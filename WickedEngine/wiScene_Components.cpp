@@ -2859,7 +2859,7 @@ namespace wi::scene
 		return active;
 	}
 
-	XMMATRIX SplineComponent::EvaluateSplineAt(float t)
+	XMMATRIX SplineComponent::EvaluateSplineAt(float t) const
 	{
 		if (spline_node_transforms.empty())
 			return {};
@@ -2987,5 +2987,90 @@ namespace wi::scene
 		P = XMVectorSetW(P, 1);
 		XMMATRIX M = { B, N, T, P };
 		return M;
+	}
+	XMVECTOR SplineComponent::ClosestPointOnSpline(const XMVECTOR& P, int steps) const
+	{
+		if (spline_node_transforms.empty())
+			return XMVectorZero();
+		if (spline_node_transforms.size() == 1)
+			return spline_node_transforms[0].GetPositionV();
+
+		if (spline_node_transforms.size() == 2)
+			return wi::math::ClosestPointOnLineSegment(spline_node_transforms[0].GetPositionV(), spline_node_transforms[1].GetPositionV(), P);
+
+		steps *= (int)spline_node_transforms.size();
+		float mindist = FLT_MAX;
+		XMVECTOR MIN = XMVectorZero();
+		XMVECTOR A = wi::math::GetPosition(EvaluateSplineAt(0.0f));
+		for (int i = 1; i < steps; ++i)
+		{
+			const float t = float(i) / float(steps - 1);
+			XMMATRIX M = EvaluateSplineAt(t);
+			XMVECTOR B = wi::math::GetPosition(M);
+			XMVECTOR C = wi::math::ClosestPointOnLineSegment(A, B, P);
+			float dist = wi::math::Distance(P, C);
+			if (dist < mindist)
+			{
+				mindist = dist;
+				MIN = C;
+			}
+			A = B;
+		}
+
+		return MIN;
+	}
+	XMVECTOR SplineComponent::TraceSplinePlane(const XMVECTOR& ORIGIN, const XMVECTOR& DIRECTION, int steps) const
+	{
+		if (spline_node_transforms.empty())
+			return XMVectorZero();
+		if (spline_node_transforms.size() == 1)
+			return XMVectorZero();
+
+		steps *= (int)spline_node_transforms.size();
+		float mindist = FLT_MAX;
+		XMVECTOR MIN = XMVectorZero();
+		for (int i = 0; i < steps; ++i)
+		{
+			const float t = float(i) / float(steps - 1);
+			XMMATRIX M = EvaluateSplineAt(t);
+			XMVECTOR P = wi::math::GetPosition(M);
+			XMVECTOR N = wi::math::GetUp(M);
+			XMVECTOR PLANE = XMPlaneFromPointNormal(P, N);
+			XMVECTOR I = XMPlaneIntersectLine(PLANE, ORIGIN, ORIGIN + DIRECTION * 100000);
+			float dist = wi::math::Distance(P, I);
+			if (dist < mindist)
+			{
+				mindist = dist;
+				MIN = I;
+			}
+		}
+
+		return MIN;
+	}
+	AABB SplineComponent::ComputeAABB(int steps) const
+	{
+		AABB ret;
+		float range = width;
+		if (terrain_modifier_amount > 0)
+		{
+			range /= sqr(terrain_modifier_amount);
+		}
+		steps *= (int)spline_node_transforms.size();
+		for (int i = 0; i < steps; ++i)
+		{
+			const float t = float(i) / float(steps - 1);
+			XMMATRIX M = EvaluateSplineAt(t);
+			XMVECTOR P = wi::math::GetPosition(M);
+			XMVECTOR R = XMVector3Normalize(wi::math::GetRight(M)) * range;
+			XMVECTOR N = XMVector3Normalize(wi::math::GetUp(M)) * range;
+			XMVECTOR F = XMVector3Normalize(wi::math::GetForward(M)) * range;
+			ret.AddPoint(P - R);
+			ret.AddPoint(P + R);
+			ret.AddPoint(P - N);
+			ret.AddPoint(P + N);
+			ret.AddPoint(P + F);
+			ret.AddPoint(P - F);
+		}
+		return ret;
 	}
 }

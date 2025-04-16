@@ -182,6 +182,7 @@ namespace wi::terrain
 		wi::scene::Scene scene; // The background generation thread can safely add things to this, it will be merged into the main scene when it is safe to do so
 		wi::jobsystem::context workload;
 		std::atomic_bool cancelled{ false };
+		wi::vector<SplineComponent> splines;
 	};
 
 	wi::jobsystem::context virtual_texture_ctx;
@@ -593,6 +594,12 @@ namespace wi::terrain
 				break;
 			}
 		}
+		for (size_t i = 0; i < scene->splines.GetCount(); ++i)
+		{
+			const SplineComponent& spline = scene->splines[i];
+			restart_generation |= spline.dirty_terrain;
+			spline.dirty_terrain = false;
+		}
 
 		if (restart_generation)
 		{
@@ -856,6 +863,15 @@ namespace wi::terrain
 		// Start the generation on a background thread and keep it running until the next frame
 		generator->cancelled.store(false);
 		generator->workload.priority = wi::jobsystem::Priority::Low;
+		generator->splines.clear();
+		for (size_t i = 0; i < scene->splines.GetCount(); ++i)
+		{
+			const SplineComponent& spline = scene->splines[i];
+			if (spline.terrain_modifier_amount > 0)
+			{
+				generator->splines.push_back(spline);
+			}
+		}
 		wi::jobsystem::Execute(generator->workload, [=](wi::jobsystem::JobArgs a) {
 
 			wi::Timer timer;
@@ -931,32 +947,57 @@ namespace wi::terrain
 					// Do a parallel for loop over all the chunk's vertices and compute their properties:
 					wi::jobsystem::context ctx;
 					ctx.priority = wi::jobsystem::Priority::Low;
-					wi::jobsystem::Dispatch(ctx, vertexCount, chunk_width, [&](wi::jobsystem::JobArgs args) {
+
+					// Preload height grid with padding, because neighbors will need to be accessed to determine slopes:
+					constexpr int chunk_width_padded = chunk_width + 1;
+					constexpr uint32_t vertexCount_padded = chunk_width_padded * chunk_width_padded;
+					float heights_padded[chunk_width_padded][chunk_width_padded];
+					wi::jobsystem::Dispatch(ctx, vertexCount_padded, chunk_width_padded * 4, [&](wi::jobsystem::JobArgs args) {
 						uint32_t index = args.jobIndex;
-						const float x = (float(index % chunk_width) - chunk_half_width) * chunk_scale;
-						const float z = (float(index / chunk_width) - chunk_half_width) * chunk_scale;
-						XMVECTOR corners[3];
-						XMFLOAT2 corner_offsets[3] = {
-							XMFLOAT2(0, 0),
-							XMFLOAT2(1, 0),
-							XMFLOAT2(0, 1),
-						};
-						for (int i = 0; i < arraysize(corners); ++i)
+						const XMUINT2 coord = XMUINT2(index % chunk_width_padded, index / chunk_width_padded);
+						const float x = (float(coord.x) - chunk_half_width) * chunk_scale;
+						const float z = (float(coord.y) - chunk_half_width) * chunk_scale;
+
+						float height = 0;
+						const XMFLOAT2 world_pos = XMFLOAT2(chunk_data.position.x + x, chunk_data.position.z + z);
+						for (auto& modifier : modifiers)
 						{
-							float height = 0;
-							const XMFLOAT2 world_pos = XMFLOAT2(chunk_data.position.x + x + corner_offsets[i].x, chunk_data.position.z + z + corner_offsets[i].y);
-							for (auto& modifier : modifiers)
-							{
-								modifier->Apply(world_pos, height);
-							}
-							if (i == 0)
-							{
-								chunk_data.heightmap_data[index] = uint16_t(height * 65535);
-							}
-							height = wi::math::Lerp(bottomLevel, topLevel, height);
-							corners[i] = XMVectorSet(world_pos.x, height, world_pos.y, 0);
+							modifier->Apply(world_pos, height);
 						}
-						const float height = XMVectorGetY(corners[0]);
+						height = lerp(bottomLevel, topLevel, height);
+						XMVECTOR corner = XMVectorSet(world_pos.x, height, world_pos.y, 0);
+
+						// Apply splines:
+						for (size_t j = 0; j < generator->splines.size(); ++j)
+						{
+							const SplineComponent& spline = generator->splines[j];
+							if (spline.terrain_modifier_amount <= 0 || !spline.aabb.intersects(corner))
+								continue;
+							XMVECTOR P = XMVectorSetY(corner, -1000);
+							XMVECTOR S = spline.TraceSplinePlane(P, XMVectorSet(0, 1, 0, 0), 4);
+							S = spline.ClosestPointOnSpline(S, 4);
+							float splineheight = XMVectorGetY(S);
+							P = XMVectorSetY(P, splineheight);
+							float splinedist = wi::math::Distance(P, S);
+							height = lerp(splineheight, height, smoothstep(0.0f, 1.0f, saturate(std::max(0.0f, splinedist - spline.width) * sqr(spline.terrain_modifier_amount))));
+							corner = XMVectorSetY(corner, height);
+						}
+
+						heights_padded[coord.x][coord.y] = height;
+					});
+					wi::jobsystem::Wait(ctx);
+
+					wi::jobsystem::Dispatch(ctx, vertexCount, chunk_width * 4, [&](wi::jobsystem::JobArgs args) {
+						const uint32_t index = args.jobIndex;
+						const XMUINT2 coord = XMUINT2(index % chunk_width, index / chunk_width);
+						const float x = (float(coord.x) - chunk_half_width) * chunk_scale;
+						const float z = (float(coord.y) - chunk_half_width) * chunk_scale;
+						const float height = heights_padded[coord.x][coord.y];
+						const XMVECTOR corners[3] = {
+							XMVectorSet(chunk_data.position.x + x, height, chunk_data.position.z + z, 0),
+							XMVectorSet(chunk_data.position.x + x + 1, heights_padded[coord.x + 1][coord.y], chunk_data.position.z + z, 0),
+							XMVectorSet(chunk_data.position.x + x, heights_padded[coord.x][coord.y + 1], chunk_data.position.z + z + 1, 0),
+						};
 						const XMVECTOR T = XMVectorSubtract(corners[1], corners[2]);
 						const XMVECTOR B = XMVectorSubtract(corners[0], corners[1]);
 						const XMVECTOR N = XMVector3Normalize(XMVector3Cross(T, B));
@@ -1006,7 +1047,8 @@ namespace wi::terrain
 						{
 							grass.vertex_lengths[index] = 0;
 						}
-						});
+						chunk_data.heightmap_data[index] = uint16_t(inverse_lerp(bottomLevel, topLevel, height) * 65535);
+					});
 					wi::jobsystem::Wait(ctx); // wait until chunk's vertex buffer is fully generated
 					
 					object.SetCastShadow(slope_cast_shadow.load());

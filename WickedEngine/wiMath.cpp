@@ -61,24 +61,6 @@ namespace wi::math
 		return XMFLOAT3(roll, pitch, yaw);
 	}
 	
-	XMVECTOR GetClosestPointToLine(const XMVECTOR& A, const XMVECTOR& B, const XMVECTOR& P, bool segmentClamp)
-	{
-		XMVECTOR AP_ = P - A;
-		XMVECTOR AB_ = B - A;
-		XMFLOAT3 AB, AP;
-		XMStoreFloat3(&AB, AB_);
-		XMStoreFloat3(&AP, AP_);
-		float ab2 = AB.x*AB.x + AB.y*AB.y + AB.z*AB.z;
-		float ap_ab = AP.x*AB.x + AP.y*AB.y + AP.z*AB.z;
-		float t = ap_ab / ab2;
-		if (segmentClamp)
-		{
-			if (t < 0.0f) t = 0.0f;
-			else if (t > 1.0f) t = 1.0f;
-		}
-		XMVECTOR Closest = A + AB_ * t;
-		return Closest;
-	}
 	float GetPointSegmentDistance(const XMVECTOR& point, const XMVECTOR& segmentA, const XMVECTOR& segmentB)
 	{
 		// Return minimum distance between line segment vw and point p

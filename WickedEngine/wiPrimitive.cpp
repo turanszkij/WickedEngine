@@ -139,6 +139,12 @@ namespace wi::primitive
 		if (p.z < _min.z) return false;
 		return true;
 	}
+	bool AABB::intersects(const XMVECTOR& P) const
+	{
+		XMFLOAT3 p;
+		XMStoreFloat3(&p, P);
+		return intersects(p);
+	}
 	bool AABB::intersects(const Ray& ray) const
 	{
 		if (!IsValid())
@@ -209,6 +215,12 @@ namespace wi::primitive
 	{
 		_min = wi::math::Min(_min, pos);
 		_max = wi::math::Max(_max, pos);
+	}
+	void AABB::AddPoint(const XMVECTOR& P)
+	{
+		XMFLOAT3 p;
+		XMStoreFloat3(&p, P);
+		AddPoint(p);
 	}
 	void AABB::Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri)
 	{

@@ -5781,6 +5781,9 @@ namespace wi::scene
 			dirty |= spline.prev_looped != spline.IsLooped();
 			dirty |= spline.prev_width != spline.width;
 			dirty |= spline.prev_rotation != spline.rotation;
+			dirty |= spline.prev_terrain_modifier_amount != spline.terrain_modifier_amount;
+
+			spline.prev_terrain_modifier_amount = spline.terrain_modifier_amount;
 
 			spline.spline_node_transforms.resize(spline.spline_node_entities.size());
 
@@ -5799,6 +5802,8 @@ namespace wi::scene
 					spline.spline_node_transforms[i].UpdateTransform();
 				}
 			}
+
+			spline.SetDirty(dirty);
 
 			// Mesh generation:
 			if (dirty && spline.spline_node_transforms.size() > 1)
@@ -6004,6 +6009,13 @@ namespace wi::scene
 				{
 					XMStoreFloat4x4(&spline.spline_node_transforms[i].world, ComputeEntityMatrixRecursive(node_entity));
 				}
+			}
+
+			// Compute AABB:
+			if (dirty)
+			{
+				spline.aabb = spline.ComputeAABB(10);
+				spline.dirty_terrain = true;
 			}
 		});
 		wi::jobsystem::Wait(ctx);

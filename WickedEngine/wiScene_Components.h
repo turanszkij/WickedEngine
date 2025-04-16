@@ -2544,6 +2544,7 @@ namespace wi::scene
 			NONE = 0,
 			DRAW_ALIGNED = 1 << 0,
 			LOOPED = 1 << 1,
+			DIRTY = 1 << 2,
 		};
 		uint32_t _flags = NONE;
 
@@ -2551,6 +2552,7 @@ namespace wi::scene
 		float rotation = 0; // rotation of nodes in radians around the spline axis (affects mesh generation)
 		int mesh_generation_subdivision = 0; // increase this above 0 to request mesh generation
 		int mesh_generation_vertical_subdivision = 0; // can create vertically subdivided mesh (corridoor, tunnel, etc. with this)
+		float terrain_modifier_amount = 0; // increase above 0 to affect terrain generation
 
 		wi::vector<wi::ecs::Entity> spline_node_entities;
 
@@ -2561,11 +2563,19 @@ namespace wi::scene
 		int prev_mesh_generation_subdivision = 0;
 		int prev_mesh_generation_vertical_subdivision = 0;
 		int prev_mesh_generation_nodes = 0;
+		float prev_terrain_modifier_amount = 0;
 		bool prev_looped = false;
+		wi::primitive::AABB aabb;
+		mutable bool dirty_terrain = false;
 
 		// Evaluate an interpolated location on the spline at t which in range [0,1] on the spline
 		//	the result matrix is oriented to look towards the spline direction and face upwards along the spline normal
-		XMMATRIX EvaluateSplineAt(float t);
+		XMMATRIX EvaluateSplineAt(float t) const;
+
+		XMVECTOR ClosestPointOnSpline(const XMVECTOR& P, int steps = 10) const;
+		XMVECTOR TraceSplinePlane(const XMVECTOR& ORIGIN, const XMVECTOR& DIRECTION, int steps = 10) const;
+
+		wi::primitive::AABB ComputeAABB(int steps = 10) const;
 
 		// By default the spline is drawn as camera facing, this can be used to set it to be drawn aligned to segment rotations:
 		bool IsDrawAligned() const { return _flags & DRAW_ALIGNED; }
@@ -2573,6 +2583,9 @@ namespace wi::scene
 
 		bool IsLooped() const { return _flags & LOOPED; }
 		void SetLooped(bool value = true) { if (value) { _flags |= LOOPED; } else { _flags &= ~LOOPED; } }
+
+		bool IsDirty() const { return _flags & DIRTY; }
+		void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};

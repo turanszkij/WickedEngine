@@ -399,7 +399,6 @@ namespace wi::math
 
 	XMFLOAT3 QuaternionToRollPitchYaw(const XMFLOAT4& quaternion);
 
-	XMVECTOR GetClosestPointToLine(const XMVECTOR& A, const XMVECTOR& B, const XMVECTOR& P, bool segmentClamp = false);
 	float GetPointSegmentDistance(const XMVECTOR& point, const XMVECTOR& segmentA, const XMVECTOR& segmentB);
 
 	inline float GetPlanePointDistance(const XMVECTOR& planeOrigin, const XMVECTOR& planeNormal, const XMVECTOR& point)
@@ -432,6 +431,35 @@ namespace wi::math
 	inline XMFLOAT3 GetRight(const XMFLOAT4X4& _m)
 	{
 		return XMFLOAT3(_m.m[0][0], _m.m[0][1], _m.m[0][2]);
+	}
+
+	inline XMVECTOR GetPosition(const XMMATRIX& M)
+	{
+		XMFLOAT4X4 _m;
+		XMStoreFloat4x4(&_m, M);
+		XMFLOAT3 ret = GetPosition(_m);
+		return XMLoadFloat3(&ret);
+	}
+	inline XMVECTOR GetForward(const XMMATRIX& M)
+	{
+		XMFLOAT4X4 _m;
+		XMStoreFloat4x4(&_m, M);
+		XMFLOAT3 ret = GetForward(_m);
+		return XMLoadFloat3(&ret);
+	}
+	inline XMVECTOR GetUp(const XMMATRIX& M)
+	{
+		XMFLOAT4X4 _m;
+		XMStoreFloat4x4(&_m, M);
+		XMFLOAT3 ret = GetUp(_m);
+		return XMLoadFloat3(&ret);
+	}
+	inline XMVECTOR GetRight(const XMMATRIX& M)
+	{
+		XMFLOAT4X4 _m;
+		XMStoreFloat4x4(&_m, M);
+		XMFLOAT3 ret = GetRight(_m);
+		return XMLoadFloat3(&ret);
 	}
 
 	// Returns an element of a precomputed halton sequence. Specify which iteration to get with idx >= 0

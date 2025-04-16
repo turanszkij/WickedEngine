@@ -1858,6 +1858,7 @@ void EditorComponent::Update(float dt)
 			{
 				for (size_t i = 0; i < scene.splines.GetCount(); ++i)
 				{
+					//wi::renderer::DrawBox(XMMatrixTranslationFromVector(scene.splines[i].ClosestPointOnSpline(camera.GetEye())));
 					for (size_t j = 0; j < scene.splines[i].spline_node_transforms.size(); ++j)
 					{
 						const TransformComponent& transform = scene.splines[i].spline_node_transforms[j];

@@ -17,6 +17,7 @@ public:
 	wi::gui::Slider rotSlider;
 	wi::gui::Slider subdivSlider;
 	wi::gui::Slider subdivVerticalSlider;
+	wi::gui::Slider terrainSlider;
 	wi::gui::Button addButton;
 
 	struct Entry

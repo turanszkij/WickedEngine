@@ -2512,6 +2512,11 @@ namespace wi::scene
 			{
 				SerializeEntity(archive, spline_node_entities[i], seri);
 			}
+
+			if (seri.GetVersion() >= 1)
+			{
+				archive >> terrain_modifier_amount;
+			}
 		}
 		else
 		{
@@ -2525,6 +2530,11 @@ namespace wi::scene
 			for (size_t i = 0; i < spline_node_entities.size(); ++i)
 			{
 				SerializeEntity(archive, spline_node_entities[i], seri);
+			}
+
+			if (seri.GetVersion() >= 1)
+			{
+				archive << terrain_modifier_amount;
 			}
 		}
 	}

@@ -408,22 +408,22 @@ void Translator::Update(const CameraComponent& camera, const XMFLOAT4& currentMo
 				if (state == TRANSLATOR_X)
 				{
 					XMVECTOR A = pos, B = pos + XMVectorSet(1, 0, 0, 0);
-					XMVECTOR P = wi::math::GetClosestPointToLine(A, B, intersection);
-					XMVECTOR PPrev = wi::math::GetClosestPointToLine(A, B, intersectionPrev);
+					XMVECTOR P = wi::math::ClosestPointOnLine(A, B, intersection);
+					XMVECTOR PPrev = wi::math::ClosestPointOnLine(A, B, intersectionPrev);
 					deltaV = P - PPrev;
 				}
 				else if (state == TRANSLATOR_Y)
 				{
 					XMVECTOR A = pos, B = pos + XMVectorSet(0, 1, 0, 0);
-					XMVECTOR P = wi::math::GetClosestPointToLine(A, B, intersection);
-					XMVECTOR PPrev = wi::math::GetClosestPointToLine(A, B, intersectionPrev);
+					XMVECTOR P = wi::math::ClosestPointOnLine(A, B, intersection);
+					XMVECTOR PPrev = wi::math::ClosestPointOnLine(A, B, intersectionPrev);
 					deltaV = P - PPrev;
 				}
 				else if (state == TRANSLATOR_Z)
 				{
 					XMVECTOR A = pos, B = pos + XMVectorSet(0, 0, 1, 0);
-					XMVECTOR P = wi::math::GetClosestPointToLine(A, B, intersection);
-					XMVECTOR PPrev = wi::math::GetClosestPointToLine(A, B, intersectionPrev);
+					XMVECTOR P = wi::math::ClosestPointOnLine(A, B, intersection);
+					XMVECTOR PPrev = wi::math::ClosestPointOnLine(A, B, intersectionPrev);
 					deltaV = P - PPrev;
 				}
 				else
