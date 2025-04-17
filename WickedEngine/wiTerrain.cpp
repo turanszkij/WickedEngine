@@ -990,8 +990,7 @@ namespace wi::terrain
 							float splineheight = XMVectorGetY(S);
 							P = XMVectorSetY(P, splineheight);
 							float splinedist = wi::math::Distance(P, S);
-							float splinewidth = XMVectorGetW(S);
-							height = lerp(splineheight, height, smoothstep(0.0f, 1.0f, saturate(std::max(0.0f, splinedist - splinewidth) * sqr(spline.terrain_modifier_amount))));
+							height = lerp(splineheight, height, smoothstep(0.0f, 1.0f, saturate(splinedist * sqr(spline.terrain_modifier_amount))));
 							corner = XMVectorSetY(corner, height);
 						}
 

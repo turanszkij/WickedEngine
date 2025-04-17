@@ -6018,7 +6018,7 @@ namespace wi::scene
 			}
 
 			// Compute AABB:
-			if (dirty || spline.dirty_terrain)
+			if (dirty || (spline.dirty_terrain && spline.terrain_modifier_amount > 0))
 			{
 				spline.aabb = spline.ComputeAABB();
 			}

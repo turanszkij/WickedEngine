@@ -2574,7 +2574,6 @@ namespace wi::scene
 		XMMATRIX EvaluateSplineAt(float t) const;
 
 		// Get the closest point on the spline to a point
-		//	returns the spline's node width in the W component
 		XMVECTOR ClosestPointOnSpline(const XMVECTOR& P, int steps = 10) const;
 
 		// Trace a point on the spline's plane:

@@ -1,5 +1,3 @@
-#ifndef DDS_H
-#define DDS_H
 // Minimal cross-platform DDS texture utility created by Turánszki János for Wicked Engine: https://github.com/turanszkij/WickedEngine
 // This is not using any includes or memory allocations, and computes relative memory offsets designed for texture streaming
 // Based on DDS specification: https://learn.microsoft.com/en-us/windows/win32/direct3ddds/dx-graphics-dds-pguide#dds-file-layout
@@ -35,8 +33,8 @@
 //		5) enjoy
 //
 //	Example:
-//		std::vector<unsigned8_t> texturedata; // your texture data in a GPU format
-//		std::vector<unsigned8_t> filedata; // DDS file data container
+//		std::vector<unsigned char> texturedata; // your texture data in a GPU format
+//		std::vector<unsigned char> filedata; // DDS file data container
 //		filedata.resize(sizeof(dds::Header) + texturedata.size()); // allocate memory
 //		
 //		dds::write_header(
@@ -78,17 +76,18 @@
 //	Note: This is similar to how you would provide the texture with DirectX 11 API's D3D11_SUBRESOURCE_DATA when creating textures
 //
 //	Support:
-//		- This will only create DX10 version of DDS, doesn't support legacy
-//		- Tested with Texture 1D, Texture 2D, Texture 2D Array, Cubemap, Cubemap array, 3D Texture
+//		- This will only write DX10 version of DDS, doesn't support writing legacy formats, but it supports reading them
+//		- Tested with Texture 1D, Texture 2D, Texture 2D Array, Cubemap, Cubemap array, 3D Texture, mipmaps, should work with everything
 //		- Tested with uncompressed formats and block compressed
-//		- mipmaps: Yes
-//		- arrays: Yes
 //
 // 
 //	Contributors:
 //		- Jon Jansen
 //
 //	MIT License (see the end of this file)
+
+#ifndef DDS_H
+#define DDS_H
 
 namespace dds
 {

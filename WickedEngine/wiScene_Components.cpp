@@ -2885,6 +2885,7 @@ namespace wi::scene
 			XMVECTOR B = XMVector3Normalize(XMVector3Cross(T, N));
 			N = XMVector3Normalize(XMVector3Cross(B, T));
 			B *= XMVectorGetX(W); // width offset
+			N *= XMVectorGetX(W); // width offset
 			N = XMVectorSetW(N, 0);
 			T = XMVectorSetW(T, 0);
 			B = XMVectorSetW(B, 0);
@@ -2940,7 +2941,7 @@ namespace wi::scene
 					t2 = i + 1;
 					t3 = std::min(i + 2, cnt - 1);
 				}
-				tmid = inverse_lerp(dist_prev, total_distance, tdist);
+				tmid = saturate(inverse_lerp(dist_prev, total_distance, tdist));
 				break;
 			}
 		}
@@ -2974,13 +2975,16 @@ namespace wi::scene
 		XMVECTOR P = wi::math::CatmullRomCentripetal(P0, P1, P2, P3, tmid);
 		XMVECTOR P_prev = wi::math::CatmullRomCentripetal(P0, P1, P2, P3, saturate(tmid - 0.01f));
 		XMVECTOR P_next = wi::math::CatmullRomCentripetal(P0, P1, P2, P3, saturate(tmid + 0.01f));
-		XMVECTOR Q = XMQuaternionNormalize(XMVectorCatmullRom(Q0, Q1, Q2, Q3, tmid));
+		XMVECTOR squadA, squadB, squadC;
+		XMQuaternionSquadSetup(&squadA, &squadB, &squadC, Q0, Q1, Q2, Q3);
+		XMVECTOR Q = XMQuaternionNormalize(XMQuaternionSquad(Q1, squadA, squadB, squadC, tmid));
 		XMVECTOR W = XMVectorCatmullRom(W0, W1, W2, W3, tmid);
 		XMVECTOR N = XMVector3Normalize(XMVector3Rotate(XMVectorSet(0, 1, 0, 0), Q));
 		XMVECTOR T = XMVector3Normalize(P_next - P_prev);
 		XMVECTOR B = XMVector3Normalize(XMVector3Cross(T, N));
 		N = XMVector3Normalize(XMVector3Cross(B, T));
 		B *= XMVectorGetX(W); // width offset
+		N *= XMVectorGetX(W); // width offset
 		N = XMVectorSetW(N, 0);
 		T = XMVectorSetW(T, 0);
 		B = XMVectorSetW(B, 0);
@@ -3003,17 +3007,18 @@ namespace wi::scene
 		{
 			const float t = float(i) / float(steps - 1);
 			const XMMATRIX M = EvaluateSplineAt(t);
+			XMVECTOR R = wi::math::GetRight(M);
+			float nodewidth = XMVectorGetX(XMVector3Length(R));
+			nodewidth *= width;
+			R = XMVector3Normalize(R) * nodewidth;
 			const XMVECTOR B = wi::math::GetPosition(M);
-			const XMVECTOR C = wi::math::ClosestPointOnLineSegment(A, B, P);
+			XMVECTOR C = wi::math::ClosestPointOnLineSegment(A, B, P); // point on spline center
+			C = wi::math::ClosestPointOnLineSegment(C - R, C + R, P); // extruded segment by spline width
 			const float dist = wi::math::Distance(P, C);
 			if (dist < mindist)
 			{
 				mindist = dist;
 				MIN = C;
-
-				float nodewidth = XMVectorGetX(XMVector3Length(wi::math::GetRight(M)));
-				nodewidth *= width;
-				MIN = XMVectorSetW(MIN, nodewidth); // node width in w
 			}
 			A = B;
 		}
@@ -3051,10 +3056,10 @@ namespace wi::scene
 	AABB SplineComponent::ComputeAABB(int steps) const
 	{
 		AABB ret;
-		float rangemod = 1;
+		float rangemod = width;
 		if (terrain_modifier_amount > 0)
 		{
-			rangemod = 1.0f / sqr(terrain_modifier_amount);
+			rangemod /= sqr(terrain_modifier_amount); // sqr is used to match with distance falloff used in terrain generation
 		}
 		steps *= (int)spline_node_transforms.size();
 		for (int i = 0; i < steps; ++i)
