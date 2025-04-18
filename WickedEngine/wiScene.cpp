@@ -5795,6 +5795,7 @@ namespace wi::scene
 			spline.spline_node_transforms.resize(spline.spline_node_entities.size());
 
 			// BEFORE mesh update: LOCAL space transform (because mesh will be also transformed by ObjectComponent instance)
+			spline.precomputed_total_distance = 0;
 			for (size_t i = 0; i < spline.spline_node_entities.size(); ++i)
 			{
 				Entity node_entity = spline.spline_node_entities[i];
@@ -5808,6 +5809,7 @@ namespace wi::scene
 					// Force update in local space:
 					spline.spline_node_transforms[i].SetDirty();
 					spline.spline_node_transforms[i].UpdateTransform();
+					spline.spline_node_transforms[i].ApplyTransform();
 				}
 			}
 
@@ -5822,6 +5824,7 @@ namespace wi::scene
 					MeshComponent* mesh = meshes.GetComponent(entity);
 					if (mesh != nullptr)
 					{
+						spline.PrecomputeSplineNodeDistances(); // local space
 						spline.prev_mesh_generation_subdivision = spline.mesh_generation_subdivision;
 						spline.prev_mesh_generation_vertical_subdivision = spline.mesh_generation_vertical_subdivision;
 						spline.prev_mesh_generation_nodes = (int)spline.spline_node_entities.size();
@@ -6007,6 +6010,7 @@ namespace wi::scene
 			}
 
 			// AFTER mesh generation, parented update:
+			spline.precomputed_total_distance = 0;
 			for (size_t i = 0; i < spline.spline_node_entities.size(); ++i)
 			{
 				Entity node_entity = spline.spline_node_entities[i];
@@ -6014,8 +6018,11 @@ namespace wi::scene
 				if (node_transform != nullptr)
 				{
 					XMStoreFloat4x4(&spline.spline_node_transforms[i].world, ComputeEntityMatrixRecursive(node_entity));
+					spline.spline_node_transforms[i].ApplyTransform();
 				}
 			}
+
+			spline.PrecomputeSplineNodeDistances(); // world space
 
 			// Compute AABB:
 			if (dirty || (spline.dirty_terrain && spline.terrain_modifier_amount > 0))

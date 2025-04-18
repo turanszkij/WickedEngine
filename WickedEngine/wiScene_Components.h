@@ -78,6 +78,7 @@ namespace wi::scene
 		XMVECTOR GetForwardV() const;
 		XMVECTOR GetUpV() const;
 		XMVECTOR GetRightV() const;
+		void GetPositionRotationScale(XMFLOAT3& position, XMFLOAT4& rotation, XMFLOAT3& scale) const;
 		// Computes the local space matrix from scale, rotation, translation and returns it
 		XMMATRIX GetLocalMatrix() const;
 		// Returns the stored world matrix that was computed the last time UpdateTransform() was called
@@ -2558,6 +2559,8 @@ namespace wi::scene
 
 		// Non-serialized attributes:
 		wi::vector<TransformComponent> spline_node_transforms;
+		wi::vector<float> precomputed_node_distances;
+		float precomputed_total_distance = 0;
 		float prev_width = 1;
 		float prev_rotation = 0;
 		int prev_mesh_generation_subdivision = 0;
@@ -2579,7 +2582,11 @@ namespace wi::scene
 		// Trace a point on the spline's plane:
 		XMVECTOR TraceSplinePlane(const XMVECTOR& ORIGIN, const XMVECTOR& DIRECTION, int steps = 10) const;
 
+		// Compute the boounding box of the spline iteratively
 		wi::primitive::AABB ComputeAABB(int steps = 10) const;
+
+		// Precompute the spline node distances that will be used at spline evaluation calls
+		void PrecomputeSplineNodeDistances();
 
 		// By default the spline is drawn as camera facing, this can be used to set it to be drawn aligned to segment rotations:
 		bool IsDrawAligned() const { return _flags & DRAW_ALIGNED; }

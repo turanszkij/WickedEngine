@@ -41,6 +41,15 @@ namespace wi
 					rgba |= (c - 'A' + 10) << shift;
 					shift += 4u;
 					break;
+				case 'a':
+				case 'b':
+				case 'c':
+				case 'd':
+				case 'e':
+				case 'f':
+					rgba |= (c - 'a' + 10) << shift;
+					shift += 4u;
+					break;
 				case '#':
 					break;
 				default:

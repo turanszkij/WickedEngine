@@ -1164,6 +1164,16 @@ namespace wi
 				);
 			}
 
+			if (scene->weather.IsRealisticSky())
+			{
+				wi::renderer::ComputeSkyAtmosphereSkyViewLut(cmd);
+
+				if (scene->weather.IsRealisticSkyAerialPerspective())
+				{
+					wi::renderer::ComputeSkyAtmosphereCameraVolumeLut(cmd);
+				}
+			}
+
 			if (scene->weather.IsVolumetricClouds() && !scene->weather.IsVolumetricCloudsReceiveShadow())
 			{
 				// When volumetric cloud DOESN'T receive shadow it can be done async to shadow maps!
@@ -1470,52 +1480,6 @@ namespace wi
 			});
 		}
 
-		// Main camera weather compute effects depending on shadow maps, envmaps, etc, but don't depend on async surface pass:
-		if (scene->weather.IsRealisticSky() || scene->weather.IsVolumetricClouds())
-		{
-			cmd = device->BeginCommandList();
-			wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
-
-				wi::renderer::BindCameraCB(
-					*camera,
-					camera_previous,
-					camera_reflection,
-					cmd
-				);
-
-				if (scene->weather.IsRealisticSky())
-				{
-					wi::renderer::ComputeSkyAtmosphereSkyViewLut(cmd);
-
-					if (scene->weather.IsRealisticSkyAerialPerspective())
-					{
-						wi::renderer::ComputeSkyAtmosphereCameraVolumeLut(cmd);
-					}
-				}
-				if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())
-				{
-					wi::renderer::Postprocess_AerialPerspective(
-						aerialperspectiveResources,
-						cmd
-					);
-				}
-				if (scene->weather.IsVolumetricClouds() && scene->weather.IsVolumetricCloudsReceiveShadow())
-				{
-					// When volumetric cloud receives shadow it must be done AFTER shadow maps!
-					wi::renderer::Postprocess_VolumetricClouds(
-						volumetriccloudResources,
-						cmd,
-						*camera,
-						camera_previous,
-						camera_reflection,
-						wi::renderer::GetTemporalAAEnabled() || getFSR2Enabled(),
-						scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
-						scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
-					);
-				}
-			});
-		}
-
 		// Main camera opaque color pass:
 		cmd = device->BeginCommandList();
 		device->WaitCommandList(cmd, cmd_maincamera_compute_effects);
@@ -1530,6 +1494,28 @@ namespace wi
 				camera_reflection,
 				cmd
 			);
+
+			if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())
+			{
+				wi::renderer::Postprocess_AerialPerspective(
+					aerialperspectiveResources,
+					cmd
+				);
+			}
+			if (scene->weather.IsVolumetricClouds() && scene->weather.IsVolumetricCloudsReceiveShadow())
+			{
+				// When volumetric cloud receives shadow it must be done AFTER shadow maps!
+				wi::renderer::Postprocess_VolumetricClouds(
+					volumetriccloudResources,
+					cmd,
+					*camera,
+					camera_previous,
+					camera_reflection,
+					wi::renderer::GetTemporalAAEnabled() || getFSR2Enabled(),
+					scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
+					scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
+				);
+			}
 
 			if (getRaytracedReflectionEnabled())
 			{

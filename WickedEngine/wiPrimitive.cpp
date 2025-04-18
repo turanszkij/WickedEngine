@@ -412,11 +412,15 @@ namespace wi::primitive
 	}
 	XMFLOAT4X4 Sphere::GetPlacementOrientation(const XMFLOAT3& position, const XMFLOAT3& normal) const
 	{
-		XMVECTOR N = XMLoadFloat3(&normal);
+		XMVECTOR N = XMVector3Normalize(XMLoadFloat3(&normal));
 		XMVECTOR P = XMLoadFloat3(&position);
 		XMVECTOR E = XMLoadFloat3(&center) - P;
 		XMVECTOR T = XMVector3Normalize(XMVector3Cross(N, P - E));
 		XMVECTOR B = XMVector3Normalize(XMVector3Cross(T, N));
+		N = XMVectorSetW(N, 0);
+		T = XMVectorSetW(T, 0);
+		B = XMVectorSetW(B, 0);
+		P = XMVectorSetW(P, 1);
 		XMMATRIX M = { T, N, B, P };
 		XMFLOAT4X4 orientation;
 		XMStoreFloat4x4(&orientation, M);
@@ -574,12 +578,16 @@ namespace wi::primitive
 		const XMVECTOR Base = XMLoadFloat3(&base);
 		const XMVECTOR Tip = XMLoadFloat3(&tip);
 		const XMVECTOR Axis = XMVector3Normalize(Tip - Base);
-		XMVECTOR N = XMLoadFloat3(&normal);
+		XMVECTOR N = XMVector3Normalize(XMLoadFloat3(&normal));
 		XMVECTOR P = XMLoadFloat3(&position);
 		XMVECTOR E = Axis;
 		XMVECTOR T = XMVector3Normalize(XMVector3Cross(N, P - E));
-		XMVECTOR Binorm = XMVector3Normalize(XMVector3Cross(T, N));
-		XMMATRIX M = { T, N, Binorm, P };
+		XMVECTOR B = XMVector3Normalize(XMVector3Cross(T, N));
+		N = XMVectorSetW(N, 0);
+		T = XMVectorSetW(T, 0);
+		B = XMVectorSetW(B, 0);
+		P = XMVectorSetW(P, 1);
+		XMMATRIX M = { T, N, B, P };
 		XMFLOAT4X4 orientation;
 		XMStoreFloat4x4(&orientation, M);
 		return orientation;
@@ -800,11 +808,15 @@ namespace wi::primitive
 	}
 	XMFLOAT4X4 Ray::GetPlacementOrientation(const XMFLOAT3& position, const XMFLOAT3& normal) const
 	{
-		XMVECTOR N = XMLoadFloat3(&normal);
+		XMVECTOR N = XMVector3Normalize(XMLoadFloat3(&normal));
 		XMVECTOR P = XMLoadFloat3(&position);
 		XMVECTOR E = XMLoadFloat3(&origin);
 		XMVECTOR T = XMVector3Normalize(XMVector3Cross(N, P - E));
 		XMVECTOR B = XMVector3Normalize(XMVector3Cross(T, N));
+		N = XMVectorSetW(N, 0);
+		T = XMVectorSetW(T, 0);
+		B = XMVectorSetW(B, 0);
+		P = XMVectorSetW(P, 1);
 		XMMATRIX M = { T, N, B, P };
 		XMFLOAT4X4 orientation;
 		XMStoreFloat4x4(&orientation, M);
