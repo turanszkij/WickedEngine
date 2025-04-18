@@ -194,7 +194,7 @@ Texture texture_curlNoise;
 Texture texture_weatherMap;
 
 // Direct reference to a renderable instance:
-struct RenderBatch
+struct alignas(16) RenderBatch
 {
 	uint32_t meshIndex;
 	uint32_t instanceIndex;

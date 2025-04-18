@@ -5,6 +5,9 @@
 #include <algorithm>
 #include <limits>
 
+#define _XM_F16C_INTRINSICS_
+#define _XM_FMA3_INTRINSICS_
+
 #if __has_include("DirectXMath.h")
 // In this case, DirectXMath is coming from Windows SDK.
 //	It is better to use this on Windows as some Windows libraries could depend on the same
