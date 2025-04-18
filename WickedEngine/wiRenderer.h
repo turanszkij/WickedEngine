@@ -1154,6 +1154,8 @@ namespace wi::renderer
 	float GetCapsuleShadowAngle();
 	void SetCapsuleShadowFade(float value);
 	float GetCapsuleShadowFade();
+	void SetShadowLODOverrideEnabled(bool value); // Allow shadowmap rendering to request custom LOD for objects (can result in shadow mismatch, but increased GPU performance)
+	bool IsShadowLODOverrideEnabled();
 
 	// Gets pick ray according to the current screen resolution and pointer coordinates. Can be used as input into RayIntersectWorld()
 	wi::primitive::Ray GetPickRay(long cursorX, long cursorY, const wi::Canvas& canvas, const wi::scene::CameraComponent& camera = wi::scene::GetCamera());

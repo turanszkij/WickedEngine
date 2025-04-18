@@ -161,6 +161,7 @@ You can use the Renderer with the following functions, all of which are in the g
 - SetCapsuleShadowEnabled(bool enabled)
 - SetCapsuleShadowFade(float value)
 - SetCapsuleShadowAngle(float value)
+- SetShadowLODOverrideEnabled(bool value)
 - SetTemporalAAEnabled(bool value)
 - SetRaytracedShadowsEnabled(bool value)
 - SetMeshShaderAllowed(bool enabled)

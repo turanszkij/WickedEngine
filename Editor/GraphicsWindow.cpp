@@ -162,6 +162,21 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	AddWidget(&meshletOcclusionCullingCheckBox);
 	meshletOcclusionCullingCheckBox.SetEnabled(wi::graphics::GetDevice()->CheckCapability(wi::graphics::GraphicsDeviceCapability::MESH_SHADER));
 
+	shadowLODCheckBox.Create("Shadow LOD override: ");
+	shadowLODCheckBox.SetTooltip("Enable custom LOD selection for shadow maps.\nThis can cause LOD mismatch between objects in the camera and shadows, but can be a performance benefit.");
+	shadowLODCheckBox.SetPos(XMFLOAT2(x, y += step));
+	shadowLODCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
+	if (editor->main->config.GetSection("graphics").Has("shadow_lod_override"))
+	{
+		wi::renderer::SetShadowLODOverrideEnabled(editor->main->config.GetSection("graphics").GetBool("shadow_lod_override"));
+	}
+	shadowLODCheckBox.OnClick([=](wi::gui::EventArgs args) {
+		wi::renderer::SetShadowLODOverrideEnabled(args.bValue);
+		editor->main->config.GetSection("graphics").Set("shadow_lod_override", args.bValue);
+		editor->main->config.Commit();
+		});
+	AddWidget(&shadowLODCheckBox);
+
 	GIBoostSlider.Create(1, 10, 1.0f, 1000.0f, "GI Boost: ");
 	GIBoostSlider.SetTooltip("Adjust the strength of GI.\nNote that values other than 1.0 will cause mismatch with path tracing reference!");
 	GIBoostSlider.SetSize(XMFLOAT2(wid, itemheight));
@@ -1594,6 +1609,7 @@ void GraphicsWindow::Update()
 	visibilityComputeShadingCheckBox.SetCheck(editor->renderPath->getVisibilityComputeShadingEnabled());
 	meshShaderCheckBox.SetCheck(wi::renderer::IsMeshShaderAllowed());
 	meshletOcclusionCullingCheckBox.SetCheck(wi::renderer::IsMeshletOcclusionCullingEnabled());
+	shadowLODCheckBox.SetCheck(wi::renderer::IsShadowLODOverrideEnabled());
 	resolutionScaleSlider.SetValue(editor->resolutionScale);
 	streamingSlider.SetValue(wi::resourcemanager::GetStreamingMemoryThreshold());
 	MSAAComboBox.SetSelectedByUserdataWithoutCallback(editor->renderPath->getMSAASampleCount());
@@ -1762,6 +1778,7 @@ void GraphicsWindow::ResizeLayout()
 		visibilityComputeShadingCheckBox.SetVisible(false);
 		meshShaderCheckBox.SetVisible(false);
 		meshletOcclusionCullingCheckBox.SetVisible(false);
+		shadowLODCheckBox.SetVisible(false);
 		tessellationCheckBox.SetVisible(false);
 	}
 	else
@@ -1780,6 +1797,7 @@ void GraphicsWindow::ResizeLayout()
 		visibilityComputeShadingCheckBox.SetVisible(true);
 		meshShaderCheckBox.SetVisible(true);
 		meshletOcclusionCullingCheckBox.SetVisible(true);
+		shadowLODCheckBox.SetVisible(true);
 		tessellationCheckBox.SetVisible(true);
 
 		add(shadowTypeComboBox);
@@ -1796,6 +1814,7 @@ void GraphicsWindow::ResizeLayout()
 		add_right(visibilityComputeShadingCheckBox);
 		add_right(meshShaderCheckBox);
 		add_right(meshletOcclusionCullingCheckBox);
+		add_right(shadowLODCheckBox);
 		add_right(tessellationCheckBox);
 	}
 

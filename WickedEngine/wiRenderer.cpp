@@ -145,6 +145,7 @@ int VXGI_DEBUG_CLIPMAP = 0;
 bool CAPSULE_SHADOW_ENABLED = false;
 float CAPSULE_SHADOW_ANGLE = XM_PIDIV4;
 float CAPSULE_SHADOW_FADE = 0.2f;
+bool SHADOW_LOD_OVERRIDE = true;
 
 Texture shadowMapAtlas;
 Texture shadowMapAtlas_Transparent;
@@ -6303,8 +6304,11 @@ void DrawShadowmaps(
 								if ((cascade < (cascade_count - object.cascadeMask)) && shcams[cascade].frustum.CheckBoxFast(aabb))
 								{
 									camera_mask |= 1 << cascade;
-									uint8_t candidate_lod = (uint8_t)vis.scene->ComputeObjectLODForView(object, aabb, vis.scene->meshes[object.mesh_index], shcams[cascade].view_projection);
-									shadow_lod = std::min(shadow_lod, candidate_lod);
+									if (IsShadowLODOverrideEnabled())
+									{
+										uint8_t candidate_lod = (uint8_t)vis.scene->ComputeObjectLODForView(object, aabb, vis.scene->meshes[object.mesh_index], shcams[cascade].view_projection);
+										shadow_lod = std::min(shadow_lod, candidate_lod);
+									}
 								}
 							}
 							if (camera_mask == 0)
@@ -6421,8 +6425,11 @@ void DrawShadowmaps(
 								continue;
 
 							uint8_t shadow_lod = 0xFF;
-							uint8_t candidate_lod = (uint8_t)vis.scene->ComputeObjectLODForView(object, aabb, vis.scene->meshes[object.mesh_index], shcam.view_projection);
-							shadow_lod = std::min(shadow_lod, candidate_lod);
+							if (IsShadowLODOverrideEnabled())
+							{
+								uint8_t candidate_lod = (uint8_t)vis.scene->ComputeObjectLODForView(object, aabb, vis.scene->meshes[object.mesh_index], shcam.view_projection);
+								shadow_lod = std::min(shadow_lod, candidate_lod);
+							}
 
 							renderQueue.add(object.mesh_index, uint32_t(i), 0, object.sort_bits, 0xFF, shadow_lod);
 
@@ -6584,8 +6591,11 @@ void DrawShadowmaps(
 								if (frusta[camera_index].CheckBoxFast(aabb))
 								{
 									camera_mask |= 1 << camera_index;
-									uint8_t candidate_lod = (uint8_t)vis.scene->ComputeObjectLODForView(object, aabb, vis.scene->meshes[object.mesh_index], cameras[camera_index].view_projection);
-									shadow_lod = std::min(shadow_lod, candidate_lod);
+									if (IsShadowLODOverrideEnabled())
+									{
+										uint8_t candidate_lod = (uint8_t)vis.scene->ComputeObjectLODForView(object, aabb, vis.scene->meshes[object.mesh_index], cameras[camera_index].view_projection);
+										shadow_lod = std::min(shadow_lod, candidate_lod);
+									}
 								}
 							}
 							if (camera_mask == 0)
@@ -18520,6 +18530,14 @@ void SetCapsuleShadowFade(float value)
 float GetCapsuleShadowFade()
 {
 	return CAPSULE_SHADOW_FADE;
+}
+void SetShadowLODOverrideEnabled(bool value)
+{
+	SHADOW_LOD_OVERRIDE = value;
+}
+bool IsShadowLODOverrideEnabled()
+{
+	return SHADOW_LOD_OVERRIDE;
 }
 
 wi::Resource CreatePaintableTexture(uint32_t width, uint32_t height, uint32_t mips, wi::Color initialColor)

@@ -334,6 +334,19 @@ namespace wi::lua::renderer
 		}
 		return 0;
 	}
+	int SetShadowLODOverrideEnabled(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			wi::renderer::SetShadowLODOverrideEnabled(wi::lua::SGetBool(L, 1));
+		}
+		else
+		{
+			wi::lua::SError(L, "SetShadowLODOverrideEnabled(bool value) not enough arguments!");
+		}
+		return 0;
+	}
 
 	int DrawLine(lua_State* L)
 	{
@@ -1048,6 +1061,7 @@ namespace wi::lua::renderer
 			wi::lua::RegisterFunc("SetCapsuleShadowEnabled", SetCapsuleShadowEnabled);
 			wi::lua::RegisterFunc("SetCapsuleShadowFade", SetCapsuleShadowFade);
 			wi::lua::RegisterFunc("SetCapsuleShadowAngle", SetCapsuleShadowAngle);
+			wi::lua::RegisterFunc("SetShadowLODOverrideEnabled", SetShadowLODOverrideEnabled);
 
 			wi::lua::RegisterFunc("DrawLine", DrawLine);
 			wi::lua::RegisterFunc("DrawPoint", DrawPoint);
