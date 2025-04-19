@@ -205,7 +205,7 @@
 #define XM_SFENCE() _mm_sfence()
 #endif
 
-#if defined(_XM_AVX_INTRINSICS_)
+#if defined(_XM_AVX_INTRINSICS_) && defined(_XM_FAVOR_INTEL_)
 #define XM_PERMUTE_PS( v, c ) _mm_permute_ps( v, c )
 #else
 #define XM_PERMUTE_PS( v, c ) _mm_shuffle_ps( v, v, c )
