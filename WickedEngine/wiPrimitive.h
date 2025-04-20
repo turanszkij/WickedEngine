@@ -15,7 +15,7 @@ namespace wi::primitive
 	struct Capsule;
 	struct Plane;
 
-	struct AABB
+	struct alignas(16) AABB
 	{
 		enum INTERSECTION_TYPE
 		{

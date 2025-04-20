@@ -112,6 +112,16 @@ namespace wi::math
 		XMVECTOR vector2 = XMLoadFloat3(&v2);
 		return DistanceSquared(vector1, vector2);
 	}
+	inline float DistanceSquared(const XMVECTOR& v1, const XMFLOAT3& v2)
+	{
+		XMVECTOR vector2 = XMLoadFloat3(&v2);
+		return DistanceSquared(v1, vector2);
+	}
+	inline float DistanceSquared(const XMFLOAT3& v1, const XMVECTOR& v2)
+	{
+		XMVECTOR vector1 = XMLoadFloat3(&v1);
+		return DistanceSquared(vector1, v2);
+	}
 	inline float DistanceEstimated(const XMFLOAT2& v1, const XMFLOAT2& v2)
 	{
 		XMVECTOR vector1 = XMLoadFloat2(&v1);
