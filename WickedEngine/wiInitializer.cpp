@@ -68,7 +68,7 @@ namespace wi::initializer
 		cpustring.push_back("FMA3; ");
 #endif // _XM_FMA3_INTRINSICS_
 
-		wilog(cpustring);
+		wilog(cpustring.c_str());
 
 		if (!XMVerifyCPUSupport())
 		{
