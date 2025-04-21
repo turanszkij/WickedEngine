@@ -1430,16 +1430,13 @@ using namespace vulkan_internal;
 	void GraphicsDevice_Vulkan::CopyAllocator::destroy()
 	{
 		vkQueueWaitIdle(device->queue_init.queue);
-		vkQueueWaitIdle(device->queue_transition.queue);
 		for (auto& x : freelist)
 		{
 			vkDestroyCommandPool(device->device, x.transferCommandPool, nullptr);
-			vkDestroyCommandPool(device->device, x.transitionCommandPool, nullptr);
-			vkDestroySemaphore(device->device, x.semaphore, nullptr);
 			vkDestroyFence(device->device, x.fence, nullptr);
 		}
 	}
-	GraphicsDevice_Vulkan::CopyAllocator::CopyCMD GraphicsDevice_Vulkan::CopyAllocator::allocate(uint64_t staging_size, bool require_transfer, bool require_transition)
+	GraphicsDevice_Vulkan::CopyAllocator::CopyCMD GraphicsDevice_Vulkan::CopyAllocator::allocate(uint64_t staging_size)
 	{
 		CopyCMD cmd;
 
@@ -1465,8 +1462,6 @@ using namespace vulkan_internal;
 			poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
 			poolInfo.queueFamilyIndex = device->initFamily;
 			vulkan_check(vkCreateCommandPool(device->device, &poolInfo, nullptr, &cmd.transferCommandPool));
-			poolInfo.queueFamilyIndex = device->computeFamily;
-			vulkan_check(vkCreateCommandPool(device->device, &poolInfo, nullptr, &cmd.transitionCommandPool));
 
 			VkCommandBufferAllocateInfo commandBufferInfo = {};
 			commandBufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -1474,18 +1469,11 @@ using namespace vulkan_internal;
 			commandBufferInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 			commandBufferInfo.commandPool = cmd.transferCommandPool;
 			vulkan_check(vkAllocateCommandBuffers(device->device, &commandBufferInfo, &cmd.transferCommandBuffer));
-			commandBufferInfo.commandPool = cmd.transitionCommandPool;
-			vulkan_check(vkAllocateCommandBuffers(device->device, &commandBufferInfo, &cmd.transitionCommandBuffer));
 
 			VkFenceCreateInfo fenceInfo = {};
 			fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 			vulkan_check(vkCreateFence(device->device, &fenceInfo, nullptr, &cmd.fence));
 			device->set_fence_name(cmd.fence, "CopyAllocator::fence");
-
-			VkSemaphoreCreateInfo semaphoreInfo = {};
-			semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-			vulkan_check(vkCreateSemaphore(device->device, &semaphoreInfo, nullptr, &cmd.semaphore));
-			device->set_semaphore_name(cmd.semaphore, "CopyAllocator::semaphore");
 
 			GPUBufferDesc uploaddesc;
 			uploaddesc.size = wi::math::GetNextPowerOfTwo(staging_size);
@@ -1501,19 +1489,8 @@ using namespace vulkan_internal;
 		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 		beginInfo.pInheritanceInfo = nullptr;
 
-		cmd.transfer = require_transfer;
-		if (cmd.transfer)
-		{
-			vulkan_check(vkResetCommandPool(device->device, cmd.transferCommandPool, 0));
-			vulkan_check(vkBeginCommandBuffer(cmd.transferCommandBuffer, &beginInfo));
-		}
-
-		cmd.transition = require_transition;
-		if (cmd.transition)
-		{
-			vulkan_check(vkResetCommandPool(device->device, cmd.transitionCommandPool, 0));
-			vulkan_check(vkBeginCommandBuffer(cmd.transitionCommandBuffer, &beginInfo));
-		}
+		vulkan_check(vkResetCommandPool(device->device, cmd.transferCommandPool, 0));
+		vulkan_check(vkBeginCommandBuffer(cmd.transferCommandBuffer, &beginInfo));
 
 		vulkan_check(vkResetFences(device->device, 1, &cmd.fence));
 
@@ -1527,48 +1504,14 @@ using namespace vulkan_internal;
 		VkCommandBufferSubmitInfo cbSubmitInfo = {};
 		cbSubmitInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
 
-		VkSemaphoreSubmitInfo semaphoreInfo = {};
-		semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-		semaphoreInfo.semaphore = cmd.semaphore;
-		semaphoreInfo.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
-
-		if (cmd.transfer)
 		{
 			vulkan_check(vkEndCommandBuffer(cmd.transferCommandBuffer));
 			cbSubmitInfo.commandBuffer = cmd.transferCommandBuffer;
 			submitInfo.commandBufferInfoCount = 1;
 			submitInfo.pCommandBufferInfos = &cbSubmitInfo;
 
-			if (cmd.transition)
-			{
-				// signal for transition queue:
-				submitInfo.signalSemaphoreInfoCount = 1;
-				submitInfo.pSignalSemaphoreInfos = &semaphoreInfo;
-			}
-
 			std::scoped_lock lock(*device->queue_init.locker);
-			vulkan_check(vkQueueSubmit2(device->queue_init.queue, 1, &submitInfo, cmd.transition ? VK_NULL_HANDLE : cmd.fence));
-		}
-
-		if (cmd.transition)
-		{
-			vulkan_check(vkEndCommandBuffer(cmd.transitionCommandBuffer));
-			cbSubmitInfo.commandBuffer = cmd.transitionCommandBuffer;
-			submitInfo.commandBufferInfoCount = 1;
-			submitInfo.pCommandBufferInfos = &cbSubmitInfo;
-
-			if (cmd.transfer)
-			{
-				// wait for init queue
-				submitInfo.waitSemaphoreInfoCount = 1;
-				submitInfo.pWaitSemaphoreInfos = &semaphoreInfo;
-			}
-
-			submitInfo.signalSemaphoreInfoCount = 0;
-			submitInfo.pSignalSemaphoreInfos = nullptr;
-
-			std::scoped_lock lock(*device->queue_transition.locker);
-			vulkan_check(vkQueueSubmit2(device->queue_transition.queue, 1, &submitInfo, cmd.fence));
+			vulkan_check(vkQueueSubmit2(device->queue_init.queue, 1, &submitInfo, cmd.fence));
 		}
 
 		while (vulkan_check(vkWaitForFences(device->device, 1, &cmd.fence, VK_TRUE, timeout_value)) == VK_TIMEOUT)
@@ -2954,7 +2897,6 @@ using namespace vulkan_internal;
 				if (computeFamily == VK_QUEUE_FAMILY_IGNORED && queueFamily.queueFamilyProperties.queueCount > 0 && queueFamily.queueFamilyProperties.queueFlags & VK_QUEUE_COMPUTE_BIT)
 				{
 					computeFamily = i;
-					computeFamilyCount = queueFamily.queueFamilyProperties.queueCount;
 				}
 
 				if (videoFamily == VK_QUEUE_FAMILY_IGNORED &&
@@ -3000,7 +2942,6 @@ using namespace vulkan_internal;
 					)
 				{
 					computeFamily = i;
-					computeFamilyCount = queueFamily.queueFamilyProperties.queueCount;
 
 					if (queueFamily.queueFamilyProperties.queueFlags & VK_QUEUE_SPARSE_BINDING_BIT)
 					{
@@ -3070,14 +3011,7 @@ using namespace vulkan_internal;
 				VkDeviceQueueCreateInfo queueCreateInfo = {};
 				queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 				queueCreateInfo.queueFamilyIndex = queueFamily;
-				if (queueFamily == computeFamily)
-				{
-					queueCreateInfo.queueCount = computeFamilyCount;
-				}
-				else
-				{
-					queueCreateInfo.queueCount = 1;
-				}
+				queueCreateInfo.queueCount = 1;
 				queueCreateInfo.pQueuePriorities = &queuePriority;
 				queueCreateInfos.push_back(queueCreateInfo);
 				families.push_back(queueFamily);
@@ -3106,14 +3040,6 @@ using namespace vulkan_internal;
 		{
 			vkGetDeviceQueue(device, graphicsFamily, 0, &graphicsQueue);
 			vkGetDeviceQueue(device, computeFamily, 0, &computeQueue);
-			if (computeFamilyCount > 1)
-			{
-				vkGetDeviceQueue(device, computeFamily, 1, &transitionQueue);
-			}
-			else
-			{
-				transitionQueue = computeQueue;
-			}
 			vkGetDeviceQueue(device, copyFamily, 0, &copyQueue);
 			vkGetDeviceQueue(device, initFamily, 0, &initQueue);
 			if (videoFamily != VK_QUEUE_FAMILY_IGNORED)
@@ -3133,8 +3059,6 @@ using namespace vulkan_internal;
 			queues[QUEUE_COPY].locker = queue_lockers[copyFamily];
 			queue_init.queue = initQueue;
 			queue_init.locker = queue_lockers[initFamily];
-			queue_transition.queue = transitionQueue;
-			queue_transition.locker = queue_lockers[computeFamily];
 			if (videoFamily != VK_QUEUE_FAMILY_IGNORED)
 			{
 				queues[QUEUE_VIDEO_DECODE].queue = videoQueue;
@@ -3321,7 +3245,6 @@ using namespace vulkan_internal;
 
 			// Transitions:
 			{
-				CopyAllocator::CopyCMD cmd = copyAllocator.allocate(0, false, true);
 				VkImageMemoryBarrier2 barrier = {};
 				barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
 				barrier.oldLayout = imageInfo.initialLayout;
@@ -3336,25 +3259,18 @@ using namespace vulkan_internal;
 				barrier.subresourceRange.levelCount = 1;
 				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
 				barrier.image = nullImage1D;
 				barrier.subresourceRange.layerCount = 1;
-
-				VkDependencyInfo dependencyInfo = {};
-				dependencyInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-				dependencyInfo.imageMemoryBarrierCount = 1;
-				dependencyInfo.pImageMemoryBarriers = &barrier;
-
-				vkCmdPipelineBarrier2(cmd.transitionCommandBuffer, &dependencyInfo);
+				GetTransitionHandler().barriers.push_back(barrier);
 
 				barrier.image = nullImage2D;
 				barrier.subresourceRange.layerCount = 6;
-				vkCmdPipelineBarrier2(cmd.transitionCommandBuffer, &dependencyInfo);
+				GetTransitionHandler().barriers.push_back(barrier);
 
 				barrier.image = nullImage3D;
 				barrier.subresourceRange.layerCount = 1;
-				vkCmdPipelineBarrier2(cmd.transitionCommandBuffer, &dependencyInfo);
-
-				copyAllocator.submit(cmd);
+				GetTransitionHandler().barriers.push_back(barrier);
 			}
 
 			VkImageViewCreateInfo viewInfo = {};
@@ -3673,6 +3589,15 @@ using namespace vulkan_internal;
 		}
 
 		copyAllocator.destroy();
+
+		for (auto& x : transition_handlers)
+		{
+			vkDestroyCommandPool(device, x.commandPool, nullptr);
+			for (auto& y : x.semaphores)
+			{
+				vkDestroySemaphore(device, y, nullptr);
+			}
+		}
 
 		for (auto& x : pso_layout_cache)
 		{
@@ -4053,7 +3978,7 @@ using namespace vulkan_internal;
 			}
 			else
 			{
-				cmd = copyAllocator.allocate(desc->size, true, false);
+				cmd = copyAllocator.allocate(desc->size);
 				mapped_data = cmd.uploadbuffer.mapped_data;
 			}
 
@@ -4479,7 +4404,7 @@ using namespace vulkan_internal;
 			}
 			else
 			{
-				cmd = copyAllocator.allocate(internal_state->allocation->GetSize(), true, true);
+				cmd = copyAllocator.allocate(internal_state->allocation->GetSize());
 				mapped_data = cmd.uploadbuffer.mapped_data;
 			}
 
@@ -4582,14 +4507,16 @@ using namespace vulkan_internal;
 					copyRegions.data()
 				);
 
+				copyAllocator.submit(cmd);
+
+				// Note: the copy allocator is done at this point on CPU and GPU, so transition will be safe:
 				std::swap(barrier.srcStageMask, barrier.dstStageMask);
 				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 				barrier.newLayout = _ConvertImageLayout(texture->desc.layout);
 				barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
 				barrier.dstAccessMask = _ParseResourceState(texture->desc.layout);
-				vkCmdPipelineBarrier2(cmd.transitionCommandBuffer, &dependencyInfo);
-
-				copyAllocator.submit(cmd);
+				std::scoped_lock lck(transitionLocker);
+				GetTransitionHandler().barriers.push_back(barrier);
 			}
 		}
 		else if(texture->desc.layout != ResourceState::UNDEFINED && internal_state->resource != VK_NULL_HANDLE)
@@ -4622,15 +4549,8 @@ using namespace vulkan_internal;
 			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
-			CopyAllocator::CopyCMD cmd = copyAllocator.allocate(0, false, true);
-
-			VkDependencyInfo dependencyInfo = {};
-			dependencyInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-			dependencyInfo.imageMemoryBarrierCount = 1;
-			dependencyInfo.pImageMemoryBarriers = &barrier;
-
-			vkCmdPipelineBarrier2(cmd.transitionCommandBuffer, &dependencyInfo);
-			copyAllocator.submit(cmd);
+			std::scoped_lock lck(transitionLocker);
+			GetTransitionHandler().barriers.push_back(barrier);
 		}
 
 		if (!has_flag(desc->misc_flags, ResourceMiscFlag::NO_DEFAULT_DESCRIPTORS))
@@ -7168,6 +7088,61 @@ using namespace vulkan_internal;
 	}
 	void GraphicsDevice_Vulkan::SubmitCommandLists()
 	{
+		// Submit resource initialization transitions:
+		{
+			std::scoped_lock lck(transitionLocker);
+			TransitionHandler& transition_handler = GetTransitionHandler();
+			if (!transition_handler.barriers.empty())
+			{
+				if (transition_handler.commandBuffer == VK_NULL_HANDLE)
+				{
+					VkCommandPoolCreateInfo poolInfo = {};
+					poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+					poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+					poolInfo.queueFamilyIndex = graphicsFamily;
+					vulkan_check(vkCreateCommandPool(device, &poolInfo, nullptr, &transition_handler.commandPool));
+
+					VkCommandBufferAllocateInfo commandBufferInfo = {};
+					commandBufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+					commandBufferInfo.commandBufferCount = 1;
+					commandBufferInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+					commandBufferInfo.commandPool = transition_handler.commandPool;
+					vulkan_check(vkAllocateCommandBuffers(device, &commandBufferInfo, &transition_handler.commandBuffer));
+
+					for (int i = 0; i < arraysize(transition_handler.semaphores); ++i)
+					{
+						VkSemaphoreCreateInfo info = {};
+						info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+						vulkan_check(vkCreateSemaphore(device, &info, nullptr, &transition_handler.semaphores[i]));
+					}
+				}
+				VkCommandBufferBeginInfo beginInfo = {};
+				beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+				beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+				beginInfo.pInheritanceInfo = nullptr;
+				vulkan_check(vkResetCommandPool(device, transition_handler.commandPool, 0));
+				vulkan_check(vkBeginCommandBuffer(transition_handler.commandBuffer, &beginInfo));
+				VkDependencyInfo dependencyInfo = {};
+				dependencyInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+				dependencyInfo.imageMemoryBarrierCount = (uint32_t)transition_handler.barriers.size();
+				dependencyInfo.pImageMemoryBarriers = transition_handler.barriers.data();
+				vkCmdPipelineBarrier2(transition_handler.commandBuffer, &dependencyInfo);
+				vulkan_check(vkEndCommandBuffer(transition_handler.commandBuffer));
+				CommandQueue& queue = queues[QUEUE_GRAPHICS];
+				VkCommandBufferSubmitInfo& cmd_submit = queue.submit_cmds.emplace_back();
+				cmd_submit.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+				cmd_submit.commandBuffer = transition_handler.commandBuffer;
+				for (int q = QUEUE_GRAPHICS + 1; q < QUEUE_COUNT; ++q)
+				{
+					VkSemaphore sema = transition_handler.semaphores[q - 1];
+					queue.signal(sema);
+					queues[q].wait(sema);
+				}
+				queue.submit(this, VK_NULL_HANDLE);
+				transition_handler.barriers.clear();
+			}
+		}
+
 		// Submit current frame:
 		{
 			uint32_t cmd_last = cmd_count;
