@@ -120,6 +120,7 @@ namespace wi::graphics
 		wi::vector<VkQueueFamilyVideoPropertiesKHR> queueFamiliesVideo;
 		uint32_t graphicsFamily = VK_QUEUE_FAMILY_IGNORED;
 		uint32_t computeFamily = VK_QUEUE_FAMILY_IGNORED;
+		uint32_t computeFamilyCount = 0;
 		uint32_t copyFamily = VK_QUEUE_FAMILY_IGNORED;
 		uint32_t videoFamily = VK_QUEUE_FAMILY_IGNORED;
 		uint32_t initFamily = VK_QUEUE_FAMILY_IGNORED;
@@ -130,6 +131,7 @@ namespace wi::graphics
 		VkQueue copyQueue = VK_NULL_HANDLE;
 		VkQueue videoQueue = VK_NULL_HANDLE;
 		VkQueue initQueue = VK_NULL_HANDLE;
+		VkQueue transitionQueue = VK_NULL_HANDLE;
 		VkQueue sparseQueue = VK_NULL_HANDLE;
 		bool debugUtils = false;
 
@@ -213,6 +215,7 @@ namespace wi::graphics
 		} queues[QUEUE_COUNT];
 
 		CommandQueue queue_init;
+		CommandQueue queue_transition;
 		CommandQueue queue_sparse;
 
 		struct CopyAllocator
@@ -226,6 +229,8 @@ namespace wi::graphics
 				VkCommandBuffer transferCommandBuffer = VK_NULL_HANDLE;
 				VkCommandPool transitionCommandPool = VK_NULL_HANDLE;
 				VkCommandBuffer transitionCommandBuffer = VK_NULL_HANDLE;
+				bool transfer = false;
+				bool transition = false;
 				VkFence fence = VK_NULL_HANDLE;
 				VkSemaphore semaphore = VK_NULL_HANDLE;
 				GPUBuffer uploadbuffer;
@@ -235,7 +240,7 @@ namespace wi::graphics
 
 			void init(GraphicsDevice_Vulkan* device);
 			void destroy();
-			CopyCMD allocate(uint64_t staging_size);
+			CopyCMD allocate(uint64_t staging_size, bool require_transfer, bool require_transition);
 			void submit(CopyCMD cmd);
 		};
 		mutable CopyAllocator copyAllocator;
