@@ -4,6 +4,10 @@
 #include <thread>
 #include <atomic>
 
+#if defined(PLATFORM_WINDOWS_DESKTOP) || defined(PLATFORM_LINUX)
+#include "Utility/cpuinfo.hpp"
+#endif // defined(PLATFORM_WINDOWS_DESKTOP) || defined(PLATFORM_LINUX)
+
 namespace wi::initializer
 {
 	static std::atomic_bool initializationStarted{ false };
@@ -41,16 +45,55 @@ namespace wi::initializer
 
 		wilog("\n[wi::initializer] Initializing Wicked Engine, please wait...\nVersion: %s\nPlatform: %s", wi::version::GetVersionString(), platform_string);
 
-		StackString cpustring;
-		cpustring.push_back("\nCPU features used by this build: ");
+		StackString<1024> cpustring;
+#if defined(PLATFORM_WINDOWS_DESKTOP) || defined(PLATFORM_LINUX)
+		CPUInfo cpuinfo;
+		cpustring.push_back("\nCPU: ");
+		cpustring.push_back(cpuinfo.model().c_str());
+		cpustring.push_back("\n\tFeatures available: ");
+		if (cpuinfo.haveSSE())
+		{
+			cpustring.push_back("SSE; ");
+		}
+		if (cpuinfo.haveSSE2())
+		{
+			cpustring.push_back("SSE 2; ");
+		}
+		if (cpuinfo.haveSSE3())
+		{
+			cpustring.push_back("SSE 3; ");
+		}
+		if (cpuinfo.haveSSE41())
+		{
+			cpustring.push_back("SSE 4.1; ");
+		}
+		if (cpuinfo.haveSSE42())
+		{
+			cpustring.push_back("SSE 4.2; ");
+		}
+		if (cpuinfo.haveAVX())
+		{
+			cpustring.push_back("AVX; ");
+		}
+		if (cpuinfo.haveAVX2())
+		{
+			cpustring.push_back("AVX 2; ");
+		}
+		if (cpuinfo.haveAVX512F())
+		{
+			cpustring.push_back("AVX 512; ");
+		}
+#endif // defined(PLATFORM_WINDOWS_DESKTOP) || defined(PLATFORM_LINUX)
+		cpustring.push_back("\n\tFeatures used: ");
 #ifdef _XM_SSE_INTRINSICS_
+		cpustring.push_back("SSE; ");
 		cpustring.push_back("SSE 2; ");
 #endif // _XM_SSE_INTRINSICS_
 #ifdef _XM_SSE3_INTRINSICS_
 		cpustring.push_back("SSE 3; ");
 #endif // _XM_SSE3_INTRINSICS_
 #ifdef _XM_SSE4_INTRINSICS_
-		cpustring.push_back("SSE 4; ");
+		cpustring.push_back("SSE 4.1; ");
 #endif // _XM_SSE4_INTRINSICS_
 #ifdef _XM_AVX_INTRINSICS_
 		cpustring.push_back("AVX; ");
@@ -61,12 +104,6 @@ namespace wi::initializer
 #ifdef _XM_ARM_NEON_INTRINSICS_
 		cpustring.push_back("NEON; ");
 #endif // _XM_ARM_NEON_INTRINSICS_
-#ifdef _XM_F16C_INTRINSICS_
-		cpustring.push_back("F16C; ");
-#endif // _XM_F16C_INTRINSICS_
-#ifdef _XM_FMA3_INTRINSICS_
-		cpustring.push_back("FMA3; ");
-#endif // _XM_FMA3_INTRINSICS_
 
 		wi::backlog::post(cpustring.c_str());
 
@@ -74,6 +111,8 @@ namespace wi::initializer
 		{
 			wilog_messagebox("XMVerifyCPUSupport() failed! This means that your CPU doesn't support a required feature! %s", cpustring.c_str());
 		}
+
+		wilog("\nRAM: %s", wi::helper::GetMemorySizeText(wi::helper::GetMemoryUsage().total_physical).c_str());
 
 		size_t shaderdump_count = wi::renderer::GetShaderDumpCount();
 		if (shaderdump_count > 0)
