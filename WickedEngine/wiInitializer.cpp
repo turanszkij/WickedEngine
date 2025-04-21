@@ -50,7 +50,7 @@ namespace wi::initializer
 		CPUInfo cpuinfo;
 		cpustring.push_back("\nCPU: ");
 		cpustring.push_back(cpuinfo.model().c_str());
-		cpustring.push_back("\n\t- Features available: ");
+		cpustring.push_back("\n\tFeatures available: ");
 		if (cpuinfo.haveSSE())
 		{
 			cpustring.push_back("SSE; ");
@@ -84,7 +84,7 @@ namespace wi::initializer
 			cpustring.push_back("AVX 512; ");
 		}
 #endif // defined(PLATFORM_WINDOWS_DESKTOP) || defined(PLATFORM_LINUX)
-		cpustring.push_back("\n\t- Features used: ");
+		cpustring.push_back("\n\tFeatures used: ");
 #ifdef _XM_SSE_INTRINSICS_
 		cpustring.push_back("SSE; ");
 		cpustring.push_back("SSE 2; ");
@@ -111,6 +111,8 @@ namespace wi::initializer
 		{
 			wilog_messagebox("XMVerifyCPUSupport() failed! This means that your CPU doesn't support a required feature! %s", cpustring.c_str());
 		}
+
+		wilog("\nRAM: %s", wi::helper::GetMemorySizeText(wi::helper::GetMemoryUsage().total_physical).c_str());
 
 		size_t shaderdump_count = wi::renderer::GetShaderDumpCount();
 		if (shaderdump_count > 0)
