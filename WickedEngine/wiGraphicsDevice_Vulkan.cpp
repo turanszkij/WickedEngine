@@ -1330,6 +1330,16 @@ using namespace vulkan_internal;
 		vulkan_check(vkSetDebugUtilsObjectNameEXT(device, &info));
 	}
 
+	void GraphicsDevice_Vulkan::CommandQueue::clear()
+	{
+		swapchain_updates.clear();
+		submit_swapchains.clear();
+		submit_swapChainImageIndices.clear();
+		submit_waitSemaphoreInfos.clear();
+		submit_signalSemaphores.clear();
+		submit_signalSemaphoreInfos.clear();
+		submit_cmds.clear();
+	}
 	void GraphicsDevice_Vulkan::CommandQueue::signal(VkSemaphore semaphore)
 	{
 		if (queue == VK_NULL_HANDLE)
@@ -3262,15 +3272,15 @@ using namespace vulkan_internal;
 
 				barrier.image = nullImage1D;
 				barrier.subresourceRange.layerCount = 1;
-				GetTransitionHandler().barriers.push_back(barrier);
+				init_transitions.push_back(barrier);
 
 				barrier.image = nullImage2D;
 				barrier.subresourceRange.layerCount = 6;
-				GetTransitionHandler().barriers.push_back(barrier);
+				init_transitions.push_back(barrier);
 
 				barrier.image = nullImage3D;
 				barrier.subresourceRange.layerCount = 1;
-				GetTransitionHandler().barriers.push_back(barrier);
+				init_transitions.push_back(barrier);
 			}
 
 			VkImageViewCreateInfo viewInfo = {};
@@ -4516,7 +4526,7 @@ using namespace vulkan_internal;
 				barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
 				barrier.dstAccessMask = _ParseResourceState(texture->desc.layout);
 				std::scoped_lock lck(transitionLocker);
-				GetTransitionHandler().barriers.push_back(barrier);
+				init_transitions.push_back(barrier);
 			}
 		}
 		else if(texture->desc.layout != ResourceState::UNDEFINED && internal_state->resource != VK_NULL_HANDLE)
@@ -4550,7 +4560,7 @@ using namespace vulkan_internal;
 			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
 			std::scoped_lock lck(transitionLocker);
-			GetTransitionHandler().barriers.push_back(barrier);
+			init_transitions.push_back(barrier);
 		}
 
 		if (!has_flag(desc->misc_flags, ResourceMiscFlag::NO_DEFAULT_DESCRIPTORS))
@@ -7090,9 +7100,9 @@ using namespace vulkan_internal;
 	{
 		// Submit resource initialization transitions:
 		{
-			std::scoped_lock lck(transitionLocker);
 			TransitionHandler& transition_handler = GetTransitionHandler();
-			if (!transition_handler.barriers.empty())
+			std::scoped_lock lck(transitionLocker);
+			if (!init_transitions.empty())
 			{
 				if (transition_handler.commandBuffer == VK_NULL_HANDLE)
 				{
@@ -7124,8 +7134,8 @@ using namespace vulkan_internal;
 				vulkan_check(vkBeginCommandBuffer(transition_handler.commandBuffer, &beginInfo));
 				VkDependencyInfo dependencyInfo = {};
 				dependencyInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-				dependencyInfo.imageMemoryBarrierCount = (uint32_t)transition_handler.barriers.size();
-				dependencyInfo.pImageMemoryBarriers = transition_handler.barriers.data();
+				dependencyInfo.imageMemoryBarrierCount = (uint32_t)init_transitions.size();
+				dependencyInfo.pImageMemoryBarriers = init_transitions.data();
 				vkCmdPipelineBarrier2(transition_handler.commandBuffer, &dependencyInfo);
 				vulkan_check(vkEndCommandBuffer(transition_handler.commandBuffer));
 				CommandQueue& queue = queues[QUEUE_GRAPHICS];
@@ -7134,12 +7144,14 @@ using namespace vulkan_internal;
 				cmd_submit.commandBuffer = transition_handler.commandBuffer;
 				for (int q = QUEUE_GRAPHICS + 1; q < QUEUE_COUNT; ++q)
 				{
+					if (queues[q].queue == VK_NULL_HANDLE)
+						continue;
 					VkSemaphore sema = transition_handler.semaphores[q - 1];
 					queue.signal(sema);
 					queues[q].wait(sema);
 				}
 				queue.submit(this, VK_NULL_HANDLE);
-				transition_handler.barriers.clear();
+				init_transitions.clear();
 			}
 		}
 
@@ -7291,6 +7303,14 @@ using namespace vulkan_internal;
 			if (resetFenceCount > 0)
 			{
 				vulkan_check(vkResetFences(device, resetFenceCount, resetFences));
+			}
+		}
+
+		for (int q = 0; q < QUEUE_COUNT; ++q)
+		{
+			if (queues[q].queue == VK_NULL_HANDLE)
+			{
+				queues[q].clear();
 			}
 		}
 
