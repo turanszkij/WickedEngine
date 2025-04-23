@@ -1292,6 +1292,8 @@ Describes a Rigid Body Physics object.
 - CapsuleParams_Radius : float
 - CapsuleParams_Height : float
 - TargetMeshLOD : int
+- MaxSlopeAngle : float		-- character physics max slope angle in radians
+- GravityFactor : float		- character physics gravity factor
 
 </br>
 
@@ -1304,6 +1306,8 @@ Describes a Rigid Body Physics object.
 - SetDisableDeactivation(bool value) -- Sets if the rigidbody is able to deactivate after inactivity
 - SetKinematic(bool value) -- Set the rigid body to be kinematic (which means it is optimized for being moved by the system or user logic, not the physics engine)
 - SetStartDeactivated(bool value) -- If true, rigid body will be deactivated when added to the simulation (if it's dynamic, it won't fall)
+- SetCharacterPhysics(bool value)	-- enable character physics that is driven by the physics engine
+- IsCharacterPhysics() : bool	-- returns true if this rigid body has character physics enabled
 
 #### SoftBodyPhysicsComponent
 Describes a Soft Body Physics object.
@@ -1579,6 +1583,7 @@ The metadata component can store and retrieve an arbitrary amount of named user 
 
 #### CharacterComponent
 Implementation of basic character controller features such as movement in the scene, inverse kinematics for legs, swimming, water ripples, etc.
+Note that CharacterComponent is NOT using physics, but a custom character logic. The character will collide with other characters, objects that are tagged as Navmesh, and colliders that are tagged with CPU enabled.
 
 - SetActive(bool value)	-- Enable/disable character processing (enabled by default)
 - IsActive() : bool	-- Returns whether the character processing is active or not
@@ -2089,7 +2094,14 @@ Playstation button codes:
 - GetAccuracy() : int
 - SetFrameRate(float value)	-- Set the frames per second resolution of physics simulation (default = 120 FPS)
 - GetFrameRate() : float
-- GetVelocity() : Vector-- returns linear velocity of a body
+- GetVelocity() : Vector	-- returns linear velocity of the body in the latest simulation step
+- GetPosition() : Vector	-- returns current position of the body in the latest simulation step
+- GetRotation() : Vector	-- returns current rotation of the body in the latest simulation step
+- GetCharacterGroundPosition() : Vector		-- returns the ground position of the rigidbody if it has character physics enabled
+- GetCharacterGroundNormal() : Vector		-- returns the ground normal of the rigidbody if it has character physics enabled
+- GetCharacterGroundVelocity() : Vector		-- returns the ground velocity of the rigidbody if it has character physics enabled
+- IsCharacterGroundSupported() : bool		-- returns true if the character physics is supported by normal or steep ground
+- GetCharacterGroundState() : CharacterGroundStates			-- returns the `CharacterGroundStates` of the character physics
 - SetGhostMode(RigidBodyPhysicsComponent|HumanoidComponent component, bool value)	-- enable/disable ghost mode for rigid body or ragdoll (all collision disabled)
 - SetRagdollGhostMode(HumanoidComponent humanoid, bool value)	-- enable/disable ghost mode for a ragdoll. In ghost mode, the ragdoll will not collide with anything. Enable this if the humanoid sits inside a vehicle for example.
 - SetPosition(RigidBodyPhysicsComponent component, Vector position)	-- teleport a dynamic body
@@ -2109,6 +2121,15 @@ Playstation button codes:
 - SetActivationState(SoftBodyPhysicsComponent component, int state)	-- Force set activation state to soft body. Use a value ACTIVATION_STATE_ACTIVE or ACTIVATION_STATE_INACTIVE
 - [outer]ACTIVATION_STATE_ACTIVE : int
 - [outer]ACTIVATION_STATE_INACTIVE : int
+
+```lua
+CharacterGroundStates = {
+	OnGround = 0,		-- Character is on the ground and can move freely.
+	OnSteepGround = 1,	-- Character is on a slope that is too steep and can't climb up any further. The caller should start applying downward velocity if sliding from the slope is desired.
+	NotSupported = 2,	-- Character is touching an object, but is not supported by it and should fall. The GetGroundXXX functions will return information about the touched object.
+	InAir = 3,			-- Character is in the air and is not touching anything.
+}
+```
 
 - Intersects(Scene scene, Ray ray) : Entity entity, Vector position,normal, Entity humanoid_ragdoll_entity, HumanoidBone humanoid_bone, Vector position_local	-- Performns physics scene intersection for closest hit with a ray
 

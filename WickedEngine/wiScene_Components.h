@@ -402,6 +402,7 @@ namespace wi::scene
 			KINEMATIC = 1 << 1,
 			START_DEACTIVATED = 1 << 2,
 			REFRESH_PARAMETERS_REQUEST = 1 << 3,
+			CHARACTER_PHYSICS = 1 << 4,
 		};
 		uint32_t _flags = EMPTY;
 
@@ -507,6 +508,12 @@ namespace wi::scene
 
 		} vehicle;
 
+		struct Character
+		{
+			float maxSlopeAngle = wi::math::DegreesToRadians(50.0f);	// Maximum angle of slope that character can still walk on (radians).
+			float gravityFactor = 1.0f;
+		} character;
+
 		// Non-serialized attributes:
 		std::shared_ptr<void> physicsobject = nullptr; // You can set to null to recreate the physics object the next time phsyics system will be running.
 
@@ -523,6 +530,9 @@ namespace wi::scene
 
 		constexpr void SetRefreshParametersNeeded(bool value = true) { if (value) { _flags |= REFRESH_PARAMETERS_REQUEST; } else { _flags &= ~REFRESH_PARAMETERS_REQUEST; } }
 		constexpr bool IsRefreshParametersNeeded() const { return _flags & REFRESH_PARAMETERS_REQUEST; }
+
+		constexpr void SetCharacterPhysics(bool value = true) { if (value) { _flags |= CHARACTER_PHYSICS; } else { _flags &= ~CHARACTER_PHYSICS; } }
+		constexpr bool IsCharacterPhysics() const { return _flags & CHARACTER_PHYSICS; }
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};

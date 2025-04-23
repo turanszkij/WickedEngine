@@ -74,6 +74,22 @@ namespace wi::physics
 	);
 
 	XMFLOAT3 GetVelocity(wi::scene::RigidBodyPhysicsComponent& physicscomponent);
+	XMFLOAT3 GetPosition(wi::scene::RigidBodyPhysicsComponent& physicscomponent);
+	XMFLOAT4 GetRotation(wi::scene::RigidBodyPhysicsComponent& physicscomponent);
+
+	XMFLOAT3 GetCharacterGroundPosition(wi::scene::RigidBodyPhysicsComponent& physicscomponent);
+	XMFLOAT3 GetCharacterGroundNormal(wi::scene::RigidBodyPhysicsComponent& physicscomponent);
+	XMFLOAT3 GetCharacterGroundVelocity(wi::scene::RigidBodyPhysicsComponent& physicscomponent);
+	bool IsCharacterGroundSupported(wi::scene::RigidBodyPhysicsComponent& physicscomponent);
+
+	enum class CharacterGroundStates
+	{
+		OnGround,		// Character is on the ground and can move freely.
+		OnSteepGround,	// Character is on a slope that is too steep and can't climb up any further. The caller should start applying downward velocity if sliding from the slope is desired.
+		NotSupported,	// Character is touching an object, but is not supported by it and should fall. The GetGroundXXX functions will return information about the touched object.
+		InAir,			// Character is in the air and is not touching anything.
+	};
+	CharacterGroundStates GetCharacterGroundState(wi::scene::RigidBodyPhysicsComponent& physicscomponent);
 
 	// Apply force at body center
 	void ApplyForce(

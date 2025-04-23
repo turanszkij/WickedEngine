@@ -361,6 +361,62 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 	AddWidget(&physicsDebugCheckBox);
 
 
+
+	characterCheckBox.Create("Character physics: ");
+	characterCheckBox.SetTooltip("Enable physics-driven character");
+	characterCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->SetCharacterPhysics(args.bValue);
+				physicscomponent->SetRefreshParametersNeeded();
+			}
+		}
+	});
+	AddWidget(&characterCheckBox);
+
+	characterLabel.Create("CharacterLabel");
+	characterLabel.SetText("Character is driven by the physics engine. This is different from CharacterComponent which uses custom character logic!");
+	characterLabel.SetSize(XMFLOAT2(100, 100));
+	AddWidget(&characterLabel);
+
+	characterSlopeSlider.Create(0, 90, 50, 90, "Max slope angle: ");
+	characterSlopeSlider.SetTooltip("Specify the slope angle that the character can stand on.");
+	characterSlopeSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->character.maxSlopeAngle = wi::math::DegreesToRadians(args.fValue);
+				physicscomponent->SetRefreshParametersNeeded();
+			}
+		}
+	});
+	AddWidget(&characterSlopeSlider);
+
+	characterGravitySlider.Create(0, 4, 1, 100, "Gravity factor: ");
+	characterGravitySlider.SetTooltip("Specify the strength of gravity acting on the character.");
+	characterGravitySlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->character.gravityFactor = args.fValue;
+				physicscomponent->SetRefreshParametersNeeded();
+			}
+		}
+	});
+	AddWidget(&characterGravitySlider);
+
+
+
 	vehicleLabel.Create("VehicleLabel");
 	std::string tips;
 	tips += "Vehicle physics tips:\n";
@@ -934,6 +990,10 @@ void RigidBodyWindow::SetEntity(Entity entity)
 
 		collisionShapeComboBox.SetSelectedByUserdataWithoutCallback((uint64_t)physicsComponent->shape);
 
+		characterCheckBox.SetCheck(physicsComponent->IsCharacterPhysics());
+		characterSlopeSlider.SetValue(wi::math::RadiansToDegrees(physicsComponent->character.maxSlopeAngle));
+		characterGravitySlider.SetValue(physicsComponent->character.gravityFactor);
+
 		vehicleCombo.SetSelectedByUserdataWithoutCallback((uint64_t)physicsComponent->vehicle.type);
 		vehicleCollisionCombo.SetSelectedByUserdataWithoutCallback((uint64_t)physicsComponent->vehicle.collision_mode);
 
@@ -1058,6 +1118,25 @@ void RigidBodyWindow::ResizeLayout()
 	add_right(disabledeactivationCheckBox);
 	add_right(kinematicCheckBox);
 	add_right(physicsDebugCheckBox);
+
+	y += 20;
+
+	add_right(characterCheckBox);
+	if (characterCheckBox.GetCheck())
+	{
+		characterLabel.SetVisible(true);
+		characterSlopeSlider.SetVisible(true);
+		characterGravitySlider.SetVisible(true);
+		add_fullwidth(characterLabel);
+		add(characterSlopeSlider);
+		add(characterGravitySlider);
+	}
+	else
+	{
+		characterLabel.SetVisible(false);
+		characterSlopeSlider.SetVisible(false);
+		characterGravitySlider.SetVisible(false);
+	}
 
 	y += 20;
 

@@ -6080,9 +6080,11 @@ Luna<RigidBodyPhysicsComponent_BindLua>::FunctionType RigidBodyPhysicsComponent_
 	lunamethod(RigidBodyPhysicsComponent_BindLua, IsDisableDeactivation),
 	lunamethod(RigidBodyPhysicsComponent_BindLua, IsKinematic),
 	lunamethod(RigidBodyPhysicsComponent_BindLua, IsStartDeactivated),
+	lunamethod(RigidBodyPhysicsComponent_BindLua, IsCharacterPhysics),
 	lunamethod(RigidBodyPhysicsComponent_BindLua, SetDisableDeactivation),
 	lunamethod(RigidBodyPhysicsComponent_BindLua, SetKinematic),
 	lunamethod(RigidBodyPhysicsComponent_BindLua, SetStartDeactivated),
+	lunamethod(RigidBodyPhysicsComponent_BindLua, SetCharacterPhysics),
 	{ NULL, NULL }
 };
 Luna<RigidBodyPhysicsComponent_BindLua>::PropertyType RigidBodyPhysicsComponent_BindLua::properties[] = {
@@ -6098,6 +6100,8 @@ Luna<RigidBodyPhysicsComponent_BindLua>::PropertyType RigidBodyPhysicsComponent_
 	lunaproperty(RigidBodyPhysicsComponent_BindLua, CapsuleParams_Radius),
 	lunaproperty(RigidBodyPhysicsComponent_BindLua, CapsuleParams_Height),
 	lunaproperty(RigidBodyPhysicsComponent_BindLua, TargetMeshLOD),
+	lunaproperty(RigidBodyPhysicsComponent_BindLua, MaxSlopeAngle),
+	lunaproperty(RigidBodyPhysicsComponent_BindLua, GravityFactor),
 	{ NULL, NULL }
 };
 
@@ -6172,6 +6176,25 @@ int RigidBodyPhysicsComponent_BindLua::SetStartDeactivated(lua_State* L)
 		wi::lua::SError(L, "SetStartDeactivated(bool value) not enough arguments!");
 	}
 	return 0;
+}
+int RigidBodyPhysicsComponent_BindLua::SetCharacterPhysics(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		bool value = wi::lua::SGetBool(L, 1);
+		component->SetCharacterPhysics(value);
+	}
+	else
+	{
+		wi::lua::SError(L, "SetCharacterPhysics(bool value) not enough arguments!");
+	}
+	return 0;
+}
+int RigidBodyPhysicsComponent_BindLua::IsCharacterPhysics(lua_State* L)
+{
+	wi::lua::SSetBool(L, component->IsCharacterPhysics());
+	return 1;
 }
 
 
