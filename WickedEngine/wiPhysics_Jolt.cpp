@@ -126,12 +126,11 @@ namespace wi::physics
 
 		static std::atomic<uint32_t> collisionGroupID{}; // generate unique collision group for each ragdoll to enable collision between them
 
-		namespace Layers
+		enum Layers : ObjectLayer
 		{
-			static constexpr ObjectLayer NON_MOVING = 0;
-			static constexpr ObjectLayer MOVING = 1;
-			static constexpr ObjectLayer GHOST = 2;
-			static constexpr ObjectLayer NUM_LAYERS = 3;
+			GHOST = 0,
+			NON_MOVING = 1,
+			MOVING = 2,
 		};
 
 		/// Class that determines if two object layers can collide
@@ -142,12 +141,12 @@ namespace wi::physics
 			{
 				switch (inObject1)
 				{
+				case Layers::GHOST:
+					return false; // collides with nothing
 				case Layers::NON_MOVING:
 					return inObject2 == Layers::MOVING; // Non moving only collides with moving
 				case Layers::MOVING:
 					return inObject2 == Layers::MOVING || inObject2 == Layers::NON_MOVING; // Moving collides with moving and non moving
-				case Layers::GHOST:
-					return false; // collides with nothing
 				default:
 					JPH_ASSERT(false);
 					return false;
@@ -162,8 +161,8 @@ namespace wi::physics
 		// your broadphase layers define JPH_TRACK_BROADPHASE_STATS and look at the stats reported on the TTY.
 		namespace BroadPhaseLayers
 		{
-			static constexpr BroadPhaseLayer NON_MOVING(0);
-			static constexpr BroadPhaseLayer MOVING(1);
+			static constexpr BroadPhaseLayer STATIC(0);
+			static constexpr BroadPhaseLayer DYNAMIC(1);
 			static constexpr uint NUM_LAYERS(2);
 		};
 
@@ -172,13 +171,7 @@ namespace wi::physics
 		class BPLayerInterfaceImpl final : public BroadPhaseLayerInterface
 		{
 		public:
-			BPLayerInterfaceImpl()
-			{
-				// Create a mapping table from object to broad phase layer
-				mObjectToBroadPhase[Layers::NON_MOVING] = BroadPhaseLayers::NON_MOVING;
-				mObjectToBroadPhase[Layers::MOVING] = BroadPhaseLayers::MOVING;
-				mObjectToBroadPhase[Layers::GHOST] = BroadPhaseLayers::MOVING;
-			}
+			BPLayerInterfaceImpl() {}
 
 			virtual uint GetNumBroadPhaseLayers() const override
 			{
@@ -187,12 +180,8 @@ namespace wi::physics
 
 			virtual BroadPhaseLayer GetBroadPhaseLayer(ObjectLayer inLayer) const override
 			{
-				JPH_ASSERT(inLayer < Layers::NUM_LAYERS);
-				return mObjectToBroadPhase[inLayer];
+				return inLayer == Layers::MOVING ? BroadPhaseLayers::DYNAMIC : BroadPhaseLayers::STATIC;
 			}
-
-		private:
-			BroadPhaseLayer mObjectToBroadPhase[Layers::NUM_LAYERS];
 		};
 
 		/// Class that determines if an object layer can collide with a broadphase layer
@@ -203,12 +192,12 @@ namespace wi::physics
 			{
 				switch (inLayer1)
 				{
-				case Layers::NON_MOVING:
-					return inLayer2 == BroadPhaseLayers::MOVING;
-				case Layers::MOVING:
-					return inLayer2 == BroadPhaseLayers::MOVING || inLayer2 == BroadPhaseLayers::NON_MOVING;
 				case Layers::GHOST:
 					return false;
+				case Layers::NON_MOVING:
+					return inLayer2 == BroadPhaseLayers::DYNAMIC;
+				case Layers::MOVING:
+					return inLayer2 == BroadPhaseLayers::DYNAMIC || inLayer2 == BroadPhaseLayers::STATIC;
 				default:
 					JPH_ASSERT(false);
 					return false;
