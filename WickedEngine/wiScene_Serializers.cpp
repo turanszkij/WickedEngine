@@ -834,6 +834,12 @@ namespace wi::scene
 				SerializeEntity(archive, vehicle.wheel_entity_rear_left, seri);
 				SerializeEntity(archive, vehicle.wheel_entity_rear_right, seri);
 			}
+
+			if (seri.GetVersion() >= 6)
+			{
+				archive >> character.maxSlopeAngle;
+				archive >> character.gravityFactor;
+			}
 		}
 		else
 		{
@@ -906,6 +912,12 @@ namespace wi::scene
 				SerializeEntity(archive, vehicle.wheel_entity_front_right, seri);
 				SerializeEntity(archive, vehicle.wheel_entity_rear_left, seri);
 				SerializeEntity(archive, vehicle.wheel_entity_rear_right, seri);
+			}
+
+			if (seri.GetVersion() >= 6)
+			{
+				archive << character.maxSlopeAngle;
+				archive << character.gravityFactor;
 			}
 		}
 	}

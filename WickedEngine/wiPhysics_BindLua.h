@@ -41,6 +41,14 @@ namespace wi::lua
 		int ActivateAllRigidBodies(lua_State* L);
 		int ResetPhysicsObjects(lua_State* L);
 		int GetVelocity(lua_State* L);
+		int GetPosition(lua_State* L);
+		int GetRotation(lua_State* L);
+		int GetCharacterGroundPosition(lua_State* L);
+		int GetCharacterGroundNormal(lua_State* L);
+		int GetCharacterGroundVelocity(lua_State* L);
+		int IsCharacterGroundSupported(lua_State* L);
+		int GetCharacterGroundState(lua_State* L);
+		int ChangeCharacterShape(lua_State* L);
 		int SetGhostMode(lua_State* L);
 		int SetRagdollGhostMode(lua_State* L);
 

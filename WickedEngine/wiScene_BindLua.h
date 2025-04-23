@@ -952,6 +952,8 @@ namespace wi::lua::scene
 			CapsuleParams_Radius = FloatProperty(&component->capsule.radius);
 			CapsuleParams_Height = FloatProperty(&component->capsule.height);
 			TargetMeshLOD = LongLongProperty(reinterpret_cast<long long*>(&component->mesh_lod));
+			MaxSlopeAngle = FloatProperty(&component->character.maxSlopeAngle);
+			GravityFactor = FloatProperty(&component->character.gravityFactor);
 		}
 
 		RigidBodyPhysicsComponent_BindLua(wi::scene::RigidBodyPhysicsComponent* component) :component(component)
@@ -975,7 +977,9 @@ namespace wi::lua::scene
 		FloatProperty CapsuleParams_Radius;
 		FloatProperty CapsuleParams_Height;
 		LongLongProperty TargetMeshLOD;
-		
+		FloatProperty MaxSlopeAngle;
+		FloatProperty GravityFactor;
+
 		PropertyFunction(Shape)
 		PropertyFunction(Mass)
 		PropertyFunction(Friction)
@@ -988,10 +992,13 @@ namespace wi::lua::scene
 		PropertyFunction(CapsuleParams_Radius)
 		PropertyFunction(CapsuleParams_Height)
 		PropertyFunction(TargetMeshLOD)
+		PropertyFunction(MaxSlopeAngle)
+		PropertyFunction(GravityFactor)
 
 		int SetDisableDeactivation(lua_State* L);
 		int SetKinematic(lua_State* L);
 		int SetStartDeactivated(lua_State* L);
+		int SetCharacterPhysics(lua_State* L);
 
 		int IsVehicle(lua_State* L);
 		int IsCar(lua_State* L);
@@ -999,6 +1006,7 @@ namespace wi::lua::scene
 		int IsDisableDeactivation(lua_State* L);
 		int IsKinematic(lua_State* L);
 		int IsStartDeactivated(lua_State* L);
+		int IsCharacterPhysics(lua_State* L);
 	};
 
 	class SoftBodyPhysicsComponent_BindLua

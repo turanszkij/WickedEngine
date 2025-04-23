@@ -74,6 +74,27 @@ namespace wi::physics
 	);
 
 	XMFLOAT3 GetVelocity(wi::scene::RigidBodyPhysicsComponent& physicscomponent);
+	XMFLOAT3 GetPosition(wi::scene::RigidBodyPhysicsComponent& physicscomponent);
+	XMFLOAT4 GetRotation(wi::scene::RigidBodyPhysicsComponent& physicscomponent);
+
+	XMFLOAT3 GetCharacterGroundPosition(wi::scene::RigidBodyPhysicsComponent& physicscomponent);
+	XMFLOAT3 GetCharacterGroundNormal(wi::scene::RigidBodyPhysicsComponent& physicscomponent);
+	XMFLOAT3 GetCharacterGroundVelocity(wi::scene::RigidBodyPhysicsComponent& physicscomponent);
+
+	// Returns true if character is standing on the ground or steep ground, false otherwise
+	bool IsCharacterGroundSupported(wi::scene::RigidBodyPhysicsComponent& physicscomponent);
+
+	enum class CharacterGroundStates
+	{
+		OnGround,		// Character is on the ground and can move freely.
+		OnSteepGround,	// Character is on a slope that is too steep and can't climb up any further. The caller should start applying downward velocity if sliding from the slope is desired.
+		NotSupported,	// Character is touching an object, but is not supported by it and should fall. The GetGroundXXX functions will return information about the touched object.
+		InAir,			// Character is in the air and is not touching anything.
+	};
+	CharacterGroundStates GetCharacterGroundState(wi::scene::RigidBodyPhysicsComponent& physicscomponent);
+
+	// Tries to change the physics character's shape, returns tru if successful, false if character would be blocked with the new shape
+	bool ChangeCharacterShape(wi::scene::RigidBodyPhysicsComponent& physicscomponent, const wi::scene::RigidBodyPhysicsComponent::CapsuleParams& capsule);
 
 	// Apply force at body center
 	void ApplyForce(
