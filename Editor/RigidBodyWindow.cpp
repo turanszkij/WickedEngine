@@ -55,7 +55,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 	collisionShapeComboBox.SetTooltip("Set rigid body collision shape.");
 	AddWidget(&collisionShapeComboBox);
 
-	XSlider.Create(0, 10, 1, 100000, "X: ");
+	XSlider.Create(0, 10, 1, 100000, "XSlider");
 	XSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -81,9 +81,10 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			}
 		}
 	});
+	ZSlider.SetLocalizationEnabled(false);
 	AddWidget(&XSlider);
 
-	YSlider.Create(0, 10, 1, 100000, "Y: ");
+	YSlider.Create(0, 10, 1, 100000, "YSlider");
 	YSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -106,9 +107,10 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			}
 		}
 	});
+	ZSlider.SetLocalizationEnabled(false);
 	AddWidget(&YSlider);
 
-	ZSlider.Create(0, 10, 1, 100000, "Z: ");
+	ZSlider.Create(0, 10, 1, 100000, "ZSlider");
 	ZSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -128,11 +130,8 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			}
 		}
 	});
+	ZSlider.SetLocalizationEnabled(false);
 	AddWidget(&ZSlider);
-
-	XSlider.SetText("Width");
-	YSlider.SetText("Height");
-	ZSlider.SetText("Depth");
 
 	massSlider.Create(0, 10, 1, 100000, "Mass: ");
 	massSlider.SetTooltip("Set the mass amount for the physics engine.");
@@ -362,7 +361,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 
 
 
-	characterCheckBox.Create("Character physics: ");
+	characterCheckBox.Create(ICON_PHYSICS_CHARACTER " Character physics: ");
 	characterCheckBox.SetTooltip("Enable physics-driven character");
 	characterCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
@@ -379,8 +378,8 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 	AddWidget(&characterCheckBox);
 
 	characterLabel.Create("CharacterLabel");
-	characterLabel.SetText("Character is driven by the physics engine. This is different from CharacterComponent which uses custom character logic!");
-	characterLabel.SetSize(XMFLOAT2(100, 100));
+	characterLabel.SetText("Notes about physics-driven character:\n- The capsule shape is recommended for a physics character.\n- The friction and mass of the physics character are taken from the standard rigid body parameters.\n- This is different from CharacterComponent which uses custom character movement logic.");
+	characterLabel.SetSize(XMFLOAT2(100, 160));
 	AddWidget(&characterLabel);
 
 	characterSlopeSlider.Create(0, 90, 50, 90, "Max slope angle: ");
@@ -429,7 +428,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 	vehicleLabel.SetSize(XMFLOAT2(100, 240));
 	AddWidget(&vehicleLabel);
 
-	vehicleCombo.Create("Vehicle physics: ");
+	vehicleCombo.Create(ICON_VEHICLE " Vehicle physics: ");
 	vehicleCombo.AddItem("None", (uint64_t)RigidBodyPhysicsComponent::Vehicle::Type::None);
 	vehicleCombo.AddItem("Car", (uint64_t)RigidBodyPhysicsComponent::Vehicle::Type::Car);
 	vehicleCombo.AddItem("Motorcycle", (uint64_t)RigidBodyPhysicsComponent::Vehicle::Type::Motorcycle);
@@ -911,13 +910,6 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 
 void RigidBodyWindow::RefreshShapeType()
 {
-	XSlider.SetEnabled(false);
-	YSlider.SetEnabled(false);
-	ZSlider.SetEnabled(false);
-	XSlider.SetText("-");
-	YSlider.SetText("-");
-	ZSlider.SetText("-");
-
 	Scene& scene = editor->GetCurrentScene();
 
 	const RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(entity);
@@ -927,36 +919,39 @@ void RigidBodyWindow::RefreshShapeType()
 	switch (physicscomponent->shape)
 	{
 	case RigidBodyPhysicsComponent::CollisionShape::BOX:
-		XSlider.SetEnabled(true);
-		YSlider.SetEnabled(true);
-		ZSlider.SetEnabled(true);
-		XSlider.SetText("Width");
-		YSlider.SetText("Height");
-		ZSlider.SetText("Depth");
+		XSlider.SetVisible(true);
+		YSlider.SetVisible(true);
+		ZSlider.SetVisible(true);
+		XSlider.SetText("Width: ");
+		YSlider.SetText("Height: ");
+		ZSlider.SetText("Depth: ");
 		XSlider.SetValue(physicscomponent->box.halfextents.x);
 		YSlider.SetValue(physicscomponent->box.halfextents.y);
 		ZSlider.SetValue(physicscomponent->box.halfextents.z);
 		break;
 	case RigidBodyPhysicsComponent::CollisionShape::SPHERE:
-		XSlider.SetEnabled(true);
-		XSlider.SetText("Radius");
-		YSlider.SetText("-");
-		ZSlider.SetText("-");
+		XSlider.SetVisible(true);
+		YSlider.SetVisible(false);
+		ZSlider.SetVisible(false);
+		XSlider.SetText("Radius: ");
 		XSlider.SetValue(physicscomponent->sphere.radius);
 		break;
 	case RigidBodyPhysicsComponent::CollisionShape::CAPSULE:
 	case RigidBodyPhysicsComponent::CollisionShape::CYLINDER:
-		XSlider.SetEnabled(true);
-		YSlider.SetEnabled(true);
-		XSlider.SetText("Height");
-		YSlider.SetText("Radius");
-		ZSlider.SetText("-");
+		XSlider.SetVisible(true);
+		YSlider.SetVisible(true);
+		ZSlider.SetVisible(false);
+		XSlider.SetText("Height: ");
+		YSlider.SetText("Radius: ");
 		XSlider.SetValue(physicscomponent->capsule.height);
 		YSlider.SetValue(physicscomponent->capsule.radius);
 		break;
 	case RigidBodyPhysicsComponent::CollisionShape::CONVEX_HULL:
 	case RigidBodyPhysicsComponent::CollisionShape::TRIANGLE_MESH:
 	default:
+		XSlider.SetVisible(false);
+		YSlider.SetVisible(false);
+		ZSlider.SetVisible(false);
 		break;
 	}
 }
@@ -1065,6 +1060,7 @@ void RigidBodyWindow::SetEntity(Entity entity)
 
 void RigidBodyWindow::ResizeLayout()
 {
+	RefreshShapeType();
 	wi::gui::Window::ResizeLayout();
 	const float padding = 4;
 	const float width = GetWidgetAreaSize().x;
