@@ -3085,6 +3085,31 @@ namespace wi::physics
 		}
 		return CharacterGroundStates::NotSupported;
 	}
+	bool ChangeCharacterShape(RigidBodyPhysicsComponent& physicscomponent, const RigidBodyPhysicsComponent::CapsuleParams& capsule)
+	{
+		if (physicscomponent.physicsobject == nullptr)
+			return false;
+		RigidBody& physicsobject = GetRigidBody(physicscomponent);
+		if (physicsobject.character != nullptr)
+		{
+			ShapeSettings::ShapeResult shape_result;
+			Vec3 bottom_offset = Vec3::sZero();
+			CapsuleShapeSettings settings(capsule.height, capsule.radius);
+			settings.SetEmbedded();
+			shape_result = settings.Create();
+			bottom_offset = Vec3(0, settings.mHalfHeightOfCylinder + settings.mRadius, 0);
+			ShapeRefC newshape = RotatedTranslatedShapeSettings(bottom_offset, Quat::sIdentity(), shape_result.Get()).Create().Get();
+			bool success = physicsobject.character->SetShape(newshape, 1.5f * 0.02f /*1.5 * PhysicsSystem::mPenetrationSlop*/);
+			if (success)
+			{
+				physicsobject.shape = newshape;
+				physicscomponent.shape = RigidBodyPhysicsComponent::CollisionShape::CAPSULE;
+				physicscomponent.capsule = capsule;
+			}
+			return success;
+		}
+		return false;
+	}
 
 	void ApplyForce(
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,

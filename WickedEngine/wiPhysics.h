@@ -80,6 +80,8 @@ namespace wi::physics
 	XMFLOAT3 GetCharacterGroundPosition(wi::scene::RigidBodyPhysicsComponent& physicscomponent);
 	XMFLOAT3 GetCharacterGroundNormal(wi::scene::RigidBodyPhysicsComponent& physicscomponent);
 	XMFLOAT3 GetCharacterGroundVelocity(wi::scene::RigidBodyPhysicsComponent& physicscomponent);
+
+	// Returns true if character is standing on the ground or steep ground, false otherwise
 	bool IsCharacterGroundSupported(wi::scene::RigidBodyPhysicsComponent& physicscomponent);
 
 	enum class CharacterGroundStates
@@ -90,6 +92,9 @@ namespace wi::physics
 		InAir,			// Character is in the air and is not touching anything.
 	};
 	CharacterGroundStates GetCharacterGroundState(wi::scene::RigidBodyPhysicsComponent& physicscomponent);
+
+	// Tries to change the physics character's shape, returns tru if successful, false if character would be blocked with the new shape
+	bool ChangeCharacterShape(wi::scene::RigidBodyPhysicsComponent& physicscomponent, const wi::scene::RigidBodyPhysicsComponent::CapsuleParams& capsule);
 
 	// Apply force at body center
 	void ApplyForce(

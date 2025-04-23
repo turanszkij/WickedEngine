@@ -40,6 +40,7 @@ namespace wi::lua
 		lunamethod(Physics_BindLua, GetCharacterGroundVelocity),
 		lunamethod(Physics_BindLua, IsCharacterGroundSupported),
 		lunamethod(Physics_BindLua, GetCharacterGroundState),
+		lunamethod(Physics_BindLua, ChangeCharacterShape),
 		lunamethod(Physics_BindLua, SetGhostMode),
 		lunamethod(Physics_BindLua, SetRagdollGhostMode),
 		lunamethod(Physics_BindLua, Intersects),
@@ -676,6 +677,34 @@ namespace wi::lua
 		}
 		else
 			wi::lua::SError(L, "GetCharacterGroundState(RigidBodyPhysicsComponent component) not enough arguments!");
+		return 0;
+	}
+	int Physics_BindLua::ChangeCharacterShape(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			scene::RigidBodyPhysicsComponent_BindLua* component = Luna<scene::RigidBodyPhysicsComponent_BindLua>::lightcheck(L, 1);
+			if (component == nullptr)
+			{
+				wi::lua::SError(L, "ChangeCharacterShape(RigidBodyPhysicsComponent component) first argument is not a RigidBodyPhysicsComponent!");
+				return 0;
+			}
+
+			wi::scene::RigidBodyPhysicsComponent::CapsuleParams capsule;
+			if (argc > 1)
+			{
+				capsule.height = wi::lua::SGetFloat(L, 2);
+				if (argc > 2)
+				{
+					capsule.radius = wi::lua::SGetFloat(L, 3);
+				}
+			}
+			wi::lua::SSetBool(L, wi::physics::ChangeCharacterShape(*component->component, capsule));
+			return 1;
+		}
+		else
+			wi::lua::SError(L, "ChangeCharacterShape(RigidBodyPhysicsComponent component) not enough arguments!");
 		return 0;
 	}
 	int Physics_BindLua::SetGhostMode(lua_State* L)
