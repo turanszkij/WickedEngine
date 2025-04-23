@@ -2094,14 +2094,15 @@ Playstation button codes:
 - GetAccuracy() : int
 - SetFrameRate(float value)	-- Set the frames per second resolution of physics simulation (default = 120 FPS)
 - GetFrameRate() : float
-- GetVelocity() : Vector	-- returns linear velocity of the body in the latest simulation step
-- GetPosition() : Vector	-- returns current position of the body in the latest simulation step
-- GetRotation() : Vector	-- returns current rotation of the body in the latest simulation step
-- GetCharacterGroundPosition() : Vector		-- returns the ground position of the rigidbody if it has character physics enabled
-- GetCharacterGroundNormal() : Vector		-- returns the ground normal of the rigidbody if it has character physics enabled
-- GetCharacterGroundVelocity() : Vector		-- returns the ground velocity of the rigidbody if it has character physics enabled
-- IsCharacterGroundSupported() : bool		-- returns true if the character physics is supported by normal or steep ground
-- GetCharacterGroundState() : CharacterGroundStates			-- returns the `CharacterGroundStates` of the character physics
+- GetVelocity(RigidBodyPhysicsComponent component) : Vector	-- returns linear velocity of the body in the latest simulation step
+- GetPosition(RigidBodyPhysicsComponent component) : Vector	-- returns current position of the body in the latest simulation step
+- GetRotation(RigidBodyPhysicsComponent component) : Vector	-- returns current rotation of the body in the latest simulation step
+- GetCharacterGroundPosition(RigidBodyPhysicsComponent component) : Vector		-- returns the ground position of the rigidbody if it has character physics enabled
+- GetCharacterGroundNormal(RigidBodyPhysicsComponent component) : Vector		-- returns the ground normal of the rigidbody if it has character physics enabled
+- GetCharacterGroundVelocity(RigidBodyPhysicsComponent component) : Vector		-- returns the ground velocity of the rigidbody if it has character physics enabled
+- IsCharacterGroundSupported(RigidBodyPhysicsComponent component) : bool		-- returns true if the character physics is supported by normal or steep ground
+- GetCharacterGroundState(RigidBodyPhysicsComponent component) : CharacterGroundStates			-- returns the `CharacterGroundStates` of the character physics
+- ChangeCharacterShape(RigidBodyPhysicsComponent component, float height, float radius) : bool		-- changes the physics character's shape into a capsule with specified height and radius. Returns true if successful, false otherwise. Failure means that something is blocking the character.
 - SetGhostMode(RigidBodyPhysicsComponent|HumanoidComponent component, bool value)	-- enable/disable ghost mode for rigid body or ragdoll (all collision disabled)
 - SetRagdollGhostMode(HumanoidComponent humanoid, bool value)	-- enable/disable ghost mode for a ragdoll. In ghost mode, the ragdoll will not collide with anything. Enable this if the humanoid sits inside a vehicle for example.
 - SetPosition(RigidBodyPhysicsComponent component, Vector position)	-- teleport a dynamic body
