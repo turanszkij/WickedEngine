@@ -36,4 +36,7 @@ namespace wi::input::sdlinput
 	// Call this within the main.cpp program loop for the engine to be able handle the input
 	void ProcessEvent(const SDL_Event &event);
 #endif
+
+	// Helper function to convert into Wicked Key "space"
+	int to_wicked(const SDL_Scancode &key, const SDL_Keycode &keyk);
 }

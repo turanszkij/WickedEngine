@@ -54,6 +54,7 @@ else ()
 		pkg_check_modules(WAYLAND_CLIENT REQUIRED wayland-client)
 		pkg_check_modules(WAYLAND_SCANNER REQUIRED wayland-scanner)
 		pkg_check_modules(WAYLAND_PROTOCOLS REQUIRED wayland-protocols)
+		pkg_check_modules(XKBCOMMON REQUIRED xkbcommon)
 		# Get variables
 		pkg_get_variable(WAYLAND_SCANNER_BIN wayland-scanner wayland_scanner)
 		pkg_get_variable(WAYLAND_PROTOCOLS_DATADIR wayland-protocols pkgdatadir)
@@ -194,12 +195,14 @@ else ()
 		target_include_directories(${TARGET_NAME}
 			PUBLIC ${WAYLAND_CLIENT_INCLUDE_DIRS}
 			# PRIVATE ${WAYLAND_CURSOR_INCLUDE_DIRS}
+			PUBLIC ${XKBCOMMON_INCLUDE_DIRS}
 			PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
 			# PUBLIC $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine>
 			)
 
 		target_link_libraries(${TARGET_NAME}
 			PUBLIC ${WAYLAND_CLIENT_LIBRARIES}
+			PUBLIC ${XKBCOMMON_LIBRARIES}
 			# PRIVATE ${WAYLAND_CURSOR_LIBRARIES}
 			)
 	endif()

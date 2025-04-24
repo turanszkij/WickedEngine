@@ -43,6 +43,8 @@ private:
 public:
 	std::function<void(Window* window)> on_redraw_callback;
 	std::function<void(Window* window)> on_close;
+	std::function<void(Window* window)> on_focus_on;
+	std::function<void(Window* window)> on_focus_off;
 
 public:
 	~Window() { Deinit(); }
@@ -59,13 +61,15 @@ public:
 	VkResult CreateVulkanSurface(VkInstance instance, VkSurfaceKHR* VKSurface);
 
 	// callbacks
-	void on_enter(wl_output *output);
-	void on_leave(wl_output *output);
-	void on_redraw(wl_callback *wl_callback, uint32_t time);
-	void on_xdg_surface_ack_configure(uint32_t serial);
-	void on_toplevel_close();
-	void on_toplevel_configure(int32_t width, int32_t height, wl_array *states);
-	void on_toplevel_configure_bounds(int32_t width, int32_t height);
+	void _on_enter_monitor(wl_output *output);
+	void _on_leave_monitor(wl_output *output);
+	void _on_redraw(wl_callback *wl_callback, uint32_t time);
+	void _on_xdg_surface_ack_configure(uint32_t serial);
+	void _on_toplevel_close();
+	void _on_toplevel_configure(int32_t width, int32_t height, wl_array *states);
+	void _on_toplevel_configure_bounds(int32_t width, int32_t height);
+
+friend class Backend;
 };
 
 }

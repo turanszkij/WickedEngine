@@ -3,6 +3,7 @@
 #include "wiXInput.h"
 #include "wiRawInput.h"
 #include "wiSDLInput.h"
+#include "Wayland/wiWaylandInput.h"
 #include "wiHelper.h"
 #include "wiBacklog.h"
 #include "wiProfiler.h"
@@ -148,6 +149,7 @@ namespace wi::input
 		wi::input::xinput::Update();
 		wi::input::rawinput::Update();
 		wi::input::sdlinput::Update();
+		wi::input::wayland::Update();
 
 #ifdef PLATFORM_PS5
 		wi::input::ps5::Update();
@@ -170,12 +172,17 @@ namespace wi::input
 		mouse.position.y = (float)p.y;
 		mouse.position.x /= canvas.GetDPIScaling();
 		mouse.position.y /= canvas.GetDPIScaling();
-
 #elif SDL2
-		wi::input::sdlinput::GetMouseState(&mouse);
-		mouse.position.x /= canvas.GetDPIScaling();
-		mouse.position.y /= canvas.GetDPIScaling();
-		wi::input::sdlinput::GetKeyboardState(&keyboard);
+		if (window.type == platform::LinuxWindow::eSDLWindow) {
+			wi::input::sdlinput::GetMouseState(&mouse);
+			mouse.position.x /= canvas.GetDPIScaling();
+			mouse.position.y /= canvas.GetDPIScaling();
+			wi::input::sdlinput::GetKeyboardState(&keyboard);
+		}
+		else if (window.type == platform::LinuxWindow::eWaylandWindow) {
+			wi::input::wayland::GetMouseState(&mouse);
+			wi::input::wayland::GetKeyboardState(&keyboard);
+		}
 		//TODO controllers
 		//TODO touch
 #endif

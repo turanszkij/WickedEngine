@@ -98,6 +98,16 @@ void wayland_loop(wi::wayland::Backend &wwbackend, Tests &tests)
 {
 	bool quit = false;
 	wwbackend.window.on_close = [&quit](wi::wayland::Window*w) { quit = true; };
+	wwbackend.window.on_focus_on = [&tests](wi::wayland::Window*w)
+	{
+		tests.is_window_active = true;
+		std::clog << "window on enter" << std::endl;
+	};
+	wwbackend.window.on_focus_off = [&tests](wi::wayland::Window*w)
+	{
+		tests.is_window_active = false;
+		std::clog << "window on leave" << std::endl;
+	};
 
 	while(!quit)
 	{

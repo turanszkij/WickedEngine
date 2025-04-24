@@ -17,31 +17,31 @@ extern "C" void _static_on_redraw(void *data,
 								  wl_callback *wl_callback,
 								  uint32_t time)
 {
-	static_cast<Window*>(data)->on_redraw(wl_callback, time);
+	static_cast<Window*>(data)->_on_redraw(wl_callback, time);
 }
 
-extern "C" void _static_on_enter(void *data,
+extern "C" void _static_on_enter_monitor(void *data,
 								 wl_surface *wl_surface,
 								 wl_output *output)
 {
-	static_cast<Window*>(data)->on_enter(output);
+	static_cast<Window*>(data)->_on_enter_monitor(output);
 }
 
-extern "C" void _static_on_leave(void *data,
+extern "C" void _static_on_leave_monitor(void *data,
 								 wl_surface *wl_surface,
 								 wl_output *output)
 {
-	static_cast<Window*>(data)->on_leave(output);
+	static_cast<Window*>(data)->_on_leave_monitor(output);
 }
 
 extern "C" void _static_xdg_surface_configure(void* data, xdg_surface* raw, uint32_t serial)
 {
-	static_cast<Window*>(data)->on_xdg_surface_ack_configure(serial);
+	static_cast<Window*>(data)->_on_xdg_surface_ack_configure(serial);
 }
 
 extern "C" void _static_toplevel_close(void *data, xdg_toplevel *xdg_toplevel)
 {
-	static_cast<Window*>(data)->on_toplevel_close();
+	static_cast<Window*>(data)->_on_toplevel_close();
 }
 
 extern "C" void _static_toplevel_configure(void *data,
@@ -50,7 +50,7 @@ extern "C" void _static_toplevel_configure(void *data,
 					  int32_t height,
 					  wl_array *states)
 {
-	static_cast<Window*>(data)->on_toplevel_configure(width, height, states);
+	static_cast<Window*>(data)->_on_toplevel_configure(width, height, states);
 }
 
 extern "C" void _static_toplevel_configure_bounds(void *data,
@@ -58,16 +58,16 @@ extern "C" void _static_toplevel_configure_bounds(void *data,
 							 int32_t width,
 							 int32_t height)
 {
-	static_cast<Window*>(data)->on_toplevel_configure_bounds(width, height);
+	static_cast<Window*>(data)->_on_toplevel_configure_bounds(width, height);
 }
 
-void Window::on_enter(wl_output *output)
+void Window::_on_enter_monitor(wl_output *output)
 {}
 
-void Window::on_leave(wl_output *output)
+void Window::_on_leave_monitor(wl_output *output)
 {}
 
-void Window::on_redraw(wl_callback *wl_callback, uint32_t time)
+void Window::_on_redraw(wl_callback *wl_callback, uint32_t time)
 {
 	if(frame_callback != nullptr) {
 		wl_callback_destroy(frame_callback);
@@ -77,23 +77,23 @@ void Window::on_redraw(wl_callback *wl_callback, uint32_t time)
 		on_redraw_callback(this);
 }
 
-void Window::on_xdg_surface_ack_configure(uint32_t serial)
+void Window::_on_xdg_surface_ack_configure(uint32_t serial)
 {
 	xdg_surface_ack_configure(XDGsurface, serial);
 }
 
-void Window::on_toplevel_close()
+void Window::_on_toplevel_close()
 {
 	if (on_close) on_close(this);
 }
 
-void Window::on_toplevel_configure(int32_t width, int32_t height, wl_array* states)
+void Window::_on_toplevel_configure(int32_t width, int32_t height, wl_array* states)
 {
 	desired_width = width;
 	desired_height = height;
 }
 
-void Window::on_toplevel_configure_bounds(int32_t width, int32_t height)
+void Window::_on_toplevel_configure_bounds(int32_t width, int32_t height)
 {}
 
 
@@ -104,8 +104,8 @@ bool Window::Init(Backend* backend, const char* title)
 	// Surface
 	WLsurface = wl_compositor_create_surface(backend->compositor);
 	if (WLsurface == nullptr) {std::cerr << "Could not create surface from compositor" << std::endl; return false;}
-	WLsurface_listener.enter = &_static_on_enter;
-	WLsurface_listener.leave = &_static_on_leave;
+	WLsurface_listener.enter = &_static_on_enter_monitor;
+	WLsurface_listener.leave = &_static_on_leave_monitor;
 	frame_listener.done = &_static_on_redraw;
 	wl_surface_add_listener(WLsurface, &WLsurface_listener, this);
 
@@ -133,6 +133,7 @@ bool Window::Init(Backend* backend, const char* title)
 		}
 	}
 
+	xdg_toplevel_set_app_id(toplevel, "WickedEngine");
 	SetTitle(title);
 	return true;
 }

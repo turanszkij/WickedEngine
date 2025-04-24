@@ -1,4 +1,5 @@
 #pragma once
+#include "wayland-client-protocol.h"
 #include "wiWaylandWindow.h"
 #include <wayland-client.h>
 #include <map>
@@ -30,6 +31,12 @@ private:
 	xdg_wm_base_listener window_manager_listener;
 	zxdg_decoration_manager_v1 *decoration_manager = nullptr;
 
+	wl_seat* seat = nullptr;
+	wl_keyboard* keyboard = nullptr;
+	wl_pointer* pointer = nullptr;
+	wl_keyboard_listener keyboard_listener {};
+	wl_pointer_listener pointer_listener {};
+
 public:
 	Window window;
 
@@ -48,6 +55,8 @@ public:
 	void registry_event_add(uint32_t id, const char* interface, uint32_t version);
 	void registry_event_remove(uint32_t id);
 	void window_manager_pong(uint32_t serial);
+	void keyboard_focuson(uint32_t serial, wl_surface* surface, wl_array* keys);
+	void keyboard_focusoff(uint32_t serial, wl_surface* surface);
 
 private:
 	bool init_registry();
@@ -74,6 +83,7 @@ private:
 	bool bind_compositor();
 	bool bind_xdg_wm_base();
 	bool bind_decoration_manager();
+	bool bind_wl_seat();
 
 	bool init_window_manager();
 
