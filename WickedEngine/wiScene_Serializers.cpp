@@ -2531,6 +2531,7 @@ namespace wi::scene
 			}
 			if (seri.GetVersion() >= 2)
 			{
+				archive >> terrain_pushdown;
 				archive >> terrain_texture_falloff;
 			}
 		}
@@ -2554,6 +2555,7 @@ namespace wi::scene
 			}
 			if (seri.GetVersion() >= 2)
 			{
+				archive << terrain_pushdown;
 				archive << terrain_texture_falloff;
 			}
 		}

@@ -27,7 +27,7 @@ void SplineWindow::Create(EditorComponent* _editor)
 
 	infoLabel.Create("SplineInfo");
 	infoLabel.SetSize(XMFLOAT2(100, 120));
-	infoLabel.SetText("The spline is a curve that goes through every specified entity that has a TransformComponent smoothly. A mesh can be generated from it automatically by increasing the subdivisions. It can also modify terrain when the terrain modification slider is used.");
+	infoLabel.SetText("The spline is a curve that goes through every specified entity that has a TransformComponent smoothly. A mesh can be generated from it automatically by increasing the subdivisions. It can also modify terrain when the terrain modification slider is used. The terrain texture can also be modified if the spline has a material.");
 	AddWidget(&infoLabel);
 
 	loopedCheck.Create("Looped: ");
@@ -203,6 +203,28 @@ void SplineWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&terrainTexSlider);
 
+	terrainPushdownSlider.Create(0, 10, 0, 100, "Terrain push down: ");
+	terrainPushdownSlider.SetTooltip("Push down the terrain genetry from the spline plane by an amount.");
+	terrainPushdownSlider.OnSlide([this](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			SplineComponent* spline = scene.splines.GetComponent(x.entity);
+			if (spline == nullptr)
+				continue;
+			spline->terrain_pushdown = args.fValue;
+		}
+
+		// indirect set:
+		SplineComponent* spline = scene.splines.GetComponent(entity);
+		if (spline != nullptr)
+		{
+			spline->terrain_pushdown = args.fValue;
+		}
+		editor->componentsWnd.RefreshEntityTree();
+		});
+	AddWidget(&terrainPushdownSlider);
+
 	addButton.Create("AddNode");
 	addButton.SetText("+");
 	addButton.SetTooltip("Add an entity as a node to the spline (it must have TransformComponent). Hotkey: Ctrl + E");
@@ -236,6 +258,7 @@ void SplineWindow::SetEntity(Entity entity)
 		subdivSlider.SetValue(spline->mesh_generation_subdivision);
 		subdivVerticalSlider.SetValue(spline->mesh_generation_vertical_subdivision);
 		terrainSlider.SetValue(spline->terrain_modifier_amount);
+		terrainPushdownSlider.SetValue(spline->terrain_pushdown);
 		terrainTexSlider.SetValue(spline->terrain_texture_falloff);
 
 		if (changed)
@@ -377,6 +400,7 @@ void SplineWindow::ResizeLayout()
 	add(subdivSlider);
 	add(subdivVerticalSlider);
 	add(terrainSlider);
+	add(terrainPushdownSlider);
 	add(terrainTexSlider);
 	add(widthSlider);
 	add(rotSlider);

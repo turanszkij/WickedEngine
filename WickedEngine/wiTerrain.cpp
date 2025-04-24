@@ -605,16 +605,18 @@ namespace wi::terrain
 				{
 					spline.dirty_terrain = false;
 					spline.prev_terrain_modifier_amount = spline.terrain_modifier_amount;
+					spline.prev_terrain_pushdown = spline.terrain_pushdown;
 					spline.prev_terrain_texture_falloff = spline.terrain_texture_falloff;
 					spline.prev_terrain_generation_nodes = (int)spline.spline_node_entities.size();
 				}
-				Entity splineEntity = scene->splines.GetEntity(i);
-				const MaterialComponent* splineMaterial = scene->materials.GetComponent(splineEntity);
+				restart_generation |= spline.materialEntity != spline.materialEntity_terrainPrev;
+				const MaterialComponent* splineMaterial = scene->materials.GetComponent(spline.materialEntity);
 				if (splineMaterial != nullptr)
 				{
 					restart_generation |= splineMaterial->IsDirty();
-					splineMaterialEntities.push_back(splineEntity);
+					splineMaterialEntities.push_back(spline.materialEntity);
 				}
+				spline.materialEntity_terrainPrev = spline.materialEntity;
 			}
 		}
 
@@ -952,7 +954,7 @@ namespace wi::terrain
 						x.pixels.resize(vertexCount);
 					}
 
-					chunk_data.spline_blendmap_layers.resize(generator->splines.size());
+					chunk_data.spline_blendmap_layers.resize(splineMaterialEntities.size());
 					for (auto& x : chunk_data.spline_blendmap_layers)
 					{
 						x.pixels.resize(vertexCount);
@@ -998,9 +1000,12 @@ namespace wi::terrain
 
 						// Apply splines to height only:
 						const XMVECTOR P = XMVectorSet(world_pos.x, -100000, world_pos.y, 0);
+						int splinematerialcnt = -1;
 						for (size_t j = 0; j < generator->splines.size(); ++j)
 						{
 							const SplineComponent& spline = generator->splines[j];
+							if (spline.materialEntity != INVALID_ENTITY)
+								splinematerialcnt++;
 							if (!spline.aabb.intersects(P))
 								continue;
 							XMVECTOR S = spline.TraceSplinePlane(P, UP, 4);
@@ -1008,11 +1013,11 @@ namespace wi::terrain
 							const float splineheight = XMVectorGetY(S);
 							const float splinedist = wi::math::Distance(XMVectorSetY(P, splineheight), S);
 							const float splinefactor = 1.0f - smoothstep(0.0f, 1.0f, saturate(splinedist * sqr(spline.terrain_modifier_amount)));
-							if (is_real_vertex)
+							if (is_real_vertex && spline.materialEntity != INVALID_ENTITY)
 							{
-								chunk_data.spline_blendmap_layers[j].pixels[real_index] = uint8_t(smoothstep(clamp(spline.terrain_texture_falloff, 0.0f, 0.999f), 1.0f, splinefactor) * 255);
+								chunk_data.spline_blendmap_layers[splinematerialcnt].pixels[real_index] = uint8_t(smoothstep(clamp(spline.terrain_texture_falloff, 0.0f, 0.999f), 1.0f, splinefactor) * 255);
 							}
-							height = lerp(height, splineheight, splinefactor);
+							height = lerp(height, splineheight - spline.terrain_pushdown, splinefactor);
 						}
 
 						heights_padded[coord.x][coord.y] = height;
