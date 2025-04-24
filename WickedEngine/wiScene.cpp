@@ -5787,6 +5787,7 @@ namespace wi::scene
 			dirty |= spline.prev_rotation != spline.rotation;
 
 			bool dirty_terrain = spline.prev_terrain_modifier_amount != spline.terrain_modifier_amount;
+			dirty_terrain |= spline.prev_terrain_texture_falloff != spline.terrain_texture_falloff;
 			dirty_terrain |= spline.prev_terrain_generation_nodes != (int)spline.spline_node_entities.size();
 			dirty_terrain |= spline.prev_looped != spline.IsLooped();
 			dirty_terrain |= spline.prev_width != spline.width;

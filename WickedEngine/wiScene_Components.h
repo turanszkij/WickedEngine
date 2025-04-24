@@ -2564,6 +2564,7 @@ namespace wi::scene
 		int mesh_generation_subdivision = 0; // increase this above 0 to request mesh generation
 		int mesh_generation_vertical_subdivision = 0; // can create vertically subdivided mesh (corridoor, tunnel, etc. with this)
 		float terrain_modifier_amount = 0; // increase above 0 to affect terrain generation
+		float terrain_texture_falloff = 0.8f; // texture blend falloff for terrain modifier spline
 
 		wi::vector<wi::ecs::Entity> spline_node_entities;
 
@@ -2577,6 +2578,7 @@ namespace wi::scene
 		int prev_mesh_generation_vertical_subdivision = 0;
 		int prev_mesh_generation_nodes = 0;
 		mutable float prev_terrain_modifier_amount = 0;
+		mutable float prev_terrain_texture_falloff = 0;
 		mutable int prev_terrain_generation_nodes = 0;
 		mutable bool dirty_terrain = false;
 		bool prev_looped = false;

@@ -2529,6 +2529,10 @@ namespace wi::scene
 			{
 				archive >> terrain_modifier_amount;
 			}
+			if (seri.GetVersion() >= 2)
+			{
+				archive >> terrain_texture_falloff;
+			}
 		}
 		else
 		{
@@ -2547,6 +2551,10 @@ namespace wi::scene
 			if (seri.GetVersion() >= 1)
 			{
 				archive << terrain_modifier_amount;
+			}
+			if (seri.GetVersion() >= 2)
+			{
+				archive << terrain_texture_falloff;
 			}
 		}
 	}

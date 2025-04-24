@@ -181,6 +181,28 @@ void SplineWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&terrainSlider);
 
+	terrainTexSlider.Create(0, 1, 0, 100, "Terrain texture falloff: ");
+	terrainTexSlider.SetTooltip("Affects the terrain texturing falloff when spline is terrain modifying.");
+	terrainTexSlider.OnSlide([this](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			SplineComponent* spline = scene.splines.GetComponent(x.entity);
+			if (spline == nullptr)
+				continue;
+			spline->terrain_texture_falloff = args.fValue;
+		}
+
+		// indirect set:
+		SplineComponent* spline = scene.splines.GetComponent(entity);
+		if (spline != nullptr)
+		{
+			spline->terrain_texture_falloff = args.fValue;
+		}
+		editor->componentsWnd.RefreshEntityTree();
+	});
+	AddWidget(&terrainTexSlider);
+
 	addButton.Create("AddNode");
 	addButton.SetText("+");
 	addButton.SetTooltip("Add an entity as a node to the spline (it must have TransformComponent). Hotkey: Ctrl + E");
@@ -214,6 +236,7 @@ void SplineWindow::SetEntity(Entity entity)
 		subdivSlider.SetValue(spline->mesh_generation_subdivision);
 		subdivVerticalSlider.SetValue(spline->mesh_generation_vertical_subdivision);
 		terrainSlider.SetValue(spline->terrain_modifier_amount);
+		terrainTexSlider.SetValue(spline->terrain_texture_falloff);
 
 		if (changed)
 		{
@@ -354,6 +377,7 @@ void SplineWindow::ResizeLayout()
 	add(subdivSlider);
 	add(subdivVerticalSlider);
 	add(terrainSlider);
+	add(terrainTexSlider);
 	add(widthSlider);
 	add(rotSlider);
 	add_right(loopedCheck);
