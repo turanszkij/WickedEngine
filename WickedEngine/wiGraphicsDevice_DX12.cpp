@@ -1714,12 +1714,12 @@ std::mutex queue_locker;
 	}
 	void GraphicsDevice_DX12::CopyAllocator::submit(CopyCMD cmd)
 	{
-		cmd.commandList->Close();
+		dx12_check(cmd.commandList->Close());
 		ID3D12CommandList* commandlists[] = {
 			cmd.commandList.Get()
 		};
 
-		cmd.fence->Signal(0);
+		dx12_check(cmd.fence->Signal(0));
 
 		{
 #ifdef PLATFORM_XBOX

@@ -5787,6 +5787,8 @@ namespace wi::scene
 			dirty |= spline.prev_rotation != spline.rotation;
 
 			bool dirty_terrain = spline.prev_terrain_modifier_amount != spline.terrain_modifier_amount;
+			dirty_terrain |= spline.prev_terrain_pushdown != spline.terrain_pushdown;
+			dirty_terrain |= spline.prev_terrain_texture_falloff != spline.terrain_texture_falloff;
 			dirty_terrain |= spline.prev_terrain_generation_nodes != (int)spline.spline_node_entities.size();
 			dirty_terrain |= spline.prev_looped != spline.IsLooped();
 			dirty_terrain |= spline.prev_width != spline.width;
@@ -5797,6 +5799,15 @@ namespace wi::scene
 			spline.prev_looped = spline.IsLooped();
 
 			spline.spline_node_transforms.resize(spline.spline_node_entities.size());
+
+			if (materials.Contains(entity))
+			{
+				spline.materialEntity = entity;
+			}
+			else
+			{
+				spline.materialEntity = INVALID_ENTITY;
+			}
 
 			// BEFORE mesh update: LOCAL space transform (because mesh will be also transformed by ObjectComponent instance)
 			spline.precomputed_total_distance = 0;

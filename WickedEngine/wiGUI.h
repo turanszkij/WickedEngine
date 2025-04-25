@@ -452,6 +452,7 @@ namespace wi::gui
 	{
 	protected:
 		bool wrap_enabled = true;
+		bool fittext_enabled = false;
 	public:
 		void Create(const std::string& name);
 
@@ -465,6 +466,7 @@ namespace wi::gui
 		ScrollBar scrollbar;
 
 		void SetWrapEnabled(bool value) { wrap_enabled = value; }
+		void SetFitTextEnabled(bool value) { fittext_enabled = value; }
 
 		float margin_left = 0;
 		float margin_right = 0;

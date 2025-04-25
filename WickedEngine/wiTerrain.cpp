@@ -189,7 +189,7 @@ namespace wi::terrain
 
 	static std::mutex locker;
 
-	void weight_norm(XMFLOAT4& weights)
+	constexpr void weight_norm(XMFLOAT4& weights)
 	{
 		const float norm = 1.0f / (weights.x + weights.y + weights.z + weights.w);
 		weights.x *= norm;
@@ -594,6 +594,7 @@ namespace wi::terrain
 				break;
 			}
 		}
+		splineMaterialEntities.clear();
 		for (size_t i = 0; i < scene->splines.GetCount(); ++i)
 		{
 			const SplineComponent& spline = scene->splines[i];
@@ -604,8 +605,18 @@ namespace wi::terrain
 				{
 					spline.dirty_terrain = false;
 					spline.prev_terrain_modifier_amount = spline.terrain_modifier_amount;
+					spline.prev_terrain_pushdown = spline.terrain_pushdown;
+					spline.prev_terrain_texture_falloff = spline.terrain_texture_falloff;
 					spline.prev_terrain_generation_nodes = (int)spline.spline_node_entities.size();
 				}
+				restart_generation |= spline.materialEntity != spline.materialEntity_terrainPrev;
+				const MaterialComponent* splineMaterial = scene->materials.GetComponent(spline.materialEntity);
+				if (splineMaterial != nullptr)
+				{
+					restart_generation |= splineMaterial->IsDirty();
+					splineMaterialEntities.push_back(spline.materialEntity);
+				}
+				spline.materialEntity_terrainPrev = spline.materialEntity;
 			}
 		}
 
@@ -937,11 +948,17 @@ namespace wi::terrain
 					mesh.vertex_tangents.resize(vertexCount);
 					mesh.vertex_uvset_0.resize(vertexCount);
 
-					chunk_data.blendmap_layers.reserve(4);
-					chunk_data.blendmap_layers.emplace_back().pixels.resize(vertexCount);
-					chunk_data.blendmap_layers.emplace_back().pixels.resize(vertexCount);
-					chunk_data.blendmap_layers.emplace_back().pixels.resize(vertexCount);
-					chunk_data.blendmap_layers.emplace_back().pixels.resize(vertexCount);
+					chunk_data.blendmap_layers.resize(4);
+					for (auto& x : chunk_data.blendmap_layers)
+					{
+						x.pixels.resize(vertexCount);
+					}
+
+					chunk_data.spline_blendmap_layers.resize(splineMaterialEntities.size());
+					for (auto& x : chunk_data.spline_blendmap_layers)
+					{
+						x.pixels.resize(vertexCount);
+					}
 
 					chunk_data.mesh_vertex_positions = mesh.vertex_positions.data();
 
@@ -978,18 +995,29 @@ namespace wi::terrain
 						}
 						height = lerp(bottomLevel, topLevel, height);
 
+						const bool is_real_vertex = coord.x < chunk_width && coord.y < chunk_width;
+						const uint32_t real_index = coord.x + coord.y * chunk_width;
+
 						// Apply splines to height only:
 						const XMVECTOR P = XMVectorSet(world_pos.x, -100000, world_pos.y, 0);
+						int splinematerialcnt = -1;
 						for (size_t j = 0; j < generator->splines.size(); ++j)
 						{
 							const SplineComponent& spline = generator->splines[j];
+							if (spline.materialEntity != INVALID_ENTITY)
+								splinematerialcnt++;
 							if (!spline.aabb.intersects(P))
 								continue;
 							XMVECTOR S = spline.TraceSplinePlane(P, UP, 4);
 							S = spline.ClosestPointOnSpline(S, 4);
 							const float splineheight = XMVectorGetY(S);
 							const float splinedist = wi::math::Distance(XMVectorSetY(P, splineheight), S);
-							height = lerp(splineheight, height, smoothstep(0.0f, 1.0f, saturate(splinedist * sqr(spline.terrain_modifier_amount))));
+							const float splinefactor = 1.0f - smoothstep(0.0f, 1.0f, saturate(splinedist * sqr(spline.terrain_modifier_amount)));
+							if (is_real_vertex && spline.materialEntity != INVALID_ENTITY)
+							{
+								chunk_data.spline_blendmap_layers[splinematerialcnt].pixels[real_index] = uint8_t(smoothstep(clamp(spline.terrain_texture_falloff, 0.0f, 0.999f), 1.0f, splinefactor) * 255);
+							}
+							height = lerp(height, splineheight - spline.terrain_pushdown, splinefactor);
 						}
 
 						heights_padded[coord.x][coord.y] = height;
@@ -1044,9 +1072,19 @@ namespace wi::terrain
 
 						XMFLOAT3 vertex_pos(chunk_data.position.x + x, height, chunk_data.position.z + z);
 
+						float spline_factor = 0;
+						if (!chunk_data.spline_blendmap_layers.empty())
+						{
+							for (auto& y : chunk_data.spline_blendmap_layers)
+							{
+								spline_factor += float(y.pixels[index]) / 255.0f;
+							}
+							spline_factor /= float(chunk_data.spline_blendmap_layers.size());
+						}
+
 						const float grass_noise_frequency = 0.1f;
 						const float grass_noise = perlin_noise.compute(vertex_pos.x * grass_noise_frequency, vertex_pos.y * grass_noise_frequency, vertex_pos.z * grass_noise_frequency) * 0.5f + 0.5f;
-						const float region_grass = std::pow(materialBlendWeights.x * (1 - materialBlendWeights.w), 8.0f) * grass_noise;
+						const float region_grass = std::pow(materialBlendWeights.x * (1 - materialBlendWeights.w), 8.0f) * grass_noise * (1 - saturate(spline_factor));
 						if (region_grass > 0.1f)
 						{
 							grass_valid_vertex_count.fetch_add(1);
@@ -1167,6 +1205,22 @@ namespace wi::terrain
 									XMFLOAT4 region0 = wi::Color(chunk_data.blendmap_layers[0].pixels[ind0], chunk_data.blendmap_layers[1].pixels[ind0], chunk_data.blendmap_layers[2].pixels[ind0], chunk_data.blendmap_layers[3].pixels[ind0]);
 									XMFLOAT4 region1 = wi::Color(chunk_data.blendmap_layers[0].pixels[ind1], chunk_data.blendmap_layers[1].pixels[ind1], chunk_data.blendmap_layers[2].pixels[ind1], chunk_data.blendmap_layers[3].pixels[ind1]);
 									XMFLOAT4 region2 = wi::Color(chunk_data.blendmap_layers[0].pixels[ind2], chunk_data.blendmap_layers[1].pixels[ind2], chunk_data.blendmap_layers[2].pixels[ind2], chunk_data.blendmap_layers[3].pixels[ind2]);
+									float spline_factor0 = 0;
+									float spline_factor1 = 0;
+									float spline_factor2 = 0;
+									if (!chunk_data.spline_blendmap_layers.empty())
+									{
+										for (auto& y : chunk_data.spline_blendmap_layers)
+										{
+											spline_factor0 += float(y.pixels[ind0]) / 255.0f;
+											spline_factor1 += float(y.pixels[ind1]) / 255.0f;
+											spline_factor2 += float(y.pixels[ind2]) / 255.0f;
+										}
+										const float rcp = 1.0f / float(chunk_data.spline_blendmap_layers.size());
+										spline_factor0 *= rcp;
+										spline_factor1 *= rcp;
+										spline_factor2 *= rcp;
+									}
 									weight_norm(region0);
 									weight_norm(region1);
 									weight_norm(region2);
@@ -1189,9 +1243,10 @@ namespace wi::terrain
 										region0.z + f * (region1.z - region0.z) + g * (region2.z - region0.z),
 										region0.w + f * (region1.w - region0.w) + g * (region2.w - region0.w)
 									);
+									const float spline_factor = spline_factor0 + f * (spline_factor1 - spline_factor0) + g * (spline_factor2 - spline_factor0);
 
 									const float noise = std::pow(perlin_noise.compute((vertex_pos.x + chunk_data.position.x) * prop.noise_frequency, vertex_pos.y * prop.noise_frequency, (vertex_pos.z + chunk_data.position.z) * prop.noise_frequency) * 0.5f + 0.5f, prop.noise_power);
-									const float chance = std::pow(((float*)&region)[prop.region], prop.region_power) * noise;
+									const float chance = std::pow(((float*)&region)[prop.region], prop.region_power) * noise * (1 - saturate(spline_factor));
 									if (chance > prop.threshold)
 									{
 										wi::Archive archive = wi::Archive(prop.data.data(), prop.data.size());
@@ -1310,20 +1365,27 @@ namespace wi::terrain
 			device->SetName(&chunk_data.heightmap, "wi::terrain::ChunkData::heightmap");
 		}
 
-		if (!chunk_data.blendmap.IsValid() || chunk_data.blendmap.desc.array_size != (uint32_t)chunk_data.blendmap_layers.size())
+		const uint32_t required_layers = uint32_t(chunk_data.blendmap_layers.size() + chunk_data.spline_blendmap_layers.size());
+		if (!chunk_data.blendmap.IsValid() || chunk_data.blendmap.desc.array_size != required_layers)
 		{
 			TextureDesc desc;
 			desc.width = (uint32_t)chunk_width;
 			desc.height = (uint32_t)chunk_width;
-			desc.array_size = (uint32_t)chunk_data.blendmap_layers.size();
+			desc.array_size = required_layers;
 			desc.format = Format::R8_UNORM;
 			desc.bind_flags = BindFlag::SHADER_RESOURCE;
 
-			wi::vector<SubresourceData> data(chunk_data.blendmap_layers.size());
+			wi::vector<SubresourceData> data(required_layers);
 			for (size_t i = 0; i < chunk_data.blendmap_layers.size(); ++i)
 			{
 				data[i].data_ptr = chunk_data.blendmap_layers[i].pixels.data();
 				data[i].row_pitch = chunk_width * sizeof(uint8_t);
+			}
+			const size_t offset = chunk_data.blendmap_layers.size();
+			for (size_t i = 0; i < chunk_data.spline_blendmap_layers.size(); ++i)
+			{
+				data[offset + i].data_ptr = chunk_data.spline_blendmap_layers[i].pixels.data();
+				data[offset + i].row_pitch = chunk_width * sizeof(uint8_t);
 			}
 
 			bool success = device->CreateTexture(&desc, data.data(), &chunk_data.blendmap);
@@ -1769,12 +1831,20 @@ namespace wi::terrain
 				if (push.blendmap_texture < 0)
 					continue;
 
-				auto mem = device->AllocateGPU(sizeof(uint) * vt->blendmap.desc.array_size, cmd);
-				const uint blendcount = std::min(vt->blendmap.desc.array_size, uint(materialEntities.size()));
-				for (uint i = 0; i < blendcount; ++i)
+				auto mem = device->AllocateGPU(sizeof(uint) * push.blendmap_layers, cmd);
+				const uint splineMaterialCount = (uint)splineMaterialEntities.size();
+				const uint baseMaterialCount = push.blendmap_layers - splineMaterialCount;
+				for (uint i = 0; i < splineMaterialCount; ++i)
 				{
-					const uint material_index = (uint)scene->materials.GetIndex(materialEntities[i]);
-					std::memcpy((uint*)mem.data + i, &material_index, sizeof(uint)); // force memcpy to avoid uncached write into GPU pointer!
+					const Entity entity = splineMaterialEntities[i];
+					const uint material_index = (uint)scene->materials.GetIndex(entity);
+					std::memcpy((uint*)mem.data + baseMaterialCount + i, &material_index, sizeof(uint)); // force memcpy to avoid uncached read from GPU pointer!
+				}
+				for (uint i = 0; i < baseMaterialCount; ++i)
+				{
+					const Entity entity = materialEntities[i];
+					const uint material_index = (uint)scene->materials.GetIndex(entity);
+					std::memcpy((uint*)mem.data + i, &material_index, sizeof(uint)); // force memcpy to avoid uncached read from GPU pointer!
 				}
 
 				push.blendmap_buffer = device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV);

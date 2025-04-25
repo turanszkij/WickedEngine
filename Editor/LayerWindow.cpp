@@ -24,25 +24,15 @@ void LayerWindow::Create(EditorComponent* _editor)
 		editor->componentsWnd.RefreshEntityTree();
 	});
 
-	float x = 30;
-	float y = 0;
-	float step = 25;
-	float siz = 20;
-	float wid = 250;
-
 	label.Create("LayerWindowLabel");
 	label.SetText("The layer is a 32-bit mask (uint32_t), which can be used for filtering by multiple systems (visibility, collision, picking, scripts, etc.).\n- If all bits are disabled, it means the layer will be inactive in most systems.");
-	label.SetPos(XMFLOAT2(x, y));
-	label.SetSize(XMFLOAT2(wid, 100));
-	label.SetColor(wi::Color::Transparent());
+	label.SetFitTextEnabled(true);
 	AddWidget(&label);
-	y += label.GetScale().y + 5;
 
 	for (uint32_t i = 0; i < arraysize(layers); ++i)
 	{
 		layers[i].Create("");
 		layers[i].SetText(std::to_string(i) + ": ");
-		layers[i].SetPos(XMFLOAT2(x + 20 + (i % 5) * 50, y + (i / 5) * step));
 		layers[i].OnClick([=](wi::gui::EventArgs args) {
 			wi::scene::Scene& scene = editor->GetCurrentScene();
 			for (auto& x : editor->translator.selected)
@@ -66,10 +56,7 @@ void LayerWindow::Create(EditorComponent* _editor)
 		AddWidget(&layers[i]);
 	}
 
-	y += step * 7;
-
 	enableAllButton.Create("ALL " ICON_CHECK);
-	enableAllButton.SetPos(XMFLOAT2(x, y));
 	enableAllButton.OnClick([this](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -87,7 +74,6 @@ void LayerWindow::Create(EditorComponent* _editor)
 	AddWidget(&enableAllButton);
 
 	enableNoneButton.Create("NONE " ICON_DISABLED);
-	enableNoneButton.SetPos(XMFLOAT2(x + 120, y));
 	enableNoneButton.OnClick([this](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)

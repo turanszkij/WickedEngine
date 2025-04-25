@@ -2563,7 +2563,9 @@ namespace wi::scene
 		float rotation = 0; // rotation of nodes in radians around the spline axis (affects mesh generation)
 		int mesh_generation_subdivision = 0; // increase this above 0 to request mesh generation
 		int mesh_generation_vertical_subdivision = 0; // can create vertically subdivided mesh (corridoor, tunnel, etc. with this)
-		float terrain_modifier_amount = 0; // increase above 0 to affect terrain generation
+		float terrain_modifier_amount = 0; // increase above 0 to affect terrain generation (greater values increase the strength of the terrain trying to match the spline plane)
+		float terrain_pushdown = 0; // push down the terrain below the spline plane (or above if negative value)
+		float terrain_texture_falloff = 0.8f; // texture blend falloff for terrain modifier spline
 
 		wi::vector<wi::ecs::Entity> spline_node_entities;
 
@@ -2577,10 +2579,14 @@ namespace wi::scene
 		int prev_mesh_generation_vertical_subdivision = 0;
 		int prev_mesh_generation_nodes = 0;
 		mutable float prev_terrain_modifier_amount = 0;
+		mutable float prev_terrain_pushdown = 0;
+		mutable float prev_terrain_texture_falloff = 0;
 		mutable int prev_terrain_generation_nodes = 0;
 		mutable bool dirty_terrain = false;
 		bool prev_looped = false;
 		wi::primitive::AABB aabb;
+		wi::ecs::Entity materialEntity = wi::ecs::INVALID_ENTITY; // temp for terrain usage
+		mutable wi::ecs::Entity materialEntity_terrainPrev = wi::ecs::INVALID_ENTITY; // temp for terrain usage
 
 		// Evaluate an interpolated location on the spline at t which in range [0,1] on the spline
 		//	the result matrix is oriented to look towards the spline direction and face upwards along the spline normal

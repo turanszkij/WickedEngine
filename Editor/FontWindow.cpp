@@ -441,7 +441,7 @@ void FontWindow::Create(EditorComponent* _editor)
 	AddWidget(&colorPicker);
 
 	typewriterInfoLabel.Create("Tip: if you add Sound Component to text, then the typewriter animation will use that sound as typewriter sound effect.");
-	typewriterInfoLabel.SetSize(XMFLOAT2(80, 80));
+	typewriterInfoLabel.SetFitTextEnabled(true);
 	AddWidget(&typewriterInfoLabel);
 
 	typewriterTimeSlider.Create(0, 10, 0, 10000, "Typewriter time: ");

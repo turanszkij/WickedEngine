@@ -225,6 +225,7 @@ namespace wi::terrain
 		const XMFLOAT3* mesh_vertex_positions = nullptr;
 		wi::HairParticleSystem grass;
 		wi::vector<BlendmapLayer> blendmap_layers;
+		wi::vector<BlendmapLayer> spline_blendmap_layers;
 		wi::graphics::Texture blendmap;
 		wi::primitive::Sphere sphere;
 		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
@@ -278,13 +279,14 @@ namespace wi::terrain
 		wi::ecs::Entity terrainEntity = wi::ecs::INVALID_ENTITY;
 		wi::ecs::Entity chunkGroupEntity = wi::ecs::INVALID_ENTITY;
 		wi::scene::Scene* scene = nullptr;
-		wi::vector<wi::ecs::Entity> materialEntities = {};
+		wi::vector<wi::ecs::Entity> materialEntities;
+		wi::vector<wi::ecs::Entity> splineMaterialEntities;
 		wi::ecs::Entity grassEntity = wi::ecs::INVALID_ENTITY;
 		wi::scene::WeatherComponent weather;
 		wi::HairParticleSystem grass_properties;
 		wi::scene::MaterialComponent grass_material;
 		wi::unordered_map<Chunk, ChunkData> chunks;
-		Chunk center_chunk = {};
+		Chunk center_chunk;
 		wi::noise::Perlin perlin_noise;
 		wi::vector<Prop> props;
 		int grass_chunk_dist = 1;

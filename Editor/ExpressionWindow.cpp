@@ -25,20 +25,13 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 		editor->componentsWnd.RefreshEntityTree();
 		});
 
-	float x = 60;
-	float y = 4;
-	float hei = 20;
-	float step = hei + 2;
-	float wid = 220;
-
 	infoLabel.Create("");
-	infoLabel.SetSize(XMFLOAT2(100, 60));
 	infoLabel.SetText("Tip: If you also attach a Sound component to this entity, the mouth expression (if available) will be animated based on the sound playing.");
+	infoLabel.SetFitTextEnabled(true);
 	AddWidget(&infoLabel);
 
 	talkCheckBox.Create("Force Talking: ");
 	talkCheckBox.SetTooltip("Force continuous talking animation, even if no voice is playing");
-	talkCheckBox.SetSize(XMFLOAT2(hei, hei));
 	talkCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		ExpressionComponent* expression_mastering = scene.expressions.GetComponent(entity);
@@ -51,7 +44,6 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 
 	blinkFrequencySlider.Create(0, 1, 0, 1000, "Blinks: ");
 	blinkFrequencySlider.SetTooltip("Specifies the number of blinks per second.");
-	blinkFrequencySlider.SetSize(XMFLOAT2(wid, hei));
 	blinkFrequencySlider.OnSlide([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		ExpressionComponent* expression_mastering = scene.expressions.GetComponent(entity);
@@ -62,7 +54,6 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 	AddWidget(&blinkFrequencySlider);
 
 	blinkLengthSlider.Create(0, 1, 0, 1000, "Blink Length: ");
-	blinkLengthSlider.SetSize(XMFLOAT2(wid, hei));
 	blinkLengthSlider.OnSlide([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		ExpressionComponent* expression_mastering = scene.expressions.GetComponent(entity);
@@ -73,7 +64,6 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 	AddWidget(&blinkLengthSlider);
 
 	blinkCountSlider.Create(1, 4, 2, 3, "Blink Count: ");
-	blinkCountSlider.SetSize(XMFLOAT2(wid, hei));
 	blinkCountSlider.OnSlide([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		ExpressionComponent* expression_mastering = scene.expressions.GetComponent(entity);
@@ -85,7 +75,6 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 
 	lookFrequencySlider.Create(0, 1, 0, 1000, "Looks: ");
 	lookFrequencySlider.SetTooltip("Specifies the number of look-aways per second.");
-	lookFrequencySlider.SetSize(XMFLOAT2(wid, hei));
 	lookFrequencySlider.OnSlide([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		ExpressionComponent* expression_mastering = scene.expressions.GetComponent(entity);
@@ -96,7 +85,6 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 	AddWidget(&lookFrequencySlider);
 
 	lookLengthSlider.Create(0, 1, 0, 1000, "Look Length: ");
-	lookLengthSlider.SetSize(XMFLOAT2(wid, hei));
 	lookLengthSlider.OnSlide([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		ExpressionComponent* expression_mastering = scene.expressions.GetComponent(entity);
@@ -107,8 +95,6 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 	AddWidget(&lookLengthSlider);
 
 	expressionList.Create("Expressions: ");
-	expressionList.SetSize(XMFLOAT2(wid, 200));
-	expressionList.SetPos(XMFLOAT2(4, y += step));
 	expressionList.OnSelect([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		ExpressionComponent* expression_mastering = scene.expressions.GetComponent(entity);
@@ -127,7 +113,6 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 	AddWidget(&expressionList);
 
 	binaryCheckBox.Create("Binary: ");
-	binaryCheckBox.SetSize(XMFLOAT2(hei, hei));
 	binaryCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		ExpressionComponent* expression_mastering = scene.expressions.GetComponent(entity);
@@ -150,8 +135,6 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 	AddWidget(&binaryCheckBox);
 
 	weightSlider.Create(0, 1, 0, 100000, "Weight: ");
-	weightSlider.SetSize(XMFLOAT2(wid, hei));
-	weightSlider.SetPos(XMFLOAT2(x, y += step));
 	weightSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		ExpressionComponent* expression_mastering = scene.expressions.GetComponent(entity);
@@ -177,7 +160,6 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 
 	overrideMouthCombo.Create("Override Mouth: ");
 	overrideMouthCombo.SetTooltip("Lip sync override control");
-	overrideMouthCombo.SetSize(XMFLOAT2(wid, hei));
 	overrideMouthCombo.AddItem("None", (uint64_t)ExpressionComponent::Override::None);
 	overrideMouthCombo.AddItem("Block", (uint64_t)ExpressionComponent::Override::Block);
 	overrideMouthCombo.AddItem("Blend", (uint64_t)ExpressionComponent::Override::Blend);
@@ -206,7 +188,6 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 
 	overrideBlinkCombo.Create("Override Blink: ");
 	overrideBlinkCombo.SetTooltip("Blink override control");
-	overrideBlinkCombo.SetSize(XMFLOAT2(wid, hei));
 	overrideBlinkCombo.AddItem("None", (uint64_t)ExpressionComponent::Override::None);
 	overrideBlinkCombo.AddItem("Block", (uint64_t)ExpressionComponent::Override::Block);
 	overrideBlinkCombo.AddItem("Blend", (uint64_t)ExpressionComponent::Override::Blend);
@@ -235,7 +216,6 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 
 	overrideLookCombo.Create("Override Look: ");
 	overrideLookCombo.SetTooltip("Look-away override control");
-	overrideLookCombo.SetSize(XMFLOAT2(wid, hei));
 	overrideLookCombo.AddItem("None", (uint64_t)ExpressionComponent::Override::None);
 	overrideLookCombo.AddItem("Block", (uint64_t)ExpressionComponent::Override::Block);
 	overrideLookCombo.AddItem("Blend", (uint64_t)ExpressionComponent::Override::Blend);
