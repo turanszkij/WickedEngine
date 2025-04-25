@@ -24,19 +24,11 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 		editor->componentsWnd.RefreshEntityTree();
 	});
 
-	float x = 120;
-	float y = 0;
-	float hei = 18;
-	float step = hei + 2;
-	float wid = 150;
-
 	infoLabel.Create("");
-	infoLabel.SetSize(XMFLOAT2(wid, 200));
+	infoLabel.SetFitTextEnabled(true);
 	AddWidget(&infoLabel);
 
 	meshComboBox.Create("Mesh: ");
-	meshComboBox.SetSize(XMFLOAT2(wid, hei));
-	meshComboBox.SetPos(XMFLOAT2(x, y));
 	meshComboBox.SetEnabled(false);
 	meshComboBox.OnSelect([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
@@ -76,8 +68,6 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	AddWidget(&cameraBendCheckbox);
 
 	countSlider.Create(0, 100000, 1000, 100000, "Strand Count: ");
-	countSlider.SetSize(XMFLOAT2(wid, hei));
-	countSlider.SetPos(XMFLOAT2(x, y += step));
 	countSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -94,8 +84,6 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	AddWidget(&countSlider);
 
 	lengthSlider.Create(0, 4, 1, 1000, "Length: ");
-	lengthSlider.SetSize(XMFLOAT2(wid, hei));
-	lengthSlider.SetPos(XMFLOAT2(x, y += step));
 	lengthSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -112,8 +100,6 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	AddWidget(&lengthSlider);
 
 	widthSlider.Create(0, 2, 1, 1000, "Width: ");
-	widthSlider.SetSize(XMFLOAT2(wid, hei));
-	widthSlider.SetPos(XMFLOAT2(x, y += step));
 	widthSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -130,8 +116,6 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	AddWidget(&widthSlider);
 
 	stiffnessSlider.Create(0, 10, 0.5f, 100, "Stiffness: ");
-	stiffnessSlider.SetSize(XMFLOAT2(wid, hei));
-	stiffnessSlider.SetPos(XMFLOAT2(x, y += step));
 	stiffnessSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -148,8 +132,6 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	AddWidget(&stiffnessSlider);
 
 	dragSlider.Create(0, 1, 0.5f, 100, "Drag: ");
-	dragSlider.SetSize(XMFLOAT2(wid, hei));
-	dragSlider.SetPos(XMFLOAT2(x, y += step));
 	dragSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -166,8 +148,6 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	AddWidget(&dragSlider);
 
 	gravityPowerSlider.Create(0, 1, 0.5f, 100, "Gravity Power: ");
-	gravityPowerSlider.SetSize(XMFLOAT2(wid, hei));
-	gravityPowerSlider.SetPos(XMFLOAT2(x, y += step));
 	gravityPowerSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -184,8 +164,6 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	AddWidget(&gravityPowerSlider);
 
 	randomnessSlider.Create(0, 1, 0.2f, 1000, "Randomness: ");
-	randomnessSlider.SetSize(XMFLOAT2(wid, hei));
-	randomnessSlider.SetPos(XMFLOAT2(x, y += step));
 	randomnessSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -202,8 +180,6 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	AddWidget(&randomnessSlider);
 
 	segmentcountSlider.Create(1, 10, 1, 9, "Segments: ");
-	segmentcountSlider.SetSize(XMFLOAT2(wid, hei));
-	segmentcountSlider.SetPos(XMFLOAT2(x, y += step));
 	segmentcountSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -220,8 +196,6 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	AddWidget(&segmentcountSlider);
 
 	billboardcountSlider.Create(1, 10, 1, 9, "Billboards: ");
-	billboardcountSlider.SetSize(XMFLOAT2(wid, hei));
-	billboardcountSlider.SetPos(XMFLOAT2(x, y += step));
 	billboardcountSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -238,8 +212,6 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	AddWidget(&billboardcountSlider);
 
 	randomSeedSlider.Create(1, 12345, 1, 12344, "Random seed: ");
-	randomSeedSlider.SetSize(XMFLOAT2(wid, hei));
-	randomSeedSlider.SetPos(XMFLOAT2(x, y += step));
 	randomSeedSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -256,8 +228,6 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	AddWidget(&randomSeedSlider);
 
 	viewDistanceSlider.Create(0, 1000, 100, 10000, "View distance: ");
-	viewDistanceSlider.SetSize(XMFLOAT2(wid, hei));
-	viewDistanceSlider.SetPos(XMFLOAT2(x, y += step));
 	viewDistanceSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -274,8 +244,6 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	AddWidget(&viewDistanceSlider);
 
 	uniformitySlider.Create(0.01f, 2.0f, 0.1f, 1000, "Uniformity: ");
-	uniformitySlider.SetSize(XMFLOAT2(wid, hei));
-	uniformitySlider.SetPos(XMFLOAT2(x, y += step));
 	uniformitySlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -504,7 +472,7 @@ void HairParticleWindow::UpdateData()
 	Scene& scene = editor->GetCurrentScene();
 
 	std::string ss;
-	ss += "To use hair particle system, first you must select a surface mesh to spawn particles on, and then increase particle count to grow particles. The particles will get their texture from the Material that is created on the current entity.\n\n";
+	ss += "Tip: To use hair particle system, first you must select a surface mesh to spawn particles on, and then increase particle count to grow particles. The particles will get their texture from the Material that is created on the current entity.\n\n";
 	ss += "Position format: " + std::string(wi::graphics::GetFormatString(hair->position_format)) + "\n";
 	ss += "Memory usage: " + wi::helper::GetMemorySizeText(hair->GetMemorySizeInBytes()) + "\n";
 	infoLabel.SetText(ss);

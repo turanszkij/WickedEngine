@@ -28,6 +28,7 @@ void SplineWindow::Create(EditorComponent* _editor)
 	infoLabel.Create("SplineInfo");
 	infoLabel.SetSize(XMFLOAT2(100, 120));
 	infoLabel.SetText("The spline is a curve that goes through every specified entity that has a TransformComponent smoothly. A mesh can be generated from it automatically by increasing the subdivisions. It can also modify terrain when the terrain modification slider is used. The terrain texture can also be modified if the spline has a material.");
+	infoLabel.SetFitTextEnabled(true);
 	AddWidget(&infoLabel);
 
 	loopedCheck.Create("Looped: ");

@@ -33,7 +33,7 @@ void ColliderWindow::Create(EditorComponent* _editor)
 
 	infoLabel.Create("");
 	infoLabel.SetText("Colliders are used for simple fake physics, without using the physics engine. They are only used in specific CPU/GPU systems.");
-	infoLabel.SetSize(XMFLOAT2(100, 50));
+	infoLabel.SetFitTextEnabled(true);
 	AddWidget(&infoLabel);
 
 	cpuCheckBox.Create("CPU: ");

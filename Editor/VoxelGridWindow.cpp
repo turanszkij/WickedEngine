@@ -24,18 +24,11 @@ void VoxelGridWindow::Create(EditorComponent* _editor)
 		editor->componentsWnd.RefreshEntityTree();
 		});
 
-	float x = 80;
-	float y = 0;
-	float hei = 18;
-	float wid = 200;
-	float step = hei + 4;
-
 	infoLabel.Create("");
-	infoLabel.SetSize(XMFLOAT2(100, 150));
+	infoLabel.SetFitTextEnabled(true);
 	AddWidget(&infoLabel);
 
 	dimXInput.Create("DimX");
-	dimXInput.SetSize(XMFLOAT2(100, hei));
 	dimXInput.SetDescription("Dimension X: ");
 	dimXInput.OnInputAccepted([=](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
@@ -47,7 +40,6 @@ void VoxelGridWindow::Create(EditorComponent* _editor)
 	AddWidget(&dimXInput);
 
 	dimYInput.Create("DimY");
-	dimYInput.SetSize(XMFLOAT2(100, hei));
 	dimYInput.SetDescription("Y: ");
 	dimYInput.OnInputAccepted([=](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
@@ -59,7 +51,6 @@ void VoxelGridWindow::Create(EditorComponent* _editor)
 	AddWidget(&dimYInput);
 
 	dimZInput.Create("DimZ");
-	dimZInput.SetSize(XMFLOAT2(100, hei));
 	dimZInput.SetDescription("Z: ");
 	dimZInput.OnInputAccepted([=](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
@@ -71,7 +62,6 @@ void VoxelGridWindow::Create(EditorComponent* _editor)
 	AddWidget(&dimZInput);
 
 	clearButton.Create("Clear voxels " ICON_CLEARVOXELS);
-	clearButton.SetSize(XMFLOAT2(100, hei));
 	clearButton.OnClick([=](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
 		wi::VoxelGrid* voxelgrid = scene.voxel_grids.GetComponent(entity);
@@ -83,7 +73,6 @@ void VoxelGridWindow::Create(EditorComponent* _editor)
 
 	voxelizeObjectsButton.Create("Voxelize objects " ICON_VOXELIZE);
 	voxelizeObjectsButton.SetTooltip("Generate navigation grid including all meshes.");
-	voxelizeObjectsButton.SetSize(XMFLOAT2(100, hei));
 	voxelizeObjectsButton.OnClick([=](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
 		wi::VoxelGrid* voxelgrid = scene.voxel_grids.GetComponent(entity);
@@ -95,7 +84,6 @@ void VoxelGridWindow::Create(EditorComponent* _editor)
 
 	voxelizeNavigationButton.Create("Voxelize navigation " ICON_VOXELIZE);
 	voxelizeNavigationButton.SetTooltip("Generate navigation grid including all navmeshes (object tagged as navmesh).");
-	voxelizeNavigationButton.SetSize(XMFLOAT2(100, hei));
 	voxelizeNavigationButton.OnClick([=](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
 		wi::VoxelGrid* voxelgrid = scene.voxel_grids.GetComponent(entity);
@@ -107,7 +95,6 @@ void VoxelGridWindow::Create(EditorComponent* _editor)
 
 	voxelizeCollidersButton.Create("Voxelize CPU colliders " ICON_VOXELIZE);
 	voxelizeCollidersButton.SetTooltip("Generate navigation grid including all CPU colliders.");
-	voxelizeCollidersButton.SetSize(XMFLOAT2(100, hei));
 	voxelizeCollidersButton.OnClick([=](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
 		wi::VoxelGrid* voxelgrid = scene.voxel_grids.GetComponent(entity);
@@ -119,7 +106,6 @@ void VoxelGridWindow::Create(EditorComponent* _editor)
 
 	floodfillButton.Create("Flood fill " ICON_VOXELFILL);
 	floodfillButton.SetTooltip("Fill enclosed empty voxel areas to solid.\nThis can take long if there are large enclosed empty areas.");
-	floodfillButton.SetSize(XMFLOAT2(100, hei));
 	floodfillButton.OnClick([=](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
 		wi::VoxelGrid* voxelgrid = scene.voxel_grids.GetComponent(entity);
@@ -133,7 +119,6 @@ void VoxelGridWindow::Create(EditorComponent* _editor)
 
 	fitToSceneButton.Create("Fit bounds to scene " ICON_VOXELBOUNDS);
 	fitToSceneButton.SetTooltip("Fit the bounds of the voxel grid onto the whole scene.");
-	fitToSceneButton.SetSize(XMFLOAT2(100, hei));
 	fitToSceneButton.OnClick([=](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
 		if (scene.bounds.getArea() < 0)
@@ -155,7 +140,6 @@ void VoxelGridWindow::Create(EditorComponent* _editor)
 
 	generateMeshButton.Create("Generate Mesh " ICON_MESH);
 	generateMeshButton.SetTooltip("Generate a mesh from the voxels.");
-	generateMeshButton.SetSize(XMFLOAT2(100, hei));
 	generateMeshButton.OnClick([=](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
 		wi::VoxelGrid* voxelgrid = scene.voxel_grids.GetComponent(entity);
@@ -175,7 +159,6 @@ void VoxelGridWindow::Create(EditorComponent* _editor)
 
 	generateSimplifiedMeshButton.Create("Generate Simplified Mesh " ICON_MESH);
 	generateSimplifiedMeshButton.SetTooltip("Generate a simplified mesh from the voxels.");
-	generateSimplifiedMeshButton.SetSize(XMFLOAT2(100, hei));
 	generateSimplifiedMeshButton.OnClick([=](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
 		wi::VoxelGrid* voxelgrid = scene.voxel_grids.GetComponent(entity);
@@ -195,7 +178,6 @@ void VoxelGridWindow::Create(EditorComponent* _editor)
 
 	generateNavMeshButton.Create("Generate Navigation Mesh " ICON_NAVIGATION);
 	generateNavMeshButton.SetTooltip("Generate a simplified navigation mesh from the voxels.");
-	generateNavMeshButton.SetSize(XMFLOAT2(100, hei));
 	generateNavMeshButton.OnClick([=](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
 		wi::VoxelGrid* voxelgrid = scene.voxel_grids.GetComponent(entity);
@@ -226,12 +208,10 @@ void VoxelGridWindow::Create(EditorComponent* _editor)
 
 	subtractCheckBox.Create("Subtraction mode: ");
 	subtractCheckBox.SetTooltip("If enabled, voxelization will be subtractive, so it will remove voxels instead of add.");
-	subtractCheckBox.SetSize(XMFLOAT2(hei, hei));
 	AddWidget(&subtractCheckBox);
 
 	debugAllCheckBox.Create("Debug draw all: ");
 	debugAllCheckBox.SetTooltip("Draw all voxel grids, whether they are selected or not.");
-	debugAllCheckBox.SetSize(XMFLOAT2(hei, hei));
 	AddWidget(&debugAllCheckBox);
 
 

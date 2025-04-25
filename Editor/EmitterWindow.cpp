@@ -271,8 +271,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 
 
 	infoLabel.Create("EmitterInfo");
-	infoLabel.SetSize(XMFLOAT2(GetSize().x - 20, 160));
-	infoLabel.SetPos(XMFLOAT2(10, y += step));
+	infoLabel.SetFitTextEnabled(true);
 	AddWidget(&infoLabel);
 
 
@@ -953,6 +952,7 @@ void EmitterWindow::UpdateData()
 	NameComponent* meshName = scene.names.GetComponent(emitter->meshID);
 
 	std::string ss;
+	ss += "Tip: You can modify the Material on this entity to set texture, color, emissive to the particles. Particles can also be spawned from a mesh surface if you specify a mesh for it.\n\n";
 	ss += "Emitter Mesh: " + (meshName != nullptr ? meshName->name : "NO EMITTER MESH") + " (" + std::to_string(emitter->meshID) + ")\n";
 	ss += "Memory usage: " + wi::helper::GetMemorySizeText(emitter->GetMemorySizeInBytes()) + "\n";
 	ss += "\n";

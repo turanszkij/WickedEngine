@@ -33,6 +33,7 @@ void AnimationWindow::Create(EditorComponent* _editor)
 	infoLabel.Create("");
 	infoLabel.SetSize(XMFLOAT2(100, 50));
 	infoLabel.SetText("The animation window will stay open even if you select other entities until it is collapsed, so you can record other entities' data.");
+	infoLabel.SetFitTextEnabled(true);
 	AddWidget(&infoLabel);
 
 	modeComboBox.Create("Sampling: ");

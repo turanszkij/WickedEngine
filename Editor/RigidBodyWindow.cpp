@@ -379,7 +379,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 
 	characterLabel.Create("CharacterLabel");
 	characterLabel.SetText("Notes about physics-driven character:\n- The capsule shape is recommended for a physics character.\n- The friction and mass of the physics character are taken from the standard rigid body parameters.\n- This is different from CharacterComponent which uses custom character movement logic.");
-	characterLabel.SetSize(XMFLOAT2(100, 160));
+	characterLabel.SetFitTextEnabled(true);
 	AddWidget(&characterLabel);
 
 	characterSlopeSlider.Create(0, 90, 50, 90, "Max slope angle: ");
@@ -425,7 +425,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 	tips += "- Enable physics visualizer while editing vehicle parameters\n";
 	tips += "- You can reset vehicles by Ctrl + left click on the physics toggle button\n";
 	vehicleLabel.SetText(tips);
-	vehicleLabel.SetSize(XMFLOAT2(100, 240));
+	vehicleLabel.SetFitTextEnabled(true);
 	AddWidget(&vehicleLabel);
 
 	vehicleCombo.Create(ICON_VEHICLE " Vehicle physics: ");

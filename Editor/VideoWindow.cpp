@@ -47,17 +47,9 @@ void VideoWindow::Create(EditorComponent* _editor)
 		editor->componentsWnd.RefreshEntityTree();
 		});
 
-	float x = 60;
-	float y = 0;
-	float hei = 18;
-	float step = hei + 2;
-	float wid = 200;
-
 
 	openButton.Create("Open File " ICON_OPEN);
 	openButton.SetTooltip("Open video file.\nSupported extensions: MP4");
-	openButton.SetPos(XMFLOAT2(x, y));
-	openButton.SetSize(XMFLOAT2(wid, hei));
 	openButton.OnClick([&](wi::gui::EventArgs args) {
 		VideoComponent* video = editor->GetCurrentScene().videos.GetComponent(entity);
 		if (video != nullptr)
@@ -79,14 +71,10 @@ void VideoWindow::Create(EditorComponent* _editor)
 	AddWidget(&openButton);
 
 	filenameLabel.Create("Filename");
-	filenameLabel.SetPos(XMFLOAT2(x, y += step));
-	filenameLabel.SetSize(XMFLOAT2(wid, hei));
 	AddWidget(&filenameLabel);
 
 	playpauseButton.Create(ICON_PLAY);
 	playpauseButton.SetTooltip("Play/Pause selected video instance.");
-	playpauseButton.SetPos(XMFLOAT2(x, y += step));
-	playpauseButton.SetSize(XMFLOAT2(wid, hei));
 	playpauseButton.OnClick([&](wi::gui::EventArgs args) {
 		VideoComponent* video = editor->GetCurrentScene().videos.GetComponent(entity);
 		if (video != nullptr)
@@ -107,8 +95,6 @@ void VideoWindow::Create(EditorComponent* _editor)
 
 	stopButton.Create(ICON_STOP);
 	stopButton.SetTooltip("Stop selected video instance.");
-	stopButton.SetPos(XMFLOAT2(x, y += step));
-	stopButton.SetSize(XMFLOAT2(hei, hei));
 	stopButton.OnClick([&](wi::gui::EventArgs args) {
 		VideoComponent* video = editor->GetCurrentScene().videos.GetComponent(entity);
 		if (video != nullptr)
@@ -123,8 +109,6 @@ void VideoWindow::Create(EditorComponent* _editor)
 
 	loopedCheckbox.Create("Looped: ");
 	loopedCheckbox.SetTooltip("Enable looping for the selected video instance.");
-	loopedCheckbox.SetPos(XMFLOAT2(x, y += step));
-	loopedCheckbox.SetSize(XMFLOAT2(hei, hei));
 	loopedCheckbox.SetCheckText(ICON_LOOP);
 	loopedCheckbox.OnClick([&](wi::gui::EventArgs args) {
 		VideoComponent* video = editor->GetCurrentScene().videos.GetComponent(entity);
@@ -136,7 +120,6 @@ void VideoWindow::Create(EditorComponent* _editor)
 	AddWidget(&loopedCheckbox);
 
 	timerSlider.Create(0, 1, 0, 100000, "Timer: ");
-	timerSlider.SetSize(XMFLOAT2(hei, hei));
 	timerSlider.OnSlide([&](wi::gui::EventArgs args) {
 		VideoComponent* video = editor->GetCurrentScene().videos.GetComponent(entity);
 		if (video != nullptr && video->videoResource.IsValid())
@@ -159,11 +142,10 @@ void VideoWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&timerSlider);
 
-	preview.SetSize(XMFLOAT2(160, 90));
 	AddWidget(&preview);
 
 	infoLabel.Create("");
-	infoLabel.SetSize(XMFLOAT2(800, 500));
+	infoLabel.SetFitTextEnabled(true);
 	AddWidget(&infoLabel);
 
 

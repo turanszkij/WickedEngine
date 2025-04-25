@@ -26,18 +26,13 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 		editor->componentsWnd.RefreshEntityTree();
 	});
 
-	float x = 5, y = 0, step = 35;
-
 	infoLabel.Create("");
-	infoLabel.SetSize(XMFLOAT2(300, 120));
-	infoLabel.SetPos(XMFLOAT2(x, y));
 	infoLabel.SetColor(wi::Color::Transparent());
+	infoLabel.SetFitTextEnabled(true);
 	AddWidget(&infoLabel);
-	y += infoLabel.GetScale().y + 5;
 
 	realTimeCheckBox.Create("RealTime: ");
 	realTimeCheckBox.SetTooltip("Enable continuous rendering of the probe in every frame.");
-	realTimeCheckBox.SetPos(XMFLOAT2(x + 100, y));
 	realTimeCheckBox.SetEnabled(false);
 	realTimeCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
@@ -54,7 +49,6 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 
 	msaaCheckBox.Create("MSAA: ");
 	msaaCheckBox.SetTooltip("Enable Multi Sampling Anti Aliasing for the probe, this will improve its quality.");
-	msaaCheckBox.SetPos(XMFLOAT2(x + 200, y));
 	msaaCheckBox.SetEnabled(false);
 	msaaCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
@@ -71,7 +65,6 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 
 	refreshButton.Create("Refresh");
 	refreshButton.SetTooltip("Re-renders the selected probe.");
-	refreshButton.SetPos(XMFLOAT2(x, y+= step));
 	refreshButton.SetEnabled(false);
 	refreshButton.OnClick([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
@@ -87,7 +80,6 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 
 	refreshAllButton.Create("Refresh All");
 	refreshAllButton.SetTooltip("Re-renders all probes in the scene.");
-	refreshAllButton.SetPos(XMFLOAT2(x + 120, y));
 	refreshAllButton.SetEnabled(true);
 	refreshAllButton.OnClick([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
@@ -103,7 +95,6 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 
 	importButton.Create("Import Cubemap");
 	importButton.SetTooltip("Import a DDS texture file into the selected environment probe.");
-	importButton.SetPos(XMFLOAT2(x, y += step));
 	importButton.SetEnabled(false);
 	importButton.OnClick([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
@@ -142,7 +133,6 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 
 	exportButton.Create("Export Cubemap");
 	exportButton.SetTooltip("Export the selected probe into a DDS cubemap texture file.");
-	exportButton.SetPos(XMFLOAT2(x, y += step));
 	exportButton.SetEnabled(false);
 	exportButton.OnClick([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();

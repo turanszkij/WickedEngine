@@ -36,21 +36,13 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 		editor->componentsWnd.RefreshEntityTree();
 	});
 
-	float x = 95;
-	float y = 0;
-	float hei = 18;
-	float step = hei + 2;
-	float wid = 170;
-
 	infoLabel.Create("");
 	infoLabel.SetText("Soft body physics must be used together with a MeshComponent, otherwise it will have no effect.\nYou can use the Paint Tool to pin or soften soft body vertices.");
-	infoLabel.SetSize(XMFLOAT2(100, 90));
+	infoLabel.SetFitTextEnabled(true);
 	AddWidget(&infoLabel);
 
 	resetButton.Create("Reset");
 	resetButton.SetTooltip("Set the detail to keep between simulation and graphics mesh.\nLower = less detailed, higher = more detailed.");
-	resetButton.SetSize(XMFLOAT2(wid, hei));
-	resetButton.SetPos(XMFLOAT2(x, y));
 	resetButton.OnClick([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -75,8 +67,6 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 
 	detailSlider.Create(0.001f, 1, 1, 1000, "LOD Detail: ");
 	detailSlider.SetTooltip("Set the detail to keep between simulation and graphics mesh.\nLower = less detailed, higher = more detailed.");
-	detailSlider.SetSize(XMFLOAT2(wid, hei));
-	detailSlider.SetPos(XMFLOAT2(x, y));
 	detailSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -101,8 +91,6 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 
 	massSlider.Create(0, 100, 1, 100000, "Mass: ");
 	massSlider.SetTooltip("Set the mass amount for the physics engine.");
-	massSlider.SetSize(XMFLOAT2(wid, hei));
-	massSlider.SetPos(XMFLOAT2(x, y));
 	massSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -128,8 +116,6 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 
 	frictionSlider.Create(0, 1, 0.5f, 100000, "Friction: ");
 	frictionSlider.SetTooltip("Set the friction amount for the physics engine.");
-	frictionSlider.SetSize(XMFLOAT2(wid, hei));
-	frictionSlider.SetPos(XMFLOAT2(x, y += step));
 	frictionSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -154,8 +140,6 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 
 	restitutionSlider.Create(0, 1, 0, 100000, "Restitution: ");
 	restitutionSlider.SetTooltip("Set the restitution amount for the physics engine.");
-	restitutionSlider.SetSize(XMFLOAT2(wid, hei));
-	restitutionSlider.SetPos(XMFLOAT2(x, y += step));
 	restitutionSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -180,8 +164,6 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 
 	pressureSlider.Create(0, 100000, 0, 100000, "Pressure: ");
 	pressureSlider.SetTooltip("Set the pressure amount for the physics engine.");
-	pressureSlider.SetSize(XMFLOAT2(wid, hei));
-	pressureSlider.SetPos(XMFLOAT2(x, y += step));
 	pressureSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -207,8 +189,6 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 
 	vertexRadiusSlider.Create(0, 1, 0, 100000, "Vertex Radius: ");
 	vertexRadiusSlider.SetTooltip("Set how much distance vertices should keep from other physics bodies.");
-	vertexRadiusSlider.SetSize(XMFLOAT2(wid, hei));
-	vertexRadiusSlider.SetPos(XMFLOAT2(x, y += step));
 	vertexRadiusSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
@@ -234,8 +214,6 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 
 	windCheckbox.Create("Wind: ");
 	windCheckbox.SetTooltip("Enable/disable wind force on this soft body.");
-	windCheckbox.SetSize(XMFLOAT2(hei, hei));
-	windCheckbox.SetPos(XMFLOAT2(x, y += step));
 	windCheckbox.OnClick([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)

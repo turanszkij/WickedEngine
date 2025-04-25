@@ -25,22 +25,12 @@ void DecalWindow::Create(EditorComponent* _editor)
 		editor->componentsWnd.RefreshEntityTree();
 	});
 
-	float x = 200;
-	float y = 0;
-	float hei = 18;
-	float step = hei + 2;
-
 	placementCheckBox.Create("Decal Placement Enabled: ");
-	placementCheckBox.SetPos(XMFLOAT2(x, y));
-	placementCheckBox.SetSize(XMFLOAT2(hei, hei));
 	placementCheckBox.SetCheck(false);
 	placementCheckBox.SetTooltip("Enable decal placement. Use the left mouse button to place decals to the scene.");
 	AddWidget(&placementCheckBox);
 
-	y += step;
-
 	onlyalphaCheckBox.Create("Alpha only basecolor: ");
-	onlyalphaCheckBox.SetSize(XMFLOAT2(hei, hei));
 	onlyalphaCheckBox.SetTooltip("You can enable this to only use alpha channel from basecolor map. Useful for blending normalmap-only decals.");
 	onlyalphaCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
@@ -55,7 +45,6 @@ void DecalWindow::Create(EditorComponent* _editor)
 	AddWidget(&onlyalphaCheckBox);
 
 	slopeBlendPowerSlider.Create(0, 8, 0, 1000, "Slope Blend: ");
-	slopeBlendPowerSlider.SetSize(XMFLOAT2(100, hei));
 	slopeBlendPowerSlider.SetTooltip("Set a power factor for blending on surface slopes. 0 = no slope blend, increasing = more slope blend");
 	slopeBlendPowerSlider.OnSlide([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
@@ -69,15 +58,11 @@ void DecalWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&slopeBlendPowerSlider);
 
-	y += step;
-
 	infoLabel.Create("");
 	infoLabel.SetText("Set decal properties in the Material component. Decals support the following material properties:\n - Base color\n - Base color texture\n - Emissive strength\n - Normalmap texture\n - Normalmap strength\n - Surfacemap texture\n - Texture tiling (TexMulAdd)");
-	infoLabel.SetSize(XMFLOAT2(300, 100));
-	infoLabel.SetPos(XMFLOAT2(10, y));
 	infoLabel.SetColor(wi::Color::Transparent());
+	infoLabel.SetFitTextEnabled(true);
 	AddWidget(&infoLabel);
-	y += infoLabel.GetScale().y - step + 5;
 
 	SetMinimized(true);
 	SetVisible(false);

@@ -26,8 +26,8 @@ void ConstraintWindow::Create(EditorComponent* _editor)
 		});
 
 	infoLabel.Create("ConstraintInfo");
-	infoLabel.SetSize(XMFLOAT2(100, 150));
 	infoLabel.SetText("Constraints can be added to bind one or two rigid bodies. If only one body is specified, then it will be bound to the constraint's location. If two bodies are specified, they will be bound together with the constraint acting as the pivot between them at the time of binding.");
+	infoLabel.SetFitTextEnabled(true);
 	AddWidget(&infoLabel);
 
 	physicsDebugCheckBox.Create(ICON_EYE " Physics visualizer: ");

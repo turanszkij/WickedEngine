@@ -1339,9 +1339,16 @@ namespace wi::gui
 			break;
 		}
 
+		const float textheight = font.TextHeight();
+
+		if (fittext_enabled)
+		{
+			SetSize(XMFLOAT2(GetSize().x, textheight + 4 + margin_top + margin_bottom));
+		}
+
 		if (scrollbar.IsEnabled())
 		{
-			scrollbar.SetListLength(font.TextHeight());
+			scrollbar.SetListLength(textheight);
 			scrollbar.ClearTransform();
 			scrollbar.SetPos(XMFLOAT2(translation.x + scale.x - scrollbar_width, translation.y));
 			scrollbar.SetSize(XMFLOAT2(scrollbar_width, scale.y));

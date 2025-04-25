@@ -15,19 +15,10 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	SetText("Paint Tool " ICON_PAINTTOOL);
 	SetSize(XMFLOAT2(300, 800));
 
-	float x = 105;
-	float y = 0;
-	float hei = 20;
-	float step = hei + 4;
-	float wid = 160;
-
 	colorPicker.Create("Color", wi::gui::Window::WindowControls::NONE);
-	float mod_wid = colorPicker.GetScale().x;
 
 	modeComboBox.Create("Mode: ");
 	modeComboBox.SetTooltip("Choose paint tool mode");
-	modeComboBox.SetPos(XMFLOAT2(x, y));
-	modeComboBox.SetSize(XMFLOAT2(wid, hei));
 	modeComboBox.AddItem(ICON_DISABLED " Disabled", MODE_DISABLED);
 	modeComboBox.AddItem(ICON_MATERIAL " Texture", MODE_TEXTURE);
 	modeComboBox.AddItem(ICON_MESH " Vertexcolor", MODE_VERTEXCOLOR);
@@ -111,20 +102,13 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&modeComboBox);
 
-	y += step + 5;
-
 	infoLabel.Create("Paint Tool is disabled.");
-	infoLabel.SetSize(XMFLOAT2(mod_wid - 10, 100));
-	infoLabel.SetPos(XMFLOAT2(5, y));
 	infoLabel.SetColor(wi::Color::Transparent());
+	infoLabel.SetFitTextEnabled(true);
 	AddWidget(&infoLabel);
-
-	y += infoLabel.GetScale().y - step + 5;
 
 	radiusSlider.Create(0.1f, 20.0f, 1, 10000, "Brush Radius: ");
 	radiusSlider.SetTooltip("Set the brush radius in pixel units");
-	radiusSlider.SetSize(XMFLOAT2(wid, hei));
-	radiusSlider.SetPos(XMFLOAT2(x, y += step));
 	radiusSlider.OnSlide([this](wi::gui::EventArgs args) {
 		if (GetMode() == MODE_TEXTURE)
 		{
@@ -143,32 +127,22 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 
 	amountSlider.Create(0, 1, 1, 10000, "Power: ");
 	amountSlider.SetTooltip("Set the brush power amount. 0 = minimum affection, 1 = maximum affection");
-	amountSlider.SetSize(XMFLOAT2(wid, hei));
-	amountSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&amountSlider);
 
 	smoothnessSlider.Create(0, 2, 1, 10000, "Smoothness: ");
 	smoothnessSlider.SetTooltip("Set the brush smoothness. 0 = hard, increase for more smoothness");
-	smoothnessSlider.SetSize(XMFLOAT2(wid, hei));
-	smoothnessSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&smoothnessSlider);
 
 	spacingSlider.Create(0, 500, 1, 500, "Spacing: ");
 	spacingSlider.SetTooltip("Brush spacing means how much brush movement (in pixels) starts a new stroke. 0 = new stroke every frame, 100 = every 100 pixel movement since last stroke will start a new stroke.");
-	spacingSlider.SetSize(XMFLOAT2(wid, hei));
-	spacingSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&spacingSlider);
 
 	rotationSlider.Create(0, 1, 0, 10000, "Rotation: ");
 	rotationSlider.SetTooltip("Brush rotation randomness. This will affect the splat mode brush texture.");
-	rotationSlider.SetSize(XMFLOAT2(wid, hei));
-	rotationSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&rotationSlider);
 
 	stabilizerSlider.Create(1, 15, 2, 14, "Stabilizer: ");
 	stabilizerSlider.SetTooltip("The stabilizer generates a small delay between user input and painting, which will be used to compute a smoother paint stroke..");
-	stabilizerSlider.SetSize(XMFLOAT2(wid, hei));
-	stabilizerSlider.SetPos(XMFLOAT2(x, y += step));
 	if (editor->main->config.GetSection("paint_tool").Has("stabilizer"))
 	{
 		stabilizerSlider.SetValue((float)editor->main->config.GetSection("paint_tool").GetInt("stabilizer"));
@@ -181,8 +155,6 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 
 	backfaceCheckBox.Create("Backfaces: ");
 	backfaceCheckBox.SetTooltip("Set whether to paint on backfaces of geometry or not");
-	backfaceCheckBox.SetSize(XMFLOAT2(hei, hei));
-	backfaceCheckBox.SetPos(XMFLOAT2(x - 20, y += step));
 	if (editor->main->config.GetSection("paint_tool").Has("backfaces"))
 	{
 		backfaceCheckBox.SetCheck(editor->main->config.GetSection("paint_tool").GetBool("backfaces"));
@@ -195,8 +167,6 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 
 	wireCheckBox.Create("Wireframe: ");
 	wireCheckBox.SetTooltip("Set whether to draw wireframe on top of geometry or not");
-	wireCheckBox.SetSize(XMFLOAT2(hei, hei));
-	wireCheckBox.SetPos(XMFLOAT2(x - 20 + 100, y));
 	wireCheckBox.SetCheck(false);
 	if (editor->main->config.GetSection("paint_tool").Has("wireframe"))
 	{
@@ -210,8 +180,6 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 
 	pressureCheckBox.Create("Pressure: ");
 	pressureCheckBox.SetTooltip("Set whether to use pressure sensitivity (for example pen tablet)");
-	pressureCheckBox.SetSize(XMFLOAT2(hei, hei));
-	pressureCheckBox.SetPos(XMFLOAT2(x - 20 + 200, y));
 	if (editor->main->config.GetSection("paint_tool").Has("pressure"))
 	{
 		pressureCheckBox.SetCheck(editor->main->config.GetSection("paint_tool").GetBool("pressure"));
@@ -225,36 +193,25 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 
 	alphaCheckBox.Create("Redirect alpha: ");
 	alphaCheckBox.SetTooltip("The red color will be redirected to write alpha channel. Alpha value controls the blending like normally.");
-	alphaCheckBox.SetSize(XMFLOAT2(hei, hei));
-	alphaCheckBox.SetPos(XMFLOAT2(x - 20 + 200, y));
 	AddWidget(&alphaCheckBox);
 
 	terrainCheckBox.Create("Terrain only: ");
 	terrainCheckBox.SetTooltip("Terrain specific sculpting mode.");
-	terrainCheckBox.SetSize(XMFLOAT2(hei, hei));
-	terrainCheckBox.SetPos(XMFLOAT2(x - 20 + 200, y));
 	terrainCheckBox.SetCheckText(ICON_TERRAIN);
 	AddWidget(&terrainCheckBox);
 
 	axisCombo.Create("Axis Lock: ");
 	axisCombo.SetTooltip("You can lock modification to an axis here.");
-	axisCombo.SetPos(XMFLOAT2(x, y));
-	axisCombo.SetSize(XMFLOAT2(wid, hei));
 	axisCombo.AddItem(ICON_DISABLED, (uint64_t)AxisLock::Disabled);
 	axisCombo.AddItem("X " ICON_LEFT_RIGHT, (uint64_t)AxisLock::X);
 	axisCombo.AddItem("Y " ICON_UP_DOWN, (uint64_t)AxisLock::Y);
 	axisCombo.AddItem("Z " ICON_UPRIGHT_DOWNLEFT, (uint64_t)AxisLock::Z);
 	AddWidget(&axisCombo);
 
-	colorPicker.SetPos(XMFLOAT2(5, y += step));
 	AddWidget(&colorPicker);
-
-	y += colorPicker.GetScale().y;
 
 	textureSlotComboBox.Create("Texture Slot: ");
 	textureSlotComboBox.SetTooltip("Choose texture slot of the selected material to paint (texture paint mode only)");
-	textureSlotComboBox.SetPos(XMFLOAT2(x, y += step));
-	textureSlotComboBox.SetSize(XMFLOAT2(wid, hei));
 	textureSlotComboBox.AddItem("BaseColor (RGBA)", MaterialComponent::BASECOLORMAP);
 	textureSlotComboBox.AddItem("Normal (RGB)", MaterialComponent::NORMALMAP);
 	textureSlotComboBox.AddItem("SurfaceMap (RGBA)", MaterialComponent::SURFACEMAP);
@@ -275,8 +232,6 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 
 	brushShapeComboBox.Create("Brush Shape: ");
 	brushShapeComboBox.SetTooltip("Choose shape for brush masking effect");
-	brushShapeComboBox.SetPos(XMFLOAT2(x, y += step));
-	brushShapeComboBox.SetSize(XMFLOAT2(wid, hei));
 	brushShapeComboBox.AddItem(ICON_CIRCLE);
 	brushShapeComboBox.AddItem(ICON_SQUARE);
 	brushShapeComboBox.SetSelected(0);
@@ -284,8 +239,6 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 
 	saveTextureButton.Create("Save Texture");
 	saveTextureButton.SetTooltip("Save edited texture.");
-	saveTextureButton.SetSize(XMFLOAT2(wid, hei));
-	saveTextureButton.SetPos(XMFLOAT2(x, y += step));
 	saveTextureButton.OnClick([this] (wi::gui::EventArgs args) {
 
 		Scene& scene = editor->GetCurrentScene();
@@ -331,8 +284,6 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	brushTextureButton.Create("");
 	brushTextureButton.SetDescription("Brush tex: ");
 	brushTextureButton.SetTooltip("Open an image to use as brush texture (splatting mode).\nSplat mode means that the texture will be relative to the brush position");
-	brushTextureButton.SetSize(XMFLOAT2(hei*2, hei*2));
-	brushTextureButton.SetPos(XMFLOAT2(x, y += step));
 	brushTextureButton.sprites[wi::gui::IDLE].params.color = wi::Color::White();
 	brushTextureButton.sprites[wi::gui::FOCUS].params.color = wi::Color::Gray();
 	brushTextureButton.sprites[wi::gui::ACTIVE].params.color = wi::Color::White();
@@ -362,8 +313,6 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	revealTextureButton.Create("");
 	revealTextureButton.SetDescription("Reveal tex: ");
 	revealTextureButton.SetTooltip("Open an image to use as reveal mode texture.\nReveal mode means that the texture will use the UV of the mesh. It will be multiplied by brush tex.");
-	revealTextureButton.SetSize(XMFLOAT2(hei * 2, hei * 2));
-	revealTextureButton.SetPos(XMFLOAT2(x + 150, y));
 	revealTextureButton.sprites[wi::gui::IDLE].params.color = wi::Color::White();
 	revealTextureButton.sprites[wi::gui::FOCUS].params.color = wi::Color::Gray();
 	revealTextureButton.sprites[wi::gui::ACTIVE].params.color = wi::Color::White();
