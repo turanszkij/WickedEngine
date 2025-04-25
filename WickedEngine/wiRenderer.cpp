@@ -2623,6 +2623,37 @@ const GPUBuffer& GetIndexBufferForQuads(uint32_t max_quad_count)
 	return indexBufferForQuads32;
 }
 
+static constexpr uint32_t suballocation_pagesize = 64u * 1024u;
+static std::mutex suballocation_locker;
+static GPUBuffer suballocation_buffer;
+OffsetAllocator::Allocation SuballocateGPUBuffer(uint64_t size)
+{
+	const uint64_t alignedsize = AlignTo(size, (uint64_t)suballocation_pagesize);
+	const uint32_t count = uint32_t(alignedsize / suballocation_pagesize);
+
+	std::scoped_lock lock(suballocation_locker);
+	static constexpr uint32_t numpages = 1024u;
+	static constexpr uint32_t totalsize = suballocation_pagesize * numpages;
+	static OffsetAllocator::Allocator allocator(totalsize, numpages);
+	if (!suballocation_buffer.IsValid())
+	{
+		GPUBufferDesc desc;
+		desc.size = totalsize;
+		desc.usage = Usage::DEFAULT;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::VERTEX_BUFFER | BindFlag::INDEX_BUFFER;
+		desc.misc_flags = ResourceMiscFlag::ALIASING_BUFFER | ResourceMiscFlag::NO_DEFAULT_DESCRIPTORS;
+		desc.alignment = suballocation_pagesize;
+		bool success = device->CreateBuffer(&desc, nullptr, &suballocation_buffer);
+		assert(success);
+	}
+	return allocator.allocate(count);
+}
+GPUBuffer GetSuballocationBufferStorage()
+{
+	std::scoped_lock lock(suballocation_locker);
+	return suballocation_buffer;
+}
+
 void ModifyObjectSampler(const SamplerDesc& desc)
 {
 	if (initialized.load())
@@ -2961,7 +2992,8 @@ void RenderMeshes(
 	uint32_t prev_stencilref = STENCILREF_DEFAULT;
 	device->BindStencilRef(prev_stencilref, cmd);
 
-	const GPUBuffer* prev_ib = nullptr;
+	IndexBufferFormat prev_ibformat = IndexBufferFormat::UINT16;
+	device->BindIndexBuffer(&suballocation_buffer, prev_ibformat, 0, cmd);
 
 	// This will be called every time we start a new draw call:
 	auto batch_flush = [&]()
@@ -3092,10 +3124,11 @@ void RenderMeshes(
 				device->BindStencilRef(stencilRef, cmd);
 			}
 
-			if (!meshShaderPSO && prev_ib != &mesh.generalBuffer)
+			const IndexBufferFormat ibformat = mesh.GetIndexFormat();
+			if (!meshShaderPSO && prev_ibformat != ibformat)
 			{
-				device->BindIndexBuffer(&mesh.generalBuffer, mesh.GetIndexFormat(), mesh.ib.offset, cmd);
-				prev_ib = &mesh.generalBuffer;
+				prev_ibformat = ibformat;
+				device->BindIndexBuffer(&suballocation_buffer, prev_ibformat, 0, cmd);
 			}
 
 			if (
@@ -3114,6 +3147,8 @@ void RenderMeshes(
 			push.instances = instanceBufferDescriptorIndex;
 			push.instance_offset = (uint)instancedBatch.dataOffset;
 
+			const uint32_t indexOffset = uint32_t(((uint64_t)mesh.generalBufferOffsetAllocation.offset * (uint64_t)suballocation_pagesize + mesh.ib.offset) / mesh.GetIndexStride()) + subset.indexOffset;
+
 			if (pso_backside != nullptr)
 			{
 				device->BindPipelineState(pso_backside, cmd);
@@ -3124,7 +3159,7 @@ void RenderMeshes(
 				}
 				else
 				{
-					device->DrawIndexedInstanced(subset.indexCount, instancedBatch.instanceCount, subset.indexOffset, 0, 0, cmd);
+					device->DrawIndexedInstanced(subset.indexCount, instancedBatch.instanceCount, indexOffset, 0, 0, cmd);
 				}
 			}
 
@@ -3136,7 +3171,7 @@ void RenderMeshes(
 			}
 			else
 			{
-				device->DrawIndexedInstanced(subset.indexCount, instancedBatch.instanceCount, subset.indexOffset, 0, 0, cmd);
+				device->DrawIndexedInstanced(subset.indexCount, instancedBatch.instanceCount, indexOffset, 0, 0, cmd);
 			}
 
 		}

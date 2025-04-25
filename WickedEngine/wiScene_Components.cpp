@@ -1291,7 +1291,12 @@ namespace wi::scene
 			}
 		};
 
-		bool success = device->CreateBuffer2(&bd, init_callback, &generalBuffer);
+		generalBufferOffsetAllocation = wi::renderer::SuballocateGPUBuffer(bd.size);
+		assert(generalBufferOffsetAllocation.offset != OffsetAllocator::Allocation::NO_SPACE);
+		GPUBuffer alias = wi::renderer::GetSuballocationBufferStorage();
+		uint64_t alias_offset = generalBufferOffsetAllocation.offset * 64 * 1024;
+
+		bool success = device->CreateBuffer2(&bd, init_callback, &generalBuffer, &alias, alias_offset);
 		assert(success);
 		device->SetName(&generalBuffer, "MeshComponent::generalBuffer");
 

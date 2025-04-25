@@ -314,6 +314,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\lodepng.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\meshoptimizer.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\minimp4.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\offsetAllocator.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\pugiconfig.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\pugixml.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\WinAdapter.h" />
@@ -610,6 +611,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\vertexfilter.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\vfetchanalyzer.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\vfetchoptimizer.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\offsetAllocator.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\pugixml.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiAsync_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiConfig.cpp" />
