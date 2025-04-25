@@ -3357,20 +3357,7 @@ namespace wi::gui
 			if (sprites[state].params.isCornerRoundingEnabled())
 			{
 				// Left side:
-				if (closeButton.parent)
-				{
-					closeButton.sprites[i].params.enableCornerRounding();
-					closeButton.sprites[i].params.corners_rounding[0].radius = sprites[state].params.corners_rounding[0].radius;
-					if (IsCollapsed())
-					{
-						closeButton.sprites[i].params.corners_rounding[2].radius = sprites[state].params.corners_rounding[2].radius;
-					}
-					else
-					{
-						closeButton.sprites[i].params.corners_rounding[2].radius = 0;
-					}
-				}
-				else if (collapseButton.parent)
+				if (collapseButton.parent)
 				{
 					collapseButton.sprites[i].params.enableCornerRounding();
 					collapseButton.sprites[i].params.corners_rounding[0].radius = sprites[state].params.corners_rounding[0].radius;
@@ -3411,7 +3398,20 @@ namespace wi::gui
 				}
 
 				// Right side:
-				if (moveDragger.parent)
+				if (closeButton.parent)
+				{
+					closeButton.sprites[i].params.enableCornerRounding();
+					closeButton.sprites[i].params.corners_rounding[1].radius = sprites[state].params.corners_rounding[1].radius;
+					if (IsCollapsed())
+					{
+						closeButton.sprites[i].params.corners_rounding[3].radius = sprites[state].params.corners_rounding[3].radius;
+					}
+					else
+					{
+						closeButton.sprites[i].params.corners_rounding[3].radius = 0;
+					}
+				}
+				else if (moveDragger.parent)
 				{
 					moveDragger.sprites[i].params.enableCornerRounding();
 					moveDragger.sprites[i].params.corners_rounding[1].radius = sprites[state].params.corners_rounding[1].radius;
@@ -4042,10 +4042,6 @@ namespace wi::gui
 			}
 			moveDragger.SetSize(XMFLOAT2(scale.x - control_size * rem, control_size));
 			float offset = 0;
-			if (closeButton.parent != nullptr)
-			{
-				offset++;
-			}
 			if (collapseButton.parent != nullptr)
 			{
 				offset++;
@@ -4057,20 +4053,14 @@ namespace wi::gui
 		{
 			closeButton.Detach();
 			closeButton.SetSize(XMFLOAT2(control_size, control_size));
-			float offset = 0;
-			closeButton.SetPos(XMFLOAT2(translation.x + control_size * offset, translation.y));
+			closeButton.SetPos(XMFLOAT2(translation.x + scale.x - control_size, translation.y));
 			closeButton.AttachTo(this);
 		}
 		if (collapseButton.parent != nullptr)
 		{
 			collapseButton.Detach();
 			collapseButton.SetSize(XMFLOAT2(control_size, control_size));
-			float offset = 0;
-			if (closeButton.parent != nullptr)
-			{
-				offset++;
-			}
-			collapseButton.SetPos(XMFLOAT2(translation.x + control_size * offset, translation.y));
+			collapseButton.SetPos(XMFLOAT2(translation.x, translation.y));
 			collapseButton.AttachTo(this);
 		}
 		if (label.parent != nullptr)
@@ -4082,7 +4072,6 @@ namespace wi::gui
 			if (closeButton.parent != nullptr)
 			{
 				label_size.x -= control_size;
-				label_pos.x += control_size;
 			}
 			if (collapseButton.parent != nullptr)
 			{
