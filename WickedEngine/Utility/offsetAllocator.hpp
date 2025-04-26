@@ -2,6 +2,8 @@
 // (C) Sebastian Aaltonen 2023
 // MIT License (see file: LICENSE)
 
+// Modified a bit to fit Wicked Engine
+
 //#define USE_16_BIT_OFFSETS
 
 namespace OffsetAllocator
@@ -52,10 +54,12 @@ namespace OffsetAllocator
     class Allocator
     {
     public:
-        Allocator(uint32 size, uint32 maxAllocs = 128 * 1024);
+		Allocator() = default;
         Allocator(Allocator &&other);
         ~Allocator();
         void reset();
+
+		void init(uint32 size, uint32 maxAllocs = 128 * 1024);
         
         Allocation allocate(uint32 size);
         void free(Allocation allocation);
@@ -81,16 +85,16 @@ namespace OffsetAllocator
             bool used = false; // TODO: Merge as bit flag
         };
     
-        uint32 m_size;
-        uint32 m_maxAllocs;
-        uint32 m_freeStorage;
+        uint32 m_size = 0;
+        uint32 m_maxAllocs = 0;
+        uint32 m_freeStorage = 0;
 
-        uint32 m_usedBinsTop;
-        uint8 m_usedBins[NUM_TOP_BINS];
-        NodeIndex m_binIndices[NUM_LEAF_BINS];
+        uint32 m_usedBinsTop = 0;
+		uint8 m_usedBins[NUM_TOP_BINS] = {};
+		NodeIndex m_binIndices[NUM_LEAF_BINS] = {};
                 
-        Node* m_nodes;
-        NodeIndex* m_freeNodes;
-        uint32 m_freeOffset;
+		Node* m_nodes = nullptr;
+		NodeIndex* m_freeNodes = nullptr;
+		uint32 m_freeOffset = 0;
     };
 }

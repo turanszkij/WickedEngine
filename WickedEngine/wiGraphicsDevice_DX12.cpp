@@ -2422,6 +2422,7 @@ std::mutex queue_locker;
 
 				disabledMessages.push_back(D3D12_MESSAGE_ID_DRAW_EMPTY_SCISSOR_RECTANGLE);
 				disabledMessages.push_back(D3D12_MESSAGE_ID_SETPRIVATEDATA_CHANGINGPARAMS);
+				disabledMessages.push_back(D3D12_MESSAGE_ID_HEAP_ADDRESS_RANGE_INTERSECTS_MULTIPLE_BUFFERS);
 
 				D3D12_INFO_QUEUE_FILTER filter = {};
 				filter.AllowList.NumSeverities = static_cast<UINT>(enabledSeverities.size());

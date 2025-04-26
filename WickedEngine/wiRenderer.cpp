@@ -2623,18 +2623,13 @@ const GPUBuffer& GetIndexBufferForQuads(uint32_t max_quad_count)
 	return indexBufferForQuads32;
 }
 
-static constexpr uint32_t suballocation_pagesize = 64u * 1024u;
 static std::mutex suballocation_locker;
 static GPUBuffer suballocation_buffer;
-OffsetAllocator::Allocation SuballocateGPUBuffer(uint64_t size)
+wi::allocator::PageAllocator::Allocation SuballocateGPUBuffer(uint64_t size)
 {
-	const uint64_t alignedsize = AlignTo(size, (uint64_t)suballocation_pagesize);
-	const uint32_t count = uint32_t(alignedsize / suballocation_pagesize);
-
 	std::scoped_lock lock(suballocation_locker);
-	static constexpr uint32_t numpages = 1024u;
-	static constexpr uint32_t totalsize = suballocation_pagesize * numpages;
-	static OffsetAllocator::Allocator allocator(totalsize, numpages);
+	static constexpr uint32_t totalsize = 256ull * 1024ull * 1024ull; // 256 MB
+	static wi::allocator::PageAllocator allocator;
 	if (!suballocation_buffer.IsValid())
 	{
 		GPUBufferDesc desc;
@@ -2642,11 +2637,14 @@ OffsetAllocator::Allocation SuballocateGPUBuffer(uint64_t size)
 		desc.usage = Usage::DEFAULT;
 		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::VERTEX_BUFFER | BindFlag::INDEX_BUFFER;
 		desc.misc_flags = ResourceMiscFlag::ALIASING_BUFFER | ResourceMiscFlag::NO_DEFAULT_DESCRIPTORS;
-		desc.alignment = suballocation_pagesize;
+		desc.alignment = device->GetMinOffsetAlignment(&desc);
 		bool success = device->CreateBuffer(&desc, nullptr, &suballocation_buffer);
 		assert(success);
+		device->SetName(&suballocation_buffer, "wi::renderer::suballocation_buffer");
+		allocator.init(totalsize, (uint32_t)desc.alignment);
+		wilog("SuballocateGPUBuffer created buffer with size: %s, with page size: %s, page count: %d", wi::helper::GetMemorySizeText(allocator.GetTotalSizeInBytes()).c_str(), wi::helper::GetMemorySizeText(allocator.page_size).c_str(), (int)allocator.page_count);
 	}
-	return allocator.allocate(count);
+	return allocator.allocate(size);
 }
 GPUBuffer GetSuballocationBufferStorage()
 {
@@ -2993,7 +2991,7 @@ void RenderMeshes(
 	device->BindStencilRef(prev_stencilref, cmd);
 
 	IndexBufferFormat prev_ibformat = IndexBufferFormat::UINT16;
-	device->BindIndexBuffer(&suballocation_buffer, prev_ibformat, 0, cmd);
+	const GPUBuffer* prev_ib = nullptr;
 
 	// This will be called every time we start a new draw call:
 	auto batch_flush = [&]()
@@ -3125,10 +3123,13 @@ void RenderMeshes(
 			}
 
 			const IndexBufferFormat ibformat = mesh.GetIndexFormat();
-			if (!meshShaderPSO && prev_ibformat != ibformat)
+			const GPUBuffer* ib = mesh.generalBufferOffsetAllocation.IsValid() ? &suballocation_buffer : &mesh.generalBuffer;
+
+			if (!meshShaderPSO && (prev_ib != ib || prev_ibformat != ibformat))
 			{
+				prev_ib = ib;
 				prev_ibformat = ibformat;
-				device->BindIndexBuffer(&suballocation_buffer, prev_ibformat, 0, cmd);
+				device->BindIndexBuffer(ib, ibformat, 0, cmd);
 			}
 
 			if (
@@ -3147,7 +3148,15 @@ void RenderMeshes(
 			push.instances = instanceBufferDescriptorIndex;
 			push.instance_offset = (uint)instancedBatch.dataOffset;
 
-			const uint32_t indexOffset = uint32_t(((uint64_t)mesh.generalBufferOffsetAllocation.offset * (uint64_t)suballocation_pagesize + mesh.ib.offset) / mesh.GetIndexStride()) + subset.indexOffset;
+			uint32_t indexOffset = 0;
+			if (mesh.generalBufferOffsetAllocation.IsValid())
+			{
+				indexOffset = uint32_t(((uint64_t)mesh.generalBufferOffsetAllocation.byte_offset + mesh.ib.offset) / mesh.GetIndexStride()) + subset.indexOffset;
+			}
+			else
+			{
+				indexOffset = uint32_t(mesh.ib.offset / mesh.GetIndexStride()) + subset.indexOffset;
+			}
 
 			if (pso_backside != nullptr)
 			{

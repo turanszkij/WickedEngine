@@ -15,8 +15,7 @@
 #include "wiUnorderedSet.h"
 #include "wiBVH.h"
 #include "wiPathQuery.h"
-
-#include "Utility/offsetAllocator.hpp"
+#include "wiAllocator.h"
 
 namespace wi::scene
 {
@@ -714,7 +713,7 @@ namespace wi::scene
 
 		// Non-serialized attributes:
 		wi::primitive::AABB aabb;
-		OffsetAllocator::Allocation generalBufferOffsetAllocation;
+		wi::allocator::PageAllocator::Allocation generalBufferOffsetAllocation;
 		wi::graphics::GPUBuffer generalBuffer; // index buffer + all static vertex buffers
 		wi::graphics::GPUBuffer streamoutBuffer; // all dynamic vertex buffers
 		struct BufferView

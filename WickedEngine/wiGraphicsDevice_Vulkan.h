@@ -473,6 +473,10 @@ namespace wi::graphics
 			{
 				alignment = std::max(alignment, properties2.properties.limits.minTexelBufferOffsetAlignment);
 			}
+			if (has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_BUFFER) || has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_NON_RT_DS) || has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_RT_DS))
+			{
+				alignment = std::max(alignment, uint64_t(64 * 1024)); // 64KB safety to match DX12, because cannot use vkGetBufferMemoryRequirements here
+			}
 			return alignment;
 		}
 

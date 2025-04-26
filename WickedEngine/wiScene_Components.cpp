@@ -1291,13 +1291,26 @@ namespace wi::scene
 			}
 		};
 
+		// The suballocation strategy is used to have all mesh buffers reside in a global buffer
+		//	With this we can avoid rebinding the index buffer for every mesh and can work with purely offsets
+		//	Though the index buffer will still need to be rebound if the index format changes, but that happens less frequently
 		generalBufferOffsetAllocation = wi::renderer::SuballocateGPUBuffer(bd.size);
-		assert(generalBufferOffsetAllocation.offset != OffsetAllocator::Allocation::NO_SPACE);
-		GPUBuffer alias = wi::renderer::GetSuballocationBufferStorage();
-		uint64_t alias_offset = generalBufferOffsetAllocation.offset * 64 * 1024;
+		if (generalBufferOffsetAllocation.IsValid())
+		{
+			GPUBuffer alias = wi::renderer::GetSuballocationBufferStorage();
+			uint64_t alias_offset = generalBufferOffsetAllocation.byte_offset;
 
-		bool success = device->CreateBuffer2(&bd, init_callback, &generalBuffer, &alias, alias_offset);
-		assert(success);
+			bool success = device->CreateBuffer2(&bd, init_callback, &generalBuffer, &alias, alias_offset);
+			assert(success);
+			//wilog("SuballocateGPUBuffer free pages remaining: %d", (int)generalBufferOffsetAllocation.allocator->allocator.storageReport().totalFreeSpace);
+		}
+		else
+		{
+			// If suballocation was not successful, a standalone buffer can be created instead:
+			bool success = device->CreateBuffer2(&bd, init_callback, &generalBuffer);
+			assert(success);
+		}
+
 		device->SetName(&generalBuffer, "MeshComponent::generalBuffer");
 
 		assert(ib.IsValid());

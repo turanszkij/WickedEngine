@@ -12,8 +12,7 @@
 #include "shaders/ShaderInterop_SurfelGI.h"
 #include "wiVector.h"
 #include "wiSpinLock.h"
-
-#include "Utility/offsetAllocator.hpp"
+#include "wiAllocator.h"
 
 #include <memory>
 #include <limits>
@@ -70,8 +69,9 @@ namespace wi::renderer
 	//	vertexID * 4 + [0, 1, 2, 2, 1, 3]
 	const wi::graphics::GPUBuffer& GetIndexBufferForQuads(uint32_t max_quad_count);
 
-	OffsetAllocator::Allocation SuballocateGPUBuffer(uint64_t size);
-	wi::graphics::GPUBuffer GetSuballocationBufferStorage();
+	// Sub-allocate from a large GPU buffer for memory aliasing purpose:
+	wi::allocator::PageAllocator::Allocation SuballocateGPUBuffer(uint64_t size);
+	wi::graphics::GPUBuffer GetSuballocationBufferStorage(); // this can be used as aliasing dest in suballocated buffer creations
 
 	void ModifyObjectSampler(const wi::graphics::SamplerDesc& desc);
 
