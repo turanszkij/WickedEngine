@@ -2625,10 +2625,10 @@ const GPUBuffer& GetIndexBufferForQuads(uint32_t max_quad_count)
 
 static std::mutex suballocation_locker;
 static GPUBuffer suballocation_buffer;
-wi::allocator::PageAllocator::Allocation SuballocateGPUBuffer(uint64_t size)
+BufferSuballocation SuballocateGPUBuffer(uint64_t size)
 {
 	std::scoped_lock lock(suballocation_locker);
-	static constexpr uint32_t totalsize = 256ull * 1024ull * 1024ull; // 256 MB
+	static constexpr uint64_t totalsize = 256ull * 1024ull * 1024ull; // 256 MB
 	static wi::allocator::PageAllocator allocator;
 	if (!suballocation_buffer.IsValid())
 	{
@@ -2644,12 +2644,18 @@ wi::allocator::PageAllocator::Allocation SuballocateGPUBuffer(uint64_t size)
 		allocator.init(totalsize, (uint32_t)desc.alignment);
 		wilog("SuballocateGPUBuffer created buffer with size: %s, with page size: %s, page count: %d", wi::helper::GetMemorySizeText(allocator.GetTotalSizeInBytes()).c_str(), wi::helper::GetMemorySizeText(allocator.page_size).c_str(), (int)allocator.page_count);
 	}
-	return allocator.allocate(size);
-}
-GPUBuffer GetSuballocationBufferStorage()
-{
-	std::scoped_lock lock(suballocation_locker);
-	return suballocation_buffer;
+	BufferSuballocation ret;
+	ret.alias = suballocation_buffer;
+	ret.allocation = allocator.allocate(size);
+	//if (ret.allocation.IsValid())
+	//{
+	//	wilog("SuballocateGPUBuffer allocated size: %s, free space remaining: %s", wi::helper::GetMemorySizeText(size).c_str(), wi::helper::GetMemorySizeText(ret.allocation.allocator->allocator.storageReport().totalFreeSpace * allocator.page_size).c_str());
+	//}
+	//else
+	//{
+	//	wilog("SuballocateGPUBuffer tried to allocate size: %s, but it couldn't be fulfilled.", wi::helper::GetMemorySizeText(size).c_str());
+	//}
+	return ret;
 }
 
 void ModifyObjectSampler(const SamplerDesc& desc)

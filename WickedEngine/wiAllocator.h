@@ -78,6 +78,11 @@ namespace wi::allocator
 			ptr->~T();
 			free_list.push_back(ptr);
 		}
+
+		inline bool is_empty() const
+		{
+			return (blocks.size() * block_size) == free_list.size();
+		}
 	};
 
 	// Allocation and freeing of a number of bytes, managed in pages of the same size, with refcounting and auto freeing on destruction and thread safety
@@ -87,7 +92,7 @@ namespace wi::allocator
 		uint32_t page_size = 0;
 		struct AllocationInternal
 		{
-			std::atomic<uint32_t> refcount{ 0 };
+			std::atomic<int> refcount{ 0 };
 			OffsetAllocator::Allocation allocation;
 		};
 		struct AllocatorInternal
@@ -98,12 +103,12 @@ namespace wi::allocator
 		};
 		std::shared_ptr<AllocatorInternal> allocator;
 
-		void init(uint64_t total_size_in_bytes, uint32_t page_size = 64 * 1024)
+		void init(uint64_t total_size_in_bytes, uint32_t page_size = 64u * 1024u)
 		{
 			this->page_count = uint32_t(align(total_size_in_bytes, (uint64_t)page_size) / (uint64_t)page_size);
 			this->page_size = page_size;
 			allocator = std::make_shared<AllocatorInternal>();
-			allocator->allocator.init(page_count);
+			allocator->allocator.init(page_count, std::min(page_count, 128u * 1024u));
 		}
 
 		constexpr uint64_t GetTotalSizeInBytes() const { return uint64_t(page_count) * uint64_t(page_size); }
@@ -114,9 +119,13 @@ namespace wi::allocator
 			AllocationInternal* internal_state = nullptr;
 			uint64_t byte_offset = ~0ull;
 
-			Allocation() = default;
+			Allocation()
+			{
+				Reset();
+			}
 			Allocation(const Allocation& other)
 			{
+				Reset();
 				allocator = other.allocator;
 				internal_state = other.internal_state;
 				byte_offset = other.byte_offset;
@@ -127,6 +136,7 @@ namespace wi::allocator
 			}
 			Allocation(Allocation&& other) noexcept
 			{
+				Reset();
 				allocator = std::move(other.allocator);
 				internal_state = other.internal_state;
 				byte_offset = other.byte_offset;
@@ -136,18 +146,11 @@ namespace wi::allocator
 			}
 			~Allocation()
 			{
-				if (IsValid())
-				{
-					if (internal_state->refcount.fetch_sub(1) == 1)
-					{
-						std::scoped_lock lck(allocator->locker);
-						allocator->allocator.free(internal_state->allocation);
-						allocator->internal_blocks.free(internal_state);
-					}
-				}
+				Reset();
 			}
 			void operator=(const Allocation& other)
 			{
+				Reset();
 				allocator = other.allocator;
 				internal_state = other.internal_state;
 				byte_offset = other.byte_offset;
@@ -158,6 +161,7 @@ namespace wi::allocator
 			}
 			void operator=(Allocation&& other) noexcept
 			{
+				Reset();
 				allocator = std::move(other.allocator);
 				internal_state = other.internal_state;
 				byte_offset = other.byte_offset;
@@ -165,11 +169,28 @@ namespace wi::allocator
 				other.internal_state = nullptr;
 				other.byte_offset = ~0ull;
 			}
+			void Reset()
+			{
+				if (IsValid() && (internal_state->refcount.fetch_sub(1) <= 1))
+				{
+					std::scoped_lock lck(allocator->locker);
+					allocator->allocator.free(internal_state->allocation);
+					allocator->internal_blocks.free(internal_state);
+					if (allocator->internal_blocks.is_empty())
+					{
+						// resetting allocator when it's completely empty clears all fragmentation:
+						allocator->allocator.reset();
+					}
+				}
+				allocator = {};
+				internal_state = nullptr;
+				byte_offset = ~0ull;
+			}
 
-			constexpr bool IsValid() const { return byte_offset != ~0ull; }
+			constexpr bool IsValid() const { return internal_state != nullptr; }
 		};
 
-		Allocation allocate(size_t sizeInBytes)
+		inline Allocation allocate(size_t sizeInBytes)
 		{
 			const uint32_t pages = uint32_t(align((uint64_t)sizeInBytes, (uint64_t)page_size) / (uint64_t)page_size);
 			std::scoped_lock lck(allocator->locker);
@@ -179,7 +200,7 @@ namespace wi::allocator
 			{
 				alloc.allocator = allocator;
 				alloc.internal_state = allocator->internal_blocks.allocate();
-				alloc.internal_state->refcount.fetch_add(1);
+				alloc.internal_state->refcount.store(1);
 				alloc.internal_state->allocation = offsetallocation;
 				alloc.byte_offset = offsetallocation.offset * page_size;
 			}

@@ -70,8 +70,15 @@ namespace wi::renderer
 	const wi::graphics::GPUBuffer& GetIndexBufferForQuads(uint32_t max_quad_count);
 
 	// Sub-allocate from a large GPU buffer for memory aliasing purpose:
-	wi::allocator::PageAllocator::Allocation SuballocateGPUBuffer(uint64_t size);
-	wi::graphics::GPUBuffer GetSuballocationBufferStorage(); // this can be used as aliasing dest in suballocated buffer creations
+	//	The buffer will be DEFAULT usage, useable as vertex buffer, index buffer and shader resource
+	//	The purpose is to suballocate smaller GPUBuffers inside a larger GPUBuffer and bind the large GPUBuffer once as index buffer,
+	//	while the small buffers can be allocated/deallocated from it with memory aliasing
+	struct BufferSuballocation
+	{
+		wi::graphics::GPUBuffer alias;
+		wi::allocator::PageAllocator::Allocation allocation;
+	};
+	BufferSuballocation SuballocateGPUBuffer(uint64_t size);
 
 	void ModifyObjectSampler(const wi::graphics::SamplerDesc& desc);
 

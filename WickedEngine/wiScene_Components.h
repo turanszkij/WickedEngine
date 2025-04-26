@@ -656,7 +656,7 @@ namespace wi::scene
 			BVH_ENABLED = 1 << 8,
 			QUANTIZED_POSITIONS_DISABLED = 1 << 9,
 		};
-		uint32_t _flags = RENDERABLE;
+		// *uint32_t _flags is moved down for better struct padding...
 
 		wi::vector<XMFLOAT3> vertex_positions;
 		wi::vector<XMFLOAT3> vertex_normals;
@@ -753,13 +753,6 @@ namespace wi::scene
 		XMFLOAT2 uv_range_max = XMFLOAT2(1, 1);
 
 		wi::vector<wi::graphics::RaytracingAccelerationStructure> BLASes; // one BLAS per LOD
-		enum BLAS_STATE
-		{
-			BLAS_STATE_NEEDS_REBUILD,
-			BLAS_STATE_NEEDS_REFIT,
-			BLAS_STATE_COMPLETE,
-		};
-		mutable BLAS_STATE BLAS_state = BLAS_STATE_NEEDS_REBUILD;
 
 		wi::vector<wi::primitive::AABB> bvh_leaf_aabbs;
 		wi::BVH bvh;
@@ -772,6 +765,16 @@ namespace wi::scene
 		wi::vector<SubsetClusterRange> cluster_ranges;
 
 		RigidBodyPhysicsComponent precomputed_rigidbody_physics_shape; // you can precompute a physics shape here if you need without using a real rigid body component yet
+
+		uint32_t _flags = RENDERABLE; // *this is serialized but put here for better struct padding
+
+		enum BLAS_STATE
+		{
+			BLAS_STATE_NEEDS_REBUILD,
+			BLAS_STATE_NEEDS_REFIT,
+			BLAS_STATE_COMPLETE,
+		};
+		mutable BLAS_STATE BLAS_state = BLAS_STATE_NEEDS_REBUILD;
 
 		constexpr void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
 		constexpr void SetDoubleSided(bool value) { if (value) { _flags |= DOUBLE_SIDED; } else { _flags &= ~DOUBLE_SIDED; } }
