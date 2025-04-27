@@ -183,7 +183,7 @@ namespace wi::scene
 		XMFLOAT4 emissiveColor = XMFLOAT4(1, 1, 1, 0);
 		XMFLOAT4 subsurfaceScattering = XMFLOAT4(1, 1, 1, 0);
 		XMFLOAT4 extinctionColor = XMFLOAT4(0, 0.9f, 1, 1);
-		XMFLOAT4 texMulAdd = XMFLOAT4(1, 1, 0, 0);
+		XMFLOAT4 texMulAdd = XMFLOAT4(1, 1, 0, 0); // dynamic multiplier (.xy) and addition (.zw) for UV coordinates
 		float roughness = 0.2f;
 		float reflectance = 0.02f;
 		float metalness = 0.0f;
@@ -713,9 +713,10 @@ namespace wi::scene
 
 		// Non-serialized attributes:
 		wi::primitive::AABB aabb;
-		wi::allocator::PageAllocator::Allocation generalBufferOffsetAllocation;
 		wi::graphics::GPUBuffer generalBuffer; // index buffer + all static vertex buffers
 		wi::graphics::GPUBuffer streamoutBuffer; // all dynamic vertex buffers
+		wi::allocator::PageAllocator::Allocation generalBufferOffsetAllocation;
+		wi::graphics::GPUBuffer generalBufferOffsetAllocationAlias;
 		struct BufferView
 		{
 			uint64_t offset = ~0ull;

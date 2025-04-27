@@ -1302,6 +1302,7 @@ namespace wi::scene
 			assert(success);
 			device->SetName(&generalBuffer, "MeshComponent::generalBuffer (suballocated)");
 			generalBufferOffsetAllocation = std::move(suballoc.allocation);
+			generalBufferOffsetAllocationAlias = std::move(suballoc.alias);
 		}
 		else
 		{

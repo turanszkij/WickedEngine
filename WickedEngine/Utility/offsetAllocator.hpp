@@ -22,8 +22,10 @@ namespace OffsetAllocator
     // But it only supports up to 65536 maximum allocation count
 #ifdef USE_16_BIT_NODE_INDICES
     typedef uint16 NodeIndex;
+	static constexpr uint32 default_maxallocations = 64 * 1024;
 #else
     typedef uint32 NodeIndex;
+	static constexpr uint32 default_maxallocations = 128 * 1024;
 #endif
 
     static constexpr uint32 NUM_TOP_BINS = 32;
@@ -60,7 +62,7 @@ namespace OffsetAllocator
     class Allocator
     {
     public:
-		void init(uint32 size, uint32 maxAllocs = 128 * 1024);
+		void init(uint32 size, uint32 maxAllocs = default_maxallocations);
 		void reset();
         
         Allocation allocate(uint32 size);

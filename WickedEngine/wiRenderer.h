@@ -67,18 +67,20 @@ namespace wi::renderer
 
 	// Returns a buffer preinitialized for quad index buffer laid out as:
 	//	vertexID * 4 + [0, 1, 2, 2, 1, 3]
+	//	Note: it will return 16-bit or 32-bit index buffer depending on max_quad_count
 	const wi::graphics::GPUBuffer& GetIndexBufferForQuads(uint32_t max_quad_count);
 
-	// Sub-allocate from a large GPU buffer for memory aliasing purpose:
-	//	The buffer will be DEFAULT usage, useable as vertex buffer, index buffer and shader resource
-	//	The purpose is to suballocate smaller GPUBuffers inside a larger GPUBuffer and bind the large GPUBuffer once as index buffer,
-	//	while the small buffers can be allocated/deallocated from it with memory aliasing
 	struct BufferSuballocation
 	{
 		wi::graphics::GPUBuffer alias;
 		wi::allocator::PageAllocator::Allocation allocation;
 	};
+	// Sub-allocate (thread-safe) from a global GPU buffer for memory aliasing purpose:
+	//	The buffer will be DEFAULT usage, useable as vertex buffer, index buffer and shader resource
+	//	The purpose is to suballocate smaller GPUBuffers inside a larger GPUBuffer and bind the large GPUBuffer once as index buffer,
+	//	while the small buffers can be allocated/deallocated from it with memory aliasing and also used regularly by themselves
 	BufferSuballocation SuballocateGPUBuffer(uint64_t size);
+	void UpdateGPUSuballocator(); // called every frame for deferred release of GPU suballocations
 
 	void ModifyObjectSampler(const wi::graphics::SamplerDesc& desc);
 

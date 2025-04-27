@@ -318,6 +318,7 @@ namespace wi
 		wi::input::ClearForNextFrame();
 		wi::profiler::EndFrame(cmd);
 		graphicsDevice->SubmitCommandLists();
+		wi::renderer::UpdateGPUSuballocator();
 	}
 
 	void Application::Update(float dt)
