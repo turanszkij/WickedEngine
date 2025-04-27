@@ -1744,6 +1744,19 @@ void EditorComponent::Update(float dt)
 
 			editorscene.camera_transform.UpdateTransform();
 			XMStoreFloat3(&editorscene.cam_move, move);
+
+			// Modify camera speed with mouse scroll in FPS mode:
+			if (std::abs(currentMouse.z) > 0.1f)
+			{
+				float current = cameraWnd.movespeedSlider.GetValue();
+				float increment = 2.0f;
+				float add = currentMouse.z < 0 ? -increment : increment;
+				cameraWnd.movespeedSlider.SetValue(std::max(0.1f, std::ceil(current + add)));
+				char txt[256];
+				snprintf(txt, arraysize(txt), "Camera speed: %.1f", cameraWnd.movespeedSlider.GetValue());
+				save_text_message = txt;
+				save_text_alpha = 1.0f;
+			}
 		}
 		else
 		{
