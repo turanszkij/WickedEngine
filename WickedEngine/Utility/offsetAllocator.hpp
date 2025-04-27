@@ -2,9 +2,15 @@
 // (C) Sebastian Aaltonen 2023
 // MIT License (see file: LICENSE)
 
-// Modified a bit to fit Wicked Engine
+// Modified for Wicked Engine
+//  - removed cpp20 features
+//	- removed constructors
+//	- changed node storage to std::vector
+//	- reduced size of Node structure
 
 //#define USE_16_BIT_OFFSETS
+
+#include <vector>
 
 namespace OffsetAllocator
 {
@@ -36,16 +42,16 @@ namespace OffsetAllocator
 
     struct StorageReport
     {
-        uint32 totalFreeSpace;
-        uint32 largestFreeRegion;
+		uint32 totalFreeSpace = 0;
+		uint32 largestFreeRegion = 0;
     };
 
     struct StorageReportFull
     {
         struct Region
         {
-            uint32 size;
-            uint32 count;
+			uint32 size = 0;
+			uint32 count = 0;
         };
         
         Region freeRegions[NUM_LEAF_BINS];
@@ -54,12 +60,8 @@ namespace OffsetAllocator
     class Allocator
     {
     public:
-		Allocator() = default;
-        Allocator(Allocator &&other);
-        ~Allocator();
-        void reset();
-
 		void init(uint32 size, uint32 maxAllocs = 128 * 1024);
+		void reset();
         
         Allocation allocate(uint32 size);
         void free(Allocation allocation);
@@ -76,13 +78,24 @@ namespace OffsetAllocator
         {
             static constexpr NodeIndex unused = 0xffffffff;
             
-            uint32 dataOffset = 0;
-            uint32 dataSize = 0;
-            NodeIndex binListPrev = unused;
-            NodeIndex binListNext = unused;
-            NodeIndex neighborPrev = unused;
-            NodeIndex neighborNext = unused;
-            bool used = false; // TODO: Merge as bit flag
+			uint32 dataOffset : 32;
+			uint32 dataSize : 31;
+			uint32 used : 1;
+            NodeIndex binListPrev : 32;
+            NodeIndex binListNext : 32;
+            NodeIndex neighborPrev : 32;
+            NodeIndex neighborNext : 32;
+
+			Node()
+			{
+				dataOffset = 0;
+				dataSize = 0;
+				binListPrev = unused;
+				binListNext = unused;
+				neighborPrev = unused;
+				neighborNext = unused;
+				used = 0;
+			}
         };
     
         uint32 m_size = 0;
@@ -93,8 +106,8 @@ namespace OffsetAllocator
 		uint8 m_usedBins[NUM_TOP_BINS] = {};
 		NodeIndex m_binIndices[NUM_LEAF_BINS] = {};
                 
-		Node* m_nodes = nullptr;
-		NodeIndex* m_freeNodes = nullptr;
+		std::vector<Node> m_nodes;
+		std::vector<NodeIndex> m_freeNodes;
 		uint32 m_freeOffset = 0;
     };
 }
