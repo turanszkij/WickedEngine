@@ -5246,6 +5246,16 @@ void UpdateRenderDataAsync(
 		ComputeVolumetricCloudShadows(cmd, weatherMapFirst, weatherMapSecond);
 	}
 
+	if (vis.scene->weather.IsRealisticSky())
+	{
+		wi::renderer::ComputeSkyAtmosphereTextures(cmd);
+		wi::renderer::ComputeSkyAtmosphereSkyViewLut(cmd);
+		if (vis.scene->weather.IsRealisticSkyAerialPerspective())
+		{
+			wi::renderer::ComputeSkyAtmosphereCameraVolumeLut(cmd);
+		}
+	}
+
 	// GPU Particle systems simulation/sorting/culling:
 	if (!vis.visibleEmitters.empty() || vis.scene->weather.rain_amount > 0)
 	{
