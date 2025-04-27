@@ -3029,7 +3029,7 @@ void RenderMeshes(
 	device->BindStencilRef(prev_stencilref, cmd);
 
 	IndexBufferFormat prev_ibformat = IndexBufferFormat::UINT16;
-	const GPUBuffer* prev_ib = nullptr;
+	const void* prev_ib_internal = nullptr;
 
 	// This will be called every time we start a new draw call:
 	auto batch_flush = [&]()
@@ -3163,10 +3163,11 @@ void RenderMeshes(
 			// Note: the mesh.generalBuffer can be either a standalone allocated buffer, or a suballocated one (to reduce index buffer switching)
 			const GPUBuffer* ib = mesh.generalBufferOffsetAllocation.IsValid() ? &mesh.generalBufferOffsetAllocationAlias : &mesh.generalBuffer;
 			const IndexBufferFormat ibformat = mesh.GetIndexFormat();
+			const void* ibinternal = ib->internal_state.get();
 
-			if (!meshShaderPSO && (prev_ib != ib || prev_ibformat != ibformat))
+			if (!meshShaderPSO && (prev_ib_internal != ibinternal || prev_ibformat != ibformat))
 			{
-				prev_ib = ib;
+				prev_ib_internal = ibinternal;
 				prev_ibformat = ibformat;
 				device->BindIndexBuffer(ib, ibformat, 0, cmd);
 			}
