@@ -2,6 +2,7 @@
 #include "CommonInclude.h"
 #include "wiArchive.h"
 #include "wiRandom.h"
+#include "wiMath.h"
 
 // Note: these should be implemented independently of math library optimizations to be cross platform deterministic!
 //	Otherwise the terrain generation might be different across platforms
@@ -139,13 +140,72 @@ namespace wi::noise
 				std::floor(p.y)
 			);
 		}
+
+		// Backwards compatibility implementation for XMVectorSin() without FMA instruction:
+		inline XMVECTOR XM_CALLCONV FMADD_COMPAT(XMVECTOR a, XMVECTOR b, XMVECTOR c) noexcept { return _mm_add_ps(_mm_mul_ps((a), (b)), (c)); }
+		inline XMVECTOR XM_CALLCONV FNMADD_COMPAT(XMVECTOR a, XMVECTOR b, XMVECTOR c) noexcept { return _mm_sub_ps((c), _mm_mul_ps((a), (b))); }
+		inline XMVECTOR XM_CALLCONV XMVectorModAngles_COMPAT(FXMVECTOR Angles) noexcept
+		{
+			// Modulo the range of the given angles such that -XM_PI <= Angles < XM_PI
+			XMVECTOR vResult = _mm_mul_ps(Angles, g_XMReciprocalTwoPi);
+			// Use the inline function due to complexity for rounding
+			vResult = XMVectorRound(vResult);
+			return FNMADD_COMPAT(vResult, g_XMTwoPi, Angles);
+		}
+		inline XMFLOAT2 sin(XMFLOAT2 p)
+		{
+			XMVECTOR P = XMLoadFloat2(&p);
+			//P = XMVectorSin(P);
+			{
+				// Force the value within the bounds of pi
+				XMVECTOR x = XMVectorModAngles_COMPAT(P);
+
+				// Map in [-pi/2,pi/2] with sin(y) = sin(x).
+				__m128 sign = _mm_and_ps(x, g_XMNegativeZero);
+				__m128 c = _mm_or_ps(g_XMPi, sign);  // pi when x >= 0, -pi when x < 0
+				__m128 absx = _mm_andnot_ps(sign, x);  // |x|
+				__m128 rflx = _mm_sub_ps(c, x);
+				__m128 comp = _mm_cmple_ps(absx, g_XMHalfPi);
+				__m128 select0 = _mm_and_ps(comp, x);
+				__m128 select1 = _mm_andnot_ps(comp, rflx);
+				x = _mm_or_ps(select0, select1);
+
+				__m128 x2 = _mm_mul_ps(x, x);
+
+				// Compute polynomial approximation
+				const XMVECTOR SC1 = g_XMSinCoefficients1;
+				__m128 vConstantsB = XM_PERMUTE_PS(SC1, _MM_SHUFFLE(0, 0, 0, 0));
+				const XMVECTOR SC0 = g_XMSinCoefficients0;
+				__m128 vConstants = XM_PERMUTE_PS(SC0, _MM_SHUFFLE(3, 3, 3, 3));
+				__m128 Result = FMADD_COMPAT(vConstantsB, x2, vConstants);
+
+				vConstants = XM_PERMUTE_PS(SC0, _MM_SHUFFLE(2, 2, 2, 2));
+				Result = FMADD_COMPAT(Result, x2, vConstants);
+
+				vConstants = XM_PERMUTE_PS(SC0, _MM_SHUFFLE(1, 1, 1, 1));
+				Result = FMADD_COMPAT(Result, x2, vConstants);
+
+				vConstants = XM_PERMUTE_PS(SC0, _MM_SHUFFLE(0, 0, 0, 0));
+				Result = FMADD_COMPAT(Result, x2, vConstants);
+
+				Result = FMADD_COMPAT(Result, x2, g_XMOne);
+				Result = _mm_mul_ps(Result, x);
+
+				P = Result;
+			}
+			XMFLOAT2 ret;
+			XMStoreFloat2(&ret, P);
+			return ret;
+		}
+
 		inline XMFLOAT2 hash(XMFLOAT2 p)
 		{
 			XMFLOAT2 ret = XMFLOAT2(
 				dot(XMFLOAT2(p.x, p.y), XMFLOAT2(127.1f, 311.7f)),
 				dot(XMFLOAT2(p.x, p.y), XMFLOAT2(269.5f, 183.3f))
 			);
-			return fract(XMFLOAT2(std::sin(ret.x) * 18.5453f, std::sin(ret.y) * 18.5453f));
+			ret = sin(ret);
+			return fract(XMFLOAT2(ret.x * 18.5453f, ret.y * 18.5453f));
 		}
 		struct Result
 		{
