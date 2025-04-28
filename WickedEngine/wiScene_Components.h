@@ -15,6 +15,7 @@
 #include "wiUnorderedSet.h"
 #include "wiBVH.h"
 #include "wiPathQuery.h"
+#include "wiAllocator.h"
 
 namespace wi::scene
 {
@@ -182,7 +183,7 @@ namespace wi::scene
 		XMFLOAT4 emissiveColor = XMFLOAT4(1, 1, 1, 0);
 		XMFLOAT4 subsurfaceScattering = XMFLOAT4(1, 1, 1, 0);
 		XMFLOAT4 extinctionColor = XMFLOAT4(0, 0.9f, 1, 1);
-		XMFLOAT4 texMulAdd = XMFLOAT4(1, 1, 0, 0);
+		XMFLOAT4 texMulAdd = XMFLOAT4(1, 1, 0, 0); // dynamic multiplier (.xy) and addition (.zw) for UV coordinates
 		float roughness = 0.2f;
 		float reflectance = 0.02f;
 		float metalness = 0.0f;
@@ -655,7 +656,7 @@ namespace wi::scene
 			BVH_ENABLED = 1 << 8,
 			QUANTIZED_POSITIONS_DISABLED = 1 << 9,
 		};
-		uint32_t _flags = RENDERABLE;
+		// *uint32_t _flags is moved down for better struct padding...
 
 		wi::vector<XMFLOAT3> vertex_positions;
 		wi::vector<XMFLOAT3> vertex_normals;
@@ -714,6 +715,8 @@ namespace wi::scene
 		wi::primitive::AABB aabb;
 		wi::graphics::GPUBuffer generalBuffer; // index buffer + all static vertex buffers
 		wi::graphics::GPUBuffer streamoutBuffer; // all dynamic vertex buffers
+		wi::allocator::PageAllocator::Allocation generalBufferOffsetAllocation;
+		wi::graphics::GPUBuffer generalBufferOffsetAllocationAlias;
 		struct BufferView
 		{
 			uint64_t offset = ~0ull;
@@ -751,13 +754,6 @@ namespace wi::scene
 		XMFLOAT2 uv_range_max = XMFLOAT2(1, 1);
 
 		wi::vector<wi::graphics::RaytracingAccelerationStructure> BLASes; // one BLAS per LOD
-		enum BLAS_STATE
-		{
-			BLAS_STATE_NEEDS_REBUILD,
-			BLAS_STATE_NEEDS_REFIT,
-			BLAS_STATE_COMPLETE,
-		};
-		mutable BLAS_STATE BLAS_state = BLAS_STATE_NEEDS_REBUILD;
 
 		wi::vector<wi::primitive::AABB> bvh_leaf_aabbs;
 		wi::BVH bvh;
@@ -770,6 +766,16 @@ namespace wi::scene
 		wi::vector<SubsetClusterRange> cluster_ranges;
 
 		RigidBodyPhysicsComponent precomputed_rigidbody_physics_shape; // you can precompute a physics shape here if you need without using a real rigid body component yet
+
+		uint32_t _flags = RENDERABLE; // *this is serialized but put here for better struct padding
+
+		enum BLAS_STATE
+		{
+			BLAS_STATE_NEEDS_REBUILD,
+			BLAS_STATE_NEEDS_REFIT,
+			BLAS_STATE_COMPLETE,
+		};
+		mutable BLAS_STATE BLAS_state = BLAS_STATE_NEEDS_REBUILD;
 
 		constexpr void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
 		constexpr void SetDoubleSided(bool value) { if (value) { _flags |= DOUBLE_SIDED; } else { _flags &= ~DOUBLE_SIDED; } }

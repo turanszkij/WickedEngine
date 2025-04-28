@@ -3750,12 +3750,6 @@ using namespace vulkan_internal;
 	}
 	bool GraphicsDevice_Vulkan::CreateBuffer2(const GPUBufferDesc* desc, const std::function<void(void*)>& init_callback, GPUBuffer* buffer, const GPUResource* alias, uint64_t alias_offset) const
 	{
-#ifdef PLATFORM_LINUX
-		// Resource aliasing on Linux sometimes fails with VK_ERROR_UNKOWN so I disable it:
-		alias = nullptr;
-		alias_offset = 0;
-#endif // PLATFORM_LINUX
-
 		auto internal_state = std::make_shared<Buffer_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
 		buffer->internal_state = internal_state;
@@ -3854,6 +3848,10 @@ using namespace vulkan_internal;
 		{
 			VkMemoryRequirements memory_requirements = {};
 			memory_requirements.alignment = desc->alignment;
+			if (memory_requirements.alignment == 0)
+			{
+				memory_requirements.alignment = GetMinOffsetAlignment(desc);
+			}
 			memory_requirements.size = AlignTo(desc->size, memory_requirements.alignment);
 			memory_requirements.memoryTypeBits = ~0u;
 

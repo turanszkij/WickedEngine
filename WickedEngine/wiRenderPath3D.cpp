@@ -920,12 +920,6 @@ namespace wi
 				wi::renderer::UpdateRaytracingAccelerationStructures(*scene, cmd);
 			}
 
-			if (scene->weather.IsRealisticSky())
-			{
-				wi::renderer::ComputeSkyAtmosphereTextures(cmd);
-				wi::renderer::ComputeSkyAtmosphereSkyViewLut(cmd);
-			}
-
 			if (wi::renderer::GetSurfelGIEnabled())
 			{
 				wi::renderer::SurfelGI(
@@ -1164,16 +1158,6 @@ namespace wi
 				);
 			}
 
-			if (scene->weather.IsRealisticSky())
-			{
-				wi::renderer::ComputeSkyAtmosphereSkyViewLut(cmd);
-
-				if (scene->weather.IsRealisticSkyAerialPerspective())
-				{
-					wi::renderer::ComputeSkyAtmosphereCameraVolumeLut(cmd);
-				}
-			}
-
 			if (scene->weather.IsVolumetricClouds() && !scene->weather.IsVolumetricCloudsReceiveShadow())
 			{
 				// When volumetric cloud DOESN'T receive shadow it can be done async to shadow maps!
@@ -1304,17 +1288,6 @@ namespace wi
 					camera_reflection,
 					cmd
 				);
-
-				// Render SkyAtmosphere assets from planar reflections point of view
-				if (scene->weather.IsRealisticSky())
-				{
-					wi::renderer::ComputeSkyAtmosphereSkyViewLut(cmd);
-
-					if (scene->weather.IsRealisticSkyAerialPerspective())
-					{
-						wi::renderer::ComputeSkyAtmosphereCameraVolumeLut(cmd);
-					}
-				}
 
 				device->EventBegin("Planar reflections Z-Prepass", cmd);
 				auto range = wi::profiler::BeginRangeGPU("Planar Reflections Z-Prepass", cmd);

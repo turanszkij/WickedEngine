@@ -2623,6 +2623,73 @@ const GPUBuffer& GetIndexBufferForQuads(uint32_t max_quad_count)
 	return indexBufferForQuads32;
 }
 
+// This is responsible to manage big chunks of GPUBuffer, each of which will be used for suballocations:
+struct GPUSubAllocator
+{
+	static constexpr uint64_t blocksize = 256ull * 1024ull * 1024ull; // 256 MB
+	struct Block
+	{
+		wi::allocator::PageAllocator allocator;
+		GPUBuffer buffer;
+	};
+	wi::vector<Block> blocks;
+	std::mutex locker;
+} static suballocator;
+BufferSuballocation SuballocateGPUBuffer(uint64_t size)
+{
+	if (size > GPUSubAllocator::blocksize / 2)
+		return {}; // invalid, larger allocations than half block size will not be suballocated
+
+	// scoped for locker
+	{
+		std::scoped_lock lock(suballocator.locker);
+
+		// See if any of the large blocks can fulfill the allocation request:
+		BufferSuballocation allocation;
+		for (auto& block : suballocator.blocks)
+		{
+			allocation.allocation = block.allocator.allocate(size);
+			if (allocation.allocation.IsValid())
+			{
+				allocation.alias = block.buffer;
+				//wilog("SuballocateGPUBuffer allocated size: %s, pages: %d, free space remaining: %s", wi::helper::GetMemorySizeText(size).c_str(), block.allocator.page_count_from_bytes(size), wi::helper::GetMemorySizeText(allocation.allocation.allocator->allocator.storageReport().totalFreeSpace * block.allocator.page_size).c_str());
+				return allocation;
+			}
+		}
+
+		// Allocation couldn't be fulfilled, create new block:
+		GPUBufferDesc desc;
+		desc.size = GPUSubAllocator::blocksize;
+		desc.usage = Usage::DEFAULT;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::VERTEX_BUFFER | BindFlag::INDEX_BUFFER;
+		desc.misc_flags = ResourceMiscFlag::ALIASING_BUFFER | ResourceMiscFlag::NO_DEFAULT_DESCRIPTORS;
+		desc.alignment = device->GetMinOffsetAlignment(&desc);
+		auto& block = suballocator.blocks.emplace_back();
+		bool success = device->CreateBuffer(&desc, nullptr, &block.buffer);
+		assert(success);
+		device->SetName(&block.buffer, "GPUSubAllocator");
+		block.allocator.init(desc.size, (uint32_t)desc.alignment, true);
+		wilog("SuballocateGPUBuffer created buffer block with size: %s, with page size: %s, page count: %d", wi::helper::GetMemorySizeText(block.allocator.total_size_in_bytes()).c_str(), wi::helper::GetMemorySizeText(block.allocator.page_size).c_str(), (int)block.allocator.page_count);
+	}
+	return SuballocateGPUBuffer(size); // retry
+}
+void UpdateGPUSuballocator()
+{
+	std::scoped_lock lock(suballocator.locker);
+	for (auto& block : suballocator.blocks)
+	{
+		block.allocator.update_deferred_release(device->GetFrameCount(), device->GetBufferCount());
+	}
+	for (size_t i = 0; i < suballocator.blocks.size(); ++i)
+	{
+		if (suballocator.blocks[i].allocator.is_empty())
+		{
+			suballocator.blocks.erase(suballocator.blocks.begin() + i);
+			break;
+		}
+	}
+}
+
 void ModifyObjectSampler(const SamplerDesc& desc)
 {
 	if (initialized.load())
@@ -2961,7 +3028,8 @@ void RenderMeshes(
 	uint32_t prev_stencilref = STENCILREF_DEFAULT;
 	device->BindStencilRef(prev_stencilref, cmd);
 
-	const GPUBuffer* prev_ib = nullptr;
+	IndexBufferFormat prev_ibformat = IndexBufferFormat::UINT16;
+	const void* prev_ib_internal = nullptr;
 
 	// This will be called every time we start a new draw call:
 	auto batch_flush = [&]()
@@ -3092,10 +3160,16 @@ void RenderMeshes(
 				device->BindStencilRef(stencilRef, cmd);
 			}
 
-			if (!meshShaderPSO && prev_ib != &mesh.generalBuffer)
+			// Note: the mesh.generalBuffer can be either a standalone allocated buffer, or a suballocated one (to reduce index buffer switching)
+			const GPUBuffer* ib = mesh.generalBufferOffsetAllocation.IsValid() ? &mesh.generalBufferOffsetAllocationAlias : &mesh.generalBuffer;
+			const IndexBufferFormat ibformat = mesh.GetIndexFormat();
+			const void* ibinternal = ib->internal_state.get();
+
+			if (!meshShaderPSO && (prev_ib_internal != ibinternal || prev_ibformat != ibformat))
 			{
-				device->BindIndexBuffer(&mesh.generalBuffer, mesh.GetIndexFormat(), mesh.ib.offset, cmd);
-				prev_ib = &mesh.generalBuffer;
+				prev_ib_internal = ibinternal;
+				prev_ibformat = ibformat;
+				device->BindIndexBuffer(ib, ibformat, 0, cmd);
 			}
 
 			if (
@@ -3114,6 +3188,18 @@ void RenderMeshes(
 			push.instances = instanceBufferDescriptorIndex;
 			push.instance_offset = (uint)instancedBatch.dataOffset;
 
+			uint32_t indexOffset = 0;
+			if (mesh.generalBufferOffsetAllocation.IsValid())
+			{
+				// In case the mesh general buffer is suballocated, the indexOffset is calculated relative to the beginning of the aliased buffer block:
+				indexOffset = uint32_t(((uint64_t)mesh.generalBufferOffsetAllocation.byte_offset + mesh.ib.offset) / mesh.GetIndexStride()) + subset.indexOffset;
+			}
+			else
+			{
+				// In case the mesh general buffer is not suballocated, it is a standalone buffer and index offset is relative to itself
+				indexOffset = uint32_t(mesh.ib.offset / mesh.GetIndexStride()) + subset.indexOffset;
+			}
+
 			if (pso_backside != nullptr)
 			{
 				device->BindPipelineState(pso_backside, cmd);
@@ -3124,7 +3210,7 @@ void RenderMeshes(
 				}
 				else
 				{
-					device->DrawIndexedInstanced(subset.indexCount, instancedBatch.instanceCount, subset.indexOffset, 0, 0, cmd);
+					device->DrawIndexedInstanced(subset.indexCount, instancedBatch.instanceCount, indexOffset, 0, 0, cmd);
 				}
 			}
 
@@ -3136,7 +3222,7 @@ void RenderMeshes(
 			}
 			else
 			{
-				device->DrawIndexedInstanced(subset.indexCount, instancedBatch.instanceCount, subset.indexOffset, 0, 0, cmd);
+				device->DrawIndexedInstanced(subset.indexCount, instancedBatch.instanceCount, indexOffset, 0, 0, cmd);
 			}
 
 		}
@@ -5194,6 +5280,16 @@ void UpdateRenderDataAsync(
 		const Texture* weatherMapFirst = vis.scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &vis.scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr;
 		const Texture* weatherMapSecond = vis.scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &vis.scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr;
 		ComputeVolumetricCloudShadows(cmd, weatherMapFirst, weatherMapSecond);
+	}
+
+	if (vis.scene->weather.IsRealisticSky())
+	{
+		wi::renderer::ComputeSkyAtmosphereTextures(cmd);
+		wi::renderer::ComputeSkyAtmosphereSkyViewLut(cmd);
+		if (vis.scene->weather.IsRealisticSkyAerialPerspective())
+		{
+			wi::renderer::ComputeSkyAtmosphereCameraVolumeLut(cmd);
+		}
 	}
 
 	// GPU Particle systems simulation/sorting/culling:

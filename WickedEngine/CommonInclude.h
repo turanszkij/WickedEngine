@@ -16,6 +16,12 @@
 
 // Simple common math helpers:
 
+template<typename T>
+constexpr T align(T value, T alignment)
+{
+	return ((value + alignment - T(1)) / alignment) * alignment;
+}
+
 template <typename T>
 constexpr T sqr(T x) { return x * x; }
 

@@ -1036,6 +1036,17 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 		if (mesh->so_nor.IsValid()) ss += "\tstreamout_normals;\n";
 		if (mesh->so_tan.IsValid()) ss += "\tstreamout_tangents;\n";
 		if (mesh->so_pre.IsValid()) ss += "\tprevious_position;\n";
+
+		ss += "\nSuballocation offset: ";
+		if (mesh->generalBufferOffsetAllocation.IsValid())
+		{
+			ss += wi::helper::GetMemorySizeText(mesh->generalBufferOffsetAllocation.byte_offset);
+		}
+		else
+		{
+			ss += "suballocation is not used for this mesh";
+		}
+
 		meshInfoLabel.SetText(ss);
 
 		subsetComboBox.ClearItems();
