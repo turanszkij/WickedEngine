@@ -1164,7 +1164,7 @@ namespace wi::terrain
 							chunk_data.prop_density_current = prop_density;
 
 							wi::random::RNG rng(chunk.compute_hash());
-							wilog("RNG chunk x = %d, y = %d, raw = %llu", chunk.x, chunk.z, chunk.raw);
+							wilog("RNG chunk x = %d, y = %d, raw = %llu", chunk.x, chunk.z, (unsigned long long)chunk.raw);
 
 							for (const auto& prop : props)
 							{
@@ -1186,6 +1186,9 @@ namespace wi::terrain
 									XMFLOAT4 region0 = wi::Color(chunk_data.blendmap_layers[0].pixels[ind0], chunk_data.blendmap_layers[1].pixels[ind0], chunk_data.blendmap_layers[2].pixels[ind0], chunk_data.blendmap_layers[3].pixels[ind0]);
 									XMFLOAT4 region1 = wi::Color(chunk_data.blendmap_layers[0].pixels[ind1], chunk_data.blendmap_layers[1].pixels[ind1], chunk_data.blendmap_layers[2].pixels[ind1], chunk_data.blendmap_layers[3].pixels[ind1]);
 									XMFLOAT4 region2 = wi::Color(chunk_data.blendmap_layers[0].pixels[ind2], chunk_data.blendmap_layers[1].pixels[ind2], chunk_data.blendmap_layers[2].pixels[ind2], chunk_data.blendmap_layers[3].pixels[ind2]);
+									weight_norm(region0);
+									weight_norm(region1);
+									weight_norm(region2);
 									float spline_factor0 = 0;
 									float spline_factor1 = 0;
 									float spline_factor2 = 0;
@@ -1202,9 +1205,6 @@ namespace wi::terrain
 										spline_factor1 *= rcp;
 										spline_factor2 *= rcp;
 									}
-									weight_norm(region0);
-									weight_norm(region1);
-									weight_norm(region2);
 									// random barycentric coords on the triangle:
 									float f = rng.next_float();
 									float g = rng.next_float();
