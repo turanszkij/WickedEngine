@@ -6667,6 +6667,8 @@ std::mutex queue_locker;
 					commandlist.GetGraphicsCommandList()->IASetPrimitiveTopology(internal_state->primitiveTopology);
 				}
 			}
+			else
+				return; // early exit for static pso
 
 			commandlist.prev_pipeline_hash = {};
 			commandlist.dirty_pso = false;
@@ -6678,7 +6680,8 @@ std::mutex queue_locker;
 			pipeline_hash.renderpass_hash = commandlist.renderpass_info.get_hash();
 			if (commandlist.prev_pipeline_hash == pipeline_hash)
 			{
-				return;
+				commandlist.active_pso = pso;
+				return; // early exit for dynamic pso|renderpass
 			}
 			commandlist.prev_pipeline_hash = pipeline_hash;
 			commandlist.dirty_pso = true;
@@ -6700,9 +6703,7 @@ std::mutex queue_locker;
 	{
 		CommandList_DX12& commandlist = GetCommandList(cmd);
 		if (commandlist.active_cs == cs)
-		{
 			return;
-		}
 		commandlist.active_pso = nullptr;
 		commandlist.active_rt = nullptr;
 
