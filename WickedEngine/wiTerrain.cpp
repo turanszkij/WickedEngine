@@ -1170,7 +1170,7 @@ namespace wi::terrain
 								if (prop.data.empty())
 									continue;
 								const int gen_count = rng.next_int(
-									int(std::ceil(float(prop.min_count_per_chunk) * chunk_data.prop_density_current)),
+									int(std::floor(float(prop.min_count_per_chunk) * chunk_data.prop_density_current)),
 									int(std::ceil(float(prop.max_count_per_chunk) * chunk_data.prop_density_current))
 								);
 								for (int i = 0; i < gen_count; ++i)
