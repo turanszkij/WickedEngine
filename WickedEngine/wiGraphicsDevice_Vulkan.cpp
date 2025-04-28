@@ -8257,6 +8257,8 @@ using namespace vulkan_internal;
 	void GraphicsDevice_Vulkan::BindPipelineState(const PipelineState* pso, CommandList cmd)
 	{
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
+		if (commandlist.active_pso == pso)
+			return;
 		commandlist.active_cs = nullptr;
 		commandlist.active_rt = nullptr;
 
@@ -8319,9 +8321,7 @@ using namespace vulkan_internal;
 	{
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 		if (commandlist.active_cs == cs)
-		{
 			return;
-		}
 		commandlist.active_pso = nullptr;
 		commandlist.active_rt = nullptr;
 
