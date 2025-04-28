@@ -1164,6 +1164,7 @@ namespace wi::terrain
 							chunk_data.prop_density_current = prop_density;
 
 							wi::random::RNG rng(chunk.compute_hash());
+							wilog("RNG chunk x = %d, y = %d, raw = %llu", chunk.x, chunk.z, chunk.raw);
 
 							for (const auto& prop : props)
 							{
