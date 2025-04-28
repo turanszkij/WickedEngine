@@ -18,7 +18,7 @@ namespace wi::terrain
 		{
 			struct
 			{
-				int x, z;
+				int32_t x, z;
 			};
 			uint64_t raw = 0;
 		};
@@ -383,6 +383,10 @@ namespace wi::terrain
 		float weight = 0.5f;
 		float frequency = 0.0008f;
 
+		// helpers for more user friendly setup with scaling in world space:
+		constexpr void SetScale(float scale) { frequency = 1.0f / scale; }
+		constexpr float GetScale() const { return 1.0f / frequency; }
+
 		virtual void Seed(uint32_t seed) {}
 		virtual void Apply(const XMFLOAT2& world_pos, float& height) = 0;
 		constexpr void Blend(float& height, float value)
@@ -455,13 +459,13 @@ namespace wi::terrain
 	};
 	struct HeightmapModifier : public Modifier
 	{
-		float scale = 0.1f;
+		float amount = 0.1f; // multiplier for height values
 
 		wi::vector<uint8_t> data;
 		int width = 0;
 		int height = 0;
 
-		HeightmapModifier() { type = Type::Heightmap; }
+		HeightmapModifier() { type = Type::Heightmap; SetScale(1.0f); }
 		void Apply(const XMFLOAT2& world_pos, float& height) override
 		{
 			XMFLOAT2 p = world_pos;
@@ -480,7 +484,7 @@ namespace wi::terrain
 				{
 					value = ((float)((uint16_t*)data.data())[idx] / 65535.0f);
 				}
-				Blend(height, value * scale);
+				Blend(height, value * amount);
 			}
 		}
 	};

@@ -8257,8 +8257,6 @@ using namespace vulkan_internal;
 	void GraphicsDevice_Vulkan::BindPipelineState(const PipelineState* pso, CommandList cmd)
 	{
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
-		if (commandlist.active_pso == pso)
-			return;
 		commandlist.active_cs = nullptr;
 		commandlist.active_rt = nullptr;
 
@@ -8270,6 +8268,8 @@ using namespace vulkan_internal;
 			{
 				vkCmdBindPipeline(commandlist.GetCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, internal_state->pipeline);
 			}
+			else
+				return; // early exit for static pso
 
 			commandlist.prev_pipeline_hash = {};
 			commandlist.dirty_pso = false;
@@ -8282,7 +8282,7 @@ using namespace vulkan_internal;
 			if (commandlist.prev_pipeline_hash == pipeline_hash)
 			{
 				commandlist.active_pso = pso;
-				return;
+				return; // early exit for dynamic pso|renderpass
 			}
 			commandlist.prev_pipeline_hash = pipeline_hash;
 			commandlist.dirty_pso = true;

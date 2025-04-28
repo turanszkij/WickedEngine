@@ -1,8 +1,11 @@
 #pragma once
 #include "CommonInclude.h"
-#include "wiMath.h"
 #include "wiArchive.h"
 #include "wiRandom.h"
+#include "wiMath.h"
+
+// Note: these should be implemented independently of math library optimizations to be cross platform deterministic!
+//	Otherwise the terrain generation might be different across platforms
 
 namespace wi::noise
 {
@@ -119,52 +122,124 @@ namespace wi::noise
 	// Based on: https://www.shadertoy.com/view/MslGD8
 	namespace voronoi
 	{
-		inline XMVECTOR fract(XMVECTOR p)
+		constexpr float dot(XMFLOAT2 a, XMFLOAT2 b)
 		{
-			return p - XMVectorFloor(p);
+			return a.x * b.x + a.y * b.y;
 		}
-		inline XMVECTOR hash(XMVECTOR p)
+		inline XMFLOAT2 fract(XMFLOAT2 p)
 		{
-			p = XMVectorSet(
-				XMVectorGetX(XMVector2Dot(p, XMVectorSet(127.1f, 311.7f, 0, 0))),
-				XMVectorGetX(XMVector2Dot(p, XMVectorSet(269.5f, 183.3f, 0, 0))),
-				0,
-				0
+			return XMFLOAT2(
+				p.x - std::floor(p.x),
+				p.y - std::floor(p.y)
 			);
-			return fract(XMVectorSin(p) * 18.5453f);
+		}
+		inline XMFLOAT2 floor(XMFLOAT2 p)
+		{
+			return XMFLOAT2(
+				std::floor(p.x),
+				std::floor(p.y)
+			);
+		}
+
+		// Backwards compatibility implementation for XMVectorSin() without FMA instruction:
+		inline XMVECTOR XM_CALLCONV FMADD_COMPAT(XMVECTOR a, XMVECTOR b, XMVECTOR c) noexcept { return _mm_add_ps(_mm_mul_ps((a), (b)), (c)); }
+		inline XMVECTOR XM_CALLCONV FNMADD_COMPAT(XMVECTOR a, XMVECTOR b, XMVECTOR c) noexcept { return _mm_sub_ps((c), _mm_mul_ps((a), (b))); }
+		inline XMVECTOR XM_CALLCONV XMVectorModAngles_COMPAT(FXMVECTOR Angles) noexcept
+		{
+			// Modulo the range of the given angles such that -XM_PI <= Angles < XM_PI
+			XMVECTOR vResult = _mm_mul_ps(Angles, g_XMReciprocalTwoPi);
+			// Use the inline function due to complexity for rounding
+			vResult = XMVectorRound(vResult);
+			return FNMADD_COMPAT(vResult, g_XMTwoPi, Angles);
+		}
+		inline XMFLOAT2 sin(XMFLOAT2 p)
+		{
+			XMVECTOR P = XMLoadFloat2(&p);
+			//P = XMVectorSin(P);
+			{
+				// Force the value within the bounds of pi
+				XMVECTOR x = XMVectorModAngles_COMPAT(P);
+
+				// Map in [-pi/2,pi/2] with sin(y) = sin(x).
+				__m128 sign = _mm_and_ps(x, g_XMNegativeZero);
+				__m128 c = _mm_or_ps(g_XMPi, sign);  // pi when x >= 0, -pi when x < 0
+				__m128 absx = _mm_andnot_ps(sign, x);  // |x|
+				__m128 rflx = _mm_sub_ps(c, x);
+				__m128 comp = _mm_cmple_ps(absx, g_XMHalfPi);
+				__m128 select0 = _mm_and_ps(comp, x);
+				__m128 select1 = _mm_andnot_ps(comp, rflx);
+				x = _mm_or_ps(select0, select1);
+
+				__m128 x2 = _mm_mul_ps(x, x);
+
+				// Compute polynomial approximation
+				const XMVECTOR SC1 = g_XMSinCoefficients1;
+				__m128 vConstantsB = XM_PERMUTE_PS(SC1, _MM_SHUFFLE(0, 0, 0, 0));
+				const XMVECTOR SC0 = g_XMSinCoefficients0;
+				__m128 vConstants = XM_PERMUTE_PS(SC0, _MM_SHUFFLE(3, 3, 3, 3));
+				__m128 Result = FMADD_COMPAT(vConstantsB, x2, vConstants);
+
+				vConstants = XM_PERMUTE_PS(SC0, _MM_SHUFFLE(2, 2, 2, 2));
+				Result = FMADD_COMPAT(Result, x2, vConstants);
+
+				vConstants = XM_PERMUTE_PS(SC0, _MM_SHUFFLE(1, 1, 1, 1));
+				Result = FMADD_COMPAT(Result, x2, vConstants);
+
+				vConstants = XM_PERMUTE_PS(SC0, _MM_SHUFFLE(0, 0, 0, 0));
+				Result = FMADD_COMPAT(Result, x2, vConstants);
+
+				Result = FMADD_COMPAT(Result, x2, g_XMOne);
+				Result = _mm_mul_ps(Result, x);
+
+				P = Result;
+			}
+			XMFLOAT2 ret;
+			XMStoreFloat2(&ret, P);
+			return ret;
+		}
+
+		inline XMFLOAT2 hash(XMFLOAT2 p)
+		{
+			XMFLOAT2 ret = XMFLOAT2(
+				dot(XMFLOAT2(p.x, p.y), XMFLOAT2(127.1f, 311.7f)),
+				dot(XMFLOAT2(p.x, p.y), XMFLOAT2(269.5f, 183.3f))
+			);
+			ret = sin(ret);
+			return fract(XMFLOAT2(ret.x * 18.5453f, ret.y * 18.5453f));
 		}
 		struct Result
 		{
-			float distance;
-			float cell_id;
+			float distance = 0;
+			float cell_id = 0;
 		};
 		inline Result compute(float x, float y, float seed)
 		{
-			Result result = {};
+			Result result;
 
-			XMVECTOR p = XMVectorSet(x, y, 0, 0);
-			XMVECTOR n = XMVectorFloor(p);
-			XMVECTOR f = fract(p);
+			XMFLOAT2 p = XMFLOAT2(x, y);
+			XMFLOAT2 n = floor(p);
+			XMFLOAT2 f = fract(p);
 
-			XMVECTOR m = XMVectorSet(8, 0, 0, 0);
+			XMFLOAT3 m = XMFLOAT3(8, 0, 0);
 			for (int j = -1; j <= 1; j++)
 			{
 				for (int i = -1; i <= 1; i++)
 				{
-					XMVECTOR g = XMVectorSet(float(i), float(j), 0, 0);
-					XMVECTOR o = hash(n + g);
-					//XMVECTOR r = g - f + o;
-					XMVECTOR r = g - f + (XMVectorReplicate(0.5f) + 0.5f * XMVectorSin(seed * o));
-					float d = XMVectorGetX(XMVector2Dot(r, r));
-					if (d < XMVectorGetX(m))
+					XMFLOAT2 g = XMFLOAT2(float(i), float(j));
+					XMFLOAT2 o = hash(XMFLOAT2(n.x + g.x, n.y + g.y));
+					XMFLOAT2 r;
+					r.x = g.x - f.x + (0.5f + 0.5f * std::sin(seed * o.x));
+					r.y = g.y - f.y + (0.5f + 0.5f * std::sin(seed * o.y));
+					float d = dot(r, r);
+					if (d < m.x)
 					{
-						m = XMVectorSet(d, XMVectorGetX(o), XMVectorGetY(o), 0);
+						m = XMFLOAT3(d, o.x, o.y);
 					}
 				}
 			}
 
-			result.distance = XMVectorGetX(XMVectorSqrt(m));
-			result.cell_id = XMVectorGetY(m) + XMVectorGetZ(m);
+			result.distance = std::sqrt(m.x);
+			result.cell_id = m.y + m.z;
 
 			return result;
 		}
