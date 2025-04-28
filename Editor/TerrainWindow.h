@@ -7,7 +7,7 @@ struct ModifierWindow : public wi::gui::Window
 	std::function<void()> generation_callback;
 	wi::gui::ComboBox blendCombo;
 	wi::gui::Slider weightSlider;
-	wi::gui::Slider frequencySlider;
+	wi::gui::Slider scaleSlider;
 
 	virtual ~ModifierWindow() = default;
 
@@ -38,7 +38,7 @@ struct VoronoiModifierWindow : public ModifierWindow
 };
 struct HeightmapModifierWindow : public ModifierWindow
 {
-	wi::gui::Slider scaleSlider;
+	wi::gui::Slider amountSlider;
 	wi::gui::Button loadButton;
 
 	HeightmapModifierWindow();
@@ -148,6 +148,8 @@ public:
 	void SetEntity(wi::ecs::Entity entity);
 	void AddModifier(ModifierWindow* modifier_window);
 	void SetupAssets();
+
+	void RefreshMaterialComboBoxes();
 
 	void Update(const wi::Canvas& canvas, float dt) override;
 	void ResizeLayout() override;
