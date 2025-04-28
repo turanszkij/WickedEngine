@@ -31,7 +31,7 @@ ModifierWindow::ModifierWindow(const std::string& name)
 	});
 	AddWidget(&weightSlider);
 
-	scaleSlider.Create(10, 10000, 1000, 10000, "Scale: ");
+	scaleSlider.Create(0.1f, 10000, 1000, 10000, "Scale: ");
 	scaleSlider.SetSize(XMFLOAT2(100, 20));
 	scaleSlider.SetTooltip("Horizontal world scale of the modifier");
 	scaleSlider.OnSlide([=](wi::gui::EventArgs args) {
@@ -1027,7 +1027,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 				PerlinModifierWindow* ptr = new PerlinModifierWindow;
 				std::shared_ptr<wi::terrain::PerlinModifier> modifier = std::make_shared<wi::terrain::PerlinModifier>();
 				terrain->modifiers.push_back(modifier);
-				ptr->Bind(modifier.get());
+				ptr->From(modifier.get());
 				AddModifier(ptr);
 			}
 			break;
@@ -1036,7 +1036,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 				VoronoiModifierWindow* ptr = new VoronoiModifierWindow;
 				std::shared_ptr<wi::terrain::VoronoiModifier> modifier = std::make_shared<wi::terrain::VoronoiModifier>();
 				terrain->modifiers.push_back(modifier);
-				ptr->Bind(modifier.get());
+				ptr->From(modifier.get());
 				AddModifier(ptr);
 			}
 			break;
@@ -1045,7 +1045,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 				HeightmapModifierWindow* ptr = new HeightmapModifierWindow;
 				std::shared_ptr<wi::terrain::HeightmapModifier> modifier = std::make_shared<wi::terrain::HeightmapModifier>();
 				terrain->modifiers.push_back(modifier);
-				ptr->Bind(modifier.get());
+				ptr->From(modifier.get());
 				AddModifier(ptr);
 			}
 			break;

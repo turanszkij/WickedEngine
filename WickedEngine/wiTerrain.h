@@ -465,7 +465,7 @@ namespace wi::terrain
 		int width = 0;
 		int height = 0;
 
-		HeightmapModifier() { type = Type::Heightmap; }
+		HeightmapModifier() { type = Type::Heightmap; SetScale(1.0f); }
 		void Apply(const XMFLOAT2& world_pos, float& height) override
 		{
 			XMFLOAT2 p = world_pos;
