@@ -39,7 +39,7 @@ Directional lights + cascaded shadow maps
 Spotlights + shadow maps
 Point lights + shadow cubemaps
 Soft shadows (PCF)
-Physics: rigid body, soft body, ragdoll
+Physics: rigid body, soft body, ragdoll, vehicle, character
 3D Audio (Xaudio2)
 Input: keyboard, mouse, controller (rawinput, xinput), touch
 Controller feedback (vibration, LED)
@@ -91,6 +91,7 @@ Video decoding: H264
 3D path finding
 Screen Space Global Illumination (SSGI)
 Texture streaming
+Splines
 
 GLTF 2.0 - KHR extensions supported:
 KHR_materials_unlit
@@ -115,3 +116,4 @@ GLTF 2.0 - VRM 1.0 extensions supported:
 VRMC_springBone
 VRMC_vrm_expressions
 VRMC_vrm_humanoid
+VRMC_vrm_animation

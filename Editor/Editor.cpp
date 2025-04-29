@@ -20,6 +20,7 @@ enum class FileType
 	GLTF,
 	GLB,
 	VRM,
+	VRMA,
 	FBX,
 	IMAGE,
 	VIDEO,
@@ -35,6 +36,7 @@ static wi::unordered_map<std::string, FileType> filetypes = {
 	{"GLTF", FileType::GLTF},
 	{"GLB", FileType::GLB},
 	{"VRM", FileType::VRM},
+	{"VRMA", FileType::VRMA},
 	{"FBX", FileType::FBX},
 	{"H", FileType::HEADER},
 	{"CPP", FileType::CPP},
@@ -996,6 +998,7 @@ void EditorComponent::Load()
 		params.extensions.push_back("gltf");
 		params.extensions.push_back("glb");
 		params.extensions.push_back("vrm");
+		params.extensions.push_back("vrma");
 		params.extensions.push_back("fbx");
 		params.extensions.push_back("lua");
 		params.extensions.push_back("txt");
@@ -1749,13 +1752,15 @@ void EditorComponent::Update(float dt)
 			if (std::abs(currentMouse.z) > 0.1f)
 			{
 				float current = cameraWnd.movespeedSlider.GetValue();
-				float increment = 2.0f;
+				float increment = current > 10 ? 2.0f : 1.0f;
 				float add = currentMouse.z < 0 ? -increment : increment;
 				cameraWnd.movespeedSlider.SetValue(std::max(0.1f, std::ceil(current + add)));
 				char txt[256];
 				snprintf(txt, arraysize(txt), "Camera speed: %.1f", cameraWnd.movespeedSlider.GetValue());
 				save_text_message = txt;
 				save_text_alpha = 1.0f;
+				main->config.GetSection("camera").Set("move_speed", cameraWnd.movespeedSlider.GetValue());
+				main->config.Commit();
 			}
 		}
 		else
@@ -5201,7 +5206,7 @@ void EditorComponent::Open(std::string filename)
 		{
 			ImportModel_OBJ(filename, *scene);
 		}
-		else if (type == FileType::GLTF || type == FileType::GLB || type == FileType::VRM)
+		else if (type == FileType::GLTF || type == FileType::GLB || type == FileType::VRM || type == FileType::VRMA)
 		{
 			ImportModel_GLTF(filename, *scene);
 		}
