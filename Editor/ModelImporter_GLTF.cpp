@@ -3024,8 +3024,11 @@ void Import_Extension_VRMC(LoaderState& state)
 					{
 						auto node = bone.Get("node");
 						int idx = node.GetNumberAsInt();
-						Entity boneEntity = state.scene->transforms.GetEntity((size_t)idx);
-						Import_VRMC_Bone(state, boneEntity, key);
+						if (state.entityMap.count(idx))
+						{
+							Entity boneEntity = state.entityMap[idx];
+							Import_VRMC_Bone(state, boneEntity, key);
+						}
 					}
 				}
 				int asd = 90;
