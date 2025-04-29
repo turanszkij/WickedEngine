@@ -2103,6 +2103,7 @@ Playstation button codes:
 - IsCharacterGroundSupported(RigidBodyPhysicsComponent component) : bool		-- returns true if the character physics is supported by normal or steep ground
 - GetCharacterGroundState(RigidBodyPhysicsComponent component) : CharacterGroundStates			-- returns the `CharacterGroundStates` of the character physics
 - ChangeCharacterShape(RigidBodyPhysicsComponent component, float height, float radius) : bool		-- changes the physics character's shape into a capsule with specified height and radius. Returns true if successful, false otherwise. Failure means that something is blocking the character.
+- MoveCharacter(RigidBodyPhysicsComponent component, Vector movement_direction, opt float movement_speed = 6, opt float jump = 0, opt bool controlMovementDuringJump = false)	-- applies movement logic to physics character
 - SetGhostMode(RigidBodyPhysicsComponent|HumanoidComponent component, bool value)	-- enable/disable ghost mode for rigid body or ragdoll (all collision disabled)
 - SetRagdollGhostMode(HumanoidComponent humanoid, bool value)	-- enable/disable ghost mode for a ragdoll. In ghost mode, the ragdoll will not collide with anything. Enable this if the humanoid sits inside a vehicle for example.
 - SetPosition(RigidBodyPhysicsComponent component, Vector position)	-- teleport a dynamic body

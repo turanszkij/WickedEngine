@@ -3110,6 +3110,52 @@ namespace wi::physics
 		}
 		return false;
 	}
+	void MoveCharacter(
+		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
+		const XMFLOAT3& movement_direction_in,
+		float movement_speed,
+		float jump,
+		bool controlMovementDuringJump
+	)
+	{
+		if (physicscomponent.physicsobject == nullptr)
+			return;
+		RigidBody& physicsobject = GetRigidBody(physicscomponent);
+		if (physicsobject.character == nullptr)
+			return;
+
+		// This is the same logic as the Jolt physics character sample in CharacterTest::HandleInput
+
+		// Cancel movement in opposite direction of normal when touching something we can't walk up
+		Vec3 movement_direction = cast(movement_direction_in);
+		Character::EGroundState ground_state = physicsobject.character->GetGroundState();
+		if (ground_state == Character::EGroundState::OnSteepGround
+			|| ground_state == Character::EGroundState::NotSupported)
+		{
+			Vec3 normal = physicsobject.character->GetGroundNormal();
+			normal.SetY(0.0f);
+			float dot = normal.Dot(movement_direction);
+			if (dot < 0.0f)
+				movement_direction -= (dot * normal) / normal.LengthSq();
+		}
+
+		if (controlMovementDuringJump || physicsobject.character->IsSupported())
+		{
+			// Update velocity
+			Vec3 current_velocity = physicsobject.character->GetLinearVelocity();
+			Vec3 desired_velocity = movement_speed * movement_direction;
+			if (!desired_velocity.IsNearZero() || current_velocity.GetY() < 0.0f || !physicsobject.character->IsSupported())
+				desired_velocity.SetY(current_velocity.GetY());
+			Vec3 new_velocity = 0.75f * current_velocity + 0.25f * desired_velocity;
+
+			// Jump
+			if (jump > 0 && ground_state == Character::EGroundState::OnGround)
+				new_velocity += Vec3(0, jump, 0);
+
+			// Update the velocity
+			physicsobject.character->SetLinearVelocity(new_velocity);
+		}
+	}
 
 	void ApplyForce(
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,

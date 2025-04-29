@@ -41,6 +41,7 @@ namespace wi::lua
 		lunamethod(Physics_BindLua, IsCharacterGroundSupported),
 		lunamethod(Physics_BindLua, GetCharacterGroundState),
 		lunamethod(Physics_BindLua, ChangeCharacterShape),
+		lunamethod(Physics_BindLua, MoveCharacter),
 		lunamethod(Physics_BindLua, SetGhostMode),
 		lunamethod(Physics_BindLua, SetRagdollGhostMode),
 		lunamethod(Physics_BindLua, Intersects),
@@ -705,6 +706,54 @@ namespace wi::lua
 		}
 		else
 			wi::lua::SError(L, "ChangeCharacterShape(RigidBodyPhysicsComponent component) not enough arguments!");
+		return 0;
+	}
+	int Physics_BindLua::MoveCharacter(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 1)
+		{
+			scene::RigidBodyPhysicsComponent_BindLua* component = Luna<scene::RigidBodyPhysicsComponent_BindLua>::lightcheck(L, 1);
+			if (component == nullptr)
+			{
+				wi::lua::SError(L, "MoveCharacter(RigidBodyPhysicsComponent component, Vector movement_direction, opt float movement_speed = 6, opt float jump = 0, opt bool controlMovementDuringJump = false) first argument is not a RigidBodyPhysicsComponent!");
+				return 0;
+			}
+
+			Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 2);
+			if (vec == nullptr)
+			{
+				wi::lua::SError(L, "MoveCharacter(RigidBodyPhysicsComponent component, Vector movement_direction, opt float movement_speed = 6, opt float jump = 0, opt bool controlMovementDuringJump = false) second argument is not a Vector!");
+				return 0;
+			}
+
+			float movement_speed = 6.0f;
+			float jump = 0;
+			bool controlMovementDuringJump = false;
+
+			if (argc > 2)
+			{
+				movement_speed = wi::lua::SGetFloat(L, 3);
+				if (argc > 3)
+				{
+					jump = wi::lua::SGetFloat(L, 4);
+					if (argc > 4)
+					{
+						controlMovementDuringJump = wi::lua::SGetBool(L, 5);
+					}
+				}
+			}
+
+			wi::physics::MoveCharacter(
+				*component->component,
+				vec->GetFloat3(),
+				movement_speed,
+				jump,
+				controlMovementDuringJump
+			);
+		}
+		else
+			wi::lua::SError(L, "MoveCharacter(RigidBodyPhysicsComponent component, Vector movement_direction, opt float movement_speed = 6, opt float jump = 0, opt bool controlMovementDuringJump = false) not enough arguments!");
 		return 0;
 	}
 	int Physics_BindLua::SetGhostMode(lua_State* L)

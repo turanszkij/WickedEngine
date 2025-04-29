@@ -96,6 +96,19 @@ namespace wi::physics
 	// Tries to change the physics character's shape, returns tru if successful, false if character would be blocked with the new shape
 	bool ChangeCharacterShape(wi::scene::RigidBodyPhysicsComponent& physicscomponent, const wi::scene::RigidBodyPhysicsComponent::CapsuleParams& capsule);
 
+	// Apply movement logic to a physics character
+	//	movement_direction : a normalized or zero direction
+	//	movement_speed	: horizontal movement speed of the character
+	//	jump	: vertical jump speed (positive)
+	//	controlMovementDuringJump	: whether movement can be applied when character is in the air
+	void MoveCharacter(
+		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
+		const XMFLOAT3& movement_direction,
+		float movement_speed = 6,
+		float jump = 0,
+		bool controlMovementDuringJump = false
+	);
+
 	// Apply force at body center
 	void ApplyForce(
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
