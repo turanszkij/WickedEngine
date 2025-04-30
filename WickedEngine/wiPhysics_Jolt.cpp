@@ -3756,6 +3756,7 @@ namespace wi::physics
 		int softBodyVertex = -1;
 		Vec3 softBodyVertexOffset = Vec3::sZero();
 		float prevInvMass = 0;
+		float bind_distance = 0;
 		~PickDragOperation_Jolt()
 		{
 			if (physics_scene == nullptr || bodyB == nullptr)
@@ -3781,7 +3782,8 @@ namespace wi::physics
 		const wi::scene::Scene& scene,
 		wi::primitive::Ray ray,
 		PickDragOperation& op,
-		ConstraintType constraint_type
+		ConstraintType constraint_type,
+		float break_distance
 	)
 	{
 		if (scene.physics_scene == nullptr)
@@ -3807,6 +3809,13 @@ namespace wi::physics
 				// Rigid body constraint:
 				//body_interface.SetPosition(internal_state->bodyA->GetID(), pos, EActivation::Activate);
 				body_interface.MoveKinematic(internal_state->bodyA->GetID(), pos, Quat::sIdentity(), physics_scene.GetKinematicDT(scene.dt));
+
+				float dist = (internal_state->bodyA->GetCenterOfMassPosition() - internal_state->bodyB->GetCenterOfMassPosition()).Length();
+				dist -= internal_state->bind_distance;
+				if (dist > break_distance)
+				{
+					internal_state->constraint->SetEnabled(false);
+				}
 			}
 		}
 		else
@@ -3843,6 +3852,8 @@ namespace wi::physics
 					settings.mPoint1 = settings.mPoint2 = pos;
 					internal_state->constraint = settings.Create(*internal_state->bodyA, *internal_state->bodyB);
 				}
+
+				internal_state->bind_distance = (internal_state->bodyA->GetCenterOfMassPosition() - internal_state->bodyB->GetCenterOfMassPosition()).Length();
 
 				physics_scene.physics_system.AddConstraint(internal_state->constraint);
 			}

@@ -839,26 +839,39 @@ namespace wi::lua
 			scene::Scene_BindLua* scene = Luna<scene::Scene_BindLua>::lightcheck(L, 1);
 			if (scene == nullptr)
 			{
-				wi::lua::SError(L, "Intersects(Scene, Ray, PickDragOperation) first argument is not a Scene!");
+				wi::lua::SError(L, "PickDrag(Scene, Ray, PickDragOperation) first argument is not a Scene!");
 				return 0;
 			}
 			primitive::Ray_BindLua* ray = Luna<primitive::Ray_BindLua>::lightcheck(L, 2);
 			if (ray == nullptr)
 			{
-				wi::lua::SError(L, "Intersects(Scene, Ray, PickDragOperation) second argument is not a Ray!");
+				wi::lua::SError(L, "PickDrag(Scene, Ray, PickDragOperation) second argument is not a Ray!");
 				return 0;
 			}
 			PickDragOperation_BindLua* op = Luna<PickDragOperation_BindLua>::lightcheck(L, 3);
 			if (op == nullptr)
 			{
-				wi::lua::SError(L, "Intersects(Scene, Ray, PickDragOperation) third argument is not a PickDragOperation!");
+				wi::lua::SError(L, "PickDrag(Scene, Ray, PickDragOperation) third argument is not a PickDragOperation!");
 				return 0;
 			}
 
-			wi::physics::PickDrag(*scene->scene, ray->ray, op->op);
+			wi::physics::ConstraintType type = wi::physics::ConstraintType::Fixed;
+			float break_distance = FLT_MAX;
+
+			if (argc > 3)
+			{
+				type = (wi::physics::ConstraintType)wi::lua::SGetInt(L, 4);
+
+				if (argc > 4)
+				{
+					break_distance = wi::lua::SGetFloat(L, 5);
+				}
+			}
+
+			wi::physics::PickDrag(*scene->scene, ray->ray, op->op, type, break_distance);
 			return 0;
 		}
-		wi::lua::SError(L, "Intersects(Scene, Ray, PickDragOperation) not enough arguments!");
+		wi::lua::SError(L, "PickDrag(Scene, Ray, PickDragOperation) not enough arguments!");
 		return 0;
 	}
 
@@ -947,6 +960,11 @@ namespace wi::lua
 			wi::lua::RunText(R"(
 ACTIVATION_STATE_ACTIVE = 0
 ACTIVATION_STATE_INACTIVE = 1
+
+ConstraintType = {
+	Fixed = 0,
+	Point = 1
+}
 
 CharacterGroundStates = {
 	OnGround = 0,

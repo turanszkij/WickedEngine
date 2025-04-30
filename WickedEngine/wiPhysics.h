@@ -234,7 +234,8 @@ namespace wi::physics
 		const wi::scene::Scene& scene,
 		wi::primitive::Ray ray,
 		PickDragOperation& op,
-		ConstraintType constraint_type = ConstraintType::Fixed
+		ConstraintType constraint_type = ConstraintType::Fixed,
+		float break_distance = FLT_MAX
 	);
 
 	// Create the shape immediately, useful when you want to do this from a thread

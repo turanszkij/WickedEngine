@@ -2138,7 +2138,14 @@ CharacterGroundStates = {
 - DriveVehicle(RigidBodyPhysicsComponent rigidbody, opt float forward = 0, opt float right = 0, opt float brake = 0, opt float handbrake = 0)	-- set input from driver: forward and right values are values between -1 and 1 to indicate reverse/forward or left/right. brake and handbrake (handbrake = back brake for motorcycles) are values between 0 and 1.
 - GetVehicleForwardVelocity(RigidBodyPhysicsComponent rigidbody) : float	-- Signed velocity amount in forward direction
 
-- PickDrag(Scene scene, Ray, ray, PickDragOperation op) -- pick and drag physics objects such as ragdolls and rigid bodies.
+- PickDrag(Scene scene, Ray, ray, PickDragOperation op, opt ConstraintType constraint, opt float break_distance = FLT_MAX) -- pick and drag physics objects such as ragdolls and rigid bodies.
+
+```lua
+ConstraintType = {
+	Fixed = 0,
+	Point = 1
+}
+```
 
 #### PickDragOperation
 Tracks a physics pick drag operation. Use it with `phyiscs.PickDrag()` function. When using this object first time to PickDrag, the operation will be started and the operation will end when you call Finish() or when the object is destroyed
