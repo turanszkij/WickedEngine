@@ -1367,9 +1367,21 @@ namespace wi::physics
 					capsule_height = std::abs(capsule_height);
 
 					ShapeSettings::ShapeResult shape_result;
-					CapsuleShapeSettings shape_settings(capsule_height * 0.5f, capsule_radius);
-					shape_settings.SetEmbedded();
-					shape_result = shape_settings.Create();
+					CapsuleShapeSettings capsule_settings(capsule_height * 0.5f, capsule_radius);
+					capsule_settings.SetEmbedded();
+					BoxShapeSettings box_settings(Vec3(capsule_radius, capsule_radius * 0.75f, capsule_height * 0.5f + capsule_radius), capsule_radius * 0.1f);
+					box_settings.SetEmbedded();
+
+					switch (c)
+					{
+					case BODYPART_LEFT_FOOT:
+					case BODYPART_RIGHT_FOOT:
+						shape_result = box_settings.Create();
+						break;
+					default:
+						shape_result = capsule_settings.Create();
+						break;
+					}
 
 					RotatedTranslatedShapeSettings rtshape_settings;
 					rtshape_settings.SetEmbedded();
@@ -1389,7 +1401,6 @@ namespace wi::physics
 					case BODYPART_LEFT_FOOT:
 					case BODYPART_RIGHT_FOOT:
 						physicsobject.capsule = wi::primitive::Capsule(XMFLOAT3(0, 0, -capsule_height * 0.5f - capsule_radius), XMFLOAT3(0, 0, capsule_height * 0.5f + capsule_radius), capsule_radius);
-						rtshape_settings.mRotation = Quat::sRotation(Vec3::sAxisX(), 0.5f * JPH_PI).Normalized();
 						break;
 					default:
 						physicsobject.capsule = wi::primitive::Capsule(XMFLOAT3(0, -capsule_height * 0.5f - capsule_radius, 0), XMFLOAT3(0, capsule_height * 0.5f + capsule_radius, 0), capsule_radius);
