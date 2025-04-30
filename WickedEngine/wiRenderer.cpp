@@ -2660,7 +2660,15 @@ BufferSuballocation SuballocateGPUBuffer(uint64_t size)
 		// Allocation couldn't be fulfilled, create new block:
 		GPUBufferDesc desc;
 		desc.size = GPUSubAllocator::blocksize;
-		desc.usage = Usage::DEFAULT;
+		if (device->CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
+		{
+			// In UMA mode, it is better to create UPLOAD buffer, this avoids one copy from UPLOAD to DEFAULT
+			desc.usage = Usage::UPLOAD;
+		}
+		else
+		{
+			desc.usage = Usage::DEFAULT;
+		}
 		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::VERTEX_BUFFER | BindFlag::INDEX_BUFFER;
 		desc.misc_flags = ResourceMiscFlag::ALIASING_BUFFER | ResourceMiscFlag::NO_DEFAULT_DESCRIPTORS;
 		desc.alignment = device->GetMinOffsetAlignment(&desc);
