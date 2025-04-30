@@ -11090,15 +11090,11 @@ void ComputeShadingRateClassification(
 	};
 	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-	device->Barrier(GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
-
 	device->ClearUAV(&output, 0, cmd);
 	device->Barrier(GPUBarrier::Memory(&output), cmd);
 
 	// Whole threadgroup for each tile:
 	device->Dispatch(desc.width, desc.height, 1, cmd);
-
-	device->Barrier(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout), cmd);
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);

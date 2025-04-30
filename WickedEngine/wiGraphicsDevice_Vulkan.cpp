@@ -5395,6 +5395,10 @@ using namespace vulkan_internal;
 
 		VkGraphicsPipelineCreateInfo& pipelineInfo = internal_state->pipelineInfo;
 		//pipelineInfo.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
+		//if (CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING_TIER2))
+		//{
+		//	pipelineInfo.flags |= VK_PIPELINE_CREATE_RENDERING_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR;
+		//}
 		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 		pipelineInfo.layout = internal_state->pipelineLayout;
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;

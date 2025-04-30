@@ -66,7 +66,11 @@ namespace wi::helper
 	void messageBox(const std::string& msg, const std::string& caption)
 	{
 #ifdef PLATFORM_WINDOWS_DESKTOP
-		MessageBoxA(GetActiveWindow(), msg.c_str(), caption.c_str(), 0);
+		std::wstring wmsg;
+		std::wstring wcaption;
+		StringConvert(msg, wmsg);
+		StringConvert(caption, wcaption);
+		MessageBox(GetActiveWindow(), wmsg.c_str(), wcaption.c_str(), 0);
 #endif // PLATFORM_WINDOWS_DESKTOP
 
 #ifdef SDL2
