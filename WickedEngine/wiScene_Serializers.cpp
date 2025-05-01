@@ -962,6 +962,10 @@ namespace wi::scene
 				archive >> slider_constraint.target_velocity;
 				archive >> slider_constraint.max_force;
 			}
+			if (seri.GetVersion() >= 6)
+			{
+				archive >> break_distance;
+			}
 		}
 		else
 		{
@@ -1001,6 +1005,10 @@ namespace wi::scene
 			{
 				archive << slider_constraint.target_velocity;
 				archive << slider_constraint.max_force;
+			}
+			if (seri.GetVersion() >= 6)
+			{
+				archive << break_distance;
 			}
 		}
 	}

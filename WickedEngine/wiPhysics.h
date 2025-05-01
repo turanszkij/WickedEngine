@@ -171,6 +171,9 @@ namespace wi::physics
 	// Override all vehicle wheel transforms in world space
 	void OverrideWehicleWheelTransforms(wi::scene::Scene& scene);
 
+	bool IsConstraintBroken(const wi::scene::PhysicsConstraintComponent& physicscomponent);
+	void SetConstraintBroken(wi::scene::PhysicsConstraintComponent& physicscomponent, bool broken = true);
+
 	enum class ActivationState
 	{
 		Active,

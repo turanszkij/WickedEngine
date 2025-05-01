@@ -626,6 +626,8 @@ namespace wi::scene
 			float max_force = 0; // N
 		} slider_constraint;
 
+		float break_distance = FLT_MAX; // how much the constraint is allowed to be exerted before breaking, calculated as relative distance
+
 		// Non-serialized attributes:
 		std::shared_ptr<void> physicsobject = nullptr; // You can set to null to recreate the physics object the next time phsyics system will be running.
 
