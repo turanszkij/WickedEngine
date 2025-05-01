@@ -4314,6 +4314,39 @@ void EditorComponent::Render() const
 			}
 #endif
 
+			if (save_text_alpha > 0)
+			{
+				wi::font::Params params;
+				params.color = save_text_color;
+				params.shadowColor = wi::Color::Black();
+				params.color.setA(uint8_t(std::min(1.0f, save_text_alpha) * 255));
+				params.shadowColor.setA(params.color.getA());
+				params.position = XMFLOAT3(GetLogicalWidth() * 0.5f, GetLogicalHeight() * 0.5f, 0);
+				params.h_align = wi::font::WIFALIGN_CENTER;
+				params.v_align = wi::font::WIFALIGN_CENTER;
+				params.size = 30;
+				params.shadow_softness = 1;
+				wi::font::Cursor cursor = wi::font::Draw(save_text_message, params, cmd);
+
+				params.size = 24;
+				params.position.y += cursor.size.y;
+				wi::font::Draw(save_text_filename, params, cmd);
+			}
+
+			if (drive_mode)
+			{
+				wi::font::Params params;
+				params.color = save_text_color;
+				params.shadowColor = wi::Color::Black();
+				params.shadowColor.setA(params.color.getA());
+				params.position = XMFLOAT3(PhysicalToLogical(viewport3D.top_left_x + viewport3D.width * 0.5f), PhysicalToLogical(viewport3D.top_left_y + 5), 0);
+				params.h_align = wi::font::WIFALIGN_CENTER;
+				params.v_align = wi::font::WIFALIGN_TOP;
+				params.size = 30;
+				params.shadow_softness = 1;
+				wi::font::Draw("Drive Mode", params, cmd);
+			}
+
 			device->RenderPassEnd(cmd);
 		}
 
@@ -4336,51 +4369,6 @@ void EditorComponent::Compose(CommandList cmd) const
 	GetDevice()->BindViewports(1, &vp, cmd);
 
 	RenderPath2D::Compose(cmd);
-
-	if (save_text_alpha > 0)
-	{
-		wi::font::Params params;
-		params.color = save_text_color;
-		params.shadowColor = wi::Color::Black();
-		params.color.setA(uint8_t(std::min(1.0f, save_text_alpha) * 255));
-		params.shadowColor.setA(params.color.getA());
-		params.position = XMFLOAT3(GetLogicalWidth() * 0.5f, GetLogicalHeight() * 0.5f, 0);
-		params.h_align = wi::font::WIFALIGN_CENTER;
-		params.v_align = wi::font::WIFALIGN_CENTER;
-		params.size = 30;
-		params.shadow_softness = 1;
-		wi::font::Cursor cursor = wi::font::Draw(save_text_message, params, cmd);
-
-		params.size = 24;
-		params.position.y += cursor.size.y;
-		wi::font::Draw(save_text_filename, params, cmd);
-	}
-
-	if (drive_mode)
-	{
-		wi::font::Params params;
-		params.color = save_text_color;
-		params.shadowColor = wi::Color::Black();
-		params.shadowColor.setA(params.color.getA());
-		params.position = XMFLOAT3(PhysicalToLogical(viewport3D.top_left_x + viewport3D.width * 0.5f), PhysicalToLogical(viewport3D.top_left_y + 5), 0);
-		params.h_align = wi::font::WIFALIGN_CENTER;
-		params.v_align = wi::font::WIFALIGN_TOP;
-		params.size = 30;
-		params.shadow_softness = 1;
-		wi::font::Draw("Drive Mode", params, cmd);
-	}
-
-#ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
-	auto& scene = GetCurrentScene();
-	if (scene.terrains.GetCount() > 0)
-	{
-		auto& terrain = scene.terrains[0];
-		if (!terrain.chunks[terrain.center_chunk].vt.empty())
-		{
-			terrain.chunks[terrain.center_chunk].vt[0].DrawDebug(cmd);
-		}
-	}
-#endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
 }
 
 void EditorComponent::ResizeViewport3D()
