@@ -7459,7 +7459,7 @@ std::mutex queue_locker;
 		D3D12_VIDEO_DECODE_OUTPUT_STREAM_ARGUMENTS output = {};
 		D3D12_VIDEO_DECODE_INPUT_STREAM_ARGUMENTS input = {};
 
-		if (op->output == nullptr || op->output == op->DPB)
+		if (op->output == nullptr)
 		{
 			output.pOutputTexture2D = dpb_internal->resource.Get();
 			output.OutputSubresource = D3D12CalcSubresource(0, op->current_dpb, 0, op->DPB->desc.mip_levels, op->DPB->desc.array_size);

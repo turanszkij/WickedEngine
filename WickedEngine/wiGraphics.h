@@ -928,7 +928,7 @@ namespace wi::graphics
 		const int* dpb_poc = nullptr; // for each DPB reference slot, indicate the PictureOrderCount
 		const int* dpb_framenum = nullptr; // for each DPB reference slot, indicate the framenum value
 		const Texture* DPB = nullptr; // DPB texture with arraysize = num_references + 1
-		const Texture* output = nullptr; // output of the operation, it can be the same as DPB if the decoder supports VideoDecoderSupportFlags::DPB_AND_OUTPUT_COINCIDE
+		const Texture* output = nullptr; // output of the operation, it should be nullptr if DPB_AND_OUTPUT_COINCIDE is supported
 	};
 
 	struct RenderPassImage

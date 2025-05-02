@@ -9371,7 +9371,7 @@ using namespace vulkan_internal;
 		decode_info.srcBuffer = stream_internal->resource;
 		decode_info.srcBufferOffset = (VkDeviceSize)op->stream_offset;
 		decode_info.srcBufferRange = (VkDeviceSize)AlignTo(op->stream_size, VIDEO_DECODE_BITSTREAM_ALIGNMENT);
-		if (op->output == nullptr || op->output == op->DPB)
+		if (op->output == nullptr)
 		{
 			decode_info.dstPictureResource = *reference_slot_infos[op->current_dpb].pPictureResource;
 		}

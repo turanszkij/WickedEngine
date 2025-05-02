@@ -21,6 +21,7 @@ namespace wi::video
 	}
 	bool CreateVideo(const uint8_t* filedata, size_t filesize, Video* video)
 	{
+		wilog("CreateVideo: Video decoding is still very experimental, use at yourt own risk!");
 		bool success = false;
 		const uint8_t* input_buf = filedata;
 		struct INPUT_BUFFER
@@ -349,7 +350,7 @@ namespace wi::video
 
 					GPUBufferDesc bd;
 					bd.size = aligned_size;
-					bd.usage = Usage::DEFAULT;
+					bd.usage = Usage::UPLOAD; // DEFAULT doesn't work on Nvidia
 					bd.misc_flags = ResourceMiscFlag::VIDEO_DECODE;
 					success = device->CreateBuffer2(&bd, copy_video_track, &video->data_stream);
 					assert(success);
@@ -405,19 +406,21 @@ namespace wi::video
 		{
 			td.bind_flags = BindFlag::SHADER_RESOURCE;
 			td.misc_flags = ResourceMiscFlag::VIDEO_DECODE;
+			td.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 		}
 		else
 		{
 			td.misc_flags = ResourceMiscFlag::VIDEO_DECODE_DPB_ONLY;
+			td.layout = ResourceState::VIDEO_DECODE_DPB;
 		}
-		td.layout = ResourceState::VIDEO_DECODE_DPB;
 		success = device->CreateTexture(&td, nullptr, &instance->dpb.texture);
 		assert(success);
 		device->SetName(&instance->dpb.texture, "VideoInstance::DPB::texture");
 
 		if (has_flag(instance->decoder.support, VideoDecoderSupportFlags::DPB_AND_OUTPUT_COINCIDE))
 		{
-			instance->dpb.output = instance->dpb.texture;
+			// DPB_AND_OUTPUT_COINCIDE so DPB can be used for output:
+			instance->dpb.output = {};
 
 			for (uint32_t i = 0; i < td.array_size; ++i)
 			{
@@ -425,7 +428,7 @@ namespace wi::video
 				Format luminance_format = Format::R8_UNORM;
 				ImageAspect luminance_aspect = ImageAspect::LUMINANCE;
 				instance->dpb.subresources_luminance[i] = device->CreateSubresource(
-					&instance->dpb.output,
+					&instance->dpb.texture,
 					SubresourceType::SRV,
 					i, 1, 0, 1,
 					&luminance_format, &luminance_aspect
@@ -434,7 +437,7 @@ namespace wi::video
 				Format chrominance_format = Format::R8G8_UNORM;
 				ImageAspect chrominance_aspect = ImageAspect::CHROMINANCE;
 				instance->dpb.subresources_chrominance[i] = device->CreateSubresource(
-					&instance->dpb.output,
+					&instance->dpb.texture,
 					SubresourceType::SRV,
 					i, 1, 0, 1,
 					&chrominance_format, &chrominance_aspect
@@ -443,6 +446,7 @@ namespace wi::video
 		}
 		else
 		{
+			// DPB_AND_OUTPUT_COINCIDE NOT supported so DPB MUST NOT be used for output:
 			td.array_size = 1;
 			td.bind_flags = BindFlag::SHADER_RESOURCE;
 			td.misc_flags = ResourceMiscFlag::VIDEO_DECODE_OUTPUT_ONLY;
@@ -563,12 +567,12 @@ namespace wi::video
 		decode_operation.dpb_poc = instance->dpb.poc_status;
 		decode_operation.dpb_framenum = instance->dpb.framenum_status;
 		decode_operation.DPB = &instance->dpb.texture;
-		decode_operation.output = &instance->dpb.output;
 
 		ImageAspect aspect_luma = ImageAspect::LUMINANCE;
 		ImageAspect aspect_chroma = ImageAspect::CHROMINANCE;
 		if (has_flag(instance->decoder.support, VideoDecoderSupportFlags::DPB_AND_OUTPUT_COINCIDE))
 		{
+			decode_operation.output = nullptr;
 			// Ensure that current DPB slot is in DST state:
 			if (instance->dpb.resource_states[instance->dpb.current_slot] != ResourceState::VIDEO_DECODE_DPB)
 			{
@@ -591,6 +595,7 @@ namespace wi::video
 		else
 		{
 			// if DPB_AND_OUTPUT_COINCIDE is NOT supported, then DPB is kept always in DPB state, and only the output tex is ever a shader resource:
+			decode_operation.output = &instance->dpb.output;
 			instance->barriers.push_back(GPUBarrier::Image(&instance->dpb.output, ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::VIDEO_DECODE_DST, -1, -1, &aspect_luma));
 			instance->barriers.push_back(GPUBarrier::Image(&instance->dpb.output, ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::VIDEO_DECODE_DST, -1, -1, &aspect_chroma));
 		}
@@ -703,7 +708,7 @@ namespace wi::video
 		if (has_flag(instance->decoder.support, VideoDecoderSupportFlags::DPB_AND_OUTPUT_COINCIDE))
 		{
 			wi::renderer::YUV_to_RGB(
-				instance->dpb.output,
+				instance->dpb.texture,
 				instance->dpb.subresources_luminance[instance->dpb.current_slot],
 				instance->dpb.subresources_chrominance[instance->dpb.current_slot],
 				output.texture,
