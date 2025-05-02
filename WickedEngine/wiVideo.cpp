@@ -349,7 +349,7 @@ namespace wi::video
 
 					GPUBufferDesc bd;
 					bd.size = aligned_size;
-					bd.usage = Usage::UPLOAD;
+					bd.usage = Usage::DEFAULT;
 					bd.misc_flags = ResourceMiscFlag::VIDEO_DECODE;
 					success = device->CreateBuffer2(&bd, copy_video_track, &video->data_stream);
 					assert(success);

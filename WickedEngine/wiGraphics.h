@@ -408,9 +408,9 @@ namespace wi::graphics
 		ALIASING = ALIASING_BUFFER | ALIASING_TEXTURE_NON_RT_DS | ALIASING_TEXTURE_RT_DS, // memory allocation will be suitable for all kinds of resources. Requires GraphicsDeviceCapability::ALIASING_GENERIC to be supported
 		TYPED_FORMAT_CASTING = 1 << 11,	// enable casting formats between same type and different modifiers: eg. UNORM -> SRGB
 		TYPELESS_FORMAT_CASTING = 1 << 12,	// enable casting formats to other formats that have the same bit-width and channel layout: eg. R32_FLOAT -> R32_UINT
-		VIDEO_DECODE = 1 << 13,	// resource is usabe in video decoding operations
-		VIDEO_DECODE_OUTPUT_ONLY = 1 << 14,	// resource is usabe in video decoding operations but as output only and not as DPB
-		VIDEO_DECODE_DPB_ONLY = 1 << 15,	// resource is usabe in video decoding operations but as strictly DPB only
+		VIDEO_DECODE = 1 << 13,	// resource is usabe in video decoding operations (for buffers it is indicating a bitstream buffer, for textures it is a DPB and output texture if DPB_AND_OUTPUT_COINCIDE is supported)
+		VIDEO_DECODE_OUTPUT_ONLY = 1 << 14,	// resource is usabe in video decoding operations but as output only and not as DPB (used for DPB textures when DPB_AND_OUTPUT_COINCIDE is NOT supported)
+		VIDEO_DECODE_DPB_ONLY = 1 << 15,	// resource is usabe in video decoding operations but as strictly DPB only (used for output textures when DPB_AND_OUTPUT_COINCIDE is NOT supported)
 		NO_DEFAULT_DESCRIPTORS = 1 << 16, // skips creation of default descriptors for resources
 		TEXTURE_COMPATIBLE_COMPRESSION = 1 << 17, // optimization that can enable sampling from compressed textures
 		SHARED = 1 << 18, // shared texture
