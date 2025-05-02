@@ -409,9 +409,11 @@ namespace wi::graphics
 		TYPED_FORMAT_CASTING = 1 << 11,	// enable casting formats between same type and different modifiers: eg. UNORM -> SRGB
 		TYPELESS_FORMAT_CASTING = 1 << 12,	// enable casting formats to other formats that have the same bit-width and channel layout: eg. R32_FLOAT -> R32_UINT
 		VIDEO_DECODE = 1 << 13,	// resource is usabe in video decoding operations
-		NO_DEFAULT_DESCRIPTORS = 1 << 14, // skips creation of default descriptors for resources
-		TEXTURE_COMPATIBLE_COMPRESSION = 1 << 15, // optimization that can enable sampling from compressed textures
-		SHARED = 1 << 16, // shared texture
+		VIDEO_DECODE_OUTPUT_ONLY = 1 << 14,	// resource is usabe in video decoding operations but as output only and not as DPB
+		VIDEO_DECODE_DPB_ONLY = 1 << 15,	// resource is usabe in video decoding operations but as strictly DPB only
+		NO_DEFAULT_DESCRIPTORS = 1 << 16, // skips creation of default descriptors for resources
+		TEXTURE_COMPATIBLE_COMPRESSION = 1 << 17, // optimization that can enable sampling from compressed textures
+		SHARED = 1 << 18, // shared texture
 
 		// Compat:
 		SPARSE_TILE_POOL_BUFFER = ALIASING_BUFFER,
@@ -478,8 +480,9 @@ namespace wi::graphics
 
 		// Other:
 		VIDEO_DECODE_SRC = 1 << 15,			// video decode operation source (bitstream buffer or DPB texture)
-		VIDEO_DECODE_DST = 1 << 16,			// video decode operation destination DPB texture
-		SWAPCHAIN = 1 << 17,				// resource state of swap chain's back buffer texture when it's not rendering
+		VIDEO_DECODE_DST = 1 << 16,			// video decode operation destination output texture
+		VIDEO_DECODE_DPB = 1 << 17,			// video decode operation destination DPB texture
+		SWAPCHAIN = 1 << 18,				// resource state of swap chain's back buffer texture when it's not rendering
 	};
 
 	enum class RenderPassFlags
@@ -488,6 +491,14 @@ namespace wi::graphics
 		ALLOW_UAV_WRITES = 1 << 0,
 		SUSPENDING = 1 << 1,
 		RESUMING = 1 << 2,
+	};
+
+	enum class VideoDecoderSupportFlags
+	{
+		NONE = 0,
+		DPB_AND_OUTPUT_COINCIDE = 1 << 0,
+		DPB_AND_OUTPUT_DISTINCT = 1 << 1,
+		DPB_INDIVIDUAL_TEXTURES_SUPPORTED = 1 << 2,
 	};
 
 
@@ -890,6 +901,7 @@ namespace wi::graphics
 	{
 		VideoDesc desc;
 		constexpr const VideoDesc& GetDesc() const { return desc; }
+		VideoDecoderSupportFlags support = VideoDecoderSupportFlags::NONE;
 	};
 
 	struct VideoDecodeOperation
@@ -916,6 +928,7 @@ namespace wi::graphics
 		const int* dpb_poc = nullptr; // for each DPB reference slot, indicate the PictureOrderCount
 		const int* dpb_framenum = nullptr; // for each DPB reference slot, indicate the framenum value
 		const Texture* DPB = nullptr; // DPB texture with arraysize = num_references + 1
+		const Texture* output = nullptr; // output of the operation, it can be the same as DPB if the decoder supports VideoDecoderSupportFlags::DPB_AND_OUTPUT_COINCIDE
 	};
 
 	struct RenderPassImage
@@ -2128,6 +2141,10 @@ struct enable_bitmask_operators<wi::graphics::RenderPassDesc::Flags> {
 };
 template<>
 struct enable_bitmask_operators<wi::graphics::RenderPassFlags> {
+	static const bool enable = true;
+};
+template<>
+struct enable_bitmask_operators<wi::graphics::VideoDecoderSupportFlags> {
 	static const bool enable = true;
 };
 

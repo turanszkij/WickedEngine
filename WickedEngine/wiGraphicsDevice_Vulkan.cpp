@@ -354,9 +354,12 @@ namespace vulkan_internal
 			return VK_IMAGE_LAYOUT_GENERAL;
 		case ResourceState::SHADING_RATE_SOURCE:
 			return VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR;
-		case ResourceState::VIDEO_DECODE_SRC:
-		case ResourceState::VIDEO_DECODE_DST:
+		case ResourceState::VIDEO_DECODE_DPB:
 			return VK_IMAGE_LAYOUT_VIDEO_DECODE_DPB_KHR;
+		case ResourceState::VIDEO_DECODE_SRC:
+			return VK_IMAGE_LAYOUT_VIDEO_DECODE_SRC_KHR;
+		case ResourceState::VIDEO_DECODE_DST:
+			return VK_IMAGE_LAYOUT_VIDEO_DECODE_DST_KHR;
 		case ResourceState::SWAPCHAIN:
 			return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 		default:
@@ -457,7 +460,8 @@ namespace vulkan_internal
 			flags |= VK_PIPELINE_STAGE_2_CONDITIONAL_RENDERING_BIT_EXT;
 		}
 		if (has_flag(value, ResourceState::VIDEO_DECODE_DST) ||
-			has_flag(value, ResourceState::VIDEO_DECODE_SRC))
+			has_flag(value, ResourceState::VIDEO_DECODE_SRC) ||
+			has_flag(value, ResourceState::VIDEO_DECODE_DPB))
 		{
 			flags |= VK_PIPELINE_STAGE_2_VIDEO_DECODE_BIT_KHR;
 		}
@@ -534,6 +538,10 @@ namespace vulkan_internal
 		if (has_flag(value, ResourceState::VIDEO_DECODE_SRC))
 		{
 			flags |= VK_ACCESS_2_VIDEO_DECODE_READ_BIT_KHR;
+		}
+		if (has_flag(value, ResourceState::VIDEO_DECODE_DPB))
+		{
+			flags |= VK_ACCESS_2_VIDEO_DECODE_WRITE_BIT_KHR;
 		}
 
 		return flags;
@@ -4138,11 +4146,21 @@ using namespace vulkan_internal;
 		{
 			imageInfo.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
 		}
+
 		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE))
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_VIDEO_DECODE_DPB_BIT_KHR;
 			imageInfo.usage |= VK_IMAGE_USAGE_VIDEO_DECODE_SRC_BIT_KHR;
 			imageInfo.usage |= VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR;
+		}
+		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_OUTPUT_ONLY))
+		{
+			//imageInfo.usage = VK_IMAGE_USAGE_VIDEO_DECODE_SRC_BIT_KHR; // Note: this is not a combination of flags, but complete assignment!
+			imageInfo.usage |= VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR;
+		}
+		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_DPB_ONLY))
+		{
+			imageInfo.usage = VK_IMAGE_USAGE_VIDEO_DECODE_DPB_BIT_KHR; // Note: this is not a combination of flags, but complete assignment!
 		}
 
 		if (desc->format == Format::NV12 && has_flag(texture->desc.bind_flags, BindFlag::SHADER_RESOURCE))
@@ -4610,7 +4628,7 @@ using namespace vulkan_internal;
 			}
 		}
 
-		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE))
+		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE) || has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_OUTPUT_ONLY) || has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_DPB_ONLY))
 		{
 			VkImageViewCreateInfo view_desc = {};
 			view_desc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -4626,7 +4644,18 @@ using namespace vulkan_internal;
 
 			VkImageViewUsageCreateInfo viewUsageInfo = {};
 			viewUsageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_USAGE_CREATE_INFO;
-			viewUsageInfo.usage = VK_IMAGE_USAGE_VIDEO_DECODE_DPB_BIT_KHR | VK_IMAGE_USAGE_VIDEO_DECODE_SRC_BIT_KHR | VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR;
+			if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_DPB_ONLY))
+			{
+				viewUsageInfo.usage = VK_IMAGE_USAGE_VIDEO_DECODE_DPB_BIT_KHR;
+			}
+			else if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_OUTPUT_ONLY))
+			{
+				viewUsageInfo.usage = VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR;
+			}
+			else
+			{
+				viewUsageInfo.usage = VK_IMAGE_USAGE_VIDEO_DECODE_DPB_BIT_KHR | VK_IMAGE_USAGE_VIDEO_DECODE_SRC_BIT_KHR | VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR;
+			}
 			view_desc.pNext = &viewUsageInfo;
 
 			res = vulkan_check(vkCreateImageView(device, &view_desc, nullptr, &internal_state->video_decode_view));
@@ -6413,7 +6442,16 @@ using namespace vulkan_internal;
 		session_parameters_info.pNext = &session_parameters_info_h264;
 		vulkan_check(vkCreateVideoSessionParametersKHR(device, &session_parameters_info, nullptr, &internal_state->session_parameters));
 
-		assert(video_capability_h264.decode_capabilities.flags & VK_VIDEO_DECODE_CAPABILITY_DPB_AND_OUTPUT_COINCIDE_BIT_KHR); // Currently the only method supported
+		video_decoder->support = {};
+		if (video_capability_h264.decode_capabilities.flags & VK_VIDEO_DECODE_CAPABILITY_DPB_AND_OUTPUT_COINCIDE_BIT_KHR)
+		{
+			video_decoder->support |= VideoDecoderSupportFlags::DPB_AND_OUTPUT_COINCIDE;
+		}
+		if (video_capability_h264.decode_capabilities.flags & VK_VIDEO_DECODE_CAPABILITY_DPB_AND_OUTPUT_DISTINCT_BIT_KHR)
+		{
+			video_decoder->support |= VideoDecoderSupportFlags::DPB_AND_OUTPUT_DISTINCT;
+		}
+		video_decoder->support |= VideoDecoderSupportFlags::DPB_INDIVIDUAL_TEXTURES_SUPPORTED;
 
 		return true;
 	}
@@ -9333,7 +9371,21 @@ using namespace vulkan_internal;
 		decode_info.srcBuffer = stream_internal->resource;
 		decode_info.srcBufferOffset = (VkDeviceSize)op->stream_offset;
 		decode_info.srcBufferRange = (VkDeviceSize)AlignTo(op->stream_size, VIDEO_DECODE_BITSTREAM_ALIGNMENT);
-		decode_info.dstPictureResource = *reference_slot_infos[op->current_dpb].pPictureResource;
+		if (op->output == nullptr || op->output == op->DPB)
+		{
+			decode_info.dstPictureResource = *reference_slot_infos[op->current_dpb].pPictureResource;
+		}
+		else
+		{
+			auto output_internal = to_internal(op->output);
+			decode_info.dstPictureResource.sType = VK_STRUCTURE_TYPE_VIDEO_PICTURE_RESOURCE_INFO_KHR;
+			decode_info.dstPictureResource.codedOffset.x = 0;
+			decode_info.dstPictureResource.codedOffset.y = 0;
+			decode_info.dstPictureResource.codedExtent.width = op->DPB->desc.width;
+			decode_info.dstPictureResource.codedExtent.height = op->DPB->desc.height;
+			decode_info.dstPictureResource.baseArrayLayer = 0;
+			decode_info.dstPictureResource.imageViewBinding = output_internal->video_decode_view;
+		}
 		decode_info.referenceSlotCount = op->dpb_reference_count;
 		decode_info.pReferenceSlots = decode_info.referenceSlotCount == 0 ? nullptr : reference_slots;
 		decode_info.pSetupReferenceSlot = &reference_slot_infos[op->current_dpb];

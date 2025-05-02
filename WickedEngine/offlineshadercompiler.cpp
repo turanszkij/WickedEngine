@@ -207,6 +207,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"virtualTextureResidencyUpdateCS", wi::graphics::ShaderStage::CS },
 	{"windCS", wi::graphics::ShaderStage::CS },
 	{"yuv_to_rgbCS", wi::graphics::ShaderStage::CS },
+	{"yuv_to_rgbCS", wi::graphics::ShaderStage::CS, ShaderModel::SM_6_0, {"ARRAY"}},
 	{"wetmap_updateCS", wi::graphics::ShaderStage::CS },
 	{"causticsCS", wi::graphics::ShaderStage::CS },
 	{"depth_reprojectCS", wi::graphics::ShaderStage::CS },
