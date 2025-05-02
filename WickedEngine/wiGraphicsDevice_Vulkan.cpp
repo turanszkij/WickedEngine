@@ -4155,7 +4155,6 @@ using namespace vulkan_internal;
 		}
 		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_OUTPUT_ONLY))
 		{
-			//imageInfo.usage = VK_IMAGE_USAGE_VIDEO_DECODE_SRC_BIT_KHR; // Note: this is not a combination of flags, but complete assignment!
 			imageInfo.usage |= VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR;
 		}
 		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_DPB_ONLY))

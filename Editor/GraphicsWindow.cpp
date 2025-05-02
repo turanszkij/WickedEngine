@@ -1571,6 +1571,7 @@ void GraphicsWindow::UpdateSwapChainFormats(wi::graphics::SwapChain* swapChain)
 			break;
 		}
 		swapChain->desc.allow_hdr = editor->main->allow_hdr;
+		editor->main->config.Set("allow_hdr", editor->main->allow_hdr);
 
 		bool success = wi::graphics::GetDevice()->CreateSwapChain(&swapChain->desc, nullptr, swapChain);
 		assert(success);
