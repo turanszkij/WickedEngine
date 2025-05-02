@@ -207,7 +207,6 @@ wi::vector<ShaderEntry> shaders = {
 	{"virtualTextureResidencyUpdateCS", wi::graphics::ShaderStage::CS },
 	{"windCS", wi::graphics::ShaderStage::CS },
 	{"yuv_to_rgbCS", wi::graphics::ShaderStage::CS },
-	{"yuv_to_rgbCS", wi::graphics::ShaderStage::CS, ShaderModel::SM_6_0, {"ARRAY"}},
 	{"wetmap_updateCS", wi::graphics::ShaderStage::CS },
 	{"causticsCS", wi::graphics::ShaderStage::CS },
 	{"depth_reprojectCS", wi::graphics::ShaderStage::CS },
@@ -485,6 +484,10 @@ int main(int argc, char* argv[])
 	// permutations for copyStencilBitPS:
 	shaders.push_back({ "copyStencilBitPS", wi::graphics::ShaderStage::PS });
 	shaders.back().permutations.emplace_back().defines = { "MSAA" };
+
+	// permutations for yuv_to_rgbCS:
+	shaders.push_back({ "yuv_to_rgbCS", wi::graphics::ShaderStage::CS });
+	shaders.back().permutations.emplace_back().defines = { "ARRAY" };
 
 	wi::jobsystem::Initialize();
 	wi::jobsystem::context ctx;
