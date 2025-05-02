@@ -21,7 +21,7 @@ namespace wi::video
 	}
 	bool CreateVideo(const uint8_t* filedata, size_t filesize, Video* video)
 	{
-		wilog("CreateVideo: Video decoding is still very experimental, use at yourt own risk!");
+		wilog("CreateVideo: Video decoding is still very experimental, use at your own risk!");
 		bool success = false;
 		const uint8_t* input_buf = filedata;
 		struct INPUT_BUFFER
