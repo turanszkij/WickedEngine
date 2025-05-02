@@ -270,8 +270,6 @@ namespace wi::scene
 		wi::vector<TransformComponent> transforms_temp;
 
 		// CPU/GPU Colliders:
-		std::atomic<uint32_t> collider_allocator_cpu{ 0 };
-		std::atomic<uint32_t> collider_allocator_gpu{ 0 };
 		wi::vector<uint8_t> collider_deinterleaved_data;
 		uint32_t collider_count_cpu = 0;
 		uint32_t collider_count_gpu = 0;
@@ -280,6 +278,9 @@ namespace wi::scene
 		ColliderComponent* colliders_cpu = nullptr;
 		ColliderComponent* colliders_gpu = nullptr;
 		wi::BVH collider_bvh;
+		wi::BVH collider_bvh_next;
+		wi::jobsystem::context collider_bvh_workload;
+		void CountCPUandGPUColliders();
 
 		// Ocean GPU state:
 		wi::Ocean ocean;

@@ -2027,6 +2027,8 @@ namespace wi::scene
 		wi::primitive::Plane plane;
 		uint32_t layerMask = ~0u;
 		float dist = 0;
+		uint32_t cpu_index = 0;
+		uint32_t gpu_index = 0;
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};

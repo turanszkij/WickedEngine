@@ -24,6 +24,7 @@ namespace wi
 
 		constexpr bool IsValid() const { return nodes != nullptr; }
 
+		// Completely rebuilds tree from scratch
 		void Build(const wi::primitive::AABB* aabbs, uint32_t aabb_count)
 		{
 			node_count = 0;
@@ -50,73 +51,36 @@ namespace wi
 			Subdivide(0, aabbs);
 		}
 
-		void Subdivide(uint32_t nodeIndex, const wi::primitive::AABB* leaf_aabb_data)
+		// Updates the AABBs, but doesn't modify the tree structure (fast update mode) 
+		void Update(const wi::primitive::AABB* aabbs, uint32_t aabb_count)
 		{
-			Node& node = nodes[nodeIndex];
-			if (node.count <= 2)
+			if (node_count == 0)
+				return;
+			if (aabb_count == 0)
+				return;
+			if (aabb_count != leaf_count)
 				return;
 
-			XMFLOAT3 extent = node.aabb.getHalfWidth();
-			XMFLOAT3 min = node.aabb.getMin();
-			int axis = 0;
-			if (extent.y > extent.x) axis = 1;
-			if (extent.z > ((float*)&extent)[axis]) axis = 2;
-			float splitPos = ((float*)&min)[axis] + ((float*)&extent)[axis] * 0.5f;
-
-			// in-place partition
-			int i = node.offset;
-			int j = i + node.count - 1;
-			while (i <= j)
+			for (uint32_t i = node_count - 1; i > 0; --i)
 			{
-				XMFLOAT3 center = leaf_aabb_data[leaf_indices[i]].getCenter();
-				float value = ((float*)&center)[axis];
-
-				if (value < splitPos)
+				Node& node = nodes[i];
+				node.aabb = wi::primitive::AABB();
+				if (node.isLeaf())
 				{
-					i++;
+					for (uint32_t j = 0; j < node.count; ++j)
+					{
+						node.aabb = wi::primitive::AABB::Merge(node.aabb, aabbs[leaf_indices[node.offset + j]]);
+					}
 				}
 				else
 				{
-					std::swap(leaf_indices[i], leaf_indices[j--]);
+					node.aabb = wi::primitive::AABB::Merge(node.aabb, nodes[node.left].aabb);
+					node.aabb = wi::primitive::AABB::Merge(node.aabb, nodes[node.left + 1].aabb);
 				}
 			}
-
-			// abort split if one of the sides is empty
-			int leftCount = i - node.offset;
-			if (leftCount == 0 || leftCount == node.count)
-				return;
-
-			// create child nodes
-			uint32_t left_child_index = node_count++;
-			uint32_t right_child_index = node_count++;
-			node.left = left_child_index;
-			nodes[left_child_index] = {};
-			nodes[left_child_index].offset = node.offset;
-			nodes[left_child_index].count = leftCount;
-			nodes[right_child_index] = {};
-			nodes[right_child_index].offset = i;
-			nodes[right_child_index].count = node.count - leftCount;
-			node.count = 0;
-			UpdateNodeBounds(left_child_index, leaf_aabb_data);
-			UpdateNodeBounds(right_child_index, leaf_aabb_data);
-
-			// recurse
-			Subdivide(left_child_index, leaf_aabb_data);
-			Subdivide(right_child_index, leaf_aabb_data);
 		}
 
-		void UpdateNodeBounds(uint32_t nodeIndex, const wi::primitive::AABB* leaf_aabb_data)
-		{
-			Node& node = nodes[nodeIndex];
-			node.aabb = {};
-			for (uint32_t i = 0; i < node.count; ++i)
-			{
-				uint32_t offset = node.offset + i;
-				uint32_t index = leaf_indices[offset];
-				node.aabb = wi::primitive::AABB::Merge(node.aabb, leaf_aabb_data[index]);
-			}
-		}
-
+		// Intersect with a primitive shape and return the closest hit
 		template <typename T>
 		void Intersects(
 			const T& primitive,
@@ -172,6 +136,74 @@ namespace wi
 				}
 			}
 			return false;
+		}
+
+	private:
+		void UpdateNodeBounds(uint32_t nodeIndex, const wi::primitive::AABB* leaf_aabb_data)
+		{
+			Node& node = nodes[nodeIndex];
+			node.aabb = {};
+			for (uint32_t i = 0; i < node.count; ++i)
+			{
+				uint32_t offset = node.offset + i;
+				uint32_t index = leaf_indices[offset];
+				node.aabb = wi::primitive::AABB::Merge(node.aabb, leaf_aabb_data[index]);
+			}
+		}
+
+		void Subdivide(uint32_t nodeIndex, const wi::primitive::AABB* leaf_aabb_data)
+		{
+			Node& node = nodes[nodeIndex];
+			if (node.count <= 2)
+				return;
+
+			XMFLOAT3 extent = node.aabb.getHalfWidth();
+			XMFLOAT3 min = node.aabb.getMin();
+			int axis = 0;
+			if (extent.y > extent.x) axis = 1;
+			if (extent.z > ((float*)&extent)[axis]) axis = 2;
+			float splitPos = ((float*)&min)[axis] + ((float*)&extent)[axis] * 0.5f;
+
+			// in-place partition
+			int i = node.offset;
+			int j = i + node.count - 1;
+			while (i <= j)
+			{
+				XMFLOAT3 center = leaf_aabb_data[leaf_indices[i]].getCenter();
+				float value = ((float*)&center)[axis];
+
+				if (value < splitPos)
+				{
+					i++;
+				}
+				else
+				{
+					std::swap(leaf_indices[i], leaf_indices[j--]);
+				}
+			}
+
+			// abort split if one of the sides is empty
+			int leftCount = i - node.offset;
+			if (leftCount == 0 || leftCount == node.count)
+				return;
+
+			// create child nodes
+			uint32_t left_child_index = node_count++;
+			uint32_t right_child_index = node_count++;
+			node.left = left_child_index;
+			nodes[left_child_index] = {};
+			nodes[left_child_index].offset = node.offset;
+			nodes[left_child_index].count = leftCount;
+			nodes[right_child_index] = {};
+			nodes[right_child_index].offset = i;
+			nodes[right_child_index].count = node.count - leftCount;
+			node.count = 0;
+			UpdateNodeBounds(left_child_index, leaf_aabb_data);
+			UpdateNodeBounds(right_child_index, leaf_aabb_data);
+
+			// recurse
+			Subdivide(left_child_index, leaf_aabb_data);
+			Subdivide(right_child_index, leaf_aabb_data);
 		}
 	};
 }
