@@ -202,6 +202,21 @@ void ConstraintWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&maxSlider);
 
+	breakSlider.Create(0, 10, 1, 1000, "Break distance: ");
+	breakSlider.SetTooltip("How much the constraint is allowed to be exerted before breaking, calculated as relative distance. Set to FLT_MAX to disable breaking.");
+	breakSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
+			if (physicscomponent != nullptr)
+			{
+				physicscomponent->break_distance = args.fValue;
+			}
+		}
+	});
+	AddWidget(&breakSlider);
+
 	motorSlider1.Create(0, 10, 1, 100000, "motorSlider1");
 	motorSlider1.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
@@ -635,6 +650,8 @@ void ConstraintWindow::SetEntity(Entity entity)
 			break;
 		}
 
+		breakSlider.SetValue(physicsComponent->break_distance);
+
 		bodyAComboBox.ClearItems();
 		bodyAComboBox.AddItem("INVALID_ENTITY", (uint64_t)INVALID_ENTITY);
 		bodyBComboBox.ClearItems();
@@ -718,6 +735,11 @@ void ConstraintWindow::ResizeLayout()
 	add(bodyAComboBox);
 	add(bodyBComboBox);
 	add_right(collisionCheckBox);
+
+
+	margin_right = 80;
+	add(breakSlider);
+	margin_right = 40;
 
 
 	Scene& scene = editor->GetCurrentScene();

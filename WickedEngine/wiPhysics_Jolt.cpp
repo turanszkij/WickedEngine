@@ -378,6 +378,11 @@ namespace wi::physics
 			BodyID body1_ref;
 			BodyID body2_ref;
 
+			 // to detect constraint breaking:
+			float bind_distance = 0;
+			BodyID body1_id;
+			BodyID body2_id;
+
 			~Constraint()
 			{
 				if (physics_scene == nullptr)
@@ -994,6 +999,7 @@ namespace wi::physics
 				body1 = body_interface.CreateBody(BodyCreationSettings(new SphereShape(0.01f), cast(transform.GetPosition()), cast(transform.GetRotation()).Normalized(), EMotionType::Kinematic, Layers::GHOST));
 				physicsobject.body1_self = body1->GetID();
 				body_interface.AddBody(physicsobject.body1_self, EActivation::Activate);
+				physicsobject.body1_id = physicsobject.body1_self;
 			}
 			else
 			{
@@ -1007,6 +1013,7 @@ namespace wi::physics
 				Body& body = lock.GetBody();
 				body1 = &body;
 				physicsobject.body1_ref = rb.bodyID;
+				physicsobject.body1_id = rb.bodyID;
 			}
 
 			const RigidBodyPhysicsComponent* rigidbodyB = scene.rigidbodies.GetComponent(physicscomponent.bodyB);
@@ -1015,6 +1022,7 @@ namespace wi::physics
 				body2 = body_interface.CreateBody(BodyCreationSettings(new SphereShape(0.01f), cast(transform.GetPosition()), cast(transform.GetRotation()).Normalized(), EMotionType::Kinematic, Layers::GHOST));
 				physicsobject.body2_self = body2->GetID();
 				body_interface.AddBody(physicsobject.body2_self, EActivation::Activate);
+				physicsobject.body2_id = physicsobject.body2_self;
 			}
 			else
 			{
@@ -1028,6 +1036,7 @@ namespace wi::physics
 				Body& body = lock.GetBody();
 				body2 = &body;
 				physicsobject.body2_ref = rb.bodyID;
+				physicsobject.body2_id = rb.bodyID;
 			}
 
 			if (physicscomponent.type == PhysicsConstraintComponent::Type::Fixed)
@@ -1146,6 +1155,8 @@ namespace wi::physics
 				body1->GetCollisionGroup().SetGroupFilter(nullptr);
 				body2->GetCollisionGroup().SetGroupFilter(nullptr);
 			}
+
+			physicsobject.bind_distance = (body1->GetCenterOfMassPosition() - body2->GetCenterOfMassPosition()).Length();
 
 			physics_scene.physics_system.AddConstraint(physicsobject.constraint);
 			physicscomponent.SetRefreshParametersNeeded(true); // motors will be refreshed
@@ -1367,9 +1378,21 @@ namespace wi::physics
 					capsule_height = std::abs(capsule_height);
 
 					ShapeSettings::ShapeResult shape_result;
-					CapsuleShapeSettings shape_settings(capsule_height * 0.5f, capsule_radius);
-					shape_settings.SetEmbedded();
-					shape_result = shape_settings.Create();
+					CapsuleShapeSettings capsule_settings(capsule_height * 0.5f, capsule_radius);
+					capsule_settings.SetEmbedded();
+					BoxShapeSettings box_settings(Vec3(capsule_radius, capsule_radius * 0.75f, capsule_height * 0.5f + capsule_radius), capsule_radius * 0.1f);
+					box_settings.SetEmbedded();
+
+					switch (c)
+					{
+					case BODYPART_LEFT_FOOT:
+					case BODYPART_RIGHT_FOOT:
+						shape_result = box_settings.Create();
+						break;
+					default:
+						shape_result = capsule_settings.Create();
+						break;
+					}
 
 					RotatedTranslatedShapeSettings rtshape_settings;
 					rtshape_settings.SetEmbedded();
@@ -1389,7 +1412,6 @@ namespace wi::physics
 					case BODYPART_LEFT_FOOT:
 					case BODYPART_RIGHT_FOOT:
 						physicsobject.capsule = wi::primitive::Capsule(XMFLOAT3(0, 0, -capsule_height * 0.5f - capsule_radius), XMFLOAT3(0, 0, capsule_height * 0.5f + capsule_radius), capsule_radius);
-						rtshape_settings.mRotation = Quat::sRotation(Vec3::sAxisX(), 0.5f * JPH_PI).Normalized();
 						break;
 					default:
 						physicsobject.capsule = wi::primitive::Capsule(XMFLOAT3(0, -capsule_height * 0.5f - capsule_radius, 0), XMFLOAT3(0, capsule_height * 0.5f + capsule_radius, 0), capsule_radius);
@@ -2091,89 +2113,105 @@ namespace wi::physics
 				AddConstraint(scene, entity, physicscomponent, *transform);
 			}
 
-			if (physicscomponent.physicsobject != nullptr && physicscomponent.IsRefreshParametersNeeded())
+			if (physicscomponent.physicsobject != nullptr)
 			{
-				physicscomponent.SetRefreshParametersNeeded(false);
 				Constraint& constraint = GetConstraint(physicscomponent);
-				if (physicscomponent.type == PhysicsConstraintComponent::Type::Fixed)
+				if (physicscomponent.IsRefreshParametersNeeded())
 				{
-				}
-				else if (physicscomponent.type == PhysicsConstraintComponent::Type::Point)
-				{
-				}
-				else if (physicscomponent.type == PhysicsConstraintComponent::Type::Distance)
-				{
-					DistanceConstraint* ptr = ((DistanceConstraint*)constraint.constraint.GetPtr());
-					ptr->SetDistance(physicscomponent.distance_constraint.min_distance, physicscomponent.distance_constraint.max_distance);
-				}
-				else if (physicscomponent.type == PhysicsConstraintComponent::Type::Hinge)
-				{
-					HingeConstraint* ptr = ((HingeConstraint*)constraint.constraint.GetPtr());
-					ptr->SetLimits(physicscomponent.hinge_constraint.min_angle, physicscomponent.hinge_constraint.max_angle);
+					physicscomponent.SetRefreshParametersNeeded(false);
+					if (physicscomponent.type == PhysicsConstraintComponent::Type::Fixed)
+					{
+					}
+					else if (physicscomponent.type == PhysicsConstraintComponent::Type::Point)
+					{
+					}
+					else if (physicscomponent.type == PhysicsConstraintComponent::Type::Distance)
+					{
+						DistanceConstraint* ptr = ((DistanceConstraint*)constraint.constraint.GetPtr());
+						ptr->SetDistance(physicscomponent.distance_constraint.min_distance, physicscomponent.distance_constraint.max_distance);
+					}
+					else if (physicscomponent.type == PhysicsConstraintComponent::Type::Hinge)
+					{
+						HingeConstraint* ptr = ((HingeConstraint*)constraint.constraint.GetPtr());
+						ptr->SetLimits(physicscomponent.hinge_constraint.min_angle, physicscomponent.hinge_constraint.max_angle);
 
-					if (physicscomponent.hinge_constraint.target_angular_velocity != 0.0f)
-					{
-						BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
-						if (!constraint.body1_ref.IsInvalid())
+						if (physicscomponent.hinge_constraint.target_angular_velocity != 0.0f)
 						{
-							body_interface.ActivateBody(constraint.body1_ref);
+							BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
+							if (!constraint.body1_ref.IsInvalid())
+							{
+								body_interface.ActivateBody(constraint.body1_ref);
+							}
+							if (!constraint.body2_ref.IsInvalid())
+							{
+								body_interface.ActivateBody(constraint.body2_ref);
+							}
+							ptr->SetMotorState(EMotorState::Velocity);
+							ptr->SetTargetAngularVelocity(physicscomponent.hinge_constraint.target_angular_velocity);
 						}
-						if (!constraint.body2_ref.IsInvalid())
+						else
 						{
-							body_interface.ActivateBody(constraint.body2_ref);
+							ptr->SetMotorState(EMotorState::Off);
 						}
-						ptr->SetMotorState(EMotorState::Velocity);
-						ptr->SetTargetAngularVelocity(physicscomponent.hinge_constraint.target_angular_velocity);
 					}
-					else
+					else if (physicscomponent.type == PhysicsConstraintComponent::Type::Cone)
 					{
-						ptr->SetMotorState(EMotorState::Off);
+						ConeConstraint* ptr = ((ConeConstraint*)constraint.constraint.GetPtr());
+						ptr->SetHalfConeAngle(physicscomponent.cone_constraint.half_cone_angle);
 					}
-				}
-				else if (physicscomponent.type == PhysicsConstraintComponent::Type::Cone)
-				{
-					ConeConstraint* ptr = ((ConeConstraint*)constraint.constraint.GetPtr());
-					ptr->SetHalfConeAngle(physicscomponent.cone_constraint.half_cone_angle);
-				}
-				else if (physicscomponent.type == PhysicsConstraintComponent::Type::SixDOF)
-				{
-					SixDOFConstraint* ptr = ((SixDOFConstraint*)constraint.constraint.GetPtr());
-					ptr->SetTranslationLimits(cast(physicscomponent.six_dof.minTranslationAxes), cast(physicscomponent.six_dof.maxTranslationAxes));
-					ptr->SetRotationLimits(cast(physicscomponent.six_dof.minRotationAxes), cast(physicscomponent.six_dof.maxRotationAxes));
-				}
-				else if (physicscomponent.type == PhysicsConstraintComponent::Type::SwingTwist)
-				{
-					SwingTwistConstraint* ptr = ((SwingTwistConstraint*)constraint.constraint.GetPtr());
-					ptr->SetNormalHalfConeAngle(physicscomponent.swing_twist.normal_half_cone_angle);
-					ptr->SetPlaneHalfConeAngle(physicscomponent.swing_twist.plane_half_cone_angle);
-					ptr->SetTwistMinAngle(physicscomponent.swing_twist.min_twist_angle);
-					ptr->SetTwistMaxAngle(physicscomponent.swing_twist.max_twist_angle);
-				}
-				else if (physicscomponent.type == PhysicsConstraintComponent::Type::Slider)
-				{
-					SliderConstraint* ptr = ((SliderConstraint*)constraint.constraint.GetPtr());
-					ptr->SetLimits(physicscomponent.slider_constraint.min_limit, physicscomponent.slider_constraint.max_limit);
+					else if (physicscomponent.type == PhysicsConstraintComponent::Type::SixDOF)
+					{
+						SixDOFConstraint* ptr = ((SixDOFConstraint*)constraint.constraint.GetPtr());
+						ptr->SetTranslationLimits(cast(physicscomponent.six_dof.minTranslationAxes), cast(physicscomponent.six_dof.maxTranslationAxes));
+						ptr->SetRotationLimits(cast(physicscomponent.six_dof.minRotationAxes), cast(physicscomponent.six_dof.maxRotationAxes));
+					}
+					else if (physicscomponent.type == PhysicsConstraintComponent::Type::SwingTwist)
+					{
+						SwingTwistConstraint* ptr = ((SwingTwistConstraint*)constraint.constraint.GetPtr());
+						ptr->SetNormalHalfConeAngle(physicscomponent.swing_twist.normal_half_cone_angle);
+						ptr->SetPlaneHalfConeAngle(physicscomponent.swing_twist.plane_half_cone_angle);
+						ptr->SetTwistMinAngle(physicscomponent.swing_twist.min_twist_angle);
+						ptr->SetTwistMaxAngle(physicscomponent.swing_twist.max_twist_angle);
+					}
+					else if (physicscomponent.type == PhysicsConstraintComponent::Type::Slider)
+					{
+						SliderConstraint* ptr = ((SliderConstraint*)constraint.constraint.GetPtr());
+						ptr->SetLimits(physicscomponent.slider_constraint.min_limit, physicscomponent.slider_constraint.max_limit);
 
-					if (physicscomponent.slider_constraint.target_velocity != 0.0f)
-					{
-						BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
-						if (!constraint.body1_ref.IsInvalid())
+						if (physicscomponent.slider_constraint.target_velocity != 0.0f)
 						{
-							body_interface.ActivateBody(constraint.body1_ref);
+							BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
+							if (!constraint.body1_ref.IsInvalid())
+							{
+								body_interface.ActivateBody(constraint.body1_ref);
+							}
+							if (!constraint.body2_ref.IsInvalid())
+							{
+								body_interface.ActivateBody(constraint.body2_ref);
+							}
+							ptr->SetMotorState(EMotorState(EMotorState::Velocity));
+							ptr->SetTargetVelocity(physicscomponent.slider_constraint.target_velocity);
+							auto& settings = ptr->GetMotorSettings();
+							settings.mMaxForceLimit = physicscomponent.slider_constraint.max_force;
+							settings.mMinForceLimit = -physicscomponent.slider_constraint.max_force;
 						}
-						if (!constraint.body2_ref.IsInvalid())
+						else
 						{
-							body_interface.ActivateBody(constraint.body2_ref);
+							ptr->SetMotorState(EMotorState::Off);
 						}
-						ptr->SetMotorState(EMotorState(EMotorState::Velocity));
-						ptr->SetTargetVelocity(physicscomponent.slider_constraint.target_velocity);
-						auto& settings = ptr->GetMotorSettings();
-						settings.mMaxForceLimit = physicscomponent.slider_constraint.max_force;
-						settings.mMinForceLimit = -physicscomponent.slider_constraint.max_force;
 					}
-					else
+				}
+				if (physicscomponent.break_distance < FLT_MAX)
+				{
+					BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
+					const Vec3 pos1 = body_interface.GetCenterOfMassPosition(constraint.body1_id);
+					const Vec3 pos2 = body_interface.GetCenterOfMassPosition(constraint.body2_id);
+					float dist = (pos1 - pos2).Length();
+					dist -= constraint.bind_distance;
+					if (dist > physicscomponent.break_distance)
 					{
-						ptr->SetMotorState(EMotorState::Off);
+						// break constraint:
+						constraint.constraint->SetEnabled(false);
 					}
 				}
 			}
@@ -3110,6 +3148,52 @@ namespace wi::physics
 		}
 		return false;
 	}
+	void MoveCharacter(
+		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
+		const XMFLOAT3& movement_direction_in,
+		float movement_speed,
+		float jump,
+		bool controlMovementDuringJump
+	)
+	{
+		if (physicscomponent.physicsobject == nullptr)
+			return;
+		RigidBody& physicsobject = GetRigidBody(physicscomponent);
+		if (physicsobject.character == nullptr)
+			return;
+
+		// This is the same logic as the Jolt physics character sample in CharacterTest::HandleInput
+
+		// Cancel movement in opposite direction of normal when touching something we can't walk up
+		Vec3 movement_direction = cast(movement_direction_in);
+		Character::EGroundState ground_state = physicsobject.character->GetGroundState();
+		if (ground_state == Character::EGroundState::OnSteepGround
+			|| ground_state == Character::EGroundState::NotSupported)
+		{
+			Vec3 normal = physicsobject.character->GetGroundNormal();
+			normal.SetY(0.0f);
+			float dot = normal.Dot(movement_direction);
+			if (dot < 0.0f)
+				movement_direction -= (dot * normal) / normal.LengthSq();
+		}
+
+		if (controlMovementDuringJump || physicsobject.character->IsSupported())
+		{
+			// Update velocity
+			Vec3 current_velocity = physicsobject.character->GetLinearVelocity();
+			Vec3 desired_velocity = movement_speed * movement_direction;
+			if (!desired_velocity.IsNearZero() || current_velocity.GetY() < 0.0f || !physicsobject.character->IsSupported())
+				desired_velocity.SetY(current_velocity.GetY());
+			Vec3 new_velocity = 0.75f * current_velocity + 0.25f * desired_velocity;
+
+			// Jump
+			if (jump > 0 && ground_state == Character::EGroundState::OnGround)
+				new_velocity += Vec3(0, jump, 0);
+
+			// Update the velocity
+			physicsobject.character->SetLinearVelocity(new_velocity);
+		}
+	}
 
 	void ApplyForce(
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
@@ -3422,6 +3506,21 @@ namespace wi::physics
 		wi::jobsystem::Wait(ctx);
 	}
 
+	bool IsConstraintBroken(const wi::scene::PhysicsConstraintComponent& physicscomponent)
+	{
+		if (physicscomponent.physicsobject == nullptr)
+			return false;
+		const Constraint& constraint = GetConstraint(physicscomponent);
+		return constraint.constraint->GetEnabled();
+	}
+	void SetConstraintBroken(wi::scene::PhysicsConstraintComponent& physicscomponent, bool broken)
+	{
+		if (physicscomponent.physicsobject == nullptr)
+			return;
+		Constraint& constraint = GetConstraint(physicscomponent);
+		constraint.constraint->SetEnabled(!broken);
+	}
+
 	void SetActivationState(
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		ActivationState state
@@ -3710,6 +3809,7 @@ namespace wi::physics
 		int softBodyVertex = -1;
 		Vec3 softBodyVertexOffset = Vec3::sZero();
 		float prevInvMass = 0;
+		float bind_distance = 0;
 		~PickDragOperation_Jolt()
 		{
 			if (physics_scene == nullptr || bodyB == nullptr)
@@ -3735,7 +3835,8 @@ namespace wi::physics
 		const wi::scene::Scene& scene,
 		wi::primitive::Ray ray,
 		PickDragOperation& op,
-		ConstraintType constraint_type
+		ConstraintType constraint_type,
+		float break_distance
 	)
 	{
 		if (scene.physics_scene == nullptr)
@@ -3761,6 +3862,13 @@ namespace wi::physics
 				// Rigid body constraint:
 				//body_interface.SetPosition(internal_state->bodyA->GetID(), pos, EActivation::Activate);
 				body_interface.MoveKinematic(internal_state->bodyA->GetID(), pos, Quat::sIdentity(), physics_scene.GetKinematicDT(scene.dt));
+
+				float dist = (internal_state->bodyA->GetCenterOfMassPosition() - internal_state->bodyB->GetCenterOfMassPosition()).Length();
+				dist -= internal_state->bind_distance;
+				if (dist > break_distance)
+				{
+					internal_state->constraint->SetEnabled(false);
+				}
 			}
 		}
 		else
@@ -3797,6 +3905,8 @@ namespace wi::physics
 					settings.mPoint1 = settings.mPoint2 = pos;
 					internal_state->constraint = settings.Create(*internal_state->bodyA, *internal_state->bodyB);
 				}
+
+				internal_state->bind_distance = (internal_state->bodyA->GetCenterOfMassPosition() - internal_state->bodyB->GetCenterOfMassPosition()).Length();
 
 				physics_scene.physics_system.AddConstraint(internal_state->constraint);
 			}

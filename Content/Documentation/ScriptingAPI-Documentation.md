@@ -2103,6 +2103,7 @@ Playstation button codes:
 - IsCharacterGroundSupported(RigidBodyPhysicsComponent component) : bool		-- returns true if the character physics is supported by normal or steep ground
 - GetCharacterGroundState(RigidBodyPhysicsComponent component) : CharacterGroundStates			-- returns the `CharacterGroundStates` of the character physics
 - ChangeCharacterShape(RigidBodyPhysicsComponent component, float height, float radius) : bool		-- changes the physics character's shape into a capsule with specified height and radius. Returns true if successful, false otherwise. Failure means that something is blocking the character.
+- MoveCharacter(RigidBodyPhysicsComponent component, Vector movement_direction, opt float movement_speed = 6, opt float jump = 0, opt bool controlMovementDuringJump = false)	-- applies movement logic to physics character
 - SetGhostMode(RigidBodyPhysicsComponent|HumanoidComponent component, bool value)	-- enable/disable ghost mode for rigid body or ragdoll (all collision disabled)
 - SetRagdollGhostMode(HumanoidComponent humanoid, bool value)	-- enable/disable ghost mode for a ragdoll. In ghost mode, the ragdoll will not collide with anything. Enable this if the humanoid sits inside a vehicle for example.
 - SetPosition(RigidBodyPhysicsComponent component, Vector position)	-- teleport a dynamic body
@@ -2137,7 +2138,14 @@ CharacterGroundStates = {
 - DriveVehicle(RigidBodyPhysicsComponent rigidbody, opt float forward = 0, opt float right = 0, opt float brake = 0, opt float handbrake = 0)	-- set input from driver: forward and right values are values between -1 and 1 to indicate reverse/forward or left/right. brake and handbrake (handbrake = back brake for motorcycles) are values between 0 and 1.
 - GetVehicleForwardVelocity(RigidBodyPhysicsComponent rigidbody) : float	-- Signed velocity amount in forward direction
 
-- PickDrag(Scene scene, Ray, ray, PickDragOperation op) -- pick and drag physics objects such as ragdolls and rigid bodies.
+- PickDrag(Scene scene, Ray, ray, PickDragOperation op, opt ConstraintType constraint, opt float break_distance = FLT_MAX) -- pick and drag physics objects such as ragdolls and rigid bodies.
+
+```lua
+ConstraintType = {
+	Fixed = 0,
+	Point = 1
+}
+```
 
 #### PickDragOperation
 Tracks a physics pick drag operation. Use it with `phyiscs.PickDrag()` function. When using this object first time to PickDrag, the operation will be started and the operation will end when you call Finish() or when the object is destroyed

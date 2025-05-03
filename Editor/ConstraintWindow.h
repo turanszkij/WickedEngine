@@ -20,6 +20,7 @@ public:
 	wi::gui::ComboBox bodyBComboBox;
 	wi::gui::Slider minSlider;
 	wi::gui::Slider maxSlider;
+	wi::gui::Slider breakSlider;
 
 	wi::gui::Slider motorSlider1;
 	wi::gui::Slider motorSlider2;

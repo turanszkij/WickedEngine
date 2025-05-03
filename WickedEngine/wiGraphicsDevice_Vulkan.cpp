@@ -3750,12 +3750,6 @@ using namespace vulkan_internal;
 	}
 	bool GraphicsDevice_Vulkan::CreateBuffer2(const GPUBufferDesc* desc, const std::function<void(void*)>& init_callback, GPUBuffer* buffer, const GPUResource* alias, uint64_t alias_offset) const
 	{
-#ifdef PLATFORM_LINUX
-		// Resource aliasing on Linux sometimes fails with VK_ERROR_UNKOWN so I disable it:
-		alias = nullptr;
-		alias_offset = 0;
-#endif // PLATFORM_LINUX
-
 		auto internal_state = std::make_shared<Buffer_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
 		buffer->internal_state = internal_state;
@@ -3846,6 +3840,15 @@ using namespace vulkan_internal;
 			bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		}
 
+		if (desc->usage == Usage::READBACK)
+		{
+			bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+		}
+		else if (desc->usage == Usage::UPLOAD)
+		{
+			bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+		}
+
 		VkResult res;
 
 		if (has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_BUFFER) ||
@@ -3854,11 +3857,28 @@ using namespace vulkan_internal;
 		{
 			VkMemoryRequirements memory_requirements = {};
 			memory_requirements.alignment = desc->alignment;
+			if (memory_requirements.alignment == 0)
+			{
+				memory_requirements.alignment = GetMinOffsetAlignment(desc);
+			}
 			memory_requirements.size = AlignTo(desc->size, memory_requirements.alignment);
 			memory_requirements.memoryTypeBits = ~0u;
 
 			VmaAllocationCreateInfo create_info = {};
-			create_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+			if (desc->usage == Usage::READBACK)
+			{
+				create_info.usage = VMA_MEMORY_USAGE_GPU_TO_CPU;
+				create_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+			}
+			else if (desc->usage == Usage::UPLOAD)
+			{
+				create_info.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+				create_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+			}
+			else
+			{
+				create_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+			}
 
 			create_info.flags |= VMA_ALLOCATION_CREATE_CAN_ALIAS_BIT;
 
@@ -3911,17 +3931,15 @@ using namespace vulkan_internal;
 		}
 		else
 		{
-			VmaAllocationCreateInfo allocInfo = {};
-			allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+			VmaAllocationCreateInfo create_info = {};
+			create_info.usage = VMA_MEMORY_USAGE_AUTO;
 			if (desc->usage == Usage::READBACK)
 			{
-				bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-				allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+				create_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
 			}
 			else if (desc->usage == Usage::UPLOAD)
 			{
-				bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-				allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+				create_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
 			}
 
 			if (alias == nullptr)
@@ -3929,7 +3947,7 @@ using namespace vulkan_internal;
 				res = vulkan_check(vmaCreateBuffer(
 					allocationhandler->allocator,
 					&bufferInfo,
-					&allocInfo,
+					&create_info,
 					&internal_state->resource,
 					&internal_state->allocation,
 					nullptr
@@ -3965,8 +3983,17 @@ using namespace vulkan_internal;
 
 		if (desc->usage == Usage::READBACK || desc->usage == Usage::UPLOAD)
 		{
-			buffer->mapped_data = internal_state->allocation->GetMappedData();
-			buffer->mapped_size = internal_state->allocation->GetSize();
+			if (alias == nullptr)
+			{
+				buffer->mapped_data = internal_state->allocation->GetMappedData();
+				buffer->mapped_size = internal_state->allocation->GetSize();
+			}
+			else
+			{
+				wilog_assert(alias->mapped_data != nullptr, "Aliased buffer created with mapping request, but the aliasing storage resource was not mapped!");
+				buffer->mapped_data = (uint8_t*)alias->mapped_data + alias_offset;
+				buffer->mapped_size = desc->size;
+			}
 		}
 
 		if (bufferInfo.usage & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT)
@@ -5397,6 +5424,10 @@ using namespace vulkan_internal;
 
 		VkGraphicsPipelineCreateInfo& pipelineInfo = internal_state->pipelineInfo;
 		//pipelineInfo.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
+		//if (CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING_TIER2))
+		//{
+		//	pipelineInfo.flags |= VK_PIPELINE_CREATE_RENDERING_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR;
+		//}
 		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 		pipelineInfo.layout = internal_state->pipelineLayout;
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
@@ -8270,6 +8301,8 @@ using namespace vulkan_internal;
 			{
 				vkCmdBindPipeline(commandlist.GetCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, internal_state->pipeline);
 			}
+			else
+				return; // early exit for static pso
 
 			commandlist.prev_pipeline_hash = {};
 			commandlist.dirty_pso = false;
@@ -8282,7 +8315,7 @@ using namespace vulkan_internal;
 			if (commandlist.prev_pipeline_hash == pipeline_hash)
 			{
 				commandlist.active_pso = pso;
-				return;
+				return; // early exit for dynamic pso|renderpass
 			}
 			commandlist.prev_pipeline_hash = pipeline_hash;
 			commandlist.dirty_pso = true;
@@ -8321,9 +8354,7 @@ using namespace vulkan_internal;
 	{
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 		if (commandlist.active_cs == cs)
-		{
 			return;
-		}
 		commandlist.active_pso = nullptr;
 		commandlist.active_rt = nullptr;
 

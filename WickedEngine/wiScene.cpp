@@ -6,7 +6,6 @@
 #include "wiJobSystem.h"
 #include "wiSpinLock.h"
 #include "wiHelper.h"
-#include "wiRenderer.h"
 #include "wiBacklog.h"
 #include "wiTimer.h"
 #include "wiUnorderedMap.h"
@@ -61,6 +60,11 @@ namespace wi::scene
 				terrain.Generation_Update(camera);
 			}
 		}
+
+		// count colliders in background thread before procedural anim system
+		wi::jobsystem::Execute(collider_bvh_workload, [this](wi::jobsystem::JobArgs args) {
+			CountCPUandGPUColliders();
+		});
 
 		ScanSpringDependencies(); // after terrain, because this saves transform ptrs and terrain can add transforms
 
@@ -1014,20 +1018,19 @@ namespace wi::scene
 		matrix_objects_prev.insert(matrix_objects_prev.end(), other.matrix_objects_prev.begin(), other.matrix_objects_prev.end());
 
 		// Recount colliders:
-		collider_allocator_cpu.store(0u);
-		collider_allocator_gpu.store(0u);
+		CountCPUandGPUColliders();
 		const size_t size =
-			sizeof(wi::primitive::AABB) * colliders.GetCount() +
-			sizeof(wi::primitive::AABB) * colliders.GetCount() +
-			sizeof(ColliderComponent) * colliders.GetCount() +
-			sizeof(ColliderComponent) * colliders.GetCount()
+			sizeof(wi::primitive::AABB) * collider_count_cpu +
+			sizeof(wi::primitive::AABB) * collider_count_gpu +
+			sizeof(ColliderComponent) * collider_count_cpu +
+			sizeof(ColliderComponent) * collider_count_gpu
 		;
 		collider_deinterleaved_data.reserve(size);
 		ASAN_UNPOISON_MEMORY_REGION(collider_deinterleaved_data.data(), size);
 		aabb_colliders_cpu = (wi::primitive::AABB*)collider_deinterleaved_data.data();
-		aabb_colliders_gpu = aabb_colliders_cpu + colliders.GetCount();
-		colliders_cpu = (ColliderComponent*)(aabb_colliders_gpu + colliders.GetCount());
-		colliders_gpu = colliders_cpu + colliders.GetCount();
+		aabb_colliders_gpu = aabb_colliders_cpu + collider_count_cpu;
+		colliders_cpu = (ColliderComponent*)(aabb_colliders_gpu + collider_count_gpu);
+		colliders_gpu = colliders_cpu + collider_count_cpu;
 
 		for (size_t i = 0; i < colliders.GetCount(); ++i)
 		{
@@ -1087,19 +1090,15 @@ namespace wi::scene
 
 			if (collider.IsCPUEnabled())
 			{
-				uint32_t index = collider_allocator_cpu.fetch_add(1u);
-				colliders_cpu[index] = collider;
-				aabb_colliders_cpu[index] = aabb;
+				colliders_cpu[collider.cpu_index] = collider;
+				aabb_colliders_cpu[collider.cpu_index] = aabb;
 			}
 			if (collider.IsGPUEnabled())
 			{
-				uint32_t index = collider_allocator_gpu.fetch_add(1u);
-				colliders_gpu[index] = collider;
-				aabb_colliders_gpu[index] = aabb;
+				colliders_gpu[collider.gpu_index] = collider;
+				aabb_colliders_gpu[collider.gpu_index] = aabb;
 			}
 		}
-		collider_count_cpu = collider_allocator_cpu.load();
-		collider_count_gpu = collider_allocator_gpu.load();
 		collider_bvh.Build(aabb_colliders_cpu, collider_count_cpu);
 	}
 	Entity Scene::Instantiate(Scene& prefab, bool attached)
@@ -3652,20 +3651,20 @@ namespace wi::scene
 		}
 
 		// Colliders:
-		collider_allocator_cpu.store(0u);
-		collider_allocator_gpu.store(0u);
+		wi::jobsystem::Wait(collider_bvh_workload); // waits for BVH build and collider counts
+		std::swap(collider_bvh, collider_bvh_next);
 		const size_t size =
-			sizeof(wi::primitive::AABB) * colliders.GetCount() +
-			sizeof(wi::primitive::AABB) * colliders.GetCount() +
-			sizeof(ColliderComponent) * colliders.GetCount() +
-			sizeof(ColliderComponent) * colliders.GetCount()
+			sizeof(wi::primitive::AABB) * collider_count_cpu +
+			sizeof(wi::primitive::AABB) * collider_count_gpu +
+			sizeof(ColliderComponent) * collider_count_cpu +
+			sizeof(ColliderComponent) * collider_count_gpu
 		;
 		collider_deinterleaved_data.reserve(size);
 		ASAN_UNPOISON_MEMORY_REGION(collider_deinterleaved_data.data(), size);
 		aabb_colliders_cpu = (wi::primitive::AABB*)collider_deinterleaved_data.data();
-		aabb_colliders_gpu = aabb_colliders_cpu + colliders.GetCount();
-		colliders_cpu = (ColliderComponent*)(aabb_colliders_gpu + colliders.GetCount());
-		colliders_gpu = colliders_cpu + colliders.GetCount();
+		aabb_colliders_gpu = aabb_colliders_cpu + collider_count_cpu;
+		colliders_cpu = (ColliderComponent*)(aabb_colliders_gpu + collider_count_gpu);
+		colliders_gpu = colliders_cpu + collider_count_cpu;
 
 		wi::jobsystem::Dispatch(ctx, (uint32_t)colliders.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
 
@@ -3731,23 +3730,19 @@ namespace wi::scene
 
 			if (collider.IsCPUEnabled())
 			{
-				uint32_t index = collider_allocator_cpu.fetch_add(1u);
-				colliders_cpu[index] = collider;
-				aabb_colliders_cpu[index] = aabb;
+				colliders_cpu[collider.cpu_index] = collider;
+				aabb_colliders_cpu[collider.cpu_index] = aabb;
 			}
 			if (collider.IsGPUEnabled())
 			{
-				uint32_t index = collider_allocator_gpu.fetch_add(1u);
-				colliders_gpu[index] = collider;
-				aabb_colliders_gpu[index] = aabb;
+				colliders_gpu[collider.gpu_index] = collider;
+				aabb_colliders_gpu[collider.gpu_index] = aabb;
 			}
 
-			});
+		});
 
 		wi::jobsystem::Wait(ctx);
-		collider_count_cpu = collider_allocator_cpu.load();
-		collider_count_gpu = collider_allocator_gpu.load();
-		collider_bvh.Build(aabb_colliders_cpu, collider_count_cpu);
+		collider_bvh.Update(aabb_colliders_cpu, collider_count_cpu);
 
 		// Springs:
 		wi::jobsystem::Wait(spring_dependency_scan_workload);
@@ -3755,8 +3750,17 @@ namespace wi::scene
 		{
 			wi::jobsystem::Dispatch(ctx, (uint32_t)spring_queues.size(), 1, [this](wi::jobsystem::JobArgs args) {
 				UpdateSpringsTopDownRecursive(nullptr, *spring_queues[args.jobIndex]);
-				});
+			});
 			wi::jobsystem::Wait(ctx);
+		}
+
+		if (collider_count_cpu > 0)
+		{
+			// Issue the bvh rebuild on a background thread, the result will be used next frame...
+			collider_bvh_workload.priority = wi::jobsystem::Priority::Low;
+			wi::jobsystem::Execute(collider_bvh_workload, [this](wi::jobsystem::JobArgs args) {
+				collider_bvh_next.Build(aabb_colliders_cpu, collider_count_cpu);
+			});
 		}
 
 		wi::profiler::EndRange(range);
@@ -7925,6 +7929,27 @@ namespace wi::scene
 				child_transform->UpdateTransform_Parented(*parent_transform);
 			}
 			RefreshHierarchyTopdownFromParent(child);
+		}
+	}
+
+	void Scene::CountCPUandGPUColliders()
+	{
+		// Note: the collider arrays must be consistent across frames, so can't be counted with multiple threads, this is why it's separated from collider updating
+		collider_count_cpu = 0;
+		collider_count_gpu = 0;
+		for (size_t i = 0; i < colliders.GetCount(); ++i)
+		{
+			ColliderComponent& collider = colliders[i];
+			if (collider.IsCPUEnabled())
+			{
+				collider.cpu_index = collider_count_cpu;
+				collider_count_cpu++;
+			}
+			if (collider.IsGPUEnabled())
+			{
+				collider.gpu_index = collider_count_gpu;
+				collider_count_gpu++;
+			}
 		}
 	}
 

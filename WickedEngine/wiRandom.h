@@ -22,9 +22,9 @@ namespace wi::random
 		// gives an uint in range [0, UINT64_MAX]
 		constexpr uint64_t next_uint()
 		{
-			state ^= state >> 12;
-			state ^= state << 25;
-			state ^= state >> 27;
+			state ^= state >> 12ull;
+			state ^= state << 25ull;
+			state ^= state >> 27ull;
 			return state * 0x2545F4914F6CDD1DULL;
 		}
 		// gives an uint64 in range [min, max]
@@ -76,7 +76,7 @@ namespace wi::random
 				uint32_t u;
 				float f;
 			} value = {};
-			value.u = 0x3f800000 | (uint32_t(next_uint()) >> 9);
+			value.u = 0x3f800000u | (uint32_t(next_uint()) >> 9);
 			return value.f - 1.0f;
 		}
 		// gives a float in range [min, max]

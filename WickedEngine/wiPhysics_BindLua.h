@@ -49,6 +49,7 @@ namespace wi::lua
 		int IsCharacterGroundSupported(lua_State* L);
 		int GetCharacterGroundState(lua_State* L);
 		int ChangeCharacterShape(lua_State* L);
+		int MoveCharacter(lua_State* L);
 		int SetGhostMode(lua_State* L);
 		int SetRagdollGhostMode(lua_State* L);
 

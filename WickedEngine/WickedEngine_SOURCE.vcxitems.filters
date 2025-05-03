@@ -1389,6 +1389,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\RegisterTypes.h">
       <Filter>JOLT</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\offsetAllocator.hpp">
+      <Filter>UTILITY</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -2188,6 +2191,9 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\RegisterTypes.cpp">
       <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\offsetAllocator.cpp">
+      <Filter>UTILITY</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

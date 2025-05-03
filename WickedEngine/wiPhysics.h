@@ -96,6 +96,19 @@ namespace wi::physics
 	// Tries to change the physics character's shape, returns tru if successful, false if character would be blocked with the new shape
 	bool ChangeCharacterShape(wi::scene::RigidBodyPhysicsComponent& physicscomponent, const wi::scene::RigidBodyPhysicsComponent::CapsuleParams& capsule);
 
+	// Apply movement logic to a physics character
+	//	movement_direction : a normalized or zero direction
+	//	movement_speed	: horizontal movement speed of the character
+	//	jump	: vertical jump speed (positive)
+	//	controlMovementDuringJump	: whether movement can be applied when character is in the air
+	void MoveCharacter(
+		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
+		const XMFLOAT3& movement_direction,
+		float movement_speed = 6,
+		float jump = 0,
+		bool controlMovementDuringJump = false
+	);
+
 	// Apply force at body center
 	void ApplyForce(
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
@@ -157,6 +170,9 @@ namespace wi::physics
 
 	// Override all vehicle wheel transforms in world space
 	void OverrideWehicleWheelTransforms(wi::scene::Scene& scene);
+
+	bool IsConstraintBroken(const wi::scene::PhysicsConstraintComponent& physicscomponent);
+	void SetConstraintBroken(wi::scene::PhysicsConstraintComponent& physicscomponent, bool broken = true);
 
 	enum class ActivationState
 	{
@@ -221,7 +237,8 @@ namespace wi::physics
 		const wi::scene::Scene& scene,
 		wi::primitive::Ray ray,
 		PickDragOperation& op,
-		ConstraintType constraint_type = ConstraintType::Fixed
+		ConstraintType constraint_type = ConstraintType::Fixed,
+		float break_distance = FLT_MAX
 	);
 
 	// Create the shape immediately, useful when you want to do this from a thread

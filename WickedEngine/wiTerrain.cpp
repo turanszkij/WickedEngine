@@ -498,26 +498,6 @@ namespace wi::terrain
 				{
 					scene->materials.Create(materialEntities[i]);
 				}
-				if (i < MATERIAL_COUNT && !scene->names.Contains(materialEntities[i]))
-				{
-					NameComponent& name = scene->names.Create(materialEntities[i]);
-					switch (i)
-					{
-					default:
-					case MATERIAL_BASE:
-						name = "material_base";
-						break;
-					case MATERIAL_SLOPE:
-						name = "material_slope";
-						break;
-					case MATERIAL_LOW_ALTITUDE:
-						name = "material_low_altitude";
-						break;
-					case MATERIAL_HIGH_ALTITUDE:
-						name = "material_high_altitude";
-						break;
-					}
-				}
 				*scene->materials.GetComponent(materialEntities[i]) = materials[i];
 			}
 		}
@@ -1189,9 +1169,9 @@ namespace wi::terrain
 							{
 								if (prop.data.empty())
 									continue;
-								const int gen_count = (int)rng.next_uint(
-									uint32_t(prop.min_count_per_chunk * chunk_data.prop_density_current),
-									std::max(1u, uint32_t(prop.max_count_per_chunk * chunk_data.prop_density_current))
+								const int gen_count = rng.next_int(
+									int(std::floor(float(prop.min_count_per_chunk) * chunk_data.prop_density_current)),
+									int(std::ceil(float(prop.max_count_per_chunk) * chunk_data.prop_density_current))
 								);
 								for (int i = 0; i < gen_count; ++i)
 								{
@@ -1205,6 +1185,9 @@ namespace wi::terrain
 									XMFLOAT4 region0 = wi::Color(chunk_data.blendmap_layers[0].pixels[ind0], chunk_data.blendmap_layers[1].pixels[ind0], chunk_data.blendmap_layers[2].pixels[ind0], chunk_data.blendmap_layers[3].pixels[ind0]);
 									XMFLOAT4 region1 = wi::Color(chunk_data.blendmap_layers[0].pixels[ind1], chunk_data.blendmap_layers[1].pixels[ind1], chunk_data.blendmap_layers[2].pixels[ind1], chunk_data.blendmap_layers[3].pixels[ind1]);
 									XMFLOAT4 region2 = wi::Color(chunk_data.blendmap_layers[0].pixels[ind2], chunk_data.blendmap_layers[1].pixels[ind2], chunk_data.blendmap_layers[2].pixels[ind2], chunk_data.blendmap_layers[3].pixels[ind2]);
+									weight_norm(region0);
+									weight_norm(region1);
+									weight_norm(region2);
 									float spline_factor0 = 0;
 									float spline_factor1 = 0;
 									float spline_factor2 = 0;
@@ -1221,9 +1204,6 @@ namespace wi::terrain
 										spline_factor1 *= rcp;
 										spline_factor2 *= rcp;
 									}
-									weight_norm(region0);
-									weight_norm(region1);
-									weight_norm(region2);
 									// random barycentric coords on the triangle:
 									float f = rng.next_float();
 									float g = rng.next_float();
@@ -2305,7 +2285,7 @@ namespace wi::terrain
 					{
 						std::shared_ptr<HeightmapModifier> modifier = std::make_shared<HeightmapModifier>();
 						modifiers[i] = modifier;
-						archive >> modifier->scale;
+						archive >> modifier->amount;
 						archive >> modifier->data;
 						archive >> modifier->width;
 						archive >> modifier->height;
@@ -2422,7 +2402,7 @@ namespace wi::terrain
 					((VoronoiModifier*)modifier.get())->perlin_noise.Serialize(archive);
 					break;
 				case Modifier::Type::Heightmap:
-					archive << ((HeightmapModifier*)modifier.get())->scale;
+					archive << ((HeightmapModifier*)modifier.get())->amount;
 					archive << ((HeightmapModifier*)modifier.get())->data;
 					archive << ((HeightmapModifier*)modifier.get())->width;
 					archive << ((HeightmapModifier*)modifier.get())->height;

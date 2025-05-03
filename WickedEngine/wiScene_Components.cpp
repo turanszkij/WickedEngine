@@ -586,6 +586,7 @@ namespace wi::scene
 
 	void MeshComponent::DeleteRenderData()
 	{
+		generalBufferOffsetAllocation = {};
 		generalBuffer = {};
 		streamoutBuffer = {};
 		ib = {};
@@ -1291,9 +1292,25 @@ namespace wi::scene
 			}
 		};
 
-		bool success = device->CreateBuffer2(&bd, init_callback, &generalBuffer);
-		assert(success);
-		device->SetName(&generalBuffer, "MeshComponent::generalBuffer");
+		// The suballocation strategy is used to have all mesh buffers reside in a global buffer
+		//	With this we can avoid rebinding the index buffer for every mesh and can work with purely offsets
+		//	Though the index buffer will still need to be rebound if the index format changes, but that happens less frequently
+		wi::renderer::BufferSuballocation suballoc = wi::renderer::SuballocateGPUBuffer(bd.size);
+		if (suballoc.allocation.IsValid())
+		{
+			bool success = device->CreateBuffer2(&bd, init_callback, &generalBuffer, &suballoc.alias, suballoc.allocation.byte_offset);
+			assert(success);
+			device->SetName(&generalBuffer, "MeshComponent::generalBuffer (suballocated)");
+			generalBufferOffsetAllocation = std::move(suballoc.allocation);
+			generalBufferOffsetAllocationAlias = std::move(suballoc.alias);
+		}
+		else
+		{
+			// If suballocation was not successful, a standalone buffer can be created instead:
+			bool success = device->CreateBuffer2(&bd, init_callback, &generalBuffer);
+			assert(success);
+			device->SetName(&generalBuffer, "MeshComponent::generalBuffer");
+		}
 
 		assert(ib.IsValid());
 		const Format ib_format = GetIndexFormat() == IndexBufferFormat::UINT32 ? Format::R32_UINT : Format::R16_UINT;

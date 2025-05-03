@@ -20,6 +20,7 @@ enum class FileType
 	GLTF,
 	GLB,
 	VRM,
+	VRMA,
 	FBX,
 	IMAGE,
 	VIDEO,
@@ -35,6 +36,7 @@ static wi::unordered_map<std::string, FileType> filetypes = {
 	{"GLTF", FileType::GLTF},
 	{"GLB", FileType::GLB},
 	{"VRM", FileType::VRM},
+	{"VRMA", FileType::VRMA},
 	{"FBX", FileType::FBX},
 	{"H", FileType::HEADER},
 	{"CPP", FileType::CPP},
@@ -996,6 +998,7 @@ void EditorComponent::Load()
 		params.extensions.push_back("gltf");
 		params.extensions.push_back("glb");
 		params.extensions.push_back("vrm");
+		params.extensions.push_back("vrma");
 		params.extensions.push_back("fbx");
 		params.extensions.push_back("lua");
 		params.extensions.push_back("txt");
@@ -1749,13 +1752,15 @@ void EditorComponent::Update(float dt)
 			if (std::abs(currentMouse.z) > 0.1f)
 			{
 				float current = cameraWnd.movespeedSlider.GetValue();
-				float increment = 2.0f;
+				float increment = current > 10 ? 2.0f : 1.0f;
 				float add = currentMouse.z < 0 ? -increment : increment;
 				cameraWnd.movespeedSlider.SetValue(std::max(0.1f, std::ceil(current + add)));
 				char txt[256];
 				snprintf(txt, arraysize(txt), "Camera speed: %.1f", cameraWnd.movespeedSlider.GetValue());
 				save_text_message = txt;
 				save_text_alpha = 1.0f;
+				main->config.GetSection("camera").Set("move_speed", cameraWnd.movespeedSlider.GetValue());
+				main->config.Commit();
 			}
 		}
 		else
@@ -2113,82 +2118,16 @@ void EditorComponent::Update(float dt)
 			}
 			if (bone_picking)
 			{
-				for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
+				for (auto& it : bone_picking_items)
 				{
-					const ArmatureComponent& armature = scene.armatures[i];
-					for (Entity entity : armature.boneCollection)
+					Entity entity = it.first;
+					const Capsule& capsule = it.second;
+					float dis = -1;
+					if (pickRay.intersects(capsule, dis) && dis < hovered.distance)
 					{
-						if (!scene.transforms.Contains(entity))
-							continue;
-						const TransformComponent& transform = *scene.transforms.GetComponent(entity);
-						XMVECTOR a = transform.GetPositionV();
-						XMVECTOR b = a + XMVectorSet(0, 0.1f, 0, 0);
-						// Search for child to connect bone tip:
-						bool child_found = false;
-						for (size_t h = 0; (h < scene.humanoids.GetCount()) && !child_found; ++h)
-						{
-							const HumanoidComponent& humanoid = scene.humanoids[h];
-							int bodypart = 0;
-							for (Entity child : humanoid.bones)
-							{
-								const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(child);
-								if (hierarchy != nullptr && hierarchy->parentID == entity && scene.transforms.Contains(child))
-								{
-									if (bodypart == int(HumanoidComponent::HumanoidBone::Hips))
-									{
-										// skip root-hip connection
-										child_found = true;
-										break;
-									}
-									const TransformComponent& child_transform = *scene.transforms.GetComponent(child);
-									b = child_transform.GetPositionV();
-									child_found = true;
-									break;
-								}
-								bodypart++;
-							}
-						}
-						if (!child_found)
-						{
-							for (Entity child : armature.boneCollection)
-							{
-								const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(child);
-								if (hierarchy != nullptr && hierarchy->parentID == entity && scene.transforms.Contains(child))
-								{
-									const TransformComponent& child_transform = *scene.transforms.GetComponent(child);
-									b = child_transform.GetPositionV();
-									child_found = true;
-									break;
-								}
-							}
-						}
-						if (!child_found)
-						{
-							// No child, try to guess bone tip compared to parent (if it has parent):
-							const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(entity);
-							if (hierarchy != nullptr && scene.transforms.Contains(hierarchy->parentID))
-							{
-								const TransformComponent& parent_transform = *scene.transforms.GetComponent(hierarchy->parentID);
-								XMVECTOR ab = a - parent_transform.GetPositionV();
-								b = a + ab;
-							}
-						}
-						XMVECTOR ab = XMVector3Normalize(b - a);
-
-						wi::primitive::Capsule capsule;
-						capsule.radius = wi::math::Distance(a, b) * 0.1f;
-						a -= ab * capsule.radius;
-						b += ab * capsule.radius;
-						XMStoreFloat3(&capsule.base, a);
-						XMStoreFloat3(&capsule.tip, b);
-
-						float dis = -1;
-						if (pickRay.intersects(capsule, dis) && dis < hovered.distance)
-						{
-							hovered = wi::scene::PickResult();
-							hovered.entity = entity;
-							hovered.distance = dis;
-						}
+						hovered = wi::scene::PickResult();
+						hovered.entity = entity;
+						hovered.distance = dis;
 					}
 				}
 			}
@@ -4134,13 +4073,7 @@ void EditorComponent::Render() const
 					LoadShaders();
 				}
 
-				size_t bone_count = 0;
-				for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
-				{
-					const ArmatureComponent& armature = scene.armatures[i];
-					bone_count += armature.boneCollection.size();
-				}
-
+				size_t bone_count = bone_picking_items.size();
 				if (bone_count > 0)
 				{
 					struct Vertex
@@ -4160,168 +4093,98 @@ void EditorComponent::Render() const
 					const XMVECTOR Eye = camera.GetEye();
 					const XMVECTOR Unit = XMVectorSet(0, 1, 0, 0);
 
-					for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
+					for (auto& it : bone_picking_items)
 					{
-						const ArmatureComponent& armature = scene.armatures[i];
-						for (Entity entity : armature.boneCollection)
+						Entity entity = it.first;
+						const Capsule& capsule = it.second;
+						XMVECTOR a = XMLoadFloat3(&capsule.base);
+						XMVECTOR b = XMLoadFloat3(&capsule.tip);
+						XMVECTOR ab = XMVector3Normalize(b - a);
+
+						XMFLOAT4 color = inactiveEntityColor;
+
+						if (scene.springs.Contains(entity))
 						{
-							if (!scene.transforms.Contains(entity))
-								continue;
-							const TransformComponent& transform = *scene.transforms.GetComponent(entity);
-							XMVECTOR a = transform.GetPositionV();
-							XMVECTOR b = a + XMVectorSet(0, 0.1f, 0, 0);
-							const SpringComponent* spring = scene.springs.GetComponent(entity);
-							if (spring != nullptr)
+							color = springDebugColor;
+						}
+						else if (scene.inverse_kinematics.Contains(entity))
+						{
+							color = ikDebugColor;
+						}
+
+						if (hovered.entity == entity)
+						{
+							color = hoveredEntityColor;
+						}
+						for (auto& picked : translator.selected)
+						{
+							if (picked.entity == entity)
 							{
-								// Spring has information about bone tip already:
-								b = XMLoadFloat3(&spring->currentTail);
+								color = selectedEntityColor;
+								break;
+							}
+						}
+
+						color.w *= generalWnd.bonePickerOpacitySlider.GetValue();
+
+						XMVECTOR Base = XMLoadFloat3(&capsule.base);
+						XMVECTOR Tip = XMLoadFloat3(&capsule.tip);
+						XMVECTOR Radius = XMVectorReplicate(capsule.radius);
+						XMVECTOR Normal = XMVector3Normalize(Tip - Base);
+						XMVECTOR Tangent = XMVector3Normalize(XMVector3Cross(Normal, Base - Eye));
+						XMVECTOR Binormal = XMVector3Normalize(XMVector3Cross(Tangent, Normal));
+						XMVECTOR LineEndOffset = Normal * Radius;
+						XMVECTOR A = Base + LineEndOffset;
+						XMVECTOR B = Tip - LineEndOffset;
+						XMVECTOR AB = Unit * XMVector3Length(B - A);
+						XMMATRIX M = { Tangent,Normal,Binormal,XMVectorSetW(A, 1) };
+
+						uint32_t center_vertex_index = vertex_count;
+						Vertex center_vertex;
+						XMStoreFloat4(&center_vertex.position, A);
+						center_vertex.position.w = 1;
+						center_vertex.color = color;
+						center_vertex.color.w = 0;
+						std::memcpy(vertices + vertex_count, &center_vertex, sizeof(center_vertex));
+						vertex_count++;
+
+						for (size_t i = 0; i < segment_count; ++i)
+						{
+							XMVECTOR segment_pos;
+							const float angle0 = XM_PIDIV2 + (float)i / (float)segment_count * XM_2PI;
+							if (i < 18)
+							{
+								segment_pos = XMVectorSet(sinf(angle0) * capsule.radius, cosf(angle0) * capsule.radius, 0, 1);
+							}
+							else if (i == 18)
+							{
+								segment_pos = XMVectorSet(sinf(angle0) * capsule.radius, cosf(angle0) * capsule.radius, 0, 1);
+							}
+							else if (i > 18 && i < 18 + 1 + 18)
+							{
+								segment_pos = AB + XMVectorSet(sinf(angle0) * capsule.radius * 0.5f, cosf(angle0) * capsule.radius * 0.5f, 0, 1);
 							}
 							else
 							{
-								// Search for child to connect bone tip:
-								bool child_found = false;
-								for (size_t h = 0; (h < scene.humanoids.GetCount()) && !child_found; ++h)
-								{
-									const HumanoidComponent& humanoid = scene.humanoids[h];
-									int bodypart = 0;
-									for (Entity child : humanoid.bones)
-									{
-										const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(child);
-										if (hierarchy != nullptr && hierarchy->parentID == entity && scene.transforms.Contains(child))
-										{
-											if (bodypart == int(HumanoidComponent::HumanoidBone::Hips))
-											{
-												// skip root-hip connection
-												child_found = true;
-												break;
-											}
-											const TransformComponent& child_transform = *scene.transforms.GetComponent(child);
-											b = child_transform.GetPositionV();
-											child_found = true;
-											break;
-										}
-										bodypart++;
-									}
-								}
-								if (!child_found)
-								{
-									for (Entity child : armature.boneCollection)
-									{
-										const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(child);
-										if (hierarchy != nullptr && hierarchy->parentID == entity && scene.transforms.Contains(child))
-										{
-											const TransformComponent& child_transform = *scene.transforms.GetComponent(child);
-											b = child_transform.GetPositionV();
-											child_found = true;
-											break;
-										}
-									}
-								}
-								if (!child_found)
-								{
-									// No child, try to guess bone tip compared to parent (if it has parent):
-									const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(entity);
-									if (hierarchy != nullptr && scene.transforms.Contains(hierarchy->parentID))
-									{
-										const TransformComponent& parent_transform = *scene.transforms.GetComponent(hierarchy->parentID);
-										XMVECTOR ab = a - parent_transform.GetPositionV();
-										b = a + ab;
-									}
-								}
+								segment_pos = AB + XMVectorSet(sinf(angle0) * capsule.radius * 0.5f, cosf(angle0) * capsule.radius * 0.5f, 0, 1);
 							}
-							XMVECTOR ab = XMVector3Normalize(b - a);
+							segment_pos = XMVector3Transform(segment_pos, M);
 
-							wi::primitive::Capsule capsule;
-							capsule.radius = wi::math::Distance(a, b) * 0.1f;
-							a -= ab * capsule.radius;
-							b += ab * capsule.radius;
-							XMStoreFloat3(&capsule.base, a);
-							XMStoreFloat3(&capsule.tip, b);
-							XMFLOAT4 color = inactiveEntityColor;
-
-							if (spring != nullptr)
-							{
-								color = springDebugColor;
-							}
-							else if (scene.inverse_kinematics.Contains(entity))
-							{
-								color = ikDebugColor;
-							}
-
-							if (hovered.entity == entity)
-							{
-								color = hoveredEntityColor;
-							}
-							for (auto& picked : translator.selected)
-							{
-								if (picked.entity == entity)
-								{
-									color = selectedEntityColor;
-									break;
-								}
-							}
-
-							color.w *= generalWnd.bonePickerOpacitySlider.GetValue();
-
-							XMVECTOR Base = XMLoadFloat3(&capsule.base);
-							XMVECTOR Tip = XMLoadFloat3(&capsule.tip);
-							XMVECTOR Radius = XMVectorReplicate(capsule.radius);
-							XMVECTOR Normal = XMVector3Normalize(Tip - Base);
-							XMVECTOR Tangent = XMVector3Normalize(XMVector3Cross(Normal, Base - Eye));
-							XMVECTOR Binormal = XMVector3Normalize(XMVector3Cross(Tangent, Normal));
-							XMVECTOR LineEndOffset = Normal * Radius;
-							XMVECTOR A = Base + LineEndOffset;
-							XMVECTOR B = Tip - LineEndOffset;
-							XMVECTOR AB = Unit * XMVector3Length(B - A);
-							XMMATRIX M = { Tangent,Normal,Binormal,XMVectorSetW(A, 1) };
-
-							uint32_t center_vertex_index = vertex_count;
-							Vertex center_vertex;
-							XMStoreFloat4(&center_vertex.position, A);
-							center_vertex.position.w = 1;
-							center_vertex.color = color;
-							center_vertex.color.w = 0;
-							std::memcpy(vertices + vertex_count, &center_vertex, sizeof(center_vertex));
-							vertex_count++;
-
-							for (size_t i = 0; i < segment_count; ++i)
-							{
-								XMVECTOR segment_pos;
-								const float angle0 = XM_PIDIV2 + (float)i / (float)segment_count * XM_2PI;
-								if (i < 18)
-								{
-									segment_pos = XMVectorSet(sinf(angle0) * capsule.radius, cosf(angle0) * capsule.radius, 0, 1);
-								}
-								else if (i == 18)
-								{
-									segment_pos = XMVectorSet(sinf(angle0) * capsule.radius, cosf(angle0) * capsule.radius, 0, 1);
-								}
-								else if (i > 18 && i < 18 + 1 + 18)
-								{
-									segment_pos = AB + XMVectorSet(sinf(angle0) * capsule.radius * 0.5f, cosf(angle0) * capsule.radius * 0.5f, 0, 1);
-								}
-								else
-								{
-									segment_pos = AB + XMVectorSet(sinf(angle0) * capsule.radius * 0.5f, cosf(angle0) * capsule.radius * 0.5f, 0, 1);
-								}
-								segment_pos = XMVector3Transform(segment_pos, M);
-
-								Vertex vertex;
-								XMStoreFloat4(&vertex.position, segment_pos);
-								vertex.position.w = 1;
-								vertex.color = color;
-								//vertex.color.w = 0;
-								std::memcpy(vertices + vertex_count, &vertex, sizeof(vertex));
-								uint32_t ind[] = { center_vertex_index,vertex_count - 1,vertex_count };
-								std::memcpy(indices + index_count, ind, sizeof(ind));
-								index_count += arraysize(ind);
-								vertex_count++;
-							}
-							// closing triangle fan:
-							uint32_t ind[] = { center_vertex_index,vertex_count - 1,center_vertex_index+1 };
+							Vertex vertex;
+							XMStoreFloat4(&vertex.position, segment_pos);
+							vertex.position.w = 1;
+							vertex.color = color;
+							//vertex.color.w = 0;
+							std::memcpy(vertices + vertex_count, &vertex, sizeof(vertex));
+							uint32_t ind[] = { center_vertex_index,vertex_count - 1,vertex_count };
 							std::memcpy(indices + index_count, ind, sizeof(ind));
 							index_count += arraysize(ind);
+							vertex_count++;
 						}
+						// closing triangle fan:
+						uint32_t ind[] = { center_vertex_index,vertex_count - 1,center_vertex_index + 1 };
+						std::memcpy(indices + index_count, ind, sizeof(ind));
+						index_count += arraysize(ind);
 					}
 
 					device->EventBegin("Bone capsules", cmd);
@@ -4451,6 +4314,39 @@ void EditorComponent::Render() const
 			}
 #endif
 
+			if (save_text_alpha > 0)
+			{
+				wi::font::Params params;
+				params.color = save_text_color;
+				params.shadowColor = wi::Color::Black();
+				params.color.setA(uint8_t(std::min(1.0f, save_text_alpha) * 255));
+				params.shadowColor.setA(params.color.getA());
+				params.position = XMFLOAT3(GetLogicalWidth() * 0.5f, GetLogicalHeight() * 0.5f, 0);
+				params.h_align = wi::font::WIFALIGN_CENTER;
+				params.v_align = wi::font::WIFALIGN_CENTER;
+				params.size = 30;
+				params.shadow_softness = 1;
+				wi::font::Cursor cursor = wi::font::Draw(save_text_message, params, cmd);
+
+				params.size = 24;
+				params.position.y += cursor.size.y;
+				wi::font::Draw(save_text_filename, params, cmd);
+			}
+
+			if (drive_mode)
+			{
+				wi::font::Params params;
+				params.color = save_text_color;
+				params.shadowColor = wi::Color::Black();
+				params.shadowColor.setA(params.color.getA());
+				params.position = XMFLOAT3(PhysicalToLogical(viewport3D.top_left_x + viewport3D.width * 0.5f), PhysicalToLogical(viewport3D.top_left_y + 5), 0);
+				params.h_align = wi::font::WIFALIGN_CENTER;
+				params.v_align = wi::font::WIFALIGN_TOP;
+				params.size = 30;
+				params.shadow_softness = 1;
+				wi::font::Draw("Drive Mode", params, cmd);
+			}
+
 			device->RenderPassEnd(cmd);
 		}
 
@@ -4473,51 +4369,6 @@ void EditorComponent::Compose(CommandList cmd) const
 	GetDevice()->BindViewports(1, &vp, cmd);
 
 	RenderPath2D::Compose(cmd);
-
-	if (save_text_alpha > 0)
-	{
-		wi::font::Params params;
-		params.color = save_text_color;
-		params.shadowColor = wi::Color::Black();
-		params.color.setA(uint8_t(std::min(1.0f, save_text_alpha) * 255));
-		params.shadowColor.setA(params.color.getA());
-		params.position = XMFLOAT3(GetLogicalWidth() * 0.5f, GetLogicalHeight() * 0.5f, 0);
-		params.h_align = wi::font::WIFALIGN_CENTER;
-		params.v_align = wi::font::WIFALIGN_CENTER;
-		params.size = 30;
-		params.shadow_softness = 1;
-		wi::font::Cursor cursor = wi::font::Draw(save_text_message, params, cmd);
-
-		params.size = 24;
-		params.position.y += cursor.size.y;
-		wi::font::Draw(save_text_filename, params, cmd);
-	}
-
-	if (drive_mode)
-	{
-		wi::font::Params params;
-		params.color = save_text_color;
-		params.shadowColor = wi::Color::Black();
-		params.shadowColor.setA(params.color.getA());
-		params.position = XMFLOAT3(PhysicalToLogical(viewport3D.top_left_x + viewport3D.width * 0.5f), PhysicalToLogical(viewport3D.top_left_y + 5), 0);
-		params.h_align = wi::font::WIFALIGN_CENTER;
-		params.v_align = wi::font::WIFALIGN_TOP;
-		params.size = 30;
-		params.shadow_softness = 1;
-		wi::font::Draw("Drive Mode", params, cmd);
-	}
-
-#ifdef TERRAIN_VIRTUAL_TEXTURE_DEBUG
-	auto& scene = GetCurrentScene();
-	if (scene.terrains.GetCount() > 0)
-	{
-		auto& terrain = scene.terrains[0];
-		if (!terrain.chunks[terrain.center_chunk].vt.empty())
-		{
-			terrain.chunks[terrain.center_chunk].vt[0].DrawDebug(cmd);
-		}
-	}
-#endif // TERRAIN_VIRTUAL_TEXTURE_DEBUG
 }
 
 void EditorComponent::ResizeViewport3D()
@@ -5201,7 +5052,7 @@ void EditorComponent::Open(std::string filename)
 		{
 			ImportModel_OBJ(filename, *scene);
 		}
-		else if (type == FileType::GLTF || type == FileType::GLB || type == FileType::VRM)
+		else if (type == FileType::GLTF || type == FileType::GLB || type == FileType::VRM || type == FileType::VRMA)
 		{
 			ImportModel_GLTF(filename, *scene);
 		}
@@ -5443,39 +5294,164 @@ void EditorComponent::PostSaveText(const std::string& message, const std::string
 
 void EditorComponent::CheckBonePickingEnabled()
 {
+	Scene& scene = GetCurrentScene();
+
 	if (generalWnd.skeletonsVisibleCheckBox.GetCheck())
 	{
 		bone_picking = true;
-		return;
 	}
-
-	// Check if armature or bone is selected to allow bone picking:
-	//	(Don't want to always enable bone picking, because it can make the screen look very busy.)
-	Scene& scene = GetCurrentScene();
-
-	bone_picking = false;
-	for (size_t i = 0; i < scene.armatures.GetCount() && !bone_picking; ++i)
+	else
 	{
-		Entity entity = scene.armatures.GetEntity(i);
-		for (auto& x : translator.selected)
+		// Check if armature or bone or humanoid is selected to allow bone picking:
+		//	(Don't want to always enable bone picking, because it can make the screen look very busy.)
+
+		bone_picking = false;
+		for (size_t i = 0; i < scene.humanoids.GetCount() && !bone_picking; ++i)
 		{
-			if (entity == x.entity)
-			{
-				bone_picking = true;
-				break;
-			}
-		}
-		for (Entity bone : scene.armatures[i].boneCollection)
-		{
+			Entity entity = scene.humanoids.GetEntity(i);
 			for (auto& x : translator.selected)
 			{
-				if (bone == x.entity)
+				if (entity == x.entity)
 				{
 					bone_picking = true;
 					break;
 				}
 			}
+			for (Entity bone : scene.humanoids[i].bones)
+			{
+				for (auto& x : translator.selected)
+				{
+					if (bone == x.entity)
+					{
+						bone_picking = true;
+						break;
+					}
+				}
+			}
 		}
+		for (size_t i = 0; i < scene.armatures.GetCount() && !bone_picking; ++i)
+		{
+			Entity entity = scene.armatures.GetEntity(i);
+			for (auto& x : translator.selected)
+			{
+				if (entity == x.entity)
+				{
+					bone_picking = true;
+					break;
+				}
+			}
+			for (Entity bone : scene.armatures[i].boneCollection)
+			{
+				for (auto& x : translator.selected)
+				{
+					if (bone == x.entity)
+					{
+						bone_picking = true;
+						break;
+					}
+				}
+			}
+		}
+	}
+
+	if (!bone_picking)
+		return;
+	
+	bone_picking_items.clear();
+	auto bone_pick_iterate = [&](const Entity* entities, size_t entity_count) {
+		for (size_t i = 0; i < entity_count; ++i)
+		{
+			Entity entity = entities[i];
+			if (entity == INVALID_ENTITY)
+				continue;
+			if (bone_picking_items.count(entity) > 0)
+				continue;
+			if (!scene.transforms.Contains(entity))
+				continue;
+			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
+			XMVECTOR a = transform.GetPositionV();
+			XMVECTOR b = a + XMVectorSet(0, 0.1f, 0, 0);
+			const SpringComponent* spring = scene.springs.GetComponent(entity);
+			if (spring != nullptr)
+			{
+				// Spring has information about bone tip already:
+				b = XMLoadFloat3(&spring->currentTail);
+			}
+			else
+			{
+				// Search for child to connect bone tip:
+				bool child_found = false;
+				for (size_t h = 0; (h < scene.humanoids.GetCount()) && !child_found; ++h)
+				{
+					const HumanoidComponent& humanoid = scene.humanoids[h];
+					int bodypart = 0;
+					for (Entity child : humanoid.bones)
+					{
+						const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(child);
+						if (hierarchy != nullptr && hierarchy->parentID == entity && scene.transforms.Contains(child))
+						{
+							if (bodypart == int(HumanoidComponent::HumanoidBone::Hips))
+							{
+								// skip root-hip connection
+								child_found = true;
+								break;
+							}
+							const TransformComponent& child_transform = *scene.transforms.GetComponent(child);
+							b = child_transform.GetPositionV();
+							child_found = true;
+							break;
+						}
+						bodypart++;
+					}
+				}
+				if (!child_found)
+				{
+					for (size_t j = 0; j < entity_count; ++j)
+					{
+						Entity child = entities[j];
+						const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(child);
+						if (hierarchy != nullptr && hierarchy->parentID == entity && scene.transforms.Contains(child))
+						{
+							const TransformComponent& child_transform = *scene.transforms.GetComponent(child);
+							b = child_transform.GetPositionV();
+							child_found = true;
+							break;
+						}
+					}
+				}
+				if (!child_found)
+				{
+					// No child, try to guess bone tip compared to parent (if it has parent):
+					const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(entity);
+					if (hierarchy != nullptr && scene.transforms.Contains(hierarchy->parentID))
+					{
+						const TransformComponent& parent_transform = *scene.transforms.GetComponent(hierarchy->parentID);
+						XMVECTOR ab = a - parent_transform.GetPositionV();
+						b = a + ab;
+					}
+				}
+			}
+			XMVECTOR ab = XMVector3Normalize(b - a);
+
+			wi::primitive::Capsule capsule;
+			capsule.radius = wi::math::Distance(a, b) * 0.1f;
+			a -= ab * capsule.radius;
+			b += ab * capsule.radius;
+			XMStoreFloat3(&capsule.base, a);
+			XMStoreFloat3(&capsule.tip, b);
+
+			bone_picking_items[entity] = capsule;
+		}
+	};
+	for (size_t i = 0; i < scene.humanoids.GetCount(); ++i)
+	{
+		const HumanoidComponent& humanoid = scene.humanoids[i];
+		bone_pick_iterate(humanoid.bones, arraysize(humanoid.bones));
+	}
+	for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
+	{
+		const ArmatureComponent& armature = scene.armatures[i];
+		bone_pick_iterate(armature.boneCollection.data(), armature.boneCollection.size());
 	}
 }
 

@@ -146,6 +146,7 @@ public:
 
 	bool bone_picking = false;
 	void CheckBonePickingEnabled();
+	wi::unordered_map<wi::ecs::Entity, wi::primitive::Capsule> bone_picking_items;
 
 	void UpdateDynamicWidgets();
 
