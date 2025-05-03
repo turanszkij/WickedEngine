@@ -57,6 +57,7 @@ namespace wi::video
 		struct DPB
 		{
 			wi::graphics::Texture texture;
+			wi::graphics::Texture output;
 			int subresources_luminance[17] = {};
 			int subresources_chrominance[17] = {};
 			int poc_status[17] = {};

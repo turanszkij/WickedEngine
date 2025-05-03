@@ -485,6 +485,10 @@ int main(int argc, char* argv[])
 	shaders.push_back({ "copyStencilBitPS", wi::graphics::ShaderStage::PS });
 	shaders.back().permutations.emplace_back().defines = { "MSAA" };
 
+	// permutations for yuv_to_rgbCS:
+	shaders.push_back({ "yuv_to_rgbCS", wi::graphics::ShaderStage::CS });
+	shaders.back().permutations.emplace_back().defines = { "ARRAY" };
+
 	wi::jobsystem::Initialize();
 	wi::jobsystem::context ctx;
 

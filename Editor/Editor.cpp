@@ -1760,7 +1760,6 @@ void EditorComponent::Update(float dt)
 				save_text_message = txt;
 				save_text_alpha = 1.0f;
 				main->config.GetSection("camera").Set("move_speed", cameraWnd.movespeedSlider.GetValue());
-				main->config.Commit();
 			}
 		}
 		else

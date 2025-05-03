@@ -3,15 +3,24 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
+#ifdef ARRAY
 Texture2DArray<float> input_luminance : register(t0);
 Texture2DArray<float2> input_chrominance : register(t1);
+#else
+Texture2D<float> input_luminance : register(t0);
+Texture2D<float2> input_chrominance : register(t1);
+#endif // ARRAY
 
 RWTexture2D<unorm float4> output : register(u0);
 
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
+#ifdef ARRAY
 	const float3 uv = float3((DTid.xy + 0.5f) * postprocess.resolution_rcp, 0);
+#else
+	const float2 uv = float2((DTid.xy + 0.5f) * postprocess.resolution_rcp);
+#endif // ARRAY
 
 	float luminance = input_luminance.SampleLevel(sampler_linear_clamp, uv, 0);
 	float2 chrominance = input_chrominance.SampleLevel(sampler_linear_clamp, uv, 0);

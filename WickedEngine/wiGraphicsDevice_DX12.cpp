@@ -126,6 +126,8 @@ namespace dx12_internal
 			ret |= D3D12_RESOURCE_STATE_VIDEO_DECODE_READ;
 		if (has_flag(value, ResourceState::VIDEO_DECODE_DST))
 			ret |= D3D12_RESOURCE_STATE_VIDEO_DECODE_WRITE;
+		if (has_flag(value, ResourceState::VIDEO_DECODE_DPB))
+			ret |= D3D12_RESOURCE_STATE_VIDEO_DECODE_WRITE;
 
 		if (has_flag(value, ResourceState::SWAPCHAIN))
 			ret |= D3D12_RESOURCE_STATE_PRESENT;
@@ -3534,6 +3536,11 @@ std::mutex queue_locker;
 			resourcedesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS;
 		}
 
+		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_DPB_ONLY))
+		{
+			resourcedesc.Flags = D3D12_RESOURCE_FLAG_VIDEO_DECODE_REFERENCE_ONLY | D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
+		}
+
 		switch (texture->desc.type)
 		{
 		case TextureDesc::Type::TEXTURE_1D:
@@ -4558,11 +4565,23 @@ std::mutex queue_locker;
 		video_decode_support.BitRate = desc->bit_rate;
 		video_decode_support.FrameRate = { 0, 1 };
 		dx12_check(video_device->CheckFeatureSupport(D3D12_FEATURE_VIDEO_DECODE_SUPPORT, &video_decode_support, sizeof(video_decode_support)));
-		bool reference_only = video_decode_support.ConfigurationFlags & D3D12_VIDEO_DECODE_CONFIGURATION_FLAG_REFERENCE_ONLY_ALLOCATIONS_REQUIRED;
-		assert(!reference_only); // Not supported currently, will need to use resource flags: D3D12_RESOURCE_FLAG_VIDEO_DECODE_REFERENCE_ONLY | D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE, and do output decode conversion
 
 		if (video_decode_support.DecodeTier < D3D12_VIDEO_DECODE_TIER_1)
 			return false;
+
+		video_decoder->support = {};
+		if (video_decode_support.ConfigurationFlags & D3D12_VIDEO_DECODE_CONFIGURATION_FLAG_REFERENCE_ONLY_ALLOCATIONS_REQUIRED)
+		{
+			video_decoder->support |= VideoDecoderSupportFlags::DPB_AND_OUTPUT_DISTINCT;
+		}
+		else
+		{
+			video_decoder->support |= VideoDecoderSupportFlags::DPB_AND_OUTPUT_COINCIDE;
+		}
+		if (video_decode_support.DecodeTier >= D3D12_VIDEO_DECODE_TIER_2)
+		{
+			video_decoder->support |= VideoDecoderSupportFlags::DPB_INDIVIDUAL_TEXTURES_SUPPORTED;
+		}
 
 		auto internal_state = std::make_shared<VideoDecoder_DX12>();
 		internal_state->allocationhandler = allocationhandler;
@@ -7440,8 +7459,17 @@ std::mutex queue_locker;
 		D3D12_VIDEO_DECODE_OUTPUT_STREAM_ARGUMENTS output = {};
 		D3D12_VIDEO_DECODE_INPUT_STREAM_ARGUMENTS input = {};
 
-		output.pOutputTexture2D = dpb_internal->resource.Get();
-		output.OutputSubresource = D3D12CalcSubresource(0, op->current_dpb, 0, op->DPB->desc.mip_levels, op->DPB->desc.array_size);
+		if (op->output == nullptr)
+		{
+			output.pOutputTexture2D = dpb_internal->resource.Get();
+			output.OutputSubresource = D3D12CalcSubresource(0, op->current_dpb, 0, op->DPB->desc.mip_levels, op->DPB->desc.array_size);
+		}
+		else
+		{
+			auto output_internal = to_internal(op->output);
+			output.pOutputTexture2D = output_internal->resource.Get();
+			output.OutputSubresource = 0;
+		}
 
 		ID3D12Resource* reference_frames[16] = {};
 		UINT reference_subresources[16] = {};
