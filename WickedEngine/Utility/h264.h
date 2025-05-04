@@ -1,31 +1,61 @@
+// Minimal cross-platform H264 video parser utility created by Turánszki János for Wicked Engine: https://github.com/turanszkij/WickedEngine
+//	This is not using any includes or memory allocations
+//	Based on the H264 specification: Rec. ITU-T H.264 (08/2021)
+//	The following library was also used as reference: https://github.com/aizvorski/h264bitstream/
+//
+// What this library does:
+//	- extract descriptor structures from a H264 bitstream
+//		- NAL headers
+//		- Sequence Parameter Set (SPS)
+//		- Picture Parameter Set (PPS)
+//		- Slices (SliceHeader)
+//
+// What this library doesn't do:
+//	- read from MP4 file
+//	- decode video
+//	- encode video
+//	- display video
+//
+// How to use:
+// 1) Create a bitstream to consume binary data, the data pointer must point to data that contains raw H264 data:
+//	Bitstream bs;
+//	bs.init(data, size);
+//
+// 2) Find a NAL header in the bitstream:
+//	find_next_nal(&bs);
+//
+// 2) Read the NAL header from the bitstream:
+//	NALHeader nal;
+//	read_nal_header(&nal, &bs);
+//
+// 3) Depending on nal.type, you can extract the important structures from the bitstream:
+//	if (nal.type == NAL_UNIT_TYPE_SPS)
+//	{
+//		PPS pps = {};
+//		read_pps(&pps, &bs);
+//	}
+//	else if (nal.type == NAL_UNIT_TYPE_SPS)
+//	{
+//		SPS sps = {};
+//		read_sps(&sps, &bs);
+//	}
+//	else if (nal.type == NAL_UNIT_TYPE_CODED_SLICE_IDR || nal.type == NAL_UNIT_TYPE_CODED_SLICE_NON_IDR)
+//	{
+//		SliceHeader slice_header = {};
+//		read_slice_header(&slice_header, &nal, &pps, &sps, &bs);
+//	}
+//
+// 4) repeat until you have extracted all that you require or the data ends
+//
+// 
+//	MIT License (see the end of this file)
+
 #ifndef H264_H
 #define H264_H
-// Minimal H264 video parser
-// Read the H264 specification: Rec. ITU-T H.264 (08/2021)
-// The following library was used as reference: https://github.com/aizvorski/h264bitstream/
-// 
-// Use this to parse metadata information about a H264 video before passing it to a decoder.
-// You can use the following functions to access H264 information:
-//
-// Create a bitstream to consume binary data:
-// Bitstream bs;
-// bs.init(data, size);
-//
-// Then you can read a NAL header after you detected a new NAL unit (starts with h264::start_code bytes):
-// void read_nal_header(NALHeader* nal, Bitstream* b);
-//
-// After the NAL unit type was determined, you can use the following functions to read PPS, SPS and SliceHeaders (depending on NAL unit type):
-// void read_pps(PPS* pps, Bitstream* b);
-// void read_sps(SPS* sps, Bitstream* b);
-// void read_slice_header(SliceHeader* sh, NALHeader* nal, const PPS* pps_array, const SPS* sps_array, Bitstream* b);
-//
-// Do this before you include this file in *one* C++ file to create the implementation:
-// #define H264_IMPLEMENTATION
-
-#include <stdint.h>
 
 namespace h264 {
-	static constexpr uint8_t nal_start_code[] = { 0,0,1 };
+
+	static constexpr unsigned char nal_start_code[] = { 0,0,1 };
 
 	struct SPS
 	{
@@ -285,26 +315,29 @@ namespace h264 {
 
 	struct Bitstream
 	{
-		const uint8_t* start;
-		const uint8_t* p;
-		const uint8_t* end;
+		const unsigned char* start;
+		const unsigned char* p;
+		const unsigned char* end;
 		int bits_left;
 
-		constexpr void init(const uint8_t* buf, size_t size)
+		constexpr void init(const unsigned char* buf, size_t size)
 		{
 			start = buf;
 			p = buf;
 			end = buf + size;
 			bits_left = 8;
 		}
-		constexpr bool byte_aligned()
-		{
-			return bits_left == 8;
-		}
+		constexpr unsigned long long byte_offset() { return (unsigned long long)(p - start); }
+		constexpr bool byte_aligned() { return bits_left == 8; }
 		constexpr bool eof() { if (p >= end) { return true; } else { return false; } }
-		constexpr uint32_t u1()
+		constexpr void back_1byte()
 		{
-			uint32_t r = 0;
+			bits_left = 8;
+			p--;
+		}
+		constexpr unsigned u1()
+		{
+			unsigned r = 0;
 			bits_left--;
 			if (!eof())
 			{
@@ -317,18 +350,18 @@ namespace h264 {
 			}
 			return r;
 		}
-		constexpr uint32_t u(int n)
+		constexpr unsigned u(int n)
 		{
-			uint32_t r = 0;
+			unsigned r = 0;
 			for (int i = 0; i < n; i++)
 			{
 				r |= (u1() << (n - i - 1));
 			}
 			return r;
 		}
-		constexpr uint32_t ue()
+		constexpr unsigned ue()
 		{
-			int32_t r = 0;
+			int r = 0;
 			int i = 0;
 
 			while ((u1() == 0) && (i < 32) && (!eof()))
@@ -339,9 +372,9 @@ namespace h264 {
 			r += (1 << i) - 1;
 			return r;
 		}
-		constexpr int32_t se()
+		constexpr int se()
 		{
-			int32_t r = ue();
+			int r = ue();
 			if (r & 0x01)
 			{
 				r = (r + 1) / 2;
@@ -354,24 +387,38 @@ namespace h264 {
 		}
 	};
 
-	void read_nal_header(NALHeader* nal, Bitstream* b);
-	void read_pps(PPS* pps, Bitstream* b);
-	void read_sps(SPS* sps, Bitstream* b);
-	void read_slice_header(SliceHeader* sh, NALHeader* nal, const PPS* pps_array, const SPS* sps_array, Bitstream* b);
-
-#ifdef H264_IMPLEMENTATION
-	void read_nal_header(NALHeader* nal, Bitstream* b)
+	// returns true if a nal header is found, false otherwise
+	constexpr bool find_next_nal(Bitstream* b)
 	{
-		uint32_t forbidden_zero_bit = b->u(1);
-		assert(forbidden_zero_bit == 0);
+		while (!b->eof())
+		{
+			// Read in 3 byte increments because the nal header is 3 bytes normally:
+			const unsigned int b0 = b->u(8);
+			const unsigned int b1 = b->u(8);
+			const unsigned int b2 = b->u(8);
+			if (b0 == 0 && b1 == 0 && b2 == 1)
+				return true;
+			// step back 2 bytes, so the next iteration has a chance to succeed if extended NAL start code is being used which is 4 bytes:
+			b->back_1byte();
+			b->back_1byte();
+		}
+		return false;
+	}
+	// returns true if a valid nal header was read, false otherwise
+	constexpr bool read_nal_header(NALHeader* nal, Bitstream* b)
+	{
+		unsigned forbidden_zero_bit = b->u(1);
+		if (forbidden_zero_bit != 0)
+			return false;
 		nal->idc = (h264::NAL_REF_IDC)b->u(2);
 		nal->type = (h264::NAL_UNIT_TYPE)b->u(5);
+		return true;
 	}
-	void read_scaling_list(Bitstream* b, int* scalingList, int sizeOfScalingList, int* useDefaultScalingMatrixFlag)
+	constexpr void read_scaling_list(Bitstream* b, int* scalingList, int sizeOfScalingList, int* useDefaultScalingMatrixFlag)
 	{
 		int lastScale = 8;
 		int nextScale = 8;
-		int delta_scale;
+		int delta_scale = 0;
 		for (int j = 0; j < sizeOfScalingList; j++)
 		{
 			if (nextScale != 0)
@@ -398,7 +445,7 @@ namespace h264 {
 			lastScale = scalingList[j];
 		}
 	}
-	void read_hrd_parameters(SPS* sps, Bitstream* b)
+	constexpr void read_hrd_parameters(SPS* sps, Bitstream* b)
 	{
 		sps->hrd.cpb_cnt_minus1 = b->ue();
 		sps->hrd.bit_rate_scale = b->u(4);
@@ -414,7 +461,7 @@ namespace h264 {
 		sps->hrd.dpb_output_delay_length_minus1 = b->u(5);
 		sps->hrd.time_offset_length = b->u(5);
 	}
-	void read_rbsp_trailing_bits(Bitstream* b)
+	constexpr void read_rbsp_trailing_bits(Bitstream* b)
 	{
 		/* rbsp_stop_one_bit */ b->u(1);
 
@@ -423,7 +470,7 @@ namespace h264 {
 			/* rbsp_alignment_zero_bit */ b->u(1);
 		}
 	}
-	void read_vui_parameters(SPS* sps, Bitstream* b)
+	constexpr void read_vui_parameters(SPS* sps, Bitstream* b)
 	{
 		sps->vui.aspect_ratio_info_present_flag = b->u1();
 		if (sps->vui.aspect_ratio_info_present_flag)
@@ -493,7 +540,7 @@ namespace h264 {
 			sps->vui.max_dec_frame_buffering = b->ue();
 		}
 	}
-	int intlog2(int x)
+	constexpr int intlog2(int x)
 	{
 		int log = 0;
 		if (x < 0) { x = 0; }
@@ -504,7 +551,7 @@ namespace h264 {
 		if (log > 0 && x == 1 << (log - 1)) { log--; }
 		return log;
 	}
-	int more_rbsp_data(Bitstream* b)
+	constexpr int more_rbsp_data(Bitstream* b)
 	{
 		// no more data
 		if (b->eof()) { return 0; }
@@ -523,7 +570,7 @@ namespace h264 {
 		// All following bits were 0, it was the rsbp_stop_bit
 		return 0;
 	}
-	void read_sps(SPS* sps, Bitstream* b)
+	constexpr void read_sps(SPS* sps, Bitstream* b)
 	{
 		sps->profile_idc = b->u(8);
 		sps->constraint_set0_flag = b->u1();
@@ -611,7 +658,7 @@ namespace h264 {
 		}
 		read_rbsp_trailing_bits(b);
 	}
-	void read_pps(PPS* pps, Bitstream* b)
+	constexpr void read_pps(PPS* pps, Bitstream* b)
 	{
 		pps->pic_parameter_set_id = b->ue();
 		pps->seq_parameter_set_id = b->ue();
@@ -700,14 +747,14 @@ namespace h264 {
 		}
 		read_rbsp_trailing_bits(b);
 	}
-	int is_slice_type(int slice_type, int cmp_type)
+	constexpr int is_slice_type(int slice_type, int cmp_type)
 	{
 		if (slice_type >= 5) { slice_type -= 5; }
 		if (cmp_type >= 5) { cmp_type -= 5; }
 		if (slice_type == cmp_type) { return 1; }
 		else { return 0; }
 	}
-	void read_ref_pic_list_reordering(SliceHeader* sh, Bitstream* b)
+	constexpr void read_ref_pic_list_reordering(SliceHeader* sh, Bitstream* b)
 	{
 		if (!is_slice_type(sh->slice_type, SH_SLICE_TYPE_I) && !is_slice_type(sh->slice_type, SH_SLICE_TYPE_SI))
 		{
@@ -754,16 +801,14 @@ namespace h264 {
 			}
 		}
 	}
-	void read_pred_weight_table(SliceHeader* sh, const SPS* sps, const PPS* pps, Bitstream* b)
+	constexpr void read_pred_weight_table(SliceHeader* sh, const SPS* sps, const PPS* pps, Bitstream* b)
 	{
-		int i, j;
-
 		sh->pwt.luma_log2_weight_denom = b->ue();
 		if (sps->chroma_format_idc != 0)
 		{
 			sh->pwt.chroma_log2_weight_denom = b->ue();
 		}
-		for (i = 0; i <= pps->num_ref_idx_l0_active_minus1; i++)
+		for (int i = 0; i <= pps->num_ref_idx_l0_active_minus1; i++)
 		{
 			sh->pwt.luma_weight_l0_flag[i] = b->u1();
 			if (sh->pwt.luma_weight_l0_flag[i])
@@ -776,7 +821,7 @@ namespace h264 {
 				sh->pwt.chroma_weight_l0_flag[i] = b->u1();
 				if (sh->pwt.chroma_weight_l0_flag[i])
 				{
-					for (j = 0; j < 2; j++)
+					for (int j = 0; j < 2; j++)
 					{
 						sh->pwt.chroma_weight_l0[i][j] = b->se();
 						sh->pwt.chroma_offset_l0[i][j] = b->se();
@@ -786,7 +831,7 @@ namespace h264 {
 		}
 		if (is_slice_type(sh->slice_type, SH_SLICE_TYPE_B))
 		{
-			for (i = 0; i <= pps->num_ref_idx_l1_active_minus1; i++)
+			for (int i = 0; i <= pps->num_ref_idx_l1_active_minus1; i++)
 			{
 				sh->pwt.luma_weight_l1_flag[i] = b->u1();
 				if (sh->pwt.luma_weight_l1_flag[i])
@@ -799,7 +844,7 @@ namespace h264 {
 					sh->pwt.chroma_weight_l1_flag[i] = b->u1();
 					if (sh->pwt.chroma_weight_l1_flag[i])
 					{
-						for (j = 0; j < 2; j++)
+						for (int j = 0; j < 2; j++)
 						{
 							sh->pwt.chroma_weight_l1[i][j] = b->se();
 							sh->pwt.chroma_offset_l1[i][j] = b->se();
@@ -809,7 +854,7 @@ namespace h264 {
 			}
 		}
 	}
-	void read_dec_ref_pic_marking(SliceHeader* sh, NALHeader* nal, Bitstream* b)
+	constexpr void read_dec_ref_pic_marking(SliceHeader* sh, NALHeader* nal, Bitstream* b)
 	{
 		if (nal->type == 5)
 		{
@@ -848,7 +893,7 @@ namespace h264 {
 			}
 		}
 	}
-	void read_slice_header(SliceHeader* sh, NALHeader* nal, const PPS* pps_array, const SPS* sps_array, Bitstream* b)
+	constexpr void read_slice_header(SliceHeader* sh, NALHeader* nal, const PPS* pps_array, const SPS* sps_array, Bitstream* b)
 	{
 		sh->first_mb_in_slice = b->ue();
 		sh->slice_type = b->ue();
@@ -941,12 +986,31 @@ namespace h264 {
 		if (pps->num_slice_groups_minus1 > 0 &&
 			pps->slice_group_map_type >= 3 && pps->slice_group_map_type <= 5)
 		{
-			int v = intlog2(pps->pic_size_in_map_units_minus1 + pps->slice_group_change_rate_minus1 + 1);
+			const int v = intlog2(pps->pic_size_in_map_units_minus1 + pps->slice_group_change_rate_minus1 + 1);
 			sh->slice_group_change_cycle = b->u(v);
 		}
 	}
-#endif // H264_IMPLEMENTATION
 
 }
 
 #endif // H264_H
+
+//Copyright(c) 2025 Turánszki János
+//
+//Permission is hereby granted, free of charge, to any person obtaining a copy
+//of this software and associated documentation files(the "Software"), to deal
+//in the Software without restriction, including without limitation the rights
+//to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+//copies of the Software, and to permit persons to whom the Software is
+//furnished to do so, subject to the following conditions :
+//
+//The above copyright notice and this permission notice shall be included in
+//all copies or substantial portions of the Software.
+//
+//THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+//AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+//THE SOFTWARE.

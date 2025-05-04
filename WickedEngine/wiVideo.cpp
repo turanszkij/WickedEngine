@@ -7,6 +7,7 @@
 #include "Utility/h264.h"
 
 //#define DEBUG_DUMP_H264
+static const int dump_frame_count = 100;
 
 using namespace wi::graphics;
 
@@ -79,6 +80,7 @@ namespace wi::video
 #ifdef DEBUG_DUMP_H264
 				wi::vector<uint8_t> dump;
 				size_t dump_offset = 0;
+				int dump_frame_counter = 0;
 #endif // DEBUG_DUMP_H264
 
 				if (track.handler_type == MP4D_HANDLER_TYPE_VIDE)
@@ -108,10 +110,10 @@ namespace wi::video
 						{
 							const uint8_t* sps_data = (const uint8_t*)data;
 #ifdef DEBUG_DUMP_H264
-							size_t additional_dump_size = sizeof(h264::start_code) + size;
+							size_t additional_dump_size = sizeof(h264::nal_start_code) + size;
 							dump.resize(dump.size() + additional_dump_size);
-							std::memcpy(dump.data() + dump_offset, h264::start_code, sizeof(h264::start_code));
-							std::memcpy(dump.data() + dump_offset + sizeof(h264::start_code), sps_data, size);
+							std::memcpy(dump.data() + dump_offset, h264::nal_start_code, sizeof(h264::nal_start_code));
+							std::memcpy(dump.data() + dump_offset + sizeof(h264::nal_start_code), sps_data, size);
 							dump_offset += additional_dump_size;
 #endif // DEBUG_DUMP_H264
 
@@ -152,10 +154,10 @@ namespace wi::video
 						{
 							const uint8_t* pps_data = (const uint8_t*)data;
 #ifdef DEBUG_DUMP_H264
-							size_t additional_dump_size = sizeof(h264::start_code) + size;
+							size_t additional_dump_size = sizeof(h264::nal_start_code) + size;
 							dump.resize(dump.size() + additional_dump_size);
-							std::memcpy(dump.data() + dump_offset, h264::start_code, sizeof(h264::start_code));
-							std::memcpy(dump.data() + dump_offset + sizeof(h264::start_code), pps_data, size);
+							std::memcpy(dump.data() + dump_offset, h264::nal_start_code, sizeof(h264::nal_start_code));
+							std::memcpy(dump.data() + dump_offset + sizeof(h264::nal_start_code), pps_data, size);
 							dump_offset += additional_dump_size;
 #endif // DEBUG_DUMP_H264
 
@@ -211,11 +213,15 @@ namespace wi::video
 							assert(frame_bytes >= size);
 
 #ifdef DEBUG_DUMP_H264
-							size_t additional_dump_size = sizeof(h264::start_code) + size - 4;
-							dump.resize(dump.size() + additional_dump_size);
-							std::memcpy(dump.data() + dump_offset, h264::start_code, sizeof(h264::start_code));
-							std::memcpy(dump.data() + dump_offset + sizeof(h264::start_code), src_buffer + 4, size - 4);
-							dump_offset += additional_dump_size;
+							if (dump_frame_counter < dump_frame_count)
+							{
+								size_t additional_dump_size = sizeof(h264::nal_start_code) + size - 4;
+								dump.resize(dump.size() + additional_dump_size);
+								std::memcpy(dump.data() + dump_offset, h264::nal_start_code, sizeof(h264::nal_start_code));
+								std::memcpy(dump.data() + dump_offset + sizeof(h264::nal_start_code), src_buffer + 4, size - 4);
+								dump_offset += additional_dump_size;
+								dump_frame_counter++;
+							}
 #endif // DEBUG_DUMP_H264
 
 							h264::Bitstream bs = {};
@@ -291,6 +297,53 @@ namespace wi::video
 
 #ifdef DEBUG_DUMP_H264
 					wi::helper::FileWrite("dump.h264", dump.data(), dump.size());
+
+					// validate dump:
+					if (wi::helper::FileRead("dump.h264", dump))
+					{
+						using namespace h264;
+						Bitstream bs;
+						bs.init(dump.data(), dump.size());
+						while (find_next_nal(&bs))
+						{
+							NALHeader nal;
+							if (read_nal_header(&nal, &bs))
+							{
+								switch (nal.type)
+								{
+								case NAL_UNIT_TYPE_CODED_SLICE_NON_IDR:
+									wilog("H264 dump validation NAL found: NAL_UNIT_TYPE_CODED_SLICE_NON_IDR");
+									break;
+								case NAL_UNIT_TYPE_CODED_SLICE_IDR:
+									wilog("H264 dump validation NAL found: NAL_UNIT_TYPE_CODED_SLICE_IDR");
+									break;
+								case NAL_UNIT_TYPE_SPS:
+									wilog("H264 dump validation NAL found: NAL_UNIT_TYPE_SPS");
+									break;
+								case NAL_UNIT_TYPE_PPS:
+									wilog("H264 dump validation NAL found: NAL_UNIT_TYPE_PPS");
+									break;
+								case NAL_UNIT_TYPE_SEI:
+									wilog("H264 dump validation NAL found: NAL_UNIT_TYPE_SEI");
+									break;
+								case NAL_UNIT_TYPE_AUD:
+									wilog("H264 dump validation NAL found: NAL_UNIT_TYPE_AUD");
+									break;
+								default:
+									wilog("H264 dump validation NAL found: %d", (int)nal.type);
+									break;
+								}
+							}
+							else
+							{
+								wilog_assert(0, "H264 dump validation failed: invalid NAL!");
+							}
+						}
+					}
+					else
+					{
+						wilog_assert(0, "H264 dump validation failed: file doesn't exist!");
+					}
 #endif // DEBUG_DUMP_H264
 
 					video->frame_display_order.resize(video->frames_infos.size());

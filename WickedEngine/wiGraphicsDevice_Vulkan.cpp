@@ -6373,9 +6373,9 @@ using namespace vulkan_internal;
 
 		VkVideoDecodeH264SessionParametersAddInfoKHR session_parameters_add_info_h264 = {};
 		session_parameters_add_info_h264.sType = VK_STRUCTURE_TYPE_VIDEO_DECODE_H264_SESSION_PARAMETERS_ADD_INFO_KHR;
-		session_parameters_add_info_h264.stdPPSCount = (uint32_t)desc->pps_count;
+		session_parameters_add_info_h264.stdPPSCount = (uint32_t)pps_array_h264.size();
 		session_parameters_add_info_h264.pStdPPSs = pps_array_h264.data();
-		session_parameters_add_info_h264.stdSPSCount = (uint32_t)desc->sps_count;
+		session_parameters_add_info_h264.stdSPSCount = (uint32_t)sps_array_h264.size();
 		session_parameters_add_info_h264.pStdSPSs = sps_array_h264.data();
 
 		VkVideoSessionCreateInfoKHR info = {};
@@ -6430,8 +6430,8 @@ using namespace vulkan_internal;
 
 		VkVideoDecodeH264SessionParametersCreateInfoKHR session_parameters_info_h264 = {};
 		session_parameters_info_h264.sType = VK_STRUCTURE_TYPE_VIDEO_DECODE_H264_SESSION_PARAMETERS_CREATE_INFO_KHR;
-		session_parameters_info_h264.maxStdPPSCount = (uint32_t)desc->pps_count;
-		session_parameters_info_h264.maxStdSPSCount = (uint32_t)desc->sps_count;
+		session_parameters_info_h264.maxStdPPSCount = (uint32_t)pps_array_h264.size();
+		session_parameters_info_h264.maxStdSPSCount = (uint32_t)sps_array_h264.size();
 		session_parameters_info_h264.pParametersAddInfo = &session_parameters_add_info_h264;
 
 		VkVideoSessionParametersCreateInfoKHR session_parameters_info = {};

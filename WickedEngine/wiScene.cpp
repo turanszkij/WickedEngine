@@ -1480,7 +1480,10 @@ namespace wi::scene
 			VideoComponent& video = videos.Create(entity);
 			video.filename = filename;
 			video.videoResource = wi::resourcemanager::Load(filename);
-			wi::video::CreateVideoInstance(&video.videoResource.GetVideo(), &video.videoinstance);
+			if (video.videoResource.IsValid())
+			{
+				wi::video::CreateVideoInstance(&video.videoResource.GetVideo(), &video.videoinstance);
+			}
 		}
 
 		return entity;
