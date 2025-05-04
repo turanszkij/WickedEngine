@@ -1547,11 +1547,6 @@ namespace dx12_internal
 		ComPtr<ID3D12VideoDecoderHeap> decoder_heap;
 		ComPtr<ID3D12VideoDecoder> decoder;
 
-		std::atomic<uint32_t> current_param_idx{ 0 };
-		DXVA_PicParams_H264 pic_params[32] = {};
-		DXVA_Qmatrix_H264 qmatrix[32] = {};
-		DXVA_Slice_H264_Short slices[32] = {};
-
 		~VideoDecoder_DX12()
 		{
 			std::scoped_lock lck(allocationhandler->destroylocker);
@@ -7469,10 +7464,13 @@ std::mutex queue_locker;
 			auto output_internal = to_internal(op->output);
 			output.pOutputTexture2D = output_internal->resource.Get();
 			output.OutputSubresource = 0;
+			output.ConversionArguments.Enable = TRUE;
+			output.ConversionArguments.pReferenceTexture2D = dpb_internal->resource.Get();
+			output.ConversionArguments.ReferenceSubresource = D3D12CalcSubresource(0, op->current_dpb, 0, op->DPB->desc.mip_levels, op->DPB->desc.array_size);
 		}
 
-		ID3D12Resource* reference_frames[16] = {};
-		UINT reference_subresources[16] = {};
+		ID3D12Resource* reference_frames[32] = {};
+		UINT reference_subresources[32] = {};
 		for (size_t i = 0; i < op->DPB->desc.array_size; ++i)
 		{
 			reference_frames[i] = dpb_internal->resource.Get();
@@ -7491,14 +7489,9 @@ std::mutex queue_locker;
 		const h264::PPS* pps = (const h264::PPS*)op->pps;
 		const h264::SPS* sps = (const h264::SPS*)op->sps;
 
-		const uint32_t current_param_idx = decoder_internal->current_param_idx.fetch_add(1) % arraysize(decoder_internal->slices);
-		DXVA_PicParams_H264& pic_params = decoder_internal->pic_params[current_param_idx];
-		DXVA_Qmatrix_H264& qmatrix = decoder_internal->qmatrix[current_param_idx];
-		DXVA_Slice_H264_Short& sliceinfo = decoder_internal->slices[current_param_idx];
-
-		pic_params = {};
-		qmatrix = {};
-		sliceinfo = {};
+		DXVA_PicParams_H264 pic_params = {};
+		DXVA_Qmatrix_H264 qmatrix = {};
+		DXVA_Slice_H264_Short sliceinfo = {};
 
 		// DirectX Video Acceleration for H.264/MPEG-4 AVC Decoding, Microsoft, Updated 2010, Page 21
 		//	https://www.microsoft.com/en-us/download/details.aspx?id=11323

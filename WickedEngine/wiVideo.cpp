@@ -649,8 +649,8 @@ namespace wi::video
 		{
 			// if DPB_AND_OUTPUT_COINCIDE is NOT supported, then DPB is kept always in DPB state, and only the output tex is ever a shader resource:
 			decode_operation.output = &instance->dpb.output;
-			instance->barriers.push_back(GPUBarrier::Image(&instance->dpb.output, ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::VIDEO_DECODE_DST, -1, -1, &aspect_luma));
-			instance->barriers.push_back(GPUBarrier::Image(&instance->dpb.output, ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::VIDEO_DECODE_DST, -1, -1, &aspect_chroma));
+			instance->barriers.push_back(GPUBarrier::Image(&instance->dpb.output, instance->dpb.output.desc.layout, ResourceState::VIDEO_DECODE_DST, -1, -1, &aspect_luma));
+			instance->barriers.push_back(GPUBarrier::Image(&instance->dpb.output, instance->dpb.output.desc.layout, ResourceState::VIDEO_DECODE_DST, -1, -1, &aspect_chroma));
 		}
 		if (!instance->barriers.empty())
 		{
@@ -678,8 +678,8 @@ namespace wi::video
 		{
 			// if DPB_AND_OUTPUT_COINCIDE is NOT supported, then DPB is kept always in DPB state, and only the output tex is ever a shader resource:
 			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&instance->dpb.output, ResourceState::VIDEO_DECODE_DST, ResourceState::SHADER_RESOURCE_COMPUTE, -1, -1, &aspect_luma),
-				GPUBarrier::Image(&instance->dpb.output, ResourceState::VIDEO_DECODE_DST, ResourceState::SHADER_RESOURCE_COMPUTE, -1, -1, &aspect_chroma),
+				GPUBarrier::Image(&instance->dpb.output, ResourceState::VIDEO_DECODE_DST, instance->dpb.output.desc.layout, -1, -1, &aspect_luma),
+				GPUBarrier::Image(&instance->dpb.output, ResourceState::VIDEO_DECODE_DST, instance->dpb.output.desc.layout, -1, -1, &aspect_chroma),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}

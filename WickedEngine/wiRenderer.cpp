@@ -17856,12 +17856,7 @@ void YUV_to_RGB(
 	};
 	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
+	device->Barrier(GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
 
 	device->Dispatch(
 		(output_desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -17870,12 +17865,7 @@ void YUV_to_RGB(
 		cmd
 	);
 
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
+	device->Barrier(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout), cmd);
 
 	device->EventEnd(cmd);
 }
