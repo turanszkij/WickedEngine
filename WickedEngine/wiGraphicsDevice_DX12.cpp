@@ -3536,6 +3536,15 @@ std::mutex queue_locker;
 			resourcedesc.Flags = D3D12_RESOURCE_FLAG_VIDEO_DECODE_REFERENCE_ONLY | D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 		}
 
+		if (
+			has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE) ||
+			has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_DPB_ONLY)
+			)
+		{
+			// Nvidia GPU will crash if placed resource is used for video decode operation!
+			allocationDesc.Flags = D3D12MA::ALLOCATION_FLAG_COMMITTED;
+		}
+
 		switch (texture->desc.type)
 		{
 		case TextureDesc::Type::TEXTURE_1D:
@@ -7469,8 +7478,8 @@ std::mutex queue_locker;
 			output.ConversionArguments.ReferenceSubresource = D3D12CalcSubresource(0, op->current_dpb, 0, op->DPB->desc.mip_levels, op->DPB->desc.array_size);
 		}
 
-		ID3D12Resource* reference_frames[32] = {};
-		UINT reference_subresources[32] = {};
+		ID3D12Resource* reference_frames[16] = {};
+		UINT reference_subresources[16] = {};
 		for (size_t i = 0; i < op->DPB->desc.array_size; ++i)
 		{
 			reference_frames[i] = dpb_internal->resource.Get();
@@ -7640,40 +7649,6 @@ std::mutex queue_locker;
 			&output,
 			&input
 		);
-
-		// Debug immediate submit-wait:
-#if 0
-		ComPtr<ID3D12Fence> fence;
-		dx12_check(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(fence)));
-
-		//D3D12_RESOURCE_BARRIER bar = {};
-		//bar.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		//bar.Transition.pResource = dpb_internal->resource.Get();
-		//bar.Transition.StateBefore = D3D12_RESOURCE_STATE_VIDEO_DECODE_WRITE;
-		//bar.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
-		//bar.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-		//commandlist.GetVideoDecodeCommandList()->ResourceBarrier(1, &bar);
-
-		dx12_check(commandlist.GetVideoDecodeCommandList()->Close());
-
-		CommandQueue& queue = queues[commandlist.queue];
-		queue.submit_cmds.push_back(commandlist.GetCommandList());
-		queue.queue->ExecuteCommandLists(
-			(UINT)queue.submit_cmds.size(),
-			queue.submit_cmds.data()
-		);
-		queue.submit_cmds.clear();
-
-		dx12_check(queue.queue->Signal(fence.Get(), 1));
-		if (fence->GetCompletedValue() < 1)
-		{
-			dx12_check(fence->SetEventOnCompletion(1, nullptr));
-		}
-		fence->Signal(0);
-
-		dx12_check(commandlist.GetCommandAllocator()->Reset());
-		dx12_check(commandlist.GetVideoDecodeCommandList()->Reset(commandlist.GetCommandAllocator()));
-#endif
 	}
 
 	void GraphicsDevice_DX12::EventBegin(const char* name, CommandList cmd)
