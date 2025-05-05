@@ -347,6 +347,7 @@ namespace wi::graphics
 	enum class VideoProfile : uint8_t
 	{
 		H264,	// AVC
+		H265,	// HEVC
 	};
 
 	enum class ComponentSwizzle : uint8_t
@@ -415,6 +416,9 @@ namespace wi::graphics
 		TEXTURE_COMPATIBLE_COMPRESSION = 1 << 17, // optimization that can enable sampling from compressed textures (console only)
 		SHARED = 1 << 18, // shared texture
 
+		VIDEO_COMPATIBILITY_H264 = 1 << 19,	// required for vulkan resource creation for every resource (biotstream buffer, DPB, output) that will be used in a H264 decode session
+		VIDEO_COMPATIBILITY_H265 = 1 << 20,	// required for vulkan resource creation for every resource (biotstream buffer, DPB, output) that will be used in a H265 decode session
+
 		// Compat:
 		SPARSE_TILE_POOL_BUFFER = ALIASING_BUFFER,
 		SPARSE_TILE_POOL_TEXTURE_NON_RT_DS = ALIASING_TEXTURE_NON_RT_DS,
@@ -447,8 +451,9 @@ namespace wi::graphics
 		STENCIL_RESOLVE_MIN_MAX = 1 << 19,
 		CACHE_COHERENT_UMA = 1 << 20,	// https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_feature_data_architecture
 		VIDEO_DECODE_H264 = 1 << 21,
-		R9G9B9E5_SHAREDEXP_RENDERABLE = 1 << 22, // indicates supporting R9G9B9E5_SHAREDEXP format for rendering to
-		COPY_BETWEEN_DIFFERENT_IMAGE_ASPECTS_NOT_SUPPORTED = 1 << 23, // indicates that CopyTexture src and dst ImageAspect must match
+		VIDEO_DECODE_H265 = 1 << 22,
+		R9G9B9E5_SHAREDEXP_RENDERABLE = 1 << 23, // indicates supporting R9G9B9E5_SHAREDEXP format for rendering to
+		COPY_BETWEEN_DIFFERENT_IMAGE_ASPECTS_NOT_SUPPORTED = 1 << 24, // indicates that CopyTexture src and dst ImageAspect must match
 
 		// Compat:
 		GENERIC_SPARSE_TILE_POOL = ALIASING_GENERIC,

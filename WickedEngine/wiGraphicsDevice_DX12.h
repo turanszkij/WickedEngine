@@ -57,6 +57,8 @@ namespace wi::graphics
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> drawIndexedInstancedIndirectCommandSignature;
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> dispatchMeshIndirectCommandSignature;
 
+		wi::vector<GUID> video_decode_profile_list;
+
 		bool deviceRemoved = false;
 		bool tearingSupported = false;
 		bool additionalShadingRatesSupported = false;

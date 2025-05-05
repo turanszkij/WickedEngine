@@ -159,15 +159,20 @@ namespace wi::graphics
 		VkPhysicalDeviceImageViewMinLodFeaturesEXT image_view_min_lod_features = {};
 		VkPhysicalDeviceMeshShaderFeaturesEXT mesh_shader_features = {};
 
-		VkVideoDecodeH264ProfileInfoKHR decode_h264_profile = {};
-		VkVideoDecodeH264CapabilitiesKHR decode_h264_capabilities = {};
 		struct VideoCapability
 		{
 			VkVideoProfileInfoKHR profile = {};
 			VkVideoDecodeCapabilitiesKHR decode_capabilities = {};
 			VkVideoCapabilitiesKHR video_capabilities = {};
 		};
+
+		VkVideoDecodeH264ProfileInfoKHR decode_h264_profile = {};
+		VkVideoDecodeH264CapabilitiesKHR decode_h264_capabilities = {};
 		VideoCapability video_capability_h264 = {};
+
+		VkVideoDecodeH265ProfileInfoKHR decode_h265_profile = {};
+		VkVideoDecodeH265CapabilitiesKHR decode_h265_capabilities = {};
+		VideoCapability video_capability_h265 = {};
 
 		wi::vector<VkDynamicState> pso_dynamicStates;
 		VkPipelineDynamicStateCreateInfo dynamicStateInfo = {};

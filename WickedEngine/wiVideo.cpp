@@ -22,7 +22,6 @@ namespace wi::video
 	}
 	bool CreateVideo(const uint8_t* filedata, size_t filesize, Video* video)
 	{
-		wilog("CreateVideo: Video decoding is still very experimental, use at your own risk!");
 		bool success = false;
 		const uint8_t* input_buf = filedata;
 		struct INPUT_BUFFER
@@ -75,7 +74,7 @@ namespace wi::video
 
 			for (uint32_t ntrack = 0; ntrack < mp4.track_count; ntrack++)
 			{
-				MP4D_track_t& track = mp4.track[ntrack];
+				const MP4D_track_t& track = mp4.track[ntrack];
 
 #ifdef DEBUG_DUMP_H264
 				wi::vector<uint8_t> dump;
@@ -91,10 +90,11 @@ namespace wi::video
 						video->profile = VideoProfile::H264;
 						break;
 					case MP4_OBJECT_TYPE_HEVC:
-						wi::helper::messageBox("H265 (HEVC) video format is not supported yet!", "Error!");
+						video->profile = VideoProfile::H265;
+						wilog_warning("H265 (HEVC) video format is not supported yet!");
 						return false;
 					default:
-						wi::helper::messageBox("Unknown video format!", "Error!");
+						wilog_warning("Unknown video format! track.object_type_indication = %d", (int)track.object_type_indication);
 						return false;
 					}
 
@@ -403,8 +403,8 @@ namespace wi::video
 
 					GPUBufferDesc bd;
 					bd.size = aligned_size;
-					bd.usage = Usage::UPLOAD; // DEFAULT doesn't work on Nvidia
-					bd.misc_flags = ResourceMiscFlag::VIDEO_DECODE;
+					bd.usage = Usage::DEFAULT;
+					bd.misc_flags = ResourceMiscFlag::VIDEO_DECODE | ResourceMiscFlag::VIDEO_COMPATIBILITY_H264;
 					success = device->CreateBuffer2(&bd, copy_video_track, &video->data_stream);
 					assert(success);
 					device->SetName(&video->data_stream, "wi::Video::data_stream");
@@ -417,7 +417,7 @@ namespace wi::video
 		}
 		else
 		{
-			wi::helper::messageBox("MP4 parsing failure!", "Error!");
+			wilog_warning("MP4 parsing failure! MP4D_open result = %d", result);
 			return false;
 		}
 		MP4D_close(&mp4);
@@ -430,9 +430,14 @@ namespace wi::video
 		instance->flags &= ~VideoInstance::Flags::InitialFirstFrameDecoded;
 
 		GraphicsDevice* device = GetDevice();
-		if (!device->CheckCapability(GraphicsDeviceCapability::VIDEO_DECODE_H264))
+		if (video->profile == VideoProfile::H264 && !device->CheckCapability(GraphicsDeviceCapability::VIDEO_DECODE_H264))
 		{
-			wi::helper::messageBox("The video decoding implementation is not supported by your GPU!\nYou can attempt to update graphics driver.\nThere is no CPU decoding implemented yet, video will be disabled!", "Warning!");
+			wilog_warning("The H264 video decoding implementation is not supported by your GPU!\nYou can attempt to update graphics driver.\nThere is no CPU decoding implemented now, video will be disabled!");
+			return false;
+		}
+		if (video->profile == VideoProfile::H265 && !device->CheckCapability(GraphicsDeviceCapability::VIDEO_DECODE_H265))
+		{
+			wilog_warning("The H265 video decoding implementation is not supported by your GPU!\nYou can attempt to update graphics driver.\nThere is no CPU decoding implemented now, video will be disabled!");
 			return false;
 		}
 
@@ -466,6 +471,7 @@ namespace wi::video
 			td.misc_flags = ResourceMiscFlag::VIDEO_DECODE_DPB_ONLY;
 			td.layout = ResourceState::VIDEO_DECODE_DPB;
 		}
+		td.misc_flags |= ResourceMiscFlag::VIDEO_COMPATIBILITY_H264;
 		success = device->CreateTexture(&td, nullptr, &instance->dpb.texture);
 		assert(success);
 		device->SetName(&instance->dpb.texture, "VideoInstance::DPB::texture");
@@ -503,6 +509,7 @@ namespace wi::video
 			td.array_size = 1;
 			td.bind_flags = BindFlag::SHADER_RESOURCE;
 			td.misc_flags = ResourceMiscFlag::VIDEO_DECODE_OUTPUT_ONLY;
+			td.misc_flags |= ResourceMiscFlag::VIDEO_COMPATIBILITY_H264;
 			td.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 			success = device->CreateTexture(&td, nullptr, &instance->dpb.output);
 			assert(success);

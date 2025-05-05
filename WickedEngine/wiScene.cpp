@@ -4084,7 +4084,7 @@ namespace wi::scene
 
 			material.WriteShaderMaterial(materialArrayMapped + args.jobIndex);
 
-			VideoComponent* video = videos.GetComponent(entity);
+			const VideoComponent* video = videos.GetComponent(entity);
 			if (video != nullptr)
 			{
 				// Video attachment will overwrite texture slots on shader side:
@@ -4851,16 +4851,30 @@ namespace wi::scene
 
 			light.maskTexDescriptor = -1;
 
-			const MaterialComponent* material = materials.GetComponent(entity);
-			if (material != nullptr && material->textures[MaterialComponent::BASECOLORMAP].resource.IsValid())
+			if (light.type == LightComponent::SPOT || light.type == LightComponent::POINT)
 			{
-				const Texture& tex = material->textures[MaterialComponent::BASECOLORMAP].resource.GetTexture();
-				if (
-					(light.type == LightComponent::SPOT && !has_flag(tex.desc.misc_flags, ResourceMiscFlag::TEXTURECUBE)) ||
-					(light.type == LightComponent::POINT && has_flag(tex.desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
-					)
+				// Material can be used as mask texture for spot and point lights:
+				const MaterialComponent* material = materials.GetComponent(entity);
+				if (material != nullptr && material->textures[MaterialComponent::BASECOLORMAP].resource.IsValid())
 				{
-					light.maskTexDescriptor = GetDevice()->GetDescriptorIndex(&tex, SubresourceType::SRV, material->textures[MaterialComponent::BASECOLORMAP].resource.GetTextureSRGBSubresource());
+					const Texture& tex = material->textures[MaterialComponent::BASECOLORMAP].resource.GetTexture();
+					if (
+						(light.type == LightComponent::SPOT && !has_flag(tex.desc.misc_flags, ResourceMiscFlag::TEXTURECUBE)) ||
+						(light.type == LightComponent::POINT && has_flag(tex.desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
+						)
+					{
+						light.maskTexDescriptor = GetDevice()->GetDescriptorIndex(&tex, SubresourceType::SRV, material->textures[MaterialComponent::BASECOLORMAP].resource.GetTextureSRGBSubresource());
+					}
+				}
+			}
+
+			if (light.type == LightComponent::SPOT)
+			{
+				// Video attachment will overwrite texture mask for spotlight:
+				const VideoComponent* video = videos.GetComponent(entity);
+				if (video != nullptr)
+				{
+					light.maskTexDescriptor = GetDevice()->GetDescriptorIndex(&video->videoinstance.output.texture, SubresourceType::SRV, video->videoinstance.output.subresource_srgb);
 				}
 			}
 

@@ -184,18 +184,38 @@ void VideoWindow::SetEntity(Entity entity)
 		{
 			const wi::video::Video& videofile = video->videoResource.GetVideo();
 			std::string str;
-			if (GetDevice()->CheckCapability(wi::graphics::GraphicsDeviceCapability::VIDEO_DECODE_H264))
+			if (videofile.profile == wi::graphics::VideoProfile::H264)
 			{
-				str += "GPU decode: Supported\n";
+				str += "Format: H264 (AVC)\n";
+				if (GetDevice()->CheckCapability(wi::graphics::GraphicsDeviceCapability::VIDEO_DECODE_H264))
+				{
+					str += "GPU decode: Supported\n";
+				}
+				else
+				{
+					str += "GPU decode: Not supported\n";
+				}
+			}
+			else if (videofile.profile == wi::graphics::VideoProfile::H265)
+			{
+				str += "Format: H265 (HEVC)\n";
+				if (GetDevice()->CheckCapability(wi::graphics::GraphicsDeviceCapability::VIDEO_DECODE_H265))
+				{
+					str += "GPU decode: Supported\n";
+				}
+				else
+				{
+					str += "GPU decode: Not supported\n";
+				}
 			}
 			else
 			{
-				str += "GPU decode: Not supported\n";
+				str += "Format: Unsupported\n";
 			}
 			str += "Audio track: not implemented\n";
-			str += "Display buffers in use: " + std::to_string(video->videoinstance.output_textures_used.size()) + "\n\n";
+			str += "Size: " + wi::helper::GetMemorySizeText(video->videoResource.GetVideo().data_stream.GetDesc().size) + "\n\n";
 
-			str += "Tip: if you have a material on this entity, the material textures will be replaced by video. This way you can set video textures into the 3D scene.\n\n";
+			str += "Tip: if you have a material on this entity, the material basecolor and emissive textures will be replaced by video. If it has light, then the video will be used as light multiplier. This way you can set video textures into the 3D scene.\n\n";
 
 			str += "title : " + videofile.title + "\n";
 			str += "album : " + videofile.album + "\n";
@@ -211,6 +231,7 @@ void VideoWindow::SetEntity(Entity entity)
 			str += "Picture Parameter Sets: " + std::to_string(videofile.pps_count) + "\n";
 			str += "Sequence Parameter Sets: " + std::to_string(videofile.sps_count) + "\n";
 			str += "Decode Picture Buffers: " + std::to_string(video->videoinstance.dpb.texture.desc.array_size) + "\n";
+			str += "Display buffers in use: " + std::to_string(video->videoinstance.output_textures_used.size()) + "\n\n";
 			infoLabel.SetText(str);
 
 			timerSlider.SetRange(0, videofile.duration_seconds);

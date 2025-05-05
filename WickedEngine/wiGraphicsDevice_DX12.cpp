@@ -2500,8 +2500,27 @@ std::mutex queue_locker;
 			hr = dx12_check(device->CreateCommandQueue(&queues[QUEUE_VIDEO_DECODE].desc, PPV_ARGS(queues[QUEUE_VIDEO_DECODE].queue)));
 			if (SUCCEEDED(hr))
 			{
-				capabilities |= GraphicsDeviceCapability::VIDEO_DECODE_H264;
 				dx12_check(queues[QUEUE_VIDEO_DECODE].queue->SetName(L"QUEUE_VIDEO_DECODE"));
+
+				D3D12_FEATURE_DATA_VIDEO_DECODE_PROFILE_COUNT video_decode_profile_count = {};
+				dx12_check(video_device->CheckFeatureSupport(D3D12_FEATURE_VIDEO_DECODE_PROFILE_COUNT, &video_decode_profile_count, sizeof(video_decode_profile_count)));
+				video_decode_profile_list.resize(video_decode_profile_count.ProfileCount);
+				D3D12_FEATURE_DATA_VIDEO_DECODE_PROFILES video_decode_profiles = {};
+				video_decode_profiles.ProfileCount = video_decode_profile_count.ProfileCount;
+				video_decode_profiles.pProfiles = video_decode_profile_list.data();
+				dx12_check(video_device->CheckFeatureSupport(D3D12_FEATURE_VIDEO_DECODE_PROFILES, &video_decode_profiles, sizeof(video_decode_profiles)));
+
+				for (auto& profile : video_decode_profile_list)
+				{
+					if (profile == D3D12_VIDEO_DECODE_PROFILE_H264)
+					{
+						capabilities |= GraphicsDeviceCapability::VIDEO_DECODE_H264;
+					}
+					else if (profile == D3D12_VIDEO_DECODE_PROFILE_HEVC_MAIN)
+					{
+						//capabilities |= GraphicsDeviceCapability::VIDEO_DECODE_H265; //TODO
+					}
+				}
 			}
 		}
 
@@ -4508,38 +4527,25 @@ std::mutex queue_locker;
 		if (video_device == nullptr)
 			return false;
 
-		D3D12_FEATURE_DATA_VIDEO_DECODE_PROFILE_COUNT video_decode_profile_count = {};
-		dx12_check(video_device->CheckFeatureSupport(D3D12_FEATURE_VIDEO_DECODE_PROFILE_COUNT, &video_decode_profile_count, sizeof(video_decode_profile_count)));
-		wi::vector<GUID> profiles(video_decode_profile_count.ProfileCount);
-		D3D12_FEATURE_DATA_VIDEO_DECODE_PROFILES video_decode_profiles = {};
-		video_decode_profiles.ProfileCount = video_decode_profile_count.ProfileCount;
-		video_decode_profiles.pProfiles = profiles.data();
-		dx12_check(video_device->CheckFeatureSupport(D3D12_FEATURE_VIDEO_DECODE_PROFILES, &video_decode_profiles, sizeof(video_decode_profiles)));
 		D3D12_VIDEO_DECODER_DESC decoder_desc = {};
 		switch (desc->profile)
 		{
 		case VideoProfile::H264:
+			if (!CheckCapability(GraphicsDeviceCapability::VIDEO_DECODE_H264))
+				return false;
 			decoder_desc.Configuration.DecodeProfile = D3D12_VIDEO_DECODE_PROFILE_H264;
 			decoder_desc.Configuration.InterlaceType = D3D12_VIDEO_FRAME_CODED_INTERLACE_TYPE_NONE;
 			break;
-		//case VideoProfile::H265:
-		//	decoder_desc.Configuration.DecodeProfile = D3D12_VIDEO_DECODE_PROFILE_HEVC_MAIN;
-		//	break;
+		case VideoProfile::H265:
+			if (!CheckCapability(GraphicsDeviceCapability::VIDEO_DECODE_H265))
+				return false;
+			decoder_desc.Configuration.DecodeProfile = D3D12_VIDEO_DECODE_PROFILE_HEVC_MAIN;
+			decoder_desc.Configuration.InterlaceType = D3D12_VIDEO_FRAME_CODED_INTERLACE_TYPE_NONE;
+			break;
 		default:
 			assert(0); // not implemented
-			break;
-		}
-		bool profile_valid = false;
-		for (auto& x : profiles)
-		{
-			if (x == decoder_desc.Configuration.DecodeProfile)
-			{
-				profile_valid = true;
-				break;
-			}
-		}
-		if (!profile_valid)
 			return false;
+		}
 
 		D3D12_FEATURE_DATA_VIDEO_DECODE_FORMAT_COUNT video_decode_format_count = {};
 		video_decode_format_count.Configuration = decoder_desc.Configuration;
@@ -7494,161 +7500,168 @@ std::mutex queue_locker;
 		input.CompressedBitstream.Size = op->stream_size;
 		input.pHeap = decoder_internal->decoder_heap.Get();
 
-		const h264::SliceHeader* slice_header = (const h264::SliceHeader*)op->slice_header;
-		const h264::PPS* pps = (const h264::PPS*)op->pps;
-		const h264::SPS* sps = (const h264::SPS*)op->sps;
+		if (video_decoder->desc.profile == VideoProfile::H264)
+		{
+			const h264::SliceHeader* slice_header = (const h264::SliceHeader*)op->slice_header;
+			const h264::PPS* pps = (const h264::PPS*)op->pps;
+			const h264::SPS* sps = (const h264::SPS*)op->sps;
 
-		DXVA_PicParams_H264 pic_params = {};
-		DXVA_Qmatrix_H264 qmatrix = {};
-		DXVA_Slice_H264_Short sliceinfo = {};
+			DXVA_PicParams_H264 pic_params_h264 = {};
+			DXVA_Qmatrix_H264 qmatrix_h264 = {};
+			DXVA_Slice_H264_Short sliceinfo_h264 = {};
 
-		// DirectX Video Acceleration for H.264/MPEG-4 AVC Decoding, Microsoft, Updated 2010, Page 21
-		//	https://www.microsoft.com/en-us/download/details.aspx?id=11323
-		//	Also: https://gitlab.freedesktop.org/mesa/mesa/-/blob/main/src/gallium/drivers/d3d12/d3d12_video_dec_h264.cpp
-		//	Also: https://github.com/mofo7777/H264Dxva2Decoder
-		pic_params.wFrameWidthInMbsMinus1 = sps->pic_width_in_mbs_minus1;
-		pic_params.wFrameHeightInMbsMinus1 = sps->pic_height_in_map_units_minus1;
-		pic_params.IntraPicFlag = op->frame_type == VideoFrameType::Intra ? 1 : 0;
-		pic_params.MbaffFrameFlag = 0 /*sps->mb_adaptive_frame_field_flag && !slice_header->field_pic_flag*/;
-		pic_params.field_pic_flag = 0 /*slice_header->field_pic_flag*/; // 0 = full frame (top and bottom field)
-		//pic_params.bottom_field_flag = 0; // missing??
-		pic_params.chroma_format_idc = 1; // sps->chroma_format_idc; // only 1 is supported (YUV420)
-		pic_params.bit_depth_chroma_minus8 = sps->bit_depth_chroma_minus8;
-		assert(pic_params.bit_depth_chroma_minus8 == 0);   // Only support for NV12 now
-		pic_params.bit_depth_luma_minus8 = sps->bit_depth_luma_minus8;
-		assert(pic_params.bit_depth_luma_minus8 == 0);   // Only support for NV12 now
-		pic_params.residual_colour_transform_flag = sps->separate_colour_plane_flag; // https://gitlab.freedesktop.org/mesa/mesa/-/blob/main/src/gallium/drivers/d3d12/d3d12_video_dec_h264.cpp#L328
-		if (pic_params.field_pic_flag)
-		{
-			pic_params.CurrPic.AssociatedFlag = slice_header->bottom_field_flag ? 1 : 0; // if pic_params.field_pic_flag == 1, then this is 0 = top field, 1 = bottom_field
-		}
-		else
-		{
-			pic_params.CurrPic.AssociatedFlag = 0;
-		}
-		pic_params.CurrPic.Index7Bits = (UCHAR)op->current_dpb;
-		pic_params.CurrFieldOrderCnt[0] = op->poc[0];
-		pic_params.CurrFieldOrderCnt[1] = op->poc[1];
-		for (uint32_t i = 0; i < 16; ++i)
-		{
-			pic_params.RefFrameList[i].bPicEntry = 0xFF;
-			pic_params.FieldOrderCntList[i][0] = 0;
-			pic_params.FieldOrderCntList[i][1] = 0;
-			pic_params.FrameNumList[i] = 0;
-		}
-		for (size_t i = 0; i < op->dpb_reference_count; ++i)
-		{
-			uint32_t ref_slot = op->dpb_reference_slots[i];
-			assert(ref_slot != op->current_dpb);
-			pic_params.RefFrameList[i].AssociatedFlag = 0; // 0 = short term, 1 = long term reference
-			pic_params.RefFrameList[i].Index7Bits = (UCHAR)ref_slot;
-			pic_params.FieldOrderCntList[i][0] = op->dpb_poc[ref_slot];
-			pic_params.FieldOrderCntList[i][1] = op->dpb_poc[ref_slot];
-			pic_params.UsedForReferenceFlags |= 1 << (i * 2 + 0);
-			pic_params.UsedForReferenceFlags |= 1 << (i * 2 + 1);
-			pic_params.FrameNumList[i] = op->dpb_framenum[ref_slot];
-		}
-		pic_params.weighted_pred_flag = pps->weighted_pred_flag;
-		pic_params.weighted_bipred_idc = pps->weighted_bipred_idc;
-		pic_params.sp_for_switch_flag = 0;
-
-		pic_params.transform_8x8_mode_flag = pps->transform_8x8_mode_flag;
-		pic_params.constrained_intra_pred_flag = pps->constrained_intra_pred_flag;
-		pic_params.num_ref_frames = sps->num_ref_frames;
-		pic_params.MbsConsecutiveFlag = 1; // The value shall be 1 unless the restricted-mode profile in use explicitly supports the value 0.
-		pic_params.frame_mbs_only_flag = sps->frame_mbs_only_flag;
-		pic_params.MinLumaBipredSize8x8Flag = sps->level_idc >= 31;
-		pic_params.RefPicFlag = op->reference_priority > 0 ? 1 : 0;
-		pic_params.frame_num = slice_header->frame_num;
-		pic_params.pic_init_qp_minus26 = pps->pic_init_qp_minus26;
-		pic_params.pic_init_qs_minus26 = pps->pic_init_qs_minus26;
-		pic_params.chroma_qp_index_offset = pps->chroma_qp_index_offset;
-		pic_params.second_chroma_qp_index_offset = pps->second_chroma_qp_index_offset;
-		pic_params.log2_max_frame_num_minus4 = sps->log2_max_frame_num_minus4;
-		pic_params.pic_order_cnt_type = sps->pic_order_cnt_type;
-		pic_params.log2_max_pic_order_cnt_lsb_minus4 = sps->log2_max_pic_order_cnt_lsb_minus4;
-		pic_params.delta_pic_order_always_zero_flag = sps->delta_pic_order_always_zero_flag;
-		pic_params.direct_8x8_inference_flag = sps->direct_8x8_inference_flag;
-		pic_params.entropy_coding_mode_flag = pps->entropy_coding_mode_flag;
-		pic_params.pic_order_present_flag = pps->pic_order_present_flag;
-		pic_params.num_slice_groups_minus1 = pps->num_slice_groups_minus1;
-		assert(pic_params.num_slice_groups_minus1 == 0);   // FMO Not supported by VA
-		pic_params.slice_group_map_type = pps->slice_group_map_type;
-		pic_params.deblocking_filter_control_present_flag = pps->deblocking_filter_control_present_flag;
-		pic_params.redundant_pic_cnt_present_flag = pps->redundant_pic_cnt_present_flag;
-		pic_params.slice_group_change_rate_minus1 = pps->slice_group_change_rate_minus1;
-		pic_params.Reserved16Bits = 3; // DXVA spec
-		pic_params.StatusReportFeedbackNumber = (UINT)op->decoded_frame_index + 1; // shall not be 0
-		assert(pic_params.StatusReportFeedbackNumber > 0);
-		pic_params.ContinuationFlag = 1;
-		pic_params.num_ref_idx_l0_active_minus1 = pps->num_ref_idx_l0_active_minus1;
-		pic_params.num_ref_idx_l1_active_minus1 = pps->num_ref_idx_l1_active_minus1;
-		input.FrameArguments[input.NumFrameArguments].Type = D3D12_VIDEO_DECODE_ARGUMENT_TYPE_PICTURE_PARAMETERS;
-		input.FrameArguments[input.NumFrameArguments].Size = sizeof(pic_params);
-		input.FrameArguments[input.NumFrameArguments].pData = &pic_params;
-		input.NumFrameArguments++;
-
-		// DirectX Video Acceleration for H.264/MPEG-4 AVC Decoding, Microsoft, Updated 2010, Page 29
-		//	Also: https://gitlab.freedesktop.org/mesa/mesa/-/blob/main/src/gallium/drivers/d3d12/d3d12_video_dec_h264.cpp#L548
-		if (sps->seq_scaling_matrix_present_flag)
-		{
-			static constexpr int vl_zscan_normal_16[] =
+			// DirectX Video Acceleration for H.264/MPEG-4 AVC Decoding, Microsoft, Updated 2010, Page 21
+			//	https://www.microsoft.com/en-us/download/details.aspx?id=11323
+			//	Also: https://gitlab.freedesktop.org/mesa/mesa/-/blob/main/src/gallium/drivers/d3d12/d3d12_video_dec_h264.cpp
+			//	Also: https://github.com/mofo7777/H264Dxva2Decoder
+			pic_params_h264.wFrameWidthInMbsMinus1 = sps->pic_width_in_mbs_minus1;
+			pic_params_h264.wFrameHeightInMbsMinus1 = sps->pic_height_in_map_units_minus1;
+			pic_params_h264.IntraPicFlag = op->frame_type == VideoFrameType::Intra ? 1 : 0;
+			pic_params_h264.MbaffFrameFlag = 0 /*sps->mb_adaptive_frame_field_flag && !slice_header->field_pic_flag*/;
+			pic_params_h264.field_pic_flag = 0 /*slice_header->field_pic_flag*/; // 0 = full frame (top and bottom field)
+			//pic_params_h264.bottom_field_flag = 0; // missing??
+			pic_params_h264.chroma_format_idc = 1; // sps->chroma_format_idc; // only 1 is supported (YUV420)
+			pic_params_h264.bit_depth_chroma_minus8 = sps->bit_depth_chroma_minus8;
+			assert(pic_params_h264.bit_depth_chroma_minus8 == 0);   // Only support for NV12 now
+			pic_params_h264.bit_depth_luma_minus8 = sps->bit_depth_luma_minus8;
+			assert(pic_params_h264.bit_depth_luma_minus8 == 0);   // Only support for NV12 now
+			pic_params_h264.residual_colour_transform_flag = sps->separate_colour_plane_flag; // https://gitlab.freedesktop.org/mesa/mesa/-/blob/main/src/gallium/drivers/d3d12/d3d12_video_dec_h264.cpp#L328
+			if (pic_params_h264.field_pic_flag)
 			{
-				/* Zig-Zag scan pattern */
-				0, 1, 4, 8, 5, 2, 3, 6,
-				9, 12, 13, 10, 7, 11, 14, 15
-			};
-			static constexpr int vl_zscan_normal[] =
+				pic_params_h264.CurrPic.AssociatedFlag = slice_header->bottom_field_flag ? 1 : 0; // if pic_params_h264.field_pic_flag == 1, then this is 0 = top field, 1 = bottom_field
+			}
+			else
 			{
-				/* Zig-Zag scan pattern */
-				 0, 1, 8,16, 9, 2, 3,10,
-				17,24,32,25,18,11, 4, 5,
-				12,19,26,33,40,48,41,34,
-				27,20,13, 6, 7,14,21,28,
-				35,42,49,56,57,50,43,36,
-				29,22,15,23,30,37,44,51,
-				58,59,52,45,38,31,39,46,
-				53,60,61,54,47,55,62,63
-			};
-			for (int i = 0; i < 6; ++i)
+				pic_params_h264.CurrPic.AssociatedFlag = 0;
+			}
+			pic_params_h264.CurrPic.Index7Bits = (UCHAR)op->current_dpb;
+			pic_params_h264.CurrFieldOrderCnt[0] = op->poc[0];
+			pic_params_h264.CurrFieldOrderCnt[1] = op->poc[1];
+			for (uint32_t i = 0; i < 16; ++i)
 			{
-				for (int j = 0; j < 16; ++j)
+				pic_params_h264.RefFrameList[i].bPicEntry = 0xFF;
+				pic_params_h264.FieldOrderCntList[i][0] = 0;
+				pic_params_h264.FieldOrderCntList[i][1] = 0;
+				pic_params_h264.FrameNumList[i] = 0;
+			}
+			for (size_t i = 0; i < op->dpb_reference_count; ++i)
+			{
+				uint32_t ref_slot = op->dpb_reference_slots[i];
+				assert(ref_slot != op->current_dpb);
+				pic_params_h264.RefFrameList[i].AssociatedFlag = 0; // 0 = short term, 1 = long term reference
+				pic_params_h264.RefFrameList[i].Index7Bits = (UCHAR)ref_slot;
+				pic_params_h264.FieldOrderCntList[i][0] = op->dpb_poc[ref_slot];
+				pic_params_h264.FieldOrderCntList[i][1] = op->dpb_poc[ref_slot];
+				pic_params_h264.UsedForReferenceFlags |= 1 << (i * 2 + 0);
+				pic_params_h264.UsedForReferenceFlags |= 1 << (i * 2 + 1);
+				pic_params_h264.FrameNumList[i] = op->dpb_framenum[ref_slot];
+			}
+			pic_params_h264.weighted_pred_flag = pps->weighted_pred_flag;
+			pic_params_h264.weighted_bipred_idc = pps->weighted_bipred_idc;
+			pic_params_h264.sp_for_switch_flag = 0;
+
+			pic_params_h264.transform_8x8_mode_flag = pps->transform_8x8_mode_flag;
+			pic_params_h264.constrained_intra_pred_flag = pps->constrained_intra_pred_flag;
+			pic_params_h264.num_ref_frames = sps->num_ref_frames;
+			pic_params_h264.MbsConsecutiveFlag = 1; // The value shall be 1 unless the restricted-mode profile in use explicitly supports the value 0.
+			pic_params_h264.frame_mbs_only_flag = sps->frame_mbs_only_flag;
+			pic_params_h264.MinLumaBipredSize8x8Flag = sps->level_idc >= 31;
+			pic_params_h264.RefPicFlag = op->reference_priority > 0 ? 1 : 0;
+			pic_params_h264.frame_num = slice_header->frame_num;
+			pic_params_h264.pic_init_qp_minus26 = pps->pic_init_qp_minus26;
+			pic_params_h264.pic_init_qs_minus26 = pps->pic_init_qs_minus26;
+			pic_params_h264.chroma_qp_index_offset = pps->chroma_qp_index_offset;
+			pic_params_h264.second_chroma_qp_index_offset = pps->second_chroma_qp_index_offset;
+			pic_params_h264.log2_max_frame_num_minus4 = sps->log2_max_frame_num_minus4;
+			pic_params_h264.pic_order_cnt_type = sps->pic_order_cnt_type;
+			pic_params_h264.log2_max_pic_order_cnt_lsb_minus4 = sps->log2_max_pic_order_cnt_lsb_minus4;
+			pic_params_h264.delta_pic_order_always_zero_flag = sps->delta_pic_order_always_zero_flag;
+			pic_params_h264.direct_8x8_inference_flag = sps->direct_8x8_inference_flag;
+			pic_params_h264.entropy_coding_mode_flag = pps->entropy_coding_mode_flag;
+			pic_params_h264.pic_order_present_flag = pps->pic_order_present_flag;
+			pic_params_h264.num_slice_groups_minus1 = pps->num_slice_groups_minus1;
+			assert(pic_params_h264.num_slice_groups_minus1 == 0);   // FMO Not supported by VA
+			pic_params_h264.slice_group_map_type = pps->slice_group_map_type;
+			pic_params_h264.deblocking_filter_control_present_flag = pps->deblocking_filter_control_present_flag;
+			pic_params_h264.redundant_pic_cnt_present_flag = pps->redundant_pic_cnt_present_flag;
+			pic_params_h264.slice_group_change_rate_minus1 = pps->slice_group_change_rate_minus1;
+			pic_params_h264.Reserved16Bits = 3; // DXVA spec
+			pic_params_h264.StatusReportFeedbackNumber = (UINT)op->decoded_frame_index + 1; // shall not be 0
+			assert(pic_params_h264.StatusReportFeedbackNumber > 0);
+			pic_params_h264.ContinuationFlag = 1;
+			pic_params_h264.num_ref_idx_l0_active_minus1 = pps->num_ref_idx_l0_active_minus1;
+			pic_params_h264.num_ref_idx_l1_active_minus1 = pps->num_ref_idx_l1_active_minus1;
+			input.FrameArguments[input.NumFrameArguments].Type = D3D12_VIDEO_DECODE_ARGUMENT_TYPE_PICTURE_PARAMETERS;
+			input.FrameArguments[input.NumFrameArguments].Size = sizeof(pic_params_h264);
+			input.FrameArguments[input.NumFrameArguments].pData = &pic_params_h264;
+			input.NumFrameArguments++;
+
+			// DirectX Video Acceleration for H.264/MPEG-4 AVC Decoding, Microsoft, Updated 2010, Page 29
+			//	Also: https://gitlab.freedesktop.org/mesa/mesa/-/blob/main/src/gallium/drivers/d3d12/d3d12_video_dec_h264.cpp#L548
+			if (sps->seq_scaling_matrix_present_flag)
+			{
+				static constexpr int vl_zscan_normal_16[] =
 				{
-					qmatrix.bScalingLists4x4[i][j] = pps->ScalingList4x4[i][vl_zscan_normal_16[j]];
+					/* Zig-Zag scan pattern */
+					0, 1, 4, 8, 5, 2, 3, 6,
+					9, 12, 13, 10, 7, 11, 14, 15
+				};
+				static constexpr int vl_zscan_normal[] =
+				{
+					/* Zig-Zag scan pattern */
+					 0, 1, 8,16, 9, 2, 3,10,
+					17,24,32,25,18,11, 4, 5,
+					12,19,26,33,40,48,41,34,
+					27,20,13, 6, 7,14,21,28,
+					35,42,49,56,57,50,43,36,
+					29,22,15,23,30,37,44,51,
+					58,59,52,45,38,31,39,46,
+					53,60,61,54,47,55,62,63
+				};
+				for (int i = 0; i < 6; ++i)
+				{
+					for (int j = 0; j < 16; ++j)
+					{
+						qmatrix_h264.bScalingLists4x4[i][j] = pps->ScalingList4x4[i][vl_zscan_normal_16[j]];
+					}
+				}
+				for (int i = 0; i < 64; ++i)
+				{
+					qmatrix_h264.bScalingLists8x8[0][i] = pps->ScalingList8x8[0][vl_zscan_normal[i]];
+					qmatrix_h264.bScalingLists8x8[1][i] = pps->ScalingList8x8[1][vl_zscan_normal[i]];
 				}
 			}
-			for (int i = 0; i < 64; ++i)
+			else
 			{
-				qmatrix.bScalingLists8x8[0][i] = pps->ScalingList8x8[0][vl_zscan_normal[i]];
-				qmatrix.bScalingLists8x8[1][i] = pps->ScalingList8x8[1][vl_zscan_normal[i]];
+				// I don't know why it needs to be filled with 16, but otherwise it gets corrupted output
+				//	Source: https://github.com/mofo7777/H264Dxva2Decoder
+				std::memset(&qmatrix_h264, 16, sizeof(DXVA_Qmatrix_H264));
 			}
+			input.FrameArguments[input.NumFrameArguments].Type = D3D12_VIDEO_DECODE_ARGUMENT_TYPE_INVERSE_QUANTIZATION_MATRIX;
+			input.FrameArguments[input.NumFrameArguments].Size = sizeof(qmatrix_h264);
+			input.FrameArguments[input.NumFrameArguments].pData = &qmatrix_h264;
+			input.NumFrameArguments++;
+
+			// DirectX Video Acceleration for H.264/MPEG-4 AVC Decoding, Microsoft, Updated 2010, Page 31
+			sliceinfo_h264.BSNALunitDataLocation = 0;
+			sliceinfo_h264.SliceBytesInBuffer = (UINT)op->stream_size;
+			sliceinfo_h264.wBadSliceChopping = 0; // whole slice is in the buffer
+			input.FrameArguments[input.NumFrameArguments].Type = D3D12_VIDEO_DECODE_ARGUMENT_TYPE_SLICE_CONTROL;
+			input.FrameArguments[input.NumFrameArguments].Size = sizeof(sliceinfo_h264);
+			input.FrameArguments[input.NumFrameArguments].pData = &sliceinfo_h264;
+			input.NumFrameArguments++;
+
+			CommandList_DX12& commandlist = GetCommandList(cmd);
+			commandlist.GetVideoDecodeCommandList()->DecodeFrame(
+				decoder_internal->decoder.Get(),
+				&output,
+				&input
+			);
 		}
-		else
+		else if (video_decoder->desc.profile == VideoProfile::H265)
 		{
-			// I don't know why it needs to be filled with 16, but otherwise it gets corrupted output
-			//	Source: https://github.com/mofo7777/H264Dxva2Decoder
-			std::memset(&qmatrix, 16, sizeof(DXVA_Qmatrix_H264));
+			assert(0); // TODO
 		}
-		input.FrameArguments[input.NumFrameArguments].Type = D3D12_VIDEO_DECODE_ARGUMENT_TYPE_INVERSE_QUANTIZATION_MATRIX;
-		input.FrameArguments[input.NumFrameArguments].Size = sizeof(qmatrix);
-		input.FrameArguments[input.NumFrameArguments].pData = &qmatrix;
-		input.NumFrameArguments++;
-
-		// DirectX Video Acceleration for H.264/MPEG-4 AVC Decoding, Microsoft, Updated 2010, Page 31
-		sliceinfo.BSNALunitDataLocation = 0;
-		sliceinfo.SliceBytesInBuffer = (UINT)op->stream_size;
-		sliceinfo.wBadSliceChopping = 0; // whole slice is in the buffer
-		input.FrameArguments[input.NumFrameArguments].Type = D3D12_VIDEO_DECODE_ARGUMENT_TYPE_SLICE_CONTROL;
-		input.FrameArguments[input.NumFrameArguments].Size = sizeof(sliceinfo);
-		input.FrameArguments[input.NumFrameArguments].pData = &sliceinfo;
-		input.NumFrameArguments++;
-
-		CommandList_DX12& commandlist = GetCommandList(cmd);
-		commandlist.GetVideoDecodeCommandList()->DecodeFrame(
-			decoder_internal->decoder.Get(),
-			&output,
-			&input
-		);
 	}
 
 	void GraphicsDevice_DX12::EventBegin(const char* name, CommandList cmd)
