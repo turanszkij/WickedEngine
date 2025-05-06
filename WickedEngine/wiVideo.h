@@ -96,12 +96,16 @@ namespace wi::video
 	};
 
 	bool CreateVideo(const std::string& filename, Video* video);
-	bool CreateVideo(const uint8_t* filedata, size_t filesize, Video* video);
+	bool CreateVideoMP4(const uint8_t* filedata, size_t filesize, Video* video);
+	bool CreateVideoH264RAW(const uint8_t* filedata, size_t filesize, Video* video);
 	bool CreateVideoInstance(const Video* video, VideoInstance* instance);
 
 	bool IsDecodingRequired(const VideoInstance* instance, float dt);
 	void UpdateVideo(VideoInstance* instance, float dt, wi::graphics::CommandList cmd);
 	void ResolveVideoToRGB(VideoInstance* instance, wi::graphics::CommandList cmd);
+
+	// Set video instance state to a timer (approximately), this will take efect the next time it is decoded
+	void Seek(VideoInstance* instance, float timerSeconds);
 }
 
 template<>

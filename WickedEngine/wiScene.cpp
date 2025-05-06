@@ -5330,6 +5330,24 @@ namespace wi::scene
 		{
 			VideoComponent& video = videos[i];
 
+			if (!video.videoinstance.IsValid() && video.videoResource.IsValid())
+			{
+				if (wi::video::CreateVideoInstance(&video.videoResource.GetVideo(), &video.videoinstance))
+				{
+					video.Seek(video.currentTimer);
+				}
+			}
+
+			video.currentTimer = 0;
+			if (video.videoResource.IsValid())
+			{
+				const wi::video::Video& vid = video.videoResource.GetVideo();
+				if (vid.frames_infos.size() > video.videoinstance.current_frame)
+				{
+					video.currentTimer = vid.frames_infos[video.videoinstance.current_frame].timestamp_seconds;
+				}
+			}
+
 			if (video.IsPlaying())
 			{
 				video.videoinstance.flags |= wi::video::VideoInstance::Flags::Playing;

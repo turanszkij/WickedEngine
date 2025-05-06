@@ -119,27 +119,11 @@ void VideoWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&loopedCheckbox);
 
-	timerSlider.Create(0, 1, 0, 100000, "Timer: ");
+	timerSlider.Create(0, 1, 0, 1000, "Timer: ");
 	timerSlider.OnSlide([&](wi::gui::EventArgs args) {
 		VideoComponent* video = editor->GetCurrentScene().videos.GetComponent(entity);
-		if (video != nullptr && video->videoResource.IsValid())
-		{
-			const wi::video::Video& videofile = video->videoResource.GetVideo();
-			int target_frame = int(float(args.fValue / videofile.duration_seconds) * videofile.frames_infos.size());
-			for (size_t i = 0; i < videofile.frames_infos.size(); ++i)
-			{
-				auto& frame_info = videofile.frames_infos[i];
-				if (i >= target_frame && frame_info.type == wi::graphics::VideoFrameType::Intra)
-				{
-					target_frame = (int)i;
-					break;
-				}
-			}
-			video->videoinstance.current_frame = target_frame;
-			video->videoinstance.flags |= wi::video::VideoInstance::Flags::DecoderReset;
-			video->videoinstance.flags &= ~wi::video::VideoInstance::Flags::InitialFirstFrameDecoded;
-		}
-		});
+		video->Seek(args.fValue);
+	});
 	AddWidget(&timerSlider);
 
 	AddWidget(&preview);
@@ -235,7 +219,7 @@ void VideoWindow::SetEntity(Entity entity)
 			infoLabel.SetText(str);
 
 			timerSlider.SetRange(0, videofile.duration_seconds);
-			timerSlider.SetValue(float(video->videoinstance.current_frame) / float(videofile.frames_infos.size()) * videofile.duration_seconds);
+			timerSlider.SetValue(video->currentTimer);
 		}
 	}
 	else

@@ -67,6 +67,7 @@ namespace wi::lua::scene
 		int Component_CreateForceField(lua_State* L);
 		int Component_CreateWeather(lua_State* L);
 		int Component_CreateSound(lua_State* L);
+		int Component_CreateVideo(lua_State* L);
 		int Component_CreateCollider(lua_State* L);
 		int Component_CreateExpression(lua_State* L);
 		int Component_CreateHumanoid(lua_State* L);
@@ -96,6 +97,7 @@ namespace wi::lua::scene
 		int Component_GetForceField(lua_State* L);
 		int Component_GetWeather(lua_State* L);
 		int Component_GetSound(lua_State* L);
+		int Component_GetVideo(lua_State* L);
 		int Component_GetCollider(lua_State* L);
 		int Component_GetExpression(lua_State* L);
 		int Component_GetHumanoid(lua_State* L);
@@ -125,6 +127,7 @@ namespace wi::lua::scene
 		int Component_GetForceFieldArray(lua_State* L);
 		int Component_GetWeatherArray(lua_State* L);
 		int Component_GetSoundArray(lua_State* L);
+		int Component_GetVideoArray(lua_State* L);
 		int Component_GetColliderArray(lua_State* L);
 		int Component_GetExpressionArray(lua_State* L);
 		int Component_GetHumanoidArray(lua_State* L);
@@ -155,6 +158,7 @@ namespace wi::lua::scene
 		int Entity_GetForceFieldArray(lua_State* L);
 		int Entity_GetWeatherArray(lua_State* L);
 		int Entity_GetSoundArray(lua_State* L);
+		int Entity_GetVideoArray(lua_State* L);
 		int Entity_GetColliderArray(lua_State* L);
 		int Entity_GetExpressionArray(lua_State* L);
 		int Entity_GetHumanoidArray(lua_State* L);
@@ -185,6 +189,7 @@ namespace wi::lua::scene
 		int Component_RemoveForceField(lua_State* L);
 		int Component_RemoveWeather(lua_State* L);
 		int Component_RemoveSound(lua_State* L);
+		int Component_RemoveVideo(lua_State* L);
 		int Component_RemoveCollider(lua_State* L);
 		int Component_RemoveExpression(lua_State* L);
 		int Component_RemoveHumanoid(lua_State* L);
@@ -1719,6 +1724,50 @@ namespace wi::lua::scene
 		int SetSoundInstance(lua_State* L);
 		int GetSound(lua_State* L);
 		int GetSoundInstance(lua_State* L);
+	};
+
+	class VideoComponent_BindLua
+	{
+	private:
+		wi::scene::VideoComponent owning;
+	public:
+		wi::scene::VideoComponent* component = nullptr;
+
+		inline static constexpr char className[] = "VideoComponent";
+		static Luna<VideoComponent_BindLua>::FunctionType methods[];
+		static Luna<VideoComponent_BindLua>::PropertyType properties[];
+
+		inline void BuildBindings()
+		{
+			Filename = StringProperty(&component->filename);
+		}
+
+		VideoComponent_BindLua(wi::scene::VideoComponent* component) :component(component)
+		{
+			BuildBindings();
+		}
+		VideoComponent_BindLua(lua_State* L) : component(&owning)
+		{
+			BuildBindings();
+		}
+
+		StringProperty Filename;
+
+		PropertyFunction(Filename)
+
+		int IsPlaying(lua_State* L);
+		int IsLooped(lua_State* L);
+
+		int Play(lua_State* L);
+		int Stop(lua_State* L);
+		int SetLooped(lua_State* L);
+		int GetLength(lua_State* L);
+		int GetCurrentTimer(lua_State* L);
+		int Seek(lua_State* L);
+		int SetVideo(lua_State* L);
+		int SetVideoInstance(lua_State* L);
+		int GetVideo(lua_State* L);
+		int GetVideoInstance(lua_State* L);
 	};
 
 	class ColliderComponent_BindLua

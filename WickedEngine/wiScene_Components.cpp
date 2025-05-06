@@ -2711,6 +2711,17 @@ namespace wi::scene
 		wi::audio::CreateSoundInstance(&soundResource.GetSound(), &soundinstance);
 	}
 
+	float VideoComponent::GetLength() const
+	{
+		if (!videoResource.IsValid())
+			return 0;
+		return videoResource.GetVideo().duration_seconds;
+	}
+	void VideoComponent::Seek(float timerSeconds)
+	{
+		wi::video::Seek(&videoinstance, timerSeconds);
+	}
+
 	bool HumanoidComponent::IsValid() const
 	{
 		if (bones[size_t(HumanoidBone::Hips)] == INVALID_ENTITY)

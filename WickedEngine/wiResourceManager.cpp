@@ -217,7 +217,8 @@ namespace wi
 			IMAGE,
 			SOUND,
 			SCRIPT,
-			VIDEO,
+			VIDEO_MP4,
+			VIDEO_H264_RAW,
 			FONTSTYLE,
 		};
 		static const wi::unordered_map<std::string, DataType> types = {
@@ -234,7 +235,8 @@ namespace wi
 			{"WAV", DataType::SOUND},
 			{"OGG", DataType::SOUND},
 			{"LUA", DataType::SCRIPT},
-			{"MP4", DataType::VIDEO},
+			{"MP4", DataType::VIDEO_MP4},
+			{"H264", DataType::VIDEO_H264_RAW},
 			{"TTF", DataType::FONTSTYLE},
 		};
 		wi::vector<std::string> GetSupportedImageExtensions()
@@ -266,7 +268,7 @@ namespace wi
 			wi::vector<std::string> ret;
 			for (auto& x : types)
 			{
-				if (x.second == DataType::VIDEO)
+				if (x.second == DataType::VIDEO_MP4 || x.second == DataType::VIDEO_H264_RAW)
 				{
 					ret.push_back(x.first);
 				}
@@ -1164,9 +1166,15 @@ namespace wi
 			}
 			break;
 
-			case DataType::VIDEO:
+			case DataType::VIDEO_MP4:
 			{
-				success = wi::video::CreateVideo(filedata, filesize, &resource->video);
+				success = wi::video::CreateVideoMP4(filedata, filesize, &resource->video);
+			}
+			break;
+
+			case DataType::VIDEO_H264_RAW:
+			{
+				success = wi::video::CreateVideoH264RAW(filedata, filesize, &resource->video);
 			}
 			break;
 

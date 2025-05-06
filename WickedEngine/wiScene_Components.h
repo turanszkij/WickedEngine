@@ -1915,6 +1915,7 @@ namespace wi::scene
 		std::string filename;
 		wi::Resource videoResource;
 		wi::video::VideoInstance videoinstance;
+		float currentTimer = 0; // The current playback timer is reflected in this
 
 		constexpr bool IsPlaying() const { return _flags & PLAYING; }
 		constexpr bool IsLooped() const { return _flags & LOOPED; }
@@ -1922,6 +1923,12 @@ namespace wi::scene
 		constexpr void Play() { _flags |= PLAYING; }
 		constexpr void Stop() { _flags &= ~PLAYING; }
 		constexpr void SetLooped(bool value = true) { if (value) { _flags |= LOOPED; } else { _flags &= ~LOOPED; } }
+
+		// Get total length of video in seconds
+		float GetLength() const;
+
+		// seek to timestamp (approxiamte)
+		void Seek(float timerSeconds);
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};

@@ -12,6 +12,7 @@
 #include "wiUnorderedMap.h"
 #include "wiVoxelGrid_BindLua.h"
 #include "wiAudio_BindLua.h"
+#include "wiVideo_BindLua.h"
 #include "wiAsync_BindLua.h"
 #include "wiPathQuery_BindLua.h"
 
@@ -514,6 +515,7 @@ void Bind()
 		Luna<Weather_VolumetricCloudParams_BindLua>::Register(L);
 		Luna<WeatherComponent_BindLua>::Register(L);
 		Luna<SoundComponent_BindLua>::Register(L);
+		Luna<VideoComponent_BindLua>::Register(L);
 		Luna<ColliderComponent_BindLua>::Register(L);
 		Luna<ExpressionComponent_BindLua>::Register(L);
 		Luna<HumanoidComponent_BindLua>::Register(L);
@@ -558,6 +560,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_CreateForceField),
 	lunamethod(Scene_BindLua, Component_CreateWeather),
 	lunamethod(Scene_BindLua, Component_CreateSound),
+	lunamethod(Scene_BindLua, Component_CreateVideo),
 	lunamethod(Scene_BindLua, Component_CreateCollider),
 	lunamethod(Scene_BindLua, Component_CreateExpression),
 	lunamethod(Scene_BindLua, Component_CreateHumanoid),
@@ -587,6 +590,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_GetForceField),
 	lunamethod(Scene_BindLua, Component_GetWeather),
 	lunamethod(Scene_BindLua, Component_GetSound),
+	lunamethod(Scene_BindLua, Component_GetVideo),
 	lunamethod(Scene_BindLua, Component_GetCollider),
 	lunamethod(Scene_BindLua, Component_GetExpression),
 	lunamethod(Scene_BindLua, Component_GetHumanoid),
@@ -616,6 +620,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_GetForceFieldArray),
 	lunamethod(Scene_BindLua, Component_GetWeatherArray),
 	lunamethod(Scene_BindLua, Component_GetSoundArray),
+	lunamethod(Scene_BindLua, Component_GetVideoArray),
 	lunamethod(Scene_BindLua, Component_GetColliderArray),
 	lunamethod(Scene_BindLua, Component_GetExpressionArray),
 	lunamethod(Scene_BindLua, Component_GetHumanoidArray),
@@ -646,6 +651,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Entity_GetForceFieldArray),
 	lunamethod(Scene_BindLua, Entity_GetWeatherArray),
 	lunamethod(Scene_BindLua, Entity_GetSoundArray),
+	lunamethod(Scene_BindLua, Entity_GetVideoArray),
 	lunamethod(Scene_BindLua, Entity_GetColliderArray),
 	lunamethod(Scene_BindLua, Entity_GetExpressionArray),
 	lunamethod(Scene_BindLua, Entity_GetHumanoidArray),
@@ -675,6 +681,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Component_RemoveForceField),
 	lunamethod(Scene_BindLua, Component_RemoveWeather),
 	lunamethod(Scene_BindLua, Component_RemoveSound),
+	lunamethod(Scene_BindLua, Component_RemoveVideo),
 	lunamethod(Scene_BindLua, Component_RemoveCollider),
 	lunamethod(Scene_BindLua, Component_RemoveExpression),
 	lunamethod(Scene_BindLua, Component_RemoveHumanoid),
@@ -1326,6 +1333,23 @@ int Scene_BindLua::Component_CreateSound(lua_State* L)
 	}
 	return 0;
 }
+int Scene_BindLua::Component_CreateVideo(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+
+		VideoComponent& component = scene->videos.Create(entity);
+		Luna<VideoComponent_BindLua>::push(L, &component);
+		return 1;
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Component_CreateVideo(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
 int Scene_BindLua::Component_CreateCollider(lua_State* L)
 {
 	int argc = wi::lua::SGetArgCount(L);
@@ -1898,6 +1922,28 @@ int Scene_BindLua::Component_GetSound(lua_State* L)
 	}
 	return 0;
 }
+int Scene_BindLua::Component_GetVideo(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+
+		VideoComponent* component = scene->videos.GetComponent(entity);
+		if (component == nullptr)
+		{
+			return 0;
+		}
+
+		Luna<VideoComponent_BindLua>::push(L, component);
+		return 1;
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Component_GetVideo(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
 int Scene_BindLua::Component_GetCollider(lua_State* L)
 {
 	int argc = wi::lua::SGetArgCount(L);
@@ -2306,6 +2352,17 @@ int Scene_BindLua::Component_GetSoundArray(lua_State* L)
 	}
 	return 1;
 }
+int Scene_BindLua::Component_GetVideoArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->videos.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->videos.GetCount(); ++i)
+	{
+		Luna<VideoComponent_BindLua>::push(L, &scene->videos[i]);
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
 int Scene_BindLua::Component_GetColliderArray(lua_State* L)
 {
 	lua_createtable(L, (int)scene->colliders.GetCount(), 0);
@@ -2622,6 +2679,17 @@ int Scene_BindLua::Entity_GetSoundArray(lua_State* L)
 	for (size_t i = 0; i < scene->sounds.GetCount(); ++i)
 	{
 		wi::lua::SSetLongLong(L, scene->sounds.GetEntity(i));
+		lua_rawseti(L, newTable, lua_Integer(i + 1));
+	}
+	return 1;
+}
+int Scene_BindLua::Entity_GetVideoArray(lua_State* L)
+{
+	lua_createtable(L, (int)scene->videos.GetCount(), 0);
+	int newTable = lua_gettop(L);
+	for (size_t i = 0; i < scene->videos.GetCount(); ++i)
+	{
+		wi::lua::SSetLongLong(L, scene->videos.GetEntity(i));
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -3063,6 +3131,23 @@ int Scene_BindLua::Component_RemoveSound(lua_State* L)
 	else
 	{
 		wi::lua::SError(L, "Scene::Component_RemoveSound(Entity entity) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::Component_RemoveVideo(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+		if(scene->videos.Contains(entity))
+		{
+			scene->videos.Remove(entity);
+		}
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::Component_RemoveVideo(Entity entity) not enough arguments!");
 	}
 	return 0;
 }
@@ -6904,6 +6989,141 @@ int SoundComponent_BindLua::GetSound(lua_State* L)
 int SoundComponent_BindLua::GetSoundInstance(lua_State* L)
 {
 	Luna<SoundInstance_BindLua>::push(L, component->soundinstance);
+	return 1;
+}
+
+
+
+
+
+
+
+Luna<VideoComponent_BindLua>::FunctionType VideoComponent_BindLua::methods[] = {
+	lunamethod(VideoComponent_BindLua, SetFilename),
+	lunamethod(VideoComponent_BindLua, GetFilename),
+	lunamethod(VideoComponent_BindLua, IsPlaying),
+	lunamethod(VideoComponent_BindLua, IsLooped),
+	lunamethod(VideoComponent_BindLua, Play),
+	lunamethod(VideoComponent_BindLua, Stop),
+	lunamethod(VideoComponent_BindLua, SetLooped),
+	lunamethod(VideoComponent_BindLua, GetLength),
+	lunamethod(VideoComponent_BindLua, GetCurrentTimer),
+	lunamethod(VideoComponent_BindLua, Seek),
+	lunamethod(VideoComponent_BindLua, SetVideo),
+	lunamethod(VideoComponent_BindLua, SetVideoInstance),
+	lunamethod(VideoComponent_BindLua, GetVideo),
+	lunamethod(VideoComponent_BindLua, GetVideoInstance),
+	{ NULL, NULL }
+};
+Luna<VideoComponent_BindLua>::PropertyType VideoComponent_BindLua::properties[] = {
+	lunaproperty(VideoComponent_BindLua, Filename),
+	{ NULL, NULL }
+};
+
+int VideoComponent_BindLua::IsPlaying(lua_State* L)
+{
+	wi::lua::SSetBool(L, component->IsPlaying());
+	return 1;
+}
+int VideoComponent_BindLua::IsLooped(lua_State* L)
+{
+	wi::lua::SSetBool(L, component->IsLooped());
+	return 1;
+}
+int VideoComponent_BindLua::Play(lua_State* L)
+{
+	component->Play();
+	return 0;
+}
+int VideoComponent_BindLua::Stop(lua_State* L)
+{
+	component->Stop();
+	return 0;
+}
+int VideoComponent_BindLua::SetLooped(lua_State* L)
+{
+	bool value = true;
+
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		value = wi::lua::SGetBool(L, 1);
+	}
+
+	component->SetLooped(value);
+
+	return 0;
+}
+int VideoComponent_BindLua::GetLength(lua_State* L)
+{
+	wi::lua::SSetFloat(L, component->GetLength());
+	return 1;
+}
+int VideoComponent_BindLua::GetCurrentTimer(lua_State* L)
+{
+	wi::lua::SSetFloat(L, component->currentTimer);
+	return 1;
+}
+int VideoComponent_BindLua::Seek(lua_State* L)
+{
+	float value = 0;
+
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		value = wi::lua::SGetFloat(L, 1);
+	}
+
+	component->Seek(value);
+
+	return 0;
+}
+int VideoComponent_BindLua::SetVideo(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 1)
+	{
+		wi::lua::SError(L, "SetVideo(Video Video): not enough arguments!");
+		return 0;
+	}
+
+	Video_BindLua* Video = Luna<Video_BindLua>::lightcheck(L, 1);
+	if (Video == nullptr)
+	{
+		wi::lua::SError(L, "SetVideo(Video Video): argument is not a Video!");
+		return 0;
+	}
+
+	component->videoResource = Video->videoResource;
+	return 0;
+}
+int VideoComponent_BindLua::SetVideoInstance(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 1)
+	{
+		wi::lua::SError(L, "SetVideoInstance(VideoInstance inst): not enough arguments!");
+		return 0;
+	}
+
+	VideoInstance_BindLua* inst = Luna<VideoInstance_BindLua>::lightcheck(L, 1);
+	if (inst == nullptr)
+	{
+		wi::lua::SError(L, "SetVideoInstance(VideoInstance inst): argument is not a VideoInstance!");
+		return 0;
+	}
+
+	component->videoinstance = inst->videoinstance;
+	return 0;
+}
+int VideoComponent_BindLua::GetVideo(lua_State* L)
+{
+	Luna<Video_BindLua>::push(L, component->videoResource);
+	return 1;
+}
+int VideoComponent_BindLua::GetVideoInstance(lua_State* L)
+{
+	Luna<VideoInstance_BindLua>::push(L, component->videoinstance);
 	return 1;
 }
 

@@ -456,6 +456,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiVector.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiVersion.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiVideo.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiVideo_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiVoxelGrid.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiVoxelGrid_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiXInput.h" />
@@ -811,6 +812,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiTrailRenderer_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiVersion.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiVideo.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiVideo_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiVoxelGrid.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiVoxelGrid_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiXInput.cpp" />

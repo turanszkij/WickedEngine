@@ -22,6 +22,9 @@ This is a reference and explanation of Lua scripting features in Wicked Engine.
 		1. [Sound](#sound)
 		2. [SoundInstance](#soundinstance)
 		3. [SoundInstance3D](#soundinstance3d)
+	6. [Video](#video)
+		1. [Video](#video)
+		2. [VideoInstance](#videoinstance)
 	7. [Vector](#vector)
 	8. [Matrix](#matrix)
 	8. [Async](#async)
@@ -45,6 +48,7 @@ This is a reference and explanation of Lua scripting features in Wicked Engine.
 		16. [ForceFieldComponent](#forcefieldcomponent)
 		17. [WeatherComponent](#weathercomponent)
 		18. [SoundComponent](#soundcomponent)
+		18. [VideoComponent](#videocomponent)
 		19. [ColliderComponent](#collidercomponent)
 		19. [ExpressionComponent](#expressioncomponent)
 		19. [HumanoidComponent](#humanoidcomponent)
@@ -579,6 +583,19 @@ Describes the relation between a sound instance and a listener in a 3D world
 - SetEmitterVelocity(Vector value)
 - SetEmitterRadius(float radius)
 
+### Video
+The video interface consists of two types of objects: Video and VideoInstance. Note: these are the underlying objects that VideoComponents use in the scene, to easily set videos to materials or lights, look at the [VideoComponent](#videocomponent) object that you can use with the scene's entity component system.
+
+#### Video
+The Video object stores the compressed video data in a GPU buffer
+- [constructor]Video(string filename)	-- loads an MP4 video file (currently only the H264 internal compression format is supported)
+- IsValid() : bool	-- returns true if the video was successfully created
+
+#### VideoInstance
+The VideoInstance object is responsible to decode the video frames and output them to textures. One Video can be decoded with multiple VideoInstances to display frames of the video at different timings. Normally yout would use one VideoInstance for a video, unless you want to show the video multiple times at once at different locations.
+- [constructor]VideoInstance(Video video)	-- creates a decoder instance for the video data
+- IsValid() : bool	-- returns true if the video instance was successfully created
+
 #### Submix Types
 The submix types group sound instances together to be controlled together
 - [outer]SUBMIX_TYPE_SOUNDEFFECT : int  -- sound effect group
@@ -769,6 +786,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_CreateForceField(Entity entity) : ForceFieldComponent result  -- attach a ForceFieldComponent to an entity. The returned component is associated with the entity and can be manipulated
 - Component_CreateWeather(Entity entity) : WeatherComponent result  -- attach a WeatherComponent to an entity. The returned component is associated with the entity and can be manipulated
 - Component_CreateSound(Entity entity) : SoundComponent result  -- attach a SoundComponent to an entity. The returned component is associated with the entity and can be manipulated
+- Component_CreateVideo(Entity entity) : VideoComponent result  -- attach a VideoComponent to an entity. The returned component is associated with the entity and can be manipulated
 - Component_CreateCollider(Entity entity) : ColliderComponent result  -- attach a ColliderComponent to an entity. The returned component is associated with the entity and can be manipulated
 - Component_CreateExpression(Entity entity) : ExpressionComponent result  -- attach a ExpressionComponent to an entity. The returned component is associated with the entity and can be manipulated
 - Component_CreateHumanoid(Entity entity) : HumanoidComponent result  -- attach a HumanoidComponent to an entity. The returned component is associated with the entity and can be manipulated
@@ -795,6 +813,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_GetForceField(Entity entity) : ForceFieldComponent? result  -- query the ForceFieldComponent of the entity (if exists)
 - Component_GetWeather(Entity entity) : WeatherComponent? result  -- query the WeatherComponent of the entity (if exists)
 - Component_GetSound(Entity entity) : SoundComponent? result  -- query the SoundComponent of the entity (if exists)
+- Component_GetVideo(Entity entity) : VideoComponent? result  -- query the VideoComponent of the entity (if exists)
 - Component_GetCollider(Entity entity) : ColliderComponent? result  -- query the ColliderComponent of the entity (if exists)
 - Component_GetExpression(Entity entity) : ExpressionComponent? result  -- query the ExpressionComponent of the entity (if exists)
 - Component_GetHumanoid(Entity entity) : HumanoidComponent? result  -- query the HumanoidComponent of the entity (if exists)
@@ -821,6 +840,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_GetForceFieldArray() : ForceFieldComponent[] result  -- returns the array of all components of this type
 - Component_GetWeatherArray() : WeatherComponent[] result  -- returns the array of all components of this type
 - Component_GetSoundArray() : SoundComponent[] result  -- returns the array of all components of this type
+- Component_GetVideoArray() : VideoComponent[] result  -- returns the array of all components of this type
 - Component_GetColliderArray() : ColliderComponent[] result  -- returns the array of all components of this type
 - Component_GetExpressionArray() : ExpressionComponent[] result  -- returns the array of all components of this type
 - Component_GetHumanoidArray() : HumanoidComponent[] result  -- returns the array of all components of this type
@@ -849,6 +869,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Entity_GetForceFieldArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetWeatherArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetSoundArray() : Entity[] result  -- returns the array of all entities that have this component type
+- Entity_GetVideoArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetColliderArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetExpressionArray() : Entity[] result  -- returns the array of all entities that have this component type
 - Entity_GetHumanoidArray() : Entity[] result  -- returns the array of all entities that have this component type
@@ -876,6 +897,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Component_RemoveForceField(Entity entity)  -- remove the ForceFieldComponent of the entity (if exists)
 - Component_RemoveWeather(Entity entity) -- remove the WeatherComponent of the entity (if exists)
 - Component_RemoveSound(Entity entity)  -- remove the SoundComponent of the entity (if exists)
+- Component_RemoveVideo(Entity entity)  -- remove the VideoComponent of the entity (if exists)
 - Component_RemoveCollider(Entity entity)  -- remove the ColliderComponent of the entity (if exists)
 - Component_RemoveExpression(Entity entity)  -- remove the ExpressionComponent of the entity (if exists)
 - Component_RemoveHumanoid(Entity entity)  -- remove the HumanoidComponent of the entity (if exists)
@@ -1403,6 +1425,25 @@ Describes a Sound object.
 - SetSoundInstance(SoundInstance inst)
 - GetSound() : Sound
 - GetSoundInstance() : SoundInstance
+
+#### VideoComponent
+Describes a video object
+- Filename : string
+
+</br>
+
+- Play()
+- Stop()
+- SetLooped(bool value)
+- IsPlaying() : bool
+- IsLooped() : bool
+- GetLength() : float	-- returns video length in seconds
+- GetCurrentTimer() : float	-- returns the current timer in seconds
+- Seek(float timerSeconds) -- sets the decoder state to be decoding from specific time in seconds (approximately)
+- SetVideo(Video video)
+- SetVideoInstance(VideoInstance instance)
+- GetVideo() : Video
+- GetVideoInstance() : VideoInstance
 
 #### ColliderComponent
 Describes a Collider object.

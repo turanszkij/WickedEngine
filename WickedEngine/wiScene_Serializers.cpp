@@ -2135,12 +2135,19 @@ namespace wi::scene
 			archive >> _flags;
 			archive >> filename;
 
+			if (seri.GetVersion() >= 1)
+			{
+				archive >> currentTimer;
+			}
+
 			wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
 				if (!filename.empty())
 				{
 					filename = dir + filename;
 					videoResource = wi::resourcemanager::Load(filename);
-					wi::video::CreateVideoInstance(&videoResource.GetVideo(), &videoinstance);
+					// Note: video instance can't be created yet, as videoResource is not necessarily ready at this point
+					//	Consider when multiple threads are loading the same sound, one thread will be loading the data,
+					//	the others return early with the resource that will be containing the data once it has been loaded.
 				}
 			});
 		}
@@ -2150,6 +2157,12 @@ namespace wi::scene
 
 			archive << _flags;
 			archive << wi::helper::GetPathRelative(dir, filename);
+
+			if (seri.GetVersion() >= 1)
+			{
+				archive << currentTimer;
+			}
+
 		}
 	}
 	void InverseKinematicsComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
