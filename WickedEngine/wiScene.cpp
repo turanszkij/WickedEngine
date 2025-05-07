@@ -995,6 +995,8 @@ namespace wi::scene
 	{
 		for (auto& entry : componentLibrary.entries)
 		{
+			if (other.componentLibrary.entries.count(entry.first) == 0)
+				continue;
 			entry.second.component_manager->Merge(*other.componentLibrary.entries[entry.first].component_manager);
 		}
 	}
