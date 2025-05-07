@@ -17,21 +17,21 @@ namespace wi::video
 	{
 		if (video->profile == VideoProfile::H264)
 		{
+			const h264::SliceHeader* slice_header_array = (const h264::SliceHeader*)video->slice_header_datas.data();
 			const h264::PPS* pps_array = (const h264::PPS*)video->pps_datas.data();
 			const h264::SPS* sps_array = (const h264::SPS*)video->sps_datas.data();
 			int prev_pic_order_cnt_lsb = 0;
 			int prev_pic_order_cnt_msb = 0;
 			int poc_cycle = 0;
-			for (size_t i = 0; i < video->frames_infos.size(); ++i)
+			for (size_t i = 0; i < video->frame_infos.size(); ++i)
 			{
-				h264::SliceHeader* slice_header = (h264::SliceHeader*)video->slice_header_datas.data() + i;
-
-				const h264::PPS& pps = pps_array[slice_header->pic_parameter_set_id];
+				const h264::SliceHeader& slice_header = slice_header_array[i];
+				const h264::PPS& pps = pps_array[slice_header.pic_parameter_set_id];
 				const h264::SPS& sps = sps_array[pps.seq_parameter_set_id];
 
 				// Rec. ITU-T H.264 (08/2021) page 77
 				int max_pic_order_cnt_lsb = 1 << (sps.log2_max_pic_order_cnt_lsb_minus4 + 4);
-				int pic_order_cnt_lsb = slice_header->pic_order_cnt_lsb;
+				int pic_order_cnt_lsb = slice_header.pic_order_cnt_lsb;
 
 				if (pic_order_cnt_lsb == 0)
 				{
@@ -58,8 +58,8 @@ namespace wi::video
 				prev_pic_order_cnt_msb = pic_order_cnt_msb;
 
 				// https://www.vcodex.com/h264avc-picture-management/
-				video->frames_infos[i].poc = pic_order_cnt_msb + pic_order_cnt_lsb; // poc = TopFieldOrderCount
-				video->frames_infos[i].gop = poc_cycle - 1;
+				video->frame_infos[i].poc = pic_order_cnt_msb + pic_order_cnt_lsb; // poc = TopFieldOrderCount
+				video->frame_infos[i].gop = poc_cycle - 1;
 			}
 		}
 		if (video->profile == VideoProfile::H265)
@@ -67,21 +67,21 @@ namespace wi::video
 			assert(0); // TODO
 		}
 
-		video->frame_display_order.resize(video->frames_infos.size());
-		for (size_t i = 0; i < video->frames_infos.size(); ++i)
+		video->frame_display_order.resize(video->frame_infos.size());
+		for (size_t i = 0; i < video->frame_infos.size(); ++i)
 		{
 			video->frame_display_order[i] = i;
 		}
 		std::sort(video->frame_display_order.begin(), video->frame_display_order.end(), [&](size_t a, size_t b) {
-			const Video::FrameInfo& frameA = video->frames_infos[a];
-			const Video::FrameInfo& frameB = video->frames_infos[b];
+			const Video::FrameInfo& frameA = video->frame_infos[a];
+			const Video::FrameInfo& frameB = video->frame_infos[b];
 			int64_t prioA = (int64_t(frameA.gop) << 32ll) | int64_t(frameA.poc);
 			int64_t prioB = (int64_t(frameB.gop) << 32ll) | int64_t(frameB.poc);
 			return prioA < prioB;
 		});
 		for (size_t i = 0; i < video->frame_display_order.size(); ++i)
 		{
-			video->frames_infos[video->frame_display_order[i]].display_order = (int)i;
+			video->frame_infos[video->frame_display_order[i]].display_order = (int)i;
 		}
 	}
 
@@ -267,7 +267,7 @@ namespace wi::video
 					GraphicsDevice* device = GetDevice();
 					const uint64_t alignment = device->GetVideoDecodeBitstreamAlignment();
 
-					video->frames_infos.reserve(track.sample_count);
+					video->frame_infos.reserve(track.sample_count);
 					video->slice_header_datas.reserve(track.sample_count * sizeof(h264::SliceHeader));
 					video->slice_header_count = track.sample_count;
 					uint32_t track_duration = 0;
@@ -278,7 +278,7 @@ namespace wi::video
 						MP4D_file_offset_t ofs = MP4D_frame_offset(&mp4, ntrack, i, &frame_bytes, &timestamp, &duration);
 						track_duration += duration;
 
-						Video::FrameInfo& info = video->frames_infos.emplace_back();
+						Video::FrameInfo& info = video->frame_infos.emplace_back();
 						info.offset = aligned_size;
 
 						const uint8_t* src_buffer = input_buf + ofs;
@@ -397,7 +397,7 @@ namespace wi::video
 						{
 							unsigned frame_bytes, timestamp, duration;
 							MP4D_file_offset_t ofs = MP4D_frame_offset(&mp4, ntrack, i, &frame_bytes, &timestamp, &duration);
-							uint8_t* dst_buffer = (uint8_t*)dest + video->frames_infos[i].offset;
+							uint8_t* dst_buffer = (uint8_t*)dest + video->frame_infos[i].offset;
 							const uint8_t* src_buffer = input_buf + ofs;
 							while (frame_bytes > 0)
 							{
@@ -460,10 +460,10 @@ namespace wi::video
 		while (h264::find_next_nal(&bs))
 		{
 			const uint64_t nal_offset = bs.byte_offset() - sizeof(h264::nal_start_code);
-			if (!video->frames_infos.empty())
+			if (!video->frame_infos.empty())
 			{
 				// patch size of previous frame:
-				Video::FrameInfo& frame_info = video->frames_infos.back();
+				Video::FrameInfo& frame_info = video->frame_infos.back();
 				if (frame_info.size == 0)
 				{
 					frame_info.size = nal_offset - frame_info.offset;
@@ -477,7 +477,7 @@ namespace wi::video
 				{
 				case h264::NAL_UNIT_TYPE_CODED_SLICE_NON_IDR:
 				{
-					Video::FrameInfo& frame_info = video->frames_infos.emplace_back();
+					Video::FrameInfo& frame_info = video->frame_infos.emplace_back();
 					frame_info.offset = nal_offset;
 					frame_info.type = wi::graphics::VideoFrameType::Predictive;
 					frame_info.reference_priority = nal.idc;
@@ -490,7 +490,7 @@ namespace wi::video
 				break;
 				case h264::NAL_UNIT_TYPE_CODED_SLICE_IDR:
 				{
-					Video::FrameInfo& frame_info = video->frames_infos.emplace_back();
+					Video::FrameInfo& frame_info = video->frame_infos.emplace_back();
 					frame_info.offset = nal_offset;
 					frame_info.type = wi::graphics::VideoFrameType::Intra;
 					frame_info.reference_priority = nal.idc;
@@ -541,10 +541,10 @@ namespace wi::video
 			}
 		}
 
-		if (!video->frames_infos.empty())
+		if (!video->frame_infos.empty())
 		{
 			// patch size of last frame:
-			Video::FrameInfo& frame_info = video->frames_infos.back();
+			Video::FrameInfo& frame_info = video->frame_infos.back();
 			if (frame_info.size == 0)
 			{
 				frame_info.size = bs.byte_offset() - frame_info.offset;
@@ -558,7 +558,7 @@ namespace wi::video
 		uint64_t aligned_size = 0;
 		video->duration_seconds = 0;
 		video->average_frames_per_second = 60;
-		for (Video::FrameInfo& frame_info : video->frames_infos)
+		for (Video::FrameInfo& frame_info : video->frame_infos)
 		{
 			aligned_size += align(frame_info.size, alignment);
 			frame_info.duration_seconds = 1.0f / 60.0f; // 60 FPS lock
@@ -569,7 +569,7 @@ namespace wi::video
 		// Write the slice datas into the aligned offsets, and store the aligned offsets in frame_infos, from here they will be storing offsets into the bitstream buffer, and not the source file:
 		uint64_t aligned_offset = 0;
 		auto copy_video_track = [&](void* dest) {
-			for (Video::FrameInfo& frame_info : video->frames_infos)
+			for (Video::FrameInfo& frame_info : video->frame_infos)
 			{
 				std::memcpy((uint8_t*)dest + aligned_offset, filedata + frame_info.offset, frame_info.size);
 				frame_info.offset = aligned_offset;
@@ -726,7 +726,7 @@ namespace wi::video
 			instance->time_until_next_frame -= dt;
 			if (instance->time_until_next_frame > 0)
 				return;
-			if (instance->current_frame >= (int)instance->video->frames_infos.size() - 1)
+			if (instance->current_frame >= (int)instance->video->frame_infos.size() - 1)
 			{
 				if (has_flag(instance->flags, VideoInstance::Flags::Looped))
 				{
@@ -735,7 +735,7 @@ namespace wi::video
 				else
 				{
 					instance->flags &= ~VideoInstance::Flags::Playing;
-					instance->current_frame = (int)instance->video->frames_infos.size() - 1;
+					instance->current_frame = (int)instance->video->frame_infos.size() - 1;
 				}
 			}
 		}
@@ -746,8 +746,8 @@ namespace wi::video
 		GraphicsDevice* device = GetDevice();
 
 		const Video* video = instance->video;
-		instance->current_frame = std::min(instance->current_frame, std::max(0, (int)video->frames_infos.size() - 1));
-		const Video::FrameInfo& frame_info = video->frames_infos[instance->current_frame];
+		instance->current_frame = std::min(instance->current_frame, std::max(0, (int)video->frame_infos.size() - 1));
+		const Video::FrameInfo& frame_info = video->frame_infos[instance->current_frame];
 		instance->time_until_next_frame = frame_info.duration_seconds;
 
 		const h264::SliceHeader* slice_header = (const h264::SliceHeader*)video->slice_header_datas.data() + instance->current_frame;
@@ -926,7 +926,7 @@ namespace wi::video
 
 		VideoInstance::OutputTexture output = std::move(instance->output_textures_free.back());
 		instance->output_textures_free.pop_back();
-		output.display_order = video->frames_infos[std::max(instance->current_frame - 1, 0)].display_order;
+		output.display_order = video->frame_infos[std::max(instance->current_frame - 1, 0)].display_order;
 
 		if (has_flag(instance->decoder.support, VideoDecoderSupportFlags::DPB_AND_OUTPUT_COINCIDE))
 		{
@@ -988,10 +988,10 @@ namespace wi::video
 		if (video == nullptr)
 			return;
 		bool found = false;
-		int target_frame = int(float(timerSeconds / video->duration_seconds) * video->frames_infos.size());
-		for (size_t i = 0; i < video->frames_infos.size(); ++i)
+		int target_frame = int(float(timerSeconds / video->duration_seconds) * video->frame_infos.size());
+		for (size_t i = 0; i < video->frame_infos.size(); ++i)
 		{
-			auto& frame_info = video->frames_infos[i];
+			auto& frame_info = video->frame_infos[i];
 			if (i >= target_frame && frame_info.type == wi::graphics::VideoFrameType::Intra)
 			{
 				target_frame = (int)i;

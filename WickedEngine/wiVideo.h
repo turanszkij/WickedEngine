@@ -44,7 +44,7 @@ namespace wi::video
 			int gop = 0;
 			int display_order = 0;
 		};
-		wi::vector<FrameInfo> frames_infos;
+		wi::vector<FrameInfo> frame_infos;
 		wi::vector<size_t> frame_display_order;
 		uint32_t num_dpb_slots = 0;
 		inline bool IsValid() const { return data_stream.IsValid(); }
