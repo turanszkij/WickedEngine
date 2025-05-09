@@ -67,21 +67,21 @@ namespace wi::video
 			assert(0); // TODO
 		}
 
-		video->frame_display_order.resize(video->frame_infos.size());
+		wi::vector<size_t> frame_display_order(video->frame_infos.size());
 		for (size_t i = 0; i < video->frame_infos.size(); ++i)
 		{
-			video->frame_display_order[i] = i;
+			frame_display_order[i] = i;
 		}
-		std::sort(video->frame_display_order.begin(), video->frame_display_order.end(), [&](size_t a, size_t b) {
+		std::sort(frame_display_order.begin(), frame_display_order.end(), [&](size_t a, size_t b) {
 			const Video::FrameInfo& frameA = video->frame_infos[a];
 			const Video::FrameInfo& frameB = video->frame_infos[b];
 			int64_t prioA = (int64_t(frameA.gop) << 32ll) | int64_t(frameA.poc);
 			int64_t prioB = (int64_t(frameB.gop) << 32ll) | int64_t(frameB.poc);
 			return prioA < prioB;
 		});
-		for (size_t i = 0; i < video->frame_display_order.size(); ++i)
+		for (size_t i = 0; i < frame_display_order.size(); ++i)
 		{
-			video->frame_infos[video->frame_display_order[i]].display_order = (int)i;
+			video->frame_infos[frame_display_order[i]].display_order = (int)i;
 		}
 	}
 

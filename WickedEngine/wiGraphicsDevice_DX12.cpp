@@ -2296,7 +2296,7 @@ std::mutex queue_locker;
 #endif // PLATFORM_WINDOWS_DESKTOP
 
 		HRESULT hr;
-		Microsoft::WRL::ComPtr<IDXGIAdapter1> dxgiAdapter;
+		ComPtr<IDXGIAdapter1> dxgiAdapter;
 
 #ifdef PLATFORM_XBOX
 

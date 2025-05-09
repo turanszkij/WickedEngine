@@ -320,7 +320,7 @@ namespace h264 {
 		const unsigned char* end;
 		int bits_left;
 
-		constexpr void init(const unsigned char* buf, size_t size)
+		constexpr void init(const unsigned char* buf, unsigned long long size)
 		{
 			start = buf;
 			p = buf;
