@@ -15,7 +15,19 @@
 
 using namespace std;
 
-Editor editor;
+class EditorWithDevInfo : public Editor
+{
+public:
+	const char* GetAdapterName() const
+	{
+		return graphicsDevice == nullptr ? "(no device)" : graphicsDevice->GetAdapterName().c_str();
+	}
+
+	const char* GetDriverDescription() const
+	{
+		return graphicsDevice == nullptr ? "(no device)" : graphicsDevice->GetDriverDescription().c_str();
+	}
+} editor;
 
 int sdl_loop()
 {
@@ -107,18 +119,29 @@ void set_window_icon(SDL_Window *window) {
 
 void crash_handler(int sig)
 {
+	static bool already_handled = false;
+
 	void* btbuf[100];
 
-	char outbuf[256];
+	char outbuf[512];
+
+	if (already_handled) return;
+
+	already_handled = true;
 
 	size_t size = backtrace(btbuf, 100);
+
 	snprintf(
 		outbuf, sizeof(outbuf),
 		"Signal: %i (%s)\n"
-		"Version: %s\nStacktrace:\n",
-		sig,
-		sigdescr_np(sig),
-		wi::version::GetVersionString()
+		"Version: %s\n"
+		"Adapter: %s\n"
+		"Driver: %s\n"
+		"Stacktrace:\n",
+		sig, sigdescr_np(sig),
+		wi::version::GetVersionString(),
+		editor.GetAdapterName(),
+		editor.GetDriverDescription()
 	);
 
 	fprintf(
@@ -144,11 +167,14 @@ void crash_handler(int sig)
 		fputs(outbuf, logfile);
 		fflush(logfile);
 		backtrace_symbols_fd(btbuf, size, fileno(logfile));
+		fputs("\nBacklog:\n", logfile);
+		fflush(logfile);
+		fputs(wi::backlog::getText().c_str(), logfile);
 		fclose(logfile);
 		char cwdbuf[200];
 		fprintf(stderr, "\e[1mcrash log written to %s/%s\e[m\n", getcwd(cwdbuf, sizeof(cwdbuf)), filename);
 	}
-	exit(1);
+	abort();
 }
 
 #endif
