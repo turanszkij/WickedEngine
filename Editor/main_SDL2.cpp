@@ -168,8 +168,10 @@ void crash_handler(int sig)
 		fflush(logfile);
 		backtrace_symbols_fd(btbuf, size, fileno(logfile));
 		fputs("\nBacklog:\n", logfile);
-		fflush(logfile);
-		fputs(wi::backlog::getText().c_str(), logfile);
+		wi::backlog::_forEachLogEntry_unsafe([&] (auto&& entry) {
+			fputs(entry.text.c_str(), logfile);
+			fflush(logfile);
+		});
 		fclose(logfile);
 		char cwdbuf[200];
 		fprintf(stderr, "\e[1mcrash log written to %s/%s\e[m\n", getcwd(cwdbuf, sizeof(cwdbuf)), filename);
