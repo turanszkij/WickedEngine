@@ -23,11 +23,6 @@ namespace wi::backlog
 {
 	bool enabled = false;
 	bool was_ever_enabled = enabled;
-	struct LogEntry
-	{
-		std::string text;
-		LogLevel level = LogLevel::Default;
-	};
 	const float speed = 4000.0f;
 	const size_t deletefromline = 500;
 	float pos = 5;
@@ -58,11 +53,15 @@ namespace wi::backlog
 		{
 			std::scoped_lock lck(entriesLock);
 			std::string retval;
-			for (auto& x : entries)
-			{
-				retval += x.text;
-			}
+			_forEachLogEntry_unsafe([&](auto&& entry) {retval += entry.text;});
 			return retval;
+		}
+		inline void _forEachLogEntry_unsafe(std::function<void(const LogEntry&)> cb)
+		{
+			for (auto& entry : entries)
+			{
+				cb(entry);
+			}
 		}
 		void writeLogfile()
 		{
@@ -346,6 +345,11 @@ namespace wi::backlog
 	std::string getText()
 	{
 		return internal_state.getText();
+	}
+	// You generally don't want to use this. See notes in header
+	void _forEachLogEntry_unsafe(std::function<void(const LogEntry&)> cb)
+	{
+		internal_state._forEachLogEntry_unsafe(cb);
 	}
 	void clear()
 	{
