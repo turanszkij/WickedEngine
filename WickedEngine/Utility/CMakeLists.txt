@@ -1,9 +1,6 @@
 cmake_minimum_required(VERSION 3.19)
 
 include(GNUInstallDirs)
-if (PLATFORM MATCHES "SDL2")
-	add_subdirectory(FAudio)
-endif()
 
 file(GLOB_RECURSE HEADER_FILES CONFIGURE_DEPENDS
 	*.h
