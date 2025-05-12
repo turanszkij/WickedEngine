@@ -109,11 +109,6 @@ else ()
 		$<$<BOOL:${OpenImageDenoise_FOUND}>:OpenImageDenoise> # links OpenImageDenoise only if it's found
 	)
 
-	set_target_properties(FAudio PROPERTIES
-		POSITION_INDEPENDENT_CODE ${WICKED_PIC}
-	)
-	set(WICKEDENGINE_STATIC_LIBRARIES ${WICKEDENGINE_STATIC_LIBRARIES} FAudio)
-
 	if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	target_compile_options(${TARGET_NAME} PRIVATE
 			-Wuninitialized
