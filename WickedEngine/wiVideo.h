@@ -92,6 +92,11 @@ namespace wi::video
 		};
 		Flags flags = Flags::Empty;
 		inline bool IsValid() const { return decoder.IsValid(); }
+
+		// Get texture resource of the latest decoded frame that can be displayed:
+		wi::graphics::Texture GetCurrentFrameTexture() const { return output.texture; }
+		// Get SRGB subresource view of the latest decoded frame that can be displayed:
+		int GetCurrentFrameTextureSRGBSubresource() const { return output.subresource_srgb; }
 	};
 
 	bool CreateVideo(const std::string& filename, Video* video);

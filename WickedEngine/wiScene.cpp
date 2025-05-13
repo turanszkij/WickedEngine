@@ -4090,7 +4090,8 @@ namespace wi::scene
 			if (video != nullptr)
 			{
 				// Video attachment will overwrite texture slots on shader side:
-				int descriptor = GetDevice()->GetDescriptorIndex(&video->videoinstance.output.texture, SubresourceType::SRV, video->videoinstance.output.subresource_srgb);
+				Texture videoTexture = video->videoinstance.GetCurrentFrameTexture();
+				int descriptor = GetDevice()->GetDescriptorIndex(&videoTexture, SubresourceType::SRV, video->videoinstance.GetCurrentFrameTextureSRGBSubresource());
 				material.WriteShaderTextureSlot(materialArrayMapped + args.jobIndex, BASECOLORMAP, descriptor);
 				material.WriteShaderTextureSlot(materialArrayMapped + args.jobIndex, EMISSIVEMAP, descriptor);
 			}
@@ -4876,7 +4877,8 @@ namespace wi::scene
 				const VideoComponent* video = videos.GetComponent(entity);
 				if (video != nullptr)
 				{
-					light.maskTexDescriptor = GetDevice()->GetDescriptorIndex(&video->videoinstance.output.texture, SubresourceType::SRV, video->videoinstance.output.subresource_srgb);
+					Texture videoTexture = video->videoinstance.GetCurrentFrameTexture();
+					light.maskTexDescriptor = GetDevice()->GetDescriptorIndex(&videoTexture, SubresourceType::SRV, video->videoinstance.GetCurrentFrameTextureSRGBSubresource());
 				}
 			}
 
@@ -5408,6 +5410,7 @@ namespace wi::scene
 	void Scene::RunSpriteUpdateSystem(wi::jobsystem::context& ctx)
 	{
 		wi::jobsystem::Dispatch(ctx, (uint32_t)sprites.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
+			Entity entity = sprites.GetEntity(args.jobIndex);
 			Sprite& sprite = sprites[args.jobIndex];
 			if (sprite.params.isExtractNormalMapEnabled())
 			{
@@ -5421,6 +5424,18 @@ namespace wi::scene
 			{
 				sprite.params.mask_subresource = sprite.maskResource.GetTextureSRGBSubresource();
 			}
+
+			const VideoComponent* videocomponent = videos.GetComponent(entity);
+			if (videocomponent != nullptr && videocomponent->videoinstance.IsValid())
+			{
+				Texture videoTexture = videocomponent->videoinstance.GetCurrentFrameTexture();
+				if (videoTexture.IsValid())
+				{
+					sprite.textureResource.SetTexture(videoTexture);
+					sprite.params.image_subresource = videocomponent->videoinstance.GetCurrentFrameTextureSRGBSubresource();
+				}
+			}
+
 			sprite.Update(dt);
 		});
 	}
