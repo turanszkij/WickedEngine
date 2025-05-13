@@ -1440,7 +1440,8 @@ namespace wi::helper
 #else
 		std::mbstate_t state = std::mbstate_t {};
 		const std::size_t len = std::mbsrtowcs(to, &from, dest_size_in_characters, &state);
-		return len+1; // string length + null terminating character
+		if (len > 0) return len + 1; // string length + null terminating character
+		return len;
 #endif // _WIN32
 	}
 
@@ -1460,7 +1461,8 @@ namespace wi::helper
 #else
 		std::mbstate_t state = std::mbstate_t {};
 		const std::size_t len = std::wcsrtombs(to, &from, dest_size_in_characters, &state);
-		return len+1; // string length + null terminating character
+		if (len > 0) return len + 1; // string length + null terminating character
+		return len;
 #endif // _WIN32
 	}
 	
