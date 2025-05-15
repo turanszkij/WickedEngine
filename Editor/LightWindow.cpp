@@ -418,42 +418,6 @@ void LightWindow::SetEntity(Entity entity)
 }
 void LightWindow::SetLightType(LightComponent::LightType type)
 {
-	if (type == LightComponent::DIRECTIONAL)
-	{
-		rangeSlider.SetEnabled(false);
-		outerConeAngleSlider.SetEnabled(false);
-		innerConeAngleSlider.SetEnabled(false);
-		radiusSlider.SetRange(0, 1);
-		lengthSlider.SetEnabled(false);
-		heightSlider.SetEnabled(false);
-	}
-	else
-	{
-		rangeSlider.SetEnabled(true);
-		if (type == LightComponent::SPOT)
-		{
-			outerConeAngleSlider.SetEnabled(true);
-			innerConeAngleSlider.SetEnabled(true);
-			lengthSlider.SetEnabled(false);
-			heightSlider.SetEnabled(false);
-		}
-		else if (type == LightComponent::SPOT)
-		{
-			outerConeAngleSlider.SetEnabled(false);
-			innerConeAngleSlider.SetEnabled(false);
-			lengthSlider.SetEnabled(true);
-			heightSlider.SetEnabled(false);
-		}
-		else if (type == LightComponent::RECTANGLE)
-		{
-			outerConeAngleSlider.SetEnabled(false);
-			innerConeAngleSlider.SetEnabled(false);
-			lengthSlider.SetEnabled(true);
-			heightSlider.SetEnabled(true);
-		}
-		radiusSlider.SetRange(0, 10);
-	}
-	radiusSlider.SetEnabled(true);
 	RefreshCascades();
 }
 
@@ -560,6 +524,50 @@ void LightWindow::ResizeLayout()
 		y += padding;
 	};
 
+	LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
+	if (light != nullptr)
+	{
+		if (light->type == LightComponent::DIRECTIONAL)
+		{
+			rangeSlider.SetVisible(false);
+			outerConeAngleSlider.SetVisible(false);
+			innerConeAngleSlider.SetVisible(false);
+			radiusSlider.SetVisible(true);
+			radiusSlider.SetRange(0, 1);
+			lengthSlider.SetVisible(false);
+			heightSlider.SetVisible(false);
+		}
+		else
+		{
+			rangeSlider.SetVisible(true);
+			if (light->type == LightComponent::SPOT)
+			{
+				outerConeAngleSlider.SetVisible(true);
+				innerConeAngleSlider.SetVisible(true);
+				radiusSlider.SetVisible(true);
+				lengthSlider.SetVisible(false);
+				heightSlider.SetVisible(false);
+			}
+			else if (light->type == LightComponent::POINT)
+			{
+				outerConeAngleSlider.SetVisible(false);
+				innerConeAngleSlider.SetVisible(false);
+				radiusSlider.SetVisible(true);
+				lengthSlider.SetVisible(true);
+				heightSlider.SetVisible(false);
+			}
+			else if (light->type == LightComponent::RECTANGLE)
+			{
+				outerConeAngleSlider.SetVisible(false);
+				innerConeAngleSlider.SetVisible(false);
+				radiusSlider.SetVisible(false);
+				lengthSlider.SetVisible(true);
+				heightSlider.SetVisible(true);
+			}
+			radiusSlider.SetRange(0, 10);
+		}
+	}
+
 	add_fullwidth(colorPicker);
 	add(typeSelectorComboBox);
 	add(intensitySlider);
@@ -577,7 +585,6 @@ void LightWindow::ResizeLayout()
 	add_right(volumetricCloudsCheckBox);
 	add(shadowResolutionComboBox);
 
-	const LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
 	if (light != nullptr && light->GetType() == LightComponent::DIRECTIONAL)
 	{
 		y += jump;

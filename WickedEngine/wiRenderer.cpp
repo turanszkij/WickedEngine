@@ -1387,7 +1387,7 @@ void LoadShaders()
 				desc.il = nullptr;
 				break;
 			case LightComponent::RECTANGLE:
-				desc.bs = &blendStates[BSTYPE_ADDITIVE];
+				desc.bs = &blendStates[BSTYPE_TRANSPARENT];
 				desc.vs = &shaders[VSTYPE_LIGHTVISUALIZER_RECTLIGHT];
 				desc.ps = &shaders[PSTYPE_LIGHTVISUALIZER_RECTLIGHT];
 				desc.rs = &rasterizers[RSTYPE_FRONT];
@@ -2183,9 +2183,16 @@ void SetUpStates()
 	rs.fill_mode = FillMode::SOLID;
 	rs.cull_mode = CullMode::BACK;
 	rs.front_counter_clockwise = true;
-	rs.depth_bias = -1;
-	rs.depth_bias_clamp = 0;
+	if (IsFormatUnorm(format_depthbuffer_shadowmap))
+	{
+		rs.depth_bias = -1;
+	}
+	else
+	{
+		rs.depth_bias = -1000;
+	}
 	rs.slope_scaled_depth_bias = -4.0f;
+	rs.depth_bias_clamp = -0.01f;
 	rs.depth_clip_enable = false;
 	rs.multisample_enable = false;
 	rs.antialiased_line_enable = false;
@@ -2780,13 +2787,13 @@ struct SHCAM
 	Frustum frustum;					// This frustum can be used for intersection test with wiPrimitive primitives
 	BoundingFrustum boundingfrustum;	// This boundingfrustum can be used for frustum vs frustum intersection test
 
-	inline void init(const XMFLOAT3& eyePos, const XMFLOAT4& rotation, float nearPlane, float farPlane, float fov) 
+	inline void init(const XMFLOAT3& eyePos, const XMFLOAT4& rotation, float nearPlane, float farPlane, float fov, XMVECTOR default_forward = XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f), XMVECTOR default_up = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f))
 	{
 		const XMVECTOR E = XMLoadFloat3(&eyePos);
 		const XMVECTOR Q = XMQuaternionNormalize(XMLoadFloat4(&rotation));
 		const XMMATRIX rot = XMMatrixRotationQuaternion(Q);
-		const XMVECTOR to = XMVector3TransformNormal(XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f), rot);
-		const XMVECTOR up = XMVector3TransformNormal(XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), rot);
+		const XMVECTOR to = XMVector3TransformNormal(default_forward, rot);
+		const XMVECTOR up = XMVector3TransformNormal(default_up, rot);
 		const XMMATRIX V = XMMatrixLookToLH(E, to, up);
 		const XMMATRIX P = XMMatrixPerspectiveFovLH(fov, 1, farPlane, nearPlane);
 		view_projection = XMMatrixMultiply(V, P);
@@ -2800,7 +2807,19 @@ struct SHCAM
 };
 inline void CreateSpotLightShadowCam(const LightComponent& light, SHCAM& shcam)
 {
-	shcam.init(light.position, light.rotation, 0.1f, light.GetRange(), light.outerConeAngle * 2);
+	if (light.type == LightComponent::RECTANGLE)
+	{
+		XMVECTOR P = XMLoadFloat3(&light.position);
+		static float backoffset = 0.5f;
+		P -= XMLoadFloat3(&light.direction) * backoffset; // back offset hack to fixup the shadow projection limits
+		XMFLOAT3 pos;
+		XMStoreFloat3(&pos, P);
+		shcam.init(pos, light.rotation, 0.1f, light.GetRange(), XM_PI * 0.9f, XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f), XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)); // rect light is pointing to -Z by default
+	}
+	else
+	{
+		shcam.init(light.position, light.rotation, 0.1f, light.GetRange(), light.outerConeAngle * 2);
+	}
 }
 inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponent camera, SHCAM* shcams, size_t shcam_count, const wi::rectpacker::Rect& shadow_rect)
 {
@@ -3831,6 +3850,7 @@ void UpdateVisibility(Visibility& vis)
 					}
 					break;
 				case LightComponent::SPOT:
+				case LightComponent::RECTANGLE:
 					if (light.forced_shadow_resolution >= 0)
 					{
 						rect.w = int(light.forced_shadow_resolution);
@@ -3843,7 +3863,6 @@ void UpdateVisibility(Visibility& vis)
 					}
 					break;
 				case LightComponent::POINT:
-				case LightComponent::RECTANGLE:
 					if (light.forced_shadow_resolution >= 0)
 					{
 						rect.w = int(light.forced_shadow_resolution) * 6;
@@ -3894,7 +3913,6 @@ void UpdateVisibility(Visibility& vis)
 								lightrect.w /= int(light.cascade_distances.size());
 								break;
 							case LightComponent::POINT:
-							case LightComponent::RECTANGLE:
 								lightrect.w /= 6;
 								break;
 							}
@@ -4740,15 +4758,11 @@ void UpdatePerFrameData(
 
 			shaderentity.SetIndices(matrixCounter, maskTex);
 
-			if (shadowmap)
+			if (shadowmap || (maskTex > 0))
 			{
-				const float FarZ = 0.1f;	// watch out: reversed depth buffer! Also, light near plane is constant for simplicity, this should match on cpu side!
-				const float NearZ = std::max(1.0f, light.GetRange()); // watch out: reversed depth buffer!
-				const float fRange = FarZ / (FarZ - NearZ);
-				const float cubemapDepthRemapNear = fRange;
-				const float cubemapDepthRemapFar = -fRange * NearZ;
-				shaderentity.SetCubeRemapNear(cubemapDepthRemapNear);
-				shaderentity.SetCubeRemapFar(cubemapDepthRemapFar);
+				SHCAM shcam;
+				CreateSpotLightShadowCam(light, shcam);
+				XMStoreFloat4x4(&matrixArray[matrixCounter++], shcam.view_projection);
 			}
 
 			if (light.IsCastingShadow())
@@ -6627,6 +6641,7 @@ void DrawShadowmaps(
 		}
 		break;
 		case LightComponent::SPOT:
+		case LightComponent::RECTANGLE:
 		{
 			if (max_shadow_resolution_2D == 0 && light.forced_shadow_resolution < 0)
 				break;
@@ -6747,7 +6762,6 @@ void DrawShadowmaps(
 		}
 		break;
 		case LightComponent::POINT:
-		case LightComponent::RECTANGLE:
 		{
 			if (max_shadow_resolution_cube == 0 && light.forced_shadow_resolution < 0)
 				break;

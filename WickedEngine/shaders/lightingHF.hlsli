@@ -435,7 +435,7 @@ inline void light_rect(in ShaderEntity light, in Surface surface, inout Lighting
 		return; // facing away from light
 		
 	half3 light_color = light.GetColor().rgb * shadow_mask;
-
+	
 	[branch]
 	if (light.IsCastingShadow() && surface.IsReceiveShadow())
 	{
@@ -444,7 +444,14 @@ inline void light_rect(in ShaderEntity light, in Surface surface, inout Lighting
 		if ((GetFrame().options & OPTION_BIT_RAYTRACED_SHADOWS) == 0 || GetCamera().texture_rtshadow_index < 0 || (GetCamera().options & SHADERCAMERA_OPTION_USE_SHADOW_MASK) == 0)
 #endif // SHADOW_MASK_ENABLED
 		{
-			light_color *= shadow_cube(light, LunnormalizedShadow, surface.pixel);
+			float4 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + 0), float4(surface.P, 1));
+			shadow_pos.xyz /= shadow_pos.w;
+			float2 shadow_uv = clipspace_to_uv(shadow_pos.xy);
+			[branch]
+			if (is_saturated(shadow_uv))
+			{
+				light_color *= shadow_2D(light, shadow_pos.xyz, shadow_uv.xy, 0, surface.pixel);
+			}
 		}
 		
 		if (!any(light_color))
@@ -475,11 +482,13 @@ inline void light_rect(in ShaderEntity light, in Surface surface, inout Lighting
 		half mipcount16f = half(mipcount);
 		half MIP = surface.roughness * mipcount16f;
 		
-		half2 diffuse_uv = half2(get_angle(L, right) / PI, 1 - (get_angle(L, up) / PI));
+		float4 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + 0), float4(surface.P, 1));
+		shadow_pos.xyz /= shadow_pos.w;
+		float2 diffuse_uv = clipspace_to_uv(shadow_pos.xy);
 		half4 diffuse_mask = tex.SampleLevel(sampler_linear_clamp, diffuse_uv, mipcount - 2);
 		light_color_diffuse *= diffuse_mask.rgb * diffuse_mask.a;
 
-		half2 specular_uv = clipspace_to_uv(nearest2DPoint / half2(light_length * 0.5, light_height * 0.5));
+		float2 specular_uv = clipspace_to_uv(nearest2DPoint / float2(light_length * 0.5, light_height * 0.5));
 		half4 specular_mask = tex.SampleLevel(sampler_linear_clamp, specular_uv, MIP);
 		light_color_specular *= specular_mask.rgb * specular_mask.a;
 	}
