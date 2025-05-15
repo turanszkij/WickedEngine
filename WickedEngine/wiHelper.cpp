@@ -1398,10 +1398,10 @@ namespace wi::helper
 #else
 		std::mbstate_t state = std::mbstate_t {};
 		const char* from_c = from.c_str();
-		const std::size_t len = 1 + std::mbsrtowcs(nullptr, &from_c, 0, &state);
-		std::vector<wchar_t> to_c(len);
-		std::mbsrtowcs(to_c.data(), &from_c, to_c.size(), &state);
-		to = to_c.data();
+		std::setlocale(LC_ALL, "en_US.utf8");
+		const std::size_t len = std::mbsrtowcs(nullptr, &from_c, 0, &state);
+		to.resize(len);
+		std::mbsrtowcs(to.data(), &from_c, len, &state);
 #endif // _WIN32
 	}
 
@@ -1417,10 +1417,10 @@ namespace wi::helper
 #else
 		std::mbstate_t state = std::mbstate_t {};
 		const wchar_t* from_c = from.c_str();
-		const std::size_t len = 1 + std::wcsrtombs(nullptr, &from_c, 0, &state);
-		std::vector<char> to_c(len);
-		std::wcsrtombs(to_c.data(), &from_c, to_c.size(), &state);
-		to = to_c.data();
+		std::setlocale(LC_ALL, "en_US.utf8");
+		const std::size_t len = std::wcsrtombs(nullptr, &from_c, 0, &state);
+		to.resize(len);
+		std::wcsrtombs(to.data(), &from_c, len, &state);
 #endif // _WIN32
 	}
 
@@ -1440,8 +1440,8 @@ namespace wi::helper
 #else
 		std::mbstate_t state = std::mbstate_t {};
 		const std::size_t len = std::mbsrtowcs(to, &from, dest_size_in_characters, &state);
-		if (len > 0) return len + 1; // string length + null terminating character
-		return len;
+		if (len == static_cast<std::size_t>(-1)) return len + 1; // string length + null terminating character
+		return -1;
 #endif // _WIN32
 	}
 
@@ -1461,8 +1461,8 @@ namespace wi::helper
 #else
 		std::mbstate_t state = std::mbstate_t {};
 		const std::size_t len = std::wcsrtombs(to, &from, dest_size_in_characters, &state);
-		if (len > 0) return len + 1; // string length + null terminating character
-		return len;
+		if (len == static_cast<std::size_t>(-1)) return len + 1; // string length + null terminating character
+		return -1;
 #endif // _WIN32
 	}
 	
