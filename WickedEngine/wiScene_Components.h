@@ -1319,13 +1319,10 @@ namespace wi::scene
 
 		enum LightType
 		{
-			DIRECTIONAL = ENTITY_TYPE_DIRECTIONALLIGHT,
-			POINT = ENTITY_TYPE_POINTLIGHT,
-			SPOT = ENTITY_TYPE_SPOTLIGHT,
-			//SPHERE = ENTITY_TYPE_SPHERELIGHT,
-			//DISC = ENTITY_TYPE_DISCLIGHT,
-			//RECTANGLE = ENTITY_TYPE_RECTANGLELIGHT,
-			//TUBE = ENTITY_TYPE_TUBELIGHT,
+			DIRECTIONAL,
+			POINT,
+			SPOT,
+			RECTANGLE,
 			LIGHTTYPE_COUNT,
 			ENUM_FORCE_UINT32 = 0xFFFFFFFF,
 		};
@@ -1337,7 +1334,8 @@ namespace wi::scene
 		float outerConeAngle = XM_PIDIV4;
 		float innerConeAngle = 0; // default value is 0, means only outer cone angle is used
 		float radius = 0.025f;
-		float length = 0;
+		float length = 0; // point lights: line/capsule length; rect light: width
+		float height = 0; // rect light only
 		float volumetric_boost = 0; // increase the strength of volumetric fog only for this light
 
 		wi::vector<float> cascade_distances = { 8,80,800 };

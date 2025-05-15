@@ -81,7 +81,7 @@ inline half3 shadow_cube(in ShaderEntity light, in float3 Lunnormalized, min16ui
 	float2 shadow_uv = uv_slice.xy;
 	shadow_uv.x += uv_slice.z;
 	shadow_uv = mad(shadow_uv, light.shadowAtlasMulAdd.xy, light.shadowAtlasMulAdd.zw);
-	return sample_shadow(shadow_uv, remapped_distance, shadow_border_clamp(light, uv_slice.z), light.GetRadius(), pixel);
+	return sample_shadow(shadow_uv, remapped_distance, shadow_border_clamp(light, uv_slice.z), max(light.GetRadius(), light.GetLength()), pixel);
 }
 
 #else

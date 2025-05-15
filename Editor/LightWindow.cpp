@@ -115,8 +115,24 @@ void LightWindow::Create(EditorComponent* _editor)
 		}
 	});
 	lengthSlider.SetEnabled(false);
-	lengthSlider.SetTooltip("[Experimental] Adjust the length of the light source.\nWith this you can make capsule light out of a point light.");
+	lengthSlider.SetTooltip("Adjust the length of the light source.\nWith this you can make capsule light out of a point light.");
 	AddWidget(&lengthSlider);
+
+	heightSlider.Create(0, 10, 0, 100000, "Height: ");
+	heightSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			LightComponent* light = scene.lights.GetComponent(x.entity);
+			if (light != nullptr)
+			{
+				light->height = args.fValue;
+			}
+		}
+		});
+	heightSlider.SetEnabled(false);
+	heightSlider.SetTooltip("Adjust the height of the light source.\nWith height and length you can make rectangular light out of a point light.");
+	AddWidget(&heightSlider);
 
 	outerConeAngleSlider.Create(0.1f, XM_PIDIV2 - 0.01f, 0, 100000, "Outer Cone Angle: ");
 	outerConeAngleSlider.OnSlide([&](wi::gui::EventArgs args) {
@@ -263,6 +279,7 @@ void LightWindow::Create(EditorComponent* _editor)
 	typeSelectorComboBox.AddItem("Directional");
 	typeSelectorComboBox.AddItem("Point");
 	typeSelectorComboBox.AddItem("Spot");
+	typeSelectorComboBox.AddItem("Rectangle");
 	typeSelectorComboBox.SetTooltip("Choose the light source type...");
 	typeSelectorComboBox.SetSelected((int)LightComponent::POINT);
 	AddWidget(&typeSelectorComboBox);
@@ -293,7 +310,7 @@ void LightWindow::Create(EditorComponent* _editor)
 
 
 	tipLabel.Create("TipLabel");
-	tipLabel.SetText("Tip: you can add a material to this entity, and the base color texture of it will be used to tint the light color (point light needs a cubemap, spotlight needs a texture2D). You can also add a video to this entity and the video will be used as light color multiplier (only for spotlight).");
+	tipLabel.SetText("Tip: you can add a material to this entity, and the base color texture of it will be used to tint the light color (point light needs a cubemap, spotlight needs a texture2D). You can also add a video to this entity and the video will be used as light color multiplier (only for spotlight and rectangle light).");
 	tipLabel.SetFitTextEnabled(true);
 	AddWidget(&tipLabel);
 
@@ -360,6 +377,7 @@ void LightWindow::SetEntity(Entity entity)
 		rangeSlider.SetValue(light->range);
 		radiusSlider.SetValue(light->radius);
 		lengthSlider.SetValue(light->length);
+		heightSlider.SetValue(light->height);
 		outerConeAngleSlider.SetValue(light->outerConeAngle);
 		innerConeAngleSlider.SetValue(light->innerConeAngle);
 		volumetricBoostSlider.SetValue(light->volumetric_boost);
@@ -407,6 +425,7 @@ void LightWindow::SetLightType(LightComponent::LightType type)
 		innerConeAngleSlider.SetEnabled(false);
 		radiusSlider.SetRange(0, 1);
 		lengthSlider.SetEnabled(false);
+		heightSlider.SetEnabled(false);
 	}
 	else
 	{
@@ -416,12 +435,21 @@ void LightWindow::SetLightType(LightComponent::LightType type)
 			outerConeAngleSlider.SetEnabled(true);
 			innerConeAngleSlider.SetEnabled(true);
 			lengthSlider.SetEnabled(false);
+			heightSlider.SetEnabled(false);
 		}
-		else
+		else if (type == LightComponent::SPOT)
 		{
 			outerConeAngleSlider.SetEnabled(false);
 			innerConeAngleSlider.SetEnabled(false);
 			lengthSlider.SetEnabled(true);
+			heightSlider.SetEnabled(false);
+		}
+		else if (type == LightComponent::RECTANGLE)
+		{
+			outerConeAngleSlider.SetEnabled(false);
+			innerConeAngleSlider.SetEnabled(false);
+			lengthSlider.SetEnabled(true);
+			heightSlider.SetEnabled(true);
 		}
 		radiusSlider.SetRange(0, 10);
 	}
@@ -541,6 +569,7 @@ void LightWindow::ResizeLayout()
 	add(volumetricBoostSlider);
 	add(radiusSlider);
 	add(lengthSlider);
+	add(heightSlider);
 	add_right(shadowCheckBox);
 	add_right(haloCheckBox);
 	add_right(volumetricsCheckBox);

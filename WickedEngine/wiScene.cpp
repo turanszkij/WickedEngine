@@ -4847,6 +4847,7 @@ namespace wi::scene
 				aabb.createFromHalfWidth(light.position, XMFLOAT3(light.GetRange(), light.GetRange(), light.GetRange()));
 				break;
 			case LightComponent::POINT:
+			case LightComponent::RECTANGLE:
 				XMStoreFloat3(&light.direction, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(1, 0, 0, 0), W)));
 				aabb.createFromHalfWidth(light.position, XMFLOAT3(light.GetRange(), light.GetRange(), light.GetRange()));
 				break;
@@ -4854,31 +4855,34 @@ namespace wi::scene
 
 			light.maskTexDescriptor = -1;
 
-			if (light.type == LightComponent::SPOT || light.type == LightComponent::POINT)
+			GraphicsDevice* device = GetDevice();
+
+			if (light.type == LightComponent::SPOT || light.type == LightComponent::POINT || light.type == LightComponent::RECTANGLE)
 			{
-				// Material can be used as mask texture for spot and point lights:
+				// Material can be used as mask texture for spot, rectangle and point lights:
 				const MaterialComponent* material = materials.GetComponent(entity);
 				if (material != nullptr && material->textures[MaterialComponent::BASECOLORMAP].resource.IsValid())
 				{
 					const Texture& tex = material->textures[MaterialComponent::BASECOLORMAP].resource.GetTexture();
 					if (
+						(light.type == LightComponent::RECTANGLE && !has_flag(tex.desc.misc_flags, ResourceMiscFlag::TEXTURECUBE)) ||
 						(light.type == LightComponent::SPOT && !has_flag(tex.desc.misc_flags, ResourceMiscFlag::TEXTURECUBE)) ||
 						(light.type == LightComponent::POINT && has_flag(tex.desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
 						)
 					{
-						light.maskTexDescriptor = GetDevice()->GetDescriptorIndex(&tex, SubresourceType::SRV, material->textures[MaterialComponent::BASECOLORMAP].resource.GetTextureSRGBSubresource());
+						light.maskTexDescriptor = device->GetDescriptorIndex(&tex, SubresourceType::SRV, material->textures[MaterialComponent::BASECOLORMAP].resource.GetTextureSRGBSubresource());
 					}
 				}
 			}
 
-			if (light.type == LightComponent::SPOT)
+			if (light.type == LightComponent::SPOT || light.type == LightComponent::RECTANGLE)
 			{
-				// Video attachment will overwrite texture mask for spotlight:
+				// Video attachment will overwrite texture mask for spotlight and rectangle light:
 				const VideoComponent* video = videos.GetComponent(entity);
 				if (video != nullptr)
 				{
 					Texture videoTexture = video->videoinstance.GetCurrentFrameTexture();
-					light.maskTexDescriptor = GetDevice()->GetDescriptorIndex(&videoTexture, SubresourceType::SRV, video->videoinstance.GetCurrentFrameTextureSRGBSubresource());
+					light.maskTexDescriptor = device->GetDescriptorIndex(&videoTexture, SubresourceType::SRV, video->videoinstance.GetCurrentFrameTextureSRGBSubresource());
 				}
 			}
 

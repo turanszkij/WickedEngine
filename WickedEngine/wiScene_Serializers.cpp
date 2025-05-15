@@ -1159,10 +1159,6 @@ namespace wi::scene
 			archive >> _flags;
 			archive >> color;
 			archive >> (uint32_t&)type;
-			if (type > SPOT)
-			{
-				type = POINT; // fallback from old area light
-			}
 			archive >> intensity;
 			archive >> range;
 			archive >> outerConeAngle;
@@ -1214,6 +1210,10 @@ namespace wi::scene
 			if (seri.GetVersion() >= 3)
 			{
 				archive >> volumetric_boost;
+			}
+			if (seri.GetVersion() >= 4)
+			{
+				archive >> height;
 			}
 
 			wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
@@ -1286,6 +1286,10 @@ namespace wi::scene
 			if (seri.GetVersion() >= 3)
 			{
 				archive << volumetric_boost;
+			}
+			if (seri.GetVersion() >= 4)
+			{
+				archive << height;
 			}
 		}
 	}

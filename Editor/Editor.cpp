@@ -538,6 +538,7 @@ void EditorComponent::Load()
 		NEW_MATERIAL,
 		NEW_POINTLIGHT,
 		NEW_SPOTLIGHT,
+		NEW_RECTLIGHT,
 		NEW_DIRECTIONALLIGHT,
 		NEW_ENVIRONMENTPROBE,
 		NEW_FORCE,
@@ -573,6 +574,7 @@ void EditorComponent::Load()
 	newEntityCombo.AddItem("Transform " ICON_TRANSFORM, NEW_TRANSFORM);
 	newEntityCombo.AddItem("Material " ICON_MATERIAL, NEW_MATERIAL);
 	newEntityCombo.AddItem("Point Light " ICON_POINTLIGHT, NEW_POINTLIGHT);
+	newEntityCombo.AddItem("Rectangle Light " ICON_RECTLIGHT, NEW_RECTLIGHT);
 	newEntityCombo.AddItem("Spot Light " ICON_SPOTLIGHT, NEW_SPOTLIGHT);
 	newEntityCombo.AddItem("Directional Light " ICON_DIRECTIONALLIGHT, NEW_DIRECTIONALLIGHT);
 	newEntityCombo.AddItem("Environment Probe " ICON_ENVIRONMENTPROBE, NEW_ENVIRONMENTPROBE);
@@ -619,6 +621,14 @@ void EditorComponent::Load()
 			pick.entity = scene.Entity_CreateLight("pointlight", in_front_of_camera, XMFLOAT3(1, 1, 1), 2, 60);
 			scene.lights.GetComponent(pick.entity)->type = LightComponent::POINT;
 			scene.lights.GetComponent(pick.entity)->intensity = 20;
+			break;
+		case NEW_RECTLIGHT:
+			pick.entity = scene.Entity_CreateLight("rectlight", in_front_of_camera, XMFLOAT3(1, 1, 1), 2, 60);
+			scene.lights.GetComponent(pick.entity)->type = LightComponent::RECTANGLE;
+			scene.lights.GetComponent(pick.entity)->intensity = 20;
+			scene.lights.GetComponent(pick.entity)->length = 2;
+			scene.lights.GetComponent(pick.entity)->height = 2;
+			scene.lights.GetComponent(pick.entity)->SetVisualizerEnabled(true);
 			break;
 		case NEW_SPOTLIGHT:
 			pick.entity = scene.Entity_CreateLight("spotlight", in_front_of_camera, XMFLOAT3(1, 1, 1), 2, 60);
@@ -3539,6 +3549,9 @@ void EditorComponent::Render() const
 						break;
 					case LightComponent::DIRECTIONAL:
 						wi::font::Draw(ICON_DIRECTIONALLIGHT, fp, cmd);
+						break;
+					case LightComponent::RECTANGLE:
+						wi::font::Draw(ICON_RECTLIGHT, fp, cmd);
 						break;
 					default:
 						break;

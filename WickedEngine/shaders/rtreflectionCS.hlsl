@@ -191,6 +191,11 @@ void main(uint2 DTid : SV_DispatchThreadID)
 					light_point(light, surface, lighting);
 				}
 				break;
+				case ENTITY_TYPE_RECTLIGHT:
+				{
+					light_rect(light, surface, lighting);
+				}
+				break;
 				case ENTITY_TYPE_SPOTLIGHT:
 				{
 					light_spot(light, surface, lighting);
