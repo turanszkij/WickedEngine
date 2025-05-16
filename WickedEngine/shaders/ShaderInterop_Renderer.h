@@ -1777,4 +1777,11 @@ struct alignas(16) DDGIProbe
 	uint2 offset;
 };
 
+struct ShadowFilterPush
+{
+	uint4 rect;
+	float2 atlas_resolution_rcp;
+	float2 spread;
+};
+
 #endif // WI_SHADERINTEROP_RENDERER_H
