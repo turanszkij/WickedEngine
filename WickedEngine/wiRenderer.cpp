@@ -146,6 +146,7 @@ bool CAPSULE_SHADOW_ENABLED = false;
 float CAPSULE_SHADOW_ANGLE = XM_PIDIV4;
 float CAPSULE_SHADOW_FADE = 0.2f;
 bool SHADOW_LOD_OVERRIDE = true;
+float EXPONENTIAL_SHADOW_BIAS = 80;
 
 Texture shadowMapAtlas;
 Texture shadowMapAtlas_Exponential;
@@ -2459,14 +2460,18 @@ void SetUpStates()
 	bd.independent_blend_enable = false;
 	blendStates[BSTYPE_MULTIPLY] = bd;
 
-	bd.render_target[0].src_blend = Blend::ZERO;
-	bd.render_target[0].dest_blend = Blend::SRC_COLOR;
-	bd.render_target[0].blend_op = BlendOp::ADD;
-	bd.render_target[0].src_blend_alpha = Blend::ONE;
-	bd.render_target[0].dest_blend_alpha = Blend::ONE;
-	bd.render_target[0].blend_op_alpha = BlendOp::MAX;
-	bd.render_target[0].blend_enable = true;
-	bd.render_target[0].render_target_write_mask = ColorWrite::ENABLE_ALL;
+	// RT0 exponential depth write disable:
+	bd.render_target[0].blend_enable = false;
+	bd.render_target[0].render_target_write_mask = ColorWrite::DISABLE;
+	// RT1 transparent shadow blend enable:
+	bd.render_target[1].src_blend = Blend::ZERO;
+	bd.render_target[1].dest_blend = Blend::SRC_COLOR;
+	bd.render_target[1].blend_op = BlendOp::ADD;
+	bd.render_target[1].src_blend_alpha = Blend::ONE;
+	bd.render_target[1].dest_blend_alpha = Blend::ONE;
+	bd.render_target[1].blend_op_alpha = BlendOp::MAX;
+	bd.render_target[1].blend_enable = true;
+	bd.render_target[1].render_target_write_mask = ColorWrite::ENABLE_ALL;
 	bd.alpha_to_coverage_enable = false;
 	bd.independent_blend_enable = false;
 	blendStates[BSTYPE_TRANSPARENTSHADOW] = bd;
@@ -2784,7 +2789,7 @@ struct SHCAM
 	XMMATRIX view_projection;
 	Frustum frustum;					// This frustum can be used for intersection test with wiPrimitive primitives
 	BoundingFrustum boundingfrustum;	// This boundingfrustum can be used for frustum vs frustum intersection test
-	static constexpr float z_near = 0.01f;
+	static constexpr float z_near = 0.1f;
 
 	inline void init(const XMFLOAT3& eyePos, const XMFLOAT4& rotation, float nearPlane, float farPlane, float fov, XMVECTOR default_forward = XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f), XMVECTOR default_up = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f))
 	{
@@ -4129,6 +4134,7 @@ void UpdatePerFrameData(
 		frameCB.temporalaa_samplerotation = (x & 0x000000FF) | ((y & 0x000000FF) << 8);
 	}
 
+	frameCB.exponential_shadow_bias = EXPONENTIAL_SHADOW_BIAS;
 	frameCB.capsuleshadow_fade_angle = uint32_t(XMConvertFloatToHalf(CAPSULE_SHADOW_FADE)) | uint32_t(XMConvertFloatToHalf(std::max(0.001f, CAPSULE_SHADOW_ANGLE * 0.5f))) << 16u;
 
 	frameCB.options = 0;
@@ -4695,7 +4701,7 @@ void UpdatePerFrameData(
 
 			if (shadowmap)
 			{
-				const float FarZ = SHCAM::z_near;	// watch out: reversed depth buffer! Also, light near plane is constant for simplicity, this should match on cpu side!
+				const float FarZ = SHCAM::z_near;	// watch out: reversed depth buffer! Also, light near plane is constant for simplicity
 				const float NearZ = std::max(1.0f, light.GetRange()); // watch out: reversed depth buffer!
 				const float fRange = FarZ / (FarZ - NearZ);
 				const float cubemapDepthRemapNear = fRange;
@@ -18915,6 +18921,14 @@ void SetShadowLODOverrideEnabled(bool value)
 bool IsShadowLODOverrideEnabled()
 {
 	return SHADOW_LOD_OVERRIDE;
+}
+void SetExponentialShadowBias(float value)
+{
+	EXPONENTIAL_SHADOW_BIAS = value;
+}
+float GetExponentialShadowBias()
+{
+	return EXPONENTIAL_SHADOW_BIAS;
 }
 
 wi::Resource CreatePaintableTexture(uint32_t width, uint32_t height, uint32_t mips, wi::Color initialColor)

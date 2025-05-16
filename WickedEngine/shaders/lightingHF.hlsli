@@ -82,7 +82,7 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 			{
 				// Project into shadow map space (no need to divide by .w because ortho projection!):
 				const float4x4 cascade_projection = load_entitymatrix(light.GetMatrixIndex() + cascade);
-				const float3 shadow_pos = mul(cascade_projection, float4(surface.P, 1)).xyz;
+				const float3 shadow_pos = mul(cascade_projection, float4(surface.P - surface.N, 1)).xyz;
 				const float3 shadow_uv = clipspace_to_uv(shadow_pos);
 
 				// Determine if pixel is inside current cascade bounds and compute shadow if it is:
@@ -97,7 +97,7 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 					if (cascade_fade > 0 && dither(surface.pixel + GetTemporalAASampleRotation()) < cascade_fade)
 						continue;
 						
-					light_color *= shadow_2D(light, shadow_pos, shadow_uv.xy, cascade, surface.pixel);
+					light_color *= shadow_2D(light, shadow_pos, shadow_uv.xy, cascade);
 					break;
 				}
 			}
@@ -204,7 +204,7 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 		if ((GetFrame().options & OPTION_BIT_RAYTRACED_SHADOWS) == 0 || GetCamera().texture_rtshadow_index < 0 || (GetCamera().options & SHADERCAMERA_OPTION_USE_SHADOW_MASK) == 0)
 #endif // SHADOW_MASK_ENABLED
 		{
-			light_color *= shadow_cube(light, LunnormalizedShadow, surface.pixel);
+			light_color *= shadow_cube(light, LunnormalizedShadow);
 		}
 		
 		if (!any(light_color))
@@ -318,7 +318,7 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 			[branch]
 			if (is_saturated(shadow_uv))
 			{
-				light_color *= shadow_2D(light, shadow_pos.xyz, shadow_uv.xy, 0, surface.pixel);
+				light_color *= shadow_2D(light, shadow_pos.xyz, shadow_uv.xy, 0);
 			}
 		}
 		
@@ -450,7 +450,7 @@ inline void light_rect(in ShaderEntity light, in Surface surface, inout Lighting
 			[branch]
 			if (is_saturated(shadow_uv))
 			{
-				light_color *= shadow_2D(light, shadow_pos.xyz, shadow_uv.xy, 0, surface.pixel);
+				light_color *= shadow_2D(light, shadow_pos.xyz, shadow_uv.xy, 0);
 			}
 		}
 		

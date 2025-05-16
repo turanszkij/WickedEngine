@@ -72,6 +72,14 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&streamingSlider);
 
+	exponentialShadowBiasSlider.Create(50.0f, 5000.0f, wi::renderer::GetExponentialShadowBias(), 10000, "Exponential Shadow Bias: ");
+	exponentialShadowBiasSlider.SetSize(XMFLOAT2(wid, itemheight));
+	exponentialShadowBiasSlider.SetPos(XMFLOAT2(x, y += step));
+	exponentialShadowBiasSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::renderer::SetExponentialShadowBias(args.fValue);
+	});
+	AddWidget(&exponentialShadowBiasSlider);
+
 	renderPathComboBox.Create("Render Path: ");
 	renderPathComboBox.SetSize(XMFLOAT2(wid, itemheight));
 	renderPathComboBox.SetPos(XMFLOAT2(x, y += step));
@@ -1613,6 +1621,7 @@ void GraphicsWindow::Update()
 	shadowLODCheckBox.SetCheck(wi::renderer::IsShadowLODOverrideEnabled());
 	resolutionScaleSlider.SetValue(editor->resolutionScale);
 	streamingSlider.SetValue(wi::resourcemanager::GetStreamingMemoryThreshold());
+	exponentialShadowBiasSlider.SetValue(wi::renderer::GetExponentialShadowBias());
 	MSAAComboBox.SetSelectedByUserdataWithoutCallback(editor->renderPath->getMSAASampleCount());
 	tonemapCombo.SetSelectedByUserdataWithoutCallback((uint64_t)editor->renderPath->getTonemap());
 	exposureSlider.SetValue(editor->renderPath->getExposure());
@@ -1759,6 +1768,7 @@ void GraphicsWindow::ResizeLayout()
 	add(renderPathComboBox);
 	add(resolutionScaleSlider);
 	add(streamingSlider);
+	add(exponentialShadowBiasSlider);
 	add(speedMultiplierSlider);
 	add(textureQualityComboBox);
 	add(mipLodBiasSlider);

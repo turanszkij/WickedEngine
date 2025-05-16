@@ -21,7 +21,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float filtered = 0;
 
 	const float2 spread_offset = push.atlas_resolution_rcp * (2 + push.spread * 8);
-	const uint soft_shadow_sample_count = (uint)lerp(8.0, 64.0, saturate(length(push.spread)));
+	const uint soft_shadow_sample_count = (uint)lerp(8.0, 128.0, saturate(length(push.spread)));
 	const float soft_shadow_sample_count_rcp = 1.0 / (float)soft_shadow_sample_count;
 	const float soft_shadow_sample_count_sqrt_rcp = rsqrt((float)soft_shadow_sample_count);
 

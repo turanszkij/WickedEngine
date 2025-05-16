@@ -3,5 +3,5 @@
 
 void main(PixelInput input, out float exponential_shadow : SV_Target0)
 {
-	exponential_shadow = exp(exponential_shadow_constant * input.pos.z);
+	exponential_shadow = exp(-GetFrame().exponential_shadow_bias * input.pos.z);
 }

@@ -1191,7 +1191,7 @@ struct alignas(16) FrameCB
 
 	uint		capsuleshadow_fade_angle;
 	int			indirect_debugbufferindex;
-	int			padding0;
+	float		exponential_shadow_bias;
 	int			padding1;
 
 	float		blue_noise_phase;

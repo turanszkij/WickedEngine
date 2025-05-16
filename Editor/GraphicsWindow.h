@@ -19,6 +19,7 @@ public:
 	wi::gui::CheckBox meshShaderCheckBox;
 	wi::gui::CheckBox meshletOcclusionCullingCheckBox;
 	wi::gui::CheckBox shadowLODCheckBox;
+	wi::gui::Slider exponentialShadowBiasSlider;
 	wi::gui::Slider resolutionScaleSlider;
 	wi::gui::Slider streamingSlider;
 	wi::gui::Slider GIBoostSlider;

@@ -2,19 +2,16 @@
 #define WI_SHADOW_HF
 #include "globals.hlsli"
 
-static const float exponential_shadow_constant = -4000;
-
-inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, half2 radius, min16uint2 pixel)
+inline half3 sample_shadow(float2 uv, float cmp)
 {
 	Texture2D<float> texture_shadowatlas = bindless_textures_float[descriptor_index(GetFrame().texture_shadowatlas_index)];
 	Texture2D<half4> texture_shadowatlas_transparent = bindless_textures_half4[descriptor_index(GetFrame().texture_shadowatlas_transparent_index)];
 	
-	float2 sample_uv = clamp(uv, uv_clamping.xy, uv_clamping.zw);
-	float shadowMapValue = texture_shadowatlas.SampleLevel(sampler_linear_clamp, sample_uv, 0);
-	half3 shadow = saturate(shadowMapValue * exp(-exponential_shadow_constant * cmp));
+	float shadowMapValue = texture_shadowatlas.SampleLevel(sampler_linear_clamp, uv, 0);
+	half3 shadow = saturate(shadowMapValue * exp(GetFrame().exponential_shadow_bias * cmp));
 		
 #ifndef DISABLE_TRANSPARENT_SHADOWMAP
-	half4 transparent_shadow = texture_shadowatlas_transparent.SampleLevel(sampler_linear_clamp, sample_uv, 0);
+	half4 transparent_shadow = texture_shadowatlas_transparent.SampleLevel(sampler_linear_clamp, uv, 0);
 #ifdef TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
 	if (transparent_shadow.a > cmp)
 #endif // TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
@@ -27,29 +24,31 @@ inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, half2 radiu
 }
 
 // This is used to clamp the uvs to last texel center to avoid sampling on the border and overfiltering into a different shadow
-inline float4 shadow_border_clamp(in ShaderEntity light, in float slice)
+inline float2 shadow_border_clamp(in ShaderEntity light, in float slice, in float2 uv)
 {
 	const float border_size = 0.75 * GetFrame().shadow_atlas_resolution_rcp;
 	const float2 topleft = mad(float2(slice, 0), light.shadowAtlasMulAdd.xy, light.shadowAtlasMulAdd.zw) + border_size;
 	const float2 bottomright = mad(float2(slice + 1, 1), light.shadowAtlasMulAdd.xy, light.shadowAtlasMulAdd.zw) - border_size;
-	return float4(topleft, bottomright);
+	return clamp(uv, topleft, bottomright);
 }
 
-inline half3 shadow_2D(in ShaderEntity light, in float3 shadow_pos, in float2 shadow_uv, in uint cascade, min16uint2 pixel = 0)
+inline half3 shadow_2D(in ShaderEntity light, in float3 shadow_pos, in float2 shadow_uv, in uint cascade)
 {
 	shadow_uv.x += cascade;
 	shadow_uv = mad(shadow_uv, light.shadowAtlasMulAdd.xy, light.shadowAtlasMulAdd.zw);
-	return sample_shadow(shadow_uv, shadow_pos.z, shadow_border_clamp(light, cascade), light.GetType() == ENTITY_TYPE_RECTLIGHT ? (half2(light.GetRadius(), light.GetLength()) * 0.2) : light.GetRadius(), pixel);
+	shadow_uv = shadow_border_clamp(light, cascade, shadow_uv);
+	return sample_shadow(shadow_uv, shadow_pos.z);
 }
 
-inline half3 shadow_cube(in ShaderEntity light, in float3 Lunnormalized, min16uint2 pixel = 0)
+inline half3 shadow_cube(in ShaderEntity light, in float3 Lunnormalized)
 {
 	const float remapped_distance = light.GetCubemapDepthRemapNear() + light.GetCubemapDepthRemapFar() / (max(max(abs(Lunnormalized.x), abs(Lunnormalized.y)), abs(Lunnormalized.z)) * 0.989);
 	const float3 uv_slice = cubemap_to_uv(-Lunnormalized);
 	float2 shadow_uv = uv_slice.xy;
 	shadow_uv.x += uv_slice.z;
 	shadow_uv = mad(shadow_uv, light.shadowAtlasMulAdd.xy, light.shadowAtlasMulAdd.zw);
-	return sample_shadow(shadow_uv, remapped_distance, shadow_border_clamp(light, uv_slice.z), light.GetRadius(), pixel);
+	shadow_uv = shadow_border_clamp(light, uv_slice.z, shadow_uv);
+	return sample_shadow(shadow_uv, remapped_distance);
 }
 
 inline half shadow_2D_volumetricclouds(float3 P)

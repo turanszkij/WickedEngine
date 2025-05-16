@@ -16,5 +16,5 @@ void main(VertexToPixel input, out float exponential_shadow : SV_Target0)
 		clip(material.textures[BASECOLORMAP].Sample(sampler_linear_clamp, input.tex.xyxy).a - material.GetAlphaTest());
 	}
 	
-	exponential_shadow = exp(exponential_shadow_constant * input.pos.z);
+	exponential_shadow = exp(-GetFrame().exponential_shadow_bias * input.pos.z);
 }
