@@ -148,6 +148,7 @@ float CAPSULE_SHADOW_FADE = 0.2f;
 bool SHADOW_LOD_OVERRIDE = true;
 
 Texture shadowMapAtlas;
+Texture shadowMapAtlas_Exponential;
 Texture shadowMapAtlas_Transparent;
 int max_shadow_resolution_2D = 1024;
 int max_shadow_resolution_cube = 256;
@@ -647,7 +648,7 @@ SHADERTYPE GetPSTYPE(RENDERPASS renderPass, bool alphatest, bool transparent, Ma
 			}
 			else
 			{
-				realPS = SHADERTYPE_COUNT;
+				realPS = PSTYPE_SHADOW;
 			}
 		}
 		break;
@@ -932,6 +933,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_SKY_STATIC], "skyPS_static.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_SKY_DYNAMIC], "skyPS_dynamic.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_SUN], "sunPS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_SHADOW], "shadowPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_SHADOW_ALPHATEST], "shadowPS_alphatest.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_SHADOW_TRANSPARENT], "shadowPS_transparent.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_SHADOW_WATER], "shadowPS_water.cso"); });
@@ -1905,7 +1907,7 @@ void LoadShaders()
 									switch (renderPass)
 									{
 									case RENDERPASS_SHADOW:
-										desc.bs = &blendStates[transparency ? BSTYPE_TRANSPARENTSHADOW : BSTYPE_COLORWRITEDISABLE];
+										desc.bs = &blendStates[transparency ? BSTYPE_TRANSPARENTSHADOW : BSTYPE_OPAQUE];
 										break;
 									case RENDERPASS_RAINBLOCKER:
 										desc.bs = &blendStates[BSTYPE_COLORWRITEDISABLE];
@@ -2050,8 +2052,9 @@ void LoadShaders()
 									case RENDERPASS_SHADOW:
 									{
 										RenderPassInfo renderpass_info;
-										renderpass_info.rt_count = 1;
-										renderpass_info.rt_formats[0] = format_rendertarget_shadowmap;
+										renderpass_info.rt_count = 2;
+										renderpass_info.rt_formats[0] = format_exponential_shadowmap;
+										renderpass_info.rt_formats[1] = format_rendertarget_shadowmap;
 										renderpass_info.ds_format = format_depthbuffer_shadowmap;
 										device->CreatePipelineState(&desc, GetObjectPSO(variant), &renderpass_info);
 									}
@@ -2183,16 +2186,9 @@ void SetUpStates()
 	rs.fill_mode = FillMode::SOLID;
 	rs.cull_mode = CullMode::BACK;
 	rs.front_counter_clockwise = true;
-	if (IsFormatUnorm(format_depthbuffer_shadowmap))
-	{
-		rs.depth_bias = -1;
-	}
-	else
-	{
-		rs.depth_bias = -1000;
-	}
-	rs.slope_scaled_depth_bias = -4.0f;
-	rs.depth_bias_clamp = -0.01f;
+	rs.depth_bias = 0;
+	rs.slope_scaled_depth_bias = 0;
+	rs.depth_bias_clamp = 0;
 	rs.depth_clip_enable = false;
 	rs.multisample_enable = false;
 	rs.antialiased_line_enable = false;
@@ -2786,6 +2782,7 @@ struct SHCAM
 	XMMATRIX view_projection;
 	Frustum frustum;					// This frustum can be used for intersection test with wiPrimitive primitives
 	BoundingFrustum boundingfrustum;	// This boundingfrustum can be used for frustum vs frustum intersection test
+	static constexpr float z_near = 0.01f;
 
 	inline void init(const XMFLOAT3& eyePos, const XMFLOAT4& rotation, float nearPlane, float farPlane, float fov, XMVECTOR default_forward = XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f), XMVECTOR default_up = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f))
 	{
@@ -2814,11 +2811,11 @@ inline void CreateSpotLightShadowCam(const LightComponent& light, SHCAM& shcam)
 		P -= XMLoadFloat3(&light.direction) * backoffset; // back offset hack to fixup the shadow projection limits
 		XMFLOAT3 pos;
 		XMStoreFloat3(&pos, P);
-		shcam.init(pos, light.rotation, 0.1f, light.GetRange(), XM_PI * 0.9f, XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f), XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)); // rect light is pointing to -Z by default
+		shcam.init(pos, light.rotation, SHCAM::z_near, light.GetRange(), XM_PI * 0.9f, XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f), XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)); // rect light is pointing to -Z by default
 	}
 	else
 	{
-		shcam.init(light.position, light.rotation, 0.1f, light.GetRange(), light.outerConeAngle * 2);
+		shcam.init(light.position, light.rotation, SHCAM::z_near, light.GetRange(), light.outerConeAngle * 2);
 	}
 }
 inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponent camera, SHCAM* shcams, size_t shcam_count, const wi::rectpacker::Rect& shadow_rect)
@@ -2903,7 +2900,7 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 		float ext = abs(_center.z - _min.z);
 		ext = std::max(ext, std::min(1500.0f, farPlane) * 0.5f);
 		_min.z = _center.z - ext;
-		_max.z = _center.z + ext;
+		_max.z = _center.z;
 
 		const XMMATRIX lightProjection = XMMatrixOrthographicOffCenterLH(_min.x, _max.x, _min.y, _max.y, _max.z, _min.z); // notice reversed Z!
 
@@ -2912,15 +2909,15 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 	}
 
 }
-inline void CreateCubemapCameras(const XMFLOAT3& position, float zNearP, float zFarP, SHCAM* shcams, size_t shcam_count)
+inline void CreateCubemapCameras(const XMFLOAT3& position, float zFarP, SHCAM* shcams, size_t shcam_count)
 {
 	assert(shcam_count == 6);
-	shcams[0].init(position, XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2); //+x
-	shcams[1].init(position, XMFLOAT4(0.5f, 0.5f, 0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2); //-x
-	shcams[2].init(position, XMFLOAT4(1, 0, 0, -0), zNearP, zFarP, XM_PIDIV2); //+y
-	shcams[3].init(position, XMFLOAT4(0, 0, 0, -1), zNearP, zFarP, XM_PIDIV2); //-y
-	shcams[4].init(position, XMFLOAT4(0.707f, 0, 0, -0.707f), zNearP, zFarP, XM_PIDIV2); //+z
-	shcams[5].init(position, XMFLOAT4(0, 0.707f, 0.707f, 0), zNearP, zFarP, XM_PIDIV2); //-z
+	shcams[0].init(position, XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), SHCAM::z_near, zFarP, XM_PIDIV2); //+x
+	shcams[1].init(position, XMFLOAT4(0.5f, 0.5f, 0.5f, -0.5f), SHCAM::z_near, zFarP, XM_PIDIV2); //-x
+	shcams[2].init(position, XMFLOAT4(1, 0, 0, -0), SHCAM::z_near, zFarP, XM_PIDIV2); //+y
+	shcams[3].init(position, XMFLOAT4(0, 0, 0, -1), SHCAM::z_near, zFarP, XM_PIDIV2); //-y
+	shcams[4].init(position, XMFLOAT4(0.707f, 0, 0, -0.707f), SHCAM::z_near, zFarP, XM_PIDIV2); //+z
+	shcams[5].init(position, XMFLOAT4(0, 0.707f, 0.707f, 0), SHCAM::z_near, zFarP, XM_PIDIV2); //-z
 }
 
 ForwardEntityMaskCB ForwardEntityCullingCPU(const Visibility& vis, const AABB& batch_aabb, RENDERPASS renderPass)
@@ -3925,11 +3922,20 @@ void UpdateVisibility(Visibility& vis)
 						desc.width = uint32_t(vis.shadow_packer.width);
 						desc.height = uint32_t(vis.shadow_packer.height);
 						desc.format = format_depthbuffer_shadowmap;
-						desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
-						desc.layout = ResourceState::SHADER_RESOURCE;
-						desc.misc_flags = ResourceMiscFlag::TEXTURE_COMPATIBLE_COMPRESSION;
+						desc.bind_flags = BindFlag::DEPTH_STENCIL;
+						desc.layout = ResourceState::DEPTHSTENCIL;
 						device->CreateTexture(&desc, nullptr, &shadowMapAtlas);
 						device->SetName(&shadowMapAtlas, "shadowMapAtlas");
+
+						desc.format = format_exponential_shadowmap;
+						desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+						desc.layout = ResourceState::SHADER_RESOURCE;
+						desc.clear.color[0] = 1;
+						desc.clear.color[1] = 1;
+						desc.clear.color[2] = 1;
+						desc.clear.color[3] = 1;
+						device->CreateTexture(&desc, nullptr, &shadowMapAtlas_Exponential);
+						device->SetName(&shadowMapAtlas_Exponential, "shadowMapAtlas_Exponential");
 
 						desc.format = format_rendertarget_shadowmap;
 						desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
@@ -4232,7 +4238,7 @@ void UpdatePerFrameData(
 	frameCB.indirect_debugbufferindex = device->GetDescriptorIndex(&buffers[BUFFERTYPE_INDIRECT_DEBUG_0], SubresourceType::UAV);
 
 	// Note: shadow maps always assumed to be valid to avoid shader branching logic
-	const Texture& shadowMap = shadowMapAtlas.IsValid() ? shadowMapAtlas : *wi::texturehelper::getBlack();
+	const Texture& shadowMap = shadowMapAtlas_Exponential.IsValid() ? shadowMapAtlas_Exponential : *wi::texturehelper::getBlack();
 	const Texture& shadowMapTransparent = shadowMapAtlas_Transparent.IsValid() ? shadowMapAtlas_Transparent : *wi::texturehelper::getWhite();
 	frameCB.texture_shadowatlas_index = device->GetDescriptorIndex(&shadowMap, SubresourceType::SRV);
 	frameCB.texture_shadowatlas_transparent_index = device->GetDescriptorIndex(&shadowMapTransparent, SubresourceType::SRV);
@@ -4683,7 +4689,7 @@ void UpdatePerFrameData(
 
 			if (shadowmap)
 			{
-				const float FarZ = 0.1f;	// watch out: reversed depth buffer! Also, light near plane is constant for simplicity, this should match on cpu side!
+				const float FarZ = SHCAM::z_near;	// watch out: reversed depth buffer! Also, light near plane is constant for simplicity, this should match on cpu side!
 				const float NearZ = std::max(1.0f, light.GetRange()); // watch out: reversed depth buffer!
 				const float fRange = FarZ / (FarZ - NearZ);
 				const float cubemapDepthRemapNear = fRange;
@@ -6481,9 +6487,16 @@ void DrawShadowmaps(
 		RenderPassImage::DepthStencil(
 			&shadowMapAtlas,
 			RenderPassImage::LoadOp::CLEAR,
+			RenderPassImage::StoreOp::DONTCARE,
+			ResourceState::DEPTHSTENCIL,
+			ResourceState::DEPTHSTENCIL,
+			ResourceState::DEPTHSTENCIL
+		),
+		RenderPassImage::RenderTarget(
+			&shadowMapAtlas_Exponential,
+			RenderPassImage::LoadOp::CLEAR,
 			RenderPassImage::StoreOp::STORE,
 			ResourceState::SHADER_RESOURCE,
-			ResourceState::DEPTHSTENCIL,
 			ResourceState::SHADER_RESOURCE
 		),
 		RenderPassImage::RenderTarget(
@@ -6768,10 +6781,9 @@ void DrawShadowmaps(
 
 			Sphere boundingsphere(light.position, light.GetRange());
 
-			const float zNearP = 0.1f;
 			const float zFarP = std::max(1.0f, light.GetRange());
 			SHCAM cameras[6];
-			CreateCubemapCameras(light.position, zNearP, zFarP, cameras, arraysize(cameras));
+			CreateCubemapCameras(light.position, zFarP, cameras, arraysize(cameras));
 			Viewport vp[arraysize(cameras)];
 			Rect scissors[arraysize(cameras)];
 			Frustum frusta[arraysize(cameras)];
@@ -8741,7 +8753,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 	BindCommonResources(cmd);
 
-	const float zNearP = vis.camera->zNearP;
+	const float zNearP = SHCAM::z_near;
 	const float zFarP = vis.camera->zFarP;
 	const float zNearPRcp = 1.0f / zNearP;
 	const float zFarPRcp = 1.0f / zFarP;
@@ -8753,7 +8765,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		device->BindViewports(1, &vp, cmd);
 
 		SHCAM cameras[6];
-		CreateCubemapCameras(probe.position, zNearP, zFarP, cameras, arraysize(cameras));
+		CreateCubemapCameras(probe.position, zFarP, cameras, arraysize(cameras));
 
 		CameraCB cb;
 		cb.init();

@@ -1,7 +1,7 @@
 #define OBJECTSHADER_LAYOUT_SHADOW_TEX
 #include "objectHF.hlsli"
 
-void main(PixelInput input)
+void main(PixelInput input, out float exponential_shadow : SV_Target0)
 {
 	ShaderMaterial material = GetMaterial();
 	
@@ -22,4 +22,6 @@ void main(PixelInput input)
 	ShaderMeshInstance meshinstance = load_instance(input.GetInstanceIndex());
 	
 	clip(alpha - material.GetAlphaTest() - meshinstance.GetAlphaTest());
+	
+	exponential_shadow = exp(exponential_shadow_constant * input.pos.z);
 }

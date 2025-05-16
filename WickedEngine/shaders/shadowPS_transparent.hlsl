@@ -3,7 +3,7 @@
 #include "objectHF.hlsli"
 
 [earlydepthstencil]
-float4 main(PixelInput input) : SV_TARGET
+void main(PixelInput input, out float exponential_shadow : SV_Target0, out float4 transparent_shadow : SV_Target1)
 {
 	ShaderMaterial material = GetMaterial();
 
@@ -54,5 +54,6 @@ float4 main(PixelInput input) : SV_TARGET
 
 	color.a = input.pos.z; // secondary depth
 
-	return color;
+	exponential_shadow = exp(exponential_shadow_constant * input.pos.z);
+	transparent_shadow = color;
 }

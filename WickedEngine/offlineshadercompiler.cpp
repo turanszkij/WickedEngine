@@ -232,6 +232,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"sunPS", wi::graphics::ShaderStage::PS },
 	{"skyPS_dynamic", wi::graphics::ShaderStage::PS },
 	{"skyPS_static", wi::graphics::ShaderStage::PS },
+	{"shadowPS", wi::graphics::ShaderStage::PS },
 	{"shadowPS_transparent", wi::graphics::ShaderStage::PS },
 	{"shadowPS_water", wi::graphics::ShaderStage::PS },
 	{"shadowPS_alphatest", wi::graphics::ShaderStage::PS },

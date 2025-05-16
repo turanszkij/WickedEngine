@@ -3,7 +3,7 @@
 #include "hairparticleHF.hlsli"
 #include "ShaderInterop_HairParticle.h"
 
-void main(VertexToPixel input)
+void main(VertexToPixel input, out float exponential_shadow : SV_Target0)
 {
 	// Distance dithered fade:
 	clip(dither(input.pos.xy) - input.fade);
@@ -15,4 +15,6 @@ void main(VertexToPixel input)
 	{
 		clip(material.textures[BASECOLORMAP].Sample(sampler_linear_clamp, input.tex.xyxy).a - material.GetAlphaTest());
 	}
+	
+	exponential_shadow = exp(exponential_shadow_constant * input.pos.z);
 }

@@ -773,15 +773,6 @@ namespace wi
 
 		rs_shadow = ncrs;
 
-		if (IsFormatUnorm(wi::renderer::format_depthbuffer_shadowmap))
-		{
-			rs_shadow.depth_bias = -1;
-		}
-		else
-		{
-			rs_shadow.depth_bias = -1000;
-		}
-
 
 		DepthStencilState dsd;
 		dsd.depth_enable = true;
@@ -815,7 +806,7 @@ namespace wi
 		bld.alpha_to_coverage_enable = false;
 		bs = bld;
 
-		bld.render_target[0].render_target_write_mask = ColorWrite::DISABLE;
+		bld.render_target[0].render_target_write_mask = ColorWrite::ENABLE_RED;
 		bs_shadow = bld;
 
 		static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { HairParticleSystem_Internal::LoadShaders(); });
