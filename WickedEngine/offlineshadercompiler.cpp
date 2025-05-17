@@ -226,7 +226,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"volumetricLight_SpotPS", wi::graphics::ShaderStage::PS },
 	{"volumetricLight_PointPS", wi::graphics::ShaderStage::PS },
 	{"volumetricLight_DirectionalPS", wi::graphics::ShaderStage::PS },
-	{"volumetricLight_rectanglePS", wi::graphics::ShaderStage::PS },
+	{"volumetriclight_rectanglePS", wi::graphics::ShaderStage::PS },
 	{"voxelPS", wi::graphics::ShaderStage::PS },
 	{"vertexcolorPS", wi::graphics::ShaderStage::PS },
 	{"upsample_bilateralPS", wi::graphics::ShaderStage::PS },
