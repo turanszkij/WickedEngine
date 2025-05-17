@@ -2192,7 +2192,7 @@ void SetUpStates()
 		rs.depth_bias = -1000;
 	}
 	rs.slope_scaled_depth_bias = -4.0f;
-	rs.depth_bias_clamp = -0.01f;
+	rs.depth_bias_clamp = 0;
 	rs.depth_clip_enable = false;
 	rs.multisample_enable = false;
 	rs.antialiased_line_enable = false;
