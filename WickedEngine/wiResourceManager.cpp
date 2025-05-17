@@ -1080,15 +1080,7 @@ namespace wi
 
 							success = device->CreateTexture(&desc, init_data, &resource->texture);
 							device->SetName(&resource->texture, name.c_str());
-
-							for (uint32_t i = 0; i < resource->texture.desc.mip_levels; ++i)
-							{
-								int subresource_index;
-								subresource_index = device->CreateSubresource(&resource->texture, SubresourceType::SRV, 0, 1, i, 1);
-								assert(subresource_index == i);
-								subresource_index = device->CreateSubresource(&resource->texture, SubresourceType::UAV, 0, 1, i, 1);
-								assert(subresource_index == i);
-							}
+							device->CreateMipgenSubresources(resource->texture);
 
 							// This part must be AFTER mip level subresource creation:
 							Format srgb_format = GetFormatSRGB(desc.format);
@@ -1122,9 +1114,9 @@ namespace wi
 								desc.bind_flags = BindFlag::SHADER_RESOURCE;
 
 								const uint32_t block_size = GetFormatBlockSize(desc.format);
-								desc.width = AlignTo(desc.width, block_size);
-								desc.height = AlignTo(desc.height, block_size);
-								desc.mip_levels = GetMipCount(desc.width, desc.height, desc.depth, block_size, block_size);
+								desc.width = align(desc.width, block_size);
+								desc.height = align(desc.height, block_size);
+								desc.mip_levels = GetMipCount(desc.width, desc.height, 1, block_size);
 
 								success = device->CreateTexture(&desc, nullptr, &resource->texture);
 								device->SetName(&resource->texture, name.c_str());

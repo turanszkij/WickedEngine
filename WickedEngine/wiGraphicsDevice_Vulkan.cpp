@@ -4001,14 +4001,29 @@ using namespace vulkan_internal;
 
 			if (alias == nullptr)
 			{
-				res = vulkan_check(vmaCreateBuffer(
-					allocationhandler->allocator,
-					&bufferInfo,
-					&create_info,
-					&internal_state->resource,
-					&internal_state->allocation,
-					nullptr
-				));
+				if (desc->alignment > 0)
+				{
+					res = vulkan_check(vmaCreateBufferWithAlignment(
+						allocationhandler->allocator,
+						&bufferInfo,
+						&create_info,
+						16ull,
+						&internal_state->resource,
+						&internal_state->allocation,
+						nullptr
+					));
+				}
+				else
+				{
+					res = vulkan_check(vmaCreateBuffer(
+						allocationhandler->allocator,
+						&bufferInfo,
+						&create_info,
+						&internal_state->resource,
+						&internal_state->allocation,
+						nullptr
+					));
+				}
 			}
 			else
 			{
@@ -6024,8 +6039,7 @@ using namespace vulkan_internal;
 		// Backing memory as buffer:
 		VkBufferCreateInfo bufferInfo = {};
 		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		bufferInfo.size = internal_state->sizeInfo.accelerationStructureSize +
-			std::max(internal_state->sizeInfo.buildScratchSize, internal_state->sizeInfo.updateScratchSize);
+		bufferInfo.size = align(internal_state->sizeInfo.accelerationStructureSize, (VkDeviceSize)acceleration_structure_properties.minAccelerationStructureScratchOffsetAlignment) + std::max(internal_state->sizeInfo.buildScratchSize, internal_state->sizeInfo.updateScratchSize);
 		bufferInfo.usage = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR;
 		bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT; // scratch
 		bufferInfo.usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
@@ -6067,9 +6081,7 @@ using namespace vulkan_internal;
 		VkBufferDeviceAddressInfo addressinfo = {};
 		addressinfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
 		addressinfo.buffer = internal_state->buffer;
-		internal_state->scratch_address = vkGetBufferDeviceAddress(device, &addressinfo)
-			+ internal_state->sizeInfo.accelerationStructureSize;
-
+		internal_state->scratch_address = align(vkGetBufferDeviceAddress(device, &addressinfo) + internal_state->sizeInfo.accelerationStructureSize, (VkDeviceAddress)acceleration_structure_properties.minAccelerationStructureScratchOffsetAlignment);
 
 		if (desc->type == RaytracingAccelerationStructureDesc::Type::TOPLEVEL)
 		{
@@ -6092,16 +6104,6 @@ using namespace vulkan_internal;
 				vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
 			}
 		}
-
-#if 0
-		buildAccelerationStructuresKHR(
-			device,
-			VK_NULL_HANDLE,
-			1,
-			&info,
-			&pRangeInfo
-		);
-#endif
 
 		bvh->size = bufferInfo.size;
 

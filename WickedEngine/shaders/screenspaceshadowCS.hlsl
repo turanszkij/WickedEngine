@@ -163,6 +163,38 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 					}
 				}
 				break;
+				case ENTITY_TYPE_RECTLIGHT:
+				{
+#ifdef RTSHADOW
+					const half4 quaternion = light.GetQuaternion();
+					const half3 right = rotate_vector(half3(1, 0, 0), quaternion);
+					const half3 up = rotate_vector(half3(0, 1, 0), quaternion);
+					light.position += right * (bluenoise.x - 0.5) * light.GetLength();
+					light.position += up * (bluenoise.y - 0.5) * light.GetHeight();
+#endif // RTSHADOW
+					L = light.position - surface.P;
+					const float dist2 = dot(L, L);
+					const float range = light.GetRange();
+					const float range2 = range * range;
+
+					[branch]
+					if (dist2 < range2)
+					{
+						const float3 Lunnormalized = L;
+						const float dist = sqrt(dist2);
+						L /= dist;
+
+						SurfaceToLight surfaceToLight;
+						surfaceToLight.create(surface, L);
+
+						[branch]
+						if (any(surfaceToLight.NdotL))
+						{
+							ray.TMax = dist;
+						}
+					}
+				}
+				break;
 				case ENTITY_TYPE_SPOTLIGHT:
 				{
 					float3 Loriginal = normalize(light.position - surface.P);

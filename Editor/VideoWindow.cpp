@@ -62,8 +62,11 @@ void VideoWindow::Create(EditorComponent* _editor)
 				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					video->filename = fileName;
 					video->videoResource = wi::resourcemanager::Load(fileName);
-					wi::video::CreateVideoInstance(&video->videoResource.GetVideo(), &video->videoinstance);
-					filenameLabel.SetText(wi::helper::GetFileNameFromPath(video->filename));
+					if (video->videoResource.IsValid())
+					{
+						wi::video::CreateVideoInstance(&video->videoResource.GetVideo(), &video->videoinstance);
+						filenameLabel.SetText(wi::helper::GetFileNameFromPath(video->filename));
+					}
 					});
 				});
 		}

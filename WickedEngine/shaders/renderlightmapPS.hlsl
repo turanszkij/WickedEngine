@@ -214,6 +214,39 @@ float4 main(Input input) : SV_TARGET
 					}
 				}
 				break;
+				case ENTITY_TYPE_RECTLIGHT:
+				{
+					const half4 quaternion = light.GetQuaternion();
+					const half3 right = rotate_vector(half3(1, 0, 0), quaternion);
+					const half3 up = rotate_vector(half3(0, 1, 0), quaternion);
+					const half3 forward = cross(up, right);
+					if (dot(surface.P - light.position, forward) <= 0)
+						break; // behind light
+					light.position += right * (rng.next_float() - 0.5) * light.GetLength();
+					light.position += up * (rng.next_float() - 0.5) * light.GetHeight();
+					L = light.position - surface.P;
+					const float dist2 = dot(L, L);
+					const float range = light.GetRange();
+					const float range2 = range * range;
+
+					[branch]
+					if (dist2 < range2)
+					{
+						dist = sqrt(dist2);
+						L /= dist;
+						NdotL = saturate(dot(L, surface.N));
+
+						[branch]
+						if (NdotL > 0)
+						{
+							const float3 lightColor = light.GetColor().rgb;
+
+							lighting.direct.diffuse = lightColor;
+							lighting.direct.diffuse *= attenuation_pointlight(dist2, range, range2);
+						}
+					}
+				}
+				break;
 				case ENTITY_TYPE_SPOTLIGHT:
 				{
 					float3 Loriginal = normalize(light.position - surface.P);
