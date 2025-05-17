@@ -2819,7 +2819,7 @@ inline void CreateSpotLightShadowCam(const LightComponent& light, SHCAM& shcam)
 	if (light.type == LightComponent::RECTANGLE)
 	{
 		XMVECTOR P = XMLoadFloat3(&light.position);
-		static float backoffset = 0.5f;
+		static float backoffset = 1.0f;
 		P -= XMLoadFloat3(&light.direction) * backoffset; // back offset hack to fixup the shadow projection limits
 		XMFLOAT3 pos;
 		XMStoreFloat3(&pos, P);

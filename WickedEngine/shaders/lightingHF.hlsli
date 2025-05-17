@@ -521,8 +521,6 @@ inline void light_rect(in ShaderEntity light, in Surface surface, inout Lighting
 		uint2 dim;
 		uint mipcount;
 		tex.GetDimensions(0, dim.x, dim.y, mipcount);
-		half mipcount16f = half(mipcount);
-		half MIP = surface.roughness * mipcount16f;
 		
 		float4 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + 0), float4(surface.P, 1));
 		shadow_pos.xyz /= shadow_pos.w;
@@ -531,7 +529,7 @@ inline void light_rect(in ShaderEntity light, in Surface surface, inout Lighting
 		light_color_diffuse *= diffuse_mask.rgb * diffuse_mask.a * PI; // PI : try to fix energy loss at mip levels
 
 		float2 specular_uv = clipspace_to_uv(nearest2DPoint / float2(light_length * 0.5, light_height * 0.5));
-		half4 specular_mask = tex.SampleLevel(sampler_linear_clamp, specular_uv, MIP);
+		half4 specular_mask = tex.SampleLevel(sampler_linear_clamp, specular_uv, (1 - sqr(1 - saturate(surface.roughness))) * mipcount);
 		light_color_specular *= specular_mask.rgb * specular_mask.a;
 	}
 	
