@@ -14,6 +14,37 @@
 #define LIGHTING_SCATTER
 #endif // WATER
 
+bool AreAllQuadLanesActive()
+{
+    // Get the lane index within the wave
+    uint laneIndex = WaveGetLaneIndex();
+    
+    // Get the active lanes in the wave
+    uint4 ballot = WaveActiveBallot(true);
+    
+    // Assuming a quad is 4 consecutive lanes, check if all 4 lanes in the quad are active
+    // Note: This assumes the quad lanes are contiguous in the wave (implementation-dependent)
+    uint quadStartLane = laneIndex & ~3u; // Align to the start of the quad
+    bool allLanesActive = true;
+    
+    for (uint i = 0; i < 4; i++)
+    {
+        uint laneToCheck = quadStartLane + i;
+        if (laneToCheck < WaveGetLaneCount())
+        {
+            // Check if the lane is active in the ballot
+            allLanesActive = allLanesActive && (ballot[laneToCheck / 32] & (1u << (laneToCheck % 32))) != 0;
+        }
+        else
+        {
+            // If the lane is out of bounds, consider it inactive
+            allLanesActive = false;
+        }
+    }
+    
+    return allLanesActive;
+}
+
 template<typename T>
 inline void QuadBlur(inout T value)
 {
@@ -22,7 +53,7 @@ inline void QuadBlur(inout T value)
 //	Note that I don't implement this in shadowHF.hlsli because we need to
 //	make sure that when averaging, all lanes in the quad are coherent
 //	It wouldn't be good if some waves are not sampling shadows or sampling different slices
-	value = (value + QuadReadAcrossX(value) + QuadReadAcrossY(value) + QuadReadAcrossDiagonal(value)) * 0.25;
+	if(AreAllQuadLanesActive()) value = (value + QuadReadAcrossX(value) + QuadReadAcrossY(value) + QuadReadAcrossDiagonal(value)) * 0.25;
 #endif // __SHADER_STAGE_PIXEL
 }
 

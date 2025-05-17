@@ -882,6 +882,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_VOLUMETRICLIGHT_DIRECTIONAL], "volumetriclight_directionalVS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_VOLUMETRICLIGHT_POINT], "volumetriclight_pointVS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_VOLUMETRICLIGHT_SPOT], "volumetriclight_spotVS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_VOLUMETRICLIGHT_RECTANGLE], "volumetriclight_rectangleVS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_LIGHTVISUALIZER_SPOTLIGHT], "vSpotLightVS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_LIGHTVISUALIZER_POINTLIGHT], "vPointLightVS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_LIGHTVISUALIZER_RECTLIGHT], "vRectLightVS.cso"); });
@@ -923,6 +924,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_VOLUMETRICLIGHT_DIRECTIONAL], "volumetricLight_DirectionalPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_VOLUMETRICLIGHT_POINT], "volumetricLight_PointPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_VOLUMETRICLIGHT_SPOT], "volumetricLight_SpotPS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_VOLUMETRICLIGHT_RECTANGLE], "volumetricLight_rectanglePS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_ENVMAP], "envMapPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_ENVMAP_SKY_STATIC], "envMap_skyPS_static.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_ENVMAP_SKY_DYNAMIC], "envMap_skyPS_dynamic.cso"); });
@@ -1401,11 +1403,12 @@ void LoadShaders()
 
 
 		// volumetric lights:
-		if (args.jobIndex <= LightComponent::SPOT)
+		if (args.jobIndex <= LightComponent::RECTANGLE)
 		{
 			desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
 			desc.bs = &blendStates[BSTYPE_ADDITIVE];
 			desc.rs = &rasterizers[RSTYPE_BACK];
+			desc.pt = PrimitiveTopology::TRIANGLELIST;
 
 			switch (args.jobIndex)
 			{
@@ -1420,6 +1423,12 @@ void LoadShaders()
 			case LightComponent::SPOT:
 				desc.vs = &shaders[VSTYPE_VOLUMETRICLIGHT_SPOT];
 				desc.ps = &shaders[PSTYPE_VOLUMETRICLIGHT_SPOT];
+				break;
+			case LightComponent::RECTANGLE:
+				desc.vs = &shaders[VSTYPE_VOLUMETRICLIGHT_RECTANGLE];
+				desc.ps = &shaders[PSTYPE_VOLUMETRICLIGHT_RECTANGLE];
+				desc.rs = &rasterizers[RSTYPE_FRONT];
+				desc.pt = PrimitiveTopology::TRIANGLESTRIP;
 				break;
 			}
 
@@ -6332,6 +6341,25 @@ void DrawVolumeLights(
 				device->BindDynamicConstantBuffer(miscCb, CB_GETBINDSLOT(MiscCB), cmd);
 
 				device->Draw(192, 0, cmd); // cone
+			}
+			break;
+			case LightComponent::RECTANGLE:
+			{
+				MiscCB miscCb;
+				miscCb.g_xColor.x = float(type_idx);
+				miscCb.g_xColor.y = light.volumetric_boost;
+
+				const XMVECTOR LightPos = XMLoadFloat3(&light.position);
+
+				XMStoreFloat4x4(&miscCb.g_xTransform,
+					XMMatrixScaling(light.GetRange(), light.GetRange(), light.GetRange()) *
+					XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation)) *
+					XMMatrixTranslationFromVector(LightPos) *
+					VP
+				);
+				device->BindDynamicConstantBuffer(miscCb, CB_GETBINDSLOT(MiscCB), cmd);
+
+				device->Draw(14, 0, cmd); // cube
 			}
 			break;
 			}
