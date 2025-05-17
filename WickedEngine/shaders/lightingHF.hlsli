@@ -363,28 +363,6 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 #endif // LIGHTING_SCATTER
 }
 
-// Based on the Frostbite presentation: 
-//	Moving Frostbite to Physically Based Rendering by Sebastien Lagarde, Charles de Rousiers, Siggraph 2014
-//	http://www.frostbite.com/wp-content/uploads/2014/11/course_notes_moving_frostbite_to_pbr.pdf
-inline float RectangleSolidAngle(float3 worldPos, float3 p0, float3 p1, float3 p2, float3 p3)
-{
-	float3 v0 = p0 - worldPos;
-	float3 v1 = p1 - worldPos;
-	float3 v2 = p2 - worldPos;
-	float3 v3 = p3 - worldPos;
-
-	float3 n0 = normalize(cross(v0, v1));
-	float3 n1 = normalize(cross(v1, v2));
-	float3 n2 = normalize(cross(v2, v3));
-	float3 n3 = normalize(cross(v3, v0));
-	
-	float g0 = acos(dot(-n0, n1));
-	float g1 = acos(dot(-n1, n2));
-	float g2 = acos(dot(-n2, n3));
-	float g3 = acos(dot(-n3, n0));
-
-	return saturate(g0 + g1 + g2 + g3 - 2 * PI);
-}
 inline void light_rect(in ShaderEntity light, in Surface surface, inout Lighting lighting, in half shadow_mask = 1)
 {
 	if (shadow_mask <= 0.001)
@@ -422,12 +400,27 @@ inline void light_rect(in ShaderEntity light, in Surface surface, inout Lighting
 	SurfaceToLight surface_to_light;
 	surface_to_light.create(surface, L);
 	
-	surface_to_light.NdotL = RectangleSolidAngle(surface.P, p0, p1, p2, p3) /** 0.2*/ * (
-		saturate(dot(normalize(p0 - surface.P), surface.N)) +
-		saturate(dot(normalize(p1 - surface.P), surface.N)) +
-		saturate(dot(normalize(p2 - surface.P), surface.N)) +
-		saturate(dot(normalize(p3 - surface.P), surface.N)) +
-		saturate(dot(normalize(light.position - surface.P), surface.N))
+	// Solid angle based on the Frostbite presentation: Moving Frostbite to Physically Based Rendering by Sebastien Lagarde, Charles de Rousiers, Siggraph 2014
+	float3 v0 = normalize(p0 - surface.P);
+	float3 v1 = normalize(p1 - surface.P);
+	float3 v2 = normalize(p2 - surface.P);
+	float3 v3 = normalize(p3 - surface.P);
+	float3 n0 = normalize(cross(v0, v1));
+	float3 n1 = normalize(cross(v1, v2));
+	float3 n2 = normalize(cross(v2, v3));
+	float3 n3 = normalize(cross(v3, v0));
+	float g0 = acos(dot(-n0, n1));
+	float g1 = acos(dot(-n1, n2));
+	float g2 = acos(dot(-n2, n3));
+	float g3 = acos(dot(-n3, n0));
+	const float solid_angle = saturate(g0 + g1 + g2 + g3 - 2 * PI);
+	
+	surface_to_light.NdotL = solid_angle * 0.2 * (
+		saturate(dot(v0, surface.N)) +
+		saturate(dot(v1, surface.N)) +
+		saturate(dot(v2, surface.N)) +
+		saturate(dot(v3, surface.N)) +
+		surface_to_light.NdotL
 	);
 	surface_to_light.NdotL_sss = surface_to_light.NdotL;
 		
