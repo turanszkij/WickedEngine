@@ -479,7 +479,7 @@ inline void light_rect(in ShaderEntity light, in Surface surface, inout Lighting
 		shadow_pos.xyz /= shadow_pos.w;
 		float2 diffuse_uv = clipspace_to_uv(shadow_pos.xy);
 		half4 diffuse_mask = tex.SampleLevel(sampler_linear_clamp, diffuse_uv, mipcount - 2);
-		light_color_diffuse *= diffuse_mask.rgb * diffuse_mask.a;
+		light_color_diffuse *= diffuse_mask.rgb * diffuse_mask.a * PI; // PI : try to fix energy loss at mip levels
 
 		float2 specular_uv = clipspace_to_uv(nearest2DPoint / float2(light_length * 0.5, light_height * 0.5));
 		half4 specular_mask = tex.SampleLevel(sampler_linear_clamp, specular_uv, MIP);
