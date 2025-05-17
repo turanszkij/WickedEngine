@@ -14,6 +14,18 @@
 #define LIGHTING_SCATTER
 #endif // WATER
 
+template<typename T>
+inline void QuadBlur(inout T value)
+{
+#if __SHADER_TARGET_STAGE == __SHADER_STAGE_PIXEL && defined(SHADOW_SAMPLING_DISK)
+// Average shadow within quad, this smooths out the dithering a bit:
+//	Note that I don't implement this in shadowHF.hlsli because we need to
+//	make sure that when averaging, all lanes in the quad are coherent
+//	It wouldn't be good if some waves are not sampling shadows or sampling different slices
+	value = (value + QuadReadAcrossX(value) + QuadReadAcrossY(value) + QuadReadAcrossDiagonal(value)) * 0.25;
+#endif // __SHADER_STAGE_PIXEL
+}
+
 struct LightingPart
 {
 	half3 diffuse;
@@ -102,6 +114,8 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 				}
 			}
 		}
+		
+		QuadBlur(light_color);
 		
 		if (!any(light_color))
 			return; // light color lost after shadow
@@ -206,6 +220,8 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 		{
 			light_color *= shadow_cube(light, LunnormalizedShadow, surface.pixel);
 		}
+		
+		QuadBlur(light_color);
 		
 		if (!any(light_color))
 			return; // light color lost after shadow
@@ -321,6 +337,8 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 				light_color *= shadow_2D(light, shadow_pos.xyz, shadow_uv.xy, 0, surface.pixel);
 			}
 		}
+		
+		QuadBlur(light_color);
 		
 		if (!any(light_color))
 			return; // light color lost after shadow

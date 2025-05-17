@@ -1371,6 +1371,7 @@ void LoadShaders()
 			desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
 			desc.ps = &shaders[PSTYPE_LIGHTVISUALIZER];
 			desc.pt = PrimitiveTopology::TRIANGLELIST;
+			desc.il = nullptr;
 
 			switch (args.jobIndex)
 			{
@@ -1384,7 +1385,6 @@ void LoadShaders()
 				desc.bs = &blendStates[BSTYPE_ADDITIVE];
 				desc.vs = &shaders[VSTYPE_LIGHTVISUALIZER_SPOTLIGHT];
 				desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
-				desc.il = nullptr;
 				break;
 			case LightComponent::RECTANGLE:
 				desc.bs = &blendStates[BSTYPE_TRANSPARENT];
@@ -1392,7 +1392,7 @@ void LoadShaders()
 				desc.ps = &shaders[PSTYPE_LIGHTVISUALIZER_RECTLIGHT];
 				desc.rs = &rasterizers[RSTYPE_FRONT];
 				desc.pt = PrimitiveTopology::TRIANGLESTRIP;
-				desc.il = nullptr;
+				desc.dss = &depthStencils[DSSTYPE_DEFAULT];
 				break;
 			}
 
