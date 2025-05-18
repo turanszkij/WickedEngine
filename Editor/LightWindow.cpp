@@ -131,7 +131,7 @@ void LightWindow::Create(EditorComponent* _editor)
 		}
 		});
 	heightSlider.SetEnabled(false);
-	heightSlider.SetTooltip("Adjust the height of the light source.\nWith height and length you can make rectangular light out of a point light.");
+	heightSlider.SetTooltip("Adjust the height of the rectangle light source.\n");
 	AddWidget(&heightSlider);
 
 	outerConeAngleSlider.Create(0.1f, XM_PIDIV2 - 0.01f, 0, 100000, "Outer Cone Angle: ");
