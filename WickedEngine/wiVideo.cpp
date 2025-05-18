@@ -857,11 +857,14 @@ namespace wi::video
 			if (has_flag(instance->decoder.support, VideoDecoderSupportFlags::DPB_AND_OUTPUT_COINCIDE))
 			{
 				decode.src = instance->dpb.texture;
-				decode.src_subresource_luminance = instance->dpb.subresources_luminance[instance->dpb.current_slot];
-				decode.src_subresource_chrominance = instance->dpb.subresources_chrominance[instance->dpb.current_slot];
+				decode.src_subresource_luminance = instance->dpb.subresources_luminance[instance->dpb.next_slot];
+				decode.src_subresource_chrominance = instance->dpb.subresources_chrominance[instance->dpb.next_slot];
 			}
-			instance->output_textures_request.push_back(decode);
-			instance->output_textures_used.push_back(decode);
+			if (decode.display_order >= instance->target_display_order)
+			{
+				instance->output_textures_request.push_back(decode);
+				instance->output_textures_used.push_back(decode);
+			}
 
 			instance->current_decode_frame = std::min(instance->current_decode_frame, std::max(0, (int)video->frame_infos.size() - 1));
 			const Video::FrameInfo& frame_info = video->frame_infos[instance->current_decode_frame];
