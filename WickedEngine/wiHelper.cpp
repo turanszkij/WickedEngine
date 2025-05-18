@@ -1396,7 +1396,7 @@ namespace wi::helper
 			MultiByteToWideChar(CP_UTF8, 0, from.c_str(), -1, &to[0], num);
 		}
 #else
-		std::mbstate_t state = std::mbstate_t {};
+		std::mbstate_t state {};
 		const char* from_c = from.c_str();
 		std::setlocale(LC_ALL, "en_US.utf8");
 		const std::size_t len = std::mbsrtowcs(nullptr, &from_c, 0, &state);
@@ -1415,7 +1415,7 @@ namespace wi::helper
 			WideCharToMultiByte(CP_UTF8, 0, from.c_str(), -1, &to[0], num, NULL, NULL);
 		}
 #else
-		std::mbstate_t state = std::mbstate_t {};
+		std::mbstate_t state {};
 		const wchar_t* from_c = from.c_str();
 		std::setlocale(LC_ALL, "en_US.utf8");
 		const std::size_t len = std::wcsrtombs(nullptr, &from_c, 0, &state);
@@ -1438,7 +1438,7 @@ namespace wi::helper
 		}
 		return num;
 #else
-		std::mbstate_t state = std::mbstate_t {};
+		std::mbstate_t state {};
 		const std::size_t len = std::mbsrtowcs(to, &from, dest_size_in_characters, &state);
 		if (len == static_cast<std::size_t>(-1)) return -1;
 		return len + 1; // string length + null terminating character
@@ -1459,7 +1459,7 @@ namespace wi::helper
 		}
 		return num;
 #else
-		std::mbstate_t state = std::mbstate_t {};
+		std::mbstate_t state {};
 		const std::size_t len = std::wcsrtombs(to, &from, dest_size_in_characters, &state);
 		if (len == static_cast<std::size_t>(-1)) return -1;
 		return len + 1; // string length + null terminating character
