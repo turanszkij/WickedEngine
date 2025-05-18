@@ -365,6 +365,8 @@ namespace wi::scene
 
 		RunMeshUpdateSystem(ctx);
 
+		RunVideoUpdateSystem(ctx);
+
 		RunMaterialUpdateSystem(ctx);
 
 		wi::jobsystem::Wait(ctx); // dependencies
@@ -396,8 +398,6 @@ namespace wi::scene
 		RunParticleUpdateSystem(ctx);
 
 		RunSoundUpdateSystem(ctx);
-
-		RunVideoUpdateSystem(ctx);
 
 		RunImpostorUpdateSystem(ctx);
 
@@ -5354,10 +5354,7 @@ namespace wi::scene
 			if (video.videoResource.IsValid())
 			{
 				const wi::video::Video& vid = video.videoResource.GetVideo();
-				if (vid.frame_infos.size() > video.videoinstance.current_frame)
-				{
-					video.currentTimer = vid.frame_infos[video.videoinstance.current_frame].timestamp_seconds;
-				}
+				video.currentTimer = video.videoinstance.current_time;
 			}
 
 			if (video.IsPlaying())
@@ -5380,6 +5377,7 @@ namespace wi::scene
 
 			video.videoinstance.flags |= wi::video::VideoInstance::Flags::Mipmapped;
 
+			wi::video::UpdateVideo(&video.videoinstance, dt);
 		}
 	}
 	void Scene::RunScriptUpdateSystem(wi::jobsystem::context& ctx)

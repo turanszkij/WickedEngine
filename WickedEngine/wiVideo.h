@@ -56,7 +56,6 @@ namespace wi::video
 		struct DPB
 		{
 			wi::graphics::Texture texture;
-			wi::graphics::Texture output;
 			int subresources_luminance[17] = {};
 			int subresources_chrominance[17] = {};
 			int poc_status[17] = {};
@@ -72,14 +71,18 @@ namespace wi::video
 			wi::graphics::Texture texture;
 			int subresource_srgb = -1;
 			int display_order = -1;
+
+			wi::graphics::Texture src;
+			int src_subresource_luminance = -1;
+			int src_subresource_chrominance = -1;
 		};
 		wi::vector<OutputTexture> output_textures_free;
+		wi::vector<OutputTexture> output_textures_request;
 		wi::vector<OutputTexture> output_textures_used;
 		OutputTexture output;
 		int target_display_order = 0;
-		int current_frame = 0;
-		float time_until_next_frame = 0;
-		wi::vector<wi::graphics::GPUBarrier> barriers;
+		int current_decode_frame = 0;
+		float current_time = 0;
 		enum class Flags
 		{
 			Empty = 0,
@@ -104,8 +107,10 @@ namespace wi::video
 	bool CreateVideoH264RAW(const uint8_t* filedata, size_t filesize, Video* video);
 	bool CreateVideoInstance(const Video* video, VideoInstance* instance);
 
-	bool IsDecodingRequired(const VideoInstance* instance, float dt);
-	void UpdateVideo(VideoInstance* instance, float dt, wi::graphics::CommandList cmd);
+	void UpdateVideo(VideoInstance* instance, float dt);
+
+	bool IsDecodingRequired(const VideoInstance* instance);
+	void DecodeVideo(VideoInstance* instance, wi::graphics::CommandList cmd);
 	void ResolveVideoToRGB(VideoInstance* instance, wi::graphics::CommandList cmd);
 
 	// Set video instance state to a timer (approximately), this will take efect the next time it is decoded

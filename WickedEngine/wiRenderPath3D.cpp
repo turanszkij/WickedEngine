@@ -808,7 +808,7 @@ namespace wi
 			for (size_t i = 0; i < scene->videos.GetCount(); ++i)
 			{
 				const wi::scene::VideoComponent& video = scene->videos[i];
-				if (wi::video::IsDecodingRequired(&video.videoinstance, scene->dt))
+				if (wi::video::IsDecodingRequired(&video.videoinstance))
 				{
 					video_cmd = device->BeginCommandList(QUEUE_VIDEO_DECODE);
 					break;
@@ -817,7 +817,7 @@ namespace wi
 			for (size_t i = 0; i < scene->videos.GetCount(); ++i)
 			{
 				wi::scene::VideoComponent& video = scene->videos[i];
-				wi::video::UpdateVideo(&video.videoinstance, scene->dt, video_cmd);
+				wi::video::DecodeVideo(&video.videoinstance, video_cmd);
 			}
 		}
 

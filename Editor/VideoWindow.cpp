@@ -84,7 +84,7 @@ void VideoWindow::Create(EditorComponent* _editor)
 		{
 			if (video->IsPlaying())
 			{
-				video->Stop();
+				video->Pause();
 				playpauseButton.SetText(ICON_PLAY);
 			}
 			else
@@ -103,9 +103,6 @@ void VideoWindow::Create(EditorComponent* _editor)
 		if (video != nullptr)
 		{
 			video->Stop();
-			video->videoinstance.current_frame = 0;
-			video->videoinstance.flags &= ~wi::video::VideoInstance::Flags::InitialFirstFrameDecoded;
-			video->videoinstance.flags &= ~wi::video::VideoInstance::Flags::Playing;
 		}
 		});
 	AddWidget(&stopButton);
@@ -218,6 +215,8 @@ void VideoWindow::SetEntity(Entity entity)
 			str += "Picture Parameter Sets: " + std::to_string(videofile.pps_count) + "\n";
 			str += "Sequence Parameter Sets: " + std::to_string(videofile.sps_count) + "\n";
 			str += "Decode Picture Buffers: " + std::to_string(video->videoinstance.dpb.texture.desc.array_size) + "\n";
+			str += "Target display order: " + std::to_string(video->videoinstance.target_display_order) + "\n";
+			str += "Display buffers free: " + std::to_string(video->videoinstance.output_textures_free.size()) + "\n";
 			str += "Display buffers in use: " + std::to_string(video->videoinstance.output_textures_used.size()) + "\n\n";
 			infoLabel.SetText(str);
 

@@ -79,9 +79,13 @@ namespace wi::video
 			int64_t prioB = (int64_t(frameB.gop) << 32ll) | int64_t(frameB.poc);
 			return prioA < prioB;
 		});
+		float timestamp = 0;
 		for (size_t i = 0; i < frame_display_order.size(); ++i)
 		{
-			video->frame_infos[frame_display_order[i]].display_order = (int)i;
+			Video::FrameInfo& frame_info = video->frame_infos[frame_display_order[i]];
+			frame_info.display_order = (int)i;
+			frame_info.timestamp_seconds = timestamp;
+			timestamp += frame_info.duration_seconds;
 		}
 	}
 
@@ -332,7 +336,6 @@ namespace wi::video
 						}
 
 						aligned_size += AlignTo(info.size, alignment);
-						info.timestamp_seconds = float(double(timestamp) * timescale_rcp);
 						info.duration_seconds = float(double(duration) * timescale_rcp);
 					}
 
@@ -551,8 +554,6 @@ namespace wi::video
 			}
 		}
 
-		CalculatePictureOrder(video);
-
 		// Calculate the total aligned size of the bitstream buffer that will contain the slice datas:
 		const uint64_t alignment = device->GetVideoDecodeBitstreamAlignment();
 		uint64_t aligned_size = 0;
@@ -562,9 +563,10 @@ namespace wi::video
 		{
 			aligned_size += align(frame_info.size, alignment);
 			frame_info.duration_seconds = 1.0f / 60.0f; // 60 FPS lock
-			frame_info.timestamp_seconds = video->duration_seconds;
 			video->duration_seconds += frame_info.duration_seconds;
 		}
+
+		CalculatePictureOrder(video);
 
 		// Write the slice datas into the aligned offsets, and store the aligned offsets in frame_infos, from here they will be storing offsets into the bitstream buffer, and not the source file:
 		uint64_t aligned_offset = 0;
@@ -589,7 +591,7 @@ namespace wi::video
 	bool CreateVideoInstance(const Video* video, VideoInstance* instance)
 	{
 		instance->video = video;
-		instance->current_frame = 0;
+		instance->current_decode_frame = 0;
 		instance->flags &= ~VideoInstance::Flags::InitialFirstFrameDecoded;
 
 		GraphicsDevice* device = GetDevice();
@@ -642,8 +644,6 @@ namespace wi::video
 		if (has_flag(instance->decoder.support, VideoDecoderSupportFlags::DPB_AND_OUTPUT_COINCIDE))
 		{
 			// DPB_AND_OUTPUT_COINCIDE so DPB can be used for output:
-			instance->dpb.output = {};
-
 			for (uint32_t i = 0; i < td.array_size; ++i)
 			{
 				instance->dpb.resource_states[i] = td.layout;
@@ -666,54 +666,95 @@ namespace wi::video
 				);
 			}
 		}
-		else
-		{
-			// DPB_AND_OUTPUT_COINCIDE NOT supported so DPB MUST NOT be used for output:
-			td.array_size = 1;
-			td.bind_flags = BindFlag::SHADER_RESOURCE;
-			td.misc_flags = ResourceMiscFlag::VIDEO_DECODE_OUTPUT_ONLY;
-			td.misc_flags |= ResourceMiscFlag::VIDEO_COMPATIBILITY_H264;
-			td.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
-			success = device->CreateTexture(&td, nullptr, &instance->dpb.output);
-			assert(success);
-			device->SetName(&instance->dpb.output, "VideoInstance::DPB::output");
-
-			Format luminance_format = Format::R8_UNORM;
-			ImageAspect luminance_aspect = ImageAspect::LUMINANCE;
-			instance->dpb.subresources_luminance[0] = device->CreateSubresource(
-				&instance->dpb.output,
-				SubresourceType::SRV,
-				0, 1, 0, 1,
-				&luminance_format, &luminance_aspect
-			);
-
-			Format chrominance_format = Format::R8G8_UNORM;
-			ImageAspect chrominance_aspect = ImageAspect::CHROMINANCE;
-			instance->dpb.subresources_chrominance[0] = device->CreateSubresource(
-				&instance->dpb.output,
-				SubresourceType::SRV,
-				0, 1, 0, 1,
-				&chrominance_format, &chrominance_aspect
-			);
-		}
 
 		return success;
 	}
 
-	bool IsDecodingRequired(const VideoInstance* instance, float dt)
+	void UpdateDisplayOrderOutput(VideoInstance* instance)
+	{
+		// Check if current output texture can be replaced by a newer one:
+		if (instance->output.display_order != instance->target_display_order)
+		{
+			for (size_t i = 0; i < instance->output_textures_used.size(); ++i)
+			{
+				if (instance->output_textures_used[i].display_order == instance->target_display_order)
+				{
+					if (instance->output.texture.IsValid())
+					{
+						// Free current output texture:
+						instance->output_textures_free.push_back(instance->output);
+						instance->output = {};
+					}
+
+					// Take this used texture as current output:
+					instance->output = std::move(instance->output_textures_used[i]);
+
+					// Remove this used texture:
+					std::swap(instance->output_textures_used[i], instance->output_textures_used.back());
+					instance->output_textures_used.pop_back();
+					break;
+				}
+			}
+		}
+
+		// Check if any used textures can be freed because their display order is outdated:
+		for (size_t i = 0; i < instance->output_textures_used.size(); ++i)
+		{
+			if (instance->output_textures_used[i].display_order < instance->target_display_order)
+			{
+				// Remove this used texture:
+				instance->output_textures_free.push_back(std::move(instance->output_textures_used[i]));
+				std::swap(instance->output_textures_used[i], instance->output_textures_used.back());
+				instance->output_textures_used.pop_back();
+			}
+		}
+	}
+
+	void UpdateVideo(VideoInstance* instance, float dt)
+	{
+		if (instance == nullptr || instance->video == nullptr)
+			return;
+
+		if (has_flag(instance->flags, VideoInstance::Flags::Looped) && instance->current_time > instance->video->duration_seconds)
+		{
+			instance->current_time = 0;
+			instance->current_decode_frame = 0;
+		}
+
+		// Search for the exact frame that we should currently be displaying:
+		instance->target_display_order = 0;
+		for (size_t i = 0; i < instance->video->frame_infos.size(); ++i)
+		{
+			const Video::FrameInfo& frame_info = instance->video->frame_infos[i];
+			if (frame_info.timestamp_seconds <= instance->current_time && frame_info.timestamp_seconds + frame_info.duration_seconds > instance->current_time)
+			{
+				instance->target_display_order = frame_info.display_order;
+				break;
+			}
+		}
+
+		UpdateDisplayOrderOutput(instance);
+
+		// Important that this is at the end of func:
+		if (has_flag(instance->flags, VideoInstance::Flags::Playing))
+		{
+			instance->current_time += dt;
+		}
+	}
+	bool IsDecodingRequired(const VideoInstance* instance)
 	{
 		if (!GetDevice()->CheckCapability(GraphicsDeviceCapability::VIDEO_DECODE_H264))
 			return false;
 		if (instance == nullptr || instance->video == nullptr)
 			return false;
+		if (instance->current_decode_frame >= (int)instance->video->frame_infos.size())
+			return false;
 		if (!has_flag(instance->flags, VideoInstance::Flags::InitialFirstFrameDecoded))
-			return true;
-		if (has_flag(instance->flags, VideoInstance::Flags::Playing) && instance->time_until_next_frame - dt <= 0)
 			return true;
 		bool found_next_displayable = false;
 		for (auto& x : instance->output_textures_used)
 		{
-			if (x.display_order == instance->target_display_order)
+			if (x.display_order == instance->target_display_order + 1)
 			{
 				found_next_displayable = true;
 				break;
@@ -725,165 +766,220 @@ namespace wi::video
 		}
 		return false;
 	}
-	void UpdateVideo(VideoInstance* instance, float dt, CommandList cmd)
+	void DecodeVideo(VideoInstance* instance, CommandList cmd)
 	{
-		if (!GetDevice()->CheckCapability(GraphicsDeviceCapability::VIDEO_DECODE_H264))
-			return;
-		if (instance == nullptr || instance->video == nullptr)
-			return;
-
-		if (has_flag(instance->flags, VideoInstance::Flags::InitialFirstFrameDecoded))
-		{
-			if (!has_flag(instance->flags, VideoInstance::Flags::Playing))
-				return;
-			instance->time_until_next_frame -= dt;
-			if (instance->time_until_next_frame > 0)
-				return;
-			if (instance->current_frame >= (int)instance->video->frame_infos.size() - 1)
-			{
-				if (has_flag(instance->flags, VideoInstance::Flags::Looped))
-				{
-					instance->current_frame = 0;
-				}
-				else
-				{
-					instance->flags &= ~VideoInstance::Flags::Playing;
-					instance->current_frame = (int)instance->video->frame_infos.size() - 1;
-				}
-			}
-		}
-
 		if (!cmd.IsValid())
 			return;
 
 		GraphicsDevice* device = GetDevice();
-
 		const Video* video = instance->video;
-		instance->current_frame = std::min(instance->current_frame, std::max(0, (int)video->frame_infos.size() - 1));
-		const Video::FrameInfo& frame_info = video->frame_infos[instance->current_frame];
-		instance->time_until_next_frame = frame_info.duration_seconds;
 
-		const h264::SliceHeader* slice_header = (const h264::SliceHeader*)video->slice_header_datas.data() + instance->current_frame;
-		const h264::PPS* pps = (const h264::PPS*)video->pps_datas.data() + slice_header->pic_parameter_set_id;
-		const h264::SPS* sps = (const h264::SPS*)video->sps_datas.data() + pps->seq_parameter_set_id;
-
-		VideoDecodeOperation decode_operation;
-		if (instance->current_frame == 0 || has_flag(instance->flags, VideoInstance::Flags::DecoderReset))
+		while (IsDecodingRequired(instance))
 		{
-			decode_operation.flags = VideoDecodeOperation::FLAG_SESSION_RESET;
-			instance->flags &= ~VideoInstance::Flags::DecoderReset;
-			instance->output = {};
-			instance->output_textures_free.clear();
-			instance->output_textures_used.clear();
-			instance->target_display_order = instance->current_frame;
-		}
-		if (frame_info.type == VideoFrameType::Intra)
-		{
-			instance->dpb.reference_usage.clear();
-			instance->dpb.next_ref = 0;
-			instance->dpb.next_slot = 0;
-		}
-		instance->dpb.current_slot = instance->dpb.next_slot;
-		instance->dpb.poc_status[instance->dpb.current_slot] = frame_info.poc;
-		instance->dpb.framenum_status[instance->dpb.current_slot] = slice_header->frame_num;
-		decode_operation.stream = &video->data_stream;
-		decode_operation.stream_offset = frame_info.offset;
-		decode_operation.stream_size = frame_info.size;
-		decode_operation.poc[0] = frame_info.poc;
-		decode_operation.poc[1] = frame_info.poc;
-		decode_operation.frame_type = frame_info.type;
-		decode_operation.reference_priority = frame_info.reference_priority;
-		decode_operation.decoded_frame_index = instance->current_frame;
-		decode_operation.slice_header = slice_header;
-		decode_operation.pps = pps;
-		decode_operation.sps = sps;
-		decode_operation.current_dpb = instance->dpb.current_slot;
-		decode_operation.dpb_reference_count = (uint32_t)instance->dpb.reference_usage.size();
-		decode_operation.dpb_reference_slots = instance->dpb.reference_usage.data();
-		decode_operation.dpb_poc = instance->dpb.poc_status;
-		decode_operation.dpb_framenum = instance->dpb.framenum_status;
-		decode_operation.DPB = &instance->dpb.texture;
-
-		ImageAspect aspect_luma = ImageAspect::LUMINANCE;
-		ImageAspect aspect_chroma = ImageAspect::CHROMINANCE;
-		if (has_flag(instance->decoder.support, VideoDecoderSupportFlags::DPB_AND_OUTPUT_COINCIDE))
-		{
-			decode_operation.output = nullptr;
-			// Ensure that current DPB slot is in DST state:
-			if (instance->dpb.resource_states[instance->dpb.current_slot] != ResourceState::VIDEO_DECODE_DPB)
+			// Allocate one output texture:
+			if (instance->output_textures_free.empty())
 			{
-				instance->barriers.push_back(GPUBarrier::Image(&instance->dpb.texture, instance->dpb.resource_states[instance->dpb.current_slot], ResourceState::VIDEO_DECODE_DPB, 0, instance->dpb.current_slot, &aspect_luma));
-				instance->barriers.push_back(GPUBarrier::Image(&instance->dpb.texture, instance->dpb.resource_states[instance->dpb.current_slot], ResourceState::VIDEO_DECODE_DPB, 0, instance->dpb.current_slot, &aspect_chroma));
-				instance->dpb.resource_states[instance->dpb.current_slot] = ResourceState::VIDEO_DECODE_DPB;
-			}
-			// Ensure that reference frame DPB slots are in SRC state:
-			for (size_t i = 0; i < instance->dpb.reference_usage.size(); ++i)
-			{
-				uint8_t ref = instance->dpb.reference_usage[i];
-				if (instance->dpb.resource_states[ref] != ResourceState::VIDEO_DECODE_SRC)
+				VideoInstance::OutputTexture& output = instance->output_textures_free.emplace_back();
+				TextureDesc td;
+				td.width = video->width;
+				td.height = video->height;
+				td.format = Format::R8G8B8A8_UNORM;
+				if (has_flag(instance->flags, VideoInstance::Flags::Mipmapped))
 				{
-					instance->barriers.push_back(GPUBarrier::Image(&instance->dpb.texture, instance->dpb.resource_states[ref], ResourceState::VIDEO_DECODE_SRC, 0, ref, &aspect_luma));
-					instance->barriers.push_back(GPUBarrier::Image(&instance->dpb.texture, instance->dpb.resource_states[ref], ResourceState::VIDEO_DECODE_SRC, 0, ref, &aspect_chroma));
-					instance->dpb.resource_states[ref] = ResourceState::VIDEO_DECODE_SRC;
+					td.mip_levels = 0; // max mipcount
+				}
+				td.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+				td.misc_flags = ResourceMiscFlag::TYPED_FORMAT_CASTING;
+				td.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
+				bool success = device->CreateTexture(&td, nullptr, &output.texture);
+				device->SetName(&output.texture, "VideoInstance::OutputTexture");
+				assert(success);
+
+				if (has_flag(instance->flags, VideoInstance::Flags::Mipmapped))
+				{
+					for (uint32_t i = 0; i < output.texture.GetDesc().mip_levels; ++i)
+					{
+						int subresource_index;
+						subresource_index = device->CreateSubresource(&output.texture, SubresourceType::SRV, 0, 1, i, 1);
+						assert(subresource_index == i);
+						subresource_index = device->CreateSubresource(&output.texture, SubresourceType::UAV, 0, 1, i, 1);
+						assert(subresource_index == i);
+					}
+				}
+
+				// This part must be AFTER mip level subresource creation:
+				Format srgb_format = GetFormatSRGB(td.format);
+				output.subresource_srgb = device->CreateSubresource(
+					&output.texture,
+					SubresourceType::SRV,
+					0, -1,
+					0, -1,
+					&srgb_format
+				);
+
+				if (!has_flag(instance->decoder.support, VideoDecoderSupportFlags::DPB_AND_OUTPUT_COINCIDE))
+				{
+					// Must create separate YUV texture from DPB in non-coincide mode:
+					td.width = video->padded_width;
+					td.height = video->padded_height;
+					td.format = Format::NV12;
+					td.mip_levels = 1;
+					td.bind_flags = BindFlag::SHADER_RESOURCE;
+					td.misc_flags = ResourceMiscFlag::VIDEO_DECODE_OUTPUT_ONLY;
+					td.misc_flags |= ResourceMiscFlag::VIDEO_COMPATIBILITY_H264;
+					td.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
+					success = device->CreateTexture(&td, nullptr, &output.src);
+					assert(success);
+					device->SetName(&output.src, "VideoInstance::OutputTexture::src");
+
+					Format luminance_format = Format::R8_UNORM;
+					ImageAspect luminance_aspect = ImageAspect::LUMINANCE;
+					output.src_subresource_luminance = device->CreateSubresource(
+						&output.src,
+						SubresourceType::SRV,
+						0, 1, 0, 1,
+						&luminance_format, &luminance_aspect
+					);
+
+					Format chrominance_format = Format::R8G8_UNORM;
+					ImageAspect chrominance_aspect = ImageAspect::CHROMINANCE;
+					output.src_subresource_chrominance = device->CreateSubresource(
+						&output.src,
+						SubresourceType::SRV,
+						0, 1, 0, 1,
+						&chrominance_format, &chrominance_aspect
+					);
 				}
 			}
-		}
-		else
-		{
-			// if DPB_AND_OUTPUT_COINCIDE is NOT supported, then DPB is kept always in DPB state, and only the output tex is ever a shader resource:
-			decode_operation.output = &instance->dpb.output;
-			instance->barriers.push_back(GPUBarrier::Image(&instance->dpb.output, instance->dpb.output.desc.layout, ResourceState::VIDEO_DECODE_DST, -1, -1, &aspect_luma));
-			instance->barriers.push_back(GPUBarrier::Image(&instance->dpb.output, instance->dpb.output.desc.layout, ResourceState::VIDEO_DECODE_DST, -1, -1, &aspect_chroma));
-		}
-		if (!instance->barriers.empty())
-		{
-			device->Barrier(instance->barriers.data(), (uint32_t)instance->barriers.size(), cmd);
-			instance->barriers.clear();
-		}
-
-		device->VideoDecode(&instance->decoder, &decode_operation, cmd);
-
-		if (has_flag(instance->decoder.support, VideoDecoderSupportFlags::DPB_AND_OUTPUT_COINCIDE))
-		{
-			// The current DPB slot is transitioned into a shader readable state because it will need to be resolved into RGB on a different GPU queue:
-			//	The video queue must be used to transition from video states
-			if (instance->dpb.resource_states[instance->dpb.current_slot] != ResourceState::SHADER_RESOURCE_COMPUTE)
+			VideoInstance::OutputTexture decode = std::move(instance->output_textures_free.back());
+			instance->output_textures_free.pop_back();
+			decode.display_order = video->frame_infos[instance->current_decode_frame].display_order;
+			if (has_flag(instance->decoder.support, VideoDecoderSupportFlags::DPB_AND_OUTPUT_COINCIDE))
 			{
+				decode.src = instance->dpb.texture;
+				decode.src_subresource_luminance = instance->dpb.subresources_luminance[instance->dpb.current_slot];
+				decode.src_subresource_chrominance = instance->dpb.subresources_chrominance[instance->dpb.current_slot];
+			}
+			instance->output_textures_request.push_back(decode);
+			instance->output_textures_used.push_back(decode);
+
+			instance->current_decode_frame = std::min(instance->current_decode_frame, std::max(0, (int)video->frame_infos.size() - 1));
+			const Video::FrameInfo& frame_info = video->frame_infos[instance->current_decode_frame];
+
+			const h264::SliceHeader* slice_header = (const h264::SliceHeader*)video->slice_header_datas.data() + instance->current_decode_frame;
+			const h264::PPS* pps = (const h264::PPS*)video->pps_datas.data() + slice_header->pic_parameter_set_id;
+			const h264::SPS* sps = (const h264::SPS*)video->sps_datas.data() + pps->seq_parameter_set_id;
+
+			VideoDecodeOperation decode_operation;
+			if (instance->current_decode_frame == 0 || has_flag(instance->flags, VideoInstance::Flags::DecoderReset))
+			{
+				decode_operation.flags = VideoDecodeOperation::FLAG_SESSION_RESET;
+				instance->flags &= ~VideoInstance::Flags::DecoderReset;
+			}
+			if (frame_info.type == VideoFrameType::Intra)
+			{
+				instance->dpb.reference_usage.clear();
+				instance->dpb.next_ref = 0;
+				instance->dpb.next_slot = 0;
+			}
+			instance->dpb.current_slot = instance->dpb.next_slot;
+			instance->dpb.poc_status[instance->dpb.current_slot] = frame_info.poc;
+			instance->dpb.framenum_status[instance->dpb.current_slot] = slice_header->frame_num;
+			decode_operation.stream = &video->data_stream;
+			decode_operation.stream_offset = frame_info.offset;
+			decode_operation.stream_size = frame_info.size;
+			decode_operation.poc[0] = frame_info.poc;
+			decode_operation.poc[1] = frame_info.poc;
+			decode_operation.frame_type = frame_info.type;
+			decode_operation.reference_priority = frame_info.reference_priority;
+			decode_operation.decoded_frame_index = instance->current_decode_frame;
+			decode_operation.slice_header = slice_header;
+			decode_operation.pps = pps;
+			decode_operation.sps = sps;
+			decode_operation.current_dpb = instance->dpb.current_slot;
+			decode_operation.dpb_reference_count = (uint32_t)instance->dpb.reference_usage.size();
+			decode_operation.dpb_reference_slots = instance->dpb.reference_usage.data();
+			decode_operation.dpb_poc = instance->dpb.poc_status;
+			decode_operation.dpb_framenum = instance->dpb.framenum_status;
+			decode_operation.DPB = &instance->dpb.texture;
+
+			ImageAspect aspect_luma = ImageAspect::LUMINANCE;
+			ImageAspect aspect_chroma = ImageAspect::CHROMINANCE;
+			if (has_flag(instance->decoder.support, VideoDecoderSupportFlags::DPB_AND_OUTPUT_COINCIDE))
+			{
+				decode_operation.output = nullptr;
+				// Ensure that current DPB slot is in DST state:
+				if (instance->dpb.resource_states[instance->dpb.current_slot] != ResourceState::VIDEO_DECODE_DPB)
+				{
+					wi::renderer::PushBarrier(GPUBarrier::Image(&instance->dpb.texture, instance->dpb.resource_states[instance->dpb.current_slot], ResourceState::VIDEO_DECODE_DPB, 0, instance->dpb.current_slot, &aspect_luma));
+					wi::renderer::PushBarrier(GPUBarrier::Image(&instance->dpb.texture, instance->dpb.resource_states[instance->dpb.current_slot], ResourceState::VIDEO_DECODE_DPB, 0, instance->dpb.current_slot, &aspect_chroma));
+					instance->dpb.resource_states[instance->dpb.current_slot] = ResourceState::VIDEO_DECODE_DPB;
+				}
+				// Ensure that reference frame DPB slots are in SRC state:
+				for (size_t i = 0; i < instance->dpb.reference_usage.size(); ++i)
+				{
+					uint8_t ref = instance->dpb.reference_usage[i];
+					if (instance->dpb.resource_states[ref] != ResourceState::VIDEO_DECODE_SRC)
+					{
+						wi::renderer::PushBarrier(GPUBarrier::Image(&instance->dpb.texture, instance->dpb.resource_states[ref], ResourceState::VIDEO_DECODE_SRC, 0, ref, &aspect_luma));
+						wi::renderer::PushBarrier(GPUBarrier::Image(&instance->dpb.texture, instance->dpb.resource_states[ref], ResourceState::VIDEO_DECODE_SRC, 0, ref, &aspect_chroma));
+						instance->dpb.resource_states[ref] = ResourceState::VIDEO_DECODE_SRC;
+					}
+				}
+			}
+			else
+			{
+				// if DPB_AND_OUTPUT_COINCIDE is NOT supported, then DPB is kept always in DPB state, and only the output tex is ever a shader resource:
+				decode_operation.output = &decode.src;
+				wi::renderer::PushBarrier(GPUBarrier::Image(&decode.src, decode.src.desc.layout, ResourceState::VIDEO_DECODE_DST, -1, -1, &aspect_luma));
+				wi::renderer::PushBarrier(GPUBarrier::Image(&decode.src, decode.src.desc.layout, ResourceState::VIDEO_DECODE_DST, -1, -1, &aspect_chroma));
+			}
+			wi::renderer::FlushBarriers(cmd);
+
+			device->VideoDecode(&instance->decoder, &decode_operation, cmd);
+
+			if (has_flag(instance->decoder.support, VideoDecoderSupportFlags::DPB_AND_OUTPUT_COINCIDE))
+			{
+				// The current DPB slot is transitioned into a shader readable state because it will need to be resolved into RGB on a different GPU queue:
+				//	The video queue must be used to transition from video states
+				if (instance->dpb.resource_states[instance->dpb.current_slot] != ResourceState::SHADER_RESOURCE_COMPUTE)
+				{
+					GPUBarrier barriers[] = {
+						GPUBarrier::Image(&instance->dpb.texture, instance->dpb.resource_states[instance->dpb.current_slot], ResourceState::SHADER_RESOURCE_COMPUTE, 0, instance->dpb.current_slot, &aspect_luma),
+						GPUBarrier::Image(&instance->dpb.texture, instance->dpb.resource_states[instance->dpb.current_slot], ResourceState::SHADER_RESOURCE_COMPUTE, 0, instance->dpb.current_slot, &aspect_chroma),
+					};
+					device->Barrier(barriers, arraysize(barriers), cmd);
+					instance->dpb.resource_states[instance->dpb.current_slot] = ResourceState::SHADER_RESOURCE_COMPUTE;
+				}
+			}
+			else
+			{
+				// if DPB_AND_OUTPUT_COINCIDE is NOT supported, then DPB is kept always in DPB state, and only the output tex is ever a shader resource:
 				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&instance->dpb.texture, instance->dpb.resource_states[instance->dpb.current_slot], ResourceState::SHADER_RESOURCE_COMPUTE, 0, instance->dpb.current_slot, &aspect_luma),
-					GPUBarrier::Image(&instance->dpb.texture, instance->dpb.resource_states[instance->dpb.current_slot], ResourceState::SHADER_RESOURCE_COMPUTE, 0, instance->dpb.current_slot, &aspect_chroma),
+					GPUBarrier::Image(&decode.src, ResourceState::VIDEO_DECODE_DST, decode.src.desc.layout, -1, -1, &aspect_luma),
+					GPUBarrier::Image(&decode.src, ResourceState::VIDEO_DECODE_DST, decode.src.desc.layout, -1, -1, &aspect_chroma),
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
-				instance->dpb.resource_states[instance->dpb.current_slot] = ResourceState::SHADER_RESOURCE_COMPUTE;
 			}
-		}
-		else
-		{
-			// if DPB_AND_OUTPUT_COINCIDE is NOT supported, then DPB is kept always in DPB state, and only the output tex is ever a shader resource:
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&instance->dpb.output, ResourceState::VIDEO_DECODE_DST, instance->dpb.output.desc.layout, -1, -1, &aspect_luma),
-				GPUBarrier::Image(&instance->dpb.output, ResourceState::VIDEO_DECODE_DST, instance->dpb.output.desc.layout, -1, -1, &aspect_chroma),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
 
-		// DPB slot management:
-		//	When current frame was a reference, then the next frame can not overwrite its DPB slot, so increment next_slot as a ring buffer
-		//	However, the ring buffer will wrap around so older reference frames can be overwritten by this
-		if (frame_info.reference_priority > 0)
-		{
-			if (instance->dpb.next_ref >= instance->dpb.reference_usage.size())
+			// DPB slot management:
+			//	When current frame was a reference, then the next frame can not overwrite its DPB slot, so increment next_slot as a ring buffer
+			//	However, the ring buffer will wrap around so older reference frames can be overwritten by this
+			if (frame_info.reference_priority > 0)
 			{
-				instance->dpb.reference_usage.resize(instance->dpb.next_ref + 1);
+				if (instance->dpb.next_ref >= instance->dpb.reference_usage.size())
+				{
+					instance->dpb.reference_usage.resize(instance->dpb.next_ref + 1);
+				}
+				instance->dpb.reference_usage[instance->dpb.next_ref] = instance->dpb.current_slot;
+				instance->dpb.next_ref = (instance->dpb.next_ref + 1) % (instance->dpb.texture.desc.array_size - 1);
+				instance->dpb.next_slot = (instance->dpb.next_slot + 1) % instance->dpb.texture.desc.array_size;
 			}
-			instance->dpb.reference_usage[instance->dpb.next_ref] = instance->dpb.current_slot;
-			instance->dpb.next_ref = (instance->dpb.next_ref + 1) % (instance->dpb.texture.desc.array_size - 1);
-			instance->dpb.next_slot = (instance->dpb.next_slot + 1) % instance->dpb.texture.desc.array_size;
-		}
 
-		instance->flags |= VideoInstance::Flags::NeedsResolve;
-		instance->flags |= VideoInstance::Flags::InitialFirstFrameDecoded;
-		instance->current_frame++;
+			instance->flags |= VideoInstance::Flags::NeedsResolve;
+			instance->flags |= VideoInstance::Flags::InitialFirstFrameDecoded;
+			instance->current_decode_frame++;
+		}
 	}
 	void ResolveVideoToRGB(VideoInstance* instance, CommandList cmd)
 	{
@@ -896,101 +992,23 @@ namespace wi::video
 		const Video* video = instance->video;
 		GraphicsDevice* device = GetDevice();
 
-		if (instance->output_textures_free.empty())
-		{
-			VideoInstance::OutputTexture& output = instance->output_textures_free.emplace_back();
-			TextureDesc td;
-			td.width = video->width;
-			td.height = video->height;
-			td.format = Format::R8G8B8A8_UNORM;
-			if (has_flag(instance->flags, VideoInstance::Flags::Mipmapped))
-			{
-				td.mip_levels = 0; // max mipcount
-			}
-			td.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
-			td.misc_flags = ResourceMiscFlag::TYPED_FORMAT_CASTING;
-			td.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
-			bool success = device->CreateTexture(&td, nullptr, &output.texture);
-			device->SetName(&output.texture, "VideoInstance::OutputTexture");
-			assert(success);
-
-			if (has_flag(instance->flags, VideoInstance::Flags::Mipmapped))
-			{
-				for (uint32_t i = 0; i < output.texture.GetDesc().mip_levels; ++i)
-				{
-					int subresource_index;
-					subresource_index = device->CreateSubresource(&output.texture, SubresourceType::SRV, 0, 1, i, 1);
-					assert(subresource_index == i);
-					subresource_index = device->CreateSubresource(&output.texture, SubresourceType::UAV, 0, 1, i, 1);
-					assert(subresource_index == i);
-				}
-			}
-
-			// This part must be AFTER mip level subresource creation:
-			Format srgb_format = GetFormatSRGB(td.format);
-			output.subresource_srgb = device->CreateSubresource(
-				&output.texture,
-				SubresourceType::SRV,
-				0, -1,
-				0, -1,
-				&srgb_format
-			);
-		}
-
-		VideoInstance::OutputTexture output = std::move(instance->output_textures_free.back());
-		instance->output_textures_free.pop_back();
-		output.display_order = video->frame_infos[std::max(instance->current_frame - 1, 0)].display_order;
-
-		if (has_flag(instance->decoder.support, VideoDecoderSupportFlags::DPB_AND_OUTPUT_COINCIDE))
+		for (auto& x : instance->output_textures_request)
 		{
 			wi::renderer::YUV_to_RGB(
-				instance->dpb.texture,
-				instance->dpb.subresources_luminance[instance->dpb.current_slot],
-				instance->dpb.subresources_chrominance[instance->dpb.current_slot],
-				output.texture,
+				x.src,
+				x.src_subresource_luminance,
+				x.src_subresource_chrominance,
+				x.texture,
 				cmd
 			);
-		}
-		else
-		{
-			wi::renderer::YUV_to_RGB(
-				instance->dpb.output,
-				instance->dpb.subresources_luminance[0],
-				instance->dpb.subresources_chrominance[0],
-				output.texture,
-				cmd
-			);
-		}
-
-		if (has_flag(instance->flags, VideoInstance::Flags::Mipmapped))
-		{
-			wi::renderer::GenerateMipChain(output.texture, wi::renderer::MIPGENFILTER_LINEAR, cmd);
-		}
-
-		instance->output_textures_used.push_back(std::move(output));
-
-		for (size_t i = 0; i < instance->output_textures_used.size(); ++i)
-		{
-			if (instance->output_textures_used[i].display_order == instance->target_display_order)
+			if (has_flag(instance->flags, VideoInstance::Flags::Mipmapped))
 			{
-				if (instance->output.texture.IsValid())
-				{
-					// Free current output texture:
-					instance->output_textures_free.push_back(std::move(instance->output));
-				}
-
-				// Take this used texture as current oputput:
-				instance->output = std::move(instance->output_textures_used[i]);
-
-				// Remove this used texture:
-				std::swap(instance->output_textures_used[i], instance->output_textures_used.back());
-				instance->output_textures_used.pop_back();
-
-				// request next displayable picture in order:
-				instance->target_display_order++;
-				break;
+				wi::renderer::GenerateMipChain(x.texture, wi::renderer::MIPGENFILTER_LINEAR, cmd);
 			}
 		}
+		instance->output_textures_request.clear();
+
+		UpdateDisplayOrderOutput(instance);
 	}
 
 	void Seek(VideoInstance* instance, float timerSeconds)
@@ -1000,23 +1018,27 @@ namespace wi::video
 		const Video* video = instance->video;
 		if (video == nullptr)
 			return;
-		bool found = false;
-		int target_frame = int(float(timerSeconds / video->duration_seconds) * video->frame_infos.size());
+		int max_iframe = 0;
 		for (size_t i = 0; i < video->frame_infos.size(); ++i)
 		{
 			auto& frame_info = video->frame_infos[i];
-			if (i >= target_frame && frame_info.type == wi::graphics::VideoFrameType::Intra)
+			if (frame_info.type == wi::graphics::VideoFrameType::Intra)
 			{
-				target_frame = (int)i;
-				found = true;
-				break;
+				max_iframe = (int)i;
 			}
+			if (frame_info.timestamp_seconds > timerSeconds)
+				break;
 		}
-		if (found && instance->current_frame != target_frame)
+		if (instance->current_decode_frame != max_iframe)
 		{
-			instance->current_frame = target_frame;
+			instance->current_decode_frame = max_iframe;
+			instance->current_time = video->frame_infos[max_iframe].timestamp_seconds;
+			instance->target_display_order = video->frame_infos[max_iframe].display_order;
 			instance->flags |= wi::video::VideoInstance::Flags::DecoderReset;
 			instance->flags &= ~wi::video::VideoInstance::Flags::InitialFirstFrameDecoded;
+			instance->output_textures_free.clear();
+			instance->output_textures_used.clear();
+			instance->output_textures_request.clear();
 		}
 	}
 }
