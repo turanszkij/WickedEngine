@@ -51,7 +51,6 @@
     <None Include="$(MSBuildThisFileDirectory)stochasticSSRHF.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)surfaceHF.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)uvsphere.hlsli" />
-    <None Include="$(MSBuildThisFileDirectory)volumeLightHF.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)volumetricCloudsHF.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)volumetricLightHF.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)voxelConeTracingHF.hlsli" />

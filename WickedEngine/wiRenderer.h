@@ -321,9 +321,11 @@ namespace wi::renderer
 		wi::graphics::CommandList cmd
 	);
 	// Draw simple light visualizer geometries
+	//	instance_replication is used to render them into multiple texture slices
 	void DrawLightVisualizers(
 		const Visibility& vis,
-		wi::graphics::CommandList cmd
+		wi::graphics::CommandList cmd,
+		uint32_t instance_replication = 1
 	);
 	// Draw volumetric light scattering effects
 	void DrawVolumeLights(

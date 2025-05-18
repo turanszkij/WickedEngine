@@ -75,9 +75,6 @@
     <None Include="$(MSBuildThisFileDirectory)voxelConeTracingHF.hlsli">
       <Filter>HF</Filter>
     </None>
-    <None Include="$(MSBuildThisFileDirectory)volumeLightHF.hlsli">
-      <Filter>HF</Filter>
-    </None>
     <None Include="$(MSBuildThisFileDirectory)uvsphere.hlsli">
       <Filter>HF</Filter>
     </None>

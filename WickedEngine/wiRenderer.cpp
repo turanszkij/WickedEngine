@@ -6038,7 +6038,8 @@ void DrawSpritesAndFonts(
 }
 void DrawLightVisualizers(
 	const Visibility& vis,
-	CommandList cmd
+	CommandList cmd,
+	uint32_t instance_replication
 )
 {
 	if (!vis.visibleLights.empty())
@@ -6200,7 +6201,7 @@ void DrawLightVisualizers(
 						};
 						device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
 
-						device->Draw(vertexCount, 0, cmd);
+						device->DrawInstanced(vertexCount, instance_replication, 0, 0, cmd);
 					}
 					else if (type == LightComponent::SPOT)
 					{
@@ -6229,7 +6230,7 @@ void DrawLightVisualizers(
 
 						device->BindDynamicConstantBuffer(lcb, CB_GETBINDSLOT(VolumeLightCB), cmd);
 
-						device->Draw(vertexCount_cone, 0, cmd);
+						device->DrawInstanced(vertexCount_cone, instance_replication, 0, 0, cmd);
 					}
 					else if (type == LightComponent::RECTANGLE)
 					{
@@ -6244,7 +6245,7 @@ void DrawLightVisualizers(
 
 						device->BindDynamicConstantBuffer(lcb, CB_GETBINDSLOT(VolumeLightCB), cmd);
 
-						device->Draw(4, 0, cmd);
+						device->DrawInstanced(4, instance_replication, 0, 0, cmd);
 					}
 				}
 			}
@@ -9096,6 +9097,11 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			device->DrawInstanced(240, 6, 0, 0, cmd); // 6 instances so it will be replicated for every cubemap face
 		}
 
+		if (probe_aabb.layerMask & vis.layerMask) // only draw light visualizers if this is a hand placed probe
+		{
+			DrawLightVisualizers(vis, cmd, 6); // 6 instances so it will be replicated for every cubemap face
+		}
+
 		device->RenderPassEnd(cmd);
 
 		// Compute Aerial Perspective for environment map
@@ -10200,12 +10206,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 
 			for (uint32_t i = 0; i < desc.mip_levels - 1; ++i)
 			{
-				{
-					GPUBarrier barriers[] = {
-						GPUBarrier::Image(&texture,texture.desc.layout,ResourceState::UNORDERED_ACCESS,i + 1),
-					};
-					device->Barrier(barriers, arraysize(barriers), cmd);
-				}
+				device->Barrier(GPUBarrier::Image(&texture, texture.desc.layout, ResourceState::UNORDERED_ACCESS, i + 1), cmd);
 
 				mipgen.texture_output = device->GetDescriptorIndex(&texture, SubresourceType::UAV, i + 1);
 				mipgen.texture_input = device->GetDescriptorIndex(&texture, SubresourceType::SRV, i);
@@ -10223,14 +10224,10 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 					std::max(1u, (desc.width + GENERATEMIPCHAIN_2D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_2D_BLOCK_SIZE),
 					std::max(1u, (desc.height + GENERATEMIPCHAIN_2D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_2D_BLOCK_SIZE),
 					1,
-					cmd);
+					cmd
+				);
 
-				{
-					GPUBarrier barriers[] = {
-						GPUBarrier::Image(&texture,ResourceState::UNORDERED_ACCESS,texture.desc.layout,i + 1),
-					};
-					device->Barrier(barriers, arraysize(barriers), cmd);
-				}
+				device->Barrier(GPUBarrier::Image(&texture, ResourceState::UNORDERED_ACCESS, texture.desc.layout, i + 1), cmd);
 			}
 		}
 

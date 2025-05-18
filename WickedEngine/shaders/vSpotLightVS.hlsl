@@ -1,16 +1,13 @@
-#include "volumeLightHF.hlsli"
+#include "globals.hlsli"
 #include "cone.hlsli"
 #include "lightingHF.hlsli"
 
-VertexToPixel main(uint vID : SV_VertexID)
+void main(uint vID : SV_VertexID, uint instanceID : SV_InstanceID, out float4 pos : SV_Position, out float4 col : COLOR, out uint rtindex : SV_RenderTargetArrayIndex)
 {
-	VertexToPixel Out = (VertexToPixel)0;
-		
-	float4 pos = CONE[vID];
-	Out.col = float4(xLightColor.rgb, 1) * saturate(1 - dot(pos.xyz, pos.xyz));
+	pos = CONE[vID];
+	col = float4(xLightColor.rgb, 1) * saturate(1 - dot(pos.xyz, pos.xyz));
 
 	pos = mul(xLightWorld, pos);
-	Out.pos = mul(GetCamera().view_projection, pos);
-
-	return Out;
+	pos = mul(GetCamera(instanceID).view_projection, pos);
+	rtindex = instanceID;
 }
