@@ -1440,8 +1440,8 @@ namespace wi::helper
 #else
 		std::mbstate_t state = std::mbstate_t {};
 		const std::size_t len = std::mbsrtowcs(to, &from, dest_size_in_characters, &state);
-		if (len == static_cast<std::size_t>(-1)) return len + 1; // string length + null terminating character
-		return -1;
+		if (len == static_cast<std::size_t>(-1)) return -1;
+		return len + 1; // string length + null terminating character
 #endif // _WIN32
 	}
 
@@ -1461,8 +1461,8 @@ namespace wi::helper
 #else
 		std::mbstate_t state = std::mbstate_t {};
 		const std::size_t len = std::wcsrtombs(to, &from, dest_size_in_characters, &state);
-		if (len == static_cast<std::size_t>(-1)) return len + 1; // string length + null terminating character
-		return -1;
+		if (len == static_cast<std::size_t>(-1)) return -1;
+		return len + 1; // string length + null terminating character
 #endif // _WIN32
 	}
 	
