@@ -710,6 +710,19 @@ namespace wi::video
 			return true;
 		if (has_flag(instance->flags, VideoInstance::Flags::Playing) && instance->time_until_next_frame - dt <= 0)
 			return true;
+		bool found_next_displayable = false;
+		for (auto& x : instance->output_textures_used)
+		{
+			if (x.display_order == instance->target_display_order)
+			{
+				found_next_displayable = true;
+				break;
+			}
+		}
+		if (!found_next_displayable)
+		{
+			return true;
+		}
 		return false;
 	}
 	void UpdateVideo(VideoInstance* instance, float dt, CommandList cmd)
