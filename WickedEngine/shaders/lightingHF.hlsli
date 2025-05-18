@@ -495,6 +495,8 @@ inline void light_rect(in ShaderEntity light, in Surface surface, inout Lighting
 				light_color *= shadow_2D(light, shadow_pos.xyz, shadow_uv.xy, 0, surface.pixel);
 			}
 		}
+
+		QuadBlur(light_color);
 		
 		if (!any(light_color))
 			return; // light color lost after shadow
