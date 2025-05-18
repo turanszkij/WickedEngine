@@ -48,12 +48,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 {
 	uint2 dim;
 	input.GetDimensions(dim.x, dim.y);
-	dim = align(dim, 4);
-	uint2 block_dim = dim / 4;
-
-	[branch]
-	if (any(DTid.xy >= block_dim))
-		return;
+	uint2 block_dim = (dim + 3) / 4;
 
 	const float2 dim_rcp = rcp(dim);
 	const float2 uv = float2(DTid.xy * 4 + 1) * dim_rcp;

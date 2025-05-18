@@ -882,8 +882,10 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_VOLUMETRICLIGHT_DIRECTIONAL], "volumetriclight_directionalVS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_VOLUMETRICLIGHT_POINT], "volumetriclight_pointVS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_VOLUMETRICLIGHT_SPOT], "volumetriclight_spotVS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_VOLUMETRICLIGHT_RECTANGLE], "volumetriclight_rectangleVS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_LIGHTVISUALIZER_SPOTLIGHT], "vSpotLightVS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_LIGHTVISUALIZER_POINTLIGHT], "vPointLightVS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_LIGHTVISUALIZER_RECTLIGHT], "vRectLightVS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_SPHERE], "sphereVS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_OCCLUDEE], "occludeeVS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_SKY], "skyVS.cso"); });
@@ -918,9 +920,11 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_IMPOSTOR_PREPASS_DEPTHONLY], "impostorPS_prepass_depthonly.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_IMPOSTOR_SIMPLE], "impostorPS_simple.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_LIGHTVISUALIZER], "lightVisualizerPS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_LIGHTVISUALIZER_RECTLIGHT], "vRectLightPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_VOLUMETRICLIGHT_DIRECTIONAL], "volumetricLight_DirectionalPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_VOLUMETRICLIGHT_POINT], "volumetricLight_PointPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_VOLUMETRICLIGHT_SPOT], "volumetricLight_SpotPS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_VOLUMETRICLIGHT_RECTANGLE], "volumetriclight_rectanglePS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_ENVMAP], "envMapPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_ENVMAP_SKY_STATIC], "envMap_skyPS_static.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_ENVMAP_SKY_DYNAMIC], "envMap_skyPS_dynamic.cso"); });
@@ -1368,6 +1372,8 @@ void LoadShaders()
 
 			desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
 			desc.ps = &shaders[PSTYPE_LIGHTVISUALIZER];
+			desc.pt = PrimitiveTopology::TRIANGLELIST;
+			desc.il = nullptr;
 
 			switch (args.jobIndex)
 			{
@@ -1382,6 +1388,14 @@ void LoadShaders()
 				desc.vs = &shaders[VSTYPE_LIGHTVISUALIZER_SPOTLIGHT];
 				desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
 				break;
+			case LightComponent::RECTANGLE:
+				desc.bs = &blendStates[BSTYPE_TRANSPARENT];
+				desc.vs = &shaders[VSTYPE_LIGHTVISUALIZER_RECTLIGHT];
+				desc.ps = &shaders[PSTYPE_LIGHTVISUALIZER_RECTLIGHT];
+				desc.rs = &rasterizers[RSTYPE_FRONT];
+				desc.pt = PrimitiveTopology::TRIANGLESTRIP;
+				desc.dss = &depthStencils[DSSTYPE_DEFAULT];
+				break;
 			}
 
 			device->CreatePipelineState(&desc, &PSO_lightvisualizer[args.jobIndex]);
@@ -1389,11 +1403,12 @@ void LoadShaders()
 
 
 		// volumetric lights:
-		if (args.jobIndex <= LightComponent::SPOT)
+		if (args.jobIndex <= LightComponent::RECTANGLE)
 		{
 			desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
 			desc.bs = &blendStates[BSTYPE_ADDITIVE];
 			desc.rs = &rasterizers[RSTYPE_BACK];
+			desc.pt = PrimitiveTopology::TRIANGLELIST;
 
 			switch (args.jobIndex)
 			{
@@ -1408,6 +1423,12 @@ void LoadShaders()
 			case LightComponent::SPOT:
 				desc.vs = &shaders[VSTYPE_VOLUMETRICLIGHT_SPOT];
 				desc.ps = &shaders[PSTYPE_VOLUMETRICLIGHT_SPOT];
+				break;
+			case LightComponent::RECTANGLE:
+				desc.vs = &shaders[VSTYPE_VOLUMETRICLIGHT_RECTANGLE];
+				desc.ps = &shaders[PSTYPE_VOLUMETRICLIGHT_RECTANGLE];
+				desc.rs = &rasterizers[RSTYPE_FRONT];
+				desc.pt = PrimitiveTopology::TRIANGLESTRIP;
 				break;
 			}
 
@@ -2171,9 +2192,16 @@ void SetUpStates()
 	rs.fill_mode = FillMode::SOLID;
 	rs.cull_mode = CullMode::BACK;
 	rs.front_counter_clockwise = true;
-	rs.depth_bias = -1;
-	rs.depth_bias_clamp = 0;
+	if (IsFormatUnorm(format_depthbuffer_shadowmap))
+	{
+		rs.depth_bias = -1;
+	}
+	else
+	{
+		rs.depth_bias = -1000;
+	}
 	rs.slope_scaled_depth_bias = -4.0f;
+	rs.depth_bias_clamp = 0;
 	rs.depth_clip_enable = false;
 	rs.multisample_enable = false;
 	rs.antialiased_line_enable = false;
@@ -2768,13 +2796,13 @@ struct SHCAM
 	Frustum frustum;					// This frustum can be used for intersection test with wiPrimitive primitives
 	BoundingFrustum boundingfrustum;	// This boundingfrustum can be used for frustum vs frustum intersection test
 
-	inline void init(const XMFLOAT3& eyePos, const XMFLOAT4& rotation, float nearPlane, float farPlane, float fov) 
+	inline void init(const XMFLOAT3& eyePos, const XMFLOAT4& rotation, float nearPlane, float farPlane, float fov, XMVECTOR default_forward = XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f), XMVECTOR default_up = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f))
 	{
 		const XMVECTOR E = XMLoadFloat3(&eyePos);
 		const XMVECTOR Q = XMQuaternionNormalize(XMLoadFloat4(&rotation));
 		const XMMATRIX rot = XMMatrixRotationQuaternion(Q);
-		const XMVECTOR to = XMVector3TransformNormal(XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f), rot);
-		const XMVECTOR up = XMVector3TransformNormal(XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), rot);
+		const XMVECTOR to = XMVector3TransformNormal(default_forward, rot);
+		const XMVECTOR up = XMVector3TransformNormal(default_up, rot);
 		const XMMATRIX V = XMMatrixLookToLH(E, to, up);
 		const XMMATRIX P = XMMatrixPerspectiveFovLH(fov, 1, farPlane, nearPlane);
 		view_projection = XMMatrixMultiply(V, P);
@@ -2788,7 +2816,19 @@ struct SHCAM
 };
 inline void CreateSpotLightShadowCam(const LightComponent& light, SHCAM& shcam)
 {
-	shcam.init(light.position, light.rotation, 0.1f, light.GetRange(), light.outerConeAngle * 2);
+	if (light.type == LightComponent::RECTANGLE)
+	{
+		XMVECTOR P = XMLoadFloat3(&light.position);
+		static float backoffset = 1.0f;
+		P -= XMLoadFloat3(&light.direction) * backoffset; // back offset hack to fixup the shadow projection limits
+		XMFLOAT3 pos;
+		XMStoreFloat3(&pos, P);
+		shcam.init(pos, light.rotation, 0.1f, light.GetRange(), XM_PI * 0.9f, XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f), XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)); // rect light is pointing to -Z by default
+	}
+	else
+	{
+		shcam.init(light.position, light.rotation, 0.1f, light.GetRange(), light.outerConeAngle * 2);
+	}
 }
 inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponent camera, SHCAM* shcams, size_t shcam_count, const wi::rectpacker::Rect& shadow_rect)
 {
@@ -3819,6 +3859,7 @@ void UpdateVisibility(Visibility& vis)
 					}
 					break;
 				case LightComponent::SPOT:
+				case LightComponent::RECTANGLE:
 					if (light.forced_shadow_resolution >= 0)
 					{
 						rect.w = int(light.forced_shadow_resolution);
@@ -4281,6 +4322,8 @@ void UpdatePerFrameData(
 	uint lightarray_count_spot = 0;
 	uint lightarray_offset_point = 0;
 	uint lightarray_count_point = 0;
+	uint lightarray_offset_rect = 0;
+	uint lightarray_count_rect = 0;
 	uint lightarray_offset = 0;
 	uint lightarray_count = 0;
 	uint decalarray_offset = 0;
@@ -4461,7 +4504,7 @@ void UpdatePerFrameData(
 				shaderentity.layerMask = layer->layerMask;
 			}
 
-			shaderentity.SetType(light.GetType());
+			shaderentity.SetType(ENTITY_TYPE_DIRECTIONALLIGHT);
 			shaderentity.position = light.position;
 			shaderentity.SetRange(light.GetRange());
 			shaderentity.SetRadius(light.radius);
@@ -4538,7 +4581,7 @@ void UpdatePerFrameData(
 				shaderentity.layerMask = layer->layerMask;
 			}
 
-			shaderentity.SetType(light.GetType());
+			shaderentity.SetType(ENTITY_TYPE_SPOTLIGHT);
 			shaderentity.position = light.position;
 			shaderentity.SetRange(light.GetRange());
 			shaderentity.SetRadius(light.radius);
@@ -4624,7 +4667,7 @@ void UpdatePerFrameData(
 				shaderentity.layerMask = layer->layerMask;
 			}
 
-			shaderentity.SetType(light.GetType());
+			shaderentity.SetType(ENTITY_TYPE_POINTLIGHT);
 			shaderentity.position = light.position;
 			shaderentity.SetRange(light.GetRange());
 			shaderentity.SetRadius(light.radius);
@@ -4676,7 +4719,81 @@ void UpdatePerFrameData(
 			entityCounter++;
 			lightarray_count_point++;
 		}
-		lightarray_count = lightarray_count_directional + lightarray_count_spot + lightarray_count_point;
+
+		// Write rect lights into entity array:
+		lightarray_offset_rect = entityCounter;
+		for (uint32_t lightIndex : vis.visibleLights)
+		{
+			if (entityCounter == SHADER_ENTITY_COUNT)
+			{
+				entityCounter--;
+				break;
+			}
+
+			const LightComponent& light = vis.scene->lights[lightIndex];
+			if (light.GetType() != LightComponent::RECTANGLE || light.IsInactive())
+				continue;
+
+			ShaderEntity shaderentity = {};
+			shaderentity.layerMask = ~0u;
+
+			Entity entity = vis.scene->lights.GetEntity(lightIndex);
+			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
+			if (layer != nullptr)
+			{
+				shaderentity.layerMask = layer->layerMask;
+			}
+
+			shaderentity.SetType(ENTITY_TYPE_RECTLIGHT);
+			shaderentity.position = light.position;
+			shaderentity.SetRange(light.GetRange());
+			shaderentity.SetLength(light.length);
+			shaderentity.SetHeight(light.height);
+			shaderentity.SetQuaternion(light.rotation);
+			shaderentity.SetColor(float4(light.color.x * light.intensity, light.color.y * light.intensity, light.color.z * light.intensity, 1));
+
+			const bool shadowmap = IsShadowsEnabled() && light.IsCastingShadow() && !light.IsStatic();
+			const wi::rectpacker::Rect& shadow_rect = vis.visibleLightShadowRects[lightIndex];
+
+			const uint maskTex = light.maskTexDescriptor < 0 ? 0 : light.maskTexDescriptor;
+
+			if (shadowmap)
+			{
+				shaderentity.shadowAtlasMulAdd.x = shadow_rect.w * atlas_dim_rcp.x;
+				shaderentity.shadowAtlasMulAdd.y = shadow_rect.h * atlas_dim_rcp.y;
+				shaderentity.shadowAtlasMulAdd.z = shadow_rect.x * atlas_dim_rcp.x;
+				shaderentity.shadowAtlasMulAdd.w = shadow_rect.y * atlas_dim_rcp.y;
+			}
+
+			shaderentity.SetIndices(matrixCounter, maskTex);
+
+			if (shadowmap || (maskTex > 0))
+			{
+				SHCAM shcam;
+				CreateSpotLightShadowCam(light, shcam);
+				XMStoreFloat4x4(&matrixArray[matrixCounter++], shcam.view_projection);
+			}
+
+			if (light.IsCastingShadow())
+			{
+				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_CASTING_SHADOW);
+			}
+			if (light.IsStatic())
+			{
+				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_STATIC);
+			}
+
+			if (light.IsVolumetricCloudsEnabled())
+			{
+				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_VOLUMETRICCLOUDS);
+			}
+
+			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
+			entityCounter++;
+			lightarray_count_rect++;
+		}
+
+		lightarray_count = lightarray_count_directional + lightarray_count_spot + lightarray_count_point + lightarray_count_rect;
 		frameCB.entity_culling_count = lightarray_count + decalarray_count + envprobearray_count;
 
 		// Write colliders into entity array:
@@ -4775,6 +4892,7 @@ void UpdatePerFrameData(
 	frameCB.directional_lights = ShaderEntityIterator(lightarray_offset_directional, lightarray_count_directional);
 	frameCB.spotlights = ShaderEntityIterator(lightarray_offset_spot, lightarray_count_spot);
 	frameCB.pointlights = ShaderEntityIterator(lightarray_offset_point, lightarray_count_point);
+	frameCB.rectlights = ShaderEntityIterator(lightarray_offset_rect, lightarray_count_rect);
 	frameCB.lights = ShaderEntityIterator(lightarray_offset, lightarray_count);
 	frameCB.decals = ShaderEntityIterator(decalarray_offset, decalarray_count);
 	frameCB.forces = ShaderEntityIterator(forcefieldarray_offset, forcefieldarray_count);
@@ -5920,7 +6038,8 @@ void DrawSpritesAndFonts(
 }
 void DrawLightVisualizers(
 	const Visibility& vis,
-	CommandList cmd
+	CommandList cmd,
+	uint32_t instance_replication
 )
 {
 	if (!vis.visibleLights.empty())
@@ -6082,7 +6201,7 @@ void DrawLightVisualizers(
 						};
 						device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
 
-						device->Draw(vertexCount, 0, cmd);
+						device->DrawInstanced(vertexCount, instance_replication, 0, 0, cmd);
 					}
 					else if (type == LightComponent::SPOT)
 					{
@@ -6111,7 +6230,22 @@ void DrawLightVisualizers(
 
 						device->BindDynamicConstantBuffer(lcb, CB_GETBINDSLOT(VolumeLightCB), cmd);
 
-						device->Draw(vertexCount_cone, 0, cmd);
+						device->DrawInstanced(vertexCount_cone, instance_replication, 0, 0, cmd);
+					}
+					else if (type == LightComponent::RECTANGLE)
+					{
+						lcb.xLightEnerdis.y = (float)light.maskTexDescriptor;
+						lcb.xLightEnerdis.z = light.length;
+						lcb.xLightEnerdis.w = light.height;
+						XMStoreFloat4x4(&lcb.xLightWorld,
+							XMMatrixScaling(light.length * 0.5f, light.height * 0.5f, 1) *
+							XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation)) *
+							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))
+						);
+
+						device->BindDynamicConstantBuffer(lcb, CB_GETBINDSLOT(VolumeLightCB), cmd);
+
+						device->DrawInstanced(4, instance_replication, 0, 0, cmd);
 					}
 				}
 			}
@@ -6208,6 +6342,25 @@ void DrawVolumeLights(
 				device->BindDynamicConstantBuffer(miscCb, CB_GETBINDSLOT(MiscCB), cmd);
 
 				device->Draw(192, 0, cmd); // cone
+			}
+			break;
+			case LightComponent::RECTANGLE:
+			{
+				MiscCB miscCb;
+				miscCb.g_xColor.x = float(type_idx);
+				miscCb.g_xColor.y = light.volumetric_boost;
+
+				const XMVECTOR LightPos = XMLoadFloat3(&light.position);
+
+				XMStoreFloat4x4(&miscCb.g_xTransform,
+					XMMatrixScaling(light.GetRange(), light.GetRange(), light.GetRange()) *
+					XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation)) *
+					XMMatrixTranslationFromVector(LightPos) *
+					VP
+				);
+				device->BindDynamicConstantBuffer(miscCb, CB_GETBINDSLOT(MiscCB), cmd);
+
+				device->Draw(14, 0, cmd); // cube
 			}
 			break;
 			}
@@ -6517,6 +6670,7 @@ void DrawShadowmaps(
 		}
 		break;
 		case LightComponent::SPOT:
+		case LightComponent::RECTANGLE:
 		{
 			if (max_shadow_resolution_2D == 0 && light.forced_shadow_resolution < 0)
 				break;
@@ -8943,6 +9097,11 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			device->DrawInstanced(240, 6, 0, 0, cmd); // 6 instances so it will be replicated for every cubemap face
 		}
 
+		if (probe_aabb.layerMask & vis.layerMask) // only draw light visualizers if this is a hand placed probe
+		{
+			DrawLightVisualizers(vis, cmd, 6); // 6 instances so it will be replicated for every cubemap face
+		}
+
 		device->RenderPassEnd(cmd);
 
 		// Compute Aerial Perspective for environment map
@@ -9723,7 +9882,6 @@ void VXGI_Resolve(
 	device->EventEnd(cmd);
 }
 
-
 void CreateTiledLightResources(TiledLightResources& res, XMUINT2 resolution)
 {
 	res.tileCount = GetEntityCullingTileCount(resolution);
@@ -10048,12 +10206,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 
 			for (uint32_t i = 0; i < desc.mip_levels - 1; ++i)
 			{
-				{
-					GPUBarrier barriers[] = {
-						GPUBarrier::Image(&texture,texture.desc.layout,ResourceState::UNORDERED_ACCESS,i + 1),
-					};
-					device->Barrier(barriers, arraysize(barriers), cmd);
-				}
+				device->Barrier(GPUBarrier::Image(&texture, texture.desc.layout, ResourceState::UNORDERED_ACCESS, i + 1), cmd);
 
 				mipgen.texture_output = device->GetDescriptorIndex(&texture, SubresourceType::UAV, i + 1);
 				mipgen.texture_input = device->GetDescriptorIndex(&texture, SubresourceType::SRV, i);
@@ -10071,14 +10224,10 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 					std::max(1u, (desc.width + GENERATEMIPCHAIN_2D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_2D_BLOCK_SIZE),
 					std::max(1u, (desc.height + GENERATEMIPCHAIN_2D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_2D_BLOCK_SIZE),
 					1,
-					cmd);
+					cmd
+				);
 
-				{
-					GPUBarrier barriers[] = {
-						GPUBarrier::Image(&texture,ResourceState::UNORDERED_ACCESS,texture.desc.layout,i + 1),
-					};
-					device->Barrier(barriers, arraysize(barriers), cmd);
-				}
+				device->Barrier(GPUBarrier::Image(&texture, ResourceState::UNORDERED_ACCESS, texture.desc.layout, i + 1), cmd);
 			}
 		}
 
@@ -10156,8 +10305,8 @@ void BlockCompress(const Texture& texture_src, const Texture& texture_bc, Comman
 {
 	const uint32_t block_size = GetFormatBlockSize(texture_bc.desc.format);
 	TextureDesc desc;
-	desc.width = std::max(1u, texture_bc.desc.width / block_size);
-	desc.height = std::max(1u, texture_bc.desc.height / block_size);
+	desc.width = std::max(1u, (texture_bc.desc.width + block_size - 1) / block_size);
+	desc.height = std::max(1u, (texture_bc.desc.height + block_size - 1) / block_size);
 	desc.bind_flags = BindFlag::UNORDERED_ACCESS;
 	desc.layout = ResourceState::UNORDERED_ACCESS;
 
@@ -10251,11 +10400,13 @@ void BlockCompress(const Texture& texture_src, const Texture& texture_bc, Comman
 
 	for (uint32_t mip = 0; mip < texture_bc.desc.mip_levels; ++mip)
 	{
-		const uint32_t width = std::max(1u, desc.width >> mip);
-		const uint32_t height = std::max(1u, desc.height >> mip);
+		const uint32_t src_width = std::max(1u, texture_bc.desc.width >> mip);
+		const uint32_t src_height = std::max(1u, texture_bc.desc.height >> mip);
+		const uint32_t dst_width = (src_width + block_size - 1) / block_size;
+		const uint32_t dst_height = (src_height + block_size - 1) / block_size;
 		device->BindResource(&texture_src, 0, cmd, texture_src.desc.mip_levels == 1 ? -1 : mip);
 		device->BindUAV(&bc_raw_dest, 0, cmd);
-		device->Dispatch((width + 7u) / 8u, (height + 7u) / 8u, desc.array_size, cmd);
+		device->Dispatch((dst_width + 7u) / 8u, (dst_height + 7u) / 8u, desc.array_size, cmd);
 
 		GPUBarrier barriers[] = {
 			GPUBarrier::Image(&bc_raw_dest, ResourceState::UNORDERED_ACCESS, ResourceState::COPY_SRC),
@@ -10267,9 +10418,9 @@ void BlockCompress(const Texture& texture_src, const Texture& texture_bc, Comman
 		{
 			Box box;
 			box.left = 0;
-			box.right = width;
+			box.right = dst_width;
 			box.top = 0;
-			box.bottom = height;
+			box.bottom = dst_height;
 			box.front = 0;
 			box.back = 1;
 

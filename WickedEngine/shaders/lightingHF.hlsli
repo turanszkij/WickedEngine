@@ -14,6 +14,49 @@
 #define LIGHTING_SCATTER
 #endif // WATER
 
+bool AreAllQuadLanesActive()
+{
+    // Get the lane index within the wave
+    uint laneIndex = WaveGetLaneIndex();
+    
+    // Get the active lanes in the wave
+    uint4 ballot = WaveActiveBallot(true);
+    
+    // Assuming a quad is 4 consecutive lanes, check if all 4 lanes in the quad are active
+    // Note: This assumes the quad lanes are contiguous in the wave (implementation-dependent)
+    uint quadStartLane = laneIndex & ~3u; // Align to the start of the quad
+    bool allLanesActive = true;
+    
+    for (uint i = 0; i < 4; i++)
+    {
+        uint laneToCheck = quadStartLane + i;
+        if (laneToCheck < WaveGetLaneCount())
+        {
+            // Check if the lane is active in the ballot
+            allLanesActive = allLanesActive && (ballot[laneToCheck / 32] & (1u << (laneToCheck % 32))) != 0;
+        }
+        else
+        {
+            // If the lane is out of bounds, consider it inactive
+            allLanesActive = false;
+        }
+    }
+    
+    return allLanesActive;
+}
+
+template<typename T>
+inline void QuadBlur(inout T value)
+{
+#if __SHADER_TARGET_STAGE == __SHADER_STAGE_PIXEL && defined(SHADOW_SAMPLING_DISK)
+// Average shadow within quad, this smooths out the dithering a bit:
+//	Note that I don't implement this in shadowHF.hlsli because we need to
+//	make sure that when averaging, all lanes in the quad are coherent
+//	It wouldn't be good if some waves are not sampling shadows or sampling different slices
+	if(AreAllQuadLanesActive()) value = (value + QuadReadAcrossX(value) + QuadReadAcrossY(value) + QuadReadAcrossDiagonal(value)) * 0.25;
+#endif // __SHADER_STAGE_PIXEL
+}
+
 struct LightingPart
 {
 	half3 diffuse;
@@ -102,6 +145,8 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 				}
 			}
 		}
+		
+		QuadBlur(light_color);
 		
 		if (!any(light_color))
 			return; // light color lost after shadow
@@ -206,6 +251,8 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 		{
 			light_color *= shadow_cube(light, LunnormalizedShadow, surface.pixel);
 		}
+		
+		QuadBlur(light_color);
 		
 		if (!any(light_color))
 			return; // light color lost after shadow
@@ -322,6 +369,8 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 			}
 		}
 		
+		QuadBlur(light_color);
+		
 		if (!any(light_color))
 			return; // light color lost after shadow
 	}
@@ -357,6 +406,142 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 
 	lighting.direct.specular = mad(light_color, BRDF_GetSpecular(surface, surface_to_light), lighting.direct.specular);
 					
+#ifdef LIGHTING_SCATTER
+	const half scattering = ComputeScattering(saturate(dot(L, -surface.V)));
+	lighting.indirect.specular += scattering * light_color * (1 - surface.extinction) * (1 - sqr(1 - saturate(1 - surface.N.y)));
+#endif // LIGHTING_SCATTER
+}
+
+inline void light_rect(in ShaderEntity light, in Surface surface, inout Lighting lighting, in half shadow_mask = 1)
+{
+	if (shadow_mask <= 0.001)
+		return; // shadow mask zero
+	if ((light.layerMask & surface.layerMask) == 0)
+		return; // layer mismatch
+	
+	const half4 quaternion = light.GetQuaternion();
+	const half3 right = rotate_vector(half3(1, 0, 0), quaternion);
+	const half3 up = rotate_vector(half3(0, 1, 0), quaternion);
+	const half3 forward = cross(up, right);
+	const half light_length = max(0.01, light.GetLength());
+	const half light_height = max(0.01, light.GetHeight());
+	const float3 p0 = light.position - right * light_length * 0.5 + up * light_height * 0.5;
+	const float3 p1 = light.position + right * light_length * 0.5 + up * light_height * 0.5;
+	const float3 p2 = light.position + right * light_length * 0.5 - up * light_height * 0.5;
+	const float3 p3 = light.position - right * light_length * 0.5 - up * light_height * 0.5;
+	
+	if (dot(surface.P - light.position, forward) <= 0)
+		return; // behind light
+		
+	float3 Lunnormalized = light.position - surface.P;
+	const float3 LunnormalizedShadow = Lunnormalized;
+
+	const half dist2 = dot(Lunnormalized, Lunnormalized);
+	const half range = light.GetRange();
+	const half range2 = range * range;
+
+	if (dist2 > range2)
+		return; // outside range
+		
+	const half dist_rcp = rsqrt(dist2);
+	half3 L = Lunnormalized * dist_rcp;
+
+	SurfaceToLight surface_to_light;
+	surface_to_light.create(surface, L);
+	
+	// Solid angle based on the Frostbite presentation: Moving Frostbite to Physically Based Rendering by Sebastien Lagarde, Charles de Rousiers, Siggraph 2014
+	float3 v0 = normalize(p0 - surface.P);
+	float3 v1 = normalize(p1 - surface.P);
+	float3 v2 = normalize(p2 - surface.P);
+	float3 v3 = normalize(p3 - surface.P);
+	float3 n0 = normalize(cross(v0, v1));
+	float3 n1 = normalize(cross(v1, v2));
+	float3 n2 = normalize(cross(v2, v3));
+	float3 n3 = normalize(cross(v3, v0));
+	float g0 = acos(dot(-n0, n1));
+	float g1 = acos(dot(-n1, n2));
+	float g2 = acos(dot(-n2, n3));
+	float g3 = acos(dot(-n3, n0));
+	const float solid_angle = saturate(g0 + g1 + g2 + g3 - 2 * PI);
+	
+	surface_to_light.NdotL = solid_angle * 0.2 * (
+		saturate(dot(v0, surface.N)) +
+		saturate(dot(v1, surface.N)) +
+		saturate(dot(v2, surface.N)) +
+		saturate(dot(v3, surface.N)) +
+		surface_to_light.NdotL
+	);
+	surface_to_light.NdotL_sss = surface_to_light.NdotL;
+		
+	if (!any(surface_to_light.NdotL_sss))
+		return; // facing away from light
+		
+	half3 light_color = light.GetColor().rgb * shadow_mask;
+	
+	[branch]
+	if (light.IsCastingShadow() && surface.IsReceiveShadow())
+	{
+#if defined(SHADOW_MASK_ENABLED) && !defined(TRANSPARENT)
+		[branch]
+		if ((GetFrame().options & OPTION_BIT_RAYTRACED_SHADOWS) == 0 || GetCamera().texture_rtshadow_index < 0 || (GetCamera().options & SHADERCAMERA_OPTION_USE_SHADOW_MASK) == 0)
+#endif // SHADOW_MASK_ENABLED
+		{
+			float4 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + 0), float4(surface.P, 1));
+			shadow_pos.xyz /= shadow_pos.w;
+			float2 shadow_uv = clipspace_to_uv(shadow_pos.xy);
+			[branch]
+			if (is_saturated(shadow_uv))
+			{
+				light_color *= shadow_2D(light, shadow_pos.xyz, shadow_uv.xy, 0, surface.pixel);
+			}
+		}
+
+		QuadBlur(light_color);
+		
+		if (!any(light_color))
+			return; // light color lost after shadow
+	}
+		
+	light_color *= attenuation_pointlight(dist2, range, range2);
+	
+	half3 light_color_diffuse = light_color;
+	
+	half3 light_color_specular = light_color;
+
+	// Intersects the plane of the rectangle with reflection ray, then computes closest point on rectangle, source: https://alextardif.com/arealights.html
+	float3 intersectPoint = surface.P + surface.R * trace_plane(surface.P, surface.R, light.position, forward);
+	float3 intersectionVector = intersectPoint - light.position;
+	float2 intersectPlanePoint = float2(dot(intersectionVector,right), dot(intersectionVector,up));
+	float2 nearest2DPoint = float2(clamp(intersectPlanePoint.x, -light_length * 0.5, light_length * 0.5), clamp(intersectPlanePoint.y, -light_height * 0.5, light_height * 0.5));
+	float3 specular_rect = light.position + nearest2DPoint.x * right + nearest2DPoint.y * up;
+
+	const uint maskTex = light.GetTextureIndex();
+	[branch]
+	if (maskTex > 0)
+	{
+		Texture2D<half4> tex = bindless_textures_half4[descriptor_index(maskTex)];
+		uint2 dim;
+		uint mipcount;
+		tex.GetDimensions(0, dim.x, dim.y, mipcount);
+		
+		float4 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + 0), float4(surface.P, 1));
+		shadow_pos.xyz /= shadow_pos.w;
+		float2 diffuse_uv = clipspace_to_uv(shadow_pos.xy);
+		half4 diffuse_mask = tex.SampleLevel(sampler_linear_clamp, diffuse_uv, mipcount - 2);
+		light_color_diffuse *= diffuse_mask.rgb * diffuse_mask.a * PI; // PI : try to fix energy loss at mip levels
+
+		float2 specular_uv = clipspace_to_uv(nearest2DPoint / float2(light_length * 0.5, light_height * 0.5));
+		half4 specular_mask = tex.SampleLevel(sampler_linear_clamp, specular_uv, (1 - sqr(1 - saturate(surface.roughness))) * mipcount);
+		light_color_specular *= specular_mask.rgb * specular_mask.a;
+	}
+	
+	lighting.direct.diffuse = mad(light_color_diffuse, BRDF_GetDiffuse(surface, surface_to_light), lighting.direct.diffuse);
+	
+	Lunnormalized = specular_rect - surface.P;
+	L = normalize(Lunnormalized);
+	surface_to_light.create(surface, L); // recompute all surface-light vectors
+	lighting.direct.specular = mad(light_color_specular, BRDF_GetSpecular(surface, surface_to_light), lighting.direct.specular);
+				
 #ifdef LIGHTING_SCATTER
 	const half scattering = ComputeScattering(saturate(dot(L, -surface.V)));
 	lighting.indirect.specular += scattering * light_color * (1 - surface.extinction) * (1 - sqr(1 - saturate(1 - surface.N.y)));

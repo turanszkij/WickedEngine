@@ -155,7 +155,6 @@ namespace wi
 		wi::renderer::VXGIResources vxgiResources;
 
 		wi::graphics::CommandList video_cmd;
-		wi::vector<wi::video::VideoInstance*> video_instances_tmp;
 
 		wi::graphics::Texture distortion_overlay; // optional full screen distortion from an asset
 

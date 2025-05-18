@@ -771,6 +771,7 @@ enum SHADER_ENTITY_TYPE
 	ENTITY_TYPE_DIRECTIONALLIGHT,
 	ENTITY_TYPE_POINTLIGHT,
 	ENTITY_TYPE_SPOTLIGHT,
+	ENTITY_TYPE_RECTLIGHT,
 	ENTITY_TYPE_DECAL,
 	ENTITY_TYPE_ENVMAP,
 	ENTITY_TYPE_FORCEFIELD_POINT,
@@ -796,7 +797,7 @@ struct alignas(16) ShaderEntity
 	float3 position;
 	uint type8_flags8_range16;
 
-	uint2 direction16_coneAngleCos16; // coneAngleCos is used for cascade count in directional light
+	uint2 direction16_coneAngleCos16;
 	uint2 color; // half4 packed
 
 	uint layerMask;
@@ -828,12 +829,25 @@ struct alignas(16) ShaderEntity
 	{
 		return (half)f16tof32(radius16_length16 >> 16u);
 	}
+	inline half GetHeight()
+	{
+		return GetRadius();
+	}
 	inline half3 GetDirection()
 	{
 		return normalize(half3(
 			(half)f16tof32(direction16_coneAngleCos16.x),
 			(half)f16tof32(direction16_coneAngleCos16.x >> 16u),
 			(half)f16tof32(direction16_coneAngleCos16.y)
+		));
+	}
+	inline half4 GetQuaternion()
+	{
+		return normalize(half4(
+			(half)f16tof32(direction16_coneAngleCos16.x),
+			(half)f16tof32(direction16_coneAngleCos16.x >> 16u),
+			(half)f16tof32(direction16_coneAngleCos16.y),
+			(half)f16tof32(direction16_coneAngleCos16.y >> 16u)
 		));
 	}
 	inline half GetConeAngleCos()
@@ -916,6 +930,10 @@ struct alignas(16) ShaderEntity
 	{
 		radius16_length16 |= XMConvertFloatToHalf(value) << 16u;
 	}
+	inline void SetHeight(float value)
+	{
+		SetRadius(value);
+	}
 	inline void SetColor(float4 value)
 	{
 		color.x |= XMConvertFloatToHalf(value.x);
@@ -928,6 +946,13 @@ struct alignas(16) ShaderEntity
 		direction16_coneAngleCos16.x |= XMConvertFloatToHalf(value.x);
 		direction16_coneAngleCos16.x |= XMConvertFloatToHalf(value.y) << 16u;
 		direction16_coneAngleCos16.y |= XMConvertFloatToHalf(value.z);
+	}
+	inline void SetQuaternion(float4 value)
+	{
+		direction16_coneAngleCos16.x |= XMConvertFloatToHalf(value.x);
+		direction16_coneAngleCos16.x |= XMConvertFloatToHalf(value.y) << 16u;
+		direction16_coneAngleCos16.y |= XMConvertFloatToHalf(value.z);
+		direction16_coneAngleCos16.y |= XMConvertFloatToHalf(value.w) << 16u;
 	}
 	inline void SetConeAngleCos(float value)
 	{
@@ -1201,10 +1226,10 @@ struct alignas(16) FrameCB
 	uint spotlights;
 	uint pointlights;
 
+	uint rectlights;
 	uint lights;
 	uint decals;
 	uint forces;
-	uint padding2;
 
 	ShaderEntity entityArray[SHADER_ENTITY_COUNT];
 	float4x4 matrixArray[SHADER_ENTITY_COUNT];

@@ -183,18 +183,8 @@ namespace wi
 			device->CreateTexture(&desc, nullptr, &rtSceneCopy_tmp, &rtPrimitiveID);
 			device->SetName(&rtSceneCopy_tmp, "rtSceneCopy_tmp");
 
-			for (uint32_t i = 0; i < rtSceneCopy.GetDesc().mip_levels; ++i)
-			{
-				int subresource_index;
-				subresource_index = device->CreateSubresource(&rtSceneCopy, SubresourceType::SRV, 0, 1, i, 1);
-				assert(subresource_index == i);
-				subresource_index = device->CreateSubresource(&rtSceneCopy_tmp, SubresourceType::SRV, 0, 1, i, 1);
-				assert(subresource_index == i);
-				subresource_index = device->CreateSubresource(&rtSceneCopy, SubresourceType::UAV, 0, 1, i, 1);
-				assert(subresource_index == i);
-				subresource_index = device->CreateSubresource(&rtSceneCopy_tmp, SubresourceType::UAV, 0, 1, i, 1);
-				assert(subresource_index == i);
-			}
+			device->CreateMipgenSubresources(rtSceneCopy);
+			device->CreateMipgenSubresources(rtSceneCopy_tmp);
 
 			// because this is used by SSR and SSGI before it gets a chance to be normally rendered, it MUST be cleared!
 			CommandList cmd = device->BeginCommandList();
@@ -818,7 +808,7 @@ namespace wi
 			for (size_t i = 0; i < scene->videos.GetCount(); ++i)
 			{
 				const wi::scene::VideoComponent& video = scene->videos[i];
-				if (wi::video::IsDecodingRequired(&video.videoinstance, scene->dt))
+				if (wi::video::IsDecodingRequired(&video.videoinstance))
 				{
 					video_cmd = device->BeginCommandList(QUEUE_VIDEO_DECODE);
 					break;
@@ -827,7 +817,7 @@ namespace wi
 			for (size_t i = 0; i < scene->videos.GetCount(); ++i)
 			{
 				wi::scene::VideoComponent& video = scene->videos[i];
-				wi::video::UpdateVideo(&video.videoinstance, scene->dt, video_cmd);
+				wi::video::DecodeVideo(&video.videoinstance, video_cmd);
 			}
 		}
 

@@ -605,6 +605,12 @@ inline ShaderEntityIterator pointlights()
 	iter.value = GetFrame().pointlights;
 	return iter;
 }
+inline ShaderEntityIterator rectlights()
+{
+	ShaderEntityIterator iter;
+	iter.value = GetFrame().rectlights;
+	return iter;
+}
 inline ShaderEntityIterator probes()
 {
 	ShaderEntityIterator iter;
@@ -1807,10 +1813,30 @@ inline half distance_squared(half3 a, half3 b)
 	return dot(diff, diff);
 }
 
+// Angle between normalized vectors [-PI, PI]
+inline half get_angle(half3 a, half3 b)
+{
+    half ret = dot(a, b);
+    ret = clamp(ret, -1, 1);
+    ret = acos(ret);
+    return ret;
+}
 
 float plane_point_distance(float3 planeOrigin, float3 planeNormal, float3 P)
 {
 	return dot(planeNormal, P - planeOrigin);
+}
+// Projects a point onto a plane defined by a normal and a point on the plane
+float3 point_on_plane(float3 P, float3 planeOrigin, float3 planeNormal)
+{
+    // Ensure the plane normal is normalized
+    planeNormal = normalize(planeNormal);
+    
+    // Compute the distance from the point to the plane
+    float distance = dot(P - planeOrigin, planeNormal);
+    
+    // Project the point onto the plane
+    return P - distance * planeNormal;
 }
 
 // o		: ray origin

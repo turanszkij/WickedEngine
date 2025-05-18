@@ -55,8 +55,7 @@ namespace wi::video
 		wi::graphics::VideoDecoder decoder;
 		struct DPB
 		{
-			wi::graphics::Texture texture;
-			wi::graphics::Texture output;
+			wi::graphics::Texture texture; // raw decoder image array (only can be sampled when device supports coincide mode decoder)
 			int subresources_luminance[17] = {};
 			int subresources_chrominance[17] = {};
 			int poc_status[17] = {};
@@ -69,17 +68,22 @@ namespace wi::video
 		} dpb;
 		struct OutputTexture
 		{
-			wi::graphics::Texture texture;
+			wi::graphics::Texture texture; // resolved RGB image
 			int subresource_srgb = -1;
 			int display_order = -1;
+
+			// Below can be either point to DPB in coincide mode, or separate decoder output in non-coincide mode:
+			wi::graphics::Texture src;
+			int src_subresource_luminance = -1;
+			int src_subresource_chrominance = -1;
 		};
-		wi::vector<OutputTexture> output_textures_free;
-		wi::vector<OutputTexture> output_textures_used;
-		OutputTexture output;
-		int target_display_order = 0;
-		int current_frame = 0;
-		float time_until_next_frame = 0;
-		wi::vector<wi::graphics::GPUBarrier> barriers;
+		wi::vector<OutputTexture> output_textures_free; // free images that can be reused for display order buffering
+		wi::vector<OutputTexture> output_textures_resolve_request; // request image to be resolved
+		wi::vector<OutputTexture> output_textures_used; // resolved image for future display ordering use
+		OutputTexture output; // Currently displayed RGB image with the latest display order
+		int target_display_order = 0; // the current display order that should be visible
+		int current_decode_frame = 0; // the latest decoded frame index
+		float current_time = 0; // tracking the absolute time of the playback in seconds
 		enum class Flags
 		{
 			Empty = 0,
@@ -104,8 +108,10 @@ namespace wi::video
 	bool CreateVideoH264RAW(const uint8_t* filedata, size_t filesize, Video* video);
 	bool CreateVideoInstance(const Video* video, VideoInstance* instance);
 
-	bool IsDecodingRequired(const VideoInstance* instance, float dt);
-	void UpdateVideo(VideoInstance* instance, float dt, wi::graphics::CommandList cmd);
+	void UpdateVideo(VideoInstance* instance, float dt);
+
+	bool IsDecodingRequired(const VideoInstance* instance);
+	void DecodeVideo(VideoInstance* instance, wi::graphics::CommandList cmd);
 	void ResolveVideoToRGB(VideoInstance* instance, wi::graphics::CommandList cmd);
 
 	// Set video instance state to a timer (approximately), this will take efect the next time it is decoded
