@@ -593,6 +593,9 @@ namespace wi::video
 		instance->video = video;
 		instance->current_decode_frame = 0;
 		instance->flags &= ~VideoInstance::Flags::InitialFirstFrameDecoded;
+		instance->output_textures_free.clear();
+		instance->output_textures_used.clear();
+		instance->output_textures_resolve_request.clear();
 
 		GraphicsDevice* device = GetDevice();
 		if (video->profile == VideoProfile::H264 && !device->CheckCapability(GraphicsDeviceCapability::VIDEO_DECODE_H264))

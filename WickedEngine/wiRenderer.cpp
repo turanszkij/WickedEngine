@@ -2823,7 +2823,7 @@ inline void CreateSpotLightShadowCam(const LightComponent& light, SHCAM& shcam)
 		P -= XMLoadFloat3(&light.direction) * backoffset; // back offset hack to fixup the shadow projection limits
 		XMFLOAT3 pos;
 		XMStoreFloat3(&pos, P);
-		shcam.init(pos, light.rotation, 0.1f, light.GetRange(), XM_PI * 0.9f, XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f), XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)); // rect light is pointing to -Z by default
+		shcam.init(pos, light.rotation, backoffset, light.GetRange(), XM_PI * 0.9f, XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f), XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)); // rect light is pointing to -Z by default
 	}
 	else
 	{
