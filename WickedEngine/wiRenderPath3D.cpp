@@ -2695,6 +2695,7 @@ namespace wi
 						wi::renderer::DRAWSCENE_TRANSPARENT
 					);
 					wi::renderer::DrawSky(*scene, cmd);
+					wi::renderer::DrawLightVisualizers(visibility, cmd);
 					device->RenderPassEnd(cmd);
 
 					wi::renderer::GenerateMipChain(camera.render_to_texture.rendertarget_render, wi::renderer::MIPGENFILTER_LINEAR, cmd);

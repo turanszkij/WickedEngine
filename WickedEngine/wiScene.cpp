@@ -4890,6 +4890,17 @@ namespace wi::scene
 				}
 			}
 
+			if (light.cameraSource != INVALID_ENTITY)
+			{
+				const CameraComponent* camera = cameras.GetComponent(light.cameraSource);
+				if (camera != nullptr && camera->render_to_texture.rendertarget_render.IsValid())
+				{
+					// Camera attachment will overwrite texture slots on shader side:
+					int descriptor = GetDevice()->GetDescriptorIndex(&camera->render_to_texture.rendertarget_render, SubresourceType::SRV);
+					light.maskTexDescriptor = descriptor;
+				}
+			}
+
 		});
 	}
 	void Scene::RunParticleUpdateSystem(wi::jobsystem::context& ctx)

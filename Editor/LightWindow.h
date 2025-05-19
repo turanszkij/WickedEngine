@@ -28,6 +28,7 @@ public:
 	wi::gui::ColorPicker colorPicker;
 	wi::gui::ComboBox typeSelectorComboBox;
 	wi::gui::ComboBox shadowResolutionComboBox;
+	wi::gui::ComboBox cameraComboBox;
 
 	wi::gui::Label tipLabel;
 

@@ -1343,6 +1343,8 @@ namespace wi::scene
 
 		int forced_shadow_resolution = -1; // -1: disabled, greater: fixed shadow map resolution
 
+		wi::ecs::Entity cameraSource = wi::ecs::INVALID_ENTITY; // take texture from camera render
+
 		// Non-serialized attributes:
 		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 direction = XMFLOAT3(0, 1, 0);

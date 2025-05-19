@@ -1215,6 +1215,10 @@ namespace wi::scene
 			{
 				archive >> height;
 			}
+			if (seri.GetVersion() >= 5)
+			{
+				SerializeEntity(archive, cameraSource, seri);
+			}
 
 			wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
 				lensFlareRimTextures.resize(lensFlareNames.size());
@@ -1290,6 +1294,10 @@ namespace wi::scene
 			if (seri.GetVersion() >= 4)
 			{
 				archive << height;
+			}
+			if (seri.GetVersion() >= 5)
+			{
+				SerializeEntity(archive, cameraSource, seri);
 			}
 		}
 	}
