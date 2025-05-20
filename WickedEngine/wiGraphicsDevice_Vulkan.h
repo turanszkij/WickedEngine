@@ -201,12 +201,13 @@ namespace wi::graphics
 			VkQueue queue = VK_NULL_HANDLE;
 			VkSemaphore frame_semaphores[BUFFERCOUNT][QUEUE_COUNT] = {};
 			wi::vector<SwapChain> swapchain_updates;
-			wi::vector<VkSwapchainKHR> submit_swapchains;
-			wi::vector<uint32_t> submit_swapChainImageIndices;
 			wi::vector<VkSemaphoreSubmitInfo> submit_waitSemaphoreInfos;
-			wi::vector<VkSemaphore> submit_signalSemaphores;
 			wi::vector<VkSemaphoreSubmitInfo> submit_signalSemaphoreInfos;
 			wi::vector<VkCommandBufferSubmitInfo> submit_cmds;
+
+			wi::vector<VkSemaphore> swapchainWaitSemaphores;
+			wi::vector<VkSwapchainKHR> swapchains;
+			wi::vector<uint32_t> swapchainImageIndices;
 
 			bool sparse_binding_supported = false;
 			std::shared_ptr<std::mutex> locker;

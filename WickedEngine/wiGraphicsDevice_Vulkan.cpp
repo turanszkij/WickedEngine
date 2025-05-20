@@ -1020,7 +1020,7 @@ namespace vulkan_internal
 		uint32_t swapChainImageIndex = 0;
 		uint32_t swapChainAcquireSemaphoreIndex = 0;
 		wi::vector<VkSemaphore> swapchainAcquireSemaphores;
-		VkSemaphore swapchainReleaseSemaphore = VK_NULL_HANDLE;
+		wi::vector<VkSemaphore> swapchainReleaseSemaphores;
 
 		ColorSpace colorSpace = ColorSpace::SRGB;
 		SwapChainDesc desc;
@@ -1037,6 +1037,7 @@ namespace vulkan_internal
 			{
 				allocationhandler->destroyer_imageviews.push_back(std::make_pair(swapChainImageViews[i], framecount));
 				allocationhandler->destroyer_semaphores.push_back(std::make_pair(swapchainAcquireSemaphores[i], framecount));
+				allocationhandler->destroyer_semaphores.push_back(std::make_pair(swapchainReleaseSemaphores[i], framecount));
 			}
 
 #ifdef SDL2
@@ -1048,7 +1049,6 @@ namespace vulkan_internal
 				allocationhandler->destroyer_swapchains.push_back(std::make_pair(swapChain, framecount));
 				allocationhandler->destroyer_surfaces.push_back(std::make_pair(surface, framecount));
 			}
-			allocationhandler->destroyer_semaphores.push_back(std::make_pair(swapchainReleaseSemaphore, framecount));
 
 			allocationhandler->destroylocker.unlock();
 
@@ -1291,6 +1291,23 @@ namespace vulkan_internal
 		VkSemaphoreCreateInfo semaphoreInfo = {};
 		semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
+		// safety release of current swapchain semaphores that might still be working, since this could have been called mid-frame:
+		allocationhandler->destroylocker.lock();
+		for (auto& x : internal_state->swapchainAcquireSemaphores)
+		{
+			allocationhandler->destroyer_semaphores.push_back(std::make_pair(x, allocationhandler->framecount));
+		}
+		internal_state->swapchainAcquireSemaphores.clear();
+		for (auto& x : internal_state->swapchainReleaseSemaphores)
+		{
+			allocationhandler->destroyer_semaphores.push_back(std::make_pair(x, allocationhandler->framecount));
+		}
+		internal_state->swapchainReleaseSemaphores.clear();
+		allocationhandler->destroylocker.unlock();
+
+		internal_state->swapChainAcquireSemaphoreIndex = 0;
+		internal_state->swapChainImageIndex = 0;
+
 		if (internal_state->swapchainAcquireSemaphores.empty())
 		{
 			for (size_t i = 0; i < internal_state->swapChainImages.size(); ++i)
@@ -1299,9 +1316,12 @@ namespace vulkan_internal
 			}
 		}
 
-		if (internal_state->swapchainReleaseSemaphore == VK_NULL_HANDLE)
+		if (internal_state->swapchainReleaseSemaphores.empty())
 		{
-			vulkan_check(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &internal_state->swapchainReleaseSemaphore));
+			for (size_t i = 0; i < internal_state->swapChainImages.size(); ++i)
+			{
+				vulkan_check(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &internal_state->swapchainReleaseSemaphores.emplace_back()));
+			}
 		}
 
 		return true;
@@ -1341,12 +1361,13 @@ using namespace vulkan_internal;
 	void GraphicsDevice_Vulkan::CommandQueue::clear()
 	{
 		swapchain_updates.clear();
-		submit_swapchains.clear();
-		submit_swapChainImageIndices.clear();
 		submit_waitSemaphoreInfos.clear();
-		submit_signalSemaphores.clear();
 		submit_signalSemaphoreInfos.clear();
 		submit_cmds.clear();
+
+		swapchainWaitSemaphores.clear();
+		swapchains.clear();
+		swapchainImageIndices.clear();
 	}
 	void GraphicsDevice_Vulkan::CommandQueue::signal(VkSemaphore semaphore)
 	{
@@ -1406,15 +1427,15 @@ using namespace vulkan_internal;
 		}
 
 		// Swapchain presents:
-		if (!submit_swapchains.empty())
+		if (!swapchains.empty())
 		{
 			VkPresentInfoKHR presentInfo = {};
 			presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-			presentInfo.waitSemaphoreCount = (uint32_t)submit_signalSemaphores.size();
-			presentInfo.pWaitSemaphores = submit_signalSemaphores.data();
-			presentInfo.swapchainCount = (uint32_t)submit_swapchains.size();
-			presentInfo.pSwapchains = submit_swapchains.data();
-			presentInfo.pImageIndices = submit_swapChainImageIndices.data();
+			presentInfo.waitSemaphoreCount = (uint32_t)swapchainWaitSemaphores.size();
+			presentInfo.pWaitSemaphores = swapchainWaitSemaphores.data();
+			presentInfo.swapchainCount = (uint32_t)swapchains.size();
+			presentInfo.pSwapchains = swapchains.data();
+			presentInfo.pImageIndices = swapchainImageIndices.data();
 			VkResult res = vkQueuePresentKHR(queue, &presentInfo);
 			if (res != VK_SUCCESS)
 			{
@@ -1435,9 +1456,9 @@ using namespace vulkan_internal;
 			}
 
 			swapchain_updates.clear();
-			submit_swapchains.clear();
-			submit_swapChainImageIndices.clear();
-			submit_signalSemaphores.clear();
+			swapchains.clear();
+			swapchainImageIndices.clear();
+			swapchainWaitSemaphores.clear();
 		}
 	}
 
@@ -7317,21 +7338,21 @@ using namespace vulkan_internal;
 				{
 					auto internal_state = to_internal(&swapchain);
 
-					queue.submit_swapchains.push_back(internal_state->swapChain);
-					queue.submit_swapChainImageIndices.push_back(internal_state->swapChainImageIndex);
-
 					VkSemaphoreSubmitInfo& waitSemaphore = queue.submit_waitSemaphoreInfos.emplace_back();
 					waitSemaphore.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
 					waitSemaphore.semaphore = internal_state->swapchainAcquireSemaphores[internal_state->swapChainAcquireSemaphoreIndex];
 					waitSemaphore.value = 0; // not a timeline semaphore
 					waitSemaphore.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
 
-					queue.submit_signalSemaphores.push_back(internal_state->swapchainReleaseSemaphore);
 					VkSemaphoreSubmitInfo& signalSemaphore = queue.submit_signalSemaphoreInfos.emplace_back();
 					signalSemaphore.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-					signalSemaphore.semaphore = internal_state->swapchainReleaseSemaphore;
+					signalSemaphore.semaphore = internal_state->swapchainReleaseSemaphores[internal_state->swapChainImageIndex];
 					signalSemaphore.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
 					signalSemaphore.value = 0; // not a timeline semaphore
+
+					queue.swapchains.push_back(internal_state->swapChain);
+					queue.swapchainImageIndices.push_back(internal_state->swapChainImageIndex);
+					queue.swapchainWaitSemaphores.push_back(signalSemaphore.semaphore);
 				}
 
 				if (dependency)
@@ -7341,7 +7362,7 @@ using namespace vulkan_internal;
 						// Wait for command list dependency:
 						queue.wait(semaphore);
 
-						// semaphore is not recycled here, only the signals recycle themselves vecause wait will use the same
+						// semaphore is not recycled here, only the signals recycle themselves because wait will use the same
 					}
 					commandlist.waits.clear();
 
@@ -7765,9 +7786,8 @@ using namespace vulkan_internal;
 		commandlist.renderpass_barriers_end.clear();
 		auto internal_state = to_internal(swapchain);
 
-		internal_state->swapChainAcquireSemaphoreIndex = (internal_state->swapChainAcquireSemaphoreIndex + 1) % internal_state->swapchainAcquireSemaphores.size();
-
 		internal_state->locker.lock();
+		internal_state->swapChainAcquireSemaphoreIndex = (internal_state->swapChainAcquireSemaphoreIndex + 1) % internal_state->swapchainAcquireSemaphores.size();
 		VkResult res;
 		do {
 			res = vkAcquireNextImageKHR(
