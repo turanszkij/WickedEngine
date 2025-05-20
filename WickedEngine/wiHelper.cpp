@@ -17,7 +17,6 @@
 #include <iomanip>
 #include <fstream>
 #include <sstream>
-#include <codecvt> // string conversion
 #include <filesystem>
 #include <vector>
 #include <iostream>
@@ -28,6 +27,8 @@
 #include <Psapi.h> // GetProcessMemoryInfo
 #include <Commdlg.h> // openfile
 #include <WinBase.h>
+#else
+#include <cwchar> // string conversion
 #endif // _WIN32
 
 #ifdef PLATFORM_LINUX
@@ -1395,8 +1396,12 @@ namespace wi::helper
 			MultiByteToWideChar(CP_UTF8, 0, from.c_str(), -1, &to[0], num);
 		}
 #else
-		std::wstring_convert<std::codecvt_utf8<wchar_t>> cv;
-		to = cv.from_bytes(from);
+		std::mbstate_t state {};
+		const char* from_c = from.c_str();
+		std::setlocale(LC_ALL, "en_US.utf8");
+		const std::size_t len = std::mbsrtowcs(nullptr, &from_c, 0, &state);
+		to.resize(len);
+		std::mbsrtowcs(to.data(), &from_c, len, &state);
 #endif // _WIN32
 	}
 
@@ -1410,8 +1415,12 @@ namespace wi::helper
 			WideCharToMultiByte(CP_UTF8, 0, from.c_str(), -1, &to[0], num, NULL, NULL);
 		}
 #else
-		std::wstring_convert<std::codecvt_utf8<wchar_t>> cv;
-		to = cv.to_bytes(from);
+		std::mbstate_t state {};
+		const wchar_t* from_c = from.c_str();
+		std::setlocale(LC_ALL, "en_US.utf8");
+		const std::size_t len = std::wcsrtombs(nullptr, &from_c, 0, &state);
+		to.resize(len);
+		std::wcsrtombs(to.data(), &from_c, len, &state);
 #endif // _WIN32
 	}
 
@@ -1429,15 +1438,10 @@ namespace wi::helper
 		}
 		return num;
 #else
-		std::wstring_convert<std::codecvt_utf8<wchar_t>> cv;
-		auto result = cv.from_bytes(from).c_str();
-		int num = (int)cv.converted();
-		if (dest_size_in_characters >= 0)
-		{
-			num = std::min(num, dest_size_in_characters);
-		}
-		std::memcpy(to, result, num * sizeof(wchar_t));
-		return num;
+		std::mbstate_t state {};
+		const std::size_t len = std::mbsrtowcs(to, &from, dest_size_in_characters, &state);
+		if (len == static_cast<std::size_t>(-1)) return -1;
+		return len + 1; // string length + null terminating character
 #endif // _WIN32
 	}
 
@@ -1455,15 +1459,10 @@ namespace wi::helper
 		}
 		return num;
 #else
-		std::wstring_convert<std::codecvt_utf8<wchar_t>> cv;
-		auto result = cv.to_bytes(from).c_str();
-		int num = (size_t)cv.converted();
-		if (dest_size_in_characters >= 0)
-		{
-			num = std::min(num, dest_size_in_characters);
-		}
-		std::memcpy(to, result, num * sizeof(char));
-		return num;
+		std::mbstate_t state {};
+		const std::size_t len = std::wcsrtombs(to, &from, dest_size_in_characters, &state);
+		if (len == static_cast<std::size_t>(-1)) return -1;
+		return len + 1; // string length + null terminating character
 #endif // _WIN32
 	}
 	
