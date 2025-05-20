@@ -26,19 +26,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	if (depth == 0)
 		return;
 
-#ifdef RTSHADOW
-	uint flatTileIdx = 0;
-	if (GTid.y < 4)
-	{
-		flatTileIdx = flatten2D(Gid.xy * uint2(1, 2) + uint2(0, 0), (postprocess.resolution + uint2(7, 3)) / uint2(8, 4));
-	}
-	else
-	{
-		flatTileIdx = flatten2D(Gid.xy * uint2(1, 2) + uint2(0, 1), (postprocess.resolution + uint2(7, 3)) / uint2(8, 4));
-	}
-	output_tiles[flatTileIdx] = 0;
-#endif // RTSHADOW
-
 	float3 P = reconstruct_position(uv, depth);
 	float3 N = decode_oct(texture_normal[DTid.xy * DOWNSAMPLE]);
 
@@ -323,6 +310,16 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 
 #ifdef RTSHADOW
 	output_normals[DTid.xy] = saturate(N * 0.5 + 0.5);
+	
+	uint flatTileIdx = 0;
+	if (GTid.y < 4)
+	{
+		flatTileIdx = flatten2D(Gid.xy * uint2(1, 2) + uint2(0, 0), (postprocess.resolution + uint2(7, 3)) / uint2(8, 4));
+	}
+	else
+	{
+		flatTileIdx = flatten2D(Gid.xy * uint2(1, 2) + uint2(0, 1), (postprocess.resolution + uint2(7, 3)) / uint2(8, 4));
+	}
 
 	// pack 4 lights into tile bitmask:
 	int lane_index = (DTid.y % 4) * 8 + (DTid.x % 8);

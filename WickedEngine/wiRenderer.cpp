@@ -15035,11 +15035,9 @@ void Postprocess_RTShadow(
 			GPUBarrier::Image(&res.moments[3][1], res.moments[3][1].desc.layout, ResourceState::UNORDERED_ACCESS),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
-		device->ClearUAV(&res.raytraced, 0, cmd);
 		device->ClearUAV(&res.temporal[0], 0, cmd);
 		device->ClearUAV(&res.temporal[1], 0, cmd);
 		device->ClearUAV(&res.denoised, 0, cmd);
-		device->ClearUAV(&res.normals, 0, cmd);
 		device->ClearUAV(&res.scratch[0][0], 0, cmd);
 		device->ClearUAV(&res.scratch[0][1], 0, cmd);
 		device->ClearUAV(&res.scratch[1][0], 0, cmd);
@@ -15097,6 +15095,10 @@ void Postprocess_RTShadow(
 	}
 
 	device->ClearUAV(&output, 0, cmd);
+	device->ClearUAV(&res.raytraced, 0, cmd);
+	device->ClearUAV(&res.normals, 0, cmd);
+	device->ClearUAV(&res.tiles, 0, cmd);
+	device->Barrier(GPUBarrier::Memory(), cmd);
 
 	device->Dispatch(
 		(postprocess.resolution.x + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
