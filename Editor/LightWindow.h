@@ -16,6 +16,7 @@ public:
 	wi::gui::Slider rangeSlider;
 	wi::gui::Slider radiusSlider;
 	wi::gui::Slider lengthSlider;
+	wi::gui::Slider heightSlider;
 	wi::gui::Slider outerConeAngleSlider;
 	wi::gui::Slider innerConeAngleSlider;
 	wi::gui::Slider volumetricBoostSlider;
@@ -27,6 +28,7 @@ public:
 	wi::gui::ColorPicker colorPicker;
 	wi::gui::ComboBox typeSelectorComboBox;
 	wi::gui::ComboBox shadowResolutionComboBox;
+	wi::gui::ComboBox cameraComboBox;
 
 	wi::gui::Label tipLabel;
 

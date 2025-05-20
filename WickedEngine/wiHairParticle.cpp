@@ -772,7 +772,15 @@ namespace wi
 		wirers = rsd;
 
 		rs_shadow = ncrs;
-		rs_shadow.depth_bias = -1;
+
+		if (IsFormatUnorm(wi::renderer::format_depthbuffer_shadowmap))
+		{
+			rs_shadow.depth_bias = -1;
+		}
+		else
+		{
+			rs_shadow.depth_bias = -1000;
+		}
 
 
 		DepthStencilState dsd;

@@ -274,6 +274,7 @@ namespace wi::scene
 			desc.stride = (uint32_t)device->GetTopLevelAccelerationStructureInstanceSize();
 			desc.size = desc.stride * instanceArraySize * 2; // *2 to grow fast
 			desc.usage = Usage::UPLOAD;
+			desc.alignment = 16ull; // vulkan
 			if (TLAS_instancesUpload->desc.size < desc.size)
 			{
 				for (int i = 0; i < arraysize(TLAS_instancesUpload); ++i)
@@ -287,7 +288,7 @@ namespace wi::scene
 			wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
 				// Must not keep inactive TLAS instances, so zero them out for safety:
 				std::memset(TLAS_instancesMapped, 0, TLAS_instancesUpload->desc.size);
-				});
+			});
 		}
 
 		// GPU subset count allocation is ready at this point:
@@ -364,6 +365,8 @@ namespace wi::scene
 
 		RunMeshUpdateSystem(ctx);
 
+		RunVideoUpdateSystem(ctx);
+
 		RunMaterialUpdateSystem(ctx);
 
 		wi::jobsystem::Wait(ctx); // dependencies
@@ -395,8 +398,6 @@ namespace wi::scene
 		RunParticleUpdateSystem(ctx);
 
 		RunSoundUpdateSystem(ctx);
-
-		RunVideoUpdateSystem(ctx);
 
 		RunImpostorUpdateSystem(ctx);
 
@@ -4090,7 +4091,8 @@ namespace wi::scene
 			if (video != nullptr)
 			{
 				// Video attachment will overwrite texture slots on shader side:
-				int descriptor = GetDevice()->GetDescriptorIndex(&video->videoinstance.output.texture, SubresourceType::SRV, video->videoinstance.output.subresource_srgb);
+				Texture videoTexture = video->videoinstance.GetCurrentFrameTexture();
+				int descriptor = GetDevice()->GetDescriptorIndex(&videoTexture, SubresourceType::SRV, video->videoinstance.GetCurrentFrameTextureSRGBSubresource());
 				material.WriteShaderTextureSlot(materialArrayMapped + args.jobIndex, BASECOLORMAP, descriptor);
 				material.WriteShaderTextureSlot(materialArrayMapped + args.jobIndex, EMISSIVEMAP, descriptor);
 			}
@@ -4849,34 +4851,53 @@ namespace wi::scene
 				XMStoreFloat3(&light.direction, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(1, 0, 0, 0), W)));
 				aabb.createFromHalfWidth(light.position, XMFLOAT3(light.GetRange(), light.GetRange(), light.GetRange()));
 				break;
+			case LightComponent::RECTANGLE:
+				XMStoreFloat3(&light.direction, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, 0, -1, 0), W)));
+				aabb.createFromHalfWidth(light.position, XMFLOAT3(light.GetRange(), light.GetRange(), light.GetRange()));
+				break;
 			}
 
 			light.maskTexDescriptor = -1;
 
-			if (light.type == LightComponent::SPOT || light.type == LightComponent::POINT)
+			GraphicsDevice* device = GetDevice();
+
+			if (light.type == LightComponent::SPOT || light.type == LightComponent::POINT || light.type == LightComponent::RECTANGLE)
 			{
-				// Material can be used as mask texture for spot and point lights:
+				// Material can be used as mask texture for spot, rectangle and point lights:
 				const MaterialComponent* material = materials.GetComponent(entity);
 				if (material != nullptr && material->textures[MaterialComponent::BASECOLORMAP].resource.IsValid())
 				{
 					const Texture& tex = material->textures[MaterialComponent::BASECOLORMAP].resource.GetTexture();
 					if (
+						(light.type == LightComponent::RECTANGLE && !has_flag(tex.desc.misc_flags, ResourceMiscFlag::TEXTURECUBE)) ||
 						(light.type == LightComponent::SPOT && !has_flag(tex.desc.misc_flags, ResourceMiscFlag::TEXTURECUBE)) ||
 						(light.type == LightComponent::POINT && has_flag(tex.desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
 						)
 					{
-						light.maskTexDescriptor = GetDevice()->GetDescriptorIndex(&tex, SubresourceType::SRV, material->textures[MaterialComponent::BASECOLORMAP].resource.GetTextureSRGBSubresource());
+						light.maskTexDescriptor = device->GetDescriptorIndex(&tex, SubresourceType::SRV, material->textures[MaterialComponent::BASECOLORMAP].resource.GetTextureSRGBSubresource());
 					}
 				}
 			}
 
-			if (light.type == LightComponent::SPOT)
+			if (light.type == LightComponent::SPOT || light.type == LightComponent::RECTANGLE)
 			{
-				// Video attachment will overwrite texture mask for spotlight:
+				// Video attachment will overwrite texture mask for spotlight and rectangle light:
 				const VideoComponent* video = videos.GetComponent(entity);
 				if (video != nullptr)
 				{
-					light.maskTexDescriptor = GetDevice()->GetDescriptorIndex(&video->videoinstance.output.texture, SubresourceType::SRV, video->videoinstance.output.subresource_srgb);
+					Texture videoTexture = video->videoinstance.GetCurrentFrameTexture();
+					light.maskTexDescriptor = device->GetDescriptorIndex(&videoTexture, SubresourceType::SRV, video->videoinstance.GetCurrentFrameTextureSRGBSubresource());
+				}
+			}
+
+			if (light.cameraSource != INVALID_ENTITY)
+			{
+				const CameraComponent* camera = cameras.GetComponent(light.cameraSource);
+				if (camera != nullptr && camera->render_to_texture.rendertarget_render.IsValid())
+				{
+					// Camera attachment will overwrite texture slots on shader side:
+					int descriptor = GetDevice()->GetDescriptorIndex(&camera->render_to_texture.rendertarget_render, SubresourceType::SRV);
+					light.maskTexDescriptor = descriptor;
 				}
 			}
 
@@ -5344,10 +5365,7 @@ namespace wi::scene
 			if (video.videoResource.IsValid())
 			{
 				const wi::video::Video& vid = video.videoResource.GetVideo();
-				if (vid.frame_infos.size() > video.videoinstance.current_frame)
-				{
-					video.currentTimer = vid.frame_infos[video.videoinstance.current_frame].timestamp_seconds;
-				}
+				video.currentTimer = video.videoinstance.current_time;
 			}
 
 			if (video.IsPlaying())
@@ -5370,6 +5388,7 @@ namespace wi::scene
 
 			video.videoinstance.flags |= wi::video::VideoInstance::Flags::Mipmapped;
 
+			wi::video::UpdateVideo(&video.videoinstance, dt);
 		}
 	}
 	void Scene::RunScriptUpdateSystem(wi::jobsystem::context& ctx)
@@ -5408,6 +5427,7 @@ namespace wi::scene
 	void Scene::RunSpriteUpdateSystem(wi::jobsystem::context& ctx)
 	{
 		wi::jobsystem::Dispatch(ctx, (uint32_t)sprites.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
+			Entity entity = sprites.GetEntity(args.jobIndex);
 			Sprite& sprite = sprites[args.jobIndex];
 			if (sprite.params.isExtractNormalMapEnabled())
 			{
@@ -5421,6 +5441,18 @@ namespace wi::scene
 			{
 				sprite.params.mask_subresource = sprite.maskResource.GetTextureSRGBSubresource();
 			}
+
+			const VideoComponent* videocomponent = videos.GetComponent(entity);
+			if (videocomponent != nullptr && videocomponent->videoinstance.IsValid())
+			{
+				Texture videoTexture = videocomponent->videoinstance.GetCurrentFrameTexture();
+				if (videoTexture.IsValid())
+				{
+					sprite.textureResource.SetTexture(videoTexture);
+					sprite.params.image_subresource = videocomponent->videoinstance.GetCurrentFrameTextureSRGBSubresource();
+				}
+			}
+
 			sprite.Update(dt);
 		});
 	}

@@ -1861,9 +1861,8 @@ namespace wi::graphics
 
 	// Get mipmap count for a given texture dimension.
 	//	width, height, depth: dimensions of the texture
-	//	min_dimension: constrain all dimensions to a specific resolution (optional, default: 1x1x1)
-	//	required_alignment: make sure to only return so many levels so that dimensions remain aligned to a value (optional)
-	constexpr uint32_t GetMipCount(uint32_t width, uint32_t height, uint32_t depth = 1u, uint32_t min_dimension = 1u, uint32_t required_alignment = 1u)
+	//	min_dimension: break when all dimensions go below a specified dimension (optional, default: 1x1x1)
+	constexpr uint32_t GetMipCount(uint32_t width, uint32_t height, uint32_t depth = 1u, uint32_t min_dimension = 1u)
 	{
 		uint32_t mips = 1;
 		while (width > min_dimension || height > min_dimension || depth > min_dimension)
@@ -1871,12 +1870,6 @@ namespace wi::graphics
 			width = std::max(min_dimension, width >> 1u);
 			height = std::max(min_dimension, height >> 1u);
 			depth = std::max(min_dimension, depth >> 1u);
-			if (
-				AlignTo(width, required_alignment) != width ||
-				AlignTo(height, required_alignment) != height ||
-				AlignTo(depth, required_alignment) != depth
-				)
-				break;
 			mips++;
 		}
 		return mips;

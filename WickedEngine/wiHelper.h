@@ -145,12 +145,12 @@ namespace wi::helper
 	// Parameter - to - must be pre-allocated!
 	// dest_size_in_characters : number of characters in the pre-allocated string memory
 	// returns result string length
-	int StringConvert(const char* from, wchar_t* to, int dest_size_in_characters = -1);
+	int StringConvert(const char* from, wchar_t* to, int dest_size_in_characters);
 
 	// Parameter - to - must be pre-allocated!
 	// dest_size_in_characters : number of characters in the pre-allocated string memory
 	// returns result string length
-	int StringConvert(const wchar_t* from, char* to, int dest_size_in_characters = -1);
+	int StringConvert(const wchar_t* from, char* to, int dest_size_in_characters);
 
 	// Prints debug info to the console output
 	enum class DebugLevel

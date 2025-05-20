@@ -1,6 +1,6 @@
-#include "volumeLightHF.hlsli"
+#include "globals.hlsli"
 
-float4 main(VertexToPixel PSIn) : SV_TARGET
+float4 main(float4 pos : SV_Position, float4 col : COLOR) : SV_Target
 {
-	return max(PSIn.col,0);
+	return max(col, 0);
 }

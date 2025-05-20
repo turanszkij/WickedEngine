@@ -209,113 +209,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	GroupMemoryBarrierWithGroupSync();
 
 	const uint depth_mask = uDepthMask; // take out from groupshared into register
-
-#if 0
-	// Each thread will cull one entity until all entities have been culled:
-	for (uint i = groupIndex; i < entityCount; i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
-	{
-		ShaderEntity entity = load_entity(i);
-
-		switch (entity.GetType())
-		{
-		case ENTITY_TYPE_POINTLIGHT:
-		{
-			if (entity.IsStaticLight())
-				break; // static lights will be skipped here (they are used at lightmap baking)
-			if (!any(entity.GetColor().rgb))
-				break;
-			float3 positionVS = mul(GetCamera().view, float4(entity.position, 1)).xyz;
-			Sphere sphere = { positionVS.xyz, entity.GetRange() + entity.GetLength() };
-			if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
-			{
-				AppendEntity_Transparent(i);
-
-				if (SphereIntersectsAABB(sphere, GroupAABB)) // tighter fit than sphere-frustum culling
-				{
-#ifdef ADVANCED_CULLING
-					if (depth_mask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
-#endif
-					{
-						AppendEntity_Opaque(i);
-					}
-				}
-			}
-		}
-		break;
-		case ENTITY_TYPE_SPOTLIGHT:
-		{
-			if (entity.IsStaticLight())
-				break; // static lights will be skipped here (they are used at lightmap baking)
-			if (!any(entity.GetColor().rgb))
-				break;
-			float3 positionVS = mul(GetCamera().view, float4(entity.position, 1)).xyz;
-			float3 directionVS = mul((float3x3)GetCamera().view, entity.GetDirection());
-			// Construct a tight fitting sphere around the spotlight cone:
-			const float r = entity.GetRange() * 0.5f / (entity.GetConeAngleCos() * entity.GetConeAngleCos());
-			Sphere sphere = { positionVS - directionVS * r, r };
-			if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
-			{
-				AppendEntity_Transparent(i);
-
-				if (SphereIntersectsAABB(sphere, GroupAABB)) // tighter fit than sphere-frustum culling
-				{
-#ifdef ADVANCED_CULLING
-					if (depth_mask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
-#endif
-					{
-						AppendEntity_Opaque(i);
-					}
-				}
-
-			}
-		}
-		break;
-		case ENTITY_TYPE_DIRECTIONALLIGHT:
-		{
-			if (entity.IsStaticLight())
-				break; // static lights will be skipped here (they are used at lightmap baking)
-			if (!any(entity.GetColor().rgb))
-				break;
-			AppendEntity_Transparent(i);
-			AppendEntity_Opaque(i);
-		}
-		break;
-		case ENTITY_TYPE_DECAL:
-		case ENTITY_TYPE_ENVMAP:
-		{
-			float3 positionVS = mul(GetCamera().view, float4(entity.position, 1)).xyz;
-			Sphere sphere = { positionVS.xyz, entity.GetRange() };
-			if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
-			{
-				AppendEntity_Transparent(i);
-
-				// unit AABB: 
-				AABB a;
-				a.c = 0;
-				a.e = 1.0;
-
-				// frustum AABB in world space transformed into the space of the probe/decal OBB:
-				AABB b = GroupAABB_WS;
-				AABBtransform(b, load_entitymatrix(entity.GetMatrixIndex()));
-
-				if (IntersectAABB(a, b))
-				{
-#ifdef ADVANCED_CULLING
-					if (depth_mask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
-#endif
-					{
-						AppendEntity_Opaque(i);
-					}
-				}
-			}
-		}
-		break;
-		}
-	}
-#else
-
-	// This is an optimized version of the above, separated entity processing loops by type, reduces divergence and increases performance:
-
+	
 	// Point lights:
 	for (uint i = pointlights().first_item() + groupIndex; i < pointlights().end_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
@@ -367,6 +261,31 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 				}
 			}
 
+		}
+	}
+	
+	// Rectangle lights:
+	for (uint i = rectlights().first_item() + groupIndex; i < rectlights().end_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
+	{
+		ShaderEntity entity = load_entity(i);
+		
+		if (entity.IsStaticLight())
+			continue; // static lights will be skipped here (they are used at lightmap baking)
+		float3 positionVS = mul(GetCamera().view, float4(entity.position, 1)).xyz;
+		Sphere sphere = { positionVS.xyz, entity.GetRange() };
+		if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
+		{
+			AppendEntity_Transparent(i);
+
+			if (SphereIntersectsAABB(sphere, GroupAABB)) // tighter fit than sphere-frustum culling
+			{
+#ifdef ADVANCED_CULLING
+				if (depth_mask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
+#endif
+				{
+					AppendEntity_Opaque(i);
+				}
+			}
 		}
 	}
 
@@ -475,8 +394,6 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 			}
 		}
 	}
-
-#endif
 
 	GroupMemoryBarrierWithGroupSync();
 	

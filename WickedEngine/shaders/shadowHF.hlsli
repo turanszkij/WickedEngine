@@ -18,7 +18,7 @@ static const half2 vogel_points[] = {
 static const min16uint soft_shadow_sample_count = arraysize(vogel_points);
 static const half soft_shadow_sample_count_rcp = rcp((half)soft_shadow_sample_count);
 
-inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, half radius, min16uint2 pixel)
+inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, half2 radius, min16uint2 pixel)
 {
 	Texture2D<half4> texture_shadowatlas = bindless_textures_half4[descriptor_index(GetFrame().texture_shadowatlas_index)];
 	Texture2D<half4> texture_shadowatlas_transparent = bindless_textures_half4[descriptor_index(GetFrame().texture_shadowatlas_transparent_index)];
@@ -26,7 +26,7 @@ inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, half radius
 	half3 shadow = 0;
 
 #ifndef DISABLE_SOFT_SHADOWMAP
-	const float2 spread = GetFrame().shadow_atlas_resolution_rcp.xy * (mad(radius, 8, 2)); // remap radius to try to match ray traced shadow result
+	const float2 spread = GetFrame().shadow_atlas_resolution_rcp.xy * mad(radius, 8, 2); // remap radius to try to match ray traced shadow result
 	const half2x2 rot = dither_rot2x2(pixel + GetTemporalAASampleRotation()); // per pixel rotation for every sample
 	for (min16uint i = 0; i < soft_shadow_sample_count; ++i)
 	{
@@ -71,7 +71,7 @@ inline half3 shadow_2D(in ShaderEntity light, in float3 shadow_pos, in float2 sh
 {
 	shadow_uv.x += cascade;
 	shadow_uv = mad(shadow_uv, light.shadowAtlasMulAdd.xy, light.shadowAtlasMulAdd.zw);
-	return sample_shadow(shadow_uv, shadow_pos.z, shadow_border_clamp(light, cascade), light.GetRadius(), pixel);
+	return sample_shadow(shadow_uv, shadow_pos.z, shadow_border_clamp(light, cascade), light.GetType() == ENTITY_TYPE_RECTLIGHT ? (half2(light.GetRadius(), light.GetLength()) * 0.05) : light.GetRadius(), pixel);
 }
 
 inline half3 shadow_cube(in ShaderEntity light, in float3 Lunnormalized, min16uint2 pixel = 0)

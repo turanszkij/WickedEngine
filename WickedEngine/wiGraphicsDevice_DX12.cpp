@@ -5633,11 +5633,11 @@ std::mutex queue_locker;
 					// Note: pCommandListDebugNameA and similar doesn't seem to contain anything while pCommandListDebugNameW does, so convert these by hand:
 					if (pNode->pCommandListDebugNameW != nullptr)
 					{
-						wi::helper::StringConvert(pNode->pCommandListDebugNameW, commandlistname);
+						wi::helper::StringConvert(pNode->pCommandListDebugNameW, commandlistname, arraysize(commandlistname));
 					}
 					if (pNode->pCommandQueueDebugNameW != nullptr)
 					{
-						wi::helper::StringConvert(pNode->pCommandQueueDebugNameW, commandqueuename);
+						wi::helper::StringConvert(pNode->pCommandQueueDebugNameW, commandqueuename, arraysize(commandqueuename));
 					}
 
 					log += std::string("[DRED] Commandlist = [") + commandlistname + std::string("], CommandQueue = [") + commandqueuename + std::string("], lastCompletedOp = [") + std::to_string(lastCompletedOp) + "], BreadCrumbCount = [" + std::to_string(pNode->BreadcrumbCount) + "]\n";
@@ -5692,7 +5692,7 @@ std::mutex queue_locker;
 						char objectname[1024] = {};
 						if (pNode->ObjectNameW != nullptr)
 						{
-							wi::helper::StringConvert(pNode->ObjectNameW, objectname);
+							wi::helper::StringConvert(pNode->ObjectNameW, objectname, arraysize(objectname));
 						}
 						log += std::string("\tName: ") + objectname + std::string(" ") + AllocTypeName + std::string("\n");
 						pNode = pNode->pNext;
@@ -5710,7 +5710,7 @@ std::mutex queue_locker;
 						char objectname[1024] = {};
 						if (pNode->ObjectNameW != nullptr)
 						{
-							wi::helper::StringConvert(pNode->ObjectNameW, objectname);
+							wi::helper::StringConvert(pNode->ObjectNameW, objectname, arraysize(objectname));
 						}
 						log += std::string("\tName: ") + objectname + std::string(" (Type: ") + AllocTypeName + std::string(")\n");
 						pNode = pNode->pNext;
@@ -7670,7 +7670,7 @@ std::mutex queue_locker;
 		if (commandlist.queue == QUEUE_VIDEO_DECODE)
 			return;
 		wchar_t text[128];
-		if (wi::helper::StringConvert(name, text) > 0)
+		if (wi::helper::StringConvert(name, text, arraysize(text)) > 0)
 		{
 			PIXBeginEvent(commandlist.GetGraphicsCommandList(), 0xFF000000, text);
 		}
@@ -7688,7 +7688,7 @@ std::mutex queue_locker;
 		if (commandlist.queue == QUEUE_VIDEO_DECODE)
 			return;
 		wchar_t text[128];
-		if (wi::helper::StringConvert(name, text) > 0)
+		if (wi::helper::StringConvert(name, text, arraysize(text)) > 0)
 		{
 			PIXSetMarker(commandlist.GetGraphicsCommandList(), 0xFFFF0000, text);
 		}

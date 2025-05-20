@@ -26,19 +26,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	if (depth == 0)
 		return;
 
-#ifdef RTSHADOW
-	uint flatTileIdx = 0;
-	if (GTid.y < 4)
-	{
-		flatTileIdx = flatten2D(Gid.xy * uint2(1, 2) + uint2(0, 0), (postprocess.resolution + uint2(7, 3)) / uint2(8, 4));
-	}
-	else
-	{
-		flatTileIdx = flatten2D(Gid.xy * uint2(1, 2) + uint2(0, 1), (postprocess.resolution + uint2(7, 3)) / uint2(8, 4));
-	}
-	output_tiles[flatTileIdx] = 0;
-#endif // RTSHADOW
-
 	float3 P = reconstruct_position(uv, depth);
 	float3 N = decode_oct(texture_normal[DTid.xy * DOWNSAMPLE]);
 
@@ -139,6 +126,38 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 #ifdef RTSHADOW
 					light.position += light.GetDirection() * (bluenoise.z - 0.5) * light.GetLength();
 					light.position += mul(hemispherepoint_cos(bluenoise.x, bluenoise.y), get_tangentspace(normalize(light.position - surface.P))) * light.GetRadius();
+#endif // RTSHADOW
+					L = light.position - surface.P;
+					const float dist2 = dot(L, L);
+					const float range = light.GetRange();
+					const float range2 = range * range;
+
+					[branch]
+					if (dist2 < range2)
+					{
+						const float3 Lunnormalized = L;
+						const float dist = sqrt(dist2);
+						L /= dist;
+
+						SurfaceToLight surfaceToLight;
+						surfaceToLight.create(surface, L);
+
+						[branch]
+						if (any(surfaceToLight.NdotL))
+						{
+							ray.TMax = dist;
+						}
+					}
+				}
+				break;
+				case ENTITY_TYPE_RECTLIGHT:
+				{
+#ifdef RTSHADOW
+					const half4 quaternion = light.GetQuaternion();
+					const half3 right = rotate_vector(half3(1, 0, 0), quaternion);
+					const half3 up = rotate_vector(half3(0, 1, 0), quaternion);
+					light.position += right * (bluenoise.x - 0.5) * light.GetLength();
+					light.position += up * (bluenoise.y - 0.5) * light.GetHeight();
 #endif // RTSHADOW
 					L = light.position - surface.P;
 					const float dist2 = dot(L, L);
@@ -291,6 +310,16 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 
 #ifdef RTSHADOW
 	output_normals[DTid.xy] = saturate(N * 0.5 + 0.5);
+	
+	uint flatTileIdx = 0;
+	if (GTid.y < 4)
+	{
+		flatTileIdx = flatten2D(Gid.xy * uint2(1, 2) + uint2(0, 0), (postprocess.resolution + uint2(7, 3)) / uint2(8, 4));
+	}
+	else
+	{
+		flatTileIdx = flatten2D(Gid.xy * uint2(1, 2) + uint2(0, 1), (postprocess.resolution + uint2(7, 3)) / uint2(8, 4));
+	}
 
 	// pack 4 lights into tile bitmask:
 	int lane_index = (DTid.y % 4) * 8 + (DTid.x % 8);

@@ -825,7 +825,7 @@ namespace wi::input
 	{
 #ifdef PLATFORM_WINDOWS_DESKTOP
 		wchar_t wfilename[1024] = {};
-		wi::helper::StringConvert(filename, wfilename);
+		wi::helper::StringConvert(filename, wfilename, arraysize(wfilename));
 		cursor_table[cursor] = LoadCursorFromFile(wfilename);
 #endif // PLATFORM_WINDOWS_DESKTOP
 

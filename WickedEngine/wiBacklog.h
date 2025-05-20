@@ -25,7 +25,6 @@ namespace wi::backlog
 		Warning,
 		Error,
 	};
-
 	void Toggle();
 	void Scroll(int direction);
 	void Update(const wi::Canvas& canvas, float dt = 1.0f / 60.0f);
@@ -64,6 +63,20 @@ namespace wi::backlog
 	void SetLogLevel(LogLevel newLevel);
 
 	LogLevel GetUnseenLogLevelMax();
+
+
+	struct LogEntry
+	{
+		std::string text;
+		LogLevel level = LogLevel::Default;
+	};
+	// this function is intended to be used only in crash handlers to write the current
+	// backlog, but without locking or any mallocs. It might iterate over complete garbage,
+	// so it should only be used as a last resort.
+	// It's also not considered part of the API and can change at any time.
+	//
+	// Use getText() instead, unless absolutely necessary.
+	void _forEachLogEntry_unsafe(std::function<void(const LogEntry&)> cb);
 
 	// These are no longer used, but kept here to not break user code:
 	[[deprecated("does nothing")]] inline void input(const char input) {}
