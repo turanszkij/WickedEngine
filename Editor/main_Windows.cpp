@@ -279,15 +279,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			assert(filecount != 0);
 			for (UINT i = 0; i < filecount; ++i)
 			{
-				std::wstring wfilename;
-				UINT len = DragQueryFile(hdrop, i, nullptr, 0);
-				if (len == 0)
-				{
-					assert(0);
-					continue;
-				}
-				wfilename.resize(len + 1);
-				UINT res = DragQueryFile(hdrop, i, wfilename.data(), (UINT)wfilename.size());
+				wchar_t wfilename[1024] = {};
+				UINT res = DragQueryFile(hdrop, i, wfilename, arraysize(wfilename));
 				if (res == 0)
 				{
 					assert(0);
