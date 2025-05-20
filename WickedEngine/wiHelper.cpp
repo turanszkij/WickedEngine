@@ -1387,84 +1387,264 @@ namespace wi::helper
 
 	void StringConvert(const std::string& from, std::wstring& to)
 	{
-#ifdef _WIN32
-		int num = MultiByteToWideChar(CP_UTF8, 0, from.c_str(), -1, NULL, 0);
-		if (num > 0)
+		to.clear();
+		size_t i = 0;
+		while (i < from.size())
 		{
-			to.resize(size_t(num) - 1);
-			MultiByteToWideChar(CP_UTF8, 0, from.c_str(), -1, &to[0], num);
-		}
-#else
-		std::wstring_convert<std::codecvt_utf8<wchar_t>> cv;
-		to = cv.from_bytes(from);
-#endif // _WIN32
-	}
+			uint32_t codepoint = 0;
+			unsigned char c = from[i];
 
+			if (c < 0x80)
+			{
+				codepoint = c;
+				i += 1;
+			}
+			else if ((c & 0xE0) == 0xC0)
+			{
+				if (i + 1 >= from.size())
+					break;
+				codepoint = ((c & 0x1F) << 6) | (from[i + 1] & 0x3F);
+				i += 2;
+			}
+			else if ((c & 0xF0) == 0xE0)
+			{
+				if (i + 2 >= from.size())
+					break;
+				codepoint = ((c & 0x0F) << 12) | ((from[i + 1] & 0x3F) << 6) | (from[i + 2] & 0x3F);
+				i += 3;
+			}
+			else if ((c & 0xF8) == 0xF0)
+			{
+				if (i + 3 >= from.size())
+					break;
+				codepoint = ((c & 0x07) << 18) | ((from[i + 1] & 0x3F) << 12) | ((from[i + 2] & 0x3F) << 6) | (from[i + 3] & 0x3F);
+				i += 4;
+			}
+			else
+			{
+				++i;
+				continue;
+			}
+
+			if constexpr (sizeof(wchar_t) >= 4)
+			{
+				to += static_cast<wchar_t>(codepoint);
+			}
+			else
+			{
+				if (codepoint <= 0xFFFF)
+				{
+					to += static_cast<wchar_t>(codepoint);
+				}
+				else
+				{
+					codepoint -= 0x10000;
+					to += static_cast<wchar_t>((codepoint >> 10) + 0xD800);
+					to += static_cast<wchar_t>((codepoint & 0x3FF) + 0xDC00);
+				}
+			}
+		}
+	}
+	
 	void StringConvert(const std::wstring& from, std::string& to)
 	{
-#ifdef _WIN32
-		int num = WideCharToMultiByte(CP_UTF8, 0, from.c_str(), -1, NULL, 0, NULL, NULL);
-		if (num > 0)
+		to.clear();
+		for (size_t i = 0; i < from.size(); ++i)
 		{
-			to.resize(size_t(num) - 1);
-			WideCharToMultiByte(CP_UTF8, 0, from.c_str(), -1, &to[0], num, NULL, NULL);
-		}
-#else
-		std::wstring_convert<std::codecvt_utf8<wchar_t>> cv;
-		to = cv.to_bytes(from);
-#endif // _WIN32
-	}
+			uint32_t codepoint = 0;
+			wchar_t wc = from[i];
 
+			if constexpr (sizeof(wchar_t) >= 4)
+			{
+				codepoint = static_cast<uint32_t>(wc);
+			}
+			else
+			{
+				if (wc >= 0xD800 && wc <= 0xDBFF)
+				{
+					if (i + 1 < from.size())
+					{
+						wchar_t wc_low = from[i + 1];
+						if (wc_low >= 0xDC00 && wc_low <= 0xDFFF)
+						{
+							codepoint = ((static_cast<uint32_t>(wc - 0xD800) << 10) | (static_cast<uint32_t>(wc_low - 0xDC00))) + 0x10000;
+							++i;
+						}
+					}
+				}
+				else
+				{
+					codepoint = static_cast<uint32_t>(wc);
+				}
+			}
+
+			if (codepoint <= 0x7F)
+			{
+				to += static_cast<char>(codepoint);
+			}
+			else if (codepoint <= 0x7FF)
+			{
+				to += static_cast<char>(0xC0 | ((codepoint >> 6) & 0x1F));
+				to += static_cast<char>(0x80 | (codepoint & 0x3F));
+			}
+			else if (codepoint <= 0xFFFF)
+			{
+				to += static_cast<char>(0xE0 | ((codepoint >> 12) & 0x0F));
+				to += static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
+				to += static_cast<char>(0x80 | (codepoint & 0x3F));
+			}
+			else if (codepoint <= 0x10FFFF)
+			{
+				to += static_cast<char>(0xF0 | ((codepoint >> 18) & 0x07));
+				to += static_cast<char>(0x80 | ((codepoint >> 12) & 0x3F));
+				to += static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
+				to += static_cast<char>(0x80 | (codepoint & 0x3F));
+			}
+		}
+	}
+	
 	int StringConvert(const char* from, wchar_t* to, int dest_size_in_characters)
 	{
-#ifdef _WIN32
-		int num = MultiByteToWideChar(CP_UTF8, 0, from, -1, NULL, 0);
-		if (num > 0)
-		{
-			if (dest_size_in_characters >= 0)
-			{
-				num = std::min(num, dest_size_in_characters);
-			}
-			MultiByteToWideChar(CP_UTF8, 0, from, -1, &to[0], num);
-		}
-		return num;
-#else
-		std::wstring_convert<std::codecvt_utf8<wchar_t>> cv;
-		auto result = cv.from_bytes(from).c_str();
-		int num = (int)cv.converted();
-		if (dest_size_in_characters >= 0)
-		{
-			num = std::min(num, dest_size_in_characters);
-		}
-		std::memcpy(to, result, num * sizeof(wchar_t));
-		return num;
-#endif // _WIN32
-	}
+		if (!from || !to || dest_size_in_characters <= 0)
+			return 0;
 
+		const unsigned char* src = reinterpret_cast<const unsigned char*>(from);
+		int written = 0;
+
+		while (*src && written < dest_size_in_characters - 1)
+		{
+			uint32_t codepoint = 0;
+			unsigned char c = *src;
+
+			if (c < 0x80)
+			{
+				codepoint = c;
+				++src;
+			}
+			else if ((c & 0xE0) == 0xC0)
+			{
+				if (!src[1])
+					break;
+				codepoint = ((c & 0x1F) << 6) | (src[1] & 0x3F);
+				src += 2;
+			}
+			else if ((c & 0xF0) == 0xE0)
+			{
+				if (!src[1] || !src[2])
+					break;
+				codepoint = ((c & 0x0F) << 12) | ((src[1] & 0x3F) << 6) | (src[2] & 0x3F);
+				src += 3;
+			}
+			else if ((c & 0xF8) == 0xF0)
+			{
+				if (!src[1] || !src[2] || !src[3])
+					break;
+				codepoint = ((c & 0x07) << 18) | ((src[1] & 0x3F) << 12) | ((src[2] & 0x3F) << 6) | (src[3] & 0x3F);
+				src += 4;
+			}
+			else
+			{
+				++src;
+				continue;
+			}
+
+			if constexpr (sizeof(wchar_t) >= 4)
+			{
+				to[written++] = static_cast<wchar_t>(codepoint);
+			}
+			else
+			{
+				if (codepoint <= 0xFFFF)
+				{
+					to[written++] = static_cast<wchar_t>(codepoint);
+				}
+				else
+				{
+					if (written + 1 >= dest_size_in_characters - 1)
+						break;
+					codepoint -= 0x10000;
+					to[written++] = static_cast<wchar_t>((codepoint >> 10) + 0xD800);
+					to[written++] = static_cast<wchar_t>((codepoint & 0x3FF) + 0xDC00);
+				}
+			}
+		}
+
+		to[written] = 0;
+		return written;
+	}
+	
 	int StringConvert(const wchar_t* from, char* to, int dest_size_in_characters)
 	{
-#ifdef _WIN32
-		int num = WideCharToMultiByte(CP_UTF8, 0, from, -1, NULL, 0, NULL, NULL);
-		if (num > 0)
+		if (!from || !to || dest_size_in_characters <= 0)
+			return 0;
+
+		int written = 0;
+		for (int i = 0; from[i] != 0 && written < dest_size_in_characters - 1; ++i)
 		{
-			if (dest_size_in_characters >= 0)
+			uint32_t codepoint = 0;
+			wchar_t wc = from[i];
+
+			if constexpr (sizeof(wchar_t) >= 4)
 			{
-				num = std::min(num, dest_size_in_characters);
+				codepoint = static_cast<uint32_t>(wc);
 			}
-			WideCharToMultiByte(CP_UTF8, 0, from, -1, &to[0], num, NULL, NULL);
+			else
+			{
+				if (wc >= 0xD800 && wc <= 0xDBFF)
+				{
+					wchar_t wc_low = from[i + 1];
+					if (wc_low >= 0xDC00 && wc_low <= 0xDFFF)
+					{
+						codepoint = ((static_cast<uint32_t>(wc - 0xD800) << 10) | (static_cast<uint32_t>(wc_low - 0xDC00))) + 0x10000;
+						++i;
+					}
+					else
+					{
+						codepoint = wc;
+					}
+				}
+				else
+				{
+					codepoint = static_cast<uint32_t>(wc);
+				}
+			}
+
+			if (codepoint <= 0x7F)
+			{
+				if (written + 1 >= dest_size_in_characters)
+					break;
+				to[written++] = static_cast<char>(codepoint);
+			}
+			else if (codepoint <= 0x7FF)
+			{
+				if (written + 2 >= dest_size_in_characters)
+					break;
+				to[written++] = static_cast<char>(0xC0 | ((codepoint >> 6) & 0x1F));
+				to[written++] = static_cast<char>(0x80 | (codepoint & 0x3F));
+			}
+			else if (codepoint <= 0xFFFF)
+			{
+				if (written + 3 >= dest_size_in_characters)
+					break;
+				to[written++] = static_cast<char>(0xE0 | ((codepoint >> 12) & 0x0F));
+				to[written++] = static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
+				to[written++] = static_cast<char>(0x80 | (codepoint & 0x3F));
+			}
+			else if (codepoint <= 0x10FFFF)
+			{
+				if (written + 4 >= dest_size_in_characters)
+					break;
+				to[written++] = static_cast<char>(0xF0 | ((codepoint >> 18) & 0x07));
+				to[written++] = static_cast<char>(0x80 | ((codepoint >> 12) & 0x3F));
+				to[written++] = static_cast<char>(0x80 | ((codepoint >> 6) & 0x3F));
+				to[written++] = static_cast<char>(0x80 | (codepoint & 0x3F));
+			}
 		}
-		return num;
-#else
-		std::wstring_convert<std::codecvt_utf8<wchar_t>> cv;
-		auto result = cv.to_bytes(from).c_str();
-		int num = (size_t)cv.converted();
-		if (dest_size_in_characters >= 0)
-		{
-			num = std::min(num, dest_size_in_characters);
-		}
-		std::memcpy(to, result, num * sizeof(char));
-		return num;
-#endif // _WIN32
+
+		if (written < dest_size_in_characters)
+			to[written] = '\0';
+
+		return written;
 	}
 	
 	void DebugOut(const std::string& str, DebugLevel level)
