@@ -948,9 +948,9 @@ namespace wi::terrain
 					grass.vertex_lengths.resize(vertexCount);
 					std::atomic<uint32_t> grass_valid_vertex_count{ 0 };
 
-					// Shadow casting will only be enabled for sloped terrain chunks:
-					std::atomic_bool slope_cast_shadow;
-					slope_cast_shadow.store(false);
+					//// Shadow casting will only be enabled for sloped terrain chunks:
+					//std::atomic_bool slope_cast_shadow;
+					//slope_cast_shadow.store(false);
 
 					// Do a parallel for loop over all the chunk's vertices and compute their properties:
 					wi::jobsystem::context ctx;
@@ -1022,8 +1022,8 @@ namespace wi::terrain
 						XMStoreFloat3(&normal, N);
 
 						const float slope_amount = 1.0f - saturate(normal.y);
-						if (slope_amount > 0.1f)
-							slope_cast_shadow.store(true);
+						//if (slope_amount > 0.1f)
+						//	slope_cast_shadow.store(true);
 
 						float region_base = 1;
 						float region_slope = region1 == 0 ? 1 : smoothstep(0.0f, region1, slope_amount);
@@ -1078,8 +1078,8 @@ namespace wi::terrain
 					});
 					wi::jobsystem::Wait(ctx); // wait until chunk's vertex buffer is fully generated
 					
-					object.SetCastShadow(slope_cast_shadow.load());
-					mesh.SetDoubleSidedShadow(slope_cast_shadow.load());
+					//object.SetCastShadow(slope_cast_shadow.load());
+					//mesh.SetDoubleSidedShadow(slope_cast_shadow.load());
 
 					wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
 						mesh.CreateRenderData();

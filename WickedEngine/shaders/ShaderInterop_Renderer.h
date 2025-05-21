@@ -1777,4 +1777,16 @@ struct alignas(16) DDGIProbe
 	uint2 offset;
 };
 
+struct ShadowFilterData
+{
+	float4x4 inverse_view_projection;
+	float3 eye;
+	float range_rcp;
+	uint4 rect;
+	float2 atlas_resolution_rcp;
+	float2 atlas_resolution;
+	float2 spread;
+	float2 padding;
+};
+
 #endif // WI_SHADERINTEROP_RENDERER_H

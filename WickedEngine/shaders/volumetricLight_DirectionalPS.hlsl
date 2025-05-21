@@ -60,7 +60,7 @@ float4 main(VertexToPixel input) : SV_Target
 			[branch]
 			if (is_saturated(shadow_uv))
 			{
-				shadow *= shadow_2D(light, shadow_pos, shadow_uv.xy, cascade, input.pos.xy);
+				shadow *= shadow_2D(light, 1 - shadow_pos.z, shadow_uv.xy, cascade);
 				break;
 			}
 		}

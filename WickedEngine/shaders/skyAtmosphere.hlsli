@@ -685,7 +685,7 @@ SingleScatteringResult IntegrateScatteredLuminance(
 				
 				if (is_saturated(shadow_uv))
 				{
-					earthShadow *= shadow_2D(light, shadow_pos, shadow_uv.xy, furthestCascade).r;
+					earthShadow *= shadow_2D(light, 1 - shadow_pos.z, shadow_uv.xy, furthestCascade).r;
 				}
 			}
 			

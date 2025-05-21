@@ -14,49 +14,6 @@
 #define LIGHTING_SCATTER
 #endif // WATER
 
-bool AreAllQuadLanesActive()
-{
-    // Get the lane index within the wave
-    uint laneIndex = WaveGetLaneIndex();
-    
-    // Get the active lanes in the wave
-    uint4 ballot = WaveActiveBallot(true);
-    
-    // Assuming a quad is 4 consecutive lanes, check if all 4 lanes in the quad are active
-    // Note: This assumes the quad lanes are contiguous in the wave (implementation-dependent)
-    uint quadStartLane = laneIndex & ~3u; // Align to the start of the quad
-    bool allLanesActive = true;
-    
-    for (uint i = 0; i < 4; i++)
-    {
-        uint laneToCheck = quadStartLane + i;
-        if (laneToCheck < WaveGetLaneCount())
-        {
-            // Check if the lane is active in the ballot
-            allLanesActive = allLanesActive && (ballot[laneToCheck / 32] & (1u << (laneToCheck % 32))) != 0;
-        }
-        else
-        {
-            // If the lane is out of bounds, consider it inactive
-            allLanesActive = false;
-        }
-    }
-    
-    return allLanesActive;
-}
-
-template<typename T>
-inline void QuadBlur(inout T value)
-{
-#if __SHADER_TARGET_STAGE == __SHADER_STAGE_PIXEL && defined(SHADOW_SAMPLING_DISK)
-// Average shadow within quad, this smooths out the dithering a bit:
-//	Note that I don't implement this in shadowHF.hlsli because we need to
-//	make sure that when averaging, all lanes in the quad are coherent
-//	It wouldn't be good if some waves are not sampling shadows or sampling different slices
-	if(AreAllQuadLanesActive()) value = (value + QuadReadAcrossX(value) + QuadReadAcrossY(value) + QuadReadAcrossDiagonal(value)) * 0.25;
-#endif // __SHADER_STAGE_PIXEL
-}
-
 struct LightingPart
 {
 	half3 diffuse;
@@ -140,13 +97,11 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 					if (cascade_fade > 0 && dither(surface.pixel + GetTemporalAASampleRotation()) < cascade_fade)
 						continue;
 						
-					light_color *= shadow_2D(light, shadow_pos, shadow_uv.xy, cascade, surface.pixel);
+					light_color *= shadow_2D(light, 1 - shadow_pos.z, shadow_uv.xy, cascade, 16);
 					break;
 				}
 			}
 		}
-		
-		QuadBlur(light_color);
 		
 		if (!any(light_color))
 			return; // light color lost after shadow
@@ -249,10 +204,8 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 		if ((GetFrame().options & OPTION_BIT_RAYTRACED_SHADOWS) == 0 || GetCamera().texture_rtshadow_index < 0 || (GetCamera().options & SHADERCAMERA_OPTION_USE_SHADOW_MASK) == 0)
 #endif // SHADOW_MASK_ENABLED
 		{
-			light_color *= shadow_cube(light, LunnormalizedShadow, surface.pixel);
+			light_color *= shadow_cube(light, LunnormalizedShadow, 1);
 		}
-		
-		QuadBlur(light_color);
 		
 		if (!any(light_color))
 			return; // light color lost after shadow
@@ -365,11 +318,9 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 			[branch]
 			if (is_saturated(shadow_uv))
 			{
-				light_color *= shadow_2D(light, shadow_pos.xyz, shadow_uv.xy, 0, surface.pixel);
+				light_color *= shadow_2D(light, rcp(dist_rcp) / range, shadow_uv.xy, 0, 1);
 			}
 		}
-		
-		QuadBlur(light_color);
 		
 		if (!any(light_color))
 			return; // light color lost after shadow
@@ -500,11 +451,9 @@ inline void light_rect(in ShaderEntity light, in Surface surface, inout Lighting
 			[branch]
 			if (is_saturated(shadow_uv))
 			{
-				light_color *= shadow_2D(light, shadow_pos.xyz, shadow_uv.xy, 0, surface.pixel);
+				light_color *= shadow_2D(light, rcp(dist_rcp) / range, shadow_uv.xy, 0, 1);
 			}
 		}
-
-		QuadBlur(light_color);
 		
 		if (!any(light_color))
 			return; // light color lost after shadow

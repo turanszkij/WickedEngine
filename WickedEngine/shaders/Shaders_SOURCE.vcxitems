@@ -761,6 +761,7 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)aerialPerspectiveCS.hlsl" />
     <FxCompile Include="$(MSBuildThisFileDirectory)aerialPerspectiveCS_capture.hlsl" />
     <FxCompile Include="$(MSBuildThisFileDirectory)aerialPerspectiveCS_capture_MSAA.hlsl" />
+    <FxCompile Include="$(MSBuildThisFileDirectory)shadow_filterCS.hlsl" />
     <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_cameraVolumeLutCS.hlsl" />
     <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_skyLuminanceLutCS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>

@@ -27,7 +27,7 @@ namespace wi
 	static Shader ps_simple;
 	static Shader cs_simulate;
 	static DepthStencilState dss_default, dss_equal, dss_shadow;
-	static RasterizerState rs, ncrs, wirers, rs_shadow;
+	static RasterizerState rs, ncrs, wirers;
 	static BlendState bs;
 	static BlendState bs_shadow;
 	static PipelineState PSO[RENDERPASS_COUNT];
@@ -708,7 +708,7 @@ namespace wi
 						break;
 					case RENDERPASS_SHADOW:
 						desc.ps = &ps_shadow;
-						desc.rs = &rs_shadow;
+						desc.rs = &ncrs;
 						desc.bs = &bs_shadow;
 						desc.dss = &dss_shadow;
 						break;
@@ -770,17 +770,6 @@ namespace wi
 		rsd.multisample_enable = false;
 		rsd.antialiased_line_enable = false;
 		wirers = rsd;
-
-		rs_shadow = ncrs;
-
-		if (IsFormatUnorm(wi::renderer::format_depthbuffer_shadowmap))
-		{
-			rs_shadow.depth_bias = -1;
-		}
-		else
-		{
-			rs_shadow.depth_bias = -1000;
-		}
 
 
 		DepthStencilState dsd;
