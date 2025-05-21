@@ -272,7 +272,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		if (entity.IsStaticLight())
 			continue; // static lights will be skipped here (they are used at lightmap baking)
 		float3 positionVS = mul(GetCamera().view, float4(entity.position, 1)).xyz;
-		Sphere sphere = { positionVS.xyz, entity.GetRange() };
+		Sphere sphere = { positionVS.xyz, max(entity.GetLength(), entity.GetHeight()) + entity.GetRange() };
 		if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
 		{
 			AppendEntity_Transparent(i);

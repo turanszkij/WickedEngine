@@ -545,6 +545,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 		input.nor = -input.nor;
 	}
 	surface.N = normalize(input.nor);
+	surface.facenormal = surface.N;
 #endif // OBJECTSHADER_USE_NORMAL
 
 #ifdef OBJECTSHADER_USE_COMMON

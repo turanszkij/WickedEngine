@@ -425,6 +425,7 @@ inline void light_rect(in ShaderEntity light, in Surface surface, inout Lighting
 	const half3 forward = cross(up, right);
 	const half light_length = max(0.01, light.GetLength());
 	const half light_height = max(0.01, light.GetHeight());
+	const half light_area = light_length * light_height;
 	const float3 p0 = light.position - right * light_length * 0.5 + up * light_height * 0.5;
 	const float3 p1 = light.position + right * light_length * 0.5 + up * light_height * 0.5;
 	const float3 p2 = light.position + right * light_length * 0.5 - up * light_height * 0.5;
@@ -432,8 +433,15 @@ inline void light_rect(in ShaderEntity light, in Surface surface, inout Lighting
 	
 	if (dot(surface.P - light.position, forward) <= 0)
 		return; // behind light
+
+	// Determine closest point on rectangle to surface position:
+	float3 closest_point_on_plane_to_surface = point_on_plane(surface.P, light.position, forward);
+	float3 closest_vector_on_plane = closest_point_on_plane_to_surface - light.position;
+	float2 plane_point = float2(dot(closest_vector_on_plane, right), dot(closest_vector_on_plane, up));
+	float2 nearest_point = float2(clamp(plane_point.x, -light_length * 0.5, light_length * 0.5), clamp(plane_point.y, -light_height * 0.5, light_height * 0.5));
+	float3 rectangle_point = light.position + nearest_point.x * right + nearest_point.y * up;
 		
-	float3 Lunnormalized = light.position - surface.P;
+	float3 Lunnormalized = rectangle_point - surface.P;
 
 	const half dist2 = dot(Lunnormalized, Lunnormalized);
 	const half range = light.GetRange();
@@ -449,6 +457,7 @@ inline void light_rect(in ShaderEntity light, in Surface surface, inout Lighting
 	surface_to_light.create(surface, L);
 	
 	// Solid angle based on the Frostbite presentation: Moving Frostbite to Physically Based Rendering by Sebastien Lagarde, Charles de Rousiers, Siggraph 2014
+	//	https://media.contentapi.ea.com/content/dam/eacom/frostbite/files/course-notes-moving-frostbite-to-pbr-v2.pdf
 	float3 v0 = normalize(p0 - surface.P);
 	float3 v1 = normalize(p1 - surface.P);
 	float3 v2 = normalize(p2 - surface.P);
@@ -501,9 +510,9 @@ inline void light_rect(in ShaderEntity light, in Surface surface, inout Lighting
 			return; // light color lost after shadow
 	}
 		
-	light_color *= attenuation_pointlight(dist2, range, range2);
+	light_color *= attenuation_pointlight(dist2, range, range2); // dist2 is the closest point on rectangle, so it will not be a falloff from light center, but as if a point light is placed on the closest rectangle point
 	
-	half3 light_color_diffuse = light_color;
+	half3 light_color_diffuse = light_color * light_area * PI; // I increase the light color by the surface area, because I want larger lights to illuminate more.
 	
 	half3 light_color_specular = light_color;
 
