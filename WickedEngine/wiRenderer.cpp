@@ -7055,12 +7055,14 @@ void DrawShadowmaps(
 			{
 				XMStoreFloat4x4(&filter.inverse_view_projection, XMMatrixInverse(nullptr, shcams[cascade].view_projection));
 				filter.eye = float3(0, 0, 0);
+				filter.range = 0;
 				filter.range_rcp = -1;
 				filter.rect.x = shadow_rect.x + cascade * shadow_rect.w;
 				filter.rect.y = shadow_rect.y;
 				filter.rect.z = shadow_rect.w;
 				filter.rect.w = shadow_rect.h;
 				filter.spread = float2(light.radius, light.radius);
+				filter.type = SHADER_ENTITY_TYPE::ENTITY_TYPE_DIRECTIONALLIGHT;
 				device->BindDynamicConstantBuffer(filter, 2, cmd);
 				device->Dispatch((filter.rect.z + SHADOW_FILTER_THREADSIZE - 1) / SHADOW_FILTER_THREADSIZE, (filter.rect.w + SHADOW_FILTER_THREADSIZE - 1) / SHADOW_FILTER_THREADSIZE, 1, cmd);
 			}
@@ -7089,7 +7091,8 @@ void DrawShadowmaps(
 
 			XMStoreFloat4x4(&filter.inverse_view_projection, XMMatrixInverse(nullptr, shcam.view_projection));
 			filter.eye = light.position;
-			filter.range_rcp = 1.0f / light.GetRange();
+			filter.range = light.GetRange();
+			filter.range_rcp = 1.0f / filter.range;
 			filter.rect.x = shadow_rect.x;
 			filter.rect.y = shadow_rect.y;
 			filter.rect.z = shadow_rect.w;
@@ -7097,10 +7100,12 @@ void DrawShadowmaps(
 			if (light.type == LightComponent::RECTANGLE)
 			{
 				filter.spread = float2(light.length * 0.2f, light.height * 0.2f);
+				filter.type = SHADER_ENTITY_TYPE::ENTITY_TYPE_RECTLIGHT;
 			}
 			else
 			{
 				filter.spread = float2(light.radius, light.radius);
+				filter.type = SHADER_ENTITY_TYPE::ENTITY_TYPE_SPOTLIGHT;
 			}
 			device->BindDynamicConstantBuffer(filter, 2, cmd);
 			device->Dispatch((filter.rect.z + SHADOW_FILTER_THREADSIZE - 1) / SHADOW_FILTER_THREADSIZE, (filter.rect.w + SHADOW_FILTER_THREADSIZE - 1) / SHADOW_FILTER_THREADSIZE, 1, cmd);
@@ -7140,12 +7145,14 @@ void DrawShadowmaps(
 				{
 					XMStoreFloat4x4(&filter.inverse_view_projection, XMMatrixInverse(nullptr, cameras[shcam].view_projection));
 					filter.eye = light.position;
-					filter.range_rcp = 1.0f / light.GetRange();
+					filter.range = light.GetRange();
+					filter.range_rcp = 1.0f / filter.range;
 					filter.rect.x = shadow_rect.x + shcam * shadow_rect.w;
 					filter.rect.y = shadow_rect.y;
 					filter.rect.z = shadow_rect.w;
 					filter.rect.w = shadow_rect.h;
 					filter.spread = float2(light.radius, light.radius);
+					filter.type = SHADER_ENTITY_TYPE::ENTITY_TYPE_POINTLIGHT;
 					device->BindDynamicConstantBuffer(filter, 2, cmd);
 					device->Dispatch((filter.rect.z + SHADOW_FILTER_THREADSIZE - 1) / SHADOW_FILTER_THREADSIZE, (filter.rect.w + SHADOW_FILTER_THREADSIZE - 1) / SHADOW_FILTER_THREADSIZE, 1, cmd);
 				}
@@ -7167,12 +7174,14 @@ void DrawShadowmaps(
 		CreateDirLightShadowCams(vis.scene->rain_blocker_dummy_light, *vis.camera, &shcam, 1, vis.rain_blocker_shadow_rect);
 		XMStoreFloat4x4(&filter.inverse_view_projection, XMMatrixInverse(nullptr, shcam.view_projection));
 		filter.eye = float3(0, 0, 0);
+		filter.range = 0;
 		filter.range_rcp = -1;
 		filter.rect.x = vis.rain_blocker_shadow_rect.x;
 		filter.rect.y = vis.rain_blocker_shadow_rect.y;
 		filter.rect.z = vis.rain_blocker_shadow_rect.w;
 		filter.rect.w = vis.rain_blocker_shadow_rect.h;
 		filter.spread = float2(0.5f, 0.5f);
+		filter.type = SHADER_ENTITY_TYPE::ENTITY_TYPE_DIRECTIONALLIGHT;
 		device->BindDynamicConstantBuffer(filter, 2, cmd);
 		device->Dispatch((filter.rect.z + SHADOW_FILTER_THREADSIZE - 1) / SHADOW_FILTER_THREADSIZE, (filter.rect.w + SHADOW_FILTER_THREADSIZE - 1) / SHADOW_FILTER_THREADSIZE, 1, cmd);
 	}

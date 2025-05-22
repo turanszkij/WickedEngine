@@ -24,7 +24,6 @@ inline uint coord_to_cache(int2 coord)
 [numthreads(THREADCOUNT, THREADCOUNT, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 {
-	const bool ortho = filter.range_rcp < 0;
 	const float border = 0.51;
 	const float2 topleft = (filter.rect.xy + border) * filter.atlas_resolution_rcp;
 	const float2 bottomright = (filter.rect.xy + filter.rect.zw - border) * filter.atlas_resolution_rcp;
@@ -43,33 +42,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 		half4 bbbb = shadowAtlas_transparent.GatherBlue(sampler_linear_clamp, uv);
 		half4 aaaa = shadowAtlas_transparent.GatherAlpha(sampler_linear_clamp, uv);
 		const uint t = coord_to_cache(int2(x, y));
-		
-		if (ortho)
-		{
-			zzzz = 1 - zzzz;
-		}
-		else
-		{
-			zzzz.x = distance(filter.eye, reconstruct_position(origin_uv, zzzz.x, filter.inverse_view_projection)) * filter.range_rcp;
-			zzzz.y = distance(filter.eye, reconstruct_position(origin_uv, zzzz.y, filter.inverse_view_projection)) * filter.range_rcp;
-			zzzz.z = distance(filter.eye, reconstruct_position(origin_uv, zzzz.z, filter.inverse_view_projection)) * filter.range_rcp;
-			zzzz.w = distance(filter.eye, reconstruct_position(origin_uv, zzzz.w, filter.inverse_view_projection)) * filter.range_rcp;
-		}
+
+		zzzz = 1 - zzzz;
 		zzzz = saturate(zzzz);
 		zzzz = exp(exponential_shadow_bias * zzzz);
-		
-		if (ortho)
-		{
-			aaaa = 1 - aaaa;
-		}
-		else
-		{
-			aaaa.x = distance(filter.eye, reconstruct_position(origin_uv, aaaa.x, filter.inverse_view_projection)) * filter.range_rcp;
-			aaaa.y = distance(filter.eye, reconstruct_position(origin_uv, aaaa.y, filter.inverse_view_projection)) * filter.range_rcp;
-			aaaa.z = distance(filter.eye, reconstruct_position(origin_uv, aaaa.z, filter.inverse_view_projection)) * filter.range_rcp;
-			aaaa.w = distance(filter.eye, reconstruct_position(origin_uv, aaaa.w, filter.inverse_view_projection)) * filter.range_rcp;
-		}
-		aaaa = saturate(aaaa);
 		
 		cache_z[t] = zzzz.w;
 		cache_z[t + 1] = zzzz.z;
@@ -90,7 +66,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	float4 transparent_filtered = 0;
 
 	const float2 spread_offset = filter.atlas_resolution_rcp * clamp(2 + filter.spread * 8, 2, TILE_BORDER);
-	const uint soft_shadow_sample_count = (uint)lerp(4.0, 64.0, saturate(length(filter.spread)));
+	const uint soft_shadow_sample_count = (uint)lerp(4.0, 16.0, saturate(length(filter.spread)));
 	const float soft_shadow_sample_count_rcp = 1.0 / (float)soft_shadow_sample_count;
 	const float soft_shadow_sample_count_sqrt_rcp = rsqrt((float)soft_shadow_sample_count);
 

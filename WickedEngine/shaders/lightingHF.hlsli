@@ -102,10 +102,10 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 					if (cascade_fade > 0 && dither(surface.pixel + GetTemporalAASampleRotation()) < cascade_fade)
 						continue;
 						
-					light_color *= shadow_2D(light, 1 - shadow_pos.z, shadow_uv.xy, cascade);
+					light_color *= shadow_2D(light, shadow_pos.z, shadow_uv.xy, cascade);
 					break;
 #else
-					const half3 shadow_main = shadow_2D(light, 1 - shadow_pos.z, shadow_uv.xy, cascade);
+					const half3 shadow_main = shadow_2D(light, shadow_pos.z, shadow_uv.xy, cascade);
 					
 					// If we are on cascade edge threshold and not the last cascade, then fallback to a larger cascade:
 					[branch]
@@ -115,7 +115,7 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 						cascade += 1;
 						shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + cascade), float4(surface.P, 1)).xyz;
 						shadow_uv = clipspace_to_uv(shadow_pos);
-						const half3 shadow_fallback = shadow_2D(light, 1 - shadow_pos.z, shadow_uv.xy, cascade);
+						const half3 shadow_fallback = shadow_2D(light, shadow_pos.z, shadow_uv.xy, cascade);
 
 						light_color *= lerp(shadow_main, shadow_fallback, cascade_fade);
 					}
@@ -344,7 +344,7 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 			[branch]
 			if (is_saturated(shadow_uv))
 			{
-				light_color *= shadow_2D(light, rcp(dist_rcp) / range, shadow_uv.xy, 0);
+				light_color *= shadow_2D(light, shadow_pos.z, shadow_uv.xy, 0);
 			}
 		}
 		
@@ -477,7 +477,7 @@ inline void light_rect(in ShaderEntity light, in Surface surface, inout Lighting
 			[branch]
 			if (is_saturated(shadow_uv))
 			{
-				light_color *= shadow_2D(light, rcp(dist_rcp) / range, shadow_uv.xy, 0);
+				light_color *= shadow_2D(light, shadow_pos.z, shadow_uv.xy, 0);
 			}
 		}
 		

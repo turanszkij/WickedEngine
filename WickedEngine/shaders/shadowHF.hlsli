@@ -8,13 +8,13 @@ inline half3 sample_shadow(float2 uv, float cmp)
 {
 	Texture2D<float> texture_shadowatlas = bindless_textures_float[descriptor_index(GetFrame().texture_shadowatlas_filtered_index)];
 	float shadowMapValue = texture_shadowatlas.SampleLevel(sampler_linear_clamp, uv, 0);
-	half3 shadow = sqr((half)saturate(shadowMapValue * exp(-exponential_shadow_bias * cmp)));
+	half3 shadow = sqr((half)saturate(shadowMapValue * exp(-exponential_shadow_bias * (1 - cmp))));
 		
 #ifndef DISABLE_TRANSPARENT_SHADOWMAP
 	Texture2D<half4> texture_shadowatlas_transparent = bindless_textures_half4[descriptor_index(GetFrame().texture_shadowatlas_transparent_index)];
 	half4 transparent_shadow = texture_shadowatlas_transparent.SampleLevel(sampler_linear_clamp, uv, 0);
 #ifdef TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
-	if (transparent_shadow.a < cmp - 0.001)
+	if (transparent_shadow.a > cmp + 0.0001)
 #endif // TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
 	{
 		shadow *= transparent_shadow.rgb;
@@ -43,12 +43,13 @@ inline half3 shadow_2D(in ShaderEntity light, in float z, in float2 shadow_uv, i
 
 inline half3 shadow_cube(in ShaderEntity light, in float3 Lunnormalized)
 {
+	const float remapped_distance = light.GetCubemapDepthRemapNear() + light.GetCubemapDepthRemapFar() / (max(max(abs(Lunnormalized.x), abs(Lunnormalized.y)), abs(Lunnormalized.z)) * 0.989); // little bias to avoid artifact
 	const float3 uv_slice = cubemap_to_uv(-Lunnormalized);
 	float2 shadow_uv = uv_slice.xy;
 	shadow_uv.x += uv_slice.z;
 	shadow_uv = mad(shadow_uv, light.shadowAtlasMulAdd.xy, light.shadowAtlasMulAdd.zw);
 	shadow_border_clamp(light, uv_slice.z, shadow_uv);
-	return sample_shadow(shadow_uv, length(Lunnormalized) / light.GetRange());
+	return sample_shadow(shadow_uv, remapped_distance);
 }
 
 inline half shadow_2D_volumetricclouds(float3 P)

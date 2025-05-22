@@ -1787,7 +1787,8 @@ struct ShadowFilterData
 	float2 atlas_resolution_rcp;
 	float2 atlas_resolution;
 	float2 spread;
-	float2 padding;
+	float range;
+	uint type;
 };
 
 #endif // WI_SHADERINTEROP_RENDERER_H
