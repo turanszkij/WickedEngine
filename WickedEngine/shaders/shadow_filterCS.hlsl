@@ -38,10 +38,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 		const float2 uv = clamp((pixel + 0.5f) * filter.atlas_resolution_rcp, topleft, bottomright);
 		const float2 origin_uv = inverse_lerp(topleft, bottomright, uv);
 		float4 zzzz = shadowAtlas.GatherRed(sampler_linear_clamp, uv);
-		float4 rrrr = shadowAtlas_transparent.GatherRed(sampler_linear_clamp, uv);
-		float4 gggg = shadowAtlas_transparent.GatherGreen(sampler_linear_clamp, uv);
-		float4 bbbb = shadowAtlas_transparent.GatherBlue(sampler_linear_clamp, uv);
-		float4 aaaa = shadowAtlas_transparent.GatherAlpha(sampler_linear_clamp, uv);
+		half4 rrrr = shadowAtlas_transparent.GatherRed(sampler_linear_clamp, uv);
+		half4 gggg = shadowAtlas_transparent.GatherGreen(sampler_linear_clamp, uv);
+		half4 bbbb = shadowAtlas_transparent.GatherBlue(sampler_linear_clamp, uv);
+		half4 aaaa = shadowAtlas_transparent.GatherAlpha(sampler_linear_clamp, uv);
 		const uint t = coord_to_cache(int2(x, y));
 		
 		if (ortho)
@@ -50,13 +50,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 		}
 		else
 		{
-			zzzz = float4(
-				distance(filter.eye, reconstruct_position(origin_uv, zzzz.x, filter.inverse_view_projection)),
-				distance(filter.eye, reconstruct_position(origin_uv, zzzz.y, filter.inverse_view_projection)),
-				distance(filter.eye, reconstruct_position(origin_uv, zzzz.z, filter.inverse_view_projection)),
-				distance(filter.eye, reconstruct_position(origin_uv, zzzz.w, filter.inverse_view_projection))
-			);
-			zzzz = (zzzz * filter.range_rcp);
+			zzzz.x = distance(filter.eye, reconstruct_position(origin_uv, zzzz.x, filter.inverse_view_projection)) * filter.range_rcp;
+			zzzz.y = distance(filter.eye, reconstruct_position(origin_uv, zzzz.y, filter.inverse_view_projection)) * filter.range_rcp;
+			zzzz.z = distance(filter.eye, reconstruct_position(origin_uv, zzzz.z, filter.inverse_view_projection)) * filter.range_rcp;
+			zzzz.w = distance(filter.eye, reconstruct_position(origin_uv, zzzz.w, filter.inverse_view_projection)) * filter.range_rcp;
 		}
 		zzzz = saturate(zzzz);
 		zzzz = exp(exponential_shadow_bias * zzzz);
@@ -67,13 +64,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 		}
 		else
 		{
-			aaaa = float4(
-				distance(filter.eye, reconstruct_position(origin_uv, aaaa.x, filter.inverse_view_projection)),
-				distance(filter.eye, reconstruct_position(origin_uv, aaaa.y, filter.inverse_view_projection)),
-				distance(filter.eye, reconstruct_position(origin_uv, aaaa.z, filter.inverse_view_projection)),
-				distance(filter.eye, reconstruct_position(origin_uv, aaaa.w, filter.inverse_view_projection))
-			);
-			aaaa = (aaaa * filter.range_rcp);
+			aaaa.x = distance(filter.eye, reconstruct_position(origin_uv, aaaa.x, filter.inverse_view_projection)) * filter.range_rcp;
+			aaaa.y = distance(filter.eye, reconstruct_position(origin_uv, aaaa.y, filter.inverse_view_projection)) * filter.range_rcp;
+			aaaa.z = distance(filter.eye, reconstruct_position(origin_uv, aaaa.z, filter.inverse_view_projection)) * filter.range_rcp;
+			aaaa.w = distance(filter.eye, reconstruct_position(origin_uv, aaaa.w, filter.inverse_view_projection)) * filter.range_rcp;
 		}
 		aaaa = saturate(aaaa);
 		
