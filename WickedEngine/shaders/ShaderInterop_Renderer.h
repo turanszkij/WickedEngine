@@ -1777,6 +1777,7 @@ struct alignas(16) DDGIProbe
 	uint2 offset;
 };
 
+static const uint SHADOW_FILTER_THREADSIZE = 16u;
 struct ShadowFilterData
 {
 	float4x4 inverse_view_projection;

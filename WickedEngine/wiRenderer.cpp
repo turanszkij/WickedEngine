@@ -7062,7 +7062,7 @@ void DrawShadowmaps(
 				filter.rect.w = shadow_rect.h;
 				filter.spread = float2(light.radius, light.radius);
 				device->BindDynamicConstantBuffer(filter, 2, cmd);
-				device->Dispatch((filter.rect.z + 7u) / 8u, (filter.rect.w + 7u) / 8u, 1, cmd);
+				device->Dispatch((filter.rect.z + SHADOW_FILTER_THREADSIZE - 1) / SHADOW_FILTER_THREADSIZE, (filter.rect.w + SHADOW_FILTER_THREADSIZE - 1) / SHADOW_FILTER_THREADSIZE, 1, cmd);
 			}
 		}
 		break;
@@ -7103,7 +7103,7 @@ void DrawShadowmaps(
 				filter.spread = float2(light.radius, light.radius);
 			}
 			device->BindDynamicConstantBuffer(filter, 2, cmd);
-			device->Dispatch((filter.rect.z + 7u) / 8u, (filter.rect.w + 7u) / 8u, 1, cmd);
+			device->Dispatch((filter.rect.z + SHADOW_FILTER_THREADSIZE - 1) / SHADOW_FILTER_THREADSIZE, (filter.rect.w + SHADOW_FILTER_THREADSIZE - 1) / SHADOW_FILTER_THREADSIZE, 1, cmd);
 
 			if (predicationRequest && light.occlusionquery >= 0)
 			{
@@ -7147,7 +7147,7 @@ void DrawShadowmaps(
 					filter.rect.w = shadow_rect.h;
 					filter.spread = float2(light.radius, light.radius);
 					device->BindDynamicConstantBuffer(filter, 2, cmd);
-					device->Dispatch((filter.rect.z + 7u) / 8u, (filter.rect.w + 7u) / 8u, 1, cmd);
+					device->Dispatch((filter.rect.z + SHADOW_FILTER_THREADSIZE - 1) / SHADOW_FILTER_THREADSIZE, (filter.rect.w + SHADOW_FILTER_THREADSIZE - 1) / SHADOW_FILTER_THREADSIZE, 1, cmd);
 				}
 			}
 
@@ -7174,7 +7174,7 @@ void DrawShadowmaps(
 		filter.rect.w = vis.rain_blocker_shadow_rect.h;
 		filter.spread = float2(0.5f, 0.5f);
 		device->BindDynamicConstantBuffer(filter, 2, cmd);
-		device->Dispatch((filter.rect.z + 7u) / 8u, (filter.rect.w + 7u) / 8u, 1, cmd);
+		device->Dispatch((filter.rect.z + SHADOW_FILTER_THREADSIZE - 1) / SHADOW_FILTER_THREADSIZE, (filter.rect.w + SHADOW_FILTER_THREADSIZE - 1) / SHADOW_FILTER_THREADSIZE, 1, cmd);
 	}
 #endif
 	device->Barrier(GPUBarrier::Image(&shadowMapAtlas_Filtered, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE), cmd);

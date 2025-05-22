@@ -2,13 +2,13 @@
 #define WI_SHADOW_HF
 #include "globals.hlsli"
 
-static const float exponential_shadow_bias = 80;
+static const float exponential_shadow_bias = 60;
 
 inline half3 sample_shadow(float2 uv, float cmp)
 {
 	Texture2D<float> texture_shadowatlas = bindless_textures_float[descriptor_index(GetFrame().texture_shadowatlas_filtered_index)];
 	float shadowMapValue = texture_shadowatlas.SampleLevel(sampler_linear_clamp, uv, 0);
-	half3 shadow = sqr(saturate(shadowMapValue * exp(-exponential_shadow_bias * cmp)));
+	half3 shadow = sqr((half)saturate(shadowMapValue * exp(-exponential_shadow_bias * cmp)));
 		
 #ifndef DISABLE_TRANSPARENT_SHADOWMAP
 	Texture2D<half4> texture_shadowatlas_transparent = bindless_textures_half4[descriptor_index(GetFrame().texture_shadowatlas_transparent_index)];
