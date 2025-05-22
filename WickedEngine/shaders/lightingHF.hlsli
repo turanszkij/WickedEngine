@@ -14,6 +14,9 @@
 #define LIGHTING_SCATTER
 #endif // WATER
 
+// If enabled, cascade fade will be dithered, otherwise it will be a smooth blend:
+//#define CASCADE_DITHERING
+
 struct LightingPart
 {
 	half3 diffuse;
@@ -82,8 +85,8 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 			{
 				// Project into shadow map space (no need to divide by .w because ortho projection!):
 				const float4x4 cascade_projection = load_entitymatrix(light.GetMatrixIndex() + cascade);
-				const float3 shadow_pos = mul(cascade_projection, float4(surface.P, 1)).xyz;
-				const float3 shadow_uv = clipspace_to_uv(shadow_pos);
+				float3 shadow_pos = mul(cascade_projection, float4(surface.P, 1)).xyz;
+				float3 shadow_uv = clipspace_to_uv(shadow_pos);
 
 				// Determine if pixel is inside current cascade bounds and compute shadow if it is:
 				[branch]
@@ -92,7 +95,8 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 					const half3 shadow_box = half3(shadow_pos.xy, shadow_pos.z * 2 - 1);
 					const half3 cascade_edgefactor = saturate(saturate(abs(shadow_box)) - 0.8) * 5.0; // fade will be on edge and inwards 10%
 					const half cascade_fade = max3(cascade_edgefactor);
-						
+
+#ifdef CASCADE_DITHERING
 					// If we are on cascade edge threshold and not the last cascade, then fallback to a larger cascade:
 					[branch]
 					if (cascade_fade > 0 && dither(surface.pixel + GetTemporalAASampleRotation()) < cascade_fade)
@@ -100,6 +104,27 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 						
 					light_color *= shadow_2D(light, 1 - shadow_pos.z, shadow_uv.xy, cascade);
 					break;
+#else
+					const half3 shadow_main = shadow_2D(light, 1 - shadow_pos.z, shadow_uv.xy, cascade);
+					
+					// If we are on cascade edge threshold and not the last cascade, then fallback to a larger cascade:
+					[branch]
+					if (cascade_fade > 0 && cascade < light.GetShadowCascadeCount() - 1)
+					{
+						// Project into next shadow cascade (no need to divide by .w because ortho projection!):
+						cascade += 1;
+						shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + cascade), float4(surface.P, 1)).xyz;
+						shadow_uv = clipspace_to_uv(shadow_pos);
+						const half3 shadow_fallback = shadow_2D(light, 1 - shadow_pos.z, shadow_uv.xy, cascade);
+
+						light_color *= lerp(shadow_main, shadow_fallback, cascade_fade);
+					}
+					else
+					{
+						light_color *= shadow_main;
+					}
+					break;
+#endif // CASCADE_DITHERING
 				}
 			}
 		}
