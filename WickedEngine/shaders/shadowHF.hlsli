@@ -14,7 +14,7 @@ inline half3 sample_shadow(float2 uv, float cmp)
 	Texture2D<half4> texture_shadowatlas_transparent = bindless_textures_half4[descriptor_index(GetFrame().texture_shadowatlas_transparent_index)];
 	half4 transparent_shadow = texture_shadowatlas_transparent.SampleLevel(sampler_linear_clamp, uv, 0);
 #ifdef TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
-	if (transparent_shadow.a > cmp)
+	if (transparent_shadow.a < cmp)
 #endif // TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
 	{
 		shadow *= transparent_shadow.rgb;

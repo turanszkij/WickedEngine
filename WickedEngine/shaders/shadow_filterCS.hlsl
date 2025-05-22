@@ -24,7 +24,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float2 bottomright = (filter.rect.xy + filter.rect.zw - border) * filter.atlas_resolution_rcp;
 
 	float filtered = 0;
-	float transparent_filtered = 0;
+	float4 transparent_filtered = 0;
 
 	const float2 spread_offset = filter.atlas_resolution_rcp * (2 + filter.spread * 8);
 	const uint soft_shadow_sample_count = (uint)lerp(8.0, 128.0, saturate(length(filter.spread)));
@@ -58,7 +58,26 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		zzzz = saturate(zzzz);
 		zzzz = exp(exponential_shadow_bias * zzzz);
 		filtered += bilinear(zzzz, frac(sample_uv * filter.atlas_resolution));
-		transparent_filtered += shadowAtlas_transparent.SampleLevel(sampler_linear_clamp, sample_uv, 0);
+
+		float4 aaaa = shadowAtlas_transparent.GatherAlpha(sampler_linear_clamp, sample_uv);
+		if (ortho)
+		{
+			aaaa = 1 - aaaa;
+		}
+		else
+		{
+			const float2 origin_uv = inverse_lerp(uv_remap.xy, uv_remap.zw, sample_uv);
+			aaaa = float4(
+				distance(filter.eye, reconstruct_position(origin_uv, aaaa.x, filter.inverse_view_projection)),
+				distance(filter.eye, reconstruct_position(origin_uv, aaaa.y, filter.inverse_view_projection)),
+				distance(filter.eye, reconstruct_position(origin_uv, aaaa.z, filter.inverse_view_projection)),
+				distance(filter.eye, reconstruct_position(origin_uv, aaaa.w, filter.inverse_view_projection))
+			);
+			aaaa = (aaaa * filter.range_rcp);
+		}
+		aaaa = saturate(aaaa);
+		float a = bilinear(aaaa, frac(sample_uv * filter.atlas_resolution));
+		transparent_filtered += float4(shadowAtlas_transparent.SampleLevel(sampler_linear_clamp, sample_uv, 0).rgb, a);
 	}
 	filtered *= soft_shadow_sample_count_rcp;
 	transparent_filtered *= soft_shadow_sample_count_rcp;
