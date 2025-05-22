@@ -102,7 +102,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 			shadow_pos.xyz /= shadow_pos.w;
 			float2 shadow_uv = clipspace_to_uv(shadow_pos.xy);
 			[branch]
-			if (is_saturated(shadow_uv.x))
+			if (is_saturated(shadow_uv))
 			{
 				attenuation *= shadow_2D(light, shadow_pos.z, shadow_uv.xy, 0, input.pos.xy);
 			}
