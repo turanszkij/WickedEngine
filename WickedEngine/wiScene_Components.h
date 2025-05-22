@@ -2406,6 +2406,12 @@ namespace wi::scene
 					values.erase(values.begin() + lookup[name]);
 					names.erase(names.begin() + lookup[name]);
 					lookup.erase(name);
+
+					// reorder lookup
+					for (size_t i = 0; i < names.size(); ++i)
+					{
+						lookup[names[i]] = i;
+					}
 				}
 			}
 		};
