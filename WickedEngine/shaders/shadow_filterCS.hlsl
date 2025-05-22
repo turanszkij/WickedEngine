@@ -4,10 +4,10 @@
 ConstantBuffer<ShadowFilterData> filter : register(b2);
 
 Texture2D<float> shadowAtlas : register(t0);
-Texture2D<float4> shadowAtlas_transparent : register(t1);
+Texture2D<half4> shadowAtlas_transparent : register(t1);
 
 RWTexture2D<float> shadowAtlas_filtered : register(u0);
-RWTexture2D<float4> shadowAtlas_transparent_filtered : register(u1);
+RWTexture2D<half4> shadowAtlas_transparent_filtered : register(u1);
 
 static const float kGoldenAngle = 2.4;
 
