@@ -1175,24 +1175,21 @@ struct alignas(16) FrameCB
 
 	uint		frame_count;
 	uint		temporalaa_samplerotation;
-	int			texture_shadowatlas_index;
-	int			texture_shadowatlas_transparent_index;
+	uint		entity_culling_count;
+	uint		capsuleshadow_fade_angle;
 
 	uint2		shadow_atlas_resolution;
 	float2		shadow_atlas_resolution_rcp;
 
-	float4x4	cloudShadowLightSpaceMatrix;
-	float4x4	cloudShadowLightSpaceMatrixInverse;
-
+	int			texture_shadowatlas_index;
+	int			texture_shadowatlas_filtered_index;
+	int			texture_shadowatlas_transparent_index;
 	float		cloudShadowFarPlaneKm;
-	int			texture_volumetricclouds_shadow_index;
-	uint		giboost_packed; // force fp16 load
-	uint		entity_culling_count;
 
-	uint		capsuleshadow_fade_angle;
+	uint		giboost_packed; // force fp16 load
+	int			texture_volumetricclouds_shadow_index;
 	int			indirect_debugbufferindex;
 	int			padding0;
-	int			padding1;
 
 	float		blue_noise_phase;
 	int			texture_random64x64_index;
@@ -1216,6 +1213,9 @@ struct alignas(16) FrameCB
 	float4		rain_blocker_mad_prev;
 	float4x4	rain_blocker_matrix_prev;
 	float4x4	rain_blocker_matrix_inverse_prev;
+
+	float4x4	cloudShadowLightSpaceMatrix;
+	float4x4	cloudShadowLightSpaceMatrixInverse;
 
 	ShaderScene scene;
 

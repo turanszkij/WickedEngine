@@ -66,7 +66,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 		[branch]
 		if (light.IsCastingShadow())
 		{
-			attenuation *= shadow_cube(light, Lunnormalized, input.pos.xy);
+			attenuation *= shadow_cube(light, Lunnormalized);
 		}
 		
 		[branch]

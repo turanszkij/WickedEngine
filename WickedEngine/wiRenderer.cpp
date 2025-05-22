@@ -4245,9 +4245,11 @@ void UpdatePerFrameData(
 	frameCB.indirect_debugbufferindex = device->GetDescriptorIndex(&buffers[BUFFERTYPE_INDIRECT_DEBUG_0], SubresourceType::UAV);
 
 	// Note: shadow maps always assumed to be valid to avoid shader branching logic
-	const Texture& shadowMap = shadowMapAtlas_Filtered.IsValid() ? shadowMapAtlas_Filtered : *wi::texturehelper::getBlack();
+	const Texture& shadowMap = shadowMapAtlas.IsValid() ? shadowMapAtlas : *wi::texturehelper::getBlack();
+	const Texture& shadowMapFiltered = shadowMapAtlas_Filtered.IsValid() ? shadowMapAtlas_Filtered : *wi::texturehelper::getBlack();
 	const Texture& shadowMapTransparent = shadowMapAtlas_Transparent_Filtered.IsValid() ? shadowMapAtlas_Transparent_Filtered : *wi::texturehelper::getWhite();
 	frameCB.texture_shadowatlas_index = device->GetDescriptorIndex(&shadowMap, SubresourceType::SRV);
+	frameCB.texture_shadowatlas_filtered_index = device->GetDescriptorIndex(&shadowMapFiltered, SubresourceType::SRV);
 	frameCB.texture_shadowatlas_transparent_index = device->GetDescriptorIndex(&shadowMapTransparent, SubresourceType::SRV);
 	frameCB.shadow_atlas_resolution.x = shadowMap.desc.width;
 	frameCB.shadow_atlas_resolution.y = shadowMap.desc.height;
@@ -7157,6 +7159,7 @@ void DrawShadowmaps(
 		break;
 		} // terminate switch
 	}
+#if 0 // note: rain blocker doesn't use filtering for now, it uses pcf
 	// Rain blocker filtering:
 	if (vis.scene->weather.rain_amount > 0)
 	{
@@ -7173,6 +7176,7 @@ void DrawShadowmaps(
 		device->BindDynamicConstantBuffer(filter, 2, cmd);
 		device->Dispatch((filter.rect.z + 7u) / 8u, (filter.rect.w + 7u) / 8u, 1, cmd);
 	}
+#endif
 	device->Barrier(GPUBarrier::Image(&shadowMapAtlas_Filtered, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE), cmd);
 	device->Barrier(GPUBarrier::Image(&shadowMapAtlas_Transparent_Filtered, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE), cmd);
 	device->EventEnd(cmd);

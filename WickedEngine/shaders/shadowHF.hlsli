@@ -6,9 +6,9 @@ static const float exponential_shadow_bias = 80;
 
 inline half3 sample_shadow(float2 uv, float cmp)
 {
-	Texture2D<float> texture_shadowatlas = bindless_textures_float[descriptor_index(GetFrame().texture_shadowatlas_index)];
+	Texture2D<float> texture_shadowatlas = bindless_textures_float[descriptor_index(GetFrame().texture_shadowatlas_filtered_index)];
 	float shadowMapValue = texture_shadowatlas.SampleLevel(sampler_linear_clamp, uv, 0);
-	half3 shadow = saturate(shadowMapValue * exp(-exponential_shadow_bias * cmp));
+	half3 shadow = sqr(saturate(shadowMapValue * exp(-exponential_shadow_bias * cmp)));
 		
 #ifndef DISABLE_TRANSPARENT_SHADOWMAP
 	Texture2D<half4> texture_shadowatlas_transparent = bindless_textures_half4[descriptor_index(GetFrame().texture_shadowatlas_transparent_index)];
@@ -33,7 +33,7 @@ inline void shadow_border_clamp(in ShaderEntity light, in float slice, inout flo
 	uv = clamp(uv, topleft, bottomright);
 }
 
-inline half3 shadow_2D(in ShaderEntity light, in float z, in float2 shadow_uv, in uint cascade, in float shadow_power = 1)
+inline half3 shadow_2D(in ShaderEntity light, in float z, in float2 shadow_uv, in uint cascade)
 {
 	shadow_uv.x += cascade;
 	shadow_uv = mad(shadow_uv, light.shadowAtlasMulAdd.xy, light.shadowAtlasMulAdd.zw);
@@ -41,7 +41,7 @@ inline half3 shadow_2D(in ShaderEntity light, in float z, in float2 shadow_uv, i
 	return sample_shadow(shadow_uv, z);
 }
 
-inline half3 shadow_cube(in ShaderEntity light, in float3 Lunnormalized, in float shadow_power = 1)
+inline half3 shadow_cube(in ShaderEntity light, in float3 Lunnormalized)
 {
 	const float3 uv_slice = cubemap_to_uv(-Lunnormalized);
 	float2 shadow_uv = uv_slice.xy;
