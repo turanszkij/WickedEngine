@@ -150,6 +150,7 @@ bool SHADOW_LOD_OVERRIDE = true;
 Texture shadowMapAtlas;
 Texture shadowMapAtlas_Transparent;
 Texture shadowMapAtlas_Filtered;
+Texture shadowMapAtlas_Transparent_Filtered;
 int max_shadow_resolution_2D = 1024;
 int max_shadow_resolution_cube = 256;
 
@@ -2902,16 +2903,17 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 		XMStoreFloat3(&_min, vMin);
 		XMStoreFloat3(&_max, vMax);
 
-		// Extrude bounds to avoid early shadow clipping:
+		const XMMATRIX lightProjection = XMMatrixOrthographicOffCenterLH(_min.x, _max.x, _min.y, _max.y, _max.z, _min.z); // notice reversed Z!
+		shcams[cascade].view_projection = XMMatrixMultiply(lightView, lightProjection);
+
+		// Extrude bounds to avoid early shadow culling:
 		float ext = abs(_center.z - _min.z);
 		ext = std::max(ext, std::min(1500.0f, farPlane) * 0.5f);
 		_min.z = _center.z - ext;
 		_max.z = _center.z + ext;
 
-		const XMMATRIX lightProjection = XMMatrixOrthographicOffCenterLH(_min.x, _max.x, _min.y, _max.y, _max.z, _min.z); // notice reversed Z!
-
-		shcams[cascade].view_projection = XMMatrixMultiply(lightView, lightProjection);
-		shcams[cascade].frustum.Create(shcams[cascade].view_projection);
+		const XMMATRIX lightProjectionExtended = XMMatrixOrthographicOffCenterLH(_min.x, _max.x, _min.y, _max.y, _max.z, _min.z); // notice reversed Z!
+		shcams[cascade].frustum.Create(XMMatrixMultiply(lightView, lightProjectionExtended));
 	}
 
 }
@@ -3934,11 +3936,6 @@ void UpdateVisibility(Visibility& vis)
 						device->CreateTexture(&desc, nullptr, &shadowMapAtlas);
 						device->SetName(&shadowMapAtlas, "shadowMapAtlas");
 
-						desc.format = Format::R32_FLOAT;
-						desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
-						device->CreateTexture(&desc, nullptr, &shadowMapAtlas_Filtered);
-						device->SetName(&shadowMapAtlas_Filtered, "shadowMapAtlas_Filtered");
-
 						desc.format = format_rendertarget_shadowmap;
 						desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
 						desc.layout = ResourceState::SHADER_RESOURCE;
@@ -3948,6 +3945,14 @@ void UpdateVisibility(Visibility& vis)
 						desc.clear.color[3] = 0;
 						device->CreateTexture(&desc, nullptr, &shadowMapAtlas_Transparent);
 						device->SetName(&shadowMapAtlas_Transparent, "shadowMapAtlas_Transparent");
+
+						desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+						desc.format = Format::R32_FLOAT;
+						device->CreateTexture(&desc, nullptr, &shadowMapAtlas_Filtered);
+						device->SetName(&shadowMapAtlas_Filtered, "shadowMapAtlas_Filtered");
+						desc.format = format_rendertarget_shadowmap;
+						device->CreateTexture(&desc, nullptr, &shadowMapAtlas_Transparent_Filtered);
+						device->SetName(&shadowMapAtlas_Transparent_Filtered, "shadowMapAtlas_Transparent_Filtered");
 
 					}
 
@@ -4241,7 +4246,7 @@ void UpdatePerFrameData(
 
 	// Note: shadow maps always assumed to be valid to avoid shader branching logic
 	const Texture& shadowMap = shadowMapAtlas_Filtered.IsValid() ? shadowMapAtlas_Filtered : *wi::texturehelper::getBlack();
-	const Texture& shadowMapTransparent = shadowMapAtlas_Transparent.IsValid() ? shadowMapAtlas_Transparent : *wi::texturehelper::getWhite();
+	const Texture& shadowMapTransparent = shadowMapAtlas_Transparent_Filtered.IsValid() ? shadowMapAtlas_Transparent_Filtered : *wi::texturehelper::getWhite();
 	frameCB.texture_shadowatlas_index = device->GetDescriptorIndex(&shadowMap, SubresourceType::SRV);
 	frameCB.texture_shadowatlas_transparent_index = device->GetDescriptorIndex(&shadowMapTransparent, SubresourceType::SRV);
 	frameCB.shadow_atlas_resolution.x = shadowMap.desc.width;
@@ -7006,11 +7011,16 @@ void DrawShadowmaps(
 	device->RenderPassEnd(cmd);
 	device->EventBegin("Shadow Filtering", cmd);
 	device->Barrier(GPUBarrier::Image(&shadowMapAtlas_Filtered, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS), cmd);
+	device->Barrier(GPUBarrier::Image(&shadowMapAtlas_Transparent_Filtered, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS), cmd);
 	device->ClearUAV(&shadowMapAtlas_Filtered, 0, cmd);
+	device->ClearUAV(&shadowMapAtlas_Transparent_Filtered, 0, cmd);
 	device->Barrier(GPUBarrier::Memory(&shadowMapAtlas_Filtered), cmd);
+	device->Barrier(GPUBarrier::Memory(&shadowMapAtlas_Transparent_Filtered), cmd);
 	device->BindComputeShader(&shaders[CSTYPE_SHADOW_FILTER], cmd);
 	device->BindResource(&shadowMapAtlas, 0, cmd);
+	device->BindResource(&shadowMapAtlas_Transparent, 1, cmd);
 	device->BindUAV(&shadowMapAtlas_Filtered, 0, cmd);
+	device->BindUAV(&shadowMapAtlas_Transparent_Filtered, 1, cmd);
 	ShadowFilterData filter = {};
 	filter.atlas_resolution.x = float(shadowMapAtlas.desc.width);
 	filter.atlas_resolution.y = float(shadowMapAtlas.desc.height);
@@ -7164,6 +7174,7 @@ void DrawShadowmaps(
 		device->Dispatch((filter.rect.z + 7u) / 8u, (filter.rect.w + 7u) / 8u, 1, cmd);
 	}
 	device->Barrier(GPUBarrier::Image(&shadowMapAtlas_Filtered, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE), cmd);
+	device->Barrier(GPUBarrier::Image(&shadowMapAtlas_Transparent_Filtered, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE), cmd);
 	device->EventEnd(cmd);
 
 	wi::profiler::EndRange(range_gpu);

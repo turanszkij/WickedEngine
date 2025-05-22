@@ -89,8 +89,9 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 				[branch]
 				if (is_saturated(shadow_uv))
 				{
-					const half2 cascade_edgefactor = saturate(saturate(abs(shadow_pos.xy)) - 0.8) * 5.0; // fade will be on edge and inwards 10%
-					const half cascade_fade = max(cascade_edgefactor.x, cascade_edgefactor.y);
+					const half3 shadow_box = half3(shadow_pos.xy, shadow_pos.z * 2 - 1);
+					const half3 cascade_edgefactor = saturate(saturate(abs(shadow_box)) - 0.8) * 5.0; // fade will be on edge and inwards 10%
+					const half cascade_fade = max3(cascade_edgefactor);
 						
 					// If we are on cascade edge threshold and not the last cascade, then fallback to a larger cascade:
 					[branch]

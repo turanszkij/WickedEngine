@@ -742,6 +742,7 @@ namespace wi::terrain
 			if (chunk_object != nullptr)
 			{
 				chunk_object->SetWetmapEnabled(scene->IsWetmapProcessingRequired());
+				chunk_object->SetCastShadow(true);
 			}
 
 			// chunk removal:
