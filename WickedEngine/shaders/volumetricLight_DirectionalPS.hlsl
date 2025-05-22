@@ -55,7 +55,7 @@ float4 main(VertexToPixel input) : SV_Target
 		for (uint cascade = 0; cascade < light.GetShadowCascadeCount(); ++cascade)
 		{
 			float3 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + cascade), float4(P, 1)).xyz; // ortho matrix, no divide by .w
-			float3 shadow_uv = shadow_pos.xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
+			float3 shadow_uv = clipspace_to_uv(shadow_pos.xyz);
 
 			[branch]
 			if (is_saturated(shadow_uv))

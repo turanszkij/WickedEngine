@@ -100,11 +100,11 @@ float4 main(VertexToPixel input) : SV_TARGET
 		{
 			float4 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + 0), float4(P, 1));
 			shadow_pos.xyz /= shadow_pos.w;
-			float2 shadow_uv = shadow_pos.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
+			float2 shadow_uv = clipspace_to_uv(shadow_pos.xy);
 			[branch]
-			if ((saturate(shadow_uv.x) == shadow_uv.x) && (saturate(shadow_uv.y) == shadow_uv.y))
+			if (is_saturated(shadow_uv.x))
 			{
-				attenuation *= shadow_2D(light, shadow_pos.xyz, shadow_uv.xy, 0, input.pos.xy);
+				attenuation *= shadow_2D(light, shadow_pos.z, shadow_uv.xy, 0, input.pos.xy);
 			}
 		}
 			

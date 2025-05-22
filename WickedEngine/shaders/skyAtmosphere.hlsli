@@ -681,11 +681,11 @@ SingleScatteringResult IntegrateScatteredLuminance(
 			if (opaqueShadow && validLight)
 			{
 				float3 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + furthestCascade), float4(shadowP, 1)).xyz; // ortho matrix, no divide by .w
-				float3 shadow_uv = shadow_pos.xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
+				float3 shadow_uv = clipspace_to_uv(shadow_pos.xyz);
 				
 				if (is_saturated(shadow_uv))
 				{
-					earthShadow *= shadow_2D(light, shadow_pos, shadow_uv.xy, furthestCascade).r;
+					earthShadow *= shadow_2D(light, shadow_pos.z, shadow_uv.xy, furthestCascade).r;
 				}
 			}
 			

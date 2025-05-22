@@ -897,7 +897,7 @@ inline float2 clipspace_to_uv(in float2 clipspace)
 }
 inline float3 clipspace_to_uv(in float3 clipspace)
 {
-	return clipspace * float3(0.5, -0.5, 0.5) + 0.5;
+	return clipspace * float3(0.5, -0.5, 1) + float3(0.5, 0.5, 0);
 }
 inline half2 clipspace_to_uv(in half2 clipspace)
 {
@@ -905,7 +905,7 @@ inline half2 clipspace_to_uv(in half2 clipspace)
 }
 inline half3 clipspace_to_uv(in half3 clipspace)
 {
-	return clipspace * half3(0.5, -0.5, 0.5) + 0.5;
+	return clipspace * half3(0.5, -0.5, 1) + half3(0.5, 0.5, 0);
 }
 
 inline half3 GetSunColor() { return unpack_half3(GetWeather().sun_color); } // sun color with intensity applied

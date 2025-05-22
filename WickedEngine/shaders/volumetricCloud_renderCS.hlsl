@@ -121,7 +121,7 @@ void OpaqueShadow(inout ParticipatingMedia participatingMedia, float3 worldPosit
 	if (furthest_cascade_volumetrics(light, furthestCascade))
 	{
 		float3 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + furthestCascade), float4(worldPosition, 1)).xyz; // ortho matrix, no divide by .w
-		float3 shadow_uv = shadow_pos.xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
+		float3 shadow_uv = clipspace_to_uv(shadow_pos.xyz);
 				
 		if (is_saturated(shadow_uv))
 		{

@@ -67,11 +67,11 @@ inline float4 shadow_border_clamp(in ShaderEntity light, in float slice)
 	return float4(topleft, bottomright);
 }
 
-inline half3 shadow_2D(in ShaderEntity light, in float3 shadow_pos, in float2 shadow_uv, in uint cascade, min16uint2 pixel = 0)
+inline half3 shadow_2D(in ShaderEntity light, in float z, in float2 shadow_uv, in uint cascade, min16uint2 pixel = 0)
 {
 	shadow_uv.x += cascade;
 	shadow_uv = mad(shadow_uv, light.shadowAtlasMulAdd.xy, light.shadowAtlasMulAdd.zw);
-	return sample_shadow(shadow_uv, shadow_pos.z, shadow_border_clamp(light, cascade), light.GetType() == ENTITY_TYPE_RECTLIGHT ? (half2(light.GetRadius(), light.GetLength()) * 0.05) : light.GetRadius(), pixel);
+	return sample_shadow(shadow_uv, z, shadow_border_clamp(light, cascade), light.GetType() == ENTITY_TYPE_RECTLIGHT ? (half2(light.GetRadius(), light.GetLength()) * 0.05) : light.GetRadius(), pixel);
 }
 
 inline half3 shadow_cube(in ShaderEntity light, in float3 Lunnormalized, min16uint2 pixel = 0)
@@ -130,12 +130,12 @@ inline void shadow_border_shrink(in ShaderEntity light, inout float2 shadow_uv)
 	shadow_uv = clamp(shadow_uv * shadow_resolution, border_size, shadow_resolution - border_size) / shadow_resolution;
 }
 
-inline half3 shadow_2D(in ShaderEntity light, in float3 shadow_pos, in float2 shadow_uv, in uint cascade, in min16uint2 pixel = 0)
+inline half3 shadow_2D(in ShaderEntity light, in float z, in float2 shadow_uv, in uint cascade, in min16uint2 pixel = 0)
 {
 	shadow_border_shrink(light, shadow_uv);
 	shadow_uv.x += cascade;
 	shadow_uv = mad(shadow_uv, light.shadowAtlasMulAdd.xy, light.shadowAtlasMulAdd.zw);
-	return sample_shadow(shadow_uv, shadow_pos.z, pixel);
+	return sample_shadow(shadow_uv, z, pixel);
 }
 
 inline half3 shadow_cube(in ShaderEntity light, in float3 Lunnormalized, in min16uint2 pixel = 0)
@@ -156,12 +156,6 @@ inline half shadow_2D_volumetricclouds(float3 P)
 	// Project into shadow map space (no need to divide by .w because ortho projection!):
 	float3 shadow_pos = mul(GetFrame().cloudShadowLightSpaceMatrix, float4(P, 1)).xyz;
 	float3 shadow_uv = clipspace_to_uv(shadow_pos);
-
-	[branch]
-	if (shadow_uv.z < 0.5)
-	{
-		return 1.0;
-	}
 	
 	[branch]
 	if (is_saturated(shadow_uv))
