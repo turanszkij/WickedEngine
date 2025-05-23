@@ -3,20 +3,152 @@
 #include "globals.hlsli"
 
 #define SHADOW_SAMPLING_DISK
+//#define SHADOW_SAMPLING_DITHERING
 
 #ifdef SHADOW_SAMPLING_DISK
 
 // "Vogel disk" sampling pattern based on: https://github.com/corporateshark/poisson-disk-generator/blob/master/PoissonGenerator.h
 //	Baked values are remapped from [0, 1] range into [-1, 1] range by doing: value * 2 - 1
+//	To change sampling count, simply uncomment the block that you want and comment the other blocks
 static const half2 vogel_points[] = {
-	half2(0.353553, 0.000000),
-	half2(-0.451560, 0.413635),
-	half2(0.069174, -0.787537),
-	half2(0.569060, 0.742409),
+
+	//// 4 sample version:
+	//half2(0.353553, 0.000000),
+	//half2(-0.451560, 0.413635),
+	//half2(0.069174, -0.787537),
+	//half2(0.569060, 0.742409),
+
+	//// 8 sample version:
+	//float2(0.25000000, 0.00000000),
+	//float2(-0.31930089, 0.29248416),
+	//float2(0.04891348, -0.55687296),
+	//float2(0.40238643, 0.52496207),
+	//float2(-0.73851585, -0.13074535),
+	//float2(0.69968677, -0.44490278),
+	//float2(-0.23419666, 0.87043202),
+	//float2(-0.44604915, -0.85938364),
+
+	// 16 sample version:
+	float2(0.17677665, 0.00000000),
+	float2(-0.22577983, 0.20681751),
+	float2(0.03458714, -0.39376867),
+	float2(0.28453016, 0.37120426),
+	float2(-0.52220953, -0.09245092),
+	float2(0.49475324, -0.31459379),
+	float2(-0.16560209, 0.61548841),
+	float2(-0.31540442, -0.60767603),
+	float2(0.68456841, 0.25023210),
+	float2(-0.71235347, 0.29377294),
+	float2(0.34362423, -0.73360229),
+	float2(0.25340176, 0.80903494),
+	float2(-0.76454973, -0.44352412),
+	float2(0.89722824, -0.19680285),
+	float2(-0.54790950, 0.77848911),
+	float2(-0.12594837, -0.97615927),
+
+	//// 32 sample version:
+	//float2(0.12500000, 0.00000000),
+	//float2(-0.15965044, 0.14624202),
+	//float2(0.02445674, -0.27843648),
+	//float2(0.20119321, 0.26248097),
+	//float2(-0.36925793, -0.06537271),
+	//float2(0.34984338, -0.22245139),
+	//float2(-0.11709833, 0.43521595),
+	//float2(-0.22302461, -0.42969179),
+	//float2(0.48406291, 0.17694080),
+	//float2(-0.50370997, 0.20772886),
+	//float2(0.24297905, -0.51873517),
+	//float2(0.17918217, 0.57207417),
+	//float2(-0.54061830, -0.31361890),
+	//float2(0.63443625, -0.13916063),
+	//float2(-0.38743055, 0.55047488),
+	//float2(-0.08905894, -0.69024885),
+	//float2(0.54879880, 0.46308208),
+	//float2(-0.73889750, 0.03009081),
+	//float2(0.53931046, -0.53597510),
+	//float2(-0.03660476, 0.77976608),
+	//float2(-0.51236552, -0.61490381),
+	//float2(0.81227481, 0.10993028),
+	//float2(-0.68869931, 0.47834957),
+	//float2(0.18879366, -0.83590192),
+	//float2(0.43436146, 0.75957572),
+	//float2(-0.85019755, -0.27210116),
+	//float2(0.82646751, -0.38088906),
+	//float2(-0.35873961, 0.85479879),
+	//float2(-0.31848884, -0.88836360),
+	//float2(0.84942913, 0.44759941),
+	//float2(-0.94430852, 0.24780297),
+	//float2(0.53754807, -0.83391672),
+
+	//// 64 sample version:
+	//float2(0.08838832, 0.00000000),
+	//float2(-0.11288989, 0.10340881),
+	//float2(0.01729357, -0.19688433),
+	//float2(0.14226508, 0.18560219),
+	//float2(-0.26110476, -0.04622549),
+	//float2(0.24737668, -0.15729690),
+	//float2(-0.08280104, 0.30774426),
+	//float2(-0.15770221, -0.30383801),
+	//float2(0.34228420, 0.12511611),
+	//float2(-0.35617673, 0.14688647),
+	//float2(0.17181218, -0.36680114),
+	//float2(0.12670088, 0.40451741),
+	//float2(-0.38227487, -0.22176206),
+	//float2(0.44861412, -0.09840143),
+	//float2(-0.27395475, 0.38924456),
+	//float2(-0.06297421, -0.48807967),
+	//float2(0.38805938, 0.32744849),
+	//float2(-0.52247941, 0.02127743),
+	//float2(0.38135004, -0.37899160),
+	//float2(-0.02588350, 0.55137777),
+	//float2(-0.36229712, -0.43480265),
+	//float2(0.57436502, 0.07773244),
+	//float2(-0.48698390, 0.33824420),
+	//float2(0.13349736, -0.59107190),
+	//float2(0.30713987, 0.53710103),
+	//float2(-0.60118049, -0.19240457),
+	//float2(0.58440077, -0.26932925),
+	//float2(-0.25366724, 0.60443401),
+	//float2(-0.22520560, -0.62816793),
+	//float2(0.60063708, 0.31650054),
+	//float2(-0.66772699, 0.17522311),
+	//float2(0.38010383, -0.58966815),
+	//float2(0.11987054, 0.70245540),
+	//float2(-0.57146782, -0.44369137),
+	//float2(0.73177743, -0.05970073),
+	//float2(-0.50646347, 0.54606068),
+	//float2(0.00468481, -0.75517583),
+	//float2(0.51353145, 0.56764686),
+	//float2(-0.77219379, -0.07265866),
+	//float2(0.62647057, -0.47404855),
+	//float2(-0.14353156, 0.78243923),
+	//float2(-0.42785490, -0.68218595),
+	//float2(0.78558588, 0.21660399),
+	//float2(-0.73408145, 0.37524915),
+	//float2(0.29113102, -0.78138036),
+	//float2(0.31661296, 0.78146899),
+	//float2(-0.76964480, -0.36634594),
+	//float2(0.82370150, -0.25239521),
+	//float2(-0.44148487, 0.75026906),
+	//float2(-0.18308842, -0.86018378),
+	//float2(0.72322643, 0.51575768),
+	//float2(-0.89036399, 0.10926771),
+	//float2(0.58837402, -0.68856990),
+	//float2(0.03153503, 0.91375208),
+	//float2(-0.64641660, -0.65856522),
+	//float2(0.92991614, 0.04943299),
+	//float2(-0.72555935, 0.59697247),
+	//float2(0.13294542, -0.93848974),
+	//float2(0.54051471, 0.78861046),
+	//float2(-0.93917644, -0.21825480),
+	//float2(0.84699202, -0.47740650),
+	//float2(-0.30459112, 0.93175197),
+	//float2(-0.40804350, -0.90003496),
+	//float2(0.91606736, 0.39116228),
 };
 
 static const min16uint soft_shadow_sample_count = arraysize(vogel_points);
-static const half soft_shadow_sample_count_rcp = rcp((half)soft_shadow_sample_count);
+static const half soft_shadow_sample_count_rcp = rcp(soft_shadow_sample_count);
 
 inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, half2 radius, min16uint2 pixel)
 {
@@ -24,13 +156,19 @@ inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, half2 radiu
 	Texture2D<half4> texture_shadowatlas_transparent = bindless_textures_half4[descriptor_index(GetFrame().texture_shadowatlas_transparent_index)];
 	
 	half3 shadow = 0;
-
+	
 #ifndef DISABLE_SOFT_SHADOWMAP
 	const float2 spread = GetFrame().shadow_atlas_resolution_rcp.xy * mad(radius, 8, 2); // remap radius to try to match ray traced shadow result
+#ifdef SHADOW_SAMPLING_DITHERING
 	const half2x2 rot = dither_rot2x2(pixel + GetTemporalAASampleRotation()); // per pixel rotation for every sample
+#endif // SHADOW_SAMPLING_DITHERING
 	for (min16uint i = 0; i < soft_shadow_sample_count; ++i)
 	{
+#ifdef SHADOW_SAMPLING_DITHERING
 		float2 sample_uv = mad(mul(vogel_points[i], rot), spread, uv);
+#else
+		float2 sample_uv = mad(vogel_points[i], spread, uv);
+#endif // SHADOW_SAMPLING_DITHERING
 #else
 		float2 sample_uv = uv;
 #endif // DISABLE_SOFT_SHADOWMAP

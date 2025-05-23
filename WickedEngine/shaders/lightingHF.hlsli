@@ -14,49 +14,6 @@
 #define LIGHTING_SCATTER
 #endif // WATER
 
-bool AreAllQuadLanesActive()
-{
-    // Get the lane index within the wave
-    uint laneIndex = WaveGetLaneIndex();
-    
-    // Get the active lanes in the wave
-    uint4 ballot = WaveActiveBallot(true);
-    
-    // Assuming a quad is 4 consecutive lanes, check if all 4 lanes in the quad are active
-    // Note: This assumes the quad lanes are contiguous in the wave (implementation-dependent)
-    uint quadStartLane = laneIndex & ~3u; // Align to the start of the quad
-    bool allLanesActive = true;
-    
-    for (uint i = 0; i < 4; i++)
-    {
-        uint laneToCheck = quadStartLane + i;
-        if (laneToCheck < WaveGetLaneCount())
-        {
-            // Check if the lane is active in the ballot
-            allLanesActive = allLanesActive && (ballot[laneToCheck / 32] & (1u << (laneToCheck % 32))) != 0;
-        }
-        else
-        {
-            // If the lane is out of bounds, consider it inactive
-            allLanesActive = false;
-        }
-    }
-    
-    return allLanesActive;
-}
-
-template<typename T>
-inline void QuadBlur(inout T value)
-{
-#if __SHADER_TARGET_STAGE == __SHADER_STAGE_PIXEL && defined(SHADOW_SAMPLING_DISK)
-// Average shadow within quad, this smooths out the dithering a bit:
-//	Note that I don't implement this in shadowHF.hlsli because we need to
-//	make sure that when averaging, all lanes in the quad are coherent
-//	It wouldn't be good if some waves are not sampling shadows or sampling different slices
-	if(AreAllQuadLanesActive()) value = (value + QuadReadAcrossX(value) + QuadReadAcrossY(value) + QuadReadAcrossDiagonal(value)) * 0.25;
-#endif // __SHADER_STAGE_PIXEL
-}
-
 struct LightingPart
 {
 	half3 diffuse;
@@ -90,6 +47,7 @@ inline void ApplyLighting(in Surface surface, in Lighting lighting, inout half4 
 	color.rgb += surface.emissiveColor;
 }
 
+//#define CASCADE_DITHERING
 inline void light_directional(in ShaderEntity light, in Surface surface, inout Lighting lighting, in half shadow_mask = 1)
 {
 	if (shadow_mask <= 0.001)
@@ -125,8 +83,8 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 			{
 				// Project into shadow map space (no need to divide by .w because ortho projection!):
 				const float4x4 cascade_projection = load_entitymatrix(light.GetMatrixIndex() + cascade);
-				const float3 shadow_pos = mul(cascade_projection, float4(surface.P, 1)).xyz;
-				const float3 shadow_uv = clipspace_to_uv(shadow_pos);
+				float3 shadow_pos = mul(cascade_projection, float4(surface.P, 1)).xyz;
+				float3 shadow_uv = clipspace_to_uv(shadow_pos);
 
 				// Determine if pixel is inside current cascade bounds and compute shadow if it is:
 				[branch]
@@ -136,18 +94,38 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 					const half3 cascade_edgefactor = saturate(saturate(abs(shadow_box)) - 0.8) * 5.0; // fade will be on edge and inwards 10%
 					const half cascade_fade = max3(cascade_edgefactor);
 						
+#ifdef CASCADE_DITHERING
 					// If we are on cascade edge threshold and not the last cascade, then fallback to a larger cascade:
 					[branch]
 					if (cascade_fade > 0 && dither(surface.pixel + GetTemporalAASampleRotation()) < cascade_fade)
 						continue;
 						
-					light_color *= shadow_2D(light, shadow_pos.z, shadow_uv.xy, cascade, surface.pixel);
+					light_color *= shadow_2D(light, shadow_pos.z, shadow_uv.xy, cascade);
 					break;
+#else
+					const half3 shadow_main = shadow_2D(light, shadow_pos.z, shadow_uv.xy, cascade, surface.pixel);
+					
+					// If we are on cascade edge threshold and not the last cascade, then fallback to a larger cascade:
+					[branch]
+					if (cascade_fade > 0 && cascade < light.GetShadowCascadeCount() - 1)
+					{
+						// Project into next shadow cascade (no need to divide by .w because ortho projection!):
+						cascade += 1;
+						shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + cascade), float4(surface.P, 1)).xyz;
+						shadow_uv = clipspace_to_uv(shadow_pos);
+						const half3 shadow_fallback = shadow_2D(light, shadow_pos.z, shadow_uv.xy, cascade, surface.pixel);
+
+						light_color *= lerp(shadow_main, shadow_fallback, cascade_fade);
+					}
+					else
+					{
+						light_color *= shadow_main;
+					}
+					break;
+#endif // CASCADE_DITHERING
 				}
 			}
 		}
-		
-		QuadBlur(light_color);
 		
 		if (!any(light_color))
 			return; // light color lost after shadow
@@ -252,8 +230,6 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 		{
 			light_color *= shadow_cube(light, LunnormalizedShadow, surface.pixel);
 		}
-		
-		QuadBlur(light_color);
 		
 		if (!any(light_color))
 			return; // light color lost after shadow
@@ -369,8 +345,6 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 				light_color *= shadow_2D(light, shadow_pos.z, shadow_uv.xy, 0, surface.pixel);
 			}
 		}
-		
-		QuadBlur(light_color);
 		
 		if (!any(light_color))
 			return; // light color lost after shadow
@@ -504,8 +478,6 @@ inline void light_rect(in ShaderEntity light, in Surface surface, inout Lighting
 				light_color *= shadow_2D(light, shadow_pos.z, shadow_uv.xy, 0, surface.pixel);
 			}
 		}
-
-		QuadBlur(light_color);
 		
 		if (!any(light_color))
 			return; // light color lost after shadow

@@ -77,7 +77,7 @@ struct Surface
 	half occlusion;			// occlusion [0 -> 1]
 	half opacity;			// opacity for blending operation [0 -> 1]
 	half3 emissiveColor;	// light emission [0 -> 1]
-	half4 refraction;		// refraction color (rgb), refraction amount (a)
+	float4 refraction;		// refraction color (rgb), refraction amount (a)
 	half transmission;		// transmission factor
 	min16uint2 pixel;		// pixel coordinate (used for randomization effects)
 	float2 screenUV;		// pixel coordinate in UV space [0 -> 1] (used for randomization effects)
