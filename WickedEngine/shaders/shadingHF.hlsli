@@ -593,7 +593,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 				half radius = entity.GetRange() * CAPSULE_SHADOW_BOLDEN;
 				half occ = directionalOcclusionCapsule(surface.P, A, B, radius, cone);
 
-				// attenutaion based on capsule-sphere:
+				// attenuation based on capsule-sphere:
 				float3 center = lerp(A, B, 0.5);
 				half range = distance(center, A) + radius + CAPSULE_SHADOW_AFFECTION_RANGE;
 				half range2 = range * range;

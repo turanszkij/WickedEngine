@@ -1444,6 +1444,7 @@ namespace dx12_internal
 		{
 			struct PSO_STREAM1
 			{
+				CD3DX12_PIPELINE_STATE_STREAM_FLAGS Flags;
 				CD3DX12_PIPELINE_STATE_STREAM_VS VS;
 				CD3DX12_PIPELINE_STATE_STREAM_HS HS;
 				CD3DX12_PIPELINE_STATE_STREAM_DS DS;
@@ -4049,6 +4050,7 @@ std::mutex queue_locker;
 		pso->desc = *desc;
 
 		auto& stream = internal_state->stream;
+		//stream.stream1.Flags |= D3D12_PIPELINE_STATE_FLAG_DYNAMIC_DEPTH_BIAS; // doesn't work on windows 10
 		if (pso->desc.vs != nullptr)
 		{
 			auto shader_internal = to_internal(pso->desc.vs);
