@@ -50,7 +50,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="test_script.lua" />
-    <None Include="..\..\WickedEngine\dxil.dll" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Tests.rc">

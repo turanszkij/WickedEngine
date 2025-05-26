@@ -94,7 +94,4 @@
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
-  <ItemGroup>
-    <None Include="..\..\WickedEngine\dxil.dll" />
-  </ItemGroup>
 </Project>

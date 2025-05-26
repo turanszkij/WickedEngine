@@ -105,7 +105,4 @@
       <Filter>Resources</Filter>
     </ResourceCompile>
   </ItemGroup>
-  <ItemGroup>
-    <None Include="..\..\WickedEngine\dxil.dll" />
-  </ItemGroup>
 </Project>
