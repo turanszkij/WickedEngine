@@ -557,16 +557,18 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 		}
 	}
 
-	// Capsule shadows:
+	// Capsule shadows and capsule reflection blockers:
 	[branch]
 	if ((GetFrame().options & OPTION_BIT_CAPSULE_SHADOW_ENABLED) && !surface.IsCapsuleShadowDisabled() && !forces().empty()) // capsule shadows are contained in forces array for now...
 	{
-		half4 cone = half4(surface.dominant_lightdir, GetCapsuleShadowAngle());
+		half4 occlusion_cone = half4(surface.dominant_lightdir, GetCapsuleShadowAngle());
+		half4 reflection_cone = half4(surface.R, max(0.001, sqr(surface.roughness) * 0.5));
 		half capsuleshadow = 1;
+		half capsulereflection = 1;
 		
 		// Loop through light buckets in the tile:
 		ShaderEntityIterator iterator = forces();
-		for (uint bucket = iterator.first_bucket(); (bucket <= iterator.last_bucket()) && (capsuleshadow > 0); ++bucket)
+		for (uint bucket = iterator.first_bucket(); (bucket <= iterator.last_bucket()) && (capsuleshadow > 0 || capsulereflection > 0); ++bucket)
 		{
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
@@ -577,7 +579,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 #endif // ENTITY_TILE_UNIFORM
 
 			[loop]
-			while ((bucket_bits != 0) && (capsuleshadow > 0))
+			while ((bucket_bits != 0) && (capsuleshadow > 0 || capsulereflection > 0))
 			{
 				// Retrieve global entity index from local bucket, then remove bit from local bucket:
 				const uint bucket_bit_index = firstbitlow(bucket_bits);
@@ -591,21 +593,27 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 				float3 A = entity.position;
 				float3 B = entity.GetColliderTip();
 				half radius = entity.GetRange() * CAPSULE_SHADOW_BOLDEN;
-				half occ = directionalOcclusionCapsule(surface.P, A, B, radius, cone);
+				half occ = directionalOcclusionCapsule(surface.P, A, B, radius, occlusion_cone);
+				half ref = directionalOcclusionCapsule(surface.P, A, B, radius, reflection_cone);
 
 				// attenuation based on capsule-sphere:
 				float3 center = lerp(A, B, 0.5);
 				half range = distance(center, A) + radius + CAPSULE_SHADOW_AFFECTION_RANGE;
 				half range2 = range * range;
-				half dist2 = distance_squared(surface.P, center);
-				occ = 1 - saturate((1 - occ) * saturate(attenuation_pointlight(dist2, range, range2)));
+				occ = 1 - saturate((1 - occ) * saturate(attenuation_pointlight(distance_squared(surface.P, center), range, range2)));
+				ref = 1 - saturate((1 - ref) * saturate(attenuation_pointlight(distance_squared(closest_point_on_line(surface.P, surface.P + surface.R, center), center), range, range2)));
 			
 				capsuleshadow *= occ;
+				capsulereflection *= ref;
 			}
 		}
 		capsuleshadow = lerp(capsuleshadow, 1, GetCapsuleShadowFade());
 		capsuleshadow = saturate(capsuleshadow);
 		surface.occlusion *= capsuleshadow;
+
+		capsulereflection = pow4(capsulereflection);
+		lighting.direct.specular *= capsulereflection;
+		lighting.indirect.specular *= capsulereflection;
 	}
 
 }

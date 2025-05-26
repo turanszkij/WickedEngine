@@ -2,8 +2,6 @@
 #include "cullingShaderHF.hlsli"
 #include "lightingHF.hlsli"
 
-#define entityCount (GetFrame().entity_culling_count)
-
 RWStructuredBuffer<uint> entityTiles : register(u0);
 
 // Group shared variables.

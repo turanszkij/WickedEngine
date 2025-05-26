@@ -750,6 +750,7 @@ struct PrimitiveID
 #define HEMISPHERE_SAMPLING_PDF rcp(2 * PI)
 
 #define sqr(a) ((a)*(a))
+#define pow3(a) ((a)*(a)*(a))
 #define pow4(a) ((a)*(a)*(a)*(a))
 #define pow5(a) ((a)*(a)*(a)*(a)*(a))
 #define pow8(a) ((a)*(a)*(a)*(a)*(a)*(a)*(a)*(a))
@@ -881,31 +882,31 @@ inline uint4 align(uint4 value, uint4 alignment)
 
 inline float2 uv_to_clipspace(in float2 uv)
 {
-	float2 clipspace = uv * 2 - 1;
+	float2 clipspace = mad(uv, 2, -1);
 	clipspace.y *= -1;
 	return clipspace;
 }
 inline half2 uv_to_clipspace(in half2 uv)
 {
-	half2 clipspace = uv * 2 - 1;
+	half2 clipspace = mad(uv, 2, -1);
 	clipspace.y *= -1;
 	return clipspace;
 }
 inline float2 clipspace_to_uv(in float2 clipspace)
 {
-	return clipspace * float2(0.5, -0.5) + 0.5;
+	return mad(clipspace, float2(0.5, -0.5), 0.5);
 }
 inline float3 clipspace_to_uv(in float3 clipspace)
 {
-	return clipspace * float3(0.5, -0.5, 1) + float3(0.5, 0.5, 0);
+	return mad(clipspace, float3(0.5, -0.5, 1), float3(0.5, 0.5, 0));
 }
 inline half2 clipspace_to_uv(in half2 clipspace)
 {
-	return clipspace * half2(0.5, -0.5) + 0.5;
+	return mad(clipspace, half2(0.5, -0.5), 0.5);
 }
 inline half3 clipspace_to_uv(in half3 clipspace)
 {
-	return clipspace * half3(0.5, -0.5, 1) + half3(0.5, 0.5, 0);
+	return mad(clipspace, half3(0.5, -0.5, 1), half3(0.5, 0.5, 0));
 }
 
 inline half3 GetSunColor() { return unpack_half3(GetWeather().sun_color); } // sun color with intensity applied

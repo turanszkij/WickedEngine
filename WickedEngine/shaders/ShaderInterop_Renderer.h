@@ -1047,7 +1047,7 @@ struct alignas(16) ShaderFrustumCorners
 #endif // __cplusplus
 };
 
-static const float CAPSULE_SHADOW_AFFECTION_RANGE = 2; // how far away the capsule shadow can reach outside of their own radius
+static const float CAPSULE_SHADOW_AFFECTION_RANGE = 4; // how far away the capsule shadow can reach outside of their own radius
 static const float CAPSULE_SHADOW_BOLDEN = 1.1f; // multiplier for capsule shadow capsule radiuses globally
 
 static const uint SHADER_ENTITY_COUNT = 256;

@@ -9922,42 +9922,30 @@ void ComputeTiledLightCulling(
 
 	BindCommonResources(cmd);
 
-	// Perform the culling
+	device->EventBegin("Entity Culling", cmd);
+
+	if (GetDebugLightCulling() && debugUAV.IsValid())
 	{
-		device->EventBegin("Entity Culling", cmd);
-
-		if (GetDebugLightCulling() && debugUAV.IsValid())
-		{
-			device->BindComputeShader(&shaders[GetAdvancedLightCulling() ? CSTYPE_LIGHTCULLING_ADVANCED_DEBUG : CSTYPE_LIGHTCULLING_DEBUG], cmd);
-			device->BindUAV(&debugUAV, 3, cmd);
-		}
-		else
-		{
-			device->BindComputeShader(&shaders[GetAdvancedLightCulling() ? CSTYPE_LIGHTCULLING_ADVANCED : CSTYPE_LIGHTCULLING], cmd);
-		}
-
-		const GPUResource* uavs[] = {
-			&res.entityTiles,
-		};
-		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
-
-		device->Dispatch(res.tileCount.x, res.tileCount.y, 1, cmd);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Buffer(&res.entityTiles, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
-		device->EventEnd(cmd);
+		device->BindComputeShader(&shaders[GetAdvancedLightCulling() ? CSTYPE_LIGHTCULLING_ADVANCED_DEBUG : CSTYPE_LIGHTCULLING_DEBUG], cmd);
+		device->BindUAV(&debugUAV, 3, cmd);
 	}
+	else
+	{
+		device->BindComputeShader(&shaders[GetAdvancedLightCulling() ? CSTYPE_LIGHTCULLING_ADVANCED : CSTYPE_LIGHTCULLING], cmd);
+	}
+
+	device->BindUAV(&res.entityTiles, 0, cmd);
+
+	device->Dispatch(res.tileCount.x, res.tileCount.y, 1, cmd);
+
+	device->Barrier(GPUBarrier::Buffer(&res.entityTiles, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE), cmd);
+
+	device->EventEnd(cmd);
 
 	// Unbind from UAV slots:
 	GPUResource empty;
 	const GPUResource* uavs[] = {
 		&empty,
-		&empty
 	};
 	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
