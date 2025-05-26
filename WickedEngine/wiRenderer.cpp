@@ -2796,7 +2796,7 @@ struct SHCAM
 	Frustum frustum;					// This frustum can be used for intersection test with wiPrimitive primitives
 	BoundingFrustum boundingfrustum;	// This boundingfrustum can be used for frustum vs frustum intersection test
 
-	inline void init(const XMFLOAT3& eyePos, const XMFLOAT4& rotation, float nearPlane, float farPlane, float fov, XMVECTOR default_forward = XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f), XMVECTOR default_up = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f))
+	inline void init(const XMFLOAT3& eyePos, const XMFLOAT4& rotation, float nearPlane, float farPlane, float fov, XMVECTOR default_forward = XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f), XMVECTOR default_up = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), float aspect = 1)
 	{
 		const XMVECTOR E = XMLoadFloat3(&eyePos);
 		const XMVECTOR Q = XMQuaternionNormalize(XMLoadFloat4(&rotation));
@@ -2804,7 +2804,7 @@ struct SHCAM
 		const XMVECTOR to = XMVector3TransformNormal(default_forward, rot);
 		const XMVECTOR up = XMVector3TransformNormal(default_up, rot);
 		const XMMATRIX V = XMMatrixLookToLH(E, to, up);
-		const XMMATRIX P = XMMatrixPerspectiveFovLH(fov, 1, farPlane, nearPlane);
+		const XMMATRIX P = XMMatrixPerspectiveFovLH(fov, aspect, farPlane, nearPlane);
 		view_projection = XMMatrixMultiply(V, P);
 		frustum.Create(view_projection);
 		
@@ -2820,10 +2820,13 @@ inline void CreateSpotLightShadowCam(const LightComponent& light, SHCAM& shcam)
 	{
 		XMVECTOR P = XMLoadFloat3(&light.position);
 		static float backoffset = 1.0f;
-		P -= XMLoadFloat3(&light.direction) * backoffset; // back offset hack to fixup the shadow projection limits
+		XMVECTOR P2 = P - XMLoadFloat3(&light.direction) * backoffset; // back offset hack to fixup the shadow projection limits
+		float fov = XMVectorGetX(XMVector3AngleBetweenNormals(XMVector3Normalize(XMVectorSet(0, -light.height, backoffset, 0)), XMVector3Normalize(XMVectorSet(0, light.height, backoffset, 0))));
+		fov = clamp(fov, XM_PIDIV4, XM_PI * 0.9f);
+		float aspect = light.length / std::max(0.01f, light.height);
 		XMFLOAT3 pos;
-		XMStoreFloat3(&pos, P);
-		shcam.init(pos, light.rotation, backoffset, light.GetRange(), XM_PI * 0.9f, XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f), XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)); // rect light is pointing to -Z by default
+		XMStoreFloat3(&pos, P2);
+		shcam.init(pos, light.rotation, backoffset, light.GetRange(), fov, XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f), XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), aspect); // rect light is pointing to -Z by default
 	}
 	else
 	{

@@ -66,7 +66,7 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 			TextureCube<half4> cubemap = bindless_cubemaps_half4[descriptor_index(probeTexture)];
 			
 			const half3 clipSpacePos = mul(probeProjection, float4(surface.P, 1)).xyz;
-			const half3 uvw = clipspace_to_uv(clipSpacePos.xyz);
+			const half3 uvw = box_to_uv(clipSpacePos.xyz);
 			[branch]
 			if (is_saturated(uvw))
 			{
@@ -203,7 +203,7 @@ inline void ForwardDecals(inout Surface surface, inout half4 surfaceMap, Sampler
 		if ((decal.layerMask & surface.layerMask) == 0)
 			continue;
 		const float3 clipSpacePos = mul(decalProjection, float4(surface.P, 1)).xyz;
-		float3 uvw = clipspace_to_uv(clipSpacePos.xyz);
+		float3 uvw = box_to_uv(clipSpacePos.xyz);
 		[branch]
 		if (is_saturated(uvw))
 		{
@@ -318,7 +318,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 				TextureCube<half4> cubemap = bindless_cubemaps_half4[descriptor_index(probeTexture)];
 					
 				const half3 clipSpacePos = mul(probeProjection, float4(surface.P, 1)).xyz;
-				const half3 uvw = clipspace_to_uv(clipSpacePos.xyz);
+				const half3 uvw = box_to_uv(clipSpacePos.xyz);
 				[branch]
 				if (is_saturated(uvw))
 				{
@@ -562,7 +562,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	if ((GetFrame().options & OPTION_BIT_CAPSULE_SHADOW_ENABLED) && !surface.IsCapsuleShadowDisabled() && !forces().empty()) // capsule shadows are contained in forces array for now...
 	{
 		half4 occlusion_cone = half4(surface.dominant_lightdir, GetCapsuleShadowAngle());
-		half4 reflection_cone = half4(surface.R, max(0.001, sqr(surface.roughness) * 0.5));
+		half4 reflection_cone = half4(surface.R, max(0.01, surface.roughness));
 		half capsuleshadow = 1;
 		half capsulereflection = 1;
 		
@@ -607,11 +607,13 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 				capsulereflection *= ref;
 			}
 		}
+		
 		capsuleshadow = lerp(capsuleshadow, 1, GetCapsuleShadowFade());
 		capsuleshadow = saturate(capsuleshadow);
 		surface.occlusion *= capsuleshadow;
 
-		capsulereflection = pow4(capsulereflection);
+		capsulereflection = sqr(capsulereflection);
+		capsulereflection = lerp(capsulereflection, 1, GetCapsuleShadowFade());
 		lighting.direct.specular *= capsulereflection;
 		lighting.indirect.specular *= capsulereflection;
 	}
@@ -672,7 +674,7 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex, inout half4 s
 			if ((decal.layerMask & surface.layerMask) == 0)
 				continue;
 			const float3 clipSpacePos = mul(decalProjection, float4(surface.P, 1)).xyz;
-			float3 uvw = clipspace_to_uv(clipSpacePos.xyz);
+			float3 uvw = box_to_uv(clipSpacePos.xyz);
 			[branch]
 			if (is_saturated(uvw))
 			{

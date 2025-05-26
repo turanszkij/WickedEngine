@@ -14,7 +14,7 @@ float4 main(Input input) : SV_TARGET
 	float3 P = input.pos3D;
 	
 	const float3 clipSpacePos = mul(g_xPaintDecalMatrix, float4(P, 1)).xyz;
-	float3 uvw = clipspace_to_uv(clipSpacePos.xyz);
+	float3 uvw = box_to_uv(clipSpacePos.xyz);
 	if (is_saturated(uvw))
 	{
 		Texture2D in_texture = bindless_textures[descriptor_index(g_xPaintDecalTexture)];

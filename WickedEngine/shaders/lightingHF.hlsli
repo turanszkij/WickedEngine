@@ -410,11 +410,11 @@ inline void light_rect(in ShaderEntity light, in Surface surface, inout Lighting
 		return; // behind light
 
 	// Determine closest point on rectangle to surface position:
-	float3 closest_point_on_plane_to_surface = point_on_plane(surface.P, light.position, forward);
-	float3 closest_vector_on_plane = closest_point_on_plane_to_surface - light.position;
-	float2 plane_point = float2(dot(closest_vector_on_plane, right), dot(closest_vector_on_plane, up));
-	float2 nearest_point = float2(clamp(plane_point.x, -light_length * 0.5, light_length * 0.5), clamp(plane_point.y, -light_height * 0.5, light_height * 0.5));
-	float3 rectangle_point = light.position + nearest_point.x * right + nearest_point.y * up;
+	const float3 closest_point_on_plane_to_surface = point_on_plane(surface.P, light.position, forward);
+	const float3 closest_vector_on_plane = closest_point_on_plane_to_surface - light.position;
+	const float2 plane_point = float2(dot(closest_vector_on_plane, right), dot(closest_vector_on_plane, up));
+	const float2 nearest_point = float2(clamp(plane_point.x, -light_length * 0.5, light_length * 0.5), clamp(plane_point.y, -light_height * 0.5, light_height * 0.5));
+	const float3 rectangle_point = light.position + nearest_point.x * right + nearest_point.y * up;
 		
 	float3 Lunnormalized = rectangle_point - surface.P;
 
@@ -433,18 +433,18 @@ inline void light_rect(in ShaderEntity light, in Surface surface, inout Lighting
 	
 	// Solid angle based on the Frostbite presentation: Moving Frostbite to Physically Based Rendering by Sebastien Lagarde, Charles de Rousiers, Siggraph 2014
 	//	https://media.contentapi.ea.com/content/dam/eacom/frostbite/files/course-notes-moving-frostbite-to-pbr-v2.pdf
-	float3 v0 = normalize(p0 - surface.P);
-	float3 v1 = normalize(p1 - surface.P);
-	float3 v2 = normalize(p2 - surface.P);
-	float3 v3 = normalize(p3 - surface.P);
-	float3 n0 = normalize(cross(v0, v1));
-	float3 n1 = normalize(cross(v1, v2));
-	float3 n2 = normalize(cross(v2, v3));
-	float3 n3 = normalize(cross(v3, v0));
-	float g0 = acos(dot(-n0, n1));
-	float g1 = acos(dot(-n1, n2));
-	float g2 = acos(dot(-n2, n3));
-	float g3 = acos(dot(-n3, n0));
+	const float3 v0 = normalize(p0 - surface.P);
+	const float3 v1 = normalize(p1 - surface.P);
+	const float3 v2 = normalize(p2 - surface.P);
+	const float3 v3 = normalize(p3 - surface.P);
+	const float3 n0 = normalize(cross(v0, v1));
+	const float3 n1 = normalize(cross(v1, v2));
+	const float3 n2 = normalize(cross(v2, v3));
+	const float3 n3 = normalize(cross(v3, v0));
+	const float g0 = acosFast(dot(-n0, n1));
+	const float g1 = acosFast(dot(-n1, n2));
+	const float g2 = acosFast(dot(-n2, n3));
+	const float g3 = acosFast(dot(-n3, n0));
 	const float solid_angle = saturate(g0 + g1 + g2 + g3 - 2 * PI);
 	
 	surface_to_light.NdotL = solid_angle * 0.2 * (
@@ -490,11 +490,11 @@ inline void light_rect(in ShaderEntity light, in Surface surface, inout Lighting
 	half3 light_color_specular = light_color;
 
 	// Intersects the plane of the rectangle with reflection ray, then computes closest point on rectangle, source: https://alextardif.com/arealights.html
-	float3 intersectPoint = surface.P + surface.R * trace_plane(surface.P, surface.R, light.position, forward);
-	float3 intersectionVector = intersectPoint - light.position;
-	float2 intersectPlanePoint = float2(dot(intersectionVector,right), dot(intersectionVector,up));
-	float2 nearest2DPoint = float2(clamp(intersectPlanePoint.x, -light_length * 0.5, light_length * 0.5), clamp(intersectPlanePoint.y, -light_height * 0.5, light_height * 0.5));
-	float3 specular_rect = light.position + nearest2DPoint.x * right + nearest2DPoint.y * up;
+	const float3 intersectPoint = surface.P + surface.R * trace_plane(surface.P, surface.R, light.position, forward);
+	const float3 intersectionVector = intersectPoint - light.position;
+	const float2 intersectPlanePoint = float2(dot(intersectionVector,right), dot(intersectionVector,up));
+	const float2 nearest2DPoint = float2(clamp(intersectPlanePoint.x, -light_length * 0.5, light_length * 0.5), clamp(intersectPlanePoint.y, -light_height * 0.5, light_height * 0.5));
+	const float3 specular_rect = light.position + nearest2DPoint.x * right + nearest2DPoint.y * up;
 
 	const uint maskTex = light.GetTextureIndex();
 	[branch]
@@ -521,7 +521,7 @@ inline void light_rect(in ShaderEntity light, in Surface surface, inout Lighting
 	Lunnormalized = specular_rect - surface.P;
 	L = normalize(Lunnormalized);
 	surface_to_light.create(surface, L); // recompute all surface-light vectors
-	lighting.direct.specular = mad(light_color_specular, BRDF_GetSpecular(surface, surface_to_light), lighting.direct.specular);
+	lighting.direct.specular = mad(light_color_specular, saturate(BRDF_GetSpecular(surface, surface_to_light)), lighting.direct.specular); // saturated BRDF_GetSpecular, otherwise the video reflection will be overly bright!
 				
 #ifdef LIGHTING_SCATTER
 	const half scattering = ComputeScattering(saturate(dot(L, -surface.V)));

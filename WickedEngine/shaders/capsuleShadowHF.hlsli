@@ -3,21 +3,6 @@
 
 // Source: https://www.shadertoy.com/view/3stcD4
 
-float acosFast(float x) {
-    // Lagarde 2014, "Inverse trigonometric functions GPU optimization for AMD GCN architecture"
-    // This is the approximation of degree 1, with a max absolute error of 9.0x10^-3
-    float y = abs(x);
-    float p = -0.1565827 * y + 1.570796;
-    p *= sqrt(1.0 - y);
-    return x >= 0.0 ? p : PI - p;
-}
-
-float acosFastPositive(float x) {
-    // Lagarde 2014, "Inverse trigonometric functions GPU optimization for AMD GCN architecture"
-    float p = -0.1565827 * x + 1.570796;
-    return p * sqrt(1.0 - x);
-}
-
 float sphericalCapsIntersection(float cosCap1, float cosCap2, float cap2, float cosDistance) {
     // Oat and Sander 2007, "Ambient Aperture Lighting"
     // Approximation mentioned by Jimenez et al. 2016
@@ -57,6 +42,7 @@ float directionalOcclusionSphere(in float3 pos, in float4 sphere, in float4 cone
 }
 
 float directionalOcclusionCapsule(in float3 pos, in float3 capsuleA, in float3 capsuleB, in float capsuleRadius, in float4 cone) {
+	cone.xyz = normalize(cone.xyz); // fix for the stickman artifact
     float3 Ld = capsuleB - capsuleA;
     float3 L0 = capsuleA - pos;
     float a = dot(cone.xyz, Ld);

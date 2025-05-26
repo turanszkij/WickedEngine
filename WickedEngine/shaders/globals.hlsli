@@ -880,6 +880,7 @@ inline uint4 align(uint4 value, uint4 alignment)
 	return ((value + alignment - 1) / alignment) * alignment;
 }
 
+// UV [0,1] -> projection matrix clip space [-1,1]
 inline float2 uv_to_clipspace(in float2 uv)
 {
 	float2 clipspace = mad(uv, 2, -1);
@@ -892,6 +893,8 @@ inline half2 uv_to_clipspace(in half2 uv)
 	clipspace.y *= -1;
 	return clipspace;
 }
+
+// projection matrix clip space [-1,1] on XY and [0,1] on Z -> UV [0,1]
 inline float2 clipspace_to_uv(in float2 clipspace)
 {
 	return mad(clipspace, float2(0.5, -0.5), 0.5);
@@ -907,6 +910,33 @@ inline half2 clipspace_to_uv(in half2 clipspace)
 inline half3 clipspace_to_uv(in half3 clipspace)
 {
 	return mad(clipspace, half3(0.5, -0.5, 1), half3(0.5, 0.5, 0));
+}
+
+// box matrix projection [-1,1] -> UV [0,1]
+inline float3 box_to_uv(in float3 box)
+{
+	return mad(box, float3(0.5, -0.5, 0.5), float3(0.5, 0.5, 0.5));
+}
+inline half3 box_to_uv(in half3 box)
+{
+	return mad(box, half3(0.5, -0.5, 0.5), half3(0.5, 0.5, 0.5));
+}
+
+float acosFast(float x)
+{
+    // Lagarde 2014, "Inverse trigonometric functions GPU optimization for AMD GCN architecture"
+    // This is the approximation of degree 1, with a max absolute error of 9.0x10^-3
+    float y = abs(x);
+    float p = -0.1565827 * y + 1.570796;
+    p *= sqrt(1.0 - y);
+    return x >= 0.0 ? p : PI - p;
+}
+
+float acosFastPositive(float x)
+{
+    // Lagarde 2014, "Inverse trigonometric functions GPU optimization for AMD GCN architecture"
+    float p = -0.1565827 * x + 1.570796;
+    return p * sqrt(1.0 - x);
 }
 
 inline half3 GetSunColor() { return unpack_half3(GetWeather().sun_color); } // sun color with intensity applied
