@@ -94,7 +94,6 @@
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="..\WickedEngine\dxcompiler.dll" />
-    <CopyFileToFolders Include="..\WickedEngine\dxil.dll" />
     <CopyFileToFolders Include="ImGuiVS.hlsl" />
     <CopyFileToFolders Include="ImGuiPS.hlsl" />
   </ItemGroup>

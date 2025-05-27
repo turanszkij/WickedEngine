@@ -133,9 +133,6 @@
     <CopyFileToFolders Include="..\WickedEngine\dxcompiler.dll">
       <FileType>Document</FileType>
     </CopyFileToFolders>
-    <CopyFileToFolders Include="..\WickedEngine\dxil.dll">
-      <FileType>Document</FileType>
-    </CopyFileToFolders>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\WickedEngine\WickedEngine_Windows.vcxproj">
