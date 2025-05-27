@@ -267,10 +267,8 @@ half3 ddgi_sample_irradiance(in float3 P, in half3 N, inout half3 out_dominant_l
 
 		SH::ApproximateDirectionalLight(sum_sh, out_dominant_lightdir, out_dominant_lightcolor);
 
-		// DLD notes:
-		// 1: casting to float3 avoids the "stickman" arifact when close to some walls with capsule shadow
-		// 2: bending with normal direction to push dld above surface level since light can't fall to surface from behind
-		out_dominant_lightdir = normalize(float3(out_dominant_lightdir) + N * 0.8);
+		// bending with normal direction to push dld above surface level since light can't fall to surface from behind
+		out_dominant_lightdir = normalize(out_dominant_lightdir + N * 0.8);
 
 		return net_irradiance;
 	}
