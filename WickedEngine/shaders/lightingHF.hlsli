@@ -521,7 +521,7 @@ inline void light_rect(in ShaderEntity light, in Surface surface, inout Lighting
 	Lunnormalized = specular_rect - surface.P;
 	L = normalize(Lunnormalized);
 	surface_to_light.create(surface, L); // recompute all surface-light vectors
-	lighting.direct.specular = mad(light_color_specular, saturate(BRDF_GetSpecular(surface, surface_to_light)), lighting.direct.specular); // saturated BRDF_GetSpecular, otherwise the video reflection will be overly bright!
+	lighting.direct.specular = mad(light_color_specular, BRDF_GetSpecular(surface, surface_to_light), lighting.direct.specular);
 				
 #ifdef LIGHTING_SCATTER
 	const half scattering = ComputeScattering(saturate(dot(L, -surface.V)));
