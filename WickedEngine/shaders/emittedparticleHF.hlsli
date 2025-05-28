@@ -3,18 +3,9 @@
 #include "globals.hlsli"
 #include "ShaderInterop_EmittedParticle.h"
 
-ShaderMeshInstance EmitterGetInstance()
-{
-	return load_instance(xEmitterInstanceIndex);
-}
-ShaderGeometry EmitterGetGeometry()
-{
-	return load_geometry(EmitterGetInstance().geometryOffset);
-}
-ShaderMaterial EmitterGetMaterial()
-{
-	return load_material(EmitterGetGeometry().materialIndex);
-}
+#define EmitterGetInstance() (load_instance(xEmitterInstanceIndex))
+#define EmitterGetGeometry() (load_geometry(EmitterGetInstance().geometryOffset))
+#define EmitterGetMaterial() (load_material(EmitterGetGeometry().materialIndex))
 
 struct VertextoPixel
 {

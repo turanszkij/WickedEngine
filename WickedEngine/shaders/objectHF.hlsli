@@ -49,14 +49,8 @@
 
 PUSHCONSTANT(push, ObjectPushConstants);
 
-inline ShaderGeometry GetMesh()
-{
-	return load_geometry(push.geometryIndex);
-}
-inline ShaderMaterial GetMaterial()
-{
-	return load_material(push.materialIndex);
-}
+#define GetMesh() (load_geometry(push.geometryIndex))
+#define GetMaterial() (load_material(push.materialIndex))
 
 #define sampler_objectshader bindless_samplers[descriptor_index(GetMaterial().sampler_descriptor)]
 
