@@ -1,5 +1,8 @@
 #include "wiGraphicsDevice_Vulkan.h"
 
+// pipeline state cache can be enabled here for Vulkan, but now it seems slower than not using it, so it's disabled by default:
+//#define VULKAN_PIPELINE_CACHE_ENABLED
+
 #ifdef WICKEDENGINE_BUILD_VULKAN
 #include "wiVersion.h"
 #include "wiTimer.h"
@@ -3459,6 +3462,7 @@ using namespace vulkan_internal;
 			allocationhandler->bindlessAccelerationStructures.init(this, VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 32);
 		}
 
+#ifdef VULKAN_PIPELINE_CACHE_ENABLED
 		// Pipeline Cache
 		{
 			// Try to read pipeline cache file if exists.
@@ -3505,7 +3509,7 @@ using namespace vulkan_internal;
 					badCache = true;
 				}
 
-				if (memcmp(pipelineCacheUUID, properties2.properties.pipelineCacheUUID, sizeof(pipelineCacheUUID)) != 0)
+				if (std::memcmp(pipelineCacheUUID, properties2.properties.pipelineCacheUUID, sizeof(pipelineCacheUUID)) != 0)
 				{
 					badCache = true;
 				}
@@ -3524,6 +3528,7 @@ using namespace vulkan_internal;
 			// Create Vulkan pipeline cache
 			vulkan_check(vkCreatePipelineCache(device, &createInfo, nullptr, &pipelineCache));
 		}
+#endif
 
 		// Static samplers:
 		{
@@ -7505,16 +7510,16 @@ using namespace vulkan_internal;
 		}
 		allocationhandler->destroylocker.unlock();
 
-		// Destroy Vulkan pipeline cache 
-		vkDestroyPipelineCache(device, pipelineCache, nullptr);
-		pipelineCache = VK_NULL_HANDLE;
+		if (pipelineCache != VK_NULL_HANDLE)
+		{
+			vkDestroyPipelineCache(device, pipelineCache, nullptr);
+			pipelineCache = VK_NULL_HANDLE;
 
-		VkPipelineCacheCreateInfo createInfo{ VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO };
-		createInfo.initialDataSize = 0;
-		createInfo.pInitialData = nullptr;
-
-		// Create Vulkan pipeline cache
-		vulkan_check(vkCreatePipelineCache(device, &createInfo, nullptr, &pipelineCache));
+			VkPipelineCacheCreateInfo createInfo{ VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO };
+			createInfo.initialDataSize = 0;
+			createInfo.pInitialData = nullptr;
+			vulkan_check(vkCreatePipelineCache(device, &createInfo, nullptr, &pipelineCache));
+		}
 	}
 
 	Texture GraphicsDevice_Vulkan::GetBackBuffer(const SwapChain* swapchain) const
