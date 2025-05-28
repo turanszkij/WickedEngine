@@ -3193,7 +3193,6 @@ void RenderMeshes(
 					variant.bits.mesh_shader = meshShaderRequested;
 
 					pso = GetObjectPSO(variant);
-					assert(pso->IsValid());
 
 					if ((filterMask & FILTER_TRANSPARENT) && variant.bits.cullmode == (uint32_t)CullMode::NONE)
 					{
@@ -3204,7 +3203,7 @@ void RenderMeshes(
 			}
 
 			if (pso == nullptr || !pso->IsValid())
-				continue;
+				continue; // This can happen if the pipeline compilation was not completed for this draw yet
 
 			const bool meshShaderPSO = pso->desc.ms != nullptr;
 			STENCILREF engineStencilRef = material.engineStencilRef;
