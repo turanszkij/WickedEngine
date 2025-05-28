@@ -2089,25 +2089,20 @@ void LoadShaders()
 	}
 
 }
-bool IsPipelineCreationActive()
+int IsPipelineCreationActive()
 {
-	if (wi::jobsystem::IsBusy(raytracing_ctx))
-		return true;
-	if (wi::jobsystem::IsBusy(objectps_ctx))
-		return true;
-	if (wi::jobsystem::IsBusy(mesh_shader_ctx))
-		return true;
+	int ret = 0;
+	ret += raytracing_ctx.counter.load();
+	ret += objectps_ctx.counter.load();
+	ret += mesh_shader_ctx.counter.load();
 	for (uint32_t renderPass = 0; renderPass < RENDERPASS_COUNT; ++renderPass)
 	{
 		for (uint32_t mesh_shader = 0; mesh_shader <= (IsMeshShaderAllowed() ? 1u : 0u); ++mesh_shader)
 		{
-			if (wi::jobsystem::IsBusy(object_pso_job_ctx[renderPass][mesh_shader]))
-			{
-				return true;
-			}
+			ret += object_pso_job_ctx[renderPass][mesh_shader].counter.load();
 		}
 	}
-	return false;
+	return ret;
 }
 void LoadBuffers()
 {
@@ -3031,8 +3026,9 @@ void RenderMeshes(
 
 	device->EventBegin("RenderMeshes", cmd);
 
-	// Always wait for non-mesh shader variants, it can be used when mesh shader is not applicable for an object:
-	wi::jobsystem::Wait(object_pso_job_ctx[renderPass][OBJECT_MESH_SHADER_PSO_DISABLED]);
+	// If shader pipeline is not compiled, this rendering will be skipped in this frame:
+	if (wi::jobsystem::IsBusy(object_pso_job_ctx[renderPass][OBJECT_MESH_SHADER_PSO_DISABLED]))
+		return;
 
 	RenderPassInfo renderpass_info = device->GetRenderPassInfo(cmd);
 
@@ -3055,8 +3051,9 @@ void RenderMeshes(
 
 	if (mesh_shader)
 	{
-		// Mesh shader is optional, only wait for these completions if enabled:
-		wi::jobsystem::Wait(object_pso_job_ctx[renderPass][OBJECT_MESH_SHADER_PSO_ENABLED]);
+		// If shader pipeline is not compiled, this rendering will be skipped in this frame:
+		if (wi::jobsystem::IsBusy(object_pso_job_ctx[renderPass][OBJECT_MESH_SHADER_PSO_ENABLED]))
+			return;
 	}
 
 	// Pre-allocate space for all the instances in GPU-buffer:
@@ -10514,7 +10511,8 @@ void RayTraceScene(
 	if (!scene.TLAS.IsValid() && !scene.BVH.IsValid())
 		return;
 
-	wi::jobsystem::Wait(raytracing_ctx);
+	if (wi::jobsystem::IsBusy(raytracing_ctx))
+		return;
 
 	device->EventBegin("RayTraceScene", cmd);
 	auto range = wi::profiler::BeginRangeGPU("RayTraceScene", cmd);
@@ -10654,7 +10652,8 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 	if (!scene.TLAS.IsValid() && !scene.BVH.IsValid())
 		return;
 
-	wi::jobsystem::Wait(raytracing_ctx);
+	if (wi::jobsystem::IsBusy(raytracing_ctx))
+		return;
 
 	const uint32_t lightmap_request_count = scene.lightmap_request_allocator.load();
 
@@ -11731,7 +11730,8 @@ void SurfelGI(
 	if (!scene.TLAS.IsValid() && !scene.BVH.IsValid())
 		return;
 
-	wi::jobsystem::Wait(raytracing_ctx);
+	if (wi::jobsystem::IsBusy(raytracing_ctx))
+		return;
 
 	auto prof_range = wi::profiler::BeginRangeGPU("SurfelGI", cmd);
 	device->EventBegin("SurfelGI", cmd);
@@ -11963,7 +11963,8 @@ void DDGI(
 	if (!scene.ddgi.ray_buffer.IsValid())
 		return;
 
-	wi::jobsystem::Wait(raytracing_ctx);
+	if (wi::jobsystem::IsBusy(raytracing_ctx))
+		return;
 
 	auto prof_range = wi::profiler::BeginRangeGPU("DDGI", cmd);
 	device->EventBegin("DDGI", cmd);
@@ -13168,7 +13169,8 @@ void Postprocess_RTAO(
 	if (!scene.TLAS.IsValid())
 		return;
 
-	wi::jobsystem::Wait(raytracing_ctx);
+	if (wi::jobsystem::IsBusy(raytracing_ctx))
+		return;
 
 	device->EventBegin("Postprocess_RTAO", cmd);
 	auto prof_range = wi::profiler::BeginRangeGPU("RTAO", cmd);
@@ -13452,7 +13454,8 @@ void Postprocess_RTDiffuse(
 	if (!scene.TLAS.IsValid() && !scene.BVH.IsValid())
 		return;
 
-	wi::jobsystem::Wait(raytracing_ctx);
+	if (wi::jobsystem::IsBusy(raytracing_ctx))
+		return;
 
 	device->EventBegin("Postprocess_RTDiffuse", cmd);
 	auto profilerRange = wi::profiler::BeginRangeGPU("RTDiffuse", cmd);
@@ -14146,7 +14149,8 @@ void Postprocess_RTReflection(
 	if (!scene.TLAS.IsValid() && !scene.BVH.IsValid())
 		return;
 
-	wi::jobsystem::Wait(raytracing_ctx);
+	if (wi::jobsystem::IsBusy(raytracing_ctx))
+		return;
 
 	device->EventBegin("Postprocess_RTReflection", cmd);
 	auto profilerRange = wi::profiler::BeginRangeGPU("RTReflection", cmd);
@@ -14994,7 +14998,8 @@ void Postprocess_RTShadow(
 	if (!scene.TLAS.IsValid() && !scene.BVH.IsValid())
 		return;
 
-	wi::jobsystem::Wait(raytracing_ctx);
+	if (wi::jobsystem::IsBusy(raytracing_ctx))
+		return;
 
 	device->EventBegin("Postprocess_RTShadow", cmd);
 	auto prof_range = wi::profiler::BeginRangeGPU("RTShadow", cmd);

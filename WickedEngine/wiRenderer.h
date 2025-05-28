@@ -114,8 +114,8 @@ namespace wi::renderer
 		const wi::vector<std::string>& permutation_defines = {}
 	);
 
-	// Whether background pipeline compilations are active
-	bool IsPipelineCreationActive();
+	// Whether background pipeline compilations are active (returns number of active jobs)
+	int IsPipelineCreationActive();
 
 	struct Visibility
 	{
