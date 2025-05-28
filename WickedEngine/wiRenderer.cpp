@@ -2035,7 +2035,11 @@ void LoadShaders()
 										{
 											variant.bits.sample_count = msaa;
 											renderpass_info.sample_count = msaa;
-											device->CreatePipelineState(&desc, GetObjectPSO(variant), &renderpass_info);
+											PipelineState pso;
+											device->CreatePipelineState(&desc, &pso, &renderpass_info);
+											wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+												*GetObjectPSO(variant) = pso;
+											});
 										}
 									}
 									break;
@@ -2051,7 +2055,11 @@ void LoadShaders()
 										{
 											variant.bits.sample_count = msaa;
 											renderpass_info.sample_count = msaa;
-											device->CreatePipelineState(&desc, GetObjectPSO(variant), &renderpass_info);
+											PipelineState pso;
+											device->CreatePipelineState(&desc, &pso, &renderpass_info);
+											wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+												*GetObjectPSO(variant) = pso;
+											});
 										}
 									}
 									break;
@@ -2062,7 +2070,11 @@ void LoadShaders()
 										renderpass_info.rt_count = 1;
 										renderpass_info.rt_formats[0] = format_rendertarget_shadowmap;
 										renderpass_info.ds_format = format_depthbuffer_shadowmap;
-										device->CreatePipelineState(&desc, GetObjectPSO(variant), &renderpass_info);
+										PipelineState pso;
+										device->CreatePipelineState(&desc, &pso, &renderpass_info);
+										wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+											*GetObjectPSO(variant) = pso;
+										});
 									}
 									break;
 
@@ -2071,12 +2083,20 @@ void LoadShaders()
 										RenderPassInfo renderpass_info;
 										renderpass_info.rt_count = 0;
 										renderpass_info.ds_format = format_depthbuffer_shadowmap;
-										device->CreatePipelineState(&desc, GetObjectPSO(variant), &renderpass_info);
+										PipelineState pso;
+										device->CreatePipelineState(&desc, &pso, &renderpass_info);
+										wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+											*GetObjectPSO(variant) = pso;
+										});
 									}
 									break;
 
 									default:
-										device->CreatePipelineState(&desc, GetObjectPSO(variant));
+										PipelineState pso;
+										device->CreatePipelineState(&desc, &pso);
+										wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+											*GetObjectPSO(variant) = pso;
+										});
 										break;
 									}
 								}
@@ -3026,10 +3046,6 @@ void RenderMeshes(
 
 	device->EventBegin("RenderMeshes", cmd);
 
-	// If shader pipeline is not compiled, this rendering will be skipped in this frame:
-	if (wi::jobsystem::IsBusy(object_pso_job_ctx[renderPass][OBJECT_MESH_SHADER_PSO_DISABLED]))
-		return;
-
 	RenderPassInfo renderpass_info = device->GetRenderPassInfo(cmd);
 
 	const bool tessellation =
@@ -3048,13 +3064,6 @@ void RenderMeshes(
 
 	const bool mesh_shader = IsMeshShaderAllowed() &&
 		(renderPass == RENDERPASS_PREPASS || renderPass == RENDERPASS_PREPASS_DEPTHONLY || renderPass == RENDERPASS_MAIN || renderPass == RENDERPASS_SHADOW || renderPass == RENDERPASS_RAINBLOCKER);
-
-	if (mesh_shader)
-	{
-		// If shader pipeline is not compiled, this rendering will be skipped in this frame:
-		if (wi::jobsystem::IsBusy(object_pso_job_ctx[renderPass][OBJECT_MESH_SHADER_PSO_ENABLED]))
-			return;
-	}
 
 	// Pre-allocate space for all the instances in GPU-buffer:
 	const size_t alloc_size = renderQueue.size() * camera_count * sizeof(ShaderMeshInstancePointer);
@@ -3195,9 +3204,7 @@ void RenderMeshes(
 			}
 
 			if (pso == nullptr || !pso->IsValid())
-			{
 				continue;
-			}
 
 			const bool meshShaderPSO = pso->desc.ms != nullptr;
 			STENCILREF engineStencilRef = material.engineStencilRef;
@@ -3249,7 +3256,7 @@ void RenderMeshes(
 				indexOffset = uint32_t(mesh.ib.offset / mesh.GetIndexStride()) + subset.indexOffset;
 			}
 
-			if (pso_backside != nullptr)
+			if (pso_backside != nullptr &&pso_backside->IsValid())
 			{
 				device->BindPipelineState(pso_backside, cmd);
 				device->PushConstants(&push, sizeof(push), cmd);

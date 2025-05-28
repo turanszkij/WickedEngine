@@ -72,7 +72,9 @@ namespace wi::eventhandler
 				{
 					callback(userdata);
 				}
+				manager->locker.lock();
 				callbacks.clear();
+				manager->locker.unlock();
 			}
 		}
 		// Callbacks that live until deleted:
