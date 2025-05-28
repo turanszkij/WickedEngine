@@ -1837,7 +1837,8 @@ void LoadShaders()
 		{
 			// default objectshaders:
 			//	We don't wait for these here, because then it can slow down the init time a lot
-			//	We will wait for these to complete in RenderMeshes() just before they will be first used
+			//	We compile PipelineStates on backround threads, but we will add them to be useable by GetObjectPSO on the main thread (wi::eventhandler::EVENT_THREAD_SAFE_POINT)
+			//	The RenderMeshes that uses these pipeline states will be checking the PipelineState.IsValid() and skip draws if the pipeline is not yet valid
 			wi::jobsystem::Wait(object_pso_job_ctx[renderPass][mesh_shader]);
 			object_pso_job_ctx[renderPass][mesh_shader].priority = wi::jobsystem::Priority::Low;
 			for (uint32_t shaderType = 0; shaderType < MaterialComponent::SHADERTYPE_COUNT; ++shaderType)

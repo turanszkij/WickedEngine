@@ -742,6 +742,7 @@ namespace wi::terrain
 			if (chunk_object != nullptr)
 			{
 				chunk_object->SetWetmapEnabled(scene->IsWetmapProcessingRequired());
+				chunk_object->emissiveColor.w = virtual_texture_any ? 1.0f : 0.0f; // without virtual textures, emissive will be disabled on the object-level (most likely missing content)
 			}
 
 			// chunk removal:
