@@ -358,7 +358,7 @@ struct PixelInput
 	inline float3 GetPos3D()
 	{
 #ifdef OBJECTSHADER_USE_CAMERAINDEX
-		ShaderCamera camera = GetCamera(GetCameraIndex());
+		ShaderCamera camera = GetCameraIndexed(GetCameraIndex());
 #else
 		ShaderCamera camera = GetCamera();
 #endif // OBJECTSHADER_USE_CAMERAINDEX
@@ -369,7 +369,7 @@ struct PixelInput
 	inline float3 GetViewVector()
 	{
 #ifdef OBJECTSHADER_USE_CAMERAINDEX
-		ShaderCamera camera = GetCamera(GetCameraIndex());
+		ShaderCamera camera = GetCameraIndexed(GetCameraIndex());
 #else
 		ShaderCamera camera = GetCamera();
 #endif // OBJECTSHADER_USE_CAMERAINDEX
@@ -388,7 +388,7 @@ PixelInput vertex_to_pixel_export(VertexInput input)
 	Out.pos = surface.position;
 
 #ifdef OBJECTSHADER_USE_CAMERAINDEX
-	ShaderCamera camera = GetCamera(input.GetInstancePointer().GetCameraIndex());
+	ShaderCamera camera = GetCameraIndexed(input.GetInstancePointer().GetCameraIndex());
 #else
 	ShaderCamera camera = GetCamera();
 #endif // OBJECTSHADER_USE_CAMERAINDEX
@@ -498,7 +498,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 // Pixel shader base:
 {
 #ifdef OBJECTSHADER_USE_CAMERAINDEX
-	ShaderCamera camera = GetCamera(input.GetCameraIndex());
+	ShaderCamera camera = GetCameraIndexed(input.GetCameraIndex());
 #else
 	ShaderCamera camera = GetCamera();
 #endif // OBJECTSHADER_USE_CAMERAINDEX

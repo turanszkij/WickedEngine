@@ -122,9 +122,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		return;
 	}
 
-	float3 depthWorldPosition = reconstruct_position(uv, depth, GetCamera(DTid.z).inverse_view_projection);
+	float3 depthWorldPosition = reconstruct_position(uv, depth, GetCameraIndexed(DTid.z).inverse_view_projection);
 
-	float3 rayOrigin = GetCamera(DTid.z).position;
+	float3 rayOrigin = GetCameraIndexed(DTid.z).position;
 	float3 rayDirection = normalize(N);	
 	
 	float3 luminance = float3(0.0, 0.0, 0.0);

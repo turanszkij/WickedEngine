@@ -8,6 +8,6 @@ void main(uint vID : SV_VertexID, uint instanceID : SV_InstanceID, out float4 po
 	col = float4(xLightColor.rgb, 1) * saturate(1 - dot(pos.xyz, pos.xyz));
 
 	pos = mul(xLightWorld, pos);
-	pos = mul(GetCamera(instanceID).view_projection, pos);
+	pos = mul(GetCameraIndexed(instanceID).view_projection, pos);
 	rtindex = instanceID;
 }

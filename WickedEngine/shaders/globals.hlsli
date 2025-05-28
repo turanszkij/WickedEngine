@@ -502,51 +502,21 @@ StructuredBuffer<DDGIProbe> bindless_structured_ddi_probes[] : register(space208
 #define GetFrame() (g_xFrame)
 #define GetScene() (g_xFrame.scene)
 #define GetWeather() (g_xFrame.scene.weather)
-
-inline ShaderCamera GetCamera(uint camera_index = 0)
-{
-	return g_xCamera.cameras[camera_index];
-}
-inline ShaderMeshInstance load_instance(uint instanceIndex)
-{
-	return bindless_structured_meshinstance[descriptor_index(GetScene().instancebuffer)][instanceIndex];
-}
-inline ShaderGeometry load_geometry(uint geometryIndex)
-{
-	return bindless_structured_geometry[descriptor_index(GetScene().geometrybuffer)][geometryIndex];
-}
-inline ShaderMeshlet load_meshlet(uint meshletIndex)
-{
-	return bindless_structured_meshlet[descriptor_index(GetScene().meshletbuffer)][meshletIndex];
-}
-inline ShaderMaterial load_material(uint materialIndex)
-{
-	return bindless_structured_material[descriptor_index(GetScene().materialbuffer)][materialIndex];
-}
-uint load_entitytile(uint tileIndex)
-{
-	uint offset = 0;
+#define GetCamera() (g_xCamera.cameras[0])
+#define GetCameraIndexed(camera_index) (g_xCamera.cameras[camera_index])
+#define load_instance(instanceIndex) (bindless_structured_meshinstance[descriptor_index(GetScene().instancebuffer)][instanceIndex])
+#define load_geometry(geometryIndex) (bindless_structured_geometry[descriptor_index(GetScene().geometrybuffer)][geometryIndex])
+#define load_meshlet(meshletIndex) (bindless_structured_meshlet[descriptor_index(GetScene().meshletbuffer)][meshletIndex])
+#define load_material(materialIndex) (bindless_structured_material[descriptor_index(GetScene().materialbuffer)][materialIndex])
+#define load_entity(entityIndex) (GetFrame().entityArray[entityIndex])
+#define load_entitymatrix(matrixIndex) (GetFrame().matrixArray[matrixIndex])
 #ifdef TRANSPARENT
-	offset += GetCamera().entity_culling_tile_bucket_count_flat;
+#define load_entitytile(tileIndex) (bindless_structured_uint[GetCamera().buffer_entitytiles_index][GetCamera().entity_culling_tile_bucket_count_flat + tileIndex])
+#else
+#define load_entitytile(tileIndex) (bindless_structured_uint[GetCamera().buffer_entitytiles_index][tileIndex])
 #endif // TRANSPARENT
-	return bindless_structured_uint[GetCamera().buffer_entitytiles_index][offset + tileIndex];
-}
-inline ShaderEntity load_entity(uint entityIndex)
-{
-	return GetFrame().entityArray[entityIndex];
-}
-inline ShaderEntity load_entity(min16uint entityIndex)
-{
-	return GetFrame().entityArray[entityIndex];
-}
-inline float4x4 load_entitymatrix(uint matrixIndex)
-{
-	return GetFrame().matrixArray[matrixIndex];
-}
-inline float4x4 load_entitymatrix(min16uint matrixIndex)
-{
-	return GetFrame().matrixArray[matrixIndex];
-}
+
+
 inline void write_mipmap_feedback(uint materialIndex, float4 uvsets_dx, float4 uvsets_dy)
 {
 	[branch]

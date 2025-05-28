@@ -742,9 +742,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float depth = texture_input_depth.SampleLevel(sampler_point_clamp, N, 0).r;
 #endif // MSAA
 
-	float3 depthWorldPosition = reconstruct_position(uv, depth, GetCamera(DTid.z).inverse_view_projection);
+	float3 depthWorldPosition = reconstruct_position(uv, depth, GetCameraIndexed(DTid.z).inverse_view_projection);
 
-	float3 rayOrigin = GetCamera(DTid.z).position;
+	float3 rayOrigin = GetCameraIndexed(DTid.z).position;
 	float3 rayDirection = normalize(N);
 
 	float4 cloudColor = 0;

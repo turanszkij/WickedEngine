@@ -11,7 +11,7 @@ void main(uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID, out floa
 {
 	pos = float4(RECT[vertexID], 1);
 	pos = mul(xLightWorld, pos);
-	pos = mul(GetCamera(instanceID).view_projection, pos);
+	pos = mul(GetCameraIndexed(instanceID).view_projection, pos);
 
 	uv = clipspace_to_uv(RECT[vertexID].xy);
 	

@@ -43,7 +43,7 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	// Meshlet culling:
 	if (visible)
 	{
-		ShaderCamera camera = GetCamera(poi.GetCameraIndex());
+		ShaderCamera camera = GetCameraIndexed(poi.GetCameraIndex());
 		ShaderClusterBounds bounds = bindless_structured_cluster_bounds[descriptor_index(geometry.vb_bou)][meshletID];
 		if (geometry.vb_pre >= 0)
 		{
@@ -211,11 +211,11 @@ void main(
 		triangles[ti] = cluster.triangles[ti].tri();
 		
 #ifdef OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
-		primitives[ti].RTIndex = GetCamera(frustum_index).output_index;
+		primitives[ti].RTIndex = GetCameraIndexed(frustum_index).output_index;
 #endif // OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
 
 #ifdef OBJECTSHADER_USE_VIEWPORTARRAYINDEX
-		primitives[ti].VPIndex = GetCamera(frustum_index).output_index;
+		primitives[ti].VPIndex = GetCameraIndexed(frustum_index).output_index;
 #endif // OBJECTSHADER_USE_VIEWPORTARRAYINDEX
 		
 #if defined(OBJECTSHADER_LAYOUT_PREPASS) || defined(OBJECTSHADER_LAYOUT_PREPASS_TEX)
