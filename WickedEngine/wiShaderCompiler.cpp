@@ -166,16 +166,6 @@ namespace wi::shadercompiler
 			args.push_back(L"-fvk-t-shift"); args.push_back(L"1000"); args.push_back(L"0");
 			args.push_back(L"-fvk-u-shift"); args.push_back(L"2000"); args.push_back(L"0");
 			args.push_back(L"-fvk-s-shift"); args.push_back(L"3000"); args.push_back(L"0");
-
-			// prevent a crash with modern dxc in some shaders (like envmapPS)
-			// when the optimizer runs out of IDs. Every vulkan implementation
-			// is required to support at least 0x3fffff, which is also the
-			// default. While the (optimized) SPIR-V normally use way less (for
-			// example envmapPS uses less than 7000), a crash occurs in the
-			// optimizer once a temporary ID reaches this limit. In other words,
-			// increasing this limit should still create SPIR-V that will run on
-			// all implementations. *fingers crossed*
-			args.push_back(L"-fspv-max-id"); args.push_back(L"4fffff");
 			break;
 		default:
 			assert(0);

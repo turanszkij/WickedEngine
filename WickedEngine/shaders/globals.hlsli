@@ -498,21 +498,14 @@ StructuredBuffer<ShaderTerrainChunk> bindless_structured_terrain_chunks[] : regi
 StructuredBuffer<DDGIProbe> bindless_structured_ddi_probes[] : register(space208);
 #endif // __spirv__
 
-inline FrameCB GetFrame()
-{
-	return g_xFrame;
-}
+// Note: these are macros, otherwise the SPIRV compilation is a LOT slower and uses a LOT more memory for some reason, issue: https://github.com/microsoft/DirectXShaderCompiler/issues/7488
+#define GetFrame() (g_xFrame)
+#define GetScene() (g_xFrame.scene)
+#define GetWeather() (g_xFrame.scene.weather)
+
 inline ShaderCamera GetCamera(uint camera_index = 0)
 {
 	return g_xCamera.cameras[camera_index];
-}
-inline ShaderScene GetScene()
-{
-	return GetFrame().scene;
-}
-inline ShaderWeather GetWeather()
-{
-	return GetScene().weather;
 }
 inline ShaderMeshInstance load_instance(uint instanceIndex)
 {
