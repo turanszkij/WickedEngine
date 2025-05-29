@@ -928,24 +928,9 @@ void EditorComponent::Load()
 	playButton.OnClick([&](wi::gui::EventArgs args) {
 		if (last_script_path.empty() || !wi::helper::FileExists(last_script_path))
 		{
-			wi::helper::FileDialogParams params;
-			params.type = wi::helper::FileDialogParams::OPEN;
-			params.description = ".lua";
-			params.extensions.push_back("lua");
-			wi::helper::FileDialog(params, [&](std::string fileName) {
-				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-
-					std::string extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(fileName));
-					if (!extension.compare("LUA"))
-					{
-						last_script_path = fileName;
-						main->config.Set("last_script_path", last_script_path);
-						main->config.Commit();
-						playButton.SetScriptTip("dofile(\"" + last_script_path + "\")");
-						wi::lua::RunFile(fileName);
-					}
-				});
-			});
+			contentBrowserWnd.RefreshContent();
+			contentBrowserWnd.SetVisible(true);
+			contentBrowserWnd.SetEnabled(true);
 		}
 		else
 		{
@@ -1759,7 +1744,8 @@ void EditorComponent::Update(float dt)
 			XMStoreFloat3(&editorscene.cam_move, move);
 
 			// Modify camera speed with mouse scroll in FPS mode:
-			if (std::abs(currentMouse.z) > 0.1f)
+			//	Note: in Paint tool window the scroll is used to modify the brush size
+			if (!paintToolWnd.IsVisible() && std::abs(currentMouse.z) > 0.1f)
 			{
 				float current = cameraWnd.movespeedSlider.GetValue();
 				float increment = current > 10 ? 2.0f : 1.0f;

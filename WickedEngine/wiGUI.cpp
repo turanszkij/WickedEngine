@@ -548,6 +548,8 @@ namespace wi::gui
 		{
 			priority_change = val;
 			enabled = val;
+			if (!enabled)
+				state = IDLE;
 		}
 	}
 	bool Widget::IsEnabled() const
@@ -560,6 +562,8 @@ namespace wi::gui
 		{
 			priority_change |= val;
 			visible = val;
+			if (!visible)
+				state = IDLE;
 		}
 	}
 	bool Widget::IsVisible() const

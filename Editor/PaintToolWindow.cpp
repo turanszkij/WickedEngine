@@ -90,15 +90,6 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 			radiusSlider.SetValue(vertex_paint_radius);
 		}
 
-		if (args.userdata == MODE_TERRAIN_MATERIAL)
-		{
-			SetSize(XMFLOAT2(GetSize().x, 1200));
-		}
-		else
-		{
-			SetSize(XMFLOAT2(GetSize().x, 800));
-		}
-
 	});
 	AddWidget(&modeComboBox);
 
@@ -1926,7 +1917,6 @@ void PaintToolWindow::ResizeLayout()
 				Entity entity = terrain.materialEntities[i];
 
 				wi::gui::Button& button = terrain_material_buttons[i];
-				button.SetVisible(IsVisible() && !IsCollapsed());
 
 				button.SetTheme(theme);
 				button.SetColor(wi::Color::White());
@@ -1996,8 +1986,6 @@ void PaintToolWindow::RecreateTerrainMaterialButtons()
 		wi::gui::Button& button = terrain_material_buttons[i];
 		button.Create("");
 		AddWidget(&button);
-		button.SetVisible(false);
-		button.SetEnabled(true);
 		button.SetText("");
 		button.SetTooltip("");
 
