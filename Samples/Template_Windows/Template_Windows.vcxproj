@@ -135,6 +135,13 @@
       <Project>{06163dcb-b183-4ed9-9c62-13ef1658e049}</Project>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="..\..\WickedEngine\dxil.dll">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+      <FileType>Document</FileType>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+    </CopyFileToFolders>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

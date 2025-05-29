@@ -88,6 +88,7 @@
     <CopyFileToFolders Include="ImGuiPS.hlsl" />
     <CopyFileToFolders Include="ImGuiVS.hlsl" />
     <CopyFileToFolders Include="..\..\WickedEngine\dxcompiler.dll" />
+    <CopyFileToFolders Include="..\..\WickedEngine\dxil.dll" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="ImGui">

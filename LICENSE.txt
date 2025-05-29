@@ -1,7 +1,3 @@
-The following license (MIT) applies to WickedEngine's main code. Third party code
-may be licensed under different terms, but all licenses are OSI approved; see
-third_party_software.txt for details.
-
 Copyright (c) 2025 Turánszki János
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,3 +17,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
+
+
+
+third party software licenses can be found at: third_party_software.txt
