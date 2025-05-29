@@ -383,7 +383,7 @@ inline PipelineState* GetObjectPSO(ObjectRenderingVariant variant)
 	return &PSO_object[variant.bits.renderpass][variant.bits.shadertype][variant.bits.mesh_shader][variant.value];
 }
 wi::jobsystem::context mesh_shader_ctx;
-wi::jobsystem::context object_pso_job_ctx[RENDERPASS_COUNT][OBJECT_MESH_SHADER_PSO_COUNT];
+wi::jobsystem::context object_pso_job_ctx;
 PipelineState PSO_object_wire;
 PipelineState PSO_object_wire_tessellation;
 PipelineState PSO_object_wire_mesh_shader;
@@ -1831,19 +1831,20 @@ void LoadShaders()
 
 	wi::jobsystem::Wait(ctx);
 
+
+	// default objectshaders:
+	//	We don't wait for these here, because then it can slow down the init time a lot
+	//	We compile PipelineStates on backround threads, but we will add them to be useable by GetObjectPSO on the main thread (wi::eventhandler::EVENT_THREAD_SAFE_POINT)
+	//	The RenderMeshes that uses these pipeline states will be checking the PipelineState.IsValid() and skip draws if the pipeline is not yet valid
+	wi::jobsystem::Wait(object_pso_job_ctx);
+	object_pso_job_ctx.priority = wi::jobsystem::Priority::Low;
 	for (uint32_t renderPass = 0; renderPass < RENDERPASS_COUNT; ++renderPass)
 	{
-		for (uint32_t mesh_shader = 0; mesh_shader <= (device->CheckCapability(GraphicsDeviceCapability::MESH_SHADER) ? 1u : 0u); ++mesh_shader)
+		for (uint32_t shaderType = 0; shaderType < MaterialComponent::SHADERTYPE_COUNT; ++shaderType)
 		{
-			// default objectshaders:
-			//	We don't wait for these here, because then it can slow down the init time a lot
-			//	We compile PipelineStates on backround threads, but we will add them to be useable by GetObjectPSO on the main thread (wi::eventhandler::EVENT_THREAD_SAFE_POINT)
-			//	The RenderMeshes that uses these pipeline states will be checking the PipelineState.IsValid() and skip draws if the pipeline is not yet valid
-			wi::jobsystem::Wait(object_pso_job_ctx[renderPass][mesh_shader]);
-			object_pso_job_ctx[renderPass][mesh_shader].priority = wi::jobsystem::Priority::Low;
-			for (uint32_t shaderType = 0; shaderType < MaterialComponent::SHADERTYPE_COUNT; ++shaderType)
+			for (uint32_t mesh_shader = 0; mesh_shader <= (device->CheckCapability(GraphicsDeviceCapability::MESH_SHADER) ? 1u : 0u); ++mesh_shader)
 			{
-				wi::jobsystem::Execute(object_pso_job_ctx[renderPass][mesh_shader], [=](wi::jobsystem::JobArgs args) {
+				wi::jobsystem::Execute(object_pso_job_ctx, [=](wi::jobsystem::JobArgs args) {
 					for (uint32_t blendMode = 0; blendMode < BLENDMODE_COUNT; ++blendMode)
 					{
 						for (uint32_t cullMode = 0; cullMode <= 3; ++cullMode)
@@ -2040,7 +2041,7 @@ void LoadShaders()
 											device->CreatePipelineState(&desc, &pso, &renderpass_info);
 											wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 												*GetObjectPSO(variant) = pso;
-											});
+												});
 										}
 									}
 									break;
@@ -2060,7 +2061,7 @@ void LoadShaders()
 											device->CreatePipelineState(&desc, &pso, &renderpass_info);
 											wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 												*GetObjectPSO(variant) = pso;
-											});
+												});
 										}
 									}
 									break;
@@ -2075,7 +2076,7 @@ void LoadShaders()
 										device->CreatePipelineState(&desc, &pso, &renderpass_info);
 										wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 											*GetObjectPSO(variant) = pso;
-										});
+											});
 									}
 									break;
 
@@ -2088,7 +2089,7 @@ void LoadShaders()
 										device->CreatePipelineState(&desc, &pso, &renderpass_info);
 										wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 											*GetObjectPSO(variant) = pso;
-										});
+											});
 									}
 									break;
 
@@ -2097,7 +2098,7 @@ void LoadShaders()
 										device->CreatePipelineState(&desc, &pso);
 										wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 											*GetObjectPSO(variant) = pso;
-										});
+											});
 										break;
 									}
 								}
@@ -2116,13 +2117,7 @@ int IsPipelineCreationActive()
 	ret += raytracing_ctx.counter.load();
 	ret += objectps_ctx.counter.load();
 	ret += mesh_shader_ctx.counter.load();
-	for (uint32_t renderPass = 0; renderPass < RENDERPASS_COUNT; ++renderPass)
-	{
-		for (uint32_t mesh_shader = 0; mesh_shader <= (IsMeshShaderAllowed() ? 1u : 0u); ++mesh_shader)
-		{
-			ret += object_pso_job_ctx[renderPass][mesh_shader].counter.load();
-		}
-	}
+	ret += object_pso_job_ctx.counter.load();
 	return ret;
 }
 void LoadBuffers()
@@ -2772,13 +2767,7 @@ void ReloadShaders()
 	wi::jobsystem::Wait(raytracing_ctx);
 	wi::jobsystem::Wait(objectps_ctx);
 	wi::jobsystem::Wait(mesh_shader_ctx);
-	for (uint32_t renderPass = 0; renderPass < RENDERPASS_COUNT; ++renderPass)
-	{
-		for (uint32_t mesh_shader = 0; mesh_shader <= (IsMeshShaderAllowed() ? 1u : 0u); ++mesh_shader)
-		{
-			wi::jobsystem::Wait(object_pso_job_ctx[renderPass][mesh_shader]);
-		}
-	}
+	wi::jobsystem::Wait(object_pso_job_ctx);
 
 	device->ClearPipelineStateCache();
 	SHADER_ERRORS.store(0);
@@ -3015,7 +3004,7 @@ void Workaround(const int bug , CommandList cmd)
 		//PE: https://github.com/turanszkij/WickedEngine/issues/450#issuecomment-1143647323
 
 		//PE: We MUST use RENDERPASS_VOXELIZE (DSSTYPE_DEPTHDISABLED) or it will not work ?
-		wi::jobsystem::Wait(object_pso_job_ctx[RENDERPASS_VOXELIZE][OBJECT_MESH_SHADER_PSO_DISABLED]);
+		wi::jobsystem::Wait(object_pso_job_ctx);
 		ObjectRenderingVariant variant = {};
 		variant.bits.renderpass = RENDERPASS_VOXELIZE;
 		variant.bits.blendmode = BLENDMODE_OPAQUE;
