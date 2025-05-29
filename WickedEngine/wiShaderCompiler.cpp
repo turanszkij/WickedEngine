@@ -129,7 +129,7 @@ namespace wi::shadercompiler
 		// https://github.com/microsoft/DirectXShaderCompiler/wiki/Using-dxc.exe-and-dxcompiler.dll#dxcompiler-dll-interface
 
 		wi::vector<std::wstring> args = {
-			L"-res-may-alias",
+			//L"-res-may-alias",
 			//L"-flegacy-macro-expansion",
 			//L"-no-legacy-cbuf-layout",
 			//L"-pack-optimized", // this has problem with tessellation shaders: https://github.com/microsoft/DirectXShaderCompiler/issues/3362
@@ -159,8 +159,7 @@ namespace wi::shadercompiler
 			break;
 		case ShaderFormat::SPIRV:
 			args.push_back(L"-spirv");
-			args.push_back(L"-fspv-target-env=vulkan1.2");
-			//args.push_back(L"-fspv-target-env=vulkan1.3"); // this has some problem with RenderDoc AMD disassembly so it's not enabled for now
+			args.push_back(L"-fspv-target-env=vulkan1.3");
 			args.push_back(L"-fvk-use-dx-layout");
 			args.push_back(L"-fvk-use-dx-position-w");
 			//args.push_back(L"-fvk-b-shift"); args.push_back(L"0"); args.push_back(L"0");
