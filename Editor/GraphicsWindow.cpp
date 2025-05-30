@@ -327,7 +327,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	vxgiDebugCombo.Create("");
 	vxgiDebugCombo.SetTooltip("Toggle VXGI visualization.");
 	vxgiDebugCombo.SetPos(XMFLOAT2(x + wid + 1, y));
-	vxgiDebugCombo.SetSize(XMFLOAT2(80, itemheight));
+	vxgiDebugCombo.SetSize(XMFLOAT2(wid, itemheight));
 	vxgiDebugCombo.AddItem("No debug", 0);
 	vxgiDebugCombo.AddItem("Clipmaps", VXGI_CLIPMAP_COUNT);
 	for (uint32_t i = 0; i < VXGI_CLIPMAP_COUNT; ++i)
@@ -709,7 +709,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	x = 110;
 	float hei = itemheight;
 	wid = 140;
-	float mod_wid = 60;
+	float mod_wid = 100;
 
 	hdrcalibrationSlider.Create(0, 8, 1, 100, "HDR calibration: ");
 	hdrcalibrationSlider.SetTooltip("Set multiplier for HDR output, this only takes effect when swapchain output format is non-SRGB");
@@ -1726,17 +1726,15 @@ void GraphicsWindow::ResizeLayout()
 		if (!widget.IsVisible())
 			return;
 		const float margin_left = 155;
-		const float margin_right = 50;
 		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
 		y += widget.GetSize().y;
 		y += padding;
 	};
 	auto add_right = [&](wi::gui::Widget& widget) {
 		if (!widget.IsVisible())
 			return;
-		const float margin_right = 50;
-		widget.SetPos(XMFLOAT2(width - margin_right - widget.GetSize().x, y));
+		widget.SetPos(XMFLOAT2(width - padding - widget.GetSize().x, y));
 		y += widget.GetSize().y;
 		y += padding;
 	};
@@ -1744,9 +1742,8 @@ void GraphicsWindow::ResizeLayout()
 		if (!widget.IsVisible())
 			return;
 		const float margin_left = padding;
-		const float margin_right = padding;
 		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
 		y += widget.GetSize().y;
 		y += padding;
 	};

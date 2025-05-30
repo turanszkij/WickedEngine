@@ -1996,13 +1996,19 @@ namespace wi::gui
 		Widget::Update(canvas, dt);
 
 		valueInputField.Detach();
-		valueInputField.SetSize(XMFLOAT2(std::max(scale.y, wi::font::TextWidth(valueInputField.GetText(), valueInputField.font.params) + 4), scale.y));
-		valueInputField.SetPos(XMFLOAT2(translation.x + scale.x + 1, translation.y));
+		if (state != ACTIVE)
+		{
+			// only set input field size when slider is not dragged because now it will modify slider active size too!
+			valueInputField.SetSize(XMFLOAT2(std::max(scale.y, wi::font::TextWidth(valueInputField.GetText(), valueInputField.font.params) + 4), scale.y));
+			valueInputField.SetPos(XMFLOAT2(translation.x + scale.x - valueInputField.GetSize().x, translation.y));
+		}
 		valueInputField.AttachTo(this);
+
+		hitBox.siz.x = scale.x - valueInputField.GetSize().x - 1;
 
 		scissorRect.bottom = (int32_t)std::ceil(translation.y + scale.y);
 		scissorRect.left = (int32_t)std::floor(translation.x);
-		scissorRect.right = (int32_t)std::ceil(translation.x + scale.x + 1 + valueInputField.GetSize().x);
+		scissorRect.right = (int32_t)std::ceil(translation.x + scale.x);
 		scissorRect.top = (int32_t)std::floor(translation.y);
 
 		for (int i = 0; i < WIDGETSTATE_COUNT; ++i)
@@ -2031,7 +2037,7 @@ namespace wi::gui
 				{
 					if (state == ACTIVE)
 					{
-						// continue drag if already grabbed wheter it is intersecting or not
+						// continue drag if already grabbed whether it is intersecting or not
 						dragged = true;
 					}
 				}
@@ -2066,7 +2072,7 @@ namespace wi::gui
 			{
 				EventArgs args;
 				args.clickPos = pointerHitbox.pos;
-				value = wi::math::InverseLerp(translation.x, translation.x + scale.x, args.clickPos.x);
+				value = wi::math::InverseLerp(translation.x, translation.x + hitBox.siz.x, args.clickPos.x);
 				value = wi::math::Clamp(value, 0, 1);
 				value *= step;
 				value = std::floor(value);
@@ -2085,11 +2091,13 @@ namespace wi::gui
 
 		const float knobWidth = sprites_knob[state].params.siz.x;
 		const float knobWidthHalf = knobWidth * 0.5f;
-		sprites_knob[state].params.pos.x = wi::math::Lerp(translation.x + knobWidthHalf + 2, translation.x + scale.x - knobWidthHalf - 2, wi::math::Clamp(wi::math::InverseLerp(start, end, value), 0, 1));
+		sprites_knob[state].params.pos.x = wi::math::Lerp(translation.x + knobWidthHalf + 2, translation.x + hitBox.siz.x - knobWidthHalf - 2, wi::math::Clamp(wi::math::InverseLerp(start, end, value), 0, 1));
 		sprites_knob[state].params.pos.y = translation.y + 2;
 		sprites_knob[state].params.siz.y = scale.y - 4;
 		sprites_knob[state].params.pivot = XMFLOAT2(0.5f, 0);
 		sprites_knob[state].params.fade = sprites[state].params.fade;
+
+		sprites[state].params.siz.x = hitBox.siz.x;
 	}
 	void Slider::Render(const wi::Canvas& canvas, CommandList cmd) const
 	{
@@ -2105,7 +2113,8 @@ namespace wi::gui
 			wi::image::Params fx = sprites[state].params;
 			fx.pos.x -= shadow;
 			fx.pos.y -= shadow;
-			fx.siz.x += shadow * 2 + 1 + valueInputField.GetSize().x;
+			fx.siz.x = scale.x;
+			fx.siz.x += shadow * 2;
 			fx.siz.y += shadow * 2;
 			fx.color = shadow_color;
 			if (fx.isCornerRoundingEnabled())
@@ -2466,7 +2475,7 @@ namespace wi::gui
 
 		Widget::Update(canvas, dt);
 
-		const float drop_width = fixed_drop_width > 0 ? fixed_drop_width : (IsDropArrowEnabled() ? scale.x : (scale.x - 1 - scale.y));
+		const float drop_width = fixed_drop_width > 0 ? fixed_drop_width : (scale.x - 1 - scale.y);
 		const float drop_x = GetDropX(canvas);
 
 		if (IsEnabled() && dt > 0)
@@ -2614,6 +2623,13 @@ namespace wi::gui
 				}
 			}
 		}
+
+		sprites[state].params.siz.x = scale.x;
+		if (IsDropArrowEnabled())
+		{
+			sprites[state].params.siz.x -= scale.y + 1;
+		}
+
 		font.params.posY = translation.y + sprites[state].params.siz.y * 0.5f;
 
 		selected = std::min((int)items.size(), selected);
@@ -2626,9 +2642,14 @@ namespace wi::gui
 		{
 			selected_font.SetText(invalid_selection_text);
 		}
-		selected_font.params.posX = translation.x + scale.x * 0.5f;
+		selected_font.params.posX = translation.x + sprites[state].params.siz.x * 0.5f;
 		selected_font.params.posY = translation.y + scale.y * 0.5f;
 		selected_font.Update(dt);
+
+		scissorRect.bottom = (int32_t)std::ceil(translation.y + scale.y);
+		scissorRect.left = (int32_t)std::floor(translation.x);
+		scissorRect.right = (int32_t)std::ceil(translation.x + sprites[state].params.siz.x);
+		scissorRect.top = (int32_t)std::floor(translation.y);
 	}
 	void ComboBox::Render(const wi::Canvas& canvas, CommandList cmd) const
 	{
@@ -2639,7 +2660,7 @@ namespace wi::gui
 		}
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
-		const float drop_width = fixed_drop_width > 0 ? fixed_drop_width : (IsDropArrowEnabled() ? scale.x : (scale.x - 1 - scale.y));
+		const float drop_width = fixed_drop_width > 0 ? fixed_drop_width : (scale.x - 1 - scale.y);
 		const float drop_x = GetDropX(canvas);
 
 		// shadow:
@@ -2648,11 +2669,8 @@ namespace wi::gui
 			wi::image::Params fx = sprites[state].params;
 			fx.pos.x -= shadow;
 			fx.pos.y -= shadow;
+			fx.siz.x = scale.x;
 			fx.siz.x += shadow * 2;
-			if (drop_arrow)
-			{
-				fx.siz.x += 1 + scale.y;
-			}
 			fx.siz.y += shadow * 2;
 			fx.color = shadow_color;
 			if (fx.isCornerRoundingEnabled())
@@ -2715,7 +2733,7 @@ namespace wi::gui
 			// control-arrow-background
 			wi::image::Params fx = sprites[state].params;
 			fx.disableCornerRounding();
-			fx.pos = XMFLOAT3(translation.x + scale.x + 1, translation.y, 0);
+			fx.pos = XMFLOAT3(translation.x + scale.x - scale.y, translation.y, 0);
 			fx.siz = XMFLOAT2(scale.y, scale.y);
 			wi::image::Draw(nullptr, fx, cmd);
 
@@ -2727,7 +2745,7 @@ namespace wi::gui
 				cb.g_xColor = font.params.color;
 				XMStoreFloat4x4(&cb.g_xTransform, XMMatrixScaling(scale.y * 0.25f, scale.y * 0.25f, 1) *
 					XMMatrixRotationZ(drop_offset < 0 ? -XM_PIDIV2 : XM_PIDIV2) *
-					XMMatrixTranslation(translation.x + scale.x + 1 + scale.y * 0.5f, translation.y + scale.y * 0.5f, 0) *
+					XMMatrixTranslation(translation.x + scale.x - scale.y * 0.5f, translation.y + scale.y * 0.5f, 0) *
 					Projection
 				);
 				device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
@@ -4880,12 +4898,12 @@ namespace wi::gui
 			if (!widget.IsVisible())
 				return;
 			const float margin_left = 20;
-			const float margin_right = 120;
+			const float margin_right = 80;
 			y -= widget.GetSize().y;
 			y -= padding;
 			widget.SetPos(XMFLOAT2(margin_left, y));
 			widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
-		};
+			};
 		auto add_right = [&](wi::gui::Widget& widget) {
 			if (!widget.IsVisible())
 				return;
@@ -4893,7 +4911,7 @@ namespace wi::gui
 			y -= widget.GetSize().y;
 			y -= padding;
 			widget.SetPos(XMFLOAT2(width - margin_right - widget.GetSize().x, y));
-		};
+			};
 
 		add(alphaSlider);
 		y += alphaSlider.GetSize().y;
@@ -4978,6 +4996,8 @@ namespace wi::gui
 		scrollbar.sprites_knob[ScrollBar::SCROLLBAR_HOVER].params.color = wi::Color(180, 180, 180, 180);
 		scrollbar.sprites_knob[ScrollBar::SCROLLBAR_GRABBED].params.color = wi::Color::White();
 		scrollbar.SetOverScroll(0.25f);
+
+		SetSize(XMFLOAT2(100, 200));
 	}
 	bool TreeList::DoesItemHaveChildren(int index) const
 	{

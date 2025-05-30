@@ -87,8 +87,23 @@ void MaterialPickerWindow::ResizeLayout()
 		return;
 	}
 
-	zoomSlider.SetPos(XMFLOAT2(55, 0));
-	zoomSlider.SetSize(XMFLOAT2(GetWidgetAreaSize().x - 100 - 5, 20));
+	const float padding = 4;
+	float width = GetWidgetAreaSize().x - padding * 2;
+	float y = padding;
+	float jump = 20;
+	float x_off = 100;
+
+	auto add = [&](wi::gui::Widget& widget) {
+		if (!widget.IsVisible())
+			return;
+		const float margin_left = 55;
+		widget.SetPos(XMFLOAT2(margin_left, y));
+		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
+		y += widget.GetSize().y;
+		y += padding;
+	};
+
+	add(zoomSlider);
 
 	wi::gui::Theme theme;
 	theme.image.CopyFrom(sprites[wi::gui::IDLE].params);

@@ -17,6 +17,8 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	filterCombo.Create("");
 	filterCombo.SetShadowRadius(0);
 	filterCombo.SetMaxVisibleItemCount(16);
+	filterCombo.SetDropArrowEnabled(false);
+	filterCombo.SetFixedDropWidth(40);
 	filterCombo.AddItem("*", (uint64_t)Filter::All);
 	filterCombo.AddItem(ICON_TRANSFORM, (uint64_t)Filter::Transform);
 	filterCombo.AddItem(ICON_MATERIAL, (uint64_t)Filter::Material);
@@ -605,10 +607,10 @@ void ComponentsWindow::ResizeLayout()
 	{
 		float x_off = 25;
 		float filterHeight = filterCombo.GetSize().y;
-		float filterComboWidth = 30;
+		float filterComboWidth = 28;
 
 		filterInput.SetPos(XMFLOAT2(pos.x + x_off, pos.y));
-		filterInput.SetSize(XMFLOAT2(width - x_off - filterHeight - 5 - filterComboWidth - filterHeight, filterCombo.GetScale().y));
+		filterInput.SetSize(XMFLOAT2(width - x_off - filterHeight - 3 - filterComboWidth, filterCombo.GetScale().y));
 
 		filterCaseCheckBox.SetPos(XMFLOAT2(filterInput.GetPos().x + filterInput.GetSize().x + 1, pos.y));
 		filterCaseCheckBox.SetSize(XMFLOAT2(filterHeight, filterHeight));

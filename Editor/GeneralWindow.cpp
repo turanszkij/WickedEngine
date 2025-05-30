@@ -1014,17 +1014,15 @@ void GeneralWindow::ResizeLayout()
 		if (!widget.IsVisible())
 			return;
 		const float margin_left = 155;
-		const float margin_right = 0;
 		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
 		y += widget.GetSize().y;
 		y += padding;
 	};
 	auto add_right = [&](wi::gui::Widget& widget) {
 		if (!widget.IsVisible())
 			return;
-		const float margin_right = 0;
-		widget.SetPos(XMFLOAT2(width - margin_right - widget.GetSize().x, y));
+		widget.SetPos(XMFLOAT2(width - padding - widget.GetSize().x, y));
 		y += widget.GetSize().y;
 		y += padding;
 	};
@@ -1032,50 +1030,32 @@ void GeneralWindow::ResizeLayout()
 		if (!widget.IsVisible())
 			return;
 		const float margin_left = padding * 2;
-		const float margin_right = 0;
 		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
 		y += widget.GetSize().y;
 		y += padding;
 	};
 
-	otherinfoCheckBox.SetPos(XMFLOAT2(width - otherinfoCheckBox.GetSize().x, y));
+	otherinfoCheckBox.SetPos(XMFLOAT2(width - otherinfoCheckBox.GetSize().x - padding, y));
 	fpsCheckBox.SetPos(XMFLOAT2(otherinfoCheckBox.GetPos().x - fpsCheckBox.GetSize().x - 70, y));
 	versionCheckBox.SetPos(XMFLOAT2(fpsCheckBox.GetPos().x - versionCheckBox.GetSize().x - 70, y));
 	y += versionCheckBox.GetSize().y;
 	y += padding;
 
-	width -= padding * 6;
 	add(masterVolumeSlider);
-	width += padding * 6;
 
-	saveModeComboBox.SetPos(XMFLOAT2(x_off, y));
-	saveModeComboBox.SetSize(XMFLOAT2(width - x_off - saveModeComboBox.GetScale().y - 1, saveModeComboBox.GetScale().y));
-	y += saveModeComboBox.GetSize().y;
-	y += padding;
+	add(saveModeComboBox);
 
 	add_right(saveCompressionCheckBox);
 
-	themeCombo.SetPos(XMFLOAT2(x_off, y));
-	themeCombo.SetSize(XMFLOAT2(width - x_off - themeCombo.GetScale().y - 1, themeCombo.GetScale().y));
-	y += themeCombo.GetSize().y;
-	y += padding;
+	add(themeCombo);
 
-	languageCombo.SetPos(XMFLOAT2(x_off, y));
-	languageCombo.SetSize(XMFLOAT2(width - x_off - languageCombo.GetScale().y - 1, languageCombo.GetScale().y));
-	y += languageCombo.GetSize().y;
-	y += padding;
+	add(languageCombo);
 
 	add_fullwidth(localizationButton);
 
-	physicsDebugCheckBox.SetPos(XMFLOAT2(width - physicsDebugCheckBox.GetSize().x, y));
-	y += physicsDebugCheckBox.GetSize().y;
-	y += padding;
-
-	nameDebugCheckBox.SetPos(XMFLOAT2(width - nameDebugCheckBox.GetSize().x, y));
-	y += nameDebugCheckBox.GetSize().y;
-	y += padding;
-
+	add_right(physicsDebugCheckBox);
+	add_right(nameDebugCheckBox);
 	add_right(wireFrameCheckBox);
 	add_right(gridHelperCheckBox);
 	add_right(aabbDebugCheckBox);

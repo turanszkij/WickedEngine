@@ -701,20 +701,19 @@ void ConstraintWindow::ResizeLayout()
 	float jump = 20;
 
 	const float margin_left = 145;
-	float margin_right = 40;
 
 	auto add = [&](wi::gui::Widget& widget) {
 		if (!widget.IsVisible())
 			return;
 		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
 		y += widget.GetSize().y;
 		y += padding;
 		};
 	auto add_right = [&](wi::gui::Widget& widget) {
 		if (!widget.IsVisible())
 			return;
-		widget.SetPos(XMFLOAT2(width - margin_right - widget.GetSize().x, y));
+		widget.SetPos(XMFLOAT2(width - padding - widget.GetSize().x, y));
 		y += widget.GetSize().y;
 		y += padding;
 		};
@@ -722,9 +721,8 @@ void ConstraintWindow::ResizeLayout()
 		if (!widget.IsVisible())
 			return;
 		const float margin_left = padding;
-		const float margin_right = padding;
 		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
 		y += widget.GetSize().y;
 		y += padding;
 		};
@@ -737,9 +735,7 @@ void ConstraintWindow::ResizeLayout()
 	add_right(collisionCheckBox);
 
 
-	margin_right = 80;
 	add(breakSlider);
-	margin_right = 40;
 
 
 	Scene& scene = editor->GetCurrentScene();
@@ -861,7 +857,6 @@ void ConstraintWindow::ResizeLayout()
 			add_fullwidth(fixedXRotationButton);
 			add_fullwidth(fixedYRotationButton);
 			add_fullwidth(fixedZRotationButton);
-			margin_right = 80;
 			add(minTranslationXSlider);
 			add(minTranslationYSlider);
 			add(minTranslationZSlider);
@@ -878,8 +873,6 @@ void ConstraintWindow::ResizeLayout()
 		default:
 			break;
 		}
-
-		margin_right = 40;
 
 		if (normalConeSlider.IsVisible())
 		{

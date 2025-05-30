@@ -101,17 +101,15 @@ void DecalWindow::ResizeLayout()
 		if (!widget.IsVisible())
 			return;
 		const float margin_left = 100;
-		const float margin_right = 40;
 		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
 		y += widget.GetSize().y;
 		y += padding;
 	};
 	auto add_right = [&](wi::gui::Widget& widget) {
 		if (!widget.IsVisible())
 			return;
-		const float margin_right = padding;
-		widget.SetPos(XMFLOAT2(width - margin_right - widget.GetSize().x, y));
+		widget.SetPos(XMFLOAT2(width - padding - widget.GetSize().x, y));
 		y += widget.GetSize().y;
 		y += padding;
 	};
@@ -119,9 +117,8 @@ void DecalWindow::ResizeLayout()
 		if (!widget.IsVisible())
 			return;
 		const float margin_left = padding;
-		const float margin_right = padding;
 		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
 		y += widget.GetSize().y;
 		y += padding;
 	};
