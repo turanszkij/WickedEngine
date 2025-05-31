@@ -20,7 +20,7 @@ using namespace Microsoft::WRL;
 #define SHADERCOMPILER_ENABLED_DXCOMPILER
 #define __RPC_FAR
 #define ComPtr CComPtr
-#include "Utility/WinAdapter.h"
+#include "Utility/dxc/WinAdapter.h"
 #endif // PLATFORM_LINUX
 
 #ifdef SHADERCOMPILER_ENABLED_DXCOMPILER
