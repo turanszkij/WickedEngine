@@ -1005,7 +1005,7 @@ void GeneralWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
 	const float padding = 4;
-	float width = GetWidgetAreaSize().x - padding * 2;
+	float width = GetWidgetAreaSize().x;
 	float y = padding;
 	float jump = 20;
 	float x_off = 100;
@@ -1080,15 +1080,12 @@ void GeneralWindow::ResizeLayout()
 
 	y += jump;
 
-	float prev_width = width;
-	width -= padding * 6;
 	add(transformToolOpacitySlider);
 	add(transformToolDarkenSlider);
 	add(bonePickerOpacitySlider);
 	add_right(skeletonsVisibleCheckBox);
 
 	y += jump;
-	width = prev_width;
 
 	add_fullwidth(eliminateCoarseCascadesButton);
 	add_fullwidth(ddsConvButton);

@@ -88,7 +88,7 @@ void MaterialPickerWindow::ResizeLayout()
 	}
 
 	const float padding = 4;
-	float width = GetWidgetAreaSize().x - padding * 2;
+	float width = GetWidgetAreaSize().x;
 	float y = padding;
 	float jump = 20;
 	float x_off = 100;
