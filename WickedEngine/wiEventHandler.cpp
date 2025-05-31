@@ -1,5 +1,6 @@
 #include "wiEventHandler.h"
 #include "wiUnorderedMap.h"
+#include "wiVector.h"
 
 #include <list>
 #include <mutex>
@@ -23,13 +24,12 @@ namespace wi::eventhandler
 
 		~EventInternal()
 		{
-			manager->locker.lock();
+			std::scoped_lock lck(manager->locker);
 			auto it = manager->subscribers.find(id);
 			if (it != manager->subscribers.end())
 			{
 				it->second.remove(&callback);
 			}
-			manager->locker.unlock();
 		}
 	};
 
@@ -42,56 +42,63 @@ namespace wi::eventhandler
 		eventinternal->id = id;
 		eventinternal->callback = callback;
 
-		manager->locker.lock();
+		std::scoped_lock lck(manager->locker);
 		manager->subscribers[id].push_back(&eventinternal->callback);
-		manager->locker.unlock();
 
 		return handle;
 	}
 
 	void Subscribe_Once(int id, std::function<void(uint64_t)> callback)
 	{
-		manager->locker.lock();
+		std::scoped_lock lck(manager->locker);
 		manager->subscribers_once[id].push_back(callback);
-		manager->locker.unlock();
 	}
 
 	void FireEvent(int id, uint64_t userdata)
 	{
-		// Callbacks that only live for once:
-		{
-			manager->locker.lock();
-			auto it = manager->subscribers_once.find(id);
-			bool found = it != manager->subscribers_once.end();
-			manager->locker.unlock();
+		thread_local wi::vector<std::function<void(uint64_t)>> current_callbacks;
 
-			if (found)
-			{
-				auto& callbacks = it->second;
-				for (auto& callback : callbacks)
-				{
-					callback(userdata);
-				}
-				manager->locker.lock();
-				callbacks.clear();
-				manager->locker.unlock();
-			}
-		}
-		// Callbacks that live until deleted:
+		// Gather callbacks inside lock:
+		//	This allows callbacks to call other events while not being locked
 		{
-			manager->locker.lock();
-			auto it = manager->subscribers.find(id);
-			bool found = it != manager->subscribers.end();
-			manager->locker.unlock();
+			std::scoped_lock lck(manager->locker);
 
-			if (found)
+			// Callbacks that only live for once:
 			{
-				auto& callbacks = it->second;
-				for (auto& callback : callbacks)
+				auto it = manager->subscribers_once.find(id);
+				bool found = it != manager->subscribers_once.end();
+
+				if (found)
 				{
-					(*callback)(userdata);
+					auto& callbacks = it->second;
+					for (auto& callback : callbacks)
+					{
+						current_callbacks.push_back(callback);
+					}
+					callbacks.clear();
 				}
 			}
+			// Callbacks that live until deleted:
+			{
+				auto it = manager->subscribers.find(id);
+				bool found = it != manager->subscribers.end();
+
+				if (found)
+				{
+					auto& callbacks = it->second;
+					for (auto& callback : callbacks)
+					{
+						current_callbacks.push_back(*callback);
+					}
+				}
+			}
 		}
+
+		// Execution is outside locking:
+		for (auto& callback : current_callbacks)
+		{
+			callback(userdata);
+		}
+		current_callbacks.clear();
 	}
 }
