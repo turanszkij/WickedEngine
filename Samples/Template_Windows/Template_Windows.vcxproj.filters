@@ -46,6 +46,5 @@
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="..\..\WickedEngine\dxcompiler.dll" />
-    <CopyFileToFolders Include="..\..\WickedEngine\dxil.dll" />
   </ItemGroup>
 </Project>

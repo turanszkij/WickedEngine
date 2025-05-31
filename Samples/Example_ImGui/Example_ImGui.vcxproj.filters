@@ -88,7 +88,6 @@
     <CopyFileToFolders Include="ImGuiVS.hlsl" />
     <CopyFileToFolders Include="ImGuiPS.hlsl" />
     <CopyFileToFolders Include="..\..\WickedEngine\dxcompiler.dll" />
-    <CopyFileToFolders Include="..\..\WickedEngine\dxil.dll" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="wicked.ico">
