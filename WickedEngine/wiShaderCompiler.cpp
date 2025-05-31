@@ -20,11 +20,11 @@ using namespace Microsoft::WRL;
 #define SHADERCOMPILER_ENABLED_DXCOMPILER
 #define __RPC_FAR
 #define ComPtr CComPtr
-#include "Utility/WinAdapter.h"
+#include "Utility/dxc/WinAdapter.h"
 #endif // PLATFORM_LINUX
 
 #ifdef SHADERCOMPILER_ENABLED_DXCOMPILER
-#include "Utility/dxcapi.h"
+#include "Utility/dxc/dxcapi.h"
 #endif // SHADERCOMPILER_ENABLED_DXCOMPILER
 
 #ifdef SHADERCOMPILER_ENABLED_D3DCOMPILER

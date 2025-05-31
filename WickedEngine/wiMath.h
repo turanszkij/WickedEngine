@@ -20,9 +20,9 @@
 //	as part of the engine utilities
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wuninitialized"
-#include "Utility/DirectXMath.h"
-#include "Utility/DirectXPackedVector.h"
-#include "Utility/DirectXCollision.h"
+#include "Utility/DirectXMath/DirectXMath.h"
+#include "Utility/DirectXMath/DirectXPackedVector.h"
+#include "Utility/DirectXMath/DirectXCollision.h"
 #pragma GCC diagnostic pop
 #endif
 

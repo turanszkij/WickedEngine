@@ -97,12 +97,9 @@ PixelInput main(ConstantOutput input, float3 uvw : SV_DomainLocation, const Outp
 {
 	PixelInput output = patch[0];
 
-	// workaround for NVidia driver bug
-	const float3 uvwCopy = 1 * uvw;
-
-	const float u = uvwCopy.x;
-	const float v = uvwCopy.y;
-	const float w = uvwCopy.z;
+	const float u = uvw.x;
+	const float v = uvw.y;
+	const float w = uvw.z;
 	const float uu = u * u;
 	const float vv = v * v;
 	const float ww = w * w;
