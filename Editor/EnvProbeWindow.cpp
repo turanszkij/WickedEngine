@@ -266,10 +266,7 @@ void EnvProbeWindow::ResizeLayout()
 	layout.y += exportButton.GetSize().y;
 	layout.y += layout.padding;
 
-	resolutionCombo.SetSize(XMFLOAT2(layout.width - 100 - resolutionCombo.GetSize().y - layout.padding, resolutionCombo.GetSize().y));
-	resolutionCombo.SetPos(XMFLOAT2(100, layout.y));
-	layout.y += resolutionCombo.GetSize().y;
-	layout.y += layout.padding;
+	layout.add(resolutionCombo);
 
 	layout.add_right(realTimeCheckBox);
 	layout.add_right(msaaCheckBox);
