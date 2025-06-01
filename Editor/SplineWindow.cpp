@@ -363,61 +363,31 @@ void SplineWindow::NewNode()
 void SplineWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
-	const float padding = 4;
-	const float width = GetWidgetAreaSize().x;
-	float y = padding;
-	float jump = 20;
+	layout.margin_left = 145;
 
-	const float margin_left = 145;
+	layout.add_fullwidth(infoLabel);
+	layout.add(subdivSlider);
+	layout.add(subdivVerticalSlider);
+	layout.add(terrainSlider);
+	layout.add(terrainPushdownSlider);
+	layout.add(terrainTexSlider);
+	layout.add(widthSlider);
+	layout.add(rotSlider);
+	layout.add_right(loopedCheck);
+	layout.add_right(alignedCheck);
 
-	auto add = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-		};
-	auto add_right = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(width - padding - widget.GetSize().x, y));
-		y += widget.GetSize().y;
-		y += padding;
-		};
-	auto add_fullwidth = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = padding;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-		};
+	layout.y += layout.padding * 2;
 
-	add_fullwidth(infoLabel);
-	add(subdivSlider);
-	add(subdivVerticalSlider);
-	add(terrainSlider);
-	add(terrainPushdownSlider);
-	add(terrainTexSlider);
-	add(widthSlider);
-	add(rotSlider);
-	add_right(loopedCheck);
-	add_right(alignedCheck);
-
-	y += padding * 2;
-
-	add_fullwidth(addButton);
+	layout.add_fullwidth(addButton);
 
 	for (auto& entry : entries)
 	{
-		entry.removeButton.SetPos(XMFLOAT2(padding, y));
+		entry.removeButton.SetPos(XMFLOAT2(layout.padding, layout.y));
 
-		entry.entityButton.SetSize(XMFLOAT2(width - padding * 3 - entry.removeButton.GetSize().x, entry.entityButton.GetSize().y));
-		entry.entityButton.SetPos(XMFLOAT2(entry.removeButton.GetPos().x + entry.removeButton.GetSize().x + padding, y));
+		entry.entityButton.SetSize(XMFLOAT2(layout.width - layout.padding * 3 - entry.removeButton.GetSize().x, entry.entityButton.GetSize().y));
+		entry.entityButton.SetPos(XMFLOAT2(entry.removeButton.GetPos().x + entry.removeButton.GetSize().x + layout.padding, layout.y));
 
-		y += entry.entityButton.GetSize().y;
-		y += padding;
+		layout.y += entry.entityButton.GetSize().y;
+		layout.y += layout.padding;
 	}
 }

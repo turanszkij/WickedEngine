@@ -1381,84 +1381,55 @@ void MaterialWindow::SetEntity(Entity entity)
 void MaterialWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
-	const float padding = 4;
-	const float width = GetWidgetAreaSize().x;
-	float y = padding;
-	float jump = 20;
-
-	auto add = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = 150;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_right = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(width - padding - widget.GetSize().x, y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_fullwidth = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = padding;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
+	layout.margin_left = 150;
 
 	Scene& scene = editor->GetCurrentScene();
 	MaterialComponent* material = scene.materials.GetComponent(entity);
 
-	add_fullwidth(materialNameField);
-	add_right(shadowReceiveCheckBox);
-	add_right(shadowCasterCheckBox);
-	add_right(useVertexColorsCheckBox);
-	add_right(specularGlossinessCheckBox);
-	add_right(occlusionPrimaryCheckBox);
-	add_right(occlusionSecondaryCheckBox);
-	add_right(vertexAOCheckBox);
-	add_right(windCheckBox);
-	add_right(doubleSidedCheckBox);
-	add_right(outlineCheckBox);
-	add_right(preferUncompressedCheckBox);
-	add_right(disableStreamingCheckBox);
-	add_right(coplanarCheckBox);
-	add_right(capsuleShadowCheckBox);
-	add(shaderTypeComboBox);
-	add(blendModeComboBox);
-	add(shadingRateComboBox);
-	add(cameraComboBox);
-	add(alphaRefSlider);
-	add(normalMapSlider);
-	add(roughnessSlider);
-	add(reflectanceSlider);
-	add(metalnessSlider);
-	add(emissiveSlider);
-	add(saturationSlider);
-	add(cloakSlider);
-	add(chromaticAberrationSlider);
-	add(transmissionSlider);
-	add(refractionSlider);
-	add(pomSlider);
-	add(anisotropyStrengthSlider);
-	add(anisotropyRotationSlider);
-	add(displacementMappingSlider);
-	add(subsurfaceScatteringSlider);
-	add(texAnimFrameRateSlider);
-	add(texAnimDirectionSliderU);
-	add(texAnimDirectionSliderV);
-	add(texMulSliderX);
-	add(texMulSliderY);
-	add(sheenRoughnessSlider);
-	add(clearcoatSlider);
-	add(clearcoatRoughnessSlider);
-	add(blendTerrainSlider);
+	layout.add_fullwidth(materialNameField);
+	layout.add_right(shadowReceiveCheckBox);
+	layout.add_right(shadowCasterCheckBox);
+	layout.add_right(useVertexColorsCheckBox);
+	layout.add_right(specularGlossinessCheckBox);
+	layout.add_right(occlusionPrimaryCheckBox);
+	layout.add_right(occlusionSecondaryCheckBox);
+	layout.add_right(vertexAOCheckBox);
+	layout.add_right(windCheckBox);
+	layout.add_right(doubleSidedCheckBox);
+	layout.add_right(outlineCheckBox);
+	layout.add_right(preferUncompressedCheckBox);
+	layout.add_right(disableStreamingCheckBox);
+	layout.add_right(coplanarCheckBox);
+	layout.add_right(capsuleShadowCheckBox);
+	layout.add(shaderTypeComboBox);
+	layout.add(blendModeComboBox);
+	layout.add(shadingRateComboBox);
+	layout.add(cameraComboBox);
+	layout.add(alphaRefSlider);
+	layout.add(normalMapSlider);
+	layout.add(roughnessSlider);
+	layout.add(reflectanceSlider);
+	layout.add(metalnessSlider);
+	layout.add(emissiveSlider);
+	layout.add(saturationSlider);
+	layout.add(cloakSlider);
+	layout.add(chromaticAberrationSlider);
+	layout.add(transmissionSlider);
+	layout.add(refractionSlider);
+	layout.add(pomSlider);
+	layout.add(anisotropyStrengthSlider);
+	layout.add(anisotropyRotationSlider);
+	layout.add(displacementMappingSlider);
+	layout.add(subsurfaceScatteringSlider);
+	layout.add(texAnimFrameRateSlider);
+	layout.add(texAnimDirectionSliderU);
+	layout.add(texAnimDirectionSliderV);
+	layout.add(texMulSliderX);
+	layout.add(texMulSliderY);
+	layout.add(sheenRoughnessSlider);
+	layout.add(clearcoatSlider);
+	layout.add(clearcoatRoughnessSlider);
+	layout.add(blendTerrainSlider);
 	if (material != nullptr && material->shaderType == MaterialComponent::SHADERTYPE_INTERIORMAPPING)
 	{
 		interiorScaleXSlider.SetVisible(true);
@@ -1468,13 +1439,13 @@ void MaterialWindow::ResizeLayout()
 		interiorOffsetYSlider.SetVisible(true);
 		interiorOffsetZSlider.SetVisible(true);
 		interiorRotationSlider.SetVisible(true);
-		add(interiorScaleXSlider);
-		add(interiorScaleYSlider);
-		add(interiorScaleZSlider);
-		add(interiorOffsetXSlider);
-		add(interiorOffsetYSlider);
-		add(interiorOffsetZSlider);
-		add(interiorRotationSlider);
+		layout.add(interiorScaleXSlider);
+		layout.add(interiorScaleYSlider);
+		layout.add(interiorScaleZSlider);
+		layout.add(interiorOffsetXSlider);
+		layout.add(interiorOffsetYSlider);
+		layout.add(interiorOffsetZSlider);
+		layout.add(interiorRotationSlider);
 	}
 	else
 	{
@@ -1486,11 +1457,11 @@ void MaterialWindow::ResizeLayout()
 		interiorOffsetZSlider.SetVisible(false);
 		interiorRotationSlider.SetVisible(false);
 	}
-	add(colorComboBox);
-	add_fullwidth(colorPicker);
-	add(textureSlotComboBox);
-	add_fullwidth(textureSlotButton);
-	add_fullwidth(textureSlotLabel);
+	layout.add(colorComboBox);
+	layout.add_fullwidth(colorPicker);
+	layout.add(textureSlotComboBox);
+	layout.add_fullwidth(textureSlotButton);
+	layout.add_fullwidth(textureSlotLabel);
 	textureSlotLabel.SetSize(XMFLOAT2(textureSlotLabel.GetSize().x - textureSlotLabel.GetSize().y - 2, textureSlotLabel.GetSize().y));
 	textureSlotUvsetField.SetPos(XMFLOAT2(textureSlotLabel.GetPos().x + textureSlotLabel.GetSize().x + 2, textureSlotLabel.GetPos().y));
 

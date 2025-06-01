@@ -508,56 +508,27 @@ void HairParticleWindow::UpdateData()
 void HairParticleWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
-	const float padding = 4;
-	const float width = GetWidgetAreaSize().x;
-	float y = padding;
-	float jump = 20;
+	layout.margin_left = 100;
 
-	const float margin_left = 100;
+	layout.add_fullwidth(infoLabel);
+	layout.add(meshComboBox);
+	layout.add_right(cameraBendCheckbox);
+	layout.add(countSlider);
+	layout.add(segmentcountSlider);
+	layout.add(billboardcountSlider);
+	layout.add(lengthSlider);
+	layout.add(widthSlider);
+	layout.add(stiffnessSlider);
+	layout.add(dragSlider);
+	layout.add(gravityPowerSlider);
+	layout.add(randomnessSlider);
+	layout.add(randomSeedSlider);
+	layout.add(viewDistanceSlider);
+	layout.add(uniformitySlider);
 
-	auto add = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_right = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(width - padding - widget.GetSize().x, y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_fullwidth = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = padding;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
+	layout.jump();
 
-	add_fullwidth(infoLabel);
-	add(meshComboBox);
-	add_right(cameraBendCheckbox);
-	add(countSlider);
-	add(segmentcountSlider);
-	add(billboardcountSlider);
-	add(lengthSlider);
-	add(widthSlider);
-	add(stiffnessSlider);
-	add(dragSlider);
-	add(gravityPowerSlider);
-	add(randomnessSlider);
-	add(randomSeedSlider);
-	add(viewDistanceSlider);
-	add(uniformitySlider);
-
-	y += jump;
-	add_fullwidth(addSpriteButton);
+	layout.add_fullwidth(addSpriteButton);
 
 	const float preview_size = 100;
 	const float border = 40 * preview_size / 100.0f;
@@ -566,10 +537,10 @@ void HairParticleWindow::ResizeLayout()
 	for (auto& x : sprites)
 	{
 		x.SetSize(XMFLOAT2(preview_size, preview_size));
-		x.SetPos(XMFLOAT2((i % cells) * (preview_size + border) + padding, y));
+		x.SetPos(XMFLOAT2((i % cells) * (preview_size + border) + layout.padding, layout.y));
 		if ((i % cells) == (cells - 1))
 		{
-			y += preview_size + 20;
+			layout.y += preview_size + 20;
 		}
 		auto& r = spriteRemoveButtons[i];
 		r.SetPos(XMFLOAT2(x.GetPos().x + x.GetSize().x + 1, x.GetPos().y));

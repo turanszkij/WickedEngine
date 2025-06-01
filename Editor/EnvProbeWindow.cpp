@@ -245,64 +245,34 @@ void EnvProbeWindow::SetEntity(Entity entity)
 void EnvProbeWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
-	const float padding = 4;
-	const float width = GetWidgetAreaSize().x;
-	float y = padding;
-	float jump = 20;
+	layout.margin_left = 80;
 
-	const float margin_left = 80;
+	layout.add_fullwidth(infoLabel);
 
-	auto add = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_right = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(width - padding - widget.GetSize().x, y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_fullwidth = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = padding;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-
-	add_fullwidth(infoLabel);
-
-	refreshButton.SetSize(XMFLOAT2(width * 0.5f - padding * 1.5f, refreshButton.GetSize().y));
+	refreshButton.SetSize(XMFLOAT2(layout.width * 0.5f - layout.padding * 1.5f, refreshButton.GetSize().y));
 	refreshAllButton.SetSize(refreshButton.GetSize());
-	refreshAllButton.SetPos(XMFLOAT2(width - padding - refreshButton.GetSize().x, y));
-	refreshButton.SetPos(XMFLOAT2(refreshAllButton.GetPos().x - padding - refreshButton.GetSize().x, y));
-	y += refreshAllButton.GetSize().y;
-	y += padding;
+	refreshAllButton.SetPos(XMFLOAT2(layout.width - layout.padding - refreshButton.GetSize().x, layout.y));
+	refreshButton.SetPos(XMFLOAT2(refreshAllButton.GetPos().x - layout.padding - refreshButton.GetSize().x, layout.y));
+	layout.y += refreshAllButton.GetSize().y;
+	layout.y += layout.padding;
 
-	importButton.SetSize(XMFLOAT2(width - padding * 2, importButton.GetSize().y));
-	importButton.SetPos(XMFLOAT2(padding, y));
-	y += importButton.GetSize().y;
-	y += padding;
+	importButton.SetSize(XMFLOAT2(layout.width - layout.padding * 2, importButton.GetSize().y));
+	importButton.SetPos(XMFLOAT2(layout.padding, layout.y));
+	layout.y += importButton.GetSize().y;
+	layout.y += layout.padding;
 
-	exportButton.SetSize(XMFLOAT2(width - padding * 2, exportButton.GetSize().y));
-	exportButton.SetPos(XMFLOAT2(padding, y));
-	y += exportButton.GetSize().y;
-	y += padding;
+	exportButton.SetSize(XMFLOAT2(layout.width - layout.padding * 2, exportButton.GetSize().y));
+	exportButton.SetPos(XMFLOAT2(layout.padding, layout.y));
+	layout.y += exportButton.GetSize().y;
+	layout.y += layout.padding;
 
-	resolutionCombo.SetSize(XMFLOAT2(width - 100 - resolutionCombo.GetSize().y - padding, resolutionCombo.GetSize().y));
-	resolutionCombo.SetPos(XMFLOAT2(100, y));
-	y += resolutionCombo.GetSize().y;
-	y += padding;
+	resolutionCombo.SetSize(XMFLOAT2(layout.width - 100 - resolutionCombo.GetSize().y - layout.padding, resolutionCombo.GetSize().y));
+	resolutionCombo.SetPos(XMFLOAT2(100, layout.y));
+	layout.y += resolutionCombo.GetSize().y;
+	layout.y += layout.padding;
 
-	add_right(realTimeCheckBox);
-	add_right(msaaCheckBox);
+	layout.add_right(realTimeCheckBox);
+	layout.add_right(msaaCheckBox);
 
 
 }

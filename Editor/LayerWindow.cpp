@@ -141,55 +141,26 @@ void LayerWindow::SetEntity(Entity entity)
 void LayerWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
-	const float padding = 4;
-	const float width = GetWidgetAreaSize().x;
-	float y = padding;
-	float jump = 20;
+	layout.margin_left = 80;
 
-	auto add = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = 80;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_right = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(width - padding - widget.GetSize().x, y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_fullwidth = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = padding;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-
-	add_fullwidth(label);
-	enableAllButton.SetSize(XMFLOAT2(width * 0.5f - padding * 1.5f, enableAllButton.GetSize().y));
+	layout.add_fullwidth(label);
+	enableAllButton.SetSize(XMFLOAT2(layout.width * 0.5f - layout.padding * 1.5f, enableAllButton.GetSize().y));
 	enableNoneButton.SetSize(enableAllButton.GetSize());
-	enableNoneButton.SetPos(XMFLOAT2(width - padding - enableNoneButton.GetSize().x, y));
-	enableAllButton.SetPos(XMFLOAT2(enableNoneButton.GetPos().x - padding - enableAllButton.GetSize().x, y));
-	y += enableNoneButton.GetSize().y;
-	y += padding;
+	enableNoneButton.SetPos(XMFLOAT2(layout.width - layout.padding - enableNoneButton.GetSize().x, layout.y));
+	enableAllButton.SetPos(XMFLOAT2(enableNoneButton.GetPos().x - layout.padding - enableAllButton.GetSize().x, layout.y));
+	layout.y += enableNoneButton.GetSize().y;
+	layout.y += layout.padding;
 
-	float off_x = padding + 30;
+	float off_x = layout.padding + 30;
 	for (uint32_t i = 0; i < arraysize(layers); ++i)
 	{
-		layers[i].SetPos(XMFLOAT2(off_x, y));
+		layers[i].SetPos(XMFLOAT2(off_x, layout.y));
 		off_x += 50;
-		if (off_x + layers[i].GetSize().x > width - padding)
+		if (off_x + layers[i].GetSize().x > layout.width - layout.padding)
 		{
-			off_x = padding + 30;
-			y += layers[i].GetSize().y;
-			y += padding;
+			off_x = layout.padding + 30;
+			layout.y += layers[i].GetSize().y;
+			layout.y += layout.padding;
 		}
 	}
 

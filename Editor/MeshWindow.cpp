@@ -1139,67 +1139,38 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 void MeshWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
-	const float padding = 4;
-	const float width = GetWidgetAreaSize().x;
-	float y = padding;
-	float jump = 20;
+	layout.margin_left = 100;
 
-	auto add = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = 100;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_right = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(width - padding - widget.GetSize().x, y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_fullwidth = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = padding;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-
-	add_fullwidth(meshInfoLabel);
-	add(subsetComboBox);
+	layout.add_fullwidth(meshInfoLabel);
+	layout.add(subsetComboBox);
 	subsetRemoveButton.SetPos(XMFLOAT2(subsetComboBox.GetPos().x + subsetComboBox.GetSize().x + 1 + subsetComboBox.GetSize().y, subsetComboBox.GetPos().y));
 	subsetRemoveButton.SetSize(XMFLOAT2(subsetComboBox.GetSize().y, subsetComboBox.GetSize().y));
-	add(subsetMaterialComboBox);
-	add(subsetLastButton);
-	add_right(doubleSidedCheckBox);
-	add_right(doubleSidedShadowCheckBox);
-	add_right(bvhCheckBox);
-	add_right(quantizeCheckBox);
-	add_fullwidth(impostorCreateButton);
-	add(impostorDistanceSlider);
-	add(tessellationFactorSlider);
-	add_fullwidth(instanceSelectButton);
-	add_fullwidth(flipCullingButton);
-	add_fullwidth(flipNormalsButton);
-	add_fullwidth(computeNormalsSmoothButton);
-	add_fullwidth(computeNormalsHardButton);
-	add_fullwidth(recenterButton);
-	add_fullwidth(recenterToBottomButton);
-	add_fullwidth(mergeButton);
-	add_fullwidth(optimizeButton);
-	add_fullwidth(exportHeaderButton);
+	layout.add(subsetMaterialComboBox);
+	layout.add(subsetLastButton);
+	layout.add_right(doubleSidedCheckBox);
+	layout.add_right(doubleSidedShadowCheckBox);
+	layout.add_right(bvhCheckBox);
+	layout.add_right(quantizeCheckBox);
+	layout.add_fullwidth(impostorCreateButton);
+	layout.add(impostorDistanceSlider);
+	layout.add(tessellationFactorSlider);
+	layout.add_fullwidth(instanceSelectButton);
+	layout.add_fullwidth(flipCullingButton);
+	layout.add_fullwidth(flipNormalsButton);
+	layout.add_fullwidth(computeNormalsSmoothButton);
+	layout.add_fullwidth(computeNormalsHardButton);
+	layout.add_fullwidth(recenterButton);
+	layout.add_fullwidth(recenterToBottomButton);
+	layout.add_fullwidth(mergeButton);
+	layout.add_fullwidth(optimizeButton);
+	layout.add_fullwidth(exportHeaderButton);
 
-	add(morphTargetCombo);
-	add(morphTargetSlider);
+	layout.add(morphTargetCombo);
+	layout.add(morphTargetSlider);
 
-	add_fullwidth(lodgenButton);
-	add(lodCountSlider);
-	add(lodQualitySlider);
-	add(lodErrorSlider);
-	add_right(lodSloppyCheckBox);
+	layout.add_fullwidth(lodgenButton);
+	layout.add(lodCountSlider);
+	layout.add(lodQualitySlider);
+	layout.add(lodErrorSlider);
+	layout.add_right(lodSloppyCheckBox);
 }

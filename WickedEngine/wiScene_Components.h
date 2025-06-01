@@ -57,7 +57,7 @@ namespace wi::scene
 		XMFLOAT3 translation_local = XMFLOAT3(0, 0, 0);
 
 		// Non-serialized attributes:
-		float padding = 0;
+		float _padding = 0;
 
 		// The world matrix can be computed from local scale, rotation, translation
 		//	- by calling UpdateTransform()

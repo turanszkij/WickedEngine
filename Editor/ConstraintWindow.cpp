@@ -695,47 +695,17 @@ void ConstraintWindow::SetEntity(Entity entity)
 void ConstraintWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
-	const float padding = 4;
-	const float width = GetWidgetAreaSize().x;
-	float y = padding;
-	float jump = 20;
+	layout.margin_left = 145;
 
-	const float margin_left = 145;
-
-	auto add = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-		};
-	auto add_right = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(width - padding - widget.GetSize().x, y));
-		y += widget.GetSize().y;
-		y += padding;
-		};
-	auto add_fullwidth = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = padding;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-		};
-
-	add_fullwidth(infoLabel);
-	add_fullwidth(rebindButton);
-	add(typeComboBox);
-	add(bodyAComboBox);
-	add(bodyBComboBox);
-	add_right(collisionCheckBox);
+	layout.add_fullwidth(infoLabel);
+	layout.add_fullwidth(rebindButton);
+	layout.add(typeComboBox);
+	layout.add(bodyAComboBox);
+	layout.add(bodyBComboBox);
+	layout.add_right(collisionCheckBox);
 
 
-	add(breakSlider);
+	layout.add(breakSlider);
 
 
 	Scene& scene = editor->GetCurrentScene();
@@ -851,24 +821,24 @@ void ConstraintWindow::ResizeLayout()
 			maxRotationXSlider.SetVisible(true);
 			maxRotationYSlider.SetVisible(true);
 			maxRotationZSlider.SetVisible(true);
-			add_fullwidth(fixedXButton);
-			add_fullwidth(fixedYButton);
-			add_fullwidth(fixedZButton);
-			add_fullwidth(fixedXRotationButton);
-			add_fullwidth(fixedYRotationButton);
-			add_fullwidth(fixedZRotationButton);
-			add(minTranslationXSlider);
-			add(minTranslationYSlider);
-			add(minTranslationZSlider);
-			add(maxTranslationXSlider);
-			add(maxTranslationYSlider);
-			add(maxTranslationZSlider);
-			add(minRotationXSlider);
-			add(minRotationYSlider);
-			add(minRotationZSlider);
-			add(maxRotationXSlider);
-			add(maxRotationYSlider);
-			add(maxRotationZSlider);
+			layout.add_fullwidth(fixedXButton);
+			layout.add_fullwidth(fixedYButton);
+			layout.add_fullwidth(fixedZButton);
+			layout.add_fullwidth(fixedXRotationButton);
+			layout.add_fullwidth(fixedYRotationButton);
+			layout.add_fullwidth(fixedZRotationButton);
+			layout.add(minTranslationXSlider);
+			layout.add(minTranslationYSlider);
+			layout.add(minTranslationZSlider);
+			layout.add(maxTranslationXSlider);
+			layout.add(maxTranslationYSlider);
+			layout.add(maxTranslationZSlider);
+			layout.add(minRotationXSlider);
+			layout.add(minRotationYSlider);
+			layout.add(minRotationZSlider);
+			layout.add(maxRotationXSlider);
+			layout.add(maxRotationYSlider);
+			layout.add(maxRotationZSlider);
 			break;
 		default:
 			break;
@@ -876,32 +846,32 @@ void ConstraintWindow::ResizeLayout()
 
 		if (normalConeSlider.IsVisible())
 		{
-			add(normalConeSlider);
+			layout.add(normalConeSlider);
 		}
 		if (planeConeSlider.IsVisible())
 		{
-			add(planeConeSlider);
+			layout.add(planeConeSlider);
 		}
 
 		if (minSlider.IsVisible())
 		{
-			add(minSlider);
+			layout.add(minSlider);
 		}
 		if (maxSlider.IsVisible())
 		{
-			add(maxSlider);
+			layout.add(maxSlider);
 		}
 
 		if (motorSlider1.IsVisible())
 		{
-			add(motorSlider1);
+			layout.add(motorSlider1);
 		}
 		if (motorSlider2.IsVisible())
 		{
-			add(motorSlider2);
+			layout.add(motorSlider2);
 		}
 
-		add_right(physicsDebugCheckBox);
-		add(constraintDebugSlider);
+		layout.add_right(physicsDebugCheckBox);
+		layout.add(constraintDebugSlider);
 	}
 }

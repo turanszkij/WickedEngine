@@ -72,23 +72,13 @@ PerlinModifierWindow::PerlinModifierWindow() : ModifierWindow("Perlin Noise")
 void PerlinModifierWindow::ResizeLayout()
 {
 	ModifierWindow::ResizeLayout();
-	const float padding = 4;
-	const float width = GetWidgetAreaSize().x;
-	float y = padding;
+	layout.margin_left = 100;
 
-	auto add = [&](wi::gui::Widget& widget) {
-		const float margin_left = 100;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
+	layout.add(blendCombo);
+	layout.add(weightSlider);
+	layout.add(scaleSlider);
 
-	add(blendCombo);
-	add(weightSlider);
-	add(scaleSlider);
-
-	add(octavesSlider);
+	layout.add(octavesSlider);
 }
 void PerlinModifierWindow::Bind(wi::terrain::PerlinModifier* ptr)
 {
@@ -145,26 +135,16 @@ VoronoiModifierWindow::VoronoiModifierWindow() : ModifierWindow("Voronoi Noise")
 void VoronoiModifierWindow::ResizeLayout()
 {
 	ModifierWindow::ResizeLayout();
-	const float padding = 4;
-	const float width = GetWidgetAreaSize().x;
-	float y = padding;
+	layout.margin_left = 100;
 
-	auto add = [&](wi::gui::Widget& widget) {
-		const float margin_left = 100;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
+	layout.add(blendCombo);
+	layout.add(weightSlider);
+	layout.add(scaleSlider);
 
-	add(blendCombo);
-	add(weightSlider);
-	add(scaleSlider);
-
-	add(fadeSlider);
-	add(shapeSlider);
-	add(falloffSlider);
-	add(perturbationSlider);
+	layout.add(fadeSlider);
+	layout.add(shapeSlider);
+	layout.add(falloffSlider);
+	layout.add(perturbationSlider);
 }
 void VoronoiModifierWindow::Bind(wi::terrain::VoronoiModifier* ptr)
 {
@@ -258,24 +238,14 @@ HeightmapModifierWindow::HeightmapModifierWindow() : ModifierWindow("Heightmap")
 void HeightmapModifierWindow::ResizeLayout()
 {
 	ModifierWindow::ResizeLayout();
-	const float padding = 4;
-	const float width = GetWidgetAreaSize().x;
-	float y = padding;
+	layout.margin_left = 100;
 
-	auto add = [&](wi::gui::Widget& widget) {
-		const float margin_left = 100;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
+	layout.add(blendCombo);
+	layout.add(weightSlider);
+	layout.add(scaleSlider);
 
-	add(blendCombo);
-	add(weightSlider);
-	add(scaleSlider);
-
-	add(amountSlider);
-	add(loadButton);
+	layout.add(amountSlider);
+	layout.add(loadButton);
 }
 void HeightmapModifierWindow::Bind(wi::terrain::HeightmapModifier* ptr)
 {
@@ -491,30 +461,20 @@ void PropWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
 
-	constexpr float padding = 4;
-	const float width = GetWidgetAreaSize().x;
-	float y = padding;
+	layout.margin_left = 150;
 
-	auto add = [&](wi::gui::Widget& widget) {
-		constexpr float margin_left = 150;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-
-	add(meshCombo);
-	add(minCountPerChunkInput);
-	add(maxCountPerChunkInput);
-	add(regionCombo);
-	add(regionPowerSlider);
-	add(noiseFrequencySlider);
-	add(noisePowerSlider);
-	add(thresholdSlider);
-	add(minSizeSlider);
-	add(maxSizeSlider);
-	add(minYOffsetInput);
-	add(maxYOffsetInput);
+	layout.add(meshCombo);
+	layout.add(minCountPerChunkInput);
+	layout.add(maxCountPerChunkInput);
+	layout.add(regionCombo);
+	layout.add(regionPowerSlider);
+	layout.add(noiseFrequencySlider);
+	layout.add(noisePowerSlider);
+	layout.add(thresholdSlider);
+	layout.add(minSizeSlider);
+	layout.add(maxSizeSlider);
+	layout.add(minYOffsetInput);
+	layout.add(maxYOffsetInput);
 }
 
 PropsWindow::PropsWindow(EditorComponent* editor)
@@ -617,45 +577,17 @@ void PropsWindow::Update(const wi::Canvas& canvas, float dt)
 
 void PropsWindow::ResizeLayout()
 {
-	constexpr float padding = 4;
-	const float width = GetWidgetAreaSize().x;
-	float y = padding;
+	layout.margin_left = 150;
 
-	auto add = [&](wi::gui::Widget& widget) {
-		constexpr float margin_left = 150;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-
-	auto add_fullwidth = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = padding;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-		};
-
-	auto add_window = [&](wi::gui::Window& widget) {
-		const float margin_left = padding;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-		widget.SetEnabled(true);
-	};
-
-	add_fullwidth(addButton);
+	layout.add_fullwidth(addButton);
 
 	for(auto& window : windows)
 	{
-		add_window(*window);
+		layout.add_fullwidth(*window);
+		window->SetEnabled(true);
 	}
 
-	SetSize(XMFLOAT2(GetScale().x, control_size + y));
+	SetSize(XMFLOAT2(GetScale().x, control_size + layout.y));
 
 	wi::gui::Window::ResizeLayout();
 }
@@ -1873,69 +1805,48 @@ void TerrainWindow::Update(const wi::Canvas& canvas, float dt)
 }
 void TerrainWindow::ResizeLayout()
 {
-	const float padding = 4;
-	const float width = GetWidgetAreaSize().x;
-	float y = padding;
+	layout.margin_left = 150;
 
-	auto add = [&](wi::gui::Widget& widget) {
-		const float margin_left = 150;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_checkbox = [&](wi::gui::CheckBox& widget) {
-		widget.SetPos(XMFLOAT2(width - padding - widget.GetSize().x, y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_window = [&](wi::gui::Window& widget) {
-		const float margin_left = padding;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-		widget.SetEnabled(true);
-	};
-
-	add_checkbox(removalCheckBox);
+	layout.add_right(removalCheckBox);
 	centerToCamCheckBox.SetPos(XMFLOAT2(removalCheckBox.GetPos().x - 100, removalCheckBox.GetPos().y));
-	add_checkbox(grassCheckBox);
+	layout.add_right(grassCheckBox);
 	physicsCheckBox.SetPos(XMFLOAT2(grassCheckBox.GetPos().x - 100, grassCheckBox.GetPos().y));
-	add_checkbox(tessellationCheckBox);
-	add(lodSlider);
-	add(generationSlider);
-	add(propGenerationSlider);
-	add(physicsGenerationSlider);
-	add(propDensitySlider);
-	add(grassDensitySlider);
-	add(grassLengthSlider);
-	add(grassDistanceSlider);
-	add(presetCombo);
-	add(scaleSlider);
-	add(seedSlider);
-	add(bottomLevelSlider);
-	add(topLevelSlider);
-	add(region1Slider);
-	add(region2Slider);
-	add(region3Slider);
+	layout.add_right(tessellationCheckBox);
+	layout.add(lodSlider);
+	layout.add(generationSlider);
+	layout.add(propGenerationSlider);
+	layout.add(physicsGenerationSlider);
+	layout.add(propDensitySlider);
+	layout.add(grassDensitySlider);
+	layout.add(grassLengthSlider);
+	layout.add(grassDistanceSlider);
+	layout.add(presetCombo);
+	layout.add(scaleSlider);
+	layout.add(seedSlider);
+	layout.add(bottomLevelSlider);
+	layout.add(topLevelSlider);
+	layout.add(region1Slider);
+	layout.add(region2Slider);
+	layout.add(region3Slider);
 	for (size_t i = 0; i < arraysize(materialCombos); ++i)
 	{
-		add(materialCombos[i]);
+		layout.add(materialCombos[i]);
 	}
-	add(materialCombo_GrassParticle);
-	add(saveHeightmapButton);
-	add(saveRegionButton);
-	add(addModifierCombo);
+	layout.add(materialCombo_GrassParticle);
+	layout.add(saveHeightmapButton);
+	layout.add(saveRegionButton);
+	layout.add(addModifierCombo);
 
 	for (auto& modifier : modifiers)
 	{
-		add_window(*modifier);
+		layout.add_fullwidth(*modifier);
+		modifier->SetEnabled(true);
 	}
 
-	add_window(*propsWindow.get());
+	layout.add_fullwidth(*propsWindow.get());
+	propsWindow->SetEnabled(true);
 
-	SetSize(XMFLOAT2(GetScale().x, y + control_size));
+	SetSize(XMFLOAT2(GetScale().x, layout.y + control_size));
 
 	wi::gui::Window::ResizeLayout();
 }

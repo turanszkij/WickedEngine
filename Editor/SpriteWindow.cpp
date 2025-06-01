@@ -648,69 +648,39 @@ void SpriteWindow::SetEntity(wi::ecs::Entity entity)
 void SpriteWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
-	const float padding = 4;
-	const float width = GetWidgetAreaSize().x;
-	float y = padding;
-	float jump = 20;
+	layout.margin_left = 118;
 
-	const float margin_left = 118;
-
-	auto add = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_right = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(width - padding - widget.GetSize().x, y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_fullwidth = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = padding;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-
-	add_fullwidth(textureButton);
-	add_fullwidth(maskButton);
-	add(pivotXSlider);
-	add(pivotYSlider);
-	add(intensitySlider);
-	add(rotationSlider);
-	add(saturationSlider);
-	add(alphaStartSlider);
-	add(alphaEndSlider);
-	add(borderSoftenSlider);
-	add(cornerRounding0Slider);
-	add(cornerRounding1Slider);
-	add(cornerRounding2Slider);
-	add(cornerRounding3Slider);
-	add(qualityCombo);
-	add(samplemodeCombo);
-	add(blendModeCombo);
-	add_right(hiddenCheckBox);
-	add_right(cameraFacingCheckBox);
-	add_right(cameraScalingCheckBox);
-	add_right(depthTestCheckBox);
-	add_right(distortionCheckBox);
-	add_fullwidth(colorPicker);
-	add(movingTexXSlider);
-	add(movingTexYSlider);
-	add(drawrectFrameRateSlider);
-	add(drawrectFrameCountInput);
-	add(drawrectHorizontalFrameCountInput);
-	add(wobbleXSlider);
-	add(wobbleYSlider);
-	add(wobbleSpeedSlider);
+	layout.add_fullwidth(textureButton);
+	layout.add_fullwidth(maskButton);
+	layout.add(pivotXSlider);
+	layout.add(pivotYSlider);
+	layout.add(intensitySlider);
+	layout.add(rotationSlider);
+	layout.add(saturationSlider);
+	layout.add(alphaStartSlider);
+	layout.add(alphaEndSlider);
+	layout.add(borderSoftenSlider);
+	layout.add(cornerRounding0Slider);
+	layout.add(cornerRounding1Slider);
+	layout.add(cornerRounding2Slider);
+	layout.add(cornerRounding3Slider);
+	layout.add(qualityCombo);
+	layout.add(samplemodeCombo);
+	layout.add(blendModeCombo);
+	layout.add_right(hiddenCheckBox);
+	layout.add_right(cameraFacingCheckBox);
+	layout.add_right(cameraScalingCheckBox);
+	layout.add_right(depthTestCheckBox);
+	layout.add_right(distortionCheckBox);
+	layout.add_fullwidth(colorPicker);
+	layout.add(movingTexXSlider);
+	layout.add(movingTexYSlider);
+	layout.add(drawrectFrameRateSlider);
+	layout.add(drawrectFrameCountInput);
+	layout.add(drawrectHorizontalFrameCountInput);
+	layout.add(wobbleXSlider);
+	layout.add(wobbleYSlider);
+	layout.add(wobbleSpeedSlider);
 }
 
 void SpriteWindow::UpdateSpriteDrawRectParams(wi::Sprite* sprite)

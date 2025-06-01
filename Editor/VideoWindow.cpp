@@ -237,41 +237,12 @@ void VideoWindow::SetEntity(Entity entity)
 void VideoWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
-	const float padding = 4;
-	const float width = GetWidgetAreaSize().x;
-	float y = padding;
-	float jump = 20;
+	layout.margin_left = 80;
 
-	auto add = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = 80;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_right = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(width - padding - widget.GetSize().x, y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_fullwidth = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = padding;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
+	layout.add_fullwidth(openButton);
+	layout.add_fullwidth(filenameLabel);
 
-	add_fullwidth(openButton);
-	add_fullwidth(filenameLabel);
-
-	add_fullwidth(preview);
+	layout.add_fullwidth(preview);
 	float h_aspect = 9.0f / 16.0f;
 	if (preview.video != nullptr && preview.video->videoResource.IsValid())
 	{
@@ -280,16 +251,16 @@ void VideoWindow::ResizeLayout()
 	}
 	preview.SetSize(XMFLOAT2(preview.GetSize().x, preview.GetSize().x * h_aspect));
 
-	add(playpauseButton);
-	playpauseButton.SetSize(XMFLOAT2(width - 140, playpauseButton.GetSize().y));
+	layout.add(playpauseButton);
+	playpauseButton.SetSize(XMFLOAT2(layout.width - 140, playpauseButton.GetSize().y));
 	loopedCheckbox.SetPos(XMFLOAT2(playpauseButton.GetPos().x - loopedCheckbox.GetSize().x - 2, playpauseButton.GetPos().y));
 	stopButton.SetPos(XMFLOAT2(playpauseButton.GetPos().x + playpauseButton.GetSize().x + 2, playpauseButton.GetPos().y));
-	stopButton.SetSize(XMFLOAT2(width - stopButton.GetPos().x - padding, playpauseButton.GetSize().y));
+	stopButton.SetSize(XMFLOAT2(layout.width - stopButton.GetPos().x - layout.padding, playpauseButton.GetSize().y));
 
-	add(timerSlider);
+	layout.add(timerSlider);
 
-	y += jump;
+	layout.jump();
 
-	add_fullwidth(infoLabel);
+	layout.add_fullwidth(infoLabel);
 }
 

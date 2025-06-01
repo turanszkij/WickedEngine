@@ -1062,68 +1062,39 @@ void RigidBodyWindow::ResizeLayout()
 {
 	RefreshShapeType();
 	wi::gui::Window::ResizeLayout();
-	const float padding = 4;
-	const float width = GetWidgetAreaSize().x;
-	float y = padding;
-	float jump = 20;
+	layout.margin_left = 145;
 
-	const float margin_left = 145;
+	layout.add(collisionShapeComboBox);
+	layout.add(XSlider);
+	layout.add(YSlider);
+	layout.add(ZSlider);
+	layout.add(massSlider);
+	layout.add(frictionSlider);
+	layout.add(restitutionSlider);
+	layout.add(lineardampingSlider);
+	layout.add(angulardampingSlider);
+	layout.add(buoyancySlider);
+	layout.add(physicsMeshLODSlider);
+	layout.add(offsetXSlider);
+	layout.add(offsetYSlider);
+	layout.add(offsetZSlider);
+	layout.add_right(startDeactivatedCheckBox);
+	layout.add_right(disabledeactivationCheckBox);
+	layout.add_right(kinematicCheckBox);
+	layout.add_right(physicsDebugCheckBox);
 
-	auto add = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_right = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(width - padding - widget.GetSize().x, y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_fullwidth = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = padding;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
 
-	add(collisionShapeComboBox);
-	add(XSlider);
-	add(YSlider);
-	add(ZSlider);
-	add(massSlider);
-	add(frictionSlider);
-	add(restitutionSlider);
-	add(lineardampingSlider);
-	add(angulardampingSlider);
-	add(buoyancySlider);
-	add(physicsMeshLODSlider);
-	add(offsetXSlider);
-	add(offsetYSlider);
-	add(offsetZSlider);
-	add_right(startDeactivatedCheckBox);
-	add_right(disabledeactivationCheckBox);
-	add_right(kinematicCheckBox);
-	add_right(physicsDebugCheckBox);
+	layout.jump();
 
-	y += 20;
-
-	add_right(characterCheckBox);
+	layout.add_right(characterCheckBox);
 	if (characterCheckBox.GetCheck())
 	{
 		characterLabel.SetVisible(true);
 		characterSlopeSlider.SetVisible(true);
 		characterGravitySlider.SetVisible(true);
-		add_fullwidth(characterLabel);
-		add(characterSlopeSlider);
-		add(characterGravitySlider);
+		layout.add_fullwidth(characterLabel);
+		layout.add(characterSlopeSlider);
+		layout.add(characterGravitySlider);
 	}
 	else
 	{
@@ -1132,9 +1103,9 @@ void RigidBodyWindow::ResizeLayout()
 		characterGravitySlider.SetVisible(false);
 	}
 
-	y += 20;
+	layout.jump();
 
-	add(vehicleCombo);
+	layout.add(vehicleCombo);
 	if (vehicleCombo.GetSelected() > 0)
 	{
 		vehicleLabel.SetVisible(true);
@@ -1161,32 +1132,32 @@ void RigidBodyWindow::ResizeLayout()
 		rSuspensionFrequencySlider.SetVisible(true);
 		rSuspensionDampingSlider.SetVisible(true);
 
-		add_fullwidth(vehicleLabel);
+		layout.add_fullwidth(vehicleLabel);
 
-		add_right(driveCheckbox);
+		layout.add_right(driveCheckbox);
 
-		add(vehicleCollisionCombo);
-		add(wheelRadiusSlider);
-		add(wheelWidthSlider);
-		add(chassisHalfWidthSlider);
-		add(chassisHalfHeightSlider);
-		add(chassisHalfLengthSlider);
-		add(frontWheelOffsetSlider);
-		add(rearWheelOffsetSlider);
-		add(maxTorqueSlider);
-		add(clutchStrengthSlider);
-		add(maxRollAngleSlider);
-		add(maxSteeringAngleSlider);
+		layout.add(vehicleCollisionCombo);
+		layout.add(wheelRadiusSlider);
+		layout.add(wheelWidthSlider);
+		layout.add(chassisHalfWidthSlider);
+		layout.add(chassisHalfHeightSlider);
+		layout.add(chassisHalfLengthSlider);
+		layout.add(frontWheelOffsetSlider);
+		layout.add(rearWheelOffsetSlider);
+		layout.add(maxTorqueSlider);
+		layout.add(clutchStrengthSlider);
+		layout.add(maxRollAngleSlider);
+		layout.add(maxSteeringAngleSlider);
 
-		add(fSuspensionMinSlider);
-		add(fSuspensionMaxSlider);
-		add(fSuspensionFrequencySlider);
-		add(fSuspensionDampingSlider);
+		layout.add(fSuspensionMinSlider);
+		layout.add(fSuspensionMaxSlider);
+		layout.add(fSuspensionFrequencySlider);
+		layout.add(fSuspensionDampingSlider);
 
-		add(rSuspensionMinSlider);
-		add(rSuspensionMaxSlider);
-		add(rSuspensionFrequencySlider);
-		add(rSuspensionDampingSlider);
+		layout.add(rSuspensionMinSlider);
+		layout.add(rSuspensionMaxSlider);
+		layout.add(rSuspensionFrequencySlider);
+		layout.add(rSuspensionDampingSlider);
 
 		RigidBodyPhysicsComponent::Vehicle::Type type = (RigidBodyPhysicsComponent::Vehicle::Type)vehicleCombo.GetSelectedUserdata();
 		switch (type)
@@ -1200,31 +1171,31 @@ void RigidBodyWindow::ResizeLayout()
 			wheelEntityFrontRightCombo.SetVisible(true);
 			wheelEntityRearLeftCombo.SetVisible(true);
 			wheelEntityRearRightCombo.SetVisible(true);
-			add(wheelEntityFrontLeftCombo);
-			add(wheelEntityFrontRightCombo);
-			add(wheelEntityRearLeftCombo);
-			add(wheelEntityRearRightCombo);
+			layout.add(wheelEntityFrontLeftCombo);
+			layout.add(wheelEntityFrontRightCombo);
+			layout.add(wheelEntityRearLeftCombo);
+			layout.add(wheelEntityRearRightCombo);
 			fourwheelCheckbox.SetVisible(true);
 			motorleanCheckbox.SetVisible(false);
-			add_right(fourwheelCheckbox);
+			layout.add_right(fourwheelCheckbox);
 			break;
 		case wi::scene::RigidBodyPhysicsComponent::Vehicle::Type::Motorcycle:
 			motorcycleFBrakeSuspensionAngleSlider.SetVisible(true);
 			motorcycleFBrakeTorqueSlider.SetVisible(true);
 			motorcycleRBrakeTorqueSlider.SetVisible(true);
-			add(motorcycleFBrakeSuspensionAngleSlider);
-			add(motorcycleFBrakeTorqueSlider);
-			add(motorcycleRBrakeTorqueSlider);
+			layout.add(motorcycleFBrakeSuspensionAngleSlider);
+			layout.add(motorcycleFBrakeTorqueSlider);
+			layout.add(motorcycleRBrakeTorqueSlider);
 
 			wheelEntityFrontLeftCombo.SetVisible(true);
 			wheelEntityFrontRightCombo.SetVisible(false);
 			wheelEntityRearLeftCombo.SetVisible(true);
 			wheelEntityRearRightCombo.SetVisible(false);
-			add(wheelEntityFrontLeftCombo);
-			add(wheelEntityRearLeftCombo);
+			layout.add(wheelEntityFrontLeftCombo);
+			layout.add(wheelEntityRearLeftCombo);
 			motorleanCheckbox.SetVisible(true);
 			fourwheelCheckbox.SetVisible(false);
-			add_right(motorleanCheckbox);
+			layout.add_right(motorleanCheckbox);
 			break;
 		default:
 			break;

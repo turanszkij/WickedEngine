@@ -522,53 +522,25 @@ void SoundWindow::SetEntity(Entity entity)
 void SoundWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
-	const float padding = 4;
-	const float width = GetWidgetAreaSize().x;
-	float y = padding;
-	float jump = 20;
+	layout.margin_left = 100;
 
-	auto add = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = 100;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_right = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(width - padding - widget.GetSize().x, y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_fullwidth = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = padding;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-
-	add_fullwidth(openButton);
-	add_fullwidth(filenameLabel);
-	add(playstopButton);
+	layout.add_fullwidth(openButton);
+	layout.add_fullwidth(filenameLabel);
+	layout.add(playstopButton);
 	loopedCheckbox.SetPos(XMFLOAT2(playstopButton.GetPos().x - loopedCheckbox.GetSize().x - 2, playstopButton.GetPos().y));
-	add(volumeSlider);
-	add_right(reverbCheckbox);
+	layout.add(volumeSlider);
+	layout.add_right(reverbCheckbox);
 	disable3dCheckbox.SetPos(XMFLOAT2(reverbCheckbox.GetPos().x - disable3dCheckbox.GetSize().x - 100 - 2, reverbCheckbox.GetPos().y));
-	add(submixComboBox);
-	add(reverbComboBox);
+	layout.add(submixComboBox);
+	layout.add(reverbComboBox);
 
-	add(beginInput);
-	add(lengthInput);
-	add(loopBeginInput);
-	add(loopLengthInput);
+	layout.add(beginInput);
+	layout.add(lengthInput);
+	layout.add(loopBeginInput);
+	layout.add(loopLengthInput);
 
-	y += 10;
-	add_fullwidth(waveGraph);
+	layout.jump();
+
+	layout.add_fullwidth(waveGraph);
 }
 
