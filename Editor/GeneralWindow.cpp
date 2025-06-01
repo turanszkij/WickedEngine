@@ -1004,91 +1004,57 @@ void GeneralWindow::RefreshLanguageSelectionAfterWholeGUIWasInitialized()
 void GeneralWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
-	const float padding = 4;
-	float width = GetWidgetAreaSize().x;
-	float y = padding;
-	float jump = 20;
-	float x_off = 100;
 
-	auto add = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = 155;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_right = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(width - padding - widget.GetSize().x, y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_fullwidth = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = padding * 2;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
+	layout.add_right(versionCheckBox, fpsCheckBox, otherinfoCheckBox);
 
-	otherinfoCheckBox.SetPos(XMFLOAT2(width - otherinfoCheckBox.GetSize().x - padding, y));
-	fpsCheckBox.SetPos(XMFLOAT2(otherinfoCheckBox.GetPos().x - fpsCheckBox.GetSize().x - 70, y));
-	versionCheckBox.SetPos(XMFLOAT2(fpsCheckBox.GetPos().x - versionCheckBox.GetSize().x - 70, y));
-	y += versionCheckBox.GetSize().y;
-	y += padding;
+	layout.add(masterVolumeSlider);
 
-	add(masterVolumeSlider);
+	layout.add(saveModeComboBox);
 
-	add(saveModeComboBox);
+	layout.add_right(saveCompressionCheckBox);
 
-	add_right(saveCompressionCheckBox);
+	layout.add(themeCombo);
 
-	add(themeCombo);
+	layout.add(languageCombo);
 
-	add(languageCombo);
+	layout.add_fullwidth(localizationButton);
 
-	add_fullwidth(localizationButton);
+	layout.add_right(physicsDebugCheckBox);
+	layout.add_right(nameDebugCheckBox);
+	layout.add_right(wireFrameCheckBox);
+	layout.add_right(gridHelperCheckBox);
+	layout.add_right(aabbDebugCheckBox);
+	layout.add_right(boneLinesCheckBox);
+	layout.add_right(debugEmittersCheckBox);
+	layout.add_right(debugForceFieldsCheckBox);
+	layout.add_right(debugRaytraceBVHCheckBox);
+	layout.add_right(envProbesCheckBox);
+	layout.add_right(cameraVisCheckBox);
+	layout.add_right(colliderVisCheckBox);
+	layout.add_right(springVisCheckBox);
+	layout.add_right(splineVisCheckBox);
 
-	add_right(physicsDebugCheckBox);
-	add_right(nameDebugCheckBox);
-	add_right(wireFrameCheckBox);
-	add_right(gridHelperCheckBox);
-	add_right(aabbDebugCheckBox);
-	add_right(boneLinesCheckBox);
-	add_right(debugEmittersCheckBox);
-	add_right(debugForceFieldsCheckBox);
-	add_right(debugRaytraceBVHCheckBox);
-	add_right(envProbesCheckBox);
-	add_right(cameraVisCheckBox);
-	add_right(colliderVisCheckBox);
-	add_right(springVisCheckBox);
-	add_right(splineVisCheckBox);
+	layout.jump();
 
-	y += jump;
+	layout.add_right(freezeCullingCameraCheckBox);
+	layout.add_right(disableAlbedoMapsCheckBox);
+	layout.add_right(forceDiffuseLightingCheckBox);
 
-	add_right(freezeCullingCameraCheckBox);
-	add_right(disableAlbedoMapsCheckBox);
-	add_right(forceDiffuseLightingCheckBox);
-	y += jump;
+	layout.jump();
 
-	add_right(focusModeCheckBox);
+	layout.add_right(focusModeCheckBox);
 
-	y += jump;
+	layout.jump();
 
-	add(transformToolOpacitySlider);
-	add(transformToolDarkenSlider);
-	add(bonePickerOpacitySlider);
-	add_right(skeletonsVisibleCheckBox);
+	layout.add(transformToolOpacitySlider);
+	layout.add(transformToolDarkenSlider);
+	layout.add(bonePickerOpacitySlider);
+	layout.add_right(skeletonsVisibleCheckBox);
 
-	y += jump;
+	layout.jump();
 
-	add_fullwidth(eliminateCoarseCascadesButton);
-	add_fullwidth(ddsConvButton);
-	add_fullwidth(ktxConvButton);
-	add_fullwidth(duplicateCollidersButton);
+	layout.add_fullwidth(eliminateCoarseCascadesButton);
+	layout.add_fullwidth(ddsConvButton);
+	layout.add_fullwidth(ktxConvButton);
+	layout.add_fullwidth(duplicateCollidersButton);
 }

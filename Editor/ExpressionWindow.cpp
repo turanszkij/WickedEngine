@@ -280,50 +280,20 @@ void ExpressionWindow::SetEntity(Entity entity)
 void ExpressionWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
-	const float padding = 4;
-	const float width = GetWidgetAreaSize().x;
-	float y = padding;
-	float jump = 20;
+	layout.margin_left = 110;
 
-	const float margin_left = 110;
-
-	auto add = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_right = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(width - padding - widget.GetSize().x, y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_fullwidth = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = padding;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-
-	add_fullwidth(infoLabel);
-	add_right(talkCheckBox);
-	add(blinkFrequencySlider);
-	add(blinkLengthSlider);
-	add(blinkCountSlider);
-	add(lookFrequencySlider);
-	add(lookLengthSlider);
-	add_fullwidth(expressionList);
-	add_right(binaryCheckBox);
-	add(weightSlider);
-	add(overrideMouthCombo);
-	add(overrideBlinkCombo);
-	add(overrideLookCombo);
+	layout.add_fullwidth(infoLabel);
+	layout.add_right(talkCheckBox);
+	layout.add(blinkFrequencySlider);
+	layout.add(blinkLengthSlider);
+	layout.add(blinkCountSlider);
+	layout.add(lookFrequencySlider);
+	layout.add(lookLengthSlider);
+	layout.add_fullwidth(expressionList);
+	layout.add_right(binaryCheckBox);
+	layout.add(weightSlider);
+	layout.add(overrideMouthCombo);
+	layout.add(overrideBlinkCombo);
+	layout.add(overrideLookCombo);
 
 }

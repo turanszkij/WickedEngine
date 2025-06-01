@@ -526,57 +526,27 @@ void HumanoidWindow::RefreshBoneList()
 void HumanoidWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
-	const float padding = 4;
-	const float width = GetWidgetAreaSize().x;
-	float y = padding;
-	float jump = 20;
+	layout.margin_left = 110;
 
-	const float margin_left = 110;
-
-	auto add = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_right = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(width - padding - widget.GetSize().x, y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_fullwidth = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = padding;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-
-	add_fullwidth(infoLabel);
-	add_right(lookatCheckBox);
+	layout.add_fullwidth(infoLabel);
+	layout.add_right(lookatCheckBox);
 	lookatMouseCheckBox.SetPos(XMFLOAT2(lookatCheckBox.GetPos().x - 120, lookatCheckBox.GetPos().y));
-	add(lookatEntityCombo);
-	add_right(ragdollCheckBox);
-	add_right(capsuleShadowCheckBox);
-	add(headRotMaxXSlider);
-	add(headRotMaxYSlider);
-	add(headRotSpeedSlider);
-	add(eyeRotMaxXSlider);
-	add(eyeRotMaxYSlider);
-	add(eyeRotSpeedSlider);
-	add(headSizeSlider);
-	add(ragdollFatnessSlider);
-	add(ragdollHeadSizeSlider);
+	layout.add(lookatEntityCombo);
+	layout.add_right(ragdollCheckBox);
+	layout.add_right(capsuleShadowCheckBox);
+	layout.add(headRotMaxXSlider);
+	layout.add(headRotMaxYSlider);
+	layout.add(headRotSpeedSlider);
+	layout.add(eyeRotMaxXSlider);
+	layout.add(eyeRotMaxYSlider);
+	layout.add(eyeRotSpeedSlider);
+	layout.add(headSizeSlider);
+	layout.add(ragdollFatnessSlider);
+	layout.add(ragdollHeadSizeSlider);
 
-	y += jump;
+	layout.jump();
 
-	add_fullwidth(boneList);
+	layout.add_fullwidth(boneList);
 
 }
 

@@ -550,63 +550,33 @@ void FontWindow::SetEntity(wi::ecs::Entity entity)
 void FontWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
-	const float padding = 4;
-	const float width = GetWidgetAreaSize().x;
-	float y = padding;
-	float jump = 20;
+	layout.margin_left = 120;
 
-	const float margin_left = 120;
-
-	auto add = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_right = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(width - padding - widget.GetSize().x, y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_fullwidth = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = padding;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-
-	add_fullwidth(textInput);
-	add(fileButton);
-	add(fontStyleButton);
-	add(fontSizeCombo);
-	add(hAlignCombo);
-	add(vAlignCombo);
-	add(rotationSlider);
-	add(spacingSlider);
-	add(softnessSlider);
-	add(boldenSlider);
-	add(intensitySlider);
-	add(shadowSoftnessSlider);
-	add(shadowBoldenSlider);
-	add(shadowIntensitySlider);
-	add(shadowOffsetXSlider);
-	add(shadowOffsetYSlider);
-	add_right(hiddenCheckBox);
-	add_right(cameraFacingCheckBox);
-	add_right(cameraScalingCheckBox);
-	add_right(depthTestCheckBox);
-	add_right(sdfCheckBox);
-	add(colorModeCombo);
-	add_fullwidth(colorPicker);
-	add_fullwidth(typewriterInfoLabel);
-	add(typewriterTimeSlider);
-	add_right(typewriterLoopedCheckBox);
-	add(typewriterStartInput);
+	layout.add_fullwidth(textInput);
+	layout.add(fileButton);
+	layout.add(fontStyleButton);
+	layout.add(fontSizeCombo);
+	layout.add(hAlignCombo);
+	layout.add(vAlignCombo);
+	layout.add(rotationSlider);
+	layout.add(spacingSlider);
+	layout.add(softnessSlider);
+	layout.add(boldenSlider);
+	layout.add(intensitySlider);
+	layout.add(shadowSoftnessSlider);
+	layout.add(shadowBoldenSlider);
+	layout.add(shadowIntensitySlider);
+	layout.add(shadowOffsetXSlider);
+	layout.add(shadowOffsetYSlider);
+	layout.add_right(hiddenCheckBox);
+	layout.add_right(cameraFacingCheckBox);
+	layout.add_right(cameraScalingCheckBox);
+	layout.add_right(depthTestCheckBox);
+	layout.add_right(sdfCheckBox);
+	layout.add(colorModeCombo);
+	layout.add_fullwidth(colorPicker);
+	layout.add_fullwidth(typewriterInfoLabel);
+	layout.add(typewriterTimeSlider);
+	layout.add_right(typewriterLoopedCheckBox);
+	layout.add(typewriterStartInput);
 }

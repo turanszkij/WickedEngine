@@ -420,64 +420,35 @@ void MetadataWindow::RefreshEntries()
 void MetadataWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
-	const float padding = 4;
-	const float width = GetWidgetAreaSize().x;
-	float y = padding;
-	float jump = 20;
+	layout.margin_left = 100;
 
-	auto add = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = 100;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-		};
-	auto add_right = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(width - padding - widget.GetSize().x, y));
-		y += widget.GetSize().y;
-		y += padding;
-		};
-	auto add_fullwidth = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = padding;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-		};
+	layout.add(presetCombo);
+	layout.add_fullwidth(addCombo);
 
-	add(presetCombo);
-	add_fullwidth(addCombo);
-
-	y += padding * 2;
+	layout.jump();
 
 	for (auto& entry : entries)
 	{
-		entry.remove.SetPos(XMFLOAT2(padding, y));
+		entry.remove.SetPos(XMFLOAT2(layout.padding, layout.y));
 
 		if (entry.is_bool)
 		{
-			entry.check.SetPos(XMFLOAT2(width - padding - entry.check.GetSize().x, y));
+			entry.check.SetPos(XMFLOAT2(layout.width - layout.padding - entry.check.GetSize().x, layout.y));
 
-			entry.name.SetSize(XMFLOAT2(width - wi::font::TextWidth(entry.check.GetText(), entry.check.font.params) - padding * 3 - entry.check.GetSize().x - entry.remove.GetSize().x, entry.name.GetSize().y));
+			entry.name.SetSize(XMFLOAT2(layout.width - wi::font::TextWidth(entry.check.GetText(), entry.check.font.params) - layout.padding * 3 - entry.check.GetSize().x - entry.remove.GetSize().x, entry.name.GetSize().y));
 		}
 		else
 		{
-			entry.value.SetSize(XMFLOAT2(std::max(wi::font::TextWidth(entry.value.GetCurrentInputValue(), entry.value.font.params) + padding, entry.value.GetSize().y), entry.value.GetSize().y));
-			entry.value.SetPos(XMFLOAT2(width - padding - entry.value.GetSize().x, y));
+			entry.value.SetSize(XMFLOAT2(std::max(wi::font::TextWidth(entry.value.GetCurrentInputValue(), entry.value.font.params) + layout.padding, entry.value.GetSize().y), entry.value.GetSize().y));
+			entry.value.SetPos(XMFLOAT2(layout.width - layout.padding - entry.value.GetSize().x, layout.y));
 
-			entry.name.SetSize(XMFLOAT2(width - wi::font::TextWidth(entry.value.GetDescription(), entry.value.font.params) - padding * 3 - entry.value.GetSize().x - entry.remove.GetSize().x, entry.name.GetSize().y));
+			entry.name.SetSize(XMFLOAT2(layout.width - wi::font::TextWidth(entry.value.GetDescription(), entry.value.font.params) - layout.padding * 3 - entry.value.GetSize().x - entry.remove.GetSize().x, entry.name.GetSize().y));
 		}
 
-		entry.name.SetPos(XMFLOAT2(entry.remove.GetPos().x + entry.remove.GetSize().x + padding, y));
+		entry.name.SetPos(XMFLOAT2(entry.remove.GetPos().x + entry.remove.GetSize().x + layout.padding, layout.y));
 
-		y += entry.name.GetSize().y;
-		y += padding;
+		layout.y += entry.name.GetSize().y;
+		layout.y += layout.padding;
 	}
 
 }

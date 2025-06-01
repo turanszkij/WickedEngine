@@ -1837,56 +1837,26 @@ void PaintToolWindow::ReplaceEditTextureSlot(wi::scene::MaterialComponent& mater
 void PaintToolWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
-	const float padding = 4;
-	const float width = GetWidgetAreaSize().x;
-	float y = padding;
 
-	auto add = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = 110;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_right = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(width - padding - widget.GetSize().x, y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_fullwidth = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = padding;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
+	layout.margin_left = 110;
 
-	add(modeComboBox);
-	add_fullwidth(infoLabel);
-	add_fullwidth(colorPicker);
-	add(radiusSlider);
-	add(amountSlider);
-	add(smoothnessSlider);
-	add(spacingSlider);
-	add(rotationSlider);
-	add(stabilizerSlider);
-	add_right(backfaceCheckBox);
-	wireCheckBox.SetPos(XMFLOAT2(backfaceCheckBox.GetPos().x - wireCheckBox.GetSize().x - 100, backfaceCheckBox.GetPos().y));
-	add_right(pressureCheckBox);
-	alphaCheckBox.SetPos(XMFLOAT2(pressureCheckBox.GetPos().x - alphaCheckBox.GetSize().x - 100, pressureCheckBox.GetPos().y));
-	terrainCheckBox.SetPos(XMFLOAT2(pressureCheckBox.GetPos().x - terrainCheckBox.GetSize().x - 100, pressureCheckBox.GetPos().y));
-	add(textureSlotComboBox);
-	add(brushShapeComboBox);
-	add(axisCombo);
-	add(saveTextureButton);
-	add_right(brushTextureButton);
-	add_right(revealTextureButton);
+	layout.add(modeComboBox);
+	layout.add_fullwidth(infoLabel);
+	layout.add_fullwidth(colorPicker);
+	layout.add(radiusSlider);
+	layout.add(amountSlider);
+	layout.add(smoothnessSlider);
+	layout.add(spacingSlider);
+	layout.add(rotationSlider);
+	layout.add(stabilizerSlider);
+	layout.add_right(wireCheckBox, backfaceCheckBox);
+	layout.add_right(terrainCheckBox, alphaCheckBox, pressureCheckBox);
+	layout.add(textureSlotComboBox);
+	layout.add(brushShapeComboBox);
+	layout.add(axisCombo);
+	layout.add(saveTextureButton);
+	layout.add_right(brushTextureButton);
+	layout.add_right(revealTextureButton);
 
 	if (GetMode() == MODE_TERRAIN_MATERIAL)
 	{
@@ -1907,7 +1877,7 @@ void PaintToolWindow::ResizeLayout()
 			const float preview_size = 100;
 			const float border = 20 * preview_size / 100.0f;
 			int cells = std::max(1, int(GetWidgetAreaSize().x / (preview_size + border)));
-			float offset_y = y + border;
+			float offset_y = layout.y + border;
 
 			for (size_t i = 0; i < terrain_material_buttons.size(); ++i)
 			{

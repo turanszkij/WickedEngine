@@ -948,6 +948,8 @@ namespace wi::gui
 			break;
 		}
 
+		const XMFLOAT2 descriptionsize = font_description.TextSize();
+
 		font_description.params.posX = translation.x - 2;
 		font_description.params.posY = translation.y + scale.y * 0.5f;
 		switch (font_description.params.h_align)
@@ -1661,6 +1663,8 @@ namespace wi::gui
 			}
 		}
 
+		const XMFLOAT2 descriptionsize = font_description.TextSize();
+
 		font.params.posX = translation.x + 2;
 		font.params.posY = translation.y + scale.y * 0.5f;
 		font_description.params.posX = translation.x - 2;
@@ -1998,8 +2002,8 @@ namespace wi::gui
 		valueInputField.Detach();
 		if (state != ACTIVE)
 		{
-			// only set input field size when slider is not dragged because now it will modify slider active size too!
-			valueInputField.SetSize(XMFLOAT2(std::max(scale.y, wi::font::TextWidth(valueInputField.GetText(), valueInputField.font.params) + 4), scale.y));
+			// only set input field size when slider is not dragged because now it will modify slider active size too, and slider size shouldn't be modified while dragging!
+			valueInputField.SetSize(XMFLOAT2(std::max(scale.y, wi::font::TextWidth(valueInputField.GetCurrentInputValue(), valueInputField.font.params) + 4), scale.y));
 			valueInputField.SetPos(XMFLOAT2(translation.x + scale.x - valueInputField.GetSize().x, translation.y));
 		}
 		valueInputField.AttachTo(this);
@@ -2098,6 +2102,8 @@ namespace wi::gui
 		sprites_knob[state].params.fade = sprites[state].params.fade;
 
 		sprites[state].params.siz.x = hitBox.siz.x;
+
+		font_description = font;
 	}
 	void Slider::Render(const wi::Canvas& canvas, CommandList cmd) const
 	{
@@ -2281,6 +2287,8 @@ namespace wi::gui
 		}
 
 		font.params.posY = translation.y + scale.y * 0.5f;
+
+		font_description = font;
 	}
 	void CheckBox::Render(const wi::Canvas& canvas, CommandList cmd) const
 	{
@@ -2650,6 +2658,8 @@ namespace wi::gui
 		scissorRect.left = (int32_t)std::floor(translation.x);
 		scissorRect.right = (int32_t)std::ceil(translation.x + sprites[state].params.siz.x);
 		scissorRect.top = (int32_t)std::floor(translation.y);
+
+		font_description = font;
 	}
 	void ComboBox::Render(const wi::Canvas& canvas, CommandList cmd) const
 	{
@@ -4045,6 +4055,7 @@ namespace wi::gui
 	void Window::ResizeLayout()
 	{
 		Widget::ResizeLayout();
+		layout.reset(*this);
 		for (auto& widget : widgets)
 		{
 			widget->ResizeLayout();

@@ -235,54 +235,24 @@ void ColliderWindow::SetEntity(Entity entity)
 void ColliderWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
-	const float padding = 4;
-	const float width = GetWidgetAreaSize().x;
-	float y = padding;
-	float jump = 20;
+	layout.margin_left = 80;
 
-	const float margin_left = 80;
-
-	auto add = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_right = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(width - padding - widget.GetSize().x, y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_fullwidth = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = padding;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-
-	add_fullwidth(infoLabel);
-	add_right(cpuCheckBox);
+	layout.add_fullwidth(infoLabel);
+	layout.add_right(cpuCheckBox);
 	gpuCheckBox.SetPos(XMFLOAT2(cpuCheckBox.GetPos().x - 100, cpuCheckBox.GetPos().y));
-	add(shapeCombo);
-	add(radiusSlider);
+	layout.add(shapeCombo);
+	layout.add(radiusSlider);
 
-	y += jump;
+	layout.jump();
 
-	add(offsetX);
-	add(offsetY);
-	add(offsetZ);
+	layout.add(offsetX);
+	layout.add(offsetY);
+	layout.add(offsetZ);
 
-	y += jump;
+	layout.jump();
 
-	add(tailX);
-	add(tailY);
-	add(tailZ);
+	layout.add(tailX);
+	layout.add(tailY);
+	layout.add(tailZ);
 
 }

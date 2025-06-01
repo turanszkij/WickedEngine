@@ -365,6 +365,10 @@ namespace wi::gui
 		float GetAngularHighlightWidth() const { return angular_highlight_width; };
 		void SetAngularHighlightColor(const XMFLOAT4& value) { angular_highlight_color = value; };
 		XMFLOAT4 GetAngularHighlightColor() const { return angular_highlight_color; };
+
+		wi::SpriteFont font_description;
+		void SetDescription(const std::string& desc) { font_description.SetText(desc); }
+		const std::string GetDescription() const { return font_description.GetTextA(); }
 	};
 
 	// Clickable, draggable box
@@ -379,9 +383,6 @@ namespace wi::gui
 		XMFLOAT2 prevPos = XMFLOAT2(0, 0);
 	public:
 		void Create(const std::string& name);
-
-		wi::SpriteFont font_description;
-		void SetDescription(const std::string& desc) { font_description.SetText(desc); }
 
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
@@ -486,15 +487,11 @@ namespace wi::gui
 	public:
 		void Create(const std::string& name);
 
-		wi::SpriteFont font_description;
-
 		void SetValue(const std::string& newValue);
 		void SetValue(int newValue);
 		void SetValue(float newValue);
 		const std::string GetValue();
 		const std::string GetCurrentInputValue();
-		void SetDescription(const std::string& desc) { font_description.SetText(desc); }
-		const std::string GetDescription() const { return font_description.GetTextA(); }
 
 		// Set whether incomplete input will be removed on lost activation state (default: true)
 		void SetCancelInputEnabled(bool value) { cancel_input_enabled = value; }
@@ -687,6 +684,106 @@ namespace wi::gui
 		} resize_state = RESIZE_STATE_NONE;
 		XMFLOAT2 resize_begin = XMFLOAT2(0, 0);
 		float resize_blink_timer = 0;
+
+		struct Layout
+		{
+			float padding = 4;
+			float width = 0;
+			float y = 0;
+			float x = 0;
+			float margin_left = 160;
+
+			// Reset layout state:
+			void reset(Window& window)
+			{
+				width = window.GetWidgetAreaSize().x;
+				y = padding;
+			}
+
+			// Jump over an empty space to visually separate widgets a bit:
+			void jump(float amount = 20)
+			{
+				y += amount;
+			}
+
+			// Add one widget in a row:
+			void add(wi::gui::Widget& widget)
+			{
+				if (!widget.IsVisible())
+					return;
+				x = margin_left;
+				widget.SetPos(XMFLOAT2(x, y));
+				widget.SetSize(XMFLOAT2(width - x - padding, widget.GetScale().y));
+				y += widget.GetSize().y;
+				y += padding;
+			}
+			// Add one widget to the right side:
+			void add_right(wi::gui::Widget& widget)
+			{
+				if (!widget.IsVisible())
+					return;
+				x = width - padding - widget.GetSize().x;
+				if (!widget.font_description.text.empty() && widget.font_description.params.h_align == wi::font::WIFALIGN_LEFT)
+				{
+					x -= widget.font_description.TextWidth();
+				}
+				widget.SetPos(XMFLOAT2(x, y));
+				if (!widget.font_description.text.empty() && widget.font_description.params.h_align == wi::font::WIFALIGN_RIGHT)
+				{
+					x -= widget.font_description.TextWidth() + padding * 4;
+				}
+				x -= padding;
+				y += widget.GetSize().y;
+				y += padding;
+			}
+			// Add one widget to fill the whole width:
+			void add_fullwidth(wi::gui::Widget& widget)
+			{
+				if (!widget.IsVisible())
+					return;
+				x = padding;
+				if (!widget.font_description.text.empty() && widget.font_description.params.h_align == wi::font::WIFALIGN_RIGHT)
+				{
+					x += widget.font_description.TextWidth();
+				}
+				widget.SetPos(XMFLOAT2(x, y));
+				widget.SetSize(XMFLOAT2(width - x - padding, widget.GetSize().y));
+				y += widget.GetSize().y;
+				y += padding;
+			}
+			// Add one widget to fill the whole width and keep aspect ratio:
+			void add_fullwidth_aspect(wi::gui::Widget& widget)
+			{
+				if (!widget.IsVisible())
+					return;
+				x = padding;
+				if (!widget.font_description.text.empty() && widget.font_description.params.h_align == wi::font::WIFALIGN_RIGHT)
+				{
+					x += widget.font_description.TextWidth();
+				}
+				widget.SetPos(XMFLOAT2(margin_left, y));
+				widget.SetSize(XMFLOAT2(width - margin_left - padding, width - margin_left - padding));
+				y += widget.GetSize().y;
+				y += padding;
+			}
+
+			// Add multiple widgets in a row aligned to the right side:
+			template<typename... Args>
+			void add_right(wi::gui::Widget& widget, Args&&... args)
+			{
+				add_right(std::forward<Args>(args)...);
+				if (!widget.IsVisible())
+					return;
+				x -= widget.GetSize().x;
+				widget.SetPos(XMFLOAT2(x, y - widget.GetSize().y - padding));
+				if (!widget.font_description.text.empty() && widget.font_description.params.h_align == wi::font::WIFALIGN_RIGHT)
+				{
+					x -= widget.font.TextWidth();
+					x -= padding * 4;
+				}
+				x -= padding;
+			}
+		} layout;
 
 	public:
 		enum class WindowControls

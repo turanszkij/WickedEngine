@@ -987,76 +987,46 @@ void EmitterWindow::UpdateData()
 void EmitterWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
-	const float padding = 4;
-	const float width = GetWidgetAreaSize().x;
-	float y = padding;
-	float jump = 20;
+	layout.margin_left = 130;
 
-	const float margin_left = 130;
+	layout.add_fullwidth(infoLabel);
+	layout.add_fullwidth(restartButton);
+	burstCountInput.SetPos(XMFLOAT2(layout.width - layout.padding - burstCountInput.GetSize().x, layout.y));
+	layout.y += burstCountInput.GetSize().y + layout.padding;
+	burstButton.SetPos(XMFLOAT2(layout.padding, burstCountInput.GetPos().y));
+	burstButton.SetSize(XMFLOAT2(layout.width - layout.padding * 3 - burstCountInput.GetSize().x, burstCountInput.GetSize().y));
+	layout.add(meshComboBox);
+	layout.add(shaderTypeComboBox);
+	layout.add_right(sortCheckBox);
+	layout.add_right(depthCollisionsCheckBox);
+	layout.add_right(sphCheckBox);
+	layout.add_right(pauseCheckBox);
+	layout.add_right(debugCheckBox);
+	layout.add_right(volumeCheckBox);
+	layout.add_right(frameBlendingCheckBox);
+	layout.add_right(collidersDisabledCheckBox);
+	layout.add_right(takeColorCheckBox);
+	layout.add(maxParticlesSlider);
+	layout.add(emitCountSlider);
+	layout.add(emitSizeSlider);
+	layout.add(emitRotationSlider);
+	layout.add(emitNormalSlider);
+	layout.add(emitScalingSlider);
+	layout.add(emitLifeSlider);
+	layout.add(emitOpacityCurveStartSlider);
+	layout.add(emitOpacityCurveEndSlider);
+	layout.add(emitLifeRandomnessSlider);
+	layout.add(emitRandomnessSlider);
+	layout.add(emitColorRandomnessSlider);
+	layout.add(emitMotionBlurSlider);
+	layout.add(emitMassSlider);
+	layout.add(timestepSlider);
+	layout.add(dragSlider);
+	layout.add(restitutionSlider);
 
-	auto add = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_right = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(width - padding - widget.GetSize().x, y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_fullwidth = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = padding;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-
-	add_fullwidth(infoLabel);
-	add_fullwidth(restartButton);
-	burstCountInput.SetPos(XMFLOAT2(width - padding - burstCountInput.GetSize().x, y));
-	y += burstCountInput.GetSize().y + padding;
-	burstButton.SetPos(XMFLOAT2(padding, burstCountInput.GetPos().y));
-	burstButton.SetSize(XMFLOAT2(width - padding * 3 - burstCountInput.GetSize().x, burstCountInput.GetSize().y));
-	add(meshComboBox);
-	add(shaderTypeComboBox);
-	add_right(sortCheckBox);
-	add_right(depthCollisionsCheckBox);
-	add_right(sphCheckBox);
-	add_right(pauseCheckBox);
-	add_right(debugCheckBox);
-	add_right(volumeCheckBox);
-	add_right(frameBlendingCheckBox);
-	add_right(collidersDisabledCheckBox);
-	add_right(takeColorCheckBox);
-	add(maxParticlesSlider);
-	add(emitCountSlider);
-	add(emitSizeSlider);
-	add(emitRotationSlider);
-	add(emitNormalSlider);
-	add(emitScalingSlider);
-	add(emitLifeSlider);
-	add(emitOpacityCurveStartSlider);
-	add(emitOpacityCurveEndSlider);
-	add(emitLifeRandomnessSlider);
-	add(emitRandomnessSlider);
-	add(emitColorRandomnessSlider);
-	add(emitMotionBlurSlider);
-	add(emitMassSlider);
-	add(timestepSlider);
-	add(dragSlider);
-	add(restitutionSlider);
-
-	const float l = margin_left;
-	const float r = width - padding;
-	float w = ((r - l) - padding * 2) / 3.0f;
+	const float l = layout.margin_left;
+	const float r = layout.width - layout.padding;
+	float w = ((r - l) - layout.padding * 2) / 3.0f;
 	VelocityXInput.SetSize(XMFLOAT2(w, VelocityXInput.GetSize().y));
 	VelocityYInput.SetSize(XMFLOAT2(w, VelocityYInput.GetSize().y));
 	VelocityZInput.SetSize(XMFLOAT2(w, VelocityZInput.GetSize().y));
@@ -1064,36 +1034,36 @@ void EmitterWindow::ResizeLayout()
 	GravityYInput.SetSize(XMFLOAT2(w, GravityYInput.GetSize().y));
 	GravityZInput.SetSize(XMFLOAT2(w, GravityZInput.GetSize().y));
 
-	VelocityXInput.SetPos(XMFLOAT2(margin_left, y));
-	VelocityYInput.SetPos(XMFLOAT2(VelocityXInput.GetPos().x + w + padding, y));
-	VelocityZInput.SetPos(XMFLOAT2(VelocityYInput.GetPos().x + w + padding, y));
+	VelocityXInput.SetPos(XMFLOAT2(layout.margin_left, layout.y));
+	VelocityYInput.SetPos(XMFLOAT2(VelocityXInput.GetPos().x + w + layout.padding, layout.y));
+	VelocityZInput.SetPos(XMFLOAT2(VelocityYInput.GetPos().x + w + layout.padding, layout.y));
 
-	y += VelocityZInput.GetSize().y;
-	y += padding;
+	layout.y += VelocityZInput.GetSize().y;
+	layout.y += layout.padding;
 
-	GravityXInput.SetPos(XMFLOAT2(margin_left, y));
-	GravityYInput.SetPos(XMFLOAT2(GravityXInput.GetPos().x + w + padding, y));
-	GravityZInput.SetPos(XMFLOAT2(GravityYInput.GetPos().x + w + padding, y));
+	GravityXInput.SetPos(XMFLOAT2(layout.margin_left, layout.y));
+	GravityYInput.SetPos(XMFLOAT2(GravityXInput.GetPos().x + w + layout.padding, layout.y));
+	GravityZInput.SetPos(XMFLOAT2(GravityYInput.GetPos().x + w + layout.padding, layout.y));
 
-	y += GravityZInput.GetSize().y;
-	y += padding;
+	layout.y += GravityZInput.GetSize().y;
+	layout.y += layout.padding;
 
-	add(frameRateInput);
+	layout.add(frameRateInput);
 
-	w = ((r - l) - padding) / 2.0f;
+	w = ((r - l) - layout.padding) / 2.0f;
 	framesXInput.SetSize(XMFLOAT2(w, framesXInput.GetSize().y));
 	framesYInput.SetSize(XMFLOAT2(w, framesYInput.GetSize().y));
-	framesXInput.SetPos(XMFLOAT2(margin_left, y));
-	framesYInput.SetPos(XMFLOAT2(framesXInput.GetPos().x + w + padding, y));
+	framesXInput.SetPos(XMFLOAT2(layout.margin_left, layout.y));
+	framesYInput.SetPos(XMFLOAT2(framesXInput.GetPos().x + w + layout.padding, layout.y));
 
-	y += framesYInput.GetSize().y;
-	y += padding;
+	layout.y += framesYInput.GetSize().y;
+	layout.y += layout.padding;
 
-	add(frameCountInput);
-	add(frameStartInput);
+	layout.add(frameCountInput);
+	layout.add(frameStartInput);
 
-	add(sph_h_Slider);
-	add(sph_K_Slider);
-	add(sph_p0_Slider);
-	add(sph_e_Slider);
+	layout.add(sph_h_Slider);
+	layout.add(sph_K_Slider);
+	layout.add(sph_p0_Slider);
+	layout.add(sph_e_Slider);
 }

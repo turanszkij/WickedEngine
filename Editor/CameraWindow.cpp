@@ -339,55 +339,25 @@ void CameraWindow::Update()
 void CameraWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
-	const float padding = 4;
-	const float width = GetWidgetAreaSize().x;
-	float y = padding;
-	float jump = 20;
 
-	auto add = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = 155;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_right = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(width - padding - widget.GetSize().x, y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_fullwidth = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = padding;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
+	layout.add_fullwidth(resetButton);
+	layout.add(farPlaneSlider);
+	layout.add(nearPlaneSlider);
+	layout.add(fovSlider);
+	layout.add(focalLengthSlider);
+	layout.add(apertureSizeSlider);
+	layout.add(apertureShapeXSlider);
+	layout.add(apertureShapeYSlider);
+	layout.add(movespeedSlider);
+	layout.add(rotationspeedSlider);
+	layout.add(accelerationSlider);
+	layout.add_right(fpsCheckBox);
+	layout.add_right(orthoCheckBox);
 
-	add_fullwidth(resetButton);
-	add(farPlaneSlider);
-	add(nearPlaneSlider);
-	add(fovSlider);
-	add(focalLengthSlider);
-	add(apertureSizeSlider);
-	add(apertureShapeXSlider);
-	add(apertureShapeYSlider);
-	add(movespeedSlider);
-	add(rotationspeedSlider);
-	add(accelerationSlider);
-	add_right(fpsCheckBox);
-	add_right(orthoCheckBox);
+	layout.jump();
 
-	y += 20;
-
-	add_fullwidth(proxyButton);
-	add_right(followCheckBox);
-	add(followSlider);
+	layout.add_fullwidth(proxyButton);
+	layout.add_right(followCheckBox);
+	layout.add(followSlider);
 
 }

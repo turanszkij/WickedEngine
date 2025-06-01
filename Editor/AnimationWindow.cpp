@@ -1328,68 +1328,38 @@ void AnimationWindow::RefreshKeyframesList()
 void AnimationWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
-	const float padding = 4;
-	const float width = GetWidgetAreaSize().x;
-	float y = padding;
-	float jump = 20;
+	layout.margin_left = 80;
 
-	const float margin_left = 80;
+	layout.add_fullwidth(infoLabel);
+	layout.add(modeComboBox);
 
-	auto add = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_right = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(width - padding - widget.GetSize().x, y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_fullwidth = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = padding;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-
-	add_fullwidth(infoLabel);
-	add(modeComboBox);
-
-	loopTypeButton.SetPos(XMFLOAT2(margin_left, y));
-	const float l = loopTypeButton.GetPos().x + loopTypeButton.GetSize().x + padding;
-	const float r = width - padding - padding * 4;
+	loopTypeButton.SetPos(XMFLOAT2(layout.margin_left, layout.y));
+	const float l = loopTypeButton.GetPos().x + loopTypeButton.GetSize().x + layout.padding;
+	const float r = layout.width - layout.padding - layout.padding * 4;
 	const float diff = r - l;
 	backwardsButton.SetSize(XMFLOAT2(diff/5, backwardsButton.GetSize().y));
 	backwardsFromEndButton.SetSize(backwardsButton.GetSize());
 	stopButton.SetSize(backwardsButton.GetSize());
 	playFromStartButton.SetSize(backwardsButton.GetSize());
 	playButton.SetSize(backwardsButton.GetSize());
-	backwardsButton.SetPos(XMFLOAT2(loopTypeButton.GetPos().x + loopTypeButton.GetSize().x + padding, y));
-	backwardsFromEndButton.SetPos(XMFLOAT2(backwardsButton.GetPos().x + backwardsButton.GetSize().x + padding, y));
-	stopButton.SetPos(XMFLOAT2(backwardsButton.GetPos().x + backwardsButton.GetSize().x * 2 + padding * 2, y));
-	playFromStartButton.SetPos(XMFLOAT2(backwardsButton.GetPos().x + backwardsButton.GetSize().x * 3 + padding * 3, y));
-	playButton.SetPos(XMFLOAT2(backwardsButton.GetPos().x + backwardsButton.GetSize().x * 4 + padding * 4, y));
-	y += stopButton.GetSize().y;
-	y += padding;
+	backwardsButton.SetPos(XMFLOAT2(loopTypeButton.GetPos().x + loopTypeButton.GetSize().x + layout.padding, layout.y));
+	backwardsFromEndButton.SetPos(XMFLOAT2(backwardsButton.GetPos().x + backwardsButton.GetSize().x + layout.padding, layout.y));
+	stopButton.SetPos(XMFLOAT2(backwardsButton.GetPos().x + backwardsButton.GetSize().x * 2 + layout.padding * 2, layout.y));
+	playFromStartButton.SetPos(XMFLOAT2(backwardsButton.GetPos().x + backwardsButton.GetSize().x * 3 + layout.padding * 3, layout.y));
+	playButton.SetPos(XMFLOAT2(backwardsButton.GetPos().x + backwardsButton.GetSize().x * 4 + layout.padding * 4, layout.y));
+	layout.y += stopButton.GetSize().y;
+	layout.y += layout.padding;
 
-	add(timerSlider);
-	add(amountSlider);
-	add(speedSlider);
-	add(startInput);
-	add(endInput);
-	add(recordCombo);
-	add(retargetCombo);
-	rootMotionCheckBox.SetPos(XMFLOAT2(margin_left, y));
-	y += rootMotionCheckBox.GetSize().y;
-	y += padding;
-	add(rootBoneComboBox);
-	add_fullwidth(keyframesList);
+	layout.add(timerSlider);
+	layout.add(amountSlider);
+	layout.add(speedSlider);
+	layout.add(startInput);
+	layout.add(endInput);
+	layout.add(recordCombo);
+	layout.add(retargetCombo);
+	rootMotionCheckBox.SetPos(XMFLOAT2(layout.margin_left, layout.y));
+	layout.y += rootMotionCheckBox.GetSize().y;
+	layout.y += layout.padding;
+	layout.add(rootBoneComboBox);
+	layout.add_fullwidth(keyframesList);
 }

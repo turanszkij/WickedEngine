@@ -526,36 +526,7 @@ void LightWindow::RefreshCascades()
 void LightWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
-	const float padding = 4;
-	const float width = GetWidgetAreaSize().x;
-	float y = padding;
-	float jump = 20;
-
-	auto add = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = 140;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_right = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(width - padding - widget.GetSize().x, y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_fullwidth = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = padding;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
+	layout.margin_left = 140;
 
 	LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
 	if (light != nullptr)
@@ -601,48 +572,48 @@ void LightWindow::ResizeLayout()
 		}
 	}
 
-	add_fullwidth(colorPicker);
-	add(typeSelectorComboBox);
-	add(intensitySlider);
-	add(rangeSlider);
-	add(outerConeAngleSlider);
-	add(innerConeAngleSlider);
-	add(volumetricBoostSlider);
-	add(radiusSlider);
-	add(lengthSlider);
-	add(heightSlider);
-	add_right(shadowCheckBox);
-	add_right(haloCheckBox);
-	add_right(volumetricsCheckBox);
-	add_right(staticCheckBox);
-	add_right(volumetricCloudsCheckBox);
-	add(shadowResolutionComboBox);
-	add(cameraComboBox);
+	layout.add_fullwidth(colorPicker);
+	layout.add(typeSelectorComboBox);
+	layout.add(intensitySlider);
+	layout.add(rangeSlider);
+	layout.add(outerConeAngleSlider);
+	layout.add(innerConeAngleSlider);
+	layout.add(volumetricBoostSlider);
+	layout.add(radiusSlider);
+	layout.add(lengthSlider);
+	layout.add(heightSlider);
+	layout.add_right(shadowCheckBox);
+	layout.add_right(haloCheckBox);
+	layout.add_right(volumetricsCheckBox);
+	layout.add_right(staticCheckBox);
+	layout.add_right(volumetricCloudsCheckBox);
+	layout.add(shadowResolutionComboBox);
+	layout.add(cameraComboBox);
 
 	if (light != nullptr && light->GetType() == LightComponent::DIRECTIONAL)
 	{
-		y += jump;
+		layout.jump();
 		for (auto& x : cascades)
 		{
-			add(x.distanceSlider);
-			x.removeButton.SetPos(XMFLOAT2(x.distanceSlider.GetPos().x - padding - x.removeButton.GetSize().x, x.distanceSlider.GetPos().y));
+			layout.add(x.distanceSlider);
+			x.removeButton.SetPos(XMFLOAT2(x.distanceSlider.GetPos().x - layout.padding - x.removeButton.GetSize().x, x.distanceSlider.GetPos().y));
 		}
-		add_fullwidth(addCascadeButton);
+		layout.add_fullwidth(addCascadeButton);
 	}
 
-	y += jump;
+	layout.jump();
 
-	add_fullwidth(tipLabel);
+	layout.add_fullwidth(tipLabel);
 
-	y += jump;
+	layout.jump();
 
-	add_fullwidth(lensflare_Label);
-	add_fullwidth(lensflare_Button[0]);
-	add_fullwidth(lensflare_Button[1]);
-	add_fullwidth(lensflare_Button[2]);
-	add_fullwidth(lensflare_Button[3]);
-	add_fullwidth(lensflare_Button[4]);
-	add_fullwidth(lensflare_Button[5]);
-	add_fullwidth(lensflare_Button[6]);
+	layout.add_fullwidth(lensflare_Label);
+	layout.add_fullwidth(lensflare_Button[0]);
+	layout.add_fullwidth(lensflare_Button[1]);
+	layout.add_fullwidth(lensflare_Button[2]);
+	layout.add_fullwidth(lensflare_Button[3]);
+	layout.add_fullwidth(lensflare_Button[4]);
+	layout.add_fullwidth(lensflare_Button[5]);
+	layout.add_fullwidth(lensflare_Button[6]);
 
 }

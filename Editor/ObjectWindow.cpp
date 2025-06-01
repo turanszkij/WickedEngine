@@ -1161,81 +1161,43 @@ void ObjectWindow::SetEntity(Entity entity)
 void ObjectWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
-	const float padding = 4;
-	const float width = GetWidgetAreaSize().x;
-	float y = padding;
-	float jump = 20;
+	layout.margin_left = 140;
 
-	float margin_left = 140;
+	layout.margin_left = 80;
 
-	auto add = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_right = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(width - padding - widget.GetSize().x, y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_fullwidth = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = padding;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_fullwidth_aspect = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = padding;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, width - margin_left - padding));
-		y += widget.GetSize().y;
-		y += padding;
-	};
+	layout.add(meshCombo);
 
-	margin_left = 80;
+	layout.margin_left = 140;
 
-	add(meshCombo);
+	layout.add_right(renderableCheckBox);
+	layout.add_right(shadowCheckBox);
+	layout.add_right(foregroundCheckBox);
+	layout.add_right(notVisibleInMainCameraCheckBox);
+	layout.add_right(notVisibleInReflectionsCheckBox);
+	layout.add_right(wetmapCheckBox);
+	layout.add_right(navmeshCheckBox);
+	layout.add(ditherSlider);
+	layout.add(alphaRefSlider);
+	layout.add(rimHighlightIntesitySlider);
+	layout.add(rimHighlightFalloffSlider);
+	layout.add(cascadeMaskSlider);
+	layout.add(lodSlider);
+	layout.add(drawdistanceSlider);
+	layout.add(sortPrioritySlider);
+	layout.add(colorComboBox);
+	layout.add_fullwidth(colorPicker);
 
-	margin_left = 140;
+	layout.jump();
 
-	add_right(renderableCheckBox);
-	add_right(shadowCheckBox);
-	add_right(foregroundCheckBox);
-	add_right(notVisibleInMainCameraCheckBox);
-	add_right(notVisibleInReflectionsCheckBox);
-	add_right(wetmapCheckBox);
-	add_right(navmeshCheckBox);
-	add(ditherSlider);
-	add(alphaRefSlider);
-	add(rimHighlightIntesitySlider);
-	add(rimHighlightFalloffSlider);
-	add(cascadeMaskSlider);
-	add(lodSlider);
-	add(drawdistanceSlider);
-	add(sortPrioritySlider);
-	add(colorComboBox);
-	add_fullwidth(colorPicker);
+	layout.add(lightmapResolutionSlider);
 
-	y += jump;
-	add(lightmapResolutionSlider);
+	layout.margin_left = 80;
 
-	margin_left = 80;
-
-	add_right(lightmapBlockCompressionCheckBox);
-	add(lightmapSourceUVSetComboBox);
-	add(generateLightmapButton);
-	add(stopLightmapGenButton);
-	add(clearLightmapButton);
+	layout.add_right(lightmapBlockCompressionCheckBox);
+	layout.add(lightmapSourceUVSetComboBox);
+	layout.add(generateLightmapButton);
+	layout.add(stopLightmapGenButton);
+	layout.add(clearLightmapButton);
 
 
 	Scene& scene = editor->GetCurrentScene();
@@ -1248,7 +1210,7 @@ void ObjectWindow::ResizeLayout()
 			res.SetTexture(object->lightmap);
 			lightmapPreviewButton.SetImage(res);
 			lightmapPreviewButton.SetVisible(true);
-			add_fullwidth_aspect(lightmapPreviewButton);
+			layout.add_fullwidth_aspect(lightmapPreviewButton);
 		}
 		else
 		{
@@ -1256,8 +1218,9 @@ void ObjectWindow::ResizeLayout()
 		}
 	}
 
-	y += jump;
-	add_fullwidth(vertexAOButton);
-	add(vertexAORayCountSlider);
-	add(vertexAORayLengthSlider);
+	layout.jump();
+
+	layout.add_fullwidth(vertexAOButton);
+	layout.add(vertexAORayCountSlider);
+	layout.add(vertexAORayLengthSlider);
 }

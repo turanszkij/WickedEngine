@@ -433,82 +433,53 @@ void TransformWindow::SetEntity(Entity entity)
 void TransformWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
-	const float padding = 4;
-	const float width = GetWidgetAreaSize().x;
-	float y = padding;
-	float jump = 20;
+	layout.margin_left = 80;
 
-	auto add = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = 80;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_right = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(width - padding - widget.GetSize().x, y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_fullwidth = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = padding;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
+	layout.add_fullwidth(clearButton);
 
-	add_fullwidth(clearButton);
+	float safe_width = layout.width - 100 - 20 - layout.padding;
+	txInput.SetSize(XMFLOAT2(safe_width / 3.0f - layout.padding, txInput.GetSize().y));
+	tyInput.SetSize(XMFLOAT2(safe_width / 3.0f - layout.padding, txInput.GetSize().y));
+	tzInput.SetSize(XMFLOAT2(safe_width / 3.0f - layout.padding, txInput.GetSize().y));
 
-	float safe_width = width - 100 - 20 - padding;
-	txInput.SetSize(XMFLOAT2(safe_width / 3.0f - padding, txInput.GetSize().y));
-	tyInput.SetSize(XMFLOAT2(safe_width / 3.0f - padding, txInput.GetSize().y));
-	tzInput.SetSize(XMFLOAT2(safe_width / 3.0f - padding, txInput.GetSize().y));
+	sxInput.SetSize(XMFLOAT2(safe_width / 3.0f - layout.padding, txInput.GetSize().y));
+	syInput.SetSize(XMFLOAT2(safe_width / 3.0f - layout.padding, txInput.GetSize().y));
+	szInput.SetSize(XMFLOAT2(safe_width / 3.0f - layout.padding, txInput.GetSize().y));
+	suInput.SetSize(XMFLOAT2(safe_width - layout.padding, txInput.GetSize().y));
 
-	sxInput.SetSize(XMFLOAT2(safe_width / 3.0f - padding, txInput.GetSize().y));
-	syInput.SetSize(XMFLOAT2(safe_width / 3.0f - padding, txInput.GetSize().y));
-	szInput.SetSize(XMFLOAT2(safe_width / 3.0f - padding, txInput.GetSize().y));
-	suInput.SetSize(XMFLOAT2(safe_width - padding, txInput.GetSize().y));
+	rollInput.SetSize(XMFLOAT2(safe_width / 3.0f - layout.padding, txInput.GetSize().y));
+	pitchInput.SetSize(XMFLOAT2(safe_width / 3.0f - layout.padding, txInput.GetSize().y));
+	yawInput.SetSize(XMFLOAT2(safe_width / 3.0f - layout.padding, txInput.GetSize().y));
 
-	rollInput.SetSize(XMFLOAT2(safe_width / 3.0f - padding, txInput.GetSize().y));
-	pitchInput.SetSize(XMFLOAT2(safe_width / 3.0f - padding, txInput.GetSize().y));
-	yawInput.SetSize(XMFLOAT2(safe_width / 3.0f - padding, txInput.GetSize().y));
+	safe_width = layout.width - 100;
+	rxInput.SetSize(XMFLOAT2(safe_width / 4.0f - layout.padding, txInput.GetSize().y));
+	ryInput.SetSize(XMFLOAT2(safe_width / 4.0f - layout.padding, txInput.GetSize().y));
+	rzInput.SetSize(XMFLOAT2(safe_width / 4.0f - layout.padding, txInput.GetSize().y));
+	rwInput.SetSize(XMFLOAT2(safe_width / 4.0f - layout.padding, txInput.GetSize().y));
 
-	safe_width = width - 100;
-	rxInput.SetSize(XMFLOAT2(safe_width / 4.0f - padding, txInput.GetSize().y));
-	ryInput.SetSize(XMFLOAT2(safe_width / 4.0f - padding, txInput.GetSize().y));
-	rzInput.SetSize(XMFLOAT2(safe_width / 4.0f - padding, txInput.GetSize().y));
-	rwInput.SetSize(XMFLOAT2(safe_width / 4.0f - padding, txInput.GetSize().y));
+	layout.add_right(resetTranslationButton);
+	tzInput.SetPos(XMFLOAT2(resetTranslationButton.GetPos().x - tzInput.GetSize().x - layout.padding, resetTranslationButton.GetPos().y));
+	tyInput.SetPos(XMFLOAT2(tzInput.GetPos().x - tyInput.GetSize().x - layout.padding, tzInput.GetPos().y));
+	txInput.SetPos(XMFLOAT2(tyInput.GetPos().x - txInput.GetSize().x - layout.padding, tyInput.GetPos().y));
+	layout.add_right(resetScaleButton);
+	szInput.SetPos(XMFLOAT2(resetScaleButton.GetPos().x - szInput.GetSize().x - layout.padding, resetScaleButton.GetPos().y));
+	syInput.SetPos(XMFLOAT2(szInput.GetPos().x - syInput.GetSize().x - layout.padding, szInput.GetPos().y));
+	sxInput.SetPos(XMFLOAT2(syInput.GetPos().x - sxInput.GetSize().x - layout.padding, syInput.GetPos().y));
+	layout.add_right(resetScaleUniformButton);
+	suInput.SetPos(XMFLOAT2(resetScaleUniformButton.GetPos().x - suInput.GetSize().x - layout.padding, resetScaleUniformButton.GetPos().y));
+	layout.add_right(resetRotationButton);
+	yawInput.SetPos(XMFLOAT2(resetRotationButton.GetPos().x - yawInput.GetSize().x - layout.padding, resetRotationButton.GetPos().y));
+	pitchInput.SetPos(XMFLOAT2(yawInput.GetPos().x - pitchInput.GetSize().x - layout.padding, yawInput.GetPos().y));
+	rollInput.SetPos(XMFLOAT2(pitchInput.GetPos().x - rollInput.GetSize().x - layout.padding, pitchInput.GetPos().y));
+	layout.add_right(rwInput);
+	rzInput.SetPos(XMFLOAT2(rwInput.GetPos().x - rzInput.GetSize().x - layout.padding, rwInput.GetPos().y));
+	ryInput.SetPos(XMFLOAT2(rzInput.GetPos().x - ryInput.GetSize().x - layout.padding, rzInput.GetPos().y));
+	rxInput.SetPos(XMFLOAT2(ryInput.GetPos().x - rxInput.GetSize().x - layout.padding, ryInput.GetPos().y));
 
-	add_right(resetTranslationButton);
-	tzInput.SetPos(XMFLOAT2(resetTranslationButton.GetPos().x - tzInput.GetSize().x - padding, resetTranslationButton.GetPos().y));
-	tyInput.SetPos(XMFLOAT2(tzInput.GetPos().x - tyInput.GetSize().x - padding, tzInput.GetPos().y));
-	txInput.SetPos(XMFLOAT2(tyInput.GetPos().x - txInput.GetSize().x - padding, tyInput.GetPos().y));
-	add_right(resetScaleButton);
-	szInput.SetPos(XMFLOAT2(resetScaleButton.GetPos().x - szInput.GetSize().x - padding, resetScaleButton.GetPos().y));
-	syInput.SetPos(XMFLOAT2(szInput.GetPos().x - syInput.GetSize().x - padding, szInput.GetPos().y));
-	sxInput.SetPos(XMFLOAT2(syInput.GetPos().x - sxInput.GetSize().x - padding, syInput.GetPos().y));
-	add_right(resetScaleUniformButton);
-	suInput.SetPos(XMFLOAT2(resetScaleUniformButton.GetPos().x - suInput.GetSize().x - padding, resetScaleUniformButton.GetPos().y));
-	add_right(resetRotationButton);
-	yawInput.SetPos(XMFLOAT2(resetRotationButton.GetPos().x - yawInput.GetSize().x - padding, resetRotationButton.GetPos().y));
-	pitchInput.SetPos(XMFLOAT2(yawInput.GetPos().x - pitchInput.GetSize().x - padding, yawInput.GetPos().y));
-	rollInput.SetPos(XMFLOAT2(pitchInput.GetPos().x - rollInput.GetSize().x - padding, pitchInput.GetPos().y));
-	add_right(rwInput);
-	rzInput.SetPos(XMFLOAT2(rwInput.GetPos().x - rzInput.GetSize().x - padding, rwInput.GetPos().y));
-	ryInput.SetPos(XMFLOAT2(rzInput.GetPos().x - ryInput.GetSize().x - padding, rzInput.GetPos().y));
-	rxInput.SetPos(XMFLOAT2(ryInput.GetPos().x - rxInput.GetSize().x - padding, ryInput.GetPos().y));
+	layout.jump();
 
-	y += jump;
-
-	add_right(snapScaleInput);
-	add_right(snapRotateInput);
-	add_right(snapTranslateInput);
+	layout.add_right(snapScaleInput);
+	layout.add_right(snapRotateInput);
+	layout.add_right(snapTranslateInput);
 
 }

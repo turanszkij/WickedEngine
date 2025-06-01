@@ -360,57 +360,28 @@ void CameraComponentWindow::SetEntity(Entity entity)
 void CameraComponentWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
-	const float padding = 4;
-	const float width = GetWidgetAreaSize().x;
-	float y = padding;
-	float jump = 20;
+	layout.margin_left = 140;
 
-	auto add = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = 140;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_right = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(width - padding - widget.GetSize().x, y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_fullwidth = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = padding;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
+	layout.add(farPlaneSlider);
+	layout.add(nearPlaneSlider);
+	layout.add(fovSlider);
+	layout.add(focalLengthSlider);
+	layout.add(apertureSizeSlider);
+	layout.add(apertureShapeXSlider);
+	layout.add(apertureShapeYSlider);
 
-	add(farPlaneSlider);
-	add(nearPlaneSlider);
-	add(fovSlider);
-	add(focalLengthSlider);
-	add(apertureSizeSlider);
-	add(apertureShapeXSlider);
-	add(apertureShapeYSlider);
+	layout.jump();
 
-	y += jump;
-
-	add_fullwidth(renderButton);
+	layout.add_fullwidth(renderButton);
 	if (renderEnabled)
 	{
 		resolutionXSlider.SetVisible(true);
 		resolutionYSlider.SetVisible(true);
 		samplecountSlider.SetVisible(true);
 
-		add(resolutionXSlider);
-		add(resolutionYSlider);
-		add(samplecountSlider);
+		layout.add(resolutionXSlider);
+		layout.add(resolutionYSlider);
+		layout.add(samplecountSlider);
 	}
 	else
 	{
@@ -419,8 +390,8 @@ void CameraComponentWindow::ResizeLayout()
 		samplecountSlider.SetVisible(false);
 	}
 
-	y += jump;
+	layout.jump();
 
-	add_fullwidth(preview);
+	layout.add_fullwidth(preview);
 
 }

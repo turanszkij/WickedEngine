@@ -1460,6 +1460,7 @@ namespace wi::scene
 			SoundComponent& sound = sounds.Create(entity);
 			sound.filename = filename;
 			sound.soundResource = wi::resourcemanager::Load(filename);
+			sound.soundinstance.SetLooped(sound.IsLooped());
 			wi::audio::CreateSoundInstance(&sound.soundResource.GetSound(), &sound.soundinstance);
 		}
 

@@ -244,62 +244,32 @@ void VoxelGridWindow::SetEntity(Entity entity)
 void VoxelGridWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
-	const float padding = 4;
-	const float width = GetWidgetAreaSize().x;
-	float y = padding;
-	float jump = 20;
+	layout.margin_left = 90;
 
-	const float margin_left = 90;
-
-	auto add = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_right = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(width - padding - widget.GetSize().x, y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_fullwidth = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = padding;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-
-	add_fullwidth(infoLabel);
+	layout.add_fullwidth(infoLabel);
 
 	const float padding2 = 20;
 	const float l = 95;
-	const float r = width;
+	const float r = layout.width;
 	float w = ((r - l) - padding2 * 2) / 3.0f;
 	dimXInput.SetSize(XMFLOAT2(w, dimXInput.GetSize().y));
 	dimYInput.SetSize(XMFLOAT2(w, dimYInput.GetSize().y));
 	dimZInput.SetSize(XMFLOAT2(w, dimZInput.GetSize().y));
-	dimXInput.SetPos(XMFLOAT2(margin_left, y));
-	dimYInput.SetPos(XMFLOAT2(dimXInput.GetPos().x + w + padding2, y));
-	dimZInput.SetPos(XMFLOAT2(dimYInput.GetPos().x + w + padding2, y));
-	y += dimZInput.GetSize().y;
-	y += padding;
+	dimXInput.SetPos(XMFLOAT2(layout.margin_left, layout.y));
+	dimYInput.SetPos(XMFLOAT2(dimXInput.GetPos().x + w + padding2, layout.y));
+	dimZInput.SetPos(XMFLOAT2(dimYInput.GetPos().x + w + padding2, layout.y));
+	layout.y += dimZInput.GetSize().y;
+	layout.y += layout.padding;
 
-	add_fullwidth(clearButton);
-	add_fullwidth(voxelizeObjectsButton);
-	add_fullwidth(voxelizeCollidersButton);
-	add_fullwidth(voxelizeNavigationButton);
-	add_fullwidth(floodfillButton);
-	add_fullwidth(fitToSceneButton);
-	add_fullwidth(generateMeshButton);
-	add_fullwidth(generateSimplifiedMeshButton);
-	add_fullwidth(generateNavMeshButton);
-	add_right(subtractCheckBox);
-	add_right(debugAllCheckBox);
+	layout.add_fullwidth(clearButton);
+	layout.add_fullwidth(voxelizeObjectsButton);
+	layout.add_fullwidth(voxelizeCollidersButton);
+	layout.add_fullwidth(voxelizeNavigationButton);
+	layout.add_fullwidth(floodfillButton);
+	layout.add_fullwidth(fitToSceneButton);
+	layout.add_fullwidth(generateMeshButton);
+	layout.add_fullwidth(generateSimplifiedMeshButton);
+	layout.add_fullwidth(generateNavMeshButton);
+	layout.add_right(subtractCheckBox);
+	layout.add_right(debugAllCheckBox);
 }

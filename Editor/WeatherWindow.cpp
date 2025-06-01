@@ -1264,96 +1264,67 @@ void WeatherWindow::UpdateWind()
 void WeatherWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
-	const float padding = 4;
-	const float width = GetWidgetAreaSize().x;
-	float y = padding;
-	float jump = 20;
+	layout.margin_left = 150;
 
-	auto add = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = 150;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_right = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		widget.SetPos(XMFLOAT2(width - padding - widget.GetSize().x, y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-	auto add_fullwidth = [&](wi::gui::Widget& widget) {
-		if (!widget.IsVisible())
-			return;
-		const float margin_left = padding;
-		widget.SetPos(XMFLOAT2(margin_left, y));
-		widget.SetSize(XMFLOAT2(width - margin_left - padding, widget.GetScale().y));
-		y += widget.GetSize().y;
-		y += padding;
-	};
-
-	add_fullwidth(primaryButton);
-	add_right(realisticskyCheckBox);
-	add_right(aerialperspectiveCheckBox);
-	add_right(realisticskyHighQualityCheckBox);
-	add_right(realisticskyReceiveShadowCheckBox);
-	add(colorComboBox);
-	add_fullwidth(colorPicker);
-	add_fullwidth(skyButton);
-	add_fullwidth(colorgradingButton);
-	add_right(heightFogCheckBox);
+	layout.add_fullwidth(primaryButton);
+	layout.add_right(realisticskyCheckBox);
+	layout.add_right(aerialperspectiveCheckBox);
+	layout.add_right(realisticskyHighQualityCheckBox);
+	layout.add_right(realisticskyReceiveShadowCheckBox);
+	layout.add(colorComboBox);
+	layout.add_fullwidth(colorPicker);
+	layout.add_fullwidth(skyButton);
+	layout.add_fullwidth(colorgradingButton);
+	layout.add_right(heightFogCheckBox);
 	overrideFogColorCheckBox.SetPos(XMFLOAT2(heightFogCheckBox.GetPos().x - 100, heightFogCheckBox.GetPos().y));
-	add(fogStartSlider);
-	add(fogDensitySlider);
-	add(fogHeightStartSlider);
-	add(fogHeightEndSlider);
-	add(gravitySlider);
-	add(windSpeedSlider);
-	add(windMagnitudeSlider);
-	add(windDirectionSlider);
-	add(windWaveSizeSlider);
-	add(windRandomnessSlider);
-	add(skyExposureSlider);
-	add(starsSlider);
-	add(skyRotationSlider);
-	add(rainAmountSlider);
-	add(rainLengthSlider);
-	add(rainSpeedSlider);
-	add(rainScaleSlider);
-	add(rainSplashScaleSlider);
+	layout.add(fogStartSlider);
+	layout.add(fogDensitySlider);
+	layout.add(fogHeightStartSlider);
+	layout.add(fogHeightEndSlider);
+	layout.add(gravitySlider);
+	layout.add(windSpeedSlider);
+	layout.add(windMagnitudeSlider);
+	layout.add(windDirectionSlider);
+	layout.add(windWaveSizeSlider);
+	layout.add(windRandomnessSlider);
+	layout.add(skyExposureSlider);
+	layout.add(starsSlider);
+	layout.add(skyRotationSlider);
+	layout.add(rainAmountSlider);
+	layout.add(rainLengthSlider);
+	layout.add(rainSpeedSlider);
+	layout.add(rainScaleSlider);
+	layout.add(rainSplashScaleSlider);
 
-	y += jump;
+	layout.jump();
 
-	add_right(volumetricCloudsCheckBox);
-	add_right(volumetricCloudsReceiveShadowCheckBox);
-	add_right(volumetricCloudsCastShadowCheckBox);
-	add(cloudStartHeightSlider);
-	add(cloudThicknessSlider);
-	add(skewAlongWindDirectionFirstSlider);
-	add(totalNoiseScaleFirstSlider);
-	add(curlScaleFirstSlider);
-	add(curlNoiseHeightFractionFirstSlider);
-	add(curlNoiseModifierFirstSlider);
-	add(detailScaleFirstSlider);
-	add(detailNoiseHeightFractionFirstSlider);
-	add(detailNoiseModifierFirstSlider);
-	add(skewAlongCoverageWindDirectionFirstSlider);
-	add(weatherScaleFirstSlider);
-	add(coverageAmountFirstSlider);
-	add(coverageMinimumFirstSlider);
-	add(typeAmountFirstSlider);
-	add(typeMinimumFirstSlider);
-	add(rainAmountFirstSlider);
-	add(rainMinimumFirstSlider);
+	layout.add_right(volumetricCloudsCheckBox);
+	layout.add_right(volumetricCloudsReceiveShadowCheckBox);
+	layout.add_right(volumetricCloudsCastShadowCheckBox);
+	layout.add(cloudStartHeightSlider);
+	layout.add(cloudThicknessSlider);
+	layout.add(skewAlongWindDirectionFirstSlider);
+	layout.add(totalNoiseScaleFirstSlider);
+	layout.add(curlScaleFirstSlider);
+	layout.add(curlNoiseHeightFractionFirstSlider);
+	layout.add(curlNoiseModifierFirstSlider);
+	layout.add(detailScaleFirstSlider);
+	layout.add(detailNoiseHeightFractionFirstSlider);
+	layout.add(detailNoiseModifierFirstSlider);
+	layout.add(skewAlongCoverageWindDirectionFirstSlider);
+	layout.add(weatherScaleFirstSlider);
+	layout.add(coverageAmountFirstSlider);
+	layout.add(coverageMinimumFirstSlider);
+	layout.add(typeAmountFirstSlider);
+	layout.add(typeMinimumFirstSlider);
+	layout.add(rainAmountFirstSlider);
+	layout.add(rainMinimumFirstSlider);
 
 	auto add_textfields4 = [&](wi::gui::TextInputField (&textFields)[4]) {
-		add_right(textFields[3]);
-		textFields[2].SetPos(XMFLOAT2(textFields[3].GetPos().x - textFields[2].GetSize().x - padding, textFields[3].GetPos().y));
-		textFields[1].SetPos(XMFLOAT2(textFields[2].GetPos().x - textFields[1].GetSize().x - padding, textFields[2].GetPos().y));
-		textFields[0].SetPos(XMFLOAT2(textFields[1].GetPos().x - textFields[0].GetSize().x - padding, textFields[1].GetPos().y));
+		layout.add_right(textFields[3]);
+		textFields[2].SetPos(XMFLOAT2(textFields[3].GetPos().x - textFields[2].GetSize().x - layout.padding, textFields[3].GetPos().y));
+		textFields[1].SetPos(XMFLOAT2(textFields[2].GetPos().x - textFields[1].GetSize().x - layout.padding, textFields[2].GetPos().y));
+		textFields[0].SetPos(XMFLOAT2(textFields[1].GetPos().x - textFields[0].GetSize().x - layout.padding, textFields[1].GetPos().y));
 	};
 
 	add_textfields4(gradientSmallFirstTextFields);
@@ -1363,36 +1334,36 @@ void WeatherWindow::ResizeLayout()
 	add_textfields4(anvilDeformationMediumFirstTextFields);
 	add_textfields4(anvilDeformationLargeFirstTextFields);
 
-	add(windSpeedFirstSlider);
-	add(windAngleFirstSlider);
-	add(windUpAmountFirstSlider);
-	add(coverageWindSpeedFirstSlider);
-	add(coverageWindAngleFirstSlider);
-	add(coverageAmountSecondSlider);
-	add(coverageMinimumSecondSlider);
-	add_fullwidth(volumetricCloudsWeatherMapFirstButton);
-	add_fullwidth(volumetricCloudsWeatherMapSecondButton);
+	layout.add(windSpeedFirstSlider);
+	layout.add(windAngleFirstSlider);
+	layout.add(windUpAmountFirstSlider);
+	layout.add(coverageWindSpeedFirstSlider);
+	layout.add(coverageWindAngleFirstSlider);
+	layout.add(coverageAmountSecondSlider);
+	layout.add(coverageMinimumSecondSlider);
+	layout.add_fullwidth(volumetricCloudsWeatherMapFirstButton);
+	layout.add_fullwidth(volumetricCloudsWeatherMapSecondButton);
 
-	y += jump;
+	layout.jump();
 
-	add_right(ocean_enabledCheckBox);
-	add(ocean_patchSizeSlider);
-	add(ocean_waveAmplitudeSlider);
-	add(ocean_choppyScaleSlider);
-	add(ocean_windDependencySlider);
-	add(ocean_timeScaleSlider);
-	add(ocean_heightSlider);
-	add(ocean_detailSlider);
-	add(ocean_toleranceSlider);
-	add_fullwidth(ocean_resetButton);
+	layout.add_right(ocean_enabledCheckBox);
+	layout.add(ocean_patchSizeSlider);
+	layout.add(ocean_waveAmplitudeSlider);
+	layout.add(ocean_choppyScaleSlider);
+	layout.add(ocean_windDependencySlider);
+	layout.add(ocean_timeScaleSlider);
+	layout.add(ocean_heightSlider);
+	layout.add(ocean_detailSlider);
+	layout.add(ocean_toleranceSlider);
+	layout.add_fullwidth(ocean_resetButton);
 
-	y += jump;
+	layout.jump();
 
-	add_fullwidth(preset0Button);
-	add_fullwidth(preset1Button);
-	add_fullwidth(preset2Button);
-	add_fullwidth(preset3Button);
-	add_fullwidth(preset4Button);
-	add_fullwidth(preset5Button);
+	layout.add_fullwidth(preset0Button);
+	layout.add_fullwidth(preset1Button);
+	layout.add_fullwidth(preset2Button);
+	layout.add_fullwidth(preset3Button);
+	layout.add_fullwidth(preset4Button);
+	layout.add_fullwidth(preset5Button);
 
 }
