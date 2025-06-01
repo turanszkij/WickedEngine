@@ -2002,8 +2002,8 @@ namespace wi::gui
 		valueInputField.Detach();
 		if (state != ACTIVE)
 		{
-			// only set input field size when slider is not dragged because now it will modify slider active size too!
-			valueInputField.SetSize(XMFLOAT2(std::max(scale.y, wi::font::TextWidth(valueInputField.GetText(), valueInputField.font.params) + 4), scale.y));
+			// only set input field size when slider is not dragged because now it will modify slider active size too, and slider size shouldn't be modified while dragging!
+			valueInputField.SetSize(XMFLOAT2(std::max(scale.y, wi::font::TextWidth(valueInputField.GetCurrentInputValue(), valueInputField.font.params) + 4), scale.y));
 			valueInputField.SetPos(XMFLOAT2(translation.x + scale.x - valueInputField.GetSize().x, translation.y));
 		}
 		valueInputField.AttachTo(this);

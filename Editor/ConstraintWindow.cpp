@@ -841,6 +841,30 @@ void ConstraintWindow::ResizeLayout()
 			layout.add(maxRotationZSlider);
 			break;
 		default:
+			minSlider.SetVisible(false);
+			maxSlider.SetVisible(false);
+
+			normalConeSlider.SetVisible(false);
+			planeConeSlider.SetVisible(false);
+
+			fixedXButton.SetVisible(false);
+			fixedYButton.SetVisible(false);
+			fixedZButton.SetVisible(false);
+			fixedXRotationButton.SetVisible(false);
+			fixedYRotationButton.SetVisible(false);
+			fixedZRotationButton.SetVisible(false);
+			minTranslationXSlider.SetVisible(false);
+			minTranslationYSlider.SetVisible(false);
+			minTranslationZSlider.SetVisible(false);
+			maxTranslationXSlider.SetVisible(false);
+			maxTranslationYSlider.SetVisible(false);
+			maxTranslationZSlider.SetVisible(false);
+			minRotationXSlider.SetVisible(false);
+			minRotationYSlider.SetVisible(false);
+			minRotationZSlider.SetVisible(false);
+			maxRotationXSlider.SetVisible(false);
+			maxRotationYSlider.SetVisible(false);
+			maxRotationZSlider.SetVisible(false);
 			break;
 		}
 

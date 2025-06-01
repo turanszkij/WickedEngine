@@ -880,6 +880,9 @@ namespace wi
 
 	void EmittedParticleSystem::SetOpacityCurveControl(float peakStart, float peakEnd)
 	{
+		peakStart = saturate(peakStart);
+		peakEnd = saturate(peakEnd);
+
 		peakEnd = std::max(peakStart, peakEnd);
 
 		opacityCurveControlPeakStart = peakStart;

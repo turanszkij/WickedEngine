@@ -426,7 +426,6 @@ void MetadataWindow::ResizeLayout()
 	layout.add_fullwidth(addCombo);
 
 	layout.jump();
-	layout.jump();
 
 	for (auto& entry : entries)
 	{
