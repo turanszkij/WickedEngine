@@ -90,6 +90,28 @@ struct StackString
 	constexpr bool empty() const { return cnt == 0; }
 };
 
+// Stack allocated simplified vector container:
+template<typename T, size_t count>
+struct StackVector
+{
+	T items[count] = {};
+	size_t last = 0;
+	constexpr size_t size() const { return last; }
+	constexpr bool empty() const { return last == 0; }
+	constexpr void push_back(const T& item) { items[last++] = item; }
+	constexpr void push_back(T&& item) { items[last++] = std::move(item); }
+	constexpr void pop_back() { if (!empty()) items[--last] = {}; }
+	constexpr void clear() { for (size_t i = 0; i < count; ++i) items[i] = {}; last = 0; }
+	constexpr T* begin() { return items; }
+	constexpr T* end() { return items + last; }
+	constexpr const T& back() const { return items[last - 1]; }
+	constexpr T& back() { return items[0]; }
+	constexpr const T& front() const { return items[last - 1]; }
+	constexpr T& front() { return items[0]; }
+	constexpr const T& operator[](size_t index) const { return items[index]; }
+	constexpr T& operator[](size_t index) { return items[index]; }
+};
+
 // CPU intrinsics:
 #if defined(_WIN32)
 // Windows, Xbox:

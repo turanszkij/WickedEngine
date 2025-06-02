@@ -56,49 +56,50 @@ namespace wi::eventhandler
 
 	void FireEvent(int id, uint64_t userdata)
 	{
-		thread_local wi::vector<std::function<void(uint64_t)>> current_callbacks;
+		manager->locker.lock();
 
-		// Gather callbacks inside lock:
-		//	This allows callbacks to call other events while not being locked
+		// Callbacks that only live for once:
 		{
-			std::scoped_lock lck(manager->locker);
+			auto it = manager->subscribers_once.find(id);
+			bool found = it != manager->subscribers_once.end();
 
-			// Callbacks that only live for once:
+			if (found)
 			{
-				auto it = manager->subscribers_once.find(id);
-				bool found = it != manager->subscribers_once.end();
-
-				if (found)
+				auto& callbacks = it->second;
+				for (auto& callback : callbacks)
 				{
-					auto& callbacks = it->second;
-					for (auto& callback : callbacks)
-					{
-						current_callbacks.push_back(callback);
-					}
-					callbacks.clear();
+					// move callback into temp var:
+					auto cb = std::move(callback);
+
+					// execute outside lock:
+					manager->locker.unlock();
+					cb(userdata);
+					manager->locker.lock();
 				}
+				callbacks.clear();
 			}
-			// Callbacks that live until deleted:
-			{
-				auto it = manager->subscribers.find(id);
-				bool found = it != manager->subscribers.end();
+		}
+		// Callbacks that live until deleted:
+		{
+			auto it = manager->subscribers.find(id);
+			bool found = it != manager->subscribers.end();
 
-				if (found)
+			if (found)
+			{
+				auto& callbacks = it->second;
+				for (auto& callback : callbacks)
 				{
-					auto& callbacks = it->second;
-					for (auto& callback : callbacks)
-					{
-						current_callbacks.push_back(*callback);
-					}
+					// make copy of callback:
+					auto cb = *callback;
+
+					// execute outside lock:
+					manager->locker.unlock();
+					cb(userdata);
+					manager->locker.lock();
 				}
 			}
 		}
 
-		// Execution is outside locking:
-		for (auto& callback : current_callbacks)
-		{
-			callback(userdata);
-		}
-		current_callbacks.clear();
+		manager->locker.unlock();
 	}
 }
