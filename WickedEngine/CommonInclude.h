@@ -99,7 +99,7 @@ struct StackVector
 	constexpr unsigned size() const { return last; }
 	constexpr bool empty() const { return last == 0; }
 	constexpr void push_back(const T& item) { items[last++] = item; }
-	constexpr void push_back(T&& item) { items[last++] = std::move(item); }
+	constexpr void push_back(T&& item) { items[last++] = static_cast<T&&>(item); }
 	constexpr void pop_back() { if (!empty()) items[--last] = {}; }
 	constexpr void clear() { for (unsigned i = 0; i < count; ++i) items[i] = {}; last = 0; }
 	constexpr T* begin() { return items; }
