@@ -278,6 +278,8 @@ namespace wi::gui
 		float angular_highlight_width = 0;
 		float angular_highlight_timer = 0;
 		XMFLOAT4 angular_highlight_color = XMFLOAT4(1, 1, 1, 1);
+		float left_text_width = 0;
+		float right_text_width = 0;
 
 	public:
 		Widget();
@@ -366,9 +368,8 @@ namespace wi::gui
 		void SetAngularHighlightColor(const XMFLOAT4& value) { angular_highlight_color = value; };
 		XMFLOAT4 GetAngularHighlightColor() const { return angular_highlight_color; };
 
-		wi::SpriteFont font_description;
-		void SetDescription(const std::string& desc) { font_description.SetText(desc); }
-		const std::string GetDescription() const { return font_description.GetTextA(); }
+		constexpr float GetLeftTextWidth() const { return left_text_width; }
+		constexpr float GetRightTextWidth() const { return right_text_width; }
 	};
 
 	// Clickable, draggable box
@@ -393,6 +394,10 @@ namespace wi::gui
 		void OnDragStart(std::function<void(EventArgs args)> func);
 		void OnDrag(std::function<void(EventArgs args)> func);
 		void OnDragEnd(std::function<void(EventArgs args)> func);
+
+		wi::SpriteFont font_description;
+		void SetDescription(const std::string& desc) { font_description.SetText(desc); }
+		const std::string GetDescription() const { return font_description.GetTextA(); }
 	};
 
 	// Generic scroll bar
@@ -513,6 +518,10 @@ namespace wi::gui
 		void OnInputAccepted(std::function<void(EventArgs args)> func);
 		// Called when input was updated with new character:
 		void OnInput(std::function<void(EventArgs args)> func);
+
+		wi::SpriteFont font_description;
+		void SetDescription(const std::string& desc) { font_description.SetText(desc); }
+		const std::string GetDescription() const { return font_description.GetTextA(); }
 	};
 
 	// Define an interval and slide the control along it
@@ -711,10 +720,11 @@ namespace wi::gui
 			{
 				if (!widget.IsVisible())
 					return;
+				const XMFLOAT2 size = widget.GetSize();
 				x = margin_left;
 				widget.SetPos(XMFLOAT2(x, y));
-				widget.SetSize(XMFLOAT2(width - x - padding, widget.GetScale().y));
-				y += widget.GetSize().y;
+				widget.SetSize(XMFLOAT2(width - x - padding, size.y));
+				y += size.y;
 				y += padding;
 			}
 			// Add one widget to the right side:
@@ -722,18 +732,16 @@ namespace wi::gui
 			{
 				if (!widget.IsVisible())
 					return;
-				x = width - padding - widget.GetSize().x;
-				if (!widget.font_description.text.empty() && widget.font_description.params.h_align == wi::font::WIFALIGN_LEFT)
-				{
-					x -= widget.font_description.TextWidth();
-				}
+				const XMFLOAT2 size = widget.GetSize();
+				x = width - padding - size.x;
+				x -= widget.GetRightTextWidth();
 				widget.SetPos(XMFLOAT2(x, y));
-				if (!widget.font_description.text.empty() && widget.font_description.params.h_align == wi::font::WIFALIGN_RIGHT)
+				if (widget.GetLeftTextWidth() > 0)
 				{
-					x -= widget.font_description.TextWidth() + padding * 4;
+					x -= widget.GetLeftTextWidth() + padding * 4;
 				}
 				x -= padding;
-				y += widget.GetSize().y;
+				y += size.y;
 				y += padding;
 			}
 			// Add one widget to fill the whole width:
@@ -741,14 +749,12 @@ namespace wi::gui
 			{
 				if (!widget.IsVisible())
 					return;
+				const XMFLOAT2 size = widget.GetSize();
 				x = padding;
-				if (!widget.font_description.text.empty() && widget.font_description.params.h_align == wi::font::WIFALIGN_RIGHT)
-				{
-					x += widget.font_description.TextWidth();
-				}
+				x += widget.GetLeftTextWidth();
 				widget.SetPos(XMFLOAT2(x, y));
-				widget.SetSize(XMFLOAT2(width - x - padding, widget.GetSize().y));
-				y += widget.GetSize().y;
+				widget.SetSize(XMFLOAT2(width - x - padding, size.y));
+				y += size.y;
 				y += padding;
 			}
 			// Add one widget to fill the whole width and keep aspect ratio:
@@ -757,10 +763,7 @@ namespace wi::gui
 				if (!widget.IsVisible())
 					return;
 				x = padding;
-				if (!widget.font_description.text.empty() && widget.font_description.params.h_align == wi::font::WIFALIGN_RIGHT)
-				{
-					x += widget.font_description.TextWidth();
-				}
+				x += widget.GetLeftTextWidth();
 				widget.SetPos(XMFLOAT2(margin_left, y));
 				widget.SetSize(XMFLOAT2(width - margin_left - padding, width - margin_left - padding));
 				y += widget.GetSize().y;
@@ -776,10 +779,9 @@ namespace wi::gui
 					return;
 				x -= widget.GetSize().x;
 				widget.SetPos(XMFLOAT2(x, y - widget.GetSize().y - padding));
-				if (!widget.font_description.text.empty() && widget.font_description.params.h_align == wi::font::WIFALIGN_RIGHT)
+				if (widget.GetLeftTextWidth() > 0)
 				{
-					x -= widget.font.TextWidth();
-					x -= padding * 4;
+					x -= widget.GetLeftTextWidth() + padding * 4;
 				}
 				x -= padding;
 			}

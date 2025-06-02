@@ -206,7 +206,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	surfelGIDebugComboBox.Create("");
 	surfelGIDebugComboBox.SetTooltip("Choose Surfel GI debug visualization.");
 	surfelGIDebugComboBox.SetPos(XMFLOAT2(x + 30, y));
-	surfelGIDebugComboBox.SetSize(XMFLOAT2(80, itemheight));
+	surfelGIDebugComboBox.SetSize(XMFLOAT2(wid, itemheight));
 	surfelGIDebugComboBox.AddItem("No Debug", SURFEL_DEBUG_NONE);
 	surfelGIDebugComboBox.AddItem("Normal", SURFEL_DEBUG_NORMAL);
 	surfelGIDebugComboBox.AddItem("Color", SURFEL_DEBUG_COLOR);
@@ -1773,12 +1773,9 @@ void GraphicsWindow::ResizeLayout()
 		layout.add(shadowProps2DComboBox);
 		layout.add(shadowPropsCubeComboBox);
 		layout.add(MSAAComboBox);
-		layout.add_right(temporalAADebugCheckBox);
-		temporalAACheckBox.SetPos(XMFLOAT2(temporalAADebugCheckBox.GetPos().x - temporalAACheckBox.GetSize().x - 70, temporalAADebugCheckBox.GetPos().y));
-		layout.add_right(variableRateShadingClassificationDebugCheckBox);
-		variableRateShadingClassificationCheckBox.SetPos(XMFLOAT2(variableRateShadingClassificationDebugCheckBox.GetPos().x - variableRateShadingClassificationCheckBox.GetSize().x - 70, variableRateShadingClassificationDebugCheckBox.GetPos().y));
-		layout.add_right(debugLightCullingCheckBox);
-		advancedLightCullingCheckBox.SetPos(XMFLOAT2(debugLightCullingCheckBox.GetPos().x - advancedLightCullingCheckBox.GetSize().x - 70, debugLightCullingCheckBox.GetPos().y));
+		layout.add_right(temporalAACheckBox, temporalAADebugCheckBox);
+		layout.add_right(variableRateShadingClassificationCheckBox, variableRateShadingClassificationDebugCheckBox);
+		layout.add_right(advancedLightCullingCheckBox, debugLightCullingCheckBox);
 		layout.add_right(occlusionCullingCheckBox);
 		layout.add_right(visibilityComputeShadingCheckBox);
 		layout.add_right(meshShaderCheckBox);
@@ -1852,8 +1849,7 @@ void GraphicsWindow::ResizeLayout()
 
 		layout.jump();
 
-		layout.add_right(ddgiCheckBox);
-		layout.add_right(ddgiDebugCheckBox);
+		layout.add_right(ddgiCheckBox, ddgiDebugCheckBox);
 		layout.add_right(ddgiX, ddgiY, ddgiZ);
 		layout.add(ddgiRayCountSlider);
 		layout.add(ddgiBlendSpeedSlider);

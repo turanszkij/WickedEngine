@@ -948,7 +948,8 @@ namespace wi::gui
 			break;
 		}
 
-		const XMFLOAT2 descriptionsize = font_description.TextSize();
+		left_text_width = 0;
+		right_text_width = 0;
 
 		font_description.params.posX = translation.x - 2;
 		font_description.params.posY = translation.y + scale.y * 0.5f;
@@ -956,9 +957,11 @@ namespace wi::gui
 		{
 		case wi::font::WIFALIGN_LEFT:
 			font_description.params.posX = translation.x + scale.x + shadow;
+			right_text_width = font_description.TextWidth();
 			break;
 		case wi::font::WIFALIGN_RIGHT:
 			font_description.params.posX = translation.x - shadow;
+			left_text_width = font_description.TextWidth();
 			break;
 		case wi::font::WIFALIGN_CENTER:
 		default:
@@ -1663,7 +1666,8 @@ namespace wi::gui
 			}
 		}
 
-		const XMFLOAT2 descriptionsize = font_description.TextSize();
+		left_text_width = 0;
+		right_text_width = 0;
 
 		font.params.posX = translation.x + 2;
 		font.params.posY = translation.y + scale.y * 0.5f;
@@ -1673,9 +1677,11 @@ namespace wi::gui
 		{
 		case wi::font::WIFALIGN_LEFT:
 			font_description.params.posX = translation.x + scale.x;
+			right_text_width = font_description.TextWidth();
 			break;
 		case wi::font::WIFALIGN_RIGHT:
 			font_description.params.posX = translation.x;
+			left_text_width = font_description.TextWidth();
 			break;
 		case wi::font::WIFALIGN_CENTER:
 		default:
@@ -2103,7 +2109,7 @@ namespace wi::gui
 
 		sprites[state].params.siz.x = hitBox.siz.x;
 
-		font_description = font;
+		left_text_width = font.TextWidth();
 	}
 	void Slider::Render(const wi::Canvas& canvas, CommandList cmd) const
 	{
@@ -2288,7 +2294,7 @@ namespace wi::gui
 
 		font.params.posY = translation.y + scale.y * 0.5f;
 
-		font_description = font;
+		left_text_width = font.TextWidth();
 	}
 	void CheckBox::Render(const wi::Canvas& canvas, CommandList cmd) const
 	{
@@ -2659,7 +2665,7 @@ namespace wi::gui
 		scissorRect.right = (int32_t)std::ceil(translation.x + sprites[state].params.siz.x);
 		scissorRect.top = (int32_t)std::floor(translation.y);
 
-		font_description = font;
+		left_text_width = font.TextWidth();
 	}
 	void ComboBox::Render(const wi::Canvas& canvas, CommandList cmd) const
 	{
