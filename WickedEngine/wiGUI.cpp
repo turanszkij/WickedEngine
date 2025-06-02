@@ -530,13 +530,11 @@ namespace wi::gui
 	}
 	XMFLOAT2 Widget::GetPos() const
 	{
-		XMFLOAT3 transform_position = TransformComponent::GetPosition();
-		return *(XMFLOAT2*)&transform_position;
+		return *(XMFLOAT2*)&translation;
 	}
 	XMFLOAT2 Widget::GetSize() const
 	{
-		XMFLOAT3 transform_scale = TransformComponent::GetScale();
-		return *(XMFLOAT2*)&transform_scale;
+		return *(XMFLOAT2*)&scale;
 	}
 	WIDGETSTATE Widget::GetState() const
 	{
@@ -4919,7 +4917,7 @@ namespace wi::gui
 			y -= widget.GetSize().y;
 			y -= padding;
 			widget.SetPos(XMFLOAT2(margin_left, y));
-			widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetScale().y));
+			widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetSize().y));
 			};
 		auto add_right = [&](wi::gui::Widget& widget) {
 			if (!widget.IsVisible())
