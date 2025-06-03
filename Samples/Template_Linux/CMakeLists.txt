@@ -13,7 +13,6 @@ endif()
 
 set(SOURCE_FILES
     main.cpp
-    stdafx.h
 )
 
 set(LIB_DXCOMPILER "libdxcompiler.so")
@@ -33,16 +32,12 @@ if (${INSTALLED_ENGINE})
         TARGET WickedEngine::dxcompiler
         PROPERTY IMPORTED_LOCATION)
     get_filename_component(WICKED_LIBFOLDER ${LIBDXCOMPILER_PATH} DIRECTORY)
-    set(STARTUP_LUA "${WICKED_LIBFOLDER}/Editor/startup.lua")
 else()
     set(LIBDXCOMPILER_PATH "${WICKED_ROOT_DIR}/WickedEngine/${LIB_DXCOMPILER}")
-    set(STARTUP_LUA "${WICKED_ROOT_DIR}/Editor/startup.lua")
 endif()
 message("libdxcompiler found at ${LIBDXCOMPILER_PATH}")
-message("startup lua found at ${STARTUP_LUA}")
 
 add_custom_command(
     TARGET Template_Linux POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LIBDXCOMPILER_PATH} ${CMAKE_CURRENT_BINARY_DIR}
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${STARTUP_LUA} ${CMAKE_CURRENT_BINARY_DIR}/startup.lua
 )

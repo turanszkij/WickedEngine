@@ -122,11 +122,6 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="main_Windows.h" />
-    <ClInclude Include="Resource.h" />
-    <ClInclude Include="targetver.h" />
-  </ItemGroup>
-  <ItemGroup>
     <ResourceCompile Include="Editor.rc" />
   </ItemGroup>
   <ItemGroup>
