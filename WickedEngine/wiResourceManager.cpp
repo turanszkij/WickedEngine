@@ -6,9 +6,7 @@
 #include "wiBacklog.h"
 #include "wiJobSystem.h"
 
-#include "Utility/qoi.h"
 #include "Utility/stb_image.h"
-#include "Utility/basis_universal/transcoder/basisu_transcoder.h"
 #include "Utility/dds.h"
 
 #include <algorithm>
@@ -222,15 +220,12 @@ namespace wi
 			FONTSTYLE,
 		};
 		static const wi::unordered_map<std::string, DataType> types = {
-			{"BASIS", DataType::IMAGE},
-			{"KTX2", DataType::IMAGE},
 			{"JPG", DataType::IMAGE},
 			{"JPEG", DataType::IMAGE},
 			{"PNG", DataType::IMAGE},
 			{"BMP", DataType::IMAGE},
 			{"DDS", DataType::IMAGE},
 			{"TGA", DataType::IMAGE},
-			{"QOI", DataType::IMAGE},
 			{"HDR", DataType::IMAGE},
 			{"WAV", DataType::SOUND},
 			{"OGG", DataType::SOUND},
@@ -331,282 +326,7 @@ namespace wi
 			case DataType::IMAGE:
 			{
 				GraphicsDevice* device = wi::graphics::GetDevice();
-				if (!ext.compare("KTX2"))
-				{
-					flags &= ~Flags::STREAMING; // disable streaming
-					basist::ktx2_transcoder transcoder;
-					if (transcoder.init(filedata, (uint32_t)filesize))
-					{
-						TextureDesc desc;
-						desc.bind_flags = BindFlag::SHADER_RESOURCE;
-						desc.width = transcoder.get_width();
-						desc.height = transcoder.get_height();
-						desc.array_size = std::max(desc.array_size, transcoder.get_layers() * transcoder.get_faces());
-						desc.mip_levels = transcoder.get_levels();
-						desc.misc_flags = ResourceMiscFlag::TYPED_FORMAT_CASTING;
-						if (transcoder.get_faces() == 6)
-						{
-							desc.misc_flags |= ResourceMiscFlag::TEXTURECUBE;
-						}
-
-						basist::transcoder_texture_format fmt = basist::transcoder_texture_format::cTFRGBA32;
-						desc.format = Format::R8G8B8A8_UNORM;
-
-						bool import_compressed = has_flag(flags, Flags::IMPORT_BLOCK_COMPRESSED);
-						if (import_compressed)
-						{
-							// BC5 is disabled because it's missing green channel!
-							//if (has_flag(flags, Flags::IMPORT_NORMALMAP))
-							//{
-							//	fmt = basist::transcoder_texture_format::cTFBC5_RG;
-							//	desc.format = Format::BC5_UNORM;
-							//	desc.swizzle.r = ComponentSwizzle::R;
-							//	desc.swizzle.g = ComponentSwizzle::G;
-							//	desc.swizzle.b = ComponentSwizzle::ONE;
-							//	desc.swizzle.a = ComponentSwizzle::ONE;
-							//}
-							//else
-							{
-								if (transcoder.get_has_alpha())
-								{
-									fmt = basist::transcoder_texture_format::cTFBC3_RGBA;
-									desc.format = Format::BC3_UNORM;
-								}
-								else
-								{
-									fmt = basist::transcoder_texture_format::cTFBC1_RGB;
-									desc.format = Format::BC1_UNORM;
-								}
-							}
-						}
-						uint32_t bytes_per_block = basis_get_bytes_per_block_or_pixel(fmt);
-
-						if (transcoder.start_transcoding())
-						{
-							// all subresources will use one allocation for transcoder destination, so compute combined size:
-							size_t transcoded_data_size = 0;
-							const uint32_t layers = std::max(1u, transcoder.get_layers());
-							const uint32_t faces = transcoder.get_faces();
-							const uint32_t levels = transcoder.get_levels();
-							for (uint32_t layer = 0; layer < layers; ++layer)
-							{
-								for (uint32_t face = 0; face < faces; ++face)
-								{
-									for (uint32_t mip = 0; mip < levels; ++mip)
-									{
-										basist::ktx2_image_level_info level_info;
-										if (transcoder.get_image_level_info(level_info, mip, layer, face))
-										{
-											uint32_t pixel_or_block_count = (import_compressed
-												? level_info.m_total_blocks
-												: (level_info.m_orig_width * level_info.m_orig_height));
-											transcoded_data_size += bytes_per_block * pixel_or_block_count;
-										}
-									}
-								}
-							}
-							wi::vector<uint8_t> transcoded_data(transcoded_data_size);
-
-							wi::vector<SubresourceData> InitData;
-							size_t transcoded_data_offset = 0;
-							for (uint32_t layer = 0; layer < layers; ++layer)
-							{
-								for (uint32_t face = 0; face < faces; ++face)
-								{
-									for (uint32_t mip = 0; mip < levels; ++mip)
-									{
-										basist::ktx2_image_level_info level_info;
-										if (transcoder.get_image_level_info(level_info, mip, layer, face))
-										{
-											void* data_ptr = transcoded_data.data() + transcoded_data_offset;
-											uint32_t pixel_or_block_count = (import_compressed
-												? level_info.m_total_blocks
-												: (level_info.m_orig_width * level_info.m_orig_height));
-											transcoded_data_offset += bytes_per_block * pixel_or_block_count;
-											if (transcoder.transcode_image_level(
-												mip,
-												layer,
-												face,
-												data_ptr,
-												pixel_or_block_count,
-												fmt
-											))
-											{
-												SubresourceData subresourceData;
-												subresourceData.data_ptr = data_ptr;
-												subresourceData.row_pitch = (import_compressed ? level_info.m_num_blocks_x : level_info.m_orig_width) * bytes_per_block;
-												subresourceData.slice_pitch = subresourceData.row_pitch * (import_compressed ? level_info.m_num_blocks_y : level_info.m_orig_height);
-												InitData.push_back(subresourceData);
-											}
-											else
-											{
-												wi::backlog::post("KTX2 transcoding error while loading image!", wi::backlog::LogLevel::Error);
-												assert(0);
-											}
-										}
-										else
-										{
-											wi::backlog::post("KTX2 transcoding error while loading image level info!", wi::backlog::LogLevel::Error);
-											assert(0);
-										}
-									}
-								}
-							}
-
-							if (!InitData.empty())
-							{
-								success = device->CreateTexture(&desc, InitData.data(), &resource->texture);
-								device->SetName(&resource->texture, name.c_str());
-
-								Format srgb_format = GetFormatSRGB(desc.format);
-								if (srgb_format != Format::UNKNOWN && srgb_format != desc.format)
-								{
-									resource->srgb_subresource = device->CreateSubresource(
-										&resource->texture,
-										SubresourceType::SRV,
-										0, -1,
-										0, -1,
-										&srgb_format
-									);
-								}
-							}
-						}
-						transcoder.clear();
-					}
-				}
-				else if (!ext.compare("BASIS"))
-				{
-					flags &= ~Flags::STREAMING; // disable streaming
-					basist::basisu_transcoder transcoder;
-					if (transcoder.validate_header(filedata, (uint32_t)filesize))
-					{
-						basist::basisu_file_info fileInfo;
-						if (transcoder.get_file_info(filedata, (uint32_t)filesize, fileInfo))
-						{
-							uint32_t image_index = 0;
-							basist::basisu_image_info info;
-							if (transcoder.get_image_info(filedata, (uint32_t)filesize, info, image_index))
-							{
-								TextureDesc desc;
-								desc.bind_flags = BindFlag::SHADER_RESOURCE;
-								desc.width = info.m_width;
-								desc.height = info.m_height;
-								desc.mip_levels = info.m_total_levels;
-								desc.misc_flags = ResourceMiscFlag::TYPED_FORMAT_CASTING;
-
-								basist::transcoder_texture_format fmt = basist::transcoder_texture_format::cTFRGBA32;
-								desc.format = Format::R8G8B8A8_UNORM;
-
-								bool import_compressed = has_flag(flags, Flags::IMPORT_BLOCK_COMPRESSED);
-								if (import_compressed)
-								{
-									// BC5 is disabled because it's missing green channel!
-									//if (has_flag(flags, Flags::IMPORT_NORMALMAP))
-									//{
-									//	fmt = basist::transcoder_texture_format::cTFBC5_RG;
-									//	desc.format = Format::BC5_UNORM;
-									//	desc.swizzle.r = ComponentSwizzle::R;
-									//	desc.swizzle.g = ComponentSwizzle::G;
-									//	desc.swizzle.b = ComponentSwizzle::ONE;
-									//	desc.swizzle.a = ComponentSwizzle::ONE;
-									//}
-									//else
-									{
-										if (info.m_alpha_flag)
-										{
-											fmt = basist::transcoder_texture_format::cTFBC3_RGBA;
-											desc.format = Format::BC3_UNORM;
-										}
-										else
-										{
-											fmt = basist::transcoder_texture_format::cTFBC1_RGB;
-											desc.format = Format::BC1_UNORM;
-										}
-									}
-								}
-								uint32_t bytes_per_block = basis_get_bytes_per_block_or_pixel(fmt);
-
-								if (transcoder.start_transcoding(filedata, (uint32_t)filesize))
-								{
-									// all subresources will use one allocation for transcoder destination, so compute combined size:
-									size_t transcoded_data_size = 0;
-									for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
-									{
-										basist::basisu_image_level_info level_info;
-										if (transcoder.get_image_level_info(filedata, (uint32_t)filesize, level_info, image_index, mip))
-										{
-											uint32_t pixel_or_block_count = (import_compressed
-												? level_info.m_total_blocks
-												: (level_info.m_orig_width * level_info.m_orig_height));
-											transcoded_data_size += bytes_per_block * pixel_or_block_count;
-										}
-									}
-									wi::vector<uint8_t> transcoded_data(transcoded_data_size);
-
-									wi::vector<SubresourceData> InitData;
-									size_t transcoded_data_offset = 0;
-									for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
-									{
-										basist::basisu_image_level_info level_info;
-										if (transcoder.get_image_level_info(filedata, (uint32_t)filesize, level_info, 0, mip))
-										{
-											void* data_ptr = transcoded_data.data() + transcoded_data_offset;
-											uint32_t pixel_or_block_count = (import_compressed
-												? level_info.m_total_blocks
-												: (level_info.m_orig_width * level_info.m_orig_height));
-											transcoded_data_offset += pixel_or_block_count * bytes_per_block;
-											if (transcoder.transcode_image_level(
-												filedata,
-												(uint32_t)filesize,
-												image_index,
-												mip,
-												data_ptr,
-												pixel_or_block_count,
-												fmt
-											))
-											{
-												SubresourceData subresourceData;
-												subresourceData.data_ptr = data_ptr;
-												subresourceData.row_pitch = (import_compressed ? level_info.m_num_blocks_x : level_info.m_orig_width) * bytes_per_block;
-												subresourceData.slice_pitch = subresourceData.row_pitch * (import_compressed ? level_info.m_num_blocks_y : level_info.m_orig_height);
-												InitData.push_back(subresourceData);
-											}
-											else
-											{
-												wi::backlog::post("BASIS transcoding error while loading image!", wi::backlog::LogLevel::Error);
-												assert(0);
-											}
-										}
-										else
-										{
-											wi::backlog::post("BASIS transcoding error while loading image level info!", wi::backlog::LogLevel::Error);
-											assert(0);
-										}
-									}
-
-									if (!InitData.empty())
-									{
-										success = device->CreateTexture(&desc, InitData.data(), &resource->texture);
-										device->SetName(&resource->texture, name.c_str());
-
-										Format srgb_format = GetFormatSRGB(desc.format);
-										if (srgb_format != Format::UNKNOWN && srgb_format != desc.format)
-										{
-											resource->srgb_subresource = device->CreateSubresource(
-												&resource->texture,
-												SubresourceType::SRV,
-												0, -1,
-												0, -1,
-												&srgb_format
-											);
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-				else if (!ext.compare("DDS"))
+				if (!ext.compare("DDS"))
 				{
 					dds::Header header = dds::read_header(filedata, filesize);
 					if (header.is_valid())
@@ -899,7 +619,7 @@ namespace wi
 				}
 				else
 				{
-					// qoi, png, tga, jpg, etc. loader:
+					// png, tga, jpg, etc. loader:
 					flags &= ~Flags::STREAMING; // disable streaming
 					int height = 0, width = 0, channels = 0;
 					bool is_16bit = false;
@@ -908,109 +628,97 @@ namespace wi
 					Swizzle swizzle = { ComponentSwizzle::R, ComponentSwizzle::G, ComponentSwizzle::B, ComponentSwizzle::A };
 
 					void* rgba;
-					if (!ext.compare("QOI"))
+					if (!has_flag(flags, Flags::IMPORT_COLORGRADINGLUT) && stbi_is_16_bit_from_memory(filedata, (int)filesize))
 					{
-						qoi_desc desc = {};
-						rgba = qoi_decode(filedata, (int)filesize, &desc, 4);
-						// redefine width, height to avoid further conditionals
-						height = desc.height;
-						width = desc.width;
-						channels = 4;
+						is_16bit = true;
+						rgba = stbi_load_16_from_memory(filedata, (int)filesize, &width, &height, &channels, 0);
+						switch (channels)
+						{
+						case 1:
+							format = Format::R16_UNORM;
+							bc_format = Format::BC4_UNORM;
+							swizzle = { ComponentSwizzle::R, ComponentSwizzle::R, ComponentSwizzle::R, ComponentSwizzle::ONE };
+							break;
+						case 2:
+							format = Format::R16G16_UNORM;
+							bc_format = Format::BC5_UNORM;
+							swizzle = { ComponentSwizzle::R, ComponentSwizzle::R, ComponentSwizzle::R, ComponentSwizzle::G };
+							break;
+						case 3:
+						{
+							// Graphics API doesn't support 3 channel formats, so need to expand to RGBA:
+							struct Color3
+							{
+								uint16_t r, g, b;
+							};
+							const Color3* color3 = (const Color3*)rgba;
+							wi::Color16* color4 = (wi::Color16*)malloc(width * height * sizeof(wi::Color16));
+							for (int i = 0; i < width * height; ++i)
+							{
+								color4[i].setR(color3[i].r);
+								color4[i].setG(color3[i].g);
+								color4[i].setB(color3[i].b);
+								color4[i].setA(65535);
+							}
+							free(rgba);
+							rgba = color4;
+							format = Format::R16G16B16A16_UNORM;
+							bc_format = Format::BC1_UNORM;
+							swizzle = { ComponentSwizzle::R, ComponentSwizzle::G, ComponentSwizzle::B, ComponentSwizzle::ONE };
+						}
+						break;
+						case 4:
+						default:
+							format = Format::R16G16B16A16_UNORM;
+							bc_format = Format::BC3_UNORM;
+							swizzle = { ComponentSwizzle::R, ComponentSwizzle::G, ComponentSwizzle::B, ComponentSwizzle::A };
+							break;
+						}
 					}
 					else
 					{
-						if (!has_flag(flags, Flags::IMPORT_COLORGRADINGLUT) && stbi_is_16_bit_from_memory(filedata, (int)filesize))
+						rgba = stbi_load_from_memory(filedata, (int)filesize, &width, &height, &channels, 0);
+						switch (channels)
 						{
-							is_16bit = true;
-							rgba = stbi_load_16_from_memory(filedata, (int)filesize, &width, &height, &channels, 0);
-							switch (channels)
-							{
-							case 1:
-								format = Format::R16_UNORM;
-								bc_format = Format::BC4_UNORM;
-								swizzle = { ComponentSwizzle::R, ComponentSwizzle::R, ComponentSwizzle::R, ComponentSwizzle::ONE };
-								break;
-							case 2:
-								format = Format::R16G16_UNORM;
-								bc_format = Format::BC5_UNORM;
-								swizzle = { ComponentSwizzle::R, ComponentSwizzle::R, ComponentSwizzle::R, ComponentSwizzle::G };
-								break;
-							case 3:
-							{
-								// Graphics API doesn't support 3 channel formats, so need to expand to RGBA:
-								struct Color3
-								{
-									uint16_t r, g, b;
-								};
-								const Color3* color3 = (const Color3*)rgba;
-								wi::Color16* color4 = (wi::Color16*)malloc(width * height * sizeof(wi::Color16));
-								for (int i = 0; i < width * height; ++i)
-								{
-									color4[i].setR(color3[i].r);
-									color4[i].setG(color3[i].g);
-									color4[i].setB(color3[i].b);
-									color4[i].setA(65535);
-								}
-								free(rgba);
-								rgba = color4;
-								format = Format::R16G16B16A16_UNORM;
-								bc_format = Format::BC1_UNORM;
-								swizzle = { ComponentSwizzle::R, ComponentSwizzle::G, ComponentSwizzle::B, ComponentSwizzle::ONE };
-							}
+						case 1:
+							format = Format::R8_UNORM;
+							bc_format = Format::BC4_UNORM;
+							swizzle = { ComponentSwizzle::R, ComponentSwizzle::R, ComponentSwizzle::R, ComponentSwizzle::ONE };
 							break;
-							case 4:
-							default:
-								format = Format::R16G16B16A16_UNORM;
-								bc_format = Format::BC3_UNORM;
-								swizzle = { ComponentSwizzle::R, ComponentSwizzle::G, ComponentSwizzle::B, ComponentSwizzle::A };
-								break;
+						case 2:
+							format = Format::R8G8_UNORM;
+							bc_format = Format::BC5_UNORM;
+							swizzle = { ComponentSwizzle::R, ComponentSwizzle::R, ComponentSwizzle::R, ComponentSwizzle::G };
+							break;
+						case 3:
+						{
+							// Graphics API doesn't support 3 channel formats, so need to expand to RGBA:
+							struct Color3
+							{
+								uint8_t r, g, b;
+							};
+							const Color3* color3 = (const Color3*)rgba;
+							wi::Color* color4 = (wi::Color*)malloc(width * height * sizeof(wi::Color));
+							for (int i = 0; i < width * height; ++i)
+							{
+								color4[i].setR(color3[i].r);
+								color4[i].setG(color3[i].g);
+								color4[i].setB(color3[i].b);
+								color4[i].setA(255);
 							}
+							free(rgba);
+							rgba = color4;
+							format = Format::R8G8B8A8_UNORM;
+							bc_format = Format::BC1_UNORM;
+							swizzle = { ComponentSwizzle::R, ComponentSwizzle::G, ComponentSwizzle::B, ComponentSwizzle::ONE };
 						}
-						else
-						{
-							rgba = stbi_load_from_memory(filedata, (int)filesize, &width, &height, &channels, 0);
-							switch (channels)
-							{
-							case 1:
-								format = Format::R8_UNORM;
-								bc_format = Format::BC4_UNORM;
-								swizzle = { ComponentSwizzle::R, ComponentSwizzle::R, ComponentSwizzle::R, ComponentSwizzle::ONE };
-								break;
-							case 2:
-								format = Format::R8G8_UNORM;
-								bc_format = Format::BC5_UNORM;
-								swizzle = { ComponentSwizzle::R, ComponentSwizzle::R, ComponentSwizzle::R, ComponentSwizzle::G };
-								break;
-							case 3:
-							{
-								// Graphics API doesn't support 3 channel formats, so need to expand to RGBA:
-								struct Color3
-								{
-									uint8_t r, g, b;
-								};
-								const Color3* color3 = (const Color3*)rgba;
-								wi::Color* color4 = (wi::Color*)malloc(width * height * sizeof(wi::Color));
-								for (int i = 0; i < width * height; ++i)
-								{
-									color4[i].setR(color3[i].r);
-									color4[i].setG(color3[i].g);
-									color4[i].setB(color3[i].b);
-									color4[i].setA(255);
-								}
-								free(rgba);
-								rgba = color4;
-								format = Format::R8G8B8A8_UNORM;
-								bc_format = Format::BC1_UNORM;
-								swizzle = { ComponentSwizzle::R, ComponentSwizzle::G, ComponentSwizzle::B, ComponentSwizzle::ONE };
-							}
+						break;
+						case 4:
+						default:
+							format = Format::R8G8B8A8_UNORM;
+							bc_format = Format::BC3_UNORM;
+							swizzle = { ComponentSwizzle::R, ComponentSwizzle::G, ComponentSwizzle::B, ComponentSwizzle::A };
 							break;
-							case 4:
-							default:
-								format = Format::R8G8B8A8_UNORM;
-								bc_format = Format::BC3_UNORM;
-								swizzle = { ComponentSwizzle::R, ComponentSwizzle::G, ComponentSwizzle::B, ComponentSwizzle::A };
-								break;
-							}
 						}
 					}
 
@@ -1138,7 +846,7 @@ namespace wi
 							}
 						}
 					}
-					free(rgba);
+					stbi_image_free(rgba);
 				}
 			}
 			break;
@@ -1201,13 +909,6 @@ namespace wi
 			locker.lock();
 			std::weak_ptr<ResourceInternal>& weak_resource = resources[name];
 			std::shared_ptr<ResourceInternal> resource = weak_resource.lock();
-
-			static bool basis_init = false; // within lock!
-			if (!basis_init)
-			{
-				basis_init = true;
-				basist::basisu_transcoder_init();
-			}
 
 			uint64_t timestamp = 0;
 			if(!container_filename.empty())

@@ -31,8 +31,6 @@ install(FILES ${HEADER_FILES}
 # compiled on their own; hence we mark them as header files
 file(GLOB_RECURSE DIRECTLY_INCLUDED_FILES CONFIGURE_DEPENDS
 	# included by utility_common.cpp
-	basis_universal/*.cpp
-	basis_universal/*.c
 	mikktspace.c
 
 	# included by volk.h

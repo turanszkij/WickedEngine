@@ -663,12 +663,6 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			ddsConvButton.sprites[i].params.corners_rounding[2].radius = 8;
 			ddsConvButton.sprites[i].params.corners_rounding[3].radius = 8;
 
-			ktxConvButton.sprites[i].params.enableCornerRounding();
-			ktxConvButton.sprites[i].params.corners_rounding[0].radius = 8;
-			ktxConvButton.sprites[i].params.corners_rounding[1].radius = 8;
-			ktxConvButton.sprites[i].params.corners_rounding[2].radius = 8;
-			ktxConvButton.sprites[i].params.corners_rounding[3].radius = 8;
-
 			duplicateCollidersButton.sprites[i].params.enableCornerRounding();
 			duplicateCollidersButton.sprites[i].params.corners_rounding[0].radius = 8;
 			duplicateCollidersButton.sprites[i].params.corners_rounding[1].radius = 8;
@@ -927,51 +921,6 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	AddWidget(&ddsConvButton);
 
 
-	ktxConvButton.Create("KTX2 Convert");
-	ktxConvButton.SetTooltip("All material textures in the scene will be converted to KTX2 format.\nTHIS MIGHT TAKE LONG, SO GET YOURSELF A COFFEE OR TEA!");
-	ktxConvButton.SetSize(XMFLOAT2(100, 18));
-	ktxConvButton.OnClick([=](wi::gui::EventArgs args) {
-
-		Scene& scene = editor->GetCurrentScene();
-
-		wi::unordered_map<std::string, wi::Resource> conv;
-		for (uint32_t i = 0; i < scene.materials.GetCount(); ++i)
-		{
-			MaterialComponent& material = scene.materials[i];
-			for (auto& x : material.textures)
-			{
-				if (x.GetGPUResource() == nullptr)
-					continue;
-				if (has_flag(x.resource.GetTexture().GetDesc().misc_flags, ResourceMiscFlag::SPARSE))
-					continue;
-				if (wi::helper::GetExtensionFromFileName(x.name).compare("KTX2"))
-				{
-					x.name = wi::helper::ReplaceExtension(x.name, "KTX2");
-					conv[x.name] = x.resource;
-				}
-			}
-		}
-
-		for (auto& x : conv)
-		{
-			wi::vector<uint8_t> filedata;
-			if (wi::helper::saveTextureToMemoryFile(x.second.GetTexture(), "KTX2", filedata))
-			{
-				x.second = wi::resourcemanager::Load(x.first, wi::resourcemanager::Flags::NONE, filedata.data(), filedata.size());
-				x.second.SetFileData(std::move(filedata));
-			}
-		}
-
-		for (uint32_t i = 0; i < scene.materials.GetCount(); ++i)
-		{
-			MaterialComponent& material = scene.materials[i];
-			material.CreateRenderData();
-		}
-
-		});
-	AddWidget(&ktxConvButton);
-
-
 	duplicateCollidersButton.Create("Delete duplicate colliders");
 	duplicateCollidersButton.SetTooltip("Duplicate colliders will be removed from the scene.");
 	duplicateCollidersButton.SetSize(XMFLOAT2(100, 18));
@@ -1055,6 +1004,5 @@ void GeneralWindow::ResizeLayout()
 
 	layout.add_fullwidth(eliminateCoarseCascadesButton);
 	layout.add_fullwidth(ddsConvButton);
-	layout.add_fullwidth(ktxConvButton);
 	layout.add_fullwidth(duplicateCollidersButton);
 }

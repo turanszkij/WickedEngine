@@ -1004,11 +1004,11 @@ static int mp4e_write_fragment_header(MP4E_mux_t *mux, int track_num, int data_b
     unsigned char **stack = stack_base;
     unsigned char *pdata_offset;
     unsigned flags;
-    enum
-    {
-        default_sample_duration_present = 0x000008,
-        default_sample_flags_present = 0x000020,
-    } e;
+    //enum
+    //{
+    //    default_sample_duration_present = 0x000008,
+    //    default_sample_flags_present = 0x000020,
+    //} e;
 
     track_t *tr = ((track_t*)mux->tracks.data) + track_num;
 
@@ -1208,7 +1208,7 @@ static int mp4e_flush_index(MP4E_mux_t *mux)
 #define TRACK_HEADER_BYTES 512
     index_bytes = FILE_HEADER_BYTES;
     if (mux->text_comment)
-        index_bytes += 128 + strlen(mux->text_comment);
+        index_bytes += (unsigned)128 + (unsigned)strlen(mux->text_comment);
     for (ntr = 0; ntr < ntracks; ntr++)
     {
         track_t *tr = ((track_t*)mux->tracks.data) + ntr;
@@ -3185,7 +3185,7 @@ broken_android_meta_hack:
         // if box is not envelope, just skip it
         if (i == NELEM(g_envelope_box))
         {
-            if (payload_bytes > file_size)
+            if ((int64_t)payload_bytes > file_size)
             {
                 eof_flag = 1;
             } else
