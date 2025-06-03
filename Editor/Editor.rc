@@ -1,4 +1,2 @@
-#include "resource.h"
-
-IDC_MYICON ICON "wicked.ico"
+1001 ICON "wicked.ico"
 

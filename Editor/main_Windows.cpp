@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "resource.h"
 
 #include <SDKDDKVer.h>
 
@@ -117,7 +116,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	wcex.cbClsExtra = 0;
 	wcex.cbWndExtra = 0;
 	wcex.hInstance = hInstance;
-	wcex.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDC_MYICON));
+	wcex.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(1001)); // 1001 = icon from Resource.rc file
 	wcex.hIconSm = wcex.hIcon;
 	wcex.hCursor = LoadCursor(hInstance, IDC_ARROW);
 	wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
