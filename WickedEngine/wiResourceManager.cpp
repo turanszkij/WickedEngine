@@ -619,7 +619,7 @@ namespace wi
 				}
 				else
 				{
-					// qoi, png, tga, jpg, etc. loader:
+					// png, tga, jpg, etc. loader:
 					flags &= ~Flags::STREAMING; // disable streaming
 					int height = 0, width = 0, channels = 0;
 					bool is_16bit = false;
