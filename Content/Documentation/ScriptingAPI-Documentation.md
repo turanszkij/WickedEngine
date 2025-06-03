@@ -492,7 +492,7 @@ A texture image data.
 	float squish = 1,
 	float blend = 1,
 	float edge_smoothness = 0.04) -- creates a lens distortion normal map (16-bit precision)
-- Save(string filename) -- saves texture into a file. Provide the extension in the filename, it should be one of the following: .JPG, .PNG, .TGA, .BMP, .DDS, .KTX2, .BASIS
+- Save(string filename) -- saves texture into a file. Provide the extension in the filename, it should be one of the following: .JPG, .PNG, .TGA, .BMP, .DDS
 
 ```lua
 GradientType = {
