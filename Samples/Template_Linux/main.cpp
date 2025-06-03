@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
             "WickedEngineApplicationTemplate",
             SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
             1920, 1080,
-            SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN | SDL_WINDOW_ALLOW_HIGHDPI);
+            SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
 
     SDL_Event event;
 
@@ -61,5 +61,5 @@ int main(int argc, char *argv[])
 
     SDL_Quit();
 
-    return ret;
+    return 0;
 }
