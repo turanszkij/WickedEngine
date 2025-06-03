@@ -7,9 +7,7 @@
 #include "Utility/lodepng.h"
 #include "Utility/dds.h"
 #include "Utility/stb_image_write.h"
-#include "Utility/basis_universal/encoder/basisu_comp.h"
-#include "Utility/basis_universal/encoder/basisu_gpu_texture.h"
-#include "Utility/basis_universal/zstd/zstd.h"
+#include "Utility/zstd/zstd.h"
 
 #include <thread>
 #include <locale>
@@ -512,11 +510,6 @@ namespace wi::helper
 			mip_depth = std::max(1u, mip_depth / 2);
 		}
 
-		bool basis = !extension.compare("BASIS");
-		bool ktx2 = !extension.compare("KTX2");
-		basisu::image basis_image;
-		basisu::vector<basisu::image> basis_mipmaps;
-
 		int dst_channel_count = 4;
 		if (desc.format == Format::R10G10B10A2_UNORM)
 		{
@@ -675,122 +668,9 @@ namespace wi::helper
 			// This can be saved by reducing target channel count, no conversion needed
 			dst_channel_count = 2;
 		}
-		else if (IsFormatBlockCompressed(desc.format))
-		{
-			basisu::texture_format fmt;
-			switch (desc.format)
-			{
-			default:
-				assert(0);
-				return false;
-			case Format::BC1_UNORM:
-			case Format::BC1_UNORM_SRGB:
-				fmt = basisu::texture_format::cBC1;
-				break;
-			case Format::BC3_UNORM:
-			case Format::BC3_UNORM_SRGB:
-				fmt = basisu::texture_format::cBC3;
-				break;
-			case Format::BC4_UNORM:
-				fmt = basisu::texture_format::cBC4;
-				break;
-			case Format::BC5_UNORM:
-				fmt = basisu::texture_format::cBC5;
-				break;
-			case Format::BC7_UNORM:
-			case Format::BC7_UNORM_SRGB:
-				fmt = basisu::texture_format::cBC7;
-				break;
-			}
-			basisu::gpu_image basis_gpu_image;
-			basis_gpu_image.init(fmt, desc.width, desc.height);
-			std::memcpy(basis_gpu_image.get_ptr(), texturedata.data(), std::min(texturedata.size(), (size_t)basis_gpu_image.get_size_in_bytes()));
-			basis_gpu_image.unpack(basis_image);
-		}
 		else
 		{
 			assert(desc.format == Format::R8G8B8A8_UNORM || desc.format == Format::R8G8B8A8_UNORM_SRGB); // If you need to save other texture format, implement data conversion for it
-		}
-
-		if (basis || ktx2)
-		{
-			if (basis_image.get_total_pixels() == 0)
-			{
-				basis_image.init(texturedata.data(), desc.width, desc.height, 4);
-				if (desc.mip_levels > 1)
-				{
-					basis_mipmaps.reserve(desc.mip_levels - 1);
-					for (uint32_t mip = 1; mip < desc.mip_levels; ++mip)
-					{
-						basisu::image basis_mip;
-						const MipDesc& mipdesc = mips[mip];
-						basis_mip.init(mipdesc.address, mipdesc.width, mipdesc.height, 4);
-						basis_mipmaps.push_back(basis_mip);
-					}
-				}
-			}
-			static bool encoder_initialized = false;
-			if (!encoder_initialized)
-			{
-				encoder_initialized = true;
-				basisu::basisu_encoder_init(false, false);
-			}
-			basisu::basis_compressor_params params;
-			params.m_source_images.push_back(basis_image);
-			if (desc.mip_levels > 1)
-			{
-				params.m_source_mipmap_images.push_back(basis_mipmaps);
-			}
-			if (ktx2)
-			{
-				params.m_create_ktx2_file = true;
-			}
-			else
-			{
-				params.m_create_ktx2_file = false;
-			}
-#if 1
-			params.m_compression_level = basisu::BASISU_DEFAULT_COMPRESSION_LEVEL;
-#else
-			params.m_compression_level = basisu::BASISU_MAX_COMPRESSION_LEVEL;
-#endif
-			// Disable CPU mipmap generation:
-			//	instead we provide mipmap data that was downloaded from the GPU with m_source_mipmap_images.
-			//	This is better, because engine specific mipgen options will be retained, such as coverage preserving mipmaps
-			params.m_mip_gen = false;
-			params.m_quality_level = basisu::BASISU_QUALITY_MAX;
-			params.m_multithreading = true;
-			int num_threads = std::max(1u, std::thread::hardware_concurrency());
-			basisu::job_pool jpool(num_threads);
-			params.m_pJob_pool = &jpool;
-			basisu::basis_compressor compressor;
-			if (compressor.init(params))
-			{
-				auto result = compressor.process();
-				if (result == basisu::basis_compressor::cECSuccess)
-				{
-					if (basis)
-					{
-						const auto& basis_file = compressor.get_output_basis_file();
-						filedata.resize(basis_file.size());
-						std::memcpy(filedata.data(), basis_file.data(), basis_file.size());
-						return true;
-					}
-					else if (ktx2)
-					{
-						const auto& ktx2_file = compressor.get_output_ktx2_file();
-						filedata.resize(ktx2_file.size());
-						std::memcpy(filedata.data(), ktx2_file.data(), ktx2_file.size());
-						return true;
-					}
-				}
-				else
-				{
-					wi::backlog::post("basisu::basis_compressor::process() failure!", wi::backlog::LogLevel::Error);
-					assert(0);
-				}
-			}
-			return false;
 		}
 
 		int write_result = 0;

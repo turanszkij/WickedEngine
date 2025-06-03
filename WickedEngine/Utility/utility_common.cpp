@@ -15,41 +15,10 @@
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
 
-#define QOI_IMPLEMENTATION
-#include "qoi.h"
-
 #define MINIMP4_IMPLEMENTATION
 #include "minimp4.h"
 #undef RETURN_ERROR
 
 #include "mikktspace.c"
 
-
-// Basis Universal library sources are compiled below for simplicity:
-
-//#define BASISU_FORCE_DEVEL_MESSAGES 1
-#define BASISU_NO_ITERATOR_DEBUG_LEVEL
-#include "basis_universal/transcoder/basisu_transcoder.cpp"
-
-#undef _CRT_SECURE_NO_WARNINGS
-#include "basis_universal/encoder/jpgd.cpp"
-#include "basis_universal/encoder/basisu_backend.cpp"
-#include "basis_universal/encoder/basisu_basis_file.cpp"
-#include "basis_universal/encoder/basisu_bc7enc.cpp"
-#include "basis_universal/encoder/basisu_comp.cpp"
-#include "basis_universal/encoder/basisu_enc.cpp"
-#include "basis_universal/encoder/basisu_etc.cpp"
-#include "basis_universal/encoder/basisu_frontend.cpp"
-#include "basis_universal/encoder/basisu_gpu_texture.cpp"
-#include "basis_universal/encoder/basisu_kernels_sse.cpp"
-#include "basis_universal/encoder/basisu_opencl.cpp"
-#include "basis_universal/encoder/basisu_pvrtc1_4.cpp"
-#include "basis_universal/encoder/basisu_resampler.cpp"
-#include "basis_universal/encoder/basisu_resample_filters.cpp"
-#include "basis_universal/encoder/basisu_ssim.cpp"
-#include "basis_universal/encoder/basisu_uastc_enc.cpp"
-#include "basis_universal/encoder/pvpngreader.cpp"
-
-#undef CLAMP
-//#include "basis_universal/zstd/zstddeclib.c"
-#include "basis_universal/zstd/zstd.c"
+#include "zstd/zstd.c"

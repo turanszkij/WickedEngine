@@ -43,7 +43,6 @@ public:
 	wi::gui::Button localizationButton;
 	wi::gui::Button eliminateCoarseCascadesButton;
 	wi::gui::Button ddsConvButton;
-	wi::gui::Button ktxConvButton;
 	wi::gui::Button duplicateCollidersButton;
 
 	void ResizeLayout() override;
