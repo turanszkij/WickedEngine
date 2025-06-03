@@ -181,7 +181,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	}
 	if (hWnd == NULL)
 	{
-		wilog("Win32 window creation failure!");
+		wilog_error("Win32 window creation failure!");
 		return -1;
 	}
 	if (fullscreen)
@@ -219,5 +219,5 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	wi::jobsystem::ShutDown();
 
-    return (int) msg.wParam;
+    return (int)msg.wParam;
 }
