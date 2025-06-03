@@ -143,7 +143,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		borderless = editor.config.GetBool("borderless");
 		editor.allow_hdr = editor.config.GetBool("allow_hdr");
 
-		wi::backlog::post("config.ini loaded in " + std::to_string(timer.elapsed_milliseconds()) + " milliseconds\n");
+		wilog("config.ini loaded in %.2f milliseconds\n", (float)timer.elapsed_milliseconds());
 	}
 
 	HWND hWnd = NULL;

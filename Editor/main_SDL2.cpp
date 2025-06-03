@@ -218,7 +218,7 @@ int main(int argc, char *argv[])
 		fullscreen = editor.config.GetBool("fullscreen");
 		editor.allow_hdr = editor.config.GetBool("allow_hdr");
 
-		wi::backlog::post("config.ini loaded in " + std::to_string(timer.elapsed_milliseconds()) + " milliseconds\n");
+		wilog("config.ini loaded in %.2f milliseconds\n", (float)timer.elapsed_milliseconds());
 	}
 
 	width = std::max(100, width);
