@@ -59,6 +59,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	wi::jobsystem::ShutDown(); // waits for jobs to finish before shutdown
+
     SDL_Quit();
 
     return 0;
