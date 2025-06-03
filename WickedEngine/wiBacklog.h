@@ -77,9 +77,4 @@ namespace wi::backlog
 	//
 	// Use getText() instead, unless absolutely necessary.
 	void _forEachLogEntry_unsafe(std::function<void(const LogEntry&)> cb);
-
-	// These are no longer used, but kept here to not break user code:
-	[[deprecated("does nothing")]] inline void input(const char input) {}
-	[[deprecated("does nothing")]] inline void acceptInput() {}
-	[[deprecated("does nothing")]] inline void deletefromInput() {}
 };

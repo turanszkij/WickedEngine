@@ -87,7 +87,7 @@ void TestsRenderer::Load()
 	audioTest.Create("AudioTest");
 	audioTest.SetText("Play Test Audio");
 	audioTest.SetSize(XMFLOAT2(200, 20));
-	audioTest.SetPos(XMFLOAT2(10, 110));
+	audioTest.SetPos(XMFLOAT2(80, 110));
 	audioTest.OnClick([&](wi::gui::EventArgs args) {
 		static bool playing = false;
 
@@ -116,8 +116,8 @@ void TestsRenderer::Load()
 
 	volume.Create(0, 100, 50, 100, "Volume");
 	volume.SetText("Volume: ");
-	volume.SetSize(XMFLOAT2(120, 20));
-	volume.SetPos(XMFLOAT2(65, 140));
+	volume.SetSize(XMFLOAT2(200, 20));
+	volume.SetPos(XMFLOAT2(80, 140));
 	volume.OnSlide([](wi::gui::EventArgs args) {
 		wi::audio::SetVolume(args.fValue / 100.0f, &soundinstance);
 	});
@@ -125,8 +125,8 @@ void TestsRenderer::Load()
 
 	direction.Create(-1, 1, 0, 10000, "Direction");
 	direction.SetText("Direction: ");
-	direction.SetSize(XMFLOAT2(120, 20));
-	direction.SetPos(XMFLOAT2(65, 170));
+	direction.SetSize(XMFLOAT2(200, 20));
+	direction.SetPos(XMFLOAT2(80, 170));
 	direction.OnSlide([](wi::gui::EventArgs args) {
 		wi::audio::SoundInstance3D instance3D;
 		instance3D.emitterPos = XMFLOAT3(args.fValue, 0, 0);
@@ -137,8 +137,8 @@ void TestsRenderer::Load()
 
 	testSelector.Create("TestSelector");
 	testSelector.SetText("Demo: ");
-	testSelector.SetSize(XMFLOAT2(140, 20));
-	testSelector.SetPos(XMFLOAT2(50, 220));
+	testSelector.SetSize(XMFLOAT2(200, 20));
+	testSelector.SetPos(XMFLOAT2(80, 220));
 	testSelector.AddItem("HelloWorld", HELLOWORLD);
 	testSelector.AddItem("Model", MODEL);
 	testSelector.AddItem("EmittedParticle 1", EMITTEDPARTICLE1);
