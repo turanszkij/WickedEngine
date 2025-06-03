@@ -183,7 +183,7 @@ inline unsigned long firstbithigh(unsigned long long value)
 	unsigned long bit_index;
 	if (_BitScanReverse64(&bit_index, value))
 	{
-		return 31ull - bit_index;
+		return 63ull - bit_index;
 	}
 	return 0;
 }
