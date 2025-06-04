@@ -5104,6 +5104,7 @@ namespace wi::gui
 					}
 
 					this->scale_local = wi::math::Max(this->scale_local, XMFLOAT3(item_height() * 3, item_height() * 3, 1)); // don't allow resize to negative or too small
+					this->scale = this->scale_local;
 					this->AttachTo(saved_parent);
 					resize_begin = pointerHitbox.pos;
 				}
