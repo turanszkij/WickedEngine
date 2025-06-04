@@ -125,7 +125,7 @@ void OpaqueShadow(inout ParticipatingMedia participatingMedia, float3 worldPosit
 				
 		if (is_saturated(shadow_uv))
 		{
-			shadow *= shadow_2D(light, shadow_pos, shadow_uv.xy, furthestCascade).r;
+			shadow *= shadow_2D(light, shadow_pos.z, shadow_uv.xy, furthestCascade).r;
 		}
 	}
 
