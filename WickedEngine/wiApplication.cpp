@@ -169,20 +169,30 @@ namespace wi
 		if (!startup_script)
 		{
 			startup_script = true;
-			std::string startup_lua_filename = wi::helper::GetCurrentPath() + "/startup.lua";
-			if (wi::helper::FileExists(startup_lua_filename))
+			if (wi::helper::FileExists(rewriteable_startup_script_text))
 			{
-				if (wi::lua::RunFile(startup_lua_filename))
+				if (wi::lua::RunFile(rewriteable_startup_script_text))
 				{
-					wi::backlog::post("Executed startup file: " + startup_lua_filename);
+					wi::backlog::post("Executed startup file: " + rewriteable_startup_script_text);
 				}
 			}
-			std::string startup_luab_filename = wi::helper::GetCurrentPath() + "/startup.luab";
-			if (wi::helper::FileExists(startup_luab_filename))
+			else
 			{
-				if (wi::lua::RunBinaryFile(startup_luab_filename))
+				std::string startup_lua_filename = wi::helper::GetCurrentPath() + "/startup.lua";
+				if (wi::helper::FileExists(startup_lua_filename))
 				{
-					wi::backlog::post("Executed startup file: " + startup_luab_filename);
+					if (wi::lua::RunFile(startup_lua_filename))
+					{
+						wi::backlog::post("Executed startup file: " + startup_lua_filename);
+					}
+				}
+				std::string startup_luab_filename = wi::helper::GetCurrentPath() + "/startup.luab";
+				if (wi::helper::FileExists(startup_luab_filename))
+				{
+					if (wi::lua::RunBinaryFile(startup_luab_filename))
+					{
+						wi::backlog::post("Executed startup file: " + startup_luab_filename);
+					}
 				}
 			}
 		}
@@ -800,6 +810,11 @@ namespace wi
 #elif defined(PLATFORM_LINUX)
 		SDL_SetWindowFullscreen(window, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
 #endif // PLATFORM_WINDOWS_DESKTOP
+	}
+
+	bool Application::IsScriptReplacement() const
+	{
+		return wi::helper::FileExists(rewriteable_startup_script_text);
 	}
 
 }

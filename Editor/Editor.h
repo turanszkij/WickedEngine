@@ -4,6 +4,7 @@
 #include "ComponentsWindow.h"
 #include "ProfilerWindow.h"
 #include "ContentBrowserWindow.h"
+#include "ProjectCreatorWindow.h"
 #include "GraphicsWindow.h"
 #include "CameraWindow.h"
 #include "MaterialPickerWindow.h"
@@ -46,6 +47,7 @@ public:
 
 	wi::gui::Button playButton;
 	wi::gui::Button stopButton;
+	wi::gui::Button projectCreatorButton;
 
 	wi::gui::Button saveButton;
 	wi::gui::Button openButton;
@@ -63,6 +65,7 @@ public:
 	ComponentsWindow componentsWnd;
 	ProfilerWindow profilerWnd;
 	ContentBrowserWindow contentBrowserWnd;
+	ProjectCreatorWindow projectCreatorWnd;
 	wi::gui::Window topmenuWnd;
 
 	wi::gui::Button generalButton;
@@ -182,6 +185,7 @@ public:
 	void SaveAs();
 	bool deleting = false;
 
+	wi::graphics::Texture CreateThumbnail(wi::graphics::Texture texture, uint32_t target_width, uint32_t target_height) const;
 	wi::graphics::Texture CreateThumbnailScreenshot() const;
 
 	std::string save_text_message = "";

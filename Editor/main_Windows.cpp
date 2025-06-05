@@ -132,7 +132,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	bool borderless = false;
 
 	wi::Timer timer;
-	if (editor.config.Open("config.ini"))
+	if (wi::helper::FileExists("config.ini") && editor.config.Open("config.ini"))
 	{
 		if (editor.config.Has("width"))
 		{

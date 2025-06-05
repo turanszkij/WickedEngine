@@ -134,6 +134,8 @@ namespace wi
 		}
 		bool IsFaded() const { return fadeManager.IsFaded(); }
 
+		const std::string rewriteable_startup_script_text = "wicked_engine_rewriteable_startup_script_path_paddedlength_256_uniquestring                                                                                                                                                                                    ";
+		bool IsScriptReplacement() const;
 	};
 
 }

@@ -208,7 +208,7 @@ int main(int argc, char *argv[])
 	bool fullscreen = false;
 
 	wi::Timer timer;
-	if (editor.config.Open("config.ini"))
+	if (wi::helper::FileExists("config.ini") && editor.config.Open("config.ini"))
 	{
 		if (editor.config.Has("width"))
 		{

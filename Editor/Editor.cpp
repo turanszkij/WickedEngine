@@ -326,17 +326,20 @@ void Editor::Initialize()
 
 	wi::renderer::SetOcclusionCullingEnabled(true);
 
-	renderComponent.main = this;
-	uint32_t msaa = 4;
-	if (config.Has("gui_antialiasing"))
+	if (!IsScriptReplacement()) // we only activate editor functionality if this exe does not have a script replacement
 	{
-		msaa = std::max(1u, (uint32_t)config.GetInt("gui_antialiasing"));
-	}
-	renderComponent.setMSAASampleCount(msaa);
-	renderComponent.Load();
-	ActivatePath(&renderComponent, 0.5f, wi::Color::Black(), wi::FadeManager::FadeType::CrossFade);
+		renderComponent.main = this;
+		uint32_t msaa = 4;
+		if (config.Has("gui_antialiasing"))
+		{
+			msaa = std::max(1u, (uint32_t)config.GetInt("gui_antialiasing"));
+		}
+		renderComponent.setMSAASampleCount(msaa);
+		renderComponent.Load();
+		ActivatePath(&renderComponent, 0.5f, wi::Color::Black(), wi::FadeManager::FadeType::CrossFade);
 
-	wi::lua::EnableEditorFunctionality(this, &renderComponent);
+		wi::lua::EnableEditorFunctionality(this, &renderComponent);
+	}
 }
 void Editor::HotReload()
 {
@@ -414,6 +417,9 @@ void EditorComponent::ResizeLayout()
 
 	contentBrowserWnd.SetSize(XMFLOAT2(screenW / 1.6f, screenH / 1.2f));
 	contentBrowserWnd.SetPos(XMFLOAT2(screenW / 2.0f - contentBrowserWnd.scale.x / 2.0f, screenH / 2.0f - contentBrowserWnd.scale.y / 2.0f));
+
+	projectCreatorWnd.SetSize(XMFLOAT2(480, 430));
+	projectCreatorWnd.SetPos(XMFLOAT2(screenW / 2.0f - projectCreatorWnd.scale.x / 2.0f, screenH / 2.0f - projectCreatorWnd.scale.y / 2.0f));
 
 }
 void EditorComponent::Load()
@@ -960,6 +966,17 @@ void EditorComponent::Load()
 	topmenuWnd.AddWidget(&stopButton);
 
 
+	projectCreatorButton.Create(ICON_PROJECT_CREATE);
+	projectCreatorButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
+	projectCreatorButton.font.params.shadowColor = wi::Color::Transparent();
+	projectCreatorButton.SetShadowRadius(2);
+	projectCreatorButton.SetTooltip("Create a new project.");
+	projectCreatorButton.OnClick([&](wi::gui::EventArgs args) {
+		projectCreatorWnd.SetVisible(!projectCreatorWnd.IsVisible());
+	});
+	topmenuWnd.AddWidget(&projectCreatorButton);
+
+
 
 	saveButton.Create("Save");
 	saveButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
@@ -1273,6 +1290,9 @@ void EditorComponent::Load()
 
 	contentBrowserWnd.Create(this);
 	GetGUI().AddWidget(&contentBrowserWnd);
+
+	projectCreatorWnd.Create(this);
+	GetGUI().AddWidget(&projectCreatorWnd);
 
 	std::string theme = main->config.GetSection("options").GetText("theme");
 	if(theme.empty())
@@ -5195,14 +5215,11 @@ void EditorComponent::SaveAs()
 	});
 }
 
-Texture EditorComponent::CreateThumbnailScreenshot() const
+Texture EditorComponent::CreateThumbnail(Texture texture, uint32_t target_width, uint32_t target_height) const
 {
 	GraphicsDevice* device = GetDevice();
 	CommandList cmd = device->BeginCommandList();
-	static const uint32_t target_width = 256;
-	static const uint32_t target_height = 128;
-
-	Texture thumbnail = *renderPath->GetLastPostprocessRT();
+	Texture thumbnail = texture;
 
 	// Overestimate actual size with aspect (note that downscale factor will be 4x later):
 	uint32_t current_width = target_width;
@@ -5218,6 +5235,7 @@ Texture EditorComponent::CreateThumbnailScreenshot() const
 		TextureDesc desc = thumbnail.desc;
 		desc.width = current_width;
 		desc.height = current_height;
+		desc.mip_levels = 1;
 		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::RENDER_TARGET | BindFlag::UNORDERED_ACCESS;
 		Texture upsized;
 		device->CreateTexture(&desc, nullptr, &upsized);
@@ -5272,6 +5290,7 @@ Texture EditorComponent::CreateThumbnailScreenshot() const
 		TextureDesc desc = thumbnail.desc;
 		desc.width = std::max(target_width, desc.width / 4u);
 		desc.height = std::max(target_height, desc.height / 4u);
+		desc.mip_levels = 1;
 		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::RENDER_TARGET | BindFlag::UNORDERED_ACCESS;
 		Texture downsized;
 		device->CreateTexture(&desc, nullptr, &downsized);
@@ -5280,6 +5299,10 @@ Texture EditorComponent::CreateThumbnailScreenshot() const
 	}
 
 	return thumbnail;
+}
+Texture EditorComponent::CreateThumbnailScreenshot() const
+{
+	return CreateThumbnail(*renderPath->GetLastPostprocessRT(), 256, 128);
 }
 
 void EditorComponent::PostSaveText(const std::string& message, const std::string& filename, float time_seconds)
@@ -5608,8 +5631,10 @@ void EditorComponent::UpdateDynamicWidgets()
 
 	float static_pos = screenW - wid_idle * 12;
 
+	projectCreatorButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
+	projectCreatorButton.SetPos(XMFLOAT2(static_pos - stopButton.GetSize().x - 20, y));
 	stopButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
-	stopButton.SetPos(XMFLOAT2(static_pos - stopButton.GetSize().x - 20, y));
+	stopButton.SetPos(XMFLOAT2(projectCreatorButton.GetPos().x - playButton.GetSize().x - padding, y));
 	playButton.SetSize(XMFLOAT2(wid_idle * 0.75f, hei));
 	playButton.SetPos(XMFLOAT2(stopButton.GetPos().x - playButton.GetSize().x - padding, y));
 

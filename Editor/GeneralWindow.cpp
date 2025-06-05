@@ -516,6 +516,8 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		editor->componentsWnd.spriteWnd.textureButton.SetColor(wi::Color::White(), wi::gui::IDLE);
 		editor->paintToolWnd.brushTextureButton.SetColor(wi::Color::White(), wi::gui::IDLE);
 		editor->paintToolWnd.revealTextureButton.SetColor(wi::Color::White(), wi::gui::IDLE);
+		editor->projectCreatorWnd.iconButton.SetColor(wi::Color::White(), wi::gui::IDLE);
+		editor->projectCreatorWnd.thumbnailButton.SetColor(wi::Color::White(), wi::gui::IDLE);
 		editor->aboutLabel.sprites[wi::gui::FOCUS] = editor->aboutLabel.sprites[wi::gui::IDLE];
 		int scene_id = 0;
 		for (auto& editorscene : editor->scenes)
@@ -683,8 +685,8 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			editor->playButton.sprites[i].params.enableCornerRounding();
 			editor->playButton.sprites[i].params.corners_rounding[0].radius = 10;
 
-			editor->stopButton.sprites[i].params.enableCornerRounding();
-			editor->stopButton.sprites[i].params.corners_rounding[1].radius = 10;
+			editor->projectCreatorButton.sprites[i].params.enableCornerRounding();
+			editor->projectCreatorButton.sprites[i].params.corners_rounding[1].radius = 10;
 
 			editor->translateButton.sprites[i].params.enableCornerRounding();
 			editor->translateButton.sprites[i].params.corners_rounding[0].radius = 10;
