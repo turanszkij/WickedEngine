@@ -230,7 +230,7 @@ backlog_post("Hello World!")
 						if (wi::helper::saveTextureToMemoryFile(tex, "raw", iconfiledata))
 						{
 							// replace the pixel data part:
-							std::copy(iconfiledata.begin(), iconfiledata.end(), it + match.length() + 1);
+							std::copy(iconfiledata.begin(), iconfiledata.end(), it + 256);
 						}
 					}
 				}
