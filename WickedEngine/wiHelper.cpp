@@ -847,6 +847,12 @@ namespace wi::helper
 			std::memcpy(filedata.data(), ss.c_str(), ss.length());
 			return true;
 		}
+		else if (!extension.compare("RAW"))
+		{
+			filedata.resize(mip.width* mip.height * sizeof(wi::Color));
+			std::memcpy(filedata.data(), mip.address, filedata.size());
+			return true;
+		}
 		else
 		{
 			assert(0 && "Unsupported extension");

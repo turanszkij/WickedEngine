@@ -215,6 +215,27 @@ backlog_post("Hello World!")
 						}
 					}
 				}
+
+				// icon replacement in the Linux executable:
+				if (iconResource.IsValid())
+				{
+					wi::graphics::Texture tex = iconResource.GetTexture();
+
+					std::string match = "Wicked Editor Embedded Icon Data SDL";
+
+					// searches for match string:
+					auto it = std::search(exedata.begin(), exedata.end(), match.begin(), match.end());
+					if (it != exedata.end())
+					{
+						wi::vector<uint8_t> iconfiledata;
+						if (wi::helper::saveTextureToMemoryFile(tex, "raw", iconfiledata))
+						{
+							// replace the pixel data part:
+							std::copy(iconfiledata.begin(), iconfiledata.end(), it + match.length() + 1);
+						}
+					}
+				}
+
 				wi::helper::FileWrite(exepath_dst, exedata.data(), exedata.size());
 			}
 		}

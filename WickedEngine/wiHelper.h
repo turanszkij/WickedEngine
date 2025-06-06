@@ -51,16 +51,16 @@ namespace wi::helper
 	// Save raw pixel data from the texture to memory
 	bool saveTextureToMemory(const wi::graphics::Texture& texture, wi::vector<uint8_t>& texturedata);
 
-	// Save texture to memory as a file format (file format is determined by extension, supported extensions: .png, .jpg, .jpeg, .tga, .bmp, .dds, .ico, .h)
+	// Save texture to memory as a file format (file format is determined by extension, supported extensions: .png, .jpg, .jpeg, .tga, .bmp, .dds, .ico, .h, .raw)
 	bool saveTextureToMemoryFile(const wi::graphics::Texture& texture, const std::string& fileExtension, wi::vector<uint8_t>& filedata);
 
-	// Save raw texture data to memory as file format (file format is determined by extension, supported extensions: .png, .jpg, .jpeg, .tga, .bmp, .dds, .ico, .h)
+	// Save raw texture data to memory as file format (file format is determined by extension, supported extensions: .png, .jpg, .jpeg, .tga, .bmp, .dds, .ico, .h, .raw)
 	bool saveTextureToMemoryFile(const wi::vector<uint8_t>& textureData, const wi::graphics::TextureDesc& desc, const std::string& fileExtension, wi::vector<uint8_t>& filedata);
 
-	// Save texture to file format (file format is determined by extension, supported extensions: .png, .jpg, .jpeg, .tga, .bmp, .dds, .ico, .h)
+	// Save texture to file format (file format is determined by extension, supported extensions: .png, .jpg, .jpeg, .tga, .bmp, .dds, .ico, .h, .raw)
 	bool saveTextureToFile(const wi::graphics::Texture& texture, const std::string& fileName);
 
-	// Save raw texture data to file format (file format is determined by extension, supported extensions: .png, .jpg, .jpeg, .tga, .bmp, .dds, .ico, .h)
+	// Save raw texture data to file format (file format is determined by extension, supported extensions: .png, .jpg, .jpeg, .tga, .bmp, .dds, .ico, .h, .raw)
 	bool saveTextureToFile(const wi::vector<uint8_t>& texturedata, const wi::graphics::TextureDesc& desc, const std::string& fileName);
 
 	// Download buffer from GPU into CPU memory
