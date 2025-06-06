@@ -117,7 +117,6 @@ backlog_post("Hello World!")
 		if (iconResource.IsValid())
 		{
 			wi::helper::saveTextureToFile(iconResource.GetTexture(), directory + "icon.png");
-			wi::helper::saveTextureToFile(iconResource.GetTexture(), directory + "icon.h");
 		}
 		if (thumbnailResource.IsValid())
 		{

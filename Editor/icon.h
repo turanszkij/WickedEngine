@@ -2,8 +2,8 @@ struct EmbeddedImage {
 const unsigned int width = 128;
 const unsigned int height = 128;
 const unsigned int bytes_per_pixel = 4;
-const char comment[] = "Wicked Editor Embedded Icon Data SDL";
-const unsigned char pixel_data[] = {
+const char comment[256] = "Wicked Editor Embedded Icon Data SDL";
+const unsigned char pixel_data[128 * 128 * 4] = {
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -2053,4 +2053,4 @@ const unsigned char pixel_data[] = {
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 };
-} embedded_image;
+};
