@@ -4,6 +4,8 @@
 using namespace wi::ecs;
 using namespace wi::scene;
 
+extern const char wicked_editor_application_name_replacement_256padded[];
+
 void ProjectCreatorWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
@@ -151,7 +153,19 @@ end)
 			wi::vector<uint8_t> exedata;
 			if (wi::helper::FileRead(exepath_dst, exedata))
 			{
-				// string replacement in the executable:
+				// window title string replacement in the executable:
+				{
+					std::string match = wicked_editor_application_name_replacement_256padded;
+					auto it = std::search(exedata.begin(), exedata.end(), match.begin(), match.end());
+					if (it != exedata.end())
+					{
+						wi::vector<uint8_t> replacement(name.length() + 1);
+						std::copy(name.begin(), name.end(), replacement.begin());
+						std::copy(replacement.begin(), replacement.end(), it);
+					}
+				}
+
+				// startup script string replacement in the executable:
 				{
 					auto it = std::search(exedata.begin(), exedata.end(), editor->main->rewriteable_startup_script_text.begin(), editor->main->rewriteable_startup_script_text.end());
 					if (it != exedata.end())

@@ -6,6 +6,7 @@
 #include <shellapi.h> // drag n drop
 
 Editor editor;
+extern const char wicked_editor_application_name_replacement_256padded[];
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -122,6 +123,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
 	wcex.lpszMenuName = NULL;
 	wcex.lpszClassName = L"Wicked Editor";
+	wchar_t wname[256] = {};
+	wi::helper::StringConvert(wicked_editor_application_name_replacement_256padded, wname, arraysize(wname));
+	wcex.lpszClassName = wname;
 	RegisterClassExW(&wcex);
 
 

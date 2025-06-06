@@ -6,6 +6,9 @@
 #include "Translator.h"
 #include "DummyVisualizer.h"
 
+// the application name string can be overwritten from outside:
+extern const char wicked_editor_application_name_replacement_256padded[] = "Wicked Editor                                                                                                                                                                                                                                                  ";
+
 using namespace wi::graphics;
 using namespace wi::primitive;
 using namespace wi::scene;

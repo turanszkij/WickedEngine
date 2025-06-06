@@ -13,6 +13,8 @@
 #  include <unistd.h>
 #endif
 
+extern const char wicked_editor_application_name_replacement_256padded[];
+
 using namespace std;
 
 class EditorWithDevInfo : public Editor
@@ -225,7 +227,7 @@ int main(int argc, char *argv[])
 	height = std::max(100, height);
 
     sdl2::window_ptr_t window = sdl2::make_window(
-            "Wicked Editor",
+			wicked_editor_application_name_replacement_256padded,
             SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
             width, height,
             SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
