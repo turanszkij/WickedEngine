@@ -498,7 +498,7 @@ StructuredBuffer<ShaderTerrainChunk> bindless_structured_terrain_chunks[] : regi
 StructuredBuffer<DDGIProbe> bindless_structured_ddi_probes[] : register(space208);
 #endif // __spirv__
 
-// Note: these are macros, otherwise the SPIRV compilation is a LOT slower and uses a LOT more memory for some reason, issue: https://github.com/microsoft/DirectXShaderCompiler/issues/7488
+// Note: these are macros, the SPIRV compilation is a LOT slower and uses a LOT more memory when functions return large structs, issue: https://github.com/microsoft/DirectXShaderCompiler/issues/7493
 #define GetFrame() (g_xFrame)
 #define GetScene() (g_xFrame.scene)
 #define GetWeather() (g_xFrame.scene.weather)
