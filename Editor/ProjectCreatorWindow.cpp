@@ -94,7 +94,7 @@ void ProjectCreatorWindow::Create(EditorComponent* _editor)
 			wi::helper::messageBox("Application name must be provided first!");
 			return;
 		}
-		std::string folder = wi::helper::FolderDialog();
+		std::string folder = wi::helper::FolderDialog("Select location where project folder will be created.");
 		if (folder.empty())
 			return;
 		std::string name = projectNameInput.GetText();
@@ -117,6 +117,7 @@ backlog_post("Hello World!")
 		if (iconResource.IsValid())
 		{
 			wi::helper::saveTextureToFile(iconResource.GetTexture(), directory + "icon.png");
+			wi::helper::saveTextureToFile(iconResource.GetTexture(), directory + "icon.h");
 		}
 		if (thumbnailResource.IsValid())
 		{
@@ -217,6 +218,7 @@ backlog_post("Hello World!")
 				wi::helper::FileWrite(exepath_dst, exedata.data(), exedata.size());
 			}
 		}
+		editor->RegisterRecentlyUsed(directory + scriptfilename);
 		wi::helper::OpenUrl(directory);
 	});
 	AddWidget(&createButton);
