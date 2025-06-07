@@ -3,11 +3,14 @@
 #include "wiBacklog.h"
 #include "wiEventHandler.h"
 #include "wiMath.h"
+#include "wiImage.h"
+#include "wiRenderer.h"
 
 #include "Utility/lodepng.h"
 #include "Utility/dds.h"
 #include "Utility/stb_image_write.h"
 #include "Utility/zstd/zstd.h"
+#include "Utility/portable-file-dialogs.h"
 
 #include <thread>
 #include <locale>
@@ -30,7 +33,6 @@
 
 #ifdef PLATFORM_LINUX
 #include <sys/sysinfo.h>
-#include "Utility/portable-file-dialogs.h"
 #endif // PLATFORM_LINUX
 
 #ifdef PLATFORM_WINDOWS_DESKTOP
@@ -673,6 +675,181 @@ namespace wi::helper
 			assert(desc.format == Format::R8G8B8A8_UNORM || desc.format == Format::R8G8B8A8_UNORM_SRGB); // If you need to save other texture format, implement data conversion for it
 		}
 
+		if (!extension.compare("ICO"))
+		{
+			struct ICONDIR
+			{
+				uint16_t idReserved;   // Reserved (must be 0)
+				uint16_t idType;       // Resource Type (1 for icon)
+				uint16_t idCount;      // Number of images
+			};
+			struct ICONDIRENTRY
+			{
+				uint8_t  bWidth;       // Width, in pixels
+				uint8_t  bHeight;      // Height, in pixels
+				uint8_t  bColorCount;  // Number of colors (0 if >= 8bpp)
+				uint8_t  bReserved;    // Reserved (must be 0)
+				uint16_t wPlanes;      // Color Planes
+				uint16_t wBitCount;    // Bits per pixel
+				uint32_t dwBytesInRes; // Size of image data
+				uint32_t dwImageOffset;// Offset to image data
+			};
+			struct BITMAPINFOHEADER
+			{
+				uint32_t biSize;       // Size of this header
+				int32_t  biWidth;      // Width in pixels
+				int32_t  biHeight;     // Height in pixels (doubled for icon)
+				uint16_t biPlanes;     // Number of color planes
+				uint16_t biBitCount;   // Bits per pixel
+				uint32_t biCompression;// Compression method
+				uint32_t biSizeImage;  // Size of image data
+				int32_t  biXPelsPerMeter; // Horizontal resolution
+				int32_t  biYPelsPerMeter; // Vertical resolution
+				uint32_t biClrUsed;    // Colors used
+				uint32_t biClrImportant; // Important colors
+			};
+
+			const uint32_t minsize = 32;
+
+			size_t filesize = sizeof(ICONDIR);
+
+			ICONDIR icondir = { 0,1,0 };
+
+			for (auto& mip : mips)
+			{
+				if (mip.width > 256 || mip.height > 256)
+					continue;
+				if (mip.width < minsize || mip.height < minsize)
+					break;
+				icondir.idCount++;
+				filesize += sizeof(ICONDIRENTRY);
+			}
+
+			if (icondir.idCount < 1)
+			{
+				wilog_assert(0, "No valid images were found that can be added to ICO file format!");
+				return false;
+			}
+
+			uint32_t imageDataOffset = (uint32_t)filesize;
+
+			for (auto& mip : mips)
+			{
+				if (mip.width > 256 || mip.height > 256)
+					continue;
+				if (mip.width < minsize || mip.height < minsize)
+					break;
+				const uint32_t pixelCount = mip.width * mip.height;
+				const uint32_t rgbDataSize = pixelCount * 4; // 32-bit RGBA
+				const uint32_t maskSize = ((mip.width + 7) / 8) * mip.height; // 1-bit mask, padded to byte
+				const uint32_t imageDataSize = sizeof(BITMAPINFOHEADER) + rgbDataSize + maskSize;
+				filesize += imageDataSize;
+			}
+
+			filedata.resize(filesize);
+			uint8_t* ptr = filedata.data();
+
+			std::memcpy(ptr, &icondir, sizeof(ICONDIR));
+			ptr += sizeof(ICONDIR);
+
+			for (auto& mip : mips)
+			{
+				if (mip.width > 256 || mip.height > 256)
+					continue;
+				if (mip.width < minsize || mip.height < minsize)
+					break;
+
+				const uint32_t pixelCount = mip.width * mip.height;
+				const uint32_t rgbDataSize = pixelCount * 4; // 32-bit RGBA
+				const uint32_t maskSize = ((mip.width + 7) / 8) * mip.height; // 1-bit mask, padded to byte
+				const uint32_t imageDataSize = sizeof(BITMAPINFOHEADER) + rgbDataSize + maskSize;
+
+				ICONDIRENTRY iconEntry = {
+					static_cast<uint8_t>(mip.width > 255 ? 0 : mip.width), // Width (0 for 256+)
+					static_cast<uint8_t>(mip.height > 255 ? 0 : mip.height), // Height (0 for 256+)
+					0, // Color count (0 for 32-bit)
+					0, // Reserved
+					1, // Color planes
+					32, // Bits per pixel
+					imageDataSize, // Size of image data
+					imageDataOffset // Offset to image data
+				};
+				std::memcpy(ptr, &iconEntry, sizeof(ICONDIRENTRY));
+				ptr += sizeof(ICONDIRENTRY);
+				imageDataOffset += imageDataSize;
+			}
+
+			for (auto& mip : mips)
+			{
+				if (mip.width > 256 || mip.height > 256)
+					continue;
+				if (mip.width < minsize || mip.height < minsize)
+					break;
+
+				const uint32_t pixelCount = mip.width * mip.height;
+				const uint32_t rgbDataSize = pixelCount * 4; // 32-bit RGBA
+				const uint32_t maskSize = ((mip.width + 7) / 8) * mip.height; // 1-bit mask, padded to byte
+
+				BITMAPINFOHEADER bmpHeader = {
+					sizeof(BITMAPINFOHEADER), // Size of header
+					int32_t(mip.width), // Width
+					int32_t(mip.height * 2), // Height (doubled for XOR + AND mask)
+					1, // Planes
+					32, // Bits per pixel
+					0, // No compression
+					rgbDataSize + maskSize, // Image size
+					0, // X pixels per meter
+					0, // Y pixels per meter
+					0, // Colors used
+					0  // Important colors
+				};
+				std::memcpy(ptr, &bmpHeader, sizeof(BITMAPINFOHEADER));
+				ptr += sizeof(BITMAPINFOHEADER);
+
+				// Convert RGBA to BGRA and write XOR mask (flipped vertically)
+				for (uint32_t y = mip.height; y > 0; --y)
+				{
+					const uint8_t* src = mip.address + (y - 1) * mip.width * 4;
+					for (uint32_t x = 0; x < mip.width; ++x)
+					{
+						// Convert RGBA to BGRA
+						ptr[0] = src[2]; // B
+						ptr[1] = src[1]; // G
+						ptr[2] = src[0]; // R
+						ptr[3] = src[3]; // A
+						ptr += 4;
+						src += 4;
+					}
+				}
+
+				// Write AND mask (1-bit transparency mask)
+				for (uint32_t y = mip.height; y > 0; --y)
+				{
+					const uint8_t* src = mip.address + (y - 1) * mip.width * 4;
+					for (uint32_t x = 0; x < mip.width; x += 8)
+					{
+						uint8_t maskByte = 0;
+						for (uint32_t bit = 0; bit < 8 && (x + bit) < mip.width; ++bit)
+						{
+							// Set bit to 0 if pixel is opaque (alpha > 0), 1 if transparent
+							if (src[(x + bit) * 4 + 3] == 0)
+							{
+								maskByte |= (1 << (7 - bit));
+							}
+						}
+						*ptr++ = maskByte;
+					}
+					// Pad to 32-bit boundary
+					while ((ptr - filedata.data() - sizeof(ICONDIR) - sizeof(ICONDIRENTRY) - sizeof(BITMAPINFOHEADER) - rgbDataSize) % 4 != 0)
+					{
+						*ptr++ = 0;
+					}
+				}
+			}
+
+			return true;
+		}
+
 		int write_result = 0;
 
 		filedata.clear();
@@ -702,6 +879,35 @@ namespace wi::helper
 		else if (!extension.compare("BMP"))
 		{
 			write_result = stbi_write_bmp_to_func(func, &filedata, (int)mip.width, (int)mip.height, dst_channel_count, mip.address);
+		}
+		else if (!extension.compare("H"))
+		{
+			const size_t datasize = mip.width * mip.height * sizeof(wi::Color);
+			std::string ss;
+			ss += "struct EmbeddedImage {\n";
+			ss += "const unsigned int width = " + std::to_string(mip.width) + ";\n";
+			ss += "const unsigned int height = " + std::to_string(mip.height) + ";\n";
+			ss += "const unsigned int bytes_per_pixel = 4;\n";
+			ss += "const char comment[256] = \"RGBA Image Header Generated By Wicked Engine\";\n";
+			ss += "const unsigned char pixel_data[" + std::to_string(mip.width) + " * " + std::to_string(mip.height) + " * 4] = {";
+			for (size_t i = 0; i < datasize; ++i)
+			{
+				if (i % 32 == 0)
+				{
+					ss += "\n";
+				}
+				ss += std::to_string((uint32_t)mip.address[i]) + ",";
+			}
+			ss += "\n};\n};\n";
+			filedata.resize(ss.size());
+			std::memcpy(filedata.data(), ss.c_str(), ss.length());
+			return true;
+		}
+		else if (!extension.compare("RAW"))
+		{
+			filedata.resize(mip.width* mip.height * sizeof(wi::Color));
+			std::memcpy(filedata.data(), mip.address, filedata.size());
+			return true;
 		}
 		else
 		{
@@ -923,6 +1129,13 @@ namespace wi::helper
 		}
 	}
 
+	std::string BackslashToForwardSlash(const std::string& str)
+	{
+		std::string ret = str;
+		std::replace(ret.begin(), ret.end(), '\\', '/');
+		return ret;
+	}
+
 	void DirectoryCreate(const std::string& path)
 	{
 		std::filesystem::create_directories(ToNativeString(path));
@@ -1021,6 +1234,11 @@ namespace wi::helper
 		return std::chrono::duration_cast<std::chrono::duration<uint64_t>>(tim.time_since_epoch()).count();
 	}
 
+	bool FileCopy(const std::string& filename_src, const std::string& filename_dst)
+	{
+		return std::filesystem::copy_file(ToNativeString(filename_src), ToNativeString(filename_dst), std::filesystem::copy_options::overwrite_existing);
+	}
+
 	std::string GetTempDirectoryPath()
 	{
 #if defined(PLATFORM_XBOX) || defined(PLATFORM_PS5)
@@ -1059,6 +1277,19 @@ namespace wi::helper
 		auto path = std::filesystem::current_path();
 		return FromWString(path.generic_wstring());
 #endif // PLATFORM_PS5
+	}
+
+	std::string GetExecutablePath()
+	{
+#ifdef _WIN32
+		wchar_t wstr[1024] = {};
+		GetModuleFileName(NULL, wstr, arraysize(wstr));
+		char str[1024] = {};
+		StringConvert(wstr, str, arraysize(str));
+		return str;
+#else
+		return std::filesystem::canonical("/proc/self/exe").string();
+#endif // _WIN32
 	}
 
 	void FileDialog(const FileDialogParams& params, std::function<void(std::string fileName)> onSuccess)
@@ -1189,6 +1420,16 @@ namespace wi::helper
 			}
 		}
 #endif // PLATFORM_LINUX
+	}
+
+	std::string FolderDialog(const std::string& description)
+	{
+		if (!pfd::settings::available())
+		{
+			messageBox("No dialog backend available!", "Error!");
+			return "";
+		}
+		return pfd::select_folder(description).result();
 	}
 
 	void GetFileNamesInDirectory(const std::string& directory, std::function<void(std::string fileName)> onSuccess, const std::string& filter_extension)

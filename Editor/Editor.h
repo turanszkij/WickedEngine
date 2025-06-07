@@ -4,6 +4,7 @@
 #include "ComponentsWindow.h"
 #include "ProfilerWindow.h"
 #include "ContentBrowserWindow.h"
+#include "ProjectCreatorWindow.h"
 #include "GraphicsWindow.h"
 #include "CameraWindow.h"
 #include "MaterialPickerWindow.h"
@@ -46,6 +47,7 @@ public:
 
 	wi::gui::Button playButton;
 	wi::gui::Button stopButton;
+	wi::gui::Button projectCreatorButton;
 
 	wi::gui::Button saveButton;
 	wi::gui::Button openButton;
@@ -63,6 +65,7 @@ public:
 	ComponentsWindow componentsWnd;
 	ProfilerWindow profilerWnd;
 	ContentBrowserWindow contentBrowserWnd;
+	ProjectCreatorWindow projectCreatorWnd;
 	wi::gui::Window topmenuWnd;
 
 	wi::gui::Button generalButton;
@@ -182,6 +185,7 @@ public:
 	void SaveAs();
 	bool deleting = false;
 
+	wi::graphics::Texture CreateThumbnail(wi::graphics::Texture texture, uint32_t target_width, uint32_t target_height, bool mipmaps = false) const;
 	wi::graphics::Texture CreateThumbnailScreenshot() const;
 
 	std::string save_text_message = "";
@@ -287,3 +291,11 @@ static const char* EditorLocalizationStrings[] = {
 	"Content",
 };
 static_assert(arraysize(EditorLocalizationStrings) == size_t(EditorLocalization::Count));
+
+struct ApplicationExeCustomization
+{
+	char name_256padded[256] = {};
+	wi::Color backlog_color = wi::Color(130, 210, 220, 255); // color of backlog font (startup text)
+	wi::Color background_color = wi::Color(114, 170, 229); // color of startup background behind startup text
+};
+extern ApplicationExeCustomization exe_customization;

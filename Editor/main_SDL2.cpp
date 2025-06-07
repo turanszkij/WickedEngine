@@ -4,7 +4,7 @@
 #include "sdl2.h"
 #include <fstream>
 
-#include "icon.c"
+#include "icon.h"
 
 #ifdef __linux__
 #  include <execinfo.h>
@@ -95,7 +95,7 @@ void set_window_icon(SDL_Window *window) {
     // to assume the data it gets is byte-wise RGB(A) data
     Uint32 rmask, gmask, bmask, amask;
 #if SDL_BYTEORDER == SDL_BIG_ENDIAN
-    int shift = (gimp_image.bytes_per_pixel == 3) ? 8 : 0;
+    int shift = (embedded_image.bytes_per_pixel == 3) ? 8 : 0;
     rmask = 0xff000000 >> shift;
     gmask = 0x00ff0000 >> shift;
     bmask = 0x0000ff00 >> shift;
@@ -104,10 +104,10 @@ void set_window_icon(SDL_Window *window) {
     rmask = 0x000000ff;
     gmask = 0x0000ff00;
     bmask = 0x00ff0000;
-    amask = (gimp_image.bytes_per_pixel == 3) ? 0 : 0xff000000;
+    amask = (embedded_image.bytes_per_pixel == 3) ? 0 : 0xff000000;
 #endif
-    SDL_Surface* icon = SDL_CreateRGBSurfaceFrom((void*)gimp_image.pixel_data, gimp_image.width,
-        gimp_image.height, gimp_image.bytes_per_pixel*8, gimp_image.bytes_per_pixel*gimp_image.width,
+    SDL_Surface* icon = SDL_CreateRGBSurfaceFrom((void*)embedded_image.pixel_data, embedded_image.width,
+		embedded_image.height, embedded_image.bytes_per_pixel*8, embedded_image.bytes_per_pixel* embedded_image.width,
         rmask, gmask, bmask, amask);
 
     SDL_SetWindowIcon(window, icon);
@@ -196,7 +196,7 @@ int main(int argc, char *argv[])
 	}
 #endif
 
-    wi::arguments::Parse(argc, argv);
+	wi::arguments::Parse(argc, argv);
 
     sdl2::sdlsystem_ptr_t system = sdl2::make_sdlsystem(SDL_INIT_EVERYTHING | SDL_INIT_EVENTS);
     if (*system) {
@@ -208,7 +208,7 @@ int main(int argc, char *argv[])
 	bool fullscreen = false;
 
 	wi::Timer timer;
-	if (editor.config.Open("config.ini"))
+	if (wi::helper::FileExists("config.ini") && editor.config.Open("config.ini"))
 	{
 		if (editor.config.Has("width"))
 		{
@@ -225,7 +225,7 @@ int main(int argc, char *argv[])
 	height = std::max(100, height);
 
     sdl2::window_ptr_t window = sdl2::make_window(
-            "Wicked Editor",
+			exe_customization.name_256padded,
             SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
             width, height,
             SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);

@@ -12,6 +12,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_ LPWSTR    lpCmdLine,
                      _In_ int       nCmdShow)
 {
+	wi::arguments::Parse(lpCmdLine);
+
 	SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
 	static auto WndProc = [](HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) -> LRESULT {
@@ -117,11 +119,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	wcex.cbWndExtra = 0;
 	wcex.hInstance = hInstance;
 	wcex.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(1001)); // 1001 = icon from Resource.rc file
-	wcex.hIconSm = wcex.hIcon;
+	wcex.hIconSm = NULL;
 	wcex.hCursor = LoadCursor(hInstance, IDC_ARROW);
 	wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
 	wcex.lpszMenuName = NULL;
-	wcex.lpszClassName = L"Wicked Editor";
+	wchar_t wname[256] = {};
+	wi::helper::StringConvert(exe_customization.name_256padded, wname, arraysize(wname));
+	wcex.lpszClassName = wname;
 	RegisterClassExW(&wcex);
 
 
@@ -132,7 +136,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	bool borderless = false;
 
 	wi::Timer timer;
-	if (editor.config.Open("config.ini"))
+	if (wi::helper::FileExists("config.ini") && editor.config.Open("config.ini"))
 	{
 		if (editor.config.Has("width"))
 		{
@@ -196,9 +200,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	ShowWindow(hWnd, nCmdShow);
 	UpdateWindow(hWnd);
 	DragAcceptFiles(hWnd, TRUE);
-
-
-	wi::arguments::Parse(lpCmdLine);
 
 	editor.SetWindow(hWnd);
 

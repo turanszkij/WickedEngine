@@ -114,6 +114,11 @@ namespace wi
 				desc.height = swapChain.desc.height;
 				desc.format = Format::R11G11B10_FLOAT;
 				desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+				// try to set background color for swapchain color as if it's using hdr scaling:
+				desc.clear.color[0] = swapChain.desc.clear_color[0] * 9;
+				desc.clear.color[1] = swapChain.desc.clear_color[1] * 9;
+				desc.clear.color[2] = swapChain.desc.clear_color[2] * 9;
+				desc.clear.color[3] = swapChain.desc.clear_color[3];
 				bool success = graphicsDevice->CreateTexture(&desc, nullptr, &rendertargetPreHDR10);
 				assert(success);
 				graphicsDevice->SetName(&rendertargetPreHDR10, "Application::rendertargetPreHDR10");
@@ -169,20 +174,30 @@ namespace wi
 		if (!startup_script)
 		{
 			startup_script = true;
-			std::string startup_lua_filename = wi::helper::GetCurrentPath() + "/startup.lua";
-			if (wi::helper::FileExists(startup_lua_filename))
+			if (wi::helper::FileExists(rewriteable_startup_script_text))
 			{
-				if (wi::lua::RunFile(startup_lua_filename))
+				if (wi::lua::RunFile(rewriteable_startup_script_text))
 				{
-					wi::backlog::post("Executed startup file: " + startup_lua_filename);
+					wi::backlog::post("Executed startup file: " + rewriteable_startup_script_text);
 				}
 			}
-			std::string startup_luab_filename = wi::helper::GetCurrentPath() + "/startup.luab";
-			if (wi::helper::FileExists(startup_luab_filename))
+			else
 			{
-				if (wi::lua::RunBinaryFile(startup_luab_filename))
+				std::string startup_lua_filename = wi::helper::GetCurrentPath() + "/startup.lua";
+				if (wi::helper::FileExists(startup_lua_filename))
 				{
-					wi::backlog::post("Executed startup file: " + startup_luab_filename);
+					if (wi::lua::RunFile(startup_lua_filename))
+					{
+						wi::backlog::post("Executed startup file: " + startup_lua_filename);
+					}
+				}
+				std::string startup_luab_filename = wi::helper::GetCurrentPath() + "/startup.luab";
+				if (wi::helper::FileExists(startup_luab_filename))
+				{
+					if (wi::lua::RunBinaryFile(startup_luab_filename))
+					{
+						wi::backlog::post("Executed startup file: " + startup_luab_filename);
+					}
 				}
 			}
 		}
@@ -725,13 +740,8 @@ namespace wi
 
 		canvas.init(window);
 
-		SwapChainDesc desc;
-		if (swapChain.IsValid())
-		{
-			// it will only resize, but keep format and other settings
-			desc = swapChain.desc;
-		}
-		else
+		SwapChainDesc desc = swapChain.desc;
+		if (!swapChain.IsValid())
 		{
 			// initialize for the first time
 			desc.buffer_count = 3;
@@ -800,6 +810,11 @@ namespace wi
 #elif defined(PLATFORM_LINUX)
 		SDL_SetWindowFullscreen(window, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
 #endif // PLATFORM_WINDOWS_DESKTOP
+	}
+
+	bool Application::IsScriptReplacement() const
+	{
+		return wi::helper::FileExists(rewriteable_startup_script_text);
 	}
 
 }
