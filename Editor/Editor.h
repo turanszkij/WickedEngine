@@ -185,7 +185,7 @@ public:
 	void SaveAs();
 	bool deleting = false;
 
-	wi::graphics::Texture CreateThumbnail(wi::graphics::Texture texture, uint32_t target_width, uint32_t target_height) const;
+	wi::graphics::Texture CreateThumbnail(wi::graphics::Texture texture, uint32_t target_width, uint32_t target_height, bool mipmaps = false) const;
 	wi::graphics::Texture CreateThumbnailScreenshot() const;
 
 	std::string save_text_message = "";

@@ -5226,7 +5226,7 @@ void EditorComponent::SaveAs()
 	});
 }
 
-Texture EditorComponent::CreateThumbnail(Texture texture, uint32_t target_width, uint32_t target_height) const
+Texture EditorComponent::CreateThumbnail(Texture texture, uint32_t target_width, uint32_t target_height, bool mipmaps) const
 {
 	GraphicsDevice* device = GetDevice();
 	CommandList cmd = device->BeginCommandList();
@@ -5246,7 +5246,7 @@ Texture EditorComponent::CreateThumbnail(Texture texture, uint32_t target_width,
 		TextureDesc desc = thumbnail.desc;
 		desc.width = current_width;
 		desc.height = current_height;
-		desc.mip_levels = 1;
+		desc.mip_levels = mipmaps? 0 : 1;
 		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::RENDER_TARGET | BindFlag::UNORDERED_ACCESS;
 		Texture upsized;
 		device->CreateTexture(&desc, nullptr, &upsized);
@@ -5301,12 +5301,18 @@ Texture EditorComponent::CreateThumbnail(Texture texture, uint32_t target_width,
 		TextureDesc desc = thumbnail.desc;
 		desc.width = std::max(target_width, desc.width / 4u);
 		desc.height = std::max(target_height, desc.height / 4u);
-		desc.mip_levels = 1;
+		desc.mip_levels = mipmaps ? 0 : 1;
 		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::RENDER_TARGET | BindFlag::UNORDERED_ACCESS;
 		Texture downsized;
 		device->CreateTexture(&desc, nullptr, &downsized);
 		wi::renderer::Postprocess_Downsample4x(thumbnail, downsized, cmd);
 		thumbnail = downsized;
+	}
+
+	if (mipmaps)
+	{
+		device->CreateMipgenSubresources(thumbnail);
+		wi::renderer::GenerateMipChain(thumbnail, wi::renderer::MIPGENFILTER_LINEAR, cmd);
 	}
 
 	return thumbnail;

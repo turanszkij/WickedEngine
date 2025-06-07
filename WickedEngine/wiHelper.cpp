@@ -675,40 +675,8 @@ namespace wi::helper
 			assert(desc.format == Format::R8G8B8A8_UNORM || desc.format == Format::R8G8B8A8_UNORM_SRGB); // If you need to save other texture format, implement data conversion for it
 		}
 
-		int write_result = 0;
-
-		filedata.clear();
-		stbi_write_func* func = [](void* context, void* data, int size) {
-			wi::vector<uint8_t>& filedata = *(wi::vector<uint8_t>*)context;
-			for (int i = 0; i < size; ++i)
-			{
-				filedata.push_back(*((uint8_t*)data + i));
-			}
-		};
-
-		static int mip_request = 0; // you can use this while debugging to write specific mip level to file (todo: option param?)
-		const MipDesc& mip = mips[mip_request];
-
-		if (is_png)
+		if (!extension.compare("ICO"))
 		{
-			write_result = stbi_write_png_to_func(func, &filedata, (int)mip.width, (int)mip.height, dst_channel_count, mip.address, 0);
-		}
-		else if (!extension.compare("JPG") || !extension.compare("JPEG"))
-		{
-			write_result = stbi_write_jpg_to_func(func, &filedata, (int)mip.width, (int)mip.height, dst_channel_count, mip.address, 100);
-		}
-		else if (!extension.compare("TGA"))
-		{
-			write_result = stbi_write_tga_to_func(func, &filedata, (int)mip.width, (int)mip.height, dst_channel_count, mip.address);
-		}
-		else if (!extension.compare("BMP"))
-		{
-			write_result = stbi_write_bmp_to_func(func, &filedata, (int)mip.width, (int)mip.height, dst_channel_count, mip.address);
-		}
-		else if (!extension.compare("ICO"))
-		{
-			wilog_assert(mip.width <= 256 && mip.height <= 256, "The ICO format doesn't support resolution above 256 pixels in any dimension!");
-
 			struct ICONDIR
 			{
 				uint16_t idReserved;   // Reserved (must be 0)
@@ -741,88 +709,171 @@ namespace wi::helper
 				uint32_t biClrImportant; // Important colors
 			};
 
-			const uint32_t pixelCount = mip.width * mip.height;
-			const uint32_t rgbDataSize = pixelCount * 4; // 32-bit RGBA
-			const uint32_t maskSize = ((mip.width + 7) / 8) * mip.height; // 1-bit mask, padded to byte
-			const uint32_t bmpInfoHeaderSize = sizeof(BITMAPINFOHEADER);
-			const uint32_t iconDirSize = sizeof(ICONDIR);
-			const uint32_t iconDirEntrySize = sizeof(ICONDIRENTRY);
-			const uint32_t imageDataSize = bmpInfoHeaderSize + rgbDataSize + maskSize;
-			const uint32_t totalSize = iconDirSize + iconDirEntrySize + imageDataSize;
+			const uint32_t minsize = 32;
 
-			// Initialize output buffer
-			filedata.resize(totalSize);
-			uint8_t* ptr = filedata.data();
+			size_t filesize = sizeof(ICONDIR);
 
-			ICONDIR iconDir = { 0, 1, 1 }; // Reserved=0, Type=1 (icon), Count=1
-			std::memcpy(ptr, &iconDir, iconDirSize);
-			ptr += iconDirSize;
+			ICONDIR icondir = { 0,1,0 };
 
-			ICONDIRENTRY iconEntry = {
-				static_cast<uint8_t>(mip.width > 255 ? 0 : mip.width), // Width (0 for 256+)
-				static_cast<uint8_t>(mip.height > 255 ? 0 : mip.height), // Height (0 for 256+)
-				0, // Color count (0 for 32-bit)
-				0, // Reserved
-				1, // Color planes
-				32, // Bits per pixel
-				imageDataSize, // Size of image data
-				iconDirSize + iconDirEntrySize // Offset to image data
-			};
-			std::memcpy(ptr, &iconEntry, iconDirEntrySize);
-			ptr += iconDirEntrySize;
-
-			BITMAPINFOHEADER bmpHeader = {
-				bmpInfoHeaderSize, // Size of header
-				int32_t(mip.width), // Width
-				int32_t(mip.height * 2), // Height (doubled for XOR + AND mask)
-				1, // Planes
-				32, // Bits per pixel
-				0, // No compression
-				rgbDataSize + maskSize, // Image size
-				0, // X pixels per meter
-				0, // Y pixels per meter
-				0, // Colors used
-				0  // Important colors
-			};
-			std::memcpy(ptr, &bmpHeader, bmpInfoHeaderSize);
-			ptr += bmpInfoHeaderSize;
-
-			// Convert RGBA to BGRA and write XOR mask (flipped vertically)
-			for (uint32_t y = mip.height; y > 0; --y)
+			for (auto& mip : mips)
 			{
-				const uint8_t* src = mip.address + (y - 1) * mip.width * 4;
-				for (uint32_t x = 0; x < mip.width; ++x)
-				{
-					// Convert RGBA to BGRA
-					ptr[0] = src[2]; // B
-					ptr[1] = src[1]; // G
-					ptr[2] = src[0]; // R
-					ptr[3] = src[3]; // A
-					ptr += 4;
-					src += 4;
-				}
+				if (mip.width > 256 || mip.height > 256)
+					continue;
+				if (mip.width < minsize || mip.height < minsize)
+					break;
+				icondir.idCount++;
+				filesize += sizeof(ICONDIRENTRY);
 			}
 
-			// Write AND mask (1-bit transparency mask)
-			for (uint32_t y = mip.height; y > 0; --y) {
-				const uint8_t* src = mip.address + (y - 1) * mip.width * 4;
-				for (uint32_t x = 0; x < mip.width; x += 8) {
-					uint8_t maskByte = 0;
-					for (uint32_t bit = 0; bit < 8 && (x + bit) < mip.width; ++bit) {
-						// Set bit to 0 if pixel is opaque (alpha > 0), 1 if transparent
-						if (src[(x + bit) * 4 + 3] == 0) {
-							maskByte |= (1 << (7 - bit));
-						}
+			if (icondir.idCount < 1)
+			{
+				wilog_assert(0, "No valid images were found that can be added to ICO file format!");
+				return false;
+			}
+
+			uint32_t imageDataOffset = (uint32_t)filesize;
+
+			for (auto& mip : mips)
+			{
+				if (mip.width > 256 || mip.height > 256)
+					continue;
+				if (mip.width < minsize || mip.height < minsize)
+					break;
+				const uint32_t pixelCount = mip.width * mip.height;
+				const uint32_t rgbDataSize = pixelCount * 4; // 32-bit RGBA
+				const uint32_t maskSize = ((mip.width + 7) / 8) * mip.height; // 1-bit mask, padded to byte
+				const uint32_t imageDataSize = sizeof(BITMAPINFOHEADER) + rgbDataSize + maskSize;
+				filesize += imageDataSize;
+			}
+
+			filedata.resize(filesize);
+			uint8_t* ptr = filedata.data();
+
+			std::memcpy(ptr, &icondir, sizeof(ICONDIR));
+			ptr += sizeof(ICONDIR);
+
+			for (auto& mip : mips)
+			{
+				if (mip.width > 256 || mip.height > 256)
+					continue;
+				if (mip.width < minsize || mip.height < minsize)
+					break;
+
+				const uint32_t pixelCount = mip.width * mip.height;
+				const uint32_t rgbDataSize = pixelCount * 4; // 32-bit RGBA
+				const uint32_t maskSize = ((mip.width + 7) / 8) * mip.height; // 1-bit mask, padded to byte
+				const uint32_t imageDataSize = sizeof(BITMAPINFOHEADER) + rgbDataSize + maskSize;
+
+				ICONDIRENTRY iconEntry = {
+					static_cast<uint8_t>(mip.width > 255 ? 0 : mip.width), // Width (0 for 256+)
+					static_cast<uint8_t>(mip.height > 255 ? 0 : mip.height), // Height (0 for 256+)
+					0, // Color count (0 for 32-bit)
+					0, // Reserved
+					1, // Color planes
+					32, // Bits per pixel
+					imageDataSize, // Size of image data
+					imageDataOffset // Offset to image data
+				};
+				std::memcpy(ptr, &iconEntry, sizeof(ICONDIRENTRY));
+				ptr += sizeof(ICONDIRENTRY);
+				imageDataOffset += imageDataSize;
+			}
+
+			for (auto& mip : mips)
+			{
+				if (mip.width > 256 || mip.height > 256)
+					continue;
+				if (mip.width < minsize || mip.height < minsize)
+					break;
+
+				const uint32_t pixelCount = mip.width * mip.height;
+				const uint32_t rgbDataSize = pixelCount * 4; // 32-bit RGBA
+				const uint32_t maskSize = ((mip.width + 7) / 8) * mip.height; // 1-bit mask, padded to byte
+
+				BITMAPINFOHEADER bmpHeader = {
+					sizeof(BITMAPINFOHEADER), // Size of header
+					int32_t(mip.width), // Width
+					int32_t(mip.height * 2), // Height (doubled for XOR + AND mask)
+					1, // Planes
+					32, // Bits per pixel
+					0, // No compression
+					rgbDataSize + maskSize, // Image size
+					0, // X pixels per meter
+					0, // Y pixels per meter
+					0, // Colors used
+					0  // Important colors
+				};
+				std::memcpy(ptr, &bmpHeader, sizeof(BITMAPINFOHEADER));
+				ptr += sizeof(BITMAPINFOHEADER);
+
+				// Convert RGBA to BGRA and write XOR mask (flipped vertically)
+				for (uint32_t y = mip.height; y > 0; --y)
+				{
+					const uint8_t* src = mip.address + (y - 1) * mip.width * 4;
+					for (uint32_t x = 0; x < mip.width; ++x)
+					{
+						// Convert RGBA to BGRA
+						ptr[0] = src[2]; // B
+						ptr[1] = src[1]; // G
+						ptr[2] = src[0]; // R
+						ptr[3] = src[3]; // A
+						ptr += 4;
+						src += 4;
 					}
-					*ptr++ = maskByte;
 				}
-				// Pad to 32-bit boundary
-				while ((ptr - filedata.data() - iconDirSize - iconDirEntrySize - bmpInfoHeaderSize - rgbDataSize) % 4 != 0) {
-					*ptr++ = 0;
+
+				// Write AND mask (1-bit transparency mask)
+				for (uint32_t y = mip.height; y > 0; --y) {
+					const uint8_t* src = mip.address + (y - 1) * mip.width * 4;
+					for (uint32_t x = 0; x < mip.width; x += 8) {
+						uint8_t maskByte = 0;
+						for (uint32_t bit = 0; bit < 8 && (x + bit) < mip.width; ++bit) {
+							// Set bit to 0 if pixel is opaque (alpha > 0), 1 if transparent
+							if (src[(x + bit) * 4 + 3] == 0) {
+								maskByte |= (1 << (7 - bit));
+							}
+						}
+						*ptr++ = maskByte;
+					}
+					// Pad to 32-bit boundary
+					while ((ptr - filedata.data() - sizeof(ICONDIR) - sizeof(ICONDIRENTRY) - sizeof(BITMAPINFOHEADER) - rgbDataSize) % 4 != 0) {
+						*ptr++ = 0;
+					}
 				}
 			}
 
 			return true;
+		}
+
+		int write_result = 0;
+
+		filedata.clear();
+		stbi_write_func* func = [](void* context, void* data, int size) {
+			wi::vector<uint8_t>& filedata = *(wi::vector<uint8_t>*)context;
+			for (int i = 0; i < size; ++i)
+			{
+				filedata.push_back(*((uint8_t*)data + i));
+			}
+		};
+
+		static int mip_request = 0; // you can use this while debugging to write specific mip level to file (todo: option param?)
+		const MipDesc& mip = mips[mip_request];
+
+		if (is_png)
+		{
+			write_result = stbi_write_png_to_func(func, &filedata, (int)mip.width, (int)mip.height, dst_channel_count, mip.address, 0);
+		}
+		else if (!extension.compare("JPG") || !extension.compare("JPEG"))
+		{
+			write_result = stbi_write_jpg_to_func(func, &filedata, (int)mip.width, (int)mip.height, dst_channel_count, mip.address, 100);
+		}
+		else if (!extension.compare("TGA"))
+		{
+			write_result = stbi_write_tga_to_func(func, &filedata, (int)mip.width, (int)mip.height, dst_channel_count, mip.address);
+		}
+		else if (!extension.compare("BMP"))
+		{
+			write_result = stbi_write_bmp_to_func(func, &filedata, (int)mip.width, (int)mip.height, dst_channel_count, mip.address);
 		}
 		else if (!extension.compare("H"))
 		{

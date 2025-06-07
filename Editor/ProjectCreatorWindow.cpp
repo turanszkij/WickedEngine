@@ -45,7 +45,7 @@ void ProjectCreatorWindow::Create(EditorComponent* _editor)
 					wi::Resource res = wi::resourcemanager::Load(fileName);
 					if (!res.IsValid())
 						return;
-					iconResource.SetTexture(editor->CreateThumbnail(res.GetTexture(), 128, 128));
+					iconResource.SetTexture(editor->CreateThumbnail(res.GetTexture(), 128, 128, true));
 					iconName = fileName;
 					iconButton.SetImage(iconResource);
 				});
@@ -162,6 +162,7 @@ end)
 		if (iconResource.IsValid())
 		{
 			wi::helper::saveTextureToFile(iconResource.GetTexture(), directory + "icon.png");
+			wi::helper::saveTextureToFile(iconResource.GetTexture(), directory + "icon.ico");
 		}
 		if (thumbnailResource.IsValid())
 		{
@@ -260,41 +261,46 @@ end)
 							uint32_t biClrImportant; // Important colors
 						};
 
-						const uint32_t pixelCount = tex.desc.width * tex.desc.height;
-						const uint32_t rgbDataSize = pixelCount * 4; // 32-bit RGBA
-						const uint32_t maskSize = ((tex.desc.width + 7) / 8) * tex.desc.height; // 1-bit mask, padded to byte
-						const uint32_t bmpInfoHeaderSize = sizeof(BITMAPINFOHEADER);
-						const uint32_t iconDirSize = sizeof(ICONDIR);
-						const uint32_t iconDirEntrySize = sizeof(ICONDIRENTRY);
-						const uint32_t imageDataSize = bmpInfoHeaderSize + rgbDataSize + maskSize;
+						const int resolutions[] = {128,64,32};
 
-						BITMAPINFOHEADER bmpHeader = {
-							bmpInfoHeaderSize, // Size of header
-							int32_t(tex.desc.width), // Width
-							int32_t(tex.desc.height * 2), // Height (doubled for XOR + AND mask)
-							1, // Planes
-							32, // Bits per pixel
-							0, // No compression
-							rgbDataSize + maskSize, // Image size
-							0, // X pixels per meter
-							0, // Y pixels per meter
-							0, // Colors used
-							0  // Important colors
-						};
-
-						wi::vector<uint8_t> bmpvec(sizeof(bmpHeader));
-						std::memcpy(bmpvec.data(), &bmpHeader, sizeof(bmpHeader));
-
-						// searches for exact BMP header match:
-						auto it = std::search(exedata.begin(), exedata.end(), bmpvec.begin(), bmpvec.end());
-						if (it != exedata.end())
+						for (int res : resolutions)
 						{
-							wi::vector<uint8_t> iconfiledata;
-							if (wi::helper::saveTextureToMemoryFile(tex, "ico", iconfiledata))
+							const uint32_t pixelCount = res * res;
+							const uint32_t rgbDataSize = pixelCount * 4; // 32-bit RGBA
+							const uint32_t maskSize = ((res + 7) / 8) * res; // 1-bit mask, padded to byte
+							const uint32_t bmpInfoHeaderSize = sizeof(BITMAPINFOHEADER);
+							const uint32_t iconDirSize = sizeof(ICONDIR);
+							const uint32_t iconDirEntrySize = sizeof(ICONDIRENTRY);
+							const uint32_t imageDataSize = bmpInfoHeaderSize + rgbDataSize + maskSize;
+
+							BITMAPINFOHEADER bmpHeader = {
+								bmpInfoHeaderSize, // Size of header
+								int32_t(res), // Width
+								int32_t(res * 2), // Height (doubled for XOR + AND mask)
+								1, // Planes
+								32, // Bits per pixel
+								0, // No compression
+								rgbDataSize + maskSize, // Image size
+								0, // X pixels per meter
+								0, // Y pixels per meter
+								0, // Colors used
+								0  // Important colors
+							};
+
+							wi::vector<uint8_t> bmpvec(sizeof(bmpHeader));
+							std::memcpy(bmpvec.data(), &bmpHeader, sizeof(bmpHeader));
+
+							// searches for exact BMP header match:
+							auto it = std::search(exedata.begin(), exedata.end(), bmpvec.begin(), bmpvec.end());
+							if (it != exedata.end())
 							{
-								// replace the BMP header and data part:
-								std::copy(iconfiledata.begin() + sizeof(ICONDIR) + sizeof(ICONDIRENTRY), iconfiledata.end(), it);
-								wilog("\tOverwritten Win32 icon");
+								wi::vector<uint8_t> iconfiledata;
+								if (wi::helper::saveTextureToMemoryFile(editor->CreateThumbnail(tex, res, res), "ico", iconfiledata))
+								{
+									// replace the BMP header and data part:
+									std::copy(iconfiledata.begin() + sizeof(ICONDIR) + sizeof(ICONDIRENTRY), iconfiledata.end(), it);
+									wilog("\tOverwritten Win32 icon at %d * %d resolution", res, res);
+								}
 							}
 						}
 					}

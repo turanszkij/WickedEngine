@@ -119,7 +119,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	wcex.cbWndExtra = 0;
 	wcex.hInstance = hInstance;
 	wcex.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(1001)); // 1001 = icon from Resource.rc file
-	wcex.hIconSm = wcex.hIcon;
+	wcex.hIconSm = NULL;
 	wcex.hCursor = LoadCursor(hInstance, IDC_ARROW);
 	wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
 	wcex.lpszMenuName = NULL;
