@@ -1073,6 +1073,13 @@ namespace wi::helper
 		}
 	}
 
+	std::string BackslashToForwardSlash(const std::string& str)
+	{
+		std::string ret = str;
+		std::replace(ret.begin(), ret.end(), '\\', '/');
+		return ret;
+	}
+
 	void DirectoryCreate(const std::string& path)
 	{
 		std::filesystem::create_directories(ToNativeString(path));

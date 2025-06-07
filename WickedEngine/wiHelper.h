@@ -89,6 +89,8 @@ namespace wi::helper
 
 	void MakePathAbsolute(std::string& path);
 
+	std::string BackslashToForwardSlash(const std::string& str);
+
 	void DirectoryCreate(const std::string& path);
 
 	// Returns the file size if the file exists, otherwise 0

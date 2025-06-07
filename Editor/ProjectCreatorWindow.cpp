@@ -169,9 +169,9 @@ end)
 		}
 
 		wi::unordered_set<std::string> exes;
-		exes.insert(wi::helper::GetExecutablePath());
-		exes.insert(wi::helper::GetCurrentPath() + "/Editor_Windows.exe");
-		exes.insert(wi::helper::GetCurrentPath() + "/Editor_Linux");
+		exes.insert(wi::helper::BackslashToForwardSlash(wi::helper::GetExecutablePath()));
+		exes.insert(wi::helper::BackslashToForwardSlash(wi::helper::GetCurrentPath() + "/Editor_Windows.exe"));
+		exes.insert(wi::helper::BackslashToForwardSlash(wi::helper::GetCurrentPath() + "/Editor_Linux"));
 
 		for (auto& exepath_src : exes)
 		{
