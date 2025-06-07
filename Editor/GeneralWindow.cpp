@@ -507,6 +507,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		highlight.z *= 2;
 		editor->newEntityCombo.SetAngularHighlightColor(highlight);
 		editor->componentsWnd.newComponentCombo.SetAngularHighlightColor(highlight);
+		editor->projectCreatorWnd.createButton.SetAngularHighlightColor(highlight);
 		editor->componentsWnd.materialWnd.textureSlotButton.SetColor(wi::Color::White(), wi::gui::IDLE);
 		editor->componentsWnd.objectWnd.lightmapPreviewButton.SetColor(wi::Color::White());
 		for (auto& x : editor->componentsWnd.objectWnd.lightmapPreviewButton.sprites)

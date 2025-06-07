@@ -114,6 +114,10 @@ namespace wi
 				desc.height = swapChain.desc.height;
 				desc.format = Format::R11G11B10_FLOAT;
 				desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+				desc.clear.color[0] = swapChain.desc.clear_color[0];
+				desc.clear.color[1] = swapChain.desc.clear_color[1];
+				desc.clear.color[2] = swapChain.desc.clear_color[2];
+				desc.clear.color[3] = swapChain.desc.clear_color[3];
 				bool success = graphicsDevice->CreateTexture(&desc, nullptr, &rendertargetPreHDR10);
 				assert(success);
 				graphicsDevice->SetName(&rendertargetPreHDR10, "Application::rendertargetPreHDR10");
@@ -735,13 +739,8 @@ namespace wi
 
 		canvas.init(window);
 
-		SwapChainDesc desc;
-		if (swapChain.IsValid())
-		{
-			// it will only resize, but keep format and other settings
-			desc = swapChain.desc;
-		}
-		else
+		SwapChainDesc desc = swapChain.desc;
+		if (!swapChain.IsValid())
 		{
 			// initialize for the first time
 			desc.buffer_count = 3;

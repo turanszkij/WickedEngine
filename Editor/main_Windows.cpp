@@ -6,13 +6,14 @@
 #include <shellapi.h> // drag n drop
 
 Editor editor;
-extern const char wicked_editor_application_name_replacement_256padded[];
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
                      _In_ LPWSTR    lpCmdLine,
                      _In_ int       nCmdShow)
 {
+	wi::arguments::Parse(lpCmdLine);
+
 	SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
 	static auto WndProc = [](HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) -> LRESULT {
@@ -122,9 +123,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	wcex.hCursor = LoadCursor(hInstance, IDC_ARROW);
 	wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
 	wcex.lpszMenuName = NULL;
-	wcex.lpszClassName = L"Wicked Editor";
 	wchar_t wname[256] = {};
-	wi::helper::StringConvert(wicked_editor_application_name_replacement_256padded, wname, arraysize(wname));
+	wi::helper::StringConvert(exe_customization.name_256padded, wname, arraysize(wname));
 	wcex.lpszClassName = wname;
 	RegisterClassExW(&wcex);
 
@@ -200,9 +200,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	ShowWindow(hWnd, nCmdShow);
 	UpdateWindow(hWnd);
 	DragAcceptFiles(hWnd, TRUE);
-
-
-	wi::arguments::Parse(lpCmdLine);
 
 	editor.SetWindow(hWnd);
 

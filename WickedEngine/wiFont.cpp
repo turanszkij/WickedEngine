@@ -319,7 +319,7 @@ namespace wi::font
 
 		BlendState bd;
 		bd.render_target[0].blend_enable = true;
-		bd.render_target[0].src_blend = Blend::SRC_ALPHA;
+		bd.render_target[0].src_blend = Blend::ONE; // premultiplied blending
 		bd.render_target[0].dest_blend = Blend::INV_SRC_ALPHA;
 		bd.render_target[0].blend_op = BlendOp::ADD;
 		bd.render_target[0].src_blend_alpha = Blend::ONE;

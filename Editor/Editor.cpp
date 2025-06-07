@@ -6,8 +6,12 @@
 #include "Translator.h"
 #include "DummyVisualizer.h"
 
-// the application name string can be overwritten from outside:
-extern const char wicked_editor_application_name_replacement_256padded[] = "Wicked Editor                                                                                                                                                                                                                                                  ";
+// some application parameters can be overwritten in the executable by finding the 256 byte long pattern in the first member:
+extern ApplicationExeCustomization exe_customization = {
+	"Wicked Editor                                                                                                                                                                                                                                                  ",
+	wi::Color(130, 210, 220, 255),
+	wi::Color::Black()
+};
 
 using namespace wi::graphics;
 using namespace wi::primitive;
@@ -313,6 +317,12 @@ void Editor::Initialize()
 		filetypes[x] = FileType::IMAGE;
 	}
 
+	wi::backlog::setFontColor(exe_customization.backlog_color);
+	XMFLOAT4 clearcol = exe_customization.background_color;
+	swapChain.desc.clear_color[0] = clearcol.x;
+	swapChain.desc.clear_color[1] = clearcol.y;
+	swapChain.desc.clear_color[2] = clearcol.z;
+
 	Application::Initialize();
 
 	infoDisplay.active = true;
@@ -324,8 +334,6 @@ void Editor::Initialize()
 	//infoDisplay.colorspace = true;
 	//infoDisplay.heap_allocation_counter = true;
 	//infoDisplay.vram_usage = true;
-
-	wi::backlog::setFontColor(wi::Color(130, 210, 220, 255));
 
 	wi::renderer::SetOcclusionCullingEnabled(true);
 
@@ -421,7 +429,7 @@ void EditorComponent::ResizeLayout()
 	contentBrowserWnd.SetSize(XMFLOAT2(screenW / 1.6f, screenH / 1.2f));
 	contentBrowserWnd.SetPos(XMFLOAT2(screenW / 2.0f - contentBrowserWnd.scale.x / 2.0f, screenH / 2.0f - contentBrowserWnd.scale.y / 2.0f));
 
-	projectCreatorWnd.SetSize(XMFLOAT2(480, 430));
+	projectCreatorWnd.SetSize(XMFLOAT2(projectCreatorWnd.backgroundColorPicker.GetSize().x * 2 + 4 * 3, 780));
 	projectCreatorWnd.SetPos(XMFLOAT2(screenW / 2.0f - projectCreatorWnd.scale.x / 2.0f, screenH / 2.0f - projectCreatorWnd.scale.y / 2.0f));
 
 }

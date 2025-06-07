@@ -17,6 +17,10 @@ public:
 	wi::Resource iconResource;
 	std::string iconName;
 
+	wi::gui::ColorPicker backlogColorPicker;
+	wi::gui::ColorPicker backgroundColorPicker;
+	wi::gui::Button colorPreviewButton;
+
 	wi::Resource thumbnailResource;
 	std::string thumbnailName;
 
