@@ -269,9 +269,6 @@ end)
 							const uint32_t rgbDataSize = pixelCount * 4; // 32-bit RGBA
 							const uint32_t maskSize = ((res + 7) / 8) * res; // 1-bit mask, padded to byte
 							const uint32_t bmpInfoHeaderSize = sizeof(BITMAPINFOHEADER);
-							const uint32_t iconDirSize = sizeof(ICONDIR);
-							const uint32_t iconDirEntrySize = sizeof(ICONDIRENTRY);
-							const uint32_t imageDataSize = bmpInfoHeaderSize + rgbDataSize + maskSize;
 
 							BITMAPINFOHEADER bmpHeader = {
 								bmpInfoHeaderSize, // Size of header
@@ -291,11 +288,12 @@ end)
 							std::memcpy(bmpvec.data(), &bmpHeader, sizeof(bmpHeader));
 
 							// searches for exact BMP header match:
+							//	TODO: add some validation here because this method is quite stupid, just checking header bit pattern is not foolproof
 							auto it = std::search(exedata.begin(), exedata.end(), bmpvec.begin(), bmpvec.end());
 							if (it != exedata.end())
 							{
 								wi::vector<uint8_t> iconfiledata;
-								if (wi::helper::saveTextureToMemoryFile(editor->CreateThumbnail(tex, res, res), "ico", iconfiledata))
+								if (wi::helper::saveTextureToMemoryFile(editor->CreateThumbnail(tex, res, res, false), "ico", iconfiledata)) // note: individual mip thumbnails at this point!
 								{
 									// replace the BMP header and data part:
 									std::copy(iconfiledata.begin() + sizeof(ICONDIR) + sizeof(ICONDIRENTRY), iconfiledata.end(), it);

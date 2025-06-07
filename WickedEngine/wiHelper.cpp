@@ -823,20 +823,25 @@ namespace wi::helper
 				}
 
 				// Write AND mask (1-bit transparency mask)
-				for (uint32_t y = mip.height; y > 0; --y) {
+				for (uint32_t y = mip.height; y > 0; --y)
+				{
 					const uint8_t* src = mip.address + (y - 1) * mip.width * 4;
-					for (uint32_t x = 0; x < mip.width; x += 8) {
+					for (uint32_t x = 0; x < mip.width; x += 8)
+					{
 						uint8_t maskByte = 0;
-						for (uint32_t bit = 0; bit < 8 && (x + bit) < mip.width; ++bit) {
+						for (uint32_t bit = 0; bit < 8 && (x + bit) < mip.width; ++bit)
+						{
 							// Set bit to 0 if pixel is opaque (alpha > 0), 1 if transparent
-							if (src[(x + bit) * 4 + 3] == 0) {
+							if (src[(x + bit) * 4 + 3] == 0)
+							{
 								maskByte |= (1 << (7 - bit));
 							}
 						}
 						*ptr++ = maskByte;
 					}
 					// Pad to 32-bit boundary
-					while ((ptr - filedata.data() - sizeof(ICONDIR) - sizeof(ICONDIRENTRY) - sizeof(BITMAPINFOHEADER) - rgbDataSize) % 4 != 0) {
+					while ((ptr - filedata.data() - sizeof(ICONDIR) - sizeof(ICONDIRENTRY) - sizeof(BITMAPINFOHEADER) - rgbDataSize) % 4 != 0)
+					{
 						*ptr++ = 0;
 					}
 				}
