@@ -26,6 +26,8 @@ void ProjectCreatorWindow::Create(EditorComponent* _editor)
 	iconButton.SetText("");
 	iconButton.SetDescription("Icon: ");
 	iconButton.SetSize(XMFLOAT2(128 * 0.5f, 128 * 0.5f));
+	iconButton.font_description.params.v_align = wi::font::WIFALIGN_BOTTOM;
+	iconButton.font_description.params.h_align = wi::font::WIFALIGN_CENTER;
 	iconButton.SetTooltip("The icon will be used for the executable icon.");
 	iconButton.OnClick([this](wi::gui::EventArgs args) {
 		if (iconResource.IsValid())
@@ -57,7 +59,9 @@ void ProjectCreatorWindow::Create(EditorComponent* _editor)
 	thumbnailButton.Create("projectThumbnail");
 	thumbnailButton.SetText("");
 	thumbnailButton.SetDescription("Thumbnail: ");
-	thumbnailButton.SetSize(XMFLOAT2(480 * 0.5f, 270 * 0.5f));
+	thumbnailButton.font_description.params.v_align = wi::font::WIFALIGN_BOTTOM;
+	thumbnailButton.font_description.params.h_align = wi::font::WIFALIGN_CENTER;
+	thumbnailButton.SetSize(XMFLOAT2(480 * 0.4f, 270 * 0.4f));
 	thumbnailButton.SetTooltip("The thumbnail will be used for displaying the project in the editor.");
 	thumbnailButton.OnClick([this](wi::gui::EventArgs args) {
 		if (thumbnailResource.IsValid())
@@ -85,6 +89,42 @@ void ProjectCreatorWindow::Create(EditorComponent* _editor)
 		}
 	});
 	AddWidget(&thumbnailButton);
+
+	splashScreenButton.Create("projectSplashScreen");
+	splashScreenButton.SetText("");
+	splashScreenButton.SetDescription("Splash screen: ");
+	splashScreenButton.font_description.params.v_align = wi::font::WIFALIGN_BOTTOM;
+	splashScreenButton.font_description.params.h_align = wi::font::WIFALIGN_CENTER;
+	splashScreenButton.SetSize(XMFLOAT2(480 * 0.5f, 270 * 0.5f));
+	splashScreenButton.SetTooltip("The splash screen will be shown while the engine is initalizing.\nIf there is a splash screen, then it will replace the intialization log display.");
+	splashScreenButton.OnClick([this](wi::gui::EventArgs args) {
+		if (splashScreenResource.IsValid())
+		{
+			splashScreenResource = {};
+			splashScreenResourceCroppedPreview = {};
+			splashScreenName = {};
+			splashScreenButton.SetImage(splashScreenResourceCroppedPreview);
+		}
+		else
+		{
+			wi::helper::FileDialogParams params;
+			params.type = wi::helper::FileDialogParams::OPEN;
+			params.description = "Texture";
+			params.extensions = wi::resourcemanager::GetSupportedImageExtensions();
+			wi::helper::FileDialog(params, [this](std::string fileName) {
+				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					wi::Resource res = wi::resourcemanager::Load(fileName);
+					if (!res.IsValid())
+						return;
+					splashScreenResource = res;
+					splashScreenName = fileName;
+					splashScreenResourceCroppedPreview.SetTexture(editor->CreateThumbnail(splashScreenResource.GetTexture(), 1280, 720, true));
+					splashScreenButton.SetImage(splashScreenResourceCroppedPreview);
+				});
+			});
+		}
+		});
+	AddWidget(&splashScreenButton);
 
 	backlogColorPicker.Create("backlog color", wi::gui::Window::WindowControls::NONE);
 	backlogColorPicker.SetSize(XMFLOAT2(256, 256));
@@ -138,7 +178,7 @@ runProcess(function()
 
 	-- set up a 3D render path, so if you load a model it will be displayed
 	local renderpath = RenderPath3D()
-	application.SetActivePath(renderpath)
+	application.SetActivePath(renderpath, 1.0, 0, 0, 0, FadeType.CrossFade) -- 1 sec cross fade
 
 	-- set up a simple text that will dynamically change every frame
 	local counter = 0
@@ -147,14 +187,14 @@ runProcess(function()
 
 	-- run an endless update loop, it will run until killProcesses() is called or the application exits
 	while true do
-		update()
+		update() -- blocks this process until next update() is signaled from Wicked Engine
 
 		-- every frame the text is positioned to the center of the screen and display the value of the frame counter
 		font.SetText("Hello World! Current frame counter = " .. counter)
-		font.SetSize(12)
-		font.SetScale(3)
-		font.SetPos(Vector(GetScreenWidth() * 0.5, GetScreenHeight() * 0.5))
-		font.SetAlign(WIFALIGN_CENTER, WIFALIGN_CENTER)
+		font.SetSize(12) -- the true render size of the font (larger can increase memory usage, but improves appearance)
+		font.SetScale(3) -- upscaling the font by a factor of 3 without increasing the true font resolution
+		font.SetPos(Vector(GetScreenWidth() * 0.5, GetScreenHeight() * 0.5)) -- put to center of the screen
+		font.SetAlign(WIFALIGN_CENTER, WIFALIGN_CENTER) -- horizontal and vertical text align
 
 		counter = counter + 1
 
@@ -181,6 +221,10 @@ end)
 		if (thumbnailResource.IsValid())
 		{
 			wi::helper::saveTextureToFile(thumbnailResource.GetTexture(), directory + "thumbnail.png");
+		}
+		if (splashScreenResource.IsValid())
+		{
+			wi::helper::saveTextureToFile(splashScreenResource.GetTexture(), directory + "splash_screen.png");
 		}
 
 		wi::unordered_set<std::string> exes;
@@ -370,7 +414,7 @@ void ProjectCreatorWindow::ResizeLayout()
 
 	layout.jump();
 
-	layout.add_right(iconButton, thumbnailButton);
+	layout.add_right(iconButton, thumbnailButton, splashScreenButton);
 
 	layout.jump();
 

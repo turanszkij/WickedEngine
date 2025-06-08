@@ -148,8 +148,54 @@ namespace wi
 			viewport.width = (float)swapChain.desc.width;
 			viewport.height = (float)swapChain.desc.height;
 			graphicsDevice->BindViewports(1, &viewport, cmd);
-			if (wi::initializer::IsInitializeFinished(wi::initializer::INITIALIZED_SYSTEM_FONT))
+			static bool splash_screen_check = false;
+			if (!splash_screen.IsValid() && !splash_screen_check)
 			{
+				splash_screen_check = true;
+				std::string splash_screen_path = wi::helper::GetCurrentPath() + "/splash_screen.png";
+				if (wi::helper::FileExists(splash_screen_path))
+				{
+					wi::Resource resource = wi::resourcemanager::Load(splash_screen_path);
+					if (resource.IsValid())
+					{
+						splash_screen = resource.GetTexture();
+					}
+				}
+			}
+			if (splash_screen.IsValid())
+			{
+				if (wi::initializer::IsInitializeFinished(wi::initializer::INITIALIZED_SYSTEM_IMAGE))
+				{
+					// Draw the splash screen while engine is initializing and image renderer is ready
+					wi::image::SetCanvas(canvas);
+					wi::image::Params fx;
+					const TextureDesc& desc = splash_screen.GetDesc();
+					const float canvas_aspect = canvas.GetLogicalWidth() / canvas.GetLogicalHeight();
+					const float image_aspect = float(desc.width) / float(desc.height);
+					if (canvas_aspect > image_aspect)
+					{
+						// display aspect is wider than image:
+						fx.siz.x = canvas.GetLogicalWidth();
+						fx.siz.y = canvas.GetLogicalHeight() / image_aspect * canvas_aspect;
+					}
+					else
+					{
+						// image aspect is wider or equal to display
+						fx.siz.x = canvas.GetLogicalWidth() / canvas_aspect * image_aspect;
+						fx.siz.y = canvas.GetLogicalHeight();
+					}
+					fx.pos = XMFLOAT3(canvas.GetLogicalWidth() * 0.5f, canvas.GetLogicalHeight() * 0.5f, 0);
+					fx.pivot = XMFLOAT2(0.5f, 0.5f);
+					if (colorspace != ColorSpace::SRGB)
+					{
+						fx.enableLinearOutputMapping(9);
+					}
+					wi::image::Draw(&splash_screen, fx, cmd);
+				}
+			}
+			else if (wi::initializer::IsInitializeFinished(wi::initializer::INITIALIZED_SYSTEM_FONT))
+			{
+				// If there is no splash screen, the log is rendered while engine is initializing
 				ColorSpace colorspace = graphicsDevice->GetSwapChainColorSpace(&swapChain);
 				wi::backlog::DrawOutputText(canvas, cmd, colorspace);
 			}
@@ -169,6 +215,8 @@ namespace wi
 			graphicsDevice->SubmitCommandLists();
 			return;
 		}
+
+		splash_screen = {}; // splash screen no longer needed after initialization, it is deleted
 
 		static bool startup_script = false;
 		if (!startup_script)

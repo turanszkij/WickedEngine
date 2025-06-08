@@ -519,6 +519,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		editor->paintToolWnd.revealTextureButton.SetColor(wi::Color::White(), wi::gui::IDLE);
 		editor->projectCreatorWnd.iconButton.SetColor(wi::Color::White(), wi::gui::IDLE);
 		editor->projectCreatorWnd.thumbnailButton.SetColor(wi::Color::White(), wi::gui::IDLE);
+		editor->projectCreatorWnd.splashScreenButton.SetColor(wi::Color::White(), wi::gui::IDLE);
 		editor->aboutLabel.sprites[wi::gui::FOCUS] = editor->aboutLabel.sprites[wi::gui::IDLE];
 		int scene_id = 0;
 		for (auto& editorscene : editor->scenes)
