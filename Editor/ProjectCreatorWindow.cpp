@@ -164,7 +164,15 @@ end)
 )";
 
 		std::string scriptfilename = name + ".lua";
-		wi::helper::FileWrite(directory + scriptfilename, (const uint8_t*)script.data(), script.size());
+		std::string scriptfilepath = directory + scriptfilename;
+		if (!wi::helper::FileExists(scriptfilepath))
+		{
+			wi::helper::FileWrite(scriptfilepath, (const uint8_t*)script.data(), script.size());
+		}
+		else
+		{
+			wilog("Project creator: %s script file already exists, so it will not be overwritten.", scriptfilepath.c_str());
+		}
 		if (iconResource.IsValid())
 		{
 			wi::helper::saveTextureToFile(iconResource.GetTexture(), directory + "icon.png");
