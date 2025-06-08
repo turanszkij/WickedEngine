@@ -375,11 +375,13 @@ void ProjectCreatorWindow::ResizeLayout()
 	layout.jump();
 
 	layout.add_fullwidth(colorPreviewButton);
-	layout.add_right(backlogColorPicker, backgroundColorPicker);
+	layout.add(backlogColorPicker, backgroundColorPicker);
 
 	layout.jump();
 
 	layout.add_fullwidth(createButton);
+
+	createButton.SetSize(XMFLOAT2(createButton.GetSize().x, std::max(30.0f, layout.height - createButton.GetPos().y - layout.padding * 2)));
 
 	colorPreviewButton.SetColor(backgroundColorPicker.GetPickColor());
 	colorPreviewButton.font.params.color = backlogColorPicker.GetPickColor();

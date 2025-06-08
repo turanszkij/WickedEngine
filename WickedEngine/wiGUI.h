@@ -698,6 +698,7 @@ namespace wi::gui
 		{
 			float padding = 4;
 			float width = 0;
+			float height = 0;
 			float y = 0;
 			float x = 0;
 			float margin_left = 160;
@@ -705,7 +706,9 @@ namespace wi::gui
 			// Reset layout state:
 			void reset(Window& window)
 			{
-				width = window.GetWidgetAreaSize().x;
+				const XMFLOAT2 widgetareasize = window.GetWidgetAreaSize();
+				width = widgetareasize.x;
+				height = widgetareasize.y - window.GetControlSize();
 				y = padding;
 			}
 
@@ -785,8 +788,32 @@ namespace wi::gui
 				}
 				x -= padding;
 			}
-		} layout;
 
+			void helper_fitx(float sizx, wi::gui::Widget& widget)
+			{
+				float left = widget.GetLeftTextWidth();
+				if (left > 0)
+					left += padding;
+				widget.SetSize(XMFLOAT2(sizx - left, widget.GetSize().y));
+			}
+			template<typename... Args>
+			void helper_fitx(float sizx, wi::gui::Widget& widget, Args&&... args)
+			{
+				helper_fitx(sizx, widget);
+				helper_fitx(sizx, std::forward<Args>(args)...);
+			}
+
+			// Add multiple widgets in a row, equally sized to fit
+			template<typename... Args>
+			void add(wi::gui::Widget& widget, Args&&... args)
+			{
+				constexpr size_t total_count = 1 + sizeof...(Args);
+				const float onewidth = (width - padding) / total_count - (padding * (total_count - 1));
+				helper_fitx(onewidth, widget, std::forward<Args>(args)...);
+				add_right(widget, std::forward<Args>(args)...);
+			}
+		} layout;
+		 
 	public:
 		enum class WindowControls
 		{
