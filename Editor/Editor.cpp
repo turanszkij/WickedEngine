@@ -297,24 +297,8 @@ void Editor::Initialize()
 {
 	if (config.Has("font"))
 	{
-		// Replace default font from config:
+		// Replace default font from config before engine initialization:
 		wi::font::AddFontStyle(config.GetText("font"));
-	}
-
-	auto ext_video = wi::resourcemanager::GetSupportedVideoExtensions();
-	for (auto& x : ext_video)
-	{
-		filetypes[x] = FileType::VIDEO;
-	}
-	auto ext_sound = wi::resourcemanager::GetSupportedSoundExtensions();
-	for (auto& x : ext_sound)
-	{
-		filetypes[x] = FileType::SOUND;
-	}
-	auto ext_image = wi::resourcemanager::GetSupportedImageExtensions();
-	for (auto& x : ext_image)
-	{
-		filetypes[x] = FileType::IMAGE;
 	}
 
 	wi::backlog::setFontColor(exe_customization.backlog_color);
@@ -335,7 +319,10 @@ void Editor::Initialize()
 	//infoDisplay.heap_allocation_counter = true;
 	//infoDisplay.vram_usage = true;
 
-	wi::renderer::SetOcclusionCullingEnabled(true);
+	// Font icon is from #include "FontAwesomeV6.h"
+	//	We will not directly use this font style, but let the font renderer fall back on it
+	//	when an icon character is not found in the default font.
+	wi::font::AddFontStyle("FontAwesomeV6", font_awesome_v6, font_awesome_v6_size);
 
 	if (!IsScriptReplacement()) // we only activate editor functionality if this exe does not have a script replacement
 	{
@@ -350,10 +337,28 @@ void Editor::Initialize()
 		ActivatePath(&renderComponent, 0.5f, wi::Color::Black(), wi::FadeManager::FadeType::CrossFade);
 
 		wi::lua::EnableEditorFunctionality(this, &renderComponent);
+
+		auto ext_video = wi::resourcemanager::GetSupportedVideoExtensions();
+		for (auto& x : ext_video)
+		{
+			filetypes[x] = FileType::VIDEO;
+		}
+		auto ext_sound = wi::resourcemanager::GetSupportedSoundExtensions();
+		for (auto& x : ext_sound)
+		{
+			filetypes[x] = FileType::SOUND;
+		}
+		auto ext_image = wi::resourcemanager::GetSupportedImageExtensions();
+		for (auto& x : ext_image)
+		{
+			filetypes[x] = FileType::IMAGE;
+		}
 	}
 }
 void Editor::HotReload()
 {
+	if (IsScriptReplacement())
+		return;
 	if (!wi::initializer::IsInitializeFinished())
 		return;
 
@@ -1401,11 +1406,6 @@ void EditorComponent::Start()
 {
 	// Start() is called after system initialization is complete, while Load() can be while initialization is still not finished
 	//	Therefore we initialize things in Start which would need to be after system initializations:
-
-	// Font icon is from #include "FontAwesomeV6.h"
-	//	We will not directly use this font style, but let the font renderer fall back on it
-	//	when an icon character is not found in the default font.
-	wi::font::AddFontStyle("FontAwesomeV6", font_awesome_v6, font_awesome_v6_size);
 
 	// Add other fonts that were loaded from fonts directory as fallback fonts:
 	for (auto& x : font_datas)
@@ -4987,6 +4987,8 @@ void EditorComponent::RegisterRecentlyUsed(const std::string& filename)
 
 void EditorComponent::Open(std::string filename)
 {
+	if (main->IsScriptReplacement())
+		return;
 	std::string extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(filename));
 
 	FileType type = FileType::INVALID;
