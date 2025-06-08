@@ -52,7 +52,9 @@ namespace wi
 		wi::graphics::SwapChain swapChain;
 		wi::Canvas canvas;
 		wi::platform::window_type window;
+
 		wi::graphics::Texture splash_screen;
+		int splash_screen_subresource = -1;
 
 		// Runs the main engine loop
 		void Run();

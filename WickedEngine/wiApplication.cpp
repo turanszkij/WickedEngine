@@ -159,6 +159,7 @@ namespace wi
 					if (resource.IsValid())
 					{
 						splash_screen = resource.GetTexture();
+						splash_screen_subresource = graphicsDevice->CreateSubresource(&splash_screen, SubresourceType::SRV, 0, 1, 0, 1); // only first mip! mipgen is not initialized at this point...
 					}
 				}
 			}
@@ -190,6 +191,7 @@ namespace wi
 					{
 						fx.enableLinearOutputMapping(9);
 					}
+					fx.image_subresource = splash_screen_subresource;
 					wi::image::Draw(&splash_screen, fx, cmd);
 				}
 			}
