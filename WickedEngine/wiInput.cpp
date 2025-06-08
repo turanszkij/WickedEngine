@@ -847,22 +847,20 @@ namespace wi::input
 			const uint32_t height = icondirentry->bHeight;
 
 			// Convert BGRA to ARGB and flip vertically
+            wi::vector<wi::Color> colors;
+            colors.reserve(width * height);
 			for (uint32_t y = height; y > 0; --y)
 			{
 				uint8_t* src = pixeldata + (y - 1) * width * 4;
 				for (uint32_t x = 0; x < width; ++x)
 				{
-					wi::Color color(src[1], src[1], src[0], src[3]);
-					src[0] = color.getA();
-					src[1] = color.getR();
-					src[2] = color.getG();
-					src[3] = color.getB();
+					colors.push_back(wi::Color(src[3], src[2], src[1], src[0]));
 					src += 4;
 				}
 			}
 
 			SDL_Surface* surface = SDL_CreateRGBSurfaceFrom(
-				pixeldata,
+				colors.data(),
 				width,
 				height,
 				4 * 8,
