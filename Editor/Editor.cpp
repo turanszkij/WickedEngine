@@ -5243,6 +5243,13 @@ Texture EditorComponent::CreateThumbnail(Texture texture, uint32_t target_width,
 		current_height *= 4;
 	}
 
+	// It is invalid top create texture above 16K resolution, so force downsize if this happens:
+	while (current_width > 16384 || current_height > 16384)
+	{
+		current_width /= 2;
+		current_height /= 2;
+	}
+
 	// Crop target:
 	{
 		TextureDesc desc = thumbnail.desc;

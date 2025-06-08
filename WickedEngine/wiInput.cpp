@@ -16,6 +16,7 @@
 
 #ifdef SDL2
 #include <SDL2/SDL.h>
+#include "Utility/win32ico.h"
 #endif // SDL2
 
 #ifdef PLATFORM_PS5
@@ -828,6 +829,53 @@ namespace wi::input
 		wi::helper::StringConvert(filename, wfilename, arraysize(wfilename));
 		cursor_table[cursor] = LoadCursorFromFile(wfilename);
 #endif // PLATFORM_WINDOWS_DESKTOP
+
+#ifdef SDL2
+		// In SDL extract the raw color data from win32 .CUR file and use SDL to create cursor:
+		wi::vector<uint8_t> data;
+		if (wi::helper::FileRead(filename, data))
+		{
+			// Extract only the first image data:
+			ico::ICONDIRENTRY* icondirentry = (ico::ICONDIRENTRY*)(data.data() + sizeof(ico::ICONDIR));
+
+			int hotspotX = icondirentry->wPlanes;
+			int hotspotY = icondirentry->wBitCount;
+
+			uint8_t* pixeldata = (data.data() + icondirentry->dwImageOffset + sizeof(ico::BITMAPINFOHEADER));
+
+			const uint32_t width = icondirentry->bWidth;
+			const uint32_t height = icondirentry->bHeight;
+
+			// Convert BGRA to ARGB and flip vertically
+			for (uint32_t y = height; y > 0; --y)
+			{
+				uint8_t* src = pixeldata + (y - 1) * width * 4;
+				for (uint32_t x = 0; x < width; ++x)
+				{
+					wi::Color color(src[1], src[1], src[0], src[3]);
+					src[0] = color.getA();
+					src[1] = color.getR();
+					src[2] = color.getG();
+					src[3] = color.getB();
+					src += 4;
+				}
+			}
+
+			SDL_Surface* surface = SDL_CreateSurfaceFrom(
+				pixeldata,
+				width,
+				height,
+				4 * width, // Pitch (bytes per row)
+				SDL_PIXELFORMAT_ARGB8888
+			);
+
+			if (surface != nullptr)
+			{
+				cursor_table[cursor] = SDL_CreateColorCursor(surface, hotspotX, hotspotY);
+				SDL_FreeSurface(surface);
+			}
+		}
+#endif // SDL2
 
 		// refresh in case we set the current one:
 		cursor_next = cursor_current;

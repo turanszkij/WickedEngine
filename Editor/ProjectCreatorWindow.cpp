@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "ProjectCreatorWindow.h"
 
+#include "Utility/win32ico.h"
+
 using namespace wi::ecs;
 using namespace wi::scene;
 
@@ -217,6 +219,10 @@ end)
 		{
 			wi::helper::saveTextureToFile(iconResource.GetTexture(), directory + "icon.png");
 			wi::helper::saveTextureToFile(iconResource.GetTexture(), directory + "icon.ico");
+
+			//wi::vector<uint8_t> cursordata;
+			//wi::helper::CreateCursorFromTexture(iconResource.GetTexture(), 4, 4, cursordata);
+			//wi::helper::FileWrite(directory + "cursor.cur", cursordata.data(), cursordata.size());
 		}
 		if (thumbnailResource.IsValid())
 		{
@@ -287,38 +293,6 @@ end)
 					{
 						wi::graphics::Texture tex = iconResource.GetTexture();
 
-						struct ICONDIR
-						{
-							uint16_t idReserved;   // Reserved (must be 0)
-							uint16_t idType;       // Resource Type (1 for icon)
-							uint16_t idCount;      // Number of images
-						};
-						struct ICONDIRENTRY
-						{
-							uint8_t  bWidth;       // Width, in pixels
-							uint8_t  bHeight;      // Height, in pixels
-							uint8_t  bColorCount;  // Number of colors (0 if >= 8bpp)
-							uint8_t  bReserved;    // Reserved (must be 0)
-							uint16_t wPlanes;      // Color Planes
-							uint16_t wBitCount;    // Bits per pixel
-							uint32_t dwBytesInRes; // Size of image data
-							uint32_t dwImageOffset;// Offset to image data
-						};
-						struct BITMAPINFOHEADER
-						{
-							uint32_t biSize;       // Size of this header
-							int32_t  biWidth;      // Width in pixels
-							int32_t  biHeight;     // Height in pixels (doubled for icon)
-							uint16_t biPlanes;     // Number of color planes
-							uint16_t biBitCount;   // Bits per pixel
-							uint32_t biCompression;// Compression method
-							uint32_t biSizeImage;  // Size of image data
-							int32_t  biXPelsPerMeter; // Horizontal resolution
-							int32_t  biYPelsPerMeter; // Vertical resolution
-							uint32_t biClrUsed;    // Colors used
-							uint32_t biClrImportant; // Important colors
-						};
-
 						const int resolutions[] = {128,64,32};
 
 						for (int res : resolutions)
@@ -326,9 +300,9 @@ end)
 							const uint32_t pixelCount = res * res;
 							const uint32_t rgbDataSize = pixelCount * 4; // 32-bit RGBA
 							const uint32_t maskSize = ((res + 7) / 8) * res; // 1-bit mask, padded to byte
-							const uint32_t bmpInfoHeaderSize = sizeof(BITMAPINFOHEADER);
+							const uint32_t bmpInfoHeaderSize = sizeof(ico::BITMAPINFOHEADER);
 
-							BITMAPINFOHEADER bmpHeader = {
+							ico::BITMAPINFOHEADER bmpHeader = {
 								bmpInfoHeaderSize, // Size of header
 								int32_t(res), // Width
 								int32_t(res * 2), // Height (doubled for XOR + AND mask)
@@ -354,7 +328,7 @@ end)
 								if (wi::helper::saveTextureToMemoryFile(editor->CreateThumbnail(tex, res, res, false), "ico", iconfiledata)) // note: individual mip thumbnails at this point!
 								{
 									// replace the BMP header and data part:
-									std::copy(iconfiledata.begin() + sizeof(ICONDIR) + sizeof(ICONDIRENTRY), iconfiledata.end(), it);
+									std::copy(iconfiledata.begin() + sizeof(ico::ICONDIR) + sizeof(ico::ICONDIRENTRY), iconfiledata.end(), it);
 									wilog("\tOverwritten Win32 icon at %d * %d resolution", res, res);
 								}
 							}
