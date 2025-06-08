@@ -861,12 +861,16 @@ namespace wi::input
 				}
 			}
 
-			SDL_Surface* surface = SDL_CreateSurfaceFrom(
+			SDL_Surface* surface = SDL_CreateRGBSurfaceFrom(
 				pixeldata,
 				width,
 				height,
-				4 * width, // Pitch (bytes per row)
-				SDL_PIXELFORMAT_ARGB8888
+				4 * 8,
+				4 * width,
+				0x0000ff00,
+				0x00ff0000,
+				0xff000000,
+				0x000000ff
 			);
 
 			if (surface != nullptr)
