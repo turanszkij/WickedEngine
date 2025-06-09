@@ -382,6 +382,7 @@ namespace wi::gui
 		std::function<void(EventArgs args)> onDragEnd;
 		XMFLOAT2 dragStart = XMFLOAT2(0, 0);
 		XMFLOAT2 prevPos = XMFLOAT2(0, 0);
+		bool disableClicking = false;
 	public:
 		void Create(const std::string& name);
 
@@ -398,6 +399,8 @@ namespace wi::gui
 		wi::SpriteFont font_description;
 		void SetDescription(const std::string& desc) { font_description.SetText(desc); }
 		const std::string GetDescription() const { return font_description.GetTextA(); }
+
+		void DisableClickForCurrentDragOperation() { disableClicking = true; }
 	};
 
 	// Generic scroll bar

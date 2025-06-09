@@ -261,7 +261,7 @@ namespace wi::input
 	void SetCursor(CURSOR cursor);
 
 	// Replaces the specified cursor from a cursor image file
-	//	(file type must be a .cur or .ani on Windows)
+	//	(file type must be a .cur or .ani (.ani only works on Windows))
 	void SetCursorFromFile(CURSOR cursor, const char* filename);
 
 	// Resets specified cursor to the original:

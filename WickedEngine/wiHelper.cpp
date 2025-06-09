@@ -956,8 +956,8 @@ namespace wi::helper
 		for (uint16_t i = 0; i < icondir->idCount; ++i)
 		{
 			ico::ICONDIRENTRY* icondirentry = (ico::ICONDIRENTRY*)(data.data() + sizeof(ico::ICONDIR)) + i;
-			icondirentry->wPlanes = (uint16_t)hotspotX / (baseWidth / icondirentry->bWidth);
-			icondirentry->wBitCount = (uint16_t)hotspotY / (baseHeight / icondirentry->bHeight);
+			icondirentry->wPlanes = (uint16_t)hotspotX / (baseWidth / (icondirentry->bWidth == 0 ? 256 : icondirentry->bWidth));
+			icondirentry->wBitCount = (uint16_t)hotspotY / (baseHeight / (icondirentry->bHeight == 0 ? 256 : icondirentry->bHeight));
 		}
 
 		return true;

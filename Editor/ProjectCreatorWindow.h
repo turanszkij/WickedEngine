@@ -13,22 +13,26 @@ public:
 	wi::gui::Button iconButton;
 	wi::gui::Button thumbnailButton;
 	wi::gui::Button splashScreenButton;
-	wi::gui::Button createButton;
+
+	wi::gui::Label cursorLabel;
+	wi::gui::Button cursorButton;
 
 	wi::gui::ColorPicker backlogColorPicker;
 	wi::gui::ColorPicker backgroundColorPicker;
 	wi::gui::Button colorPreviewButton;
 
+	wi::gui::Button createButton;
+
 	wi::Resource iconResource;
-	std::string iconName;
-
 	wi::Resource thumbnailResource;
-	std::string thumbnailName;
-
 	wi::Resource splashScreenResource;
 	wi::Resource splashScreenResourceCroppedPreview;
-	std::string splashScreenName;
+	wi::Resource cursorResource;
 
+	float hotspotX = 0.0f;
+	float hotspotY = 0.0f;
+
+	void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 	void ResizeLayout() override;
 };
 
