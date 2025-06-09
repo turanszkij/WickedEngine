@@ -6,6 +6,7 @@ namespace wi::lua
 
 	Luna<Video_BindLua>::FunctionType Video_BindLua::methods[] = {
 		lunamethod(Video_BindLua, IsValid),
+		lunamethod(Video_BindLua, GetDurationSeconds),
 		{ NULL, NULL }
 	};
 	Luna<Video_BindLua>::PropertyType Video_BindLua::properties[] = {
@@ -27,6 +28,12 @@ namespace wi::lua
 		return 1;
 	}
 
+	int Video_BindLua::GetDurationSeconds(lua_State* L)
+	{
+		wi::lua::SSetFloat(L, videoResource.IsValid() ? videoResource.GetVideo().duration_seconds : 0.0f);
+		return 1;
+	}
+
 	void Video_BindLua::Bind()
 	{
 		static bool initialized = false;
@@ -41,6 +48,13 @@ namespace wi::lua
 
 	Luna<VideoInstance_BindLua>::FunctionType VideoInstance_BindLua::methods[] = {
 		lunamethod(VideoInstance_BindLua, IsValid),
+		lunamethod(VideoInstance_BindLua, Play),
+		lunamethod(VideoInstance_BindLua, Pause),
+		lunamethod(VideoInstance_BindLua, Stop),
+		lunamethod(VideoInstance_BindLua, SetLooped),
+		lunamethod(VideoInstance_BindLua, Seek),
+		lunamethod(VideoInstance_BindLua, GetCurrentTimer),
+		lunamethod(VideoInstance_BindLua, IsEnded),
 		{ NULL, NULL }
 	};
 	Luna<VideoInstance_BindLua>::PropertyType VideoInstance_BindLua::properties[] = {
@@ -76,6 +90,71 @@ namespace wi::lua
 	int VideoInstance_BindLua::IsValid(lua_State* L)
 	{
 		wi::lua::SSetBool(L, videoinstance.IsValid());
+		return 1;
+	}
+
+	int VideoInstance_BindLua::Play(lua_State* L)
+	{
+		videoinstance.flags |= wi::video::VideoInstance::Flags::Playing;
+		return 0;
+	}
+	int VideoInstance_BindLua::Pause(lua_State* L)
+	{
+		videoinstance.flags &= ~wi::video::VideoInstance::Flags::Playing;
+		return 0;
+	}
+	int VideoInstance_BindLua::Stop(lua_State* L)
+	{
+		videoinstance.flags &= ~wi::video::VideoInstance::Flags::Playing;
+		wi::video::Seek(&videoinstance, 0);
+		return 0;
+	}
+	int VideoInstance_BindLua::SetLooped(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+
+		bool looped = true;
+		if (argc > 0)
+		{
+			looped = wi::lua::SGetBool(L, 1);
+		}
+
+		if (looped)
+		{
+			videoinstance.flags |= wi::video::VideoInstance::Flags::Looped;
+		}
+		else
+		{
+			videoinstance.flags &= ~wi::video::VideoInstance::Flags::Looped;
+		}
+		return 0;
+	}
+	int VideoInstance_BindLua::Seek(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			wi::video::Seek(&videoinstance, wi::lua::SGetFloat(L, 1));
+		}
+		else
+		{
+			wi::lua::SError(L, "Seek(float timerSeconds) not enough arguments!");
+		}
+		return 0;
+	}
+	int VideoInstance_BindLua::GetCurrentTimer(lua_State* L)
+	{
+		wi::lua::SSetFloat(L, videoinstance.current_time);
+		return 1;
+	}
+	int VideoInstance_BindLua::IsEnded(lua_State* L)
+	{
+		if (videoinstance.video == nullptr)
+		{
+			wi::lua::SSetBool(L, true);
+			return 1;
+		}
+		wi::lua::SSetBool(L, videoinstance.current_time >= videoinstance.video->duration_seconds);
 		return 1;
 	}
 

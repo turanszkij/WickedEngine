@@ -93,25 +93,26 @@ namespace wi
 
 		GetGUI().Update(*this, dt);
 
+		video_decodes.clear();
 		for (auto& x : layers)
 		{
 			for (auto& y : x.items)
 			{
-				switch (y.type)
+				if (y.sprite != nullptr)
 				{
-				default:
-				case RenderItem2D::TYPE::SPRITE:
-					if (y.sprite != nullptr)
+					y.sprite->Update(dt);
+				}
+				if (y.font != nullptr)
+				{
+					y.font->Update(dt);
+				}
+				if (y.videoinstance != nullptr)
+				{
+					wi::video::UpdateVideo(y.videoinstance, dt);
+					if (wi::video::IsDecodingRequired(y.videoinstance))
 					{
-						y.sprite->Update(dt);
+						video_decodes.push_back(y.videoinstance);
 					}
-					break;
-				case RenderItem2D::TYPE::FONT:
-					if (y.font != nullptr)
-					{
-						y.font->Update(dt);
-					}
-					break;
 				}
 			}
 		}
@@ -124,21 +125,13 @@ namespace wi
 		{
 			for (auto& y : x.items)
 			{
-				switch (y.type)
+				if (y.sprite != nullptr)
 				{
-				default:
-				case RenderItem2D::TYPE::SPRITE:
-					if (y.sprite != nullptr)
-					{
-						y.sprite->FixedUpdate();
-					}
-					break;
-				case RenderItem2D::TYPE::FONT:
-					if (y.font != nullptr)
-					{
-						y.font->FixedUpdate();
-					}
-					break;
+					y.sprite->FixedUpdate();
+				}
+				if (y.font != nullptr)
+				{
+					y.font->FixedUpdate();
 				}
 			}
 		}
@@ -167,10 +160,34 @@ namespace wi
 		}
 
 		GraphicsDevice* device = wi::graphics::GetDevice();
+
+		CommandList video_cmd;
+		if (!video_decodes.empty())
+		{
+			video_cmd = device->BeginCommandList(QUEUE_VIDEO_DECODE);
+			device->EventBegin("RenderPath2D video decoding", video_cmd);
+			for (auto& x : video_decodes)
+			{
+				wi::video::DecodeVideo(x, video_cmd);
+			}
+			device->EventEnd(video_cmd);
+		}
+
 		CommandList cmd = device->BeginCommandList();
 		device->EventBegin("RenderPath2D::Render", cmd);
 		wi::image::SetCanvas(*this);
 		wi::font::SetCanvas(*this);
+
+		if (!video_decodes.empty())
+		{
+			device->WaitCommandList(cmd, video_cmd);
+			device->EventBegin("RenderPath2D video resolving", cmd);
+			for (auto& x : video_decodes)
+			{
+				wi::video::ResolveVideoToRGB(x, cmd);
+			}
+			device->EventEnd(cmd);
+		}
 
 		wi::renderer::ProcessDeferredTextureRequests(cmd);
 
@@ -236,27 +253,23 @@ namespace wi
 		{
 			for (auto& y : x.items)
 			{
-				switch (y.type)
+				if (y.sprite != nullptr)
 				{
-				default:
-				case RenderItem2D::TYPE::SPRITE:
-					if (y.sprite != nullptr)
+					if (!stencil_scaled && y.sprite->params.stencilComp != wi::image::STENCILMODE_DISABLED && stencilScaled.IsValid())
 					{
-						if (!stencil_scaled && y.sprite->params.stencilComp != wi::image::STENCILMODE_DISABLED && stencilScaled.IsValid())
-						{
-							// Only need a scaled stencil mask if there are any stenciled sprites, and only once is enough before the first one
-							stencil_scaled = true;
-							wi::renderer::ScaleStencilMask(vp, rtStencilExtracted, cmd);
-						}
-						y.sprite->Draw(cmd);
+						// Only need a scaled stencil mask if there are any stenciled sprites, and only once is enough before the first one
+						stencil_scaled = true;
+						wi::renderer::ScaleStencilMask(vp, rtStencilExtracted, cmd);
 					}
-					break;
-				case RenderItem2D::TYPE::FONT:
-					if (y.font != nullptr)
+					if (y.videoinstance != nullptr)
 					{
-						y.font->Draw(cmd);
+						y.sprite->textureResource.SetTexture(y.videoinstance->GetCurrentFrameTexture());
 					}
-					break;
+					y.sprite->Draw(cmd);
+				}
+				if (y.font != nullptr)
+				{
+					y.font->Draw(cmd);
 				}
 			}
 		}
@@ -295,11 +308,9 @@ namespace wi
 	{
 		for (auto& x : layers)
 		{
-			if (!x.name.compare(layer))
+			if (x.name == layer)
 			{
-				x.items.push_back(RenderItem2D());
-				x.items.back().type = RenderItem2D::TYPE::SPRITE;
-				x.items.back().sprite = sprite;
+				x.items.emplace_back().sprite = sprite;
 			}
 		}
 		SortLayers();
@@ -310,9 +321,10 @@ namespace wi
 		{
 			for (auto& y : x.items)
 			{
-				if (y.type == RenderItem2D::TYPE::SPRITE && y.sprite == sprite)
+				if (y.sprite == sprite)
 				{
 					y.sprite = nullptr;
+					y.videoinstance = nullptr;
 				}
 			}
 		}
@@ -324,10 +336,8 @@ namespace wi
 		{
 			for (auto& y : x.items)
 			{
-				if (y.type == RenderItem2D::TYPE::SPRITE)
-				{
-					y.sprite = nullptr;
-				}
+				y.sprite = nullptr;
+				y.videoinstance = nullptr;
 			}
 		}
 		CleanLayers();
@@ -351,11 +361,9 @@ namespace wi
 	{
 		for (auto& x : layers)
 		{
-			if (!x.name.compare(layer))
+			if (x.name == layer)
 			{
-				x.items.push_back(RenderItem2D());
-				x.items.back().type = RenderItem2D::TYPE::FONT;
-				x.items.back().font = font;
+				x.items.emplace_back().font = font;
 			}
 		}
 		SortLayers();
@@ -366,7 +374,7 @@ namespace wi
 		{
 			for (auto& y : x.items)
 			{
-				if (y.type == RenderItem2D::TYPE::FONT && y.font == font)
+				if (y.font == font)
 				{
 					y.font = nullptr;
 				}
@@ -380,10 +388,7 @@ namespace wi
 		{
 			for (auto& y : x.items)
 			{
-				if (y.type == RenderItem2D::TYPE::FONT)
-				{
-					y.font = nullptr;
-				}
+				y.font = nullptr;
 			}
 		}
 		CleanLayers();
@@ -403,6 +408,19 @@ namespace wi
 		return 0;
 	}
 
+	void RenderPath2D::AddVideoSprite(wi::video::VideoInstance* videoinstance, wi::Sprite* sprite, const std::string& layer)
+	{
+		for (auto& x : layers)
+		{
+			if (x.name == layer)
+			{
+				RenderItem2D& item = x.items.emplace_back();
+				item.sprite = sprite;
+				item.videoinstance = videoinstance;
+			}
+		}
+		SortLayers();
+	}
 
 	void RenderPath2D::AddLayer(const std::string& name)
 	{
@@ -435,7 +453,7 @@ namespace wi
 		{
 			for (auto& y : x.items)
 			{
-				if (y.type == RenderItem2D::TYPE::SPRITE && y.sprite == sprite)
+				if (y.sprite == sprite)
 				{
 					y.order = order;
 				}
@@ -449,7 +467,7 @@ namespace wi
 		{
 			for (auto& y : x.items)
 			{
-				if (y.type == RenderItem2D::TYPE::FONT && y.font == font)
+				if (y.font == font)
 				{
 					y.order = order;
 				}
@@ -508,7 +526,7 @@ namespace wi
 			wi::vector<RenderItem2D> itemsToRetain(0);
 			for (auto& y : x.items)
 			{
-				if (y.sprite != nullptr || y.font != nullptr)
+				if (y.sprite != nullptr || y.font != nullptr || y.videoinstance != nullptr)
 				{
 					itemsToRetain.push_back(y);
 				}

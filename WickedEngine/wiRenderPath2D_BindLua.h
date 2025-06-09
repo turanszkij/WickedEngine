@@ -29,6 +29,7 @@ namespace wi::lua
 		virtual ~RenderPath2D_BindLua() = default;
 
 		int AddSprite(lua_State* L);
+		int AddVideoSprite(lua_State* L);
 		int AddFont(lua_State* L);
 		int RemoveSprite(lua_State* L);
 		int RemoveFont(lua_State* L);

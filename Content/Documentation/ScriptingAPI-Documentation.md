@@ -590,11 +590,19 @@ The video interface consists of two types of objects: Video and VideoInstance. N
 The Video object stores the compressed video data in a GPU buffer
 - [constructor]Video(string filename)	-- loads an MP4 video file (currently only the H264 internal compression format is supported)
 - IsValid() : bool	-- returns true if the video was successfully created
+- GetDurationSeconds() : float
 
 #### VideoInstance
 The VideoInstance object is responsible to decode the video frames and output them to textures. One Video can be decoded with multiple VideoInstances to display frames of the video at different timings. Normally yout would use one VideoInstance for a video, unless you want to show the video multiple times at once at different locations.
 - [constructor]VideoInstance(Video video)	-- creates a decoder instance for the video data
 - IsValid() : bool	-- returns true if the video instance was successfully created
+- Play()
+- Pause()
+- Stop()
+- SetLooped(opt bool looped = true)
+- Seek(float timerSeconds)
+- GetCurrentTimer() : float 	-- returns current video playback timer for this decoder instance in seconds
+- IsEnded() : bool		-- returns true if the video playback has ended
 
 #### Submix Types
 The submix types group sound instances together to be controlled together
@@ -1751,6 +1759,7 @@ A RenderPath is a high level system that represents a part of the whole applicat
 It can hold Sprites and SpriteFonts and can sort them by layers, update and render them.
 - [constructor]RenderPath2D()
 - AddSprite(Sprite sprite, opt string layer)
+- AddVideoSprite(VideoInstance videoinstance, Sprite sprite, opt string layer)
 - AddFont(SpriteFont font, opt string layer)
 - RemoveFont(SpriteFont font)
 - ClearSprites()

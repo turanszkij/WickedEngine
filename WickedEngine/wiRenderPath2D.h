@@ -2,6 +2,7 @@
 #include "wiRenderPath.h"
 #include "wiGUI.h"
 #include "wiVector.h"
+#include "wiVideo.h"
 
 #include <string>
 
@@ -29,6 +30,8 @@ namespace wi
 
 		uint32_t msaaSampleCount = 1;
 		uint32_t msaaSampleCount2D = 1;
+
+		wi::vector<wi::video::VideoInstance*> video_decodes;
 
 	public:
 		// Delete GPU resources and initialize them to default
@@ -64,18 +67,13 @@ namespace wi
 		void ClearFonts();
 		int GetFontOrder(wi::SpriteFont* font);
 
+		void AddVideoSprite(wi::video::VideoInstance* videoinstance, wi::Sprite* sprite, const std::string& layer = "");
+
 		struct RenderItem2D
 		{
-			enum class TYPE
-			{
-				SPRITE,
-				FONT,
-			} type = TYPE::SPRITE;
-			union
-			{
-				wi::Sprite* sprite = nullptr;
-				wi::SpriteFont* font;
-			};
+			wi::Sprite* sprite = nullptr;
+			wi::SpriteFont* font = nullptr;
+			wi::video::VideoInstance* videoinstance = nullptr;
 			int order = 0;
 		};
 		struct RenderLayer2D
