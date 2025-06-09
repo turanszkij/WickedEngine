@@ -26,6 +26,7 @@ namespace wi::lua
 		}
 
 		int IsValid(lua_State* L);
+		int GetDurationSeconds(lua_State* L);
 
 		static void Bind();
 	};
@@ -47,6 +48,15 @@ namespace wi::lua
 		~VideoInstance_BindLua() {}
 
 		int IsValid(lua_State* L);
+
+		int Play(lua_State* L);
+		int Pause(lua_State* L);
+		int Stop(lua_State* L);
+		int SetLooped(lua_State* L);
+		int Seek(lua_State* L);
+
+		int GetCurrentTimer(lua_State* L);
+		int IsEnded(lua_State* L);
 
 		static void Bind();
 	};
