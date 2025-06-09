@@ -302,6 +302,7 @@ Calls Render for the active RenderPath and wakes up scripts that are waiting for
 Calls Compose for the active RenderPath
 
 Note: the splash_screen texture of the application can be created before application is initialized, in this case this texture will be shown as a full screen image (with cropping, if necessary) while the engine initialization hasn't finished. The splash_screen texture will be also created automatically if a splash_screen.png file is found in the working directory. If a splash screen is not used, then the intialization logging screen will be shown at startup.
+Warning: if you load a splash screen yourself with the resource manager, note that mipmaps will not be generated while the engine is not yet initialized. You can use the Application::splash_screen_subresource to specify which mipmap to use for the image by using the GraphicsDevice::CreateSubresource() method. This will be handled automatically if you use the default splash_screen.png file.
 
 ### RenderPath
 [[Header]](../../WickedEngine/wiRenderPath.h)

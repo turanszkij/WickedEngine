@@ -317,6 +317,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\offsetAllocator.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\pugiconfig.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\pugixml.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\win32ico.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\WinAdapter.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiAsync_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiBVH.h" />

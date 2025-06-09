@@ -11,6 +11,7 @@
 #include "Utility/stb_image_write.h"
 #include "Utility/zstd/zstd.h"
 #include "Utility/portable-file-dialogs.h"
+#include "Utility/win32ico.h"
 
 #include <thread>
 #include <locale>
@@ -677,43 +678,11 @@ namespace wi::helper
 
 		if (!extension.compare("ICO"))
 		{
-			struct ICONDIR
-			{
-				uint16_t idReserved;   // Reserved (must be 0)
-				uint16_t idType;       // Resource Type (1 for icon)
-				uint16_t idCount;      // Number of images
-			};
-			struct ICONDIRENTRY
-			{
-				uint8_t  bWidth;       // Width, in pixels
-				uint8_t  bHeight;      // Height, in pixels
-				uint8_t  bColorCount;  // Number of colors (0 if >= 8bpp)
-				uint8_t  bReserved;    // Reserved (must be 0)
-				uint16_t wPlanes;      // Color Planes
-				uint16_t wBitCount;    // Bits per pixel
-				uint32_t dwBytesInRes; // Size of image data
-				uint32_t dwImageOffset;// Offset to image data
-			};
-			struct BITMAPINFOHEADER
-			{
-				uint32_t biSize;       // Size of this header
-				int32_t  biWidth;      // Width in pixels
-				int32_t  biHeight;     // Height in pixels (doubled for icon)
-				uint16_t biPlanes;     // Number of color planes
-				uint16_t biBitCount;   // Bits per pixel
-				uint32_t biCompression;// Compression method
-				uint32_t biSizeImage;  // Size of image data
-				int32_t  biXPelsPerMeter; // Horizontal resolution
-				int32_t  biYPelsPerMeter; // Vertical resolution
-				uint32_t biClrUsed;    // Colors used
-				uint32_t biClrImportant; // Important colors
-			};
-
 			const uint32_t minsize = 32;
 
-			size_t filesize = sizeof(ICONDIR);
+			size_t filesize = sizeof(ico::ICONDIR);
 
-			ICONDIR icondir = { 0,1,0 };
+			ico::ICONDIR icondir = { 0,1,0 };
 
 			for (auto& mip : mips)
 			{
@@ -722,7 +691,7 @@ namespace wi::helper
 				if (mip.width < minsize || mip.height < minsize)
 					break;
 				icondir.idCount++;
-				filesize += sizeof(ICONDIRENTRY);
+				filesize += sizeof(ico::ICONDIRENTRY);
 			}
 
 			if (icondir.idCount < 1)
@@ -742,15 +711,15 @@ namespace wi::helper
 				const uint32_t pixelCount = mip.width * mip.height;
 				const uint32_t rgbDataSize = pixelCount * 4; // 32-bit RGBA
 				const uint32_t maskSize = ((mip.width + 7) / 8) * mip.height; // 1-bit mask, padded to byte
-				const uint32_t imageDataSize = sizeof(BITMAPINFOHEADER) + rgbDataSize + maskSize;
+				const uint32_t imageDataSize = sizeof(ico::BITMAPINFOHEADER) + rgbDataSize + maskSize;
 				filesize += imageDataSize;
 			}
 
 			filedata.resize(filesize);
 			uint8_t* ptr = filedata.data();
 
-			std::memcpy(ptr, &icondir, sizeof(ICONDIR));
-			ptr += sizeof(ICONDIR);
+			std::memcpy(ptr, &icondir, sizeof(ico::ICONDIR));
+			ptr += sizeof(ico::ICONDIR);
 
 			for (auto& mip : mips)
 			{
@@ -762,9 +731,9 @@ namespace wi::helper
 				const uint32_t pixelCount = mip.width * mip.height;
 				const uint32_t rgbDataSize = pixelCount * 4; // 32-bit RGBA
 				const uint32_t maskSize = ((mip.width + 7) / 8) * mip.height; // 1-bit mask, padded to byte
-				const uint32_t imageDataSize = sizeof(BITMAPINFOHEADER) + rgbDataSize + maskSize;
+				const uint32_t imageDataSize = sizeof(ico::BITMAPINFOHEADER) + rgbDataSize + maskSize;
 
-				ICONDIRENTRY iconEntry = {
+				ico::ICONDIRENTRY iconEntry = {
 					static_cast<uint8_t>(mip.width > 255 ? 0 : mip.width), // Width (0 for 256+)
 					static_cast<uint8_t>(mip.height > 255 ? 0 : mip.height), // Height (0 for 256+)
 					0, // Color count (0 for 32-bit)
@@ -774,8 +743,8 @@ namespace wi::helper
 					imageDataSize, // Size of image data
 					imageDataOffset // Offset to image data
 				};
-				std::memcpy(ptr, &iconEntry, sizeof(ICONDIRENTRY));
-				ptr += sizeof(ICONDIRENTRY);
+				std::memcpy(ptr, &iconEntry, sizeof(ico::ICONDIRENTRY));
+				ptr += sizeof(ico::ICONDIRENTRY);
 				imageDataOffset += imageDataSize;
 			}
 
@@ -790,8 +759,8 @@ namespace wi::helper
 				const uint32_t rgbDataSize = pixelCount * 4; // 32-bit RGBA
 				const uint32_t maskSize = ((mip.width + 7) / 8) * mip.height; // 1-bit mask, padded to byte
 
-				BITMAPINFOHEADER bmpHeader = {
-					sizeof(BITMAPINFOHEADER), // Size of header
+				ico::BITMAPINFOHEADER bmpHeader = {
+					sizeof(ico::BITMAPINFOHEADER), // Size of header
 					int32_t(mip.width), // Width
 					int32_t(mip.height * 2), // Height (doubled for XOR + AND mask)
 					1, // Planes
@@ -803,8 +772,8 @@ namespace wi::helper
 					0, // Colors used
 					0  // Important colors
 				};
-				std::memcpy(ptr, &bmpHeader, sizeof(BITMAPINFOHEADER));
-				ptr += sizeof(BITMAPINFOHEADER);
+				std::memcpy(ptr, &bmpHeader, sizeof(ico::BITMAPINFOHEADER));
+				ptr += sizeof(ico::BITMAPINFOHEADER);
 
 				// Convert RGBA to BGRA and write XOR mask (flipped vertically)
 				for (uint32_t y = mip.height; y > 0; --y)
@@ -838,11 +807,6 @@ namespace wi::helper
 							}
 						}
 						*ptr++ = maskByte;
-					}
-					// Pad to 32-bit boundary
-					while ((ptr - filedata.data() - sizeof(ICONDIR) - sizeof(ICONDIRENTRY) - sizeof(BITMAPINFOHEADER) - rgbDataSize) % 4 != 0)
-					{
-						*ptr++ = 0;
 					}
 				}
 			}
@@ -975,6 +939,28 @@ namespace wi::helper
 		}
 
 		return success;
+	}
+
+	bool CreateCursorFromTexture(const wi::graphics::Texture& texture, int hotspotX, int hotspotY, wi::vector<uint8_t>& data)
+	{
+		if (!saveTextureToMemoryFile(texture, "ico", data))
+			return false;
+
+		// rewrite ICO structure for CUR structure:
+		ico::ICONDIR* icondir = (ico::ICONDIR*)data.data();
+		icondir->idType = 2;
+
+		uint32_t baseWidth = texture.desc.width;
+		uint32_t baseHeight = texture.desc.height;
+
+		for (uint16_t i = 0; i < icondir->idCount; ++i)
+		{
+			ico::ICONDIRENTRY* icondirentry = (ico::ICONDIRENTRY*)(data.data() + sizeof(ico::ICONDIR)) + i;
+			icondirentry->wPlanes = (uint16_t)hotspotX / (baseWidth / icondirentry->bWidth);
+			icondirentry->wBitCount = (uint16_t)hotspotY / (baseHeight / icondirentry->bHeight);
+		}
+
+		return true;
 	}
 
 	std::string getCurrentDateTimeAsString()

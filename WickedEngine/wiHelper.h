@@ -66,6 +66,9 @@ namespace wi::helper
 	// Download buffer from GPU into CPU memory
 	bool saveBufferToMemory(const wi::graphics::GPUBuffer& buffer, wi::vector<uint8_t>& data);
 
+	// Creates cursor data from texture. If successful, the file data is returned in the data argument
+	bool CreateCursorFromTexture(const wi::graphics::Texture& texture, int hotspotX, int hotspotY, wi::vector<uint8_t>& data);
+
 	std::string getCurrentDateTimeAsString();
 
 	void SplitPath(const std::string& fullPath, std::string& dir, std::string& fileName);
