@@ -4,7 +4,9 @@ backlog_post("---> START SCRIPT: video_fullscreen.lua")
 
 runProcess(function() 
 
-    local renderpath = application.GetActivePath()
+    local prevrenderpath = application.GetActivePath()
+    local renderpath = RenderPath2D()
+    application.SetActivePath(renderpath)
 
     local video = Video(script_dir() .. "/video.mp4")
     local videoinstance = VideoInstance(video)
@@ -25,6 +27,11 @@ runProcess(function()
     renderpath.RemoveSprite(sprite) -- also removes video because sprite and video were added together with AddVideoSprite
 
     backlog_post("video ended and removed from RenderPath2D")
+
+    if prevrenderpath ~= nil then
+        backlog_post("switrched back to previous RenderPath2D with cross fade")
+        application.SetActivePath(prevrenderpath, 0.5, 0, 0, 0, FadeType.CrossFade)
+    end
 
 end)
 
