@@ -29,7 +29,7 @@ runProcess(function()
     backlog_post("video ended and removed from RenderPath2D")
 
     if prevrenderpath ~= nil then
-        backlog_post("switrched back to previous RenderPath2D with cross fade")
+        backlog_post("switched back to previous RenderPath2D with cross fade")
         application.SetActivePath(prevrenderpath, 0.5, 0, 0, 0, FadeType.CrossFade)
     end
 
