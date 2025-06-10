@@ -855,7 +855,7 @@ namespace wi::gui
 				args.clickPos = pointerHitbox.pos;
 				onDragEnd(args);
 
-				if (pointerHitbox.intersects(hitBox))
+				if (pointerHitbox.intersects(hitBox) && !disableClicking)
 				{
 					// Click occurs when the button is released within the bounds
 					onClick(args);
@@ -978,6 +978,11 @@ namespace wi::gui
 		default:
 			font_description.params.posY = translation.y + scale.y * 0.5f;
 			break;
+		}
+
+		if (state <= FOCUS)
+		{
+			disableClicking = false;
 		}
 	}
 	void Button::Render(const wi::Canvas& canvas, CommandList cmd) const
