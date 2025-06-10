@@ -4416,13 +4416,14 @@ namespace wi::scene
 				{
 					struct
 					{
-						uint32_t shadertype : MaterialComponent::SHADERTYPE_COUNT;
-						uint32_t blendmode : wi::enums::BLENDMODE_COUNT;
+						uint32_t shadertype : 6; // max 64 shader types
+						uint32_t blendmode : 3; // max 8 blendmodes
 						uint32_t doublesided : 1;	// bool
 						uint32_t tessellation : 1;	// bool
 						uint32_t alphatest : 1;		// bool
 						uint32_t customshader : 8;
 						uint32_t sort_priority : 4;
+						uint32_t unused : 8;
 					} bits;
 					uint32_t value;
 				} sort_bits;

@@ -317,14 +317,15 @@ void MaterialWindow::Create(EditorComponent* _editor)
 			MaterialComponent* material = get_material(scene, x);
 			if (material == nullptr)
 				continue;
-			material->userBlendMode = (wi::enums::BLENDMODE)args.iValue;
+			material->userBlendMode = (wi::enums::BLENDMODE)args.userdata;
 		}
 	});
-	blendModeComboBox.AddItem("Opaque");
-	blendModeComboBox.AddItem("Alpha");
-	blendModeComboBox.AddItem("Premultiplied");
-	blendModeComboBox.AddItem("Additive");
-	blendModeComboBox.AddItem("Multiply");
+	blendModeComboBox.AddItem("Opaque", wi::enums::BLENDMODE_OPAQUE);
+	blendModeComboBox.AddItem("Alpha", wi::enums::BLENDMODE_ALPHA);
+	blendModeComboBox.AddItem("Premultiplied", wi::enums::BLENDMODE_PREMULTIPLIED);
+	blendModeComboBox.AddItem("Additive", wi::enums::BLENDMODE_ADDITIVE);
+	blendModeComboBox.AddItem("Multiply", wi::enums::BLENDMODE_MULTIPLY);
+	blendModeComboBox.AddItem("Inverse", wi::enums::BLENDMODE_INVERSE);
 	blendModeComboBox.SetEnabled(false);
 	blendModeComboBox.SetTooltip("Set the blend mode of the material.");
 	AddWidget(&blendModeComboBox);

@@ -325,6 +325,7 @@ void SpriteWindow::Create(EditorComponent* _editor)
 	blendModeCombo.AddItem("Premultiplied", wi::enums::BLENDMODE_PREMULTIPLIED);
 	blendModeCombo.AddItem("Additive", wi::enums::BLENDMODE_ADDITIVE);
 	blendModeCombo.AddItem("Multiply", wi::enums::BLENDMODE_MULTIPLY);
+	blendModeCombo.AddItem("Inverse", wi::enums::BLENDMODE_INVERSE);
 	blendModeCombo.OnSelect([=](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
