@@ -5253,6 +5253,7 @@ Texture EditorComponent::CreateThumbnail(Texture texture, uint32_t target_width,
 	// Crop target:
 	{
 		TextureDesc desc = thumbnail.desc;
+		desc.format = Format::R8G8B8A8_UNORM;
 		desc.width = current_width;
 		desc.height = current_height;
 		desc.mip_levels = mipmaps? 0 : 1;
@@ -5308,6 +5309,7 @@ Texture EditorComponent::CreateThumbnail(Texture texture, uint32_t target_width,
 	while (thumbnail.desc.width > target_width || thumbnail.desc.height > target_height)
 	{
 		TextureDesc desc = thumbnail.desc;
+		desc.format = Format::R8G8B8A8_UNORM;
 		desc.width = std::max(target_width, desc.width / 4u);
 		desc.height = std::max(target_height, desc.height / 4u);
 		desc.mip_levels = mipmaps ? 0 : 1;

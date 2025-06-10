@@ -132,7 +132,7 @@ void ProjectCreatorWindow::Create(EditorComponent* _editor)
 	cursorButton.font_description.params.v_align = wi::font::WIFALIGN_BOTTOM;
 	cursorButton.font_description.params.h_align = wi::font::WIFALIGN_CENTER;
 	cursorButton.SetSize(XMFLOAT2(64, 64));
-	cursorButton.SetTooltip("The cursor can be used as a custom cursor for your app.");
+	cursorButton.SetTooltip("The cursor can be used as a custom cursor for your app. Here you can load an image to create it.");
 	cursorButton.OnClick([this](wi::gui::EventArgs args) {
 		if (cursorResource.IsValid())
 		{

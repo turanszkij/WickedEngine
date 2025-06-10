@@ -1,7 +1,5 @@
 #include "stdafx.h"
 
-#include <SDKDDKVer.h>
-
 #include <fstream>
 #include <shellapi.h> // drag n drop
 
