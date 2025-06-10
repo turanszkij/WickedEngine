@@ -150,7 +150,7 @@ void ProjectCreatorWindow::Create(EditorComponent* _editor)
 					wi::Resource res = wi::resourcemanager::Load(fileName);
 					if (!res.IsValid())
 						return;
-					cursorResource.SetTexture(editor->CreateThumbnail(res.GetTexture(), 64, 64));
+					cursorResource.SetTexture(editor->CreateThumbnail(res.GetTexture(), 64, 64, true));
 					cursorButton.SetImage(cursorResource);
 				});
 			});
