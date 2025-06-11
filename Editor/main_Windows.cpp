@@ -2,6 +2,9 @@
 
 #include <fstream>
 #include <shellapi.h> // drag n drop
+#include <dwmapi.h> // DwmSetWindowAttribute
+
+#pragma comment(lib, "dwmapi.lib")
 
 Editor editor;
 
@@ -103,6 +106,21 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 				break;
 			}
 			break;
+		case WM_SETTINGCHANGE:
+			{
+				// Change window theme dark mode based on system setting:
+				HKEY hKey;
+				DWORD value = 1; // Default to light mode (1 = light, 0 = dark)
+				DWORD dataSize = sizeof(value);
+				if (RegOpenKeyEx(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize", 0, KEY_READ, &hKey) == ERROR_SUCCESS)
+				{
+					RegQueryValueEx(hKey, L"AppsUseLightTheme", NULL, NULL, (LPBYTE)&value, &dataSize);
+					RegCloseKey(hKey);
+				}
+				BOOL darkmode = value == 0;
+				DwmSetWindowAttribute(hWnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &darkmode, sizeof(darkmode));
+			}
+			break;
 		default:
 			return DefWindowProc(hWnd, message, wParam, lParam);
 		}
@@ -195,6 +213,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		height = info.rcMonitor.bottom - info.rcMonitor.top;
 		MoveWindow(hWnd, 0, 0, width, height, FALSE);
 	}
+	SendMessage(hWnd, WM_SETTINGCHANGE, 0, 0); // trigger dark mode theme detection
 	ShowWindow(hWnd, nCmdShow);
 	UpdateWindow(hWnd);
 	DragAcceptFiles(hWnd, TRUE);

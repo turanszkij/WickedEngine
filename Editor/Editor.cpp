@@ -10,7 +10,7 @@
 extern ApplicationExeCustomization exe_customization = {
 	"Wicked Editor                                                                                                                                                                                                                                                  ",
 	wi::Color(130, 210, 220, 255),
-	wi::Color::Black()
+	wi::Color(17, 30, 43, 255)
 };
 
 using namespace wi::graphics;
