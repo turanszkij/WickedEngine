@@ -50,6 +50,7 @@ namespace wi::backlog
 	bool isActive();
 
 	void setBackground(wi::graphics::Texture* texture);
+	void setBackgroundColor(wi::Color color);
 	void setFontSize(int value);
 	void setFontRowspacing(float value);
 	void setFontColor(wi::Color color);

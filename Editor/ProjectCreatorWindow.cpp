@@ -166,10 +166,10 @@ void ProjectCreatorWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&cursorButton);
 
-	backlogColorPicker.Create("backlog color", wi::gui::Window::WindowControls::NONE);
-	backlogColorPicker.SetSize(XMFLOAT2(256, 256));
-	backlogColorPicker.SetPickColor(exe_customization.backlog_color);
-	AddWidget(&backlogColorPicker);
+	fontColorPicker.Create("font color", wi::gui::Window::WindowControls::NONE);
+	fontColorPicker.SetSize(XMFLOAT2(256, 256));
+	fontColorPicker.SetPickColor(exe_customization.font_color);
+	AddWidget(&fontColorPicker);
 
 	backgroundColorPicker.Create("background color", wi::gui::Window::WindowControls::NONE);
 	backgroundColorPicker.SetSize(XMFLOAT2(256, 256));
@@ -180,7 +180,7 @@ void ProjectCreatorWindow::Create(EditorComponent* _editor)
 	colorPreviewButton.SetText("Preview: these colors will be used by the application when showing the initialization screen and backlog text. [Click here to reset colors]");
 	colorPreviewButton.SetSize(XMFLOAT2(256, 64));
 	colorPreviewButton.OnClick([this](wi::gui::EventArgs args) {
-		backlogColorPicker.SetPickColor(exe_customization.backlog_color);
+		fontColorPicker.SetPickColor(exe_customization.font_color);
 		backgroundColorPicker.SetPickColor(exe_customization.background_color);
 	});
 	AddWidget(&colorPreviewButton);
@@ -329,7 +329,7 @@ end)
 							wi::vector<uint8_t> replacement(sizeof(ApplicationExeCustomization));
 							ApplicationExeCustomization& customization = *(ApplicationExeCustomization*)replacement.data();
 							std::memcpy(customization.name_256padded, name.c_str(), name.length());
-							customization.backlog_color = backlogColorPicker.GetPickColor();
+							customization.font_color = fontColorPicker.GetPickColor();
 							customization.background_color = backgroundColorPicker.GetPickColor();
 							std::copy(replacement.begin(), replacement.end(), it);
 							wilog("\tOverwritten ApplicationExeCustomization structure");
@@ -477,7 +477,7 @@ void ProjectCreatorWindow::ResizeLayout()
 	layout.jump();
 
 	layout.add_fullwidth(colorPreviewButton);
-	layout.add(backlogColorPicker, backgroundColorPicker);
+	layout.add(fontColorPicker, backgroundColorPicker);
 
 	layout.jump();
 
@@ -486,7 +486,7 @@ void ProjectCreatorWindow::ResizeLayout()
 	createButton.SetSize(XMFLOAT2(createButton.GetSize().x, std::max(30.0f, layout.height - createButton.GetPos().y - layout.padding * 2)));
 
 	colorPreviewButton.SetColor(backgroundColorPicker.GetPickColor());
-	colorPreviewButton.font.params.color = backlogColorPicker.GetPickColor();
+	colorPreviewButton.font.params.color = fontColorPicker.GetPickColor();
 	colorPreviewButton.font.params.v_align = wi::font::WIFALIGN_TOP;
 	colorPreviewButton.font.params.h_align = wi::font::WIFALIGN_LEFT;
 	colorPreviewButton.font.params.h_wrap = colorPreviewButton.GetSize().x;

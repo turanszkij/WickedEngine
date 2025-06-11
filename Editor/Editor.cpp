@@ -301,7 +301,8 @@ void Editor::Initialize()
 		wi::font::AddFontStyle(config.GetText("font"));
 	}
 
-	wi::backlog::setFontColor(exe_customization.backlog_color);
+	wi::backlog::setFontColor(exe_customization.font_color);
+	wi::backlog::setBackgroundColor(exe_customization.background_color);
 	XMFLOAT4 clearcol = exe_customization.background_color;
 	swapChain.desc.clear_color[0] = clearcol.x;
 	swapChain.desc.clear_color[1] = clearcol.y;
@@ -434,7 +435,7 @@ void EditorComponent::ResizeLayout()
 	contentBrowserWnd.SetSize(XMFLOAT2(screenW / 1.6f, screenH / 1.2f));
 	contentBrowserWnd.SetPos(XMFLOAT2(screenW / 2.0f - contentBrowserWnd.scale.x / 2.0f, screenH / 2.0f - contentBrowserWnd.scale.y / 2.0f));
 
-	projectCreatorWnd.SetSize(XMFLOAT2(projectCreatorWnd.backgroundColorPicker.GetSize().x * 2 + 4 * 3, 780));
+	projectCreatorWnd.SetSize(XMFLOAT2(projectCreatorWnd.backgroundColorPicker.GetSize().x * 2 + 4 * 3, std::min(780.0f, screenH * 0.8f)));
 	projectCreatorWnd.SetPos(XMFLOAT2(screenW / 2.0f - projectCreatorWnd.scale.x / 2.0f, screenH / 2.0f - projectCreatorWnd.scale.y / 2.0f));
 
 }

@@ -17,7 +17,7 @@ public:
 	wi::gui::Label cursorLabel;
 	wi::gui::Button cursorButton;
 
-	wi::gui::ColorPicker backlogColorPicker;
+	wi::gui::ColorPicker fontColorPicker;
 	wi::gui::ColorPicker backgroundColorPicker;
 	wi::gui::Button colorPreviewButton;
 
