@@ -132,7 +132,7 @@ void ProjectCreatorWindow::Create(EditorComponent* _editor)
 	cursorButton.font_description.params.v_align = wi::font::WIFALIGN_BOTTOM;
 	cursorButton.font_description.params.h_align = wi::font::WIFALIGN_CENTER;
 	cursorButton.SetSize(XMFLOAT2(64, 64));
-	cursorButton.SetTooltip("The cursor can be used as a custom cursor for your app.");
+	cursorButton.SetTooltip("The cursor can be used as a custom cursor for your app. Here you can load an image to create it.");
 	cursorButton.OnClick([this](wi::gui::EventArgs args) {
 		if (cursorResource.IsValid())
 		{
@@ -177,7 +177,7 @@ void ProjectCreatorWindow::Create(EditorComponent* _editor)
 	AddWidget(&backgroundColorPicker);
 
 	colorPreviewButton.Create("colorPreviewButton");
-	colorPreviewButton.SetText("Preview:\nThese colors will be used by the application when showing the initialization screen. The text color will be also used for the backlog.\n\n[Click on this preview to reset colors]");
+	colorPreviewButton.SetText("Preview: these colors will be used by the application when showing the initialization screen and backlog text. [Click here to reset colors]");
 	colorPreviewButton.SetSize(XMFLOAT2(256, 64));
 	colorPreviewButton.OnClick([this](wi::gui::EventArgs args) {
 		backlogColorPicker.SetPickColor(exe_customization.backlog_color);
@@ -446,9 +446,10 @@ void ProjectCreatorWindow::Render(const wi::Canvas& canvas, wi::graphics::Comman
 	fx.pos.x = cursorButton.GetPos().x + cursorButton.GetSize().x * hotspotX;
 	fx.pos.y = cursorButton.GetPos().y + cursorButton.GetSize().y * hotspotY;
 	fx.pivot = XMFLOAT2(0.5f, 0.5f);
-	fx.color = wi::Color::Black();
+	fx.color = wi::Color::White();
 	fx.siz.x = 2;
 	fx.siz.y = 16;
+	fx.blendFlag = wi::enums::BLENDMODE_INVERSE;
 	wi::image::Draw(nullptr, fx, cmd);
 	fx.rotation = XM_PI * 0.5f;
 	wi::image::Draw(nullptr, fx, cmd);

@@ -1908,6 +1908,9 @@ void LoadShaders()
 									case BLENDMODE_MULTIPLY:
 										desc.bs = &blendStates[BSTYPE_MULTIPLY];
 										break;
+									case BLENDMODE_INVERSE:
+										desc.bs = &blendStates[BSTYPE_INVERSE];
+										break;
 									default:
 										assert(0);
 										break;
@@ -2480,6 +2483,18 @@ void SetUpStates()
 	bd.alpha_to_coverage_enable = false;
 	bd.independent_blend_enable = false;
 	blendStates[BSTYPE_MULTIPLY] = bd;
+
+	bd.render_target[0].src_blend = Blend::INV_DEST_COLOR;
+	bd.render_target[0].dest_blend = Blend::ZERO;
+	bd.render_target[0].blend_op = BlendOp::ADD;
+	bd.render_target[0].src_blend_alpha = Blend::DEST_ALPHA;
+	bd.render_target[0].dest_blend_alpha = Blend::ZERO;
+	bd.render_target[0].blend_op_alpha = BlendOp::ADD;
+	bd.render_target[0].blend_enable = true;
+	bd.render_target[0].render_target_write_mask = ColorWrite::ENABLE_ALL;
+	bd.alpha_to_coverage_enable = false;
+	bd.independent_blend_enable = false;
+	blendStates[BSTYPE_INVERSE] = bd;
 
 	bd.render_target[0].src_blend = Blend::ZERO;
 	bd.render_target[0].dest_blend = Blend::SRC_COLOR;

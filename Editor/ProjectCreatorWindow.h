@@ -29,8 +29,8 @@ public:
 	wi::Resource splashScreenResourceCroppedPreview;
 	wi::Resource cursorResource;
 
-	float hotspotX = 0.0f;
-	float hotspotY = 0.0f;
+	float hotspotX = 0.5f;
+	float hotspotY = 0.5f;
 
 	void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 	void ResizeLayout() override;
