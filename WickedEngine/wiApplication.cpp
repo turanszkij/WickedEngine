@@ -224,16 +224,18 @@ namespace wi
 		if (!startup_script)
 		{
 			startup_script = true;
-			if (wi::helper::FileExists(rewriteable_startup_script_text))
+			const std::string workingdir = wi::helper::GetCurrentPath() + "/";
+			const std::string rewriteable_script_filename = workingdir + rewriteable_startup_script_text;
+			if (wi::helper::FileExists(rewriteable_script_filename))
 			{
-				if (wi::lua::RunFile(rewriteable_startup_script_text))
+				if (wi::lua::RunFile(rewriteable_script_filename))
 				{
-					wi::backlog::post("Executed startup file: " + rewriteable_startup_script_text);
+					wi::backlog::post("Executed startup file: " + rewriteable_script_filename);
 				}
 			}
 			else
 			{
-				std::string startup_lua_filename = wi::helper::GetCurrentPath() + "/startup.lua";
+				const std::string startup_lua_filename = workingdir + "startup.lua";
 				if (wi::helper::FileExists(startup_lua_filename))
 				{
 					if (wi::lua::RunFile(startup_lua_filename))
@@ -241,7 +243,7 @@ namespace wi
 						wi::backlog::post("Executed startup file: " + startup_lua_filename);
 					}
 				}
-				std::string startup_luab_filename = wi::helper::GetCurrentPath() + "/startup.luab";
+				const std::string startup_luab_filename = workingdir + "startup.luab";
 				if (wi::helper::FileExists(startup_luab_filename))
 				{
 					if (wi::lua::RunBinaryFile(startup_luab_filename))
