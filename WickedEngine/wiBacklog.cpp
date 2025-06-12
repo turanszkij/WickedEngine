@@ -29,6 +29,7 @@ namespace wi::backlog
 	float scroll = 0;
 	int historyPos = 0;
 	wi::font::Params font_params;
+	wi::Color backgroundColor = wi::Color(17, 30, 43, 255);
 	Texture backgroundTex;
 	bool refitscroll = false;
 	wi::gui::TextInputField inputField;
@@ -222,21 +223,15 @@ namespace wi::backlog
 		GraphicsDevice* device = GetDevice();
 		device->EventBegin("Backlog", cmd);
 
-		if (!backgroundTex.IsValid())
-		{
-			const uint8_t colorData[] = { 0, 0, 43, 200, 43, 31, 141, 223 };
-			wi::texturehelper::CreateTexture(backgroundTex, colorData, 1, 2);
-			device->SetName(&backgroundTex, "wi::backlog::backgroundTex");
-		}
-
 		wi::image::Params fx = wi::image::Params((float)canvas.GetLogicalWidth(), (float)canvas.GetLogicalHeight());
 		fx.pos = XMFLOAT3(0, pos, 0);
-		fx.opacity = wi::math::Lerp(1, 0, -pos / canvas.GetLogicalHeight());
+		fx.opacity = wi::math::Lerp(0.9f, 0, saturate(-pos / canvas.GetLogicalHeight()));
 		if (colorspace != ColorSpace::SRGB)
 		{
 			fx.enableLinearOutputMapping(9);
 		}
-		wi::image::Draw(&backgroundTex, fx, cmd);
+		fx.color = backgroundColor;
+		wi::image::Draw(backgroundTex.IsValid() ? &backgroundTex : nullptr, fx, cmd);
 
 		wi::image::Params inputbg;
 		inputbg.color = wi::Color(80, 140, 180, 200);
@@ -451,6 +446,10 @@ namespace wi::backlog
 	void setBackground(Texture* texture)
 	{
 		backgroundTex = *texture;
+	}
+	void setBackgroundColor(wi::Color color)
+	{
+		backgroundColor = color;
 	}
 	void setFontSize(int value)
 	{
