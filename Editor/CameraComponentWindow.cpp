@@ -14,6 +14,7 @@ void CameraPreview::RenderPreview()
 		{
 			renderpath.camera = camera;
 			scale_local.y = scale_local.x * renderpath.camera->height / renderpath.camera->width;
+			scale = scale_local;
 			if (!camera->render_to_texture.rendertarget_render.IsValid())
 			{
 				renderpath.setSceneUpdateEnabled(false); // we just view our scene with this that's updated by the main rernderpath
