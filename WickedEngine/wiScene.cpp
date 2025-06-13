@@ -3171,6 +3171,7 @@ namespace wi::scene
 			if (humanoid == nullptr)
 				continue;
 			character.left_foot = humanoid->bones[size_t(HumanoidComponent::HumanoidBone::LeftFoot)];
+			if (!inverse_kinematics.Contains(character.left_foot))
 			{
 				InverseKinematicsComponent& ik = inverse_kinematics.Create(character.left_foot);
 				ik.use_target_position = true;
@@ -3178,6 +3179,7 @@ namespace wi::scene
 				ik.iteration_count = 10;
 			}
 			character.right_foot = humanoid->bones[size_t(HumanoidComponent::HumanoidBone::RightFoot)];
+			if (!inverse_kinematics.Contains(character.right_foot))
 			{
 				InverseKinematicsComponent& ik = inverse_kinematics.Create(character.right_foot);
 				ik.use_target_position = true;
