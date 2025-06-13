@@ -391,7 +391,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 		
 		SurfaceToLight surface_to_light;
 		surface_to_light.create(surface, surface.dominant_lightdir);
-		lighting.indirect.specular += max(0, BRDF_GetSpecular(surface, surface_to_light) * surface.dominant_lightcolor);
+		lighting.indirect.specular += max(0, BRDF_GetSpecular(surface, surface_to_light) * (float3)surface.dominant_lightcolor); // casting dominant_lightcolor to float3 fixes DDGI color overblown in DX12 when sky is black, I don't know why!
 	}
 	
 	[branch]
