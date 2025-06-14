@@ -1753,7 +1753,16 @@ namespace wi::helper
 
 		return written;
 	}
-	
+
+	std::string StringRemoveTrailingWhitespaces(const std::string& str)
+	{
+		size_t found;
+		found = str.find_last_not_of(" /t");
+		if (found == std::string::npos)
+			return str;
+		return str.substr(0, found + 1);
+	}
+
 	void DebugOut(const std::string& str, DebugLevel level)
 	{
 #ifdef _WIN32

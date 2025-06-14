@@ -162,6 +162,8 @@ namespace wi::helper
 	// returns result string length
 	int StringConvert(const wchar_t* from, char* to, int dest_size_in_characters);
 
+	std::string StringRemoveTrailingWhitespaces(const std::string& str);
+
 	// Prints debug info to the console output
 	enum class DebugLevel
 	{
