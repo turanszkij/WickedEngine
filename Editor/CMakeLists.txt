@@ -34,6 +34,9 @@ else ()
 
 endif ()
 
+# Needed for terrain system
+add_dependencies(WickedEngineEditor Content)
+
 # Copy content to build folder:
 add_custom_command(
 	TARGET WickedEngineEditor POST_BUILD
