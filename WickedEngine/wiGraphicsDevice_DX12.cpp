@@ -1439,6 +1439,7 @@ namespace dx12_internal
 
 		ComPtr<ID3D12VersionedRootSignatureDeserializer> rootsig_deserializer;
 		const D3D12_VERSIONED_ROOT_SIGNATURE_DESC* rootsig_desc = nullptr;
+		std::shared_ptr<void> rootsig_desc_lifetime_extender;
 		RootSignatureOptimizer rootsig_optimizer;
 
 		struct PSO_STREAM
@@ -4060,6 +4061,7 @@ std::mutex queue_locker;
 			{
 				internal_state->rootSignature = shader_internal->rootSignature;
 				internal_state->rootsig_desc = shader_internal->rootsig_desc;
+				internal_state->rootsig_desc_lifetime_extender = pso->desc.vs->internal_state;
 				stream.stream1.ROOTSIG = internal_state->rootSignature.Get();
 			}
 		}
@@ -4071,6 +4073,7 @@ std::mutex queue_locker;
 			{
 				internal_state->rootSignature = shader_internal->rootSignature;
 				internal_state->rootsig_desc = shader_internal->rootsig_desc;
+				internal_state->rootsig_desc_lifetime_extender = pso->desc.hs->internal_state;
 				stream.stream1.ROOTSIG = internal_state->rootSignature.Get();
 			}
 		}
@@ -4082,6 +4085,7 @@ std::mutex queue_locker;
 			{
 				internal_state->rootSignature = shader_internal->rootSignature;
 				internal_state->rootsig_desc = shader_internal->rootsig_desc;
+				internal_state->rootsig_desc_lifetime_extender = pso->desc.ds->internal_state;
 				stream.stream1.ROOTSIG = internal_state->rootSignature.Get();
 			}
 		}
@@ -4093,6 +4097,7 @@ std::mutex queue_locker;
 			{
 				internal_state->rootSignature = shader_internal->rootSignature;
 				internal_state->rootsig_desc = shader_internal->rootsig_desc;
+				internal_state->rootsig_desc_lifetime_extender = pso->desc.gs->internal_state;
 				stream.stream1.ROOTSIG = internal_state->rootSignature.Get();
 			}
 		}
@@ -4104,6 +4109,7 @@ std::mutex queue_locker;
 			{
 				internal_state->rootSignature = shader_internal->rootSignature;
 				internal_state->rootsig_desc = shader_internal->rootsig_desc;
+				internal_state->rootsig_desc_lifetime_extender = pso->desc.ps->internal_state;
 				stream.stream1.ROOTSIG = internal_state->rootSignature.Get();
 			}
 		}
@@ -4116,6 +4122,7 @@ std::mutex queue_locker;
 			{
 				internal_state->rootSignature = shader_internal->rootSignature;
 				internal_state->rootsig_desc = shader_internal->rootsig_desc;
+				internal_state->rootsig_desc_lifetime_extender = pso->desc.ms->internal_state;
 				stream.stream1.ROOTSIG = internal_state->rootSignature.Get();
 			}
 		}
@@ -4127,6 +4134,7 @@ std::mutex queue_locker;
 			{
 				internal_state->rootSignature = shader_internal->rootSignature;
 				internal_state->rootsig_desc = shader_internal->rootsig_desc;
+				internal_state->rootsig_desc_lifetime_extender = pso->desc.as->internal_state;
 				stream.stream1.ROOTSIG = internal_state->rootSignature.Get();
 			}
 		}
