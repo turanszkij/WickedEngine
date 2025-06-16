@@ -54,6 +54,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)ConstraintWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)SplineWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ProjectCreatorWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)ThemeEditorWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)AnimationWindow.h" />
@@ -113,6 +114,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ConstraintWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)SplineWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ProjectCreatorWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThemeEditorWindow.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)startup.lua" />

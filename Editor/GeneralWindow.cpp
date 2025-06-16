@@ -360,6 +360,15 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	wi::helper::GetFileNamesInDirectory(languages_directory, add_language, "XML");
 
 
+	themeEditorButton.Create("themeEditorButton");
+	themeEditorButton.SetText(ICON_THEME_EDITOR);
+	themeEditorButton.SetTooltip("Open the theme editor.");
+	themeEditorButton.SetSize(XMFLOAT2(themeEditorButton.GetSize().y, themeEditorButton.GetSize().y));
+	themeEditorButton.OnClick([&](wi::gui::EventArgs args) {
+		editor->themeEditorWnd.SetVisible(!editor->themeEditorWnd.IsVisible());
+	});
+	AddWidget(&themeEditorButton);
+
 	enum class Theme
 	{
 		Dark,
@@ -367,6 +376,8 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		Soft,
 		Hacking,
 		Nord,
+
+		Custom = ~0ull
 	};
 
 	themeCombo.Create("Theme: ");
@@ -376,6 +387,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	themeCombo.AddItem("Soft " ICON_SOFT, (uint64_t)Theme::Soft);
 	themeCombo.AddItem("Hacking " ICON_HACKING, (uint64_t)Theme::Hacking);
 	themeCombo.AddItem("Nord " ICON_NORD, (uint64_t)Theme::Nord);
+	themeCombo.AddItem("Custom " ICON_THEME_EDITOR, (uint64_t)Theme::Custom);
 	themeCombo.OnSelect([=](wi::gui::EventArgs args) {
 
 		// Dark theme defaults:
@@ -430,6 +442,23 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			theme.font.shadow_color = wi::Color::Shadow();
 			break;
 		}
+
+		if (args.userdata == ~0ull)
+		{
+			theme_color_idle = editor->themeEditorWnd.idleColor;
+			theme_color_focus = editor->themeEditorWnd.focusColor;
+			dark_point = editor->themeEditorWnd.backgroundColor;
+			theme.shadow_color = editor->themeEditorWnd.shadowColor;
+			theme.font.color = editor->themeEditorWnd.fontColor;
+			theme.font.shadow_color = editor->themeEditorWnd.fontShadowColor;
+		}
+
+		editor->themeEditorWnd.idleColor = theme_color_idle;
+		editor->themeEditorWnd.focusColor = theme_color_focus;
+		editor->themeEditorWnd.backgroundColor = dark_point;
+		editor->themeEditorWnd.shadowColor = theme.shadow_color;
+		editor->themeEditorWnd.fontColor = theme.font.color;
+		editor->themeEditorWnd.fontShadowColor = theme.font.shadow_color;
 
 		theme.shadow_highlight = !focusModeCheckBox.GetCheck();
 		theme.shadow_highlight_spread = 0.4f;
@@ -650,6 +679,12 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		}
 		for (int i = 0; i < arraysize(wi::gui::Widget::sprites); ++i)
 		{
+			themeEditorButton.sprites[i].params.enableCornerRounding();
+			themeEditorButton.sprites[i].params.corners_rounding[0].radius = 8;
+			themeEditorButton.sprites[i].params.corners_rounding[1].radius = 8;
+			themeEditorButton.sprites[i].params.corners_rounding[2].radius = 8;
+			themeEditorButton.sprites[i].params.corners_rounding[3].radius = 8;
+
 			localizationButton.sprites[i].params.enableCornerRounding();
 			localizationButton.sprites[i].params.corners_rounding[0].radius = 8;
 			localizationButton.sprites[i].params.corners_rounding[1].radius = 8;
@@ -968,6 +1003,7 @@ void GeneralWindow::ResizeLayout()
 	layout.add_right(saveCompressionCheckBox);
 
 	layout.add(themeCombo);
+	themeEditorButton.SetPos(XMFLOAT2(themeCombo.GetPos().x - themeCombo.GetLeftTextWidth() - themeEditorButton.GetSize().x - layout.padding * 2, themeCombo.GetPos().y));
 
 	layout.add(languageCombo);
 

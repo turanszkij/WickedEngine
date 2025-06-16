@@ -70,6 +70,7 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)TerrainWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)FontWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)ThemeEditorWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)TransformWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Translator.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)VideoWindow.cpp" />
@@ -135,6 +136,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)stdafx.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)TerrainWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)FontWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ThemeEditorWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)tiny_gltf.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)tiny_obj_loader.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)TransformWindow.h" />
