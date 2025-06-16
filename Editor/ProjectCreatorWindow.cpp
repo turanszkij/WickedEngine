@@ -502,6 +502,8 @@ void ProjectCreatorWindow::Render(const wi::Canvas& canvas, wi::graphics::Comman
 {
 	wi::gui::Window::Render(canvas, cmd);
 
+	if (!IsVisible())
+		return;
 	wi::gui::Window::ApplyScissor(canvas, scissorRect, cmd);
 	wi::image::Params fx;
 	fx.pos.x = cursorButton.GetPos().x + cursorButton.GetSize().x * hotspotX;
