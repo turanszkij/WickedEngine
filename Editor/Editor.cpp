@@ -438,7 +438,7 @@ void EditorComponent::ResizeLayout()
 	projectCreatorWnd.SetSize(XMFLOAT2(projectCreatorWnd.backgroundColorPicker.GetSize().x * 2 + 4 * 3, std::min(780.0f, screenH * 0.8f)));
 	projectCreatorWnd.SetPos(XMFLOAT2(screenW / 2.0f - projectCreatorWnd.scale.x / 2.0f, screenH / 2.0f - projectCreatorWnd.scale.y / 2.0f));
 
-	themeEditorWnd.SetSize(XMFLOAT2(themeEditorWnd.colorpicker.GetSize().x * 2 + 4 * 3, std::min(780.0f, screenH * 0.8f)));
+	themeEditorWnd.SetSize(XMFLOAT2(512, std::min(780.0f, screenH * 0.8f)));
 	themeEditorWnd.SetPos(XMFLOAT2(screenW / 2.0f - themeEditorWnd.scale.x / 2.0f, screenH / 2.0f - themeEditorWnd.scale.y / 2.0f));
 
 }

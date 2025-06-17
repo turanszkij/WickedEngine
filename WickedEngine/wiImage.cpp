@@ -349,6 +349,10 @@ namespace wi::image
 		}
 		image.texMulAdd.z += params.texOffset.x * inv_width;	// texOffset.x: add
 		image.texMulAdd.w += params.texOffset.y * inv_height;	// texOffset.y: add
+		image.texMulAdd.x *= params.texMulAdd.x;
+		image.texMulAdd.y *= params.texMulAdd.y;
+		image.texMulAdd.z += params.texMulAdd.z;
+		image.texMulAdd.w += params.texMulAdd.w;
 
 		if (params.isDrawRect2Enabled())
 		{
@@ -363,6 +367,10 @@ namespace wi::image
 		}
 		image.texMulAdd2.z += params.texOffset2.x * inv_width;	// texOffset.x: add
 		image.texMulAdd2.w += params.texOffset2.y * inv_height;	// texOffset.y: add
+		image.texMulAdd2.x *= params.texMulAdd2.x;
+		image.texMulAdd2.y *= params.texMulAdd2.y;
+		image.texMulAdd2.z += params.texMulAdd2.z;
+		image.texMulAdd2.w += params.texMulAdd2.w;
 
 		device->EventBegin("Image", cmd);
 

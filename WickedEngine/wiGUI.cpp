@@ -218,6 +218,13 @@ namespace wi::gui
 			widget->SetColor(color, id);
 		}
 	}
+	void GUI::SetImage(wi::Resource resource, int id)
+	{
+		for (auto& widget : widgets)
+		{
+			widget->SetImage(resource, id);
+		}
+	}
 	void GUI::SetShadowColor(wi::Color color)
 	{
 		for (auto& widget : widgets)
@@ -1222,6 +1229,40 @@ namespace wi::gui
 		fx.siz = XMFLOAT2(scale.x, scale.y);
 		fx.color = sprites[IDLE].params.color;
 		wi::image::Draw(nullptr, fx, cmd);
+
+
+		// shadow:
+		if (shadow > 0)
+		{
+			wi::image::Params fx = sprites_knob[scrollbar_state].params;
+			fx.pos.x -= shadow;
+			fx.pos.y -= shadow;
+			fx.siz.x += shadow * 2;
+			fx.siz.y += shadow * 2;
+			fx.color = shadow_color;
+			if (fx.isCornerRoundingEnabled())
+			{
+				for (auto& corner_rounding : fx.corners_rounding)
+				{
+					if (corner_rounding.radius > 0)
+					{
+						corner_rounding.radius += shadow;
+					}
+				}
+			}
+			if (shadow_highlight)
+			{
+				fx.enableHighlight();
+				fx.highlight_pos = GetPointerHighlightPos(canvas);
+				fx.highlight_color = shadow_highlight_color;
+				fx.highlight_spread = shadow_highlight_spread;
+			}
+			else
+			{
+				fx.disableHighlight();
+			}
+			wi::image::Draw(nullptr, fx, cmd);
+		}
 
 		// scrollbar knob
 		sprites_knob[scrollbar_state].Draw(cmd);
@@ -3866,7 +3907,30 @@ namespace wi::gui
 		// base:
 		if (!IsCollapsed())
 		{
-			sprites[IDLE].Draw(cmd);
+			wi::image::Params params = sprites[IDLE].params;
+			const wi::Resource& res = sprites[IDLE].textureResource;
+			if (res.IsValid())
+			{
+				params.sampleFlag = wi::image::SAMPLEMODE_WRAP;
+				const Texture& tex = res.GetTexture();
+				const float widget_aspect = scale_local.x / scale_local.y;
+				const float image_aspect = float(tex.desc.width) / float(tex.desc.height);
+				if (widget_aspect > image_aspect)
+				{
+					// display aspect is wider than image:
+					params.texMulAdd.y *= image_aspect / widget_aspect;
+				}
+				else
+				{
+					// image aspect is wider or equal to display
+					params.texMulAdd.x *= widget_aspect / image_aspect;
+					if (right_aligned_image)
+					{
+						params.texMulAdd.z = 1.0f - params.texMulAdd.x;
+					}
+				}
+			}
+			wi::image::Draw(sprites[IDLE].GetTexture(), params, cmd);
 		}
 
 		for (size_t i = 0; i < widgets.size(); ++i)
@@ -4043,6 +4107,19 @@ namespace wi::gui
 		if (id == WIDGET_ID_WINDOW_BASE)
 		{
 			sprites[IDLE].params.color = color;
+		}
+	}
+	void Window::SetImage(wi::Resource resource, int id)
+	{
+		Widget::SetImage(resource, id);
+		for (auto& widget : widgets)
+		{
+			widget->SetImage(resource, id);
+		}
+
+		if (id == WIDGET_ID_WINDOW_BASE)
+		{
+			sprites[IDLE].textureResource = resource;
 		}
 	}
 	void Window::SetShadowColor(wi::Color color)

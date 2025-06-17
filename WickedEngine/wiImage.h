@@ -73,6 +73,8 @@ namespace wi::image
 		XMFLOAT4 drawRect2 = XMFLOAT4(0, 0, 0, 0);
 		XMFLOAT2 texOffset = XMFLOAT2(0, 0);
 		XMFLOAT2 texOffset2 = XMFLOAT2(0, 0);
+		XMFLOAT4 texMulAdd = XMFLOAT4(1, 1, 0, 0);
+		XMFLOAT4 texMulAdd2 = XMFLOAT4(1, 1, 0, 0);
 		XMFLOAT2 pivot = XMFLOAT2(0, 0); // (0,0) : upperleft, (0.5,0.5) : center, (1,1) : bottomright
 		float rotation = 0;
 		float fade = 0;

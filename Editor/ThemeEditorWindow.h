@@ -19,6 +19,9 @@ public:
 
 	wi::gui::ColorPicker colorpicker;
 
+	wi::gui::Button imageButton;
+	wi::gui::Slider imageSlider;
+
 	wi::gui::Button saveButton;
 
 	wi::Color idleColor;
@@ -27,6 +30,8 @@ public:
 	wi::Color shadowColor;
 	wi::Color fontColor;
 	wi::Color fontShadowColor;
+
+	wi::Resource imageResource;
 
 	enum class ColorPickerMode
 	{

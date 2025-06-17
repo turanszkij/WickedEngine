@@ -393,7 +393,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		// Dark theme defaults:
 		wi::Color theme_color_idle = wi::Color(30, 40, 60, 200);
 		wi::Color theme_color_focus = wi::Color(70, 150, 170, 220);
-		wi::Color dark_point = wi::Color(10, 10, 20, 220); // darker elements will lerp towards this
+		wi::Color theme_color_background = wi::Color(10, 10, 20, 220);
 		wi::gui::Theme theme;
 		theme.image.background = true;
 		theme.image.blendFlag = wi::enums::BLENDMODE_OPAQUE;
@@ -411,7 +411,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			editor->main->config.GetSection("options").Set("theme", "Bright");
 			theme_color_idle = wi::Color(200, 210, 220, 230);
 			theme_color_focus = wi::Color(210, 230, 255, 250);
-			dark_point = wi::Color(180, 180, 190, 230);
+			theme_color_background = wi::Color(180, 180, 190, 230);
 			theme.shadow_color = wi::Color::Shadow();
 			theme.font.color = wi::Color(50, 50, 80, 255);
 			break;
@@ -419,15 +419,15 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			editor->main->config.GetSection("options").Set("theme", "Soft");
 			theme_color_idle = wi::Color(200, 180, 190, 190);
 			theme_color_focus = wi::Color(240, 190, 200, 230);
-			dark_point = wi::Color(100, 80, 90, 220);
+			theme_color_background = wi::Color(100, 80, 90, 220);
 			theme.shadow_color = wi::Color(240, 190, 200, 180);
 			theme.font.color = wi::Color(255, 230, 240, 255);
 			break;
 		case Theme::Hacking:
 			editor->main->config.GetSection("options").Set("theme", "Hacking");
-			theme_color_idle = wi::Color(0, 0, 0, 255);
+			theme_color_idle = wi::Color(0, 38, 0, 255);
 			theme_color_focus = wi::Color(0, 160, 60, 255);
-			dark_point = wi::Color(0, 0, 0, 255);
+			theme_color_background = wi::Color(0, 20, 0, 255);
 			theme.shadow_color = wi::Color(0, 200, 90, 200);
 			theme.font.color = wi::Color(0, 200, 90, 255);
 			theme.font.shadow_color = wi::Color::Shadow();
@@ -436,10 +436,9 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			editor->main->config.GetSection("options").Set("theme", "Nord");
 			theme_color_idle = wi::Color(46, 52, 64, 255);
 			theme_color_focus = wi::Color(59, 66, 82, 255);
-			dark_point = wi::Color(46, 52, 64, 255);
+			theme_color_background = wi::Color(36, 42, 54, 255);
 			theme.shadow_color = wi::Color(106, 112, 124, 200);
 			theme.font.color = wi::Color(236, 239, 244, 255);
-			theme.font.shadow_color = wi::Color::Shadow();
 			break;
 		}
 
@@ -447,7 +446,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		{
 			theme_color_idle = editor->themeEditorWnd.idleColor;
 			theme_color_focus = editor->themeEditorWnd.focusColor;
-			dark_point = editor->themeEditorWnd.backgroundColor;
+			theme_color_background = editor->themeEditorWnd.backgroundColor;
 			theme.shadow_color = editor->themeEditorWnd.shadowColor;
 			theme.font.color = editor->themeEditorWnd.fontColor;
 			theme.font.shadow_color = editor->themeEditorWnd.fontShadowColor;
@@ -455,7 +454,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 
 		editor->themeEditorWnd.idleColor = theme_color_idle;
 		editor->themeEditorWnd.focusColor = theme_color_focus;
-		editor->themeEditorWnd.backgroundColor = dark_point;
+		editor->themeEditorWnd.backgroundColor = theme_color_background;
 		editor->themeEditorWnd.shadowColor = theme.shadow_color;
 		editor->themeEditorWnd.fontColor = theme.font.color;
 		editor->themeEditorWnd.fontShadowColor = theme.font.shadow_color;
@@ -466,10 +465,6 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		theme.shadow_highlight_color.x *= 1.4f;
 		theme.shadow_highlight_color.y *= 1.4f;
 		theme.shadow_highlight_color.z *= 1.4f;
-		if ((Theme)args.userdata == Theme::Nord)
-		{
-			theme.shadow_highlight_color = wi::Color::White();
-		}
 
 		//theme.image.highlight_color = theme_color_focus;
 		//theme.image.highlight_spread = 0.3f;
@@ -492,43 +487,42 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		gui.SetColor(theme_color_focus, wi::gui::FOCUS);
 		gui.SetColor(theme_color_active, wi::gui::ACTIVE);
 		gui.SetColor(theme_color_deactivating, wi::gui::DEACTIVATING);
-		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.7f), wi::gui::WIDGET_ID_WINDOW_BASE);
+
+		gui.SetImage(editor->themeEditorWnd.imageResource, wi::gui::WIDGET_ID_WINDOW_BASE);
+		if (editor->themeEditorWnd.imageResource.IsValid())
+		{
+			gui.SetColor(wi::Color::lerp(wi::Color::White(), theme_color_background, saturate(editor->themeEditorWnd.imageSlider.GetValue())), wi::gui::WIDGET_ID_WINDOW_BASE);
+		}
+		else
+		{
+			gui.SetColor(theme_color_background, wi::gui::WIDGET_ID_WINDOW_BASE);
+		}
 
 		gui.SetColor(theme_color_focus, wi::gui::WIDGET_ID_TEXTINPUTFIELD_ACTIVE);
 		gui.SetColor(theme_color_focus, wi::gui::WIDGET_ID_TEXTINPUTFIELD_DEACTIVATING);
 
-		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.75f), wi::gui::WIDGET_ID_SLIDER_BASE_IDLE);
-		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.8f), wi::gui::WIDGET_ID_SLIDER_BASE_FOCUS);
-		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.85f), wi::gui::WIDGET_ID_SLIDER_BASE_ACTIVE);
-		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.8f), wi::gui::WIDGET_ID_SLIDER_BASE_DEACTIVATING);
+		gui.SetColor(wi::Color::lerp(theme_color_idle, theme_color_background, 0.75f), wi::gui::WIDGET_ID_SLIDER_BASE_IDLE);
+		gui.SetColor(wi::Color::lerp(theme_color_idle, theme_color_background, 0.8f), wi::gui::WIDGET_ID_SLIDER_BASE_FOCUS);
+		gui.SetColor(wi::Color::lerp(theme_color_idle, theme_color_background, 0.85f), wi::gui::WIDGET_ID_SLIDER_BASE_ACTIVE);
+		gui.SetColor(wi::Color::lerp(theme_color_idle, theme_color_background, 0.8f), wi::gui::WIDGET_ID_SLIDER_BASE_DEACTIVATING);
 		gui.SetColor(theme_color_idle, wi::gui::WIDGET_ID_SLIDER_KNOB_IDLE);
 		gui.SetColor(theme_color_focus, wi::gui::WIDGET_ID_SLIDER_KNOB_FOCUS);
 		gui.SetColor(theme_color_active, wi::gui::WIDGET_ID_SLIDER_KNOB_ACTIVE);
 		gui.SetColor(theme_color_deactivating, wi::gui::WIDGET_ID_SLIDER_KNOB_DEACTIVATING);
 
-		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.75f), wi::gui::WIDGET_ID_SCROLLBAR_BASE_IDLE);
-		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.8f), wi::gui::WIDGET_ID_SCROLLBAR_BASE_FOCUS);
-		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.85f), wi::gui::WIDGET_ID_SCROLLBAR_BASE_ACTIVE);
-		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.8f), wi::gui::WIDGET_ID_SCROLLBAR_BASE_DEACTIVATING);
+		gui.SetColor(wi::Color::lerp(theme_color_idle, theme_color_background, 0.75f), wi::gui::WIDGET_ID_SCROLLBAR_BASE_IDLE);
+		gui.SetColor(wi::Color::lerp(theme_color_idle, theme_color_background, 0.8f), wi::gui::WIDGET_ID_SCROLLBAR_BASE_FOCUS);
+		gui.SetColor(wi::Color::lerp(theme_color_idle, theme_color_background, 0.85f), wi::gui::WIDGET_ID_SCROLLBAR_BASE_ACTIVE);
+		gui.SetColor(wi::Color::lerp(theme_color_idle, theme_color_background, 0.8f), wi::gui::WIDGET_ID_SCROLLBAR_BASE_DEACTIVATING);
 		gui.SetColor(theme_color_idle, wi::gui::WIDGET_ID_SCROLLBAR_KNOB_INACTIVE);
 		gui.SetColor(theme_color_focus, wi::gui::WIDGET_ID_SCROLLBAR_KNOB_HOVER);
 		gui.SetColor(theme_color_active, wi::gui::WIDGET_ID_SCROLLBAR_KNOB_GRABBED);
 
-		gui.SetColor(wi::Color::lerp(theme_color_idle, dark_point, 0.8f), wi::gui::WIDGET_ID_COMBO_DROPDOWN);
+		gui.SetColor(wi::Color::lerp(theme_color_idle, theme_color_background, 0.8f), wi::gui::WIDGET_ID_COMBO_DROPDOWN);
 
-		if ((Theme)args.userdata == Theme::Hacking)
-		{
-			gui.SetColor(wi::Color(0, 200, 90, 255), wi::gui::WIDGET_ID_SLIDER_KNOB_IDLE);
-			gui.SetColor(wi::Color(0, 200, 90, 255), wi::gui::WIDGET_ID_SCROLLBAR_KNOB_INACTIVE);
-		}
-		
-		if ((Theme)args.userdata == Theme::Nord)
-		{
-			gui.SetColor(wi::Color(136, 192, 208, 255), wi::gui::WIDGET_ID_SLIDER_KNOB_IDLE);
-			gui.SetColor(wi::Color(76, 86, 106, 255), wi::gui::WIDGET_ID_SCROLLBAR_KNOB_INACTIVE);
-		}
 
 		// customize individual elements:
+		editor->componentsWnd.SetRightAlignedImage(true);
 		editor->loadmodel_font.params.color = theme.font.color;
 		XMFLOAT4 highlight = theme_color_focus;
 		highlight.x *= 2;
@@ -756,7 +750,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			editor->componentsWnd.splineWnd.addButton.sprites[i].params.corners_rounding[2].radius = 10;
 			editor->componentsWnd.splineWnd.addButton.sprites[i].params.corners_rounding[3].radius = 10;
 		}
-		editor->componentsWnd.weatherWnd.default_sky_horizon = dark_point;
+		editor->componentsWnd.weatherWnd.default_sky_horizon = theme_color_background;
 		editor->componentsWnd.weatherWnd.default_sky_zenith = theme_color_idle;
 		editor->componentsWnd.weatherWnd.Update();
 
@@ -848,18 +842,9 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			sprite.params.corners_rounding[3].radius = 10;
 		}
 
-		if ((Theme)args.userdata == Theme::Bright)
-		{
-			editor->inactiveEntityColor = theme_color_focus;
-			editor->hoveredEntityColor = theme_color_focus;
-			editor->dummyColor = theme_color_focus;
-		}
-		else
-		{
-			editor->inactiveEntityColor = theme.font.color;
-			editor->hoveredEntityColor = theme.font.color;
-			editor->dummyColor = theme.font.color;
-		}
+		editor->inactiveEntityColor = theme.font.color;
+		editor->hoveredEntityColor = theme.font.color;
+		editor->dummyColor = theme.font.color;
 		editor->inactiveEntityColor.setA(150);
 		editor->backgroundEntityColor = shadow_color;
 
