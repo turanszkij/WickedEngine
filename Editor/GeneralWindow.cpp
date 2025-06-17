@@ -388,7 +388,6 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	themeCombo.OnSelect([=](wi::gui::EventArgs args) {
 
 		currentTheme = themeCombo.GetItemText(args.iValue);
-		editor->main->config.GetSection("options").Set("theme", currentTheme);
 
 		// Dark theme defaults:
 		wi::Color theme_color_idle = wi::Color(30, 40, 60, 200);
@@ -405,9 +404,11 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		default:
 			break;
 		case Theme::Dark:
+			editor->main->config.GetSection("options").Set("theme", currentTheme);
 			editor->themeEditorWnd.imageResource = {};
 			break;
 		case Theme::Bright:
+			editor->main->config.GetSection("options").Set("theme", currentTheme);
 			theme_color_idle = wi::Color(200, 210, 220, 230);
 			theme_color_focus = wi::Color(210, 230, 255, 250);
 			theme_color_background = wi::Color(180, 180, 190, 230);
@@ -416,6 +417,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			editor->themeEditorWnd.imageResource = {};
 			break;
 		case Theme::Soft:
+			editor->main->config.GetSection("options").Set("theme", currentTheme);
 			theme_color_idle = wi::Color(200, 180, 190, 190);
 			theme_color_focus = wi::Color(240, 190, 200, 230);
 			theme_color_background = wi::Color(100, 80, 90, 220);
@@ -424,6 +426,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			editor->themeEditorWnd.imageResource = {};
 			break;
 		case Theme::Hacking:
+			editor->main->config.GetSection("options").Set("theme", currentTheme);
 			theme_color_idle = wi::Color(0, 38, 0, 255);
 			theme_color_focus = wi::Color(0, 160, 60, 255);
 			theme_color_background = wi::Color(0, 20, 0, 255);
@@ -433,6 +436,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			editor->themeEditorWnd.imageResource = {};
 			break;
 		case Theme::Nord:
+			editor->main->config.GetSection("options").Set("theme", currentTheme);
 			theme_color_idle = wi::Color(46, 52, 64, 255);
 			theme_color_focus = wi::Color(59, 66, 82, 255);
 			theme_color_background = wi::Color(36, 42, 54, 255);
@@ -442,6 +446,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			break;
 		case Theme::User:
 			{
+				editor->main->config.GetSection("options").Set("theme", currentTheme);
 				wi::Archive archive(wi::helper::GetCurrentPath() + "/themes/" + currentTheme + ".witheme");
 				uint64_t version = 0;
 				archive >> version;
@@ -1006,7 +1011,6 @@ void GeneralWindow::ReloadThemes()
 	wi::helper::GetFileNamesInDirectory(wi::helper::GetCurrentPath() + "/themes/", [this](std::string filename) {
 		themeCombo.AddItem(wi::helper::GetFileNameFromPath(wi::helper::RemoveExtension(filename)), (uint64_t)Theme::User);
 	}, "witheme");
-	themeCombo.AddItem("Custom " ICON_THEME_EDITOR, (uint64_t)Theme::Custom);
 
 	for (int i = 0; i < (int)themeCombo.GetItemCount(); ++i)
 	{
@@ -1016,6 +1020,9 @@ void GeneralWindow::ReloadThemes()
 			break;
 		}
 	}
+
+	// add after!
+	themeCombo.AddItem("Custom " ICON_THEME_EDITOR, (uint64_t)Theme::Custom);
 }
 
 void GeneralWindow::ResizeLayout()
