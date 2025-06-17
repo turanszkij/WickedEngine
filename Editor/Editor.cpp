@@ -438,7 +438,7 @@ void EditorComponent::ResizeLayout()
 	projectCreatorWnd.SetSize(XMFLOAT2(projectCreatorWnd.backgroundColorPicker.GetSize().x * 2 + 4 * 3, std::min(780.0f, screenH * 0.8f)));
 	projectCreatorWnd.SetPos(XMFLOAT2(screenW / 2.0f - projectCreatorWnd.scale.x / 2.0f, screenH / 2.0f - projectCreatorWnd.scale.y / 2.0f));
 
-	themeEditorWnd.SetSize(XMFLOAT2(512, std::min(780.0f, screenH * 0.8f)));
+	themeEditorWnd.SetSize(XMFLOAT2(550, std::min(780.0f, screenH * 0.8f)));
 	themeEditorWnd.SetPos(XMFLOAT2(screenW / 2.0f - themeEditorWnd.scale.x / 2.0f, screenH / 2.0f - themeEditorWnd.scale.y / 2.0f));
 
 }
@@ -1316,32 +1316,6 @@ void EditorComponent::Load()
 
 	themeEditorWnd.Create(this);
 	GetGUI().AddWidget(&themeEditorWnd);
-
-	std::string theme = main->config.GetSection("options").GetText("theme");
-	if(theme.empty())
-	{
-		generalWnd.themeCombo.SetSelected(0);
-	}
-	else if (!theme.compare("Dark"))
-	{
-		generalWnd.themeCombo.SetSelected(0);
-	}
-	else if (!theme.compare("Bright"))
-	{
-		generalWnd.themeCombo.SetSelected(1);
-	}
-	else if (!theme.compare("Soft"))
-	{
-		generalWnd.themeCombo.SetSelected(2);
-	}
-	else if (!theme.compare("Hacking"))
-	{
-		generalWnd.themeCombo.SetSelected(3);
-	}
-	else if (!theme.compare("Nord"))
-	{
-		generalWnd.themeCombo.SetSelected(4);
-	}
 
 	SetDefaultLocalization();
 	generalWnd.RefreshLanguageSelectionAfterWholeGUIWasInitialized();

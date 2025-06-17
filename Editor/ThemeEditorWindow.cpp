@@ -138,7 +138,7 @@ void ThemeEditorWindow::Create(EditorComponent* _editor)
 		if (imageResource.IsValid())
 		{
 			imageResource = {};
-			imageButton.SetImage(imageResource);
+			imageResourceName = {};
 			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 				editor->generalWnd.themeCombo.SetSelectedByUserdata(~0ull);
 				});
@@ -151,11 +151,11 @@ void ThemeEditorWindow::Create(EditorComponent* _editor)
 			params.extensions = wi::resourcemanager::GetSupportedImageExtensions();
 			wi::helper::FileDialog(params, [this](std::string fileName) {
 				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-					wi::Resource res = wi::resourcemanager::Load(fileName);
+					wi::Resource res = wi::resourcemanager::Load(fileName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
 					if (!res.IsValid())
 						return;
 					imageResource = res;
-					imageButton.SetImage(imageResource);
+					imageResourceName = wi::helper::GetFileNameFromPath(fileName);
 					wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 						editor->generalWnd.themeCombo.SetSelectedByUserdata(~0ull);
 						});
@@ -178,7 +178,22 @@ void ThemeEditorWindow::Create(EditorComponent* _editor)
 	saveButton.Create("themeSave");
 	saveButton.SetText("Save theme");
 	saveButton.OnClick([this](wi::gui::EventArgs args) {
-
+		std::string directory = wi::helper::GetCurrentPath() + "/themes/";
+		wi::helper::DirectoryCreate(directory);
+		static const uint64_t version = 1;
+		wi::Archive archive;
+		archive.SetReadModeAndResetPos(false);
+		archive << version;
+		archive << idleColor.rgba;
+		archive << focusColor.rgba;
+		archive << backgroundColor.rgba;
+		archive << shadowColor.rgba;
+		archive << fontColor.rgba;
+		archive << fontShadowColor.rgba;
+		archive << imageResourceName;
+		archive << imageResource.GetFileData();
+		archive.SaveFile(directory + nameInput.GetCurrentInputValue() + ".witheme");
+		editor->generalWnd.ReloadThemes();
 	});
 	AddWidget(&saveButton);
 
@@ -290,6 +305,7 @@ void ThemeEditorWindow::Update(const wi::Canvas& canvas, float dt)
 	imageButton.SetColor(wi::Color::White(), wi::gui::IDLE);
 	if(!imageButton.sprites[wi::gui::IDLE].textureResource.IsValid())
 		imageButton.SetSize(XMFLOAT2(10, 1));
+	imageButton.SetImage(imageResource);
 
 	wi::gui::Window::Update(canvas, dt);
 }

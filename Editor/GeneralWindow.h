@@ -46,8 +46,12 @@ public:
 	wi::gui::Button ddsConvButton;
 	wi::gui::Button duplicateCollidersButton;
 
+	std::string currentTheme;
+
 	void ResizeLayout() override;
 
 	void RefreshLanguageSelectionAfterWholeGUIWasInitialized();
+
+	void ReloadThemes();
 };
 

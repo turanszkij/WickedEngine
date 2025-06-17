@@ -32,6 +32,7 @@ public:
 	wi::Color fontShadowColor;
 
 	wi::Resource imageResource;
+	std::string imageResourceName;
 
 	enum class ColorPickerMode
 	{
