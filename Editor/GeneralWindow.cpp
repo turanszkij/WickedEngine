@@ -7,7 +7,7 @@ using namespace wi::scene;
 
 static const std::string languages_directory = "languages/";
 
-enum class Theme
+enum class Theme : uint64_t
 {
 	Dark,
 	Bright,
