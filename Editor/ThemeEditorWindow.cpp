@@ -192,9 +192,19 @@ void ThemeEditorWindow::Create(EditorComponent* _editor)
 		archive << fontShadowColor.rgba;
 		archive << imageResourceName;
 		archive << imageResource.GetFileData();
-		archive.SaveFile(directory + nameInput.GetCurrentInputValue() + ".witheme");
-		editor->generalWnd.ReloadThemes();
+		std::string name = nameInput.GetCurrentInputValue();
+		if (name.empty())
+			name = "Unnamed";
+		std::string filename = directory + name + ".witheme";
+		if (archive.SaveFile(filename))
+		{
+			editor->PostSaveText("Saved theme:", filename);
+			editor->generalWnd.ReloadThemes();
+		}
 	});
+	saveButton.SetAngularHighlightWidth(6);
+	saveButton.SetSize(XMFLOAT2(64, 64));
+	saveButton.font.params.scaling = 1.5f;
 	AddWidget(&saveButton);
 
 	SetVisible(false);
