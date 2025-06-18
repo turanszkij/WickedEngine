@@ -387,9 +387,7 @@ namespace wi::image
 				image.flags |= IMAGE_FLAG_GRADIENT_CIRCULAR;
 				break;
 			}
-			XMFLOAT3SE se;
-			XMStoreFloat3SE(&se, XMVectorSet(params.gradient_color.x* params.gradient_color.w, params.gradient_color.y* params.gradient_color.w, params.gradient_color.z* params.gradient_color.w, 0));
-			image.gradient_color = se.v;
+			image.gradient_color = wi::math::pack_half4(params.gradient_color);
 			image.gradient_uv_start = wi::math::pack_half2(params.gradient_uv_start);
 			image.gradient_uv_end = wi::math::pack_half2(params.gradient_uv_end);
 		}

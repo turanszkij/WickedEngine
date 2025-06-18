@@ -51,9 +51,13 @@ struct alignas(16) ImageConstants
 	uint angular_softness_direction; // packed half2
 
 	uint angular_softness_mad; // packed half2
-	uint gradient_uv_start;
-	uint gradient_uv_end;
-	uint gradient_color;
+	uint padding0;
+	uint padding1;
+	uint padding2;
+
+	uint2 gradient_color; // packed half4
+	uint gradient_uv_start; // packed half2
+	uint gradient_uv_end; // packed half2
 };
 CONSTANTBUFFER(image, ImageConstants, CBSLOT_IMAGE);
 

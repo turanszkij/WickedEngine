@@ -908,7 +908,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 
 		wi::image::Params::Gradient gradient = wi::image::Params::Gradient::Linear;
 		XMFLOAT4 gradientcolor = theme_color_focus;
-		gradientcolor.w = 1.2f;
+		gradientcolor.w *= 1.2f;
 		XMFLOAT2 gradient_start = XMFLOAT2(0, 0);
 		XMFLOAT2 gradient_end = XMFLOAT2(0, 0.5f);
 		for (int i = 0; i < /*arraysize(wi::gui::Widget::sprites)*/1; ++i)
