@@ -16,6 +16,9 @@ enum IMAGE_FLAGS
 	IMAGE_FLAG_HIGHLIGHT = 1u << 9u,
 	IMAGE_FLAG_CUBEMAP_BASE = 1u << 10u,
 	IMAGE_FLAG_TEXTURE1D_BASE = 1u << 11u,
+	IMAGE_FLAG_GRADIENT_LINEAR = 1u << 12u,
+	IMAGE_FLAG_GRADIENT_LINEAR_REFLECTED = 1u << 13u,
+	IMAGE_FLAG_GRADIENT_CIRCULAR = 1u << 14u,
 };
 
 struct alignas(16) ImageConstants
@@ -48,9 +51,9 @@ struct alignas(16) ImageConstants
 	uint angular_softness_direction; // packed half2
 
 	uint angular_softness_mad; // packed half2
-	uint padding0;
-	uint padding1;
-	uint padding2;
+	uint gradient_uv_start;
+	uint gradient_uv_end;
+	uint gradient_color;
 };
 CONSTANTBUFFER(image, ImageConstants, CBSLOT_IMAGE);
 

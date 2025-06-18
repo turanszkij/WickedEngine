@@ -1004,6 +1004,7 @@ namespace wi::gui
 		if (shadow > 0)
 		{
 			wi::image::Params fx = sprites[state].params;
+			fx.gradient = wi::image::Params::Gradient::None;
 			fx.pos.x -= shadow;
 			fx.pos.y -= shadow;
 			fx.siz.x += shadow * 2;
@@ -1235,6 +1236,7 @@ namespace wi::gui
 		if (shadow > 0)
 		{
 			wi::image::Params fx = sprites_knob[scrollbar_state].params;
+			fx.gradient = wi::image::Params::Gradient::None;
 			fx.pos.x -= shadow;
 			fx.pos.y -= shadow;
 			fx.siz.x += shadow * 2;
@@ -1455,6 +1457,7 @@ namespace wi::gui
 		if (shadow > 0)
 		{
 			wi::image::Params fx = sprites[state].params;
+			fx.gradient = wi::image::Params::Gradient::None;
 			fx.pos.x -= shadow;
 			fx.pos.y -= shadow;
 			fx.siz.x += shadow * 2;
@@ -1777,6 +1780,7 @@ namespace wi::gui
 		if (shadow > 0)
 		{
 			wi::image::Params fx = sprites[state].params;
+			fx.gradient = wi::image::Params::Gradient::None;
 			fx.pos.x -= shadow;
 			fx.pos.y -= shadow;
 			fx.siz.x += shadow * 2;
@@ -2167,6 +2171,7 @@ namespace wi::gui
 		if (shadow > 0)
 		{
 			wi::image::Params fx = sprites[state].params;
+			fx.gradient = wi::image::Params::Gradient::None;
 			fx.pos.x -= shadow;
 			fx.pos.y -= shadow;
 			fx.siz.x = scale.x;
@@ -2352,6 +2357,7 @@ namespace wi::gui
 		if (shadow > 0)
 		{
 			wi::image::Params fx = sprites[state].params;
+			fx.gradient = wi::image::Params::Gradient::None;
 			fx.pos.x -= shadow;
 			fx.pos.y -= shadow;
 			fx.siz.x += shadow * 2;
@@ -2727,6 +2733,7 @@ namespace wi::gui
 		if (shadow > 0)
 		{
 			wi::image::Params fx = sprites[state].params;
+			fx.gradient = wi::image::Params::Gradient::None;
 			fx.pos.x -= shadow;
 			fx.pos.y -= shadow;
 			fx.siz.x = scale.x;
@@ -3732,6 +3739,7 @@ namespace wi::gui
 		if (shadow > 0)
 		{
 			wi::image::Params fx = sprites[state].params;
+			fx.gradient = wi::image::Params::Gradient::None;
 			fx.pos.x -= shadow;
 			fx.pos.y -= shadow;
 			fx.siz.x += shadow * 2;
@@ -5406,6 +5414,7 @@ namespace wi::gui
 		if (shadow > 0)
 		{
 			wi::image::Params fx = sprites[state].params;
+			fx.gradient = wi::image::Params::Gradient::None;
 			fx.pos.x -= shadow;
 			fx.pos.y -= shadow;
 			fx.siz.x += shadow * 2;

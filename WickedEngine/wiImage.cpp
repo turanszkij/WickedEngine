@@ -372,6 +372,28 @@ namespace wi::image
 		image.texMulAdd2.z += params.texMulAdd2.z;
 		image.texMulAdd2.w += params.texMulAdd2.w;
 
+		if (params.gradient != Params::Gradient::None)
+		{
+			switch (params.gradient)
+			{
+			default:
+			case Params::Gradient::Linear:
+				image.flags |= IMAGE_FLAG_GRADIENT_LINEAR;
+				break;
+			case Params::Gradient::LinearReflected:
+				image.flags |= IMAGE_FLAG_GRADIENT_LINEAR_REFLECTED;
+				break;
+			case Params::Gradient::Circular:
+				image.flags |= IMAGE_FLAG_GRADIENT_CIRCULAR;
+				break;
+			}
+			XMFLOAT3SE se;
+			XMStoreFloat3SE(&se, XMVectorSet(params.gradient_color.x* params.gradient_color.w, params.gradient_color.y* params.gradient_color.w, params.gradient_color.z* params.gradient_color.w, 0));
+			image.gradient_color = se.v;
+			image.gradient_uv_start = wi::math::pack_half2(params.gradient_uv_start);
+			image.gradient_uv_end = wi::math::pack_half2(params.gradient_uv_end);
+		}
+
 		device->EventBegin("Image", cmd);
 
 		uint32_t stencilRef = params.stencilRef;

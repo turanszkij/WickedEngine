@@ -1808,7 +1808,8 @@ inline half distance_squared(half3 a, half3 b)
 }
 
 // Angle between normalized vectors [-PI, PI]
-inline half get_angle(half3 a, half3 b)
+template <typename T>
+inline half get_angle(T a, T b)
 {
     half ret = dot(a, b);
     ret = clamp(ret, -1, 1);
@@ -1895,17 +1896,19 @@ float trace_disk(float3 o, float3 d, float3 diskCenter, float diskRadius, float3
 	return dot(diff, diff) < sqr(diskRadius);
 }
 
-// Return the closest point on the line (without limit) 
-float3 closest_point_on_line(float3 a, float3 b, float3 c)
+// Return the closest point on the line (without limit)
+template <typename T>
+T closest_point_on_line(T a, T b, T c)
 {
-	float3 ab = b - a;
+	T ab = b - a;
 	float t = dot(c - a, ab) / dot(ab, ab);
 	return a + t * ab;
 }
 // Return the closest point on the segment (with limit) 
-float3 closest_point_on_segment(float3 a, float3 b, float3 c)
+template <typename T>
+T closest_point_on_segment(T a, T b, T c)
 {
-	float3 ab = b - a;
+	T ab = b - a;
 	float t = dot(c - a, ab) / dot(ab, ab);
 	return a + saturate(t) * ab;
 }
