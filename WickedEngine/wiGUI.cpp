@@ -5035,6 +5035,24 @@ namespace wi::gui
 		y = control_size + 4;
 		add_right(text_hex);
 	}
+	void ColorPicker::SetColor(wi::Color color, int id)
+	{
+		Window::SetColor(color, id);
+
+		if (id == WIDGET_ID_COLORPICKER_BASE)
+		{
+			sprites[IDLE].params.color = color;
+		}
+	}
+	void ColorPicker::SetImage(wi::Resource resource, int id)
+	{
+		Window::SetImage(resource, id);
+
+		if (id == WIDGET_ID_COLORPICKER_BASE)
+		{
+			sprites[IDLE].textureResource = resource;
+		}
+	}
 	wi::Color ColorPicker::GetPickColor() const
 	{
 		hsv source;

@@ -520,6 +520,9 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			gui.SetColor(theme_color_background, wi::gui::WIDGET_ID_WINDOW_BASE);
 		}
 
+		gui.SetImage({}, wi::gui::WIDGET_ID_COLORPICKER_BASE);
+		gui.SetColor(theme_color_background, wi::gui::WIDGET_ID_COLORPICKER_BASE);
+
 		gui.SetColor(theme_color_focus, wi::gui::WIDGET_ID_TEXTINPUTFIELD_ACTIVE);
 		gui.SetColor(theme_color_focus, wi::gui::WIDGET_ID_TEXTINPUTFIELD_DEACTIVATING);
 

@@ -87,6 +87,9 @@ namespace wi::gui
 		// Window:
 		WIDGET_ID_WINDOW_BASE,
 
+		// Colorpicker:
+		WIDGET_ID_COLORPICKER_BASE,
+
 		// other user-defined widget states can be specified after this (but in user's own enum):
 		//	And you will of course need to handle it yourself in a SetColor() override for example
 		WIDGET_ID_USER,
@@ -934,6 +937,8 @@ namespace wi::gui
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 		void ResizeLayout() override;
+		void SetColor(wi::Color color, int id = -1) override;
+		void SetImage(wi::Resource resource, int id = -1) override;
 		const char* GetWidgetTypeName() const override { return "ColorPicker"; }
 
 		wi::Color GetPickColor() const;
