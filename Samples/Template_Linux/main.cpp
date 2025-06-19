@@ -56,6 +56,7 @@ int main(int argc, char *argv[])
 			default:
 				break;
 			}
+			wi::input::sdlinput::ProcessEvent(event);
 		}
 	}
 
