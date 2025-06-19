@@ -536,14 +536,14 @@ namespace wi::audio
 	{
 		if (instance == nullptr || !instance->IsValid())
 		{
-			xaudio_check(audio_internal->masteringVoice->SetVolume(volume));
-
+			if (audio_internal->masteringVoice != nullptr)
+				xaudio_check(audio_internal->masteringVoice->SetVolume(volume));
 		}
 		else
 		{
 			auto instanceinternal = to_internal(instance);
-			xaudio_check(instanceinternal->sourceVoice->SetVolume(volume));
-
+			if (instanceinternal->sourceVoice != nullptr)
+				xaudio_check(instanceinternal->sourceVoice->SetVolume(volume));
 		}
 	}
 	float GetVolume(const SoundInstance* instance)
@@ -551,12 +551,14 @@ namespace wi::audio
 		float volume = 0;
 		if (instance == nullptr || !instance->IsValid())
 		{
-			audio_internal->masteringVoice->GetVolume(&volume);
+			if(audio_internal->masteringVoice != nullptr)
+				audio_internal->masteringVoice->GetVolume(&volume);
 		}
 		else
 		{
 			auto instanceinternal = to_internal(instance);
-			instanceinternal->sourceVoice->GetVolume(&volume);
+			if(instanceinternal->sourceVoice != nullptr)
+				instanceinternal->sourceVoice->GetVolume(&volume);
 		}
 		return volume;
 	}
@@ -573,7 +575,6 @@ namespace wi::audio
 			{
 				instanceinternal->buffer.LoopCount = 0;
 				xaudio_check(instanceinternal->sourceVoice->SubmitSourceBuffer(&instanceinternal->buffer));
-
 			}
 		}
 	}
@@ -606,7 +607,8 @@ namespace wi::audio
 		{
 			auto instanceinternal = to_internal(instance);
 			XAUDIO2_VOICE_STATE state = {};
-			instanceinternal->sourceVoice->GetState(&state, 0);
+			if (instanceinternal->sourceVoice != nullptr)
+				instanceinternal->sourceVoice->GetState(&state, 0);
 			return state.SamplesPlayed;
 		}
 		return 0ull;
@@ -614,8 +616,8 @@ namespace wi::audio
 
 	void SetSubmixVolume(SUBMIX_TYPE type, float volume)
 	{
-		xaudio_check(audio_internal->submixVoices[type]->SetVolume(volume));
-
+		if(audio_internal->submixVoices[type] != nullptr)
+			xaudio_check(audio_internal->submixVoices[type]->SetVolume(volume));
 	}
 	float GetSubmixVolume(SUBMIX_TYPE type)
 	{
