@@ -191,7 +191,15 @@ void ThemeEditorWindow::Create(EditorComponent* _editor)
 		archive << fontColor.rgba;
 		archive << fontShadowColor.rgba;
 		archive << imageResourceName;
-		archive << imageResource.GetFileData();
+		if (imageResource.IsValid())
+		{
+			archive << imageResource.GetFileData();
+		}
+		else
+		{
+			wi::vector<uint8_t> emptyimage;
+			archive << emptyimage;
+		}
 		std::string name = nameInput.GetCurrentInputValue();
 		if (name.empty())
 			name = "Unnamed";

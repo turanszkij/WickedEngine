@@ -461,7 +461,8 @@ void GeneralWindow::Create(EditorComponent* _editor)
 				wi::vector<uint8_t> imagedata;
 				archive >> imagedata;
 				static uint64_t cnt = 0;
-				editor->themeEditorWnd.imageResource = wi::resourcemanager::Load(wi::helper::GetCurrentPath() + "/themes/" + imageresourcename, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA, imagedata.data(), imagedata.size());
+				if(!imagedata.empty())
+					editor->themeEditorWnd.imageResource = wi::resourcemanager::Load(wi::helper::GetCurrentPath() + "/themes/" + imageresourcename, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA, imagedata.data(), imagedata.size());
 			}
 			break;
 		case Theme::Custom:
