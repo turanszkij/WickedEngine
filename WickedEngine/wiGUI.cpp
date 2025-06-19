@@ -1918,6 +1918,16 @@ namespace wi::gui
 					wi::helper::SetClipboardText(clipboard);
 					return;
 				}
+				else if (wi::input::Down((wi::input::BUTTON)'X'))
+				{
+					// Cut:
+					caret_pos = caret_pos_prev;
+					std::wstring text = font_input.GetText();
+					int start = std::min(caret_begin, caret_pos);
+					int end = std::max(caret_begin, caret_pos);
+					std::wstring clipboard = std::wstring(text.c_str() + start, text.c_str() + end);
+					wi::helper::SetClipboardText(clipboard);
+				}
 				else
 					return;
 			}
