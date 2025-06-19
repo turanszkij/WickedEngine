@@ -21,7 +21,7 @@ void ThemeEditorWindow::Create(EditorComponent* _editor)
 
 	idleButton.Create("themeIdleButton");
 	idleButton.SetSize(XMFLOAT2(siz, siz));
-	idleButton.SetDescription("Idle");
+	idleButton.SetDescription("Base");
 	idleButton.SetTooltip("The main color of widgets when they are not in interaction.");
 	idleButton.SetText("");
 	idleButton.font_description.params.v_align = wi::font::WIFALIGN_BOTTOM;
@@ -34,7 +34,7 @@ void ThemeEditorWindow::Create(EditorComponent* _editor)
 
 	focusButton.Create("themeFocusButton");
 	focusButton.SetSize(XMFLOAT2(siz, siz));
-	focusButton.SetDescription("Focus");
+	focusButton.SetDescription("Highlight");
 	focusButton.SetTooltip("The main color of widgets when they are in focus, hovered by the mouse.");
 	focusButton.SetText("");
 	focusButton.font_description.params.v_align = wi::font::WIFALIGN_BOTTOM;
@@ -313,8 +313,15 @@ void ThemeEditorWindow::Update(const wi::Canvas& canvas, float dt)
 
 	imageButton.SetShadowRadius(8);
 	imageButton.SetColor(wi::Color::White(), wi::gui::IDLE);
-	if(!imageButton.sprites[wi::gui::IDLE].textureResource.IsValid())
+	if (imageButton.sprites[wi::gui::IDLE].textureResource.IsValid())
+	{
+		imageSlider.SetVisible(true);
+	}
+	else
+	{
 		imageButton.SetSize(XMFLOAT2(10, 1));
+		imageSlider.SetVisible(false);
+	}
 	imageButton.SetImage(imageResource);
 
 	wi::gui::Window::Update(canvas, dt);
