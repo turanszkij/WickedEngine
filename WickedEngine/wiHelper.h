@@ -213,4 +213,10 @@ namespace wi::helper
 
 	// Hash the contents of a file:
 	size_t HashByteData(const uint8_t* data, size_t size);
+
+	// Returns string for paste operation
+	std::wstring GetClipboardText();
+
+	// Copies text to clipboard
+	void SetClipboardText(const std::wstring& wstr);
 };

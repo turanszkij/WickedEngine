@@ -1877,8 +1877,6 @@ namespace wi::gui
 	void TextInputField::AddInput(const wchar_t inputChar)
 	{
 		input_updated = true;
-		if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RCONTROL))
-			return;
 		switch (inputChar)
 		{
 		case '\b':	// BACKSPACE
@@ -1892,15 +1890,44 @@ namespace wi::gui
 		std::wstring value_new = font_input.GetText();
 		if (value_new.size() >= caret_pos)
 		{
+			int caret_pos_prev = caret_pos;
 			if (caret_begin != caret_pos)
 			{
 				int offset = std::min(caret_pos, caret_begin);
 				value_new.erase(offset, std::abs(caret_pos - caret_begin));
 				caret_pos = offset;
 			}
-			value_new.insert(value_new.begin() + caret_pos, inputChar);
+			int num = 0;
+			if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RCONTROL))
+			{
+				if (wi::input::Down((wi::input::BUTTON)'V'))
+				{
+					// Paste:
+					std::wstring clipboard = wi::helper::GetClipboardText();
+					value_new.insert(value_new.begin() + caret_pos, clipboard.begin(), clipboard.end());
+					num = (int)clipboard.length();
+				}
+				else if (wi::input::Down((wi::input::BUTTON)'C'))
+				{
+					// Copy:
+					caret_pos = caret_pos_prev;
+					std::wstring text = font_input.GetText();
+					int start = std::min(caret_begin, caret_pos);
+					int end = std::max(caret_begin, caret_pos);
+					std::wstring clipboard = std::wstring(text.c_str() + start, text.c_str() + end);
+					wi::helper::SetClipboardText(clipboard);
+					return;
+				}
+				else
+					return;
+			}
+			else
+			{
+				value_new.insert(value_new.begin() + caret_pos, inputChar);
+				num = 1;
+			}
 			font_input.SetText(value_new);
-			caret_pos = std::min((int)font_input.GetText().size(), caret_pos + 1);
+			caret_pos = std::min((int)font_input.GetText().size(), caret_pos + num);
 		}
 		caret_begin = caret_pos;
 	}
