@@ -5,6 +5,7 @@
 #include "ProfilerWindow.h"
 #include "ContentBrowserWindow.h"
 #include "ProjectCreatorWindow.h"
+#include "ThemeEditorWindow.h"
 #include "GraphicsWindow.h"
 #include "CameraWindow.h"
 #include "MaterialPickerWindow.h"
@@ -66,6 +67,7 @@ public:
 	ProfilerWindow profilerWnd;
 	ContentBrowserWindow contentBrowserWnd;
 	ProjectCreatorWindow projectCreatorWnd;
+	ThemeEditorWindow themeEditorWnd;
 	wi::gui::Window topmenuWnd;
 
 	wi::gui::Button generalButton;

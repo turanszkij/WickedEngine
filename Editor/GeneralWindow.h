@@ -12,6 +12,7 @@ public:
 	wi::gui::CheckBox otherinfoCheckBox;
 	wi::gui::Slider masterVolumeSlider;
 	wi::gui::ComboBox themeCombo;
+	wi::gui::Button themeEditorButton;
 	wi::gui::ComboBox saveModeComboBox;
 	wi::gui::CheckBox saveCompressionCheckBox;
 	wi::gui::ComboBox languageCombo;
@@ -45,8 +46,12 @@ public:
 	wi::gui::Button ddsConvButton;
 	wi::gui::Button duplicateCollidersButton;
 
+	std::string currentTheme;
+
 	void ResizeLayout() override;
 
 	void RefreshLanguageSelectionAfterWholeGUIWasInitialized();
+
+	void ReloadThemes();
 };
 

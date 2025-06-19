@@ -1979,4 +1979,50 @@ namespace wi::helper
 		}
 		return hash;
 	}
+
+	std::wstring GetClipboardText()
+	{
+		std::wstring wstr;
+
+#ifdef PLATFORM_WINDOWS_DESKTOP
+		if (!::OpenClipboard(NULL))
+			return wstr;
+		HANDLE wbuf_handle = ::GetClipboardData(CF_UNICODETEXT);
+		if (wbuf_handle == NULL)
+		{
+			::CloseClipboard();
+			return wstr;
+		}
+		if (const WCHAR* wbuf_global = (const WCHAR*)::GlobalLock(wbuf_handle))
+		{
+			wstr = wbuf_global;
+		}
+		::GlobalUnlock(wbuf_handle);
+		::CloseClipboard();
+#endif // PLATFORM_WINDOWS_DESKTOP
+
+		return wstr;
+	}
+
+	void SetClipboardText(const std::wstring& wstr)
+	{
+#ifdef PLATFORM_WINDOWS_DESKTOP
+		if (!::OpenClipboard(NULL))
+			return;
+		const int wbuf_length = (int)wstr.length() + 1;
+		HGLOBAL wbuf_handle = ::GlobalAlloc(GMEM_MOVEABLE, (SIZE_T)wbuf_length * sizeof(WCHAR));
+		if (wbuf_handle == NULL)
+		{
+			::CloseClipboard();
+			return;
+		}
+		WCHAR* wbuf_global = (WCHAR*)::GlobalLock(wbuf_handle);
+		std::memcpy(wbuf_global, wstr.c_str(), wbuf_length * sizeof(wchar_t));
+		::GlobalUnlock(wbuf_handle);
+		::EmptyClipboard();
+		if (::SetClipboardData(CF_UNICODETEXT, wbuf_handle) == NULL)
+			::GlobalFree(wbuf_handle);
+		::CloseClipboard();
+#endif // PLATFORM_WINDOWS_DESKTOP
+	}
 }

@@ -84,6 +84,43 @@ float4 main(VertextoPixel input) : SV_TARGET
 		const half highlight_spread = highlight_color_spread.w;
 		color.rgb = lerp(color.rgb, highlight_color, smoothstep(highlight_spread, 0, saturate(distance(uv, highlight_xy))));
 	}
+
+	[branch]
+	if (image.flags & IMAGE_FLAG_GRADIENT_LINEAR)
+	{
+		const half2 a = unpack_half2(image.gradient_uv_start);
+		const half2 b = unpack_half2(image.gradient_uv_end);
+		const half dist = length(b - a);
+		const half2 uv = uvsets.xy;
+		const half2 point_on_line = closest_point_on_segment(a, b, uv);
+		const half uv_distance = length(point_on_line - a);
+		const half gradient = smoothstep(0.0, 1.0, 1 - saturate(inverse_lerp(half(0.0), dist, uv_distance)));
+		const half4 gradient_color = unpack_half4(image.gradient_color);
+		color.rgb = lerp(color.rgb, gradient_color.rgb, gradient * gradient_color.a);
+	}
+	else if (image.flags & IMAGE_FLAG_GRADIENT_LINEAR_REFLECTED)
+	{
+		const half2 a = unpack_half2(image.gradient_uv_start);
+		const half2 b = unpack_half2(image.gradient_uv_end);
+		const half dist = length(b - a);
+		const half2 uv = uvsets.xy;
+		const half2 point_on_line = closest_point_on_line(a, b, uv);
+		const half uv_distance = length(point_on_line - a);
+		const half gradient = smoothstep(0.0, 1.0, 1 - saturate(inverse_lerp(half(0.0), dist, uv_distance)));
+		const half4 gradient_color = unpack_half4(image.gradient_color);
+		color.rgb = lerp(color.rgb, gradient_color.rgb, gradient * gradient_color.a);
+	}
+	else if (image.flags & IMAGE_FLAG_GRADIENT_CIRCULAR)
+	{
+		const half2 a = unpack_half2(image.gradient_uv_start);
+		const half2 b = unpack_half2(image.gradient_uv_end);
+		const half dist = length(b - a);
+		const half2 uv = uvsets.xy;
+		const half uv_distance = clamp(length(uv - a), 0, dist);
+		const half gradient = smoothstep(0.0, 1.0, 1 - saturate(inverse_lerp(half(0.0), dist, uv_distance)));
+		const half4 gradient_color = unpack_half4(image.gradient_color);
+		color.rgb = lerp(color.rgb, gradient_color.rgb, gradient * gradient_color.a);
+	}
 	
 	[branch]
 	if (border_soften > 0)

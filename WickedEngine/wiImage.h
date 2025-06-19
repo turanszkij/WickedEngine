@@ -73,6 +73,8 @@ namespace wi::image
 		XMFLOAT4 drawRect2 = XMFLOAT4(0, 0, 0, 0);
 		XMFLOAT2 texOffset = XMFLOAT2(0, 0);
 		XMFLOAT2 texOffset2 = XMFLOAT2(0, 0);
+		XMFLOAT4 texMulAdd = XMFLOAT4(1, 1, 0, 0);
+		XMFLOAT4 texMulAdd2 = XMFLOAT4(1, 1, 0, 0);
 		XMFLOAT2 pivot = XMFLOAT2(0, 0); // (0,0) : upperleft, (0.5,0.5) : center, (1,1) : bottomright
 		float rotation = 0;
 		float fade = 0;
@@ -85,6 +87,17 @@ namespace wi::image
 		float angular_softness_inner_angle = 0;
 		float angular_softness_outer_angle = 0;
 		float saturation = 1;
+
+		enum class Gradient
+		{
+			None,
+			Linear,
+			LinearReflected,
+			Circular,
+		} gradient = Gradient::None;
+		XMFLOAT2 gradient_uv_start = XMFLOAT2(0, 0);
+		XMFLOAT2 gradient_uv_end = XMFLOAT2(1, 0);
+		XMFLOAT4 gradient_color = XMFLOAT4(1, 1, 1, 1);
 
 		// you can deform the image by its corners (0: top left, 1: top right, 2: bottom left, 3: bottom right)
 		XMFLOAT2 corners[4] = {

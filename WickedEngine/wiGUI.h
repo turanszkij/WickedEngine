@@ -87,6 +87,9 @@ namespace wi::gui
 		// Window:
 		WIDGET_ID_WINDOW_BASE,
 
+		// Colorpicker:
+		WIDGET_ID_COLORPICKER_BASE,
+
 		// other user-defined widget states can be specified after this (but in user's own enum):
 		//	And you will of course need to handle it yourself in a SetColor() override for example
 		WIDGET_ID_USER,
@@ -248,6 +251,7 @@ namespace wi::gui
 		bool IsVisible() const { return visible; }
 
 		void SetColor(wi::Color color, int id = -1);
+		void SetImage(wi::Resource resource, int id = -1);
 		void SetShadowColor(wi::Color color);
 		void SetTheme(const Theme& theme, int id = -1);
 
@@ -673,6 +677,7 @@ namespace wi::gui
 		wi::vector<Widget*> widgets;
 		bool minimized = false;
 		bool has_titlebar = false;
+		bool right_aligned_image = false;
 		Widget scrollable_area;
 		float control_size = 20;
 		std::function<void(EventArgs args)> onClose;
@@ -699,7 +704,7 @@ namespace wi::gui
 
 		struct Layout
 		{
-			float padding = 4;
+			float padding = 2;
 			float width = 0;
 			float height = 0;
 			float y = 0;
@@ -728,9 +733,11 @@ namespace wi::gui
 					return;
 				const XMFLOAT2 size = widget.GetSize();
 				x = margin_left;
+				y += widget.GetShadowRadius();
 				widget.SetPos(XMFLOAT2(x, y));
-				widget.SetSize(XMFLOAT2(width - x - padding, size.y));
+				widget.SetSize(XMFLOAT2(width - x - padding - widget.GetShadowRadius(), size.y));
 				y += size.y;
+				y += widget.GetShadowRadius();
 				y += padding;
 			}
 			// Add one widget to the right side:
@@ -741,6 +748,8 @@ namespace wi::gui
 				const XMFLOAT2 size = widget.GetSize();
 				x = width - padding - size.x;
 				x -= widget.GetRightTextWidth();
+				x -= widget.GetShadowRadius();
+				y += widget.GetShadowRadius();
 				widget.SetPos(XMFLOAT2(x, y));
 				if (widget.GetLeftTextWidth() > 0)
 				{
@@ -748,6 +757,7 @@ namespace wi::gui
 				}
 				x -= padding;
 				y += size.y;
+				y += widget.GetShadowRadius();
 				y += padding;
 			}
 			// Add one widget to fill the whole width:
@@ -758,9 +768,12 @@ namespace wi::gui
 				const XMFLOAT2 size = widget.GetSize();
 				x = padding;
 				x += widget.GetLeftTextWidth();
+				x += widget.GetShadowRadius();
+				y += widget.GetShadowRadius();
 				widget.SetPos(XMFLOAT2(x, y));
-				widget.SetSize(XMFLOAT2(width - x - padding, size.y));
+				widget.SetSize(XMFLOAT2(width - x - padding - widget.GetShadowRadius(), size.y));
 				y += size.y;
+				y += widget.GetShadowRadius();
 				y += padding;
 			}
 			// Add one widget to fill the whole width and keep aspect ratio:
@@ -770,9 +783,21 @@ namespace wi::gui
 					return;
 				x = padding;
 				x += widget.GetLeftTextWidth();
+				x += widget.GetShadowRadius();
+				y += widget.GetShadowRadius();
 				widget.SetPos(XMFLOAT2(margin_left, y));
-				widget.SetSize(XMFLOAT2(width - margin_left - padding, width - margin_left - padding));
+				float h_aspect = widget.GetSize().y / widget.GetSize().x;
+				const wi::Resource& res = widget.sprites[widget.GetState()].textureResource;
+				if (res.IsValid())
+				{
+					const wi::graphics::Texture& tex = res.GetTexture();
+					h_aspect = (float)tex.desc.height / (float)tex.desc.width;
+				}
+				const float w = width - x - padding - widget.GetShadowRadius();
+				widget.SetSize(XMFLOAT2(w, w * h_aspect));
+				widget.SetPos(XMFLOAT2(x, y));
 				y += widget.GetSize().y;
+				y += widget.GetShadowRadius();
 				y += padding;
 			}
 
@@ -855,6 +880,7 @@ namespace wi::gui
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 		void RenderTooltip(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 		void SetColor(wi::Color color, int id = -1) override;
+		void SetImage(wi::Resource resource, int id = -1) override;
 		void SetShadowColor(wi::Color color) override;
 		void SetTheme(const Theme& theme, int id = -1) override;
 		const char* GetWidgetTypeName() const override { return "Window"; }
@@ -882,6 +908,9 @@ namespace wi::gui
 		ScrollBar scrollbar_horizontal;
 		WindowControls controls;
 
+		// Set whether the background image should be aligned to the right side while keeping aspect ratio
+		void SetRightAlignedImage(bool value) { right_aligned_image = value; }
+
 		void ExportLocalization(wi::Localization& localization) const override;
 		void ImportLocalization(const wi::Localization& localization) override;
 	};
@@ -908,6 +937,8 @@ namespace wi::gui
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 		void ResizeLayout() override;
+		void SetColor(wi::Color color, int id = -1) override;
+		void SetImage(wi::Resource resource, int id = -1) override;
 		const char* GetWidgetTypeName() const override { return "ColorPicker"; }
 
 		wi::Color GetPickColor() const;
