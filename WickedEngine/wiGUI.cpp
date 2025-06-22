@@ -2538,11 +2538,11 @@ namespace wi::gui
 	float ComboBox::GetDropOffset(const wi::Canvas& canvas) const
 	{
 		float screenheight = canvas.GetLogicalHeight();
-		int visible_items = std::min(maxVisibleItemCount, int(items.size()) - firstItemVisible);
+		int visible_items = std::min(maxVisibleItemCount, filteredItemCount - firstItemVisible);
 		if (!filterText.empty())
 		{
 			visible_items = 0;
-			for (int i = firstItemVisible; i < (firstItemVisible + std::min(maxVisibleItemCount, (int)items.size())) && (visible_items < maxVisibleItemCount); ++i)
+			for (int i = firstItemVisible; (i < (int)items.size()) && (visible_items < maxVisibleItemCount); ++i)
 			{
 				if (wi::helper::toUpper(items[i].name).find(filterText) != std::string::npos)
 				{
@@ -2577,7 +2577,7 @@ namespace wi::gui
 		if (!filterText.empty())
 		{
 			int invisible_items = 0;
-			for (int i = firstItemVisible; i < (firstItemVisible + std::min(maxVisibleItemCount, (int)items.size())) && (i < index); ++i)
+			for (int i = firstItemVisible; (i < (int)items.size()) && (i < index); ++i)
 			{
 				if (wi::helper::toUpper(items[i].name).find(filterText) == std::string::npos)
 				{
@@ -2734,17 +2734,17 @@ namespace wi::gui
 					{
 						int scroll = (int)wi::input::GetPointer().z;
 						firstItemVisible -= scroll;
-						firstItemVisible = std::max(0, std::min((int)items.size() - maxVisibleItemCount, firstItemVisible));
+						firstItemVisible = std::max(0, std::min(filteredItemCount - maxVisibleItemCount, firstItemVisible));
 						if (scroll)
 						{
-							const float scrollbar_value = wi::math::InverseLerp(0, float(std::max(0, (int)items.size() - maxVisibleItemCount)), float(firstItemVisible));
+							const float scrollbar_value = wi::math::InverseLerp(0, float(std::max(0, filteredItemCount - maxVisibleItemCount)), float(firstItemVisible));
 							scrollbar_delta = wi::math::Lerp(scrollbar_begin, scrollbar_end, scrollbar_value) - scrollbar_begin;
 						}
 					}
 
 					hovered = -1;
 					int visible_items = 0;
-					for (int i = firstItemVisible; i < (firstItemVisible + std::min(maxVisibleItemCount, (int)items.size())) && (visible_items < maxVisibleItemCount); ++i)
+					for (int i = firstItemVisible; (i < (int)items.size()) && (visible_items < maxVisibleItemCount); ++i)
 					{
 						if (!filterText.empty() && wi::helper::toUpper(items[i].name).find(filterText) == std::string::npos)
 							continue;
@@ -3015,7 +3015,7 @@ namespace wi::gui
 
 			// control-list
 			int visible_items = 0;
-			for (int i = firstItemVisible; i < (firstItemVisible + std::min(maxVisibleItemCount, (int)items.size())) && (visible_items < maxVisibleItemCount); ++i)
+			for (int i = firstItemVisible; (i < (int)items.size()) && (visible_items < maxVisibleItemCount); ++i)
 			{
 				if (!filterText.empty() && wi::helper::toUpper(items[i].name).find(filterText) == std::string::npos)
 					continue;
