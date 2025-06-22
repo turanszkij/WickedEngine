@@ -590,6 +590,16 @@ void ComponentsWindow::Update(float dt)
 {
 	animWnd.Update();
 	weatherWnd.Update();
+
+	if (nameWnd.nameInput.GetState() == wi::gui::WIDGETSTATE::DEACTIVATING)
+	{
+		editor->renaming_mode = false;
+	}
+	if (nameWnd.nameInput.GetState() == wi::gui::WIDGETSTATE::ACTIVE)
+	{
+		editor->renaming_mode = true;
+
+	}
 }
 
 void ComponentsWindow::ResizeLayout()

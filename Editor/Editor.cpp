@@ -67,7 +67,7 @@ enum class EditorActions
 	SELECT_ALL_ENTITIES,
 	DESELECT_ALL_ENTITIES,
 	FOCUS_ON_SELECTION,
-	RENAME_ENTITY,
+	RENAME_SELECTED,
 
 	// Edit actions
 	UNDO_ACTION,
@@ -127,7 +127,7 @@ HotkeyInfo hotkeyActions[size_t(EditorActions::COUNT)] = {
 	{wi::input::BUTTON('A'),					/*press=*/ true,		/*control=*/ true,		/*shift=*/ false},	//SELECT_ALL_ENTITIES,
 	{wi::input::BUTTON::KEYBOARD_BUTTON_ESCAPE,	/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//DESELECT_ALL_ENTITIES,
 	{wi::input::BUTTON('F'),					/*press=*/ false,		/*control=*/ false,		/*shift=*/ false},	//FOCUS_ON_SELECTION,
-	{wi::input::BUTTON('L'),		/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//RENAME_ENTITY,
+	{wi::input::BUTTON('L'),					/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//RENAME_SELECTED,
 	{wi::input::BUTTON('Z'),					/*press=*/ true,		/*control=*/ true,		/*shift=*/ false},	//UNDO_ACTION,
 	{wi::input::BUTTON('Y'),					/*press=*/ true,		/*control=*/ true,		/*shift=*/ false},	//REDO_ACTION,
 	{wi::input::BUTTON('C'),					/*press=*/ true,		/*control=*/ true,		/*shift=*/ false},	//COPY_ACTION,
@@ -201,7 +201,7 @@ void HotkeyRemap(Editor* main)
 		{"SELECT_ALL_ENTITIES", EditorActions::SELECT_ALL_ENTITIES},
 		{"DESELECT_ALL_ENTITIES", EditorActions::DESELECT_ALL_ENTITIES},
 		{"FOCUS_ON_SELECTION", EditorActions::FOCUS_ON_SELECTION},
-		{"RENAME_ENTITY", EditorActions::RENAME_ENTITY},
+		{"RENAME_SELECTED", EditorActions::RENAME_SELECTED},
 		{"UNDO_ACTION", EditorActions::UNDO_ACTION},
 		{"REDO_ACTION", EditorActions::REDO_ACTION},
 		{"COPY_ACTION", EditorActions::COPY_ACTION},
@@ -1614,20 +1614,6 @@ void EditorComponent::Update(float dt)
 		drive_orbit_horizontal = lerp(drive_orbit_horizontal, 0.0f, dt);
 	}
 
-	if (!translator.selected.empty() && CheckInput(EditorActions::RENAME_ENTITY))
-	{
-		for (auto& x : translator.selected)
-		{
-			if (NameComponent* name_comp = scene.names.GetComponent(x.entity))
-			{
-				componentsWnd.nameWnd.nameInput.SetAsActive();
-				componentsWnd.nameWnd.SetCollapsed(false);
-
-				renaming_mode = true;
-			}
-		}
-	}
-
 	// Camera control:
 	if (!drive_mode && !wi::backlog::isActive() && !GetGUI().HasFocus() && !renaming_mode)
 	{
@@ -1816,6 +1802,19 @@ void EditorComponent::Update(float dt)
 		if (!translator.selected.empty() && CheckInput(EditorActions::FOCUS_ON_SELECTION))
 		{
 			FocusCameraOnSelected();
+		}
+
+		if (!translator.selected.empty() && CheckInput(EditorActions::RENAME_SELECTED))
+		{
+			for (auto& x : translator.selected)
+			{
+				const auto& picked = translator.selected.back();
+    			if (NameComponent* name_comp = scene.names.GetComponent(translator.selected.back().entity))
+    			{
+    			    componentsWnd.nameWnd.nameInput.SetAsActive();
+    			    componentsWnd.nameWnd.SetCollapsed(false);
+    			}
+			}
 		}
 
 		inspector_mode = CheckInput(EditorActions::INSPECTOR_MODE);
