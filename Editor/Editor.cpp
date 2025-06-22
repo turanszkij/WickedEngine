@@ -127,7 +127,7 @@ HotkeyInfo hotkeyActions[size_t(EditorActions::COUNT)] = {
 	{wi::input::BUTTON('A'),					/*press=*/ true,		/*control=*/ true,		/*shift=*/ false},	//SELECT_ALL_ENTITIES,
 	{wi::input::BUTTON::KEYBOARD_BUTTON_ESCAPE,	/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//DESELECT_ALL_ENTITIES,
 	{wi::input::BUTTON('F'),					/*press=*/ false,		/*control=*/ false,		/*shift=*/ false},	//FOCUS_ON_SELECTION,
-	{wi::input::BUTTON('L'),					/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//RENAME_SELECTED,
+	{wi::input::BUTTON('R'),					/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//RENAME_SELECTED,
 	{wi::input::BUTTON('Z'),					/*press=*/ true,		/*control=*/ true,		/*shift=*/ false},	//UNDO_ACTION,
 	{wi::input::BUTTON('Y'),					/*press=*/ true,		/*control=*/ true,		/*shift=*/ false},	//REDO_ACTION,
 	{wi::input::BUTTON('C'),					/*press=*/ true,		/*control=*/ true,		/*shift=*/ false},	//COPY_ACTION,
@@ -1195,6 +1195,7 @@ void EditorComponent::Load()
 		ss += "Duplicate entity: " + GetInputString(EditorActions::DUPLICATE_ENTITY) + "\n";
 		ss += "Select All: " + GetInputString(EditorActions::SELECT_ALL_ENTITIES) + "\n";
 		ss += "Deselect All: " + GetInputString(EditorActions::DESELECT_ALL_ENTITIES) + "\n";
+		ss += "Rename Selected: " + GetInputString(EditorActions::RENAME_SELECTED) + " (this hotkey is temporary, will be F2 in the future)" + "\n";
 		ss += "Undo: " + GetInputString(EditorActions::UNDO_ACTION) + "\n";
 		ss += "Redo: " + GetInputString(EditorActions::REDO_ACTION) + "\n";
 		ss += "Copy: " + GetInputString(EditorActions::COPY_ACTION) + "\n";
