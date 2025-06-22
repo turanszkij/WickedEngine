@@ -226,6 +226,7 @@ namespace wi::gui
 	};
 
 	class Widget;
+	class ComboBox;
 
 	class GUI
 	{
@@ -261,6 +262,7 @@ namespace wi::gui
 
 	class Widget : public wi::scene::TransformComponent
 	{
+		friend class ComboBox;
 	private:
 		int tooltipTimer = 0;
 	protected:
@@ -610,6 +612,7 @@ namespace wi::gui
 			COMBOSTATE_SELECTING,	// The hovered item is clicked
 			COMBOSTATE_SCROLLBAR_HOVER,		// scrollbar is to be selected
 			COMBOSTATE_SCROLLBAR_GRABBED,	// scrollbar is moved
+			COMBOSTATE_FILTER_INTERACT, // interaction with filter sub-widget
 			COMBOSTATE_COUNT,
 		} combostate = COMBOSTATE_INACTIVE;
 		int hovered = -1;
@@ -625,6 +628,10 @@ namespace wi::gui
 
 		wi::Color drop_color = wi::Color::Ghost();
 		std::wstring invalid_selection_text;
+
+		TextInputField filter;
+		std::string filterText;
+		int filteredItemCount = 0;
 
 		float GetDropOffset(const wi::Canvas& canvas) const;
 		float GetDropX(const wi::Canvas& canvas) const;
