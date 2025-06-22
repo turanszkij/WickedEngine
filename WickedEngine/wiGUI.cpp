@@ -2531,17 +2531,31 @@ namespace wi::gui
 		selected_font = font;
 		selected_font.params.h_align = wi::font::WIFALIGN_CENTER;
 		selected_font.params.v_align = wi::font::WIFALIGN_CENTER;
+
+		filter.Create("");
+		filter.SetCancelInputEnabled(false);
 	}
 	float ComboBox::GetDropOffset(const wi::Canvas& canvas) const
 	{
 		float screenheight = canvas.GetLogicalHeight();
 		int visible_items = std::min(maxVisibleItemCount, int(items.size()) - firstItemVisible);
+		if (!filterText.empty())
+		{
+			visible_items = 0;
+			for (int i = firstItemVisible; i < (firstItemVisible + std::min(maxVisibleItemCount, (int)items.size())) && (visible_items < maxVisibleItemCount); ++i)
+			{
+				if (wi::helper::toUpper(items[i].name).find(filterText) != std::string::npos)
+				{
+					visible_items++;
+				}
+			}
+		}
 		float total_height = scale.y + visible_items * combo_height();
 		if (translation.y + total_height > screenheight)
 		{
 			return -total_height - 1;
 		}
-		return 1;
+		return combo_height(); // space for filter sub-widget above
 	}
 	float ComboBox::GetDropX(const wi::Canvas& canvas) const
 	{
@@ -2560,12 +2574,24 @@ namespace wi::gui
 	}
 	float ComboBox::GetItemOffset(const wi::Canvas& canvas, int index) const
 	{
+		if (!filterText.empty())
+		{
+			int invisible_items = 0;
+			for (int i = firstItemVisible; i < (firstItemVisible + std::min(maxVisibleItemCount, (int)items.size())) && (i < index); ++i)
+			{
+				if (wi::helper::toUpper(items[i].name).find(filterText) == std::string::npos)
+				{
+					invisible_items++;
+				}
+			}
+			index -= invisible_items;
+		}
 		index = std::max(firstItemVisible, index) - firstItemVisible;
 		return scale.y + combo_height() * index + GetDropOffset(canvas);
 	}
 	bool ComboBox::HasScrollbar() const
 	{
-		return maxVisibleItemCount < (int)items.size();
+		return maxVisibleItemCount < filteredItemCount;
 	}
 	void ComboBox::Update(const wi::Canvas& canvas, float dt)
 	{
@@ -2645,25 +2671,38 @@ namespace wi::gui
 				Activate();
 			}
 
-			const float scrollbar_begin = translation.y + scale.y + drop_offset + scale.y * 0.5f;
-			const float scrollbar_end = scrollbar_begin + std::max(0.0f, (float)std::min(maxVisibleItemCount, (int)items.size()) - 1) * combo_height();
-
 			if (state == ACTIVE)
 			{
+				filteredItemCount = int(items.size());
+				if (!filterText.empty())
+				{
+					filteredItemCount = 0;
+					for (int i = 0; i < (int)items.size(); ++i)
+					{
+						if (wi::helper::toUpper(items[i].name).find(filterText) == std::string::npos)
+							continue;
+						filteredItemCount++;
+					}
+				}
+
+				const float scrollbar_begin = translation.y + scale.y + drop_offset + scale.y * 0.5f;
+				const float scrollbar_end = scrollbar_begin + std::max(0.0f, (float)std::min(maxVisibleItemCount, filteredItemCount) - 1) * combo_height();
+
 				pointerHitbox = GetPointerHitbox(false); // get the hitbox again, but this time it won't be constrained to parent
 				if (HasScrollbar())
 				{
 					if (combostate != COMBOSTATE_SELECTING && combostate != COMBOSTATE_INACTIVE)
 					{
-						if (combostate == COMBOSTATE_SCROLLBAR_GRABBED || pointerHitbox.intersects(Hitbox2D(XMFLOAT2(drop_x + drop_width + 1, translation.y + scale.y + drop_offset), XMFLOAT2(scale.y, (float)std::min(maxVisibleItemCount, (int)items.size()) * combo_height()))))
+						if (combostate == COMBOSTATE_SCROLLBAR_GRABBED || pointerHitbox.intersects(Hitbox2D(XMFLOAT2(drop_x + drop_width + 1, translation.y + scale.y + drop_offset), XMFLOAT2(scale.y, (float)std::min(maxVisibleItemCount, filteredItemCount) * combo_height()))))
 						{
 							if (click_down)
 							{
+								filter.SetAsActive();
 								combostate = COMBOSTATE_SCROLLBAR_GRABBED;
 								scrollbar_delta = wi::math::Clamp(pointerHitbox.pos.y, scrollbar_begin, scrollbar_end) - scrollbar_begin;
 								const float scrollbar_value = wi::math::InverseLerp(scrollbar_begin, scrollbar_end, scrollbar_begin + scrollbar_delta);
-								firstItemVisible = int(float(std::max(0, (int)items.size() - maxVisibleItemCount)) * scrollbar_value + 0.5f);
-								firstItemVisible = std::max(0, std::min((int)items.size() - maxVisibleItemCount, firstItemVisible));
+								firstItemVisible = int(float(std::max(0, filteredItemCount - maxVisibleItemCount)) * scrollbar_value + 0.5f);
+								firstItemVisible = std::max(0, std::min(filteredItemCount - maxVisibleItemCount, firstItemVisible));
 							}
 							else
 							{
@@ -2680,6 +2719,7 @@ namespace wi::gui
 				if (combostate == COMBOSTATE_INACTIVE)
 				{
 					combostate = COMBOSTATE_HOVER;
+					filter.SetAsActive();
 				}
 				else if (combostate == COMBOSTATE_SELECTING)
 				{
@@ -2689,18 +2729,26 @@ namespace wi::gui
 				else if (combostate == COMBOSTATE_HOVER && scroll_allowed)
 				{
 					scroll_allowed = false;
-					int scroll = (int)wi::input::GetPointer().z;
-					firstItemVisible -= scroll;
-					firstItemVisible = std::max(0, std::min((int)items.size() - maxVisibleItemCount, firstItemVisible));
-					if (scroll)
+
+					if (HasScrollbar())
 					{
-						const float scrollbar_value = wi::math::InverseLerp(0, float(std::max(0, (int)items.size() - maxVisibleItemCount)), float(firstItemVisible));
-						scrollbar_delta = wi::math::Lerp(scrollbar_begin, scrollbar_end, scrollbar_value) - scrollbar_begin;
+						int scroll = (int)wi::input::GetPointer().z;
+						firstItemVisible -= scroll;
+						firstItemVisible = std::max(0, std::min((int)items.size() - maxVisibleItemCount, firstItemVisible));
+						if (scroll)
+						{
+							const float scrollbar_value = wi::math::InverseLerp(0, float(std::max(0, (int)items.size() - maxVisibleItemCount)), float(firstItemVisible));
+							scrollbar_delta = wi::math::Lerp(scrollbar_begin, scrollbar_end, scrollbar_value) - scrollbar_begin;
+						}
 					}
 
 					hovered = -1;
-					for (int i = firstItemVisible; i < (firstItemVisible + std::min(maxVisibleItemCount, (int)items.size())); ++i)
+					int visible_items = 0;
+					for (int i = firstItemVisible; i < (firstItemVisible + std::min(maxVisibleItemCount, (int)items.size())) && (visible_items < maxVisibleItemCount); ++i)
 					{
+						if (!filterText.empty() && wi::helper::toUpper(items[i].name).find(filterText) == std::string::npos)
+							continue;
+						visible_items++;
 						Hitbox2D itembox;
 						itembox.pos.x = drop_x;
 						itembox.pos.y = translation.y + GetItemOffset(canvas, i);
@@ -2715,15 +2763,44 @@ namespace wi::gui
 
 					if (clicked)
 					{
-						combostate = COMBOSTATE_SELECTING;
-						if (hovered >= 0)
+						if (pointerHitbox.intersects(filter.hitBox))
 						{
-							SetSelected(hovered);
+							combostate = COMBOSTATE_FILTER_INTERACT;
+						}
+						else
+						{
+							combostate = COMBOSTATE_SELECTING;
+							if (hovered >= 0)
+							{
+								SetSelected(hovered);
+							}
 						}
 					}
 				}
+				else if (combostate == COMBOSTATE_FILTER_INTERACT)
+				{
+					// nothing here, but this holds main widget active while filter interaction is detected
+				}
+
+				filter.Activate();
+				filter.scale_local.x = drop_width;
+				filter.scale_local.y = combo_height() - filter.GetShadowRadius() * 2;
+				filter.translation_local.x = drop_x;
+				filter.translation_local.y = translation.y + scale.y + drop_offset - combo_height() + filter.GetShadowRadius();
+				filter.SetDirty();
+				filterText = wi::helper::toUpper(filter.GetText());
+				filter.font.params.size = int(filter.scale_local.y - 4);
+			}
+			else
+			{
+				filter.SetText("");
+				filterText = "";
 			}
 		}
+
+		filter.SetEnabled(enabled);
+		filter.force_disable = force_disable;
+		filter.Update(canvas, dt);
 
 		sprites[state].params.siz.x = scale.x;
 		if (IsDropArrowEnabled())
@@ -2875,6 +2952,16 @@ namespace wi::gui
 		// drop-down
 		if (state == ACTIVE)
 		{
+			{
+				Rect fullscissorRect;
+				fullscissorRect.bottom = (int32_t)(canvas.GetPhysicalHeight());
+				fullscissorRect.left = (int32_t)(0);
+				fullscissorRect.right = (int32_t)(canvas.GetPhysicalWidth());
+				fullscissorRect.top = (int32_t)(0);
+				ApplyScissor(canvas, fullscissorRect, cmd);
+				filter.Render(canvas, cmd);
+			}
+
 			if (HasScrollbar())
 			{
 				Rect rect;
@@ -2906,7 +2993,7 @@ namespace wi::gui
 						col = wi::Color::fromFloat4(sprites[ACTIVE].params.color);
 					}
 					wi::image::Draw(
-						wi::texturehelper::getWhite(),
+						nullptr,
 						wi::image::Params(
 							drop_x + drop_width + 1,
 							translation.y + scale.y + drop_offset + scrollbar_delta,
@@ -2927,8 +3014,12 @@ namespace wi::gui
 			ApplyScissor(canvas, rect, cmd, false);
 
 			// control-list
-			for (int i = firstItemVisible; i < (firstItemVisible + std::min(maxVisibleItemCount, (int)items.size())); ++i)
+			int visible_items = 0;
+			for (int i = firstItemVisible; i < (firstItemVisible + std::min(maxVisibleItemCount, (int)items.size())) && (visible_items < maxVisibleItemCount); ++i)
 			{
+				if (!filterText.empty() && wi::helper::toUpper(items[i].name).find(filterText) == std::string::npos)
+					continue;
+				visible_items++;
 				wi::image::Params fx = sprites[state].params;
 				fx.disableCornerRounding();
 				fx.pos = XMFLOAT3(drop_x, translation.y + GetItemOffset(canvas, i), 0);
@@ -3088,6 +3179,7 @@ namespace wi::gui
 	void ComboBox::SetColor(wi::Color color, int id)
 	{
 		Widget::SetColor(color, id);
+		filter.SetColor(color, id);
 
 		if (id == WIDGET_ID_COMBO_DROPDOWN)
 		{
@@ -3097,6 +3189,7 @@ namespace wi::gui
 	void ComboBox::SetTheme(const Theme& theme, int id)
 	{
 		Widget::SetTheme(theme, id);
+		filter.SetTheme(theme, id);
 
 		if (id == WIDGET_ID_COMBO_DROPDOWN)
 		{
