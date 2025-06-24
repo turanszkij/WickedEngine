@@ -404,11 +404,11 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		default:
 			break;
 		case Theme::Dark:
-			editor->main->config.GetSection("options").Set("theme", currentTheme);
+			editor->main->config.GetSection("options").Set("theme", "Dark");
 			editor->themeEditorWnd.imageResource = {};
 			break;
 		case Theme::Bright:
-			editor->main->config.GetSection("options").Set("theme", currentTheme);
+			editor->main->config.GetSection("options").Set("theme", "Bright");
 			theme_color_idle = wi::Color(200, 210, 220, 230);
 			theme_color_focus = wi::Color(210, 230, 255, 250);
 			theme_color_background = wi::Color(180, 180, 190, 230);
@@ -417,7 +417,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			editor->themeEditorWnd.imageResource = {};
 			break;
 		case Theme::Soft:
-			editor->main->config.GetSection("options").Set("theme", currentTheme);
+			editor->main->config.GetSection("options").Set("theme", "Soft");
 			theme_color_idle = wi::Color(200, 180, 190, 190);
 			theme_color_focus = wi::Color(240, 190, 200, 230);
 			theme_color_background = wi::Color(100, 80, 90, 220);
@@ -426,7 +426,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			editor->themeEditorWnd.imageResource = {};
 			break;
 		case Theme::Hacking:
-			editor->main->config.GetSection("options").Set("theme", currentTheme);
+			editor->main->config.GetSection("options").Set("theme", "Hacking");
 			theme_color_idle = wi::Color(0, 38, 0, 255);
 			theme_color_focus = wi::Color(0, 160, 60, 255);
 			theme_color_background = wi::Color(0, 20, 0, 255);
@@ -436,7 +436,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			editor->themeEditorWnd.imageResource = {};
 			break;
 		case Theme::Nord:
-			editor->main->config.GetSection("options").Set("theme", currentTheme);
+			editor->main->config.GetSection("options").Set("theme", "Nord");
 			theme_color_idle = wi::Color(46, 52, 64, 255);
 			theme_color_focus = wi::Color(59, 66, 82, 255);
 			theme_color_background = wi::Color(36, 42, 54, 255);
@@ -1087,8 +1087,10 @@ void GeneralWindow::RefreshLanguageSelectionAfterWholeGUIWasInitialized()
 }
 void GeneralWindow::ReloadThemes()
 {
-	if(editor->main->config.GetSection("options").Has("theme"))
+	if (editor->main->config.GetSection("options").Has("theme"))
 		currentTheme = editor->main->config.GetSection("options").GetText("theme");
+	else
+		currentTheme = "Dark";
 
 	themeCombo.ClearItems();
 	themeCombo.AddItem("Dark " ICON_DARK, (uint64_t)Theme::Dark);
@@ -1100,12 +1102,35 @@ void GeneralWindow::ReloadThemes()
 		themeCombo.AddItem(wi::helper::GetFileNameFromPath(wi::helper::RemoveExtension(filename)), (uint64_t)Theme::User);
 	}, "witheme");
 
-	for (int i = 0; i < (int)themeCombo.GetItemCount(); ++i)
+	if (currentTheme == "Dark")
 	{
-		if (currentTheme == themeCombo.GetItemText(i))
+		themeCombo.SetSelectedByUserdataWithoutCallback((uint64_t)Theme::Dark);
+	}
+	else if (currentTheme == "Bright")
+	{
+		themeCombo.SetSelectedByUserdataWithoutCallback((uint64_t)Theme::Bright);
+	}
+	else if (currentTheme == "Soft")
+	{
+		themeCombo.SetSelectedByUserdataWithoutCallback((uint64_t)Theme::Soft);
+	}
+	else if (currentTheme == "Hacking")
+	{
+		themeCombo.SetSelectedByUserdataWithoutCallback((uint64_t)Theme::Hacking);
+	}
+	else if (currentTheme == "Nord")
+	{
+		themeCombo.SetSelectedByUserdataWithoutCallback((uint64_t)Theme::Nord);
+	}
+	else
+	{
+		for (int i = 0; i < (int)themeCombo.GetItemCount(); ++i)
 		{
-			themeCombo.SetSelectedWithoutCallback(i);
-			break;
+			if (currentTheme == themeCombo.GetItemText(i))
+			{
+				themeCombo.SetSelectedWithoutCallback(i);
+				break;
+			}
 		}
 	}
 
