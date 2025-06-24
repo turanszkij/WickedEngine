@@ -67,6 +67,7 @@ enum class EditorActions
 	SELECT_ALL_ENTITIES,
 	DESELECT_ALL_ENTITIES,
 	FOCUS_ON_SELECTION,
+	RENAME_SELECTED,
 
 	// Edit actions
 	UNDO_ACTION,
@@ -126,6 +127,7 @@ HotkeyInfo hotkeyActions[size_t(EditorActions::COUNT)] = {
 	{wi::input::BUTTON('A'),					/*press=*/ true,		/*control=*/ true,		/*shift=*/ false},	//SELECT_ALL_ENTITIES,
 	{wi::input::BUTTON::KEYBOARD_BUTTON_ESCAPE,	/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//DESELECT_ALL_ENTITIES,
 	{wi::input::BUTTON('F'),					/*press=*/ false,		/*control=*/ false,		/*shift=*/ false},	//FOCUS_ON_SELECTION,
+	{wi::input::BUTTON('R'),					/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//RENAME_SELECTED,
 	{wi::input::BUTTON('Z'),					/*press=*/ true,		/*control=*/ true,		/*shift=*/ false},	//UNDO_ACTION,
 	{wi::input::BUTTON('Y'),					/*press=*/ true,		/*control=*/ true,		/*shift=*/ false},	//REDO_ACTION,
 	{wi::input::BUTTON('C'),					/*press=*/ true,		/*control=*/ true,		/*shift=*/ false},	//COPY_ACTION,
@@ -199,6 +201,7 @@ void HotkeyRemap(Editor* main)
 		{"SELECT_ALL_ENTITIES", EditorActions::SELECT_ALL_ENTITIES},
 		{"DESELECT_ALL_ENTITIES", EditorActions::DESELECT_ALL_ENTITIES},
 		{"FOCUS_ON_SELECTION", EditorActions::FOCUS_ON_SELECTION},
+		{"RENAME_SELECTED", EditorActions::RENAME_SELECTED},
 		{"UNDO_ACTION", EditorActions::UNDO_ACTION},
 		{"REDO_ACTION", EditorActions::REDO_ACTION},
 		{"COPY_ACTION", EditorActions::COPY_ACTION},
@@ -288,6 +291,7 @@ void HotkeyRemap(Editor* main)
 		// Remap hotkey if button is successfully found:
 		if (button != wi::input::BUTTON_NONE)
 		{
+				
 			hotkeyActions[size_t(action)] = HotkeyInfo{ button, hotkeyActions[size_t(action)].press, hotkeyString.find("CTRL") != std::string::npos, hotkeyString.find("SHIFT") != std::string::npos };
 		}
 	}
@@ -1191,6 +1195,7 @@ void EditorComponent::Load()
 		ss += "Duplicate entity: " + GetInputString(EditorActions::DUPLICATE_ENTITY) + "\n";
 		ss += "Select All: " + GetInputString(EditorActions::SELECT_ALL_ENTITIES) + "\n";
 		ss += "Deselect All: " + GetInputString(EditorActions::DESELECT_ALL_ENTITIES) + "\n";
+		ss += "Rename Selected: " + GetInputString(EditorActions::RENAME_SELECTED) + " (this hotkey is temporary, will be F2 in the future)" + "\n";
 		ss += "Undo: " + GetInputString(EditorActions::UNDO_ACTION) + "\n";
 		ss += "Redo: " + GetInputString(EditorActions::REDO_ACTION) + "\n";
 		ss += "Copy: " + GetInputString(EditorActions::COPY_ACTION) + "\n";
@@ -1611,7 +1616,7 @@ void EditorComponent::Update(float dt)
 	}
 
 	// Camera control:
-	if (!drive_mode && !wi::backlog::isActive() && !GetGUI().HasFocus())
+	if (!drive_mode && !wi::backlog::isActive() && !GetGUI().HasFocus() && !renaming_mode)
 	{
 		deleting = CheckInput(EditorActions::DELETE_ACTION);
 		currentMouse = wi::input::GetPointer();
@@ -1798,6 +1803,19 @@ void EditorComponent::Update(float dt)
 		if (!translator.selected.empty() && CheckInput(EditorActions::FOCUS_ON_SELECTION))
 		{
 			FocusCameraOnSelected();
+		}
+
+		if (!translator.selected.empty() && CheckInput(EditorActions::RENAME_SELECTED))
+		{
+			for (auto& x : translator.selected)
+			{
+				const auto& picked = translator.selected.back();
+    			if (NameComponent* name_comp = scene.names.GetComponent(translator.selected.back().entity))
+    			{
+    			    componentsWnd.nameWnd.nameInput.SetAsActive();
+    			    componentsWnd.nameWnd.SetCollapsed(false);
+    			}
+			}
 		}
 
 		inspector_mode = CheckInput(EditorActions::INSPECTOR_MODE);
