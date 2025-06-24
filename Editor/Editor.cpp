@@ -127,7 +127,7 @@ HotkeyInfo hotkeyActions[size_t(EditorActions::COUNT)] = {
 	{wi::input::BUTTON('A'),					/*press=*/ true,		/*control=*/ true,		/*shift=*/ false},	//SELECT_ALL_ENTITIES,
 	{wi::input::BUTTON::KEYBOARD_BUTTON_ESCAPE,	/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//DESELECT_ALL_ENTITIES,
 	{wi::input::BUTTON('F'),					/*press=*/ false,		/*control=*/ false,		/*shift=*/ false},	//FOCUS_ON_SELECTION,
-	{wi::input::BUTTON('R'),					/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//RENAME_SELECTED,
+	{wi::input::BUTTON::KEYBOARD_BUTTON_F2,		/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//RENAME_SELECTED,
 	{wi::input::BUTTON('Z'),					/*press=*/ true,		/*control=*/ true,		/*shift=*/ false},	//UNDO_ACTION,
 	{wi::input::BUTTON('Y'),					/*press=*/ true,		/*control=*/ true,		/*shift=*/ false},	//REDO_ACTION,
 	{wi::input::BUTTON('C'),					/*press=*/ true,		/*control=*/ true,		/*shift=*/ false},	//COPY_ACTION,
@@ -137,7 +137,7 @@ HotkeyInfo hotkeyActions[size_t(EditorActions::COUNT)] = {
 	{wi::input::BUTTON('1'),					/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//MOVE_TOGGLE_ACTION,
 	{wi::input::BUTTON('2'),					/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//ROTATE_TOGGLE_ACTION,
 	{wi::input::BUTTON('3'),					/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//SCALE_TOGGLE_ACTION,
-	{wi::input::BUTTON::KEYBOARD_BUTTON_F2,		/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//MAKE_NEW_SCREENSHOT,
+	{wi::input::BUTTON::KEYBOARD_BUTTON_F3,		/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//MAKE_NEW_SCREENSHOT,
 	{wi::input::BUTTON('I'),					/*press=*/ false,		/*control=*/ false,		/*shift=*/ false},	//INSPECTOR_MODE,
 	{wi::input::BUTTON::MOUSE_BUTTON_LEFT,		/*press=*/ true,		/*control=*/ true,		/*shift=*/ true},	//PLACE_INSTANCES,
 	{wi::input::BUTTON('S'),					/*press=*/ true,		/*control=*/ true,		/*shift=*/ true},	//SAVE_SCENE_AS,
@@ -1615,8 +1615,22 @@ void EditorComponent::Update(float dt)
 		drive_orbit_horizontal = lerp(drive_orbit_horizontal, 0.0f, dt);
 	}
 
+	if (!GetGUI().IsTyping() && !translator.selected.empty() && CheckInput(EditorActions::RENAME_SELECTED))
+	{
+		for (auto& x : translator.selected)
+		{
+			if (!scene.names.Contains(x.entity))
+			{
+				scene.names.Create(x.entity);
+			}
+		}
+		componentsWnd.nameWnd.SetEntity(translator.selected.back().entity);
+		componentsWnd.nameWnd.SetCollapsed(false);
+		componentsWnd.nameWnd.nameInput.SetAsActive(true);
+	}
+
 	// Camera control:
-	if (!drive_mode && !wi::backlog::isActive() && !GetGUI().HasFocus() && !renaming_mode)
+	if (!drive_mode && !wi::backlog::isActive() && !GetGUI().HasFocus())
 	{
 		deleting = CheckInput(EditorActions::DELETE_ACTION);
 		currentMouse = wi::input::GetPointer();
@@ -1803,19 +1817,6 @@ void EditorComponent::Update(float dt)
 		if (!translator.selected.empty() && CheckInput(EditorActions::FOCUS_ON_SELECTION))
 		{
 			FocusCameraOnSelected();
-		}
-
-		if (!translator.selected.empty() && CheckInput(EditorActions::RENAME_SELECTED))
-		{
-			for (auto& x : translator.selected)
-			{
-				const auto& picked = translator.selected.back();
-    			if (NameComponent* name_comp = scene.names.GetComponent(translator.selected.back().entity))
-    			{
-    			    componentsWnd.nameWnd.nameInput.SetAsActive();
-    			    componentsWnd.nameWnd.SetCollapsed(false);
-    			}
-			}
 		}
 
 		inspector_mode = CheckInput(EditorActions::INSPECTOR_MODE);

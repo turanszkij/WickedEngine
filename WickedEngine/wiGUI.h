@@ -515,7 +515,10 @@ namespace wi::gui
 		static void AddInput(const wchar_t inputChar);
 		static void AddInput(const char inputChar);
 		static void DeleteFromInput(int direction = -1);
-		void SetAsActive();
+
+		// Sets this text input as currently active in typing state
+		//	selectall params: selects the current input, so typing will immediately overwrite it
+		void SetAsActive(bool selectall = false);
 
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;

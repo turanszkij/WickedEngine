@@ -40,8 +40,6 @@ public:
 	float drive_orbit_horizontal = 0;
 	float drive_steering_smoothed = 0;
 
-	bool renaming_mode = false;
-
 	wi::gui::Button navtestButton;
 	bool navtest_enabled = false;
 	wi::scene::PickResult navtest_start_pick;

@@ -1709,7 +1709,6 @@ namespace wi::gui
 			{
 				// activate
 				SetAsActive();
-				typing_active = true; // do NOT set this inside SetAsActive() because that can be called from outside, but this bool cannot, and it could stuck
 			}
 		}
 
@@ -1991,13 +1990,14 @@ namespace wi::gui
 		Widget::SetTheme(theme, id);
 		theme.font.Apply(font_description.params);
 	}
-	void TextInputField::SetAsActive()
+	void TextInputField::SetAsActive(bool selectall)
 	{
 		Activate();
 		font_input.SetText(font.GetText());
 		caret_pos = (int)font_input.GetText().size();
-		caret_begin = caret_pos;
+		caret_begin = selectall ? 0 : caret_pos;
 		caret_delay = 0;
+		typing_active = true;
 	}
 
 

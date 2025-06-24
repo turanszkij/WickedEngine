@@ -46,7 +46,6 @@ void NameWindow::Create(EditorComponent* _editor)
 			name->name = args.sValue;
 		}
 		editor->componentsWnd.RefreshEntityTree();
-		editor->renaming_mode = false;
 	});
 	AddWidget(&nameInput);
 
