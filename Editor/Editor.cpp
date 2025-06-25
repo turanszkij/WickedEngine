@@ -1325,6 +1325,8 @@ void EditorComponent::Load()
 	SetDefaultLocalization();
 	generalWnd.RefreshLanguageSelectionAfterWholeGUIWasInitialized();
 
+	generalWnd.RefreshTheme();
+
 	auto load_font = [this](std::string filename) {
 		font_datas.emplace_back().name = filename;
 		wi::helper::FileRead(filename, font_datas.back().filedata);
@@ -2998,8 +3000,6 @@ void EditorComponent::Update(float dt)
 	{
 		wi::renderer::SetToDrawDebugSprings(generalWnd.springVisCheckBox.GetCheck());
 	}
-
-	generalWnd.RefreshTheme();
 }
 void EditorComponent::PostUpdate()
 {
@@ -6094,9 +6094,9 @@ void EditorComponent::SetDefaultLocalization()
 }
 void EditorComponent::SetLocalization(wi::Localization& loc)
 {
-	current_localization = loc;
-	GetGUI().ImportLocalization(current_localization);
-	RefreshSceneList();
+	//current_localization = loc;
+	//GetGUI().ImportLocalization(current_localization);
+	//RefreshSceneList();
 }
 void EditorComponent::ReloadLanguage()
 {
