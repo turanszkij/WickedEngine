@@ -448,26 +448,29 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			{
 				editor->main->config.GetSection("options").Set("theme", currentTheme);
 				wi::Archive archive(wi::helper::GetCurrentPath() + "/themes/" + currentTheme + ".witheme");
-				uint64_t version = 0;
-				archive >> version;
-				archive >> theme_color_idle.rgba;
-				archive >> theme_color_focus.rgba;
-				archive >> theme_color_background.rgba;
-				archive >> theme.shadow_color.rgba;
-				archive >> theme.font.color.rgba;
-				archive >> theme.font.shadow_color.rgba;
-				std::string imageresourcename;
-				archive >> imageresourcename;
-				wi::vector<uint8_t> imagedata;
-				archive >> imagedata;
-				static uint64_t cnt = 0;
-				if (imagedata.empty())
+				if (archive.IsOpen())
 				{
-					editor->themeEditorWnd.imageResource = {};
-				}
-				else
-				{
-					editor->themeEditorWnd.imageResource = wi::resourcemanager::Load(wi::helper::GetCurrentPath() + "/themes/" + imageresourcename, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA, imagedata.data(), imagedata.size());
+					uint64_t version = 0;
+					archive >> version;
+					archive >> theme_color_idle.rgba;
+					archive >> theme_color_focus.rgba;
+					archive >> theme_color_background.rgba;
+					archive >> theme.shadow_color.rgba;
+					archive >> theme.font.color.rgba;
+					archive >> theme.font.shadow_color.rgba;
+					std::string imageresourcename;
+					archive >> imageresourcename;
+					wi::vector<uint8_t> imagedata;
+					archive >> imagedata;
+					static uint64_t cnt = 0;
+					if (imagedata.empty())
+					{
+						editor->themeEditorWnd.imageResource = {};
+					}
+					else
+					{
+						editor->themeEditorWnd.imageResource = wi::resourcemanager::Load(wi::helper::GetCurrentPath() + "/themes/" + imageresourcename, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA, imagedata.data(), imagedata.size());
+					}
 				}
 			}
 			break;
@@ -1136,23 +1139,23 @@ void GeneralWindow::ReloadThemes()
 
 	if (currentTheme == "Dark")
 	{
-		themeCombo.SetSelectedByUserdataWithoutCallback((uint64_t)Theme::Dark);
+		themeCombo.SetSelectedByUserdata((uint64_t)Theme::Dark);
 	}
 	else if (currentTheme == "Bright")
 	{
-		themeCombo.SetSelectedByUserdataWithoutCallback((uint64_t)Theme::Bright);
+		themeCombo.SetSelectedByUserdata((uint64_t)Theme::Bright);
 	}
 	else if (currentTheme == "Soft")
 	{
-		themeCombo.SetSelectedByUserdataWithoutCallback((uint64_t)Theme::Soft);
+		themeCombo.SetSelectedByUserdata((uint64_t)Theme::Soft);
 	}
 	else if (currentTheme == "Hacking")
 	{
-		themeCombo.SetSelectedByUserdataWithoutCallback((uint64_t)Theme::Hacking);
+		themeCombo.SetSelectedByUserdata((uint64_t)Theme::Hacking);
 	}
 	else if (currentTheme == "Nord")
 	{
-		themeCombo.SetSelectedByUserdataWithoutCallback((uint64_t)Theme::Nord);
+		themeCombo.SetSelectedByUserdata((uint64_t)Theme::Nord);
 	}
 	else
 	{
@@ -1160,7 +1163,7 @@ void GeneralWindow::ReloadThemes()
 		{
 			if (currentTheme == themeCombo.GetItemText(i))
 			{
-				themeCombo.SetSelectedWithoutCallback(i);
+				themeCombo.SetSelected(i);
 				break;
 			}
 		}

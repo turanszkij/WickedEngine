@@ -1036,6 +1036,8 @@ void WeatherWindow::SetEntity(wi::ecs::Entity entity)
 
 void WeatherWindow::Update()
 {
+	if (editor == nullptr)
+		return;
 	Scene& scene = editor->GetCurrentScene();
 	if (scene.weathers.GetCount() > 0)
 	{

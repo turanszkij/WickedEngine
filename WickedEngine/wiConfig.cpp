@@ -2,6 +2,7 @@
 #include "wiHelper.h"
 
 #include <unordered_set>
+#include <mutex>
 
 namespace wi::config
 {
@@ -95,6 +96,8 @@ namespace wi::config
 	bool File::Open(const char* filename)
 	{
 		this->filename = filename; // even if file couldn't be loaded, we remember the filename so it can be created on commit
+		if (!wi::helper::FileExists(filename))
+			return false;
 		wi::vector<uint8_t> filedata;
 		if (!wi::helper::FileRead(filename, filedata))
 			return false;
@@ -308,6 +311,8 @@ namespace wi::config
 				}
 			}
 		}
+		static std::mutex locker;
+		std::scoped_lock lck(locker);
 		wi::helper::FileWrite(filename, (const uint8_t*)text.c_str(), text.length());
 	}
 	Section& File::GetSection(const char* name)
