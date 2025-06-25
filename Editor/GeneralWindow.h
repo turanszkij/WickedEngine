@@ -52,6 +52,7 @@ public:
 
 	void RefreshLanguageSelectionAfterWholeGUIWasInitialized();
 
+	void RefreshTheme();
 	void ReloadThemes();
 };
 

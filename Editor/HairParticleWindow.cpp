@@ -407,7 +407,7 @@ void HairParticleWindow::RefreshSprites()
 		AddWidget(&s);
 	}
 
-	editor->generalWnd.themeCombo.SetSelected(editor->generalWnd.themeCombo.GetSelected()); // theme callback
+	editor->generalWnd.RefreshTheme();
 }
 
 void HairParticleWindow::SetEntity(Entity entity)

@@ -338,8 +338,7 @@ void ContentBrowserWindow::SetSelection(SELECTION selection)
 			AddWidget(&x);
 		}
 
-		// Refresh theme:
-		editor->generalWnd.themeCombo.SetSelected(editor->generalWnd.themeCombo.GetSelected());
+		editor->generalWnd.RefreshTheme();
 
 	});
 }

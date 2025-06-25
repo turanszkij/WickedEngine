@@ -531,7 +531,7 @@ void PropsWindow::AddWindow(wi::terrain::Prop& prop)
 
 	windows.emplace_back().reset(wnd);
 
-	editor->generalWnd.themeCombo.SetSelected(editor->generalWnd.themeCombo.GetSelected()); // theme refresh
+	editor->generalWnd.RefreshTheme();
 }
 
 void PropsWindow::Update(const wi::Canvas& canvas, float dt)
@@ -1398,7 +1398,7 @@ void TerrainWindow::AddModifier(ModifierWindow* modifier_window)
 		modifiers_to_remove.push_back(modifier_window);
 		});
 
-	editor->generalWnd.themeCombo.SetSelected(editor->generalWnd.themeCombo.GetSelected()); // theme refresh
+	editor->generalWnd.RefreshTheme();
 }
 void TerrainWindow::SetupAssets()
 {

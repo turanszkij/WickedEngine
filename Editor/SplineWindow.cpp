@@ -328,7 +328,7 @@ void SplineWindow::RefreshEntries()
 		AddWidget(&entry.removeButton);
 	}
 
-	editor->generalWnd.themeCombo.SetSelected(editor->generalWnd.themeCombo.GetSelected());
+	editor->generalWnd.RefreshTheme();
 }
 
 void SplineWindow::NewNode()

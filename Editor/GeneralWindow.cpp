@@ -196,7 +196,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		editor->main->config.GetSection("options").Set("focus_mode", args.bValue);
 		// trigger themeCombo's OnSelect handler, which will enable/disable shadow highlighting
 		// according to this checkbox's state
-		themeCombo.SetSelected(themeCombo.GetSelected());
+		RefreshTheme();
 	});
 	AddWidget(&focusModeCheckBox);
 
@@ -1119,6 +1119,11 @@ void GeneralWindow::RefreshLanguageSelectionAfterWholeGUIWasInitialized()
 			}
 		}
 	}
+}
+
+void GeneralWindow::RefreshTheme()
+{
+	themeCombo.SetSelected(themeCombo.GetSelected());
 }
 void GeneralWindow::ReloadThemes()
 {

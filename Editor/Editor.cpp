@@ -2998,6 +2998,8 @@ void EditorComponent::Update(float dt)
 	{
 		wi::renderer::SetToDrawDebugSprings(generalWnd.springVisCheckBox.GetCheck());
 	}
+
+	generalWnd.RefreshTheme();
 }
 void EditorComponent::PostUpdate()
 {
@@ -5908,7 +5910,7 @@ void EditorComponent::SetCurrentScene(int index)
 }
 void EditorComponent::RefreshSceneList()
 {
-	generalWnd.themeCombo.SetSelected(generalWnd.themeCombo.GetSelected());
+	generalWnd.RefreshTheme();
 	for (int i = 0; i < int(scenes.size()); ++i)
 	{
 		auto& editorscene = scenes[i];

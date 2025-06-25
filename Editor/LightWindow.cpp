@@ -518,8 +518,7 @@ void LightWindow::RefreshCascades()
 	AddWidget(&addCascadeButton);
 	addCascadeButton.SetEnabled(true);
 
-	// refresh theme:
-	editor->generalWnd.themeCombo.SetSelected(editor->generalWnd.themeCombo.GetSelected());
+	editor->generalWnd.RefreshTheme();
 
 }
 

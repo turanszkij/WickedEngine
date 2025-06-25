@@ -414,7 +414,7 @@ void MetadataWindow::RefreshEntries()
 		AddWidget(&entry.remove);
 	}
 
-	editor->generalWnd.themeCombo.SetSelected(editor->generalWnd.themeCombo.GetSelected());
+	editor->generalWnd.RefreshTheme();
 }
 
 void MetadataWindow::ResizeLayout()
