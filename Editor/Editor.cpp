@@ -5792,14 +5792,17 @@ void EditorComponent::UpdateDynamicWidgets()
 	if (wi::backlog::GetUnseenLogLevelMax() >= wi::backlog::LogLevel::Error)
 	{
 		logButton.sprites[wi::gui::IDLE].params.color = wi::Color::Error();
+		logButton.sprites[wi::gui::IDLE].params.gradient = wi::image::Params::Gradient::None;
 	}
 	else if (wi::backlog::GetUnseenLogLevelMax() >= wi::backlog::LogLevel::Warning)
 	{
 		logButton.sprites[wi::gui::IDLE].params.color = wi::Color::Warning();
+		logButton.sprites[wi::gui::IDLE].params.gradient = wi::image::Params::Gradient::None;
 	}
 	else
 	{
 		logButton.sprites[wi::gui::IDLE].params.color = color_off;
+		logButton.sprites[wi::gui::IDLE].params.gradient = wi::image::Params::Gradient::Linear;
 	}
 
 

@@ -991,6 +991,38 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			//	editorscene->tabSelectButton.sprites[i].params.gradient_uv_end = gradient_end;
 			//}
 		}
+
+		gradient = wi::image::Params::Gradient::Circular;
+		gradient_start = XMFLOAT2(0.9f, 0.1f);
+		gradient_end = XMFLOAT2(0.25f, 0.1f);
+		for (int i = 0; i < /*arraysize(wi::gui::Widget::sprites)*/1; ++i)
+		{
+			editor->generalButton.sprites[i].params.gradient = gradient;
+			editor->generalButton.sprites[i].params.gradient_color = gradientcolor;
+			editor->generalButton.sprites[i].params.gradient_uv_start = gradient_start;
+			editor->generalButton.sprites[i].params.gradient_uv_end = gradient_end;
+
+			editor->graphicsButton.sprites[i].params.gradient = gradient;
+			editor->graphicsButton.sprites[i].params.gradient_color = gradientcolor;
+			editor->graphicsButton.sprites[i].params.gradient_uv_start = gradient_start;
+			editor->graphicsButton.sprites[i].params.gradient_uv_end = gradient_end;
+
+			editor->paintToolButton.sprites[i].params.gradient = gradient;
+			editor->paintToolButton.sprites[i].params.gradient_color = gradientcolor;
+			editor->paintToolButton.sprites[i].params.gradient_uv_start = gradient_start;
+			editor->paintToolButton.sprites[i].params.gradient_uv_end = gradient_end;
+
+			editor->materialsButton.sprites[i].params.gradient = gradient;
+			editor->materialsButton.sprites[i].params.gradient_color = gradientcolor;
+			editor->materialsButton.sprites[i].params.gradient_uv_start = gradient_start;
+			editor->materialsButton.sprites[i].params.gradient_uv_end = gradient_end;
+
+			editor->cameraButton.sprites[i].params.gradient = gradient;
+			editor->cameraButton.sprites[i].params.gradient_color = gradientcolor;
+			editor->cameraButton.sprites[i].params.gradient_uv_start = gradient_start;
+			editor->cameraButton.sprites[i].params.gradient_uv_end = gradient_end;
+		}
+
 	});
 	ReloadThemes();
 	AddWidget(&themeCombo);

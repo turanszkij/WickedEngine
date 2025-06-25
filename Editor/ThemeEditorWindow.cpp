@@ -207,6 +207,7 @@ void ThemeEditorWindow::Create(EditorComponent* _editor)
 		if (archive.SaveFile(filename))
 		{
 			editor->PostSaveText("Saved theme:", filename);
+			editor->main->config.GetSection("options").Set("theme", name);
 			editor->generalWnd.ReloadThemes();
 		}
 	});
