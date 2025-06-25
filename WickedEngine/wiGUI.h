@@ -348,8 +348,8 @@ namespace wi::gui
 		void AttachTo(Widget* parent);
 		void Detach();
 
-		void Activate();
-		void Deactivate();
+		virtual void Activate();
+		virtual void Deactivate();
 
 		void ApplyScissor(const wi::Canvas& canvas, const wi::graphics::Rect rect, wi::graphics::CommandList cmd, bool constrain_to_parent = true) const;
 		wi::primitive::Hitbox2D GetPointerHitbox(bool constrained = true) const;
@@ -519,6 +519,9 @@ namespace wi::gui
 		// Sets this text input as currently active in typing state
 		//	selectall params: selects the current input, so typing will immediately overwrite it
 		void SetAsActive(bool selectall = false);
+
+		void Activate() override;
+		void Deactivate() override;
 
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;

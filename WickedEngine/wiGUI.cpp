@@ -1635,7 +1635,6 @@ namespace wi::gui
 						onInputAccepted(args);
 					}
 					Deactivate();
-					typing_active = false;
 				}
 				//else if (wi::input::Press(wi::input::KEYBOARD_BUTTON_BACKSPACE))
 				//{
@@ -1672,7 +1671,6 @@ namespace wi::gui
 					// cancel input
 					font_input.text.clear();
 					Deactivate();
-					typing_active = false;
 				}
 				else if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
 				{
@@ -2002,7 +2000,18 @@ namespace wi::gui
 		caret_pos = (int)font_input.GetText().size();
 		caret_begin = selectall ? 0 : caret_pos;
 		caret_delay = 0;
-		typing_active = true;
+	}
+	void TextInputField::Activate()
+	{
+		if (state != ACTIVE)
+			typing_active = true;
+		Widget::Activate();
+	}
+	void TextInputField::Deactivate()
+	{
+		if(state == ACTIVE)
+			typing_active = false;
+		Widget::Deactivate();
 	}
 
 
@@ -2786,7 +2795,10 @@ namespace wi::gui
 				{
 					// nothing here, but this holds main widget active while filter interaction is detected
 				}
+			}
 
+			if (state == ACTIVE) // intentionally checks base state again!
+			{
 				filter.Activate();
 				filter.scale_local.x = drop_width;
 				filter.scale_local.y = combo_height() - filter.GetShadowRadius() * 2;
@@ -2798,6 +2810,7 @@ namespace wi::gui
 			}
 			else
 			{
+				filter.Deactivate();
 				filter.SetText("");
 				filterText = "";
 			}
