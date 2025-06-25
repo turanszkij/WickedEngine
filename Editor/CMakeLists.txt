@@ -10,24 +10,24 @@ if (WIN32)
 		Editor.rc
 	)
 
-	add_executable(WickedEngineEditor WIN32 ${SOURCE_FILES})
+	add_executable(Editor WIN32 ${SOURCE_FILES})
 
-	target_link_libraries(WickedEngineEditor PUBLIC
+	target_link_libraries(Editor PUBLIC
 		WickedEngine_Windows
 	)
 
-	set_property(TARGET WickedEngineEditor PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+	set_property(TARGET Editor PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 	set(LIB_DXCOMPILER "dxcompiler.dll")
 else ()
-	add_executable(WickedEngineEditor ${SOURCE_FILES})
+	add_executable(Editor ${SOURCE_FILES})
 
-	target_link_libraries(WickedEngineEditor PUBLIC
+	target_link_libraries(Editor PUBLIC
 		WickedEngine
 	)
 	set(LIB_DXCOMPILER "libdxcompiler.so")
 
 	# needed for proper names in crash stacktrace
-	set_target_properties(WickedEngineEditor
+	set_target_properties(Editor
 		PROPERTIES
 		ENABLE_EXPORTS ON
 	)
@@ -35,11 +35,11 @@ else ()
 endif ()
 
 # Needed for terrain system
-add_dependencies(WickedEngineEditor Content)
+add_dependencies(Editor Content)
 
 # Copy content to build folder:
 add_custom_command(
-	TARGET WickedEngineEditor POST_BUILD
+	TARGET Editor POST_BUILD
 	# Copy shader compiler library in the source folder
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${WICKED_ROOT_DIR}/WickedEngine/${LIB_DXCOMPILER} ${CMAKE_CURRENT_BINARY_DIR}
 	#COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/languages ${CMAKE_CURRENT_BINARY_DIR}/languages
@@ -49,8 +49,8 @@ add_custom_command(
 include(GNUInstallDirs)
 set(EDITOR_INSTALL_FOLDER "${CMAKE_INSTALL_LIBDIR}/WickedEngine/Editor")
 
-# WickedEngineEditor executable
-install(TARGETS WickedEngineEditor RUNTIME DESTINATION ${EDITOR_INSTALL_FOLDER})
+# Editor executable
+install(TARGETS Editor RUNTIME DESTINATION ${EDITOR_INSTALL_FOLDER})
 
 # install editor assets
 install(DIRECTORY

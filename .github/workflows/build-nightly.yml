@@ -76,7 +76,7 @@ jobs:
         
     - name: Move files
       run: |
-        mv build/Editor/WickedEngineEditor ./Editor_Linux
+        mv build/Editor/Editor ./Editor_Linux
         mv Editor/config.ini ./
         mv Editor/startup.lua ./
         mv Editor/fonts ./
