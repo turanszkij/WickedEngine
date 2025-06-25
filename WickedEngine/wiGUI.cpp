@@ -728,6 +728,11 @@ namespace wi::gui
 		{
 			UpdateTransform_Parented(*parent);
 		}
+
+		XMVECTOR S, R, T;
+		XMMatrixDecompose(&S, &R, &T, XMLoadFloat4x4(&world));
+		XMStoreFloat3(&translation, T);
+		XMStoreFloat3(&scale, S);
 	}
 	void Widget::Detach()
 	{
