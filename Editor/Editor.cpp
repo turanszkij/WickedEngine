@@ -6094,9 +6094,9 @@ void EditorComponent::SetDefaultLocalization()
 }
 void EditorComponent::SetLocalization(wi::Localization& loc)
 {
-	//current_localization = loc;
-	//GetGUI().ImportLocalization(current_localization);
-	//RefreshSceneList();
+	current_localization = loc;
+	GetGUI().ImportLocalization(current_localization);
+	RefreshSceneList();
 }
 void EditorComponent::ReloadLanguage()
 {
