@@ -94,7 +94,7 @@ namespace wi::backlog
 	{
 		if (!locked)
 		{
-			if (wi::input::Press(wi::input::KEYBOARD_BUTTON_HOME) && !GUI.IsTyping())
+			if (wi::input::Press(wi::input::KEYBOARD_BUTTON_HOME))
 			{
 				Toggle();
 			}
