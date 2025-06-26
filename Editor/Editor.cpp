@@ -1400,6 +1400,8 @@ void EditorComponent::Start()
 
 	graphicsWnd.ApplySamplerSettings();
 
+	componentsWnd.RefreshEntityTree(); // called at Start() for updating the tree list when returning from scripts too
+
 	RenderPath2D::Start();
 }
 void EditorComponent::PreUpdate()

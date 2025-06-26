@@ -258,30 +258,69 @@ runProcess(function()
 		local dt = getDeltaTime() -- get delta time (elapsed time since last update())
 
 		-- every frame the text is positioned to the upper center of the screen and display the value of the frame counter
-		font.SetText("Hello World! Current frame counter = " .. counter)
+		font.SetText("Hello World! Current frame counter = " .. counter .. "\nCamera look: right mouse button\nMove camera: WASD\nMove object: arrows\nIf you run this script from Wicked Editor, ESCAPE will return to the editor.")
 		font.SetSize(24) -- the true render size of the font (larger can increase memory usage, but improves appearance)
 		font.SetScale(2) -- upscaling the font without increasing the true font resolution
 		font.SetPos(Vector(GetScreenWidth() * 0.5, GetScreenHeight() * 0.25)) -- put to upper center of the screen
 		font.SetAlign(WIFALIGN_CENTER, WIFALIGN_CENTER) -- horizontal and vertical text align
+
+		-- Mouse look camera:
+		if input.Down(MOUSE_BUTTON_RIGHT) then
+			local mouse_movement = input.GetPointerDelta()
+			mouse_movement = vector.Multiply(mouse_movement, dt * 0.1)
+			cam_transform.Rotate(Vector(mouse_movement.GetY(), mouse_movement.GetX())) -- roll-pitch-yaw rotation
+		end
 		
 		-- WASD camera movement:
 		local camspeed = 10 * dt
+		local camera_movement = Vector()
 		if input.Down(string.byte('W')) then
-			cam_transform.Translate(Vector(0,0,camspeed))
-		elseif input.Down(string.byte('S')) then
-			cam_transform.Translate(Vector(0,0,-camspeed))
-		elseif input.Down(string.byte('A')) then
-			cam_transform.Translate(Vector(-camspeed,0))
-		elseif input.Down(string.byte('D')) then
-			cam_transform.Translate(Vector(camspeed,0))
+			camera_movement = vector.Add(camera_movement, Vector(0,0,camspeed))
 		end
-		cam_transform.UpdateTransform()
+		if input.Down(string.byte('S')) then
+			camera_movement = vector.Add(camera_movement, Vector(0,0,-camspeed))
+		end
+		if input.Down(string.byte('A')) then
+			camera_movement = vector.Add(camera_movement, Vector(-camspeed,0))
+		end
+		if input.Down(string.byte('D')) then
+			camera_movement = vector.Add(camera_movement, Vector(camspeed,0))
+		end
+		camera_movement = vector.Rotate(camera_movement, cam_transform.Rotation_local) -- rotate the camera movement with camera orientation, so it's relative
+		cam_transform.Translate(camera_movement)
+
+		cam_transform.UpdateTransform() -- because cam_transform is not part of the scene system, but we created it just in the script, update it manually with UpdateTransform()
 		camera.TransformCamera(cam_transform)
 		camera.UpdateCamera()
 
 		-- rotate the cube every frame by a bit with the amount of delta time since last frame:
 		local cube_transform = scene.Component_GetTransform(cube_root_entity)
 		cube_transform.Rotate(Vector(0, dt * math.pi, 0))
+		
+		-- arrows object movement:
+		local movspeed = 10 * dt
+		local object_movement = Vector()
+		if input.Down(KEYBOARD_BUTTON_UP) then
+			object_movement = vector.Add(object_movement, Vector(0,movspeed))
+		end
+		if input.Down(KEYBOARD_BUTTON_DOWN) then
+			object_movement = vector.Add(object_movement, Vector(0,-movspeed))
+		end
+		if input.Down(KEYBOARD_BUTTON_LEFT) then
+			object_movement = vector.Add(object_movement, Vector(-movspeed,0))
+		end
+		if input.Down(KEYBOARD_BUTTON_RIGHT) then
+			object_movement = vector.Add(object_movement, Vector(movspeed,0))
+		end
+		object_movement = vector.Rotate(object_movement, cam_transform.Rotation_local) -- rotate the object movement with camera orientation, so it's relative
+		cube_transform.Translate(object_movement)
+
+		-- Add some editor testing functionality to return to editor when ESC is pressed. This can help development, and only works if script is running from the Editor:
+		if IsThisEditor() and input.Press(KEYBOARD_BUTTON_ESCAPE) then
+			ReturnToEditor()
+			input.ResetCursor(CURSOR_DEFAULT)
+			return
+		end
 
 		counter = counter + 1
 
