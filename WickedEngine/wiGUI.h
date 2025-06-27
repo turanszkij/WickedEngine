@@ -769,6 +769,7 @@ namespace wi::gui
 					x -= widget.GetLeftTextWidth() + padding * 4;
 				}
 				x -= padding;
+				x -= widget.GetShadowRadius();
 				y += size.y;
 				y += widget.GetShadowRadius();
 				y += padding;
@@ -821,13 +822,17 @@ namespace wi::gui
 				add_right(std::forward<Args>(args)...);
 				if (!widget.IsVisible())
 					return;
-				x -= widget.GetSize().x;
-				widget.SetPos(XMFLOAT2(x, y - widget.GetSize().y - padding));
+				const XMFLOAT2 size = widget.GetSize();
+				x -= size.x;
+				x -= widget.GetRightTextWidth();
+				x -= widget.GetShadowRadius();
+				widget.SetPos(XMFLOAT2(x, y - size.y - padding - widget.GetShadowRadius()));
 				if (widget.GetLeftTextWidth() > 0)
 				{
 					x -= widget.GetLeftTextWidth() + padding * 4;
 				}
 				x -= padding;
+				x -= widget.GetShadowRadius();
 			}
 
 			void helper_fitx(float sizx, wi::gui::Widget& widget)

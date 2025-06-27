@@ -97,6 +97,19 @@ void ThemeEditorWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&fontShadowButton);
 
+	gradientButton.Create("themeGradientButton");
+	gradientButton.SetSize(XMFLOAT2(siz, siz));
+	gradientButton.SetDescription("Gradient");
+	gradientButton.SetTooltip("The gradient color.");
+	gradientButton.SetText("");
+	gradientButton.font_description.params.v_align = wi::font::WIFALIGN_BOTTOM;
+	gradientButton.font_description.params.h_align = wi::font::WIFALIGN_CENTER;
+	gradientButton.OnClick([this](wi::gui::EventArgs args) {
+		mode = mode == ColorPickerMode::Gradient ? ColorPickerMode::None : ColorPickerMode::Gradient;
+		colorpicker.SetPickColor(gradientColor);
+		});
+	AddWidget(&gradientButton);
+
 	colorpicker.Create("themeColorPicker", wi::gui::Window::WindowControls::NONE);
 	colorpicker.SetSize(XMFLOAT2(256, 256));
 	colorpicker.OnColorChanged([this](wi::gui::EventArgs args) {
@@ -119,6 +132,9 @@ void ThemeEditorWindow::Create(EditorComponent* _editor)
 			break;
 		case ThemeEditorWindow::ColorPickerMode::FontShadow:
 			fontShadowColor = args.color;
+			break;
+		case ThemeEditorWindow::ColorPickerMode::Gradient:
+			gradientColor = args.color;
 			break;
 		default:
 			break;
@@ -180,7 +196,7 @@ void ThemeEditorWindow::Create(EditorComponent* _editor)
 	saveButton.OnClick([this](wi::gui::EventArgs args) {
 		std::string directory = wi::helper::GetCurrentPath() + "/themes/";
 		wi::helper::DirectoryCreate(directory);
-		static const uint64_t version = 1;
+		static const uint64_t version = 2;
 		wi::Archive archive;
 		archive.SetReadModeAndResetPos(false);
 		archive << version;
@@ -200,15 +216,24 @@ void ThemeEditorWindow::Create(EditorComponent* _editor)
 			wi::vector<uint8_t> emptyimage;
 			archive << emptyimage;
 		}
+
+		// New version handlers should be added at the end, so older versions can open newer themes!
+		if (version >= 2)
+		{
+			archive << gradientColor.rgba;
+		}
+
 		std::string name = nameInput.GetCurrentInputValue();
 		if (name.empty())
 			name = "Unnamed";
 		std::string filename = directory + name + ".witheme";
 		if (archive.SaveFile(filename))
 		{
-			editor->PostSaveText("Saved theme:", filename);
-			editor->main->config.GetSection("options").Set("theme", name);
-			editor->generalWnd.ReloadThemes();
+			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+				editor->PostSaveText("Saved theme:", filename);
+				editor->main->config.GetSection("options").Set("theme", name);
+				editor->generalWnd.ReloadThemes();
+			});
 		}
 	});
 	saveButton.SetAngularHighlightWidth(6);
@@ -236,6 +261,7 @@ void ThemeEditorWindow::Update(const wi::Canvas& canvas, float dt)
 	shadowButton.SetShadowRadius(1);
 	fontButton.SetShadowRadius(1);
 	fontShadowButton.SetShadowRadius(1);
+	gradientButton.SetShadowRadius(1);
 
 	const float rad = 6;
 	switch (mode)
@@ -264,6 +290,10 @@ void ThemeEditorWindow::Update(const wi::Canvas& canvas, float dt)
 		fontShadowButton.SetShadowRadius(rad);
 		colorpicker.label.SetText("Font shadow color");
 		break;
+	case ThemeEditorWindow::ColorPickerMode::Gradient:
+		gradientButton.SetShadowRadius(rad);
+		colorpicker.label.SetText("Gradient color");
+		break;
 	default:
 		break;
 	}
@@ -274,6 +304,7 @@ void ThemeEditorWindow::Update(const wi::Canvas& canvas, float dt)
 	shadowButton.SetColor(shadowColor);
 	fontButton.SetColor(fontColor);
 	fontShadowButton.SetColor(fontShadowColor);
+	gradientButton.SetColor(gradientColor);
 
 	for (int i = 0; i < arraysize(editor->newSceneButton.sprites); ++i)
 	{
@@ -313,6 +344,12 @@ void ThemeEditorWindow::Update(const wi::Canvas& canvas, float dt)
 		fontShadowButton.sprites[i].params.corners_rounding[2].radius = 20;
 		fontShadowButton.sprites[i].params.corners_rounding[3].radius = 20;
 
+		gradientButton.sprites[i].params.enableCornerRounding();
+		gradientButton.sprites[i].params.corners_rounding[0].radius = 20;
+		gradientButton.sprites[i].params.corners_rounding[1].radius = 20;
+		gradientButton.sprites[i].params.corners_rounding[2].radius = 20;
+		gradientButton.sprites[i].params.corners_rounding[3].radius = 20;
+
 		imageButton.sprites[i].params.enableCornerRounding();
 		imageButton.sprites[i].params.corners_rounding[0].radius = 20;
 		imageButton.sprites[i].params.corners_rounding[1].radius = 20;
@@ -344,7 +381,7 @@ void ThemeEditorWindow::ResizeLayout()
 	layout.jump(32);
 
 	layout.padding = 20;
-	layout.add_right(idleButton, focusButton, backgroundButton, shadowButton, fontButton, fontShadowButton);
+	layout.add_right(idleButton, focusButton, backgroundButton, shadowButton, fontButton, fontShadowButton, gradientButton);
 	layout.padding = 4;
 
 	layout.add_fullwidth(colorpicker);

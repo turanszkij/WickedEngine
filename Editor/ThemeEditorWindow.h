@@ -16,6 +16,7 @@ public:
 	wi::gui::Button shadowButton;
 	wi::gui::Button fontButton;
 	wi::gui::Button fontShadowButton;
+	wi::gui::Button gradientButton;
 
 	wi::gui::ColorPicker colorpicker;
 
@@ -30,6 +31,7 @@ public:
 	wi::Color shadowColor;
 	wi::Color fontColor;
 	wi::Color fontShadowColor;
+	wi::Color gradientColor;
 
 	wi::Resource imageResource;
 	std::string imageResourceName;
@@ -42,7 +44,8 @@ public:
 		Background,
 		Shadow,
 		Font,
-		FontShadow
+		FontShadow,
+		Gradient
 	} mode;
 
 	void Update(const wi::Canvas& canvas, float dt) override;

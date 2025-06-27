@@ -961,7 +961,7 @@ namespace wi::gui
 		left_text_width = 0;
 		right_text_width = 0;
 
-		font_description.params.posX = translation.x - 2;
+		font_description.params.posX = translation.x;
 		font_description.params.posY = translation.y + scale.y * 0.5f;
 		switch (font_description.params.h_align)
 		{
@@ -1720,16 +1720,16 @@ namespace wi::gui
 
 		font.params.posX = translation.x + 2;
 		font.params.posY = translation.y + scale.y * 0.5f;
-		font_description.params.posX = translation.x - 2;
+		font_description.params.posX = translation.x;
 		font_description.params.posY = translation.y + scale.y * 0.5f;
 		switch (font_description.params.h_align)
 		{
 		case wi::font::WIFALIGN_LEFT:
-			font_description.params.posX = translation.x + scale.x;
+			font_description.params.posX = translation.x + scale.x + shadow;
 			right_text_width = font_description.TextWidth();
 			break;
 		case wi::font::WIFALIGN_RIGHT:
-			font_description.params.posX = translation.x;
+			font_description.params.posX = translation.x - shadow;
 			left_text_width = font_description.TextWidth();
 			break;
 		case wi::font::WIFALIGN_CENTER:
@@ -1740,10 +1740,10 @@ namespace wi::gui
 		switch (font_description.params.v_align)
 		{
 		case wi::font::WIFALIGN_TOP:
-			font_description.params.posY = translation.y + scale.y;
+			font_description.params.posY = translation.y + scale.y + shadow;
 			break;
 		case wi::font::WIFALIGN_BOTTOM:
-			font_description.params.posY = translation.y;
+			font_description.params.posY = translation.y - shadow;
 			break;
 		case wi::font::WIFALIGN_CENTER:
 		default:
@@ -2735,7 +2735,7 @@ namespace wi::gui
 					combostate = COMBOSTATE_HOVER;
 					filter.SetAsActive();
 				}
-				else if (combostate == COMBOSTATE_SELECTING)
+				else if (combostate == COMBOSTATE_SELECTING || wi::input::Press(wi::input::KEYBOARD_BUTTON_ESCAPE))
 				{
 					Deactivate();
 					combostate = COMBOSTATE_INACTIVE;
@@ -4628,7 +4628,8 @@ namespace wi::gui
 		text_hex.SetSize(XMFLOAT2(80, 18));
 		text_hex.SetText("");
 		text_hex.SetTooltip("Enter RGBA hex value");
-		text_hex.SetDescription("Hex: ");
+		text_hex.SetDescription("#");
+		text_hex.font_description.params.scaling = 1.2f;
 		text_hex.OnInputAccepted([this](EventArgs args) {
 			wi::Color color(args.sValue.c_str());
 			SetPickColor(color);

@@ -12,7 +12,7 @@ namespace wi
 		constexpr Color(uint8_t r = 0, uint8_t g = 0, uint8_t b = 0, uint8_t a = 255) : rgba(uint32_t(r) | (uint32_t(g) << 8) | (uint32_t(b) << 16) | (uint32_t(a) << 24)) {}
 		constexpr Color(const char* hex)
 		{
-			rgba = 0;
+			Color abgr;
 			uint32_t shift = 0u;
 			for (int i = 0; i < 9; ++i)
 			{
@@ -29,7 +29,7 @@ namespace wi
 				case '7':
 				case '8':
 				case '9':
-					rgba |= (c - '0') << shift;
+					abgr.rgba |= (c - '0') << shift;
 					shift += 4u;
 					break;
 				case 'A':
@@ -38,7 +38,7 @@ namespace wi
 				case 'D':
 				case 'E':
 				case 'F':
-					rgba |= (c - 'A' + 10) << shift;
+					abgr.rgba |= (c - 'A' + 10) << shift;
 					shift += 4u;
 					break;
 				case 'a':
@@ -47,16 +47,24 @@ namespace wi
 				case 'd':
 				case 'e':
 				case 'f':
-					rgba |= (c - 'a' + 10) << shift;
+					abgr.rgba |= (c - 'a' + 10) << shift;
 					shift += 4u;
 					break;
 				case '#':
 					break;
 				default:
 				case 0:
+					setR(abgr.getA());
+					setG(abgr.getB());
+					setB(abgr.getG());
+					setA(abgr.getR());
 					return;
 				}
 			}
+			setR(abgr.getA());
+			setG(abgr.getB());
+			setB(abgr.getG());
+			setA(abgr.getR());
 		}
 
 		constexpr uint8_t getR() const { return (rgba >> 0) & 0xFF; }
@@ -98,10 +106,11 @@ namespace wi
 		};
 		constexpr const char_return<9> to_hex() const
 		{
+			const uint32_t abgr = Color(getA(), getB(), getG(), getR()).rgba;
 			char_return<9> ret;
 			for (int i = 0; i < 8; ++i)
 			{
-				const uint8_t v = (rgba >> (i * 4)) & 0xF;
+				const uint8_t v = (abgr >> (i * 4)) & 0xF;
 				ret.text[i] = v < 10 ? ('0' + v) : ('A' + v - 10);
 			}
 			return ret;
@@ -109,11 +118,11 @@ namespace wi
 
 		static constexpr Color fromFloat4(const XMFLOAT4& value)
 		{
-			return Color((uint8_t)(value.x * 255), (uint8_t)(value.y * 255), (uint8_t)(value.z * 255), (uint8_t)(value.w * 255));
+			return Color((uint8_t)(saturate(value.x) * 255), (uint8_t)(saturate(value.y) * 255), (uint8_t)(saturate(value.z) * 255), (uint8_t)(saturate(value.w) * 255));
 		}
 		static constexpr Color fromFloat3(const XMFLOAT3& value)
 		{
-			return Color((uint8_t)(value.x * 255), (uint8_t)(value.y * 255), (uint8_t)(value.z * 255));
+			return Color((uint8_t)(saturate(value.x) * 255), (uint8_t)(saturate(value.y) * 255), (uint8_t)(saturate(value.z) * 255));
 		}
 
 		static constexpr Color lerp(Color a, Color b, float i)

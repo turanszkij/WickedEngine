@@ -124,6 +124,7 @@ local function Character(model_scene, start_transform, controllable, anim_scene,
 			local charactercomponent = scene.Component_GetCharacter(self.model)
 			charactercomponent.Jump(f)
 			self.state = States.JUMP
+			charactercomponent.StopAnimation() -- fix for jumping when jump anim didn't finish yet, instead I force prev anim to finish
 		end,
 		Turn = function(self,dir)
 			local charactercomponent = scene.Component_GetCharacter(self.model)

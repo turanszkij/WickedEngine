@@ -393,6 +393,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		wi::Color theme_color_idle = wi::Color(30, 40, 60, 200);
 		wi::Color theme_color_focus = wi::Color(70, 150, 170, 220);
 		wi::Color theme_color_background = wi::Color(10, 10, 20, 220);
+		XMFLOAT4 theme_color_gradient = theme_color_focus;
 		wi::gui::Theme theme;
 		theme.image.background = true;
 		theme.image.blendFlag = wi::enums::BLENDMODE_OPAQUE;
@@ -414,6 +415,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			theme_color_background = wi::Color(180, 180, 190, 230);
 			theme.shadow_color = wi::Color::Shadow();
 			theme.font.color = wi::Color(50, 50, 80, 255);
+			theme_color_gradient = XMFLOAT4(1, 1, 1, 0.66f);
 			editor->themeEditorWnd.imageResource = {};
 			break;
 		case Theme::Soft:
@@ -423,6 +425,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			theme_color_background = wi::Color(100, 80, 90, 220);
 			theme.shadow_color = wi::Color(240, 190, 200, 180);
 			theme.font.color = wi::Color(255, 230, 240, 255);
+			theme_color_gradient = theme_color_focus;
 			editor->themeEditorWnd.imageResource = {};
 			break;
 		case Theme::Hacking:
@@ -433,6 +436,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			theme.shadow_color = wi::Color(0, 200, 90, 200);
 			theme.font.color = wi::Color(0, 200, 90, 255);
 			theme.font.shadow_color = wi::Color::Shadow();
+			theme_color_gradient = theme_color_focus;
 			editor->themeEditorWnd.imageResource = {};
 			break;
 		case Theme::Nord:
@@ -442,6 +446,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			theme_color_background = wi::Color(36, 42, 54, 255);
 			theme.shadow_color = wi::Color(106, 112, 124, 200);
 			theme.font.color = wi::Color(236, 239, 244, 255);
+			theme_color_gradient = XMFLOAT4(1, 1, 1, 0.66f);
 			editor->themeEditorWnd.imageResource = {};
 			break;
 		case Theme::User:
@@ -462,14 +467,29 @@ void GeneralWindow::Create(EditorComponent* _editor)
 					archive >> imageresourcename;
 					wi::vector<uint8_t> imagedata;
 					archive >> imagedata;
+
+					// New version handlers should be added at the end, so older versions can open newer themes!
+					if (version >= 2)
+					{
+						wi::Color grad;
+						archive >> grad.rgba;
+						theme_color_gradient = grad;
+					}
+					else
+					{
+						theme_color_gradient = theme_color_focus;
+					}
+
 					static uint64_t cnt = 0;
 					if (imagedata.empty())
 					{
 						editor->themeEditorWnd.imageResource = {};
+						editor->themeEditorWnd.imageResourceName = {};
 					}
 					else
 					{
 						editor->themeEditorWnd.imageResource = wi::resourcemanager::Load(wi::helper::GetCurrentPath() + "/themes/" + imageresourcename, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA, imagedata.data(), imagedata.size());
+						editor->themeEditorWnd.imageResourceName = imageresourcename;
 					}
 				}
 			}
@@ -481,6 +501,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			theme.shadow_color = editor->themeEditorWnd.shadowColor;
 			theme.font.color = editor->themeEditorWnd.fontColor;
 			theme.font.shadow_color = editor->themeEditorWnd.fontShadowColor;
+			theme_color_gradient = editor->themeEditorWnd.gradientColor;
 			break;
 		}
 
@@ -490,6 +511,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		editor->themeEditorWnd.shadowColor = theme.shadow_color;
 		editor->themeEditorWnd.fontColor = theme.font.color;
 		editor->themeEditorWnd.fontShadowColor = theme.font.shadow_color;
+		editor->themeEditorWnd.gradientColor = wi::Color::fromFloat4(theme_color_gradient);
 
 		theme.shadow_highlight = !focusModeCheckBox.GetCheck();
 		theme.shadow_highlight_spread = 0.4f;
@@ -920,108 +942,98 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		}
 
 		wi::image::Params::Gradient gradient = wi::image::Params::Gradient::Linear;
-		XMFLOAT4 gradientcolor = theme_color_focus;
-		gradientcolor.w *= 1.2f;
 		XMFLOAT2 gradient_start = XMFLOAT2(0, 0);
-		XMFLOAT2 gradient_end = XMFLOAT2(0, 0.5f);
+		XMFLOAT2 gradient_end = XMFLOAT2(0, 0.32f);
 		for (int i = 0; i < /*arraysize(wi::gui::Widget::sprites)*/1; ++i)
 		{
 			editor->playButton.sprites[i].params.gradient = gradient;
-			editor->playButton.sprites[i].params.gradient_color = gradientcolor;
+			editor->playButton.sprites[i].params.gradient_color = theme_color_gradient;
 			editor->playButton.sprites[i].params.gradient_uv_start = gradient_start;
 			editor->playButton.sprites[i].params.gradient_uv_end = gradient_end;
 
 			editor->stopButton.sprites[i].params.gradient = gradient;
-			editor->stopButton.sprites[i].params.gradient_color = gradientcolor;
+			editor->stopButton.sprites[i].params.gradient_color = theme_color_gradient;
 			editor->stopButton.sprites[i].params.gradient_uv_start = gradient_start;
 			editor->stopButton.sprites[i].params.gradient_uv_end = gradient_end;
 
 			editor->projectCreatorButton.sprites[i].params.gradient = gradient;
-			editor->projectCreatorButton.sprites[i].params.gradient_color = gradientcolor;
+			editor->projectCreatorButton.sprites[i].params.gradient_color = theme_color_gradient;
 			editor->projectCreatorButton.sprites[i].params.gradient_uv_start = gradient_start;
 			editor->projectCreatorButton.sprites[i].params.gradient_uv_end = gradient_end;
 
 			editor->saveButton.sprites[i].params.gradient = gradient;
-			editor->saveButton.sprites[i].params.gradient_color = gradientcolor;
+			editor->saveButton.sprites[i].params.gradient_color = theme_color_gradient;
 			editor->saveButton.sprites[i].params.gradient_uv_start = gradient_start;
 			editor->saveButton.sprites[i].params.gradient_uv_end = gradient_end;
 
 			editor->openButton.sprites[i].params.gradient = gradient;
-			editor->openButton.sprites[i].params.gradient_color = gradientcolor;
+			editor->openButton.sprites[i].params.gradient_color = theme_color_gradient;
 			editor->openButton.sprites[i].params.gradient_uv_start = gradient_start;
 			editor->openButton.sprites[i].params.gradient_uv_end = gradient_end;
 
 			editor->contentBrowserButton.sprites[i].params.gradient = gradient;
-			editor->contentBrowserButton.sprites[i].params.gradient_color = gradientcolor;
+			editor->contentBrowserButton.sprites[i].params.gradient_color = theme_color_gradient;
 			editor->contentBrowserButton.sprites[i].params.gradient_uv_start = gradient_start;
 			editor->contentBrowserButton.sprites[i].params.gradient_uv_end = gradient_end;
 
 			editor->logButton.sprites[i].params.gradient = gradient;
-			editor->logButton.sprites[i].params.gradient_color = gradientcolor;
+			editor->logButton.sprites[i].params.gradient_color = theme_color_gradient;
 			editor->logButton.sprites[i].params.gradient_uv_start = gradient_start;
 			editor->logButton.sprites[i].params.gradient_uv_end = gradient_end;
 
 			editor->profilerButton.sprites[i].params.gradient = gradient;
-			editor->profilerButton.sprites[i].params.gradient_color = gradientcolor;
+			editor->profilerButton.sprites[i].params.gradient_color = theme_color_gradient;
 			editor->profilerButton.sprites[i].params.gradient_uv_start = gradient_start;
 			editor->profilerButton.sprites[i].params.gradient_uv_end = gradient_end;
 
 			editor->fullscreenButton.sprites[i].params.gradient = gradient;
-			editor->fullscreenButton.sprites[i].params.gradient_color = gradientcolor;
+			editor->fullscreenButton.sprites[i].params.gradient_color = theme_color_gradient;
 			editor->fullscreenButton.sprites[i].params.gradient_uv_start = gradient_start;
 			editor->fullscreenButton.sprites[i].params.gradient_uv_end = gradient_end;
 
 			editor->bugButton.sprites[i].params.gradient = gradient;
-			editor->bugButton.sprites[i].params.gradient_color = gradientcolor;
+			editor->bugButton.sprites[i].params.gradient_color = theme_color_gradient;
 			editor->bugButton.sprites[i].params.gradient_uv_start = gradient_start;
 			editor->bugButton.sprites[i].params.gradient_uv_end = gradient_end;
 
 			editor->aboutButton.sprites[i].params.gradient = gradient;
-			editor->aboutButton.sprites[i].params.gradient_color = gradientcolor;
+			editor->aboutButton.sprites[i].params.gradient_color = theme_color_gradient;
 			editor->aboutButton.sprites[i].params.gradient_uv_start = gradient_start;
 			editor->aboutButton.sprites[i].params.gradient_uv_end = gradient_end;
 
 			editor->exitButton.sprites[i].params.gradient = gradient;
-			editor->exitButton.sprites[i].params.gradient_color = gradientcolor;
+			editor->exitButton.sprites[i].params.gradient_color = theme_color_gradient;
 			editor->exitButton.sprites[i].params.gradient_uv_start = gradient_start;
 			editor->exitButton.sprites[i].params.gradient_uv_end = gradient_end;
-
-			//for (auto& editorscene : editor->scenes)
-			//{
-			//	editorscene->tabSelectButton.sprites[i].params.gradient = gradient;
-			//	editorscene->tabSelectButton.sprites[i].params.gradient_color = gradientcolor;
-			//	editorscene->tabSelectButton.sprites[i].params.gradient_uv_start = gradient_start;
-			//	editorscene->tabSelectButton.sprites[i].params.gradient_uv_end = gradient_end;
-			//}
 		}
 
 		gradient = wi::image::Params::Gradient::Circular;
 		gradient_start = XMFLOAT2(0.9f, 0.1f);
-		gradient_end = XMFLOAT2(0.25f, 0.1f);
+		gradient_end = XMFLOAT2(0.42f, 0.1f);
 		for (int i = 0; i < /*arraysize(wi::gui::Widget::sprites)*/1; ++i)
 		{
 			editor->generalButton.sprites[i].params.gradient = gradient;
-			editor->generalButton.sprites[i].params.gradient_color = gradientcolor;
+			editor->generalButton.sprites[i].params.gradient_color = theme_color_gradient;
 			editor->generalButton.sprites[i].params.gradient_uv_start = gradient_start;
 			editor->generalButton.sprites[i].params.gradient_uv_end = gradient_end;
 
 			editor->graphicsButton.sprites[i].params.gradient = gradient;
-			editor->graphicsButton.sprites[i].params.gradient_color = gradientcolor;
+			editor->graphicsButton.sprites[i].params.gradient_color = theme_color_gradient;
 			editor->graphicsButton.sprites[i].params.gradient_uv_start = gradient_start;
 			editor->graphicsButton.sprites[i].params.gradient_uv_end = gradient_end;
 
 			editor->paintToolButton.sprites[i].params.gradient = gradient;
-			editor->paintToolButton.sprites[i].params.gradient_color = gradientcolor;
+			editor->paintToolButton.sprites[i].params.gradient_color = theme_color_gradient;
 			editor->paintToolButton.sprites[i].params.gradient_uv_start = gradient_start;
 			editor->paintToolButton.sprites[i].params.gradient_uv_end = gradient_end;
 
 			editor->materialsButton.sprites[i].params.gradient = gradient;
-			editor->materialsButton.sprites[i].params.gradient_color = gradientcolor;
+			editor->materialsButton.sprites[i].params.gradient_color = theme_color_gradient;
 			editor->materialsButton.sprites[i].params.gradient_uv_start = gradient_start;
 			editor->materialsButton.sprites[i].params.gradient_uv_end = gradient_end;
 
 			editor->cameraButton.sprites[i].params.gradient = gradient;
-			editor->cameraButton.sprites[i].params.gradient_color = gradientcolor;
+			editor->cameraButton.sprites[i].params.gradient_color = theme_color_gradient;
 			editor->cameraButton.sprites[i].params.gradient_uv_start = gradient_start;
 			editor->cameraButton.sprites[i].params.gradient_uv_end = gradient_end;
 		}
