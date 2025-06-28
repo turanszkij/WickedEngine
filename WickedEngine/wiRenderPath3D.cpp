@@ -3163,4 +3163,46 @@ namespace wi
 		}
 	}
 
+	Texture RenderPath3D::CreateScreenshotWithAlphaBackground()
+	{
+		TextureDesc desc = rtMain_render.GetDesc();
+		desc.format = Format::R8G8B8A8_UNORM;
+		desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+		Texture tex;
+		GraphicsDevice* device = GetDevice();
+		bool success = device->CreateTexture(&desc, nullptr, &tex);
+		assert(success);
+
+		Texture tex_resolved;
+		if (desc.sample_count > 1)
+		{
+			desc.sample_count = 1;
+			success = device->CreateTexture(&desc, nullptr, &tex_resolved);
+			assert(success);
+		}
+
+		CommandList cmd = device->BeginCommandList();
+		RenderPassImage rp[] = {
+			RenderPassImage::RenderTarget(&tex, RenderPassImage::LoadOp::CLEAR),
+			RenderPassImage::DepthStencil(GetDepthStencil()),
+			RenderPassImage::Resolve(&tex_resolved),
+		};
+		device->RenderPassBegin(rp, tex_resolved.IsValid() ? 3 : 2, cmd);
+		Viewport vp;
+		vp.width = (float)desc.width;
+		vp.height = (float)desc.height;
+		device->BindViewports(1, &vp, cmd);
+		wi::image::Params fx;
+		fx.stencilComp = wi::image::STENCILMODE_NOT;
+		fx.stencilRef = 0;
+		fx.stencilRefMode = wi::image::STENCILREFMODE_ALL;
+		fx.enableFullScreen();
+		wi::image::Draw(GetLastPostprocessRT(), fx, cmd);
+		device->RenderPassEnd(cmd);
+
+		if (tex_resolved.IsValid())
+			return tex_resolved;
+		return tex;
+	}
+
 }

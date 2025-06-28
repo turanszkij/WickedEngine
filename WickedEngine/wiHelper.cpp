@@ -81,6 +81,11 @@ namespace wi::helper
 
 	std::string screenshot(const wi::graphics::SwapChain& swapchain, const std::string& name)
 	{
+		return screenshot(wi::graphics::GetDevice()->GetBackBuffer(&swapchain));
+	}
+
+	std::string screenshot(const wi::graphics::Texture& texture, const std::string& name)
+	{
 		std::string directory;
 		if (name.empty())
 		{
@@ -100,7 +105,7 @@ namespace wi::helper
 			filename = directory + "/sc_" + getCurrentDateTimeAsString() + ".png";
 		}
 
-		bool result = saveTextureToFile(wi::graphics::GetDevice()->GetBackBuffer(&swapchain), filename);
+		bool result = saveTextureToFile(texture, filename);
 		assert(result);
 
 		if (result)

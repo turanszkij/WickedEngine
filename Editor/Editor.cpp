@@ -83,7 +83,8 @@ enum class EditorActions
 	SCALE_TOGGLE_ACTION,
 
 	// Engine actions
-	MAKE_NEW_SCREENSHOT,
+	SCREENSHOT,
+	SCREENSHOT_ALPHA,
 	INSPECTOR_MODE,
 	PLACE_INSTANCES,
 
@@ -137,7 +138,8 @@ HotkeyInfo hotkeyActions[size_t(EditorActions::COUNT)] = {
 	{wi::input::BUTTON('1'),					/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//MOVE_TOGGLE_ACTION,
 	{wi::input::BUTTON('2'),					/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//ROTATE_TOGGLE_ACTION,
 	{wi::input::BUTTON('3'),					/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//SCALE_TOGGLE_ACTION,
-	{wi::input::BUTTON::KEYBOARD_BUTTON_F3,		/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//MAKE_NEW_SCREENSHOT,
+	{wi::input::BUTTON::KEYBOARD_BUTTON_F3,		/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//SCREENSHOT,
+	{wi::input::BUTTON::KEYBOARD_BUTTON_F4,		/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//SCREENSHOT_ALPHA,
 	{wi::input::BUTTON('I'),					/*press=*/ false,		/*control=*/ false,		/*shift=*/ false},	//INSPECTOR_MODE,
 	{wi::input::BUTTON::MOUSE_BUTTON_LEFT,		/*press=*/ true,		/*control=*/ true,		/*shift=*/ true},	//PLACE_INSTANCES,
 	{wi::input::BUTTON('S'),					/*press=*/ true,		/*control=*/ true,		/*shift=*/ true},	//SAVE_SCENE_AS,
@@ -211,7 +213,8 @@ void HotkeyRemap(Editor* main)
 		{"MOVE_TOGGLE_ACTION", EditorActions::MOVE_TOGGLE_ACTION},
 		{"ROTATE_TOGGLE_ACTION", EditorActions::ROTATE_TOGGLE_ACTION},
 		{"SCALE_TOGGLE_ACTION", EditorActions::SCALE_TOGGLE_ACTION},
-		{"MAKE_NEW_SCREENSHOT", EditorActions::MAKE_NEW_SCREENSHOT},
+		{"MAKE_NEW_SCREENSHOT", EditorActions::SCREENSHOT},
+		{"MAKE_NEW_SCREENSHOT_ALPHA", EditorActions::SCREENSHOT_ALPHA},
 		{"INSPECTOR_MODE", EditorActions::INSPECTOR_MODE},
 		{"PLACE_INSTANCES", EditorActions::PLACE_INSTANCES},
 		{"SAVE_SCENE_AS", EditorActions::SAVE_SCENE_AS},
@@ -1209,7 +1212,8 @@ void EditorComponent::Load()
 		ss += "Rotate Toggle: " + GetInputString(EditorActions::ROTATE_TOGGLE_ACTION) + "\n";
 		ss += "Scale Toggle: " + GetInputString(EditorActions::SCALE_TOGGLE_ACTION) + "\n";
 		ss += "Wireframe mode: " + GetInputString(EditorActions::WIREFRAME_MODE) + "\n";
-		ss += "Screenshot (saved into Editor's screenshots folder): " + GetInputString(EditorActions::MAKE_NEW_SCREENSHOT) + "\n";
+		ss += "Screenshot (saved into Editor's screenshots folder): " + GetInputString(EditorActions::SCREENSHOT) + "\n";
+		ss += "Screenshot with background as alpha (saved into Editor's screenshots folder): " + GetInputString(EditorActions::SCREENSHOT_ALPHA) + "\n";
 		ss += "Depth of field refocus to point: " + GetInputString(EditorActions::DEPTH_OF_FIELD_REFOCUS_TO_POINT) + " + left mouse button" + "\n";
 		ss += "Color grading reference: " + GetInputString(EditorActions::COLOR_GRADING_REFERENCE) + " (color grading palette reference will be displayed in top left corner)\n";
 		ss += "Focus on selected: " + GetInputString(EditorActions::FOCUS_ON_SELECTION) + " button, this will make the camera jump to selection.\n";
@@ -1422,9 +1426,22 @@ void EditorComponent::Update(float dt)
 
 	main->canvas.scaling = float(guiScalingCombo.GetSelectedUserdata()) / 100.0f;
 
-	if (CheckInput(EditorActions::MAKE_NEW_SCREENSHOT))
+	if (CheckInput(EditorActions::SCREENSHOT))
 	{
 		std::string filename = wi::helper::screenshot(main->swapChain);
+		PostSaveText(filename);
+		if (filename.empty())
+		{
+			PostSaveText("Error! Screenshot was not successful!");
+		}
+		else
+		{
+			PostSaveText("Screenshot saved: ", filename);
+		}
+	}
+	if (CheckInput(EditorActions::SCREENSHOT_ALPHA))
+	{
+		std::string filename = wi::helper::screenshot(renderPath->CreateScreenshotWithAlphaBackground());
 		PostSaveText(filename);
 		if (filename.empty())
 		{
@@ -4344,32 +4361,13 @@ void EditorComponent::Render() const
 			}
 #endif
 
-			if (save_text_alpha > 0)
-			{
-				wi::font::Params params;
-				params.color = save_text_color;
-				params.shadowColor = wi::Color::Black();
-				params.color.setA(uint8_t(std::min(1.0f, save_text_alpha) * 255));
-				params.shadowColor.setA(params.color.getA());
-				params.position = XMFLOAT3(GetLogicalWidth() * 0.5f, GetLogicalHeight() * 0.5f, 0);
-				params.h_align = wi::font::WIFALIGN_CENTER;
-				params.v_align = wi::font::WIFALIGN_CENTER;
-				params.size = 30;
-				params.shadow_softness = 1;
-				wi::font::Cursor cursor = wi::font::Draw(save_text_message, params, cmd);
-
-				params.size = 24;
-				params.position.y += cursor.size.y;
-				wi::font::Draw(save_text_filename, params, cmd);
-			}
-
 			if (drive_mode)
 			{
 				wi::font::Params params;
 				params.color = save_text_color;
 				params.shadowColor = wi::Color::Black();
 				params.shadowColor.setA(params.color.getA());
-				params.position = XMFLOAT3(PhysicalToLogical(viewport3D.top_left_x + viewport3D.width * 0.5f), PhysicalToLogical(viewport3D.top_left_y + 5), 0);
+				params.position = XMFLOAT3(PhysicalToLogical(viewport3D.width * 0.5f), 20, 0);
 				params.h_align = wi::font::WIFALIGN_CENTER;
 				params.v_align = wi::font::WIFALIGN_TOP;
 				params.size = 30;
@@ -4399,6 +4397,29 @@ void EditorComponent::Compose(CommandList cmd) const
 	GetDevice()->BindViewports(1, &vp, cmd);
 
 	RenderPath2D::Compose(cmd);
+
+	if (save_text_alpha > 0)
+	{
+		wi::font::Params params;
+		params.color = save_text_color;
+		params.shadowColor = wi::Color::Black();
+		params.color.setA(uint8_t(std::min(1.0f, save_text_alpha) * 255));
+		params.shadowColor.setA(params.color.getA());
+		params.position = XMFLOAT3(GetLogicalWidth() * 0.5f, GetLogicalHeight() * 0.5f, 0);
+		params.h_align = wi::font::WIFALIGN_CENTER;
+		params.v_align = wi::font::WIFALIGN_CENTER;
+		params.size = 30;
+		params.shadow_softness = 1;
+		if (colorspace != ColorSpace::SRGB)
+		{
+			params.enableLinearOutputMapping(9);
+		}
+		wi::font::Cursor cursor = wi::font::Draw(save_text_message, params, cmd);
+
+		params.size = 24;
+		params.position.y += cursor.size.y;
+		wi::font::Draw(save_text_filename, params, cmd);
+	}
 }
 
 void EditorComponent::ResizeViewport3D()

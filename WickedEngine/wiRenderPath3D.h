@@ -352,6 +352,9 @@ namespace wi
 
 		void Stop() override;
 		void Start() override;
+
+		// Creates screenshot of the render result and replaces background (sky) pixels with transparency
+		wi::graphics::Texture CreateScreenshotWithAlphaBackground();
 	};
 
 }

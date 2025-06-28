@@ -48,6 +48,9 @@ namespace wi::helper
 	// Returns file path if successful, empty string otherwise
 	std::string screenshot(const wi::graphics::SwapChain& swapchain, const std::string& name = "");
 
+	// Returns file path if successful, empty string otherwise
+	std::string screenshot(const wi::graphics::Texture& texture, const std::string& name = "");
+
 	// Save raw pixel data from the texture to memory
 	bool saveTextureToMemory(const wi::graphics::Texture& texture, wi::vector<uint8_t>& texturedata);
 
