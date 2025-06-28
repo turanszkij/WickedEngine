@@ -79,6 +79,9 @@ namespace wi::lua
 
 		int SetDistortionOverlay(lua_State* L);
 
+		int SetChromaticAberrationEnabled(lua_State* L);
+		int SetChromaticAberrationAmount(lua_State* L);
+
 		static void Bind();
 	};
 
