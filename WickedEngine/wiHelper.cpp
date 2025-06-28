@@ -156,25 +156,26 @@ namespace wi::helper
 
 			const uint32_t data_stride = GetFormatStride(desc.format);
 			const uint32_t block_size = GetFormatBlockSize(desc.format);
-			const uint32_t num_blocks_x = desc.width / block_size;
-			const uint32_t num_blocks_y = desc.height / block_size;
 			size_t cpy_offset = 0;
 			size_t subresourceIndex = 0;
 			for (uint32_t layer = 0; layer < desc.array_size; ++layer)
 			{
-				uint32_t mip_width = num_blocks_x;
-				uint32_t mip_height = num_blocks_y;
-				uint32_t mip_depth = desc.depth;
 				for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
 				{
+					const uint32_t mip_width = std::max(1u, desc.width >> mip);
+					const uint32_t mip_height = std::max(1u, desc.height >> mip);
+					const uint32_t mip_depth = std::max(1u, desc.depth >> mip);
+					const uint32_t num_blocks_x = (mip_width + block_size - 1) / block_size;
+					const uint32_t num_blocks_y = (mip_height + block_size - 1) / block_size;
+
 					assert(subresourceIndex < stagingTex.mapped_subresource_count);
 					const SubresourceData& subresourcedata = stagingTex.mapped_subresources[subresourceIndex++];
-					const size_t dst_rowpitch = mip_width * data_stride;
+					const size_t dst_rowpitch = num_blocks_x * data_stride;
 					for (uint32_t z = 0; z < mip_depth; ++z)
 					{
 						uint8_t* dst_slice = texturedata.data() + cpy_offset;
 						uint8_t* src_slice = (uint8_t*)subresourcedata.data_ptr + subresourcedata.slice_pitch * z;
-						for (uint32_t i = 0; i < mip_height; ++i)
+						for (uint32_t i = 0; i < num_blocks_y; ++i)
 						{
 							std::memcpy(
 								dst_slice + i * dst_rowpitch,
@@ -182,12 +183,8 @@ namespace wi::helper
 								dst_rowpitch
 							);
 						}
-						cpy_offset += mip_height * dst_rowpitch;
+						cpy_offset += num_blocks_y * dst_rowpitch;
 					}
-
-					mip_width = std::max(1u, mip_width / 2);
-					mip_height = std::max(1u, mip_height / 2);
-					mip_depth = std::max(1u, mip_depth / 2);
 				}
 			}
 		}

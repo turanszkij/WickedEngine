@@ -1882,17 +1882,17 @@ namespace wi::graphics
 		size_t size = 0;
 		const uint32_t bytes_per_block = GetFormatStride(desc.format);
 		const uint32_t pixels_per_block = GetFormatBlockSize(desc.format);
-		const uint32_t num_blocks_x = desc.width / pixels_per_block;
-		const uint32_t num_blocks_y = desc.height / pixels_per_block;
 		const uint32_t mips = desc.mip_levels == 0 ? GetMipCount(desc.width, desc.height, desc.depth) : desc.mip_levels;
 		for (uint32_t layer = 0; layer < desc.array_size; ++layer)
 		{
 			for (uint32_t mip = 0; mip < mips; ++mip)
 			{
-				const uint32_t width = std::max(1u, num_blocks_x >> mip);
-				const uint32_t height = std::max(1u, num_blocks_y >> mip);
-				const uint32_t depth = std::max(1u, desc.depth >> mip);
-				size += width * height * depth * bytes_per_block;
+				const uint32_t mip_width = std::max(1u, desc.width >> mip);
+				const uint32_t mip_height = std::max(1u, desc.height >> mip);
+				const uint32_t mip_depth = std::max(1u, desc.depth >> mip);
+				const uint32_t num_blocks_x = (mip_width + pixels_per_block - 1) / pixels_per_block;
+				const uint32_t num_blocks_y = (mip_height + pixels_per_block - 1) / pixels_per_block;
+				size += num_blocks_x * num_blocks_y * mip_depth * bytes_per_block;
 			}
 		}
 		size *= desc.sample_count;
