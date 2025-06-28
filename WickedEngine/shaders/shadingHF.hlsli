@@ -779,7 +779,9 @@ inline uint AlphaToCoverage(half alpha, half alphaTest, float4 svposition)
 	else if (GetCamera().sample_count > 1)
 	{
 		// Without Temporal AA, use static dithering:
-		alpha -= dither(svposition.xy) / GetCamera().sample_count;
+		//alpha -= dither(svposition.xy) / GetCamera().sample_count;
+
+		// Static MSAA dithering is disabled now, but keep this branch logic here to not take alpha test path for MSAA
 	}
 	else
 	{
