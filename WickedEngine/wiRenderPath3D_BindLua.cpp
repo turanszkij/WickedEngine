@@ -72,6 +72,8 @@ namespace wi::lua
 		lunamethod(RenderPath3D_BindLua, GetLastPostProcessRT),
 
 		lunamethod(RenderPath3D_BindLua, SetDistortionOverlay),
+		lunamethod(RenderPath3D_BindLua, SetChromaticAberrationEnabled),
+		lunamethod(RenderPath3D_BindLua, SetChromaticAberrationAmount),
 
 		lunamethod(RenderPath2D_BindLua, CopyFrom),
 		{ NULL, NULL }
@@ -704,6 +706,38 @@ namespace wi::lua
 		{
 			((RenderPath3D*)component)->distortion_overlay = {};
 		}
+		return 0;
+	}
+
+	int RenderPath3D_BindLua::SetChromaticAberrationEnabled(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetChromaticAberrationEnabled(bool value) component is null!");
+			return 0;
+		}
+		if (wi::lua::SGetArgCount(L) > 0)
+		{
+			((RenderPath3D*)component)->setChromaticAberrationEnabled(wi::lua::SGetBool(L, 1));
+		}
+		else
+			wi::lua::SError(L, "SetChromaticAberrationEnabled(bool value) not enough arguments!");
+		return 0;
+	}
+
+	int RenderPath3D_BindLua::SetChromaticAberrationAmount(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetExposure(float value) component is null!");
+			return 0;
+		}
+		if (wi::lua::SGetArgCount(L) > 0)
+		{
+			((RenderPath3D*)component)->setChromaticAberrationAmount(wi::lua::SGetFloat(L, 1));
+		}
+		else
+			wi::lua::SError(L, "SetChromaticAberrationAmount(float value) not enough arguments!");
 		return 0;
 	}
 
