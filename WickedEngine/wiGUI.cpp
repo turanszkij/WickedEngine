@@ -2794,6 +2794,10 @@ namespace wi::gui
 				else if (combostate == COMBOSTATE_FILTER_INTERACT)
 				{
 					// nothing here, but this holds main widget active while filter interaction is detected
+					if (clicked && !pointerHitbox.intersects(filter.hitBox))
+					{
+						combostate = COMBOSTATE_INACTIVE;
+					}
 				}
 			}
 
