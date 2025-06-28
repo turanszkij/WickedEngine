@@ -512,6 +512,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		editor->themeEditorWnd.fontColor = theme.font.color;
 		editor->themeEditorWnd.fontShadowColor = theme.font.shadow_color;
 		editor->themeEditorWnd.gradientColor = wi::Color::fromFloat4(theme_color_gradient);
+		editor->themeEditorWnd.UpdateColorPickerMode();
 
 		theme.shadow_highlight = !focusModeCheckBox.GetCheck();
 		theme.shadow_highlight_spread = 0.4f;
@@ -650,6 +651,36 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		editor->cameraButton.SetShadowHighlightSpread(0.2f);
 		editor->materialsButton.SetShadowHighlightSpread(0.2f);
 		editor->paintToolButton.SetShadowHighlightSpread(0.2f);
+
+		if (editor->themeEditorWnd.imageResource.IsValid())
+		{
+			// When there is background image, make the entity tools not occlude a big part of it:
+			editor->componentsWnd.entityTree.SetShadowRadius(0);
+			editor->componentsWnd.entityTree.sprites[wi::gui::IDLE].params.blendFlag = wi::enums::BLENDMODE_ALPHA;
+			editor->componentsWnd.entityTree.sprites[wi::gui::IDLE].params.disableBackground();
+			editor->componentsWnd.entityTree.sprites[wi::gui::FOCUS].params.disableBackground();
+			editor->componentsWnd.entityTree.scrollbar.SetShadowRadius(0);
+
+			editor->componentsWnd.filterInput.SetShadowRadius(0);
+			editor->componentsWnd.filterInput.sprites[wi::gui::IDLE].params.blendFlag = wi::enums::BLENDMODE_ALPHA;
+			editor->componentsWnd.filterInput.sprites[wi::gui::IDLE].params.disableBackground();
+			editor->componentsWnd.filterInput.sprites[wi::gui::FOCUS].params.disableBackground();
+
+			editor->componentsWnd.filterCombo.SetShadowRadius(0);
+			editor->componentsWnd.filterCombo.sprites[wi::gui::IDLE].params.blendFlag = wi::enums::BLENDMODE_ALPHA;
+			editor->componentsWnd.filterCombo.sprites[wi::gui::IDLE].params.disableBackground();
+			editor->componentsWnd.filterCombo.sprites[wi::gui::FOCUS].params.disableBackground();
+
+			editor->componentsWnd.filterCaseCheckBox.SetShadowRadius(0);
+			editor->componentsWnd.filterCaseCheckBox.sprites[wi::gui::IDLE].params.blendFlag = wi::enums::BLENDMODE_ALPHA;
+			editor->componentsWnd.filterCaseCheckBox.sprites[wi::gui::IDLE].params.disableBackground();
+			editor->componentsWnd.filterCaseCheckBox.sprites[wi::gui::FOCUS].params.disableBackground();
+		}
+		else
+		{
+			editor->componentsWnd.entityTree.SetShadowRadius(1);
+			editor->componentsWnd.entityTree.scrollbar.SetShadowRadius(1);
+		}
 
 		for (int i = 0; i < arraysize(editor->newSceneButton.sprites); ++i)
 		{

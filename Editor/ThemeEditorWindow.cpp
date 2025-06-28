@@ -28,7 +28,7 @@ void ThemeEditorWindow::Create(EditorComponent* _editor)
 	idleButton.font_description.params.h_align = wi::font::WIFALIGN_CENTER;
 	idleButton.OnClick([this](wi::gui::EventArgs args) {
 		mode = mode == ColorPickerMode::Idle ? ColorPickerMode::None : ColorPickerMode::Idle;
-		colorpicker.SetPickColor(idleColor);
+		UpdateColorPickerMode();
 		});
 	AddWidget(&idleButton);
 
@@ -41,7 +41,7 @@ void ThemeEditorWindow::Create(EditorComponent* _editor)
 	focusButton.font_description.params.h_align = wi::font::WIFALIGN_CENTER;
 	focusButton.OnClick([this](wi::gui::EventArgs args) {
 		mode = mode == ColorPickerMode::Focus ? ColorPickerMode::None : ColorPickerMode::Focus;
-		colorpicker.SetPickColor(focusColor);
+		UpdateColorPickerMode();
 		});
 	AddWidget(&focusButton);
 
@@ -54,7 +54,7 @@ void ThemeEditorWindow::Create(EditorComponent* _editor)
 	backgroundButton.font_description.params.h_align = wi::font::WIFALIGN_CENTER;
 	backgroundButton.OnClick([this](wi::gui::EventArgs args) {
 		mode = mode == ColorPickerMode::Background ? ColorPickerMode::None : ColorPickerMode::Background;
-		colorpicker.SetPickColor(backgroundColor);
+		UpdateColorPickerMode();
 		});
 	AddWidget(&backgroundButton);
 
@@ -67,7 +67,7 @@ void ThemeEditorWindow::Create(EditorComponent* _editor)
 	shadowButton.font_description.params.h_align = wi::font::WIFALIGN_CENTER;
 	shadowButton.OnClick([this](wi::gui::EventArgs args) {
 		mode = mode == ColorPickerMode::Shadow ? ColorPickerMode::None : ColorPickerMode::Shadow;
-		colorpicker.SetPickColor(shadowColor);
+		UpdateColorPickerMode();
 		});
 	AddWidget(&shadowButton);
 
@@ -80,7 +80,7 @@ void ThemeEditorWindow::Create(EditorComponent* _editor)
 	fontButton.font_description.params.h_align = wi::font::WIFALIGN_CENTER;
 	fontButton.OnClick([this](wi::gui::EventArgs args) {
 		mode = mode == ColorPickerMode::Font ? ColorPickerMode::None : ColorPickerMode::Font;
-		colorpicker.SetPickColor(fontColor);
+		UpdateColorPickerMode();
 		});
 	AddWidget(&fontButton);
 
@@ -93,7 +93,7 @@ void ThemeEditorWindow::Create(EditorComponent* _editor)
 	fontShadowButton.font_description.params.h_align = wi::font::WIFALIGN_CENTER;
 	fontShadowButton.OnClick([this](wi::gui::EventArgs args) {
 		mode = mode == ColorPickerMode::FontShadow ? ColorPickerMode::None : ColorPickerMode::FontShadow;
-		colorpicker.SetPickColor(fontShadowColor);
+		UpdateColorPickerMode();
 		});
 	AddWidget(&fontShadowButton);
 
@@ -106,7 +106,7 @@ void ThemeEditorWindow::Create(EditorComponent* _editor)
 	gradientButton.font_description.params.h_align = wi::font::WIFALIGN_CENTER;
 	gradientButton.OnClick([this](wi::gui::EventArgs args) {
 		mode = mode == ColorPickerMode::Gradient ? ColorPickerMode::None : ColorPickerMode::Gradient;
-		colorpicker.SetPickColor(gradientColor);
+		UpdateColorPickerMode();
 		});
 	AddWidget(&gradientButton);
 
@@ -242,6 +242,38 @@ void ThemeEditorWindow::Create(EditorComponent* _editor)
 	AddWidget(&saveButton);
 
 	SetVisible(false);
+}
+
+void ThemeEditorWindow::UpdateColorPickerMode()
+{
+	switch (mode)
+	{
+	case ThemeEditorWindow::ColorPickerMode::None:
+		break;
+	case ThemeEditorWindow::ColorPickerMode::Idle:
+		colorpicker.SetPickColor(idleColor);
+		break;
+	case ThemeEditorWindow::ColorPickerMode::Focus:
+		colorpicker.SetPickColor(focusColor);
+		break;
+	case ThemeEditorWindow::ColorPickerMode::Background:
+		colorpicker.SetPickColor(backgroundColor);
+		break;
+	case ThemeEditorWindow::ColorPickerMode::Shadow:
+		colorpicker.SetPickColor(shadowColor);
+		break;
+	case ThemeEditorWindow::ColorPickerMode::Font:
+		colorpicker.SetPickColor(fontColor);
+		break;
+	case ThemeEditorWindow::ColorPickerMode::FontShadow:
+		colorpicker.SetPickColor(fontShadowColor);
+		break;
+	case ThemeEditorWindow::ColorPickerMode::Gradient:
+		colorpicker.SetPickColor(gradientColor);
+		break;
+	default:
+		break;
+	}
 }
 
 void ThemeEditorWindow::Update(const wi::Canvas& canvas, float dt)
