@@ -145,5 +145,5 @@ float4 main(VertexToPixel input) : SV_TARGET
 
 	accumulation *= sampleCount_rcp;
 
-	return max(0, half4(accumulation * light.GetColor().rgb, 1));
+	return saturateMediump(max(0, half4(accumulation * light.GetColor().rgb, 1)));
 }

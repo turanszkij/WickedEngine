@@ -87,5 +87,5 @@ float4 main(VertexToPixel input) : SV_Target
 		atmosphere_transmittance = GetAtmosphericLightTransmittance(GetWeather().atmosphere, P, L, texture_transmittancelut);
 	}
 
-	return max(0, half4(accumulation * light.GetColor().rgb * atmosphere_transmittance, 1));
+	return saturateMediump(max(0, half4(accumulation * light.GetColor().rgb * atmosphere_transmittance, 1)));
 }

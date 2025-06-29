@@ -43,7 +43,7 @@ namespace wi
 			desc.height = GetPhysicalHeight();
 			desc.sample_count = sampleCount;
 			desc.bind_flags = BindFlag::DEPTH_STENCIL;
-			desc.format = Format::D24_UNORM_S8_UINT;
+			desc.format = Format::D32_FLOAT_S8X24_UINT; // D24 was erroring on Vulkan AMD though here it would be enough
 			desc.layout = ResourceState::DEPTHSTENCIL;
 			device->CreateTexture(&desc, nullptr, &stencilScaled);
 			device->SetName(&stencilScaled, "stencilScaled");

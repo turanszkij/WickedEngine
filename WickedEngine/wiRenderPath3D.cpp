@@ -191,7 +191,6 @@ namespace wi
 			device->Barrier(GPUBarrier::Image(&rtSceneCopy, rtSceneCopy.desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
 			device->ClearUAV(&rtSceneCopy, 0, cmd);
 			device->Barrier(GPUBarrier::Image(&rtSceneCopy, ResourceState::UNORDERED_ACCESS, rtSceneCopy.desc.layout), cmd);
-			device->SubmitCommandLists();
 		}
 		{
 			TextureDesc desc;
