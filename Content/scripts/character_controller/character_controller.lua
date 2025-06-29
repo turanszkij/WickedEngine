@@ -177,7 +177,7 @@ local function Character(model_scene, start_transform, controllable, anim_scene,
 				-- read from mouse:
 				if(input.Down(MOUSE_BUTTON_RIGHT)) then
 					local mouseDif = input.GetPointerDelta()
-					mouseDif = mouseDif:Multiply(dt * 0.1)
+					mouseDif = mouseDif:Multiply(0.016 * 0.1) -- not using delta time for delta mouse because it's not a diff from prev frame but hw delta movement reading!
 					diff = vector.Add(diff, mouseDif)
 					input.SetPointer(self.savedPointerPos)
 					input.HidePointer(true)
