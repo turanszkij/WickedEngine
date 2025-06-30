@@ -647,20 +647,23 @@ local function ThirdPersonCamera(character)
 				return
 			end
 
+			local dt = getDeltaTime()
+			local dt_smoothing = dt * 5
+
 			-- Mouse scroll or gamepad triggers will move the camera distance:
 			local scroll = input.GetPointer().GetZ() -- pointer.z is the mouse wheel delta this frame
 			scroll = scroll + input.GetAnalog(GAMEPAD_ANALOG_TRIGGER_R).GetX()
 			scroll = scroll - input.GetAnalog(GAMEPAD_ANALOG_TRIGGER_L).GetX()
 			scroll = scroll * self.zoom_speed
 			self.rest_distance_new = math.max(self.rest_distance_new - scroll, self.min_distance) -- do not allow too close using max
-			self.rest_distance = math.lerp(self.rest_distance, self.rest_distance_new, 0.1) -- lerp will smooth out the zooming
+			self.rest_distance = math.lerp(self.rest_distance, self.rest_distance_new, dt_smoothing) -- lerp will smooth out the zooming
 
 			-- This will allow some smoothing for certain movements of camera target:
 			local charactercomponent = scene.Component_GetCharacter(self.character.model)
 			local character_position = charactercomponent.GetPositionInterpolated()
-			self.target_rot_horizontal = math.lerp(self.target_rot_horizontal, self.character.target_rot_horizontal, 0.1)
-			self.target_rot_vertical = math.lerp(self.target_rot_vertical, self.character.target_rot_vertical, 0.1)
-			self.target_height = math.lerp(self.target_height, character_position.GetY() + self.character.target_height + charactercomponent.GetFootOffset(), 0.1)
+			self.target_rot_horizontal = math.lerp(self.target_rot_horizontal, self.character.target_rot_horizontal, dt_smoothing)
+			self.target_rot_vertical = math.lerp(self.target_rot_vertical, self.character.target_rot_vertical, dt_smoothing)
+			self.target_height = math.lerp(self.target_height, character_position.GetY() + self.character.target_height + charactercomponent.GetFootOffset(), dt_smoothing)
 
 			local camera_transform = scene.Component_GetTransform(self.camera)
 			local target_transform = TransformComponent()
