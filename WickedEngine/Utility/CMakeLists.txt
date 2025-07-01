@@ -15,12 +15,15 @@ file(GLOB_RECURSE SOURCE_FILES CONFIGURE_DEPENDS
 	*.cpp
 )
 
+# workaround for source dir containing regex meta characters
+string(REGEX REPLACE "([.+?*])" "\\\\\\1" SDIR "${CMAKE_CURRENT_SOURCE_DIR}")
+
 # FAudio has their own CMakeLists
 list(FILTER HEADER_FILES
-	EXCLUDE REGEX ${CMAKE_CURRENT_SOURCE_DIR}/FAudio/.*
+	EXCLUDE REGEX "${SDIR}/FAudio/.*"
 )
 list(FILTER SOURCE_FILES
-	EXCLUDE REGEX ${CMAKE_CURRENT_SOURCE_DIR}/FAudio/.*
+	EXCLUDE REGEX "${SDIR}/FAudio/.*"
 )
 
 install(FILES ${HEADER_FILES}
