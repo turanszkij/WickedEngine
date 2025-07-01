@@ -1,7 +1,10 @@
 cmake_minimum_required(VERSION 3.19)
 
+# workaround for source dir containing regex meta characters
+string(REGEX REPLACE "([.+?*])" "\\\\\\1" SDIR "${CMAKE_CURRENT_SOURCE_DIR}")
+
 file(GLOB SOURCE_FILES CONFIGURE_DEPENDS *.cpp)
-list(FILTER SOURCE_FILES EXCLUDE REGEX ${CMAKE_CURRENT_SOURCE_DIR}/main_.*)
+list(FILTER SOURCE_FILES EXCLUDE REGEX ${SDIR}/main_.*)
 list(APPEND SOURCE_FILES main_${PLATFORM}.cpp)
 
 
