@@ -62,7 +62,7 @@ set_target_properties(Jolt PROPERTIES
 file(GLOB HEADER_FILES CONFIGURE_DEPENDS *.h)
 
 file(GLOB SOURCE_FILES CONFIGURE_DEPENDS *.cpp)
-list(REMOVE_ITEM SOURCE_FILES offlineshadercompiler.cpp)
+list(REMOVE_ITEM SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/offlineshadercompiler.cpp)
 
 add_library(${TARGET_NAME} ${WICKED_LIBRARY_TYPE}
 	${SOURCE_FILES}
