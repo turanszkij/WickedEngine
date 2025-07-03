@@ -294,6 +294,8 @@ void LightWindow::Create(EditorComponent* _editor)
 	shadowResolutionComboBox.AddItem("512", 512);
 	shadowResolutionComboBox.AddItem("1024", 1024);
 	shadowResolutionComboBox.AddItem("2048", 2048);
+	shadowResolutionComboBox.AddItem("4096", 4096);
+	shadowResolutionComboBox.AddItem("8192", 8192);
 	shadowResolutionComboBox.OnSelect([&](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
