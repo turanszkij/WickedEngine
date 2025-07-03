@@ -10,9 +10,8 @@
 [![Steam](https://img.shields.io/badge/Steam-%23000000.svg?logo=steam&logoColor=white)](https://store.steampowered.com/app/1967460/Wicked_Engine/)
 [![Itch.io](https://img.shields.io/badge/itch.io-%23FF0B34.svg?logo=Itch.io&logoColor=white)](https://turanszkij.itch.io/wicked-engine)
 
-
 <br/>
-<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/videoprojectors.gif" width="320px"/>
+<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/girl_pose.png" width="240px"/>
 Wicked Engine is an open-source 3D engine with modern graphics. Use this as a C++ framework for your graphics projects, a standalone 3D editor, LUA scripting or just for learning.<br/>
 
 - [Website](https://wickedengine.net/)<br/>
@@ -24,40 +23,41 @@ Wicked Engine is an open-source 3D engine with modern graphics. Use this as a C+
 - [Videos](https://www.youtube.com/playlist?list=PLLN-1FTGyLU_HJoC5zx6hJkB3D2XLiaxS)<br/>
 
 You can get the full source code by using Git version control and cloning https://github.com/turanszkij/WickedEngine.git, or downloading it as zip. You can also download nightly packaged builds of the Editor here (requires Github sign in): [![Github Build Status](https://github.com/turanszkij/WickedEngine/workflows/Build/badge.svg)](https://github.com/turanszkij/WickedEngine/actions)
-<br/>
+
 <br/>
 
-<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/fps.gif" width="320px"/>
+<img align="left" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/guy_pose.png" width="240px"/>
 
 ### Platforms:
-- Windows 10 or newer
+- Windows 10+
 - Linux
 - Xbox Series X|S
 - PlayStation 5
 
 ### How to build: 
 
+<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/videoprojectors.gif" width="320px"/>
+
 #### Windows
-To build Wicked Engine for Windows 10 or later, use the latest version of Visual Studio and the provided `WickedEngine.sln` solution file. By simply pressing F5, Wicked Engine and the Editor application will be built and then start. There are other example projects that you can build as well within the solution.
+To build Wicked Engine for Windows 10 or newer, open the `WickedEngine.sln` solution file with the latest Visual Studio. When it's opened, press F5, then Wicked Engine and the Editor application will be built and then start. You can check out other sample projects in the solution too.
 
-<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/fighting_game.gif" width="320px"/>
+If you want to develop a C++ application that uses Wicked Engine, you can build the WickedEngine_Windows static library project and link against it. Including the `"WickedEngine.h"` header will attempt to link the binaries for the appropriate platform, but search directories should be set up beforehand. For example, you can set additional library directories to `$(SolutionDir)BUILD\$(Platform)\$(Configuration)` by default. For examples, see the `Samples/Template_Windows`, `Samples/Tests`, and `Editor_Windows` projects. 
 
-If you want to develop a C++ application that uses Wicked Engine, you can build the WickedEngine static library project for the appropriate platform, such as `WickedEngine_Windows` and link against it. Including the `"WickedEngine.h"` header will attempt to link the binaries for the appropriate platform, but search directories should be set up beforehand. For example, you can set additional library directories to `$(SolutionDir)BUILD\$(Platform)\$(Configuration)` by default. For examples, see the `Template`, `Tests`, and `Editor` projects. 
-
-If you have questions or stuck, please use the `windows` communication channel on Discord: [![Discord chat](https://img.shields.io/discord/602811659224088577?logo=discord)](https://discord.gg/CFjRYmE)
-
-<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/character_grass.gif" width="320px"/>
+<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/fps.gif" width="320px"/>
 
 #### Linux
-To build the engine for Linux, use Cmake. You can find a sample build script for Ubuntu [here](.github/workflows/build.yml) (in the linux section). On the Linux operating system, you will need to ensure some additional dependencies are installed, such as Cmake (3.7 or newer), g++ compiler (C++ 17 compliant version) and SDL2. For Ubuntu 20.04, you can use the following commands to install dependencies:
+To build the engine for Linux, use Cmake. You can find a sample build script for Ubuntu [here](.github/workflows/build.yml) (in the linux section). 
 
-<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/inverse_kinematics.gif" width="320px"/>
+On Linux you will need to ensure some additional dependencies are installed, such as Cmake (3.7 or newer), g++ compiler (C++ 17 compliant version) and SDL2. For Ubuntu 20.04, you can use the following commands to install dependencies:
+
+<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/fighting_game.gif" width="320px"/>
 
 ```bash
 sudo apt update
 sudo apt install libsdl2-dev
 sudo apt install build-essential
 ```
+
 To build the engine, editor and tests, use `cmake` and then `make`:
 ```bash
 mkdir build
@@ -66,11 +66,9 @@ cmake .. -DCMAKE_BUILD_TYPE=Release
 make
 ```
 
+<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/character_grass.gif" width="320px"/>
+
 If you want to develop an application that uses Wicked Engine, you will have to link to libWickedEngine.a and `#include "WickedEngine.h"` into the source code. For examples, look at the Cmake files, or the Tests and the Editor applications.
-
-You can also download prebuilt and packaged versions of the Editor and Tests here (requires Github sign in): [![Github Build Status](https://github.com/turanszkij/WickedEngine/workflows/Build/badge.svg)](https://github.com/turanszkij/WickedEngine/actions)
-
-If you have questions or stuck, please use the `linux` communication channel on Discord: [![Discord chat](https://img.shields.io/discord/602811659224088577?logo=discord)](https://discord.gg/CFjRYmE)
 
 #### Xbox Series X|S
 Xbox Series specific extension files required for building are currently private.
@@ -83,7 +81,7 @@ PlayStation 5 specific extension files required for building are currently priva
 
 #### Initialization (C++):
 
-<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/grass.gif" width="320px"/>
+<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/clouds.gif" width="320px"/>
 
 ```cpp
 // Include engine headers:
@@ -177,18 +175,20 @@ if(input.Press(KEYBOARD_BUTTON_LEFT)) then
    audio.Play(soundinstance); -- this will play the sound if you press the left arrow on the keyboard
 end
 ```
+
+<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/inverse_kinematics.gif" width="320px"/>
+
 <i>(You can enter lua scripts into the backlog (HOME button), or the startup.lua script which is always executed on application startup if it is found near the app, or load a script via dofile("script.lua") command)</i>
 
 For more code samples and advanced use cases, please see the example projects, like the Template_Windows, Tests, or Editor project. There are also sample models and scripts included with Wicked Engine in the Content/models and Content/scripts folders. Check them out to learn about more features.
 
 ### Scripting API:
 
-<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/clouds.gif" width="320px"/>
+<img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/grass.gif" width="320px"/>
 
-You can use a great number of engine features through the Lua scripting api, which can even be used real time while the program is running. The included applications, like the Editor,
-contain a scripting input method toggled by the "Home" key. A blue screen will be presented where the user can type in LUA commands. It is very minimal in regards to input methods.
-For further details, please check the scripting API documentation: [Wicked Engine Scripting API](Content/Documentation/ScriptingAPI-Documentation.md)
-
+You can use a lot of of engine features through Lua scripting. The included applications, like the Editor,
+contain a scripting input method toggled by the "Home" key. A text screen will be presented where the user can type in LUA commands.
+For further details, check the scripting API documentation: [Wicked Engine Scripting API](Content/Documentation/ScriptingAPI-Documentation.md)
 
 ### Model import/export:
 The native model format is the <b>WISCENE</b> format. Any application using Wicked Engine can open this format efficiently.
@@ -201,7 +201,7 @@ In addition, the Editor supports importing some common model formats:
 - <b>GLTF, GLB</b>
 - <b>VRM, VRMA</b>
 
-The preferred workflow is to import models into the Editor, and save them as <b>WISCENE</b>, then any Wicked Engine application can open them.<br/>
+You can import models into the Editor, and save them as <b>WISCENE</b>, then any Wicked Engine application can open them.<br/>
 
 <img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/snowstorm.gif" width="320px"/>
 
@@ -244,7 +244,7 @@ You can specify command line arguments (without any prefix) to switch between re
 <br/>
 
 ### Other software using Wicked Engine
-- <a href="https://www.game-guru.com/max">Game Guru MAX</a>: Easy to use game creator software
+- <a href="https://www.game-guru.com/max">Game Guru MAX</a>: Easy to use game creator
 - <a href="https://www.youtube.com/watch?v=0SxXmnSQ6Q4">Flytrap</a>: Demoscene production by qop
 - <a href="https://youtu.be/mbmNU5QVM8A?si=9sDMS1LrMsz03f5r">doddering</a>: Demoscene production by qop
 - <a href="https://turanszkij.itch.io/wicked-shooter">Wicked Shooter</a>: FPS sample game in Wicked Engine
