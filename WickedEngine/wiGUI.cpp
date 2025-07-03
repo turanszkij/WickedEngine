@@ -2819,6 +2819,10 @@ namespace wi::gui
 				filterText = "";
 			}
 		}
+		else
+		{
+			filter.Deactivate();
+		}
 
 		filter.SetEnabled(enabled);
 		filter.force_disable = force_disable;
