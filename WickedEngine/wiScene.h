@@ -561,9 +561,6 @@ namespace wi::scene
 		XMMATRIX GetRestPose(wi::ecs::Entity entity) const;
 		XMMATRIX FindBoneRestPose(wi::ecs::Entity bone) { return GetRestPose(bone); }; // back-compat of GetRestPose
 
-		// Returns 1 if humanoid's default facing direction is forward, -1 if it's backward
-		float GetHumanoidDefaultFacing(const HumanoidComponent& humanoid, wi::ecs::Entity humanoidEntity) const;
-
 		// All triangles of the object will be injected into the voxel grid
 		//	subtract: if false (default), voxels will be added, if true then voxels will be removed
 		void VoxelizeObject(size_t objectIndex, wi::VoxelGrid& grid, bool subtract = false, uint32_t lod = 0);
