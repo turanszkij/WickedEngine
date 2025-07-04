@@ -639,7 +639,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
 			if (physicscomponent != nullptr)
 			{
-				physicscomponent->vehicle.front_suspension.min_length;
+				physicscomponent->vehicle.front_suspension.min_length = args.fValue;
 				physicscomponent->SetRefreshParametersNeeded();
 			}
 		}
@@ -654,7 +654,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
 			if (physicscomponent != nullptr)
 			{
-				physicscomponent->vehicle.front_suspension.max_length;
+				physicscomponent->vehicle.front_suspension.max_length = args.fValue;
 				physicscomponent->SetRefreshParametersNeeded();
 			}
 		}
@@ -669,7 +669,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
 			if (physicscomponent != nullptr)
 			{
-				physicscomponent->vehicle.front_suspension.frequency;
+				physicscomponent->vehicle.front_suspension.frequency = args.fValue;
 				physicscomponent->SetRefreshParametersNeeded();
 			}
 		}
@@ -684,7 +684,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
 			if (physicscomponent != nullptr)
 			{
-				physicscomponent->vehicle.front_suspension.damping;
+				physicscomponent->vehicle.front_suspension.damping = args.fValue;
 				physicscomponent->SetRefreshParametersNeeded();
 			}
 		}
@@ -699,7 +699,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
 			if (physicscomponent != nullptr)
 			{
-				physicscomponent->vehicle.rear_suspension.min_length;
+				physicscomponent->vehicle.rear_suspension.min_length = args.fValue;
 				physicscomponent->SetRefreshParametersNeeded();
 			}
 		}
@@ -714,7 +714,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
 			if (physicscomponent != nullptr)
 			{
-				physicscomponent->vehicle.rear_suspension.max_length;
+				physicscomponent->vehicle.rear_suspension.max_length = args.fValue;
 				physicscomponent->SetRefreshParametersNeeded();
 			}
 		}
@@ -729,7 +729,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
 			if (physicscomponent != nullptr)
 			{
-				physicscomponent->vehicle.rear_suspension.frequency;
+				physicscomponent->vehicle.rear_suspension.frequency = args.fValue;
 				physicscomponent->SetRefreshParametersNeeded();
 			}
 		}
@@ -744,7 +744,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(x.entity);
 			if (physicscomponent != nullptr)
 			{
-				physicscomponent->vehicle.rear_suspension.damping;
+				physicscomponent->vehicle.rear_suspension.damping = args.fValue;
 				physicscomponent->SetRefreshParametersNeeded();
 			}
 		}
