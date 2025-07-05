@@ -683,6 +683,8 @@ PipelineState PSO_copyStencilBit[8];
 PipelineState PSO_copyStencilBit_MSAA[8];
 PipelineState PSO_extractStencilBit[8];
 
+PipelineState PSO_waveeffect;
+
 RaytracingPipelineState RTPSO_reflection;
 
 enum SKYRENDERING
@@ -953,6 +955,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_COPY_STENCIL_BIT_MSAA], "copyStencilBitPS.cso", ShaderModel::SM_6_0, {"MSAA"}); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_EXTRACT_STENCIL_BIT], "extractStencilBitPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_PAINTDECAL], "paintdecalPS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_WAVE_EFFECT], "waveeffectPS.cso"); });
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_VOXELIZER], "objectGS_voxelizer.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_VOXEL], "voxelGS.cso"); });
@@ -1541,6 +1544,16 @@ void LoadShaders()
 			device->CreatePipelineState(&desc, &PSO_extractStencilBit[i]);
 		}
 		});
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
+		PipelineStateDesc desc;
+
+		desc.vs = &shaders[VSTYPE_SCREEN];
+		desc.ps = &shaders[PSTYPE_WAVE_EFFECT];
+		desc.bs = &blendStates[BSTYPE_ADDITIVE];
+		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
+		desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
+		device->CreatePipelineState(&desc, &PSO_waveeffect);
+	});
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
 		PipelineStateDesc desc;
 		desc.vs = &shaders[VSTYPE_LENSFLARE];
@@ -18398,6 +18411,23 @@ void ComputeReprojectedDepthPyramid(
 
 		bottom += 2;
 	}
+
+	device->EventEnd(cmd);
+}
+
+void DrawWaveEffect(const XMFLOAT4& color, CommandList cmd)
+{
+	device->EventBegin("DrawWaveEffect", cmd);
+
+	BindCommonResources(cmd);
+
+	device->BindPipelineState(&PSO_waveeffect, cmd);
+
+	PostProcess postprocess = {};
+	postprocess.params0 = color;
+	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
+	device->Draw(3, 0, cmd);
 
 	device->EventEnd(cmd);
 }

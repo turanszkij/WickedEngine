@@ -204,6 +204,7 @@ namespace wi::enums
 		PSTYPE_COPY_STENCIL_BIT,
 		PSTYPE_COPY_STENCIL_BIT_MSAA,
 		PSTYPE_EXTRACT_STENCIL_BIT,
+		PSTYPE_WAVE_EFFECT,
 
 
 		// geometry shaders

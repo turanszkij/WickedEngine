@@ -1080,6 +1080,9 @@ namespace wi::renderer
 	void DrawWaterRipples(const Visibility& vis, wi::graphics::CommandList cmd);
 
 
+	void DrawWaveEffect(const XMFLOAT4& color, wi::graphics::CommandList cmd);
+
+
 
 	void SetShadowProps2D(int max_resolution);
 	void SetShadowPropsCube(int max_resolution);

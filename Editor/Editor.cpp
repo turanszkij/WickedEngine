@@ -420,6 +420,13 @@ void EditorComponent::ResizeBuffers()
 	renderPath->width = 0; // force resize buffers
 	renderPath->height = 0;// force resize buffers
 	ResizeViewport3D();
+
+	TextureDesc desc;
+	desc.width = GetPhysicalWidth();
+	desc.height = GetPhysicalHeight();
+	desc.format = Format::R8G8B8A8_UNORM;
+	desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+	GetDevice()->CreateTexture(&desc, nullptr, &gui_background_effect);
 }
 void EditorComponent::ResizeLayout()
 {
@@ -4376,6 +4383,30 @@ void EditorComponent::Render() const
 			}
 
 			device->RenderPassEnd(cmd);
+		}
+
+		{
+			device->EventBegin("Editor GUI background effect", cmd);
+			device->RenderPassBegin(&gui_background_effect, cmd);
+
+			Viewport vp;
+			vp.width = (float)gui_background_effect.desc.width;
+			vp.height = (float)gui_background_effect.desc.height;
+			device->BindViewports(1, &vp, cmd);
+
+			Rect rect;
+			rect.from_viewport(vp);
+			device->BindScissorRects(1, &rect, cmd);
+
+			wi::image::Params fx;
+			fx.enableFullScreen();
+			wi::image::Draw(renderPath->GetGUIBlurredBackground(), fx, cmd);
+
+			static float opa = 1.0f;
+			wi::renderer::DrawWaveEffect(XMFLOAT4(1,1,1,opa), cmd);
+
+			device->RenderPassEnd(cmd);
+			device->EventEnd(cmd);
 		}
 
 		device->EventEnd(cmd);
