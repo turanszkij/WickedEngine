@@ -41,199 +41,86 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 	infoLabel.SetFitTextEnabled(true);
 	AddWidget(&infoLabel);
 
-	resetButton.Create("Reset");
-	resetButton.SetTooltip("Set the detail to keep between simulation and graphics mesh.\nLower = less detailed, higher = more detailed.");
-	resetButton.OnClick([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			SoftBodyPhysicsComponent* physicscomponent = scene.softbodies.GetComponent(x.entity);
-			if (physicscomponent == nullptr)
+	auto forEachSelected = [&] (auto func) {
+		return [&, func] (auto args) {
+			wi::scene::Scene& scene = editor->GetCurrentScene();
+			for (auto& x : editor->translator.selected)
 			{
-				// Try also getting it through object's mesh:
-				ObjectComponent* object = scene.objects.GetComponent(x.entity);
-				if (object != nullptr)
+				SoftBodyPhysicsComponent* physicscomponent = scene.softbodies.GetComponent(x.entity);
+				if (physicscomponent == nullptr)
 				{
-					physicscomponent = scene.softbodies.GetComponent(object->meshID);
+					// Try also getting it through object's mesh:
+					ObjectComponent* object = scene.objects.GetComponent(x.entity);
+					if (object != nullptr)
+					{
+						physicscomponent = scene.softbodies.GetComponent(object->meshID);
+					}
+				}
+				if (physicscomponent != nullptr)
+				{
+					func(physicscomponent, args);
 				}
 			}
-			if (physicscomponent != nullptr)
-			{
-				physicscomponent->Reset();
-			}
-		}
-	});
+		};
+	};
+
+	resetButton.Create("Reset");
+	resetButton.SetTooltip("Set the detail to keep between simulation and graphics mesh.\nLower = less detailed, higher = more detailed.");
+	resetButton.OnClick(forEachSelected([&] (auto physicscomponent, auto args) {
+		physicscomponent->Reset();
+	}));
 	AddWidget(&resetButton);
 
 	detailSlider.Create(0.001f, 1, 1, 1000, "LOD Detail: ");
 	detailSlider.SetTooltip("Set the detail to keep between simulation and graphics mesh.\nLower = less detailed, higher = more detailed.");
-	detailSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			SoftBodyPhysicsComponent* physicscomponent = scene.softbodies.GetComponent(x.entity);
-			if (physicscomponent == nullptr)
-			{
-				// Try also getting it through object's mesh:
-				ObjectComponent* object = scene.objects.GetComponent(x.entity);
-				if (object != nullptr)
-				{
-					physicscomponent = scene.softbodies.GetComponent(object->meshID);
-				}
-			}
-			if (physicscomponent != nullptr)
-			{
-				physicscomponent->SetDetail(args.fValue);
-			}
-		}
-	});
+	detailSlider.OnSlide(forEachSelected([&] (auto physicscomponent, auto args) {
+		physicscomponent->SetDetail(args.fValue);
+	}));
 	AddWidget(&detailSlider);
 
 	massSlider.Create(0, 100, 1, 100000, "Mass: ");
 	massSlider.SetTooltip("Set the mass amount for the physics engine.");
-	massSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			SoftBodyPhysicsComponent* physicscomponent = scene.softbodies.GetComponent(x.entity);
-			if (physicscomponent == nullptr)
-			{
-				// Try also getting it through object's mesh:
-				ObjectComponent* object = scene.objects.GetComponent(x.entity);
-				if (object != nullptr)
-				{
-					physicscomponent = scene.softbodies.GetComponent(object->meshID);
-				}
-			}
-			if (physicscomponent != nullptr)
-			{
-				physicscomponent->physicsobject = {};
-				physicscomponent->mass = args.fValue;
-			}
-		}
-	});
+	massSlider.OnSlide(forEachSelected([&] (auto physicscomponent, auto args) {
+		physicscomponent->physicsobject = {};
+		physicscomponent->mass = args.fValue;
+	}));
 	AddWidget(&massSlider);
 
 	frictionSlider.Create(0, 1, 0.5f, 100000, "Friction: ");
 	frictionSlider.SetTooltip("Set the friction amount for the physics engine.");
-	frictionSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			SoftBodyPhysicsComponent* physicscomponent = scene.softbodies.GetComponent(x.entity);
-			if (physicscomponent == nullptr)
-			{
-				// Try also getting it through object's mesh:
-				ObjectComponent* object = scene.objects.GetComponent(x.entity);
-				if (object != nullptr)
-				{
-					physicscomponent = scene.softbodies.GetComponent(object->meshID);
-				}
-			}
-			if (physicscomponent != nullptr)
-			{
-				physicscomponent->friction = args.fValue;
-			}
-		}
-	});
+	frictionSlider.OnSlide(forEachSelected([&] (auto physicscomponent, auto args) {
+		physicscomponent->friction = args.fValue;
+	}));
 	AddWidget(&frictionSlider);
 
 	restitutionSlider.Create(0, 1, 0, 100000, "Restitution: ");
 	restitutionSlider.SetTooltip("Set the restitution amount for the physics engine.");
-	restitutionSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			SoftBodyPhysicsComponent* physicscomponent = scene.softbodies.GetComponent(x.entity);
-			if (physicscomponent == nullptr)
-			{
-				// Try also getting it through object's mesh:
-				ObjectComponent* object = scene.objects.GetComponent(x.entity);
-				if (object != nullptr)
-				{
-					physicscomponent = scene.softbodies.GetComponent(object->meshID);
-				}
-			}
-			if (physicscomponent != nullptr)
-			{
-				physicscomponent->restitution = args.fValue;
-			}
-		}
-	});
+	restitutionSlider.OnSlide(forEachSelected([&] (auto physicscomponent, auto args) {
+		physicscomponent->restitution = args.fValue;
+	}));
 	AddWidget(&restitutionSlider);
 
 	pressureSlider.Create(0, 100000, 0, 100000, "Pressure: ");
 	pressureSlider.SetTooltip("Set the pressure amount for the physics engine.");
-	pressureSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			SoftBodyPhysicsComponent* physicscomponent = scene.softbodies.GetComponent(x.entity);
-			if (physicscomponent == nullptr)
-			{
-				// Try also getting it through object's mesh:
-				ObjectComponent* object = scene.objects.GetComponent(x.entity);
-				if (object != nullptr)
-				{
-					physicscomponent = scene.softbodies.GetComponent(object->meshID);
-				}
-			}
-			if (physicscomponent != nullptr)
-			{
-				physicscomponent->pressure = args.fValue;
-				physicscomponent->physicsobject = {};
-			}
-		}
-		});
+	pressureSlider.OnSlide(forEachSelected([&] (auto physicscomponent, auto args) {
+		physicscomponent->pressure = args.fValue;
+		physicscomponent->physicsobject = {};
+	}));
 	AddWidget(&pressureSlider);
 
 	vertexRadiusSlider.Create(0, 1, 0, 100000, "Vertex Radius: ");
 	vertexRadiusSlider.SetTooltip("Set how much distance vertices should keep from other physics bodies.");
-	vertexRadiusSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			SoftBodyPhysicsComponent* physicscomponent = scene.softbodies.GetComponent(x.entity);
-			if (physicscomponent == nullptr)
-			{
-				// Try also getting it through object's mesh:
-				ObjectComponent* object = scene.objects.GetComponent(x.entity);
-				if (object != nullptr)
-				{
-					physicscomponent = scene.softbodies.GetComponent(object->meshID);
-				}
-			}
-			if (physicscomponent != nullptr)
-			{
-				physicscomponent->physicsobject = {};
-				physicscomponent->vertex_radius = args.fValue;
-			}
-		}
-	});
+	vertexRadiusSlider.OnSlide(forEachSelected([&] (auto physicscomponent, auto args) {
+		physicscomponent->physicsobject = {};
+		physicscomponent->vertex_radius = args.fValue;
+	}));
 	AddWidget(&vertexRadiusSlider);
 
 	windCheckbox.Create("Wind: ");
 	windCheckbox.SetTooltip("Enable/disable wind force on this soft body.");
-	windCheckbox.OnClick([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			SoftBodyPhysicsComponent* physicscomponent = scene.softbodies.GetComponent(x.entity);
-			if (physicscomponent == nullptr)
-			{
-				// Try also getting it through object's mesh:
-				ObjectComponent* object = scene.objects.GetComponent(x.entity);
-				if (object != nullptr)
-				{
-					physicscomponent = scene.softbodies.GetComponent(object->meshID);
-				}
-			}
-			if (physicscomponent != nullptr)
-			{
-				physicscomponent->SetWindEnabled(args.bValue);
-			}
-		}
-	});
+	windCheckbox.OnClick(forEachSelected([&] (auto physicscomponent, auto args) {
+		physicscomponent->SetWindEnabled(args.bValue);
+	}));
 	AddWidget(&windCheckbox);
 
 

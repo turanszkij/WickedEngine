@@ -30,32 +30,32 @@ void DecalWindow::Create(EditorComponent* _editor)
 	placementCheckBox.SetTooltip("Enable decal placement. Use the left mouse button to place decals to the scene.");
 	AddWidget(&placementCheckBox);
 
+	auto forEachSelected = [&] (auto func) {
+		return [&, func] (auto args) {
+			wi::scene::Scene& scene = editor->GetCurrentScene();
+			for (auto& x : editor->translator.selected)
+			{
+				DecalComponent* decal = scene.decals.GetComponent(x.entity);
+				if (decal != nullptr)
+				{
+					func(decal, args);
+				}
+			}
+		};
+	};
+
 	onlyalphaCheckBox.Create("Alpha only basecolor: ");
 	onlyalphaCheckBox.SetTooltip("You can enable this to only use alpha channel from basecolor map. Useful for blending normalmap-only decals.");
-	onlyalphaCheckBox.OnClick([=](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			DecalComponent* decal = scene.decals.GetComponent(x.entity);
-			if (decal == nullptr)
-				continue;
-			decal->SetBaseColorOnlyAlpha(args.bValue);
-		}
-	});
+	onlyalphaCheckBox.OnClick(forEachSelected([&] (auto decal, auto args) {
+		decal->SetBaseColorOnlyAlpha(args.bValue);
+	}));
 	AddWidget(&onlyalphaCheckBox);
 
 	slopeBlendPowerSlider.Create(0, 8, 0, 1000, "Slope Blend: ");
 	slopeBlendPowerSlider.SetTooltip("Set a power factor for blending on surface slopes. 0 = no slope blend, increasing = more slope blend");
-	slopeBlendPowerSlider.OnSlide([=](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			DecalComponent* decal = scene.decals.GetComponent(x.entity);
-			if (decal == nullptr)
-				continue;
-			decal->slopeBlendPower = args.fValue;
-		}
-	});
+	slopeBlendPowerSlider.OnSlide(forEachSelected([&] (auto decal, auto args) {
+		decal->slopeBlendPower = args.fValue;
+	}));
 	AddWidget(&slopeBlendPowerSlider);
 
 	infoLabel.Create("");

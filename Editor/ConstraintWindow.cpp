@@ -40,20 +40,35 @@ void ConstraintWindow::Create(EditorComponent* _editor)
 	physicsDebugCheckBox.SetCheck(wi::physics::IsDebugDrawEnabled());
 	AddWidget(&physicsDebugCheckBox);
 
+	auto forEachSelected = [&](auto func) {
+		return [&, func](auto args) {
+			wi::scene::Scene& scene = editor->GetCurrentScene();
+			for (auto& x : editor->translator.selected)
+			{
+				PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
+				if (physicscomponent != nullptr) {
+					func(physicscomponent, args);
+				}
+			}
+		};
+	};
+
+	auto forEachSelectedWithRefresh = [&](auto func) {
+		return [&, func](auto args) {
+			forEachSelected([&, func](auto physicscomponent, auto args) {
+				func(physicscomponent, args);
+				physicscomponent->SetRefreshParametersNeeded(true);
+			});
+		};
+	};
+
+
 	collisionCheckBox.Create("Disable self collision: ");
 	collisionCheckBox.SetTooltip("Disable collision between the two bodies that this constraint targets.\nNote: changing this will recreate the constraint in the current pose relative to the bodies.");
-	collisionCheckBox.OnClick([=](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
-			if (physicscomponent != nullptr)
-			{
-				physicscomponent->SetDisableSelfCollision(args.bValue);
-				physicscomponent->physicsobject = nullptr;
-			}
-		}
-		});
+	collisionCheckBox.OnClick(forEachSelected([&] (auto physicscomponent, auto args) {
+		physicscomponent->SetDisableSelfCollision(args.bValue);
+		physicscomponent->physicsobject = nullptr;
+	}));
 	AddWidget(&collisionCheckBox);
 
 	constraintDebugSlider.Create(0, 10, 1, 100, "Debug size: ");
@@ -64,17 +79,9 @@ void ConstraintWindow::Create(EditorComponent* _editor)
 	AddWidget(&constraintDebugSlider);
 
 	rebindButton.Create("Rebind Constraint");
-	rebindButton.OnClick([this](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
-			if (physicscomponent != nullptr)
-			{
-				physicscomponent->physicsobject = nullptr;
-			}
-		}
-	});
+	rebindButton.OnClick(forEachSelected([&](auto physicscomponent, auto args) {
+		physicscomponent->physicsobject = nullptr;
+	}));
 	AddWidget(&rebindButton);
 
 	typeComboBox.Create("Type: ");
@@ -86,495 +93,252 @@ void ConstraintWindow::Create(EditorComponent* _editor)
 	typeComboBox.AddItem("Six DOF", (uint64_t)PhysicsConstraintComponent::Type::SixDOF);
 	typeComboBox.AddItem("Swing Twist", (uint64_t)PhysicsConstraintComponent::Type::SwingTwist);
 	typeComboBox.AddItem("Slider", (uint64_t)PhysicsConstraintComponent::Type::Slider);
-	typeComboBox.OnSelect([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
+	typeComboBox.OnSelect(forEachSelected([&](auto physicscomponent, auto args) {
+		PhysicsConstraintComponent::Type type = (PhysicsConstraintComponent::Type)args.userdata;
+		if (physicscomponent->type != type)
 		{
-			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
-			if (physicscomponent != nullptr)
-			{
-				PhysicsConstraintComponent::Type type = (PhysicsConstraintComponent::Type)args.userdata;
-				if (physicscomponent->type != type)
-				{
-					physicscomponent->physicsobject = nullptr;
-					physicscomponent->type = type;
-				}
-			}
+			physicscomponent->physicsobject = nullptr;
+			physicscomponent->type = type;
 		}
-	});
+	}));
 	typeComboBox.SetSelected(0);
 	typeComboBox.SetEnabled(true);
 	typeComboBox.SetTooltip("Set constraint type.");
 	AddWidget(&typeComboBox);
 
 	bodyAComboBox.Create("Body A: ");
-	bodyAComboBox.OnSelect([=](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
-			if (physicscomponent != nullptr)
-			{
-				physicscomponent->bodyA = args.userdata;
-				physicscomponent->physicsobject = nullptr;
-			}
-		}
-	});
+	bodyAComboBox.OnSelect(forEachSelected([&](auto physicscomponent, auto args) {
+		physicscomponent->bodyA = args.userdata;
+		physicscomponent->physicsobject = nullptr;
+	}));
 	AddWidget(&bodyAComboBox);
 
 	bodyBComboBox.Create("Body B: ");
-	bodyBComboBox.OnSelect([=](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
-			if (physicscomponent != nullptr)
-			{
-				physicscomponent->bodyB = args.userdata;
-				physicscomponent->physicsobject = nullptr;
-			}
-		}
-	});
+	bodyBComboBox.OnSelect(forEachSelected([&](auto physicscomponent, auto args) {
+		physicscomponent->bodyB = args.userdata;
+		physicscomponent->physicsobject = nullptr;
+	}));
 	AddWidget(&bodyBComboBox);
 
 	minSlider.Create(0, 10, 1, 100000, "minSlider");
-	minSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
+	minSlider.OnSlide(forEachSelected([&](auto physicscomponent, auto args) {
+		switch (physicscomponent->type)
 		{
-			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
-			if (physicscomponent != nullptr)
-			{
-				switch (physicscomponent->type)
-				{
-				case PhysicsConstraintComponent::Type::Distance:
-					physicscomponent->distance_constraint.min_distance = args.fValue;
-					break;
-				case PhysicsConstraintComponent::Type::Hinge:
-					physicscomponent->hinge_constraint.min_angle = wi::math::DegreesToRadians(args.fValue);
-					break;
-				case PhysicsConstraintComponent::Type::Cone:
-					physicscomponent->cone_constraint.half_cone_angle = wi::math::DegreesToRadians(args.fValue);
-					break;
-				case PhysicsConstraintComponent::Type::SwingTwist:
-					physicscomponent->swing_twist.min_twist_angle = wi::math::DegreesToRadians(args.fValue);
-					break;
-				case PhysicsConstraintComponent::Type::Slider:
-					physicscomponent->slider_constraint.min_limit = args.fValue;
-					break;
-				default:
-					break;
-				}
-				physicscomponent->SetRefreshParametersNeeded(true);
-			}
+		case PhysicsConstraintComponent::Type::Distance:
+			physicscomponent->distance_constraint.min_distance = args.fValue;
+			break;
+		case PhysicsConstraintComponent::Type::Hinge:
+			physicscomponent->hinge_constraint.min_angle = wi::math::DegreesToRadians(args.fValue);
+			break;
+		case PhysicsConstraintComponent::Type::Cone:
+			physicscomponent->cone_constraint.half_cone_angle = wi::math::DegreesToRadians(args.fValue);
+			break;
+		case PhysicsConstraintComponent::Type::SwingTwist:
+			physicscomponent->swing_twist.min_twist_angle = wi::math::DegreesToRadians(args.fValue);
+			break;
+		case PhysicsConstraintComponent::Type::Slider:
+			physicscomponent->slider_constraint.min_limit = args.fValue;
+			break;
+		default:
+			break;
 		}
-	});
+		physicscomponent->SetRefreshParametersNeeded(true);
+	}));
 	AddWidget(&minSlider);
 
 	maxSlider.Create(0, 10, 1, 100000, "maxSlider");
-	maxSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
+	maxSlider.OnSlide(forEachSelected([&](auto physicscomponent, auto args) {
+		switch (physicscomponent->type)
 		{
-			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
-			if (physicscomponent != nullptr)
-			{
-				switch (physicscomponent->type)
-				{
-				case PhysicsConstraintComponent::Type::Distance:
-					physicscomponent->distance_constraint.max_distance = args.fValue;
-					break;
-				case PhysicsConstraintComponent::Type::Hinge:
-					physicscomponent->hinge_constraint.max_angle = wi::math::DegreesToRadians(args.fValue);
-					break;
-				case PhysicsConstraintComponent::Type::SwingTwist:
-					physicscomponent->swing_twist.max_twist_angle = wi::math::DegreesToRadians(args.fValue);
-					break;
-				case PhysicsConstraintComponent::Type::Slider:
-					physicscomponent->slider_constraint.max_limit = args.fValue;
-					break;
-				default:
-					break;
-				}
-				physicscomponent->SetRefreshParametersNeeded(true);
-			}
+		case PhysicsConstraintComponent::Type::Distance:
+			physicscomponent->distance_constraint.max_distance = args.fValue;
+			break;
+		case PhysicsConstraintComponent::Type::Hinge:
+			physicscomponent->hinge_constraint.max_angle = wi::math::DegreesToRadians(args.fValue);
+			break;
+		case PhysicsConstraintComponent::Type::SwingTwist:
+			physicscomponent->swing_twist.max_twist_angle = wi::math::DegreesToRadians(args.fValue);
+			break;
+		case PhysicsConstraintComponent::Type::Slider:
+			physicscomponent->slider_constraint.max_limit = args.fValue;
+			break;
+		default:
+			break;
 		}
-	});
+		physicscomponent->SetRefreshParametersNeeded(true);
+	}));
 	AddWidget(&maxSlider);
 
 	breakSlider.Create(0, 10, 1, 1000, "Break distance: ");
 	breakSlider.SetTooltip("How much the constraint is allowed to be exerted before breaking, calculated as relative distance. Set to FLT_MAX to disable breaking.");
-	breakSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
-			if (physicscomponent != nullptr)
-			{
-				physicscomponent->break_distance = args.fValue;
-			}
-		}
-	});
+	breakSlider.OnSlide(forEachSelected([&] (auto physicscomponent, auto args) {
+		physicscomponent->break_distance = args.fValue;
+	}));
 	AddWidget(&breakSlider);
 
 	motorSlider1.Create(0, 10, 1, 100000, "motorSlider1");
-	motorSlider1.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
+	motorSlider1.OnSlide(forEachSelected([&](auto physicscomponent, auto args) {
+		switch (physicscomponent->type)
 		{
-			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
-			if (physicscomponent != nullptr)
-			{
-				switch (physicscomponent->type)
-				{
-				case PhysicsConstraintComponent::Type::Hinge:
-					physicscomponent->hinge_constraint.target_angular_velocity = args.fValue;
-					break;
-				case PhysicsConstraintComponent::Type::Slider:
-					physicscomponent->slider_constraint.target_velocity = args.fValue;
-					break;
-				default:
-					break;
-				}
-				physicscomponent->SetRefreshParametersNeeded(true);
-			}
+		case PhysicsConstraintComponent::Type::Hinge:
+			physicscomponent->hinge_constraint.target_angular_velocity = args.fValue;
+			break;
+		case PhysicsConstraintComponent::Type::Slider:
+			physicscomponent->slider_constraint.target_velocity = args.fValue;
+			break;
+		default:
+			break;
 		}
-	});
+		physicscomponent->SetRefreshParametersNeeded(true);
+	}));
 	AddWidget(&motorSlider1);
 
 	motorSlider2.Create(0, 10, 1, 100000, "motorSlider2");
-	motorSlider2.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
+	motorSlider2.OnSlide(forEachSelected([&](auto physicscomponent, auto args) {
+		switch (physicscomponent->type)
 		{
-			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
-			if (physicscomponent != nullptr)
-			{
-				switch (physicscomponent->type)
-				{
-				case PhysicsConstraintComponent::Type::Slider:
-					physicscomponent->slider_constraint.max_force = args.fValue;
-					break;
-				default:
-					break;
-				}
-				physicscomponent->SetRefreshParametersNeeded(true);
-			}
+		case PhysicsConstraintComponent::Type::Slider:
+			physicscomponent->slider_constraint.max_force = args.fValue;
+			break;
+		default:
+			break;
 		}
-		});
+		physicscomponent->SetRefreshParametersNeeded(true);
+	}));
 	AddWidget(&motorSlider2);
 
 
 	normalConeSlider.Create(0, 90, 1, 90, "Normal Angle: ");
-	normalConeSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
-			if (physicscomponent != nullptr)
-			{
-				physicscomponent->swing_twist.normal_half_cone_angle = wi::math::DegreesToRadians(args.fValue);
-				physicscomponent->SetRefreshParametersNeeded(true);
-			}
-		}
-		});
+	normalConeSlider.OnSlide(forEachSelected([&](auto physicscomponent, auto args) {
+		physicscomponent->swing_twist.normal_half_cone_angle = wi::math::DegreesToRadians(args.fValue);
+		physicscomponent->SetRefreshParametersNeeded(true);
+	}));
 	AddWidget(&normalConeSlider);
 
 	planeConeSlider.Create(0, 90, 1, 90, "Plane Angle: ");
-	planeConeSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
-			if (physicscomponent != nullptr)
-			{
-				physicscomponent->swing_twist.plane_half_cone_angle = wi::math::DegreesToRadians(args.fValue);
-				physicscomponent->SetRefreshParametersNeeded(true);
-			}
-		}
-		});
+	planeConeSlider.OnSlide(forEachSelected([&](auto physicscomponent, auto args) {
+		physicscomponent->swing_twist.plane_half_cone_angle = wi::math::DegreesToRadians(args.fValue);
+		physicscomponent->SetRefreshParametersNeeded(true);
+	}));
 	AddWidget(&planeConeSlider);
 
 
-
+	auto fixXYZ = [&](auto func) {
+		return [&](auto args) {
+			forEachSelectedWithRefresh([&](auto physicscomponent, auto args) {
+				func(physicscomponent);
+			});
+			SetEntity(entity);
+		};
+	};
 
 	fixedXButton.Create("Fix X");
-	fixedXButton.OnClick([=](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
-			if (physicscomponent != nullptr)
-			{
-				physicscomponent->six_dof.SetFixedX();
-				physicscomponent->SetRefreshParametersNeeded(true);
-			}
-		}
-		SetEntity(entity);
-		});
+	fixedXButton.OnClick(fixXYZ([&](auto physicscomponent) {
+		physicscomponent->six_dof.SetFixedX();
+	}));
 	AddWidget(&fixedXButton);
 
 	fixedYButton.Create("Fix Y");
-	fixedYButton.OnClick([=](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
-			if (physicscomponent != nullptr)
-			{
-				physicscomponent->six_dof.SetFixedY();
-				physicscomponent->SetRefreshParametersNeeded(true);
-			}
-		}
-		SetEntity(entity);
-		});
+	fixedYButton.OnClick(fixXYZ([&](auto physicscomponent) {
+		physicscomponent->six_dof.SetFixedY();
+	}));
 	AddWidget(&fixedYButton);
 
 	fixedZButton.Create("Fix Z");
-	fixedZButton.OnClick([=](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
-			if (physicscomponent != nullptr)
-			{
-				physicscomponent->six_dof.SetFixedZ();
-				physicscomponent->SetRefreshParametersNeeded(true);
-			}
-		}
-		SetEntity(entity);
-		});
+	fixedZButton.OnClick(fixXYZ([&](auto physicscomponent) {
+		physicscomponent->six_dof.SetFixedZ();
+	}));
 	AddWidget(&fixedZButton);
 
 	fixedXRotationButton.Create("Fix Rot X");
-	fixedXRotationButton.OnClick([=](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
-			if (physicscomponent != nullptr)
-			{
-				physicscomponent->six_dof.SetFixedRotationX();
-				physicscomponent->SetRefreshParametersNeeded(true);
-			}
-		}
-		SetEntity(entity);
-		});
+	fixedXRotationButton.OnClick(fixXYZ([&](auto physicscomponent) {
+		physicscomponent->six_dof.SetFixedRotationX();
+		}));
 	AddWidget(&fixedXRotationButton);
 
 	fixedYRotationButton.Create("Fix Rot Y");
-	fixedYRotationButton.OnClick([=](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
-			if (physicscomponent != nullptr)
-			{
-				physicscomponent->six_dof.SetFixedRotationY();
-				physicscomponent->SetRefreshParametersNeeded(true);
-			}
-		}
-		SetEntity(entity);
-	});
+	fixedYRotationButton.OnClick(fixXYZ([&](auto physicscomponent) {
+		physicscomponent->six_dof.SetFixedRotationY();
+	}));
 	AddWidget(&fixedYRotationButton);
 
 	fixedZRotationButton.Create("Fix Rot Z");
-	fixedZRotationButton.OnClick([=](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
-			if (physicscomponent != nullptr)
-			{
-				physicscomponent->six_dof.SetFixedRotationZ();
-				physicscomponent->SetRefreshParametersNeeded(true);
-			}
-		}
-		SetEntity(entity);
-	});
+	fixedZRotationButton.OnClick(fixXYZ([&](auto physicscomponent) {
+		physicscomponent->six_dof.SetFixedRotationZ();
+	}));
 	AddWidget(&fixedZRotationButton);
 
 
 	minTranslationXSlider.Create(-10, 0, 1, 100000, "Min Translation X: ");
-	minTranslationXSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
-			if (physicscomponent != nullptr)
-			{
-				physicscomponent->six_dof.minTranslationAxes.x = args.fValue;
-				physicscomponent->SetRefreshParametersNeeded(true);
-			}
-		}
-		});
+	minTranslationXSlider.OnSlide(forEachSelectedWithRefresh([&](auto physicscomponent, auto args) {
+		physicscomponent->six_dof.minTranslationAxes.x = args.fValue;
+	}));
 	AddWidget(&minTranslationXSlider);
 
 	minTranslationYSlider.Create(-10, 0, 1, 100000, "Min Translation Y: ");
-	minTranslationYSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
-			if (physicscomponent != nullptr)
-			{
-				physicscomponent->six_dof.minTranslationAxes.y = args.fValue;
-				physicscomponent->SetRefreshParametersNeeded(true);
-			}
-		}
-		});
+	minTranslationYSlider.OnSlide(forEachSelectedWithRefresh([&](auto physicscomponent, auto args) {
+		physicscomponent->six_dof.minTranslationAxes.y = args.fValue;
+	}));
 	AddWidget(&minTranslationYSlider);
 
 	minTranslationZSlider.Create(-10, 0, 1, 100000, "Min Translation Z: ");
-	minTranslationZSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
-			if (physicscomponent != nullptr)
-			{
-				physicscomponent->six_dof.minTranslationAxes.z = args.fValue;
-				physicscomponent->SetRefreshParametersNeeded(true);
-			}
-		}
-		});
+	minTranslationZSlider.OnSlide(forEachSelectedWithRefresh([&](auto physicscomponent, auto args) {
+		physicscomponent->six_dof.minTranslationAxes.z = args.fValue;
+	}));
 	AddWidget(&minTranslationZSlider);
 
 	maxTranslationXSlider.Create(0, 10, 1, 100000, "Max Translation X: ");
-	maxTranslationXSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
-			if (physicscomponent != nullptr)
-			{
-				physicscomponent->six_dof.maxTranslationAxes.x = args.fValue;
-				physicscomponent->SetRefreshParametersNeeded(true);
-			}
-		}
-		});
+	maxTranslationXSlider.OnSlide(forEachSelectedWithRefresh([&](auto physicscomponent, auto args) {
+		physicscomponent->six_dof.maxTranslationAxes.x = args.fValue;
+	}));
 	AddWidget(&maxTranslationXSlider);
 
 	maxTranslationYSlider.Create(0, 10, 1, 100000, "Max Translation Y: ");
-	maxTranslationYSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
-			if (physicscomponent != nullptr)
-			{
-				physicscomponent->six_dof.maxTranslationAxes.y = args.fValue;
-				physicscomponent->SetRefreshParametersNeeded(true);
-			}
-		}
-		});
+	maxTranslationYSlider.OnSlide(forEachSelectedWithRefresh([&](auto physicscomponent, auto args) {
+		physicscomponent->six_dof.maxTranslationAxes.y = args.fValue;
+	}));
 	AddWidget(&maxTranslationYSlider);
 
 	maxTranslationZSlider.Create(0, 10, 1, 100000, "Max Translation Z: ");
-	maxTranslationZSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
-			if (physicscomponent != nullptr)
-			{
-				physicscomponent->six_dof.maxTranslationAxes.z = args.fValue;
-				physicscomponent->SetRefreshParametersNeeded(true);
-			}
-		}
-		});
+	maxTranslationZSlider.OnSlide(forEachSelectedWithRefresh([&](auto physicscomponent, auto args) {
+		physicscomponent->six_dof.maxTranslationAxes.z = args.fValue;
+	}));
 	AddWidget(&maxTranslationZSlider);
 
-
-
 	minRotationXSlider.Create(-180, 0, 1, 100000, "Min Rotation X: ");
-	minRotationXSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
-			if (physicscomponent != nullptr)
-			{
-				physicscomponent->six_dof.minRotationAxes.x = wi::math::DegreesToRadians(args.fValue);
-				physicscomponent->SetRefreshParametersNeeded(true);
-			}
-		}
-		});
+	minRotationXSlider.OnSlide(forEachSelectedWithRefresh([&](auto physicscomponent, auto args) {
+		physicscomponent->six_dof.minRotationAxes.x = wi::math::DegreesToRadians(args.fValue);
+	}));
 	AddWidget(&minRotationXSlider);
 
 	minRotationYSlider.Create(-180, 0, 1, 100000, "Min Rotation Y: ");
-	minRotationYSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
-			if (physicscomponent != nullptr)
-			{
-				physicscomponent->six_dof.minRotationAxes.y = wi::math::DegreesToRadians(args.fValue);
-				physicscomponent->SetRefreshParametersNeeded(true);
-			}
-		}
-		});
+	minRotationYSlider.OnSlide(forEachSelectedWithRefresh([&](auto physicscomponent, auto args) {
+		physicscomponent->six_dof.minRotationAxes.y = wi::math::DegreesToRadians(args.fValue);
+	}));
 	AddWidget(&minRotationYSlider);
 
 	minRotationZSlider.Create(-180, 0, 1, 100000, "Min Rotation Z: ");
-	minRotationZSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
-			if (physicscomponent != nullptr)
-			{
-				physicscomponent->six_dof.minRotationAxes.z = wi::math::DegreesToRadians(args.fValue);
-				physicscomponent->SetRefreshParametersNeeded(true);
-			}
-		}
-		});
+	minRotationZSlider.OnSlide(forEachSelectedWithRefresh([&](auto physicscomponent, auto args) {
+		physicscomponent->six_dof.minRotationAxes.z = wi::math::DegreesToRadians(args.fValue);
+	}));
 	AddWidget(&minRotationZSlider);
 
 	maxRotationXSlider.Create(0, 180, 1, 100000, "Max Rotation X: ");
-	maxRotationXSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
-			if (physicscomponent != nullptr)
-			{
-				physicscomponent->six_dof.maxRotationAxes.x = wi::math::DegreesToRadians(args.fValue);
-				physicscomponent->SetRefreshParametersNeeded(true);
-			}
-		}
-		});
+	maxRotationXSlider.OnSlide(forEachSelectedWithRefresh([&](auto physicscomponent, auto args) {
+		physicscomponent->six_dof.maxRotationAxes.x = wi::math::DegreesToRadians(args.fValue);
+	}));
 	AddWidget(&maxRotationXSlider);
 
 	maxRotationYSlider.Create(0, 180, 1, 100000, "Max Rotation Y: ");
-	maxRotationYSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
-			if (physicscomponent != nullptr)
-			{
-				physicscomponent->six_dof.maxRotationAxes.y = wi::math::DegreesToRadians(args.fValue);
-				physicscomponent->SetRefreshParametersNeeded(true);
-			}
-		}
-		});
+	maxRotationYSlider.OnSlide(forEachSelectedWithRefresh([&](auto physicscomponent, auto args) {
+		physicscomponent->six_dof.maxRotationAxes.y = wi::math::DegreesToRadians(args.fValue);
+	}));
 	AddWidget(&maxRotationYSlider);
 
 	maxRotationZSlider.Create(0, 180, 1, 100000, "Max Rotation Z: ");
-	maxRotationZSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			PhysicsConstraintComponent* physicscomponent = scene.constraints.GetComponent(x.entity);
-			if (physicscomponent != nullptr)
-			{
-				physicscomponent->six_dof.maxRotationAxes.z = wi::math::DegreesToRadians(args.fValue);
-				physicscomponent->SetRefreshParametersNeeded(true);
-			}
-		}
-		});
+	maxRotationZSlider.OnSlide(forEachSelectedWithRefresh([&](auto physicscomponent, auto args) {
+		physicscomponent->six_dof.maxRotationAxes.z = wi::math::DegreesToRadians(args.fValue);
+	}));
 	AddWidget(&maxRotationZSlider);
 
 

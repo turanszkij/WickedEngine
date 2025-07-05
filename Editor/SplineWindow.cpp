@@ -31,199 +31,94 @@ void SplineWindow::Create(EditorComponent* _editor)
 	infoLabel.SetFitTextEnabled(true);
 	AddWidget(&infoLabel);
 
-	loopedCheck.Create("Looped: ");
-	loopedCheck.OnClick([this](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			SplineComponent* spline = scene.splines.GetComponent(x.entity);
-			if (spline == nullptr)
-				continue;
-			spline->SetLooped(args.bValue);
-		}
+	auto forAllSelectedAndIndirect = [&] (auto func) {
+		return [=] (auto args) {
+			wi::scene::Scene& scene = editor->GetCurrentScene();
+			for (auto& x : editor->translator.selected)
+			{
+				SplineComponent* spline = scene.splines.GetComponent(x.entity);
+				if (spline != nullptr)
+				{
+					func(spline, args);
+				}
+			}
 
-		// indirect set:
-		SplineComponent* spline = scene.splines.GetComponent(entity);
-		if (spline != nullptr)
-		{
-			spline->SetLooped(args.bValue);
-		}
-	});
+			// indirect set:
+			SplineComponent* spline = scene.splines.GetComponent(entity);
+			if (spline != nullptr)
+			{
+				func(spline, args);
+			}
+		};
+	};
+
+	auto forAllSelectedAndIndirectWithRefresh = [&] (auto func) {
+		return [&] (auto args) {
+			forAllSelectedAndIndirect(func);
+			editor->componentsWnd.RefreshEntityTree();
+		};
+	};
+
+	loopedCheck.Create("Looped: ");
+	loopedCheck.OnClick(forAllSelectedAndIndirect([&] (auto spline, auto args) {
+		spline->SetLooped(args.bValue);
+	}));
 	AddWidget(&loopedCheck);
 
 	alignedCheck.Create("Draw Aligned: ");
-	alignedCheck.OnClick([this](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			SplineComponent* spline = scene.splines.GetComponent(x.entity);
-			if (spline == nullptr)
-				continue;
-			spline->SetDrawAligned(args.bValue);
-		}
-
-		// indirect set:
-		SplineComponent* spline = scene.splines.GetComponent(entity);
-		if (spline != nullptr)
-		{
-			spline->SetDrawAligned(args.bValue);
-		}
-	});
+	alignedCheck.OnClick(forAllSelectedAndIndirect([&] (auto spline, auto args) {
+		spline->SetDrawAligned(args.bValue);
+	}));
 	AddWidget(&alignedCheck);
 
 	widthSlider.Create(0.001f, 4, 0, 1000, "Width: ");
 	widthSlider.SetTooltip("Set overall width multiplier for all nodes, used in mesh generation.");
-	widthSlider.OnSlide([this](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			SplineComponent* spline = scene.splines.GetComponent(x.entity);
-			if (spline == nullptr)
-				continue;
-			spline->width = args.fValue;
-		}
-
-		// indirect set:
-		SplineComponent* spline = scene.splines.GetComponent(entity);
-		if (spline != nullptr)
-		{
-			spline->width = args.fValue;
-		}
-		editor->componentsWnd.RefreshEntityTree();
-		});
+	widthSlider.OnSlide(forAllSelectedAndIndirectWithRefresh([&] (auto spline, auto args) {
+		spline->width = args.fValue;
+	}));
 	AddWidget(&widthSlider);
 
 	rotSlider.Create(0, 360, 0, 360, "Rotation: ");
 	rotSlider.SetTooltip("Set overall rotation for all nodes, used in mesh generation.");
-	rotSlider.OnSlide([this](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
+	rotSlider.OnSlide(forAllSelectedAndIndirectWithRefresh([&] (auto spline, auto args) {
 		float rad = wi::math::DegreesToRadians(args.fValue);
-		for (auto& x : editor->translator.selected)
-		{
-			SplineComponent* spline = scene.splines.GetComponent(x.entity);
-			if (spline == nullptr)
-				continue;
-			spline->rotation = rad;
-		}
-
-		// indirect set:
-		SplineComponent* spline = scene.splines.GetComponent(entity);
-		if (spline != nullptr)
-		{
-			spline->rotation = rad;
-		}
-		editor->componentsWnd.RefreshEntityTree();
-		});
+		spline->rotation = rad;
+	}));
 	AddWidget(&rotSlider);
 
 	subdivSlider.Create(0, 100, 0, 100, "Mesh subdivision: ");
 	subdivSlider.SetTooltip("Set subdivision count for mesh generation. \nIncreasing this above 0 will enable mesh generation and higher values mean higher quality.");
-	subdivSlider.OnSlide([this](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			SplineComponent* spline = scene.splines.GetComponent(x.entity);
-			if (spline == nullptr)
-				continue;
-			spline->mesh_generation_subdivision = args.iValue;
-		}
-
-		// indirect set:
-		SplineComponent* spline = scene.splines.GetComponent(entity);
-		if (spline != nullptr)
-		{
-			spline->mesh_generation_subdivision = args.iValue;
-		}
-		editor->componentsWnd.RefreshEntityTree();
-	});
+	subdivSlider.OnSlide(forAllSelectedAndIndirectWithRefresh([&] (auto spline, auto args) {
+		spline->mesh_generation_subdivision = args.iValue;
+	}));
 	AddWidget(&subdivSlider);
 
 	subdivVerticalSlider.Create(0, 36, 0, 36, "Vertical subdivision: ");
 	subdivVerticalSlider.SetTooltip("Set subdivision count for mesh generation's vertical axis to create a corridoor or a tunnel.");
-	subdivVerticalSlider.OnSlide([this](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			SplineComponent* spline = scene.splines.GetComponent(x.entity);
-			if (spline == nullptr)
-				continue;
-			spline->mesh_generation_vertical_subdivision = args.iValue;
-		}
-
-		// indirect set:
-		SplineComponent* spline = scene.splines.GetComponent(entity);
-		if (spline != nullptr)
-		{
-			spline->mesh_generation_vertical_subdivision = args.iValue;
-		}
-		editor->componentsWnd.RefreshEntityTree();
-		});
+	subdivVerticalSlider.OnSlide(forAllSelectedAndIndirectWithRefresh([&] (auto spline, auto args) {
+		spline->mesh_generation_vertical_subdivision = args.iValue;
+	}));
 	AddWidget(&subdivVerticalSlider);
 
 	terrainSlider.Create(0, 1, 0, 100, "Terrain modifier: ");
 	terrainSlider.SetTooltip("Set terrain modification strength (0 to turn it off, higher values mean more sharpness).");
-	terrainSlider.OnSlide([this](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			SplineComponent* spline = scene.splines.GetComponent(x.entity);
-			if (spline == nullptr)
-				continue;
-			spline->terrain_modifier_amount = args.fValue;
-		}
-
-		// indirect set:
-		SplineComponent* spline = scene.splines.GetComponent(entity);
-		if (spline != nullptr)
-		{
-			spline->terrain_modifier_amount = args.fValue;
-		}
-		editor->componentsWnd.RefreshEntityTree();
-	});
+	terrainSlider.OnSlide(forAllSelectedAndIndirectWithRefresh([&] (auto spline, auto args) {
+		spline->terrain_modifier_amount = args.fValue;
+	}));
 	AddWidget(&terrainSlider);
 
 	terrainTexSlider.Create(0, 1, 0, 100, "Terrain texture falloff: ");
 	terrainTexSlider.SetTooltip("Affects the terrain texturing falloff when spline is terrain modifying.");
-	terrainTexSlider.OnSlide([this](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			SplineComponent* spline = scene.splines.GetComponent(x.entity);
-			if (spline == nullptr)
-				continue;
-			spline->terrain_texture_falloff = args.fValue;
-		}
-
-		// indirect set:
-		SplineComponent* spline = scene.splines.GetComponent(entity);
-		if (spline != nullptr)
-		{
-			spline->terrain_texture_falloff = args.fValue;
-		}
-		editor->componentsWnd.RefreshEntityTree();
-	});
+	terrainTexSlider.OnSlide(forAllSelectedAndIndirectWithRefresh([&] (auto spline, auto args) {
+		spline->terrain_texture_falloff = args.fValue;
+	}));
 	AddWidget(&terrainTexSlider);
 
 	terrainPushdownSlider.Create(0, 10, 0, 100, "Terrain push down: ");
 	terrainPushdownSlider.SetTooltip("Push down the terrain genetry from the spline plane by an amount.");
-	terrainPushdownSlider.OnSlide([this](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			SplineComponent* spline = scene.splines.GetComponent(x.entity);
-			if (spline == nullptr)
-				continue;
-			spline->terrain_pushdown = args.fValue;
-		}
-
-		// indirect set:
-		SplineComponent* spline = scene.splines.GetComponent(entity);
-		if (spline != nullptr)
-		{
-			spline->terrain_pushdown = args.fValue;
-		}
-		editor->componentsWnd.RefreshEntityTree();
-		});
+	terrainPushdownSlider.OnSlide(forAllSelectedAndIndirectWithRefresh([&] (auto spline, auto args) {
+		spline->terrain_pushdown = args.fValue;
+	}));
 	AddWidget(&terrainPushdownSlider);
 
 	addButton.Create("AddNode");

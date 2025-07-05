@@ -32,7 +32,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	SetSize(XMFLOAT2(300, 1580));
 
 	closeButton.SetTooltip("Delete MaterialComponent");
-	OnClose([=](wi::gui::EventArgs args) {
+	OnClose([&](wi::gui::EventArgs args) {
 
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
@@ -50,232 +50,145 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	float x = 150, y = 0;
 	float wid = 130;
 
+	auto forEachSelected = [&] (auto func) {
+		return [=] (auto args) {
+			wi::scene::Scene& scene = editor->GetCurrentScene();
+			for (auto& x : editor->translator.selected)
+			{
+				MaterialComponent* material = get_material(scene, x);
+				if (material != nullptr)
+					func(material, args);
+			}
+		};
+	};
 
 	shadowReceiveCheckBox.Create("Receive Shadow: ");
 	shadowReceiveCheckBox.SetTooltip("Receives shadow or not?");
 	shadowReceiveCheckBox.SetPos(XMFLOAT2(x, y));
 	shadowReceiveCheckBox.SetSize(XMFLOAT2(hei, hei));
-	shadowReceiveCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetReceiveShadow(args.bValue);
-		}
-	});
+	shadowReceiveCheckBox.OnClick(forEachSelected([&] (auto material, auto args) {
+		material->SetReceiveShadow(args.bValue);
+	}));
 	AddWidget(&shadowReceiveCheckBox);
 
 	shadowCasterCheckBox.Create("Cast Shadow: ");
 	shadowCasterCheckBox.SetTooltip("The subset will contribute to the scene shadows if enabled.");
 	shadowCasterCheckBox.SetPos(XMFLOAT2(x, y += step));
 	shadowCasterCheckBox.SetSize(XMFLOAT2(hei, hei));
-	shadowCasterCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetCastShadow(args.bValue);
-		}
-	});
+	shadowCasterCheckBox.OnClick(forEachSelected([&] (auto material, auto args) {
+		material->SetCastShadow(args.bValue);
+	}));
 	AddWidget(&shadowCasterCheckBox);
 
 	useVertexColorsCheckBox.Create("Use vertex colors: ");
 	useVertexColorsCheckBox.SetTooltip("Enable if you want to render the mesh with vertex colors (must have appropriate vertex buffer)");
 	useVertexColorsCheckBox.SetPos(XMFLOAT2(x, y += step));
 	useVertexColorsCheckBox.SetSize(XMFLOAT2(hei, hei));
-	useVertexColorsCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetUseVertexColors(args.bValue);
-		}
-	});
+	useVertexColorsCheckBox.OnClick(forEachSelected([&] (auto material, auto args) {
+		material->SetUseVertexColors(args.bValue);
+	}));
 	AddWidget(&useVertexColorsCheckBox);
 
 	specularGlossinessCheckBox.Create("Spec-gloss workflow: ");
 	specularGlossinessCheckBox.SetTooltip("If enabled, surface map will be viewed like it contains specular color (RGB) and smoothness (A)");
 	specularGlossinessCheckBox.SetPos(XMFLOAT2(x, y += step));
 	specularGlossinessCheckBox.SetSize(XMFLOAT2(hei, hei));
-	specularGlossinessCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetUseSpecularGlossinessWorkflow(args.bValue);
-		}
-	});
+	specularGlossinessCheckBox.OnClick(forEachSelected([&] (auto material, auto args) {
+		material->SetUseSpecularGlossinessWorkflow(args.bValue);
+	}));
 	AddWidget(&specularGlossinessCheckBox);
 
 	occlusionPrimaryCheckBox.Create("Occlusion 1: ");
 	occlusionPrimaryCheckBox.SetTooltip("If enabled, surface map's RED channel will be used as occlusion map");
 	occlusionPrimaryCheckBox.SetPos(XMFLOAT2(x, y += step));
 	occlusionPrimaryCheckBox.SetSize(XMFLOAT2(hei, hei));
-	occlusionPrimaryCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetOcclusionEnabled_Primary(args.bValue);
-		}
-	});
+	occlusionPrimaryCheckBox.OnClick(forEachSelected([&] (auto material, auto args) {
+		material->SetOcclusionEnabled_Primary(args.bValue);
+	}));
 	AddWidget(&occlusionPrimaryCheckBox);
 
 	occlusionSecondaryCheckBox.Create("Occlusion 2: ");
 	occlusionSecondaryCheckBox.SetTooltip("If enabled, occlusion map's RED channel will be used as occlusion map");
 	occlusionSecondaryCheckBox.SetPos(XMFLOAT2(x, y += step));
 	occlusionSecondaryCheckBox.SetSize(XMFLOAT2(hei, hei));
-	occlusionSecondaryCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetOcclusionEnabled_Secondary(args.bValue);
-		}
-	});
+	occlusionSecondaryCheckBox.OnClick(forEachSelected([&] (auto material, auto args) {
+		material->SetOcclusionEnabled_Secondary(args.bValue);
+	}));
 	AddWidget(&occlusionSecondaryCheckBox);
 
 	vertexAOCheckBox.Create("Vertex AO: ");
 	vertexAOCheckBox.SetTooltip("If enabled, vertex ambient occlusion will be enabled (if it exists)");
 	vertexAOCheckBox.SetPos(XMFLOAT2(x, y += step));
 	vertexAOCheckBox.SetSize(XMFLOAT2(hei, hei));
-	vertexAOCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetVertexAODisabled(!args.bValue);
-		}
-	});
+	vertexAOCheckBox.OnClick(forEachSelected([&] (auto material, auto args) {
+		material->SetVertexAODisabled(!args.bValue);
+	}));
 	AddWidget(&vertexAOCheckBox);
 
 	windCheckBox.Create("Wind: ");
 	windCheckBox.SetTooltip("If enabled, vertex wind weights will affect how much wind offset affects the subset.");
 	windCheckBox.SetPos(XMFLOAT2(x, y += step));
 	windCheckBox.SetSize(XMFLOAT2(hei, hei));
-	windCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetUseWind(args.bValue);
-		}
-	});
+	windCheckBox.OnClick(forEachSelected([&] (auto material, auto args) {
+		material->SetUseWind(args.bValue);
+	}));
 	AddWidget(&windCheckBox);
 
 	doubleSidedCheckBox.Create("Double sided: ");
 	doubleSidedCheckBox.SetTooltip("Decide whether to render both sides of the material (It's also possible to set this behaviour per mesh).");
 	doubleSidedCheckBox.SetPos(XMFLOAT2(x, y += step));
 	doubleSidedCheckBox.SetSize(XMFLOAT2(hei, hei));
-	doubleSidedCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetDoubleSided(args.bValue);
-		}
-	});
+	doubleSidedCheckBox.OnClick(forEachSelected([&] (auto material, auto args) {
+		material->SetDoubleSided(args.bValue);
+	}));
 	AddWidget(&doubleSidedCheckBox);
 
 	outlineCheckBox.Create("Cartoon Outline: ");
 	outlineCheckBox.SetTooltip("Enable cartoon outline. The Cartoon Outline graphics setting also needs to be enabled for it to show up.");
 	outlineCheckBox.SetPos(XMFLOAT2(x, y += step));
 	outlineCheckBox.SetSize(XMFLOAT2(hei, hei));
-	outlineCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetOutlineEnabled(args.bValue);
-		}
-	});
+	outlineCheckBox.OnClick(forEachSelected([&] (auto material, auto args) {
+		material->SetOutlineEnabled(args.bValue);
+	}));
 	AddWidget(&outlineCheckBox);
 
 	preferUncompressedCheckBox.Create("Prefer Uncompressed Textures: ");
 	preferUncompressedCheckBox.SetTooltip("For uncompressed textures (jpg, png, etc.) here it is possible to enable/disable auto block compression on importing. \nBlock compression can reduce GPU memory usage and improve performance, but it can result in degraded quality.");
 	preferUncompressedCheckBox.SetPos(XMFLOAT2(x, y += step));
 	preferUncompressedCheckBox.SetSize(XMFLOAT2(hei, hei));
-	preferUncompressedCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetPreferUncompressedTexturesEnabled(args.bValue);
-		}
+	preferUncompressedCheckBox.OnClick(forEachSelected([&] (auto material, auto args) {
+		material->SetPreferUncompressedTexturesEnabled(args.bValue);
 		textureSlotComboBox.SetSelected(textureSlotComboBox.GetSelected()); // update
-	});
+	}));
 	AddWidget(&preferUncompressedCheckBox);
 
 	disableStreamingCheckBox.Create("Disable Texture Streaming: ");
 	disableStreamingCheckBox.SetTooltip("Disable texture streaming for this material only.");
 	disableStreamingCheckBox.SetPos(XMFLOAT2(x, y += step));
 	disableStreamingCheckBox.SetSize(XMFLOAT2(hei, hei));
-	disableStreamingCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetTextureStreamingDisabled(args.bValue);
-			material->CreateRenderData(true);
-		}
+	disableStreamingCheckBox.OnClick(forEachSelected([&] (auto material, auto args) {
+		material->SetTextureStreamingDisabled(args.bValue);
+		material->CreateRenderData(true);
 		textureSlotComboBox.SetSelected(textureSlotComboBox.GetSelected()); // update
-	});
+	}));
 	AddWidget(&disableStreamingCheckBox);
 
 	coplanarCheckBox.Create("Coplanar blending: ");
 	coplanarCheckBox.SetTooltip("If polygons are coplanar to an opaque surface, then the blending can be done in the opaque pass.\nThis can enable some benefits of opaque render pass to a specific transparent surface.");
 	coplanarCheckBox.SetPos(XMFLOAT2(x, y += step));
 	coplanarCheckBox.SetSize(XMFLOAT2(hei, hei));
-	coplanarCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetCoplanarBlending(args.bValue);
-		}
-	});
+	coplanarCheckBox.OnClick(forEachSelected([&] (auto material, auto args) {
+		material->SetCoplanarBlending(args.bValue);
+	}));
 	AddWidget(&coplanarCheckBox);
 
 	capsuleShadowCheckBox.Create("Capsule Shadow Disabled: ");
 	capsuleShadowCheckBox.SetTooltip("Disable receiving capsule shadows for this material.");
 	capsuleShadowCheckBox.SetPos(XMFLOAT2(x, y += step));
 	capsuleShadowCheckBox.SetSize(XMFLOAT2(hei, hei));
-	capsuleShadowCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetCapsuleShadowDisabled(args.bValue);
-		}
-	});
+	capsuleShadowCheckBox.OnClick(forEachSelected([&] (auto material, auto args) {
+		material->SetCapsuleShadowDisabled(args.bValue);
+	}));
 	AddWidget(&capsuleShadowCheckBox);
 
 
@@ -283,14 +196,8 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	shaderTypeComboBox.SetTooltip("Select a shader for this material. \nCustom shaders (*) will also show up here (see wi::renderer:RegisterCustomShader() for more info.)\nNote that custom shaders (*) can't select between blend modes, as they are created with an explicit blend mode.");
 	shaderTypeComboBox.SetPos(XMFLOAT2(x, y += step));
 	shaderTypeComboBox.SetSize(XMFLOAT2(wid, hei));
-	shaderTypeComboBox.OnSelect([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			if (args.iValue >= MaterialComponent::SHADERTYPE_COUNT)
+	shaderTypeComboBox.OnSelect(forEachSelected([&] (auto material, auto args) {
+		if (args.iValue >= MaterialComponent::SHADERTYPE_COUNT)
 			{
 				material->SetCustomShaderID(args.iValue - MaterialComponent::SHADERTYPE_COUNT);
 				blendModeComboBox.SetEnabled(false);
@@ -301,8 +208,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 				material->SetCustomShaderID(-1);
 				blendModeComboBox.SetEnabled(true);
 			}
-		}
-	});
+	}));
 	shaderTypeComboBox.SetEnabled(false);
 	shaderTypeComboBox.SetMaxVisibleItemCount(5);
 	AddWidget(&shaderTypeComboBox);
@@ -310,16 +216,9 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	blendModeComboBox.Create("Blend mode: ");
 	blendModeComboBox.SetPos(XMFLOAT2(x, y += step));
 	blendModeComboBox.SetSize(XMFLOAT2(wid, hei));
-	blendModeComboBox.OnSelect([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->userBlendMode = (wi::enums::BLENDMODE)args.userdata;
-		}
-	});
+	blendModeComboBox.OnSelect(forEachSelected([&] (auto material, auto args) {
+		material->userBlendMode = (wi::enums::BLENDMODE)args.userdata;
+	}));
 	blendModeComboBox.AddItem("Opaque", wi::enums::BLENDMODE_OPAQUE);
 	blendModeComboBox.AddItem("Alpha", wi::enums::BLENDMODE_ALPHA);
 	blendModeComboBox.AddItem("Premultiplied", wi::enums::BLENDMODE_PREMULTIPLIED);
@@ -334,16 +233,9 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	shadingRateComboBox.SetTooltip("Select shading rate for this material. \nSelecting larger shading rate will decrease rendering quality of this material, \nbut increases performance.\nRequires hardware support for variable shading rate");
 	shadingRateComboBox.SetPos(XMFLOAT2(x, y += step));
 	shadingRateComboBox.SetSize(XMFLOAT2(wid, hei));
-	shadingRateComboBox.OnSelect([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->shadingRate = (ShadingRate)args.iValue;
-		}
-	});
+	shadingRateComboBox.OnSelect(forEachSelected([&] (auto material, auto args) {
+		material->shadingRate = (ShadingRate)args.iValue;
+	}));
 	shadingRateComboBox.AddItem("1X1");
 	shadingRateComboBox.AddItem("1X2");
 	shadingRateComboBox.AddItem("2X1");
@@ -358,22 +250,16 @@ void MaterialWindow::Create(EditorComponent* _editor)
 
 	cameraComboBox.Create("Camera source: ");
 	cameraComboBox.SetTooltip("Select a camera to use as texture");
-	cameraComboBox.OnSelect([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->cameraSource = (Entity)args.userdata;
-		}
+	cameraComboBox.OnSelect(forEachSelected([&] (auto material, auto args) {
+		material->cameraSource = (Entity)args.userdata;
 
+		auto& scene = editor->GetCurrentScene();
 		CameraComponent* camera = scene.cameras.GetComponent((Entity)args.userdata);
 		if (camera != nullptr)
 		{
 			camera->render_to_texture.resolution = XMUINT2(256, 256);
 		}
-	});
+	}));
 	AddWidget(&cameraComboBox);
 
 
@@ -385,224 +271,126 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	normalMapSlider.SetTooltip("How much the normal map should distort the face normals (bumpiness).");
 	normalMapSlider.SetSize(XMFLOAT2(wid, hei));
 	normalMapSlider.SetPos(XMFLOAT2(x, y += step));
-	normalMapSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetNormalMapStrength(args.fValue);
-		}
-	});
+	normalMapSlider.OnSlide(forEachSelected([&] (auto material, auto args) {
+		material->SetNormalMapStrength(args.fValue);
+	}));
 	AddWidget(&normalMapSlider);
 
 	roughnessSlider.Create(0, 1, 0.5f, 1000, "Roughness: ");
 	roughnessSlider.SetTooltip("Adjust the surface roughness. Rough surfaces are less shiny, more matte.");
 	roughnessSlider.SetSize(XMFLOAT2(wid, hei));
 	roughnessSlider.SetPos(XMFLOAT2(x, y += step));
-	roughnessSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetRoughness(args.fValue);
-		}
-	});
+	roughnessSlider.OnSlide(forEachSelected([&] (auto material, auto args) {
+		material->SetRoughness(args.fValue);
+	}));
 	AddWidget(&roughnessSlider);
 
 	reflectanceSlider.Create(0, 1, 0.5f, 1000, "Reflectance: ");
 	reflectanceSlider.SetTooltip("Adjust the surface [non-metal] reflectivity (also called specularFactor).\nNote: this is not available in specular-glossiness workflow");
 	reflectanceSlider.SetSize(XMFLOAT2(wid, hei));
 	reflectanceSlider.SetPos(XMFLOAT2(x, y += step));
-	reflectanceSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetReflectance(args.fValue);
-		}
-	});
+	reflectanceSlider.OnSlide(forEachSelected([&] (auto material, auto args) {
+		material->SetReflectance(args.fValue);
+	}));
 	AddWidget(&reflectanceSlider);
 
 	metalnessSlider.Create(0, 1, 0.0f, 1000, "Metalness: ");
 	metalnessSlider.SetTooltip("The more metal-like the surface is, the more the its color will contribute to the reflection color.\nNote: this is not available in specular-glossiness workflow");
 	metalnessSlider.SetSize(XMFLOAT2(wid, hei));
 	metalnessSlider.SetPos(XMFLOAT2(x, y += step));
-	metalnessSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetMetalness(args.fValue);
-		}
-	});
+	metalnessSlider.OnSlide(forEachSelected([&] (auto material, auto args) {
+		material->SetMetalness(args.fValue);
+	}));
 	AddWidget(&metalnessSlider);
 
 	alphaRefSlider.Create(0, 1, 1.0f, 1000, "AlphaRef: ");
 	alphaRefSlider.SetTooltip("Adjust the alpha cutoff threshold. Alpha cutout can affect performance");
 	alphaRefSlider.SetSize(XMFLOAT2(wid, hei));
 	alphaRefSlider.SetPos(XMFLOAT2(x, y += step));
-	alphaRefSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetAlphaRef(args.fValue);
-		}
-	});
+	alphaRefSlider.OnSlide(forEachSelected([&] (auto material, auto args) {
+		material->SetAlphaRef(args.fValue);
+	}));
 	AddWidget(&alphaRefSlider);
 
 	emissiveSlider.Create(0, 10, 0.0f, 1000, "Emissive: ");
 	emissiveSlider.SetTooltip("Adjust the light emission of the surface. The color of the light emitted is that of the color of the material.");
 	emissiveSlider.SetSize(XMFLOAT2(wid, hei));
 	emissiveSlider.SetPos(XMFLOAT2(x, y += step));
-	emissiveSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetEmissiveStrength(args.fValue);
-		}
-	});
+	emissiveSlider.OnSlide(forEachSelected([&] (auto material, auto args) {
+		material->SetEmissiveStrength(args.fValue);
+	}));
 	AddWidget(&emissiveSlider);
 
 	saturationSlider.Create(0, 2, 1, 1000, "Saturation: ");
 	saturationSlider.SetTooltip("Adjust the saturation of the material.");
 	saturationSlider.SetSize(XMFLOAT2(wid, hei));
 	saturationSlider.SetPos(XMFLOAT2(x, y += step));
-	saturationSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetSaturation(args.fValue);
-		}
-	});
+	saturationSlider.OnSlide(forEachSelected([&] (auto material, auto args) {
+		material->SetSaturation(args.fValue);
+	}));
 	AddWidget(&saturationSlider);
 
 	cloakSlider.Create(0, 1.0f, 0.02f, 1000, "Cloak: ");
 	cloakSlider.SetTooltip("The cloak effect is a combination of transmission, refraction and roughness, without color tinging.");
 	cloakSlider.SetSize(XMFLOAT2(wid, hei));
 	cloakSlider.SetPos(XMFLOAT2(x, y += step));
-	cloakSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetCloakAmount(args.fValue);
-		}
-		});
+	cloakSlider.OnSlide(forEachSelected([&] (auto material, auto args) {
+		material->SetCloakAmount(args.fValue);
+	}));
 	AddWidget(&cloakSlider);
 
 	chromaticAberrationSlider.Create(0, 10.0f, 0, 1000, "Chromatic aberration: ");
 	chromaticAberrationSlider.SetTooltip("Separation of RGB colors inside transmissive material.");
 	chromaticAberrationSlider.SetSize(XMFLOAT2(wid, hei));
 	chromaticAberrationSlider.SetPos(XMFLOAT2(x, y += step));
-	chromaticAberrationSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetChromaticAberrationAmount(args.fValue);
-		}
-		});
+	chromaticAberrationSlider.OnSlide(forEachSelected([&] (auto material, auto args) {
+		material->SetChromaticAberrationAmount(args.fValue);
+	}));
 	AddWidget(&chromaticAberrationSlider);
 
 	transmissionSlider.Create(0, 1.0f, 0.02f, 1000, "Transmission: ");
 	transmissionSlider.SetTooltip("Adjust the transmissiveness. More transmissiveness means more diffuse light is transmitted instead of absorbed.");
 	transmissionSlider.SetSize(XMFLOAT2(wid, hei));
 	transmissionSlider.SetPos(XMFLOAT2(x, y += step));
-	transmissionSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetTransmissionAmount(args.fValue);
-		}
-	});
+	transmissionSlider.OnSlide(forEachSelected([&] (auto material, auto args) {
+		material->SetTransmissionAmount(args.fValue);
+	}));
 	AddWidget(&transmissionSlider);
 
 	refractionSlider.Create(0, 1, 0, 1000, "Refraction: ");
 	refractionSlider.SetTooltip("Adjust the refraction amount for transmissive materials.");
 	refractionSlider.SetSize(XMFLOAT2(wid, hei));
 	refractionSlider.SetPos(XMFLOAT2(x, y += step));
-	refractionSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetRefractionAmount(args.fValue);
-		}
-	});
+	refractionSlider.OnSlide(forEachSelected([&] (auto material, auto args) {
+		material->SetRefractionAmount(args.fValue);
+	}));
 	AddWidget(&refractionSlider);
 
 	pomSlider.Create(0, 1.0f, 0.0f, 1000, "Par Occl Mapping: ");
 	pomSlider.SetTooltip("[Parallax Occlusion Mapping] Adjust how much the bump map should modulate the surface parallax effect. \nOnly works with PBR + Parallax shader.");
 	pomSlider.SetSize(XMFLOAT2(wid, hei));
 	pomSlider.SetPos(XMFLOAT2(x, y += step));
-	pomSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetParallaxOcclusionMapping(args.fValue);
-		}
-	});
+	pomSlider.OnSlide(forEachSelected([&] (auto material, auto args) {
+		material->SetParallaxOcclusionMapping(args.fValue);
+	}));
 	AddWidget(&pomSlider);
 
 	anisotropyStrengthSlider.Create(0, 1.0f, 0.0f, 1000, "Anisotropy Strength: ");
 	anisotropyStrengthSlider.SetTooltip("Adjust anisotropy specular effect's strength. \nOnly works with PBR + Anisotropic shader.");
 	anisotropyStrengthSlider.SetSize(XMFLOAT2(wid, hei));
 	anisotropyStrengthSlider.SetPos(XMFLOAT2(x, y += step));
-	anisotropyStrengthSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->anisotropy_strength = args.fValue;
-		}
-	});
+	anisotropyStrengthSlider.OnSlide(forEachSelected([&] (auto material, auto args) {
+		material->anisotropy_strength = args.fValue;
+	}));
 	AddWidget(&anisotropyStrengthSlider);
 
 	anisotropyRotationSlider.Create(0, 360, 0.0f, 360, "Anisotropy Rot: ");
 	anisotropyRotationSlider.SetTooltip("Adjust anisotropy specular effect's rotation. \nOnly works with PBR + Anisotropic shader.");
 	anisotropyRotationSlider.SetSize(XMFLOAT2(wid, hei));
 	anisotropyRotationSlider.SetPos(XMFLOAT2(x, y += step));
-	anisotropyRotationSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->anisotropy_rotation = wi::math::DegreesToRadians(args.fValue);
-		}
-	});
+	anisotropyRotationSlider.OnSlide(forEachSelected([&] (auto material, auto args) {
+		material->anisotropy_rotation = wi::math::DegreesToRadians(args.fValue);
+	}));
 	AddWidget(&anisotropyRotationSlider);
 
 
@@ -610,114 +398,65 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	displacementMappingSlider.SetTooltip("Adjust how much the bump map should modulate the geometry when using tessellation.");
 	displacementMappingSlider.SetSize(XMFLOAT2(wid, hei));
 	displacementMappingSlider.SetPos(XMFLOAT2(x, y += step));
-	displacementMappingSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetDisplacementMapping(args.fValue);
-		}
-	});
+	displacementMappingSlider.OnSlide(forEachSelected([&] (auto material, auto args) {
+		material->SetDisplacementMapping(args.fValue);
+	}));
 	AddWidget(&displacementMappingSlider);
 
 	subsurfaceScatteringSlider.Create(0, 2, 0.0f, 1000, "Subsurface Scattering: ");
 	subsurfaceScatteringSlider.SetTooltip("Subsurface scattering amount. \nYou can also adjust the subsurface color by selecting it in the color picker");
 	subsurfaceScatteringSlider.SetSize(XMFLOAT2(wid, hei));
 	subsurfaceScatteringSlider.SetPos(XMFLOAT2(x, y += step));
-	subsurfaceScatteringSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetSubsurfaceScatteringAmount(args.fValue);
-		}
-	});
+	subsurfaceScatteringSlider.OnSlide(forEachSelected([&] (auto material, auto args) {
+		material->SetSubsurfaceScatteringAmount(args.fValue);
+	}));
 	AddWidget(&subsurfaceScatteringSlider);
 
 	texAnimFrameRateSlider.Create(0, 60, 0, 60, "Texcoord anim FPS: ");
 	texAnimFrameRateSlider.SetTooltip("Adjust the texture animation frame rate (frames per second). Any value above 0 will make the material dynamic.");
 	texAnimFrameRateSlider.SetSize(XMFLOAT2(wid, hei));
 	texAnimFrameRateSlider.SetPos(XMFLOAT2(x, y += step));
-	texAnimFrameRateSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->texAnimFrameRate = args.fValue;
-		}
-	});
+	texAnimFrameRateSlider.OnSlide(forEachSelected([&] (auto material, auto args) {
+		material->texAnimFrameRate = args.fValue;
+	}));
 	AddWidget(&texAnimFrameRateSlider);
 
 	texAnimDirectionSliderU.Create(-0.05f, 0.05f, 0, 1000, "Texcoord anim U: ");
 	texAnimDirectionSliderU.SetTooltip("Adjust the texture animation speed along the U direction in texture space.");
 	texAnimDirectionSliderU.SetSize(XMFLOAT2(wid, hei));
 	texAnimDirectionSliderU.SetPos(XMFLOAT2(x, y += step));
-	texAnimDirectionSliderU.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->texAnimDirection.x = args.fValue;
-		}
-	});
+	texAnimDirectionSliderU.OnSlide(forEachSelected([&] (auto material, auto args) {
+		material->texAnimDirection.x = args.fValue;
+	}));
 	AddWidget(&texAnimDirectionSliderU);
 
 	texAnimDirectionSliderV.Create(-0.05f, 0.05f, 0, 1000, "Texcoord anim V: ");
 	texAnimDirectionSliderV.SetTooltip("Adjust the texture animation speed along the V direction in texture space.");
 	texAnimDirectionSliderV.SetSize(XMFLOAT2(wid, hei));
 	texAnimDirectionSliderV.SetPos(XMFLOAT2(x, y += step));
-	texAnimDirectionSliderV.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->texAnimDirection.y = args.fValue;
-		}
-	});
+	texAnimDirectionSliderV.OnSlide(forEachSelected([&] (auto material, auto args) {
+		material->texAnimDirection.y = args.fValue;
+	}));
 	AddWidget(&texAnimDirectionSliderV);
 
 	texMulSliderX.Create(0.01f, 10.0f, 0, 1000, "Texture TileSize X: ");
 	texMulSliderX.SetTooltip("Adjust the texture mapping size.");
 	texMulSliderX.SetSize(XMFLOAT2(wid, hei));
 	texMulSliderX.SetPos(XMFLOAT2(x, y += step));
-	texMulSliderX.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetDirty();
+	texMulSliderX.OnSlide(forEachSelected([&] (auto material, auto args) {
+		material->SetDirty();
 			material->texMulAdd.x = args.fValue;
-		}
-	});
+	}));
 	AddWidget(&texMulSliderX);
 
 	texMulSliderY.Create(0.01f, 10.0f, 0, 1000, "Texture TileSize Y: ");
 	texMulSliderY.SetTooltip("Adjust the texture mapping size.");
 	texMulSliderY.SetSize(XMFLOAT2(wid, hei));
 	texMulSliderY.SetPos(XMFLOAT2(x, y += step));
-	texMulSliderY.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetDirty();
+	texMulSliderY.OnSlide(forEachSelected([&] (auto material, auto args) {
+		material->SetDirty();
 			material->texMulAdd.y = args.fValue;
-		}
-	});
+	}));
 	AddWidget(&texMulSliderY);
 
 
@@ -725,167 +464,89 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	sheenRoughnessSlider.SetTooltip("This affects roughness of sheen layer for cloth shading.");
 	sheenRoughnessSlider.SetSize(XMFLOAT2(wid, hei));
 	sheenRoughnessSlider.SetPos(XMFLOAT2(x, y += step));
-	sheenRoughnessSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetSheenRoughness(args.fValue);
-		}
-	});
+	sheenRoughnessSlider.OnSlide(forEachSelected([&] (auto material, auto args) {
+		material->SetSheenRoughness(args.fValue);
+	}));
 	AddWidget(&sheenRoughnessSlider);
 
 	clearcoatSlider.Create(0, 1, 0, 1000, "Clearcoat: ");
 	clearcoatSlider.SetTooltip("This affects clearcoat layer blending.");
 	clearcoatSlider.SetSize(XMFLOAT2(wid, hei));
 	clearcoatSlider.SetPos(XMFLOAT2(x, y += step));
-	clearcoatSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetClearcoatFactor(args.fValue);
-		}
-	});
+	clearcoatSlider.OnSlide(forEachSelected([&] (auto material, auto args) {
+		material->SetClearcoatFactor(args.fValue);
+	}));
 	AddWidget(&clearcoatSlider);
 
 	clearcoatRoughnessSlider.Create(0, 1, 0, 1000, "Clearcoat Roughness: ");
 	clearcoatRoughnessSlider.SetTooltip("This affects roughness of clear coat layer.");
 	clearcoatRoughnessSlider.SetSize(XMFLOAT2(wid, hei));
 	clearcoatRoughnessSlider.SetPos(XMFLOAT2(x, y += step));
-	clearcoatRoughnessSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetClearcoatRoughness(args.fValue);
-		}
-	});
+	clearcoatRoughnessSlider.OnSlide(forEachSelected([&] (auto material, auto args) {
+		material->SetClearcoatRoughness(args.fValue);
+	}));
 	AddWidget(&clearcoatRoughnessSlider);
 
 	blendTerrainSlider.Create(0, 2, 0, 1000, "Blend with terrain: ");
 	blendTerrainSlider.SetTooltip("Blend with terrain height.");
 	blendTerrainSlider.SetSize(XMFLOAT2(wid, hei));
 	blendTerrainSlider.SetPos(XMFLOAT2(x, y += step));
-	blendTerrainSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetBlendWithTerrainHeight(args.fValue);
-		}
-	});
+	blendTerrainSlider.OnSlide(forEachSelected([&] (auto material, auto args) {
+		material->SetBlendWithTerrainHeight(args.fValue);
+	}));
 	AddWidget(&blendTerrainSlider);
 
 	interiorScaleXSlider.Create(1, 10, 1, 1000, "Interior Scale X: ");
 	interiorScaleXSlider.SetTooltip("Set the cubemap scale for the interior mapping (if material uses interior mapping shader)");
-	interiorScaleXSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetInteriorMappingScale(XMFLOAT3(args.fValue, material->interiorMappingScale.y, material->interiorMappingScale.z));
-		}
-	});
+	interiorScaleXSlider.OnSlide(forEachSelected([&] (auto material, auto args) {
+		material->SetInteriorMappingScale(XMFLOAT3(args.fValue, material->interiorMappingScale.y, material->interiorMappingScale.z));
+	}));
 	AddWidget(&interiorScaleXSlider);
 
 	interiorScaleYSlider.Create(1, 10, 1, 1000, "Interior Scale Y: ");
 	interiorScaleYSlider.SetTooltip("Set the cubemap scale for the interior mapping (if material uses interior mapping shader)");
-	interiorScaleYSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetInteriorMappingScale(XMFLOAT3(material->interiorMappingScale.x, args.fValue, material->interiorMappingScale.z));
-		}
-		});
+	interiorScaleYSlider.OnSlide(forEachSelected([&] (auto material, auto args) {
+		material->SetInteriorMappingScale(XMFLOAT3(material->interiorMappingScale.x, args.fValue, material->interiorMappingScale.z));
+	}));
 	AddWidget(&interiorScaleYSlider);
 
 	interiorScaleZSlider.Create(1, 10, 1, 1000, "Interior Scale Z: ");
 	interiorScaleZSlider.SetTooltip("Set the cubemap scale for the interior mapping (if material uses interior mapping shader)");
-	interiorScaleZSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetInteriorMappingScale(XMFLOAT3(material->interiorMappingScale.x, material->interiorMappingScale.y, args.fValue));
-		}
-		});
+	interiorScaleZSlider.OnSlide(forEachSelected([&] (auto material, auto args) {
+		material->SetInteriorMappingScale(XMFLOAT3(material->interiorMappingScale.x, material->interiorMappingScale.y, args.fValue));
+	}));
 	AddWidget(&interiorScaleZSlider);
 
 	interiorOffsetXSlider.Create(-10, 10, 0, 2000, "Interior Offset X: ");
 	interiorOffsetXSlider.SetTooltip("Set the cubemap offset for the interior mapping (if material uses interior mapping shader)");
-	interiorOffsetXSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetInteriorMappingOffset(XMFLOAT3(args.fValue, material->interiorMappingOffset.y, material->interiorMappingOffset.z));
-		}
-		});
+	interiorOffsetXSlider.OnSlide(forEachSelected([&] (auto material, auto args) {
+		material->SetInteriorMappingOffset(XMFLOAT3(args.fValue, material->interiorMappingOffset.y, material->interiorMappingOffset.z));
+	}));
 	AddWidget(&interiorOffsetXSlider);
 
 	interiorOffsetYSlider.Create(-10, 10, 0, 2000, "Interior Offset Y: ");
 	interiorOffsetYSlider.SetTooltip("Set the cubemap offset for the interior mapping (if material uses interior mapping shader)");
-	interiorOffsetYSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetInteriorMappingOffset(XMFLOAT3(material->interiorMappingOffset.x, args.fValue, material->interiorMappingOffset.z));
-		}
-		});
+	interiorOffsetYSlider.OnSlide(forEachSelected([&] (auto material, auto args) {
+		material->SetInteriorMappingOffset(XMFLOAT3(material->interiorMappingOffset.x, args.fValue, material->interiorMappingOffset.z));
+	}));
 	AddWidget(&interiorOffsetYSlider);
 
 	interiorOffsetZSlider.Create(-10, 10, 0, 2000, "Interior Offset Z: ");
 	interiorOffsetZSlider.SetTooltip("Set the cubemap offset for the interior mapping (if material uses interior mapping shader)");
-	interiorOffsetZSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetInteriorMappingOffset(XMFLOAT3(material->interiorMappingOffset.x, material->interiorMappingOffset.y, args.fValue));
-		}
-		});
+	interiorOffsetZSlider.OnSlide(forEachSelected([&] (auto material, auto args) {
+		material->SetInteriorMappingOffset(XMFLOAT3(material->interiorMappingOffset.x, material->interiorMappingOffset.y, args.fValue));
+	}));
 	AddWidget(&interiorOffsetZSlider);
 
 	interiorRotationSlider.Create(0, 360, 0, 360, "Interior Rotation: ");
 	interiorRotationSlider.SetTooltip("Set the cubemap horizontal rotation for the interior mapping (if material uses interior mapping shader)");
-	interiorRotationSlider.OnSlide([&](wi::gui::EventArgs args) {
+	interiorRotationSlider.OnSlide(forEachSelected([&] (auto material, auto args) {
 		float radians = wi::math::DegreesToRadians(args.fValue);
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			material->SetInteriorMappingRotation(radians);
-		}
-	});
+		material->SetInteriorMappingRotation(radians);
+	}));
 	AddWidget(&interiorRotationSlider);
 
 
-	// 
 	hei = 20;
 	step = hei + 2;
 	x = 10;
@@ -924,14 +585,8 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	colorPicker.SetPos(XMFLOAT2(10, y += step));
 	colorPicker.SetVisible(true);
 	colorPicker.SetEnabled(true);
-	colorPicker.OnColorChanged([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			switch (colorComboBox.GetSelected())
+	colorPicker.OnColorChanged(forEachSelected([&] (auto material, auto args) {
+		switch (colorComboBox.GetSelected())
 			{
 			default:
 			case 0:
@@ -956,8 +611,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 				material->SetExtinctionColor(args.color.toFloat4());
 				break;
 			}
-		}
-	});
+	}));
 	AddWidget(&colorPicker);
 
 
@@ -1169,17 +823,10 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	textureSlotUvsetField.SetTooltip("uv set number");
 	textureSlotUvsetField.SetPos(XMFLOAT2(x + textureSlotLabel.GetScale().x + 2, y));
 	textureSlotUvsetField.SetSize(XMFLOAT2(hei, hei));
-	textureSlotUvsetField.OnInputAccepted([this](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MaterialComponent* material = get_material(scene, x);
-			if (material == nullptr)
-				continue;
-			int slot = textureSlotComboBox.GetSelected();
-			material->textures[slot].uvset = (uint32_t)args.iValue;
-		}
-	});
+	textureSlotUvsetField.OnInputAccepted(forEachSelected([&] (auto material, auto args) {
+		int slot = textureSlotComboBox.GetSelected();
+		material->textures[slot].uvset = (uint32_t)args.iValue;
+	}));
 	AddWidget(&textureSlotUvsetField);
 
 
@@ -1293,7 +940,7 @@ void MaterialWindow::SetEntity(Entity entity)
 
 		colorComboBox.SetEnabled(true);
 		colorPicker.SetEnabled(true);
-		
+
 		switch (colorComboBox.GetSelected())
 		{
 		default:
