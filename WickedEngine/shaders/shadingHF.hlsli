@@ -612,10 +612,12 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 		capsuleshadow = saturate(capsuleshadow);
 		surface.occlusion *= capsuleshadow;
 
+#ifndef PLANARREFLECTION
 		capsulereflection = sqr(capsulereflection);
 		capsulereflection = lerp(capsulereflection, 1, GetCapsuleShadowFade());
 		lighting.direct.specular *= capsulereflection;
 		lighting.indirect.specular *= capsulereflection;
+#endif // PLANARREFLECTION
 	}
 
 }
