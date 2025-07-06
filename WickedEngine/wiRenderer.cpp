@@ -1549,7 +1549,7 @@ void LoadShaders()
 
 		desc.vs = &shaders[VSTYPE_SCREEN];
 		desc.ps = &shaders[PSTYPE_WAVE_EFFECT];
-		desc.bs = &blendStates[BSTYPE_ADDITIVE];
+		desc.bs = &blendStates[BSTYPE_PREMULTIPLIED];
 		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
 		desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
 		device->CreatePipelineState(&desc, &PSO_waveeffect);

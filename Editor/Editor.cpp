@@ -427,6 +427,14 @@ void EditorComponent::ResizeBuffers()
 	desc.format = Format::R8G8B8A8_UNORM;
 	desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
 	GetDevice()->CreateTexture(&desc, nullptr, &gui_background_effect);
+
+	topmenuWnd.background_overlay = gui_background_effect;
+	componentsWnd.background_overlay = gui_background_effect;
+	generalWnd.background_overlay = gui_background_effect;
+	graphicsWnd.background_overlay = gui_background_effect;
+	paintToolWnd.background_overlay = gui_background_effect;
+	cameraWnd.background_overlay = gui_background_effect;
+	materialPickerWnd.background_overlay = gui_background_effect;
 }
 void EditorComponent::ResizeLayout()
 {
@@ -4398,12 +4406,10 @@ void EditorComponent::Render() const
 			rect.from_viewport(vp);
 			device->BindScissorRects(1, &rect, cmd);
 
-			wi::image::Params fx;
-			fx.enableFullScreen();
-			wi::image::Draw(renderPath->GetGUIBlurredBackground(), fx, cmd);
-
-			static float opa = 1.0f;
-			wi::renderer::DrawWaveEffect(XMFLOAT4(1,1,1,opa), cmd);
+			static float opa = 0.4f;
+			XMFLOAT4 col = themeEditorWnd.focusColor;
+			col.w = opa;
+			wi::renderer::DrawWaveEffect(col, cmd);
 
 			device->RenderPassEnd(cmd);
 			device->EventEnd(cmd);

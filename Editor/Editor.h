@@ -89,7 +89,7 @@ public:
 
 	std::unique_ptr<wi::RenderPath3D> renderPath;
 	wi::graphics::Texture gui_background_effect;
-	const wi::graphics::Texture* GetGUIBlurredBackground() const override { return &gui_background_effect; }
+	const wi::graphics::Texture* GetGUIBlurredBackground() const override { return renderPath->GetGUIBlurredBackground(); }
 
 	void ResizeBuffers() override;
 	void ResizeLayout() override;

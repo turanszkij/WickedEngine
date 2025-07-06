@@ -70,8 +70,8 @@ float4 main(VertextoPixel input) : SV_TARGET
 	if (image.texture_background_index >= 0)
 	{
 		Texture2D<half4> backgroundTexture = bindless_textures_half4[descriptor_index(image.texture_background_index)];
-		const half3 background = backgroundTexture.Sample(sam, uv_screen).rgb;
-		color = half4(lerp(background, color.rgb, color.a), mask.a);
+		const half4 background = backgroundTexture.Sample(sam, uv_screen);
+		color = lerp(background, color, color.a);
 	}
 
 	[branch]
