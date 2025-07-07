@@ -58,7 +58,7 @@ void ConstraintWindow::Create(EditorComponent* _editor)
 			forEachSelected([this, func](auto physicscomponent, auto args) {
 				func(physicscomponent, args);
 				physicscomponent->SetRefreshParametersNeeded(true);
-			});
+			})(args);
 		};
 	};
 
@@ -227,7 +227,7 @@ void ConstraintWindow::Create(EditorComponent* _editor)
 		return [this, forEachSelectedWithRefresh, func](auto args) {
 			forEachSelectedWithRefresh([func](auto physicscomponent, auto args) {
 				func(physicscomponent);
-			});
+			})(args);
 			SetEntity(entity);
 		};
 	};
