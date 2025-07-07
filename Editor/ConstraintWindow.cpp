@@ -53,12 +53,12 @@ void ConstraintWindow::Create(EditorComponent* _editor)
 		};
 	};
 
-	auto forEachSelectedWithRefresh = [&](auto func) {
+	auto forEachSelectedWithRefresh = [=](auto func) {
 		return [&, func](auto args) {
 			forEachSelected([&, func](auto physicscomponent, auto args) {
 				func(physicscomponent, args);
 				physicscomponent->SetRefreshParametersNeeded(true);
-			});
+			})(args);
 		};
 	};
 
@@ -224,10 +224,10 @@ void ConstraintWindow::Create(EditorComponent* _editor)
 
 
 	auto fixXYZ = [&](auto func) {
-		return [&](auto args) {
-			forEachSelectedWithRefresh([&](auto physicscomponent, auto args) {
+		return [=](auto args) {
+			forEachSelectedWithRefresh([&, func](auto physicscomponent, auto args) {
 				func(physicscomponent);
-			});
+			})(args);
 			SetEntity(entity);
 		};
 	};
