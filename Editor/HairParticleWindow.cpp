@@ -28,8 +28,8 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	infoLabel.SetFitTextEnabled(true);
 	AddWidget(&infoLabel);
 
-	auto forEachSelected = [&] (auto func) {
-		return [&, func] (auto args) {
+	auto forEachSelected = [this] (auto func) {
+		return [this, func] (auto args) {
 			wi::scene::Scene& scene = editor->GetCurrentScene();
 			for (auto& x : editor->translator.selected)
 			{
@@ -44,7 +44,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 
 	meshComboBox.Create("Mesh: ");
 	meshComboBox.SetEnabled(false);
-	meshComboBox.OnSelect(forEachSelected([&] (auto hair, auto args) {
+	meshComboBox.OnSelect(forEachSelected([this] (auto hair, auto args) {
 		if (args.iValue == 0)
 		{
 			hair->meshID = INVALID_ENTITY;
@@ -60,13 +60,13 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 
 	cameraBendCheckbox.Create("Camera Bend: ");
 	cameraBendCheckbox.SetTooltip("Enable a slight bending in camera view, that can help hide the card look when looking from above.");
-	cameraBendCheckbox.OnClick(forEachSelected([&] (auto hair, auto args) {
+	cameraBendCheckbox.OnClick(forEachSelected([] (auto hair, auto args) {
 		hair->SetCameraBendEnabled(args.bValue);
 	}));
 	AddWidget(&cameraBendCheckbox);
 
 	countSlider.Create(0, 100000, 1000, 100000, "Strand Count: ");
-	countSlider.OnSlide(forEachSelected([&] (auto hair, auto args) {
+	countSlider.OnSlide(forEachSelected([] (auto hair, auto args) {
 		hair->strandCount = (uint32_t)args.iValue;
 	}));
 	countSlider.SetEnabled(false);
@@ -74,7 +74,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	AddWidget(&countSlider);
 
 	lengthSlider.Create(0, 4, 1, 1000, "Length: ");
-	lengthSlider.OnSlide(forEachSelected([&] (auto hair, auto args) {
+	lengthSlider.OnSlide(forEachSelected([] (auto hair, auto args) {
 		hair->length = args.fValue;
 	}));
 	lengthSlider.SetEnabled(false);
@@ -82,7 +82,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	AddWidget(&lengthSlider);
 
 	widthSlider.Create(0, 2, 1, 1000, "Width: ");
-	widthSlider.OnSlide(forEachSelected([&] (auto hair, auto args) {
+	widthSlider.OnSlide(forEachSelected([] (auto hair, auto args) {
 		hair->width = args.fValue;
 	}));
 	widthSlider.SetEnabled(false);
@@ -90,7 +90,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	AddWidget(&widthSlider);
 
 	stiffnessSlider.Create(0, 10, 0.5f, 100, "Stiffness: ");
-	stiffnessSlider.OnSlide(forEachSelected([&] (auto hair, auto args) {
+	stiffnessSlider.OnSlide(forEachSelected([] (auto hair, auto args) {
 		hair->stiffness = args.fValue;
 	}));
 	stiffnessSlider.SetEnabled(false);
@@ -98,7 +98,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	AddWidget(&stiffnessSlider);
 
 	dragSlider.Create(0, 1, 0.5f, 100, "Drag: ");
-	dragSlider.OnSlide(forEachSelected([&] (auto hair, auto args) {
+	dragSlider.OnSlide(forEachSelected([] (auto hair, auto args) {
 		hair->drag = args.fValue;
 	}));
 	dragSlider.SetEnabled(false);
@@ -106,7 +106,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	AddWidget(&dragSlider);
 
 	gravityPowerSlider.Create(0, 1, 0.5f, 100, "Gravity Power: ");
-	gravityPowerSlider.OnSlide(forEachSelected([&] (auto hair, auto args) {
+	gravityPowerSlider.OnSlide(forEachSelected([] (auto hair, auto args) {
 		hair->gravityPower = args.fValue;
 	}));
 	gravityPowerSlider.SetEnabled(false);
@@ -114,7 +114,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	AddWidget(&gravityPowerSlider);
 
 	randomnessSlider.Create(0, 1, 0.2f, 1000, "Randomness: ");
-	randomnessSlider.OnSlide(forEachSelected([&] (auto hair, auto args) {
+	randomnessSlider.OnSlide(forEachSelected([] (auto hair, auto args) {
 		hair->randomness = args.fValue;
 	}));
 	randomnessSlider.SetEnabled(false);
@@ -122,7 +122,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	AddWidget(&randomnessSlider);
 
 	segmentcountSlider.Create(1, 10, 1, 9, "Segments: ");
-	segmentcountSlider.OnSlide(forEachSelected([&] (auto hair, auto args) {
+	segmentcountSlider.OnSlide(forEachSelected([] (auto hair, auto args) {
 		hair->segmentCount = (uint32_t)args.iValue;
 	}));
 	segmentcountSlider.SetEnabled(false);
@@ -130,7 +130,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	AddWidget(&segmentcountSlider);
 
 	billboardcountSlider.Create(1, 10, 1, 9, "Billboards: ");
-	billboardcountSlider.OnSlide(forEachSelected([&] (auto hair, auto args) {
+	billboardcountSlider.OnSlide(forEachSelected([] (auto hair, auto args) {
 		hair->billboardCount = (uint32_t)args.iValue;
 	}));
 	billboardcountSlider.SetEnabled(false);
@@ -138,7 +138,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	AddWidget(&billboardcountSlider);
 
 	randomSeedSlider.Create(1, 12345, 1, 12344, "Random seed: ");
-	randomSeedSlider.OnSlide(forEachSelected([&] (auto hair, auto args) {
+	randomSeedSlider.OnSlide(forEachSelected([] (auto hair, auto args) {
 		hair->randomSeed = (uint32_t)args.iValue;
 	}));
 	randomSeedSlider.SetEnabled(false);
@@ -146,7 +146,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	AddWidget(&randomSeedSlider);
 
 	viewDistanceSlider.Create(0, 1000, 100, 10000, "View distance: ");
-	viewDistanceSlider.OnSlide(forEachSelected([&] (auto hair, auto args) {
+	viewDistanceSlider.OnSlide(forEachSelected([] (auto hair, auto args) {
 		hair->viewDistance = args.fValue;
 	}));
 	viewDistanceSlider.SetEnabled(false);
@@ -154,7 +154,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	AddWidget(&viewDistanceSlider);
 
 	uniformitySlider.Create(0.01f, 2.0f, 0.1f, 1000, "Uniformity: ");
-	uniformitySlider.OnSlide(forEachSelected([&] (auto hair, auto args) {
+	uniformitySlider.OnSlide(forEachSelected([] (auto hair, auto args) {
 		hair->uniformity = args.fValue;
 	}));
 	uniformitySlider.SetTooltip("How much the sprite selection distribution noise is modulated by particle positions.");

@@ -34,8 +34,8 @@ void LightWindow::Create(EditorComponent* _editor)
 
 	float mod_x = 10;
 
-	auto forEachSelected = [&] (auto func) {
-		return [&, func] (auto args) {
+	auto forEachSelected = [this] (auto func) {
+		return [this, func] (auto args) {
 			wi::scene::Scene& scene = editor->GetCurrentScene();
 			for (auto& x : editor->translator.selected)
 			{
@@ -49,7 +49,7 @@ void LightWindow::Create(EditorComponent* _editor)
 	colorPicker.SetPos(XMFLOAT2(mod_x, y));
 	colorPicker.SetVisible(true);
 	colorPicker.SetEnabled(false);
-	colorPicker.OnColorChanged(forEachSelected([&] (auto light, auto args) {
+	colorPicker.OnColorChanged(forEachSelected([] (auto light, auto args) {
 		light->color = args.color.toFloat3();
 	}));
 	AddWidget(&colorPicker);
@@ -58,7 +58,7 @@ void LightWindow::Create(EditorComponent* _editor)
 	y += colorPicker.GetScale().y + 5;
 
 	intensitySlider.Create(0, 1000, 0, 100000, "Intensity: ");
-	intensitySlider.OnSlide(forEachSelected([&] (auto light, auto args) {
+	intensitySlider.OnSlide(forEachSelected([] (auto light, auto args) {
 		light->intensity = args.fValue;
 	}));
 	intensitySlider.SetEnabled(false);
@@ -66,7 +66,7 @@ void LightWindow::Create(EditorComponent* _editor)
 	AddWidget(&intensitySlider);
 
 	rangeSlider.Create(1, 1000, 0, 100000, "Range: ");
-	rangeSlider.OnSlide(forEachSelected([&] (auto light, auto args) {
+	rangeSlider.OnSlide(forEachSelected([] (auto light, auto args) {
 		light->range = args.fValue;
 	}));
 	rangeSlider.SetEnabled(false);
@@ -74,7 +74,7 @@ void LightWindow::Create(EditorComponent* _editor)
 	AddWidget(&rangeSlider);
 
 	radiusSlider.Create(0, 10, 0, 100000, "Radius: ");
-	radiusSlider.OnSlide(forEachSelected([&] (auto light, auto args) {
+	radiusSlider.OnSlide(forEachSelected([] (auto light, auto args) {
 		light->radius = args.fValue;
 	}));
 	radiusSlider.SetEnabled(false);
@@ -82,7 +82,7 @@ void LightWindow::Create(EditorComponent* _editor)
 	AddWidget(&radiusSlider);
 
 	lengthSlider.Create(0, 10, 0, 100000, "Length: ");
-	lengthSlider.OnSlide(forEachSelected([&] (auto light, auto args) {
+	lengthSlider.OnSlide(forEachSelected([] (auto light, auto args) {
 		light->length = args.fValue;
 	}));
 	lengthSlider.SetEnabled(false);
@@ -90,7 +90,7 @@ void LightWindow::Create(EditorComponent* _editor)
 	AddWidget(&lengthSlider);
 
 	heightSlider.Create(0, 10, 0, 100000, "Height: ");
-	heightSlider.OnSlide(forEachSelected([&] (auto light, auto args) {
+	heightSlider.OnSlide(forEachSelected([] (auto light, auto args) {
 		light->height = args.fValue;
 	}));
 	heightSlider.SetEnabled(false);
@@ -98,7 +98,7 @@ void LightWindow::Create(EditorComponent* _editor)
 	AddWidget(&heightSlider);
 
 	outerConeAngleSlider.Create(0.1f, XM_PIDIV2 - 0.01f, 0, 100000, "Outer Cone Angle: ");
-	outerConeAngleSlider.OnSlide(forEachSelected([&] (auto light, auto args) {
+	outerConeAngleSlider.OnSlide(forEachSelected([] (auto light, auto args) {
 		light->outerConeAngle = args.fValue;
 	}));
 	outerConeAngleSlider.SetEnabled(false);
@@ -106,7 +106,7 @@ void LightWindow::Create(EditorComponent* _editor)
 	AddWidget(&outerConeAngleSlider);
 
 	innerConeAngleSlider.Create(0, XM_PI - 0.01f, 0, 100000, "Inner Cone Angle: ");
-	innerConeAngleSlider.OnSlide(forEachSelected([&] (auto light, auto args) {
+	innerConeAngleSlider.OnSlide(forEachSelected([] (auto light, auto args) {
 		light->innerConeAngle = args.fValue;
 	}));
 	innerConeAngleSlider.SetEnabled(false);
@@ -114,14 +114,14 @@ void LightWindow::Create(EditorComponent* _editor)
 	AddWidget(&innerConeAngleSlider);
 
 	volumetricBoostSlider.Create(0, 10, 0, 1000, "Volumetric boost: ");
-	volumetricBoostSlider.OnSlide(forEachSelected([&] (auto light, auto args) {
+	volumetricBoostSlider.OnSlide(forEachSelected([] (auto light, auto args) {
 		light->volumetric_boost = args.fValue;
 	}));
 	volumetricBoostSlider.SetTooltip("Adjust the volumetric fog effect's strength just for this light");
 	AddWidget(&volumetricBoostSlider);
 
 	shadowCheckBox.Create("Shadow: ");
-	shadowCheckBox.OnClick(forEachSelected([&] (auto light, auto args) {
+	shadowCheckBox.OnClick(forEachSelected([] (auto light, auto args) {
 		light->SetCastShadow(args.bValue);
 	}));
 	shadowCheckBox.SetEnabled(false);
@@ -129,7 +129,7 @@ void LightWindow::Create(EditorComponent* _editor)
 	AddWidget(&shadowCheckBox);
 
 	volumetricsCheckBox.Create("Volumetric: ");
-	volumetricsCheckBox.OnClick(forEachSelected([&] (auto light, auto args) {
+	volumetricsCheckBox.OnClick(forEachSelected([] (auto light, auto args) {
 		light->SetVolumetricsEnabled(args.bValue);
 	}));
 	volumetricsCheckBox.SetEnabled(false);
@@ -137,7 +137,7 @@ void LightWindow::Create(EditorComponent* _editor)
 	AddWidget(&volumetricsCheckBox);
 
 	haloCheckBox.Create("Visualizer: ");
-	haloCheckBox.OnClick(forEachSelected([&] (auto light, auto args) {
+	haloCheckBox.OnClick(forEachSelected([] (auto light, auto args) {
 		light->SetVisualizerEnabled(args.bValue);
 	}));
 	haloCheckBox.SetEnabled(false);
@@ -145,7 +145,7 @@ void LightWindow::Create(EditorComponent* _editor)
 	AddWidget(&haloCheckBox);
 
 	staticCheckBox.Create("Static: ");
-	staticCheckBox.OnClick(forEachSelected([&] (auto light, auto args) {
+	staticCheckBox.OnClick(forEachSelected([] (auto light, auto args) {
 		light->SetStatic(args.bValue);
 	}));
 	staticCheckBox.SetEnabled(false);
@@ -153,7 +153,7 @@ void LightWindow::Create(EditorComponent* _editor)
 	AddWidget(&staticCheckBox);
 
 	volumetricCloudsCheckBox.Create("Volumetric Clouds: ");
-	volumetricCloudsCheckBox.OnClick(forEachSelected([&] (auto light, auto args) {
+	volumetricCloudsCheckBox.OnClick(forEachSelected([] (auto light, auto args) {
 		light->SetVolumetricCloudsEnabled(args.bValue);
 	}));
 	volumetricCloudsCheckBox.SetEnabled(false);
@@ -195,7 +195,7 @@ void LightWindow::Create(EditorComponent* _editor)
 	shadowResolutionComboBox.AddItem("2048", 2048);
 	shadowResolutionComboBox.AddItem("4096", 4096);
 	shadowResolutionComboBox.AddItem("8192", 8192);
-	shadowResolutionComboBox.OnSelect(forEachSelected([&] (auto light, auto args) {
+	shadowResolutionComboBox.OnSelect(forEachSelected([] (auto light, auto args) {
 		light->forced_shadow_resolution = int(args.userdata);
 	}));
 	shadowResolutionComboBox.SetSelected(0);

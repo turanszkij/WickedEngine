@@ -56,8 +56,8 @@ void LayerWindow::Create(EditorComponent* _editor)
 		AddWidget(&layers[i]);
 	}
 
-	auto forEachLayer = [&] (auto func) {
-		return [&, func] (auto args) {
+	auto forEachLayer = [this] (auto func) {
+		return [this, func] (auto args) {
 			wi::scene::Scene& scene = editor->GetCurrentScene();
 			for (auto& x : editor->translator.selected)
 			{
@@ -75,13 +75,13 @@ void LayerWindow::Create(EditorComponent* _editor)
 	};
 
 	enableAllButton.Create("ALL " ICON_CHECK);
-	enableAllButton.OnClick(forEachLayer([&] (auto layer, auto args) {
+	enableAllButton.OnClick(forEachLayer([] (auto layer, auto args) {
 		layer->layerMask = ~0;
 	}));
 	AddWidget(&enableAllButton);
 
 	enableNoneButton.Create("NONE " ICON_DISABLED);
-	enableNoneButton.OnClick(forEachLayer([&] (auto layer, auto args) {
+	enableNoneButton.OnClick(forEachLayer([] (auto layer, auto args) {
 		layer->layerMask = 0;
 	}));
 	AddWidget(&enableNoneButton);

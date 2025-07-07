@@ -50,8 +50,8 @@ void CameraWindow::Create(EditorComponent* _editor)
 
 	ResetCam();
 
-	auto updateCamera = [&](auto func) {
-		return [&](wi::gui::EventArgs args) {
+	auto updateCamera = [this](auto func) {
+		return [this, func](wi::gui::EventArgs args) {
 			Scene& scene = editor->GetCurrentScene();
 			CameraComponent& camera = editor->GetCurrentEditorScene().camera;
 			func(camera, args);

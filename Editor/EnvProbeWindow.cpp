@@ -31,8 +31,8 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 	infoLabel.SetFitTextEnabled(true);
 	AddWidget(&infoLabel);
 
-	auto forEachSelected = [&] (auto func) {
-		return [&, func] (auto args) {
+	auto forEachSelected = [this] (auto func) {
+		return [this, func] (auto args) {
 			wi::scene::Scene& scene = editor->GetCurrentScene();
 			for (auto& x : editor->translator.selected)
 			{
@@ -48,7 +48,7 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 	realTimeCheckBox.Create("RealTime: ");
 	realTimeCheckBox.SetTooltip("Enable continuous rendering of the probe in every frame.");
 	realTimeCheckBox.SetEnabled(false);
-	realTimeCheckBox.OnClick(forEachSelected([&] (auto probe, auto args) {
+	realTimeCheckBox.OnClick(forEachSelected([] (auto probe, auto args) {
 		probe->SetRealTime(args.bValue);
 		probe->SetDirty();
 	}));
@@ -57,7 +57,7 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 	msaaCheckBox.Create("MSAA: ");
 	msaaCheckBox.SetTooltip("Enable Multi Sampling Anti Aliasing for the probe, this will improve its quality.");
 	msaaCheckBox.SetEnabled(false);
-	msaaCheckBox.OnClick(forEachSelected([&] (auto probe, auto args) {
+	msaaCheckBox.OnClick(forEachSelected([] (auto probe, auto args) {
 		probe->SetMSAA(args.bValue);
 		probe->SetDirty();
 	}));
@@ -66,7 +66,7 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 	refreshButton.Create("Refresh");
 	refreshButton.SetTooltip("Re-renders the selected probe.");
 	refreshButton.SetEnabled(false);
-	refreshButton.OnClick(forEachSelected([&] (auto probe, auto args) {
+	refreshButton.OnClick(forEachSelected([] (auto probe, auto args) {
 		probe->SetDirty();
 	}));
 	AddWidget(&refreshButton);
@@ -74,7 +74,7 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 	refreshAllButton.Create("Refresh All");
 	refreshAllButton.SetTooltip("Re-renders all probes in the scene.");
 	refreshAllButton.SetEnabled(true);
-	refreshAllButton.OnClick(forEachSelected([&] (auto probe, auto args) {
+	refreshAllButton.OnClick(forEachSelected([] (auto probe, auto args) {
 		probe->SetDirty();
 	}));
 	AddWidget(&refreshAllButton);
@@ -82,7 +82,7 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 	importButton.Create("Import Cubemap");
 	importButton.SetTooltip("Import a DDS texture file into the selected environment probe.");
 	importButton.SetEnabled(false);
-	importButton.OnClick(forEachSelected([&] (auto probe, auto args) {
+	importButton.OnClick(forEachSelected([] (auto probe, auto args) {
 		if (probe != nullptr && probe->texture.IsValid())
 		{
 			wi::helper::FileDialogParams params;
@@ -113,14 +113,14 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 	exportButton.Create("Export Cubemap");
 	exportButton.SetTooltip("Export the selected probe into a DDS cubemap texture file.");
 	exportButton.SetEnabled(false);
-	exportButton.OnClick(forEachSelected([&] (auto probe, auto args) {
+	exportButton.OnClick(forEachSelected([this] (auto probe, auto args) {
 		if (probe != nullptr && probe->texture.IsValid())
 		{
 			wi::helper::FileDialogParams params;
 			params.type = wi::helper::FileDialogParams::SAVE;
 			params.description = "DDS";
 			params.extensions = { "DDS" };
-			wi::helper::FileDialog(params, [=](std::string fileName) {
+			wi::helper::FileDialog(params, [this, probe](std::string fileName) {
 				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 
 					std::string extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(fileName));
@@ -155,7 +155,7 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 	resolutionCombo.AddItem("512", 512);
 	resolutionCombo.AddItem("1024", 1024);
 	resolutionCombo.AddItem("2048", 2048);
-	resolutionCombo.OnSelect(forEachSelected([&] (auto probe, auto args) {
+	resolutionCombo.OnSelect(forEachSelected([] (auto probe, auto args) {
 		probe->resolution = (uint32_t)args.userdata;
 		probe->CreateRenderData();
 	}));

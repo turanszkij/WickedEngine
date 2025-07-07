@@ -30,8 +30,8 @@ void IKWindow::Create(EditorComponent* _editor)
 	float hei = 18;
 	float step = hei + 2;
 
-	auto forEachSelected = [&] (auto func) {
-		return [&, func] (auto args) {
+	auto forEachSelected = [this] (auto func) {
+		return [this, func] (auto args) {
 			wi::scene::Scene& scene = editor->GetCurrentScene();
 			for (auto& x : editor->translator.selected)
 			{
@@ -48,7 +48,7 @@ void IKWindow::Create(EditorComponent* _editor)
 	targetCombo.SetSize(XMFLOAT2(siz, hei));
 	targetCombo.SetPos(XMFLOAT2(x, y));
 	targetCombo.SetEnabled(false);
-	targetCombo.OnSelect(forEachSelected([&] (auto ik, auto args) {
+	targetCombo.OnSelect(forEachSelected([this] (auto ik, auto args) {
 		if (args.iValue == 0)
 		{
 			ik->target = INVALID_ENTITY;
@@ -65,7 +65,7 @@ void IKWindow::Create(EditorComponent* _editor)
 	disabledCheckBox.SetTooltip("Disable simulation.");
 	disabledCheckBox.SetPos(XMFLOAT2(x, y += step));
 	disabledCheckBox.SetSize(XMFLOAT2(hei, hei));
-	disabledCheckBox.OnClick(forEachSelected([&] (auto ik, auto args) {
+	disabledCheckBox.OnClick(forEachSelected([] (auto ik, auto args) {
 		ik->SetDisabled(args.bValue);
 	}));
 	AddWidget(&disabledCheckBox);
@@ -74,7 +74,7 @@ void IKWindow::Create(EditorComponent* _editor)
 	chainLengthSlider.SetTooltip("How far the hierarchy chain is simulated backwards from this entity");
 	chainLengthSlider.SetPos(XMFLOAT2(x, y += step));
 	chainLengthSlider.SetSize(XMFLOAT2(siz, hei));
-	chainLengthSlider.OnSlide(forEachSelected([&] (auto ik, auto args) {
+	chainLengthSlider.OnSlide(forEachSelected([] (auto ik, auto args) {
 		ik->chain_length = args.iValue;
 	}));
 	AddWidget(&chainLengthSlider);
@@ -83,7 +83,7 @@ void IKWindow::Create(EditorComponent* _editor)
 	iterationCountSlider.SetTooltip("How many iterations to compute the inverse kinematics for. Higher values are slower but more accurate.");
 	iterationCountSlider.SetPos(XMFLOAT2(x, y += step));
 	iterationCountSlider.SetSize(XMFLOAT2(siz, hei));
-	iterationCountSlider.OnSlide(forEachSelected([&] (auto ik, auto args) {
+	iterationCountSlider.OnSlide(forEachSelected([] (auto ik, auto args) {
 		ik->iteration_count = args.iValue;
 	}));
 	AddWidget(&iterationCountSlider);
