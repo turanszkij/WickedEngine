@@ -103,7 +103,7 @@ void CameraComponentWindow::Create(EditorComponent* _editor)
 	float step = hei + 2;
 	float wid = 120;
 
-	auto forAllSelectedCameraComponents = [&](auto /* void(nonnull CameraComponent*, wi::gui::EventArgs) */ func) {
+	auto forEachSelectedCameraComponent = [&](auto /* void(nonnull CameraComponent*, wi::gui::EventArgs) */ func) {
 		return [&](wi::gui::EventArgs args) {
 			wi::scene::Scene& scene = editor->GetCurrentScene();
 			for (auto& x : editor->translator.selected)
@@ -122,7 +122,7 @@ void CameraComponentWindow::Create(EditorComponent* _editor)
 	farPlaneSlider.SetSize(XMFLOAT2(wid, hei));
 	farPlaneSlider.SetPos(XMFLOAT2(x, y));
 	farPlaneSlider.SetValue(editor->GetCurrentEditorScene().camera.zFarP);
-	farPlaneSlider.OnSlide(forAllSelectedCameraComponents([&](auto camera, auto args) {
+	farPlaneSlider.OnSlide(forEachSelectedCameraComponent([&](auto camera, auto args) {
 		camera->zFarP = args.fValue;
 	}));
 	AddWidget(&farPlaneSlider);
@@ -132,7 +132,7 @@ void CameraComponentWindow::Create(EditorComponent* _editor)
 	nearPlaneSlider.SetSize(XMFLOAT2(wid, hei));
 	nearPlaneSlider.SetPos(XMFLOAT2(x, y += step));
 	nearPlaneSlider.SetValue(editor->GetCurrentEditorScene().camera.zNearP);
-	nearPlaneSlider.OnSlide(forAllSelectedCameraComponents([&](auto camera, auto args) {
+	nearPlaneSlider.OnSlide(forEachSelectedCameraComponent([&](auto camera, auto args) {
 		camera->zNearP = args.fValue;
 	}));
 	AddWidget(&nearPlaneSlider);
@@ -142,7 +142,7 @@ void CameraComponentWindow::Create(EditorComponent* _editor)
 	fovSlider.SetSize(XMFLOAT2(wid, hei));
 	fovSlider.SetPos(XMFLOAT2(x, y += step));
 	fovSlider.SetValue(editor->GetCurrentEditorScene().camera.fov / XM_PI * 180.f);
-	fovSlider.OnSlide(forAllSelectedCameraComponents([&](auto camera, auto args) {
+	fovSlider.OnSlide(forEachSelectedCameraComponent([&](auto camera, auto args) {
 		camera->fov = args.fValue / 180.f * XM_PI;
 	}));
 	AddWidget(&fovSlider);
@@ -151,7 +151,7 @@ void CameraComponentWindow::Create(EditorComponent* _editor)
 	focalLengthSlider.SetTooltip("Controls the depth of field effect's focus distance");
 	focalLengthSlider.SetSize(XMFLOAT2(wid, hei));
 	focalLengthSlider.SetPos(XMFLOAT2(x, y += step));
-	focalLengthSlider.OnSlide(forAllSelectedCameraComponents([&](auto camera, auto args) {
+	focalLengthSlider.OnSlide(forEachSelectedCameraComponent([&](auto camera, auto args) {
 		camera->focal_length = args.fValue;
 	}));
 	AddWidget(&focalLengthSlider);
@@ -160,7 +160,7 @@ void CameraComponentWindow::Create(EditorComponent* _editor)
 	apertureSizeSlider.SetTooltip("Controls the depth of field effect's strength");
 	apertureSizeSlider.SetSize(XMFLOAT2(wid, hei));
 	apertureSizeSlider.SetPos(XMFLOAT2(x, y += step));
-	apertureSizeSlider.OnSlide(forAllSelectedCameraComponents([&](auto camera, auto args) {
+	apertureSizeSlider.OnSlide(forEachSelectedCameraComponent([&](auto camera, auto args) {
 		camera->aperture_size = args.fValue;
 	}));
 	AddWidget(&apertureSizeSlider);
@@ -169,7 +169,7 @@ void CameraComponentWindow::Create(EditorComponent* _editor)
 	apertureShapeXSlider.SetTooltip("Controls the depth of field effect's bokeh shape");
 	apertureShapeXSlider.SetSize(XMFLOAT2(wid, hei));
 	apertureShapeXSlider.SetPos(XMFLOAT2(x, y += step));
-	apertureShapeXSlider.OnSlide(forAllSelectedCameraComponents([&](auto camera, auto args) {
+	apertureShapeXSlider.OnSlide(forEachSelectedCameraComponent([&](auto camera, auto args) {
 		camera->aperture_shape.x = args.fValue;
 	}));
 	AddWidget(&apertureShapeXSlider);
@@ -178,7 +178,7 @@ void CameraComponentWindow::Create(EditorComponent* _editor)
 	apertureShapeYSlider.SetTooltip("Controls the depth of field effect's bokeh shape");
 	apertureShapeYSlider.SetSize(XMFLOAT2(wid, hei));
 	apertureShapeYSlider.SetPos(XMFLOAT2(x, y += step));
-	apertureShapeYSlider.OnSlide(forAllSelectedCameraComponents([&](auto camera, auto args) {
+	apertureShapeYSlider.OnSlide(forEachSelectedCameraComponent([&](auto camera, auto args) {
 		camera->aperture_shape.y = args.fValue;
 	}));
 	AddWidget(&apertureShapeYSlider);
@@ -223,21 +223,21 @@ void CameraComponentWindow::Create(EditorComponent* _editor)
 
 	resolutionXSlider.Create(128, 2048, 256, 2048 - 128, "Render Width: ");
 	resolutionXSlider.SetTooltip("Set the render resolution Width");
-	resolutionXSlider.OnSlide(forAllSelectedCameraComponents([&](auto camera, auto args) {
+	resolutionXSlider.OnSlide(forEachSelectedCameraComponent([&](auto camera, auto args) {
 		camera->render_to_texture.resolution.x = (uint32_t)args.iValue;
 	}));
 	AddWidget(&resolutionXSlider);
 
 	resolutionYSlider.Create(128, 2048, 256, 2048 - 128, "Render Height: ");
 	resolutionYSlider.SetTooltip("Set the render resolution Height");
-	resolutionYSlider.OnSlide(forAllSelectedCameraComponents([&](auto camera, auto args) {
+	resolutionYSlider.OnSlide(forEachSelectedCameraComponent([&](auto camera, auto args) {
 		camera->render_to_texture.resolution.y = (uint32_t)args.iValue;
 	}));
 	AddWidget(&resolutionYSlider);
 
 	samplecountSlider.Create(1, 8, 1, 7, "Sample count: ");
 	samplecountSlider.SetTooltip("Set the render resolution sample count (MSAA)");
-	samplecountSlider.OnSlide(forAllSelectedCameraComponents([&](auto camera, auto args) {
+	samplecountSlider.OnSlide(forEachSelectedCameraComponent([&](auto camera, auto args) {
 		camera->render_to_texture.sample_count = wi::math::GetNextPowerOfTwo((uint32_t)args.iValue);
 	}));
 	AddWidget(&samplecountSlider);
