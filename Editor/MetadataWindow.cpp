@@ -24,6 +24,20 @@ void MetadataWindow::Create(EditorComponent* _editor)
 		editor->componentsWnd.RefreshEntityTree();
 	});
 
+	auto forEachSelected = [&] (auto func) {
+		return [&, func] (auto args) {
+			wi::scene::Scene& scene = editor->GetCurrentScene();
+			for (auto& x : editor->translator.selected)
+			{
+				MetadataComponent* metadata = scene.metadatas.GetComponent(x.entity);
+				if (metadata != nullptr)
+				{
+					func(metadata, args);
+				}
+			}
+		};
+	};
+
 	presetCombo.Create("Preset: ");
 	presetCombo.AddItem("Custom", (uint64_t)MetadataComponent::Preset::Custom);
 	presetCombo.AddItem("Waypoint", (uint64_t)MetadataComponent::Preset::Waypoint);
@@ -32,16 +46,9 @@ void MetadataWindow::Create(EditorComponent* _editor)
 	presetCombo.AddItem("Npc", (uint64_t)MetadataComponent::Preset::NPC);
 	presetCombo.AddItem("Pickup", (uint64_t)MetadataComponent::Preset::Pickup);
 	presetCombo.AddItem("Vehicle", (uint64_t)MetadataComponent::Preset::Vehicle);
-	presetCombo.OnSelect([this](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MetadataComponent* metadata = scene.metadatas.GetComponent(x.entity);
-			if (metadata == nullptr)
-				continue;
-			metadata->preset = (MetadataComponent::Preset)args.userdata;
-		}
-	});
+	presetCombo.OnSelect(forEachSelected([&] (auto metadata, auto args) {
+		metadata->preset = (MetadataComponent::Preset)args.userdata;
+	}));
 	AddWidget(&presetCombo);
 
 	addCombo.Create("");
@@ -51,13 +58,8 @@ void MetadataWindow::Create(EditorComponent* _editor)
 	addCombo.AddItem("int");
 	addCombo.AddItem("float");
 	addCombo.AddItem("string");
-	addCombo.OnSelect([this](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MetadataComponent* metadata = scene.metadatas.GetComponent(x.entity);
-			if (metadata == nullptr)
-				continue;
+	addCombo.OnSelect([=] (auto args) {
+		forEachSelected([] (auto metadata, auto args) {
 			std::string property_name = "name";
 			switch (args.iValue)
 			{
@@ -83,7 +85,7 @@ void MetadataWindow::Create(EditorComponent* _editor)
 				metadata->string_values.set(property_name, "");
 				break;
 			}
-		}
+		})(args);
 		addCombo.SetSelectedWithoutCallback(-1);
 		RefreshEntries();
 	});
@@ -145,6 +147,24 @@ void MetadataWindow::RefreshEntries()
 		metadata->string_values.size()
 	);
 
+
+	auto forEachSelectedWithRefresh = [&] (auto name, auto func) {
+		return [&, func] (auto args) {
+			wi::scene::Scene& scene = editor->GetCurrentScene();
+			for (auto& x : editor->translator.selected)
+			{
+				MetadataComponent* metadata = scene.metadatas.GetComponent(x.entity);
+				if (metadata != nullptr && metadata->bool_values.has(name))
+				{
+					func(metadata, args);
+				}
+			}
+			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
+				RefreshEntries();
+			});
+		};
+	};
+
 	// Note: to not disturb the ordering of entries while editing them, we iterate by the ordered names array in each table
 
 	for (auto& name : metadata->bool_values.names)
@@ -152,64 +172,30 @@ void MetadataWindow::RefreshEntries()
 		Entry& entry = entries.emplace_back();
 		entry.name.Create("");
 		entry.name.SetText(name);
-		entry.name.OnInputAccepted([name, this](wi::gui::EventArgs args) {
-			wi::scene::Scene& scene = editor->GetCurrentScene();
-			for (auto& x : editor->translator.selected)
-			{
-				MetadataComponent* metadata = scene.metadatas.GetComponent(x.entity);
-				if (metadata == nullptr)
-					continue;
-				if (!metadata->bool_values.has(name))
-					continue;
-				auto value = metadata->bool_values.get(name);
-				metadata->bool_values.erase(name);
-				metadata->bool_values.set(args.sValue, value);
-			}
-			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
-				RefreshEntries();
-			});
-		});
+		entry.name.OnInputAccepted(forEachSelectedWithRefresh(name, [&] (auto metadata, auto args) {
+			if (!metadata->bool_values.has(name))
+				return;
+			auto value = metadata->bool_values.get(name);
+			metadata->bool_values.erase(name);
+			metadata->bool_values.set(args.sValue, value);
+		}));
 		AddWidget(&entry.name);
 
 		entry.is_bool = true;
 		entry.check.Create("");
 		entry.check.SetText(" = (bool) ");
 		entry.check.SetCheck(metadata->bool_values.get(name));
-		entry.check.OnClick([name, this](wi::gui::EventArgs args) {
-			wi::scene::Scene& scene = editor->GetCurrentScene();
-			for (auto& x : editor->translator.selected)
-			{
-				MetadataComponent* metadata = scene.metadatas.GetComponent(x.entity);
-				if (metadata == nullptr)
-					continue;
-				if (!metadata->bool_values.has(name))
-					continue;
-				metadata->bool_values.set(name, args.bValue);
-			}
-			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
-				RefreshEntries();
-				});
-		});
+		entry.check.OnClick(forEachSelectedWithRefresh(name, [&] (auto metadata, auto args) {
+			metadata->bool_values.set(name, args.bValue);
+		}));
 		AddWidget(&entry.check);
 
 		entry.remove.Create("");
 		entry.remove.SetText("X");
 		entry.remove.SetSize(XMFLOAT2(entry.remove.GetSize().y, entry.remove.GetSize().y));
-		entry.remove.OnClick([name, this](wi::gui::EventArgs args) {
-			wi::scene::Scene& scene = editor->GetCurrentScene();
-			for (auto& x : editor->translator.selected)
-			{
-				MetadataComponent* metadata = scene.metadatas.GetComponent(x.entity);
-				if (metadata == nullptr)
-					continue;
-				if (!metadata->bool_values.has(name))
-					continue;
-				metadata->bool_values.erase(name);
-			}
-			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
-				RefreshEntries();
-			});
-		});
+		entry.remove.OnClick(forEachSelectedWithRefresh(name, [&] (auto metadata, auto args) {
+			metadata->bool_values.erase(name);
+		}));
 		AddWidget(&entry.remove);
 	}
 
@@ -218,23 +204,11 @@ void MetadataWindow::RefreshEntries()
 		Entry& entry = entries.emplace_back();
 		entry.name.Create("");
 		entry.name.SetText(name);
-		entry.name.OnInputAccepted([name, this](wi::gui::EventArgs args) {
-			wi::scene::Scene& scene = editor->GetCurrentScene();
-			for (auto& x : editor->translator.selected)
-			{
-				MetadataComponent* metadata = scene.metadatas.GetComponent(x.entity);
-				if (metadata == nullptr)
-					continue;
-				if (!metadata->int_values.has(name))
-					continue;
-				auto value = metadata->int_values.get(name);
-				metadata->int_values.erase(name);
-				metadata->int_values.set(args.sValue, value);
-			}
-			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
-				RefreshEntries();
-				});
-			});
+		entry.name.OnInputAccepted(forEachSelectedWithRefresh(name, [&] (auto metadata, auto args) {
+			auto value = metadata->int_values.get(name);
+			metadata->int_values.erase(name);
+			metadata->int_values.set(args.sValue, value);
+		}));
 		AddWidget(&entry.name);
 
 		entry.is_bool = false;
@@ -242,41 +216,17 @@ void MetadataWindow::RefreshEntries()
 		entry.value.SetDescription(" = (int) ");
 		entry.value.SetSize(XMFLOAT2(60, entry.value.GetSize().y));
 		entry.value.SetValue(metadata->int_values.get(name));
-		entry.value.OnInputAccepted([name, this](wi::gui::EventArgs args) {
-			wi::scene::Scene& scene = editor->GetCurrentScene();
-			for (auto& x : editor->translator.selected)
-			{
-				MetadataComponent* metadata = scene.metadatas.GetComponent(x.entity);
-				if (metadata == nullptr)
-					continue;
-				if (!metadata->int_values.has(name))
-					continue;
-				metadata->int_values.set(name, args.iValue);
-			}
-			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
-				RefreshEntries();
-				});
-			});
+		entry.value.OnInputAccepted(forEachSelectedWithRefresh(name, [&] (auto metadata, auto args) {
+			metadata->int_values.set(name, args.iValue);
+		}));
 		AddWidget(&entry.value);
 
 		entry.remove.Create("");
 		entry.remove.SetText("X");
 		entry.remove.SetSize(XMFLOAT2(entry.remove.GetSize().y, entry.remove.GetSize().y));
-		entry.remove.OnClick([name, this](wi::gui::EventArgs args) {
-			wi::scene::Scene& scene = editor->GetCurrentScene();
-			for (auto& x : editor->translator.selected)
-			{
-				MetadataComponent* metadata = scene.metadatas.GetComponent(x.entity);
-				if (metadata == nullptr)
-					continue;
-				if (!metadata->int_values.has(name))
-					continue;
-				metadata->int_values.erase(name);
-			}
-			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
-				RefreshEntries();
-				});
-			});
+		entry.remove.OnClick(forEachSelectedWithRefresh(name, [&] (auto metadata, auto args) {
+			metadata->int_values.erase(name);
+		}));
 		AddWidget(&entry.remove);
 	}
 
@@ -285,23 +235,11 @@ void MetadataWindow::RefreshEntries()
 		Entry& entry = entries.emplace_back();
 		entry.name.Create("");
 		entry.name.SetText(name);
-		entry.name.OnInputAccepted([name, this](wi::gui::EventArgs args) {
-			wi::scene::Scene& scene = editor->GetCurrentScene();
-			for (auto& x : editor->translator.selected)
-			{
-				MetadataComponent* metadata = scene.metadatas.GetComponent(x.entity);
-				if (metadata == nullptr)
-					continue;
-				if (!metadata->float_values.has(name))
-					continue;
-				auto value = metadata->float_values.get(name);
-				metadata->float_values.erase(name);
-				metadata->float_values.set(args.sValue, value);
-			}
-			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
-				RefreshEntries();
-				});
-			});
+		entry.name.OnInputAccepted(forEachSelectedWithRefresh(name, [&] (auto metadata, auto args) {
+			auto value = metadata->float_values.get(name);
+			metadata->float_values.erase(name);
+			metadata->float_values.set(args.sValue, value);
+		}));
 		AddWidget(&entry.name);
 
 		entry.is_bool = false;
@@ -309,41 +247,17 @@ void MetadataWindow::RefreshEntries()
 		entry.value.SetDescription(" = (float) ");
 		entry.value.SetSize(XMFLOAT2(60, entry.value.GetSize().y));
 		entry.value.SetValue(metadata->float_values.get(name));
-		entry.value.OnInputAccepted([name, this](wi::gui::EventArgs args) {
-			wi::scene::Scene& scene = editor->GetCurrentScene();
-			for (auto& x : editor->translator.selected)
-			{
-				MetadataComponent* metadata = scene.metadatas.GetComponent(x.entity);
-				if (metadata == nullptr)
-					continue;
-				if (!metadata->float_values.has(name))
-					continue;
-				metadata->float_values.set(name, args.fValue);
-			}
-			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
-				RefreshEntries();
-				});
-			});
+		entry.value.OnInputAccepted(forEachSelectedWithRefresh(name, [&] (auto metadata, auto args) {
+			metadata->float_values.set(name, args.fValue);
+		}));
 		AddWidget(&entry.value);
 
 		entry.remove.Create("");
 		entry.remove.SetText("X");
 		entry.remove.SetSize(XMFLOAT2(entry.remove.GetSize().y, entry.remove.GetSize().y));
-		entry.remove.OnClick([name, this](wi::gui::EventArgs args) {
-			wi::scene::Scene& scene = editor->GetCurrentScene();
-			for (auto& x : editor->translator.selected)
-			{
-				MetadataComponent* metadata = scene.metadatas.GetComponent(x.entity);
-				if (metadata == nullptr)
-					continue;
-				if (!metadata->float_values.has(name))
-					continue;
-				metadata->float_values.erase(name);
-			}
-			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
-				RefreshEntries();
-				});
-			});
+		entry.remove.OnClick(forEachSelectedWithRefresh(name, [&] (auto metadata, auto args) {
+			metadata->float_values.erase(name);
+		}));
 		AddWidget(&entry.remove);
 	}
 
@@ -352,23 +266,11 @@ void MetadataWindow::RefreshEntries()
 		Entry& entry = entries.emplace_back();
 		entry.name.Create("");
 		entry.name.SetText(name);
-		entry.name.OnInputAccepted([name, this](wi::gui::EventArgs args) {
-			wi::scene::Scene& scene = editor->GetCurrentScene();
-			for (auto& x : editor->translator.selected)
-			{
-				MetadataComponent* metadata = scene.metadatas.GetComponent(x.entity);
-				if (metadata == nullptr)
-					continue;
-				if (!metadata->string_values.has(name))
-					continue;
-				auto value = metadata->string_values.get(name);
-				metadata->string_values.erase(name);
-				metadata->string_values.set(args.sValue, value);
-			}
-			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
-				RefreshEntries();
-				});
-			});
+		entry.name.OnInputAccepted(forEachSelectedWithRefresh(name, [&] (auto metadata, auto args) {
+			auto value = metadata->string_values.get(name);
+			metadata->string_values.erase(name);
+			metadata->string_values.set(args.sValue, value);
+		}));
 		AddWidget(&entry.name);
 
 		entry.is_bool = false;
@@ -376,41 +278,17 @@ void MetadataWindow::RefreshEntries()
 		entry.value.SetDescription(" = (string) ");
 		entry.value.SetSize(XMFLOAT2(120, entry.value.GetSize().y));
 		entry.value.SetValue(metadata->string_values.get(name));
-		entry.value.OnInputAccepted([name, this](wi::gui::EventArgs args) {
-			wi::scene::Scene& scene = editor->GetCurrentScene();
-			for (auto& x : editor->translator.selected)
-			{
-				MetadataComponent* metadata = scene.metadatas.GetComponent(x.entity);
-				if (metadata == nullptr)
-					continue;
-				if (!metadata->string_values.has(name))
-					continue;
-				metadata->string_values.set(name, args.sValue);
-			}
-			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
-				RefreshEntries();
-				});
-			});
+		entry.value.OnInputAccepted(forEachSelectedWithRefresh(name, [&] (auto metadata, auto args) {
+			metadata->string_values.set(name, args.sValue);
+		}));
 		AddWidget(&entry.value);
 
 		entry.remove.Create("");
 		entry.remove.SetText("X");
 		entry.remove.SetSize(XMFLOAT2(entry.remove.GetSize().y, entry.remove.GetSize().y));
-		entry.remove.OnClick([name, this](wi::gui::EventArgs args) {
-			wi::scene::Scene& scene = editor->GetCurrentScene();
-			for (auto& x : editor->translator.selected)
-			{
-				MetadataComponent* metadata = scene.metadatas.GetComponent(x.entity);
-				if (metadata == nullptr)
-					continue;
-				if (!metadata->string_values.has(name))
-					continue;
-				metadata->string_values.erase(name);
-			}
-			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
-				RefreshEntries();
-				});
-			});
+		entry.remove.OnClick(forEachSelectedWithRefresh(name, [&] (auto metadata, auto args) {
+			metadata->string_values.erase(name);
+		}));
 		AddWidget(&entry.remove);
 	}
 

@@ -60,20 +60,25 @@ void ForceFieldWindow::Create(EditorComponent* _editor)
 	typeComboBox.SetTooltip("Choose the force field type.");
 	AddWidget(&typeComboBox);
 
+	auto forEachSelected = [&](auto func) {
+		return [&, func](auto args) {
+			wi::scene::Scene& scene = editor->GetCurrentScene();
+			for (auto& x : editor->translator.selected)
+			{
+				ForceFieldComponent* force = scene.forces.GetComponent(x.entity);
+				if (force != nullptr) {
+					func(force, args);
+				}
+			}
+		};
+	};
 
 	gravitySlider.Create(-10, 10, 0, 100000, "Gravity: ");
 	gravitySlider.SetSize(XMFLOAT2(wid, hei));
 	gravitySlider.SetPos(XMFLOAT2(x, y += step));
-	gravitySlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			ForceFieldComponent* force = scene.forces.GetComponent(x.entity);
-			if (force == nullptr)
-				continue;
-			force->gravity = args.fValue;
-		}
-	});
+	gravitySlider.OnSlide(forEachSelected([&] (auto force, auto args) {
+		force->gravity = args.fValue;
+	}));
 	gravitySlider.SetEnabled(false);
 	gravitySlider.SetTooltip("Set the amount of gravity. Positive values attract, negatives deflect.");
 	AddWidget(&gravitySlider);
@@ -82,16 +87,9 @@ void ForceFieldWindow::Create(EditorComponent* _editor)
 	rangeSlider.Create(0.0f, 100.0f, 10, 100000, "Range: ");
 	rangeSlider.SetSize(XMFLOAT2(wid, hei));
 	rangeSlider.SetPos(XMFLOAT2(x, y += step));
-	rangeSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			ForceFieldComponent* force = scene.forces.GetComponent(x.entity);
-			if (force == nullptr)
-				continue;
-			force->range = args.fValue;
-		}
-	});
+	rangeSlider.OnSlide(forEachSelected([&](auto force, auto args) {
+		force->range = args.fValue;
+	}));
 	rangeSlider.SetEnabled(false);
 	rangeSlider.SetTooltip("Set the range of affection.");
 	AddWidget(&rangeSlider);

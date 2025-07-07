@@ -12,7 +12,7 @@ void LightWindow::Create(EditorComponent* _editor)
 	SetSize(XMFLOAT2(650, 940));
 
 	closeButton.SetTooltip("Delete LightComponent");
-	OnClose([=](wi::gui::EventArgs args) {
+	OnClose([&](wi::gui::EventArgs args) {
 
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
@@ -34,229 +34,128 @@ void LightWindow::Create(EditorComponent* _editor)
 
 	float mod_x = 10;
 
+	auto forEachSelected = [&] (auto func) {
+		return [&, func] (auto args) {
+			wi::scene::Scene& scene = editor->GetCurrentScene();
+			for (auto& x : editor->translator.selected)
+			{
+				LightComponent* light = scene.lights.GetComponent(x.entity);
+				if (light != nullptr) func(light, args);
+			}
+		};
+	};
+
 	colorPicker.Create("Light Color", wi::gui::Window::WindowControls::NONE);
 	colorPicker.SetPos(XMFLOAT2(mod_x, y));
 	colorPicker.SetVisible(true);
 	colorPicker.SetEnabled(false);
-	colorPicker.OnColorChanged([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			LightComponent* light = scene.lights.GetComponent(x.entity);
-			if (light != nullptr)
-			{
-				light->color = args.color.toFloat3();
-			}
-		}
-	});
+	colorPicker.OnColorChanged(forEachSelected([&] (auto light, auto args) {
+		light->color = args.color.toFloat3();
+	}));
 	AddWidget(&colorPicker);
 
 	float mod_wid = colorPicker.GetScale().x;
 	y += colorPicker.GetScale().y + 5;
 
 	intensitySlider.Create(0, 1000, 0, 100000, "Intensity: ");
-	intensitySlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			LightComponent* light = scene.lights.GetComponent(x.entity);
-			if (light != nullptr)
-			{
-				light->intensity = args.fValue;
-			}
-		}
-	});
+	intensitySlider.OnSlide(forEachSelected([&] (auto light, auto args) {
+		light->intensity = args.fValue;
+	}));
 	intensitySlider.SetEnabled(false);
 	intensitySlider.SetTooltip("Brightness of light in. The units that this is defined in depend on the type of light. \nPoint and spot lights use luminous intensity in candela (lm/sr) while directional lights use illuminance in lux (lm/m2).");
 	AddWidget(&intensitySlider);
 
 	rangeSlider.Create(1, 1000, 0, 100000, "Range: ");
-	rangeSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			LightComponent* light = scene.lights.GetComponent(x.entity);
-			if (light != nullptr)
-			{
-				light->range = args.fValue;
-			}
-		}
-	});
+	rangeSlider.OnSlide(forEachSelected([&] (auto light, auto args) {
+		light->range = args.fValue;
+	}));
 	rangeSlider.SetEnabled(false);
 	rangeSlider.SetTooltip("Adjust the maximum range the light can affect.");
 	AddWidget(&rangeSlider);
 
 	radiusSlider.Create(0, 10, 0, 100000, "Radius: ");
-	radiusSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			LightComponent* light = scene.lights.GetComponent(x.entity);
-			if (light != nullptr)
-			{
-				light->radius = args.fValue;
-			}
-		}
-	});
+	radiusSlider.OnSlide(forEachSelected([&] (auto light, auto args) {
+		light->radius = args.fValue;
+	}));
 	radiusSlider.SetEnabled(false);
 	radiusSlider.SetTooltip("[Experimental] Adjust the radius of the light source.\nFor directional light, this will only affect ray traced shadow softness.");
 	AddWidget(&radiusSlider);
 
 	lengthSlider.Create(0, 10, 0, 100000, "Length: ");
-	lengthSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			LightComponent* light = scene.lights.GetComponent(x.entity);
-			if (light != nullptr)
-			{
-				light->length = args.fValue;
-			}
-		}
-	});
+	lengthSlider.OnSlide(forEachSelected([&] (auto light, auto args) {
+		light->length = args.fValue;
+	}));
 	lengthSlider.SetEnabled(false);
 	lengthSlider.SetTooltip("Adjust the length of the light source.\nWith this you can make capsule light out of a point light.");
 	AddWidget(&lengthSlider);
 
 	heightSlider.Create(0, 10, 0, 100000, "Height: ");
-	heightSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			LightComponent* light = scene.lights.GetComponent(x.entity);
-			if (light != nullptr)
-			{
-				light->height = args.fValue;
-			}
-		}
-		});
+	heightSlider.OnSlide(forEachSelected([&] (auto light, auto args) {
+		light->height = args.fValue;
+	}));
 	heightSlider.SetEnabled(false);
 	heightSlider.SetTooltip("Adjust the height of the rectangle light source.\n");
 	AddWidget(&heightSlider);
 
 	outerConeAngleSlider.Create(0.1f, XM_PIDIV2 - 0.01f, 0, 100000, "Outer Cone Angle: ");
-	outerConeAngleSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			LightComponent* light = scene.lights.GetComponent(x.entity);
-			if (light != nullptr)
-			{
-				light->outerConeAngle = args.fValue;
-			}
-		}
-	});
+	outerConeAngleSlider.OnSlide(forEachSelected([&] (auto light, auto args) {
+		light->outerConeAngle = args.fValue;
+	}));
 	outerConeAngleSlider.SetEnabled(false);
 	outerConeAngleSlider.SetTooltip("Adjust the main cone aperture for spotlight.");
 	AddWidget(&outerConeAngleSlider);
 
 	innerConeAngleSlider.Create(0, XM_PI - 0.01f, 0, 100000, "Inner Cone Angle: ");
-	innerConeAngleSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			LightComponent* light = scene.lights.GetComponent(x.entity);
-			if (light != nullptr)
-			{
-				light->innerConeAngle = args.fValue;
-			}
-		}
-	});
+	innerConeAngleSlider.OnSlide(forEachSelected([&] (auto light, auto args) {
+		light->innerConeAngle = args.fValue;
+	}));
 	innerConeAngleSlider.SetEnabled(false);
 	innerConeAngleSlider.SetTooltip("Adjust the inner cone aperture for spotlight.\n(The inner cone will always be inside the outer cone)");
 	AddWidget(&innerConeAngleSlider);
 
 	volumetricBoostSlider.Create(0, 10, 0, 1000, "Volumetric boost: ");
-	volumetricBoostSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			LightComponent* light = scene.lights.GetComponent(x.entity);
-			if (light != nullptr)
-			{
-				light->volumetric_boost = args.fValue;
-			}
-		}
-		});
+	volumetricBoostSlider.OnSlide(forEachSelected([&] (auto light, auto args) {
+		light->volumetric_boost = args.fValue;
+	}));
 	volumetricBoostSlider.SetTooltip("Adjust the volumetric fog effect's strength just for this light");
 	AddWidget(&volumetricBoostSlider);
 
 	shadowCheckBox.Create("Shadow: ");
-	shadowCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			LightComponent* light = scene.lights.GetComponent(x.entity);
-			if (light != nullptr)
-			{
-				light->SetCastShadow(args.bValue);
-			}
-		}
-	});
+	shadowCheckBox.OnClick(forEachSelected([&] (auto light, auto args) {
+		light->SetCastShadow(args.bValue);
+	}));
 	shadowCheckBox.SetEnabled(false);
 	shadowCheckBox.SetTooltip("Set light as shadow caster. Many shadow casters can affect performance!");
 	AddWidget(&shadowCheckBox);
 
 	volumetricsCheckBox.Create("Volumetric: ");
-	volumetricsCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			LightComponent* light = scene.lights.GetComponent(x.entity);
-			if (light != nullptr)
-			{
-				light->SetVolumetricsEnabled(args.bValue);
-			}
-		}
-	});
+	volumetricsCheckBox.OnClick(forEachSelected([&] (auto light, auto args) {
+		light->SetVolumetricsEnabled(args.bValue);
+	}));
 	volumetricsCheckBox.SetEnabled(false);
 	volumetricsCheckBox.SetTooltip("Compute volumetric light scattering effect. \nThe fog settings affect scattering (see Weather window). If there is no fog, there is no scattering.");
 	AddWidget(&volumetricsCheckBox);
 
 	haloCheckBox.Create("Visualizer: ");
-	haloCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			LightComponent* light = scene.lights.GetComponent(x.entity);
-			if (light != nullptr)
-			{
-				light->SetVisualizerEnabled(args.bValue);
-			}
-		}
-	});
+	haloCheckBox.OnClick(forEachSelected([&] (auto light, auto args) {
+		light->SetVisualizerEnabled(args.bValue);
+	}));
 	haloCheckBox.SetEnabled(false);
 	haloCheckBox.SetTooltip("Visualize light source emission");
 	AddWidget(&haloCheckBox);
 
 	staticCheckBox.Create("Static: ");
-	staticCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			LightComponent* light = scene.lights.GetComponent(x.entity);
-			if (light != nullptr)
-			{
-				light->SetStatic(args.bValue);
-			}
-		}
-	});
+	staticCheckBox.OnClick(forEachSelected([&] (auto light, auto args) {
+		light->SetStatic(args.bValue);
+	}));
 	staticCheckBox.SetEnabled(false);
 	staticCheckBox.SetTooltip("Static lights will only be used for baking into lightmaps, DDGI and Surfel GI.");
 	AddWidget(&staticCheckBox);
 
 	volumetricCloudsCheckBox.Create("Volumetric Clouds: ");
-	volumetricCloudsCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			LightComponent* light = scene.lights.GetComponent(x.entity);
-			if (light != nullptr)
-			{
-				light->SetVolumetricCloudsEnabled(args.bValue);
-			}
-		}
-	});
+	volumetricCloudsCheckBox.OnClick(forEachSelected([&] (auto light, auto args) {
+		light->SetVolumetricCloudsEnabled(args.bValue);
+	}));
 	volumetricCloudsCheckBox.SetEnabled(false);
 	volumetricCloudsCheckBox.SetTooltip("When enabled light emission will affect volumetric clouds.");
 	AddWidget(&volumetricCloudsCheckBox);
@@ -271,7 +170,7 @@ void LightWindow::Create(EditorComponent* _editor)
 			LightComponent* light = scene.lights.GetComponent(x.entity);
 			if (light != nullptr)
 			{
-				light->SetType((LightComponent::LightType)args.iValue);
+			light->SetType((LightComponent::LightType)args.iValue);
 				SetLightType(light->GetType());
 			}
 		}
@@ -296,38 +195,24 @@ void LightWindow::Create(EditorComponent* _editor)
 	shadowResolutionComboBox.AddItem("2048", 2048);
 	shadowResolutionComboBox.AddItem("4096", 4096);
 	shadowResolutionComboBox.AddItem("8192", 8192);
-	shadowResolutionComboBox.OnSelect([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			LightComponent* light = scene.lights.GetComponent(x.entity);
-			if (light != nullptr)
-			{
-				light->forced_shadow_resolution = int(args.userdata);
-			}
-		}
-	});
+	shadowResolutionComboBox.OnSelect(forEachSelected([&] (auto light, auto args) {
+		light->forced_shadow_resolution = int(args.userdata);
+	}));
 	shadowResolutionComboBox.SetSelected(0);
 	AddWidget(&shadowResolutionComboBox);
 
 
 	cameraComboBox.Create("Camera source: ");
 	cameraComboBox.SetTooltip("Select a camera to use as texture");
-	cameraComboBox.OnSelect([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			LightComponent* light = scene.lights.GetComponent(x.entity);
-			if (light != nullptr)
-			{
-				light->cameraSource = int(args.userdata);
-			}
-		}
-
+	cameraComboBox.OnSelect([=] (auto args) {
+		forEachSelected([] (auto light, auto args) {
+			light->cameraSource = int(args.userdata);
+		})(args);
+		auto& scene = editor->GetCurrentScene();
 		CameraComponent* camera = scene.cameras.GetComponent((Entity)args.userdata);
 		if (camera != nullptr)
 		{
-			camera->render_to_texture.resolution = XMUINT2(256, 256);
+		 	camera->render_to_texture.resolution = XMUINT2(256, 256);
 		}
 	});
 	AddWidget(&cameraComboBox);
@@ -346,21 +231,21 @@ void LightWindow::Create(EditorComponent* _editor)
 		lensflare_Button[i].Create("LensFlareSlot");
 		lensflare_Button[i].SetText("");
 		lensflare_Button[i].SetTooltip("Load a lensflare texture to this slot");
-		lensflare_Button[i].OnClick([=](wi::gui::EventArgs args) {
+		lensflare_Button[i].OnClick([&](wi::gui::EventArgs args) {
 			LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
 			if (light == nullptr)
 				return;
 
 			if (light->lensFlareRimTextures.size() <= i)
 			{
-				light->lensFlareRimTextures.resize(i + 1);
-				light->lensFlareNames.resize(i + 1);
+			light->lensFlareRimTextures.resize(i + 1);
+			light->lensFlareNames.resize(i + 1);
 			}
 
 			if (light->lensFlareRimTextures[i].IsValid())
 			{
-				light->lensFlareNames[i] = "";
-				light->lensFlareRimTextures[i] = {};
+			light->lensFlareNames[i] = "";
+			light->lensFlareRimTextures[i] = {};
 				lensflare_Button[i].SetText("");
 			}
 			else
@@ -370,9 +255,9 @@ void LightWindow::Create(EditorComponent* _editor)
 				params.description = "Texture";
 				params.extensions = wi::resourcemanager::GetSupportedImageExtensions();
 				wi::helper::FileDialog(params, [this, light, i](std::string fileName) {
-					wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-						light->lensFlareRimTextures[i] = wi::resourcemanager::Load(fileName);
-						light->lensFlareNames[i] = fileName;
+					wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [&](uint64_t userdata) {
+					light->lensFlareRimTextures[i] = wi::resourcemanager::Load(fileName);
+					light->lensFlareNames[i] = fileName;
 						lensflare_Button[i].SetText(wi::helper::GetFileNameFromPath(fileName));
 					});
 				});
@@ -484,8 +369,8 @@ void LightWindow::RefreshCascades()
 		cascade.distanceSlider.Create(1, 1000, 0, 1000, "");
 		cascade.distanceSlider.SetTooltip("Specify cascade's maximum reach distance from camera.\nNote: Increasing cascades indices should use increasing distances.");
 		cascade.distanceSlider.SetSize(XMFLOAT2(100, 18));
-		cascade.distanceSlider.OnSlide([=](wi::gui::EventArgs args) {
-			light->cascade_distances[counter] = args.fValue;
+		cascade.distanceSlider.OnSlide([&](wi::gui::EventArgs args) {
+		light->cascade_distances[counter] = args.fValue;
 		});
 		cascade.distanceSlider.SetValue(light->cascade_distances[counter]);
 		AddWidget(&cascade.distanceSlider);
@@ -495,8 +380,8 @@ void LightWindow::RefreshCascades()
 		cascade.removeButton.SetTooltip("Remove this shadow cascade");
 		cascade.removeButton.SetDescription("Cascade " + std::to_string(counter) + ": ");
 		cascade.removeButton.SetSize(XMFLOAT2(18, 18));
-		cascade.removeButton.OnClick([=](wi::gui::EventArgs args) {
-			light->cascade_distances.erase(light->cascade_distances.begin() + counter);
+		cascade.removeButton.OnClick([&](wi::gui::EventArgs args) {
+		light->cascade_distances.erase(light->cascade_distances.begin() + counter);
 			RefreshCascades();
 		});
 		AddWidget(&cascade.removeButton);
@@ -508,7 +393,7 @@ void LightWindow::RefreshCascades()
 	addCascadeButton.Create("Add shadow cascade");
 	addCascadeButton.SetTooltip("Add new shadow cascade. Note that for each shadow cascades, the scene will be rendered again, so adding more will affect performance!");
 	addCascadeButton.SetSize(XMFLOAT2(100, 20));
-	addCascadeButton.OnClick([=](wi::gui::EventArgs args) {
+	addCascadeButton.OnClick([&](wi::gui::EventArgs args) {
 		float prev_cascade = 1;
 		if (!light->cascade_distances.empty())
 		{

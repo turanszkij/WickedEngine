@@ -103,22 +103,28 @@ void CameraComponentWindow::Create(EditorComponent* _editor)
 	float step = hei + 2;
 	float wid = 120;
 
+	auto forAllSelectedCameraComponents = [&](auto /* void(nonnull CameraComponent*, wi::gui::EventArgs) */ func) {
+		return [&](wi::gui::EventArgs args) {
+			wi::scene::Scene& scene = editor->GetCurrentScene();
+			for (auto& x : editor->translator.selected)
+			{
+				CameraComponent* camera = scene.cameras.GetComponent(x.entity);
+				if (camera == nullptr)
+					continue;
+				func(camera, args);
+				camera->SetDirty();
+			}
+		};
+	};
+
 	farPlaneSlider.Create(100, 10000, 5000, 100000, "Far Plane: ");
 	farPlaneSlider.SetTooltip("Controls the camera's far clip plane, geometry farther than this will be clipped.");
 	farPlaneSlider.SetSize(XMFLOAT2(wid, hei));
 	farPlaneSlider.SetPos(XMFLOAT2(x, y));
 	farPlaneSlider.SetValue(editor->GetCurrentEditorScene().camera.zFarP);
-	farPlaneSlider.OnSlide([=](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			CameraComponent* camera = scene.cameras.GetComponent(x.entity);
-			if (camera == nullptr)
-				continue;
-			camera->zFarP = args.fValue;
-			camera->SetDirty();
-		}
-	});
+	farPlaneSlider.OnSlide(forAllSelectedCameraComponents([&](auto camera, auto args) {
+		camera->zFarP = args.fValue;
+	}));
 	AddWidget(&farPlaneSlider);
 
 	nearPlaneSlider.Create(0.01f, 10, 0.1f, 10000, "Near Plane: ");
@@ -126,17 +132,9 @@ void CameraComponentWindow::Create(EditorComponent* _editor)
 	nearPlaneSlider.SetSize(XMFLOAT2(wid, hei));
 	nearPlaneSlider.SetPos(XMFLOAT2(x, y += step));
 	nearPlaneSlider.SetValue(editor->GetCurrentEditorScene().camera.zNearP);
-	nearPlaneSlider.OnSlide([=](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			CameraComponent* camera = scene.cameras.GetComponent(x.entity);
-			if (camera == nullptr)
-				continue;
-			camera->zNearP = args.fValue;
-			camera->SetDirty();
-		}
-	});
+	nearPlaneSlider.OnSlide(forAllSelectedCameraComponents([&](auto camera, auto args) {
+		camera->zNearP = args.fValue;
+	}));
 	AddWidget(&nearPlaneSlider);
 
 	fovSlider.Create(1, 179, 60, 10000, "FOV: ");
@@ -144,85 +142,45 @@ void CameraComponentWindow::Create(EditorComponent* _editor)
 	fovSlider.SetSize(XMFLOAT2(wid, hei));
 	fovSlider.SetPos(XMFLOAT2(x, y += step));
 	fovSlider.SetValue(editor->GetCurrentEditorScene().camera.fov / XM_PI * 180.f);
-	fovSlider.OnSlide([=](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			CameraComponent* camera = scene.cameras.GetComponent(x.entity);
-			if (camera == nullptr)
-				continue;
-			camera->fov = args.fValue / 180.f * XM_PI;
-			camera->SetDirty();
-		}
-	});
+	fovSlider.OnSlide(forAllSelectedCameraComponents([&](auto camera, auto args) {
+		camera->fov = args.fValue / 180.f * XM_PI;
+	}));
 	AddWidget(&fovSlider);
 
 	focalLengthSlider.Create(0.001f, 100, 1, 10000, "Focal Length: ");
 	focalLengthSlider.SetTooltip("Controls the depth of field effect's focus distance");
 	focalLengthSlider.SetSize(XMFLOAT2(wid, hei));
 	focalLengthSlider.SetPos(XMFLOAT2(x, y += step));
-	focalLengthSlider.OnSlide([=](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			CameraComponent* camera = scene.cameras.GetComponent(x.entity);
-			if (camera == nullptr)
-				continue;
-			camera->focal_length = args.fValue;
-			camera->SetDirty();
-		}
-	});
+	focalLengthSlider.OnSlide(forAllSelectedCameraComponents([&](auto camera, auto args) {
+		camera->focal_length = args.fValue;
+	}));
 	AddWidget(&focalLengthSlider);
 
 	apertureSizeSlider.Create(0, 1, 0, 10000, "Aperture Size: ");
 	apertureSizeSlider.SetTooltip("Controls the depth of field effect's strength");
 	apertureSizeSlider.SetSize(XMFLOAT2(wid, hei));
 	apertureSizeSlider.SetPos(XMFLOAT2(x, y += step));
-	apertureSizeSlider.OnSlide([=](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			CameraComponent* camera = scene.cameras.GetComponent(x.entity);
-			if (camera == nullptr)
-				continue;
-			camera->aperture_size = args.fValue;
-			camera->SetDirty();
-		}
-	});
+	apertureSizeSlider.OnSlide(forAllSelectedCameraComponents([&](auto camera, auto args) {
+		camera->aperture_size = args.fValue;
+	}));
 	AddWidget(&apertureSizeSlider);
 
 	apertureShapeXSlider.Create(0, 2, 1, 10000, "Aperture Shape X: ");
 	apertureShapeXSlider.SetTooltip("Controls the depth of field effect's bokeh shape");
 	apertureShapeXSlider.SetSize(XMFLOAT2(wid, hei));
 	apertureShapeXSlider.SetPos(XMFLOAT2(x, y += step));
-	apertureShapeXSlider.OnSlide([=](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			CameraComponent* camera = scene.cameras.GetComponent(x.entity);
-			if (camera == nullptr)
-				continue;
-			camera->aperture_shape.x = args.fValue;
-			camera->SetDirty();
-		}
-	});
+	apertureShapeXSlider.OnSlide(forAllSelectedCameraComponents([&](auto camera, auto args) {
+		camera->aperture_shape.x = args.fValue;
+	}));
 	AddWidget(&apertureShapeXSlider);
 
 	apertureShapeYSlider.Create(0, 2, 1, 10000, "Aperture Shape Y: ");
 	apertureShapeYSlider.SetTooltip("Controls the depth of field effect's bokeh shape");
 	apertureShapeYSlider.SetSize(XMFLOAT2(wid, hei));
 	apertureShapeYSlider.SetPos(XMFLOAT2(x, y += step));
-	apertureShapeYSlider.OnSlide([=](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			CameraComponent* camera = scene.cameras.GetComponent(x.entity);
-			if (camera == nullptr)
-				continue;
-			camera->aperture_shape.y = args.fValue;
-			camera->SetDirty();
-		}
-	});
+	apertureShapeYSlider.OnSlide(forAllSelectedCameraComponents([&](auto camera, auto args) {
+		camera->aperture_shape.y = args.fValue;
+	}));
 	AddWidget(&apertureShapeYSlider);
 
 	renderButton.Create("RenderToTexture");
@@ -265,49 +223,23 @@ void CameraComponentWindow::Create(EditorComponent* _editor)
 
 	resolutionXSlider.Create(128, 2048, 256, 2048 - 128, "Render Width: ");
 	resolutionXSlider.SetTooltip("Set the render resolution Width");
-	resolutionXSlider.OnSlide([=](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			CameraComponent* camera = scene.cameras.GetComponent(x.entity);
-			if (camera == nullptr)
-				continue;
-			camera->render_to_texture.resolution.x = (uint32_t)args.iValue;
-			camera->SetDirty();
-		}
-		});
+	resolutionXSlider.OnSlide(forAllSelectedCameraComponents([&](auto camera, auto args) {
+		camera->render_to_texture.resolution.x = (uint32_t)args.iValue;
+	}));
 	AddWidget(&resolutionXSlider);
 
 	resolutionYSlider.Create(128, 2048, 256, 2048 - 128, "Render Height: ");
 	resolutionYSlider.SetTooltip("Set the render resolution Height");
-	resolutionYSlider.OnSlide([=](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			CameraComponent* camera = scene.cameras.GetComponent(x.entity);
-			if (camera == nullptr)
-				continue;
-			camera->render_to_texture.resolution.y = (uint32_t)args.iValue;
-			camera->SetDirty();
-		}
-		});
+	resolutionYSlider.OnSlide(forAllSelectedCameraComponents([&](auto camera, auto args) {
+		camera->render_to_texture.resolution.y = (uint32_t)args.iValue;
+	}));
 	AddWidget(&resolutionYSlider);
 
 	samplecountSlider.Create(1, 8, 1, 7, "Sample count: ");
 	samplecountSlider.SetTooltip("Set the render resolution sample count (MSAA)");
-	samplecountSlider.OnSlide([=](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		uint32_t samplecount = wi::math::GetNextPowerOfTwo((uint32_t)args.iValue);
-		samplecountSlider.SetValue((int)samplecount);
-		for (auto& x : editor->translator.selected)
-		{
-			CameraComponent* camera = scene.cameras.GetComponent(x.entity);
-			if (camera == nullptr)
-				continue;
-			camera->render_to_texture.sample_count = samplecount;
-			camera->SetDirty();
-		}
-		});
+	samplecountSlider.OnSlide(forAllSelectedCameraComponents([&](auto camera, auto args) {
+		camera->render_to_texture.sample_count = wi::math::GetNextPowerOfTwo((uint32_t)args.iValue);
+	}));
 	AddWidget(&samplecountSlider);
 
 
