@@ -453,7 +453,7 @@ void EditorComponent::ResizeLayout()
 	projectCreatorWnd.SetSize(XMFLOAT2(projectCreatorWnd.backgroundColorPicker.GetSize().x * 2 + 4 * 3, std::min(780.0f, screenH * 0.8f)));
 	projectCreatorWnd.SetPos(XMFLOAT2(screenW / 2.0f - projectCreatorWnd.scale.x / 2.0f, screenH / 2.0f - projectCreatorWnd.scale.y / 2.0f));
 
-	themeEditorWnd.SetSize(XMFLOAT2(640, std::min(780.0f, screenH * 0.8f)));
+	themeEditorWnd.SetSize(XMFLOAT2(740, std::min(780.0f, screenH * 0.8f)));
 	themeEditorWnd.SetPos(XMFLOAT2(screenW / 2.0f - themeEditorWnd.scale.x / 2.0f, screenH / 2.0f - themeEditorWnd.scale.y / 2.0f));
 
 }
@@ -3028,7 +3028,7 @@ void EditorComponent::Update(float dt)
 		wi::renderer::SetToDrawDebugSprings(generalWnd.springVisCheckBox.GetCheck());
 	}
 
-	if (generalWnd.focusModeCheckBox.GetCheck())
+	if (generalWnd.focusModeCheckBox.GetCheck() || themeEditorWnd.waveColor.getA() == 0)
 	{
 		topmenuWnd.background_overlay = {};
 		componentsWnd.background_overlay = {};
@@ -4407,9 +4407,9 @@ void EditorComponent::Render() const
 			device->RenderPassEnd(cmd);
 		}
 
-		if(!generalWnd.focusModeCheckBox.GetCheck())
+		if(!generalWnd.focusModeCheckBox.GetCheck() && themeEditorWnd.waveColor.getA() > 0)
 		{
-			device->EventBegin("Editor GUI background effect", cmd);
+			device->EventBegin("Background wave effect", cmd);
 			device->RenderPassBegin(&gui_background_effect, cmd);
 
 			Viewport vp;
@@ -4421,10 +4421,7 @@ void EditorComponent::Render() const
 			rect.from_viewport(vp);
 			device->BindScissorRects(1, &rect, cmd);
 
-			static float opa = 0.4f;
-			XMFLOAT4 col = themeEditorWnd.focusColor;
-			col.w = opa;
-			wi::renderer::DrawWaveEffect(col, cmd);
+			wi::renderer::DrawWaveEffect(themeEditorWnd.waveColor, cmd);
 
 			device->RenderPassEnd(cmd);
 			device->EventEnd(cmd);

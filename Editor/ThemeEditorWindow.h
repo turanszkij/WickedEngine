@@ -17,6 +17,7 @@ public:
 	wi::gui::Button fontButton;
 	wi::gui::Button fontShadowButton;
 	wi::gui::Button gradientButton;
+	wi::gui::Button waveButton;
 
 	wi::gui::ColorPicker colorpicker;
 
@@ -32,6 +33,7 @@ public:
 	wi::Color fontColor;
 	wi::Color fontShadowColor;
 	wi::Color gradientColor;
+	wi::Color waveColor;
 
 	wi::Resource imageResource;
 	std::string imageResourceName;
@@ -45,7 +47,8 @@ public:
 		Shadow,
 		Font,
 		FontShadow,
-		Gradient
+		Gradient,
+		Wave,
 	} mode;
 	void UpdateColorPickerMode();
 

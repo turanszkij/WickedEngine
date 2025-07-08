@@ -110,6 +110,19 @@ void ThemeEditorWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&gradientButton);
 
+	waveButton.Create("themeWaveButton");
+	waveButton.SetSize(XMFLOAT2(siz, siz));
+	waveButton.SetDescription("Wave");
+	waveButton.SetTooltip("The wave color.");
+	waveButton.SetText("");
+	waveButton.font_description.params.v_align = wi::font::WIFALIGN_BOTTOM;
+	waveButton.font_description.params.h_align = wi::font::WIFALIGN_CENTER;
+	waveButton.OnClick([this](wi::gui::EventArgs args) {
+		mode = mode == ColorPickerMode::Wave ? ColorPickerMode::None : ColorPickerMode::Wave;
+		UpdateColorPickerMode();
+		});
+	AddWidget(&waveButton);
+
 	colorpicker.Create("themeColorPicker", wi::gui::Window::WindowControls::NONE);
 	colorpicker.SetSize(XMFLOAT2(256, 256));
 	colorpicker.OnColorChanged([this](wi::gui::EventArgs args) {
@@ -135,6 +148,9 @@ void ThemeEditorWindow::Create(EditorComponent* _editor)
 			break;
 		case ThemeEditorWindow::ColorPickerMode::Gradient:
 			gradientColor = args.color;
+			break;
+		case ThemeEditorWindow::ColorPickerMode::Wave:
+			waveColor = args.color;
 			break;
 		default:
 			break;
@@ -196,7 +212,7 @@ void ThemeEditorWindow::Create(EditorComponent* _editor)
 	saveButton.OnClick([this](wi::gui::EventArgs args) {
 		std::string directory = wi::helper::GetCurrentPath() + "/themes/";
 		wi::helper::DirectoryCreate(directory);
-		static const uint64_t version = 2;
+		static const uint64_t version = 3;
 		wi::Archive archive;
 		archive.SetReadModeAndResetPos(false);
 		archive << version;
@@ -221,6 +237,10 @@ void ThemeEditorWindow::Create(EditorComponent* _editor)
 		if (version >= 2)
 		{
 			archive << gradientColor.rgba;
+		}
+		if (version >= 3)
+		{
+			archive << waveColor.rgba;
 		}
 
 		std::string name = nameInput.GetCurrentInputValue();
@@ -271,6 +291,9 @@ void ThemeEditorWindow::UpdateColorPickerMode()
 	case ThemeEditorWindow::ColorPickerMode::Gradient:
 		colorpicker.SetPickColor(gradientColor);
 		break;
+	case ThemeEditorWindow::ColorPickerMode::Wave:
+		colorpicker.SetPickColor(waveColor);
+		break;
 	default:
 		break;
 	}
@@ -294,6 +317,7 @@ void ThemeEditorWindow::Update(const wi::Canvas& canvas, float dt)
 	fontButton.SetShadowRadius(1);
 	fontShadowButton.SetShadowRadius(1);
 	gradientButton.SetShadowRadius(1);
+	waveButton.SetShadowRadius(1);
 
 	const float rad = 6;
 	switch (mode)
@@ -326,6 +350,10 @@ void ThemeEditorWindow::Update(const wi::Canvas& canvas, float dt)
 		gradientButton.SetShadowRadius(rad);
 		colorpicker.label.SetText("Gradient color");
 		break;
+	case ThemeEditorWindow::ColorPickerMode::Wave:
+		waveButton.SetShadowRadius(rad);
+		colorpicker.label.SetText("Wave color");
+		break;
 	default:
 		break;
 	}
@@ -337,6 +365,7 @@ void ThemeEditorWindow::Update(const wi::Canvas& canvas, float dt)
 	fontButton.SetColor(fontColor);
 	fontShadowButton.SetColor(fontShadowColor);
 	gradientButton.SetColor(gradientColor);
+	waveButton.SetColor(waveColor);
 
 	for (int i = 0; i < arraysize(editor->newSceneButton.sprites); ++i)
 	{
@@ -382,6 +411,12 @@ void ThemeEditorWindow::Update(const wi::Canvas& canvas, float dt)
 		gradientButton.sprites[i].params.corners_rounding[2].radius = 20;
 		gradientButton.sprites[i].params.corners_rounding[3].radius = 20;
 
+		waveButton.sprites[i].params.enableCornerRounding();
+		waveButton.sprites[i].params.corners_rounding[0].radius = 20;
+		waveButton.sprites[i].params.corners_rounding[1].radius = 20;
+		waveButton.sprites[i].params.corners_rounding[2].radius = 20;
+		waveButton.sprites[i].params.corners_rounding[3].radius = 20;
+
 		imageButton.sprites[i].params.enableCornerRounding();
 		imageButton.sprites[i].params.corners_rounding[0].radius = 20;
 		imageButton.sprites[i].params.corners_rounding[1].radius = 20;
@@ -413,7 +448,7 @@ void ThemeEditorWindow::ResizeLayout()
 	layout.jump(32);
 
 	layout.padding = 20;
-	layout.add_right(idleButton, focusButton, backgroundButton, shadowButton, fontButton, fontShadowButton, gradientButton);
+	layout.add_right(idleButton, focusButton, backgroundButton, shadowButton, fontButton, fontShadowButton, gradientButton, waveButton);
 	layout.padding = 4;
 
 	layout.add_fullwidth(colorpicker);
