@@ -424,7 +424,7 @@ void EditorComponent::ResizeBuffers()
 	TextureDesc desc;
 	desc.width = GetPhysicalWidth();
 	desc.height = GetPhysicalHeight();
-	desc.format = Format::R8G8B8A8_UNORM;
+	desc.format = Format::R10G10B10A2_UNORM;
 	desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
 	GetDevice()->CreateTexture(&desc, nullptr, &gui_background_effect);
 	GetDevice()->SetName(&gui_background_effect, "gui_background_effect");
@@ -3026,6 +3026,27 @@ void EditorComponent::Update(float dt)
 	else
 	{
 		wi::renderer::SetToDrawDebugSprings(generalWnd.springVisCheckBox.GetCheck());
+	}
+
+	if (generalWnd.focusModeCheckBox.GetCheck())
+	{
+		topmenuWnd.background_overlay = {};
+		componentsWnd.background_overlay = {};
+		generalWnd.background_overlay = {};
+		graphicsWnd.background_overlay = {};
+		paintToolWnd.background_overlay = {};
+		cameraWnd.background_overlay = {};
+		materialPickerWnd.background_overlay = {};
+	}
+	else
+	{
+		topmenuWnd.background_overlay = gui_background_effect;
+		componentsWnd.background_overlay = gui_background_effect;
+		generalWnd.background_overlay = gui_background_effect;
+		graphicsWnd.background_overlay = gui_background_effect;
+		paintToolWnd.background_overlay = gui_background_effect;
+		cameraWnd.background_overlay = gui_background_effect;
+		materialPickerWnd.background_overlay = gui_background_effect;
 	}
 }
 void EditorComponent::PostUpdate()
