@@ -137,8 +137,8 @@ void MeshWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&subsetLastButton);
 
-	auto forEachSelected = [&] (auto func) {
-		return [&, func] (auto args) {
+	auto forEachSelected = [this] (auto func) {
+		return [this, func] (auto args) {
 			wi::scene::Scene& scene = editor->GetCurrentScene();
 			for (auto& x : editor->translator.selected)
 			{
@@ -151,28 +151,28 @@ void MeshWindow::Create(EditorComponent* _editor)
 
 	doubleSidedCheckBox.Create("Double Sided: ");
 	doubleSidedCheckBox.SetTooltip("If enabled, the inside of the mesh will be visible.");
-	doubleSidedCheckBox.OnClick(forEachSelected([&] (auto mesh, auto args) {
+	doubleSidedCheckBox.OnClick(forEachSelected([] (auto mesh, auto args) {
 		mesh->SetDoubleSided(args.bValue);
 	}));
 	AddWidget(&doubleSidedCheckBox);
 
 	doubleSidedShadowCheckBox.Create("Double Sided Shadow: ");
 	doubleSidedShadowCheckBox.SetTooltip("If enabled, the shadow rendering will be forced to use double sided mode.\nThis can help fix some shadow artifacts without enabling double sided mode for the main rendering of this mesh.");
-	doubleSidedShadowCheckBox.OnClick(forEachSelected([&] (auto mesh, auto args) {
+	doubleSidedShadowCheckBox.OnClick(forEachSelected([] (auto mesh, auto args) {
 		mesh->SetDoubleSidedShadow(args.bValue);
 	}));
 	AddWidget(&doubleSidedShadowCheckBox);
 
 	bvhCheckBox.Create("Enable BVH: ");
 	bvhCheckBox.SetTooltip("Whether to generate BVH (Bounding Volume Hierarchy) for the mesh or not.\nBVH will be used to optimize intersections with the mesh at an additional memory cost.\nIt is recommended to use a BVH for high polygon count meshes that will be used for intersections.\nThis CPU BVH does not support skinned or morphed geometry.");
-	bvhCheckBox.OnClick(forEachSelected([&] (auto mesh, auto args) {
+	bvhCheckBox.OnClick(forEachSelected([] (auto mesh, auto args) {
 		mesh->SetBVHEnabled(args.bValue);
 	}));
 	AddWidget(&bvhCheckBox);
 
 	quantizeCheckBox.Create("Quantization Disabled: ");
 	quantizeCheckBox.SetTooltip("Disable quantization of vertex positions if you notice inaccuracy errors with UNORM position formats.");
-	quantizeCheckBox.OnClick(forEachSelected([&] (auto mesh, auto args) {
+	quantizeCheckBox.OnClick(forEachSelected([] (auto mesh, auto args) {
 		mesh->SetQuantizedPositionsDisabled(args.bValue);
 			mesh->CreateRenderData();
 			if (!mesh->BLASes.empty())
@@ -213,7 +213,7 @@ void MeshWindow::Create(EditorComponent* _editor)
 
 	tessellationFactorSlider.Create(0, 100, 0, 10000, "Tess Factor: ");
 	tessellationFactorSlider.SetTooltip("Set the dynamic tessellation amount. Tessellation should be enabled in the Renderer window and your GPU must support it!");
-	tessellationFactorSlider.OnSlide(forEachSelected([&] (auto mesh, auto args) {
+	tessellationFactorSlider.OnSlide(forEachSelected([] (auto mesh, auto args) {
 		mesh->tessellationFactor = args.fValue;
 	}));
 	AddWidget(&tessellationFactorSlider);
@@ -240,8 +240,8 @@ void MeshWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&instanceSelectButton);
 
-	auto changeSelectedMesh = [&] (auto func) {
-		return [&] (auto args) {
+	auto changeSelectedMesh = [this] (auto func) {
+		return [this, func] (auto args) {
 			wi::scene::Scene& scene = editor->GetCurrentScene();
 			wi::unordered_set<MeshComponent*> visited_meshes; // fix double visit (straight mesh + object->mesh)
 			for (auto& x : editor->translator.selected)
@@ -748,7 +748,7 @@ void MeshWindow::Create(EditorComponent* _editor)
 
 	morphTargetSlider.Create(0, 1, 0, 100000, "Weight: ");
 	morphTargetSlider.SetTooltip("Set the weight for morph target");
-	morphTargetSlider.OnSlide(forEachSelected([&] (auto mesh, auto args) {
+	morphTargetSlider.OnSlide(forEachSelected([this] (auto mesh, auto args) {
 		if (morphTargetCombo.GetSelected() < (int)mesh->morph_targets.size())
 			{
 				mesh->morph_targets[morphTargetCombo.GetSelected()].weight = args.fValue;
@@ -758,8 +758,8 @@ void MeshWindow::Create(EditorComponent* _editor)
 
 	lodgenButton.Create("LOD Gen");
 	lodgenButton.SetTooltip("Generate LODs (levels of detail).");
-	lodgenButton.OnClick([=] (auto args) {
-		forEachSelected([&] (auto mesh, auto args) {
+	lodgenButton.OnClick([this, forEachSelected] (auto args) {
+		forEachSelected([this] (auto mesh, auto args) {
 			if (mesh->subsets_per_lod == 0)
 			{
 				// if there were no lods before, record the subset count without lods:

@@ -30,8 +30,8 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 	infoLabel.SetFitTextEnabled(true);
 	AddWidget(&infoLabel);
 
-	auto handleExpr = [&] (auto func) {
-		return [&] (auto args) {
+	auto handleExpr = [this] (auto func) {
+		return [this, func] (auto args) {
 			wi::scene::Scene& scene = editor->GetCurrentScene();
 			ExpressionComponent* expression_mastering = scene.expressions.GetComponent(entity);
 			if (expression_mastering != nullptr) {

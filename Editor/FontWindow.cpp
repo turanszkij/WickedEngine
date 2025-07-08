@@ -31,8 +31,8 @@ void FontWindow::Create(EditorComponent* _editor)
 	float siz = 250;
 	float hei = 20;
 
-	auto forEachSelectedFont = [&] (auto func) {
-		return [&, func](auto args) {
+	auto forEachSelectedFont = [this] (auto func) {
+		return [this, func](auto args) {
 			wi::scene::Scene& scene = editor->GetCurrentScene();
 			for (auto& x : editor->translator.selected)
 			{
@@ -46,7 +46,7 @@ void FontWindow::Create(EditorComponent* _editor)
 
 	textInput.Create("");
 	textInput.SetPos(XMFLOAT2(x, y));
-	textInput.OnInput(forEachSelectedFont([&] (auto font, auto args) {
+	textInput.OnInput(forEachSelectedFont([] (auto font, auto args) {
 		font->SetText(args.sValue);
 	}));
 	AddWidget(&textInput);
@@ -80,7 +80,7 @@ void FontWindow::Create(EditorComponent* _editor)
 	fontStyleButton.Create("");
 	fontStyleButton.SetDescription("Style: ");
 	fontStyleButton.SetTooltip("Load a font style from file (.TTF) to apply to this font.");
-	fontStyleButton.OnClick(forEachSelectedFont([&] (auto font, auto args) {
+	fontStyleButton.OnClick(forEachSelectedFont([this] (auto font, auto args) {
 		if (font->fontStyleResource.IsValid())
 		{
 			wi::Archive& archive = editor->AdvanceHistory();
@@ -129,7 +129,7 @@ void FontWindow::Create(EditorComponent* _editor)
 	fontSizeCombo.AddItem("84", 84);
 	fontSizeCombo.AddItem("96", 96);
 	fontSizeCombo.AddItem("108", 108);
-	fontSizeCombo.OnSelect(forEachSelectedFont([&] (auto font, auto args) {
+	fontSizeCombo.OnSelect(forEachSelectedFont([] (auto font, auto args) {
 		font->params.size = int(args.userdata);
 	}));
 	AddWidget(&fontSizeCombo);
@@ -139,7 +139,7 @@ void FontWindow::Create(EditorComponent* _editor)
 	hAlignCombo.AddItem("Left", wi::font::WIFALIGN_LEFT);
 	hAlignCombo.AddItem("Center", wi::font::WIFALIGN_CENTER);
 	hAlignCombo.AddItem("Right", wi::font::WIFALIGN_RIGHT);
-	hAlignCombo.OnSelect(forEachSelectedFont([&] (auto font, auto args) {
+	hAlignCombo.OnSelect(forEachSelectedFont([] (auto font, auto args) {
 		font->params.h_align = wi::font::Alignment(args.userdata);
 	}));
 	AddWidget(&hAlignCombo);
@@ -149,97 +149,97 @@ void FontWindow::Create(EditorComponent* _editor)
 	vAlignCombo.AddItem("Top", wi::font::WIFALIGN_TOP);
 	vAlignCombo.AddItem("Center", wi::font::WIFALIGN_CENTER);
 	vAlignCombo.AddItem("Bottom", wi::font::WIFALIGN_BOTTOM);
-	vAlignCombo.OnSelect(forEachSelectedFont([&] (auto font, auto args) {
+	vAlignCombo.OnSelect(forEachSelectedFont([] (auto font, auto args) {
 		font->params.v_align = wi::font::Alignment(args.userdata);
 	}));
 	AddWidget(&vAlignCombo);
 
 	rotationSlider.Create(0, 360, 0, 10000, "Rotation: ");
 	rotationSlider.SetTooltip("Z Rotation around alignment center point. The editor input is in degrees.");
-	rotationSlider.OnSlide(forEachSelectedFont([&] (auto font, auto args) {
+	rotationSlider.OnSlide(forEachSelectedFont([] (auto font, auto args) {
 		font->params.rotation = wi::math::DegreesToRadians(args.fValue);
 	}));
 	AddWidget(&rotationSlider);
 
 	spacingSlider.Create(0, 10, 0, 10000, "Spacing: ");
 	spacingSlider.SetTooltip("Horizontal spacing between characters.");
-	spacingSlider.OnSlide(forEachSelectedFont([&] (auto font, auto args) {
+	spacingSlider.OnSlide(forEachSelectedFont([] (auto font, auto args) {
 		font->params.spacingX = args.fValue;
 	}));
 	AddWidget(&spacingSlider);
 
 	softnessSlider.Create(0, 1, 0, 10000, "Softness: ");
-	softnessSlider.OnSlide(forEachSelectedFont([&] (auto font, auto args) {
+	softnessSlider.OnSlide(forEachSelectedFont([] (auto font, auto args) {
 		font->params.softness = args.fValue;
 	}));
 	AddWidget(&softnessSlider);
 
 	boldenSlider.Create(0, 1, 0, 10000, "Bolden: ");
-	boldenSlider.OnSlide(forEachSelectedFont([&] (auto font, auto args) {
+	boldenSlider.OnSlide(forEachSelectedFont([] (auto font, auto args) {
 		font->params.bolden = args.fValue;
 	}));
 	AddWidget(&boldenSlider);
 
 	shadowSoftnessSlider.Create(0, 1, 0, 10000, "Shadow Softness: ");
-	shadowSoftnessSlider.OnSlide(forEachSelectedFont([&] (auto font, auto args) {
+	shadowSoftnessSlider.OnSlide(forEachSelectedFont([] (auto font, auto args) {
 		font->params.shadow_softness = args.fValue;
 	}));
 	AddWidget(&shadowSoftnessSlider);
 
 	shadowBoldenSlider.Create(0, 1, 0, 10000, "Shadow Bolden: ");
-	shadowBoldenSlider.OnSlide(forEachSelectedFont([&] (auto font, auto args) {
+	shadowBoldenSlider.OnSlide(forEachSelectedFont([] (auto font, auto args) {
 		font->params.shadow_bolden = args.fValue;
 	}));
 	AddWidget(&shadowBoldenSlider);
 
 	shadowOffsetXSlider.Create(-2, 2, 0, 10000, "Shadow Offset X: ");
-	shadowOffsetXSlider.OnSlide(forEachSelectedFont([&] (auto font, auto args) {
+	shadowOffsetXSlider.OnSlide(forEachSelectedFont([] (auto font, auto args) {
 		font->params.shadow_offset_x = args.fValue;
 	}));
 	AddWidget(&shadowOffsetXSlider);
 
 	shadowOffsetYSlider.Create(-2, 2, 0, 10000, "Shadow Offset Y: ");
-	shadowOffsetYSlider.OnSlide(forEachSelectedFont([&] (auto font, auto args) {
+	shadowOffsetYSlider.OnSlide(forEachSelectedFont([] (auto font, auto args) {
 		font->params.shadow_offset_y = args.fValue;
 	}));
 	AddWidget(&shadowOffsetYSlider);
 
 	intensitySlider.Create(0, 100, 1, 10000, "Intensity: ");
-	intensitySlider.OnSlide(forEachSelectedFont([&] (auto font, auto args) {
+	intensitySlider.OnSlide(forEachSelectedFont([] (auto font, auto args) {
 		font->params.intensity = args.fValue;
 	}));
 	AddWidget(&intensitySlider);
 
 	shadowIntensitySlider.Create(0, 100, 1, 10000, "Shadow Intensity: ");
-	shadowIntensitySlider.OnSlide(forEachSelectedFont([&] (auto font, auto args) {
+	shadowIntensitySlider.OnSlide(forEachSelectedFont([] (auto font, auto args) {
 		font->params.shadow_intensity = args.fValue;
 	}));
 	AddWidget(&shadowIntensitySlider);
 
 	hiddenCheckBox.Create("Hidden: ");
 	hiddenCheckBox.SetTooltip("Hide / unhide the font");
-	hiddenCheckBox.OnClick(forEachSelectedFont([&] (auto font, auto args) {
+	hiddenCheckBox.OnClick(forEachSelectedFont([] (auto font, auto args) {
 		font->SetHidden(args.bValue);
 	}));
 	AddWidget(&hiddenCheckBox);
 
 	cameraFacingCheckBox.Create("Camera Facing: ");
 	cameraFacingCheckBox.SetTooltip("Camera facing fonts will always rotate towards the camera.");
-	cameraFacingCheckBox.OnClick(forEachSelectedFont([&] (auto font, auto args) {
+	cameraFacingCheckBox.OnClick(forEachSelectedFont([] (auto font, auto args) {
 		font->SetCameraFacing(args.bValue);
 	}));
 	AddWidget(&cameraFacingCheckBox);
 
 	cameraScalingCheckBox.Create("Camera Scaling: ");
 	cameraScalingCheckBox.SetTooltip("Camera scaling fonts will always keep the same size on screen, irrespective of the distance to the camera.");
-	cameraScalingCheckBox.OnClick(forEachSelectedFont([&] (auto font, auto args) {
+	cameraScalingCheckBox.OnClick(forEachSelectedFont([] (auto font, auto args) {
 		font->SetCameraScaling(args.bValue);
 	}));
 	AddWidget(&cameraScalingCheckBox);
 
 	depthTestCheckBox.Create("Depth Test: ");
 	depthTestCheckBox.SetTooltip("Depth tested fonts will be clipped against geometry.");
-	depthTestCheckBox.OnClick(forEachSelectedFont([&] (auto font, auto args) {
+	depthTestCheckBox.OnClick(forEachSelectedFont([] (auto font, auto args) {
 		if (args.bValue)
 		{
 			font->params.enableDepthTest();
@@ -253,7 +253,7 @@ void FontWindow::Create(EditorComponent* _editor)
 
 	sdfCheckBox.Create("SDF: ");
 	sdfCheckBox.SetTooltip("Signed Distance Field rendering is used for improved font upscaling, softness, boldness and soft shadow effects.");
-	sdfCheckBox.OnClick(forEachSelectedFont([&] (auto font, auto args) {
+	sdfCheckBox.OnClick(forEachSelectedFont([] (auto font, auto args) {
 		if (args.bValue)
 		{
 			font->params.enableSDFRendering();
@@ -271,7 +271,7 @@ void FontWindow::Create(EditorComponent* _editor)
 	colorModeCombo.AddItem("Font color");
 	colorModeCombo.AddItem("Shadow color");
 	colorModeCombo.SetTooltip("Choose the destination data of the color picker.");
-	colorModeCombo.OnSelect(forEachSelectedFont([&] (auto font, auto args) {
+	colorModeCombo.OnSelect(forEachSelectedFont([this] (auto font, auto args) {
 		if (args.iValue == 0)
 		{
 			colorPicker.SetPickColor(font->params.color);
@@ -284,7 +284,7 @@ void FontWindow::Create(EditorComponent* _editor)
 	AddWidget(&colorModeCombo);
 
 	colorPicker.Create("Color", wi::gui::Window::WindowControls::NONE);
-	colorPicker.OnColorChanged(forEachSelectedFont([&] (auto font, auto args) {
+	colorPicker.OnColorChanged(forEachSelectedFont([this] (auto font, auto args) {
 		switch (colorModeCombo.GetSelected())
 		{
 		default:
@@ -304,14 +304,14 @@ void FontWindow::Create(EditorComponent* _editor)
 
 	typewriterTimeSlider.Create(0, 10, 0, 10000, "Typewriter time: ");
 	typewriterTimeSlider.SetTooltip("Time to complete typewriter animation (0 = disable).");
-	typewriterTimeSlider.OnSlide(forEachSelectedFont([&] (auto font, auto args) {
+	typewriterTimeSlider.OnSlide(forEachSelectedFont([] (auto font, auto args) {
 		font->anim.typewriter.time = args.fValue;
 	}));
 	AddWidget(&typewriterTimeSlider);
 
 	typewriterLoopedCheckBox.Create("Typewriter Looped: ");
 	typewriterLoopedCheckBox.SetTooltip("Whether typewriter animation is looped or not.");
-	typewriterLoopedCheckBox.OnClick(forEachSelectedFont([&] (auto font, auto args) {
+	typewriterLoopedCheckBox.OnClick(forEachSelectedFont([] (auto font, auto args) {
 		font->anim.typewriter.looped = args.bValue;
 	}));
 	AddWidget(&typewriterLoopedCheckBox);
@@ -321,7 +321,7 @@ void FontWindow::Create(EditorComponent* _editor)
 	typewriterStartInput.SetTooltip("Set the starting character for typewriter animation (0 = first).");
 	typewriterStartInput.SetPos(XMFLOAT2(x, y));
 	typewriterStartInput.SetSize(XMFLOAT2(siz, hei));
-	typewriterStartInput.OnInputAccepted(forEachSelectedFont([&] (auto font, auto args) {
+	typewriterStartInput.OnInputAccepted(forEachSelectedFont([] (auto font, auto args) {
 		font->anim.typewriter.character_start = (size_t)args.iValue;
 	}));
 	AddWidget(&typewriterStartInput);
