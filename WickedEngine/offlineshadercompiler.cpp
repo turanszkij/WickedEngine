@@ -273,6 +273,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"copyStencilBitPS", wi::graphics::ShaderStage::PS },
 	{"extractStencilBitPS", wi::graphics::ShaderStage::PS },
 	{"trailPS", wi::graphics::ShaderStage::PS },
+	{"waveeffectPS", wi::graphics::ShaderStage::PS },
 
 
 	{"hairparticleVS", wi::graphics::ShaderStage::VS },

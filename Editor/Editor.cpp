@@ -427,14 +427,7 @@ void EditorComponent::ResizeBuffers()
 	desc.format = Format::R8G8B8A8_UNORM;
 	desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
 	GetDevice()->CreateTexture(&desc, nullptr, &gui_background_effect);
-
-	topmenuWnd.background_overlay = gui_background_effect;
-	componentsWnd.background_overlay = gui_background_effect;
-	generalWnd.background_overlay = gui_background_effect;
-	graphicsWnd.background_overlay = gui_background_effect;
-	paintToolWnd.background_overlay = gui_background_effect;
-	cameraWnd.background_overlay = gui_background_effect;
-	materialPickerWnd.background_overlay = gui_background_effect;
+	GetDevice()->SetName(&gui_background_effect, "gui_background_effect");
 }
 void EditorComponent::ResizeLayout()
 {
@@ -4393,6 +4386,7 @@ void EditorComponent::Render() const
 			device->RenderPassEnd(cmd);
 		}
 
+		if(!generalWnd.focusModeCheckBox.GetCheck())
 		{
 			device->EventBegin("Editor GUI background effect", cmd);
 			device->RenderPassBegin(&gui_background_effect, cmd);

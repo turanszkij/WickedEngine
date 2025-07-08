@@ -580,6 +580,26 @@ void GeneralWindow::Create(EditorComponent* _editor)
 
 
 		// customize individual elements:
+		if (focusModeCheckBox.GetCheck())
+		{
+			editor->topmenuWnd.background_overlay = {};
+			editor->componentsWnd.background_overlay = {};
+			editor->generalWnd.background_overlay = {};
+			editor->graphicsWnd.background_overlay = {};
+			editor->paintToolWnd.background_overlay = {};
+			editor->cameraWnd.background_overlay = {};
+			editor->materialPickerWnd.background_overlay = {};
+		}
+		else
+		{
+			editor->topmenuWnd.background_overlay = editor->gui_background_effect;
+			editor->componentsWnd.background_overlay = editor->gui_background_effect;
+			editor->generalWnd.background_overlay = editor->gui_background_effect;
+			editor->graphicsWnd.background_overlay = editor->gui_background_effect;
+			editor->paintToolWnd.background_overlay = editor->gui_background_effect;
+			editor->cameraWnd.background_overlay = editor->gui_background_effect;
+			editor->materialPickerWnd.background_overlay = editor->gui_background_effect;
+		}
 		editor->componentsWnd.SetRightAlignedImage(true);
 		editor->loadmodel_font.params.color = theme.font.color;
 		XMFLOAT4 highlight = theme_color_focus;
@@ -965,11 +985,15 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		{
 			editor->newEntityCombo.SetAngularHighlightWidth(0);
 			editor->newEntityCombo.SetShadowRadius(2);
+			editor->componentsWnd.newComponentCombo.SetAngularHighlightWidth(0);
+			editor->componentsWnd.newComponentCombo.SetShadowRadius(2);
 		}
 		else
 		{
 			editor->newEntityCombo.SetAngularHighlightWidth(3);
 			editor->newEntityCombo.SetShadowRadius(0);
+			editor->componentsWnd.newComponentCombo.SetAngularHighlightWidth(3);
+			editor->componentsWnd.newComponentCombo.SetShadowRadius(0);
 		}
 
 		wi::image::Params::Gradient gradient = wi::image::Params::Gradient::Linear;
