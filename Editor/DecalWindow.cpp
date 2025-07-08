@@ -30,8 +30,8 @@ void DecalWindow::Create(EditorComponent* _editor)
 	placementCheckBox.SetTooltip("Enable decal placement. Use the left mouse button to place decals to the scene.");
 	AddWidget(&placementCheckBox);
 
-	auto forEachSelected = [&] (auto func) {
-		return [&, func] (auto args) {
+	auto forEachSelected = [this] (auto func) {
+		return [this, func] (auto args) {
 			wi::scene::Scene& scene = editor->GetCurrentScene();
 			for (auto& x : editor->translator.selected)
 			{
@@ -46,14 +46,14 @@ void DecalWindow::Create(EditorComponent* _editor)
 
 	onlyalphaCheckBox.Create("Alpha only basecolor: ");
 	onlyalphaCheckBox.SetTooltip("You can enable this to only use alpha channel from basecolor map. Useful for blending normalmap-only decals.");
-	onlyalphaCheckBox.OnClick(forEachSelected([&] (auto decal, auto args) {
+	onlyalphaCheckBox.OnClick(forEachSelected([] (auto decal, auto args) {
 		decal->SetBaseColorOnlyAlpha(args.bValue);
 	}));
 	AddWidget(&onlyalphaCheckBox);
 
 	slopeBlendPowerSlider.Create(0, 8, 0, 1000, "Slope Blend: ");
 	slopeBlendPowerSlider.SetTooltip("Set a power factor for blending on surface slopes. 0 = no slope blend, increasing = more slope blend");
-	slopeBlendPowerSlider.OnSlide(forEachSelected([&] (auto decal, auto args) {
+	slopeBlendPowerSlider.OnSlide(forEachSelected([] (auto decal, auto args) {
 		decal->slopeBlendPower = args.fValue;
 	}));
 	AddWidget(&slopeBlendPowerSlider);

@@ -24,8 +24,8 @@ void MetadataWindow::Create(EditorComponent* _editor)
 		editor->componentsWnd.RefreshEntityTree();
 	});
 
-	auto forEachSelected = [&] (auto func) {
-		return [&, func] (auto args) {
+	auto forEachSelected = [this] (auto func) {
+		return [this, func] (auto args) {
 			wi::scene::Scene& scene = editor->GetCurrentScene();
 			for (auto& x : editor->translator.selected)
 			{
@@ -46,7 +46,7 @@ void MetadataWindow::Create(EditorComponent* _editor)
 	presetCombo.AddItem("Npc", (uint64_t)MetadataComponent::Preset::NPC);
 	presetCombo.AddItem("Pickup", (uint64_t)MetadataComponent::Preset::Pickup);
 	presetCombo.AddItem("Vehicle", (uint64_t)MetadataComponent::Preset::Vehicle);
-	presetCombo.OnSelect(forEachSelected([&] (auto metadata, auto args) {
+	presetCombo.OnSelect(forEachSelected([] (auto metadata, auto args) {
 		metadata->preset = (MetadataComponent::Preset)args.userdata;
 	}));
 	AddWidget(&presetCombo);
@@ -148,8 +148,8 @@ void MetadataWindow::RefreshEntries()
 	);
 
 
-	auto forEachSelectedWithRefresh = [&] (auto name, auto func) {
-		return [&, func] (auto args) {
+	auto forEachSelectedWithRefresh = [this] (auto name, auto func) {
+		return [this, func, name] (auto args) {
 			wi::scene::Scene& scene = editor->GetCurrentScene();
 			for (auto& x : editor->translator.selected)
 			{
@@ -172,7 +172,7 @@ void MetadataWindow::RefreshEntries()
 		Entry& entry = entries.emplace_back();
 		entry.name.Create("");
 		entry.name.SetText(name);
-		entry.name.OnInputAccepted(forEachSelectedWithRefresh(name, [&] (auto metadata, auto args) {
+		entry.name.OnInputAccepted(forEachSelectedWithRefresh(name, [&name] (auto metadata, auto args) {
 			if (!metadata->bool_values.has(name))
 				return;
 			auto value = metadata->bool_values.get(name);
@@ -185,7 +185,7 @@ void MetadataWindow::RefreshEntries()
 		entry.check.Create("");
 		entry.check.SetText(" = (bool) ");
 		entry.check.SetCheck(metadata->bool_values.get(name));
-		entry.check.OnClick(forEachSelectedWithRefresh(name, [&] (auto metadata, auto args) {
+		entry.check.OnClick(forEachSelectedWithRefresh(name, [&name] (auto metadata, auto args) {
 			metadata->bool_values.set(name, args.bValue);
 		}));
 		AddWidget(&entry.check);
@@ -193,7 +193,7 @@ void MetadataWindow::RefreshEntries()
 		entry.remove.Create("");
 		entry.remove.SetText("X");
 		entry.remove.SetSize(XMFLOAT2(entry.remove.GetSize().y, entry.remove.GetSize().y));
-		entry.remove.OnClick(forEachSelectedWithRefresh(name, [&] (auto metadata, auto args) {
+		entry.remove.OnClick(forEachSelectedWithRefresh(name, [&name] (auto metadata, auto args) {
 			metadata->bool_values.erase(name);
 		}));
 		AddWidget(&entry.remove);
@@ -204,7 +204,7 @@ void MetadataWindow::RefreshEntries()
 		Entry& entry = entries.emplace_back();
 		entry.name.Create("");
 		entry.name.SetText(name);
-		entry.name.OnInputAccepted(forEachSelectedWithRefresh(name, [&] (auto metadata, auto args) {
+		entry.name.OnInputAccepted(forEachSelectedWithRefresh(name, [&name] (auto metadata, auto args) {
 			auto value = metadata->int_values.get(name);
 			metadata->int_values.erase(name);
 			metadata->int_values.set(args.sValue, value);
@@ -216,7 +216,7 @@ void MetadataWindow::RefreshEntries()
 		entry.value.SetDescription(" = (int) ");
 		entry.value.SetSize(XMFLOAT2(60, entry.value.GetSize().y));
 		entry.value.SetValue(metadata->int_values.get(name));
-		entry.value.OnInputAccepted(forEachSelectedWithRefresh(name, [&] (auto metadata, auto args) {
+		entry.value.OnInputAccepted(forEachSelectedWithRefresh(name, [&name] (auto metadata, auto args) {
 			metadata->int_values.set(name, args.iValue);
 		}));
 		AddWidget(&entry.value);
@@ -224,7 +224,7 @@ void MetadataWindow::RefreshEntries()
 		entry.remove.Create("");
 		entry.remove.SetText("X");
 		entry.remove.SetSize(XMFLOAT2(entry.remove.GetSize().y, entry.remove.GetSize().y));
-		entry.remove.OnClick(forEachSelectedWithRefresh(name, [&] (auto metadata, auto args) {
+		entry.remove.OnClick(forEachSelectedWithRefresh(name, [&name] (auto metadata, auto args) {
 			metadata->int_values.erase(name);
 		}));
 		AddWidget(&entry.remove);
@@ -235,7 +235,7 @@ void MetadataWindow::RefreshEntries()
 		Entry& entry = entries.emplace_back();
 		entry.name.Create("");
 		entry.name.SetText(name);
-		entry.name.OnInputAccepted(forEachSelectedWithRefresh(name, [&] (auto metadata, auto args) {
+		entry.name.OnInputAccepted(forEachSelectedWithRefresh(name, [&name] (auto metadata, auto args) {
 			auto value = metadata->float_values.get(name);
 			metadata->float_values.erase(name);
 			metadata->float_values.set(args.sValue, value);
@@ -247,7 +247,7 @@ void MetadataWindow::RefreshEntries()
 		entry.value.SetDescription(" = (float) ");
 		entry.value.SetSize(XMFLOAT2(60, entry.value.GetSize().y));
 		entry.value.SetValue(metadata->float_values.get(name));
-		entry.value.OnInputAccepted(forEachSelectedWithRefresh(name, [&] (auto metadata, auto args) {
+		entry.value.OnInputAccepted(forEachSelectedWithRefresh(name, [&name] (auto metadata, auto args) {
 			metadata->float_values.set(name, args.fValue);
 		}));
 		AddWidget(&entry.value);
@@ -255,7 +255,7 @@ void MetadataWindow::RefreshEntries()
 		entry.remove.Create("");
 		entry.remove.SetText("X");
 		entry.remove.SetSize(XMFLOAT2(entry.remove.GetSize().y, entry.remove.GetSize().y));
-		entry.remove.OnClick(forEachSelectedWithRefresh(name, [&] (auto metadata, auto args) {
+		entry.remove.OnClick(forEachSelectedWithRefresh(name, [&name] (auto metadata, auto args) {
 			metadata->float_values.erase(name);
 		}));
 		AddWidget(&entry.remove);
@@ -266,7 +266,7 @@ void MetadataWindow::RefreshEntries()
 		Entry& entry = entries.emplace_back();
 		entry.name.Create("");
 		entry.name.SetText(name);
-		entry.name.OnInputAccepted(forEachSelectedWithRefresh(name, [&] (auto metadata, auto args) {
+		entry.name.OnInputAccepted(forEachSelectedWithRefresh(name, [&name] (auto metadata, auto args) {
 			auto value = metadata->string_values.get(name);
 			metadata->string_values.erase(name);
 			metadata->string_values.set(args.sValue, value);
@@ -278,7 +278,7 @@ void MetadataWindow::RefreshEntries()
 		entry.value.SetDescription(" = (string) ");
 		entry.value.SetSize(XMFLOAT2(120, entry.value.GetSize().y));
 		entry.value.SetValue(metadata->string_values.get(name));
-		entry.value.OnInputAccepted(forEachSelectedWithRefresh(name, [&] (auto metadata, auto args) {
+		entry.value.OnInputAccepted(forEachSelectedWithRefresh(name, [&name] (auto metadata, auto args) {
 			metadata->string_values.set(name, args.sValue);
 		}));
 		AddWidget(&entry.value);
@@ -286,7 +286,7 @@ void MetadataWindow::RefreshEntries()
 		entry.remove.Create("");
 		entry.remove.SetText("X");
 		entry.remove.SetSize(XMFLOAT2(entry.remove.GetSize().y, entry.remove.GetSize().y));
-		entry.remove.OnClick(forEachSelectedWithRefresh(name, [&] (auto metadata, auto args) {
+		entry.remove.OnClick(forEachSelectedWithRefresh(name, [&name] (auto metadata, auto args) {
 			metadata->string_values.erase(name);
 		}));
 		AddWidget(&entry.remove);

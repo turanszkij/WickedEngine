@@ -365,8 +365,8 @@ void ObjectWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&meshCombo);
 
-	auto forEachSelected = [&] (auto func) {
-		return [&, func] (auto args) {
+	auto forEachSelected = [this] (auto func) {
+		return [this, func] (auto args) {
 			wi::scene::Scene& scene = editor->GetCurrentScene();
 			for (auto& x : editor->translator.selected)
 			{
@@ -383,7 +383,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	renderableCheckBox.SetSize(XMFLOAT2(hei, hei));
 	renderableCheckBox.SetPos(XMFLOAT2(x, y));
 	renderableCheckBox.SetCheck(true);
-	renderableCheckBox.OnClick(forEachSelected([&] (auto object, auto args) {
+	renderableCheckBox.OnClick(forEachSelected([] (auto object, auto args) {
 		object->SetRenderable(args.bValue);
 	}));
 	AddWidget(&renderableCheckBox);
@@ -393,7 +393,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	shadowCheckBox.SetSize(XMFLOAT2(hei, hei));
 	shadowCheckBox.SetPos(XMFLOAT2(x, y += step));
 	shadowCheckBox.SetCheck(true);
-	shadowCheckBox.OnClick(forEachSelected([&] (auto object, auto args) {
+	shadowCheckBox.OnClick(forEachSelected([] (auto object, auto args) {
 		object->SetCastShadow(args.bValue);
 	}));
 	AddWidget(&shadowCheckBox);
@@ -403,7 +403,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	navmeshCheckBox.SetSize(XMFLOAT2(hei, hei));
 	navmeshCheckBox.SetPos(XMFLOAT2(x, y += step));
 	navmeshCheckBox.SetCheck(true);
-	navmeshCheckBox.OnClick(forEachSelected([&] (auto object, auto args) {
+	navmeshCheckBox.OnClick(forEachSelected([this] (auto object, auto args) {
 		if (args.bValue)
 		{
 			object->filterMask |= wi::enums::FILTER_NAVIGATION_MESH;
@@ -427,7 +427,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	foregroundCheckBox.SetSize(XMFLOAT2(hei, hei));
 	foregroundCheckBox.SetPos(XMFLOAT2(x, y += step));
 	foregroundCheckBox.SetCheck(true);
-	foregroundCheckBox.OnClick(forEachSelected([&] (auto object, auto args) {
+	foregroundCheckBox.OnClick(forEachSelected([] (auto object, auto args) {
 		object->SetForeground(args.bValue);
 	}));
 	AddWidget(&foregroundCheckBox);
@@ -437,7 +437,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	notVisibleInMainCameraCheckBox.SetSize(XMFLOAT2(hei, hei));
 	notVisibleInMainCameraCheckBox.SetPos(XMFLOAT2(x, y += step));
 	notVisibleInMainCameraCheckBox.SetCheck(true);
-	notVisibleInMainCameraCheckBox.OnClick(forEachSelected([&] (auto object, auto args) {
+	notVisibleInMainCameraCheckBox.OnClick(forEachSelected([] (auto object, auto args) {
 		object->SetNotVisibleInMainCamera(args.bValue);
 	}));
 	AddWidget(&notVisibleInMainCameraCheckBox);
@@ -447,7 +447,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	notVisibleInReflectionsCheckBox.SetSize(XMFLOAT2(hei, hei));
 	notVisibleInReflectionsCheckBox.SetPos(XMFLOAT2(x, y += step));
 	notVisibleInReflectionsCheckBox.SetCheck(true);
-	notVisibleInReflectionsCheckBox.OnClick(forEachSelected([&] (auto object, auto args) {
+	notVisibleInReflectionsCheckBox.OnClick(forEachSelected([] (auto object, auto args) {
 		object->SetNotVisibleInReflections(args.bValue);
 	}));
 	AddWidget(&notVisibleInReflectionsCheckBox);
@@ -457,7 +457,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	wetmapCheckBox.SetSize(XMFLOAT2(hei, hei));
 	wetmapCheckBox.SetPos(XMFLOAT2(x, y += step));
 	wetmapCheckBox.SetCheck(true);
-	wetmapCheckBox.OnClick(forEachSelected([&] (auto object, auto args) {
+	wetmapCheckBox.OnClick(forEachSelected([] (auto object, auto args) {
 		object->SetWetmapEnabled(args.bValue);
 	}));
 	AddWidget(&wetmapCheckBox);
@@ -466,7 +466,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	ditherSlider.SetTooltip("Adjust transparency of the object. Opaque materials will use dithered transparency in this case!");
 	ditherSlider.SetSize(XMFLOAT2(wid, hei));
 	ditherSlider.SetPos(XMFLOAT2(x, y += step));
-	ditherSlider.OnSlide(forEachSelected([&] (auto object, auto args) {
+	ditherSlider.OnSlide(forEachSelected([] (auto object, auto args) {
 		object->color.w = 1 - args.fValue;
 	}));
 	AddWidget(&ditherSlider);
@@ -475,7 +475,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	alphaRefSlider.SetTooltip("Adjust alpha ref per instance.\nThis is an additional value on top of material's alpha ref, used for alpha testing (alpha cutout).");
 	alphaRefSlider.SetSize(XMFLOAT2(wid, hei));
 	alphaRefSlider.SetPos(XMFLOAT2(x, y += step));
-	alphaRefSlider.OnSlide(forEachSelected([&] (auto object, auto args) {
+	alphaRefSlider.OnSlide(forEachSelected([] (auto object, auto args) {
 		object->alphaRef = args.fValue;
 	}));
 	AddWidget(&alphaRefSlider);
@@ -484,7 +484,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	rimHighlightIntesitySlider.SetTooltip("Strength of the rim highlight color.");
 	rimHighlightIntesitySlider.SetSize(XMFLOAT2(wid, hei));
 	rimHighlightIntesitySlider.SetPos(XMFLOAT2(x, y += step));
-	rimHighlightIntesitySlider.OnSlide(forEachSelected([&] (auto object, auto args) {
+	rimHighlightIntesitySlider.OnSlide(forEachSelected([] (auto object, auto args) {
 		object->rimHighlightColor.w = args.fValue;
 	}));
 	AddWidget(&rimHighlightIntesitySlider);
@@ -493,7 +493,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	rimHighlightFalloffSlider.SetTooltip("Rim falloff power of the rim highlight effect.");
 	rimHighlightFalloffSlider.SetSize(XMFLOAT2(wid, hei));
 	rimHighlightFalloffSlider.SetPos(XMFLOAT2(x, y += step));
-	rimHighlightFalloffSlider.OnSlide(forEachSelected([&] (auto object, auto args) {
+	rimHighlightFalloffSlider.OnSlide(forEachSelected([] (auto object, auto args) {
 		object->rimHighlightFalloff = args.fValue;
 	}));
 	AddWidget(&rimHighlightFalloffSlider);
@@ -502,7 +502,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	cascadeMaskSlider.SetTooltip("How many shadow cascades to skip when rendering this object into shadow maps? (0: skip none, it will be in all cascades, 1: skip first (biggest cascade), ...etc...");
 	cascadeMaskSlider.SetSize(XMFLOAT2(wid, hei));
 	cascadeMaskSlider.SetPos(XMFLOAT2(x, y += step));
-	cascadeMaskSlider.OnSlide(forEachSelected([&] (auto object, auto args) {
+	cascadeMaskSlider.OnSlide(forEachSelected([] (auto object, auto args) {
 		object->cascadeMask = (uint32_t)args.iValue;
 	}));
 	AddWidget(&cascadeMaskSlider);
@@ -511,7 +511,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	lodSlider.SetTooltip("Increase or decrease the LOD selection");
 	lodSlider.SetSize(XMFLOAT2(wid, hei));
 	lodSlider.SetPos(XMFLOAT2(x, y += step));
-	lodSlider.OnSlide(forEachSelected([&] (auto object, auto args) {
+	lodSlider.OnSlide(forEachSelected([] (auto object, auto args) {
 		object->lod_bias = args.fValue;
 	}));
 	AddWidget(&lodSlider);
@@ -520,7 +520,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	drawdistanceSlider.SetTooltip("Specify the draw distance of the object");
 	drawdistanceSlider.SetSize(XMFLOAT2(wid, hei));
 	drawdistanceSlider.SetPos(XMFLOAT2(x, y += step));
-	drawdistanceSlider.OnSlide(forEachSelected([&] (auto object, auto args) {
+	drawdistanceSlider.OnSlide(forEachSelected([] (auto object, auto args) {
 		object->draw_distance = args.fValue;
 	}));
 	AddWidget(&drawdistanceSlider);
@@ -529,7 +529,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	sortPrioritySlider.SetTooltip("Set to larger value to draw earlier (most useful for transparents with alpha blending, if the sorting order by distance is not good enough)");
 	sortPrioritySlider.SetSize(XMFLOAT2(wid, hei));
 	sortPrioritySlider.SetPos(XMFLOAT2(x, y += step));
-	sortPrioritySlider.OnSlide(forEachSelected([&] (auto object, auto args) {
+	sortPrioritySlider.OnSlide(forEachSelected([] (auto object, auto args) {
 		object->sort_priority = (uint8_t)args.iValue;
 	}));
 	AddWidget(&sortPrioritySlider);
@@ -558,7 +558,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	lightmapBlockCompressionCheckBox.SetSize(XMFLOAT2(hei, hei));
 	lightmapBlockCompressionCheckBox.SetPos(XMFLOAT2(x, y += step));
 	lightmapBlockCompressionCheckBox.SetCheck(true);
-	lightmapBlockCompressionCheckBox.OnClick(forEachSelected([&] (auto object, auto args) {
+	lightmapBlockCompressionCheckBox.OnClick(forEachSelected([] (auto object, auto args) {
 		object->SetLightmapDisableBlockCompression(!args.bValue);
 	}));
 	AddWidget(&lightmapBlockCompressionCheckBox);
@@ -658,7 +658,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	stopLightmapGenButton.SetTooltip("Stop the lightmap rendering and save the lightmap.\nIf denoiser is enabled, this is the point at which lightmap will be denoised, which could take a while.");
 	stopLightmapGenButton.SetPos(XMFLOAT2(x, y += step));
 	stopLightmapGenButton.SetSize(XMFLOAT2(wid, hei));
-	stopLightmapGenButton.OnClick(forEachSelected([&] (auto object, auto args) {
+	stopLightmapGenButton.OnClick(forEachSelected([] (auto object, auto args) {
 		object->SetLightmapRenderRequest(false);
 		object->SaveLightmap();
 	}));
@@ -668,7 +668,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	clearLightmapButton.SetTooltip("Clear the lightmap from this object.");
 	clearLightmapButton.SetPos(XMFLOAT2(x, y += step));
 	clearLightmapButton.SetSize(XMFLOAT2(wid, hei));
-	clearLightmapButton.OnClick(forEachSelected([&] (auto object, auto args) {
+	clearLightmapButton.OnClick(forEachSelected([] (auto object, auto args) {
 		object->ClearLightmap();
 	}));
 	AddWidget(&clearLightmapButton);

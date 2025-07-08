@@ -13,7 +13,7 @@ void SpriteWindow::Create(EditorComponent* _editor)
 	SetSize(XMFLOAT2(670, 1540));
 
 	closeButton.SetTooltip("Delete Sprite");
-	OnClose([=](wi::gui::EventArgs args) {
+	OnClose([this](wi::gui::EventArgs args) {
 
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
@@ -26,8 +26,8 @@ void SpriteWindow::Create(EditorComponent* _editor)
 		editor->componentsWnd.RefreshEntityTree();
 	});
 
-	auto forEachSelected = [&] (auto func) {
-		return [&, func] (auto args) {
+	auto forEachSelected = [this] (auto func) {
+		return [this, func] (auto args) {
 			wi::scene::Scene& scene = editor->GetCurrentScene();
 			for (auto& x : editor->translator.selected)
 			{
@@ -46,7 +46,7 @@ void SpriteWindow::Create(EditorComponent* _editor)
 	textureButton.sprites[wi::gui::FOCUS].params.color = wi::Color::Gray();
 	textureButton.sprites[wi::gui::ACTIVE].params.color = wi::Color::White();
 	textureButton.sprites[wi::gui::DEACTIVATING].params.color = wi::Color::Gray();
-	textureButton.OnClick(forEachSelected([&] (auto sprite, auto args) {
+	textureButton.OnClick(forEachSelected([this] (auto sprite, auto args) {
 		if (sprite->textureResource.IsValid())
 		{
 			wi::Archive& archive = editor->AdvanceHistory();
@@ -90,7 +90,7 @@ void SpriteWindow::Create(EditorComponent* _editor)
 	maskButton.sprites[wi::gui::FOCUS].params.color = wi::Color::Gray();
 	maskButton.sprites[wi::gui::ACTIVE].params.color = wi::Color::White();
 	maskButton.sprites[wi::gui::DEACTIVATING].params.color = wi::Color::Gray();
-	maskButton.OnClick(forEachSelected([&] (auto sprite, auto args) {
+	maskButton.OnClick(forEachSelected([this] (auto sprite, auto args) {
 		if (sprite->maskResource.IsValid())
 		{
 			wi::Archive& archive = editor->AdvanceHistory();
@@ -119,84 +119,84 @@ void SpriteWindow::Create(EditorComponent* _editor)
 
 	pivotXSlider.Create(0, 1, 0, 10000, "Pivot X: ");
 	pivotXSlider.SetTooltip("Horizontal pivot: 0: left, 0.5: center, 1: right");
-	pivotXSlider.OnSlide(forEachSelected([&] (auto sprite, auto args) {
+	pivotXSlider.OnSlide(forEachSelected([] (auto sprite, auto args) {
 		sprite->params.pivot.x = args.fValue;
 	}));
 	AddWidget(&pivotXSlider);
 
 	pivotYSlider.Create(0, 1, 0, 10000, "Pivot Y: ");
 	pivotYSlider.SetTooltip("Vertical pivot: 0: top, 0.5: center, 1: bottom");
-	pivotYSlider.OnSlide(forEachSelected([&] (auto sprite, auto args) {
+	pivotYSlider.OnSlide(forEachSelected([] (auto sprite, auto args) {
 		sprite->params.pivot.y = args.fValue;
 	}));
 	AddWidget(&pivotYSlider);
 
 	intensitySlider.Create(0, 100, 1, 10000, "Intensity: ");
 	intensitySlider.SetTooltip("Color multiplier");
-	intensitySlider.OnSlide(forEachSelected([&] (auto sprite, auto args) {
+	intensitySlider.OnSlide(forEachSelected([] (auto sprite, auto args) {
 		sprite->params.intensity = args.fValue;
 	}));
 	AddWidget(&intensitySlider);
 
 	rotationSlider.Create(0, 360, 0, 10000, "Rotation: ");
 	rotationSlider.SetTooltip("Z Rotation around pivot point. The editor input is in degrees.");
-	rotationSlider.OnSlide(forEachSelected([&] (auto sprite, auto args) {
+	rotationSlider.OnSlide(forEachSelected([] (auto sprite, auto args) {
 		sprite->params.rotation = wi::math::DegreesToRadians(args.fValue);
 	}));
 	AddWidget(&rotationSlider);
 
 	saturationSlider.Create(0, 2, 1, 1000, "Saturation: ");
 	saturationSlider.SetTooltip("Modify saturation of the image.");
-	saturationSlider.OnSlide(forEachSelected([&] (auto sprite, auto args) {
+	saturationSlider.OnSlide(forEachSelected([] (auto sprite, auto args) {
 		sprite->params.saturation = args.fValue;
 	}));
 	AddWidget(&saturationSlider);
 
 	alphaStartSlider.Create(0, 1, 0, 10000, "Mask Alpha Start: ");
 	alphaStartSlider.SetTooltip("Constrain mask alpha to not go below this level.");
-	alphaStartSlider.OnSlide(forEachSelected([&] (auto sprite, auto args) {
+	alphaStartSlider.OnSlide(forEachSelected([] (auto sprite, auto args) {
 		sprite->params.mask_alpha_range_start = args.fValue;
 	}));
 	AddWidget(&alphaStartSlider);
 
 	alphaEndSlider.Create(0, 1, 1, 10000, "Mask Alpha End: ");
 	alphaEndSlider.SetTooltip("Constrain mask alpha to not go above this level.");
-	alphaEndSlider.OnSlide(forEachSelected([&] (auto sprite, auto args) {
+	alphaEndSlider.OnSlide(forEachSelected([] (auto sprite, auto args) {
 		sprite->params.mask_alpha_range_end = args.fValue;
 	}));
 	AddWidget(&alphaEndSlider);
 
 	borderSoftenSlider.Create(0, 1, 0, 10000, "Border Soften: ");
 	borderSoftenSlider.SetTooltip("Soften the borders of the sprite.");
-	borderSoftenSlider.OnSlide(forEachSelected([&] (auto sprite, auto args) {
+	borderSoftenSlider.OnSlide(forEachSelected([] (auto sprite, auto args) {
 		sprite->params.border_soften = args.fValue;
 	}));
 	AddWidget(&borderSoftenSlider);
 
 	cornerRounding0Slider.Create(0, 0.5f, 1, 10000, "Rounding 0: ");
 	cornerRounding0Slider.SetTooltip("Enable corner rounding for the lop left corner.");
-	cornerRounding0Slider.OnSlide(forEachSelected([&] (auto sprite, auto args) {
+	cornerRounding0Slider.OnSlide(forEachSelected([] (auto sprite, auto args) {
 		sprite->params.corners_rounding[0].radius = args.fValue;
 	}));
 	AddWidget(&cornerRounding0Slider);
 
 	cornerRounding1Slider.Create(0, 0.5f, 0, 10000, "Rounding 1: ");
 	cornerRounding1Slider.SetTooltip("Enable corner rounding for the lop right corner.");
-	cornerRounding1Slider.OnSlide(forEachSelected([&] (auto sprite, auto args) {
+	cornerRounding1Slider.OnSlide(forEachSelected([] (auto sprite, auto args) {
 		sprite->params.corners_rounding[1].radius = args.fValue;
 	}));
 	AddWidget(&cornerRounding1Slider);
 
 	cornerRounding2Slider.Create(0, 0.5f, 0, 10000, "Rounding 2: ");
 	cornerRounding2Slider.SetTooltip("Enable corner rounding for the bottom left corner.");
-	cornerRounding2Slider.OnSlide(forEachSelected([&] (auto sprite, auto args) {
+	cornerRounding2Slider.OnSlide(forEachSelected([] (auto sprite, auto args) {
 		sprite->params.corners_rounding[2].radius = args.fValue;
 	}));
 	AddWidget(&cornerRounding2Slider);
 
 	cornerRounding3Slider.Create(0, 0.5f, 0, 10000, "Rounding 3: ");
 	cornerRounding3Slider.SetTooltip("Enable corner rounding for the bottom right corner.");
-	cornerRounding3Slider.OnSlide(forEachSelected([&] (auto sprite, auto args) {
+	cornerRounding3Slider.OnSlide(forEachSelected([] (auto sprite, auto args) {
 		sprite->params.corners_rounding[3].radius = args.fValue;
 	}));
 	AddWidget(&cornerRounding3Slider);
@@ -205,7 +205,7 @@ void SpriteWindow::Create(EditorComponent* _editor)
 	qualityCombo.AddItem("Nearest Neighbor", wi::image::QUALITY_NEAREST);
 	qualityCombo.AddItem("Linear", wi::image::QUALITY_LINEAR);
 	qualityCombo.AddItem("Anisotropic", wi::image::QUALITY_ANISOTROPIC);
-	qualityCombo.OnSelect(forEachSelected([&] (auto sprite, auto args) {
+	qualityCombo.OnSelect(forEachSelected([] (auto sprite, auto args) {
 		sprite->params.quality = (wi::image::QUALITY)args.userdata;
 	}));
 	AddWidget(&qualityCombo);
@@ -214,7 +214,7 @@ void SpriteWindow::Create(EditorComponent* _editor)
 	samplemodeCombo.AddItem("Clamp", wi::image::SAMPLEMODE_CLAMP);
 	samplemodeCombo.AddItem("Mirror", wi::image::SAMPLEMODE_MIRROR);
 	samplemodeCombo.AddItem("Wrap", wi::image::SAMPLEMODE_WRAP);
-	samplemodeCombo.OnSelect(forEachSelected([&] (auto sprite, auto args) {
+	samplemodeCombo.OnSelect(forEachSelected([] (auto sprite, auto args) {
 		sprite->params.sampleFlag = (wi::image::SAMPLEMODE)args.userdata;
 	}));
 	AddWidget(&samplemodeCombo);
@@ -226,35 +226,35 @@ void SpriteWindow::Create(EditorComponent* _editor)
 	blendModeCombo.AddItem("Additive", wi::enums::BLENDMODE_ADDITIVE);
 	blendModeCombo.AddItem("Multiply", wi::enums::BLENDMODE_MULTIPLY);
 	blendModeCombo.AddItem("Inverse", wi::enums::BLENDMODE_INVERSE);
-	blendModeCombo.OnSelect(forEachSelected([&] (auto sprite, auto args) {
+	blendModeCombo.OnSelect(forEachSelected([] (auto sprite, auto args) {
 		sprite->params.blendFlag = (wi::enums::BLENDMODE)args.userdata;
 	}));
 	AddWidget(&blendModeCombo);
 
 	hiddenCheckBox.Create("Hidden: ");
 	hiddenCheckBox.SetTooltip("Hide / unhide the sprite");
-	hiddenCheckBox.OnClick(forEachSelected([&] (auto sprite, auto args) {
+	hiddenCheckBox.OnClick(forEachSelected([] (auto sprite, auto args) {
 		sprite->SetHidden(args.bValue);
 	}));
 	AddWidget(&hiddenCheckBox);
 
 	cameraFacingCheckBox.Create("Camera Facing: ");
 	cameraFacingCheckBox.SetTooltip("Camera facing sprites will always rotate towards the camera.");
-	cameraFacingCheckBox.OnClick(forEachSelected([&] (auto sprite, auto args) {
+	cameraFacingCheckBox.OnClick(forEachSelected([] (auto sprite, auto args) {
 		sprite->SetCameraFacing(args.bValue);
 	}));
 	AddWidget(&cameraFacingCheckBox);
 
 	cameraScalingCheckBox.Create("Camera Scaling: ");
 	cameraScalingCheckBox.SetTooltip("Camera scaling sprites will always keep the same size on screen, irrespective of the distance to the camera.");
-	cameraScalingCheckBox.OnClick(forEachSelected([&] (auto sprite, auto args) {
+	cameraScalingCheckBox.OnClick(forEachSelected([] (auto sprite, auto args) {
 		sprite->SetCameraScaling(args.bValue);
 	}));
 	AddWidget(&cameraScalingCheckBox);
 
 	depthTestCheckBox.Create("Depth Test: ");
 	depthTestCheckBox.SetTooltip("Depth tested sprites will be clipped against geometry.");
-	depthTestCheckBox.OnClick(forEachSelected([&] (auto sprite, auto args) {
+	depthTestCheckBox.OnClick(forEachSelected([] (auto sprite, auto args) {
 		if (args.bValue)
 			{
 				sprite->params.enableDepthTest();
@@ -268,7 +268,7 @@ void SpriteWindow::Create(EditorComponent* _editor)
 
 	distortionCheckBox.Create("Distortion: ");
 	distortionCheckBox.SetTooltip("The distortion effect will use the sprite as a normal map to distort the rendered image.\nUse the color alpha to control distortion amount.");
-	distortionCheckBox.OnClick(forEachSelected([&] (auto sprite, auto args) {
+	distortionCheckBox.OnClick(forEachSelected([] (auto sprite, auto args) {
 		if (args.bValue)
 			{
 				sprite->params.enableExtractNormalMap();
@@ -281,28 +281,28 @@ void SpriteWindow::Create(EditorComponent* _editor)
 	AddWidget(&distortionCheckBox);
 
 	colorPicker.Create("Color", wi::gui::Window::WindowControls::NONE);
-	colorPicker.OnColorChanged(forEachSelected([&] (auto sprite, auto args) {
+	colorPicker.OnColorChanged(forEachSelected([] (auto sprite, auto args) {
 		sprite->params.color = args.color;
 	}));
 	AddWidget(&colorPicker);
 
 	movingTexXSlider.Create(-1000, 1000, 0, 10000, "Scrolling X: ");
 	movingTexXSlider.SetTooltip("Scrolling animation's speed in X direction.");
-	movingTexXSlider.OnSlide(forEachSelected([&] (auto sprite, auto args) {
+	movingTexXSlider.OnSlide(forEachSelected([] (auto sprite, auto args) {
 		sprite->anim.movingTexAnim.speedX = args.fValue;
 	}));
 	AddWidget(&movingTexXSlider);
 
 	movingTexYSlider.Create(-1000, 1000, 0, 10000, "Scrolling Y: ");
 	movingTexYSlider.SetTooltip("Scrolling animation's speed in Y direction.");
-	movingTexYSlider.OnSlide(forEachSelected([&] (auto sprite, auto args) {
+	movingTexYSlider.OnSlide(forEachSelected([] (auto sprite, auto args) {
 		sprite->anim.movingTexAnim.speedY = args.fValue;
 	}));
 	AddWidget(&movingTexYSlider);
 
 	drawrectFrameRateSlider.Create(0, 60, 0, 60, "Spritesheet FPS: ");
 	drawrectFrameRateSlider.SetTooltip("Sprite Sheet animation's frame rate per second.");
-	drawrectFrameRateSlider.OnSlide(forEachSelected([&] (auto sprite, auto args) {
+	drawrectFrameRateSlider.OnSlide(forEachSelected([this] (auto sprite, auto args) {
 		sprite->anim.drawRectAnim.frameRate = args.fValue;
 			UpdateSpriteDrawRectParams(sprite);
 	}));
@@ -311,7 +311,7 @@ void SpriteWindow::Create(EditorComponent* _editor)
 	drawrectFrameCountInput.Create("");
 	drawrectFrameCountInput.SetDescription("frames: ");
 	drawrectFrameCountInput.SetTooltip("Set the total frame count of the sprite sheet animation (1 = only 1 frame, no animation).");
-	drawrectFrameCountInput.OnInputAccepted(forEachSelected([&] (auto sprite, auto args) {
+	drawrectFrameCountInput.OnInputAccepted(forEachSelected([this] (auto sprite, auto args) {
 		sprite->anim.drawRectAnim.frameCount = args.iValue;
 			UpdateSpriteDrawRectParams(sprite);
 	}));
@@ -320,7 +320,7 @@ void SpriteWindow::Create(EditorComponent* _editor)
 	drawrectHorizontalFrameCountInput.Create("");
 	drawrectHorizontalFrameCountInput.SetDescription("Horiz. frames: ");
 	drawrectHorizontalFrameCountInput.SetTooltip("Set the horizontal frame count of the sprite sheet animation.\n(optional, use if sprite sheet contains multiple rows, default = 0).");
-	drawrectHorizontalFrameCountInput.OnInputAccepted(forEachSelected([&] (auto sprite, auto args) {
+	drawrectHorizontalFrameCountInput.OnInputAccepted(forEachSelected([this] (auto sprite, auto args) {
 		sprite->anim.drawRectAnim.horizontalFrameCount = args.iValue;
 			UpdateSpriteDrawRectParams(sprite);
 	}));
@@ -328,21 +328,21 @@ void SpriteWindow::Create(EditorComponent* _editor)
 
 	wobbleXSlider.Create(0, 1, 0, 10000, "Wobble X: ");
 	wobbleXSlider.SetTooltip("Wobble animation's amount in X direction.");
-	wobbleXSlider.OnSlide(forEachSelected([&] (auto sprite, auto args) {
+	wobbleXSlider.OnSlide(forEachSelected([] (auto sprite, auto args) {
 		sprite->anim.wobbleAnim.amount.x = args.fValue;
 	}));
 	AddWidget(&wobbleXSlider);
 
 	wobbleYSlider.Create(0, 1, 0, 10000, "Wobble Y: ");
 	wobbleYSlider.SetTooltip("Wobble animation's amount in X direction.");
-	wobbleYSlider.OnSlide(forEachSelected([&] (auto sprite, auto args) {
+	wobbleYSlider.OnSlide(forEachSelected([] (auto sprite, auto args) {
 		sprite->anim.wobbleAnim.amount.y = args.fValue;
 	}));
 	AddWidget(&wobbleYSlider);
 
 	wobbleSpeedSlider.Create(0, 4, 0, 10000, "Wobble Speed: ");
 	wobbleSpeedSlider.SetTooltip("Wobble animation's speed.");
-	wobbleSpeedSlider.OnSlide(forEachSelected([&] (auto sprite, auto args) {
+	wobbleSpeedSlider.OnSlide(forEachSelected([] (auto sprite, auto args) {
 		sprite->anim.wobbleAnim.speed = args.fValue;
 	}));
 	AddWidget(&wobbleSpeedSlider);

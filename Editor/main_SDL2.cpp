@@ -168,7 +168,7 @@ void crash_handler(int sig)
 		fflush(logfile);
 		backtrace_symbols_fd(btbuf, size, fileno(logfile));
 		fputs("\nBacklog:\n", logfile);
-		wi::backlog::_forEachLogEntry_unsafe([&] (auto&& entry) {
+		wi::backlog::_forEachLogEntry_unsafe([&logfile] (auto&& entry) {
 			fputs(entry.text.c_str(), logfile);
 			fflush(logfile);
 		});

@@ -36,8 +36,8 @@ void ColliderWindow::Create(EditorComponent* _editor)
 	infoLabel.SetFitTextEnabled(true);
 	AddWidget(&infoLabel);
 
-	auto forEachSelectedCollider = [&](auto func) {
-		return [&, func](wi::gui::EventArgs args) {
+	auto forEachSelectedCollider = [this](auto func) {
+		return [this, func](wi::gui::EventArgs args) {
 			wi::scene::Scene& scene = editor->GetCurrentScene();
 			for (auto& x : editor->translator.selected)
 			{
@@ -51,7 +51,7 @@ void ColliderWindow::Create(EditorComponent* _editor)
 	cpuCheckBox.Create("CPU: ");
 	cpuCheckBox.SetTooltip("Enable for use on the CPU. CPU usage includes: springs.");
 	cpuCheckBox.SetSize(XMFLOAT2(hei, hei));
-	cpuCheckBox.OnClick(forEachSelectedCollider([&](auto collider, auto args) {
+	cpuCheckBox.OnClick(forEachSelectedCollider([](auto collider, auto args) {
 		collider->SetCPUEnabled(args.bValue);
 	}));
 	AddWidget(&cpuCheckBox);
@@ -59,7 +59,7 @@ void ColliderWindow::Create(EditorComponent* _editor)
 	gpuCheckBox.Create("GPU: ");
 	gpuCheckBox.SetTooltip("Enable for use on the GPU. GPU usage includes: emitter and hair particle systems.\nNote that GPU can support only a limited amount of colliders.");
 	gpuCheckBox.SetSize(XMFLOAT2(hei, hei));
-	gpuCheckBox.OnClick(forEachSelectedCollider([&](auto collider, auto args) {
+	gpuCheckBox.OnClick(forEachSelectedCollider([](auto collider, auto args) {
 		collider->SetGPUEnabled(args.bValue);
 	}));
 	AddWidget(&gpuCheckBox);
@@ -70,7 +70,7 @@ void ColliderWindow::Create(EditorComponent* _editor)
 	shapeCombo.AddItem("Sphere", (uint64_t)ColliderComponent::Shape::Sphere);
 	shapeCombo.AddItem("Capsule", (uint64_t)ColliderComponent::Shape::Capsule);
 	shapeCombo.AddItem("Plane", (uint64_t)ColliderComponent::Shape::Plane);
-	shapeCombo.OnSelect(forEachSelectedCollider([&](auto collider, auto args) {
+	shapeCombo.OnSelect(forEachSelectedCollider([](auto collider, auto args) {
 		collider->shape = (ColliderComponent::Shape)args.userdata;
 	}));
 	AddWidget(&shapeCombo);
@@ -78,7 +78,7 @@ void ColliderWindow::Create(EditorComponent* _editor)
 	radiusSlider.Create(0, 10, 0, 100000, "Radius: ");
 	radiusSlider.SetSize(XMFLOAT2(wid, hei));
 	radiusSlider.SetPos(XMFLOAT2(x, y += step));
-	radiusSlider.OnSlide(forEachSelectedCollider([&](auto collider, auto args) {
+	radiusSlider.OnSlide(forEachSelectedCollider([](auto collider, auto args) {
 		collider->radius = args.fValue;
 	}));
 	AddWidget(&radiusSlider);
@@ -90,7 +90,7 @@ void ColliderWindow::Create(EditorComponent* _editor)
 	offsetX.Create(-10, 10, 0, 10000, "Offset X: ");
 	offsetX.SetSize(XMFLOAT2(wid, hei));
 	offsetX.SetPos(XMFLOAT2(x, y += step));
-	offsetX.OnSlide(forEachSelectedCollider([&](auto collider, auto args) {
+	offsetX.OnSlide(forEachSelectedCollider([](auto collider, auto args) {
 		collider->offset.x = args.fValue;
 	}));
 	AddWidget(&offsetX);
@@ -98,7 +98,7 @@ void ColliderWindow::Create(EditorComponent* _editor)
 	offsetY.Create(-10, 10, 0, 10000, "Offset Y: ");
 	offsetY.SetSize(XMFLOAT2(wid, hei));
 	offsetY.SetPos(XMFLOAT2(x, y += step));
-	offsetY.OnSlide(forEachSelectedCollider([&](auto collider, auto args) {
+	offsetY.OnSlide(forEachSelectedCollider([](auto collider, auto args) {
 		collider->offset.y = args.fValue;
 	}));
 	AddWidget(&offsetY);
@@ -106,7 +106,7 @@ void ColliderWindow::Create(EditorComponent* _editor)
 	offsetZ.Create(-10, 10, 0, 10000, "Offset Z: ");
 	offsetZ.SetSize(XMFLOAT2(wid, hei));
 	offsetZ.SetPos(XMFLOAT2(x, y += step));
-	offsetZ.OnSlide(forEachSelectedCollider([&](auto collider, auto args) {
+	offsetZ.OnSlide(forEachSelectedCollider([](auto collider, auto args) {
 		collider->offset.z = args.fValue;
 	}));
 	AddWidget(&offsetZ);
@@ -118,7 +118,7 @@ void ColliderWindow::Create(EditorComponent* _editor)
 	tailX.Create(-10, 10, 0, 10000, "Tail X: ");
 	tailX.SetSize(XMFLOAT2(wid, hei));
 	tailX.SetPos(XMFLOAT2(x, y += step));
-	tailX.OnSlide(forEachSelectedCollider([&](auto collider, auto args) {
+	tailX.OnSlide(forEachSelectedCollider([](auto collider, auto args) {
 		collider->tail.x = args.fValue;
 	}));
 	AddWidget(&tailX);
@@ -126,7 +126,7 @@ void ColliderWindow::Create(EditorComponent* _editor)
 	tailY.Create(-10, 10, 0, 10000, "Tail Y: ");
 	tailY.SetSize(XMFLOAT2(wid, hei));
 	tailY.SetPos(XMFLOAT2(x, y += step));
-	tailY.OnSlide(forEachSelectedCollider([&](auto collider, auto args) {
+	tailY.OnSlide(forEachSelectedCollider([](auto collider, auto args) {
 		collider->tail.y = args.fValue;
 	}));
 	AddWidget(&tailY);
@@ -134,7 +134,7 @@ void ColliderWindow::Create(EditorComponent* _editor)
 	tailZ.Create(-10, 10, 0, 10000, "Tail Z: ");
 	tailZ.SetSize(XMFLOAT2(wid, hei));
 	tailZ.SetPos(XMFLOAT2(x, y += step));
-	tailZ.OnSlide(forEachSelectedCollider([&](auto collider, auto args) {
+	tailZ.OnSlide(forEachSelectedCollider([](auto collider, auto args) {
 		collider->tail.z = args.fValue;
 	}));
 	AddWidget(&tailZ);

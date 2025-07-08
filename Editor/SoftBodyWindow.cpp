@@ -41,8 +41,8 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 	infoLabel.SetFitTextEnabled(true);
 	AddWidget(&infoLabel);
 
-	auto forEachSelected = [&] (auto func) {
-		return [&, func] (auto args) {
+	auto forEachSelected = [this] (auto func) {
+		return [this, func] (auto args) {
 			wi::scene::Scene& scene = editor->GetCurrentScene();
 			for (auto& x : editor->translator.selected)
 			{
@@ -66,21 +66,21 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 
 	resetButton.Create("Reset");
 	resetButton.SetTooltip("Set the detail to keep between simulation and graphics mesh.\nLower = less detailed, higher = more detailed.");
-	resetButton.OnClick(forEachSelected([&] (auto physicscomponent, auto args) {
+	resetButton.OnClick(forEachSelected([] (auto physicscomponent, auto args) {
 		physicscomponent->Reset();
 	}));
 	AddWidget(&resetButton);
 
 	detailSlider.Create(0.001f, 1, 1, 1000, "LOD Detail: ");
 	detailSlider.SetTooltip("Set the detail to keep between simulation and graphics mesh.\nLower = less detailed, higher = more detailed.");
-	detailSlider.OnSlide(forEachSelected([&] (auto physicscomponent, auto args) {
+	detailSlider.OnSlide(forEachSelected([] (auto physicscomponent, auto args) {
 		physicscomponent->SetDetail(args.fValue);
 	}));
 	AddWidget(&detailSlider);
 
 	massSlider.Create(0, 100, 1, 100000, "Mass: ");
 	massSlider.SetTooltip("Set the mass amount for the physics engine.");
-	massSlider.OnSlide(forEachSelected([&] (auto physicscomponent, auto args) {
+	massSlider.OnSlide(forEachSelected([] (auto physicscomponent, auto args) {
 		physicscomponent->physicsobject = {};
 		physicscomponent->mass = args.fValue;
 	}));
@@ -88,21 +88,21 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 
 	frictionSlider.Create(0, 1, 0.5f, 100000, "Friction: ");
 	frictionSlider.SetTooltip("Set the friction amount for the physics engine.");
-	frictionSlider.OnSlide(forEachSelected([&] (auto physicscomponent, auto args) {
+	frictionSlider.OnSlide(forEachSelected([] (auto physicscomponent, auto args) {
 		physicscomponent->friction = args.fValue;
 	}));
 	AddWidget(&frictionSlider);
 
 	restitutionSlider.Create(0, 1, 0, 100000, "Restitution: ");
 	restitutionSlider.SetTooltip("Set the restitution amount for the physics engine.");
-	restitutionSlider.OnSlide(forEachSelected([&] (auto physicscomponent, auto args) {
+	restitutionSlider.OnSlide(forEachSelected([] (auto physicscomponent, auto args) {
 		physicscomponent->restitution = args.fValue;
 	}));
 	AddWidget(&restitutionSlider);
 
 	pressureSlider.Create(0, 100000, 0, 100000, "Pressure: ");
 	pressureSlider.SetTooltip("Set the pressure amount for the physics engine.");
-	pressureSlider.OnSlide(forEachSelected([&] (auto physicscomponent, auto args) {
+	pressureSlider.OnSlide(forEachSelected([] (auto physicscomponent, auto args) {
 		physicscomponent->pressure = args.fValue;
 		physicscomponent->physicsobject = {};
 	}));
@@ -110,7 +110,7 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 
 	vertexRadiusSlider.Create(0, 1, 0, 100000, "Vertex Radius: ");
 	vertexRadiusSlider.SetTooltip("Set how much distance vertices should keep from other physics bodies.");
-	vertexRadiusSlider.OnSlide(forEachSelected([&] (auto physicscomponent, auto args) {
+	vertexRadiusSlider.OnSlide(forEachSelected([] (auto physicscomponent, auto args) {
 		physicscomponent->physicsobject = {};
 		physicscomponent->vertex_radius = args.fValue;
 	}));
@@ -118,7 +118,7 @@ void SoftBodyWindow::Create(EditorComponent* _editor)
 
 	windCheckbox.Create("Wind: ");
 	windCheckbox.SetTooltip("Enable/disable wind force on this soft body.");
-	windCheckbox.OnClick(forEachSelected([&] (auto physicscomponent, auto args) {
+	windCheckbox.OnClick(forEachSelected([] (auto physicscomponent, auto args) {
 		physicscomponent->SetWindEnabled(args.bValue);
 	}));
 	AddWidget(&windCheckbox);

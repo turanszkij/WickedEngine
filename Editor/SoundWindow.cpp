@@ -94,8 +94,8 @@ void SoundWindow::Create(EditorComponent* _editor)
 	filenameLabel.SetSize(XMFLOAT2(wid, hei));
 	AddWidget(&filenameLabel);
 
-	auto forEachSelected = [&] (auto func) {
-		return [&, func] (auto args) {
+	auto forEachSelected = [this] (auto func) {
+		return [this, func] (auto args) {
 			wi::scene::Scene& scene = editor->GetCurrentScene();
 			for (auto& x : editor->translator.selected)
 			{
@@ -112,7 +112,7 @@ void SoundWindow::Create(EditorComponent* _editor)
 	playstopButton.SetTooltip("Play/Stop selected sound instance.");
 	playstopButton.SetPos(XMFLOAT2(x, y += step));
 	playstopButton.SetSize(XMFLOAT2(wid, hei));
-	playstopButton.OnClick(forEachSelected([&] (auto sound, auto args) {
+	playstopButton.OnClick(forEachSelected([this] (auto sound, auto args) {
 		if (sound->IsPlaying())
 		{
 			sound->Stop();
@@ -132,7 +132,7 @@ void SoundWindow::Create(EditorComponent* _editor)
 	loopedCheckbox.SetPos(XMFLOAT2(x, y += step));
 	loopedCheckbox.SetSize(XMFLOAT2(hei, hei));
 	loopedCheckbox.SetCheckText(ICON_LOOP);
-	loopedCheckbox.OnClick(forEachSelected([&] (auto sound, auto args) {
+	loopedCheckbox.OnClick(forEachSelected([] (auto sound, auto args) {
 		sound->SetLooped(args.bValue);
 	}));
 	AddWidget(&loopedCheckbox);
@@ -142,7 +142,7 @@ void SoundWindow::Create(EditorComponent* _editor)
 	reverbCheckbox.SetTooltip("Enable/disable reverb.");
 	reverbCheckbox.SetPos(XMFLOAT2(x, y += step));
 	reverbCheckbox.SetSize(XMFLOAT2(hei, hei));
-	reverbCheckbox.OnClick(forEachSelected([&] (auto sound, auto args) {
+	reverbCheckbox.OnClick(forEachSelected([] (auto sound, auto args) {
 		sound->soundinstance.SetEnableReverb(args.bValue);
 		wi::audio::CreateSoundInstance(&sound->soundResource.GetSound(), &sound->soundinstance);
 	}));
@@ -153,7 +153,7 @@ void SoundWindow::Create(EditorComponent* _editor)
 	disable3dCheckbox.SetTooltip("Sounds in the scene are 3D spatial by default. Select this to disable 3D effect.");
 	disable3dCheckbox.SetPos(XMFLOAT2(x, y += step));
 	disable3dCheckbox.SetSize(XMFLOAT2(hei, hei));
-	disable3dCheckbox.OnClick(forEachSelected([&] (auto sound, auto args) {
+	disable3dCheckbox.OnClick(forEachSelected([] (auto sound, auto args) {
 		sound->SetDisable3D(args.bValue);
 	}));
 	AddWidget(&disable3dCheckbox);
@@ -163,7 +163,7 @@ void SoundWindow::Create(EditorComponent* _editor)
 	volumeSlider.SetTooltip("Set volume level for the selected sound instance.");
 	volumeSlider.SetPos(XMFLOAT2(x, y += step));
 	volumeSlider.SetSize(XMFLOAT2(wid, hei));
-	volumeSlider.OnSlide(forEachSelected([&] (auto sound, auto args) {
+	volumeSlider.OnSlide(forEachSelected([] (auto sound, auto args) {
 		sound->volume = args.fValue;
 	}));
 	AddWidget(&volumeSlider);
@@ -172,7 +172,7 @@ void SoundWindow::Create(EditorComponent* _editor)
 	submixComboBox.Create("Submix: ");
 	submixComboBox.SetPos(XMFLOAT2(x, y += step));
 	submixComboBox.SetSize(XMFLOAT2(wid, hei));
-	submixComboBox.OnSelect(forEachSelected([&] (auto sound, auto args) {
+	submixComboBox.OnSelect(forEachSelected([] (auto sound, auto args) {
 		sound->soundinstance.type = (wi::audio::SUBMIX_TYPE)args.iValue;
 		wi::audio::CreateSoundInstance(&sound->soundResource.GetSound(), &sound->soundinstance);
 	}));
@@ -231,7 +231,7 @@ void SoundWindow::Create(EditorComponent* _editor)
 	beginInput.SetDescription("Begin: ");
 	beginInput.SetTooltip("Beginning of the playback in seconds, relative to the Sound it will be created from (0 = from beginning).");
 	beginInput.SetSize(XMFLOAT2(wid, hei));
-	beginInput.OnInputAccepted(forEachSelected([&] (auto sound, auto args) {
+	beginInput.OnInputAccepted(forEachSelected([] (auto sound, auto args) {
 		sound->soundinstance.begin = args.fValue;
 		wi::audio::CreateSoundInstance(&sound->soundResource.GetSound(), &sound->soundinstance);
 	}));
@@ -241,7 +241,7 @@ void SoundWindow::Create(EditorComponent* _editor)
 	lengthInput.SetDescription("Length: ");
 	lengthInput.SetTooltip("Length in seconds (0 = until end)");
 	lengthInput.SetSize(XMFLOAT2(wid, hei));
-	lengthInput.OnInputAccepted(forEachSelected([&] (auto sound, auto args) {
+	lengthInput.OnInputAccepted(forEachSelected([] (auto sound, auto args) {
 		sound->soundinstance.length = args.fValue;
 		wi::audio::CreateSoundInstance(&sound->soundResource.GetSound(), &sound->soundinstance);
 	}));
@@ -251,7 +251,7 @@ void SoundWindow::Create(EditorComponent* _editor)
 	loopBeginInput.SetDescription("Loop Begin: ");
 	loopBeginInput.SetTooltip("Loop region begin in seconds, relative to the instance begin time (0 = from beginning)");
 	loopBeginInput.SetSize(XMFLOAT2(wid, hei));
-	loopBeginInput.OnInputAccepted(forEachSelected([&] (auto sound, auto args) {
+	loopBeginInput.OnInputAccepted(forEachSelected([] (auto sound, auto args) {
 		sound->soundinstance.loop_begin = args.fValue;
 		wi::audio::CreateSoundInstance(&sound->soundResource.GetSound(), &sound->soundinstance);
 	}));
@@ -261,7 +261,7 @@ void SoundWindow::Create(EditorComponent* _editor)
 	loopLengthInput.SetDescription("Loop Length: ");
 	loopLengthInput.SetTooltip("Loop region length in seconds (0 = until the end)");
 	loopLengthInput.SetSize(XMFLOAT2(wid, hei));
-	loopLengthInput.OnInputAccepted(forEachSelected([&] (auto sound, auto args) {
+	loopLengthInput.OnInputAccepted(forEachSelected([] (auto sound, auto args) {
 		sound->soundinstance.loop_length = args.fValue;
 		wi::audio::CreateSoundInstance(&sound->soundResource.GetSound(), &sound->soundinstance);
 	}));

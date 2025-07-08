@@ -43,8 +43,8 @@ void SpringWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&resetAllButton);
 
-	auto forEachSelected = [&] (auto func) {
-		return [&, func] (auto args) {
+	auto forEachSelected = [this] (auto func) {
+		return [this, func] (auto args) {
 			wi::scene::Scene& scene = editor->GetCurrentScene();
 			for (auto& x : editor->translator.selected)
 			{
@@ -61,7 +61,7 @@ void SpringWindow::Create(EditorComponent* _editor)
 	disabledCheckBox.SetTooltip("Disable simulation.");
 	disabledCheckBox.SetPos(XMFLOAT2(x, y += step));
 	disabledCheckBox.SetSize(XMFLOAT2(hei, hei));
-	disabledCheckBox.OnClick(forEachSelected([&] (auto spring, auto args) {
+	disabledCheckBox.OnClick(forEachSelected([] (auto spring, auto args) {
 		spring->SetDisabled(args.bValue);
 	}));
 	AddWidget(&disabledCheckBox);
@@ -70,7 +70,7 @@ void SpringWindow::Create(EditorComponent* _editor)
 	gravityCheckBox.SetTooltip("Whether global gravity should affect the spring");
 	gravityCheckBox.SetPos(XMFLOAT2(x, y += step));
 	gravityCheckBox.SetSize(XMFLOAT2(hei, hei));
-	gravityCheckBox.OnClick(forEachSelected([&] (auto spring, auto args) {
+	gravityCheckBox.OnClick(forEachSelected([] (auto spring, auto args) {
 		spring->SetGravityEnabled(args.bValue);
 	}));
 	AddWidget(&gravityCheckBox);
@@ -79,7 +79,7 @@ void SpringWindow::Create(EditorComponent* _editor)
 	stiffnessSlider.SetTooltip("The stiffness affects how strongly the spring tries to orient itself to rest pose (higher values increase the jiggliness)");
 	stiffnessSlider.SetPos(XMFLOAT2(x, y += step));
 	stiffnessSlider.SetSize(XMFLOAT2(siz, hei));
-	stiffnessSlider.OnSlide(forEachSelected([&] (auto spring, auto args) {
+	stiffnessSlider.OnSlide(forEachSelected([] (auto spring, auto args) {
 		spring->stiffnessForce = args.fValue;
 	}));
 	AddWidget(&stiffnessSlider);
@@ -88,7 +88,7 @@ void SpringWindow::Create(EditorComponent* _editor)
 	dragSlider.SetTooltip("The drag affects how fast energy is lost (higher values make the spring come to rest faster)");
 	dragSlider.SetPos(XMFLOAT2(x, y += step));
 	dragSlider.SetSize(XMFLOAT2(siz, hei));
-	dragSlider.OnSlide(forEachSelected([&] (auto spring, auto args) {
+	dragSlider.OnSlide(forEachSelected([] (auto spring, auto args) {
 		spring->dragForce = args.fValue;
 	}));
 	AddWidget(&dragSlider);
@@ -97,7 +97,7 @@ void SpringWindow::Create(EditorComponent* _editor)
 	windSlider.SetTooltip("How much the global wind effect affects the spring");
 	windSlider.SetPos(XMFLOAT2(x, y += step));
 	windSlider.SetSize(XMFLOAT2(siz, hei));
-	windSlider.OnSlide(forEachSelected([&] (auto spring, auto args) {
+	windSlider.OnSlide(forEachSelected([] (auto spring, auto args) {
 		spring->windForce = args.fValue;
 	}));
 	AddWidget(&windSlider);
@@ -106,7 +106,7 @@ void SpringWindow::Create(EditorComponent* _editor)
 	gravitySlider.SetTooltip("How much the global gravity effect affects the spring");
 	gravitySlider.SetPos(XMFLOAT2(x, y += step));
 	gravitySlider.SetSize(XMFLOAT2(siz, hei));
-	gravitySlider.OnSlide(forEachSelected([&] (auto spring, auto args) {
+	gravitySlider.OnSlide(forEachSelected([] (auto spring, auto args) {
 		spring->gravityPower = args.fValue;
 	}));
 	AddWidget(&gravitySlider);
@@ -115,7 +115,7 @@ void SpringWindow::Create(EditorComponent* _editor)
 	hitradiusSlider.SetTooltip("The radius of the spring's collision sphere, that will be checked against colliders.");
 	hitradiusSlider.SetPos(XMFLOAT2(x, y += step));
 	hitradiusSlider.SetSize(XMFLOAT2(siz, hei));
-	hitradiusSlider.OnSlide(forEachSelected([&] (auto spring, auto args) {
+	hitradiusSlider.OnSlide(forEachSelected([] (auto spring, auto args) {
 		spring->hitRadius = args.fValue;
 	}));
 	AddWidget(&hitradiusSlider);
