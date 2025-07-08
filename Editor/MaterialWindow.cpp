@@ -198,16 +198,16 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	shaderTypeComboBox.SetSize(XMFLOAT2(wid, hei));
 	shaderTypeComboBox.OnSelect(forEachSelected([this] (auto material, auto args) {
 		if (args.iValue >= MaterialComponent::SHADERTYPE_COUNT)
-			{
-				material->SetCustomShaderID(args.iValue - MaterialComponent::SHADERTYPE_COUNT);
-				blendModeComboBox.SetEnabled(false);
-			}
-			else
-			{
-				material->shaderType = (MaterialComponent::SHADERTYPE)args.userdata;
-				material->SetCustomShaderID(-1);
-				blendModeComboBox.SetEnabled(true);
-			}
+		{
+			material->SetCustomShaderID(args.iValue - MaterialComponent::SHADERTYPE_COUNT);
+			blendModeComboBox.SetEnabled(false);
+		}
+		else
+		{
+			material->shaderType = (MaterialComponent::SHADERTYPE)args.userdata;
+			material->SetCustomShaderID(-1);
+			blendModeComboBox.SetEnabled(true);
+		}
 	}));
 	shaderTypeComboBox.SetEnabled(false);
 	shaderTypeComboBox.SetMaxVisibleItemCount(5);

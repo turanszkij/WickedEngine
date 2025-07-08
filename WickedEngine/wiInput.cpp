@@ -328,11 +328,11 @@ namespace wi::input
 				case Controller::SDLINPUT:
 					connected = wi::input::sdlinput::GetControllerState(&controller.state, controller.deviceIndex);
 					break;
-#ifdef PLATFORM_PS5
 				case Controller::PS5:
+#ifdef PLATFORM_PS5
 					connected = wi::input::ps5::GetControllerState(&controller.state, controller.deviceIndex);
-					break;
 #endif // PLATFORM_PS5
+					break;
 				case Controller::DISCONNECTED:
 					connected = false;
 					break;
@@ -1129,7 +1129,7 @@ namespace wi::input
 		if (strcmp(str, "Numpad 9") == 0)
 			return KEYBOARD_BUTTON_NUMPAD9;
 
-		if (str[0] >= DIGIT_RANGE_START && str[0] < GAMEPAD_RANGE_START)
+		if (str[0] >= DIGIT_RANGE_START /*&& str[0] < GAMEPAD_RANGE_START*/)
 		{
 			return (BUTTON)str[0];
 		}
