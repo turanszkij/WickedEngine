@@ -26,7 +26,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 	});
 
 	auto forEachSelectedPhysicsComponent = [&](auto /* void(RigidBodyPhysicsComponent*, wi::gui::EventArgs) */ func) {
-		return [&](wi::gui::EventArgs args) {
+		return [&, func](wi::gui::EventArgs args) {
 			wi::scene::Scene& scene = editor->GetCurrentScene();
 			for (auto& x : editor->translator.selected)
 			{
@@ -54,15 +54,15 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 	collisionShapeComboBox.AddItem("Convex Hull", RigidBodyPhysicsComponent::CollisionShape::CONVEX_HULL);
 	collisionShapeComboBox.AddItem("Triangle Mesh", RigidBodyPhysicsComponent::CollisionShape::TRIANGLE_MESH);
 	collisionShapeComboBox.AddItem("Height Field", RigidBodyPhysicsComponent::CollisionShape::HEIGHTFIELD);
-	collisionShapeComboBox.OnSelect([&](wi::gui::EventArgs args) {
-		forEachSelectedPhysicsComponent([&](auto physicscomponent, auto args) {
+	collisionShapeComboBox.OnSelect([=](wi::gui::EventArgs args) {
+		forEachSelectedPhysicsComponent([](auto physicscomponent, auto args) {
 			RigidBodyPhysicsComponent::CollisionShape shape = (RigidBodyPhysicsComponent::CollisionShape)args.userdata;
 			if (physicscomponent->shape != shape)
 			{
 				physicscomponent->physicsobject = nullptr;
 				physicscomponent->shape = shape;
 			}
-		});
+		})(args);
 		RefreshShapeType();
 	});
 

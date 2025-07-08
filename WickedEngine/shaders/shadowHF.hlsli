@@ -214,7 +214,7 @@ inline half3 shadow_2D(in ShaderEntity light, in float z, in float2 shadow_uv, i
 
 inline half3 shadow_cube(in ShaderEntity light, in float3 Lunnormalized, min16uint2 pixel = 0)
 {
-	const float remapped_distance = light.GetCubemapDepthRemapNear() + light.GetCubemapDepthRemapFar() / (max(max(abs(Lunnormalized.x), abs(Lunnormalized.y)), abs(Lunnormalized.z)));
+	const float remapped_distance = light.GetCubemapDepthRemapNear() + light.GetCubemapDepthRemapFar() / (max(max(abs(Lunnormalized.x), abs(Lunnormalized.y)), abs(Lunnormalized.z)) * 0.989); // little bias to avoid artifact
 	const float3 uv_slice = cubemap_to_uv(-Lunnormalized);
 	float2 shadow_uv = uv_slice.xy;
 	shadow_uv.x += uv_slice.z;

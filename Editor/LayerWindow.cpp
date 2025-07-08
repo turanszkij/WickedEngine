@@ -56,38 +56,34 @@ void LayerWindow::Create(EditorComponent* _editor)
 		AddWidget(&layers[i]);
 	}
 
-	enableAllButton.Create("ALL " ICON_CHECK);
-	enableAllButton.OnClick([this](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			LayerComponent* layer = scene.layers.GetComponent(x.entity);
-			if (layer == nullptr)
+	auto forEachLayer = [&] (auto func) {
+		return [&, func] (auto args) {
+			wi::scene::Scene& scene = editor->GetCurrentScene();
+			for (auto& x : editor->translator.selected)
 			{
-				layer = &editor->GetCurrentScene().layers.Create(x.entity);
+				LayerComponent* layer = scene.layers.GetComponent(x.entity);
+				if (layer == nullptr)
+				{
+					layer = &editor->GetCurrentScene().layers.Create(x.entity);
+				}
+				if (layer != nullptr)
+				{
+					func(layer, args);
+				}
 			}
-			if (layer == nullptr)
-				return;
-			layer->layerMask = ~0;
-		}
-	});
+		};
+	};
+
+	enableAllButton.Create("ALL " ICON_CHECK);
+	enableAllButton.OnClick(forEachLayer([&] (auto layer, auto args) {
+		layer->layerMask = ~0;
+	}));
 	AddWidget(&enableAllButton);
 
 	enableNoneButton.Create("NONE " ICON_DISABLED);
-	enableNoneButton.OnClick([this](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			LayerComponent* layer = scene.layers.GetComponent(x.entity);
-			if (layer == nullptr)
-			{
-				layer = &editor->GetCurrentScene().layers.Create(x.entity);
-			}
-			if (layer == nullptr)
-				return;
-			layer->layerMask = 0;
-		}
-	});
+	enableNoneButton.OnClick(forEachLayer([&] (auto layer, auto args) {
+		layer->layerMask = 0;
+	}));
 	AddWidget(&enableNoneButton);
 
 	SetMinimized(true);

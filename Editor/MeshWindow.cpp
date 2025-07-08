@@ -29,7 +29,7 @@ void MeshWindow::Create(EditorComponent* _editor)
 	SetSize(XMFLOAT2(580, 880));
 
 	closeButton.SetTooltip("Delete MeshComponent");
-	OnClose([=](wi::gui::EventArgs args) {
+	OnClose([&](wi::gui::EventArgs args) {
 
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
@@ -49,7 +49,7 @@ void MeshWindow::Create(EditorComponent* _editor)
 
 	subsetComboBox.Create("Select subset: ");
 	subsetComboBox.SetEnabled(false);
-	subsetComboBox.OnSelect([=](wi::gui::EventArgs args) {
+	subsetComboBox.OnSelect([&](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
 		MeshComponent* mesh = scene.meshes.GetComponent(entity);
 		if (mesh != nullptr)
@@ -137,65 +137,49 @@ void MeshWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&subsetLastButton);
 
+	auto forEachSelected = [&] (auto func) {
+		return [&, func] (auto args) {
+			wi::scene::Scene& scene = editor->GetCurrentScene();
+			for (auto& x : editor->translator.selected)
+			{
+				MeshComponent* mesh = get_mesh(scene, x);
+				if (mesh != nullptr)
+					func(mesh, args);
+			}
+		};
+	};
+
 	doubleSidedCheckBox.Create("Double Sided: ");
 	doubleSidedCheckBox.SetTooltip("If enabled, the inside of the mesh will be visible.");
-	doubleSidedCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MeshComponent* mesh = get_mesh(scene, x);
-			if (mesh == nullptr)
-				continue;
-			mesh->SetDoubleSided(args.bValue);
-		}
-	});
+	doubleSidedCheckBox.OnClick(forEachSelected([&] (auto mesh, auto args) {
+		mesh->SetDoubleSided(args.bValue);
+	}));
 	AddWidget(&doubleSidedCheckBox);
 
 	doubleSidedShadowCheckBox.Create("Double Sided Shadow: ");
 	doubleSidedShadowCheckBox.SetTooltip("If enabled, the shadow rendering will be forced to use double sided mode.\nThis can help fix some shadow artifacts without enabling double sided mode for the main rendering of this mesh.");
-	doubleSidedShadowCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MeshComponent* mesh = get_mesh(scene, x);
-			if (mesh == nullptr)
-				continue;
-			mesh->SetDoubleSidedShadow(args.bValue);
-		}
-	});
+	doubleSidedShadowCheckBox.OnClick(forEachSelected([&] (auto mesh, auto args) {
+		mesh->SetDoubleSidedShadow(args.bValue);
+	}));
 	AddWidget(&doubleSidedShadowCheckBox);
 
 	bvhCheckBox.Create("Enable BVH: ");
 	bvhCheckBox.SetTooltip("Whether to generate BVH (Bounding Volume Hierarchy) for the mesh or not.\nBVH will be used to optimize intersections with the mesh at an additional memory cost.\nIt is recommended to use a BVH for high polygon count meshes that will be used for intersections.\nThis CPU BVH does not support skinned or morphed geometry.");
-	bvhCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MeshComponent* mesh = get_mesh(scene, x);
-			if (mesh == nullptr)
-				continue;
-			mesh->SetBVHEnabled(args.bValue);
-		}
-	});
+	bvhCheckBox.OnClick(forEachSelected([&] (auto mesh, auto args) {
+		mesh->SetBVHEnabled(args.bValue);
+	}));
 	AddWidget(&bvhCheckBox);
 
 	quantizeCheckBox.Create("Quantization Disabled: ");
 	quantizeCheckBox.SetTooltip("Disable quantization of vertex positions if you notice inaccuracy errors with UNORM position formats.");
-	quantizeCheckBox.OnClick([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MeshComponent* mesh = get_mesh(scene, x);
-			if (mesh == nullptr)
-				continue;
-			mesh->SetQuantizedPositionsDisabled(args.bValue);
+	quantizeCheckBox.OnClick(forEachSelected([&] (auto mesh, auto args) {
+		mesh->SetQuantizedPositionsDisabled(args.bValue);
 			mesh->CreateRenderData();
 			if (!mesh->BLASes.empty())
 			{
 				mesh->CreateRaytracingRenderData();
 			}
-		}
-	});
+	}));
 	AddWidget(&quantizeCheckBox);
 
 	impostorCreateButton.Create("Create Impostor");
@@ -229,16 +213,9 @@ void MeshWindow::Create(EditorComponent* _editor)
 
 	tessellationFactorSlider.Create(0, 100, 0, 10000, "Tess Factor: ");
 	tessellationFactorSlider.SetTooltip("Set the dynamic tessellation amount. Tessellation should be enabled in the Renderer window and your GPU must support it!");
-	tessellationFactorSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MeshComponent* mesh = get_mesh(scene, x);
-			if (mesh == nullptr)
-				continue;
-			mesh->tessellationFactor = args.fValue;
-		}
-	});
+	tessellationFactorSlider.OnSlide(forEachSelected([&] (auto mesh, auto args) {
+		mesh->tessellationFactor = args.fValue;
+	}));
 	AddWidget(&tessellationFactorSlider);
 
 	instanceSelectButton.Create("Select instances");
@@ -263,104 +240,63 @@ void MeshWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&instanceSelectButton);
 
+	auto changeSelectedMesh = [&] (auto func) {
+		return [&] (auto args) {
+			wi::scene::Scene& scene = editor->GetCurrentScene();
+			wi::unordered_set<MeshComponent*> visited_meshes; // fix double visit (straight mesh + object->mesh)
+			for (auto& x : editor->translator.selected)
+			{
+				MeshComponent* mesh = get_mesh(scene, x);
+				if (mesh == nullptr || visited_meshes.count(mesh) > 0)
+					continue;
+				func(mesh);
+				visited_meshes.insert(mesh);
+			};
+			SetEntity(entity, subset);
+		};
+	};
+
 	flipCullingButton.Create("Flip Culling");
 	flipCullingButton.SetTooltip("Flip faces to reverse triangle culling order.");
-	flipCullingButton.OnClick([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		wi::unordered_set<MeshComponent*> visited_meshes; // fix double visit (straight mesh + object->mesh)
-		for (auto& x : editor->translator.selected)
-		{
-			MeshComponent* mesh = get_mesh(scene, x);
-			if (mesh == nullptr || visited_meshes.count(mesh) > 0)
-				continue;
-			mesh->FlipCulling();
-			visited_meshes.insert(mesh);
-		}
-		SetEntity(entity, subset);
-	});
+	flipCullingButton.OnClick(changeSelectedMesh([&] (auto mesh) {
+		mesh->FlipCulling();
+	}));
 	AddWidget(&flipCullingButton);
 
 	flipNormalsButton.Create("Flip Normals");
 	flipNormalsButton.SetTooltip("Flip surface normals.");
-	flipNormalsButton.OnClick([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		wi::unordered_set<MeshComponent*> visited_meshes; // fix double visit (straight mesh + object->mesh)
-		for (auto& x : editor->translator.selected)
-		{
-			MeshComponent* mesh = get_mesh(scene, x);
-			if (mesh == nullptr || visited_meshes.count(mesh) > 0)
-				continue;
-			mesh->FlipNormals();
-			visited_meshes.insert(mesh);
-		}
-		SetEntity(entity, subset);
-	});
+	flipNormalsButton.OnClick(changeSelectedMesh([&] (auto mesh) {
+		mesh->FlipNormals();
+	}));
 	AddWidget(&flipNormalsButton);
 
 	computeNormalsSmoothButton.Create("Compute Normals [SMOOTH]");
 	computeNormalsSmoothButton.SetTooltip("Compute surface normals of the mesh. Resulting normals will be unique per vertex. This can reduce vertex count, but is slow.");
-	computeNormalsSmoothButton.OnClick([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		wi::unordered_set<MeshComponent*> visited_meshes; // fix double visit (straight mesh + object->mesh)
-		for (auto& x : editor->translator.selected)
-		{
-			MeshComponent* mesh = get_mesh(scene, x);
-			if (mesh == nullptr || visited_meshes.count(mesh) > 0)
-				continue;
-			mesh->ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH);
-			visited_meshes.insert(mesh);
-		}
-		SetEntity(entity, subset);
-	});
+	computeNormalsSmoothButton.OnClick(changeSelectedMesh([&] (auto mesh) {
+		mesh->ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH);
+	}));
 	AddWidget(&computeNormalsSmoothButton);
 
 	computeNormalsHardButton.Create("Compute Normals [HARD]");
 	computeNormalsHardButton.SetTooltip("Compute surface normals of the mesh. Resulting normals will be unique per face. This can increase vertex count.");
-	computeNormalsHardButton.OnClick([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		wi::unordered_set<MeshComponent*> visited_meshes; // fix double visit (straight mesh + object->mesh)
-		for (auto& x : editor->translator.selected)
-		{
-			MeshComponent* mesh = get_mesh(scene, x);
-			if (mesh == nullptr || visited_meshes.count(mesh) > 0)
-				continue;
-			mesh->ComputeNormals(MeshComponent::COMPUTE_NORMALS_HARD);
-			visited_meshes.insert(mesh);
-		}
-		SetEntity(entity, subset);
-	});
+	computeNormalsHardButton.OnClick(changeSelectedMesh([&] (auto mesh) {
+		mesh->ComputeNormals(MeshComponent::COMPUTE_NORMALS_HARD);
+
+	}));
 	AddWidget(&computeNormalsHardButton);
 
 	recenterButton.Create("Recenter");
 	recenterButton.SetTooltip("Recenter mesh to AABB center.");
-	recenterButton.OnClick([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		wi::unordered_set<MeshComponent*> visited_meshes; // fix double visit (straight mesh + object->mesh)
-		for (auto& x : editor->translator.selected)
-		{
-			MeshComponent* mesh = get_mesh(scene, x);
-			if (mesh == nullptr || visited_meshes.count(mesh) > 0)
-				continue;
-			mesh->Recenter();
-			visited_meshes.insert(mesh);
-		}
-	});
+	recenterButton.OnClick(changeSelectedMesh([&] (auto mesh) {
+		mesh->Recenter();
+	}));
 	AddWidget(&recenterButton);
 
 	recenterToBottomButton.Create("RecenterToBottom");
 	recenterToBottomButton.SetTooltip("Recenter mesh to AABB bottom.");
-	recenterToBottomButton.OnClick([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		wi::unordered_set<MeshComponent*> visited_meshes; // fix double visit (straight mesh + object->mesh)
-		for (auto& x : editor->translator.selected)
-		{
-			MeshComponent* mesh = get_mesh(scene, x);
-			if (mesh == nullptr || visited_meshes.count(mesh) > 0)
-				continue;
-			mesh->RecenterToBottom();
-			visited_meshes.insert(mesh);
-		}
-	});
+	recenterToBottomButton.OnClick(changeSelectedMesh([&] (auto mesh) {
+		mesh->RecenterToBottom();
+	}));
 	AddWidget(&recenterToBottomButton);
 
 	mergeButton.Create("Merge Selected");
@@ -630,19 +566,14 @@ void MeshWindow::Create(EditorComponent* _editor)
 		{
 			scene.Entity_Remove(x);
 		}
-		
+
 	});
 	AddWidget(&mergeButton);
 
 	optimizeButton.Create("Optimize");
 	optimizeButton.SetTooltip("Run the meshoptimizer library.");
-	optimizeButton.OnClick([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MeshComponent* mesh = get_mesh(scene, x);
-			if (mesh == nullptr)
-				continue;
+	optimizeButton.OnClick([=] (auto args) {
+		forEachSelected([] (auto mesh, auto args) {
 			// https://github.com/zeux/meshoptimizer#vertex-cache-optimization
 
 			size_t index_count = mesh->indices.size();
@@ -654,7 +585,7 @@ void MeshWindow::Create(EditorComponent* _editor)
 			mesh->indices = indices;
 
 			mesh->CreateRenderData();
-		}
+		})(args);
 		SetEntity(entity, subset);
 	});
 	AddWidget(&optimizeButton);
@@ -666,8 +597,8 @@ void MeshWindow::Create(EditorComponent* _editor)
 		params.description = ".h (C++ header file)";
 		params.extensions.push_back("h");
 		params.type = wi::helper::FileDialogParams::TYPE::SAVE;
-		wi::helper::FileDialog(params, [=](std::string filename) {
-			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+		wi::helper::FileDialog(params, [&](std::string filename) {
+			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [&](uint64_t userdata) {
 
 				wi::scene::Scene& scene = editor->GetCurrentScene();
 				wi::vector<XMFLOAT3> vertices;
@@ -817,30 +748,18 @@ void MeshWindow::Create(EditorComponent* _editor)
 
 	morphTargetSlider.Create(0, 1, 0, 100000, "Weight: ");
 	morphTargetSlider.SetTooltip("Set the weight for morph target");
-	morphTargetSlider.OnSlide([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MeshComponent* mesh = get_mesh(scene, x);
-			if (mesh == nullptr)
-				continue;
-			if (morphTargetCombo.GetSelected() < (int)mesh->morph_targets.size())
+	morphTargetSlider.OnSlide(forEachSelected([&] (auto mesh, auto args) {
+		if (morphTargetCombo.GetSelected() < (int)mesh->morph_targets.size())
 			{
 				mesh->morph_targets[morphTargetCombo.GetSelected()].weight = args.fValue;
 			}
-		}
-	});
+	}));
 	AddWidget(&morphTargetSlider);
 
 	lodgenButton.Create("LOD Gen");
 	lodgenButton.SetTooltip("Generate LODs (levels of detail).");
-	lodgenButton.OnClick([&](wi::gui::EventArgs args) {
-		wi::scene::Scene& scene = editor->GetCurrentScene();
-		for (auto& x : editor->translator.selected)
-		{
-			MeshComponent* mesh = get_mesh(scene, x);
-			if (mesh == nullptr)
-				continue;
+	lodgenButton.OnClick([=] (auto args) {
+		forEachSelected([&] (auto mesh, auto args) {
 			if (mesh->subsets_per_lod == 0)
 			{
 				// if there were no lods before, record the subset count without lods:
@@ -933,7 +852,7 @@ void MeshWindow::Create(EditorComponent* _editor)
 					subsets.back().indexCount = (uint32_t)lods[i].subsets[subsetIndex].indices.size();
 					for (auto& x : lods[i].subsets[subsetIndex].indices)
 					{
-						mesh->indices.push_back(x);
+				 		mesh->indices.push_back(x);
 					}
 				}
 			}
@@ -945,7 +864,7 @@ void MeshWindow::Create(EditorComponent* _editor)
 			{
 				mesh->BuildBVH();
 			}
-		}
+		})(args);
 		SetEntity(entity, subset);
 	});
 	AddWidget(&lodgenButton);

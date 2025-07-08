@@ -302,7 +302,9 @@ namespace wi::font
 		// add default font if there is none yet:
 		if (fontStyles.empty())
 		{
-			AddFontStyle("Liberation Sans", liberation_sans, sizeof(liberation_sans));
+			wi::vector<uint8_t> data;
+			helper::Decompress(liberation_sans_zstd, sizeof(liberation_sans_zstd), data);
+			AddFontStyle("Liberation Sans", data.data(), data.size(), true);
 		}
 
 		RasterizerState rs;
