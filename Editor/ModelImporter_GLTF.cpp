@@ -142,6 +142,39 @@ void Import_VRMC_Bone(LoaderState& state, Entity boneEntity, const std::string& 
 void Import_Mixamo_Bone(LoaderState& state, Entity boneEntity, const tinygltf::Node& node);
 void Import_Makehuman_Bone(LoaderState& state, Entity boneEntity, const tinygltf::Node& node);
 
+static void ImportMetadata(LoaderState& state, Entity entity, const tinygltf::Value& extras)
+{
+	if (extras.IsObject())
+	{
+		MetadataComponent& metadata = state.scene->metadatas.Create(entity);
+
+		for (auto& key : extras.Keys())
+		{
+			auto& value = extras.Get(key);
+			switch (value.Type())
+			{
+			case tinygltf::Type::BOOL_TYPE:
+				metadata.bool_values.set(key, value.Get<bool>());
+				break;
+			case tinygltf::Type::INT_TYPE:
+				metadata.int_values.set(key, value.Get<int>());
+				break;
+			case tinygltf::Type::REAL_TYPE:
+				metadata.float_values.set(key, float(value.Get<double>()));
+				break;
+			case tinygltf::Type::STRING_TYPE:
+				metadata.string_values.set(key, value.Get<std::string>());
+				break;
+			default:
+				json j;
+				tinygltf::ValueToJson(value, &j);
+				metadata.string_values.set(key, j.dump());
+			}
+		}
+	}
+
+}
+
 // Recursively loads nodes and resolves hierarchy:
 void LoadNode(int nodeIndex, Entity parent, LoaderState& state)
 {
@@ -258,6 +291,8 @@ void LoadNode(int nodeIndex, Entity parent, LoaderState& state)
 		transform.world._44 = (float)node.matrix[15];
 		transform.ApplyTransform(); // this creates S, R, T vectors from world matrix
 	}
+
+	ImportMetadata(state, entity, node.extras);
 
 	transform.UpdateTransform();
 
@@ -932,6 +967,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				material.textures[MaterialComponent::ANISOTROPYMAP].uvset = (uint32_t)param.Get("texCoord").Get<int>();
 			}
 		}
+		ImportMetadata(state, materialEntity, x.extras);
 
 		material.CreateRenderData();
 	}
@@ -1531,6 +1567,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			mesh.ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH_FAST);
 		}
 
+		ImportMetadata(state, meshEntity, x.extras);
 		mesh.CreateRenderData(); // tangents are generated inside if needed, which must be done before FlipZAxis!
 	}
 
@@ -1556,6 +1593,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		{
 			assert(0);
 		}
+		ImportMetadata(state, armatureEntity, skin.extras);
 	}
 
 	// Create transform hierarchy, assign objects, meshes, armatures, cameras:
@@ -1740,7 +1778,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				animationcomponent.channels[i].path = AnimationComponent::AnimationChannel::Path::UNKNOWN;
 			}
 		}
-
+		ImportMetadata(state, entity, anim.extras);
 	}
 
 	// Create lights:
@@ -1779,6 +1817,8 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		// In gltf, default light direction is forward, in engine, it's downwards, so apply a rotation:
 		TransformComponent& transform = *scene.transforms.GetComponent(entity);
 		transform.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2, 0, 0));
+
+		ImportMetadata(state, entity, x.extras);
 	}
 
 	int cameraIndex = 0;
@@ -1797,6 +1837,8 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		camera.fov = (float)x.perspective.yfov;
 		camera.zFarP = (float)x.perspective.zfar;
 		camera.zNearP = (float)x.perspective.znear;
+
+		ImportMetadata(state, entity, x.extras);
 	}
 
 	// https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Vendor/EXT_lights_image_based/README.md
