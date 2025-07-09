@@ -147,150 +147,89 @@ void MetadataWindow::RefreshEntries()
 		metadata->string_values.size()
 	);
 
-
-	auto forEachSelectedWithRefresh = [this] (auto name, auto func) {
-		return [this, func, name] (auto args) {
-			wi::scene::Scene& scene = editor->GetCurrentScene();
-			for (auto& x : editor->translator.selected)
-			{
-				MetadataComponent* metadata = scene.metadatas.GetComponent(x.entity);
-				if (metadata != nullptr && metadata->bool_values.has(name))
-				{
-					func(metadata, args);
-				}
-			}
-			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
-				RefreshEntries();
-			});
-		};
+	auto forEachSelectedNameWithRefresh = [this] (auto MetadataComponent::* mptr, auto name, auto func) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (auto& x : editor->translator.selected)
+		{
+			MetadataComponent* metadata = scene.metadatas.GetComponent(x.entity);
+			if (metadata != nullptr && (metadata->*mptr).has(name))
+				func(metadata->*mptr);
+		}
+		wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
+			RefreshEntries();
+		});
 	};
 
-	// Note: to not disturb the ordering of entries while editing them, we iterate by the ordered names array in each table
+	auto createEntry = [=] (auto MetadataComponent::* mptr, auto wi::gui::EventArgs::* aptr, auto createValueEntryFunc) {
+		// Note: to not disturb the ordering of entries while editing them, we iterate by the ordered names array in each table
+		for (auto& name : (metadata->*mptr).names)
+		{
+			Entry& entry = entries.emplace_back();
+			entry.name.Create("");
+			entry.name.SetText(name);
+			entry.name.OnInputAccepted([=] (auto args) {
+				forEachSelectedNameWithRefresh(mptr, name, [=] (auto&& values) {
+					auto value = values.get(name);
+					values.erase(name);
+					values.set(args.sValue, value);
+				});
+			});
+			AddWidget(&entry.name);
 
-	for (auto& name : metadata->bool_values.names)
-	{
-		Entry& entry = entries.emplace_back();
-		entry.name.Create("");
-		entry.name.SetText(name);
-		entry.name.OnInputAccepted(forEachSelectedWithRefresh(name, [&name] (auto metadata, auto args) {
-			if (!metadata->bool_values.has(name))
-				return;
-			auto value = metadata->bool_values.get(name);
-			metadata->bool_values.erase(name);
-			metadata->bool_values.set(args.sValue, value);
-		}));
-		AddWidget(&entry.name);
+			AddWidget(createValueEntryFunc(entry, (metadata->*mptr).get(name), [=] (auto args) {
+				forEachSelectedNameWithRefresh(mptr, name, [=] (auto&& values) {
+					values.set(name, args.*aptr);
+				});
+			}));
 
+			entry.remove.Create("");
+			entry.remove.SetText("X");
+			entry.remove.SetSize(XMFLOAT2(entry.remove.GetSize().y, entry.remove.GetSize().y));
+			entry.remove.OnClick([=] (auto args) {
+				forEachSelectedNameWithRefresh(mptr, name, [=] (auto&& values) {
+					values.erase(name);
+				});
+			});
+			AddWidget(&entry.remove);
+		}
+
+	};
+
+	createEntry(&MetadataComponent::bool_values, &wi::gui::EventArgs::bValue, [] (auto&& entry, auto&& value, auto&& func) {
 		entry.is_bool = true;
 		entry.check.Create("");
 		entry.check.SetText(" = (bool) ");
-		entry.check.SetCheck(metadata->bool_values.get(name));
-		entry.check.OnClick(forEachSelectedWithRefresh(name, [&name] (auto metadata, auto args) {
-			metadata->bool_values.set(name, args.bValue);
-		}));
-		AddWidget(&entry.check);
-
-		entry.remove.Create("");
-		entry.remove.SetText("X");
-		entry.remove.SetSize(XMFLOAT2(entry.remove.GetSize().y, entry.remove.GetSize().y));
-		entry.remove.OnClick(forEachSelectedWithRefresh(name, [&name] (auto metadata, auto args) {
-			metadata->bool_values.erase(name);
-		}));
-		AddWidget(&entry.remove);
-	}
-
-	for (auto& name : metadata->int_values.names)
-	{
-		Entry& entry = entries.emplace_back();
-		entry.name.Create("");
-		entry.name.SetText(name);
-		entry.name.OnInputAccepted(forEachSelectedWithRefresh(name, [&name] (auto metadata, auto args) {
-			auto value = metadata->int_values.get(name);
-			metadata->int_values.erase(name);
-			metadata->int_values.set(args.sValue, value);
-		}));
-		AddWidget(&entry.name);
-
+		entry.check.SetCheck(value);
+		entry.check.OnClick(func);
+		return &entry.check;
+	});
+	createEntry(&MetadataComponent::int_values, &wi::gui::EventArgs::iValue, [] (auto&& entry, auto&& value, auto&& func) {
 		entry.is_bool = false;
 		entry.value.Create("");
 		entry.value.SetDescription(" = (int) ");
 		entry.value.SetSize(XMFLOAT2(60, entry.value.GetSize().y));
-		entry.value.SetValue(metadata->int_values.get(name));
-		entry.value.OnInputAccepted(forEachSelectedWithRefresh(name, [&name] (auto metadata, auto args) {
-			metadata->int_values.set(name, args.iValue);
-		}));
-		AddWidget(&entry.value);
-
-		entry.remove.Create("");
-		entry.remove.SetText("X");
-		entry.remove.SetSize(XMFLOAT2(entry.remove.GetSize().y, entry.remove.GetSize().y));
-		entry.remove.OnClick(forEachSelectedWithRefresh(name, [&name] (auto metadata, auto args) {
-			metadata->int_values.erase(name);
-		}));
-		AddWidget(&entry.remove);
-	}
-
-	for (auto& name : metadata->float_values.names)
-	{
-		Entry& entry = entries.emplace_back();
-		entry.name.Create("");
-		entry.name.SetText(name);
-		entry.name.OnInputAccepted(forEachSelectedWithRefresh(name, [&name] (auto metadata, auto args) {
-			auto value = metadata->float_values.get(name);
-			metadata->float_values.erase(name);
-			metadata->float_values.set(args.sValue, value);
-		}));
-		AddWidget(&entry.name);
-
+		entry.value.SetValue(value);
+		entry.value.OnInputAccepted(func);
+		return &entry.value;
+	});
+	createEntry(&MetadataComponent::float_values, &wi::gui::EventArgs::fValue, [] (auto&& entry, auto&& value, auto&& func) {
 		entry.is_bool = false;
 		entry.value.Create("");
 		entry.value.SetDescription(" = (float) ");
 		entry.value.SetSize(XMFLOAT2(60, entry.value.GetSize().y));
-		entry.value.SetValue(metadata->float_values.get(name));
-		entry.value.OnInputAccepted(forEachSelectedWithRefresh(name, [&name] (auto metadata, auto args) {
-			metadata->float_values.set(name, args.fValue);
-		}));
-		AddWidget(&entry.value);
-
-		entry.remove.Create("");
-		entry.remove.SetText("X");
-		entry.remove.SetSize(XMFLOAT2(entry.remove.GetSize().y, entry.remove.GetSize().y));
-		entry.remove.OnClick(forEachSelectedWithRefresh(name, [&name] (auto metadata, auto args) {
-			metadata->float_values.erase(name);
-		}));
-		AddWidget(&entry.remove);
-	}
-
-	for (auto& name : metadata->string_values.names)
-	{
-		Entry& entry = entries.emplace_back();
-		entry.name.Create("");
-		entry.name.SetText(name);
-		entry.name.OnInputAccepted(forEachSelectedWithRefresh(name, [&name] (auto metadata, auto args) {
-			auto value = metadata->string_values.get(name);
-			metadata->string_values.erase(name);
-			metadata->string_values.set(args.sValue, value);
-		}));
-		AddWidget(&entry.name);
-
+		entry.value.SetValue(value);
+		entry.value.OnInputAccepted(func);
+		return &entry.value;
+	});
+	createEntry(&MetadataComponent::string_values, &wi::gui::EventArgs::sValue, [] (auto&& entry, auto&& value, auto&& func) {
 		entry.is_bool = false;
 		entry.value.Create("");
 		entry.value.SetDescription(" = (string) ");
 		entry.value.SetSize(XMFLOAT2(120, entry.value.GetSize().y));
-		entry.value.SetValue(metadata->string_values.get(name));
-		entry.value.OnInputAccepted(forEachSelectedWithRefresh(name, [&name] (auto metadata, auto args) {
-			metadata->string_values.set(name, args.sValue);
-		}));
-		AddWidget(&entry.value);
-
-		entry.remove.Create("");
-		entry.remove.SetText("X");
-		entry.remove.SetSize(XMFLOAT2(entry.remove.GetSize().y, entry.remove.GetSize().y));
-		entry.remove.OnClick(forEachSelectedWithRefresh(name, [&name] (auto metadata, auto args) {
-			metadata->string_values.erase(name);
-		}));
-		AddWidget(&entry.remove);
-	}
+		entry.value.SetValue(value);
+		entry.value.OnInputAccepted(func);
+		return &entry.value;
+	});
 
 	editor->generalWnd.RefreshTheme();
 }
