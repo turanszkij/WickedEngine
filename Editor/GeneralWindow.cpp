@@ -408,7 +408,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		case Theme::Dark:
 			editor->main->config.GetSection("options").Set("theme", "Dark");
 			editor->themeEditorWnd.imageResource = {};
-			theme_color_wave = wi::Color(99, 155, 220, 70);
+			theme_color_wave = wi::Color(99, 155, 220, 103);
 			break;
 		case Theme::Bright:
 			editor->main->config.GetSection("options").Set("theme", "Bright");
