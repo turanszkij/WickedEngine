@@ -12,9 +12,15 @@ if (UNIX)
     target_compile_definitions(LUA PUBLIC LUA_USE_POSIX=1)
 endif()
 
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    target_compile_options(LUA PRIVATE
+        -Wno-string-plus-int
+    )
+endif()
+
 set_target_properties(LUA PROPERTIES
-	FOLDER "ThirdParty"
-	POSITION_INDEPENDENT_CODE ${WICKED_PIC}
+    FOLDER "ThirdParty"
+    POSITION_INDEPENDENT_CODE ${WICKED_PIC}
 )
 
 install(FILES ${LUA_HEADERS}

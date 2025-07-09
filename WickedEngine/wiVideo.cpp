@@ -192,7 +192,7 @@ namespace wi::video
 						int size = 0;
 						int index = 0;
 						const void* data = nullptr;
-						while (data = MP4D_read_sps(&mp4, ntrack, index, &size))
+						while ((data = MP4D_read_sps(&mp4, ntrack, index, &size)))
 						{
 							const uint8_t* sps_data = (const uint8_t*)data;
 #ifdef DEBUG_DUMP_H264
@@ -236,7 +236,7 @@ namespace wi::video
 						int size = 0;
 						int index = 0;
 						const void* data = nullptr;
-						while (data = MP4D_read_pps(&mp4, ntrack, index, &size))
+						while ((data = MP4D_read_pps(&mp4, ntrack, index, &size)))
 						{
 							const uint8_t* pps_data = (const uint8_t*)data;
 #ifdef DEBUG_DUMP_H264
