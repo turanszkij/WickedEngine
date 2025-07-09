@@ -125,6 +125,9 @@ else ()
 			#-Werror
 			#uncomment this to stop the compilation at the first error
 			# -Wfatal-errors
+
+			# turn off some warnings we don't want
+			-Wno-nullability-completeness   # _Nonnull etc. are only supported on Clang
 			)
 	elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	# add some warnings and set them as errors
