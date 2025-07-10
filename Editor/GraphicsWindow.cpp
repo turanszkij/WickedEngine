@@ -1588,12 +1588,12 @@ void GraphicsWindow::Update()
 	if (editor->resolutionScale != editor->renderPath->resolutionScale)
 	{
 		editor->renderPath->resolutionScale = editor->resolutionScale;
-		//editor->ResizeBuffers();
+		editor->ResizeBuffers();
 	}
 	if (MSAAComboBox.GetItemUserData(MSAAComboBox.GetSelected()) != editor->renderPath->getMSAASampleCount())
 	{
 		editor->renderPath->setMSAASampleCount((uint32_t)MSAAComboBox.GetItemUserData(MSAAComboBox.GetSelected()));
-		//editor->ResizeBuffers();
+		editor->ResizeBuffers();
 	}
 
 	if (IsCollapsed())
