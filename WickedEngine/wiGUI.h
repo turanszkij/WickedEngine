@@ -931,6 +931,8 @@ namespace wi::gui
 
 		void ExportLocalization(wi::Localization& localization) const override;
 		void ImportLocalization(const wi::Localization& localization) override;
+
+		wi::graphics::Texture background_overlay;
 	};
 
 	// HSV-Color Picker

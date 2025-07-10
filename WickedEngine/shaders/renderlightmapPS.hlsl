@@ -39,12 +39,14 @@ void BakeryPixelPush(inout float3 P, in float3 N, in float2 UV, inout RNG rng, i
 	
 	float3x3 TBN = compute_tangent_frame(N, P, UV);
 
-	for (uint i = 0; i < arraysize(tangent_directions); ++i)
+	bool valid = true; // AMD DX12 issue workaround for early break/return!
+	
+	for (uint i = 0; i < arraysize(tangent_directions) && WaveActiveAnyTrue(valid); ++i)
 	{
 		RayDesc ray;
-		ray.Origin = P + N * 0.0001;
+		ray.Origin = P + N * 0.001;
 		ray.Direction = normalize(mul(float3(tangent_directions[i], 1), TBN));
-		ray.TMin = 0.0001;
+		ray.TMin = 0.001;
 		ray.TMax = dPos;
 	
 		bool backface_hit = false;
@@ -55,8 +57,12 @@ void BakeryPixelPush(inout float3 P, in float3 N, in float2 UV, inout RNG rng, i
 		surface.init();
 		surface.V = -ray.Direction;
 
+		valid = true;
+
 #ifdef RTAPI
-		uint flags = 0;
+		uint flags = RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES;
+		flags |= RAY_FLAG_FORCE_OPAQUE;
+		flags |= RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH;
 		wiRayQuery q;
 		q.TraceRayInline(
 			scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
@@ -80,7 +86,7 @@ void BakeryPixelPush(inout float3 P, in float3 N, in float2 UV, inout RNG rng, i
 
 			surface.hit_depth = q.CommittedRayT();
 			if (!surface.load(prim, q.CommittedTriangleBarycentrics()))
-				return;
+				valid = false;
 
 			hit_nor = surface.facenormal;
 		}
@@ -95,21 +101,21 @@ void BakeryPixelPush(inout float3 P, in float3 N, in float2 UV, inout RNG rng, i
 
 			surface.hit_depth = hit.distance;
 			if (!surface.load(hit.primitiveID, hit.bary))
-				return;
+				valid = false;
 
 			hit_nor = surface.facenormal;
 		}
 #endif // RTAPI
 
-		if (backface_hit)
+		if (valid && backface_hit)
 		{
 			bakerydebug = 1;
 			P = hit_pos - hit_nor * 0.001;
-			return;
 		}
 	}
 }
 
+[earlydepthstencil]
 float4 main(Input input) : SV_TARGET
 {
 #ifdef DEBUG_CHARTS
@@ -131,9 +137,9 @@ float4 main(Input input) : SV_TARGET
 	BakeryPixelPush(P, surface.N, uv, rng, bakerydebug);
 	
 	RayDesc ray;
-	ray.Origin = P;
+	ray.Origin = P + surface.N * 0.001;
 	ray.Direction = normalize(sample_hemisphere_cos(surface.N, rng));
-	ray.TMin = 0.0001;
+	ray.TMin = 0.001;
 	ray.TMax = FLT_MAX;
 	float3 result = 0;
 	float3 energy = 1;
@@ -288,8 +294,8 @@ float4 main(Input input) : SV_TARGET
 					float3 shadow = energy;
 
 					RayDesc newRay;
-					newRay.Origin = surface.P;
-					newRay.TMin = 0.0001;
+					newRay.Origin = surface.P + surface.N * 0.001;
+					newRay.TMin = 0.001;
 					newRay.TMax = dist;
 					newRay.Direction = normalize(L + max3(surface.sss));
 
@@ -440,6 +446,8 @@ float4 main(Input input) : SV_TARGET
 				ray.Direction = sample_hemisphere_cos(surface.N, rng);
 				energy *= surface.albedo * (1 - surface.F) / max(0.001, 1 - specular_chance) / max(0.001, 1 - surface.transmission);
 			}
+			
+			ray.Origin += surface.facenormal * 0.001; // NOTE: TMin on AMD doesn't handle CommittedTriangleFrontFace correctly, so origin is updated instead!
 		}
 
 		// Terminate ray's path or apply inverse termination bias:

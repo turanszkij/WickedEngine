@@ -12,9 +12,11 @@ namespace wi
 		constexpr Color(uint8_t r = 0, uint8_t g = 0, uint8_t b = 0, uint8_t a = 255) : rgba(uint32_t(r) | (uint32_t(g) << 8) | (uint32_t(b) << 16) | (uint32_t(a) << 24)) {}
 		constexpr Color(const char* hex)
 		{
-			Color abgr;
+			int len = 0;
+			while (hex[len++] != 0) {}
+			rgba = 0;
 			uint32_t shift = 0u;
-			for (int i = 0; i < 9; ++i)
+			for (int i = len - 1; i >= 0; i--)
 			{
 				const char c = hex[i];
 				switch (c)
@@ -29,7 +31,7 @@ namespace wi
 				case '7':
 				case '8':
 				case '9':
-					abgr.rgba |= (c - '0') << shift;
+					rgba |= (c - '0') << shift;
 					shift += 4u;
 					break;
 				case 'A':
@@ -38,7 +40,7 @@ namespace wi
 				case 'D':
 				case 'E':
 				case 'F':
-					abgr.rgba |= (c - 'A' + 10) << shift;
+					rgba |= (c - 'A' + 10) << shift;
 					shift += 4u;
 					break;
 				case 'a':
@@ -47,24 +49,18 @@ namespace wi
 				case 'd':
 				case 'e':
 				case 'f':
-					abgr.rgba |= (c - 'a' + 10) << shift;
+					rgba |= (c - 'a' + 10) << shift;
 					shift += 4u;
 					break;
 				case '#':
 					break;
 				default:
 				case 0:
-					setR(abgr.getA());
-					setG(abgr.getB());
-					setB(abgr.getG());
-					setA(abgr.getR());
-					return;
+					break;
 				}
+				if (len < 8)
+					setA(255);
 			}
-			setR(abgr.getA());
-			setG(abgr.getB());
-			setB(abgr.getG());
-			setA(abgr.getR());
 		}
 
 		constexpr uint8_t getR() const { return (rgba >> 0) & 0xFF; }
@@ -106,12 +102,11 @@ namespace wi
 		};
 		constexpr const char_return<9> to_hex() const
 		{
-			const uint32_t abgr = Color(getA(), getB(), getG(), getR()).rgba;
 			char_return<9> ret;
-			for (int i = 0; i < 8; ++i)
+			for (int i = 7; i >= 0; i--)
 			{
-				const uint8_t v = (abgr >> (i * 4)) & 0xF;
-				ret.text[i] = v < 10 ? ('0' + v) : ('A' + v - 10);
+				const uint8_t v = (rgba >> (i * 4)) & 0xF;
+				ret.text[7 - i] = v < 10 ? ('0' + v) : ('A' + v - 10);
 			}
 			return ret;
 		}

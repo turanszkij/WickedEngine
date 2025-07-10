@@ -1,8 +1,6 @@
 #include "globals.hlsli"
 
-float4 main(uint vertexID : SV_VertexID) : SV_Position
+void main(uint vertexID : SV_VertexID, out float4 pos : SV_Position, out float2 uv : TEXCOORD)
 {
-	float4 pos;
-	vertexID_create_fullscreen_triangle(vertexID, pos);
-	return pos;
+	vertexID_create_fullscreen_triangle(vertexID, pos, uv);
 }

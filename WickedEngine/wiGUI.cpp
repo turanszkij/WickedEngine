@@ -4095,6 +4095,14 @@ namespace wi::gui
 				}
 			}
 			wi::image::Draw(sprites[IDLE].GetTexture(), params, cmd);
+
+			if (background_overlay.IsValid())
+			{
+				params.blendFlag = wi::enums::BLENDMODE_ADDITIVE;
+				params.color.w = 0;
+				params.setBackgroundMap(&background_overlay);
+				wi::image::Draw(nullptr, params, cmd);
+			}
 		}
 
 		for (size_t i = 0; i < widgets.size(); ++i)

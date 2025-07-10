@@ -420,6 +420,14 @@ void EditorComponent::ResizeBuffers()
 	renderPath->width = 0; // force resize buffers
 	renderPath->height = 0;// force resize buffers
 	ResizeViewport3D();
+
+	TextureDesc desc;
+	desc.width = GetPhysicalWidth();
+	desc.height = GetPhysicalHeight();
+	desc.format = Format::R10G10B10A2_UNORM;
+	desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+	GetDevice()->CreateTexture(&desc, nullptr, &gui_background_effect);
+	GetDevice()->SetName(&gui_background_effect, "gui_background_effect");
 }
 void EditorComponent::ResizeLayout()
 {
@@ -445,7 +453,7 @@ void EditorComponent::ResizeLayout()
 	projectCreatorWnd.SetSize(XMFLOAT2(projectCreatorWnd.backgroundColorPicker.GetSize().x * 2 + 4 * 3, std::min(780.0f, screenH * 0.8f)));
 	projectCreatorWnd.SetPos(XMFLOAT2(screenW / 2.0f - projectCreatorWnd.scale.x / 2.0f, screenH / 2.0f - projectCreatorWnd.scale.y / 2.0f));
 
-	themeEditorWnd.SetSize(XMFLOAT2(640, std::min(780.0f, screenH * 0.8f)));
+	themeEditorWnd.SetSize(XMFLOAT2(740, std::min(780.0f, screenH * 0.8f)));
 	themeEditorWnd.SetPos(XMFLOAT2(screenW / 2.0f - themeEditorWnd.scale.x / 2.0f, screenH / 2.0f - themeEditorWnd.scale.y / 2.0f));
 
 }
@@ -3019,6 +3027,27 @@ void EditorComponent::Update(float dt)
 	{
 		wi::renderer::SetToDrawDebugSprings(generalWnd.springVisCheckBox.GetCheck());
 	}
+
+	if (generalWnd.focusModeCheckBox.GetCheck() || themeEditorWnd.waveColor.getA() == 0)
+	{
+		topmenuWnd.background_overlay = {};
+		componentsWnd.background_overlay = {};
+		generalWnd.background_overlay = {};
+		graphicsWnd.background_overlay = {};
+		paintToolWnd.background_overlay = {};
+		cameraWnd.background_overlay = {};
+		materialPickerWnd.background_overlay = {};
+	}
+	else
+	{
+		topmenuWnd.background_overlay = gui_background_effect;
+		componentsWnd.background_overlay = gui_background_effect;
+		generalWnd.background_overlay = gui_background_effect;
+		graphicsWnd.background_overlay = gui_background_effect;
+		paintToolWnd.background_overlay = gui_background_effect;
+		cameraWnd.background_overlay = gui_background_effect;
+		materialPickerWnd.background_overlay = gui_background_effect;
+	}
 }
 void EditorComponent::PostUpdate()
 {
@@ -4376,6 +4405,26 @@ void EditorComponent::Render() const
 			}
 
 			device->RenderPassEnd(cmd);
+		}
+
+		if(!generalWnd.focusModeCheckBox.GetCheck() && themeEditorWnd.waveColor.getA() > 0)
+		{
+			device->EventBegin("Background wave effect", cmd);
+			device->RenderPassBegin(&gui_background_effect, cmd);
+
+			Viewport vp;
+			vp.width = (float)gui_background_effect.desc.width;
+			vp.height = (float)gui_background_effect.desc.height;
+			device->BindViewports(1, &vp, cmd);
+
+			Rect rect;
+			rect.from_viewport(vp);
+			device->BindScissorRects(1, &rect, cmd);
+
+			wi::renderer::DrawWaveEffect(themeEditorWnd.waveColor, cmd);
+
+			device->RenderPassEnd(cmd);
+			device->EventEnd(cmd);
 		}
 
 		device->EventEnd(cmd);

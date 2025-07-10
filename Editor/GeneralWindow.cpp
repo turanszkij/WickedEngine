@@ -394,6 +394,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		wi::Color theme_color_focus = wi::Color(70, 150, 170, 220);
 		wi::Color theme_color_background = wi::Color(10, 10, 20, 220);
 		XMFLOAT4 theme_color_gradient = theme_color_focus;
+		XMFLOAT4 theme_color_wave = theme_color_focus;
 		wi::gui::Theme theme;
 		theme.image.background = true;
 		theme.image.blendFlag = wi::enums::BLENDMODE_OPAQUE;
@@ -407,6 +408,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		case Theme::Dark:
 			editor->main->config.GetSection("options").Set("theme", "Dark");
 			editor->themeEditorWnd.imageResource = {};
+			theme_color_wave = wi::Color(99, 155, 220, 103);
 			break;
 		case Theme::Bright:
 			editor->main->config.GetSection("options").Set("theme", "Bright");
@@ -416,6 +418,8 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			theme.shadow_color = wi::Color::Shadow();
 			theme.font.color = wi::Color(50, 50, 80, 255);
 			theme_color_gradient = XMFLOAT4(1, 1, 1, 0.66f);
+			theme_color_wave = theme_color_focus;
+			theme_color_wave.w = 0.4f;
 			editor->themeEditorWnd.imageResource = {};
 			break;
 		case Theme::Soft:
@@ -426,6 +430,8 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			theme.shadow_color = wi::Color(240, 190, 200, 180);
 			theme.font.color = wi::Color(255, 230, 240, 255);
 			theme_color_gradient = theme_color_focus;
+			theme_color_wave = theme_color_focus;
+			theme_color_wave.w = 0.4f;
 			editor->themeEditorWnd.imageResource = {};
 			break;
 		case Theme::Hacking:
@@ -437,6 +443,8 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			theme.font.color = wi::Color(0, 200, 90, 255);
 			theme.font.shadow_color = wi::Color::Shadow();
 			theme_color_gradient = theme_color_focus;
+			theme_color_wave = theme_color_focus;
+			theme_color_wave.w = 0.4f;
 			editor->themeEditorWnd.imageResource = {};
 			break;
 		case Theme::Nord:
@@ -447,6 +455,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			theme.shadow_color = wi::Color(106, 112, 124, 200);
 			theme.font.color = wi::Color(236, 239, 244, 255);
 			theme_color_gradient = XMFLOAT4(1, 1, 1, 0.66f);
+			theme_color_wave = wi::Color(58, 75, 93, 153);
 			editor->themeEditorWnd.imageResource = {};
 			break;
 		case Theme::User:
@@ -479,6 +488,17 @@ void GeneralWindow::Create(EditorComponent* _editor)
 					{
 						theme_color_gradient = theme_color_focus;
 					}
+					if (version >= 3)
+					{
+						wi::Color wave;
+						archive >> wave.rgba;
+						theme_color_wave = wave;
+					}
+					else
+					{
+						theme_color_wave = theme_color_focus;
+						theme_color_wave.w = 0.4f;
+					}
 
 					static uint64_t cnt = 0;
 					if (imagedata.empty())
@@ -502,6 +522,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			theme.font.color = editor->themeEditorWnd.fontColor;
 			theme.font.shadow_color = editor->themeEditorWnd.fontShadowColor;
 			theme_color_gradient = editor->themeEditorWnd.gradientColor;
+			theme_color_wave = editor->themeEditorWnd.waveColor;
 			break;
 		}
 
@@ -512,6 +533,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		editor->themeEditorWnd.fontColor = theme.font.color;
 		editor->themeEditorWnd.fontShadowColor = theme.font.shadow_color;
 		editor->themeEditorWnd.gradientColor = wi::Color::fromFloat4(theme_color_gradient);
+		editor->themeEditorWnd.waveColor = wi::Color::fromFloat4(theme_color_wave);
 		editor->themeEditorWnd.UpdateColorPickerMode();
 
 		theme.shadow_highlight = !focusModeCheckBox.GetCheck();
@@ -965,11 +987,15 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		{
 			editor->newEntityCombo.SetAngularHighlightWidth(0);
 			editor->newEntityCombo.SetShadowRadius(2);
+			editor->componentsWnd.newComponentCombo.SetAngularHighlightWidth(0);
+			editor->componentsWnd.newComponentCombo.SetShadowRadius(2);
 		}
 		else
 		{
 			editor->newEntityCombo.SetAngularHighlightWidth(3);
 			editor->newEntityCombo.SetShadowRadius(0);
+			editor->componentsWnd.newComponentCombo.SetAngularHighlightWidth(3);
+			editor->componentsWnd.newComponentCombo.SetShadowRadius(0);
 		}
 
 		wi::image::Params::Gradient gradient = wi::image::Params::Gradient::Linear;
