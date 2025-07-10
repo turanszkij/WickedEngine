@@ -5247,7 +5247,6 @@ namespace wi::gui
 		saturation = result.s;
 		luminance = result.v;
 		alphaSlider.SetValue((float)value.getA());
-		text_hex.SetText(value.to_hex());
 	}
 	void ColorPicker::FireEvents()
 	{
