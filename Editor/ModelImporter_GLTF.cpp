@@ -127,6 +127,7 @@ struct LoaderState
 	tinygltf::Model gltfModel;
 	Scene* scene;
 	wi::unordered_map<int, Entity> entityMap;  // node -> entity
+	std::unordered_multimap<int, Entity> punctualLightMap;  // KHR_lights_punctual -> entities
 	Entity rootEntity = INVALID_ENTITY;
 
 	//Export states
@@ -238,6 +239,8 @@ void LoadNode(int nodeIndex, Entity parent, LoaderState& state)
 	{
 		// https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_lights_punctual
 		entity = scene.Entity_CreateLight(""); // light component will be filled later
+		int index = ext_lights_punctual->second.Get("light").Get<int>();
+		state.punctualLightMap.insert({ index, entity });
 	}
 
 	if (entity == INVALID_ENTITY)
@@ -1785,40 +1788,44 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 	int lightIndex = 0;
 	for (auto& x : state.gltfModel.lights)
 	{
-		Entity entity = scene.lights.GetEntity(lightIndex);
-		LightComponent& light = scene.lights[lightIndex++];
-		NameComponent& name = *scene.names.GetComponent(entity);
-		name = x.name;
-
-		if (!x.type.compare("spot"))
+		for (auto [it, end] = state.punctualLightMap.equal_range(lightIndex); it != end; it++)
 		{
-			light.type = LightComponent::LightType::SPOT;
-		}
-		if (!x.type.compare("point"))
-		{
-			light.type = LightComponent::LightType::POINT;
-		}
-		if (!x.type.compare("directional"))
-		{
-			light.type = LightComponent::LightType::DIRECTIONAL;
-		}
+			Entity entity = it->second;
+			LightComponent& light = scene.lights[lightIndex];
+			NameComponent& name = *scene.names.GetComponent(entity);
+			name = x.name;
 
-		if (!x.color.empty())
-		{
-			light.color = XMFLOAT3(float(x.color[0]), float(x.color[1]), float(x.color[2]));
+			if (!x.type.compare("spot"))
+			{
+				light.type = LightComponent::LightType::SPOT;
+			}
+			if (!x.type.compare("point"))
+			{
+				light.type = LightComponent::LightType::POINT;
+			}
+			if (!x.type.compare("directional"))
+			{
+				light.type = LightComponent::LightType::DIRECTIONAL;
+			}
+
+			if (!x.color.empty())
+			{
+				light.color = XMFLOAT3(float(x.color[0]), float(x.color[1]), float(x.color[2]));
+			}
+
+			light.intensity = float(x.intensity);
+			light.range = x.range > 0 ? float(x.range) : std::numeric_limits<float>::max();
+			light.outerConeAngle = float(x.spot.outerConeAngle);
+			light.innerConeAngle = float(x.spot.innerConeAngle);
+			light.SetCastShadow(true);
+
+			// In gltf, default light direction is forward, in engine, it's downwards, so apply a rotation:
+			TransformComponent& transform = *scene.transforms.GetComponent(entity);
+			transform.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2, 0, 0));
+
+			ImportMetadata(state, entity, x.extras);
 		}
-
-		light.intensity = float(x.intensity);
-		light.range = x.range > 0 ? float(x.range) : std::numeric_limits<float>::max();
-		light.outerConeAngle = float(x.spot.outerConeAngle);
-		light.innerConeAngle = float(x.spot.innerConeAngle);
-		light.SetCastShadow(true);
-
-		// In gltf, default light direction is forward, in engine, it's downwards, so apply a rotation:
-		TransformComponent& transform = *scene.transforms.GetComponent(entity);
-		transform.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV2, 0, 0));
-
-		ImportMetadata(state, entity, x.extras);
+		lightIndex++;
 	}
 
 	int cameraIndex = 0;
