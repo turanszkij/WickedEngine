@@ -349,8 +349,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 				if(light.IsCastingShadow() && surface.IsReceiveShadow())
 				{
 					RayDesc newRay;
-					newRay.Origin = surface.P;
-					newRay.TMin = 0.01;
+					newRay.Origin = surface.P + surface.facenormal * 0.001; // NOTE: TMin was not enough on AMD to avoid self intersection!!!
+					newRay.TMin = 0.001;
 					newRay.TMax = dist;
 					newRay.Direction = normalize(L + max3(surface.sss));
 
@@ -442,12 +442,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 				energy *= surface.albedo * (1 - surface.F) / max(0.001, 1 - specular_chance) / max(0.001, 1 - surface.transmission);
 			}
 
-			if (dot(ray.Direction, surface.facenormal) <= 0)
-			{
-				// Don't allow normal map to bend over the face normal more than 90 degrees to avoid light leaks
-				//	In this case, the ray is pushed above the surface slightly to not go below
-				ray.Origin += surface.facenormal * 0.001;
-			}
+			ray.Origin += surface.facenormal * 0.001; // NOTE: TMin was not enough on AMD to avoid self intersection!!!
 		}
 
 	}
