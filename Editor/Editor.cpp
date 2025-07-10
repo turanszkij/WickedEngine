@@ -2918,7 +2918,7 @@ void EditorComponent::Update(float dt)
 
 	RenderPath2D::Update(dt);
 
-	UpdateDynamicWidgets(dt);
+	UpdateDynamicWidgets();
 
 	ResizeViewport3D();
 	renderPath->colorspace = colorspace;
@@ -5575,14 +5575,14 @@ void EditorComponent::CheckBonePickingEnabled()
 	}
 }
 
-void EditorComponent::UpdateDynamicWidgets(float dt)
+void EditorComponent::UpdateDynamicWidgets()
 {
 	float screenW = GetLogicalWidth();
 	float screenH = GetLogicalHeight();
 	float wid_idle = 40;
 	float wid_focus = wid_idle * 2.5f;
 	float padding = 4;
-	float lerp = 0.4f * dt / 0.016f;
+	float lerp = 0.4f;
 
 	bool fullscreen = main->config.GetBool("fullscreen");
 
@@ -6078,7 +6078,7 @@ void EditorComponent::NewScene()
 	topmenuWnd.AddWidget(&editorscene->tabCloseButton);
 	SetCurrentScene(scene_id);
 	RefreshSceneList();
-	UpdateDynamicWidgets(0);
+	UpdateDynamicWidgets();
 	cameraWnd.ResetCam();
 }
 

@@ -154,7 +154,7 @@ public:
 	void CheckBonePickingEnabled();
 	wi::unordered_map<wi::ecs::Entity, wi::primitive::Capsule> bone_picking_items;
 
-	void UpdateDynamicWidgets(float dt);
+	void UpdateDynamicWidgets();
 
 	wi::Archive clipboard;
 
