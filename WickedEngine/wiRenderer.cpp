@@ -10579,7 +10579,6 @@ void RayTraceScene(
 
 	PushBarrier(GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS));
 
-	// Note: these are always in ResourceState::UNORDERED_ACCESS, no need to transition!
 	if (output_albedo != nullptr)
 	{
 		device->BindUAV(output_albedo, 1, cmd);
@@ -10591,10 +10590,12 @@ void RayTraceScene(
 	if (output_depth != nullptr)
 	{
 		device->BindUAV(output_depth, 3, cmd);
+		PushBarrier(GPUBarrier::Image(output_depth, output_depth->desc.layout, ResourceState::UNORDERED_ACCESS));
 	}
 	if (output_stencil != nullptr)
 	{
 		device->BindUAV(output_stencil, 4, cmd);
+		PushBarrier(GPUBarrier::Image(output_stencil, output_stencil->desc.layout, ResourceState::UNORDERED_ACCESS));
 	}
 	FlushBarriers(cmd);
 
@@ -10633,6 +10634,16 @@ void RayTraceScene(
 	);
 
 	PushBarrier(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout));
+	if (output_depth != nullptr)
+	{
+		PushBarrier(GPUBarrier::Image(output_depth, ResourceState::UNORDERED_ACCESS, output_depth->desc.layout));
+	}
+	if (output_stencil != nullptr)
+	{
+		PushBarrier(GPUBarrier::Image(output_stencil, ResourceState::UNORDERED_ACCESS, output_stencil->desc.layout));
+	}
+	FlushBarriers(cmd);
+
 	if (output_depth_stencil != nullptr)
 	{
 		CopyDepthStencil(
@@ -10643,18 +10654,6 @@ void RayTraceScene(
 			0xFF
 		);
 	}
-	else
-	{
-		if (output_depth != nullptr)
-		{
-			PushBarrier(GPUBarrier::Image(output_depth, ResourceState::UNORDERED_ACCESS, output_depth->desc.layout));
-		}
-		if (output_stencil != nullptr)
-		{
-			PushBarrier(GPUBarrier::Image(output_stencil, ResourceState::UNORDERED_ACCESS, output_stencil->desc.layout));
-		}
-	}
-	FlushBarriers(cmd);
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd); // RayTraceScene
@@ -18062,9 +18061,6 @@ void CopyDepthStencil(
 	if (manual_depthstencil_copy_required)
 	{
 		// Vulkan workaround:
-		PushBarrier(GPUBarrier::Image(input_depth, input_depth->desc.layout, ResourceState::SHADER_RESOURCE));
-		PushBarrier(GPUBarrier::Image(input_stencil, input_stencil->desc.layout, ResourceState::SHADER_RESOURCE));
-		FlushBarriers(cmd);
 
 		RenderPassImage rp[] = {
 			RenderPassImage::DepthStencil(
@@ -18093,7 +18089,6 @@ void CopyDepthStencil(
 			device->BindResource(input_depth, 0, cmd);
 			device->Draw(3, 0, cmd);
 			device->EventEnd(cmd);
-			PushBarrier(GPUBarrier::Image(input_depth, ResourceState::SHADER_RESOURCE, input_depth->desc.layout));
 		}
 
 		if (input_stencil != nullptr)
@@ -18128,12 +18123,9 @@ void CopyDepthStencil(
 				stencil_bits_to_copy >>= 1;
 			}
 			device->EventEnd(cmd);
-			PushBarrier(GPUBarrier::Image(input_stencil, ResourceState::SHADER_RESOURCE, input_stencil->desc.layout));
 		}
 
 		device->RenderPassEnd(cmd);
-
-		FlushBarriers(cmd);
 
 	}
 	else

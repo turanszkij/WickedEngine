@@ -75,7 +75,6 @@ namespace wi
 
 			{
 				desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
-				desc.layout = ResourceState::UNORDERED_ACCESS;
 				desc.format = Format::R32_FLOAT;
 				device->CreateTexture(&desc, nullptr, &traceDepth);
 				device->SetName(&traceDepth, "traceDepth");

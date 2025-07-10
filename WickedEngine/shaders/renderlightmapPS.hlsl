@@ -110,6 +110,7 @@ void BakeryPixelPush(inout float3 P, in float3 N, in float2 UV, inout RNG rng, i
 	}
 }
 
+[earlydepthstencil]
 float4 main(Input input) : SV_TARGET
 {
 #ifdef DEBUG_CHARTS
