@@ -52,7 +52,6 @@ void CameraWindow::Create(EditorComponent* _editor)
 
 	auto updateCamera = [this](auto func) {
 		return [this, func](wi::gui::EventArgs args) {
-			Scene& scene = editor->GetCurrentScene();
 			CameraComponent& camera = editor->GetCurrentEditorScene().camera;
 			func(camera, args);
 			camera.UpdateCamera();
@@ -69,7 +68,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 		editor->GetCurrentEditorScene().camera.zFarP = editor->main->config.GetSection("camera").GetFloat("far");
 	}
 	farPlaneSlider.SetValue(editor->GetCurrentEditorScene().camera.zFarP);
-	farPlaneSlider.OnSlide(updateCamera([&](auto camera, auto args) {
+	farPlaneSlider.OnSlide(updateCamera([&](CameraComponent& camera, auto args) {
 		camera.zFarP = args.fValue;
 		editor->main->config.GetSection("camera").Set("far", args.fValue);
 		editor->main->config.Commit();
@@ -85,7 +84,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 		editor->GetCurrentEditorScene().camera.zNearP = editor->main->config.GetSection("camera").GetFloat("near");
 	}
 	nearPlaneSlider.SetValue(editor->GetCurrentEditorScene().camera.zNearP);
-	nearPlaneSlider.OnSlide(updateCamera([&](auto camera, auto args) {
+	nearPlaneSlider.OnSlide(updateCamera([&](CameraComponent& camera, auto args) {
 		camera.zNearP = args.fValue;
 		editor->main->config.GetSection("camera").Set("near", args.fValue);
 		editor->main->config.Commit();
@@ -101,7 +100,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 		editor->GetCurrentEditorScene().camera.fov = editor->main->config.GetSection("camera").GetFloat("fov") / 180.f * XM_PI;
 	}
 	fovSlider.SetValue(editor->GetCurrentEditorScene().camera.fov / XM_PI * 180.f);
-	fovSlider.OnSlide(updateCamera([&](auto camera, auto args) {
+	fovSlider.OnSlide(updateCamera([&](CameraComponent& camera, auto args) {
 		camera.fov = args.fValue / 180.f * XM_PI;
 		editor->main->config.GetSection("camera").Set("fov", args.fValue);
 		editor->main->config.Commit();
@@ -112,7 +111,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 	focalLengthSlider.SetTooltip("Controls the depth of field effect's focus distance.\nYou can also refocus by holding the C key and picking in the scene with the left mouse button.");
 	focalLengthSlider.SetSize(XMFLOAT2(wid, hei));
 	focalLengthSlider.SetPos(XMFLOAT2(x, y += step));
-	focalLengthSlider.OnSlide(updateCamera([&](auto camera, auto args) {
+	focalLengthSlider.OnSlide(updateCamera([&](CameraComponent& camera, auto args) {
 		camera.focal_length = args.fValue;
 	}));
 	AddWidget(&focalLengthSlider);
@@ -121,7 +120,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 	apertureSizeSlider.SetTooltip("Controls the depth of field effect's strength");
 	apertureSizeSlider.SetSize(XMFLOAT2(wid, hei));
 	apertureSizeSlider.SetPos(XMFLOAT2(x, y += step));
-	apertureSizeSlider.OnSlide(updateCamera([&](auto camera, auto args) {
+	apertureSizeSlider.OnSlide(updateCamera([&](CameraComponent& camera, auto args) {
 		camera.aperture_size = args.fValue;
 	}));
 	AddWidget(&apertureSizeSlider);
@@ -130,7 +129,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 	apertureShapeXSlider.SetTooltip("Controls the depth of field effect's bokeh shape");
 	apertureShapeXSlider.SetSize(XMFLOAT2(wid, hei));
 	apertureShapeXSlider.SetPos(XMFLOAT2(x, y += step));
-	apertureShapeXSlider.OnSlide(updateCamera([&](auto camera, auto args) {
+	apertureShapeXSlider.OnSlide(updateCamera([&](CameraComponent& camera, auto args) {
 		camera.aperture_shape.x = args.fValue;
 	}));
 	AddWidget(&apertureShapeXSlider);
@@ -139,7 +138,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 	apertureShapeYSlider.SetTooltip("Controls the depth of field effect's bokeh shape");
 	apertureShapeYSlider.SetSize(XMFLOAT2(wid, hei));
 	apertureShapeYSlider.SetPos(XMFLOAT2(x, y += step));
-	apertureShapeYSlider.OnSlide(updateCamera([&](auto camera, auto args) {
+	apertureShapeYSlider.OnSlide(updateCamera([&](CameraComponent& camera, auto args) {
 		camera.aperture_shape.y = args.fValue;
 	}));
 	AddWidget(&apertureShapeYSlider);
