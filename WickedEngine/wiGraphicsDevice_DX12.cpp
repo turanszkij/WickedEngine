@@ -22,8 +22,7 @@ DEFINE_GUID(D3D12_VIDEO_DECODE_PROFILE_H264, 0x1b81be68, 0xa0c7, 0x11d3, 0xb9, 0
 
 #include "Utility/D3D12MemAlloc.cpp" // include this here because we use D3D12MA_D3D12_HEADERS_ALREADY_INCLUDED
 #include "Utility/h264.h"
-
-#include <dxva.h>
+#include "Utility/dxva.h"
 
 #include <map>
 #include <string>
