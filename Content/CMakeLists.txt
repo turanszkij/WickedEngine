@@ -1,15 +1,9 @@
 cmake_minimum_required(VERSION 3.19)
 
-if(CMAKE_VERSION VERSION_LESS "3.26.0")
-  set(COPY_DIR_CMD copy_directory)
-else()
-  set(COPY_DIR_CMD copy_directory_if_different)
-endif()
-
 add_custom_target(Content
-    COMMAND ${CMAKE_COMMAND} -E ${COPY_DIR_CMD}
-        ${WICKED_ROOT_DIR}/Content
-        ${CMAKE_CURRENT_BINARY_DIR}
-    COMMENT "Copying Content"
+    COMMAND
+	${CMAKE_COMMAND} -E rm -rf ${CMAKE_CURRENT_BINARY_DIR} &&
+	${CMAKE_COMMAND} -E create_symlink ${WICKED_ROOT_DIR}/Content ${CMAKE_CURRENT_BINARY_DIR}
+    COMMENT "Symlinking Content directory"
     VERBATIM
 )
