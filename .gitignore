@@ -209,6 +209,7 @@ ModelManifest.xml
 # CMake build cache files
 .cache/
 
+# Wicked compiled shaders
 *.cso
 *.wishadermeta
 wiShaderdump.h
@@ -223,6 +224,11 @@ wiShaderdump.h
 *.elf
 *.prx
 
+# clangd
+.clangd
+compile_commands.json
+
 # Others
 log.txt
+wicked-editor-crash-log.txt
 pso_cache_vulkan
