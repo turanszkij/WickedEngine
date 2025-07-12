@@ -420,15 +420,15 @@ end)
 				{
 					// ApplicationExeCustomization replacement in the executable:
 					{
-						wi::vector<uint8_t> match_padded256(256);
-						std::memcpy(match_padded256.data(), exe_customization.name_256padded, sizeof(exe_customization.name_256padded));
+						wi::vector<uint8_t> match_padded(arraysize(exe_customization.name_padded));
+						std::memcpy(match_padded.data(), exe_customization.name_padded, sizeof(exe_customization.name_padded));
 
-						auto it = std::search(exedata.begin(), exedata.end(), match_padded256.begin(), match_padded256.end());
+						auto it = std::search(exedata.begin(), exedata.end(), match_padded.begin(), match_padded.end());
 						if (it != exedata.end())
 						{
 							wi::vector<uint8_t> replacement(sizeof(ApplicationExeCustomization));
 							ApplicationExeCustomization& customization = *(ApplicationExeCustomization*)replacement.data();
-							std::memcpy(customization.name_256padded, name.c_str(), name.length());
+							std::memcpy(customization.name_padded, name.c_str(), name.length());
 							customization.font_color = fontColorPicker.GetPickColor();
 							customization.background_color = backgroundColorPicker.GetPickColor();
 							std::copy(replacement.begin(), replacement.end(), it);

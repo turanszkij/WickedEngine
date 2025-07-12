@@ -297,7 +297,7 @@ static_assert(arraysize(EditorLocalizationStrings) == size_t(EditorLocalization:
 
 struct ApplicationExeCustomization
 {
-	char name_256padded[256];
+	char name_padded[120];
 	wi::Color font_color; // color of backlog font (startup text)
 	wi::Color background_color; // color of startup background behind startup text
 };

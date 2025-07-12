@@ -140,7 +140,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
 	wcex.lpszMenuName = NULL;
 	wchar_t wname[256] = {};
-	wi::helper::StringConvert(wi::helper::StringRemoveTrailingWhitespaces(exe_customization.name_256padded).c_str(), wname, arraysize(wname));
+	wi::helper::StringConvert(wi::helper::StringRemoveTrailingWhitespaces(exe_customization.name_padded).c_str(), wname, arraysize(wname));
 	wcex.lpszClassName = wname;
 	RegisterClassExW(&wcex);
 
