@@ -69,9 +69,6 @@ add_library(${TARGET_NAME} ${WICKED_LIBRARY_TYPE}
 	${HEADER_FILES}
 )
 
-if(MSVC)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP /bigobj")
-endif()
 
 add_library(WickedEngine ALIAS ${TARGET_NAME})
 set_target_properties(${TARGET_NAME} PROPERTIES
@@ -95,7 +92,13 @@ if (WIN32)
 		UNICODE _UNICODE
 	)
 
-	target_compile_options(${TARGET_NAME} PRIVATE /W3)
+	if (MSVC)
+		target_compile_options(${TARGET_NAME} PRIVATE
+			/W3
+			/MP
+			/bigobj
+		)
+	endif()
 
 	set(LIBDXCOMPILER "dxcompiler.dll")
 else ()
