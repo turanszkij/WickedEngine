@@ -225,7 +225,7 @@ int main(int argc, char *argv[])
 	height = std::max(100, height);
 
     sdl2::window_ptr_t window = sdl2::make_window(
-			wi::helper::StringRemoveTrailingWhitespaces(exe_customization.name_256padded).c_str(),
+			wi::helper::StringRemoveTrailingWhitespaces(exe_customization.name_padded).c_str(),
             SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
             width, height,
             SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
