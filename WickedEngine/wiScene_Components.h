@@ -407,7 +407,7 @@ namespace wi::scene
 		};
 		uint32_t _flags = EMPTY;
 
-		enum CollisionShape
+		enum CollisionShape : uint32_t
 		{
 			BOX,
 			SPHERE,
@@ -416,7 +416,6 @@ namespace wi::scene
 			TRIANGLE_MESH,
 			CYLINDER,
 			HEIGHTFIELD,
-			ENUM_FORCE_UINT32 = 0xFFFFFFFF
 		};
 		CollisionShape shape = BOX;
 		float mass = 1.0f; // Set to 0 to make body static
@@ -1317,14 +1316,13 @@ namespace wi::scene
 		};
 		uint32_t _flags = EMPTY;
 
-		enum LightType
+		enum LightType : uint32_t
 		{
 			DIRECTIONAL,
 			POINT,
 			SPOT,
 			RECTANGLE,
 			LIGHTTYPE_COUNT,
-			ENUM_FORCE_UINT32 = 0xFFFFFFFF,
 		};
 		LightType type = POINT;
 
