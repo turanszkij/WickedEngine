@@ -396,16 +396,6 @@ namespace wi::graphics
 			return *(CommandList_Vulkan*)cmd.internal_state;
 		}
 
-		struct PSOLayout
-		{
-			VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
-			VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
-			wi::vector<VkDescriptorSet> bindlessSets;
-			uint32_t bindlessFirstSet = 0;
-		};
-		mutable wi::unordered_map<PSOLayoutHash, PSOLayout> pso_layout_cache;
-		mutable std::mutex pso_layout_cache_mutex;
-
 		VkPipelineCache pipelineCache = VK_NULL_HANDLE;
 		wi::unordered_map<PipelineHash, VkPipeline> pipelines_global;
 
@@ -903,6 +893,28 @@ namespace wi::graphics
 			}
 		};
 		std::shared_ptr<AllocationHandler> allocationhandler;
+
+
+		struct PSOLayout
+		{
+			std::shared_ptr<AllocationHandler> allocationhandler;
+			VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
+			VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
+			wi::vector<VkDescriptorSet> bindlessSets;
+			uint32_t bindlessFirstSet = 0;
+			~PSOLayout()
+			{
+				if (allocationhandler == nullptr)
+					return;
+				allocationhandler->destroylocker.lock();
+				uint64_t framecount = allocationhandler->framecount;
+				allocationhandler->destroyer_pipelineLayouts.push_back(std::make_pair(pipelineLayout, framecount));
+				allocationhandler->destroyer_descriptorSetLayouts.push_back(std::make_pair(descriptorSetLayout, framecount));
+				allocationhandler->destroylocker.unlock();
+			}
+		};
+		mutable wi::unordered_map<PSOLayoutHash, std::shared_ptr<PSOLayout>> pso_layout_cache;
+		mutable std::mutex pso_layout_cache_mutex;
 	};
 }
 

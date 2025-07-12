@@ -900,6 +900,7 @@ namespace vulkan_internal
 		VkShaderModule shaderModule = VK_NULL_HANDLE;
 		VkPipeline pipeline_cs = VK_NULL_HANDLE;
 		VkPipelineShaderStageCreateInfo stageInfo = {};
+		std::shared_ptr<GraphicsDevice_Vulkan::PSOLayout> layout_lifetime; // lifetime management only
 		VkPipelineLayout pipelineLayout_cs = VK_NULL_HANDLE; // no lifetime management here
 		VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE; // no lifetime management here
 		wi::vector<VkDescriptorSetLayoutBinding> layoutBindings;
@@ -929,6 +930,7 @@ namespace vulkan_internal
 	{
 		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
 		VkPipeline pipeline = VK_NULL_HANDLE;
+		std::shared_ptr<GraphicsDevice_Vulkan::PSOLayout> layout_lifetime; // lifetime management only
 		VkPipelineLayout pipelineLayout = VK_NULL_HANDLE; // no lifetime management here
 		VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE; // no lifetime management here
 		wi::vector<VkDescriptorSetLayoutBinding> layoutBindings;
@@ -3682,11 +3684,7 @@ using namespace vulkan_internal;
 			}
 		}
 
-		for (auto& x : pso_layout_cache)
-		{
-			vkDestroyPipelineLayout(device, x.second.pipelineLayout, nullptr);
-			vkDestroyDescriptorSetLayout(device, x.second.descriptorSetLayout, nullptr);
-		}
+		pso_layout_cache.clear();
 
 		for (auto& commandlist : commandlists)
 		{
@@ -4958,7 +4956,7 @@ using namespace vulkan_internal;
 				layout_hasher.embed_hash();
 
 				pso_layout_cache_mutex.lock();
-				if (pso_layout_cache[layout_hasher].pipelineLayout == VK_NULL_HANDLE)
+				if (pso_layout_cache[layout_hasher] == nullptr)
 				{
 					wi::vector<VkDescriptorSetLayout> layouts;
 
@@ -5031,19 +5029,23 @@ using namespace vulkan_internal;
 					if (res == VK_SUCCESS)
 					{
 						auto& cached_layout = pso_layout_cache[layout_hasher];
-						cached_layout.descriptorSetLayout = internal_state->descriptorSetLayout;
-						cached_layout.pipelineLayout = internal_state->pipelineLayout_cs;
-						cached_layout.bindlessSets = internal_state->bindlessSets;
-						cached_layout.bindlessFirstSet = internal_state->bindlessFirstSet;
+						cached_layout = std::make_shared<PSOLayout>();
+						cached_layout->allocationhandler = allocationhandler;
+						cached_layout->descriptorSetLayout = internal_state->descriptorSetLayout;
+						cached_layout->pipelineLayout = internal_state->pipelineLayout_cs;
+						cached_layout->bindlessSets = internal_state->bindlessSets;
+						cached_layout->bindlessFirstSet = internal_state->bindlessFirstSet;
+						internal_state->layout_lifetime = cached_layout;
 					}
 				}
 				else
 				{
 					auto& cached_layout = pso_layout_cache[layout_hasher];
-					internal_state->descriptorSetLayout = cached_layout.descriptorSetLayout;
-					internal_state->pipelineLayout_cs = cached_layout.pipelineLayout;
-					internal_state->bindlessSets = cached_layout.bindlessSets;
-					internal_state->bindlessFirstSet = cached_layout.bindlessFirstSet;
+					internal_state->descriptorSetLayout = cached_layout->descriptorSetLayout;
+					internal_state->pipelineLayout_cs = cached_layout->pipelineLayout;
+					internal_state->bindlessSets = cached_layout->bindlessSets;
+					internal_state->bindlessFirstSet = cached_layout->bindlessFirstSet;
+					internal_state->layout_lifetime = cached_layout;
 				}
 				pso_layout_cache_mutex.unlock();
 			}
@@ -5458,7 +5460,7 @@ using namespace vulkan_internal;
 			layout_hasher.embed_hash();
 
 			pso_layout_cache_mutex.lock();
-			if (pso_layout_cache[layout_hasher].pipelineLayout == VK_NULL_HANDLE)
+			if (pso_layout_cache[layout_hasher] == nullptr)
 			{
 				wi::vector<VkDescriptorSetLayout> layouts;
 				{
@@ -5531,19 +5533,23 @@ using namespace vulkan_internal;
 				if (res == VK_SUCCESS)
 				{
 					auto& cached_layout = pso_layout_cache[layout_hasher];
-					cached_layout.descriptorSetLayout = internal_state->descriptorSetLayout;
-					cached_layout.pipelineLayout = internal_state->pipelineLayout;
-					cached_layout.bindlessSets = internal_state->bindlessSets;
-					cached_layout.bindlessFirstSet = internal_state->bindlessFirstSet;
+					cached_layout = std::make_shared<PSOLayout>();
+					cached_layout->allocationhandler = allocationhandler;
+					cached_layout->descriptorSetLayout = internal_state->descriptorSetLayout;
+					cached_layout->pipelineLayout = internal_state->pipelineLayout;
+					cached_layout->bindlessSets = internal_state->bindlessSets;
+					cached_layout->bindlessFirstSet = internal_state->bindlessFirstSet;
+					internal_state->layout_lifetime = cached_layout;
 				}
 			}
 			else
 			{
 				auto& cached_layout = pso_layout_cache[layout_hasher];
-				internal_state->descriptorSetLayout = cached_layout.descriptorSetLayout;
-				internal_state->pipelineLayout = cached_layout.pipelineLayout;
-				internal_state->bindlessSets = cached_layout.bindlessSets;
-				internal_state->bindlessFirstSet = cached_layout.bindlessFirstSet;
+				internal_state->descriptorSetLayout = cached_layout->descriptorSetLayout;
+				internal_state->pipelineLayout = cached_layout->pipelineLayout;
+				internal_state->bindlessSets = cached_layout->bindlessSets;
+				internal_state->bindlessFirstSet = cached_layout->bindlessFirstSet;
+				internal_state->layout_lifetime = cached_layout;
 			}
 			pso_layout_cache_mutex.unlock();
 		}
@@ -7486,11 +7492,6 @@ using namespace vulkan_internal;
 		allocationhandler->destroylocker.lock();
 
 		pso_layout_cache_mutex.lock();
-		for (auto& x : pso_layout_cache)
-		{
-			if (x.second.pipelineLayout) allocationhandler->destroyer_pipelineLayouts.push_back(std::make_pair(x.second.pipelineLayout, FRAMECOUNT));
-			if (x.second.descriptorSetLayout) allocationhandler->destroyer_descriptorSetLayouts.push_back(std::make_pair(x.second.descriptorSetLayout, FRAMECOUNT));
-		}
 		pso_layout_cache.clear();
 		pso_layout_cache_mutex.unlock();
 
