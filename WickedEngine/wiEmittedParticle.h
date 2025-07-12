@@ -21,14 +21,13 @@ namespace wi
 	public:
 
 		// This is serialized, order of enums shouldn't change!
-		enum PARTICLESHADERTYPE
+		enum PARTICLESHADERTYPE : uint32_t
 		{
 			SOFT,
 			SOFT_DISTORTION,
 			SIMPLE,
 			SOFT_LIGHTING,
 			PARTICLESHADERTYPE_COUNT,
-			ENUM_FORCE_UINT32 = 0xFFFFFFFF,
 		};
 
 		ParticleCounters statistics = {};

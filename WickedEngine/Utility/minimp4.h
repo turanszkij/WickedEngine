@@ -494,7 +494,8 @@ int MP4E_set_text_comment(MP4E_mux_t *mux, const char *comment);
 #define MINIMP4_IMPLEMENTATION_GUARD
 
 #define FOUR_CHAR_INT(a, b, c, d) (((uint32_t)(a) << 24) | ((b) << 16) | ((c) << 8) | (d))
-enum
+// next line changed from original: add ": uint32_t" to force correct type on Clang
+enum : uint32_t
 {
     BOX_co64    = FOUR_CHAR_INT( 'c', 'o', '6', '4' ),//ChunkLargeOffsetAtomType
     BOX_stco    = FOUR_CHAR_INT( 's', 't', 'c', 'o' ),//ChunkOffsetAtomType

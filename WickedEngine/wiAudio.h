@@ -15,15 +15,13 @@ namespace wi::audio
 
 	// SUBMIX_TYPE specifies the playback channel of sound instances
 	//	Do not change the order as this enum can be serialized!
-	enum SUBMIX_TYPE
+	enum SUBMIX_TYPE : uint32_t
 	{
 		SUBMIX_TYPE_SOUNDEFFECT,
 		SUBMIX_TYPE_MUSIC,
 		SUBMIX_TYPE_USER0,
 		SUBMIX_TYPE_USER1,
 		SUBMIX_TYPE_COUNT,
-
-		ENUM_FORCE_UINT32 = 0xFFFFFFFF, // submix type can be serialized
 	};
 
 	// Sound is holding the sound data needed for playback, but it can't be played by itself.
