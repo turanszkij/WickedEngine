@@ -5,6 +5,8 @@
 
 #include "Utility/stb_image.h"
 #include "Utility/dds.h"
+#include <wiHelper.h>
+#include <wiUnorderedSet.h>
 
 #define TINYGLTF_IMPLEMENTATION
 #define TINYGLTF_NO_FS
@@ -12,9 +14,14 @@
 #define TINYGLTF_NO_STB_IMAGE_WRITE
 #include "tiny_gltf.h"
 
+#ifndef _WIN32
+#  include <wordexp.h>
+#endif
+
 using namespace wi::graphics;
 using namespace wi::scene;
 using namespace wi::ecs;
+using json = nlohmann::json;
 
 namespace tinygltf
 {
@@ -81,6 +88,13 @@ namespace tinygltf
 		return wi::helper::FileWrite(filepath, contents.data(), contents.size());
 	}
 
+	bool GetFileSizeInBytes(size_t* filesize_out, std::string* err,
+							const std::string& filepath, void* userdata)
+	{
+		*filesize_out = wi::helper::FileSize(filepath);
+		return true;
+	}
+
 	bool LoadImageData(Image *image, const int image_idx, std::string *err,
 		std::string *warn, int req_width, int req_height,
 		const unsigned char *bytes, int size, void *userdata)
@@ -111,8 +125,10 @@ namespace tinygltf
 		return true;
 	}
 
-	bool WriteImageData(const std::string *basepath, const std::string *filename,
-		Image *image, bool embedImages, void *)
+	bool WriteImageData(
+		const std::string* basepath, const std::string* filename,
+		const Image* image, bool embedImages, const FsCallbacks*, const URICallbacks*,
+		std::string* out_uri, void*)
 	{
 		assert(0); // TODO
 		return false;
@@ -474,6 +490,26 @@ void FlipZAxis(LoaderState& state)
 	}
 }
 
+static const wi::unordered_set<std::string> SUPPORTED_EXTENSIONS = {
+	"EXT_lights_image_based",
+	"KHR_lights_punctual",
+	"KHR_materials_anisotropy",
+	"KHR_materials_clearcoat",
+	"KHR_materials_emissive_strength",
+	"KHR_materials_ior",
+	"KHR_materials_pbrSpecularGlossiness",
+	"KHR_materials_sheen",
+	"KHR_materials_specular",
+	"KHR_materials_transmission",
+	"KHR_materials_unlit",
+	"VRM",
+	"VRMC_materials_mtoon",
+	"VRMC_springBone",
+	"VRMC_springBone_extended_collider",
+	"VRMC_vrm",
+	"VRMC_vrm_animation",
+};
+
 void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 {
 	std::string directory = wi::helper::GetDirectoryFromPath(fileName);
@@ -489,7 +525,10 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 	callbacks.WriteWholeFile = tinygltf::WriteWholeFile;
 	callbacks.FileExists = tinygltf::FileExists;
 	callbacks.ExpandFilePath = tinygltf::ExpandFilePath;
-	loader.SetFsCallbacks(callbacks);
+	callbacks.GetFileSizeInBytes = tinygltf::GetFileSizeInBytes;
+
+	bool ret = loader.SetFsCallbacks(callbacks);
+	assert(ret);
 
 	wi::resourcemanager::ResourceSerializer seri; // keep this alive to not delete loaded images while importing gltf
 	loader.SetImageLoader(tinygltf::LoadImageData, &seri);
@@ -499,7 +538,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 	state.scene = &scene;
 
 	wi::vector<uint8_t> filedata;
-	bool ret = wi::helper::FileRead(fileName, filedata);
+	ret = wi::helper::FileRead(fileName, filedata);
 
 	if (ret)
 	{
@@ -535,7 +574,16 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 
 	if (!ret)
 	{
-		wi::helper::messageBox(err, "GLTF error!");
+		wi::helper::messageBox(err, "glTF error!");
+		return;
+	}
+
+	for (auto& ext : state.gltfModel.extensionsRequired)
+	{
+		if (SUPPORTED_EXTENSIONS.find(ext) == SUPPORTED_EXTENSIONS.end())
+		{
+			wi::backlog::post("The glTF file " + fileName + " requires the unsupported extension " + ext + ". Trying to import it anyway, some objects might be missing!", wi::backlog::LogLevel::Warning);
+		}
 	}
 
 	state.rootEntity = CreateEntity();
