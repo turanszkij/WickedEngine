@@ -69,10 +69,6 @@ add_library(${TARGET_NAME} ${WICKED_LIBRARY_TYPE}
 	${HEADER_FILES}
 )
 
-if(MSVC)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP /bigobj")
-endif()
-
 add_library(WickedEngine ALIAS ${TARGET_NAME})
 set_target_properties(${TARGET_NAME} PROPERTIES
 	PUBLIC_HEADER "${HEADER_FILES}"
@@ -95,7 +91,13 @@ if (WIN32)
 		UNICODE _UNICODE
 	)
 
-	target_compile_options(${TARGET_NAME} PRIVATE /W3)
+	if (MSVC)
+		add_compile_options(
+			/W3
+			/MP
+			/bigobj
+		)
+	endif()
 
 	set(LIBDXCOMPILER "dxcompiler.dll")
 else ()
@@ -113,38 +115,6 @@ else ()
 		POSITION_INDEPENDENT_CODE ${WICKED_PIC}
 	)
 	set(WICKEDENGINE_STATIC_LIBRARIES ${WICKEDENGINE_STATIC_LIBRARIES} FAudio)
-
-	if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-	target_compile_options(${TARGET_NAME} PRIVATE
-			-Wuninitialized
-			#-Wwrite-strings
-			#-Winit-self
-			#-Wreturn-type
-			#-Wreorder
-			#-Werror=delete-non-virtual-dtor
-			#-Werror
-			#uncomment this to stop the compilation at the first error
-			# -Wfatal-errors
-
-			# turn off some warnings we don't want
-			-Wno-nullability-completeness   # _Nonnull etc. are only supported on Clang
-			)
-	elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-	# add some warnings and set them as errors
-	# read more details here: https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html
-	target_compile_options(${TARGET_NAME} PRIVATE
-			-Wuninitialized
-			-Wmaybe-uninitialized
-			-Wwrite-strings
-			-Winit-self
-			-Wreturn-type
-			-Wreorder
-			-Werror=delete-non-virtual-dtor
-			-Werror
-			#uncomment this to stop the compilation at the first error
-			# -Wfatal-errors
-			)
-	endif()
 
 	target_link_libraries(${TARGET_NAME} PRIVATE dl)
 
