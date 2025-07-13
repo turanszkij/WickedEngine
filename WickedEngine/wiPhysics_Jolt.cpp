@@ -1930,9 +1930,6 @@ namespace wi::physics
 			}
 			break;
 
-		// make Clang happy
-		case wi::scene::RigidBodyPhysicsComponent::ENUM_FORCE_UINT32:
-			JPH_ASSERT(false);
 		}
 
 		if (!shape_result.IsValid())
