@@ -7,6 +7,18 @@ include(GNUInstallDirs)
 set(INSTALL_LOCAL_CONFIGDIR "${CMAKE_BINARY_DIR}/cmake")
 set(INSTALL_CONFIGDIR "${CMAKE_INSTALL_LIBDIR}/cmake/WickedEngine")
 
+# Use same options as Jolt
+# Select X86 processor features to use (if everything is off it will be SSE2 compatible)
+option(USE_SSE4_1 "Enable SSE4.1" ON)
+option(USE_SSE4_2 "Enable SSE4.2" ON)
+option(USE_AVX "Enable AVX" ON)
+option(USE_AVX2 "Enable AVX2" ON)
+option(USE_AVX512 "Enable AVX512" OFF)
+option(USE_LZCNT "Enable LZCNT" ON)
+option(USE_TZCNT "Enable TZCNT" ON)
+option(USE_F16C "Enable F16C" ON)
+option(USE_FMADD "Enable FMADD" ON)
+
 if (WICKED_DYNAMIC_LIBRARY)
 	set(WICKED_LIBRARY_TYPE SHARED)
 	message(STATUS "Building WickedEngine as a shared library")
@@ -55,6 +67,11 @@ add_subdirectory(Utility)
 add_compile_definitions(JPH_DEBUG_RENDERER=1)
 set(PHYSICS_REPO_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 include(${PHYSICS_REPO_ROOT}/Jolt/Jolt.cmake)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  # Jolt triggers a bug in some GCC versions, so we need to disable the warning
+  target_compile_options(Jolt PRIVATE -Wno-stringop-overflow)
+endif()
+
 set_target_properties(Jolt PROPERTIES
 	POSITION_INDEPENDENT_CODE ${WICKED_PIC}
 )
@@ -68,10 +85,6 @@ add_library(${TARGET_NAME} ${WICKED_LIBRARY_TYPE}
 	${SOURCE_FILES}
 	${HEADER_FILES}
 )
-
-if(MSVC)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP /bigobj")
-endif()
 
 add_library(WickedEngine ALIAS ${TARGET_NAME})
 set_target_properties(${TARGET_NAME} PROPERTIES
@@ -90,12 +103,58 @@ set(WICKEDENGINE_STATIC_LIBRARIES
 	Utility
 )
 
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+	if ("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x86" OR "${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
+		if (USE_AVX512)
+			target_compile_options(${TARGET_NAME} PUBLIC /arch:AVX512)
+		elseif (USE_AVX2)
+			target_compile_options(${TARGET_NAME} PUBLIC /arch:AVX2)
+		elseif (USE_AVX)
+			target_compile_options(${TARGET_NAME} PUBLIC /arch:AVX)
+		endif()
+	endif()
+elseif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64" OR "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "AMD64" OR "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86" OR "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "i386")
+	if (USE_AVX512)
+		target_compile_options(${TARGET_NAME} PUBLIC -mavx512f -mavx512vl -mavx512dq -mavx2 -mbmi -mpopcnt -mlzcnt -mf16c)
+	elseif (USE_AVX2)
+		target_compile_options(${TARGET_NAME} PUBLIC -mavx2 -mbmi -mpopcnt -mlzcnt -mf16c)
+	elseif (USE_AVX)
+		target_compile_options(${TARGET_NAME} PUBLIC -mavx -mpopcnt)
+	elseif (USE_SSE4_2)
+		target_compile_options(${TARGET_NAME} PUBLIC -msse4.2 -mpopcnt)
+	elseif (USE_SSE4_1)
+		target_compile_options(${TARGET_NAME} PUBLIC -msse4.1)
+	else()
+		target_compile_options(${TARGET_NAME} PUBLIC -msse2)
+	endif()
+	if (USE_LZCNT)
+		target_compile_options(${TARGET_NAME} PUBLIC -mlzcnt)
+	endif()
+	if (USE_TZCNT)
+		target_compile_options(${TARGET_NAME} PUBLIC -mbmi)
+	endif()
+	if (USE_F16C)
+		target_compile_options(${TARGET_NAME} PUBLIC -mf16c)
+	endif()
+	if (USE_FMADD)
+		target_compile_options(${TARGET_NAME} PUBLIC -mfma)
+	endif()
+
+	target_compile_options(${TARGET_NAME} PUBLIC -mfpmath=sse)
+endif()
+
 if (WIN32)
 	target_compile_definitions(${TARGET_NAME} PUBLIC
 		UNICODE _UNICODE
 	)
 
-	target_compile_options(${TARGET_NAME} PRIVATE /W3)
+	if (MSVC)
+		add_compile_options(
+			/W3
+			/MP
+			/bigobj
+		)
+	endif()
 
 	set(LIBDXCOMPILER "dxcompiler.dll")
 else ()
@@ -113,38 +172,6 @@ else ()
 		POSITION_INDEPENDENT_CODE ${WICKED_PIC}
 	)
 	set(WICKEDENGINE_STATIC_LIBRARIES ${WICKEDENGINE_STATIC_LIBRARIES} FAudio)
-
-	if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-	target_compile_options(${TARGET_NAME} PRIVATE
-			-Wuninitialized
-			#-Wwrite-strings
-			#-Winit-self
-			#-Wreturn-type
-			#-Wreorder
-			#-Werror=delete-non-virtual-dtor
-			#-Werror
-			#uncomment this to stop the compilation at the first error
-			# -Wfatal-errors
-
-			# turn off some warnings we don't want
-			-Wno-nullability-completeness   # _Nonnull etc. are only supported on Clang
-			)
-	elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-	# add some warnings and set them as errors
-	# read more details here: https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html
-	target_compile_options(${TARGET_NAME} PRIVATE
-			-Wuninitialized
-			-Wmaybe-uninitialized
-			-Wwrite-strings
-			-Winit-self
-			-Wreturn-type
-			-Wreorder
-			-Werror=delete-non-virtual-dtor
-			-Werror
-			#uncomment this to stop the compilation at the first error
-			# -Wfatal-errors
-			)
-	endif()
 
 	target_link_libraries(${TARGET_NAME} PRIVATE dl)
 
