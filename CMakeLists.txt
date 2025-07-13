@@ -88,6 +88,9 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 
 		# some GCC versions have bugs triggering this warning
 	    -Wno-stringop-overflow
+		# this is just silly
+		-Wno-format-zero-length
+
 		#uncomment this to stop the compilation at the first error
         # -Wfatal-errors
     )
