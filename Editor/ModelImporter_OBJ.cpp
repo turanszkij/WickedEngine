@@ -2,9 +2,15 @@
 #include "wiScene.h"
 #include "ModelImporter.h"
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
-
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 using namespace wi::graphics;
 using namespace wi::scene;
 using namespace wi::ecs;

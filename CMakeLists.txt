@@ -82,10 +82,13 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         -Wwrite-strings
         -Winit-self
         -Wreturn-type
-        -Wreorder
-        -Werror=delete-non-virtual-dtor
+        $<$<COMPILE_LANGUAGE:CXX>:-Wreorder>
+        $<$<COMPILE_LANGUAGE:CXX>:-Werror=delete-non-virtual-dtor>
         -Werror
-        #uncomment this to stop the compilation at the first error
+
+		# some GCC versions have bugs triggering this warning
+	    -Wno-stringop-overflow
+		#uncomment this to stop the compilation at the first error
         # -Wfatal-errors
     )
 endif()

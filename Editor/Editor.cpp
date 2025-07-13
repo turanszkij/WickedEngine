@@ -7,7 +7,7 @@
 #include "DummyVisualizer.h"
 
 // some application parameters can be overwritten in the executable by finding the 256 byte long pattern in the first member:
-extern ApplicationExeCustomization exe_customization = {
+ApplicationExeCustomization exe_customization = {
 	"Wicked Editor                                                                                                          ",
 	wi::Color(130, 210, 220, 255),
 	wi::Color(17, 30, 43, 255)
