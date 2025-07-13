@@ -4767,8 +4767,8 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 
 			// Build accessors
 
-			size_t morph_pos_accessor_index = -1;
-			if(buf_d_morph_pos_size > 0)
+			size_t morph_pos_accessor_index = 0;
+			if (buf_d_morph_pos_size > 0)
 			{
 				// Sparse accessor indices
 				auto is_sparse = (m_morph.sparse_indices_positions.size() > 0);
@@ -4798,22 +4798,22 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 				morph_pos_accessor_builder.componentType = TINYGLTF_COMPONENT_TYPE_FLOAT;
 				morph_pos_accessor_builder.count = (is_sparse) ? mesh.vertex_positions.size() : m_morph.vertex_positions.size();
 				morph_pos_accessor_builder.type = TINYGLTF_TYPE_VEC3;
-				if(is_sparse)
+				if (is_sparse)
 				{
 					auto& sparse = morph_pos_accessor_builder.sparse;
 					sparse.isSparse = true;
 					sparse.count = (int)m_morph.sparse_indices_positions.size();
-					
+
 					sparse.indices.bufferView = morph_sparse_bufferView_index;
 					sparse.indices.componentType = TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT;
-					
+
 					sparse.values.bufferView = morph_pos_bufferView_index;
 				}
 				state.gltfModel.accessors.push_back(morph_pos_accessor_builder);
 			}
 
-			size_t morph_norm_accessor_index = -1;
-			if(buf_d_morph_norm_size > 0)
+			size_t morph_norm_accessor_index = 0;
+			if (buf_d_morph_norm_size > 0)
 			{
 				// Sparse accessor indices
 				auto is_sparse = (m_morph.sparse_indices_normals.size() > 0);
@@ -4845,15 +4845,15 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 				// morph_norm_accessor_builder.count = (is_sparse) ? mesh.vertex_normals.size() : m_morph.vertex_normals.size();
 				morph_norm_accessor_builder.count = (is_sparse) ? mesh.vertex_positions.size() : m_morph.vertex_normals.size();
 				morph_norm_accessor_builder.type = TINYGLTF_TYPE_VEC3;
-				if(is_sparse)
+				if (is_sparse)
 				{
 					auto& sparse = morph_norm_accessor_builder.sparse;
 					sparse.isSparse = true;
 					sparse.count = (int)m_morph.sparse_indices_normals.size();
-					
+
 					sparse.indices.bufferView = morph_sparse_bufferView_index;
 					sparse.indices.componentType = TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT;
-					
+
 					sparse.values.bufferView = morph_norm_bufferView_index;
 				}
 				state.gltfModel.accessors.push_back(morph_norm_accessor_builder);
