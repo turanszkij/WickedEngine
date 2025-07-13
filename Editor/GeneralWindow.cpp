@@ -1207,9 +1207,16 @@ void GeneralWindow::ReloadThemes()
 	themeCombo.AddItem("Soft " ICON_SOFT, (uint64_t)Theme::Soft);
 	themeCombo.AddItem("Hacking " ICON_HACKING, (uint64_t)Theme::Hacking);
 	themeCombo.AddItem("Nord " ICON_NORD, (uint64_t)Theme::Nord);
-	wi::helper::GetFileNamesInDirectory(wi::helper::GetCurrentPath() + "/themes/", [this](std::string filename) {
-		themeCombo.AddItem(wi::helper::GetFileNameFromPath(wi::helper::RemoveExtension(filename)), (uint64_t)Theme::User);
+
+	wi::vector<std::string> custom_themes;
+	wi::helper::GetFileNamesInDirectory(wi::helper::GetCurrentPath() + "/themes/", [&](std::string filename) {
+		custom_themes.push_back(wi::helper::GetFileNameFromPath(wi::helper::RemoveExtension(filename)));
 	}, "witheme");
+	std::sort(custom_themes.begin(), custom_themes.end(), std::less());
+	for (auto& x : custom_themes)
+	{
+		themeCombo.AddItem(x, (uint64_t)Theme::User);
+	}
 
 	if (currentTheme == "Dark")
 	{
