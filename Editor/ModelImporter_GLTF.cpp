@@ -2227,7 +2227,7 @@ void Import_Extension_VRM(LoaderState& state)
 				for (size_t boneGroup_index = 0; boneGroup_index < boneGroups.ArrayLen(); ++boneGroup_index)
 				{
 					const auto& boneGroup = boneGroups.Get(int(boneGroup_index));
-					SpringComponent component{};
+					SpringComponent component;
 
 					if (boneGroup.Has("dragForce"))
 					{
@@ -2966,7 +2966,7 @@ void Import_Extension_VRMC(LoaderState& state)
 					for (size_t joint_index = 0; joint_index < joints.ArrayLen(); ++joint_index)
 					{
 						const auto& joint = joints.Get(int(joint_index));
-						SpringComponent component{};
+						SpringComponent component;
 						//component.colliders = colliderIDs; // for now, we will just use all colliders in the scene for every spring
 
 						if (joint.Has("dragForce"))
