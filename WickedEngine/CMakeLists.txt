@@ -55,6 +55,11 @@ add_subdirectory(Utility)
 add_compile_definitions(JPH_DEBUG_RENDERER=1)
 set(PHYSICS_REPO_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 include(${PHYSICS_REPO_ROOT}/Jolt/Jolt.cmake)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  # Jolt triggers a bug in some GCC versions, so we need to disable the warning
+  target_compile_options(Jolt PRIVATE -Wno-stringop-overflow)
+endif()
+
 set_target_properties(Jolt PROPERTIES
 	POSITION_INDEPENDENT_CODE ${WICKED_PIC}
 )
