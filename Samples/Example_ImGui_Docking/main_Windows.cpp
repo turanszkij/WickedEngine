@@ -111,7 +111,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    float sizeadjust = 0.93;
    float screen_width = GetSystemMetrics(SM_CXSCREEN);
    float screen_height = GetSystemMetrics(SM_CYSCREEN);
-	RECT rect = { (screen_width -(screen_width * sizeadjust)), (screen_height -(screen_height * sizeadjust)), screen_width * sizeadjust, screen_height * sizeadjust};
+	RECT rect = { (long)(screen_width -(screen_width * sizeadjust)), (long)(screen_height -(screen_height * sizeadjust)), (long)(screen_width * sizeadjust), (long)(screen_height * sizeadjust)};
    AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, true);
 
    HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
