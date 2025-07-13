@@ -2746,7 +2746,7 @@ std::mutex queue_locker;
 				break;
 			}
 			error += "\nExiting.";
-			wilog_messagebox(error.c_str());
+			wilog_messagebox("%s", error.c_str());
 			wi::platform::Exit();
 		}
 
@@ -5736,7 +5736,7 @@ std::mutex queue_locker;
 
 		std::string message = "D3D12: device removed, cause: ";
 		message += removedReasonString;
-		wilog_messagebox(message.c_str());
+		wilog_messagebox("%s", message.c_str());
 		wi::platform::Exit();
 #endif // PLATFORM_WINDOWS_DESKTOP
 	}
