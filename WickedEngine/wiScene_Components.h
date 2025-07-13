@@ -1981,7 +1981,7 @@ namespace wi::scene
 
 		// These are maintained for top-down chained update by spring dependency system:
 		wi::vector<SpringComponent*> children;
-		wi::ecs::Entity entity;
+		wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
 		TransformComponent* transform = nullptr;
 		TransformComponent* parent_transform = nullptr;
 
