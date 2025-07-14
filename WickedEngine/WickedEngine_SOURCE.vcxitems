@@ -308,6 +308,8 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\TriangleSplitter\TriangleSplitter.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\TriangleSplitter\TriangleSplitterBinning.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\TriangleSplitter\TriangleSplitterMean.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)LUA\ljumptab.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)LUA\lopnames.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\dds.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\dxva.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\h264.h" />
@@ -663,9 +665,6 @@
       <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lbaselib.c">
-      <CompileAsWinRT>false</CompileAsWinRT>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lbitlib.c">
       <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lcode.c">

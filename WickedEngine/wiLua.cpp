@@ -316,7 +316,7 @@ namespace wi::lua
 		TrailRenderer_BindLua::Bind();
 		Async_BindLua::Bind();
 
-		wilog("wi::lua Initialized [Lua %s.%s] (%d ms)", LUA_VERSION_MAJOR, LUA_VERSION_MINOR, (int)std::round(timer.elapsed()));
+		wilog("wi::lua Initialized [Lua %s.%s.%s] (%d ms)", LUA_VERSION_MAJOR, LUA_VERSION_MINOR, LUA_VERSION_RELEASE, (int)std::round(timer.elapsed()));
 	}
 
 	lua_State* GetLuaState()
