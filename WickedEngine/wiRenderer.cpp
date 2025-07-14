@@ -10684,6 +10684,44 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 
 	BindCommonResources(cmd);
 
+	// Scan for max allocation, to avoid multiple allocations in loop (because dealloc is deferred for multiple frames, it could introduce overallocation):
+	uint32_t max_width = 0;
+	uint32_t max_height = 0;
+	for (uint32_t requestIndex = 0; requestIndex < lightmap_request_count; ++requestIndex)
+	{
+		uint32_t objectIndex = *(scene.lightmap_requests.data() + requestIndex);
+		const ObjectComponent& object = scene.objects[objectIndex];
+		if (!object.lightmap.IsValid())
+			continue;
+		if (!object.lightmap_render.IsValid())
+			continue;
+
+		if (object.IsLightmapRenderRequested())
+		{
+			max_width = std::max(max_width, object.lightmap.desc.width);
+			max_height = std::max(max_height, object.lightmap.desc.height);
+		}
+	}
+
+	static Texture lightmap_color_tmp;
+	static Texture lightmap_depth_tmp;
+	if (lightmap_color_tmp.desc.width < max_width || lightmap_color_tmp.desc.height < max_height)
+	{
+		TextureDesc desc;
+		desc.width = wi::math::GetNextPowerOfTwo(max_width);
+		desc.height = wi::math::GetNextPowerOfTwo(max_height);
+		desc.format = Format::R16G16B16A16_FLOAT;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS | BindFlag::RENDER_TARGET; // Note: RENDER_TARGET is not used, but it's created with support for ResourceMiscFlag::ALIASING_TEXTURE_RT_DS
+		desc.misc_flags = ResourceMiscFlag::ALIASING_TEXTURE_RT_DS;
+		device->CreateTexture(&desc, nullptr, &lightmap_color_tmp);
+
+		desc.format = Format::D16_UNORM;
+		desc.bind_flags = BindFlag::DEPTH_STENCIL;
+		desc.layout = ResourceState::DEPTHSTENCIL;
+		desc.misc_flags = ResourceMiscFlag::NONE;
+		device->CreateTexture(&desc, nullptr, &lightmap_depth_tmp, &lightmap_color_tmp); // aliased!
+	}
+
 	// Render lightmaps for each object:
 	for (uint32_t requestIndex = 0; requestIndex < lightmap_request_count; ++requestIndex)
 	{
@@ -10703,22 +10741,6 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 			assert(mesh.vb_atl.IsValid());
 
 			const TextureDesc& desc = object.lightmap_render.GetDesc();
-
-			static Texture lightmap_color_tmp;
-			static Texture lightmap_depth_tmp;
-			if (lightmap_color_tmp.desc.width < object.lightmap.desc.width || lightmap_color_tmp.desc.height < object.lightmap.desc.height)
-			{
-				lightmap_color_tmp.desc = object.lightmap.desc;
-				lightmap_color_tmp.desc.misc_flags = ResourceMiscFlag::ALIASING_TEXTURE_RT_DS;
-				device->CreateTexture(&lightmap_color_tmp.desc, nullptr, &lightmap_color_tmp);
-
-				lightmap_depth_tmp.desc.width = object.lightmap.desc.width;
-				lightmap_depth_tmp.desc.height = object.lightmap.desc.height;
-				lightmap_depth_tmp.desc.format = Format::D16_UNORM;
-				lightmap_depth_tmp.desc.bind_flags = BindFlag::DEPTH_STENCIL;
-				lightmap_depth_tmp.desc.layout = ResourceState::DEPTHSTENCIL;
-				device->CreateTexture(&lightmap_depth_tmp.desc, nullptr, &lightmap_depth_tmp, &lightmap_color_tmp); // aliased!
-			}
 
 			device->Barrier(GPUBarrier::Aliasing(&lightmap_color_tmp, &lightmap_depth_tmp), cmd);
 
