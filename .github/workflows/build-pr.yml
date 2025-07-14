@@ -4,7 +4,7 @@ on:
   pull_request
 
 env:
-  CCACHE_VERSION: 4.10.2
+  CCACHE_VERSION: 4.11.3
   # needed because wiRenderer uses conditional include via __hasinclude
   CCACHE_NODIRECT: 1
 
@@ -20,8 +20,8 @@ jobs:
       uses: actions/cache/restore@v4
       with:
         path: C:\Users\runneradmin\AppData\Local\ccache
-        key: win-ccache-${{ github.run_id }}
-        restore-keys: win-ccache-
+        key: ccache-win-${{ github.run_id }}
+        restore-keys: ccache-win-
 
     - name: Install Ccache
       run: |
@@ -80,6 +80,17 @@ jobs:
 
   linux:
     runs-on: ubuntu-latest
+    name: linux (${{ matrix.cc }})
+    strategy:
+      matrix:
+        include:
+        - cc: gcc
+          cxx: g++
+          package_bins: true
+        - cc: clang
+          cxx: clang++
+          package_bins: false
+
     steps:
     - uses: actions/checkout@v4
 
@@ -88,8 +99,8 @@ jobs:
       uses: actions/cache/restore@v4
       with:
         path: ~/.cache/ccache
-        key: ccache-${{ github.run_id }}
-        restore-keys: ccache-
+        key: ccache-${{ matrix.cc }}-${{ github.run_id }}
+        restore-keys: ccache-${{ matrix.cc }}-
 
     - name: Install dependencies
       run: |
@@ -98,10 +109,8 @@ jobs:
 
     - name: Initial compile
       run: |
-        mkdir build
-        cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-        CCACHE_NODIRECT=1 make -j$(nproc)
+        CC=${{ matrix.cc }} CXX=${{ matrix.cxx }} cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+        make -C build -j$(nproc)
 
     - name: Generate shader dump
       run: |
@@ -111,8 +120,7 @@ jobs:
 
     - name: Recompile with shader dump
       run: |
-        cd build
-        CCACHE_NODIRECT=1 make -B -j $(nproc)
+        make -C build -B -j$(nproc)
 
     - name: Save Ccache database
       id: save-ccache
@@ -123,6 +131,7 @@ jobs:
         key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
 
     - name: Move binaries
+      if: matrix.package_bins
       run: |
         mv build/Editor/Editor ./Editor_Linux
         mv Editor/config.ini ./
@@ -130,6 +139,7 @@ jobs:
         mv Editor/fonts ./
 
     - name: Package Editor
+      if: matrix.package_bins
       uses: actions/upload-artifact@v4
       with:
         name: Editor (Linux)

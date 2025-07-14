@@ -5,7 +5,8 @@ on:
     branches: [ master ]
 
 env:
-  CCACHE_VERSION: 4.10.2
+  CCACHE_VERSION: 4.11.3
+  # needed because wiRenderer uses conditional include via __hasinclude
   CCACHE_NODIRECT: 1
 
 jobs:
@@ -79,6 +80,7 @@ jobs:
 
 
   linux:
+    name: linux (gcc)
     runs-on: ubuntu-latest
     steps:
 
@@ -89,7 +91,7 @@ jobs:
       uses: actions/cache/restore@v4
       with:
         path: ~/.cache/ccache
-        key: ccache-${{ github.run_id }}
+        key: ccache-gcc-${{ github.run_id }}
         restore-keys: ccache-
 
     - name: Install dependencies
@@ -102,7 +104,7 @@ jobs:
         mkdir build
         cd build
         cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-        CCACHE_NODIRECT=1 make -j$(nproc)
+        make -j$(nproc)
     - name: Generate shader dump
       run: |
         cd build/WickedEngine
@@ -112,7 +114,7 @@ jobs:
     - name: Recompile with shader dump
       run: |
         cd build
-        CCACHE_NODIRECT=1 make -B -j $(nproc)
+        make -B -j $(nproc)
 
     - name: Save Ccache database
       id: save-ccache
