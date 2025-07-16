@@ -10,8 +10,11 @@
 #include "Utility/dds.h"
 #include "Utility/stb_image_write.h"
 #include "Utility/zstd/zstd.h"
-#include "Utility/portable-file-dialogs.h"
 #include "Utility/win32ico.h"
+
+#ifndef __SCE__
+#include "Utility/portable-file-dialogs.h"
+#endif // __SCE__
 
 #include <thread>
 #include <locale>
@@ -1412,12 +1415,16 @@ namespace wi::helper
 
 	std::string FolderDialog(const std::string& description)
 	{
+#ifdef __SCE__
+		return "";
+#else
 		if (!pfd::settings::available())
 		{
 			messageBox("No dialog backend available!", "Error!");
 			return "";
 		}
 		return pfd::select_folder(description).result();
+#endif // __SCE__
 	}
 
 	void GetFileNamesInDirectory(const std::string& directory, std::function<void(std::string fileName)> onSuccess, const std::string& filter_extension)
