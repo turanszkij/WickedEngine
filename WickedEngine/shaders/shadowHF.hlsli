@@ -199,7 +199,7 @@ inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, half2 radiu
 // This is used to clamp the uvs to last texel center to avoid sampling on the border and overfiltering into a different shadow
 inline float4 shadow_border_clamp(in ShaderEntity light, in float slice)
 {
-	const float border_size = 0.75 * GetFrame().shadow_atlas_resolution_rcp;
+	const float2 border_size = 0.75 * GetFrame().shadow_atlas_resolution_rcp;
 	const float2 topleft = mad(float2(slice, 0), light.shadowAtlasMulAdd.xy, light.shadowAtlasMulAdd.zw) + border_size;
 	const float2 bottomright = mad(float2(slice + 1, 1), light.shadowAtlasMulAdd.xy, light.shadowAtlasMulAdd.zw) - border_size;
 	return float4(topleft, bottomright);
