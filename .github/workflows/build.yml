@@ -6,6 +6,7 @@ on:
 
 env:
   CCACHE_VERSION: 4.11.3
+  CCACHE_MAXSIZE: 500Mi
   # needed because wiRenderer uses conditional include via __hasinclude
   CCACHE_NODIRECT: 1
 
@@ -21,8 +22,8 @@ jobs:
       uses: actions/cache/restore@v4
       with:
         path: C:\Users\runneradmin\AppData\Local\ccache
-        key: win-ccache-${{ github.run_id }}
-        restore-keys: win-ccache-
+        key: ccache-win-${{ github.run_id }}
+        restore-keys: ccache-win-
 
     - name: Install Ccache
       run: |
@@ -80,10 +81,19 @@ jobs:
 
 
   linux:
-    name: linux (gcc)
     runs-on: ubuntu-latest
-    steps:
+    name: linux (${{ matrix.cc }})
+    strategy:
+      matrix:
+        include:
+        - cc: gcc
+          cxx: g++
+          package_bins: true
+        - cc: clang
+          cxx: clang++
+          package_bins: false
 
+    steps:
     - uses: actions/checkout@v4
 
     - name: Restore Ccache database
@@ -91,8 +101,8 @@ jobs:
       uses: actions/cache/restore@v4
       with:
         path: ~/.cache/ccache
-        key: ccache-gcc-${{ github.run_id }}
-        restore-keys: ccache-
+        key: ccache-${{ matrix.cc }}-${{ github.run_id }}
+        restore-keys: ccache-${{ matrix.cc }}-
 
     - name: Install dependencies
       run: |
@@ -125,6 +135,7 @@ jobs:
         key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
 
     - name: Move files
+      if: matrix.package_bins
       run: |
         mv build/Editor/Editor ./Editor_Linux
         mv Editor/config.ini ./
@@ -132,6 +143,7 @@ jobs:
         mv Editor/fonts ./
 
     - name: Package Editor
+      if: matrix.package_bins
       uses: actions/upload-artifact@v4
       with:
         name: Editor (Linux)
