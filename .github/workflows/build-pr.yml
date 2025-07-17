@@ -5,6 +5,7 @@ on:
 
 env:
   CCACHE_VERSION: 4.11.3
+  CCACHE_MAXSIZE: 500Mi
   # needed because wiRenderer uses conditional include via __hasinclude
   CCACHE_NODIRECT: 1
 
