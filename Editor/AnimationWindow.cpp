@@ -984,7 +984,9 @@ void AnimationWindow::Create(EditorComponent* _editor)
 		retargetCombo.SetSelectedWithoutCallback(-1);
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 
-		Entity retarget_entity = scene.RetargetAnimation((Entity)args.userdata, entity, true);
+		Entity dst_entity = (Entity)args.userdata;
+		scene.ResetPose(dst_entity); // reset pose to be able to retarget anim to character while it's already in an animated pose
+		Entity retarget_entity = scene.RetargetAnimation(dst_entity, entity, true);
 		if (retarget_entity != INVALID_ENTITY)
 		{
 			NameComponent name;
