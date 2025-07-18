@@ -12,6 +12,8 @@ public:
 	void RefreshBoneList();
 
 	wi::gui::Label infoLabel;
+	wi::gui::Button importAnimationsButton;
+	wi::gui::ComboBox animationTesterCombo;
 	wi::gui::CheckBox lookatMouseCheckBox;
 	wi::gui::CheckBox lookatCheckBox;
 	wi::gui::ComboBox lookatEntityCombo;

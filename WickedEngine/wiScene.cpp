@@ -7539,6 +7539,17 @@ namespace wi::scene
 				transform->ClearTransform();
 				transform->MatrixTransform(XMMatrixInverse(nullptr, XMLoadFloat4x4(&armature->inverseBindMatrices[i])) * W);
 				transform->UpdateTransform();
+			}
+		}
+
+		// Only re-attach after all transforms updated, because order of bone collection is not guaranteed to be parent->child!
+		//	This fixes resetpose for Mixamo rigs
+		for (size_t i = 0; i < armature->boneCollection.size(); ++i)
+		{
+			Entity bone = armature->boneCollection[i];
+			TransformComponent* transform = transforms.GetComponent(bone);
+			if (transform != nullptr)
+			{
 				const HierarchyComponent* hier = hierarchy.GetComponent(bone);
 				if (hier != nullptr && hier->parentID != INVALID_ENTITY)
 				{
@@ -7849,7 +7860,7 @@ namespace wi::scene
 							auto& retarget_sampler = animation.samplers.emplace_back();
 							retarget_sampler = sampler;
 							retarget_sampler.backwards_compatibility_data = {};
-							retarget_sampler.scene = src_scene == this ? nullptr : src_scene;
+							retarget_sampler.scene = bake_data ? nullptr : (src_scene == this ? nullptr : src_scene);
 
 							XMMATRIX srcParentMatrix = src_scene->ComputeParentMatrixRecursive(bone_source);
 							XMMATRIX srcMatrix = transform_source->GetLocalMatrix() * srcParentMatrix;
@@ -7870,7 +7881,7 @@ namespace wi::scene
 								retarget_sampler.data = retarget_data_entity;
 								retarget_scene.Component_Attach(retarget_data_entity, retarget_entity);
 
-								auto& animation_data = animation_datas.Contains(sampler.data) ? *animation_datas.GetComponent(sampler.data) : sampler.backwards_compatibility_data;
+								auto& animation_data = src_scene->animation_datas.Contains(sampler.data) ? *src_scene->animation_datas.GetComponent(sampler.data) : sampler.backwards_compatibility_data;
 								retarget_animation_data = animation_data;
 
 								XMVECTOR S, R, T; // matrix decompose destinations
