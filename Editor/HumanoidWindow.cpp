@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "HumanoidWindow.h"
+#include "ModelImporter.h"
 
 using namespace wi::ecs;
 using namespace wi::scene;
@@ -184,6 +185,97 @@ void HumanoidWindow::Create(EditorComponent* _editor)
 	AddWidget(&boneList);
 
 
+
+	importAnimationsButton.Create(ICON_ANIMATION " Import animations");
+	importAnimationsButton.SetTooltip("Import animations from a scene or model file and retarget them to this humanoid.");
+	importAnimationsButton.OnClick([=](wi::gui::EventArgs args) {
+		wi::helper::FileDialogParams params;
+		params.type = wi::helper::FileDialogParams::OPEN;
+		params.description = "Animated models (wiscene, gltf, fbx, vrm, vrma)";
+		params.extensions = { "WISCENE", "GLTF", "GLB", "FBX", "VRM", "VRMA" };
+		wi::helper::FileDialog(params, [this](std::string fileName) {
+			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+				std::string ext = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(fileName));
+
+				Scene animscene;
+				if (!ext.compare("WISCENE"))
+				{
+					wi::scene::LoadModel(animscene, fileName);
+				}
+				else if (!ext.compare("GLTF") || !ext.compare("GLB") || !ext.compare("VRM") || !ext.compare("VRMA"))
+				{
+					ImportModel_GLTF(fileName, animscene);
+				}
+				else if (!ext.compare("FBX"))
+				{
+					ImportModel_FBX(fileName, animscene);
+				}
+
+				wilog("Started importing animations from file: %s", fileName.c_str());
+				int import_count = 0;
+
+				Scene& scene = editor->GetCurrentScene();
+				for (auto& x : editor->translator.selected)
+				{
+					if (!scene.humanoids.Contains(x.entity))
+						continue;
+					Entity humanoidentity = x.entity;
+					const NameComponent* name_dest = scene.names.GetComponent(humanoidentity);
+					std::string humanoidname = name_dest == nullptr ? std::to_string(humanoidentity) : name_dest->name;
+					scene.ResetPose(humanoidentity);
+					for (size_t j = 0; j < animscene.animations.GetCount(); ++j)
+					{
+						Entity animentity = animscene.animations.GetEntity(j);
+						Entity retarget_entity = scene.RetargetAnimation(humanoidentity, animentity, true, &animscene);
+						if (retarget_entity != INVALID_ENTITY)
+						{
+							NameComponent name;
+							const NameComponent* name_source = animscene.names.GetComponent(animentity);
+							if (name_source != nullptr)
+							{
+								name.name += name_source->name;
+							}
+							scene.names.Create(retarget_entity) = name;
+							wilog("\tFound a humanoid animation and successfully retargetted: %s -> %s", name.name.c_str(), humanoidname.c_str());
+							import_count++;
+						}
+					}
+				}
+
+				wilog("Finished importing %d animations from file.", import_count);
+
+				editor->componentsWnd.RefreshEntityTree();
+			});
+		});
+	});
+	AddWidget(&importAnimationsButton);
+
+	animationTesterCombo.Create("Animation tester: ");
+	animationTesterCombo.SetTooltip("Select an animation from the list of children to this humanoid.\nThe selected animation will be played instantly and others will be stopped.");
+	animationTesterCombo.OnSelect([this](wi::gui::EventArgs args){
+		Scene& scene = editor->GetCurrentScene();
+		for (size_t i = 0; i < scene.animations.GetCount(); ++i)
+		{
+			if (!scene.Entity_IsDescendant(scene.animations.GetEntity(i), entity))
+				continue;
+			scene.animations[i].Stop();
+		}
+		if (scene.Entity_IsDescendant((Entity)args.userdata, entity))
+		{
+			AnimationComponent* anim = scene.animations.GetComponent((Entity)args.userdata);
+			if (anim != nullptr)
+			{
+				anim->Play();
+			}
+		}
+		else if (args.userdata == INVALID_ENTITY)
+		{
+			scene.ResetPose(entity);
+		}
+	});
+	AddWidget(&animationTesterCombo);
+
+
 	SetMinimized(true);
 	SetVisible(false);
 
@@ -236,10 +328,26 @@ void HumanoidWindow::SetEntity(Entity entity)
 			{
 				Entity transformEntity = scene.transforms.GetEntity(i);
 				const NameComponent* name = scene.names.GetComponent(transformEntity);
-				lookatEntityCombo.AddItem(name == nullptr ? std::to_string(transformEntity) : name->name, transformEntity);
+				lookatEntityCombo.AddItem((name == nullptr || name->name.empty()) ? std::to_string(transformEntity) : name->name, transformEntity);
 				if (humanoid->lookAtEntity == transformEntity)
 				{
 					lookatEntityCombo.SetSelectedWithoutCallback((int)lookatEntityCombo.GetItemCount() - 1);
+				}
+			}
+
+			Entity prevselectedanim = animationTesterCombo.GetSelectedUserdata();
+			animationTesterCombo.ClearItems();
+			animationTesterCombo.AddItem("NONE " ICON_DISABLED, INVALID_ENTITY);
+			for (size_t i = 0; i < scene.animations.GetCount(); ++i)
+			{
+				Entity animationentity = scene.animations.GetEntity(i);
+				if (!scene.Entity_IsDescendant(animationentity, entity))
+					continue;
+				const NameComponent* name = scene.names.GetComponent(animationentity);
+				animationTesterCombo.AddItem((name == nullptr || name->name.empty()) ? std::to_string(animationentity) : name->name, (uint64_t)animationentity);
+				if (prevselectedanim == animationentity)
+				{
+					animationTesterCombo.SetSelectedWithoutCallback((int)animationTesterCombo.GetItemCount() - 1);
 				}
 			}
 		}
@@ -489,6 +597,11 @@ void HumanoidWindow::ResizeLayout()
 	layout.add(headSizeSlider);
 	layout.add(ragdollFatnessSlider);
 	layout.add(ragdollHeadSizeSlider);
+
+	layout.jump();
+
+	layout.add_fullwidth(importAnimationsButton);
+	layout.add_fullwidth(animationTesterCombo);
 
 	layout.jump();
 

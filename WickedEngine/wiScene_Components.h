@@ -1757,7 +1757,7 @@ namespace wi::scene
 
 		XMVECTOR rootPrevTranslation = XMVectorSet(-69, 420, 69, -420);
 		XMVECTOR rootPrevRotation = XMVectorSet(-69, 420, 69, -420);
-		XMVECTOR INVALID_VECTOR = XMVectorSet(-69, 420, 69, -420);
+		inline static const XMVECTOR INVALID_VECTOR = XMVectorSet(-69, 420, 69, -420);
 		float prevLocTimer;
 		float prevRotTimer;
 		// Root Motion

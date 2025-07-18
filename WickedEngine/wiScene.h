@@ -549,7 +549,7 @@ namespace wi::scene
 		//	src			:	the animation to copy, it should already target humanoid bones
 		//	bake_data	:	if true, the retargeted data will be baked into a new animation data.
 		//					if false, it will reuse the source animation data without creating a new one and retargeting will be applied at runtime on every Update
-		//	src_scene	:	(optional) specify if you want to retarget from an other scene. This scene must be kept alive while you use the resulting animation!
+		//	src_scene	:	(optional) specify if you want to retarget from an other scene. This scene must be kept alive while you use the resulting animation if the data is not baked!
 		//					If you use a separate scene, then you mustn't serialize the scene while there are animations referencing the src_scene!
 		//
 		//	returns entity ID of the new animation or INVALID_ENTITY if retargeting was not successful
