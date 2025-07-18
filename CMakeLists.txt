@@ -86,19 +86,24 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         $<$<COMPILE_LANGUAGE:CXX>:-Werror=delete-non-virtual-dtor>
         -Werror
 
-		# some GCC versions have bugs triggering this warning
-	    -Wno-stringop-overflow
-		# this is just silly
-		-Wno-format-zero-length
+        # some GCC versions have bugs triggering this warning
+        -Wno-stringop-overflow
+        # this is just silly
+        -Wno-format-zero-length
 
-		#uncomment this to stop the compilation at the first error
+        #uncomment this to stop the compilation at the first error
         # -Wfatal-errors
     )
 endif()
 
 
 add_subdirectory(WickedEngine)
-add_subdirectory(Content)
+add_custom_target(Content
+    COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_CURRENT_BINARY_DIR}/Content
+    COMMAND ${CMAKE_COMMAND} -E create_symlink ${WICKED_ROOT_DIR}/Content ${CMAKE_CURRENT_BINARY_DIR}/Content
+    COMMENT "Symlinking Content directory"
+    VERBATIM
+)
 
 if (WICKED_EDITOR)
     add_subdirectory(Editor)
