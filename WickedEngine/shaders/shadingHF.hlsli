@@ -765,35 +765,49 @@ inline void ApplyAerialPerspective(float2 uv, float3 P, inout half4 color)
 	}
 }
 
-inline uint AlphaToCoverage(half alpha, half alphaTest, float4 svposition)
+// Handle transparency effects in opaque render pass:
+//	alpha		: the transparency value of the surface
+//	alphaTest	: user specified alpha cutoff value
+//	dithering	: additional transparency that will be used for dithering or multisampled coverage modifier
+//	svposition	: SV_Position system value pixel shader input
+//
+//	returns bitmask that can be used for SV_Coverage output from pixel shader
+inline uint AlphaToCoverage(half alpha, half alphaTest, half dithering, float4 svposition)
 {
-	if (alphaTest == 0)
-	{
-		// No alpha test, force full coverage:
-		return ~0u;
-	}
-
 	if (GetFrame().options & OPTION_BIT_TEMPORALAA_ENABLED)
 	{
 		// When Temporal AA is enabled, dither the alpha mask with animated blue noise:
-		alpha -= blue_noise(svposition.xy, svposition.w).x / GetCamera().sample_count;
+		alpha -= dithering + blue_noise(svposition.xy, svposition.w).x / GetCamera().sample_count;
 	}
 	else if (GetCamera().sample_count > 1)
 	{
-		// Without Temporal AA, use static dithering:
-		//alpha -= dither(svposition.xy) / GetCamera().sample_count;
-
-		// Static MSAA dithering is disabled now, but keep this branch logic here to not take alpha test path for MSAA
+		// Multisampled transparency:
+		//	alphaTest is not made, pure alpha is used for sample mask
+		//	dithering is modifying final alpha
+		alpha -= dithering;
 	}
 	else
 	{
 		// Without Temporal AA and MSAA, regular alpha test behaviour will be used:
+		//	emulate clip() behaviour with combined alpha test and dithering
+		const half cutout_pattern = dither(svposition.xy) - dithering;
+		if (cutout_pattern < 0)
+		{
+			alpha = 0;
+		}
 		alpha -= alphaTest;
 	}
 
 	if (alpha > 0)
 	{
+#ifdef TRANSPARENT
+		// Transparent render pass:
+		//	still clips alpha = 0 but for any alpha it will use blending and full coverage
+		//	otherwise the alpha would do blending and coverage which doubles the alpha effect in multisampling
+		return ~0u;
+#else
 		return ~0u >> (31u - uint(alpha * GetCamera().sample_count));
+#endif // TRANSPARENT
 	}
 	return 0;
 }

@@ -1069,28 +1069,19 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 
 	half alphatest = material.GetAlphaTest() + meshinstance.GetAlphaTest();
 
+	half dithering = 0;
 #ifndef DISABLE_ALPHATEST
 #ifndef TRANSPARENT
 #ifndef ENVMAPRENDERING
 #ifdef OBJECTSHADER_USE_DITHERING
-	// apply dithering:
-	if (GetCamera().sample_count > 1)
-	{
-		// AlphaToCoverage will handle it as transparent instead of dithering:
-		color.a -= input.GetDither();
-		alphatest += input.GetDither();
-	}
-	else
-	{
-		clip(dither(pixel + GetTemporalAASampleRotation()) - input.GetDither());
-	}
+	dithering = input.GetDither();
 #endif // OBJECTSHADER_USE_DITHERING
 #endif // DISABLE_ALPHATEST
 #endif // TRANSPARENT
 #endif // ENVMAPRENDERING
 
 #ifndef DISABLE_ALPHATEST
-	coverage = AlphaToCoverage(color.a, alphatest, input.pos); // opaque soft alpha test (MSAA, temporal AA support)
+	coverage = AlphaToCoverage(color.a, alphatest, dithering, input.pos); // opaque soft alpha test (MSAA, temporal AA support)
 #endif // DISABLE_ALPHATEST
 	
 	// end point:

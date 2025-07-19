@@ -25,6 +25,11 @@ struct VertexToPixel
 	{
 		return GetCamera().screen_to_nearplane(pos) - GetPos3D(); // ortho support, cannot use cameraPos!
 	}
+
+	inline half GetDither()
+	{
+		return fade;
+	}
 };
 
 #endif // WI_HAIRPARTICLE_HF

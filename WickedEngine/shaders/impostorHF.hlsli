@@ -20,6 +20,11 @@ struct VSOut
 	{
 		return GetCamera().screen_to_nearplane(pos) - GetPos3D(); // ortho support, cannot use cameraPos!
 	}
+
+	inline half GetDither()
+	{
+		return dither;
+	}
 };
 
 Texture2DArray<float4> impostorTex : register(t1);

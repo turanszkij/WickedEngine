@@ -15,8 +15,5 @@ void main(VertexToPixel input, out uint coverage : SV_Coverage)
 		alpha = material.textures[BASECOLORMAP].Sample(sampler_linear_clamp, input.tex.xyxy).a;
 	}
 
-	// Distance dithered fade:
-	clip(dither(input.pos.xy + GetTemporalAASampleRotation()) - input.fade);
-
-	coverage = AlphaToCoverage(alpha, material.GetAlphaTest(), input.pos);
+	coverage = AlphaToCoverage(alpha, material.GetAlphaTest(), input.GetDither(), input.pos);
 }
