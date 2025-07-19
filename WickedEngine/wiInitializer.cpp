@@ -75,6 +75,14 @@ namespace wi::initializer
 		{
 			cpustring.push_back("AVX; ");
 		}
+		if (cpuinfo.haveFMA3())
+		{
+			cpustring.push_back("FMA3; ");
+		}
+		if (cpuinfo.haveF16C())
+		{
+			cpustring.push_back("F16C; ");
+		}
 		if (cpuinfo.haveAVX2())
 		{
 			cpustring.push_back("AVX 2; ");
@@ -98,6 +106,12 @@ namespace wi::initializer
 #ifdef _XM_AVX_INTRINSICS_
 		cpustring.push_back("AVX; ");
 #endif // _XM_AVX_INTRINSICS_
+#ifdef _XM_FMA3_INTRINSICS_
+		cpustring.push_back("FMA3; ");
+#endif // _XM_FMA3_INTRINSICS_
+#ifdef _XM_F16C_INTRINSICS_
+		cpustring.push_back("F16C; ");
+#endif // _XM_F16C_INTRINSICS_
 #ifdef _XM_AVX2_INTRINSICS_
 		cpustring.push_back("AVX 2; ");
 #endif // _XM_AVX2_INTRINSICS_

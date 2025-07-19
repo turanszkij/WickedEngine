@@ -44,6 +44,8 @@ public:
 	inline bool    haveSSE3()          const { return mIsSSE3; }
 	inline bool    haveSSE41()         const { return mIsSSE41; }
 	inline bool    haveSSE42()         const { return mIsSSE42; }
+	inline bool    haveF16C()          const { return mIsF16C; }
+	inline bool    haveFMA3()          const { return mIsFMA3; }
 	inline bool    haveAVX()           const { return mIsAVX; }
 	inline bool    haveAVX2()          const { return mIsAVX2; }
 	inline bool    haveAVX512F()       const { return mIsAVX512F; }
@@ -57,7 +59,9 @@ private:
 	static constexpr uint32_t SSE42_POS = 0x00100000;
 	static constexpr uint32_t AVX_POS = 0x10000000;
 	static constexpr uint32_t AVX2_POS = 0x00000020;
+	static constexpr uint32_t FMA3_POS = 1u << 12;
 	static constexpr uint32_t AVX512F_POS = 1u << 15; // Bit 16
+	static constexpr uint32_t F16C_POS = 1u << 29;
 	static constexpr uint32_t LVL_NUM = 0x000000FF;
 	static constexpr uint32_t LVL_TYPE = 0x0000FF00;
 	static constexpr uint32_t LVL_CORES = 0x0000FFFF;
@@ -77,6 +81,8 @@ private:
 	bool   mIsAVX = false;
 	bool   mIsAVX2 = false;
 	bool   mIsAVX512F = false;
+	bool   mIsF16C = false;
+	bool   mIsFMA3 = false;
 };
 
 CPUInfo::CPUInfo()
@@ -97,6 +103,8 @@ CPUInfo::CPUInfo()
 	mIsSSE41 = cpuID1.ECX() & SSE41_POS;
 	mIsSSE42 = cpuID1.ECX() & SSE41_POS;
 	mIsAVX = cpuID1.ECX() & AVX_POS;
+	mIsF16C = cpuID1.ECX() & F16C_POS;
+	mIsFMA3 = cpuID1.ECX() & FMA3_POS;
 	// Get AVX2 instructions availability
 	CPUID cpuID7(7, 0);
 	mIsAVX2 = cpuID7.EBX() & AVX2_POS;
