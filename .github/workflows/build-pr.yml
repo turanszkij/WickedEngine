@@ -83,8 +83,18 @@ jobs:
     runs-on: ubuntu-latest
     name: linux (${{ matrix.cc }})
     strategy:
+      fail-fast: false
       matrix:
         include:
+        - cc: gcc-12
+          cxx: g++-12
+          package_bins: false
+        - cc: gcc-13
+          cxx: g++-13
+          package_bins: false
+        - cc: gcc-14
+          cxx: g++-14
+          package_bins: false
         - cc: gcc
           cxx: g++
           package_bins: true

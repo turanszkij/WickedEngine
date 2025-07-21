@@ -1,9 +1,7 @@
 cmake_minimum_required(VERSION 3.19)
 set (SOURCE_FILES
-	stdafx.cpp
 	Tests.cpp
 	Tests.h
-	stdafx.h
 )
 
 if (WIN32)
@@ -33,6 +31,8 @@ else()
 
 	set(LIB_DXCOMPILER "libdxcompiler.so")
 endif ()
+
+target_precompile_headers(Tests PRIVATE stdafx.h)
 
 if (MSVC)
 	set_property(TARGET Tests PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
