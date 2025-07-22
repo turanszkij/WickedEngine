@@ -174,6 +174,12 @@ namespace wi::scene
 
 		XMStoreFloat4(&rotation_local, quat);
 	}
+	void TransformComponent::RotateRollPitchYaw(const XMVECTOR& value)
+	{
+		XMFLOAT3 v;
+		XMStoreFloat3(&v, value);
+		RotateRollPitchYaw(v);
+	}
 	void TransformComponent::Rotate(const XMFLOAT4& quaternion)
 	{
 		SetDirty();

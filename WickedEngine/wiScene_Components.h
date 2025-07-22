@@ -95,6 +95,7 @@ namespace wi::scene
 		void Translate(const XMFLOAT3& value);
 		void Translate(const XMVECTOR& value);
 		void RotateRollPitchYaw(const XMFLOAT3& value);
+		void RotateRollPitchYaw(const XMVECTOR& value);
 		void Rotate(const XMFLOAT4& quaternion);
 		void Rotate(const XMVECTOR& quaternion);
 		void Scale(const XMFLOAT3& value);
@@ -2296,6 +2297,9 @@ namespace wi::scene
 		float ragdoll_headsize = 1.0f;
 
 		wi::ecs::Entity lookAtEntity = wi::ecs::INVALID_ENTITY; // lookAt can be fixed to specific entity
+
+		float arm_spacing = 0;
+		float leg_spacing = 0;
 
 		// Non-serialized attributes:
 		XMFLOAT3 lookAt = {}; // lookAt target pos, can be set by user

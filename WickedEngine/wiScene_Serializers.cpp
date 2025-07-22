@@ -2401,6 +2401,12 @@ namespace wi::scene
 			{
 				SerializeEntity(archive, lookAtEntity, seri);
 			}
+
+			if (seri.GetVersion() >= 3)
+			{
+				archive >> arm_spacing;
+				archive >> leg_spacing;
+			}
 		}
 		else
 		{
@@ -2425,6 +2431,12 @@ namespace wi::scene
 			if (seri.GetVersion() >= 2)
 			{
 				SerializeEntity(archive, lookAtEntity, seri);
+			}
+
+			if (seri.GetVersion() >= 3)
+			{
+				archive << arm_spacing;
+				archive << leg_spacing;
 			}
 		}
 	}

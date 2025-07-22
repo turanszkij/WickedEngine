@@ -1870,6 +1870,10 @@ namespace wi::lua::scene
 		int SetRagdollHeadSize(lua_State* L);
 		int GetRagdollFatness(lua_State* L);
 		int GetRagdollHeadSize(lua_State* L);
+		int SetArmSpacing(lua_State* L);
+		int GetArmSpacing(lua_State* L);
+		int SetLegSpacing(lua_State* L);
+		int GetLegSpacing(lua_State* L);
 	};
 
 	class DecalComponent_BindLua

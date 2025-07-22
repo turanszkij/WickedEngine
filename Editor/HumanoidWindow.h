@@ -28,6 +28,8 @@ public:
 	wi::gui::Slider headSizeSlider;
 	wi::gui::Slider ragdollFatnessSlider;
 	wi::gui::Slider ragdollHeadSizeSlider;
+	wi::gui::Slider armSpacingSlider;
+	wi::gui::Slider legSpacingSlider;
 	wi::gui::TreeList boneList;
 
 	void ResizeLayout() override;
