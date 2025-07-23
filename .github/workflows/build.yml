@@ -84,6 +84,7 @@ jobs:
     runs-on: ubuntu-latest
     name: linux (${{ matrix.cc }})
     strategy:
+      fail-fast: false
       matrix:
         include:
         - cc: gcc
