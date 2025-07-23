@@ -1528,6 +1528,10 @@ Describes a Collider object.
 - SetRagdollHeadSize(float value) -- Control the overall size of the ragdoll head (default: 1)
 - GetRagdollFatness() : float
 - GetRagdollHeadSize() : float
+- SetArmSpacing(float value) -- dynamically modify arm spacing after animation (negative: pull together, positive: push apart)
+- GetArmSpacing() : float
+- SetLegSpacing(float value) -- dynamically modify leg spacing after animation (negative: pull together, positive: push apart)
+- GetLegSpacing() : float
 
 ```lua
 [outer] HumanoidBone = {
@@ -1542,11 +1546,11 @@ Describes a Collider object.
 	Jaw = 8,
 	LeftUpperLeg = 9,	-- included in ragdoll
 	LeftLowerLeg = 10,	-- included in ragdoll
-	LeftFoot = 11,
+	LeftFoot = 11,		-- included in ragdoll
 	LeftToes = 12,
 	RightUpperLeg = 13,	-- included in ragdoll
 	RightLowerLeg = 14,	-- included in ragdoll
-	RightFoot = 15,
+	RightFoot = 15,		-- included in ragdoll
 	RightToes = 16,
 	LeftShoulder = 17,
 	LeftUpperArm = 18,	-- included in ragdoll

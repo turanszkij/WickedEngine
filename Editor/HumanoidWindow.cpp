@@ -149,6 +149,20 @@ void HumanoidWindow::Create(EditorComponent* _editor)
 	}));
 	AddWidget(&ragdollHeadSizeSlider);
 
+	armSpacingSlider.Create(-1, 1, 0, 100, "Arm spacing: ");
+	armSpacingSlider.SetTooltip("Adjust distance between arms.");
+	armSpacingSlider.OnSlide(forEachSelected([](auto humanoid, auto args) {
+		humanoid->arm_spacing = args.fValue;
+	}));
+	AddWidget(&armSpacingSlider);
+
+	legSpacingSlider.Create(-1, 1, 0, 100, "Leg spacing: ");
+	legSpacingSlider.SetTooltip("Adjust distance between legs.");
+	legSpacingSlider.OnSlide(forEachSelected([](auto humanoid, auto args) {
+		humanoid->leg_spacing = args.fValue;
+	}));
+	AddWidget(&legSpacingSlider);
+
 	boneList.Create("Bones: ");
 	boneList.OnSelect([&](wi::gui::EventArgs args) {
 
@@ -314,6 +328,8 @@ void HumanoidWindow::SetEntity(Entity entity)
 			eyeRotSpeedSlider.SetValue(humanoid->eye_rotation_speed);
 			ragdollFatnessSlider.SetValue(humanoid->ragdoll_fatness);
 			ragdollHeadSizeSlider.SetValue(humanoid->ragdoll_headsize);
+			armSpacingSlider.SetValue(humanoid->arm_spacing);
+			legSpacingSlider.SetValue(humanoid->leg_spacing);
 
 			Entity bone = humanoid->bones[size_t(HumanoidComponent::HumanoidBone::Head)];
 			const TransformComponent* transform = scene.transforms.GetComponent(bone);
@@ -597,6 +613,8 @@ void HumanoidWindow::ResizeLayout()
 	layout.add(headSizeSlider);
 	layout.add(ragdollFatnessSlider);
 	layout.add(ragdollHeadSizeSlider);
+	layout.add(armSpacingSlider);
+	layout.add(legSpacingSlider);
 
 	layout.jump();
 

@@ -7506,6 +7506,10 @@ Luna<HumanoidComponent_BindLua>::FunctionType HumanoidComponent_BindLua::methods
 	lunamethod(HumanoidComponent_BindLua, SetRagdollHeadSize),
 	lunamethod(HumanoidComponent_BindLua, GetRagdollFatness),
 	lunamethod(HumanoidComponent_BindLua, GetRagdollHeadSize),
+	lunamethod(HumanoidComponent_BindLua, SetArmSpacing),
+	lunamethod(HumanoidComponent_BindLua, GetArmSpacing),
+	lunamethod(HumanoidComponent_BindLua, SetLegSpacing),
+	lunamethod(HumanoidComponent_BindLua, GetLegSpacing),
 	{ NULL, NULL }
 };
 Luna<HumanoidComponent_BindLua>::PropertyType HumanoidComponent_BindLua::properties[] = {
@@ -7641,6 +7645,42 @@ int HumanoidComponent_BindLua::GetRagdollFatness(lua_State* L)
 int HumanoidComponent_BindLua::GetRagdollHeadSize(lua_State* L)
 {
 	wi::lua::SSetFloat(L, component->ragdoll_headsize);
+	return 1;
+}
+int HumanoidComponent_BindLua::SetArmSpacing(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->arm_spacing = wi::lua::SGetFloat(L, 1);
+	}
+	else
+	{
+		wi::lua::SError(L, "SetArmSpacing(float value) not enough arguments!");
+	}
+	return 0;
+}
+int HumanoidComponent_BindLua::GetArmSpacing(lua_State* L)
+{
+	wi::lua::SSetFloat(L, component->arm_spacing);
+	return 1;
+}
+int HumanoidComponent_BindLua::SetLegSpacing(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->leg_spacing = wi::lua::SGetFloat(L, 1);
+	}
+	else
+	{
+		wi::lua::SError(L, "SetLegSpacing(float value) not enough arguments!");
+	}
+	return 0;
+}
+int HumanoidComponent_BindLua::GetLegSpacing(lua_State* L)
+{
+	wi::lua::SSetFloat(L, component->leg_spacing);
 	return 1;
 }
 

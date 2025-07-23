@@ -3490,6 +3490,8 @@ namespace wi::scene
 			}
 		});
 
+		wi::jobsystem::Wait(ctx); // sync needed when there is IK on character arm/leg, and also arm/leg spacing!
+
 		wi::jobsystem::Dispatch(ctx, (uint32_t)humanoids.GetCount(), 1, [this, &recompute_hierarchy](wi::jobsystem::JobArgs args) {
 			Entity humanoidEntity = humanoids.GetEntity(args.jobIndex);
 			HumanoidComponent& humanoid = humanoids[args.jobIndex];
@@ -3612,6 +3614,35 @@ namespace wi::scene
 					W = XMMatrixRotationQuaternion(Q) * W;
 					XMStoreFloat4x4(&transform.world, W); // world space to have immediate feedback from parent to child (head -> eyes)
 
+				}
+			}
+
+			if (humanoid.arm_spacing != 0.0f)
+			{
+				recompute_hierarchy.store(true);
+				size_t left_arm = transforms.GetIndex(humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftUpperArm]);
+				size_t right_arm = transforms.GetIndex(humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightUpperArm]);
+				if (left_arm != ~0ull)
+				{
+					transforms_temp[left_arm].Rotate(XMQuaternionRotationNormal(FORWARD, -humanoid.arm_spacing * XM_PIDIV4));
+				}
+				if (right_arm != ~0ull)
+				{
+					transforms_temp[right_arm].Rotate(XMQuaternionRotationNormal(FORWARD, humanoid.arm_spacing * XM_PIDIV4));
+				}
+			}
+			if (humanoid.leg_spacing != 0.0f)
+			{
+				recompute_hierarchy.store(true);
+				size_t left_leg = transforms.GetIndex(humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftUpperLeg]);
+				size_t right_leg = transforms.GetIndex(humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightUpperLeg]);
+				if (left_leg != ~0ull)
+				{
+					transforms_temp[left_leg].Rotate(XMQuaternionRotationNormal(FORWARD, -humanoid.leg_spacing * XM_PIDIV4));
+				}
+				if (right_leg != ~0ull)
+				{
+					transforms_temp[right_leg].Rotate(XMQuaternionRotationNormal(FORWARD, humanoid.leg_spacing * XM_PIDIV4));
 				}
 			}
 		});
