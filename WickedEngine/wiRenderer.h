@@ -369,10 +369,9 @@ namespace wi::renderer
 
 	struct LuminanceResources
 	{
-		wi::graphics::GPUBuffer luminance;
+		wi::graphics::GPUBuffer luminance; // result luminance value
 	};
 	void CreateLuminanceResources(LuminanceResources& res, XMUINT2 resolution);
-	// Compute the luminance for the source image and return the texture containing the luminance value in pixel [0,0]
 	void ComputeLuminance(
 		const LuminanceResources& res,
 		const wi::graphics::Texture& sourceImage,
@@ -419,7 +418,6 @@ namespace wi::renderer
 
 		inline bool IsValid() const { return bins.IsValid(); }
 	};
-	void CreateVisibilityResourcesLightWeight(VisibilityResources& res, XMUINT2 resolution);
 	void CreateVisibilityResources(VisibilityResources& res, XMUINT2 resolution);
 	void Visibility_Prepare(
 		const VisibilityResources& res,
