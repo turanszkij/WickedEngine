@@ -187,7 +187,7 @@ local function Character(model_scene, start_transform, controllable, anim_scene,
 				end
 				
 				self.target_rot_horizontal = self.target_rot_horizontal + diff.GetX()
-				self.target_rot_vertical = math.clamp(self.target_rot_vertical + diff.GetY(), -math.pi * 0.3, math.pi * 0.4) -- vertical camers limits
+				self.target_rot_vertical = math.clamp(self.target_rot_vertical + diff.GetY(), -math.pi * 0.3, math.pi * 0.4) -- vertical camera limits
 			end
 
 			-- Blend to current mood, blend out other moods:
@@ -586,7 +586,7 @@ local ResolveCharacters = function(characterA, characterB)
 			humanoidB.SetLookAt(headA)
 
 			local facing_amount = vector.Dot(characterB:GetFacing(), vector.Subtract(characterA.position, characterB.position).Normalize())
-			if #characterA.dialogs > 0 and conversation.state == ConversationState.Disabled and facing_amount > 0.8 then
+			if characterA.dialogs ~= nil and #characterA.dialogs > 0 and conversation.state == ConversationState.Disabled and facing_amount > 0.8 then
 				if input.Press(KEYBOARD_BUTTON_ENTER) or input.Press(GAMEPAD_BUTTON_2) then
 					characterA:Turn(vector.Subtract(headB, headA):Normalize())
 					conversation:Enter(characterA)
