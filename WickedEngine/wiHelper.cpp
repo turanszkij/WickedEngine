@@ -1364,7 +1364,7 @@ namespace wi::helper
 					// Single file
 					std::string result_filename;
 					StringConvert(directory, result_filename);
-					onSuccess(result_filename);
+					onSuccess(BackslashToForwardSlash(result_filename));
 				}
 				else
 				{
@@ -1375,7 +1375,7 @@ namespace wi::helper
 						p += wcslen(p) + 1;
 						std::string result_filename;
 						StringConvert(fullPath, result_filename);
-						onSuccess(result_filename);
+						onSuccess(BackslashToForwardSlash(result_filename));
 					}
 				}
 			}

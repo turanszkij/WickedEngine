@@ -181,7 +181,7 @@ public:
 	size_t maxRecentFilenames = 10;
 	wi::vector<std::string> recentFolders;
 	size_t maxRecentFolders = 8;
-	void RegisterRecentlyUsed(const std::string& filename);
+	void RegisterRecentlyUsed(std::string filename);
 
 	void Open(std::string filename);
 	void Save(const std::string& filename);

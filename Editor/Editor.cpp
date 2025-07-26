@@ -5003,8 +5003,9 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 	componentsWnd.RefreshEntityTree();
 }
 
-void EditorComponent::RegisterRecentlyUsed(const std::string& filename)
+void EditorComponent::RegisterRecentlyUsed(std::string filename)
 {
+	filename = wi::helper::BackslashToForwardSlash(filename);
 	{
 		for (size_t i = 0; i < recentFilenames.size();)
 		{
