@@ -1407,7 +1407,12 @@ namespace wi::helper
 		switch (params.type) {
 			case FileDialogParams::OPEN:
 			{
-				std::vector<std::string> selection = pfd::open_file("Open file", std::filesystem::current_path().string(), extensions, params.multiselect).result();
+				pfd::opt options = pfd::opt::none;
+				if (params.multiselect)
+				{
+					options = options | pfd::opt::multiselect;
+				}
+				std::vector<std::string> selection = pfd::open_file("Open file", std::filesystem::current_path().string(), extensions, options).result();
 				if (!selection.empty())
 				{
 					for (auto& x : selection)
