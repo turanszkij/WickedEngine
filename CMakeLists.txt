@@ -18,8 +18,34 @@ option(USE_LIBCXX "Link WickedEngine to llvm libc++ library - only available wit
 option(WICKED_EDITOR "Build WickedEngine editor" ON)
 option(WICKED_TESTS "Build WickedEngine tests" ON)
 option(WICKED_IMGUI_EXAMPLE "Build WickedEngine imgui example" ON)
+if (CMAKE_HOST_WIN32)
+	set(symlink_default OFF)
+else()
+	set(symlink_default ON)
+endif()
+option(WICKED_USE_SYMLINKS "Prefer symlinking over copying directories" ${symlink_default})
 
-include(CMakeDependentOption)
+
+if(WICKED_USE_SYMLINKS)
+    # check for symlink support (on windows it requires admin or developer mode)
+    execute_process(
+        COMMAND ${CMAKE_COMMAND} -E create_symlink CMakeLists.txt ${CMAKE_CURRENT_BINARY_DIR}/symlink-test
+        ERROR_QUIET
+        RESULT_VARIABLE symlink_check_result
+    )
+    if(symlink_check_result EQUAL 0)
+        file(REMOVE ${CMAKE_BINARY_DIR}/symlink-test)
+        set(COPY_OR_SYMLINK_DIR_CMD create_symlink)
+    else()
+        message(FATAL_ERROR "Symlinks are not supported. Either disable them using -DWICKED_USE_SYMLINKS=OFF or enable Windows' developer mode")
+    endif()
+else()
+    if(CMAKE_VERSION VERSION_LESS "3.26.0")
+        set(COPY_OR_SYMLINK_DIR_CMD copy_directory)
+    else()
+        set(COPY_OR_SYMLINK_DIR_CMD copy_directory_if_different)
+    endif()
+endif()
 
 if(UNIX)
     option(WICKED_LINUX_TEMPLATE "Build WickedEngine Linux template" ON)
@@ -99,10 +125,9 @@ endif()
 
 add_subdirectory(WickedEngine)
 add_custom_target(Content
-    COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_CURRENT_BINARY_DIR}/Content
-    COMMAND ${CMAKE_COMMAND} -E create_symlink ${WICKED_ROOT_DIR}/Content ${CMAKE_CURRENT_BINARY_DIR}/Content
-    COMMENT "Symlinking Content directory"
-    VERBATIM
+   COMMAND ${CMAKE_COMMAND} -E ${COPY_OR_SYMLINK_DIR_CMD} ${WICKED_ROOT_DIR}/Content ${CMAKE_CURRENT_BINARY_DIR}/Content
+   COMMENT "$<IF:$<BOOL:${WICKED_USE_SYMLINKS}>,Symlinking,Copying> Content directory"
+   VERBATIM
 )
 
 if (WICKED_EDITOR)
