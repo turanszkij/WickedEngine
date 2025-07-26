@@ -1922,7 +1922,7 @@ namespace wi::scene
 			for (size_t animation_index = 0; animation_index < animation_queue.animations.size(); ++animation_index)
 			{
 				AnimationComponent& animation = *animation_queue.animations[animation_index];
-				if (!animation.IsPlaying())
+				if (!animation.IsPlaying() && animation.last_update_time == animation.timer) // The timer check is for scrolling paused animation timer, it should still update anim even if not playing!
 					continue;
 				animation.last_update_time = animation.timer;
 
