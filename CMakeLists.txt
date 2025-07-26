@@ -11,6 +11,28 @@ endif()
 
 set(WICKED_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
+# check for symlink support (on windows it requires admin or developer mode)
+execute_process(
+    COMMAND ${CMAKE_COMMAND} -E create_symlink CMakeLists.txt ${CMAKE_BINARY_DIR}/symlink-test
+    ERROR_QUIET
+    RESULT_VARIABLE SYMLINK_CHECK_RESULT
+)
+
+if(SYMLINK_CHECK_RESULT EQUAL 0)
+    message(STATUS "Symlinks are supported")
+    file(REMOVE ${CMAKE_BINARY_DIR}/symlink-test)
+    set(SYMLINK_SUPPORTED 1)
+    set(COPY_OR_SYMLINK_DIR_CMD create_symlink)
+else()
+    message(STATUS "Symlinks are not supported, will copy directories instead. On Windows, activate developer mode to allow symlinking")
+    set(SYMLINK_SUPPORTED 0)
+    if(CMAKE_VERSION VERSION_LESS "3.26.0")
+        set(COPY_OR_SYMLINK_DIR_CMD copy_directory)
+    else()
+        set(COPY_OR_SYMLINK_DIR_CMD copy_directory_if_different)
+    endif()
+endif()
+
 option(WICKED_DYNAMIC_LIBRARY "Build WickedEngine as a dynamic library" OFF)
 option(WICKED_PIC "Build WickedEngine as position-independent code" WICKED_DYNAMIC_LIBRARY)
 option(USE_LIBCXX "Link WickedEngine to llvm libc++ library - only available with the Clang compiler" OFF)
@@ -99,10 +121,9 @@ endif()
 
 add_subdirectory(WickedEngine)
 add_custom_target(Content
-    COMMAND ${CMAKE_COMMAND} -E rm -rf ${CMAKE_CURRENT_BINARY_DIR}/Content
-    COMMAND ${CMAKE_COMMAND} -E create_symlink ${WICKED_ROOT_DIR}/Content ${CMAKE_CURRENT_BINARY_DIR}/Content
-    COMMENT "Symlinking Content directory"
-    VERBATIM
+   COMMAND ${CMAKE_COMMAND} -E ${COPY_OR_SYMLINK_DIR_CMD} ${WICKED_ROOT_DIR}/Content ${CMAKE_CURRENT_BINARY_DIR}/Content
+   COMMENT "$<IF:${SYMLINK_SUPPORTED},Symlinking,Copying> Content directory"
+   VERBATIM
 )
 
 if (WICKED_EDITOR)
