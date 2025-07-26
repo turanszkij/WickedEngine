@@ -1288,7 +1288,7 @@ namespace wi::helper
 #ifdef PLATFORM_WINDOWS_DESKTOP
 		std::thread([=] {
 
-			wchar_t szFile[256];
+			wchar_t szFile[4096];
 
 			OPENFILENAME ofn;
 			ZeroMemory(&ofn, sizeof(ofn));
@@ -1339,7 +1339,12 @@ namespace wi::helper
 			{
 			case FileDialogParams::OPEN:
 				ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+				ofn.Flags |= OFN_EXPLORER;
 				ofn.Flags |= OFN_NOCHANGEDIR;
+				if (params.multiselect)
+				{
+					ofn.Flags |= OFN_ALLOWMULTISELECT;
+				}
 				ok = GetOpenFileName(&ofn) == TRUE;
 				break;
 			case FileDialogParams::SAVE:
@@ -1351,24 +1356,38 @@ namespace wi::helper
 
 			if (ok)
 			{
-				std::string result_filename;
-				StringConvert(ofn.lpstrFile, result_filename);
-				onSuccess(result_filename);
+				const wchar_t* p = szFile;
+				std::wstring directory = p;
+				p += directory.length() + 1;
+				if (*p == L'\0')
+				{
+					// Single file
+					std::string result_filename;
+					StringConvert(directory, result_filename);
+					onSuccess(result_filename);
+				}
+				else
+				{
+					// Multiple files
+					while (*p)
+					{
+						std::wstring fullPath = directory + L"\\" + p;
+						p += wcslen(p) + 1;
+						std::string result_filename;
+						StringConvert(fullPath, result_filename);
+						onSuccess(result_filename);
+					}
+				}
 			}
 
 			}).detach();
 #endif // PLATFORM_WINDOWS_DESKTOP
 
 #ifdef PLATFORM_LINUX
-		if (!pfd::settings::available()) {
-			const char *message = "No dialog backend available";
-#ifdef SDL2
-			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
-									 "File dialog error!",
-									 message,
-									 nullptr);
-#endif
-			std::cerr << message << std::endl;
+		if (!pfd::settings::available())
+		{
+			wilog_messagebox("[wi::helper::FileDialog()] No file dialog backend available!");
+			return;
 		}
 
 		std::vector<std::string> extensions = {params.description, ""};
@@ -1378,31 +1397,29 @@ namespace wi::helper
 			extensions[1] += "*." + toLower(x);
 			extensions[1] += " ";
 			extensions[1] += "*." + toUpper(x);
-			if (extcount < params.extensions.size() - 1) {
+			if (extcount < params.extensions.size() - 1)
+			{
 				extensions[1] += " ";
 			}
 			extcount++;
 		}
 
 		switch (params.type) {
-			case FileDialogParams::OPEN: {
-				std::vector<std::string> selection = pfd::open_file(
-					"Open file",
-					std::filesystem::current_path().string(),
-					extensions
-				).result();
+			case FileDialogParams::OPEN:
+			{
+				std::vector<std::string> selection = pfd::open_file("Open file", std::filesystem::current_path().string(), extensions, params.multiselect).result();
 				if (!selection.empty())
 				{
-					onSuccess(selection[0]);
+					for (auto& x : selection)
+					{
+						onSuccess(x);
+					}
 				}
 				break;
 			}
-			case FileDialogParams::SAVE: {
-				std::string destination = pfd::save_file(
-					"Save file",
-					std::filesystem::current_path().string(),
-					extensions
-				).result();
+			case FileDialogParams::SAVE:
+			{
+				std::string destination = pfd::save_file("Save file", std::filesystem::current_path().string(), extensions).result();
 				if (!destination.empty())
 				{
 					onSuccess(destination);

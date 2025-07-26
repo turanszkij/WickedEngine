@@ -133,6 +133,7 @@ namespace wi::helper
 		} type = OPEN;
 		std::string description;
 		wi::vector<std::string> extensions;
+		bool multiselect = true; // only for TYPE::OPEN
 	};
 	void FileDialog(const FileDialogParams& params, std::function<void(std::string fileName)> onSuccess);
 
