@@ -682,6 +682,17 @@ void ImportModel_FBX(const std::string& filename, wi::scene::Scene& scene)
 		animcomponent.start = (float)bake->playback_time_begin;
 		animcomponent.end = (float)bake->playback_time_end;
 
+		if (stack->name.length > 0)
+		{
+			NameComponent& name = scene.names.Create(entity);
+			name = stack->name.data;
+			if (name == "mixamo.com")
+			{
+				// Mixamo animation name is converted to file name without extension for easy animation importing and differentiation:
+				name = wi::helper::RemoveExtension(wi::helper::GetFileNameFromPath(filename));
+			}
+		}
+
 		for (const ufbx_baked_node& bake_node : bake->nodes)
 		{
 			ufbx_node* scene_node = fbxscene->nodes[bake_node.typed_id];
