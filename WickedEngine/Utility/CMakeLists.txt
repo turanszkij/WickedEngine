@@ -45,11 +45,11 @@ set_property(
 	PROPERTY HEADER_FILE_ONLY ON
 )
 
-if (NOT WIN32)
-	list(REMOVE_ITEM SOURCE_FILES
-		${CMAKE_CURRENT_SOURCE_DIR}/D3D12MemAlloc.cpp
-	)
-endif()
+# linux doesn't support it, and windows includes
+# it directly in wiGraphicsDevice_DX12.cpp
+list(REMOVE_ITEM SOURCE_FILES
+	${CMAKE_CURRENT_SOURCE_DIR}/D3D12MemAlloc.cpp
+)
 add_library(Utility STATIC
 	${SOURCE_FILES}
 	${HEADER_FILES}

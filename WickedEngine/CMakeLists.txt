@@ -170,6 +170,7 @@ else ()
 
 	set_target_properties(FAudio PROPERTIES
 		POSITION_INDEPENDENT_CODE ${WICKED_PIC}
+		UNITY_BUILD NO
 	)
 	set(WICKEDENGINE_STATIC_LIBRARIES ${WICKEDENGINE_STATIC_LIBRARIES} FAudio)
 
@@ -195,6 +196,17 @@ add_custom_command(
 		COMMAND ${CMAKE_COMMAND} -E create_symlink ${WICKED_ROOT_DIR}/WickedEngine/shaders ${CMAKE_CURRENT_BINARY_DIR}/shaders
 )
 
+set_property(SOURCE
+	wiAudio.cpp
+	wiOcean.cpp
+	wiPrimitive_BindLUA.cpp
+	wiPhysics_Jolt.cpp
+	wiGraphicsDevice_Vulkan.cpp
+	wiGraphicsDevice_DX12.cpp
+
+	PROPERTY SKIP_UNITY_BUILD_INCLUSION TRUE
+)
+set_property(TARGET LUA PROPERTY UNITY_BUILD NO)
 
 # OFFLINE SHADER COMPILER
 add_executable(offlineshadercompiler
