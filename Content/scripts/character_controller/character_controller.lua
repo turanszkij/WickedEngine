@@ -17,6 +17,7 @@
 --		Left Shift/left shoulder button: jog -> run
 --		SPACE/gamepad X/gamepad button 3: jump
 --		Right Mouse Button/Right thumbstick: rotate camera
+--		Left Mouse Button: wave hand
 --		Scoll middle mouse/Left-Right triggers: adjust camera distance
 --		H: toggle debug draw
 --		L: toggle framerate lock
@@ -40,6 +41,12 @@ local Layers = {
 	Player = 1 << 0,
 	NPC = 1 << 1,
 }
+
+-- Simple character states
+--	All states that the character can enter are listed here
+--	The naming in "" matches the animation name in animations library (assets/animations.wiscene)
+--	Movement states are handled with player input in a specialized way
+--	Other states (example: WAVE) can be entered from IDLE and they last until the animation ends. In case of looped animation, they last until movement input happens
 States = {
 	IDLE = "idle",
 	WALK = "walk",
@@ -48,7 +55,6 @@ States = {
 	JUMP = "jump",
 	SWIM_IDLE = "swim_idle",
 	SWIM = "swim",
-	DANCE = "dance",
 	WAVE = "wave"
 }
 
@@ -135,7 +141,8 @@ local function Character(model_scene, start_transform, controllable, anim_scene,
 			local rotation_matrix = matrix.Multiply(matrix.RotationY(self.target_rot_horizontal), matrix.RotationX(self.target_rot_vertical))
 			dir = vector.TransformNormal(dir.Normalize(), rotation_matrix)
 			dir.SetY(0)
-			charactercomponent.Turn(dir.Normalize())
+			local dirNorm = dir.Normalize()
+			charactercomponent.Turn(dirNorm)
 			local speed = self.walk_speed
 			if self.state == States.WALK then
 				speed = self.walk_speed
@@ -145,8 +152,10 @@ local function Character(model_scene, start_transform, controllable, anim_scene,
 				speed = self.run_speed
 			elseif self.state == States.SWIM then
 				speed = self.swim_speed
+			elseif not charactercomponent.IsGrounded() then
+				speed = self.run_speed
 			end
-			charactercomponent.Move(self:GetFacing():Multiply(Vector(speed,speed,speed)))
+			charactercomponent.Move(dirNorm:Multiply(Vector(speed,speed,speed)))
 		end,
 		SetAnimationAmount = function(self,amount)
 			local charactercomponent = scene.Component_GetCharacter(self.model)
@@ -203,15 +212,46 @@ local function Character(model_scene, start_transform, controllable, anim_scene,
 					expression.SetPresetWeight(preset, weight)
 				end
 			end
+
+			local moveInputDir = Vector()
+			local moveInputLength = 0
+			if self.controllable then
+				if not backlog_isactive() then
+					-- Movement input:
+					if(input.Down(KEYBOARD_BUTTON_LEFT) or input.Down(string.byte('A'))) then
+						moveInputDir = moveInputDir:Add( Vector(-1) )
+					end
+					if(input.Down(KEYBOARD_BUTTON_RIGHT) or input.Down(string.byte('D'))) then
+						moveInputDir = moveInputDir:Add( Vector(1) )
+					end
+					
+					if(input.Down(KEYBOARD_BUTTON_UP) or input.Down(string.byte('W'))) then
+						moveInputDir = moveInputDir:Add( Vector(0,0,1) )
+					end
+					if(input.Down(KEYBOARD_BUTTON_DOWN) or input.Down(string.byte('S'))) then
+						moveInputDir = moveInputDir:Add( Vector(0,0,-1) )
+					end
+
+					local analog = input.GetAnalog(GAMEPAD_ANALOG_THUMBSTICK_L)
+					moveInputDir = vector.Add(moveInputDir, Vector(analog.GetX(), 0, analog.GetY()))
+					moveInputLength = vector.Length(moveInputDir)
+				end
+			end
+
+			local animation = scene.Component_GetAnimation(self.anims[self.state])
+			local looped_anim = animation.IsLooped()
 			
 			-- state and animation update
 			charactercomponent.PlayAnimation(self.anims[self.state])
-			if self.state == States.JUMP then
-				if charactercomponent.IsAnimationEnded() then
+			if looped_anim then
+				if moveInputLength > 0 or self.state == States.WALK or self.state == States.JOG or self.state == States.RUN then
+					-- Looped anims decay back to IDLE when a movement input was done, and also always for movement-related states
+					--	Note that movement-related states decay back to IDLE but at the same frame if input is still held they re-enter their own state and keep it running
 					self.state = States.IDLE
 				end
 			else
-				if self.ground_intersect and self.state ~= States.DANCE and self.state ~= States.WAVE then
+				if charactercomponent.IsAnimationEnded() then
+					-- If current animation is non-looped, only decay back to idle when it is over
 					self.state = States.IDLE
 				end
 			end
@@ -222,44 +262,25 @@ local function Character(model_scene, start_transform, controllable, anim_scene,
 
 			if self.controllable then
 				if not backlog_isactive() then
-					-- Movement input:
-					local lookDir = Vector()
-					if(input.Down(KEYBOARD_BUTTON_LEFT) or input.Down(string.byte('A'))) then
-						lookDir = lookDir:Add( Vector(-1) )
-					end
-					if(input.Down(KEYBOARD_BUTTON_RIGHT) or input.Down(string.byte('D'))) then
-						lookDir = lookDir:Add( Vector(1) )
-					end
-					
-					if(input.Down(KEYBOARD_BUTTON_UP) or input.Down(string.byte('W'))) then
-						lookDir = lookDir:Add( Vector(0,0,1) )
-					end
-					if(input.Down(KEYBOARD_BUTTON_DOWN) or input.Down(string.byte('S'))) then
-						lookDir = lookDir:Add( Vector(0,0,-1) )
-					end
-
-					local analog = input.GetAnalog(GAMEPAD_ANALOG_THUMBSTICK_L)
-					lookDir = vector.Add(lookDir, Vector(analog.GetX(), 0, analog.GetY()))
-						
 					-- Apply movement:
-					if(lookDir.Length() > 0) then
+					if moveInputLength > 0 then
 						if self.state == States.SWIM_IDLE then
 							self.state = States.SWIM
-							self:MoveDirection(lookDir)
-						elseif self.ground_intersect or charactercomponent.IsWallIntersect() then
-							if self.ground_intersect then
-								local analog_len = vector.Length(analog)
-								if input.Down(KEYBOARD_BUTTON_LCONTROL) or (analog_len > 0 and analog_len < 0.75) then
-									self.state = States.WALK
+							self:MoveDirection(moveInputDir)
+						elseif self.state == States.JUMP and not charactercomponent.IsGrounded() then
+							self:MoveDirection(moveInputDir)
+						elseif self.state == States.IDLE and (self.ground_intersect or charactercomponent.IsWallIntersect()) then
+							local analog_len = vector.Length(analog)
+							if input.Down(KEYBOARD_BUTTON_LCONTROL) or (analog_len > 0 and analog_len < 0.75) then
+								self.state = States.WALK
+							else
+								if input.Down(KEYBOARD_BUTTON_LSHIFT) or input.Down(GAMEPAD_BUTTON_5) then
+									self.state = States.RUN
 								else
-									if input.Down(KEYBOARD_BUTTON_LSHIFT) or input.Down(GAMEPAD_BUTTON_5) then
-										self.state = States.RUN
-									else
-										self.state = States.JOG
-									end
+									self.state = States.JOG
 								end
 							end
-							self:MoveDirection(lookDir)
+							self:MoveDirection(moveInputDir)
 						end
 					end
 					
@@ -378,6 +399,13 @@ local function Character(model_scene, start_transform, controllable, anim_scene,
 					opacity = math.lerp(opacity, 1, 0.1)
 					color.SetW(opacity)
 					object.SetColor(color)
+				end
+			end
+
+			-- Enter state of individual anims:
+			if self.controllable and self.state == States.IDLE then
+				if input.Press(MOUSE_BUTTON_LEFT) then
+					self.state = States.WAVE
 				end
 			end
 			
@@ -533,15 +561,14 @@ local function Character(model_scene, start_transform, controllable, anim_scene,
 	scene.ResetPose(self.model)
 
 	-- The base animation entities are queried from the anim_scene, they are not yet tergeting our character:
-	self.anims[States.IDLE] = anim_scene.Entity_FindByName("idle")
-	self.anims[States.WALK] = anim_scene.Entity_FindByName("walk")
-	self.anims[States.JOG] = anim_scene.Entity_FindByName("jog")
-	self.anims[States.RUN] = anim_scene.Entity_FindByName("run")
-	self.anims[States.JUMP] = anim_scene.Entity_FindByName("jump")
-	self.anims[States.SWIM_IDLE] = anim_scene.Entity_FindByName("swim_idle")
-	self.anims[States.SWIM] = anim_scene.Entity_FindByName("swim")
-	self.anims[States.DANCE] = anim_scene.Entity_FindByName("dance")
-	self.anims[States.WAVE] = anim_scene.Entity_FindByName("wave")
+	for i,state in pairs(States) do
+		self.anims[state] = anim_scene.Entity_FindByName(state)
+		if self.anims[state] == INVALID_ENTITY then
+			backlog_post("Animation not found: " .. state)
+		else
+			backlog_post("Animation found: " .. state)
+		end
+	end
 
 	-- Retarget animation entities onto the character, and add them to the CharacterComponent:
 	--	Also see if a requested animation set (animset) is available for each animation, and use that instead if yes
@@ -627,8 +654,8 @@ local function ThirdPersonCamera(character)
 		camera = INVALID_ENTITY,
 		character = nil,
 		side_offset = 0.2,
-		rest_distance = 1,
-		rest_distance_new = 1,
+		rest_distance = 2.5,
+		rest_distance_new = 2.5,
 		min_distance = 0.5,
 		zoom_speed = 0.3,
 		target_rot_horizontal = 0,
@@ -911,7 +938,8 @@ runProcess(function()
 	help_text = help_text .. "LEFT CONTROL: walk\n"
 	help_text = help_text .. "SPACE/gamepad X/gamepad button 3: Jump\n"
 	help_text = help_text .. "Right Mouse Button/Right thumbstick: rotate camera\n"
-	help_text = help_text .. "Scoll middle mouse/Left-Right triggers: adjust camera distance\n"
+	help_text = help_text .. "Left Mouse Button: wave hand\n"
+	help_text = help_text .. "Scroll middle mouse/Left-Right triggers: adjust camera distance\n"
 	help_text = help_text .. "ESCAPE key: quit\n"
 	help_text = help_text .. "ENTER key: interact\n"
 	help_text = help_text .. "R: reload script\n"

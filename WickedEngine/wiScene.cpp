@@ -5591,9 +5591,10 @@ namespace wi::scene
 				XMVECTOR facing_next = XMVector3Normalize(XMVectorSetY(XMLoadFloat3(&character.facing_next), 0));
 				XMVECTOR facing = XMVector3Normalize(XMVectorSetY(XMLoadFloat3(&character.facing), 0));
 				const float facing_correctness = XMVectorGetX(XMVectorSaturate(XMVector3Dot(facing, facing_next)));
-				XMVECTOR movement = XMLoadFloat3(&character.movement) * facing_correctness;
+				XMVECTOR movement = XMLoadFloat3(&character.movement);
 				XMVECTOR position = XMLoadFloat3(&character.position);
 				XMVECTOR height = XMVectorSet(0, character.height, 0, 0);
+				const bool any_movement = character.movement.x != 0 || character.movement.y != 0 && character.movement.z != 0;
 
 				// Swimming:
 				character.swimming = false;
@@ -5702,6 +5703,12 @@ namespace wi::scene
 							position += collisionNormal * result.depth;
 							inertia = XMVectorZero();
 						}
+					}
+
+					if (!character.ground_intersect && any_movement)
+					{
+						// if there is movement requested by input and character is not touching ground or wall, there is still ground friction to not increase velocity without limit
+						velocity *= wall_friction;
 					}
 
 					// Check character capsules:
