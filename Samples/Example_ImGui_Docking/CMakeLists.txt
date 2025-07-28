@@ -69,7 +69,7 @@ endif ()
 if (MSVC)
 	set_property(TARGET Example_ImGui_Docking PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 endif ()
-
+set_property(TARGET Example_ImGui_Docking PROPERTY UNITY_BUILD NO)
 
 # Copy content to build folder:
 add_dependencies(Example_ImGui_Docking Content)
