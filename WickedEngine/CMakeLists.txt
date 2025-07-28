@@ -12,7 +12,7 @@ set(INSTALL_CONFIGDIR "${CMAKE_INSTALL_LIBDIR}/cmake/WickedEngine")
 option(USE_SSE4_1 "Enable SSE4.1" ON)
 option(USE_SSE4_2 "Enable SSE4.2" ON)
 option(USE_AVX "Enable AVX" ON)
-option(USE_AVX2 "Enable AVX2" ON)
+option(USE_AVX2 "Enable AVX2" OFF)
 option(USE_AVX512 "Enable AVX512" OFF)
 option(USE_LZCNT "Enable LZCNT" ON)
 option(USE_TZCNT "Enable TZCNT" ON)
@@ -64,7 +64,6 @@ endif()
 add_subdirectory(LUA)
 add_subdirectory(Utility)
 
-add_compile_definitions(JPH_DEBUG_RENDERER=1)
 set(PHYSICS_REPO_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 include(${PHYSICS_REPO_ROOT}/Jolt/Jolt.cmake)
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -75,6 +74,7 @@ endif()
 set_target_properties(Jolt PROPERTIES
 	POSITION_INDEPENDENT_CODE ${WICKED_PIC}
 )
+add_compile_definitions(Jolt JPH_DEBUG_RENDERER)
 
 file(GLOB HEADER_FILES CONFIGURE_DEPENDS *.h)
 
@@ -102,6 +102,22 @@ set(WICKEDENGINE_STATIC_LIBRARIES
 	LUA
 	Utility
 )
+
+if (USE_AVX512 OR USE_AVX2)
+	target_compile_definitions(${TARGET_NAME} PUBLIC _XM_AVX2_INTRINSICS_)
+endif()
+if (USE_AVX)
+	target_compile_definitions(${TARGET_NAME} PUBLIC _XM_AVX_INTRINSICS_)
+endif()
+if (USE_SSE4_1 OR USE_SSE4_2)
+	target_compile_definitions(${TARGET_NAME} PUBLIC _XM_SSE4_INTRINSICS_)
+endif()
+if (USE_F16C)
+	target_compile_definitions(${TARGET_NAME} PUBLIC _XM_F16C_INTRINSICS_)
+endif()
+if (USE_FMADD)
+	target_compile_definitions(${TARGET_NAME} PUBLIC _XM_FMA3_INTRINSICS_)
+endif()
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
 	if ("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x86" OR "${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
@@ -142,6 +158,8 @@ elseif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64" OR "${CMAKE_SYSTEM_PROCESS
 
 	target_compile_options(${TARGET_NAME} PUBLIC -mfpmath=sse)
 endif()
+
+target_compile_definitions(${TARGET_NAME} PUBLIC WICKED_CMAKE_BUILD)
 
 if (WIN32)
 	target_compile_definitions(${TARGET_NAME} PUBLIC
