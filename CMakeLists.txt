@@ -72,21 +72,15 @@ elseif(UNIX)
     set(PLATFORM "SDL2")
     add_compile_definitions(SDL2=1)
     
-    # Try to match Visual Studio Level 3 warnings:
+    # Common compiler options and warning level for CLANG and GCC:
     add_compile_options(
         -Wall
 
-        #-Wno-unused-parameter
         -Wno-unused-variable
         -Wno-unused-function
         -Wno-unused-but-set-variable
-        #-Wno-missing-field-initializers
-        #-Wno-ignored-qualifiers
         -Wno-sign-compare
         -Wno-switch
-		#
-        #$<$<COMPILE_LANGUAGE:CXX>:-Wno-unused-lambda-capture>
-        $<$<COMPILE_LANGUAGE:CXX>:-Wno-overloaded-virtual>
     )
 endif()
 
@@ -97,9 +91,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         -fms-extensions
 
         -Wno-nullability-completeness
-        #-Wno-logical-op-parentheses
         -Wno-unused-private-field
-        #-Wno-pointer-bool-conversion
     )
     if (USE_LIBCXX)
         add_compile_options(
@@ -112,12 +104,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     # GCC specific compile options:
     add_compile_options(
-        #-Wno-maybe-uninitialized
         -Wno-strict-aliasing
-        #-Wno-parentheses
-        #-Wno-format-zero-length
-        #-Wno-implicit-fallthrough
-        #-Wno-address
     )
 endif()
 
