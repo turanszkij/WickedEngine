@@ -7,7 +7,7 @@ class WeatherWindow : public wi::gui::Window
 public:
 	void Create(EditorComponent* editor);
 
-	void Update();
+	void UpdateData();
 
 	EditorComponent* editor = nullptr;
 

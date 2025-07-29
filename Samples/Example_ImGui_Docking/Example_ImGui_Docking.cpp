@@ -831,8 +831,8 @@ void Example_ImGuiRenderer::Update(float dt)
 
 		//PE: stop flickering when scrollbar goes on/off.
 		if (ImGui::GetCurrentWindow()->ScrollbarSizes.x > 0) {
-			ImGui::Text("");
-			ImGui::Text("");
+			ImGui::Text("%s", "");
+			ImGui::Text("%s", "");
 		}
 
 	}
@@ -847,7 +847,7 @@ void Example_ImGuiRenderer::Update(float dt)
 			object = scene.objects.GetComponent(highlight_entity);
 			bSettingsOpen = true;
 		}
-		ImGui::SetNextItemOpen(&bSettingsOpen);
+		ImGui::SetNextItemOpen(bSettingsOpen);
 
 		if (ImGui::CollapsingHeader(ICON_MD_HIGHLIGHT_ALT "  Selection", ImGuiTreeNodeFlags_DefaultOpen)) //ImGuiTreeNodeFlags_None
 		{
@@ -1237,8 +1237,8 @@ void Example_ImGuiRenderer::Update(float dt)
 
 		//PE: stop flickering when scrollbar goes on/off.
 		if (ImGui::GetCurrentWindow()->ScrollbarSizes.x > 0) {
-			ImGui::Text("");
-			ImGui::Text("");
+			ImGui::Text("%s", "");
+			ImGui::Text("%s", "");
 		}
 
 		ImRect bbwin(ImGui::GetWindowPos(), ImGui::GetWindowPos() + ImGui::GetWindowSize());

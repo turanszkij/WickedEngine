@@ -40,7 +40,7 @@ class ComponentsWindow : public wi::gui::Window
 {
 public:
 	void Create(EditorComponent* editor);
-	void Update(float dt);
+	void UpdateData(float dt);
 
 	void ResizeLayout() override;
 

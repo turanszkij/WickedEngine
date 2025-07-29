@@ -1287,7 +1287,7 @@ void EditorComponent::Load()
 	exitButton.SetTooltip("Exit");
 	exitButton.SetColor(wi::Color(160, 50, 50, 180), wi::gui::WIDGETSTATE::IDLE);
 	exitButton.SetColor(wi::Color(200, 50, 50, 255), wi::gui::WIDGETSTATE::FOCUS);
-	exitButton.OnClick([this](wi::gui::EventArgs args) {
+	exitButton.OnClick([](wi::gui::EventArgs args) {
 		wi::platform::Exit();
 		});
 	topmenuWnd.AddWidget(&exitButton);
@@ -1474,10 +1474,10 @@ void EditorComponent::Update(float dt)
 		scene.Entity_Remove(grass_interaction_entity);
 	}
 
-	cameraWnd.Update();
-	paintToolWnd.Update(dt);
-	graphicsWnd.Update();
-	componentsWnd.Update(dt);
+	cameraWnd.UpdateData();
+	paintToolWnd.UpdateData(dt);
+	graphicsWnd.UpdateData();
+	componentsWnd.UpdateData(dt);
 
 	// Pulsating selection color update:
 	outlineTimer += dt;
@@ -2405,7 +2405,7 @@ void EditorComponent::Update(float dt)
 	main->infoDisplay.colorgrading_helper = false;
 
 	// Control operations...
-	if (!GetGUI().IsTyping() && wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RCONTROL))
+	if (!GetGUI().IsTyping() && (wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RCONTROL)))
 	{
 		bool isCtrlDown = wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RCONTROL);
 		bool isShiftDown = wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RSHIFT);
@@ -5209,7 +5209,7 @@ void EditorComponent::Open(std::string filename)
 			}
 			RefreshSceneList();
 
-			componentsWnd.weatherWnd.Update();
+			componentsWnd.weatherWnd.UpdateData();
 			componentsWnd.RefreshEntityTree();
 			wi::backlog::post("[Editor] finished loading model: " + filename);
 		});

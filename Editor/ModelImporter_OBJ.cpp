@@ -11,6 +11,7 @@
 #if defined(__GNUC__) && !defined(__clang__)
 #pragma GCC diagnostic pop
 #endif
+
 using namespace wi::graphics;
 using namespace wi::scene;
 using namespace wi::ecs;

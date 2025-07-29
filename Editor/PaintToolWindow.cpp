@@ -333,7 +333,7 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	SetVisible(false);
 }
 
-void PaintToolWindow::Update(float dt)
+void PaintToolWindow::UpdateData(float dt)
 {
 	RecordHistory(INVALID_ENTITY);
 
@@ -489,6 +489,8 @@ void PaintToolWindow::Update(float dt)
 
 		switch (mode)
 		{
+		default:
+			break;
 		case MODE_TEXTURE:
 		{
 			Ray pickRay = editor->pickRay;
@@ -745,6 +747,8 @@ void PaintToolWindow::Update(float dt)
 						case MODE_WIND:
 							material->SetUseWind(true);
 							break;
+						default:
+							break;
 						}
 					}
 				}
@@ -776,6 +780,8 @@ void PaintToolWindow::Update(float dt)
 						std::fill(mesh->vertex_windweights.begin(), mesh->vertex_windweights.end(), 0xFF); // fill max affection
 						rebuild = true;
 					}
+					break;
+				default:
 					break;
 				}
 
@@ -822,6 +828,8 @@ void PaintToolWindow::Update(float dt)
 								mesh->vertex_windweights[j] = vcol.getA();
 							}
 							break;
+							default:
+								break;
 							}
 						}
 					}
@@ -1005,6 +1013,8 @@ void PaintToolWindow::Update(float dt)
 								break;
 							case MODE_SCULPTING_SUBTRACT:
 								PL -= sculptDir * x.affection;
+								break;
+							default:
 								break;
 							}
 							XMStoreFloat3(&mesh->vertex_positions[x.ind], PL);
@@ -1254,6 +1264,8 @@ void PaintToolWindow::Update(float dt)
 									//	(because if removed, distribution also changes which might be distracting)
 									hair.vertex_lengths[j] = wi::math::Clamp(hair.vertex_lengths[j], 1.0f / 255.0f, 1.0f);
 								}
+								break;
+							default:
 								break;
 							}
 							hair._flags |= wi::HairParticleSystem::REBUILD_BUFFERS;

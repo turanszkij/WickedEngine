@@ -864,7 +864,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		}
 		editor->componentsWnd.weatherWnd.default_sky_horizon = theme_color_background;
 		editor->componentsWnd.weatherWnd.default_sky_zenith = theme_color_idle;
-		editor->componentsWnd.weatherWnd.Update();
+		editor->componentsWnd.weatherWnd.UpdateData();
 
 		for (auto& x : editor->componentsWnd.lightWnd.cascades)
 		{

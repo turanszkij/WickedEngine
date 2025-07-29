@@ -53,9 +53,9 @@ void ConstraintWindow::Create(EditorComponent* _editor)
 		};
 	};
 
-	auto forEachSelectedWithRefresh = [this, forEachSelected](auto func) {
-		return [this, forEachSelected, func](auto args) {
-			forEachSelected([this, func](auto physicscomponent, auto args) {
+	auto forEachSelectedWithRefresh = [forEachSelected](auto func) {
+		return [forEachSelected, func](auto args) {
+			forEachSelected([func](auto physicscomponent, auto args) {
 				func(physicscomponent, args);
 				physicscomponent->SetRefreshParametersNeeded(true);
 			})(args);

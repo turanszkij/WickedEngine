@@ -32,7 +32,7 @@ public:
 	wi::gui::CheckBox rootMotionCheckBox;
 	wi::gui::ComboBox rootBoneComboBox;
 
-	void Update();
+	void UpdateData();
 
 	void RefreshKeyframesList();
 

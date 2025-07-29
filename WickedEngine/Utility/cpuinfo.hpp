@@ -139,7 +139,7 @@ CPUInfo::CPUInfo()
 				mNumLogCpus = (cpuID1.EBX() >> 16) & 0xFF;
 				if (HFS >= 4)
 				{
-					mNumCores = 1 + (CPUID(4, 0).EAX() >> 26) & 0x3F;
+					mNumCores = 1 + ((CPUID(4, 0).EAX() >> 26) & 0x3F);
 				}
 			}
 			if (mIsHTT)
