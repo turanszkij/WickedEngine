@@ -1379,37 +1379,37 @@ bool ComponentsWindow::CheckEntityFilter(wi::ecs::Entity entity)
 	bool valid = false;
 
 	if (
-		has_flag(filter, Filter::Transform) && scene.transforms.Contains(entity) ||
-		has_flag(filter, Filter::Material) && scene.materials.Contains(entity) ||
-		has_flag(filter, Filter::Mesh) && scene.meshes.Contains(entity) ||
-		has_flag(filter, Filter::Object) && scene.objects.Contains(entity) ||
-		has_flag(filter, Filter::EnvironmentProbe) && scene.probes.Contains(entity) ||
-		has_flag(filter, Filter::Decal) && scene.decals.Contains(entity) ||
-		has_flag(filter, Filter::Sound) && scene.sounds.Contains(entity) ||
-		has_flag(filter, Filter::Weather) && scene.weathers.Contains(entity) ||
-		has_flag(filter, Filter::Light) && scene.lights.Contains(entity) ||
-		has_flag(filter, Filter::Animation) && scene.animations.Contains(entity) ||
-		has_flag(filter, Filter::Force) && scene.forces.Contains(entity) ||
-		has_flag(filter, Filter::Emitter) && scene.emitters.Contains(entity) ||
-		has_flag(filter, Filter::IK) && scene.inverse_kinematics.Contains(entity) ||
-		has_flag(filter, Filter::Camera) && scene.cameras.Contains(entity) ||
-		has_flag(filter, Filter::Armature) && scene.armatures.Contains(entity) ||
-		has_flag(filter, Filter::Collider) && scene.colliders.Contains(entity) ||
-		has_flag(filter, Filter::Script) && scene.scripts.Contains(entity) ||
-		has_flag(filter, Filter::Expression) && scene.expressions.Contains(entity) ||
-		has_flag(filter, Filter::Terrain) && scene.terrains.Contains(entity) ||
-		has_flag(filter, Filter::Spring) && scene.springs.Contains(entity) ||
-		has_flag(filter, Filter::Humanoid) && scene.humanoids.Contains(entity) ||
-		has_flag(filter, Filter::Video) && scene.videos.Contains(entity) ||
-		has_flag(filter, Filter::Sprite) && scene.sprites.Contains(entity) ||
-		has_flag(filter, Filter::Font) && scene.fonts.Contains(entity) ||
-		has_flag(filter, Filter::VoxelGrid) && scene.voxel_grids.Contains(entity) ||
-		has_flag(filter, Filter::RigidBody) && scene.rigidbodies.Contains(entity) ||
-		has_flag(filter, Filter::SoftBody) && scene.softbodies.Contains(entity) ||
-		has_flag(filter, Filter::Metadata) && scene.metadatas.Contains(entity) ||
-		has_flag(filter, Filter::Constraint) && scene.constraints.Contains(entity) ||
-		has_flag(filter, Filter::Spline) && scene.splines.Contains(entity) ||
-		has_flag(filter, Filter::Vehicle) && (scene.rigidbodies.Contains(entity) && scene.rigidbodies.GetComponent(entity)->IsVehicle())
+		(has_flag(filter, Filter::Transform) && scene.transforms.Contains(entity)) ||
+		(has_flag(filter, Filter::Material) && scene.materials.Contains(entity)) ||
+		(has_flag(filter, Filter::Mesh) && scene.meshes.Contains(entity)) ||
+		(has_flag(filter, Filter::Object) && scene.objects.Contains(entity)) ||
+		(has_flag(filter, Filter::EnvironmentProbe) && scene.probes.Contains(entity)) ||
+		(has_flag(filter, Filter::Decal) && scene.decals.Contains(entity)) ||
+		(has_flag(filter, Filter::Sound) && scene.sounds.Contains(entity)) ||
+		(has_flag(filter, Filter::Weather) && scene.weathers.Contains(entity)) ||
+		(has_flag(filter, Filter::Light) && scene.lights.Contains(entity)) ||
+		(has_flag(filter, Filter::Animation) && scene.animations.Contains(entity)) ||
+		(has_flag(filter, Filter::Force) && scene.forces.Contains(entity)) ||
+		(has_flag(filter, Filter::Emitter) && scene.emitters.Contains(entity)) ||
+		(has_flag(filter, Filter::IK) && scene.inverse_kinematics.Contains(entity)) ||
+		(has_flag(filter, Filter::Camera) && scene.cameras.Contains(entity)) ||
+		(has_flag(filter, Filter::Armature) && scene.armatures.Contains(entity)) ||
+		(has_flag(filter, Filter::Collider) && scene.colliders.Contains(entity)) ||
+		(has_flag(filter, Filter::Script) && scene.scripts.Contains(entity)) ||
+		(has_flag(filter, Filter::Expression) && scene.expressions.Contains(entity)) ||
+		(has_flag(filter, Filter::Terrain) && scene.terrains.Contains(entity)) ||
+		(has_flag(filter, Filter::Spring) && scene.springs.Contains(entity)) ||
+		(has_flag(filter, Filter::Humanoid) && scene.humanoids.Contains(entity)) ||
+		(has_flag(filter, Filter::Video) && scene.videos.Contains(entity)) ||
+		(has_flag(filter, Filter::Sprite) && scene.sprites.Contains(entity)) ||
+		(has_flag(filter, Filter::Font) && scene.fonts.Contains(entity)) ||
+		(has_flag(filter, Filter::VoxelGrid) && scene.voxel_grids.Contains(entity)) ||
+		(has_flag(filter, Filter::RigidBody) && scene.rigidbodies.Contains(entity)) ||
+		(has_flag(filter, Filter::SoftBody) && scene.softbodies.Contains(entity)) ||
+		(has_flag(filter, Filter::Metadata) && scene.metadatas.Contains(entity)) ||
+		(has_flag(filter, Filter::Constraint) && scene.constraints.Contains(entity)) ||
+		(has_flag(filter, Filter::Spline) && scene.splines.Contains(entity)) ||
+		(has_flag(filter, Filter::Vehicle) && (scene.rigidbodies.Contains(entity) && scene.rigidbodies.GetComponent(entity)->IsVehicle()))
 		)
 	{
 		valid = true;
