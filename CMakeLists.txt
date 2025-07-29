@@ -78,12 +78,17 @@ elseif(UNIX)
 		-Wextra
 	 
 	 	-Wno-unused-parameter
+   		-Wno-unused-variable
    		-Wno-unused-function
    		-Wno-unused-but-set-variable
-   		-Wno-unused-lambda-capture
+	 	-Wno-missing-field-initializers
 	 	-Wno-ignored-qualifiers
 	 	-Wno-sign-compare
-   		-Wno-overloaded-virtual
+	 	-Wno-switch
+   		-Wno-logical-op-parentheses
+
+  		$<$<COMPILE_LANGUAGE:CXX>:-Wno-unused-lambda-capture>
+  		$<$<COMPILE_LANGUAGE:CXX>:-Wno-overloaded-virtual>
 	)
 endif()
 
