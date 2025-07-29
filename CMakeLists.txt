@@ -99,6 +99,8 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 
         -Wno-nullability-completeness
    		-Wno-logical-op-parentheses
+	 	-Wno-unused-private-field
+   		-Wno-pointer-bool-conversion
     )
     if (USE_LIBCXX)
         add_compile_options(
@@ -114,6 +116,8 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	 	-Wno-maybe-uninitialized
    		-Wno-strict-aliasing
 	 	-Wno-parentheses
+   		-Wno-format-zero-length
+   		-Wno-implicit-fallthrough=
     )
 endif()
 
