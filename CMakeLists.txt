@@ -113,6 +113,7 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     add_compile_options(
 	 	-Wno-maybe-uninitialized
    		-Wno-strict-aliasing
+	 	-Wno-parentheses
     )
 endif()
 
