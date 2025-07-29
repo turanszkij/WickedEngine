@@ -50,12 +50,19 @@ namespace wi::lua
 		{ NULL, NULL }
 	};
 
+	Vector_BindLua::Vector_BindLua(const XMFLOAT2& vector)
+	{
+		data.x = vector.x;
+		data.y = vector.y;
+		data.z = 0;
+		data.w = 0;
+	}
 	Vector_BindLua::Vector_BindLua(const XMFLOAT3& vector)
 	{
 		data.x = vector.x;
 		data.y = vector.y;
 		data.z = vector.z;
-		data.w = 1;
+		data.w = 0;
 	}
 	Vector_BindLua::Vector_BindLua(const XMFLOAT4& vector)
 	{

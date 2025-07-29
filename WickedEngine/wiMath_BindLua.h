@@ -15,6 +15,7 @@ namespace wi::lua
 		static Luna<Vector_BindLua>::PropertyType properties[];
 
 		Vector_BindLua() = default;
+		Vector_BindLua(const XMFLOAT2& vector);
 		Vector_BindLua(const XMFLOAT3& vector);
 		Vector_BindLua(const XMFLOAT4& vector);
 		Vector_BindLua(const XMVECTOR& vector);
