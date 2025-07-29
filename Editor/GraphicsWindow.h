@@ -114,7 +114,7 @@ public:
 	void ChangeRenderPath(RENDERPATH path);
 
 	void UpdateSwapChainFormats(wi::graphics::SwapChain* swapChain);
-	void Update();
+	void UpdateData();
 
 	void ResizeLayout() override;
 

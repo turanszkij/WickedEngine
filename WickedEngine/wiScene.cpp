@@ -5594,7 +5594,7 @@ namespace wi::scene
 				XMVECTOR movement = XMLoadFloat3(&character.movement);
 				XMVECTOR position = XMLoadFloat3(&character.position);
 				XMVECTOR height = XMVectorSet(0, character.height, 0, 0);
-				const bool any_movement = character.movement.x != 0 || character.movement.y != 0 && character.movement.z != 0;
+				const bool any_movement = character.movement.x != 0 || character.movement.y != 0 || character.movement.z != 0;
 
 				// Swimming:
 				character.swimming = false;

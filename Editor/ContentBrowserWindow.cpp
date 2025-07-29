@@ -325,7 +325,7 @@ void ContentBrowserWindow::SetSelection(SELECTION selection)
 				AddItems(folder, "fbx", ICON_OBJECT);
 				AddItems(folder, "obj", ICON_OBJECT);
 				AddItems(folder, "lua", ICON_SCRIPT);
-				openFolderButton.OnClick([this, folder](wi::gui::EventArgs args) {
+				openFolderButton.OnClick([folder](wi::gui::EventArgs args) {
 					wi::helper::OpenUrl(folder);
 				});
 				AddWidget(&openFolderButton, wi::gui::Window::AttachmentOptions::NONE);

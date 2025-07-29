@@ -295,7 +295,7 @@ void CameraWindow::SetEntity(Entity entity)
 	}
 }
 
-void CameraWindow::Update()
+void CameraWindow::UpdateData()
 {
 	CameraComponent& camera = editor->GetCurrentEditorScene().camera;
 

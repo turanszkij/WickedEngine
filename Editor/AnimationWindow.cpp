@@ -1105,7 +1105,7 @@ void AnimationWindow::SetEntity(Entity entity)
 	}
 }
 
-void AnimationWindow::Update()
+void AnimationWindow::UpdateData()
 {
 	Scene& scene = editor->GetCurrentScene();
 

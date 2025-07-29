@@ -275,48 +275,50 @@ namespace wi::input::sdlinput
                 return wi::input::KEYBOARD_BUTTON_PAGEDOWN;
             case SDL_SCANCODE_PAGEUP:
                 return wi::input::KEYBOARD_BUTTON_PAGEUP;
-			case SDL_SCANCODE_KP_0:
-				return wi::input::KEYBOARD_BUTTON_NUMPAD0;
-			case SDL_SCANCODE_KP_1:
-				return wi::input::KEYBOARD_BUTTON_NUMPAD1;
-			case SDL_SCANCODE_KP_2:
-				return wi::input::KEYBOARD_BUTTON_NUMPAD2;
-			case SDL_SCANCODE_KP_3:
-				return wi::input::KEYBOARD_BUTTON_NUMPAD3;
-			case SDL_SCANCODE_KP_4:
-				return wi::input::KEYBOARD_BUTTON_NUMPAD4;
-			case SDL_SCANCODE_KP_5:
-				return wi::input::KEYBOARD_BUTTON_NUMPAD5;
-			case SDL_SCANCODE_KP_6:
-				return wi::input::KEYBOARD_BUTTON_NUMPAD6;
-			case SDL_SCANCODE_KP_7:
-				return wi::input::KEYBOARD_BUTTON_NUMPAD7;
-			case SDL_SCANCODE_KP_8:
-				return wi::input::KEYBOARD_BUTTON_NUMPAD8;
-			case SDL_SCANCODE_KP_9:
-				return wi::input::KEYBOARD_BUTTON_NUMPAD9;
-			case SDL_SCANCODE_KP_MULTIPLY:
-				return wi::input::KEYBOARD_BUTTON_MULTIPLY;
-			case SDL_SCANCODE_KP_PLUS:
-				return wi::input::KEYBOARD_BUTTON_ADD;
-			case SDL_SCANCODE_SEPARATOR:
-				return wi::input::KEYBOARD_BUTTON_SEPARATOR;
-			case SDL_SCANCODE_KP_MINUS:
-				return wi::input::KEYBOARD_BUTTON_SUBTRACT;
-			case SDL_SCANCODE_KP_DECIMAL:
-				return wi::input::KEYBOARD_BUTTON_DECIMAL;
-			case SDL_SCANCODE_KP_DIVIDE:
-				return wi::input::KEYBOARD_BUTTON_DIVIDE;
-			case SDL_SCANCODE_INSERT:
-				return wi::input::KEYBOARD_BUTTON_INSERT;
-			case SDL_SCANCODE_TAB:
-				return wi::input::KEYBOARD_BUTTON_TAB;
-			case SDL_SCANCODE_GRAVE: 
-    			return wi::input::KEYBOARD_BUTTON_TILDE;
-			case SDL_SCANCODE_LALT:
-				return wi::input::KEYBOARD_BUTTON_ALT;
-			case SDL_SCANCODE_RALT:
-				return wi::input::KEYBOARD_BUTTON_ALTGR;
+            case SDL_SCANCODE_KP_0:
+                return wi::input::KEYBOARD_BUTTON_NUMPAD0;
+            case SDL_SCANCODE_KP_1:
+                return wi::input::KEYBOARD_BUTTON_NUMPAD1;
+            case SDL_SCANCODE_KP_2:
+                return wi::input::KEYBOARD_BUTTON_NUMPAD2;
+            case SDL_SCANCODE_KP_3:
+                return wi::input::KEYBOARD_BUTTON_NUMPAD3;
+            case SDL_SCANCODE_KP_4:
+                return wi::input::KEYBOARD_BUTTON_NUMPAD4;
+            case SDL_SCANCODE_KP_5:
+                return wi::input::KEYBOARD_BUTTON_NUMPAD5;
+            case SDL_SCANCODE_KP_6:
+                return wi::input::KEYBOARD_BUTTON_NUMPAD6;
+            case SDL_SCANCODE_KP_7:
+                return wi::input::KEYBOARD_BUTTON_NUMPAD7;
+            case SDL_SCANCODE_KP_8:
+                return wi::input::KEYBOARD_BUTTON_NUMPAD8;
+            case SDL_SCANCODE_KP_9:
+                return wi::input::KEYBOARD_BUTTON_NUMPAD9;
+            case SDL_SCANCODE_KP_MULTIPLY:
+                return wi::input::KEYBOARD_BUTTON_MULTIPLY;
+            case SDL_SCANCODE_KP_PLUS:
+                return wi::input::KEYBOARD_BUTTON_ADD;
+            case SDL_SCANCODE_SEPARATOR:
+                return wi::input::KEYBOARD_BUTTON_SEPARATOR;
+            case SDL_SCANCODE_KP_MINUS:
+                return wi::input::KEYBOARD_BUTTON_SUBTRACT;
+            case SDL_SCANCODE_KP_DECIMAL:
+                return wi::input::KEYBOARD_BUTTON_DECIMAL;
+            case SDL_SCANCODE_KP_DIVIDE:
+                return wi::input::KEYBOARD_BUTTON_DIVIDE;
+            case SDL_SCANCODE_INSERT:
+                return wi::input::KEYBOARD_BUTTON_INSERT;
+            case SDL_SCANCODE_TAB:
+                return wi::input::KEYBOARD_BUTTON_TAB;
+            case SDL_SCANCODE_GRAVE: 
+                return wi::input::KEYBOARD_BUTTON_TILDE;
+            case SDL_SCANCODE_LALT:
+                return wi::input::KEYBOARD_BUTTON_ALT;
+            case SDL_SCANCODE_RALT:
+                return wi::input::KEYBOARD_BUTTON_ALTGR;
+            default:
+                break;
         }
 
 
@@ -347,7 +349,7 @@ namespace wi::input::sdlinput
             case SDL_CONTROLLER_BUTTON_RIGHTSTICK: btnenum = wi::input::GAMEPAD_BUTTON_8; break;
             case SDL_CONTROLLER_BUTTON_BACK: btnenum = wi::input::GAMEPAD_BUTTON_9; break;
             case SDL_CONTROLLER_BUTTON_START: btnenum = wi::input::GAMEPAD_BUTTON_10; break;
-			default: assert(0); return;
+            default: assert(0); return;
         }
         btnenum = 1 << (btnenum - wi::input::GAMEPAD_RANGE_START - 1);
         if(pressed){
@@ -376,10 +378,10 @@ namespace wi::input::sdlinput
     bool GetControllerState(wi::input::ControllerState* state, int index) {
         if(index < controllers.size()){
             if (state != nullptr)
-			{
-				*state = controllers[index].state;
-			}
-			return true;
+            {
+                *state = controllers[index].state;
+            }
+            return true;
         }
         return false;
     }

@@ -19,7 +19,7 @@ void DummyVisualizer::Draw(
 	static PipelineState pso[2];
 	if (!pso[0].IsValid() || !pso[1].IsValid())
 	{
-		static auto LoadShaders = [depth] {
+		static auto LoadShaders = [] {
 			PipelineStateDesc desc;
 			desc.vs = wi::renderer::GetShader(wi::enums::VSTYPE_VERTEXCOLOR);
 			desc.ps = wi::renderer::GetShader(wi::enums::PSTYPE_VERTEXCOLOR);

@@ -39,8 +39,8 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 		};
 	};
 
-	auto forEachSelectedPhysicsComponentWithRefresh = [this, forEachSelectedPhysicsComponent](auto /* void(RigidBodyPhysicsComponent*, wi::gui::EventArgs) */ func) {
-		return forEachSelectedPhysicsComponent([this, func](auto physicscomponent, auto args) {
+	auto forEachSelectedPhysicsComponentWithRefresh = [forEachSelectedPhysicsComponent](auto /* void(RigidBodyPhysicsComponent*, wi::gui::EventArgs) */ func) {
+		return forEachSelectedPhysicsComponent([func](auto physicscomponent, auto args) {
 			func(physicscomponent, args);
 			physicscomponent->SetRefreshParametersNeeded();
 		});

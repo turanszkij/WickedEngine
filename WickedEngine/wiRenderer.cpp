@@ -455,6 +455,8 @@ SHADERTYPE GetMSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, b
 	case RENDERPASS_RAINBLOCKER:
 		realMS = MSTYPE_SHADOW;
 		break;
+	default:
+		break;
 	}
 
 	return realMS;
@@ -526,6 +528,8 @@ SHADERTYPE GetVSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, b
 	case RENDERPASS_RAINBLOCKER:
 		realVS = VSTYPE_SHADOW;
 		break;
+	default:
+		break;
 	}
 
 	return realVS;
@@ -554,6 +558,8 @@ SHADERTYPE GetGSTYPE(RENDERPASS renderPass, bool alphatest, bool transparent)
 		}
 #endif // PLATFORM_PS5
 		break;
+	default:
+		break;
 	}
 
 	return realGS;
@@ -578,6 +584,8 @@ SHADERTYPE GetHSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest)
 		case RENDERPASS_MAIN:
 			return HSTYPE_OBJECT;
 			break;
+		default:
+			break;
 		}
 	}
 
@@ -601,6 +609,8 @@ SHADERTYPE GetDSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest)
 			}
 		case RENDERPASS_MAIN:
 			return DSTYPE_OBJECT;
+		default:
+			break;
 		}
 	}
 
@@ -3188,6 +3198,8 @@ void RenderMeshes(
 						{
 							pso = tessellatorRequested ? &PSO_object_wire_tessellation : &PSO_object_wire;
 						}
+					default:
+						break;
 					}
 				}
 				else if (material.customShaderID >= 0 && material.customShaderID < (int)customShaders.size())
@@ -3570,7 +3582,7 @@ void UpdateVisibility(Visibility& vis)
 
 					if (vis.flags & Visibility::ALLOW_OCCLUSION_CULLING)
 					{
-						if (!light.IsStatic() && light.GetType() != LightComponent::DIRECTIONAL || light.occlusionquery < 0)
+						if (!light.IsStatic() && light.GetType() != LightComponent::DIRECTIONAL && light.occlusionquery < 0)
 						{
 							if (!aabb.intersects(vis.camera->Eye))
 							{
@@ -3838,7 +3850,7 @@ void UpdateVisibility(Visibility& vis)
 	}
 
 	// Shadow atlas packing:
-	if (IsShadowsEnabled() && (vis.flags & Visibility::ALLOW_SHADOW_ATLAS_PACKING) && !vis.visibleLights.empty() || vis.scene->weather.rain_amount > 0)
+	if ((IsShadowsEnabled() && (vis.flags & Visibility::ALLOW_SHADOW_ATLAS_PACKING) && !vis.visibleLights.empty()) || vis.scene->weather.rain_amount > 0)
 	{
 		auto range = wi::profiler::BeginRangeCPU("Shadowmap packing");
 		float iterative_scaling = 1;
@@ -3907,6 +3919,8 @@ void UpdateVisibility(Visibility& vis)
 						rect.h = int(max_shadow_resolution_cube * amount);
 					}
 					break;
+				default:
+					break;
 				}
 				if (rect.w > 8 && rect.h > 8)
 				{
@@ -3947,6 +3961,8 @@ void UpdateVisibility(Visibility& vis)
 								break;
 							case LightComponent::POINT:
 								lightrect.w /= 6;
+								break;
+							default:
 								break;
 							}
 						}
@@ -6967,6 +6983,8 @@ void DrawShadowmaps(
 
 		}
 		break;
+		default:
+			break;
 		} // terminate switch
 	}
 

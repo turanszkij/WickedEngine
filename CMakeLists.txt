@@ -19,9 +19,9 @@ option(WICKED_EDITOR "Build WickedEngine editor" ON)
 option(WICKED_TESTS "Build WickedEngine tests" ON)
 option(WICKED_IMGUI_EXAMPLE "Build WickedEngine imgui example" ON)
 if (CMAKE_HOST_WIN32)
-	set(symlink_default OFF)
+    set(symlink_default OFF)
 else()
-	set(symlink_default ON)
+    set(symlink_default ON)
 endif()
 option(WICKED_USE_SYMLINKS "Prefer symlinking over copying directories" ${symlink_default})
 
@@ -71,25 +71,26 @@ if (WIN32)
 elseif(UNIX)
     set(PLATFORM "SDL2")
     add_compile_definitions(SDL2=1)
+    
+    # Common compiler options and warning level for CLANG and GCC:
+    add_compile_options(
+        -Wall
+
+        -Wno-unused-variable
+        -Wno-unused-function
+        -Wno-unused-but-set-variable
+        -Wno-sign-compare
+    )
 endif()
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    # CLANG specific compile options:
     add_compile_options(
         -fdeclspec
         -fms-extensions
 
-        -Wuninitialized
-        #-Wwrite-strings
-        #-Winit-self
-        #-Wreturn-type
-        #-Wreorder
-        #-Werror=delete-non-virtual-dtor
-        #-Werror
-        #uncomment this to stop the compilation at the first error
-        # -Wfatal-errors
-
-        # turn off some warnings we don't want
-        -Wno-nullability-completeness   # _Nonnull etc. are only supported on Clang
+        -Wno-nullability-completeness
+        -Wno-unused-private-field
     )
     if (USE_LIBCXX)
         add_compile_options(
@@ -100,25 +101,9 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         )
     endif()
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-# add some warnings and set them as errors
-# read more details here: https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html
+    # GCC specific compile options:
     add_compile_options(
-        -Wuninitialized
-        -Wmaybe-uninitialized
-        -Wwrite-strings
-        -Winit-self
-        -Wreturn-type
-        $<$<COMPILE_LANGUAGE:CXX>:-Wreorder>
-        $<$<COMPILE_LANGUAGE:CXX>:-Werror=delete-non-virtual-dtor>
-        -Werror
-
-        # some GCC versions have bugs triggering this warning
-        -Wno-stringop-overflow
-        # this is just silly
-        -Wno-format-zero-length
-
-        #uncomment this to stop the compilation at the first error
-        # -Wfatal-errors
+        -Wno-strict-aliasing
     )
 endif()
 

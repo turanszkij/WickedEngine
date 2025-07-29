@@ -1034,7 +1034,7 @@ void WeatherWindow::SetEntity(wi::ecs::Entity entity)
 	}
 }
 
-void WeatherWindow::Update()
+void WeatherWindow::UpdateData()
 {
 	if (editor == nullptr)
 		return;

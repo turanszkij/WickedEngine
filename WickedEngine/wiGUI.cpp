@@ -4739,7 +4739,6 @@ namespace wi::gui
 				colorpickerstate = CPS_IDLE;
 			}
 
-			dragged = dragged;
 			if (colorpickerstate == CPS_HUE && dragged)
 			{
 				//hue pick
