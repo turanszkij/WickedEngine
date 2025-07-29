@@ -455,6 +455,7 @@ namespace wi::scene
 		// Bakes the transform's current world matrix back to hierarchy local space (if it is part of a hierarchy)
 		void Component_TransformWorldToHierarchy(wi::ecs::Entity entity);
 
+		// Gathers all direct and indirect children of an entity
 		void GatherChildren(wi::ecs::Entity parent, wi::vector<wi::ecs::Entity>& children) const;
 
 		// Read/write whole scene into an archive
