@@ -3056,8 +3056,6 @@ void Import_Extension_VRMC(LoaderState& state)
 						}
 					}
 				}
-				int asd = 90;
-				asd = asd;
 			}
 			else
 			{

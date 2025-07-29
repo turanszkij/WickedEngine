@@ -19,9 +19,9 @@ option(WICKED_EDITOR "Build WickedEngine editor" ON)
 option(WICKED_TESTS "Build WickedEngine tests" ON)
 option(WICKED_IMGUI_EXAMPLE "Build WickedEngine imgui example" ON)
 if (CMAKE_HOST_WIN32)
-	set(symlink_default OFF)
+    set(symlink_default OFF)
 else()
-	set(symlink_default ON)
+    set(symlink_default ON)
 endif()
 option(WICKED_USE_SYMLINKS "Prefer symlinking over copying directories" ${symlink_default})
 
@@ -71,36 +71,36 @@ if (WIN32)
 elseif(UNIX)
     set(PLATFORM "SDL2")
     add_compile_definitions(SDL2=1)
-	
-	# Try to match Visual Studio Level 3 warnings:
-	add_compile_options(
-		-Wall
-		-Wextra
-	 
-	 	-Wno-unused-parameter
-   		-Wno-unused-variable
-   		-Wno-unused-function
-   		-Wno-unused-but-set-variable
-	 	-Wno-missing-field-initializers
-	 	-Wno-ignored-qualifiers
-	 	-Wno-sign-compare
-	 	-Wno-switch
+    
+    # Try to match Visual Studio Level 3 warnings:
+    add_compile_options(
+        -Wall
+        -Wextra
+     
+        -Wno-unused-parameter
+        -Wno-unused-variable
+        -Wno-unused-function
+        -Wno-unused-but-set-variable
+        -Wno-missing-field-initializers
+        -Wno-ignored-qualifiers
+        -Wno-sign-compare
+        -Wno-switch
 
-  		$<$<COMPILE_LANGUAGE:CXX>:-Wno-unused-lambda-capture>
-  		$<$<COMPILE_LANGUAGE:CXX>:-Wno-overloaded-virtual>
-	)
+        $<$<COMPILE_LANGUAGE:CXX>:-Wno-unused-lambda-capture>
+        $<$<COMPILE_LANGUAGE:CXX>:-Wno-overloaded-virtual>
+    )
 endif()
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-	# CLANG specific compile options:
+    # CLANG specific compile options:
     add_compile_options(
         -fdeclspec
         -fms-extensions
 
         -Wno-nullability-completeness
-   		-Wno-logical-op-parentheses
-	 	-Wno-unused-private-field
-   		-Wno-pointer-bool-conversion
+        -Wno-logical-op-parentheses
+        -Wno-unused-private-field
+        -Wno-pointer-bool-conversion
     )
     if (USE_LIBCXX)
         add_compile_options(
@@ -111,13 +111,14 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         )
     endif()
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-	# GCC specific compile options:
+    # GCC specific compile options:
     add_compile_options(
-	 	-Wno-maybe-uninitialized
-   		-Wno-strict-aliasing
-	 	-Wno-parentheses
-   		-Wno-format-zero-length
-   		-Wno-implicit-fallthrough
+        -Wno-maybe-uninitialized
+        -Wno-strict-aliasing
+        -Wno-parentheses
+        -Wno-format-zero-length
+        -Wno-implicit-fallthrough
+        -Wno-address
     )
 endif()
 
