@@ -117,7 +117,7 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
    		-Wno-strict-aliasing
 	 	-Wno-parentheses
    		-Wno-format-zero-length
-   		-Wno-implicit-fallthrough=
+   		-Wno-implicit-fallthrough
     )
 endif()
 
