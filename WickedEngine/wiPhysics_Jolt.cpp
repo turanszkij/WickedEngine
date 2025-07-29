@@ -3370,6 +3370,8 @@ namespace wi::physics
 		case HumanoidComponent::HumanoidBone::LeftLowerLeg:
 			bodypart = Ragdoll::BODYPART_LEFT_LOWER_LEG;
 			break;
+		default:
+			break;
 		}
 		if (bodypart == Ragdoll::BODYPART_COUNT)
 			return;

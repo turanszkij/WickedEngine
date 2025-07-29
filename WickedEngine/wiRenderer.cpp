@@ -3198,6 +3198,8 @@ void RenderMeshes(
 						{
 							pso = tessellatorRequested ? &PSO_object_wire_tessellation : &PSO_object_wire;
 						}
+					default:
+						break;
 					}
 				}
 				else if (material.customShaderID >= 0 && material.customShaderID < (int)customShaders.size())

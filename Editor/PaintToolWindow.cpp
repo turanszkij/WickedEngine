@@ -1014,6 +1014,8 @@ void PaintToolWindow::UpdateData(float dt)
 							case MODE_SCULPTING_SUBTRACT:
 								PL -= sculptDir * x.affection;
 								break;
+							default:
+								break;
 							}
 							XMStoreFloat3(&mesh->vertex_positions[x.ind], PL);
 
@@ -1262,6 +1264,8 @@ void PaintToolWindow::UpdateData(float dt)
 									//	(because if removed, distribution also changes which might be distracting)
 									hair.vertex_lengths[j] = wi::math::Clamp(hair.vertex_lengths[j], 1.0f / 255.0f, 1.0f);
 								}
+								break;
+							default:
 								break;
 							}
 							hair._flags |= wi::HairParticleSystem::REBUILD_BUFFERS;
