@@ -113,7 +113,7 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     # GCC specific compile options:
     add_compile_options(
         #-Wno-maybe-uninitialized
-        #-Wno-strict-aliasing
+        -Wno-strict-aliasing
         #-Wno-parentheses
         #-Wno-format-zero-length
         #-Wno-implicit-fallthrough
