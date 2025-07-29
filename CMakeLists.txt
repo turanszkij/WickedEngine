@@ -72,12 +72,18 @@ elseif(UNIX)
     set(PLATFORM "SDL2")
     add_compile_definitions(SDL2=1)
 	
-	# Recommendation for Visual Studio Level 3 warning match:
+	# Try to match Visual Studio Level 3 warnings:
 	add_compile_options(
 		-Wall
 		-Wextra
 	 
 	 	-Wno-unused-parameter
+   		-Wno-unused-function
+   		-Wno-unused-but-set-variable
+   		-Wno-unused-lambda-capture
+	 	-Wno-ignored-qualifiers
+	 	-Wno-sign-compare
+   		-Wno-overloaded-virtual
 	)
 endif()
 
