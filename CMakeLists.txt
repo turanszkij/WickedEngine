@@ -73,6 +73,13 @@ elseif(UNIX)
     add_compile_definitions(SDL2=1)
 endif()
 
+# Recommendation for Visual Studio Level 3 warning match:
+add_compile_options(
+	-Wall
+	-Wextra
+	-pedantic
+)
+
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     add_compile_options(
         -fdeclspec
