@@ -586,10 +586,10 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	}
 	SetSize(size);
 }
-void ComponentsWindow::Update(float dt)
+void ComponentsWindow::UpdateData(float dt)
 {
-	animWnd.Update();
-	weatherWnd.Update();
+	animWnd.UpdateData();
+	weatherWnd.UpdateData();
 }
 
 void ComponentsWindow::ResizeLayout()

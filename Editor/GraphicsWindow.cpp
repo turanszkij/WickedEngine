@@ -1579,7 +1579,7 @@ void GraphicsWindow::UpdateSwapChainFormats(wi::graphics::SwapChain* swapChain)
 		});
 }
 
-void GraphicsWindow::Update()
+void GraphicsWindow::UpdateData()
 {
 	if (vsyncCheckBox.GetCheck() != editor->main->swapChain.desc.vsync)
 	{

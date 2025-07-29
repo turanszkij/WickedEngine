@@ -333,7 +333,7 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	SetVisible(false);
 }
 
-void PaintToolWindow::Update(float dt)
+void PaintToolWindow::UpdateData(float dt)
 {
 	RecordHistory(INVALID_ENTITY);
 

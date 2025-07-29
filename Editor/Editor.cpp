@@ -1474,10 +1474,10 @@ void EditorComponent::Update(float dt)
 		scene.Entity_Remove(grass_interaction_entity);
 	}
 
-	cameraWnd.Update();
-	paintToolWnd.Update(dt);
-	graphicsWnd.Update();
-	componentsWnd.Update(dt);
+	cameraWnd.UpdateData();
+	paintToolWnd.UpdateData(dt);
+	graphicsWnd.UpdateData();
+	componentsWnd.UpdateData(dt);
 
 	// Pulsating selection color update:
 	outlineTimer += dt;
@@ -5209,7 +5209,7 @@ void EditorComponent::Open(std::string filename)
 			}
 			RefreshSceneList();
 
-			componentsWnd.weatherWnd.Update();
+			componentsWnd.weatherWnd.UpdateData();
 			componentsWnd.RefreshEntityTree();
 			wi::backlog::post("[Editor] finished loading model: " + filename);
 		});

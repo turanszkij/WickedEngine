@@ -61,7 +61,7 @@ public:
 	wi::gui::Button revealTextureButton;
 	wi::gui::ComboBox axisCombo;
 
-	void Update(float dt);
+	void UpdateData(float dt);
 	void DrawBrush(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const;
 
 	XMFLOAT2 pos = XMFLOAT2(0, 0);
