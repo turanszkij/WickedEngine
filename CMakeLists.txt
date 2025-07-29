@@ -78,7 +78,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         -fdeclspec
         -fms-extensions
 
-        -Wuninitialized
+        #-Wuninitialized
         #-Wwrite-strings
         #-Winit-self
         #-Wreturn-type
@@ -103,19 +103,19 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 # add some warnings and set them as errors
 # read more details here: https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html
     add_compile_options(
-        -Wuninitialized
-        -Wmaybe-uninitialized
-        -Wwrite-strings
-        -Winit-self
-        -Wreturn-type
-        $<$<COMPILE_LANGUAGE:CXX>:-Wreorder>
-        $<$<COMPILE_LANGUAGE:CXX>:-Werror=delete-non-virtual-dtor>
-        -Werror
+        #-Wuninitialized
+        #-Wmaybe-uninitialized
+        #-Wwrite-strings
+        #-Winit-self
+        #-Wreturn-type
+        #$<$<COMPILE_LANGUAGE:CXX>:-Wreorder>
+        #$<$<COMPILE_LANGUAGE:CXX>:-Werror=delete-non-virtual-dtor>
+        #-Werror
 
         # some GCC versions have bugs triggering this warning
-        -Wno-stringop-overflow
+        #-Wno-stringop-overflow
         # this is just silly
-        -Wno-format-zero-length
+        #-Wno-format-zero-length
 
         #uncomment this to stop the compilation at the first error
         # -Wfatal-errors

@@ -98,16 +98,7 @@ namespace wi::ecs
 		}
 		else
 		{
-#if defined(__GNUC__) && !defined(__SCE__) && !defined(__clang__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#endif // __GNUC__ && !__SCE__ && ! __clang__
-
 			archive << entity;
-
-#if defined(__GNUC__) && !defined(__SCE__) && !defined(__clang__)
-#pragma GCC diagnostic pop
-#endif // __GNUC__ && !__SCE__ && !__clang__
 		}
 	}
 
