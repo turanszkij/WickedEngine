@@ -77,7 +77,6 @@ endif()
 add_compile_options(
 	-Wall
 	-Wextra
-	-pedantic
 )
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
