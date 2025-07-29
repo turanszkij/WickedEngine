@@ -82,7 +82,7 @@ elseif(UNIX)
         -Wno-unused-but-set-variable
         #-Wno-missing-field-initializers
         #-Wno-ignored-qualifiers
-        #-Wno-sign-compare
+        -Wno-sign-compare
         -Wno-switch
 		#
         #$<$<COMPILE_LANGUAGE:CXX>:-Wno-unused-lambda-capture>
@@ -98,7 +98,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 
         -Wno-nullability-completeness
         #-Wno-logical-op-parentheses
-        #-Wno-unused-private-field
+        -Wno-unused-private-field
         #-Wno-pointer-bool-conversion
     )
     if (USE_LIBCXX)

@@ -796,7 +796,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 			params.description = "Texture";
 			params.extensions = wi::resourcemanager::GetSupportedImageExtensions();
 			Entity materialEntity = entity;
-			wi::helper::FileDialog(params, [this, materialEntity, slot](std::string fileName) {
+			wi::helper::FileDialog(params, [this, slot](std::string fileName) {
 				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 					wi::resourcemanager::Flags flags = material->GetTextureSlotResourceFlags(MaterialComponent::TEXTURESLOT(slot));
