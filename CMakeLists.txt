@@ -85,7 +85,6 @@ elseif(UNIX)
 	 	-Wno-ignored-qualifiers
 	 	-Wno-sign-compare
 	 	-Wno-switch
-   		-Wno-logical-op-parentheses
 
   		$<$<COMPILE_LANGUAGE:CXX>:-Wno-unused-lambda-capture>
   		$<$<COMPILE_LANGUAGE:CXX>:-Wno-overloaded-virtual>
@@ -93,22 +92,13 @@ elseif(UNIX)
 endif()
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+	# CLANG specific compile options:
     add_compile_options(
         -fdeclspec
         -fms-extensions
 
-        #-Wuninitialized
-        #-Wwrite-strings
-        #-Winit-self
-        #-Wreturn-type
-        #-Wreorder
-        #-Werror=delete-non-virtual-dtor
-        #-Werror
-        #uncomment this to stop the compilation at the first error
-        # -Wfatal-errors
-
-        # turn off some warnings we don't want
-        -Wno-nullability-completeness   # _Nonnull etc. are only supported on Clang
+        -Wno-nullability-completeness
+   		-Wno-logical-op-parentheses
     )
     if (USE_LIBCXX)
         add_compile_options(
@@ -119,25 +109,10 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         )
     endif()
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-# add some warnings and set them as errors
-# read more details here: https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html
+	# GCC specific compile options:
     add_compile_options(
-        #-Wuninitialized
-        #-Wmaybe-uninitialized
-        #-Wwrite-strings
-        #-Winit-self
-        #-Wreturn-type
-        #$<$<COMPILE_LANGUAGE:CXX>:-Wreorder>
-        #$<$<COMPILE_LANGUAGE:CXX>:-Werror=delete-non-virtual-dtor>
-        #-Werror
-
-        # some GCC versions have bugs triggering this warning
-        #-Wno-stringop-overflow
-        # this is just silly
-        #-Wno-format-zero-length
-
-        #uncomment this to stop the compilation at the first error
-        # -Wfatal-errors
+	 	-Wno-maybe-uninitialized
+   		-Wno-strict-aliasing
     )
 endif()
 
