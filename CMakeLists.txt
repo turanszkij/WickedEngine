@@ -76,7 +76,7 @@ elseif(UNIX)
     add_compile_options(
         -Wall
         -Wextra
-		-pedantic
+        -pedantic
      
         -Wno-unused-parameter
         -Wno-unused-variable
