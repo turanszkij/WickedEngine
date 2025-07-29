@@ -71,13 +71,15 @@ if (WIN32)
 elseif(UNIX)
     set(PLATFORM "SDL2")
     add_compile_definitions(SDL2=1)
+	
+	# Recommendation for Visual Studio Level 3 warning match:
+	add_compile_options(
+		-Wall
+		-Wextra
+	 
+	 	-Wno-unused-parameter
+	)
 endif()
-
-# Recommendation for Visual Studio Level 3 warning match:
-add_compile_options(
-	-Wall
-	-Wextra
-)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     add_compile_options(
