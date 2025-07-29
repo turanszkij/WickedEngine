@@ -489,6 +489,8 @@ void PaintToolWindow::UpdateData(float dt)
 
 		switch (mode)
 		{
+		default:
+			break;
 		case MODE_TEXTURE:
 		{
 			Ray pickRay = editor->pickRay;
@@ -745,6 +747,8 @@ void PaintToolWindow::UpdateData(float dt)
 						case MODE_WIND:
 							material->SetUseWind(true);
 							break;
+						default:
+							break;
 						}
 					}
 				}
@@ -776,6 +780,8 @@ void PaintToolWindow::UpdateData(float dt)
 						std::fill(mesh->vertex_windweights.begin(), mesh->vertex_windweights.end(), 0xFF); // fill max affection
 						rebuild = true;
 					}
+					break;
+				default:
 					break;
 				}
 
@@ -822,6 +828,8 @@ void PaintToolWindow::UpdateData(float dt)
 								mesh->vertex_windweights[j] = vcol.getA();
 							}
 							break;
+							default:
+								break;
 							}
 						}
 					}

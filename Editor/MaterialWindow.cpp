@@ -981,6 +981,8 @@ void MaterialWindow::SetEntity(Entity entity)
 			clearcoatSlider.SetEnabled(true);
 			clearcoatRoughnessSlider.SetEnabled(true);
 			break;
+		default:
+			break;
 		}
 		sheenRoughnessSlider.SetValue(material->sheenRoughness);
 		clearcoatSlider.SetValue(material->clearcoat);

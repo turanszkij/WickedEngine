@@ -455,6 +455,8 @@ SHADERTYPE GetMSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, b
 	case RENDERPASS_RAINBLOCKER:
 		realMS = MSTYPE_SHADOW;
 		break;
+	default:
+		break;
 	}
 
 	return realMS;
@@ -526,6 +528,8 @@ SHADERTYPE GetVSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, b
 	case RENDERPASS_RAINBLOCKER:
 		realVS = VSTYPE_SHADOW;
 		break;
+	default:
+		break;
 	}
 
 	return realVS;
@@ -554,6 +558,8 @@ SHADERTYPE GetGSTYPE(RENDERPASS renderPass, bool alphatest, bool transparent)
 		}
 #endif // PLATFORM_PS5
 		break;
+	default:
+		break;
 	}
 
 	return realGS;
@@ -578,6 +584,8 @@ SHADERTYPE GetHSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest)
 		case RENDERPASS_MAIN:
 			return HSTYPE_OBJECT;
 			break;
+		default:
+			break;
 		}
 	}
 
@@ -601,6 +609,8 @@ SHADERTYPE GetDSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest)
 			}
 		case RENDERPASS_MAIN:
 			return DSTYPE_OBJECT;
+		default:
+			break;
 		}
 	}
 
@@ -3907,6 +3917,8 @@ void UpdateVisibility(Visibility& vis)
 						rect.h = int(max_shadow_resolution_cube * amount);
 					}
 					break;
+				default:
+					break;
 				}
 				if (rect.w > 8 && rect.h > 8)
 				{
@@ -3947,6 +3959,8 @@ void UpdateVisibility(Visibility& vis)
 								break;
 							case LightComponent::POINT:
 								lightrect.w /= 6;
+								break;
+							default:
 								break;
 							}
 						}
@@ -6967,6 +6981,8 @@ void DrawShadowmaps(
 
 		}
 		break;
+		default:
+			break;
 		} // terminate switch
 	}
 
