@@ -80,7 +80,6 @@ elseif(UNIX)
         -Wno-unused-function
         -Wno-unused-but-set-variable
         -Wno-sign-compare
-        -Wno-switch
     )
 endif()
 
