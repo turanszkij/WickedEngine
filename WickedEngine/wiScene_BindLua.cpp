@@ -1035,8 +1035,6 @@ int Scene_BindLua::IntersectsAll(lua_State* L)
 		{
 			wi::vector<Scene::RayIntersectionResult> results;
 			scene->IntersectsAll(results, ray->ray, filterMask, layerMask, lod);
-			if (results.empty())
-				return 0;
 			int cnt = (int)results.size();
 			lua_createtable(L, cnt, 0);
 			int newTable = lua_gettop(L);
