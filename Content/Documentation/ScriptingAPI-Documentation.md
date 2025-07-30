@@ -31,6 +31,8 @@ This is a reference and explanation of Lua scripting features in Wicked Engine.
 	9. [Scene](#scene)
 		1. [Entity](#entity)
 		2. [Scene](#scene)
+		2. [RayIntersectionResult](#rayintersectionresult)
+		2. [SphereIntersectionResult](#sphereintersectionresult)
 		3. [NameComponent](#namecomponent)
 		4. [LayerComponent](#layercomponent)
 		5. [TransformComponent](#transformcomponent)
@@ -766,6 +768,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - [outer]FILTER_ALL : uint	-- include everything
 - Intersects(Ray|Sphere|Capsule primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) : int entity, Vector position,normal, float distance, Vector velocity, int subsetIndex, Matrix orientation, Vector uv, HumanoidBone humanoid_bone	-- intersects a primitive with the scene and returns collision parameters. If humanoid_bone is not `HumanoidBone.Count` then the intersection is a ragdoll, and entity refers to the humanoid entity
 - IntersectsFirst(Ray primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) : bool	-- intersects a primitive with the scene and returns true immediately on intersection, false if there was no intersection. This can be faster for occlusion check than regular `Intersects` that searches for closest intersection.
+- IntersectsAll(Ray|Sphere|Capsule primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) results[] -- intersects the scene with a primitive and returns array of results. In case of Ray, [RayIntersectionResult](#rayintersectionresult) will be returned, for Sphere and Capsule [SphereIntersectionResult](#sphereintersectionresult) will be returned
 - Update()  -- updates the scene and every entity and component inside the scene
 - Clear()  -- deletes every entity and component inside the scene
 - Merge(Scene other)  -- moves contents from an other scene into this one. The other scene will be empty after this operation (contents are moved, not copied)
@@ -933,6 +936,33 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - VoxelizeScene(VoxelGrid voxelgrid, opt bool subtract = false, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) -- voxelizes all entities in the scene which intersect the voxel grid volume and match the filterMask and layerMask. Subtract parameter controls whether the voxels are added (true) or removed (false). Lod argument selects object's level of detail
 
 - FixupNans()	-- maintenance utility to help fix Nan issues in TransformComponents. Transforms containing nans will be cleared and renamed with _nanfix postfix
+
+#### RayIntersectionResult
+Result of one hit in scene.IntersectsAll
+- GetEntity() : Entity
+- GetPosition() : Vector
+- GetNormal() : Vector
+- GetUV() : Vector
+- GetVelocity() : Vector
+- GetDistance() : float
+- GetSubsetIndex() : int
+- GetVertexID0() : int
+- GetVertexID1() : int
+- GetVertexID2() : int
+- GetBarycentrics() : Vector
+- GetOrientation() : Vector
+- GetHumanoidBone() : int
+
+#### SphereIntersectionResult
+Result of one hit in scene.IntersectsAll
+- GetEntity() : Entity
+- GetPosition() : Vector
+- GetNormal() : Vector
+- GetVelocity() : Vector
+- GetDepth() : float
+- GetSubsetIndex() : int
+- GetOrientation() : Vector
+- GetHumanoidBone() : int
 
 #### NameComponent
 Holds a string that can more easily identify an entity to humans than an entity ID. 

@@ -18,7 +18,6 @@
 
 #include <string>
 #include <memory>
-#include <limits>
 
 namespace wi::scene
 {
@@ -455,6 +454,7 @@ namespace wi::scene
 		// Bakes the transform's current world matrix back to hierarchy local space (if it is part of a hierarchy)
 		void Component_TransformWorldToHierarchy(wi::ecs::Entity entity);
 
+		// Gathers all direct and indirect children of an entity
 		void GatherChildren(wi::ecs::Entity parent, wi::vector<wi::ecs::Entity>& children) const;
 
 		// Read/write whole scene into an archive
@@ -493,7 +493,7 @@ namespace wi::scene
 			XMFLOAT3 normal = XMFLOAT3(0, 0, 0);
 			XMFLOAT4 uv = XMFLOAT4(0, 0, 0, 0);
 			XMFLOAT3 velocity = XMFLOAT3(0, 0, 0);
-			float distance = std::numeric_limits<float>::max();
+			float distance = FLT_MAX;
 			int subsetIndex = -1;
 			int vertexID0 = -1;
 			int vertexID1 = -1;
@@ -522,6 +522,9 @@ namespace wi::scene
 		//	lod				:	specify min level of detail for meshes
 		bool IntersectsFirst(const wi::primitive::Ray& ray, uint32_t filterMask = wi::enums::FILTER_OPAQUE, uint32_t layerMask = ~0, uint32_t lod = 0) const;
 
+		// Given a ray, finds all intersections against all mesh instances or collliders
+		void IntersectsAll(wi::vector<RayIntersectionResult>& results, const wi::primitive::Ray& ray, uint32_t filterMask = wi::enums::FILTER_OPAQUE, uint32_t layerMask = ~0, uint32_t lod = 0) const;
+
 		struct SphereIntersectionResult
 		{
 			wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
@@ -533,10 +536,18 @@ namespace wi::scene
 			XMFLOAT4X4 orientation = wi::math::IDENTITY_MATRIX;
 			HumanoidComponent::HumanoidBone humanoid_bone = HumanoidComponent::HumanoidBone::Count;
 		};
+		// Closest sphere intersection
 		SphereIntersectionResult Intersects(const wi::primitive::Sphere& sphere, uint32_t filterMask = wi::enums::FILTER_OPAQUE, uint32_t layerMask = ~0, uint32_t lod = 0) const;
 
+		// All sphere intersections
+		void IntersectsAll(wi::vector<SphereIntersectionResult>& results, const wi::primitive::Sphere& sphere, uint32_t filterMask = wi::enums::FILTER_OPAQUE, uint32_t layerMask = ~0, uint32_t lod = 0) const;
+
 		using CapsuleIntersectionResult = SphereIntersectionResult;
+		// Closest capsule intersection
 		CapsuleIntersectionResult Intersects(const wi::primitive::Capsule& capsule, uint32_t filterMask = wi::enums::FILTER_OPAQUE, uint32_t layerMask = ~0, uint32_t lod = 0) const;
+
+		// All capsule intersections
+		void IntersectsAll(wi::vector<CapsuleIntersectionResult>& results, const wi::primitive::Capsule& capsule, uint32_t filterMask = wi::enums::FILTER_OPAQUE, uint32_t layerMask = ~0, uint32_t lod = 0) const;
 
 		// Goes through the hierarchy backwards and computes entity's world space matrix:
 		XMMATRIX ComputeEntityMatrixRecursive(wi::ecs::Entity entity) const;

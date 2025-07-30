@@ -493,6 +493,8 @@ void Bind()
 		wi::lua::RegisterFunc("SceneIntersectCapsule", SceneIntersectCapsule);
 
 		Luna<Scene_BindLua>::Register(L);
+		Luna<RayIntersectionResult_BindLua>::Register(L);
+		Luna<SphereIntersectionResult_BindLua>::Register(L);
 		Luna<NameComponent_BindLua>::Register(L);
 		Luna<LayerComponent_BindLua>::Register(L);
 		Luna<TransformComponent_BindLua>::Register(L);
@@ -536,6 +538,7 @@ Luna<Scene_BindLua>::FunctionType Scene_BindLua::methods[] = {
 	lunamethod(Scene_BindLua, Instantiate),
 	lunamethod(Scene_BindLua, UpdateHierarchy),
 	lunamethod(Scene_BindLua, Intersects),
+	lunamethod(Scene_BindLua, IntersectsAll),
 	lunamethod(Scene_BindLua, IntersectsFirst),
 	lunamethod(Scene_BindLua, FindAllEntities),
 	lunamethod(Scene_BindLua, Entity_FindByName),
@@ -1003,6 +1006,88 @@ int Scene_BindLua::Intersects(lua_State* L)
 	else
 	{
 		wi::lua::SError(L, "Scene::Intersects(Ray|Sphere|Capsule primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) not enough arguments!");
+	}
+	return 0;
+}
+int Scene_BindLua::IntersectsAll(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		uint32_t filterMask = wi::enums::FILTER_ALL;
+		uint32_t layerMask = ~0u;
+		uint lod = 0;
+		if (argc > 1)
+		{
+			filterMask = (uint32_t)wi::lua::SGetInt(L, 2);
+			if (argc > 2)
+			{
+				layerMask = (uint32_t)wi::lua::SGetInt(L, 3);
+				if (argc > 3)
+				{
+					lod = (uint32_t)wi::lua::SGetInt(L, 4);
+				}
+			}
+		}
+
+		Ray_BindLua* ray = Luna<Ray_BindLua>::lightcheck(L, 1);
+		if (ray != nullptr)
+		{
+			wi::vector<Scene::RayIntersectionResult> results;
+			scene->IntersectsAll(results, ray->ray, filterMask, layerMask, lod);
+			if (results.empty())
+				return 0;
+			int cnt = (int)results.size();
+			lua_createtable(L, cnt, 0);
+			int newTable = lua_gettop(L);
+			for (size_t i = 0; i < results.size(); ++i)
+			{
+				const auto& result = results[i];
+				Luna<RayIntersectionResult_BindLua>::push(L, result);
+				lua_rawseti(L, newTable, lua_Integer(i + 1));
+			}
+			return cnt;
+		}
+
+		Sphere_BindLua* sphere = Luna<Sphere_BindLua>::lightcheck(L, 1);
+		if (sphere != nullptr)
+		{
+			wi::vector<Scene::SphereIntersectionResult> results;
+			scene->IntersectsAll(results, sphere->sphere, filterMask, layerMask, lod);
+			int cnt = (int)results.size();
+			lua_createtable(L, cnt, 0);
+			int newTable = lua_gettop(L);
+			for (size_t i = 0; i < results.size(); ++i)
+			{
+				const auto& result = results[i];
+				Luna<SphereIntersectionResult_BindLua>::push(L, result);
+				lua_rawseti(L, newTable, lua_Integer(i + 1));
+			}
+			return cnt;
+		}
+
+		Capsule_BindLua* capsule = Luna<Capsule_BindLua>::lightcheck(L, 1);
+		if (capsule != nullptr)
+		{
+			wi::vector<Scene::CapsuleIntersectionResult> results;
+			scene->IntersectsAll(results, capsule->capsule, filterMask, layerMask, lod);
+			int cnt = (int)results.size();
+			lua_createtable(L, cnt, 0);
+			int newTable = lua_gettop(L);
+			for (size_t i = 0; i < results.size(); ++i)
+			{
+				const auto& result = results[i];
+				Luna<SphereIntersectionResult_BindLua>::push(L, result);
+				lua_rawseti(L, newTable, lua_Integer(i + 1));
+			}
+			return cnt;
+		}
+
+		wi::lua::SError(L, "Scene::IntersectsAll(Ray|Sphere|Capsule primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) first argument is not an accepted primitive type!");
+	}
+	else
+	{
+		wi::lua::SError(L, "Scene::IntersectsAll(Ray|Sphere|Capsule primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) not enough arguments!");
 	}
 	return 0;
 }
@@ -3528,6 +3613,160 @@ int Scene_BindLua::FixupNans(lua_State* L)
 	scene->FixupNans();
 	return 0;
 }
+
+
+
+
+
+Luna<RayIntersectionResult_BindLua>::FunctionType RayIntersectionResult_BindLua::methods[] = {
+	lunamethod(RayIntersectionResult_BindLua, GetEntity),
+	lunamethod(RayIntersectionResult_BindLua, GetPosition),
+	lunamethod(RayIntersectionResult_BindLua, GetNormal),
+	lunamethod(RayIntersectionResult_BindLua, GetUV),
+	lunamethod(RayIntersectionResult_BindLua, GetVelocity),
+	lunamethod(RayIntersectionResult_BindLua, GetDistance),
+	lunamethod(RayIntersectionResult_BindLua, GetSubsetIndex),
+	lunamethod(RayIntersectionResult_BindLua, GetVertexID0),
+	lunamethod(RayIntersectionResult_BindLua, GetVertexID1),
+	lunamethod(RayIntersectionResult_BindLua, GetVertexID2),
+	lunamethod(RayIntersectionResult_BindLua, GetBarycentrics),
+	lunamethod(RayIntersectionResult_BindLua, GetOrientation),
+	lunamethod(RayIntersectionResult_BindLua, GetHumanoidBone),
+	{ NULL, NULL }
+};
+Luna<RayIntersectionResult_BindLua>::PropertyType RayIntersectionResult_BindLua::properties[] = {
+	{ NULL, NULL }
+};
+
+int RayIntersectionResult_BindLua::GetEntity(lua_State* L)
+{
+	wi::lua::SSetLongLong(L, result.entity);
+	return 1;
+}
+int RayIntersectionResult_BindLua::GetPosition(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, result.position);
+	return 1;
+}
+int RayIntersectionResult_BindLua::GetNormal(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, result.normal);
+	return 1;
+}
+int RayIntersectionResult_BindLua::GetUV(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, result.uv);
+	return 1;
+}
+int RayIntersectionResult_BindLua::GetVelocity(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, result.velocity);
+	return 1;
+}
+int RayIntersectionResult_BindLua::GetDistance(lua_State* L)
+{
+	wi::lua::SSetFloat(L, result.distance);
+	return 1;
+}
+int RayIntersectionResult_BindLua::GetSubsetIndex(lua_State* L)
+{
+	wi::lua::SSetInt(L, result.subsetIndex);
+	return 1;
+}
+int RayIntersectionResult_BindLua::GetVertexID0(lua_State* L)
+{
+	wi::lua::SSetInt(L, result.vertexID0);
+	return 1;
+}
+int RayIntersectionResult_BindLua::GetVertexID1(lua_State* L)
+{
+	wi::lua::SSetInt(L, result.vertexID1);
+	return 1;
+}
+int RayIntersectionResult_BindLua::GetVertexID2(lua_State* L)
+{
+	wi::lua::SSetInt(L, result.vertexID2);
+	return 1;
+}
+int RayIntersectionResult_BindLua::GetBarycentrics(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, result.bary);
+	return 1;
+}
+int RayIntersectionResult_BindLua::GetOrientation(lua_State* L)
+{
+	Luna<Matrix_BindLua>::push(L, result.orientation);
+	return 1;
+}
+int RayIntersectionResult_BindLua::GetHumanoidBone(lua_State* L)
+{
+	wi::lua::SSetInt(L, (int)result.humanoid_bone);
+	return 1;
+}
+
+
+
+
+
+Luna<SphereIntersectionResult_BindLua>::FunctionType SphereIntersectionResult_BindLua::methods[] = {
+	lunamethod(SphereIntersectionResult_BindLua, GetEntity),
+	lunamethod(SphereIntersectionResult_BindLua, GetPosition),
+	lunamethod(SphereIntersectionResult_BindLua, GetNormal),
+	lunamethod(SphereIntersectionResult_BindLua, GetVelocity),
+	lunamethod(SphereIntersectionResult_BindLua, GetDepth),
+	lunamethod(SphereIntersectionResult_BindLua, GetSubsetIndex),
+	lunamethod(SphereIntersectionResult_BindLua, GetOrientation),
+	lunamethod(SphereIntersectionResult_BindLua, GetHumanoidBone),
+	{ NULL, NULL }
+};
+Luna<SphereIntersectionResult_BindLua>::PropertyType SphereIntersectionResult_BindLua::properties[] = {
+	{ NULL, NULL }
+};
+
+int SphereIntersectionResult_BindLua::GetEntity(lua_State* L)
+{
+	wi::lua::SSetLongLong(L, result.entity);
+	return 1;
+}
+int SphereIntersectionResult_BindLua::GetPosition(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, result.position);
+	return 1;
+}
+int SphereIntersectionResult_BindLua::GetNormal(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, result.normal);
+	return 1;
+}
+int SphereIntersectionResult_BindLua::GetVelocity(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, result.velocity);
+	return 1;
+}
+int SphereIntersectionResult_BindLua::GetDepth(lua_State* L)
+{
+	wi::lua::SSetFloat(L, result.depth);
+	return 1;
+}
+int SphereIntersectionResult_BindLua::GetSubsetIndex(lua_State* L)
+{
+	wi::lua::SSetInt(L, result.subsetIndex);
+	return 1;
+}
+int SphereIntersectionResult_BindLua::GetOrientation(lua_State* L)
+{
+	Luna<Matrix_BindLua>::push(L, result.orientation);
+	return 1;
+}
+int SphereIntersectionResult_BindLua::GetHumanoidBone(lua_State* L)
+{
+	wi::lua::SSetInt(L, (int)result.humanoid_bone);
+	return 1;
+}
+
+
+
+
 
 
 

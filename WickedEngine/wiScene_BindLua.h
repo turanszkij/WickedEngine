@@ -41,6 +41,7 @@ namespace wi::lua::scene
 		int UpdateHierarchy(lua_State* L);
 
 		int Intersects(lua_State* L);
+		int IntersectsAll(lua_State* L);
 		int IntersectsFirst(lua_State* L);
 
 		int FindAllEntities(lua_State* L);
@@ -217,6 +218,59 @@ namespace wi::lua::scene
 		int VoxelizeScene(lua_State* L);
 
 		int FixupNans(lua_State* L);
+	};
+
+	class RayIntersectionResult_BindLua
+	{
+	public:
+		inline static constexpr char className[] = "RayIntersectionResult";
+		static Luna<RayIntersectionResult_BindLua>::FunctionType methods[];
+		static Luna<RayIntersectionResult_BindLua>::PropertyType properties[];
+
+		wi::scene::Scene::RayIntersectionResult result;
+
+		RayIntersectionResult_BindLua() = default;
+		RayIntersectionResult_BindLua(lua_State* L) {}
+		RayIntersectionResult_BindLua(const wi::scene::Scene::RayIntersectionResult& result) : result(result) {}
+		RayIntersectionResult_BindLua(wi::scene::Scene::RayIntersectionResult&& result) : result(std::move(result)) {}
+
+		int GetEntity(lua_State* L);
+		int GetPosition(lua_State* L);
+		int GetNormal(lua_State* L);
+		int GetUV(lua_State* L);
+		int GetVelocity(lua_State* L);
+		int GetDistance(lua_State* L);
+		int GetSubsetIndex(lua_State* L);
+		int GetVertexID0(lua_State* L);
+		int GetVertexID1(lua_State* L);
+		int GetVertexID2(lua_State* L);
+		int GetBarycentrics(lua_State* L);
+		int GetOrientation(lua_State* L);
+		int GetHumanoidBone(lua_State* L);
+	};
+
+	class SphereIntersectionResult_BindLua
+	{
+	public:
+		inline static constexpr char className[] = "SphereIntersectionResult";
+		static Luna<SphereIntersectionResult_BindLua>::FunctionType methods[];
+		static Luna<SphereIntersectionResult_BindLua>::PropertyType properties[];
+
+		wi::scene::Scene::SphereIntersectionResult result;
+
+		SphereIntersectionResult_BindLua() = default;
+		SphereIntersectionResult_BindLua(lua_State* L) {}
+		SphereIntersectionResult_BindLua(const wi::scene::Scene::SphereIntersectionResult& result) : result(result) {}
+		SphereIntersectionResult_BindLua(wi::scene::Scene::SphereIntersectionResult&& result) : result(std::move(result)) {}
+
+		int GetEntity(lua_State* L);
+		int GetPosition(lua_State* L);
+		int GetNormal(lua_State* L);
+		int GetVelocity(lua_State* L);
+		int GetDepth(lua_State* L);
+		int GetSubsetIndex(lua_State* L);
+		int GetOrientation(lua_State* L);
+		int GetHumanoidBone(lua_State* L);
 	};
 
 	class NameComponent_BindLua
