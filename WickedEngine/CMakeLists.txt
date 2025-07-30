@@ -86,6 +86,8 @@ add_library(${TARGET_NAME} ${WICKED_LIBRARY_TYPE}
 	${HEADER_FILES}
 )
 
+target_precompile_headers(${TARGET_NAME} PRIVATE WickedEngine.h)
+
 add_library(WickedEngine ALIAS ${TARGET_NAME})
 set_target_properties(${TARGET_NAME} PROPERTIES
 	PUBLIC_HEADER "${HEADER_FILES}"

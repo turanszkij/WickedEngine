@@ -3,11 +3,12 @@ if (NOT WIN32)
 	find_package(Threads REQUIRED)
 endif ()
 
-set (SOURCE_FILES
-	stdafx.cpp
+set(SOURCE_FILES
 	Example_ImGui_Docking.cpp
 	Example_ImGui_Docking.h
-	stdafx.h
+	../../Editor/ModelImporter_GLTF.cpp
+)
+set(IMGUI_FILES
 	ImGui/imconfig.h
 	ImGui/imgui.cpp
 	ImGui/imgui.h
@@ -22,36 +23,50 @@ set (SOURCE_FILES
 	ImGui/ImGuizmo.cpp
 	ImGui/ImGuizmo.h
 	ImGui/IconsMaterialDesign.h
-	../../Editor/ModelImporter_GLTF.cpp
 )
 
 if (WIN32)
-	list (APPEND SOURCE_FILES
+	list(APPEND SOURCE_FILES
 		main_Windows.cpp
 		main_Windows.h
 		Tests.rc
+	)
+	list(APPEND IMGUI_FILES
 		ImGui/imgui_impl_win32.cpp
 		ImGui/imgui_impl_win32.h
 	)
+	add_library(Example_ImGui_Docking_Lib OBJECT ${IMGUI_FILES})
 
 	add_executable(Example_ImGui_Docking WIN32 ${SOURCE_FILES})
 
-	target_link_libraries(Example_ImGui_Docking PUBLIC
+	target_link_libraries(Example_ImGui_Docking
+		PUBLIC
 		WickedEngine_Windows
+
+		PRIVATE
+		Example_ImGui_Docking_Lib
 	)
 	set(LIB_DXCOMPILER "dxcompiler.dll")
 else()
-	list (APPEND SOURCE_FILES
+	list(APPEND SOURCE_FILES
 		main_SDL2.cpp
+	)
+	list(APPEND IMGUI_FILES
 		ImGui/imgui_impl_sdl.cpp
 		ImGui/imgui_impl_sdl.h
 	)
-
+	add_library(Example_ImGui_Docking_Lib OBJECT ${IMGUI_FILES})
+	find_package(SDL2 REQUIRED)
+	target_link_libraries(Example_ImGui_Docking_Lib PRIVATE SDL2::SDL2)
 	add_executable(Example_ImGui_Docking ${SOURCE_FILES})
 
-	target_link_libraries(Example_ImGui_Docking PUBLIC
+	target_link_libraries(Example_ImGui_Docking
+		PUBLIC
 		WickedEngine
 		Threads::Threads
+
+		PRIVATE
+		Example_ImGui_Docking_Lib
 	)
 
 	# Copy shaders and font to build and source folders just to be safe:
@@ -65,6 +80,8 @@ else()
 
 	set(LIB_DXCOMPILER "libdxcompiler.so")
 endif ()
+
+target_precompile_headers(Example_ImGui_Docking PRIVATE stdafx.h)
 
 if (MSVC)
 	set_property(TARGET Example_ImGui_Docking PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")

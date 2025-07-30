@@ -5,6 +5,7 @@ string(REGEX REPLACE "([.+?*])" "\\\\\\1" SDIR "${CMAKE_CURRENT_SOURCE_DIR}")
 
 file(GLOB SOURCE_FILES CONFIGURE_DEPENDS *.cpp)
 list(FILTER SOURCE_FILES EXCLUDE REGEX ${SDIR}/main_.*)
+list(FILTER SOURCE_FILES EXCLUDE REGEX ${SDIR}/stdafx.*)
 list(APPEND SOURCE_FILES main_${PLATFORM}.cpp)
 
 
@@ -36,6 +37,8 @@ else ()
 	)
 
 endif ()
+
+target_precompile_headers(Editor PRIVATE "stdafx.h")
 
 # Needed for terrain system
 add_dependencies(Editor Content)
