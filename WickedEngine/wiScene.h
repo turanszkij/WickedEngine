@@ -18,7 +18,6 @@
 
 #include <string>
 #include <memory>
-#include <limits>
 
 namespace wi::scene
 {
@@ -494,7 +493,7 @@ namespace wi::scene
 			XMFLOAT3 normal = XMFLOAT3(0, 0, 0);
 			XMFLOAT4 uv = XMFLOAT4(0, 0, 0, 0);
 			XMFLOAT3 velocity = XMFLOAT3(0, 0, 0);
-			float distance = std::numeric_limits<float>::max();
+			float distance = FLT_MAX;
 			int subsetIndex = -1;
 			int vertexID0 = -1;
 			int vertexID1 = -1;

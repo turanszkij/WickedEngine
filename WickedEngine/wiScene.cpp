@@ -1939,10 +1939,12 @@ namespace wi::scene
 
 					const AnimationComponent::AnimationChannel::PathDataType path_data_type = channel.GetPathDataType();
 
-					float timeFirst = std::numeric_limits<float>::max();
-					float timeLast = std::numeric_limits<float>::min();
-					int keyLeft = 0;	float timeLeft = std::numeric_limits<float>::min();
-					int keyRight = 0;	float timeRight = std::numeric_limits<float>::max();
+					float timeFirst = FLT_MAX;
+					float timeLast = -FLT_MAX;
+					int keyLeft = 0;
+					int keyRight = 0;
+					float timeLeft = -FLT_MAX;
+					float timeRight = FLT_MAX;
 
 					// search for usable keyframes:
 					for (int k = 0; k < (int)animationdata->keyframe_times.size(); ++k)
@@ -3835,8 +3837,8 @@ namespace wi::scene
 				armature.boneData.resize(armature.boneCollection.size());
 			}
 
-			XMFLOAT3 _min = XMFLOAT3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
-			XMFLOAT3 _max = XMFLOAT3(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
+			XMFLOAT3 _min = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX);
+			XMFLOAT3 _max = XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
 
 			uint32_t boneIndex = 0;
 			for (Entity boneEntity : armature.boneCollection)
@@ -4864,7 +4866,7 @@ namespace wi::scene
 			default:
 			case LightComponent::DIRECTIONAL:
 				XMStoreFloat3(&light.direction, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), W)));
-				aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max()));
+				aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX));
 				locker.lock();
 				if (args.jobIndex < weather.most_important_light_index)
 				{
@@ -7635,7 +7637,7 @@ namespace wi::scene
 
 					XMVECTOR ReferencePoint;
 					XMVECTOR d = XMVector3Normalize(B - A);
-					if (std::abs(XMVectorGetX(XMVector3Dot(N, d))) < std::numeric_limits<float>::epsilon())
+					if (std::abs(XMVectorGetX(XMVector3Dot(N, d))) < FLT_EPSILON)
 					{
 						// Capsule line cannot be intersected with triangle plane (they are parallel)
 						//	In this case, just take a point from triangle
@@ -7801,7 +7803,7 @@ namespace wi::scene
 						{
 							result.entity = entity;
 							XMStoreFloat3(&result.position, bestPoint);
-							if (lenX > std::numeric_limits<float>::epsilon())
+							if (lenX > FLT_EPSILON)
 							{
 								result.depth = depth;
 								XMStoreFloat3(&result.normal, intersectionVec / intersectionVecLen);
@@ -8064,7 +8066,7 @@ namespace wi::scene
 
 					XMVECTOR ReferencePoint;
 					XMVECTOR d = XMVector3Normalize(B - A);
-					if (std::abs(XMVectorGetX(XMVector3Dot(N, d))) < std::numeric_limits<float>::epsilon())
+					if (std::abs(XMVectorGetX(XMVector3Dot(N, d))) < FLT_EPSILON)
 					{
 						// Capsule line cannot be intersected with triangle plane (they are parallel)
 						//	In this case, just take a point from triangle
@@ -8231,7 +8233,7 @@ namespace wi::scene
 							CapsuleIntersectionResult result;
 							result.entity = entity;
 							XMStoreFloat3(&result.position, bestPoint);
-							if (lenX > std::numeric_limits<float>::epsilon())
+							if (lenX > FLT_EPSILON)
 							{
 								result.depth = depth;
 								XMStoreFloat3(&result.normal, intersectionVec / intersectionVecLen);
