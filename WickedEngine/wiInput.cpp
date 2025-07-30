@@ -170,7 +170,7 @@ namespace wi::input
 		mouse.position.x = (float)p.x;
 		mouse.position.y = (float)p.y;
 
-#elif SDL2
+#elif defined(SDL2)
 		wi::input::sdlinput::GetMouseState(&mouse);
 		wi::input::sdlinput::GetKeyboardState(&keyboard);
 #endif
@@ -637,7 +637,7 @@ namespace wi::input
 			}
 #if defined(_WIN32) && !defined(PLATFORM_XBOX)
 			return KEY_DOWN(keycode) || KEY_TOGGLE(keycode);
-#elif SDL2
+#elif defined(SDL2)
 			return keyboard.buttons[keycode] == 1;
 #endif
 		}
@@ -734,7 +734,7 @@ namespace wi::input
 		{
 			while (ShowCursor(true) < 0) {};
 		}
-#elif SDL2
+#elif defined(SDL2)
 		SDL_SetRelativeMouseMode(value ? SDL_TRUE : SDL_FALSE);
 #endif // _WIN32
 	}

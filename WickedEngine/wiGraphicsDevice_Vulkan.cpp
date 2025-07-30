@@ -2399,7 +2399,7 @@ using namespace vulkan_internal;
 
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
 		instanceExtensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
-#elif SDL2
+#elif defined(SDL2)
 		{
 			uint32_t extensionCount;
 			SDL_Vulkan_GetInstanceExtensions(window, &extensionCount, nullptr);
@@ -3779,7 +3779,7 @@ using namespace vulkan_internal;
 			createInfo.hinstance = GetModuleHandle(nullptr);
 
 			vulkan_check(vkCreateWin32SurfaceKHR(instance, &createInfo, nullptr, &internal_state->surface));
-#elif SDL2
+#elif defined(SDL2)
 			if (!SDL_Vulkan_CreateSurface(window, instance, &internal_state->surface))
 			{
 				throw sdl2::SDLError("Error creating a vulkan surface");
