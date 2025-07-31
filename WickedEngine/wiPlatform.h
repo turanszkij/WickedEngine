@@ -41,7 +41,7 @@ namespace wi::platform
 #ifdef _WIN32
 	using window_type = HWND;
 	using error_type = HRESULT;
-#elif SDL2
+#elif defined(SDL2)
 	using window_type = SDL_Window*;
 	using error_type = int;
 #else
