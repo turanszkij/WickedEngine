@@ -3260,11 +3260,11 @@ namespace wi::scene
 						ik_pos = right_result.position;
 					}
 				}
-				character.foot_offset = wi::math::Lerp(character.foot_offset, diff, 0.1f);
+				character.foot_offset = wi::math::Lerp(character.foot_offset, diff, saturate(5 * dt));
 			}
 			else
 			{
-				character.foot_offset = wi::math::Lerp(character.foot_offset, 0.0f, 0.1f);
+				character.foot_offset = wi::math::Lerp(character.foot_offset, 0.0f, saturate(5 * dt));
 			}
 
 			TransformComponent* humanoid_transform = transforms.GetComponent(character.humanoidEntity);
@@ -3275,16 +3275,18 @@ namespace wi::scene
 				humanoid_transform->SetDirty();
 			}
 
+			const float foot_blend = dt == 0.0f ? 1.0f : saturate(0.5f * dt * 60.0f); // teleport immediately when dt is 0 (initial placement)
+
 			// Ease out inverse kinematics by default:
 			if (inverse_kinematics.Contains(character.left_foot))
 			{
 				InverseKinematicsComponent& ik = *inverse_kinematics.GetComponent(character.left_foot);
-				ik.target_position = wi::math::Lerp(ik.target_position, left_pos, 0.6f);
+				ik.target_position = wi::math::Lerp(ik.target_position, left_pos, foot_blend);
 			}
 			if (inverse_kinematics.Contains(character.right_foot))
 			{
 				InverseKinematicsComponent& ik = *inverse_kinematics.GetComponent(character.right_foot);
-				ik.target_position = wi::math::Lerp(ik.target_position, right_pos, 0.6f);
+				ik.target_position = wi::math::Lerp(ik.target_position, right_pos, foot_blend);
 			}
 
 			// The upper foot will use IK:
@@ -3292,7 +3294,7 @@ namespace wi::scene
 			{
 				InverseKinematicsComponent& ik = *inverse_kinematics.GetComponent(ik_foot);
 				ik_pos.y += 0.16f;
-				ik.target_position = wi::math::Lerp(ik.target_position, ik_pos, 0.6f);
+				ik.target_position = wi::math::Lerp(ik.target_position, ik_pos, foot_blend);
 #if 0
 				// Debug draw foot target:
 				locker.lock();
