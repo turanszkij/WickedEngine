@@ -28,7 +28,7 @@
 #define wiGetProcAddress(handle,name) dlsym(handle, name)
 typedef void* HMODULE;
 #endif // _WIN32
-
+// dummy change
 #ifdef SDL2
 #include <SDL2/SDL.h>
 #include <SDL_vulkan.h>
