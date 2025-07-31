@@ -227,7 +227,8 @@ namespace wi::ecs
 				entities.resize(prev_count + count);
 				for (size_t i = 0; i < count; ++i)
 				{
-					Entity entity;
+					// assign value to make GCC happy
+					Entity entity = INVALID_ENTITY;
 					SerializeEntity(archive, entity, seri);
 					entities[prev_count + i] = entity;
 					lookup[entity] = prev_count + i;
