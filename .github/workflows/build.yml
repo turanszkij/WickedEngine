@@ -7,8 +7,8 @@ on:
 env:
   CCACHE_VERSION: 4.11.3
   CCACHE_MAXSIZE: 500Mi
-  # needed because wiRenderer uses conditional include via __hasinclude
-  CCACHE_NODIRECT: 1
+  # see https://ccache.dev/manual/latest.html#_precompiled_headers
+  CCACHE_SLOPPINESS: pch_defines,time_macros,include_file_mtime,include_file_ctime
 
 jobs:
 
@@ -125,7 +125,7 @@ jobs:
     - name: Recompile with shader dump
       run: |
         cd build
-        make -B -j $(nproc)
+        make -j $(nproc)
 
     - name: Save Ccache database
       id: save-ccache
