@@ -28,7 +28,25 @@ namespace wi
 	{
 		if (IsHidden())
 			return;
-		wi::image::Draw(GetTexture(), params, cmd);
+		if ((maskResource.IsValid() && params.maskMap == nullptr) || (backgroundResource.IsValid() && params.backgroundMap == nullptr))
+		{
+			// The mask/background resource in sprite is used when it's not specified in params:
+			//	It is mostly a fix for unexpected behaviour in scripts where sprite.SetParams() would overwrite the mask map too
+			wi::image::Params temp = params;
+			if (maskResource.IsValid() && params.maskMap == nullptr)
+			{
+				temp.setMaskMap(&maskResource.GetTexture());
+			}
+			if (backgroundResource.IsValid() && params.backgroundMap == nullptr)
+			{
+				temp.setBackgroundMap(&backgroundResource.GetTexture());
+			}
+			wi::image::Draw(GetTexture(), temp, cmd);
+		}
+		else
+		{
+			wi::image::Draw(GetTexture(), params, cmd);
+		}
 	}
 
 	void Sprite::FixedUpdate()
