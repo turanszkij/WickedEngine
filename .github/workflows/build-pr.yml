@@ -110,8 +110,8 @@ jobs:
 
     - name: Initial compile
       run: |
-        CC=${{ matrix.cc }} CXX=${{ matrix.cxx }} cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-        make -C build -j$(nproc)
+        CC=${{ matrix.cc }} CXX=${{ matrix.cxx }} cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -GNinja
+        ninja -C build
 
     - name: Generate shader dump
       run: |
@@ -121,7 +121,7 @@ jobs:
 
     - name: Recompile with shader dump
       run: |
-        make -C build -j$(nproc)
+        ninja -C build
 
     - name: Save Ccache database
       id: save-ccache
