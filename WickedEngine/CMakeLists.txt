@@ -76,6 +76,8 @@ set_target_properties(Jolt PROPERTIES
 )
 add_compile_definitions(Jolt JPH_DEBUG_RENDERER)
 
+# Note: if you remove this glob, the wiShaderDump.h hack
+# will stop working, see below for more information
 file(GLOB HEADER_FILES CONFIGURE_DEPENDS *.h)
 
 file(GLOB SOURCE_FILES CONFIGURE_DEPENDS *.cpp)
@@ -162,6 +164,21 @@ elseif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64" OR "${CMAKE_SYSTEM_PROCESS
 endif()
 
 target_compile_definitions(${TARGET_NAME} PUBLIC WICKED_CMAKE_BUILD)
+
+# wiRenderer.cpp gets compiled differently depending on whether or not
+# wiShaderDump.h exists. If it does, it includes it and defines
+# SHADERDUMP_ENABLED. CMake doesn't support optional dependencies,
+# so we check if the file exists and define it ourselves if it does,
+# this will cause the file to be recompiled if necessary.
+# IMPORTANT: this only works because we are using GLOB on header files
+# and therefore CMake will re-run if those change. Without a GLOB
+# the check will only be done once and stop working reliably.
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/wiShaderDump.h)
+    set_property(
+        SOURCE wiRenderer.cpp
+        PROPERTY COMPILE_DEFINITIONS "SHADERDUMP_ENABLED="
+    )
+endif()
 
 if (WIN32)
 	target_compile_definitions(${TARGET_NAME} PUBLIC
