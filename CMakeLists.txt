@@ -91,6 +91,10 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 
         -Wno-nullability-completeness
         -Wno-unused-private-field
+
+        # Increase Ccache hit rate, note that you also need to set config options
+        # in your Ccache config, see https://ccache.dev/manual/latest.html#_precompiled_headers
+        "SHELL:-Xclang -fno-pch-timestamp"
     )
     if (USE_LIBCXX)
         add_compile_options(

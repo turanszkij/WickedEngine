@@ -73,7 +73,7 @@ jobs:
     - name: Recompile with shader dump
       run: |
         cd build
-        make -B -j $(nproc)
+        make -j $(nproc)
         
     - name: Move files
       run: |
