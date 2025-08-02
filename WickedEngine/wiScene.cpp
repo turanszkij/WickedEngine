@@ -16,7 +16,7 @@
 #include "shaders/ShaderInterop_SurfelGI.h"
 #include "shaders/ShaderInterop_DDGI.h"
 
-#if __has_include("sanitizer/asan_interface.h")
+#if __has_include(<sanitizer/asan_interface.h>)
 #include <sanitizer/asan_interface.h>
 #else
 #define ASAN_UNPOISON_MEMORY_REGION(ptr,size)
