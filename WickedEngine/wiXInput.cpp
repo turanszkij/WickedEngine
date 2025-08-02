@@ -1,6 +1,6 @@
 #include "wiXInput.h"
 
-#if __has_include("xinput.h")
+#if __has_include(<xinput.h>)
 
 #if defined(PLATFORM_WINDOWS_DESKTOP)
 #include <xinput.h>
@@ -121,4 +121,4 @@ namespace wi::input::xinput
 	bool GetControllerState(wi::input::ControllerState* state, int index) { return false; }
 	void SetControllerFeedback(const wi::input::ControllerFeedback& data, int index) {}
 }
-#endif // __has_include("xinput.h")
+#endif // __has_include(<xinput.h>)
