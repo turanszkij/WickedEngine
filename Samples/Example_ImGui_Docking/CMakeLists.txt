@@ -81,6 +81,13 @@ else()
 	set(LIB_DXCOMPILER "libdxcompiler.so")
 endif ()
 
+if(WICKED_USE_IPO)
+set_target_properties(Example_ImGui_Docking PROPERTIES
+    INTERPROCEDURAL_OPTIMIZATION ON
+    INTERPROCEDURAL_OPTIMIZATION_DEBUG OFF
+)
+endif()
+
 target_precompile_headers(Example_ImGui_Docking PRIVATE stdafx.h)
 
 if (MSVC)

@@ -9,15 +9,21 @@ if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
     )
 endif()
 
+project(WickedEngine)
+
+include(CheckIPOSupported)
+check_ipo_supported(RESULT ipo_supported)
+
 set(WICKED_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 option(WICKED_DYNAMIC_LIBRARY "Build WickedEngine as a dynamic library" OFF)
 option(WICKED_PIC "Build WickedEngine as position-independent code" WICKED_DYNAMIC_LIBRARY)
 option(USE_LIBCXX "Link WickedEngine to llvm libc++ library - only available with the Clang compiler" OFF)
-
 option(WICKED_EDITOR "Build WickedEngine editor" ON)
 option(WICKED_TESTS "Build WickedEngine tests" ON)
 option(WICKED_IMGUI_EXAMPLE "Build WickedEngine imgui example" ON)
+option(WICKED_USE_IPO "Enable IPO/LTO in non-debug builds" ${ipo_supported})
+
 if (CMAKE_HOST_WIN32)
     set(symlink_default OFF)
 else()
@@ -25,6 +31,10 @@ else()
 endif()
 option(WICKED_USE_SYMLINKS "Prefer symlinking over copying directories" ${symlink_default})
 
+# check that IPO is supported when turned on
+if(WICKED_USE_IPO)
+    check_ipo_supported()
+endif()
 
 if(WICKED_USE_SYMLINKS)
     # check for symlink support (on windows it requires admin or developer mode)
@@ -62,7 +72,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE WICKED_PIC)
 # Use solution folders to organize projects
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-project(WickedEngine)
+
 
 if (WIN32)
     set(PLATFORM "Windows")
@@ -71,7 +81,7 @@ if (WIN32)
 elseif(UNIX)
     set(PLATFORM "SDL2")
     add_compile_definitions(SDL2=1)
-    
+
     # Common compiler options and warning level for CLANG and GCC:
     add_compile_options(
         -Wall
