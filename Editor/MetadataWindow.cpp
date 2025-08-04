@@ -172,7 +172,7 @@ void MetadataWindow::RefreshEntries()
 		Entry& entry = entries.emplace_back();
 		entry.name.Create("");
 		entry.name.SetText(name);
-		entry.name.OnInputAccepted(forEachSelectedWithRefresh(name, [&name] (auto metadata, auto args) {
+		entry.name.OnInputAccepted(forEachSelectedWithRefresh(name, [=] (auto metadata, auto args) {
 			if (!metadata->bool_values.has(name))
 				return;
 			auto value = metadata->bool_values.get(name);
@@ -185,7 +185,7 @@ void MetadataWindow::RefreshEntries()
 		entry.check.Create("");
 		entry.check.SetText(" = (bool) ");
 		entry.check.SetCheck(metadata->bool_values.get(name));
-		entry.check.OnClick(forEachSelectedWithRefresh(name, [&name] (auto metadata, auto args) {
+		entry.check.OnClick(forEachSelectedWithRefresh(name, [=] (auto metadata, auto args) {
 			if (!metadata->bool_values.has(name))
 				return;
 			metadata->bool_values.set(name, args.bValue);
@@ -195,7 +195,7 @@ void MetadataWindow::RefreshEntries()
 		entry.remove.Create("");
 		entry.remove.SetText("X");
 		entry.remove.SetSize(XMFLOAT2(entry.remove.GetSize().y, entry.remove.GetSize().y));
-		entry.remove.OnClick(forEachSelectedWithRefresh(name, [&name] (auto metadata, auto args) {
+		entry.remove.OnClick(forEachSelectedWithRefresh(name, [=] (auto metadata, auto args) {
 			if (!metadata->bool_values.has(name))
 				return;
 			metadata->bool_values.erase(name);
@@ -245,7 +245,7 @@ void MetadataWindow::RefreshEntries()
 		Entry& entry = entries.emplace_back();
 		entry.name.Create("");
 		entry.name.SetText(name);
-		entry.name.OnInputAccepted(forEachSelectedWithRefresh(name, [&name] (auto metadata, auto args) {
+		entry.name.OnInputAccepted(forEachSelectedWithRefresh(name, [=] (auto metadata, auto args) {
 			if (!metadata->float_values.has(name))
 				return;
 			auto value = metadata->float_values.get(name);
@@ -259,7 +259,7 @@ void MetadataWindow::RefreshEntries()
 		entry.value.SetDescription(" = (float) ");
 		entry.value.SetSize(XMFLOAT2(60, entry.value.GetSize().y));
 		entry.value.SetValue(metadata->float_values.get(name));
-		entry.value.OnInputAccepted(forEachSelectedWithRefresh(name, [&name] (auto metadata, auto args) {
+		entry.value.OnInputAccepted(forEachSelectedWithRefresh(name, [=] (auto metadata, auto args) {
 			if (!metadata->float_values.has(name))
 				return;
 			metadata->float_values.set(name, args.fValue);
@@ -269,7 +269,7 @@ void MetadataWindow::RefreshEntries()
 		entry.remove.Create("");
 		entry.remove.SetText("X");
 		entry.remove.SetSize(XMFLOAT2(entry.remove.GetSize().y, entry.remove.GetSize().y));
-		entry.remove.OnClick(forEachSelectedWithRefresh(name, [&name] (auto metadata, auto args) {
+		entry.remove.OnClick(forEachSelectedWithRefresh(name, [=] (auto metadata, auto args) {
 			if (!metadata->float_values.has(name))
 				return;
 			metadata->float_values.erase(name);
@@ -282,7 +282,7 @@ void MetadataWindow::RefreshEntries()
 		Entry& entry = entries.emplace_back();
 		entry.name.Create("");
 		entry.name.SetText(name);
-		entry.name.OnInputAccepted(forEachSelectedWithRefresh(name, [&name] (auto metadata, auto args) {
+		entry.name.OnInputAccepted(forEachSelectedWithRefresh(name, [=] (auto metadata, auto args) {
 			if (!metadata->string_values.has(name))
 				return;
 			auto value = metadata->string_values.get(name);
@@ -296,7 +296,7 @@ void MetadataWindow::RefreshEntries()
 		entry.value.SetDescription(" = (string) ");
 		entry.value.SetSize(XMFLOAT2(120, entry.value.GetSize().y));
 		entry.value.SetValue(metadata->string_values.get(name));
-		entry.value.OnInputAccepted(forEachSelectedWithRefresh(name, [&name] (auto metadata, auto args) {
+		entry.value.OnInputAccepted(forEachSelectedWithRefresh(name, [=] (auto metadata, auto args) {
 			if (!metadata->string_values.has(name))
 				return;
 			metadata->string_values.set(name, args.sValue);
@@ -306,7 +306,7 @@ void MetadataWindow::RefreshEntries()
 		entry.remove.Create("");
 		entry.remove.SetText("X");
 		entry.remove.SetSize(XMFLOAT2(entry.remove.GetSize().y, entry.remove.GetSize().y));
-		entry.remove.OnClick(forEachSelectedWithRefresh(name, [&name] (auto metadata, auto args) {
+		entry.remove.OnClick(forEachSelectedWithRefresh(name, [=] (auto metadata, auto args) {
 			if (!metadata->string_values.has(name))
 				return;
 			metadata->string_values.erase(name);
