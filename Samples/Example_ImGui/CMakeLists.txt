@@ -75,6 +75,13 @@ else()
 	set(LIB_DXCOMPILER "libdxcompiler.so")
 endif ()
 
+if(WICKED_USE_IPO)
+set_target_properties(Example_ImGui PROPERTIES
+    INTERPROCEDURAL_OPTIMIZATION ON
+    INTERPROCEDURAL_OPTIMIZATION_DEBUG OFF
+)
+endif()
+
 if (MSVC)
 	set_property(TARGET Example_ImGui PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 endif ()

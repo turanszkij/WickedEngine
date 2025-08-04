@@ -21,6 +21,13 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 WIN32_EXECUTABLE YES
 )
 
+if(WICKED_USE_IPO)
+set_target_properties(${PROJEC_NAME} PROPERTIES
+    INTERPROCEDURAL_OPTIMIZATION ON
+    INTERPROCEDURAL_OPTIMIZATION_DEBUG OFF
+)
+endif()
+
 set(PLATFORM "Windows")
 add_compile_definitions(WIN32 _WINDOWS)
 

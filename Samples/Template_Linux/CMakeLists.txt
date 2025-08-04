@@ -27,6 +27,13 @@ target_link_libraries(Template_Linux PUBLIC
     $<$<BOOL:${INSTALLED_ENGINE}>:WickedEngine::WickedEngine>
 )
 
+if(WICKED_USE_IPO)
+set_target_properties(Template_Linux PROPERTIES
+    INTERPROCEDURAL_OPTIMIZATION ON
+    INTERPROCEDURAL_OPTIMIZATION_DEBUG OFF
+)
+endif()
+
 if (${INSTALLED_ENGINE})
     get_property(LIBDXCOMPILER_PATH
         TARGET WickedEngine::dxcompiler
