@@ -5773,6 +5773,8 @@ namespace wi::scene
 				character.leaning_next = lerp(character.leaning_next, turn_leaning, dt * 5);
 				character.leaning = lerp(character.leaning, character.leaning_next, dt * 5);
 
+				character.anim_timer = 0; // default 0 but overridden if there is valid anim
+
 				// Simple animation blending:
 				for (Entity animEntity : character.animations)
 				{
@@ -5789,6 +5791,7 @@ namespace wi::scene
 						animation->amount = clamp(animation->amount + dt, 0.0f, character.anim_amount);
 						animation->Play();
 						character.anim_ended = animation->timer >= animation->end;
+						character.anim_timer = animation->timer;
 					}
 					else
 					{

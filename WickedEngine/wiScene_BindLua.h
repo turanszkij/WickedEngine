@@ -412,6 +412,7 @@ namespace wi::lua::scene
 		int SetUpDirection(lua_State* L);
 		int SetOrtho(lua_State* L);
 		int IsOrtho(lua_State* L);
+		int ProjectToScreen(lua_State* L);
 	};
 
 	class AnimationComponent_BindLua
@@ -2007,6 +2008,7 @@ namespace wi::lua::scene
 		int StopAnimation(lua_State* L);
 		int SetAnimationAmount(lua_State* L);
 		int GetAnimationAmount(lua_State* L);
+		int GetAnimationTimer(lua_State* L);
 		int IsAnimationEnded(lua_State* L);
 
 		int SetGroundFriction(lua_State* L);

@@ -2474,6 +2474,7 @@ namespace wi::scene
 		wi::PathQuery pathquery; // completed
 		wi::vector<wi::ecs::Entity> animations;
 		wi::ecs::Entity currentAnimation = wi::ecs::INVALID_ENTITY;
+		float anim_timer = 0;
 		float anim_amount = 1;
 		bool reset_anim = true;
 		bool anim_ended = true;
@@ -2508,6 +2509,7 @@ namespace wi::scene
 		void StopAnimation();
 		void SetAnimationAmount(float amount);
 		float GetAnimationAmount() const;
+		float GetAnimationTimer() const;
 		bool IsAnimationEnded() const;
 
 		// Teleport character to position immediately

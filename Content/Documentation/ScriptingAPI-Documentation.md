@@ -1049,6 +1049,7 @@ Describes an orientation in 3D space.
 - IsOrtho() : bool	-- returns true if the camera is using orthographic projection, false otherwise
 - GetOrthoVerticalSize() : float result
 - SetOrthoVerticalSize(float value)	-- Sets the vertical size of the camera in world space, used only in orthographic projection mode
+- ProjectToScreen(Vector point, Canvas canvas)	-- projects the world-space point to screen space within the canvas logical width and height units (sceen width and height). If the Z coordinate is positive that means that it is in front of the camera, otherwise it is behind (can be considered to be clipped)
 
 #### AnimationComponent
 - Timer : float
@@ -1681,7 +1682,8 @@ Note that CharacterComponent is NOT using physics, but a custom character logic.
 - PlayAnimation(Entity entity)	-- Play the animation. This will be blended in as primary animation, others will be belnded out.
 - StopAnimation()	-- stops current animation
 - SetAnimationAmount(float value)	-- Set target blend amount of current animation
-- GetAnimatioNAmount() : float	-- returns target blend amount of current animation
+- GetAnimationAmount() : float	-- returns target blend amount of current animation
+- GetAnimationTimer() : float	-- returns the timer of current animation
 - IsAnimationEnded() : bool	--returns true if the current animation is ended, false otherwise
 
 - SetGroundFriction(float value)	-- velocity multiplier when moving on ground, default: 0.92

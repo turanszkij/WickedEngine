@@ -15,6 +15,7 @@
 #include "wiVideo_BindLua.h"
 #include "wiAsync_BindLua.h"
 #include "wiPathQuery_BindLua.h"
+#include "wiApplication_BindLua.h"
 
 #include <string>
 
@@ -4241,6 +4242,7 @@ Luna<CameraComponent_BindLua>::FunctionType CameraComponent_BindLua::methods[] =
 	lunamethod(CameraComponent_BindLua, SetUpDirection),
 	lunamethod(CameraComponent_BindLua, SetOrtho),
 	lunamethod(CameraComponent_BindLua, IsOrtho),
+	lunamethod(CameraComponent_BindLua, ProjectToScreen),
 	{ NULL, NULL }
 };
 Luna<CameraComponent_BindLua>::PropertyType CameraComponent_BindLua::properties[] = {
@@ -4538,6 +4540,34 @@ int CameraComponent_BindLua::SetOrtho(lua_State* L)
 		wi::lua::SError(L, "SetOrtho(bool value) not enough arguments!");
 	}
 	return 0;
+}
+int CameraComponent_BindLua::ProjectToScreen(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 2)
+	{
+		wi::lua::SError(L, "ProjectToScreen(Vector point, Canvas canvas) not enough arguments!");
+		return 0;
+	}
+	Vector_BindLua* vector = Luna<Vector_BindLua>::lightcheck(L, 1);
+	if (vector == nullptr)
+	{
+		wi::lua::SError(L, "ProjectToScreen(Vector point, Canvas canvas) first argument is not a Vector!");
+		return 0;
+	}
+	Canvas_BindLua* canvas = Luna<Canvas_BindLua>::lightcheck(L, 2);
+	if (canvas == nullptr)
+	{
+		wi::lua::SError(L, "ProjectToScreen(Vector point, Canvas canvas) second argument is not a Canvas!");
+		return 0;
+	}
+	XMVECTOR result = XMLoadFloat4(&vector->data);
+	XMMATRIX VP = component->GetViewProjection();
+	result = XMVector3TransformCoord(result, VP);
+	result = XMVectorMultiplyAdd(result, XMVectorSet(0.5f, -0.5f, 1, 1), XMVectorSet(0.5f, 0.5f, 0, 0));
+	result = XMVectorMultiply(result, XMVectorSet(canvas->canvas.GetLogicalWidth(), canvas->canvas.GetLogicalHeight(), 1, 1));
+	Luna<Vector_BindLua>::push(L, result);
+	return 1;
 }
 
 
@@ -8188,6 +8218,7 @@ Luna<CharacterComponent_BindLua>::FunctionType CharacterComponent_BindLua::metho
 	lunamethod(CharacterComponent_BindLua, StopAnimation),
 	lunamethod(CharacterComponent_BindLua, SetAnimationAmount),
 	lunamethod(CharacterComponent_BindLua, GetAnimationAmount),
+	lunamethod(CharacterComponent_BindLua, GetAnimationTimer),
 	lunamethod(CharacterComponent_BindLua, IsAnimationEnded),
 
 	lunamethod(CharacterComponent_BindLua, SetGroundFriction),
@@ -8357,6 +8388,11 @@ int CharacterComponent_BindLua::SetAnimationAmount(lua_State* L)
 int CharacterComponent_BindLua::GetAnimationAmount(lua_State* L)
 {
 	wi::lua::SSetFloat(L, component->GetAnimationAmount());
+	return 1;
+}
+int CharacterComponent_BindLua::GetAnimationTimer(lua_State* L)
+{
+	wi::lua::SSetFloat(L, component->GetAnimationTimer());
 	return 1;
 }
 int CharacterComponent_BindLua::IsAnimationEnded(lua_State* L)

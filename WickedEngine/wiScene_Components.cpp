@@ -2802,11 +2802,13 @@ namespace wi::scene
 		{
 			reset_anim = true;
 			currentAnimation = entity;
+			anim_timer = 0;
 		}
 	}
 	void CharacterComponent::StopAnimation()
 	{
 		currentAnimation = INVALID_ENTITY;
+		anim_timer = 0;
 	}
 	void CharacterComponent::SetAnimationAmount(float amount)
 	{
@@ -2815,6 +2817,10 @@ namespace wi::scene
 	float CharacterComponent::GetAnimationAmount() const
 	{
 		return anim_amount;
+	}
+	float CharacterComponent::GetAnimationTimer() const
+	{
+		return anim_timer;
 	}
 	bool CharacterComponent::IsAnimationEnded() const
 	{
