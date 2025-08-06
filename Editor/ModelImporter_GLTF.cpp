@@ -88,13 +88,6 @@ namespace tinygltf
 		return wi::helper::FileWrite(filepath, contents.data(), contents.size());
 	}
 
-	bool GetFileSizeInBytes(size_t* filesize_out, std::string* err,
-							const std::string& filepath, void* userdata)
-	{
-		*filesize_out = wi::helper::FileSize(filepath);
-		return true;
-	}
-
 	bool LoadImageData(Image *image, const int image_idx, std::string *err,
 		std::string *warn, int req_width, int req_height,
 		const unsigned char *bytes, int size, void *userdata)
@@ -125,10 +118,8 @@ namespace tinygltf
 		return true;
 	}
 
-	bool WriteImageData(
-		const std::string* basepath, const std::string* filename,
-		const Image* image, bool embedImages, const FsCallbacks*, const URICallbacks*,
-		std::string* out_uri, void*)
+	bool WriteImageData(const std::string* basepath, const std::string* filename,
+		Image* image, bool embedImages, void*)
 	{
 		assert(0); // TODO
 		return false;
@@ -525,10 +516,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 	callbacks.WriteWholeFile = tinygltf::WriteWholeFile;
 	callbacks.FileExists = tinygltf::FileExists;
 	callbacks.ExpandFilePath = tinygltf::ExpandFilePath;
-	callbacks.GetFileSizeInBytes = tinygltf::GetFileSizeInBytes;
-
-	bool ret = loader.SetFsCallbacks(callbacks);
-	assert(ret);
+	loader.SetFsCallbacks(callbacks);
 
 	wi::resourcemanager::ResourceSerializer seri; // keep this alive to not delete loaded images while importing gltf
 	loader.SetImageLoader(tinygltf::LoadImageData, &seri);
@@ -538,7 +526,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 	state.scene = &scene;
 
 	wi::vector<uint8_t> filedata;
-	ret = wi::helper::FileRead(fileName, filedata);
+	bool ret = wi::helper::FileRead(fileName, filedata);
 
 	if (ret)
 	{
@@ -5199,6 +5187,13 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		auto& animation = wiscene.animations[anim_id];
 		
 		tinygltf::Animation animation_builder;
+
+		Entity entity = wiscene.animations.GetEntity(anim_id);
+		const NameComponent* name = wiscene.names.GetComponent(entity);
+		if (name != nullptr)
+		{
+			animation_builder.name = name->name;
+		}
 
 		for(auto& sampler : animation.samplers)
 		{
