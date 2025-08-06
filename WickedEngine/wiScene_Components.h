@@ -2492,6 +2492,11 @@ namespace wi::scene
 		};
 		std::shared_ptr<PathfindingThreadContext> pathfinding_thread; // separate allocation, mustn't be reallocated while path finding thread is running
 		const wi::VoxelGrid* voxelgrid = nullptr;
+		float shake_horizontal = 0;
+		float shake_vertical = 0;
+		float shake_frequency = 0;
+		float shake_decay = 0;
+		float shake_timer = 0;
 
 		// Apply movement to the character in the next update
 		void Move(const XMFLOAT3& direction);
@@ -2503,6 +2508,11 @@ namespace wi::scene
 		void Turn(const XMFLOAT3& direction);
 		// Lean sideways, negative values mean left, positive values mean right
 		void Lean(float amount);
+		// Apply shaking to the character
+		//	horizontal, vertical: movement amount in directions
+		//	frequency: speed of movement
+		//	decay: speed of slowing down
+		void Shake(float horizontal, float vertical = 0, float frequency = 100, float decay = 10);
 
 		void AddAnimation(wi::ecs::Entity entity);
 		void PlayAnimation(wi::ecs::Entity entity);

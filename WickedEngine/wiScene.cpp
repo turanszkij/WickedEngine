@@ -5868,10 +5868,26 @@ namespace wi::scene
 
 				XMVECTOR offset = XMLoadFloat3(&character.relative_offset);
 				offset = XMVector3TransformNormal(offset, facing_rot);
+
+				const float shake_timer_decay = std::exp(-character.shake_decay * character.shake_timer);
+				const float shake_intesity_horizontal = character.shake_horizontal * shake_timer_decay;
+				const float shake_intesity_vertical = character.shake_vertical * shake_timer_decay;
+				if (shake_intesity_horizontal > 0.001f || shake_intesity_vertical > 0.001f)
+				{
+					offset += XMVectorSet(
+						shake_intesity_horizontal * std::sin(character.shake_frequency * character.shake_timer),
+						shake_intesity_vertical * std::sin(character.shake_frequency * -character.shake_timer),
+						shake_intesity_horizontal * std::cos(character.shake_frequency * character.shake_timer),
+						0
+					);
+				}
+
 				transform->Translate(offset);
 
 				transform->SetDirty();
 			}
+
+			character.shake_timer += dt;
 
 		});
 		wi::jobsystem::Wait(ctx);

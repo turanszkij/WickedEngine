@@ -2792,6 +2792,14 @@ namespace wi::scene
 	{
 		leaning_next = amount;
 	}
+	void CharacterComponent::Shake(float horizontal, float vertical, float frequency, float decay)
+	{
+		shake_horizontal = horizontal;
+		shake_vertical = vertical;
+		shake_frequency = frequency;
+		shake_decay = decay;
+		shake_timer = 0;
+	}
 	void CharacterComponent::AddAnimation(Entity entity)
 	{
 		animations.push_back(entity);

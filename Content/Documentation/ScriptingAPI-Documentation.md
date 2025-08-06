@@ -1677,6 +1677,7 @@ Note that CharacterComponent is NOT using physics, but a custom character logic.
 - Jump(float amount)	-- Jump upwards by an amount. The jump will be executed in the next scene update, with collisions.
 - Turn(Vector value)	-- Turn towards a direction continuously.
 - Lean(float value)	-- Lean sideways, negative values mean left, positive values mean right
+- Shake(float horizontal, opt float vertical = 0, opt float frequency = 100, opt float decay = 10)	-- Apply shaking to the character. horizontal, vertical: movement amount in directions; frequency: speed of movement; decay: speed of slowing down
 
 - AddAnimation(Entity entity)	-- Adds animation for tracking blending state. The simple animation blending will perform blend-out for each animation except the currenttly active one
 - PlayAnimation(Entity entity)	-- Play the animation. This will be blended in as primary animation, others will be belnded out.

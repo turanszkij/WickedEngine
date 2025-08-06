@@ -8212,6 +8212,7 @@ Luna<CharacterComponent_BindLua>::FunctionType CharacterComponent_BindLua::metho
 	lunamethod(CharacterComponent_BindLua, Jump),
 	lunamethod(CharacterComponent_BindLua, Turn),
 	lunamethod(CharacterComponent_BindLua, Lean),
+	lunamethod(CharacterComponent_BindLua, Shake),
 
 	lunamethod(CharacterComponent_BindLua, AddAnimation),
 	lunamethod(CharacterComponent_BindLua, PlayAnimation),
@@ -8343,6 +8344,33 @@ int CharacterComponent_BindLua::Lean(lua_State* L)
 		return 0;
 	}
 	component->Lean(wi::lua::SGetFloat(L, 1));
+	return 0;
+}
+int CharacterComponent_BindLua::Shake(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 1)
+	{
+		wi::lua::SError(L, "Shake(float horizontal, opt float vertical = 0) not enough arguments!");
+		return 0;
+	}
+	float horizontal = wi::lua::SGetFloat(L, 1);
+	float vertical = 0;
+	float frequency = 100;
+	float decay = 10;
+	if (argc > 1)
+	{
+		vertical = wi::lua::SGetFloat(L, 2);
+		if (argc > 2)
+		{
+			frequency = wi::lua::SGetFloat(L, 3);
+			if (argc > 3)
+			{
+				decay = wi::lua::SGetFloat(L, 4);
+			}
+		}
+	}
+	component->Shake(horizontal, vertical, frequency, decay);
 	return 0;
 }
 
