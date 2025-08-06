@@ -9,7 +9,6 @@
 #include <wiUnorderedSet.h>
 
 #define TINYGLTF_IMPLEMENTATION
-#define TINYGLTF_NO_FS
 #define TINYGLTF_NO_STB_IMAGE
 #define TINYGLTF_NO_STB_IMAGE_WRITE
 #include "tiny_gltf.h"
@@ -23,8 +22,10 @@ using namespace wi::scene;
 using namespace wi::ecs;
 using json = nlohmann::json;
 
-namespace tinygltf
+namespace wi::tinygltf
 {
+
+	using namespace ::tinygltf;
 
 	bool FileExists(const std::string& abs_filename, void*) {
 		return wi::helper::FileExists(abs_filename);
@@ -88,6 +89,13 @@ namespace tinygltf
 		return wi::helper::FileWrite(filepath, contents.data(), contents.size());
 	}
 
+	bool GetFileSizeInBytes(size_t* filesize_out, std::string* err,
+							const std::string& filepath, void* userdata)
+	{
+		*filesize_out = wi::helper::FileSize(filepath);
+		return true;
+	}
+
 	bool LoadImageData(Image *image, const int image_idx, std::string *err,
 		std::string *warn, int req_width, int req_height,
 		const unsigned char *bytes, int size, void *userdata)
@@ -118,8 +126,10 @@ namespace tinygltf
 		return true;
 	}
 
-	bool WriteImageData(const std::string* basepath, const std::string* filename,
-		Image* image, bool embedImages, void*)
+	bool WriteImageData(
+		const std::string* basepath, const std::string* filename,
+		const Image* image, bool embedImages, const FsCallbacks*, const URICallbacks*,
+		std::string* out_uri, void*)
 	{
 		assert(0); // TODO
 		return false;
@@ -512,21 +522,24 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 	std::string warn;
 
 	tinygltf::FsCallbacks callbacks;
-	callbacks.ReadWholeFile = tinygltf::ReadWholeFile;
-	callbacks.WriteWholeFile = tinygltf::WriteWholeFile;
-	callbacks.FileExists = tinygltf::FileExists;
-	callbacks.ExpandFilePath = tinygltf::ExpandFilePath;
-	loader.SetFsCallbacks(callbacks);
+	callbacks.ReadWholeFile = wi::tinygltf::ReadWholeFile;
+	callbacks.WriteWholeFile = wi::tinygltf::WriteWholeFile;
+	callbacks.FileExists = wi::tinygltf::FileExists;
+	callbacks.GetFileSizeInBytes = wi::tinygltf::GetFileSizeInBytes;
+	callbacks.ExpandFilePath = wi::tinygltf::ExpandFilePath;
+
+	bool ret = loader.SetFsCallbacks(callbacks);
+	assert(ret);
 
 	wi::resourcemanager::ResourceSerializer seri; // keep this alive to not delete loaded images while importing gltf
-	loader.SetImageLoader(tinygltf::LoadImageData, &seri);
-	loader.SetImageWriter(tinygltf::WriteImageData, nullptr);
-	
+	loader.SetImageLoader(wi::tinygltf::LoadImageData, &seri);
+	loader.SetImageWriter(wi::tinygltf::WriteImageData, nullptr);
+
 	LoaderState state;
 	state.scene = &scene;
 
 	wi::vector<uint8_t> filedata;
-	bool ret = wi::helper::FileRead(fileName, filedata);
+	ret = wi::helper::FileRead(fileName, filedata);
 
 	if (ret)
 	{
@@ -3941,11 +3954,13 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 	tinygltf::TinyGLTF writer;
 
 	tinygltf::FsCallbacks callbacks;
-	callbacks.ReadWholeFile = tinygltf::ReadWholeFile;
-	callbacks.WriteWholeFile = tinygltf::WriteWholeFile;
-	callbacks.FileExists = tinygltf::FileExists;
-	callbacks.ExpandFilePath = tinygltf::ExpandFilePath;
-	writer.SetFsCallbacks(callbacks);
+	callbacks.ReadWholeFile = wi::tinygltf::ReadWholeFile;
+	callbacks.WriteWholeFile = wi::tinygltf::WriteWholeFile;
+	callbacks.FileExists = wi::tinygltf::FileExists;
+	callbacks.ExpandFilePath = wi::tinygltf::ExpandFilePath;
+	callbacks.GetFileSizeInBytes = wi::tinygltf::GetFileSizeInBytes;
+	bool res = writer.SetFsCallbacks(callbacks);
+	assert(res);
 
 	LoaderState state;
 	state.scene = &scene;
@@ -5242,13 +5257,14 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 	auto file_extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(filename));
 	if(file_extension == "GLB")
 	{
-		writer.WriteGltfSceneToFile(&state.gltfModel, filename, false, true, true, true);
+		res = writer.WriteGltfSceneToFile(&state.gltfModel, filename, false, true, true, true);
 	}
 	else
 	{
-		writer.WriteGltfSceneToFile(&state.gltfModel, filename, false, false, true, false);
+		res = writer.WriteGltfSceneToFile(&state.gltfModel, filename, false, false, true, false);
 	}
 
+	assert(res);
 	// Restore scene world orientation
 	FlipZAxis(state);
 	wiscene.Update(0.f);
