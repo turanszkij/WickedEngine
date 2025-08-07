@@ -1261,10 +1261,6 @@ namespace wi::terrain
 									}
 								}
 							}
-							if (!IsPhysicsEnabled())
-							{
-								generator->scene.rigidbodies.Clear();
-							}
 						}
 					}
 				}

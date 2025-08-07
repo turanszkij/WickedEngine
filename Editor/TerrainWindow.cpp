@@ -676,13 +676,12 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	AddWidget(&grassCheckBox);
 
 	physicsCheckBox.Create("Physics: ");
-	physicsCheckBox.SetTooltip("Specify whether physics is enabled for newly generated terrain chunks.");
+	physicsCheckBox.SetTooltip("Specify whether physics is enabled for terrain chunks.");
 	physicsCheckBox.SetSize(XMFLOAT2(hei, hei));
 	physicsCheckBox.SetPos(XMFLOAT2(x, y += step));
 	physicsCheckBox.SetCheck(true);
 	physicsCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		terrain->SetPhysicsEnabled(args.bValue);
-		generate_callback();
 		});
 	AddWidget(&physicsCheckBox);
 
