@@ -3,6 +3,12 @@ name: Pull Request Verification
 on:
   pull_request
 
+env:
+  CCACHE_VERSION: 4.11.3
+  CCACHE_MAXSIZE: 500Mi
+  # see https://ccache.dev/manual/latest.html#_precompiled_headers
+  CCACHE_SLOPPINESS: pch_defines,time_macros,include_file_mtime,include_file_ctime
+
 jobs:
   
   windows:
