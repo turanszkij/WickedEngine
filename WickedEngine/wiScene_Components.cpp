@@ -2811,12 +2811,14 @@ namespace wi::scene
 			reset_anim = true;
 			currentAnimation = entity;
 			anim_timer = 0;
+			anim_ended = false;
 		}
 	}
 	void CharacterComponent::StopAnimation()
 	{
 		currentAnimation = INVALID_ENTITY;
 		anim_timer = 0;
+		anim_ended = true;
 	}
 	void CharacterComponent::SetAnimationAmount(float amount)
 	{
