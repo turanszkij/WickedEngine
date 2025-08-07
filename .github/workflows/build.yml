@@ -11,26 +11,58 @@ env:
   CCACHE_SLOPPINESS: pch_defines,time_macros,include_file_mtime,include_file_ctime
 
 jobs:
-  
+
   windows:
     runs-on: windows-latest
+    env:
+      # needed on Windows because wiRenderer conditionally includes wiShaderDump.h
+      # and only our CMake config has a workaround for it
+      CCACHE_NODIRECT: 1
     steps:
     - uses: actions/checkout@v4
+
+    - name: Restore Ccache database
+      id: restore-ccache
+      uses: actions/cache/restore@v4
+      with:
+        path: C:\Users\runneradmin\AppData\Local\ccache
+        key: ccache-win-${{ github.run_id }}
+        restore-keys: ccache-win-
+
+    - name: Install Ccache
+      run: |
+        curl -sOSL https://github.com/ccache/ccache/releases/download/v$Env:CCACHE_VERSION/ccache-$Env:CCACHE_VERSION-windows-x86_64.zip
+        unzip -qj ccache-$Env:CCACHE_VERSION-windows-x86_64.zip ccache-$Env:CCACHE_VERSION-windows-x86_64/ccache.exe
+        mv ccache.exe cl.exe
+        mv .github/workflows/Directory.Build.props.ghbuild Directory.Build.props
+
     - name: Initial compile
       shell: cmd
       run: |
-        "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/MSBuild.exe" WickedEngine.sln /t:OfflineShaderCompiler /m /p:Configuration=Release /p:Platform=x64
+        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+        MSBuild WickedEngine.sln /t:OfflineShaderCompiler /m /p:Configuration=Release /p:Platform=x64
+
     - name: Generate shader dump
       shell: cmd
       run: |
         cd "WickedEngine"
         "../BUILD/x64/Release/OfflineShaderCompiler/OfflineShaderCompiler.exe" hlsl6 spirv shaderdump strip_reflection
+
     - name: Recompile with shader dump
       shell: cmd
       run: |
-        "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/MSBuild.exe" WickedEngine.sln /t:clean /m /p:Configuration=Release /p:Platform=x64
-        "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/MSBuild.exe" WickedEngine.sln /t:Editor_Windows /m /p:Configuration=Release /p:Platform=x64
-    
+        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+        MSBuild WickedEngine.sln /t:clean /m /p:Configuration=Release /p:Platform=x64
+        MSBuild WickedEngine.sln /t:Editor_Windows /m /p:Configuration=Release /p:Platform=x64
+
+    - name: Save Ccache database
+      id: save-ccache
+      if: always() && steps.restore-ccache.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: C:\Users\runneradmin\AppData\Local\ccache
+        key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
+
     - name: Move files
       shell: cmd
       run: |
