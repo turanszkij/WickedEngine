@@ -54,6 +54,15 @@ namespace wi::lua
 		lunamethod(ImageParams_BindLua, DisableDistortionMask),
 		lunamethod(ImageParams_BindLua, SetMaskAlphaRange),
 		lunamethod(ImageParams_BindLua, GetMaskAlphaRange),
+
+		lunamethod(ImageParams_BindLua, SetAngularSoftnessDirection),
+		lunamethod(ImageParams_BindLua, SetAngularSoftnessInnerAngle),
+		lunamethod(ImageParams_BindLua, SetAngularSoftnessOuterAngle),
+		lunamethod(ImageParams_BindLua, EnableAngularSoftnessDoubleSided),
+		lunamethod(ImageParams_BindLua, EnableAngularSoftnessInverse),
+		lunamethod(ImageParams_BindLua, DisableAngularSoftnessDoubleSided),
+		lunamethod(ImageParams_BindLua, DisableAngularSoftnessInverse),
+
 		{ nullptr, nullptr }
 	};
 	Luna<ImageParams_BindLua>::PropertyType ImageParams_BindLua::properties[] = {
@@ -508,6 +517,66 @@ namespace wi::lua
 		wi::lua::SSetFloat(L, params.mask_alpha_range_start);
 		wi::lua::SSetFloat(L, params.mask_alpha_range_end);
 		return 2;
+	}
+
+	int ImageParams_BindLua::SetAngularSoftnessDirection(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc < 1)
+		{
+			wi::lua::SError(L, "SetAngularSoftnessDirection(Vector value) : not enough arguments!");
+			return 0;
+		}
+		Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 1);
+		if (v == nullptr)
+		{
+			wi::lua::SError(L, "SetAngularSoftnessDirection(Vector value) : first argument is not a Vector!");
+			return 0;
+		}
+		params.angular_softness_direction = v->GetFloat2();
+		return 0;
+	}
+	int ImageParams_BindLua::SetAngularSoftnessInnerAngle(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc < 1)
+		{
+			wi::lua::SError(L, "SetAngularSoftnessInnerAngle(float value) : not enough arguments!");
+			return 0;
+		}
+		params.angular_softness_inner_angle = wi::lua::SGetFloat(L, 1);
+		return 0;
+	}
+	int ImageParams_BindLua::SetAngularSoftnessOuterAngle(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc < 1)
+		{
+			wi::lua::SError(L, "SetAngularSoftnessOuterAngle(float value) : not enough arguments!");
+			return 0;
+		}
+		params.angular_softness_outer_angle = wi::lua::SGetFloat(L, 1);
+		return 0;
+	}
+	int ImageParams_BindLua::EnableAngularSoftnessDoubleSided(lua_State* L)
+	{
+		params.disableAngularSoftnessDoubleSided();
+		return 0;
+	}
+	int ImageParams_BindLua::EnableAngularSoftnessInverse(lua_State* L)
+	{
+		params.enableAngularSoftnessInverse();
+		return 0;
+	}
+	int ImageParams_BindLua::DisableAngularSoftnessDoubleSided(lua_State* L)
+	{
+		params.disableAngularSoftnessDoubleSided();
+		return 0;
+	}
+	int ImageParams_BindLua::DisableAngularSoftnessInverse(lua_State* L)
+	{
+		params.disableAngularSoftnessInverse();
+		return 0;
 	}
 
 	ImageParams_BindLua::ImageParams_BindLua(lua_State* L)

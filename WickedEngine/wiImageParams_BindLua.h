@@ -68,6 +68,14 @@ namespace wi::lua
 		int SetMaskAlphaRange(lua_State* L);
 		int GetMaskAlphaRange(lua_State* L);
 
+		int SetAngularSoftnessDirection(lua_State* L);
+		int SetAngularSoftnessInnerAngle(lua_State* L);
+		int SetAngularSoftnessOuterAngle(lua_State* L);
+		int EnableAngularSoftnessDoubleSided(lua_State* L);
+		int EnableAngularSoftnessInverse(lua_State* L);
+		int DisableAngularSoftnessDoubleSided(lua_State* L);
+		int DisableAngularSoftnessInverse(lua_State* L);
+
 		static void Bind();
 	};
 }

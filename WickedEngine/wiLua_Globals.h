@@ -245,6 +245,9 @@ function math.lerp(a,b,t)
 	return (a + (b-a)*t);
 end
 -- inverse linear interpolation
+function math.inverse_lerp(value1,value2,pos)
+	return (pos - value1) / (value2 - value1);
+end
 function math.inverselerp(value1,value2,pos)
 	return (pos - value1) / (value2 - value1);
 end
