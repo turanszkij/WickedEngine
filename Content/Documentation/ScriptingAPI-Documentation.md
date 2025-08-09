@@ -112,6 +112,8 @@ This section describes the common tools for scripting which are not necessarily 
 - render()  -- wait for a render step to be called (to be used from inside a process)
 - getDeltaTime()  -- returns the delta time in seconds (time passed sice previous update())
 - math.lerp(float a,b,t)  -- linear interpolation
+- math.inverse_lerp(float a,b,t)  -- inverse linear interpolation
+- math.inverselerp(float a,b,t)  -- inverse linear interpolation
 - math.clamp(float x,min,max)  -- clamp x between min and max
 - math.saturate(float x)  -- clamp x between 0 and 1
 - math.round(float x)  -- round x to nearest integer
@@ -298,6 +300,13 @@ Specify Sprite properties, like position, size, etc.
 - DisableDistortionMask()
 - SetMaskAlphaRange(float start, end)
 - GetMaskAlphaRange() : float start, end
+- SetAngularSoftnessDirection(Vector value)
+- SetAngularSoftnessInnerAngle(float value)
+- SetAngularSoftnessOuterAngle(float value)
+- EnableAngularSoftnessDoubleSided()
+- EnableAngularSoftnessInverse()
+- DisableAngularSoftnessDoubleSided()
+- DisableAngularSoftnessInverse()
 
 - [outer]STENCILMODE_DISABLED : int
 - [outer]STENCILMODE_EQUAL : int
