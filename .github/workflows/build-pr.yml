@@ -12,6 +12,10 @@ jobs:
 
   windows:
     runs-on: windows-latest
+    env:
+      # needed on Windows because wiRenderer conditionally includes wiShaderDump.h
+      # and only our CMake config has a workaround for it
+      CCACHE_NODIRECT: 1
     steps:
     - uses: actions/checkout@v4
 

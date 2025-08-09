@@ -2002,6 +2002,7 @@ namespace wi::lua::scene
 		int Jump(lua_State* L);
 		int Turn(lua_State* L);
 		int Lean(lua_State* L);
+		int Shake(lua_State* L);
 
 		int AddAnimation(lua_State* L);
 		int PlayAnimation(lua_State* L);
