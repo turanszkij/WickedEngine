@@ -236,7 +236,6 @@ add_custom_command(
 set_property(SOURCE
     wiAudio.cpp
     wiOcean.cpp
-    wiPrimitive_BindLUA.cpp
     wiPhysics_Jolt.cpp
     wiGraphicsDevice_Vulkan.cpp
     wiGraphicsDevice_DX12.cpp
