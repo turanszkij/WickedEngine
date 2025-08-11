@@ -598,7 +598,7 @@ void MeshWindow::Create(EditorComponent* _editor)
 		params.extensions.push_back("h");
 		params.type = wi::helper::FileDialogParams::TYPE::SAVE;
 		wi::helper::FileDialog(params, [&](std::string filename) {
-			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [&](uint64_t userdata) {
+			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 
 				wi::scene::Scene& scene = editor->GetCurrentScene();
 				wi::vector<XMFLOAT3> vertices;
