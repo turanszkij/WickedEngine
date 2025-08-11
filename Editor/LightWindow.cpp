@@ -12,7 +12,7 @@ void LightWindow::Create(EditorComponent* _editor)
 	SetSize(XMFLOAT2(650, 940));
 
 	closeButton.SetTooltip("Delete LightComponent");
-	OnClose([&](wi::gui::EventArgs args) {
+	OnClose([=](wi::gui::EventArgs args) {
 
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
@@ -161,7 +161,7 @@ void LightWindow::Create(EditorComponent* _editor)
 	AddWidget(&volumetricCloudsCheckBox);
 
 	typeSelectorComboBox.Create("Type: ");
-	typeSelectorComboBox.OnSelect([&](wi::gui::EventArgs args) {
+	typeSelectorComboBox.OnSelect([=](wi::gui::EventArgs args) {
 		if (args.iValue < 0)
 			return;
 		wi::scene::Scene& scene = editor->GetCurrentScene();
@@ -231,7 +231,7 @@ void LightWindow::Create(EditorComponent* _editor)
 		lensflare_Button[i].Create("LensFlareSlot");
 		lensflare_Button[i].SetText("");
 		lensflare_Button[i].SetTooltip("Load a lensflare texture to this slot");
-		lensflare_Button[i].OnClick([&](wi::gui::EventArgs args) {
+		lensflare_Button[i].OnClick([=](wi::gui::EventArgs args) {
 			LightComponent* light = editor->GetCurrentScene().lights.GetComponent(entity);
 			if (light == nullptr)
 				return;
@@ -255,7 +255,7 @@ void LightWindow::Create(EditorComponent* _editor)
 				params.description = "Texture";
 				params.extensions = wi::resourcemanager::GetSupportedImageExtensions();
 				wi::helper::FileDialog(params, [this, light, i](std::string fileName) {
-					wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [&](uint64_t userdata) {
+					wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					light->lensFlareRimTextures[i] = wi::resourcemanager::Load(fileName);
 					light->lensFlareNames[i] = fileName;
 						lensflare_Button[i].SetText(wi::helper::GetFileNameFromPath(fileName));
@@ -369,8 +369,8 @@ void LightWindow::RefreshCascades()
 		cascade.distanceSlider.Create(1, 1000, 0, 1000, "");
 		cascade.distanceSlider.SetTooltip("Specify cascade's maximum reach distance from camera.\nNote: Increasing cascades indices should use increasing distances.");
 		cascade.distanceSlider.SetSize(XMFLOAT2(100, 18));
-		cascade.distanceSlider.OnSlide([&](wi::gui::EventArgs args) {
-		light->cascade_distances[counter] = args.fValue;
+		cascade.distanceSlider.OnSlide([=](wi::gui::EventArgs args) {
+			light->cascade_distances[counter] = args.fValue;
 		});
 		cascade.distanceSlider.SetValue(light->cascade_distances[counter]);
 		AddWidget(&cascade.distanceSlider);
@@ -380,8 +380,8 @@ void LightWindow::RefreshCascades()
 		cascade.removeButton.SetTooltip("Remove this shadow cascade");
 		cascade.removeButton.SetDescription("Cascade " + std::to_string(counter) + ": ");
 		cascade.removeButton.SetSize(XMFLOAT2(18, 18));
-		cascade.removeButton.OnClick([&](wi::gui::EventArgs args) {
-		light->cascade_distances.erase(light->cascade_distances.begin() + counter);
+		cascade.removeButton.OnClick([=](wi::gui::EventArgs args) {
+			light->cascade_distances.erase(light->cascade_distances.begin() + counter);
 			RefreshCascades();
 		});
 		AddWidget(&cascade.removeButton);
@@ -393,7 +393,7 @@ void LightWindow::RefreshCascades()
 	addCascadeButton.Create("Add shadow cascade");
 	addCascadeButton.SetTooltip("Add new shadow cascade. Note that for each shadow cascades, the scene will be rendered again, so adding more will affect performance!");
 	addCascadeButton.SetSize(XMFLOAT2(100, 20));
-	addCascadeButton.OnClick([&](wi::gui::EventArgs args) {
+	addCascadeButton.OnClick([=](wi::gui::EventArgs args) {
 		float prev_cascade = 1;
 		if (!light->cascade_distances.empty())
 		{
