@@ -179,8 +179,6 @@ void SplineWindow::RefreshEntries()
 	if (spline == nullptr)
 		return;
 
-	entries.reserve(spline->spline_node_entities.size());
-
 	for (size_t i = 0; i < spline->spline_node_entities.size(); ++i)
 	{
 		Entity entity = spline->spline_node_entities[i];

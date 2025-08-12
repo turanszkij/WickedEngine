@@ -291,6 +291,9 @@ namespace wi::gui
 		Widget();
 		virtual ~Widget() = default;
 
+    // Delete copy/move to keep internal references stable.
+    Widget(const Widget &) = delete;
+
 		const std::string& GetName() const;
 		void SetName(const std::string& value);
 		std::string GetText() const;
