@@ -115,6 +115,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 		surface.init();
 		surface.create(material, color, surfacemap_simple);
 		surface.P = pos3D;
+		surface.facenormal = N;
 		surface.N = N;
 		surface.V = V;
 		surface.pixel = pixel;

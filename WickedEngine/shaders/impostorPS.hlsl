@@ -34,6 +34,7 @@ float4 main(VSOut input) : SV_Target
 	surface.f0 = lerp(reflectance.xxx, baseColor.rgb, metalness);
 	surface.occlusion = occlusion;
 	surface.P = input.GetPos3D();
+	surface.facenormal = N;
 	surface.N = N;
 	surface.V = V;
 	surface.pixel = input.pos.xy;

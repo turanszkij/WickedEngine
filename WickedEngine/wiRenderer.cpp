@@ -2229,6 +2229,7 @@ void SetUpStates()
 	rs.fill_mode = FillMode::SOLID;
 	rs.cull_mode = CullMode::BACK;
 	rs.front_counter_clockwise = true;
+#if 0
 	if (IsFormatUnorm(format_depthbuffer_shadowmap))
 	{
 		rs.depth_bias = -1;
@@ -2238,6 +2239,10 @@ void SetUpStates()
 		rs.depth_bias = -1000;
 	}
 	rs.slope_scaled_depth_bias = -6.0f;
+#else
+	rs.depth_bias = 0;
+	rs.slope_scaled_depth_bias = 0;
+#endif
 	rs.depth_bias_clamp = 0;
 	rs.depth_clip_enable = false;
 	rs.multisample_enable = false;
@@ -2833,11 +2838,13 @@ void ClearWorld(Scene& scene)
 }
 
 // Don't store this structure on heap!
+//	This structure is not using constructor or default initializers!
 struct SHCAM
 {
 	XMMATRIX view_projection;
 	Frustum frustum;					// This frustum can be used for intersection test with wiPrimitive primitives
 	BoundingFrustum boundingfrustum;	// This boundingfrustum can be used for frustum vs frustum intersection test
+	float texelSizeDirLight;
 
 	inline void init(const XMFLOAT3& eyePos, const XMFLOAT4& rotation, float nearPlane, float farPlane, float fov, XMVECTOR default_forward = XMVectorSet(0.0f, -1.0f, 0.0f, 0.0f), XMVECTOR default_up = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), float aspect = 1)
 	{
@@ -2855,6 +2862,7 @@ struct SHCAM
 		std::swap(boundingfrustum.Near, boundingfrustum.Far);
 		boundingfrustum.Transform(boundingfrustum, XMMatrixInverse(nullptr, V));
 		XMStoreFloat4(&boundingfrustum.Orientation, XMQuaternionNormalize(XMLoadFloat4(&boundingfrustum.Orientation)));
+		texelSizeDirLight = 0;
 	};
 };
 inline void CreateSpotLightShadowCam(const LightComponent& light, SHCAM& shcam)
@@ -2964,6 +2972,7 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 
 		shcams[cascade].view_projection = XMMatrixMultiply(lightView, lightProjection);
 		shcams[cascade].frustum.Create(shcams[cascade].view_projection);
+		shcams[cascade].texelSizeDirLight = XMVectorGetX(texelSize);
 	}
 
 }
@@ -4574,6 +4583,7 @@ void UpdatePerFrameData(
 				CreateDirLightShadowCams(light, *vis.camera, shcams, cascade_count, shadow_rect);
 				for (size_t cascade = 0; cascade < cascade_count; ++cascade)
 				{
+					shcams[cascade].view_projection.r[3] = XMVectorSetW(shcams[cascade].view_projection.r[3], shcams[cascade].texelSizeDirLight * 2); // Note that shader will need to reset this to 1 after loading
 					XMStoreFloat4x4(&matrixArray[matrixCounter++], shcams[cascade].view_projection);
 				}
 			}

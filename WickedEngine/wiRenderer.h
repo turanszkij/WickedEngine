@@ -30,7 +30,7 @@ namespace wi::renderer
 	constexpr wi::graphics::Format format_rendertarget_main = wi::graphics::Format::R11G11B10_FLOAT;
 	constexpr wi::graphics::Format format_idbuffer = wi::graphics::Format::R32_UINT;
 	constexpr wi::graphics::Format format_rendertarget_shadowmap = wi::graphics::Format::R16G16B16A16_FLOAT;
-	constexpr wi::graphics::Format format_depthbuffer_shadowmap = wi::graphics::Format::D16_UNORM;
+	constexpr wi::graphics::Format format_depthbuffer_shadowmap = wi::graphics::Format::D32_FLOAT;
 	constexpr wi::graphics::Format format_rendertarget_envprobe = wi::graphics::Format::R11G11B10_FLOAT;
 	constexpr wi::graphics::Format format_depthbuffer_envprobe = wi::graphics::Format::D16_UNORM;
 

@@ -14,6 +14,8 @@
 #define LIGHTING_SCATTER
 #endif // WATER
 
+static const float normal_shadow_bias = 0.012;
+
 struct LightingPart
 {
 	half3 diffuse;
@@ -77,13 +79,17 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 		if ((GetFrame().options & OPTION_BIT_RAYTRACED_SHADOWS) == 0 || GetCamera().texture_rtshadow_index < 0 || (GetCamera().options & SHADERCAMERA_OPTION_USE_SHADOW_MASK) == 0)
 #endif // SHADOW_MASK_ENABLED
 		{
+		
 			// Loop through cascades from closest (smallest) to furthest (largest)
 			[loop]
 			for (min16uint cascade = 0; cascade < light.GetShadowCascadeCount(); ++cascade)
 			{
 				// Project into shadow map space (no need to divide by .w because ortho projection!):
-				const float4x4 cascade_projection = load_entitymatrix(light.GetMatrixIndex() + cascade);
-				float3 shadow_pos = mul(cascade_projection, float4(surface.P, 1)).xyz;
+				float4x4 cascade_projection = load_entitymatrix(light.GetMatrixIndex() + cascade);
+				float texelSize = cascade_projection[3][3];
+				cascade_projection[3] = float4(0, 0, 0, 1);
+				float3 shadowSurfacePos = surface.P + surface.facenormal * texelSize; // biased in normal direction based on cascade texel size
+				float3 shadow_pos = mul(cascade_projection, float4(shadowSurfacePos, 1)).xyz;
 				float3 shadow_uv = clipspace_to_uv(shadow_pos);
 
 				// Determine if pixel is inside current cascade bounds and compute shadow if it is:
@@ -111,7 +117,11 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 					{
 						// Project into next shadow cascade (no need to divide by .w because ortho projection!):
 						cascade += 1;
-						shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + cascade), float4(surface.P, 1)).xyz;
+						cascade_projection = load_entitymatrix(light.GetMatrixIndex() + cascade);
+						texelSize = cascade_projection[3][3];
+						cascade_projection[3] = float4(0, 0, 0, 1);
+						shadowSurfacePos = surface.P + surface.facenormal * texelSize; // biased in normal direction based on cascade texel size
+						shadow_pos = mul(cascade_projection, float4(shadowSurfacePos, 1)).xyz;
 						shadow_uv = clipspace_to_uv(shadow_pos);
 						const half3 shadow_fallback = shadow_2D(light, shadow_pos.z, shadow_uv.xy, cascade, surface.pixel);
 
@@ -187,7 +197,9 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 		return; // layer mismatch
 	
 	float3 Lunnormalized = light.position - surface.P;
-	const float3 LunnormalizedShadow = Lunnormalized;
+	
+	const float3 shadowSurfacePos = surface.P + surface.facenormal * 0.01; // biased in normal direction
+	const float3 LunnormalizedShadow = light.position - shadowSurfacePos;
 
 #ifndef DISABLE_AREA_LIGHTS
 	if (light.GetLength() > 0)
@@ -336,7 +348,8 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 		if ((GetFrame().options & OPTION_BIT_RAYTRACED_SHADOWS) == 0 || GetCamera().texture_rtshadow_index < 0 || (GetCamera().options & SHADERCAMERA_OPTION_USE_SHADOW_MASK) == 0)
 #endif // SHADOW_MASK_ENABLED
 		{
-			float4 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + 0), float4(surface.P, 1));
+			const float3 shadowSurfacePos = surface.P + surface.facenormal * normal_shadow_bias; // biased in normal direction
+			float4 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + 0), float4(shadowSurfacePos, 1));
 			shadow_pos.xyz /= shadow_pos.w;
 			float2 shadow_uv = clipspace_to_uv(shadow_pos.xy);
 			[branch]
@@ -469,7 +482,8 @@ inline void light_rect(in ShaderEntity light, in Surface surface, inout Lighting
 		if ((GetFrame().options & OPTION_BIT_RAYTRACED_SHADOWS) == 0 || GetCamera().texture_rtshadow_index < 0 || (GetCamera().options & SHADERCAMERA_OPTION_USE_SHADOW_MASK) == 0)
 #endif // SHADOW_MASK_ENABLED
 		{
-			float4 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + 0), float4(surface.P, 1));
+			const float3 shadowSurfacePos = surface.P + surface.facenormal * normal_shadow_bias; // biased in normal direction
+			float4 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + 0), float4(shadowSurfacePos, 1));
 			shadow_pos.xyz /= shadow_pos.w;
 			float2 shadow_uv = clipspace_to_uv(shadow_pos.xy);
 			[branch]

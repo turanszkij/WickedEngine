@@ -773,6 +773,7 @@ namespace wi
 
 		rs_shadow = ncrs;
 
+#if 0
 		if (IsFormatUnorm(wi::renderer::format_depthbuffer_shadowmap))
 		{
 			rs_shadow.depth_bias = -1;
@@ -781,7 +782,7 @@ namespace wi
 		{
 			rs_shadow.depth_bias = -1000;
 		}
-
+#endif
 
 		DepthStencilState dsd;
 		dsd.depth_enable = true;

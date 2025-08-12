@@ -34,6 +34,7 @@ float4 main(VertexToPixel input) : SV_Target
 	surface.init();
 	surface.create(material, color, surfacemap_simple);
 	surface.P = input.GetPos3D();
+	surface.facenormal = input.nor_wet.xyz;
 	surface.N = input.nor_wet.xyz;
 	surface.V = V;
 	surface.pixel = input.pos.xy;
