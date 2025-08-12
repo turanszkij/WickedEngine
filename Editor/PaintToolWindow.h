@@ -92,7 +92,7 @@ public:
 		Z
 	};
 
-	wi::vector<wi::gui::Button> terrain_material_buttons;
+  std::deque<wi::gui::Button> terrain_material_buttons;
 	size_t terrain_material_layer = 0;
 
 	float texture_paint_radius = 50;

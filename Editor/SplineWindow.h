@@ -27,7 +27,7 @@ public:
 		wi::gui::Button removeButton;
 		wi::gui::Button entityButton;
 	};
-	wi::vector<Entry> entries;
+  std::deque<Entry> entries;
 
 	void RefreshEntries();
 

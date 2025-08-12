@@ -291,6 +291,10 @@ namespace wi::gui
 		Widget();
 		virtual ~Widget() = default;
 
+    // Delete copy/move to prevent invalidating `this`
+    // since it is often captured by event handlers.
+    Widget(const Widget &) = delete;
+
 		const std::string& GetName() const;
 		void SetName(const std::string& value);
 		std::string GetText() const;

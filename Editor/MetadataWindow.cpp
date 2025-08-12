@@ -140,14 +140,6 @@ void MetadataWindow::RefreshEntries()
 	if (metadata == nullptr)
 		return;
 
-	entries.reserve(
-		metadata->bool_values.size() +
-		metadata->int_values.size() +
-		metadata->float_values.size() +
-		metadata->string_values.size()
-	);
-
-
 	auto forEachSelectedWithRefresh = [this] (auto name, auto func) {
 		return [this, func, name] (auto args) {
 			wi::scene::Scene& scene = editor->GetCurrentScene();

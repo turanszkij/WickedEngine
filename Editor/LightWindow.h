@@ -40,7 +40,7 @@ public:
 		wi::gui::Slider distanceSlider;
 		wi::gui::Button removeButton;
 	};
-	wi::vector<CascadeConfig> cascades;
+  std::deque<CascadeConfig> cascades;
 	wi::gui::Button addCascadeButton;
 	void RefreshCascades();
 
