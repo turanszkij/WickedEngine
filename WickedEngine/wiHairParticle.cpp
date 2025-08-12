@@ -779,7 +779,7 @@ namespace wi
 		}
 		else
 		{
-			rs_shadow.depth_bias = -1000;
+			rs.depth_bias = -10;
 		}
 
 

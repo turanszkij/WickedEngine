@@ -2229,15 +2229,19 @@ void SetUpStates()
 	rs.fill_mode = FillMode::SOLID;
 	rs.cull_mode = CullMode::BACK;
 	rs.front_counter_clockwise = true;
+	// Note: biases work slightly differently with unorm and float formats
+	//	depth_bias				: needs to be tested when light is facing surface head-on (for example: directional light pointing down perpendicular to plane)
+	//	slope_scaled_depth_bias	: needs to be tested when light gets more parallel to surface. This can cause holes in shadow maps at mismatching triangle orientations
 	if (IsFormatUnorm(format_depthbuffer_shadowmap))
 	{
 		rs.depth_bias = -1;
+		rs.slope_scaled_depth_bias = -4.0f;
 	}
 	else
 	{
-		rs.depth_bias = -1000;
+		rs.depth_bias = -10;
+		rs.slope_scaled_depth_bias = -3.4f;
 	}
-	rs.slope_scaled_depth_bias = -6.0f;
 	rs.depth_bias_clamp = 0;
 	rs.depth_clip_enable = false;
 	rs.multisample_enable = false;
