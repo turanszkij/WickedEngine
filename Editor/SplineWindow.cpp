@@ -53,7 +53,7 @@ void SplineWindow::Create(EditorComponent* _editor)
 	};
 
 	auto forEachSelectedAndIndirectWithRefresh = [this, forEachSelectedAndIndirect] (auto func) {
-		return [this, &forEachSelectedAndIndirect, func] (auto args) {
+		return [this, forEachSelectedAndIndirect, func] (auto args) {
 			forEachSelectedAndIndirect(func);
 			editor->componentsWnd.RefreshEntityTree();
 		};
