@@ -49,12 +49,7 @@ void SplineWindow::Create(EditorComponent* _editor)
 			{
 				func(spline, args);
 			}
-		};
-	};
 
-	auto forEachSelectedAndIndirectWithRefresh = [this, forEachSelectedAndIndirect] (auto func) {
-		return [this, forEachSelectedAndIndirect, func] (auto args) {
-			forEachSelectedAndIndirect(func);
 			editor->componentsWnd.RefreshEntityTree();
 		};
 	};
@@ -73,14 +68,14 @@ void SplineWindow::Create(EditorComponent* _editor)
 
 	widthSlider.Create(0.001f, 4, 0, 1000, "Width: ");
 	widthSlider.SetTooltip("Set overall width multiplier for all nodes, used in mesh generation.");
-	widthSlider.OnSlide(forEachSelectedAndIndirectWithRefresh([] (auto spline, auto args) {
+	widthSlider.OnSlide(forEachSelectedAndIndirect([] (auto spline, auto args) {
 		spline->width = args.fValue;
 	}));
 	AddWidget(&widthSlider);
 
 	rotSlider.Create(0, 360, 0, 360, "Rotation: ");
 	rotSlider.SetTooltip("Set overall rotation for all nodes, used in mesh generation.");
-	rotSlider.OnSlide(forEachSelectedAndIndirectWithRefresh([] (auto spline, auto args) {
+	rotSlider.OnSlide(forEachSelectedAndIndirect([] (auto spline, auto args) {
 		float rad = wi::math::DegreesToRadians(args.fValue);
 		spline->rotation = rad;
 	}));
@@ -88,35 +83,35 @@ void SplineWindow::Create(EditorComponent* _editor)
 
 	subdivSlider.Create(0, 100, 0, 100, "Mesh subdivision: ");
 	subdivSlider.SetTooltip("Set subdivision count for mesh generation. \nIncreasing this above 0 will enable mesh generation and higher values mean higher quality.");
-	subdivSlider.OnSlide(forEachSelectedAndIndirectWithRefresh([] (auto spline, auto args) {
+	subdivSlider.OnSlide(forEachSelectedAndIndirect([] (auto spline, auto args) {
 		spline->mesh_generation_subdivision = args.iValue;
 	}));
 	AddWidget(&subdivSlider);
 
 	subdivVerticalSlider.Create(0, 36, 0, 36, "Vertical subdivision: ");
 	subdivVerticalSlider.SetTooltip("Set subdivision count for mesh generation's vertical axis to create a corridoor or a tunnel.");
-	subdivVerticalSlider.OnSlide(forEachSelectedAndIndirectWithRefresh([] (auto spline, auto args) {
+	subdivVerticalSlider.OnSlide(forEachSelectedAndIndirect([] (auto spline, auto args) {
 		spline->mesh_generation_vertical_subdivision = args.iValue;
 	}));
 	AddWidget(&subdivVerticalSlider);
 
 	terrainSlider.Create(0, 1, 0, 100, "Terrain modifier: ");
 	terrainSlider.SetTooltip("Set terrain modification strength (0 to turn it off, higher values mean more sharpness).");
-	terrainSlider.OnSlide(forEachSelectedAndIndirectWithRefresh([] (auto spline, auto args) {
+	terrainSlider.OnSlide(forEachSelectedAndIndirect([] (auto spline, auto args) {
 		spline->terrain_modifier_amount = args.fValue;
 	}));
 	AddWidget(&terrainSlider);
 
 	terrainTexSlider.Create(0, 1, 0, 100, "Terrain texture falloff: ");
 	terrainTexSlider.SetTooltip("Affects the terrain texturing falloff when spline is terrain modifying.");
-	terrainTexSlider.OnSlide(forEachSelectedAndIndirectWithRefresh([] (auto spline, auto args) {
+	terrainTexSlider.OnSlide(forEachSelectedAndIndirect([] (auto spline, auto args) {
 		spline->terrain_texture_falloff = args.fValue;
 	}));
 	AddWidget(&terrainTexSlider);
 
 	terrainPushdownSlider.Create(0, 10, 0, 100, "Terrain push down: ");
 	terrainPushdownSlider.SetTooltip("Push down the terrain genetry from the spline plane by an amount.");
-	terrainPushdownSlider.OnSlide(forEachSelectedAndIndirectWithRefresh([] (auto spline, auto args) {
+	terrainPushdownSlider.OnSlide(forEachSelectedAndIndirect([] (auto spline, auto args) {
 		spline->terrain_pushdown = args.fValue;
 	}));
 	AddWidget(&terrainPushdownSlider);
