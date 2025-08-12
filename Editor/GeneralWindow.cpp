@@ -192,7 +192,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	{
 		focusModeCheckBox.SetCheck(editor->main->config.GetSection("options").GetBool("focus_mode"));
 	}
-	focusModeCheckBox.OnClick([&](wi::gui::EventArgs args) {
+	focusModeCheckBox.OnClick([this](wi::gui::EventArgs args) {
 		editor->main->config.GetSection("options").Set("focus_mode", args.bValue);
 		// trigger themeCombo's OnSelect handler, which will enable/disable shadow highlighting
 		// according to this checkbox's state
@@ -204,7 +204,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	versionCheckBox.SetTooltip("Toggle the engine version display text in top left corner.");
 	editor->main->infoDisplay.watermark = editor->main->config.GetSection("options").GetBool("version");
 	versionCheckBox.SetCheck(editor->main->infoDisplay.watermark);
-	versionCheckBox.OnClick([&](wi::gui::EventArgs args) {
+	versionCheckBox.OnClick([this](wi::gui::EventArgs args) {
 		editor->main->infoDisplay.watermark = args.bValue;
 		editor->main->config.GetSection("options").Set("version", args.bValue);
 		editor->main->config.Commit();
@@ -216,7 +216,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	fpsCheckBox.SetTooltip("Toggle the FPS display text in top left corner.");
 	editor->main->infoDisplay.fpsinfo = editor->main->config.GetSection("options").GetBool("fps");
 	fpsCheckBox.SetCheck(editor->main->infoDisplay.fpsinfo);
-	fpsCheckBox.OnClick([&](wi::gui::EventArgs args) {
+	fpsCheckBox.OnClick([this](wi::gui::EventArgs args) {
 		editor->main->infoDisplay.fpsinfo = args.bValue;
 		editor->main->config.GetSection("options").Set("fps", args.bValue);
 		editor->main->config.Commit();
@@ -235,7 +235,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	editor->main->infoDisplay.logical_size = info;
 	editor->main->infoDisplay.pipeline_count = info;
 	otherinfoCheckBox.SetCheck(info);
-	otherinfoCheckBox.OnClick([&](wi::gui::EventArgs args) {
+	otherinfoCheckBox.OnClick([this](wi::gui::EventArgs args) {
 		editor->main->infoDisplay.heap_allocation_counter = args.bValue;
 		editor->main->infoDisplay.vram_usage = args.bValue;
 		editor->main->infoDisplay.device_name = args.bValue;
@@ -268,7 +268,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	{
 		saveCompressionCheckBox.SetCheck(editor->main->config.GetSection("options").GetBool("save_compressed"));
 	}
-	saveCompressionCheckBox.OnClick([&](wi::gui::EventArgs args) {
+	saveCompressionCheckBox.OnClick([this](wi::gui::EventArgs args) {
 		editor->main->config.GetSection("options").Set("save_compressed", args.bValue);
 		editor->main->config.Commit();
 	});
@@ -322,7 +322,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	localizationButton.Create(ICON_LANGUAGE " Create Localization Template");
 	localizationButton.SetTooltip("Generate a file that can be used to edit localization for the Editor.\nThe template will be created from the currently selected language.");
 	localizationButton.SetSize(XMFLOAT2(100, 18));
-	localizationButton.OnClick([&](wi::gui::EventArgs args) {
+	localizationButton.OnClick([this](wi::gui::EventArgs args) {
 		wi::helper::FileDialogParams params;
 		params.type = wi::helper::FileDialogParams::SAVE;
 		params.description = "XML file (.xml)";
@@ -376,7 +376,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	themeEditorButton.SetText(ICON_THEME_EDITOR);
 	themeEditorButton.SetTooltip("Open the theme editor.");
 	themeEditorButton.SetSize(XMFLOAT2(themeEditorButton.GetSize().y, themeEditorButton.GetSize().y));
-	themeEditorButton.OnClick([&](wi::gui::EventArgs args) {
+	themeEditorButton.OnClick([this](wi::gui::EventArgs args) {
 		editor->themeEditorWnd.nameInput.SetText(currentTheme);
 		editor->themeEditorWnd.SetVisible(!editor->themeEditorWnd.IsVisible());
 	});

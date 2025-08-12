@@ -12,7 +12,7 @@ void FontWindow::Create(EditorComponent* _editor)
 	SetSize(XMFLOAT2(670, 1020));
 
 	closeButton.SetTooltip("Delete Font");
-	OnClose([&](wi::gui::EventArgs args) {
+	OnClose([this](wi::gui::EventArgs args) {
 
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
@@ -52,7 +52,7 @@ void FontWindow::Create(EditorComponent* _editor)
 	AddWidget(&textInput);
 
 	fileButton.Create("From file...");
-	fileButton.OnClick([&](wi::gui::EventArgs args) {
+	fileButton.OnClick([this](wi::gui::EventArgs args) {
 
 		wi::helper::FileDialogParams params;
 		params.type = wi::helper::FileDialogParams::OPEN;

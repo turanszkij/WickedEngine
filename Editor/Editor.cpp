@@ -568,7 +568,7 @@ void EditorComponent::Load()
 	newSceneButton.Create("+");
 	newSceneButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
 	newSceneButton.SetTooltip("New scene");
-	newSceneButton.OnClick([&](wi::gui::EventArgs args) {
+	newSceneButton.OnClick([this](wi::gui::EventArgs args) {
 		NewScene();
 		});
 	topmenuWnd.AddWidget(&newSceneButton);
@@ -883,7 +883,7 @@ void EditorComponent::Load()
 		scaleButton.SetShadowRadius(2);
 		scaleButton.SetTooltip("Scale\nHotkey: 3");
 		scaleButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
-		scaleButton.OnClick([&](wi::gui::EventArgs args) {
+		scaleButton.OnClick([this](wi::gui::EventArgs args) {
 			translator.isScalator = true;
 			translator.isTranslator = false;
 			translator.isRotator = false;
@@ -893,7 +893,7 @@ void EditorComponent::Load()
 		rotateButton.SetShadowRadius(2);
 		rotateButton.SetTooltip("Rotate\nHotkey: 2");
 		rotateButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
-		rotateButton.OnClick([&](wi::gui::EventArgs args) {
+		rotateButton.OnClick([this](wi::gui::EventArgs args) {
 			translator.isRotator = true;
 			translator.isScalator = false;
 			translator.isTranslator = false;
@@ -903,7 +903,7 @@ void EditorComponent::Load()
 		translateButton.SetShadowRadius(2);
 		translateButton.SetTooltip("Translate/Move (Ctrl + T)\nHotkey: 1");
 		translateButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
-		translateButton.OnClick([&](wi::gui::EventArgs args) {
+		translateButton.OnClick([this](wi::gui::EventArgs args) {
 			translator.isTranslator = true;
 			translator.isScalator = false;
 			translator.isRotator = false;
@@ -918,7 +918,7 @@ void EditorComponent::Load()
 	{
 		wi::physics::SetSimulationEnabled(main->config.GetSection("options").GetBool("physics"));
 	}
-	physicsButton.OnClick([&](wi::gui::EventArgs args) {
+	physicsButton.OnClick([this](wi::gui::EventArgs args) {
 		if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL))
 		{
 			wi::physics::ResetPhysicsObjects(GetCurrentScene());
@@ -936,7 +936,7 @@ void EditorComponent::Load()
 	dummyButton.SetShadowRadius(2);
 	dummyButton.SetTooltip("Toggle reference dummy visualizer\n - Use the reference dummy to get an idea about object sizes compared to a human character size.\n - Position the dummy by clicking on something with the middle mouse button while the dummy is active.\n - Pressing this button while Ctrl key is held down will reset dummy position to the origin.\n - Pressing this button while the Shift key is held down will switch between male and female dummies.");
 	dummyButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
-	dummyButton.OnClick([&](wi::gui::EventArgs args) {
+	dummyButton.OnClick([this](wi::gui::EventArgs args) {
 		if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RCONTROL))
 		{
 			dummy_pos = XMFLOAT3(0, 0, 0);
@@ -956,7 +956,7 @@ void EditorComponent::Load()
 	navtestButton.SetShadowRadius(2);
 	navtestButton.SetTooltip("Toggle navigation testing. When enabled, you can visualize path finding results.\nYou can put down START and GOAL waypoints inside voxel grids to test path finding.\nControls:\n----------\nF5 + middle click: put START to surface\nF6 + middle click: put GOAL to surface\nF7 + middle click: put START to air\nF8 + middle click: put GOAL to air");
 	navtestButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
-	navtestButton.OnClick([&](wi::gui::EventArgs args) {
+	navtestButton.OnClick([this](wi::gui::EventArgs args) {
 		navtest_enabled = !navtest_enabled;
 	});
 	GetGUI().AddWidget(&navtestButton);
@@ -966,7 +966,7 @@ void EditorComponent::Load()
 	playButton.SetShadowRadius(2);
 	playButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
 	playButton.SetTooltip("Execute the last used (standalone) script.\nTo use a new script, use the Open button.");
-	playButton.OnClick([&](wi::gui::EventArgs args) {
+	playButton.OnClick([this](wi::gui::EventArgs args) {
 		if (last_script_path.empty() || !wi::helper::FileExists(last_script_path))
 		{
 			contentBrowserWnd.RefreshContent();
@@ -995,7 +995,7 @@ void EditorComponent::Load()
 	stopButton.SetShadowRadius(2);
 	stopButton.SetTooltip("Stops every script background processes that are still running.");
 	stopButton.SetScriptTip("killProcesses()");
-	stopButton.OnClick([&](wi::gui::EventArgs args) {
+	stopButton.OnClick([](wi::gui::EventArgs args) {
 		wi::lua::KillProcesses();
 	});
 	topmenuWnd.AddWidget(&stopButton);
@@ -1006,7 +1006,7 @@ void EditorComponent::Load()
 	projectCreatorButton.font.params.shadowColor = wi::Color::Transparent();
 	projectCreatorButton.SetShadowRadius(2);
 	projectCreatorButton.SetTooltip("Create a new project.");
-	projectCreatorButton.OnClick([&](wi::gui::EventArgs args) {
+	projectCreatorButton.OnClick([this](wi::gui::EventArgs args) {
 		projectCreatorWnd.SetVisible(!projectCreatorWnd.IsVisible());
 	});
 	topmenuWnd.AddWidget(&projectCreatorButton);
@@ -1020,7 +1020,7 @@ void EditorComponent::Load()
 	saveButton.SetTooltip("Save the current scene to a new file (Ctrl + Shift + S)\nBy default, the scene will be saved into .wiscene, but you can specify .gltf or .glb extensions to export into GLTF.\nYou can also use Ctrl + S to quicksave, without browsing.");
 	saveButton.SetColor(wi::Color(50, 180, 100, 180), wi::gui::WIDGETSTATE::IDLE);
 	saveButton.SetColor(wi::Color(50, 220, 140, 255), wi::gui::WIDGETSTATE::FOCUS);
-	saveButton.OnClick([&](wi::gui::EventArgs args) {
+	saveButton.OnClick([this](wi::gui::EventArgs args) {
 		SaveAs();
 		});
 	topmenuWnd.AddWidget(&saveButton);
@@ -1036,7 +1036,7 @@ void EditorComponent::Load()
 #endif // PLATFORM_WINDOWS_DESKTOP
 	openButton.SetColor(wi::Color(50, 100, 255, 180), wi::gui::WIDGETSTATE::IDLE);
 	openButton.SetColor(wi::Color(120, 160, 255, 255), wi::gui::WIDGETSTATE::FOCUS);
-	openButton.OnClick([&](wi::gui::EventArgs args) {
+	openButton.OnClick([this](wi::gui::EventArgs args) {
 		wi::helper::FileDialogParams params;
 		params.type = wi::helper::FileDialogParams::OPEN;
 		params.description = ".wiscene, .obj, .gltf, .glb, .vrm, .fbx, .lua, .mp4, .png, ...";
@@ -1080,7 +1080,7 @@ void EditorComponent::Load()
 	contentBrowserButton.SetTooltip("Browse content.");
 	contentBrowserButton.SetColor(wi::Color(50, 100, 255, 180), wi::gui::WIDGETSTATE::IDLE);
 	contentBrowserButton.SetColor(wi::Color(120, 160, 255, 255), wi::gui::WIDGETSTATE::FOCUS);
-	contentBrowserButton.OnClick([&](wi::gui::EventArgs args) {
+	contentBrowserButton.OnClick([this](wi::gui::EventArgs args) {
 		contentBrowserWnd.SetVisible(!contentBrowserWnd.IsVisible());
 		if (contentBrowserWnd.IsVisible())
 		{
@@ -1097,7 +1097,7 @@ void EditorComponent::Load()
 	logButton.SetTooltip("Open the backlog (toggle with HOME button)");
 	logButton.SetColor(wi::Color(50, 160, 200, 180), wi::gui::WIDGETSTATE::IDLE);
 	logButton.SetColor(wi::Color(120, 200, 200, 255), wi::gui::WIDGETSTATE::FOCUS);
-	logButton.OnClick([&](wi::gui::EventArgs args) {
+	logButton.OnClick([](wi::gui::EventArgs args) {
 		wi::backlog::Toggle();
 		});
 	topmenuWnd.AddWidget(&logButton);
@@ -1110,7 +1110,7 @@ void EditorComponent::Load()
 	profilerButton.SetTooltip("View the profiler frame timings");
 	profilerButton.SetColor(wi::Color(50, 160, 200, 180), wi::gui::WIDGETSTATE::IDLE);
 	profilerButton.SetColor(wi::Color(120, 200, 200, 255), wi::gui::WIDGETSTATE::FOCUS);
-	profilerButton.OnClick([&](wi::gui::EventArgs args) {
+	profilerButton.OnClick([this](wi::gui::EventArgs args) {
 		profilerWnd.SetVisible(!wi::profiler::IsEnabled());
 		wi::profiler::SetEnabled(!wi::profiler::IsEnabled());
 	});
@@ -1124,7 +1124,7 @@ void EditorComponent::Load()
 	cinemaButton.SetTooltip("Enter cinema mode (all HUD disabled). Press ESC to return to normal.");
 	cinemaButton.SetColor(wi::Color(50, 160, 200, 180), wi::gui::WIDGETSTATE::IDLE);
 	cinemaButton.SetColor(wi::Color(120, 200, 200, 255), wi::gui::WIDGETSTATE::FOCUS);
-	cinemaButton.OnClick([&](wi::gui::EventArgs args) {
+	cinemaButton.OnClick([this](wi::gui::EventArgs args) {
 		if (renderPath != nullptr)
 		{
 			renderPath->GetGUI().SetVisible(false);
@@ -1143,7 +1143,7 @@ void EditorComponent::Load()
 	fullscreenButton.SetTooltip("Toggle full screen");
 	fullscreenButton.SetColor(wi::Color(50, 160, 200, 180), wi::gui::WIDGETSTATE::IDLE);
 	fullscreenButton.SetColor(wi::Color(120, 200, 200, 255), wi::gui::WIDGETSTATE::FOCUS);
-	fullscreenButton.OnClick([&](wi::gui::EventArgs args) {
+	fullscreenButton.OnClick([this](wi::gui::EventArgs args) {
 		bool fullscreen = main->config.GetBool("fullscreen");
 		fullscreen = !fullscreen;
 		main->config.Set("fullscreen", fullscreen);
@@ -1178,7 +1178,7 @@ void EditorComponent::Load()
 	aboutButton.SetTooltip("About...");
 	aboutButton.SetColor(wi::Color(50, 160, 200, 180), wi::gui::WIDGETSTATE::IDLE);
 	aboutButton.SetColor(wi::Color(120, 200, 200, 255), wi::gui::WIDGETSTATE::FOCUS);
-	aboutButton.OnClick([&](wi::gui::EventArgs args) {
+	aboutButton.OnClick([this](wi::gui::EventArgs args) {
 		aboutWindow.SetVisible(!aboutWindow.IsVisible());
 		});
 	topmenuWnd.AddWidget(&aboutButton);
@@ -1267,7 +1267,7 @@ void EditorComponent::Load()
 		aboutWindow.OnResize([this]() {
 			aboutLabel.SetSize(XMFLOAT2(aboutWindow.GetWidgetAreaSize().x - 20, aboutLabel.GetSize().y));
 		});
-		aboutWindow.OnCollapse([&](wi::gui::EventArgs args) {
+		aboutWindow.OnCollapse([this](wi::gui::EventArgs args) {
 			for (int i = 0; i < arraysize(wi::gui::Widget::sprites); ++i)
 			{
 				aboutWindow.sprites[i].params.enableCornerRounding();

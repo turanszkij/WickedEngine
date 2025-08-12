@@ -68,7 +68,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 		editor->GetCurrentEditorScene().camera.zFarP = editor->main->config.GetSection("camera").GetFloat("far");
 	}
 	farPlaneSlider.SetValue(editor->GetCurrentEditorScene().camera.zFarP);
-	farPlaneSlider.OnSlide(updateCamera([&](CameraComponent& camera, auto args) {
+	farPlaneSlider.OnSlide(updateCamera([this](CameraComponent& camera, auto args) {
 		camera.zFarP = args.fValue;
 		editor->main->config.GetSection("camera").Set("far", args.fValue);
 		editor->main->config.Commit();
@@ -84,7 +84,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 		editor->GetCurrentEditorScene().camera.zNearP = editor->main->config.GetSection("camera").GetFloat("near");
 	}
 	nearPlaneSlider.SetValue(editor->GetCurrentEditorScene().camera.zNearP);
-	nearPlaneSlider.OnSlide(updateCamera([&](CameraComponent& camera, auto args) {
+	nearPlaneSlider.OnSlide(updateCamera([this](CameraComponent& camera, auto args) {
 		camera.zNearP = args.fValue;
 		editor->main->config.GetSection("camera").Set("near", args.fValue);
 		editor->main->config.Commit();
@@ -100,7 +100,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 		editor->GetCurrentEditorScene().camera.fov = editor->main->config.GetSection("camera").GetFloat("fov") / 180.f * XM_PI;
 	}
 	fovSlider.SetValue(editor->GetCurrentEditorScene().camera.fov / XM_PI * 180.f);
-	fovSlider.OnSlide(updateCamera([&](CameraComponent& camera, auto args) {
+	fovSlider.OnSlide(updateCamera([this](CameraComponent& camera, auto args) {
 		camera.fov = args.fValue / 180.f * XM_PI;
 		editor->main->config.GetSection("camera").Set("fov", args.fValue);
 		editor->main->config.Commit();
@@ -111,7 +111,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 	focalLengthSlider.SetTooltip("Controls the depth of field effect's focus distance.\nYou can also refocus by holding the C key and picking in the scene with the left mouse button.");
 	focalLengthSlider.SetSize(XMFLOAT2(wid, hei));
 	focalLengthSlider.SetPos(XMFLOAT2(x, y += step));
-	focalLengthSlider.OnSlide(updateCamera([&](CameraComponent& camera, auto args) {
+	focalLengthSlider.OnSlide(updateCamera([](CameraComponent& camera, auto args) {
 		camera.focal_length = args.fValue;
 	}));
 	AddWidget(&focalLengthSlider);
@@ -120,7 +120,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 	apertureSizeSlider.SetTooltip("Controls the depth of field effect's strength");
 	apertureSizeSlider.SetSize(XMFLOAT2(wid, hei));
 	apertureSizeSlider.SetPos(XMFLOAT2(x, y += step));
-	apertureSizeSlider.OnSlide(updateCamera([&](CameraComponent& camera, auto args) {
+	apertureSizeSlider.OnSlide(updateCamera([](CameraComponent& camera, auto args) {
 		camera.aperture_size = args.fValue;
 	}));
 	AddWidget(&apertureSizeSlider);
@@ -129,7 +129,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 	apertureShapeXSlider.SetTooltip("Controls the depth of field effect's bokeh shape");
 	apertureShapeXSlider.SetSize(XMFLOAT2(wid, hei));
 	apertureShapeXSlider.SetPos(XMFLOAT2(x, y += step));
-	apertureShapeXSlider.OnSlide(updateCamera([&](CameraComponent& camera, auto args) {
+	apertureShapeXSlider.OnSlide(updateCamera([](CameraComponent& camera, auto args) {
 		camera.aperture_shape.x = args.fValue;
 	}));
 	AddWidget(&apertureShapeXSlider);
@@ -138,7 +138,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 	apertureShapeYSlider.SetTooltip("Controls the depth of field effect's bokeh shape");
 	apertureShapeYSlider.SetSize(XMFLOAT2(wid, hei));
 	apertureShapeYSlider.SetPos(XMFLOAT2(x, y += step));
-	apertureShapeYSlider.OnSlide(updateCamera([&](CameraComponent& camera, auto args) {
+	apertureShapeYSlider.OnSlide(updateCamera([](CameraComponent& camera, auto args) {
 		camera.aperture_shape.y = args.fValue;
 	}));
 	AddWidget(&apertureShapeYSlider);
@@ -185,7 +185,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 	resetButton.Create("Reset Camera");
 	resetButton.SetSize(XMFLOAT2(wid, hei));
 	resetButton.SetPos(XMFLOAT2(x, y += step));
-	resetButton.OnClick([&](wi::gui::EventArgs args) {
+	resetButton.OnClick([this](wi::gui::EventArgs args) {
 		ResetCam();
 
 		CameraComponent& camera = editor->GetCurrentEditorScene().camera;
@@ -204,7 +204,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 	{
 		fpsCheckBox.SetCheck(editor->main->config.GetSection("camera").GetBool("fps"));
 	}
-	fpsCheckBox.OnClick([&](wi::gui::EventArgs args) {
+	fpsCheckBox.OnClick([this](wi::gui::EventArgs args) {
 		editor->main->config.GetSection("camera").Set("fps", args.bValue);
 		editor->main->config.Commit();
 		});
@@ -214,7 +214,7 @@ void CameraWindow::Create(EditorComponent* _editor)
 	orthoCheckBox.SetSize(XMFLOAT2(hei, hei));
 	orthoCheckBox.SetPos(XMFLOAT2(x, y += step));
 	orthoCheckBox.SetCheck(editor->GetCurrentEditorScene().camera.IsOrtho());
-	orthoCheckBox.OnClick([&](wi::gui::EventArgs args) {
+	orthoCheckBox.OnClick([this](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
 		CameraComponent& camera = editor->GetCurrentEditorScene().camera;
 		camera.SetOrtho(args.bValue);

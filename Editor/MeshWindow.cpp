@@ -29,7 +29,7 @@ void MeshWindow::Create(EditorComponent* _editor)
 	SetSize(XMFLOAT2(580, 880));
 
 	closeButton.SetTooltip("Delete MeshComponent");
-	OnClose([&](wi::gui::EventArgs args) {
+	OnClose([this](wi::gui::EventArgs args) {
 
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
@@ -49,7 +49,7 @@ void MeshWindow::Create(EditorComponent* _editor)
 
 	subsetComboBox.Create("Select subset: ");
 	subsetComboBox.SetEnabled(false);
-	subsetComboBox.OnSelect([&](wi::gui::EventArgs args) {
+	subsetComboBox.OnSelect([this](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
 		MeshComponent* mesh = scene.meshes.GetComponent(entity);
 		if (mesh != nullptr)
@@ -184,7 +184,7 @@ void MeshWindow::Create(EditorComponent* _editor)
 
 	impostorCreateButton.Create("Create Impostor");
 	impostorCreateButton.SetTooltip("Create an impostor image of the mesh. The mesh will be replaced by this image when far away, to render faster.");
-	impostorCreateButton.OnClick([&](wi::gui::EventArgs args) {
+	impostorCreateButton.OnClick([this](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
 		ImpostorComponent* impostor = scene.impostors.GetComponent(entity);
 		if (impostor == nullptr)
@@ -202,7 +202,7 @@ void MeshWindow::Create(EditorComponent* _editor)
 
 	impostorDistanceSlider.Create(0, 1000, 100, 10000, "Impostor Dist: ");
 	impostorDistanceSlider.SetTooltip("Assign the distance where the mesh geometry should be switched to the impostor image.");
-	impostorDistanceSlider.OnSlide([&](wi::gui::EventArgs args) {
+	impostorDistanceSlider.OnSlide([this](wi::gui::EventArgs args) {
 		ImpostorComponent* impostor = editor->GetCurrentScene().impostors.GetComponent(entity);
 		if (impostor != nullptr)
 		{
@@ -220,7 +220,7 @@ void MeshWindow::Create(EditorComponent* _editor)
 
 	instanceSelectButton.Create("Select instances");
 	instanceSelectButton.SetTooltip("Select all instances that use this mesh.");
-	instanceSelectButton.OnClick([&](wi::gui::EventArgs args) {
+	instanceSelectButton.OnClick([this](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		wi::vector<Entity> sel;
 		wi::unordered_set<const ObjectComponent*> visited_objects; // fix double visit (straight mesh + object->mesh)
@@ -258,28 +258,28 @@ void MeshWindow::Create(EditorComponent* _editor)
 
 	flipCullingButton.Create("Flip Culling");
 	flipCullingButton.SetTooltip("Flip faces to reverse triangle culling order.");
-	flipCullingButton.OnClick(changeSelectedMesh([&] (auto mesh) {
+	flipCullingButton.OnClick(changeSelectedMesh([] (auto mesh) {
 		mesh->FlipCulling();
 	}));
 	AddWidget(&flipCullingButton);
 
 	flipNormalsButton.Create("Flip Normals");
 	flipNormalsButton.SetTooltip("Flip surface normals.");
-	flipNormalsButton.OnClick(changeSelectedMesh([&] (auto mesh) {
+	flipNormalsButton.OnClick(changeSelectedMesh([] (auto mesh) {
 		mesh->FlipNormals();
 	}));
 	AddWidget(&flipNormalsButton);
 
 	computeNormalsSmoothButton.Create("Compute Normals [SMOOTH]");
 	computeNormalsSmoothButton.SetTooltip("Compute surface normals of the mesh. Resulting normals will be unique per vertex. This can reduce vertex count, but is slow.");
-	computeNormalsSmoothButton.OnClick(changeSelectedMesh([&] (auto mesh) {
+	computeNormalsSmoothButton.OnClick(changeSelectedMesh([] (auto mesh) {
 		mesh->ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH);
 	}));
 	AddWidget(&computeNormalsSmoothButton);
 
 	computeNormalsHardButton.Create("Compute Normals [HARD]");
 	computeNormalsHardButton.SetTooltip("Compute surface normals of the mesh. Resulting normals will be unique per face. This can increase vertex count.");
-	computeNormalsHardButton.OnClick(changeSelectedMesh([&] (auto mesh) {
+	computeNormalsHardButton.OnClick(changeSelectedMesh([] (auto mesh) {
 		mesh->ComputeNormals(MeshComponent::COMPUTE_NORMALS_HARD);
 
 	}));
@@ -287,14 +287,14 @@ void MeshWindow::Create(EditorComponent* _editor)
 
 	recenterButton.Create("Recenter");
 	recenterButton.SetTooltip("Recenter mesh to AABB center.");
-	recenterButton.OnClick(changeSelectedMesh([&] (auto mesh) {
+	recenterButton.OnClick(changeSelectedMesh([] (auto mesh) {
 		mesh->Recenter();
 	}));
 	AddWidget(&recenterButton);
 
 	recenterToBottomButton.Create("RecenterToBottom");
 	recenterToBottomButton.SetTooltip("Recenter mesh to AABB bottom.");
-	recenterToBottomButton.OnClick(changeSelectedMesh([&] (auto mesh) {
+	recenterToBottomButton.OnClick(changeSelectedMesh([] (auto mesh) {
 		mesh->RecenterToBottom();
 	}));
 	AddWidget(&recenterToBottomButton);
@@ -592,7 +592,7 @@ void MeshWindow::Create(EditorComponent* _editor)
 
 	exportHeaderButton.Create("Export to C++ header");
 	exportHeaderButton.SetTooltip("Export vertex positions and index buffer into a C++ header file.\n - Object transformation (if selected through object picking) and Skinning pose will be applied.\n - Only LOD0 will be exported.\n - The generated vertex positions and indices will be reordered and optimized without considering other vertex attributes.");
-	exportHeaderButton.OnClick([&](wi::gui::EventArgs args) {
+	exportHeaderButton.OnClick([this](wi::gui::EventArgs args) {
 		wi::helper::FileDialogParams params;
 		params.description = ".h (C++ header file)";
 		params.extensions.push_back("h");
@@ -716,7 +716,7 @@ void MeshWindow::Create(EditorComponent* _editor)
 
 	subsetMaterialComboBox.Create("Material: ");
 	subsetMaterialComboBox.SetEnabled(false);
-	subsetMaterialComboBox.OnSelect([&](wi::gui::EventArgs args) {
+	subsetMaterialComboBox.OnSelect([this](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
 		MeshComponent* mesh = scene.meshes.GetComponent(entity);
 		if (mesh != nullptr && subset >= 0 && subset < mesh->subsets.size())
@@ -736,7 +736,7 @@ void MeshWindow::Create(EditorComponent* _editor)
 
 
 	morphTargetCombo.Create("Morph Target:");
-	morphTargetCombo.OnSelect([&](wi::gui::EventArgs args) {
+	morphTargetCombo.OnSelect([this](wi::gui::EventArgs args) {
 		MeshComponent* mesh = editor->GetCurrentScene().meshes.GetComponent(entity);
 		if (mesh != nullptr && args.iValue < (int)mesh->morph_targets.size())
 		{

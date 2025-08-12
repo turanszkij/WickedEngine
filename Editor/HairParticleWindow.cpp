@@ -161,7 +161,7 @@ void HairParticleWindow::Create(EditorComponent* _editor)
 	AddWidget(&uniformitySlider);
 
 	addSpriteButton.Create("Select sprite rect");
-	addSpriteButton.OnClick([&](wi::gui::EventArgs args) {
+	addSpriteButton.OnClick([this](wi::gui::EventArgs args) {
 
 		Scene& scene = editor->GetCurrentScene();
 		if (!scene.materials.Contains(entity))
