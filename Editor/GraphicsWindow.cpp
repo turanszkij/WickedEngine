@@ -713,7 +713,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	float mod_wid = 100;
 
 	hdrcalibrationSlider.Create(0, 8, 1, 100, "HDR calibration: ");
-	hdrcalibrationSlider.SetTooltip("Set multiplier for HDR output, this only takes effect when swapchain output format is non-SRGB");
+	hdrcalibrationSlider.SetTooltip("Set multiplier for HDR output for the 3D rendering, this only takes effect when swapchain output format is non-SRGB.\nNote: 3D content (RenderPath3D) is always rendered in HDR internally, this affects the output mapping for HDR display.");
 	hdrcalibrationSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setHDRCalibration(args.fValue);
 		editor->main->config.GetSection("graphics").Set("hdr_calibration", args.fValue);
@@ -724,6 +724,19 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		editor->renderPath->setHDRCalibration(editor->main->config.GetSection("graphics").GetFloat("hdr_calibration"));
 	}
 	AddWidget(&hdrcalibrationSlider);
+
+	hdrScalingSlider.Create(0.1f, 18, 1, 100, "HDR UI calibration: ");
+	hdrScalingSlider.SetTooltip("Set multiplier for HDR output for the 2D rendering, this only takes effect when swapchain output format is non-SRGB.\nNote: 2D content (RenderPath2D) is always rendered in SDR internally, this affects the output mapping for HDR display.");
+	hdrScalingSlider.OnSlide([=](wi::gui::EventArgs args) {
+		editor->SetHDRScaling(args.fValue);
+		editor->main->config.GetSection("graphics").Set("hdr_scaling", args.fValue);
+		editor->main->config.Commit();
+		});
+	if (editor->main->config.GetSection("graphics").Has("hdr_scaling"))
+	{
+		editor->SetHDRScaling(editor->main->config.GetSection("graphics").GetFloat("hdr_scaling"));
+	}
+	AddWidget(&hdrScalingSlider);
 
 	tonemapCombo.Create("Tonemap: ");
 	tonemapCombo.SetTooltip("Choose tone mapping type");
@@ -1606,6 +1619,7 @@ void GraphicsWindow::UpdateData()
 	ddgiZ.SetValue(std::to_string(scene.ddgi.grid_dimensions.z));
 
 	hdrcalibrationSlider.SetValue(editor->renderPath->getHDRCalibration());
+	hdrScalingSlider.SetValue(editor->GetHDRScaling());
 	occlusionCullingCheckBox.SetCheck(wi::renderer::GetOcclusionCullingEnabled());
 	GIBoostSlider.SetValue(wi::renderer::GetGIBoost());
 	visibilityComputeShadingCheckBox.SetCheck(editor->renderPath->getVisibilityComputeShadingEnabled());
@@ -1724,6 +1738,7 @@ void GraphicsWindow::ResizeLayout()
 	layout.add_right(vsyncCheckBox);
 	layout.add(swapchainComboBox);
 	layout.add(hdrcalibrationSlider);
+	layout.add(hdrScalingSlider);
 	layout.add(renderPathComboBox);
 	layout.add(resolutionScaleSlider);
 	layout.add(streamingSlider);

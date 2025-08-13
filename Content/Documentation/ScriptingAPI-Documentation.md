@@ -1817,6 +1817,8 @@ It can hold Sprites and SpriteFonts and can sort them by layers, update and rend
 - SetLayerOrder(string name, int order)
 - SetSpriteOrder(Sprite sprite, int order)
 - SetFontOrder(SpriteFont font, int order)
+- GetHDRScaling() : float	-- returns HDR scaling value used for SDR to HDR linear output mapping conversion (default: 9.0)
+- SetHDRScaling(float value)	-- sets HDR scaling value used for SDR to HDR linear output mapping conversion (default: 9.0)
 - CopyFrom(RenderPath other) -- copies everything from other renderpath into this
 
 #### RenderPath3D

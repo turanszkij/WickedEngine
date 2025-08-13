@@ -19,6 +19,8 @@ namespace wi::lua
 		lunamethod(RenderPath2D_BindLua, SetLayerOrder),
 		lunamethod(RenderPath2D_BindLua, SetSpriteOrder),
 		lunamethod(RenderPath2D_BindLua, SetFontOrder),
+		lunamethod(RenderPath2D_BindLua, GetHDRScaling),
+		lunamethod(RenderPath2D_BindLua, SetHDRScaling),
 
 		lunamethod(RenderPath_BindLua, GetLayerMask),
 		lunamethod(RenderPath_BindLua, SetLayerMask),

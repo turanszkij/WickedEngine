@@ -24,6 +24,8 @@ namespace wi::lua
 		lunamethod(RenderPath2D_BindLua, SetLayerOrder),
 		lunamethod(RenderPath2D_BindLua, SetSpriteOrder),
 		lunamethod(RenderPath2D_BindLua, SetFontOrder),
+		lunamethod(RenderPath2D_BindLua, GetHDRScaling),
+		lunamethod(RenderPath2D_BindLua, SetHDRScaling),
 		lunamethod(RenderPath_BindLua, GetLayerMask),
 		lunamethod(RenderPath_BindLua, SetLayerMask),
 
@@ -456,6 +458,52 @@ namespace wi::lua
 		else
 		{
 			wi::lua::SError(L, "SetFontOrder(Font font, int order) not enough arguments!");
+		}
+		return 0;
+	}
+
+	int RenderPath2D_BindLua::GetHDRScaling(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "GetHDRScaling() component is empty!");
+			return 0;
+		}
+		RenderPath2D* ccomp = dynamic_cast<RenderPath2D*>(component);
+		if (ccomp != nullptr)
+		{
+			wi::lua::SSetFloat(L, ccomp->GetHDRScaling());
+			return 1;
+		}
+		else
+		{
+			wi::lua::SError(L, "SetHDRScaling(float value) not a RenderPath2D!");
+		}
+		return 0;
+	}
+	int RenderPath2D_BindLua::SetHDRScaling(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetHDRScaling(float value) component is empty!");
+			return 0;
+		}
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 1)
+		{
+			RenderPath2D* ccomp = dynamic_cast<RenderPath2D*>(component);
+			if (ccomp != nullptr)
+			{
+				ccomp->SetHDRScaling(wi::lua::SGetFloat(L, 1));
+			}
+			else
+			{
+				wi::lua::SError(L, "SetHDRScaling(float value) not a RenderPath2D!");
+			}
+		}
+		else
+		{
+			wi::lua::SError(L, "SetHDRScaling(float value) not enough arguments!");
 		}
 		return 0;
 	}
