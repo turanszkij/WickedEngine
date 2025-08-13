@@ -54,7 +54,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	filterCombo.AddItem(ICON_SPLINE, (uint64_t)Filter::Spline);
 	filterCombo.SetTooltip("Apply filtering to the Entities by components");
 	filterCombo.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
-	filterCombo.OnSelect([&](wi::gui::EventArgs args) {
+	filterCombo.OnSelect([this](wi::gui::EventArgs args) {
 		filter = (Filter)args.userdata;
 		RefreshEntityTree();
 		});

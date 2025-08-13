@@ -32,7 +32,7 @@ void PaintToolWindow::Create(EditorComponent* _editor)
 	modeComboBox.AddItem(ICON_HAIR " Hairparticle - Length (Alpha)", MODE_HAIRPARTICLE_LENGTH);
 	modeComboBox.AddItem(ICON_MESH " Wind weight (Alpha)", MODE_WIND);
 	modeComboBox.SetSelected(0);
-	modeComboBox.OnSelect([&](wi::gui::EventArgs args) {
+	modeComboBox.OnSelect([this](wi::gui::EventArgs args) {
 		switch (args.userdata)
 		{
 		case MODE_DISABLED:

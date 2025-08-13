@@ -35,7 +35,7 @@ void HierarchyWindow::Create(EditorComponent* _editor)
 	parentCombo.Create("Parent: ");
 	parentCombo.SetSize(XMFLOAT2(wid, hei));
 	parentCombo.SetPos(XMFLOAT2(x, y));
-	parentCombo.OnSelect([&](wi::gui::EventArgs args) {
+	parentCombo.OnSelect([this](wi::gui::EventArgs args) {
 		Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
 		{

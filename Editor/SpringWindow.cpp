@@ -34,7 +34,7 @@ void SpringWindow::Create(EditorComponent* _editor)
 	resetAllButton.SetTooltip("Reset all springs in the scene to initial pose.");
 	resetAllButton.SetPos(XMFLOAT2(x, y));
 	resetAllButton.SetSize(XMFLOAT2(siz, hei));
-	resetAllButton.OnClick([&](wi::gui::EventArgs args) {
+	resetAllButton.OnClick([this](wi::gui::EventArgs args) {
 		auto& scene = editor->GetCurrentScene();
 		for (size_t i = 0; i < scene.springs.GetCount(); ++i)
 		{

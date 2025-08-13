@@ -524,7 +524,7 @@ void PropsWindow::AddWindow(wi::terrain::Prop& prop)
 {
 	PropWindow* wnd = new PropWindow(terrain, &prop, &editor->GetCurrentScene());
 	wnd->generation_callback = generation_callback;
-	wnd->OnClose([&, wnd](wi::gui::EventArgs args) {
+	wnd->OnClose([this, wnd](wi::gui::EventArgs args) {
 		windows_to_remove.push_back(wnd);
 	});
 	AddWidget(wnd);
@@ -1071,7 +1071,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 		materialCombos[i].SetTooltip("Select material entity");
 		materialCombos[i].SetSize(XMFLOAT2(wid, hei));
 		materialCombos[i].SetPos(XMFLOAT2(x, y += step));
-		materialCombos[i].OnSelect([&, i](wi::gui::EventArgs args) {
+		materialCombos[i].OnSelect([this, i](wi::gui::EventArgs args) {
 			const Scene& scene = editor->GetCurrentScene();
 			wi::ecs::Entity entity = static_cast<wi::ecs::Entity>(args.userdata);
 			if (entity != INVALID_ENTITY && scene.materials.Contains(entity))
@@ -1096,7 +1096,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	materialCombo_GrassParticle.SetTooltip("Select material entity");
 	materialCombo_GrassParticle.SetSize(XMFLOAT2(wid, hei));
 	materialCombo_GrassParticle.SetPos(XMFLOAT2(x, y += step));
-	materialCombo_GrassParticle.OnSelect([&](wi::gui::EventArgs args) {
+	materialCombo_GrassParticle.OnSelect([this](wi::gui::EventArgs args) {
 		const Scene& scene = editor->GetCurrentScene();
 		wi::ecs::Entity entity = static_cast<wi::ecs::Entity>(args.userdata);
 		if (entity != INVALID_ENTITY && scene.materials.Contains(entity))
