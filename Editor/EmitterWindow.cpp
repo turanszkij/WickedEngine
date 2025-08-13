@@ -146,7 +146,7 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	debugCheckBox.Create("DEBUG: ");
 	debugCheckBox.SetPos(XMFLOAT2(x, y += step));
 	debugCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	debugCheckBox.OnClick([&](wi::gui::EventArgs args) {
+	debugCheckBox.OnClick([](wi::gui::EventArgs args) {
 		wi::renderer::SetToDrawDebugEmitters(args.bValue);
 	});
 	debugCheckBox.SetCheck(wi::renderer::GetToDrawDebugEmitters());

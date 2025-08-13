@@ -12,7 +12,7 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 	SetSize(XMFLOAT2(670, 580));
 
 	closeButton.SetTooltip("Delete ExpressionComponent");
-	OnClose([&](wi::gui::EventArgs args) {
+	OnClose([this](wi::gui::EventArgs args) {
 
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
@@ -42,45 +42,45 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 
 	talkCheckBox.Create("Force Talking: ");
 	talkCheckBox.SetTooltip("Force continuous talking animation, even if no voice is playing");
-	talkCheckBox.OnClick(handleExpr([&] (auto expression_mastering, auto args) {
+	talkCheckBox.OnClick(handleExpr([] (auto expression_mastering, auto args) {
 		expression_mastering->SetForceTalkingEnabled(args.bValue);
 	}));
 	AddWidget(&talkCheckBox);
 
 	blinkFrequencySlider.Create(0, 1, 0, 1000, "Blinks: ");
 	blinkFrequencySlider.SetTooltip("Specifies the number of blinks per second.");
-	blinkFrequencySlider.OnSlide(handleExpr([&] (auto expression_mastering, auto args) {
+	blinkFrequencySlider.OnSlide(handleExpr([] (auto expression_mastering, auto args) {
 		expression_mastering->blink_frequency = args.fValue;
 	}));
 	AddWidget(&blinkFrequencySlider);
 
 	blinkLengthSlider.Create(0, 1, 0, 1000, "Blink Length: ");
-	blinkLengthSlider.OnSlide(handleExpr([&] (auto expression_mastering, auto args) {
+	blinkLengthSlider.OnSlide(handleExpr([] (auto expression_mastering, auto args) {
 		expression_mastering->blink_length = args.fValue;
 	}));
 	AddWidget(&blinkLengthSlider);
 
 	blinkCountSlider.Create(1, 4, 2, 3, "Blink Count: ");
-	blinkCountSlider.OnSlide(handleExpr([&] (auto expression_mastering, auto args) {
+	blinkCountSlider.OnSlide(handleExpr([] (auto expression_mastering, auto args) {
 		expression_mastering->blink_count = args.iValue;
 	}));
 	AddWidget(&blinkCountSlider);
 
 	lookFrequencySlider.Create(0, 1, 0, 1000, "Looks: ");
 	lookFrequencySlider.SetTooltip("Specifies the number of look-aways per second.");
-	lookFrequencySlider.OnSlide(handleExpr([&] (auto expression_mastering, auto args) {
+	lookFrequencySlider.OnSlide(handleExpr([] (auto expression_mastering, auto args) {
 		expression_mastering->look_frequency = args.fValue;
 	}));
 	AddWidget(&lookFrequencySlider);
 
 	lookLengthSlider.Create(0, 1, 0, 1000, "Look Length: ");
-	lookLengthSlider.OnSlide(handleExpr([&] (auto expression_mastering, auto args) {
+	lookLengthSlider.OnSlide(handleExpr([] (auto expression_mastering, auto args) {
 		expression_mastering->look_length = args.fValue;
 	}));
 	AddWidget(&lookLengthSlider);
 
 	expressionList.Create("Expressions: ");
-	expressionList.OnSelect(handleExpr([&] (auto expression_mastering, auto args) {
+	expressionList.OnSelect(handleExpr([this] (auto expression_mastering, auto args) {
 		if (args.iValue >= expression_mastering->expressions.size())
 			return;
 
@@ -93,8 +93,8 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 	}));
 	AddWidget(&expressionList);
 
-	auto handleExprList = [&] (auto func, const bool checkExprSize = true) {
-		return handleExpr([&] (auto expression_mastering, auto args) {
+	auto handleExprList = [=] (auto func, const bool checkExprSize = true) {
+		return handleExpr([=] (auto expression_mastering, auto args) {
 			if (checkExprSize && args.iValue >= expression_mastering->expressions.size())
 				return;
 
@@ -114,13 +114,13 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 	};
 
 	binaryCheckBox.Create("Binary: ");
-	binaryCheckBox.OnClick(handleExprList([&] (auto expression, auto args) {
+	binaryCheckBox.OnClick(handleExprList([] (auto expression, auto args) {
 		expression.SetBinary(args.bValue);
 	}, false));
 	AddWidget(&binaryCheckBox);
 
 	weightSlider.Create(0, 1, 0, 100000, "Weight: ");
-	weightSlider.OnSlide(handleExprList([&] (auto expression, auto args) {
+	weightSlider.OnSlide(handleExprList([] (auto expression, auto args) {
 		expression.weight = args.fValue;
 	}));
 	AddWidget(&weightSlider);
@@ -130,7 +130,7 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 	overrideMouthCombo.AddItem("None", (uint64_t)ExpressionComponent::Override::None);
 	overrideMouthCombo.AddItem("Block", (uint64_t)ExpressionComponent::Override::Block);
 	overrideMouthCombo.AddItem("Blend", (uint64_t)ExpressionComponent::Override::Blend);
-	overrideMouthCombo.OnSelect(handleExprList([&] (auto expression, auto args) {
+	overrideMouthCombo.OnSelect(handleExprList([] (auto expression, auto args) {
 		expression.override_mouth = (ExpressionComponent::Override)args.userdata;
 	}));
 	AddWidget(&overrideMouthCombo);
@@ -140,7 +140,7 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 	overrideBlinkCombo.AddItem("None", (uint64_t)ExpressionComponent::Override::None);
 	overrideBlinkCombo.AddItem("Block", (uint64_t)ExpressionComponent::Override::Block);
 	overrideBlinkCombo.AddItem("Blend", (uint64_t)ExpressionComponent::Override::Blend);
-	overrideBlinkCombo.OnSelect(handleExprList([&] (auto expression, auto args) {
+	overrideBlinkCombo.OnSelect(handleExprList([] (auto expression, auto args) {
 		expression.override_blink = (ExpressionComponent::Override)args.userdata;
 	}));
 	AddWidget(&overrideBlinkCombo);
@@ -150,7 +150,7 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 	overrideLookCombo.AddItem("None", (uint64_t)ExpressionComponent::Override::None);
 	overrideLookCombo.AddItem("Block", (uint64_t)ExpressionComponent::Override::Block);
 	overrideLookCombo.AddItem("Blend", (uint64_t)ExpressionComponent::Override::Blend);
-	overrideLookCombo.OnSelect(handleExprList([&] (auto expression, auto args) {
+	overrideLookCombo.OnSelect(handleExprList([] (auto expression, auto args) {
 		expression.override_look = (ExpressionComponent::Override)args.userdata;
 	}));
 	AddWidget(&overrideLookCombo);

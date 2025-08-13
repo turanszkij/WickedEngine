@@ -33,7 +33,7 @@ void ForceFieldWindow::Create(EditorComponent* _editor)
 	typeComboBox.Create("Type: ");
 	typeComboBox.SetPos(XMFLOAT2(x, y));
 	typeComboBox.SetSize(XMFLOAT2(wid, hei));
-	typeComboBox.OnSelect([&](wi::gui::EventArgs args) {
+	typeComboBox.OnSelect([this](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		for (auto& x : editor->translator.selected)
 		{

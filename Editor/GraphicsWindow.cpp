@@ -77,7 +77,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	renderPathComboBox.SetPos(XMFLOAT2(x, y += step));
 	renderPathComboBox.AddItem("Default", RENDERPATH_DEFAULT);
 	renderPathComboBox.AddItem("Path Tracing", RENDERPATH_PATHTRACING);
-	renderPathComboBox.OnSelect([&](wi::gui::EventArgs args) {
+	renderPathComboBox.OnSelect([this](wi::gui::EventArgs args) {
 		ChangeRenderPath((RENDERPATH)args.userdata);
 		});
 	renderPathComboBox.SetEnabled(true);
@@ -244,7 +244,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	ddgiRayCountSlider.SetSize(XMFLOAT2(wid, itemheight));
 	ddgiRayCountSlider.SetPos(XMFLOAT2(x, y += step));
 	ddgiRayCountSlider.SetValue((float)wi::renderer::GetDDGIRayCount());
-	ddgiRayCountSlider.OnSlide([&](wi::gui::EventArgs args) {
+	ddgiRayCountSlider.OnSlide([](wi::gui::EventArgs args) {
 		wi::renderer::SetDDGIRayCount((uint32_t)args.iValue);
 		});
 	AddWidget(&ddgiRayCountSlider);
@@ -254,7 +254,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	ddgiBlendSpeedSlider.SetSize(XMFLOAT2(wid, itemheight));
 	ddgiBlendSpeedSlider.SetPos(XMFLOAT2(x, y += step));
 	ddgiBlendSpeedSlider.SetValue(wi::renderer::GetDDGIBlendSpeed());
-	ddgiBlendSpeedSlider.OnSlide([&](wi::gui::EventArgs args) {
+	ddgiBlendSpeedSlider.OnSlide([](wi::gui::EventArgs args) {
 		wi::renderer::SetDDGIBlendSpeed(args.fValue);
 		});
 	AddWidget(&ddgiBlendSpeedSlider);
@@ -360,7 +360,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	vxgiVoxelSizeSlider.SetTooltip("Adjust the voxel size for VXGI calculations.");
 	vxgiVoxelSizeSlider.SetSize(XMFLOAT2(wid, itemheight));
 	vxgiVoxelSizeSlider.SetPos(XMFLOAT2(x, y += step));
-	vxgiVoxelSizeSlider.OnSlide([&](wi::gui::EventArgs args) {
+	vxgiVoxelSizeSlider.OnSlide([this](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		scene.vxgi.clipmaps[0].voxelsize = args.fValue;
 	});
@@ -370,7 +370,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	vxgiRayStepSizeSlider.SetTooltip("Adjust the precision of ray marching for [reflection] cone tracing step. Lower values = more precision but slower performance.");
 	vxgiRayStepSizeSlider.SetSize(XMFLOAT2(wid, itemheight));
 	vxgiRayStepSizeSlider.SetPos(XMFLOAT2(x, y += step));
-	vxgiRayStepSizeSlider.OnSlide([&](wi::gui::EventArgs args) {
+	vxgiRayStepSizeSlider.OnSlide([this](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		scene.vxgi.rayStepSize = args.fValue;
 	});
@@ -380,7 +380,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	vxgiMaxDistanceSlider.SetTooltip("Adjust max raymarching distance for VXGI.");
 	vxgiMaxDistanceSlider.SetSize(XMFLOAT2(wid, itemheight));
 	vxgiMaxDistanceSlider.SetPos(XMFLOAT2(x, y += step));
-	vxgiMaxDistanceSlider.OnSlide([&](wi::gui::EventArgs args) {
+	vxgiMaxDistanceSlider.OnSlide([this](wi::gui::EventArgs args) {
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 		scene.vxgi.maxDistance = args.fValue;
 	});
@@ -451,7 +451,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	speedMultiplierSlider.SetSize(XMFLOAT2(wid, itemheight));
 	speedMultiplierSlider.SetPos(XMFLOAT2(x, y += step));
 	speedMultiplierSlider.SetValue(wi::renderer::GetGameSpeed());
-	speedMultiplierSlider.OnSlide([&](wi::gui::EventArgs args) {
+	speedMultiplierSlider.OnSlide([](wi::gui::EventArgs args) {
 		wi::renderer::SetGameSpeed(args.fValue);
 	});
 	AddWidget(&speedMultiplierSlider);
@@ -469,7 +469,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 			wi::renderer::SetRaytracedShadowsEnabled(editor->main->config.GetSection("graphics").GetBool("raytraced_shadows"));
 		}
 	}
-	shadowTypeComboBox.OnSelect([&](wi::gui::EventArgs args) {
+	shadowTypeComboBox.OnSelect([this](wi::gui::EventArgs args) {
 
 		switch (args.iValue)
 		{
@@ -500,7 +500,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	shadowProps2DComboBox.AddItem("1024");
 	shadowProps2DComboBox.AddItem("2048");
 	shadowProps2DComboBox.AddItem("4096");
-	shadowProps2DComboBox.OnSelect([&](wi::gui::EventArgs args) {
+	shadowProps2DComboBox.OnSelect([this](wi::gui::EventArgs args) {
 
 		switch (args.iValue)
 		{
@@ -552,7 +552,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	shadowPropsCubeComboBox.AddItem("512");
 	shadowPropsCubeComboBox.AddItem("1024");
 	shadowPropsCubeComboBox.AddItem("2048");
-	shadowPropsCubeComboBox.OnSelect([&](wi::gui::EventArgs args) {
+	shadowPropsCubeComboBox.OnSelect([this](wi::gui::EventArgs args) {
 		switch (args.iValue)
 		{
 		case 0:
@@ -643,7 +643,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	textureQualityComboBox.AddItem("Bilinear");
 	textureQualityComboBox.AddItem("Trilinear");
 	textureQualityComboBox.AddItem("Anisotropic");
-	textureQualityComboBox.OnSelect([&](wi::gui::EventArgs args) {
+	textureQualityComboBox.OnSelect([this](wi::gui::EventArgs args) {
 		wi::graphics::SamplerDesc desc = wi::renderer::GetSampler(wi::enums::SAMPLER_OBJECTSHADER)->GetDesc();
 
 		switch (args.iValue)
@@ -679,7 +679,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	mipLodBiasSlider.SetSize(XMFLOAT2(wid, itemheight));
 	mipLodBiasSlider.SetPos(XMFLOAT2(x, y += step));
 	mipLodBiasSlider.SetValue(editor->main->config.GetSection("graphics").GetFloat("mip_lod_bias"));
-	mipLodBiasSlider.OnSlide([&](wi::gui::EventArgs args) {
+	mipLodBiasSlider.OnSlide([this](wi::gui::EventArgs args) {
 		wi::graphics::SamplerDesc desc = wi::renderer::GetSampler(wi::enums::SAMPLER_OBJECTSHADER)->GetDesc();
 		desc.mip_lod_bias = wi::math::Clamp(args.fValue, -15.9f, 15.9f);
 		wi::renderer::ModifyObjectSampler(desc);
@@ -697,7 +697,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		wi::renderer::SetRaytraceBounceCount(editor->main->config.GetSection("graphics").GetInt("raytracing_bounce_count"));
 	}
 	raytraceBounceCountSlider.SetValue((float)wi::renderer::GetRaytraceBounceCount());
-	raytraceBounceCountSlider.OnSlide([&](wi::gui::EventArgs args) {
+	raytraceBounceCountSlider.OnSlide([this](wi::gui::EventArgs args) {
 		wi::renderer::SetRaytraceBounceCount((uint32_t)args.iValue);
 		editor->main->config.GetSection("graphics").Set("raytracing_bounces", args.iValue);
 		editor->main->config.Commit();

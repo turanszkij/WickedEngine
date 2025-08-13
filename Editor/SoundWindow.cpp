@@ -62,7 +62,7 @@ void SoundWindow::Create(EditorComponent* _editor)
 	openButton.SetTooltip("Open sound file.\nSupported extensions: WAV, OGG");
 	openButton.SetPos(XMFLOAT2(x, y));
 	openButton.SetSize(XMFLOAT2(wid, hei));
-	openButton.OnClick([&](wi::gui::EventArgs args) {
+	openButton.OnClick([this](wi::gui::EventArgs args) {
 		SoundComponent* sound = editor->GetCurrentScene().sounds.GetComponent(entity);
 		if (sound != nullptr)
 		{
@@ -187,7 +187,7 @@ void SoundWindow::Create(EditorComponent* _editor)
 	reverbComboBox.Create("Reverb: ");
 	reverbComboBox.SetPos(XMFLOAT2(x, y += step));
 	reverbComboBox.SetSize(XMFLOAT2(wid, hei));
-	reverbComboBox.OnSelect([&](wi::gui::EventArgs args) {
+	reverbComboBox.OnSelect([](wi::gui::EventArgs args) {
 		wi::audio::SetReverb((wi::audio::REVERB_PRESET)args.iValue);
 	});
 	reverbComboBox.AddItem("DEFAULT");

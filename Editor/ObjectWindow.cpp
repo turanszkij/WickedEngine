@@ -548,7 +548,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	lightmapResolutionSlider.SetTooltip("Set the approximate resolution for this object's lightmap. This will be packed into the larger global lightmap later.");
 	lightmapResolutionSlider.SetSize(XMFLOAT2(wid, hei));
 	lightmapResolutionSlider.SetPos(XMFLOAT2(x, y += step));
-	lightmapResolutionSlider.OnSlide([&](wi::gui::EventArgs args) {
+	lightmapResolutionSlider.OnSlide([this](wi::gui::EventArgs args) {
 		lightmapResolutionSlider.SetValue(float(wi::math::GetNextPowerOfTwo(uint32_t(args.fValue))));
 	});
 	AddWidget(&lightmapResolutionSlider);
@@ -578,7 +578,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	generateLightmapButton.SetTooltip("Render the lightmap for only this object. It will automatically combined with the global lightmap.");
 	generateLightmapButton.SetPos(XMFLOAT2(x, y += step));
 	generateLightmapButton.SetSize(XMFLOAT2(wid, hei));
-	generateLightmapButton.OnClick([&](wi::gui::EventArgs args) {
+	generateLightmapButton.OnClick([this](wi::gui::EventArgs args) {
 
 		Scene& scene = editor->GetCurrentScene();
 
@@ -681,7 +681,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	vertexAOButton.SetPos(XMFLOAT2(x, y += step));
 	vertexAOButton.SetSize(XMFLOAT2(wid, hei));
 	vertexAOButton.SetLocalizationEnabled(false);
-	vertexAOButton.OnClick([&](wi::gui::EventArgs args) {
+	vertexAOButton.OnClick([this](wi::gui::EventArgs args) {
 		const Scene& scene = editor->GetCurrentScene();
 
 		// Build BVHs for everything selected:
@@ -730,7 +730,8 @@ void ObjectWindow::Create(EditorComponent* _editor)
 					uint32_t groupSizePerCore = wi::jobsystem::DispatchGroupCount((uint32_t)objectcomponent->vertex_ao.size(), wi::jobsystem::GetThreadCount());
 
 					wi::jobsystem::context ctx;
-					wi::jobsystem::Dispatch(ctx, (uint32_t)objectcomponent->vertex_ao.size(), groupSizePerCore, [&](wi::jobsystem::JobArgs args) {
+					wi::jobsystem::Dispatch(ctx, (uint32_t)objectcomponent->vertex_ao.size(), groupSizePerCore, [=](wi::jobsystem::JobArgs args) {
+		        const Scene& scene = editor->GetCurrentScene();
 						XMFLOAT3 position = meshcomponent->vertex_positions[args.jobIndex];
 						XMFLOAT3 normal = meshcomponent->vertex_normals[args.jobIndex];
 						const XMMATRIX W = XMLoadFloat4x4(&scene.matrix_objects[objectcomponentIndex]);
@@ -898,7 +899,7 @@ void ObjectWindow::Create(EditorComponent* _editor)
 	colorPicker.SetPos(XMFLOAT2(5, y += step));
 	colorPicker.SetVisible(true);
 	colorPicker.SetEnabled(true);
-	colorPicker.OnColorChanged([&](wi::gui::EventArgs args) {
+	colorPicker.OnColorChanged([this](wi::gui::EventArgs args) {
 		ObjectComponent* object = editor->GetCurrentScene().objects.GetComponent(entity);
 		if (object != nullptr)
 		{

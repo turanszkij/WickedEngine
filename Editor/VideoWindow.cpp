@@ -50,7 +50,7 @@ void VideoWindow::Create(EditorComponent* _editor)
 
 	openButton.Create("Open File " ICON_OPEN);
 	openButton.SetTooltip("Open video file.\nSupported extensions: MP4");
-	openButton.OnClick([&](wi::gui::EventArgs args) {
+	openButton.OnClick([this](wi::gui::EventArgs args) {
 		VideoComponent* video = editor->GetCurrentScene().videos.GetComponent(entity);
 		if (video != nullptr)
 		{
@@ -78,7 +78,7 @@ void VideoWindow::Create(EditorComponent* _editor)
 
 	playpauseButton.Create(ICON_PLAY);
 	playpauseButton.SetTooltip("Play/Pause selected video instance.");
-	playpauseButton.OnClick([&](wi::gui::EventArgs args) {
+	playpauseButton.OnClick([this](wi::gui::EventArgs args) {
 		VideoComponent* video = editor->GetCurrentScene().videos.GetComponent(entity);
 		if (video != nullptr)
 		{
@@ -98,7 +98,7 @@ void VideoWindow::Create(EditorComponent* _editor)
 
 	stopButton.Create(ICON_STOP);
 	stopButton.SetTooltip("Stop selected video instance.");
-	stopButton.OnClick([&](wi::gui::EventArgs args) {
+	stopButton.OnClick([this](wi::gui::EventArgs args) {
 		VideoComponent* video = editor->GetCurrentScene().videos.GetComponent(entity);
 		if (video != nullptr)
 		{
@@ -110,7 +110,7 @@ void VideoWindow::Create(EditorComponent* _editor)
 	loopedCheckbox.Create("Looped: ");
 	loopedCheckbox.SetTooltip("Enable looping for the selected video instance.");
 	loopedCheckbox.SetCheckText(ICON_LOOP);
-	loopedCheckbox.OnClick([&](wi::gui::EventArgs args) {
+	loopedCheckbox.OnClick([this](wi::gui::EventArgs args) {
 		VideoComponent* video = editor->GetCurrentScene().videos.GetComponent(entity);
 		if (video != nullptr)
 		{
@@ -120,7 +120,7 @@ void VideoWindow::Create(EditorComponent* _editor)
 	AddWidget(&loopedCheckbox);
 
 	timerSlider.Create(0, 1, 0, 1000, "Timer: ");
-	timerSlider.OnSlide([&](wi::gui::EventArgs args) {
+	timerSlider.OnSlide([this](wi::gui::EventArgs args) {
 		VideoComponent* video = editor->GetCurrentScene().videos.GetComponent(entity);
 		video->Seek(args.fValue);
 	});

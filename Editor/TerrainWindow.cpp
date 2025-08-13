@@ -510,7 +510,7 @@ void PropsWindow::Rebuild()
 		return;
 	}
 
-	generation_callback = [&] {
+	generation_callback = [this] {
 		terrain->InvalidateProps();
 	};
 
@@ -524,7 +524,7 @@ void PropsWindow::AddWindow(wi::terrain::Prop& prop)
 {
 	PropWindow* wnd = new PropWindow(terrain, &prop, &editor->GetCurrentScene());
 	wnd->generation_callback = generation_callback;
-	wnd->OnClose([&, wnd](wi::gui::EventArgs args) {
+	wnd->OnClose([=](wi::gui::EventArgs args) {
 		windows_to_remove.push_back(wnd);
 	});
 	AddWidget(wnd);
@@ -621,7 +621,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	float hei = 20;
 	float wid = 120;
 
-	auto generate_callback = [&]() {
+	auto generate_callback = [this]() {
 
 		terrain->SetCenterToCamEnabled(centerToCamCheckBox.GetCheck());
 		terrain->SetRemovalEnabled(removalCheckBox.GetCheck());
@@ -1071,7 +1071,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 		materialCombos[i].SetTooltip("Select material entity");
 		materialCombos[i].SetSize(XMFLOAT2(wid, hei));
 		materialCombos[i].SetPos(XMFLOAT2(x, y += step));
-		materialCombos[i].OnSelect([&, i](wi::gui::EventArgs args) {
+		materialCombos[i].OnSelect([this, i](wi::gui::EventArgs args) {
 			const Scene& scene = editor->GetCurrentScene();
 			wi::ecs::Entity entity = static_cast<wi::ecs::Entity>(args.userdata);
 			if (entity != INVALID_ENTITY && scene.materials.Contains(entity))
@@ -1096,7 +1096,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	materialCombo_GrassParticle.SetTooltip("Select material entity");
 	materialCombo_GrassParticle.SetSize(XMFLOAT2(wid, hei));
 	materialCombo_GrassParticle.SetPos(XMFLOAT2(x, y += step));
-	materialCombo_GrassParticle.OnSelect([&](wi::gui::EventArgs args) {
+	materialCombo_GrassParticle.OnSelect([this](wi::gui::EventArgs args) {
 		const Scene& scene = editor->GetCurrentScene();
 		wi::ecs::Entity entity = static_cast<wi::ecs::Entity>(args.userdata);
 		if (entity != INVALID_ENTITY && scene.materials.Contains(entity))
@@ -1354,7 +1354,7 @@ void TerrainWindow::SetEntity(Entity entity)
 void TerrainWindow::RefreshMaterialComboBoxes()
 {
 	wi::scene::Scene& scene = editor->GetCurrentScene();
-	auto fillMaterialCombo = [&](wi::gui::ComboBox& comboBox, Entity selected) {
+	auto fillMaterialCombo = [&scene](wi::gui::ComboBox& comboBox, Entity selected) {
 		comboBox.ClearItems();
 		comboBox.AddItem("NO MATERIAL", INVALID_ENTITY);
 		for (size_t i = 0; i < scene.materials.GetCount(); ++i)
@@ -1594,8 +1594,13 @@ void TerrainWindow::SetupAssets()
 	}
 
 	wi::jobsystem::context ctx;
-	wi::jobsystem::Dispatch(ctx, (uint32_t)terrain_preset.materialEntities.size(), 1, [&](wi::jobsystem::JobArgs args) {
-		Entity entity = terrain_preset.materialEntities[args.jobIndex];
+	wi::jobsystem::Dispatch(ctx, (uint32_t)terrain_preset.materialEntities.size(), 1, [this, terrainEntity](wi::jobsystem::JobArgs args) {
+	  Scene& currentScene = editor->GetCurrentScene();
+	  wi::terrain::Terrain* terrain_preset = currentScene.terrains.GetComponent(terrainEntity);
+    // FIXME Should this log an error?
+    if (terrain_preset == nullptr)
+      return;
+		Entity entity = terrain_preset->materialEntities[args.jobIndex];
 		MaterialComponent* material = currentScene.materials.GetComponent(entity);
 		if (material == nullptr)
 			return;

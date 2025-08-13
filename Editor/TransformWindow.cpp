@@ -57,7 +57,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 	txInput.SetDescription("Position: ");
 	txInput.SetPos(XMFLOAT2(x, y += step));
 	txInput.SetSize(XMFLOAT2(siz, hei));
-	txInput.OnInputAccepted([&](wi::gui::EventArgs args) {
+	txInput.OnInputAccepted([this](wi::gui::EventArgs args) {
 		TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
@@ -71,7 +71,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 	tyInput.SetValue(0);
 	tyInput.SetPos(XMFLOAT2(x, y += step));
 	tyInput.SetSize(XMFLOAT2(siz, hei));
-	tyInput.OnInputAccepted([&](wi::gui::EventArgs args) {
+	tyInput.OnInputAccepted([this](wi::gui::EventArgs args) {
 		TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
@@ -85,7 +85,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 	tzInput.SetValue(0);
 	tzInput.SetPos(XMFLOAT2(x, y += step));
 	tzInput.SetSize(XMFLOAT2(siz, hei));
-	tzInput.OnInputAccepted([&](wi::gui::EventArgs args) {
+	tzInput.OnInputAccepted([this](wi::gui::EventArgs args) {
 		TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
@@ -103,7 +103,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 	sxInput.SetDescription("Scale: ");
 	sxInput.SetPos(XMFLOAT2(x, y));
 	sxInput.SetSize(XMFLOAT2(siz, hei));
-	sxInput.OnInputAccepted([&](wi::gui::EventArgs args) {
+	sxInput.OnInputAccepted([this](wi::gui::EventArgs args) {
 		TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
@@ -117,7 +117,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 	syInput.SetValue(1);
 	syInput.SetPos(XMFLOAT2(x, y += step));
 	syInput.SetSize(XMFLOAT2(siz, hei));
-	syInput.OnInputAccepted([&](wi::gui::EventArgs args) {
+	syInput.OnInputAccepted([this](wi::gui::EventArgs args) {
 		TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
@@ -131,7 +131,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 	szInput.SetValue(1);
 	szInput.SetPos(XMFLOAT2(x, y += step));
 	szInput.SetSize(XMFLOAT2(siz, hei));
-	szInput.OnInputAccepted([&](wi::gui::EventArgs args) {
+	szInput.OnInputAccepted([this](wi::gui::EventArgs args) {
 		TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
@@ -146,7 +146,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 	suInput.SetValue(1);
 	suInput.SetPos(XMFLOAT2(x, y += step));
 	suInput.SetSize(XMFLOAT2(siz, hei));
-	suInput.OnInputAccepted([&](wi::gui::EventArgs args) {
+	suInput.OnInputAccepted([this](wi::gui::EventArgs args) {
 		TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
@@ -168,7 +168,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 	rollInput.SetTooltip("Roll (in degrees)\n Note: Euler angle rotations can result in precision loss from quaternion conversion!");
 	rollInput.SetPos(XMFLOAT2(x, y += step));
 	rollInput.SetSize(XMFLOAT2(siz, hei));
-	rollInput.OnInputAccepted([&](wi::gui::EventArgs args) {
+	rollInput.OnInputAccepted([this](wi::gui::EventArgs args) {
 		TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
@@ -188,7 +188,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 	pitchInput.SetTooltip("Pitch (in degrees)\n Note: Euler angle rotations can result in precision loss from quaternion conversion!");
 	pitchInput.SetPos(XMFLOAT2(x, y += step));
 	pitchInput.SetSize(XMFLOAT2(siz, hei));
-	pitchInput.OnInputAccepted([&](wi::gui::EventArgs args) {
+	pitchInput.OnInputAccepted([this](wi::gui::EventArgs args) {
 		TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
@@ -208,7 +208,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 	yawInput.SetTooltip("Yaw (in degrees)\n Note: Euler angle rotations can result in precision loss from quaternion conversion!");
 	yawInput.SetPos(XMFLOAT2(x, y += step));
 	yawInput.SetSize(XMFLOAT2(siz, hei));
-	yawInput.OnInputAccepted([&](wi::gui::EventArgs args) {
+	yawInput.OnInputAccepted([this](wi::gui::EventArgs args) {
 		TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
@@ -232,7 +232,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 	rxInput.SetTooltip("Rotation Quaternion.X");
 	rxInput.SetPos(XMFLOAT2(x, y += step));
 	rxInput.SetSize(XMFLOAT2(siz, hei));
-	rxInput.OnInputAccepted([&](wi::gui::EventArgs args) {
+	rxInput.OnInputAccepted([this](wi::gui::EventArgs args) {
 		TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
@@ -248,7 +248,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 	ryInput.SetTooltip("Rotation Quaternion.Y");
 	ryInput.SetPos(XMFLOAT2(x, y += step));
 	ryInput.SetSize(XMFLOAT2(siz, hei));
-	ryInput.OnInputAccepted([&](wi::gui::EventArgs args) {
+	ryInput.OnInputAccepted([this](wi::gui::EventArgs args) {
 		TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
@@ -264,7 +264,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 	rzInput.SetTooltip("Rotation Quaternion.Z");
 	rzInput.SetPos(XMFLOAT2(x, y += step));
 	rzInput.SetSize(XMFLOAT2(siz, hei));
-	rzInput.OnInputAccepted([&](wi::gui::EventArgs args) {
+	rzInput.OnInputAccepted([this](wi::gui::EventArgs args) {
 		TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{
@@ -280,7 +280,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 	rwInput.SetTooltip("Rotation Quaternion.W");
 	rwInput.SetPos(XMFLOAT2(x, y += step));
 	rwInput.SetSize(XMFLOAT2(siz, hei));
-	rwInput.OnInputAccepted([&](wi::gui::EventArgs args) {
+	rwInput.OnInputAccepted([this](wi::gui::EventArgs args) {
 		TransformComponent* transform = editor->GetCurrentScene().transforms.GetComponent(entity);
 		if (transform != nullptr)
 		{

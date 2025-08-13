@@ -13,7 +13,7 @@ void HumanoidWindow::Create(EditorComponent* _editor)
 	SetSize(XMFLOAT2(670, 620));
 
 	closeButton.SetTooltip("Delete HumanoidComponent");
-	OnClose([&](wi::gui::EventArgs args) {
+	OnClose([this](wi::gui::EventArgs args) {
 
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
@@ -164,7 +164,7 @@ void HumanoidWindow::Create(EditorComponent* _editor)
 	AddWidget(&legSpacingSlider);
 
 	boneList.Create("Bones: ");
-	boneList.OnSelect([&](wi::gui::EventArgs args) {
+	boneList.OnSelect([this](wi::gui::EventArgs args) {
 
 		if (args.iValue < 0)
 			return;

@@ -12,7 +12,7 @@ void FontWindow::Create(EditorComponent* _editor)
 	SetSize(XMFLOAT2(670, 1020));
 
 	closeButton.SetTooltip("Delete Font");
-	OnClose([&](wi::gui::EventArgs args) {
+	OnClose([this](wi::gui::EventArgs args) {
 
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
@@ -52,13 +52,13 @@ void FontWindow::Create(EditorComponent* _editor)
 	AddWidget(&textInput);
 
 	fileButton.Create("From file...");
-	fileButton.OnClick([&](wi::gui::EventArgs args) {
+	fileButton.OnClick([this](wi::gui::EventArgs args) {
 
 		wi::helper::FileDialogParams params;
 		params.type = wi::helper::FileDialogParams::OPEN;
 		params.description = "Text (*.txt)";
 		params.extensions = { "txt" };
-		wi::helper::FileDialog(params, [&](std::string fileName) {
+		wi::helper::FileDialog(params, [this](std::string fileName) {
 			wi::vector<uint8_t> filedata;
 			wi::helper::FileRead(fileName, filedata);
 			std::string fileText;
@@ -101,7 +101,7 @@ void FontWindow::Create(EditorComponent* _editor)
 			params.type = wi::helper::FileDialogParams::OPEN;
 			params.description = "Font (*.TTF)";
 			params.extensions = wi::resourcemanager::GetSupportedFontStyleExtensions();
-			wi::helper::FileDialog(params, [&](std::string fileName) {
+			wi::helper::FileDialog(params, [=](std::string fileName) {
 				font->fontStyleResource = wi::resourcemanager::Load(fileName);
 				font->fontStyleName = fileName;
 				fontStyleButton.SetText(wi::helper::GetFileNameFromPath(font->fontStyleName));
