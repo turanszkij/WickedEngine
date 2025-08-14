@@ -21,7 +21,7 @@ public:
 		wi::gui::CheckBox check;
 		bool is_bool = false;
 	};
-	wi::vector<Entry> entries;
+  std::deque<Entry> entries;
 
 	void RefreshEntries();
 

@@ -8,7 +8,7 @@ public:
 
 	EditorComponent* editor = nullptr;
 
-	wi::vector<wi::gui::Button> buttons;
+  std::deque<wi::gui::Button> buttons;
 
 	wi::gui::Slider zoomSlider;
 

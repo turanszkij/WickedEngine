@@ -359,8 +359,6 @@ void LightWindow::RefreshCascades()
 	if (light == nullptr || light->type != LightComponent::DIRECTIONAL)
 		return;
 
-	cascades.reserve(light->cascade_distances.size());
-
 	int counter = 0;
 	for (auto& x : light->cascade_distances)
 	{
