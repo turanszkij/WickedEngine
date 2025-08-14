@@ -22,7 +22,7 @@ public:
 	};
 	SELECTION current_selection = SELECTION_COUNT;
 	wi::gui::Button folderButtons[SELECTION_COUNT];
-  std::deque<wi::gui::Button> itemButtons;
+	std::deque<wi::gui::Button> itemButtons;
 
 	wi::gui::Button openFolderButton;
 

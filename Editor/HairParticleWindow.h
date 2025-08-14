@@ -35,7 +35,7 @@ public:
 	wi::gui::Slider uniformitySlider;
 
 	wi::gui::Button addSpriteButton;
-  std::deque<wi::gui::Button> sprites;
+	std::deque<wi::gui::Button> sprites;
 	std::deque<wi::gui::Button> spriteRemoveButtons;
 	std::deque<wi::gui::Slider> spriteSizeSliders;
 
