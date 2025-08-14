@@ -77,6 +77,13 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 if (WIN32)
     set(PLATFORM "Windows")
     add_compile_definitions(WIN32=1)
+    if (MSVC)
+        add_compile_options(
+            /W3
+            /MP
+        )
+	endif()
+
     # add_compile_definitions(_WIN32=1) this is a given from the compiler
 elseif(UNIX)
     set(PLATFORM "SDL2")
