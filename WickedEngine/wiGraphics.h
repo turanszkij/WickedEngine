@@ -1820,18 +1820,26 @@ namespace wi::graphics
 			{
 			case 'r':
 			case 'R':
+			case 'x':
+			case 'X':
 				*comp = ComponentSwizzle::R;
 				break;
 			case 'g':
 			case 'G':
+			case 'y':
+			case 'Y':
 				*comp = ComponentSwizzle::G;
 				break;
 			case 'b':
 			case 'B':
+			case 'z':
+			case 'Z':
 				*comp = ComponentSwizzle::B;
 				break;
 			case 'a':
 			case 'A':
+			case 'w':
+			case 'W':
 				*comp = ComponentSwizzle::A;
 				break;
 			case '0':
