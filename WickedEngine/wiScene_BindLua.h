@@ -2032,6 +2032,7 @@ namespace wi::lua::scene
 		int SetRelativeOffset(lua_State* L);
 		int SetFootPlacementEnabled(lua_State* L);
 		int SetCharacterToCharacterCollisionDisabled(lua_State* L);
+		int SetDedicatedShadow(lua_State* L);
 
 		int GetHealth(lua_State* L);
 		int GetWidth(lua_State* L);
@@ -2051,6 +2052,7 @@ namespace wi::lua::scene
 		int GetRelativeOffset(lua_State* L);
 		int IsFootPlacementEnabled(lua_State* L);
 		int IsCharacterToCharacterCollisionDisabled(lua_State* L);
+		int IsDedicatedShadow(lua_State* L);
 		int GetLeaning(lua_State* L);
 		int GetLeaningSmoothed(lua_State* L);
 		int GetFootOffset(lua_State* L);

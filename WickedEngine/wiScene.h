@@ -90,6 +90,7 @@ namespace wi::scene
 		bool IsLightmapUpdateRequested() const { return lightmap_request_allocator.load() > 0; }
 		wi::Archive optimized_instatiation_data;
 		wi::vector<wi::primitive::Capsule> character_capsules;
+		wi::vector<wi::primitive::Sphere> character_dedicated_shadows;
 		wi::unordered_map<wi::ecs::Entity, wi::vector<wi::ecs::Entity>> topdown_hierarchy; // managed by BuildTopDownHierarchy() in every Update(), allows parent->children traversal
 		wi::jobsystem::context topdown_hierarchy_workload;
 

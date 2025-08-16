@@ -2884,7 +2884,7 @@ inline void CreateSpotLightShadowCam(const LightComponent& light, SHCAM& shcam)
 		shcam.init(light.position, light.rotation, 0.1f, light.GetRange(), light.outerConeAngle * 2);
 	}
 }
-inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponent camera, SHCAM* shcams, size_t shcam_count, const wi::rectpacker::Rect& shadow_rect)
+inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponent camera, SHCAM* shcams, size_t shcam_count, const wi::rectpacker::Rect& shadow_rect, const Sphere* dedicated_shadows = nullptr, size_t dedicated_shadow_count = 0)
 {
 	// remove camera jittering
 	camera.jitter = XMFLOAT2(0, 0);
@@ -2913,34 +2913,45 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 	// Compute shadow cameras:
 	for (int cascade = 0; cascade < shcam_count; ++cascade)
 	{
-		// Compute cascade bounds in light-view-space from the main frustum corners:
-		const float split_near = cascade == 0 ? 0 : light.cascade_distances[cascade - 1] / farPlane;
-		const float split_far = light.cascade_distances[cascade] / farPlane;
-		const XMVECTOR corners[] =
-		{
-			XMVector3Transform(XMVectorLerp(frustum_corners[0], frustum_corners[1], split_near), lightView),
-			XMVector3Transform(XMVectorLerp(frustum_corners[0], frustum_corners[1], split_far), lightView),
-			XMVector3Transform(XMVectorLerp(frustum_corners[2], frustum_corners[3], split_near), lightView),
-			XMVector3Transform(XMVectorLerp(frustum_corners[2], frustum_corners[3], split_far), lightView),
-			XMVector3Transform(XMVectorLerp(frustum_corners[4], frustum_corners[5], split_near), lightView),
-			XMVector3Transform(XMVectorLerp(frustum_corners[4], frustum_corners[5], split_far), lightView),
-			XMVector3Transform(XMVectorLerp(frustum_corners[6], frustum_corners[7], split_near), lightView),
-			XMVector3Transform(XMVectorLerp(frustum_corners[6], frustum_corners[7], split_far), lightView),
-		};
-
-		// Compute cascade bounding sphere center:
 		XMVECTOR center = XMVectorZero();
-		for (int j = 0; j < arraysize(corners); ++j)
-		{
-			center = XMVectorAdd(center, corners[j]);
-		}
-		center = center / float(arraysize(corners));
-
-		// Compute cascade bounding sphere radius:
 		float radius = 0;
-		for (int j = 0; j < arraysize(corners); ++j)
+
+		if (cascade < dedicated_shadow_count)
 		{
-			radius = std::max(radius, XMVectorGetX(XMVector3Length(XMVectorSubtract(corners[j], center))));
+			// Dedicated shadow sphere is used as-is:
+			const Sphere& sphere = dedicated_shadows[cascade];
+			center = XMVector3Transform(XMLoadFloat3(&sphere.center), lightView);
+			radius = sphere.radius;
+		}
+		else
+		{
+			// Compute cascade bounds in light-view-space from the main frustum corners:
+			const float split_near = cascade == 0 ? 0 : light.cascade_distances[cascade - 1 - dedicated_shadow_count] / farPlane;
+			const float split_far = light.cascade_distances[cascade - dedicated_shadow_count] / farPlane;
+			const XMVECTOR corners[] =
+			{
+				XMVector3Transform(XMVectorLerp(frustum_corners[0], frustum_corners[1], split_near), lightView),
+				XMVector3Transform(XMVectorLerp(frustum_corners[0], frustum_corners[1], split_far), lightView),
+				XMVector3Transform(XMVectorLerp(frustum_corners[2], frustum_corners[3], split_near), lightView),
+				XMVector3Transform(XMVectorLerp(frustum_corners[2], frustum_corners[3], split_far), lightView),
+				XMVector3Transform(XMVectorLerp(frustum_corners[4], frustum_corners[5], split_near), lightView),
+				XMVector3Transform(XMVectorLerp(frustum_corners[4], frustum_corners[5], split_far), lightView),
+				XMVector3Transform(XMVectorLerp(frustum_corners[6], frustum_corners[7], split_near), lightView),
+				XMVector3Transform(XMVectorLerp(frustum_corners[6], frustum_corners[7], split_far), lightView),
+			};
+
+			// Compute cascade bounding sphere center:
+			for (int j = 0; j < arraysize(corners); ++j)
+			{
+				center = XMVectorAdd(center, corners[j]);
+			}
+			center = center / float(arraysize(corners));
+
+			// Compute cascade bounding sphere radius:
+			for (int j = 0; j < arraysize(corners); ++j)
+			{
+				radius = std::max(radius, XMVectorGetX(XMVector3Length(XMVectorSubtract(corners[j], center))));
+			}
 		}
 
 		// Fit AABB onto bounding sphere:
@@ -3891,17 +3902,20 @@ void UpdateVisibility(Visibility& vis)
 				switch (light.GetType())
 				{
 				case LightComponent::DIRECTIONAL:
+				{
+					const int cascade_count = int(light.cascade_distances.size() + vis.scene->character_dedicated_shadows.size());
 					if (light.forced_shadow_resolution >= 0)
 					{
-						rect.w = light.forced_shadow_resolution * int(light.cascade_distances.size());
+						rect.w = light.forced_shadow_resolution * cascade_count;
 						rect.h = light.forced_shadow_resolution;
 					}
 					else
 					{
-						rect.w = int(max_shadow_resolution_2D * iterative_scaling) * int(light.cascade_distances.size());
+						rect.w = int(max_shadow_resolution_2D * iterative_scaling) * cascade_count;
 						rect.h = int(max_shadow_resolution_2D * iterative_scaling);
 					}
-					break;
+				}
+				break;
 				case LightComponent::SPOT:
 				case LightComponent::RECTANGLE:
 					if (light.forced_shadow_resolution >= 0)
@@ -3965,8 +3979,11 @@ void UpdateVisibility(Visibility& vis)
 							switch (light.GetType())
 							{
 							case LightComponent::DIRECTIONAL:
-								lightrect.w /= int(light.cascade_distances.size());
-								break;
+							{
+								const int cascade_count = int(light.cascade_distances.size() + vis.scene->character_dedicated_shadows.size());
+								lightrect.w /= cascade_count;
+							}
+							break;
 							case LightComponent::POINT:
 								lightrect.w /= 6;
 								break;
@@ -4573,13 +4590,13 @@ void UpdatePerFrameData(
 
 			shaderentity.SetIndices(matrixCounter, 0);
 
-			const uint cascade_count = std::min((uint)light.cascade_distances.size(), MATRIXARRAY_COUNT - matrixCounter);
+			const uint cascade_count = std::min(uint(light.cascade_distances.size() + vis.scene->character_dedicated_shadows.size()), MATRIXARRAY_COUNT - matrixCounter);
 			shaderentity.SetShadowCascadeCount(cascade_count);
 
-			if (shadowmap && !light.cascade_distances.empty())
+			if (shadowmap && cascade_count > 0)
 			{
 				SHCAM* shcams = (SHCAM*)alloca(sizeof(SHCAM) * cascade_count);
-				CreateDirLightShadowCams(light, *vis.camera, shcams, cascade_count, shadow_rect);
+				CreateDirLightShadowCams(light, *vis.camera, shcams, cascade_count, shadow_rect, vis.scene->character_dedicated_shadows.data(), vis.scene->character_dedicated_shadows.size());
 				for (size_t cascade = 0; cascade < cascade_count; ++cascade)
 				{
 					XMStoreFloat4x4(&matrixArray[matrixCounter++], shcams[cascade].view_projection);
@@ -6593,14 +6610,15 @@ void DrawShadowmaps(
 		{
 			if (max_shadow_resolution_2D == 0 && light.forced_shadow_resolution < 0)
 				break;
-			if (light.cascade_distances.empty())
+
+			const uint32_t cascade_count = std::min(uint(light.cascade_distances.size() + vis.scene->character_dedicated_shadows.size()), max_viewport_count);
+			if (cascade_count == 0)
 				break;
 
-			const uint32_t cascade_count = std::min((uint32_t)light.cascade_distances.size(), max_viewport_count);
 			Viewport* viewports = (Viewport*)alloca(sizeof(Viewport) * cascade_count);
 			Rect* scissors = (Rect*)alloca(sizeof(Rect) * cascade_count);
 			SHCAM* shcams = (SHCAM*)alloca(sizeof(SHCAM) * cascade_count);
-			CreateDirLightShadowCams(light, *vis.camera, shcams, cascade_count, shadow_rect);
+			CreateDirLightShadowCams(light, *vis.camera, shcams, cascade_count, shadow_rect, vis.scene->character_dedicated_shadows.data(), vis.scene->character_dedicated_shadows.size());
 
 			for (size_t i = 0; i < vis.scene->aabb_objects.size(); ++i)
 			{
@@ -6685,7 +6703,7 @@ void DrawShadowmaps(
 			if (!vis.visibleHairs.empty())
 			{
 				cb.cameras[0].position = vis.camera->Eye;
-				for (uint32_t cascade = 0; cascade < std::min(2u, cascade_count); ++cascade)
+				for (uint32_t cascade = 0; cascade < std::min(2u + (uint32_t)vis.scene->character_dedicated_shadows.size(), cascade_count); ++cascade)
 				{
 					XMStoreFloat4x4(&cb.cameras[0].view_projection, shcams[cascade].view_projection);
 					device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);

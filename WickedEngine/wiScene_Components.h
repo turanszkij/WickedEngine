@@ -2431,7 +2431,8 @@ namespace wi::scene
 		enum FLAGS
 		{
 			NONE = 0,
-			CHARACTER_TO_CHARACTER_COLLISION_DISABLED = 1 << 0
+			CHARACTER_TO_CHARACTER_COLLISION_DISABLED = 1 << 0,
+			DEDICATED_SHADOW = 1 << 1,
 		};
 		uint32_t _flags = NONE;
 
@@ -2582,6 +2583,9 @@ namespace wi::scene
 
 		bool IsCharacterToCharacterCollisionDisabled() const { return _flags & CHARACTER_TO_CHARACTER_COLLISION_DISABLED; }
 		void SetCharacterToCharacterCollisionDisabled(bool value = true) { if (value) { _flags |= CHARACTER_TO_CHARACTER_COLLISION_DISABLED; } else { _flags &= ~CHARACTER_TO_CHARACTER_COLLISION_DISABLED; } }
+
+		bool IsDedicatedShadow() const { return _flags & DEDICATED_SHADOW; }
+		void SetDedicatedShadow(bool value = true) { if (value) { _flags |= DEDICATED_SHADOW; } else { _flags &= ~DEDICATED_SHADOW; } }
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
