@@ -172,7 +172,7 @@ local function Character(model_scene, start_transform, controllable, anim_scene,
 			local capsule = charactercomponent.GetCapsule()
 			character_capsules[self.model] = capsule
 			--DrawCapsule(capsule)
-			charactercomponent.SetDedicatedShadow(self.controllable or (conversation.override_input and conversation.character == self)) -- main character and cinematic focus character have dedicated shadow
+			charactercomponent.SetDedicatedShadow(self == player or (conversation.override_input and conversation.character == self)) -- main character and cinematic focus character have dedicated shadow
 
 			local humanoid = scene.Component_GetHumanoid(self.humanoid)
 			humanoid.SetLookAtEnabled(false)
