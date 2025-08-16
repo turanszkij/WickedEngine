@@ -5891,6 +5891,19 @@ namespace wi::scene
 
 		});
 		wi::jobsystem::Wait(ctx);
+
+		character_dedicated_shadows.clear();
+		for (size_t i = 0; i < characters.GetCount(); ++i)
+		{
+			if (characters[i].IsDedicatedShadow())
+			{
+				Sphere sphere = characters[i].GetCapsule().getSphere();
+				if (camera.frustum.CheckSphere(sphere.center, sphere.radius)) // only take dedicated shadow for main camera view
+				{
+					character_dedicated_shadows.push_back(sphere);
+				}
+			}
+		}
 	}
 	void Scene::RunSplineUpdateSystem(wi::jobsystem::context& ctx)
 	{

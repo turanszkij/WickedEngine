@@ -8242,6 +8242,7 @@ Luna<CharacterComponent_BindLua>::FunctionType CharacterComponent_BindLua::metho
 	lunamethod(CharacterComponent_BindLua, SetRelativeOffset),
 	lunamethod(CharacterComponent_BindLua, SetFootPlacementEnabled),
 	lunamethod(CharacterComponent_BindLua, SetCharacterToCharacterCollisionDisabled),
+	lunamethod(CharacterComponent_BindLua, SetDedicatedShadow),
 
 	lunamethod(CharacterComponent_BindLua, GetHealth),
 	lunamethod(CharacterComponent_BindLua, GetWidth),
@@ -8257,6 +8258,7 @@ Luna<CharacterComponent_BindLua>::FunctionType CharacterComponent_BindLua::metho
 	lunamethod(CharacterComponent_BindLua, IsSwimming),
 	lunamethod(CharacterComponent_BindLua, IsFootPlacementEnabled),
 	lunamethod(CharacterComponent_BindLua, IsCharacterToCharacterCollisionDisabled),
+	lunamethod(CharacterComponent_BindLua, IsDedicatedShadow),
 	lunamethod(CharacterComponent_BindLua, GetCapsule),
 	lunamethod(CharacterComponent_BindLua, GetFacing),
 	lunamethod(CharacterComponent_BindLua, GetFacingSmoothed),
@@ -8663,6 +8665,17 @@ int CharacterComponent_BindLua::SetCharacterToCharacterCollisionDisabled(lua_Sta
 	component->SetCharacterToCharacterCollisionDisabled(wi::lua::SGetBool(L, 1));
 	return 0;
 }
+int CharacterComponent_BindLua::SetDedicatedShadow(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 1)
+	{
+		wi::lua::SError(L, "SetDedicatedShadow(bool value) not enough arguments!");
+		return 0;
+	}
+	component->SetDedicatedShadow(wi::lua::SGetBool(L, 1));
+	return 0;
+}
 
 int CharacterComponent_BindLua::GetHealth(lua_State* L)
 {
@@ -8732,6 +8745,11 @@ int CharacterComponent_BindLua::IsFootPlacementEnabled(lua_State* L)
 int CharacterComponent_BindLua::IsCharacterToCharacterCollisionDisabled(lua_State* L)
 {
 	wi::lua::SSetBool(L, component->IsCharacterToCharacterCollisionDisabled());
+	return 1;
+}
+int CharacterComponent_BindLua::IsDedicatedShadow(lua_State* L)
+{
+	wi::lua::SSetBool(L, component->IsDedicatedShadow());
 	return 1;
 }
 int CharacterComponent_BindLua::GetCapsule(lua_State* L)
