@@ -2969,15 +2969,15 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 		center = (vMin + vMax) * 0.5f;
 
 		XMFLOAT3 _center;
-		XMFLOAT3 _min;
-		XMFLOAT3 _max;
 		XMStoreFloat3(&_center, center);
-		XMStoreFloat3(&_min, vMin);
-		XMStoreFloat3(&_max, vMax);
 
 		// clipping extrusion for projection:
 		//	Tight Z distribution for precision (16-bit unorm especially) but allowing some extra room for cascade blending in Z
 		{
+			XMFLOAT3 _min;
+			XMFLOAT3 _max;
+			XMStoreFloat3(&_min, vMin);
+			XMStoreFloat3(&_max, vMax);
 			float ext = abs(_center.z - _min.z);
 			ext *= 4;
 			_min.z = _center.z - ext;
@@ -2991,6 +2991,10 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 		//	This only affects the frustum, which is for frustum culling draw call selection
 		//	It is coarser to allow far away casters to be drawn. Far away casters can be outside real projection, and their depth will be clamped (depth clip is off)
 		{
+			XMFLOAT3 _min;
+			XMFLOAT3 _max;
+			XMStoreFloat3(&_min, vMin);
+			XMStoreFloat3(&_max, vMax);
 			float ext = abs(_center.z - _min.z);
 			ext = std::max(ext, std::min(2000.0f, farPlane) * 0.5f);
 			_min.z = _center.z - ext;
