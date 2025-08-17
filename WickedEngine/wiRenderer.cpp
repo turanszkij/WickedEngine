@@ -2913,10 +2913,12 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 	// Compute shadow cameras:
 	for (int cascade = 0; cascade < shcam_count; ++cascade)
 	{
+		const bool dedicated_cascade = cascade < dedicated_shadow_count;
+
 		XMVECTOR center = XMVectorZero();
 		float radius = 0;
 
-		if (cascade < dedicated_shadow_count)
+		if (dedicated_cascade)
 		{
 			// Dedicated shadow sphere is used as-is:
 			const Sphere& sphere = dedicated_shadows[cascade];
@@ -2973,16 +2975,28 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 		XMStoreFloat3(&_min, vMin);
 		XMStoreFloat3(&_max, vMax);
 
-		// Extrude bounds to avoid early shadow clipping:
-		float ext = abs(_center.z - _min.z);
-		ext = std::max(ext, std::min(1500.0f, farPlane) * 0.5f);
-		_min.z = _center.z - ext;
-		_max.z = _center.z + ext;
+		// clipping extrusion for projection transform (thighter z-distribution):
+		{
+			float ext = abs(_center.z - _min.z);
+			ext *= 4;
+			_min.z = _center.z - ext;
+			_max.z = _center.z + ext;
 
-		const XMMATRIX lightProjection = XMMatrixOrthographicOffCenterLH(_min.x, _max.x, _min.y, _max.y, _max.z, _min.z); // notice reversed Z!
+			const XMMATRIX lightProjection = XMMatrixOrthographicOffCenterLH(_min.x, _max.x, _min.y, _max.y, _max.z, _min.z); // notice reversed Z!
+			shcams[cascade].view_projection = XMMatrixMultiply(lightView, lightProjection);
+		}
 
-		shcams[cascade].view_projection = XMMatrixMultiply(lightView, lightProjection);
-		shcams[cascade].frustum.Create(shcams[cascade].view_projection);
+		// culling extrusion for frustum (coarser culling, depth clip is off so some values will be clamped but still occluding):
+		{
+			float ext = abs(_center.z - _min.z);
+			ext = std::max(ext, std::min(2000.0f, farPlane) * 0.5f);
+			_min.z = _center.z - ext;
+			_max.z = _center.z + ext;
+
+			// For the frustum, it is extended in Z for culling
+			const XMMATRIX lightProjection = XMMatrixOrthographicOffCenterLH(_min.x, _max.x, _min.y, _max.y, _max.z, _min.z); // notice reversed Z!
+			shcams[cascade].frustum.Create(XMMatrixMultiply(lightView, lightProjection));
+		}
 	}
 
 }
