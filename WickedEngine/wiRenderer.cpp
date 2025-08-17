@@ -2975,7 +2975,8 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 		XMStoreFloat3(&_min, vMin);
 		XMStoreFloat3(&_max, vMax);
 
-		// clipping extrusion for projection transform (thighter z-distribution):
+		// clipping extrusion for projection:
+		//	Tight Z distribution for precision (16-bit unorm especially) but allowing some extra room for cascade blending in Z
 		{
 			float ext = abs(_center.z - _min.z);
 			ext *= 4;
@@ -2986,7 +2987,9 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 			shcams[cascade].view_projection = XMMatrixMultiply(lightView, lightProjection);
 		}
 
-		// culling extrusion for frustum (coarser culling, depth clip is off so some values will be clamped but still occluding):
+		// culling extrusion for frustum:
+		//	This only affects the frustum, which is for frustum culling draw call selection
+		//	It is coarser to allow far away casters to be drawn. Far away casters can be outside real projection, and their depth will be clamped (depth clip is off)
 		{
 			float ext = abs(_center.z - _min.z);
 			ext = std::max(ext, std::min(2000.0f, farPlane) * 0.5f);
