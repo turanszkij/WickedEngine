@@ -2,8 +2,9 @@
 #define WI_SHADOW_HF
 #include "globals.hlsli"
 
-#define SHADOW_SAMPLING_DISK
-//#define SHADOW_SAMPLING_DITHERING
+#define SHADOW_SAMPLING_DISK			// enables disk pattern sampling of shadows, otherwise it uses a fixed grid kernel
+#define SHADOW_SAMPLING_DITHERING		// enables dithering and temporal dithering for sampling, with this, shadows can use lower sample count but noise might be visible
+#define SHADOW_SAMPLING_PCSS			// enables penumbra computation based on blocker search (percentage closer soft shadows)
 
 #ifdef SHADOW_SAMPLING_DISK
 
@@ -158,7 +159,37 @@ inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, half2 radiu
 	half3 shadow = 0;
 	
 #ifndef DISABLE_SOFT_SHADOWMAP
-	const float2 spread = GetFrame().shadow_atlas_resolution_rcp.xy * mad(radius, 8, 2); // remap radius to try to match ray traced shadow result
+	float2 spread = GetFrame().shadow_atlas_resolution_rcp.xy * mad(radius, 8, 2); // remap radius to try to match ray traced shadow result
+
+#ifdef SHADOW_SAMPLING_PCSS
+	half z_receiver = cmp;
+	half blocker_count = 0;
+	half blocker_sum = 0;
+	const half search = 2;
+	for (half x = -search; x <= search; ++x)
+	for (half y = -search; y <= search; ++y)
+	{
+		const float2 sample_uv = clamp(mad(spread, float2(x, y) * 10, uv), uv_clamping.xy, uv_clamping.zw);
+		const half4 depths = texture_shadowatlas.GatherRed(sampler_linear_clamp, sample_uv);
+		for (uint d = 0; d < 4; ++d)
+		{
+			const half depth = depths[d];
+			if (depth > z_receiver)
+			{
+				blocker_count++;
+				blocker_sum += depth;
+			}
+		}
+	}
+	if (blocker_count > 0)
+	{
+		half blocker_average = blocker_sum / blocker_count;
+		half penumbra = abs(z_receiver - blocker_average) / blocker_average;
+		penumbra *= 50;
+		spread = max(spread * penumbra, GetFrame().shadow_atlas_resolution_rcp.xy);
+	}
+#endif // SHADOW_SAMPLING_PCSS
+	
 #ifdef SHADOW_SAMPLING_DITHERING
 	const half2x2 rot = dither_rot2x2(pixel + GetTemporalAASampleRotation()); // per pixel rotation for every sample
 #endif // SHADOW_SAMPLING_DITHERING
