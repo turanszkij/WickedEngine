@@ -3,8 +3,8 @@
 #include "globals.hlsli"
 
 #define SHADOW_SAMPLING_DISK			// enables disk pattern sampling of shadows, otherwise it uses a fixed grid kernel
-#define SHADOW_SAMPLING_DITHERING		// enables dithering and temporal dithering for sampling, with this, shadows can use lower sample count but noise might be visible
-#define SHADOW_SAMPLING_PCSS			// enables penumbra computation based on blocker search (percentage closer soft shadows)
+//#define SHADOW_SAMPLING_DITHERING		// enables dithering and temporal dithering for sampling, with this, shadows can use lower sample count but noise might be visible
+//#define SHADOW_SAMPLING_PCSS			// enables penumbra computation based on blocker search (percentage closer soft shadows)
 
 #ifdef SHADOW_SAMPLING_DISK
 
@@ -165,11 +165,11 @@ inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, half2 radiu
 	half z_receiver = cmp;
 	half blocker_count = 0;
 	half blocker_sum = 0;
-	const half search = 2;
-	for (half x = -search; x <= search; ++x)
-	for (half y = -search; y <= search; ++y)
+	const float search = 2;
+	for (float x = -search; x <= search; ++x)
+	for (float y = -search; y <= search; ++y)
 	{
-		const float2 sample_uv = clamp(mad(spread, float2(x, y) * 10, uv), uv_clamping.xy, uv_clamping.zw);
+		const float2 sample_uv = clamp(mad(spread, float2(x, y) * 4, uv), uv_clamping.xy, uv_clamping.zw);
 		const half4 depths = texture_shadowatlas.GatherRed(sampler_linear_clamp, sample_uv);
 		for (uint d = 0; d < 4; ++d)
 		{
@@ -184,9 +184,9 @@ inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, half2 radiu
 	if (blocker_count > 0)
 	{
 		half blocker_average = blocker_sum / blocker_count;
-		half penumbra = abs(z_receiver - blocker_average) / blocker_average;
-		penumbra *= 50;
-		spread = max(spread * penumbra, GetFrame().shadow_atlas_resolution_rcp.xy);
+		half penumbra = abs(z_receiver - blocker_average);
+		penumbra *= 200;
+		spread = clamp(spread * penumbra, GetFrame().shadow_atlas_resolution_rcp.xy * 2, spread * 4);
 	}
 #endif // SHADOW_SAMPLING_PCSS
 	
