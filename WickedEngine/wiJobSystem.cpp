@@ -14,6 +14,9 @@
 
 #ifdef PLATFORM_LINUX
 #include <pthread.h>
+#if __has_include(<pthread_np.h>)
+	#include <pthread_np.h>
+#endif
 #include <sys/resource.h>
 #endif // PLATFORM_LINUX
 
@@ -198,7 +201,8 @@ namespace wi::jobsystem
 			{
 				std::thread& worker = res.threads.emplace_back([threadID, priority, &res] {
 
-#ifdef PLATFORM_LINUX
+#if defined(__FREEBSD__)
+#elif defined(PLATFORM_LINUX)
 
 					// from the sched(2) manpage:
 					// In the current [Linux 2.6.23+] implementation, each unit of
