@@ -35,6 +35,12 @@
 #include <WinBase.h>
 #endif // _WIN32
 
+#ifdef __FREEBSD__
+#include <sys/param.h>
+#include <sys/sysctl.h>
+#include <sys/user.h>
+#endif
+
 #ifdef PLATFORM_LINUX
 #include <sys/sysinfo.h>
 #endif // PLATFORM_LINUX
@@ -1272,12 +1278,22 @@ namespace wi::helper
 
 	std::string GetExecutablePath()
 	{
-#ifdef _WIN32
+#if defined(_WIN32)
 		wchar_t wstr[1024] = {};
 		GetModuleFileName(NULL, wstr, arraysize(wstr));
 		char str[1024] = {};
 		StringConvert(wstr, str, arraysize(str));
 		return str;
+#elif defined(__FREEBSD__)
+		int name[] = { CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 };
+		char str[MAXPATHLEN] = {};
+		size_t length;
+		int error = sysctl(name, 4, str, &length, NULL, 0);
+		if (error < 0 || length <= 1) {
+			// sysctl failed
+			return std::string();
+		}
+		return std::string(str, length);
 #else
 		return std::filesystem::canonical("/proc/self/exe").string();
 #endif // _WIN32
@@ -1884,13 +1900,23 @@ namespace wi::helper
 		mem.process_virtual = pmc.PrivateUsage;
 #elif defined(PLATFORM_LINUX)
 		struct sysinfo info;
-		constexpr int PAGE_SIZE = 4096;
 		if (sysinfo(&info) == 0)
 		{
 			unsigned long phys = info.totalram - info.totalswap;
 			mem.total_physical = phys * info.mem_unit;
 			mem.total_virtual = info.totalswap * info.mem_unit;
 		}
+#if defined(__FREEBSD__)
+		int name[] = { CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid() };
+		size_t size = sizeof(struct kinfo_proc);
+		struct kinfo_proc kinfo;
+		int error = sysctl(name, 4, &kinfo, &size, NULL, 0);
+		if (error == 0)
+		{
+			mem.process_physical = kinfo.ki_rssize * PAGE_SIZE;
+		}
+#else
+		constexpr int PAGE_SIZE = 4096;
 		unsigned long l;
 		std::ifstream statm("/proc/self/statm");
 		// Format of statm:
@@ -1904,6 +1930,7 @@ namespace wi::helper
 		mem.process_physical = l * PAGE_SIZE;
 		// there doesn't seem to be an easy way to determine
 		// swapped out memory
+#endif
 #elif defined(PLATFORM_PS5)
 		wi::graphics::GraphicsDevice::MemoryUsage gpumem = wi::graphics::GetDevice()->GetMemoryUsage();
 		mem.process_physical = mem.total_physical = gpumem.budget;

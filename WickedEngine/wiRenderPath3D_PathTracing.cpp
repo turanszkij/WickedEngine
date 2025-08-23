@@ -12,7 +12,9 @@
 #include "OpenImageDenoise/oidn.hpp"
 #if OIDN_VERSION_MAJOR >= 2
 #define OPEN_IMAGE_DENOISE
+#ifdef _WIN32
 #pragma comment(lib,"OpenImageDenoise.lib")
+#endif
 // Also provide the required DLL files from OpenImageDenoise release near the exe!
 #endif // OIDN_VERSION_MAJOR >= 2
 #endif // __has_include("OpenImageDenoise/oidn.hpp")
