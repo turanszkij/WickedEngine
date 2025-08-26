@@ -6727,6 +6727,12 @@ void DrawShadowmaps(
 				for (uint32_t cascade = 0; cascade < std::min(2u + (uint32_t)vis.scene->character_dedicated_shadows.size(), cascade_count); ++cascade)
 				{
 					XMStoreFloat4x4(&cb.cameras[0].view_projection, shcams[cascade].view_projection);
+					cb.cameras[0].options = SHADERCAMERA_OPTION_ORTHO;
+					if (cascade < vis.scene->character_dedicated_shadows.size())
+					{
+						// Note: this hack is to improve the look of dedicated character shadow cascade which otherwise has too sharp grass shadows and cascade transition becomes too obvious
+						cb.cameras[0].options |= SHADERCAMERA_OPTION_DEDICATED_SHADOW_LODBIAS;
+					}
 					device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 
 					Viewport vp;
