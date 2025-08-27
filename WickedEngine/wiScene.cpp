@@ -4375,6 +4375,7 @@ namespace wi::scene
 			object.SetDynamic(false);
 			object.SetRequestPlanarReflection(false);
 			object.fadeDistance = object.draw_distance;
+			object.mesh_blend_required = false;
 
 			if (object.meshID != INVALID_ENTITY && meshes.Contains(object.meshID) && transforms.Contains(entity))
 			{
@@ -4485,6 +4486,11 @@ namespace wi::scene
 						if (material->HasPlanarReflection())
 						{
 							object.SetRequestPlanarReflection(true);
+						}
+
+						if (material->IsMeshBlend())
+						{
+							object.mesh_blend_required = true;
 						}
 
 						sort_bits.bits.shadertype |= 1 << material->shaderType;

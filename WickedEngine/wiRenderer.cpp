@@ -1077,6 +1077,8 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SHARPEN], "sharpenCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_TONEMAP], "tonemapCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_UNDERWATER], "underwaterCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_MESH_BLEND_PREPARE], "mesh_blend_prepareCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_MESH_BLEND], "mesh_blendCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_FSR_UPSCALING], "fsr_upscalingCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_FSR_SHARPEN], "fsr_sharpenCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_FSR2_AUTOGEN_REACTIVE_PASS], "ffx-fsr2/ffx_fsr2_autogen_reactive_pass.cso"); });
@@ -3699,6 +3701,11 @@ void UpdateVisibility(Visibility& vis)
 				if (object.GetFilterMask() & FILTER_TRANSPARENT)
 				{
 					vis.transparents_visible.store(true);
+				}
+
+				if (object.mesh_blend_required)
+				{
+					vis.mesh_blend_visible.store(true);
 				}
 
 				if (vis.flags & Visibility::ALLOW_OCCLUSION_CULLING)
@@ -18023,6 +18030,103 @@ void Postprocess_Underwater(
 	);
 
 	device->Barrier(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout), cmd);
+
+	wi::profiler::EndRange(range);
+	device->EventEnd(cmd);
+}
+void PostProcess_MeshBlend(
+	const Visibility& vis,
+	const Texture& output,
+	CommandList cmd
+)
+{
+	static Texture mask;
+	static Texture tmp;
+	if (!vis.mesh_blend_visible.load())
+	{
+		mask = {};
+		tmp = {};
+		return;
+	}
+	device->EventBegin("Postprocess_MeshBlend", cmd);
+	auto range = wi::profiler::BeginRangeGPU("Mesh Blend", cmd);
+
+	BindCommonResources(cmd);
+
+	const TextureDesc& desc = output.GetDesc();
+
+	PostProcess postprocess;
+	postprocess.resolution.x = desc.width;
+	postprocess.resolution.y = desc.height;
+	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+
+	if (mask.desc.width != desc.width || mask.desc.height != desc.height)
+	{
+		TextureDesc mask_desc = desc;
+		mask_desc.format = Format::R8_UNORM;
+		device->CreateTexture(&mask_desc, nullptr, &mask);
+		device->SetName(&mask, "MeshBlend mask");
+	}
+	if (tmp.desc.width != desc.width || tmp.desc.height != desc.height)
+	{
+		device->CreateTexture(&desc, nullptr, &tmp);
+		device->SetName(&tmp, "MeshBlend temp");
+	}
+
+	PushBarrier(GPUBarrier::Image(&mask, mask.desc.layout, ResourceState::UNORDERED_ACCESS));
+	PushBarrier(GPUBarrier::Image(&tmp, tmp.desc.layout, ResourceState::COPY_DST));
+	PushBarrier(GPUBarrier::Image(&output, output.desc.layout, ResourceState::COPY_SRC));
+	FlushBarriers(cmd);
+
+	{
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_MESH_BLEND_PREPARE], cmd);
+		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
+		const GPUResource* uavs[] = {
+			&mask,
+		};
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+
+		device->ClearUAV(&mask, 0, cmd);
+		device->Barrier(GPUBarrier::Memory(&mask), cmd);
+
+		device->Dispatch(
+			(desc.width + 7) / 8,
+			(desc.height + 7) / 8,
+			1,
+			cmd
+		);
+
+		PushBarrier(GPUBarrier::Image(&mask, ResourceState::UNORDERED_ACCESS, mask.desc.layout));
+	}
+
+	{
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_MESH_BLEND], cmd);
+		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
+		device->CopyResource(&tmp, &output, cmd);
+		PushBarrier(GPUBarrier::Image(&tmp, ResourceState::COPY_DST, tmp.desc.layout));
+		PushBarrier(GPUBarrier::Image(&output, ResourceState::COPY_SRC, ResourceState::UNORDERED_ACCESS));
+		FlushBarriers(cmd);
+
+		device->BindResource(&tmp, 0, cmd);
+		device->BindResource(&mask, 1, cmd);
+
+		const GPUResource* uavs[] = {
+			&output,
+		};
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+
+		device->Dispatch(
+			(desc.width + 15) / 16,
+			(desc.height + 15) / 16,
+			1,
+			cmd
+		);
+
+		device->Barrier(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout), cmd);
+	}
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);

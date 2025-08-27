@@ -164,6 +164,7 @@ namespace wi::renderer
 		XMFLOAT4 reflectionPlane = XMFLOAT4(0, 1, 0, 0);
 		std::atomic_bool volumetriclight_request{ false };
 		std::atomic_bool transparents_visible{ false };
+		std::atomic_bool mesh_blend_visible{ false };
 
 		void Clear()
 		{
@@ -182,6 +183,7 @@ namespace wi::renderer
 			planar_reflection_visible = false;
 			volumetriclight_request.store(false);
 			transparents_visible.store(false);
+			mesh_blend_visible.store(false);
 		}
 
 		bool IsRequestedPlanarReflections() const
@@ -962,6 +964,11 @@ namespace wi::renderer
 	);
 	void Postprocess_Underwater(
 		const wi::graphics::Texture& input,
+		const wi::graphics::Texture& output,
+		wi::graphics::CommandList cmd
+	);
+	void PostProcess_MeshBlend(
+		const Visibility& vis,
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd
 	);

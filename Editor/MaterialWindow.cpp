@@ -191,6 +191,15 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	}));
 	AddWidget(&capsuleShadowCheckBox);
 
+	meshblendCheckBox.Create("Mesh blend: ");
+	meshblendCheckBox.SetTooltip("Enable the mesh blending post process effect on this material.");
+	meshblendCheckBox.SetPos(XMFLOAT2(x, y += step));
+	meshblendCheckBox.SetSize(XMFLOAT2(hei, hei));
+	meshblendCheckBox.OnClick(forEachSelected([] (auto material, auto args) {
+		material->SetMeshBlend(args.bValue);
+	}));
+	AddWidget(&meshblendCheckBox);
+
 
 	shaderTypeComboBox.Create("Shader: ");
 	shaderTypeComboBox.SetTooltip("Select a shader for this material. \nCustom shaders (*) will also show up here (see wi::renderer:RegisterCustomShader() for more info.)\nNote that custom shaders (*) can't select between blend modes, as they are created with an explicit blend mode.");
@@ -875,6 +884,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		disableStreamingCheckBox.SetCheck(material->IsTextureStreamingDisabled());
 		coplanarCheckBox.SetCheck(material->IsCoplanarBlending());
 		capsuleShadowCheckBox.SetCheck(material->IsCapsuleShadowDisabled());
+		meshblendCheckBox.SetCheck(material->IsMeshBlend());
 		normalMapSlider.SetValue(material->normalMapStrength);
 		roughnessSlider.SetValue(material->roughness);
 		reflectanceSlider.SetValue(material->reflectance);
@@ -1051,6 +1061,7 @@ void MaterialWindow::ResizeLayout()
 	layout.add_right(disableStreamingCheckBox);
 	layout.add_right(coplanarCheckBox);
 	layout.add_right(capsuleShadowCheckBox);
+	layout.add_right(meshblendCheckBox);
 	layout.add(shaderTypeComboBox);
 	layout.add(blendModeComboBox);
 	layout.add(shadingRateComboBox);

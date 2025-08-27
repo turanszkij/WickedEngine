@@ -139,6 +139,7 @@ namespace wi::scene
 			DISABLE_TEXTURE_STREAMING = 1 << 15,
 			COPLANAR_BLENDING = 1 << 16, // force transparent material draw in opaque pass (useful for coplanar polygons)
 			DISABLE_CAPSULE_SHADOW = 1 << 17,
+			MESH_BLEND = 1 << 18,
 		};
 		uint32_t _flags = CAST_SHADOW;
 
@@ -374,6 +375,8 @@ namespace wi::scene
 		constexpr bool IsCapsuleShadowDisabled() const { return _flags & DISABLE_CAPSULE_SHADOW; }
 		constexpr void SetCapsuleShadowDisabled(bool value = true) { if (value) { _flags |= DISABLE_CAPSULE_SHADOW; } else { _flags &= ~DISABLE_CAPSULE_SHADOW; } }
 
+		constexpr void SetMeshBlend(bool value) { if (value) { _flags |= MESH_BLEND; } else { _flags &= ~MESH_BLEND; } }
+		constexpr bool IsMeshBlend() const { return _flags & MESH_BLEND; }
 
 		void SetPreferUncompressedTexturesEnabled(bool value = true) { if (value) { _flags |= PREFER_UNCOMPRESSED_TEXTURES; } else { _flags &= ~PREFER_UNCOMPRESSED_TEXTURES; } CreateRenderData(true); }
 
@@ -1179,6 +1182,7 @@ namespace wi::scene
 
 		uint16_t lod = 0;
 		mutable bool wetmap_cleared = false;
+		bool mesh_blend_required = false;
 
 		// these will only be valid for a single frame:
 		uint32_t mesh_index = ~0u;

@@ -36,6 +36,7 @@ public:
 	wi::gui::CheckBox forceDiffuseLightingCheckBox;
 	wi::gui::CheckBox focusModeCheckBox;
 
+	wi::gui::Slider outlineOpacitySlider;
 	wi::gui::Slider transformToolOpacitySlider;
 	wi::gui::Slider transformToolDarkenSlider;
 	wi::gui::Slider bonePickerOpacitySlider;

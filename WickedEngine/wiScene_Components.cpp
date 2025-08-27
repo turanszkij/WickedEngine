@@ -391,6 +391,10 @@ namespace wi::scene
 		{
 			material.options_stencilref |= SHADERMATERIAL_OPTION_BIT_CAPSULE_SHADOW_DISABLED;
 		}
+		if (IsMeshBlend())
+		{
+			material.options_stencilref |= SHADERMATERIAL_OPTION_BIT_MESH_BLEND;
+		}
 
 		material.options_stencilref |= wi::renderer::CombineStencilrefs(engineStencilRef, userStencilRef) << 24u;
 

@@ -1656,6 +1656,11 @@ namespace wi
 				device->Barrier(&barrier, 1, cmd);
 			}
 
+			if (getMeshBlendEnabled())
+			{
+				wi::renderer::PostProcess_MeshBlend(visibility_main, rtMain, cmd);
+			}
+
 			if (rtAO.IsValid())
 			{
 				device->Barrier(GPUBarrier::Aliasing(&rtAO, &rtParticleDistortion), cmd);

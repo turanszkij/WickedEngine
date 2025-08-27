@@ -79,6 +79,7 @@ enum SHADERMATERIAL_OPTIONS
 	SHADERMATERIAL_OPTION_BIT_UNLIT = 1 << 10,
 	SHADERMATERIAL_OPTION_BIT_USE_VERTEXAO = 1 << 11,
 	SHADERMATERIAL_OPTION_BIT_CAPSULE_SHADOW_DISABLED = 1 << 12,
+	SHADERMATERIAL_OPTION_BIT_MESH_BLEND = 1 << 13,
 };
 
 // Same as MaterialComponent::TEXTURESLOT
@@ -459,6 +460,7 @@ struct alignas(16) ShaderMaterial
 	inline bool IsAdditive() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_ADDITIVE; }
 	inline bool IsDoubleSided() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_DOUBLE_SIDED; }
 	inline bool IsCapsuleShadowDisabled() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_CAPSULE_SHADOW_DISABLED; }
+	inline bool IsMeshBlend() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_MESH_BLEND; }
 };
 
 // For binning shading based on shader types:

@@ -274,6 +274,11 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&saveCompressionCheckBox);
 
+	outlineOpacitySlider.Create(0, 1, 1, 100, "Outline Opacity: ");
+	outlineOpacitySlider.SetTooltip("You can control the transparency of the selection outline");
+	outlineOpacitySlider.SetSize(XMFLOAT2(100, 18));
+	AddWidget(&outlineOpacitySlider);
+
 	transformToolOpacitySlider.Create(0, 1, 1, 100, "Transform Tool Opacity: ");
 	transformToolOpacitySlider.SetTooltip("You can control the transparency of the object placement tool");
 	transformToolOpacitySlider.SetSize(XMFLOAT2(100, 18));
@@ -1300,6 +1305,7 @@ void GeneralWindow::ResizeLayout()
 
 	layout.jump();
 
+	layout.add(outlineOpacitySlider);
 	layout.add(transformToolOpacitySlider);
 	layout.add(transformToolDarkenSlider);
 	layout.add(bonePickerOpacitySlider);

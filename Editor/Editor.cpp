@@ -3536,7 +3536,7 @@ void EditorComponent::Render() const
 			{
 				device->EventBegin("Selection Outline Edge", cmd);
 				wi::renderer::BindCommonResources(cmd);
-				float opacity = wi::math::Lerp(0.4f, 1.0f, selectionColorIntensity);
+				float opacity = wi::math::Lerp(0.4f, 1.0f, selectionColorIntensity) * generalWnd.outlineOpacitySlider.GetValue();
 				XMFLOAT4 col = selectionColor2;
 				col.w *= opacity;
 				wi::renderer::Postprocess_Outline(rt_selectionOutline[0], cmd, 0.1f, 1, col);
