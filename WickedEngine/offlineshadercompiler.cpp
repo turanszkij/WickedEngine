@@ -50,6 +50,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"tonemapCS", wi::graphics::ShaderStage::CS},
 	{"underwaterCS", wi::graphics::ShaderStage::CS},
 	{"mesh_blend_prepareCS", wi::graphics::ShaderStage::CS},
+	{"mesh_blend_expandCS", wi::graphics::ShaderStage::CS},
 	{"mesh_blendCS", wi::graphics::ShaderStage::CS},
 	{"fsr_upscalingCS", wi::graphics::ShaderStage::CS},
 	{"fsr_sharpenCS", wi::graphics::ShaderStage::CS},

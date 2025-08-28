@@ -1078,6 +1078,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_TONEMAP], "tonemapCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_UNDERWATER], "underwaterCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_MESH_BLEND_PREPARE], "mesh_blend_prepareCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_MESH_BLEND_EXPAND], "mesh_blend_expandCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_MESH_BLEND], "mesh_blendCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_FSR_UPSCALING], "fsr_upscalingCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_FSR_SHARPEN], "fsr_sharpenCS.cso"); });
@@ -18042,10 +18043,13 @@ void PostProcess_MeshBlend(
 {
 	static Texture mask;
 	static Texture tmp;
+	static Texture expand[2];
 	if (!vis.mesh_blend_visible.load())
 	{
 		mask = {};
 		tmp = {};
+		expand[0] = {};
+		expand[1] = {};
 		return;
 	}
 	device->EventBegin("Postprocess_MeshBlend", cmd);
@@ -18055,7 +18059,7 @@ void PostProcess_MeshBlend(
 
 	const TextureDesc& desc = output.GetDesc();
 
-	PostProcess postprocess;
+	PostProcess postprocess = {};
 	postprocess.resolution.x = desc.width;
 	postprocess.resolution.y = desc.height;
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
@@ -18073,23 +18077,39 @@ void PostProcess_MeshBlend(
 		device->CreateTexture(&desc, nullptr, &tmp);
 		device->SetName(&tmp, "MeshBlend temp");
 	}
+	if (expand[0].desc.width != desc.width || expand[0].desc.height != desc.height)
+	{
+		TextureDesc mask_desc = desc;
+		mask_desc.format = Format::R16G16_UINT;
+		device->CreateTexture(&mask_desc, nullptr, &expand[0]);
+		device->SetName(&expand[0], "MeshBlend expand[0]");
+		device->CreateTexture(&mask_desc, nullptr, &expand[1]);
+		device->SetName(&expand[1], "MeshBlend expand[1]");
+	}
 
 	PushBarrier(GPUBarrier::Image(&mask, mask.desc.layout, ResourceState::UNORDERED_ACCESS));
 	PushBarrier(GPUBarrier::Image(&tmp, tmp.desc.layout, ResourceState::COPY_DST));
+	PushBarrier(GPUBarrier::Image(&expand[0], expand[0].desc.layout, ResourceState::UNORDERED_ACCESS));
+	PushBarrier(GPUBarrier::Image(&expand[1], expand[1].desc.layout, ResourceState::UNORDERED_ACCESS));
 	PushBarrier(GPUBarrier::Image(&output, output.desc.layout, ResourceState::COPY_SRC));
 	FlushBarriers(cmd);
 
+	device->ClearUAV(&mask, 0, cmd);
+	device->ClearUAV(&expand[0], 0, cmd);
+	device->ClearUAV(&expand[1], 0, cmd);
+	device->Barrier(GPUBarrier::Memory(&mask), cmd);
+	device->Barrier(GPUBarrier::Memory(&expand[0]), cmd);
+	device->Barrier(GPUBarrier::Memory(&expand[1]), cmd);
+
+	// Create region map
 	{
+		device->EventBegin("Prepare", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_MESH_BLEND_PREPARE], cmd);
+
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
-		const GPUResource* uavs[] = {
-			&mask,
-		};
-		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
-
-		device->ClearUAV(&mask, 0, cmd);
-		device->Barrier(GPUBarrier::Memory(&mask), cmd);
+		device->BindUAV(&mask, 0, cmd);
+		device->BindUAV(&expand[0], 1, cmd);
 
 		device->Dispatch(
 			(desc.width + 7) / 8,
@@ -18099,10 +18119,52 @@ void PostProcess_MeshBlend(
 		);
 
 		PushBarrier(GPUBarrier::Image(&mask, ResourceState::UNORDERED_ACCESS, mask.desc.layout));
+		PushBarrier(GPUBarrier::Image(&expand[0], ResourceState::UNORDERED_ACCESS, expand[0].desc.layout));
+		PushBarrier(GPUBarrier::Image(&expand[1], ResourceState::UNORDERED_ACCESS, expand[1].desc.layout));
+		FlushBarriers(cmd);
+		device->EventEnd(cmd);
 	}
 
+	// Expand edges by multipass jump flood
+	int read = 0;
+	int write = 1;
+	const float stepsizes[] = { /*256,128,64,*/32,16,8,4,2,1 };
 	{
+		device->EventBegin("Expand", cmd);
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_MESH_BLEND_EXPAND], cmd);
+
+		for (int i = 0; i < arraysize(stepsizes); ++i)
+		{
+			device->Barrier(GPUBarrier::Image(&expand[write], expand[write].desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
+
+			postprocess.params0.x = stepsizes[i];
+			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
+			device->BindResource(&expand[read], 0, cmd);
+			device->BindResource(&mask, 1, cmd);
+			device->BindUAV(&expand[write], 0, cmd);
+
+			device->Dispatch(
+				(desc.width + 7) / 8,
+				(desc.height + 7) / 8,
+				1,
+				cmd
+			);
+
+			device->Barrier(GPUBarrier::Image(&expand[write], ResourceState::UNORDERED_ACCESS, expand[write].desc.layout), cmd);
+
+			std::swap(read, write);
+		}
+
+		device->EventEnd(cmd);
+	}
+
+	// Blend across edges
+	{
+		device->EventBegin("Blend", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_MESH_BLEND], cmd);
+
+		postprocess.params0.x = stepsizes[0];
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 		device->CopyResource(&tmp, &output, cmd);
@@ -18112,20 +18174,19 @@ void PostProcess_MeshBlend(
 
 		device->BindResource(&tmp, 0, cmd);
 		device->BindResource(&mask, 1, cmd);
+		device->BindResource(&expand[read], 2, cmd);
 
-		const GPUResource* uavs[] = {
-			&output,
-		};
-		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+		device->BindUAV(&output, 0, cmd);
 
 		device->Dispatch(
-			(desc.width + 15) / 16,
-			(desc.height + 15) / 16,
+			(desc.width + 7) / 8,
+			(desc.height + 7) / 8,
 			1,
 			cmd
 		);
 
 		device->Barrier(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout), cmd);
+		device->EventEnd(cmd);
 	}
 
 	wi::profiler::EndRange(range);

@@ -5,12 +5,70 @@ PUSHCONSTANT(postprocess, PostProcess);
 
 Texture2D<half4> input : register(t0);
 Texture2D<half> mask : register(t1);
+Texture2D<uint2> edgemap : register(t2);
 
 RWTexture2D<half4> output : register(u0);
 
 static const float depth_diff_allowed = 0.14; // world space dist
 
-static const uint THREADCOUNT = 16;
+#if 1
+
+[numthreads(8, 8, 1)]
+void main(uint3 DTid : SV_DispatchThreadID)
+{
+	const uint2 edge = edgemap[DTid.xy];
+	if (all(edge == 0))
+		return;
+		
+	uint2 dim = postprocess.resolution;
+	float2 dim_rcp = postprocess.resolution_rcp;
+
+	ShaderCamera camera = GetCamera();
+	half depth_diff_allowed_norm = depth_diff_allowed * camera.z_far_rcp;
+	
+	const half current_id = mask[DTid.xy];
+	const half current_depth = texture_lineardepth[DTid.xy];
+	
+	half2 best_offset = (float2)edge - (float2)DTid.xy;
+	half best_dist = length(best_offset);
+	
+	const int spread = clamp(400.0 / max(0.001, current_depth * camera.z_far), 2, postprocess.params0.x);
+	const float max_dist = length(float2(spread, spread));
+	
+	const float2 uv = (DTid.xy + best_offset * 2 + 0.5) * dim_rcp; // *2 : mirroring to the other side of the seam
+	const half4 rrrr = input.GatherRed(sampler_linear_clamp, uv);
+	const half4 gggg = input.GatherGreen(sampler_linear_clamp, uv);
+	const half4 bbbb = input.GatherBlue(sampler_linear_clamp, uv);
+	const half4 aaaa = input.GatherAlpha(sampler_linear_clamp, uv);
+    const half4 iiii = mask.GatherRed(sampler_linear_clamp, uv);
+	const half4 zzzz = texture_lineardepth.GatherRed(sampler_linear_clamp, uv);
+	half4 other_color = 0;
+	half sum = 0;
+	[unroll] for (uint i = 0; i < 4; ++i)
+	{
+		// The gathered values are validated and invalid samples discarded
+		const half depth = zzzz[i];
+		const half diff = abs(current_depth - depth);
+		const half id = iiii[i];
+		if (id != current_id && diff <= depth_diff_allowed_norm)
+		{
+			other_color += half4(rrrr[i], gggg[i], bbbb[i], aaaa[i]);
+			sum++;
+		}
+	}
+	if (sum > 0)
+	{
+		other_color /= sum;
+		const half weight = saturate(0.5 - best_dist / max_dist);
+		output[DTid.xy] = lerp(output[DTid.xy], other_color, weight);
+		//output[DTid.xy] = float4(weight, 0, 0, 1);
+	}
+}
+
+
+#else
+
+static const uint THREADCOUNT = 8;
 static const int TILE_BORDER = 16;
 static const int TILE_SIZE = TILE_BORDER + THREADCOUNT + TILE_BORDER;
 groupshared uint cache_id_z[TILE_SIZE * TILE_SIZE];
@@ -53,7 +111,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	half best_dist = MEDIUMP_FLT_MAX;
 	half2 best_offset = 0;
 	
-	const int spread = clamp(400.0 / max(0.001, current_depth), 2, TILE_BORDER);
+	const int spread = clamp(400.0 / max(0.001, current_depth * camera.z_far), 2, TILE_BORDER);
 	const float max_dist = length(float2(spread, spread));
 	
 	const int step = 2;
@@ -108,3 +166,4 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 		}
 	}
 }
+#endif
