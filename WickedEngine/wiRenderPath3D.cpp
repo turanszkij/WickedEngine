@@ -1658,7 +1658,7 @@ namespace wi
 
 			if (getMeshBlendEnabled())
 			{
-				wi::renderer::PostProcess_MeshBlend(visibility_main, rtMain, cmd);
+				wi::renderer::PostProcess_MeshBlend(visibility_main, rtMain, cmd, getMeshBlendDepthRejection());
 			}
 
 			if (rtAO.IsValid())

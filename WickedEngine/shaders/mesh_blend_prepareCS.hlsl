@@ -1,12 +1,14 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
+// Purpose of this shader:
+//	- resolves the blend region mask from primitive ID buffer into 8bit unorm (unorm to allow gather later)
+//	- detects edges on the blend region mask, outputs thin edge map
+
 PUSHCONSTANT(postprocess, PostProcess);
 
-RWTexture2D<half> output : register(u0);
+RWTexture2D<half> output_mask : register(u0);
 RWTexture2D<uint2> output_edgemap : register(u1);
-
-static const float depth_diff_allowed = 0.14; // world space dist
 
 static const uint THREADCOUNT = 8;
 static const int TILE_BORDER = 1;
@@ -24,6 +26,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	float2 dim_rcp = postprocess.resolution_rcp;
 
 	// preload grid cache:
+	//	We only need center pixel for region mask, but we need a padded grid to detect edges, this allows combining both steps into a single pass
+	//	in exchange for some extra computation
 	const int2 tile_upperleft = Gid.xy * THREADCOUNT - TILE_BORDER;
 	for (uint y = GTid.y; y < TILE_SIZE; y += THREADCOUNT)
 	for (uint x = GTid.x; x < TILE_SIZE; x += THREADCOUNT)
@@ -31,7 +35,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 		const uint t = coord_to_cache(int2(x, y));
 		cache_id[t] = 0;
 		
-		const int2 pixel = tile_upperleft + int2(x, y);
+		const int2 pixel = clamp(tile_upperleft + int2(x, y), 0, postprocess.resolution - 1);
 	
 		uint primitiveID = texture_primitiveID[pixel];
 		if (primitiveID == 0)
@@ -66,14 +70,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	
 	const int2 pixel_local = TILE_BORDER + GTid.xy;
 	const half current_id = cache_id[coord_to_cache(pixel_local)];
-	const half current_depth = texture_lineardepth[DTid.xy];
 
-	output[DTid.xy] = current_id;
+	output_mask[DTid.xy] = current_id;
 
+	// Find edges by going through the cached grid:
 	float best_dist = FLT_MAX;
 	uint2 best_offset = 0;
-	ShaderCamera camera = GetCamera();
-	half depth_diff_allowed_norm = depth_diff_allowed * camera.z_far_rcp;
 	for (int y = -TILE_BORDER; y <= TILE_BORDER; y += 1)
 	for (int x = -TILE_BORDER; x <= TILE_BORDER; x += 1)
 	{
@@ -81,16 +83,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 		const half id = cache_id[coord_to_cache(pixel_local + offset)];
 		if (id != current_id)
 		{
-			const half depth = texture_lineardepth[DTid.xy + offset];
-			const half diff = abs(current_depth - depth);
-			if (diff <= depth_diff_allowed_norm)
+			const float dist = dot((float2)offset, (float2)offset);
+			if (dist < best_dist)
 			{
-				const float dist = dot((float2)offset, (float2)offset);
-				if (dist < best_dist)
-				{
-					best_dist = dist;
-					best_offset = offset;
-				}
+				best_dist = dist;
+				best_offset = offset;
 			}
 		}
 	}

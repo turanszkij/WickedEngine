@@ -970,7 +970,8 @@ namespace wi::renderer
 	void PostProcess_MeshBlend(
 		const Visibility& vis,
 		const wi::graphics::Texture& output,
-		wi::graphics::CommandList cmd
+		wi::graphics::CommandList cmd,
+		float depth_rejection = 0.2f
 	);
 	void Postprocess_Custom(
 		const wi::graphics::Shader& computeshader,

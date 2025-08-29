@@ -18038,7 +18038,8 @@ void Postprocess_Underwater(
 void PostProcess_MeshBlend(
 	const Visibility& vis,
 	const Texture& output,
-	CommandList cmd
+	CommandList cmd,
+	float depth_rejection
 )
 {
 	static Texture mask;
@@ -18064,6 +18065,7 @@ void PostProcess_MeshBlend(
 	postprocess.resolution.y = desc.height;
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	postprocess.params0.y = depth_rejection;
 
 	if (mask.desc.width != desc.width || mask.desc.height != desc.height)
 	{
@@ -18128,7 +18130,7 @@ void PostProcess_MeshBlend(
 	// Expand edges by multipass jump flood
 	int read = 0;
 	int write = 1;
-	const float stepsizes[] = { /*256,128,64,*/32,16,8,4,2,1 };
+	const float stepsizes[] = { /*256,128,*/64,32,16,8,4,2,1 };
 	{
 		device->EventBegin("Expand", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_MESH_BLEND_EXPAND], cmd);
