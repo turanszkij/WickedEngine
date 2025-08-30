@@ -22,9 +22,6 @@ inline uint coord_to_cache(int2 coord)
 [numthreads(THREADCOUNT, THREADCOUNT, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 {
-	uint2 dim = postprocess.resolution;
-	float2 dim_rcp = postprocess.resolution_rcp;
-
 	// preload grid cache:
 	//	We only need center pixel for region mask, but we need a padded grid to detect edges, this allows combining both steps into a single pass
 	//	in exchange for some extra computation
