@@ -53,7 +53,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		other_color /= sum;
 		dweight /= sum;
 		float weight = saturate(0.5 - best_dist / postprocess.params0.x) * dweight;
-		output[DTid.xy] = float4(lerp(output[DTid.xy].rgb, other_color.rgb, weight), 1);
-		//output[DTid.xy] = float4(weight, 0, 0, 1);
+		output[DTid.xy] = half4(lerp(input[DTid.xy].rgb, other_color.rgb, weight), 1);
+		//output[DTid.xy] = half4(weight, 0, 0, 1);
 	}
 }
