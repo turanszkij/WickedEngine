@@ -83,7 +83,7 @@ void main(uint2 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 				tmp.xyz /= max(0.0001, tmp.w); // max: avoid nan
 				depth = saturate(tmp.z); // saturate: avoid blown up values
 
-				bin = surface.material.shaderType;
+				bin = surface.material.GetShaderType();
 			}
 		}
 		else

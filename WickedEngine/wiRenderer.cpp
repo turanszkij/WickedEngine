@@ -18038,8 +18038,7 @@ void Postprocess_Underwater(
 void PostProcess_MeshBlend(
 	const Visibility& vis,
 	const Texture& output,
-	CommandList cmd,
-	float depth_rejection
+	CommandList cmd
 )
 {
 	static Texture mask;
@@ -18065,12 +18064,13 @@ void PostProcess_MeshBlend(
 	postprocess.resolution.y = desc.height;
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
-	postprocess.params0.y = depth_rejection;
+	const float max_distance = 10.0f;
+	postprocess.params0.y = max_distance;
 
 	if (mask.desc.width != desc.width || mask.desc.height != desc.height)
 	{
 		TextureDesc mask_desc = desc;
-		mask_desc.format = Format::R8_UNORM;
+		mask_desc.format = Format::R8G8_UNORM;
 		device->CreateTexture(&mask_desc, nullptr, &mask);
 		device->SetName(&mask, "MeshBlend mask");
 	}

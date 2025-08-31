@@ -59,7 +59,6 @@ namespace wi
 		float ssgiDepthRejection = 8;
 		wi::renderer::Tonemap tonemap = wi::renderer::Tonemap::ACES;
 		float hdr_calibration = 1;
-		float mesh_blend_depth_rejection = 0.2f;
 
 		AO ao = AO_DISABLED;
 		bool fxaaEnabled = false;
@@ -276,7 +275,6 @@ namespace wi
 		constexpr bool getFSR2Enabled() const { return fsr2Enabled; }
 		constexpr bool getVisibilityComputeShadingEnabled() const { return visibility_shading_in_compute; }
 		constexpr bool getMeshBlendEnabled() const { return mesh_blend; }
-		constexpr float getMeshBlendDepthRejection() const { return mesh_blend_depth_rejection; }
 
 		constexpr void setExposure(float value) { exposure = value; }
 		constexpr void setHDRCalibration(float value) { hdr_calibration = value; }
@@ -331,7 +329,6 @@ namespace wi
 		constexpr void setOcclusionCullingEnabled(bool value) { occlusionCullingEnabled = value; }
 		constexpr void setSceneUpdateEnabled(bool value) { sceneUpdateEnabled = value; }
 		constexpr void setMeshBlendEnabled(bool value) { mesh_blend = value; }
-		constexpr void setMeshBlendDepthRejection(float value) { mesh_blend_depth_rejection = value; }
 		void setFSREnabled(bool value);
 		void setFSR2Enabled(bool value);
 		void setFSR2Preset(FSR2_Preset preset); // this will modify resolution scaling and sampler lod bias

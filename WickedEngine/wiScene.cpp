@@ -4295,7 +4295,7 @@ namespace wi::scene
 		{
 			ShaderMaterial material;
 			material.init();
-			material.shaderType = ~0u;
+			material.shaderType_meshblend = 0xFFFF;
 			std::memcpy(materialArrayMapped + impostorMaterialOffset, &material, sizeof(material));
 
 			ShaderGeometry geometry;
@@ -4488,7 +4488,7 @@ namespace wi::scene
 							object.SetRequestPlanarReflection(true);
 						}
 
-						if (material->IsMeshBlend())
+						if (material->GetMeshBlend() > 0)
 						{
 							object.mesh_blend_required = true;
 						}

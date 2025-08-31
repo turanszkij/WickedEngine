@@ -462,22 +462,6 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&meshblendCheckBox);
 
-	meshblendSlider.Create(0, 2, 1, 1000, "Mesh Blend Threshold: ");
-	meshblendSlider.SetTooltip("Mesh blend post process depth rejection threshold.");
-	meshblendSlider.SetPos(XMFLOAT2(x, y += step));
-	meshblendSlider.SetSize(XMFLOAT2(itemheight, itemheight));
-	if (editor->main->config.GetSection("graphics").Has("mesh_blend_depth_rejection"))
-	{
-		editor->renderPath->setMeshBlendDepthRejection(editor->main->config.GetSection("graphics").GetFloat("mesh_blend_depth_rejection"));
-	}
-	meshblendSlider.SetValue(editor->renderPath->getMeshBlendDepthRejection());
-	meshblendSlider.OnSlide([=](wi::gui::EventArgs args) {
-		editor->renderPath->setMeshBlendDepthRejection(args.fValue);
-		editor->main->config.GetSection("graphics").Set("mesh_blend_depth_rejection", args.fValue);
-		editor->main->config.Commit();
-	});
-	AddWidget(&meshblendSlider);
-
 	speedMultiplierSlider.Create(0, 4, 1, 100000, "Speed: ");
 	speedMultiplierSlider.SetTooltip("Adjust the global speed (time multiplier)");
 	speedMultiplierSlider.SetSize(XMFLOAT2(wid, itemheight));
@@ -1797,7 +1781,6 @@ void GraphicsWindow::ResizeLayout()
 		shadowLODCheckBox.SetVisible(false);
 		tessellationCheckBox.SetVisible(false);
 		meshblendCheckBox.SetVisible(false);
-		meshblendSlider.SetVisible(false);
 	}
 	else
 	{
@@ -1818,7 +1801,6 @@ void GraphicsWindow::ResizeLayout()
 		shadowLODCheckBox.SetVisible(true);
 		tessellationCheckBox.SetVisible(true);
 		meshblendCheckBox.SetVisible(true);
-		meshblendSlider.SetVisible(true);
 
 		layout.add(shadowTypeComboBox);
 		layout.add(shadowProps2DComboBox);
@@ -1834,7 +1816,6 @@ void GraphicsWindow::ResizeLayout()
 		layout.add_right(shadowLODCheckBox);
 		layout.add_right(tessellationCheckBox);
 		layout.add_right(meshblendCheckBox);
-		layout.add(meshblendSlider);
 	}
 
 	layout.jump();

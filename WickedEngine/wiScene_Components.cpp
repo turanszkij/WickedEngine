@@ -328,7 +328,7 @@ namespace wi::scene
 			_blend_with_terrain_height_rcp = 1.0f / blend_with_terrain_height;
 		}
 		material.aniso_anisosin_anisocos_terrainblend = pack_half4(_anisotropy_strength, _anisotropy_rotation_sin, _anisotropy_rotation_cos, _blend_with_terrain_height_rcp);
-		material.shaderType = (uint)shaderType;
+		material.shaderType_meshblend = ((uint)shaderType & 0xFFFF) | (XMConvertFloatToHalf(mesh_blend) << 16u);
 		material.userdata = userdata;
 
 		if (shaderType == SHADERTYPE_INTERIORMAPPING)
@@ -390,10 +390,6 @@ namespace wi::scene
 		if (IsCapsuleShadowDisabled())
 		{
 			material.options_stencilref |= SHADERMATERIAL_OPTION_BIT_CAPSULE_SHADOW_DISABLED;
-		}
-		if (IsMeshBlend())
-		{
-			material.options_stencilref |= SHADERMATERIAL_OPTION_BIT_MESH_BLEND;
 		}
 
 		material.options_stencilref |= wi::renderer::CombineStencilrefs(engineStencilRef, userStencilRef) << 24u;

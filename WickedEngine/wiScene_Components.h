@@ -139,7 +139,6 @@ namespace wi::scene
 			DISABLE_TEXTURE_STREAMING = 1 << 15,
 			COPLANAR_BLENDING = 1 << 16, // force transparent material draw in opaque pass (useful for coplanar polygons)
 			DISABLE_CAPSULE_SHADOW = 1 << 17,
-			MESH_BLEND = 1 << 18,
 		};
 		uint32_t _flags = CAST_SHADOW;
 
@@ -201,6 +200,7 @@ namespace wi::scene
 		float cloak = 0;
 		float chromatic_aberration = 0;
 		float saturation = 1;
+		float mesh_blend = 0;
 
 		XMFLOAT4 sheenColor = XMFLOAT4(1, 1, 1, 1);
 		float sheenRoughness = 0;
@@ -375,8 +375,8 @@ namespace wi::scene
 		constexpr bool IsCapsuleShadowDisabled() const { return _flags & DISABLE_CAPSULE_SHADOW; }
 		constexpr void SetCapsuleShadowDisabled(bool value = true) { if (value) { _flags |= DISABLE_CAPSULE_SHADOW; } else { _flags &= ~DISABLE_CAPSULE_SHADOW; } }
 
-		constexpr void SetMeshBlend(bool value) { if (value) { _flags |= MESH_BLEND; } else { _flags &= ~MESH_BLEND; } }
-		constexpr bool IsMeshBlend() const { return _flags & MESH_BLEND; }
+		constexpr void SetMeshBlend(float value) { mesh_blend = value; SetDirty(); }
+		constexpr float GetMeshBlend() const { return mesh_blend; }
 
 		void SetPreferUncompressedTexturesEnabled(bool value = true) { if (value) { _flags |= PREFER_UNCOMPRESSED_TEXTURES; } else { _flags &= ~PREFER_UNCOMPRESSED_TEXTURES; } CreateRenderData(true); }
 

@@ -79,7 +79,6 @@ enum SHADERMATERIAL_OPTIONS
 	SHADERMATERIAL_OPTION_BIT_UNLIT = 1 << 10,
 	SHADERMATERIAL_OPTION_BIT_USE_VERTEXAO = 1 << 11,
 	SHADERMATERIAL_OPTION_BIT_CAPSULE_SHADOW_DISABLED = 1 << 12,
-	SHADERMATERIAL_OPTION_BIT_MESH_BLEND = 1 << 13,
 };
 
 // Same as MaterialComponent::TEXTURESLOT
@@ -376,7 +375,7 @@ struct alignas(16) ShaderMaterial
 	int sampler_descriptor;
 	uint options_stencilref;
 	uint layerMask;
-	uint shaderType;
+	uint shaderType_meshblend;
 
 	uint4 userdata;
 
@@ -404,7 +403,7 @@ struct alignas(16) ShaderMaterial
 		sampler_descriptor = -1;
 		options_stencilref = 0;
 		layerMask = ~0u;
-		shaderType = 0;
+		shaderType_meshblend = 0;
 
 		userdata = uint4(0, 0, 0, 0);
 
@@ -444,6 +443,8 @@ struct alignas(16) ShaderMaterial
 	inline half3 GetInteriorOffset() { return unpack_half3(subsurfaceScattering_inv); }
 	inline half2 GetInteriorSinCos() { return half2(unpack_half4(subsurfaceScattering).w, unpack_half4(subsurfaceScattering_inv).w); }
 	inline uint GetStencilRef() { return options_stencilref >> 24u; }
+	inline uint GetShaderType() { return shaderType_meshblend & 0xFFFF; }
+	inline half GetMeshBlend() { return f16tof32(shaderType_meshblend >> 16u); }
 #endif // __cplusplus
 
 	inline uint GetOptions() { return options_stencilref; }
@@ -460,7 +461,6 @@ struct alignas(16) ShaderMaterial
 	inline bool IsAdditive() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_ADDITIVE; }
 	inline bool IsDoubleSided() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_DOUBLE_SIDED; }
 	inline bool IsCapsuleShadowDisabled() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_CAPSULE_SHADOW_DISABLED; }
-	inline bool IsMeshBlend() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_MESH_BLEND; }
 };
 
 // For binning shading based on shader types:

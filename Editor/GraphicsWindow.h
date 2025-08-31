@@ -108,7 +108,6 @@ public:
 	wi::gui::CheckBox tessellationCheckBox;
 
 	wi::gui::CheckBox meshblendCheckBox;
-	wi::gui::Slider meshblendSlider;
 
 	enum RENDERPATH
 	{

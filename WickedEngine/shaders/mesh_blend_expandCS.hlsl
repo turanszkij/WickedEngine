@@ -7,7 +7,7 @@
 PUSHCONSTANT(postprocess, PostProcess);
 
 Texture2D<uint2> edgemap : register(t0);
-Texture2D<half> mask : register(t1);
+Texture2D<half2> mask : register(t1);
 
 RWTexture2D<uint2> output : register(u0);
 
@@ -30,7 +30,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	if (primitiveID == 0)
 		return;
 	
-	const half current_id = mask[DTid.xy];
+	const half current_id = mask[DTid.xy].x;
 	
 	uint2 current_edge = edgemap[DTid.xy];
 	float2 current_diff = (float2)DTid.xy - (float2)current_edge;
@@ -39,7 +39,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	for (uint i = 0; i < arraysize(offsets); ++i)
 	{
 		const uint2 edge = edgemap[clamp(DTid.xy + offsets[i] * postprocess.params0.x, 0, postprocess.resolution - 1)];
-		const half id = mask[edge];
+		const half id = mask[edge].x;
 		if (id != current_id)
 		{
 			const float2 diff = (float2)DTid.xy - (float2)edge;

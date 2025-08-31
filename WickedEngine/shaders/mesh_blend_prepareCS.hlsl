@@ -7,13 +7,13 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-RWTexture2D<half> output_mask : register(u0);
+RWTexture2D<half2> output_mask : register(u0);
 RWTexture2D<uint2> output_edgemap : register(u1);
 
 static const uint THREADCOUNT = 8;
 static const int TILE_BORDER = 1;
 static const int TILE_SIZE = TILE_BORDER + THREADCOUNT + TILE_BORDER;
-groupshared half cache_id[TILE_SIZE * TILE_SIZE];
+groupshared uint cache[TILE_SIZE * TILE_SIZE];
 inline uint coord_to_cache(int2 coord)
 {
 	return flatten2D(clamp(coord, 0, TILE_SIZE - 1), TILE_SIZE);
@@ -30,7 +30,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	for (uint x = GTid.x; x < TILE_SIZE; x += THREADCOUNT)
 	{
 		const uint t = coord_to_cache(int2(x, y));
-		cache_id[t] = 0;
+		cache[t] = 0;
 		
 		const int2 pixel = clamp(tile_upperleft + int2(x, y), 0, postprocess.resolution - 1);
 	
@@ -58,17 +58,19 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 			continue;
 		ShaderMaterial material = load_material(geometry.materialIndex);
 
-		if (material.IsMeshBlend())
+		const half mesh_blend = material.GetMeshBlend();
+		if (mesh_blend > 0)
 		{
-			cache_id[t] = half(float(((prim.instanceIndex * geometry.materialIndex) % 255) + 1) / 255.0); // +1: forced request indicator
+			cache[t] = pack_half2(half(float(((prim.instanceIndex * geometry.materialIndex) % 255) + 1) / 255.0), saturate(mesh_blend / postprocess.params0.y)); // +1: forced request indicator
 		}
 	}
 	GroupMemoryBarrierWithGroupSync();
 	
 	const int2 pixel_local = TILE_BORDER + GTid.xy;
-	const half current_id = cache_id[coord_to_cache(pixel_local)];
+	const half2 current = unpack_half2(cache[coord_to_cache(pixel_local)]);
+	const half current_id = current.x;
 
-	output_mask[DTid.xy] = current_id;
+	output_mask[DTid.xy] = current;
 
 	// Find edges by going through the cached grid:
 	float best_dist = FLT_MAX;
@@ -77,7 +79,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	for (int x = -TILE_BORDER; x <= TILE_BORDER; x += 1)
 	{
 		const int2 offset = int2(x, y);
-		const half id = cache_id[coord_to_cache(pixel_local + offset)];
+		const half id = unpack_half2(cache[coord_to_cache(pixel_local + offset)]).x;
 		if (id != current_id)
 		{
 			const float dist = dot((float2)offset, (float2)offset);
