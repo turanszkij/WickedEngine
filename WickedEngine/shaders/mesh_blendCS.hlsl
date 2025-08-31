@@ -22,6 +22,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float3 P = reconstruct_position(float2(DTid.xy + 0.5) * postprocess.resolution_rcp, texture_depth[DTid.xy], camera.inverse_view_projection);
 	
 	const half current_id = mask[DTid.xy];
+	const half edge_id = mask[edge];
 	
 	half2 best_offset = (float2)edge - (float2)DTid.xy;
 	half best_dist = length(best_offset);
@@ -39,7 +40,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	{
 		// The gathered values are validated and invalid samples discarded
 		const half id = iiii[i];
-		if (id != current_id)
+		if (id != current_id && id == edge_id) // only allow blending into different region, and only if it's the same as edge id
 		{
 			const float3 p0 = reconstruct_position(uv, dddd[i], camera.inverse_view_projection);
 			const float diff = length(p0 - P);
