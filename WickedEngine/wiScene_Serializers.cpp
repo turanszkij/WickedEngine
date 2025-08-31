@@ -266,6 +266,10 @@ namespace wi::scene
 			{
 				SerializeEntity(archive, cameraSource, seri);
 			}
+			if (seri.GetVersion() >= 11)
+			{
+				archive >> mesh_blend;
+			}
 
 			for (auto& x : textures)
 			{
@@ -440,6 +444,10 @@ namespace wi::scene
 			if (seri.GetVersion() >= 10)
 			{
 				SerializeEntity(archive, cameraSource, seri);
+			}
+			if (seri.GetVersion() >= 11)
+			{
+				archive << mesh_blend;
 			}
 		}
 	}
