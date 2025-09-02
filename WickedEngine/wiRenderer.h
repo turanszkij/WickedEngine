@@ -198,6 +198,10 @@ namespace wi::renderer
 		{
 			return transparents_visible.load();
 		}
+		bool IsMeshBlendVisible() const
+		{
+			return mesh_blend_visible.load();
+		}
 	};
 
 	// Performs frustum culling.
@@ -967,8 +971,17 @@ namespace wi::renderer
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd
 	);
+	struct MeshBlendResources
+	{
+		wi::graphics::Texture mask;
+		wi::graphics::Texture tmp;
+		wi::graphics::Texture expand[2];
+
+		bool IsValid() const { return mask.IsValid(); }
+	};
+	void CreateMeshBlendResources(MeshBlendResources& res, XMUINT2 resolution);
 	void PostProcess_MeshBlend(
-		const Visibility& vis,
+		const MeshBlendResources& res,
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd
 	);

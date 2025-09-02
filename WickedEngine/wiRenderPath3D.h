@@ -154,6 +154,7 @@ namespace wi
 		wi::renderer::VisibilityResources visibilityResources;
 		wi::renderer::FSR2Resources fsr2Resources;
 		wi::renderer::VXGIResources vxgiResources;
+		wi::renderer::MeshBlendResources meshblendResources;
 
 		wi::graphics::CommandList video_cmd;
 

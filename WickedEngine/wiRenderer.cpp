@@ -18035,23 +18035,33 @@ void Postprocess_Underwater(
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);
 }
+void CreateMeshBlendResources(MeshBlendResources& res, XMUINT2 resolution)
+{
+	TextureDesc desc;
+	desc.width = resolution.x;
+	desc.height = resolution.y;
+	desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+
+	desc.format = Format::R8G8_UNORM;
+	device->CreateTexture(&desc, nullptr, &res.mask);
+	device->SetName(&res.mask, "MeshBlend mask");
+
+	desc.format = Format::R11G11B10_FLOAT;
+	device->CreateTexture(&desc, nullptr, &res.tmp);
+	device->SetName(&res.tmp, "MeshBlend temp");
+
+	desc.format = Format::R16G16_UINT;
+	device->CreateTexture(&desc, nullptr, &res.expand[0]);
+	device->SetName(&res.expand[0], "MeshBlend expand[0]");
+	device->CreateTexture(&desc, nullptr, &res.expand[1]);
+	device->SetName(&res.expand[1], "MeshBlend expand[1]");
+}
 void PostProcess_MeshBlend(
-	const Visibility& vis,
+	const MeshBlendResources& res,
 	const Texture& output,
 	CommandList cmd
 )
 {
-	static Texture mask;
-	static Texture tmp;
-	static Texture expand[2];
-	if (!vis.mesh_blend_visible.load())
-	{
-		mask = {};
-		tmp = {};
-		expand[0] = {};
-		expand[1] = {};
-		return;
-	}
 	device->EventBegin("Postprocess_MeshBlend", cmd);
 	auto range = wi::profiler::BeginRangeGPU("Mesh Blend", cmd);
 
@@ -18067,41 +18077,19 @@ void PostProcess_MeshBlend(
 	const float max_distance = 10.0f;
 	postprocess.params0.y = max_distance;
 
-	if (mask.desc.width != desc.width || mask.desc.height != desc.height)
-	{
-		TextureDesc mask_desc = desc;
-		mask_desc.format = Format::R8G8_UNORM;
-		device->CreateTexture(&mask_desc, nullptr, &mask);
-		device->SetName(&mask, "MeshBlend mask");
-	}
-	if (tmp.desc.width != desc.width || tmp.desc.height != desc.height)
-	{
-		device->CreateTexture(&desc, nullptr, &tmp);
-		device->SetName(&tmp, "MeshBlend temp");
-	}
-	if (expand[0].desc.width != desc.width || expand[0].desc.height != desc.height)
-	{
-		TextureDesc mask_desc = desc;
-		mask_desc.format = Format::R16G16_UINT;
-		device->CreateTexture(&mask_desc, nullptr, &expand[0]);
-		device->SetName(&expand[0], "MeshBlend expand[0]");
-		device->CreateTexture(&mask_desc, nullptr, &expand[1]);
-		device->SetName(&expand[1], "MeshBlend expand[1]");
-	}
-
-	PushBarrier(GPUBarrier::Image(&mask, mask.desc.layout, ResourceState::UNORDERED_ACCESS));
-	PushBarrier(GPUBarrier::Image(&tmp, tmp.desc.layout, ResourceState::COPY_DST));
-	PushBarrier(GPUBarrier::Image(&expand[0], expand[0].desc.layout, ResourceState::UNORDERED_ACCESS));
-	PushBarrier(GPUBarrier::Image(&expand[1], expand[1].desc.layout, ResourceState::UNORDERED_ACCESS));
+	PushBarrier(GPUBarrier::Image(&res.mask, res.mask.desc.layout, ResourceState::UNORDERED_ACCESS));
+	PushBarrier(GPUBarrier::Image(&res.tmp, res.tmp.desc.layout, ResourceState::COPY_DST));
+	PushBarrier(GPUBarrier::Image(&res.expand[0], res.expand[0].desc.layout, ResourceState::UNORDERED_ACCESS));
+	PushBarrier(GPUBarrier::Image(&res.expand[1], res.expand[1].desc.layout, ResourceState::UNORDERED_ACCESS));
 	PushBarrier(GPUBarrier::Image(&output, output.desc.layout, ResourceState::COPY_SRC));
 	FlushBarriers(cmd);
 
-	device->ClearUAV(&mask, 0, cmd);
-	device->ClearUAV(&expand[0], 0, cmd);
-	device->ClearUAV(&expand[1], 0, cmd);
-	device->Barrier(GPUBarrier::Memory(&mask), cmd);
-	device->Barrier(GPUBarrier::Memory(&expand[0]), cmd);
-	device->Barrier(GPUBarrier::Memory(&expand[1]), cmd);
+	device->ClearUAV(&res.mask, 0, cmd);
+	device->ClearUAV(&res.expand[0], 0, cmd);
+	device->ClearUAV(&res.expand[1], 0, cmd);
+	device->Barrier(GPUBarrier::Memory(&res.mask), cmd);
+	device->Barrier(GPUBarrier::Memory(&res.expand[0]), cmd);
+	device->Barrier(GPUBarrier::Memory(&res.expand[1]), cmd);
 
 	// Create region map
 	{
@@ -18110,8 +18098,8 @@ void PostProcess_MeshBlend(
 
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
-		device->BindUAV(&mask, 0, cmd);
-		device->BindUAV(&expand[0], 1, cmd);
+		device->BindUAV(&res.mask, 0, cmd);
+		device->BindUAV(&res.expand[0], 1, cmd);
 
 		device->Dispatch(
 			(desc.width + 7) / 8,
@@ -18120,9 +18108,9 @@ void PostProcess_MeshBlend(
 			cmd
 		);
 
-		PushBarrier(GPUBarrier::Image(&mask, ResourceState::UNORDERED_ACCESS, mask.desc.layout));
-		PushBarrier(GPUBarrier::Image(&expand[0], ResourceState::UNORDERED_ACCESS, expand[0].desc.layout));
-		PushBarrier(GPUBarrier::Image(&expand[1], ResourceState::UNORDERED_ACCESS, expand[1].desc.layout));
+		PushBarrier(GPUBarrier::Image(&res.mask, ResourceState::UNORDERED_ACCESS, res.mask.desc.layout));
+		PushBarrier(GPUBarrier::Image(&res.expand[0], ResourceState::UNORDERED_ACCESS, res.expand[0].desc.layout));
+		PushBarrier(GPUBarrier::Image(&res.expand[1], ResourceState::UNORDERED_ACCESS, res.expand[1].desc.layout));
 		FlushBarriers(cmd);
 		device->EventEnd(cmd);
 	}
@@ -18137,14 +18125,14 @@ void PostProcess_MeshBlend(
 
 		for (int i = 0; i < arraysize(stepsizes); ++i)
 		{
-			device->Barrier(GPUBarrier::Image(&expand[write], expand[write].desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
+			device->Barrier(GPUBarrier::Image(&res.expand[write], res.expand[write].desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
 
 			postprocess.params0.x = stepsizes[i];
 			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
-			device->BindResource(&expand[read], 0, cmd);
-			device->BindResource(&mask, 1, cmd);
-			device->BindUAV(&expand[write], 0, cmd);
+			device->BindResource(&res.expand[read], 0, cmd);
+			device->BindResource(&res.mask, 1, cmd);
+			device->BindUAV(&res.expand[write], 0, cmd);
 
 			device->Dispatch(
 				(desc.width + 7) / 8,
@@ -18153,7 +18141,7 @@ void PostProcess_MeshBlend(
 				cmd
 			);
 
-			device->Barrier(GPUBarrier::Image(&expand[write], ResourceState::UNORDERED_ACCESS, expand[write].desc.layout), cmd);
+			device->Barrier(GPUBarrier::Image(&res.expand[write], ResourceState::UNORDERED_ACCESS, res.expand[write].desc.layout), cmd);
 
 			std::swap(read, write);
 		}
@@ -18169,14 +18157,14 @@ void PostProcess_MeshBlend(
 		postprocess.params0.x = stepsizes[0];
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
-		device->CopyResource(&tmp, &output, cmd);
-		PushBarrier(GPUBarrier::Image(&tmp, ResourceState::COPY_DST, tmp.desc.layout));
+		device->CopyResource(&res.tmp, &output, cmd);
+		PushBarrier(GPUBarrier::Image(&res.tmp, ResourceState::COPY_DST, res.tmp.desc.layout));
 		PushBarrier(GPUBarrier::Image(&output, ResourceState::COPY_SRC, ResourceState::UNORDERED_ACCESS));
 		FlushBarriers(cmd);
 
-		device->BindResource(&tmp, 0, cmd);
-		device->BindResource(&mask, 1, cmd);
-		device->BindResource(&expand[read], 2, cmd);
+		device->BindResource(&res.tmp, 0, cmd);
+		device->BindResource(&res.mask, 1, cmd);
+		device->BindResource(&res.expand[read], 2, cmd);
 
 		device->BindUAV(&output, 0, cmd);
 

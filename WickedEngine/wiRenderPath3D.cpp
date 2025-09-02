@@ -81,6 +81,7 @@ namespace wi
 		visibilityResources = {};
 		fsr2Resources = {};
 		vxgiResources = {};
+		meshblendResources = {};
 	}
 
 	void RenderPath3D::ResizeBuffers()
@@ -818,6 +819,18 @@ namespace wi
 				wi::scene::VideoComponent& video = scene->videos[i];
 				wi::video::DecodeVideo(&video.videoinstance, video_cmd);
 			}
+		}
+
+		if (getMeshBlendEnabled() && visibility_main.IsMeshBlendVisible())
+		{
+			if (!meshblendResources.IsValid())
+			{
+				wi::renderer::CreateMeshBlendResources(meshblendResources, internalResolution);
+			}
+		}
+		else
+		{
+			meshblendResources = {};
 		}
 
 		prerender_happened = true;
@@ -1656,9 +1669,9 @@ namespace wi
 				device->Barrier(&barrier, 1, cmd);
 			}
 
-			if (getMeshBlendEnabled())
+			if (getMeshBlendEnabled() && visibility_main.IsMeshBlendVisible())
 			{
-				wi::renderer::PostProcess_MeshBlend(visibility_main, rtMain, cmd);
+				wi::renderer::PostProcess_MeshBlend(meshblendResources, rtMain, cmd);
 			}
 
 			if (rtAO.IsValid())
