@@ -1175,6 +1175,11 @@ namespace wi
 				);
 			}
 
+			if (getMeshBlendEnabled() && visibility_main.IsMeshBlendVisible())
+			{
+				wi::renderer::PostProcess_MeshBlend_EdgeProcess(meshblendResources, cmd);
+			}
+
 		});
 
 		// Occlusion culling:
@@ -1671,7 +1676,7 @@ namespace wi
 
 			if (getMeshBlendEnabled() && visibility_main.IsMeshBlendVisible())
 			{
-				wi::renderer::PostProcess_MeshBlend(meshblendResources, rtMain, cmd);
+				wi::renderer::PostProcess_MeshBlend_Resolve(meshblendResources, rtMain, cmd);
 			}
 
 			if (rtAO.IsValid())

@@ -980,7 +980,11 @@ namespace wi::renderer
 		bool IsValid() const { return mask.IsValid(); }
 	};
 	void CreateMeshBlendResources(MeshBlendResources& res, XMUINT2 resolution);
-	void PostProcess_MeshBlend(
+	void PostProcess_MeshBlend_EdgeProcess( // this part can be run on async compute, it doesn't need color buffer, only the primID
+		const MeshBlendResources& res,
+		wi::graphics::CommandList cmd
+	);
+	void PostProcess_MeshBlend_Resolve(
 		const MeshBlendResources& res,
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd

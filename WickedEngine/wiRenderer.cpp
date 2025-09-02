@@ -18035,6 +18035,10 @@ void Postprocess_Underwater(
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);
 }
+
+static constexpr float meshblend_stepsizes[] = { /*256,128,*/64,32,16,8,4,2,1 };
+static constexpr int meshblend_final_read = arraysize(meshblend_stepsizes) % 2;
+static constexpr int meshblend_final_write = 1 - meshblend_final_read;
 void CreateMeshBlendResources(MeshBlendResources& res, XMUINT2 resolution)
 {
 	TextureDesc desc;
@@ -18046,28 +18050,27 @@ void CreateMeshBlendResources(MeshBlendResources& res, XMUINT2 resolution)
 	device->CreateTexture(&desc, nullptr, &res.mask);
 	device->SetName(&res.mask, "MeshBlend mask");
 
-	desc.format = Format::R11G11B10_FLOAT;
-	device->CreateTexture(&desc, nullptr, &res.tmp);
-	device->SetName(&res.tmp, "MeshBlend temp");
-
 	desc.format = Format::R16G16_UINT;
 	device->CreateTexture(&desc, nullptr, &res.expand[0]);
 	device->SetName(&res.expand[0], "MeshBlend expand[0]");
 	device->CreateTexture(&desc, nullptr, &res.expand[1]);
 	device->SetName(&res.expand[1], "MeshBlend expand[1]");
+
+	desc.format = Format::R11G11B10_FLOAT;
+	device->CreateTexture(&desc, nullptr, &res.tmp, &res.expand[meshblend_final_write]); // aliased! Need to take into account the ping-ponging indices!
+	device->SetName(&res.tmp, "MeshBlend temp");
 }
-void PostProcess_MeshBlend(
+void PostProcess_MeshBlend_EdgeProcess(
 	const MeshBlendResources& res,
-	const Texture& output,
 	CommandList cmd
 )
 {
-	device->EventBegin("Postprocess_MeshBlend", cmd);
-	auto range = wi::profiler::BeginRangeGPU("Mesh Blend", cmd);
+	device->EventBegin("PostProcess_MeshBlend_EdgeProcess", cmd);
+	auto range = wi::profiler::BeginRangeGPU("Mesh Blend - Edge procesing (Async compute)", cmd);
 
 	BindCommonResources(cmd);
 
-	const TextureDesc& desc = output.GetDesc();
+	const TextureDesc& desc = res.mask.GetDesc();
 
 	PostProcess postprocess = {};
 	postprocess.resolution.x = desc.width;
@@ -18077,11 +18080,10 @@ void PostProcess_MeshBlend(
 	const float max_distance = 10.0f;
 	postprocess.params0.y = max_distance;
 
+	PushBarrier(GPUBarrier::Aliasing(&res.tmp , &res.expand[meshblend_final_write]));
 	PushBarrier(GPUBarrier::Image(&res.mask, res.mask.desc.layout, ResourceState::UNORDERED_ACCESS));
-	PushBarrier(GPUBarrier::Image(&res.tmp, res.tmp.desc.layout, ResourceState::COPY_DST));
 	PushBarrier(GPUBarrier::Image(&res.expand[0], res.expand[0].desc.layout, ResourceState::UNORDERED_ACCESS));
 	PushBarrier(GPUBarrier::Image(&res.expand[1], res.expand[1].desc.layout, ResourceState::UNORDERED_ACCESS));
-	PushBarrier(GPUBarrier::Image(&output, output.desc.layout, ResourceState::COPY_SRC));
 	FlushBarriers(cmd);
 
 	device->ClearUAV(&res.mask, 0, cmd);
@@ -18118,16 +18120,15 @@ void PostProcess_MeshBlend(
 	// Expand edges by multipass jump flood
 	int read = 0;
 	int write = 1;
-	const float stepsizes[] = { /*256,128,*/64,32,16,8,4,2,1 };
 	{
 		device->EventBegin("Expand", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_MESH_BLEND_EXPAND], cmd);
 
-		for (int i = 0; i < arraysize(stepsizes); ++i)
+		for (int i = 0; i < arraysize(meshblend_stepsizes); ++i)
 		{
 			device->Barrier(GPUBarrier::Image(&res.expand[write], res.expand[write].desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
 
-			postprocess.params0.x = stepsizes[i];
+			postprocess.params0.x = meshblend_stepsizes[i];
 			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 			device->BindResource(&res.expand[read], 0, cmd);
@@ -18149,35 +18150,58 @@ void PostProcess_MeshBlend(
 		device->EventEnd(cmd);
 	}
 
-	// Blend across edges
-	{
-		device->EventBegin("Blend", cmd);
-		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_MESH_BLEND], cmd);
+	wi::profiler::EndRange(range);
+	device->EventEnd(cmd);
+}
+void PostProcess_MeshBlend_Resolve(
+	const MeshBlendResources& res,
+	const Texture& output,
+	CommandList cmd
+)
+{
+	device->EventBegin("PostProcess_MeshBlend_Resolve", cmd);
+	auto range = wi::profiler::BeginRangeGPU("Mesh Blend - Resolve (Gfx)", cmd);
 
-		postprocess.params0.x = stepsizes[0];
-		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+	BindCommonResources(cmd);
 
-		device->CopyResource(&res.tmp, &output, cmd);
-		PushBarrier(GPUBarrier::Image(&res.tmp, ResourceState::COPY_DST, res.tmp.desc.layout));
-		PushBarrier(GPUBarrier::Image(&output, ResourceState::COPY_SRC, ResourceState::UNORDERED_ACCESS));
-		FlushBarriers(cmd);
+	const TextureDesc& desc = output.GetDesc();
 
-		device->BindResource(&res.tmp, 0, cmd);
-		device->BindResource(&res.mask, 1, cmd);
-		device->BindResource(&res.expand[read], 2, cmd);
+	PostProcess postprocess = {};
+	postprocess.resolution.x = desc.width;
+	postprocess.resolution.y = desc.height;
+	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	const float max_distance = 10.0f;
+	postprocess.params0.y = max_distance;
 
-		device->BindUAV(&output, 0, cmd);
+	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_MESH_BLEND], cmd);
 
-		device->Dispatch(
-			(desc.width + 7) / 8,
-			(desc.height + 7) / 8,
-			1,
-			cmd
-		);
+	postprocess.params0.x = meshblend_stepsizes[0];
+	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
-		device->Barrier(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout), cmd);
-		device->EventEnd(cmd);
-	}
+	PushBarrier(GPUBarrier::Aliasing(&res.expand[meshblend_final_write], &res.tmp));
+	PushBarrier(GPUBarrier::Image(&res.tmp, res.tmp.desc.layout, ResourceState::COPY_DST));
+	PushBarrier(GPUBarrier::Image(&output, output.desc.layout, ResourceState::COPY_SRC));
+	FlushBarriers(cmd);
+	device->CopyResource(&res.tmp, &output, cmd);
+	PushBarrier(GPUBarrier::Image(&res.tmp, ResourceState::COPY_DST, res.tmp.desc.layout));
+	PushBarrier(GPUBarrier::Image(&output, ResourceState::COPY_SRC, ResourceState::UNORDERED_ACCESS));
+	FlushBarriers(cmd);
+
+	device->BindResource(&res.tmp, 0, cmd);
+	device->BindResource(&res.mask, 1, cmd);
+	device->BindResource(&res.expand[meshblend_final_read], 2, cmd);
+
+	device->BindUAV(&output, 0, cmd);
+
+	device->Dispatch(
+		(desc.width + 7) / 8,
+		(desc.height + 7) / 8,
+		1,
+		cmd
+	);
+
+	device->Barrier(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout), cmd);
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);
