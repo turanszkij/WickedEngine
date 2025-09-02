@@ -19,6 +19,19 @@ inline uint coord_to_cache(int2 coord)
 	return flatten2D(clamp(coord, 0, TILE_SIZE - 1), TILE_SIZE);
 }
 
+// Straight neighbors first, diagonals after
+static const int2 offsets[] = {
+	int2(-1, 0),
+	int2(1, 0),
+	int2(0, -1),
+	int2(0, 1),
+	
+	int2(-1, -1),
+	int2(-1, 1),
+	int2(1, -1),
+	int2(1, 1),
+};
+
 [numthreads(THREADCOUNT, THREADCOUNT, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 {
@@ -73,26 +86,15 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	output_mask[DTid.xy] = current;
 
 	// Find edges by going through the cached grid:
-	float best_dist = FLT_MAX;
-	uint2 best_offset = 0;
-	for (int y = -TILE_BORDER; y <= TILE_BORDER; y += 1)
-	for (int x = -TILE_BORDER; x <= TILE_BORDER; x += 1)
+	for (uint i = 0; i < arraysize(offsets); ++i)
 	{
-		const int2 offset = int2(x, y);
+		const int2 offset = offsets[i];
 		const half id = unpack_half2(cache[coord_to_cache(pixel_local + offset)]).x;
 		if (id != current_id)
 		{
-			const float dist = dot((float2)offset, (float2)offset);
-			if (dist < best_dist)
-			{
-				best_dist = dist;
-				best_offset = offset;
-			}
+			// early exit relies on the straight neighbors having priority in iteration, and diagonal neighbors after because they are farther
+			output_edgemap[DTid.xy] = clamp((int2)DTid.xy + offset, 0, postprocess.resolution - 1);
+			return;
 		}
-	}
-
-	if (best_dist < FLT_MAX)
-	{
-		output_edgemap[DTid.xy] = clamp((int2)DTid.xy + best_offset, 0, postprocess.resolution - 1);
 	}
 }
