@@ -18195,7 +18195,7 @@ void PostProcess_MeshBlend_Resolve(
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 	postprocess.params0.y = meshblend_max_distance;
-	postprocess.params0.x = meshblend_stepsizes[0];
+	postprocess.params0.x = meshblend_stepsizes[0] * 4;
 	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	device->BindResource(&res.tmp, 0, cmd);
