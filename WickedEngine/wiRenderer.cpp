@@ -18046,6 +18046,7 @@ void Postprocess_Underwater(
 	device->EventEnd(cmd);
 }
 
+static constexpr float meshblend_max_distance = 10.0f;
 static constexpr float meshblend_stepsizes[] = { /*256,128,*/64,32,16,8,4,2,1 };
 static constexpr int meshblend_final_read = arraysize(meshblend_stepsizes) % 2;
 static constexpr int meshblend_final_write = 1 - meshblend_final_read;
@@ -18087,8 +18088,7 @@ void PostProcess_MeshBlend_EdgeProcess(
 	postprocess.resolution.y = desc.height;
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
-	const float max_distance = 10.0f;
-	postprocess.params0.y = max_distance;
+	postprocess.params0.y = meshblend_max_distance;
 
 	PushBarrier(GPUBarrier::Aliasing(&res.tmp , &res.expand[meshblend_final_write]));
 	PushBarrier(GPUBarrier::Image(&res.mask, res.mask.desc.layout, ResourceState::UNORDERED_ACCESS));
@@ -18194,8 +18194,7 @@ void PostProcess_MeshBlend_Resolve(
 	postprocess.resolution.y = desc.height;
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
-	const float max_distance = 10.0f;
-	postprocess.params0.y = max_distance;
+	postprocess.params0.y = meshblend_max_distance;
 	postprocess.params0.x = meshblend_stepsizes[0];
 	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
