@@ -81,6 +81,7 @@ namespace wi
 		visibilityResources = {};
 		fsr2Resources = {};
 		vxgiResources = {};
+		meshblendResources = {};
 	}
 
 	void RenderPath3D::ResizeBuffers()
@@ -820,6 +821,18 @@ namespace wi
 			}
 		}
 
+		if (getMeshBlendEnabled() && visibility_main.IsMeshBlendVisible())
+		{
+			if (!meshblendResources.IsValid())
+			{
+				wi::renderer::CreateMeshBlendResources(meshblendResources, internalResolution);
+			}
+		}
+		else
+		{
+			meshblendResources = {};
+		}
+
 		prerender_happened = true;
 
 		RenderPath2D::PreRender();
@@ -1160,6 +1173,11 @@ namespace wi
 					scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
 					scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
 				);
+			}
+
+			if (getMeshBlendEnabled() && visibility_main.IsMeshBlendVisible())
+			{
+				wi::renderer::PostProcess_MeshBlend_EdgeProcess(meshblendResources, cmd);
 			}
 
 		});
@@ -1649,6 +1667,12 @@ namespace wi
 			RenderOutline(cmd);
 
 			device->RenderPassEnd(cmd);
+
+			if (getMeshBlendEnabled() && visibility_main.IsMeshBlendVisible())
+			{
+				rp[0].loadop = RenderPassImage::LoadOp::LOAD;
+				wi::renderer::PostProcess_MeshBlend_Resolve(meshblendResources, rtMain, rp, rp_count, cmd);
+			}
 
 			if (wi::renderer::GetRaytracedShadowsEnabled() || wi::renderer::GetScreenSpaceShadowsEnabled())
 			{

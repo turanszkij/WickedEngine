@@ -164,6 +164,7 @@ namespace wi::renderer
 		XMFLOAT4 reflectionPlane = XMFLOAT4(0, 1, 0, 0);
 		std::atomic_bool volumetriclight_request{ false };
 		std::atomic_bool transparents_visible{ false };
+		std::atomic_bool mesh_blend_visible{ false };
 
 		void Clear()
 		{
@@ -182,6 +183,7 @@ namespace wi::renderer
 			planar_reflection_visible = false;
 			volumetriclight_request.store(false);
 			transparents_visible.store(false);
+			mesh_blend_visible.store(false);
 		}
 
 		bool IsRequestedPlanarReflections() const
@@ -195,6 +197,10 @@ namespace wi::renderer
 		bool IsTransparentsVisible() const
 		{
 			return transparents_visible.load();
+		}
+		bool IsMeshBlendVisible() const
+		{
+			return mesh_blend_visible.load();
 		}
 	};
 
@@ -963,6 +969,26 @@ namespace wi::renderer
 	void Postprocess_Underwater(
 		const wi::graphics::Texture& input,
 		const wi::graphics::Texture& output,
+		wi::graphics::CommandList cmd
+	);
+	struct MeshBlendResources
+	{
+		wi::graphics::Texture mask;
+		wi::graphics::Texture tmp;
+		wi::graphics::Texture expand[2];
+
+		bool IsValid() const { return mask.IsValid(); }
+	};
+	void CreateMeshBlendResources(MeshBlendResources& res, XMUINT2 resolution);
+	void PostProcess_MeshBlend_EdgeProcess( // this part can be run on async compute, it doesn't need color buffer, only the primID
+		const MeshBlendResources& res,
+		wi::graphics::CommandList cmd
+	);
+	void PostProcess_MeshBlend_Resolve( // this part can only be run on gfx queue, it will use renderpass internally (to support MSAA)
+		const MeshBlendResources& res,
+		const wi::graphics::Texture& output,
+		const wi::graphics::RenderPassImage* renderpass_images,
+		uint32_t renderpass_image_count,
 		wi::graphics::CommandList cmd
 	);
 	void Postprocess_Custom(

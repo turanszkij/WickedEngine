@@ -54,6 +54,7 @@ public:
 	wi::gui::Slider clearcoatSlider;
 	wi::gui::Slider clearcoatRoughnessSlider;
 	wi::gui::Slider blendTerrainSlider;
+	wi::gui::Slider meshblendSlider;
 	wi::gui::Slider interiorScaleXSlider;
 	wi::gui::Slider interiorScaleYSlider;
 	wi::gui::Slider interiorScaleZSlider;

@@ -375,7 +375,7 @@ struct alignas(16) ShaderMaterial
 	int sampler_descriptor;
 	uint options_stencilref;
 	uint layerMask;
-	uint shaderType;
+	uint shaderType_meshblend;
 
 	uint4 userdata;
 
@@ -403,7 +403,7 @@ struct alignas(16) ShaderMaterial
 		sampler_descriptor = -1;
 		options_stencilref = 0;
 		layerMask = ~0u;
-		shaderType = 0;
+		shaderType_meshblend = 0;
 
 		userdata = uint4(0, 0, 0, 0);
 
@@ -443,6 +443,8 @@ struct alignas(16) ShaderMaterial
 	inline half3 GetInteriorOffset() { return unpack_half3(subsurfaceScattering_inv); }
 	inline half2 GetInteriorSinCos() { return half2(unpack_half4(subsurfaceScattering).w, unpack_half4(subsurfaceScattering_inv).w); }
 	inline uint GetStencilRef() { return options_stencilref >> 24u; }
+	inline uint GetShaderType() { return shaderType_meshblend & 0xFFFF; }
+	inline half GetMeshBlend() { return f16tof32(shaderType_meshblend >> 16u); }
 #endif // __cplusplus
 
 	inline uint GetOptions() { return options_stencilref; }

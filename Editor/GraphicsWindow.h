@@ -107,6 +107,8 @@ public:
 	wi::gui::CheckBox debugLightCullingCheckBox;
 	wi::gui::CheckBox tessellationCheckBox;
 
+	wi::gui::CheckBox meshblendCheckBox;
+
 	enum RENDERPATH
 	{
 		RENDERPATH_DEFAULT,

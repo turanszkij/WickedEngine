@@ -174,11 +174,11 @@ void MeshWindow::Create(EditorComponent* _editor)
 	quantizeCheckBox.SetTooltip("Disable quantization of vertex positions if you notice inaccuracy errors with UNORM position formats.");
 	quantizeCheckBox.OnClick(forEachSelected([] (auto mesh, auto args) {
 		mesh->SetQuantizedPositionsDisabled(args.bValue);
-			mesh->CreateRenderData();
-			if (!mesh->BLASes.empty())
-			{
-				mesh->CreateRaytracingRenderData();
-			}
+		mesh->CreateRenderData();
+		if (!mesh->BLASes.empty())
+		{
+			mesh->CreateRaytracingRenderData();
+		}
 	}));
 	AddWidget(&quantizeCheckBox);
 

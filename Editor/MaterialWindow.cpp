@@ -496,6 +496,15 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	}));
 	AddWidget(&blendTerrainSlider);
 
+	meshblendSlider.Create(0, 2, 0, 1000, "Mesh Blend: ");
+	meshblendSlider.SetTooltip("Screen space Mesh Blend post process distance falloff.");
+	meshblendSlider.SetSize(XMFLOAT2(wid, hei));
+	meshblendSlider.SetPos(XMFLOAT2(x, y += step));
+	meshblendSlider.OnSlide(forEachSelected([] (auto material, auto args) {
+		material->SetMeshBlend(args.fValue);
+	}));
+	AddWidget(&meshblendSlider);
+
 	interiorScaleXSlider.Create(1, 10, 1, 1000, "Interior Scale X: ");
 	interiorScaleXSlider.SetTooltip("Set the cubemap scale for the interior mapping (if material uses interior mapping shader)");
 	interiorScaleXSlider.OnSlide(forEachSelected([] (auto material, auto args) {
@@ -988,6 +997,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		clearcoatSlider.SetValue(material->clearcoat);
 		clearcoatRoughnessSlider.SetValue(material->clearcoatRoughness);
 		blendTerrainSlider.SetValue(material->blend_with_terrain_height);
+		meshblendSlider.SetValue(material->mesh_blend);
 		interiorScaleXSlider.SetValue(material->interiorMappingScale.x);
 		interiorScaleYSlider.SetValue(material->interiorMappingScale.y);
 		interiorScaleZSlider.SetValue(material->interiorMappingScale.z);
@@ -1080,6 +1090,7 @@ void MaterialWindow::ResizeLayout()
 	layout.add(clearcoatSlider);
 	layout.add(clearcoatRoughnessSlider);
 	layout.add(blendTerrainSlider);
+	layout.add(meshblendSlider);
 	if (material != nullptr && material->shaderType == MaterialComponent::SHADERTYPE_INTERIORMAPPING)
 	{
 		interiorScaleXSlider.SetVisible(true);

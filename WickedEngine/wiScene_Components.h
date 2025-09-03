@@ -200,6 +200,7 @@ namespace wi::scene
 		float cloak = 0;
 		float chromatic_aberration = 0;
 		float saturation = 1;
+		float mesh_blend = 0;
 
 		XMFLOAT4 sheenColor = XMFLOAT4(1, 1, 1, 1);
 		float sheenRoughness = 0;
@@ -374,6 +375,8 @@ namespace wi::scene
 		constexpr bool IsCapsuleShadowDisabled() const { return _flags & DISABLE_CAPSULE_SHADOW; }
 		constexpr void SetCapsuleShadowDisabled(bool value = true) { if (value) { _flags |= DISABLE_CAPSULE_SHADOW; } else { _flags &= ~DISABLE_CAPSULE_SHADOW; } }
 
+		constexpr void SetMeshBlend(float value) { mesh_blend = value; SetDirty(); }
+		constexpr float GetMeshBlend() const { return mesh_blend; }
 
 		void SetPreferUncompressedTexturesEnabled(bool value = true) { if (value) { _flags |= PREFER_UNCOMPRESSED_TEXTURES; } else { _flags &= ~PREFER_UNCOMPRESSED_TEXTURES; } CreateRenderData(true); }
 
@@ -1179,6 +1182,7 @@ namespace wi::scene
 
 		uint16_t lod = 0;
 		mutable bool wetmap_cleared = false;
+		bool mesh_blend_required = false;
 
 		// these will only be valid for a single frame:
 		uint32_t mesh_index = ~0u;

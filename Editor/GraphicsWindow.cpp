@@ -446,6 +446,22 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	AddWidget(&tessellationCheckBox);
 	tessellationCheckBox.SetEnabled(wi::graphics::GetDevice()->CheckCapability(wi::graphics::GraphicsDeviceCapability::TESSELLATION));
 
+	meshblendCheckBox.Create("Mesh Blend: ");
+	meshblendCheckBox.SetTooltip("Enable mesh blend post process globally.");
+	meshblendCheckBox.SetPos(XMFLOAT2(x, y += step));
+	meshblendCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
+	if (editor->main->config.GetSection("graphics").Has("mesh_blend"))
+	{
+		editor->renderPath->setMeshBlendEnabled(editor->main->config.GetSection("graphics").GetBool("mesh_blend"));
+	}
+	meshblendCheckBox.SetCheck(editor->renderPath->getMeshBlendEnabled());
+	meshblendCheckBox.OnClick([=](wi::gui::EventArgs args) {
+		editor->renderPath->setMeshBlendEnabled(args.bValue);
+		editor->main->config.GetSection("graphics").Set("mesh_blend", args.bValue);
+		editor->main->config.Commit();
+	});
+	AddWidget(&meshblendCheckBox);
+
 	speedMultiplierSlider.Create(0, 4, 1, 100000, "Speed: ");
 	speedMultiplierSlider.SetTooltip("Adjust the global speed (time multiplier)");
 	speedMultiplierSlider.SetSize(XMFLOAT2(wid, itemheight));
@@ -1764,6 +1780,7 @@ void GraphicsWindow::ResizeLayout()
 		meshletOcclusionCullingCheckBox.SetVisible(false);
 		shadowLODCheckBox.SetVisible(false);
 		tessellationCheckBox.SetVisible(false);
+		meshblendCheckBox.SetVisible(false);
 	}
 	else
 	{
@@ -1783,6 +1800,7 @@ void GraphicsWindow::ResizeLayout()
 		meshletOcclusionCullingCheckBox.SetVisible(true);
 		shadowLODCheckBox.SetVisible(true);
 		tessellationCheckBox.SetVisible(true);
+		meshblendCheckBox.SetVisible(true);
 
 		layout.add(shadowTypeComboBox);
 		layout.add(shadowProps2DComboBox);
@@ -1797,6 +1815,7 @@ void GraphicsWindow::ResizeLayout()
 		layout.add_right(meshletOcclusionCullingCheckBox);
 		layout.add_right(shadowLODCheckBox);
 		layout.add_right(tessellationCheckBox);
+		layout.add_right(meshblendCheckBox);
 	}
 
 	layout.jump();

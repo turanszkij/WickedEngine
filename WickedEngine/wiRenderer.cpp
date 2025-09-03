@@ -696,8 +696,8 @@ PipelineState PSO_copyDepth;
 PipelineState PSO_copyStencilBit[8];
 PipelineState PSO_copyStencilBit_MSAA[8];
 PipelineState PSO_extractStencilBit[8];
-
 PipelineState PSO_waveeffect;
+PipelineState PSO_mesh_blend_resolve;
 
 RaytracingPipelineState RTPSO_reflection;
 
@@ -970,6 +970,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_EXTRACT_STENCIL_BIT], "extractStencilBitPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_PAINTDECAL], "paintdecalPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_WAVE_EFFECT], "waveeffectPS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_POSTPROCESS_MESH_BLEND], "mesh_blendPS.cso"); });
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_VOXELIZER], "objectGS_voxelizer.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_VOXEL], "voxelGS.cso"); });
@@ -1077,6 +1078,8 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SHARPEN], "sharpenCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_TONEMAP], "tonemapCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_UNDERWATER], "underwaterCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_MESH_BLEND_PREPARE], "mesh_blend_prepareCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_MESH_BLEND_EXPAND], "mesh_blend_expandCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_FSR_UPSCALING], "fsr_upscalingCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_FSR_SHARPEN], "fsr_sharpenCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_FSR2_AUTOGEN_REACTIVE_PASS], "ffx-fsr2/ffx_fsr2_autogen_reactive_pass.cso"); });
@@ -1567,6 +1570,16 @@ void LoadShaders()
 		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
 		desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
 		device->CreatePipelineState(&desc, &PSO_waveeffect);
+	});
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
+		PipelineStateDesc desc;
+
+		desc.vs = &shaders[VSTYPE_SCREEN];
+		desc.ps = &shaders[PSTYPE_POSTPROCESS_MESH_BLEND];
+		desc.bs = &blendStates[BSTYPE_TRANSPARENT];
+		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
+		desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
+		device->CreatePipelineState(&desc, &PSO_mesh_blend_resolve);
 	});
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
 		PipelineStateDesc desc;
@@ -3699,6 +3712,11 @@ void UpdateVisibility(Visibility& vis)
 				if (object.GetFilterMask() & FILTER_TRANSPARENT)
 				{
 					vis.transparents_visible.store(true);
+				}
+
+				if (object.mesh_blend_required)
+				{
+					vis.mesh_blend_visible.store(true);
 				}
 
 				if (vis.flags & Visibility::ALLOW_OCCLUSION_CULLING)
@@ -18023,6 +18041,170 @@ void Postprocess_Underwater(
 	);
 
 	device->Barrier(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout), cmd);
+
+	wi::profiler::EndRange(range);
+	device->EventEnd(cmd);
+}
+
+static constexpr float meshblend_max_distance = 10.0f;
+static constexpr float meshblend_stepsizes[] = { /*256,128,*/64,32,16,8,4,2,1 };
+static constexpr int meshblend_final_read = arraysize(meshblend_stepsizes) % 2;
+static constexpr int meshblend_final_write = 1 - meshblend_final_read;
+void CreateMeshBlendResources(MeshBlendResources& res, XMUINT2 resolution)
+{
+	TextureDesc desc;
+	desc.width = resolution.x;
+	desc.height = resolution.y;
+	desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+
+	desc.format = Format::R8G8_UNORM;
+	device->CreateTexture(&desc, nullptr, &res.mask);
+	device->SetName(&res.mask, "MeshBlend mask");
+
+	desc.format = Format::R16G16_UINT;
+	device->CreateTexture(&desc, nullptr, &res.expand[0]);
+	device->SetName(&res.expand[0], "MeshBlend expand[0]");
+	device->CreateTexture(&desc, nullptr, &res.expand[1]);
+	device->SetName(&res.expand[1], "MeshBlend expand[1]");
+
+	desc.format = Format::R11G11B10_FLOAT;
+	device->CreateTexture(&desc, nullptr, &res.tmp, &res.expand[meshblend_final_write]); // aliased! Need to take into account the ping-ponging indices!
+	device->SetName(&res.tmp, "MeshBlend temp");
+}
+void PostProcess_MeshBlend_EdgeProcess(
+	const MeshBlendResources& res,
+	CommandList cmd
+)
+{
+	device->EventBegin("PostProcess_MeshBlend_EdgeProcess", cmd);
+	auto range = wi::profiler::BeginRangeGPU("Mesh Blend - Edge procesing (Async compute)", cmd);
+
+	BindCommonResources(cmd);
+
+	const TextureDesc& desc = res.mask.GetDesc();
+
+	PostProcess postprocess = {};
+	postprocess.resolution.x = desc.width;
+	postprocess.resolution.y = desc.height;
+	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	postprocess.params0.y = meshblend_max_distance;
+
+	PushBarrier(GPUBarrier::Aliasing(&res.tmp , &res.expand[meshblend_final_write]));
+	PushBarrier(GPUBarrier::Image(&res.mask, res.mask.desc.layout, ResourceState::UNORDERED_ACCESS));
+	PushBarrier(GPUBarrier::Image(&res.expand[0], res.expand[0].desc.layout, ResourceState::UNORDERED_ACCESS));
+	PushBarrier(GPUBarrier::Image(&res.expand[1], res.expand[1].desc.layout, ResourceState::UNORDERED_ACCESS));
+	FlushBarriers(cmd);
+
+	device->ClearUAV(&res.mask, 0, cmd);
+	device->ClearUAV(&res.expand[0], 0, cmd);
+	device->ClearUAV(&res.expand[1], 0, cmd);
+	device->Barrier(GPUBarrier::Memory(&res.mask), cmd);
+	device->Barrier(GPUBarrier::Memory(&res.expand[0]), cmd);
+	device->Barrier(GPUBarrier::Memory(&res.expand[1]), cmd);
+
+	// Create region map
+	{
+		device->EventBegin("Prepare", cmd);
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_MESH_BLEND_PREPARE], cmd);
+
+		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
+		device->BindUAV(&res.mask, 0, cmd);
+		device->BindUAV(&res.expand[0], 1, cmd);
+
+		device->Dispatch(
+			(desc.width + 7) / 8,
+			(desc.height + 7) / 8,
+			1,
+			cmd
+		);
+
+		PushBarrier(GPUBarrier::Image(&res.mask, ResourceState::UNORDERED_ACCESS, res.mask.desc.layout));
+		PushBarrier(GPUBarrier::Image(&res.expand[0], ResourceState::UNORDERED_ACCESS, res.expand[0].desc.layout));
+		PushBarrier(GPUBarrier::Image(&res.expand[1], ResourceState::UNORDERED_ACCESS, res.expand[1].desc.layout));
+		FlushBarriers(cmd);
+		device->EventEnd(cmd);
+	}
+
+	// Expand edges by multipass jump flood
+	int read = 0;
+	int write = 1;
+	{
+		device->EventBegin("Expand", cmd);
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_MESH_BLEND_EXPAND], cmd);
+
+		for (int i = 0; i < arraysize(meshblend_stepsizes); ++i)
+		{
+			device->Barrier(GPUBarrier::Image(&res.expand[write], res.expand[write].desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
+
+			postprocess.params0.x = meshblend_stepsizes[i];
+			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
+			device->BindResource(&res.expand[read], 0, cmd);
+			device->BindResource(&res.mask, 1, cmd);
+			device->BindUAV(&res.expand[write], 0, cmd);
+
+			device->Dispatch(
+				(desc.width + 7) / 8,
+				(desc.height + 7) / 8,
+				1,
+				cmd
+			);
+
+			device->Barrier(GPUBarrier::Image(&res.expand[write], ResourceState::UNORDERED_ACCESS, res.expand[write].desc.layout), cmd);
+
+			std::swap(read, write);
+		}
+
+		device->EventEnd(cmd);
+	}
+
+	wi::profiler::EndRange(range);
+	device->EventEnd(cmd);
+}
+void PostProcess_MeshBlend_Resolve(
+	const MeshBlendResources& res,
+	const Texture& output,
+	const RenderPassImage* renderpass_images,
+	uint32_t renderpass_image_count,
+	CommandList cmd
+)
+{
+	device->EventBegin("PostProcess_MeshBlend_Resolve", cmd);
+	auto range = wi::profiler::BeginRangeGPU("Mesh Blend - Resolve (Gfx)", cmd);
+
+	PushBarrier(GPUBarrier::Aliasing(&res.expand[meshblend_final_write], &res.tmp));
+	PushBarrier(GPUBarrier::Image(&res.tmp, res.tmp.desc.layout, ResourceState::COPY_DST));
+	PushBarrier(GPUBarrier::Image(&output, output.desc.layout, ResourceState::COPY_SRC));
+	FlushBarriers(cmd);
+	device->CopyResource(&res.tmp, &output, cmd);
+	PushBarrier(GPUBarrier::Image(&res.tmp, ResourceState::COPY_DST, res.tmp.desc.layout));
+	PushBarrier(GPUBarrier::Image(&output, ResourceState::COPY_SRC, output.desc.layout));
+	FlushBarriers(cmd);
+
+	BindCommonResources(cmd);
+
+	const TextureDesc& desc = output.GetDesc();
+
+	device->BindPipelineState(&PSO_mesh_blend_resolve, cmd);
+
+	PostProcess postprocess = {};
+	postprocess.resolution.x = desc.width;
+	postprocess.resolution.y = desc.height;
+	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	postprocess.params0.y = meshblend_max_distance;
+	postprocess.params0.x = meshblend_stepsizes[0] * 4;
+	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
+	device->BindResource(&res.tmp, 0, cmd);
+	device->BindResource(&res.mask, 1, cmd);
+	device->BindResource(&res.expand[meshblend_final_read], 2, cmd);
+
+	device->RenderPassBegin(renderpass_images, renderpass_image_count, cmd);
+	device->Draw(3, 0, cmd);
+	device->RenderPassEnd(cmd);
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);
