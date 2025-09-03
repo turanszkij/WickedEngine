@@ -984,9 +984,11 @@ namespace wi::renderer
 		const MeshBlendResources& res,
 		wi::graphics::CommandList cmd
 	);
-	void PostProcess_MeshBlend_Resolve(
+	void PostProcess_MeshBlend_Resolve( // this part can only be run on gfx queue, it will use renderpass internally (to support MSAA)
 		const MeshBlendResources& res,
 		const wi::graphics::Texture& output,
+		const wi::graphics::RenderPassImage* renderpass_images,
+		uint32_t renderpass_image_count,
 		wi::graphics::CommandList cmd
 	);
 	void Postprocess_Custom(

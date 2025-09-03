@@ -696,8 +696,8 @@ PipelineState PSO_copyDepth;
 PipelineState PSO_copyStencilBit[8];
 PipelineState PSO_copyStencilBit_MSAA[8];
 PipelineState PSO_extractStencilBit[8];
-
 PipelineState PSO_waveeffect;
+PipelineState PSO_mesh_blend_resolve;
 
 RaytracingPipelineState RTPSO_reflection;
 
@@ -970,6 +970,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_EXTRACT_STENCIL_BIT], "extractStencilBitPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_PAINTDECAL], "paintdecalPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_WAVE_EFFECT], "waveeffectPS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_POSTPROCESS_MESH_BLEND], "mesh_blendPS.cso"); });
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_VOXELIZER], "objectGS_voxelizer.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_VOXEL], "voxelGS.cso"); });
@@ -1079,7 +1080,6 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_UNDERWATER], "underwaterCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_MESH_BLEND_PREPARE], "mesh_blend_prepareCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_MESH_BLEND_EXPAND], "mesh_blend_expandCS.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_MESH_BLEND], "mesh_blendCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_FSR_UPSCALING], "fsr_upscalingCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_FSR_SHARPEN], "fsr_sharpenCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_FSR2_AUTOGEN_REACTIVE_PASS], "ffx-fsr2/ffx_fsr2_autogen_reactive_pass.cso"); });
@@ -1570,6 +1570,16 @@ void LoadShaders()
 		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
 		desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
 		device->CreatePipelineState(&desc, &PSO_waveeffect);
+	});
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
+		PipelineStateDesc desc;
+
+		desc.vs = &shaders[VSTYPE_SCREEN];
+		desc.ps = &shaders[PSTYPE_POSTPROCESS_MESH_BLEND];
+		desc.bs = &blendStates[BSTYPE_TRANSPARENT];
+		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
+		desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
+		device->CreatePipelineState(&desc, &PSO_mesh_blend_resolve);
 	});
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
 		PipelineStateDesc desc;
@@ -18156,15 +18166,28 @@ void PostProcess_MeshBlend_EdgeProcess(
 void PostProcess_MeshBlend_Resolve(
 	const MeshBlendResources& res,
 	const Texture& output,
+	const RenderPassImage* renderpass_images,
+	uint32_t renderpass_image_count,
 	CommandList cmd
 )
 {
 	device->EventBegin("PostProcess_MeshBlend_Resolve", cmd);
 	auto range = wi::profiler::BeginRangeGPU("Mesh Blend - Resolve (Gfx)", cmd);
 
+	PushBarrier(GPUBarrier::Aliasing(&res.expand[meshblend_final_write], &res.tmp));
+	PushBarrier(GPUBarrier::Image(&res.tmp, res.tmp.desc.layout, ResourceState::COPY_DST));
+	PushBarrier(GPUBarrier::Image(&output, output.desc.layout, ResourceState::COPY_SRC));
+	FlushBarriers(cmd);
+	device->CopyResource(&res.tmp, &output, cmd);
+	PushBarrier(GPUBarrier::Image(&res.tmp, ResourceState::COPY_DST, res.tmp.desc.layout));
+	PushBarrier(GPUBarrier::Image(&output, ResourceState::COPY_SRC, output.desc.layout));
+	FlushBarriers(cmd);
+
 	BindCommonResources(cmd);
 
 	const TextureDesc& desc = output.GetDesc();
+
+	device->BindPipelineState(&PSO_mesh_blend_resolve, cmd);
 
 	PostProcess postprocess = {};
 	postprocess.resolution.x = desc.width;
@@ -18173,35 +18196,16 @@ void PostProcess_MeshBlend_Resolve(
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 	const float max_distance = 10.0f;
 	postprocess.params0.y = max_distance;
-
-	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_MESH_BLEND], cmd);
-
 	postprocess.params0.x = meshblend_stepsizes[0];
 	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
-
-	PushBarrier(GPUBarrier::Aliasing(&res.expand[meshblend_final_write], &res.tmp));
-	PushBarrier(GPUBarrier::Image(&res.tmp, res.tmp.desc.layout, ResourceState::COPY_DST));
-	PushBarrier(GPUBarrier::Image(&output, output.desc.layout, ResourceState::COPY_SRC));
-	FlushBarriers(cmd);
-	device->CopyResource(&res.tmp, &output, cmd);
-	PushBarrier(GPUBarrier::Image(&res.tmp, ResourceState::COPY_DST, res.tmp.desc.layout));
-	PushBarrier(GPUBarrier::Image(&output, ResourceState::COPY_SRC, ResourceState::UNORDERED_ACCESS));
-	FlushBarriers(cmd);
 
 	device->BindResource(&res.tmp, 0, cmd);
 	device->BindResource(&res.mask, 1, cmd);
 	device->BindResource(&res.expand[meshblend_final_read], 2, cmd);
 
-	device->BindUAV(&output, 0, cmd);
-
-	device->Dispatch(
-		(desc.width + 7) / 8,
-		(desc.height + 7) / 8,
-		1,
-		cmd
-	);
-
-	device->Barrier(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout), cmd);
+	device->RenderPassBegin(renderpass_images, renderpass_image_count, cmd);
+	device->Draw(3, 0, cmd);
+	device->RenderPassEnd(cmd);
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);

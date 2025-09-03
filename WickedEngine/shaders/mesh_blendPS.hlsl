@@ -9,26 +9,24 @@ Texture2D<half4> input : register(t0);
 Texture2D<half2> mask : register(t1);
 Texture2D<uint2> edgemap : register(t2);
 
-RWTexture2D<half4> output : register(u0);
-
-[numthreads(8, 8, 1)]
-void main(uint3 DTid : SV_DispatchThreadID)
+float4 main(float4 pos : SV_Position) : SV_Target
 {
-	const uint2 edge = edgemap[DTid.xy];
+	const uint2 pixel = pos.xy;
+	const uint2 edge = edgemap[pixel];
 	if (all(edge == 0))
-		return;
+		return 0;
 
 	ShaderCamera camera = GetCamera();
-	const float3 P = reconstruct_position(float2(DTid.xy + 0.5) * postprocess.resolution_rcp, texture_depth[DTid.xy], camera.inverse_view_projection);
+	const float3 P = reconstruct_position(pos.xy * postprocess.resolution_rcp, texture_depth[pixel], camera.inverse_view_projection);
 	
-	const half current_id = mask[DTid.xy].x;
+	const half current_id = mask[pixel].x;
 	const half edge_id = mask[edge].x;
-	const half distance_falloff = max(mask[DTid.xy].y, mask[edge].y) * postprocess.params0.y;
+	const half distance_falloff = max(mask[pixel].y, mask[edge].y) * postprocess.params0.y;
 	
-	const half2 best_offset = (float2)edge - (float2)DTid.xy;
+	const half2 best_offset = (float2)edge - (float2)pixel;
 	const half best_dist = length(best_offset);
 	
-	const float2 uv = (DTid.xy + best_offset * 2 + 0.5) * postprocess.resolution_rcp; // *2 : mirroring to the other side of the seam
+	const float2 uv = (pixel + best_offset * 2 + 0.5) * postprocess.resolution_rcp; // *2 : mirroring to the other side of the seam
 	const half4 rrrr = input.GatherRed(sampler_linear_clamp, uv);
 	const half4 gggg = input.GatherGreen(sampler_linear_clamp, uv);
 	const half4 bbbb = input.GatherBlue(sampler_linear_clamp, uv);
@@ -50,12 +48,15 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			sum++;
 		}
 	}
+	
+	float4 color = 0;
 	if (sum > 0)
 	{
 		other_color /= sum;
 		dweight /= sum;
 		const half weight = saturate(0.5 - best_dist / postprocess.params0.x) * dweight;
-		output[DTid.xy] = half4(lerp(input[DTid.xy].rgb, other_color.rgb, weight), 1);
-		//output[DTid.xy] = half4(weight, 0, 0, 1);
+		color = float4(lerp(input[pixel].rgb, other_color.rgb, weight), 1);
+		//color = float4(weight, 0, 0, 1);
 	}
+	return color;
 }

@@ -1668,15 +1668,16 @@ namespace wi
 
 			device->RenderPassEnd(cmd);
 
+			if (getMeshBlendEnabled() && visibility_main.IsMeshBlendVisible())
+			{
+				rp[0].loadop = RenderPassImage::LoadOp::LOAD;
+				wi::renderer::PostProcess_MeshBlend_Resolve(meshblendResources, rtMain, rp, rp_count, cmd);
+			}
+
 			if (wi::renderer::GetRaytracedShadowsEnabled() || wi::renderer::GetScreenSpaceShadowsEnabled())
 			{
 				GPUBarrier barrier = GPUBarrier::Image(&rtShadow, ResourceState::SHADER_RESOURCE, rtShadow.desc.layout);
 				device->Barrier(&barrier, 1, cmd);
-			}
-
-			if (getMeshBlendEnabled() && visibility_main.IsMeshBlendVisible())
-			{
-				wi::renderer::PostProcess_MeshBlend_Resolve(meshblendResources, rtMain, cmd);
 			}
 
 			if (rtAO.IsValid())
