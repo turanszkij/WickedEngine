@@ -22,7 +22,6 @@
 #include <iomanip>
 #include <fstream>
 #include <sstream>
-#include <codecvt> // string conversion
 #include <filesystem>
 #include <vector>
 #include <iostream>

@@ -108,7 +108,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint2 GTid :
 	for(uint y = GTid.y * 2; y < TILE_SIZE; y += THREADCOUNT * 2)
 	{
 		const int2 pixel = tile_upperleft + int2(x, y);
-		const float3 uvw = float3((pixel + 0.5f) * postprocess.resolution_rcp, layer);
+		const float3 uvw = float3((pixel + 1.0) * postprocess.resolution_rcp, layer);
 		const float4 depths = input_depth.GatherRed(sampler_linear_clamp, uvw);
 		const float4 reds = input_color.GatherRed(sampler_linear_clamp, uvw);
 		const float4 greens = input_color.GatherGreen(sampler_linear_clamp, uvw);

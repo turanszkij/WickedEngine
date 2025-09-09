@@ -7,17 +7,17 @@ PUSHCONSTANT(bloom, Bloom);
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	const float2 uv = DTid.xy + 0.5f;
+	const float2 uv = DTid.xy + 0.5;
 
-	float3 color = 0;
+	half3 color = 0;
 
-	Texture2D<float4> texture_input = bindless_textures[descriptor_index(bloom.texture_input)];
+	Texture2D<half4> texture_input = bindless_textures_half4[descriptor_index(bloom.texture_input)];
 	color += texture_input.SampleLevel(sampler_linear_clamp, (uv + float2(-0.5, -0.5)) * bloom.resolution_rcp, 0).rgb;
 	color += texture_input.SampleLevel(sampler_linear_clamp, (uv + float2(0.5, -0.5)) * bloom.resolution_rcp, 0).rgb;
 	color += texture_input.SampleLevel(sampler_linear_clamp, (uv + float2(-0.5, 0.5)) * bloom.resolution_rcp, 0).rgb;
 	color += texture_input.SampleLevel(sampler_linear_clamp, (uv + float2(0.5, 0.5)) * bloom.resolution_rcp, 0).rgb;
 
-	color /= 4.0f;
+	color /= 4.0;
 
 	float exposure = bloom.exposure;
 

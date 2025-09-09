@@ -11,58 +11,66 @@ RWTexture2D<float3> output : register(u0);
 // This hack can improve bright areas:
 #define HDR_CORRECTION
 
-static const uint TILE_BORDER = 1;
-static const uint TILE_SIZE = POSTPROCESS_BLOCKSIZE + TILE_BORDER * 2;
+static const int THREADCOUNT = POSTPROCESS_BLOCKSIZE;
+static const int TILE_BORDER = 1;
+static const int TILE_SIZE = TILE_BORDER + THREADCOUNT + TILE_BORDER;
 groupshared uint2 tile_cache[TILE_SIZE*TILE_SIZE];
 
-[numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
+inline uint coord_to_cache(int2 coord)
+{
+	return flatten2D(clamp(coord, 0, TILE_SIZE - 1), TILE_SIZE);
+}
+
+[numthreads(THREADCOUNT, THREADCOUNT, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
-	if (postprocess.params0.x)
+	// preload grid cache:
+	const int2 tile_upperleft = Gid.xy * THREADCOUNT - TILE_BORDER;
+	for(uint y = GTid.y * 2; y < TILE_SIZE; y += THREADCOUNT * 2)
+	for(uint x = GTid.x * 2; x < TILE_SIZE; x += THREADCOUNT * 2)
 	{
-		// Early exit when it is the first frame
-		output[DTid.xy] = input_current[DTid.xy].rgb;
-		return;
+		const int2 pixel = tile_upperleft + int2(x, y);
+		const float2 uv = (pixel + 1.0) * postprocess.resolution_rcp;
+		const half4 dddd = texture_lineardepth.GatherRed(sampler_linear_clamp, uv);
+		const half4 rrrr = input_current.GatherRed(sampler_linear_clamp, uv);
+		const half4 gggg = input_current.GatherGreen(sampler_linear_clamp, uv);
+		const half4 bbbb = input_current.GatherBlue(sampler_linear_clamp, uv);
+		const uint t = coord_to_cache(int2(x, y));
+		tile_cache[t] = pack_half4(half4(rrrr.w, gggg.w, bbbb.w, dddd.w));
+		tile_cache[t + 1] = pack_half4(half4(rrrr.z, gggg.z, bbbb.z, dddd.z));
+		tile_cache[t + TILE_SIZE] = pack_half4(half4(rrrr.x, gggg.x, bbbb.x, dddd.x));
+		tile_cache[t + TILE_SIZE + 1] = pack_half4(half4(rrrr.y, gggg.y, bbbb.y, dddd.y));
 	}
+	GroupMemoryBarrierWithGroupSync();
+	
 	const float2 uv = (DTid.xy + 0.5) * postprocess.resolution_rcp;
 	half3 neighborhoodMin = 10000;
 	half3 neighborhoodMax = -10000;
 	half3 current;
 	float bestDepth = 1;
-	
-	const int2 tile_upperleft = Gid.xy * POSTPROCESS_BLOCKSIZE - TILE_BORDER;
-	for (uint t = groupIndex; t < TILE_SIZE * TILE_SIZE; t += POSTPROCESS_BLOCKSIZE * POSTPROCESS_BLOCKSIZE)
-	{
-		const uint2 pixel = tile_upperleft + unflatten2D(t, TILE_SIZE);
-		const half depth = texture_lineardepth[pixel];
-		const half3 color = input_current[pixel].rgb;
-		tile_cache[t] = pack_half4(half4(color, depth));
-	}
-	GroupMemoryBarrierWithGroupSync();
+	const int2 pixel_local = TILE_BORDER + GTid.xy;
 
 	// Search for best velocity and compute color clamping range in 3x3 neighborhood:
 	int2 bestOffset = 0;
-	for (int x = -1; x <= 1; ++x)
+	for (int y = -TILE_BORDER; y <= TILE_BORDER; ++y)
+	for (int x = -TILE_BORDER; x <= TILE_BORDER; ++x)
 	{
-		for (int y = -1; y <= 1; ++y)
+		const int2 offset = int2(x, y);
+		const uint t = coord_to_cache(pixel_local + int2(x, y));
+
+		const half4 neighbor = unpack_half4(tile_cache[t]);
+		neighborhoodMin = min(neighborhoodMin, neighbor.xyz);
+		neighborhoodMax = max(neighborhoodMax, neighbor.xyz);
+		if (x == 0 && y == 0)
 		{
-			const int2 offset = int2(x, y);
-			const uint idx = flatten2D(GTid.xy + TILE_BORDER + offset, TILE_SIZE);
+			current = neighbor.xyz;
+		}
 
-			const half4 neighbor = unpack_half4(tile_cache[idx]);
-			neighborhoodMin = min(neighborhoodMin, neighbor.xyz);
-			neighborhoodMax = max(neighborhoodMax, neighbor.xyz);
-			if (x == 0 && y == 0)
-			{
-				current = neighbor.xyz;
-			}
-
-			const half depth = neighbor.w;
-			if (depth < bestDepth)
-			{
-				bestDepth = depth;
-				bestOffset = offset;
-			}
+		const half depth = neighbor.w;
+		if (depth < bestDepth)
+		{
+			bestDepth = depth;
+			bestOffset = offset;
 		}
 	}
 	const float2 velocity = texture_velocity[DTid.xy + bestOffset].xy;

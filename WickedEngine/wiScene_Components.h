@@ -10,7 +10,6 @@
 #include "shaders/ShaderInterop_Renderer.h"
 #include "wiResourceManager.h"
 #include "wiVector.h"
-#include "wiArchive.h"
 #include "wiRectPacker.h"
 #include "wiUnorderedSet.h"
 #include "wiBVH.h"

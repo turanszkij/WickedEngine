@@ -11186,12 +11186,7 @@ void ComputeLuminance(
 			cmd
 		);
 
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
+		device->Barrier(GPUBarrier::Memory(), cmd);
 	}
 
 	// Pass 2 : Reduce into 1x1 texture
@@ -11204,7 +11199,6 @@ void ComputeLuminance(
 
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
 			GPUBarrier::Buffer(&res.luminance, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
