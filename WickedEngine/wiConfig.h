@@ -20,12 +20,14 @@ namespace wi::config
 		// Get the associated value for the key:
 		bool GetBool(const char* name) const;
 		int GetInt(const char* name) const;
+		uint32_t GetUint(const char* name) const;
 		float GetFloat(const char* name) const;
 		std::string GetText(const char* name) const;
 
 		// Set the associated value for the key:
 		void Set(const char* name, bool value);
 		void Set(const char* name, int value);
+		void Set(const char* name, uint32_t value);
 		void Set(const char* name, float value);
 		void Set(const char* name, const char* value);
 		void Set(const char* name, const std::string& value);

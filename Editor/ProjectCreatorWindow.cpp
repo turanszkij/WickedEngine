@@ -15,7 +15,7 @@ void ProjectCreatorWindow::Create(EditorComponent* _editor)
 
 	infoLabel.Create("projectCreatorInfo");
 	infoLabel.SetFitTextEnabled(true);
-	infoLabel.SetText("Here you can create a new Wicked Engine application project. It will create a new folder with the project name, and set up an executable, lua script startup, custom icon, thumbnail and base colors.");
+	infoLabel.SetText("Here you can create a new Wicked Engine application project. It will create a new folder with the project name, and set up an executable, lua script startup, custom icon, thumbnail and base colors. Lua script will not be overwritten if it already exists in the destination folder with <projectname>.lua.");
 	AddWidget(&infoLabel);
 
 	projectNameInput.Create("projectName");
@@ -23,6 +23,78 @@ void ProjectCreatorWindow::Create(EditorComponent* _editor)
 	projectNameInput.SetDescription("Name: ");
 	projectNameInput.SetCancelInputEnabled(false);
 	AddWidget(&projectNameInput);
+
+	reloadButton.Create(ICON_FA_ROTATE);
+	reloadButton.SetTooltip("Reload last project");
+	reloadButton.SetSize(XMFLOAT2(reloadButton.GetSize().y, reloadButton.GetSize().y));
+	reloadButton.OnClick([this](wi::gui::EventArgs args) {
+		projectNameInput.SetText(editor->main->config.GetSection("project").GetText("name"));
+		iconFilename = editor->main->config.GetSection("project").GetText("icon");
+		thumbnailFilename = editor->main->config.GetSection("project").GetText("thumbnail");
+		splashScreenFilename = editor->main->config.GetSection("project").GetText("splash_screen");
+		cursorFilename = editor->main->config.GetSection("project").GetText("cursor");
+		hotspotX = editor->main->config.GetSection("project").GetFloat("cursor_hotspotX");
+		hotspotY = editor->main->config.GetSection("project").GetFloat("cursor_hotspotY");
+		fontColorPicker.SetPickColor(editor->main->config.GetSection("project").GetUint("font_color"));
+		backgroundColorPicker.SetPickColor(editor->main->config.GetSection("project").GetUint("background_color"));
+
+		if (iconFilename.empty())
+		{
+			iconResource = {};
+			iconButton.SetImage(iconResource);
+		}
+		else
+		{
+			wi::Resource res = wi::resourcemanager::Load(iconFilename);
+			if (!res.IsValid())
+				return;
+			iconResource.SetTexture(editor->CreateThumbnail(res.GetTexture(), 128, 128, true));
+			iconButton.SetImage(iconResource);
+		}
+
+		if (thumbnailFilename.empty())
+		{
+			thumbnailResource = {};
+			thumbnailButton.SetImage(thumbnailResource);
+		}
+		else
+		{
+			wi::Resource res = wi::resourcemanager::Load(thumbnailFilename);
+			if (!res.IsValid())
+				return;
+			thumbnailResource.SetTexture(editor->CreateThumbnail(res.GetTexture(), 480, 270, true));
+			thumbnailButton.SetImage(thumbnailResource);
+		}
+
+		if (splashScreenFilename.empty())
+		{
+			splashScreenResource = {};
+			splashScreenButton.SetImage(splashScreenResource);
+		}
+		else
+		{
+			wi::Resource res = wi::resourcemanager::Load(splashScreenFilename);
+			if (!res.IsValid())
+				return;
+			splashScreenResource.SetTexture(editor->CreateThumbnail(res.GetTexture(), 1280, 720, true));
+			splashScreenButton.SetImage(splashScreenResource);
+		}
+
+		if (cursorFilename.empty())
+		{
+			cursorResource = {};
+			cursorButton.SetImage(cursorResource);
+		}
+		else
+		{
+			wi::Resource res = wi::resourcemanager::Load(cursorFilename);
+			if (!res.IsValid())
+				return;
+			cursorResource.SetTexture(editor->CreateThumbnail(res.GetTexture(), 64, 64, true));
+			cursorButton.SetImage(cursorResource);
+		}
+	});
+	AddWidget(&reloadButton);
 
 	iconButton.Create("projectIcon");
 	iconButton.SetText("");
@@ -36,6 +108,7 @@ void ProjectCreatorWindow::Create(EditorComponent* _editor)
 		{
 			iconResource = {};
 			iconButton.SetImage(iconResource);
+			iconFilename = {};
 		}
 		else
 		{
@@ -50,6 +123,7 @@ void ProjectCreatorWindow::Create(EditorComponent* _editor)
 						return;
 					iconResource.SetTexture(editor->CreateThumbnail(res.GetTexture(), 128, 128, true));
 					iconButton.SetImage(iconResource);
+					iconFilename = fileName;
 				});
 			});
 		}
@@ -68,6 +142,7 @@ void ProjectCreatorWindow::Create(EditorComponent* _editor)
 		{
 			thumbnailResource = {};
 			thumbnailButton.SetImage(thumbnailResource);
+			thumbnailFilename = {};
 		}
 		else
 		{
@@ -82,6 +157,7 @@ void ProjectCreatorWindow::Create(EditorComponent* _editor)
 						return;
 					thumbnailResource.SetTexture(editor->CreateThumbnail(res.GetTexture(), 480, 270));
 					thumbnailButton.SetImage(thumbnailResource);
+					thumbnailFilename = fileName;
 				});
 			});
 		}
@@ -101,6 +177,7 @@ void ProjectCreatorWindow::Create(EditorComponent* _editor)
 			splashScreenResource = {};
 			splashScreenResourceCroppedPreview = {};
 			splashScreenButton.SetImage(splashScreenResourceCroppedPreview);
+			splashScreenFilename = {};
 		}
 		else
 		{
@@ -116,6 +193,7 @@ void ProjectCreatorWindow::Create(EditorComponent* _editor)
 					splashScreenResource = res;
 					splashScreenResourceCroppedPreview.SetTexture(editor->CreateThumbnail(splashScreenResource.GetTexture(), 1280, 720, true));
 					splashScreenButton.SetImage(splashScreenResourceCroppedPreview);
+					splashScreenFilename = fileName;
 				});
 			});
 		}
@@ -138,6 +216,7 @@ void ProjectCreatorWindow::Create(EditorComponent* _editor)
 		{
 			cursorResource = {};
 			cursorButton.SetImage(cursorResource);
+			cursorFilename = {};
 		}
 		else
 		{
@@ -152,6 +231,7 @@ void ProjectCreatorWindow::Create(EditorComponent* _editor)
 						return;
 					cursorResource.SetTexture(editor->CreateThumbnail(res.GetTexture(), 64, 64, true));
 					cursorButton.SetImage(cursorResource);
+					cursorFilename = fileName;
 				});
 			});
 		}
@@ -529,6 +609,18 @@ end)
 				}
 			}
 		}
+
+		editor->main->config.GetSection("project").Set("name", name);
+		editor->main->config.GetSection("project").Set("icon", iconFilename);
+		editor->main->config.GetSection("project").Set("thumbnail", thumbnailFilename);
+		editor->main->config.GetSection("project").Set("splash_screen", splashScreenFilename);
+		editor->main->config.GetSection("project").Set("cursor", cursorFilename);
+		editor->main->config.GetSection("project").Set("cursor_hotspotX", hotspotX);
+		editor->main->config.GetSection("project").Set("cursor_hotspotY", hotspotY);
+		editor->main->config.GetSection("project").Set("font_color", fontColorPicker.GetPickColor().rgba);
+		editor->main->config.GetSection("project").Set("background_color", backgroundColorPicker.GetPickColor().rgba);
+		editor->main->config.Commit();
+
 		editor->RegisterRecentlyUsed(directory + scriptfilename);
 		wi::helper::OpenUrl(directory);
 	});
@@ -565,6 +657,10 @@ void ProjectCreatorWindow::ResizeLayout()
 
 	layout.add_fullwidth(infoLabel);
 	layout.add(projectNameInput);
+
+	projectNameInput.SetSize(XMFLOAT2(projectNameInput.GetSize().x - reloadButton.GetSize().x - layout.padding * 2, projectNameInput.GetSize().y));
+	layout.y -= reloadButton.GetSize().y + reloadButton.GetShadowRadius() * 2 + layout.padding;
+	layout.add_right(reloadButton);
 
 	layout.jump();
 

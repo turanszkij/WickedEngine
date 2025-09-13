@@ -10,6 +10,7 @@ public:
 
 	wi::gui::Label infoLabel;
 	wi::gui::TextInputField projectNameInput;
+	wi::gui::Button reloadButton;
 	wi::gui::Button iconButton;
 	wi::gui::Button thumbnailButton;
 	wi::gui::Button splashScreenButton;
@@ -28,6 +29,11 @@ public:
 	wi::Resource splashScreenResource;
 	wi::Resource splashScreenResourceCroppedPreview;
 	wi::Resource cursorResource;
+
+	std::string iconFilename;
+	std::string thumbnailFilename;
+	std::string splashScreenFilename;
+	std::string cursorFilename;
 
 	float hotspotX = 0.5f;
 	float hotspotY = 0.5f;
