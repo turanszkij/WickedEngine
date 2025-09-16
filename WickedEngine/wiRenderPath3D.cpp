@@ -2503,6 +2503,13 @@ namespace wi
 				std::swap(rt_read, rt_write);
 			}
 
+			if (getCRTFilterEnabled())
+			{
+				wi::renderer::Postprocess_CRT(*rt_read, *rt_write, cmd);
+
+				std::swap(rt_read, rt_write);
+			}
+
 			lastPostprocessRT = rt_read;
 
 			// GUI Background blurring:

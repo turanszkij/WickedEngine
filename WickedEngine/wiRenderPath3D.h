@@ -85,6 +85,7 @@ namespace wi
 		bool fsrEnabled = false;
 		bool fsr2Enabled = false;
 		bool mesh_blend = true;
+		bool crtFilterEnabled = false;
 
 		mutable bool first_frame = true;
 		mutable bool prerender_happened = false;
@@ -267,6 +268,7 @@ namespace wi
 		constexpr bool getDepthOfFieldEnabled() const { return depthOfFieldEnabled; }
 		constexpr bool getEyeAdaptionEnabled() const { return eyeAdaptionEnabled; }
 		constexpr bool getSharpenFilterEnabled() const { return sharpenFilterEnabled && getSharpenFilterAmount() > 0; }
+		constexpr bool getCRTFilterEnabled() const { return crtFilterEnabled && getSharpenFilterAmount() > 0; }
 		constexpr bool getOutlineEnabled() const { return outlineEnabled; }
 		constexpr bool getChromaticAberrationEnabled() const { return chromaticAberrationEnabled; }
 		constexpr bool getDitherEnabled() const { return ditherEnabled; }
@@ -325,6 +327,7 @@ namespace wi
 		constexpr void setColorGradingEnabled(bool value) { colorGradingEnabled = value; }
 		constexpr void setLensFlareEnabled(bool value) { lensFlareEnabled = value; }
 		constexpr void setSharpenFilterEnabled(bool value) { sharpenFilterEnabled = value; }
+		constexpr void setCRTFilterEnabled(bool value) { crtFilterEnabled = value; }
 		constexpr void setChromaticAberrationEnabled(bool value) { chromaticAberrationEnabled = value; }
 		constexpr void setDitherEnabled(bool value) { ditherEnabled = value; }
 		constexpr void setOcclusionCullingEnabled(bool value) { occlusionCullingEnabled = value; }

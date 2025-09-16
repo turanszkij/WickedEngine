@@ -1336,6 +1336,22 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&ditherCheckBox);
 
+	crtFilterCheckBox.Create("CRT Filter: ");
+	crtFilterCheckBox.SetTooltip("Toggle CRT screenn filter post process of the final image.");
+	crtFilterCheckBox.SetScriptTip("RenderPath3D::SetCRTFilterEnabled(bool value)");
+	crtFilterCheckBox.SetSize(XMFLOAT2(hei, hei));
+	crtFilterCheckBox.SetPos(XMFLOAT2(x, y += step));
+	if (editor->main->config.GetSection("graphics").Has("crt"))
+	{
+		editor->renderPath->setCRTFilterEnabled(editor->main->config.GetSection("graphics").GetBool("crt"));
+	}
+	crtFilterCheckBox.OnClick([=](wi::gui::EventArgs args) {
+		editor->renderPath->setCRTFilterEnabled(args.bValue);
+		editor->main->config.GetSection("graphics").Set("crt", args.bValue);
+		editor->main->config.Commit();
+	});
+	AddWidget(&crtFilterCheckBox);
+
 	sharpenFilterCheckBox.Create("Sharpen Filter: ");
 	sharpenFilterCheckBox.SetTooltip("Toggle sharpening post process of the final image.");
 	sharpenFilterCheckBox.SetScriptTip("RenderPath3D::SetSharpenFilterEnabled(bool value)");
@@ -1701,6 +1717,7 @@ void GraphicsWindow::UpdateData()
 	colorGradingCheckBox.SetCheck(editor->renderPath->getColorGradingEnabled());
 	ditherCheckBox.SetCheck(editor->renderPath->getDitherEnabled());
 	sharpenFilterCheckBox.SetCheck(editor->renderPath->getSharpenFilterEnabled());
+	crtFilterCheckBox.SetCheck(editor->renderPath->getCRTFilterEnabled());
 	sharpenFilterAmountSlider.SetValue(editor->renderPath->getSharpenFilterAmount());
 	outlineCheckBox.SetCheck(editor->renderPath->getOutlineEnabled());
 	outlineThresholdSlider.SetValue(editor->renderPath->getOutlineThreshold());
@@ -1938,6 +1955,7 @@ void GraphicsWindow::ResizeLayout()
 	layout.add_right(fxaaCheckBox);
 	layout.add_right(colorGradingCheckBox);
 	layout.add_right(ditherCheckBox);
+	layout.add_right(crtFilterCheckBox);
 	layout.add_right(sharpenFilterAmountSlider);
 	sharpenFilterCheckBox.SetPos(XMFLOAT2(sharpenFilterAmountSlider.GetPos().x - sharpenFilterCheckBox.GetSize().x - 80, sharpenFilterAmountSlider.GetPos().y));
 	layout.add_right(outlineThresholdSlider);
