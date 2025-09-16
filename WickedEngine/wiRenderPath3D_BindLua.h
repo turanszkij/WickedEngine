@@ -52,6 +52,7 @@ namespace wi::lua
 		int SetDepthOfFieldEnabled(lua_State* L);
 		int SetEyeAdaptionEnabled(lua_State* L);
 		int SetMSAASampleCount(lua_State* L);
+		int SetCRTFilterEnabled(lua_State* L);
 		int SetSharpenFilterEnabled(lua_State* L);
 		int SetSharpenFilterAmount(lua_State* L);
 		int SetExposure(lua_State* L);

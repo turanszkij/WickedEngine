@@ -845,6 +845,11 @@ namespace wi::renderer
 		wi::graphics::CommandList cmd,
 		float amount = 1.0f
 	);
+	void Postprocess_CRT(
+		const wi::graphics::Texture& input,
+		const wi::graphics::Texture& output,
+		wi::graphics::CommandList cmd
+	);
 	enum class Tonemap
 	{
 		Reinhard,

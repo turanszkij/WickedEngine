@@ -1151,6 +1151,9 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)mesh_blendPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)crt_screenCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop.h">
