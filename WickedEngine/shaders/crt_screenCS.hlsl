@@ -157,6 +157,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float2 uv = (DTid.xy + 0.5) * postprocess.resolution_rcp.xy;
 	//uv = Warp(uv);
 	color.rgb=Tri(uv)*Mask(DTid.xy);
+	color.rgb *= 1 + sin(GetTime() * 100) * postprocess.params0.x;
 	color.rgb=ToSrgb(color.rgb);
 
 	output[DTid.xy] = color;

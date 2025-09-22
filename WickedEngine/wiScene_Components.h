@@ -1408,6 +1408,7 @@ namespace wi::scene
 			DIRTY = 1 << 0,
 			CUSTOM_PROJECTION = 1 << 1,
 			ORTHO = 1 << 2,
+			CRT_FILTER = 1 << 3,
 		};
 		uint32_t _flags = EMPTY;
 
@@ -1496,9 +1497,11 @@ namespace wi::scene
 		constexpr void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
 		constexpr void SetCustomProjectionEnabled(bool value = true) { if (value) { _flags |= CUSTOM_PROJECTION; } else { _flags &= ~CUSTOM_PROJECTION; } }
 		constexpr void SetOrtho(bool value = true) { if (value) { _flags |= ORTHO; } else { _flags &= ~ORTHO; } SetDirty(); }
+		constexpr void SetCRT(bool value = true) { if (value) { _flags |= CRT_FILTER; } else { _flags &= ~CRT_FILTER; } SetDirty(); }
 		constexpr bool IsDirty() const { return _flags & DIRTY; }
 		constexpr bool IsCustomProjectionEnabled() const { return _flags & CUSTOM_PROJECTION; }
 		constexpr bool IsOrtho() const { return _flags & ORTHO; }
+		constexpr bool IsCRT() const { return _flags & CRT_FILTER; }
 
 		void Lerp(const CameraComponent& a, const CameraComponent& b, float t);
 

@@ -16850,7 +16850,8 @@ void Postprocess_Sharpen(
 void Postprocess_CRT(
 	const Texture& input,
 	const Texture& output,
-	CommandList cmd
+	CommandList cmd,
+	float flicker
 )
 {
 	ScopedGPUProfiling("Postprocess_CRT", cmd);
@@ -16867,6 +16868,7 @@ void Postprocess_CRT(
 	postprocess.resolution.y = desc.height;
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	postprocess.params0.x = flicker;
 	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	const GPUResource* uavs[] = {
