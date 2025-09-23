@@ -2702,7 +2702,7 @@ namespace wi
 					if (camera.render_to_texture.rendertarget_MSAA.IsValid())
 					{
 						rp[rp_count++] = RenderPassImage::RenderTarget(&camera.render_to_texture.rendertarget_MSAA, RenderPassImage::LoadOp::CLEAR, RenderPassImage::StoreOp::DONTCARE, ResourceState::RENDERTARGET, ResourceState::RENDERTARGET);
-						rp[rp_count++] = RenderPassImage::Resolve(&camera.render_to_texture.rendertarget_render);
+						rp[rp_count++] = RenderPassImage::Resolve(&camera.render_to_texture.rendertarget_render, ResourceState::SHADER_RESOURCE, ResourceState::SHADER_RESOURCE, 0);
 					}
 					else
 					{
