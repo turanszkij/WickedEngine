@@ -2505,7 +2505,7 @@ namespace wi
 
 			if (getCRTFilterEnabled())
 			{
-				wi::renderer::Postprocess_CRT(*rt_read, *rt_write, cmd);
+				wi::renderer::Postprocess_CRT(*rt_read, *rt_write, cmd, 0, 0, true);
 
 				std::swap(rt_read, rt_write);
 			}
@@ -2730,7 +2730,7 @@ namespace wi
 
 					if (camera.IsCRT() && getSceneUpdateEnabled())
 					{
-						wi::renderer::Postprocess_CRT(camera.render_to_texture.rendertarget_render, camera.render_to_texture.rendertarget_display, cmd, 0.2f);
+						wi::renderer::Postprocess_CRT(camera.render_to_texture.rendertarget_render, camera.render_to_texture.rendertarget_display, cmd, 0.2f, frameCB.time * 100, false);
 						std::swap(camera.render_to_texture.rendertarget_render, camera.render_to_texture.rendertarget_display);
 					}
 

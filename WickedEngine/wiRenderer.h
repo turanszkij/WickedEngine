@@ -849,7 +849,9 @@ namespace wi::renderer
 		const wi::graphics::Texture& input,
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd,
-		float flicker = 0
+		float flicker_amount = 0,
+		float flicker_timer = 0,
+		bool srgb = true // if true, then srgb->linear->crt filter->srgb conversion will be done
 	);
 	enum class Tonemap
 	{

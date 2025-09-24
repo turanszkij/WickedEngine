@@ -41,12 +41,12 @@ static const float maskLight=1.5;
 // sRGB to Linear.
 // Assuing using sRGB typed textures this should not be needed.
 float ToLinear1(float c){return(c<=0.04045)?c/12.92:pow((c+0.055)/1.055,2.4);}
-float3 ToLinear(float3 c){return float3(ToLinear1(c.r),ToLinear1(c.g),ToLinear1(c.b));}
+float3 ToLinear(float3 c){return postprocess.params0.y ? float3(ToLinear1(c.r),ToLinear1(c.g),ToLinear1(c.b)) : c;}
 
 // Linear to sRGB.
 // Assuing using sRGB typed textures this should not be needed.
 float ToSrgb1(float c){return(c<0.0031308?c*12.92:1.055*pow(c,0.41666)-0.055);}
-float3 ToSrgb(float3 c){return float3(ToSrgb1(c.r),ToSrgb1(c.g),ToSrgb1(c.b));}
+float3 ToSrgb(float3 c){return postprocess.params0.y ? float3(ToSrgb1(c.r),ToSrgb1(c.g),ToSrgb1(c.b)) : c;}
 
 // Nearest emulated sample given floating point position and texel offset.
 // Also zero's off screen.
@@ -157,7 +157,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float2 uv = (DTid.xy + 0.5) * postprocess.resolution_rcp.xy;
 	//uv = Warp(uv);
 	color.rgb=Tri(uv)*Mask(DTid.xy);
-	color.rgb *= 1 + sin(GetTime() * 100) * postprocess.params0.x;
+	color.rgb *= 1 + postprocess.params0.x;
 	color.rgb=ToSrgb(color.rgb);
 
 	output[DTid.xy] = color;

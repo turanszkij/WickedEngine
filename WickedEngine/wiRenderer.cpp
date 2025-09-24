@@ -16851,7 +16851,9 @@ void Postprocess_CRT(
 	const Texture& input,
 	const Texture& output,
 	CommandList cmd,
-	float flicker
+	float flicker_amount,
+	float flicker_time,
+	bool srgb
 )
 {
 	ScopedGPUProfiling("Postprocess_CRT", cmd);
@@ -16868,7 +16870,8 @@ void Postprocess_CRT(
 	postprocess.resolution.y = desc.height;
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
-	postprocess.params0.x = flicker;
+	postprocess.params0.x = std::sin(flicker_time) * flicker_amount;
+	postprocess.params0.y = srgb ? 1.0f : 0.0f;
 	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	const GPUResource* uavs[] = {
