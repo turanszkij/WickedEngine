@@ -646,7 +646,7 @@
       <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">false</CompileAsWinRT>
       <CompileAsWinRT Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</CompileAsWinRT>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\utility_common.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\utility_common.c" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiArchive.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiAudio.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiAudio_BindLua.cpp" />

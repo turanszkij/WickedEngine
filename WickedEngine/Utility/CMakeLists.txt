@@ -33,7 +33,7 @@ install(FILES ${HEADER_FILES}
 # so they are not source files that should be
 # compiled on their own; hence we mark them as header files
 file(GLOB_RECURSE DIRECTLY_INCLUDED_FILES CONFIGURE_DEPENDS
-	# included by utility_common.cpp
+	# included by utility_common.c
 	mikktspace.c
 	zstd.c
 

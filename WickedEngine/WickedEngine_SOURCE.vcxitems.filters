@@ -1604,7 +1604,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGPUSortLib.cpp">
       <Filter>ENGINE\Graphics</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\utility_common.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\utility_common.c">
       <Filter>UTILITY</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGPUBVH.cpp">

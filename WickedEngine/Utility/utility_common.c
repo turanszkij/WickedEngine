@@ -3,6 +3,10 @@
 #define _CRT_SECURE_NO_WARNINGS
 #endif // _CRT_SECURE_NO_WARNINGS
 
+// needs to be first because it defines _GNU_SOURCE which
+// then changes which symbols stdlib exports
+#include "zstd/zstd.c"
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
@@ -21,4 +25,3 @@
 
 #include "mikktspace.c"
 
-#include "zstd/zstd.c"
