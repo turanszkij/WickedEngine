@@ -4,6 +4,7 @@ set(MIN_OpenImageDenoise_VERSION "2.0")
 
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
+include(FindPkgConfig)
 set(INSTALL_LOCAL_CONFIGDIR "${CMAKE_BINARY_DIR}/cmake")
 set(INSTALL_CONFIGDIR "${CMAKE_INSTALL_LIBDIR}/cmake/WickedEngine")
 
@@ -64,6 +65,10 @@ else ()
     # minimum sdl version is 2.0.14 for controller LED support
     if((${SDL_VERSION_MAJOR} GREATER_EQUAL 2) AND (${SDL2_VERSION_MINOR} GREATER_EQUAL 0) AND (${SDL2_VERSION_PATCH} GREATER_EQUAL 14))
         add_compile_definitions(SDL2_FEATURE_CONTROLLER_LED=1)
+    endif()
+
+    if(PKG_CONFIG_FOUND)
+        pkg_search_module(sysinfo QUIET IMPORTED_TARGET libsysinfo)
     endif()
 endif()
 
@@ -139,7 +144,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
             target_compile_options(${TARGET_NAME} PUBLIC /arch:AVX)
         endif()
     endif()
-elseif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64" OR "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "AMD64" OR "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86" OR "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "i386")
+elseif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64" OR "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "AMD64" OR "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "amd64" OR "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86" OR "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "i386")
     if (USE_AVX512)
         target_compile_options(${TARGET_NAME} PUBLIC -mavx512f -mavx512vl -mavx512dq -mavx2 -mbmi -mpopcnt -mlzcnt -mf16c)
     elseif (USE_AVX2)
@@ -201,6 +206,7 @@ else ()
         Threads::Threads
         SDL2::SDL2
         $<$<BOOL:${OpenImageDenoise_FOUND}>:OpenImageDenoise> # links OpenImageDenoise only if it's found
+        $<$<BOOL:${sysinfo_FOUND}>:PkgConfig::sysinfo> # links sysinfo only if it's found e.g. FreeBSD system
     )
 
     set_target_properties(FAudio PROPERTIES
