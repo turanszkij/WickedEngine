@@ -5946,15 +5946,17 @@ void DrawSoftParticles(
 			const uint32_t emitterIndex = vis.visibleEmitters[emitterSortingHashes[i] & 0x0000FFFF];
 			const wi::EmittedParticleSystem& emitter = vis.scene->emitters[emitterIndex];
 			const Entity entity = vis.scene->emitters.GetEntity(emitterIndex);
-			const MaterialComponent& material = *vis.scene->materials.GetComponent(entity);
+			const MaterialComponent* material = vis.scene->materials.GetComponent(entity);
+			if (material == nullptr)
+				continue;
 
 			if (distortion && emitter.shaderType == wi::EmittedParticleSystem::SOFT_DISTORTION)
 			{
-				emitter.Draw(material, cmd);
+				emitter.Draw(*material, cmd);
 			}
 			else if (!distortion && (emitter.shaderType == wi::EmittedParticleSystem::SOFT || emitter.shaderType == wi::EmittedParticleSystem::SOFT_LIGHTING || emitter.shaderType == wi::EmittedParticleSystem::SIMPLE || IsWireRender()))
 			{
-				emitter.Draw(material, cmd);
+				emitter.Draw(*material, cmd);
 			}
 		}
 	}
