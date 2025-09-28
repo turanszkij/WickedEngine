@@ -409,7 +409,6 @@ void Example_ImGuiRenderer::Load()
 
 }
 
-#define DIVTWOPI 57.29577951307855
 #define IMGUIBUTTONWIDE 200.0f
 #define CAMERAMOVESPEED 10.0
 bool show_demo_window = false;
@@ -419,7 +418,8 @@ bool redock_windows_on_start = true;
 bool imgui_got_focus = false, imgui_got_focus_last = false;
 ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 wi::scene::TransformComponent camera_transform;
-float camera_pos[3] = { 4.0, 6.0, -15 }, camera_ang[3] = { 22, -13, 0 };
+float camera_pos[3] = { 4.0, 6.0, -15 };
+float camera_ang[3] = { 22, -13, 0 }; // in degrees
 float font_scale = 1.0;
 wi::ecs::Entity highlight_entity = -1;
 wi::ecs::Entity subset_entity = -1;
@@ -1163,7 +1163,7 @@ void Example_ImGuiRenderer::Update(float dt)
 			ImGui::SetCursorPos(ImGui::GetCursorPos() + ImVec2(0.0f, -3.0f));
 			ImGui::PushItemWidth(inputsize - ImGui::GetFontSize());
 			ImGui::InputFloat("##CamAngleX", &camera_ang[0], 0.0f, 0.0f, "%.2f");
-			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Camera Angle X (Roll %.3f)", camera_ang[0] / DIVTWOPI);
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Camera Angle X (Roll %.3f radians)", wi::math::DegreesToRadians(camera_ang[0]));
 			ImGui::PopItemWidth();
 
 			ImGui::SameLine();
@@ -1173,7 +1173,7 @@ void Example_ImGuiRenderer::Update(float dt)
 			ImGui::SetCursorPos(ImGui::GetCursorPos() + ImVec2(0.0f, -3.0f));
 			ImGui::PushItemWidth(inputsize - ImGui::GetFontSize());
 			ImGui::InputFloat("##CamAngleY", &camera_ang[1], 0.0f, 0.0f, "%.2f");
-			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Camera Angle Y (Pitch %.3f)", camera_ang[1] / DIVTWOPI);
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Camera Angle Y (Pitch %.3f radians)", wi::math::DegreesToRadians(camera_ang[1]));
 			ImGui::PopItemWidth();
 			ImGui::SameLine();
 
@@ -1183,7 +1183,7 @@ void Example_ImGuiRenderer::Update(float dt)
 			ImGui::SetCursorPos(ImGui::GetCursorPos() + ImVec2(0.0f, -3.0f));
 			ImGui::PushItemWidth(inputsize - ImGui::GetFontSize());
 			ImGui::InputFloat("##CamAngleZ", &camera_ang[2], 0.0f, 0.0f, "%.2f");
-			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Camera Angle Z (Yaw %.3f)", camera_ang[2] / DIVTWOPI);
+			if (ImGui::IsItemHovered()) ImGui::SetTooltip("Camera Angle Z (Yaw %.3f radians)", wi::math::DegreesToRadians(camera_ang[2]));
 			ImGui::PopItemWidth();
 
 			ImGui::PushItemWidth(w);
@@ -1540,7 +1540,7 @@ void Example_ImGuiRenderer::Update(float dt)
 
 	camera_transform.ClearTransform();
 	camera_transform.Translate(XMFLOAT3(camera_pos[0], camera_pos[1], camera_pos[2]));
-	camera_transform.RotateRollPitchYaw(XMFLOAT3(camera_ang[0] / (float) DIVTWOPI, camera_ang[1] / (float) DIVTWOPI, camera_ang[2] / (float) DIVTWOPI));
+	camera_transform.RotateRollPitchYaw(XMFLOAT3(wi::math::DegreesToRadians(camera_ang[0]), wi::math::DegreesToRadians(camera_ang[1]), wi::math::DegreesToRadians(camera_ang[2])));
 	camera_transform.UpdateTransform();
 	camera.TransformCamera(camera_transform);
 	camera.UpdateCamera();
