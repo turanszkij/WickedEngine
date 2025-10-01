@@ -28,9 +28,20 @@ You can get the full source code by using Git version control and cloning https:
 
 <img align="left" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/guy_pose.png" width="240px"/>
 
+### Compilers
+
+Requires a C++17‑capable compiler.
+
+- GNU GCC (Linux, MinGW)
+- Clang (Linux)
+- Apple Clang (macOS)
+- clang-cl (Windows)
+- MSVC / Visual Studio (Windows)
+
 ### Platforms:
 - Windows 10+
 - Linux
+- macOS
 - Xbox Series X|S
 - PlayStation 5
 
@@ -69,6 +80,76 @@ make
 <img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/character_grass.gif" width="320px"/>
 
 If you want to develop an application that uses Wicked Engine, you will have to link to libWickedEngine.a and `#include "WickedEngine.h"` into the source code. For examples, look at the Cmake files, or the Tests and the Editor applications.
+
+#### macOS
+
+Building for Apple macOS requires an Apple Silicon (arm64) device.
+
+Setup uses packages from [Homebrew](https://brew.sh).
+
+```bash
+# Install macOS build tools:
+xcode-select --install
+
+# Install libraries and tooling:
+brew install cmake sdl2 molten-vk vulkan-tools vulkan-validationlayers ccache
+
+# Add necessary ENV variables:
+cat >> ~/.zshrc <<'EOF'
+export VK_ICD_FILENAMES="$(brew --prefix molten-vk)/etc/vulkan/icd.d/MoltenVK_icd.json"
+export DYLD_LIBRARY_PATH="$(brew --prefix)/lib${DYLD_LIBRARY_PATH:+:}$DYLD_LIBRARY_PATH"
+export VK_LAYER_PATH="$(brew --prefix)/share/vulkan/explicit_layer.d"
+export VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation
+EOF
+```
+
+After that choose which project would you like to build using cMake:
+
+##### Build Xcode project
+
+```bash
+cd WickedEngine
+cmake -B build -G Xcode -DCMAKE_BUILD_TYPE=Release
+
+# You can now open the project in Xcode:
+open build/WickedEngine.xcodeproj
+
+# Build release on command line:
+cmake --build build --parallel --config Release
+```
+
+##### Build using Unix Makefile project
+
+```bash
+cd WickedEngine
+cmake -S . -B build -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel --config Release
+```
+
+If you need to debug Vulkan you can set these ENV vars when running the application:
+
+```bash
+MTL_DEBUG_LAYER=1 MTL_SHADER_VALIDATION=1 VK_INSTANCE_LAYERS=VK_LAYER_KHRONOS_validation VK_LOADER_DEBUG=all ./Editor
+```
+
+##### DirectXShaderCompiler
+
+WickedEngine provides a pre-compiled DirectXShaderCompiler for macOS, but upstream doesn't provide this. So bellow are steps for compiling DirectXShaderCompiler on macOS if necessary.
+
+```bash
+brew install cmake ninja
+git clone https://github.com/microsoft/DirectXShaderCompiler.git
+cd DirectXShaderCompiler
+git checkout release-1.8.2505 # Update to latest stable branch
+git submodule update --init --recursive
+mkdir -p build
+cmake -S . -B build \
+  -C cmake/caches/PredefinedParams.cmake \
+  -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_OSX_ARCHITECTURES=arm64
+ninja -C build dxcompiler
+```
 
 #### Xbox Series X|S
 Xbox Series specific extension files required for building are currently private.

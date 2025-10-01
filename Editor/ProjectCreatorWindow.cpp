@@ -380,9 +380,11 @@ end)
 
 		if (wi::renderer::GetShaderDumpCount() == 0)
 		{
-			// If not using shader dump, try to copy shader compiler dlls into the project:
-			std::string dxcompiler_dll_path = wi::helper::GetDirectoryFromPath(wi::helper::GetExecutablePath()) + "dxcompiler.dll";
-			std::string dxcompiler_so_path = wi::helper::GetDirectoryFromPath(wi::helper::GetExecutablePath()) + "libdxcompiler.so";
+			// If not using shader dump, try to copy shader compiler libraries into the project:
+			const std::string exe_dir = wi::helper::GetDirectoryFromPath(wi::helper::GetExecutablePath());
+			std::string dxcompiler_dll_path = exe_dir + "dxcompiler.dll";
+			std::string dxcompiler_so_path = exe_dir + "libdxcompiler.so";
+			std::string dxcompiler_dylib_path = exe_dir + "libdxcompiler.dylib";
 			if (wi::helper::FileExists(dxcompiler_dll_path))
 			{
 				wi::helper::FileCopy(dxcompiler_dll_path, directory + "dxcompiler.dll");
@@ -391,12 +393,17 @@ end)
 			{
 				wi::helper::FileCopy(dxcompiler_so_path, directory + "libdxcompiler.so");
 			}
+			if (wi::helper::FileExists(dxcompiler_dylib_path))
+			{
+				wi::helper::FileCopy(dxcompiler_dylib_path, directory + "libdxcompiler.dylib");
+			}
 		}
 
 		wi::unordered_set<std::string> exes;
 		exes.insert(wi::helper::BackslashToForwardSlash(wi::helper::GetExecutablePath()));
 		exes.insert(wi::helper::BackslashToForwardSlash(wi::helper::GetCurrentPath() + "/Editor_Windows.exe"));
 		exes.insert(wi::helper::BackslashToForwardSlash(wi::helper::GetCurrentPath() + "/Editor_Linux"));
+		exes.insert(wi::helper::BackslashToForwardSlash(wi::helper::GetCurrentPath() + "/Editor_macOS"));
 
 		for (auto& exepath_src : exes)
 		{
@@ -410,7 +417,16 @@ end)
 			}
 			else
 			{
-				exepath_dst += "_Linux";
+				std::string filename = wi::helper::GetFileNameFromPath(exepath_src);
+				std::string filename_upper = wi::helper::toUpper(filename);
+				if (filename_upper.find("EDITOR_MACOS") != std::string::npos)
+				{
+					exepath_dst += "_macOS";
+				}
+				else
+				{
+					exepath_dst += "_Linux";
+				}
 			}
 			if (wi::helper::FileCopy(exepath_src, exepath_dst))
 			{

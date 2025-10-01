@@ -10,6 +10,14 @@
   #define _XM_FMA3_INTRINSICS_
 #endif
 
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmissing-braces"
+#elif defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmissing-braces"
+#endif
+
 #if __has_include(<DirectXMath.h>)
 // In this case, DirectXMath is coming from Windows SDK.
 //	It is better to use this on Windows as some Windows libraries could depend on the same
@@ -24,6 +32,12 @@
 #include "Utility/DirectXMath/DirectXMath.h"
 #include "Utility/DirectXMath/DirectXPackedVector.h"
 #include "Utility/DirectXMath/DirectXCollision.h"
+#endif
+
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#elif defined(__GNUC__)
+#pragma GCC diagnostic pop
 #endif
 
 using namespace DirectX;

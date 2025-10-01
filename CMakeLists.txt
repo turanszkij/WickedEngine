@@ -11,6 +11,8 @@ endif()
 
 project(WickedEngine)
 
+message(STATUS "CMAKE_SYSTEM_PROCESSOR: ${CMAKE_SYSTEM_PROCESSOR}")
+
 include(CheckIPOSupported)
 check_ipo_supported(RESULT ipo_supported)
 
@@ -57,7 +59,9 @@ else()
     endif()
 endif()
 
-if(UNIX)
+if (APPLE)
+    option(WICKED_MACOS_TEMPLATE "Build WickedEngine macOS template" ON)
+elseif (UNIX)
     option(WICKED_LINUX_TEMPLATE "Build WickedEngine Linux template" ON)
 elseif(WIN32)
     option(WICKED_WINDOWS_TEMPLATE "Build WickedEngine Windows template" ON)
@@ -75,6 +79,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 
 if (WIN32)
+    message(STATUS "Configuring for Windows")
     set(PLATFORM "Windows")
     add_compile_definitions(WIN32=1)
     if (MSVC)
@@ -82,10 +87,16 @@ if (WIN32)
             /W3
             /MP
         )
-	endif()
+    endif()
 
     # add_compile_definitions(_WIN32=1) this is a given from the compiler
 elseif(UNIX)
+    if (APPLE)
+        message(STATUS "Configuring for macOS")
+    else()
+        message(STATUS "Configuring for Linux/Other")
+    endif()
+
     set(PLATFORM "SDL2")
     add_compile_definitions(SDL2=1)
 
@@ -151,6 +162,10 @@ endif()
 
 if (WICKED_LINUX_TEMPLATE)
     add_subdirectory(Samples/Template_Linux)
+endif()
+
+if (WICKED_MACOS_TEMPLATE)
+    add_subdirectory(Samples/Template_macOS)
 endif()
 
 if (WICKED_WINDOWS_TEMPLATE)

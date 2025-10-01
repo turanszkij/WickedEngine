@@ -38,6 +38,15 @@
 #include <sys/sysinfo.h>
 #endif // PLATFORM_LINUX
 
+#ifdef PLATFORM_MACOS
+#include <sys/types.h>
+#include <sys/sysctl.h>
+#include <mach/mach.h>
+// _NSGetExecutablePath
+#include <mach-o/dyld.h>
+#include <limits.h>
+#endif // PLATFORM_MACOS
+
 #ifdef PLATFORM_WINDOWS_DESKTOP
 #include <comdef.h> // com_error
 #endif // PLATFORM_WINDOWS_DESKTOP
@@ -1133,13 +1142,13 @@ namespace wi::helper
 
 	size_t FileSize(const std::string& fileName)
 	{
-#if defined(PLATFORM_LINUX) || defined(PLATFORM_PS5)
+#if defined(PLATFORM_LINUX) || defined(PLATFORM_PS5) || defined(PLATFORM_MACOS)
 		std::string filepath = fileName;
-		std::replace(filepath.begin(), filepath.end(), '\\', '/'); // Linux cannot handle backslash in file path, need to convert it to forward slash
+		std::replace(filepath.begin(), filepath.end(), '\\', '/'); // POSIX cannot handle backslash in file path, need to convert it to forward slash
 		std::ifstream file(filepath, std::ios::binary | std::ios::ate);
 #else
 		std::ifstream file(ToNativeString(fileName), std::ios::binary | std::ios::ate);
-#endif // PLATFORM_LINUX || PLATFORM_PS5
+#endif // PLATFORM_LINUX || PLATFORM_PS5 || PLATFORM_MACOS
 
 		if (file.is_open())
 		{
@@ -1153,13 +1162,13 @@ namespace wi::helper
 	template<template<typename T, typename A> typename vector_interface>
 	bool FileRead_Impl(const std::string& fileName, vector_interface<uint8_t, std::allocator<uint8_t>>& data, size_t max_read, size_t offset)
 	{
-#if defined(PLATFORM_LINUX) || defined(PLATFORM_PS5)
+#if defined(PLATFORM_LINUX) || defined(PLATFORM_PS5) || defined(PLATFORM_MACOS)
 		std::string filepath = fileName;
-		std::replace(filepath.begin(), filepath.end(), '\\', '/'); // Linux cannot handle backslash in file path, need to convert it to forward slash
+		std::replace(filepath.begin(), filepath.end(), '\\', '/'); // POSIX cannot handle backslash as separator; convert to forward slash
 		std::ifstream file(filepath, std::ios::binary | std::ios::ate);
 #else
 		std::ifstream file(ToNativeString(fileName), std::ios::binary | std::ios::ate);
-#endif // PLATFORM_LINUX || PLATFORM_PS5
+#endif // PLATFORM_LINUX || PLATFORM_PS5 || PLATFORM_MACOS
 
 		if (file.is_open())
 		{
@@ -1278,7 +1287,23 @@ namespace wi::helper
 		StringConvert(wstr, str, arraysize(str));
 		return str;
 #else
+	#if defined(__APPLE__)
+		char pathbuf[PATH_MAX];
+		uint32_t size = sizeof(pathbuf);
+		if (_NSGetExecutablePath(pathbuf, &size) == 0)
+		{
+			char resolved[PATH_MAX];
+			if (realpath(pathbuf, resolved) != nullptr)
+			{
+				return std::string(resolved);
+			}
+			return std::string(pathbuf);
+		}
+		// fallback
+		return std::string();
+	#else
 		return std::filesystem::canonical("/proc/self/exe").string();
+	#endif
 #endif // _WIN32
 	}
 
@@ -1382,7 +1407,7 @@ namespace wi::helper
 			}).detach();
 #endif // PLATFORM_WINDOWS_DESKTOP
 
-#ifdef PLATFORM_LINUX
+#if defined(PLATFORM_LINUX) || defined(PLATFORM_MACOS)
 		if (!pfd::settings::available())
 		{
 			wilog_messagebox("[wi::helper::FileDialog()] No file dialog backend available!");
@@ -1860,7 +1885,14 @@ namespace wi::helper
 		int status = system(op.c_str());
 		wi::backlog::post("wi::helper::OpenUrl(" + url + ") returned status: " + std::to_string(status));
 		return;
-#endif // PLATFORM_WINDOWS_DESKTOP
+#endif // PLATFORM_LINUX
+
+#ifdef PLATFORM_MACOS
+		std::string op = "open " + url;
+		int status = system(op.c_str());
+		wi::backlog::post("wi::helper::OpenUrl(" + url + ") returned status: " + std::to_string(status));
+		return;
+#endif // PLATFORM_MACOS
 
 		wi::backlog::post("wi::helper::OpenUrl(" + url + "): not implemented for this operating system!", wi::backlog::LogLevel::Warning);
 	}
@@ -1903,6 +1935,24 @@ namespace wi::helper
 		mem.process_physical = l * PAGE_SIZE;
 		// there doesn't seem to be an easy way to determine
 		// swapped out memory
+#elif defined(PLATFORM_MACOS)
+		// macOS implementation using sysctl and Mach task info:
+		int64_t physical_mem = 0;
+		size_t len = sizeof(physical_mem);
+		if (sysctlbyname("hw.memsize", &physical_mem, &len, nullptr, 0) == 0)
+		{
+			mem.total_physical = (size_t)physical_mem;
+		}
+		// total virtual memory is not as straightforward on macOS; approximate
+		// with physical
+		mem.total_virtual = mem.total_physical;
+		mach_task_basic_info info;
+		mach_msg_type_number_t count = MACH_TASK_BASIC_INFO_COUNT;
+		if (task_info(mach_task_self(), MACH_TASK_BASIC_INFO, (task_info_t)&info, &count) == KERN_SUCCESS)
+		{
+			mem.process_physical = info.resident_size;
+			mem.process_virtual = info.virtual_size; // address space size
+		}
 #elif defined(PLATFORM_PS5)
 		wi::graphics::GraphicsDevice::MemoryUsage gpumem = wi::graphics::GetDevice()->GetMemoryUsage();
 		mem.process_physical = mem.total_physical = gpumem.budget;

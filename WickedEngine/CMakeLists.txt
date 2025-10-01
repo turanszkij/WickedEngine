@@ -37,7 +37,11 @@ if (WIN32)
         )
     endif()
 else ()
-    set(TARGET_NAME WickedEngine_Linux)
+    if(APPLE)
+        set(TARGET_NAME WickedEngine_macOS)
+    else()
+        set(TARGET_NAME WickedEngine_Linux)
+    endif()
     find_package(SDL2 REQUIRED)
     find_package(OpenImageDenoise "${MIN_OpenImageDenoise_VERSION}" QUIET)
     find_package(Threads REQUIRED)
@@ -93,6 +97,16 @@ add_library(${TARGET_NAME} ${WICKED_LIBRARY_TYPE}
     ${SOURCE_FILES}
     ${HEADER_FILES}
 )
+
+if(APPLE AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
+    # Make shim force-include PUBLIC so dependent targets (Editor) also see NEON compatibility wrappers
+    target_compile_options(${TARGET_NAME} PUBLIC -include ${CMAKE_CURRENT_SOURCE_DIR}/platform/NeonIntrinsicsAppleShim.h)
+endif()
+
+# Force UUID emulation on non-Windows (e.g. macOS/Linux)
+if(NOT WIN32)
+    target_compile_definitions(${TARGET_NAME} PUBLIC __EMULATE_UUID)
+endif()
 
 target_precompile_headers(${TARGET_NAME} PRIVATE WickedEngine.h)
 
@@ -211,7 +225,11 @@ else ()
 
     target_link_libraries(${TARGET_NAME} PRIVATE dl)
 
-    set(LIBDXCOMPILER "libdxcompiler.so")
+    if(APPLE)
+        set(LIBDXCOMPILER "libdxcompiler.dylib")
+    else()
+        set(LIBDXCOMPILER "libdxcompiler.so")
+    endif()
 endif()
 
 target_link_libraries(${TARGET_NAME} PUBLIC ${WICKEDENGINE_STATIC_LIBRARIES})

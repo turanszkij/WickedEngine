@@ -3,9 +3,17 @@
 #include <stdexcept>
 #include <stdint.h>
 #include <string>
+#include <thread>
+#include <cstring>
+#include <cctype>
 
 #ifdef _WIN32
 #include <intrin.h>
+#endif
+
+#if defined(__APPLE__)
+#include <sys/types.h>
+#include <sys/sysctl.h>
 #endif
 
 class CPUInfo {
@@ -14,6 +22,7 @@ class CPUInfo {
 
 	public:
 		inline explicit CPUID(uint32_t funcId, uint32_t subFuncId) {
+#if (defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64))
 #ifdef _WIN32
 			::__cpuidex((int*)regs, (int)funcId, (int)subFuncId);
 #else
@@ -21,6 +30,9 @@ class CPUInfo {
 				("cpuid" : "=a" (regs[0]), "=b" (regs[1]), "=c" (regs[2]), "=d" (regs[3])
 					: "a" (funcId), "c" (subFuncId));
 			// ECX is set to zero for CPUID function 4
+#endif
+#else
+			(void)funcId; (void)subFuncId; // non-x86: leave regs zeroed
 #endif
 		}
 
@@ -87,6 +99,50 @@ private:
 
 CPUInfo::CPUInfo()
 {
+#if defined(__APPLE__)
+	// Query macOS sysctl values for Apple Silicon
+	char buf[256] = {};
+	size_t len = sizeof(buf);
+	// Try machdep.cpu.brand_string first (may exist on macOS for certain
+	// runtimes), fallback to hw.model
+	if (sysctlbyname("machdep.cpu.brand_string", buf, &len, NULL, 0) != 0) {
+		len = sizeof(buf);
+		if (sysctlbyname("hw.model", buf, &len, NULL, 0) != 0) {
+			// final fallback
+			mModelName = "Apple ARM";
+		} else {
+			mModelName = std::string(buf, strnlen(buf, sizeof(buf)));
+		}
+	} else {
+		mModelName = std::string(buf, strnlen(buf, sizeof(buf)));
+	}
+
+	mVendorId = "Apple";
+
+	// logical and physical cpu counts
+	int val = 0;
+	len = sizeof(val);
+	if (sysctlbyname("hw.logicalcpu", &val, &len, NULL, 0) == 0) {
+		mNumLogCpus = val;
+	} else {
+		mNumLogCpus = (int)std::thread::hardware_concurrency();
+	}
+	len = sizeof(val);
+	if (sysctlbyname("hw.physicalcpu", &val, &len, NULL, 0) == 0) {
+		mNumCores = val;
+	} else {
+		mNumCores = mNumLogCpus;
+	}
+	mNumSMT = (mNumLogCpus > 0 && mNumCores > 0) ? (mNumLogCpus / mNumCores) : 1;
+	mIsHTT = mNumSMT > 1;
+
+	// ARM (Apple Silicon) does not support x86 CPUID features; mark them false
+	mIsSSE = mIsSSE2 = mIsSSE3 = mIsSSE41 = mIsSSE42 = false;
+	mIsAVX = mIsAVX2 = mIsAVX512F = false;
+	mIsF16C = mIsFMA3 = false;
+
+	return;
+#else
 	// Get vendor name EAX=0
 	CPUID cpuID0(0, 0);
 	const uint32_t HFS = cpuID0.EAX();
@@ -194,4 +250,5 @@ CPUInfo::CPUInfo()
 		mModelName += std::string((const char*)&cpuID.ECX(), 4);
 		mModelName += std::string((const char*)&cpuID.EDX(), 4);
 	}
+#endif // __APPLE__
 }
