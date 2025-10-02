@@ -88,6 +88,7 @@ public:
 	wi::gui::CheckBox fxaaCheckBox;
 	wi::gui::CheckBox colorGradingCheckBox;
 	wi::gui::CheckBox ditherCheckBox;
+	wi::gui::CheckBox crtFilterCheckBox;
 	wi::gui::CheckBox sharpenFilterCheckBox;
 	wi::gui::Slider sharpenFilterAmountSlider;
 	wi::gui::CheckBox outlineCheckBox;

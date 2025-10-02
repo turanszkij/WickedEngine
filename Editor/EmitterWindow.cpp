@@ -645,8 +645,19 @@ void EmitterWindow::UpdateData()
 	for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
 	{
 		Entity entity = scene.meshes.GetEntity(i);
-		const NameComponent& name = *scene.names.GetComponent(entity);
-		meshComboBox.AddItem(name.name);
+		const NameComponent* name = scene.names.GetComponent(entity);
+		if (name == nullptr)
+		{
+			meshComboBox.AddItem("[no_name] " + std::to_string(entity));
+		}
+		else if (name->name.empty())
+		{
+			meshComboBox.AddItem("[name_empty] " + std::to_string(entity));
+		}
+		else
+		{
+			meshComboBox.AddItem(name->name);
+		}
 
 		if (emitter->meshID == entity)
 		{

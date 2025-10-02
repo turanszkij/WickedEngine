@@ -123,6 +123,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
       return FALSE;
    }
 
+   example_imgui.allow_hdr = false; // Imgui doesn't support HDR
    example_imgui.SetWindow(hWnd);
 
    ShowWindow(hWnd, nCmdShow);

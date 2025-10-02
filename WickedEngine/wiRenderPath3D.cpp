@@ -2503,6 +2503,13 @@ namespace wi
 				std::swap(rt_read, rt_write);
 			}
 
+			if (getCRTFilterEnabled())
+			{
+				wi::renderer::Postprocess_CRT(*rt_read, *rt_write, cmd, 0, 0, true);
+
+				std::swap(rt_read, rt_write);
+			}
+
 			lastPostprocessRT = rt_read;
 
 			// GUI Background blurring:
@@ -2635,7 +2642,7 @@ namespace wi
 
 			wi::jobsystem::Execute(ctx, [this, cmd, i](wi::jobsystem::JobArgs args) {
 				GraphicsDevice* device = GetDevice();
-				const wi::scene::CameraComponent& camera = scene->cameras[i]; // reload, not captured in lambda (alloc)
+				wi::scene::CameraComponent& camera = scene->cameras[i]; // reload, not captured in lambda (alloc)
 				wi::renderer::Visibility& visibility = *(wi::renderer::Visibility*)camera.render_to_texture.visibility.get();
 				visibility.layerMask = getLayerMask();
 				visibility.scene = scene;
@@ -2695,7 +2702,7 @@ namespace wi
 					if (camera.render_to_texture.rendertarget_MSAA.IsValid())
 					{
 						rp[rp_count++] = RenderPassImage::RenderTarget(&camera.render_to_texture.rendertarget_MSAA, RenderPassImage::LoadOp::CLEAR, RenderPassImage::StoreOp::DONTCARE, ResourceState::RENDERTARGET, ResourceState::RENDERTARGET);
-						rp[rp_count++] = RenderPassImage::Resolve(&camera.render_to_texture.rendertarget_render);
+						rp[rp_count++] = RenderPassImage::Resolve(&camera.render_to_texture.rendertarget_render, ResourceState::SHADER_RESOURCE, ResourceState::SHADER_RESOURCE, 0);
 					}
 					else
 					{
@@ -2720,6 +2727,12 @@ namespace wi
 					wi::renderer::DrawSky(*scene, cmd);
 					wi::renderer::DrawLightVisualizers(visibility, cmd);
 					device->RenderPassEnd(cmd);
+
+					if (camera.IsCRT() && getSceneUpdateEnabled())
+					{
+						wi::renderer::Postprocess_CRT(camera.render_to_texture.rendertarget_render, camera.render_to_texture.rendertarget_display, cmd, 0.2f, frameCB.time * 100, false);
+						std::swap(camera.render_to_texture.rendertarget_render, camera.render_to_texture.rendertarget_display);
+					}
 
 					wi::renderer::GenerateMipChain(camera.render_to_texture.rendertarget_render, wi::renderer::MIPGENFILTER_LINEAR, cmd);
 				}
