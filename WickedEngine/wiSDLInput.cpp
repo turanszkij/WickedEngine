@@ -242,7 +242,7 @@ namespace wi::input::sdlinput
             return (key - 4) + CHARACTER_RANGE_START;
         }
         if(key >= 30 && key <= 38){ // 1 to 9
-            return (key - 31) + DIGIT_RANGE_START;
+            return (key - 29) + DIGIT_RANGE_START;
         }
         if (key == 39) { // 0
             return DIGIT_RANGE_START;
