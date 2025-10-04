@@ -16,6 +16,9 @@
 #include <pthread.h>
 #include <sys/resource.h>
 #endif // PLATFORM_LINUX
+#ifdef PLATFORM_MACOS
+#include <pthread.h>
+#endif // PLATFORM_MACOS
 
 #ifdef PLATFORM_PS5
 #include "wiJobSystem_PS5.h"
@@ -285,6 +288,36 @@ namespace wi::jobsystem
 					assert(SUCCEEDED(hr));
 				}
 
+#elif defined(PLATFORM_MACOS)
+				// macOS: no cpu affinity API; set thread name + QoS (quality of
+				// service) class for scheduling hints.
+				if (priority == Priority::High)
+				{
+					pthread_setname_np(("wi::job_" + std::to_string(threadID)).c_str());
+				}
+				else if (priority == Priority::Low)
+				{
+					pthread_setname_np(("wi::job_lo_" + std::to_string(threadID)).c_str());
+				}
+				else if (priority == Priority::Streaming)
+				{
+					pthread_setname_np(("wi::job_st_" + std::to_string(threadID)).c_str());
+				}
+				// Map engine priorities to macOS QoS classes for better
+				// scheduling behavior:
+				#if defined(QOS_CLASS_USER_INITIATED)
+				{
+					qos_class_t qos = QOS_CLASS_DEFAULT;
+					switch (priority)
+					{
+					case Priority::High: qos = QOS_CLASS_USER_INITIATED; break; // latency-sensitive work
+					case Priority::Low: qos = QOS_CLASS_UTILITY; break; // longer running utility work
+					case Priority::Streaming: qos = QOS_CLASS_BACKGROUND; break; // background streaming/IO
+					default: break;
+					}
+					pthread_set_qos_class_np(pthread_self(), qos, 0);
+				}
+				#endif // QOS_CLASS_USER_INITIATED
 #elif defined(PLATFORM_LINUX)
 #define handle_error_en(en, msg) \
                do { errno = en; perror(msg); } while (0)

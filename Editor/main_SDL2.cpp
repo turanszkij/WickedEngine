@@ -3,6 +3,7 @@
 
 #include "sdl2.h"
 #include <fstream>
+#include <SDL2/SDL_vulkan.h>
 
 #include "icon.h"
 
@@ -202,6 +203,32 @@ int main(int argc, char *argv[])
     if (*system) {
         throw sdl2::SDLError("Error creating SDL2 system");
     }
+
+#ifdef __APPLE__
+	// On macOS with MoltenVK installed via Homebrew, SDL might fail to
+	// auto-load the portability (MoltenVK) library during first Vulkan window
+	// creation. We attempt to pre-load the Vulkan loader first, then fall back
+	// to MoltenVK directly. This also enables us to request
+	// VK_KHR_portability_enumeration later when creating the instance.
+	bool vulkan_library_loaded = false;
+	if (SDL_Vulkan_LoadLibrary("libvulkan.dylib") == 0) {
+		vulkan_library_loaded = true; // Use the Vulkan loader which will locate MoltenVK ICD via JSONs
+	}
+	// else {
+	// 	// Fallback: try explicit Homebrew path for loader
+	// 	if (SDL_Vulkan_LoadLibrary("/opt/homebrew/lib/libvulkan.dylib") == 0) {
+	// 		vulkan_library_loaded = true;
+	// 	}
+	// }
+	if (!vulkan_library_loaded) {
+		// Final fallback: try loading MoltenVK directly
+		if (SDL_Vulkan_LoadLibrary("libMoltenVK.dylib") != 0 && SDL_Vulkan_LoadLibrary("/opt/homebrew/lib/libMoltenVK.dylib") != 0) {
+			// We don't abort here; window creation will still fail and throw
+			// with SDL's own error, giving user context.
+			wi::helper::DebugOut("[SDL] Warning: Unable to pre-load Vulkan / MoltenVK library. Window creation may fail.\n");
+		}
+	}
+#endif
 
 	int width = 1920;
 	int height = 1080;

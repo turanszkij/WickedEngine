@@ -145,7 +145,25 @@ typedef uint8_t F3DAUDIO_HANDLE[F3DAUDIO_HANDLE_BYTESIZE];
 
 /* Structures */
 
-#pragma pack(push, 1)
+/*
+ * WickedEngine note (temporary local patch):
+ * The original upstream header applies 1-byte packing for the 3D audio
+ * structs. On arm64 (Apple Silicon), this causes the function-local static
+ * DEFAULT_POINTS(...) objects (which embed a pointer as first member of the
+ * packed struct F3DAUDIO_DISTANCE_CURVE) to have 1-byte alignment. Recent
+ * ld64 rejects these misaligned pointer-containing objects with:
+ *   ld: pointer not aligned in '_F3DAudioCalculate.lpfReverbDefault'
+ * Natural alignment is sufficient for our usage and matches the ABI
+ * expectations on arm64. We retain the original pack(1) on other platforms
+ * to avoid altering layout where it might be depended upon.
+ * This should be upstream-safe; if accepted upstream, this block can be
+ * removed in favor of their solution.
+ */
+#if defined(__aarch64__) || defined(__arm64__)
+	#pragma pack(push)
+#else
+	#pragma pack(push, 1)
+#endif
 
 typedef struct F3DAUDIO_VECTOR
 {

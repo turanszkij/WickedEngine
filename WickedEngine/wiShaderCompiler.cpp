@@ -15,13 +15,13 @@
 using namespace Microsoft::WRL;
 #endif // _WIN32
 
-#ifdef PLATFORM_LINUX
+#if defined(PLATFORM_LINUX) || defined(PLATFORM_MACOS)
 #define SHADERCOMPILER_ENABLED
 #define SHADERCOMPILER_ENABLED_DXCOMPILER
 #define __RPC_FAR
 #define ComPtr CComPtr
 #include "Utility/dxc/WinAdapter.h"
-#endif // PLATFORM_LINUX
+#endif // PLATFORM_LINUX || PLATFORM_MACOS
 
 #ifdef SHADERCOMPILER_ENABLED_DXCOMPILER
 #include "Utility/dxc/dxcapi.h"
@@ -55,9 +55,15 @@ namespace wi::shadercompiler
 		{
 #ifdef _WIN32
 			const std::string library = "dxcompiler" + modifier + ".dll";
+			wi::backlog::post("wi::shadercompiler: DXC init: platform=WINDOWS, trying " + library);
 			HMODULE dxcompiler = wiLoadLibrary(library.c_str());
 #elif defined(PLATFORM_LINUX)
 			const std::string library = "./libdxcompiler" + modifier + ".so";
+			wi::backlog::post("wi::shadercompiler: DXC init: platform=LINUX, trying " + library);
+			HMODULE dxcompiler = wiLoadLibrary(library.c_str());
+#elif defined(PLATFORM_MACOS)
+			const std::string library = "./libdxcompiler" + modifier + ".dylib";
+			wi::backlog::post("wi::shadercompiler: DXC init: platform=APPLE, trying " + library);
 			HMODULE dxcompiler = wiLoadLibrary(library.c_str());
 #endif
 			if (dxcompiler != nullptr)
@@ -84,6 +90,9 @@ namespace wi::shadercompiler
 #ifdef PLATFORM_LINUX
 				wi::backlog::post(dlerror(), wi::backlog::LogLevel::Error); // print dlopen() error detail: https://linux.die.net/man/3/dlerror
 #endif // PLATFORM_LINUX
+#ifdef PLATFORM_MACOS
+				wi::backlog::post(dlerror(), wi::backlog::LogLevel::Error);
+#endif // PLATFORM_MACOS
 			}
 
 		}
