@@ -1766,9 +1766,9 @@ using namespace vulkan_internal;
 			allocInfo.pSetLayouts = &descriptorSetLayout;
 
 			VkResult res = vkAllocateDescriptorSets(device->device, &allocInfo, &descriptorSet);
-			while (res == VK_ERROR_OUT_OF_POOL_MEMORY)
+			while (res == VK_ERROR_OUT_OF_POOL_MEMORY || res == VK_ERROR_FRAGMENTED_POOL)
 			{
-				binder_pool.poolSize *= 2;
+				binder_pool.poolSize = std::max(1u, binder_pool.poolSize * 2);
 				binder_pool.init(device);
 				allocInfo.descriptorPool = binder_pool.descriptorPool;
 				res = vkAllocateDescriptorSets(device->device, &allocInfo, &descriptorSet);
