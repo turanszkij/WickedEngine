@@ -57,6 +57,14 @@ namespace wi
 			device->CreateTexture(&desc, nullptr, &rtMain);
 			device->SetName(&rtMain, "rtMain");
 
+			desc.format = wi::renderer::format_idbuffer;
+			desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+			desc.width = internalResolution.x;
+			desc.height = internalResolution.y;
+			desc.sample_count = 1;
+			device->CreateTexture(&desc, nullptr, &rtPrimitiveID);
+			device->SetName(&rtPrimitiveID, "rtPrimitiveID");
+
 			desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE | BindFlag::RENDER_TARGET;
 			desc.format = Format::R32G32B32A32_FLOAT;
 			desc.width = internalResolution.x;
@@ -393,10 +401,16 @@ namespace wi
 						denoiserNormal.IsValid() ? &denoiserNormal : nullptr,
 						&traceDepth,
 						&traceStencil,
-						&depthBuffer_Main
+						&depthBuffer_Main,
+						&rtPrimitiveID
 					);
 
 					wi::profiler::EndRange(range); // Traced Scene
+
+					if (sam == 0 && getMeshBlendEnabled() && visibility_main.IsMeshBlendVisible())
+					{
+						wi::renderer::PostProcess_MeshBlend_EdgeProcess(meshblendResources, cmd);
+					}
 				}
 
 				if (getVolumeLightsEnabled() && visibility_main.IsRequestedVolumetricLights())
@@ -481,8 +495,8 @@ namespace wi
 			// Composite other effects on top:
 			{
 				RenderPassImage rp[] = {
+					RenderPassImage::RenderTarget(&rtMain, RenderPassImage::LoadOp::CLEAR),
 					RenderPassImage::DepthStencil(&depthBuffer_Main, RenderPassImage::LoadOp::LOAD),
-					RenderPassImage::RenderTarget(&rtMain, RenderPassImage::LoadOp::CLEAR)
 				};
 				device->RenderPassBegin(rp, arraysize(rp), cmd);
 
@@ -563,6 +577,12 @@ namespace wi
 				}
 
 				device->RenderPassEnd(cmd);
+
+				if (getMeshBlendEnabled() && visibility_main.IsMeshBlendVisible())
+				{
+					rp[0].loadop = RenderPassImage::LoadOp::LOAD;
+					wi::renderer::PostProcess_MeshBlend_Resolve(meshblendResources, rtMain, rp, arraysize(rp), cmd);
+				}
 			}
 
 			// Post processing:
