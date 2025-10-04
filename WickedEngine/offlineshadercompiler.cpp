@@ -309,10 +309,14 @@ wi::vector<ShaderEntry> shaders = {
 	{"envMapVS", wi::graphics::ShaderStage::VS },
 	{"occludeeVS", wi::graphics::ShaderStage::VS },
 	{"ddgi_debugVS", wi::graphics::ShaderStage::VS },
+#if defined(PLATFORM_PS5)
 	{"objectGS_primitiveID_emulation", wi::graphics::ShaderStage::GS },
 	{"objectGS_primitiveID_emulation_alphatest", wi::graphics::ShaderStage::GS },
+#endif
+#if !defined(PLATFORM_MACOS)
 	{"voxelGS", wi::graphics::ShaderStage::GS },
 	{"objectGS_voxelizer", wi::graphics::ShaderStage::GS },
+#endif
 	{"objectVS_simple", wi::graphics::ShaderStage::VS },
 	{"objectVS_common", wi::graphics::ShaderStage::VS },
 	{"objectVS_common_tessellation", wi::graphics::ShaderStage::VS },

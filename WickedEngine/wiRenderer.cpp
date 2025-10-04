@@ -28,6 +28,9 @@
 #include "shaders/ShaderInterop_Raytracing.h"
 #include "shaders/ShaderInterop_BVH.h"
 #include "shaders/ShaderInterop_DDGI.h"
+#if defined(PLATFORM_MACOS)
+#define VOXELIZATION_FORCE_NO_GS
+#endif
 #include "shaders/ShaderInterop_VXGI.h"
 #include "shaders/ShaderInterop_FSR2.h"
 #include "shaders/uvsphere.hlsli"
@@ -102,6 +105,15 @@ void PushBarrier(const GPUBarrier& barrier)
 	if (barrier.type == GPUBarrier::Type::IMAGE && barrier.image.layout_before == barrier.image.layout_after)
 		return;
 	barrier_stack.push_back(barrier);
+}
+
+bool IsPrimitiveIDSupported()
+{
+#if defined(PLATFORM_MACOS) || defined(PLATFORM_IOS)
+	return false;
+#else
+	return true;
+#endif
 }
 
 bool wireRender = false;
@@ -630,13 +642,27 @@ SHADERTYPE GetPSTYPE(RENDERPASS renderPass, bool alphatest, bool transparent, Ma
 		realPS = SHADERTYPE((transparent ? PSTYPE_OBJECT_TRANSPARENT_PERMUTATION_BEGIN : PSTYPE_OBJECT_PERMUTATION_BEGIN) + shaderType);
 		break;
 	case RENDERPASS_PREPASS:
-		if (alphatest)
+		if (IsPrimitiveIDSupported())
 		{
-			realPS = PSTYPE_OBJECT_PREPASS_ALPHATEST;
+			if (alphatest)
+			{
+				realPS = PSTYPE_OBJECT_PREPASS_ALPHATEST;
+			}
+			else
+			{
+				realPS = PSTYPE_OBJECT_PREPASS;
+			}
 		}
 		else
 		{
-			realPS = PSTYPE_OBJECT_PREPASS;
+			if (alphatest)
+			{
+				realPS = PSTYPE_OBJECT_PREPASS_DEPTHONLY_ALPHATEST;
+			}
+			else
+			{
+				realPS = SHADERTYPE_COUNT;
+			}
 		}
 		break;
 	case RENDERPASS_PREPASS_DEPTHONLY:
@@ -972,8 +998,10 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_WAVE_EFFECT], "waveeffectPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_POSTPROCESS_MESH_BLEND], "mesh_blendPS.cso"); });
 
+#ifdef VOXELIZATION_GEOMETRY_SHADER_ENABLED
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_VOXELIZER], "objectGS_voxelizer.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_VOXEL], "voxelGS.cso"); });
+#endif // VOXELIZATION_GEOMETRY_SHADER_ENABLED
 
 #ifdef PLATFORM_PS5
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_OBJECT_PRIMITIVEID_EMULATION], "objectGS_primitiveID_emulation.cso"); });
@@ -2069,10 +2097,23 @@ void LoadShaders()
 											renderpass_info.rt_count = 0;
 											renderpass_info.rt_formats[0] = Format::UNKNOWN;
 										}
+										else if (renderPass == RENDERPASS_PREPASS)
+										{
+											if (IsPrimitiveIDSupported())
+											{
+												renderpass_info.rt_count = 1;
+												renderpass_info.rt_formats[0] = format_idbuffer;
+											}
+											else
+											{
+												renderpass_info.rt_count = 0;
+												renderpass_info.rt_formats[0] = Format::UNKNOWN;
+											}
+										}
 										else
 										{
 											renderpass_info.rt_count = 1;
-											renderpass_info.rt_formats[0] = renderPass == RENDERPASS_MAIN ? format_rendertarget_main : format_idbuffer;
+											renderpass_info.rt_formats[0] = format_rendertarget_main;
 										}
 										renderpass_info.ds_format = format_depthbuffer_main;
 										const uint32_t msaa_support[] = { 1,2,4,8 };

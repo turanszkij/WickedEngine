@@ -8,6 +8,7 @@ struct GSOutput
 };
 
 [maxvertexcount(36)]
+#ifdef VOXELIZATION_GEOMETRY_SHADER_ENABLED
 void main(
 	point uint input[1] : VERTEXID,
 	inout TriangleStream<GSOutput> output
@@ -38,8 +39,8 @@ void main(
 		float3 P = GetFrame().vxgi.clipmap_to_world((coord - 0.5) / (GetFrame().vxgi.resolution - 2), clipmap);
 		VoxelClipMap clipmap_below = GetFrame().vxgi.clipmaps[clipmap_index - 1];
 		float3 diff = (P - clipmap_below.center) * GetFrame().vxgi.resolution_rcp / clipmap_below.voxelSize;
-		float3 uvw = diff * float3(0.5f, -0.5f, 0.5f) + 0.5f;
-		if (is_saturated(uvw))
+		float3 uvw_ = diff * float3(0.5f, -0.5f, 0.5f) + 0.5f;
+		if (is_saturated(uvw_))
 			return;
 	}
 
@@ -86,7 +87,7 @@ void main(
 			color = float4(0, 0, 0, 1);
 		}
 
-		if(color.a > 0)
+		if (color.a > 0)
 		for (j = 0; j < 3; ++j)
 		{
 			tri[j].pos.xyz *= clipmap.voxelSize;
@@ -99,3 +100,6 @@ void main(
 		output.RestartStrip();
 	}
 }
+#else
+void main(point uint input[1] : VERTEXID, inout TriangleStream<GSOutput> output) {}
+#endif // VOXELIZATION_GEOMETRY_SHADER_ENABLED

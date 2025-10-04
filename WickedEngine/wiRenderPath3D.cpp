@@ -721,7 +721,7 @@ namespace wi
 
 		visibilityResources.depthbuffer = &depthBuffer_Copy;
 		visibilityResources.lineardepth = &rtLinearDepth;
-		if (getMSAASampleCount() > 1)
+		if (wi::renderer::IsPrimitiveIDSupported() && getMSAASampleCount() > 1)
 		{
 			visibilityResources.primitiveID_resolved = &rtPrimitiveID;
 		}
@@ -736,12 +736,12 @@ namespace wi
 		camera->scissor = GetScissorInternalResolution();
 		camera->sample_count = depthBuffer_Main.desc.sample_count;
 		camera->shadercamera_options = SHADERCAMERA_OPTION_NONE;
-		camera->texture_primitiveID_index = device->GetDescriptorIndex(&rtPrimitiveID, SubresourceType::SRV);
+		camera->texture_primitiveID_index = wi::renderer::IsPrimitiveIDSupported() ? device->GetDescriptorIndex(&rtPrimitiveID, SubresourceType::SRV) : -1;
 		camera->texture_depth_index = device->GetDescriptorIndex(&depthBuffer_Copy, SubresourceType::SRV);
 		camera->texture_lineardepth_index = device->GetDescriptorIndex(&rtLinearDepth, SubresourceType::SRV);
 		camera->texture_velocity_index = device->GetDescriptorIndex(&rtVelocity, SubresourceType::SRV);
-		camera->texture_normal_index = device->GetDescriptorIndex(&visibilityResources.texture_normals, SubresourceType::SRV);
-		camera->texture_roughness_index = device->GetDescriptorIndex(&visibilityResources.texture_roughness, SubresourceType::SRV);
+		camera->texture_normal_index = wi::renderer::IsPrimitiveIDSupported() ? device->GetDescriptorIndex(&visibilityResources.texture_normals, SubresourceType::SRV) : -1;
+		camera->texture_roughness_index = wi::renderer::IsPrimitiveIDSupported() ? device->GetDescriptorIndex(&visibilityResources.texture_roughness, SubresourceType::SRV) : -1;
 		camera->buffer_entitytiles_index = device->GetDescriptorIndex(&tiledLightResources.entityTiles, SubresourceType::SRV);
 		camera->texture_reflection_index = device->GetDescriptorIndex(&rtReflection_resolved, SubresourceType::SRV);
 		camera->texture_reflection_depth_index = device->GetDescriptorIndex(&depthBuffer_Reflection_resolved, SubresourceType::SRV);
@@ -976,24 +976,28 @@ namespace wi
 				);
 			}
 
-			RenderPassImage rp[] = {
-				RenderPassImage::DepthStencil(
-					&depthBuffer_Main,
-					RenderPassImage::LoadOp::CLEAR,
-					RenderPassImage::StoreOp::STORE,
-					ResourceState::DEPTHSTENCIL,
-					ResourceState::DEPTHSTENCIL,
-					ResourceState::DEPTHSTENCIL
-				),
-				RenderPassImage::RenderTarget(
+			RenderPassImage rp[2];
+			rp[0] = RenderPassImage::DepthStencil(
+				&depthBuffer_Main,
+				RenderPassImage::LoadOp::CLEAR,
+				RenderPassImage::StoreOp::STORE,
+				ResourceState::DEPTHSTENCIL,
+				ResourceState::DEPTHSTENCIL,
+				ResourceState::DEPTHSTENCIL
+			);
+			uint32_t rp_count = 1;
+			if (wi::renderer::IsPrimitiveIDSupported())
+			{
+				rp[1] = RenderPassImage::RenderTarget(
 					&rtPrimitiveID_render,
 					RenderPassImage::LoadOp::CLEAR,
 					RenderPassImage::StoreOp::STORE,
 					ResourceState::SHADER_RESOURCE_COMPUTE,
 					ResourceState::SHADER_RESOURCE_COMPUTE
-				),
-			};
-			device->RenderPassBegin(rp, arraysize(rp), cmd);
+				);
+				rp_count = 2;
+			}
+			device->RenderPassBegin(rp, rp_count, cmd);
 
 			device->EventBegin("Opaque Z-prepass", cmd);
 			auto range = wi::profiler::BeginRangeGPU("Z-Prepass", cmd);
@@ -1063,11 +1067,14 @@ namespace wi
 				cmd
 			);
 
-			wi::renderer::Visibility_Prepare(
-				visibilityResources,
-				rtPrimitiveID_render,
-				cmd
-			);
+			if (wi::renderer::IsPrimitiveIDSupported())
+			{
+				wi::renderer::Visibility_Prepare(
+					visibilityResources,
+					rtPrimitiveID_render,
+					cmd
+				);
+			}
 
 			wi::renderer::ComputeTiledLightCulling(
 				tiledLightResources,
@@ -1076,29 +1083,32 @@ namespace wi
 				cmd
 			);
 
-			if (visibility_shading_in_compute)
+			if (wi::renderer::IsPrimitiveIDSupported())
 			{
-				wi::renderer::Visibility_Surface(
-					visibilityResources,
-					rtMain,
-					cmd
-				);
-			}
-			else if (
-				getSSREnabled() ||
-				getSSGIEnabled() ||
-				getRaytracedReflectionEnabled() ||
-				getRaytracedDiffuseEnabled() ||
-				wi::renderer::GetScreenSpaceShadowsEnabled() ||
-				wi::renderer::GetRaytracedShadowsEnabled() ||
-				wi::renderer::GetVXGIEnabled()
-				)
-			{
-				// These post effects require surface normals and/or roughness
-				wi::renderer::Visibility_Surface_Reduced(
-					visibilityResources,
-					cmd
-				);
+				if (visibility_shading_in_compute)
+				{
+					wi::renderer::Visibility_Surface(
+						visibilityResources,
+						rtMain,
+						cmd
+					);
+				}
+				else if (
+					getSSREnabled() ||
+					getSSGIEnabled() ||
+					getRaytracedReflectionEnabled() ||
+					getRaytracedDiffuseEnabled() ||
+					wi::renderer::GetScreenSpaceShadowsEnabled() ||
+					wi::renderer::GetRaytracedShadowsEnabled() ||
+					wi::renderer::GetVXGIEnabled()
+					)
+				{
+					// These post effects require surface normals and/or roughness
+					wi::renderer::Visibility_Surface_Reduced(
+						visibilityResources,
+						cmd
+					);
+				}
 			}
 
 			if (rtVelocity.IsValid())
