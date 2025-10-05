@@ -47,6 +47,7 @@ namespace wi
 		rtFSR[0] = {};
 		rtFSR[1] = {};
 		rtOutlineSource = {};
+		rtOutlineSource_resolved = {};
 
 		rtPostprocess = {};
 
@@ -1575,11 +1576,15 @@ namespace wi
 				// Cut off outline source from linear depth:
 				device->EventBegin("Outline Source", cmd);
 
-				RenderPassImage rp[] = {
-					RenderPassImage::RenderTarget(&rtOutlineSource, RenderPassImage::LoadOp::CLEAR),
-					RenderPassImage::DepthStencil(&depthBuffer_Main, RenderPassImage::LoadOp::LOAD)
-				};
-				device->RenderPassBegin(rp, arraysize(rp), cmd);
+				RenderPassImage rp_outline[3];
+				uint32_t rp_outline_count = 0;
+				rp_outline[rp_outline_count++] = RenderPassImage::RenderTarget(&rtOutlineSource, RenderPassImage::LoadOp::CLEAR);
+				if (rtOutlineSource.desc.sample_count > 1 && rtOutlineSource_resolved.IsValid())
+				{
+					rp_outline[rp_outline_count++] = RenderPassImage::Resolve(&rtOutlineSource_resolved);
+				}
+				rp_outline[rp_outline_count++] = RenderPassImage::DepthStencil(&depthBuffer_Main, RenderPassImage::LoadOp::LOAD);
+				device->RenderPassBegin(rp_outline, rp_outline_count, cmd);
 				wi::image::Params params;
 				params.enableFullScreen();
 				params.stencilRefMode = wi::image::STENCILREFMODE_ENGINE;
@@ -1897,8 +1902,13 @@ namespace wi
 	{
 		if (getOutlineEnabled())
 		{
+			const Texture* outline_input = &rtOutlineSource;
+			if (rtOutlineSource.desc.sample_count > 1 && rtOutlineSource_resolved.IsValid())
+			{
+				outline_input = &rtOutlineSource_resolved;
+			}
 			wi::renderer::Postprocess_Outline(
-				rtOutlineSource,
+				*outline_input,
 				cmd,
 				getOutlineThreshold(),
 				getOutlineThickness(),
@@ -3187,12 +3197,26 @@ namespace wi
 			desc.format = Format::R32_FLOAT;
 			desc.width = internalResolution.x;
 			desc.height = internalResolution.y;
+			desc.sample_count = getMSAASampleCount();
 			device->CreateTexture(&desc, nullptr, &rtOutlineSource);
 			device->SetName(&rtOutlineSource, "rtOutlineSource");
+
+			if (desc.sample_count > 1)
+			{
+				TextureDesc resolve_desc = desc;
+				resolve_desc.sample_count = 1;
+				device->CreateTexture(&resolve_desc, nullptr, &rtOutlineSource_resolved);
+				device->SetName(&rtOutlineSource_resolved, "rtOutlineSource_resolved");
+			}
+			else
+			{
+				rtOutlineSource_resolved = {};
+			}
 		}
 		else
 		{
 			rtOutlineSource = {};
+			rtOutlineSource_resolved = {};
 		}
 	}
 
