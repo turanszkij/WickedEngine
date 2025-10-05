@@ -40,6 +40,11 @@ namespace wi
 	bool RenderPath3D_PathTracing::isDenoiserAvailable() const { return false; }
 #endif // OPEN_IMAGE_DENOISE
 
+	RenderPath3D_PathTracing::~RenderPath3D_PathTracing()
+	{
+		wi::jobsystem::Wait(denoiserContext);
+	}
+
 	void RenderPath3D_PathTracing::ResizeBuffers()
 	{
 		DeleteGPUResources();
