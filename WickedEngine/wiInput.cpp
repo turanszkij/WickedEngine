@@ -175,11 +175,11 @@ namespace wi::input
 		wi::input::sdlinput::GetKeyboardState(&keyboard);
 
 		// SDL mouse events already report coordinates in logical (points)
-		// space. Convert them to physical pixels here so the common conversion
-		// path below can safely remap everything back to logical space exactly
-		// once. This fixes high-DPI setups (macOS Retina) where coordinates
-		// would otherwise be scaled twice.
-		const float dpi_scale = canvas.GetDPIScaling();
+		// space that are DPI-compensated by the OS. Convert them to physical
+		// pixels here using only the OS DPI factor (excluding the user-defined
+		// UI scaling), so the common conversion path below can map back to the
+		// engine's logical space exactly once.
+		const float dpi_scale = canvas.scaling > 0 ? canvas.GetDPIScaling() / canvas.scaling : canvas.GetDPIScaling();
 		if (dpi_scale > 0)
 		{
 			mouse.position.x *= dpi_scale;
@@ -200,6 +200,8 @@ namespace wi::input
 		// The application always works with logical mouse coordinates:
 		mouse.position.x = canvas.PhysicalToLogical(mouse.position.x);
 		mouse.position.y = canvas.PhysicalToLogical(mouse.position.y);
+		mouse.delta_position.x = canvas.PhysicalToLogical(mouse.delta_position.x);
+		mouse.delta_position.y = canvas.PhysicalToLogical(mouse.delta_position.y);
 
 		// Check if low-level XINPUT controller is not registered for playerindex slot and register:
 		for (int i = 0; i < wi::input::xinput::GetMaxControllerCount(); ++i)
