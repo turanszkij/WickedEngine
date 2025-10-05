@@ -173,6 +173,20 @@ namespace wi::input
 #elif defined(SDL2)
 		wi::input::sdlinput::GetMouseState(&mouse);
 		wi::input::sdlinput::GetKeyboardState(&keyboard);
+
+		// SDL mouse events already report coordinates in logical (points)
+		// space. Convert them to physical pixels here so the common conversion
+		// path below can safely remap everything back to logical space exactly
+		// once. This fixes high-DPI setups (macOS Retina) where coordinates
+		// would otherwise be scaled twice.
+		const float dpi_scale = canvas.GetDPIScaling();
+		if (dpi_scale > 0)
+		{
+			mouse.position.x *= dpi_scale;
+			mouse.position.y *= dpi_scale;
+			mouse.delta_position.x *= dpi_scale;
+			mouse.delta_position.y *= dpi_scale;
+		}
 #endif
 
 		if (pen_override)
