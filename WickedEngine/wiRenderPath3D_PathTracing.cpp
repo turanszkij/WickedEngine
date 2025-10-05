@@ -309,7 +309,8 @@ namespace wi
 		}
 		else
 		{
-			denoiserResult = Texture();
+			wi::jobsystem::Wait(denoiserContext);
+			denoiserResult = {};
 			denoiserProgress = 0;
 		}
 #endif // OPEN_IMAGE_DENOISE
