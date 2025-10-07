@@ -1766,9 +1766,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\indexgenerator.cpp">
       <Filter>UTILITY\meshoptimizer</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\overdrawanalyzer.cpp">
-      <Filter>UTILITY\meshoptimizer</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\overdrawoptimizer.cpp">
       <Filter>UTILITY\meshoptimizer</Filter>
     </ClCompile>
@@ -1784,9 +1781,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\stripifier.cpp">
       <Filter>UTILITY\meshoptimizer</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\vcacheanalyzer.cpp">
-      <Filter>UTILITY\meshoptimizer</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\vcacheoptimizer.cpp">
       <Filter>UTILITY\meshoptimizer</Filter>
     </ClCompile>
@@ -1794,9 +1788,6 @@
       <Filter>UTILITY\meshoptimizer</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\vertexfilter.cpp">
-      <Filter>UTILITY\meshoptimizer</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\vfetchanalyzer.cpp">
       <Filter>UTILITY\meshoptimizer</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\vfetchoptimizer.cpp">
@@ -2206,6 +2197,15 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiVideo_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\indexanalyzer.cpp">
+      <Filter>UTILITY\meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\partition.cpp">
+      <Filter>UTILITY\meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\rasterizer.cpp">
+      <Filter>UTILITY\meshoptimizer</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

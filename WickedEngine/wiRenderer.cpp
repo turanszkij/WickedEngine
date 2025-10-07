@@ -550,18 +550,6 @@ SHADERTYPE GetGSTYPE(RENDERPASS renderPass, bool alphatest, bool transparent)
 		break;
 #endif // VOXELIZATION_GEOMETRY_SHADER_ENABLED
 
-	case RENDERPASS_PREPASS:
-#ifdef PLATFORM_PS5
-		if (alphatest)
-		{
-			realGS = GSTYPE_OBJECT_PRIMITIVEID_EMULATION_ALPHATEST;
-		}
-		else
-		{
-			realGS = GSTYPE_OBJECT_PRIMITIVEID_EMULATION;
-		}
-#endif // PLATFORM_PS5
-		break;
 	default:
 		break;
 	}
@@ -974,11 +962,6 @@ void LoadShaders()
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_VOXELIZER], "objectGS_voxelizer.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_VOXEL], "voxelGS.cso"); });
-
-#ifdef PLATFORM_PS5
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_OBJECT_PRIMITIVEID_EMULATION], "objectGS_primitiveID_emulation.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_OBJECT_PRIMITIVEID_EMULATION_ALPHATEST], "objectGS_primitiveID_emulation_alphatest.cso"); });
-#endif // PLATFORM_PS5
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_LUMINANCE_PASS1], "luminancePass1CS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_LUMINANCE_PASS2], "luminancePass2CS.cso"); });
@@ -3186,6 +3169,7 @@ void RenderMeshes(
 		const float tessF = mesh.GetTessellationFactor();
 		const bool tessellatorRequested = tessF > 0 && tessellation;
 		const bool meshShaderRequested = !tessellatorRequested && mesh_shader && mesh.vb_clu.IsValid();
+		const bool provokingIBRequired = renderPass == RENDERPASS_PREPASS || renderPass == RENDERPASS_PREPASS_DEPTHONLY; // Note: depthonly doesn't need primitiveID, but for now I don't created specialized shader for it without primitiveID (TODO measure perf, additional shaders overhead)
 
 		if (forwardLightmaskRequest)
 		{
@@ -3301,7 +3285,7 @@ void RenderMeshes(
 
 			// Note: the mesh.generalBuffer can be either a standalone allocated buffer, or a suballocated one (to reduce index buffer switching)
 			const GPUBuffer* ib = mesh.generalBufferOffsetAllocation.IsValid() ? &mesh.generalBufferOffsetAllocationAlias : &mesh.generalBuffer;
-			const IndexBufferFormat ibformat = mesh.GetIndexFormat();
+			const IndexBufferFormat ibformat = provokingIBRequired ? mesh.GetPrimitiveIndexFormat() : mesh.GetIndexFormat();
 			const void* ibinternal = ib->internal_state.get();
 
 			if (!meshShaderPSO && (prev_ib_internal != ibinternal || prev_ibformat != ibformat))
@@ -3327,16 +3311,19 @@ void RenderMeshes(
 			push.instances = instanceBufferDescriptorIndex;
 			push.instance_offset = (uint)instancedBatch.dataOffset;
 
+			const MeshComponent::BufferView& ibv = provokingIBRequired ? mesh.ib_provoke : mesh.ib;
+			const size_t ib_stride = provokingIBRequired ? mesh.GetPrimitiveIndexStride() : mesh.GetIndexStride();
+
 			uint32_t indexOffset = 0;
 			if (mesh.generalBufferOffsetAllocation.IsValid())
 			{
 				// In case the mesh general buffer is suballocated, the indexOffset is calculated relative to the beginning of the aliased buffer block:
-				indexOffset = uint32_t(((uint64_t)mesh.generalBufferOffsetAllocation.byte_offset + mesh.ib.offset) / mesh.GetIndexStride()) + subset.indexOffset;
+				indexOffset = uint32_t(((uint64_t)mesh.generalBufferOffsetAllocation.byte_offset + ibv.offset) / ib_stride) + subset.indexOffset;
 			}
 			else
 			{
 				// In case the mesh general buffer is not suballocated, it is a standalone buffer and index offset is relative to itself
-				indexOffset = uint32_t(mesh.ib.offset / mesh.GetIndexStride()) + subset.indexOffset;
+				indexOffset = uint32_t(ibv.offset / ib_stride) + subset.indexOffset;
 			}
 
 			if (pso_backside != nullptr &&pso_backside->IsValid())

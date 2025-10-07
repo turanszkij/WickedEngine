@@ -219,7 +219,7 @@ void main(
 #endif // OBJECTSHADER_USE_VIEWPORTARRAYINDEX
 		
 #if defined(OBJECTSHADER_LAYOUT_PREPASS) || defined(OBJECTSHADER_LAYOUT_PREPASS_TEX)
-		primitives[ti].primitiveID = (meshletID - geometry.meshletOffset) * MESHLET_TRIANGLE_COUNT + ti;
+		primitives[ti].primitiveID = (meshletID - geometry.meshletOffset) * MESHLET_TRIANGLE_COUNT + ti + geometry.indexOffset * 3;
 #endif // defined(OBJECTSHADER_LAYOUT_PREPASS) || defined(OBJECTSHADER_LAYOUT_PREPASS_TEX)
 
 	}

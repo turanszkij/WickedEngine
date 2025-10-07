@@ -326,8 +326,6 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">4.0</ShaderModel>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)objectGS_primitiveID_emulation.hlsl" />
-    <FxCompile Include="$(MSBuildThisFileDirectory)objectGS_primitiveID_emulation_alphatest.hlsl" />
     <FxCompile Include="$(MSBuildThisFileDirectory)objectMS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">4.0</ShaderModel>
