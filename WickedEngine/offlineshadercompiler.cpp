@@ -310,8 +310,6 @@ wi::vector<ShaderEntry> shaders = {
 	{"envMapVS", wi::graphics::ShaderStage::VS },
 	{"occludeeVS", wi::graphics::ShaderStage::VS },
 	{"ddgi_debugVS", wi::graphics::ShaderStage::VS },
-	{"objectGS_primitiveID_emulation", wi::graphics::ShaderStage::GS },
-	{"objectGS_primitiveID_emulation_alphatest", wi::graphics::ShaderStage::GS },
 	{"voxelGS", wi::graphics::ShaderStage::GS },
 	{"objectGS_voxelizer", wi::graphics::ShaderStage::GS },
 	{"objectVS_simple", wi::graphics::ShaderStage::VS },

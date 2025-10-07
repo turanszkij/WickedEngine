@@ -527,10 +527,15 @@ struct alignas(16) ShaderGeometry
 	int vb_clu;
 	int vb_bou;
 
+	int ib_reorder;
+	int padding0;
+	int padding1;
+	int padding2;
 
 	void init()
 	{
 		ib = -1;
+		ib_reorder = -1;
 		vb_pos_wind = -1;
 		vb_uvs = -1;
 		vb_nor = -1;
@@ -555,6 +560,10 @@ struct alignas(16) ShaderGeometry
 		impostorSliceOffset = -1;
 		indexOffset = 0;
 		indexCount = 0;
+
+		padding0 = 0;
+		padding1 = 0;
+		padding2 = 0;
 	}
 };
 

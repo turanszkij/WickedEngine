@@ -93,11 +93,13 @@ PUSHCONSTANT(push, ObjectPushConstants);
 #endif // OBJECTSHADER_LAYOUT_SHADOW_TEX
 
 #ifdef OBJECTSHADER_LAYOUT_PREPASS
+#define PREPASS
 #define OBJECTSHADER_USE_CLIPPLANE
 #define OBJECTSHADER_USE_INSTANCEINDEX
 #endif // OBJECTSHADER_LAYOUT_SHADOW
 
 #ifdef OBJECTSHADER_LAYOUT_PREPASS_TEX
+#define PREPASS
 #define OBJECTSHADER_USE_CLIPPLANE
 #define OBJECTSHADER_USE_UVSETS
 #define OBJECTSHADER_USE_DITHERING
@@ -120,9 +122,29 @@ struct VertexInput
 	uint vertexID : SV_VertexID;
 	uint instanceID : SV_InstanceID;
 
+	uint GetPrimitiveID()
+	{
+#ifdef PREPASS
+		// For prepass the meshopt_generateProvokingIndexBuffer is used to emulate SV_PrimitiveID via provoking vertex
+		return vertexID;
+#else
+		return 0;
+#endif // PREPASS
+	}
+
+	uint GetVertexID()
+	{
+#ifdef PREPASS
+		// For prepass the meshopt_generateProvokingIndexBuffer is used to emulate SV_PrimitiveID via provoking vertex
+		return bindless_buffers_uint[descriptor_index(GetMesh().ib_reorder)][vertexID];
+#else
+		return vertexID;
+#endif // PREPASS
+	}
+
 	float4 GetPositionWind()
 	{
-		return bindless_buffers_float4[descriptor_index(GetMesh().vb_pos_wind)][vertexID];
+		return bindless_buffers_float4[descriptor_index(GetMesh().vb_pos_wind)][GetVertexID()];
 	}
 
 	float4 GetUVSets()
@@ -130,7 +152,7 @@ struct VertexInput
 		[branch]
 		if (GetMesh().vb_uvs < 0)
 			return 0;
-		return lerp(GetMesh().uv_range_min.xyxy, GetMesh().uv_range_max.xyxy, bindless_buffers_float4[descriptor_index(GetMesh().vb_uvs)][vertexID]);
+		return lerp(GetMesh().uv_range_min.xyxy, GetMesh().uv_range_max.xyxy, bindless_buffers_float4[descriptor_index(GetMesh().vb_uvs)][GetVertexID()]);
 	}
 
 	ShaderMeshInstancePointer GetInstancePointer()
@@ -148,7 +170,7 @@ struct VertexInput
 		[branch]
 		if (GetMesh().vb_atl < 0)
 			return 0;
-		return bindless_buffers_float2[descriptor_index(GetMesh().vb_atl)][vertexID];
+		return bindless_buffers_float2[descriptor_index(GetMesh().vb_atl)][GetVertexID()];
 	}
 
 	half4 GetVertexColor()
@@ -156,7 +178,7 @@ struct VertexInput
 		[branch]
 		if (GetMesh().vb_col < 0)
 			return 1;
-		return bindless_buffers_half4[descriptor_index(GetMesh().vb_col)][vertexID];
+		return bindless_buffers_half4[descriptor_index(GetMesh().vb_col)][GetVertexID()];
 	}
 	
 	float3 GetNormal()
@@ -164,7 +186,7 @@ struct VertexInput
 		[branch]
 		if (GetMesh().vb_nor < 0)
 			return 0;
-		return bindless_buffers_float4[descriptor_index(GetMesh().vb_nor)][vertexID].xyz;
+		return bindless_buffers_float4[descriptor_index(GetMesh().vb_nor)][GetVertexID()].xyz;
 	}
 
 	float4 GetTangent()
@@ -172,7 +194,7 @@ struct VertexInput
 		[branch]
 		if (GetMesh().vb_tan < 0)
 			return 0;
-		return bindless_buffers_float4[descriptor_index(GetMesh().vb_tan)][vertexID];
+		return bindless_buffers_float4[descriptor_index(GetMesh().vb_tan)][GetVertexID()];
 	}
 
 	ShaderMeshInstance GetInstance()
@@ -190,7 +212,7 @@ struct VertexInput
 		[branch]
 		if (GetInstance().vb_ao < 0)
 			return 1;
-		return bindless_buffers_half[NonUniformResourceIndex(descriptor_index(GetInstance().vb_ao))][vertexID];
+		return bindless_buffers_half[NonUniformResourceIndex(descriptor_index(GetInstance().vb_ao))][GetVertexID()];
 	}
 
 	half GetWetmap()
@@ -198,12 +220,12 @@ struct VertexInput
 		//[branch]
 		//if (GetInstance().vb_wetmap < 0)
 		//	return 0;
-		//return bindless_buffers_half[NonUniformResourceIndex(descriptor_index(GetInstance().vb_wetmap))][vertexID];
+		//return bindless_buffers_half[NonUniformResourceIndex(descriptor_index(GetInstance().vb_wetmap))][GetVertexID()];
 
 		// There is something seriously bad with AMD driver's shader compiler as the above commented version works incorrectly and this works correctly but only for wetmap
 		[branch]
 		if (GetInstance().vb_wetmap >= 0)
-			return bindless_buffers_half[NonUniformResourceIndex(descriptor_index(GetInstance().vb_wetmap))][vertexID];
+			return bindless_buffers_half[NonUniformResourceIndex(descriptor_index(GetInstance().vb_wetmap))][GetVertexID()];
 		return 0;
 	}
 };
@@ -281,6 +303,10 @@ struct PixelInput
 #if defined(OBJECTSHADER_USE_INSTANCEINDEX) || defined(OBJECTSHADER_USE_DITHERING) || defined(OBJECTSHADER_USE_CAMERAINDEX)
 	uint poi : INSTANCEPOINTER;
 #endif // OBJECTSHADER_USE_INSTANCEINDEX || OBJECTSHADER_USE_DITHERING || OBJECTSHADER_USE_CAMERAINDEX
+
+#ifdef PREPASS
+	uint primitiveID : PRIMITIVEID;
+#endif // PREPASS
 
 #ifdef OBJECTSHADER_USE_UVSETS
 	float4 uvsets : UVSETS;
@@ -387,6 +413,9 @@ PixelInput vertex_to_pixel_export(VertexInput input)
 	ShaderCamera camera = GetCamera();
 #endif // OBJECTSHADER_USE_CAMERAINDEX
 
+#ifdef PREPASS
+	Out.primitiveID = input.GetPrimitiveID();
+#endif // PREPASS
 
 #ifndef OBJECTSHADER_USE_NOCAMERA
 	Out.pos = mul(camera.view_projection, Out.pos);
@@ -482,7 +511,7 @@ PixelInput main(VertexInput input)
 #ifdef DEPTHONLY
 void main(PixelInput input APPEND_COVERAGE_OUTPUT)
 #else
-uint main(PixelInput input, in uint primitiveID : SV_PrimitiveID APPEND_COVERAGE_OUTPUT) : SV_Target
+uint main(PixelInput input APPEND_COVERAGE_OUTPUT) : SV_Target
 #endif // DEPTHONLY
 #else
 float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVERAGE_OUTPUT) : SV_Target
@@ -1089,7 +1118,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 #ifndef DEPTHONLY
 	PrimitiveID prim;
 	prim.init();
-	prim.primitiveIndex = primitiveID;
+	prim.primitiveIndex = input.primitiveID - GetMesh().indexOffset / 3;
 	prim.instanceIndex = input.GetInstanceIndex();
 	prim.subsetIndex = push.geometryIndex - meshinstance.geometryOffset;
 	return prim.pack();

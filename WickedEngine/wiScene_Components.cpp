@@ -594,6 +594,8 @@ namespace wi::scene
 		generalBufferOffsetAllocation = {};
 		generalBuffer = {};
 		streamoutBuffer = {};
+		ib_provoke = {};
+		ib_reorder = {};
 		ib = {};
 		vb_pos_wind = {};
 		vb_nor = {};
@@ -731,6 +733,12 @@ namespace wi::scene
 #endif
 		}
 
+		// SV_PrimitiveID avoiding workaround: provoking vertex can refer to triangel index
+		//	SV_PrimitiveID needs geometry shader emulation on some platforms (on PC is can happen automatically by driver), but with this that can be avoided.
+		wi::vector<unsigned int> provoke(indices.size()); // mesh needs to be drawn with this as index buffer when SV_PrimitiveID is required
+		wi::vector<unsigned int> reorder(vertex_positions.size() + indices.size() / 3); // This can be used as vertexID lookup from current index
+		reorder.resize(meshopt_generateProvokingIndexBuffer(&provoke[0], &reorder[0], &indices[0], indices.size(), vertex_positions.size()));
+
 		const size_t uv_count = std::max(vertex_uvset_0.size(), vertex_uvset_1.size());
 
 		// Bounds computation:
@@ -846,6 +854,8 @@ namespace wi::scene
 		const uint64_t alignment = device->GetMinOffsetAlignment(&bd);
 		bd.size =
 			AlignTo(vertex_positions.size() * position_stride, alignment) + // position will be first to have 0 offset for flexible alignment!
+			AlignTo(provoke.size() * GetPrimitiveIndexStride(), alignment) +
+			AlignTo(reorder.size() * GetIndexStride(), alignment) +
 			AlignTo(indices.size() * GetIndexStride(), alignment) +
 			AlignTo(vertex_normals.size() * sizeof(Vertex_NOR), alignment) +
 			AlignTo(vertex_tangents.size() * sizeof(Vertex_TAN), alignment) +
@@ -1038,6 +1048,48 @@ namespace wi::scene
 			default:
 				assert(0);
 				break;
+			}
+
+			// Create provoking index buffer GPU data:
+			if (GetPrimitiveIndexFormat() == IndexBufferFormat::UINT32)
+			{
+				ib_provoke.offset = buffer_offset;
+				ib_provoke.size = provoke.size() * sizeof(uint32_t);
+				uint32_t* indexdata = (uint32_t*)(buffer_data + buffer_offset);
+				buffer_offset += AlignTo(ib_provoke.size, alignment);
+				std::memcpy(indexdata, provoke.data(), ib_provoke.size);
+			}
+			else
+			{
+				ib_provoke.offset = buffer_offset;
+				ib_provoke.size = provoke.size() * sizeof(uint16_t);
+				uint16_t* indexdata = (uint16_t*)(buffer_data + buffer_offset);
+				buffer_offset += AlignTo(ib_provoke.size, alignment);
+				for (size_t i = 0; i < provoke.size(); ++i)
+				{
+					std::memcpy(indexdata + i, &provoke[i], sizeof(uint16_t));
+				}
+			}
+
+			// Create reorder index buffer GPU data:
+			if (GetIndexFormat() == IndexBufferFormat::UINT32)
+			{
+				ib_reorder.offset = buffer_offset;
+				ib_reorder.size = reorder.size() * sizeof(uint32_t);
+				uint32_t* indexdata = (uint32_t*)(buffer_data + buffer_offset);
+				buffer_offset += AlignTo(ib_reorder.size, alignment);
+				std::memcpy(indexdata, reorder.data(), ib_reorder.size);
+			}
+			else
+			{
+				ib_reorder.offset = buffer_offset;
+				ib_reorder.size = reorder.size() * sizeof(uint16_t);
+				uint16_t* indexdata = (uint16_t*)(buffer_data + buffer_offset);
+				buffer_offset += AlignTo(ib_reorder.size, alignment);
+				for (size_t i = 0; i < reorder.size(); ++i)
+				{
+					std::memcpy(indexdata + i, &reorder[i], sizeof(uint16_t));
+				}
 			}
 
 			// Create index buffer GPU data:
@@ -1317,8 +1369,13 @@ namespace wi::scene
 			device->SetName(&generalBuffer, "MeshComponent::generalBuffer");
 		}
 
-		assert(ib.IsValid());
 		const Format ib_format = GetIndexFormat() == IndexBufferFormat::UINT32 ? Format::R32_UINT : Format::R16_UINT;
+
+		assert(ib_reorder.IsValid());
+		ib_reorder.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, ib_reorder.offset, ib_reorder.size, &ib_format);
+		ib_reorder.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, ib_reorder.subresource_srv);
+
+		assert(ib.IsValid());
 		ib.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, ib.offset, ib.size, &ib_format);
 		ib.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, ib.subresource_srv);
 
