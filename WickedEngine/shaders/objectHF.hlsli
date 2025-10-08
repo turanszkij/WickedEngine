@@ -124,22 +124,22 @@ struct VertexInput
 
 	uint GetPrimitiveID()
 	{
-#ifdef PREPASS
+#if defined(PREPASS) && !defined(OBJECTSHADER_COMPILE_MS)
 		// For prepass the meshopt_generateProvokingIndexBuffer is used to emulate SV_PrimitiveID via provoking vertex
 		return vertexID;
 #else
 		return 0;
-#endif // PREPASS
+#endif // defined(PREPASS) && !defined(OBJECTSHADER_COMPILE_MS)
 	}
 
 	uint GetVertexID()
 	{
-#ifdef PREPASS
+#if defined(PREPASS) && !defined(OBJECTSHADER_COMPILE_MS)
 		// For prepass the meshopt_generateProvokingIndexBuffer is used to emulate SV_PrimitiveID via provoking vertex
 		return bindless_buffers_uint[descriptor_index(GetMesh().ib_reorder)][vertexID];
 #else
 		return vertexID;
-#endif // PREPASS
+#endif // defined(PREPASS) && !defined(OBJECTSHADER_COMPILE_MS)
 	}
 
 	float4 GetPositionWind()
@@ -304,10 +304,6 @@ struct PixelInput
 	uint poi : INSTANCEPOINTER;
 #endif // OBJECTSHADER_USE_INSTANCEINDEX || OBJECTSHADER_USE_DITHERING || OBJECTSHADER_USE_CAMERAINDEX
 
-#ifdef PREPASS
-	uint primitiveID : PRIMITIVEID;
-#endif // PREPASS
-
 #ifdef OBJECTSHADER_USE_UVSETS
 	float4 uvsets : UVSETS;
 #endif // OBJECTSHADER_USE_UVSETS
@@ -328,6 +324,10 @@ struct PixelInput
 #ifdef OBJECTSHADER_USE_COLOR
 	half4 color : COLOR;
 #endif // OBJECTSHADER_USE_COLOR
+
+#if defined(PREPASS) && !defined(OBJECTSHADER_COMPILE_MS)
+	uint primitiveID : PRIMITIVEID;
+#endif // defined(PREPASS) && !defined(OBJECTSHADER_COMPILE_MS)
 
 #if !defined(OBJECTSHADER_COMPILE_PS) && !defined(OBJECTSHADER_COMPILE_MS)
 #ifdef OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
@@ -409,10 +409,10 @@ PixelInput vertex_to_pixel_export(VertexInput input)
 #else
 	ShaderCamera camera = GetCamera();
 #endif // OBJECTSHADER_USE_CAMERAINDEX
-
-#ifdef PREPASS
+	
+#if defined(PREPASS) && !defined(OBJECTSHADER_COMPILE_MS)
 	Out.primitiveID = input.GetPrimitiveID();
-#endif // PREPASS
+#endif // defined(PREPASS) && !defined(OBJECTSHADER_COMPILE_MS)
 
 #ifndef OBJECTSHADER_USE_NOCAMERA
 	Out.pos = mul(camera.view_projection, Out.pos);

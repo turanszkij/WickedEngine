@@ -159,6 +159,10 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
 struct PrimitiveAttributes
 {
+#if defined(OBJECTSHADER_LAYOUT_PREPASS) || defined(OBJECTSHADER_LAYOUT_PREPASS_TEX)
+	uint primitiveID : PRIMITIVEID;
+#endif // defined(OBJECTSHADER_LAYOUT_PREPASS) || defined(OBJECTSHADER_LAYOUT_PREPASS_TEX)
+
 #ifdef OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
 	uint RTIndex : SV_RenderTargetArrayIndex;
 #endif // OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
@@ -166,10 +170,6 @@ struct PrimitiveAttributes
 #ifdef OBJECTSHADER_USE_VIEWPORTARRAYINDEX
 	uint VPIndex : SV_ViewportArrayIndex;
 #endif // OBJECTSHADER_USE_VIEWPORTARRAYINDEX
-
-#if defined(OBJECTSHADER_LAYOUT_PREPASS) || defined(OBJECTSHADER_LAYOUT_PREPASS_TEX)
-	uint primitiveID : SV_PrimitiveID;
-#endif // defined(OBJECTSHADER_LAYOUT_PREPASS) || defined(OBJECTSHADER_LAYOUT_PREPASS_TEX)
 };
 
 [outputtopology("triangle")]
@@ -219,7 +219,7 @@ void main(
 #endif // OBJECTSHADER_USE_VIEWPORTARRAYINDEX
 		
 #if defined(OBJECTSHADER_LAYOUT_PREPASS) || defined(OBJECTSHADER_LAYOUT_PREPASS_TEX)
-		primitives[ti].primitiveID = (meshletID - geometry.meshletOffset) * MESHLET_TRIANGLE_COUNT + ti + geometry.indexOffset * 3;
+		primitives[ti].primitiveID = (meshletID - geometry.meshletOffset) * MESHLET_TRIANGLE_COUNT + ti + geometry.indexOffset / 3;
 #endif // defined(OBJECTSHADER_LAYOUT_PREPASS) || defined(OBJECTSHADER_LAYOUT_PREPASS_TEX)
 
 	}
