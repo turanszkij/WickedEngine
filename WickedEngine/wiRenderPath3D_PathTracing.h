@@ -28,6 +28,8 @@ namespace wi
 
 	public:
 
+		~RenderPath3D_PathTracing();
+
 		void Update(float dt) override;
 		void Render() const override;
 		void Compose(wi::graphics::CommandList cmd) const override;
@@ -40,7 +42,7 @@ namespace wi
 		float getDenoiserProgress() const { return denoiserProgress; }
 		bool isDenoiserAvailable() const;
 
-		void resetProgress() { sam = -1; denoiserProgress = 0; volumetriccloudResources.ResetFrame(); }
+		void resetProgress() { wi::jobsystem::Wait(denoiserContext); sam = -1; denoiserProgress = 0; volumetriccloudResources.ResetFrame(); }
 
 		uint8_t instanceInclusionMask_PathTrace = 0xFF;
 	};

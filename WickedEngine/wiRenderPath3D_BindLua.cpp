@@ -47,6 +47,7 @@ namespace wi::lua
 		lunamethod(RenderPath3D_BindLua, SetDepthOfFieldEnabled),
 		lunamethod(RenderPath3D_BindLua, SetEyeAdaptionEnabled),
 		lunamethod(RenderPath3D_BindLua, SetMSAASampleCount),
+		lunamethod(RenderPath3D_BindLua, SetCRTFilterEnabled),
 		lunamethod(RenderPath3D_BindLua, SetSharpenFilterEnabled),
 		lunamethod(RenderPath3D_BindLua, SetSharpenFilterAmount),
 		lunamethod(RenderPath3D_BindLua, SetExposure),
@@ -390,6 +391,21 @@ namespace wi::lua
 		}
 		else
 			wi::lua::SError(L, "SetMSAASampleCount(int value) not enough arguments!");
+		return 0;
+	}
+	int RenderPath3D_BindLua::SetCRTFilterEnabled(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetCRTFilterEnabled(bool value) component is null!");
+			return 0;
+		}
+		if (wi::lua::SGetArgCount(L) > 0)
+		{
+			((RenderPath3D*)component)->setCRTFilterEnabled(wi::lua::SGetBool(L, 1));
+		}
+		else
+			wi::lua::SError(L, "SetCRTFilterEnabled(bool value) not enough arguments!");
 		return 0;
 	}
 	int RenderPath3D_BindLua::SetSharpenFilterEnabled(lua_State* L)

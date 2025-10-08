@@ -511,11 +511,6 @@ else()
 	target_precompile_headers(Jolt PRIVATE "$<$<NOT:$<CONFIG:ReleaseCoverage>>:${JOLT_PHYSICS_ROOT}/Jolt.h>")
 endif()
 
-if (NOT CPP_EXCEPTIONS_ENABLED)
-	# Disable use of exceptions in MSVC's STL
-	target_compile_definitions(Jolt PUBLIC $<$<BOOL:${MSVC}>:_HAS_EXCEPTIONS=0>)
-endif()
-
 # Set the debug/non-debug build flags
 target_compile_definitions(Jolt PUBLIC "$<$<CONFIG:Debug>:_DEBUG>")
 target_compile_definitions(Jolt PUBLIC "$<$<CONFIG:Release,Distribution,ReleaseASAN,ReleaseUBSAN,ReleaseTSAN,ReleaseCoverage>:NDEBUG>")
@@ -575,10 +570,15 @@ elseif (DEBUG_RENDERER_IN_DEBUG_AND_RELEASE)
 endif()
 
 # Enable the profiler
+if (JPH_USE_EXTERNAL_PROFILE)
+	set(JOLT_PROFILE_DEFINE JPH_EXTERNAL_PROFILE)
+else()
+	set(JOLT_PROFILE_DEFINE JPH_PROFILE_ENABLED)
+endif()
 if (PROFILER_IN_DISTRIBUTION)
-	target_compile_definitions(Jolt PUBLIC "JPH_PROFILE_ENABLED")
+	target_compile_definitions(Jolt PUBLIC "${JOLT_PROFILE_DEFINE}")
 elseif (PROFILER_IN_DEBUG_AND_RELEASE)
-	target_compile_definitions(Jolt PUBLIC "$<$<CONFIG:Debug,Release,ReleaseASAN,ReleaseUBSAN,ReleaseTSAN>:JPH_PROFILE_ENABLED>")
+	target_compile_definitions(Jolt PUBLIC "$<$<CONFIG:Debug,Release,ReleaseASAN,ReleaseUBSAN,ReleaseTSAN>:${JOLT_PROFILE_DEFINE}>")
 endif()
 
 # Compile the ObjectStream class and RTTI attribute information

@@ -1045,7 +1045,7 @@ int Scene_BindLua::IntersectsAll(lua_State* L)
 				Luna<RayIntersectionResult_BindLua>::push(L, result);
 				lua_rawseti(L, newTable, lua_Integer(i + 1));
 			}
-			return cnt;
+			return 1;
 		}
 
 		Sphere_BindLua* sphere = Luna<Sphere_BindLua>::lightcheck(L, 1);
@@ -1062,7 +1062,7 @@ int Scene_BindLua::IntersectsAll(lua_State* L)
 				Luna<SphereIntersectionResult_BindLua>::push(L, result);
 				lua_rawseti(L, newTable, lua_Integer(i + 1));
 			}
-			return cnt;
+			return 1;
 		}
 
 		Capsule_BindLua* capsule = Luna<Capsule_BindLua>::lightcheck(L, 1);
@@ -1079,7 +1079,7 @@ int Scene_BindLua::IntersectsAll(lua_State* L)
 				Luna<SphereIntersectionResult_BindLua>::push(L, result);
 				lua_rawseti(L, newTable, lua_Integer(i + 1));
 			}
-			return cnt;
+			return 1;
 		}
 
 		wi::lua::SError(L, "Scene::IntersectsAll(Ray|Sphere|Capsule primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) first argument is not an accepted primitive type!");

@@ -40,6 +40,11 @@ namespace wi
 	bool RenderPath3D_PathTracing::isDenoiserAvailable() const { return false; }
 #endif // OPEN_IMAGE_DENOISE
 
+	RenderPath3D_PathTracing::~RenderPath3D_PathTracing()
+	{
+		wi::jobsystem::Wait(denoiserContext);
+	}
+
 	void RenderPath3D_PathTracing::ResizeBuffers()
 	{
 		DeleteGPUResources();
@@ -56,6 +61,14 @@ namespace wi
 			desc.height = internalResolution.y;
 			device->CreateTexture(&desc, nullptr, &rtMain);
 			device->SetName(&rtMain, "rtMain");
+
+			desc.format = wi::renderer::format_idbuffer;
+			desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+			desc.width = internalResolution.x;
+			desc.height = internalResolution.y;
+			desc.sample_count = 1;
+			device->CreateTexture(&desc, nullptr, &rtPrimitiveID);
+			device->SetName(&rtPrimitiveID, "rtPrimitiveID");
 
 			desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE | BindFlag::RENDER_TARGET;
 			desc.format = Format::R32G32B32A32_FLOAT;
@@ -296,7 +309,8 @@ namespace wi
 		}
 		else
 		{
-			denoiserResult = Texture();
+			wi::jobsystem::Wait(denoiserContext);
+			denoiserResult = {};
 			denoiserProgress = 0;
 		}
 #endif // OPEN_IMAGE_DENOISE
@@ -393,10 +407,16 @@ namespace wi
 						denoiserNormal.IsValid() ? &denoiserNormal : nullptr,
 						&traceDepth,
 						&traceStencil,
-						&depthBuffer_Main
+						&depthBuffer_Main,
+						&rtPrimitiveID
 					);
 
 					wi::profiler::EndRange(range); // Traced Scene
+
+					if (sam == 0 && getMeshBlendEnabled() && visibility_main.IsMeshBlendVisible())
+					{
+						wi::renderer::PostProcess_MeshBlend_EdgeProcess(meshblendResources, cmd);
+					}
 				}
 
 				if (getVolumeLightsEnabled() && visibility_main.IsRequestedVolumetricLights())
@@ -481,8 +501,8 @@ namespace wi
 			// Composite other effects on top:
 			{
 				RenderPassImage rp[] = {
+					RenderPassImage::RenderTarget(&rtMain, RenderPassImage::LoadOp::CLEAR),
 					RenderPassImage::DepthStencil(&depthBuffer_Main, RenderPassImage::LoadOp::LOAD),
-					RenderPassImage::RenderTarget(&rtMain, RenderPassImage::LoadOp::CLEAR)
 				};
 				device->RenderPassBegin(rp, arraysize(rp), cmd);
 
@@ -563,13 +583,41 @@ namespace wi
 				}
 
 				device->RenderPassEnd(cmd);
+
+				if (getMeshBlendEnabled() && visibility_main.IsMeshBlendVisible())
+				{
+					rp[0].loadop = RenderPassImage::LoadOp::LOAD;
+					wi::renderer::PostProcess_MeshBlend_Resolve(meshblendResources, rtMain, rp, arraysize(rp), cmd);
+				}
+			}
+
+			// Post processing:
+			const Texture* rt_read = &rtMain;
+			const Texture* rt_write = &rtPostprocess;
+
+			for (auto& x : custom_post_processes)
+			{
+				if (x.stage == CustomPostprocess::Stage::BeforeTonemap)
+				{
+					wi::renderer::Postprocess_Custom(
+						x.computeshader,
+						*rt_read,
+						*rt_write,
+						cmd,
+						x.params0,
+						x.params1,
+						x.name.c_str()
+					);
+
+					std::swap(rt_read, rt_write);
+				}
 			}
 
 			if (getEyeAdaptionEnabled())
 			{
 				wi::renderer::ComputeLuminance(
 					luminanceResources,
-					rtMain,
+					*rt_read,
 					cmd,
 					getEyeAdaptionRate(),
 					getEyeAdaptionKey()
@@ -579,7 +627,7 @@ namespace wi
 			{
 				wi::renderer::ComputeBloom(
 					bloomResources,
-					rtMain,
+					*rt_read,
 					cmd,
 					getBloomThreshold(),
 					getExposure(),
@@ -588,8 +636,8 @@ namespace wi
 			}
 
 			wi::renderer::Postprocess_Tonemap(
-				rtMain,
-				rtPostprocess,
+				*rt_read,
+				*rt_write,
 				cmd,
 				getExposure(),
 				getBrightness(),
@@ -605,7 +653,56 @@ namespace wi
 				&distortion_overlay,
 				getHDRCalibration()
 			);
-			lastPostprocessRT = &rtPostprocess;
+			std::swap(rt_read, rt_write);
+
+			for (auto& x : custom_post_processes)
+			{
+				if (x.stage == CustomPostprocess::Stage::AfterTonemap)
+				{
+					wi::renderer::Postprocess_Custom(
+						x.computeshader,
+						*rt_read,
+						*rt_write,
+						cmd,
+						x.params0,
+						x.params1,
+						x.name.c_str()
+					);
+
+					std::swap(rt_read, rt_write);
+				}
+			}
+
+			if (getSharpenFilterEnabled())
+			{
+				wi::renderer::Postprocess_Sharpen(*rt_read, *rt_write, cmd, getSharpenFilterAmount());
+
+				std::swap(rt_read, rt_write);
+			}
+
+			if (getFXAAEnabled())
+			{
+				wi::renderer::Postprocess_FXAA(*rt_read, *rt_write, cmd);
+
+				std::swap(rt_read, rt_write);
+			}
+
+			if (getChromaticAberrationEnabled())
+			{
+				wi::renderer::Postprocess_Chromatic_Aberration(*rt_read, *rt_write, cmd, getChromaticAberrationAmount());
+
+				std::swap(rt_read, rt_write);
+			}
+
+			if (getCRTFilterEnabled())
+			{
+				wi::renderer::Postprocess_CRT(*rt_read, *rt_write, cmd);
+
+				std::swap(rt_read, rt_write);
+			}
+
+			lastPostprocessRT = rt_read;
+
 
 			// GUI Background blurring:
 			{
@@ -617,7 +714,7 @@ namespace wi
 				device->EventEnd(cmd);
 				wi::profiler::EndRange(range);
 			}
-			});
+		});
 
 		RenderPath2D::Render();
 
@@ -636,7 +733,7 @@ namespace wi
 		fx.enableFullScreen();
 		fx.blendFlag = wi::enums::BLENDMODE_OPAQUE;
 		fx.quality = wi::image::QUALITY_LINEAR;
-		wi::image::Draw(&rtPostprocess, fx, cmd);
+		wi::image::Draw(lastPostprocessRT, fx, cmd);
 
 		device->EventEnd(cmd);
 

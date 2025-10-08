@@ -242,6 +242,13 @@ void CameraComponentWindow::Create(EditorComponent* _editor)
 	}));
 	AddWidget(&samplecountSlider);
 
+	crtCheckbox.Create("CRT: ");
+	crtCheckbox.SetTooltip("Toggle CRT TV mode for this camera (when render to texture is enabled)");
+	crtCheckbox.OnClick(forEachSelectedCameraComponent([](auto camera, auto args) {
+		camera->SetCRT(args.bValue);
+	}));
+	AddWidget(&crtCheckbox);
+
 
 	AddWidget(&preview);
 
@@ -275,6 +282,7 @@ void CameraComponentWindow::SetEntity(Entity entity)
 		resolutionXSlider.SetValue((int)camera->render_to_texture.resolution.x);
 		resolutionYSlider.SetValue((int)camera->render_to_texture.resolution.y);
 		samplecountSlider.SetValue((int)camera->render_to_texture.sample_count);
+		crtCheckbox.SetCheck(camera->IsCRT());
 
 		preview.entity = entity;
 		preview.renderpath.scene = &scene;
@@ -311,16 +319,19 @@ void CameraComponentWindow::ResizeLayout()
 		resolutionXSlider.SetVisible(true);
 		resolutionYSlider.SetVisible(true);
 		samplecountSlider.SetVisible(true);
+		crtCheckbox.SetVisible(true);
 
 		layout.add(resolutionXSlider);
 		layout.add(resolutionYSlider);
 		layout.add(samplecountSlider);
+		layout.add_right(crtCheckbox);
 	}
 	else
 	{
 		resolutionXSlider.SetVisible(false);
 		resolutionYSlider.SetVisible(false);
 		samplecountSlider.SetVisible(false);
+		crtCheckbox.SetVisible(false);
 	}
 
 	layout.jump();

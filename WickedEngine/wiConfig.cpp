@@ -45,6 +45,23 @@ namespace wi::config
 		}
 		return std::stoi(it->second);
 	}
+	uint32_t Section::GetUint(const char* name) const
+	{
+		auto it = values.find(name);
+		if (it == values.end())
+		{
+			return 0u;
+		}
+		if (!it->second.compare("true"))
+		{
+			return 1u;
+		}
+		if (!it->second.compare("false"))
+		{
+			return 0u;
+		}
+		return (uint32_t)std::stoul(it->second);
+	}
 	float Section::GetFloat(const char* name) const
 	{
 		auto it = values.find(name);
@@ -77,6 +94,10 @@ namespace wi::config
 		values[name] = value ? "true" : "false";
 	}
 	void Section::Set(const char* name, int value)
+	{
+		values[name] = std::to_string(value);
+	}
+	void Section::Set(const char* name, uint32_t value)
 	{
 		values[name] = std::to_string(value);
 	}

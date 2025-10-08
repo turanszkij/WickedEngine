@@ -735,6 +735,8 @@ namespace wi::scene
 				return offset != ~0ull;
 			}
 		};
+		BufferView ib_provoke;
+		BufferView ib_reorder;
 		BufferView ib;
 		BufferView vb_pos_wind;
 		BufferView vb_nor;
@@ -807,6 +809,9 @@ namespace wi::scene
 
 		inline wi::graphics::IndexBufferFormat GetIndexFormat() const { return wi::graphics::GetIndexBufferFormat((uint32_t)vertex_positions.size()); }
 		inline size_t GetIndexStride() const { return GetIndexFormat() == wi::graphics::IndexBufferFormat::UINT32 ? sizeof(uint32_t) : sizeof(uint16_t); }
+
+		inline wi::graphics::IndexBufferFormat GetPrimitiveIndexFormat() const { return wi::graphics::GetIndexBufferFormat((uint32_t)indices.size() / 3); }
+		inline size_t GetPrimitiveIndexStride() const { return GetPrimitiveIndexFormat() == wi::graphics::IndexBufferFormat::UINT32 ? sizeof(uint32_t) : sizeof(uint16_t); }
 
 		uint32_t GetLODCount() const { return subsets_per_lod == 0 ? 1 : ((uint32_t)subsets.size() / subsets_per_lod); }
 		void GetLODSubsetRange(uint32_t lod, uint32_t& first_subset, uint32_t& last_subset) const
@@ -1408,6 +1413,7 @@ namespace wi::scene
 			DIRTY = 1 << 0,
 			CUSTOM_PROJECTION = 1 << 1,
 			ORTHO = 1 << 2,
+			CRT_FILTER = 1 << 3,
 		};
 		uint32_t _flags = EMPTY;
 
@@ -1496,9 +1502,11 @@ namespace wi::scene
 		constexpr void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
 		constexpr void SetCustomProjectionEnabled(bool value = true) { if (value) { _flags |= CUSTOM_PROJECTION; } else { _flags &= ~CUSTOM_PROJECTION; } }
 		constexpr void SetOrtho(bool value = true) { if (value) { _flags |= ORTHO; } else { _flags &= ~ORTHO; } SetDirty(); }
+		constexpr void SetCRT(bool value = true) { if (value) { _flags |= CRT_FILTER; } else { _flags &= ~CRT_FILTER; } SetDirty(); }
 		constexpr bool IsDirty() const { return _flags & DIRTY; }
 		constexpr bool IsCustomProjectionEnabled() const { return _flags & CUSTOM_PROJECTION; }
 		constexpr bool IsOrtho() const { return _flags & ORTHO; }
+		constexpr bool IsCRT() const { return _flags & CRT_FILTER; }
 
 		void Lerp(const CameraComponent& a, const CameraComponent& b, float t);
 

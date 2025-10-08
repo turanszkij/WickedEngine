@@ -241,8 +241,11 @@ namespace wi::input::sdlinput
         if(key >= 4 && key <= 29){ // A to Z
             return (key - 4) + CHARACTER_RANGE_START;
         }
-        if(key >= 30 && key <= 39){ // 0 to 9
-            return (key - 30) + DIGIT_RANGE_START;
+        if(key >= 30 && key <= 38){ // 1 to 9
+            return (key - 29) + DIGIT_RANGE_START;
+        }
+        if (key == 39) { // 0
+            return DIGIT_RANGE_START;
         }
         if(key >= 58 && key <= 69){ // F1 to F12
             return (key - 58) + KEYBOARD_BUTTON_F1;

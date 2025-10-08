@@ -74,7 +74,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 		const half mesh_blend = material.GetMeshBlend();
 		if (mesh_blend > 0)
 		{
-			cache[t] = pack_half2(half(float(((prim.instanceIndex * geometry.materialIndex) % 255) + 1) / 255.0), saturate(mesh_blend / postprocess.params0.y)); // +1: forced request indicator
+			cache[t] = pack_half2(half(float((((prim.instanceIndex + 1) * (geometry.materialIndex + 1)) % 255) + 1) / 255.0), saturate(mesh_blend / postprocess.params0.y)); // +1: forced request indicator
 		}
 	}
 	GroupMemoryBarrierWithGroupSync();

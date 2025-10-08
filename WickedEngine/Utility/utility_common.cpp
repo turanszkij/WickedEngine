@@ -3,6 +3,9 @@
 #define _CRT_SECURE_NO_WARNINGS
 #endif // _CRT_SECURE_NO_WARNINGS
 
+// prevent linking problems when using ASAN
+extern "C" {
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
@@ -22,3 +25,5 @@
 #include "mikktspace.c"
 
 #include "zstd/zstd.c"
+
+}

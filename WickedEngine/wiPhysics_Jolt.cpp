@@ -896,7 +896,6 @@ namespace wi::physics
 			PhysicsScene& physics_scene = GetPhysicsScene(scene);
 
 			physicsobject.shared_settings.SetEmbedded();
-			physicsobject.shared_settings.mVertexRadius = physicscomponent.vertex_radius;
 
 			physicscomponent.CreateFromMesh(mesh);
 			if (physicscomponent.physicsIndices.empty())
@@ -964,6 +963,7 @@ namespace wi::physics
 			settings.mUpdatePosition = false;
 			settings.mAllowSleeping = !physicscomponent.IsDisableDeactivation();
 			settings.mUserData = (uint64_t)&physicsobject;
+			settings.mVertexRadius = physicscomponent.vertex_radius;
 
 			physicsobject.friction = settings.mFriction;
 			physicsobject.restitution = settings.mRestitution;

@@ -16,6 +16,7 @@ RWTexture2D<float4> output_albedo : register(u1);
 RWTexture2D<float4> output_normal : register(u2);
 RWTexture2D<float> output_depth : register(u3);
 RWTexture2D<uint> output_stencil : register(u4);
+RWTexture2D<uint> output_primitiveID : register(u5);
 
 [numthreads(RAYTRACING_LAUNCH_BLOCKSIZE, RAYTRACING_LAUNCH_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
@@ -34,6 +35,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	// for denoiser:
 	float3 primary_albedo = 0;
 	float3 primary_normal = 0;
+
+	// for primID post effect:
+	uint primary_primitiveID = 0;
 
 	// Create starting ray:
 	RayDesc ray = CreateCameraRay(pixel, xTracePixelOffset);
@@ -167,6 +171,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		surface.hit_depth = q.CommittedRayT();
 		if (!surface.load(prim, q.CommittedTriangleBarycentrics()))
 			return;
+			
+		if (primary_primitiveID == 0)
+			primary_primitiveID = prim.pack();
 
 #else
 		// ray origin updated for next bounce:
@@ -177,6 +184,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		surface.hit_depth = hit.distance;
 		if (!surface.load(hit.primitiveID, hit.bary))
 			return;
+
+		if (primary_primitiveID == 0)
+			primary_primitiveID = hit.primitiveID.pack();
 
 #endif // RTAPI
 
@@ -455,5 +465,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	{
 		output_depth[pixel] = depth;
 		output_stencil[pixel] = stencil;
+		output_primitiveID[pixel] = primary_primitiveID;
 	}
 }

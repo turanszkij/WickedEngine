@@ -81,6 +81,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"ssr_raytraceCS_cheap", wi::graphics::ShaderStage::CS},
 	{"ssr_raytraceCS_earlyexit", wi::graphics::ShaderStage::CS},
 	{"sharpenCS", wi::graphics::ShaderStage::CS},
+	{"crt_screenCS", wi::graphics::ShaderStage::CS},
 	{"skinningCS", wi::graphics::ShaderStage::CS},
 	{"resolveMSAADepthStencilCS", wi::graphics::ShaderStage::CS},
 	{"raytraceCS", wi::graphics::ShaderStage::CS},
