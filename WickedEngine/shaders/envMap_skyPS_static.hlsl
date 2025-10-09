@@ -1,5 +1,4 @@
 #define OBJECTSHADER_USE_NORMAL
-#define OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
 #include "objectHF.hlsli"
 #include "skyHF.hlsli"
 
