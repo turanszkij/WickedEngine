@@ -80,6 +80,7 @@ PUSHCONSTANT(push, ObjectPushConstants);
 //#define OBJECTSHADER_USE_INSTANCEINDEX			- shader will use instance ID
 //#define OBJECTSHADER_USE_CAMERAINDEX				- shader will use camera ID
 //#define OBJECTSHADER_USE_COMMON					- shader will use atlas, ambient occlusion, wetmap
+//#define OBJECTSHADER_USE_PROVOKING_INDEX_BUFFER	- shader will load vertex ID through provoking index buffer reordering
 
 
 #ifdef OBJECTSHADER_LAYOUT_SHADOW
@@ -121,25 +122,23 @@ struct VertexInput
 {
 	uint vertexID : SV_VertexID;
 	uint instanceID : SV_InstanceID;
-
+	
+#ifdef OBJECTSHADER_USE_PROVOKING_INDEX_BUFFER
 	uint GetPrimitiveID()
 	{
-#if defined(PREPASS) && !defined(OBJECTSHADER_COMPILE_MS)
 		// For prepass the meshopt_generateProvokingIndexBuffer is used to emulate SV_PrimitiveID via provoking vertex
 		return vertexID;
-#else
-		return 0;
-#endif // defined(PREPASS) && !defined(OBJECTSHADER_COMPILE_MS)
 	}
+#endif // OBJECTSHADER_USE_PROVOKING_INDEX_BUFFER
 
 	uint GetVertexID()
 	{
-#if defined(PREPASS) && !defined(OBJECTSHADER_COMPILE_MS)
+#ifdef OBJECTSHADER_USE_PROVOKING_INDEX_BUFFER
 		// For prepass the meshopt_generateProvokingIndexBuffer is used to emulate SV_PrimitiveID via provoking vertex
 		return bindless_buffers_uint[descriptor_index(GetMesh().ib_reorder)][vertexID];
 #else
 		return vertexID;
-#endif // defined(PREPASS) && !defined(OBJECTSHADER_COMPILE_MS)
+#endif // OBJECTSHADER_USE_PROVOKING_INDEX_BUFFER
 	}
 
 	float4 GetPositionWind()
@@ -410,9 +409,9 @@ PixelInput vertex_to_pixel_export(VertexInput input)
 	ShaderCamera camera = GetCamera();
 #endif // OBJECTSHADER_USE_CAMERAINDEX
 	
-#if defined(PREPASS) && !defined(OBJECTSHADER_COMPILE_MS)
+#if defined(PREPASS) && defined(OBJECTSHADER_USE_PROVOKING_INDEX_BUFFER)
 	Out.primitiveID = input.GetPrimitiveID();
-#endif // defined(PREPASS) && !defined(OBJECTSHADER_COMPILE_MS)
+#endif // defined(PREPASS) && defined(OBJECTSHADER_USE_PROVOKING_INDEX_BUFFER)
 
 #ifndef OBJECTSHADER_USE_NOCAMERA
 	Out.pos = mul(camera.view_projection, Out.pos);

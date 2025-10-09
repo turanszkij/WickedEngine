@@ -3210,7 +3210,12 @@ void RenderMeshes(
 		const float tessF = mesh.GetTessellationFactor();
 		const bool tessellatorRequested = tessF > 0 && tessellation;
 		const bool meshShaderRequested = !tessellatorRequested && mesh_shader && mesh.vb_clu.IsValid();
-		const bool provokingIBRequired = renderPass == RENDERPASS_PREPASS || renderPass == RENDERPASS_PREPASS_DEPTHONLY; // Note: depthonly doesn't need primitiveID, but for now I don't created specialized shader for it without primitiveID (TODO measure perf, additional shaders overhead)
+
+		// Notes on provoking index buffer:
+		//	Normally it's used for primitiveID generation, so it would be only used in PREPASS
+		//	PREPASS_DEPTHONLY doesn't use separate shader variants, so it will also use provoking index buffer
+		//	tessellation requires it to match same primitive order between prepass and color pass to have exact same tessellation
+		const bool provokingIBRequired = renderPass == RENDERPASS_PREPASS || renderPass == RENDERPASS_PREPASS_DEPTHONLY || tessellatorRequested;
 
 		if (forwardLightmaskRequest)
 		{
