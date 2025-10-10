@@ -38,21 +38,30 @@ void ContentBrowserWindow::Update(const wi::Canvas& canvas, float dt)
 
 	SetShadowRadius(6);
 
-	static const float radius = 15;
+	const bool gui_round_enabled = !editor->main->config.GetSection("options").GetBool("disable_round_corners");
+	constexpr float radius = 15;
 
 	for (int i = 0; i < arraysize(wi::gui::Widget::sprites); ++i)
 	{
-		sprites[i].params.enableCornerRounding();
-		sprites[i].params.corners_rounding[0].radius = radius;
-		sprites[i].params.corners_rounding[1].radius = radius;
-		sprites[i].params.corners_rounding[2].radius = radius;
-		sprites[i].params.corners_rounding[3].radius = radius;
+		if (gui_round_enabled)
+		{
+			sprites[i].params.enableCornerRounding();
+			sprites[i].params.corners_rounding[0].radius = radius;
+			sprites[i].params.corners_rounding[1].radius = radius;
+			sprites[i].params.corners_rounding[2].radius = radius;
+			sprites[i].params.corners_rounding[3].radius = radius;
 
-		openFolderButton.sprites[i].params.enableCornerRounding();
-		openFolderButton.sprites[i].params.corners_rounding[0].radius = radius;
-		openFolderButton.sprites[i].params.corners_rounding[1].radius = radius;
-		openFolderButton.sprites[i].params.corners_rounding[2].radius = radius;
-		openFolderButton.sprites[i].params.corners_rounding[3].radius = radius;
+			openFolderButton.sprites[i].params.enableCornerRounding();
+			openFolderButton.sprites[i].params.corners_rounding[0].radius = radius;
+			openFolderButton.sprites[i].params.corners_rounding[1].radius = radius;
+			openFolderButton.sprites[i].params.corners_rounding[2].radius = radius;
+			openFolderButton.sprites[i].params.corners_rounding[3].radius = radius;
+		}
+		else
+		{
+			sprites[i].params.disableCornerRounding();
+			openFolderButton.sprites[i].params.disableCornerRounding();
+		}
 	}
 
 	for (auto& x : folderButtons)
@@ -60,8 +69,15 @@ void ContentBrowserWindow::Update(const wi::Canvas& canvas, float dt)
 		x.font.params.h_align = wi::font::WIFALIGN_LEFT;
 		for (auto& y : x.sprites)
 		{
-			y.params.enableCornerRounding();
-			y.params.corners_rounding[3].radius = radius;
+			if (gui_round_enabled)
+			{
+				y.params.enableCornerRounding();
+				y.params.corners_rounding[3].radius = radius;
+			}
+			else
+			{
+				y.params.disableCornerRounding();
+			}
 		}
 		x.SetShadowRadius(0);
 	}
@@ -73,19 +89,26 @@ void ContentBrowserWindow::Update(const wi::Canvas& canvas, float dt)
 		}
 		for (auto& y : x.sprites)
 		{
-			y.params.enableCornerRounding();
-			y.params.corners_rounding[0].radius = radius;
-			y.params.corners_rounding[1].radius = radius;
-			y.params.corners_rounding[2].radius = radius;
-			y.params.corners_rounding[3].radius = radius;
+			if (gui_round_enabled)
+			{
+				y.params.enableCornerRounding();
+				y.params.corners_rounding[0].radius = radius;
+				y.params.corners_rounding[1].radius = radius;
+				y.params.corners_rounding[2].radius = radius;
+				y.params.corners_rounding[3].radius = radius;
+			}
+			else
+			{
+				y.params.disableCornerRounding();
+			}
 		}
 		x.SetShadowRadius(4);
 	}
 
 	openFolderButton.SetShadowRadius(0);
 
-	XMFLOAT4 color_on = sprites[wi::gui::FOCUS].params.color;
-	XMFLOAT4 color_off = sprites[wi::gui::IDLE].params.color;
+	const XMFLOAT4 color_on = sprites[wi::gui::FOCUS].params.color;
+	const XMFLOAT4 color_off = sprites[wi::gui::IDLE].params.color;
 
 	for (auto& x : folderButtons)
 	{
@@ -213,7 +236,7 @@ void ContentBrowserWindow::RefreshContent()
 		{
 			folder.pop_back();
 		}
-		
+
 		auto last_slash = folder.find_last_of("/\\");
 		if (last_slash != folder.npos) {
 			folder = folder.substr(last_slash);

@@ -35,6 +35,8 @@ public:
 	wi::gui::CheckBox disableAlbedoMapsCheckBox;
 	wi::gui::CheckBox forceDiffuseLightingCheckBox;
 	wi::gui::CheckBox focusModeCheckBox;
+	wi::gui::CheckBox disableRoundCornersCheckBox;
+	wi::gui::CheckBox disableGradientCheckBox;
 
 	wi::gui::Slider outlineOpacitySlider;
 	wi::gui::Slider transformToolOpacitySlider;

@@ -200,6 +200,32 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&focusModeCheckBox);
 
+	disableRoundCornersCheckBox.Create("Disable round corners in GUI: ");
+	disableRoundCornersCheckBox.SetTooltip("Disable corner rounding for the editor GUI elements.");
+	if (editor->main->config.GetSection("options").Has("disable_round_corners"))
+	{
+		disableRoundCornersCheckBox.SetCheck(editor->main->config.GetSection("options").GetBool("disable_round_corners"));
+	}
+	disableRoundCornersCheckBox.OnClick([this](wi::gui::EventArgs args) {
+		editor->main->config.GetSection("options").Set("disable_round_corners", args.bValue);
+		editor->main->config.Commit();
+		RefreshTheme();
+	});
+	AddWidget(&disableRoundCornersCheckBox);
+
+	disableGradientCheckBox.Create("Disable gradient in GUI: ");
+	disableGradientCheckBox.SetTooltip("Disable gradient for the editor GUI elements.");
+	if (editor->main->config.GetSection("options").Has("disable_gradient"))
+	{
+		disableGradientCheckBox.SetCheck(editor->main->config.GetSection("options").GetBool("disable_gradient"));
+	}
+	disableGradientCheckBox.OnClick([this](wi::gui::EventArgs args) {
+		editor->main->config.GetSection("options").Set("disable_gradient", args.bValue);
+		editor->main->config.Commit();
+		RefreshTheme();
+	});
+	AddWidget(&disableGradientCheckBox);
+
 	versionCheckBox.Create("Version: ");
 	versionCheckBox.SetTooltip("Toggle the engine version display text in top left corner.");
 	editor->main->infoDisplay.watermark = editor->main->config.GetSection("options").GetBool("version");
@@ -505,7 +531,6 @@ void GeneralWindow::Create(EditorComponent* _editor)
 						theme_color_wave.w = 0.4f;
 					}
 
-					static uint64_t cnt = 0;
 					if (imagedata.empty())
 					{
 						editor->themeEditorWnd.imageResource = {};
@@ -632,6 +657,10 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		editor->projectCreatorWnd.cursorButton.SetColor(wi::Color::White(), wi::gui::IDLE);
 		editor->aboutLabel.sprites[wi::gui::FOCUS] = editor->aboutLabel.sprites[wi::gui::IDLE];
 		editor->exitButton.SetColor(wi::Color::Error(), wi::gui::FOCUS);
+		const bool gui_round_enabled = !disableRoundCornersCheckBox.GetCheck();
+		constexpr float gui_round_radius_default = 10.0f; // Default for most elements
+		constexpr float gui_round_radius_circular = 20.0f; // Circular elements
+		constexpr float gui_round_radius_button = 8.0f; // Button elements
 		int scene_id = 0;
 		for (auto& editorscene : editor->scenes)
 		{
@@ -639,14 +668,22 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			{
 				for (int i = 0; i < arraysize(editorscene->tabSelectButton.sprites); ++i)
 				{
-					editorscene->tabSelectButton.sprites[i].params.enableCornerRounding();
-					editorscene->tabSelectButton.sprites[i].params.corners_rounding[0].radius = 10;
+					if (gui_round_enabled) {
+						editorscene->tabSelectButton.sprites[i].params.enableCornerRounding();
+						editorscene->tabSelectButton.sprites[i].params.corners_rounding[0].radius = gui_round_radius_default;
+					} else {
+						editorscene->tabSelectButton.sprites[i].params.disableCornerRounding();
+					}
 				}
 			}
 			for (int i = 0; i < arraysize(editorscene->tabCloseButton.sprites); ++i)
 			{
-				editorscene->tabCloseButton.sprites[i].params.enableCornerRounding();
-				editorscene->tabCloseButton.sprites[i].params.corners_rounding[1].radius = 10;
+				if (gui_round_enabled) {
+					editorscene->tabCloseButton.sprites[i].params.enableCornerRounding();
+					editorscene->tabCloseButton.sprites[i].params.corners_rounding[1].radius = gui_round_radius_default;
+				} else {
+					editorscene->tabCloseButton.sprites[i].params.disableCornerRounding();
+				}
 			}
 
 			if (editor->current_scene == scene_id)
@@ -711,161 +748,273 @@ void GeneralWindow::Create(EditorComponent* _editor)
 
 		for (int i = 0; i < arraysize(editor->newSceneButton.sprites); ++i)
 		{
-			editor->newSceneButton.sprites[i].params.enableCornerRounding();
-			editor->newSceneButton.sprites[i].params.corners_rounding[0].radius = 20;
-			editor->newSceneButton.sprites[i].params.corners_rounding[1].radius = 20;
-			editor->newSceneButton.sprites[i].params.corners_rounding[2].radius = 20;
-			editor->newSceneButton.sprites[i].params.corners_rounding[3].radius = 20;
+			if (gui_round_enabled) {
+				editor->newSceneButton.sprites[i].params.enableCornerRounding();
+				editor->newSceneButton.sprites[i].params.corners_rounding[0].radius = gui_round_radius_circular;
+				editor->newSceneButton.sprites[i].params.corners_rounding[1].radius = gui_round_radius_circular;
+				editor->newSceneButton.sprites[i].params.corners_rounding[2].radius = gui_round_radius_circular;
+				editor->newSceneButton.sprites[i].params.corners_rounding[3].radius = gui_round_radius_circular;
+			} else {
+				editor->newSceneButton.sprites[i].params.disableCornerRounding();
+			}
 
-			editor->newEntityCombo.sprites[i].params.enableCornerRounding();
-			editor->newEntityCombo.sprites[i].params.corners_rounding[0].radius = 20;
-			editor->newEntityCombo.sprites[i].params.corners_rounding[1].radius = 20;
-			editor->newEntityCombo.sprites[i].params.corners_rounding[2].radius = 20;
-			editor->newEntityCombo.sprites[i].params.corners_rounding[3].radius = 20;
+			if (gui_round_enabled) {
+				editor->newEntityCombo.sprites[i].params.enableCornerRounding();
+				editor->newEntityCombo.sprites[i].params.corners_rounding[0].radius = gui_round_radius_circular;
+				editor->newEntityCombo.sprites[i].params.corners_rounding[1].radius = gui_round_radius_circular;
+				editor->newEntityCombo.sprites[i].params.corners_rounding[2].radius = gui_round_radius_circular;
+				editor->newEntityCombo.sprites[i].params.corners_rounding[3].radius = gui_round_radius_circular;
+			} else {
+				editor->newEntityCombo.sprites[i].params.disableCornerRounding();
+			}
 
 			//editor->generalButton.sprites[i].params.enableHighlight();
-			editor->generalButton.sprites[i].params.enableCornerRounding();
-			editor->generalButton.sprites[i].params.corners_rounding[0].radius = 20;
-			editor->generalButton.sprites[i].params.corners_rounding[1].radius = 20;
-			editor->generalButton.sprites[i].params.corners_rounding[2].radius = 20;
-			editor->generalButton.sprites[i].params.corners_rounding[3].radius = 20;
+			if (gui_round_enabled) {
+				editor->generalButton.sprites[i].params.enableCornerRounding();
+				editor->generalButton.sprites[i].params.corners_rounding[0].radius = gui_round_radius_circular;
+				editor->generalButton.sprites[i].params.corners_rounding[1].radius = gui_round_radius_circular;
+				editor->generalButton.sprites[i].params.corners_rounding[2].radius = gui_round_radius_circular;
+				editor->generalButton.sprites[i].params.corners_rounding[3].radius = gui_round_radius_circular;
+			} else {
+				editor->generalButton.sprites[i].params.disableCornerRounding();
+			}
 
 			//editor->graphicsButton.sprites[i].params.enableHighlight();
-			editor->graphicsButton.sprites[i].params.enableCornerRounding();
-			editor->graphicsButton.sprites[i].params.corners_rounding[0].radius = 20;
-			editor->graphicsButton.sprites[i].params.corners_rounding[1].radius = 20;
-			editor->graphicsButton.sprites[i].params.corners_rounding[2].radius = 20;
-			editor->graphicsButton.sprites[i].params.corners_rounding[3].radius = 20;
+			if (gui_round_enabled) {
+				editor->graphicsButton.sprites[i].params.enableCornerRounding();
+				editor->graphicsButton.sprites[i].params.corners_rounding[0].radius = gui_round_radius_circular;
+				editor->graphicsButton.sprites[i].params.corners_rounding[1].radius = gui_round_radius_circular;
+				editor->graphicsButton.sprites[i].params.corners_rounding[2].radius = gui_round_radius_circular;
+				editor->graphicsButton.sprites[i].params.corners_rounding[3].radius = gui_round_radius_circular;
+			} else {
+				editor->graphicsButton.sprites[i].params.disableCornerRounding();
+			}
 
 			//editor->cameraButton.sprites[i].params.enableHighlight();
-			editor->cameraButton.sprites[i].params.enableCornerRounding();
-			editor->cameraButton.sprites[i].params.corners_rounding[0].radius = 20;
-			editor->cameraButton.sprites[i].params.corners_rounding[1].radius = 20;
-			editor->cameraButton.sprites[i].params.corners_rounding[2].radius = 20;
-			editor->cameraButton.sprites[i].params.corners_rounding[3].radius = 20;
+			if (gui_round_enabled) {
+				editor->cameraButton.sprites[i].params.enableCornerRounding();
+				editor->cameraButton.sprites[i].params.corners_rounding[0].radius = gui_round_radius_circular;
+				editor->cameraButton.sprites[i].params.corners_rounding[1].radius = gui_round_radius_circular;
+				editor->cameraButton.sprites[i].params.corners_rounding[2].radius = gui_round_radius_circular;
+				editor->cameraButton.sprites[i].params.corners_rounding[3].radius = gui_round_radius_circular;
+			} else {
+				editor->cameraButton.sprites[i].params.disableCornerRounding();
+			}
 
 			//editor->materialsButton.sprites[i].params.enableHighlight();
-			editor->materialsButton.sprites[i].params.enableCornerRounding();
-			editor->materialsButton.sprites[i].params.corners_rounding[0].radius = 20;
-			editor->materialsButton.sprites[i].params.corners_rounding[1].radius = 20;
-			editor->materialsButton.sprites[i].params.corners_rounding[2].radius = 20;
-			editor->materialsButton.sprites[i].params.corners_rounding[3].radius = 20;
+			if (gui_round_enabled) {
+				editor->materialsButton.sprites[i].params.enableCornerRounding();
+				editor->materialsButton.sprites[i].params.corners_rounding[0].radius = gui_round_radius_circular;
+				editor->materialsButton.sprites[i].params.corners_rounding[1].radius = gui_round_radius_circular;
+				editor->materialsButton.sprites[i].params.corners_rounding[2].radius = gui_round_radius_circular;
+				editor->materialsButton.sprites[i].params.corners_rounding[3].radius = gui_round_radius_circular;
+			} else {
+				editor->materialsButton.sprites[i].params.disableCornerRounding();
+			}
 
 			//editor->paintToolButton.sprites[i].params.enableHighlight();
-			editor->paintToolButton.sprites[i].params.enableCornerRounding();
-			editor->paintToolButton.sprites[i].params.corners_rounding[0].radius = 20;
-			editor->paintToolButton.sprites[i].params.corners_rounding[1].radius = 20;
-			editor->paintToolButton.sprites[i].params.corners_rounding[2].radius = 20;
-			editor->paintToolButton.sprites[i].params.corners_rounding[3].radius = 20;
+			if (gui_round_enabled) {
+				editor->paintToolButton.sprites[i].params.enableCornerRounding();
+				editor->paintToolButton.sprites[i].params.corners_rounding[0].radius = gui_round_radius_circular;
+				editor->paintToolButton.sprites[i].params.corners_rounding[1].radius = gui_round_radius_circular;
+				editor->paintToolButton.sprites[i].params.corners_rounding[2].radius = gui_round_radius_circular;
+				editor->paintToolButton.sprites[i].params.corners_rounding[3].radius = gui_round_radius_circular;
+			} else {
+				editor->paintToolButton.sprites[i].params.disableCornerRounding();
+			}
 
-			editor->componentsWnd.newComponentCombo.sprites[i].params.enableCornerRounding();
-			editor->componentsWnd.newComponentCombo.sprites[i].params.corners_rounding[0].radius = 20;
-			editor->componentsWnd.newComponentCombo.sprites[i].params.corners_rounding[1].radius = 20;
-			editor->componentsWnd.newComponentCombo.sprites[i].params.corners_rounding[2].radius = 20;
-			editor->componentsWnd.newComponentCombo.sprites[i].params.corners_rounding[3].radius = 20;
+			if (gui_round_enabled) {
+				editor->componentsWnd.newComponentCombo.sprites[i].params.enableCornerRounding();
+				editor->componentsWnd.newComponentCombo.sprites[i].params.corners_rounding[0].radius = gui_round_radius_circular;
+				editor->componentsWnd.newComponentCombo.sprites[i].params.corners_rounding[1].radius = gui_round_radius_circular;
+				editor->componentsWnd.newComponentCombo.sprites[i].params.corners_rounding[2].radius = gui_round_radius_circular;
+				editor->componentsWnd.newComponentCombo.sprites[i].params.corners_rounding[3].radius = gui_round_radius_circular;
+			} else {
+				editor->componentsWnd.newComponentCombo.sprites[i].params.disableCornerRounding();
+			}
 
-			editor->dummyButton.sprites[i].params.enableCornerRounding();
-			editor->dummyButton.sprites[i].params.corners_rounding[0].radius = 10;
-			editor->dummyButton.sprites[i].params.corners_rounding[1].radius = 10;
-			editor->dummyButton.sprites[i].params.corners_rounding[2].radius = 10;
-			editor->dummyButton.sprites[i].params.corners_rounding[3].radius = 10;
+			if (gui_round_enabled) {
+				editor->dummyButton.sprites[i].params.enableCornerRounding();
+				editor->dummyButton.sprites[i].params.corners_rounding[0].radius = gui_round_radius_default;
+				editor->dummyButton.sprites[i].params.corners_rounding[1].radius = gui_round_radius_default;
+				editor->dummyButton.sprites[i].params.corners_rounding[2].radius = gui_round_radius_default;
+				editor->dummyButton.sprites[i].params.corners_rounding[3].radius = gui_round_radius_default;
+			} else {
+				editor->dummyButton.sprites[i].params.disableCornerRounding();
+			}
 
-			editor->physicsButton.sprites[i].params.enableCornerRounding();
-			editor->physicsButton.sprites[i].params.corners_rounding[0].radius = 10;
-			editor->physicsButton.sprites[i].params.corners_rounding[1].radius = 10;
-			editor->physicsButton.sprites[i].params.corners_rounding[2].radius = 10;
-			editor->physicsButton.sprites[i].params.corners_rounding[3].radius = 10;
+			if (gui_round_enabled) {
+				editor->physicsButton.sprites[i].params.enableCornerRounding();
+				editor->physicsButton.sprites[i].params.corners_rounding[0].radius = gui_round_radius_default;
+				editor->physicsButton.sprites[i].params.corners_rounding[1].radius = gui_round_radius_default;
+				editor->physicsButton.sprites[i].params.corners_rounding[2].radius = gui_round_radius_default;
+				editor->physicsButton.sprites[i].params.corners_rounding[3].radius = gui_round_radius_default;
+			} else {
+				editor->physicsButton.sprites[i].params.disableCornerRounding();
+			}
 
-			editor->navtestButton.sprites[i].params.enableCornerRounding();
-			editor->navtestButton.sprites[i].params.corners_rounding[0].radius = 10;
-			editor->navtestButton.sprites[i].params.corners_rounding[1].radius = 10;
-			editor->navtestButton.sprites[i].params.corners_rounding[2].radius = 10;
-			editor->navtestButton.sprites[i].params.corners_rounding[3].radius = 10;
+			if (gui_round_enabled) {
+				editor->navtestButton.sprites[i].params.enableCornerRounding();
+				editor->navtestButton.sprites[i].params.corners_rounding[0].radius = gui_round_radius_default;
+				editor->navtestButton.sprites[i].params.corners_rounding[1].radius = gui_round_radius_default;
+				editor->navtestButton.sprites[i].params.corners_rounding[2].radius = gui_round_radius_default;
+				editor->navtestButton.sprites[i].params.corners_rounding[3].radius = gui_round_radius_default;
+			} else {
+				editor->navtestButton.sprites[i].params.disableCornerRounding();
+			}
 
-			editor->cinemaButton.sprites[i].params.enableCornerRounding();
-			editor->cinemaButton.sprites[i].params.corners_rounding[0].radius = 10;
-			editor->cinemaButton.sprites[i].params.corners_rounding[1].radius = 10;
-			editor->cinemaButton.sprites[i].params.corners_rounding[2].radius = 10;
-			editor->cinemaButton.sprites[i].params.corners_rounding[3].radius = 10;
+			if (gui_round_enabled) {
+				editor->cinemaButton.sprites[i].params.enableCornerRounding();
+				editor->cinemaButton.sprites[i].params.corners_rounding[0].radius = gui_round_radius_default;
+				editor->cinemaButton.sprites[i].params.corners_rounding[1].radius = gui_round_radius_default;
+				editor->cinemaButton.sprites[i].params.corners_rounding[2].radius = gui_round_radius_default;
+				editor->cinemaButton.sprites[i].params.corners_rounding[3].radius = gui_round_radius_default;
+			} else {
+				editor->cinemaButton.sprites[i].params.disableCornerRounding();
+			}
 		}
 		for (int i = 0; i < arraysize(wi::gui::Widget::sprites); ++i)
 		{
-			themeEditorButton.sprites[i].params.enableCornerRounding();
-			themeEditorButton.sprites[i].params.corners_rounding[0].radius = 8;
-			themeEditorButton.sprites[i].params.corners_rounding[1].radius = 8;
-			themeEditorButton.sprites[i].params.corners_rounding[2].radius = 8;
-			themeEditorButton.sprites[i].params.corners_rounding[3].radius = 8;
+			if (gui_round_enabled) {
+				themeEditorButton.sprites[i].params.enableCornerRounding();
+				themeEditorButton.sprites[i].params.corners_rounding[0].radius = gui_round_radius_button;
+				themeEditorButton.sprites[i].params.corners_rounding[1].radius = gui_round_radius_button;
+				themeEditorButton.sprites[i].params.corners_rounding[2].radius = gui_round_radius_button;
+				themeEditorButton.sprites[i].params.corners_rounding[3].radius = gui_round_radius_button;
+			} else {
+				themeEditorButton.sprites[i].params.disableCornerRounding();
+			}
 
-			localizationButton.sprites[i].params.enableCornerRounding();
-			localizationButton.sprites[i].params.corners_rounding[0].radius = 8;
-			localizationButton.sprites[i].params.corners_rounding[1].radius = 8;
-			localizationButton.sprites[i].params.corners_rounding[2].radius = 8;
-			localizationButton.sprites[i].params.corners_rounding[3].radius = 8;
+			if (gui_round_enabled) {
+				localizationButton.sprites[i].params.enableCornerRounding();
+				localizationButton.sprites[i].params.corners_rounding[0].radius = gui_round_radius_button;
+				localizationButton.sprites[i].params.corners_rounding[1].radius = gui_round_radius_button;
+				localizationButton.sprites[i].params.corners_rounding[2].radius = gui_round_radius_button;
+				localizationButton.sprites[i].params.corners_rounding[3].radius = gui_round_radius_button;
+			} else {
+				localizationButton.sprites[i].params.disableCornerRounding();
+			}
 
-			eliminateCoarseCascadesButton.sprites[i].params.enableCornerRounding();
-			eliminateCoarseCascadesButton.sprites[i].params.corners_rounding[0].radius = 8;
-			eliminateCoarseCascadesButton.sprites[i].params.corners_rounding[1].radius = 8;
-			eliminateCoarseCascadesButton.sprites[i].params.corners_rounding[2].radius = 8;
-			eliminateCoarseCascadesButton.sprites[i].params.corners_rounding[3].radius = 8;
+			if (gui_round_enabled) {
+				eliminateCoarseCascadesButton.sprites[i].params.enableCornerRounding();
+				eliminateCoarseCascadesButton.sprites[i].params.corners_rounding[0].radius = gui_round_radius_button;
+				eliminateCoarseCascadesButton.sprites[i].params.corners_rounding[1].radius = gui_round_radius_button;
+				eliminateCoarseCascadesButton.sprites[i].params.corners_rounding[2].radius = gui_round_radius_button;
+				eliminateCoarseCascadesButton.sprites[i].params.corners_rounding[3].radius = gui_round_radius_button;
+			} else {
+				eliminateCoarseCascadesButton.sprites[i].params.disableCornerRounding();
+			}
 
-			ddsConvButton.sprites[i].params.enableCornerRounding();
-			ddsConvButton.sprites[i].params.corners_rounding[0].radius = 8;
-			ddsConvButton.sprites[i].params.corners_rounding[1].radius = 8;
-			ddsConvButton.sprites[i].params.corners_rounding[2].radius = 8;
-			ddsConvButton.sprites[i].params.corners_rounding[3].radius = 8;
+			if (gui_round_enabled) {
+				ddsConvButton.sprites[i].params.enableCornerRounding();
+				ddsConvButton.sprites[i].params.corners_rounding[0].radius = gui_round_radius_button;
+				ddsConvButton.sprites[i].params.corners_rounding[1].radius = gui_round_radius_button;
+				ddsConvButton.sprites[i].params.corners_rounding[2].radius = gui_round_radius_button;
+				ddsConvButton.sprites[i].params.corners_rounding[3].radius = gui_round_radius_button;
+			} else {
+				ddsConvButton.sprites[i].params.disableCornerRounding();
+			}
 
-			duplicateCollidersButton.sprites[i].params.enableCornerRounding();
-			duplicateCollidersButton.sprites[i].params.corners_rounding[0].radius = 8;
-			duplicateCollidersButton.sprites[i].params.corners_rounding[1].radius = 8;
-			duplicateCollidersButton.sprites[i].params.corners_rounding[2].radius = 8;
-			duplicateCollidersButton.sprites[i].params.corners_rounding[3].radius = 8;
+			if (gui_round_enabled) {
+				duplicateCollidersButton.sprites[i].params.enableCornerRounding();
+				duplicateCollidersButton.sprites[i].params.corners_rounding[0].radius = gui_round_radius_button;
+				duplicateCollidersButton.sprites[i].params.corners_rounding[1].radius = gui_round_radius_button;
+				duplicateCollidersButton.sprites[i].params.corners_rounding[2].radius = gui_round_radius_button;
+				duplicateCollidersButton.sprites[i].params.corners_rounding[3].radius = gui_round_radius_button;
+			} else {
+				duplicateCollidersButton.sprites[i].params.disableCornerRounding();
+			}
 
-			editor->aboutWindow.sprites[i].params.enableCornerRounding();
-			editor->aboutWindow.sprites[i].params.corners_rounding[0].radius = 10;
-			editor->aboutWindow.sprites[i].params.corners_rounding[1].radius = 10;
-			editor->aboutWindow.sprites[i].params.corners_rounding[2].radius = 10;
-			editor->aboutWindow.sprites[i].params.corners_rounding[3].radius = 10;
+			if (gui_round_enabled) {
+				editor->aboutWindow.sprites[i].params.enableCornerRounding();
+				editor->aboutWindow.sprites[i].params.corners_rounding[0].radius = gui_round_radius_default;
+				editor->aboutWindow.sprites[i].params.corners_rounding[1].radius = gui_round_radius_default;
+				editor->aboutWindow.sprites[i].params.corners_rounding[2].radius = gui_round_radius_default;
+				editor->aboutWindow.sprites[i].params.corners_rounding[3].radius = gui_round_radius_default;
+			} else {
+				editor->aboutWindow.sprites[i].params.disableCornerRounding();
+			}
 		}
 		for (int i = 0; i < arraysize(wi::gui::Widget::sprites); ++i)
 		{
-			editor->saveButton.sprites[i].params.enableCornerRounding();
-			editor->saveButton.sprites[i].params.corners_rounding[0].radius = 10;
+			if (gui_round_enabled) {
+				editor->saveButton.sprites[i].params.enableCornerRounding();
+				editor->saveButton.sprites[i].params.corners_rounding[0].radius = gui_round_radius_default;
+			} else {
+				editor->saveButton.sprites[i].params.disableCornerRounding();
+			}
 
-			editor->playButton.sprites[i].params.enableCornerRounding();
-			editor->playButton.sprites[i].params.corners_rounding[0].radius = 10;
+			if (gui_round_enabled) {
+				editor->playButton.sprites[i].params.enableCornerRounding();
+				editor->playButton.sprites[i].params.corners_rounding[0].radius = gui_round_radius_default;
+			} else {
+				editor->playButton.sprites[i].params.disableCornerRounding();
+			}
 
-			editor->projectCreatorButton.sprites[i].params.enableCornerRounding();
-			editor->projectCreatorButton.sprites[i].params.corners_rounding[1].radius = 10;
+			if (gui_round_enabled) {
+				editor->projectCreatorButton.sprites[i].params.enableCornerRounding();
+				editor->projectCreatorButton.sprites[i].params.corners_rounding[1].radius = gui_round_radius_default;
+			} else {
+				editor->projectCreatorButton.sprites[i].params.disableCornerRounding();
+			}
 
-			editor->translateButton.sprites[i].params.enableCornerRounding();
-			editor->translateButton.sprites[i].params.corners_rounding[0].radius = 10;
-			editor->translateButton.sprites[i].params.corners_rounding[1].radius = 10;
+			if (gui_round_enabled) {
+				editor->translateButton.sprites[i].params.enableCornerRounding();
+				editor->translateButton.sprites[i].params.corners_rounding[0].radius = gui_round_radius_default;
+				editor->translateButton.sprites[i].params.corners_rounding[1].radius = gui_round_radius_default;
+			} else {
+				editor->translateButton.sprites[i].params.disableCornerRounding();
+			}
 
-			editor->scaleButton.sprites[i].params.enableCornerRounding();
-			editor->scaleButton.sprites[i].params.corners_rounding[2].radius = 10;
-			editor->scaleButton.sprites[i].params.corners_rounding[3].radius = 10;
+			if (gui_round_enabled) {
+				editor->scaleButton.sprites[i].params.enableCornerRounding();
+				editor->scaleButton.sprites[i].params.corners_rounding[2].radius = gui_round_radius_default;
+				editor->scaleButton.sprites[i].params.corners_rounding[3].radius = gui_round_radius_default;
+			} else {
+				editor->scaleButton.sprites[i].params.disableCornerRounding();
+			}
 
-			editor->dummyButton.sprites[i].params.enableCornerRounding();
-			editor->dummyButton.sprites[i].params.corners_rounding[3].radius = 10;
+			if (gui_round_enabled) {
+				editor->dummyButton.sprites[i].params.enableCornerRounding();
+				editor->dummyButton.sprites[i].params.corners_rounding[3].radius = gui_round_radius_default;
+			} else {
+				editor->dummyButton.sprites[i].params.disableCornerRounding();
+			}
 
-			editor->navtestButton.sprites[i].params.enableCornerRounding();
-			editor->navtestButton.sprites[i].params.corners_rounding[2].radius = 10;
+			if (gui_round_enabled) {
+				editor->navtestButton.sprites[i].params.enableCornerRounding();
+				editor->navtestButton.sprites[i].params.corners_rounding[2].radius = gui_round_radius_default;
+			} else {
+				editor->navtestButton.sprites[i].params.disableCornerRounding();
+			}
 
-			editor->physicsButton.sprites[i].params.enableCornerRounding();
-			editor->physicsButton.sprites[i].params.corners_rounding[2].radius = 10;
-			editor->physicsButton.sprites[i].params.corners_rounding[3].radius = 10;
+			if (gui_round_enabled) {
+				editor->physicsButton.sprites[i].params.enableCornerRounding();
+				editor->physicsButton.sprites[i].params.corners_rounding[2].radius = gui_round_radius_default;
+				editor->physicsButton.sprites[i].params.corners_rounding[3].radius = gui_round_radius_default;
+			} else {
+				editor->physicsButton.sprites[i].params.disableCornerRounding();
+			}
 
-			editor->componentsWnd.metadataWnd.addCombo.sprites[i].params.enableCornerRounding();
-			editor->componentsWnd.metadataWnd.addCombo.sprites[i].params.corners_rounding[0].radius = 10;
-			editor->componentsWnd.metadataWnd.addCombo.sprites[i].params.corners_rounding[1].radius = 10;
-			editor->componentsWnd.metadataWnd.addCombo.sprites[i].params.corners_rounding[2].radius = 10;
-			editor->componentsWnd.metadataWnd.addCombo.sprites[i].params.corners_rounding[3].radius = 10;
+			if (gui_round_enabled) {
+				editor->componentsWnd.metadataWnd.addCombo.sprites[i].params.enableCornerRounding();
+				editor->componentsWnd.metadataWnd.addCombo.sprites[i].params.corners_rounding[0].radius = gui_round_radius_default;
+				editor->componentsWnd.metadataWnd.addCombo.sprites[i].params.corners_rounding[1].radius = gui_round_radius_default;
+				editor->componentsWnd.metadataWnd.addCombo.sprites[i].params.corners_rounding[2].radius = gui_round_radius_default;
+				editor->componentsWnd.metadataWnd.addCombo.sprites[i].params.corners_rounding[3].radius = gui_round_radius_default;
+			} else {
+				editor->componentsWnd.metadataWnd.addCombo.sprites[i].params.disableCornerRounding();
+			}
 
-			editor->componentsWnd.splineWnd.addButton.sprites[i].params.enableCornerRounding();
-			editor->componentsWnd.splineWnd.addButton.sprites[i].params.corners_rounding[0].radius = 10;
-			editor->componentsWnd.splineWnd.addButton.sprites[i].params.corners_rounding[1].radius = 10;
-			editor->componentsWnd.splineWnd.addButton.sprites[i].params.corners_rounding[2].radius = 10;
-			editor->componentsWnd.splineWnd.addButton.sprites[i].params.corners_rounding[3].radius = 10;
+			if (gui_round_enabled) {
+				editor->componentsWnd.splineWnd.addButton.sprites[i].params.enableCornerRounding();
+				editor->componentsWnd.splineWnd.addButton.sprites[i].params.corners_rounding[0].radius = gui_round_radius_default;
+				editor->componentsWnd.splineWnd.addButton.sprites[i].params.corners_rounding[1].radius = gui_round_radius_default;
+				editor->componentsWnd.splineWnd.addButton.sprites[i].params.corners_rounding[2].radius = gui_round_radius_default;
+				editor->componentsWnd.splineWnd.addButton.sprites[i].params.corners_rounding[3].radius = gui_round_radius_default;
+			} else {
+				editor->componentsWnd.splineWnd.addButton.sprites[i].params.disableCornerRounding();
+			}
 		}
 		editor->componentsWnd.weatherWnd.default_sky_horizon = theme_color_background;
 		editor->componentsWnd.weatherWnd.default_sky_zenith = theme_color_idle;
@@ -876,9 +1025,13 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			x.removeButton.SetColor(wi::Color::Error(), wi::gui::WIDGETSTATE::FOCUS);
 			for (auto& sprite : x.removeButton.sprites)
 			{
-				sprite.params.enableCornerRounding();
-				sprite.params.corners_rounding[0].radius = 10;
-				sprite.params.corners_rounding[2].radius = 10;
+				if (gui_round_enabled) {
+					sprite.params.enableCornerRounding();
+					sprite.params.corners_rounding[0].radius = gui_round_radius_default;
+					sprite.params.corners_rounding[2].radius = gui_round_radius_default;
+				} else {
+					sprite.params.disableCornerRounding();
+				}
 			}
 		}
 
@@ -887,9 +1040,13 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			x.remove.SetColor(wi::Color::Error(), wi::gui::WIDGETSTATE::FOCUS);
 			for (auto& sprite : x.remove.sprites)
 			{
-				sprite.params.enableCornerRounding();
-				sprite.params.corners_rounding[0].radius = 10;
-				sprite.params.corners_rounding[2].radius = 10;
+				if (gui_round_enabled) {
+					sprite.params.enableCornerRounding();
+					sprite.params.corners_rounding[0].radius = gui_round_radius_default;
+					sprite.params.corners_rounding[2].radius = gui_round_radius_default;
+				} else {
+					sprite.params.disableCornerRounding();
+				}
 			}
 		}
 
@@ -898,40 +1055,60 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			x.removeButton.SetColor(wi::Color::Error(), wi::gui::WIDGETSTATE::FOCUS);
 			for (auto& sprite : x.removeButton.sprites)
 			{
-				sprite.params.enableCornerRounding();
-				sprite.params.corners_rounding[0].radius = 10;
-				sprite.params.corners_rounding[2].radius = 10;
+				if (gui_round_enabled) {
+					sprite.params.enableCornerRounding();
+					sprite.params.corners_rounding[0].radius = gui_round_radius_default;
+					sprite.params.corners_rounding[2].radius = gui_round_radius_default;
+				} else {
+					sprite.params.disableCornerRounding();
+				}
 			}
 			for (auto& sprite : x.entityButton.sprites)
 			{
-				sprite.params.enableCornerRounding();
-				sprite.params.corners_rounding[1].radius = 10;
-				sprite.params.corners_rounding[3].radius = 10;
+				if (gui_round_enabled) {
+					sprite.params.enableCornerRounding();
+					sprite.params.corners_rounding[1].radius = gui_round_radius_default;
+					sprite.params.corners_rounding[3].radius = gui_round_radius_default;
+				} else {
+					sprite.params.disableCornerRounding();
+				}
 			}
 		}
 
 		editor->componentsWnd.transformWnd.resetTranslationButton.SetColor(wi::Color::Error(), wi::gui::WIDGETSTATE::FOCUS);
 		for (auto& sprite : editor->componentsWnd.transformWnd.resetTranslationButton.sprites)
 		{
-			sprite.params.enableCornerRounding();
-			sprite.params.corners_rounding[1].radius = 10;
-			sprite.params.corners_rounding[3].radius = 10;
+			if (gui_round_enabled) {
+				sprite.params.enableCornerRounding();
+				sprite.params.corners_rounding[1].radius = gui_round_radius_default;
+				sprite.params.corners_rounding[3].radius = gui_round_radius_default;
+			} else {
+				sprite.params.disableCornerRounding();
+			}
 		}
 
 		editor->componentsWnd.transformWnd.resetScaleButton.SetColor(wi::Color::Error(), wi::gui::WIDGETSTATE::FOCUS);
 		for (auto& sprite : editor->componentsWnd.transformWnd.resetScaleButton.sprites)
 		{
-			sprite.params.enableCornerRounding();
-			sprite.params.corners_rounding[1].radius = 10;
-			sprite.params.corners_rounding[3].radius = 10;
+			if (gui_round_enabled) {
+				sprite.params.enableCornerRounding();
+				sprite.params.corners_rounding[1].radius = gui_round_radius_default;
+				sprite.params.corners_rounding[3].radius = gui_round_radius_default;
+			} else {
+				sprite.params.disableCornerRounding();
+			}
 		}
 
 		editor->componentsWnd.transformWnd.resetScaleUniformButton.SetColor(wi::Color::Error(), wi::gui::WIDGETSTATE::FOCUS);
 		for (auto& sprite : editor->componentsWnd.transformWnd.resetScaleUniformButton.sprites)
 		{
-			sprite.params.enableCornerRounding();
-			sprite.params.corners_rounding[1].radius = 10;
-			sprite.params.corners_rounding[3].radius = 10;
+			if (gui_round_enabled) {
+				sprite.params.enableCornerRounding();
+				sprite.params.corners_rounding[1].radius = gui_round_radius_default;
+				sprite.params.corners_rounding[3].radius = gui_round_radius_default;
+			} else {
+				sprite.params.disableCornerRounding();
+			}
 		}
 
 		for (auto& x : editor->componentsWnd.hairWnd.sprites)
@@ -943,9 +1120,13 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			x.sprites[wi::gui::FOCUS].params.color = wi::Color::Error();
 			for (auto& sprite : x.sprites)
 			{
-				sprite.params.enableCornerRounding();
-				sprite.params.corners_rounding[1].radius = 10;
-				sprite.params.corners_rounding[3].radius = 10;
+				if (gui_round_enabled) {
+					sprite.params.enableCornerRounding();
+					sprite.params.corners_rounding[1].radius = gui_round_radius_default;
+					sprite.params.corners_rounding[3].radius = gui_round_radius_default;
+				} else {
+					sprite.params.disableCornerRounding();
+				}
 			}
 		}
 		editor->componentsWnd.hairWnd.spriterectwnd.spriteButton.SetColor(wi::Color::White());
@@ -954,9 +1135,13 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		editor->componentsWnd.transformWnd.resetRotationButton.SetColor(wi::Color::Error(), wi::gui::WIDGETSTATE::FOCUS);
 		for (auto& sprite : editor->componentsWnd.transformWnd.resetRotationButton.sprites)
 		{
-			sprite.params.enableCornerRounding();
-			sprite.params.corners_rounding[1].radius = 10;
-			sprite.params.corners_rounding[3].radius = 10;
+			if (gui_round_enabled) {
+				sprite.params.enableCornerRounding();
+				sprite.params.corners_rounding[1].radius = gui_round_radius_default;
+				sprite.params.corners_rounding[3].radius = gui_round_radius_default;
+			} else {
+				sprite.params.disableCornerRounding();
+			}
 		}
 
 		editor->inactiveEntityColor = theme.font.color;
@@ -981,11 +1166,15 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		for (auto& sprite : editor->guiScalingCombo.sprites)
 		{
 			//sprite.params.enableHighlight();
-			sprite.params.enableCornerRounding();
-			sprite.params.corners_rounding[0].radius = 10;
-			sprite.params.corners_rounding[1].radius = 10;
-			sprite.params.corners_rounding[2].radius = 10;
-			sprite.params.corners_rounding[3].radius = 10;
+			if (gui_round_enabled) {
+				sprite.params.enableCornerRounding();
+				sprite.params.corners_rounding[0].radius = gui_round_radius_default;
+				sprite.params.corners_rounding[1].radius = gui_round_radius_default;
+				sprite.params.corners_rounding[2].radius = gui_round_radius_default;
+				sprite.params.corners_rounding[3].radius = gui_round_radius_default;
+			} else {
+				sprite.params.disableCornerRounding();
+			}
 		}
 
 		if (focusModeCheckBox.GetCheck())
@@ -1003,7 +1192,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			editor->componentsWnd.newComponentCombo.SetShadowRadius(0);
 		}
 
-		wi::image::Params::Gradient gradient = wi::image::Params::Gradient::Linear;
+		wi::image::Params::Gradient gradient = editor->main->config.GetSection("options").GetBool("disable_gradient") ? wi::image::Params::Gradient::None : wi::image::Params::Gradient::Linear;
 		XMFLOAT2 gradient_start = XMFLOAT2(0, 0);
 		XMFLOAT2 gradient_end = XMFLOAT2(0, 0.32f);
 		for (int i = 0; i < /*arraysize(wi::gui::Widget::sprites)*/1; ++i)
@@ -1069,7 +1258,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			editor->exitButton.sprites[i].params.gradient_uv_end = gradient_end;
 		}
 
-		gradient = wi::image::Params::Gradient::Circular;
+		gradient = editor->main->config.GetSection("options").GetBool("disable_gradient") ? wi::image::Params::Gradient::None : wi::image::Params::Gradient::Circular;
 		gradient_start = XMFLOAT2(0.9f, 0.1f);
 		gradient_end = XMFLOAT2(0.42f, 0.1f);
 		for (int i = 0; i < /*arraysize(wi::gui::Widget::sprites)*/1; ++i)
@@ -1302,6 +1491,8 @@ void GeneralWindow::ResizeLayout()
 	layout.jump();
 
 	layout.add_right(focusModeCheckBox);
+	layout.add_right(disableRoundCornersCheckBox);
+	layout.add_right(disableGradientCheckBox);
 
 	layout.jump();
 
