@@ -474,12 +474,20 @@ namespace wi::terrain
 			modifier->Seed(seed);
 		}
 
-		// Add some nice weather and lighting:
-		if (!scene->weathers.Contains(terrainEntity))
+		// Add some nice weather and lighting if there are no weathers in the scene yet:
+		bool created_terrain_weather = false;
+		if (scene->weathers.GetCount() == 0)
 		{
-			scene->weathers.Create(terrainEntity);
+			if (!scene->weathers.Contains(terrainEntity))
+			{
+				scene->weathers.Create(terrainEntity);
+				created_terrain_weather = true;
+			}
 		}
-		*scene->weathers.GetComponent(terrainEntity) = weather;
+		if (created_terrain_weather)
+		{
+			*scene->weathers.GetComponent(terrainEntity) = weather;
+		}
 		if (!weather.IsOceanEnabled())
 		{
 			scene->ocean = {};
