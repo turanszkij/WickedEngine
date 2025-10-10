@@ -810,8 +810,8 @@ namespace wi::scene
 		inline wi::graphics::IndexBufferFormat GetIndexFormat() const { return wi::graphics::GetIndexBufferFormat((uint32_t)vertex_positions.size()); }
 		inline size_t GetIndexStride() const { return GetIndexFormat() == wi::graphics::IndexBufferFormat::UINT32 ? sizeof(uint32_t) : sizeof(uint16_t); }
 
-		inline wi::graphics::IndexBufferFormat GetPrimitiveIndexFormat() const { return wi::graphics::GetIndexBufferFormat((uint32_t)indices.size() / 3); }
-		inline size_t GetPrimitiveIndexStride() const { return GetPrimitiveIndexFormat() == wi::graphics::IndexBufferFormat::UINT32 ? sizeof(uint32_t) : sizeof(uint16_t); }
+		inline wi::graphics::IndexBufferFormat GetProvokingIndexFormat() const { return wi::graphics::GetIndexBufferFormat((uint32_t)indices.size()); }
+		inline size_t GetProvokingIndexStride() const { return GetProvokingIndexFormat() == wi::graphics::IndexBufferFormat::UINT32 ? sizeof(uint32_t) : sizeof(uint16_t); }
 
 		uint32_t GetLODCount() const { return subsets_per_lod == 0 ? 1 : ((uint32_t)subsets.size() / subsets_per_lod); }
 		void GetLODSubsetRange(uint32_t lod, uint32_t& first_subset, uint32_t& last_subset) const

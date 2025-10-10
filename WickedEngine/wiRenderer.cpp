@@ -3290,7 +3290,7 @@ void RenderMeshes(
 
 			// Note: the mesh.generalBuffer can be either a standalone allocated buffer, or a suballocated one (to reduce index buffer switching)
 			const GPUBuffer* ib = mesh.generalBufferOffsetAllocation.IsValid() ? &mesh.generalBufferOffsetAllocationAlias : &mesh.generalBuffer;
-			const IndexBufferFormat ibformat = provokingIBRequired ? mesh.GetPrimitiveIndexFormat() : mesh.GetIndexFormat();
+			const IndexBufferFormat ibformat = provokingIBRequired ? mesh.GetProvokingIndexFormat() : mesh.GetIndexFormat();
 			const void* ibinternal = ib->internal_state.get();
 
 			if (!meshShaderPSO && (prev_ib_internal != ibinternal || prev_ibformat != ibformat))
@@ -3317,7 +3317,7 @@ void RenderMeshes(
 			push.instance_offset = (uint)instancedBatch.dataOffset;
 
 			const MeshComponent::BufferView& ibv = provokingIBRequired ? mesh.ib_provoke : mesh.ib;
-			const size_t ib_stride = provokingIBRequired ? mesh.GetPrimitiveIndexStride() : mesh.GetIndexStride();
+			const size_t ib_stride = provokingIBRequired ? mesh.GetProvokingIndexStride() : mesh.GetIndexStride();
 
 			uint32_t indexOffset = 0;
 			if (mesh.generalBufferOffsetAllocation.IsValid())

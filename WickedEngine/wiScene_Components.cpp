@@ -854,7 +854,7 @@ namespace wi::scene
 		const uint64_t alignment = device->GetMinOffsetAlignment(&bd);
 		bd.size =
 			AlignTo(vertex_positions.size() * position_stride, alignment) + // position will be first to have 0 offset for flexible alignment!
-			AlignTo(provoke.size() * GetPrimitiveIndexStride(), alignment) +
+			AlignTo(provoke.size() * GetProvokingIndexStride(), alignment) +
 			AlignTo(reorder.size() * GetIndexStride(), alignment) +
 			AlignTo(indices.size() * GetIndexStride(), alignment) +
 			AlignTo(vertex_normals.size() * sizeof(Vertex_NOR), alignment) +
@@ -1051,7 +1051,7 @@ namespace wi::scene
 			}
 
 			// Create provoking index buffer GPU data:
-			if (GetPrimitiveIndexFormat() == IndexBufferFormat::UINT32)
+			if (GetProvokingIndexFormat() == IndexBufferFormat::UINT32)
 			{
 				ib_provoke.offset = buffer_offset;
 				ib_provoke.size = provoke.size() * sizeof(uint32_t);
