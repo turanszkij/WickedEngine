@@ -6,6 +6,7 @@ class CameraPreview : public wi::gui::Widget
 public:
 	wi::RenderPath3D renderpath;
 	wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
+	EditorComponent* editor = nullptr;
 
 	void RenderPreview();
 
