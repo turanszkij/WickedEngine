@@ -1,6 +1,6 @@
 #include "wiPlatform.h"
 
-#ifdef PLATFORM_LINUX
+#if defined(PLATFORM_LINUX) || defined(PLATFORM_MACOS)
 #include "wiNetwork.h"
 #include "wiBacklog.h"
 #include "wiTimer.h"

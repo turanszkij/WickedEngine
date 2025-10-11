@@ -1,38 +1,89 @@
+/**
+ * This file includes platform, os specific libraries and supplies common
+ * platform specific resources.
+ */
+
 #pragma once
-// This file includes platform, os specific libraries and supplies common platform specific resources
+
+///////////////////////////////////////////////////////////////////////////////
+// Define current platform
+///////////////////////////////////////////////////////////////////////////////
 
 #ifdef _WIN32
-
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif // NOMINMAX
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <SDKDDKVer.h>
-#include <windows.h>
-
-#if WINAPI_FAMILY == WINAPI_FAMILY_GAMES
-#define PLATFORM_XBOX
-#else
-#define PLATFORM_WINDOWS_DESKTOP
-#endif // WINAPI_FAMILY_GAMES
-#define wiLoadLibrary(name) LoadLibraryA(name)
-#define wiGetProcAddress(handle,name) GetProcAddress(handle, name)
+    #if WINAPI_FAMILY == WINAPI_FAMILY_GAMES
+		#define PLATFORM_XBOX
+	#else
+		#define PLATFORM_WINDOWS_DESKTOP
+	#endif
 #elif defined(__SCE__)
-#define PLATFORM_PS5
+    #define PLATFORM_PS5
+#elif defined(__APPLE__)
+    #define PLATFORM_MACOS
 #else
-#define PLATFORM_LINUX
-#include <dlfcn.h>
-#define wiLoadLibrary(name) dlopen(name, RTLD_LAZY)
-#define wiGetProcAddress(handle,name) dlsym(handle, name)
-typedef void* HMODULE;
-#endif // _WIN32
+    #define PLATFORM_LINUX
+#endif
+
+///////////////////////////////////////////////////////////////////////////////
+// Platform specific includes and definitions
+///////////////////////////////////////////////////////////////////////////////
+
+// Windows and Xbox
+#if defined(PLATFORM_WINDOWS_DESKTOP) || defined(PLATFORM_XBOX)
+    #ifndef NOMINMAX
+    	#define NOMINMAX
+    #endif
+
+    #ifndef WIN32_LEAN_AND_MEAN
+    	#define WIN32_LEAN_AND_MEAN
+    #endif
+
+    #include <SDKDDKVer.h>
+    #include <windows.h>
+
+    using HMODULE_t = HMODULE;
+
+    static inline HMODULE_t wiLoadLibrary(const char* name)
+	{
+		return LoadLibraryA(name);
+	}
+
+    static inline void* wiGetProcAddress(HMODULE_t h, const char* name)
+	{
+		return (void*)GetProcAddress(h, name);
+	}
+
+// PS5
+#elif defined(PLATFORM_PS5)
+    // EMPTY ON PURPOSE
+
+// POSIX (Linux + macOS)
+#elif defined(PLATFORM_LINUX) || defined(PLATFORM_MACOS)
+    #include <dlfcn.h>
+
+    using HMODULE_t = void*;
+
+    static inline HMODULE_t wiLoadLibrary(const char* name)
+	{
+		return dlopen(name, RTLD_LAZY);
+	}
+
+    static inline void* wiGetProcAddress(HMODULE_t h, const char* name)
+	{
+		return dlsym(h, name);
+	}
+
+#else
+    #error "Unsupported platform!"
+#endif
+
+///////////////////////////////////////////////////////////////////////////////
+// Include SDL2 if available
+///////////////////////////////////////////////////////////////////////////////
 
 #ifdef SDL2
-#include <SDL2/SDL.h>
-#include <SDL_vulkan.h>
-#include "sdl2.h"
+	#include <SDL2/SDL.h>
+	#include <SDL_vulkan.h>
+	#include "sdl2.h"
 #endif
 
 
@@ -84,11 +135,17 @@ namespace wi::platform
 		dest->height = int(rect.bottom - rect.top);
 #endif // PLATFORM_WINDOWS_DESKTOP || PLATFORM_XBOX
 
-#ifdef PLATFORM_LINUX
-		int window_width, window_height;
-		SDL_GetWindowSize(window, &window_width, &window_height);
-		SDL_Vulkan_GetDrawableSize(window, &dest->width, &dest->height);
-		dest->dpi = ((float)dest->width / (float)window_width) * 96.f;
-#endif // PLATFORM_LINUX
+// On POSIX platforms with SDL (Linux, macOS) use SDL to query drawable and DPI
+#if defined(PLATFORM_LINUX) || defined(PLATFORM_MACOS)
+	int window_width = 0, window_height = 0;
+
+	SDL_GetWindowSize(window, &window_width, &window_height);
+	SDL_Vulkan_GetDrawableSize(window, &dest->width, &dest->height);
+
+	if (window_width != 0)
+	{
+	    dest->dpi = ((float)dest->width / (float)window_width) * 96.f;
+	}
+#endif // PLATFORM_LINUX || PLATFORM_MACOS
 	}
 }

@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 #include <limits>
+#include <type_traits>
 
 namespace wi::graphics
 {
@@ -1860,6 +1861,14 @@ namespace wi::graphics
 	constexpr T AlignTo(T value, T alignment)
 	{
 		return ((value + alignment - T(1)) / alignment) * alignment;
+	}
+	// Overload to allow mixing different integral types (eg: size_t with
+	// uint64_t) without manual casts
+	template<typename T, typename U>
+	constexpr auto AlignTo(T value, U alignment) -> std::common_type_t<T, U>
+	{
+		using R = std::common_type_t<T, U>;
+		return ((R(value) + R(alignment) - R(1)) / R(alignment)) * R(alignment);
 	}
 	template<typename T>
 	constexpr bool IsAligned(T value, T alignment)
