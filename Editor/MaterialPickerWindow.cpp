@@ -31,6 +31,11 @@ void MaterialPickerWindow::RecreateButtons()
 
 	for (size_t i = 0; i < scene.materials.GetCount(); ++i)
 	{
+		if (scene.materials[i].IsInternal())
+		{
+			continue;
+		}
+
 		Entity entity = scene.materials.GetEntity(i);
 
 		wi::gui::Button& button = buttons[i];
@@ -107,6 +112,11 @@ void MaterialPickerWindow::ResizeLayout()
 
 	for (size_t i = 0; i < scene.materials.GetCount(); ++i)
 	{
+		if (scene.materials[i].IsInternal())
+		{
+			continue;
+		}
+
 		const MaterialComponent& material = scene.materials[i];
 		Entity entity = scene.materials.GetEntity(i);
 

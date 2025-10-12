@@ -915,6 +915,7 @@ namespace wi::terrain
 					MaterialComponent& material = generator->scene.materials.Create(chunk_data.entity);
 					// material params will be 1 because they will be created from only texture maps
 					//	because region materials are blended together into one texture
+					material.SetInternal();
 					material.SetRoughness(1);
 					material.SetMetalness(1);
 					material.SetReflectance(1);
@@ -1086,7 +1087,7 @@ namespace wi::terrain
 						chunk_data.heightmap_data[index] = uint16_t(inverse_lerp(bottomLevel, topLevel, height) * 65535);
 					});
 					wi::jobsystem::Wait(ctx); // wait until chunk's vertex buffer is fully generated
-					
+
 					object.SetCastShadow(slope_cast_shadow.load());
 					mesh.SetDoubleSidedShadow(slope_cast_shadow.load());
 
