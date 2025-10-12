@@ -301,7 +301,7 @@ void ThemeEditorWindow::UpdateColorPickerMode()
 
 void ThemeEditorWindow::Update(const wi::Canvas& canvas, float dt)
 {
-	const bool gui_round_enabled = !editor->main->config.GetSection("options").GetBool("disable_round_corners");
+	const bool gui_round_enabled = !editor->generalWnd.disableRoundCornersCheckBox.GetCheck();
 	if (mode == ColorPickerMode::None)
 	{
 		colorpicker.SetVisible(false);

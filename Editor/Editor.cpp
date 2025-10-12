@@ -1267,7 +1267,7 @@ void EditorComponent::Load()
 			aboutLabel.SetSize(XMFLOAT2(aboutWindow.GetWidgetAreaSize().x - 20, aboutLabel.GetSize().y));
 		});
 		aboutWindow.OnCollapse([this](wi::gui::EventArgs args) {
-			const bool gui_round_enabled = !main->config.GetSection("options").GetBool("disable_round_corners");
+			const bool gui_round_enabled = !generalWnd.disableRoundCornersCheckBox.GetCheck();
 			for (int i = 0; i < arraysize(wi::gui::Widget::sprites); ++i)
 			{
 				if (gui_round_enabled)
@@ -5884,7 +5884,7 @@ void EditorComponent::UpdateDynamicWidgets()
 	else
 	{
 		logButton.sprites[wi::gui::IDLE].params.color = color_off;
-		logButton.sprites[wi::gui::IDLE].params.gradient = main->config.GetSection("options").GetBool("disable_gradient") ? wi::image::Params::Gradient::None : wi::image::Params::Gradient::Linear;
+		logButton.sprites[wi::gui::IDLE].params.gradient = generalWnd.disableGradientCheckBox.GetCheck() ? wi::image::Params::Gradient::None : wi::image::Params::Gradient::Linear;
 	}
 
 

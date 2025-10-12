@@ -38,7 +38,7 @@ void CameraPreview::Render(const wi::Canvas& canvas, wi::graphics::CommandList c
 
 	if (renderpath.scene != nullptr && renderpath.camera != nullptr)
 	{
-		const bool gui_round_enabled = editor ? !editor->main->config.GetSection("options").GetBool("disable_round_corners") : true;
+		const bool gui_round_enabled = !editor->generalWnd.disableRoundCornersCheckBox.GetCheck();
 		wi::image::Params params;
 		params.pos = translation;
 		params.siz = XMFLOAT2(scale.x, scale.y);

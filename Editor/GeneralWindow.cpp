@@ -1192,7 +1192,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			editor->componentsWnd.newComponentCombo.SetShadowRadius(0);
 		}
 
-		wi::image::Params::Gradient gradient = editor->main->config.GetSection("options").GetBool("disable_gradient") ? wi::image::Params::Gradient::None : wi::image::Params::Gradient::Linear;
+		wi::image::Params::Gradient gradient = disableGradientCheckBox.GetCheck() ? wi::image::Params::Gradient::None : wi::image::Params::Gradient::Linear;
 		XMFLOAT2 gradient_start = XMFLOAT2(0, 0);
 		XMFLOAT2 gradient_end = XMFLOAT2(0, 0.32f);
 		for (int i = 0; i < /*arraysize(wi::gui::Widget::sprites)*/1; ++i)
@@ -1258,7 +1258,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			editor->exitButton.sprites[i].params.gradient_uv_end = gradient_end;
 		}
 
-		gradient = editor->main->config.GetSection("options").GetBool("disable_gradient") ? wi::image::Params::Gradient::None : wi::image::Params::Gradient::Circular;
+		gradient = disableGradientCheckBox.GetCheck() ? wi::image::Params::Gradient::None : wi::image::Params::Gradient::Circular;
 		gradient_start = XMFLOAT2(0.9f, 0.1f);
 		gradient_end = XMFLOAT2(0.42f, 0.1f);
 		for (int i = 0; i < /*arraysize(wi::gui::Widget::sprites)*/1; ++i)

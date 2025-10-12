@@ -38,7 +38,7 @@ void ContentBrowserWindow::Update(const wi::Canvas& canvas, float dt)
 
 	SetShadowRadius(6);
 
-	const bool gui_round_enabled = !editor->main->config.GetSection("options").GetBool("disable_round_corners");
+	const bool gui_round_enabled = !editor->generalWnd.disableRoundCornersCheckBox.GetCheck();
 	constexpr float radius = 15;
 
 	for (int i = 0; i < arraysize(wi::gui::Widget::sprites); ++i)

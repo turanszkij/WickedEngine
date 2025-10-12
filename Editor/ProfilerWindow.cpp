@@ -43,7 +43,7 @@ void ProfilerWindow::Update(const wi::Canvas& canvas, float dt)
 {
 	wi::gui::Window::Update(canvas, dt);
 
-	const bool gui_round_enabled = editor ? !editor->main->config.GetSection("options").GetBool("disable_round_corners") : true;
+	const bool gui_round_enabled = !editor->generalWnd.disableRoundCornersCheckBox.GetCheck();
 	for (int i = 0; i < arraysize(wi::gui::Widget::sprites); ++i)
 	{
 		if (gui_round_enabled)
