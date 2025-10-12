@@ -4586,6 +4586,10 @@ namespace wi::scene
 					{
 						instance.instance_mask &= ~wi::renderer::raytracing_inclusion_mask_reflection;
 					}
+					if (object.GetFilterMask() & FILTER_WATER)
+					{
+						instance.instance_mask &= ~wi::renderer::raytracing_inclusion_mask_shadow;
+					}
 					instance.bottom_level = &mesh.BLASes[object.lod];
 					instance.instance_contribution_to_hit_group_index = 0;
 					instance.flags = 0;
