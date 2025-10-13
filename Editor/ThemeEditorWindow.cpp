@@ -301,6 +301,7 @@ void ThemeEditorWindow::UpdateColorPickerMode()
 
 void ThemeEditorWindow::Update(const wi::Canvas& canvas, float dt)
 {
+	const bool gui_round_enabled = !editor->generalWnd.disableRoundCornersCheckBox.GetCheck();
 	if (mode == ColorPickerMode::None)
 	{
 		colorpicker.SetVisible(false);
@@ -369,59 +370,29 @@ void ThemeEditorWindow::Update(const wi::Canvas& canvas, float dt)
 
 	for (int i = 0; i < arraysize(editor->newSceneButton.sprites); ++i)
 	{
-		idleButton.sprites[i].params.enableCornerRounding();
-		idleButton.sprites[i].params.corners_rounding[0].radius = 20;
-		idleButton.sprites[i].params.corners_rounding[1].radius = 20;
-		idleButton.sprites[i].params.corners_rounding[2].radius = 20;
-		idleButton.sprites[i].params.corners_rounding[3].radius = 20;
-
-		focusButton.sprites[i].params.enableCornerRounding();
-		focusButton.sprites[i].params.corners_rounding[0].radius = 20;
-		focusButton.sprites[i].params.corners_rounding[1].radius = 20;
-		focusButton.sprites[i].params.corners_rounding[2].radius = 20;
-		focusButton.sprites[i].params.corners_rounding[3].radius = 20;
-
-		backgroundButton.sprites[i].params.enableCornerRounding();
-		backgroundButton.sprites[i].params.corners_rounding[0].radius = 20;
-		backgroundButton.sprites[i].params.corners_rounding[1].radius = 20;
-		backgroundButton.sprites[i].params.corners_rounding[2].radius = 20;
-		backgroundButton.sprites[i].params.corners_rounding[3].radius = 20;
-
-		shadowButton.sprites[i].params.enableCornerRounding();
-		shadowButton.sprites[i].params.corners_rounding[0].radius = 20;
-		shadowButton.sprites[i].params.corners_rounding[1].radius = 20;
-		shadowButton.sprites[i].params.corners_rounding[2].radius = 20;
-		shadowButton.sprites[i].params.corners_rounding[3].radius = 20;
-
-		fontButton.sprites[i].params.enableCornerRounding();
-		fontButton.sprites[i].params.corners_rounding[0].radius = 20;
-		fontButton.sprites[i].params.corners_rounding[1].radius = 20;
-		fontButton.sprites[i].params.corners_rounding[2].radius = 20;
-		fontButton.sprites[i].params.corners_rounding[3].radius = 20;
-
-		fontShadowButton.sprites[i].params.enableCornerRounding();
-		fontShadowButton.sprites[i].params.corners_rounding[0].radius = 20;
-		fontShadowButton.sprites[i].params.corners_rounding[1].radius = 20;
-		fontShadowButton.sprites[i].params.corners_rounding[2].radius = 20;
-		fontShadowButton.sprites[i].params.corners_rounding[3].radius = 20;
-
-		gradientButton.sprites[i].params.enableCornerRounding();
-		gradientButton.sprites[i].params.corners_rounding[0].radius = 20;
-		gradientButton.sprites[i].params.corners_rounding[1].radius = 20;
-		gradientButton.sprites[i].params.corners_rounding[2].radius = 20;
-		gradientButton.sprites[i].params.corners_rounding[3].radius = 20;
-
-		waveButton.sprites[i].params.enableCornerRounding();
-		waveButton.sprites[i].params.corners_rounding[0].radius = 20;
-		waveButton.sprites[i].params.corners_rounding[1].radius = 20;
-		waveButton.sprites[i].params.corners_rounding[2].radius = 20;
-		waveButton.sprites[i].params.corners_rounding[3].radius = 20;
-
-		imageButton.sprites[i].params.enableCornerRounding();
-		imageButton.sprites[i].params.corners_rounding[0].radius = 20;
-		imageButton.sprites[i].params.corners_rounding[1].radius = 20;
-		imageButton.sprites[i].params.corners_rounding[2].radius = 20;
-		imageButton.sprites[i].params.corners_rounding[3].radius = 20;
+		auto apply_round_corners = [&](wi::gui::Button& b) {
+			if (gui_round_enabled)
+			{
+				b.sprites[i].params.enableCornerRounding();
+				b.sprites[i].params.corners_rounding[0].radius = 20;
+				b.sprites[i].params.corners_rounding[1].radius = 20;
+				b.sprites[i].params.corners_rounding[2].radius = 20;
+				b.sprites[i].params.corners_rounding[3].radius = 20;
+			}
+			else
+			{
+				b.sprites[i].params.disableCornerRounding();
+			}
+		};
+		apply_round_corners(idleButton);
+		apply_round_corners(focusButton);
+		apply_round_corners(backgroundButton);
+		apply_round_corners(shadowButton);
+		apply_round_corners(fontButton);
+		apply_round_corners(fontShadowButton);
+		apply_round_corners(gradientButton);
+		apply_round_corners(waveButton);
+		apply_round_corners(imageButton);
 	}
 
 	imageButton.SetShadowRadius(8);

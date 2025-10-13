@@ -294,7 +294,6 @@ void HotkeyRemap(Editor* main)
 		// Remap hotkey if button is successfully found:
 		if (button != wi::input::BUTTON_NONE)
 		{
-				
 			hotkeyActions[size_t(action)] = HotkeyInfo{ button, hotkeyActions[size_t(action)].press, hotkeyString.find("CTRL") != std::string::npos, hotkeyString.find("SHIFT") != std::string::npos };
 		}
 	}
@@ -1268,13 +1267,21 @@ void EditorComponent::Load()
 			aboutLabel.SetSize(XMFLOAT2(aboutWindow.GetWidgetAreaSize().x - 20, aboutLabel.GetSize().y));
 		});
 		aboutWindow.OnCollapse([this](wi::gui::EventArgs args) {
+			const bool gui_round_enabled = !generalWnd.disableRoundCornersCheckBox.GetCheck();
 			for (int i = 0; i < arraysize(wi::gui::Widget::sprites); ++i)
 			{
-				aboutWindow.sprites[i].params.enableCornerRounding();
-				aboutWindow.sprites[i].params.corners_rounding[0].radius = 10;
-				aboutWindow.sprites[i].params.corners_rounding[1].radius = 10;
-				aboutWindow.sprites[i].params.corners_rounding[2].radius = 10;
-				aboutWindow.sprites[i].params.corners_rounding[3].radius = 10;
+				if (gui_round_enabled)
+				{
+					aboutWindow.sprites[i].params.enableCornerRounding();
+					aboutWindow.sprites[i].params.corners_rounding[0].radius = 10;
+					aboutWindow.sprites[i].params.corners_rounding[1].radius = 10;
+					aboutWindow.sprites[i].params.corners_rounding[2].radius = 10;
+					aboutWindow.sprites[i].params.corners_rounding[3].radius = 10;
+				}
+				else
+				{
+					aboutWindow.sprites[i].params.disableCornerRounding();
+				}
 			}
 		});
 		GetGUI().AddWidget(&aboutWindow);
@@ -1322,7 +1329,7 @@ void EditorComponent::Load()
 	componentsWnd.Create(this);
 	GetGUI().AddWidget(&componentsWnd);
 
-	profilerWnd.Create();
+	profilerWnd.Create(this);
 	GetGUI().AddWidget(&profilerWnd);
 
 	contentBrowserWnd.Create(this);
@@ -5477,7 +5484,7 @@ void EditorComponent::CheckBonePickingEnabled()
 
 	if (!bone_picking)
 		return;
-	
+
 	bone_picking_items.clear();
 	auto bone_pick_iterate = [&](const Entity* entities, size_t entity_count) {
 		for (size_t i = 0; i < entity_count; ++i)
@@ -5877,7 +5884,7 @@ void EditorComponent::UpdateDynamicWidgets()
 	else
 	{
 		logButton.sprites[wi::gui::IDLE].params.color = color_off;
-		logButton.sprites[wi::gui::IDLE].params.gradient = wi::image::Params::Gradient::Linear;
+		logButton.sprites[wi::gui::IDLE].params.gradient = generalWnd.disableGradientCheckBox.GetCheck() ? wi::image::Params::Gradient::None : wi::image::Params::Gradient::Linear;
 	}
 
 
