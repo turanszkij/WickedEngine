@@ -511,7 +511,7 @@ namespace wi::terrain
 		}
 
 		// Restore grass parameters:
-		{
+		if (IsGrassEnabled()) {
 			if (grassEntity == INVALID_ENTITY)
 			{
 				grassEntity = CreateEntity();
