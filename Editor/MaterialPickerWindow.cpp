@@ -40,7 +40,7 @@ void MaterialPickerWindow::RecreateButtons()
 
 		button.OnClick([entity, this](wi::gui::EventArgs args) {
 
-			wi::Archive& archive = editor->AdvanceHistory();
+			wi::Archive& archive = editor->AdvanceHistory(true);
 			archive << EditorComponent::HISTORYOP_SELECTION;
 			// record PREVIOUS selection state...
 			editor->RecordSelection(archive);

@@ -45,6 +45,21 @@ namespace wi::helper
 
 	void messageBox(const std::string& msg, const std::string& caption = "Warning!");
 
+	enum class MessageBoxResult
+	{
+		OK,
+		Cancel,
+		Yes,
+		No,
+		Abort,
+		Retry,
+		Ignore
+	};
+
+	// Shows a message box with custom buttons and returns the user's choice
+	//	buttons can be combinations like: "OK", "OKCancel", "YesNo", "YesNoCancel", etc.
+	MessageBoxResult messageBoxCustom(const std::string& msg, const std::string& caption = "Warning!", const std::string& buttons = "OK");
+
 	// Returns file path if successful, empty string otherwise
 	std::string screenshot(const wi::graphics::SwapChain& swapchain, const std::string& name = "");
 
