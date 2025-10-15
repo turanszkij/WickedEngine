@@ -223,6 +223,8 @@ public:
 	void RefreshSceneList();
 	void NewScene();
 
+	bool CheckUnsavedChanges(int scene_index = -1);
+
 	void FocusCameraOnSelected();
 
 	wi::Localization default_localization;

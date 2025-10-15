@@ -1294,7 +1294,15 @@ void EditorComponent::Load()
 	exitButton.SetTooltip("Exit");
 	exitButton.SetColor(wi::Color(160, 50, 50, 180), wi::gui::WIDGETSTATE::IDLE);
 	exitButton.SetColor(wi::Color(200, 50, 50, 255), wi::gui::WIDGETSTATE::FOCUS);
-	exitButton.OnClick([](wi::gui::EventArgs args) {
+	exitButton.OnClick([this](wi::gui::EventArgs args) {
+		// Check all scenes for unsaved changes
+		for (int i = 0; i < (int)scenes.size(); ++i)
+		{
+			if (!CheckUnsavedChanges(i))
+			{
+				return;
+			}
+		}
 		wi::platform::Exit();
 		});
 	topmenuWnd.AddWidget(&exitButton);
@@ -6036,6 +6044,12 @@ void EditorComponent::RefreshSceneList()
 			SetCurrentScene(i);
 			});
 		editorscene->tabCloseButton.OnClick([this, i](wi::gui::EventArgs args) {
+			// Check for unsaved changes before closing
+			if (!CheckUnsavedChanges(i))
+			{
+				return;
+			}
+
 			wi::lua::KillProcesses();
 
 			translator.selected.clear();
@@ -6108,6 +6122,51 @@ void EditorComponent::NewScene()
 	RefreshSceneList();
 	UpdateDynamicWidgets();
 	cameraWnd.ResetCam();
+}
+
+bool EditorComponent::CheckUnsavedChanges(int scene_index)
+{
+	if (scene_index < 0)
+		scene_index = current_scene;
+
+	if (scene_index < 0 || scene_index >= (int)scenes.size())
+		return true;
+
+	EditorScene& editorscene = *scenes[scene_index];
+	if (!editorscene.has_unsaved_changes)
+		return true;
+
+	std::string sceneName = editorscene.path.empty() ? "" : wi::helper::GetFileNameFromPath(editorscene.path);
+	std::string message = sceneName.empty() ? "Do you want to save the untitled scene?" : "Do you want to save changes to \"" + sceneName + "\"?";
+	wi::helper::MessageBoxResult result = wi::helper::messageBoxCustom(message, "Unsaved changes", "YesNoCancel");
+
+	if (result == wi::helper::MessageBoxResult::Yes)
+	{
+		// User wants to save
+		if (editorscene.path.empty())
+		{
+			// Need to prompt for save location
+			SaveAs();
+			// After SaveAs, check if the scene was actually saved
+			return !editorscene.has_unsaved_changes;
+		}
+		else
+		{
+			// Save to existing path
+			Save(editorscene.path);
+			return true;
+		}
+	}
+	else if (result == wi::helper::MessageBoxResult::No)
+	{
+		// User doesn't want to save, proceed
+		return true;
+	}
+	else // Cancel or closed dialog
+	{
+		// User cancelled, don't proceed
+		return false;
+	}
 }
 
 void EditorComponent::FocusCameraOnSelected()

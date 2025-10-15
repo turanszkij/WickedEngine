@@ -81,6 +81,83 @@ namespace wi::helper
 #endif // SDL2
 	}
 
+	MessageBoxResult messageBoxCustom(const std::string& msg, const std::string& caption, const std::string& buttons)
+	{
+#ifdef PLATFORM_WINDOWS_DESKTOP
+		std::wstring wmsg;
+		std::wstring wcaption;
+		StringConvert(msg, wmsg);
+		StringConvert(caption, wcaption);
+
+		UINT type = MB_ICONQUESTION;
+		if (buttons == "YesNoCancel")
+		{
+			type |= MB_YESNOCANCEL;
+		}
+		else if (buttons == "YesNo")
+		{
+			type |= MB_YESNO;
+		}
+		else if (buttons == "OKCancel")
+		{
+			type |= MB_OKCANCEL;
+		}
+		else if (buttons == "AbortRetryIgnore")
+		{
+			type |= MB_ABORTRETRYIGNORE;
+		}
+		else // default to OK
+		{
+			type |= MB_OK;
+		}
+
+		const int result = MessageBox(GetActiveWindow(), wmsg.c_str(), wcaption.c_str(), type);
+
+		switch (result)
+		{
+		case IDOK: return MessageBoxResult::OK;
+		case IDCANCEL: return MessageBoxResult::Cancel;
+		case IDYES: return MessageBoxResult::Yes;
+		case IDNO: return MessageBoxResult::No;
+		case IDABORT: return MessageBoxResult::Abort;
+		case IDRETRY: return MessageBoxResult::Retry;
+		case IDIGNORE: return MessageBoxResult::Ignore;
+		default: return MessageBoxResult::Cancel;
+		}
+#endif // PLATFORM_WINDOWS_DESKTOP
+
+#ifdef SDL2
+		const SDL_MessageBoxButtonData buttons_data[] = {
+			{ SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 0, "Yes" },
+			{ 0, 1, "No" },
+			{ SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 2, "Cancel" },
+		};
+		const SDL_MessageBoxData messageboxdata = {
+			SDL_MESSAGEBOX_INFORMATION,
+			NULL,
+			caption.c_str(),
+			msg.c_str(),
+			SDL_arraysize(buttons_data),
+			buttons_data,
+			NULL
+		};
+		int buttonid;
+		if (SDL_ShowMessageBox(&messageboxdata, &buttonid) < 0)
+		{
+			return MessageBoxResult::Cancel;
+		}
+		switch (buttonid)
+		{
+		case 0: return MessageBoxResult::Yes;
+		case 1: return MessageBoxResult::No;
+		case 2: return MessageBoxResult::Cancel;
+		default: return MessageBoxResult::Cancel;
+		}
+#endif // SDL2
+
+		return MessageBoxResult::Cancel;
+	}
+
 	std::string screenshot(const wi::graphics::SwapChain& swapchain, const std::string& name)
 	{
 		return screenshot(wi::graphics::GetDevice()->GetBackBuffer(&swapchain));
@@ -1294,7 +1371,7 @@ namespace wi::helper
 			ofn.lStructSize = sizeof(ofn);
 			ofn.hwndOwner = nullptr;
 			ofn.lpstrFile = szFile;
-			// Set lpstrFile[0] to '\0' so that GetOpenFileName does not 
+			// Set lpstrFile[0] to '\0' so that GetOpenFileName does not
 			// use the contents of szFile to initialize itself.
 			ofn.lpstrFile[0] = '\0';
 			ofn.nMaxFile = sizeof(szFile);
@@ -1582,7 +1659,7 @@ namespace wi::helper
 			}
 		}
 	}
-	
+
 	void StringConvert(const std::wstring& from, std::string& to)
 	{
 		to.clear();
@@ -1639,7 +1716,7 @@ namespace wi::helper
 			}
 		}
 	}
-	
+
 	int StringConvert(const char* from, wchar_t* to, int dest_size_in_characters)
 	{
 		if (!from || !to || dest_size_in_characters <= 0)
@@ -1709,7 +1786,7 @@ namespace wi::helper
 		to[written] = 0;
 		return written;
 	}
-	
+
 	int StringConvert(const wchar_t* from, char* to, int dest_size_in_characters)
 	{
 		if (!from || !to || dest_size_in_characters <= 0)
@@ -1817,7 +1894,7 @@ namespace wi::helper
 	}
 #endif // _WIN32
 	}
-	
+
 	void Sleep(float milliseconds)
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds((int)milliseconds));
