@@ -174,7 +174,7 @@ public:
 	void RecordEntity(wi::Archive& archive, const wi::vector<wi::ecs::Entity>& entities);
 
 	void ResetHistory();
-	wi::Archive& AdvanceHistory();
+	wi::Archive& AdvanceHistory(bool scene_unchanged = false);
 	void ConsumeHistoryOperation(bool undo);
 
 	wi::vector<std::string> recentFilenames;
@@ -209,6 +209,7 @@ public:
 		wi::scene::TransformComponent camera_target;
 		wi::vector<wi::Archive> history;
 		int historyPos = -1;
+		bool has_unsaved_changes = false;
 		wi::gui::Button tabSelectButton;
 		wi::gui::Button tabCloseButton;
 	};

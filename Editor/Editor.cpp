@@ -2350,7 +2350,7 @@ void EditorComponent::Update(float dt)
 		// Select...
 		if (leftmouse_select || selectAll || clear_selected)
 		{
-			wi::Archive& archive = AdvanceHistory();
+			wi::Archive& archive = AdvanceHistory(true);
 			archive << HISTORYOP_SELECTION;
 			// record PREVIOUS selection state...
 			RecordSelection(archive);
@@ -4735,8 +4735,9 @@ void EditorComponent::ResetHistory()
 	EditorScene& editorscene = GetCurrentEditorScene();
 	editorscene.historyPos = -1;
 	editorscene.history.clear();
+	editorscene.has_unsaved_changes = false;
 }
-wi::Archive& EditorComponent::AdvanceHistory()
+wi::Archive& EditorComponent::AdvanceHistory(const bool scene_unchanged)
 {
 	EditorScene& editorscene = GetCurrentEditorScene();
 	editorscene.historyPos++;
@@ -4748,6 +4749,12 @@ wi::Archive& EditorComponent::AdvanceHistory()
 
 	editorscene.history.emplace_back();
 	editorscene.history.back().SetReadModeAndResetPos(false);
+
+	if (!scene_unchanged)
+	{
+		editorscene.has_unsaved_changes = true;
+		RefreshSceneList();
+	}
 
 	return editorscene.history.back();
 }
@@ -5218,6 +5225,10 @@ void EditorComponent::Open(std::string filename)
 
 			componentsWnd.weatherWnd.UpdateData();
 			componentsWnd.RefreshEntityTree();
+
+			GetCurrentEditorScene().has_unsaved_changes = false;
+			RefreshSceneList();
+
 			wi::backlog::post("[Editor] finished loading model: " + filename);
 		});
 	});
@@ -5282,6 +5293,7 @@ void EditorComponent::Save(const std::string& filename)
 	}
 
 	GetCurrentEditorScene().path = filename;
+	GetCurrentEditorScene().has_unsaved_changes = false;
 	RefreshSceneList();
 
 	RegisterRecentlyUsed(filename);
@@ -5994,23 +6006,31 @@ void EditorComponent::RefreshSceneList()
 	for (int i = 0; i < int(scenes.size()); ++i)
 	{
 		auto& editorscene = scenes[i];
+		std::string tabText;
 		if (editorscene->path.empty())
 		{
 			if (current_localization.Get((size_t)EditorLocalization::UntitledScene))
 			{
-				editorscene->tabSelectButton.SetText(current_localization.Get((size_t)EditorLocalization::UntitledScene));
+				tabText = current_localization.Get((size_t)EditorLocalization::UntitledScene);
 			}
 			else
 			{
-				editorscene->tabSelectButton.SetText("Untitled scene");
+				tabText = "Untitled scene";
 			}
 			editorscene->tabSelectButton.SetTooltip("");
 		}
 		else
 		{
-			editorscene->tabSelectButton.SetText(wi::helper::GetFileNameFromPath(editorscene->path));
+			tabText = wi::helper::GetFileNameFromPath(editorscene->path);
 			editorscene->tabSelectButton.SetTooltip(editorscene->path);
 		}
+
+		if (editorscene->has_unsaved_changes)
+		{
+			tabText = tabText + " *";
+		}
+
+		editorscene->tabSelectButton.SetText(tabText);
 
 		editorscene->tabSelectButton.OnClick([this, i](wi::gui::EventArgs args) {
 			SetCurrentScene(i);
