@@ -15,53 +15,40 @@ void MaterialPickerWindow::Create(EditorComponent* _editor)
 	zoomSlider.Create(10, 100, 100, 100 - 10, "Zoom: ");
 	AddWidget(&zoomSlider);
 
-	showNoTransformCheckBox.Create("Transform materials: ");
-	showNoTransformCheckBox.SetCheckText(ICON_EYE);
-	showNoTransformCheckBox.SetCheck(true);
-	showNoTransformCheckBox.OnClick([this](wi::gui::EventArgs args) {
+	showMeshMaterialCheckBox.Create("Mesh materials: ");
+	showMeshMaterialCheckBox.SetCheckText(ICON_EYE);
+	showMeshMaterialCheckBox.SetCheck(true);
+	showMeshMaterialCheckBox.OnClick([this](wi::gui::EventArgs args) {
 		RecreateButtons();
 	});
-	AddWidget(&showNoTransformCheckBox);
+	AddWidget(&showMeshMaterialCheckBox);
 
-	showInternalCheckBox.Create("Internal materials: ");
-	showInternalCheckBox.SetCheckText(ICON_EYE);
-	showInternalCheckBox.SetCheck(false);
-	showInternalCheckBox.OnClick([this](wi::gui::EventArgs args) {
+	showInternalMaterialCheckBox.Create("Internal materials: ");
+	showInternalMaterialCheckBox.SetCheckText(ICON_EYE);
+	showInternalMaterialCheckBox.SetCheck(false);
+	showInternalMaterialCheckBox.OnClick([this](wi::gui::EventArgs args) {
 		RecreateButtons();
 	});
-	AddWidget(&showInternalCheckBox);
+	AddWidget(&showInternalMaterialCheckBox);
 
 	SetVisible(false);
 }
 
-bool MaterialPickerWindow::MaterialHasTransform(const wi::ecs::Entity materialEntity) const
+bool MaterialPickerWindow::MaterialIsUsedInMesh(const wi::ecs::Entity materialEntity) const
 {
 	if (editor == nullptr)
 		return false;
 
 	const wi::scene::Scene& scene = editor->GetCurrentScene();
 
-	for (size_t j = 0; j < scene.objects.GetCount(); ++j)
+	// Check all meshes to see if any subset uses this material
+	for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
 	{
-		const ObjectComponent& object = scene.objects[j];
-		const Entity objectEntity = scene.objects.GetEntity(j);
-
-		// Check if this object has a transform
-		if (!scene.transforms.Contains(objectEntity))
-			continue;
-
-		// Check if the object's mesh contains this material
-		if (scene.meshes.Contains(object.meshID))
+		const MeshComponent& mesh = scene.meshes[i];
+		for (const auto& subset : mesh.subsets)
 		{
-			const MeshComponent* mesh = scene.meshes.GetComponent(object.meshID);
-			if (mesh != nullptr)
-			{
-				for (const auto& subset : mesh->subsets)
-				{
-					if (subset.materialID == materialEntity)
-						return true;
-				}
-			}
+			if (subset.materialID == materialEntity)
+				return true;
 		}
 	}
 
@@ -73,11 +60,12 @@ bool MaterialPickerWindow::ShouldShowMaterial(const wi::scene::MaterialComponent
 	const bool isInternal = material.IsInternal();
 
 	// Check if we should hide internal materials
-	if (!showInternalCheckBox.GetCheck() && isInternal)
+	if (!showInternalMaterialCheckBox.GetCheck() && isInternal)
 		return false;
 
-	// Check if we should hide materials with transform
-	if (!showNoTransformCheckBox.GetCheck() && !isInternal && MaterialHasTransform(entity))
+	// Check if we should hide materials used in meshes
+	// Note: Internal materials are always shown if showInternalCheckBox is true, regardless of mesh usage filter
+	if (!showMeshMaterialCheckBox.GetCheck() && !isInternal && MaterialIsUsedInMesh(entity))
 		return false;
 
 	return true;
@@ -162,11 +150,11 @@ void MaterialPickerWindow::ResizeLayout()
 	layout.add(zoomSlider);
 
 	constexpr float hei = 20;
-	showNoTransformCheckBox.SetSize(XMFLOAT2(hei, hei));
-	layout.add_right(showNoTransformCheckBox);
+	showMeshMaterialCheckBox.SetSize(XMFLOAT2(hei, hei));
+	layout.add_right(showMeshMaterialCheckBox);
 
-	showInternalCheckBox.SetSize(XMFLOAT2(hei, hei));
-	layout.add_right(showInternalCheckBox);
+	showInternalMaterialCheckBox.SetSize(XMFLOAT2(hei, hei));
+	layout.add_right(showInternalMaterialCheckBox);
 
 	wi::gui::Theme theme;
 	theme.image.CopyFrom(sprites[wi::gui::IDLE].params);
@@ -180,7 +168,7 @@ void MaterialPickerWindow::ResizeLayout()
 	const float preview_size = zoomSlider.GetValue();
 	const float border = 20 * preview_size / 100.0f;
 	const int cells = std::max(1, int(GetWidgetAreaSize().x / (preview_size + border)));
-	float offset_y = showInternalCheckBox.GetPos().y + showInternalCheckBox.GetSize().y + border;
+	float offset_y = showInternalMaterialCheckBox.GetPos().y + showInternalMaterialCheckBox.GetSize().y + border;
 	int visible_button_index = 0;
 
 	for (size_t i = 0; i < scene.materials.GetCount(); ++i)

@@ -11,8 +11,8 @@ public:
 	std::deque<wi::gui::Button> buttons;
 
 	wi::gui::Slider zoomSlider;
-	wi::gui::CheckBox showNoTransformCheckBox;
-	wi::gui::CheckBox showInternalCheckBox;
+	wi::gui::CheckBox showMeshMaterialCheckBox;
+	wi::gui::CheckBox showInternalMaterialCheckBox;
 
 	void ResizeLayout() override;
 
@@ -21,6 +21,6 @@ public:
 
 private:
 	bool ShouldShowMaterial(const wi::scene::MaterialComponent& material, wi::ecs::Entity entity) const;
-	bool MaterialHasTransform(wi::ecs::Entity materialEntity) const;
+	bool MaterialIsUsedInMesh(wi::ecs::Entity materialEntity) const;
 };
 
