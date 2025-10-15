@@ -777,7 +777,10 @@ inline uint AlphaToCoverage(half alpha, half alphaTest, half dithering, float4 s
 	if (GetFrame().options & OPTION_BIT_TEMPORALAA_ENABLED)
 	{
 		// When Temporal AA is enabled, dither the alpha mask with animated blue noise:
-		alpha -= dithering + blue_noise(svposition.xy, svposition.w).x / GetCamera().sample_count;
+		if (alphaTest > 0 || dithering > 0)
+		{
+			alpha -= alphaTest + dithering + blue_noise(svposition.xy, svposition.w).x / GetCamera().sample_count;
+		}
 	}
 	else if (GetCamera().sample_count > 1)
 	{

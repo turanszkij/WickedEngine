@@ -21,8 +21,9 @@ void ProfilerWidget::Render(const wi::Canvas& canvas, wi::graphics::CommandList 
 	wi::profiler::DrawData(canvas, translation.x + 5, translation.y + 5, cmd);
 }
 
-void ProfilerWindow::Create()
+void ProfilerWindow::Create(EditorComponent* _editor)
 {
+	editor = _editor;
 	Window::Create("Profiler", wi::gui::Window::WindowControls::ALL);
 
 	OnClose([=](wi::gui::EventArgs args) {
@@ -42,13 +43,21 @@ void ProfilerWindow::Update(const wi::Canvas& canvas, float dt)
 {
 	wi::gui::Window::Update(canvas, dt);
 
+	const bool gui_round_enabled = !editor->generalWnd.disableRoundCornersCheckBox.GetCheck();
 	for (int i = 0; i < arraysize(wi::gui::Widget::sprites); ++i)
 	{
-		sprites[i].params.enableCornerRounding();
-		sprites[i].params.corners_rounding[0].radius = 10;
-		sprites[i].params.corners_rounding[1].radius = 10;
-		sprites[i].params.corners_rounding[2].radius = 10;
-		sprites[i].params.corners_rounding[3].radius = 10;
+		if (gui_round_enabled)
+		{
+			sprites[i].params.enableCornerRounding();
+			sprites[i].params.corners_rounding[0].radius = 10;
+			sprites[i].params.corners_rounding[1].radius = 10;
+			sprites[i].params.corners_rounding[2].radius = 10;
+			sprites[i].params.corners_rounding[3].radius = 10;
+		}
+		else
+		{
+			sprites[i].params.disableCornerRounding();
+		}
 	}
 }
 void ProfilerWindow::ResizeLayout()
