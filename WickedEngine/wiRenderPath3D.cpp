@@ -1920,13 +1920,9 @@ namespace wi
 				// When normalizedDistance is 1.0 (at threshold): slow fade (fadeSpeed)
 				// When normalizedDistance is 0.0 (cutoff): very fast fade (fadeOutSpeedMax)
 				fadeSpeed = wi::math::Lerp(getLightShaftsFadeOutSpeedMax(), getLightShaftsFadeSpeed(), normalizedDistance);
+			}
 
-				lightShaftsFadeFactor = wi::math::Lerp(lightShaftsFadeFactor, targetFadeFactor, 1.0f - exp(-fadeSpeed * scene->dt));
-			}
-			else
-			{
-				lightShaftsFadeFactor = wi::math::Lerp(lightShaftsFadeFactor, targetFadeFactor, 1.0f - exp(-fadeSpeed * scene->dt));
-			}
+			lightShaftsFadeFactor = wi::math::Lerp(lightShaftsFadeFactor, targetFadeFactor, 1.0f - exp(-fadeSpeed * scene->dt));
 
 			GraphicsDevice* device = wi::graphics::GetDevice();
 
