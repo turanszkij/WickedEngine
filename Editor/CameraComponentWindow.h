@@ -7,6 +7,8 @@ public:
 	wi::RenderPath3D renderpath;
 	wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
 	EditorComponent* editor = nullptr;
+	float preview_timer = 0.0f;
+	float preview_update_frequency = 0.1f; // Update preview every 0.1 seconds (10 FPS)
 
 	void RenderPreview();
 
