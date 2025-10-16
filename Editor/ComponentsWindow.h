@@ -127,10 +127,15 @@ public:
 	wi::unordered_set<wi::ecs::Entity> entitytree_opened_items;
 	void PushToEntityTree(wi::ecs::Entity entity, int level);
 	void RefreshEntityTree();
-	bool CheckEntityFilter(wi::ecs::Entity entity);
+	bool CheckEntityFilter(wi::ecs::Entity entity) const;
+
+private:
+	static int GetEntityTypePriority(wi::ecs::Entity entity, const wi::scene::Scene& scene);
+	static std::string GetEntityNameForSorting(wi::ecs::Entity entity, const wi::scene::Scene& scene);
+	void SortEntitiesByMode(wi::vector<wi::ecs::Entity>& entities, const wi::scene::Scene& scene, int sortingMode);
 };
 
 template<>
 struct enable_bitmask_operators<ComponentsWindow::Filter> {
-	static const bool enable = true;
+	static constexpr bool enable = true;
 };
