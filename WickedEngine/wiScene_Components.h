@@ -138,6 +138,7 @@ namespace wi::scene
 			DISABLE_TEXTURE_STREAMING = 1 << 15,
 			COPLANAR_BLENDING = 1 << 16, // force transparent material draw in opaque pass (useful for coplanar polygons)
 			DISABLE_CAPSULE_SHADOW = 1 << 17,
+			INTERNAL = 1 << 18 // used only for internal purposes
 		};
 		uint32_t _flags = CAST_SHADOW;
 
@@ -278,6 +279,9 @@ namespace wi::scene
 
 		constexpr void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
 		constexpr bool IsDirty() const { return _flags & DIRTY; }
+
+		constexpr void SetInternal(bool value = true) { if (value) { _flags |= INTERNAL; } else { _flags &= ~INTERNAL; } }
+		constexpr bool IsInternal() const { return _flags & INTERNAL; }
 
 		constexpr void SetCastShadow(bool value) { SetDirty(); if (value) { _flags |= CAST_SHADOW; } else { _flags &= ~CAST_SHADOW; } }
 		constexpr void SetReceiveShadow(bool value) { SetDirty(); if (value) { _flags &= ~DISABLE_RECEIVE_SHADOW; } else { _flags |= DISABLE_RECEIVE_SHADOW; } }

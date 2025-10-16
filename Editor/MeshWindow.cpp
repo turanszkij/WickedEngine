@@ -988,6 +988,11 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 		subsetMaterialComboBox.AddItem("NO MATERIAL");
 		for (size_t i = 0; i < scene.materials.GetCount(); ++i)
 		{
+			if (scene.materials[i].IsInternal())
+			{
+				continue;
+			}
+
 			Entity entity = scene.materials.GetEntity(i);
 
 			if (scene.names.Contains(entity))

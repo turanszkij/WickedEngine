@@ -15,7 +15,60 @@ void MaterialPickerWindow::Create(EditorComponent* _editor)
 	zoomSlider.Create(10, 100, 100, 100 - 10, "Zoom: ");
 	AddWidget(&zoomSlider);
 
+	showMeshMaterialCheckBox.Create("Mesh materials: ");
+	showMeshMaterialCheckBox.SetCheckText(ICON_EYE);
+	showMeshMaterialCheckBox.SetCheck(true);
+	showMeshMaterialCheckBox.OnClick([this](wi::gui::EventArgs args) {
+		RecreateButtons();
+	});
+	AddWidget(&showMeshMaterialCheckBox);
+
+	showInternalMaterialCheckBox.Create("Internal materials: ");
+	showInternalMaterialCheckBox.SetCheckText(ICON_EYE);
+	showInternalMaterialCheckBox.SetCheck(false);
+	showInternalMaterialCheckBox.OnClick([this](wi::gui::EventArgs args) {
+		RecreateButtons();
+	});
+	AddWidget(&showInternalMaterialCheckBox);
+
 	SetVisible(false);
+}
+
+bool MaterialPickerWindow::MaterialIsUsedInMesh(const wi::ecs::Entity materialEntity) const
+{
+	if (editor == nullptr)
+		return false;
+
+	const wi::scene::Scene& scene = editor->GetCurrentScene();
+
+	// Check all meshes to see if any subset uses this material
+	for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
+	{
+		const MeshComponent& mesh = scene.meshes[i];
+		for (const auto& subset : mesh.subsets)
+		{
+			if (subset.materialID == materialEntity)
+				return true;
+		}
+	}
+
+	return false;
+}
+
+bool MaterialPickerWindow::ShouldShowMaterial(const wi::scene::MaterialComponent& material, const wi::ecs::Entity entity) const
+{
+	const bool isInternal = material.IsInternal();
+
+	// Check if we should hide internal materials
+	if (!showInternalMaterialCheckBox.GetCheck() && isInternal)
+		return false;
+
+	// Check if we should hide materials used in meshes
+	// Note: Internal materials are always shown if showInternalCheckBox is true, regardless of mesh usage filter
+	if (!showMeshMaterialCheckBox.GetCheck() && !isInternal && MaterialIsUsedInMesh(entity))
+		return false;
+
+	return true;
 }
 
 void MaterialPickerWindow::RecreateButtons()
@@ -31,7 +84,12 @@ void MaterialPickerWindow::RecreateButtons()
 
 	for (size_t i = 0; i < scene.materials.GetCount(); ++i)
 	{
+		const MaterialComponent& material = scene.materials[i];
 		Entity entity = scene.materials.GetEntity(i);
+
+		// Apply filters
+		if (!ShouldShowMaterial(material, entity))
+			continue;
 
 		wi::gui::Button& button = buttons[i];
 		button.Create("");
@@ -91,6 +149,13 @@ void MaterialPickerWindow::ResizeLayout()
 
 	layout.add(zoomSlider);
 
+	constexpr float hei = 20;
+	showMeshMaterialCheckBox.SetSize(XMFLOAT2(hei, hei));
+	layout.add_right(showMeshMaterialCheckBox);
+
+	showInternalMaterialCheckBox.SetSize(XMFLOAT2(hei, hei));
+	layout.add_right(showInternalMaterialCheckBox);
+
 	wi::gui::Theme theme;
 	theme.image.CopyFrom(sprites[wi::gui::IDLE].params);
 	theme.image.background = false;
@@ -102,13 +167,18 @@ void MaterialPickerWindow::ResizeLayout()
 
 	const float preview_size = zoomSlider.GetValue();
 	const float border = 20 * preview_size / 100.0f;
-	int cells = std::max(1, int(GetWidgetAreaSize().x / (preview_size + border)));
-	float offset_y = border + zoomSlider.GetSize().y;
+	const int cells = std::max(1, int(GetWidgetAreaSize().x / (preview_size + border)));
+	float offset_y = showInternalMaterialCheckBox.GetPos().y + showInternalMaterialCheckBox.GetSize().y + border;
+	int visible_button_index = 0;
 
 	for (size_t i = 0; i < scene.materials.GetCount(); ++i)
 	{
 		const MaterialComponent& material = scene.materials[i];
-		Entity entity = scene.materials.GetEntity(i);
+		const Entity entity = scene.materials.GetEntity(i);
+
+		// Apply filters
+		if (!ShouldShowMaterial(material, entity))
+			continue;
 
 		wi::gui::Button& button = buttons[i];
 		button.SetVisible(IsVisible() && !IsCollapsed());
@@ -118,7 +188,7 @@ void MaterialPickerWindow::ResizeLayout()
 		button.SetColor(wi::Color(255, 255, 255, 150), wi::gui::IDLE);
 		button.SetShadowRadius(0);
 
-		for (auto& picked : editor->translator.selected)
+		for (const auto& picked : editor->translator.selected)
 		{
 			if (picked.entity == entity)
 			{
@@ -156,10 +226,12 @@ void MaterialPickerWindow::ResizeLayout()
 		button.font.params.v_align = wi::font::WIFALIGN_BOTTOM;
 
 		button.SetSize(XMFLOAT2(preview_size, preview_size));
-		button.SetPos(XMFLOAT2((i % cells) * (preview_size + border) + border, offset_y));
-		if ((i % cells) == (cells - 1))
+		button.SetPos(XMFLOAT2((visible_button_index % cells) * (preview_size + border) + border, offset_y));
+		if ((visible_button_index % cells) == (cells - 1))
 		{
 			offset_y += preview_size + border;
 		}
+
+		visible_button_index++;
 	}
 }

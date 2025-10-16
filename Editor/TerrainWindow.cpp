@@ -1359,6 +1359,11 @@ void TerrainWindow::RefreshMaterialComboBoxes()
 		comboBox.AddItem("NO MATERIAL", INVALID_ENTITY);
 		for (size_t i = 0; i < scene.materials.GetCount(); ++i)
 		{
+			if (scene.materials[i].IsInternal())
+			{
+				continue;
+			}
+
 			Entity entity = scene.materials.GetEntity(i);
 			if (scene.names.Contains(entity))
 			{
