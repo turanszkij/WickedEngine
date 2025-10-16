@@ -28,9 +28,6 @@
 #include "shaders/ShaderInterop_Raytracing.h"
 #include "shaders/ShaderInterop_BVH.h"
 #include "shaders/ShaderInterop_DDGI.h"
-#if defined(PLATFORM_MACOS)
-#define VOXELIZATION_FORCE_NO_GS
-#endif
 #include "shaders/ShaderInterop_VXGI.h"
 #include "shaders/ShaderInterop_FSR2.h"
 #include "shaders/uvsphere.hlsli"
@@ -630,27 +627,13 @@ SHADERTYPE GetPSTYPE(RENDERPASS renderPass, bool alphatest, bool transparent, Ma
 		realPS = SHADERTYPE((transparent ? PSTYPE_OBJECT_TRANSPARENT_PERMUTATION_BEGIN : PSTYPE_OBJECT_PERMUTATION_BEGIN) + shaderType);
 		break;
 	case RENDERPASS_PREPASS:
-		if (IsPrimitiveIDSupported())
+		if (alphatest)
 		{
-			if (alphatest)
-			{
-				realPS = PSTYPE_OBJECT_PREPASS_ALPHATEST;
-			}
-			else
-			{
-				realPS = PSTYPE_OBJECT_PREPASS;
-			}
+			realPS = PSTYPE_OBJECT_PREPASS_ALPHATEST;
 		}
 		else
 		{
-			if (alphatest)
-			{
-				realPS = PSTYPE_OBJECT_PREPASS_DEPTHONLY_ALPHATEST;
-			}
-			else
-			{
-				realPS = SHADERTYPE_COUNT;
-			}
+			realPS = PSTYPE_OBJECT_PREPASS;
 		}
 		break;
 	case RENDERPASS_PREPASS_DEPTHONLY:
@@ -986,10 +969,8 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_WAVE_EFFECT], "waveeffectPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_POSTPROCESS_MESH_BLEND], "mesh_blendPS.cso"); });
 
-#ifdef VOXELIZATION_GEOMETRY_SHADER_ENABLED
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_VOXELIZER], "objectGS_voxelizer.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_VOXEL], "voxelGS.cso"); });
-#endif // VOXELIZATION_GEOMETRY_SHADER_ENABLED
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_LUMINANCE_PASS1], "luminancePass1CS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_LUMINANCE_PASS2], "luminancePass2CS.cso"); });
@@ -2081,6 +2062,8 @@ void LoadShaders()
 											renderpass_info.rt_count = 0;
 											renderpass_info.rt_formats[0] = Format::UNKNOWN;
 										}
+										// MACOS FIX
+										// [Error] Vulkan error: vkCreateGraphicsPipelines(device, pipelineCache, 1, &pipelineInfo, nullptr, &internal_state->pipeline) failed with VK_ERROR_INITIALIZATION_FAILED (wiGraphicsDevice_Vulkan.cpp:6043)
 										else if (renderPass == RENDERPASS_PREPASS)
 										{
 											if (IsPrimitiveIDSupported())
@@ -2097,7 +2080,7 @@ void LoadShaders()
 										else
 										{
 											renderpass_info.rt_count = 1;
-											renderpass_info.rt_formats[0] = format_rendertarget_main;
+											renderpass_info.rt_formats[0] = renderPass == RENDERPASS_MAIN ? format_rendertarget_main : format_idbuffer;
 										}
 										renderpass_info.ds_format = format_depthbuffer_main;
 										const uint32_t msaa_support[] = { 1,2,4,8 };

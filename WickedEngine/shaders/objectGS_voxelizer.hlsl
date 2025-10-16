@@ -25,7 +25,6 @@ struct GSOutput
 };
 
 [maxvertexcount(3)]
-#ifdef VOXELIZATION_GEOMETRY_SHADER_ENABLED
 void main(
 	triangle GSInput input[3],
 	inout TriangleStream< GSOutput > outputStream
@@ -90,6 +89,3 @@ void main(
 		outputStream.Append(output[i]);
 	}
 }
-#else
-void main(triangle GSInput input[3], inout TriangleStream<GSOutput> outputStream) {}
-#endif // VOXELIZATION_GEOMETRY_SHADER_ENABLED

@@ -722,7 +722,7 @@ namespace wi
 
 		visibilityResources.depthbuffer = &depthBuffer_Copy;
 		visibilityResources.lineardepth = &rtLinearDepth;
-		if (wi::renderer::IsPrimitiveIDSupported() && getMSAASampleCount() > 1)
+		if (getMSAASampleCount() > 1)
 		{
 			visibilityResources.primitiveID_resolved = &rtPrimitiveID;
 		}
@@ -737,12 +737,12 @@ namespace wi
 		camera->scissor = GetScissorInternalResolution();
 		camera->sample_count = depthBuffer_Main.desc.sample_count;
 		camera->shadercamera_options = SHADERCAMERA_OPTION_NONE;
-		camera->texture_primitiveID_index = wi::renderer::IsPrimitiveIDSupported() ? device->GetDescriptorIndex(&rtPrimitiveID, SubresourceType::SRV) : -1;
+		camera->texture_primitiveID_index = device->GetDescriptorIndex(&rtPrimitiveID, SubresourceType::SRV);
 		camera->texture_depth_index = device->GetDescriptorIndex(&depthBuffer_Copy, SubresourceType::SRV);
 		camera->texture_lineardepth_index = device->GetDescriptorIndex(&rtLinearDepth, SubresourceType::SRV);
 		camera->texture_velocity_index = device->GetDescriptorIndex(&rtVelocity, SubresourceType::SRV);
-		camera->texture_normal_index = wi::renderer::IsPrimitiveIDSupported() ? device->GetDescriptorIndex(&visibilityResources.texture_normals, SubresourceType::SRV) : -1;
-		camera->texture_roughness_index = wi::renderer::IsPrimitiveIDSupported() ? device->GetDescriptorIndex(&visibilityResources.texture_roughness, SubresourceType::SRV) : -1;
+		camera->texture_normal_index = device->GetDescriptorIndex(&visibilityResources.texture_normals, SubresourceType::SRV);
+		camera->texture_roughness_index = device->GetDescriptorIndex(&visibilityResources.texture_roughness, SubresourceType::SRV);
 		camera->buffer_entitytiles_index = device->GetDescriptorIndex(&tiledLightResources.entityTiles, SubresourceType::SRV);
 		camera->texture_reflection_index = device->GetDescriptorIndex(&rtReflection_resolved, SubresourceType::SRV);
 		camera->texture_reflection_depth_index = device->GetDescriptorIndex(&depthBuffer_Reflection_resolved, SubresourceType::SRV);
@@ -977,6 +977,9 @@ namespace wi
 				);
 			}
 
+			// MACOS FIX
+			// -[MTLDebugRenderCommandEncoder setRenderPipelineState:]:1639: failed assertion `Set Render Pipeline State Validation
+			// For color attachment 0, the render pipeline's pixelFormat (MTLPixelFormatInvalid) does not match the framebuffer's pixelFormat (MTLPixelFormatR32Uint).
 			RenderPassImage rp[2];
 			rp[0] = RenderPassImage::DepthStencil(
 				&depthBuffer_Main,
@@ -1068,6 +1071,10 @@ namespace wi
 				cmd
 			);
 
+			// MACOS FIX
+			// This is still necessary, otherwise after adding a cube editor crashes with
+			// [Error] Vulkan error: vkQueuePresentKHR failed with VK_ERROR_DEVICE_LOST (wiGraphicsDevice_Vulkan.cpp:1503)
+			// Assertion failed: (false), function submit, file wiGraphicsDevice_Vulkan.cpp, line 1503.
 			if (wi::renderer::IsPrimitiveIDSupported())
 			{
 				wi::renderer::Visibility_Prepare(
@@ -1084,32 +1091,29 @@ namespace wi
 				cmd
 			);
 
-			if (wi::renderer::IsPrimitiveIDSupported())
+			if (visibility_shading_in_compute)
 			{
-				if (visibility_shading_in_compute)
-				{
-					wi::renderer::Visibility_Surface(
-						visibilityResources,
-						rtMain,
-						cmd
-					);
-				}
-				else if (
-					getSSREnabled() ||
-					getSSGIEnabled() ||
-					getRaytracedReflectionEnabled() ||
-					getRaytracedDiffuseEnabled() ||
-					wi::renderer::GetScreenSpaceShadowsEnabled() ||
-					wi::renderer::GetRaytracedShadowsEnabled() ||
-					wi::renderer::GetVXGIEnabled()
-					)
-				{
-					// These post effects require surface normals and/or roughness
-					wi::renderer::Visibility_Surface_Reduced(
-						visibilityResources,
-						cmd
-					);
-				}
+				wi::renderer::Visibility_Surface(
+					visibilityResources,
+					rtMain,
+					cmd
+				);
+			}
+			else if (
+				getSSREnabled() ||
+				getSSGIEnabled() ||
+				getRaytracedReflectionEnabled() ||
+				getRaytracedDiffuseEnabled() ||
+				wi::renderer::GetScreenSpaceShadowsEnabled() ||
+				wi::renderer::GetRaytracedShadowsEnabled() ||
+				wi::renderer::GetVXGIEnabled()
+				)
+			{
+				// These post effects require surface normals and/or roughness
+				wi::renderer::Visibility_Surface_Reduced(
+					visibilityResources,
+					cmd
+				);
 			}
 
 			if (rtVelocity.IsValid())

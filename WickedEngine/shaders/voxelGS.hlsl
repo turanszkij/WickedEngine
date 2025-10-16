@@ -8,7 +8,6 @@ struct GSOutput
 };
 
 [maxvertexcount(36)]
-#ifdef VOXELIZATION_GEOMETRY_SHADER_ENABLED
 void main(
 	point uint input[1] : VERTEXID,
 	inout TriangleStream<GSOutput> output
@@ -100,6 +99,3 @@ void main(
 		output.RestartStrip();
 	}
 }
-#else
-void main(point uint input[1] : VERTEXID, inout TriangleStream<GSOutput> output) {}
-#endif // VOXELIZATION_GEOMETRY_SHADER_ENABLED

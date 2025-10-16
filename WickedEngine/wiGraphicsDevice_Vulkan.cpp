@@ -16,10 +16,6 @@
 
 #include "Utility/spirv_reflect.h"
 
-#ifndef VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME
-#define VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME "VK_KHR_portability_subset"
-#endif
-
 #define VMA_IMPLEMENTATION
 #define VMA_STATIC_VULKAN_FUNCTIONS 0
 #define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
@@ -34,11 +30,6 @@
 #include <cstring>
 #include <iostream>
 #include <algorithm>
-
-#if defined(PLATFORM_MACOS)
-#include <dlfcn.h>
-#include <sys/stat.h>
-#endif
 
 namespace wi::graphics
 {
@@ -1766,6 +1757,9 @@ using namespace vulkan_internal;
 			allocInfo.pSetLayouts = &descriptorSetLayout;
 
 			VkResult res = vkAllocateDescriptorSets(device->device, &allocInfo, &descriptorSet);
+			// MACOS FIX
+			// [Error] Vulkan error: vkAllocateDescriptorSets failed with VK_ERROR_FRAGMENTED_POOL (wiGraphicsDevice_Vulkan.cpp:1778)
+			// Assertion failed: (res >= VK_SUCCESS), function flush, file wiGraphicsDevice_Vulkan.cpp, line 1778.
 			while (res == VK_ERROR_OUT_OF_POOL_MEMORY || res == VK_ERROR_FRAGMENTED_POOL)
 			{
 				binder_pool.poolSize = std::max(1u, binder_pool.poolSize * 2);
@@ -2203,7 +2197,7 @@ using namespace vulkan_internal;
 					const RasterizerState& desc = *pso->desc.rs;
 					if (desc.forced_sample_count > 1)
 					{
-						multisampling.rasterizationSamples = wi_clamp_sample_count(physicalDevice, (VkSampleCountFlagBits)desc.forced_sample_count);
+						multisampling.rasterizationSamples = (VkSampleCountFlagBits)desc.forced_sample_count;
 					}
 				}
 				multisampling.minSampleShading = 1.0f;
@@ -2392,63 +2386,8 @@ using namespace vulkan_internal;
 		TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = sizeof(VkAccelerationStructureInstanceKHR);
 
 		validationMode = validationMode_;
-//////////
-		VkResult res;
-		// VkResult res = VK_SUCCESS;
 
-// #if defined(PLATFORM_MACOS)
-// 		// On macOS, try to directly load vkGetInstanceProcAddr from common Homebrew
-// 		// or MoltenVK locations and initialize volk with that symbol. This helps
-// 		// when running under debuggers or launchers that don't propagate DYLD
-// 		// environment variables reliably. If this fails, fall back to volkInitialize().
-// 		{
-// 			void* module = nullptr;
-// 			PFN_vkGetInstanceProcAddr getInstanceProc = nullptr;
-// 			const char* candidates[] = {
-// 				// "/opt/homebrew/lib/libvulkan.1.dylib",
-// 				// "/opt/homebrew/lib/libvulkan.dylib",
-// 				// "/opt/homebrew/lib/libMoltenVK.dylib",
-// 				// "libvulkan.dylib",
-// 				// "libvulkan.1.dylib",
-// 				"libMoltenVK.dylib",
-// 				nullptr
-// 			};
-
-// 			for (const char** p = candidates; *p != nullptr; ++p)
-// 			{
-// 				module = dlopen(*p, RTLD_NOW | RTLD_LOCAL);
-// 				if (!module)
-// 					continue;
-
-// 				getInstanceProc = (PFN_vkGetInstanceProcAddr)dlsym(module, "vkGetInstanceProcAddr");
-// 				if (getInstanceProc)
-// 				{
-// 					// keep the module handle open for the process lifetime so the
-// 					// function pointer remains valid; do not dlclose(module).
-// 					break;
-// 				}
-// 				else
-// 				{
-// 					dlclose(module);
-// 					module = nullptr;
-// 				}
-// 			}
-
-// 			if (getInstanceProc)
-// 			{
-// 				// Initialize volk with the loader's vkGetInstanceProcAddr directly
-// 				volkInitializeCustom(getInstanceProc);
-// 				res = VK_SUCCESS;
-// 			}
-// 			else
-// 			{
-				res = vulkan_check(volkInitialize());
-// 			}
-// 		}
-// #else
-// 		res = vulkan_check(volkInitialize());
-// #endif
-
+		VkResult res = vulkan_check(volkInitialize());
 		if (res != VK_SUCCESS)
 		{
 			wi::helper::messageBox("volkInitialize failed! ERROR: " + std::string(string_VkResult(res)), "Error!");
@@ -2493,14 +2432,6 @@ using namespace vulkan_internal;
 			{
 				instanceExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 			}
-#if defined(PLATFORM_MACOS)
-			// MoltenVK requires enabling VK_KHR_portability_enumeration +
-			// setting the ENUMERATE_PORTABILITY flag
-			else if (strcmp(availableExtension.extensionName, VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME) == 0)
-			{
-				instanceExtensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
-			}
-#endif
 		}
 
 		instanceExtensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
@@ -2567,19 +2498,6 @@ using namespace vulkan_internal;
 			createInfo.ppEnabledLayerNames = instanceLayers.data();
 			createInfo.enabledExtensionCount = static_cast<uint32_t>(instanceExtensions.size());
 			createInfo.ppEnabledExtensionNames = instanceExtensions.data();
-
-#if defined(PLATFORM_MACOS)
-			// If portability enumeration extension was enabled, also set the
-			// corresponding create flag
-			for (auto ext : instanceExtensions)
-			{
-				if (strcmp(ext, VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME) == 0)
-				{
-					createInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
-					break;
-				}
-			}
-#endif
 
 			VkDebugUtilsMessengerCreateInfoEXT debugUtilsCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
 
@@ -2705,11 +2623,11 @@ using namespace vulkan_internal;
 				// requires enabling it in
 				// VkDeviceCreateInfo::ppEnabledExtensionNames when present in
 				// the device properties.
-				if (checkExtensionSupport(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME, available_deviceExtensions))
-				{
-					enabled_deviceExtensions.push_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
-					portability_subset_enabled = true;
-				}
+				// if (checkExtensionSupport(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME, available_deviceExtensions))
+				// {
+				// 	enabled_deviceExtensions.push_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
+				// 	portability_subset_enabled = true;
+				// }
 
 				if (checkExtensionSupport(VK_EXT_IMAGE_VIEW_MIN_LOD_EXTENSION_NAME, available_deviceExtensions))
 				{
@@ -2882,7 +2800,7 @@ using namespace vulkan_internal;
 	#if defined(PLATFORM_MACOS)
 			if (features2.features.geometryShader != VK_TRUE)
 			{
-				wilog_warning("Vulkan geometry shader support unavailable; using mesh shaders on macOS.");
+				wilog_warning("Vulkan geometry shader support unavailable!");
 			}
 	#else
 			assert(features2.features.geometryShader == VK_TRUE);
@@ -4329,9 +4247,7 @@ using namespace vulkan_internal;
 		imageInfo.format = _ConvertFormat(texture->desc.format);
 		imageInfo.arrayLayers = texture->desc.array_size;
 		imageInfo.mipLevels = texture->desc.mip_levels;
-		VkSampleCountFlagBits sample_count = wi_clamp_sample_count(physicalDevice, (VkSampleCountFlagBits)texture->desc.sample_count);
-		imageInfo.samples = sample_count;
-		texture->desc.sample_count = (uint32_t)sample_count;
+		imageInfo.samples = (VkSampleCountFlagBits)texture->desc.sample_count;
 		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
 		imageInfo.usage = 0;
@@ -5967,6 +5883,9 @@ using namespace vulkan_internal;
 			VkPipelineMultisampleStateCreateInfo multisampling = {};
 			multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 			multisampling.sampleShadingEnable = VK_FALSE;
+			// MACOS
+			// [Error] Vulkan error: vkCreateGraphicsPipelines(device, pipelineCache, 1, &pipelineInfo, nullptr, &internal_state->pipeline) failed with VK_ERROR_INITIALIZATION_FAILED (wiGraphicsDevice_Vulkan.cpp:6120)
+			// Assertion failed: ((res >= VK_SUCCESS)), function operator(), file wiGraphicsDevice_Vulkan.cpp, line 6120.
 			{
 				VkSampleCountFlagBits requested = (VkSampleCountFlagBits)renderpass_info->sample_count;
 				multisampling.rasterizationSamples = wi_clamp_sample_count(physicalDevice, requested);
@@ -6749,17 +6668,6 @@ using namespace vulkan_internal;
 		if (type == SubresourceType::SRV)
 		{
 			view_desc.components = _ConvertSwizzle(swizzle == nullptr ? texture->desc.swizzle : *swizzle);
-			if (portability_subset_enabled)
-			{
-				// Portability subset (MoltenVK) may report imageViewFormatSwizzle = VK_FALSE, requiring identity swizzle
-				if (view_desc.components.r != VK_COMPONENT_SWIZZLE_IDENTITY ||
-					view_desc.components.g != VK_COMPONENT_SWIZZLE_IDENTITY ||
-					view_desc.components.b != VK_COMPONENT_SWIZZLE_IDENTITY ||
-					view_desc.components.a != VK_COMPONENT_SWIZZLE_IDENTITY)
-				{
-					view_desc.components = { VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY };
-				}
-			}
 		}
 		switch (format)
 		{
@@ -7054,57 +6962,6 @@ using namespace vulkan_internal;
 				srv_desc.format = _ConvertFormat(format);
 				srv_desc.offset = offset;
 				srv_desc.range = std::min(size, (uint64_t)desc.size - srv_desc.offset);
-
-				// If the requested range is zero, avoid creating an empty
-				// VkBufferView. Some drivers (MoltenVK/Metal) will attempt to
-				// create a texture with zero width from such a view which
-				// triggers a fatal assertion. Fall back to treating this as an
-				// untyped/raw storage buffer descriptor instead.
-				if (srv_desc.range == 0ull)
-				{
-					// treat as raw buffer (no typed view)
-					subresource.index = allocationhandler->bindlessStorageBuffers.allocate();
-					subresource.is_typed = false;
-					if (subresource.IsValid())
-					{
-						subresource.buffer_info.buffer = internal_state->resource;
-						subresource.buffer_info.offset = offset;
-						// Use whole size so descriptor won't reference a
-						// zero-length range
-						subresource.buffer_info.range = VK_WHOLE_SIZE;
-
-						VkWriteDescriptorSet write = {};
-						write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-						write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-						write.dstBinding = 0;
-						write.dstArrayElement = subresource.index;
-						write.descriptorCount = 1;
-						write.dstSet = allocationhandler->bindlessStorageBuffers.descriptorSet;
-						write.pBufferInfo = &subresource.buffer_info;
-						vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
-					}
-
-					if (type == SubresourceType::SRV)
-					{
-						if (!internal_state->srv.IsValid())
-						{
-							internal_state->srv = subresource;
-							return -1;
-						}
-						internal_state->subresources_srv.push_back(subresource);
-						return int(internal_state->subresources_srv.size() - 1);
-					}
-					else
-					{
-						if (!internal_state->uav.IsValid())
-						{
-							internal_state->uav = subresource;
-							return -1;
-						}
-						internal_state->subresources_uav.push_back(subresource);
-						return int(internal_state->subresources_uav.size() - 1);
-					}
-				}
 
 				res = vkCreateBufferView(device, &srv_desc, nullptr, &subresource.buffer_view);
 
