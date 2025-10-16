@@ -58,6 +58,9 @@ public:
 	wi::gui::CheckBox lensFlareCheckBox;
 	wi::gui::CheckBox lightShaftsCheckBox;
 	wi::gui::Slider lightShaftsStrengthStrengthSlider;
+	wi::gui::Slider lightShaftsFadeSpeedSlider;
+	wi::gui::Slider lightShaftsFadeOutSpeedMaxSlider;
+	wi::gui::Slider lightShaftsFadeThresholdSlider;
 	wi::gui::CheckBox capsuleshadowCheckbox;
 	wi::gui::Slider capsuleshadowFadeSlider;
 	wi::gui::Slider capsuleshadowAngleSlider;

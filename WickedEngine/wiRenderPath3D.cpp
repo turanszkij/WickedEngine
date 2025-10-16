@@ -1898,9 +1898,36 @@ namespace wi
 	}
 	void RenderPath3D::RenderLightShafts(CommandList cmd) const
 	{
-		XMVECTOR sunDirection = XMLoadFloat3(&scene->weather.sunDirection);
-		if (getLightShaftsEnabled() && XMVectorGetX(XMVector3Dot(sunDirection, camera->GetAt())) > 0)
+		const XMVECTOR sunDirection = XMLoadFloat3(&scene->weather.sunDirection);
+		const float sunDotCamera = XMVectorGetX(XMVector3Dot(sunDirection, camera->GetAt()));
+
+		if (getLightShaftsEnabled() && sunDotCamera > 0)
 		{
+			// Calculate target fade factor based on sun-camera angle
+			float targetFadeFactor = 0.0f;
+			if (sunDotCamera > getLightShaftsFadeThreshold())
+			{
+				targetFadeFactor = 1.0f;
+			}
+
+			float fadeSpeed = getLightShaftsFadeSpeed();
+			if (targetFadeFactor < lightShaftsFadeFactor)
+			{
+				// Calculate how close we are to the cutoff threshold
+				const float normalizedDistance = wi::math::saturate(sunDotCamera / getLightShaftsFadeThreshold());
+
+				// Map distance to fade speed: closer to cutoff = faster fade
+				// When normalizedDistance is 1.0 (at threshold): slow fade (fadeSpeed)
+				// When normalizedDistance is 0.0 (cutoff): very fast fade (fadeOutSpeedMax)
+				fadeSpeed = wi::math::Lerp(getLightShaftsFadeOutSpeedMax(), getLightShaftsFadeSpeed(), normalizedDistance);
+
+				lightShaftsFadeFactor = wi::math::Lerp(lightShaftsFadeFactor, targetFadeFactor, 1.0f - exp(-fadeSpeed * scene->dt));
+			}
+			else
+			{
+				lightShaftsFadeFactor = wi::math::Lerp(lightShaftsFadeFactor, targetFadeFactor, 1.0f - exp(-fadeSpeed * scene->dt));
+			}
+
 			GraphicsDevice* device = wi::graphics::GetDevice();
 
 			device->EventBegin("Light Shafts", cmd);
@@ -2175,6 +2202,7 @@ namespace wi
 			wi::image::Params fx;
 			fx.enableFullScreen();
 			fx.blendFlag = BLENDMODE_ADDITIVE;
+			fx.opacity = lightShaftsFadeFactor;
 			wi::image::Draw(&rtSun[1], fx, cmd);
 			device->EventEnd(cmd);
 		}
