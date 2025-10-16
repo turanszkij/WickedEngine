@@ -495,6 +495,22 @@ namespace wi::terrain
 
 		// Restore surface source materials:
 		{
+			// Clean up invalid material entities that no longer exist in the scene
+			for (size_t i = 0; i < materialEntities.size(); )
+			{
+				if (materialEntities[i] != INVALID_ENTITY && !scene->materials.Contains(materialEntities[i]))
+				{
+					materialEntities.erase(materialEntities.begin() + i);
+					if (i < materials.size())
+					{
+						materials.erase(materials.begin() + i);
+					}
+					continue;
+				}
+				++i;
+			}
+
+			// Restore valid materials
 			for (size_t i = 0; i < materialEntities.size(); ++i)
 			{
 				if (materialEntities[i] == INVALID_ENTITY)
