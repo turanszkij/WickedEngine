@@ -1903,13 +1903,11 @@ namespace wi
 
 		if (getLightShaftsEnabled() && sunDotCamera > 0)
 		{
-			// Calculate adaptive threshold based on fade speed
-			// Slower fade = wider activation angle, faster fade = tighter activation angle
-			const float fadeThreshold = 0.75f / getLightShaftsFadeSpeed();
+			constexpr float fadeThreshold = 0.25f;
 
 			// Calculate target fade factor based on sun-camera angle
 			float targetFadeFactor = 0.0f;
-			if (sunDotCamera > fadeThreshold)
+			if (sunDotCamera > 0.25)
 			{
 				targetFadeFactor = 1.0f;
 			}
@@ -1919,7 +1917,7 @@ namespace wi
 			{
 				// Adaptive fade-out: accelerate as we approach the cutoff threshold
 				const float normalizedDistance = wi::math::saturate(sunDotCamera / fadeThreshold);
-				const float fadeOutMultiplier = 13.0f; // Multiplier for fast fade-out
+				constexpr float fadeOutMultiplier = 13.0f; // Multiplier for fast fade-out
 
 				// When normalizedDistance is 1.0 (at threshold): slow fade (fadeSpeed)
 				// When normalizedDistance is 0.0 (cutoff): very fast fade (fadeOutSpeedMax)

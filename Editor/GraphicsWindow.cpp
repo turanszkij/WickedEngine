@@ -872,7 +872,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	AddWidget(&lightShaftsStrengthStrengthSlider);
 
 	lightShaftsFadeSpeedSlider.Create(0.1f, 10.0f, 3.0f, 1000, "Fade Speed: ");
-	lightShaftsFadeSpeedSlider.SetTooltip("Set light shaft fade speed. Higher values result in faster fading and tighter activation angle.");
+	lightShaftsFadeSpeedSlider.SetTooltip("Set light shaft fade speed. Higher values result in faster fading.");
 	lightShaftsFadeSpeedSlider.SetSize(XMFLOAT2(mod_wid, hei));
 	lightShaftsFadeSpeedSlider.SetPos(XMFLOAT2(x + 100, y += step));
 	if (editor->main->config.GetSection("graphics").Has("lightshafts_fade_speed"))
