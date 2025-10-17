@@ -486,19 +486,21 @@ namespace wi
 				infodisplay_str += "[Windows]";
 #elif defined(PLATFORM_LINUX)
 				infodisplay_str += "[Linux]";
+#elif defined(PLATFORM_MACOS)
+				infodisplay_str += "[macOS]";
 #elif defined(PLATFORM_PS5)
 				infodisplay_str += "[PS5]";
 #elif defined(PLATFORM_XBOX)
 				infodisplay_str += "[Xbox]";
 #endif // PLATFORM
 
-#if defined(_ARM)
-				infodisplay_str += "[ARM]";
-#elif defined(_WIN64)
-				infodisplay_str += "[64-bit]";
-#elif defined(_WIN32)
-				infodisplay_str += "[32-bit]";
-#endif // _ARM
+#if defined(__aarch64__) || defined(__arm64__) || defined(_M_ARM64)
+				infodisplay_str += "[AArch64]";
+#elif defined(_WIN64) || defined(__x86_64__) || defined(_M_X64)
+				infodisplay_str += "[x86-64]";
+#elif defined(_WIN32) || defined(__i386__) || defined(_M_IX86)
+				infodisplay_str += "[i386]";
+#endif // __aarch64__ || __arm64__ || _M_ARM64
 
 #ifdef WICKEDENGINE_BUILD_DX12
 				if (dynamic_cast<GraphicsDevice_DX12*>(graphicsDevice.get()))
@@ -859,8 +861,8 @@ namespace wi
 				SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
 		}
 
-#elif defined(PLATFORM_LINUX)
-		SDL_SetWindowFullscreen(window, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+#elif defined(PLATFORM_LINUX) || defined(PLATFORM_MACOS)
+	SDL_SetWindowFullscreen(window, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
 #endif // PLATFORM_WINDOWS_DESKTOP
 	}
 

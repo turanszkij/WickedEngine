@@ -142,6 +142,7 @@ namespace wi::noise
 		}
 
 		// Backwards compatibility implementation for XMVectorSin() without FMA instruction:
+		#if defined(_XM_SSE_INTRINSICS_) && !defined(_XM_NO_INTRINSICS_)
 		inline XMVECTOR XM_CALLCONV FMADD_COMPAT(XMVECTOR a, XMVECTOR b, XMVECTOR c) noexcept { return _mm_add_ps(_mm_mul_ps((a), (b)), (c)); }
 		inline XMVECTOR XM_CALLCONV FNMADD_COMPAT(XMVECTOR a, XMVECTOR b, XMVECTOR c) noexcept { return _mm_sub_ps((c), _mm_mul_ps((a), (b))); }
 		inline XMVECTOR XM_CALLCONV XMVectorModAngles_COMPAT(FXMVECTOR Angles) noexcept
@@ -197,6 +198,16 @@ namespace wi::noise
 			XMStoreFloat2(&ret, P);
 			return ret;
 		}
+		#else
+		inline XMFLOAT2 sin(XMFLOAT2 p)
+		{
+			XMVECTOR P = XMLoadFloat2(&p);
+			P = XMVectorSin(P);
+			XMFLOAT2 ret;
+			XMStoreFloat2(&ret, P);
+			return ret;
+		}
+		#endif
 
 		inline XMFLOAT2 hash(XMFLOAT2 p)
 		{

@@ -2,7 +2,7 @@
 #include "CommonInclude.h"
 #include "wiPlatform.h"
 
-#if defined(PLATFORM_WINDOWS_DESKTOP) || defined(PLATFORM_LINUX)
+#if defined(PLATFORM_WINDOWS_DESKTOP) || defined(PLATFORM_LINUX) || defined(PLATFORM_MACOS)
 #define WICKEDENGINE_BUILD_VULKAN
 #endif // PLATFORM_WINDOWS_DESKTOP || PLATFORM_LINUX
 
@@ -17,6 +17,10 @@
 #ifdef _WIN32
 #define VK_USE_PLATFORM_WIN32_KHR
 #endif // _WIN32
+
+#if defined(PLATFORM_MACOS)
+#define VK_USE_PLATFORM_MACOS_MVK
+#endif
 
 #define VK_NO_PROTOTYPES
 #include "Utility/vulkan/vulkan.h"
@@ -132,6 +136,7 @@ namespace wi::graphics
 		VkQueue initQueue = VK_NULL_HANDLE;
 		VkQueue sparseQueue = VK_NULL_HANDLE;
 		bool debugUtils = false;
+		bool portability_subset_enabled = false; // VK_KHR_portability_subset was enabled on device
 
 		VkPhysicalDeviceProperties2 properties2 = {};
 		VkPhysicalDeviceVulkan11Properties properties_1_1 = {};

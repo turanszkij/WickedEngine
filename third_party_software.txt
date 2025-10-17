@@ -605,7 +605,7 @@ SOFTWARE.
 
 ###############################################################################################################################
 
-dxcompiler.dll and libdxcompiler.so: https://github.com/microsoft/DirectXShaderCompiler
+dxcompiler.dll, libdxcompiler.so and libdxcompiler.dylib: https://github.com/microsoft/DirectXShaderCompiler
 
 ==============================================================================
 LLVM Release License
