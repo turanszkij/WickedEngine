@@ -3076,7 +3076,7 @@ void EditorComponent::PostUpdate()
 
 	// This needs to be after scene was updated fully by EditorComponent's renderPath
 	//	Because this will just render the scene without updating its resources
-	if (renderPath->getSceneUpdateEnabled()) // only update preview if scene was updated at all by main renderPath
+	if (!componentsWnd.cameraComponentWnd.IsCollapsed() && renderPath->getSceneUpdateEnabled()) // only update preview if scene was updated at all by main renderPath
 	{
 		componentsWnd.cameraComponentWnd.preview.RenderPreview();
 	}
