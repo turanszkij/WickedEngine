@@ -1903,9 +1903,13 @@ namespace wi
 
 		if (getLightShaftsEnabled() && sunDotCamera > 0)
 		{
+			// Calculate adaptive threshold based on fade speed
+			// Slower fade = wider activation angle, faster fade = tighter activation angle
+			const float fadeThreshold = 0.75f / getLightShaftsFadeSpeed();
+
 			// Calculate target fade factor based on sun-camera angle
 			float targetFadeFactor = 0.0f;
-			if (sunDotCamera > getLightShaftsFadeThreshold())
+			if (sunDotCamera > fadeThreshold)
 			{
 				targetFadeFactor = 1.0f;
 			}
@@ -1913,13 +1917,13 @@ namespace wi
 			float fadeSpeed = getLightShaftsFadeSpeed();
 			if (targetFadeFactor < lightShaftsFadeFactor)
 			{
-				// Calculate how close we are to the cutoff threshold
-				const float normalizedDistance = wi::math::saturate(sunDotCamera / getLightShaftsFadeThreshold());
+				// Adaptive fade-out: accelerate as we approach the cutoff threshold
+				const float normalizedDistance = wi::math::saturate(sunDotCamera / fadeThreshold);
+				const float fadeOutMultiplier = 13.0f; // Multiplier for fast fade-out
 
-				// Map distance to fade speed: closer to cutoff = faster fade
 				// When normalizedDistance is 1.0 (at threshold): slow fade (fadeSpeed)
 				// When normalizedDistance is 0.0 (cutoff): very fast fade (fadeOutSpeedMax)
-				fadeSpeed = wi::math::Lerp(getLightShaftsFadeOutSpeedMax(), getLightShaftsFadeSpeed(), normalizedDistance);
+				fadeSpeed = wi::math::Lerp(fadeSpeed * fadeOutMultiplier, fadeSpeed, normalizedDistance);
 			}
 
 			lightShaftsFadeFactor = wi::math::Lerp(lightShaftsFadeFactor, targetFadeFactor, 1.0f - exp(-fadeSpeed * scene->dt));

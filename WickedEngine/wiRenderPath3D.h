@@ -54,8 +54,6 @@ namespace wi
 		float fsr2Sharpness = 0.5f;
 		float lightShaftsStrength = 0.5f;
 		float lightShaftsFadeSpeed = 3.0f;
-		float lightShaftsFadeOutSpeedMax = 40.0f;
-		float lightShaftsFadeThreshold = 0.25f;
 		float raytracedDiffuseRange = 10;
 		float raytracedReflectionsRange = 10000.0f;
 		float reflectionRoughnessCutoff = 0.6f;
@@ -250,8 +248,6 @@ namespace wi
 		constexpr float getFSR2Sharpness() const { return fsr2Sharpness; }
 		constexpr float getLightShaftsStrength() const { return lightShaftsStrength; }
 		constexpr float getLightShaftsFadeSpeed() const { return lightShaftsFadeSpeed; }
-		constexpr float getLightShaftsFadeOutSpeedMax() const { return lightShaftsFadeOutSpeedMax; }
-		constexpr float getLightShaftsFadeThreshold() const { return lightShaftsFadeThreshold; }
 		constexpr float getRaytracedDiffuseRange() const { return raytracedDiffuseRange; }
 		constexpr float getRaytracedReflectionsRange() const { return raytracedReflectionsRange; }
 		constexpr float getReflectionRoughnessCutoff() const { return reflectionRoughnessCutoff; }
@@ -311,8 +307,6 @@ namespace wi
 		constexpr void setFSR2Sharpness(float value) { fsr2Sharpness = value; }
 		constexpr void setLightShaftsStrength(float value) { lightShaftsStrength = value; }
 		constexpr void setLightShaftsFadeSpeed(float value) { lightShaftsFadeSpeed = value; }
-		constexpr void setLightShaftsFadeOutSpeedMax(float value) { lightShaftsFadeOutSpeedMax = value; }
-		constexpr void setLightShaftsFadeThreshold(float value) { lightShaftsFadeThreshold = value; }
 		constexpr void setRaytracedDiffuseRange(float value) { raytracedDiffuseRange = value; }
 		constexpr void setRaytracedReflectionsRange(float value) { raytracedReflectionsRange = value; }
 		constexpr void setReflectionRoughnessCutoff(float value) { reflectionRoughnessCutoff = value; }
