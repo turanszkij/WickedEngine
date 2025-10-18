@@ -153,7 +153,7 @@ static const half soft_shadow_sample_count_rcp = rcp(soft_shadow_sample_count);
 
 inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, half2 radius, min16uint2 pixel)
 {
-	Texture2D<half4> texture_shadowatlas = bindless_textures_half4[descriptor_index(GetFrame().texture_shadowatlas_index)];
+	Texture2D<float> texture_shadowatlas = bindless_textures_float[descriptor_index(GetFrame().texture_shadowatlas_index)];
 	Texture2D<half4> texture_shadowatlas_transparent = bindless_textures_half4[descriptor_index(GetFrame().texture_shadowatlas_transparent_index)];
 	
 	half3 shadow = 0;
