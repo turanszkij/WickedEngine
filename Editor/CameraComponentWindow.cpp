@@ -17,7 +17,7 @@ void CameraPreview::RenderPreview()
 			scale = scale_local;
 			if (!camera->render_to_texture.rendertarget_render.IsValid())
 			{
-				renderpath.setSceneUpdateEnabled(false); // we just view our scene with this that's updated by the main rernderpath
+				renderpath.setSceneUpdateEnabled(false); // we just view our scene with this that's updated by the main renderpath
 				renderpath.setOcclusionCullingEnabled(false); // occlusion culling only works for one camera
 				renderpath.PreUpdate();
 				renderpath.Update(0);

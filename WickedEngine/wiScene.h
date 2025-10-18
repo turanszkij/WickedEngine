@@ -93,6 +93,7 @@ namespace wi::scene
 		wi::vector<wi::primitive::Sphere> character_dedicated_shadows;
 		wi::unordered_map<wi::ecs::Entity, wi::vector<wi::ecs::Entity>> topdown_hierarchy; // managed by BuildTopDownHierarchy() in every Update(), allows parent->children traversal
 		wi::jobsystem::context topdown_hierarchy_workload;
+		uint32_t cpu_gpu_mapped_resource_index = 0;
 
 		// AABB culling streams:
 		wi::vector<wi::primitive::AABB> aabb_objects;

@@ -33,6 +33,8 @@ namespace wi::scene
 
 	void Scene::Update(float dt)
 	{
+		GraphicsDevice* device = wi::graphics::GetDevice();
+		cpu_gpu_mapped_resource_index = GetDevice()->GetBufferIndex(); // this is now saved so that the renderer knows the last resource index that the scene was updated with
 		this->dt = dt;
 		time += dt;
 
@@ -70,8 +72,6 @@ namespace wi::scene
 
 		StartBuildTopDownHierarchy();
 
-		GraphicsDevice* device = wi::graphics::GetDevice();
-
 		instanceArraySize = objects.GetCount() + hairs.GetCount() + emitters.GetCount();
 		if (impostors.GetCount() > 0)
 		{
@@ -108,7 +108,7 @@ namespace wi::scene
 				device->SetName(&instanceUploadBuffer[i], "Scene::instanceUploadBuffer");
 			}
 		}
-		instanceArrayMapped = (ShaderMeshInstance*)instanceUploadBuffer[device->GetBufferIndex()].mapped_data;
+		instanceArrayMapped = (ShaderMeshInstance*)instanceUploadBuffer[cpu_gpu_mapped_resource_index].mapped_data;
 
 		materialArraySize = materials.GetCount();
 		if (impostors.GetCount() > 0)
@@ -146,7 +146,7 @@ namespace wi::scene
 				device->SetName(&materialUploadBuffer[i], "Scene::materialUploadBuffer");
 			}
 		}
-		materialArrayMapped = (ShaderMaterial*)materialUploadBuffer[device->GetBufferIndex()].mapped_data;
+		materialArrayMapped = (ShaderMaterial*)materialUploadBuffer[cpu_gpu_mapped_resource_index].mapped_data;
 
 		if (textureStreamingFeedbackBuffer.desc.size < materialArraySize * sizeof(uint32_t))
 		{
@@ -168,7 +168,7 @@ namespace wi::scene
 				device->SetName(&textureStreamingFeedbackBuffer_readback[i], "Scene::textureStreamingFeedbackBuffer_readback");
 			}
 		}
-		textureStreamingFeedbackMapped = (const uint32_t*)textureStreamingFeedbackBuffer_readback[device->GetBufferIndex()].mapped_data;
+		textureStreamingFeedbackMapped = (const uint32_t*)textureStreamingFeedbackBuffer_readback[cpu_gpu_mapped_resource_index].mapped_data;
 
 		// Occlusion culling read:
 		if(wi::renderer::GetOcclusionCullingEnabled() && !wi::renderer::GetFreezeCullingCameraEnabled())
@@ -204,7 +204,7 @@ namespace wi::scene
 			}
 
 			// Advance to next query result buffer to use (this will be the oldest one that was written)
-			queryheap_idx = device->GetBufferIndex();
+			queryheap_idx = cpu_gpu_mapped_resource_index;
 
 			// Clear query allocation state:
 			queryAllocator.store(0);
@@ -283,7 +283,7 @@ namespace wi::scene
 					device->SetName(&TLAS_instancesUpload[i], "Scene::TLAS_instancesUpload");
 				}
 			}
-			TLAS_instancesMapped = TLAS_instancesUpload[device->GetBufferIndex()].mapped_data;
+			TLAS_instancesMapped = TLAS_instancesUpload[cpu_gpu_mapped_resource_index].mapped_data;
 
 			wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
 				// Must not keep inactive TLAS instances, so zero them out for safety:
@@ -330,7 +330,7 @@ namespace wi::scene
 				device->SetName(&geometryUploadBuffer[i], "Scene::geometryUploadBuffer");
 			}
 		}
-		geometryArrayMapped = (ShaderGeometry*)geometryUploadBuffer[device->GetBufferIndex()].mapped_data;
+		geometryArrayMapped = (ShaderGeometry*)geometryUploadBuffer[cpu_gpu_mapped_resource_index].mapped_data;
 
 		// Skinning data size is ready at this point:
 		skinningDataSize = skinningAllocator.load();
@@ -359,7 +359,7 @@ namespace wi::scene
 				device->SetName(&skinningUploadBuffer[i], "Scene::skinningUploadBuffer");
 			}
 		}
-		skinningDataMapped = skinningUploadBuffer[device->GetBufferIndex()].mapped_data;
+		skinningDataMapped = skinningUploadBuffer[cpu_gpu_mapped_resource_index].mapped_data;
 
 		RunExpressionUpdateSystem(ctx);
 
@@ -826,9 +826,9 @@ namespace wi::scene
 		// Shader scene resources:
 		if (device->CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
 		{
-			shaderscene.instancebuffer = device->GetDescriptorIndex(&instanceUploadBuffer[device->GetBufferIndex()], SubresourceType::SRV);
-			shaderscene.geometrybuffer = device->GetDescriptorIndex(&geometryUploadBuffer[device->GetBufferIndex()], SubresourceType::SRV);
-			shaderscene.materialbuffer = device->GetDescriptorIndex(&materialUploadBuffer[device->GetBufferIndex()], SubresourceType::SRV);
+			shaderscene.instancebuffer = device->GetDescriptorIndex(&instanceUploadBuffer[cpu_gpu_mapped_resource_index], SubresourceType::SRV);
+			shaderscene.geometrybuffer = device->GetDescriptorIndex(&geometryUploadBuffer[cpu_gpu_mapped_resource_index], SubresourceType::SRV);
+			shaderscene.materialbuffer = device->GetDescriptorIndex(&materialUploadBuffer[cpu_gpu_mapped_resource_index], SubresourceType::SRV);
 		}
 		else
 		{

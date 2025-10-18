@@ -344,8 +344,6 @@ namespace wi
 
 		wi::renderer::SetShadowsEnabled(getShadowsEnabled());
 
-		float update_speed = 0;
-
 		const bool hw_raytrace = device->CheckCapability(GraphicsDeviceCapability::RAYTRACING);
 		if (getSceneUpdateEnabled())
 		{
@@ -360,10 +358,8 @@ namespace wi
 				scene->SetAccelerationStructureUpdateRequested(true);
 			}
 			scene->camera = *camera;
-			update_speed = dt * wi::renderer::GetGameSpeed();
+			scene->Update(dt * wi::renderer::GetGameSpeed());
 		}
-
-		scene->Update(update_speed);
 	}
 
 	void RenderPath3D::PreRender()
@@ -526,7 +522,7 @@ namespace wi
 			volumetriccloudResources = {};
 		}
 
-		if (!scene->waterRipples.empty())
+		if (!scene->waterRipples.empty() && rtParticleDistortion.IsValid())
 		{
 			if (!rtWaterRipple.IsValid())
 			{
