@@ -170,10 +170,10 @@ inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, half2 radiu
 	for (float y = -search; y <= search; ++y)
 	{
 		const float2 sample_uv = clamp(mad(spread, float2(x, y) * 4, uv), uv_clamping.xy, uv_clamping.zw);
-		const half4 depths = texture_shadowatlas.GatherRed(sampler_linear_clamp, sample_uv);
+		const float4 depths = texture_shadowatlas.GatherRed(sampler_linear_clamp, sample_uv);
 		for (uint d = 0; d < 4; ++d)
 		{
-			const half depth = depths[d];
+			const half depth = (half)depths[d];
 			if (depth > z_receiver)
 			{
 				blocker_count++;
@@ -205,7 +205,8 @@ inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, half2 radiu
 #endif // DISABLE_SOFT_SHADOWMAP
 
 		sample_uv = clamp(sample_uv, uv_clamping.xy, uv_clamping.zw);
-		half3 pcf = texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, sample_uv, cmp).rrr;
+		half pcf_scalar = (half)texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, sample_uv, cmp);
+		half3 pcf = half3(pcf_scalar, pcf_scalar, pcf_scalar);
 		
 #ifndef DISABLE_TRANSPARENT_SHADOWMAP
 		half4 transparent_shadow = texture_shadowatlas_transparent.SampleLevel(sampler_linear_clamp, sample_uv, 0);
@@ -257,20 +258,21 @@ inline half3 shadow_cube(in ShaderEntity light, in float3 Lunnormalized, min16ui
 
 inline half3 sample_shadow(float2 uv, float cmp, min16uint2 pixel)
 {
-	Texture2D<half4> texture_shadowatlas = bindless_textures_half4[descriptor_index(GetFrame().texture_shadowatlas_index)];
-	half3 shadow = texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp).r;
+	Texture2D<float> texture_shadowatlas = bindless_textures_float[descriptor_index(GetFrame().texture_shadowatlas_index)];
+	half3 shadow = (half)texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp);
 
 #ifndef DISABLE_SOFT_SHADOWMAP
 	// sample along a rectangle pattern around center:
-	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(-1, -1)).r;
-	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(-1, 0)).r;
-	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(-1, 1)).r;
-	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(0, -1)).r;
-	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(0, 1)).r;
-	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(1, -1)).r;
-	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(1, 0)).r;
-	shadow.x += texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(1, 1)).r;
-	shadow = shadow.xxx / 9.0;
+	half sum = shadow.x;
+	sum += (half)texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(-1, -1));
+	sum += (half)texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(-1, 0));
+	sum += (half)texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(-1, 1));
+	sum += (half)texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(0, -1));
+	sum += (half)texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(0, 1));
+	sum += (half)texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(1, -1));
+	sum += (half)texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(1, 0));
+	sum += (half)texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, uv, cmp, int2(1, 1));
+	shadow = half3(sum / 9.0, sum / 9.0, sum / 9.0);
 #endif // DISABLE_SOFT_SHADOWMAP
 
 #ifndef DISABLE_TRANSPARENT_SHADOWMAP
@@ -397,13 +399,13 @@ inline bool rain_blocker_check(in float3 P)
 	if (GetFrame().texture_shadowatlas_index < 0 || !any(GetFrame().rain_blocker_mad))
 		return false;
 		
-	Texture2D texture_shadowatlas = bindless_textures[descriptor_index(GetFrame().texture_shadowatlas_index)];
+	Texture2D<float> texture_shadowatlas = bindless_textures_float[descriptor_index(GetFrame().texture_shadowatlas_index)];
 	float3 shadow_pos = mul(GetFrame().rain_blocker_matrix, float4(P, 1)).xyz;
 	float3 shadow_uv = clipspace_to_uv(shadow_pos);
 	if (is_saturated(shadow_uv))
 	{
 		shadow_uv.xy = mad(shadow_uv.xy, GetFrame().rain_blocker_mad.xy, GetFrame().rain_blocker_mad.zw);
-		float shadow = texture_shadowatlas.SampleLevel(sampler_point_clamp, shadow_uv.xy, 0).r;
+		float shadow = texture_shadowatlas.SampleLevel(sampler_point_clamp, shadow_uv.xy, 0);
 
 		if(shadow > shadow_pos.z)
 		{
@@ -444,13 +446,13 @@ inline bool rain_blocker_check_prev(in float3 P)
 	if (GetFrame().texture_shadowatlas_index < 0 || !any(GetFrame().rain_blocker_mad_prev))
 		return false;
 		
-	Texture2D texture_shadowatlas = bindless_textures[descriptor_index(GetFrame().texture_shadowatlas_index)];
+	Texture2D<float> texture_shadowatlas = bindless_textures_float[descriptor_index(GetFrame().texture_shadowatlas_index)];
 	float3 shadow_pos = mul(GetFrame().rain_blocker_matrix_prev, float4(P, 1)).xyz;
 	float3 shadow_uv = clipspace_to_uv(shadow_pos);
 	if (is_saturated(shadow_uv))
 	{
 		shadow_uv.xy = mad(shadow_uv.xy, GetFrame().rain_blocker_mad_prev.xy, GetFrame().rain_blocker_mad_prev.zw);
-		float shadow = texture_shadowatlas.SampleLevel(sampler_point_clamp, shadow_uv.xy, 0).r;
+		float shadow = texture_shadowatlas.SampleLevel(sampler_point_clamp, shadow_uv.xy, 0);
 
 		if(shadow > shadow_pos.z)
 		{
