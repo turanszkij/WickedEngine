@@ -3,6 +3,7 @@
 #define SURFACE_LOAD_MIPCONE
 #define SVT_FEEDBACK
 #define TEXTURE_SLOT_NONUNIFORM
+#define WATER
 #include "globals.hlsli"
 #include "raytracingHF.hlsli"
 #include "lightingHF.hlsli"
@@ -57,6 +58,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 	RayCone raycone = pixel_ray_cone_from_image_height(xTraceResolution.y);
 
+	float4 water_opacity = 0;
+	float water_depth = -1;
+	float3 extinction = 1;
+	
 	float depth = 0;
 	uint stencil = 0;
 
@@ -193,6 +198,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		surface.P = ray.Origin;
 		surface.V = -ray.Direction;
 		surface.update();
+
+		if (water_depth >= 0)
+		{
+			water_depth += surface.hit_depth;
+			float waterfog = saturate(exp(-water_depth * water_opacity));
+			float3 transmittance = saturate(exp(-water_depth * extinction * water_opacity));
+			energy *= transmittance;
+		}
 
 		result += energy * surface.emissiveColor;
 
@@ -425,14 +438,26 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		energy /= termination_chance;
 
 		// Set up next bounce:
+		const bool is_water = surface.material.GetShaderType() == SHADERTYPE_WATER;
+		if (is_water)
+		{
+			surface.transmission = 0.9; // hack the water into the transmission path somehow to still have a bit of reflection
+			extinction *= surface.material.GetSheenColor().rgb; // Note: sheen color is repurposed as extinction color for water
+			water_opacity = surface.baseColor.a;
+			water_depth = max(0, water_depth);
+		}
+		
 		if (rng.next_float() < surface.transmission)
 		{
 			// Refraction
 			const float3 R = refract(ray.Direction, surface.N, 1 - lerp(surface.material.GetRefraction(), 0.1, surface.material.GetCloak()));
 			float roughnessBRDF = sqr(clamp(lerp(surface.roughness, 0.1, surface.material.GetCloak()), min_roughness, 1));
 			ray.Direction = lerp(R, sample_hemisphere_cos(R, rng), roughnessBRDF);
-			energy *= lerp(surface.albedo, 1, surface.material.GetCloak()) / max(0.001, surface.transmission);
-
+			if (!is_water) // water will have depth based extinction instead of simple tint
+			{
+				energy *= lerp(surface.albedo, 1, surface.material.GetCloak()) / max(0.001, surface.transmission);
+			}
+			
 			// Add a new bounce iteration, otherwise the transparent effect can disappear:
 			bounce--;
 		}
