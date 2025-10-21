@@ -462,6 +462,7 @@ namespace wi::terrain
 			}
 		}
 		chunks.clear();
+		virtual_textures_in_use.clear();
 
 		if (chunkGroupEntity != INVALID_ENTITY)
 		{
@@ -640,6 +641,7 @@ namespace wi::terrain
 				}
 			}
 			chunks.clear();
+			virtual_textures_in_use.clear();
 			return;
 		}
 
@@ -868,6 +870,10 @@ namespace wi::terrain
 		if (virtual_texture_any)
 		{
 			UpdateVirtualTexturesCPU();
+		}
+		else
+		{
+			virtual_textures_in_use.clear();
 		}
 
 		const uint64_t required_chunk_buffer_size = sizeof(ShaderTerrainChunk) * (chunk_buffer_range * 2 + 1) * (chunk_buffer_range * 2 + 1);
