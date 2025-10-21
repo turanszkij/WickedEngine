@@ -3,6 +3,7 @@
 #define SURFACE_LOAD_MIPCONE
 #define SVT_FEEDBACK
 #define TEXTURE_SLOT_NONUNIFORM
+#define DISABLE_HALF_PRECISION
 #define WATER
 #include "globals.hlsli"
 #include "raytracingHF.hlsli"
@@ -223,7 +224,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 				stencil = (userStencilRefOverride << 4u) | (stencil & 0xF);
 			}
 			float4 tmp = mul(GetCamera().view_projection, float4(surface.P, 1));
-			tmp.xyz /= max(0.0001, tmp.w); // max: avoid nan
 			depth = saturate(tmp.z); // saturate: avoid blown up values
 		}
 
@@ -285,7 +285,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 				if (dist2 < range2)
 				{
 					dist = sqrt(dist2);
-					L /= dist;
+					L /= max(0.001, dist);
 
 					surfaceToLight.create(surface, L);
 
@@ -317,7 +317,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 				if (dist2 < range2)
 				{
 					dist = sqrt(dist2);
-					L /= dist;
+					L /= max(0.001, dist);
 
 					surfaceToLight.create(surface, L);
 
@@ -343,7 +343,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 				if (dist2 < range2)
 				{
 					dist = sqrt(dist2);
-					L /= dist;
+					L /= max(0.001, dist);
 
 					surfaceToLight.create(surface, L);
 
@@ -435,7 +435,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		{
 			break;
 		}
-		energy /= termination_chance;
+		energy /= max(0.001, termination_chance);
 
 		// Set up next bounce:
 		const bool is_water = surface.material.GetShaderType() == SHADERTYPE_WATER;
@@ -481,7 +481,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		}
 
 	}
-
+	
 	output[pixel] = lerp(output[pixel], float4(result, 1), xTraceAccumulationFactor);
 	output_albedo[pixel] = lerp(output_albedo[pixel], float4(primary_albedo, 1), xTraceAccumulationFactor);
 	output_normal[pixel] = lerp(output_normal[pixel], float4(primary_normal, 1), xTraceAccumulationFactor);

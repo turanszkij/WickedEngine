@@ -4,6 +4,7 @@
 // Enable / disable FP16 shader ops here
 //	Note: when using -enable-16bit-types compile flag, half will be always FP16
 #if 1
+#ifndef DISABLE_HALF_PRECISION
 #ifndef __XBOX_SCARLETT // fp16 forced on xbox via compiler args
 #ifndef __PSSL__ // min types are already redefined on PS5
 #define half min16float
@@ -15,6 +16,7 @@
 #define half4x4 min16float4x4
 #endif // __PSSL__
 #endif // __XBOX_SCARLETT
+#endif // DISABLE_HALF_PRECISION
 #endif
 
 // Descriptor safety feature:
