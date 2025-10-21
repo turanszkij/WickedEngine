@@ -1009,7 +1009,7 @@ namespace dx12_internal
 	constexpr TextureDesc _ConvertTextureDesc_Inv(const D3D12_RESOURCE_DESC& desc)
 	{
 		TextureDesc retVal;
-		
+
 		switch (desc.Dimension)
 		{
 		case D3D12_RESOURCE_DIMENSION_TEXTURE1D:
@@ -4311,7 +4311,7 @@ std::mutex queue_locker;
 		{
 			internal_state->desc.Flags |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_MINIMIZE_MEMORY;
 		}
-		
+
 
 		switch (desc->type)
 		{
@@ -4345,7 +4345,7 @@ std::mutex queue_locker;
 				}
 				else if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::Type::PROCEDURAL_AABBS)
 				{
-					geometry.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS; 
+					geometry.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS;
 					geometry.AABBs.AABBs.StartAddress = to_internal(&x.aabbs.aabb_buffer)->gpu_address +
 						(D3D12_GPU_VIRTUAL_ADDRESS)x.aabbs.offset;
 					geometry.AABBs.AABBs.StrideInBytes = (UINT64)x.aabbs.stride;
@@ -5134,29 +5134,72 @@ std::mutex queue_locker;
 		if (resource == nullptr || !resource->IsValid())
 			return -1;
 
-		auto internal_state = to_internal(resource);
-
 		switch (type)
 		{
 		default:
 		case SubresourceType::SRV:
-			if (subresource < 0)
+			if (resource->IsBuffer())
 			{
-				return internal_state->srv.index;
+				const auto internal_state = to_internal((const GPUBuffer*)resource);
+				if (subresource < 0)
+				{
+					return internal_state->srv.index;
+				}
+				else
+				{
+					if (subresource >= (int)internal_state->subresources_srv.size())
+						return -1;
+					return internal_state->subresources_srv[subresource].index;
+				}
 			}
-			else
+			else if (resource->IsTexture())
 			{
-				return internal_state->subresources_srv[subresource].index;
+				const auto internal_state = to_internal((const Texture*)resource);
+				if (subresource < 0)
+				{
+					return internal_state->srv.index;
+				}
+				else
+				{
+					if (subresource >= (int)internal_state->subresources_srv.size())
+						return -1;
+					return internal_state->subresources_srv[subresource].index;
+				}
+			}
+			else if (resource->IsAccelerationStructure())
+			{
+				const auto internal_state = to_internal((const RaytracingAccelerationStructure*)resource);
+				return internal_state->srv.index;
 			}
 			break;
 		case SubresourceType::UAV:
-			if (subresource < 0)
+			if (resource->IsBuffer())
 			{
-				return internal_state->uav.index;
+				const auto internal_state = to_internal((const GPUBuffer*)resource);
+				if (subresource < 0)
+				{
+					return internal_state->uav.index;
+				}
+				else
+				{
+					if (subresource >= (int)internal_state->subresources_uav.size())
+						return -1;
+					return internal_state->subresources_uav[subresource].index;
+				}
 			}
-			else
+			else if (resource->IsTexture())
 			{
-				return internal_state->subresources_uav[subresource].index;
+				const auto internal_state = to_internal((const Texture*)resource);
+				if (subresource < 0)
+				{
+					return internal_state->uav.index;
+				}
+				else
+				{
+					if (subresource >= (int)internal_state->subresources_uav.size())
+						return -1;
+					return internal_state->subresources_uav[subresource].index;
+				}
 			}
 			break;
 		}
@@ -5200,7 +5243,7 @@ std::mutex queue_locker;
 		const void* identifier = internal_state->stateObjectProperties->GetShaderIdentifier(internal_state->group_strings[group_index].c_str());
 		std::memcpy(dest, identifier, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
 	}
-	
+
 	void GraphicsDevice_DX12::SetName(GPUResource* pResource, const char* name) const
 	{
 		wchar_t text[256];
@@ -7241,7 +7284,7 @@ std::mutex queue_locker;
 
 				if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::Type::TRIANGLES)
 				{
-					geometry.Triangles.VertexBuffer.StartAddress = to_internal(&x.triangles.vertex_buffer)->gpu_address + 
+					geometry.Triangles.VertexBuffer.StartAddress = to_internal(&x.triangles.vertex_buffer)->gpu_address +
 						(D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.vertex_byte_offset;
 					geometry.Triangles.IndexBuffer = to_internal(&x.triangles.index_buffer)->gpu_address +
 						(D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.index_offset * (x.triangles.index_format == IndexBufferFormat::UINT16 ? sizeof(uint16_t) : sizeof(uint32_t));
