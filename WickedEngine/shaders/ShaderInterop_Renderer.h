@@ -76,10 +76,28 @@ enum SHADERMATERIAL_OPTIONS
 	SHADERMATERIAL_OPTION_BIT_DOUBLE_SIDED = 1 << 7,
 	SHADERMATERIAL_OPTION_BIT_TRANSPARENT = 1 << 8,
 	SHADERMATERIAL_OPTION_BIT_ADDITIVE = 1 << 9,
-	SHADERMATERIAL_OPTION_BIT_UNLIT = 1 << 10,
-	SHADERMATERIAL_OPTION_BIT_USE_VERTEXAO = 1 << 11,
-	SHADERMATERIAL_OPTION_BIT_CAPSULE_SHADOW_DISABLED = 1 << 12,
+	SHADERMATERIAL_OPTION_BIT_USE_VERTEXAO = 1 << 10,
+	SHADERMATERIAL_OPTION_BIT_CAPSULE_SHADOW_DISABLED = 1 << 11,
 };
+
+#ifndef __cplusplus
+enum SHADERTYPE
+{
+	SHADERTYPE_PBR,
+	SHADERTYPE_PBR_PLANARREFLECTION,
+	SHADERTYPE_PBR_PARALLAXOCCLUSIONMAPPING,
+	SHADERTYPE_PBR_ANISOTROPIC,
+	SHADERTYPE_WATER,
+	SHADERTYPE_CARTOON,
+	SHADERTYPE_UNLIT,
+	SHADERTYPE_PBR_CLOTH,
+	SHADERTYPE_PBR_CLEARCOAT,
+	SHADERTYPE_PBR_CLOTH_CLEARCOAT,
+	SHADERTYPE_PBR_TERRAINBLENDED,
+	SHADERTYPE_INTERIORMAPPING,
+	SHADERTYPE_COUNT
+};
+#endif // __cplusplus
 
 // Same as MaterialComponent::TEXTURESLOT
 enum TEXTURESLOT
@@ -445,7 +463,6 @@ struct alignas(16) ShaderMaterial
 	inline uint GetStencilRef() { return options_stencilref >> 24u; }
 	inline uint GetShaderType() { return shaderType_meshblend & 0xFFFF; }
 	inline half GetMeshBlend() { return f16tof32(shaderType_meshblend >> 16u); }
-#endif // __cplusplus
 
 	inline uint GetOptions() { return options_stencilref; }
 	inline bool IsUsingVertexColors() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_USE_VERTEXCOLORS; }
@@ -456,11 +473,13 @@ struct alignas(16) ShaderMaterial
 	inline bool IsUsingWind() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_USE_WIND; }
 	inline bool IsReceiveShadow() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_RECEIVE_SHADOW; }
 	inline bool IsCastingShadow() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_CAST_SHADOW; }
-	inline bool IsUnlit() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_UNLIT; }
 	inline bool IsTransparent() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_TRANSPARENT; }
 	inline bool IsAdditive() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_ADDITIVE; }
 	inline bool IsDoubleSided() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_DOUBLE_SIDED; }
 	inline bool IsCapsuleShadowDisabled() { return GetOptions() & SHADERMATERIAL_OPTION_BIT_CAPSULE_SHADOW_DISABLED; }
+	inline bool IsUnlit() { return GetShaderType() == SHADERTYPE_UNLIT; }
+
+#endif // __cplusplus
 };
 
 // For binning shading based on shader types:

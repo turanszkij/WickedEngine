@@ -499,6 +499,31 @@ struct Surface
 			[branch]
 			if (geometry.vb_tan >= 0 && material.textures[NORMALMAP].IsValid())
 			{
+#ifdef WATER
+				[branch]
+				if (material.GetShaderType() == SHADERTYPE_WATER)
+				{
+					// WATER NORMALMAP
+					half2 bumpColor0 = 0;
+					half2 bumpColor1 = 0;
+#ifdef SURFACE_LOAD_QUAD_DERIVATIVES
+					bumpColor0 = material.textures[NORMALMAP].SampleGrad(sam, uvsets - material.texMulAdd.wwww, uvsets_dx, uvsets_dy).rg * 2 - 1;
+					bumpColor1 = material.textures[NORMALMAP].SampleGrad(sam, uvsets + material.texMulAdd.zwzw, uvsets_dx, uvsets_dy).rg * 2 - 1;
+#else
+					float lod = 0;
+#ifdef SURFACE_LOAD_MIPCONE
+					lod = compute_texture_lod(material.textures[NORMALMAP].GetTexture(), material.textures[NORMALMAP].GetUVSet() == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
+#endif // SURFACE_LOAD_MIPCONE
+					bumpColor0 = material.textures[NORMALMAP].SampleLevel(sam, uvsets - material.texMulAdd.wwww, lod).rg * 2 - 1;
+					bumpColor1 = material.textures[NORMALMAP].SampleLevel(sam, uvsets + material.texMulAdd.zwzw, lod).rg * 2 - 1;
+#endif // SURFACE_LOAD_QUAD_DERIVATIVES
+					bumpColor = half3(bumpColor0 + bumpColor1, 1)  * material.GetRefraction();
+					N = normalize(lerp(N, mul(normalize(bumpColor), TBN), material.GetNormalMapStrength()));
+					bumpColor.rg *= material.GetNormalMapStrength();
+				}
+				else {
+#endif // WATER
+
 #ifdef SURFACE_LOAD_QUAD_DERIVATIVES
 				bumpColor = half3(material.textures[NORMALMAP].SampleGrad(sam, uvsets, uvsets_dx, uvsets_dy).rg, 1);
 #else
@@ -510,8 +535,11 @@ struct Surface
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
 				bumpColor = bumpColor * 2 - 1;
 				bumpColor.rg *= material.GetNormalMapStrength();
+				
+#ifdef WATER
+				} // water else
+#endif // WATER
 			}
-
 
 #ifdef ANISOTROPIC
 			aniso.strength = material.GetAnisotropy();

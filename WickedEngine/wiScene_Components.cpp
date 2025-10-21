@@ -381,10 +381,6 @@ namespace wi::scene
 		{
 			material.options_stencilref |= SHADERMATERIAL_OPTION_BIT_ADDITIVE;
 		}
-		if (shaderType == SHADERTYPE_UNLIT)
-		{
-			material.options_stencilref |= SHADERMATERIAL_OPTION_BIT_UNLIT;
-		}
 		if (!IsVertexAODisabled())
 		{
 			material.options_stencilref |= SHADERMATERIAL_OPTION_BIT_USE_VERTEXAO;
@@ -2663,7 +2659,6 @@ namespace wi::scene
 		XMStoreFloat4x4(&InvProjection, _InvP);
 
 		XMMATRIX _VP = XMMatrixMultiply(_V, _P);
-		XMStoreFloat4x4(&View, _V);
 		XMStoreFloat4x4(&VP, _VP);
 		XMMATRIX _InvV = XMMatrixInverse(nullptr, _V);
 		XMStoreFloat4x4(&InvView, _InvV);
