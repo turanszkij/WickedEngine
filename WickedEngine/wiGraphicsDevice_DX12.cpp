@@ -5134,72 +5134,33 @@ std::mutex queue_locker;
 		if (resource == nullptr || !resource->IsValid())
 			return -1;
 
+		const auto internal_state = to_internal(resource);
+
 		switch (type)
 		{
 		default:
 		case SubresourceType::SRV:
-			if (resource->IsBuffer())
+			if (subresource < 0)
 			{
-				const auto internal_state = to_internal((const GPUBuffer*)resource);
-				if (subresource < 0)
-				{
-					return internal_state->srv.index;
-				}
-				else
-				{
-					if (subresource >= (int)internal_state->subresources_srv.size())
-						return -1;
-					return internal_state->subresources_srv[subresource].index;
-				}
-			}
-			else if (resource->IsTexture())
-			{
-				const auto internal_state = to_internal((const Texture*)resource);
-				if (subresource < 0)
-				{
-					return internal_state->srv.index;
-				}
-				else
-				{
-					if (subresource >= (int)internal_state->subresources_srv.size())
-						return -1;
-					return internal_state->subresources_srv[subresource].index;
-				}
-			}
-			else if (resource->IsAccelerationStructure())
-			{
-				const auto internal_state = to_internal((const RaytracingAccelerationStructure*)resource);
 				return internal_state->srv.index;
+			}
+			else
+			{
+				if (subresource >= (int)internal_state->subresources_srv.size())
+					return -1;
+				return internal_state->subresources_srv[subresource].index;
 			}
 			break;
 		case SubresourceType::UAV:
-			if (resource->IsBuffer())
+			if (subresource < 0)
 			{
-				const auto internal_state = to_internal((const GPUBuffer*)resource);
-				if (subresource < 0)
-				{
-					return internal_state->uav.index;
-				}
-				else
-				{
-					if (subresource >= (int)internal_state->subresources_uav.size())
-						return -1;
-					return internal_state->subresources_uav[subresource].index;
-				}
+				return internal_state->uav.index;
 			}
-			else if (resource->IsTexture())
+			else
 			{
-				const auto internal_state = to_internal((const Texture*)resource);
-				if (subresource < 0)
-				{
-					return internal_state->uav.index;
-				}
-				else
-				{
-					if (subresource >= (int)internal_state->subresources_uav.size())
-						return -1;
-					return internal_state->subresources_uav[subresource].index;
-				}
+				if (subresource >= (int)internal_state->subresources_uav.size())
+					return -1;
+				return internal_state->subresources_uav[subresource].index;
 			}
 			break;
 		}
