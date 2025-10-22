@@ -140,19 +140,6 @@ if (WICKED_EDITOR)
     add_subdirectory(Editor)
 endif()
 
-if (WICKED_TESTS)
-    add_subdirectory(Samples/Tests)
-endif()
+add_subdirectory("Samples")
 
-if (WICKED_IMGUI_EXAMPLE)
-    add_subdirectory(Samples/Example_ImGui)
-    add_subdirectory(Samples/Example_ImGui_Docking)
-endif()
-
-if (WICKED_LINUX_TEMPLATE)
-    add_subdirectory(Samples/Template_Linux)
-endif()
-
-if (WICKED_WINDOWS_TEMPLATE)
-    add_subdirectory(Samples/Template_Windows)
-endif()
+add_subdirectory("Projects")
