@@ -1,7 +1,9 @@
 #pragma once
 #include <atomic>
 #include <thread>
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
 #include <emmintrin.h> // _mm_pause()
+#endif
 
 namespace wi
 {
@@ -17,7 +19,13 @@ namespace wi
 			{
 				if (spin < 10)
 				{
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
 					_mm_pause(); // SMT thread swap can occur here
+#elif defined(__aarch64__) || defined(__arm64__) || defined(_M_ARM64)
+					__builtin_arm_yield();
+#else
+					std::this_thread::yield();
+#endif
 				}
 				else
 				{

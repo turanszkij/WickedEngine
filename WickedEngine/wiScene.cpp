@@ -2965,13 +2965,14 @@ namespace wi::scene
 						}
 					}
 					current_sample *= info.channel_count;
-					current_sample = std::min(current_sample, info.sample_count);
+					current_sample = std::min<uint64_t>(current_sample, (uint64_t)info.sample_count);
 
 					float voice = 0;
 					const int sample_count = 64;
 					for (int sam = 0; sam < sample_count; ++sam)
 					{
-						voice = std::max(voice, std::abs((float)info.samples[std::min(current_sample + sam, info.sample_count)] / 32768.0f));
+						uint64_t sample_index = std::min<uint64_t>(current_sample + sam, (uint64_t)info.sample_count - 1);
+						voice = std::max(voice, std::abs((float)info.samples[sample_index] / 32768.0f));
 					}
 					const float strength = 0.4f;
 					if (voice > 0.1f)

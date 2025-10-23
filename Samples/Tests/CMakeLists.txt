@@ -29,7 +29,11 @@ else()
 		WickedEngine
 	)
 
-	set(LIB_DXCOMPILER "libdxcompiler.so")
+	if(APPLE)
+		set(LIB_DXCOMPILER "libdxcompiler.dylib")
+	else()
+		set(LIB_DXCOMPILER "libdxcompiler.so")
+	endif()
 endif ()
 
 if(WICKED_USE_IPO)

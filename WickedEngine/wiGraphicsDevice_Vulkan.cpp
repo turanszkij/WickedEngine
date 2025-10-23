@@ -16,6 +16,10 @@
 
 #include "Utility/spirv_reflect.h"
 
+#ifndef VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME
+#define VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME "VK_KHR_portability_subset"
+#endif
+
 #define VMA_IMPLEMENTATION
 #define VMA_STATIC_VULKAN_FUNCTIONS 0
 #define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
@@ -31,8 +35,48 @@
 #include <iostream>
 #include <algorithm>
 
+#if defined(PLATFORM_MACOS)
+#include <dlfcn.h>
+#include <sys/stat.h>
+#endif
+
 namespace wi::graphics
 {
+
+// Helper to clamp requested MSAA sample count to what the physical device
+// supports. This prevents pipeline creation failures when requesting
+// unsupported counts (eg. 8x on MoltenVK GPU only supporting 4x).
+static VkSampleCountFlagBits wi_clamp_sample_count(VkPhysicalDevice physicalDevice, VkSampleCountFlagBits requested)
+{
+	if (requested == 0)
+		requested = VK_SAMPLE_COUNT_1_BIT;
+
+	VkPhysicalDeviceProperties props = {};
+	vkGetPhysicalDeviceProperties(physicalDevice, &props);
+	VkSampleCountFlags supported = props.limits.framebufferColorSampleCounts & props.limits.framebufferDepthSampleCounts;
+
+	const VkSampleCountFlagBits order[] = {
+		VK_SAMPLE_COUNT_64_BIT,
+		VK_SAMPLE_COUNT_32_BIT,
+		VK_SAMPLE_COUNT_16_BIT,
+		VK_SAMPLE_COUNT_8_BIT,
+		VK_SAMPLE_COUNT_4_BIT,
+		VK_SAMPLE_COUNT_2_BIT,
+		VK_SAMPLE_COUNT_1_BIT
+	};
+
+	VkSampleCountFlagBits best = VK_SAMPLE_COUNT_1_BIT;
+	for (VkSampleCountFlagBits c : order)
+	{
+		if (supported & c)
+		{
+			best = c;
+			if (c <= requested)
+				return c;
+		}
+	}
+	return best;
+}
 
 namespace vulkan_internal
 {
@@ -2150,13 +2194,16 @@ using namespace vulkan_internal;
 				VkPipelineMultisampleStateCreateInfo multisampling = {};
 				multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 				multisampling.sampleShadingEnable = VK_FALSE;
-				multisampling.rasterizationSamples = (VkSampleCountFlagBits)commandlist.renderpass_info.sample_count;
+				{
+					VkSampleCountFlagBits requested = (VkSampleCountFlagBits)commandlist.renderpass_info.sample_count;
+					multisampling.rasterizationSamples = wi_clamp_sample_count(physicalDevice, requested);
+				}
 				if (pso->desc.rs != nullptr)
 				{
 					const RasterizerState& desc = *pso->desc.rs;
 					if (desc.forced_sample_count > 1)
 					{
-						multisampling.rasterizationSamples = (VkSampleCountFlagBits)desc.forced_sample_count;
+						multisampling.rasterizationSamples = wi_clamp_sample_count(physicalDevice, (VkSampleCountFlagBits)desc.forced_sample_count);
 					}
 				}
 				multisampling.minSampleShading = 1.0f;
@@ -2345,10 +2392,63 @@ using namespace vulkan_internal;
 		TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = sizeof(VkAccelerationStructureInstanceKHR);
 
 		validationMode = validationMode_;
-
+//////////
 		VkResult res;
+		// VkResult res = VK_SUCCESS;
 
-		res = vulkan_check(volkInitialize());
+// #if defined(PLATFORM_MACOS)
+// 		// On macOS, try to directly load vkGetInstanceProcAddr from common Homebrew
+// 		// or MoltenVK locations and initialize volk with that symbol. This helps
+// 		// when running under debuggers or launchers that don't propagate DYLD
+// 		// environment variables reliably. If this fails, fall back to volkInitialize().
+// 		{
+// 			void* module = nullptr;
+// 			PFN_vkGetInstanceProcAddr getInstanceProc = nullptr;
+// 			const char* candidates[] = {
+// 				// "/opt/homebrew/lib/libvulkan.1.dylib",
+// 				// "/opt/homebrew/lib/libvulkan.dylib",
+// 				// "/opt/homebrew/lib/libMoltenVK.dylib",
+// 				// "libvulkan.dylib",
+// 				// "libvulkan.1.dylib",
+// 				"libMoltenVK.dylib",
+// 				nullptr
+// 			};
+
+// 			for (const char** p = candidates; *p != nullptr; ++p)
+// 			{
+// 				module = dlopen(*p, RTLD_NOW | RTLD_LOCAL);
+// 				if (!module)
+// 					continue;
+
+// 				getInstanceProc = (PFN_vkGetInstanceProcAddr)dlsym(module, "vkGetInstanceProcAddr");
+// 				if (getInstanceProc)
+// 				{
+// 					// keep the module handle open for the process lifetime so the
+// 					// function pointer remains valid; do not dlclose(module).
+// 					break;
+// 				}
+// 				else
+// 				{
+// 					dlclose(module);
+// 					module = nullptr;
+// 				}
+// 			}
+
+// 			if (getInstanceProc)
+// 			{
+// 				// Initialize volk with the loader's vkGetInstanceProcAddr directly
+// 				volkInitializeCustom(getInstanceProc);
+// 				res = VK_SUCCESS;
+// 			}
+// 			else
+// 			{
+				res = vulkan_check(volkInitialize());
+// 			}
+// 		}
+// #else
+// 		res = vulkan_check(volkInitialize());
+// #endif
+
 		if (res != VK_SUCCESS)
 		{
 			wi::helper::messageBox("volkInitialize failed! ERROR: " + std::string(string_VkResult(res)), "Error!");
@@ -2393,6 +2493,14 @@ using namespace vulkan_internal;
 			{
 				instanceExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 			}
+#if defined(PLATFORM_MACOS)
+			// MoltenVK requires enabling VK_KHR_portability_enumeration +
+			// setting the ENUMERATE_PORTABILITY flag
+			else if (strcmp(availableExtension.extensionName, VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME) == 0)
+			{
+				instanceExtensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+			}
+#endif
 		}
 
 		instanceExtensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
@@ -2459,6 +2567,19 @@ using namespace vulkan_internal;
 			createInfo.ppEnabledLayerNames = instanceLayers.data();
 			createInfo.enabledExtensionCount = static_cast<uint32_t>(instanceExtensions.size());
 			createInfo.ppEnabledExtensionNames = instanceExtensions.data();
+
+#if defined(PLATFORM_MACOS)
+			// If portability enumeration extension was enabled, also set the
+			// corresponding create flag
+			for (auto ext : instanceExtensions)
+			{
+				if (strcmp(ext, VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME) == 0)
+				{
+					createInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+					break;
+				}
+			}
+#endif
 
 			VkDebugUtilsMessengerCreateInfoEXT debugUtilsCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
 
@@ -2577,6 +2698,18 @@ using namespace vulkan_internal;
 				properties_chain = &depth_stencil_resolve_properties.pNext;
 
 				enabled_deviceExtensions = required_deviceExtensions;
+				// If the portability subset extension is available on this
+				// device, enable it. Required on some MoltenVK implementations
+				// where the physical device lists this extension in
+				// vkEnumerateDeviceExtensionProperties. The Vulkan spec
+				// requires enabling it in
+				// VkDeviceCreateInfo::ppEnabledExtensionNames when present in
+				// the device properties.
+				if (checkExtensionSupport(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME, available_deviceExtensions))
+				{
+					enabled_deviceExtensions.push_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
+					portability_subset_enabled = true;
+				}
 
 				if (checkExtensionSupport(VK_EXT_IMAGE_VIEW_MIN_LOD_EXTENSION_NAME, available_deviceExtensions))
 				{
@@ -3277,7 +3410,12 @@ using namespace vulkan_internal;
 		{
 			VkBufferCreateInfo bufferInfo = {};
 			bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-			bufferInfo.size = 4;
+			// Make the null buffer large enough to contain at least one texel for
+			// common texel formats (e.g. R32G32B32A32_SFLOAT = 16 bytes).
+			// A too-small buffer plus a large texel format can result in a
+			// zero-width texture being created by MoltenVK, which triggers a
+			// Metal validation assertion.
+			bufferInfo.size = 16;
 			bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 			bufferInfo.flags = 0;
 
@@ -4539,6 +4677,20 @@ using namespace vulkan_internal;
 					memoryGetFdInfoKHR.memory = allocationInfo.deviceMemory;
 					memoryGetFdInfoKHR.handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHR;
 					res = vulkan_check(vkGetMemoryFdKHR(allocationhandler->device, &memoryGetFdInfoKHR, &texture->shared_handle));
+#elif defined(__APPLE__)
+					// macOS / MoltenVK: exporting a Metal object is done via
+					// VK_EXT_metal_objects (vkExportMetalObjectsEXT or
+					// VkExportMetal*InfoEXT structures) rather than the generic
+					// VK_EXTERNAL_MEMORY_HANDLE_TYPE_* mechanisms used on
+					// Win32/Linux. If we need to export a Metal texture/buffer
+					// here, implement the VK_EXT_metal_objects flow: enable the
+					// extension during device creation and either add
+					// VkExportMetal*InfoEXT to the allocation/create pNext or
+					// call vkExportMetalObjectsEXT after creation. Leaving this
+					// unimplemented intentionally — fall back to no-op for
+					// platforms without explicit external-handle support.
+					(void)allocationInfo; // silence unused on platforms where not implemented
+					(void)allocationhandler;
 #endif
 				}
 			}
@@ -5806,13 +5958,16 @@ using namespace vulkan_internal;
 			VkPipelineMultisampleStateCreateInfo multisampling = {};
 			multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 			multisampling.sampleShadingEnable = VK_FALSE;
-			multisampling.rasterizationSamples = (VkSampleCountFlagBits)renderpass_info->sample_count;
+			{
+				VkSampleCountFlagBits requested = (VkSampleCountFlagBits)renderpass_info->sample_count;
+				multisampling.rasterizationSamples = wi_clamp_sample_count(physicalDevice, requested);
+			}
 			if (pso->desc.rs != nullptr)
 			{
 				const RasterizerState& desc = *pso->desc.rs;
 				if (desc.forced_sample_count > 1)
 				{
-					multisampling.rasterizationSamples = (VkSampleCountFlagBits)desc.forced_sample_count;
+					multisampling.rasterizationSamples = wi_clamp_sample_count(physicalDevice, (VkSampleCountFlagBits)desc.forced_sample_count);
 				}
 			}
 			multisampling.minSampleShading = 1.0f;
@@ -6585,6 +6740,17 @@ using namespace vulkan_internal;
 		if (type == SubresourceType::SRV)
 		{
 			view_desc.components = _ConvertSwizzle(swizzle == nullptr ? texture->desc.swizzle : *swizzle);
+			if (portability_subset_enabled)
+			{
+				// Portability subset (MoltenVK) may report imageViewFormatSwizzle = VK_FALSE, requiring identity swizzle
+				if (view_desc.components.r != VK_COMPONENT_SWIZZLE_IDENTITY ||
+					view_desc.components.g != VK_COMPONENT_SWIZZLE_IDENTITY ||
+					view_desc.components.b != VK_COMPONENT_SWIZZLE_IDENTITY ||
+					view_desc.components.a != VK_COMPONENT_SWIZZLE_IDENTITY)
+				{
+					view_desc.components = { VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY };
+				}
+			}
 		}
 		switch (format)
 		{
@@ -6879,6 +7045,57 @@ using namespace vulkan_internal;
 				srv_desc.format = _ConvertFormat(format);
 				srv_desc.offset = offset;
 				srv_desc.range = std::min(size, (uint64_t)desc.size - srv_desc.offset);
+
+				// If the requested range is zero, avoid creating an empty
+				// VkBufferView. Some drivers (MoltenVK/Metal) will attempt to
+				// create a texture with zero width from such a view which
+				// triggers a fatal assertion. Fall back to treating this as an
+				// untyped/raw storage buffer descriptor instead.
+				if (srv_desc.range == 0ull)
+				{
+					// treat as raw buffer (no typed view)
+					subresource.index = allocationhandler->bindlessStorageBuffers.allocate();
+					subresource.is_typed = false;
+					if (subresource.IsValid())
+					{
+						subresource.buffer_info.buffer = internal_state->resource;
+						subresource.buffer_info.offset = offset;
+						// Use whole size so descriptor won't reference a
+						// zero-length range
+						subresource.buffer_info.range = VK_WHOLE_SIZE;
+
+						VkWriteDescriptorSet write = {};
+						write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+						write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+						write.dstBinding = 0;
+						write.dstArrayElement = subresource.index;
+						write.descriptorCount = 1;
+						write.dstSet = allocationhandler->bindlessStorageBuffers.descriptorSet;
+						write.pBufferInfo = &subresource.buffer_info;
+						vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
+					}
+
+					if (type == SubresourceType::SRV)
+					{
+						if (!internal_state->srv.IsValid())
+						{
+							internal_state->srv = subresource;
+							return -1;
+						}
+						internal_state->subresources_srv.push_back(subresource);
+						return int(internal_state->subresources_srv.size() - 1);
+					}
+					else
+					{
+						if (!internal_state->uav.IsValid())
+						{
+							internal_state->uav = subresource;
+							return -1;
+						}
+						internal_state->subresources_uav.push_back(subresource);
+						return int(internal_state->subresources_uav.size() - 1);
+					}
+				}
 
 				res = vkCreateBufferView(device, &srv_desc, nullptr, &subresource.buffer_view);
 
