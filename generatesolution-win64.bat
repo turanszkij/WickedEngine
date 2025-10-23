@@ -1,0 +1,2 @@
+cmake -B build
+pause

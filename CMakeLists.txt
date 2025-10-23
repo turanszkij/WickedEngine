@@ -12,6 +12,8 @@ endif()
 project(WickedEngine)
 
 include(CheckIPOSupported)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/WickedEngine/cmake")
+include(ProjectLink)
 check_ipo_supported(RESULT ipo_supported)
 
 set(WICKED_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})

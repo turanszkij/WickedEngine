@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.19)
 
+project(Editor)
+
 # workaround for source dir containing regex meta characters
 string(REGEX REPLACE "([.+?*])" "\\\\\\1" SDIR "${CMAKE_CURRENT_SOURCE_DIR}")
 
@@ -8,34 +10,36 @@ list(FILTER SOURCE_FILES EXCLUDE REGEX ${SDIR}/main_.*)
 list(FILTER SOURCE_FILES EXCLUDE REGEX ${SDIR}/stdafx.*)
 list(APPEND SOURCE_FILES main_${PLATFORM}.cpp)
 
+if(WIN32)
+    add_executable(${PROJECT_NAME} WIN32 ${SOURCE_FILES})
+else()
+    add_executable(${PROJECT_NAME} ${SOURCE_FILES})
+endif()
+
+# Setup WickedEngine
+setup_wicked_app(${PROJECT_NAME})
+
+# Copy fonts directory
+add_custom_command(
+    TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E ${COPY_OR_SYMLINK_DIR_CMD}
+        ${CMAKE_CURRENT_SOURCE_DIR}/fonts
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>/fonts
+    COMMENT "Copying fonts to output directory for ${PROJECT_NAME}"
+)
 
 if (WIN32)
     list (APPEND SOURCE_FILES
         Editor.rc
     )
 
-    add_executable(Editor WIN32 ${SOURCE_FILES})
-
-    target_link_libraries(Editor PUBLIC
-        WickedEngine_Windows
-    )
-
     set_property(TARGET Editor PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
-    set(LIB_DXCOMPILER "dxcompiler.dll")
 else ()
-    add_executable(Editor ${SOURCE_FILES})
-
-    target_link_libraries(Editor PUBLIC
-        WickedEngine
-    )
-    set(LIB_DXCOMPILER "libdxcompiler.so")
-
     # needed for proper names in crash stacktrace
-    set_target_properties(Editor
+    set_target_properties(${PROJECT_NAME}
         PROPERTIES
         ENABLE_EXPORTS ON
     )
-
 endif ()
 
 if(WICKED_USE_IPO)
@@ -49,15 +53,6 @@ target_precompile_headers(Editor PRIVATE "stdafx.h")
 
 # Needed for terrain system
 add_dependencies(Editor Content)
-
-# Copy content to build folder:
-add_custom_command(
-    TARGET Editor POST_BUILD
-    # Copy shader compiler library in the source folder
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${WICKED_ROOT_DIR}/WickedEngine/${LIB_DXCOMPILER} ${CMAKE_CURRENT_BINARY_DIR}
-    #COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/languages ${CMAKE_CURRENT_BINARY_DIR}/languages
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/fonts ${CMAKE_CURRENT_BINARY_DIR}/fonts
-)
 
 include(GNUInstallDirs)
 set(EDITOR_INSTALL_FOLDER "${CMAKE_INSTALL_LIBDIR}/WickedEngine/Editor")
