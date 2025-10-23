@@ -1,6 +1,18 @@
 cmake_minimum_required(VERSION 3.19)
 project(Template_Linux)
 
+
+# NOTE: THIS CMAKE FILE HASNT BEEN TOUCHED BECAUSE THIS IS WAY TOO CUSTOM BUT IF YOU WANT TO USE THE NEW PROJECT STRUCTURE IT SHOULD LOOK SOMETHING LIKE THIS:
+#cmake_minimum_required(VERSION 3.19)
+
+#project(Template_Linux)
+
+#add_executable(${PROJECT_NAME} main.cpp)
+
+#setup_wicked_app(${PROJECT_NAME})
+
+
+
 # if the engine is installed system-wise,
 # you can set INSTALLED_ENGINE to ON
 # moving your project folder wherever you want

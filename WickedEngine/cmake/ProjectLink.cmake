@@ -20,15 +20,6 @@ macro(setup_wicked_app PROJECT_NAME)
             $<TARGET_FILE_DIR:${PROJECT_NAME}>
         COMMENT "Copying ${LIBDXCOMPILER} to output directory for ${PROJECT_NAME}"
     )
-    
-    # Optionally copy shaders as well
-    add_custom_command(
-        TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E ${COPY_OR_SYMLINK_DIR_CMD} 
-            ${WICKED_ROOT_DIR}/WickedEngine/shaders 
-            $<TARGET_FILE_DIR:${PROJECT_NAME}>/shaders
-        COMMENT "Copying shaders to output directory for ${PROJECT_NAME}"
-    )
 
     if(WIN32 AND MSVC)
         add_compile_options(/MP)

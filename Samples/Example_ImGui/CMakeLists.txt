@@ -1,4 +1,7 @@
 cmake_minimum_required(VERSION 3.19)
+
+project(Example_ImGui)
+
 if (NOT WIN32)
 	find_package(Threads REQUIRED)
 endif ()
@@ -7,6 +10,23 @@ set(SOURCE_FILES
 	Example_ImGui.cpp
 	Example_ImGui.h
 )
+
+if(WIN32)
+	list(APPEND SOURCE_FILES
+		main_Windows.cpp
+		main_Windows.h
+		Tests.rc
+	)
+	add_executable(${PROJECT_NAME} WIN32 ${SOURCE_FILES})
+else()
+	list(APPEND SOURCE_FILES
+		main_SDL2.cpp
+	)
+	add_executable(${PROJECT_NAME} ${SOURCE_FILES})
+endif()
+
+setup_wicked_app(${PROJECT_NAME})
+
 set(IMGUI_FILES
 	ImGui/imconfig.h
 	ImGui/imgui.cpp
@@ -22,31 +42,21 @@ set(IMGUI_FILES
 )
 
 if (WIN32)
-	list(APPEND SOURCE_FILES
-		main_Windows.cpp
-		main_Windows.h
-		Tests.rc
-	)
 	list(APPEND IMGUI_FILES
 		ImGui/imgui_impl_win32.cpp
 		ImGui/imgui_impl_win32.h
 	)
 	add_library(Example_ImGui_Lib OBJECT ${IMGUI_FILES})
 
-	add_executable(Example_ImGui WIN32 ${SOURCE_FILES})
-
-	target_link_libraries(Example_ImGui
-		PUBLIC
-		WickedEngine_Windows
-
-		PRIVATE
+	target_link_libraries(${PROJECT_NAME}
 		Example_ImGui_Lib
 	)
-	set(LIB_DXCOMPILER "dxcompiler.dll")
-else()
-	list(APPEND SOURCE_FILES
-		main_SDL2.cpp
+	list(APPEND SOURCE_FILES 
+		main_Windows.cpp
+		main_Windows.h
 	)
+else()
+
 	list(APPEND IMGUI_FILES
 		ImGui/imgui_impl_sdl.cpp
 		ImGui/imgui_impl_sdl.h
@@ -54,43 +64,44 @@ else()
 	add_library(Example_ImGui_Lib OBJECT ${IMGUI_FILES})
 	find_package(SDL2 REQUIRED)
 	target_link_libraries(Example_ImGui_Lib PRIVATE SDL2::SDL2)
-	add_executable(Example_ImGui ${SOURCE_FILES})
 
-	target_link_libraries(Example_ImGui
+	target_link_libraries(${PROJECT_NAME}
 		PUBLIC
-		WickedEngine
 		Threads::Threads
 
 		PRIVATE
 		Example_ImGui_Lib
 	)
+endif()
 
-	# Copy shaders to build and source folders just to be safe:
-	add_custom_command(
-		TARGET Example_ImGui POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/ImGuiPS.hlsl ${CMAKE_CURRENT_BINARY_DIR}
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/ImGuiVS.hlsl ${CMAKE_CURRENT_BINARY_DIR}
-	)
-
-	set(LIB_DXCOMPILER "libdxcompiler.so")
-endif ()
+# Copy shaders
+add_custom_command(
+    TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different 
+        ${CMAKE_CURRENT_SOURCE_DIR}/ImGuiPS.hlsl 
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different 
+        ${CMAKE_CURRENT_SOURCE_DIR}/ImGuiVS.hlsl 
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>
+    COMMENT "Copying ImGui shaders to output directory"
+)
 
 if(WICKED_USE_IPO)
-set_target_properties(Example_ImGui PROPERTIES
+set_target_properties(${PROJECT_NAME} PROPERTIES
     INTERPROCEDURAL_OPTIMIZATION ON
     INTERPROCEDURAL_OPTIMIZATION_DEBUG OFF
 )
 endif()
 
 if (MSVC)
-	set_property(TARGET Example_ImGui PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+	set_property(TARGET ${PROJECT_NAME} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 endif ()
-set_property(TARGET Example_ImGui PROPERTY UNITY_BUILD NO)
+set_property(TARGET ${PROJECT_NAME} PROPERTY UNITY_BUILD NO)
 
 # Copy content to build folder:
-add_dependencies(Example_ImGui Content)
+add_dependencies(${PROJECT_NAME} Content)
 
 add_custom_command(
-	TARGET Example_ImGui POST_BUILD
+	TARGET ${PROJECT_NAME} POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${WICKED_ROOT_DIR}/WickedEngine/${LIB_DXCOMPILER} ${CMAKE_CURRENT_BINARY_DIR}
 )
