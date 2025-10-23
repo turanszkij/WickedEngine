@@ -51,10 +51,7 @@ if (WIN32)
 	target_link_libraries(${PROJECT_NAME}
 		Example_ImGui_Lib
 	)
-	list(APPEND SOURCE_FILES 
-		main_Windows.cpp
-		main_Windows.h
-	)
+	
 else()
 
 	list(APPEND IMGUI_FILES
