@@ -2022,7 +2022,9 @@ namespace wi::gui
 		this->start = start;
 		this->end = end;
 		this->value = defaultValue;
-		this->step = std::max(step, 1.0f);
+		// ===== FIXED CODE ======
+		this->step = step; //<- FIXED: ROUNDING IS REMOVED
+		// ===== END FIXED CODE ======
 
 		SetName(name);
 		SetText(name);
@@ -2177,21 +2179,36 @@ namespace wi::gui
 			}
 
 
-			if (dragged)
+		// ===== FIXED CODE ======
+		if (dragged)
+		{
+			EventArgs args;
+			args.clickPos = pointerHitbox.pos;
+
+			//  normalize
+			float t = wi::math::InverseLerp(translation.x, translation.x + hitBox.siz.x, args.clickPos.x);
+			t = wi::math::Clamp(t, 0, 1);
+
+			// raw value
+			float rawValue = wi::math::Lerp(start, end, t);
+
+			// discretization for step
+			if (step > 0)
 			{
-				EventArgs args;
-				args.clickPos = pointerHitbox.pos;
-				value = wi::math::InverseLerp(translation.x, translation.x + hitBox.siz.x, args.clickPos.x);
-				value = wi::math::Clamp(value, 0, 1);
-				value *= step;
-				value = std::floor(value);
-				value /= step;
-				value = wi::math::Lerp(start, end, value);
-				args.fValue = value;
-				args.iValue = (int)value;
-				onSlide(args);
-				Activate();
+				// How many steps are there from start to rawValue
+				float stepsFromStart = std::round((rawValue - start) / step);
+				rawValue = start + stepsFromStart * step;
+				// checking for limits
+				rawValue = wi::math::Clamp(rawValue, start, end);
 			}
+
+			value = rawValue;
+			args.fValue = value;
+			args.iValue = (int)value;
+			onSlide(args);
+			Activate();
+		}
+		// ===== END FIXED CODE ======
 		}
 
 		valueInputField.SetValue(value);
