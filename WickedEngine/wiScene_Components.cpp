@@ -752,9 +752,20 @@ namespace wi::scene
 		}
 		aabb = AABB(_min, _max);
 
+		auto select_pos32_format = [&]() -> Format
+		{
+#if defined(__APPLE__)
+			// Metal's MTLPixelFormat list skips RGB32*, so buffer textures need
+			// 4-component positions
+			return Vertex_POS32W::FORMAT;
+#else
+			return vertex_windweights.empty() ? Vertex_POS32::FORMAT : Vertex_POS32W::FORMAT;
+#endif
+		};
+
 		if (IsQuantizedPositionsDisabled())
 		{
-			position_format = vertex_windweights.empty() ? Vertex_POS32::FORMAT : Vertex_POS32W::FORMAT;
+			position_format = select_pos32_format();
 		}
 		else
 		{
@@ -779,7 +790,7 @@ namespace wi::scene
 					// success, continue to next vertex with 16 bits
 					continue;
 				}
-				position_format = vertex_windweights.empty() ? Vertex_POS32::FORMAT : Vertex_POS32W::FORMAT; // failed, increase to 32 bits
+				position_format = select_pos32_format(); // failed, increase to full precision
 				break; // since 32 bit is the max, we can bail out
 			}
 
