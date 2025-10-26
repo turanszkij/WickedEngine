@@ -35,6 +35,9 @@ namespace wi::graphics
 	{
 		Discrete,
 		Integrated,
+		Nvidia,
+		Intel,
+		AMD,
 	};
 
 	enum class ShaderStage : uint8_t

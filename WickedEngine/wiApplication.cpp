@@ -733,6 +733,18 @@ namespace wi
 			{
 				preference = GPUPreference::Integrated;
 			}
+			else if (wi::arguments::HasArgument("nvidiagpu"))
+			{
+				preference = GPUPreference::Nvidia;
+			}
+			else if (wi::arguments::HasArgument("amdgpu"))
+			{
+				preference = GPUPreference::AMD;
+			}
+			else if (wi::arguments::HasArgument("intelgpu"))
+			{
+				preference = GPUPreference::Intel;
+			}
 
 #ifdef PLATFORM_PS5
 			wi::renderer::SetShaderPath(wi::renderer::GetShaderPath() + "ps5/");

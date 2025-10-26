@@ -55,7 +55,7 @@ namespace wi::helper
 	{
 		std::string result;
 		std::locale loc;
-		for (unsigned int i = 0; i < s.length(); ++i)
+		for (size_t i = 0; i < s.length(); ++i)
 		{
 			result += std::toupper(s.at(i), loc);
 		}
@@ -65,7 +65,28 @@ namespace wi::helper
 	{
 		std::string result;
 		std::locale loc;
-		for (unsigned int i = 0; i < s.length(); ++i)
+		for (size_t i = 0; i < s.length(); ++i)
+		{
+			result += std::tolower(s.at(i), loc);
+		}
+		return result;
+	}
+
+	std::wstring toUpper(const std::wstring& s)
+	{
+		std::wstring result;
+		std::locale loc;
+		for (size_t i = 0; i < s.length(); ++i)
+		{
+			result += std::toupper(s.at(i), loc);
+		}
+		return result;
+	}
+	std::wstring toLower(const std::wstring& s)
+	{
+		std::wstring result;
+		std::locale loc;
+		for (size_t i = 0; i < s.length(); ++i)
 		{
 			result += std::tolower(s.at(i), loc);
 		}

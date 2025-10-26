@@ -43,6 +43,10 @@ namespace wi::helper
 
 	std::string toLower(const std::string& s);
 
+	std::wstring toUpper(const std::wstring& s);
+
+	std::wstring toLower(const std::wstring& s);
+
 	void messageBox(const std::string& msg, const std::string& caption = "Warning!");
 
 	enum class MessageBoxResult

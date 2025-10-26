@@ -2717,6 +2717,18 @@ using namespace vulkan_internal;
 				{
 					priority = properties2.properties.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU;
 				}
+				else if (preference == GPUPreference::AMD)
+				{
+					priority = wi::helper::toUpper(std::string(properties2.properties.deviceName)).find("AMD") != std::string::npos;
+				}
+				else if (preference == GPUPreference::Nvidia)
+				{
+					priority = wi::helper::toUpper(std::string(properties2.properties.deviceName)).find("NVIDIA") != std::string::npos;
+				}
+				else if (preference == GPUPreference::Intel)
+				{
+					priority = wi::helper::toUpper(std::string(properties2.properties.deviceName)).find("INTEL") != std::string::npos;
+				}
 				if (priority || physicalDevice == VK_NULL_HANDLE)
 				{
 					physicalDevice = dev;

@@ -2347,10 +2347,13 @@ std::mutex queue_locker;
 			return dxgiFactory->EnumAdapters1(index, ppAdapter);
 		};
 
-		for (uint32_t i = 0; NextAdapter(i, dxgiAdapter.ReleaseAndGetAddressOf()) != DXGI_ERROR_NOT_FOUND; ++i)
+		const bool vendor_preference = preference > GPUPreference::Integrated;
+		ComPtr<IDXGIAdapter1> tempAdapter;
+		for (uint32_t i = 0; NextAdapter(i, tempAdapter.ReleaseAndGetAddressOf()) != DXGI_ERROR_NOT_FOUND; ++i)
 		{
+			bool vendor_priority = false;
 			DXGI_ADAPTER_DESC1 adapterDesc;
-			hr = dxgiAdapter->GetDesc1(&adapterDesc);
+			hr = tempAdapter->GetDesc1(&adapterDesc);
 			if (SUCCEEDED(hr))
 			{
 				// Don't select the Basic Render Driver adapter.
@@ -2358,23 +2361,40 @@ std::mutex queue_locker;
 				{
 					continue;
 				}
-			}
 
-			D3D_FEATURE_LEVEL featurelevels[] = {
-				D3D_FEATURE_LEVEL_12_2,
-				D3D_FEATURE_LEVEL_12_1,
-				D3D_FEATURE_LEVEL_12_0,
-				D3D_FEATURE_LEVEL_11_1,
-				D3D_FEATURE_LEVEL_11_0,
-			};
-			for (auto& featureLevel : featurelevels)
-			{
-				if (SUCCEEDED(D3D12CreateDevice(dxgiAdapter.Get(), featureLevel, PPV_ARGS(device))))
+				if (preference == GPUPreference::AMD)
 				{
-					break;
+					vendor_priority = wi::helper::toUpper(std::wstring(adapterDesc.Description)).find(L"AMD") != std::wstring::npos;
+				}
+				else if (preference == GPUPreference::Nvidia)
+				{
+					vendor_priority = wi::helper::toUpper(std::wstring(adapterDesc.Description)).find(L"NVIDIA") != std::wstring::npos;
+				}
+				else if (preference == GPUPreference::Intel)
+				{
+					vendor_priority = wi::helper::toUpper(std::wstring(adapterDesc.Description)).find(L"INTEL") != std::wstring::npos;
 				}
 			}
-			if (device != nullptr)
+
+			if (device == nullptr || vendor_priority)
+			{
+				D3D_FEATURE_LEVEL featurelevels[] = {
+					D3D_FEATURE_LEVEL_12_2,
+					D3D_FEATURE_LEVEL_12_1,
+					D3D_FEATURE_LEVEL_12_0,
+					D3D_FEATURE_LEVEL_11_1,
+					D3D_FEATURE_LEVEL_11_0,
+				};
+				for (auto& featureLevel : featurelevels)
+				{
+					if (SUCCEEDED(D3D12CreateDevice(tempAdapter.Get(), featureLevel, PPV_ARGS(device))))
+					{
+						dxgiAdapter = tempAdapter;
+						break;
+					}
+				}
+			}
+			if (device != nullptr && (!vendor_preference || vendor_priority))
 				break;
 		}
 
@@ -2688,37 +2708,39 @@ std::mutex queue_locker;
 		// Init adapter properties
 		{
 			DXGI_ADAPTER_DESC1 adapterDesc;
-			dx12_check(dxgiAdapter->GetDesc1(&adapterDesc));
-
-			vendorId = adapterDesc.VendorId;
-			deviceId = adapterDesc.DeviceId;
-			wi::helper::StringConvert(adapterDesc.Description, adapterName);
-
-			// Convert the adapter's D3D12 driver version to a readable string like "24.21.13.9793".
-			LARGE_INTEGER umdVersion;
-			if (dxgiAdapter->CheckInterfaceSupport(__uuidof(IDXGIDevice), &umdVersion) != DXGI_ERROR_UNSUPPORTED)
+			hr = dxgiAdapter->GetDesc1(&adapterDesc);
+			if (SUCCEEDED(hr))
 			{
-				uint64_t encodedVersion = umdVersion.QuadPart;
-				std::ostringstream o;
-				o << "D3D12 driver version ";
-				uint16_t driverVersion[4] = {};
+				vendorId = adapterDesc.VendorId;
+				deviceId = adapterDesc.DeviceId;
+				wi::helper::StringConvert(adapterDesc.Description, adapterName);
 
-				for (size_t i = 0; i < 4; ++i) {
-					driverVersion[i] = (encodedVersion >> (48 - 16 * i)) & 0xFFFF;
-					o << driverVersion[i] << ".";
+				// Convert the adapter's D3D12 driver version to a readable string like "24.21.13.9793".
+				LARGE_INTEGER umdVersion;
+				if (dxgiAdapter->CheckInterfaceSupport(__uuidof(IDXGIDevice), &umdVersion) != DXGI_ERROR_UNSUPPORTED)
+				{
+					uint64_t encodedVersion = umdVersion.QuadPart;
+					std::ostringstream o;
+					o << "D3D12 driver version ";
+					uint16_t driverVersion[4] = {};
+
+					for (size_t i = 0; i < 4; ++i) {
+						driverVersion[i] = (encodedVersion >> (48 - 16 * i)) & 0xFFFF;
+						o << driverVersion[i] << ".";
+					}
+
+					driverDescription = o.str();
 				}
 
-				driverDescription = o.str();
-			}
-
-			// Detect adapter type.
-			if (adapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
-			{
-				adapterType = AdapterType::Cpu;
-			}
-			else
-			{
-				adapterType = features.UMA() ? AdapterType::IntegratedGpu : AdapterType::DiscreteGpu;
+				// Detect adapter type.
+				if (adapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+				{
+					adapterType = AdapterType::Cpu;
+				}
+				else
+				{
+					adapterType = features.UMA() ? AdapterType::IntegratedGpu : AdapterType::DiscreteGpu;
+				}
 			}
 		}
 
