@@ -2197,7 +2197,7 @@ using namespace vulkan_internal;
 					const RasterizerState& desc = *pso->desc.rs;
 					if (desc.forced_sample_count > 1)
 					{
-						multisampling.rasterizationSamples = (VkSampleCountFlagBits)desc.forced_sample_count;
+						multisampling.rasterizationSamples = wi_clamp_sample_count(physicalDevice, (VkSampleCountFlagBits)desc.forced_sample_count);
 					}
 				}
 				multisampling.minSampleShading = 1.0f;
