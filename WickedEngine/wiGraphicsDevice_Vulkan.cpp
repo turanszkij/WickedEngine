@@ -4234,6 +4234,10 @@ using namespace vulkan_internal;
 		texture->sparse_properties = nullptr;
 		texture->desc = *desc;
 
+		uint32_t requested_samples = std::max(1u, texture->desc.sample_count);
+		VkSampleCountFlagBits clamped_samples = wi_clamp_sample_count(physicalDevice, (VkSampleCountFlagBits)requested_samples);
+		texture->desc.sample_count = (uint32_t)clamped_samples;
+
 		if (texture->desc.mip_levels == 0)
 		{
 			texture->desc.mip_levels = GetMipCount(texture->desc.width, texture->desc.height, texture->desc.depth);
@@ -4247,7 +4251,7 @@ using namespace vulkan_internal;
 		imageInfo.format = _ConvertFormat(texture->desc.format);
 		imageInfo.arrayLayers = texture->desc.array_size;
 		imageInfo.mipLevels = texture->desc.mip_levels;
-		imageInfo.samples = (VkSampleCountFlagBits)texture->desc.sample_count;
+		imageInfo.samples = clamped_samples;
 		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
 		imageInfo.usage = 0;
