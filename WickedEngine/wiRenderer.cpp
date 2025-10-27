@@ -3330,20 +3330,10 @@ void RenderMeshes(
 			push.materialIndex = subset.materialIndex;
 			push.instances = instanceBufferDescriptorIndex;
 			push.instance_offset = (uint)instancedBatch.dataOffset;
-			int wrapSamplerIndex = -1;
-			if (material.sampler_descriptor < 0)
-			{
-				wrapSamplerIndex = device->GetDescriptorIndex(wi::renderer::GetSampler(wi::enums::SAMPLER_OBJECTSHADER));
-			}
-			else
-			{
-				wrapSamplerIndex = material.sampler_descriptor;
-			}
-			int clampSamplerIndex = device->GetDescriptorIndex(wi::renderer::GetSampler(wi::enums::SAMPLER_OBJECTSHADER_CLAMP));
-			wilog_assert(wrapSamplerIndex >= 0 && wrapSamplerIndex < 256, "invalid wrap sampler index encountered: %d!", wrapSamplerIndex);
-			wilog_assert(clampSamplerIndex >= 0 && clampSamplerIndex < 256, "invalid clamp sampler index encountered: %d!", clampSamplerIndex);
-			push.wrapSamplerIndex = wrapSamplerIndex;
-			push.clampSamplerIndex = clampSamplerIndex;
+			wilog_assert(material.cached_wrapSampler >= 0 && material.cached_wrapSampler < 256, "invalid wrap sampler index encountered: %d!", material.cached_wrapSampler);
+			wilog_assert(material.cached_clampSampler >= 0 && material.cached_clampSampler < 256, "invalid clamp sampler index encountered: %d!", material.cached_clampSampler);
+			push.wrapSamplerIndex = material.cached_wrapSampler;
+			push.clampSamplerIndex = material.cached_clampSampler;
 
 			const MeshComponent::BufferView& ibv = provokingIBRequired ? mesh.ib_provoke : mesh.ib;
 			const size_t ib_stride = provokingIBRequired ? mesh.GetProvokingIndexStride() : mesh.GetIndexStride();

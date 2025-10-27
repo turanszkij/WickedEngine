@@ -4124,6 +4124,17 @@ namespace wi::scene
 				material.SetDirty(false);
 			}
 
+			GraphicsDevice* device = GetDevice();
+			if (material.sampler_descriptor < 0)
+			{
+				material.cached_wrapSampler = device->GetDescriptorIndex(wi::renderer::GetSampler(wi::enums::SAMPLER_OBJECTSHADER));
+			}
+			else
+			{
+				material.cached_wrapSampler = material.sampler_descriptor;
+			}
+			material.cached_clampSampler = device->GetDescriptorIndex(wi::renderer::GetSampler(wi::enums::SAMPLER_OBJECTSHADER_CLAMP));
+
 			material.WriteShaderMaterial(materialArrayMapped + args.jobIndex);
 
 			const VideoComponent* video = videos.GetComponent(entity);

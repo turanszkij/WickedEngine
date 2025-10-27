@@ -427,6 +427,7 @@ namespace wi::scene
 			material.textures[i].sparse_feedbackmap_descriptor = textures[i].sparse_feedbackmap_descriptor;
 		}
 
+		// Do not use the cached sampler indices here, using this function doesn't rely on material update system which caches them
 		if (sampler_descriptor < 0)
 		{
 			material.sampler_descriptor = device->GetDescriptorIndex(wi::renderer::GetSampler(wi::enums::SAMPLER_OBJECTSHADER));
