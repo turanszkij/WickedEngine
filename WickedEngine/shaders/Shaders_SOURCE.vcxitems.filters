@@ -1031,6 +1031,9 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)copyStencilBitPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)copydepthbufferCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)lineardepthCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>

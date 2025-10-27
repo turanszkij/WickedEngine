@@ -1087,6 +1087,8 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL_FLOAT1], "upsample_bilateral_float1CS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL_FLOAT4], "upsample_bilateral_float4CS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_DOWNSAMPLE4X], "downsample4xCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_DEPTH_LINEAR], "copydepthbufferCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_DEPTH_LINEAR_MSAA], "copydepthbufferCS.cso", ShaderModel::SM_6_0, wi::vector<std::string>{"COPYDEPTH_MSAA"}); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_LINEARDEPTH], "lineardepthCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_NORMALSFROMDEPTH], "normalsfromdepthCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SCREENSPACESHADOW], "screenspaceshadowCS.cso"); });
@@ -17979,6 +17981,50 @@ void Postprocess_Downsample4x(
 	);
 
 	device->Barrier(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout), cmd);
+
+	device->EventEnd(cmd);
+}
+void Postprocess_DepthLinear(
+	const Texture& input_depth,
+	const Texture& output_depth,
+	const Texture& output_lineardepth,
+	CommandList cmd
+)
+{
+	device->EventBegin("Postprocess_DepthLinear", cmd);
+
+	const bool msaa = input_depth.GetDesc().sample_count > 1;
+	device->BindComputeShader(&shaders[msaa ? CSTYPE_POSTPROCESS_DEPTH_LINEAR_MSAA : CSTYPE_POSTPROCESS_DEPTH_LINEAR], cmd);
+
+	device->BindResource(&input_depth, 0, cmd);
+
+	GPUBarrier begin_barriers[] = {
+		GPUBarrier::Image(&output_depth, output_depth.desc.layout, ResourceState::UNORDERED_ACCESS),
+		GPUBarrier::Image(&output_lineardepth, output_lineardepth.desc.layout, ResourceState::UNORDERED_ACCESS),
+	};
+	device->Barrier(begin_barriers, arraysize(begin_barriers), cmd);
+
+	const TextureDesc& depth_desc = output_depth.GetDesc();
+	const TextureDesc& lineardepth_desc = output_lineardepth.GetDesc();
+	const uint32_t mip_count = std::min<uint32_t>(5u, std::min(depth_desc.mip_levels, lineardepth_desc.mip_levels));
+	assert(mip_count >= 5);
+
+	for (uint32_t mip = 0; mip < mip_count; ++mip)
+	{
+		device->BindUAV(&output_depth, 0 + mip, cmd, mip);
+		device->BindUAV(&output_lineardepth, 5 + mip, cmd, mip);
+	}
+
+	const uint32_t dispatch_width = (depth_desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE;
+	const uint32_t dispatch_height = (depth_desc.height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE;
+	device->Dispatch(dispatch_width, dispatch_height, 1, cmd);
+
+	GPUBarrier end_barriers[] = {
+		GPUBarrier::Memory(),
+		GPUBarrier::Image(&output_depth, ResourceState::UNORDERED_ACCESS, output_depth.desc.layout),
+		GPUBarrier::Image(&output_lineardepth, ResourceState::UNORDERED_ACCESS, output_lineardepth.desc.layout),
+	};
+	device->Barrier(end_barriers, arraysize(end_barriers), cmd);
 
 	device->EventEnd(cmd);
 }

@@ -134,6 +134,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"emittedparticle_emitCS_volume", wi::graphics::ShaderStage::CS},
 	{"emittedparticle_finishUpdateCS", wi::graphics::ShaderStage::CS},
 	{"downsample4xCS", wi::graphics::ShaderStage::CS},
+	{"copydepthbufferCS", wi::graphics::ShaderStage::CS},
 	{"lineardepthCS", wi::graphics::ShaderStage::CS},
 	{"depthoffield_prepassCS_earlyexit", wi::graphics::ShaderStage::CS},
 	{"depthoffield_mainCS_cheap", wi::graphics::ShaderStage::CS},
