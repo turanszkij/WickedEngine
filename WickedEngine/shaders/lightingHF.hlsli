@@ -389,6 +389,7 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 
 inline void light_rect(in ShaderEntity light, in Surface surface, inout Lighting lighting, in half shadow_mask = 1)
 {
+#ifndef DISABLE_AREA_LIGHTS
 	if (shadow_mask <= 0.001)
 		return; // shadow mask zero
 	if ((light.layerMask & surface.layerMask) == 0)
@@ -527,6 +528,8 @@ inline void light_rect(in ShaderEntity light, in Surface surface, inout Lighting
 	const half scattering = ComputeScattering(saturate(dot(L, -surface.V)));
 	lighting.indirect.specular += scattering * light_color * (1 - surface.extinction) * (1 - sqr(1 - saturate(1 - surface.N.y)));
 #endif // LIGHTING_SCATTER
+
+#endif // DISABLE_AREA_LIGHTS
 }
 
 // ENVIRONMENT MAPS
