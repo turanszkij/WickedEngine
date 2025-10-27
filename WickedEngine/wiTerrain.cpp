@@ -692,6 +692,21 @@ namespace wi::terrain
 			}
 		}
 
+		const bool supports_sparse_virtual_textures =
+			device->CheckCapability(GraphicsDeviceCapability::SPARSE_TEXTURE2D) &&
+			device->CheckCapability(GraphicsDeviceCapability::SPARSE_BUFFER) &&
+			device->CheckCapability(GraphicsDeviceCapability::SPARSE_NULL_MAPPING);
+		if (virtual_texture_any && !supports_sparse_virtual_textures)
+		{
+			static bool sparse_warning_logged = false;
+			if (!sparse_warning_logged)
+			{
+				wi::backlog::post("Terrain virtual textures disabled because sparse resources are not supported by the active graphics device.", wi::backlog::LogLevel::Warning);
+				sparse_warning_logged = true;
+			}
+			virtual_texture_any = false;
+		}
+
 		// Ensure that enough grass chunks are generated so that grass view distance will not cause popping:
 		grass_chunk_dist = int(grass_properties.viewDistance / chunk_width + 0.5f);
 
