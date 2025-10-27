@@ -41,7 +41,6 @@ using namespace wi::graphics;
 
 namespace wi
 {
-
 	void Application::Initialize()
 	{
 		if (initialized)
@@ -707,6 +706,11 @@ namespace wi
 		wi::profiler::EndRange(range); // Compose
 	}
 
+	void Application::Exit()
+	{
+		wi::platform::Exit();
+	}
+
 	void Application::SetWindow(wi::platform::window_type window)
 	{
 		this->window = window;
@@ -880,7 +884,6 @@ namespace wi
 	{
 		return wi::helper::FileExists(rewriteable_startup_script_text);
 	}
-
 }
 
 

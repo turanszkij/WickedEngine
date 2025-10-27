@@ -515,8 +515,13 @@ namespace wi::lua
 
 	int Application_BindLua::Exit(lua_State* L)
 	{
-		wi::platform::Exit();
-		return 0;
+		if (component)
+		{
+			component->Exit();
+			return 0;
+		}
+
+		return 1;
 	}
 	int Application_BindLua::IsFaded(lua_State* L)
 	{
