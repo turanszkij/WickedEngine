@@ -45,7 +45,7 @@ int sdl_loop()
                 case SDL_WINDOWEVENT:
                     switch (event.window.event) {
                         case SDL_WINDOWEVENT_CLOSE: // exit editor
-                            quit = true;
+                            editor.Exit();
                             break;
                         case SDL_WINDOWEVENT_RESIZED:
                             // Tells the engine to reload window configuration (size and dpi)
