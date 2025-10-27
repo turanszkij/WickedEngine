@@ -362,6 +362,21 @@ void Editor::Initialize()
 		}
 	}
 }
+
+void Editor::Exit()
+{
+	// Check all scenes for unsaved changes
+	for (int i = 0; i < (int)renderComponent.scenes.size(); ++i)
+	{
+		if (!renderComponent.CheckUnsavedChanges(i))
+		{
+			return;
+		}
+	}
+
+	Application::Exit();
+}
+
 void Editor::HotReload()
 {
 	if (IsScriptReplacement())
@@ -1295,15 +1310,7 @@ void EditorComponent::Load()
 	exitButton.SetColor(wi::Color(160, 50, 50, 180), wi::gui::WIDGETSTATE::IDLE);
 	exitButton.SetColor(wi::Color(200, 50, 50, 255), wi::gui::WIDGETSTATE::FOCUS);
 	exitButton.OnClick([this](wi::gui::EventArgs args) {
-		// Check all scenes for unsaved changes
-		for (int i = 0; i < (int)scenes.size(); ++i)
-		{
-			if (!CheckUnsavedChanges(i))
-			{
-				return;
-			}
-		}
-		wi::platform::Exit();
+		main->Exit();
 		});
 	topmenuWnd.AddWidget(&exitButton);
 

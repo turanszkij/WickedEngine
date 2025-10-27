@@ -256,6 +256,8 @@ public:
 
 	void HotReload();
 
+	void Exit() override;
+
 	~Editor() override
 	{
 		config.Commit();

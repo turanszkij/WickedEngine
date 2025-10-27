@@ -84,6 +84,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			SetForegroundWindow(hWnd);
 		}
 		break;
+		case WM_CLOSE:
+			editor.Exit();
+			break;
 		case WM_DESTROY:
 			PostQuitMessage(0);
 			break;
