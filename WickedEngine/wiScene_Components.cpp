@@ -435,6 +435,7 @@ namespace wi::scene
 		{
 			material.sampler_descriptor = sampler_descriptor;
 		}
+		material.sampler_clamp_descriptor = device->GetDescriptorIndex(wi::renderer::GetSampler(wi::enums::SAMPLER_OBJECTSHADER_CLAMP));
 
 		if (shaderType == SHADERTYPE_INTERIORMAPPING && textures[BASECOLORMAP].resource.IsValid() && !has_flag(textures[BASECOLORMAP].resource.GetTexture().GetDesc().misc_flags, ResourceMiscFlag::TEXTURECUBE))
 		{

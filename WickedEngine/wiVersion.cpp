@@ -9,7 +9,7 @@ namespace wi::version
 	// minor features, major updates, breaking compatibility changes
 	const int minor = 71;
 	// minor bug fixes, alterations, refactors, updates
-	const int revision = 844;
+	const int revision = 845;
 
 	const std::string version_string = std::to_string(major) + "." + std::to_string(minor) + "." + std::to_string(revision);
 
@@ -50,15 +50,7 @@ Created by Turánszki János
 
 Contributors:
 ---------------------------
-Silas Oler
-Matteo De Carlo
-Amer Koleci
-James Webb
-Megumumpkin
-Preben Eriksen
-Dennis Brakhane
-
-All contributors: https://github.com/turanszkij/WickedEngine/graphs/contributors
+Silas Oler, Matteo De Carlo, Amer Koleci, James Webb, Megumumpkin, Preben Eriksen, Dennis Brakhane, Stanislav Denisov
 
 Patreon supporters
 ---------------------------
