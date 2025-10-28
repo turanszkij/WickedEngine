@@ -363,6 +363,10 @@ void Editor::Initialize()
 	}
 }
 
+bool Editor::CanExit() {
+	return !renderComponent.save_in_progress;
+}
+
 void Editor::Exit()
 {
 	// Check all scenes for unsaved changes
@@ -5254,6 +5258,12 @@ void EditorComponent::Open(std::string filename)
 }
 void EditorComponent::Save(const std::string& filename)
 {
+	struct ClearFlagOnExit {
+		bool& flag;
+		ClearFlagOnExit(bool& flag) : flag(flag) {}
+		~ClearFlagOnExit() {flag = false;}
+	} scoped(save_in_progress);
+
 	std::string extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(filename));
 
 	FileType type = FileType::INVALID;
@@ -5319,8 +5329,13 @@ void EditorComponent::Save(const std::string& filename)
 
 	PostSaveText("Scene saved: ", GetCurrentEditorScene().path);
 }
+
 void EditorComponent::SaveAs()
 {
+
+	// also set and reset by Save()
+	save_in_progress = true;
+
 	wi::helper::FileDialogParams params;
 	params.type = wi::helper::FileDialogParams::SAVE;
 	params.description = "Wicked Scene (.wiscene) | GLTF Model (.gltf) | GLTF Binary Model (.glb) | C++ code (.h,.cpp)";
@@ -5335,7 +5350,7 @@ void EditorComponent::SaveAs()
 			std::string filename = (!extension.compare("GLTF") || !extension.compare("GLB") || !extension.compare("H") || !extension.compare("CPP")) ? fileName : wi::helper::ForceExtension(fileName, params.extensions.front());
 			Save(filename);
 		});
-	});
+	}, [this]() { save_in_progress = false; });
 }
 
 Texture EditorComponent::CreateThumbnail(Texture texture, uint32_t target_width, uint32_t target_height, bool mipmaps) const
