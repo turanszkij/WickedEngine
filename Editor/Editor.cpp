@@ -6014,6 +6014,13 @@ void EditorComponent::SetCurrentScene(int index)
 	wi::lua::scene::SetGlobalCamera(renderPath->camera);
 	componentsWnd.RefreshEntityTree();
 	RefreshSceneList();
+
+	EditorScene& editorscene = GetCurrentEditorScene();
+	if (editorscene.path.empty() && !editorscene.untitled_camera_reset_once)
+	{
+		cameraWnd.ResetCam();
+		editorscene.untitled_camera_reset_once = true;
+	}
 }
 void EditorComponent::RefreshSceneList()
 {
@@ -6100,6 +6107,7 @@ void EditorComponent::RefreshSceneList()
 			componentsWnd.RefreshEntityTree();
 			ResetHistory();
 			scenes[i]->path.clear();
+			scenes[i]->untitled_camera_reset_once = false;
 
 			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 				if (scenes.size() > 1)

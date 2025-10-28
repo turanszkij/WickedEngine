@@ -210,6 +210,7 @@ public:
 		wi::vector<wi::Archive> history;
 		int historyPos = -1;
 		bool has_unsaved_changes = false;
+		bool untitled_camera_reset_once = false;
 		wi::gui::Button tabSelectButton;
 		wi::gui::Button tabCloseButton;
 	};
