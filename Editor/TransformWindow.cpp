@@ -52,6 +52,36 @@ void TransformWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&clearButton);
 
+	moveToEditorCameraButton.Create("Move to Editor Camera");
+	moveToEditorCameraButton.SetTooltip("Move the selected transform(s) to match the current editor camera view");
+	moveToEditorCameraButton.SetPos(XMFLOAT2(x, y += step));
+	moveToEditorCameraButton.SetSize(XMFLOAT2(wid + hei + 1, hei));
+	moveToEditorCameraButton.OnClick([=](wi::gui::EventArgs args) {
+		const Scene& scene = editor->GetCurrentScene();
+		const auto& editorscene = editor->GetCurrentEditorScene();
+
+		wi::Archive& archive = editor->AdvanceHistory();
+		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+
+		for (auto& x : editor->translator.selected)
+		{
+			TransformComponent* transform = scene.transforms.GetComponent(x.entity);
+			if (transform == nullptr)
+				continue;
+
+			editor->RecordEntity(archive, x.entity);
+
+			*transform = editorscene.camera_transform;
+			transform->SetDirty();
+		}
+
+		for (auto& x : editor->translator.selected)
+		{
+			editor->RecordEntity(archive, x.entity);
+		}
+	});
+	AddWidget(&moveToEditorCameraButton);
+
 	txInput.Create("");
 	txInput.SetValue(0);
 	txInput.SetDescription("Position: ");
@@ -436,6 +466,7 @@ void TransformWindow::ResizeLayout()
 	layout.margin_left = 80;
 
 	layout.add_fullwidth(clearButton);
+	layout.add_fullwidth(moveToEditorCameraButton);
 
 	float safe_width = layout.width - 100 - 20 - layout.padding;
 	txInput.SetSize(XMFLOAT2(safe_width / 3.0f - layout.padding, txInput.GetSize().y));
