@@ -2612,6 +2612,13 @@ void SetUpStates()
 	samplerDesc.max_anisotropy = 16;
 	device->CreateSampler(&samplerDesc, &samplers[SAMPLER_OBJECTSHADER]);
 
+	samplerDesc.filter = Filter::ANISOTROPIC;
+	samplerDesc.address_u = TextureAddressMode::CLAMP;
+	samplerDesc.address_v = TextureAddressMode::CLAMP;
+	samplerDesc.address_w = TextureAddressMode::CLAMP;
+	samplerDesc.max_anisotropy = 16;
+	device->CreateSampler(&samplerDesc, &samplers[SAMPLER_OBJECTSHADER_CLAMP]);
+
 	samplerDesc.filter = Filter::COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
 	samplerDesc.address_u = TextureAddressMode::CLAMP;
 	samplerDesc.address_v = TextureAddressMode::CLAMP;
@@ -2786,6 +2793,12 @@ void ModifyObjectSampler(const SamplerDesc& desc)
 	if (initialized.load())
 	{
 		device->CreateSampler(&desc, &samplers[SAMPLER_OBJECTSHADER]);
+
+		SamplerDesc desc2 = desc;
+		desc2.address_u = TextureAddressMode::CLAMP;
+		desc2.address_v = TextureAddressMode::CLAMP;
+		desc2.address_w = TextureAddressMode::CLAMP;
+		device->CreateSampler(&desc, &samplers[SAMPLER_OBJECTSHADER_CLAMP]);
 	}
 }
 
@@ -3317,6 +3330,10 @@ void RenderMeshes(
 			push.materialIndex = subset.materialIndex;
 			push.instances = instanceBufferDescriptorIndex;
 			push.instance_offset = (uint)instancedBatch.dataOffset;
+			wilog_assert(material.cached_wrapSampler >= 0 && material.cached_wrapSampler < 256, "invalid wrap sampler index encountered: %d!", material.cached_wrapSampler);
+			wilog_assert(material.cached_clampSampler >= 0 && material.cached_clampSampler < 256, "invalid clamp sampler index encountered: %d!", material.cached_clampSampler);
+			push.wrapSamplerIndex = material.cached_wrapSampler;
+			push.clampSamplerIndex = material.cached_clampSampler;
 
 			const MeshComponent::BufferView& ibv = provokingIBRequired ? mesh.ib_provoke : mesh.ib;
 			const size_t ib_stride = provokingIBRequired ? mesh.GetProvokingIndexStride() : mesh.GetIndexStride();
@@ -8420,6 +8437,8 @@ void DrawDebugWorld(
 			push.materialIndex = subset.materialIndex;
 			push.instances = device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV);
 			push.instance_offset = (uint)mem.offset;
+			push.wrapSamplerIndex = device->GetDescriptorIndex(wi::renderer::GetSampler(wi::enums::SAMPLER_OBJECTSHADER));
+			push.clampSamplerIndex = device->GetDescriptorIndex(wi::renderer::GetSampler(wi::enums::SAMPLER_OBJECTSHADER_CLAMP));
 			device->PushConstants(&push, sizeof(push), cmd);
 
 			device->DrawIndexedInstanced(subset.indexCount, 1, subset.indexOffset, 0, 0, cmd);
@@ -9590,6 +9609,8 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 				push.materialIndex = subset.materialIndex;
 				push.instances = -1;
 				push.instance_offset = 0;
+				push.wrapSamplerIndex = device->GetDescriptorIndex(wi::renderer::GetSampler(wi::enums::SAMPLER_OBJECTSHADER));
+				push.clampSamplerIndex = device->GetDescriptorIndex(wi::renderer::GetSampler(wi::enums::SAMPLER_OBJECTSHADER_CLAMP));
 				device->PushConstants(&push, sizeof(push), cmd);
 
 				device->DrawIndexedInstanced(subset.indexCount, 1, subset.indexOffset, 0, 0, cmd);

@@ -1254,12 +1254,16 @@ void EditorComponent::Load()
 		ss += "You can find sample LUA scripts in the Content/scripts directory. Try to load one.\n";
 		ss += "You can find a startup script in startup.lua (this will be executed on program start, if exists)\n";
 		ss += "You can use some command line arguments (without any prefix):\n";
-		ss += "\t- Default to DirectX12 graphics device: dx12\n";
-		ss += "\t- Default to Vulkan graphics device: vulkan\n";
+#ifdef PLATFORM_WINDOWS_DESKTOP
+		ss += "\t- Select Vulkan graphics device instead of DX12: vulkan\n";
+#endif // PLATFORM_WINDOWS_DESKTOP
+		ss += "\t- Prefer integrated GPU: igpu\n";
+		ss += "\t- Prefer AMD GPU: amdgpu\n";
+		ss += "\t- Prefer Nvidia GPU: nvidiagpu\n";
+		ss += "\t- Prefer Intel GPU: intelgpu\n";
 		ss += "\t- Enable graphics device debug mode: debugdevice\n";
 		ss += "\t- Enable graphics device GPU-based validation: gpuvalidation\n";
 		ss += "\t- Make window always active, even when in background: alwaysactive\n";
-		ss += "\t- Prefer to use integrated GPU: igpu\n";
 		ss += "\nFor questions, bug reports, feedback, requests, please open an issue at:\n";
 		ss += "https://github.com/turanszkij/WickedEngine/issues\n";
 		ss += "\n\n";

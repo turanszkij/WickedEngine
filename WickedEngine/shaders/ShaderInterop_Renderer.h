@@ -390,7 +390,8 @@ struct alignas(16) ShaderMaterial
 	uint2 transmission_sheenroughness_clearcoat_clearcoatroughness;
 	uint2 aniso_anisosin_anisocos_terrainblend;
 
-	int sampler_descriptor;
+	int sampler_descriptor : 16;
+	int sampler_clamp_descriptor : 16;
 	uint options_stencilref;
 	uint layerMask;
 	uint shaderType_meshblend;
@@ -419,6 +420,7 @@ struct alignas(16) ShaderMaterial
 		aniso_anisosin_anisocos_terrainblend = uint2(0, 0);
 
 		sampler_descriptor = -1;
+		sampler_clamp_descriptor = -1;
 		options_stencilref = 0;
 		layerMask = ~0u;
 		shaderType_meshblend = 0;
@@ -789,11 +791,16 @@ struct ShaderMeshInstancePointer
 
 struct ObjectPushConstants
 {
-	uint geometryIndex;
-	uint materialIndex;
+	uint geometryIndex : 24;
+	uint wrapSamplerIndex : 8;
+	uint materialIndex : 24;
+	uint clampSamplerIndex : 8;
 	int instances;
 	uint instance_offset;
 };
+#ifdef __cplusplus
+static_assert(sizeof(ObjectPushConstants) == 16);
+#endif // __cplusplus
 
 
 enum SHADER_ENTITY_TYPE

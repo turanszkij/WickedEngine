@@ -427,6 +427,7 @@ namespace wi::scene
 			material.textures[i].sparse_feedbackmap_descriptor = textures[i].sparse_feedbackmap_descriptor;
 		}
 
+		// Do not use the cached sampler indices here, using this function doesn't rely on material update system which caches them
 		if (sampler_descriptor < 0)
 		{
 			material.sampler_descriptor = device->GetDescriptorIndex(wi::renderer::GetSampler(wi::enums::SAMPLER_OBJECTSHADER));
@@ -435,6 +436,7 @@ namespace wi::scene
 		{
 			material.sampler_descriptor = sampler_descriptor;
 		}
+		material.sampler_clamp_descriptor = device->GetDescriptorIndex(wi::renderer::GetSampler(wi::enums::SAMPLER_OBJECTSHADER_CLAMP));
 
 		if (shaderType == SHADERTYPE_INTERIORMAPPING && textures[BASECOLORMAP].resource.IsValid() && !has_flag(textures[BASECOLORMAP].resource.GetTexture().GetDesc().misc_flags, ResourceMiscFlag::TEXTURECUBE))
 		{
