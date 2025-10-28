@@ -51,6 +51,7 @@ Created by Turánszki János
 Contributors:
 ---------------------------
 Silas Oler, Matteo De Carlo, Amer Koleci, James Webb, Megumumpkin, Preben Eriksen, Dennis Brakhane, Stanislav Denisov
+All contributors: https://github.com/turanszkij/WickedEngine/graphs/contributors
 
 Patreon supporters
 ---------------------------

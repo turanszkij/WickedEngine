@@ -57,7 +57,7 @@ PUSHCONSTANT(push, ObjectPushConstants);
 #define GetMaterial() (load_material(push.materialIndex))
 
 //#define sampler_objectshader bindless_samplers[descriptor_index(GetMaterial().sampler_descriptor)]
-#define sampler_objectshader bindless_samplers[descriptor_index(push.wrapSamplerIndex)]
+#define sampler_objectshader bindless_samplers[descriptor_index(push.wrapSamplerIndex)] // This one loads it faster from push constant than the above that loads from material struct but it must be fed per draw call
 #define sampler_objectshader_clamp bindless_samplers[descriptor_index(push.clampSamplerIndex)]
 
 // Use these to compile this file as shader prototype:
