@@ -35,6 +35,10 @@
 #define TEXTURE_SLOT_NONUNIFORM
 #endif // TERRAINBLENDED
 
+#ifndef OBJECTSHADER_LAYOUT_COMMON
+#define DISABLE_SVT
+#endif // OBJECTSHADER_LAYOUT_COMMON
+
 #include "globals.hlsli"
 #include "brdf.hlsli"
 #include "lightingHF.hlsli"
@@ -52,7 +56,9 @@ PUSHCONSTANT(push, ObjectPushConstants);
 #define GetMesh() (load_geometry(push.geometryIndex))
 #define GetMaterial() (load_material(push.materialIndex))
 
-#define sampler_objectshader bindless_samplers[descriptor_index(GetMaterial().sampler_descriptor)]
+//#define sampler_objectshader bindless_samplers[descriptor_index(GetMaterial().sampler_descriptor)]
+#define sampler_objectshader bindless_samplers[descriptor_index(push.wrapSamplerIndex)] // This one loads it faster from push constant than the above that loads from material struct but it must be fed per draw call
+#define sampler_objectshader_clamp bindless_samplers[descriptor_index(push.clampSamplerIndex)]
 
 // Use these to compile this file as shader prototype:
 //#define OBJECTSHADER_COMPILE_VS				- compile vertex shader prototype
@@ -732,11 +738,11 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 #ifndef PREPASS
 #ifndef WATER
 #ifdef FORWARD
-	ForwardDecals(surface, surfaceMap, sampler_objectshader);
+	ForwardDecals(surface, surfaceMap, sampler_objectshader_clamp);
 #endif // FORWARD
 
 #ifdef TILEDFORWARD
-	TiledDecals(surface, flat_tile_index, surfaceMap, sampler_objectshader);
+	TiledDecals(surface, flat_tile_index, surfaceMap, sampler_objectshader_clamp);
 #endif // TILEDFORWARD
 #endif // WATER
 #endif // PREPASS

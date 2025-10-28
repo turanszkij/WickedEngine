@@ -265,7 +265,9 @@ namespace wi::scene
 
 		// Non-serialized attributes:
 		uint32_t layerMask = ~0u;
-		int sampler_descriptor = -1; // optional
+		int sampler_descriptor = -1; // optional, you can modify this to overwrite global sampler for this material
+		int cached_wrapSampler = -1; // do not modify, system will write this
+		int cached_clampSampler = -1; // do not modify, system will write this
 
 		// User stencil value can be in range [0, 15]
 		constexpr void SetUserStencilRef(uint8_t value) { userStencilRef = value & 0x0F; }

@@ -169,7 +169,7 @@ namespace wi::helper
 			NULL
 		};
 		int buttonid;
-		if (SDL_ShowMessageBox(&messageboxdata, &buttonid) < 0)
+		if (!SDL_ShowMessageBox(&messageboxdata, &buttonid))
 		{
 			return MessageBoxResult::Cancel;
 		}

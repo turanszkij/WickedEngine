@@ -501,6 +501,7 @@ namespace wi::enums
 	{
 		// Can be changed by user
 		SAMPLER_OBJECTSHADER,
+		SAMPLER_OBJECTSHADER_CLAMP,
 
 		// Persistent samplers
 		// These are bound once and are alive forever
