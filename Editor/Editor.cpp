@@ -5258,10 +5258,10 @@ void EditorComponent::Open(std::string filename)
 }
 void EditorComponent::Save(const std::string& filename)
 {
-	struct ClearFlagOnExit {
+	struct SetAndClearFlagOnExit {
 		bool& flag;
-		ClearFlagOnExit(bool& flag) : flag(flag) {}
-		~ClearFlagOnExit() {flag = false;}
+		SetAndClearFlagOnExit(bool& flag) : flag(flag) { flag = true; }
+		~SetAndClearFlagOnExit() { flag = false; }
 	} scoped(save_in_progress);
 
 	std::string extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(filename));
