@@ -1327,7 +1327,7 @@ void ComponentsWindow::PushToEntityTree(wi::ecs::Entity entity, int level)
 		}
 	}
 
-	// Collect children and sort them by name before adding
+	// Collect children
 	wi::vector<Entity> children;
 	for (size_t i = 0; i < scene.hierarchy.GetCount(); ++i)
 	{
