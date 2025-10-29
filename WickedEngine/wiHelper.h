@@ -154,7 +154,7 @@ namespace wi::helper
 		wi::vector<std::string> extensions;
 		bool multiselect = true; // only for TYPE::OPEN
 	};
-	void FileDialog(const FileDialogParams& params, std::function<void(std::string fileName)> onSuccess);
+	void FileDialog(const FileDialogParams& params, std::function<void(std::string fileName)> onSuccess, std::function<void()> onFailure = nullptr);
 
 	std::string FolderDialog(const std::string& description = "Select folder");
 

@@ -169,7 +169,7 @@ namespace wi::helper
 			NULL
 		};
 		int buttonid;
-		if (!SDL_ShowMessageBox(&messageboxdata, &buttonid))
+		if (SDL_ShowMessageBox(&messageboxdata, &buttonid) < 0)
 		{
 			return MessageBoxResult::Cancel;
 		}
@@ -1396,7 +1396,7 @@ namespace wi::helper
 #endif // _WIN32
 	}
 
-	void FileDialog(const FileDialogParams& params, std::function<void(std::string fileName)> onSuccess)
+	void FileDialog(const FileDialogParams& params, std::function<void(std::string fileName)> onSuccess, std::function<void()> onFailure)
 	{
 #ifdef PLATFORM_WINDOWS_DESKTOP
 		std::thread([=] {
@@ -1491,6 +1491,8 @@ namespace wi::helper
 						onSuccess(BackslashToForwardSlash(result_filename));
 					}
 				}
+			} else {
+				if (onFailure) onFailure();
 			}
 
 			}).detach();
@@ -1532,6 +1534,8 @@ namespace wi::helper
 					{
 						onSuccess(x);
 					}
+				} else {
+					if (onFailure) onFailure();
 				}
 				break;
 			}
@@ -1541,6 +1545,8 @@ namespace wi::helper
 				if (!destination.empty())
 				{
 					onSuccess(destination);
+				} else {
+					if (onFailure) onFailure();
 				}
 				break;
 			}

@@ -187,6 +187,7 @@ public:
 	void Save(const std::string& filename);
 	void SaveAs();
 	bool deleting = false;
+	bool save_in_progress = false;
 
 	wi::graphics::Texture CreateThumbnail(wi::graphics::Texture texture, uint32_t target_width, uint32_t target_height, bool mipmaps = false) const;
 	wi::graphics::Texture CreateThumbnailScreenshot() const;
@@ -256,6 +257,8 @@ public:
 	void Initialize() override;
 
 	void HotReload();
+
+	bool CanExit();
 
 	void Exit() override;
 
