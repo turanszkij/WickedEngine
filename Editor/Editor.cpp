@@ -363,8 +363,8 @@ void Editor::Initialize()
 	}
 }
 
-bool Editor::CanExit() {
-	return !renderComponent.save_in_progress;
+bool Editor::KeepRunning() {
+	return !exit_requested || renderComponent.save_in_progress;
 }
 
 void Editor::Exit()
@@ -377,8 +377,8 @@ void Editor::Exit()
 			return;
 		}
 	}
-
-	Application::Exit();
+	// main loop will need to quit for us
+	exit_requested = true;
 }
 
 void Editor::HotReload()
@@ -6181,8 +6181,7 @@ bool EditorComponent::CheckUnsavedChanges(int scene_index)
 		{
 			// Need to prompt for save location
 			SaveAs();
-			// After SaveAs, check if the scene was actually saved
-			return !editorscene.has_unsaved_changes;
+			return true;
 		}
 		else
 		{

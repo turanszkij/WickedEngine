@@ -8,8 +8,6 @@
 
 Editor editor;
 
-bool quit = false;
-
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
                      _In_ LPWSTR    lpCmdLine,
@@ -88,7 +86,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		break;
 		case WM_CLOSE:
 			editor.Exit();
-			quit = true;
 			break;
 		case WM_DESTROY:
 			PostQuitMessage(0);
@@ -228,7 +225,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	MSG msg = { 0 };
 
-	while (!quit || !editor.CanExit())
+	while (editor.KeepRunning())
 	{
 		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
 			TranslateMessage(&msg);

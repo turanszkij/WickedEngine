@@ -31,8 +31,7 @@ public:
 
 int sdl_loop()
 {
-    bool quit = false;
-    while (!quit || !editor.CanExit())
+    while (editor.KeepRunning())
     {
         editor.Run();
         SDL_Event event;
@@ -41,7 +40,6 @@ int sdl_loop()
             switch(event.type){
                 case SDL_QUIT:
                     editor.Exit();
-                    quit = true;
                     break;
                 case SDL_WINDOWEVENT:
                     switch (event.window.event) {
