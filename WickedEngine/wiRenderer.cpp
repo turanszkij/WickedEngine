@@ -2105,7 +2105,7 @@ void LoadShaders()
 										renderpass_info.rt_count = 1;
 										renderpass_info.rt_formats[0] = format_rendertarget_envprobe;
 										renderpass_info.ds_format = format_depthbuffer_envprobe;
-										const uint32_t msaa_support[] = { 1,8 };
+										const uint32_t msaa_support[] = { 1, 2, 4, 8 };
 										for (uint32_t msaa : msaa_support)
 										{
 											variant.bits.sample_count = msaa;
