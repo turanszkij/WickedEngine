@@ -253,12 +253,13 @@ class Editor : public wi::Application
 public:
 	EditorComponent renderComponent;
 	wi::config::File config;
+	bool exit_requested = false;
 
 	void Initialize() override;
 
 	void HotReload();
 
-	bool CanExit();
+	bool KeepRunning();
 
 	void Exit() override;
 
