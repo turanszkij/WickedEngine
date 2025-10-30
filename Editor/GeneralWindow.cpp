@@ -300,6 +300,19 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&saveCompressionCheckBox);
 
+	entityTreeSortingComboBox.Create("Entity Tree Sorting: ");
+	entityTreeSortingComboBox.AddItem("None", 0);
+	entityTreeSortingComboBox.AddItem("By name", 1);
+	entityTreeSortingComboBox.AddItem("By type", 2);
+	entityTreeSortingComboBox.SetTooltip("Choose how entities are sorted in the entity tree.\nNone: Unsorted\nBy name: Alphabetically sorted\nBy type: Grouped by component types");
+	entityTreeSortingComboBox.SetSelected(editor->main->config.GetSection("options").GetInt("entity_tree_sorting"));
+	entityTreeSortingComboBox.OnSelect([=](wi::gui::EventArgs args) {
+		editor->main->config.GetSection("options").Set("entity_tree_sorting", args.iValue);
+		editor->main->config.Commit();
+		editor->componentsWnd.RefreshEntityTree();
+	});
+	AddWidget(&entityTreeSortingComboBox);
+
 	outlineOpacitySlider.Create(0, 1, 1, 100, "Outline Opacity: ");
 	outlineOpacitySlider.SetTooltip("You can control the transparency of the selection outline");
 	outlineOpacitySlider.SetSize(XMFLOAT2(100, 18));
@@ -1459,6 +1472,8 @@ void GeneralWindow::ResizeLayout()
 	layout.add(saveModeComboBox);
 
 	layout.add_right(saveCompressionCheckBox);
+
+	layout.add(entityTreeSortingComboBox);
 
 	layout.add(themeCombo);
 	themeEditorButton.SetPos(XMFLOAT2(themeCombo.GetPos().x - themeCombo.GetLeftTextWidth() - themeEditorButton.GetSize().x - layout.padding * 2, themeCombo.GetPos().y));

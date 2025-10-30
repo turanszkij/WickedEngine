@@ -15,6 +15,7 @@ public:
 	wi::gui::Button themeEditorButton;
 	wi::gui::ComboBox saveModeComboBox;
 	wi::gui::CheckBox saveCompressionCheckBox;
+	wi::gui::ComboBox entityTreeSortingComboBox;
 	wi::gui::ComboBox languageCombo;
 
 	wi::gui::CheckBox physicsDebugCheckBox;
