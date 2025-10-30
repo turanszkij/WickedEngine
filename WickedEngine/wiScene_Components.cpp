@@ -2965,11 +2965,18 @@ namespace wi::scene
 	}
 	void CharacterComponent::SetActive(bool value)
 	{
-		active = value;
+		if (value)
+		{
+			_flags |= ACTIVE;
+		}
+		else
+		{
+			_flags &= ~ACTIVE;
+		}
 	}
 	bool CharacterComponent::IsActive() const
 	{
-		return active;
+		return _flags & ACTIVE;
 	}
 
 	XMMATRIX SplineComponent::EvaluateSplineAt(float t) const

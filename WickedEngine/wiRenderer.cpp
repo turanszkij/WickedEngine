@@ -3330,8 +3330,8 @@ void RenderMeshes(
 			push.materialIndex = subset.materialIndex;
 			push.instances = instanceBufferDescriptorIndex;
 			push.instance_offset = (uint)instancedBatch.dataOffset;
-			wilog_assert(material.cached_wrapSampler >= 0 && material.cached_wrapSampler < 256, "invalid wrap sampler index encountered: %d!", material.cached_wrapSampler);
-			wilog_assert(material.cached_clampSampler >= 0 && material.cached_clampSampler < 256, "invalid clamp sampler index encountered: %d!", material.cached_clampSampler);
+			assert(material.cached_wrapSampler >= 0 && material.cached_wrapSampler < 256);
+			assert(material.cached_clampSampler >= 0 && material.cached_clampSampler < 256);
 			push.wrapSamplerIndex = material.cached_wrapSampler;
 			push.clampSamplerIndex = material.cached_clampSampler;
 

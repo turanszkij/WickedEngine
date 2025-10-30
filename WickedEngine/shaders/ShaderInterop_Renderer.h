@@ -371,7 +371,7 @@ struct alignas(16) ShaderTextureSlot
 #endif // __cplusplus
 };
 
-struct alignas(16) ShaderMaterial
+struct alignas(32) ShaderMaterial
 {
 	uint2 baseColor;
 	uint2 normalmap_pom_alphatest_displacement;
@@ -400,6 +400,8 @@ struct alignas(16) ShaderMaterial
 
 	ShaderTextureSlot textures[TEXTURESLOT_COUNT];
 
+	float4 padding;
+
 	void init()
 	{
 		baseColor = uint2(0, 0);
@@ -426,6 +428,7 @@ struct alignas(16) ShaderMaterial
 		shaderType_meshblend = 0;
 
 		userdata = uint4(0, 0, 0, 0);
+		padding = float4(0, 0, 0, 0);
 
 		for (int i = 0; i < TEXTURESLOT_COUNT; ++i)
 		{
@@ -483,6 +486,9 @@ struct alignas(16) ShaderMaterial
 
 #endif // __cplusplus
 };
+#ifdef __cplusplus
+static_assert(sizeof(ShaderMaterial) == 384);
+#endif // __cplusplus
 
 // For binning shading based on shader types:
 struct alignas(16) ShaderTypeBin
@@ -518,7 +524,7 @@ enum SHADERMESH_FLAGS
 
 // This is equivalent to a Mesh + MeshSubset
 //	But because these are always loaded toghether by shaders, they are unrolled into one to reduce individual buffer loads
-struct alignas(16) ShaderGeometry
+struct alignas(32) ShaderGeometry
 {
 	int ib;
 	int vb_pos_wind;
@@ -587,6 +593,9 @@ struct alignas(16) ShaderGeometry
 		padding2 = 0;
 	}
 };
+#ifdef __cplusplus
+static_assert(sizeof(ShaderGeometry) == 128);
+#endif // __cplusplus
 
 static const uint MESHLET_VERTEX_COUNT = 64u;
 static const uint MESHLET_TRIANGLE_COUNT = 124u;
@@ -682,7 +691,7 @@ struct alignas(16) ShaderTransform
 #endif // __cplusplus
 };
 
-struct alignas(16) ShaderMeshInstance
+struct alignas(32) ShaderMeshInstance
 {
 	uint64_t uid;
 	uint flags;	// high 8 bits: user stencilRef
@@ -712,6 +721,8 @@ struct alignas(16) ShaderMeshInstance
 	ShaderTransform transformPrev; // Note: this could contain quantization remapping from UNORM -> FLOAT depending on vertex position format
 	ShaderTransform transformRaw; // Note: this is the world matrix without any quantization remapping
 
+	float4 padding;
+
 	void init()
 	{
 #ifdef __cplusplus
@@ -738,6 +749,7 @@ struct alignas(16) ShaderMeshInstance
 		transform.init();
 		transformPrev.init();
 		transformRaw.init();
+		padding = float4(0, 0, 0, 0);
 	}
 
 	inline void SetUserStencilRef(uint stencilRef)
@@ -757,6 +769,10 @@ struct alignas(16) ShaderMeshInstance
 	inline half4 GetRimHighlight() { return unpack_half4(rimHighlight); }
 #endif // __cplusplus
 };
+#ifdef __cplusplus
+static_assert(sizeof(ShaderMeshInstance) == 256);
+#endif // __cplusplus
+
 struct ShaderMeshInstancePointer
 {
 	uint data;
@@ -1031,6 +1047,9 @@ struct alignas(16) ShaderEntity
 
 #endif // __cplusplus
 };
+#ifdef __cplusplus
+static_assert(sizeof(ShaderEntity) == 64);
+#endif // __cplusplus
 
 struct alignas(16) ShaderFrustum
 {
