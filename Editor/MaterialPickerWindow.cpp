@@ -185,7 +185,7 @@ void MaterialPickerWindow::ResizeLayout()
 
 		button.SetTheme(theme);
 		button.SetColor(wi::Color::White());
-		button.SetColor(wi::Color(255, 255, 255, 150), wi::gui::IDLE);
+		button.SetColor(wi::Color(255, 255, 255, 150), wi::gui::FOCUS);
 		button.SetShadowRadius(0);
 
 		for (const auto& picked : editor->translator.selected)

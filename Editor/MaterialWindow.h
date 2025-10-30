@@ -67,10 +67,21 @@ public:
 	wi::gui::ColorPicker colorPicker;
 
 	wi::gui::ComboBox textureSlotComboBox;
-	wi::gui::Button textureSlotButton;
+	wi::gui::Image textureSlotImage;
+	wi::gui::Button textureSlotLoadButton;
+	wi::gui::Button textureSlotSelectButton;
+	wi::gui::Button textureSlotClearButton;
 	wi::gui::Label textureSlotLabel;
 	wi::gui::TextInputField textureSlotUvsetField;
 
+	wi::gui::Window texturePickerWindow;
+	std::deque<wi::gui::Button> texturePickerButtons;
+
+	void RecreateTexturePickerButtons();
+
 	void ResizeLayout() override;
+
+private:
+	wi::unordered_map<std::string, wi::Resource> CollectUniqueTextures() const;
 };
 
