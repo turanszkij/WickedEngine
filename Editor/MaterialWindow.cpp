@@ -1140,7 +1140,7 @@ void MaterialWindow::ResizeLayout()
 	Scene& scene = editor->GetCurrentScene();
 	MaterialComponent* material = scene.materials.GetComponent(entity);
 
-	if (texturePickerWindow.IsVisible() && !texturePickerButtons.empty())
+	if (texturePickerWindow.IsVisible())
 	{
 		wi::unordered_map<std::string, wi::Resource> uniqueTextures = CollectUniqueTextures();
 
