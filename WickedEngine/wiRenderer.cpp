@@ -5275,12 +5275,15 @@ void UpdateRenderData(
 			{
 				Entity entity = vis.scene->hairs.GetEntity(hairIndex);
 				size_t materialIndex = vis.scene->materials.GetIndex(entity);
-				const MaterialComponent& material = vis.scene->materials[materialIndex];
-				auto& hair_update = hair_updates.emplace_back();
-				hair_update.hair = &hair;
-				hair_update.instanceIndex = (uint32_t)vis.scene->objects.GetCount() + hairIndex;
-				hair_update.mesh = mesh;
-				hair_update.material = &material;
+				if (materialIndex != INVALID_INDEX)
+				{
+					const MaterialComponent& material = vis.scene->materials[materialIndex];
+					auto& hair_update = hair_updates.emplace_back();
+					hair_update.hair = &hair;
+					hair_update.instanceIndex = (uint32_t)vis.scene->objects.GetCount() + hairIndex;
+					hair_update.mesh = mesh;
+					hair_update.material = &material;
+				}
 			}
 		}
 		HairParticleSystem::UpdateGPU(hair_updates.data(), (uint32_t)hair_updates.size(), cmd);
