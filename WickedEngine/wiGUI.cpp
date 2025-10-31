@@ -1070,6 +1070,49 @@ namespace wi::gui
 
 
 
+	void Image::Create(const std::string& name)
+	{
+		SetName(name);
+		SetSize(XMFLOAT2(100, 100));
+		SetEnabled(false);
+	}
+	void Image::Render(const wi::Canvas& canvas, CommandList cmd) const
+	{
+		if (!IsVisible())
+		{
+			return;
+		}
+
+		if (shadow > 0)
+		{
+			wi::image::Params fx = sprites[IDLE].params;
+			fx.gradient = wi::image::Params::Gradient::None;
+			fx.pos.x -= shadow;
+			fx.pos.y -= shadow;
+			fx.siz.x += shadow * 2;
+			fx.siz.y += shadow * 2;
+			fx.color = shadow_color;
+			if (fx.isCornerRoundingEnabled())
+			{
+				for (auto& corner_rounding : fx.corners_rounding)
+				{
+					corner_rounding.radius += shadow;
+				}
+			}
+			if (shadow_highlight)
+			{
+				fx.enableHighlight();
+				fx.highlight_color = shadow_highlight_color;
+				fx.highlight_spread = shadow_highlight_spread;
+			}
+			wi::image::Draw(nullptr, fx, cmd);
+		}
+
+		ApplyScissor(canvas, scissorRect, cmd);
+
+		sprites[IDLE].Draw(cmd);
+	}
+
 
 
 	void ScrollBar::Update(const wi::Canvas& canvas, float dt)
