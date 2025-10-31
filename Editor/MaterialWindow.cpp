@@ -1101,7 +1101,7 @@ void MaterialWindow::RecreateTexturePickerButtons()
 
 		button.Create("");
 		button.SetImage(textureResource);
-		button.SetTooltip(textureName);
+		button.SetTooltip(wi::helper::GetFileNameFromPath(textureName));
 		texturePickerWindow.AddWidget(&button);
 		button.SetVisible(false);
 
@@ -1313,7 +1313,7 @@ wi::unordered_map<std::string, wi::Resource> MaterialWindow::CollectUniqueTextur
 		{
 			if (texture.resource.IsValid() && !texture.name.empty())
 			{
-				uniqueTextures[wi::helper::GetFileNameFromPath(texture.name)] = texture.resource;
+				uniqueTextures[texture.name] = texture.resource;
 			}
 		}
 	}
