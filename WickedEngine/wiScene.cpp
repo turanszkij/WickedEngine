@@ -1028,12 +1028,27 @@ namespace wi::scene
 			sizeof(ColliderComponent) * collider_count_cpu +
 			sizeof(ColliderComponent) * collider_count_gpu
 		;
-		collider_deinterleaved_data.reserve(size);
-		ASAN_UNPOISON_MEMORY_REGION(collider_deinterleaved_data.data(), size);
-		aabb_colliders_cpu = (wi::primitive::AABB*)collider_deinterleaved_data.data();
-		aabb_colliders_gpu = aabb_colliders_cpu + collider_count_cpu;
-		colliders_cpu = (ColliderComponent*)(aabb_colliders_gpu + collider_count_gpu);
+		// we're going to store AABB and colliders in one big array, for
+		// this to work with their alignment, ColliderComponents needs
+		// to be allocated first at a 32-byte aligned address, then
+		// AABB, as the latter have a size multiple of 16, so if
+		// collider_count_cpu and collider_count_gpu are not both odd or even,
+		// we would end up at a multiple of 16.
+
+		// First, we need to make sure our current assumptions are correct
+		static_assert(sizeof(wi::primitive::AABB) % 16 == 0);
+		static_assert(sizeof(ColliderComponent) % 32 == 0);
+		static_assert(sizeof(void*) == sizeof(uint64_t));
+
+		// we need to reserve 31 additional bytes for eventual padding, we don't know
+		// the actual address until after we reserved the memory
+		collider_deinterleaved_data.reserve(size + 31);
+		ASAN_UNPOISON_MEMORY_REGION(collider_deinterleaved_data.data(), size + 31);
+		uint64_t padding_needed = (32 - (uint64_t)collider_deinterleaved_data.data() % 32) % 32;
+		colliders_cpu = reinterpret_cast<ColliderComponent*>(collider_deinterleaved_data.data() + padding_needed);
 		colliders_gpu = colliders_cpu + collider_count_cpu;
+		aabb_colliders_cpu = reinterpret_cast<wi::primitive::AABB*>(colliders_gpu + collider_count_gpu);
+		aabb_colliders_gpu = aabb_colliders_cpu + collider_count_cpu;
 
 		for (size_t i = 0; i < colliders.GetCount(); ++i)
 		{
@@ -3703,12 +3718,16 @@ namespace wi::scene
 			sizeof(ColliderComponent) * collider_count_cpu +
 			sizeof(ColliderComponent) * collider_count_gpu
 		;
-		collider_deinterleaved_data.reserve(size);
-		ASAN_UNPOISON_MEMORY_REGION(collider_deinterleaved_data.data(), size);
-		aabb_colliders_cpu = (wi::primitive::AABB*)collider_deinterleaved_data.data();
-		aabb_colliders_gpu = aabb_colliders_cpu + collider_count_cpu;
-		colliders_cpu = (ColliderComponent*)(aabb_colliders_gpu + collider_count_gpu);
+
+		// see comments further up the file on why we need this
+		collider_deinterleaved_data.reserve(size + 31);
+		ASAN_UNPOISON_MEMORY_REGION(collider_deinterleaved_data.data(), size + 31);
+		uint64_t padding_needed = (32 - (uint64_t)collider_deinterleaved_data.data() % 32) % 32;
+
+		colliders_cpu = reinterpret_cast<ColliderComponent*>(collider_deinterleaved_data.data() + padding_needed);
 		colliders_gpu = colliders_cpu + collider_count_cpu;
+		aabb_colliders_cpu = reinterpret_cast<wi::primitive::AABB*>(colliders_gpu + collider_count_gpu);
+		aabb_colliders_gpu = aabb_colliders_cpu + collider_count_cpu;
 
 		wi::jobsystem::Dispatch(ctx, (uint32_t)colliders.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
 
