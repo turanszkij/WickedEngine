@@ -737,7 +737,7 @@ namespace wi
 		camera->scissor = GetScissorInternalResolution();
 		camera->sample_count = depthBuffer_Main.desc.sample_count;
 		camera->shadercamera_options = SHADERCAMERA_OPTION_NONE;
-		camera->texture_primitiveID_index = device->GetDescriptorIndex(&rtPrimitiveID, SubresourceType::SRV);
+		camera->texture_primitiveID_index = wi::renderer::IsPrimitiveIDSupported() ? device->GetDescriptorIndex(&rtPrimitiveID, SubresourceType::SRV) : -1;
 		camera->texture_depth_index = device->GetDescriptorIndex(&depthBuffer_Copy, SubresourceType::SRV);
 		camera->texture_lineardepth_index = device->GetDescriptorIndex(&rtLinearDepth, SubresourceType::SRV);
 		camera->texture_velocity_index = device->GetDescriptorIndex(&rtVelocity, SubresourceType::SRV);
