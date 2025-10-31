@@ -29,6 +29,7 @@ namespace wi::ecs
 		static std::atomic<Entity> next{ INVALID_ENTITY + 1 };
 		return next.fetch_add(1);
 	}
+	inline static constexpr size_t INVALID_INDEX = ~0ull;
 
 	class ComponentLibrary;
 	struct EntitySerializer
@@ -424,17 +425,17 @@ namespace wi::ecs
 			return nullptr;
 		}
 
-		// Retrieve component index by entity handle (if not exists, returns ~0ull value)
+		// Retrieve component index by entity handle (if doesn't exist, returns INVALID_INDEX value)
 		inline size_t GetIndex(Entity entity) const
 		{
 			if (lookup.empty())
-				return ~0ull;
+				return INVALID_INDEX;
 			const auto it = lookup.find(entity);
 			if (it != lookup.end())
 			{
 				return it->second;
 			}
-			return ~0ull;
+			return INVALID_INDEX;
 		}
 
 		// Retrieve the number of existing entries

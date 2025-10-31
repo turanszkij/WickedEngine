@@ -3323,7 +3323,7 @@ namespace wi::scene
 			Entity entity = inverse_kinematics.GetEntity(args.jobIndex);
 			size_t transform_index = transforms.GetIndex(entity);
 			const HierarchyComponent* hier = hierarchy.GetComponent(entity);
-			if (transform_index == ~0ull || hier == nullptr)
+			if (transform_index == INVALID_INDEX || hier == nullptr)
 				return;
 			TransformComponent& transform = transforms_temp[transform_index];
 
@@ -3335,7 +3335,7 @@ namespace wi::scene
 			else
 			{
 				size_t target_index = transforms.GetIndex(ik.target);
-				if (target_index == ~0ull)
+				if (target_index == INVALID_INDEX)
 					return;
 				TransformComponent& target = transforms_temp[target_index];
 				target_pos = target.GetPositionV();
@@ -3365,7 +3365,7 @@ namespace wi::scene
 
 					// Compute required parent rotation that moves ik transform closer to target transform:
 					size_t parent_index = transforms.GetIndex(parent_entity);
-					if (parent_index == ~0ull)
+					if (parent_index == INVALID_INDEX)
 						continue;
 					TransformComponent& parent_transform = transforms_temp[parent_index];
 					const XMVECTOR parent_pos = parent_transform.GetPositionV();
@@ -3462,7 +3462,7 @@ namespace wi::scene
 					{
 						Entity parent_of_parent_entity = hier_parent->parentID;
 						size_t parent_of_parent_index = transforms.GetIndex(parent_of_parent_entity);
-						if (parent_of_parent_index != ~0ull)
+						if (parent_of_parent_index != INVALID_INDEX)
 						{
 							const TransformComponent* transform_parent_of_parent = &transforms_temp[parent_of_parent_index];
 							XMMATRIX parent_of_parent_inverse = XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform_parent_of_parent->world));
@@ -3506,7 +3506,7 @@ namespace wi::scene
 			if (headBone == INVALID_ENTITY)
 				return;
 			const size_t headBoneIndex = transforms.GetIndex(headBone);
-			if (headBoneIndex == ~0ull)
+			if (headBoneIndex == INVALID_INDEX)
 				return;
 			const TransformComponent& head_transform = transforms_temp[headBoneIndex];
 
@@ -3542,7 +3542,7 @@ namespace wi::scene
 				if (bone == INVALID_ENTITY)
 					continue;
 				const size_t boneIndex = transforms.GetIndex(bone);
-				if (boneIndex == ~0ull)
+				if (boneIndex == INVALID_INDEX)
 					continue;
 
 				if (boneIndex < transforms_temp.size())
@@ -3554,8 +3554,8 @@ namespace wi::scene
 					if (humanoid.IsLookAtEnabled())
 					{
 						const HierarchyComponent* hier = hierarchy.GetComponent(bone);
-						size_t parent_index = hier == nullptr ? ~0ull : transforms.GetIndex(hier->parentID);
-						if (parent_index != ~0ull)
+						size_t parent_index = hier == nullptr ? INVALID_INDEX : transforms.GetIndex(hier->parentID);
+						if (parent_index != INVALID_INDEX)
 						{
 							const TransformComponent& parent_transform = transforms_temp[parent_index];
 							transform.UpdateTransform_Parented(parent_transform);
@@ -3626,11 +3626,11 @@ namespace wi::scene
 				recompute_hierarchy.store(true);
 				size_t left_arm = transforms.GetIndex(humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftUpperArm]);
 				size_t right_arm = transforms.GetIndex(humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightUpperArm]);
-				if (left_arm != ~0ull)
+				if (left_arm != INVALID_INDEX)
 				{
 					transforms_temp[left_arm].Rotate(XMQuaternionRotationNormal(FORWARD, -humanoid.arm_spacing * XM_PIDIV4));
 				}
-				if (right_arm != ~0ull)
+				if (right_arm != INVALID_INDEX)
 				{
 					transforms_temp[right_arm].Rotate(XMQuaternionRotationNormal(FORWARD, humanoid.arm_spacing * XM_PIDIV4));
 				}
@@ -3640,11 +3640,11 @@ namespace wi::scene
 				recompute_hierarchy.store(true);
 				size_t left_leg = transforms.GetIndex(humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftUpperLeg]);
 				size_t right_leg = transforms.GetIndex(humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightUpperLeg]);
-				if (left_leg != ~0ull)
+				if (left_leg != INVALID_INDEX)
 				{
 					transforms_temp[left_leg].Rotate(XMQuaternionRotationNormal(FORWARD, -humanoid.leg_spacing * XM_PIDIV4));
 				}
-				if (right_leg != ~0ull)
+				if (right_leg != INVALID_INDEX)
 				{
 					transforms_temp[right_leg].Rotate(XMQuaternionRotationNormal(FORWARD, humanoid.leg_spacing * XM_PIDIV4));
 				}
@@ -3660,7 +3660,7 @@ namespace wi::scene
 				HierarchyComponent& hier = hierarchy[args.jobIndex];
 				Entity entity = hierarchy.GetEntity(args.jobIndex);
 				size_t child_index = transforms.GetIndex(entity);
-				if (child_index == ~0ull)
+				if (child_index == INVALID_INDEX)
 					return;
 
 				TransformComponent& transform_child = transforms_temp[child_index];
@@ -3670,7 +3670,7 @@ namespace wi::scene
 				while (parentID != INVALID_ENTITY)
 				{
 					size_t parent_index = transforms.GetIndex(parentID);
-					if (parent_index == ~0ull)
+					if (parent_index == INVALID_INDEX)
 						break;
 					TransformComponent& transform_parent = transforms_temp[parent_index];
 					worldmatrix *= transform_parent.GetLocalMatrix();
