@@ -6040,8 +6040,32 @@ void ImGui::ShowAboutWindow(bool* p_open)
 #ifdef _WIN32
         ImGui::Text("define: _WIN32");
 #endif
+#if defined(__i386__)
+        ImGui::Text("define: __i386__");
+#endif
+#if defined(_M_IX86)
+        ImGui::Text("define: _M_IX86");
+#endif
 #ifdef _WIN64
         ImGui::Text("define: _WIN64");
+#endif
+#if defined(__x86_64__)
+        ImGui::Text("define: __x86_64__");
+#endif
+#if defined(_M_X64)
+        ImGui::Text("define: _M_X64");
+#endif
+#if defined(__aarch64__)
+        ImGui::Text("define: __aarch64__");
+#endif
+#if defined(__arm__)
+        ImGui::Text("define: __arm__");
+#endif
+#if defined(_M_ARM64)
+        ImGui::Text("define: _M_ARM64");
+#endif
+#if defined(_M_ARM)
+        ImGui::Text("define: _M_ARM");
 #endif
 #ifdef __linux__
         ImGui::Text("define: __linux__");

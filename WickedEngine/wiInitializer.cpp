@@ -4,9 +4,9 @@
 #include <thread>
 #include <atomic>
 
-#if defined(PLATFORM_WINDOWS_DESKTOP) || defined(PLATFORM_LINUX)
+#if defined(PLATFORM_WINDOWS_DESKTOP) || defined(PLATFORM_LINUX) || defined(PLATFORM_MACOS)
 #include "Utility/cpuinfo.hpp"
-#endif // defined(PLATFORM_WINDOWS_DESKTOP) || defined(PLATFORM_LINUX)
+#endif // defined(PLATFORM_WINDOWS_DESKTOP) || defined(PLATFORM_LINUX) || defined(PLATFORM_MACOS)
 
 namespace wi::initializer
 {
@@ -37,6 +37,8 @@ namespace wi::initializer
 		static constexpr const char* platform_string = "Windows";
 #elif defined(PLATFORM_LINUX)
 		static constexpr const char* platform_string = "Linux";
+#elif defined(PLATFORM_MACOS)
+		static constexpr const char* platform_string = "macOS";
 #elif defined(PLATFORM_PS5)
 		static constexpr const char* platform_string = "PS5";
 #elif defined(PLATFORM_XBOX)
@@ -46,7 +48,7 @@ namespace wi::initializer
 		wilog("\n[wi::initializer] Initializing Wicked Engine, please wait...\nVersion: %s\nPlatform: %s", wi::version::GetVersionString(), platform_string);
 
 		StackString<1024> cpustring;
-#if defined(PLATFORM_WINDOWS_DESKTOP) || defined(PLATFORM_LINUX)
+#if defined(PLATFORM_WINDOWS_DESKTOP) || defined(PLATFORM_LINUX) || defined(PLATFORM_MACOS)
 		CPUInfo cpuinfo;
 		cpustring.push_back("\nCPU: ");
 		cpustring.push_back(cpuinfo.model().c_str());
@@ -91,7 +93,9 @@ namespace wi::initializer
 		{
 			cpustring.push_back("AVX 512; ");
 		}
-#endif // defined(PLATFORM_WINDOWS_DESKTOP) || defined(PLATFORM_LINUX)
+#endif // defined(PLATFORM_WINDOWS_DESKTOP) || defined(PLATFORM_LINUX) || defined(PLATFORM_MACOS)
+
+// DirectXMath feature detection:
 		cpustring.push_back("\n\tFeatures used: ");
 #ifdef _XM_SSE_INTRINSICS_
 		cpustring.push_back("SSE; ");
