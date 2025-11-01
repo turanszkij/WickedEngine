@@ -449,7 +449,8 @@ namespace wi::ecs
 #ifdef LOOKUP_STRAIGHT
 			// Straight lookup with memory wasting implementation:
 			//	Matches Entity to index with storing every possible Entity in memory up to the max stored entity index
-			//	Fastest lookup but wastes memory if a large range of Entity indices were stored
+			//	Fastest lookup but wastes memory storing every possible entity index that was encountered before
+			// !Use it only for performance testing of minimal lookup overhead!
 			struct Item
 			{
 				size_t index = INVALID_INDEX;
@@ -479,8 +480,8 @@ namespace wi::ecs
 #endif // LOOKUP_NAIVE
 
 #ifdef LOOKUP_SPARSE
-			// Straight lookup a sparse memory manager:
-			// Similar to straight as it stores a direct mapping of entity -> index, but unused ranges of 64 entities will not waste as much memory
+			// Straight lookup sparse memory manager:
+			// Similar to straight as it stores a direct mapping of entity -> index, but unused ranges of entities will not waste as much memory
 			// The lookup is slowed by the extra block data indirection
 			struct BlockData
 			{
@@ -490,50 +491,71 @@ namespace wi::ecs
 				};
 				Item items[64];
 			};
-			struct Block
+			struct BlockL1 // stores 64 contiguous entity indices
 			{
 				uint64_t status = 0; // one bit per item in block, if it's 0 then block can be freed and reused
 				BlockData* block_data = nullptr;
 			};
-			wi::vector<Block> blocks;
+			struct BlockL2
+			{
+				uint64_t status = 0; // bitmask of active L1 blocks
+				BlockL1 blocks_l1[64];
+			};
+			wi::vector<BlockL2*> blocks_l2;
 			wi::allocator::BlockAllocator<BlockData, 8> block_allocator; // block allocator manages memory per 8 blocks here (sizeof(BlockData) * 8 = 4 KB pages)
+			wi::allocator::BlockAllocator<BlockL2, 4> block_allocator_l2;
 
 			inline void clear()
 			{
-				blocks.clear();
+				blocks_l2.clear();
 				block_allocator = {};
+				block_allocator_l2 = {};
 			}
 			inline void erase(Entity entity)
 			{
-				const uint64_t block_index = entity >> 6ull; // entity / 64
-				if (blocks.size() > block_index)
+				const uint64_t block_index_l2 = entity >> 12ull; // entity / (64 * 64)
+				if (blocks_l2.size() <= block_index_l2)
+					return;
+
+				BlockL2* block_l2 = blocks_l2[block_index_l2];
+				if (block_l2 == nullptr)
+					return;
+
+				const uint64_t block_index_l1 = (entity >> 6ull) & 63ull; // (entity / 64) % 64
+				BlockL1& block = block_l2->blocks_l1[block_index_l1];
+				const uint64_t item_index = entity & 63ull; // entity % 64
+				block.block_data->items[item_index].index = INVALID_INDEX;
+				block.status &= ~(1ull << item_index);
+				if (block.status == 0)
 				{
-					Block& block = blocks[block_index];
-					if (block.status)
+					// Free the block data for reuse:
+					block_allocator.free(block.block_data);
+					block.block_data = nullptr;
+
+					block_l2->status &= ~(1ull << block_index_l1);
+					if (block_l2->status == 0)
 					{
-						const uint64_t item_index = entity & 63ull; // entity % 64
-						block.block_data->items[item_index].index = INVALID_INDEX;
-						block.status &= ~(1ull << item_index);
-						if (block.status == 0)
-						{
-							// Free the block data for reuse:
-							block_allocator.free(block.block_data);
-							block.block_data = nullptr;
-						}
+						block_allocator_l2.free(block_l2);
+						blocks_l2[block_index_l2] = nullptr;
 					}
 				}
 			}
 			inline void insert(Entity entity, size_t index)
 			{
-				if (index == INVALID_INDEX)
-					return;
-				const uint64_t block_index = entity >> 6ull; // entity / 64
-				if (blocks.size() <= block_index)
+				const uint64_t block_index_l2 = entity >> 12ull; // entity / (64 * 64)
+				if (blocks_l2.size() <= block_index_l2)
 				{
 					// Allocate new block:
-					blocks.resize(block_index + 1);
+					blocks_l2.resize(block_index_l2 + 1);
 				}
-				Block& block = blocks[block_index];
+				if (blocks_l2[block_index_l2] == nullptr)
+				{
+					blocks_l2[block_index_l2] = block_allocator_l2.allocate();
+				}
+				BlockL2* block_l2 = blocks_l2[block_index_l2];
+
+				const uint64_t block_index_l1 = (entity >> 6ull) & 63ull; // (entity / 64) % 64
+				BlockL1& block = block_l2->blocks_l1[block_index_l1];
 				if (block.block_data == nullptr)
 				{
 					block.block_data = block_allocator.allocate();
@@ -541,17 +563,24 @@ namespace wi::ecs
 				const uint64_t item_index = entity & 63ull; // entity % 64
 				block.status |= 1ull << item_index;
 				block.block_data->items[item_index].index = index;
+
+				block_l2->status |= 1ull << block_index_l1;
 			}
 			inline size_t get(Entity entity) const
 			{
-				const uint64_t block_index = entity >> 6ull; // entity / 64
-				if (blocks.size() > block_index)
+				const uint64_t block_index_l2 = entity >> 12ull; // entity / (64 * 64)
+				if (blocks_l2.size() > block_index_l2)
 				{
-					const Block& block = blocks[block_index];
-					if (block.status)
+					const BlockL2* block_l2 = blocks_l2[block_index_l2];
+					if (block_l2 != nullptr)
 					{
-						const uint64_t item_index = entity & 63ull; // entity % 64
-						return block.block_data->items[item_index].index;
+						const uint64_t block_index_l1 = (entity >> 6ull) & 63ull; // (entity / 64) % 64
+						const BlockL1& block = block_l2->blocks_l1[block_index_l1];
+						if (block.status)
+						{
+							const uint64_t item_index = entity & 63ull; // entity % 64
+							return block.block_data->items[item_index].index;
+						}
 					}
 				}
 				return INVALID_INDEX;
