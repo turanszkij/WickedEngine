@@ -19,7 +19,7 @@
 template<typename T>
 constexpr T align(T value, T alignment)
 {
-	return ((value + alignment - T(1)) / alignment) * alignment;
+	return value + (alignment - value) % alignment;
 }
 
 template <typename T>
@@ -248,19 +248,19 @@ inline long long AtomicAdd(volatile long long* ptr, long long val)
 {
 	return __atomic_fetch_add(ptr, val, __ATOMIC_SEQ_CST);
 }
-inline unsigned int countbits(unsigned int value)
+constexpr unsigned int countbits(unsigned int value)
 {
 	return __builtin_popcount(value);
 }
-inline unsigned long long countbits(unsigned long value)
+constexpr unsigned long long countbits(unsigned long value)
 {
 	return __builtin_popcountl(value);
 }
-inline unsigned long long countbits(unsigned long long value)
+constexpr unsigned long long countbits(unsigned long long value)
 {
 	return __builtin_popcountll(value);
 }
-inline unsigned long firstbithigh(unsigned int value)
+constexpr unsigned long firstbithigh(unsigned int value)
 {
 	if (value == 0)
 	{
@@ -268,7 +268,7 @@ inline unsigned long firstbithigh(unsigned int value)
 	}
 	return __builtin_clz(value);
 }
-inline unsigned long firstbithigh(unsigned long value)
+constexpr unsigned long firstbithigh(unsigned long value)
 {
 	if (value == 0)
 	{
@@ -276,7 +276,7 @@ inline unsigned long firstbithigh(unsigned long value)
 	}
 	return __builtin_clzl(value);
 }
-inline unsigned long firstbithigh(unsigned long long value)
+constexpr unsigned long firstbithigh(unsigned long long value)
 {
 	if (value == 0)
 	{
@@ -284,7 +284,7 @@ inline unsigned long firstbithigh(unsigned long long value)
 	}
 	return __builtin_clzll(value);
 }
-inline unsigned long firstbitlow(unsigned int value)
+constexpr unsigned long firstbitlow(unsigned int value)
 {
 	if (value == 0)
 	{
@@ -292,7 +292,7 @@ inline unsigned long firstbitlow(unsigned int value)
 	}
 	return __builtin_ctz(value);
 }
-inline unsigned long firstbitlow(unsigned long value)
+constexpr unsigned long firstbitlow(unsigned long value)
 {
 	if (value == 0)
 	{
@@ -300,7 +300,7 @@ inline unsigned long firstbitlow(unsigned long value)
 	}
 	return __builtin_ctzl(value);
 }
-inline unsigned long firstbitlow(unsigned long long value)
+constexpr unsigned long firstbitlow(unsigned long long value)
 {
 	if (value == 0)
 	{
