@@ -495,7 +495,7 @@ namespace wi::ecs
 				BlockData* block_data = nullptr;
 			};
 			wi::vector<Block> blocks;
-			wi::allocator::BlockAllocator<BlockData> block_allocator;
+			wi::allocator::BlockAllocator<BlockData, 8> block_allocator; // block allocator manages memory per 8 blocks here (sizeof(BlockData) * 8 = 4 KB pages)
 
 			inline void clear()
 			{
