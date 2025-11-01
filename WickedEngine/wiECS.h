@@ -438,7 +438,8 @@ namespace wi::ecs
 		wi::vector<Entity> entities;
 
 //#define LOOKUP_STRAIGHT
-#define LOOKUP_SPARSE
+//#define LOOKUP_SPARSE
+#define LOOKUP_BUCKET_HASH
 //#define LOOKUP_HASH
 
 		// This is a lookup table for entity -> index resolving
@@ -556,6 +557,59 @@ namespace wi::ecs
 				return INVALID_INDEX;
 			}
 #endif // LOOKUP_SPARSE
+
+#ifdef LOOKUP_BUCKET_HASH
+			// Implementation with hash table:
+			// Compared to standard hashing, this one hashes per 64-item bucket, resulting in less hashed entries
+			struct Block
+			{
+				uint64_t status = 0; // one bit per item in block, if it's 0 then block can be freed and reused
+				struct Item
+				{
+					size_t index = INVALID_INDEX;
+				};
+				Item items[64];
+			};
+			wi::unordered_map<uint64_t, Block> table;
+
+			inline void clear()
+			{
+				table.clear();
+			}
+			inline void erase(Entity entity)
+			{
+				const uint64_t block_index = entity >> 6ull; // entity / 64
+				auto it = table.find(block_index);
+				if (it == table.end())
+					return;
+				Block& block = it->second;
+				const uint64_t item_index = entity & 63ull; // entity % 64
+				block.items[item_index].index = INVALID_INDEX;
+				block.status &= ~(1ull << item_index);
+				if (block.status == 0)
+				{
+					// Whole block can be freed:
+					table.erase(block_index);
+				}
+			}
+			inline void insert(Entity entity, size_t index)
+			{
+				const uint64_t block_index = entity >> 6ull; // entity / 64
+				const uint64_t item_index = entity & 63ull; // entity % 64
+				Block& block = table[block_index];
+				block.items[item_index].index = index;
+				block.status |= 1ull << item_index;
+			}
+			inline size_t get(Entity entity) const
+			{
+				const uint64_t block_index = entity >> 6ull; // entity / 64
+				auto it = table.find(block_index);
+				if (it == table.end())
+					return INVALID_INDEX;
+				const uint64_t item_index = entity & 63ull; // entity % 64
+				return it->second.items[item_index].index;
+			}
+#endif // LOOKUP_BUCKET_HASH
 
 #ifdef LOOKUP_HASH
 			// Implementation with hash table:
