@@ -3942,8 +3942,7 @@ namespace wi::scene
 
 			if (geometryArrayMapped != nullptr)
 			{
-				ShaderGeometry geometry;
-				geometry.init();
+				ShaderGeometry geometry = shader_geometry_null;
 				geometry.ib = mesh.ib.descriptor_srv;
 				geometry.ib_reorder = mesh.ib_reorder.descriptor_srv;
 				if (mesh.so_pos.IsValid())
@@ -4329,8 +4328,7 @@ namespace wi::scene
 			material.shaderType_meshblend = 0xFFFF;
 			std::memcpy(materialArrayMapped + impostorMaterialOffset, &material, sizeof(material));
 
-			ShaderGeometry geometry;
-			geometry.init();
+			ShaderGeometry geometry = shader_geometry_null;
 			geometry.meshletCount = triangle_count_to_meshlet_count(uint32_t(objects.GetCount()) * 2);
 			geometry.meshletOffset = 0; // local meshlet offset
 			geometry.ib = impostor_ib_format == Format::R32_UINT ? impostor_ib32.descriptor_srv : impostor_ib16.descriptor_srv;
@@ -4339,8 +4337,7 @@ namespace wi::scene
 			geometry.materialIndex = impostorMaterialOffset;
 			std::memcpy(geometryArrayMapped + impostorGeometryOffset, &geometry, sizeof(geometry));
 
-			ShaderMeshInstance inst;
-			inst.init();
+			ShaderMeshInstance inst = shader_mesh_instance_null;
 			inst.geometryOffset = impostorGeometryOffset;
 			inst.geometryCount = 1;
 			inst.baseGeometryOffset = inst.geometryOffset;
@@ -4545,8 +4542,7 @@ namespace wi::scene
 				//XMStoreFloat4x4(&transformNormal, worldMatrixInverseTranspose);
 
 				// Create GPU instance data:
-				ShaderMeshInstance inst;
-				inst.init();
+				ShaderMeshInstance inst = shader_mesh_instance_null;
 				XMFLOAT4X4 worldMatrixPrev = matrix_objects[args.jobIndex];
 				matrix_objects_prev[args.jobIndex] = worldMatrixPrev;
 				XMStoreFloat4x4(matrix_objects.data() + args.jobIndex, W);
@@ -5022,8 +5018,7 @@ namespace wi::scene
 			uint32_t meshletCount = triangle_count_to_meshlet_count(triangleCount);
 			uint32_t meshletOffset = meshletAllocator.fetch_add(meshletCount);
 
-			ShaderGeometry geometry;
-			geometry.init();
+			ShaderGeometry geometry = shader_geometry_null;
 			geometry.indexOffset = 0;
 			geometry.indexCount = indexCount;
 			geometry.materialIndex = (uint)materials.GetIndex(entity);
@@ -5143,8 +5138,7 @@ namespace wi::scene
 
 			GraphicsDevice* device = wi::graphics::GetDevice();
 
-			ShaderGeometry geometry;
-			geometry.init();
+			ShaderGeometry geometry = shader_geometry_null;
 			geometry.indexOffset = 0;
 			geometry.indexCount = emitter.GetMaxParticleCount() * 6;
 			geometry.materialIndex = (uint)materials.GetIndex(entity);
@@ -5321,8 +5315,7 @@ namespace wi::scene
 			rainMaterial.WriteShaderMaterial(&material);
 			std::memcpy(materialArrayMapped + rainMaterialOffset, &material, sizeof(material));
 
-			ShaderGeometry geometry;
-			geometry.init();
+			ShaderGeometry geometry = shader_geometry_null;
 			geometry.indexOffset = 0;
 			geometry.indexCount = rainEmitter.GetMaxParticleCount() * 6;
 			geometry.materialIndex = rainMaterialOffset;

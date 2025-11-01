@@ -284,8 +284,7 @@ namespace wi::scene
 	{
 		using namespace wi::math;
 
-		ShaderMaterial material;
-		material.init();
+		ShaderMaterial material = shader_material_null;
 		material.baseColor = pack_half4(baseColor);
 		material.emissive_cloak = pack_half4(XMFLOAT4(emissiveColor.x * emissiveColor.w, emissiveColor.y * emissiveColor.w, emissiveColor.z * emissiveColor.w, cloak));
 		material.specular_chromatic = pack_half4(XMFLOAT4(specularColor.x * specularColor.w, specularColor.y * specularColor.w, specularColor.z * specularColor.w, chromatic_aberration));

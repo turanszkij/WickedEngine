@@ -70,6 +70,8 @@ void TestsRenderer::Load()
 	setReflectionsEnabled(true);
 	setFXAAEnabled(false);
 
+	wi::renderer::SetOcclusionCullingEnabled(false);
+
 	wi::gui::GUI& gui = GetGUI();
 
 	label.Create("Label1");
