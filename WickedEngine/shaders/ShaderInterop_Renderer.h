@@ -402,7 +402,7 @@ struct alignas(32) ShaderMaterial
 
 	float4 padding;
 
-	void init()
+	inline void init()
 	{
 		baseColor = uint2(0, 0);
 		normalmap_pom_alphatest_displacement = uint2(0, 0);
@@ -434,6 +434,12 @@ struct alignas(32) ShaderMaterial
 		{
 			textures[i].init();
 		}
+	}
+	static ShaderMaterial get_null()
+	{
+		ShaderMaterial ret;
+		ret.init();
+		return ret;
 	}
 
 #ifndef __cplusplus
@@ -488,6 +494,7 @@ struct alignas(32) ShaderMaterial
 };
 #ifdef __cplusplus
 static_assert(sizeof(ShaderMaterial) == 384);
+inline static const ShaderMaterial shader_material_null = ShaderMaterial::get_null();
 #endif // __cplusplus
 
 // For binning shading based on shader types:
@@ -559,7 +566,7 @@ struct alignas(32) ShaderGeometry
 	int padding1;
 	int padding2;
 
-	void init()
+	inline void init()
 	{
 		ib = -1;
 		ib_reorder = -1;
@@ -592,9 +599,16 @@ struct alignas(32) ShaderGeometry
 		padding1 = 0;
 		padding2 = 0;
 	}
+	static ShaderGeometry get_null()
+	{
+		ShaderGeometry ret;
+		ret.init();
+		return ret;
+	}
 };
 #ifdef __cplusplus
 static_assert(sizeof(ShaderGeometry) == 128);
+inline static const ShaderGeometry shader_geometry_null = ShaderGeometry::get_null();
 #endif // __cplusplus
 
 static const uint MESHLET_VERTEX_COUNT = 64u;
@@ -659,19 +673,19 @@ struct alignas(16) ShaderTransform
 	float4 mat1;
 	float4 mat2;
 
-	void init()
+	inline void init()
 	{
 		mat0 = float4(1, 0, 0, 0);
 		mat1 = float4(0, 1, 0, 0);
 		mat2 = float4(0, 0, 1, 0);
 	}
-	void Create(float4x4 mat)
+	inline void Create(float4x4 mat)
 	{
 		mat0 = float4(mat._11, mat._21, mat._31, mat._41);
 		mat1 = float4(mat._12, mat._22, mat._32, mat._42);
 		mat2 = float4(mat._13, mat._23, mat._33, mat._43);
 	}
-	float4x4 GetMatrix()
+	inline float4x4 GetMatrix()
 #ifdef __cplusplus
 		const
 #endif // __cplusplus
@@ -684,7 +698,7 @@ struct alignas(16) ShaderTransform
 		);
 	}
 #ifndef __cplusplus
-	float3x3 GetMatrixAdjoint()
+	inline float3x3 GetMatrixAdjoint()
 	{
 		return adjoint(GetMatrix());
 	}
@@ -723,7 +737,7 @@ struct alignas(32) ShaderMeshInstance
 
 	float4 padding;
 
-	void init()
+	inline void init()
 	{
 #ifdef __cplusplus
 		using namespace wi::math;
@@ -751,6 +765,12 @@ struct alignas(32) ShaderMeshInstance
 		transformRaw.init();
 		padding = float4(0, 0, 0, 0);
 	}
+	static ShaderMeshInstance get_null()
+	{
+		ShaderMeshInstance ret;
+		ret.init();
+		return ret;
+	}
 
 	inline void SetUserStencilRef(uint stencilRef)
 	{
@@ -771,17 +791,18 @@ struct alignas(32) ShaderMeshInstance
 };
 #ifdef __cplusplus
 static_assert(sizeof(ShaderMeshInstance) == 256);
+inline static const ShaderMeshInstance shader_mesh_instance_null = ShaderMeshInstance::get_null();
 #endif // __cplusplus
 
 struct ShaderMeshInstancePointer
 {
 	uint data;
 
-	void init()
+	inline void init()
 	{
 		data = 0;
 	}
-	void Create(uint _instanceIndex, uint camera_index = 0, float dither = 0)
+	inline void Create(uint _instanceIndex, uint camera_index = 0, float dither = 0)
 	{
 		data = 0;
 		data |= _instanceIndex & 0xFFFFFF;
@@ -790,15 +811,15 @@ struct ShaderMeshInstancePointer
 	}
 
 #ifndef __cplusplus
-	uint GetInstanceIndex()
+	inline uint GetInstanceIndex()
 	{
 		return data & 0xFFFFFF;
 	}
-	uint GetCameraIndex()
+	inline uint GetCameraIndex()
 	{
 		return (data >> 24u) & 0xF;
 	}
-	half GetDither()
+	inline half GetDither()
 	{
 		return half((data >> 28u) & 0xF) / 15.0;
 	}
@@ -1392,7 +1413,7 @@ struct alignas(16) ShaderCamera
 	uint padding1;
 
 #ifdef __cplusplus
-	void init()
+	inline void init()
 	{
 		view_projection = {};
 		position = {};
@@ -1514,7 +1535,7 @@ struct alignas(16) CameraCB
 	ShaderCamera cameras[16];
 
 #ifdef __cplusplus
-	void init()
+	inline void init()
 	{
 		for (int i = 0; i < 16; ++i)
 		{
