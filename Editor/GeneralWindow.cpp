@@ -26,7 +26,16 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	wi::gui::Window::Create("General", wi::gui::Window::WindowControls::CLOSE | wi::gui::Window::WindowControls::RESIZE_RIGHT);
 	SetText("General Options " ICON_GENERALOPTIONS);
 
-	SetSize(XMFLOAT2(300, 740));
+	XMFLOAT2 size = XMFLOAT2(300, 740);
+	if (editor->main->config.GetSection("layout").Has("options.width"))
+	{
+		size.x = editor->main->config.GetSection("layout").GetFloat("options.width");
+	}
+	if (editor->main->config.GetSection("layout").Has("options.height"))
+	{
+		size.y = editor->main->config.GetSection("layout").GetFloat("options.height");
+	}
+	SetSize(size);
 
 	masterVolumeSlider.Create(0, 2, 1, 100, "Master Volume: ");
 	if (editor->main->config.GetSection("options").Has("volume"))
@@ -1464,6 +1473,9 @@ void GeneralWindow::ReloadThemes()
 void GeneralWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
+
+	editor->main->config.GetSection("layout").Set("options.width", GetSize().x);
+	editor->main->config.GetSection("layout").Set("options.height", GetSize().y);
 
 	layout.add_right(versionCheckBox, fpsCheckBox, otherinfoCheckBox);
 
