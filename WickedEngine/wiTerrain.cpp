@@ -1679,7 +1679,9 @@ namespace wi::terrain
 					}
 				}
 
-				material->texMulAdd = XMFLOAT4(1, 1, 0, 0);
+				const float texel_inset = chunk_data.fallback_resolution > 0 ? 0.5f / float(chunk_data.fallback_resolution) : 0.0f;
+				const float tex_mul = std::max(0.0f, 1.0f - texel_inset * 2.0f);
+				material->texMulAdd = XMFLOAT4(tex_mul, tex_mul, texel_inset, texel_inset);
 				for (uint32_t map_type = 0; map_type < 4; ++map_type)
 				{
 					material->textures[map_type].sparse_residencymap_descriptor = -1;
