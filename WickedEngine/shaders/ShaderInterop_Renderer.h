@@ -1690,6 +1690,17 @@ struct TerrainVirtualTexturePush
 	int output_texture;
 	int padding0;
 };
+struct TerrainFallbackUpdatePush
+{
+	uint2 resolution;
+	float2 resolution_rcp;
+	uint blendmap_layers;
+
+	int blendmap_texture;
+	int blendmap_buffer;
+	uint blendmap_buffer_offset;
+	int output_texture;
+};
 struct VirtualTextureResidencyUpdateCB
 {
 	uint lodCount;

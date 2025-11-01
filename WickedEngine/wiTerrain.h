@@ -233,6 +233,10 @@ namespace wi::terrain
 		std::shared_ptr<VirtualTexture> vt;
 		wi::vector<uint16_t> heightmap_data;
 		wi::graphics::Texture heightmap;
+		wi::graphics::Texture fallback_textures[4];
+		int fallback_srgb_subresource[4] = { -1, -1, -1, -1 };
+		uint32_t fallback_resolution = 0;
+		bool fallback_needs_update = false;
 
 		void enable_blendmap_layer(size_t materialIndex)
 		{
@@ -298,6 +302,9 @@ namespace wi::terrain
 		wi::vector<VirtualTexture*> virtual_textures_in_use;
 		wi::graphics::Sampler sampler;
 		VirtualTextureAtlas atlas;
+		bool virtual_texture_sparse_active = false;
+		bool virtual_texture_fallback_active = false;
+		wi::vector<Chunk> fallback_update_chunks;
 
 		wi::graphics::GPUBuffer chunk_buffer;
 		int chunk_buffer_range = 3; // how many chunks to upload to GPU in X and Z directions
@@ -347,7 +354,7 @@ namespace wi::terrain
 		void CreateChunkRegionTexture(ChunkData& chunk_data);
 
 		void UpdateVirtualTexturesCPU();
-		void UpdateVirtualTexturesGPU(wi::graphics::CommandList cmd) const;
+		void UpdateVirtualTexturesGPU(wi::graphics::CommandList cmd);
 		void CopyVirtualTexturePageStatusGPU(wi::graphics::CommandList cmd) const;
 		void AllocateVirtualTextureTileRequestsGPU(wi::graphics::CommandList cmd) const;
 		void WritebackTileRequestsGPU(wi::graphics::CommandList cmd) const;

@@ -941,6 +941,18 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)terrainVirtualTextureUpdateCS_surfacemap.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)terrainFallbackUpdateCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)terrainFallbackUpdateCS_emissivemap.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)terrainFallbackUpdateCS_normalmap.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)terrainFallbackUpdateCS_surfacemap.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)emittedparticle_sphcellallocationCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
