@@ -417,7 +417,7 @@ namespace wi::font
 						&bitmap.yoff
 					);
 					bitmap.data.resize(bitmap.width * bitmap.height);
-					std::memcpy(bitmap.data.data(), data, bitmap.data.size());
+					if (data) std::memcpy(bitmap.data.data(), data, bitmap.data.size());
 					stbtt_FreeSDF(data, nullptr);
 				}
 				else
@@ -433,7 +433,7 @@ namespace wi::font
 						&bitmap.yoff
 					);
 					bitmap.data.resize(bitmap.width * bitmap.height);
-					std::memcpy(bitmap.data.data(), data, bitmap.data.size());
+					if (data) std::memcpy(bitmap.data.data(), data, bitmap.data.size());
 					stbtt_FreeBitmap(data, nullptr);
 				}
 
