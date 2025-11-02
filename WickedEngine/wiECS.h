@@ -6,6 +6,7 @@
 #include "wiUnorderedMap.h"
 #include "wiUnorderedSet.h"
 #include "wiVector.h"
+#include "wiAllocator.h"
 
 #include <cstdint>
 #include <cassert>
@@ -151,7 +152,6 @@ namespace wi::ecs
 		{
 			components.reserve(count);
 			entities.reserve(count);
-			lookup.reserve(count);
 		}
 
 		// Clear the whole container
@@ -167,13 +167,12 @@ namespace wi::ecs
 		{
 			components.reserve(GetCount() + other.GetCount());
 			entities.reserve(GetCount() + other.GetCount());
-			lookup.reserve(GetCount() + other.GetCount());
 			for (size_t i = 0; i < other.GetCount(); ++i)
 			{
 				Entity entity = other.entities[i];
 				assert(!Contains(entity));
 				entities.push_back(entity);
-				lookup[entity] = components.size();
+				lookup.insert(entity, components.size());
 				components.push_back(other.components[i]);
 			}
 		}
@@ -185,14 +184,13 @@ namespace wi::ecs
 		{
 			components.reserve(GetCount() + other.GetCount());
 			entities.reserve(GetCount() + other.GetCount());
-			lookup.reserve(GetCount() + other.GetCount());
 
 			for (size_t i = 0; i < other.GetCount(); ++i)
 			{
 				Entity entity = other.entities[i];
 				assert(!Contains(entity));
 				entities.push_back(entity);
-				lookup[entity] = components.size();
+				lookup.insert(entity, components.size());
 				components.push_back(std::move(other.components[i]));
 			}
 
@@ -232,7 +230,7 @@ namespace wi::ecs
 					Entity entity = INVALID_ENTITY;
 					SerializeEntity(archive, entity, seri);
 					entities[prev_count + i] = entity;
-					lookup[entity] = prev_count + i;
+					lookup.insert(entity, prev_count + i);
 				}
 			}
 			else
@@ -284,14 +282,13 @@ namespace wi::ecs
 			assert(entity != INVALID_ENTITY);
 
 			// Only one of this component type per entity is allowed!
-			assert(lookup.find(entity) == lookup.end());
+			assert(!Contains(entity));
 
-			// Entity count must always be the same as the number of coponents!
+			// Entity count must always be the same as the number of components!
 			assert(entities.size() == components.size());
-			assert(lookup.size() == components.size());
 
 			// Update the entity lookup table:
-			lookup[entity] = components.size();
+			lookup.insert(entity, components.size());
 
 			// New components are always pushed to the end:
 			components.emplace_back();
@@ -305,13 +302,9 @@ namespace wi::ecs
 		// Remove a component of a certain entity if it exists
 		inline void Remove(Entity entity)
 		{
-			auto it = lookup.find(entity);
-			if (it != lookup.end())
+			const size_t index = GetIndex(entity);
+			if (index != INVALID_INDEX)
 			{
-				// Directly index into components and entities array:
-				const size_t index = it->second;
-				const Entity entity = entities[index];
-
 				if (index < components.size() - 1)
 				{
 					// Swap out the dead element with the last one:
@@ -319,7 +312,7 @@ namespace wi::ecs
 					entities[index] = entities.back();
 
 					// Update the lookup table:
-					lookup[entities[index]] = index;
+					lookup.insert(entities[index], index);
 				}
 
 				// Shrink the container:
@@ -332,13 +325,9 @@ namespace wi::ecs
 		// Remove a component of a certain entity if it exists while keeping the current ordering
 		inline void Remove_KeepSorted(Entity entity)
 		{
-			auto it = lookup.find(entity);
-			if (it != lookup.end())
+			const size_t index = GetIndex(entity);
+			if (index != INVALID_INDEX)
 			{
-				// Directly index into components and entities array:
-				const size_t index = it->second;
-				const Entity entity = entities[index];
-
 				if (index < components.size() - 1)
 				{
 					// Move every component left by one that is after this element:
@@ -350,7 +339,7 @@ namespace wi::ecs
 					for (size_t i = index + 1; i < entities.size(); ++i)
 					{
 						entities[i - 1] = entities[i];
-						lookup[entities[i - 1]] = i - 1;
+						lookup.insert(entities[i - 1], i - 1);
 					}
 				}
 
@@ -382,60 +371,43 @@ namespace wi::ecs
 				const size_t next = i + direction;
 				components[i] = std::move(components[next]);
 				entities[i] = entities[next];
-				lookup[entities[i]] = i;
+				lookup.insert(entities[i], i);
 			}
 
 			// Saved entity-component moved to the required position:
 			components[index_to] = std::move(component);
 			entities[index_to] = entity;
-			lookup[entity] = index_to;
+			lookup.insert(entity, index_to);
 		}
 
 		// Check if a component exists for a given entity or not
 		inline bool Contains(Entity entity) const
 		{
-			if (lookup.empty())
-				return false;
-			return lookup.find(entity) != lookup.end();
+			return GetIndex(entity) != INVALID_INDEX;
 		}
 
 		// Retrieve a [read/write] component specified by an entity (if it exists, otherwise nullptr)
 		inline Component* GetComponent(Entity entity)
 		{
-			if (lookup.empty())
+			const size_t index = GetIndex(entity);
+			if (index == INVALID_INDEX)
 				return nullptr;
-			auto it = lookup.find(entity);
-			if (it != lookup.end())
-			{
-				return &components[it->second];
-			}
-			return nullptr;
+			return &components[index];
 		}
 
 		// Retrieve a [read only] component specified by an entity (if it exists, otherwise nullptr)
 		inline const Component* GetComponent(Entity entity) const
 		{
-			if (lookup.empty())
+			const size_t index = GetIndex(entity);
+			if (index == INVALID_INDEX)
 				return nullptr;
-			const auto it = lookup.find(entity);
-			if (it != lookup.end())
-			{
-				return &components[it->second];
-			}
-			return nullptr;
+			return &components[index];
 		}
 
 		// Retrieve component index by entity handle (if doesn't exist, returns INVALID_INDEX value)
 		inline size_t GetIndex(Entity entity) const
 		{
-			if (lookup.empty())
-				return INVALID_INDEX;
-			const auto it = lookup.find(entity);
-			if (it != lookup.end())
-			{
-				return it->second;
-			}
-			return INVALID_INDEX;
+			return lookup.get(entity);
 		}
 
 		// Retrieve the number of existing entries
@@ -464,8 +436,244 @@ namespace wi::ecs
 		wi::vector<Component> components;
 		// This is a linear array of entities corresponding to each alive component
 		wi::vector<Entity> entities;
-		// This is a lookup table for entities
-		wi::unordered_map<Entity, size_t> lookup;
+
+//#define LOOKUP_STRAIGHT
+//#define LOOKUP_SPARSE
+#define LOOKUP_BUCKET_HASH
+//#define LOOKUP_HASH
+
+		// This is a lookup table for entity -> index resolving
+		struct LookupTable
+		{
+
+#ifdef LOOKUP_STRAIGHT
+			// Straight lookup with memory wasting implementation:
+			// Matches Entity to index with storing every possible Entity in memory up to the max stored entity index
+			// Fastest lookup but wastes memory storing every possible entity index that was encountered before
+			// !Use it only for performance testing of minimal lookup overhead!
+			struct Item
+			{
+				size_t index = INVALID_INDEX;
+			};
+			wi::vector<Item> table;
+
+			inline void clear()
+			{
+				table.clear();
+			}
+			inline void erase(Entity entity)
+			{
+				table[entity].index = INVALID_INDEX;
+			}
+			inline void insert(Entity entity, size_t index)
+			{
+				if (table.size() <= entity)
+					table.resize(entity + 1);
+				table[entity].index = index;
+			}
+			inline size_t get(Entity entity) const
+			{
+				if (table.size() <= entity)
+					return INVALID_INDEX;
+				return table[entity].index;
+			}
+#endif // LOOKUP_NAIVE
+
+#ifdef LOOKUP_SPARSE
+			// Straight lookup sparse memory manager:
+			// Similar to straight as it stores a direct mapping of entity -> index, but unused ranges of entities will not waste as much memory
+			// The lookup is slowed by the extra block data indirection
+			// The problem is still that entity indices just increase forever and no guarantee that the minmax range doesn't get huge
+			struct BlockData
+			{
+				struct Item
+				{
+					size_t index = INVALID_INDEX;
+				};
+				Item items[64];
+			};
+			struct BlockL1 // stores 64 contiguous entity indices
+			{
+				uint64_t status = 0; // one bit per item in block, if it's 0 then block can be freed and reused
+				BlockData* block_data = nullptr;
+			};
+			struct BlockL2
+			{
+				uint64_t status = 0; // bitmask of active L1 blocks
+				BlockL1 blocks_l1[64];
+			};
+			wi::vector<BlockL2*> blocks_l2;
+			wi::allocator::BlockAllocator<BlockData, 8> block_allocator; // block allocator manages memory per 8 blocks here (sizeof(BlockData) * 8 = 4 KB pages)
+			wi::allocator::BlockAllocator<BlockL2, 4> block_allocator_l2;
+
+			inline void clear()
+			{
+				blocks_l2.clear();
+				block_allocator = {};
+				block_allocator_l2 = {};
+			}
+			inline void erase(Entity entity)
+			{
+				const uint64_t block_index_l2 = entity >> 12ull; // entity / (64 * 64)
+				if (blocks_l2.size() <= block_index_l2)
+					return;
+
+				BlockL2* block_l2 = blocks_l2[block_index_l2];
+				if (block_l2 == nullptr)
+					return;
+
+				const uint64_t block_index_l1 = (entity >> 6ull) & 63ull; // (entity / 64) % 64
+				BlockL1& block = block_l2->blocks_l1[block_index_l1];
+				const uint64_t item_index = entity & 63ull; // entity % 64
+				block.block_data->items[item_index].index = INVALID_INDEX;
+				block.status &= ~(1ull << item_index);
+				if (block.status == 0)
+				{
+					// Free the block data for reuse:
+					block_allocator.free(block.block_data);
+					block.block_data = nullptr;
+
+					block_l2->status &= ~(1ull << block_index_l1);
+					if (block_l2->status == 0)
+					{
+						block_allocator_l2.free(block_l2);
+						blocks_l2[block_index_l2] = nullptr;
+					}
+				}
+			}
+			inline void insert(Entity entity, size_t index)
+			{
+				const uint64_t block_index_l2 = entity >> 12ull; // entity / (64 * 64)
+				if (blocks_l2.size() <= block_index_l2)
+				{
+					// Allocate new block:
+					blocks_l2.resize(block_index_l2 + 1);
+				}
+				if (blocks_l2[block_index_l2] == nullptr)
+				{
+					blocks_l2[block_index_l2] = block_allocator_l2.allocate();
+				}
+				BlockL2* block_l2 = blocks_l2[block_index_l2];
+
+				const uint64_t block_index_l1 = (entity >> 6ull) & 63ull; // (entity / 64) % 64
+				BlockL1& block = block_l2->blocks_l1[block_index_l1];
+				if (block.block_data == nullptr)
+				{
+					block.block_data = block_allocator.allocate();
+				}
+				const uint64_t item_index = entity & 63ull; // entity % 64
+				block.status |= 1ull << item_index;
+				block.block_data->items[item_index].index = index;
+
+				block_l2->status |= 1ull << block_index_l1;
+			}
+			inline size_t get(Entity entity) const
+			{
+				const uint64_t block_index_l2 = entity >> 12ull; // entity / (64 * 64)
+				if (blocks_l2.size() > block_index_l2)
+				{
+					const BlockL2* block_l2 = blocks_l2[block_index_l2];
+					if (block_l2 != nullptr)
+					{
+						const uint64_t block_index_l1 = (entity >> 6ull) & 63ull; // (entity / 64) % 64
+						const BlockL1& block = block_l2->blocks_l1[block_index_l1];
+						if (block.status)
+						{
+							const uint64_t item_index = entity & 63ull; // entity % 64
+							return block.block_data->items[item_index].index;
+						}
+					}
+				}
+				return INVALID_INDEX;
+			}
+#endif // LOOKUP_SPARSE
+
+#ifdef LOOKUP_BUCKET_HASH
+			// Implementation with hash table:
+			// Compared to standard hashing, this one hashes per 64-item bucket, resulting in less hashed entries
+			struct Block
+			{
+				uint64_t status = 0; // one bit per item in block, if it's 0 then whole block can be freed
+				struct Item
+				{
+					size_t index = INVALID_INDEX;
+				};
+				Item items[64];
+			};
+			wi::unordered_map<uint64_t, Block> table;
+
+			inline void clear()
+			{
+				table.clear();
+			}
+			inline void erase(Entity entity)
+			{
+				const uint64_t block_index = entity >> 6ull; // entity / 64
+				auto it = table.find(block_index);
+				if (it == table.end())
+					return;
+				Block& block = it->second;
+				if (block.status)
+				{
+					const uint64_t item_index = entity & 63ull; // entity % 64
+					block.items[item_index].index = INVALID_INDEX;
+					block.status &= ~(1ull << item_index);
+					if (block.status == 0)
+					{
+						// Free the block from hash table:
+						table.erase(block_index);
+					}
+				}
+			}
+			inline void insert(Entity entity, size_t index)
+			{
+				const uint64_t block_index = entity >> 6ull; // entity / 64
+				const uint64_t item_index = entity & 63ull; // entity % 64
+				Block& block = table[block_index];
+				block.status |= 1ull << item_index;
+				block.items[item_index].index = index;
+			}
+			inline size_t get(Entity entity) const
+			{
+				const uint64_t block_index = entity >> 6ull; // entity / 64
+				const auto it = table.find(block_index);
+				if (it == table.end())
+					return INVALID_INDEX;
+				const Block& block = it->second;
+				const uint64_t item_index = entity & 63ull; // entity % 64
+				return block.items[item_index].index;
+			}
+#endif // LOOKUP_BUCKET_HASH
+
+#ifdef LOOKUP_HASH
+			// Implementation with hash table:
+			// The standard hashing method, performance depends on hashing, hash collisions
+			wi::unordered_map<Entity, size_t> table;
+
+			inline void clear()
+			{
+				table.clear();
+			}
+			inline void erase(Entity entity)
+			{
+				table.erase(entity);
+			}
+			inline void insert(Entity entity, size_t index)
+			{
+				table[entity] = index;
+			}
+			inline size_t get(Entity entity) const
+			{
+				if (table.empty())
+					return INVALID_INDEX;
+				auto it = table.find(entity);
+				if (it == table.end())
+					return INVALID_INDEX;
+				return it->second;
+			}
+#endif // LOOKUP_HASH
+
+		} lookup;
 
 		// Disallow this to be copied by mistake
 		ComponentManager(const ComponentManager&) = delete;

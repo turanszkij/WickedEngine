@@ -418,7 +418,7 @@ You can also get the index of an entity in a component manager:
 
 ```cpp
 size_t index = components.GetIndex(entity);
-if(index != ~0ull) // check if it's valid. If invalid, then the index returned will be the max value of 64 bit uint
+if(index != INVALID_INDEX) // check if it's valid. If invalid, then the index returned will be the max value of 64 bit uint
 {
 	MyComponent& component = components[index];
 }
