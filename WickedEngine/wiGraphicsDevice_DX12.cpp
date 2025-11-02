@@ -1009,7 +1009,7 @@ namespace dx12_internal
 	constexpr TextureDesc _ConvertTextureDesc_Inv(const D3D12_RESOURCE_DESC& desc)
 	{
 		TextureDesc retVal;
-		
+
 		switch (desc.Dimension)
 		{
 		case D3D12_RESOURCE_DIMENSION_TEXTURE1D:
@@ -2347,10 +2347,13 @@ std::mutex queue_locker;
 			return dxgiFactory->EnumAdapters1(index, ppAdapter);
 		};
 
-		for (uint32_t i = 0; NextAdapter(i, dxgiAdapter.ReleaseAndGetAddressOf()) != DXGI_ERROR_NOT_FOUND; ++i)
+		const bool vendor_preference = preference > GPUPreference::Integrated;
+		ComPtr<IDXGIAdapter1> tempAdapter;
+		for (uint32_t i = 0; NextAdapter(i, tempAdapter.ReleaseAndGetAddressOf()) != DXGI_ERROR_NOT_FOUND; ++i)
 		{
+			bool vendor_priority = false;
 			DXGI_ADAPTER_DESC1 adapterDesc;
-			hr = dxgiAdapter->GetDesc1(&adapterDesc);
+			hr = tempAdapter->GetDesc1(&adapterDesc);
 			if (SUCCEEDED(hr))
 			{
 				// Don't select the Basic Render Driver adapter.
@@ -2358,23 +2361,40 @@ std::mutex queue_locker;
 				{
 					continue;
 				}
-			}
 
-			D3D_FEATURE_LEVEL featurelevels[] = {
-				D3D_FEATURE_LEVEL_12_2,
-				D3D_FEATURE_LEVEL_12_1,
-				D3D_FEATURE_LEVEL_12_0,
-				D3D_FEATURE_LEVEL_11_1,
-				D3D_FEATURE_LEVEL_11_0,
-			};
-			for (auto& featureLevel : featurelevels)
-			{
-				if (SUCCEEDED(D3D12CreateDevice(dxgiAdapter.Get(), featureLevel, PPV_ARGS(device))))
+				if (preference == GPUPreference::AMD)
 				{
-					break;
+					vendor_priority = wi::helper::toUpper(std::wstring(adapterDesc.Description)).find(L"AMD") != std::wstring::npos;
+				}
+				else if (preference == GPUPreference::Nvidia)
+				{
+					vendor_priority = wi::helper::toUpper(std::wstring(adapterDesc.Description)).find(L"NVIDIA") != std::wstring::npos;
+				}
+				else if (preference == GPUPreference::Intel)
+				{
+					vendor_priority = wi::helper::toUpper(std::wstring(adapterDesc.Description)).find(L"INTEL") != std::wstring::npos;
 				}
 			}
-			if (device != nullptr)
+
+			if (device == nullptr || vendor_priority)
+			{
+				D3D_FEATURE_LEVEL featurelevels[] = {
+					D3D_FEATURE_LEVEL_12_2,
+					D3D_FEATURE_LEVEL_12_1,
+					D3D_FEATURE_LEVEL_12_0,
+					D3D_FEATURE_LEVEL_11_1,
+					D3D_FEATURE_LEVEL_11_0,
+				};
+				for (auto& featureLevel : featurelevels)
+				{
+					if (SUCCEEDED(D3D12CreateDevice(tempAdapter.Get(), featureLevel, PPV_ARGS(device))))
+					{
+						dxgiAdapter = tempAdapter;
+						break;
+					}
+				}
+			}
+			if (device != nullptr && (!vendor_preference || vendor_priority))
 				break;
 		}
 
@@ -2688,37 +2708,39 @@ std::mutex queue_locker;
 		// Init adapter properties
 		{
 			DXGI_ADAPTER_DESC1 adapterDesc;
-			dx12_check(dxgiAdapter->GetDesc1(&adapterDesc));
-
-			vendorId = adapterDesc.VendorId;
-			deviceId = adapterDesc.DeviceId;
-			wi::helper::StringConvert(adapterDesc.Description, adapterName);
-
-			// Convert the adapter's D3D12 driver version to a readable string like "24.21.13.9793".
-			LARGE_INTEGER umdVersion;
-			if (dxgiAdapter->CheckInterfaceSupport(__uuidof(IDXGIDevice), &umdVersion) != DXGI_ERROR_UNSUPPORTED)
+			hr = dxgiAdapter->GetDesc1(&adapterDesc);
+			if (SUCCEEDED(hr))
 			{
-				uint64_t encodedVersion = umdVersion.QuadPart;
-				std::ostringstream o;
-				o << "D3D12 driver version ";
-				uint16_t driverVersion[4] = {};
+				vendorId = adapterDesc.VendorId;
+				deviceId = adapterDesc.DeviceId;
+				wi::helper::StringConvert(adapterDesc.Description, adapterName);
 
-				for (size_t i = 0; i < 4; ++i) {
-					driverVersion[i] = (encodedVersion >> (48 - 16 * i)) & 0xFFFF;
-					o << driverVersion[i] << ".";
+				// Convert the adapter's D3D12 driver version to a readable string like "24.21.13.9793".
+				LARGE_INTEGER umdVersion;
+				if (dxgiAdapter->CheckInterfaceSupport(__uuidof(IDXGIDevice), &umdVersion) != DXGI_ERROR_UNSUPPORTED)
+				{
+					uint64_t encodedVersion = umdVersion.QuadPart;
+					std::ostringstream o;
+					o << "D3D12 driver version ";
+					uint16_t driverVersion[4] = {};
+
+					for (size_t i = 0; i < 4; ++i) {
+						driverVersion[i] = (encodedVersion >> (48 - 16 * i)) & 0xFFFF;
+						o << driverVersion[i] << ".";
+					}
+
+					driverDescription = o.str();
 				}
 
-				driverDescription = o.str();
-			}
-
-			// Detect adapter type.
-			if (adapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
-			{
-				adapterType = AdapterType::Cpu;
-			}
-			else
-			{
-				adapterType = features.UMA() ? AdapterType::IntegratedGpu : AdapterType::DiscreteGpu;
+				// Detect adapter type.
+				if (adapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+				{
+					adapterType = AdapterType::Cpu;
+				}
+				else
+				{
+					adapterType = features.UMA() ? AdapterType::IntegratedGpu : AdapterType::DiscreteGpu;
+				}
 			}
 		}
 
@@ -4311,7 +4333,7 @@ std::mutex queue_locker;
 		{
 			internal_state->desc.Flags |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_MINIMIZE_MEMORY;
 		}
-		
+
 
 		switch (desc->type)
 		{
@@ -4345,7 +4367,7 @@ std::mutex queue_locker;
 				}
 				else if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::Type::PROCEDURAL_AABBS)
 				{
-					geometry.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS; 
+					geometry.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS;
 					geometry.AABBs.AABBs.StartAddress = to_internal(&x.aabbs.aabb_buffer)->gpu_address +
 						(D3D12_GPU_VIRTUAL_ADDRESS)x.aabbs.offset;
 					geometry.AABBs.AABBs.StrideInBytes = (UINT64)x.aabbs.stride;
@@ -5134,7 +5156,7 @@ std::mutex queue_locker;
 		if (resource == nullptr || !resource->IsValid())
 			return -1;
 
-		auto internal_state = to_internal(resource);
+		const auto internal_state = to_internal(resource);
 
 		switch (type)
 		{
@@ -5146,6 +5168,8 @@ std::mutex queue_locker;
 			}
 			else
 			{
+				if (subresource >= (int)internal_state->subresources_srv.size())
+					return -1;
 				return internal_state->subresources_srv[subresource].index;
 			}
 			break;
@@ -5156,6 +5180,8 @@ std::mutex queue_locker;
 			}
 			else
 			{
+				if (subresource >= (int)internal_state->subresources_uav.size())
+					return -1;
 				return internal_state->subresources_uav[subresource].index;
 			}
 			break;
@@ -5200,7 +5226,7 @@ std::mutex queue_locker;
 		const void* identifier = internal_state->stateObjectProperties->GetShaderIdentifier(internal_state->group_strings[group_index].c_str());
 		std::memcpy(dest, identifier, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
 	}
-	
+
 	void GraphicsDevice_DX12::SetName(GPUResource* pResource, const char* name) const
 	{
 		wchar_t text[256];
@@ -7241,7 +7267,7 @@ std::mutex queue_locker;
 
 				if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::Type::TRIANGLES)
 				{
-					geometry.Triangles.VertexBuffer.StartAddress = to_internal(&x.triangles.vertex_buffer)->gpu_address + 
+					geometry.Triangles.VertexBuffer.StartAddress = to_internal(&x.triangles.vertex_buffer)->gpu_address +
 						(D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.vertex_byte_offset;
 					geometry.Triangles.IndexBuffer = to_internal(&x.triangles.index_buffer)->gpu_address +
 						(D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.index_offset * (x.triangles.index_format == IndexBufferFormat::UINT16 ? sizeof(uint16_t) : sizeof(uint32_t));

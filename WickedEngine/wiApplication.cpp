@@ -41,7 +41,6 @@ using namespace wi::graphics;
 
 namespace wi
 {
-
 	void Application::Initialize()
 	{
 		if (initialized)
@@ -709,6 +708,11 @@ namespace wi
 		wi::profiler::EndRange(range); // Compose
 	}
 
+	void Application::Exit()
+	{
+		wi::platform::Exit();
+	}
+
 	void Application::SetWindow(wi::platform::window_type window)
 	{
 		this->window = window;
@@ -734,6 +738,18 @@ namespace wi
 			if (wi::arguments::HasArgument("igpu"))
 			{
 				preference = GPUPreference::Integrated;
+			}
+			else if (wi::arguments::HasArgument("nvidiagpu"))
+			{
+				preference = GPUPreference::Nvidia;
+			}
+			else if (wi::arguments::HasArgument("amdgpu"))
+			{
+				preference = GPUPreference::AMD;
+			}
+			else if (wi::arguments::HasArgument("intelgpu"))
+			{
+				preference = GPUPreference::Intel;
 			}
 
 #ifdef PLATFORM_PS5
@@ -870,7 +886,6 @@ namespace wi
 	{
 		return wi::helper::FileExists(rewriteable_startup_script_text);
 	}
-
 }
 
 

@@ -18,7 +18,9 @@
 #include "OpenImageDenoise/oidn.hpp"
 #if OIDN_VERSION_MAJOR >= 2
 #define OPEN_IMAGE_DENOISE
+#ifdef _WIN32
 #pragma comment(lib,"OpenImageDenoise.lib")
+#endif
 // Also provide the required DLL files from OpenImageDenoise release near the exe!
 #endif // OIDN_VERSION_MAJOR >= 2
 #endif // __has_include("OpenImageDenoise/oidn.hpp")
@@ -282,8 +284,7 @@ namespace wi::scene
 	{
 		using namespace wi::math;
 
-		ShaderMaterial material;
-		material.init();
+		ShaderMaterial material = shader_material_null;
 		material.baseColor = pack_half4(baseColor);
 		material.emissive_cloak = pack_half4(XMFLOAT4(emissiveColor.x * emissiveColor.w, emissiveColor.y * emissiveColor.w, emissiveColor.z * emissiveColor.w, cloak));
 		material.specular_chromatic = pack_half4(XMFLOAT4(specularColor.x * specularColor.w, specularColor.y * specularColor.w, specularColor.z * specularColor.w, chromatic_aberration));
@@ -379,10 +380,6 @@ namespace wi::scene
 		{
 			material.options_stencilref |= SHADERMATERIAL_OPTION_BIT_ADDITIVE;
 		}
-		if (shaderType == SHADERTYPE_UNLIT)
-		{
-			material.options_stencilref |= SHADERMATERIAL_OPTION_BIT_UNLIT;
-		}
 		if (!IsVertexAODisabled())
 		{
 			material.options_stencilref |= SHADERMATERIAL_OPTION_BIT_USE_VERTEXAO;
@@ -429,6 +426,7 @@ namespace wi::scene
 			material.textures[i].sparse_feedbackmap_descriptor = textures[i].sparse_feedbackmap_descriptor;
 		}
 
+		// Do not use the cached sampler indices here, using this function doesn't rely on material update system which caches them
 		if (sampler_descriptor < 0)
 		{
 			material.sampler_descriptor = device->GetDescriptorIndex(wi::renderer::GetSampler(wi::enums::SAMPLER_OBJECTSHADER));
@@ -437,6 +435,7 @@ namespace wi::scene
 		{
 			material.sampler_descriptor = sampler_descriptor;
 		}
+		material.sampler_clamp_descriptor = device->GetDescriptorIndex(wi::renderer::GetSampler(wi::enums::SAMPLER_OBJECTSHADER_CLAMP));
 
 		if (shaderType == SHADERTYPE_INTERIORMAPPING && textures[BASECOLORMAP].resource.IsValid() && !has_flag(textures[BASECOLORMAP].resource.GetTexture().GetDesc().misc_flags, ResourceMiscFlag::TEXTURECUBE))
 		{
@@ -865,7 +864,7 @@ namespace wi::scene
 		const uint64_t alignment = device->GetMinOffsetAlignment(&bd);
 		bd.size =
 			AlignTo(vertex_positions.size() * position_stride, alignment) + // position will be first to have 0 offset for flexible alignment!
-			AlignTo(provoke.size() * GetPrimitiveIndexStride(), alignment) +
+			AlignTo(provoke.size() * GetProvokingIndexStride(), alignment) +
 			AlignTo(reorder.size() * GetIndexStride(), alignment) +
 			AlignTo(indices.size() * GetIndexStride(), alignment) +
 			AlignTo(vertex_normals.size() * sizeof(Vertex_NOR), alignment) +
@@ -1062,7 +1061,7 @@ namespace wi::scene
 			}
 
 			// Create provoking index buffer GPU data:
-			if (GetPrimitiveIndexFormat() == IndexBufferFormat::UINT32)
+			if (GetProvokingIndexFormat() == IndexBufferFormat::UINT32)
 			{
 				ib_provoke.offset = buffer_offset;
 				ib_provoke.size = provoke.size() * sizeof(uint32_t);
@@ -2672,7 +2671,6 @@ namespace wi::scene
 		XMStoreFloat4x4(&InvProjection, _InvP);
 
 		XMMATRIX _VP = XMMatrixMultiply(_V, _P);
-		XMStoreFloat4x4(&View, _V);
 		XMStoreFloat4x4(&VP, _VP);
 		XMMATRIX _InvV = XMMatrixInverse(nullptr, _V);
 		XMStoreFloat4x4(&InvView, _InvV);
@@ -2977,11 +2975,18 @@ namespace wi::scene
 	}
 	void CharacterComponent::SetActive(bool value)
 	{
-		active = value;
+		if (value)
+		{
+			_flags |= ACTIVE;
+		}
+		else
+		{
+			_flags &= ~ACTIVE;
+		}
 	}
 	bool CharacterComponent::IsActive() const
 	{
-		return active;
+		return _flags & ACTIVE;
 	}
 
 	XMMATRIX SplineComponent::EvaluateSplineAt(float t) const

@@ -17,7 +17,7 @@ void CameraPreview::RenderPreview()
 			scale = scale_local;
 			if (!camera->render_to_texture.rendertarget_render.IsValid())
 			{
-				renderpath.setSceneUpdateEnabled(false); // we just view our scene with this that's updated by the main rernderpath
+				renderpath.setSceneUpdateEnabled(false); // we just view our scene with this that's updated by the main renderpath
 				renderpath.setOcclusionCullingEnabled(false); // occlusion culling only works for one camera
 				renderpath.PreUpdate();
 				renderpath.Update(0);
@@ -38,26 +38,42 @@ void CameraPreview::Render(const wi::Canvas& canvas, wi::graphics::CommandList c
 
 	if (renderpath.scene != nullptr && renderpath.camera != nullptr)
 	{
+		const bool gui_round_enabled = !editor->generalWnd.disableRoundCornersCheckBox.GetCheck();
 		wi::image::Params params;
 		params.pos = translation;
 		params.siz = XMFLOAT2(scale.x, scale.y);
 		params.color = shadow_color;
 		params.blendFlag = wi::enums::BLENDMODE_ALPHA;
-		params.enableCornerRounding();
-		params.corners_rounding[0].radius = 10;
-		params.corners_rounding[1].radius = 10;
-		params.corners_rounding[2].radius = 10;
-		params.corners_rounding[3].radius = 10;
+		if (gui_round_enabled)
+		{
+			params.enableCornerRounding();
+			params.corners_rounding[0].radius = 10;
+			params.corners_rounding[1].radius = 10;
+			params.corners_rounding[2].radius = 10;
+			params.corners_rounding[3].radius = 10;
+		}
+		else
+		{
+			params.disableCornerRounding();
+		}
 		wi::image::Draw(nullptr, params, cmd);
 
 		params.pos.x += 4;
 		params.pos.y += 4;
 		params.siz.x -= 8;
 		params.siz.y -= 8;
-		params.corners_rounding[0].radius = 8;
-		params.corners_rounding[1].radius = 8;
-		params.corners_rounding[2].radius = 8;
-		params.corners_rounding[3].radius = 8;
+		if (gui_round_enabled)
+		{
+			params.enableCornerRounding();
+			params.corners_rounding[0].radius = 8;
+			params.corners_rounding[1].radius = 8;
+			params.corners_rounding[2].radius = 8;
+			params.corners_rounding[3].radius = 8;
+		}
+		else
+		{
+			params.disableCornerRounding();
+		}
 		params.color = wi::Color::White();
 		params.blendFlag = wi::enums::BLENDMODE_OPAQUE;
 		if (renderpath.camera->render_to_texture.rendertarget_render.IsValid())
@@ -77,6 +93,7 @@ void CameraPreview::Render(const wi::Canvas& canvas, wi::graphics::CommandList c
 void CameraComponentWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
+	preview.editor = _editor;
 	wi::gui::Window::Create(ICON_CAMERA " Camera", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE | wi::gui::Window::WindowControls::FIT_ALL_WIDGETS_VERTICAL);
 	editor->GetCurrentEditorScene().camera_transform.MatrixTransform(editor->GetCurrentEditorScene().camera.GetInvView());
 	editor->GetCurrentEditorScene().camera_transform.UpdateTransform();

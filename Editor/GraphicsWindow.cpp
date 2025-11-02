@@ -871,6 +871,21 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&lightShaftsStrengthStrengthSlider);
 
+	lightShaftsFadeSpeedSlider.Create(0.1f, 10.0f, 3.0f, 1000, "Fade Speed: ");
+	lightShaftsFadeSpeedSlider.SetTooltip("Set light shaft fade speed. Higher values result in faster fading.");
+	lightShaftsFadeSpeedSlider.SetSize(XMFLOAT2(mod_wid, hei));
+	lightShaftsFadeSpeedSlider.SetPos(XMFLOAT2(x + 100, y += step));
+	if (editor->main->config.GetSection("graphics").Has("lightshafts_fade_speed"))
+	{
+		editor->renderPath->setLightShaftsFadeSpeed(editor->main->config.GetSection("graphics").GetFloat("lightshafts_fade_speed"));
+	}
+	lightShaftsFadeSpeedSlider.OnSlide([=](wi::gui::EventArgs args) {
+		editor->renderPath->setLightShaftsFadeSpeed(args.fValue);
+		editor->main->config.GetSection("graphics").Set("lightshafts_fade_speed", args.fValue);
+		editor->main->config.Commit();
+		});
+	AddWidget(&lightShaftsFadeSpeedSlider);
+
 	capsuleshadowCheckbox.Create("Capsule Shadows: ");
 	capsuleshadowCheckbox.SetTooltip("Enable ambient occlusion capsule shadows.");
 	capsuleshadowCheckbox.SetSize(XMFLOAT2(hei, hei));
@@ -1925,6 +1940,7 @@ void GraphicsWindow::ResizeLayout()
 	layout.add_right(lensFlareCheckBox);
 	layout.add_right(lightShaftsStrengthStrengthSlider);
 	lightShaftsCheckBox.SetPos(XMFLOAT2(lightShaftsStrengthStrengthSlider.GetPos().x - lightShaftsCheckBox.GetSize().x - 80, lightShaftsStrengthStrengthSlider.GetPos().y));
+	layout.add_right(lightShaftsFadeSpeedSlider);
 	layout.add_right(capsuleshadowAngleSlider);
 	layout.add_right(capsuleshadowFadeSlider);
 	capsuleshadowCheckbox.SetPos(XMFLOAT2(capsuleshadowAngleSlider.GetPos().x - capsuleshadowCheckbox.GetSize().x - 80, capsuleshadowAngleSlider.GetPos().y));

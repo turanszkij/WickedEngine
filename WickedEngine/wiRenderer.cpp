@@ -2642,6 +2642,13 @@ void SetUpStates()
 	samplerDesc.max_anisotropy = 16;
 	device->CreateSampler(&samplerDesc, &samplers[SAMPLER_OBJECTSHADER]);
 
+	samplerDesc.filter = Filter::ANISOTROPIC;
+	samplerDesc.address_u = TextureAddressMode::CLAMP;
+	samplerDesc.address_v = TextureAddressMode::CLAMP;
+	samplerDesc.address_w = TextureAddressMode::CLAMP;
+	samplerDesc.max_anisotropy = 16;
+	device->CreateSampler(&samplerDesc, &samplers[SAMPLER_OBJECTSHADER_CLAMP]);
+
 	samplerDesc.filter = Filter::COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
 	samplerDesc.address_u = TextureAddressMode::CLAMP;
 	samplerDesc.address_v = TextureAddressMode::CLAMP;
@@ -2816,6 +2823,12 @@ void ModifyObjectSampler(const SamplerDesc& desc)
 	if (initialized.load())
 	{
 		device->CreateSampler(&desc, &samplers[SAMPLER_OBJECTSHADER]);
+
+		SamplerDesc desc2 = desc;
+		desc2.address_u = TextureAddressMode::CLAMP;
+		desc2.address_v = TextureAddressMode::CLAMP;
+		desc2.address_w = TextureAddressMode::CLAMP;
+		device->CreateSampler(&desc, &samplers[SAMPLER_OBJECTSHADER_CLAMP]);
 	}
 }
 
@@ -2955,8 +2968,10 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 		else
 		{
 			// Compute cascade bounds in light-view-space from the main frustum corners:
-			const float split_near = cascade == 0 ? 0 : light.cascade_distances[cascade - 1 - dedicated_shadow_count] / farPlane;
-			const float split_far = light.cascade_distances[cascade - dedicated_shadow_count] / farPlane;
+			const int near_index = cascade - 1 - (int)dedicated_shadow_count;
+			const int far_index = cascade - (int)dedicated_shadow_count;
+			const float split_near = cascade == dedicated_shadow_count ? 0 : light.cascade_distances[near_index] / farPlane;
+			const float split_far = light.cascade_distances[far_index] / farPlane;
 			const XMVECTOR corners[] =
 			{
 				XMVector3Transform(XMVectorLerp(frustum_corners[0], frustum_corners[1], split_near), lightView),
@@ -3320,7 +3335,7 @@ void RenderMeshes(
 
 			// Note: the mesh.generalBuffer can be either a standalone allocated buffer, or a suballocated one (to reduce index buffer switching)
 			const GPUBuffer* ib = mesh.generalBufferOffsetAllocation.IsValid() ? &mesh.generalBufferOffsetAllocationAlias : &mesh.generalBuffer;
-			const IndexBufferFormat ibformat = provokingIBRequired ? mesh.GetPrimitiveIndexFormat() : mesh.GetIndexFormat();
+			const IndexBufferFormat ibformat = provokingIBRequired ? mesh.GetProvokingIndexFormat() : mesh.GetIndexFormat();
 			const void* ibinternal = ib->internal_state.get();
 
 			if (!meshShaderPSO && (prev_ib_internal != ibinternal || prev_ibformat != ibformat))
@@ -3345,9 +3360,13 @@ void RenderMeshes(
 			push.materialIndex = subset.materialIndex;
 			push.instances = instanceBufferDescriptorIndex;
 			push.instance_offset = (uint)instancedBatch.dataOffset;
+			assert(material.cached_wrapSampler >= 0 && material.cached_wrapSampler < 256);
+			assert(material.cached_clampSampler >= 0 && material.cached_clampSampler < 256);
+			push.wrapSamplerIndex = material.cached_wrapSampler;
+			push.clampSamplerIndex = material.cached_clampSampler;
 
 			const MeshComponent::BufferView& ibv = provokingIBRequired ? mesh.ib_provoke : mesh.ib;
-			const size_t ib_stride = provokingIBRequired ? mesh.GetPrimitiveIndexStride() : mesh.GetIndexStride();
+			const size_t ib_stride = provokingIBRequired ? mesh.GetProvokingIndexStride() : mesh.GetIndexStride();
 
 			uint32_t indexOffset = 0;
 			if (mesh.generalBufferOffsetAllocation.IsValid())
@@ -5079,7 +5098,7 @@ void UpdateRenderData(
 		device->CopyBuffer(
 			&vis.scene->instanceBuffer,
 			0,
-			&vis.scene->instanceUploadBuffer[device->GetBufferIndex()],
+			&vis.scene->instanceUploadBuffer[vis.scene->cpu_gpu_mapped_resource_index],
 			0,
 			vis.scene->instanceArraySize * sizeof(ShaderMeshInstance),
 			cmd
@@ -5092,7 +5111,7 @@ void UpdateRenderData(
 		device->CopyBuffer(
 			&vis.scene->geometryBuffer,
 			0,
-			&vis.scene->geometryUploadBuffer[device->GetBufferIndex()],
+			&vis.scene->geometryUploadBuffer[vis.scene->cpu_gpu_mapped_resource_index],
 			0,
 			vis.scene->geometryArraySize * sizeof(ShaderGeometry),
 			cmd
@@ -5105,7 +5124,7 @@ void UpdateRenderData(
 		device->CopyBuffer(
 			&vis.scene->materialBuffer,
 			0,
-			&vis.scene->materialUploadBuffer[device->GetBufferIndex()],
+			&vis.scene->materialUploadBuffer[vis.scene->cpu_gpu_mapped_resource_index],
 			0,
 			vis.scene->materialArraySize * sizeof(ShaderMaterial),
 			cmd
@@ -5118,7 +5137,7 @@ void UpdateRenderData(
 		device->CopyBuffer(
 			&vis.scene->skinningBuffer,
 			0,
-			&vis.scene->skinningUploadBuffer[device->GetBufferIndex()],
+			&vis.scene->skinningUploadBuffer[vis.scene->cpu_gpu_mapped_resource_index],
 			0,
 			vis.scene->skinningDataSize,
 			cmd
@@ -5191,10 +5210,10 @@ void UpdateRenderData(
 		{
 			descriptor_skinningbuffer = device->GetDescriptorIndex(&vis.scene->skinningBuffer, SubresourceType::SRV);
 		}
-		else if (vis.scene->skinningUploadBuffer[device->GetBufferIndex()].IsValid())
+		else if (vis.scene->skinningUploadBuffer[vis.scene->cpu_gpu_mapped_resource_index].IsValid())
 		{
 			// In this case we use the upload buffer directly, this will be the case with UMA GPU:
-			descriptor_skinningbuffer = device->GetDescriptorIndex(&vis.scene->skinningUploadBuffer[device->GetBufferIndex()], SubresourceType::SRV);
+			descriptor_skinningbuffer = device->GetDescriptorIndex(&vis.scene->skinningUploadBuffer[vis.scene->cpu_gpu_mapped_resource_index], SubresourceType::SRV);
 		}
 		device->BindComputeShader(&shaders[CSTYPE_SKINNING], cmd);
 		for (size_t i = 0; i < vis.scene->meshes.GetCount(); ++i)
@@ -5286,12 +5305,15 @@ void UpdateRenderData(
 			{
 				Entity entity = vis.scene->hairs.GetEntity(hairIndex);
 				size_t materialIndex = vis.scene->materials.GetIndex(entity);
-				const MaterialComponent& material = vis.scene->materials[materialIndex];
-				auto& hair_update = hair_updates.emplace_back();
-				hair_update.hair = &hair;
-				hair_update.instanceIndex = (uint32_t)vis.scene->objects.GetCount() + hairIndex;
-				hair_update.mesh = mesh;
-				hair_update.material = &material;
+				if (materialIndex != INVALID_INDEX)
+				{
+					const MaterialComponent& material = vis.scene->materials[materialIndex];
+					auto& hair_update = hair_updates.emplace_back();
+					hair_update.hair = &hair;
+					hair_update.instanceIndex = (uint32_t)vis.scene->objects.GetCount() + hairIndex;
+					hair_update.mesh = mesh;
+					hair_update.material = &material;
+				}
 			}
 		}
 		HairParticleSystem::UpdateGPU(hair_updates.data(), (uint32_t)hair_updates.size(), cmd);
@@ -5584,7 +5606,7 @@ void TextureStreamingReadbackCopy(
 	{
 		device->Barrier(GPUBarrier::Buffer(&scene.textureStreamingFeedbackBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::COPY_SRC), cmd);
 		device->CopyResource(
-			&scene.textureStreamingFeedbackBuffer_readback[device->GetBufferIndex()],
+			&scene.textureStreamingFeedbackBuffer_readback[scene.cpu_gpu_mapped_resource_index],
 			&scene.textureStreamingFeedbackBuffer,
 			cmd
 		);
@@ -8448,6 +8470,8 @@ void DrawDebugWorld(
 			push.materialIndex = subset.materialIndex;
 			push.instances = device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV);
 			push.instance_offset = (uint)mem.offset;
+			push.wrapSamplerIndex = device->GetDescriptorIndex(wi::renderer::GetSampler(wi::enums::SAMPLER_OBJECTSHADER));
+			push.clampSamplerIndex = device->GetDescriptorIndex(wi::renderer::GetSampler(wi::enums::SAMPLER_OBJECTSHADER_CLAMP));
 			device->PushConstants(&push, sizeof(push), cmd);
 
 			device->DrawIndexedInstanced(subset.indexCount, 1, subset.indexOffset, 0, 0, cmd);
@@ -9618,6 +9642,8 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 				push.materialIndex = subset.materialIndex;
 				push.instances = -1;
 				push.instance_offset = 0;
+				push.wrapSamplerIndex = device->GetDescriptorIndex(wi::renderer::GetSampler(wi::enums::SAMPLER_OBJECTSHADER));
+				push.clampSamplerIndex = device->GetDescriptorIndex(wi::renderer::GetSampler(wi::enums::SAMPLER_OBJECTSHADER_CLAMP));
 				device->PushConstants(&push, sizeof(push), cmd);
 
 				device->DrawIndexedInstanced(subset.indexCount, 1, subset.indexOffset, 0, 0, cmd);

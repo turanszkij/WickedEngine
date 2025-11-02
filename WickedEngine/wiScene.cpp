@@ -33,6 +33,8 @@ namespace wi::scene
 
 	void Scene::Update(float dt)
 	{
+		GraphicsDevice* device = wi::graphics::GetDevice();
+		cpu_gpu_mapped_resource_index = GetDevice()->GetBufferIndex(); // this is now saved so that the renderer knows the last resource index that the scene was updated with
 		this->dt = dt;
 		time += dt;
 
@@ -70,8 +72,6 @@ namespace wi::scene
 
 		StartBuildTopDownHierarchy();
 
-		GraphicsDevice* device = wi::graphics::GetDevice();
-
 		instanceArraySize = objects.GetCount() + hairs.GetCount() + emitters.GetCount();
 		if (impostors.GetCount() > 0)
 		{
@@ -108,7 +108,7 @@ namespace wi::scene
 				device->SetName(&instanceUploadBuffer[i], "Scene::instanceUploadBuffer");
 			}
 		}
-		instanceArrayMapped = (ShaderMeshInstance*)instanceUploadBuffer[device->GetBufferIndex()].mapped_data;
+		instanceArrayMapped = (ShaderMeshInstance*)instanceUploadBuffer[cpu_gpu_mapped_resource_index].mapped_data;
 
 		materialArraySize = materials.GetCount();
 		if (impostors.GetCount() > 0)
@@ -146,7 +146,7 @@ namespace wi::scene
 				device->SetName(&materialUploadBuffer[i], "Scene::materialUploadBuffer");
 			}
 		}
-		materialArrayMapped = (ShaderMaterial*)materialUploadBuffer[device->GetBufferIndex()].mapped_data;
+		materialArrayMapped = (ShaderMaterial*)materialUploadBuffer[cpu_gpu_mapped_resource_index].mapped_data;
 
 		if (textureStreamingFeedbackBuffer.desc.size < materialArraySize * sizeof(uint32_t))
 		{
@@ -168,7 +168,7 @@ namespace wi::scene
 				device->SetName(&textureStreamingFeedbackBuffer_readback[i], "Scene::textureStreamingFeedbackBuffer_readback");
 			}
 		}
-		textureStreamingFeedbackMapped = (const uint32_t*)textureStreamingFeedbackBuffer_readback[device->GetBufferIndex()].mapped_data;
+		textureStreamingFeedbackMapped = (const uint32_t*)textureStreamingFeedbackBuffer_readback[cpu_gpu_mapped_resource_index].mapped_data;
 
 		// Occlusion culling read:
 		if(wi::renderer::GetOcclusionCullingEnabled() && !wi::renderer::GetFreezeCullingCameraEnabled())
@@ -204,7 +204,7 @@ namespace wi::scene
 			}
 
 			// Advance to next query result buffer to use (this will be the oldest one that was written)
-			queryheap_idx = device->GetBufferIndex();
+			queryheap_idx = cpu_gpu_mapped_resource_index;
 
 			// Clear query allocation state:
 			queryAllocator.store(0);
@@ -283,7 +283,7 @@ namespace wi::scene
 					device->SetName(&TLAS_instancesUpload[i], "Scene::TLAS_instancesUpload");
 				}
 			}
-			TLAS_instancesMapped = TLAS_instancesUpload[device->GetBufferIndex()].mapped_data;
+			TLAS_instancesMapped = TLAS_instancesUpload[cpu_gpu_mapped_resource_index].mapped_data;
 
 			wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
 				// Must not keep inactive TLAS instances, so zero them out for safety:
@@ -330,7 +330,7 @@ namespace wi::scene
 				device->SetName(&geometryUploadBuffer[i], "Scene::geometryUploadBuffer");
 			}
 		}
-		geometryArrayMapped = (ShaderGeometry*)geometryUploadBuffer[device->GetBufferIndex()].mapped_data;
+		geometryArrayMapped = (ShaderGeometry*)geometryUploadBuffer[cpu_gpu_mapped_resource_index].mapped_data;
 
 		// Skinning data size is ready at this point:
 		skinningDataSize = skinningAllocator.load();
@@ -359,7 +359,7 @@ namespace wi::scene
 				device->SetName(&skinningUploadBuffer[i], "Scene::skinningUploadBuffer");
 			}
 		}
-		skinningDataMapped = skinningUploadBuffer[device->GetBufferIndex()].mapped_data;
+		skinningDataMapped = skinningUploadBuffer[cpu_gpu_mapped_resource_index].mapped_data;
 
 		RunExpressionUpdateSystem(ctx);
 
@@ -826,9 +826,9 @@ namespace wi::scene
 		// Shader scene resources:
 		if (device->CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
 		{
-			shaderscene.instancebuffer = device->GetDescriptorIndex(&instanceUploadBuffer[device->GetBufferIndex()], SubresourceType::SRV);
-			shaderscene.geometrybuffer = device->GetDescriptorIndex(&geometryUploadBuffer[device->GetBufferIndex()], SubresourceType::SRV);
-			shaderscene.materialbuffer = device->GetDescriptorIndex(&materialUploadBuffer[device->GetBufferIndex()], SubresourceType::SRV);
+			shaderscene.instancebuffer = device->GetDescriptorIndex(&instanceUploadBuffer[cpu_gpu_mapped_resource_index], SubresourceType::SRV);
+			shaderscene.geometrybuffer = device->GetDescriptorIndex(&geometryUploadBuffer[cpu_gpu_mapped_resource_index], SubresourceType::SRV);
+			shaderscene.materialbuffer = device->GetDescriptorIndex(&materialUploadBuffer[cpu_gpu_mapped_resource_index], SubresourceType::SRV);
 		}
 		else
 		{
@@ -1028,12 +1028,27 @@ namespace wi::scene
 			sizeof(ColliderComponent) * collider_count_cpu +
 			sizeof(ColliderComponent) * collider_count_gpu
 		;
-		collider_deinterleaved_data.reserve(size);
-		ASAN_UNPOISON_MEMORY_REGION(collider_deinterleaved_data.data(), size);
-		aabb_colliders_cpu = (wi::primitive::AABB*)collider_deinterleaved_data.data();
-		aabb_colliders_gpu = aabb_colliders_cpu + collider_count_cpu;
-		colliders_cpu = (ColliderComponent*)(aabb_colliders_gpu + collider_count_gpu);
+		// we're going to store AABB and colliders in one big array, for
+		// this to work with their alignment, ColliderComponents needs
+		// to be allocated first at a 32-byte aligned address, then
+		// AABB, as the latter have a size multiple of 16, so if
+		// collider_count_cpu and collider_count_gpu are not both odd or even,
+		// we would end up at a multiple of 16.
+
+		// First, we need to make sure our current assumptions are correct
+		static_assert(sizeof(wi::primitive::AABB) % 16 == 0);
+		static_assert(sizeof(ColliderComponent) % 32 == 0);
+		static_assert(sizeof(void*) == sizeof(uint64_t));
+
+		// we need to reserve 31 additional bytes for eventual padding, we don't know
+		// the actual address until after we reserved the memory
+		collider_deinterleaved_data.reserve(size + 31);
+		ASAN_UNPOISON_MEMORY_REGION(collider_deinterleaved_data.data(), size + 31);
+		uint64_t padding_needed = (32 - (uint64_t)collider_deinterleaved_data.data() % 32) % 32;
+		colliders_cpu = reinterpret_cast<ColliderComponent*>(collider_deinterleaved_data.data() + padding_needed);
 		colliders_gpu = colliders_cpu + collider_count_cpu;
+		aabb_colliders_cpu = reinterpret_cast<wi::primitive::AABB*>(colliders_gpu + collider_count_gpu);
+		aabb_colliders_gpu = aabb_colliders_cpu + collider_count_cpu;
 
 		for (size_t i = 0; i < colliders.GetCount(); ++i)
 		{
@@ -3324,7 +3339,7 @@ namespace wi::scene
 			Entity entity = inverse_kinematics.GetEntity(args.jobIndex);
 			size_t transform_index = transforms.GetIndex(entity);
 			const HierarchyComponent* hier = hierarchy.GetComponent(entity);
-			if (transform_index == ~0ull || hier == nullptr)
+			if (transform_index == INVALID_INDEX || hier == nullptr)
 				return;
 			TransformComponent& transform = transforms_temp[transform_index];
 
@@ -3336,7 +3351,7 @@ namespace wi::scene
 			else
 			{
 				size_t target_index = transforms.GetIndex(ik.target);
-				if (target_index == ~0ull)
+				if (target_index == INVALID_INDEX)
 					return;
 				TransformComponent& target = transforms_temp[target_index];
 				target_pos = target.GetPositionV();
@@ -3366,7 +3381,7 @@ namespace wi::scene
 
 					// Compute required parent rotation that moves ik transform closer to target transform:
 					size_t parent_index = transforms.GetIndex(parent_entity);
-					if (parent_index == ~0ull)
+					if (parent_index == INVALID_INDEX)
 						continue;
 					TransformComponent& parent_transform = transforms_temp[parent_index];
 					const XMVECTOR parent_pos = parent_transform.GetPositionV();
@@ -3463,7 +3478,7 @@ namespace wi::scene
 					{
 						Entity parent_of_parent_entity = hier_parent->parentID;
 						size_t parent_of_parent_index = transforms.GetIndex(parent_of_parent_entity);
-						if (parent_of_parent_index != ~0ull)
+						if (parent_of_parent_index != INVALID_INDEX)
 						{
 							const TransformComponent* transform_parent_of_parent = &transforms_temp[parent_of_parent_index];
 							XMMATRIX parent_of_parent_inverse = XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform_parent_of_parent->world));
@@ -3507,7 +3522,7 @@ namespace wi::scene
 			if (headBone == INVALID_ENTITY)
 				return;
 			const size_t headBoneIndex = transforms.GetIndex(headBone);
-			if (headBoneIndex == ~0ull)
+			if (headBoneIndex == INVALID_INDEX)
 				return;
 			const TransformComponent& head_transform = transforms_temp[headBoneIndex];
 
@@ -3543,7 +3558,7 @@ namespace wi::scene
 				if (bone == INVALID_ENTITY)
 					continue;
 				const size_t boneIndex = transforms.GetIndex(bone);
-				if (boneIndex == ~0ull)
+				if (boneIndex == INVALID_INDEX)
 					continue;
 
 				if (boneIndex < transforms_temp.size())
@@ -3555,8 +3570,8 @@ namespace wi::scene
 					if (humanoid.IsLookAtEnabled())
 					{
 						const HierarchyComponent* hier = hierarchy.GetComponent(bone);
-						size_t parent_index = hier == nullptr ? ~0ull : transforms.GetIndex(hier->parentID);
-						if (parent_index != ~0ull)
+						size_t parent_index = hier == nullptr ? INVALID_INDEX : transforms.GetIndex(hier->parentID);
+						if (parent_index != INVALID_INDEX)
 						{
 							const TransformComponent& parent_transform = transforms_temp[parent_index];
 							transform.UpdateTransform_Parented(parent_transform);
@@ -3627,11 +3642,11 @@ namespace wi::scene
 				recompute_hierarchy.store(true);
 				size_t left_arm = transforms.GetIndex(humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftUpperArm]);
 				size_t right_arm = transforms.GetIndex(humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightUpperArm]);
-				if (left_arm != ~0ull)
+				if (left_arm != INVALID_INDEX)
 				{
 					transforms_temp[left_arm].Rotate(XMQuaternionRotationNormal(FORWARD, -humanoid.arm_spacing * XM_PIDIV4));
 				}
-				if (right_arm != ~0ull)
+				if (right_arm != INVALID_INDEX)
 				{
 					transforms_temp[right_arm].Rotate(XMQuaternionRotationNormal(FORWARD, humanoid.arm_spacing * XM_PIDIV4));
 				}
@@ -3641,11 +3656,11 @@ namespace wi::scene
 				recompute_hierarchy.store(true);
 				size_t left_leg = transforms.GetIndex(humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::LeftUpperLeg]);
 				size_t right_leg = transforms.GetIndex(humanoid.bones[(size_t)HumanoidComponent::HumanoidBone::RightUpperLeg]);
-				if (left_leg != ~0ull)
+				if (left_leg != INVALID_INDEX)
 				{
 					transforms_temp[left_leg].Rotate(XMQuaternionRotationNormal(FORWARD, -humanoid.leg_spacing * XM_PIDIV4));
 				}
-				if (right_leg != ~0ull)
+				if (right_leg != INVALID_INDEX)
 				{
 					transforms_temp[right_leg].Rotate(XMQuaternionRotationNormal(FORWARD, humanoid.leg_spacing * XM_PIDIV4));
 				}
@@ -3661,7 +3676,7 @@ namespace wi::scene
 				HierarchyComponent& hier = hierarchy[args.jobIndex];
 				Entity entity = hierarchy.GetEntity(args.jobIndex);
 				size_t child_index = transforms.GetIndex(entity);
-				if (child_index == ~0ull)
+				if (child_index == INVALID_INDEX)
 					return;
 
 				TransformComponent& transform_child = transforms_temp[child_index];
@@ -3671,7 +3686,7 @@ namespace wi::scene
 				while (parentID != INVALID_ENTITY)
 				{
 					size_t parent_index = transforms.GetIndex(parentID);
-					if (parent_index == ~0ull)
+					if (parent_index == INVALID_INDEX)
 						break;
 					TransformComponent& transform_parent = transforms_temp[parent_index];
 					worldmatrix *= transform_parent.GetLocalMatrix();
@@ -3704,12 +3719,16 @@ namespace wi::scene
 			sizeof(ColliderComponent) * collider_count_cpu +
 			sizeof(ColliderComponent) * collider_count_gpu
 		;
-		collider_deinterleaved_data.reserve(size);
-		ASAN_UNPOISON_MEMORY_REGION(collider_deinterleaved_data.data(), size);
-		aabb_colliders_cpu = (wi::primitive::AABB*)collider_deinterleaved_data.data();
-		aabb_colliders_gpu = aabb_colliders_cpu + collider_count_cpu;
-		colliders_cpu = (ColliderComponent*)(aabb_colliders_gpu + collider_count_gpu);
+
+		// see comments further up the file on why we need this
+		collider_deinterleaved_data.reserve(size + 31);
+		ASAN_UNPOISON_MEMORY_REGION(collider_deinterleaved_data.data(), size + 31);
+		uint64_t padding_needed = (32 - (uint64_t)collider_deinterleaved_data.data() % 32) % 32;
+
+		colliders_cpu = reinterpret_cast<ColliderComponent*>(collider_deinterleaved_data.data() + padding_needed);
 		colliders_gpu = colliders_cpu + collider_count_cpu;
+		aabb_colliders_cpu = reinterpret_cast<wi::primitive::AABB*>(colliders_gpu + collider_count_gpu);
+		aabb_colliders_gpu = aabb_colliders_cpu + collider_count_cpu;
 
 		wi::jobsystem::Dispatch(ctx, (uint32_t)colliders.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
 
@@ -3924,8 +3943,7 @@ namespace wi::scene
 
 			if (geometryArrayMapped != nullptr)
 			{
-				ShaderGeometry geometry;
-				geometry.init();
+				ShaderGeometry geometry = shader_geometry_null;
 				geometry.ib = mesh.ib.descriptor_srv;
 				geometry.ib_reorder = mesh.ib_reorder.descriptor_srv;
 				if (mesh.so_pos.IsValid())
@@ -4125,6 +4143,17 @@ namespace wi::scene
 				material.SetDirty(false);
 			}
 
+			GraphicsDevice* device = GetDevice();
+			if (material.sampler_descriptor < 0)
+			{
+				material.cached_wrapSampler = device->GetDescriptorIndex(wi::renderer::GetSampler(wi::enums::SAMPLER_OBJECTSHADER));
+			}
+			else
+			{
+				material.cached_wrapSampler = material.sampler_descriptor;
+			}
+			material.cached_clampSampler = device->GetDescriptorIndex(wi::renderer::GetSampler(wi::enums::SAMPLER_OBJECTSHADER_CLAMP));
+
 			material.WriteShaderMaterial(materialArrayMapped + args.jobIndex);
 
 			const VideoComponent* video = videos.GetComponent(entity);
@@ -4300,8 +4329,7 @@ namespace wi::scene
 			material.shaderType_meshblend = 0xFFFF;
 			std::memcpy(materialArrayMapped + impostorMaterialOffset, &material, sizeof(material));
 
-			ShaderGeometry geometry;
-			geometry.init();
+			ShaderGeometry geometry = shader_geometry_null;
 			geometry.meshletCount = triangle_count_to_meshlet_count(uint32_t(objects.GetCount()) * 2);
 			geometry.meshletOffset = 0; // local meshlet offset
 			geometry.ib = impostor_ib_format == Format::R32_UINT ? impostor_ib32.descriptor_srv : impostor_ib16.descriptor_srv;
@@ -4310,8 +4338,7 @@ namespace wi::scene
 			geometry.materialIndex = impostorMaterialOffset;
 			std::memcpy(geometryArrayMapped + impostorGeometryOffset, &geometry, sizeof(geometry));
 
-			ShaderMeshInstance inst;
-			inst.init();
+			ShaderMeshInstance inst = shader_mesh_instance_null;
 			inst.geometryOffset = impostorGeometryOffset;
 			inst.geometryCount = 1;
 			inst.baseGeometryOffset = inst.geometryOffset;
@@ -4516,8 +4543,7 @@ namespace wi::scene
 				//XMStoreFloat4x4(&transformNormal, worldMatrixInverseTranspose);
 
 				// Create GPU instance data:
-				ShaderMeshInstance inst;
-				inst.init();
+				ShaderMeshInstance inst = shader_mesh_instance_null;
 				XMFLOAT4X4 worldMatrixPrev = matrix_objects[args.jobIndex];
 				matrix_objects_prev[args.jobIndex] = worldMatrixPrev;
 				XMStoreFloat4x4(matrix_objects.data() + args.jobIndex, W);
@@ -4586,6 +4612,10 @@ namespace wi::scene
 					if (object.IsNotVisibleInReflections())
 					{
 						instance.instance_mask &= ~wi::renderer::raytracing_inclusion_mask_reflection;
+					}
+					if (object.GetFilterMask() & FILTER_WATER)
+					{
+						instance.instance_mask &= ~wi::renderer::raytracing_inclusion_mask_shadow;
 					}
 					instance.bottom_level = &mesh.BLASes[object.lod];
 					instance.instance_contribution_to_hit_group_index = 0;
@@ -4989,8 +5019,7 @@ namespace wi::scene
 			uint32_t meshletCount = triangle_count_to_meshlet_count(triangleCount);
 			uint32_t meshletOffset = meshletAllocator.fetch_add(meshletCount);
 
-			ShaderGeometry geometry;
-			geometry.init();
+			ShaderGeometry geometry = shader_geometry_null;
 			geometry.indexOffset = 0;
 			geometry.indexCount = indexCount;
 			geometry.materialIndex = (uint)materials.GetIndex(entity);
@@ -5110,8 +5139,7 @@ namespace wi::scene
 
 			GraphicsDevice* device = wi::graphics::GetDevice();
 
-			ShaderGeometry geometry;
-			geometry.init();
+			ShaderGeometry geometry = shader_geometry_null;
 			geometry.indexOffset = 0;
 			geometry.indexCount = emitter.GetMaxParticleCount() * 6;
 			geometry.materialIndex = (uint)materials.GetIndex(entity);
@@ -5288,8 +5316,7 @@ namespace wi::scene
 			rainMaterial.WriteShaderMaterial(&material);
 			std::memcpy(materialArrayMapped + rainMaterialOffset, &material, sizeof(material));
 
-			ShaderGeometry geometry;
-			geometry.init();
+			ShaderGeometry geometry = shader_geometry_null;
 			geometry.indexOffset = 0;
 			geometry.indexCount = rainEmitter.GetMaxParticleCount() * 6;
 			geometry.materialIndex = rainMaterialOffset;

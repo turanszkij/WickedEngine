@@ -24,7 +24,7 @@ namespace wi::input::sdlinput
 
     wi::vector<SDL_Event> events;
 
-    int to_wicked(const SDL_Scancode &key, const SDL_Keycode &keyk);
+    int to_wicked(const SDL_Scancode &scan, const SDL_Keycode &sym);
     void controller_to_wicked(uint32_t *current, Uint8 button, bool pressed);
     void controller_map_rebuild();
 
@@ -234,26 +234,23 @@ namespace wi::input::sdlinput
         events.clear();
     }
 
-    int to_wicked(const SDL_Scancode &key, const SDL_Keycode &keyk) {
+    int to_wicked(const SDL_Scancode &scan, const SDL_Keycode &sym) {
 
         // Scancode Conversion Segment
 
-        if(key >= 4 && key <= 29){ // A to Z
-            return (key - 4) + CHARACTER_RANGE_START;
+        if(sym >= SDLK_a && sym <= SDLK_z){ // A to Z
+            return (sym - SDLK_a) + CHARACTER_RANGE_START;
         }
-        if(key >= 30 && key <= 38){ // 1 to 9
-            return (key - 29) + DIGIT_RANGE_START;
+        if(sym >= SDLK_0 && sym <= SDLK_9){ // 1 to 9
+            return (sym - SDLK_0) + DIGIT_RANGE_START;
         }
-        if (key == 39) { // 0
-            return DIGIT_RANGE_START;
+        if(scan >= 58 && scan <= 69){ // F1 to F12
+			return (scan - 58) + KEYBOARD_BUTTON_F1;
         }
-        if(key >= 58 && key <= 69){ // F1 to F12
-            return (key - 58) + KEYBOARD_BUTTON_F1;
+        if(scan >= 79 && scan <= 82){ // Keyboard directional buttons
+            return (82 - scan) + KEYBOARD_BUTTON_UP;
         }
-        if(key >= 79 && key <= 82){ // Keyboard directional buttons
-            return (82 - key) + KEYBOARD_BUTTON_UP;
-        }
-        switch(key){ // Individual scancode key conversion
+        switch(scan){ // Individual scancode key conversion
             case SDL_SCANCODE_SPACE:
                 return wi::input::KEYBOARD_BUTTON_SPACE;
             case SDL_SCANCODE_LSHIFT:
@@ -314,7 +311,7 @@ namespace wi::input::sdlinput
                 return wi::input::KEYBOARD_BUTTON_INSERT;
             case SDL_SCANCODE_TAB:
                 return wi::input::KEYBOARD_BUTTON_TAB;
-            case SDL_SCANCODE_GRAVE: 
+            case SDL_SCANCODE_GRAVE:
                 return wi::input::KEYBOARD_BUTTON_TILDE;
             case SDL_SCANCODE_LALT:
                 return wi::input::KEYBOARD_BUTTON_ALT;
@@ -327,8 +324,8 @@ namespace wi::input::sdlinput
 
         // Keycode Conversion Segment
 
-        if(keyk >= 91 && keyk <= 126){
-            return keyk;
+        if(sym >= 91 && sym <= 126){
+            return sym;
         }
 
         return -1;

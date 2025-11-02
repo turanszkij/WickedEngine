@@ -9,9 +9,10 @@ class ProfilerWidget : public wi::gui::Widget
 class ProfilerWindow : public wi::gui::Window
 {
 public:
-	void Create();
+	void Create(EditorComponent* editor);
 
 	ProfilerWidget profilerWidget;
+	EditorComponent* editor = nullptr;
 
 	void Update(const wi::Canvas& canvas, float dt) override;
 	void ResizeLayout() override;

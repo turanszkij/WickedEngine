@@ -315,6 +315,18 @@ You can specify command line arguments (without any prefix) to switch between re
 	<td>Prefer integrated GPU selection for graphics. By default, dedicated GPU selection will be preferred.</td>
   </tr>
   <tr>
+	<td>amdgpu</td>
+	<td>Prefer AMD GPU selection for graphics.</td>
+  </tr>
+  <tr>
+	<td>nvidiagpu</td>
+	<td>Prefer Nvidia GPU selection for graphics.</td>
+  </tr>
+  <tr>
+	<td>intelgpu</td>
+	<td>Prefer Intel GPU selection for graphics.</td>
+  </tr>
+  <tr>
 	<td>alwaysactive</td>
 	<td>The application will not be paused when the window is in the background.</td>
   </tr>

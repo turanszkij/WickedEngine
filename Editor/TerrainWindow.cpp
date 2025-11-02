@@ -1130,7 +1130,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 				for (auto& chunk : terrain->chunks)
 				{
 					const size_t index = terrain->scene->objects.GetIndex(chunk.second.entity);
-					if (index == ~0ull)
+					if (index == INVALID_INDEX)
 						continue;
 					const wi::primitive::AABB& object_aabb = terrain->scene->aabb_objects[index];
 					aabb = wi::primitive::AABB::Merge(aabb, object_aabb);
@@ -1205,7 +1205,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 				for (auto& chunk : terrain->chunks)
 				{
 					const size_t index = terrain->scene->objects.GetIndex(chunk.second.entity);
-					if (index == ~0ull)
+					if (index == INVALID_INDEX)
 						continue;
 					const wi::primitive::AABB& object_aabb = terrain->scene->aabb_objects[index];
 					aabb = wi::primitive::AABB::Merge(aabb, object_aabb);
@@ -1359,6 +1359,11 @@ void TerrainWindow::RefreshMaterialComboBoxes()
 		comboBox.AddItem("NO MATERIAL", INVALID_ENTITY);
 		for (size_t i = 0; i < scene.materials.GetCount(); ++i)
 		{
+			if (scene.materials[i].IsInternal())
+			{
+				continue;
+			}
+
 			Entity entity = scene.materials.GetEntity(i);
 			if (scene.names.Contains(entity))
 			{

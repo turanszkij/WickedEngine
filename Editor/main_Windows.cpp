@@ -84,6 +84,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			SetForegroundWindow(hWnd);
 		}
 		break;
+		case WM_CLOSE:
+			editor.Exit();
+			break;
 		case WM_DESTROY:
 			PostQuitMessage(0);
 			break;
@@ -221,7 +224,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	editor.SetWindow(hWnd);
 
 	MSG msg = { 0 };
-	while (msg.message != WM_QUIT)
+
+	while (editor.KeepRunning())
 	{
 		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
 			TranslateMessage(&msg);

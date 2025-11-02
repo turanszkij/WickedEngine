@@ -174,7 +174,7 @@ public:
 	void RecordEntity(wi::Archive& archive, const wi::vector<wi::ecs::Entity>& entities);
 
 	void ResetHistory();
-	wi::Archive& AdvanceHistory();
+	wi::Archive& AdvanceHistory(bool scene_unchanged = false);
 	void ConsumeHistoryOperation(bool undo);
 
 	wi::vector<std::string> recentFilenames;
@@ -187,6 +187,7 @@ public:
 	void Save(const std::string& filename);
 	void SaveAs();
 	bool deleting = false;
+	bool save_in_progress = false;
 
 	wi::graphics::Texture CreateThumbnail(wi::graphics::Texture texture, uint32_t target_width, uint32_t target_height, bool mipmaps = false) const;
 	wi::graphics::Texture CreateThumbnailScreenshot() const;
@@ -209,6 +210,8 @@ public:
 		wi::scene::TransformComponent camera_target;
 		wi::vector<wi::Archive> history;
 		int historyPos = -1;
+		bool has_unsaved_changes = false;
+		bool untitled_camera_reset_once = false;
 		wi::gui::Button tabSelectButton;
 		wi::gui::Button tabCloseButton;
 	};
@@ -221,6 +224,8 @@ public:
 	void SetCurrentScene(int index);
 	void RefreshSceneList();
 	void NewScene();
+
+	bool CheckUnsavedChanges(int scene_index = -1);
 
 	void FocusCameraOnSelected();
 
@@ -248,10 +253,15 @@ class Editor : public wi::Application
 public:
 	EditorComponent renderComponent;
 	wi::config::File config;
+	bool exit_requested = false;
 
 	void Initialize() override;
 
 	void HotReload();
+
+	bool KeepRunning();
+
+	void Exit() override;
 
 	~Editor() override
 	{

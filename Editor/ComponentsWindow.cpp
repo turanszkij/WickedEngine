@@ -91,7 +91,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 		if (args.iValue < 0)
 			return;
 
-		wi::Archive& archive = editor->AdvanceHistory();
+		wi::Archive& archive = editor->AdvanceHistory(true);
 		archive << EditorComponent::HISTORYOP_SELECTION;
 		// record PREVIOUS selection state...
 		editor->RecordSelection(archive);
@@ -584,6 +584,10 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	{
 		size.x = editor->main->config.GetSection("layout").GetFloat("components.width");
 	}
+	if (editor->main->config.GetSection("layout").Has("components.height"))
+	{
+		size.y = editor->main->config.GetSection("layout").GetFloat("components.height");
+	}
 	SetSize(size);
 }
 void ComponentsWindow::UpdateData(float dt)
@@ -601,6 +605,7 @@ void ComponentsWindow::ResizeLayout()
 	const float width = GetWidgetAreaSize().x;
 	const float height = GetWidgetAreaSize().y;
 	editor->main->config.GetSection("layout").Set("components.width", GetSize().x);
+	editor->main->config.GetSection("layout").Set("components.height", GetSize().y);
 	editor->main->config.GetSection("layout").Set("entities.height", entityTree.GetSize().y);
 
 	// Entities:
@@ -1327,12 +1332,24 @@ void ComponentsWindow::PushToEntityTree(wi::ecs::Entity entity, int level)
 		}
 	}
 
+	// Collect children
+	wi::vector<Entity> children;
 	for (size_t i = 0; i < scene.hierarchy.GetCount(); ++i)
 	{
 		if (scene.hierarchy[i].parentID == entity)
 		{
-			PushToEntityTree(scene.hierarchy.GetEntity(i), level + 1);
+			children.push_back(scene.hierarchy.GetEntity(i));
 		}
+	}
+
+	// Get sorting mode from config and sort children
+	const int sortingMode = editor->main->config.GetSection("options").GetInt("entity_tree_sorting");
+	SortEntitiesByMode(children, scene, sortingMode);
+
+	// Add sorted children
+	for (Entity child : children)
+	{
+		PushToEntityTree(child, level + 1);
 	}
 }
 void ComponentsWindow::RefreshEntityTree()
@@ -1358,19 +1375,113 @@ void ComponentsWindow::RefreshEntityTree()
 
 	// Add items to level 0 that are not in hierarchy (not in hierarchy can also mean top level parent):
 	//	Note that PushToEntityTree will add children recursively, so this is all we need
+	wi::vector<Entity> topLevelEntities;
 	for (auto& x : entitytree_temp_items)
 	{
 		const HierarchyComponent* hier = scene.hierarchy.GetComponent(x);
 		if (hier == nullptr || hier->parentID == INVALID_ENTITY || entitytree_temp_items.count(hier->parentID) == 0)
 		{
-			PushToEntityTree(x, 0);
+			topLevelEntities.push_back(x);
 		}
+	}
+
+	// Get sorting mode from config and sort top-level entities
+	const int sortingMode = editor->main->config.GetSection("options").GetInt("entity_tree_sorting");
+	SortEntitiesByMode(topLevelEntities, scene, sortingMode);
+
+	// Add sorted top-level entities
+	for (const auto& x : topLevelEntities)
+	{
+		PushToEntityTree(x, 0);
 	}
 
 	entitytree_added_items.clear();
 	entitytree_opened_items.clear();
 }
-bool ComponentsWindow::CheckEntityFilter(wi::ecs::Entity entity)
+
+// Returns a priority value for an entity based on its component type.
+// Lower values = higher priority (sorted first).
+// Used when sorting entities "By type" - groups similar entity types together.
+// Priority order reflects the typical hierarchical structure:
+//   1. Organizational
+//   2. Geometry & physics
+//   3. Effects & media
+//   4. Animation & data
+//   5. Scene & logic
+int ComponentsWindow::GetEntityTypePriority(const wi::ecs::Entity entity, const wi::scene::Scene& scene)
+{
+	if (scene.layers.Contains(entity)) return 0;
+	if (scene.transforms.Contains(entity)) return 1;
+	if (scene.terrains.Contains(entity)) return 2;
+	if (scene.meshes.Contains(entity)) return 3;
+	if (scene.objects.Contains(entity)) return 4;
+	if (scene.rigidbodies.Contains(entity)) return 5;
+	if (scene.softbodies.Contains(entity)) return 6;
+	if (scene.colliders.Contains(entity)) return 7;
+	if (scene.lights.Contains(entity)) return 8;
+	if (scene.weathers.Contains(entity)) return 9;
+	if (scene.emitters.Contains(entity)) return 10;
+	if (scene.hairs.Contains(entity)) return 11;
+	if (scene.forces.Contains(entity)) return 12;
+	if (scene.sounds.Contains(entity)) return 13;
+	if (scene.videos.Contains(entity)) return 14;
+	if (scene.decals.Contains(entity)) return 15;
+	if (scene.cameras.Contains(entity)) return 16;
+	if (scene.probes.Contains(entity)) return 17;
+	if (scene.animations.Contains(entity)) return 18;
+	if (scene.armatures.Contains(entity)) return 19;
+	if (scene.humanoids.Contains(entity)) return 20;
+	if (scene.sprites.Contains(entity)) return 21;
+	if (scene.fonts.Contains(entity)) return 22;
+	if (scene.voxel_grids.Contains(entity)) return 23;
+	if (scene.materials.Contains(entity)) return 24;
+	if (scene.inverse_kinematics.Contains(entity)) return 25;
+	if (scene.constraints.Contains(entity)) return 26;
+	if (scene.springs.Contains(entity)) return 27;
+	if (scene.splines.Contains(entity)) return 28;
+	if (scene.scripts.Contains(entity)) return 29;
+	if (scene.expressions.Contains(entity)) return 30;
+	if (scene.metadatas.Contains(entity)) return 31;
+	return INT_MAX; // Entities with no specific component (sorted last)
+}
+
+std::string ComponentsWindow::GetEntityNameForSorting(const wi::ecs::Entity entity, const wi::scene::Scene& scene)
+{
+	const NameComponent* name = scene.names.GetComponent(entity);
+	if (name && !name->name.empty())
+	{
+		return wi::helper::toUpper(name->name);
+	}
+	return "[unnamed] " + std::to_string(entity);
+}
+
+void ComponentsWindow::SortEntitiesByMode(wi::vector<wi::ecs::Entity>& entities, const wi::scene::Scene& scene, const int sortingMode)
+{
+	if (sortingMode == 1) // By name
+	{
+		std::sort(entities.begin(), entities.end(), [&scene](const Entity a, const Entity b) {
+			return GetEntityNameForSorting(a, scene) < GetEntityNameForSorting(b, scene);
+		});
+	}
+	else if (sortingMode == 2) // By type
+	{
+		std::sort(entities.begin(), entities.end(), [&scene](const Entity a, const Entity b) {
+			const int priority_a = GetEntityTypePriority(a, scene);
+			const int priority_b = GetEntityTypePriority(b, scene);
+
+			if (priority_a != priority_b)
+			{
+				return priority_a < priority_b;
+			}
+
+			// Same type, sort by name
+			return GetEntityNameForSorting(a, scene) < GetEntityNameForSorting(b, scene);
+		});
+	}
+	// else sortingMode == 0 (Unsorted) - don't sort, keep original order
+}
+
+bool ComponentsWindow::CheckEntityFilter(const wi::ecs::Entity entity) const
 {
 	if (filter == Filter::All)
 		return true;

@@ -742,7 +742,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 		if (material != nullptr)
 		{
-			textureSlotButton.SetImage(material->textures[args.iValue].resource);
+			textureSlotImage.SetImage(material->textures[args.iValue].resource);
 			if (material->textures[args.iValue].resource.IsValid())
 			{
 				const Texture& texture = material->textures[args.iValue].resource.GetTexture();
@@ -764,26 +764,65 @@ void MaterialWindow::Create(EditorComponent* _editor)
 			}
 		}
 
-		textureSlotButton.SetTooltip(tooltiptext);
+		textureSlotImage.SetTooltip(tooltiptext);
 
 	});
 	textureSlotComboBox.SetSelected(0);
 	textureSlotComboBox.SetTooltip("Choose the texture slot to modify.");
 	AddWidget(&textureSlotComboBox);
 
-	textureSlotButton.Create("");
-	textureSlotButton.SetSize(XMFLOAT2(180, 180));
-	textureSlotButton.SetPos(XMFLOAT2(textureSlotComboBox.GetPosition().x + textureSlotComboBox.GetScale().x - textureSlotButton.GetScale().x, y += step));
-	textureSlotButton.sprites[wi::gui::IDLE].params.color = wi::Color::White();
-	textureSlotButton.sprites[wi::gui::FOCUS].params.color = wi::Color::Gray();
-	textureSlotButton.sprites[wi::gui::ACTIVE].params.color = wi::Color::White();
-	textureSlotButton.sprites[wi::gui::DEACTIVATING].params.color = wi::Color::Gray();
-	textureSlotButton.OnClick([this](wi::gui::EventArgs args) {
+	textureSlotLoadButton.Create("Load from file");
+	textureSlotLoadButton.SetSize(XMFLOAT2(wid, hei));
+	textureSlotLoadButton.SetPos(XMFLOAT2(x, y += step));
+	textureSlotLoadButton.SetTooltip("Load texture from file on disk");
+	textureSlotLoadButton.OnClick([this](wi::gui::EventArgs args) {
+		int slot = textureSlotComboBox.GetSelected();
+		wi::helper::FileDialogParams params;
+		params.type = wi::helper::FileDialogParams::OPEN;
+		params.description = "Texture";
+		params.extensions = wi::resourcemanager::GetSupportedImageExtensions();
+		wi::helper::FileDialog(params, [this, slot](std::string fileName) {
+			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+				MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
+				const wi::resourcemanager::Flags flags = material->GetTextureSlotResourceFlags(MaterialComponent::TEXTURESLOT(slot));
+
+				wi::Archive& archive = editor->AdvanceHistory();
+				archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+				editor->RecordEntity(archive, entity);
+
+				material->textures[slot].resource = wi::resourcemanager::Load(fileName, flags);
+				material->textures[slot].name = fileName;
+				material->SetDirty();
+				textureSlotLabel.SetText(wi::helper::GetFileNameFromPath(fileName));
+				textureSlotComboBox.SetSelected(slot);
+				textureSlotImage.SetImage(material->textures[slot].resource);
+
+				editor->RecordEntity(archive, entity);
+			});
+		});
+	});
+	AddWidget(&textureSlotLoadButton);
+
+	textureSlotSelectButton.Create("Select texture");
+	textureSlotSelectButton.SetSize(XMFLOAT2(wid, hei));
+	textureSlotSelectButton.SetPos(XMFLOAT2(x + wid / 3 + 1, y));
+	textureSlotSelectButton.SetTooltip("Select texture from current scene");
+	textureSlotSelectButton.OnClick([this](wi::gui::EventArgs args) {
+		RecreateTexturePickerButtons();
+		texturePickerWindow.SetVisible(true);
+	});
+	AddWidget(&textureSlotSelectButton);
+
+	textureSlotClearButton.Create("Clear texture");
+	textureSlotClearButton.SetSize(XMFLOAT2(wid, hei));
+	textureSlotClearButton.SetPos(XMFLOAT2(x + 2 * wid / 3 + 2, y));
+	textureSlotClearButton.SetTooltip("Clear texture from slot");
+	textureSlotClearButton.OnClick([this](wi::gui::EventArgs args) {
 		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
 		if (material == nullptr)
 			return;
 
-		int slot = textureSlotComboBox.GetSelected();
+		const int slot = textureSlotComboBox.GetSelected();
 
 		if (material->textures[slot].resource.IsValid())
 		{
@@ -795,32 +834,19 @@ void MaterialWindow::Create(EditorComponent* _editor)
 			material->textures[slot].name = "";
 			material->SetDirty();
 			textureSlotLabel.SetText("");
+			textureSlotImage.SetImage(wi::Resource());
 
 			editor->RecordEntity(archive, entity);
 		}
-		else
-		{
-			wi::helper::FileDialogParams params;
-			params.type = wi::helper::FileDialogParams::OPEN;
-			params.description = "Texture";
-			params.extensions = wi::resourcemanager::GetSupportedImageExtensions();
-			Entity materialEntity = entity;
-			wi::helper::FileDialog(params, [this, slot](std::string fileName) {
-				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-					MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
-					wi::resourcemanager::Flags flags = material->GetTextureSlotResourceFlags(MaterialComponent::TEXTURESLOT(slot));
-					material->textures[slot].resource = wi::resourcemanager::Load(fileName, flags);
-					material->textures[slot].name = fileName;
-					material->SetDirty();
-					textureSlotLabel.SetText(wi::helper::GetFileNameFromPath(fileName));
-					textureSlotComboBox.SetSelected(slot);
-				});
-			});
-		}
-		});
-	AddWidget(&textureSlotButton);
+	});
+	AddWidget(&textureSlotClearButton);
 
-	y += textureSlotButton.GetScale().y - step + 2;
+	textureSlotImage.Create("");
+	textureSlotImage.SetSize(XMFLOAT2(180, 180));
+	textureSlotImage.SetPos(XMFLOAT2(textureSlotComboBox.GetPosition().x + textureSlotComboBox.GetScale().x - textureSlotImage.GetScale().x, y += step));
+	AddWidget(&textureSlotImage);
+
+	y += textureSlotImage.GetScale().y - step + 2;
 
 	textureSlotLabel.Create("");
 	textureSlotLabel.SetPos(XMFLOAT2(x, y += step));
@@ -838,6 +864,24 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	}));
 	AddWidget(&textureSlotUvsetField);
 
+	// Create texture picker
+	const float screenW = editor->GetLogicalWidth();
+	const float screenH = editor->GetLogicalHeight();
+
+	auto wctrl = wi::gui::Window::WindowControls::ALL;
+	wctrl &= ~wi::gui::Window::WindowControls::RESIZE_BOTTOMLEFT;
+	texturePickerWindow.Create("", wctrl);
+	texturePickerWindow.SetVisible(false);
+	const float texturePickerWindowW = screenW / 3.20f;
+	const float texturePickerWindowH = screenH / 2.0f;
+	texturePickerWindow.SetSize(XMFLOAT2(texturePickerWindowW, texturePickerWindowH));
+	texturePickerWindow.SetPos(XMFLOAT2(screenW / 2.0f - texturePickerWindowW / 2.0f, screenH / 2.0f - texturePickerWindowH / 2.0f));
+
+	texturePickerWindow.OnClose([this](wi::gui::EventArgs args) {
+		texturePickerWindow.SetVisible(false);
+	});
+	editor->GetGUI().AddWidget(&texturePickerWindow);
+
 
 	SetMinimized(true);
 	SetVisible(false);
@@ -847,10 +891,10 @@ void MaterialWindow::Create(EditorComponent* _editor)
 
 void MaterialWindow::SetEntity(Entity entity)
 {
-	bool changed = this->entity != entity;
+	const bool changed = this->entity != entity;
 	this->entity = entity;
 
-	Scene& scene = editor->GetCurrentScene();
+	const Scene& scene = editor->GetCurrentScene();
 	MaterialComponent* material = scene.materials.GetComponent(entity);
 
 	if (material != nullptr)
@@ -938,11 +982,11 @@ void MaterialWindow::SetEntity(Entity entity)
 		cameraComboBox.AddItem("INVALID_ENTITY", (uint64_t)INVALID_ENTITY);
 		for (size_t i = 0; i < scene.cameras.GetCount(); ++i)
 		{
-			Entity cameraEntity = scene.cameras.GetEntity(i);
-			const NameComponent* name = scene.names.GetComponent(cameraEntity);
-			if (name != nullptr)
+			const Entity cameraEntity = scene.cameras.GetEntity(i);
+			const NameComponent* name_component = scene.names.GetComponent(cameraEntity);
+			if (name_component != nullptr)
 			{
-				cameraComboBox.AddItem(name->name, (uint64_t)cameraEntity);
+				cameraComboBox.AddItem(name_component->name, (uint64_t)cameraEntity);
 			}
 		}
 		cameraComboBox.SetSelectedByUserdataWithoutCallback((uint64_t)material->cameraSource);
@@ -1014,8 +1058,8 @@ void MaterialWindow::SetEntity(Entity entity)
 			metalnessSlider.SetEnabled(false);
 		}
 
-		int slot = textureSlotComboBox.GetSelected();
-		textureSlotButton.SetImage(material->textures[slot].resource);
+		const int slot = textureSlotComboBox.GetSelected();
+		textureSlotImage.SetImage(material->textures[slot].resource);
 		textureSlotLabel.SetText(wi::helper::GetFileNameFromPath(material->textures[slot].name));
 		textureSlotUvsetField.SetText(std::to_string(material->textures[slot].uvset));
 		if (changed)
@@ -1030,13 +1074,63 @@ void MaterialWindow::SetEntity(Entity entity)
 		colorComboBox.SetEnabled(false);
 		colorPicker.SetEnabled(false);
 
-		textureSlotButton.SetImage(wi::Resource());
+		textureSlotImage.SetImage(wi::Resource());
 		textureSlotLabel.SetText("");
 		textureSlotUvsetField.SetText("");
 	}
-
 }
 
+void MaterialWindow::RecreateTexturePickerButtons()
+{
+	if (editor == nullptr)
+		return;
+
+	// Remove old buttons
+	for (auto& button : texturePickerButtons)
+	{
+		texturePickerWindow.RemoveWidget(&button);
+	}
+	texturePickerButtons.clear();
+
+	// Create buttons for each unique texture
+	wi::unordered_map<std::string, wi::Resource> uniqueTextures = CollectUniqueTextures();
+	for (auto& [textureName, textureResource] : uniqueTextures)
+	{
+		texturePickerButtons.emplace_back();
+		wi::gui::Button& button = texturePickerButtons.back();
+
+		button.Create("");
+		button.SetImage(textureResource);
+		button.SetTooltip(wi::helper::GetFileNameFromPath(textureName));
+		texturePickerWindow.AddWidget(&button);
+		button.SetVisible(false);
+
+		std::string capturedName = textureName;
+		wi::Resource capturedResource = textureResource;
+
+		button.OnClick([this, capturedName, capturedResource](wi::gui::EventArgs args) {
+			MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
+			if (material == nullptr)
+				return;
+
+			const int slot = textureSlotComboBox.GetSelected();
+
+			wi::Archive& archive = editor->AdvanceHistory();
+			archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+			editor->RecordEntity(archive, entity);
+
+			material->textures[slot].resource = capturedResource;
+			material->textures[slot].name = capturedName;
+			material->SetDirty();
+			textureSlotLabel.SetText(wi::helper::GetFileNameFromPath(capturedName));
+			textureSlotImage.SetImage(capturedResource);
+
+			editor->RecordEntity(archive, entity);
+		});
+	}
+
+	ResizeLayout();
+}
 
 void MaterialWindow::ResizeLayout()
 {
@@ -1045,6 +1139,17 @@ void MaterialWindow::ResizeLayout()
 
 	Scene& scene = editor->GetCurrentScene();
 	MaterialComponent* material = scene.materials.GetComponent(entity);
+
+	if (texturePickerWindow.IsVisible())
+	{
+		wi::unordered_map<std::string, wi::Resource> uniqueTextures = CollectUniqueTextures();
+
+		if (texturePickerButtons.size() != uniqueTextures.size())
+		{
+			RecreateTexturePickerButtons();
+			return;
+		}
+	}
 
 	layout.add_fullwidth(materialNameField);
 	layout.add_right(shadowReceiveCheckBox);
@@ -1121,9 +1226,97 @@ void MaterialWindow::ResizeLayout()
 	layout.add(colorComboBox);
 	layout.add_fullwidth(colorPicker);
 	layout.add(textureSlotComboBox);
-	layout.add_fullwidth(textureSlotButton);
+
+	const float button_width = layout.width / 3.0f - layout.padding * 2.0f / 3.0f;
+
+	textureSlotClearButton.SetSize(XMFLOAT2(button_width, textureSlotClearButton.GetSize().y));
+	textureSlotClearButton.SetPos(XMFLOAT2(layout.width - layout.padding - textureSlotClearButton.GetSize().x, layout.y));
+
+	textureSlotSelectButton.SetSize(XMFLOAT2(button_width, textureSlotSelectButton.GetSize().y));
+	textureSlotSelectButton.SetPos(XMFLOAT2(textureSlotClearButton.GetPos().x - layout.padding - textureSlotSelectButton.GetSize().x, layout.y));
+
+	textureSlotLoadButton.SetSize(XMFLOAT2(button_width, textureSlotLoadButton.GetSize().y));
+	textureSlotLoadButton.SetPos(XMFLOAT2(textureSlotSelectButton.GetPos().x - layout.padding - textureSlotLoadButton.GetSize().x, layout.y));
+
+	layout.y += textureSlotLoadButton.GetSize().y + layout.padding;
+
+	layout.add_fullwidth(textureSlotImage);
 	layout.add_fullwidth(textureSlotLabel);
 	textureSlotLabel.SetSize(XMFLOAT2(textureSlotLabel.GetSize().x - textureSlotLabel.GetSize().y - 2, textureSlotLabel.GetSize().y));
 	textureSlotUvsetField.SetPos(XMFLOAT2(textureSlotLabel.GetPos().x + textureSlotLabel.GetSize().x + 2, textureSlotLabel.GetPos().y));
 
+	// Update texture picker
+	if (texturePickerWindow.IsVisible())
+	{
+		const NameComponent* name = scene.names.GetComponent(entity);
+		std::string windowTitle = "Texture Picker";
+		if (material && name != nullptr && !name->name.empty())
+		{
+			windowTitle += " (Entity: " + name->name + ")";
+		}
+		texturePickerWindow.moveDragger.SetText(windowTitle);
+
+		if (!texturePickerButtons.empty())
+		{
+			wi::gui::Theme theme;
+			theme.image.CopyFrom(texturePickerWindow.sprites[wi::gui::IDLE].params);
+			theme.image.background = false;
+			theme.image.blendFlag = wi::enums::BLENDMODE_ALPHA;
+			theme.image.color = wi::Color::White();
+			theme.font.CopyFrom(font.params);
+			theme.shadow_color = wi::Color::lerp(theme.font.color, wi::Color::Transparent(), 0.25f);
+			theme.tooltipFont.CopyFrom(tooltipFont.params);
+			theme.tooltipImage.CopyFrom(tooltipSprite.params);
+
+			constexpr float preview_size = 100;
+			constexpr float border = 10;
+			const float window_width = texturePickerWindow.GetWidgetAreaSize().x;
+			const int cells = std::max(1, int(window_width / (preview_size + border)));
+			float offset_y = border;
+
+			for (size_t i = 0; i < texturePickerButtons.size(); ++i)
+			{
+				wi::gui::Button& button = texturePickerButtons[i];
+
+				button.SetTheme(theme);
+				button.SetColor(wi::Color::White(), wi::gui::IDLE);
+				button.SetColor(wi::Color(255, 255, 255, 150), wi::gui::FOCUS);
+				button.SetShadowRadius(0);
+
+				button.SetSize(XMFLOAT2(preview_size, preview_size));
+				button.SetPos(XMFLOAT2((i % cells) * (preview_size + border) + border, offset_y));
+				button.SetVisible(IsVisible() && !IsCollapsed());
+				button.SetEnabled(true);
+
+				if ((i % cells) == (cells - 1))
+				{
+					offset_y += preview_size + border;
+				}
+			}
+		}
+	}
+}
+
+wi::unordered_map<std::string, wi::Resource> MaterialWindow::CollectUniqueTextures() const
+{
+	wi::unordered_map<std::string, wi::Resource> uniqueTextures;
+
+	if (editor == nullptr)
+		return uniqueTextures;
+
+	const wi::scene::Scene& scene = editor->GetCurrentScene();
+
+	for (size_t i = 0; i < scene.materials.GetCount(); ++i)
+	{
+		const MaterialComponent& material = scene.materials[i];
+		for (const auto& texture : material.textures)
+		{
+			if (texture.resource.IsValid() && !texture.name.empty())
+			{
+				uniqueTextures[texture.name] = texture.resource;
+			}
+		}
+	}
+
+	return uniqueTextures;
 }

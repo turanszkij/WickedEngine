@@ -14,6 +14,9 @@
 
 #ifdef PLATFORM_LINUX
 #include <pthread.h>
+#ifdef __FREEBSD__
+#include <pthread_np.h>
+#endif
 #include <sys/resource.h>
 #endif // PLATFORM_LINUX
 #ifdef PLATFORM_MACOS
@@ -201,7 +204,9 @@ namespace wi::jobsystem
 			{
 				std::thread& worker = res.threads.emplace_back([threadID, priority, &res] {
 
-#ifdef PLATFORM_LINUX
+#if defined(__FREEBSD__)
+// TODO: FreeBSD's setpriority is incompatible with the expected Linux non-standard behavior
+#elif defined(PLATFORM_LINUX)
 
 					// from the sched(2) manpage:
 					// In the current [Linux 2.6.23+] implementation, each unit of

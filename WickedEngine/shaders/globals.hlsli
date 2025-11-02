@@ -4,6 +4,7 @@
 // Enable / disable FP16 shader ops here
 //	Note: when using -enable-16bit-types compile flag, half will be always FP16
 #if 1
+#ifndef DISABLE_HALF_PRECISION
 #ifndef __XBOX_SCARLETT // fp16 forced on xbox via compiler args
 #ifndef __PSSL__ // min types are already redefined on PS5
 #define half min16float
@@ -15,6 +16,7 @@
 #define half4x4 min16float4x4
 #endif // __PSSL__
 #endif // __XBOX_SCARLETT
+#endif // DISABLE_HALF_PRECISION
 #endif
 
 // Descriptor safety feature:
@@ -712,11 +714,32 @@ struct PrimitiveID
 #define SPHERE_SAMPLING_PDF rcp(4 * PI)
 #define HEMISPHERE_SAMPLING_PDF rcp(2 * PI)
 
-#define sqr(a) ((a)*(a))
-#define pow3(a) ((a)*(a)*(a))
-#define pow4(a) ((a)*(a)*(a)*(a))
-#define pow5(a) ((a)*(a)*(a)*(a)*(a))
-#define pow8(a) ((a)*(a)*(a)*(a)*(a)*(a)*(a)*(a))
+template<typename T>
+T sqr(T a)
+{
+	return a * a;
+}
+template<typename T>
+T pow3(T a)
+{
+	return a * a * a;
+}
+template<typename T>
+T pow4(T a)
+{
+	return sqr(sqr(a));
+}
+template<typename T>
+T pow5(T a)
+{
+	return pow4(a) * a;
+}
+template<typename T>
+T pow8(T a)
+{
+	return sqr(pow4(a));
+}
+
 #define arraysize(a) (sizeof(a) / sizeof(a[0]))
 #define saturateMediump(x) min(x, MEDIUMP_FLT_MAX)
 #define highp

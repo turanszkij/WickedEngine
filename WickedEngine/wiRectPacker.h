@@ -40,7 +40,7 @@ namespace wi::rectpacker
 		//	returns true for success, false for failure
 		bool pack(int max_width)
 		{
-			while (width <= max_width || height <= max_width)
+			while (width <= max_width && height <= max_width)
 			{
 				if (nodes.size() < width)
 				{

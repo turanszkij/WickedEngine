@@ -652,7 +652,7 @@ namespace vulkan_internal
 	}
 
 	VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsMessengerCallback(
-		VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, 
+		VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
 		VkDebugUtilsMessageTypeFlagsEXT message_type,
 		const VkDebugUtilsMessengerCallbackDataEXT* callback_data,
 		void* user_data)
@@ -2451,7 +2451,7 @@ using namespace vulkan_internal;
 			}
 		}
 #endif // _WIN32
-		
+
 		if (validationMode != ValidationMode::Disabled)
 		{
 			// Determine the optimal validation layers to enable that are necessary for useful debugging
@@ -2768,6 +2768,18 @@ using namespace vulkan_internal;
 				{
 					priority = properties2.properties.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU;
 				}
+				else if (preference == GPUPreference::AMD)
+				{
+					priority = wi::helper::toUpper(std::string(properties2.properties.deviceName)).find("AMD") != std::string::npos;
+				}
+				else if (preference == GPUPreference::Nvidia)
+				{
+					priority = wi::helper::toUpper(std::string(properties2.properties.deviceName)).find("NVIDIA") != std::string::npos;
+				}
+				else if (preference == GPUPreference::Intel)
+				{
+					priority = wi::helper::toUpper(std::string(properties2.properties.deviceName)).find("INTEL") != std::string::npos;
+				}
 				if (priority || physicalDevice == VK_NULL_HANDLE)
 				{
 					physicalDevice = dev;
@@ -3012,7 +3024,7 @@ using namespace vulkan_internal;
 				queueFamiliesVideo[i].sType = VK_STRUCTURE_TYPE_QUEUE_FAMILY_VIDEO_PROPERTIES_KHR;
 			}
 			vkGetPhysicalDeviceQueueFamilyProperties2(physicalDevice, &queueFamilyCount, queueFamilies.data());
-			
+
 			// Query base queue families:
 			for (uint32_t i = 0; i < queueFamilyCount; ++i)
 			{
@@ -3349,7 +3361,7 @@ using namespace vulkan_internal;
 			allocInfo.preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
 			vulkan_check(vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &nullBuffer, &nullBufferAllocation, nullptr));
-			
+
 			VkBufferViewCreateInfo viewInfo = {};
 			viewInfo.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
 			viewInfo.format = VK_FORMAT_R32G32B32A32_SFLOAT;
@@ -3802,14 +3814,14 @@ using namespace vulkan_internal;
 			size_t size{};
 			vulkan_check(vkGetPipelineCacheData(device, pipelineCache, &size, nullptr));
 
-			// Get data of pipeline cache 
+			// Get data of pipeline cache
 			wi::vector<uint8_t> data(size);
 			vulkan_check(vkGetPipelineCacheData(device, pipelineCache, &size, data.data()));
 
 			// Write pipeline cache data to a file in binary format
 			wi::helper::FileWrite(get_shader_cache_path(), data.data(), size);
 
-			// Destroy Vulkan pipeline cache 
+			// Destroy Vulkan pipeline cache
 			vkDestroyPipelineCache(device, pipelineCache, nullptr);
 			pipelineCache = VK_NULL_HANDLE;
 		}
@@ -4070,14 +4082,19 @@ using namespace vulkan_internal;
 		else
 		{
 			VmaAllocationCreateInfo create_info = {};
-			create_info.usage = VMA_MEMORY_USAGE_AUTO;
 			if (desc->usage == Usage::READBACK)
 			{
+				create_info.usage = VMA_MEMORY_USAGE_AUTO_PREFER_HOST;
 				create_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
 			}
 			else if (desc->usage == Usage::UPLOAD)
 			{
+				create_info.usage = VMA_MEMORY_USAGE_AUTO_PREFER_HOST;
 				create_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+			}
+			else
+			{
+				create_info.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
 			}
 
 			if (desc->usage == Usage::DEFAULT && (bufferInfo.usage & VK_BUFFER_USAGE_VIDEO_DECODE_SRC_BIT_KHR))
@@ -4194,7 +4211,7 @@ using namespace vulkan_internal;
 					1,
 					&copyRegion
 				);
-				
+
 				copyAllocator.submit(cmd);
 			}
 		}
@@ -5592,7 +5609,7 @@ using namespace vulkan_internal;
 					default:
 						break;
 					}
-					
+
 				}
 
 				VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
@@ -7065,56 +7082,64 @@ using namespace vulkan_internal;
 		case SubresourceType::SRV:
 			if (resource->IsBuffer())
 			{
-				auto internal_state = to_internal((const GPUBuffer*)resource);
+				const auto internal_state = to_internal((const GPUBuffer*)resource);
 				if (subresource < 0)
 				{
 					return internal_state->srv.index;
 				}
 				else
 				{
+					if (subresource >= (int)internal_state->subresources_srv.size())
+						return -1;
 					return internal_state->subresources_srv[subresource].index;
 				}
 			}
-			else if(resource->IsTexture())
+			else if (resource->IsTexture())
 			{
-				auto internal_state = to_internal((const Texture*)resource);
+				const auto internal_state = to_internal((const Texture*)resource);
 				if (subresource < 0)
 				{
 					return internal_state->srv.index;
 				}
 				else
 				{
+					if (subresource >= (int)internal_state->subresources_srv.size())
+						return -1;
 					return internal_state->subresources_srv[subresource].index;
 				}
 			}
 			else if (resource->IsAccelerationStructure())
 			{
-				auto internal_state = to_internal((const RaytracingAccelerationStructure*)resource);
+				const auto internal_state = to_internal((const RaytracingAccelerationStructure*)resource);
 				return internal_state->index;
 			}
 			break;
 		case SubresourceType::UAV:
 			if (resource->IsBuffer())
 			{
-				auto internal_state = to_internal((const GPUBuffer*)resource);
+				const auto internal_state = to_internal((const GPUBuffer*)resource);
 				if (subresource < 0)
 				{
 					return internal_state->uav.index;
 				}
 				else
 				{
+					if (subresource >= (int)internal_state->subresources_uav.size())
+						return -1;
 					return internal_state->subresources_uav[subresource].index;
 				}
 			}
 			else if (resource->IsTexture())
 			{
-				auto internal_state = to_internal((const Texture*)resource);
+				const auto internal_state = to_internal((const Texture*)resource);
 				if (subresource < 0)
 				{
 					return internal_state->uav.index;
 				}
 				else
 				{
+					if (subresource >= (int)internal_state->subresources_uav.size())
+						return -1;
 					return internal_state->subresources_uav[subresource].index;
 				}
 			}
@@ -7183,7 +7208,7 @@ using namespace vulkan_internal;
 	{
 		vulkan_check(vkGetRayTracingShaderGroupHandlesKHR(device, to_internal(rtpso)->pipeline, group_index, 1, SHADER_IDENTIFIER_SIZE, dest));
 	}
-	
+
 	void GraphicsDevice_Vulkan::SetName(GPUResource* pResource, const char* name) const
 	{
 		if (!debugUtils || pResource == nullptr || !pResource->IsValid())
@@ -7926,7 +7951,7 @@ using namespace vulkan_internal;
 			assert(0);
 		}
 		commandlist.prev_swapchains.push_back(*swapchain);
-		
+
 		VkRenderingInfo info = {};
 		info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
 		info.renderArea.offset.x = 0;
@@ -8165,7 +8190,7 @@ using namespace vulkan_internal;
 				barrier.newLayout = _ConvertImageLayout(image.layout);
 
 				assert(barrier.newLayout != VK_IMAGE_LAYOUT_UNDEFINED);
-				
+
 				barrier.srcStageMask = _ConvertPipelineStage(image.layout_before);
 				barrier.dstStageMask = _ConvertPipelineStage(image.layout);
 				barrier.srcAccessMask = _ParseResourceState(image.layout_before);
@@ -9319,7 +9344,7 @@ using namespace vulkan_internal;
 		raygen.deviceAddress += desc->ray_generation.offset;
 		raygen.size = desc->ray_generation.size;
 		raygen.stride = raygen.size; // raygen specifically must be size == stride
-		
+
 		VkStridedDeviceAddressRegionKHR miss = {};
 		miss.deviceAddress = desc->miss.buffer ? to_internal(desc->miss.buffer)->address : 0;
 		miss.deviceAddress += desc->miss.offset;
@@ -9344,8 +9369,8 @@ using namespace vulkan_internal;
 			&miss,
 			&hitgroup,
 			&callable,
-			desc->width, 
-			desc->height, 
+			desc->width,
+			desc->height,
 			desc->depth
 		);
 	}

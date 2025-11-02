@@ -52,7 +52,8 @@ namespace wi
 		float eyeadaptionRate = 1;
 		float fsrSharpness = 1.0f;
 		float fsr2Sharpness = 0.5f;
-		float lightShaftsStrength = 0.2f;
+		float lightShaftsStrength = 0.5f;
+		float lightShaftsFadeSpeed = 3.0f;
 		float raytracedDiffuseRange = 10;
 		float raytracedReflectionsRange = 10000.0f;
 		float reflectionRoughnessCutoff = 0.6f;
@@ -169,6 +170,8 @@ namespace wi
 			return lastPostprocessRT;
 		}
 
+		mutable float lightShaftsFadeFactor = 0.0f;
+
 		virtual void RenderAO(wi::graphics::CommandList cmd) const;
 		virtual void RenderSSR(wi::graphics::CommandList cmd) const;
 		virtual void RenderSSGI(wi::graphics::CommandList cmd) const;
@@ -245,6 +248,7 @@ namespace wi
 		constexpr float getFSRSharpness() const { return fsrSharpness; }
 		constexpr float getFSR2Sharpness() const { return fsr2Sharpness; }
 		constexpr float getLightShaftsStrength() const { return lightShaftsStrength; }
+		constexpr float getLightShaftsFadeSpeed() const { return lightShaftsFadeSpeed; }
 		constexpr float getRaytracedDiffuseRange() const { return raytracedDiffuseRange; }
 		constexpr float getRaytracedReflectionsRange() const { return raytracedReflectionsRange; }
 		constexpr float getReflectionRoughnessCutoff() const { return reflectionRoughnessCutoff; }
@@ -303,6 +307,7 @@ namespace wi
 		constexpr void setFSRSharpness(float value) { fsrSharpness = value; }
 		constexpr void setFSR2Sharpness(float value) { fsr2Sharpness = value; }
 		constexpr void setLightShaftsStrength(float value) { lightShaftsStrength = value; }
+		constexpr void setLightShaftsFadeSpeed(float value) { lightShaftsFadeSpeed = value; }
 		constexpr void setRaytracedDiffuseRange(float value) { raytracedDiffuseRange = value; }
 		constexpr void setRaytracedReflectionsRange(float value) { raytracedReflectionsRange = value; }
 		constexpr void setReflectionRoughnessCutoff(float value) { reflectionRoughnessCutoff = value; }

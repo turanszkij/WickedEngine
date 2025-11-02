@@ -464,6 +464,7 @@ namespace wi::terrain
 			}
 		}
 		chunks.clear();
+		virtual_textures_in_use.clear();
 
 		if (chunkGroupEntity != INVALID_ENTITY)
 		{
@@ -476,12 +477,20 @@ namespace wi::terrain
 			modifier->Seed(seed);
 		}
 
-		// Add some nice weather and lighting:
-		if (!scene->weathers.Contains(terrainEntity))
+		// Add some nice weather and lighting if there are no weathers in the scene yet:
+		bool created_terrain_weather = false;
+		if (scene->weathers.GetCount() == 0)
 		{
-			scene->weathers.Create(terrainEntity);
+			if (!scene->weathers.Contains(terrainEntity))
+			{
+				scene->weathers.Create(terrainEntity);
+				created_terrain_weather = true;
+			}
 		}
-		*scene->weathers.GetComponent(terrainEntity) = weather;
+		if (created_terrain_weather)
+		{
+			*scene->weathers.GetComponent(terrainEntity) = weather;
+		}
 		if (!weather.IsOceanEnabled())
 		{
 			scene->ocean = {};
@@ -489,6 +498,22 @@ namespace wi::terrain
 
 		// Restore surface source materials:
 		{
+			// Clean up invalid material entities that no longer exist in the scene
+			for (size_t i = 0; i < materialEntities.size(); )
+			{
+				if (materialEntities[i] != INVALID_ENTITY && !scene->materials.Contains(materialEntities[i]))
+				{
+					materialEntities.erase(materialEntities.begin() + i);
+					if (i < materials.size())
+					{
+						materials.erase(materials.begin() + i);
+					}
+					continue;
+				}
+				++i;
+			}
+
+			// Restore valid materials
 			for (size_t i = 0; i < materialEntities.size(); ++i)
 			{
 				if (materialEntities[i] == INVALID_ENTITY)
@@ -505,7 +530,7 @@ namespace wi::terrain
 		}
 
 		// Restore grass parameters:
-		{
+		if (IsGrassEnabled()) {
 			if (grassEntity == INVALID_ENTITY)
 			{
 				grassEntity = CreateEntity();
@@ -618,6 +643,7 @@ namespace wi::terrain
 				}
 			}
 			chunks.clear();
+			virtual_textures_in_use.clear();
 			return;
 		}
 
@@ -867,6 +893,10 @@ namespace wi::terrain
 		{
 			UpdateVirtualTexturesCPU();
 		}
+		else
+		{
+			virtual_textures_in_use.clear();
+		}
 
 		const uint64_t required_chunk_buffer_size = sizeof(ShaderTerrainChunk) * (chunk_buffer_range * 2 + 1) * (chunk_buffer_range * 2 + 1);
 		if (chunk_buffer.desc.size < required_chunk_buffer_size)
@@ -929,6 +959,7 @@ namespace wi::terrain
 					MaterialComponent& material = generator->scene.materials.Create(chunk_data.entity);
 					// material params will be 1 because they will be created from only texture maps
 					//	because region materials are blended together into one texture
+					material.SetInternal();
 					material.SetRoughness(1);
 					material.SetMetalness(1);
 					material.SetReflectance(1);
@@ -1100,7 +1131,7 @@ namespace wi::terrain
 						chunk_data.heightmap_data[index] = uint16_t(inverse_lerp(bottomLevel, topLevel, height) * 65535);
 					});
 					wi::jobsystem::Wait(ctx); // wait until chunk's vertex buffer is fully generated
-					
+
 					object.SetCastShadow(slope_cast_shadow.load());
 					mesh.SetDoubleSidedShadow(slope_cast_shadow.load());
 

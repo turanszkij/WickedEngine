@@ -235,7 +235,7 @@ inline void ForwardDecals(inout Surface surface, inout half4 surfaceMap, Sampler
 					decalDY,
 					sampler_linear_clamp
 				);
-				uvw.xy = saturate(inoutuv.xy);
+				uvw.xy = inoutuv.xy;
 			}
 			[branch]
 			if (decalTexture >= 0)
@@ -708,7 +708,7 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex, inout half4 s
 						decalDY,
 						sampler_linear_clamp
 					);
-					uvw.xy = saturate(inoutuv.xy);
+					uvw.xy = inoutuv.xy;
 				}
 				[branch]
 				if (decalTexture >= 0)
@@ -777,7 +777,10 @@ inline uint AlphaToCoverage(half alpha, half alphaTest, half dithering, float4 s
 	if (GetFrame().options & OPTION_BIT_TEMPORALAA_ENABLED)
 	{
 		// When Temporal AA is enabled, dither the alpha mask with animated blue noise:
-		alpha -= dithering + blue_noise(svposition.xy, svposition.w).x / GetCamera().sample_count;
+		if (alphaTest > 0 || dithering > 0)
+		{
+			alpha -= dithering + blue_noise(svposition.xy, svposition.w).x / GetCamera().sample_count;
+		}
 	}
 	else if (GetCamera().sample_count > 1)
 	{

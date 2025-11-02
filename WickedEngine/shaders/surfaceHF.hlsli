@@ -374,6 +374,7 @@ struct Surface
 	void load_internal(uint flatTileIndex = 0)
 	{
 		SamplerState sam = bindless_samplers[NonUniformResourceIndex(descriptor_index(material.sampler_descriptor))];
+		SamplerState sam_clamp = bindless_samplers[NonUniformResourceIndex(descriptor_index(material.sampler_clamp_descriptor))];
 
 		const bool is_hairparticle = geometry.flags & SHADERMESH_FLAG_HAIRPARTICLE;
 		const bool is_emittedparticle = geometry.flags & SHADERMESH_FLAG_EMITTEDPARTICLE;
@@ -499,6 +500,31 @@ struct Surface
 			[branch]
 			if (geometry.vb_tan >= 0 && material.textures[NORMALMAP].IsValid())
 			{
+#ifdef WATER
+				[branch]
+				if (material.GetShaderType() == SHADERTYPE_WATER)
+				{
+					// WATER NORMALMAP
+					half2 bumpColor0 = 0;
+					half2 bumpColor1 = 0;
+#ifdef SURFACE_LOAD_QUAD_DERIVATIVES
+					bumpColor0 = material.textures[NORMALMAP].SampleGrad(sam, uvsets - material.texMulAdd.wwww, uvsets_dx, uvsets_dy).rg * 2 - 1;
+					bumpColor1 = material.textures[NORMALMAP].SampleGrad(sam, uvsets + material.texMulAdd.zwzw, uvsets_dx, uvsets_dy).rg * 2 - 1;
+#else
+					float lod = 0;
+#ifdef SURFACE_LOAD_MIPCONE
+					lod = compute_texture_lod(material.textures[NORMALMAP].GetTexture(), material.textures[NORMALMAP].GetUVSet() == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
+#endif // SURFACE_LOAD_MIPCONE
+					bumpColor0 = material.textures[NORMALMAP].SampleLevel(sam, uvsets - material.texMulAdd.wwww, lod).rg * 2 - 1;
+					bumpColor1 = material.textures[NORMALMAP].SampleLevel(sam, uvsets + material.texMulAdd.zwzw, lod).rg * 2 - 1;
+#endif // SURFACE_LOAD_QUAD_DERIVATIVES
+					bumpColor = half3(bumpColor0 + bumpColor1, 1)  * material.GetRefraction();
+					N = normalize(lerp(N, mul(normalize(bumpColor), TBN), material.GetNormalMapStrength()));
+					bumpColor.rg *= material.GetNormalMapStrength();
+				}
+				else {
+#endif // WATER
+
 #ifdef SURFACE_LOAD_QUAD_DERIVATIVES
 				bumpColor = half3(material.textures[NORMALMAP].SampleGrad(sam, uvsets, uvsets_dx, uvsets_dy).rg, 1);
 #else
@@ -510,8 +536,11 @@ struct Surface
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
 				bumpColor = bumpColor * 2 - 1;
 				bumpColor.rg *= material.GetNormalMapStrength();
+				
+#ifdef WATER
+				} // water else
+#endif // WATER
 			}
-
 
 #ifdef ANISOTROPIC
 			aniso.strength = material.GetAnisotropy();
@@ -809,12 +838,12 @@ struct Surface
 								decalDY,
 								sampler_linear_clamp
 							);
-							uvw.xy = saturate(inoutuv.xy);
+							uvw.xy = inoutuv.xy;
 						}
 						[branch]
 						if (decalTexture >= 0)
 						{
-							decalColor *= bindless_textures_half4[descriptor_index(decalTexture)].SampleGrad(sam, uvw.xy, decalDX, decalDY);
+							decalColor *= bindless_textures_half4[descriptor_index(decalTexture)].SampleGrad(sam_clamp, uvw.xy, decalDX, decalDY);
 							if ((decal.GetFlags() & ENTITY_FLAG_DECAL_BASECOLOR_ONLY_ALPHA) == 0)
 							{
 								// perform manual blending of decals:
@@ -826,7 +855,7 @@ struct Surface
 						[branch]
 						if (decalNormal >= 0)
 						{
-							half3 decalBumpColor = half3(bindless_textures_half4[descriptor_index(decalNormal)].SampleGrad(sam, uvw.xy, decalDX, decalDY).rg, 1);
+							half3 decalBumpColor = half3(bindless_textures_half4[descriptor_index(decalNormal)].SampleGrad(sam_clamp, uvw.xy, decalDX, decalDY).rg, 1);
 							decalBumpColor = decalBumpColor * 2 - 1;
 							decalBumpColor.rg *= decal.GetAngleScale();
 							decalBumpAccumulation.rgb = mad(1 - decalBumpAccumulation.a, decalColor.a * decalBumpColor.rgb, decalBumpAccumulation.rgb);
@@ -835,7 +864,7 @@ struct Surface
 						[branch]
 						if (decalSurfacemap >= 0)
 						{
-							half4 decalSurfaceColor = bindless_textures_half4[descriptor_index(decalSurfacemap)].SampleGrad(sam, uvw.xy, decalDX, decalDY);
+							half4 decalSurfaceColor = bindless_textures_half4[descriptor_index(decalSurfacemap)].SampleGrad(sam_clamp, uvw.xy, decalDX, decalDY);
 							decalSurfaceAccumulation = mad(1 - decalSurfaceAccumulationAlpha, decalColor.a * decalSurfaceColor, decalSurfaceAccumulation);
 							decalSurfaceAccumulationAlpha = mad(1 - decalColor.a, decalSurfaceAccumulationAlpha, decalColor.a);
 						}

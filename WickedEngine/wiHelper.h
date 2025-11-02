@@ -43,7 +43,26 @@ namespace wi::helper
 
 	std::string toLower(const std::string& s);
 
+	std::wstring toUpper(const std::wstring& s);
+
+	std::wstring toLower(const std::wstring& s);
+
 	void messageBox(const std::string& msg, const std::string& caption = "Warning!");
+
+	enum class MessageBoxResult
+	{
+		OK,
+		Cancel,
+		Yes,
+		No,
+		Abort,
+		Retry,
+		Ignore
+	};
+
+	// Shows a message box with custom buttons and returns the user's choice
+	//	buttons can be combinations like: "OK", "OKCancel", "YesNo", "YesNoCancel", etc.
+	MessageBoxResult messageBoxCustom(const std::string& msg, const std::string& caption = "Warning!", const std::string& buttons = "OK");
 
 	// Returns file path if successful, empty string otherwise
 	std::string screenshot(const wi::graphics::SwapChain& swapchain, const std::string& name = "");
@@ -135,7 +154,7 @@ namespace wi::helper
 		wi::vector<std::string> extensions;
 		bool multiselect = true; // only for TYPE::OPEN
 	};
-	void FileDialog(const FileDialogParams& params, std::function<void(std::string fileName)> onSuccess);
+	void FileDialog(const FileDialogParams& params, std::function<void(std::string fileName)> onSuccess, std::function<void()> onFailure = nullptr);
 
 	std::string FolderDialog(const std::string& description = "Select folder");
 

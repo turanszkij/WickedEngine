@@ -12,6 +12,7 @@ list(APPEND SOURCE_FILES main_${PLATFORM}.cpp)
 if (WIN32)
     list (APPEND SOURCE_FILES
         Editor.rc
+        Editor.manifest
     )
 
     add_executable(Editor WIN32 ${SOURCE_FILES})
@@ -19,6 +20,13 @@ if (WIN32)
     target_link_libraries(Editor PUBLIC
         WickedEngine_Windows
     )
+
+    # Work around clang bug, see
+    # https://github.com/llvm/llvm-project/issues/120394
+    # https://gitlab.kitware.com/cmake/cmake/-/issues/27064
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        target_link_options(Editor PRIVATE "SHELL:-Xlinker /manifestuac:no")
+    endif()
 
     set_property(TARGET Editor PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
     set(LIB_DXCOMPILER "dxcompiler.dll")

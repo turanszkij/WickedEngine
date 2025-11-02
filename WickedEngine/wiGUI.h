@@ -412,6 +412,16 @@ namespace wi::gui
 		void DisableClickForCurrentDragOperation() { disableClicking = true; }
 	};
 
+	// Image display widget
+	class Image : public Widget
+	{
+	public:
+		void Create(const std::string& name);
+
+		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
+		const char* GetWidgetTypeName() const override { return "Image"; }
+	};
+
 	// Generic scroll bar
 	class ScrollBar : public Widget
 	{
@@ -862,7 +872,7 @@ namespace wi::gui
 				add_right(widget, std::forward<Args>(args)...);
 			}
 		} layout;
-		 
+
 	public:
 		enum class WindowControls
 		{

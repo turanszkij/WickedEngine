@@ -51,7 +51,11 @@ namespace wi::allocator
 	{
 		struct Block
 		{
-			wi::vector<uint8_t> mem;
+			struct alignas(alignof(T)) RawStruct
+			{
+				uint8_t data[sizeof(T)];
+			};
+			wi::vector<RawStruct> mem;
 		};
 		wi::vector<Block> blocks;
 		wi::vector<T*> free_list;
@@ -63,7 +67,7 @@ namespace wi::allocator
 			{
 				free_list.reserve(block_size);
 				Block& block = blocks.emplace_back();
-				block.mem.resize(sizeof(T) * block_size);
+				block.mem.resize(block_size);
 				T* ptr = (T*)block.mem.data();
 				for (size_t i = 0; i < block_size; ++i)
 				{

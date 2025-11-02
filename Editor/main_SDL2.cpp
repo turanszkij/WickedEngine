@@ -32,8 +32,7 @@ public:
 
 int sdl_loop()
 {
-    bool quit = false;
-    while (!quit)
+    while (editor.KeepRunning())
     {
         editor.Run();
         SDL_Event event;
@@ -41,13 +40,10 @@ int sdl_loop()
             bool textinput_action_delete = false;
             switch(event.type){
                 case SDL_QUIT:
-                    quit = true;
+                    editor.Exit();
                     break;
                 case SDL_WINDOWEVENT:
                     switch (event.window.event) {
-                        case SDL_WINDOWEVENT_CLOSE: // exit editor
-                            quit = true;
-                            break;
                         case SDL_WINDOWEVENT_RESIZED:
                             // Tells the engine to reload window configuration (size and dpi)
                             editor.SetWindow(editor.window);

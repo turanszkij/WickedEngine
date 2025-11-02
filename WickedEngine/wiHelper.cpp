@@ -34,7 +34,13 @@
 #include <WinBase.h>
 #endif // _WIN32
 
-#ifdef PLATFORM_LINUX
+#if defined(__FREEBSD__)
+#include <kvm.h>
+#include <sys/param.h>
+#include <sys/sysctl.h>
+#include <sys/user.h>
+#pragma comment(lib,"kvm")
+#elif defined(PLATFORM_LINUX)
 #include <sys/sysinfo.h>
 #endif // PLATFORM_LINUX
 
@@ -58,7 +64,7 @@ namespace wi::helper
 	{
 		std::string result;
 		std::locale loc;
-		for (unsigned int i = 0; i < s.length(); ++i)
+		for (size_t i = 0; i < s.length(); ++i)
 		{
 			result += std::toupper(s.at(i), loc);
 		}
@@ -68,7 +74,28 @@ namespace wi::helper
 	{
 		std::string result;
 		std::locale loc;
-		for (unsigned int i = 0; i < s.length(); ++i)
+		for (size_t i = 0; i < s.length(); ++i)
+		{
+			result += std::tolower(s.at(i), loc);
+		}
+		return result;
+	}
+
+	std::wstring toUpper(const std::wstring& s)
+	{
+		std::wstring result;
+		std::locale loc;
+		for (size_t i = 0; i < s.length(); ++i)
+		{
+			result += std::toupper(s.at(i), loc);
+		}
+		return result;
+	}
+	std::wstring toLower(const std::wstring& s)
+	{
+		std::wstring result;
+		std::locale loc;
+		for (size_t i = 0; i < s.length(); ++i)
 		{
 			result += std::tolower(s.at(i), loc);
 		}
@@ -88,6 +115,83 @@ namespace wi::helper
 #ifdef SDL2
 		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, caption.c_str(), msg.c_str(), NULL);
 #endif // SDL2
+	}
+
+	MessageBoxResult messageBoxCustom(const std::string& msg, const std::string& caption, const std::string& buttons)
+	{
+#ifdef PLATFORM_WINDOWS_DESKTOP
+		std::wstring wmsg;
+		std::wstring wcaption;
+		StringConvert(msg, wmsg);
+		StringConvert(caption, wcaption);
+
+		UINT type = MB_ICONQUESTION;
+		if (buttons == "YesNoCancel")
+		{
+			type |= MB_YESNOCANCEL;
+		}
+		else if (buttons == "YesNo")
+		{
+			type |= MB_YESNO;
+		}
+		else if (buttons == "OKCancel")
+		{
+			type |= MB_OKCANCEL;
+		}
+		else if (buttons == "AbortRetryIgnore")
+		{
+			type |= MB_ABORTRETRYIGNORE;
+		}
+		else // default to OK
+		{
+			type |= MB_OK;
+		}
+
+		const int result = MessageBox(GetActiveWindow(), wmsg.c_str(), wcaption.c_str(), type);
+
+		switch (result)
+		{
+		case IDOK: return MessageBoxResult::OK;
+		case IDCANCEL: return MessageBoxResult::Cancel;
+		case IDYES: return MessageBoxResult::Yes;
+		case IDNO: return MessageBoxResult::No;
+		case IDABORT: return MessageBoxResult::Abort;
+		case IDRETRY: return MessageBoxResult::Retry;
+		case IDIGNORE: return MessageBoxResult::Ignore;
+		default: return MessageBoxResult::Cancel;
+		}
+#endif // PLATFORM_WINDOWS_DESKTOP
+
+#ifdef SDL2
+		const SDL_MessageBoxButtonData buttons_data[] = {
+			{ SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 0, "Yes" },
+			{ 0, 1, "No" },
+			{ SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 2, "Cancel" },
+		};
+		const SDL_MessageBoxData messageboxdata = {
+			SDL_MESSAGEBOX_INFORMATION,
+			NULL,
+			caption.c_str(),
+			msg.c_str(),
+			SDL_arraysize(buttons_data),
+			buttons_data,
+			NULL
+		};
+		int buttonid;
+		if (SDL_ShowMessageBox(&messageboxdata, &buttonid) < 0)
+		{
+			return MessageBoxResult::Cancel;
+		}
+		switch (buttonid)
+		{
+		case 0: return MessageBoxResult::Yes;
+		case 1: return MessageBoxResult::No;
+		case 2: return MessageBoxResult::Cancel;
+		default: return MessageBoxResult::Cancel;
+		}
+#endif // SDL2
+
+		return MessageBoxResult::Cancel;
 	}
 
 	std::string screenshot(const wi::graphics::SwapChain& swapchain, const std::string& name)
@@ -1280,12 +1384,22 @@ namespace wi::helper
 
 	std::string GetExecutablePath()
 	{
-#ifdef _WIN32
+#if defined(_WIN32)
 		wchar_t wstr[1024] = {};
 		GetModuleFileName(NULL, wstr, arraysize(wstr));
 		char str[1024] = {};
 		StringConvert(wstr, str, arraysize(str));
 		return str;
+#elif defined(__FREEBSD__)
+		int name[] = { CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1 };
+		char str[MAXPATHLEN] = {};
+		size_t length;
+		int error = sysctl(name, 4, str, &length, NULL, 0);
+		if (error < 0 || length <= 1) {
+			// sysctl failed
+			return std::string();
+		}
+		return std::string(str, length);
 #else
 	#if defined(__APPLE__)
 		char pathbuf[PATH_MAX];
@@ -1307,7 +1421,7 @@ namespace wi::helper
 #endif // _WIN32
 	}
 
-	void FileDialog(const FileDialogParams& params, std::function<void(std::string fileName)> onSuccess)
+	void FileDialog(const FileDialogParams& params, std::function<void(std::string fileName)> onSuccess, std::function<void()> onFailure)
 	{
 #ifdef PLATFORM_WINDOWS_DESKTOP
 		std::thread([=] {
@@ -1319,7 +1433,7 @@ namespace wi::helper
 			ofn.lStructSize = sizeof(ofn);
 			ofn.hwndOwner = nullptr;
 			ofn.lpstrFile = szFile;
-			// Set lpstrFile[0] to '\0' so that GetOpenFileName does not 
+			// Set lpstrFile[0] to '\0' so that GetOpenFileName does not
 			// use the contents of szFile to initialize itself.
 			ofn.lpstrFile[0] = '\0';
 			ofn.nMaxFile = sizeof(szFile);
@@ -1402,6 +1516,8 @@ namespace wi::helper
 						onSuccess(BackslashToForwardSlash(result_filename));
 					}
 				}
+			} else {
+				if (onFailure) onFailure();
 			}
 
 			}).detach();
@@ -1443,6 +1559,8 @@ namespace wi::helper
 					{
 						onSuccess(x);
 					}
+				} else {
+					if (onFailure) onFailure();
 				}
 				break;
 			}
@@ -1452,6 +1570,8 @@ namespace wi::helper
 				if (!destination.empty())
 				{
 					onSuccess(destination);
+				} else {
+					if (onFailure) onFailure();
 				}
 				break;
 			}
@@ -1607,7 +1727,7 @@ namespace wi::helper
 			}
 		}
 	}
-	
+
 	void StringConvert(const std::wstring& from, std::string& to)
 	{
 		to.clear();
@@ -1664,7 +1784,7 @@ namespace wi::helper
 			}
 		}
 	}
-	
+
 	int StringConvert(const char* from, wchar_t* to, int dest_size_in_characters)
 	{
 		if (!from || !to || dest_size_in_characters <= 0)
@@ -1734,7 +1854,7 @@ namespace wi::helper
 		to[written] = 0;
 		return written;
 	}
-	
+
 	int StringConvert(const wchar_t* from, char* to, int dest_size_in_characters)
 	{
 		if (!from || !to || dest_size_in_characters <= 0)
@@ -1842,7 +1962,7 @@ namespace wi::helper
 	}
 #endif // _WIN32
 	}
-	
+
 	void Sleep(float milliseconds)
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds((int)milliseconds));
@@ -1913,6 +2033,34 @@ namespace wi::helper
 		GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc));
 		mem.process_physical = pmc.WorkingSetSize;
 		mem.process_virtual = pmc.PrivateUsage;
+#elif defined(__FREEBSD__)
+		static uint64_t phys_mem = 0;
+		static uint64_t swap_mem = 0;
+		size_t sysctl_buf_s;
+		int page_size = getpagesize();
+		if (phys_mem == 0)
+		{
+			int phys_mem_name[] = { CTL_HW, HW_PHYSMEM };
+			sysctl_buf_s = sizeof(phys_mem);
+			sysctl(phys_mem_name, 2, &phys_mem, &sysctl_buf_s, NULL, 0);
+			kvm_t *kvm;
+			if ((kvm = kvm_open(NULL, "/dev/null", "/dev/null", O_RDONLY, "GetMemoryUsage")) != NULL)
+			{
+				struct kvm_swap swap;
+				if (kvm_getswapinfo(kvm, &swap, 1, 0) == 0)
+					swap_mem = swap.ksw_total * page_size;
+				kvm_close(kvm);
+			}
+		}
+		mem.total_physical = phys_mem;
+		mem.total_virtual = swap_mem;
+		struct kinfo_proc kinfo;
+		int proc_name[] = { CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid() };
+		sysctl_buf_s = sizeof(struct kinfo_proc);
+		if (sysctl(proc_name, 4, &kinfo, &sysctl_buf_s, NULL, 0) == 0)
+		{
+			mem.process_physical = kinfo.ki_rssize * page_size;
+		}
 #elif defined(PLATFORM_LINUX)
 		struct sysinfo info;
 		constexpr int PAGE_SIZE = 4096;

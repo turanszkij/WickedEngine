@@ -115,7 +115,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct alignas(16) MaterialComponent
+	struct alignas(32) MaterialComponent
 	{
 		enum FLAGS
 		{
@@ -138,6 +138,7 @@ namespace wi::scene
 			DISABLE_TEXTURE_STREAMING = 1 << 15,
 			COPLANAR_BLENDING = 1 << 16, // force transparent material draw in opaque pass (useful for coplanar polygons)
 			DISABLE_CAPSULE_SHADOW = 1 << 17,
+			INTERNAL = 1 << 18 // used only for internal purposes
 		};
 		uint32_t _flags = CAST_SHADOW;
 
@@ -264,7 +265,9 @@ namespace wi::scene
 
 		// Non-serialized attributes:
 		uint32_t layerMask = ~0u;
-		int sampler_descriptor = -1; // optional
+		int sampler_descriptor = -1; // optional, you can modify this to overwrite global sampler for this material
+		int cached_wrapSampler = -1; // do not modify, system will write this
+		int cached_clampSampler = -1; // do not modify, system will write this
 
 		// User stencil value can be in range [0, 15]
 		constexpr void SetUserStencilRef(uint8_t value) { userStencilRef = value & 0x0F; }
@@ -278,6 +281,9 @@ namespace wi::scene
 
 		constexpr void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
 		constexpr bool IsDirty() const { return _flags & DIRTY; }
+
+		constexpr void SetInternal(bool value = true) { if (value) { _flags |= INTERNAL; } else { _flags &= ~INTERNAL; } }
+		constexpr bool IsInternal() const { return _flags & INTERNAL; }
 
 		constexpr void SetCastShadow(bool value) { SetDirty(); if (value) { _flags |= CAST_SHADOW; } else { _flags &= ~CAST_SHADOW; } }
 		constexpr void SetReceiveShadow(bool value) { SetDirty(); if (value) { _flags &= ~DISABLE_RECEIVE_SHADOW; } else { _flags |= DISABLE_RECEIVE_SHADOW; } }
@@ -397,7 +403,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct alignas(16) RigidBodyPhysicsComponent
+	struct alignas(32) RigidBodyPhysicsComponent
 	{
 		enum FLAGS
 		{
@@ -540,7 +546,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct PhysicsConstraintComponent
+	struct alignas(32) PhysicsConstraintComponent
 	{
 		enum FLAGS
 		{
@@ -644,7 +650,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct alignas(16) MeshComponent
+	struct alignas(32) MeshComponent
 	{
 		enum FLAGS
 		{
@@ -810,8 +816,8 @@ namespace wi::scene
 		inline wi::graphics::IndexBufferFormat GetIndexFormat() const { return wi::graphics::GetIndexBufferFormat((uint32_t)vertex_positions.size()); }
 		inline size_t GetIndexStride() const { return GetIndexFormat() == wi::graphics::IndexBufferFormat::UINT32 ? sizeof(uint32_t) : sizeof(uint16_t); }
 
-		inline wi::graphics::IndexBufferFormat GetPrimitiveIndexFormat() const { return wi::graphics::GetIndexBufferFormat((uint32_t)indices.size() / 3); }
-		inline size_t GetPrimitiveIndexStride() const { return GetPrimitiveIndexFormat() == wi::graphics::IndexBufferFormat::UINT32 ? sizeof(uint32_t) : sizeof(uint16_t); }
+		inline wi::graphics::IndexBufferFormat GetProvokingIndexFormat() const { return wi::graphics::GetIndexBufferFormat((uint32_t)indices.size()); }
+		inline size_t GetProvokingIndexStride() const { return GetProvokingIndexFormat() == wi::graphics::IndexBufferFormat::UINT32 ? sizeof(uint32_t) : sizeof(uint16_t); }
 
 		uint32_t GetLODCount() const { return subsets_per_lod == 0 ? 1 : ((uint32_t)subsets.size() / subsets_per_lod); }
 		void GetLODSubsetRange(uint32_t lod, uint32_t& first_subset, uint32_t& last_subset) const
@@ -1134,7 +1140,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct alignas(16) ObjectComponent
+	struct alignas(32) ObjectComponent
 	{
 		enum FLAGS
 		{
@@ -1293,7 +1299,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct ArmatureComponent
+	struct alignas(32) ArmatureComponent
 	{
 		enum FLAGS
 		{
@@ -1312,7 +1318,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct LightComponent
+	struct alignas(32) LightComponent
 	{
 		enum FLAGS
 		{
@@ -1405,7 +1411,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct alignas(16) CameraComponent
+	struct alignas(32) CameraComponent
 	{
 		enum FLAGS
 		{
@@ -1513,7 +1519,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct EnvironmentProbeComponent
+	struct alignas(32) EnvironmentProbeComponent
 	{
 		static constexpr uint32_t envmapMSAASampleCount = 8;
 		enum FLAGS
@@ -1552,7 +1558,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct ForceFieldComponent
+	struct alignas(32) ForceFieldComponent
 	{
 		enum FLAGS
 		{
@@ -1578,7 +1584,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct DecalComponent
+	struct alignas(32) DecalComponent
 	{
 		enum FLAGS
 		{
@@ -1629,7 +1635,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct AnimationComponent
+	struct alignas(32) AnimationComponent
 	{
 		enum FLAGS
 		{
@@ -1799,7 +1805,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct WeatherComponent
+	struct alignas(32) WeatherComponent
 	{
 		enum FLAGS
 		{
@@ -1884,7 +1890,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct SoundComponent
+	struct alignas(32) SoundComponent
 	{
 		enum FLAGS
 		{
@@ -1912,7 +1918,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct VideoComponent
+	struct alignas(32) VideoComponent
 	{
 		enum FLAGS
 		{
@@ -1944,7 +1950,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct InverseKinematicsComponent
+	struct alignas(32) InverseKinematicsComponent
 	{
 		enum FLAGS
 		{
@@ -1967,7 +1973,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct SpringComponent
+	struct alignas(32) SpringComponent
 	{
 		enum FLAGS
 		{
@@ -1982,13 +1988,14 @@ namespace wi::scene
 		float stiffnessForce = 0.5f;
 		float dragForce = 0.5f;
 		float windForce = 0.5f;
-		float hitRadius = 0;
-		float gravityPower = 0.5f;
 		XMFLOAT3 gravityDir = {};
+		float gravityPower = 0.5f;
 
 		// Non-serialized attributes:
 		XMFLOAT3 prevTail = {};
+		float hitRadius = 0; // serialized but moved down here for better alignment
 		XMFLOAT3 currentTail = {};
+		float padding = 0;
 		XMFLOAT3 boneAxis = {};
 
 		// These are maintained for top-down chained update by spring dependency system:
@@ -2008,7 +2015,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct alignas(16) ColliderComponent
+	struct alignas(32) ColliderComponent
 	{
 		enum FLAGS
 		{
@@ -2036,23 +2043,28 @@ namespace wi::scene
 		Shape shape;
 
 		float radius = 0;
+		float padding0 = 0;
 		XMFLOAT3 offset = {};
+		float padding1 = 0;
 		XMFLOAT3 tail = {};
 
 		// Non-serialized attributes:
+		float dist = 0;
 		wi::primitive::Sphere sphere;
 		wi::primitive::Capsule capsule;
-		wi::primitive::Plane plane;
 		uint32_t layerMask = ~0u;
-		float dist = 0;
+		wi::primitive::Plane plane;
 		uint32_t cpu_index = 0;
 		uint32_t gpu_index = 0;
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct ScriptComponent
+	struct alignas(32) ScriptComponent
 	{
+		std::string filename;
+		wi::vector<uint8_t> script; // compiled script binary data (non-serialized but moved up here for better aligment)
+
 		enum FLAGS
 		{
 			EMPTY = 0,
@@ -2061,10 +2073,7 @@ namespace wi::scene
 		};
 		uint32_t _flags = EMPTY;
 
-		std::string filename;
-
 		// Non-serialized attributes:
-		wi::vector<uint8_t> script; // compiled script binary data
 		wi::Resource resource;
 		size_t script_hash = 0;
 
@@ -2080,7 +2089,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct ExpressionComponent
+	struct alignas(32) ExpressionComponent
 	{
 		enum FLAGS
 		{
@@ -2205,7 +2214,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct HumanoidComponent
+	struct alignas(32) HumanoidComponent
 	{
 		enum FLAGS
 		{
@@ -2300,8 +2309,8 @@ namespace wi::scene
 		constexpr void SetCapsuleShadowDisabled(bool value = true) { if (value) { _flags |= DISABLE_CAPSULE_SHADOW; } else { _flags &= ~DISABLE_CAPSULE_SHADOW; } }
 
 		XMFLOAT2 head_rotation_max = XMFLOAT2(XM_PI / 3.0f, XM_PI / 6.0f);
-		float head_rotation_speed = 0.1f;
 		XMFLOAT2 eye_rotation_max = XMFLOAT2(XM_PI / 20.0f, XM_PI / 20.0f);
+		float head_rotation_speed = 0.1f;
 		float eye_rotation_speed = 0.1f;
 
 		float ragdoll_fatness = 1.0f;
@@ -2314,6 +2323,7 @@ namespace wi::scene
 
 		// Non-serialized attributes:
 		XMFLOAT3 lookAt = {}; // lookAt target pos, can be set by user
+		float padding0 = 0;
 		XMFLOAT4 lookAtDeltaRotationState_Head = XMFLOAT4(0, 0, 0, 1);
 		XMFLOAT4 lookAtDeltaRotationState_LeftEye = XMFLOAT4(0, 0, 0, 1);
 		XMFLOAT4 lookAtDeltaRotationState_RightEye = XMFLOAT4(0, 0, 0, 1);
@@ -2336,7 +2346,7 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct MetadataComponent
+	struct alignas(32) MetadataComponent
 	{
 		enum FLAGS
 		{
@@ -2437,15 +2447,16 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct CharacterComponent
+	struct alignas(32) CharacterComponent
 	{
 		enum FLAGS
 		{
 			NONE = 0,
 			CHARACTER_TO_CHARACTER_COLLISION_DISABLED = 1 << 0,
 			DEDICATED_SHADOW = 1 << 1,
+			ACTIVE = 1 << 2,
 		};
-		uint32_t _flags = NONE;
+		uint32_t _flags = ACTIVE;
 
 		int health = 100;
 		float width = 0.4f; // capsule radius
@@ -2460,38 +2471,42 @@ namespace wi::scene
 		float fixed_update_fps = 120;
 		float gravity = -30;
 		float water_vertical_offset = 0;
-		float turning_speed = 10;
 		XMFLOAT3 movement = XMFLOAT3(0, 0, 0);
+		float turning_speed = 10;
 		XMFLOAT3 velocity = XMFLOAT3(0, 0, 0);
+		float foot_offset = 0;
 		XMFLOAT3 inertia = XMFLOAT3(0, 0, 0);
-		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
-		XMFLOAT3 position_prev = XMFLOAT3(0, 0, 0);
-		XMFLOAT3 relative_offset = XMFLOAT3(0, 0, 0);
-		bool active = true;
-		float accumulator = 0; // fixed timestep accumulation
-		float alpha = 0; // fixed timestep interpolation
-		XMFLOAT3 facing = XMFLOAT3(0, 0, 1); // forward facing direction (smoothed)
-		XMFLOAT3 facing_next = XMFLOAT3(0, 0, 1); // forward facing direction (immediate)
-		float leaning = 0; // sideways leaning (smoothed)
-		float leaning_next = 0; // sideways leaning (immediate)
 		bool ground_intersect = false;
 		bool wall_intersect = false;
 		bool swimming = false;
 		bool humanoid_checked = false;
+		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
+		float accumulator = 0; // fixed timestep accumulation
+		XMFLOAT3 position_prev = XMFLOAT3(0, 0, 0);
+		bool process_goal = false;
+		bool foot_placement_enabled = true;
+		bool reset_anim = true;
+		bool anim_ended = true;
+		XMFLOAT3 relative_offset = XMFLOAT3(0, 0, 0);
+		float alpha = 0; // fixed timestep interpolation
+		XMFLOAT3 facing = XMFLOAT3(0, 0, 1); // forward facing direction (smoothed)
+		float leaning = 0; // sideways leaning (smoothed)
+		XMFLOAT3 facing_next = XMFLOAT3(0, 0, 1); // forward facing direction (immediate)
+		float leaning_next = 0; // sideways leaning (immediate)
 		wi::ecs::Entity humanoidEntity = wi::ecs::INVALID_ENTITY;
 		wi::ecs::Entity left_foot = wi::ecs::INVALID_ENTITY;
 		wi::ecs::Entity right_foot = wi::ecs::INVALID_ENTITY;
-		float foot_offset = 0;
-		bool foot_placement_enabled = true;
 		wi::PathQuery pathquery; // completed
 		wi::vector<wi::ecs::Entity> animations;
 		wi::ecs::Entity currentAnimation = wi::ecs::INVALID_ENTITY;
+		XMFLOAT3 goal = XMFLOAT3(0, 0, 0);
 		float anim_timer = 0;
 		float anim_amount = 1;
-		bool reset_anim = true;
-		bool anim_ended = true;
-		XMFLOAT3 goal = XMFLOAT3(0, 0, 0);
-		bool process_goal = false;
+		float shake_horizontal = 0;
+		float shake_vertical = 0;
+		float shake_frequency = 0;
+		float shake_decay = 0;
+		float shake_timer = 0;
 		struct PathfindingThreadContext
 		{
 			wi::jobsystem::context ctx;
@@ -2504,11 +2519,6 @@ namespace wi::scene
 		};
 		std::shared_ptr<PathfindingThreadContext> pathfinding_thread; // separate allocation, mustn't be reallocated while path finding thread is running
 		const wi::VoxelGrid* voxelgrid = nullptr;
-		float shake_horizontal = 0;
-		float shake_vertical = 0;
-		float shake_frequency = 0;
-		float shake_decay = 0;
-		float shake_timer = 0;
 
 		// Apply movement to the character in the next update
 		void Move(const XMFLOAT3& direction);

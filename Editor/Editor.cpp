@@ -294,7 +294,6 @@ void HotkeyRemap(Editor* main)
 		// Remap hotkey if button is successfully found:
 		if (button != wi::input::BUTTON_NONE)
 		{
-				
 			hotkeyActions[size_t(action)] = HotkeyInfo{ button, hotkeyActions[size_t(action)].press, hotkeyString.find("CTRL") != std::string::npos, hotkeyString.find("SHIFT") != std::string::npos };
 		}
 	}
@@ -363,6 +362,25 @@ void Editor::Initialize()
 		}
 	}
 }
+
+bool Editor::KeepRunning() {
+	return !exit_requested || renderComponent.save_in_progress;
+}
+
+void Editor::Exit()
+{
+	// Check all scenes for unsaved changes
+	for (int i = 0; i < (int)renderComponent.scenes.size(); ++i)
+	{
+		if (!renderComponent.CheckUnsavedChanges(i))
+		{
+			return;
+		}
+	}
+	// main loop will need to quit for us
+	exit_requested = true;
+}
+
 void Editor::HotReload()
 {
 	if (IsScriptReplacement())
@@ -1240,12 +1258,16 @@ void EditorComponent::Load()
 		ss += "You can find sample LUA scripts in the Content/scripts directory. Try to load one.\n";
 		ss += "You can find a startup script in startup.lua (this will be executed on program start, if exists)\n";
 		ss += "You can use some command line arguments (without any prefix):\n";
-		ss += "\t- Default to DirectX12 graphics device: dx12\n";
-		ss += "\t- Default to Vulkan graphics device: vulkan\n";
+#ifdef PLATFORM_WINDOWS_DESKTOP
+		ss += "\t- Select Vulkan graphics device instead of DX12: vulkan\n";
+#endif // PLATFORM_WINDOWS_DESKTOP
+		ss += "\t- Prefer integrated GPU: igpu\n";
+		ss += "\t- Prefer AMD GPU: amdgpu\n";
+		ss += "\t- Prefer Nvidia GPU: nvidiagpu\n";
+		ss += "\t- Prefer Intel GPU: intelgpu\n";
 		ss += "\t- Enable graphics device debug mode: debugdevice\n";
 		ss += "\t- Enable graphics device GPU-based validation: gpuvalidation\n";
 		ss += "\t- Make window always active, even when in background: alwaysactive\n";
-		ss += "\t- Prefer to use integrated GPU: igpu\n";
 		ss += "\nFor questions, bug reports, feedback, requests, please open an issue at:\n";
 		ss += "https://github.com/turanszkij/WickedEngine/issues\n";
 		ss += "\n\n";
@@ -1268,13 +1290,21 @@ void EditorComponent::Load()
 			aboutLabel.SetSize(XMFLOAT2(aboutWindow.GetWidgetAreaSize().x - 20, aboutLabel.GetSize().y));
 		});
 		aboutWindow.OnCollapse([this](wi::gui::EventArgs args) {
+			const bool gui_round_enabled = !generalWnd.disableRoundCornersCheckBox.GetCheck();
 			for (int i = 0; i < arraysize(wi::gui::Widget::sprites); ++i)
 			{
-				aboutWindow.sprites[i].params.enableCornerRounding();
-				aboutWindow.sprites[i].params.corners_rounding[0].radius = 10;
-				aboutWindow.sprites[i].params.corners_rounding[1].radius = 10;
-				aboutWindow.sprites[i].params.corners_rounding[2].radius = 10;
-				aboutWindow.sprites[i].params.corners_rounding[3].radius = 10;
+				if (gui_round_enabled)
+				{
+					aboutWindow.sprites[i].params.enableCornerRounding();
+					aboutWindow.sprites[i].params.corners_rounding[0].radius = 10;
+					aboutWindow.sprites[i].params.corners_rounding[1].radius = 10;
+					aboutWindow.sprites[i].params.corners_rounding[2].radius = 10;
+					aboutWindow.sprites[i].params.corners_rounding[3].radius = 10;
+				}
+				else
+				{
+					aboutWindow.sprites[i].params.disableCornerRounding();
+				}
 			}
 		});
 		GetGUI().AddWidget(&aboutWindow);
@@ -1287,8 +1317,8 @@ void EditorComponent::Load()
 	exitButton.SetTooltip("Exit");
 	exitButton.SetColor(wi::Color(160, 50, 50, 180), wi::gui::WIDGETSTATE::IDLE);
 	exitButton.SetColor(wi::Color(200, 50, 50, 255), wi::gui::WIDGETSTATE::FOCUS);
-	exitButton.OnClick([](wi::gui::EventArgs args) {
-		wi::platform::Exit();
+	exitButton.OnClick([this](wi::gui::EventArgs args) {
+		main->Exit();
 		});
 	topmenuWnd.AddWidget(&exitButton);
 
@@ -1322,7 +1352,7 @@ void EditorComponent::Load()
 	componentsWnd.Create(this);
 	GetGUI().AddWidget(&componentsWnd);
 
-	profilerWnd.Create();
+	profilerWnd.Create(this);
 	GetGUI().AddWidget(&profilerWnd);
 
 	contentBrowserWnd.Create(this);
@@ -2343,7 +2373,7 @@ void EditorComponent::Update(float dt)
 		// Select...
 		if (leftmouse_select || selectAll || clear_selected)
 		{
-			wi::Archive& archive = AdvanceHistory();
+			wi::Archive& archive = AdvanceHistory(true);
 			archive << HISTORYOP_SELECTION;
 			// record PREVIOUS selection state...
 			RecordSelection(archive);
@@ -3061,7 +3091,7 @@ void EditorComponent::PostUpdate()
 
 	// This needs to be after scene was updated fully by EditorComponent's renderPath
 	//	Because this will just render the scene without updating its resources
-	if (renderPath->getSceneUpdateEnabled()) // only update preview if scene was updated at all by main renderPath
+	if (!componentsWnd.cameraComponentWnd.IsCollapsed() && renderPath->getSceneUpdateEnabled()) // only update preview if scene was updated at all by main renderPath
 	{
 		componentsWnd.cameraComponentWnd.preview.RenderPreview();
 	}
@@ -4728,8 +4758,9 @@ void EditorComponent::ResetHistory()
 	EditorScene& editorscene = GetCurrentEditorScene();
 	editorscene.historyPos = -1;
 	editorscene.history.clear();
+	editorscene.has_unsaved_changes = false;
 }
-wi::Archive& EditorComponent::AdvanceHistory()
+wi::Archive& EditorComponent::AdvanceHistory(const bool scene_unchanged)
 {
 	EditorScene& editorscene = GetCurrentEditorScene();
 	editorscene.historyPos++;
@@ -4741,6 +4772,12 @@ wi::Archive& EditorComponent::AdvanceHistory()
 
 	editorscene.history.emplace_back();
 	editorscene.history.back().SetReadModeAndResetPos(false);
+
+	if (!scene_unchanged)
+	{
+		editorscene.has_unsaved_changes = true;
+		RefreshSceneList();
+	}
 
 	return editorscene.history.back();
 }
@@ -5211,12 +5248,22 @@ void EditorComponent::Open(std::string filename)
 
 			componentsWnd.weatherWnd.UpdateData();
 			componentsWnd.RefreshEntityTree();
+
+			GetCurrentEditorScene().has_unsaved_changes = false;
+			RefreshSceneList();
+
 			wi::backlog::post("[Editor] finished loading model: " + filename);
 		});
 	});
 }
 void EditorComponent::Save(const std::string& filename)
 {
+	struct SetAndClearFlagOnExit {
+		bool& flag;
+		SetAndClearFlagOnExit(bool& flag) : flag(flag) { flag = true; }
+		~SetAndClearFlagOnExit() { flag = false; }
+	} scoped(save_in_progress);
+
 	std::string extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(filename));
 
 	FileType type = FileType::INVALID;
@@ -5275,14 +5322,20 @@ void EditorComponent::Save(const std::string& filename)
 	}
 
 	GetCurrentEditorScene().path = filename;
+	GetCurrentEditorScene().has_unsaved_changes = false;
 	RefreshSceneList();
 
 	RegisterRecentlyUsed(filename);
 
 	PostSaveText("Scene saved: ", GetCurrentEditorScene().path);
 }
+
 void EditorComponent::SaveAs()
 {
+
+	// also set and reset by Save()
+	save_in_progress = true;
+
 	wi::helper::FileDialogParams params;
 	params.type = wi::helper::FileDialogParams::SAVE;
 	params.description = "Wicked Scene (.wiscene) | GLTF Model (.gltf) | GLTF Binary Model (.glb) | C++ code (.h,.cpp)";
@@ -5297,7 +5350,7 @@ void EditorComponent::SaveAs()
 			std::string filename = (!extension.compare("GLTF") || !extension.compare("GLB") || !extension.compare("H") || !extension.compare("CPP")) ? fileName : wi::helper::ForceExtension(fileName, params.extensions.front());
 			Save(filename);
 		});
-	});
+	}, [this]() { save_in_progress = false; });
 }
 
 Texture EditorComponent::CreateThumbnail(Texture texture, uint32_t target_width, uint32_t target_height, bool mipmaps) const
@@ -5477,7 +5530,7 @@ void EditorComponent::CheckBonePickingEnabled()
 
 	if (!bone_picking)
 		return;
-	
+
 	bone_picking_items.clear();
 	auto bone_pick_iterate = [&](const Entity* entities, size_t entity_count) {
 		for (size_t i = 0; i < entity_count; ++i)
@@ -5877,7 +5930,7 @@ void EditorComponent::UpdateDynamicWidgets()
 	else
 	{
 		logButton.sprites[wi::gui::IDLE].params.color = color_off;
-		logButton.sprites[wi::gui::IDLE].params.gradient = wi::image::Params::Gradient::Linear;
+		logButton.sprites[wi::gui::IDLE].params.gradient = generalWnd.disableGradientCheckBox.GetCheck() ? wi::image::Params::Gradient::None : wi::image::Params::Gradient::Linear;
 	}
 
 
@@ -5980,6 +6033,13 @@ void EditorComponent::SetCurrentScene(int index)
 	wi::lua::scene::SetGlobalCamera(renderPath->camera);
 	componentsWnd.RefreshEntityTree();
 	RefreshSceneList();
+
+	EditorScene& editorscene = GetCurrentEditorScene();
+	if (editorscene.path.empty() && !editorscene.untitled_camera_reset_once)
+	{
+		cameraWnd.ResetCam();
+		editorscene.untitled_camera_reset_once = true;
+	}
 }
 void EditorComponent::RefreshSceneList()
 {
@@ -5987,28 +6047,42 @@ void EditorComponent::RefreshSceneList()
 	for (int i = 0; i < int(scenes.size()); ++i)
 	{
 		auto& editorscene = scenes[i];
+		std::string tabText;
 		if (editorscene->path.empty())
 		{
 			if (current_localization.Get((size_t)EditorLocalization::UntitledScene))
 			{
-				editorscene->tabSelectButton.SetText(current_localization.Get((size_t)EditorLocalization::UntitledScene));
+				tabText = current_localization.Get((size_t)EditorLocalization::UntitledScene);
 			}
 			else
 			{
-				editorscene->tabSelectButton.SetText("Untitled scene");
+				tabText = "Untitled scene";
 			}
 			editorscene->tabSelectButton.SetTooltip("");
 		}
 		else
 		{
-			editorscene->tabSelectButton.SetText(wi::helper::GetFileNameFromPath(editorscene->path));
+			tabText = wi::helper::GetFileNameFromPath(editorscene->path);
 			editorscene->tabSelectButton.SetTooltip(editorscene->path);
 		}
+
+		if (editorscene->has_unsaved_changes)
+		{
+			tabText = tabText + " *";
+		}
+
+		editorscene->tabSelectButton.SetText(tabText);
 
 		editorscene->tabSelectButton.OnClick([this, i](wi::gui::EventArgs args) {
 			SetCurrentScene(i);
 			});
 		editorscene->tabCloseButton.OnClick([this, i](wi::gui::EventArgs args) {
+			// Check for unsaved changes before closing
+			if (!CheckUnsavedChanges(i))
+			{
+				return;
+			}
+
 			wi::lua::KillProcesses();
 
 			translator.selected.clear();
@@ -6052,6 +6126,7 @@ void EditorComponent::RefreshSceneList()
 			componentsWnd.RefreshEntityTree();
 			ResetHistory();
 			scenes[i]->path.clear();
+			scenes[i]->untitled_camera_reset_once = false;
 
 			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 				if (scenes.size() > 1)
@@ -6081,6 +6156,50 @@ void EditorComponent::NewScene()
 	RefreshSceneList();
 	UpdateDynamicWidgets();
 	cameraWnd.ResetCam();
+}
+
+bool EditorComponent::CheckUnsavedChanges(int scene_index)
+{
+	if (scene_index < 0)
+		scene_index = current_scene;
+
+	if (scene_index < 0 || scene_index >= (int)scenes.size())
+		return true;
+
+	EditorScene& editorscene = *scenes[scene_index];
+	if (!editorscene.has_unsaved_changes)
+		return true;
+
+	std::string sceneName = editorscene.path.empty() ? "" : wi::helper::GetFileNameFromPath(editorscene.path);
+	std::string message = sceneName.empty() ? "Do you want to save the untitled scene?" : "Do you want to save changes to \"" + sceneName + "\"?";
+	wi::helper::MessageBoxResult result = wi::helper::messageBoxCustom(message, "Unsaved changes", "YesNoCancel");
+
+	if (result == wi::helper::MessageBoxResult::Yes)
+	{
+		// User wants to save
+		if (editorscene.path.empty())
+		{
+			// Need to prompt for save location
+			SaveAs();
+			return true;
+		}
+		else
+		{
+			// Save to existing path
+			Save(editorscene.path);
+			return true;
+		}
+	}
+	else if (result == wi::helper::MessageBoxResult::No)
+	{
+		// User doesn't want to save, proceed
+		return true;
+	}
+	else // Cancel or closed dialog
+	{
+		// User cancelled, don't proceed
+		return false;
+	}
 }
 
 void EditorComponent::FocusCameraOnSelected()
