@@ -448,8 +448,8 @@ namespace wi::ecs
 
 #ifdef LOOKUP_STRAIGHT
 			// Straight lookup with memory wasting implementation:
-			//	Matches Entity to index with storing every possible Entity in memory up to the max stored entity index
-			//	Fastest lookup but wastes memory storing every possible entity index that was encountered before
+			// Matches Entity to index with storing every possible Entity in memory up to the max stored entity index
+			// Fastest lookup but wastes memory storing every possible entity index that was encountered before
 			// !Use it only for performance testing of minimal lookup overhead!
 			struct Item
 			{
@@ -483,6 +483,7 @@ namespace wi::ecs
 			// Straight lookup sparse memory manager:
 			// Similar to straight as it stores a direct mapping of entity -> index, but unused ranges of entities will not waste as much memory
 			// The lookup is slowed by the extra block data indirection
+			// The problem is still that entity indices just increase forever and no guarantee that the minmax range doesn't get huge
 			struct BlockData
 			{
 				struct Item
@@ -590,26 +591,20 @@ namespace wi::ecs
 #ifdef LOOKUP_BUCKET_HASH
 			// Implementation with hash table:
 			// Compared to standard hashing, this one hashes per 64-item bucket, resulting in less hashed entries
-			struct BlockData
+			struct Block
 			{
+				uint64_t status = 0; // one bit per item in block, if it's 0 then whole block can be freed
 				struct Item
 				{
 					size_t index = INVALID_INDEX;
 				};
 				Item items[64];
 			};
-			struct Block
-			{
-				uint64_t status = 0; // one bit per item in block, if it's 0 then whole block can be freed
-				BlockData* block_data = nullptr; // putting the data outside, separately allocated so that hash table has more locality
-			};
 			wi::unordered_map<uint64_t, Block> table;
-			wi::allocator::BlockAllocator<BlockData, 8> block_allocator; // block allocator manages memory per 8 blocks here (sizeof(BlockData) * 8 = 4 KB pages)
 
 			inline void clear()
 			{
 				table.clear();
-				block_allocator = {};
 			}
 			inline void erase(Entity entity)
 			{
@@ -621,13 +616,11 @@ namespace wi::ecs
 				if (block.status)
 				{
 					const uint64_t item_index = entity & 63ull; // entity % 64
-					block.block_data->items[item_index].index = INVALID_INDEX;
+					block.items[item_index].index = INVALID_INDEX;
 					block.status &= ~(1ull << item_index);
 					if (block.status == 0)
 					{
-						// Free the block data for reuse:
-						block_allocator.free(block.block_data);
-						// Free the block from hash table too:
+						// Free the block from hash table:
 						table.erase(block_index);
 					}
 				}
@@ -635,24 +628,20 @@ namespace wi::ecs
 			inline void insert(Entity entity, size_t index)
 			{
 				const uint64_t block_index = entity >> 6ull; // entity / 64
-				Block& block = table[block_index];
-				if (block.block_data == nullptr)
-				{
-					block.block_data = block_allocator.allocate();
-				}
 				const uint64_t item_index = entity & 63ull; // entity % 64
+				Block& block = table[block_index];
 				block.status |= 1ull << item_index;
-				block.block_data->items[item_index].index = index;
+				block.items[item_index].index = index;
 			}
 			inline size_t get(Entity entity) const
 			{
 				const uint64_t block_index = entity >> 6ull; // entity / 64
-				auto it = table.find(block_index);
+				const auto it = table.find(block_index);
 				if (it == table.end())
 					return INVALID_INDEX;
 				const Block& block = it->second;
 				const uint64_t item_index = entity & 63ull; // entity % 64
-				return block.block_data->items[item_index].index;
+				return block.items[item_index].index;
 			}
 #endif // LOOKUP_BUCKET_HASH
 
