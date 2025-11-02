@@ -132,7 +132,8 @@ namespace wi
 			assert(!readMode);
 			assert(!DATA.empty());
 			assert(offset + sizeof(uint64_t) < DATA.size());
-			*(uint64_t*)(DATA.data() + offset) = uint64_t(pos);
+			uint64_t posuint64 = pos;
+			memcpy(DATA.data() + offset, &posuint64, sizeof(uint64_t));
 		}
 		// Modifies the current archive offset
 		//	It can be used in conjunction with WriteUnknownJumpPosition() and PatchUnknownJumpPosition()
@@ -490,7 +491,7 @@ namespace wi
 				data_ptr = DATA.data();
 				data_ptr_size = DATA.size();
 			}
-			*(T*)(DATA.data() + pos) = data;
+			std::memcpy(DATA.data() + pos, &data, sizeof(data));
 			pos = _right;
 		}
 
@@ -501,7 +502,7 @@ namespace wi
 			assert(readMode);
 			assert(data_ptr != nullptr);
 			assert(pos < data_ptr_size);
-			data = *(const T*)(data_ptr + pos);
+			std::memcpy(&data, data_ptr + pos, sizeof(data));
 			pos += (size_t)(sizeof(data));
 		}
 	};
