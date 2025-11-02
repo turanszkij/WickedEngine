@@ -4019,14 +4019,19 @@ using namespace vulkan_internal;
 		else
 		{
 			VmaAllocationCreateInfo create_info = {};
-			create_info.usage = VMA_MEMORY_USAGE_AUTO;
 			if (desc->usage == Usage::READBACK)
 			{
+				create_info.usage = VMA_MEMORY_USAGE_AUTO_PREFER_HOST;
 				create_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
 			}
 			else if (desc->usage == Usage::UPLOAD)
 			{
+				create_info.usage = VMA_MEMORY_USAGE_AUTO_PREFER_HOST;
 				create_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+			}
+			else
+			{
+				create_info.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
 			}
 
 			if (desc->usage == Usage::DEFAULT && (bufferInfo.usage & VK_BUFFER_USAGE_VIDEO_DECODE_SRC_BIT_KHR))
