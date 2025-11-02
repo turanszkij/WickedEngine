@@ -224,6 +224,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 				stencil = (userStencilRefOverride << 4u) | (stencil & 0xF);
 			}
 			float4 tmp = mul(GetCamera().view_projection, float4(surface.P, 1));
+			tmp.xyz /= max(0.0001, tmp.w); // max: avoid nan
 			depth = saturate(tmp.z); // saturate: avoid blown up values
 		}
 
