@@ -1,12 +1,9 @@
 #pragma once
-#define JOB_SYSTEM_FIXED_SIZE_FUNCTION
-
-#ifdef JOB_SYSTEM_FIXED_SIZE_FUNCTION
-#include "Utility/fixed_size_function.hpp"
-#endif // JOB_SYSTEM_FIXED_SIZE_FUNCTION
-
+#include "wiFunction.h"
 #include <functional>
 #include <atomic>
+
+#define JOB_SYSTEM_FIXED_SIZE_FUNCTION
 
 namespace wi::jobsystem
 {
@@ -28,7 +25,7 @@ namespace wi::jobsystem
 	};
 
 #ifdef JOB_SYSTEM_FIXED_SIZE_FUNCTION
-	using job_function_type = fixed_size_function<void(JobArgs), 128>;
+	using job_function_type = wi::function<void(JobArgs), 128>;
 #else
 	using job_function_type = std::function<void(JobArgs)>;
 #endif // JOB_SYSTEM_FIXED_SIZE_FUNCTION

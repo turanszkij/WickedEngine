@@ -325,6 +325,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiBVH.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiAllocator.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiConfig.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiFunction.h">
+      <FileType>Document</FileType>
+    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLocalization.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiNoise.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiPathQuery.h" />

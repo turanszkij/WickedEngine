@@ -8518,7 +8518,6 @@ namespace wi::scene
 				case ColliderComponent::Shape::Sphere:
 				{
 					Sphere sphere = collider.sphere;
-					// TODO: fix heap allocating lambda capture!
 					wi::jobsystem::Execute(ctx, [&voxelgrid, subtract, sphere](wi::jobsystem::JobArgs args) {
 						voxelgrid.inject_sphere(sphere, subtract);
 						});
@@ -8527,7 +8526,6 @@ namespace wi::scene
 				case ColliderComponent::Shape::Capsule:
 				{
 					Capsule capsule = collider.capsule;
-					// TODO: fix heap allocating lambda capture!
 					wi::jobsystem::Execute(ctx, [&voxelgrid, subtract, capsule](wi::jobsystem::JobArgs args) {
 						voxelgrid.inject_capsule(capsule, subtract);
 						});
@@ -8540,7 +8538,6 @@ namespace wi::scene
 					XMVECTOR P1 = XMVector3Transform(XMVectorSet(1, 0, -1, 1), planeMatrix);
 					XMVECTOR P2 = XMVector3Transform(XMVectorSet(1, 0, 1, 1), planeMatrix);
 					XMVECTOR P3 = XMVector3Transform(XMVectorSet(-1, 0, 1, 1), planeMatrix);
-					// TODO: fix heap allocating lambda capture!
 					wi::jobsystem::Execute(ctx, [&voxelgrid, subtract, P0, P1, P2, P3](wi::jobsystem::JobArgs args) {
 						voxelgrid.inject_triangle(P0, P1, P2, subtract);
 						voxelgrid.inject_triangle(P0, P2, P3, subtract);
@@ -8560,7 +8557,6 @@ namespace wi::scene
 				const AABB& aabb = aabb_objects[i];
 				if ((layerMask & aabb.layerMask) == 0)
 					continue;
-				// TODO: fix heap allocating lambda capture!
 				wi::jobsystem::Execute(ctx, [this, &voxelgrid, subtract, lod, i](wi::jobsystem::JobArgs args) {
 					VoxelizeObject(i, voxelgrid, subtract, lod);
 					});
