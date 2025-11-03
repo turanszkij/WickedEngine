@@ -1645,7 +1645,7 @@ using namespace vulkan_internal;
 		if (descriptorPool != VK_NULL_HANDLE)
 		{
 			device->allocationhandler->destroylocker.lock();
-			device->allocationhandler->destroyer_descriptorPools.push_back(std::make_pair(descriptorPool, device->FRAMECOUNT));
+			device->allocationhandler->destroyer_descriptorPools.push_back(std::make_pair(descriptorPool, device->FRAMECOUNT.load()));
 			descriptorPool = VK_NULL_HANDLE;
 			device->allocationhandler->destroylocker.unlock();
 		}
@@ -1660,6 +1660,7 @@ using namespace vulkan_internal;
 
 	void GraphicsDevice_Vulkan::DescriptorBinder::init(GraphicsDevice_Vulkan* device)
 	{
+		std::scoped_lock lock(mutex);
 		this->device = device;
 
 		// Important that these don't reallocate themselves during writing descriptors!
@@ -1671,11 +1672,13 @@ using namespace vulkan_internal;
 	}
 	void GraphicsDevice_Vulkan::DescriptorBinder::reset()
 	{
+		std::scoped_lock lock(mutex);
 		table = {};
 		dirty = true;
 	}
 	void GraphicsDevice_Vulkan::DescriptorBinder::flush(bool graphics, CommandList cmd)
 	{
+		std::scoped_lock lock(mutex);
 		if (dirty == DIRTY_NONE)
 			return;
 
@@ -2302,7 +2305,10 @@ using namespace vulkan_internal;
 				}
 				pipelineInfo.pNext = &renderingInfo;
 
-				vulkan_check(vkCreateGraphicsPipelines(device, pipelineCache, 1, &pipelineInfo, nullptr, &pipeline));
+				{
+					std::scoped_lock lock(pipelineCache_mutex);
+					vulkan_check(vkCreateGraphicsPipelines(device, pipelineCache, 1, &pipelineInfo, nullptr, &pipeline));
+				}
 
 				commandlist.pipelines_worker.push_back(std::make_pair(pipeline_hash, pipeline));
 			}
@@ -3540,7 +3546,10 @@ using namespace vulkan_internal;
 			createInfo.pInitialData = pipelineData.data();
 
 			// Create Vulkan pipeline cache
-			vulkan_check(vkCreatePipelineCache(device, &createInfo, nullptr, &pipelineCache));
+			{
+				std::scoped_lock lock(pipelineCache_mutex);
+				vulkan_check(vkCreatePipelineCache(device, &createInfo, nullptr, &pipelineCache));
+			}
 		}
 #endif
 
@@ -3745,22 +3754,25 @@ using namespace vulkan_internal;
 			vkDestroySampler(device, sam, nullptr);
 		}
 
-		if (pipelineCache != VK_NULL_HANDLE)
 		{
-			// Get size of pipeline cache
-			size_t size{};
-			vulkan_check(vkGetPipelineCacheData(device, pipelineCache, &size, nullptr));
+			std::scoped_lock lock(pipelineCache_mutex);
+			if (pipelineCache != VK_NULL_HANDLE)
+			{
+				// Get size of pipeline cache
+				size_t size{};
+				vulkan_check(vkGetPipelineCacheData(device, pipelineCache, &size, nullptr));
 
-			// Get data of pipeline cache
-			wi::vector<uint8_t> data(size);
-			vulkan_check(vkGetPipelineCacheData(device, pipelineCache, &size, data.data()));
+				// Get data of pipeline cache
+				wi::vector<uint8_t> data(size);
+				vulkan_check(vkGetPipelineCacheData(device, pipelineCache, &size, data.data()));
 
-			// Write pipeline cache data to a file in binary format
-			wi::helper::FileWrite(get_shader_cache_path(), data.data(), size);
+				// Write pipeline cache data to a file in binary format
+				wi::helper::FileWrite(get_shader_cache_path(), data.data(), size);
 
-			// Destroy Vulkan pipeline cache
-			vkDestroyPipelineCache(device, pipelineCache, nullptr);
-			pipelineCache = VK_NULL_HANDLE;
+				// Destroy Vulkan pipeline cache
+				vkDestroyPipelineCache(device, pipelineCache, nullptr);
+				pipelineCache = VK_NULL_HANDLE;
+			}
 		}
 
 		if (debugUtilsMessenger != VK_NULL_HANDLE)
@@ -4776,7 +4788,7 @@ using namespace vulkan_internal;
 
 		return res >= VK_SUCCESS;
 	}
-	bool GraphicsDevice_Vulkan::CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader) const
+	bool GraphicsDevice_Vulkan::CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader)
 	{
 		auto internal_state = std::make_shared<Shader_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
@@ -5081,7 +5093,10 @@ using namespace vulkan_internal;
 			// Create compute pipeline state in place:
 			pipelineInfo.stage = internal_state->stageInfo;
 
-			vulkan_check(vkCreateComputePipelines(device, pipelineCache, 1, &pipelineInfo, nullptr, &internal_state->pipeline_cs));
+			{
+				std::scoped_lock lock(pipelineCache_mutex);
+				vulkan_check(vkCreateComputePipelines(device, pipelineCache, 1, &pipelineInfo, nullptr, &internal_state->pipeline_cs));
+			}
 		}
 
 		return res == VK_SUCCESS;
@@ -5350,7 +5365,7 @@ using namespace vulkan_internal;
 
 		return res == VK_SUCCESS;
 	}
-	bool GraphicsDevice_Vulkan::CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso, const RenderPassInfo* renderpass_info) const
+	bool GraphicsDevice_Vulkan::CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso, const RenderPassInfo* renderpass_info)
 	{
 		auto internal_state = std::make_shared<PipelineState_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
@@ -5975,7 +5990,10 @@ using namespace vulkan_internal;
 			}
 			pipelineInfo.pNext = &renderingInfo;
 
-			vulkan_check(vkCreateGraphicsPipelines(device, pipelineCache, 1, &pipelineInfo, nullptr, &internal_state->pipeline));
+			{
+				std::scoped_lock lock(pipelineCache_mutex);
+				vulkan_check(vkCreateGraphicsPipelines(device, pipelineCache, 1, &pipelineInfo, nullptr, &internal_state->pipeline));
+			}
 		}
 
 		return res == VK_SUCCESS;
@@ -6158,7 +6176,7 @@ using namespace vulkan_internal;
 
 		return res == VK_SUCCESS;
 	}
-	bool GraphicsDevice_Vulkan::CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* desc, RaytracingPipelineState* rtpso) const
+	bool GraphicsDevice_Vulkan::CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* desc, RaytracingPipelineState* rtpso)
 	{
 		auto internal_state = std::make_shared<RTPipelineState_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
@@ -6243,17 +6261,20 @@ using namespace vulkan_internal;
 		info.basePipelineHandle = VK_NULL_HANDLE;
 		info.basePipelineIndex = 0;
 
-		VkResult res = vulkan_check(vkCreateRayTracingPipelinesKHR(
-			device,
-			VK_NULL_HANDLE,
-			pipelineCache,
-			1,
-			&info,
-			nullptr,
-			&internal_state->pipeline
-		));
+		{
+			std::scoped_lock lock(pipelineCache_mutex);
+			VkResult res = vulkan_check(vkCreateRayTracingPipelinesKHR(
+				device,
+				VK_NULL_HANDLE,
+				pipelineCache,
+				1,
+				&info,
+				nullptr,
+				&internal_state->pipeline
+			));
+		    return res == VK_SUCCESS;
+		}
 
-		return res == VK_SUCCESS;
 	}
 	bool GraphicsDevice_Vulkan::CreateVideoDecoder(const VideoDesc* desc, VideoDecoder* video_decoder) const
 	{
@@ -7424,7 +7445,7 @@ using namespace vulkan_internal;
 					else
 					{
 						allocationhandler->destroylocker.lock();
-						allocationhandler->destroyer_pipelines.push_back(std::make_pair(x.second, FRAMECOUNT));
+						allocationhandler->destroyer_pipelines.push_back(std::make_pair(x.second, FRAMECOUNT.load()));
 						allocationhandler->destroylocker.unlock();
 					}
 				}
@@ -7522,7 +7543,7 @@ using namespace vulkan_internal;
 
 		for (auto& x : pipelines_global)
 		{
-			allocationhandler->destroyer_pipelines.push_back(std::make_pair(x.second, FRAMECOUNT));
+			allocationhandler->destroyer_pipelines.push_back(std::make_pair(x.second, FRAMECOUNT.load()));
 		}
 		pipelines_global.clear();
 
@@ -7530,21 +7551,24 @@ using namespace vulkan_internal;
 		{
 			for (auto& y : x->pipelines_worker)
 			{
-				allocationhandler->destroyer_pipelines.push_back(std::make_pair(y.second, FRAMECOUNT));
+				allocationhandler->destroyer_pipelines.push_back(std::make_pair(y.second, FRAMECOUNT.load()));
 			}
 			x->pipelines_worker.clear();
 		}
 		allocationhandler->destroylocker.unlock();
 
-		if (pipelineCache != VK_NULL_HANDLE)
 		{
-			vkDestroyPipelineCache(device, pipelineCache, nullptr);
-			pipelineCache = VK_NULL_HANDLE;
+			std::scoped_lock lock(pipelineCache_mutex);
+			if (pipelineCache != VK_NULL_HANDLE)
+			{
+				vkDestroyPipelineCache(device, pipelineCache, nullptr);
+				pipelineCache = VK_NULL_HANDLE;
 
-			VkPipelineCacheCreateInfo createInfo{ VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO };
-			createInfo.initialDataSize = 0;
-			createInfo.pInitialData = nullptr;
-			vulkan_check(vkCreatePipelineCache(device, &createInfo, nullptr, &pipelineCache));
+				VkPipelineCacheCreateInfo createInfo{ VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO };
+				createInfo.initialDataSize = 0;
+				createInfo.pInitialData = nullptr;
+				vulkan_check(vkCreatePipelineCache(device, &createInfo, nullptr, &pipelineCache));
+			}
 		}
 	}
 

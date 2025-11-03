@@ -11,6 +11,7 @@
 #include "wiHelper.h"
 #include "wiGUI.h"
 
+#include <atomic>
 #include <mutex>
 #include <deque>
 #include <limits>
@@ -31,7 +32,7 @@ namespace wi::backlog
 	wi::font::Params font_params;
 	wi::Color backgroundColor = wi::Color(17, 30, 43, 255);
 	Texture backgroundTex;
-	bool refitscroll = false;
+	std::atomic<bool> refitscroll = false;
 	wi::gui::TextInputField inputField;
 	wi::gui::Button toggleButton;
 	wi::gui::GUI GUI;
@@ -39,7 +40,7 @@ namespace wi::backlog
 	bool locked = false;
 	bool blockLuaExec = false;
 	LogLevel logLevel = LogLevel::Default;
-	LogLevel unseen = LogLevel::None;
+	std::atomic<LogLevel> unseen = LogLevel::None;
 
 	std::deque<LogEntry> history;
 	std::mutex historyLock;
@@ -403,7 +404,11 @@ namespace wi::backlog
 			break;
 		}
 
-		unseen = std::max(unseen, level);
+		// atomically set unseen to max of current value and level
+		LogLevel current_unseen = unseen.load(std::memory_order_relaxed);
+		while (current_unseen < level) {
+			unseen.compare_exchange_weak(current_unseen, level, std::memory_order_acq_rel, std::memory_order_relaxed);
+		}
 
 		if (level >= LogLevel::Error)
 		{
