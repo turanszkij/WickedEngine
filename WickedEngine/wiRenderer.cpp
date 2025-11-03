@@ -749,13 +749,22 @@ bool LoadShader(
 	const wi::vector<std::string>& permutation_defines
 )
 {
+	wi::vector<std::string> final_defines = permutation_defines;
+#ifdef WI_DISABLE_VOXELIZATION_GEOMETRY_SHADER
+	static const std::string disable_voxelizer_gs_macro = "WI_DISABLE_VOXELIZATION_GEOMETRY_SHADER";
+	if (std::find(final_defines.begin(), final_defines.end(), disable_voxelizer_gs_macro) == final_defines.end())
+	{
+		final_defines.push_back(disable_voxelizer_gs_macro);
+	}
+#endif // WI_DISABLE_VOXELIZATION_GEOMETRY_SHADER
+
 	std::string shaderbinaryfilename = SHADERPATH + filename;
 
-	if (!permutation_defines.empty())
+	if (!final_defines.empty())
 	{
 		std::string ext = wi::helper::GetExtensionFromFileName(shaderbinaryfilename);
 		shaderbinaryfilename = wi::helper::RemoveExtension(shaderbinaryfilename);
-		for (auto& def : permutation_defines)
+		for (auto& def : final_defines)
 		{
 			shaderbinaryfilename += "_" + def;
 		}
@@ -792,7 +801,7 @@ bool LoadShader(
 		input.format = device->GetShaderFormat();
 		input.stage = stage;
 		input.minshadermodel = minshadermodel;
-		input.defines = permutation_defines;
+		input.defines = final_defines;
 
 		std::string sourcedir = SHADERSOURCEPATH;
 		wi::helper::MakePathAbsolute(sourcedir);
@@ -2375,7 +2384,11 @@ void SetUpStates()
 	else
 #endif // VOXELIZATION_CONSERVATIVE_RASTERIZATION_ENABLED
 	{
+#if !defined(WI_DISABLE_VOXELIZATION_GEOMETRY_SHADER)
 		rs.forced_sample_count = 8;
+#else
+		rs.forced_sample_count = 1;
+#endif // WI_DISABLE_VOXELIZATION_GEOMETRY_SHADER
 	}
 	rasterizers[RSTYPE_VOXELIZE] = rs;
 
@@ -3157,6 +3170,11 @@ void RenderMeshes(
 	device->EventBegin("RenderMeshes", cmd);
 
 	RenderPassInfo renderpass_info = device->GetRenderPassInfo(cmd);
+	if (renderPass == RENDERPASS_VOXELIZE)
+	{
+		// Voxelization renderpass renders into UAVs, so enforce a single-sample pipeline.
+		renderpass_info.sample_count = 1;
+	}
 
 	const bool tessellation =
 		(flags & DRAWSCENE_TESSELLATION) &&
@@ -3304,7 +3322,16 @@ void RenderMeshes(
 					variant.bits.renderpass = renderPass;
 					variant.bits.shadertype = material.shaderType;
 					variant.bits.blendmode = material.GetBlendMode();
-					variant.bits.cullmode = (mesh.IsDoubleSided() || material.IsDoubleSided() || (shadowRendering && mesh.IsDoubleSidedShadow())) ? (uint32_t)CullMode::NONE : (uint32_t)CullMode::BACK;
+#if defined(WI_DISABLE_VOXELIZATION_GEOMETRY_SHADER)
+					if (renderPass == RENDERPASS_VOXELIZE)
+					{
+						variant.bits.cullmode = (uint32_t)CullMode::NONE;
+					}
+					else
+#endif // WI_DISABLE_VOXELIZATION_GEOMETRY_SHADER
+					{
+						variant.bits.cullmode = (mesh.IsDoubleSided() || material.IsDoubleSided() || (shadowRendering && mesh.IsDoubleSidedShadow())) ? (uint32_t)CullMode::NONE : (uint32_t)CullMode::BACK;
+					}
 					variant.bits.tessellation = tessellatorRequested;
 					variant.bits.alphatest = material.IsAlphaTestEnabled() || forceAlphaTestForDithering;
 					variant.bits.sample_count = renderpass_info.sample_count;
@@ -9864,7 +9891,7 @@ void VXGI_Voxelize(
 #ifdef VOXELIZATION_GEOMETRY_SHADER_ENABLED
 			const uint32_t frustum_count = 1; // axis will be selected by geometry shader
 #else
-			const uint32_t frustum_count = 3; // just used to replicate 3 times for main axes, but not with real frustums
+			const uint32_t frustum_count = 6; // render along +/- axis directions when geometry shader is unavailable
 #endif // VOXELIZATION_GEOMETRY_SHADER_ENABLED
 			RenderMeshes(vis, renderQueue, RENDERPASS_VOXELIZE, FILTER_OPAQUE, cmd, 0, frustum_count);
 			device->RenderPassEnd(cmd);

@@ -3,9 +3,18 @@
 #include "ShaderInterop.h"
 #include "ShaderInterop_Renderer.h"
 
+#ifdef __cplusplus
+#include "../wiPlatform.h"
+#if defined(PLATFORM_MACOS) && !defined(WI_DISABLE_VOXELIZATION_GEOMETRY_SHADER)
+#define WI_DISABLE_VOXELIZATION_GEOMETRY_SHADER
+#endif // PLATFORM_MACOS && !WI_DISABLE_VOXELIZATION_GEOMETRY_SHADER
+#endif // __cplusplus
+
 // If enabled, geometry shader will be used to voxelize, and axis will be selected by geometry shader
 //	If disabled, vertex shader with instance replication will be used for each axis
+#if !defined(WI_DISABLE_VOXELIZATION_GEOMETRY_SHADER)
 #define VOXELIZATION_GEOMETRY_SHADER_ENABLED
+#endif // !WI_DISABLE_VOXELIZATION_GEOMETRY_SHADER
 
 // If enabled, conservative rasterization will be used to voxelize
 //	This can more accurately voxelize thin geometry, but slower
