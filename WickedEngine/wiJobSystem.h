@@ -1,9 +1,16 @@
 #pragma once
-#include "wiFunction.h"
-#include <functional>
-#include <atomic>
 
+// If this is defined, job system will use the custom wi::function with disabled allocation
+//	otherwise it will use standard std::function that might allocate
 #define JOB_SYSTEM_FIXED_SIZE_FUNCTION
+
+#ifdef JOB_SYSTEM_FIXED_SIZE_FUNCTION
+#include "wiFunction.h"
+#else
+#include <functional>
+#endif // JOB_SYSTEM_FIXED_SIZE_FUNCTION
+
+#include <atomic>
 
 namespace wi::jobsystem
 {
