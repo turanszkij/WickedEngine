@@ -247,7 +247,7 @@ add_executable(offlineshadercompiler
         offlineshadercompiler.cpp
 )
 
-if(WICKED_USE_IPO)
+if(WICKED_ENABLE_IPO)
 set_target_properties(${WICKEDENGINE_STATIC_LIBRARIES} ${TARGET_NAME} offlineshadercompiler PROPERTIES
     INTERPROCEDURAL_OPTIMIZATION ON
     INTERPROCEDURAL_OPTIMIZATION_DEBUG OFF

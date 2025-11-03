@@ -32,7 +32,7 @@ else()
 	set(LIB_DXCOMPILER "libdxcompiler.so")
 endif ()
 
-if(WICKED_USE_IPO)
+if(WICKED_ENABLE_IPO)
 set_target_properties(Tests PROPERTIES
     INTERPROCEDURAL_OPTIMIZATION ON
     INTERPROCEDURAL_OPTIMIZATION_DEBUG OFF
@@ -59,6 +59,6 @@ add_custom_command(
 	# Copy font test resources
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/yumin.ttf ${CMAKE_CURRENT_BINARY_DIR}/
 
-	COMMENT "$<IF:$<BOOL:${WICKED_USE_SYMLINKS}>,Symlinking,Copying> Tests resources"
+	COMMENT "$<IF:$<BOOL:${WICKED_ENABLE_SYMLINKS}>,Symlinking,Copying> Tests resources"
 	VERBATIM
 )

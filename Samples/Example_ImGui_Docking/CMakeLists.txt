@@ -81,7 +81,7 @@ else()
 	set(LIB_DXCOMPILER "libdxcompiler.so")
 endif ()
 
-if(WICKED_USE_IPO)
+if(WICKED_ENABLE_IPO)
 set_target_properties(Example_ImGui_Docking PROPERTIES
     INTERPROCEDURAL_OPTIMIZATION ON
     INTERPROCEDURAL_OPTIMIZATION_DEBUG OFF

@@ -22,21 +22,26 @@ option(USE_LIBCXX "Link WickedEngine to llvm libc++ library - only available wit
 option(WICKED_EDITOR "Build WickedEngine editor" ON)
 option(WICKED_TESTS "Build WickedEngine tests" ON)
 option(WICKED_IMGUI_EXAMPLE "Build WickedEngine imgui example" ON)
-option(WICKED_USE_IPO "Enable IPO/LTO in non-debug builds" ${ipo_supported})
+option(WICKED_ENABLE_IPO "Enable IPO/LTO in non-debug builds" ${ipo_supported})
+option(WICKED_ENABLE_ASAN "Enable Address Sanitizer in debug builds" OFF)
+option(WICKED_ENABLE_UBSAN "Enable Undefined Behaviour Sanitizer in debug builds" OFF)
+option(WICKED_ENABLE_TSAN "Enable Thread Sanitizer in debug builds" OFF)
+option(WICKED_ENABLE_LSAN "Enable Leak Sanitizer in debug builds" OFF)
+option(WICKED_ENABLE_SAN_RELEASE "Also enable Sanitizers in release builds" OFF)
 
 if (CMAKE_HOST_WIN32)
     set(symlink_default OFF)
 else()
     set(symlink_default ON)
 endif()
-option(WICKED_USE_SYMLINKS "Prefer symlinking over copying directories" ${symlink_default})
+option(WICKED_ENABLE_SYMLINKS "Prefer symlinking over copying directories" ${symlink_default})
 
 # check that IPO is supported when turned on
-if(WICKED_USE_IPO)
+if(WICKED_ENABLE_IPO)
     check_ipo_supported()
 endif()
 
-if(WICKED_USE_SYMLINKS)
+if(WICKED_ENABLE_SYMLINKS)
     # check for symlink support (on windows it requires admin or developer mode)
     execute_process(
         COMMAND ${CMAKE_COMMAND} -E create_symlink CMakeLists.txt ${CMAKE_CURRENT_BINARY_DIR}/symlink-test
@@ -47,7 +52,7 @@ if(WICKED_USE_SYMLINKS)
         file(REMOVE ${CMAKE_BINARY_DIR}/symlink-test)
         set(COPY_OR_SYMLINK_DIR_CMD create_symlink)
     else()
-        message(FATAL_ERROR "Symlinks are not supported. Either disable them using -DWICKED_USE_SYMLINKS=OFF or enable Windows' developer mode")
+        message(FATAL_ERROR "Symlinks are not supported. Either disable them using -DWICKED_ENABLE_SYMLINKS=OFF or enable Windows' developer mode")
     endif()
 else()
     if(CMAKE_VERSION VERSION_LESS "3.26.0")
@@ -72,7 +77,53 @@ set(CMAKE_POSITION_INDEPENDENT_CODE WICKED_PIC)
 # Use solution folders to organize projects
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+if(WICKED_ENABLE_ASAN AND WICKED_ENABLE_TSAN)
+	message(FATAL_ERROR "WICKED_ENABLE_ASAN and WICKED_ENABLE_TSAN are mutually exclusive!")
+endif()
 
+if(WICKED_ENABLE_LSAN AND WICKED_ENABLE_TSAN)
+	message(FATAL_ERROR "WICKED_ENABLE_LSAN and WICKED_ENABLE_TSAN are mutually exclusive!")
+endif()
+
+if(WICKED_ENABLE_ASAN)
+	if(MSVC)
+		set(SANITIZE_OPTIONS "/fsanitize=address")
+	else()
+		set(SANITIZE_OPTIONS "-fsanitize=address")
+	endif()
+endif()
+
+if(WICKED_ENABLE_TSAN)
+	if(MSVC)
+		message(FATAL_ERROR "MSVC does not support TSAN, use clang or gcc")
+	else()
+		set(SANITIZE_OPTIONS "${SANITIZE_OPTIONS} -fsanitize=thread")
+	endif()
+endif()
+
+if(WICKED_ENABLE_UBSAN)
+	if (MSVC)
+		message(FATAL_ERROR "MSVC does not support UBSAN, use clang or gcc")
+	else()
+		set(SANITIZE_OPTIONS "${SANITIZE_OPTIONS} -fsanitize=undefined")
+	endif()
+endif()
+
+if(WICKED_ENABLE_LSAN)
+	if (MSVC)
+		message(FATAL_ERROR "MSVC does not support LSAN, use clang or gcc")
+	else()
+		set(SANITIZE_LINK_OPTIONS "-fsanitize=leak")
+	endif()
+endif()
+
+if(WICKED_ALWAYS_USE_SAN)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${SANITIZE_OPTIONS}")
+	add_link_options(${SANITIZE_LINK_OPTIONS)
+else()
+	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${SANITIZE_OPTIONS}")
+	add_link_options($<$<CONFIG:Debug>:${SANITIZE_LINK_OPTIONS}>)
+endif()
 
 if (WIN32)
     set(PLATFORM "Windows")
@@ -132,7 +183,7 @@ endif()
 add_subdirectory(WickedEngine)
 add_custom_target(Content
    COMMAND ${CMAKE_COMMAND} -E ${COPY_OR_SYMLINK_DIR_CMD} ${WICKED_ROOT_DIR}/Content ${CMAKE_CURRENT_BINARY_DIR}/Content
-   COMMENT "$<IF:$<BOOL:${WICKED_USE_SYMLINKS}>,Symlinking,Copying> Content directory"
+   COMMENT "$<IF:$<BOOL:${WICKED_ENABLE_SYMLINKS}>,Symlinking,Copying> Content directory"
    VERBATIM
 )
 
