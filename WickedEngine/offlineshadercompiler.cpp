@@ -496,10 +496,19 @@ int main(int argc, char* argv[])
 	shaders.push_back({ "yuv_to_rgbCS", wi::graphics::ShaderStage::CS });
 	shaders.back().permutations.emplace_back().defines = { "ARRAY" };
 
+	// Simplify permutation iteration:
+	for (auto& shader : shaders)
+	{
+		if (shader.permutations.empty())
+		{
+			shader.permutations.emplace_back();
+		}
+	}
+
 	wi::jobsystem::Initialize();
 	wi::jobsystem::context ctx;
 
-	std::string SHADERSOURCEPATH = wi::renderer::GetShaderSourcePath();
+	static std::string SHADERSOURCEPATH = wi::renderer::GetShaderSourcePath();
 	wi::helper::MakePathAbsolute(SHADERSOURCEPATH);
 
 	std::cout << "[Wicked Engine Offline Shader Compiler] Searching for outdated shaders...\n";
@@ -525,15 +534,11 @@ int main(int argc, char* argv[])
 					continue;
 				}
 			}
-			wi::vector<ShaderEntry::Permutation> permutations = shader.permutations;
-			if (permutations.empty())
-			{
-				permutations.emplace_back();
-			}
 
-			for (auto permutation : permutations)
+			for (auto& permutation : shader.permutations)
 			{
-				wi::jobsystem::Execute(ctx, [=](wi::jobsystem::JobArgs args) {
+				wi::jobsystem::Execute(ctx, [&target, &permutation, &shader, SHADERPATH, compile_flags](wi::jobsystem::JobArgs args) {
+
 					std::string shaderbinaryfilename = SHADERPATH + shader.name;
 					for (auto& def : permutation.defines)
 					{
