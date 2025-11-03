@@ -40,7 +40,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			}
 			break;
 		case WM_INPUT:
-			wi::input::rawinput::ParseMessage((void*)lParam);
+			if (editor.is_window_active)
+			{
+				wi::input::rawinput::ParseMessage((void*)lParam);
+			}
 			break;
 		case WM_POINTERUPDATE:
 		{
