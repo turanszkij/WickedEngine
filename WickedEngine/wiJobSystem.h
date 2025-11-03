@@ -1,4 +1,9 @@
 #pragma once
+#define JOB_SYSTEM_FIXED_SIZE_FUNCTION
+
+#ifdef JOB_SYSTEM_FIXED_SIZE_FUNCTION
+#include "Utility/fixed_size_function.hpp"
+#endif // JOB_SYSTEM_FIXED_SIZE_FUNCTION
 
 #include <functional>
 #include <atomic>
@@ -22,6 +27,12 @@ namespace wi::jobsystem
 		void* sharedmemory;		// stack memory shared within the current group (jobs within a group execute serially)
 	};
 
+#ifdef JOB_SYSTEM_FIXED_SIZE_FUNCTION
+	using job_function_type = fixed_size_function<void(JobArgs), 128>;
+#else
+	using job_function_type = std::function<void(JobArgs)>;
+#endif // JOB_SYSTEM_FIXED_SIZE_FUNCTION
+
 	enum class Priority
 	{
 		High,		// Default
@@ -40,13 +51,13 @@ namespace wi::jobsystem
 	uint32_t GetThreadCount(Priority priority = Priority::High);
 
 	// Add a task to execute asynchronously. Any idle thread will execute this.
-	void Execute(context& ctx, const std::function<void(JobArgs)>& task);
+	void Execute(context& ctx, const job_function_type& task);
 
 	// Divide a task onto multiple jobs and execute in parallel.
 	//	jobCount	: how many jobs to generate for this task.
 	//	groupSize	: how many jobs to execute per thread. Jobs inside a group execute serially. It might be worth to increase for small jobs
 	//	task		: receives a JobArgs as parameter
-	void Dispatch(context& ctx, uint32_t jobCount, uint32_t groupSize, const std::function<void(JobArgs)>& task, size_t sharedmemory_size = 0);
+	void Dispatch(context& ctx, uint32_t jobCount, uint32_t groupSize, const job_function_type& task, size_t sharedmemory_size = 0);
 
 	// Returns the amount of job groups that will be created for a set number of jobs and group size
 	uint32_t DispatchGroupCount(uint32_t jobCount, uint32_t groupSize);

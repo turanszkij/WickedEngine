@@ -3,10 +3,10 @@
 #include "wiBacklog.h"
 #include "wiPlatform.h"
 #include "wiTimer.h"
+#include "wiAllocator.h"
 
 #include <memory>
 #include <algorithm>
-#include <deque>
 #include <string>
 #include <thread>
 #include <mutex>
@@ -26,9 +26,9 @@
 
 namespace wi::jobsystem
 {
-	struct Job
+	struct alignas(32) Job
 	{
-		std::function<void(JobArgs)> task;
+		job_function_type task;
 		context* ctx;
 		uint32_t groupID;
 		uint32_t groupJobOffset;
@@ -61,23 +61,62 @@ namespace wi::jobsystem
 	};
 	struct JobQueue
 	{
-		std::deque<Job> queue;
+		struct alignas(32) Block
+		{
+			uint32_t first_item = 0;
+			uint32_t last_item = 0;
+			Block* next = nullptr;
+			Job items[256];
+		};
+		wi::allocator::BlockAllocator<Block, 16> allocator;
+		Block* first_block = nullptr;
+		Block* last_block = nullptr;
 		std::mutex locker;
+
+		JobQueue()
+		{
+			first_block = last_block = allocator.allocate();
+		}
 
 		inline void push_back(const Job& item)
 		{
 			std::scoped_lock lock(locker);
-			queue.push_back(item);
+			if (last_block->last_item == arraysize(Block::items))
+			{
+				// We ran out of items in the last block, so we need to allocate a new one:
+				last_block->next = allocator.allocate();
+				last_block = last_block->next;
+			}
+			last_block->items[last_block->last_item++] = item;
 		}
 		inline bool pop_front(Job& item)
 		{
 			std::scoped_lock lock(locker);
-			if (queue.empty())
+			if (first_block->first_item == first_block->last_item)
 			{
+				// Here it means that the container is empty
 				return false;
 			}
-			item = std::move(queue.front());
-			queue.pop_front();
+			item = std::move(first_block->items[first_block->first_item++]);
+			if (first_block->first_item == arraysize(Block::items))
+			{
+				// When we are here it means that the block was emptied
+				Block* next = first_block->next;
+				if (next == nullptr)
+				{
+					// No next block means there is only one block and it became empty after popping
+					//	-> we can reset just the block
+					first_block->first_item = 0;
+					first_block->last_item = 0;
+				}
+				else
+				{
+					// There is a next block, we have to move to it
+					//	-> the current block can be freed and reused
+					allocator.free(first_block);
+					first_block = next;
+				}
+			}
 			return true;
 		}
 	};
@@ -354,7 +393,7 @@ namespace wi::jobsystem
 		return internal_state.resources[int(priority)].numThreads;
 	}
 
-	void Execute(context& ctx, const std::function<void(JobArgs)>& task)
+	void Execute(context& ctx, const job_function_type& task)
 	{
 		PriorityResources& res = internal_state.resources[int(ctx.priority)];
 
@@ -380,7 +419,7 @@ namespace wi::jobsystem
 		res.sleepingCondition.notify_one();
 	}
 
-	void Dispatch(context& ctx, uint32_t jobCount, uint32_t groupSize, const std::function<void(JobArgs)>& task, size_t sharedmemory_size)
+	void Dispatch(context& ctx, uint32_t jobCount, uint32_t groupSize, const job_function_type& task, size_t sharedmemory_size)
 	{
 		if (jobCount == 0 || groupSize == 0)
 		{
