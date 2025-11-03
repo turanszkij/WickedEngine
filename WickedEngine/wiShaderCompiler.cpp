@@ -498,6 +498,21 @@ namespace wi::shadercompiler
 			args_raw.push_back(x.c_str());
 		}
 
+#ifndef _WIN32
+		// work around https://github.com/microsoft/DirectXShaderCompiler/issues/7869
+		static std::mutex locale_mut;
+		static char* prev_locale;
+		// we need to use a mutex anyway, so no point in using atomic_int
+		static int scope = 0;
+
+		{
+			std::scoped_lock lock(locale_mut);
+			if (scope++ == 0) {
+				prev_locale = strdup(setlocale(LC_ALL, nullptr));
+				setlocale(LC_ALL, "en_US.UTF-8");
+			}
+		}
+#endif
 		ComPtr<IDxcResult> pResults;
 		hr = dxcCompiler->Compile(
 			&Source,						// Source buffer.
@@ -506,6 +521,15 @@ namespace wi::shadercompiler
 			&includehandler,		// User-provided interface to handle #include directives (optional).
 			IID_PPV_ARGS(&pResults)	// Compiler output status, buffer, and errors.
 		);
+#ifndef _WIN32
+		{
+			std::scoped_lock lock(locale_mut);
+			if (--scope == 0) {
+				setlocale(LC_ALL, prev_locale);
+				free(prev_locale);
+			}
+		}
+#endif
 		assert(SUCCEEDED(hr));
 
 		ComPtr<IDxcBlobUtf8> pErrors = nullptr;
