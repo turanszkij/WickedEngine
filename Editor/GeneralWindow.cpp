@@ -63,14 +63,6 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	nameDebugCheckBox.SetTooltip("Visualize the entity names in the scene");
 	AddWidget(&nameDebugCheckBox);
 
-	wireFrameCheckBox.Create("Render Wireframe: ");
-	wireFrameCheckBox.SetTooltip("Visualize the scene as a wireframe");
-	wireFrameCheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::renderer::SetWireRender(args.bValue);
-		});
-	wireFrameCheckBox.SetCheck(wi::renderer::IsWireRender());
-	AddWidget(&wireFrameCheckBox);
-
 	aabbDebugCheckBox.Create("AABB visualizer: ");
 	aabbDebugCheckBox.SetTooltip("Visualize the scene bounding boxes");
 	aabbDebugCheckBox.SetScriptTip("SetDebugPartitionTreeEnabled(bool enabled)");
@@ -388,6 +380,17 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		});
 	});
 	AddWidget(&localizationButton);
+
+	wireFrameComboBox.Create("Render wireframe: ");
+	wireFrameComboBox.SetTooltip("Choose wireframe rendering mode:\nDisabled: Normal rendering\nWireframe Only: Replace geometry with wireframe\nWireframe Overlay: Show wireframe on top of geometry");
+	wireFrameComboBox.AddItem("Disabled", wi::renderer::WIREFRAME_DISABLED);
+	wireFrameComboBox.AddItem("Wireframe Only", wi::renderer::WIREFRAME_ONLY);
+	wireFrameComboBox.AddItem("Wireframe Overlay", wi::renderer::WIREFRAME_OVERLAY);
+	wireFrameComboBox.OnSelect([](wi::gui::EventArgs args) {
+		wi::renderer::SetWireframeMode((wi::renderer::WIREFRAME_MODE)args.iValue);
+	});
+	wireFrameComboBox.SetSelected((int)wi::renderer::GetWireframeMode());
+	AddWidget(&wireFrameComboBox);
 
 	languageCombo.Create("Language: ");
 	languageCombo.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Text | wi::gui::LocalizationEnabled::Tooltip);
@@ -1494,9 +1497,9 @@ void GeneralWindow::ResizeLayout()
 
 	layout.add_fullwidth(localizationButton);
 
+	layout.add(wireFrameComboBox);
 	layout.add_right(physicsDebugCheckBox);
 	layout.add_right(nameDebugCheckBox);
-	layout.add_right(wireFrameCheckBox);
 	layout.add_right(gridHelperCheckBox);
 	layout.add_right(aabbDebugCheckBox);
 	layout.add_right(boneLinesCheckBox);

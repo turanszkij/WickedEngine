@@ -413,7 +413,7 @@ namespace wi
 		{
 			camera->jitter = fsr2Resources.GetJitter();
 		}
-		else if (wi::renderer::GetTemporalAAEnabled())
+		else if (wi::renderer::GetTemporalAAEnabled() && wi::renderer::GetWireframeMode() == wi::renderer::WIREFRAME_DISABLED)
 		{
 			const XMFLOAT4& halton = wi::math::GetHaltonSequence(wi::graphics::GetDevice()->GetFrameCount() % 256);
 			camera->jitter.x = (halton.x * 2 - 1) / (float)internalResolution.x;
@@ -1144,7 +1144,7 @@ namespace wi
 				);
 			}
 
-			if (wi::renderer::GetRaytracedShadowsEnabled())
+			if (wi::renderer::GetRaytracedShadowsEnabled() && wi::renderer::GetWireframeMode() == wi::renderer::WIREFRAME_DISABLED)
 			{
 				wi::renderer::Postprocess_RTShadow(
 					rtshadowResources,
@@ -1155,7 +1155,6 @@ namespace wi
 					cmd
 				);
 			}
-
 			if (scene->weather.IsVolumetricClouds() && !scene->weather.IsVolumetricCloudsReceiveShadow())
 			{
 				// When volumetric cloud DOESN'T receive shadow it can be done async to shadow maps!
@@ -1165,12 +1164,11 @@ namespace wi
 					*camera,
 					camera_previous,
 					camera_reflection,
-					wi::renderer::GetTemporalAAEnabled() || getFSR2Enabled(),
+					(wi::renderer::GetTemporalAAEnabled() && wi::renderer::GetWireframeMode() == wi::renderer::WIREFRAME_DISABLED) || getFSR2Enabled(),
 					scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
 					scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
 				);
 			}
-
 			if (getMeshBlendEnabled() && visibility_main.IsMeshBlendVisible())
 			{
 				wi::renderer::PostProcess_MeshBlend_EdgeProcess(meshblendResources, cmd);
@@ -1369,12 +1367,11 @@ namespace wi
 						camera_reflection,
 						camera_reflection_previous,
 						camera_reflection,
-						wi::renderer::GetTemporalAAEnabled() || getFSR2Enabled(),
+						(wi::renderer::GetTemporalAAEnabled() && wi::renderer::GetWireframeMode() == wi::renderer::WIREFRAME_DISABLED) || getFSR2Enabled(),
 						scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
 						scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
 					);
 				}
-
 				device->EventBegin("Planar reflections", cmd);
 				auto range = wi::profiler::BeginRangeGPU("Planar Reflections", cmd);
 
@@ -1487,12 +1484,11 @@ namespace wi
 					*camera,
 					camera_previous,
 					camera_reflection,
-					wi::renderer::GetTemporalAAEnabled() || getFSR2Enabled(),
+					(wi::renderer::GetTemporalAAEnabled() && wi::renderer::GetWireframeMode() == wi::renderer::WIREFRAME_DISABLED) || getFSR2Enabled(),
 					scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
 					scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
 				);
 			}
-
 			if (getRaytracedReflectionEnabled())
 			{
 				wi::renderer::Postprocess_RTReflection(
@@ -2245,6 +2241,8 @@ namespace wi
 
 		wi::renderer::DrawDebugWorld(*scene, *camera, *this, cmd);
 
+		wi::renderer::DrawWireframeOverlay(visibility_main, wi::enums::RENDERPASS_MAIN, cmd);
+
 		wi::renderer::DrawLightVisualizers(visibility_main, cmd);
 
 		wi::renderer::DrawSoftParticles(visibility_main, false, cmd);
@@ -2364,7 +2362,7 @@ namespace wi
 				rt_read = &rtFSR[0];
 				rt_write = &rtFSR[1];
 			}
-			else if (wi::renderer::GetTemporalAAEnabled() && !wi::renderer::GetTemporalAADebugEnabled() && temporalAAResources.IsValid())
+			else if (wi::renderer::GetTemporalAAEnabled() && !wi::renderer::GetTemporalAADebugEnabled() && temporalAAResources.IsValid() && wi::renderer::GetWireframeMode() == wi::renderer::WIREFRAME_DISABLED)
 			{
 				wi::renderer::Postprocess_TemporalAA(
 					temporalAAResources,
@@ -2373,7 +2371,6 @@ namespace wi
 				);
 				rt_first = temporalAAResources.GetCurrent();
 			}
-
 			if (scene->weather.IsOceanEnabled())
 			{
 				wi::renderer::Postprocess_Underwater(
