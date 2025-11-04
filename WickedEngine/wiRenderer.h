@@ -65,6 +65,7 @@ namespace wi::renderer
 	const wi::graphics::BlendState* GetBlendState(wi::enums::BSTYPES id);
 	const wi::graphics::GPUBuffer* GetBuffer(wi::enums::BUFFERTYPES id);
 	const wi::graphics::Texture* GetTexture(wi::enums::TEXTYPES id);
+	bool IsPrimitiveIDSupported();
 
 	// Returns a buffer preinitialized for quad index buffer laid out as:
 	//	vertexID * 4 + [0, 1, 2, 2, 1, 3]
@@ -963,6 +964,12 @@ namespace wi::renderer
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd,
 		bool hdrToSRGB = false
+	);
+	void Postprocess_DepthLinear(
+		const wi::graphics::Texture& input_depth,
+		const wi::graphics::Texture& output_depth,
+		const wi::graphics::Texture& output_lineardepth,
+		wi::graphics::CommandList cmd
 	);
 	void Postprocess_Lineardepth(
 		const wi::graphics::Texture& input,

@@ -1374,6 +1374,8 @@ void Example_ImGuiRenderer::Update(float dt)
 			strcpy_s(lua, "");
 			#elif  __linux__
 			strcpy(lua, "");
+			#elif  __APPLE__
+			strcpy(lua, "");
 			#endif
 			bSetKeyBoardFocus = true;
 		}
@@ -1402,6 +1404,8 @@ void Example_ImGuiRenderer::Update(float dt)
 					#ifdef _WIN32
 					strcpy_s(lua, lua_history[i].c_str());
 					#elif __linux__ 
+					strcpy(lua, lua_history[i].c_str());
+					#elif  __APPLE__
 					strcpy(lua, lua_history[i].c_str());
 					#endif
 					bSetKeyBoardFocus = true;

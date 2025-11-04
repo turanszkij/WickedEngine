@@ -104,6 +104,15 @@ void PushBarrier(const GPUBarrier& barrier)
 	barrier_stack.push_back(barrier);
 }
 
+bool IsPrimitiveIDSupported()
+{
+#if defined(PLATFORM_MACOS) || defined(PLATFORM_IOS)
+	return false;
+#else
+	return true;
+#endif
+}
+
 bool wireRender = false;
 bool debugBoneLines = false;
 bool debugPartitionTree = false;
@@ -740,13 +749,22 @@ bool LoadShader(
 	const wi::vector<std::string>& permutation_defines
 )
 {
+	wi::vector<std::string> final_defines = permutation_defines;
+#ifdef WI_DISABLE_VOXELIZATION_GEOMETRY_SHADER
+	static const std::string disable_voxelizer_gs_macro = "WI_DISABLE_VOXELIZATION_GEOMETRY_SHADER";
+	if (std::find(final_defines.begin(), final_defines.end(), disable_voxelizer_gs_macro) == final_defines.end())
+	{
+		final_defines.push_back(disable_voxelizer_gs_macro);
+	}
+#endif // WI_DISABLE_VOXELIZATION_GEOMETRY_SHADER
+
 	std::string shaderbinaryfilename = SHADERPATH + filename;
 
-	if (!permutation_defines.empty())
+	if (!final_defines.empty())
 	{
 		std::string ext = wi::helper::GetExtensionFromFileName(shaderbinaryfilename);
 		shaderbinaryfilename = wi::helper::RemoveExtension(shaderbinaryfilename);
-		for (auto& def : permutation_defines)
+		for (auto& def : final_defines)
 		{
 			shaderbinaryfilename += "_" + def;
 		}
@@ -783,7 +801,7 @@ bool LoadShader(
 		input.format = device->GetShaderFormat();
 		input.stage = stage;
 		input.minshadermodel = minshadermodel;
-		input.defines = permutation_defines;
+		input.defines = final_defines;
 
 		std::string sourcedir = SHADERSOURCEPATH;
 		wi::helper::MakePathAbsolute(sourcedir);
@@ -1078,6 +1096,8 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL_FLOAT1], "upsample_bilateral_float1CS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL_FLOAT4], "upsample_bilateral_float4CS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_DOWNSAMPLE4X], "downsample4xCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_DEPTH_LINEAR], "copydepthbufferCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_DEPTH_LINEAR_MSAA], "copydepthbufferCS.cso", ShaderModel::SM_6_0, wi::vector<std::string>{"COPYDEPTH_MSAA"}); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_LINEARDEPTH], "lineardepthCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_NORMALSFROMDEPTH], "normalsfromdepthCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SCREENSPACESHADOW], "screenspaceshadowCS.cso"); });
@@ -1154,6 +1174,10 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE_NORMALMAP], "terrainVirtualTextureUpdateCS_normalmap.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE_SURFACEMAP], "terrainVirtualTextureUpdateCS_surfacemap.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE_EMISSIVEMAP], "terrainVirtualTextureUpdateCS_emissivemap.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_TERRAIN_FALLBACK_UPDATE_BASECOLORMAP], "terrainFallbackUpdateCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_TERRAIN_FALLBACK_UPDATE_NORMALMAP], "terrainFallbackUpdateCS_normalmap.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_TERRAIN_FALLBACK_UPDATE_SURFACEMAP], "terrainFallbackUpdateCS_surfacemap.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_TERRAIN_FALLBACK_UPDATE_EMISSIVEMAP], "terrainFallbackUpdateCS_emissivemap.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_MESHLET_PREPARE], "meshlet_prepareCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_IMPOSTOR_PREPARE], "impostor_prepareCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VIRTUALTEXTURE_TILEREQUESTS], "virtualTextureTileRequestsCS.cso"); });
@@ -2053,6 +2077,21 @@ void LoadShaders()
 											renderpass_info.rt_count = 0;
 											renderpass_info.rt_formats[0] = Format::UNKNOWN;
 										}
+										// MACOS FIX
+										// [Error] Vulkan error: vkCreateGraphicsPipelines(device, pipelineCache, 1, &pipelineInfo, nullptr, &internal_state->pipeline) failed with VK_ERROR_INITIALIZATION_FAILED (wiGraphicsDevice_Vulkan.cpp:6043)
+										else if (renderPass == RENDERPASS_PREPASS)
+										{
+											if (IsPrimitiveIDSupported())
+											{
+												renderpass_info.rt_count = 1;
+												renderpass_info.rt_formats[0] = format_idbuffer;
+											}
+											else
+											{
+												renderpass_info.rt_count = 0;
+												renderpass_info.rt_formats[0] = Format::UNKNOWN;
+											}
+										}
 										else
 										{
 											renderpass_info.rt_count = 1;
@@ -2079,7 +2118,7 @@ void LoadShaders()
 										renderpass_info.rt_count = 1;
 										renderpass_info.rt_formats[0] = format_rendertarget_envprobe;
 										renderpass_info.ds_format = format_depthbuffer_envprobe;
-										const uint32_t msaa_support[] = { 1,8 };
+										const uint32_t msaa_support[] = { 1, 2, 4, 8 };
 										for (uint32_t msaa : msaa_support)
 										{
 											variant.bits.sample_count = msaa;
@@ -2345,7 +2384,11 @@ void SetUpStates()
 	else
 #endif // VOXELIZATION_CONSERVATIVE_RASTERIZATION_ENABLED
 	{
+#if !defined(WI_DISABLE_VOXELIZATION_GEOMETRY_SHADER)
 		rs.forced_sample_count = 8;
+#else
+		rs.forced_sample_count = 1;
+#endif // WI_DISABLE_VOXELIZATION_GEOMETRY_SHADER
 	}
 	rasterizers[RSTYPE_VOXELIZE] = rs;
 
@@ -3127,6 +3170,11 @@ void RenderMeshes(
 	device->EventBegin("RenderMeshes", cmd);
 
 	RenderPassInfo renderpass_info = device->GetRenderPassInfo(cmd);
+	if (renderPass == RENDERPASS_VOXELIZE)
+	{
+		// Voxelization renderpass renders into UAVs, so enforce a single-sample pipeline.
+		renderpass_info.sample_count = 1;
+	}
 
 	const bool tessellation =
 		(flags & DRAWSCENE_TESSELLATION) &&
@@ -3282,7 +3330,16 @@ void RenderMeshes(
 					variant.bits.renderpass = renderPass;
 					variant.bits.shadertype = material.shaderType;
 					variant.bits.blendmode = material.GetBlendMode();
-					variant.bits.cullmode = (mesh.IsDoubleSided() || material.IsDoubleSided() || (shadowRendering && mesh.IsDoubleSidedShadow())) ? (uint32_t)CullMode::NONE : (uint32_t)CullMode::BACK;
+#if defined(WI_DISABLE_VOXELIZATION_GEOMETRY_SHADER)
+					if (renderPass == RENDERPASS_VOXELIZE)
+					{
+						variant.bits.cullmode = (uint32_t)CullMode::NONE;
+					}
+					else
+#endif // WI_DISABLE_VOXELIZATION_GEOMETRY_SHADER
+					{
+						variant.bits.cullmode = (mesh.IsDoubleSided() || material.IsDoubleSided() || (shadowRendering && mesh.IsDoubleSidedShadow())) ? (uint32_t)CullMode::NONE : (uint32_t)CullMode::BACK;
+					}
 					variant.bits.tessellation = tessellatorRequested;
 					variant.bits.alphatest = material.IsAlphaTestEnabled() || forceAlphaTestForDithering;
 					variant.bits.sample_count = renderpass_info.sample_count;
@@ -9842,7 +9899,7 @@ void VXGI_Voxelize(
 #ifdef VOXELIZATION_GEOMETRY_SHADER_ENABLED
 			const uint32_t frustum_count = 1; // axis will be selected by geometry shader
 #else
-			const uint32_t frustum_count = 3; // just used to replicate 3 times for main axes, but not with real frustums
+			const uint32_t frustum_count = 6; // render along +/- axis directions when geometry shader is unavailable
 #endif // VOXELIZATION_GEOMETRY_SHADER_ENABLED
 			RenderMeshes(vis, renderQueue, RENDERPASS_VOXELIZE, FILTER_OPAQUE, cmd, 0, frustum_count);
 			device->RenderPassEnd(cmd);
@@ -17989,6 +18046,50 @@ void Postprocess_Downsample4x(
 	);
 
 	device->Barrier(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout), cmd);
+
+	device->EventEnd(cmd);
+}
+void Postprocess_DepthLinear(
+	const Texture& input_depth,
+	const Texture& output_depth,
+	const Texture& output_lineardepth,
+	CommandList cmd
+)
+{
+	device->EventBegin("Postprocess_DepthLinear", cmd);
+
+	const bool msaa = input_depth.GetDesc().sample_count > 1;
+	device->BindComputeShader(&shaders[msaa ? CSTYPE_POSTPROCESS_DEPTH_LINEAR_MSAA : CSTYPE_POSTPROCESS_DEPTH_LINEAR], cmd);
+
+	device->BindResource(&input_depth, 0, cmd);
+
+	GPUBarrier begin_barriers[] = {
+		GPUBarrier::Image(&output_depth, output_depth.desc.layout, ResourceState::UNORDERED_ACCESS),
+		GPUBarrier::Image(&output_lineardepth, output_lineardepth.desc.layout, ResourceState::UNORDERED_ACCESS),
+	};
+	device->Barrier(begin_barriers, arraysize(begin_barriers), cmd);
+
+	const TextureDesc& depth_desc = output_depth.GetDesc();
+	const TextureDesc& lineardepth_desc = output_lineardepth.GetDesc();
+	const uint32_t mip_count = std::min<uint32_t>(5u, std::min(depth_desc.mip_levels, lineardepth_desc.mip_levels));
+	assert(mip_count >= 5);
+
+	for (uint32_t mip = 0; mip < mip_count; ++mip)
+	{
+		device->BindUAV(&output_depth, 0 + mip, cmd, mip);
+		device->BindUAV(&output_lineardepth, 5 + mip, cmd, mip);
+	}
+
+	const uint32_t dispatch_width = (depth_desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE;
+	const uint32_t dispatch_height = (depth_desc.height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE;
+	device->Dispatch(dispatch_width, dispatch_height, 1, cmd);
+
+	GPUBarrier end_barriers[] = {
+		GPUBarrier::Memory(),
+		GPUBarrier::Image(&output_depth, ResourceState::UNORDERED_ACCESS, output_depth.desc.layout),
+		GPUBarrier::Image(&output_lineardepth, ResourceState::UNORDERED_ACCESS, output_lineardepth.desc.layout),
+	};
+	device->Barrier(end_barriers, arraysize(end_barriers), cmd);
 
 	device->EventEnd(cmd);
 }

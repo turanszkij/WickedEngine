@@ -34,6 +34,41 @@
 namespace wi::graphics
 {
 
+// Helper to clamp requested MSAA sample count to what the physical device
+// supports. This prevents pipeline creation failures when requesting
+// unsupported counts (eg. 8x on MoltenVK GPU only supporting 4x).
+static VkSampleCountFlagBits wi_clamp_sample_count(VkPhysicalDevice physicalDevice, VkSampleCountFlagBits requested)
+{
+	if (requested == 0)
+		requested = VK_SAMPLE_COUNT_1_BIT;
+
+	VkPhysicalDeviceProperties props = {};
+	vkGetPhysicalDeviceProperties(physicalDevice, &props);
+	VkSampleCountFlags supported = props.limits.framebufferColorSampleCounts & props.limits.framebufferDepthSampleCounts;
+
+	const VkSampleCountFlagBits order[] = {
+		VK_SAMPLE_COUNT_64_BIT,
+		VK_SAMPLE_COUNT_32_BIT,
+		VK_SAMPLE_COUNT_16_BIT,
+		VK_SAMPLE_COUNT_8_BIT,
+		VK_SAMPLE_COUNT_4_BIT,
+		VK_SAMPLE_COUNT_2_BIT,
+		VK_SAMPLE_COUNT_1_BIT
+	};
+
+	VkSampleCountFlagBits best = VK_SAMPLE_COUNT_1_BIT;
+	for (VkSampleCountFlagBits c : order)
+	{
+		if (supported & c)
+		{
+			best = c;
+			if (c <= requested)
+				return c;
+		}
+	}
+	return best;
+}
+
 namespace vulkan_internal
 {
 	static constexpr uint64_t timeout_value = 2000000000ull; // 2 seconds
@@ -1722,9 +1757,12 @@ using namespace vulkan_internal;
 			allocInfo.pSetLayouts = &descriptorSetLayout;
 
 			VkResult res = vkAllocateDescriptorSets(device->device, &allocInfo, &descriptorSet);
-			while (res == VK_ERROR_OUT_OF_POOL_MEMORY)
+			// MACOS FIX
+			// [Error] Vulkan error: vkAllocateDescriptorSets failed with VK_ERROR_FRAGMENTED_POOL (wiGraphicsDevice_Vulkan.cpp:1778)
+			// Assertion failed: (res >= VK_SUCCESS), function flush, file wiGraphicsDevice_Vulkan.cpp, line 1778.
+			while (res == VK_ERROR_OUT_OF_POOL_MEMORY || res == VK_ERROR_FRAGMENTED_POOL)
 			{
-				binder_pool.poolSize *= 2;
+				binder_pool.poolSize = std::max(1u, binder_pool.poolSize * 2);
 				binder_pool.init(device);
 				allocInfo.descriptorPool = binder_pool.descriptorPool;
 				res = vkAllocateDescriptorSets(device->device, &allocInfo, &descriptorSet);
@@ -2150,13 +2188,16 @@ using namespace vulkan_internal;
 				VkPipelineMultisampleStateCreateInfo multisampling = {};
 				multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 				multisampling.sampleShadingEnable = VK_FALSE;
-				multisampling.rasterizationSamples = (VkSampleCountFlagBits)commandlist.renderpass_info.sample_count;
+				{
+					VkSampleCountFlagBits requested = (VkSampleCountFlagBits)commandlist.renderpass_info.sample_count;
+					multisampling.rasterizationSamples = wi_clamp_sample_count(physicalDevice, requested);
+				}
 				if (pso->desc.rs != nullptr)
 				{
 					const RasterizerState& desc = *pso->desc.rs;
 					if (desc.forced_sample_count > 1)
 					{
-						multisampling.rasterizationSamples = (VkSampleCountFlagBits)desc.forced_sample_count;
+						multisampling.rasterizationSamples = wi_clamp_sample_count(physicalDevice, (VkSampleCountFlagBits)desc.forced_sample_count);
 					}
 				}
 				multisampling.minSampleShading = 1.0f;
@@ -2346,9 +2387,7 @@ using namespace vulkan_internal;
 
 		validationMode = validationMode_;
 
-		VkResult res;
-
-		res = vulkan_check(volkInitialize());
+		VkResult res = vulkan_check(volkInitialize());
 		if (res != VK_SUCCESS)
 		{
 			wi::helper::messageBox("volkInitialize failed! ERROR: " + std::string(string_VkResult(res)), "Error!");
@@ -2577,6 +2616,18 @@ using namespace vulkan_internal;
 				properties_chain = &depth_stencil_resolve_properties.pNext;
 
 				enabled_deviceExtensions = required_deviceExtensions;
+				// If the portability subset extension is available on this
+				// device, enable it. Required on some MoltenVK implementations
+				// where the physical device lists this extension in
+				// vkEnumerateDeviceExtensionProperties. The Vulkan spec
+				// requires enabling it in
+				// VkDeviceCreateInfo::ppEnabledExtensionNames when present in
+				// the device properties.
+				// if (checkExtensionSupport(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME, available_deviceExtensions))
+				// {
+				// 	enabled_deviceExtensions.push_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
+				// 	portability_subset_enabled = true;
+				// }
 
 				if (checkExtensionSupport(VK_EXT_IMAGE_VIEW_MIN_LOD_EXTENSION_NAME, available_deviceExtensions))
 				{
@@ -2758,7 +2809,14 @@ using namespace vulkan_internal;
 
 			assert(features2.features.imageCubeArray == VK_TRUE);
 			assert(features2.features.independentBlend == VK_TRUE);
+	#if defined(PLATFORM_MACOS)
+			if (features2.features.geometryShader != VK_TRUE)
+			{
+				wilog_warning("Vulkan geometry shader support unavailable!");
+			}
+	#else
 			assert(features2.features.geometryShader == VK_TRUE);
+	#endif // PLATFORM_MACOS
 			assert(features2.features.samplerAnisotropy == VK_TRUE);
 			assert(features2.features.shaderClipDistance == VK_TRUE);
 			assert(features2.features.textureCompressionBC == VK_TRUE);
@@ -3289,7 +3347,12 @@ using namespace vulkan_internal;
 		{
 			VkBufferCreateInfo bufferInfo = {};
 			bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-			bufferInfo.size = 4;
+			// Make the null buffer large enough to contain at least one texel for
+			// common texel formats (e.g. R32G32B32A32_SFLOAT = 16 bytes).
+			// A too-small buffer plus a large texel format can result in a
+			// zero-width texture being created by MoltenVK, which triggers a
+			// Metal validation assertion.
+			bufferInfo.size = 16;
 			bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 			bufferInfo.flags = 0;
 
@@ -4188,6 +4251,10 @@ using namespace vulkan_internal;
 		texture->sparse_properties = nullptr;
 		texture->desc = *desc;
 
+		uint32_t requested_samples = std::max(1u, texture->desc.sample_count);
+		VkSampleCountFlagBits clamped_samples = wi_clamp_sample_count(physicalDevice, (VkSampleCountFlagBits)requested_samples);
+		texture->desc.sample_count = (uint32_t)clamped_samples;
+
 		if (texture->desc.mip_levels == 0)
 		{
 			texture->desc.mip_levels = GetMipCount(texture->desc.width, texture->desc.height, texture->desc.depth);
@@ -4201,7 +4268,7 @@ using namespace vulkan_internal;
 		imageInfo.format = _ConvertFormat(texture->desc.format);
 		imageInfo.arrayLayers = texture->desc.array_size;
 		imageInfo.mipLevels = texture->desc.mip_levels;
-		imageInfo.samples = (VkSampleCountFlagBits)texture->desc.sample_count;
+		imageInfo.samples = clamped_samples;
 		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
 		imageInfo.usage = 0;
@@ -4556,6 +4623,20 @@ using namespace vulkan_internal;
 					memoryGetFdInfoKHR.memory = allocationInfo.deviceMemory;
 					memoryGetFdInfoKHR.handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHR;
 					res = vulkan_check(vkGetMemoryFdKHR(allocationhandler->device, &memoryGetFdInfoKHR, &texture->shared_handle));
+#elif defined(__APPLE__)
+					// macOS / MoltenVK: exporting a Metal object is done via
+					// VK_EXT_metal_objects (vkExportMetalObjectsEXT or
+					// VkExportMetal*InfoEXT structures) rather than the generic
+					// VK_EXTERNAL_MEMORY_HANDLE_TYPE_* mechanisms used on
+					// Win32/Linux. If we need to export a Metal texture/buffer
+					// here, implement the VK_EXT_metal_objects flow: enable the
+					// extension during device creation and either add
+					// VkExportMetal*InfoEXT to the allocation/create pNext or
+					// call vkExportMetalObjectsEXT after creation. Leaving this
+					// unimplemented intentionally — fall back to no-op for
+					// platforms without explicit external-handle support.
+					(void)allocationInfo; // silence unused on platforms where not implemented
+					(void)allocationhandler;
 #endif
 				}
 			}
@@ -5823,13 +5904,19 @@ using namespace vulkan_internal;
 			VkPipelineMultisampleStateCreateInfo multisampling = {};
 			multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 			multisampling.sampleShadingEnable = VK_FALSE;
-			multisampling.rasterizationSamples = (VkSampleCountFlagBits)renderpass_info->sample_count;
+			// MACOS
+			// [Error] Vulkan error: vkCreateGraphicsPipelines(device, pipelineCache, 1, &pipelineInfo, nullptr, &internal_state->pipeline) failed with VK_ERROR_INITIALIZATION_FAILED (wiGraphicsDevice_Vulkan.cpp:6120)
+			// Assertion failed: ((res >= VK_SUCCESS)), function operator(), file wiGraphicsDevice_Vulkan.cpp, line 6120.
+			{
+				VkSampleCountFlagBits requested = (VkSampleCountFlagBits)renderpass_info->sample_count;
+				multisampling.rasterizationSamples = wi_clamp_sample_count(physicalDevice, requested);
+			}
 			if (pso->desc.rs != nullptr)
 			{
 				const RasterizerState& desc = *pso->desc.rs;
 				if (desc.forced_sample_count > 1)
 				{
-					multisampling.rasterizationSamples = (VkSampleCountFlagBits)desc.forced_sample_count;
+					multisampling.rasterizationSamples = wi_clamp_sample_count(physicalDevice, (VkSampleCountFlagBits)desc.forced_sample_count);
 				}
 			}
 			multisampling.minSampleShading = 1.0f;

@@ -47,6 +47,7 @@ namespace wi
 		rtFSR[0] = {};
 		rtFSR[1] = {};
 		rtOutlineSource = {};
+		rtOutlineSource_resolved = {};
 
 		rtPostprocess = {};
 
@@ -245,7 +246,7 @@ namespace wi
 			desc.sample_count = getMSAASampleCount();
 			desc.layout = ResourceState::DEPTHSTENCIL;
 			desc.format = wi::renderer::format_depthbuffer_main;
-			desc.bind_flags = BindFlag::DEPTH_STENCIL;
+			desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
 			device->CreateTexture(&desc, nullptr, &depthBuffer_Main);
 			device->SetName(&depthBuffer_Main, "depthBuffer_Main");
 
@@ -732,7 +733,7 @@ namespace wi
 		camera->scissor = GetScissorInternalResolution();
 		camera->sample_count = depthBuffer_Main.desc.sample_count;
 		camera->shadercamera_options = SHADERCAMERA_OPTION_NONE;
-		camera->texture_primitiveID_index = device->GetDescriptorIndex(&rtPrimitiveID, SubresourceType::SRV);
+		camera->texture_primitiveID_index = wi::renderer::IsPrimitiveIDSupported() ? device->GetDescriptorIndex(&rtPrimitiveID, SubresourceType::SRV) : -1;
 		camera->texture_depth_index = device->GetDescriptorIndex(&depthBuffer_Copy, SubresourceType::SRV);
 		camera->texture_lineardepth_index = device->GetDescriptorIndex(&rtLinearDepth, SubresourceType::SRV);
 		camera->texture_velocity_index = device->GetDescriptorIndex(&rtVelocity, SubresourceType::SRV);
@@ -972,24 +973,31 @@ namespace wi
 				);
 			}
 
-			RenderPassImage rp[] = {
-				RenderPassImage::DepthStencil(
-					&depthBuffer_Main,
-					RenderPassImage::LoadOp::CLEAR,
-					RenderPassImage::StoreOp::STORE,
-					ResourceState::DEPTHSTENCIL,
-					ResourceState::DEPTHSTENCIL,
-					ResourceState::DEPTHSTENCIL
-				),
-				RenderPassImage::RenderTarget(
+			// MACOS FIX
+			// -[MTLDebugRenderCommandEncoder setRenderPipelineState:]:1639: failed assertion `Set Render Pipeline State Validation
+			// For color attachment 0, the render pipeline's pixelFormat (MTLPixelFormatInvalid) does not match the framebuffer's pixelFormat (MTLPixelFormatR32Uint).
+			RenderPassImage rp[2];
+			rp[0] = RenderPassImage::DepthStencil(
+				&depthBuffer_Main,
+				RenderPassImage::LoadOp::CLEAR,
+				RenderPassImage::StoreOp::STORE,
+				ResourceState::DEPTHSTENCIL,
+				ResourceState::DEPTHSTENCIL,
+				ResourceState::DEPTHSTENCIL
+			);
+			uint32_t rp_count = 1;
+			if (wi::renderer::IsPrimitiveIDSupported())
+			{
+				rp[1] = RenderPassImage::RenderTarget(
 					&rtPrimitiveID_render,
 					RenderPassImage::LoadOp::CLEAR,
 					RenderPassImage::StoreOp::STORE,
 					ResourceState::SHADER_RESOURCE_COMPUTE,
 					ResourceState::SHADER_RESOURCE_COMPUTE
-				),
-			};
-			device->RenderPassBegin(rp, arraysize(rp), cmd);
+				);
+				rp_count = 2;
+			}
+			device->RenderPassBegin(rp, rp_count, cmd);
 
 			device->EventBegin("Opaque Z-prepass", cmd);
 			auto range = wi::profiler::BeginRangeGPU("Z-Prepass", cmd);
@@ -1059,11 +1067,37 @@ namespace wi
 				cmd
 			);
 
-			wi::renderer::Visibility_Prepare(
-				visibilityResources,
-				rtPrimitiveID_render,
-				cmd
-			);
+			// MACOS FIX
+			// This is still necessary, otherwise after adding a cube editor crashes with
+			// [Error] Vulkan error: vkQueuePresentKHR failed with VK_ERROR_DEVICE_LOST (wiGraphicsDevice_Vulkan.cpp:1503)
+			// Assertion failed: (false), function submit, file wiGraphicsDevice_Vulkan.cpp, line 1503.
+			if (wi::renderer::IsPrimitiveIDSupported())
+			{
+				wi::renderer::Visibility_Prepare(
+					visibilityResources,
+					rtPrimitiveID_render,
+					cmd
+				);
+			}
+			else
+			{
+				GPUBarrier to_compute[] = {
+					GPUBarrier::Image(&depthBuffer_Main, ResourceState::DEPTHSTENCIL, ResourceState::SHADER_RESOURCE_COMPUTE),
+				};
+				device->Barrier(to_compute, arraysize(to_compute), cmd);
+
+				wi::renderer::Postprocess_DepthLinear(
+					depthBuffer_Main,
+					depthBuffer_Copy,
+					rtLinearDepth,
+					cmd
+				);
+
+				GPUBarrier to_depth[] = {
+					GPUBarrier::Image(&depthBuffer_Main, ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::DEPTHSTENCIL),
+				};
+				device->Barrier(to_depth, arraysize(to_depth), cmd);
+			}
 
 			wi::renderer::ComputeTiledLightCulling(
 				tiledLightResources,
@@ -1561,11 +1595,15 @@ namespace wi
 				// Cut off outline source from linear depth:
 				device->EventBegin("Outline Source", cmd);
 
-				RenderPassImage rp[] = {
-					RenderPassImage::RenderTarget(&rtOutlineSource, RenderPassImage::LoadOp::CLEAR),
-					RenderPassImage::DepthStencil(&depthBuffer_Main, RenderPassImage::LoadOp::LOAD)
-				};
-				device->RenderPassBegin(rp, arraysize(rp), cmd);
+				RenderPassImage rp_outline[3];
+				uint32_t rp_outline_count = 0;
+				rp_outline[rp_outline_count++] = RenderPassImage::RenderTarget(&rtOutlineSource, RenderPassImage::LoadOp::CLEAR);
+				if (rtOutlineSource.desc.sample_count > 1 && rtOutlineSource_resolved.IsValid())
+				{
+					rp_outline[rp_outline_count++] = RenderPassImage::Resolve(&rtOutlineSource_resolved);
+				}
+				rp_outline[rp_outline_count++] = RenderPassImage::DepthStencil(&depthBuffer_Main, RenderPassImage::LoadOp::LOAD);
+				device->RenderPassBegin(rp_outline, rp_outline_count, cmd);
 				wi::image::Params params;
 				params.enableFullScreen();
 				params.stencilRefMode = wi::image::STENCILREFMODE_ENGINE;
@@ -1883,8 +1921,13 @@ namespace wi
 	{
 		if (getOutlineEnabled())
 		{
+			const Texture* outline_input = &rtOutlineSource;
+			if (rtOutlineSource.desc.sample_count > 1 && rtOutlineSource_resolved.IsValid())
+			{
+				outline_input = &rtOutlineSource_resolved;
+			}
 			wi::renderer::Postprocess_Outline(
-				rtOutlineSource,
+				*outline_input,
 				cmd,
 				getOutlineThreshold(),
 				getOutlineThickness(),
@@ -3212,12 +3255,26 @@ namespace wi
 			desc.format = Format::R32_FLOAT;
 			desc.width = internalResolution.x;
 			desc.height = internalResolution.y;
+			desc.sample_count = getMSAASampleCount();
 			device->CreateTexture(&desc, nullptr, &rtOutlineSource);
 			device->SetName(&rtOutlineSource, "rtOutlineSource");
+
+			if (desc.sample_count > 1)
+			{
+				TextureDesc resolve_desc = desc;
+				resolve_desc.sample_count = 1;
+				device->CreateTexture(&resolve_desc, nullptr, &rtOutlineSource_resolved);
+				device->SetName(&rtOutlineSource_resolved, "rtOutlineSource_resolved");
+			}
+			else
+			{
+				rtOutlineSource_resolved = {};
+			}
 		}
 		else
 		{
 			rtOutlineSource = {};
+			rtOutlineSource_resolved = {};
 		}
 	}
 

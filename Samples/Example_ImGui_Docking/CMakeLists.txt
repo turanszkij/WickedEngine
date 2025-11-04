@@ -78,7 +78,11 @@ else()
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/MaterialIcons-Regular.ttf ${CMAKE_CURRENT_BINARY_DIR}
 	)
 
-	set(LIB_DXCOMPILER "libdxcompiler.so")
+	if(APPLE)
+		set(LIB_DXCOMPILER "libdxcompiler.dylib")
+	else()
+		set(LIB_DXCOMPILER "libdxcompiler.so")
+	endif()
 endif ()
 
 if(WICKED_USE_IPO)
