@@ -2453,8 +2453,23 @@ void EditorComponent::Update(float dt)
 		// Toggle wireframe mode
 		if (CheckInput(EditorActions::WIREFRAME_MODE))
 		{
-			wi::renderer::SetWireRender(!wi::renderer::IsWireRender());
-			generalWnd.wireFrameCheckBox.SetCheck(wi::renderer::IsWireRender());
+			wi::renderer::WIREFRAME_MODE currentMode = wi::renderer::GetWireframeMode();
+			wi::renderer::WIREFRAME_MODE mode;
+			switch (currentMode)
+			{
+			case wi::renderer::WIREFRAME_DISABLED:
+				mode = wi::renderer::WIREFRAME_ONLY;
+				break;
+			case wi::renderer::WIREFRAME_ONLY:
+				mode = wi::renderer::WIREFRAME_OVERLAY;
+				break;
+			case wi::renderer::WIREFRAME_OVERLAY:
+			default:
+				mode = wi::renderer::WIREFRAME_DISABLED;
+				break;
+			}
+			wi::renderer::SetWireframeMode(mode);
+			generalWnd.wireFrameComboBox.SetSelected((int)mode);
 		}
 
 		// Enable transform tool
