@@ -3184,6 +3184,7 @@ void RenderMeshes(
 		const float tessF = mesh.GetTessellationFactor();
 		const bool tessellatorRequested = tessF > 0 && tessellation;
 		const bool meshShaderRequested = !tessellatorRequested && mesh_shader && mesh.vb_clu.IsValid();
+		const bool wireframe = IsWireRender();
 
 		// Notes on provoking index buffer:
 		//	Normally it's used for primitiveID generation, so it would be only used in PREPASS
@@ -3191,11 +3192,12 @@ void RenderMeshes(
 		//	RENDERPASS_MAIN requires it to fix depth mismatch only on Intel GPU between prepass and color passes
 		//	tessellation requires it to match same primitive order between prepass and color pass to have exact same tessellation
 		const bool provokingIBRequired =
-			renderPass == RENDERPASS_PREPASS ||
-			renderPass == RENDERPASS_PREPASS_DEPTHONLY ||
-			renderPass == RENDERPASS_MAIN ||
-			tessellatorRequested
-			;
+			!wireframe && (
+				renderPass == RENDERPASS_PREPASS ||
+				renderPass == RENDERPASS_PREPASS_DEPTHONLY ||
+				renderPass == RENDERPASS_MAIN ||
+				tessellatorRequested
+			);
 
 		if (forwardLightmaskRequest)
 		{
@@ -3249,7 +3251,7 @@ void RenderMeshes(
 			const PipelineState* pso = nullptr;
 			const PipelineState* pso_backside = nullptr; // only when separate backside rendering is required (transparent doublesided)
 			{
-				if (IsWireRender() && renderPass != RENDERPASS_ENVMAPCAPTURE)
+				if (wireframe && renderPass != RENDERPASS_ENVMAPCAPTURE)
 				{
 					switch (renderPass)
 					{
