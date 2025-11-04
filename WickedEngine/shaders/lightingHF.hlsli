@@ -65,7 +65,7 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 	half3 light_color = light.GetColor().rgb * shadow_mask;
 
 	[branch]
-	if (light.IsCastingShadow() && surface.IsReceiveShadow())
+	if (light.IsCastingShadow() && surface.IsReceiveShadow() && (GetFrame().options & OPTION_BIT_DISABLE_SHADOWMAPS) == 0)
 	{
 		if (GetFrame().options & OPTION_BIT_VOLUMETRICCLOUDS_CAST_SHADOW)
 		{

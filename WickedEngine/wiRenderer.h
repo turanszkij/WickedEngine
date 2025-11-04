@@ -271,6 +271,7 @@ namespace wi::renderer
 		DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS = 1 << 7, // don't draw subsets which have planar reflection material
 		DRAWSCENE_FOREGROUND_ONLY = 1 << 8, // only include objects that are tagged as foreground
 		DRAWSCENE_MAINCAMERA = 1 << 9, // If this is active, then ObjectComponent with SetNotVisibleInMainCamera(true) won't be drawn
+		DRAWSCENE_WIREFRAME_OVERLAY = 1 << 10, // draw wireframe overlay
 	};
 
 	// Draw the world from a camera. You must call BindCameraCB() at least once in this command list prior to this
@@ -312,6 +313,12 @@ namespace wi::renderer
 		const wi::scene::Scene& scene,
 		const wi::scene::CameraComponent& camera,
 		const wi::Canvas& canvas,
+		wi::graphics::CommandList cmd
+	);
+	// Draw wireframe overlay on top of scene geometry when wireframe mode is enabled
+	void DrawWireframeOverlay(
+		const Visibility& vis,
+		wi::enums::RENDERPASS renderPass,
 		wi::graphics::CommandList cmd
 	);
 	// Draw Soft offscreen particles.
@@ -1121,9 +1128,17 @@ namespace wi::renderer
 	void SetShadowProps2D(int max_resolution);
 	void SetShadowPropsCube(int max_resolution);
 
+	enum WIREFRAME_MODE
+	{
+		WIREFRAME_DISABLED = 0,
+		WIREFRAME_ONLY = 1,
+		WIREFRAME_OVERLAY = 2,
+	};
 
 	void SetWireRender(bool value);
 	bool IsWireRender();
+	void SetWireframeMode(WIREFRAME_MODE mode);
+	WIREFRAME_MODE GetWireframeMode();
 	void SetToDrawDebugBoneLines(bool param);
 	bool GetToDrawDebugBoneLines();
 	void SetToDrawDebugPartitionTree(bool param);
