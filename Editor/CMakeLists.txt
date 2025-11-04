@@ -46,7 +46,7 @@ else ()
 
 endif ()
 
-if(WICKED_USE_IPO)
+if(WICKED_ENABLE_IPO)
     set_target_properties(Editor PROPERTIES
         INTERPROCEDURAL_OPTIMIZATION ON
         INTERPROCEDURAL_OPTIMIZATION_DEBUG OFF

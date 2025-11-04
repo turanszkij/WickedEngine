@@ -22,21 +22,32 @@ option(USE_LIBCXX "Link WickedEngine to llvm libc++ library - only available wit
 option(WICKED_EDITOR "Build WickedEngine editor" ON)
 option(WICKED_TESTS "Build WickedEngine tests" ON)
 option(WICKED_IMGUI_EXAMPLE "Build WickedEngine imgui example" ON)
-option(WICKED_USE_IPO "Enable IPO/LTO in non-debug builds" ${ipo_supported})
+option(WICKED_ENABLE_IPO "Enable IPO/LTO in non-debug builds" ${ipo_supported})
+if(UNIX)
+    option(WICKED_ENABLE_ASAN "Enable AddressSanitizer in debug builds" OFF)
+    option(WICKED_ENABLE_UBSAN "Enable UndefinedBehaviourSanitizer in debug builds" OFF)
+    option(WICKED_ENABLE_TSAN "Enable ThreadSanitizer in debug builds" OFF)
+    option(WICKED_ENABLE_SAN_ALWAYS "Enable the selected sanitizers in all builds, not just debug" OFF)
+endif()
+if(UNIX)
+    option(WICKED_LINUX_TEMPLATE "Build WickedEngine Linux template" ON)
+elseif(WIN32)
+    option(WICKED_WINDOWS_TEMPLATE "Build WickedEngine Windows template" ON)
+endif()
 
 if (CMAKE_HOST_WIN32)
     set(symlink_default OFF)
 else()
     set(symlink_default ON)
 endif()
-option(WICKED_USE_SYMLINKS "Prefer symlinking over copying directories" ${symlink_default})
+option(WICKED_ENABLE_SYMLINKS "Prefer symlinking over copying directories" ${symlink_default})
 
 # check that IPO is supported when turned on
-if(WICKED_USE_IPO)
+if(WICKED_ENABLE_IPO)
     check_ipo_supported()
 endif()
 
-if(WICKED_USE_SYMLINKS)
+if(WICKED_ENABLE_SYMLINKS)
     # check for symlink support (on windows it requires admin or developer mode)
     execute_process(
         COMMAND ${CMAKE_COMMAND} -E create_symlink CMakeLists.txt ${CMAKE_CURRENT_BINARY_DIR}/symlink-test
@@ -47,7 +58,7 @@ if(WICKED_USE_SYMLINKS)
         file(REMOVE ${CMAKE_BINARY_DIR}/symlink-test)
         set(COPY_OR_SYMLINK_DIR_CMD create_symlink)
     else()
-        message(FATAL_ERROR "Symlinks are not supported. Either disable them using -DWICKED_USE_SYMLINKS=OFF or enable Windows' developer mode")
+        message(FATAL_ERROR "Symlinks are not supported. Either disable them using -DWICKED_ENABLE_SYMLINKS=OFF or enable Windows' developer mode")
     endif()
 else()
     if(CMAKE_VERSION VERSION_LESS "3.26.0")
@@ -57,11 +68,6 @@ else()
     endif()
 endif()
 
-if(UNIX)
-    option(WICKED_LINUX_TEMPLATE "Build WickedEngine Linux template" ON)
-elseif(WIN32)
-    option(WICKED_WINDOWS_TEMPLATE "Build WickedEngine Windows template" ON)
-endif()
 
 # Configure CMake global variables
 set(CMAKE_CXX_STANDARD 17)
@@ -72,7 +78,29 @@ set(CMAKE_POSITION_INDEPENDENT_CODE WICKED_PIC)
 # Use solution folders to organize projects
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+if(WICKED_ENABLE_ASAN AND WICKED_ENABLE_TSAN)
+    message(FATAL_ERROR "WICKED_ENABLE_ASAN and WICKED_ENABLE_TSAN are mutually exclusive!")
+endif()
 
+if(WICKED_ENABLE_ASAN)
+    set(SANITIZE_OPTIONS "-fsanitize=address")
+endif()
+
+if(WICKED_ENABLE_TSAN)
+    set(SANITIZE_OPTIONS "${SANITIZE_OPTIONS} -fsanitize=thread")
+endif()
+
+if(WICKED_ENABLE_UBSAN)
+    set(SANITIZE_OPTIONS "${SANITIZE_OPTIONS} -fsanitize=undefined")
+endif()
+
+if(WICKED_ENABLE_SAN_ALWAYS)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${SANITIZE_OPTIONS}")
+    add_link_options(${SANITIZE_LINK_OPTIONS)
+else()
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${SANITIZE_OPTIONS}")
+    add_link_options($<$<CONFIG:Debug>:${SANITIZE_LINK_OPTIONS}>)
+endif()
 
 if (WIN32)
     set(PLATFORM "Windows")
@@ -82,7 +110,7 @@ if (WIN32)
             /W3
             /MP
         )
-	endif()
+    endif()
 
     # add_compile_definitions(_WIN32=1) this is a given from the compiler
 elseif(UNIX)
@@ -132,7 +160,7 @@ endif()
 add_subdirectory(WickedEngine)
 add_custom_target(Content
    COMMAND ${CMAKE_COMMAND} -E ${COPY_OR_SYMLINK_DIR_CMD} ${WICKED_ROOT_DIR}/Content ${CMAKE_CURRENT_BINARY_DIR}/Content
-   COMMENT "$<IF:$<BOOL:${WICKED_USE_SYMLINKS}>,Symlinking,Copying> Content directory"
+   COMMENT "$<IF:$<BOOL:${WICKED_ENABLE_SYMLINKS}>,Symlinking,Copying> Content directory"
    VERBATIM
 )
 
