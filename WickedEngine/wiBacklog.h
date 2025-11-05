@@ -65,6 +65,7 @@ namespace wi::backlog
 
 	LogLevel GetUnseenLogLevelMax();
 
+	void SetLogFile(const std::string& path);
 
 	struct LogEntry
 	{

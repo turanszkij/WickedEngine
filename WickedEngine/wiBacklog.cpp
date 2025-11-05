@@ -43,6 +43,7 @@ namespace wi::backlog
 
 	std::deque<LogEntry> history;
 	std::mutex historyLock;
+	std::string logfile_path = "";
 
 	struct InternalState
 	{
@@ -66,7 +67,16 @@ namespace wi::backlog
 		}
 		void writeLogfile()
 		{
-			static const std::string filename = wi::helper::GetCurrentPath() + "/log.txt";
+			std::string filename;
+
+			if (logfile_path.empty() || !wi::helper::DirectoryExists(wi::helper::GetDirectoryFromPath(logfile_path)))
+			{
+				filename = wi::helper::GetCurrentPath() + "/log.txt";
+			}
+			else
+			{
+				filename = logfile_path;
+			}
 			std::string text = getText();
 			static std::mutex writelocker;
 			std::scoped_lock lck(writelocker); // to not write the logfile from multiple threads
@@ -493,5 +503,10 @@ namespace wi::backlog
 	LogLevel GetUnseenLogLevelMax()
 	{
 		return unseen;
+	}
+
+	void SetLogFile(const std::string& path)
+	{
+		logfile_path = path;
 	}
 }
