@@ -306,6 +306,16 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&moonLightIntensitySlider);
 
+	moonEclipseSlider.Create(0.0f, 1.0f, 0.0f, 1000, "Moon Eclipse: ");
+	moonEclipseSlider.SetTooltip("Fraction of the moon darkened by Earth's shadow (0 = none, 1 = total eclipse).");
+	moonEclipseSlider.SetSize(XMFLOAT2(wid, hei));
+	moonEclipseSlider.SetPos(XMFLOAT2(x, y += step));
+	moonEclipseSlider.OnSlide([this](wi::gui::EventArgs args) {
+		GetWeather().moonEclipseStrength = args.fValue;
+		InvalidateProbes();
+		});
+	AddWidget(&moonEclipseSlider);
+
 	moonTextureButton.Create("Load Moon Texture");
 	moonTextureButton.SetTooltip("Load a dedicated texture for the moon disk. Click again to clear.");
 	moonTextureButton.SetSize(XMFLOAT2(mod_wid, hei));
@@ -1222,6 +1232,7 @@ void WeatherWindow::UpdateData()
 		moonGlowSharpnessSlider.SetValue(weather.moonGlowSharpness);
 		moonGlowIntensitySlider.SetValue(weather.moonGlowIntensity);
 		moonLightIntensitySlider.SetValue(weather.moonLightIntensity);
+		moonEclipseSlider.SetValue(weather.moonEclipseStrength);
 		moonTextureMipBiasSlider.SetValue(weather.moonTextureMipBias);
 		skyRotationSlider.SetValue(wi::math::RadiansToDegrees(weather.sky_rotation));
 		rainAmountSlider.SetValue(weather.rain_amount);
@@ -1484,6 +1495,7 @@ void WeatherWindow::ResizeLayout()
 	layout.add(moonGlowSharpnessSlider);
 	layout.add(moonGlowIntensitySlider);
 	layout.add(moonLightIntensitySlider);
+	layout.add(moonEclipseSlider);
 	layout.add_fullwidth(moonTextureButton);
 	layout.add(moonTextureMipBiasSlider);
 	layout.add(skyRotationSlider);

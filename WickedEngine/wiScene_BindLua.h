@@ -1596,6 +1596,7 @@ namespace wi::lua::scene
 			moonGlowSharpness = FloatProperty(&component->moonGlowSharpness);
 			moonGlowIntensity = FloatProperty(&component->moonGlowIntensity);
 			moonLightIntensity = FloatProperty(&component->moonLightIntensity);
+			moonEclipseStrength = FloatProperty(&component->moonEclipseStrength);
 			skyExposure = FloatProperty(&component->skyExposure);
 			horizon = VectorProperty(&component->horizon);
 			zenith = VectorProperty(&component->zenith);
@@ -1665,6 +1666,7 @@ namespace wi::lua::scene
 		FloatProperty moonGlowSharpness;
 		FloatProperty moonGlowIntensity;
 		FloatProperty moonLightIntensity;
+		FloatProperty moonEclipseStrength;
 		FloatProperty rainAmount;
 		FloatProperty rainLength;
 		FloatProperty rainSpeed;
@@ -1701,6 +1703,7 @@ namespace wi::lua::scene
 		PropertyFunction(moonGlowSharpness)
 		PropertyFunction(moonGlowIntensity)
 		PropertyFunction(moonLightIntensity)
+		PropertyFunction(moonEclipseStrength)
 		PropertyFunction(rainAmount)
 		PropertyFunction(rainLength)
 		PropertyFunction(rainSpeed)

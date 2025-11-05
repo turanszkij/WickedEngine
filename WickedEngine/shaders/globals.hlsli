@@ -1002,6 +1002,7 @@ inline float GetMoonPhaseVisibility()
 	moonDir *= rsqrt(moonLenSq);
 	return saturate(0.5f * (1.0f - dot(sunDir, moonDir)));
 }
+inline float GetMoonEclipseStrength() { return saturate(GetWeather().moon_eclipse_strength); }
 inline float3 GetMoonIlluminance() { return GetMoonColor() * GetMoonLightIntensity(); }
 inline half3 GetHorizonColor() { return unpack_half3(GetWeather().horizon); }
 inline half3 GetZenithColor() { return unpack_half3(GetWeather().zenith); }

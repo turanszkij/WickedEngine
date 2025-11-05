@@ -160,6 +160,8 @@ float3 GetDynamicSkyColor(in float2 pixel, in float3 V, bool sun_enabled = true,
 				sunToMoonDir = -sunDir * invSunLen;
 				phaseVisibility = saturate(0.5f * (1.0f + dot(sunToMoonDir, moonDir)));
 			}
+			float eclipseStrength = GetMoonEclipseStrength();
+			phaseVisibility *= saturate(1.0f - eclipseStrength);
 			float cosAngle = dot(V, moonDir);
 			float innerEdge = cos(moonSize);
 			float core = smoothstep(innerEdge, cos(moonSize * 0.8f), cosAngle);
@@ -216,7 +218,7 @@ float3 GetDynamicSkyColor(in float2 pixel, in float3 V, bool sun_enabled = true,
 				haloContribution = halo * haloIntensity * phaseVisibility;
 			}
 			sky += moonColor * haloContribution;
-			sky += diskColor * diskMask;
+			sky += diskColor * diskMask * saturate(1.0f - eclipseStrength * 0.9f);
 		}
 	}
 

@@ -43,6 +43,7 @@ public:
 	wi::gui::Slider moonGlowSharpnessSlider;
 	wi::gui::Slider moonGlowIntensitySlider;
 	wi::gui::Slider moonLightIntensitySlider;
+	wi::gui::Slider moonEclipseSlider;
 	wi::gui::Slider moonTextureMipBiasSlider;
 	wi::gui::Slider rainAmountSlider;
 	wi::gui::Slider rainLengthSlider;

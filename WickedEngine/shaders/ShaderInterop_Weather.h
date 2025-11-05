@@ -372,7 +372,9 @@ struct alignas(16) ShaderWeather
 	int moon_texture; // bindless descriptor index for moon texture (SRV), -1 if unused
 	float moon_texture_mip_bias; // optional mip bias when sampling moon texture
 	float moon_light_intensity; // illuminance emitted by moon directional light
+	float moon_eclipse_strength; // 0-1 multiplier describing earth shadow on moon
 	uint moon_light_index;
+	uint padding_moon0;
 
 	float sky_rotation_sin;
 	float sky_rotation_cos;

@@ -1,5 +1,6 @@
 This file contains changelog of wi::Archive versions
 
+98: serialized WeatherComponent moon eclipse strength
 97: serialized WeatherComponent moon light intensity
 96: serialized WeatherComponent moon texture mip bias
 95: serialized WeatherComponent moon texture path

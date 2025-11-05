@@ -964,7 +964,9 @@ namespace wi::scene
 		shaderscene.weather.moon_texture = weather.moonTexture.IsValid() ? device->GetDescriptorIndex(&weather.moonTexture.GetTexture(), SubresourceType::SRV, weather.moonTexture.GetTextureSRGBSubresource()) : -1;
 		shaderscene.weather.moon_texture_mip_bias = weather.moonTextureMipBias;
 		const float moon_phase_visibility = ComputeMoonPhaseVisibility(weather.sunDirection, moonDir);
-		shaderscene.weather.moon_light_intensity = weather.moonLightIntensity * moon_phase_visibility;
+		const float moon_eclipse_scale = wi::math::Clamp(1.0f - weather.moonEclipseStrength, 0.0f, 1.0f);
+		shaderscene.weather.moon_light_intensity = weather.moonLightIntensity * moon_phase_visibility * moon_eclipse_scale;
+		shaderscene.weather.moon_eclipse_strength = weather.moonEclipseStrength;
 		shaderscene.weather.moon_light_index = weather.moon_light_index;
 		shaderscene.weather.most_important_light_index = weather.most_important_light_index;
 		shaderscene.weather.ambient = wi::math::pack_half3(weather.ambient);
@@ -1493,7 +1495,8 @@ namespace wi::scene
 		}
 
 		const float moon_phase_visibility = ComputeMoonPhaseVisibility(weather_component.sunDirection, weather_component.moonDirection);
-		const float moon_effective_intensity = weather_component.moonLightIntensity * moon_phase_visibility;
+		const float moon_eclipse_scale = wi::math::Clamp(1.0f - weather_component.moonEclipseStrength, 0.0f, 1.0f);
+		const float moon_effective_intensity = weather_component.moonLightIntensity * moon_phase_visibility * moon_eclipse_scale;
 		const bool moon_active = moon_effective_intensity > 0.0f;
 
 		if (weather_component.moonLight == INVALID_ENTITY)
