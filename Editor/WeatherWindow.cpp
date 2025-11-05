@@ -306,12 +306,27 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&moonLightIntensitySlider);
 
+	moonEclipseAutoCheckBox.Create("Auto Moon Eclipse");
+	moonEclipseAutoCheckBox.SetTooltip("Automatically darken the moon when it enters Earth's shadow.");
+	moonEclipseAutoCheckBox.SetSize(XMFLOAT2(hei, hei));
+	moonEclipseAutoCheckBox.SetPos(XMFLOAT2(x, y += step));
+	moonEclipseAutoCheckBox.OnClick([this](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.moonEclipseAutomatic = args.bValue;
+		moonEclipseSlider.SetEnabled(!args.bValue);
+		editor->GetCurrentScene().EnsureMoonLight(weather);
+		InvalidateProbes();
+		});
+	AddWidget(&moonEclipseAutoCheckBox);
+
 	moonEclipseSlider.Create(0.0f, 1.0f, 0.0f, 1000, "Moon Eclipse: ");
-	moonEclipseSlider.SetTooltip("Fraction of the moon darkened by Earth's shadow (0 = none, 1 = total eclipse).");
+	moonEclipseSlider.SetTooltip("Fraction of the moon darkened by Earth's shadow (0 = none, 1 = total eclipse). Disabled when automation is enabled.");
 	moonEclipseSlider.SetSize(XMFLOAT2(wid, hei));
 	moonEclipseSlider.SetPos(XMFLOAT2(x, y += step));
 	moonEclipseSlider.OnSlide([this](wi::gui::EventArgs args) {
-		GetWeather().moonEclipseStrength = args.fValue;
+		auto& weather = GetWeather();
+		weather.moonEclipseStrength = args.fValue;
+		editor->GetCurrentScene().EnsureMoonLight(weather);
 		InvalidateProbes();
 		});
 	AddWidget(&moonEclipseSlider);
@@ -1233,6 +1248,8 @@ void WeatherWindow::UpdateData()
 		moonGlowIntensitySlider.SetValue(weather.moonGlowIntensity);
 		moonLightIntensitySlider.SetValue(weather.moonLightIntensity);
 		moonEclipseSlider.SetValue(weather.moonEclipseStrength);
+		moonEclipseAutoCheckBox.SetCheck(weather.moonEclipseAutomatic);
+		moonEclipseSlider.SetEnabled(!weather.moonEclipseAutomatic);
 		moonTextureMipBiasSlider.SetValue(weather.moonTextureMipBias);
 		skyRotationSlider.SetValue(wi::math::RadiansToDegrees(weather.sky_rotation));
 		rainAmountSlider.SetValue(weather.rain_amount);
@@ -1495,6 +1512,7 @@ void WeatherWindow::ResizeLayout()
 	layout.add(moonGlowSharpnessSlider);
 	layout.add(moonGlowIntensitySlider);
 	layout.add(moonLightIntensitySlider);
+	layout.add(moonEclipseAutoCheckBox);
 	layout.add(moonEclipseSlider);
 	layout.add_fullwidth(moonTextureButton);
 	layout.add(moonTextureMipBiasSlider);

@@ -6872,6 +6872,7 @@ Luna<WeatherComponent_BindLua>::PropertyType WeatherComponent_BindLua::propertie
 	lunaproperty(WeatherComponent_BindLua, moonGlowIntensity),
 	lunaproperty(WeatherComponent_BindLua, moonLightIntensity),
 	lunaproperty(WeatherComponent_BindLua, moonEclipseStrength),
+	lunaproperty(WeatherComponent_BindLua, moonEclipseAutomatic),
 	lunaproperty(WeatherComponent_BindLua, rainAmount),
 	lunaproperty(WeatherComponent_BindLua, rainLength),
 	lunaproperty(WeatherComponent_BindLua, rainSpeed),

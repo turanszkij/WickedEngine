@@ -1868,6 +1868,7 @@ namespace wi::scene
 		float moonLightIntensity = 0.05f;
 		float moonTextureMipBias = 0;
 		float moonEclipseStrength = 0.0f;
+		bool moonEclipseAutomatic = false;
 		float skyExposure = 1;
 		XMFLOAT3 horizon = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		XMFLOAT3 zenith = XMFLOAT3(0.0f, 0.0f, 0.0f);
