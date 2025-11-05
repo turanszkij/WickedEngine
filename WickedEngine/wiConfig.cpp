@@ -277,6 +277,11 @@ namespace wi::config
 				{
 					text += line.key + " = " + values[line.key];
 					committed_values[section].insert(line.key);
+					text += line.comment + "\n"; // Newline only added when there's a key-value pair
+				}
+				else if (!line.comment.empty())
+				{
+					text += line.comment + "\n"; // Standalone comment line
 				}
 			}
 			else
@@ -294,15 +299,26 @@ namespace wi::config
 					}
 					// Begin new section:
 					section = &sections[line.section_label];
+					// Ensure proper line termination before section
+					if (!text.empty() && text.back() != '\n')
+						text += "\n";
+					// Add blank line between sections (but not at file start)
+					if (!text.empty())
+						text += "\n";
 					text += "[" + line.section_label + "]";
+					text += line.comment + "\n";
 				}
-				if (!line.key.empty())
+				else if (!line.key.empty())
 				{
 					text += line.key + " = " + sections[line.section_id].GetText(line.key.c_str());
 					committed_values[section].insert(line.key);
+					text += line.comment + "\n"; // Newline only added when there's a key-value pair
+				}
+				else if (!line.comment.empty())
+				{
+					text += line.comment + "\n"; // Standalone comment line
 				}
 			}
-			text += line.comment + "\n";
 		}
 
 		// Commit left over unformatted sections and values:
@@ -320,7 +336,10 @@ namespace wi::config
 				continue;
 			if (committed_values.count(&it.second) == 0)
 			{
-				text += "\n[" + it.first + "]\n";
+				// Add blank line before section (but not at file start)
+				if (!text.empty())
+					text += "\n";
+				text += "[" + it.first + "]\n";
 				committed_values[&it.second] = {};
 			}
 			for (auto& it2 : it.second.values)
