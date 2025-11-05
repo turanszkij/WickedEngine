@@ -371,7 +371,8 @@ struct alignas(16) ShaderWeather
 	float4 moon_params; // x=size(rad), y=halo size(rad), z=halo sharpness, w=halo intensity
 	int moon_texture; // bindless descriptor index for moon texture (SRV), -1 if unused
 	float moon_texture_mip_bias; // optional mip bias when sampling moon texture
-	float2 moon_texture_padding;
+	float moon_light_intensity; // illuminance emitted by moon directional light
+	float moon_padding0;
 
 	float sky_rotation_sin;
 	float sky_rotation_cos;

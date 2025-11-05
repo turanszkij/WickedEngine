@@ -947,7 +947,8 @@ namespace wi::scene
 		shaderscene.weather.moon_params = XMFLOAT4(weather.moonSize, weather.moonGlowSize, weather.moonGlowSharpness, weather.moonGlowIntensity);
 		shaderscene.weather.moon_texture = weather.moonTexture.IsValid() ? device->GetDescriptorIndex(&weather.moonTexture.GetTexture(), SubresourceType::SRV, weather.moonTexture.GetTextureSRGBSubresource()) : -1;
 		shaderscene.weather.moon_texture_mip_bias = weather.moonTextureMipBias;
-		shaderscene.weather.moon_texture_padding = XMFLOAT2(0, 0);
+		shaderscene.weather.moon_light_intensity = weather.moonLightIntensity;
+		shaderscene.weather.moon_padding0 = 0;
 		shaderscene.weather.most_important_light_index = weather.most_important_light_index;
 		shaderscene.weather.ambient = wi::math::pack_half3(weather.ambient);
 		shaderscene.weather.sky_rotation_sin = std::sin(weather.sky_rotation);

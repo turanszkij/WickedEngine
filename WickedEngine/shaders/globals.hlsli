@@ -986,6 +986,8 @@ inline float GetMoonHaloSharpness() { return GetWeather().moon_params.z; }
 inline float GetMoonHaloIntensity() { return GetWeather().moon_params.w; }
 inline bool HasMoonTexture() { return GetWeather().moon_texture >= 0; }
 inline float GetMoonTextureMipBias() { return GetWeather().moon_texture_mip_bias; }
+inline float GetMoonLightIntensity() { return GetWeather().moon_light_intensity; }
+inline float3 GetMoonIlluminance() { return GetMoonColor() * GetMoonLightIntensity(); }
 inline half3 GetSunDirection() { return normalize(unpack_half3(GetWeather().sun_direction)); }
 inline half3 GetHorizonColor() { return unpack_half3(GetWeather().horizon); }
 inline half3 GetZenithColor() { return unpack_half3(GetWeather().zenith); }
