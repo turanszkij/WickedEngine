@@ -56,7 +56,7 @@ namespace wi::jobsystem
 				task(args);
 			}
 
-			return ctx->counter.fetch_sub(1); // returns context counter's previous value
+			return ctx->counter.fetch_sub(1, std::memory_order_relaxed); // returns context counter's previous value
 		}
 	};
 	struct JobQueue
@@ -398,7 +398,7 @@ namespace wi::jobsystem
 		PriorityResources& res = internal_state.resources[int(ctx.priority)];
 
 		// Context state is updated:
-		ctx.counter.fetch_add(1);
+		ctx.counter.fetch_add(1, std::memory_order_relaxed);
 
 		Job job;
 		job.ctx = &ctx;
@@ -415,7 +415,7 @@ namespace wi::jobsystem
 			return;
 		}
 
-		res.jobQueuePerThread[res.nextQueue.fetch_add(1) % res.numThreads].push_back(job);
+		res.jobQueuePerThread[res.nextQueue.fetch_add(1, std::memory_order_relaxed) % res.numThreads].push_back(job);
 		res.sleepingCondition.notify_one();
 	}
 
@@ -430,7 +430,7 @@ namespace wi::jobsystem
 		const uint32_t groupCount = DispatchGroupCount(jobCount, groupSize);
 
 		// Context state is updated:
-		ctx.counter.fetch_add(groupCount);
+		ctx.counter.fetch_add(groupCount, std::memory_order_relaxed);
 
 		Job job;
 		job.ctx = &ctx;
@@ -451,7 +451,7 @@ namespace wi::jobsystem
 			}
 			else
 			{
-				res.jobQueuePerThread[res.nextQueue.fetch_add(1) % res.numThreads].push_back(job);
+				res.jobQueuePerThread[res.nextQueue.fetch_add(1, std::memory_order_relaxed) % res.numThreads].push_back(job);
 			}
 		}
 
@@ -483,7 +483,7 @@ namespace wi::jobsystem
 			res.sleepingCondition.notify_all();
 
 			// work() will pick up any jobs that are on standby and execute them on this thread:
-			res.work(res.nextQueue.fetch_add(1) % res.numThreads);
+			res.work(res.nextQueue.fetch_add(1, std::memory_order_relaxed) % res.numThreads);
 
 			while (IsBusy(ctx))
 			{
