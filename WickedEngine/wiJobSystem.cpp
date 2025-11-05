@@ -40,9 +40,9 @@ namespace wi::jobsystem
 			args.groupID = groupID;
 			if (sharedmemory_size > 0)
 			{
-				uint32_t sharedmemory_size_overaligned = align(sharedmemory_size, (uint32_t)128); // overestimated alignment
-				args.sharedmemory = alloca(sharedmemory_size_overaligned);
-				args.sharedmemory = (void*)align((uint64_t)args.sharedmemory, (uint64_t)64); // avx-512 alignment is assumed at max
+				static constexpr uint32_t alignment = 64; // avx-512 alignment is assumed at max
+				args.sharedmemory = alloca(sharedmemory_size + alignment); // overestimated alignment to not overwrite after allocation from the aligned pointer
+				args.sharedmemory = (void*)align((uint64_t)args.sharedmemory, (uint64_t)alignment);
 			}
 			else
 			{
