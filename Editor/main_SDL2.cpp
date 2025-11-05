@@ -125,6 +125,25 @@ void crash_handler(int sig)
 
 	already_handled = true;
 
+	// we can only use functions that are async-signal-safe, see
+	// https://pubs.opengroup.org/onlinepubs/9699919799/functions/V2_chap02.html#tag_15_04
+
+	// we'll use fork() and let the child process do the heavy lifting of writing stuff.
+	// this is technically not 100% safe, but works well enough in practise.
+
+	pid_t child = fork();
+
+	if (child < 0) {
+		const char* msg = "Sorry, a problem occured and crash_handler couldn't fork() to tell you more\n";
+
+		write(STDERR_FILENO, msg, strlen(msg));
+		_exit(128 + sig);
+	}
+	if (child > 0) {
+		_exit(128 + sig);
+	}
+
+	// not we're in a child process and can use printf etc.
 	size_t size = backtrace(btbuf, 100);
 
 	snprintf(
@@ -172,7 +191,7 @@ void crash_handler(int sig)
 		char cwdbuf[200];
 		fprintf(stderr, "\e[1mcrash log written to %s/%s\e[m\n", getcwd(cwdbuf, sizeof(cwdbuf)), filename);
 	}
-	abort();
+	_exit(0);
 }
 
 #endif
