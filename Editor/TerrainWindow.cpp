@@ -1790,6 +1790,8 @@ void TerrainWindow::SetupAssets()
 		transform.Translate(XMFLOAT3(0, 4, 0));
 	}
 
+	// currentScene.EnsureMoonLight(currentScene.weather);
+
 	presetCombo.SetSelected(0);
 
 	editor->paintToolWnd.RecreateTerrainMaterialButtons();

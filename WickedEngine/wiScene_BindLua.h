@@ -1589,6 +1589,13 @@ namespace wi::lua::scene
 		{
 			sunColor = VectorProperty(&component->sunColor);
 			sunDirection = VectorProperty(&component->sunDirection);
+			moonColor = VectorProperty(&component->moonColor);
+			moonDirection = VectorProperty(&component->moonDirection);
+			moonSize = FloatProperty(&component->moonSize);
+			moonGlowSize = FloatProperty(&component->moonGlowSize);
+			moonGlowSharpness = FloatProperty(&component->moonGlowSharpness);
+			moonGlowIntensity = FloatProperty(&component->moonGlowIntensity);
+			moonLightIntensity = FloatProperty(&component->moonLightIntensity);
 			skyExposure = FloatProperty(&component->skyExposure);
 			horizon = VectorProperty(&component->horizon);
 			zenith = VectorProperty(&component->zenith);
@@ -1630,6 +1637,8 @@ namespace wi::lua::scene
 
 		VectorProperty sunColor;
 		VectorProperty sunDirection;
+		VectorProperty moonColor;
+		VectorProperty moonDirection;
 		FloatProperty skyExposure;
 		VectorProperty horizon;
 		VectorProperty zenith;
@@ -1651,6 +1660,11 @@ namespace wi::lua::scene
 		FloatProperty windWaveSize;
 		FloatProperty windSpeed;
 		FloatProperty stars;
+		FloatProperty moonSize;
+		FloatProperty moonGlowSize;
+		FloatProperty moonGlowSharpness;
+		FloatProperty moonGlowIntensity;
+		FloatProperty moonLightIntensity;
 		FloatProperty rainAmount;
 		FloatProperty rainLength;
 		FloatProperty rainSpeed;
@@ -1659,6 +1673,8 @@ namespace wi::lua::scene
 
 		PropertyFunction(sunColor)
 		PropertyFunction(sunDirection)
+		PropertyFunction(moonColor)
+		PropertyFunction(moonDirection)
 		PropertyFunction(skyExposure)
 		PropertyFunction(horizon)
 		PropertyFunction(zenith)
@@ -1680,6 +1696,11 @@ namespace wi::lua::scene
 		PropertyFunction(windWaveSize)
 		PropertyFunction(windSpeed)
 		PropertyFunction(stars)
+		PropertyFunction(moonSize)
+		PropertyFunction(moonGlowSize)
+		PropertyFunction(moonGlowSharpness)
+		PropertyFunction(moonGlowIntensity)
+		PropertyFunction(moonLightIntensity)
 		PropertyFunction(rainAmount)
 		PropertyFunction(rainLength)
 		PropertyFunction(rainSpeed)

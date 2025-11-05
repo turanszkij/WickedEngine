@@ -143,6 +143,52 @@ float3 GetDynamicSkyColor(in float2 pixel, in float3 V, bool sun_enabled = true,
 		sky = lerp(GetHorizonColor(), GetZenithColor(), saturate(V.y * 0.5f + 0.5f));
     }
 
+	if (!dark_enabled)
+	{
+		float moonSize = GetMoonSize();
+		float3 moonColor = GetMoonColor();
+		if (moonSize > 0 && dot(moonColor, moonColor) > 0)
+		{
+			float3 moonDir = GetMoonDirection();
+			float cosAngle = dot(V, moonDir);
+			float innerEdge = cos(moonSize);
+			float core = smoothstep(innerEdge, cos(moonSize * 0.8f), cosAngle);
+			float diskMask = core;
+			float3 diskColor = moonColor;
+			if (HasMoonTexture())
+			{
+				float3 referenceUp = abs(moonDir.y) > 0.95f ? float3(1, 0, 0) : float3(0, 1, 0);
+				float3 moonRight = normalize(cross(referenceUp, moonDir));
+				float3 moonUp = normalize(cross(moonDir, moonRight));
+				float2 local = float2(dot(V, moonRight), dot(V, moonUp));
+				float invRadius = 0.5f / max(sin(moonSize), 0.0001f);
+				float2 moonUV = local * invRadius + 0.5f;
+				if (all(moonUV >= 0.0f) && all(moonUV <= 1.0f))
+				{
+					float4 tex = bindless_textures[NonUniformResourceIndex(descriptor_index(GetWeather().moon_texture))].SampleLevel(sampler_linear_clamp, moonUV, GetMoonTextureMipBias());
+					diskMask *= tex.a;
+					diskColor *= tex.rgb;
+				}
+				else
+				{
+					diskMask = 0.0f;
+				}
+			}
+			float haloContribution = 0;
+			float haloIntensity = GetMoonHaloIntensity();
+			if (haloIntensity > 0)
+			{
+				float haloSize = max(GetMoonHaloSize(), 0.0001f);
+				float haloRadius = moonSize + haloSize;
+				float halo = smoothstep(cos(haloRadius), innerEdge, cosAngle);
+				halo = pow(saturate(halo), max(GetMoonHaloSharpness(), 0.0001f));
+				haloContribution = halo * haloIntensity;
+			}
+			sky += moonColor * haloContribution;
+			sky += diskColor * diskMask;
+		}
+	}
+
 	sky *= GetWeather().sky_exposure;
 	
 	if (clouds_enabled && V.y > 0 && GetScene().texture_cloudmap >= 0 && !stationary)

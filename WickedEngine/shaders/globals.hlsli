@@ -973,6 +973,19 @@ float acosFastPositive(float x)
 }
 
 inline half3 GetSunColor() { return unpack_half3(GetWeather().sun_color); } // sun color with intensity applied
+inline float3 GetMoonDirection()
+{
+	float3 dir = unpack_half3(GetWeather().moon_direction);
+	float len_sq = dot(dir, dir);
+	return len_sq > 0 ? dir * rsqrt(len_sq) : float3(0.0f, 0.5f, 0.8660254f);
+}
+inline half3 GetMoonColor() { return unpack_half3(GetWeather().moon_color); }
+inline float GetMoonSize() { return GetWeather().moon_params.x; }
+inline float GetMoonHaloSize() { return GetWeather().moon_params.y; }
+inline float GetMoonHaloSharpness() { return GetWeather().moon_params.z; }
+inline float GetMoonHaloIntensity() { return GetWeather().moon_params.w; }
+inline bool HasMoonTexture() { return GetWeather().moon_texture >= 0; }
+inline float GetMoonTextureMipBias() { return GetWeather().moon_texture_mip_bias; }
 inline half3 GetSunDirection() { return normalize(unpack_half3(GetWeather().sun_direction)); }
 inline half3 GetHorizonColor() { return unpack_half3(GetWeather().horizon); }
 inline half3 GetZenithColor() { return unpack_half3(GetWeather().zenith); }

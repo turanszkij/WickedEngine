@@ -357,6 +357,8 @@ struct alignas(16) ShaderWeather
 {
 	uint2 sun_direction; // packed half3
 	uint2 sun_color; // packed half3
+	uint2 moon_direction; // packed half3
+	uint2 moon_color; // packed half3
 
 	uint2 ambient; // packed half3
 	uint most_important_light_index;
@@ -366,8 +368,10 @@ struct alignas(16) ShaderWeather
 	uint2 zenith; // packed half3
 
 	float4 stars_rotation; // quaternion
-
-	float3 padding_stars;
+	float4 moon_params; // x=size(rad), y=halo size(rad), z=halo sharpness, w=halo intensity
+	int moon_texture; // bindless descriptor index for moon texture (SRV), -1 if unused
+	float moon_texture_mip_bias; // optional mip bias when sampling moon texture
+	float2 moon_texture_padding;
 
 	float sky_rotation_sin;
 	float sky_rotation_cos;

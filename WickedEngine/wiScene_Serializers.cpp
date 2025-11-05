@@ -1613,6 +1613,64 @@ namespace wi::scene
 			archive >> _flags;
 			archive >> sunDirection;
 			archive >> sunColor;
+			moonLight = wi::ecs::INVALID_ENTITY;
+			const bool supports_moon_params = (seri.GetVersion() >= 7) || (archive.GetVersion() >= 94);
+			const bool supports_moon_texture = (seri.GetVersion() >= 8) || (archive.GetVersion() >= 95);
+			const bool supports_moon_texture_bias = (seri.GetVersion() >= 9) || (archive.GetVersion() >= 96);
+			const bool supports_moon_light_intensity = (seri.GetVersion() >= 10) || (archive.GetVersion() >= 97);
+			if (supports_moon_params)
+			{
+				archive >> moonDirection;
+				archive >> moonColor;
+				archive >> moonSize;
+				archive >> moonGlowSize;
+				archive >> moonGlowSharpness;
+				archive >> moonGlowIntensity;
+				if (supports_moon_light_intensity)
+				{
+					archive >> moonLightIntensity;
+				}
+			}
+			else
+			{
+				moonDirection = XMFLOAT3(0.0f, 0.5f, 0.8660254f);
+				moonColor = XMFLOAT3(0.04f, 0.04f, 0.05f);
+				moonSize = 0.0095f;
+				moonGlowSize = 0.03f;
+				moonGlowSharpness = 2.0f;
+				moonGlowIntensity = 0.25f;
+				moonLightIntensity = 0.05f;
+			}
+			if (!supports_moon_light_intensity)
+			{
+				moonLightIntensity = 0.05f;
+			}
+			if (supports_moon_texture)
+			{
+				archive >> moonTextureName;
+				if (!moonTextureName.empty())
+				{
+					moonTextureName = dir + moonTextureName;
+					moonTexture = wi::resourcemanager::Load(moonTextureName);
+				}
+				else
+				{
+					moonTexture = {};
+				}
+			}
+			else
+			{
+				moonTextureName.clear();
+				moonTexture = {};
+			}
+			if (supports_moon_texture_bias)
+			{
+				archive >> moonTextureMipBias;
+			}
+			else
+			{
+				moonTextureMipBias = 0;
+			}
 			archive >> horizon;
 			archive >> zenith;
 			archive >> ambient;
@@ -1894,14 +1952,39 @@ namespace wi::scene
 		}
 		else
 		{
+			const bool supports_moon_params = (seri.GetVersion() >= 7) || (archive.GetVersion() >= 94);
+			const bool supports_moon_texture = (seri.GetVersion() >= 8) || (archive.GetVersion() >= 95);
+			const bool supports_moon_texture_bias = (seri.GetVersion() >= 9) || (archive.GetVersion() >= 96);
+			const bool supports_moon_light_intensity = (seri.GetVersion() >= 10) || (archive.GetVersion() >= 97);
+			seri.RegisterResource(moonTextureName);
 			seri.RegisterResource(skyMapName);
 			seri.RegisterResource(colorGradingMapName);
 			seri.RegisterResource(volumetricCloudsWeatherMapFirstName);
 			seri.RegisterResource(volumetricCloudsWeatherMapSecondName);
-
 			archive << _flags;
 			archive << sunDirection;
 			archive << sunColor;
+			if (supports_moon_params)
+			{
+				archive << moonDirection;
+				archive << moonColor;
+				archive << moonSize;
+				archive << moonGlowSize;
+				archive << moonGlowSharpness;
+				archive << moonGlowIntensity;
+				if (supports_moon_light_intensity)
+				{
+					archive << moonLightIntensity;
+				}
+			}
+			if (supports_moon_texture)
+			{
+				archive << wi::helper::GetPathRelative(dir, moonTextureName);
+			}
+			if (supports_moon_texture_bias)
+			{
+				archive << moonTextureMipBias;
+			}
 			archive << horizon;
 			archive << zenith;
 			archive << ambient;
