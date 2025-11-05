@@ -33,6 +33,22 @@ namespace wi::scene
 {
 	static constexpr uint32_t small_subtask_groupsize = 256u;
 
+	static float ComputeMoonPhaseVisibility(const XMFLOAT3& sun_dir, const XMFLOAT3& moon_dir)
+	{
+		XMVECTOR sun = XMLoadFloat3(&sun_dir);
+		XMVECTOR moon = XMLoadFloat3(&moon_dir);
+		const float sun_len_sq = XMVectorGetX(XMVector3LengthSq(sun));
+		const float moon_len_sq = XMVectorGetX(XMVector3LengthSq(moon));
+		if (!std::isfinite(sun_len_sq) || !std::isfinite(moon_len_sq) || sun_len_sq < 1e-6f || moon_len_sq < 1e-6f)
+		{
+			return 1.0f;
+		}
+		sun = XMVector3Normalize(sun);
+		moon = XMVector3Normalize(moon);
+		const float dot_sm = XMVectorGetX(XMVector3Dot(sun, moon));
+		return wi::math::Clamp(0.5f * (1.0f - dot_sm), 0.0f, 1.0f);
+	}
+
 	void Scene::Update(float dt)
 	{
 		GraphicsDevice* device = wi::graphics::GetDevice();
@@ -947,7 +963,8 @@ namespace wi::scene
 		shaderscene.weather.moon_params = XMFLOAT4(weather.moonSize, weather.moonGlowSize, weather.moonGlowSharpness, weather.moonGlowIntensity);
 		shaderscene.weather.moon_texture = weather.moonTexture.IsValid() ? device->GetDescriptorIndex(&weather.moonTexture.GetTexture(), SubresourceType::SRV, weather.moonTexture.GetTextureSRGBSubresource()) : -1;
 		shaderscene.weather.moon_texture_mip_bias = weather.moonTextureMipBias;
-		shaderscene.weather.moon_light_intensity = weather.moonLightIntensity;
+		const float moon_phase_visibility = ComputeMoonPhaseVisibility(weather.sunDirection, moonDir);
+		shaderscene.weather.moon_light_intensity = weather.moonLightIntensity * moon_phase_visibility;
 		shaderscene.weather.moon_light_index = weather.moon_light_index;
 		shaderscene.weather.most_important_light_index = weather.most_important_light_index;
 		shaderscene.weather.ambient = wi::math::pack_half3(weather.ambient);
@@ -1475,7 +1492,9 @@ namespace wi::scene
 			}
 		}
 
-		const bool moon_active = weather_component.moonLightIntensity > 0.0f;
+		const float moon_phase_visibility = ComputeMoonPhaseVisibility(weather_component.sunDirection, weather_component.moonDirection);
+		const float moon_effective_intensity = weather_component.moonLightIntensity * moon_phase_visibility;
+		const bool moon_active = moon_effective_intensity > 0.0f;
 
 		if (weather_component.moonLight == INVALID_ENTITY)
 		{
@@ -1485,7 +1504,7 @@ namespace wi::scene
 			light.SetMoonLight(true);
 			light.SetCastShadow(moon_active);
 			light.SetVolumetricsEnabled(moon_active);
-			light.intensity = weather_component.moonLightIntensity;
+			light.intensity = moon_effective_intensity;
 			light.color = weather_component.moonColor;
 			TransformComponent& transform = *transforms.GetComponent(weather_component.moonLight);
 			transform.Translate(XMFLOAT3(0, 4, 0));
@@ -1503,7 +1522,7 @@ namespace wi::scene
 		light->SetCastShadow(moon_active);
 		light->SetVolumetricsEnabled(moon_active);
 		light->color = weather_component.moonColor;
-		light->intensity = weather_component.moonLightIntensity;
+		light->intensity = moon_effective_intensity;
 		light->SetVolumetricCloudsEnabled(moon_active);
 
 		TransformComponent* transform = transforms.GetComponent(weather_component.moonLight);
