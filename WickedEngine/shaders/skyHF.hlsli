@@ -189,6 +189,19 @@ float3 GetDynamicSkyColor(in float2 pixel, in float3 V, bool sun_enabled = true,
 							diskMask *= tex.a;
 							diskColor *= tex.rgb;
 						}
+						float phaseBlend = saturate(phaseVisibility);
+						float3 shadingNormal = normalize(lerp(moonDir, localNormal, phaseBlend));
+						float diffuse = saturate(dot(shadingNormal, sunToMoonDir));
+						float rim = pow(saturate(1.0f - dot(localNormal, V)), 4.0f);
+						float wave = dot(diskCoord, float2(21.7f, -14.9f));
+						float time = GetTime();
+						float anim0 = sin(wave + time * 0.35f);
+						float anim1 = sin((diskCoord.x * -18.3f + diskCoord.y * 11.1f) - time * 0.22f);
+						float craterMask = 0.85f + 0.15f * (anim0 * 0.6f + anim1 * 0.4f);
+						float detailMask = lerp(1.0f, craterMask, phaseBlend);
+						float shading = lerp(0.35f, 1.0f, diffuse);
+						diskColor *= shading * detailMask;
+						diskColor += moonColor * rim * 0.08f * phaseBlend;
 					}
 				}
 			}
