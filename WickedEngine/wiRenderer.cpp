@@ -4698,7 +4698,16 @@ void UpdatePerFrameData(
 			shaderentity.SetRadius(light.radius);
 			shaderentity.SetLength(light.length);
 			shaderentity.SetDirection(light.direction);
-			shaderentity.SetColor(float4(light.color.x * light.intensity, light.color.y * light.intensity, light.color.z * light.intensity, 1));
+			XMFLOAT3 directional_color = light.color;
+			float light_intensity_scale = 1.0f;
+			if (lightIndex == most_important_light_component_index)
+			{
+				light_intensity_scale = wi::math::Clamp(1.0f - vis.scene->weather.resolvedSunEclipseStrength, 0.0f, 1.0f);
+			}
+			directional_color.x *= light.intensity * light_intensity_scale;
+			directional_color.y *= light.intensity * light_intensity_scale;
+			directional_color.z *= light.intensity * light_intensity_scale;
+			shaderentity.SetColor(float4(directional_color.x, directional_color.y, directional_color.z, 1));
 
 			const uint32_t directional_entity_index = lightarray_count_directional;
 

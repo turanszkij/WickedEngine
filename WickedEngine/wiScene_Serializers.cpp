@@ -1613,6 +1613,17 @@ namespace wi::scene
 			archive >> _flags;
 			archive >> sunDirection;
 			archive >> sunColor;
+			const bool supports_sun_eclipse = (seri.GetVersion() >= 13) || (archive.GetVersion() >= 100);
+			if (supports_sun_eclipse)
+			{
+				archive >> sunEclipseStrength;
+				archive >> sunEclipseAutomatic;
+			}
+			else
+			{
+				sunEclipseStrength = 0.0f;
+				sunEclipseAutomatic = false;
+			}
 			moonLight = wi::ecs::INVALID_ENTITY;
 			const bool supports_moon_params = (seri.GetVersion() >= 7) || (archive.GetVersion() >= 94);
 			const bool supports_moon_texture = (seri.GetVersion() >= 8) || (archive.GetVersion() >= 95);
@@ -1970,6 +1981,7 @@ namespace wi::scene
 		}
 		else
 		{
+			const bool supports_sun_eclipse = (seri.GetVersion() >= 13) || (archive.GetVersion() >= 100);
 			const bool supports_moon_params = (seri.GetVersion() >= 7) || (archive.GetVersion() >= 94);
 			const bool supports_moon_texture = (seri.GetVersion() >= 8) || (archive.GetVersion() >= 95);
 			const bool supports_moon_texture_bias = (seri.GetVersion() >= 9) || (archive.GetVersion() >= 96);
@@ -1984,6 +1996,11 @@ namespace wi::scene
 			archive << _flags;
 			archive << sunDirection;
 			archive << sunColor;
+			if (supports_sun_eclipse)
+			{
+				archive << sunEclipseStrength;
+				archive << sunEclipseAutomatic;
+			}
 			if (supports_moon_params)
 			{
 				archive << moonDirection;

@@ -35,6 +35,8 @@ public:
 	wi::gui::Slider windRandomnessSlider;
 	wi::gui::Slider skyExposureSlider;
 	wi::gui::Slider starsSlider;
+	wi::gui::Slider sunEclipseSlider;
+	wi::gui::CheckBox sunEclipseAutoCheckBox;
 	wi::gui::Slider skyRotationSlider;
 	wi::gui::Slider moonAzimuthSlider;
 	wi::gui::Slider moonElevationSlider;

@@ -240,6 +240,29 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&starsSlider);
 
+	sunEclipseAutoCheckBox.Create("Auto Solar Eclipse");
+	sunEclipseAutoCheckBox.SetTooltip("Automatically attenuate the sun when the moon passes in front of it.");
+	sunEclipseAutoCheckBox.SetSize(XMFLOAT2(hei, hei));
+	sunEclipseAutoCheckBox.SetPos(XMFLOAT2(x, y += step));
+	sunEclipseAutoCheckBox.OnClick([this](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.sunEclipseAutomatic = args.bValue;
+		sunEclipseSlider.SetEnabled(!args.bValue);
+		InvalidateProbes();
+		});
+	AddWidget(&sunEclipseAutoCheckBox);
+
+	sunEclipseSlider.Create(0.0f, 1.0f, 0.0f, 1000, "Solar Eclipse: ");
+	sunEclipseSlider.SetTooltip("Fraction of the sun obscured by the moon (0 = none, 1 = total eclipse). Disabled when automation is enabled.");
+	sunEclipseSlider.SetSize(XMFLOAT2(wid, hei));
+	sunEclipseSlider.SetPos(XMFLOAT2(x, y += step));
+	sunEclipseSlider.OnSlide([this](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.sunEclipseStrength = args.fValue;
+		InvalidateProbes();
+		});
+	AddWidget(&sunEclipseSlider);
+
 	moonAzimuthSlider.Create(0, 360, 0, 10000, "Moon Azimuth: ");
 	moonAzimuthSlider.SetTooltip("Horizontal moon orientation in degrees (0° faces +Z).");
 	moonAzimuthSlider.SetSize(XMFLOAT2(wid, hei));
@@ -1223,6 +1246,9 @@ void WeatherWindow::UpdateData()
 		windRandomnessSlider.SetValue(weather.windRandomness);
 		skyExposureSlider.SetValue(weather.skyExposure);
 		starsSlider.SetValue(weather.stars);
+		sunEclipseSlider.SetValue(weather.sunEclipseStrength);
+		sunEclipseAutoCheckBox.SetCheck(weather.sunEclipseAutomatic);
+		sunEclipseSlider.SetEnabled(!weather.sunEclipseAutomatic);
 
 		{
 			XMFLOAT3 moonDir = weather.moonDirection;
@@ -1418,6 +1444,8 @@ void WeatherWindow::UpdateData()
 		scene.weather.horizon = default_sky_horizon;
 		scene.weather.fogStart = std::numeric_limits<float>::max();
 		scene.weather.fogDensity = 0;
+		scene.weather.sunEclipseStrength = 0.0f;
+		scene.weather.sunEclipseAutomatic = false;
 		scene.weather.moonColor = XMFLOAT3(0.04f, 0.04f, 0.05f);
 		scene.weather.moonDirection = XMFLOAT3(0.0f, 0.5f, 0.8660254f);
 		scene.weather.moonSize = 0.0095f;
@@ -1505,6 +1533,8 @@ void WeatherWindow::ResizeLayout()
 	layout.add(windRandomnessSlider);
 	layout.add(skyExposureSlider);
 	layout.add(starsSlider);
+	layout.add(sunEclipseAutoCheckBox);
+	layout.add(sunEclipseSlider);
 	layout.add(moonAzimuthSlider);
 	layout.add(moonElevationSlider);
 	layout.add(moonSizeSlider);

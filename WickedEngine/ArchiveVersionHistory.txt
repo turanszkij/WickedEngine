@@ -1,5 +1,6 @@
 This file contains changelog of wi::Archive versions
 
+100: serialized WeatherComponent sun eclipse controls
 99: serialized WeatherComponent moon eclipse automation
 98: serialized WeatherComponent moon eclipse strength
 97: serialized WeatherComponent moon light intensity

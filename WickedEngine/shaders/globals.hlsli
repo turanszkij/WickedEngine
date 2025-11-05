@@ -972,7 +972,13 @@ float acosFastPositive(float x)
     return p * sqrt(1.0 - x);
 }
 
-inline half3 GetSunColor() { return unpack_half3(GetWeather().sun_color); } // sun color with intensity applied
+inline float GetSunEclipseStrength() { return saturate(GetWeather().sun_eclipse_strength); }
+inline half3 GetSunColor()
+{
+	const half3 rawColor = unpack_half3(GetWeather().sun_color);
+	const half eclipseScale = (half)(1.0f - GetSunEclipseStrength());
+	return rawColor * eclipseScale; // sun color with eclipse dimming applied
+}
 inline float3 GetMoonDirection()
 {
 	float3 dir = unpack_half3(GetWeather().moon_direction);

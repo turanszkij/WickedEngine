@@ -49,6 +49,52 @@ namespace wi::scene
 		return wi::math::Clamp(0.5f * (1.0f - dot_sm), 0.0f, 1.0f);
 	}
 
+	static float ResolveSunEclipseStrength(const WeatherComponent& weather)
+	{
+		const float manual = wi::math::Clamp(weather.sunEclipseStrength, 0.0f, 1.0f);
+		if (!weather.sunEclipseAutomatic)
+		{
+			return manual;
+		}
+
+		XMVECTOR sun = XMLoadFloat3(&weather.sunDirection);
+		XMVECTOR moon = XMLoadFloat3(&weather.moonDirection);
+		const float sun_len_sq = XMVectorGetX(XMVector3LengthSq(sun));
+		const float moon_len_sq = XMVectorGetX(XMVector3LengthSq(moon));
+		if (!std::isfinite(sun_len_sq) || sun_len_sq < 1e-6f)
+		{
+			return manual;
+		}
+		XMFLOAT3 default_moon_dir = XMFLOAT3(0.0f, 0.5f, 0.8660254f);
+		if (!std::isfinite(moon_len_sq) || moon_len_sq < 1e-6f)
+		{
+			moon = XMLoadFloat3(&default_moon_dir);
+		}
+
+		sun = XMVector3Normalize(sun);
+		moon = XMVector3Normalize(moon);
+		const float alignment = wi::math::Clamp(XMVectorGetX(XMVector3Dot(sun, moon)), -1.0f, 1.0f);
+		if (alignment <= 0.0f)
+		{
+			return manual;
+		}
+
+		constexpr float sun_apparent_radius = wi::math::DegreesToRadians(0.27f);
+		constexpr float penumbra_padding = wi::math::DegreesToRadians(0.35f);
+		const float moon_radius = std::max(weather.moonSize, 0.0f);
+		const float totality_angle = std::max(moon_radius + sun_apparent_radius, 0.0f);
+		const float penumbra_angle = totality_angle + penumbra_padding;
+		const float cos_totality = std::cos(totality_angle);
+		const float cos_penumbra = std::cos(penumbra_angle);
+		if (cos_totality <= cos_penumbra)
+		{
+			return manual;
+		}
+
+		const float eclipse = wi::math::Clamp((alignment - cos_penumbra) / (cos_totality - cos_penumbra), 0.0f, 1.0f);
+		return eclipse;
+	}
+
 	static float ResolveMoonEclipseStrength(const WeatherComponent& weather)
 	{
 		const float manual = wi::math::Clamp(weather.moonEclipseStrength, 0.0f, 1.0f);
@@ -989,8 +1035,16 @@ namespace wi::scene
 		shaderscene.aabb_extents_rcp.y = 1.0f / shaderscene.aabb_extents.y;
 		shaderscene.aabb_extents_rcp.z = 1.0f / shaderscene.aabb_extents.z;
 
+		const float resolved_sun_eclipse = ResolveSunEclipseStrength(weather);
+		weather.resolvedSunEclipseStrength = resolved_sun_eclipse;
+		if (weathers.GetCount() > 0)
+		{
+			weathers[0].resolvedSunEclipseStrength = weather.resolvedSunEclipseStrength;
+		}
 		shaderscene.weather.sun_color = wi::math::pack_half3(weather.sunColor);
 		shaderscene.weather.sun_direction = wi::math::pack_half3(weather.sunDirection);
+		shaderscene.weather.sun_eclipse_strength = resolved_sun_eclipse;
+		shaderscene.weather.padding_sun0 = 0.0f;
 		auto moonDir = weather.moonDirection;
 		if (wi::math::LengthSquared(moonDir) < 1e-6f)
 		{
@@ -1540,6 +1594,7 @@ namespace wi::scene
 
 		const float moon_phase_visibility = ComputeMoonPhaseVisibility(weather_component.sunDirection, weather_component.moonDirection);
 		const float resolved_moon_eclipse = ResolveMoonEclipseStrength(weather_component);
+		weather_component.resolvedSunEclipseStrength = ResolveSunEclipseStrength(weather_component);
 		const float moon_eclipse_scale = wi::math::Clamp(1.0f - resolved_moon_eclipse, 0.0f, 1.0f);
 		const float moon_effective_intensity = weather_component.moonLightIntensity * moon_phase_visibility * moon_eclipse_scale;
 		const bool moon_active = moon_effective_intensity > 0.0f;

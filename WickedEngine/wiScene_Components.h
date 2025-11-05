@@ -1859,6 +1859,9 @@ namespace wi::scene
 
 		XMFLOAT3 sunColor = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 sunDirection = XMFLOAT3(0, 1, 0);
+		float sunEclipseStrength = 0.0f;
+		bool sunEclipseAutomatic = false;
+		uint8_t padding_sun0[3] = {};
 		XMFLOAT3 moonColor = XMFLOAT3(0.04f, 0.04f, 0.05f);
 		XMFLOAT3 moonDirection = XMFLOAT3(0.0f, 0.5f, 0.8660254f);
 		float moonSize = 0.0095f; // radians
@@ -1907,6 +1910,7 @@ namespace wi::scene
 		wi::Resource colorGradingMap;
 		wi::Resource volumetricCloudsWeatherMapFirst;
 		wi::Resource volumetricCloudsWeatherMapSecond;
+		float resolvedSunEclipseStrength = 0.0f;
 		XMFLOAT4 stars_rotation_quaternion = XMFLOAT4(0, 0, 0, 1);
 		uint32_t most_important_light_index = ~0u;
 		uint32_t moon_light_index = ~0u;

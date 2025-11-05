@@ -6866,6 +6866,8 @@ Luna<WeatherComponent_BindLua>::PropertyType WeatherComponent_BindLua::propertie
 	lunaproperty(WeatherComponent_BindLua, windWaveSize),
 	lunaproperty(WeatherComponent_BindLua, windSpeed),
 	lunaproperty(WeatherComponent_BindLua, stars),
+	lunaproperty(WeatherComponent_BindLua, sunEclipseStrength),
+	lunaproperty(WeatherComponent_BindLua, sunEclipseAutomatic),
 	lunaproperty(WeatherComponent_BindLua, moonSize),
 	lunaproperty(WeatherComponent_BindLua, moonGlowSize),
 	lunaproperty(WeatherComponent_BindLua, moonGlowSharpness),

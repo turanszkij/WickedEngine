@@ -1611,6 +1611,8 @@ namespace wi::lua::scene
 			windWaveSize = FloatProperty(&component->windWaveSize);
 			windSpeed = FloatProperty(&component->windSpeed);
 			stars = FloatProperty(&component->stars);
+			sunEclipseStrength = FloatProperty(&component->sunEclipseStrength);
+			sunEclipseAutomatic = BoolProperty(&component->sunEclipseAutomatic);
 			rainAmount = FloatProperty(&component->rain_amount);
 			rainLength = FloatProperty(&component->rain_length);
 			rainSpeed = FloatProperty(&component->rain_speed);
@@ -1662,6 +1664,8 @@ namespace wi::lua::scene
 		FloatProperty windWaveSize;
 		FloatProperty windSpeed;
 		FloatProperty stars;
+		FloatProperty sunEclipseStrength;
+		BoolProperty sunEclipseAutomatic;
 		FloatProperty moonSize;
 		FloatProperty moonGlowSize;
 		FloatProperty moonGlowSharpness;
@@ -1700,6 +1704,8 @@ namespace wi::lua::scene
 		PropertyFunction(windWaveSize)
 		PropertyFunction(windSpeed)
 		PropertyFunction(stars)
+		PropertyFunction(sunEclipseStrength)
+		PropertyFunction(sunEclipseAutomatic)
 		PropertyFunction(moonSize)
 		PropertyFunction(moonGlowSize)
 		PropertyFunction(moonGlowSharpness)
