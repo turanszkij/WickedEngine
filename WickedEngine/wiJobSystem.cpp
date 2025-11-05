@@ -40,7 +40,9 @@ namespace wi::jobsystem
 			args.groupID = groupID;
 			if (sharedmemory_size > 0)
 			{
-				args.sharedmemory = alloca(sharedmemory_size);
+				uint32_t sharedmemory_size_overaligned = align(sharedmemory_size, (uint32_t)128); // overestimated alignment
+				args.sharedmemory = alloca(sharedmemory_size_overaligned);
+				args.sharedmemory = (void*)align((uint64_t)args.sharedmemory, (uint64_t)64); // avx-512 alignment is assumed at max
 			}
 			else
 			{
@@ -71,7 +73,8 @@ namespace wi::jobsystem
 		wi::allocator::BlockAllocator<Block, 16> allocator;
 		Block* first_block = nullptr;
 		Block* last_block = nullptr;
-		std::mutex locker;
+		//std::mutex locker;
+		wi::SpinLock locker;
 
 		JobQueue()
 		{
