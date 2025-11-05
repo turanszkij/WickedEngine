@@ -948,7 +948,7 @@ namespace wi::scene
 		shaderscene.weather.moon_texture = weather.moonTexture.IsValid() ? device->GetDescriptorIndex(&weather.moonTexture.GetTexture(), SubresourceType::SRV, weather.moonTexture.GetTextureSRGBSubresource()) : -1;
 		shaderscene.weather.moon_texture_mip_bias = weather.moonTextureMipBias;
 		shaderscene.weather.moon_light_intensity = weather.moonLightIntensity;
-		shaderscene.weather.moon_padding0 = 0;
+		shaderscene.weather.moon_light_index = weather.moon_light_index;
 		shaderscene.weather.most_important_light_index = weather.most_important_light_index;
 		shaderscene.weather.ambient = wi::math::pack_half3(weather.ambient);
 		shaderscene.weather.sky_rotation_sin = std::sin(weather.sky_rotation);
@@ -5150,6 +5150,15 @@ namespace wi::scene
 					}
 					locker.unlock();
 				}
+				else
+				{
+					locker.lock();
+					if (args.jobIndex < weather.moon_light_index)
+					{
+						weather.moon_light_index = args.jobIndex;
+					}
+					locker.unlock();
+				}
 				break;
 			case LightComponent::SPOT:
 				XMStoreFloat3(&light.direction, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), W)));
@@ -5438,6 +5447,7 @@ namespace wi::scene
 			EnsureMoonLight(primary_weather);
 			weather = primary_weather;
 			weather.most_important_light_index = ~0;
+			weather.moon_light_index = ~0;
 
 			if (weather.IsOceanEnabled() && !ocean.IsValid())
 			{

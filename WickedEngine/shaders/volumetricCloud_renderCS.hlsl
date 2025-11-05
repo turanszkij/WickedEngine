@@ -150,7 +150,7 @@ ParticipatingMedia SampleParticipatingMedia(float3 baseAlbedo, float3 baseExtinc
 	return participatingMedia;
 }
 
-void OpaqueShadow(inout ParticipatingMedia participatingMedia, float3 worldPosition)
+void OpaqueShadow(inout ParticipatingMedia participatingMedia, float3 worldPosition, uint light_index)
 {
 	float shadow = 1.0f;
 
@@ -158,7 +158,7 @@ void OpaqueShadow(inout ParticipatingMedia participatingMedia, float3 worldPosit
 	ShaderEntity light = (ShaderEntity) 0;
 	uint furthestCascade = 0;
 
-	if (furthest_cascade_volumetrics(light, furthestCascade))
+	if (furthest_cascade_volumetrics(light, furthestCascade, light_index))
 	{
 		float3 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + furthestCascade), float4(worldPosition, 1)).xyz; // ortho matrix, no divide by .w
 		float3 shadow_uv = clipspace_to_uv(shadow_pos.xyz);
@@ -176,7 +176,7 @@ void OpaqueShadow(inout ParticipatingMedia participatingMedia, float3 worldPosit
 	}
 }
 
-void VolumetricShadow(inout ParticipatingMedia participatingMedia, in AtmosphereParameters atmosphere, float3 worldPosition, float3 sunDirection, LayerParameters layerParametersFirst, LayerParameters layerParametersSecond, float lod)
+void VolumetricShadow(inout ParticipatingMedia participatingMedia, in AtmosphereParameters atmosphere, float3 worldPosition, float3 lightDirection, LayerParameters layerParametersFirst, LayerParameters layerParametersSecond, float lod)
 {
 	int ms = 0;
 	float3 extinctionAccumulation[MS_COUNT];
@@ -204,7 +204,7 @@ void VolumetricShadow(inout ParticipatingMedia participatingMedia, in Atmosphere
 		float t = t0 + delta * sampleSegmentT; // 5 samples: 0.02, 0.1, 0.26, 0.5, 0.82
 		
 		float shadowSampleT = GetWeather().volumetric_clouds.shadowStepLength * t;
-		float3 samplePoint = worldPosition + sunDirection * shadowSampleT; // Step futher towards the light
+		float3 samplePoint = worldPosition + lightDirection * shadowSampleT; // Step futher towards the light
 
 		float heightFraction = GetHeightFractionForPoint(atmosphere, samplePoint);
 		if (heightFraction < 0.0 || heightFraction > 1.0)
@@ -469,7 +469,8 @@ void VolumetricCloudLighting(AtmosphereParameters atmosphere, float3 startPositi
 	}
 	
 
-	const bool moonEnabled = dot(moonIlluminance, moonIlluminance) > 0.0;
+	const bool sunEnabled = GetWeather().most_important_light_index != ~0u && dot(sunIlluminance, sunIlluminance) > 0.0;
+	const bool moonEnabled = GetWeather().moon_light_index != ~0u && dot(moonIlluminance, moonIlluminance) > 0.0;
 
 	// Sample environment lighting
 	float3 environmentLuminance = SampleAmbientLight(heightFraction);
@@ -481,11 +482,21 @@ void VolumetricCloudLighting(AtmosphereParameters atmosphere, float3 startPositi
 		// Sample shadows from opaque shadow maps
 		if (GetFrame().options & OPTION_BIT_VOLUMETRICCLOUDS_RECEIVE_SHADOW)
 		{
-			OpaqueShadow(participatingMediaSun, worldPosition);
+			if (sunEnabled)
+			{
+				OpaqueShadow(participatingMediaSun, worldPosition, GetWeather().most_important_light_index);
+			}
+			if (moonEnabled)
+			{
+				OpaqueShadow(participatingMediaMoon, worldPosition, GetWeather().moon_light_index);
+			}
 		}
 		
 		// Calcualte volumetric shadow
-		VolumetricShadow(participatingMediaSun, atmosphere, worldPosition, sunDirection, layerParametersFirst, layerParametersSecond, lod);
+		if (sunEnabled)
+		{
+			VolumetricShadow(participatingMediaSun, atmosphere, worldPosition, sunDirection, layerParametersFirst, layerParametersSecond, lod);
+		}
 		if (moonEnabled)
 		{
 			VolumetricShadow(participatingMediaMoon, atmosphere, worldPosition, moonDirection, layerParametersFirst, layerParametersSecond, lod);
@@ -496,7 +507,10 @@ void VolumetricCloudLighting(AtmosphereParameters atmosphere, float3 startPositi
 		const float maxTransmittanceToView = max(max(transmittanceToView.x, transmittanceToView.y), transmittanceToView.z);
 		if (maxTransmittanceToView > 0.01f)
 		{
-			VolumetricGroundContribution(environmentLuminance, atmosphere, worldPosition, sunDirection, sunIlluminance, sunAtmosphereTransmittanceToLight, layerParametersFirst, layerParametersSecond, lod);
+			if (sunEnabled)
+			{
+				VolumetricGroundContribution(environmentLuminance, atmosphere, worldPosition, sunDirection, sunIlluminance, sunAtmosphereTransmittanceToLight, layerParametersFirst, layerParametersSecond, lod);
+			}
 			if (moonEnabled)
 			{
 				VolumetricGroundContribution(environmentLuminance, atmosphere, worldPosition, moonDirection, moonIlluminance, moonAtmosphereTransmittanceToLight, layerParametersFirst, layerParametersSecond, lod);

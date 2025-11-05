@@ -4662,6 +4662,10 @@ void UpdatePerFrameData(
 		}
 
 		const XMFLOAT2 atlas_dim_rcp = XMFLOAT2(1.0f / float(shadowMapAtlas.desc.width), 1.0f / float(shadowMapAtlas.desc.height));
+		const uint32_t most_important_light_component_index = vis.scene->weather.most_important_light_index;
+		frameCB.scene.weather.most_important_light_index = ~0u;
+		frameCB.scene.weather.moon_light_index = ~0u;
+		uint32_t moon_directional_entity_index = ~0u;
 
 		// Write directional lights into entity array:
 		lightarray_offset = entityCounter;
@@ -4695,6 +4699,8 @@ void UpdatePerFrameData(
 			shaderentity.SetLength(light.length);
 			shaderentity.SetDirection(light.direction);
 			shaderentity.SetColor(float4(light.color.x * light.intensity, light.color.y * light.intensity, light.color.z * light.intensity, 1));
+
+			const uint32_t directional_entity_index = lightarray_count_directional;
 
 			const bool shadowmap = IsShadowsEnabled() && light.IsCastingShadow() && !light.IsStatic();
 			const wi::rectpacker::Rect& shadow_rect = vis.visibleLightShadowRects[lightIndex];
@@ -4736,10 +4742,21 @@ void UpdatePerFrameData(
 				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_VOLUMETRICCLOUDS);
 			}
 
+			if (lightIndex == most_important_light_component_index)
+			{
+				frameCB.scene.weather.most_important_light_index = directional_entity_index;
+			}
+			if (light.IsMoonLight())
+			{
+				moon_directional_entity_index = directional_entity_index;
+			}
+
 			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
 			entityCounter++;
 			lightarray_count_directional++;
 		}
+
+		frameCB.scene.weather.moon_light_index = moon_directional_entity_index;
 
 		// Write spot lights into entity array:
 		lightarray_offset_spot = entityCounter;

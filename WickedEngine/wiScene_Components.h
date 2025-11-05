@@ -1907,6 +1907,7 @@ namespace wi::scene
 		wi::Resource volumetricCloudsWeatherMapSecond;
 		XMFLOAT4 stars_rotation_quaternion = XMFLOAT4(0, 0, 0, 1);
 		uint32_t most_important_light_index = ~0u;
+		uint32_t moon_light_index = ~0u;
 		wi::ecs::Entity moonLight = wi::ecs::INVALID_ENTITY;
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);

@@ -350,18 +350,28 @@ inline half shadow_2D_volumetricclouds(float3 P)
 
 // Sample light and furthest cascade for large mediums (volumetrics)
 // Used with SkyAtmosphere and Volumetric Clouds
-inline bool furthest_cascade_volumetrics(inout ShaderEntity light, inout uint furthestCascade)
+inline bool furthest_cascade_volumetrics(inout ShaderEntity light, inout uint furthestCascade, uint light_index)
 {
-	light = load_entity(lights().first_item() + GetWeather().most_important_light_index);
-	furthestCascade = light.GetShadowCascadeCount() - 1;
-	
-	if (!light.IsStaticLight() && light.IsCastingShadow() && furthestCascade >= 0)
+	ShaderEntityIterator dir_lights = directional_lights();
+	if (light_index == ~0u || light_index >= dir_lights.item_count())
 	{
-		// We consider this light useless if it is static, is not casting shadow and if there are no available cascades
+		return false;
+	}
+
+	light = load_entity(dir_lights.first_item() + light_index);
+	const uint cascade_count = light.GetShadowCascadeCount();
+	if (!light.IsStaticLight() && light.IsCastingShadow() && cascade_count > 0)
+	{
+		furthestCascade = cascade_count - 1;
 		return true;
 	}
-	
+
 	return false;
+}
+
+inline bool furthest_cascade_volumetrics(inout ShaderEntity light, inout uint furthestCascade)
+{
+	return furthest_cascade_volumetrics(light, furthestCascade, GetWeather().most_important_light_index);
 }
 
 static const float rain_blocker_head_size = 1;
