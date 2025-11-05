@@ -75,6 +75,7 @@ namespace wi::jobsystem
 		Block* last_block = nullptr;
 		//std::mutex locker;
 		wi::SpinLock locker;
+		std::atomic_uint32_t cnt{ 0 }; // for early exit, reduce contention on lock in job stealing scenario
 
 		JobQueue()
 		{
@@ -91,9 +92,12 @@ namespace wi::jobsystem
 				last_block = last_block->next;
 			}
 			last_block->items[last_block->last_item++] = item;
+			cnt.fetch_add(1, std::memory_order_relaxed);
 		}
 		inline bool pop_front(Job& item)
 		{
+			if (cnt.load(std::memory_order_relaxed) == 0)
+				return false;
 			std::scoped_lock lock(locker);
 			if (first_block->first_item == first_block->last_item)
 			{
@@ -120,6 +124,7 @@ namespace wi::jobsystem
 					first_block = next;
 				}
 			}
+			cnt.fetch_sub(1, std::memory_order_relaxed);
 			return true;
 		}
 	};
