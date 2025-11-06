@@ -4342,7 +4342,7 @@ namespace wi::scene
 			inst.geometryCount = 1;
 			inst.baseGeometryOffset = inst.geometryOffset;
 			inst.baseGeometryCount = inst.geometryCount;
-			inst.meshletOffset = meshletAllocator.fetch_add(geometry.meshletCount); // global meshlet offset
+			inst.meshletOffset = meshletAllocator.fetch_add(geometry.meshletCount, std::memory_order_relaxed); // global meshlet offset
 			std::memcpy(instanceArrayMapped + impostorInstanceOffset, &inst, sizeof(inst));
 		}
 	}
@@ -4575,7 +4575,7 @@ namespace wi::scene
 				inst.baseGeometryCount = (uint)mesh.subsets.size();
 				inst.geometryOffset = inst.baseGeometryOffset + first_subset;
 				inst.geometryCount = last_subset - first_subset;
-				inst.meshletOffset = meshletAllocator.fetch_add(mesh.meshletCount);
+				inst.meshletOffset = meshletAllocator.fetch_add(mesh.meshletCount, std::memory_order_relaxed);
 				inst.fadeDistance = object.fadeDistance;
 				inst.center = object.center;
 				inst.radius = object.radius;
@@ -5016,7 +5016,7 @@ namespace wi::scene
 			uint32_t indexCount = hair.GetIndexCount();
 			uint32_t triangleCount = indexCount / 3u;
 			uint32_t meshletCount = triangle_count_to_meshlet_count(triangleCount);
-			uint32_t meshletOffset = meshletAllocator.fetch_add(meshletCount);
+			uint32_t meshletOffset = meshletAllocator.fetch_add(meshletCount, std::memory_order_relaxed);
 
 			ShaderGeometry geometry = shader_geometry_null;
 			geometry.indexOffset = 0;
