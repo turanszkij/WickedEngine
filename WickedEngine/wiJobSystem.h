@@ -1,7 +1,7 @@
 #pragma once
 
 // If this is defined, job system will use the custom wi::function with disabled allocation
-//	otherwise it will use standard std::function that might allocate
+//	otherwise it will use standard std::function that might allocate, but more flexible in how much you can store in lambdas
 #define JOB_SYSTEM_FIXED_SIZE_FUNCTION
 
 #ifdef JOB_SYSTEM_FIXED_SIZE_FUNCTION
@@ -32,7 +32,7 @@ namespace wi::jobsystem
 	};
 
 #ifdef JOB_SYSTEM_FIXED_SIZE_FUNCTION
-	using job_function_type = wi::function<void(JobArgs), 128>;
+	using job_function_type = wi::function<void(JobArgs), 96>; // 96 is chosen to fit the whole job storage with parameters in 128 bytes
 #else
 	using job_function_type = std::function<void(JobArgs)>;
 #endif // JOB_SYSTEM_FIXED_SIZE_FUNCTION

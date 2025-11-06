@@ -26,7 +26,7 @@
 
 namespace wi::jobsystem
 {
-	struct alignas(32) Job
+	struct alignas(64) Job
 	{
 		job_function_type task;
 		context* ctx;
@@ -63,7 +63,7 @@ namespace wi::jobsystem
 	};
 	struct JobQueue
 	{
-		struct alignas(32) Block
+		struct Block
 		{
 			uint32_t first_item = 0;
 			uint32_t last_item = 0;
@@ -73,8 +73,8 @@ namespace wi::jobsystem
 		wi::allocator::BlockAllocator<Block, 16> allocator;
 		Block* first_block = nullptr;
 		Block* last_block = nullptr;
-		//std::mutex locker;
-		wi::SpinLock locker;
+		std::mutex locker;
+		//wi::SpinLock locker;
 		std::atomic_uint32_t cnt{ 0 }; // for early exit, reduce contention on lock in job stealing scenario
 
 		JobQueue()

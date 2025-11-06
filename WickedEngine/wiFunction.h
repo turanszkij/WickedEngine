@@ -85,14 +85,11 @@ namespace wi
 
 		function& operator=(const function& other)
 		{
-			if (this != &other)
+			destroy();
+			if (other.ptr)
 			{
-				destroy();
-				if (other.ptr)
-				{
-					other.ptr->copy_to(buffer);
-					ptr = reinterpret_cast<callable_base*>(&buffer.bytes);
-				}
+				other.ptr->copy_to(buffer);
+				ptr = reinterpret_cast<callable_base*>(&buffer.bytes);
 			}
 			return *this;
 		}
@@ -110,15 +107,12 @@ namespace wi
 
 		function& operator=(function&& other) noexcept
 		{
-			if (this != &other)
+			destroy();
+			if (other.ptr)
 			{
-				destroy();
-				if (other.ptr)
-				{
-					other.ptr->move_to(buffer);
-					ptr = reinterpret_cast<callable_base*>(&buffer.bytes);
-					other.ptr = nullptr;
-				}
+				other.ptr->move_to(buffer);
+				ptr = reinterpret_cast<callable_base*>(&buffer.bytes);
+				other.ptr = nullptr;
 			}
 			return *this;
 		}
@@ -128,6 +122,9 @@ namespace wi
 		{
 			return ptr->call(std::forward<Args>(args)...);
 		}
+
+		constexpr bool operator==(void* a) const { return ptr == a; }
+		constexpr bool operator!=(void* a) const { return ptr != a; }
 	};
 
 }
