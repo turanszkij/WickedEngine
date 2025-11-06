@@ -61,6 +61,7 @@ namespace wi::jobsystem
 	//	jobCount	: how many jobs to generate for this task.
 	//	groupSize	: how many jobs to execute per thread. Jobs inside a group execute serially. It might be worth to increase for small jobs
 	//	task		: receives a JobArgs as parameter
+	//	sharedmemory_size	: size of shared memory allocation for every thread group. The pointer will be 64-byte aligned
 	void Dispatch(context& ctx, uint32_t jobCount, uint32_t groupSize, const job_function_type& task, size_t sharedmemory_size = 0);
 
 	// Returns the amount of job groups that will be created for a set number of jobs and group size
