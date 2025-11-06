@@ -32,8 +32,7 @@ namespace wi::jobsystem
 	};
 
 #ifdef JOB_SYSTEM_FIXED_SIZE_FUNCTION
-	//using job_function_type = wi::function<void(JobArgs), 128>;
-	using job_function_type = wi::unsafe_function<void(JobArgs), 128>; // unsafe_function fits exactly in requested buffer size (128)
+	using job_function_type = wi::function<void(JobArgs), 128>;
 #else
 	using job_function_type = std::function<void(JobArgs)>;
 #endif // JOB_SYSTEM_FIXED_SIZE_FUNCTION
