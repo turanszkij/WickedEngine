@@ -281,7 +281,7 @@ namespace wi::jobsystem
 					}
 #endif // PLATFORM_LINUX
 
-					while (internal_state.alive.load())
+					while (internal_state.alive.load(std::memory_order_relaxed))
 					{
 						res.work(threadID);
 
@@ -393,7 +393,7 @@ namespace wi::jobsystem
 
 	bool IsShuttingDown()
 	{
-		return internal_state.alive.load() == false;
+		return internal_state.alive.load(std::memory_order_relaxed) == false;
 	}
 
 	uint32_t GetThreadCount(Priority priority)
@@ -478,7 +478,7 @@ namespace wi::jobsystem
 	bool IsBusy(const context& ctx)
 	{
 		// Whenever the context label is greater than zero, it means that there is still work that needs to be done
-		return ctx.counter.load() > 0;
+		return ctx.counter.load(std::memory_order_relaxed) > 0;
 	}
 
 	void Wait(const context& ctx)
@@ -508,6 +508,6 @@ namespace wi::jobsystem
 
 	uint32_t GetRemainingJobCount(const context& ctx)
 	{
-		return ctx.counter.load();
+		return ctx.counter.load(std::memory_order_relaxed);
 	}
 }
