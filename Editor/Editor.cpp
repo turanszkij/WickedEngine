@@ -2444,7 +2444,7 @@ void EditorComponent::Update(float dt)
 	main->infoDisplay.colorgrading_helper = false;
 
 	// Control operations...
-	if (!GetGUI().IsTyping() && (wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RCONTROL)))
+	if (!GetGUI().IsTyping() && !GetGUI().HasFocus() && (wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RCONTROL)))
 	{
 		bool isCtrlDown = wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RCONTROL);
 		bool isShiftDown = wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RSHIFT);
