@@ -34,6 +34,10 @@ namespace wi::physics
 	void SetConstraintDebugSize(float value);
 	float GetConstraintDebugSize();
 
+	// Set maximum distance for debug drawing physics shapes
+	void SetDebugDrawMaxDistance(float value);
+	float GetDebugDrawMaxDistance();
+
 	// Set the accuracy of the simulation
 	//	This value corresponds to maximum simulation step count
 	//	Higher values will be slower but more accurate
