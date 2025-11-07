@@ -1404,6 +1404,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)LUA\lopnames.h">
       <Filter>LUA</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiFunction.h">
+      <Filter>ENGINE\Helpers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">

@@ -659,7 +659,7 @@ namespace wi::terrain
 		// What was generated, will be merged in to the main scene
 		scene->MergeFastInternal(generator->scene);
 
-		const float chunk_scale_rcp = 1.0f / chunk_scale;
+		chunk_scale_rcp = 1.0f / chunk_scale;
 
 		if (IsCenterToCamEnabled())
 		{
@@ -1037,6 +1037,7 @@ namespace wi::terrain
 					wi::jobsystem::Wait(ctx);
 
 					wi::jobsystem::Dispatch(ctx, vertexCount, chunk_width * 4, [&](wi::jobsystem::JobArgs args) {
+						ChunkData& chunk_data = chunks[chunk];
 						const uint32_t index = args.jobIndex;
 						const XMUINT2 coord = XMUINT2(index % chunk_width, index / chunk_width);
 						const float x = (float(coord.x) - chunk_half_width) * chunk_scale;

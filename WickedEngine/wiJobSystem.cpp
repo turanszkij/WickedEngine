@@ -3,10 +3,10 @@
 #include "wiBacklog.h"
 #include "wiPlatform.h"
 #include "wiTimer.h"
+#include "wiAllocator.h"
 
 #include <memory>
 #include <algorithm>
-#include <deque>
 #include <string>
 #include <thread>
 #include <mutex>
@@ -26,9 +26,9 @@
 
 namespace wi::jobsystem
 {
-	struct Job
+	struct alignas(64) Job
 	{
-		std::function<void(JobArgs)> task;
+		job_function_type task;
 		context* ctx;
 		uint32_t groupID;
 		uint32_t groupJobOffset;
@@ -40,7 +40,9 @@ namespace wi::jobsystem
 			args.groupID = groupID;
 			if (sharedmemory_size > 0)
 			{
-				args.sharedmemory = alloca(sharedmemory_size);
+				static constexpr uint32_t alignment = 64; // avx-512 alignment is assumed at max
+				args.sharedmemory = alloca(sharedmemory_size + alignment); // overestimated alignment to not overwrite after allocation from the aligned pointer
+				args.sharedmemory = (void*)align((uint64_t)args.sharedmemory, (uint64_t)alignment);
 			}
 			else
 			{
@@ -56,28 +58,73 @@ namespace wi::jobsystem
 				task(args);
 			}
 
-			return ctx->counter.fetch_sub(1); // returns context counter's previous value
+			return ctx->counter.fetch_sub(1, std::memory_order_relaxed); // returns context counter's previous value
 		}
 	};
 	struct JobQueue
 	{
-		std::deque<Job> queue;
+		struct Block
+		{
+			uint32_t first_item = 0;
+			uint32_t last_item = 0;
+			Block* next = nullptr;
+			Job items[256];
+		};
+		wi::allocator::BlockAllocator<Block, 16> allocator;
+		Block* first_block = nullptr;
+		Block* last_block = nullptr;
 		std::mutex locker;
+		//wi::SpinLock locker;
+		std::atomic_uint32_t cnt{ 0 }; // for early exit, reduce contention on lock in job stealing scenario
+
+		JobQueue()
+		{
+			first_block = last_block = allocator.allocate();
+		}
 
 		inline void push_back(const Job& item)
 		{
 			std::scoped_lock lock(locker);
-			queue.push_back(item);
+			if (last_block->last_item == arraysize(Block::items))
+			{
+				// We ran out of items in the last block, so we need to allocate a new one:
+				last_block->next = allocator.allocate();
+				last_block = last_block->next;
+			}
+			last_block->items[last_block->last_item++] = item;
+			cnt.fetch_add(1, std::memory_order_relaxed);
 		}
 		inline bool pop_front(Job& item)
 		{
+			if (cnt.load(std::memory_order_relaxed) == 0)
+				return false;
 			std::scoped_lock lock(locker);
-			if (queue.empty())
+			if (first_block->first_item == first_block->last_item)
 			{
+				// Here it means that the container is empty
 				return false;
 			}
-			item = std::move(queue.front());
-			queue.pop_front();
+			item = std::move(first_block->items[first_block->first_item++]);
+			if (first_block->first_item == arraysize(Block::items))
+			{
+				// When we are here it means that the block was emptied
+				Block* next = first_block->next;
+				if (next == nullptr)
+				{
+					// No next block means there is only one block and it became empty after popping
+					//	-> we can reset just the block
+					first_block->first_item = 0;
+					first_block->last_item = 0;
+				}
+				else
+				{
+					// There is a next block, we have to move to it
+					//	-> the current block can be freed and reused
+					allocator.free(first_block);
+					first_block = next;
+				}
+			}
+			cnt.fetch_sub(1, std::memory_order_relaxed);
 			return true;
 		}
 	};
@@ -234,7 +281,7 @@ namespace wi::jobsystem
 					}
 #endif // PLATFORM_LINUX
 
-					while (internal_state.alive.load())
+					while (internal_state.alive.load(std::memory_order_relaxed))
 					{
 						res.work(threadID);
 
@@ -346,7 +393,7 @@ namespace wi::jobsystem
 
 	bool IsShuttingDown()
 	{
-		return internal_state.alive.load() == false;
+		return internal_state.alive.load(std::memory_order_relaxed) == false;
 	}
 
 	uint32_t GetThreadCount(Priority priority)
@@ -354,12 +401,12 @@ namespace wi::jobsystem
 		return internal_state.resources[int(priority)].numThreads;
 	}
 
-	void Execute(context& ctx, const std::function<void(JobArgs)>& task)
+	void Execute(context& ctx, const job_function_type& task)
 	{
 		PriorityResources& res = internal_state.resources[int(ctx.priority)];
 
 		// Context state is updated:
-		ctx.counter.fetch_add(1);
+		ctx.counter.fetch_add(1, std::memory_order_relaxed);
 
 		Job job;
 		job.ctx = &ctx;
@@ -376,11 +423,11 @@ namespace wi::jobsystem
 			return;
 		}
 
-		res.jobQueuePerThread[res.nextQueue.fetch_add(1) % res.numThreads].push_back(job);
+		res.jobQueuePerThread[res.nextQueue.fetch_add(1, std::memory_order_relaxed) % res.numThreads].push_back(job);
 		res.sleepingCondition.notify_one();
 	}
 
-	void Dispatch(context& ctx, uint32_t jobCount, uint32_t groupSize, const std::function<void(JobArgs)>& task, size_t sharedmemory_size)
+	void Dispatch(context& ctx, uint32_t jobCount, uint32_t groupSize, const job_function_type& task, size_t sharedmemory_size)
 	{
 		if (jobCount == 0 || groupSize == 0)
 		{
@@ -391,7 +438,7 @@ namespace wi::jobsystem
 		const uint32_t groupCount = DispatchGroupCount(jobCount, groupSize);
 
 		// Context state is updated:
-		ctx.counter.fetch_add(groupCount);
+		ctx.counter.fetch_add(groupCount, std::memory_order_relaxed);
 
 		Job job;
 		job.ctx = &ctx;
@@ -412,7 +459,7 @@ namespace wi::jobsystem
 			}
 			else
 			{
-				res.jobQueuePerThread[res.nextQueue.fetch_add(1) % res.numThreads].push_back(job);
+				res.jobQueuePerThread[res.nextQueue.fetch_add(1, std::memory_order_relaxed) % res.numThreads].push_back(job);
 			}
 		}
 
@@ -431,7 +478,7 @@ namespace wi::jobsystem
 	bool IsBusy(const context& ctx)
 	{
 		// Whenever the context label is greater than zero, it means that there is still work that needs to be done
-		return ctx.counter.load() > 0;
+		return ctx.counter.load(std::memory_order_relaxed) > 0;
 	}
 
 	void Wait(const context& ctx)
@@ -444,7 +491,7 @@ namespace wi::jobsystem
 			res.sleepingCondition.notify_all();
 
 			// work() will pick up any jobs that are on standby and execute them on this thread:
-			res.work(res.nextQueue.fetch_add(1) % res.numThreads);
+			res.work(res.nextQueue.fetch_add(1, std::memory_order_relaxed) % res.numThreads);
 
 			while (IsBusy(ctx))
 			{
@@ -461,6 +508,6 @@ namespace wi::jobsystem
 
 	uint32_t GetRemainingJobCount(const context& ctx)
 	{
-		return ctx.counter.load();
+		return ctx.counter.load(std::memory_order_relaxed);
 	}
 }
