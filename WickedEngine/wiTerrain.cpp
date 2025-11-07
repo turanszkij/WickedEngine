@@ -1145,7 +1145,7 @@ namespace wi::terrain
 						newrigidbody.mass = 0; // terrain chunks are static
 						newrigidbody.friction = 0.8f;
 						//newrigidbody.mesh_lod = 2;
-						wi::physics::CreateRigidBodyShape(newrigidbody, transform.scale_local, &mesh);
+						wi::physics::CreateRigidBodyShape(generator->scene, newrigidbody, transform.scale_local, &mesh, true);
 					}
 
 					wi::jobsystem::Wait(ctx); // wait until mesh.CreateRenderData() async task finishes

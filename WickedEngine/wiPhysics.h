@@ -244,8 +244,10 @@ namespace wi::physics
 	// Create the shape immediately, useful when you want to do this from a thread
 	//	Otherwise this will be created on demand before it's used for the first time
 	void CreateRigidBodyShape(
+		wi::scene::Scene& scene,
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const XMFLOAT3& scale_local = XMFLOAT3(1, 1, 1),
-		const wi::scene::MeshComponent* mesh = nullptr
+		const wi::scene::MeshComponent* mesh = nullptr,
+		bool disable_caching = false
 	);
 }
