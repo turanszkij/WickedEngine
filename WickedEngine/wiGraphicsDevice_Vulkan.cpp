@@ -1635,7 +1635,7 @@ using namespace vulkan_internal;
 		if (descriptorPool != VK_NULL_HANDLE)
 		{
 			device->allocationhandler->destroylocker.lock();
-			device->allocationhandler->destroyer_descriptorPools.push_back(std::make_pair(descriptorPool, device->FRAMECOUNT));
+			device->allocationhandler->destroyer_descriptorPools.push_back(std::make_pair(descriptorPool, device->GetFrameCount()));
 			descriptorPool = VK_NULL_HANDLE;
 			device->allocationhandler->destroylocker.unlock();
 		}
@@ -7412,7 +7412,7 @@ using namespace vulkan_internal;
 					else
 					{
 						allocationhandler->destroylocker.lock();
-						allocationhandler->destroyer_pipelines.push_back(std::make_pair(x.second, FRAMECOUNT));
+						allocationhandler->destroyer_pipelines.push_back(std::make_pair(x.second, GetFrameCount()));
 						allocationhandler->destroylocker.unlock();
 					}
 				}
@@ -7510,7 +7510,7 @@ using namespace vulkan_internal;
 
 		for (auto& x : pipelines_global)
 		{
-			allocationhandler->destroyer_pipelines.push_back(std::make_pair(x.second, FRAMECOUNT));
+			allocationhandler->destroyer_pipelines.push_back(std::make_pair(x.second, GetFrameCount()));
 		}
 		pipelines_global.clear();
 
@@ -7518,7 +7518,7 @@ using namespace vulkan_internal;
 		{
 			for (auto& y : x->pipelines_worker)
 			{
-				allocationhandler->destroyer_pipelines.push_back(std::make_pair(y.second, FRAMECOUNT));
+				allocationhandler->destroyer_pipelines.push_back(std::make_pair(y.second, GetFrameCount()));
 			}
 			x->pipelines_worker.clear();
 		}

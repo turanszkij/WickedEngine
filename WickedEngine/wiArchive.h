@@ -4,6 +4,7 @@
 #include "wiVector.h"
 #include "wiColor.h"
 #include "wiGraphics.h"
+#include "wiAtomic.h"
 
 #include <string>
 
@@ -467,6 +468,22 @@ namespace wi
 			{
 				(*this) >> data[i];
 			}
+			return *this;
+		}
+		template<typename T>
+		inline Archive& operator>>(std::atomic<T>& data)
+		{
+			T val;
+			(*this) >> val;
+			data = val;
+			return *this;
+		}
+		template<typename T>
+		inline Archive& operator>>(wi::relaxed_atomic<T>& data)
+		{
+			T val;
+			(*this) >> val;
+			data = val;
 			return *this;
 		}
 

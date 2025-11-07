@@ -36,7 +36,7 @@ namespace wi::backlog
 	wi::font::Params font_params;
 	wi::Color backgroundColor = wi::Color(17, 30, 43, 255);
 	Texture backgroundTex;
-	bool refitscroll = false;
+	std::atomic<bool> refitscroll = false;
 	wi::gui::TextInputField inputField;
 	wi::gui::Button toggleButton;
 	wi::gui::GUI GUI;
@@ -44,7 +44,7 @@ namespace wi::backlog
 	bool locked = false;
 	bool blockLuaExec = false;
 	LogLevel logLevel = LogLevel::Default;
-	LogLevel unseen = LogLevel::None;
+	std::atomic<LogLevel> unseen = LogLevel::None;
 
 	std::deque<LogEntry> history;
 	std::mutex historyLock;
@@ -494,7 +494,7 @@ namespace wi::backlog
 		wi::font::SetCanvas(canvas); // always set here as it can be called from outside...
 		wi::font::Params params = font_params;
 		params.cursor = {};
-		if (refitscroll)
+		if (refitscroll.exchange(false, std::memory_order_relaxed))
 		{
 			const float textheight = wi::font::TextHeight(getText(), params);
 			const float limit = canvas.GetLogicalHeight() - 50;
@@ -502,7 +502,6 @@ namespace wi::backlog
 			{
 				scroll = limit - textheight;
 			}
-			refitscroll = false;
 		}
 		params.posX = 5;
 		params.posY = pos + scroll;
@@ -599,7 +598,7 @@ namespace wi::backlog
 		// Enqueue for async file writing
 		asyncWriter.Enqueue(str);
 
-		refitscroll = true;
+		refitscroll.store(true);
 
 		switch (level)
 		{
@@ -615,7 +614,11 @@ namespace wi::backlog
 			break;
 		}
 
-		unseen = std::max(unseen, level);
+		// atomic version of unseen = max(unseen, level)
+		LogLevel current_unseen = unseen.load(std::memory_order_relaxed);
+		while (current_unseen < level) {
+			unseen.compare_exchange_weak(current_unseen, level, std::memory_order_acq_rel, std::memory_order_relaxed);
+		}
 
 		// Force an immediate flush on errors to prevent potential data loss
 		//	in case the application is about to crash
