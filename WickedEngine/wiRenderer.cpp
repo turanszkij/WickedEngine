@@ -3604,7 +3604,7 @@ void UpdateVisibility(Visibility& vis)
 	//	then each group writes out it's local list to global memory
 	//	The shared memory approach reduces atomics and helps the list to remain
 	//	more coherent (less randomly organized compared to original order)
-	static constexpr uint32_t groupSize = 63;
+	static constexpr uint32_t groupSize = 255;
 	static_assert(groupSize <= 256); // groupIndex must fit into uint8_t stream compaction element
 	struct StreamCompaction
 	{

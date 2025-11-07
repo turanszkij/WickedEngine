@@ -7,14 +7,14 @@
 
 namespace wi
 {
-	template <typename Sig, std::size_t BufferSize = 32>
+	template <typename Sig, unsigned int BufferSize = 32>
 	class function;
 
-	template <typename R, typename... Args, std::size_t BufferSize>
+	template <typename R, typename... Args, unsigned int BufferSize>
 	class function<R(Args...), BufferSize> {
 		struct Storage
 		{
-			uint8_t bytes[BufferSize];
+			unsigned char bytes[BufferSize];
 		};
 
 		struct callable_base
