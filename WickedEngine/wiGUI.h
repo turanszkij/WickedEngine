@@ -510,6 +510,7 @@ namespace wi::gui
 		std::function<void(EventArgs args)> onInput;
 		static wi::SpriteFont font_input;
 		bool cancel_input_enabled = true;
+		int float_precision = -1;
 
 	public:
 		void Create(const std::string& name);
@@ -550,6 +551,9 @@ namespace wi::gui
 		wi::SpriteFont font_description;
 		void SetDescription(const std::string& desc) { font_description.SetText(desc); }
 		const std::string GetDescription() const { return font_description.GetTextA(); }
+
+		// Set number of fractional float digits (-1 = default)
+		constexpr void SetFloatPrecision(int value) { float_precision = value; }
 	};
 
 	// Define an interval and slide the control along it

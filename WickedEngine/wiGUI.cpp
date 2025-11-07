@@ -12,6 +12,7 @@
 #include "wiHelper.h"
 
 #include <sstream>
+#include <iomanip> // setprecision
 
 using namespace wi::graphics;
 using namespace wi::primitive;
@@ -1602,6 +1603,10 @@ namespace wi::gui
 		else
 		{
 			std::stringstream ss("");
+			if (float_precision >= 0)
+			{
+				ss << std::fixed << std::setprecision(float_precision);
+			}
 			ss << newValue;
 			font.SetText(ss.str());
 		}

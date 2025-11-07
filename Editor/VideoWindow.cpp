@@ -124,6 +124,7 @@ void VideoWindow::Create(EditorComponent* _editor)
 		VideoComponent* video = editor->GetCurrentScene().videos.GetComponent(entity);
 		video->Seek(args.fValue);
 	});
+	timerSlider.valueInputField.SetFloatPrecision(2);
 	AddWidget(&timerSlider);
 
 	AddWidget(&preview);
