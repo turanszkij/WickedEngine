@@ -2224,6 +2224,10 @@ namespace wi::terrain
 				archive >> prop.max_size;
 				archive >> prop.min_y_offset;
 				archive >> prop.max_y_offset;
+				if (terrain_version >= 6)
+				{
+					SerializeEntity(archive, prop.source_entity, seri);
+				}
 			}
 
 			archive >> count;
@@ -2379,6 +2383,7 @@ namespace wi::terrain
 				archive << prop.max_size;
 				archive << prop.min_y_offset;
 				archive << prop.max_y_offset;
+				SerializeEntity(archive, prop.source_entity, seri);
 			}
 
 			archive << chunks.size();
