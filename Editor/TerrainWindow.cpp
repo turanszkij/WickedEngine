@@ -332,6 +332,7 @@ PropWindow::PropWindow(wi::terrain::Terrain* terrain, wi::terrain::Prop* prop, w
 			wi::scene::Scene::EntitySerializeFlags::RECURSIVE | wi::scene::Scene::EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES
 		);
 		archive.WriteData(prop->data);
+		prop->source_entity = ent;
 
 		generation_callback();
 	});
@@ -492,6 +493,14 @@ PropsWindow::PropsWindow(EditorComponent* editor)
 	});
 	AddWidget(&addButton);
 
+	reloadButton.Create("Reload props");
+	reloadButton.SetSize(XMFLOAT2(100, 20));
+	reloadButton.SetTooltip("Reload all props from their source entities to update with latest component changes");
+	reloadButton.OnClick([editor](wi::gui::EventArgs args) {
+		editor->ReloadTerrainProps();
+	});
+	AddWidget(&reloadButton);
+
 	SetSize(XMFLOAT2(420, 332));
 }
 
@@ -580,6 +589,7 @@ void PropsWindow::ResizeLayout()
 	layout.margin_left = 150;
 
 	layout.add_fullwidth(addButton);
+	layout.add_fullwidth(reloadButton);
 
 	for(auto& window : windows)
 	{

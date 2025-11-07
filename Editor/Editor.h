@@ -229,6 +229,8 @@ public:
 
 	void FocusCameraOnSelected();
 
+	void ReloadTerrainProps();
+
 	wi::Localization default_localization;
 	wi::Localization current_localization;
 	void SetDefaultLocalization();
