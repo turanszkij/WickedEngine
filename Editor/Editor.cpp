@@ -107,6 +107,7 @@ enum class EditorActions
 	ORTHO_CAMERA,
 	HIERARCHY_SELECT,
 	ADD_TO_SPLINE,
+	RELOAD_TERRAIN_PROPS,
 
 	COUNT
 };
@@ -152,6 +153,7 @@ HotkeyInfo hotkeyActions[size_t(EditorActions::COUNT)] = {
 	{wi::input::BUTTON('O'),					/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//ORTHO_CAMERA,
 	{wi::input::BUTTON('H'),					/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//HIERARCHY_SELECT,
 	{wi::input::BUTTON('E'),					/*press=*/ true,		/*control=*/ true,		/*shift=*/ false},	//ADD_TO_SPLINE,
+	{wi::input::BUTTON('R'),					/*press=*/ true,		/*control=*/ true,		/*shift=*/ false},	//RELOAD_TERRAIN_PROPS,
 };
 static_assert(arraysize(hotkeyActions) == size_t(EditorActions::COUNT));
 bool CheckInput(EditorActions action)
@@ -226,6 +228,8 @@ void HotkeyRemap(Editor* main)
 		{"RAGDOLL_AND_PHYSICS_IMPULSE_TESTER", EditorActions::RAGDOLL_AND_PHYSICS_IMPULSE_TESTER},
 		{"ORTHO_CAMERA", EditorActions::ORTHO_CAMERA},
 		{"HIERARCHY_SELECT", EditorActions::HIERARCHY_SELECT},
+		{"ADD_TO_SPLINE", EditorActions::ADD_TO_SPLINE},
+		{"RELOAD_TERRAIN_PROPS", EditorActions::RELOAD_TERRAIN_PROPS},
 	};
 	static const wi::unordered_map<std::string, wi::input::BUTTON> buttonMap = {
 		{"ESC", wi::input::KEYBOARD_BUTTON_ESCAPE},
@@ -1783,6 +1787,11 @@ void EditorComponent::Update(float dt)
 		if (CheckInput(EditorActions::ADD_TO_SPLINE) && componentsWnd.splineWnd.entity != INVALID_ENTITY)
 		{
 			componentsWnd.splineWnd.NewNode();
+		}
+
+		if (CheckInput(EditorActions::RELOAD_TERRAIN_PROPS))
+		{
+			ReloadTerrainProps();
 		}
 
 		if (cameraWnd.fpsCheckBox.GetCheck())
@@ -6286,6 +6295,47 @@ void EditorComponent::FocusCameraOnSelected()
 	editorscene.camera_transform.Translate(centerV - camera.GetAt() * focus_offset);
 	editorscene.camera_transform.UpdateTransform();
 	editorscene.cam_move = {};
+}
+
+void EditorComponent::ReloadTerrainProps()
+{
+	Scene& scene = GetCurrentScene();
+	bool any_reloaded = false;
+
+	for (size_t i = 0; i < scene.terrains.GetCount(); ++i)
+	{
+		wi::terrain::Terrain& terrain = scene.terrains[i];
+		for (wi::terrain::Prop& prop : terrain.props)
+		{
+			if (prop.source_entity == wi::ecs::INVALID_ENTITY)
+			{
+				prop.data.clear();
+				continue;
+			}
+
+			// Re-serialize the prop data
+			wi::Archive archive;
+			wi::ecs::EntitySerializer seri;
+			scene.Entity_Serialize(
+				archive,
+				seri,
+				prop.source_entity,
+				wi::scene::Scene::EntitySerializeFlags::RECURSIVE | wi::scene::Scene::EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES
+			);
+			archive.WriteData(prop.data);
+			any_reloaded = true;
+		}
+
+		if (any_reloaded)
+		{
+			terrain.InvalidateProps();
+		}
+	}
+
+	if (any_reloaded)
+	{
+		wi::backlog::post("Terrain props reloaded", wi::backlog::LogLevel::Default);
+	}
 }
 
 void EditorComponent::SetDefaultLocalization()

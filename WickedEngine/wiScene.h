@@ -56,7 +56,7 @@ namespace wi::scene
 		wi::ecs::ComponentManager<ScriptComponent>& scripts = componentLibrary.Register<ScriptComponent>("wi::scene::Scene::scripts");
 		wi::ecs::ComponentManager<ExpressionComponent>& expressions = componentLibrary.Register<ExpressionComponent>("wi::scene::Scene::expressions");
 		wi::ecs::ComponentManager<HumanoidComponent>& humanoids = componentLibrary.Register<HumanoidComponent>("wi::scene::Scene::humanoids", 3); // version = 3
-		wi::ecs::ComponentManager<wi::terrain::Terrain>& terrains = componentLibrary.Register<wi::terrain::Terrain>("wi::scene::Scene::terrains", 5); // version = 5
+		wi::ecs::ComponentManager<wi::terrain::Terrain>& terrains = componentLibrary.Register<wi::terrain::Terrain>("wi::scene::Scene::terrains", 6); // version = 6
 		wi::ecs::ComponentManager<wi::Sprite>& sprites = componentLibrary.Register<wi::Sprite>("wi::scene::Scene::sprites", 2); // version = 2
 		wi::ecs::ComponentManager<wi::SpriteFont>& fonts = componentLibrary.Register<wi::SpriteFont>("wi::scene::Scene::fonts");
 		wi::ecs::ComponentManager<wi::VoxelGrid>& voxel_grids = componentLibrary.Register<wi::VoxelGrid>("wi::scene::Scene::voxel_grids");
@@ -361,7 +361,7 @@ namespace wi::scene
 		//	seri		: serializer state for entity component system
 		//	entity		: if archive is in write mode, this is the entity to serialize. If archive is in read mode, it should be INVALID_ENTITY
 		//	flags		: specify options as EntitySerializeFlags bits to control internal behaviour
-		// 
+		//
 		//	Returns either the new entity that was read, or the original entity that was written
 		wi::ecs::Entity Entity_Serialize(
 			wi::Archive& archive,
@@ -383,10 +383,10 @@ namespace wi::scene
 			const std::string& name
 		);
 		wi::ecs::Entity Entity_CreateLight(
-			const std::string& name, 
-			const XMFLOAT3& position = XMFLOAT3(0, 0, 0), 
-			const XMFLOAT3& color = XMFLOAT3(1, 1, 1), 
-			float intensity = 1, 
+			const std::string& name,
+			const XMFLOAT3& position = XMFLOAT3(0, 0, 0),
+			const XMFLOAT3& color = XMFLOAT3(1, 1, 1),
+			float intensity = 1,
 			float range = 10,
 			LightComponent::LightType type = LightComponent::POINT,
 			float outerConeAngle = XM_PIDIV4,
@@ -681,5 +681,5 @@ namespace wi::scene
 
 template<>
 struct enable_bitmask_operators<wi::scene::Scene::EntitySerializeFlags> {
-	static const bool enable = true;
+	static constexpr bool enable = true;
 };

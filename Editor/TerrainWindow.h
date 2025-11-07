@@ -75,6 +75,7 @@ struct PropWindow : public wi::gui::Window
 struct PropsWindow : public wi::gui::Window
 {
 	wi::gui::Button addButton;
+	wi::gui::Button reloadButton;
 
 	PropsWindow(EditorComponent* editor);
 

@@ -246,6 +246,7 @@ namespace wi::terrain
 	struct Prop
 	{
 		wi::vector<uint8_t> data; // serialized component data storage
+		wi::ecs::Entity source_entity = wi::ecs::INVALID_ENTITY; // the original entity that this prop was serialized from
 		int min_count_per_chunk = 0; // a chunk will try to generate min this many props of this type
 		int max_count_per_chunk = 10; // a chunk will try to generate max this many props of this type
 		int region = 0; // region selection in range [0,3] (0: base/grass, 1: slopes, 2: low altitude (bottom level-0), 3: high altitude (0-top level))
