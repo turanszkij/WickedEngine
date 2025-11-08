@@ -82,7 +82,7 @@ namespace wi::jobsystem
 			first_block = last_block = allocator.allocate();
 		}
 
-		inline void push_back(const Job& item)
+		__forceinline void push_back(const Job& item)
 		{
 			std::scoped_lock lock(locker);
 			cnt.fetch_add(1, std::memory_order_relaxed);
@@ -94,7 +94,7 @@ namespace wi::jobsystem
 			}
 			last_block->items[last_block->last_item++] = item;
 		}
-		inline bool pop_front(Job& item)
+		__forceinline bool pop_front(Job& item)
 		{
 			if (cnt.load(std::memory_order_relaxed) == 0)
 				return false;
