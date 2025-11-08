@@ -7,11 +7,12 @@
 
 namespace wi
 {
-	template <typename Sig, unsigned int BufferSize = 32>
+	template <typename Sig, unsigned BufferSize = 32>
 	class function;
 
-	template <typename R, typename... Args, unsigned int BufferSize>
-	class function<R(Args...), BufferSize> {
+	template <typename R, typename... Args, unsigned BufferSize>
+	class function<R(Args...), BufferSize>
+	{
 		struct Storage
 		{
 			unsigned char bytes[BufferSize];
