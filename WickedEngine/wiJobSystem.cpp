@@ -163,7 +163,7 @@ namespace wi::jobsystem
 			Job job;
 			for (uint32_t i = 0; i < numThreads; ++i)
 			{
-				JobQueue& job_queue = jobQueuePerThread[startingQueue % numThreads];
+				JobQueue& job_queue = jobQueuePerThread[constrain_queue_index(startingQueue)];
 				while (job_queue.pop_front(job))
 				{
 					uint32_t progress_before = job.execute();
