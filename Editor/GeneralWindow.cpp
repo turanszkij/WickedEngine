@@ -59,6 +59,21 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	physicsDebugCheckBox.SetCheck(wi::physics::IsDebugDrawEnabled());
 	AddWidget(&physicsDebugCheckBox);
 
+	physicsDebugMaxDistanceSlider.Create(0.0f, 2000.0f, 500.0f, 100, "Physics draw distance: ");
+	physicsDebugMaxDistanceSlider.SetTooltip("Maximum distance to draw physics debug shapes");
+	physicsDebugMaxDistanceSlider.SetSize(XMFLOAT2(100, 18));
+	if (editor->main->config.GetSection("options").Has("physics_max_draw_distance"))
+	{
+		wi::physics::SetDebugDrawMaxDistance(editor->main->config.GetSection("options").GetFloat("physics_max_draw_distance"));
+		physicsDebugMaxDistanceSlider.SetValue(wi::physics::GetDebugDrawMaxDistance());
+	}
+	physicsDebugMaxDistanceSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::physics::SetDebugDrawMaxDistance(args.fValue);
+		editor->main->config.GetSection("options").Set("physics_max_draw_distance", args.fValue);
+		editor->main->config.Commit();
+	});
+	AddWidget(&physicsDebugMaxDistanceSlider);
+
 	nameDebugCheckBox.Create("Name visualizer: ");
 	nameDebugCheckBox.SetTooltip("Visualize the entity names in the scene");
 	AddWidget(&nameDebugCheckBox);
@@ -1499,6 +1514,7 @@ void GeneralWindow::ResizeLayout()
 
 	layout.add(wireFrameComboBox);
 	layout.add_right(physicsDebugCheckBox);
+	layout.add(physicsDebugMaxDistanceSlider);
 	layout.add_right(nameDebugCheckBox);
 	layout.add_right(gridHelperCheckBox);
 	layout.add_right(aabbDebugCheckBox);

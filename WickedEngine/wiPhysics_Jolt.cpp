@@ -29,6 +29,7 @@
 #include <Jolt/Physics/Collision/GroupFilterTable.h>
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 #include <Jolt/Physics/Body/BodyActivationListener.h>
+#include <Jolt/Physics/Body/BodyFilter.h>
 #include <Jolt/Physics/SoftBody/SoftBodySharedSettings.h>
 #include <Jolt/Physics/SoftBody/SoftBodyCreationSettings.h>
 #include <Jolt/Physics/SoftBody/SoftBodyMotionProperties.h>
@@ -90,6 +91,7 @@ namespace wi::physics
 		float TIMESTEP = 1.0f / 60.0f;
 		bool INTERPOLATION = true;
 		float CHARACTER_COLLISION_TOLERANCE = 0.05f;
+		float DEBUG_MAX_DRAW_DISTANCE = 500.0f;
 
 		const uint cMaxBodies = 65536;
 		const uint cNumBodyMutexes = 0;
@@ -1968,6 +1970,9 @@ namespace wi::physics
 	void SetConstraintDebugSize(float value) { CONSTRAINT_DEBUGSIZE = value; }
 	float GetConstraintDebugSize() { return CONSTRAINT_DEBUGSIZE; }
 
+	void SetDebugDrawMaxDistance(float value) { DEBUG_MAX_DRAW_DISTANCE = value; }
+	float GetDebugDrawMaxDistance() { return DEBUG_MAX_DRAW_DISTANCE; }
+
 	int GetAccuracy() { return ACCURACY; }
 	void SetAccuracy(int value) { ACCURACY = value; }
 
@@ -2904,6 +2909,31 @@ namespace wi::physics
 				}
 			};
 			static JoltDebugRenderer debug_renderer;
+			debug_renderer.SetCameraPos(cast(scene.camera.Eye));
+
+			class DistanceCullingBodyFilter : public BodyDrawFilter
+			{
+			public:
+				XMVECTOR camera_pos;
+				PhysicsSystem& physics_system;
+
+				DistanceCullingBodyFilter(const XMVECTOR cam_pos, PhysicsSystem& phys_sys)
+					: camera_pos(cam_pos), physics_system(phys_sys) {}
+
+				bool ShouldDraw(const Body& inBody) const override
+				{
+					const BodyInterface& body_interface = physics_system.GetBodyInterfaceNoLock();
+					const Vec3 body_pos = body_interface.GetPosition(inBody.GetID());
+					const XMVECTOR body_pos_vec = XMVectorSet(body_pos.GetX(), body_pos.GetY(), body_pos.GetZ(), 0.0f);
+					const float distance = XMVectorGetX(XMVector3Length(body_pos_vec - camera_pos));
+
+					return distance <= DEBUG_MAX_DRAW_DISTANCE;
+				}
+			};
+
+			const XMVECTOR camera_pos = XMLoadFloat3(&scene.camera.Eye);
+			const DistanceCullingBodyFilter distance_filter(camera_pos, physics_scene.physics_system);
+
 			BodyManager::DrawSettings settings;
 			settings.mDrawCenterOfMassTransform = true;
 			settings.mDrawMassAndInertia = false;
@@ -2912,8 +2942,7 @@ namespace wi::physics
 			settings.mDrawSoftBodyEdgeConstraints = true;
 			settings.mDrawShapeWireframe = true;
 			settings.mDrawShapeColor = BodyManager::EShapeColor::ShapeTypeColor;
-			debug_renderer.SetCameraPos(cast(scene.camera.Eye));
-			physics_scene.physics_system.DrawBodies(settings, &debug_renderer);
+			physics_scene.physics_system.DrawBodies(settings, &debug_renderer, &distance_filter);
 			physics_scene.physics_system.DrawConstraints(&debug_renderer);
 		}
 #endif // JPH_DEBUG_RENDERER
