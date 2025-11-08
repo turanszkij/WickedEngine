@@ -75,16 +75,17 @@ namespace wi::jobsystem
 		Block* last_block = nullptr;
 		std::mutex locker;
 		//wi::SpinLock locker;
-		std::atomic_uint32_t cnt{ 0 }; // for early exit, reduce contention on lock in job stealing scenario
+		std::atomic_uint32_t cnt{ 0 }; // for early exit, reduce contention on locker in job stealing scenario
 
 		JobQueue()
 		{
 			first_block = last_block = allocator.allocate();
 		}
 
-		inline void push_back(const Job& item)
+		__forceinline void push_back(const Job& item)
 		{
 			std::scoped_lock lock(locker);
+			cnt.fetch_add(1, std::memory_order_relaxed);
 			if (last_block->last_item == arraysize(Block::items))
 			{
 				// We ran out of items in the last block, so we need to allocate a new one:
@@ -92,9 +93,8 @@ namespace wi::jobsystem
 				last_block = last_block->next;
 			}
 			last_block->items[last_block->last_item++] = item;
-			cnt.fetch_add(1, std::memory_order_relaxed);
 		}
-		inline bool pop_front(Job& item)
+		__forceinline bool pop_front(Job& item)
 		{
 			if (cnt.load(std::memory_order_relaxed) == 0)
 				return false;
@@ -133,11 +133,28 @@ namespace wi::jobsystem
 		uint32_t numThreads = 0;
 		wi::vector<std::thread> threads;
 		std::unique_ptr<JobQueue[]> jobQueuePerThread;
-		std::atomic<uint32_t> nextQueue{ 0 };
+		std::atomic<uint8_t> nextQueue{ 0 };
 		std::condition_variable sleepingCondition; // for workers that are sleeping
 		std::mutex sleepingMutex; // for workers that are sleeping
 		std::condition_variable waitingCondition; // for unblocking a Wait()
 		std::mutex waitingMutex; // for unblocking a Wait()
+		uint8_t mod_lut[256] = {}; // lookup table from atomic uint8_t -> threadID (avoiding modulo)
+
+		constexpr uint8_t constrain_queue_index(uint8_t idx) const
+		{
+			//idx = idx % numThreads;
+			idx = mod_lut[idx]; // this has the modulo precomputed at Initialize()
+			return idx;
+		}
+		inline uint8_t next_queue_index()
+		{
+			uint8_t idx = nextQueue.fetch_add(1, std::memory_order_relaxed);
+			return constrain_queue_index(idx);
+		}
+		inline JobQueue& next_queue()
+		{
+			return jobQueuePerThread[next_queue_index()];
+		}
 
 		// Start working on a job queue
 		//	After the job queue is finished, it can switch to an other queue and steal jobs from there
@@ -146,7 +163,7 @@ namespace wi::jobsystem
 			Job job;
 			for (uint32_t i = 0; i < numThreads; ++i)
 			{
-				JobQueue& job_queue = jobQueuePerThread[startingQueue % numThreads];
+				JobQueue& job_queue = jobQueuePerThread[constrain_queue_index(startingQueue)];
 				while (job_queue.pop_front(job))
 				{
 					uint32_t progress_before = job.execute();
@@ -212,7 +229,7 @@ namespace wi::jobsystem
 	{
 		if (internal_state.numCores > 0)
 			return;
-		maxThreadCount = std::max(1u, maxThreadCount);
+		maxThreadCount = clamp(maxThreadCount, 1u, (uint32_t)arraysize(PriorityResources::mod_lut));
 
 		wi::Timer timer;
 
@@ -243,6 +260,12 @@ namespace wi::jobsystem
 			res.numThreads = clamp(res.numThreads, 1u, maxThreadCount);
 			res.jobQueuePerThread.reset(new JobQueue[res.numThreads]);
 			res.threads.reserve(res.numThreads);
+
+			// Precompute lookup table of modulos to avoid divs at runtime:
+			for (uint32_t i = 0; i < arraysize(res.mod_lut); ++i)
+			{
+				res.mod_lut[i] = i % res.numThreads;
+			}
 
 			for (uint32_t threadID = 0; threadID < res.numThreads; ++threadID)
 			{
@@ -339,7 +362,7 @@ namespace wi::jobsystem
 
 #elif defined(PLATFORM_LINUX)
 #define handle_error_en(en, msg) \
-               do { errno = en; perror(msg); } while (0)
+			   do { errno = en; perror(msg); } while (0)
 
 				int ret;
 				cpu_set_t cpuset;
@@ -423,7 +446,7 @@ namespace wi::jobsystem
 			return;
 		}
 
-		res.jobQueuePerThread[res.nextQueue.fetch_add(1, std::memory_order_relaxed) % res.numThreads].push_back(job);
+		res.next_queue().push_back(job);
 		res.sleepingCondition.notify_one();
 	}
 
@@ -459,7 +482,7 @@ namespace wi::jobsystem
 			}
 			else
 			{
-				res.jobQueuePerThread[res.nextQueue.fetch_add(1, std::memory_order_relaxed) % res.numThreads].push_back(job);
+				res.next_queue().push_back(job);
 			}
 		}
 
@@ -491,7 +514,7 @@ namespace wi::jobsystem
 			res.sleepingCondition.notify_all();
 
 			// work() will pick up any jobs that are on standby and execute them on this thread:
-			res.work(res.nextQueue.fetch_add(1, std::memory_order_relaxed) % res.numThreads);
+			res.work(res.next_queue_index());
 
 			while (IsBusy(ctx))
 			{
