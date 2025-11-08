@@ -73,8 +73,8 @@ namespace wi::jobsystem
 		wi::allocator::BlockAllocator<Block, 16> allocator;
 		Block* first_block = nullptr;
 		Block* last_block = nullptr;
-		//std::mutex locker;
-		wi::SpinLock locker;
+		std::mutex locker;
+		//wi::SpinLock locker;
 		std::atomic_uint32_t cnt{ 0 }; // for early exit, reduce contention on locker in job stealing scenario
 
 		JobQueue()
