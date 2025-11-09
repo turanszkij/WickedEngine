@@ -2068,7 +2068,7 @@ namespace wi::physics
 
 		physicsobject.shape = shape_result.Get();
 
-		// Store in cache for reuse
+		// Store in cache for reuse and apply scaling
 		if (!disable_caching &&
 			mesh != nullptr &&
 			(physicscomponent.shape == RigidBodyPhysicsComponent::CollisionShape::TRIANGLE_MESH ||
@@ -2086,6 +2086,8 @@ namespace wi::physics
 			shape_cache.lock.lock();
 			shape_cache.cache[cache_key] = physicsobject.shape;
 			shape_cache.lock.unlock();
+
+			physicsobject.shape = ScaledShapeSettings(physicsobject.shape, cast(scale_local)).Create().Get();
 		}
 
 		ApplyShapeTransformations(physicsobject, physicscomponent);
