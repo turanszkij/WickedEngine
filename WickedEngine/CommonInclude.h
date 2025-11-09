@@ -14,6 +14,10 @@
 #define NOMINMAX
 #endif // NOMINMAX
 
+#if defined(__GNUC__) || defined(__clang__)
+#define __forceinline __attribute__((always_inline)) inline
+#endif // defined(__GNUC__) || defined(__clang__)
+
 // Simple common math helpers:
 
 template<typename T>
