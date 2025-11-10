@@ -396,6 +396,18 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&localizationButton);
 
+	placeInFrontOfCameraCheckBox.Create("Place entities in front of camera: ");
+	placeInFrontOfCameraCheckBox.SetTooltip("When enabled, newly created entities and imported models will be positioned in front of the editor camera instead of at the origin.");
+	if (editor->main->config.GetSection("options").Has("place_entities_in_front_of_camera"))
+	{
+		placeInFrontOfCameraCheckBox.SetCheck(editor->main->config.GetSection("options").GetBool("place_entities_in_front_of_camera"));
+	}
+	placeInFrontOfCameraCheckBox.OnClick([this](wi::gui::EventArgs args) {
+		editor->main->config.GetSection("options").Set("place_entities_in_front_of_camera", args.bValue);
+		editor->main->config.Commit();
+	});
+	AddWidget(&placeInFrontOfCameraCheckBox);
+
 	wireFrameComboBox.Create("Render wireframe: ");
 	wireFrameComboBox.SetTooltip("Choose wireframe rendering mode:\nDisabled: Normal rendering\nWireframe Only: Replace geometry with wireframe\nWireframe Overlay: Show wireframe on top of geometry");
 	wireFrameComboBox.AddItem("Disabled", wi::renderer::WIREFRAME_DISABLED);
@@ -1511,6 +1523,8 @@ void GeneralWindow::ResizeLayout()
 	layout.add(languageCombo);
 
 	layout.add_fullwidth(localizationButton);
+
+	layout.add_right(placeInFrontOfCameraCheckBox);
 
 	layout.add(wireFrameComboBox);
 	layout.add_right(physicsDebugCheckBox);
