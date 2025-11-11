@@ -27,6 +27,7 @@ public:
 	wi::gui::CheckBox debugEmittersCheckBox;
 	wi::gui::CheckBox debugForceFieldsCheckBox;
 	wi::gui::CheckBox debugRaytraceBVHCheckBox;
+	wi::gui::CheckBox placeInFrontOfCameraCheckBox;
 	wi::gui::ComboBox wireFrameComboBox;
 	wi::gui::CheckBox envProbesCheckBox;
 	wi::gui::CheckBox cameraVisCheckBox;
