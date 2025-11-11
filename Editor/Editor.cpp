@@ -669,8 +669,7 @@ void EditorComponent::Load()
 		Scene& scene = GetCurrentScene();
 		PickResult pick;
 
-		XMFLOAT3 in_front_of_camera;
-		XMStoreFloat3(&in_front_of_camera, XMVectorAdd(camera.GetEye(), camera.GetAt() * 4));
+		XMFLOAT3 in_front_of_camera = GetPositionInFrontOfCamera();
 
 		switch (args.userdata)
 		{
@@ -882,6 +881,27 @@ void EditorComponent::Load()
 		}
 		if (pick.entity != INVALID_ENTITY)
 		{
+			// Place the entity in front of camera, if enabled
+			if (generalWnd.placeInFrontOfCameraCheckBox.GetCheck())
+			{
+				TransformComponent* transform = scene.transforms.GetComponent(pick.entity);
+				if (transform != nullptr)
+				{
+					// Check if this entity type should spawn in front of camera
+					bool should_reposition = true;
+					if (args.userdata == NEW_DIRECTIONALLIGHT || args.userdata == NEW_CAMERA)
+					{
+						should_reposition = false;
+					}
+
+					if (should_reposition)
+					{
+						transform->translation_local = in_front_of_camera;
+						transform->SetDirty();
+					}
+				}
+			}
+
 			wi::Archive& archive = AdvanceHistory();
 			archive << EditorComponent::HISTORYOP_ADD;
 			RecordSelection(archive);
@@ -5231,13 +5251,31 @@ void EditorComponent::Open(std::string filename)
 			{
 				GetCurrentEditorScene().path = filename;
 			}
+
+			const size_t transform_count_prev = GetCurrentScene().transforms.GetCount();
 			GetCurrentScene().Merge(*scene);
 
+			// Place the imported model in front of the camera:
+			if (type != FileType::WISCENE && generalWnd.placeInFrontOfCameraCheckBox.GetCheck())
+			{
+				// Imported models always have a root transform entity
+				if (transform_count_prev < GetCurrentScene().transforms.GetCount())
+				{
+					const Entity rootEntity = GetCurrentScene().transforms.GetEntity(transform_count_prev);
+					TransformComponent* transform = GetCurrentScene().transforms.GetComponent(rootEntity);
+					if (transform != nullptr)
+					{
+						transform->translation_local = GetPositionInFrontOfCamera();
+						transform->SetDirty();
+					}
+				}
+			}
+
 			// Detect when the new scene contains a new camera, and snap the camera onto it:
-			size_t camera_count = GetCurrentScene().cameras.GetCount();
+			const size_t camera_count = GetCurrentScene().cameras.GetCount();
 			if (camera_count > 0 && camera_count > camera_count_prev)
 			{
-				Entity entity = GetCurrentScene().cameras.GetEntity(camera_count_prev);
+				const Entity entity = GetCurrentScene().cameras.GetEntity(camera_count_prev);
 				if (entity != INVALID_ENTITY)
 				{
 					CameraComponent* cam = GetCurrentScene().cameras.GetComponent(entity);
@@ -5257,7 +5295,7 @@ void EditorComponent::Open(std::string filename)
 						editorscene.camera.width = (float)renderPath->GetInternalResolution().x;
 						editorscene.camera.height = (float)renderPath->GetInternalResolution().y;
 
-						TransformComponent* camera_transform = GetCurrentScene().transforms.GetComponent(entity);
+						const TransformComponent* camera_transform = GetCurrentScene().transforms.GetComponent(entity);
 						if (camera_transform != nullptr)
 						{
 							editorscene.camera_transform = *camera_transform;
@@ -6295,6 +6333,15 @@ void EditorComponent::FocusCameraOnSelected()
 	editorscene.camera_transform.Translate(centerV - camera.GetAt() * focus_offset);
 	editorscene.camera_transform.UpdateTransform();
 	editorscene.cam_move = {};
+}
+
+XMFLOAT3 EditorComponent::GetPositionInFrontOfCamera() const
+{
+	const EditorScene& editorscene = GetCurrentEditorScene();
+	const CameraComponent& camera = editorscene.camera;
+	XMFLOAT3 in_front_of_camera;
+	XMStoreFloat3(&in_front_of_camera, XMVectorAdd(camera.GetEye(), camera.GetAt() * 4));
+	return in_front_of_camera;
 }
 
 void EditorComponent::ReloadTerrainProps()
