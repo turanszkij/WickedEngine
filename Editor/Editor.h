@@ -231,6 +231,8 @@ public:
 
 	void ReloadTerrainProps();
 
+	XMFLOAT3 GetPositionInFrontOfCamera() const;
+
 	wi::Localization default_localization;
 	wi::Localization current_localization;
 	void SetDefaultLocalization();

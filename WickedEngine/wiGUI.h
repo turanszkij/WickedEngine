@@ -445,7 +445,14 @@ namespace wi::gui
 		float GetOffset() const { return list_offset; }
 		void SetOffset(float value);
 		// This can be called by user for extra scrolling on top of base functionality
-		void Scroll(float amount) { scrollbar_delta -= amount; }
+		//	scroll sensitivity based on how much content is hidden (higher granularity = more amplification)
+		void Scroll(const float amount)
+		{
+			if (scrollbar_granularity < 1.0f)
+			{
+				scrollbar_delta -= amount * scrollbar_granularity / (1.0f - scrollbar_granularity);
+			}
+		}
 		// How much the max scrolling will offset the list even further than it would be necessary for fitting
 		//	this value is in percent of a full scrollbar's worth of extra offset
 		//	0: no extra offset
