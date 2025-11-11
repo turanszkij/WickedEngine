@@ -1472,7 +1472,8 @@ namespace wi::gui
 				scroll_allowed = false;
 				state = FOCUS;
 				// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
-				scrollbar.Scroll(wi::input::GetPointer().z * 20);
+				const float wheel_delta = wi::input::GetPointer().z;
+				scrollbar.Scroll(wheel_delta * 60.0f);
 			}
 			else
 			{
@@ -3857,12 +3858,12 @@ namespace wi::gui
 
 		if (!IsMinimized() && IsVisible())
 		{
-			float scroll = wi::input::GetPointer().z * 20;
-			if (scroll && scroll_allowed && scrollbar_vertical.IsScrollbarRequired() && pointerHitbox.intersects(hitBox)) // when window is in focus, but other widgets aren't
+			const float wheel_delta = wi::input::GetPointer().z;
+			if (wheel_delta != 0.0f && scroll_allowed && scrollbar_vertical.IsScrollbarRequired() && pointerHitbox.intersects(hitBox)) // when window is in focus, but other widgets aren't
 			{
 				scroll_allowed = false;
 				// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
-				scrollbar_vertical.Scroll(scroll);
+				scrollbar_vertical.Scroll(wheel_delta * 60.0f);
 			}
 		}
 
@@ -5521,12 +5522,12 @@ namespace wi::gui
 				}
 			}
 
-			float scroll = wi::input::GetPointer().z * 10;
-			if (scroll && scroll_allowed && scrollbar.IsScrollbarRequired() && pointerHitbox.intersects(hitBox))
+			const float wheel_delta = wi::input::GetPointer().z;
+			if (wheel_delta != 0.0f && scroll_allowed && scrollbar.IsScrollbarRequired() && pointerHitbox.intersects(hitBox))
 			{
 				scroll_allowed = false;
 				// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
-				scrollbar.Scroll(scroll);
+				scrollbar.Scroll(wheel_delta * 40.0f);
 			}
 
 			Hitbox2D itemlist_box = GetHitbox_ListArea();
