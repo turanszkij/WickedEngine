@@ -518,7 +518,61 @@ namespace wi::physics
 
 			if (physicsobject.shape == nullptr) // shape creation can be called from outside as optimization from threads
 			{
-				CreateRigidBodyShape(scene, physicscomponent, transform.scale_local, mesh, false);
+				// Check scene's shape cache for complex shapes
+				//	These shapes are expensive to create, reuse them across multiple rigid bodies
+				//	We cache the unit-scale shape and apply scaling per-instance
+				if (mesh != nullptr && (physicscomponent.shape == RigidBodyPhysicsComponent::CollisionShape::TRIANGLE_MESH || physicscomponent.shape == RigidBodyPhysicsComponent::CollisionShape::CONVEX_HULL))
+				{
+					PhysicsShapeCache& shape_cache = GetPhysicsScene(scene).physics_shape_cache;
+					PhysicsShapeCacheKey cache_key;
+					cache_key.vertex_data = mesh->vertex_positions.data();
+					cache_key.index_data = mesh->indices.data();
+					cache_key.vertex_count = mesh->vertex_positions.size();
+					cache_key.index_count = mesh->indices.size();
+					cache_key.shape_type = physicscomponent.shape;
+					cache_key.mesh_lod = physicscomponent.mesh_lod;
+
+					ShapeRefC base_shape;
+
+					shape_cache.lock.lock();
+					auto it = shape_cache.cache.find(cache_key);
+					if (it == shape_cache.cache.end())
+					{
+						// Create and store in cache:
+						CreateRigidBodyShape(physicscomponent, XMFLOAT3(1, 1, 1), mesh); // cached with unit scale, it will be scaled per physics instances
+						base_shape = physicsobject.shape;
+						shape_cache.cache[cache_key] = base_shape;
+					}
+					else
+					{
+						// Reuse cached shape and apply per-instance scaling
+						base_shape = it->second;
+					}
+					shape_cache.lock.unlock();
+
+					// Apply scale to the cached shape
+					physicsobject.shape = ScaledShapeSettings(base_shape, cast(transform.scale_local)).Create().Get(); // instance scaling
+				}
+				else
+				{
+					// Simple shape creation, not using cache:
+					CreateRigidBodyShape(physicscomponent, transform.scale_local, mesh);
+				}
+			}
+
+			// Apply vehicle-specific transformations
+			if (physicscomponent.IsVehicle())
+			{
+				// Vehicle center of mass will be offset to chassis height to improve handling
+				physicsobject.shape = OffsetCenterOfMassShapeSettings(Vec3(0, -physicsobject.shape->GetLocalBounds().GetExtent().GetY() + physicscomponent.vehicle.chassis_half_height, 0), physicsobject.shape).Create().Get();
+			}
+
+			// Apply character-specific transformations
+			if (physicscomponent.IsCharacterPhysics())
+			{
+				// For character physics, offset the shape so the bottom is at origin
+				Vec3 bottom_offset = Vec3(0, physicsobject.shape->GetLocalBounds().GetExtent().GetY(), 0);
+				physicsobject.shape = RotatedTranslatedShapeSettings(bottom_offset, Quat::sIdentity(), physicsobject.shape).Create().Get();
 			}
 
 			if (physicsobject.shape != nullptr)
@@ -1837,72 +1891,13 @@ namespace wi::physics
 		wilog("wi::physics Initialized [Jolt Physics %d.%d.%d] (%d ms)", JPH_VERSION_MAJOR, JPH_VERSION_MINOR, JPH_VERSION_PATCH, (int)std::round(timer.elapsed()));
 	}
 
-	// Apply shape transformations to specific physics component types
-	inline void ApplyShapeTransformations(
-		RigidBody& physicsobject,
-		const wi::scene::RigidBodyPhysicsComponent& physicscomponent
-	)
-	{
-		// Apply vehicle-specific transformations
-		if (physicscomponent.IsVehicle())
-		{
-			// Vehicle center of mass will be offset to chassis height to improve handling
-			physicsobject.shape = OffsetCenterOfMassShapeSettings(Vec3(0, -physicsobject.shape->GetLocalBounds().GetExtent().GetY() + physicscomponent.vehicle.chassis_half_height, 0), physicsobject.shape).Create().Get();
-		}
-
-		// Apply character-specific transformations
-		if (physicscomponent.IsCharacterPhysics())
-		{
-			// For character physics, offset the shape so the bottom is at origin
-			Vec3 bottom_offset = Vec3(0, physicsobject.shape->GetLocalBounds().GetExtent().GetY(), 0);
-			physicsobject.shape = RotatedTranslatedShapeSettings(bottom_offset, Quat::sIdentity(), physicsobject.shape).Create().Get();
-		}
-	}
-
 	void CreateRigidBodyShape(
-		wi::scene::Scene& scene,
 		wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const XMFLOAT3& scale_local,
-		const wi::scene::MeshComponent* mesh,
-		bool disable_caching
+		const wi::scene::MeshComponent* mesh
 	)
 	{
 		RigidBody& physicsobject = GetRigidBody(physicscomponent);
-
-		// Check scene's shape cache for complex shapes
-		//	These shapes are expensive to create, reuse them across multiple rigid bodies
-		//	We cache the unit-scale shape and apply scaling per-instance
-		if (!disable_caching &&
-			mesh != nullptr &&
-			(physicscomponent.shape == RigidBodyPhysicsComponent::CollisionShape::TRIANGLE_MESH ||
-			 physicscomponent.shape == RigidBodyPhysicsComponent::CollisionShape::CONVEX_HULL))
-		{
-			PhysicsShapeCache& shape_cache = GetPhysicsScene(scene).physics_shape_cache;
-			wi::physics::PhysicsShapeCacheKey cache_key;
-			cache_key.vertex_data = mesh->vertex_positions.data();
-			cache_key.index_data = mesh->indices.data();
-			cache_key.vertex_count = mesh->vertex_positions.size();
-			cache_key.index_count = mesh->indices.size();
-			cache_key.shape_type = physicscomponent.shape;
-			cache_key.mesh_lod = physicscomponent.mesh_lod;
-
-			shape_cache.lock.lock();
-			auto it = shape_cache.cache.find(cache_key);
-			if (it != shape_cache.cache.end())
-			{
-				// Reuse cached shape and apply per-instance scaling
-				ShapeRefC base_shape = it->second;
-				shape_cache.lock.unlock();
-
-				// Apply scale to the cached shape
-				physicsobject.shape = ScaledShapeSettings(base_shape, cast(scale_local)).Create().Get();
-				
-				ApplyShapeTransformations(physicsobject, physicscomponent);
-				
-				return;
-			}
-			shape_cache.lock.unlock();
-		}
 
 		ShapeSettings::ShapeResult shape_result;
 
@@ -1951,21 +1946,9 @@ namespace wi::physics
 			{
 				Array<Vec3> points;
 				points.reserve(mesh->vertex_positions.size());
-				if (disable_caching)
+				for (auto& pos : mesh->vertex_positions)
 				{
-					// When caching is disabled, apply scale directly to create final shape
-					for (auto& pos : mesh->vertex_positions)
-					{
-						points.push_back(Vec3(pos.x * scale_local.x, pos.y * scale_local.y, pos.z * scale_local.z));
-					}
-				}
-				else
-				{
-					// When caching is enabled, create unit-scale shape for cache
-					for (auto& pos : mesh->vertex_positions)
-					{
-						points.push_back(Vec3(pos.x, pos.y, pos.z));
-					}
+					points.push_back(Vec3(pos.x * scale_local.x, pos.y * scale_local.y, pos.z * scale_local.z));
 				}
 				ConvexHullShapeSettings settings(points, convexRadius);
 				settings.SetEmbedded();
@@ -1994,20 +1977,9 @@ namespace wi::physics
 					{
 						Triangle triangle;
 						triangle.mMaterialIndex = 0;
-						if (disable_caching)
-						{
-							// When caching is disabled, apply scale directly to create final shape
-							triangle.mV[0] = Float3(mesh->vertex_positions[indices[i + 0]].x * scale_local.x, mesh->vertex_positions[indices[i + 0]].y * scale_local.y, mesh->vertex_positions[indices[i + 0]].z * scale_local.z);
-							triangle.mV[2] = Float3(mesh->vertex_positions[indices[i + 1]].x * scale_local.x, mesh->vertex_positions[indices[i + 1]].y * scale_local.y, mesh->vertex_positions[indices[i + 1]].z * scale_local.z);
-							triangle.mV[1] = Float3(mesh->vertex_positions[indices[i + 2]].x * scale_local.x, mesh->vertex_positions[indices[i + 2]].y * scale_local.y, mesh->vertex_positions[indices[i + 2]].z * scale_local.z);
-						}
-						else
-						{
-							// When caching is enabled, create unit-scale shape for cache
-							triangle.mV[0] = Float3(mesh->vertex_positions[indices[i + 0]].x, mesh->vertex_positions[indices[i + 0]].y, mesh->vertex_positions[indices[i + 0]].z);
-							triangle.mV[2] = Float3(mesh->vertex_positions[indices[i + 1]].x, mesh->vertex_positions[indices[i + 1]].y, mesh->vertex_positions[indices[i + 1]].z);
-							triangle.mV[1] = Float3(mesh->vertex_positions[indices[i + 2]].x, mesh->vertex_positions[indices[i + 2]].y, mesh->vertex_positions[indices[i + 2]].z);
-						}
+						triangle.mV[0] = Float3(mesh->vertex_positions[indices[i + 0]].x * scale_local.x, mesh->vertex_positions[indices[i + 0]].y * scale_local.y, mesh->vertex_positions[indices[i + 0]].z * scale_local.z);
+						triangle.mV[2] = Float3(mesh->vertex_positions[indices[i + 1]].x * scale_local.x, mesh->vertex_positions[indices[i + 1]].y * scale_local.y, mesh->vertex_positions[indices[i + 1]].z * scale_local.z);
+						triangle.mV[1] = Float3(mesh->vertex_positions[indices[i + 2]].x * scale_local.x, mesh->vertex_positions[indices[i + 2]].y * scale_local.y, mesh->vertex_positions[indices[i + 2]].z * scale_local.z);
 						trianglelist.push_back(triangle);
 					}
 				}
@@ -2069,30 +2041,6 @@ namespace wi::physics
 		}
 
 		physicsobject.shape = shape_result.Get();
-
-		// Store in cache for reuse and apply scaling
-		if (!disable_caching &&
-			mesh != nullptr &&
-			(physicscomponent.shape == RigidBodyPhysicsComponent::CollisionShape::TRIANGLE_MESH ||
-			 physicscomponent.shape == RigidBodyPhysicsComponent::CollisionShape::CONVEX_HULL))
-		{
-			PhysicsShapeCache& shape_cache = GetPhysicsScene(scene).physics_shape_cache;
-			wi::physics::PhysicsShapeCacheKey cache_key;
-			cache_key.vertex_data = mesh->vertex_positions.data();
-			cache_key.index_data = mesh->indices.data();
-			cache_key.vertex_count = (uint32_t)mesh->vertex_positions.size();
-			cache_key.index_count = (uint32_t)mesh->indices.size();
-			cache_key.shape_type = physicscomponent.shape;
-			cache_key.mesh_lod = physicscomponent.mesh_lod;
-
-			shape_cache.lock.lock();
-			shape_cache.cache[cache_key] = physicsobject.shape;
-			shape_cache.lock.unlock();
-
-			physicsobject.shape = ScaledShapeSettings(physicsobject.shape, cast(scale_local)).Create().Get();
-		}
-
-		ApplyShapeTransformations(physicsobject, physicscomponent);
 	}
 
 	bool IsEnabled() { return ENABLED; }
