@@ -49,7 +49,7 @@ namespace wi::scene
 			EMPTY = 0,
 			DIRTY = 1 << 0,
 		};
-
+		//private:
 		XMFLOAT3 scale_local = XMFLOAT3(1, 1, 1);
 		wi::copyable_atomic<uint32_t> _flags = DIRTY;
 		XMFLOAT4 rotation_local = XMFLOAT4(0, 0, 0, 1);	// this is a quaternion
@@ -57,12 +57,31 @@ namespace wi::scene
 
 		// Non-serialized attributes:
 		float _padding = 0;
-
+		mutable std::shared_mutex _mutex;
 		// The world matrix can be computed from local scale, rotation, translation
 		//	- by calling UpdateTransform()
 		//	- or by calling SetDirty() and letting the TransformUpdateSystem handle the updating
 		XMFLOAT4X4 world = wi::math::IDENTITY_MATRIX;
-
+		public:
+		TransformComponent() = default;
+		TransformComponent(const TransformComponent& other) : _mutex() {
+			std::shared_lock lock(other._mutex);
+			_flags = other._flags;
+			scale_local = other.scale_local;
+			rotation_local = other.rotation_local;
+			translation_local = other.translation_local;
+			world = other.world;
+		}
+		TransformComponent& operator=(const TransformComponent& other) {
+			std::shared_lock lock(other._mutex);
+			std::unique_lock lock2(_mutex);
+			_flags = other._flags;
+			scale_local = other.scale_local;
+			rotation_local = other.rotation_local;
+			translation_local = other.translation_local;
+			world = other.world;
+			return *this;
+		}
 		constexpr void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
 		WI_ATOMIC_CONSTEXPR bool IsDirty() const { return _flags & DIRTY; }
 
@@ -82,7 +101,7 @@ namespace wi::scene
 		// Computes the local space matrix from scale, rotation, translation and returns it
 		XMMATRIX GetLocalMatrix() const;
 		// Returns the stored world matrix that was computed the last time UpdateTransform() was called
-		XMMATRIX GetWorldMatrix() const { return XMLoadFloat4x4(&world); };
+		XMMATRIX GetWorldMatrix() const { std::shared_lock lock(_mutex); return XMLoadFloat4x4(&world); };
 		// Applies the local space to the world space matrix. This overwrites world matrix
 		void UpdateTransform();
 		// Apply a parent transform relative to the local space. This overwrites world matrix
@@ -105,7 +124,10 @@ namespace wi::scene
 		void CatmullRom(const TransformComponent& a, const TransformComponent& b, const TransformComponent& c, const TransformComponent& d, float t);
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+	private:
+		XMMATRIX GetLocalMatrixNoLock() const;
 	};
+	static_assert(sizeof(TransformComponent) % 16 == 0);
 
 	struct alignas(16) HierarchyComponent
 	{

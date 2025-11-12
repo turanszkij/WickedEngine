@@ -36,6 +36,7 @@ namespace wi::scene
 
 	XMFLOAT3 TransformComponent::GetPosition() const
 	{
+		std::shared_lock lock(_mutex);
 		return wi::math::GetPosition(world);
 	}
 	XMFLOAT4 TransformComponent::GetRotation() const
@@ -52,22 +53,29 @@ namespace wi::scene
 	}
 	XMVECTOR TransformComponent::GetPositionV() const
 	{
+		std::shared_lock lock(_mutex);
 		return XMLoadFloat3((XMFLOAT3*)&world._41);
 	}
 	XMVECTOR TransformComponent::GetRotationV() const
 	{
+		std::shared_lock lock(_mutex);
 		XMVECTOR S, R, T;
 		XMMatrixDecompose(&S, &R, &T, XMLoadFloat4x4(&world));
 		return R;
 	}
 	XMVECTOR TransformComponent::GetScaleV() const
 	{
+		std::shared_lock lock(_mutex);
 		XMVECTOR S, R, T;
 		XMMatrixDecompose(&S, &R, &T, XMLoadFloat4x4(&world));
 		return S;
 	}
 	XMMATRIX TransformComponent::GetLocalMatrix() const
 	{
+		std::shared_lock lock(_mutex);
+		return GetLocalMatrixNoLock();
+	}
+	XMMATRIX TransformComponent::GetLocalMatrixNoLock() const {
 		XMVECTOR S_local = XMLoadFloat3(&scale_local);
 		XMVECTOR R_local = XMLoadFloat4(&rotation_local);
 		XMVECTOR T_local = XMLoadFloat3(&translation_local);
@@ -78,33 +86,40 @@ namespace wi::scene
 	}
 	XMFLOAT3 TransformComponent::GetForward() const
 	{
+		std::shared_lock lock(_mutex);
 		return wi::math::GetForward(world);
 	}
 	XMFLOAT3 TransformComponent::GetUp() const
 	{
+		std::shared_lock lock(_mutex);
 		return wi::math::GetUp(world);
 	}
 	XMFLOAT3 TransformComponent::GetRight() const
 	{
+		std::shared_lock lock(_mutex);
 		return wi::math::GetRight(world);
 	}
 	XMVECTOR TransformComponent::GetForwardV() const
 	{
+		std::shared_lock lock(_mutex);
 		XMFLOAT3 v = wi::math::GetForward(world);
 		return XMLoadFloat3(&v);
 	}
 	XMVECTOR TransformComponent::GetUpV() const
 	{
+		std::shared_lock lock(_mutex);
 		XMFLOAT3 v = wi::math::GetUp(world);
 		return XMLoadFloat3(&v);
 	}
 	XMVECTOR TransformComponent::GetRightV() const
 	{
+		std::shared_lock lock(_mutex);
 		XMFLOAT3 v = wi::math::GetRight(world);
 		return XMLoadFloat3(&v);
 	}
 	void TransformComponent::GetPositionRotationScale(XMFLOAT3& position, XMFLOAT4& rotation, XMFLOAT3& scale) const
 	{
+		std::shared_lock lock(_mutex);
 		XMVECTOR S, R, T;
 		XMMatrixDecompose(&S, &R, &T, XMLoadFloat4x4(&world));
 		XMStoreFloat3(&position, T);
@@ -115,14 +130,16 @@ namespace wi::scene
 	{
 		if (IsDirty())
 		{
+			std::unique_lock lock(_mutex);
 			SetDirty(false);
 
-			XMStoreFloat4x4(&world, GetLocalMatrix());
+			XMStoreFloat4x4(&world, GetLocalMatrixNoLock());
 		}
 	}
 	void TransformComponent::UpdateTransform_Parented(const TransformComponent& parent)
 	{
-		XMMATRIX W = GetLocalMatrix();
+		std::unique_lock lock(_mutex);
+		XMMATRIX W = GetLocalMatrixNoLock();
 		XMMATRIX W_parent = XMLoadFloat4x4(&parent.world);
 		W = W * W_parent;
 
@@ -130,6 +147,7 @@ namespace wi::scene
 	}
 	void TransformComponent::ApplyTransform()
 	{
+		std::unique_lock lock(_mutex);
 		SetDirty();
 
 		XMVECTOR S, R, T;
@@ -140,6 +158,7 @@ namespace wi::scene
 	}
 	void TransformComponent::ClearTransform()
 	{
+		std::unique_lock lock(_mutex);
 		SetDirty();
 		scale_local = XMFLOAT3(1, 1, 1);
 		rotation_local = XMFLOAT4(0, 0, 0, 1);
@@ -147,6 +166,7 @@ namespace wi::scene
 	}
 	void TransformComponent::Translate(const XMFLOAT3& value)
 	{
+		std::unique_lock lock(_mutex);
 		SetDirty();
 		translation_local.x += value.x;
 		translation_local.y += value.y;
@@ -154,6 +174,7 @@ namespace wi::scene
 	}
 	void TransformComponent::Translate(const XMVECTOR& value)
 	{
+		std::unique_lock lock(_mutex);
 		XMFLOAT3 translation;
 		XMStoreFloat3(&translation, value);
 		Translate(translation);
@@ -765,7 +786,7 @@ namespace wi::scene
 			{
 				const XMFLOAT3& pos = vertex_positions[i];
 				const uint8_t wind = vertex_windweights.empty() ? 0xFF : vertex_windweights[i];
-				
+
 				Vertex_POS16 v;
 				v.FromFULL(aabb, pos, wind);
 				XMFLOAT3 p = v.GetPOS(aabb);
@@ -1977,7 +1998,7 @@ namespace wi::scene
 	}
 	size_t MeshComponent::GetMemoryUsageCPU() const
 	{
-		size_t size = 
+		size_t size =
 			vertex_positions.size() * sizeof(XMFLOAT3) +
 			vertex_normals.size() * sizeof(XMFLOAT3) +
 			vertex_tangents.size() * sizeof(XMFLOAT4) +
