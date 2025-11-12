@@ -49,7 +49,6 @@ namespace wi
 
 		bool is_window_active = true;
 		bool allow_hdr = true;
-		bool bypass_system_key = false;
 		wi::graphics::SwapChain swapChain;
 		wi::Canvas canvas;
 		wi::platform::window_type window;
