@@ -112,6 +112,16 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 				break;
 			}
 			break;
+		case WM_SYSCHAR:
+		case WM_SYSKEYDOWN:
+		case WM_SYSKEYUP:
+			if (editor.config.GetBool("bypass_system_key") && wParam != VK_F4)
+			{
+				// Handle system key messages (like Alt key) to prevent menu bar activation freeze
+				// Return 0 to indicate we processed the message and prevent default behavior
+				break;
+			}
+			return DefWindowProc(hWnd, message, wParam, lParam);
 		case WM_SETTINGCHANGE:
 			{
 				// Change window theme dark mode based on system setting:
