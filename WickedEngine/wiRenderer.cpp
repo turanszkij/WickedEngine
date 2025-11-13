@@ -5279,6 +5279,9 @@ void UpdateRenderData(
 
 	FlushBarriers(cmd); // wind/skinning flush
 
+	// Hair particle systems clearing (needs to be for everything, not just visible):
+	HairParticleSystem::InitializeGPUBuffersIfNeeded(vis.scene->hairs.GetData(), vis.scene->hairs.GetCount(), cmd);
+
 	// Hair particle systems GPU simulation:
 	//	(This must be non-async too, as prepass will render hairs!)
 	static thread_local wi::vector<HairParticleSystem::UpdateGPUItem> hair_updates;

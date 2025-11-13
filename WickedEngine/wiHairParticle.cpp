@@ -147,7 +147,7 @@ namespace wi
 			wi::renderer::BufferSuballocation suballoc = wi::renderer::SuballocateGPUBuffer(bd.size);
 			if (suballoc.allocation.IsValid())
 			{
-				bool success = device->CreateBufferZeroed(&bd, &generalBuffer, &suballoc.alias, suballoc.allocation.byte_offset);
+				bool success = device->CreateBuffer(&bd, nullptr, &generalBuffer, &suballoc.alias, suballoc.allocation.byte_offset);
 				assert(success);
 				device->SetName(&generalBuffer, "HairParticleSystem::generalBuffer (suballocated)");
 				generalBufferOffsetAllocation = std::move(suballoc.allocation);
@@ -156,7 +156,7 @@ namespace wi
 			else
 			{
 				// If suballocation was not successful, a standalone buffer can be created instead:
-				bool success = device->CreateBufferZeroed(&bd, &generalBuffer);
+				bool success = device->CreateBuffer(&bd, nullptr, &generalBuffer);
 				assert(success);
 				device->SetName(&generalBuffer, "HairParticleSystem::generalBuffer");
 			}
@@ -360,6 +360,32 @@ namespace wi
 		}
 
 		std::swap(vb_pos[0], vb_pos[1]);
+	}
+	void HairParticleSystem::InitializeGPUBuffersIfNeeded(
+		const HairParticleSystem* hairs,
+		size_t hairCount,
+		CommandList cmd
+	)
+	{
+		GraphicsDevice* device = wi::graphics::GetDevice();
+		device->EventBegin("HairParticleSystem - InitializeGPUBuffersIfNeeded", cmd);
+
+		for (uint32_t i = 0; i < hairCount; ++i)
+		{
+			const HairParticleSystem& hair = hairs[i];
+			if (hair.strandCount == 0 || !hair.generalBuffer.IsValid())
+			{
+				continue;
+			}
+			if (!hair.gpu_initialized)
+			{
+				hair.gpu_initialized = true;
+				device->ClearUAV(&hair.generalBuffer, 0, cmd);
+				wi::renderer::PushBarrier(GPUBarrier::Buffer(&hair.generalBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
+			}
+		}
+		wi::renderer::FlushBarriers(cmd);
+		device->EventEnd(cmd);
 	}
 	void HairParticleSystem::UpdateGPU(
 		const UpdateGPUItem* items,

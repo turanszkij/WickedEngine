@@ -48,6 +48,12 @@ namespace wi
 			float dt
 		);
 
+		static void InitializeGPUBuffersIfNeeded(
+			const HairParticleSystem* hairs,
+			size_t hairCount,
+			wi::graphics::CommandList cmd
+		);
+
 		struct UpdateGPUItem
 		{
 			const HairParticleSystem* hair = nullptr;
