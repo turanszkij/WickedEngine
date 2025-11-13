@@ -1082,45 +1082,29 @@ namespace vulkan_internal
 		}
 	};
 
-	Buffer_Vulkan* to_internal(const GPUBuffer* param)
+	template<typename T> struct VulkanType;
+	template<> struct VulkanType<GPUBuffer> { using type = Buffer_Vulkan; };
+	template<> struct VulkanType<Texture> { using type = Texture_Vulkan; };
+	template<> struct VulkanType<Sampler> { using type = Sampler_Vulkan; };
+	template<> struct VulkanType<GPUQueryHeap> { using type = QueryHeap_Vulkan; };
+	template<> struct VulkanType<Shader> { using type = Shader_Vulkan; };
+	template<> struct VulkanType<RaytracingAccelerationStructure> { using type = BVH_Vulkan; };
+	template<> struct VulkanType<PipelineState> { using type = PipelineState_Vulkan; };
+	template<> struct VulkanType<RaytracingPipelineState> { using type = RTPipelineState_Vulkan; };
+	template<> struct VulkanType<SwapChain> { using type = SwapChain_Vulkan; };
+	template<> struct VulkanType<VideoDecoder> { using type = VideoDecoder_Vulkan; };
+
+
+	template<typename T>
+	typename VulkanType<T>::type* to_internal(const T* param)
 	{
-		return static_cast<Buffer_Vulkan*>(param->internal_state.get());
+		return static_cast<typename VulkanType<T>::type*>(param->internal_state.get());
 	}
-	Texture_Vulkan* to_internal(const Texture* param)
+
+	template<typename T>
+	typename VulkanType<T>::type* to_internal(const GPUResource* res)
 	{
-		return static_cast<Texture_Vulkan*>(param->internal_state.get());
-	}
-	Sampler_Vulkan* to_internal(const Sampler* param)
-	{
-		return static_cast<Sampler_Vulkan*>(param->internal_state.get());
-	}
-	QueryHeap_Vulkan* to_internal(const GPUQueryHeap* param)
-	{
-		return static_cast<QueryHeap_Vulkan*>(param->internal_state.get());
-	}
-	Shader_Vulkan* to_internal(const Shader* param)
-	{
-		return static_cast<Shader_Vulkan*>(param->internal_state.get());
-	}
-	PipelineState_Vulkan* to_internal(const PipelineState* param)
-	{
-		return static_cast<PipelineState_Vulkan*>(param->internal_state.get());
-	}
-	BVH_Vulkan* to_internal(const RaytracingAccelerationStructure* param)
-	{
-		return static_cast<BVH_Vulkan*>(param->internal_state.get());
-	}
-	RTPipelineState_Vulkan* to_internal(const RaytracingPipelineState* param)
-	{
-		return static_cast<RTPipelineState_Vulkan*>(param->internal_state.get());
-	}
-	SwapChain_Vulkan* to_internal(const SwapChain* param)
-	{
-		return static_cast<SwapChain_Vulkan*>(param->internal_state.get());
-	}
-	VideoDecoder_Vulkan* to_internal(const VideoDecoder* param)
-	{
-		return static_cast<VideoDecoder_Vulkan*>(param->internal_state.get());
+		return static_cast<typename VulkanType<T>::type*>(res->internal_state.get());
 	}
 
 	bool CreateSwapChainInternal(
@@ -1830,7 +1814,7 @@ using namespace vulkan_internal;
 						else
 						{
 							int subresource = table.SRV_index[original_binding];
-							auto texture_internal = to_internal((const Texture*)&resource);
+							auto texture_internal = to_internal<Texture>(&resource);
 							auto& subresource_descriptor = subresource >= 0 ? texture_internal->subresources_srv[subresource] : texture_internal->srv;
 							imageInfos.back().imageView = subresource_descriptor.image_view;
 							imageInfos.back().imageLayout = texture_internal->defaultLayout;
@@ -1881,7 +1865,7 @@ using namespace vulkan_internal;
 						else
 						{
 							int subresource = table.UAV_index[original_binding];
-							auto texture_internal = to_internal((const Texture*)&resource);
+							auto texture_internal = to_internal<Texture>(&resource);
 							auto& subresource_descriptor = subresource >= 0 ? texture_internal->subresources_uav[subresource] : texture_internal->uav;
 							imageInfos.back().imageView = subresource_descriptor.image_view;
 						}
@@ -1973,7 +1957,7 @@ using namespace vulkan_internal;
 						else
 						{
 							int subresource = table.SRV_index[original_binding];
-							auto buffer_internal = to_internal((const GPUBuffer*)&resource);
+							auto buffer_internal = to_internal<GPUBuffer>(&resource);
 							auto& subresource_descriptor = subresource >= 0 ? buffer_internal->subresources_srv[subresource] : buffer_internal->srv;
 							texelBufferViews.back() = subresource_descriptor.buffer_view;
 						}
@@ -1995,7 +1979,7 @@ using namespace vulkan_internal;
 						else
 						{
 							int subresource = table.UAV_index[original_binding];
-							auto buffer_internal = to_internal((const GPUBuffer*)&resource);
+							auto buffer_internal = to_internal<GPUBuffer>(&resource);
 							auto& subresource_descriptor = subresource >= 0 ? buffer_internal->subresources_uav[subresource] : buffer_internal->uav;
 							texelBufferViews.back() = subresource_descriptor.buffer_view;
 						}
@@ -2021,7 +2005,7 @@ using namespace vulkan_internal;
 							else
 							{
 								int subresource = table.SRV_index[original_binding];
-								auto buffer_internal = to_internal((const GPUBuffer*)&resource);
+								auto buffer_internal = to_internal<GPUBuffer>(&resource);
 								auto& subresource_descriptor = subresource >= 0 ? buffer_internal->subresources_srv[subresource] : buffer_internal->srv;
 								bufferInfos.back() = subresource_descriptor.buffer_info;
 							}
@@ -2039,7 +2023,7 @@ using namespace vulkan_internal;
 							else
 							{
 								int subresource = table.UAV_index[original_binding];
-								auto buffer_internal = to_internal((const GPUBuffer*)&resource);
+								auto buffer_internal = to_internal<GPUBuffer>(&resource);
 								auto& subresource_descriptor = subresource >= 0 ? buffer_internal->subresources_uav[subresource] : buffer_internal->uav;
 								bufferInfos.back() = subresource_descriptor.buffer_info;
 							}
@@ -2063,7 +2047,7 @@ using namespace vulkan_internal;
 						}
 						else
 						{
-							auto as_internal = to_internal((const RaytracingAccelerationStructure*)&resource);
+							auto as_internal = to_internal<RaytracingAccelerationStructure>(&resource);
 							accelerationStructureViews.back().pAccelerationStructures = &as_internal->resource;
 						}
 					}
@@ -4071,7 +4055,7 @@ using namespace vulkan_internal;
 				// Aliasing: https://gpuopen-librariesandsdks.github.io/VulkanMemoryAllocator/html/resource_aliasing.html
 				if (alias->IsTexture())
 				{
-					auto alias_internal = to_internal((const Texture*)alias);
+					auto alias_internal = to_internal<Texture>(alias);
 					res = vulkan_check(vmaCreateAliasingBuffer2(
 						allocationhandler->allocator,
 						alias_internal->allocation,
@@ -4082,7 +4066,7 @@ using namespace vulkan_internal;
 				}
 				else
 				{
-					auto alias_internal = to_internal((const GPUBuffer*)alias);
+					auto alias_internal = to_internal<GPUBuffer>(alias);
 					res = vulkan_check(vmaCreateAliasingBuffer2(
 						allocationhandler->allocator,
 						alias_internal->allocation,
@@ -4515,7 +4499,7 @@ using namespace vulkan_internal;
 					// Aliasing: https://gpuopen-librariesandsdks.github.io/VulkanMemoryAllocator/html/resource_aliasing.html
 					if (alias->IsTexture())
 					{
-						auto alias_internal = to_internal((const Texture*)alias);
+						auto alias_internal = to_internal<Texture>(alias);
 						res = vulkan_check(vmaCreateAliasingImage2(
 							allocator,
 							alias_internal->allocation,
@@ -4526,7 +4510,7 @@ using namespace vulkan_internal;
 					}
 					else
 					{
-						auto alias_internal = to_internal((const GPUBuffer*)alias);
+						auto alias_internal = to_internal<GPUBuffer>(alias);
 						res = vulkan_check(vmaCreateAliasingImage2(
 							allocator,
 							alias_internal->allocation,
@@ -6995,7 +6979,7 @@ using namespace vulkan_internal;
 		case SubresourceType::SRV:
 			if (resource->IsBuffer())
 			{
-				const auto internal_state = to_internal((const GPUBuffer*)resource);
+				const auto internal_state = to_internal<GPUBuffer>(resource);
 				if (subresource < 0)
 				{
 					return internal_state->srv.index;
@@ -7009,7 +6993,7 @@ using namespace vulkan_internal;
 			}
 			else if (resource->IsTexture())
 			{
-				const auto internal_state = to_internal((const Texture*)resource);
+				const auto internal_state = to_internal<Texture>(resource);
 				if (subresource < 0)
 				{
 					return internal_state->srv.index;
@@ -7023,14 +7007,14 @@ using namespace vulkan_internal;
 			}
 			else if (resource->IsAccelerationStructure())
 			{
-				const auto internal_state = to_internal((const RaytracingAccelerationStructure*)resource);
+				const auto internal_state = to_internal<RaytracingAccelerationStructure>(resource);
 				return internal_state->index;
 			}
 			break;
 		case SubresourceType::UAV:
 			if (resource->IsBuffer())
 			{
-				const auto internal_state = to_internal((const GPUBuffer*)resource);
+				const auto internal_state = to_internal<GPUBuffer>(resource);
 				if (subresource < 0)
 				{
 					return internal_state->uav.index;
@@ -7044,7 +7028,7 @@ using namespace vulkan_internal;
 			}
 			else if (resource->IsTexture())
 			{
-				const auto internal_state = to_internal((const Texture*)resource);
+				const auto internal_state = to_internal<Texture>(resource);
 				if (subresource < 0)
 				{
 					return internal_state->uav.index;
@@ -7132,17 +7116,17 @@ using namespace vulkan_internal;
 		if (pResource->IsTexture())
 		{
 			info.objectType = VK_OBJECT_TYPE_IMAGE;
-			info.objectHandle = (uint64_t)to_internal((const Texture*)pResource)->resource;
+			info.objectHandle = (uint64_t)to_internal<Texture>(pResource)->resource;
 		}
 		else if (pResource->IsBuffer())
 		{
 			info.objectType = VK_OBJECT_TYPE_BUFFER;
-			info.objectHandle = (uint64_t)to_internal((const GPUBuffer*)pResource)->resource;
+			info.objectHandle = (uint64_t)to_internal<GPUBuffer>(pResource)->resource;
 		}
 		else if (pResource->IsAccelerationStructure())
 		{
 			info.objectType = VK_OBJECT_TYPE_ACCELERATION_STRUCTURE_KHR;
-			info.objectHandle = (uint64_t)to_internal((const RaytracingAccelerationStructure*)pResource)->resource;
+			info.objectHandle = (uint64_t)to_internal<RaytracingAccelerationStructure>(pResource)->resource;
 		}
 
 		if (info.objectHandle == (uint64_t)VK_NULL_HANDLE)
@@ -7639,7 +7623,7 @@ using namespace vulkan_internal;
 
 			if (in_command.sparse_resource->IsBuffer())
 			{
-				auto internal_sparse = to_internal((const GPUBuffer*)in_command.sparse_resource);
+				auto internal_sparse = to_internal<GPUBuffer>(in_command.sparse_resource);
 
 				VkSparseBufferMemoryBindInfo& info = out_bind.buffer_bind_info;
 				info = {};
@@ -8667,8 +8651,8 @@ using namespace vulkan_internal;
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 		if (pDst->type == GPUResource::Type::TEXTURE && pSrc->type == GPUResource::Type::TEXTURE)
 		{
-			auto internal_state_src = to_internal((const Texture*)pSrc);
-			auto internal_state_dst = to_internal((const Texture*)pDst);
+			auto internal_state_src = to_internal<Texture>(pSrc);
+			auto internal_state_dst = to_internal<Texture>(pDst);
 
 			const TextureDesc& src_desc = ((const Texture*)pSrc)->GetDesc();
 			const TextureDesc& dst_desc = ((const Texture*)pDst)->GetDesc();
@@ -8802,8 +8786,8 @@ using namespace vulkan_internal;
 		}
 		else if (pDst->type == GPUResource::Type::BUFFER && pSrc->type == GPUResource::Type::BUFFER)
 		{
-			auto internal_state_src = to_internal((const GPUBuffer*)pSrc);
-			auto internal_state_dst = to_internal((const GPUBuffer*)pDst);
+			auto internal_state_src = to_internal<GPUBuffer>(pSrc);
+			auto internal_state_dst = to_internal<GPUBuffer>(pDst);
 
 			const GPUBufferDesc& src_desc = ((const GPUBuffer*)pSrc)->GetDesc();
 			const GPUBufferDesc& dst_desc = ((const GPUBuffer*)pDst)->GetDesc();
@@ -9359,7 +9343,7 @@ using namespace vulkan_internal;
 
 		if (resource->IsBuffer())
 		{
-			auto internal_state = to_internal((const GPUBuffer*)resource);
+			auto internal_state = to_internal<GPUBuffer>(resource);
 			vkCmdFillBuffer(
 				commandlist.GetCommandBuffer(),
 				internal_state->resource,
@@ -9383,7 +9367,7 @@ using namespace vulkan_internal;
 			range.layerCount = VK_REMAINING_ARRAY_LAYERS;
 			range.levelCount = VK_REMAINING_MIP_LEVELS;
 
-			auto internal_state = to_internal((const Texture*)resource);
+			auto internal_state = to_internal<Texture>(resource);
 			vkCmdClearColorImage(
 				commandlist.GetCommandBuffer(),
 				internal_state->resource,
