@@ -144,6 +144,7 @@ namespace wi
 				AlignTo(prim_view.size, alignment) +
 				AlignTo(vb_pos_raytracing.size, alignment)
 				;
+#if 0 // Suballocation is disabled for hair particle system for now, there is some memory overwrite-like issue somewhere
 			wi::renderer::BufferSuballocation suballoc = wi::renderer::SuballocateGPUBuffer(bd.size);
 			if (suballoc.allocation.IsValid())
 			{
@@ -154,6 +155,7 @@ namespace wi
 				generalBufferOffsetAllocationAlias = std::move(suballoc.alias);
 			}
 			else
+#endif
 			{
 				// If suballocation was not successful, a standalone buffer can be created instead:
 				bool success = device->CreateBuffer(&bd, nullptr, &generalBuffer);
