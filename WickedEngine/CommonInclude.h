@@ -16,6 +16,9 @@
 
 #if defined(__GNUC__) || defined(__clang__)
 #define __forceinline __attribute__((always_inline)) inline
+#define NO_SANITIZE(x) __attribute__((no_sanitize(x)))
+#else
+#define NO_SANITIZE(x)
 #endif // defined(__GNUC__) || defined(__clang__)
 
 // Simple common math helpers:
