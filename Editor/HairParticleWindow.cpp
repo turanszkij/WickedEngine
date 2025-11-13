@@ -377,6 +377,17 @@ void HairParticleWindow::UpdateData()
 	ss += "Tip: To use hair particle system, first you must select a surface mesh to spawn particles on, and then increase particle count to grow particles. The particles will get their texture from the Material that is created on the current entity.\n\n";
 	ss += "Position format: " + std::string(wi::graphics::GetFormatString(hair->position_format)) + "\n";
 	ss += "Memory usage: " + wi::helper::GetMemorySizeText(hair->GetMemorySizeInBytes()) + "\n";
+
+	ss += "\nSuballocation offset: ";
+	if (hair->generalBufferOffsetAllocation.IsValid())
+	{
+		ss += wi::helper::GetMemorySizeText(hair->generalBufferOffsetAllocation.byte_offset);
+	}
+	else
+	{
+		ss += "suballocation is not used for this hair particle system";
+	}
+
 	infoLabel.SetText(ss);
 
 	meshComboBox.ClearItems();
