@@ -241,6 +241,7 @@ namespace wi::graphics
 
 		// Some useful helpers:
 
+		// This can be used to create a buffer filled from CPU data pointer, the copy will be done on the CPU (and additional GPU copy for non-UMA)
 		bool CreateBuffer(const GPUBufferDesc* desc, const void* initial_data, GPUBuffer* buffer, const GPUResource* alias = nullptr, uint64_t alias_offset = 0ull) const
 		{
 			if (initial_data == nullptr)
@@ -250,16 +251,19 @@ namespace wi::graphics
 			return CreateBuffer2(desc, [&](void* dest) { std::memcpy(dest, initial_data, desc->size); }, buffer, alias, alias_offset);
 		}
 
+		// This can be used to create a buffer filled with a single value, the data initialization will be done on the CPU (and additional GPU copy for non-UMA)
 		bool CreateBufferCleared(const GPUBufferDesc* desc, uint8_t value, GPUBuffer* buffer, const GPUResource* alias = nullptr, uint64_t alias_offset = 0ull) const
 		{
 			return CreateBuffer2(desc, [&](void* dest) { std::memset(dest, value, desc->size); }, buffer, alias, alias_offset);
 		}
 
+		// This can be used to create a buffer filled with zeroes, the data initialization will be done on the CPU (and additional GPU copy for non-UMA)
 		bool CreateBufferZeroed(const GPUBufferDesc* desc, GPUBuffer* buffer, const GPUResource* alias = nullptr, uint64_t alias_offset = 0ull) const
 		{
 			return CreateBufferCleared(desc, 0, buffer, alias, alias_offset);
 		}
 
+		// Execute a single GPU barrier
 		void Barrier(const GPUBarrier& barrier, CommandList cmd)
 		{
 			Barrier(&barrier, 1, cmd);
@@ -347,6 +351,7 @@ namespace wi::graphics
 			BindConstantBuffer(&allocation.buffer, slot, cmd, allocation.offset);
 		}
 
+		// Simplified renderpass beginning for a single render target and optional clear (if clear is false, it will use load operation)
 		void RenderPassBegin(const Texture* rendertarget, CommandList cmd, bool clear = true)
 		{
 			RenderPassImage rp[] = {
