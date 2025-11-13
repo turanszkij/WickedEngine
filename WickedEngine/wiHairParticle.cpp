@@ -381,7 +381,7 @@ namespace wi
 			{
 				hair.gpu_initialized = true;
 				device->ClearUAV(&hair.generalBuffer, 0, cmd);
-				wi::renderer::PushBarrier(GPUBarrier::Buffer(&hair.generalBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
+				wi::renderer::PushBarrier(GPUBarrier::Buffer(&hair.generalBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::COPY_DST));
 			}
 		}
 		wi::renderer::FlushBarriers(cmd);
