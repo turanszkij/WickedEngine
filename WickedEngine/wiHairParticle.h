@@ -21,6 +21,8 @@ namespace wi
 	public:
 		wi::graphics::GPUBuffer constantBuffer;
 		wi::graphics::GPUBuffer generalBuffer;
+		wi::allocator::PageAllocator::Allocation generalBufferOffsetAllocation;
+		wi::graphics::GPUBuffer generalBufferOffsetAllocationAlias;
 		wi::scene::MeshComponent::BufferView simulation_view;
 		wi::scene::MeshComponent::BufferView vb_pos[2];
 		wi::scene::MeshComponent::BufferView vb_nor;

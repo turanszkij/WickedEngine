@@ -144,8 +144,22 @@ namespace wi
 				AlignTo(prim_view.size, alignment) +
 				AlignTo(vb_pos_raytracing.size, alignment)
 				;
-			device->CreateBufferZeroed(&bd, &generalBuffer);
-			device->SetName(&generalBuffer, "HairParticleSystem::generalBuffer");
+			wi::renderer::BufferSuballocation suballoc = wi::renderer::SuballocateGPUBuffer(bd.size);
+			if (suballoc.allocation.IsValid())
+			{
+				bool success = device->CreateBufferZeroed(&bd, &generalBuffer, &suballoc.alias, suballoc.allocation.byte_offset);
+				assert(success);
+				device->SetName(&generalBuffer, "HairParticleSystem::generalBuffer (suballocated)");
+				generalBufferOffsetAllocation = std::move(suballoc.allocation);
+				generalBufferOffsetAllocationAlias = std::move(suballoc.alias);
+			}
+			else
+			{
+				// If suballocation was not successful, a standalone buffer can be created instead:
+				bool success = device->CreateBufferZeroed(&bd, &generalBuffer);
+				assert(success);
+				device->SetName(&generalBuffer, "HairParticleSystem::generalBuffer");
+			}
 			gpu_initialized = false;
 
 			uint64_t buffer_offset = 0ull;

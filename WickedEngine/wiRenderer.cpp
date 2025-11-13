@@ -2760,8 +2760,12 @@ BufferSuballocation SuballocateGPUBuffer(uint64_t size)
 		{
 			desc.usage = Usage::DEFAULT;
 		}
-		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::VERTEX_BUFFER | BindFlag::INDEX_BUFFER;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::VERTEX_BUFFER | BindFlag::INDEX_BUFFER | BindFlag::UNORDERED_ACCESS;
 		desc.misc_flags = ResourceMiscFlag::ALIASING_BUFFER | ResourceMiscFlag::NO_DEFAULT_DESCRIPTORS;
+		if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
+		{
+			desc.misc_flags |= ResourceMiscFlag::RAY_TRACING;
+		}
 		desc.alignment = device->GetMinOffsetAlignment(&desc);
 		auto& block = suballocator.blocks.emplace_back();
 		bool success = device->CreateBuffer(&desc, nullptr, &block.buffer);
