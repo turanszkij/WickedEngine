@@ -2785,8 +2785,10 @@ void UpdateGPUSuballocator()
 	}
 	for (size_t i = 0; i < suballocator.blocks.size(); ++i)
 	{
-		if (suballocator.blocks[i].allocator.is_empty())
+		const auto& block = suballocator.blocks[i];
+		if (block.allocator.is_empty())
 		{
+			wilog("deleted suballocation buffer block with size: %s, with page size: %s, page count: %d", wi::helper::GetMemorySizeText(block.allocator.total_size_in_bytes()).c_str(), wi::helper::GetMemorySizeText(block.allocator.page_size).c_str(), (int)block.allocator.page_count);
 			suballocator.blocks.erase(suballocator.blocks.begin() + i);
 			break;
 		}

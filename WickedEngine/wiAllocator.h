@@ -248,7 +248,7 @@ namespace wi::allocator
 		}
 
 		// returns true if no pages are allocated
-		inline bool is_empty()
+		inline bool is_empty() const
 		{
 			return allocator->allocator.storageReport().totalFreeSpace == page_count;
 		}
