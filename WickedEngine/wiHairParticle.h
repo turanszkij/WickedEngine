@@ -39,6 +39,7 @@ namespace wi
 		wi::graphics::RaytracingAccelerationStructure BLAS;
 
 		void CreateFromMesh(const wi::scene::MeshComponent& mesh);
+		void DeleteRenderData();
 		void CreateRenderData();
 		void CreateRaytracingRenderData();
 

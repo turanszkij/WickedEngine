@@ -591,6 +591,7 @@ namespace wi::scene
 	void MeshComponent::DeleteRenderData()
 	{
 		generalBufferOffsetAllocation = {};
+		generalBufferOffsetAllocationAlias = {};
 		generalBuffer = {};
 		streamoutBuffer = {};
 		ib_provoke = {};
@@ -1352,7 +1353,7 @@ namespace wi::scene
 		//	With this we can avoid rebinding the index buffer for every mesh and can work with purely offsets
 		//	Though the index buffer will still need to be rebound if the index format changes, but that happens less frequently
 		wi::renderer::BufferSuballocation suballoc = wi::renderer::SuballocateGPUBuffer(bd.size);
-		if (suballoc.allocation.IsValid())
+		if (suballoc.IsValid())
 		{
 			bool success = device->CreateBuffer2(&bd, init_callback, &generalBuffer, &suballoc.alias, suballoc.allocation.byte_offset);
 			assert(success);

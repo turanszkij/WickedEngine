@@ -89,8 +89,31 @@ namespace wi
 		_flags |= REBUILD_BUFFERS;
 	}
 
+	void HairParticleSystem::DeleteRenderData()
+	{
+		constantBuffer = {};
+		generalBuffer = {};
+		generalBufferOffsetAllocation = {};
+		generalBufferOffsetAllocationAlias = {};
+		simulation_view = {};
+		vb_pos[0] = {};
+		vb_pos[1] = {};
+		vb_nor = {};
+		vb_pos_raytracing = {};
+		vb_uvs = {};
+		wetmap = {};
+		ib_culled = {};
+		indirect_view = {};
+		prim_view = {};
+		indexBuffer = {};
+		vertexBuffer_length = {};
+		BLAS = {};
+	}
+
 	void HairParticleSystem::CreateRenderData()
 	{
+		DeleteRenderData();
+
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
 		BLAS = {};
@@ -146,7 +169,7 @@ namespace wi
 				;
 #if 0 // Suballocation is disabled for hair particle system for now, there is some memory overwrite-like issue somewhere
 			wi::renderer::BufferSuballocation suballoc = wi::renderer::SuballocateGPUBuffer(bd.size);
-			if (suballoc.allocation.IsValid())
+			if (suballoc.IsValid())
 			{
 				bool success = device->CreateBuffer(&bd, nullptr, &generalBuffer, &suballoc.alias, suballoc.allocation.byte_offset);
 				assert(success);
