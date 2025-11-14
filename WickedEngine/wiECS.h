@@ -12,6 +12,7 @@
 #include <cassert>
 #include <atomic>
 #include <memory>
+#include <shared_mutex>
 #include <string>
 
 // Entity-Component System
@@ -604,14 +605,17 @@ namespace wi::ecs
 				};
 				Item items[64];
 			};
+			mutable std::shared_mutex mutex;
 			wi::unordered_map<uint64_t, Block> table;
 
 			inline void clear()
 			{
+				std::unique_lock lock(mutex);
 				table.clear();
 			}
 			inline void erase(Entity entity)
 			{
+				std::unique_lock lock(mutex);
 				const uint64_t block_index = entity >> 6ull; // entity / 64
 				auto it = table.find(block_index);
 				if (it == table.end())
@@ -631,6 +635,7 @@ namespace wi::ecs
 			}
 			inline void insert(Entity entity, size_t index)
 			{
+				std::unique_lock lock(mutex);
 				const uint64_t block_index = entity >> 6ull; // entity / 64
 				const uint64_t item_index = entity & 63ull; // entity % 64
 				Block& block = table[block_index];
@@ -639,6 +644,7 @@ namespace wi::ecs
 			}
 			inline size_t get(Entity entity) const
 			{
+				std::shared_lock lock(mutex);
 				const uint64_t block_index = entity >> 6ull; // entity / 64
 				const auto it = table.find(block_index);
 				if (it == table.end())
@@ -653,21 +659,25 @@ namespace wi::ecs
 			// Implementation with hash table:
 			// The standard hashing method, performance depends on hashing, hash collisions
 			wi::unordered_map<Entity, size_t> table;
-
+			mutable std::shared_mutex mutex;
 			inline void clear()
 			{
+				std::unique_lock lock(mutex);
 				table.clear();
 			}
 			inline void erase(Entity entity)
 			{
+				std::unique_lock lock(mutex);
 				table.erase(entity);
 			}
 			inline void insert(Entity entity, size_t index)
 			{
+				std::unique_lock lock(mutex);
 				table[entity] = index;
 			}
 			inline size_t get(Entity entity) const
 			{
+				std::shared_lock lock(mutex);
 				if (table.empty())
 					return INVALID_INDEX;
 				auto it = table.find(entity);
@@ -694,6 +704,7 @@ namespace wi::ecs
 			uint64_t version = 0;
 		};
 		wi::unordered_map<std::string, LibraryEntry> entries;
+		mutable std::shared_mutex mutex;
 
 		// Create an instance of ComponentManager of a certain data type
 		//	The name must be unique, it will be used in serialization
@@ -701,6 +712,7 @@ namespace wi::ecs
 		template<typename T>
 		inline ComponentManager<T>& Register(const std::string& name, uint64_t version = 0)
 		{
+			std::unique_lock lock(mutex);
 			entries[name].component_manager = std::make_unique<ComponentManager<T>>();
 			entries[name].version = version;
 			return static_cast<ComponentManager<T>&>(*entries[name].component_manager);
@@ -709,6 +721,7 @@ namespace wi::ecs
 		template<typename T>
 		inline ComponentManager<T>* Get(const std::string& name)
 		{
+			std::shared_lock lock(mutex);
 			auto it = entries.find(name);
 			if (it == entries.end())
 				return nullptr;
@@ -718,6 +731,7 @@ namespace wi::ecs
 		template<typename T>
 		inline const ComponentManager<T>* Get(const std::string& name) const
 		{
+			std::shared_lock lock(mutex);
 			auto it = entries.find(name);
 			if (it == entries.end())
 				return nullptr;
@@ -726,6 +740,7 @@ namespace wi::ecs
 
 		inline uint64_t GetVersion(std::string name) const
 		{
+			std::shared_lock lock(mutex);
 			auto it = entries.find(name);
 			if (it == entries.end())
 				return 0;
