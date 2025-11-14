@@ -39,7 +39,7 @@ namespace wi::version
 "Aldo, lokimx, K. Osterman, Nomad, ykl, Alex Krokos, Timmy, Avaflow, mat, Hexegonel Samael Michael, Joe Spataro, soru, GeniokV, Mammoth, Ignacio, datae, Jason Rice, " \
 "MarsBEKET, Tim, Twisty, Zelf ieats kiezen, Romildo Franco, zNachoh, Dmitriy, Alex Minerva, Stefan Kent, Natty, Sunny Krishna, Vilmos Malárik, Ferrata, Rossakis, " \
 "Stefana Andrei, Taylor, Gunnar Kriik, 赟 杨, Rex, Lemon Brother, flxy, meta_leap, Edik, jusik5348, Agnares, Fred Naar, Saki Asui, DarkRaVen, Ray, Russell Searle, Alexandr Dem'yanenko, "\
-"Portaloffreedom, nxrighthere, わさび わさび "
+"Portaloffreedom, nxrighthere, わさび わさび, Durak, ipso"
 
 	const char* GetCreditsString()
 	{
