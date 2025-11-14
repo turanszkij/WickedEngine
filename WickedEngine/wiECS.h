@@ -431,6 +431,10 @@ namespace wi::ecs
 		// Returns the tightly packed [read only] component array
 		inline const wi::vector<Component>& GetComponentArray() const { return components; }
 
+		// Returns the raw data pointer of components:
+		inline const Component* GetData() const { return components.data(); }
+		inline Component* GetData() { return components.data(); }
+
 	private:
 		// This is a linear array of alive components
 		wi::vector<Component> components;

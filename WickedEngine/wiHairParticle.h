@@ -21,6 +21,8 @@ namespace wi
 	public:
 		wi::graphics::GPUBuffer constantBuffer;
 		wi::graphics::GPUBuffer generalBuffer;
+		wi::allocator::PageAllocator::Allocation generalBufferOffsetAllocation;
+		wi::graphics::GPUBuffer generalBufferOffsetAllocationAlias;
 		wi::scene::MeshComponent::BufferView simulation_view;
 		wi::scene::MeshComponent::BufferView vb_pos[2];
 		wi::scene::MeshComponent::BufferView vb_nor;
@@ -37,6 +39,7 @@ namespace wi
 		wi::graphics::RaytracingAccelerationStructure BLAS;
 
 		void CreateFromMesh(const wi::scene::MeshComponent& mesh);
+		void DeleteRenderData();
 		void CreateRenderData();
 		void CreateRaytracingRenderData();
 
@@ -44,6 +47,12 @@ namespace wi
 			const wi::scene::TransformComponent& transform,
 			const wi::scene::MeshComponent& mesh,
 			float dt
+		);
+
+		static void InitializeGPUBuffersIfNeeded(
+			const HairParticleSystem* hairs,
+			size_t hairCount,
+			wi::graphics::CommandList cmd
 		);
 
 		struct UpdateGPUItem

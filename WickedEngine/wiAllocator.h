@@ -172,7 +172,7 @@ namespace wi::allocator
 			{
 				Reset();
 				allocator = std::move(other.allocator);
-				internal_state = other.internal_state;
+				internal_state = std::move(other.internal_state);
 				byte_offset = other.byte_offset;
 				other.allocator = nullptr;
 				other.internal_state = nullptr;
@@ -197,7 +197,7 @@ namespace wi::allocator
 			{
 				Reset();
 				allocator = std::move(other.allocator);
-				internal_state = other.internal_state;
+				internal_state = std::move(other.internal_state);
 				byte_offset = other.byte_offset;
 				other.allocator = nullptr;
 				other.internal_state = nullptr;
@@ -248,7 +248,7 @@ namespace wi::allocator
 		}
 
 		// returns true if no pages are allocated
-		inline bool is_empty()
+		inline bool is_empty() const
 		{
 			return allocator->allocator.storageReport().totalFreeSpace == page_count;
 		}

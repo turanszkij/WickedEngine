@@ -75,9 +75,10 @@ namespace wi::renderer
 	{
 		wi::graphics::GPUBuffer alias;
 		wi::allocator::PageAllocator::Allocation allocation;
+		inline bool IsValid() const { return allocation.IsValid(); }
 	};
 	// Sub-allocate (thread-safe) from a global GPU buffer for memory aliasing purpose:
-	//	The buffer will be DEFAULT usage, useable as vertex buffer, index buffer and shader resource
+	//	The buffer will be DEFAULT usage, useable as vertex buffer, index buffer, shader resource and unordered access
 	//	The purpose is to suballocate smaller GPUBuffers inside a larger GPUBuffer and bind the large GPUBuffer once as index buffer,
 	//	while the small buffers can be allocated/deallocated from it with memory aliasing and also used regularly by themselves
 	BufferSuballocation SuballocateGPUBuffer(uint64_t size);

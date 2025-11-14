@@ -2731,46 +2731,54 @@ BufferSuballocation SuballocateGPUBuffer(uint64_t size)
 	if (size > GPUSubAllocator::blocksize / 2)
 		return {}; // invalid, larger allocations than half block size will not be suballocated
 
-	// scoped for locker
+	std::scoped_lock lock(suballocator.locker);
+
+	// See if any of the large blocks can fulfill the allocation request:
+	BufferSuballocation allocation;
+	for (auto& block : suballocator.blocks)
 	{
-		std::scoped_lock lock(suballocator.locker);
-
-		// See if any of the large blocks can fulfill the allocation request:
-		BufferSuballocation allocation;
-		for (auto& block : suballocator.blocks)
+		allocation.allocation = block.allocator.allocate(size);
+		if (allocation.allocation.IsValid())
 		{
-			allocation.allocation = block.allocator.allocate(size);
-			if (allocation.allocation.IsValid())
-			{
-				allocation.alias = block.buffer;
-				//wilog("SuballocateGPUBuffer allocated size: %s, pages: %d, free space remaining: %s", wi::helper::GetMemorySizeText(size).c_str(), block.allocator.page_count_from_bytes(size), wi::helper::GetMemorySizeText(allocation.allocation.allocator->allocator.storageReport().totalFreeSpace * block.allocator.page_size).c_str());
-				return allocation;
-			}
+			allocation.alias = block.buffer;
+			//wilog("SuballocateGPUBuffer allocated size: %s, pages: %d, free space remaining: %s", wi::helper::GetMemorySizeText(size).c_str(), block.allocator.page_count_from_bytes(size), wi::helper::GetMemorySizeText(allocation.allocation.allocator->allocator.storageReport().totalFreeSpace * block.allocator.page_size).c_str());
+			return allocation;
 		}
-
-		// Allocation couldn't be fulfilled, create new block:
-		GPUBufferDesc desc;
-		desc.size = GPUSubAllocator::blocksize;
-		if (device->CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
-		{
-			// In UMA mode, it is better to create UPLOAD buffer, this avoids one copy from UPLOAD to DEFAULT
-			desc.usage = Usage::UPLOAD;
-		}
-		else
-		{
-			desc.usage = Usage::DEFAULT;
-		}
-		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::VERTEX_BUFFER | BindFlag::INDEX_BUFFER;
-		desc.misc_flags = ResourceMiscFlag::ALIASING_BUFFER | ResourceMiscFlag::NO_DEFAULT_DESCRIPTORS;
-		desc.alignment = device->GetMinOffsetAlignment(&desc);
-		auto& block = suballocator.blocks.emplace_back();
-		bool success = device->CreateBuffer(&desc, nullptr, &block.buffer);
-		assert(success);
-		device->SetName(&block.buffer, "GPUSubAllocator");
-		block.allocator.init(desc.size, (uint32_t)desc.alignment, true);
-		wilog("SuballocateGPUBuffer created buffer block with size: %s, with page size: %s, page count: %d", wi::helper::GetMemorySizeText(block.allocator.total_size_in_bytes()).c_str(), wi::helper::GetMemorySizeText(block.allocator.page_size).c_str(), (int)block.allocator.page_count);
 	}
-	return SuballocateGPUBuffer(size); // retry
+
+	// Allocation couldn't be fulfilled, create new block:
+	GPUBufferDesc desc;
+	desc.size = GPUSubAllocator::blocksize;
+	if (device->CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
+	{
+		// In UMA mode, it is better to create UPLOAD buffer, this avoids one copy from UPLOAD to DEFAULT
+		desc.usage = Usage::UPLOAD;
+	}
+	else
+	{
+		desc.usage = Usage::DEFAULT;
+	}
+	desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::VERTEX_BUFFER | BindFlag::INDEX_BUFFER | BindFlag::UNORDERED_ACCESS;
+	desc.misc_flags = ResourceMiscFlag::ALIASING_BUFFER | ResourceMiscFlag::NO_DEFAULT_DESCRIPTORS;
+	if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
+	{
+		desc.misc_flags |= ResourceMiscFlag::RAY_TRACING;
+	}
+	desc.alignment = device->GetMinOffsetAlignment(&desc);
+	auto& block = suballocator.blocks.emplace_back();
+	bool success = device->CreateBuffer(&desc, nullptr, &block.buffer);
+	assert(success);
+	device->SetName(&block.buffer, "GPUSubAllocator");
+	block.allocator.init(desc.size, (uint32_t)desc.alignment, true);
+	wilog("SuballocateGPUBuffer created buffer block with size: %s, with page size: %s, page count: %d", wi::helper::GetMemorySizeText(block.allocator.total_size_in_bytes()).c_str(), wi::helper::GetMemorySizeText(block.allocator.page_size).c_str(), (int)block.allocator.page_count);
+
+	allocation.allocation = block.allocator.allocate(size);
+	if (allocation.allocation.IsValid())
+	{
+		allocation.alias = block.buffer;
+		//wilog("SuballocateGPUBuffer allocated size: %s, pages: %d, free space remaining: %s", wi::helper::GetMemorySizeText(size).c_str(), block.allocator.page_count_from_bytes(size), wi::helper::GetMemorySizeText(allocation.allocation.allocator->allocator.storageReport().totalFreeSpace * block.allocator.page_size).c_str());
+	}
+	return allocation;
 }
 void UpdateGPUSuballocator()
 {
@@ -2781,8 +2789,10 @@ void UpdateGPUSuballocator()
 	}
 	for (size_t i = 0; i < suballocator.blocks.size(); ++i)
 	{
-		if (suballocator.blocks[i].allocator.is_empty())
+		const auto& block = suballocator.blocks[i];
+		if (block.allocator.is_empty())
 		{
+			wilog("deleted suballocation buffer block with size: %s, with page size: %s, page count: %d", wi::helper::GetMemorySizeText(block.allocator.total_size_in_bytes()).c_str(), wi::helper::GetMemorySizeText(block.allocator.page_size).c_str(), (int)block.allocator.page_count);
 			suballocator.blocks.erase(suballocator.blocks.begin() + i);
 			break;
 		}
@@ -5274,6 +5284,9 @@ void UpdateRenderData(
 	}
 
 	FlushBarriers(cmd); // wind/skinning flush
+
+	// Hair particle systems clearing (needs to be for everything, not just visible):
+	HairParticleSystem::InitializeGPUBuffersIfNeeded(vis.scene->hairs.GetData(), vis.scene->hairs.GetCount(), cmd);
 
 	// Hair particle systems GPU simulation:
 	//	(This must be non-async too, as prepass will render hairs!)
