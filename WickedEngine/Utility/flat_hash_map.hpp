@@ -357,20 +357,16 @@ public:
         : EntryAlloc(alloc), Hasher(other), Equal(other), _max_load_factor(other._max_load_factor)
     {
         rehash_for_other_container(other);
-#if _HAS_EXCEPTIONS
-        try
-        {
-#endif // _HAS_EXCEPTIONS
+        //try
+        //{
             insert(other.begin(), other.end());
-#if _HAS_EXCEPTIONS
-        }
-        catch(...)
-        {
-            clear();
-            deallocate_data(entries, num_slots_minus_one, max_lookups);
-            throw;
-        }
-#endif // _HAS_EXCEPTIONS
+        //}
+        //catch(...)
+        //{
+        //    clear();
+        //    deallocate_data(entries, num_slots_minus_one, max_lookups);
+        //    throw;
+        //}
     }
     sherwood_v3_table(sherwood_v3_table && other) noexcept
         : EntryAlloc(std::move(other)), Hasher(std::move(other)), Equal(std::move(other))
