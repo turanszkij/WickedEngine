@@ -105,10 +105,13 @@ endif()
 if (WIN32)
     set(PLATFORM "Windows")
     add_compile_definitions(WIN32=1)
+    add_compile_definitions(_HAS_EXCEPTIONS=0)
+
     if (MSVC)
         add_compile_options(
             /W3
             /MP
+            /EHsc-
         )
     endif()
 
@@ -116,6 +119,7 @@ if (WIN32)
 elseif(UNIX)
     set(PLATFORM "SDL2")
     add_compile_definitions(SDL2=1)
+    add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=1)
 
     # Common compiler options and warning level for CLANG and GCC:
     add_compile_options(
@@ -125,6 +129,8 @@ elseif(UNIX)
         -Wno-unused-function
         -Wno-unused-but-set-variable
         -Wno-sign-compare
+
+        -fno-exceptions
     )
 endif()
 
@@ -156,6 +162,7 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     )
 endif()
 
+add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>)
 
 add_subdirectory(WickedEngine)
 add_custom_target(Content
