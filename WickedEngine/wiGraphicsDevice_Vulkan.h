@@ -496,6 +496,8 @@ namespace wi::graphics
 
 		void SparseUpdate(QUEUE_TYPE queue, const SparseUpdateCommand* commands, uint32_t command_count) override;
 
+		const char* GetTag() const override { return "[Vulkan]"; }
+
 		///////////////Thread-sensitive////////////////////////
 
 		void WaitCommandList(CommandList cmd, CommandList wait_for) override;

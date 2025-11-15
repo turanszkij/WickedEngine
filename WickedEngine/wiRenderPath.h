@@ -43,5 +43,9 @@ namespace wi
 		inline void setlayerMask(uint32_t value) { layerMask = value; }
 
 		wi::graphics::ColorSpace colorspace = wi::graphics::ColorSpace::SRGB;
+
+		// This is an identifier of RenderPath subtype that is used for lua binding.
+		static constexpr const char* script_check_identifier = relative_path(__FILE__);
+		virtual const char* GetScriptBindingID() const { return script_check_identifier; }
 	};
 }
