@@ -114,13 +114,13 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 	};
 
 	binaryCheckBox.Create("Binary: ");
-	binaryCheckBox.OnClick(handleExprList([] (auto expression, auto args) {
+	binaryCheckBox.OnClick(handleExprList([] (auto& expression, auto args) {
 		expression.SetBinary(args.bValue);
 	}, false));
 	AddWidget(&binaryCheckBox);
 
 	weightSlider.Create(0, 1, 0, 100000, "Weight: ");
-	weightSlider.OnSlide(handleExprList([] (auto expression, auto args) {
+	weightSlider.OnSlide(handleExprList([] (auto& expression, auto args) {
 		expression.weight = args.fValue;
 	}));
 	AddWidget(&weightSlider);
@@ -130,7 +130,7 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 	overrideMouthCombo.AddItem("None", (uint64_t)ExpressionComponent::Override::None);
 	overrideMouthCombo.AddItem("Block", (uint64_t)ExpressionComponent::Override::Block);
 	overrideMouthCombo.AddItem("Blend", (uint64_t)ExpressionComponent::Override::Blend);
-	overrideMouthCombo.OnSelect(handleExprList([] (auto expression, auto args) {
+	overrideMouthCombo.OnSelect(handleExprList([] (auto& expression, auto args) {
 		expression.override_mouth = (ExpressionComponent::Override)args.userdata;
 	}));
 	AddWidget(&overrideMouthCombo);
@@ -140,7 +140,7 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 	overrideBlinkCombo.AddItem("None", (uint64_t)ExpressionComponent::Override::None);
 	overrideBlinkCombo.AddItem("Block", (uint64_t)ExpressionComponent::Override::Block);
 	overrideBlinkCombo.AddItem("Blend", (uint64_t)ExpressionComponent::Override::Blend);
-	overrideBlinkCombo.OnSelect(handleExprList([] (auto expression, auto args) {
+	overrideBlinkCombo.OnSelect(handleExprList([] (auto& expression, auto args) {
 		expression.override_blink = (ExpressionComponent::Override)args.userdata;
 	}));
 	AddWidget(&overrideBlinkCombo);
@@ -150,7 +150,7 @@ void ExpressionWindow::Create(EditorComponent* _editor)
 	overrideLookCombo.AddItem("None", (uint64_t)ExpressionComponent::Override::None);
 	overrideLookCombo.AddItem("Block", (uint64_t)ExpressionComponent::Override::Block);
 	overrideLookCombo.AddItem("Blend", (uint64_t)ExpressionComponent::Override::Blend);
-	overrideLookCombo.OnSelect(handleExprList([] (auto expression, auto args) {
+	overrideLookCombo.OnSelect(handleExprList([] (auto& expression, auto args) {
 		expression.override_look = (ExpressionComponent::Override)args.userdata;
 	}));
 	AddWidget(&overrideLookCombo);
