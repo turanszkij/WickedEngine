@@ -88,6 +88,7 @@ public:
 	wi::physics::PickDragOperation physicsDragOp;
 
 	std::unique_ptr<wi::RenderPath3D> renderPath;
+	wi::RenderPath3D_PathTracing* pathtracer = nullptr; // This is not lifetime managing pointer, it will view renderPath if it's path tracing
 	wi::graphics::Texture gui_background_effect;
 	const wi::graphics::Texture* GetGUIBlurredBackground() const override { return renderPath->GetGUIBlurredBackground(); }
 

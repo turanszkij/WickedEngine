@@ -2966,7 +2966,6 @@ void EditorComponent::Update(float dt)
 		camera.UpdateCamera();
 	}
 
-	wi::RenderPath3D_PathTracing* pathtracer = dynamic_cast<wi::RenderPath3D_PathTracing*>(renderPath.get());
 	if (pathtracer != nullptr)
 	{
 		pathtracer->setTargetSampleCount((int)graphicsWnd.pathTraceTargetSlider.GetValue());

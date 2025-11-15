@@ -58,35 +58,33 @@ namespace wi::lua
 			return 0;
 		}
 
+		wi::RenderPath* renderpath = component->GetActivePath();
+
 		//return 3d component if the active one is of that type
-		RenderPath3D* comp3D = dynamic_cast<RenderPath3D*>(component->GetActivePath());
-		if (comp3D != nullptr)
+		if (renderpath->GetScriptBindingID() == wi::RenderPath3D::script_check_identifier)
 		{
-			Luna<RenderPath3D_BindLua>::push(L, comp3D);
+			Luna<RenderPath3D_BindLua>::push(L, (wi::RenderPath3D*)renderpath);
 			return 1;
 		}
 
 		//return loading component if the active one is of that type
-		LoadingScreen* compLoad = dynamic_cast<LoadingScreen*>(component->GetActivePath());
-		if (compLoad != nullptr)
+		if (renderpath->GetScriptBindingID() == wi::LoadingScreen::script_check_identifier)
 		{
-			Luna<LoadingScreen_BindLua>::push(L, compLoad);
+			Luna<LoadingScreen_BindLua>::push(L, (wi::LoadingScreen*)renderpath);
 			return 1;
 		}
 
 		//return 2d component if the active one is of that type
-		RenderPath2D* comp2D = dynamic_cast<RenderPath2D*>(component->GetActivePath());
-		if (comp2D != nullptr)
+		if (renderpath->GetScriptBindingID() == wi::RenderPath2D::script_check_identifier)
 		{
-			Luna<RenderPath2D_BindLua>::push(L, comp2D);
+			Luna<RenderPath2D_BindLua>::push(L, (wi::RenderPath2D*)renderpath);
 			return 1;
 		}
 
 		//return component if the active one is of that type
-		RenderPath* comp = dynamic_cast<RenderPath*>(component->GetActivePath());
-		if (comp != nullptr)
+		if (renderpath->GetScriptBindingID() == wi::RenderPath::script_check_identifier)
 		{
-			Luna<RenderPath_BindLua>::push(L, comp);
+			Luna<RenderPath_BindLua>::push(L, (wi::RenderPath*)renderpath);
 			return 1;
 		}
 

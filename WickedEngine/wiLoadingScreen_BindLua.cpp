@@ -47,7 +47,7 @@ namespace wi::lua
 
 	int LoadingScreen_BindLua::AddLoadModelTask(lua_State* L)
 	{
-		LoadingScreen* loading = dynamic_cast<LoadingScreen*>(component);
+		LoadingScreen* loading = static_cast<LoadingScreen*>(component);
 		if (loading == nullptr)
 		{
 			wi::lua::SError(L, "AddLoadModelTask(Scene scene, string fileName, opt Matrix transform): loading screen is invalid!");
@@ -137,7 +137,7 @@ namespace wi::lua
 	}
 	int LoadingScreen_BindLua::AddRenderPathActivationTask(lua_State* L)
 	{
-		LoadingScreen* loading = dynamic_cast<LoadingScreen*>(component);
+		LoadingScreen* loading = static_cast<LoadingScreen*>(component);
 		if (loading == nullptr)
 		{
 			wi::lua::SError(L, "AddRenderPathActivationTask(RenderPath path, opt float fadeSeconds = 0, opt int fadeR = 0,fadeG = 0,fadeB = 0, opt FadeType fadetype = FadeType.FadeToColor): loading screen is invalid!");
@@ -224,7 +224,7 @@ namespace wi::lua
 	}
 	int LoadingScreen_BindLua::IsFinished(lua_State* L)
 	{
-		LoadingScreen* loading = dynamic_cast<LoadingScreen*>(component);
+		LoadingScreen* loading = static_cast<LoadingScreen*>(component);
 		if (loading != nullptr)
 		{
 			wi::lua::SSetBool(L, loading->isFinished());
@@ -235,7 +235,7 @@ namespace wi::lua
 	}
 	int LoadingScreen_BindLua::GetProgress(lua_State* L)
 	{
-		LoadingScreen* loading = dynamic_cast<LoadingScreen*>(component);
+		LoadingScreen* loading = static_cast<LoadingScreen*>(component);
 		if (loading != nullptr)
 		{
 			wi::lua::SSetInt(L, loading->getProgress());
@@ -246,7 +246,7 @@ namespace wi::lua
 	}
 	int LoadingScreen_BindLua::SetBackgroundTexture(lua_State* L)
 	{
-		LoadingScreen* loading = dynamic_cast<LoadingScreen*>(component);
+		LoadingScreen* loading = static_cast<LoadingScreen*>(component);
 		if (loading == nullptr)
 		{
 			wi::lua::SError(L, "SetBackgroundTexture(Texture tex): loading screen is not valid!");
@@ -269,7 +269,7 @@ namespace wi::lua
 	}
 	int LoadingScreen_BindLua::GetBackgroundTexture(lua_State* L)
 	{
-		LoadingScreen* loading = dynamic_cast<LoadingScreen*>(component);
+		LoadingScreen* loading = static_cast<LoadingScreen*>(component);
 		if (loading == nullptr)
 		{
 			wi::lua::SError(L, "GetBackgroundTexture(): loading screen is not valid!");
@@ -280,7 +280,7 @@ namespace wi::lua
 	}
 	int LoadingScreen_BindLua::SetBackgroundMode(lua_State* L)
 	{
-		LoadingScreen* loading = dynamic_cast<LoadingScreen*>(component);
+		LoadingScreen* loading = static_cast<LoadingScreen*>(component);
 		if (loading == nullptr)
 		{
 			wi::lua::SError(L, "SetBackgroundMode(int mode): loading screen is not valid!");
@@ -297,7 +297,7 @@ namespace wi::lua
 	}
 	int LoadingScreen_BindLua::GetBackgroundMode(lua_State* L)
 	{
-		LoadingScreen* loading = dynamic_cast<LoadingScreen*>(component);
+		LoadingScreen* loading = static_cast<LoadingScreen*>(component);
 		if (loading == nullptr)
 		{
 			wi::lua::SError(L, "GetBackgroundMode(): loading screen is not valid!");

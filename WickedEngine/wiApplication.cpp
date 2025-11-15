@@ -499,18 +499,7 @@ namespace wi
 				infodisplay_str += "[32-bit]";
 #endif // _ARM
 
-#ifdef WICKEDENGINE_BUILD_DX12
-				if (dynamic_cast<GraphicsDevice_DX12*>(graphicsDevice.get()))
-				{
-					infodisplay_str += "[DX12]";
-				}
-#endif // WICKEDENGINE_BUILD_DX12
-#ifdef WICKEDENGINE_BUILD_VULKAN
-				if (dynamic_cast<GraphicsDevice_Vulkan*>(graphicsDevice.get()))
-				{
-					infodisplay_str += "[Vulkan]";
-				}
-#endif // WICKEDENGINE_BUILD_VULKAN
+				infodisplay_str += graphicsDevice->GetTag();
 
 #ifdef _DEBUG
 				infodisplay_str += "[DEBUG]";
