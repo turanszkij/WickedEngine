@@ -1558,49 +1558,29 @@ namespace dx12_internal
 		}
 	};
 
-	Resource_DX12* to_internal(const GPUResource* param)
+	template<typename T> struct DX12Type;
+	template<> struct DX12Type<GPUResource> { using type = Resource_DX12; };
+	template<> struct DX12Type<GPUBuffer> { using type = Resource_DX12; };
+	template<> struct DX12Type<Texture> { using type = Texture_DX12; };
+	template<> struct DX12Type<Sampler> { using type = Sampler_DX12; };
+	template<> struct DX12Type<GPUQueryHeap> { using type = QueryHeap_DX12; };
+	template<> struct DX12Type<Shader> { using type = PipelineState_DX12; };
+	template<> struct DX12Type<PipelineState> { using type = PipelineState_DX12; };
+	template<> struct DX12Type<RaytracingAccelerationStructure> { using type = BVH_DX12; };
+	template<> struct DX12Type<RaytracingPipelineState> { using type = RTPipelineState_DX12; };
+	template<> struct DX12Type<SwapChain> { using type = SwapChain_DX12; };
+	template<> struct DX12Type<VideoDecoder> { using type = VideoDecoder_DX12; };
+
+	template<typename T>
+	typename DX12Type<T>::type* to_internal(const T* param)
 	{
-		return static_cast<Resource_DX12*>(param->internal_state.get());
+		return static_cast<typename DX12Type<T>::type*>(param->internal_state.get());
 	}
-	Resource_DX12* to_internal(const GPUBuffer* param)
+
+	template<typename T>
+	typename DX12Type<T>::type* to_internal(const GPUResource* res)
 	{
-		return static_cast<Resource_DX12*>(param->internal_state.get());
-	}
-	Texture_DX12* to_internal(const Texture* param)
-	{
-		return static_cast<Texture_DX12*>(param->internal_state.get());
-	}
-	Sampler_DX12* to_internal(const Sampler* param)
-	{
-		return static_cast<Sampler_DX12*>(param->internal_state.get());
-	}
-	QueryHeap_DX12* to_internal(const GPUQueryHeap* param)
-	{
-		return static_cast<QueryHeap_DX12*>(param->internal_state.get());
-	}
-	PipelineState_DX12* to_internal(const Shader* param)
-	{
-		return static_cast<PipelineState_DX12*>(param->internal_state.get());
-	}
-	PipelineState_DX12* to_internal(const PipelineState* param)
-	{
-		return static_cast<PipelineState_DX12*>(param->internal_state.get());
-	}
-	BVH_DX12* to_internal(const RaytracingAccelerationStructure* param)
-	{
-		return static_cast<BVH_DX12*>(param->internal_state.get());
-	}
-	RTPipelineState_DX12* to_internal(const RaytracingPipelineState* param)
-	{
-		return static_cast<RTPipelineState_DX12*>(param->internal_state.get());
-	}
-	SwapChain_DX12* to_internal(const SwapChain* param)
-	{
-		return static_cast<SwapChain_DX12*>(param->internal_state.get());
-	}
-	VideoDecoder_DX12* to_internal(const VideoDecoder* param)
-	{
-		return static_cast<VideoDecoder_DX12*>(param->internal_state.get());
+		return static_cast<typename DX12Type<T>::type*>(res->internal_state.get());
 	}
 
 #ifdef PLATFORM_WINDOWS_DESKTOP
@@ -6934,16 +6914,16 @@ std::mutex queue_locker;
 	void GraphicsDevice_DX12::CopyBuffer(const GPUBuffer* pDst, uint64_t dst_offset, const GPUBuffer* pSrc, uint64_t src_offset, uint64_t size, CommandList cmd)
 	{
 		CommandList_DX12& commandlist = GetCommandList(cmd);
-		auto src_internal = to_internal((const GPUBuffer*)pSrc);
-		auto dst_internal = to_internal((const GPUBuffer*)pDst);
+		auto src_internal = to_internal(pSrc);
+		auto dst_internal = to_internal(pDst);
 
 		commandlist.GetGraphicsCommandList()->CopyBufferRegion(dst_internal->resource.Get(), dst_offset, src_internal->resource.Get(), src_offset, size);
 	}
 	void GraphicsDevice_DX12::CopyTexture(const Texture* dst, uint32_t dstX, uint32_t dstY, uint32_t dstZ, uint32_t dstMip, uint32_t dstSlice, const Texture* src, uint32_t srcMip, uint32_t srcSlice, CommandList cmd, const Box* srcbox, ImageAspect dst_aspect, ImageAspect src_aspect)
 	{
 		CommandList_DX12& commandlist = GetCommandList(cmd);
-		auto src_internal = to_internal((const GPUBuffer*)src);
-		auto dst_internal = to_internal((const GPUBuffer*)dst);
+		auto src_internal = to_internal<GPUBuffer>(src);
+		auto dst_internal = to_internal<GPUBuffer>(dst);
 		UINT srcPlane = src_aspect == ImageAspect::STENCIL ? 1 : 0;
 		UINT dstPlane = dst_aspect == ImageAspect::STENCIL ? 1 : 0;
 		CD3DX12_TEXTURE_COPY_LOCATION src_location(src_internal->resource.Get(), D3D12CalcSubresource(srcMip, srcSlice, srcPlane, src->desc.mip_levels, src->desc.array_size));
