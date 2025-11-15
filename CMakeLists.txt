@@ -130,7 +130,7 @@ elseif(UNIX)
         -Wno-unused-but-set-variable
         -Wno-sign-compare
 
-        -fno-exceptions
+        $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
     )
 endif()
 
@@ -161,8 +161,6 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         -Wno-strict-aliasing
     )
 endif()
-
-add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>)
 
 add_subdirectory(WickedEngine)
 add_custom_target(Content
