@@ -109,9 +109,11 @@ if (WIN32)
 
     if (MSVC)
         add_compile_options(
-            /W3
-            /MP
-            /EHsc-
+            /W3 # warning level 3
+            /MP # multi-processor compilation
+            /EHsc- # exceptions disabled
+            /GR- # runtime type information disabled
+            $<$<CONFIG:Release>:/GS-> # security check disabled in Release
         )
     endif()
 
@@ -123,14 +125,23 @@ elseif(UNIX)
 
     # Common compiler options and warning level for CLANG and GCC:
     add_compile_options(
-        -Wall
+        -Wall # warning level: all
 
+        # some warnings are disabled to better match MSVC warning level 3:
         -Wno-unused-variable
         -Wno-unused-function
         -Wno-unused-but-set-variable
         -Wno-sign-compare
 
-        $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
+        $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions> # exceptions disabled
+        $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti> # runtime type information disabled
+
+        # security checks disabled in Release:
+        $<$<CONFIG:Release>:-fno-stack-protector>
+        $<$<CONFIG:Release>:-fcf-protection=none>
+        $<$<CONFIG:Release>:-fno-stack-clash-protection>
+        $<$<CONFIG:Release>:-fno-stack-check>
+        $<$<CONFIG:Release>:-fno-asynchronous-unwind-tables>
     )
 endif()
 
