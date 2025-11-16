@@ -88,7 +88,14 @@ namespace wi::platform
 		int window_width, window_height;
 		SDL_GetWindowSize(window, &window_width, &window_height);
 		SDL_Vulkan_GetDrawableSize(window, &dest->width, &dest->height);
-		dest->dpi = ((float)dest->width / (float)window_width) * 96.f;
+
+		float dpi;
+		int window_index = SDL_GetWindowDisplayIndex(window);
+		if (SDL_GetDisplayDPI(window_index, &dpi, nullptr, nullptr) != 0)
+		{
+			dpi = 96.f;
+		}
+		dest->dpi = ((float)dest->width / (float)window_width) * dpi;
 #endif // PLATFORM_LINUX
 	}
 }
