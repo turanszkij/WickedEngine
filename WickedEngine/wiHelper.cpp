@@ -1501,7 +1501,7 @@ namespace wi::helper
 #ifdef PLATFORM_LINUX
 		if (!pfd::settings::available())
 		{
-			wilog_messagebox("[wi::helper::FileDialog()] No file dialog backend available!");
+			wilog_messagebox("[wi::helper::FileDialog()] No file dialog backend available! Install zenity or kdialog.");
 			return;
 		}
 
