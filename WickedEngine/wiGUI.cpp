@@ -2885,9 +2885,9 @@ namespace wi::gui
 
 		font.params.posY = translation.y + sprites[state].params.siz.y * 0.5f;
 
-		selected = std::min((int)items.size(), selected);
+		selected = std::min(selected, (int)items.size() - 1);
 
-		if (selected >= 0)
+		if (selected >= 0 && selected < (int)items.size())
 		{
 			selected_font.SetText(items[selected].name);
 		}
