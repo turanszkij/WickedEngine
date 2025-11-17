@@ -33,6 +33,9 @@ template <typename T>
 constexpr T sqr(T x) { return x * x; }
 
 template <typename T>
+constexpr T pow4(T x) { return sqr(sqr(x)); }
+
+template <typename T>
 constexpr T clamp(T x, T a, T b)
 {
 	return x < a ? a : (x > b ? b : x);
