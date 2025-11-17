@@ -9,8 +9,7 @@
 namespace wi
 {
 
-	class RenderPath3D :
-		public RenderPath2D
+	class RenderPath3D : public RenderPath2D
 	{
 	public:
 		enum AO
@@ -367,6 +366,10 @@ namespace wi
 
 		// Creates screenshot of the render result and replaces background (sky) pixels with transparency
 		wi::graphics::Texture CreateScreenshotWithAlphaBackground();
+
+		// This is an identifier of RenderPath subtype that is used for lua binding.
+		static constexpr const char* script_check_identifier = relative_path(__FILE__);
+		virtual const char* GetScriptBindingID() const { return script_check_identifier; }
 	};
 
 }

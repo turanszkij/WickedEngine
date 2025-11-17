@@ -173,6 +173,9 @@ namespace wi::graphics
 		// Performs a batched mapping of sparse resource pages to a tile pool
 		virtual void SparseUpdate(QUEUE_TYPE queue, const SparseUpdateCommand* commands, uint32_t command_count) {};
 
+		// Returns an identifier string for the graphics device subclass
+		virtual const char* GetTag() const { return ""; }
+
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		// Command List functions are below:
 		//	- These are used to record rendering commands to a CommandList

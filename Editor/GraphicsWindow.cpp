@@ -1748,13 +1748,19 @@ void GraphicsWindow::UpdateData()
 
 void GraphicsWindow::ChangeRenderPath(RENDERPATH path)
 {
+	editor->pathtracer = nullptr;
+
 	switch (path)
 	{
 	case RENDERPATH_DEFAULT:
 		editor->renderPath = std::make_unique<wi::RenderPath3D>();
 		break;
 	case RENDERPATH_PATHTRACING:
-		editor->renderPath = std::make_unique<wi::RenderPath3D_PathTracing>();
+		{
+			std::unique_ptr<wi::RenderPath3D_PathTracing> pathtracing = std::make_unique<wi::RenderPath3D_PathTracing>();
+			editor->pathtracer = pathtracing.get();
+			editor->renderPath = std::move(pathtracing);
+		}
 		break;
 	default:
 		assert(0);

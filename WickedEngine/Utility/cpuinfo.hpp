@@ -179,10 +179,6 @@ CPUInfo::CPUInfo()
 			}
 		}
 	}
-	else
-	{
-		throw std::runtime_error{"Unknown vendor! Reported vendor name is: " + mVendorId};
-	}
 
 	// Get processor brand string
 	// This seems to be working for both Intel & AMD vendors
