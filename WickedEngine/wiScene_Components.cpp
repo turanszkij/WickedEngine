@@ -3240,8 +3240,7 @@ namespace wi::scene
 			{
 				rangemod /= sqr(terrain_modifier_amount); // sqr is used to match with distance falloff used in terrain generation
 			}
-			static const size_t obb_subdiv = 4;
-			static const size_t count = (spline_node_entities.size() - 1) * obb_subdiv;
+			static const size_t count = (spline_node_entities.size() - 1) * subdivision;
 			precomputed_obbs.resize(count);
 			const XMVECTOR XAXIS = XMVectorSet(1, 0, 0, 0);
 			for (size_t i = 0; i < count; ++i)
