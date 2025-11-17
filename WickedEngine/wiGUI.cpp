@@ -829,6 +829,7 @@ namespace wi::gui
 		SetName(name);
 		SetText(name);
 		OnClick([](EventArgs args) {});
+		OnRightClick([](EventArgs args) {});
 		OnDragStart([](EventArgs args) {});
 		OnDrag([](EventArgs args) {});
 		OnDragEnd([](EventArgs args) {});
@@ -881,7 +882,8 @@ namespace wi::gui
 				Deactivate();
 			}
 
-			bool clicked = false;
+			bool leftButtonClicked = false;
+			bool rightButtonClicked = false;
 			// hover the button
 			if (pointerHitbox.intersects(hitBox))
 			{
@@ -896,7 +898,16 @@ namespace wi::gui
 				if (state == FOCUS)
 				{
 					// activate
-					clicked = true;
+					leftButtonClicked = true;
+				}
+			}
+
+			if (wi::input::Press(wi::input::MOUSE_BUTTON_RIGHT))
+			{
+				if (state == FOCUS)
+				{
+					// right-click
+					rightButtonClicked = true;
 				}
 			}
 
@@ -918,13 +929,21 @@ namespace wi::gui
 				}
 			}
 
-			if (clicked)
+			if (leftButtonClicked)
 			{
 				EventArgs args;
 				args.clickPos = pointerHitbox.pos;
 				dragStart = args.clickPos;
 				args.startPos = dragStart;
 				onDragStart(args);
+				Activate();
+			}
+
+			if (rightButtonClicked)
+			{
+				EventArgs args;
+				args.clickPos = pointerHitbox.pos;
+				onRightClick(args);
 				Activate();
 			}
 
@@ -1050,6 +1069,10 @@ namespace wi::gui
 	void Button::OnClick(std::function<void(EventArgs args)> func)
 	{
 		onClick = func;
+	}
+	void Button::OnRightClick(std::function<void(EventArgs args)> func)
+	{
+		onRightClick = func;
 	}
 	void Button::OnDragStart(std::function<void(EventArgs args)> func)
 	{

@@ -386,6 +386,7 @@ namespace wi::gui
 	{
 	protected:
 		std::function<void(EventArgs args)> onClick;
+		std::function<void(EventArgs args)> onRightClick;
 		std::function<void(EventArgs args)> onDragStart;
 		std::function<void(EventArgs args)> onDrag;
 		std::function<void(EventArgs args)> onDragEnd;
@@ -401,6 +402,7 @@ namespace wi::gui
 		const char* GetWidgetTypeName() const override { return "Button"; }
 
 		void OnClick(std::function<void(EventArgs args)> func);
+		void OnRightClick(std::function<void(EventArgs args)> func);
 		void OnDragStart(std::function<void(EventArgs args)> func);
 		void OnDrag(std::function<void(EventArgs args)> func);
 		void OnDragEnd(std::function<void(EventArgs args)> func);
