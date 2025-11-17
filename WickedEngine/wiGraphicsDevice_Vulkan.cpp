@@ -3778,7 +3778,8 @@ using namespace vulkan_internal;
 #elif defined(SDL2)
 			if (!SDL_Vulkan_CreateSurface(window, instance, &internal_state->surface))
 			{
-				throw sdl2::SDLError("Error creating a vulkan surface");
+				wilog_messagebox("Error creating a vulkan surface with SDL_Vulkan_CreateSurface!");
+				wi::platform::Exit();
 			}
 #else
 #error WICKEDENGINE VULKAN DEVICE ERROR: PLATFORM NOT SUPPORTED

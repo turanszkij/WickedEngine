@@ -105,10 +105,15 @@ endif()
 if (WIN32)
     set(PLATFORM "Windows")
     add_compile_definitions(WIN32=1)
+    add_compile_definitions(_HAS_EXCEPTIONS=0)
+
     if (MSVC)
         add_compile_options(
-            /W3
-            /MP
+            /W3 # warning level 3
+            /MP # multi-processor compilation
+            /EHsc- # exceptions disabled
+            /GR- # runtime type information disabled
+            $<$<CONFIG:Release>:/GS-> # security check disabled in Release
         )
     endif()
 
@@ -116,15 +121,27 @@ if (WIN32)
 elseif(UNIX)
     set(PLATFORM "SDL2")
     add_compile_definitions(SDL2=1)
+    add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=1)
 
     # Common compiler options and warning level for CLANG and GCC:
     add_compile_options(
-        -Wall
+        -Wall # warning level: all
 
+        # some warnings are disabled to better match MSVC warning level 3:
         -Wno-unused-variable
         -Wno-unused-function
         -Wno-unused-but-set-variable
         -Wno-sign-compare
+
+        $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions> # exceptions disabled
+        $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti> # runtime type information disabled
+
+        # security checks disabled in Release:
+        $<$<CONFIG:Release>:-fno-stack-protector>
+        $<$<CONFIG:Release>:-fcf-protection=none>
+        $<$<CONFIG:Release>:-fno-stack-clash-protection>
+        $<$<CONFIG:Release>:-fno-stack-check>
+        $<$<CONFIG:Release>:-fno-asynchronous-unwind-tables>
     )
 endif()
 
@@ -155,7 +172,6 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         -Wno-strict-aliasing
     )
 endif()
-
 
 add_subdirectory(WickedEngine)
 add_custom_target(Content

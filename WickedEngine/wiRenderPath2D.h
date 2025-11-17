@@ -11,8 +11,7 @@ namespace wi
 	class Sprite;
 	class SpriteFont;
 
-	class RenderPath2D :
-		public RenderPath
+	class RenderPath2D : public RenderPath
 	{
 	protected:
 		wi::graphics::Texture rtStencilExtracted;
@@ -104,6 +103,10 @@ namespace wi
 
 		float GetHDRScaling() const { return hdr_scaling; }
 		void SetHDRScaling(float value) { hdr_scaling = value; }
+
+		// This is an identifier of RenderPath subtype that is used for lua binding.
+		static constexpr const char* script_check_identifier = relative_path(__FILE__);
+		virtual const char* GetScriptBindingID() const { return script_check_identifier; }
 	};
 
 }

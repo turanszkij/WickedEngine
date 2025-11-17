@@ -49,7 +49,7 @@ namespace wi::lua
 			wi::lua::Sprite_BindLua* sprite = Luna<wi::lua::Sprite_BindLua>::lightcheck(L, 1);
 			if (sprite != nullptr)
 			{
-				RenderPath2D* ccomp = dynamic_cast<RenderPath2D*>(component);
+				RenderPath2D* ccomp = static_cast<RenderPath2D*>(component);
 				if (ccomp != nullptr)
 				{
 					if (argc > 1)
@@ -94,7 +94,7 @@ namespace wi::lua
 				return 0;
 			}
 
-			RenderPath2D* ccomp = dynamic_cast<RenderPath2D*>(component);
+			RenderPath2D* ccomp = static_cast<RenderPath2D*>(component);
 			if (ccomp != nullptr)
 			{
 				if (argc > 1)
@@ -126,7 +126,7 @@ namespace wi::lua
 			wi::lua::SpriteFont_BindLua* font = Luna<wi::lua::SpriteFont_BindLua>::lightcheck(L, 1);
 			if (font != nullptr)
 			{
-				RenderPath2D* ccomp = dynamic_cast<RenderPath2D*>(component);
+				RenderPath2D* ccomp = static_cast<RenderPath2D*>(component);
 				if (ccomp != nullptr)
 				{
 					if (argc > 1)
@@ -161,7 +161,7 @@ namespace wi::lua
 			wi::lua::Sprite_BindLua* sprite = Luna<wi::lua::Sprite_BindLua>::lightcheck(L, 1);
 			if (sprite != nullptr)
 			{
-				RenderPath2D* ccomp = dynamic_cast<RenderPath2D*>(component);
+				RenderPath2D* ccomp = static_cast<RenderPath2D*>(component);
 				if (ccomp != nullptr)
 				{
 					ccomp->RemoveSprite(&sprite->sprite);
@@ -193,7 +193,7 @@ namespace wi::lua
 			wi::lua::SpriteFont_BindLua* font = Luna<wi::lua::SpriteFont_BindLua>::lightcheck(L, 1);
 			if (font != nullptr)
 			{
-				RenderPath2D* ccomp = dynamic_cast<RenderPath2D*>(component);
+				RenderPath2D* ccomp = static_cast<RenderPath2D*>(component);
 				if (ccomp != nullptr)
 				{
 					ccomp->RemoveFont(&font->font);
@@ -219,7 +219,7 @@ namespace wi::lua
 			wi::lua::SError(L, "ClearSprites() component is empty!");
 			return 0;
 		}
-		RenderPath2D* ccomp = dynamic_cast<RenderPath2D*>(component);
+		RenderPath2D* ccomp = static_cast<RenderPath2D*>(component);
 		if (ccomp != nullptr)
 		{
 			ccomp->ClearSprites();
@@ -237,7 +237,7 @@ namespace wi::lua
 			wi::lua::SError(L, "ClearFonts() component is empty!");
 			return 0;
 		}
-		RenderPath2D* ccomp = dynamic_cast<RenderPath2D*>(component);
+		RenderPath2D* ccomp = static_cast<RenderPath2D*>(component);
 		if (ccomp != nullptr)
 		{
 			ccomp->ClearFonts();
@@ -261,7 +261,7 @@ namespace wi::lua
 			wi::lua::Sprite_BindLua* sprite = Luna<wi::lua::Sprite_BindLua>::lightcheck(L, 1);
 			if (sprite != nullptr)
 			{
-				RenderPath2D* ccomp = dynamic_cast<RenderPath2D*>(component);
+				RenderPath2D* ccomp = static_cast<RenderPath2D*>(component);
 				if (ccomp != nullptr)
 				{
 					wi::lua::SSetInt(L, ccomp->GetSpriteOrder(&sprite->sprite));
@@ -294,7 +294,7 @@ namespace wi::lua
 			wi::lua::SpriteFont_BindLua* font = Luna<wi::lua::SpriteFont_BindLua>::lightcheck(L, 1);
 			if (font != nullptr)
 			{
-				RenderPath2D* ccomp = dynamic_cast<RenderPath2D*>(component);
+				RenderPath2D* ccomp = static_cast<RenderPath2D*>(component);
 				if (ccomp != nullptr)
 				{
 					wi::lua::SSetInt(L, ccomp->GetFontOrder(&font->font));
@@ -325,7 +325,7 @@ namespace wi::lua
 		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 0)
 		{
-			RenderPath2D* ccomp = dynamic_cast<RenderPath2D*>(component);
+			RenderPath2D* ccomp = static_cast<RenderPath2D*>(component);
 			if (ccomp != nullptr)
 			{
 				ccomp->AddLayer(wi::lua::SGetString(L, 1));
@@ -349,7 +349,7 @@ namespace wi::lua
 			return 0;
 		}
 
-		RenderPath2D* ccomp = dynamic_cast<RenderPath2D*>(component);
+		RenderPath2D* ccomp = static_cast<RenderPath2D*>(component);
 		if (ccomp != nullptr)
 		{
 			std::string ss;
@@ -377,7 +377,7 @@ namespace wi::lua
 		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 1)
 		{
-			RenderPath2D* ccomp = dynamic_cast<RenderPath2D*>(component);
+			RenderPath2D* ccomp = static_cast<RenderPath2D*>(component);
 			if (ccomp != nullptr)
 			{
 				ccomp->SetLayerOrder(wi::lua::SGetString(L, 1), wi::lua::SGetInt(L, 2));
@@ -403,7 +403,7 @@ namespace wi::lua
 		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 1)
 		{
-			RenderPath2D* ccomp = dynamic_cast<RenderPath2D*>(component);
+			RenderPath2D* ccomp = static_cast<RenderPath2D*>(component);
 			if (ccomp != nullptr)
 			{
 				wi::lua::Sprite_BindLua* sprite = Luna<wi::lua::Sprite_BindLua>::lightcheck(L, 1);
@@ -437,7 +437,7 @@ namespace wi::lua
 		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 1)
 		{
-			RenderPath2D* ccomp = dynamic_cast<RenderPath2D*>(component);
+			RenderPath2D* ccomp = static_cast<RenderPath2D*>(component);
 			if (ccomp != nullptr)
 			{
 				wi::lua::SpriteFont_BindLua* font = Luna<wi::lua::SpriteFont_BindLua>::lightcheck(L, 1);
@@ -469,7 +469,7 @@ namespace wi::lua
 			wi::lua::SError(L, "GetHDRScaling() component is empty!");
 			return 0;
 		}
-		RenderPath2D* ccomp = dynamic_cast<RenderPath2D*>(component);
+		RenderPath2D* ccomp = static_cast<RenderPath2D*>(component);
 		if (ccomp != nullptr)
 		{
 			wi::lua::SSetFloat(L, ccomp->GetHDRScaling());
@@ -491,7 +491,7 @@ namespace wi::lua
 		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 1)
 		{
-			RenderPath2D* ccomp = dynamic_cast<RenderPath2D*>(component);
+			RenderPath2D* ccomp = static_cast<RenderPath2D*>(component);
 			if (ccomp != nullptr)
 			{
 				ccomp->SetHDRScaling(wi::lua::SGetFloat(L, 1));

@@ -404,6 +404,13 @@ void ContentBrowserWindow::AddItem(const std::string& filename, const std::strin
 			});
 		this->SetVisible(false);
 		});
+	button.OnRightClick([this, filename](wi::gui::EventArgs args) {
+		wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+			editor->NewScene();
+			editor->Open(filename);
+			});
+		this->SetVisible(false);
+		});
 	button.font_description.params.h_align = wi::font::WIFALIGN_CENTER;
 	button.font_description.params.v_align = wi::font::WIFALIGN_TOP;
 	button.font.params.size = 42;
@@ -438,4 +445,5 @@ void ContentBrowserWindow::AddItem(const std::string& filename, const std::strin
 			}
 		}
 	}
+	button.SetTooltip(button.GetTooltip() + "\n\nLeft-click: Merge into current scene\nRight-click: Open in new scene tab");
 }
