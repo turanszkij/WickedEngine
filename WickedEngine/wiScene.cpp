@@ -3830,7 +3830,9 @@ namespace wi::scene
 	}
 	void Scene::RunArmatureUpdateSystem(wi::jobsystem::context& ctx)
 	{
-		wi::jobsystem::Dispatch(ctx, (uint32_t)armatures.GetCount(), 1, [&](wi::jobsystem::JobArgs args) {
+		// disable pointer-overflow UBSAN check because adding an offset to a nullptr is UB.
+		// we only calculate but never use the value in that case, so it should be fine
+		wi::jobsystem::Dispatch(ctx, (uint32_t)armatures.GetCount(), 1, [&](wi::jobsystem::JobArgs args) NO_SANITIZE("pointer-overflow") {
 
 			ArmatureComponent& armature = armatures[args.jobIndex];
 			Entity entity = armatures.GetEntity(args.jobIndex);
