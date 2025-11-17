@@ -2650,7 +2650,7 @@ namespace wi::scene
 		wi::primitive::AABB aabb;
 		wi::ecs::Entity materialEntity = wi::ecs::INVALID_ENTITY; // temp for terrain usage
 		mutable wi::ecs::Entity materialEntity_terrainPrev = wi::ecs::INVALID_ENTITY; // temp for terrain usage
-		wi::vector<BoundingOrientedBox> precomputed_obbs;
+		wi::vector<BoundingOrientedBox> precomputed_obbs; // an array of OBBs that approximate the spline's volume
 
 		// Evaluate an interpolated location on the spline at t which in range [0,1] on the spline
 		//	the result matrix is oriented to look towards the spline direction and face upwards along the spline normal
@@ -2669,6 +2669,7 @@ namespace wi::scene
 		void PrecomputeSplineNodeDistances();
 
 		// Compute the oriented bounding boxes of the spline iteratively that approximates the spline volume
+		//	Will write into the precomputed_obbs array, subdivision mean how many boxes will be used per-segment
 		void PrecomputeSplineOBBs(int subdivision = 10);
 
 		// By default the spline is drawn as camera facing, this can be used to set it to be drawn aligned to segment rotations:
