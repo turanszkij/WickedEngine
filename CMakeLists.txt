@@ -123,6 +123,10 @@ elseif(UNIX)
     add_compile_definitions(SDL2=1)
     add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=1)
 
+
+    set(ubsan_active
+         "$<AND:$<BOOL:${WICKED_ENABLE_UBSAN}>,$<OR:$<CONFIG:Debug>,$<BOOL:${WICKED_ENABLE_SAN_ALWAYS}>>>"
+    )
     # Common compiler options and warning level for CLANG and GCC:
     add_compile_options(
         -Wall # warning level: all
@@ -134,7 +138,7 @@ elseif(UNIX)
         -Wno-sign-compare
 
         $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions> # exceptions disabled
-        $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti> # runtime type information disabled
+        $<$<AND:$<COMPILE_LANGUAGE:CXX>,$<NOT:${ubsan_active}>>:-fno-rtti> # runtime type information disabled
 
         # security checks disabled in Release:
         $<$<CONFIG:Release>:-fno-stack-protector>
@@ -154,8 +158,9 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         -Wno-nullability-completeness
         -Wno-unused-private-field
 
-        # Increase Ccache hit rate, note that you also need to set config options
-        # in your Ccache config, see https://ccache.dev/manual/latest.html#_precompiled_headers
+        # Increase Ccache hit rate, note that you also need to set config
+        # options in your Ccache config
+        # see https://ccache.dev/manual/latest.html#_precompiled_headers
         "SHELL:-Xclang -fno-pch-timestamp"
     )
     if (USE_LIBCXX)
