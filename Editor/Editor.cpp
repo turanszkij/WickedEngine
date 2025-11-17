@@ -251,7 +251,8 @@ void HotkeyRemap(Editor* main)
 		{"F9", wi::input::KEYBOARD_BUTTON_F9},
 		{"F10", wi::input::KEYBOARD_BUTTON_F10},
 		{"F11", wi::input::KEYBOARD_BUTTON_F11},
-		{"F12", wi::input::KEYBOARD_BUTTON_F12}
+		{"F12", wi::input::KEYBOARD_BUTTON_F12},
+		{"SPACE", wi::input::KEYBOARD_BUTTON_SPACE},
 	};
 
 	wi::config::Section hotkeyssection = main->config.GetSection("hotkeys");

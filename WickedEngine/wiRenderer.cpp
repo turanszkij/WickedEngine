@@ -8220,6 +8220,9 @@ void DrawDebugWorld(
 	if (debugEnvProbes)
 	{
 		device->EventBegin("Debug EnvProbes", cmd);
+
+		BindCameraCB(camera, camera, camera, cmd);
+
 		// Envmap spheres:
 
 		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_ENVPROBE], cmd);
