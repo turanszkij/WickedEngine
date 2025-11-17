@@ -6229,6 +6229,8 @@ namespace wi::scene
 			{
 				spline.aabb = spline.ComputeAABB();
 			}
+
+			spline.PrecomputeSplineOBBs(4);
 		});
 		wi::jobsystem::Wait(ctx);
 	}

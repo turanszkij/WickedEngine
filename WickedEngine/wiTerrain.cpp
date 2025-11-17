@@ -183,6 +183,7 @@ namespace wi::terrain
 		wi::jobsystem::context workload;
 		std::atomic_bool cancelled{ false };
 		wi::vector<SplineComponent> splines;
+		wi::vector<Chunk> removable_chunks; // chunks that were invalidated are regenerated on the generator thread. Before merging them with the scene, the previous version of them will need to be removed from the destination scene
 	};
 
 	wi::jobsystem::context virtual_texture_ctx;
@@ -605,23 +606,43 @@ namespace wi::terrain
 			const SplineComponent& spline = scene->splines[i];
 			if (spline.terrain_modifier_amount > 0 || spline.prev_terrain_modifier_amount > 0)
 			{
-				restart_generation |= spline.dirty_terrain;
-				if (restart_generation)
+				bool spline_terrain_invalidation = false;
+				if (spline.dirty_terrain)
 				{
 					spline.dirty_terrain = false;
+					spline_terrain_invalidation = true;
 					spline.prev_terrain_modifier_amount = spline.terrain_modifier_amount;
 					spline.prev_terrain_pushdown = spline.terrain_pushdown;
 					spline.prev_terrain_texture_falloff = spline.terrain_texture_falloff;
 					spline.prev_terrain_generation_nodes = (int)spline.spline_node_entities.size();
 				}
-				restart_generation |= spline.materialEntity != spline.materialEntity_terrainPrev;
+				spline_terrain_invalidation |= spline.materialEntity != spline.materialEntity_terrainPrev;
 				const MaterialComponent* splineMaterial = scene->materials.GetComponent(spline.materialEntity);
 				if (splineMaterial != nullptr)
 				{
-					restart_generation |= splineMaterial->IsDirty();
+					spline_terrain_invalidation |= splineMaterial->IsDirty();
 					splineMaterialEntities.push_back(spline.materialEntity);
 				}
 				spline.materialEntity_terrainPrev = spline.materialEntity;
+
+				if (spline_terrain_invalidation)
+				{
+					for (auto it = chunks.begin(); it != chunks.end(); it++)
+					{
+						ChunkData& chunk_data = it->second;
+						if (chunk_data.invalidated)
+							continue;
+						BoundingBox bb(chunk_data.sphere.center, XMFLOAT3(chunk_data.sphere.radius, 1000000, chunk_data.sphere.radius));
+						for (const BoundingOrientedBox& obb : spline.precomputed_obbs)
+						{
+							if (obb.Intersects(bb))
+							{
+								chunk_data.invalidated = true;
+								break;
+							}
+						}
+					}
+				}
 			}
 		}
 
@@ -655,6 +676,24 @@ namespace wi::terrain
 		{
 			weather = *weather_component; // feedback default weather
 		}
+
+		// Invalidated chunks replacements, originals are removed before merging updated ones:
+		for (Chunk chunk : generator->removable_chunks)
+		{
+			auto it = chunks.find(chunk);
+			if (it != chunks.end())
+			{
+				ChunkData& chunk_data = it->second;
+				chunk_data.invalidated = false;
+				scene->Entity_Remove(chunk_data.entity);
+				chunk_data.props_entity = INVALID_ENTITY;
+				if (chunk_data.vt != nullptr)
+				{
+					chunk_data.vt->invalidate();
+				}
+			}
+		}
+		generator->removable_chunks.clear();
 
 		// What was generated, will be merged in to the main scene
 		scene->MergeFastInternal(generator->scene);
@@ -916,12 +955,25 @@ namespace wi::terrain
 				chunk.x += offset_x;
 				chunk.z += offset_z;
 				auto it = chunks.find(chunk);
-				if (it == chunks.end() || it->second.entity == INVALID_ENTITY)
+				if (it == chunks.end() || it->second.entity == INVALID_ENTITY || it->second.invalidated)
 				{
 					// Generate a new chunk:
 					ChunkData& chunk_data = chunks[chunk];
 
-					chunk_data.entity = generator->scene.Entity_CreateObject("chunk_" + std::to_string(chunk.x) + "_" + std::to_string(chunk.z));
+					std::string chunk_name = "chunk_" + std::to_string(chunk.x) + "_" + std::to_string(chunk.z);
+					if (chunk_data.entity == INVALID_ENTITY)
+					{
+						chunk_data.entity = generator->scene.Entity_CreateObject(chunk_name);
+					}
+					else
+					{
+						// replacement will be made instead of simple merge, entity ID can be reused:
+						generator->scene.names.Create(chunk_data.entity) = std::move(chunk_name);
+						generator->scene.layers.Create(chunk_data.entity);
+						generator->scene.transforms.Create(chunk_data.entity);
+						generator->scene.objects.Create(chunk_data.entity);
+						generator->removable_chunks.push_back(chunk);
+					}
 					ObjectComponent& object = *generator->scene.objects.GetComponent(chunk_data.entity);
 					object.lod_bias = lod_bias;
 					object.filterMask |= wi::enums::FILTER_NAVIGATION_MESH;
@@ -1134,6 +1186,8 @@ namespace wi::terrain
 					}
 
 					// Create the textures for virtual texture update:
+					chunk_data.heightmap = {};
+					chunk_data.blendmap = {};
 					CreateChunkRegionTexture(chunk_data);
 
 					if (IsPhysicsEnabled())
@@ -1162,10 +1216,13 @@ namespace wi::terrain
 					if (it != chunks.end() && it->second.entity != INVALID_ENTITY)
 					{
 						ChunkData& chunk_data = it->second;
-						if (chunk_data.grass_entity == INVALID_ENTITY && chunk_data.grass.meshID != INVALID_ENTITY)
+						if ((chunk_data.grass_entity == INVALID_ENTITY || chunk_data.invalidated) && chunk_data.grass.meshID != INVALID_ENTITY)
 						{
 							// add patch for this chunk
-							chunk_data.grass_entity = CreateEntity();
+							if (chunk_data.grass_entity == INVALID_ENTITY)
+							{
+								chunk_data.grass_entity = CreateEntity();
+							}
 							wi::HairParticleSystem& grass = generator->scene.hairs.Create(chunk_data.grass_entity);
 							grass = chunk_data.grass;
 							chunk_data.grass_density_current = grass_density;

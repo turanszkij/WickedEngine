@@ -3227,4 +3227,50 @@ namespace wi::scene
 			precomputed_node_distances[i] = distance;
 		}
 	}
+	void SplineComponent::PrecomputeSplineOBBs(int subdivision)
+	{
+		if (spline_node_entities.size() < 2)
+		{
+			precomputed_obbs.clear();
+		}
+		else
+		{
+			float rangemod = width;
+			if (terrain_modifier_amount > 0)
+			{
+				rangemod /= sqr(terrain_modifier_amount); // sqr is used to match with distance falloff used in terrain generation
+			}
+			static const size_t obb_subdiv = 4;
+			static const size_t count = (spline_node_entities.size() - 1) * obb_subdiv;
+			precomputed_obbs.resize(count);
+			const XMVECTOR XAXIS = XMVectorSet(1, 0, 0, 0);
+			for (size_t i = 0; i < count; ++i)
+			{
+				const float t0 = float(i) / count;
+				const float t1 = float(i + 1) / count;
+				const XMMATRIX M0 = EvaluateSplineAt(t0);
+				const XMMATRIX M1 = EvaluateSplineAt(t1);
+				const XMVECTOR P0 = wi::math::GetPosition(M0);
+				const XMVECTOR P1 = wi::math::GetPosition(M1);
+				const XMVECTOR C = XMVectorLerp(P0, P1, 0.5f);
+				const XMVECTOR T = XMVector3Normalize(P1 - P0);
+				const XMVECTOR A = XMVector3Normalize(XMVector3Cross(XAXIS, T));
+				const float angle = XMScalarACos(XMVectorGetX(XMVector3Dot(XAXIS, T)));
+				const XMVECTOR Q = XMQuaternionNormalize(XMQuaternionRotationNormal(A, angle));
+				BoundingOrientedBox& obb = precomputed_obbs[i];
+				XMStoreFloat3(&obb.Center, C);
+				obb.Extents = XMFLOAT3(wi::math::Distance(P0, P1) * 0.5f + rangemod, rangemod, rangemod);
+				XMStoreFloat4(&obb.Orientation, Q);
+
+#if 0
+				// DEBUG OBB:
+				static wi::SpinLock locker;
+				locker.lock();
+				wi::renderer::DrawBox(precomputed_obbs[i]);
+				locker.unlock();
+#endif
+
+			}
+		}
+	}
 }

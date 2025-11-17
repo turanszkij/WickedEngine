@@ -18865,6 +18865,10 @@ void DrawBox(const XMFLOAT4X4& boxMatrix, const XMFLOAT4& color, bool depth)
 	else
 		renderableBoxes.push_back(std::make_pair(boxMatrix,color));
 }
+void DrawBox(const BoundingOrientedBox& obb, const XMFLOAT4& color, bool depth)
+{
+	DrawBox(XMMatrixScalingFromVector(XMLoadFloat3(&obb.Extents)) * XMMatrixRotationQuaternion(XMLoadFloat4(&obb.Orientation)) * XMMatrixTranslationFromVector(XMLoadFloat3(&obb.Center)), color, depth);
+}
 void DrawSphere(const Sphere& sphere, const XMFLOAT4& color, bool depth)
 {
 	if(depth)

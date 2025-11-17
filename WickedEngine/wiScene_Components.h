@@ -2650,6 +2650,7 @@ namespace wi::scene
 		wi::primitive::AABB aabb;
 		wi::ecs::Entity materialEntity = wi::ecs::INVALID_ENTITY; // temp for terrain usage
 		mutable wi::ecs::Entity materialEntity_terrainPrev = wi::ecs::INVALID_ENTITY; // temp for terrain usage
+		wi::vector<BoundingOrientedBox> precomputed_obbs;
 
 		// Evaluate an interpolated location on the spline at t which in range [0,1] on the spline
 		//	the result matrix is oriented to look towards the spline direction and face upwards along the spline normal
@@ -2661,11 +2662,14 @@ namespace wi::scene
 		// Trace a point on the spline's plane:
 		XMVECTOR TraceSplinePlane(const XMVECTOR& ORIGIN, const XMVECTOR& DIRECTION, int steps = 10) const;
 
-		// Compute the boounding box of the spline iteratively
+		// Compute the bounding box of the spline iteratively
 		wi::primitive::AABB ComputeAABB(int steps = 10) const;
 
 		// Precompute the spline node distances that will be used at spline evaluation calls
 		void PrecomputeSplineNodeDistances();
+
+		// Compute the oriented bounding boxes of the spline iteratively that approximates the spline volume
+		void PrecomputeSplineOBBs(int subdivision = 10);
 
 		// By default the spline is drawn as camera facing, this can be used to set it to be drawn aligned to segment rotations:
 		bool IsDrawAligned() const { return _flags & DRAW_ALIGNED; }
