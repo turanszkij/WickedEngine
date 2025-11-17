@@ -13,6 +13,7 @@
 #include <mutex>
 #include <string>
 #include <atomic>
+#include <deque>
 
 using namespace wi::ecs;
 using namespace wi::scene;
@@ -184,6 +185,7 @@ namespace wi::terrain
 		std::atomic_bool cancelled{ false };
 		wi::vector<SplineComponent> splines;
 		wi::vector<Chunk> removable_chunks; // chunks that were invalidated are regenerated on the generator thread. Before merging them with the scene, the previous version of them will need to be removed from the destination scene
+		std::deque<Chunk> priority_invalidation; // to not let invalidation stuck at same chunks every frame while editing splines, for more appealing visual feedback
 	};
 
 	wi::jobsystem::context virtual_texture_ctx;
@@ -638,6 +640,7 @@ namespace wi::terrain
 							if (obb.Intersects(bb))
 							{
 								chunk_data.invalidated = true;
+								generator->priority_invalidation.push_back(it->first);
 								break;
 							}
 						}
@@ -684,7 +687,6 @@ namespace wi::terrain
 			if (it != chunks.end())
 			{
 				ChunkData& chunk_data = it->second;
-				chunk_data.invalidated = false;
 				scene->Entity_Remove(chunk_data.entity);
 				chunk_data.props_entity = INVALID_ENTITY;
 				if (chunk_data.vt != nullptr)
@@ -1354,12 +1356,33 @@ namespace wi::terrain
 					}
 				}
 
+				it = chunks.find(chunk); // re-query!
+				if (it != chunks.end() && it->second.entity != INVALID_ENTITY)
+				{
+					ChunkData& chunk_data = it->second;
+					chunk_data.invalidated = false;
+				}
+
 				if (generated_something && timer.elapsed_milliseconds() > generation_time_budget_milliseconds)
 				{
 					generator->cancelled.store(true);
 				}
 
 			};
+
+			// priority invalidation queue:
+			//	This doesn't necessarily finish every frame, that's why it's a queue, next frame will pick up earlier requests before newer ones
+			while (!generator->priority_invalidation.empty())
+			{
+				Chunk chunk = generator->priority_invalidation.front();
+				generator->priority_invalidation.pop_front();
+				auto it = chunks.find(chunk);
+				if (it != chunks.end() && it->second.invalidated)
+				{
+					request_chunk(chunk.x, chunk.z);
+					if (generator->cancelled.load()) return;
+				}
+			}
 
 			// generate center chunk first:
 			request_chunk(0, 0);
