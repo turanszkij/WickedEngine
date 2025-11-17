@@ -1377,7 +1377,7 @@ namespace wi::terrain
 				Chunk chunk = generator->priority_invalidation.front();
 				generator->priority_invalidation.pop_front();
 				auto it = chunks.find(chunk);
-				if (it != chunks.end() && it->second.invalidated)
+				if (it != chunks.end() && it->second.invalidated) // Check here too in this special case, because multiple of the same entries can easily exist on the queue. Already refreshes chunks will not be refreshed again
 				{
 					request_chunk(chunk.x, chunk.z);
 					if (generator->cancelled.load()) return;
