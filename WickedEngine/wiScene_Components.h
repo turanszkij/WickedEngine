@@ -2647,7 +2647,6 @@ namespace wi::scene
 		mutable int prev_terrain_generation_nodes = 0;
 		mutable bool dirty_terrain = false;
 		bool prev_looped = false;
-		wi::primitive::AABB aabb; // one AABB that can fit the entire spline, for simple intersection checks
 		wi::ecs::Entity materialEntity = wi::ecs::INVALID_ENTITY; // temp for terrain usage
 		mutable wi::ecs::Entity materialEntity_terrainPrev = wi::ecs::INVALID_ENTITY; // temp for terrain usage
 		wi::vector<BoundingOrientedBox> precomputed_obbs; // an array of OBBs that approximate the spline's volume
