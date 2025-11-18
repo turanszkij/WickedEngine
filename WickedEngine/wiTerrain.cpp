@@ -635,14 +635,10 @@ namespace wi::terrain
 						if (chunk_data.invalidated)
 							continue;
 						BoundingBox bb(chunk_data.sphere.center, XMFLOAT3(chunk_data.sphere.radius, 1000000, chunk_data.sphere.radius));
-						for (const BoundingOrientedBox& obb : spline.precomputed_obbs)
+						if (spline.bvh.IntersectsFirst(bb, [&](uint32_t index) { return spline.precomputed_obbs[index].Intersects(bb); }))
 						{
-							if (obb.Intersects(bb))
-							{
-								chunk_data.invalidated = true;
-								generator->priority_invalidation.push_back(it->first);
-								break;
-							}
+							chunk_data.invalidated = true;
+							generator->priority_invalidation.push_back(it->first);
 						}
 					}
 				}
@@ -941,9 +937,6 @@ namespace wi::terrain
 			if (spline.terrain_modifier_amount > 0)
 			{
 				generator->splines.push_back(spline);
-				// extrude spline aabb for heightfield check:
-				generator->splines.back().aabb._min.y = -FLT_MAX;
-				generator->splines.back().aabb._max.y = FLT_MAX;
 			}
 		}
 		wi::jobsystem::Execute(generator->workload, [=](wi::jobsystem::JobArgs a) {
@@ -1066,13 +1059,14 @@ namespace wi::terrain
 
 						// Apply splines to height only:
 						const XMVECTOR P = XMVectorSet(world_pos.x, -100000, world_pos.y, 0);
+						const wi::primitive::Ray ray(P, UP);
 						int splinematerialcnt = -1;
 						for (size_t j = 0; j < generator->splines.size(); ++j)
 						{
 							const SplineComponent& spline = generator->splines[j];
 							if (spline.materialEntity != INVALID_ENTITY)
 								splinematerialcnt++;
-							if (!spline.aabb.intersects(P))
+							if (!spline.bvh.IntersectsFirst(ray, [&](uint32_t index) { return spline.precomputed_aabbs[index].intersects(ray); }))
 								continue;
 							XMVECTOR S = spline.TraceSplinePlane(P, UP, 4);
 							S = spline.ClosestPointOnSpline(S, 4);

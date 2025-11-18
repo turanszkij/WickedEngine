@@ -195,6 +195,16 @@ namespace wi::primitive
 		bool intersection = frustum.Intersects(bb);
 		return intersection;
 	}
+	bool AABB::intersects(const BoundingBox& other) const
+	{
+		BoundingBox bb = BoundingBox(getCenter(), getHalfWidth());
+		return bb.Intersects(other);
+	}
+	bool AABB::intersects(const BoundingOrientedBox& other) const
+	{
+		BoundingBox bb = BoundingBox(getCenter(), getHalfWidth());
+		return bb.Intersects(other);
+	}
 	AABB AABB::operator* (float a)
 	{
 		XMFLOAT3 min = getMin();

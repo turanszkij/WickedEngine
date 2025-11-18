@@ -2010,7 +2010,8 @@ namespace wi::scene
 	size_t MeshComponent::GetMemoryUsageBVH() const
 	{
 		return
-			bvh.allocation.capacity() +
+			bvh.nodes.size() * sizeof(BVH::Node) +
+			bvh.leaf_indices.size() * sizeof(uint32_t) +
 			bvh_leaf_aabbs.size() * sizeof(wi::primitive::AABB);
 	}
 	size_t MeshComponent::GetClusterCount() const
@@ -3227,11 +3228,12 @@ namespace wi::scene
 			precomputed_node_distances[i] = distance;
 		}
 	}
-	void SplineComponent::PrecomputeSplineOBBs(int subdivision)
+	void SplineComponent::PrecomputeSplineBounds(int subdivision)
 	{
 		if (spline_node_entities.size() < 2)
 		{
 			precomputed_obbs.clear();
+			precomputed_aabbs.clear();
 		}
 		else
 		{
@@ -3240,8 +3242,9 @@ namespace wi::scene
 			{
 				rangemod /= sqr(terrain_modifier_amount); // sqr is used to match with distance falloff used in terrain generation
 			}
-			static const size_t count = (spline_node_entities.size() - 1) * subdivision;
+			const size_t count = (spline_node_entities.size() - 1) * subdivision;
 			precomputed_obbs.resize(count);
+			precomputed_aabbs.resize(count);
 			const XMVECTOR XAXIS = XMVectorSet(1, 0, 0, 0);
 			for (size_t i = 0; i < count; ++i)
 			{
@@ -3269,7 +3272,25 @@ namespace wi::scene
 				locker.unlock();
 #endif
 
+				XMFLOAT3 corners[BoundingOrientedBox::CORNER_COUNT];
+				obb.GetCorners(corners);
+				AABB& aabb = precomputed_aabbs[i];
+				aabb = {};
+				for (auto& x : corners)
+				{
+					aabb.AddPoint(x);
+				}
+
+#if 0
+				// DEBUG AABB:
+				static wi::SpinLock locker;
+				locker.lock();
+				wi::renderer::DrawBox(precomputed_aabbs[i]);
+				locker.unlock();
+#endif
 			}
 		}
+
+		bvh.Build(precomputed_aabbs.data(), (uint32_t)precomputed_aabbs.size());
 	}
 }

@@ -49,6 +49,8 @@ namespace wi::primitive
 		bool intersects(const Ray& ray) const;
 		bool intersects(const Sphere& sphere) const;
 		bool intersects(const BoundingFrustum& frustum) const;
+		bool intersects(const BoundingBox& other) const;
+		bool intersects(const BoundingOrientedBox& other) const;
 		AABB operator* (float a);
 		static AABB Merge(const AABB& a, const AABB& b);
 		void AddPoint(const XMFLOAT3& pos);
