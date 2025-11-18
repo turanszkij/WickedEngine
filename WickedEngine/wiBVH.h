@@ -20,16 +20,19 @@ namespace wi
 		wi::vector<uint32_t> leaf_indices;
 		uint32_t node_count = 0;
 
-		bool IsValid() const { return node_count > 0; }
+		constexpr bool IsValid() const { return node_count > 0; }
 
 		// Completely rebuilds tree from scratch
 		void Build(const wi::primitive::AABB* aabbs, uint32_t aabb_count)
 		{
 			node_count = 0;
-			nodes.clear();
-			leaf_indices.clear();
+
 			if (aabb_count == 0)
+			{
+				nodes.clear();
+				leaf_indices.clear();
 				return;
+			}
 
 			nodes.resize(aabb_count * 2 - 1);
 			leaf_indices.resize(aabb_count);
@@ -113,7 +116,7 @@ namespace wi
 			uint32_t stack[64];
 			uint32_t count = 0;
 			stack[count++] = 0; // push node 0
-			while (count > 0)
+			while (count > 0 && (count < (arraysize(stack) - 1)))
 			{
 				const uint32_t nodeIndex = stack[--count];
 				const Node& node = nodes[nodeIndex];
