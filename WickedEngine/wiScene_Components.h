@@ -1531,6 +1531,7 @@ namespace wi::scene
 		};
 		uint32_t _flags = DIRTY;
 		uint32_t resolution = 128; // power of two
+		float realtime_update_interval = 0.0f; // how often to render when realtime (in seconds, 0 = every frame)
 		std::string textureName; // if texture is coming from an asset
 
 		// Non-serialized attributes:
@@ -1540,17 +1541,22 @@ namespace wi::scene
 		float range;
 		XMFLOAT4X4 inverseMatrix;
 		mutable bool render_dirty = false;
+		mutable bool realtime_first_render = true; // true until first real-time render completes
+		mutable float realtime_time_accumulator = 0.0f; // tracks time since last render for realtime probes
 
 		constexpr void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; DeleteResource(); } else { _flags &= ~DIRTY; } }
 		constexpr void SetRealTime(bool value) { if (value) { _flags |= REALTIME; } else { _flags &= ~REALTIME; } }
 		constexpr void SetMSAA(bool value) { if (value) { _flags |= MSAA; } else { _flags &= ~MSAA; } SetDirty(); }
+		constexpr void SetUpdateInterval(float value) { realtime_update_interval = std::max(0.0f, value); }
 
 		constexpr bool IsDirty() const { return _flags & DIRTY; }
 		constexpr bool IsRealTime() const { return _flags & REALTIME; }
 		constexpr bool IsMSAA() const { return _flags & MSAA; }
 		constexpr uint32_t GetSampleCount() const { return IsMSAA() ? envmapMSAASampleCount : 1; }
+		bool ShouldRenderThisFrame() const { return !IsRealTime() || realtime_first_render || (realtime_update_interval <= 0.0f) || (realtime_time_accumulator >= realtime_update_interval); }
 
 		size_t GetMemorySizeInBytes() const;
+		constexpr float GetRealtimeUpdateInterval() const { return realtime_update_interval; }
 
 		void CreateRenderData();
 		void DeleteResource();
