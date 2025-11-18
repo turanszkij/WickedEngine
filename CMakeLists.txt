@@ -106,24 +106,21 @@ if (WIN32)
     set(PLATFORM "Windows")
     add_compile_definitions(WIN32=1)
     add_compile_definitions(_HAS_EXCEPTIONS=0)
-
-    if (MSVC)
-        add_compile_options(
-            /W3 # warning level 3
-            /MP # multi-processor compilation
-            /EHsc- # exceptions disabled
-            /GR- # runtime type information disabled
-            $<$<CONFIG:Release>:/GS-> # security check disabled in Release
-        )
-    endif()
-
-    # add_compile_definitions(_WIN32=1) this is a given from the compiler
-elseif(UNIX)
+elseif (UNIX)
     set(PLATFORM "SDL2")
     add_compile_definitions(SDL2=1)
     add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=1)
+endif()
 
-
+if (MSVC)
+    add_compile_options(
+        /W3 # warning level 3
+        /MP # multi-processor compilation
+        /EHsc- # exceptions disabled
+        /GR- # runtime type information disabled
+        $<$<CONFIG:Release>:/GS-> # security check disabled in Release
+    )
+else()
     set(ubsan_active
          "$<AND:$<BOOL:${WICKED_ENABLE_UBSAN}>,$<OR:$<CONFIG:Debug>,$<BOOL:${WICKED_ENABLE_SAN_ALWAYS}>>>"
     )
