@@ -2647,9 +2647,11 @@ namespace wi::scene
 		mutable int prev_terrain_generation_nodes = 0;
 		mutable bool dirty_terrain = false;
 		bool prev_looped = false;
-		wi::primitive::AABB aabb;
 		wi::ecs::Entity materialEntity = wi::ecs::INVALID_ENTITY; // temp for terrain usage
 		mutable wi::ecs::Entity materialEntity_terrainPrev = wi::ecs::INVALID_ENTITY; // temp for terrain usage
+		wi::vector<BoundingOrientedBox> precomputed_obbs; // an array of OBBs that approximate the spline's volume
+		wi::vector<wi::primitive::AABB> precomputed_aabbs; // an array of AABBs that approximate the spline's volume
+		wi::BVH bvh; // BVH fitted onto the precomputed_aabbs for accelerated intersection checking. The leaf nodes can be used to index aabbs and obbs alike
 
 		// Evaluate an interpolated location on the spline at t which in range [0,1] on the spline
 		//	the result matrix is oriented to look towards the spline direction and face upwards along the spline normal
@@ -2661,11 +2663,16 @@ namespace wi::scene
 		// Trace a point on the spline's plane:
 		XMVECTOR TraceSplinePlane(const XMVECTOR& ORIGIN, const XMVECTOR& DIRECTION, int steps = 10) const;
 
-		// Compute the boounding box of the spline iteratively
+		// Compute the bounding box of the spline iteratively
 		wi::primitive::AABB ComputeAABB(int steps = 10) const;
 
 		// Precompute the spline node distances that will be used at spline evaluation calls
 		void PrecomputeSplineNodeDistances();
+
+		// Compute the oriented and axis aligned bounding boxes of the spline iteratively that approximates the spline volume
+		//	Will write into the precomputed_aabbs and precomputed_obbs array, subdivision mean how many boxes will be used per-segment
+		//	Will also build the bvh
+		void PrecomputeSplineBounds(int subdivision = 10);
 
 		// By default the spline is drawn as camera facing, this can be used to set it to be drawn aligned to segment rotations:
 		bool IsDrawAligned() const { return _flags & DRAW_ALIGNED; }

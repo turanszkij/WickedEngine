@@ -230,6 +230,7 @@ namespace wi::terrain
 		wi::primitive::Sphere sphere;
 		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
 		bool visible = true;
+		bool invalidated = false;
 		std::shared_ptr<VirtualTexture> vt;
 		wi::vector<uint16_t> heightmap_data;
 		wi::graphics::Texture heightmap;

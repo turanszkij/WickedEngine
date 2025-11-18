@@ -16,29 +16,26 @@ namespace wi
 			uint32_t count = 0;
 			constexpr bool isLeaf() const { return count > 0; }
 		};
-		wi::vector<uint8_t> allocation;
-		Node* nodes = nullptr;
+		wi::vector<Node> nodes;
+		wi::vector<uint32_t> leaf_indices;
 		uint32_t node_count = 0;
-		uint32_t* leaf_indices = nullptr;
-		uint32_t leaf_count = 0;
 
-		constexpr bool IsValid() const { return nodes != nullptr; }
+		constexpr bool IsValid() const { return node_count > 0; }
 
 		// Completely rebuilds tree from scratch
 		void Build(const wi::primitive::AABB* aabbs, uint32_t aabb_count)
 		{
 			node_count = 0;
-			if (aabb_count == 0)
-				return;
 
-			const uint32_t node_capacity = aabb_count * 2 - 1;
-			allocation.reserve(
-				sizeof(Node) * node_capacity +
-				sizeof(uint32_t) * aabb_count
-			);
-			nodes = (Node*)allocation.data();
-			leaf_indices = (uint32_t*)(nodes + node_capacity);
-			leaf_count = aabb_count;
+			if (aabb_count == 0)
+			{
+				nodes.clear();
+				leaf_indices.clear();
+				return;
+			}
+
+			nodes.resize(aabb_count * 2 - 1);
+			leaf_indices.resize(aabb_count);
 
 			Node& node = nodes[node_count++];
 			node = {};
@@ -58,7 +55,7 @@ namespace wi
 				return;
 			if (aabb_count == 0)
 				return;
-			if (aabb_count != leaf_count)
+			if (aabb_count != (uint32_t)leaf_indices.size())
 				return;
 
 			for (uint32_t i = node_count - 1; i > 0; --i)
@@ -88,7 +85,9 @@ namespace wi
 			const std::function<void(uint32_t index)>& callback
 		) const
 		{
-			Node& node = nodes[nodeIndex];
+			if (node_count == 0)
+				return;
+			const Node& node = nodes[nodeIndex];
 			if (!node.aabb.intersects(primitive))
 				return;
 			if (node.isLeaf())
@@ -112,13 +111,15 @@ namespace wi
 			const std::function<bool(uint32_t index)>& callback
 		) const
 		{
+			if (node_count == 0)
+				return false;
 			uint32_t stack[64];
 			uint32_t count = 0;
 			stack[count++] = 0; // push node 0
-			while (count > 0)
+			while (count > 0 && (count < (arraysize(stack) - 1)))
 			{
 				const uint32_t nodeIndex = stack[--count];
-				Node& node = nodes[nodeIndex];
+				const Node& node = nodes[nodeIndex];
 				if (!node.aabb.intersects(primitive))
 					continue;
 				if (node.isLeaf())
