@@ -1541,7 +1541,7 @@ namespace wi::scene
 		float range;
 		XMFLOAT4X4 inverseMatrix;
 		mutable bool render_dirty = false;
-		mutable bool realtime_first_render = true; // true until first real-time render completes
+		mutable bool first_render = true; // true until first render completes
 		mutable float realtime_time_accumulator = 0.0f; // tracks time since last render for realtime probes
 
 		constexpr void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; DeleteResource(); } else { _flags &= ~DIRTY; } }
@@ -1553,7 +1553,7 @@ namespace wi::scene
 		constexpr bool IsRealTime() const { return _flags & REALTIME; }
 		constexpr bool IsMSAA() const { return _flags & MSAA; }
 		constexpr uint32_t GetSampleCount() const { return IsMSAA() ? envmapMSAASampleCount : 1; }
-		bool ShouldRenderThisFrame() const { return !IsRealTime() || realtime_first_render || (realtime_update_interval <= 0.0f) || (realtime_time_accumulator >= realtime_update_interval); }
+		bool ShouldRenderThisFrame() const { return !IsRealTime() || first_render || (realtime_update_interval <= 0.0f) || (realtime_time_accumulator >= realtime_update_interval); }
 
 		size_t GetMemorySizeInBytes() const;
 		constexpr float GetRealtimeUpdateInterval() const { return realtime_update_interval; }

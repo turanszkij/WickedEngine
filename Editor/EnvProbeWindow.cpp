@@ -168,7 +168,7 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 		if (probe->resolution != resolution)
 		{
 			probe->resolution = resolution;
-			probe->realtime_first_render = true;
+			probe->first_render = true;
 			probe->CreateRenderData();
 		}
 	}));

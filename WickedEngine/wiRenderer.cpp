@@ -9535,7 +9535,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		bool rendered_anything = false;
 		for (size_t i = 0; i < vis.scene->probes.GetCount(); ++i)
 		{
-			auto& probe = const_cast<EnvironmentProbeComponent&>(vis.scene->probes[i]);
+			const EnvironmentProbeComponent& probe = vis.scene->probes[i];
 			const AABB& probe_aabb = vis.scene->aabb_probes[i];
 
 			if ((probe_aabb.layerMask & vis.layerMask) && probe.render_dirty && probe.texture.IsValid())
@@ -9548,7 +9548,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 				if (probe.ShouldRenderThisFrame())
 				{
 					probe.render_dirty = false;
-					probe.realtime_first_render = false;
+					probe.first_render = false;
 					probe.realtime_time_accumulator = 0.0f;
 					render_probe(probe, probe_aabb);
 					rendered_anything = true;
