@@ -21,6 +21,11 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+      with:
+        msbuild-architecture: x64
+
     - name: Restore Ccache database
       id: restore-ccache
       uses: actions/cache/restore@v4
@@ -39,7 +44,6 @@ jobs:
     - name: Initial compile
       shell: cmd
       run: |
-        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
         MSBuild WickedEngine.sln /t:OfflineShaderCompiler /m /p:Configuration=Release /p:Platform=x64
 
     - name: Generate shader dump
@@ -51,7 +55,6 @@ jobs:
     - name: Recompile with shader dump
       shell: cmd
       run: |
-        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
         MSBuild WickedEngine.sln /t:clean /m /p:Configuration=Release /p:Platform=x64
         MSBuild WickedEngine.sln /t:Editor_Windows /m /p:Configuration=Release /p:Platform=x64
 
