@@ -266,7 +266,6 @@ namespace wi::allocator
 		{
 			void* ptr = nullptr;
 			volatile long* refcount = nullptr;
-			size_t block_id = 0;
 		};
 		wi::vector<Entry> free_list;
 		std::mutex locker;
@@ -364,7 +363,6 @@ namespace wi::allocator
 			if (free_list.empty())
 			{
 				free_list.reserve(block_size);
-				const size_t block_id = blocks.size();
 				Block& block = blocks.emplace_back();
 				block.mem.resize(block_size);
 				block.refcounts.resize(block_size);
@@ -375,7 +373,6 @@ namespace wi::allocator
 					Entry entry;
 					entry.ptr = ptr + i;
 					entry.refcount = refcount + i;
-					entry.block_id = block_id;
 					free_list.push_back(entry);
 				}
 			}
