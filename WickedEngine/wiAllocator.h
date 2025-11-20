@@ -277,7 +277,14 @@ namespace wi::allocator
 			T* get() const { return (T*)ptr; }
 
 			template<typename U>
-			operator InternalStateAllocator::Allocation<U>&() const { return *(InternalStateAllocator::Allocation<U>*)this; }
+			operator InternalStateAllocator::Allocation<U>&() const
+			{
+				static_assert(offsetof(InternalStateAllocator::Allocation<T>, ptr) == offsetof(InternalStateAllocator::Allocation<U>, ptr));
+				static_assert(offsetof(InternalStateAllocator::Allocation<T>, allocator) == offsetof(InternalStateAllocator::Allocation<U>, allocator));
+				static_assert(sizeof(InternalStateAllocator::Allocation<T>) == sizeof(InternalStateAllocator::Allocation<U>));
+				static_assert(sizeof(InternalStateAllocator::Allocation<T>) == 16);
+				return *(InternalStateAllocator::Allocation<U>*)this;
+			}
 
 			constexpr bool IsValid() const { return ptr != nullptr; }
 
