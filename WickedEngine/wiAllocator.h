@@ -350,7 +350,10 @@ namespace wi::allocator
 		struct RawStruct
 		{
 			long refcount;
-			uint8_t alignas(alignof(T)) data[sizeof(T)];
+			struct alignas(alignof(T)) AlignedStorage
+			{
+				uint8_t data[sizeof(T)];
+			} storage;
 		};
 		struct Block
 		{
@@ -373,7 +376,7 @@ namespace wi::allocator
 				for (size_t i = 0; i < block_size; ++i)
 				{
 					RawStruct* ptri = ptr + i;
-					free_list.push_back((T*)ptri->data);
+					free_list.push_back((T*)ptri->storage.data);
 				}
 			}
 			T* ptr = free_list.back();
