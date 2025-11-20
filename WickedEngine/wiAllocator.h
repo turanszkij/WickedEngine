@@ -182,7 +182,7 @@ namespace wi::allocator
 			{
 				Reset();
 			}
-			void operator=(const Allocation& other)
+			Allocation& operator=(const Allocation& other)
 			{
 				Reset();
 				allocator = other.allocator;
@@ -192,8 +192,9 @@ namespace wi::allocator
 				{
 					internal_state->refcount.fetch_add(1);
 				}
+				return *this;
 			}
-			void operator=(Allocation&& other) noexcept
+			Allocation& operator=(Allocation&& other) noexcept
 			{
 				Reset();
 				allocator = std::move(other.allocator);
@@ -202,6 +203,7 @@ namespace wi::allocator
 				other.allocator = nullptr;
 				other.internal_state = nullptr;
 				other.byte_offset = ~0ull;
+				return *this;
 			}
 			void Reset()
 			{
@@ -253,4 +255,160 @@ namespace wi::allocator
 			return allocator->allocator.storageReport().totalFreeSpace == page_count;
 		}
 	};
+
+
+
+
+	// Allocation of single elements of implementation-defined size with block allocation strategy, refcounted, thread-safe
+	struct InternalStateAllocator
+	{
+		struct Entry
+		{
+			void* ptr = nullptr;
+			volatile long* refcount = nullptr;
+			size_t block_id = 0;
+		};
+		wi::vector<Entry> free_list;
+		std::mutex locker;
+
+		struct Allocation
+		{
+			InternalStateAllocator* allocator = nullptr;
+			Entry entry;
+
+			operator void* () const { return entry.ptr; }
+			void* get() const { return entry.ptr; }
+
+			constexpr bool IsValid() const { return entry.ptr != nullptr; }
+
+			Allocation() = default;
+			Allocation(const Allocation& other) { copy(other); }
+			Allocation(Allocation&& other) { move(other); }
+			virtual ~Allocation() { destroy(); }
+			Allocation& operator=(const Allocation& other)
+			{
+				copy(other);
+				return *this;
+			}
+			Allocation& operator=(Allocation&& other) noexcept
+			{
+				move(other);
+				return *this;
+			}
+
+			void destroy()
+			{
+				if (allocator != nullptr && entry.ptr != nullptr && entry.refcount != nullptr)
+				{
+					int prev = AtomicAdd(entry.refcount, -1);
+					if (prev == 1)
+					{
+						allocator->reclaim(entry);
+					}
+				}
+				allocator = nullptr;
+				entry = {};
+			}
+			void copy(const Allocation& other)
+			{
+				destroy();
+				allocator = other.allocator;
+				entry = other.entry;
+				if (entry.refcount != nullptr)
+				{
+					AtomicAdd(entry.refcount, 1);
+				}
+			}
+			void move(Allocation& other)
+			{
+				destroy();
+				allocator = other.allocator;
+				entry = other.entry;
+				other.allocator = nullptr;
+				other.entry = {};
+			}
+		};
+
+		virtual void reclaim(const Entry& entry) = 0;
+	};
+
+	template<typename T>
+	struct InternalStateAllocatorImpl final : public InternalStateAllocator
+	{
+		static constexpr size_t block_size = 256;
+		struct Block
+		{
+			struct alignas(alignof(T)) RawStruct
+			{
+				uint8_t data[sizeof(T)];
+			};
+			wi::vector<RawStruct> mem;
+			wi::vector<long> refcounts;
+		};
+		wi::vector<Block> blocks;
+
+		struct AllocationImpl final : public InternalStateAllocator::Allocation
+		{
+			T* operator->() { return (T*)entry.ptr; }
+			operator T*() { return (T*)entry.ptr; }
+			T* get() { return (T*)entry.ptr; }
+			operator InternalStateAllocator::Allocation& () const { return *this; }
+			static AllocationImpl& from(InternalStateAllocator::Allocation& other) { return *(AllocationImpl*)&other; }
+			static const AllocationImpl& from(const InternalStateAllocator::Allocation& other) { return *(const AllocationImpl*)&other; }
+		};
+
+		template<typename... ARG>
+		inline AllocationImpl allocate(ARG&&... args)
+		{
+			locker.lock();
+			if (free_list.empty())
+			{
+				free_list.reserve(block_size);
+				const size_t block_id = blocks.size();
+				Block& block = blocks.emplace_back();
+				block.mem.resize(block_size);
+				block.refcounts.resize(block_size);
+				T* ptr = (T*)block.mem.data();
+				volatile long* refcount = (volatile long*)block.refcounts.data();
+				for (size_t i = 0; i < block_size; ++i)
+				{
+					Entry entry;
+					entry.ptr = ptr + i;
+					entry.refcount = refcount + i;
+					entry.block_id = block_id;
+					free_list.push_back(entry);
+				}
+			}
+			Entry entry = free_list.back();
+			free_list.pop_back();
+			locker.unlock();
+
+			// construct can happen outside of lock
+			AllocationImpl allocation;
+			allocation.allocator = this;
+			allocation.entry = entry;
+			new (allocation.entry.ptr) T(std::forward<ARG>(args)...);
+			*allocation.entry.refcount = 1;
+			return allocation;
+		}
+
+		void reclaim(const Entry& entry) override
+		{
+			((T*)entry.ptr)->~T();
+			std::scoped_lock lck(locker);
+			free_list.push_back(entry);
+		}
+	};
+
+	template<typename T>
+	inline auto make_internal()
+	{
+		static InternalStateAllocatorImpl<T> allocator;
+		return allocator.allocate();
+	}
+	template<typename T>
+	inline auto upcast_internal(const InternalStateAllocator::Allocation& allocation)
+	{
+		return InternalStateAllocatorImpl<T>::AllocationImpl::from(allocation);
+	}
 }

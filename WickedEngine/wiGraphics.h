@@ -1,6 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiVector.h"
+#include "wiAllocator.h"
 
 #include <cassert>
 #include <memory>
@@ -840,8 +841,8 @@ namespace wi::graphics
 
 	struct GraphicsDeviceChild
 	{
-		std::shared_ptr<void> internal_state;
-		inline bool IsValid() const { return internal_state != nullptr; }
+		wi::allocator::InternalStateAllocator::Allocation internal_state;
+		constexpr bool IsValid() const { return internal_state.IsValid(); }
 
 		virtual ~GraphicsDeviceChild() = default;
 	};

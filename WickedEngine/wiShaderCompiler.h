@@ -1,6 +1,7 @@
 #pragma once
 #include "wiGraphics.h"
 #include "wiVector.h"
+#include "wiAllocator.h"
 
 #include <string>
 
@@ -28,8 +29,8 @@ namespace wi::shadercompiler
 	};
 	struct CompilerOutput
 	{
-		std::shared_ptr<void> internal_state;
-		inline bool IsValid() const { return internal_state.get() != nullptr; }
+		wi::allocator::InternalStateAllocator::Allocation internal_state;
+		constexpr bool IsValid() const { return internal_state.IsValid(); }
 
 		const uint8_t* shaderdata = nullptr;
 		size_t shadersize = 0;
