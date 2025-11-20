@@ -358,6 +358,8 @@ namespace wi::terrain
 
 		void InvalidateProps();
 
+		void InvalidateChunksAtSpline(const wi::scene::SplineComponent& spline);
+
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 
 	private:
