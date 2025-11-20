@@ -839,28 +839,29 @@ namespace wi::graphics
 
 	// Resources:
 
-	struct GraphicsDeviceChild
+	struct Sampler
 	{
 		wi::allocator::InternalAllocation internal_state;
 		constexpr bool IsValid() const { return internal_state.IsValid(); }
 
-		virtual ~GraphicsDeviceChild() = default;
-	};
-
-	struct Sampler : public GraphicsDeviceChild
-	{
 		SamplerDesc desc;
 
 		const SamplerDesc& GetDesc() const { return desc; }
 	};
 
-	struct Shader : public GraphicsDeviceChild
+	struct Shader
 	{
+		wi::allocator::InternalAllocation internal_state;
+		constexpr bool IsValid() const { return internal_state.IsValid(); }
+
 		ShaderStage stage = ShaderStage::Count;
 	};
 
-	struct GPUResource : public GraphicsDeviceChild
+	struct GPUResource
 	{
+		wi::allocator::InternalAllocation internal_state;
+		constexpr bool IsValid() const { return internal_state.IsValid(); }
+
 		enum class Type : uint8_t
 		{
 			BUFFER,
@@ -884,6 +885,14 @@ namespace wi::graphics
 		GPUBufferDesc desc;
 
 		constexpr const GPUBufferDesc& GetDesc() const { return desc; }
+
+		// dynamic allocation and destruction of this object is not allowed because we don't use virtual destructor
+		static void* operator new (size_t) = delete;
+		static void* operator new[] (size_t) = delete;
+		static void  operator delete (void*) = delete;
+		static void  operator delete[] (void*) = delete;
+		static void* operator new (size_t, void*) = delete;
+		static void* operator new[](size_t, void*) = delete;
 	};
 
 	struct Texture : public GPUResource
@@ -904,10 +913,21 @@ namespace wi::graphics
 #endif
 
 		constexpr const TextureDesc& GetDesc() const { return desc; }
+
+		// dynamic allocation and destruction of this object is not allowed because we don't use virtual destructor
+		static void* operator new (size_t) = delete;
+		static void* operator new[](size_t) = delete;
+		static void  operator delete (void*) = delete;
+		static void  operator delete[](void*) = delete;
+		static void* operator new (size_t, void*) = delete;
+		static void* operator new[](size_t, void*) = delete;
 	};
 
-	struct VideoDecoder : public GraphicsDeviceChild
+	struct VideoDecoder
 	{
+		wi::allocator::InternalAllocation internal_state;
+		constexpr bool IsValid() const { return internal_state.IsValid(); }
+
 		VideoDesc desc;
 		constexpr const VideoDesc& GetDesc() const { return desc; }
 		VideoDecoderSupportFlags support = VideoDecoderSupportFlags::NONE;
@@ -1138,22 +1158,31 @@ namespace wi::graphics
 		}
 	};
 
-	struct GPUQueryHeap : public GraphicsDeviceChild
+	struct GPUQueryHeap
 	{
+		wi::allocator::InternalAllocation internal_state;
+		constexpr bool IsValid() const { return internal_state.IsValid(); }
+
 		GPUQueryHeapDesc desc;
 
 		constexpr const GPUQueryHeapDesc& GetDesc() const { return desc; }
 	};
 
-	struct PipelineState : public GraphicsDeviceChild
+	struct PipelineState
 	{
+		wi::allocator::InternalAllocation internal_state;
+		constexpr bool IsValid() const { return internal_state.IsValid(); }
+
 		PipelineStateDesc desc;
 
 		constexpr const PipelineStateDesc& GetDesc() const { return desc; }
 	};
 
-	struct SwapChain : public GraphicsDeviceChild
+	struct SwapChain
 	{
+		wi::allocator::InternalAllocation internal_state;
+		constexpr bool IsValid() const { return internal_state.IsValid(); }
+
 		SwapChainDesc desc;
 
 		constexpr const SwapChainDesc& GetDesc() const { return desc; }
@@ -1254,6 +1283,14 @@ namespace wi::graphics
 		size_t size = 0;
 
 		constexpr const RaytracingAccelerationStructureDesc& GetDesc() const { return desc; }
+
+		// dynamic allocation and destruction of this object is not allowed because we don't use virtual destructor
+		static void* operator new (size_t) = delete;
+		static void* operator new[](size_t) = delete;
+		static void  operator delete (void*) = delete;
+		static void  operator delete[](void*) = delete;
+		static void* operator new (size_t, void*) = delete;
+		static void* operator new[](size_t, void*) = delete;
 	};
 
 	struct ShaderLibrary
@@ -1291,8 +1328,11 @@ namespace wi::graphics
 		uint32_t max_attribute_size_in_bytes = 0;
 		uint32_t max_payload_size_in_bytes = 0;
 	};
-	struct RaytracingPipelineState : public GraphicsDeviceChild
+	struct RaytracingPipelineState
 	{
+		wi::allocator::InternalAllocation internal_state;
+		constexpr bool IsValid() const { return internal_state.IsValid(); }
+
 		RaytracingPipelineStateDesc desc;
 
 		constexpr const RaytracingPipelineStateDesc& GetDesc() const { return desc; }
