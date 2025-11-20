@@ -3995,7 +3995,7 @@ using namespace vulkan_internal;
 				internal_state->resource,
 				&memory_requirements
 			);
-			buffer->sparse_page_size = memory_requirements.alignment;
+			buffer->sparse_page_size = (uint32_t)memory_requirements.alignment;
 		}
 		else
 		{
@@ -4337,7 +4337,7 @@ using namespace vulkan_internal;
 				internal_state->resource,
 				&memory_requirements
 			);
-			texture->sparse_page_size = memory_requirements.alignment;
+			texture->sparse_page_size = (uint32_t)memory_requirements.alignment;
 
 			uint32_t sparse_requirement_count = 0;
 
