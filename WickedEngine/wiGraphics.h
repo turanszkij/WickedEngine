@@ -382,7 +382,7 @@ namespace wi::graphics
 		ENABLE_ALL = ~0,
 	};
 
-	enum class BindFlag
+	enum class BindFlag : uint8_t
 	{
 		NONE = 0,
 		VERTEX_BUFFER = 1 << 0,
@@ -565,6 +565,8 @@ namespace wi::graphics
 			TEXTURE_3D,
 		} type = Type::TEXTURE_2D;
 		Format format = Format::UNKNOWN;
+		Usage usage = Usage::DEFAULT;
+		BindFlag bind_flags = BindFlag::NONE;
 		uint32_t width = 1;
 		uint32_t height = 1;
 		uint32_t depth = 1;
@@ -573,8 +575,6 @@ namespace wi::graphics
 		uint32_t sample_count = 1;
 		ClearValue clear = {};
 		Swizzle swizzle;
-		Usage usage = Usage::DEFAULT;
-		BindFlag bind_flags = BindFlag::NONE;
 		ResourceMiscFlag misc_flags = ResourceMiscFlag::NONE;
 		ResourceState layout = ResourceState::SHADER_RESOURCE;
 	};
@@ -651,10 +651,10 @@ namespace wi::graphics
 	struct GPUBufferDesc
 	{
 		uint64_t size = 0;
+		uint32_t stride = 0; // only needed for structured buffer types!
+		uint32_t alignment = 0; // needed for tile pools
 		Usage usage = Usage::DEFAULT;
 		Format format = Format::UNKNOWN; // only needed for typed buffer!
-		uint32_t stride = 0; // only needed for structured buffer types!
-		uint64_t alignment = 0; // needed for tile pools
 		BindFlag bind_flags = BindFlag::NONE;
 		ResourceMiscFlag misc_flags = ResourceMiscFlag::NONE;
 	};
@@ -838,28 +838,35 @@ namespace wi::graphics
 
 	// Resources:
 
-	struct GraphicsDeviceChild
+	struct Sampler
 	{
 		std::shared_ptr<void> internal_state;
 		inline bool IsValid() const { return internal_state != nullptr; }
 
-		virtual ~GraphicsDeviceChild() = default;
-	};
-
-	struct Sampler : public GraphicsDeviceChild
-	{
 		SamplerDesc desc;
 
 		const SamplerDesc& GetDesc() const { return desc; }
 	};
 
-	struct Shader : public GraphicsDeviceChild
+	struct Shader
 	{
+		std::shared_ptr<void> internal_state;
+		inline bool IsValid() const { return internal_state != nullptr; }
+
 		ShaderStage stage = ShaderStage::Count;
 	};
 
-	struct GPUResource : public GraphicsDeviceChild
+	struct GPUResource
 	{
+		std::shared_ptr<void> internal_state;
+		inline bool IsValid() const { return internal_state != nullptr; }
+
+		// These are only valid if the resource was created with CPU access (USAGE::UPLOAD or USAGE::READBACK)
+		void* mapped_data = nullptr;	// for buffers, it is a pointer to the buffer data; for textures, it is a pointer to texture data with linear tiling;
+		size_t mapped_size = 0;			// for buffers, it is the full buffer size; for textures it is the full texture size including all subresources;
+
+		uint32_t sparse_page_size = 0ull;	// specifies the required alignment of backing allocation for sparse tile pool
+
 		enum class Type : uint8_t
 		{
 			BUFFER,
@@ -870,22 +877,24 @@ namespace wi::graphics
 		constexpr bool IsTexture() const { return type == Type::TEXTURE; }
 		constexpr bool IsBuffer() const { return type == Type::BUFFER; }
 		constexpr bool IsAccelerationStructure() const { return type == Type::RAYTRACING_ACCELERATION_STRUCTURE; }
-
-		// These are only valid if the resource was created with CPU access (USAGE::UPLOAD or USAGE::READBACK)
-		void* mapped_data = nullptr;	// for buffers, it is a pointer to the buffer data; for textures, it is a pointer to texture data with linear tiling;
-		size_t mapped_size = 0;			// for buffers, it is the full buffer size; for textures it is the full texture size including all subresources;
-
-		size_t sparse_page_size = 0ull;	// specifies the required alignment of backing allocation for sparse tile pool
 	};
 
-	struct GPUBuffer : public GPUResource
+	struct GPUBuffer final : public GPUResource
 	{
 		GPUBufferDesc desc;
 
 		constexpr const GPUBufferDesc& GetDesc() const { return desc; }
+
+		// Dynamic allocation and destruction of this object is not allowed because virtual table is not used
+		static void* operator new (size_t) = delete;
+		static void* operator new[](size_t) = delete;
+		static void  operator delete (void*) = delete;
+		static void  operator delete[](void*) = delete;
+		static void* operator new (size_t, void*) = delete;
+		static void* operator new[](size_t, void*) = delete;
 	};
 
-	struct Texture : public GPUResource
+	struct Texture final : public GPUResource
 	{
 		TextureDesc	desc;
 
@@ -903,10 +912,21 @@ namespace wi::graphics
 #endif
 
 		constexpr const TextureDesc& GetDesc() const { return desc; }
+
+		// Dynamic allocation and destruction of this object is not allowed because virtual table is not used
+		static void* operator new (size_t) = delete;
+		static void* operator new[](size_t) = delete;
+		static void  operator delete (void*) = delete;
+		static void  operator delete[](void*) = delete;
+		static void* operator new (size_t, void*) = delete;
+		static void* operator new[](size_t, void*) = delete;
 	};
 
-	struct VideoDecoder : public GraphicsDeviceChild
+	struct VideoDecoder
 	{
+		std::shared_ptr<void> internal_state;
+		inline bool IsValid() const { return internal_state != nullptr; }
+
 		VideoDesc desc;
 		constexpr const VideoDesc& GetDesc() const { return desc; }
 		VideoDecoderSupportFlags support = VideoDecoderSupportFlags::NONE;
@@ -1137,22 +1157,31 @@ namespace wi::graphics
 		}
 	};
 
-	struct GPUQueryHeap : public GraphicsDeviceChild
+	struct GPUQueryHeap
 	{
+		std::shared_ptr<void> internal_state;
+		inline bool IsValid() const { return internal_state != nullptr; }
+
 		GPUQueryHeapDesc desc;
 
 		constexpr const GPUQueryHeapDesc& GetDesc() const { return desc; }
 	};
 
-	struct PipelineState : public GraphicsDeviceChild
+	struct PipelineState
 	{
+		std::shared_ptr<void> internal_state;
+		inline bool IsValid() const { return internal_state != nullptr; }
+
 		PipelineStateDesc desc;
 
 		constexpr const PipelineStateDesc& GetDesc() const { return desc; }
 	};
 
-	struct SwapChain : public GraphicsDeviceChild
+	struct SwapChain
 	{
+		std::shared_ptr<void> internal_state;
+		inline bool IsValid() const { return internal_state != nullptr; }
+
 		SwapChainDesc desc;
 
 		constexpr const SwapChainDesc& GetDesc() const { return desc; }
@@ -1246,13 +1275,21 @@ namespace wi::graphics
 			uint32_t count = 0;
 		} top_level;
 	};
-	struct RaytracingAccelerationStructure : public GPUResource
+	struct RaytracingAccelerationStructure final : public GPUResource
 	{
 		RaytracingAccelerationStructureDesc desc;
 
 		size_t size = 0;
 
 		constexpr const RaytracingAccelerationStructureDesc& GetDesc() const { return desc; }
+
+		// Dynamic allocation and destruction of this object is not allowed because virtual table is not used
+		static void* operator new (size_t) = delete;
+		static void* operator new[](size_t) = delete;
+		static void  operator delete (void*) = delete;
+		static void  operator delete[](void*) = delete;
+		static void* operator new (size_t, void*) = delete;
+		static void* operator new[](size_t, void*) = delete;
 	};
 
 	struct ShaderLibrary
@@ -1290,8 +1327,11 @@ namespace wi::graphics
 		uint32_t max_attribute_size_in_bytes = 0;
 		uint32_t max_payload_size_in_bytes = 0;
 	};
-	struct RaytracingPipelineState : public GraphicsDeviceChild
+	struct RaytracingPipelineState
 	{
+		std::shared_ptr<void> internal_state;
+		inline bool IsValid() const { return internal_state != nullptr; }
+
 		RaytracingPipelineStateDesc desc;
 
 		constexpr const RaytracingPipelineStateDesc& GetDesc() const { return desc; }
