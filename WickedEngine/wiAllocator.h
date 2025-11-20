@@ -264,6 +264,7 @@ namespace wi::allocator
 	{
 		virtual void reclaim(void* ptr) = 0;
 		virtual volatile long* get_refcount(void* ptr) = 0;
+		virtual size_t item_size() const = 0;
 
 		template<typename T>
 		struct Allocation
@@ -277,11 +278,6 @@ namespace wi::allocator
 
 			template<typename U>
 			operator InternalStateAllocator::Allocation<U>&() const { return *(InternalStateAllocator::Allocation<U>*)this; }
-
-			template<typename U>
-			static Allocation<T>& from(InternalStateAllocator::Allocation<U>& other) { return *(Allocation<T>*)&other; }
-			template<typename U>
-			static const Allocation<T>& from(const InternalStateAllocator::Allocation<U>& other) { return *(const Allocation<T>*)&other; }
 
 			constexpr bool IsValid() const { return ptr != nullptr; }
 
@@ -330,6 +326,8 @@ namespace wi::allocator
 			}
 			void move(Allocation& other)
 			{
+				if (this == &other)
+					return;
 				destroy();
 				allocator = other.allocator;
 				ptr = other.ptr;
@@ -344,8 +342,8 @@ namespace wi::allocator
 	{
 		struct RawStruct
 		{
-			uint8_t alignas(alignof(T)) data[sizeof(T)];
 			long refcount;
+			uint8_t alignas(alignof(T)) data[sizeof(T)];
 		};
 		struct Block
 		{
@@ -358,7 +356,7 @@ namespace wi::allocator
 		template<typename... ARG>
 		inline Allocation<T> allocate(ARG&&... args)
 		{
-			locker.lock();
+			std::scoped_lock lck(locker);
 			if (free_list.empty())
 			{
 				free_list.reserve(block_size);
@@ -367,14 +365,13 @@ namespace wi::allocator
 				RawStruct* ptr = block.mem.data();
 				for (size_t i = 0; i < block_size; ++i)
 				{
-					free_list.push_back((T*)(ptr + i));
+					RawStruct* ptri = ptr + i;
+					free_list.push_back((T*)ptri->data);
 				}
 			}
 			T* ptr = free_list.back();
 			free_list.pop_back();
-			locker.unlock();
 
-			// construct can happen outside of lock
 			new (ptr) T(std::forward<ARG>(args)...);
 			volatile long* refcount = get_refcount(ptr);
 			*refcount = 1;
@@ -386,27 +383,34 @@ namespace wi::allocator
 
 		void reclaim(void* ptr) override
 		{
-			((T*)ptr)->~T();
 			std::scoped_lock lck(locker);
+			((T*)ptr)->~T();
 			free_list.push_back((T*)ptr);
 		}
 		volatile long* get_refcount(void* ptr) override
 		{
-			return (volatile long*)((T*)ptr + 1);
+			return (volatile long*)((long*)ptr - 1);
 		}
+		size_t item_size() const override { return sizeof(T); }
 	};
 
+	// Use this as a handle for implementation specific objects:
 	using InternalAllocation = InternalStateAllocator::Allocation<void>;
-	
-	template<typename T>
-	inline auto make_internal()
+
+	// Allocate a new internal object:
+	template<typename T, typename... ARG>
+	inline InternalStateAllocator::Allocation<T> make_internal(ARG&&... args)
 	{
-		static InternalStateAllocatorImpl<T> allocator;
-		return allocator.allocate();
+		static InternalStateAllocatorImpl<T>* allocator = new InternalStateAllocatorImpl<T>; // only destroyed after program exit, never earlier
+		return allocator->allocate(std::forward<ARG>(args)...);
 	}
+
+	// Cast an internal object, returns invalid allocation if the size check doesn't match:
 	template<typename T>
-	inline auto upcast_internal(const InternalAllocation& allocation)
+	inline InternalStateAllocator::Allocation<T> upcast_internal(const InternalAllocation& allocation)
 	{
-		return InternalStateAllocator::Allocation<T>::from(allocation);
+		if (allocation.allocator->item_size() != sizeof(T))
+			return InternalStateAllocator::Allocation<T>();
+		return (InternalStateAllocator::Allocation<T>)allocation;
 	}
 }
