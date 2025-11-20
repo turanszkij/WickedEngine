@@ -1438,7 +1438,7 @@ namespace dx12_internal
 
 		ComPtr<ID3D12VersionedRootSignatureDeserializer> rootsig_deserializer;
 		const D3D12_VERSIONED_ROOT_SIGNATURE_DESC* rootsig_desc = nullptr;
-		wi::allocator::InternalStateAllocator::Allocation rootsig_desc_lifetime_extender;
+		wi::allocator::InternalAllocation rootsig_desc_lifetime_extender;
 		RootSignatureOptimizer rootsig_optimizer;
 
 		struct PSO_STREAM

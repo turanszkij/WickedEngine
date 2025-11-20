@@ -841,7 +841,7 @@ namespace wi::graphics
 
 	struct GraphicsDeviceChild
 	{
-		wi::allocator::InternalStateAllocator::Allocation internal_state;
+		wi::allocator::InternalAllocation internal_state;
 		constexpr bool IsValid() const { return internal_state.IsValid(); }
 
 		virtual ~GraphicsDeviceChild() = default;

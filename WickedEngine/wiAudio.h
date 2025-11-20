@@ -29,13 +29,13 @@ namespace wi::audio
 	//	Use SoundInstance for playback the sound data
 	struct Sound
 	{
-		wi::allocator::InternalStateAllocator::Allocation internal_state;
+		wi::allocator::InternalAllocation internal_state;
 		inline bool IsValid() const { return internal_state.get() != nullptr; }
 	};
 	// SoundInstance can be used to play back a Sound with specified effects
 	struct SoundInstance
 	{
-		wi::allocator::InternalStateAllocator::Allocation internal_state;
+		wi::allocator::InternalAllocation internal_state;
 		inline bool IsValid() const { return internal_state.get() != nullptr; }
 
 		// You can specify these params before creating the sound instance:

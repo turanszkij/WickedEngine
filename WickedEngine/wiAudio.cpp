@@ -222,7 +222,7 @@ namespace wi::audio
 	struct SoundInstanceInternal : public IXAudio2VoiceCallback
 	{
 		std::shared_ptr<AudioInternal> audio;
-		wi::allocator::InternalStateAllocatorImpl<SoundInternal>::AllocationImpl soundinternal;
+		wi::allocator::InternalStateAllocator::Allocation<SoundInternal> soundinternal;
 		IXAudio2SourceVoice* sourceVoice = nullptr;
 		XAUDIO2_VOICE_DETAILS voiceDetails = {};
 		wi::vector<float> outputMatrix;
@@ -893,7 +893,7 @@ namespace wi::audio
 	};
 	struct SoundInstanceInternal{
 		std::shared_ptr<AudioInternal> audio;
-		wi::allocator::InternalStateAllocatorImpl<SoundInternal>::AllocationImpl soundinternal;
+		wi::allocator::InternalStateAllocator::Allocation<SoundInternal> soundinternal;
 		FAudioSourceVoice* sourceVoice = nullptr;
 		FAudioVoiceDetails voiceDetails = {};
 		wi::vector<float> outputMatrix;

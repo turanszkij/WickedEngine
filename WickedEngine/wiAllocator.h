@@ -262,29 +262,39 @@ namespace wi::allocator
 	// Allocation of single elements of implementation-defined size with block allocation strategy, refcounted, thread-safe
 	struct InternalStateAllocator
 	{
-		wi::vector<void*> free_list;
-		std::mutex locker;
+		virtual void reclaim(void* ptr) = 0;
+		virtual volatile long* get_refcount(void* ptr) = 0;
 
+		template<typename T>
 		struct Allocation
 		{
+			T* ptr = nullptr;
 			InternalStateAllocator* allocator = nullptr;
-			void* ptr = nullptr;
 
-			operator void* () const { return ptr; }
-			void* get() const { return ptr; }
+			T* operator->() const { return (T*)ptr; }
+			operator T* () const { return (T*)ptr; }
+			T* get() const { return (T*)ptr; }
+
+			template<typename U>
+			operator InternalStateAllocator::Allocation<U>&() const { return *(InternalStateAllocator::Allocation<U>*)this; }
+
+			template<typename U>
+			static Allocation<T>& from(InternalStateAllocator::Allocation<U>& other) { return *(Allocation<T>*)&other; }
+			template<typename U>
+			static const Allocation<T>& from(const InternalStateAllocator::Allocation<U>& other) { return *(const Allocation<T>*)&other; }
 
 			constexpr bool IsValid() const { return ptr != nullptr; }
 
 			Allocation() = default;
 			Allocation(const Allocation& other) { copy(other); }
 			Allocation(Allocation&& other) { move(other); }
-			virtual ~Allocation() { destroy(); }
+			~Allocation() { destroy(); }
 			Allocation& operator=(const Allocation& other)
 			{
 				copy(other);
 				return *this;
 			}
-			Allocation& operator=(Allocation&& other) noexcept
+			Allocation& operator=(Allocation&& other)
 			{
 				move(other);
 				return *this;
@@ -327,15 +337,11 @@ namespace wi::allocator
 				other.ptr = nullptr;
 			}
 		};
-
-		virtual void reclaim(void* ptr) = 0;
-		virtual volatile long* get_refcount(void* ptr) = 0;
 	};
 
-	template<typename T>
+	template<typename T, size_t block_size = 256>
 	struct InternalStateAllocatorImpl final : public InternalStateAllocator
 	{
-		static constexpr size_t block_size = 256;
 		struct RawStruct
 		{
 			uint8_t alignas(alignof(T)) data[sizeof(T)];
@@ -346,19 +352,11 @@ namespace wi::allocator
 			wi::vector<RawStruct> mem;
 		};
 		wi::vector<Block> blocks;
-
-		struct AllocationImpl final : public InternalStateAllocator::Allocation
-		{
-			T* operator->() { return (T*)ptr; }
-			operator T*() { return (T*)ptr; }
-			T* get() { return (T*)ptr; }
-			operator InternalStateAllocator::Allocation& () const { return *this; }
-			static AllocationImpl& from(InternalStateAllocator::Allocation& other) { return *(AllocationImpl*)&other; }
-			static const AllocationImpl& from(const InternalStateAllocator::Allocation& other) { return *(const AllocationImpl*)&other; }
-		};
+		wi::vector<T*> free_list;
+		std::mutex locker;
 
 		template<typename... ARG>
-		inline AllocationImpl allocate(ARG&&... args)
+		inline Allocation<T> allocate(ARG&&... args)
 		{
 			locker.lock();
 			if (free_list.empty())
@@ -369,10 +367,10 @@ namespace wi::allocator
 				RawStruct* ptr = block.mem.data();
 				for (size_t i = 0; i < block_size; ++i)
 				{
-					free_list.push_back(ptr + i);
+					free_list.push_back((T*)(ptr + i));
 				}
 			}
-			void* ptr = free_list.back();
+			T* ptr = free_list.back();
 			free_list.pop_back();
 			locker.unlock();
 
@@ -380,7 +378,7 @@ namespace wi::allocator
 			new (ptr) T(std::forward<ARG>(args)...);
 			volatile long* refcount = get_refcount(ptr);
 			*refcount = 1;
-			AllocationImpl allocation;
+			Allocation<T> allocation;
 			allocation.allocator = this;
 			allocation.ptr = ptr;
 			return allocation;
@@ -390,7 +388,7 @@ namespace wi::allocator
 		{
 			((T*)ptr)->~T();
 			std::scoped_lock lck(locker);
-			free_list.push_back(ptr);
+			free_list.push_back((T*)ptr);
 		}
 		volatile long* get_refcount(void* ptr) override
 		{
@@ -398,6 +396,8 @@ namespace wi::allocator
 		}
 	};
 
+	using InternalAllocation = InternalStateAllocator::Allocation<void>;
+	
 	template<typename T>
 	inline auto make_internal()
 	{
@@ -405,8 +405,8 @@ namespace wi::allocator
 		return allocator.allocate();
 	}
 	template<typename T>
-	inline auto upcast_internal(const InternalStateAllocator::Allocation& allocation)
+	inline auto upcast_internal(const InternalAllocation& allocation)
 	{
-		return InternalStateAllocatorImpl<T>::AllocationImpl::from(allocation);
+		return InternalStateAllocator::Allocation<T>::from(allocation);
 	}
 }
