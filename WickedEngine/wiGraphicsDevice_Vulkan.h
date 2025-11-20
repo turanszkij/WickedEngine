@@ -454,24 +454,24 @@ namespace wi::graphics
 		ColorSpace GetSwapChainColorSpace(const SwapChain* swapchain) const override;
 		bool IsSwapChainSupportsHDR(const SwapChain* swapchain) const override;
 
-		uint64_t GetMinOffsetAlignment(const GPUBufferDesc* desc) const override
+		uint32_t GetMinOffsetAlignment(const GPUBufferDesc* desc) const override
 		{
-			uint64_t alignment = 1u;
+			uint32_t alignment = 1u;
 			if (has_flag(desc->bind_flags, BindFlag::CONSTANT_BUFFER))
 			{
-				alignment = std::max(alignment, properties2.properties.limits.minUniformBufferOffsetAlignment);
+				alignment = std::max(alignment, (uint32_t)properties2.properties.limits.minUniformBufferOffsetAlignment);
 			}
 			if (has_flag(desc->misc_flags, ResourceMiscFlag::BUFFER_RAW) || has_flag(desc->misc_flags, ResourceMiscFlag::BUFFER_STRUCTURED))
 			{
-				alignment = std::max(alignment, properties2.properties.limits.minStorageBufferOffsetAlignment);
+				alignment = std::max(alignment, (uint32_t)properties2.properties.limits.minStorageBufferOffsetAlignment);
 			}
 			if (desc->format != Format::UNKNOWN || has_flag(desc->misc_flags, ResourceMiscFlag::TYPED_FORMAT_CASTING))
 			{
-				alignment = std::max(alignment, properties2.properties.limits.minTexelBufferOffsetAlignment);
+				alignment = std::max(alignment, (uint32_t)properties2.properties.limits.minTexelBufferOffsetAlignment);
 			}
 			if (has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_BUFFER) || has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_NON_RT_DS) || has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_RT_DS))
 			{
-				alignment = std::max(alignment, uint64_t(64 * 1024)); // 64KB safety to match DX12, because cannot use vkGetBufferMemoryRequirements here
+				alignment = std::max(alignment, uint32_t(64 * 1024)); // 64KB safety to match DX12, because cannot use vkGetBufferMemoryRequirements here
 			}
 			return alignment;
 		}
