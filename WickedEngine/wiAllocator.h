@@ -262,23 +262,18 @@ namespace wi::allocator
 	// Allocation of single elements of implementation-defined size with block allocation strategy, refcounted, thread-safe
 	struct InternalStateAllocator
 	{
-		struct Entry
-		{
-			void* ptr = nullptr;
-			volatile long* refcount = nullptr;
-		};
-		wi::vector<Entry> free_list;
+		wi::vector<void*> free_list;
 		std::mutex locker;
 
 		struct Allocation
 		{
 			InternalStateAllocator* allocator = nullptr;
-			Entry entry;
+			void* ptr = nullptr;
 
-			operator void* () const { return entry.ptr; }
-			void* get() const { return entry.ptr; }
+			operator void* () const { return ptr; }
+			void* get() const { return ptr; }
 
-			constexpr bool IsValid() const { return entry.ptr != nullptr; }
+			constexpr bool IsValid() const { return ptr != nullptr; }
 
 			Allocation() = default;
 			Allocation(const Allocation& other) { copy(other); }
@@ -297,60 +292,66 @@ namespace wi::allocator
 
 			void destroy()
 			{
-				if (allocator != nullptr && entry.ptr != nullptr && entry.refcount != nullptr)
+				if (allocator != nullptr && ptr != nullptr)
 				{
-					int prev = AtomicAdd(entry.refcount, -1);
+					volatile long* refcount = allocator->get_refcount(ptr);
+					int prev = AtomicAdd(refcount, -1);
 					if (prev == 1)
 					{
-						allocator->reclaim(entry);
+						allocator->reclaim(ptr);
 					}
 				}
 				allocator = nullptr;
-				entry = {};
+				ptr = nullptr;
 			}
 			void copy(const Allocation& other)
 			{
 				destroy();
 				allocator = other.allocator;
-				entry = other.entry;
-				if (entry.refcount != nullptr)
+				ptr = other.ptr;
+				if (allocator != nullptr)
 				{
-					AtomicAdd(entry.refcount, 1);
+					volatile long* refcount = allocator->get_refcount(ptr);
+					if (refcount != nullptr)
+					{
+						AtomicAdd(refcount, 1);
+					}
 				}
 			}
 			void move(Allocation& other)
 			{
 				destroy();
 				allocator = other.allocator;
-				entry = other.entry;
+				ptr = other.ptr;
 				other.allocator = nullptr;
-				other.entry = {};
+				other.ptr = nullptr;
 			}
 		};
 
-		virtual void reclaim(const Entry& entry) = 0;
+		virtual void reclaim(void* ptr) = 0;
+		virtual volatile long* get_refcount(void* ptr) = 0;
 	};
 
 	template<typename T>
 	struct InternalStateAllocatorImpl final : public InternalStateAllocator
 	{
 		static constexpr size_t block_size = 256;
+		struct RawStruct
+		{
+			uint8_t alignas(alignof(T)) data[sizeof(T)];
+			long refcount;
+		};
 		struct Block
 		{
-			struct alignas(alignof(T)) RawStruct
-			{
-				uint8_t data[sizeof(T)];
-			};
 			wi::vector<RawStruct> mem;
-			wi::vector<long> refcounts;
 		};
 		wi::vector<Block> blocks;
 
 		struct AllocationImpl final : public InternalStateAllocator::Allocation
 		{
-			T* operator->() { return (T*)entry.ptr; }
-			operator T*() { return (T*)entry.ptr; }
-			T* get() { return (T*)entry.ptr; }
+			T* operator->() { return (T*)ptr; }
+			operator T*() { return (T*)ptr; }
+			T* get() { return (T*)ptr; }
 			operator InternalStateAllocator::Allocation& () const { return *this; }
 			static AllocationImpl& from(InternalStateAllocator::Allocation& other) { return *(AllocationImpl*)&other; }
 			static const AllocationImpl& from(const InternalStateAllocator::Allocation& other) { return *(const AllocationImpl*)&other; }
@@ -365,35 +366,35 @@ namespace wi::allocator
 				free_list.reserve(block_size);
 				Block& block = blocks.emplace_back();
 				block.mem.resize(block_size);
-				block.refcounts.resize(block_size);
-				T* ptr = (T*)block.mem.data();
-				volatile long* refcount = (volatile long*)block.refcounts.data();
+				RawStruct* ptr = block.mem.data();
 				for (size_t i = 0; i < block_size; ++i)
 				{
-					Entry entry;
-					entry.ptr = ptr + i;
-					entry.refcount = refcount + i;
-					free_list.push_back(entry);
+					free_list.push_back(ptr + i);
 				}
 			}
-			Entry entry = free_list.back();
+			void* ptr = free_list.back();
 			free_list.pop_back();
 			locker.unlock();
 
 			// construct can happen outside of lock
+			new (ptr) T(std::forward<ARG>(args)...);
+			volatile long* refcount = get_refcount(ptr);
+			*refcount = 1;
 			AllocationImpl allocation;
 			allocation.allocator = this;
-			allocation.entry = entry;
-			new (allocation.entry.ptr) T(std::forward<ARG>(args)...);
-			*allocation.entry.refcount = 1;
+			allocation.ptr = ptr;
 			return allocation;
 		}
 
-		void reclaim(const Entry& entry) override
+		void reclaim(void* ptr) override
 		{
-			((T*)entry.ptr)->~T();
+			((T*)ptr)->~T();
 			std::scoped_lock lck(locker);
-			free_list.push_back(entry);
+			free_list.push_back(ptr);
+		}
+		volatile long* get_refcount(void* ptr) override
+		{
+			return (volatile long*)((T*)ptr + 1);
 		}
 	};
 
