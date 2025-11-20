@@ -9540,9 +9540,19 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 			if ((probe_aabb.layerMask & vis.layerMask) && probe.render_dirty && probe.texture.IsValid())
 			{
-				probe.render_dirty = false;
-				render_probe(probe, probe_aabb);
-				rendered_anything = true;
+				if (probe.IsRealTime())
+				{
+					probe.realtime_time_accumulator += vis.scene->dt;
+				}
+
+				if (probe.ShouldRenderThisFrame())
+				{
+					probe.render_dirty = false;
+					probe.first_render = false;
+					probe.realtime_time_accumulator = 0.0f;
+					render_probe(probe, probe_aabb);
+					rendered_anything = true;
+				}
 			}
 		}
 

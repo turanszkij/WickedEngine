@@ -63,6 +63,14 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 	}));
 	AddWidget(&msaaCheckBox);
 
+	realtimeFrameIntervalSlider.Create(0.0f, 2.0f, 0.0f, 200, "Update Interval: ");
+	realtimeFrameIntervalSlider.SetTooltip("Control how often real-time probes render in seconds. 0 - every frame, 1.0 - once per second, etc.");
+	realtimeFrameIntervalSlider.SetEnabled(false);
+	realtimeFrameIntervalSlider.OnSlide(forEachSelected([] (auto probe, auto args) {
+		probe->realtime_update_interval = args.fValue;
+	}));
+	AddWidget(&realtimeFrameIntervalSlider);
+
 	refreshButton.Create("Refresh");
 	refreshButton.SetTooltip("Re-renders the selected probe.");
 	refreshButton.SetEnabled(false);
@@ -156,8 +164,13 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 	resolutionCombo.AddItem("1024", 1024);
 	resolutionCombo.AddItem("2048", 2048);
 	resolutionCombo.OnSelect(forEachSelected([] (auto probe, auto args) {
-		probe->resolution = (uint32_t)args.userdata;
-		probe->CreateRenderData();
+		uint32_t resolution = (uint32_t)args.userdata;
+		if (probe->resolution != resolution)
+		{
+			probe->resolution = resolution;
+			probe->first_render = true;
+			probe->CreateRenderData();
+		}
 	}));
 	AddWidget(&resolutionCombo);
 
@@ -179,6 +192,7 @@ void EnvProbeWindow::SetEntity(Entity entity)
 	{
 		realTimeCheckBox.SetEnabled(false);
 		msaaCheckBox.SetEnabled(false);
+		realtimeFrameIntervalSlider.SetEnabled(false);
 		refreshButton.SetEnabled(false);
 	}
 	else
@@ -187,6 +201,8 @@ void EnvProbeWindow::SetEntity(Entity entity)
 		realTimeCheckBox.SetEnabled(true);
 		msaaCheckBox.SetCheck(probe->IsMSAA());
 		msaaCheckBox.SetEnabled(true);
+		realtimeFrameIntervalSlider.SetValue(probe->realtime_update_interval);
+		realtimeFrameIntervalSlider.SetEnabled(true);
 		refreshButton.SetEnabled(true);
 		resolutionCombo.SetSelectedByUserdata(probe->resolution);
 
@@ -235,6 +251,5 @@ void EnvProbeWindow::ResizeLayout()
 
 	layout.add_right(realTimeCheckBox);
 	layout.add_right(msaaCheckBox);
-
-
+	layout.add_right(realtimeFrameIntervalSlider);
 }
