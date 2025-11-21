@@ -263,7 +263,9 @@ namespace wi::allocator
 	struct InternalStateAllocator
 	{
 		virtual void reclaim(void* ptr) = 0;
-		virtual volatile long* get_refcount(void* ptr) = 0;
+		virtual void init_refcount(void* ptr) = 0;
+		virtual uint32_t inc_refcount(void* ptr) = 0;
+		virtual uint32_t dec_refcount(void* ptr) = 0;
 		virtual size_t item_size() const = 0;
 
 		template<typename T>
@@ -307,9 +309,7 @@ namespace wi::allocator
 			{
 				if (allocator != nullptr && ptr != nullptr)
 				{
-					volatile long* refcount = allocator->get_refcount(ptr);
-					int prev = AtomicAdd(refcount, -1);
-					if (prev == 1)
+					if (allocator->dec_refcount(ptr) == 1)
 					{
 						allocator->reclaim(ptr);
 					}
@@ -322,13 +322,9 @@ namespace wi::allocator
 				destroy();
 				allocator = other.allocator;
 				ptr = other.ptr;
-				if (allocator != nullptr)
+				if (allocator != nullptr && ptr != nullptr)
 				{
-					volatile long* refcount = allocator->get_refcount(ptr);
-					if (refcount != nullptr)
-					{
-						AtomicAdd(refcount, 1);
-					}
+					allocator->inc_refcount(ptr);
 				}
 			}
 			void move(Allocation& other) noexcept
@@ -353,11 +349,11 @@ namespace wi::allocator
 			{
 				uint8_t data[sizeof(T)];
 			} storage;
-			long refcount;
+			std::atomic<uint32_t> refcount;
 		};
 		struct Block
 		{
-			wi::vector<RawStruct> mem;
+			std::unique_ptr<RawStruct[]> mem;
 		};
 		wi::vector<Block> blocks;
 		wi::vector<T*> free_list;
@@ -371,8 +367,8 @@ namespace wi::allocator
 			{
 				free_list.reserve(block_size);
 				Block& block = blocks.emplace_back();
-				block.mem.resize(block_size);
-				RawStruct* ptr = block.mem.data();
+				block.mem.reset(new RawStruct[block_size]);
+				RawStruct* ptr = block.mem.get();
 				for (size_t i = 0; i < block_size; ++i)
 				{
 					RawStruct* ptri = ptr + i;
@@ -383,8 +379,7 @@ namespace wi::allocator
 			free_list.pop_back();
 
 			new (ptr) T(std::forward<ARG>(args)...);
-			volatile long* refcount = get_refcount(ptr);
-			*refcount = 1;
+			init_refcount(ptr);
 			Allocation<T> allocation;
 			allocation.allocator = this;
 			allocation.ptr = ptr;
@@ -397,9 +392,18 @@ namespace wi::allocator
 			((T*)ptr)->~T();
 			free_list.push_back((T*)ptr);
 		}
-		volatile long* get_refcount(void* ptr) override
+
+		void init_refcount(void* ptr) override
 		{
-			return (volatile long*)((uint8_t*)ptr + offsetof(RawStruct, refcount));
+			((std::atomic<uint32_t>*)((uint8_t*)ptr + offsetof(RawStruct, refcount)))->store(1);
+		}
+		uint32_t inc_refcount(void* ptr) override
+		{
+			return ((std::atomic<uint32_t>*)((uint8_t*)ptr + offsetof(RawStruct, refcount)))->fetch_add(1);
+		}
+		uint32_t dec_refcount(void* ptr) override
+		{
+			return ((std::atomic<uint32_t>*)((uint8_t*)ptr + offsetof(RawStruct, refcount)))->fetch_sub(1);
 		}
 		size_t item_size() const override { return sizeof(T); }
 	};
