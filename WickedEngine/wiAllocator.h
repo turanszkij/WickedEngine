@@ -349,11 +349,11 @@ namespace wi::allocator
 	{
 		struct RawStruct
 		{
-			long refcount;
 			struct alignas(alignof(T)) AlignedStorage
 			{
 				uint8_t data[sizeof(T)];
 			} storage;
+			long refcount;
 		};
 		struct Block
 		{
@@ -399,7 +399,7 @@ namespace wi::allocator
 		}
 		volatile long* get_refcount(void* ptr) override
 		{
-			return (volatile long*)((long*)ptr - 1);
+			return (volatile long*)((uint8_t*)ptr + offsetof(RawStruct, refcount));
 		}
 		size_t item_size() const override { return sizeof(T); }
 	};
