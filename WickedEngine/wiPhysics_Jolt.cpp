@@ -94,6 +94,7 @@ namespace wi::physics
 		bool INTERPOLATION = true;
 		float CHARACTER_COLLISION_TOLERANCE = 0.05f;
 		float DEBUG_MAX_DRAW_DISTANCE = 500.0f;
+		int COLLISION_STEPS = 1;
 
 		// Physics shape cache data structures for reusing complex shapes across multiple rigid bodies
 		struct PhysicsShapeCacheKey
@@ -2067,6 +2068,9 @@ namespace wi::physics
 	float GetFrameRate() { return 1.0f / TIMESTEP; }
 	void SetFrameRate(float value) { TIMESTEP = 1.0f / value; }
 
+	float GetCharacterCollisionTolerance() { return CHARACTER_COLLISION_TOLERANCE; }
+	void SetCharacterCollisionTolerance(float value) { CHARACTER_COLLISION_TOLERANCE = value; }
+
 	void RunPhysicsUpdateSystem(
 		wi::jobsystem::context& ctx,
 		wi::scene::Scene& scene,
@@ -2789,7 +2793,7 @@ namespace wi::physics
 					wi::jobsystem::Wait(ctx);
 				}
 
-				physics_scene.physics_system.Update(TIMESTEP, 1, &temp_allocator, &job_system);
+				physics_scene.physics_system.Update(TIMESTEP, COLLISION_STEPS, &temp_allocator, &job_system);
 				physics_scene.accumulator = next_accumulator;
 			}
 			physics_scene.alpha = physics_scene.accumulator / TIMESTEP;

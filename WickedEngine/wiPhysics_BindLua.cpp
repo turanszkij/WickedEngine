@@ -48,6 +48,8 @@ namespace wi::lua
 		lunamethod(Physics_BindLua, PickDrag),
 		lunamethod(Physics_BindLua, DriveVehicle),
 		lunamethod(Physics_BindLua, GetVehicleForwardVelocity),
+		lunamethod(Physics_BindLua, SetCharacterCollisionTolerance),
+		lunamethod(Physics_BindLua, GetCharacterCollisionTolerance),
 		{ NULL, NULL }
 	};
 	Luna<Physics_BindLua>::PropertyType Physics_BindLua::properties[] = {
@@ -799,6 +801,24 @@ namespace wi::lua
 		else
 			wi::lua::SError(L, "SetRagdollGhostMode(HumanoidComponent component, bool value) not enough arguments!");
 		return 0;
+	}
+
+	int Physics_BindLua::SetCharacterCollisionTolerance(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			wi::physics::SetCharacterCollisionTolerance(wi::lua::SGetFloat(L, 1));
+		}
+		else
+			wi::lua::SError(L, "SetCharacterCollisionTolerance(float value) not enough arguments!");
+		return 0;
+	}
+
+	int Physics_BindLua::GetCharacterCollisionTolerance(lua_State* L)
+	{
+		wi::lua::SSetFloat(L, wi::physics::GetCharacterCollisionTolerance());
+		return 1;
 	}
 
 	int Physics_BindLua::Intersects(lua_State* L)
