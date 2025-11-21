@@ -550,6 +550,16 @@ namespace wi::lua
 		wi::profiler::SetEnabled(!wi::profiler::IsEnabled());
 		return 0;
 	}
+	int exit(lua_State* L)
+	{
+		lua_getglobal(L, "application");
+		Application_BindLua* app = Luna<Application_BindLua>::lightcheck(L, -1);
+		if (app && app->component)
+		{
+			app->component->Exit();
+		}
+		return 0;
+	}
 
 	void Application_BindLua::Bind()
 	{
@@ -561,6 +571,7 @@ namespace wi::lua
 
 			wi::lua::RegisterFunc("SetProfilerEnabled", SetProfilerEnabled);
 			wi::lua::RegisterFunc("prof", prof);
+			wi::lua::RegisterFunc("exit", exit);
 
 			wi::lua::RunText(R"(
 FadeType = {
