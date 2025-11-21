@@ -290,20 +290,20 @@ namespace wi::allocator
 
 			Allocation() = default;
 			Allocation(const Allocation& other) { copy(other); }
-			Allocation(Allocation&& other) { move(other); }
-			~Allocation() { destroy(); }
+			Allocation(Allocation&& other) noexcept { move(other); }
+			~Allocation() noexcept { destroy(); }
 			Allocation& operator=(const Allocation& other)
 			{
 				copy(other);
 				return *this;
 			}
-			Allocation& operator=(Allocation&& other)
+			Allocation& operator=(Allocation&& other) noexcept
 			{
 				move(other);
 				return *this;
 			}
 
-			void destroy()
+			void destroy() noexcept
 			{
 				if (allocator != nullptr && ptr != nullptr)
 				{
@@ -331,7 +331,7 @@ namespace wi::allocator
 					}
 				}
 			}
-			void move(Allocation& other)
+			void move(Allocation& other) noexcept
 			{
 				if (this == &other)
 					return;
