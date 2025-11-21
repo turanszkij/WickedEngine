@@ -108,7 +108,7 @@ namespace wi::terrain
 			void init(uint32_t resolution);
 			void reset();
 		};
-		wi::unordered_map<uint32_t, wi::vector<std::shared_ptr<Residency>>> free_residencies; // per resolution residencies
+		wi::unordered_map<uint32_t, wi::vector<wi::allocator::shared_ptr<Residency>>> free_residencies; // per resolution residencies
 
 		bool allocate_tile(Tile& tile)
 		{
@@ -142,20 +142,20 @@ namespace wi::terrain
 				return ~0ull;
 			return physical_tiles[tile.x + tile.y * physical_tile_count_x].free_frames;
 		}
-		std::shared_ptr<Residency> allocate_residency(uint32_t resolution)
+		wi::allocator::shared_ptr<Residency> allocate_residency(uint32_t resolution)
 		{
 			if (free_residencies[resolution].empty())
 			{
-				std::shared_ptr<Residency> residency = std::make_shared<Residency>();
+				wi::allocator::shared_ptr<Residency> residency = wi::allocator::make_shared<Residency>();
 				residency->init(resolution);
 				free_residencies[resolution].push_back(residency);
 			}
-			std::shared_ptr<Residency> residency = free_residencies[resolution].back();
+			wi::allocator::shared_ptr<Residency> residency = free_residencies[resolution].back();
 			free_residencies[resolution].pop_back();
 			residency->reset();
 			return residency;
 		}
-		void free_residency(std::shared_ptr<Residency>& residency)
+		void free_residency(wi::allocator::shared_ptr<Residency>& residency)
 		{
 			if (residency == nullptr)
 				return;
@@ -170,7 +170,7 @@ namespace wi::terrain
 
 	struct VirtualTexture
 	{
-		std::shared_ptr<VirtualTextureAtlas::Residency> residency;
+		wi::allocator::shared_ptr<VirtualTextureAtlas::Residency> residency;
 		wi::vector<VirtualTextureAtlas::Tile> tiles;
 		uint32_t lod_count = 0;
 		uint32_t resolution = 0;
@@ -231,7 +231,7 @@ namespace wi::terrain
 		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
 		bool visible = true;
 		bool invalidated = false;
-		std::shared_ptr<VirtualTexture> vt;
+		wi::allocator::shared_ptr<VirtualTexture> vt;
 		wi::vector<uint16_t> heightmap_data;
 		wi::graphics::Texture heightmap;
 

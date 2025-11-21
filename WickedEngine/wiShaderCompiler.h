@@ -29,7 +29,7 @@ namespace wi::shadercompiler
 	};
 	struct CompilerOutput
 	{
-		wi::allocator::InternalAllocation internal_state;
+		wi::allocator::shared_ptr<void> internal_state;
 		constexpr bool IsValid() const { return internal_state.IsValid(); }
 
 		const uint8_t* shaderdata = nullptr;

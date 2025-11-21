@@ -1,13 +1,13 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiVector.h"
+#include "wiSpinLock.h"
 
 #include "Utility/offsetAllocator.hpp"
 
 #include <mutex>
 #include <atomic>
 #include <memory>
-#include <cassert>
 #include <algorithm>
 #include <deque>
 
@@ -259,89 +259,100 @@ namespace wi::allocator
 
 
 
-	// Allocation of single elements of implementation-defined size with block allocation strategy, refcounted, thread-safe
-	struct InternalStateAllocator
+	// Interface for allocating pooled shared_ptr
+	struct SharedBlockAllocator
 	{
 		virtual void reclaim(void* ptr) = 0;
 		virtual void init_refcount(void* ptr) = 0;
 		virtual uint32_t inc_refcount(void* ptr) = 0;
 		virtual uint32_t dec_refcount(void* ptr) = 0;
-		virtual size_t item_size() const = 0;
-
-		template<typename T>
-		struct Allocation
-		{
-			T* ptr = nullptr;
-			InternalStateAllocator* allocator = nullptr;
-
-			T* operator->() const { return (T*)ptr; }
-			operator T* () const { return (T*)ptr; }
-			T* get() const { return (T*)ptr; }
-
-			template<typename U>
-			operator InternalStateAllocator::Allocation<U>&() const
-			{
-				static_assert(offsetof(InternalStateAllocator::Allocation<T>, ptr) == offsetof(InternalStateAllocator::Allocation<U>, ptr));
-				static_assert(offsetof(InternalStateAllocator::Allocation<T>, allocator) == offsetof(InternalStateAllocator::Allocation<U>, allocator));
-				static_assert(sizeof(InternalStateAllocator::Allocation<T>) == sizeof(InternalStateAllocator::Allocation<U>));
-				static_assert(sizeof(InternalStateAllocator::Allocation<T>) == 16);
-				return *(InternalStateAllocator::Allocation<U>*)this;
-			}
-
-			constexpr bool IsValid() const { return ptr != nullptr; }
-
-			Allocation() = default;
-			Allocation(const Allocation& other) { copy(other); }
-			Allocation(Allocation&& other) noexcept { move(other); }
-			~Allocation() noexcept { destroy(); }
-			Allocation& operator=(const Allocation& other)
-			{
-				copy(other);
-				return *this;
-			}
-			Allocation& operator=(Allocation&& other) noexcept
-			{
-				move(other);
-				return *this;
-			}
-
-			void destroy() noexcept
-			{
-				if (allocator != nullptr && ptr != nullptr)
-				{
-					if (allocator->dec_refcount(ptr) == 1)
-					{
-						allocator->reclaim(ptr);
-					}
-				}
-				allocator = nullptr;
-				ptr = nullptr;
-			}
-			void copy(const Allocation& other)
-			{
-				destroy();
-				allocator = other.allocator;
-				ptr = other.ptr;
-				if (allocator != nullptr && ptr != nullptr)
-				{
-					allocator->inc_refcount(ptr);
-				}
-			}
-			void move(Allocation& other) noexcept
-			{
-				if (this == &other)
-					return;
-				destroy();
-				allocator = other.allocator;
-				ptr = other.ptr;
-				other.allocator = nullptr;
-				other.ptr = nullptr;
-			}
-		};
 	};
 
+	// Shared ptr using a block allocation strategy, refcounted, thread-safe
+	//	This makes it easy to swap-out std::shared_ptr, but not feature complete, only has minimal feature set
+	//	Use this if you require many object of the same type, their memory allocation will be pooled
+	//	If you require just a single object, it might be better to use std::shared_ptr instead
+	template<typename T>
+	struct shared_ptr
+	{
+		T* ptr = nullptr;
+		SharedBlockAllocator* allocator = nullptr;
+
+		T* operator->() const { return (T*)ptr; }
+		operator T* () const { return (T*)ptr; }
+		T* get() const { return (T*)ptr; }
+
+		template<typename U>
+		operator shared_ptr<U> () const
+		{
+			static_assert(offsetof(shared_ptr<T>, ptr) == offsetof(shared_ptr<U>, ptr));
+			static_assert(offsetof(shared_ptr<T>, allocator) == offsetof(shared_ptr<U>, allocator));
+			static_assert(sizeof(shared_ptr<T>) == sizeof(shared_ptr<U>));
+			static_assert(sizeof(shared_ptr<T>) == 16);
+			shared_ptr<U> ret;
+			ret.allocator = allocator;
+			ret.ptr = (U*)ptr;
+			if (allocator != nullptr && ptr != nullptr)
+			{
+				allocator->inc_refcount(ptr);
+			}
+			return ret;
+		}
+
+		constexpr bool IsValid() const { return ptr != nullptr; }
+
+		shared_ptr() = default;
+		shared_ptr(const shared_ptr& other) { copy(other); }
+		shared_ptr(shared_ptr&& other) noexcept { move(other); }
+		~shared_ptr() noexcept { destroy(); }
+		shared_ptr& operator=(const shared_ptr& other)
+		{
+			copy(other);
+			return *this;
+		}
+		shared_ptr& operator=(shared_ptr&& other) noexcept
+		{
+			move(other);
+			return *this;
+		}
+
+		void destroy() noexcept
+		{
+			if (allocator != nullptr && ptr != nullptr)
+			{
+				if (allocator->dec_refcount(ptr) == 1)
+				{
+					allocator->reclaim(ptr);
+				}
+			}
+			allocator = nullptr;
+			ptr = nullptr;
+		}
+		void copy(const shared_ptr& other)
+		{
+			destroy();
+			allocator = other.allocator;
+			ptr = other.ptr;
+			if (allocator != nullptr && ptr != nullptr)
+			{
+				allocator->inc_refcount(ptr);
+			}
+		}
+		void move(shared_ptr& other) noexcept
+		{
+			if (this == &other)
+				return;
+			destroy();
+			allocator = other.allocator;
+			ptr = other.ptr;
+			other.allocator = nullptr;
+			other.ptr = nullptr;
+		}
+	};
+
+	// Implementation of a thread-safe refcounted block allocator
 	template<typename T, size_t block_size = 256>
-	struct InternalStateAllocatorImpl final : public InternalStateAllocator
+	struct SharedBlockAllocatorImpl final : public SharedBlockAllocator
 	{
 		struct RawStruct
 		{
@@ -351,80 +362,77 @@ namespace wi::allocator
 			} storage;
 			std::atomic<uint32_t> refcount;
 		};
+		static_assert(offsetof(RawStruct, storage) == 0);
+		static_assert(offsetof(RawStruct::AlignedStorage, data) == 0);
+
 		struct Block
 		{
 			std::unique_ptr<RawStruct[]> mem;
 		};
 		wi::vector<Block> blocks;
-		wi::vector<T*> free_list;
-		std::mutex locker;
+		wi::vector<void*> free_list;
+		//std::mutex locker;
+		wi::SpinLock locker;
 
 		template<typename... ARG>
-		inline Allocation<T> allocate(ARG&&... args)
+		inline shared_ptr<T> allocate(ARG&&... args)
 		{
-			std::scoped_lock lck(locker);
+			locker.lock();
 			if (free_list.empty())
 			{
-				free_list.reserve(block_size);
 				Block& block = blocks.emplace_back();
 				block.mem.reset(new RawStruct[block_size]);
 				RawStruct* ptr = block.mem.get();
+				free_list.reserve(block_size);
 				for (size_t i = 0; i < block_size; ++i)
 				{
-					RawStruct* ptri = ptr + i;
-					free_list.push_back((T*)ptri->storage.data);
+					free_list.push_back(ptr + i);
 				}
 			}
-			T* ptr = free_list.back();
+			void* ptr = free_list.back();
 			free_list.pop_back();
+			locker.unlock();
 
+			// Construction can be outside of lock, this structure wasn't shared yet:
 			new (ptr) T(std::forward<ARG>(args)...);
 			init_refcount(ptr);
-			Allocation<T> allocation;
+			shared_ptr<T> allocation;
 			allocation.allocator = this;
-			allocation.ptr = ptr;
+			allocation.ptr = static_cast<T*>(ptr);
 			return allocation;
 		}
 
 		void reclaim(void* ptr) override
 		{
+			static_cast<T*>(ptr)->~T(); // outside of lock
+
 			std::scoped_lock lck(locker);
-			((T*)ptr)->~T();
 			free_list.push_back((T*)ptr);
 		}
 
 		void init_refcount(void* ptr) override
 		{
-			((std::atomic<uint32_t>*)((uint8_t*)ptr + offsetof(RawStruct, refcount)))->store(1);
+			static_cast<RawStruct*>(ptr)->refcount.store(1);
 		}
 		uint32_t inc_refcount(void* ptr) override
 		{
-			return ((std::atomic<uint32_t>*)((uint8_t*)ptr + offsetof(RawStruct, refcount)))->fetch_add(1);
+			return static_cast<RawStruct*>(ptr)->refcount.fetch_add(1);
 		}
 		uint32_t dec_refcount(void* ptr) override
 		{
-			return ((std::atomic<uint32_t>*)((uint8_t*)ptr + offsetof(RawStruct, refcount)))->fetch_sub(1);
+			return static_cast<RawStruct*>(ptr)->refcount.fetch_sub(1);
 		}
-		size_t item_size() const override { return sizeof(T); }
 	};
 
-	// Use this as a handle for implementation specific objects:
-	using InternalAllocation = InternalStateAllocator::Allocation<void>;
-
-	// Allocate a new internal object:
-	template<typename T, typename... ARG>
-	inline InternalStateAllocator::Allocation<T> make_internal(ARG&&... args)
-	{
-		static InternalStateAllocatorImpl<T>* allocator = new InternalStateAllocatorImpl<T>; // only destroyed after program exit, never earlier
-		return allocator->allocate(std::forward<ARG>(args)...);
-	}
-
-	// Cast an internal object, returns invalid allocation if the size check doesn't match:
+	// The allocators are global intentionally, this avoids runtime construction, guard check
 	template<typename T>
-	inline InternalStateAllocator::Allocation<T> upcast_internal(const InternalAllocation& allocation)
+	inline static SharedBlockAllocatorImpl<T>* shared_block_allocator = new SharedBlockAllocatorImpl<T>; // only destroyed after program exit, never earlier
+
+	// Create a new shared pooled object:
+	template<typename T, typename... ARG>
+	inline shared_ptr<T> make_shared(ARG&&... args)
 	{
-		if (allocation.allocator->item_size() != sizeof(T))
-			return InternalStateAllocator::Allocation<T>();
-		return (InternalStateAllocator::Allocation<T>)allocation;
+		return shared_block_allocator<T>->allocate(std::forward<ARG>(args)...);
 	}
+
 }

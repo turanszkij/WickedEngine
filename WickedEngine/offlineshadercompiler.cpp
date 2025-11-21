@@ -554,7 +554,7 @@ int main(int argc, char* argv[])
 						{
 							if (shaderdump_enabled)
 							{
-								auto vec = wi::allocator::make_internal<std::vector<uint8_t>>();
+								auto vec = wi::allocator::make_shared<std::vector<uint8_t>>();
 
 								if (wi::helper::FileRead(shaderbinaryfilename, *vec))
 								{

@@ -222,7 +222,7 @@ namespace wi::audio
 	struct SoundInstanceInternal : public IXAudio2VoiceCallback
 	{
 		std::shared_ptr<AudioInternal> audio;
-		wi::allocator::InternalStateAllocator::Allocation<SoundInternal> soundinternal;
+		wi::allocator::shared_ptr<SoundInternal> soundinternal;
 		IXAudio2SourceVoice* sourceVoice = nullptr;
 		XAUDIO2_VOICE_DETAILS voiceDetails = {};
 		wi::vector<float> outputMatrix;
@@ -352,7 +352,7 @@ namespace wi::audio
 	{
 		if (audio_internal == nullptr || !audio_internal->IsValid())
 			return false;
-		auto soundinternal = wi::allocator::make_internal<SoundInternal>();
+		auto soundinternal = wi::allocator::make_shared<SoundInternal>();
 		soundinternal->audio = audio_internal;
 		sound->internal_state = soundinternal;
 
@@ -429,8 +429,8 @@ namespace wi::audio
 		if (sound == nullptr || !sound->IsValid())
 			return false;
 		HRESULT hr;
-		auto soundinternal = wi::allocator::upcast_internal<SoundInternal>(sound->internal_state);
-		auto instanceinternal = wi::allocator::make_internal<SoundInstanceInternal>();
+		auto soundinternal = wi::allocator::shared_ptr<SoundInternal>(sound->internal_state);
+		auto instanceinternal = wi::allocator::make_shared<SoundInstanceInternal>();
 		instance->internal_state = instanceinternal;
 
 		instanceinternal->audio = audio_internal;
@@ -893,7 +893,7 @@ namespace wi::audio
 	};
 	struct SoundInstanceInternal{
 		std::shared_ptr<AudioInternal> audio;
-		wi::allocator::InternalStateAllocator::Allocation<SoundInternal> soundinternal;
+		wi::allocator::shared_ptr<SoundInternal> soundinternal;
 		FAudioSourceVoice* sourceVoice = nullptr;
 		FAudioVoiceDetails voiceDetails = {};
 		wi::vector<float> outputMatrix;
@@ -979,7 +979,7 @@ namespace wi::audio
 	{
 		if (audio_internal == nullptr || !audio_internal->IsValid())
 			return false;
-		auto soundinternal = wi::allocator::make_internal<SoundInternal>();
+		auto soundinternal = wi::allocator::make_shared<SoundInternal>();
 		soundinternal->audio = audio_internal;
 		sound->internal_state = soundinternal;
 
@@ -1056,8 +1056,8 @@ namespace wi::audio
 		if (sound == nullptr || !sound->IsValid())
 			return false;
 		uint32_t res;
-		auto soundinternal = wi::allocator::upcast_internal<SoundInternal>(sound->internal_state);
-		auto instanceinternal = wi::allocator::make_internal<SoundInstanceInternal>();
+		auto soundinternal = wi::allocator::shared_ptr<SoundInternal>(sound->internal_state);
+		auto instanceinternal = wi::allocator::make_shared<SoundInstanceInternal>();
 		instance->internal_state = instanceinternal;
 
 		instanceinternal->audio = audio_internal;

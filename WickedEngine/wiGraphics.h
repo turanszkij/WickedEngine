@@ -841,7 +841,7 @@ namespace wi::graphics
 
 	struct Sampler
 	{
-		wi::allocator::InternalAllocation internal_state;
+		wi::allocator::shared_ptr<void> internal_state;
 		constexpr bool IsValid() const { return internal_state.IsValid(); }
 
 		SamplerDesc desc;
@@ -851,7 +851,7 @@ namespace wi::graphics
 
 	struct Shader
 	{
-		wi::allocator::InternalAllocation internal_state;
+		wi::allocator::shared_ptr<void> internal_state;
 		constexpr bool IsValid() const { return internal_state.IsValid(); }
 
 		ShaderStage stage = ShaderStage::Count;
@@ -859,7 +859,7 @@ namespace wi::graphics
 
 	struct GPUResource
 	{
-		wi::allocator::InternalAllocation internal_state;
+		wi::allocator::shared_ptr<void> internal_state;
 		constexpr bool IsValid() const { return internal_state.IsValid(); }
 
 		// These are only valid if the resource was created with CPU access (USAGE::UPLOAD or USAGE::READBACK)
@@ -925,7 +925,7 @@ namespace wi::graphics
 
 	struct VideoDecoder
 	{
-		wi::allocator::InternalAllocation internal_state;
+		wi::allocator::shared_ptr<void> internal_state;
 		constexpr bool IsValid() const { return internal_state.IsValid(); }
 
 		VideoDesc desc;
@@ -1160,7 +1160,7 @@ namespace wi::graphics
 
 	struct GPUQueryHeap
 	{
-		wi::allocator::InternalAllocation internal_state;
+		wi::allocator::shared_ptr<void> internal_state;
 		constexpr bool IsValid() const { return internal_state.IsValid(); }
 
 		GPUQueryHeapDesc desc;
@@ -1170,7 +1170,7 @@ namespace wi::graphics
 
 	struct PipelineState
 	{
-		wi::allocator::InternalAllocation internal_state;
+		wi::allocator::shared_ptr<void> internal_state;
 		constexpr bool IsValid() const { return internal_state.IsValid(); }
 
 		PipelineStateDesc desc;
@@ -1180,7 +1180,7 @@ namespace wi::graphics
 
 	struct SwapChain
 	{
-		wi::allocator::InternalAllocation internal_state;
+		wi::allocator::shared_ptr<void> internal_state;
 		constexpr bool IsValid() const { return internal_state.IsValid(); }
 
 		SwapChainDesc desc;
@@ -1330,7 +1330,7 @@ namespace wi::graphics
 	};
 	struct RaytracingPipelineState
 	{
-		wi::allocator::InternalAllocation internal_state;
+		wi::allocator::shared_ptr<void> internal_state;
 		constexpr bool IsValid() const { return internal_state.IsValid(); }
 
 		RaytracingPipelineStateDesc desc;
