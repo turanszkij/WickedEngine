@@ -263,7 +263,6 @@ namespace wi::allocator
 	// Interface for allocating pooled shared_ptr
 	struct SharedBlockAllocator
 	{
-		virtual void reclaim(void* ptr) = 0;
 		virtual void init_refcount(void* ptr) = 0;
 		virtual uint32_t get_refcount(void* ptr) = 0;
 		virtual uint32_t inc_refcount(void* ptr) = 0;
@@ -436,7 +435,7 @@ namespace wi::allocator
 			std::atomic<uint32_t> refcount;
 			std::atomic<uint32_t> refcount_weak;
 		};
-		static_assert(offsetof(RawStruct, data) == 0);
+		static_assert(offsetof(RawStruct, data) == 0); // we assume that data is located at 0 when casting ptr to T*, this avoids having to do a function call that would return T* like the refcounts
 
 		struct Block
 		{
@@ -475,7 +474,7 @@ namespace wi::allocator
 			return allocation;
 		}
 
-		void reclaim(void* ptr) override
+		void reclaim(void* ptr)
 		{
 			std::scoped_lock lck(locker);
 			free_list.push_back((RawStruct*)ptr);
