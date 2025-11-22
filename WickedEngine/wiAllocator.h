@@ -428,7 +428,7 @@ namespace wi::allocator
 	template<typename T, size_t block_size = 256>
 	struct SharedBlockAllocatorImpl final : public SharedBlockAllocator
 	{
-		uint8_t allocator_id = register_shared_block_allocator(this);
+		const uint8_t allocator_id = register_shared_block_allocator(this);
 
 		struct alignas(std::max(size_t(256), alignof(T))) RawStruct // 256 alignment is used at least because I use bottom 8 bits of pointer as allocator id
 		{
