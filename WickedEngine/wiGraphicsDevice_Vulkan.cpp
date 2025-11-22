@@ -2163,42 +2163,45 @@ using namespace vulkan_internal;
 				// Blending:
 				uint32_t numBlendAttachments = 0;
 				VkPipelineColorBlendAttachmentState colorBlendAttachments[8] = {};
-				for (size_t i = 0; i < commandlist.renderpass_info.rt_count; ++i)
+				if (pso->desc.bs != nullptr)
 				{
-					size_t attachmentIndex = 0;
-					if (pso->desc.bs->independent_blend_enable)
-						attachmentIndex = i;
-
-					const auto& desc = pso->desc.bs->render_target[attachmentIndex];
-					VkPipelineColorBlendAttachmentState& attachment = colorBlendAttachments[numBlendAttachments];
-					numBlendAttachments++;
-
-					attachment.blendEnable = desc.blend_enable ? VK_TRUE : VK_FALSE;
-
-					attachment.colorWriteMask = 0;
-					if (has_flag(desc.render_target_write_mask, ColorWrite::ENABLE_RED))
+					for (size_t i = 0; i < commandlist.renderpass_info.rt_count; ++i)
 					{
-						attachment.colorWriteMask |= VK_COLOR_COMPONENT_R_BIT;
-					}
-					if (has_flag(desc.render_target_write_mask, ColorWrite::ENABLE_GREEN))
-					{
-						attachment.colorWriteMask |= VK_COLOR_COMPONENT_G_BIT;
-					}
-					if (has_flag(desc.render_target_write_mask, ColorWrite::ENABLE_BLUE))
-					{
-						attachment.colorWriteMask |= VK_COLOR_COMPONENT_B_BIT;
-					}
-					if (has_flag(desc.render_target_write_mask, ColorWrite::ENABLE_ALPHA))
-					{
-						attachment.colorWriteMask |= VK_COLOR_COMPONENT_A_BIT;
-					}
+						size_t attachmentIndex = 0;
+						if (pso->desc.bs->independent_blend_enable)
+							attachmentIndex = i;
 
-					attachment.srcColorBlendFactor = _ConvertBlend(desc.src_blend);
-					attachment.dstColorBlendFactor = _ConvertBlend(desc.dest_blend);
-					attachment.colorBlendOp = _ConvertBlendOp(desc.blend_op);
-					attachment.srcAlphaBlendFactor = _ConvertBlend(desc.src_blend_alpha);
-					attachment.dstAlphaBlendFactor = _ConvertBlend(desc.dest_blend_alpha);
-					attachment.alphaBlendOp = _ConvertBlendOp(desc.blend_op_alpha);
+						const auto& desc = pso->desc.bs->render_target[attachmentIndex];
+						VkPipelineColorBlendAttachmentState& attachment = colorBlendAttachments[numBlendAttachments];
+						numBlendAttachments++;
+
+						attachment.blendEnable = desc.blend_enable ? VK_TRUE : VK_FALSE;
+
+						attachment.colorWriteMask = 0;
+						if (has_flag(desc.render_target_write_mask, ColorWrite::ENABLE_RED))
+						{
+							attachment.colorWriteMask |= VK_COLOR_COMPONENT_R_BIT;
+						}
+						if (has_flag(desc.render_target_write_mask, ColorWrite::ENABLE_GREEN))
+						{
+							attachment.colorWriteMask |= VK_COLOR_COMPONENT_G_BIT;
+						}
+						if (has_flag(desc.render_target_write_mask, ColorWrite::ENABLE_BLUE))
+						{
+							attachment.colorWriteMask |= VK_COLOR_COMPONENT_B_BIT;
+						}
+						if (has_flag(desc.render_target_write_mask, ColorWrite::ENABLE_ALPHA))
+						{
+							attachment.colorWriteMask |= VK_COLOR_COMPONENT_A_BIT;
+						}
+
+						attachment.srcColorBlendFactor = _ConvertBlend(desc.src_blend);
+						attachment.dstColorBlendFactor = _ConvertBlend(desc.dest_blend);
+						attachment.colorBlendOp = _ConvertBlendOp(desc.blend_op);
+						attachment.srcAlphaBlendFactor = _ConvertBlend(desc.src_blend_alpha);
+						attachment.dstAlphaBlendFactor = _ConvertBlend(desc.dest_blend_alpha);
+						attachment.alphaBlendOp = _ConvertBlendOp(desc.blend_op_alpha);
+					}
 				}
 
 				VkPipelineColorBlendStateCreateInfo colorBlending = {};
