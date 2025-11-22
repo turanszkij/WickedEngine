@@ -272,13 +272,14 @@ namespace wi::allocator
 	// The per-type block allocators can be indexed with bottom 8 bits of the shared_ptr's handle:
 	inline SharedBlockAllocator* block_allocators[256] = {};
 	inline std::atomic<uint8_t> next_allocator_id{ 0 };
-	inline uint8_t register_allocator(SharedBlockAllocator* allocator)
+	inline uint8_t register_shared_block_allocator(SharedBlockAllocator* allocator)
 	{
 		uint8_t id = next_allocator_id.fetch_add(1);
 		assert(id < arraysize(block_allocators));
 		block_allocators[id] = allocator;
 		return id;
 	}
+	inline uint8_t get_shared_block_allocator_count() { return next_allocator_id.load(); }
 
 	// Shared ptr using a block allocation strategy, refcounted, thread-safe
 	//	This makes it easy to swap-out std::shared_ptr, but not feature complete, only has minimal feature set
@@ -352,7 +353,7 @@ namespace wi::allocator
 	template<typename T, size_t block_size = 256>
 	struct SharedBlockAllocatorImpl final : public SharedBlockAllocator
 	{
-		uint8_t allocator_id = register_allocator(this);
+		uint8_t allocator_id = register_shared_block_allocator(this);
 
 		struct alignas(std::max(size_t(256), alignof(T))) RawStruct // 256 alignment is used at minimum because I use bottom 8 bits of pointer as allocator id
 		{
