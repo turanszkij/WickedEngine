@@ -7615,8 +7615,8 @@ using namespace vulkan_internal;
 			out_bind.memory_binds.reserve(in_command.num_resource_regions);
 			out_bind.image_memory_binds.reserve(in_command.num_resource_regions);
 
-			const VkSparseMemoryBind* memory_bind_ptr = out_bind.memory_binds.data();
-			const VkSparseImageMemoryBind* image_memory_bind_ptr = out_bind.image_memory_binds.data();
+			const VkSparseMemoryBind* const memory_bind_ptr = out_bind.memory_binds.data();
+			const VkSparseImageMemoryBind* const image_memory_bind_ptr = out_bind.image_memory_binds.data();
 
 			if (in_command.sparse_resource->IsBuffer())
 			{
@@ -7627,7 +7627,6 @@ using namespace vulkan_internal;
 				info.buffer = internal_sparse->resource;
 				info.pBinds = memory_bind_ptr;
 				info.bindCount = in_command.num_resource_regions;
-				memory_bind_ptr += in_command.num_resource_regions;
 
 				for (uint32_t j = 0; j < in_command.num_resource_regions; ++j)
 				{
@@ -7701,7 +7700,6 @@ using namespace vulkan_internal;
 					if (is_miptail)
 					{
 						opaque_info.bindCount++;
-						memory_bind_ptr++;
 
 						const TileRangeFlags& in_flags = in_command.range_flags[j];
 						uint32_t in_offset = in_command.range_start_offsets[j];
@@ -7723,7 +7721,6 @@ using namespace vulkan_internal;
 					else
 					{
 						info.bindCount++;
-						image_memory_bind_ptr++;
 
 						const TileRangeFlags& in_flags = in_command.range_flags[j];
 						uint32_t in_offset = in_command.range_start_offsets[j];

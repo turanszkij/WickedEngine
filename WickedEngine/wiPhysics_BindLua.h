@@ -52,6 +52,8 @@ namespace wi::lua
 		int MoveCharacter(lua_State* L);
 		int SetGhostMode(lua_State* L);
 		int SetRagdollGhostMode(lua_State* L);
+		int SetCharacterCollisionTolerance(lua_State* L);
+		int GetCharacterCollisionTolerance(lua_State* L);
 
 		int Intersects(lua_State* L);
 		int PickDrag(lua_State* L);
