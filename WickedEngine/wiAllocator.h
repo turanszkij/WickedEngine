@@ -10,6 +10,7 @@
 #include <memory>
 #include <algorithm>
 #include <deque>
+#include <cassert>
 
 namespace wi::allocator
 {
@@ -268,6 +269,16 @@ namespace wi::allocator
 		virtual uint32_t dec_refcount(void* ptr) = 0;
 	};
 
+	inline SharedBlockAllocator* block_allocators[256] = {};
+	inline std::atomic<uint8_t> next_allocator_id{ 0 };
+	inline uint8_t register_allocator(SharedBlockAllocator* allocator)
+	{
+		uint8_t id = next_allocator_id.fetch_add(1);
+		assert(id < arraysize(block_allocators));
+		block_allocators[id] = allocator;
+		return id;
+	}
+
 	// Shared ptr using a block allocation strategy, refcounted, thread-safe
 	//	This makes it easy to swap-out std::shared_ptr, but not feature complete, only has minimal feature set
 	//	Use this if you require many object of the same type, their memory allocation will be pooled
@@ -275,31 +286,30 @@ namespace wi::allocator
 	template<typename T>
 	struct shared_ptr
 	{
-		T* ptr = nullptr;
-		SharedBlockAllocator* allocator = nullptr;
+		uint64_t handle = 0;
 
-		T* operator->() const { return (T*)ptr; }
-		operator T* () const { return (T*)ptr; }
-		T* get() const { return (T*)ptr; }
+		constexpr T* get_ptr() const { return (T*)(handle & (~0ull << 8ull)); }
+		constexpr SharedBlockAllocator* get_allocator() const { return block_allocators[handle & 0xFF]; }
+
+		constexpr T* operator->() const { return get_ptr(); }
+		constexpr operator T* () const { return get_ptr(); }
+		constexpr T* get() const { return get_ptr(); }
 
 		template<typename U>
 		operator shared_ptr<U> () const
 		{
-			static_assert(offsetof(shared_ptr<T>, ptr) == offsetof(shared_ptr<U>, ptr));
-			static_assert(offsetof(shared_ptr<T>, allocator) == offsetof(shared_ptr<U>, allocator));
-			static_assert(sizeof(shared_ptr<T>) == sizeof(shared_ptr<U>));
-			static_assert(sizeof(shared_ptr<T>) == 16);
 			shared_ptr<U> ret;
-			ret.allocator = allocator;
-			ret.ptr = (U*)ptr;
-			if (allocator != nullptr && ptr != nullptr)
+			ret.handle = handle;
+			if (IsValid())
 			{
+				SharedBlockAllocator* allocator = get_allocator();
+				T* ptr = get_ptr();
 				allocator->inc_refcount(ptr);
 			}
 			return ret;
 		}
 
-		constexpr bool IsValid() const { return ptr != nullptr; }
+		constexpr bool IsValid() const { return handle != 0; }
 
 		shared_ptr() = default;
 		shared_ptr(const shared_ptr& other) { copy(other); }
@@ -318,24 +328,24 @@ namespace wi::allocator
 
 		void destroy() noexcept
 		{
-			if (allocator != nullptr && ptr != nullptr)
+			if (IsValid())
 			{
+				SharedBlockAllocator* allocator = get_allocator();
+				T* ptr = get_ptr();
 				if (allocator->dec_refcount(ptr) == 1)
 				{
 					allocator->reclaim(ptr);
 				}
 			}
-			allocator = nullptr;
-			ptr = nullptr;
+			handle = 0;
 		}
 		void copy(const shared_ptr& other)
 		{
 			destroy();
-			allocator = other.allocator;
-			ptr = other.ptr;
-			if (allocator != nullptr && ptr != nullptr)
+			handle = other.handle;
+			if (IsValid())
 			{
-				allocator->inc_refcount(ptr);
+				get_allocator()->inc_refcount(get_ptr());
 			}
 		}
 		void move(shared_ptr& other) noexcept
@@ -343,10 +353,8 @@ namespace wi::allocator
 			if (this == &other)
 				return;
 			destroy();
-			allocator = other.allocator;
-			ptr = other.ptr;
-			other.allocator = nullptr;
-			other.ptr = nullptr;
+			handle = other.handle;
+			other.handle = 0;
 		}
 	};
 
@@ -354,9 +362,11 @@ namespace wi::allocator
 	template<typename T, size_t block_size = 256>
 	struct SharedBlockAllocatorImpl final : public SharedBlockAllocator
 	{
-		struct RawStruct
+		uint8_t allocator_id = register_allocator(this);
+
+		struct alignas(std::max(size_t(256), alignof(T))) RawStruct // 256 alignment is used at minimum because I use bottom 8 bits of pointer as allocator id
 		{
-			alignas(alignof(T)) uint8_t data[sizeof(T)];
+			uint8_t data[sizeof(T)];
 			std::atomic<uint32_t> refcount;
 		};
 		static_assert(offsetof(RawStruct, data) == 0);
@@ -386,6 +396,7 @@ namespace wi::allocator
 				}
 			}
 			void* ptr = free_list.back();
+			assert((uint64_t)ptr == ((uint64_t)ptr & (~0ull << 8ull)));
 			free_list.pop_back();
 			locker.unlock();
 
@@ -393,8 +404,7 @@ namespace wi::allocator
 			new (ptr) T(std::forward<ARG>(args)...);
 			init_refcount(ptr);
 			shared_ptr<T> allocation;
-			allocation.allocator = this;
-			allocation.ptr = static_cast<T*>(ptr);
+			allocation.handle = uint64_t(ptr) | uint64_t(allocator_id);
 			return allocation;
 		}
 
