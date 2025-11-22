@@ -8,9 +8,9 @@
 #include <mutex>
 #include <atomic>
 #include <memory>
+#include <cassert>
 #include <algorithm>
 #include <deque>
-#include <cassert>
 
 namespace wi::allocator
 {
