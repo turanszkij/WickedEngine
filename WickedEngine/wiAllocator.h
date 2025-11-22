@@ -285,10 +285,10 @@ namespace wi::allocator
 	}
 	inline uint8_t get_shared_block_allocator_count() { return next_allocator_id.load(); }
 
-	// Shared ptr using a block allocation strategy, refcounted, thread-safe
+	// Shared ptr using a block allocation strategy, refcounted, thread-safe, reduced size using single uint64_t handle
 	//	This makes it easy to swap-out std::shared_ptr, but not feature complete, only has minimal feature set
 	//	Use this if you require many object of the same type, their memory allocation will be pooled
-	//	If you require just a single object, it might be better to use std::shared_ptr instead
+	//	If you require just a single object, it will be better to use std::shared_ptr instead
 	template<typename T>
 	struct shared_ptr
 	{
