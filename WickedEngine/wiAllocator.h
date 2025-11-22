@@ -356,14 +356,10 @@ namespace wi::allocator
 	{
 		struct RawStruct
 		{
-			struct alignas(alignof(T)) AlignedStorage
-			{
-				uint8_t data[sizeof(T)];
-			} storage;
+			alignas(alignof(T)) uint8_t data[sizeof(T)];
 			std::atomic<uint32_t> refcount;
 		};
-		static_assert(offsetof(RawStruct, storage) == 0);
-		static_assert(offsetof(RawStruct::AlignedStorage, data) == 0);
+		static_assert(offsetof(RawStruct, data) == 0);
 
 		struct Block
 		{
