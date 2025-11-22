@@ -138,6 +138,10 @@ namespace wi::initializer
 			wilog("\nNo embedded shaders found, shaders will be compiled at runtime if needed.\n\tShader source path: %s\n\tShader binary path: %s", wi::renderer::GetShaderSourcePath().c_str(), wi::renderer::GetShaderPath().c_str());
 		}
 
+#ifdef _DEBUG
+		wilog("\nNumber of shared block allocated types: %d", (int)wi::allocator::get_shared_block_allocator_count());
+#endif // _DEBUG
+
 		wi::backlog::post("");
 		wi::jobsystem::Initialize();
 

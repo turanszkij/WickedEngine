@@ -1438,7 +1438,7 @@ namespace dx12_internal
 
 		ComPtr<ID3D12VersionedRootSignatureDeserializer> rootsig_deserializer;
 		const D3D12_VERSIONED_ROOT_SIGNATURE_DESC* rootsig_desc = nullptr;
-		std::shared_ptr<void> rootsig_desc_lifetime_extender;
+		wi::allocator::shared_ptr<void> rootsig_desc_lifetime_extender;
 		RootSignatureOptimizer rootsig_optimizer;
 
 		struct PSO_STREAM
@@ -3046,11 +3046,7 @@ std::mutex queue_locker;
 
 	bool GraphicsDevice_DX12::CreateSwapChain(const SwapChainDesc* desc, wi::platform::window_type window, SwapChain* swapchain) const
 	{
-		auto internal_state = std::static_pointer_cast<SwapChain_DX12>(swapchain->internal_state);
-		if (swapchain->internal_state == nullptr)
-		{
-			internal_state = std::make_shared<SwapChain_DX12>();
-		}
+		auto internal_state = swapchain->IsValid() ? wi::allocator::shared_ptr<SwapChain_DX12>(swapchain->internal_state) : wi::allocator::make_shared<SwapChain_DX12>();
 		internal_state->allocationhandler = allocationhandler;
 		swapchain->internal_state = internal_state;
 		swapchain->desc = *desc;
@@ -3264,7 +3260,7 @@ std::mutex queue_locker;
 	}
 	bool GraphicsDevice_DX12::CreateBuffer2(const GPUBufferDesc* desc, const std::function<void(void*)>& init_callback, GPUBuffer* buffer, const GPUResource* alias, uint64_t alias_offset) const
 	{
-		auto internal_state = std::make_shared<Resource_DX12>();
+		auto internal_state = wi::allocator::make_shared<Resource_DX12>();
 		internal_state->allocationhandler = allocationhandler;
 		buffer->internal_state = internal_state;
 		buffer->type = GPUResource::Type::BUFFER;
@@ -3495,7 +3491,7 @@ std::mutex queue_locker;
 	}
 	bool GraphicsDevice_DX12::CreateTexture(const TextureDesc* desc, const SubresourceData* initial_data, Texture* texture, const GPUResource* alias, uint64_t alias_offset) const
 	{
-		auto internal_state = std::make_shared<Texture_DX12>();
+		auto internal_state = wi::allocator::make_shared<Texture_DX12>();
 		internal_state->allocationhandler = allocationhandler;
 		texture->internal_state = internal_state;
 		texture->type = GPUResource::Type::TEXTURE;
@@ -3914,7 +3910,7 @@ std::mutex queue_locker;
 	}
 	bool GraphicsDevice_DX12::CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader) const
 	{
-		auto internal_state = std::make_shared<PipelineState_DX12>();
+		auto internal_state = wi::allocator::make_shared<PipelineState_DX12>();
 		internal_state->allocationhandler = allocationhandler;
 		shader->internal_state = internal_state;
 
@@ -3974,7 +3970,7 @@ std::mutex queue_locker;
 	}
 	bool GraphicsDevice_DX12::CreateSampler(const SamplerDesc* desc, Sampler* sampler) const
 	{
-		auto internal_state = std::make_shared<Sampler_DX12>();
+		auto internal_state = wi::allocator::make_shared<Sampler_DX12>();
 		internal_state->allocationhandler = allocationhandler;
 		sampler->internal_state = internal_state;
 
@@ -4020,7 +4016,7 @@ std::mutex queue_locker;
 	}
 	bool GraphicsDevice_DX12::CreateQueryHeap(const GPUQueryHeapDesc* desc, GPUQueryHeap* queryheap) const
 	{
-		auto internal_state = std::make_shared<QueryHeap_DX12>();
+		auto internal_state = wi::allocator::make_shared<QueryHeap_DX12>();
 		internal_state->allocationhandler = allocationhandler;
 		queryheap->internal_state = internal_state;
 		queryheap->desc = *desc;
@@ -4046,7 +4042,7 @@ std::mutex queue_locker;
 	}
 	bool GraphicsDevice_DX12::CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso, const RenderPassInfo* renderpass_info) const
 	{
-		auto internal_state = std::make_shared<PipelineState_DX12>();
+		auto internal_state = wi::allocator::make_shared<PipelineState_DX12>();
 		internal_state->allocationhandler = allocationhandler;
 		pso->internal_state = internal_state;
 
@@ -4286,7 +4282,7 @@ std::mutex queue_locker;
 	}
 	bool GraphicsDevice_DX12::CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* desc, RaytracingAccelerationStructure* bvh) const
 	{
-		auto internal_state = std::make_shared<BVH_DX12>();
+		auto internal_state = wi::allocator::make_shared<BVH_DX12>();
 		internal_state->allocationhandler = allocationhandler;
 		bvh->internal_state = internal_state;
 		bvh->type = GPUResource::Type::RAYTRACING_ACCELERATION_STRUCTURE;
@@ -4423,7 +4419,7 @@ std::mutex queue_locker;
 	}
 	bool GraphicsDevice_DX12::CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* desc, RaytracingPipelineState* rtpso) const
 	{
-		auto internal_state = std::make_shared<RTPipelineState_DX12>();
+		auto internal_state = wi::allocator::make_shared<RTPipelineState_DX12>();
 		internal_state->allocationhandler = allocationhandler;
 		rtpso->internal_state = internal_state;
 		rtpso->desc = *desc;
@@ -4605,7 +4601,7 @@ std::mutex queue_locker;
 			video_decoder->support |= VideoDecoderSupportFlags::DPB_INDIVIDUAL_TEXTURES_SUPPORTED;
 		}
 
-		auto internal_state = std::make_shared<VideoDecoder_DX12>();
+		auto internal_state = wi::allocator::make_shared<VideoDecoder_DX12>();
 		internal_state->allocationhandler = allocationhandler;
 		video_decoder->internal_state = internal_state;
 		video_decoder->desc = *desc;
@@ -5790,7 +5786,7 @@ std::mutex queue_locker;
 	{
 		auto swapchain_internal = to_internal(swapchain);
 
-		auto internal_state = std::make_shared<Texture_DX12>();
+		auto internal_state = wi::allocator::make_shared<Texture_DX12>();
 		internal_state->allocationhandler = allocationhandler;
 		internal_state->resource = swapchain_internal->backBuffers[swapchain_internal->GetBufferIndex()];
 

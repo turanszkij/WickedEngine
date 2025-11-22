@@ -15,6 +15,14 @@
 
 using namespace wi::graphics;
 
+//#define RESOURCE_LOGGING
+
+#ifdef RESOURCE_LOGGING
+#define resource_log(str,...) wilog(str, ## __VA_ARGS__)
+#else
+#define resource_log(str,...)
+#endif // RESOURCE_LOGGING
+
 namespace wi
 {
 	struct StreamingTexture
@@ -112,7 +120,7 @@ namespace wi
 	{
 		if (internal_state == nullptr)
 		{
-			internal_state = std::make_shared<ResourceInternal>();
+			internal_state = wi::allocator::make_shared<ResourceInternal>();
 		}
 		ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
 		resourceinternal->filedata = data;
@@ -121,7 +129,7 @@ namespace wi
 	{
 		if (internal_state == nullptr)
 		{
-			internal_state = std::make_shared<ResourceInternal>();
+			internal_state = wi::allocator::make_shared<ResourceInternal>();
 		}
 		ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
 		resourceinternal->filedata = data;
@@ -130,7 +138,7 @@ namespace wi
 	{
 		if (internal_state == nullptr)
 		{
-			internal_state = std::make_shared<ResourceInternal>();
+			internal_state = wi::allocator::make_shared<ResourceInternal>();
 		}
 		ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
 		resourceinternal->texture = texture;
@@ -140,7 +148,7 @@ namespace wi
 	{
 		if (internal_state == nullptr)
 		{
-			internal_state = std::make_shared<ResourceInternal>();
+			internal_state = wi::allocator::make_shared<ResourceInternal>();
 		}
 		ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
 		resourceinternal->tile_pool = tile_pool;
@@ -151,7 +159,7 @@ namespace wi
 	{
 		if (internal_state == nullptr)
 		{
-			internal_state = std::make_shared<ResourceInternal>();
+			internal_state = wi::allocator::make_shared<ResourceInternal>();
 		}
 		ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
 		resourceinternal->sound = sound;
@@ -160,7 +168,7 @@ namespace wi
 	{
 		if (internal_state == nullptr)
 		{
-			internal_state = std::make_shared<ResourceInternal>();
+			internal_state = wi::allocator::make_shared<ResourceInternal>();
 		}
 		ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
 		resourceinternal->script = script;
@@ -169,7 +177,7 @@ namespace wi
 	{
 		if (internal_state == nullptr)
 		{
-			internal_state = std::make_shared<ResourceInternal>();
+			internal_state = wi::allocator::make_shared<ResourceInternal>();
 		}
 		ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
 		resourceinternal->video = video;
@@ -179,7 +187,7 @@ namespace wi
 	{
 		if (internal_state == nullptr)
 		{
-			internal_state = std::make_shared<ResourceInternal>();
+			internal_state = wi::allocator::make_shared<ResourceInternal>();
 		}
 		ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
 		resourceinternal->timestamp = 0;
@@ -189,7 +197,7 @@ namespace wi
 	{
 		if (internal_state == nullptr)
 		{
-			internal_state = std::make_shared<ResourceInternal>();
+			internal_state = wi::allocator::make_shared<ResourceInternal>();
 		}
 		ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
 		resourceinternal->streaming_resolution.fetch_or(resolution);
@@ -198,7 +206,7 @@ namespace wi
 	namespace resourcemanager
 	{
 		static std::mutex locker;
-		static std::unordered_map<std::string, std::weak_ptr<ResourceInternal>> resources;
+		static wi::unordered_map<std::string, wi::allocator::weak_ptr<ResourceInternal>> resources;
 		static Mode mode = Mode::NO_EMBEDDING;
 
 		void SetMode(Mode param)
@@ -907,8 +915,8 @@ namespace wi
 		)
 		{
 			locker.lock();
-			std::weak_ptr<ResourceInternal>& weak_resource = resources[name];
-			std::shared_ptr<ResourceInternal> resource = weak_resource.lock();
+			wi::allocator::weak_ptr<ResourceInternal>& weak_resource = resources[name];
+			wi::allocator::shared_ptr<ResourceInternal> resource = weak_resource.lock();
 
 			uint64_t timestamp = 0;
 			if(!container_filename.empty())
@@ -922,7 +930,7 @@ namespace wi
 
 			if (resource == nullptr || resource->timestamp < timestamp)
 			{
-				resource = std::make_shared<ResourceInternal>();
+				resource = wi::allocator::make_shared<ResourceInternal>();
 				resources[name] = resource;
 				resource->filename = name;
 
@@ -957,6 +965,7 @@ namespace wi
 				}
 				else
 				{
+					resource_log("\tResource reused: %s", name.c_str());
 					Resource retVal;
 					retVal.internal_state = resource;
 					locker.unlock();
@@ -989,6 +998,7 @@ namespace wi
 			}
 			else
 			{
+				resource_log("\tResource loading: %s", name.c_str());
 				success = LoadResourceDirectly(name, flags, filedata, filesize, resource.get());
 			}
 
@@ -1027,10 +1037,10 @@ namespace wi
 		}
 
 		wi::jobsystem::context streaming_ctx;
-		wi::vector<std::shared_ptr<ResourceInternal>> streaming_texture_jobs;
+		wi::vector<wi::allocator::shared_ptr<ResourceInternal>> streaming_texture_jobs;
 		struct StreamingTextureReplace
 		{
-			std::shared_ptr<ResourceInternal> resource;
+			wi::allocator::shared_ptr<ResourceInternal> resource;
 			Texture texture;
 			int srgb_subresource = -1;
 		};
@@ -1069,8 +1079,8 @@ namespace wi
 				return; // Streaming is not that important, we can abandon it if some resource loading is holding the lock
 			for (auto& x : resources)
 			{
-				std::weak_ptr<ResourceInternal>& weak_resource = x.second;
-				std::shared_ptr<ResourceInternal> resource = weak_resource.lock();
+				wi::allocator::weak_ptr<ResourceInternal>& weak_resource = x.second;
+				wi::allocator::shared_ptr<ResourceInternal> resource = weak_resource.lock();
 				if (resource != nullptr && resource->texture.IsValid() && has_flag(resource->flags, Flags::STREAMING))
 				{
 					const TextureDesc& desc = resource->texture.desc;
@@ -1123,16 +1133,31 @@ namespace wi
 
 			streaming_texture_jobs.clear();
 
-			// Gather the streaming jobs:
+			static wi::vector<const std::string*> removals; // string ptr to avoid string copies, or string constructions from char*
+
+			// Gather the streaming jobs, unload lost resources:
 			for (auto& x : resources)
 			{
-				std::weak_ptr<ResourceInternal>& weak_resource = x.second;
-				std::shared_ptr<ResourceInternal> resource = weak_resource.lock();
+				if (x.second.expired())
+				{
+					removals.push_back(&x.first);
+					continue;
+				}
+
+				wi::allocator::weak_ptr<ResourceInternal>& weak_resource = x.second;
+				wi::allocator::shared_ptr<ResourceInternal> resource = weak_resource.lock();
 				if (resource != nullptr && resource->texture.IsValid() && resource->streaming_texture.mip_count > 1)
 				{
 					streaming_texture_jobs.push_back(resource);
 				}
 			}
+
+			for (auto& x : removals)
+			{
+				resource_log("\tResource lost: %s", x->c_str());
+				resources.erase(*x);
+			}
+			removals.clear();
 			locker.unlock();
 
 			if (streaming_texture_jobs.empty())
@@ -1400,7 +1425,7 @@ namespace wi
 					auto it = resources.find(name);
 					if (it == resources.end())
 						continue;
-					std::shared_ptr<ResourceInternal> resource = it->second.lock();
+					wi::allocator::shared_ptr<ResourceInternal> resource = it->second.lock();
 					if (resource != nullptr)
 					{
 						serializable_count++;
@@ -1414,7 +1439,7 @@ namespace wi
 					auto it = resources.find(name);
 					if (it == resources.end())
 						continue;
-					std::shared_ptr<ResourceInternal> resource = it->second.lock();
+					wi::allocator::shared_ptr<ResourceInternal> resource = it->second.lock();
 
 					if (resource != nullptr)
 					{

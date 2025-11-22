@@ -549,7 +549,7 @@ namespace wi::shadercompiler
 			output.shadersize = pShader->GetBufferSize();
 
 			// keep the blob alive == keep shader pointer valid!
-			auto internal_state = std::make_shared<ComPtr<IDxcBlob>>();
+			auto internal_state = wi::allocator::make_shared<ComPtr<IDxcBlob>>();
 			*internal_state = pShader;
 			output.internal_state = internal_state;
 		}
@@ -724,7 +724,7 @@ namespace wi::shadercompiler
 			output.shadersize = code->GetBufferSize();
 
 			// keep the blob alive == keep shader pointer valid!
-			auto internal_state = std::make_shared<ComPtr<ID3D10Blob>>();
+			auto internal_state = wi::allocator::make_shared<ComPtr<ID3D10Blob>>();
 			*internal_state = code;
 			output.internal_state = internal_state;
 		}

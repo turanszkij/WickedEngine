@@ -1,6 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiVector.h"
+#include "wiSpinLock.h"
 
 #include "Utility/offsetAllocator.hpp"
 
@@ -182,7 +183,7 @@ namespace wi::allocator
 			{
 				Reset();
 			}
-			void operator=(const Allocation& other)
+			Allocation& operator=(const Allocation& other)
 			{
 				Reset();
 				allocator = other.allocator;
@@ -192,8 +193,9 @@ namespace wi::allocator
 				{
 					internal_state->refcount.fetch_add(1);
 				}
+				return *this;
 			}
-			void operator=(Allocation&& other) noexcept
+			Allocation& operator=(Allocation&& other) noexcept
 			{
 				Reset();
 				allocator = std::move(other.allocator);
@@ -202,6 +204,7 @@ namespace wi::allocator
 				other.allocator = nullptr;
 				other.internal_state = nullptr;
 				other.byte_offset = ~0ull;
+				return *this;
 			}
 			void Reset()
 			{
@@ -253,4 +256,281 @@ namespace wi::allocator
 			return allocator->allocator.storageReport().totalFreeSpace == page_count;
 		}
 	};
+
+
+
+
+	// Interface for allocating pooled shared_ptr
+	struct SharedBlockAllocator
+	{
+		virtual void init_refcount(void* ptr) = 0;
+		virtual uint32_t get_refcount(void* ptr) = 0;
+		virtual uint32_t inc_refcount(void* ptr) = 0;
+		virtual uint32_t dec_refcount(void* ptr) = 0;
+		virtual uint32_t get_refcount_weak(void* ptr) = 0;
+		virtual uint32_t inc_refcount_weak(void* ptr) = 0;
+		virtual uint32_t dec_refcount_weak(void* ptr) = 0;
+	};
+
+	// The per-type block allocators can be indexed with bottom 8 bits of the shared_ptr's handle:
+	inline SharedBlockAllocator* block_allocators[256] = {};
+	inline std::atomic<uint8_t> next_allocator_id{ 0 };
+	inline uint8_t register_shared_block_allocator(SharedBlockAllocator* allocator)
+	{
+		uint8_t id = next_allocator_id.fetch_add(1);
+		assert(id < arraysize(block_allocators));
+		block_allocators[id] = allocator;
+		return id;
+	}
+	inline uint8_t get_shared_block_allocator_count() { return next_allocator_id.load(); }
+
+	// Shared ptr using a block allocation strategy, refcounted, thread-safe, reduced size using single uint64_t handle
+	//	This makes it easy to swap-out std::shared_ptr, but not feature complete, only has minimal feature set
+	//	Use this if you require many object of the same type, their memory allocation will be pooled
+	//	If you require just a single object, it will be better to use std::shared_ptr instead
+	template<typename T>
+	struct shared_ptr
+	{
+		uint64_t handle = 0;
+
+		constexpr bool IsValid() const { return handle != 0; }
+
+		constexpr T* get_ptr() const { return (T*)(handle & (~0ull << 8ull)); }
+		constexpr SharedBlockAllocator* get_allocator() const { return block_allocators[handle & 0xFF]; }
+
+		constexpr T* operator->() const { return get_ptr(); }
+		constexpr operator T* () const { return get_ptr(); }
+		constexpr T* get() const { return get_ptr(); }
+
+		template<typename U>
+		operator shared_ptr<U>& () const { return *(shared_ptr<U>*)this; }
+
+		shared_ptr() = default;
+		shared_ptr(const shared_ptr& other) { copy(other); }
+		shared_ptr(shared_ptr&& other) noexcept { move(other); }
+		~shared_ptr() noexcept { reset(); }
+		shared_ptr& operator=(const shared_ptr& other) { copy(other); return *this; }
+		shared_ptr& operator=(shared_ptr&& other) noexcept { move(other); return *this; }
+
+		void reset() noexcept
+		{
+			if (IsValid())
+			{
+				get_allocator()->dec_refcount(get_ptr());
+			}
+			handle = 0;
+		}
+		void copy(const shared_ptr& other)
+		{
+			reset();
+			handle = other.handle;
+			if (IsValid())
+			{
+				get_allocator()->inc_refcount(get_ptr());
+			}
+		}
+		void move(shared_ptr& other) noexcept
+		{
+			if (this == &other)
+				return;
+			reset();
+			handle = other.handle;
+			other.handle = 0;
+		}
+		uint32_t use_count() const { return IsValid() ? get_allocator()->get_refcount(get_ptr()) : 0; }
+	};
+
+	// Similar to std::weak_ptr but works with the shared block allocator, and reduced feature set
+	template<typename T>
+	struct weak_ptr
+	{
+		uint64_t handle = 0;
+
+		constexpr bool IsValid() const { return handle != 0; }
+
+		constexpr T* get_ptr() const { return (T*)(handle & (~0ull << 8ull)); }
+		constexpr SharedBlockAllocator* get_allocator() const { return block_allocators[handle & 0xFF]; }
+
+		template<typename U>
+		operator weak_ptr<U>& () const { return *(weak_ptr<U>*)this; }
+
+		weak_ptr() = default;
+		weak_ptr(const weak_ptr& other) { copy(other); }
+		weak_ptr(weak_ptr&& other) noexcept { move(other); }
+		~weak_ptr() noexcept { reset(); }
+		weak_ptr& operator=(const weak_ptr& other) { copy(other); return *this; }
+		weak_ptr& operator=(weak_ptr&& other) noexcept { move(other); return *this; }
+
+		weak_ptr(const shared_ptr<T>& other)
+		{
+			reset();
+			handle = other.handle;
+			if (IsValid())
+			{
+				get_allocator()->inc_refcount_weak(get_ptr());
+			}
+		}
+
+		shared_ptr<T> lock()
+		{
+			if (!IsValid())
+				return {};
+
+			SharedBlockAllocator* alloc = get_allocator();
+			T* ptr = get_ptr();
+
+			uint32_t old_strong = alloc->inc_refcount(ptr);
+			if (old_strong == 0)
+			{
+				alloc->dec_refcount(ptr); // undo refcount
+				return {};
+			}
+
+			shared_ptr<T> ret;
+			ret.handle = handle;
+			return ret; // Already incremented refcount
+		}
+
+		void reset() noexcept
+		{
+			if (IsValid())
+			{
+				get_allocator()->dec_refcount_weak(get_ptr());
+			}
+			handle = 0;
+		}
+		void copy(const weak_ptr& other)
+		{
+			reset();
+			handle = other.handle;
+			if (IsValid())
+			{
+				get_allocator()->inc_refcount_weak(get_ptr());
+			}
+		}
+		void move(weak_ptr& other) noexcept
+		{
+			if (this == &other)
+				return;
+			reset();
+			handle = other.handle;
+			other.handle = 0;
+		}
+		uint32_t use_count() const { return get_allocator()->get_refcount(get_ptr()); }
+		bool expired() const noexcept
+		{
+			return !IsValid() || use_count() == 0;
+		}
+	};
+
+	// Implementation of a thread-safe refcounted block allocator
+	template<typename T, size_t block_size = 256>
+	struct SharedBlockAllocatorImpl final : public SharedBlockAllocator
+	{
+		const uint8_t allocator_id = register_shared_block_allocator(this);
+
+		struct alignas(std::max(size_t(256), alignof(T))) RawStruct // 256 alignment is used at least because I use bottom 8 bits of pointer as allocator id
+		{
+			uint8_t data[sizeof(T)];
+			std::atomic<uint32_t> refcount;
+			std::atomic<uint32_t> refcount_weak;
+		};
+		static_assert(offsetof(RawStruct, data) == 0); // we assume that data is located at 0 when casting ptr to T*, this avoids having to do a function call that would return T* like the refcounts
+
+		struct Block
+		{
+			std::unique_ptr<RawStruct[]> mem;
+		};
+		wi::vector<Block> blocks;
+		wi::vector<RawStruct*> free_list;
+		//std::mutex locker;
+		wi::SpinLock locker;
+
+		template<typename... ARG>
+		inline shared_ptr<T> allocate(ARG&&... args)
+		{
+			locker.lock();
+			if (free_list.empty())
+			{
+				Block& block = blocks.emplace_back();
+				block.mem.reset(new RawStruct[block_size]);
+				RawStruct* ptr = block.mem.get();
+				free_list.reserve(block_size);
+				for (size_t i = 0; i < block_size; ++i)
+				{
+					free_list.push_back(ptr + i);
+				}
+			}
+			RawStruct* ptr = free_list.back();
+			assert((uint64_t)ptr == ((uint64_t)ptr & (~0ull << 8ull))); // The pointer lower 8 bits must be 0, it will be used as allocator index
+			free_list.pop_back();
+			locker.unlock();
+
+			// Construction can be outside of lock, this structure wasn't shared yet:
+			new (ptr) T(std::forward<ARG>(args)...);
+			init_refcount(ptr);
+			shared_ptr<T> allocation;
+			allocation.handle = uint64_t(ptr) | uint64_t(allocator_id);
+			return allocation;
+		}
+
+		void reclaim(void* ptr)
+		{
+			std::scoped_lock lck(locker);
+			free_list.push_back((RawStruct*)ptr);
+		}
+
+		void init_refcount(void* ptr) override
+		{
+			static_cast<RawStruct*>(ptr)->refcount.store(1, std::memory_order_relaxed);
+			static_cast<RawStruct*>(ptr)->refcount_weak.store(1, std::memory_order_relaxed);
+		}
+		uint32_t get_refcount(void* ptr) override
+		{
+			return static_cast<RawStruct*>(ptr)->refcount.load(std::memory_order_acquire);
+		}
+		uint32_t inc_refcount(void* ptr) override
+		{
+			return static_cast<RawStruct*>(ptr)->refcount.fetch_add(1, std::memory_order_relaxed);
+		}
+		uint32_t dec_refcount(void* ptr) override
+		{
+			uint32_t old = static_cast<RawStruct*>(ptr)->refcount.fetch_sub(1, std::memory_order_acq_rel);
+			if (old == 1)
+			{
+				static_cast<T*>(ptr)->~T();
+				dec_refcount_weak(ptr);
+			}
+			return old;
+		}
+		uint32_t get_refcount_weak(void* ptr) override
+		{
+			return static_cast<RawStruct*>(ptr)->refcount_weak.load(std::memory_order_acquire);
+		}
+		uint32_t inc_refcount_weak(void* ptr) override
+		{
+			return static_cast<RawStruct*>(ptr)->refcount_weak.fetch_add(1, std::memory_order_relaxed);
+		}
+		uint32_t dec_refcount_weak(void* ptr) override
+		{
+			uint32_t old = static_cast<RawStruct*>(ptr)->refcount_weak.fetch_sub(1, std::memory_order_acq_rel);
+			if (old == 1)
+			{
+				reclaim(ptr);
+			}
+			return old;
+		}
+	};
+
+	// The allocators are global intentionally, this avoids runtime construction, guard check
+	template<typename T, size_t block_size = 256>
+	inline static SharedBlockAllocatorImpl<T, block_size>* shared_block_allocator = new SharedBlockAllocatorImpl<T, block_size>; // only destroyed after program exit, never earlier
+
+	// Create a new shared pooled object:
+	template<typename T, size_t block_size = 256, typename... ARG>
+	inline shared_ptr<T> make_shared(ARG&&... args)
+	{
+		return shared_block_allocator<T, block_size>->allocate(std::forward<ARG>(args)...);
+	}
+
 }

@@ -2163,13 +2163,14 @@ using namespace vulkan_internal;
 				// Blending:
 				uint32_t numBlendAttachments = 0;
 				VkPipelineColorBlendAttachmentState colorBlendAttachments[8] = {};
+				static BlendState::RenderTargetBlendState default_blend;
 				for (size_t i = 0; i < commandlist.renderpass_info.rt_count; ++i)
 				{
 					size_t attachmentIndex = 0;
-					if (pso->desc.bs->independent_blend_enable)
+					if (pso->desc.bs != nullptr && pso->desc.bs->independent_blend_enable)
 						attachmentIndex = i;
 
-					const auto& desc = pso->desc.bs->render_target[attachmentIndex];
+					const auto& desc = pso->desc.bs == nullptr ? default_blend : pso->desc.bs->render_target[attachmentIndex];
 					VkPipelineColorBlendAttachmentState& attachment = colorBlendAttachments[numBlendAttachments];
 					numBlendAttachments++;
 
@@ -3755,11 +3756,7 @@ using namespace vulkan_internal;
 
 	bool GraphicsDevice_Vulkan::CreateSwapChain(const SwapChainDesc* desc, wi::platform::window_type window, SwapChain* swapchain) const
 	{
-		auto internal_state = std::static_pointer_cast<SwapChain_Vulkan>(swapchain->internal_state);
-		if (swapchain->internal_state == nullptr)
-		{
-			internal_state = std::make_shared<SwapChain_Vulkan>();
-		}
+		auto internal_state = swapchain->IsValid() ? wi::allocator::shared_ptr<SwapChain_Vulkan>(swapchain->internal_state) : wi::allocator::make_shared<SwapChain_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
 		internal_state->desc = *desc;
 		swapchain->internal_state = internal_state;
@@ -3818,7 +3815,7 @@ using namespace vulkan_internal;
 	}
 	bool GraphicsDevice_Vulkan::CreateBuffer2(const GPUBufferDesc* desc, const std::function<void(void*)>& init_callback, GPUBuffer* buffer, const GPUResource* alias, uint64_t alias_offset) const
 	{
-		auto internal_state = std::make_shared<Buffer_Vulkan>();
+		auto internal_state = wi::allocator::make_shared<Buffer_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
 		buffer->internal_state = internal_state;
 		buffer->type = GPUResource::Type::BUFFER;
@@ -4161,7 +4158,7 @@ using namespace vulkan_internal;
 		alias_offset = 0;
 #endif // PLATFORM_LINUX
 
-		auto internal_state = std::make_shared<Texture_Vulkan>();
+		auto internal_state = wi::allocator::make_shared<Texture_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
 		internal_state->defaultLayout = _ConvertImageLayout(desc->layout);
 		texture->internal_state = internal_state;
@@ -4763,7 +4760,7 @@ using namespace vulkan_internal;
 	}
 	bool GraphicsDevice_Vulkan::CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader) const
 	{
-		auto internal_state = std::make_shared<Shader_Vulkan>();
+		auto internal_state = wi::allocator::make_shared<Shader_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
 		shader->internal_state = internal_state;
 		shader->stage = stage;
@@ -5073,7 +5070,7 @@ using namespace vulkan_internal;
 	}
 	bool GraphicsDevice_Vulkan::CreateSampler(const SamplerDesc* desc, Sampler* sampler) const
 	{
-		auto internal_state = std::make_shared<Sampler_Vulkan>();
+		auto internal_state = wi::allocator::make_shared<Sampler_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
 		sampler->internal_state = internal_state;
 		sampler->desc = *desc;
@@ -5311,7 +5308,7 @@ using namespace vulkan_internal;
 	}
 	bool GraphicsDevice_Vulkan::CreateQueryHeap(const GPUQueryHeapDesc* desc, GPUQueryHeap* queryheap) const
 	{
-		auto internal_state = std::make_shared<QueryHeap_Vulkan>();
+		auto internal_state = wi::allocator::make_shared<QueryHeap_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
 		queryheap->internal_state = internal_state;
 		queryheap->desc = *desc;
@@ -5337,7 +5334,7 @@ using namespace vulkan_internal;
 	}
 	bool GraphicsDevice_Vulkan::CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso, const RenderPassInfo* renderpass_info) const
 	{
-		auto internal_state = std::make_shared<PipelineState_Vulkan>();
+		auto internal_state = wi::allocator::make_shared<PipelineState_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
 		pso->internal_state = internal_state;
 		pso->desc = *desc;
@@ -5967,7 +5964,7 @@ using namespace vulkan_internal;
 	}
 	bool GraphicsDevice_Vulkan::CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* desc, RaytracingAccelerationStructure* bvh) const
 	{
-		auto internal_state = std::make_shared<BVH_Vulkan>();
+		auto internal_state = wi::allocator::make_shared<BVH_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
 		bvh->internal_state = internal_state;
 		bvh->type = GPUResource::Type::RAYTRACING_ACCELERATION_STRUCTURE;
@@ -6145,7 +6142,7 @@ using namespace vulkan_internal;
 	}
 	bool GraphicsDevice_Vulkan::CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* desc, RaytracingPipelineState* rtpso) const
 	{
-		auto internal_state = std::make_shared<RTPipelineState_Vulkan>();
+		auto internal_state = wi::allocator::make_shared<RTPipelineState_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
 		rtpso->internal_state = internal_state;
 		rtpso->desc = *desc;
@@ -6242,7 +6239,7 @@ using namespace vulkan_internal;
 	}
 	bool GraphicsDevice_Vulkan::CreateVideoDecoder(const VideoDesc* desc, VideoDecoder* video_decoder) const
 	{
-		auto internal_state = std::make_shared<VideoDecoder_Vulkan>();
+		auto internal_state = wi::allocator::make_shared<VideoDecoder_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
 		video_decoder->internal_state = internal_state;
 		video_decoder->desc = *desc;
@@ -7537,7 +7534,7 @@ using namespace vulkan_internal;
 	{
 		auto swapchain_internal = to_internal(swapchain);
 
-		auto internal_state = std::make_shared<Texture_Vulkan>();
+		auto internal_state = wi::allocator::make_shared<Texture_Vulkan>();
 		internal_state->resource = swapchain_internal->swapChainImages[swapchain_internal->swapChainImageIndex];
 
 		Texture result;

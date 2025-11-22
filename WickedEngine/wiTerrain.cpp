@@ -1638,7 +1638,7 @@ namespace wi::terrain
 
 			if (chunk_data.vt == nullptr)
 			{
-				chunk_data.vt = std::make_shared<VirtualTexture>();
+				chunk_data.vt = wi::allocator::make_shared<VirtualTexture>();
 			}
 			VirtualTexture& vt = *chunk_data.vt;
 

@@ -1,6 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiVector.h"
+#include "wiAllocator.h"
 
 #include <cassert>
 #include <memory>
@@ -840,8 +841,8 @@ namespace wi::graphics
 
 	struct Sampler
 	{
-		std::shared_ptr<void> internal_state;
-		inline bool IsValid() const { return internal_state != nullptr; }
+		wi::allocator::shared_ptr<void> internal_state;
+		constexpr bool IsValid() const { return internal_state.IsValid(); }
 
 		SamplerDesc desc;
 
@@ -850,22 +851,22 @@ namespace wi::graphics
 
 	struct Shader
 	{
-		std::shared_ptr<void> internal_state;
-		inline bool IsValid() const { return internal_state != nullptr; }
+		wi::allocator::shared_ptr<void> internal_state;
+		constexpr bool IsValid() const { return internal_state.IsValid(); }
 
 		ShaderStage stage = ShaderStage::Count;
 	};
 
 	struct GPUResource
 	{
-		std::shared_ptr<void> internal_state;
-		inline bool IsValid() const { return internal_state != nullptr; }
+		wi::allocator::shared_ptr<void> internal_state;
+		constexpr bool IsValid() const { return internal_state.IsValid(); }
 
 		// These are only valid if the resource was created with CPU access (USAGE::UPLOAD or USAGE::READBACK)
 		void* mapped_data = nullptr;	// for buffers, it is a pointer to the buffer data; for textures, it is a pointer to texture data with linear tiling;
 		size_t mapped_size = 0;			// for buffers, it is the full buffer size; for textures it is the full texture size including all subresources;
 
-		uint32_t sparse_page_size = 0ull;	// specifies the required alignment of backing allocation for sparse tile pool
+		uint32_t sparse_page_size = 0;	// specifies the required alignment of backing allocation for sparse tile pool
 
 		enum class Type : uint8_t
 		{
@@ -887,9 +888,9 @@ namespace wi::graphics
 
 		// Dynamic allocation and destruction of this object is not allowed because virtual table is not used
 		static void* operator new (size_t) = delete;
-		static void* operator new[](size_t) = delete;
+		static void* operator new[] (size_t) = delete;
 		static void  operator delete (void*) = delete;
-		static void  operator delete[](void*) = delete;
+		static void  operator delete[] (void*) = delete;
 		static void* operator new (size_t, void*) = delete;
 		static void* operator new[](size_t, void*) = delete;
 	};
@@ -924,8 +925,8 @@ namespace wi::graphics
 
 	struct VideoDecoder
 	{
-		std::shared_ptr<void> internal_state;
-		inline bool IsValid() const { return internal_state != nullptr; }
+		wi::allocator::shared_ptr<void> internal_state;
+		constexpr bool IsValid() const { return internal_state.IsValid(); }
 
 		VideoDesc desc;
 		constexpr const VideoDesc& GetDesc() const { return desc; }
@@ -1159,8 +1160,8 @@ namespace wi::graphics
 
 	struct GPUQueryHeap
 	{
-		std::shared_ptr<void> internal_state;
-		inline bool IsValid() const { return internal_state != nullptr; }
+		wi::allocator::shared_ptr<void> internal_state;
+		constexpr bool IsValid() const { return internal_state.IsValid(); }
 
 		GPUQueryHeapDesc desc;
 
@@ -1169,8 +1170,8 @@ namespace wi::graphics
 
 	struct PipelineState
 	{
-		std::shared_ptr<void> internal_state;
-		inline bool IsValid() const { return internal_state != nullptr; }
+		wi::allocator::shared_ptr<void> internal_state;
+		constexpr bool IsValid() const { return internal_state.IsValid(); }
 
 		PipelineStateDesc desc;
 
@@ -1179,8 +1180,8 @@ namespace wi::graphics
 
 	struct SwapChain
 	{
-		std::shared_ptr<void> internal_state;
-		inline bool IsValid() const { return internal_state != nullptr; }
+		wi::allocator::shared_ptr<void> internal_state;
+		constexpr bool IsValid() const { return internal_state.IsValid(); }
 
 		SwapChainDesc desc;
 
@@ -1329,8 +1330,8 @@ namespace wi::graphics
 	};
 	struct RaytracingPipelineState
 	{
-		std::shared_ptr<void> internal_state;
-		inline bool IsValid() const { return internal_state != nullptr; }
+		wi::allocator::shared_ptr<void> internal_state;
+		constexpr bool IsValid() const { return internal_state.IsValid(); }
 
 		RaytracingPipelineStateDesc desc;
 
