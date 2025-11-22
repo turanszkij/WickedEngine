@@ -288,6 +288,8 @@ namespace wi::allocator
 	{
 		uint64_t handle = 0;
 
+		constexpr bool IsValid() const { return handle != 0; }
+
 		constexpr T* get_ptr() const { return (T*)(handle & (~0ull << 8ull)); }
 		constexpr SharedBlockAllocator* get_allocator() const { return block_allocators[handle & 0xFF]; }
 
@@ -296,20 +298,7 @@ namespace wi::allocator
 		constexpr T* get() const { return get_ptr(); }
 
 		template<typename U>
-		operator shared_ptr<U> () const
-		{
-			shared_ptr<U> ret;
-			ret.handle = handle;
-			if (IsValid())
-			{
-				SharedBlockAllocator* allocator = get_allocator();
-				T* ptr = get_ptr();
-				allocator->inc_refcount(ptr);
-			}
-			return ret;
-		}
-
-		constexpr bool IsValid() const { return handle != 0; }
+		operator shared_ptr<U>& () const { return *(shared_ptr<U>*)this; }
 
 		shared_ptr() = default;
 		shared_ptr(const shared_ptr& other) { copy(other); }
