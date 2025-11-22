@@ -886,7 +886,7 @@ namespace wi::graphics
 
 		constexpr const GPUBufferDesc& GetDesc() const { return desc; }
 
-		// dynamic allocation and destruction of this object is not allowed because we don't use virtual destructor
+		// Dynamic allocation and destruction of this object is not allowed because virtual table is not used
 		static void* operator new (size_t) = delete;
 		static void* operator new[] (size_t) = delete;
 		static void  operator delete (void*) = delete;
@@ -914,7 +914,7 @@ namespace wi::graphics
 
 		constexpr const TextureDesc& GetDesc() const { return desc; }
 
-		// dynamic allocation and destruction of this object is not allowed because we don't use virtual destructor
+		// Dynamic allocation and destruction of this object is not allowed because virtual table is not used
 		static void* operator new (size_t) = delete;
 		static void* operator new[](size_t) = delete;
 		static void  operator delete (void*) = delete;
@@ -1284,7 +1284,7 @@ namespace wi::graphics
 
 		constexpr const RaytracingAccelerationStructureDesc& GetDesc() const { return desc; }
 
-		// dynamic allocation and destruction of this object is not allowed because we don't use virtual destructor
+		// Dynamic allocation and destruction of this object is not allowed because virtual table is not used
 		static void* operator new (size_t) = delete;
 		static void* operator new[](size_t) = delete;
 		static void  operator delete (void*) = delete;

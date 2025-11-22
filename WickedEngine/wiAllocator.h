@@ -524,14 +524,14 @@ namespace wi::allocator
 	};
 
 	// The allocators are global intentionally, this avoids runtime construction, guard check
-	template<typename T>
-	inline static SharedBlockAllocatorImpl<T>* shared_block_allocator = new SharedBlockAllocatorImpl<T>; // only destroyed after program exit, never earlier
+	template<typename T, size_t block_size = 256>
+	inline static SharedBlockAllocatorImpl<T, block_size>* shared_block_allocator = new SharedBlockAllocatorImpl<T, block_size>; // only destroyed after program exit, never earlier
 
 	// Create a new shared pooled object:
-	template<typename T, typename... ARG>
+	template<typename T, size_t block_size = 256, typename... ARG>
 	inline shared_ptr<T> make_shared(ARG&&... args)
 	{
-		return shared_block_allocator<T>->allocate(std::forward<ARG>(args)...);
+		return shared_block_allocator<T, block_size>->allocate(std::forward<ARG>(args)...);
 	}
 
 }
