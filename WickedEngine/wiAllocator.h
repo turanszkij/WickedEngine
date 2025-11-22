@@ -269,6 +269,7 @@ namespace wi::allocator
 		virtual uint32_t dec_refcount(void* ptr) = 0;
 	};
 
+	// The per-type block allocators can be indexed with bottom 8 bits of the shared_ptr's handle:
 	inline SharedBlockAllocator* block_allocators[256] = {};
 	inline std::atomic<uint8_t> next_allocator_id{ 0 };
 	inline uint8_t register_allocator(SharedBlockAllocator* allocator)
