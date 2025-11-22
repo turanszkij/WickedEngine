@@ -337,7 +337,7 @@ namespace wi::allocator
 			handle = other.handle;
 			other.handle = 0;
 		}
-		uint32_t use_count() const { return get_allocator()->get_refcount(get_ptr()); }
+		uint32_t use_count() const { return IsValid() ? get_allocator()->get_refcount(get_ptr()) : 0; }
 	};
 
 	// Similar to std::weak_ptr but works with the shared block allocator, and reduced feature set
