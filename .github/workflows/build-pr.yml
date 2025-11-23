@@ -113,7 +113,7 @@ jobs:
         mkdir build
         cd build
         cmake .. -DCMAKE_BUILD_TYPE=Release
-        cmake --build --config Release
+        cmake --build ./ --config Release
         cd ..
 
     - name: Generate shader dump
@@ -128,7 +128,7 @@ jobs:
       run: |
         cd build
         cmake .. -DCMAKE_BUILD_TYPE=Release
-        cmake --build --config Release
+        cmake --build ./ --config Release
         cd ..
 
     - name: Save Ccache database
