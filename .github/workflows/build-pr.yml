@@ -110,11 +110,8 @@ jobs:
     - name: Initial compile
       shell: cmd
       run: |
-        mkdir build
-        cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release
-        cmake --build ./ --config Release
-        cd ..
+        cmake -B build -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache
+        cmake --build build --config Release --parallel
 
     - name: Generate shader dump
       shell: cmd
@@ -126,10 +123,8 @@ jobs:
     - name: Recompile with shader dump
       shell: cmd
       run: |
-        cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release
-        cmake --build ./ --config Release
-        cd ..
+        cmake -B build -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache
+        cmake --build build --config Release --parallel
 
     - name: Save Ccache database
       id: save-ccache
