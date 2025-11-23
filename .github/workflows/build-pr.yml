@@ -113,14 +113,14 @@ jobs:
         mkdir build
         cd build
         cmake .. -DCMAKE_BUILD_TYPE=Release
-        make
+        cmake --build build --config Release
         cd ..
 
     - name: Generate shader dump
       shell: cmd
       run: |
         cd build/WickedEngine
-        ./offlineshadercompiler hlsl6 spirv rebuild shaderdump strip_reflection
+        ./offlineshadercompiler.exe hlsl6 spirv rebuild shaderdump strip_reflection
         mv wiShaderDump.h ../../WickedEngine/
 
     - name: Recompile with shader dump
@@ -128,7 +128,7 @@ jobs:
       run: |
         cd build
         cmake .. -DCMAKE_BUILD_TYPE=Release
-        make
+        cmake --build build --config Release
         cd ..
 
     - name: Save Ccache database
