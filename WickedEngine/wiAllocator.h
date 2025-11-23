@@ -266,7 +266,7 @@ namespace wi::allocator
 		virtual void init_refcount(void* ptr) = 0;
 		virtual uint32_t get_refcount(void* ptr) = 0;
 		virtual uint32_t inc_refcount(void* ptr) = 0;
-		virtual uint32_t dec_refcount(void* ptr, bool destruct_on_zero = false) = 0;
+		virtual uint32_t dec_refcount(void* ptr, bool destruct_on_zero = true) = 0;
 		virtual uint32_t get_refcount_weak(void* ptr) = 0;
 		virtual uint32_t inc_refcount_weak(void* ptr) = 0;
 		virtual uint32_t dec_refcount_weak(void* ptr) = 0;
