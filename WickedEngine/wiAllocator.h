@@ -266,7 +266,7 @@ namespace wi::allocator
 		virtual void init_refcount(void* ptr) = 0;
 		virtual uint32_t get_refcount(void* ptr) = 0;
 		virtual uint32_t inc_refcount(void* ptr) = 0;
-		virtual uint32_t dec_refcount(void* ptr) = 0;
+		virtual uint32_t dec_refcount(void* ptr, bool destruct_on_zero = false) = 0;
 		virtual uint32_t get_refcount_weak(void* ptr) = 0;
 		virtual uint32_t inc_refcount_weak(void* ptr) = 0;
 		virtual uint32_t dec_refcount_weak(void* ptr) = 0;
@@ -382,7 +382,7 @@ namespace wi::allocator
 			uint32_t old_strong = alloc->inc_refcount(ptr);
 			if (old_strong == 0)
 			{
-				alloc->dec_refcount(ptr); // undo refcount
+				alloc->dec_refcount(ptr, false); // undo refcount
 				return {};
 			}
 
@@ -493,12 +493,12 @@ namespace wi::allocator
 		{
 			return static_cast<RawStruct*>(ptr)->refcount.fetch_add(1, std::memory_order_relaxed);
 		}
-		uint32_t dec_refcount(void* ptr) override
+		uint32_t dec_refcount(void* ptr, bool destruct_on_zero) override
 		{
 			uint32_t old = static_cast<RawStruct*>(ptr)->refcount.fetch_sub(1, std::memory_order_acq_rel);
 			if (old == 1)
 			{
-				static_cast<T*>(ptr)->~T();
+				if (destruct_on_zero) static_cast<T*>(ptr)->~T();
 				dec_refcount_weak(ptr);
 			}
 			return old;
