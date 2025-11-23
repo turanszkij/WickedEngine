@@ -82,8 +82,9 @@ jobs:
           Editor_Windows.exe
 
 
-  windows (cmake):
+  windows_cmake:
     runs-on: windows-latest
+    name: windows (cmake)
     env:
       # needed on Windows because wiRenderer conditionally includes wiShaderDump.h
       # and only our CMake config has a workaround for it
