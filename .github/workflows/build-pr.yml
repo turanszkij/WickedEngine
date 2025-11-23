@@ -82,6 +82,78 @@ jobs:
           Editor_Windows.exe
 
 
+  windows (cmake):
+    runs-on: windows-latest
+    env:
+      # needed on Windows because wiRenderer conditionally includes wiShaderDump.h
+      # and only our CMake config has a workaround for it
+      CCACHE_NODIRECT: 1
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Restore Ccache database
+      id: restore-ccache
+      uses: actions/cache/restore@v4
+      with:
+        path: C:\Users\runneradmin\AppData\Local\ccache
+        key: ccache-win-${{ github.run_id }}
+        restore-keys: ccache-win-
+
+    - name: Install Ccache
+      run: |
+        curl -sOSL https://github.com/ccache/ccache/releases/download/v$Env:CCACHE_VERSION/ccache-$Env:CCACHE_VERSION-windows-x86_64.zip
+        unzip -qj ccache-$Env:CCACHE_VERSION-windows-x86_64.zip ccache-$Env:CCACHE_VERSION-windows-x86_64/ccache.exe
+        mv ccache.exe cl.exe
+        mv .github/workflows/Directory.Build.props.ghbuild Directory.Build.props
+
+    - name: Initial compile
+      shell: cmd
+      run: |
+        cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DWICKED_ENABLE_IPO=NO
+        make -C build -j$(nproc)
+
+    - name: Generate shader dump
+      shell: cmd
+      run: |
+        cd build/WickedEngine
+        ./offlineshadercompiler hlsl6 spirv rebuild shaderdump strip_reflection
+        mv wiShaderDump.h ../../WickedEngine/
+
+    - name: Recompile with shader dump
+      shell: cmd
+      run: |
+        cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DWICKED_ENABLE_IPO=NO
+        make -C build -j$(nproc)
+
+    - name: Save Ccache database
+      id: save-ccache
+      if: always() && steps.restore-ccache.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: C:\Users\runneradmin\AppData\Local\ccache
+        key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
+
+    - name: Move files
+      shell: cmd
+      run: |
+        move build/Editor/Editor/Editor_Windows.exe ./Editor_Windows.exe
+        move Editor\config.ini .\
+        move Editor\startup.lua .\
+        move Editor\languages .\
+        move Editor\fonts .\
+
+    - name: Package Editor
+      uses: actions/upload-artifact@v4
+      with:
+        name: Editor (Windows)
+        path: |
+          languages/
+          fonts/
+          config.ini
+          startup.lua
+          Editor_Windows.exe
+
+
   linux:
     runs-on: ubuntu-latest
     name: linux (${{ matrix.cc }})
