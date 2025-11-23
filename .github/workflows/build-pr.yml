@@ -118,7 +118,7 @@ jobs:
       run: |
         mv build/WickedEngine/Release/offlineshadercompiler.exe build/WickedEngine
         cd build/WickedEngine
-        ./offlineshadercompiler.exe hlsl6 spirv rebuild shaderdump strip_reflection
+        offlineshadercompiler.exe hlsl6 spirv rebuild shaderdump strip_reflection
         mv wiShaderDump.h ../../WickedEngine/
 
     - name: Recompile with shader dump
