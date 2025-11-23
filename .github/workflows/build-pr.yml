@@ -116,6 +116,7 @@ jobs:
     - name: Generate shader dump
       shell: cmd
       run: |
+        mv build/WickedEngine/Release/offlineshadercompiler.exe build/WickedEngine
         cd build/WickedEngine
         ./offlineshadercompiler.exe hlsl6 spirv rebuild shaderdump strip_reflection
         mv wiShaderDump.h ../../WickedEngine/
