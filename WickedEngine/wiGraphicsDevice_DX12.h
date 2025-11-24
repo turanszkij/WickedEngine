@@ -617,7 +617,7 @@ namespace wi::graphics
 				}
 			}
 		};
-		std::shared_ptr<AllocationHandler> allocationhandler;
+		wi::allocator::shared_ptr<AllocationHandler> allocationhandler;
 
 	};
 

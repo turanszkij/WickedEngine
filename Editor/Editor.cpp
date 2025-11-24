@@ -5227,7 +5227,7 @@ void EditorComponent::Open(std::string filename)
 
 	wi::jobsystem::Execute(loadmodel_workload, [=] (wi::jobsystem::JobArgs) {
 		wi::backlog::post("[Editor] started loading model: " + filename);
-		std::shared_ptr<Scene> scene = std::make_shared<Scene>();
+		wi::allocator::shared_ptr<Scene> scene = wi::allocator::make_shared_single<Scene>();
 		if (type == FileType::WISCENE)
 		{
 			wi::scene::LoadModel(*scene, filename);

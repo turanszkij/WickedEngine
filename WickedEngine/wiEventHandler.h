@@ -1,7 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
+#include "wiAllocator.h"
 
-#include <memory>
 #include <functional>
 
 namespace wi::eventhandler
@@ -12,8 +12,8 @@ namespace wi::eventhandler
 
 	struct Handle
 	{
-		std::shared_ptr<void> internal_state;
-		inline bool IsValid() const { return internal_state.get() != nullptr; }
+		wi::allocator::shared_ptr<void> internal_state;
+		constexpr bool IsValid() const { return internal_state.get() != nullptr; }
 	};
 
 	Handle Subscribe(int id, std::function<void(uint64_t)> callback);

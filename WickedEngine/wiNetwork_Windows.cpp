@@ -37,15 +37,15 @@ namespace wi::network
 			WSACleanup();
 		}
 	};
-	inline std::shared_ptr<NetworkInternal>& network_internal()
+	inline wi::allocator::shared_ptr<NetworkInternal>& network_internal()
 	{
-		static std::shared_ptr<NetworkInternal> internal_state = std::make_shared<NetworkInternal>();
+		static wi::allocator::shared_ptr<NetworkInternal> internal_state = wi::allocator::make_shared_single<NetworkInternal>();
 		return internal_state;
 	}
 
 	struct SocketInternal
 	{
-		std::shared_ptr<NetworkInternal> networkinternal;
+		wi::allocator::shared_ptr<NetworkInternal> networkinternal;
 		SOCKET handle = NULL;
 
 		~SocketInternal()
@@ -65,7 +65,7 @@ namespace wi::network
 
 	bool CreateSocket(Socket* sock)
 	{
-		std::shared_ptr<SocketInternal> socketinternal = std::make_shared<SocketInternal>();
+		wi::allocator::shared_ptr<SocketInternal> socketinternal = wi::allocator::make_shared<SocketInternal>();
 		socketinternal->networkinternal = network_internal();
 		sock->internal_state = socketinternal;
 

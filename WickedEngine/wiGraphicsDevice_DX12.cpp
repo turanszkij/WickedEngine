@@ -1172,7 +1172,7 @@ namespace dx12_internal
 
 	struct SingleDescriptor
 	{
-		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
+		wi::allocator::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
 		D3D12_CPU_DESCRIPTOR_HANDLE handle = {};
 		D3D12_DESCRIPTOR_HEAP_TYPE type = {};
 		int index = -1; // bindless
@@ -1334,7 +1334,7 @@ namespace dx12_internal
 
 	struct Resource_DX12
 	{
-		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
+		wi::allocator::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
 		ComPtr<D3D12MA::Allocation> allocation;
 		ComPtr<ID3D12Resource> resource;
 		SingleDescriptor srv;
@@ -1404,7 +1404,7 @@ namespace dx12_internal
 	};
 	struct Sampler_DX12
 	{
-		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
+		wi::allocator::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
 		SingleDescriptor descriptor;
 
 		~Sampler_DX12()
@@ -1416,7 +1416,7 @@ namespace dx12_internal
 	};
 	struct QueryHeap_DX12
 	{
-		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
+		wi::allocator::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
 		ComPtr<ID3D12QueryHeap> heap;
 
 		~QueryHeap_DX12()
@@ -1428,7 +1428,7 @@ namespace dx12_internal
 	};
 	struct PipelineState_DX12
 	{
-		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
+		wi::allocator::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
 		ComPtr<ID3D12PipelineState> resource;
 		ComPtr<ID3D12RootSignature> rootSignature;
 
@@ -1488,7 +1488,7 @@ namespace dx12_internal
 	};
 	struct RTPipelineState_DX12
 	{
-		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
+		wi::allocator::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
 		ComPtr<ID3D12StateObject> resource;
 
 		ComPtr<ID3D12StateObjectProperties> stateObjectProperties;
@@ -1508,7 +1508,7 @@ namespace dx12_internal
 	};
 	struct SwapChain_DX12
 	{
-		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
+		wi::allocator::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
 #ifdef PLATFORM_XBOX
 		uint32_t bufferIndex = 0;
 #else
@@ -1545,7 +1545,7 @@ namespace dx12_internal
 	};
 	struct VideoDecoder_DX12
 	{
-		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
+		wi::allocator::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
 		ComPtr<ID3D12VideoDecoderHeap> decoder_heap;
 		ComPtr<ID3D12VideoDecoder> decoder;
 
@@ -2441,7 +2441,7 @@ std::mutex queue_locker;
 		allocatorDesc.Flags |= D3D12MA::ALLOCATOR_FLAG_DEFAULT_POOLS_NOT_ZEROED;
 		allocatorDesc.Flags |= D3D12MA::ALLOCATOR_FLAG_MSAA_TEXTURES_ALWAYS_COMMITTED;
 
-		allocationhandler = std::make_shared<AllocationHandler>();
+		allocationhandler = wi::allocator::make_shared_single<AllocationHandler>();
 		allocationhandler->device = device;
 
 		hr = dx12_check(D3D12MA::CreateAllocator(&allocatorDesc, &allocationhandler->allocator));
