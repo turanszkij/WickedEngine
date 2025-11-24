@@ -4,7 +4,7 @@ on:
   pull_request
 
 env:
-  CCACHE_VERSION: 4.11.3
+  CCACHE_VERSION: 4.12.1
   CCACHE_MAXSIZE: 500Mi
   # see https://ccache.dev/manual/latest.html#_precompiled_headers
   CCACHE_SLOPPINESS: pch_defines,time_macros,include_file_mtime,include_file_ctime
@@ -83,35 +83,37 @@ jobs:
 
 
   windows_cmake:
+    # The omission of CCache is intentional.
+    # This job is only run on PRs, so using CCache isn't worth it
+    # since PR jobs cannot access each other's cache, only the
+    # cache from the master branch (which doesn't exist in this case)
     runs-on: windows-latest
-    name: windows (cmake)
-    env:
-      # needed on Windows because wiRenderer conditionally includes wiShaderDump.h
-      # and only our CMake config has a workaround for it
-      CCACHE_NODIRECT: 1
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - name: cmake
+          cmake_extra_opts: ""
+          cmake_build_opts: --config Release
+          editor_path: build\Editor\Release\Editor.exe
+        - name: cmake clang
+          cmake_extra_opts: >
+            -GNinja
+            -DCMAKE_BUILD_TYPE=Release
+            -DCMAKE_C_COMPILER=clang
+            -DCMAKE_CXX_COMPILER=clang++
+          cmake_build_opts: ""
+          editor_path: build\Editor\Editor.exe
+
+    name: windows (${{ matrix.name }})
     steps:
     - uses: actions/checkout@v4
-
-    - name: Restore Ccache database
-      id: restore-ccache
-      uses: actions/cache/restore@v4
-      with:
-        path: C:\Users\runneradmin\AppData\Local\ccache
-        key: ccache-win-${{ github.run_id }}
-        restore-keys: ccache-win-
-
-    - name: Install Ccache
-      run: |
-        curl -sOSL https://github.com/ccache/ccache/releases/download/v$Env:CCACHE_VERSION/ccache-$Env:CCACHE_VERSION-windows-x86_64.zip
-        unzip -qj ccache-$Env:CCACHE_VERSION-windows-x86_64.zip ccache-$Env:CCACHE_VERSION-windows-x86_64/ccache.exe
-        mv ccache.exe cl.exe
-        mv .github/workflows/Directory.Build.props.ghbuild Directory.Build.props
 
     - name: Initial compile
       shell: cmd
       run: |
-        cmake -B build -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache
-        cmake --build build --config Release --parallel
+        cmake -B build -DWICKED_ENABLE_IPO=NO ${{ matrix.cmake_extra_opts }}
+        cmake --build build ${{ matrix.cmake_build_opts }} --parallel
 
     - name: Generate shader dump
       shell: cmd
@@ -124,21 +126,12 @@ jobs:
     - name: Recompile with shader dump
       shell: cmd
       run: |
-        cmake -B build -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache
-        cmake --build build --config Release --parallel
-
-    - name: Save Ccache database
-      id: save-ccache
-      if: always() && steps.restore-ccache.cache-hit != 'true'
-      uses: actions/cache/save@v4
-      with:
-        path: C:\Users\runneradmin\AppData\Local\ccache
-        key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
+        cmake --build build ${{ matrix.cmake_build_opts }} --parallel
 
     - name: Move files
       shell: cmd
       run: |
-        move build\Editor\Release\Editor.exe .\Editor_Windows.exe
+        move ${{ matrix.editor_path }} .\Editor_Windows.exe
         move Editor\config.ini .\
         move Editor\startup.lua .\
         move Editor\languages .\
@@ -147,7 +140,7 @@ jobs:
     - name: Package Editor
       uses: actions/upload-artifact@v4
       with:
-        name: Editor (Windows) [Cmake build]
+        name: Editor (Windows) [${{ matrix.name }} build]
         path: |
           languages/
           fonts/
