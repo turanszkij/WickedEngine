@@ -106,7 +106,7 @@ namespace wi
 
 		// This is an identifier of RenderPath subtype that is used for lua binding.
 		static constexpr std::string_view script_check_identifier = relative_path(__FILE__);
-		virtual std::string_view GetScriptBindingID() const { return script_check_identifier; }
+		virtual std::string_view GetScriptBindingID() const override { return script_check_identifier; }
 	};
 
 }
