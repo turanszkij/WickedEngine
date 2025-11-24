@@ -105,8 +105,8 @@ namespace wi
 		void SetHDRScaling(float value) { hdr_scaling = value; }
 
 		// This is an identifier of RenderPath subtype that is used for lua binding.
-		static constexpr const char* script_check_identifier = relative_path(__FILE__);
-		const char* GetScriptBindingID() const override { return script_check_identifier; }
+		static constexpr std::string_view script_check_identifier = relative_path(__FILE__);
+		virtual std::string_view GetScriptBindingID() const { return script_check_identifier; }
 	};
 
 }
