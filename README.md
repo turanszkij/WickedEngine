@@ -43,6 +43,12 @@ To build Wicked Engine for Windows 10 or newer, open the `WickedEngine.sln` solu
 
 If you want to develop a C++ application that uses Wicked Engine, you can build the WickedEngine_Windows static library project and link against it. Including the `"WickedEngine.h"` header will attempt to link the binaries for the appropriate platform, but search directories should be set up beforehand. For example, you can set additional library directories to `$(SolutionDir)BUILD\$(Platform)\$(Configuration)` by default. For examples, see the `Samples/Template_Windows`, `Samples/Tests`, and `Editor_Windows` projects. 
 
+You can also use cmake to build on windows with these commands:
+```
+cmake -B build
+cmake --build build --config Release
+```
+
 <img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/fps.gif" width="320px"/>
 
 #### Linux
