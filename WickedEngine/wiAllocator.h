@@ -94,7 +94,7 @@ namespace wi::allocator
 
 
 
-	// Interface for allocating pooled shared_ptr
+	// Interface for lifetime management allocator of shared_ptr
 	struct SharedAllocator
 	{
 		virtual void init_refcount(void* ptr) = 0;
