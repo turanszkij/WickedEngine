@@ -118,7 +118,7 @@ namespace wi::allocator
 	}
 	inline uint8_t get_shared_allocator_count() { return next_allocator_id.load(); }
 
-	// Custom shared_ptr that has compact handle size, supports block allocation for pooling many objects, or heap allocation for single objects
+	// Custom shared_ptr that has compact handle size, supports block allocation for pooling many objects, or heap allocation for single objects. Not feature-complete with std:: but a minimal simplified implementation.
 	template<typename T>
 	struct shared_ptr
 	{
@@ -171,7 +171,7 @@ namespace wi::allocator
 		uint32_t use_count() const { return IsValid() ? get_allocator()->get_refcount(get_ptr()) : 0; }
 	};
 
-	// Similar to std::weak_ptr but works with the shared block allocator, and reduced feature set
+	// Similar to std::weak_ptr but reduced size and works with the shared block allocator. Not feature-complete with std:: but a minimal simplified implementation.
 	template<typename T>
 	struct weak_ptr
 	{
@@ -213,7 +213,7 @@ namespace wi::allocator
 			uint32_t old_strong = alloc->inc_refcount(ptr);
 			if (old_strong == 0)
 			{
-				alloc->dec_refcount(ptr, false); // undo refcount
+				alloc->dec_refcount(ptr, false); // undo refcount (not allowed to destruct, already destructed)
 				return {};
 			}
 
