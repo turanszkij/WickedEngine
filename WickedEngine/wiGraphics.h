@@ -886,13 +886,13 @@ namespace wi::graphics
 
 		constexpr const GPUBufferDesc& GetDesc() const { return desc; }
 
-		// Dynamic allocation and destruction of this object is not allowed because virtual table is not used
+		// Dynamic allocation and destruction of this object is not allowed because virtual table is not used. Placement new is allowed.
 		static void* operator new (size_t) = delete;
-		static void* operator new[] (size_t) = delete;
+		static void* operator new[](size_t) = delete;
 		static void  operator delete (void*) = delete;
-		static void  operator delete[] (void*) = delete;
-		static void* operator new (size_t, void*) = delete;
-		static void* operator new[](size_t, void*) = delete;
+		static void  operator delete[](void*) = delete;
+		static void* operator new(size_t, void* p) noexcept { return p; }
+		static void* operator new[](size_t, void* p) noexcept { return p; }
 	};
 
 	struct Texture final : public GPUResource
@@ -914,13 +914,13 @@ namespace wi::graphics
 
 		constexpr const TextureDesc& GetDesc() const { return desc; }
 
-		// Dynamic allocation and destruction of this object is not allowed because virtual table is not used
+		// Dynamic allocation and destruction of this object is not allowed because virtual table is not used. Placement new is allowed.
 		static void* operator new (size_t) = delete;
 		static void* operator new[](size_t) = delete;
 		static void  operator delete (void*) = delete;
 		static void  operator delete[](void*) = delete;
-		static void* operator new (size_t, void*) = delete;
-		static void* operator new[](size_t, void*) = delete;
+		static void* operator new(size_t, void* p) noexcept { return p; }
+		static void* operator new[](size_t, void* p) noexcept { return p; }
 	};
 
 	struct VideoDecoder
@@ -1284,13 +1284,13 @@ namespace wi::graphics
 
 		constexpr const RaytracingAccelerationStructureDesc& GetDesc() const { return desc; }
 
-		// Dynamic allocation and destruction of this object is not allowed because virtual table is not used
+		// Dynamic allocation and destruction of this object is not allowed because virtual table is not used. Placement new is allowed.
 		static void* operator new (size_t) = delete;
 		static void* operator new[](size_t) = delete;
 		static void  operator delete (void*) = delete;
 		static void  operator delete[](void*) = delete;
-		static void* operator new (size_t, void*) = delete;
-		static void* operator new[](size_t, void*) = delete;
+		static void* operator new(size_t, void* p) noexcept { return p; }
+		static void* operator new[](size_t, void* p) noexcept { return p; }
 	};
 
 	struct ShaderLibrary
