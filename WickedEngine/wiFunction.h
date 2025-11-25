@@ -86,6 +86,7 @@ namespace wi
 
 		function& operator=(const function& other)
 		{
+			if (&other == this) return *this;
 			destroy();
 			if (other.ptr)
 			{
