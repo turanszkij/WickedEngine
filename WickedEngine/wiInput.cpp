@@ -135,7 +135,7 @@ namespace wi::input
 		initialized.store(true);
 	}
 
-	void Update(wi::platform::window_type _window, wi::Canvas _canvas)
+	void Update(wi::platform::window_type _window, const wi::Canvas& _canvas)
 	{
 		window = _window;
 		canvas = _canvas;

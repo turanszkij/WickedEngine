@@ -4,6 +4,7 @@
 
 #include <list>
 #include <mutex>
+#include <utility>
 
 namespace wi::eventhandler
 {
@@ -40,7 +41,7 @@ namespace wi::eventhandler
 		handle.internal_state = eventinternal;
 		eventinternal->manager = manager;
 		eventinternal->id = id;
-		eventinternal->callback = callback;
+		eventinternal->callback = std::move(callback);
 
 		std::scoped_lock lck(manager->locker);
 		manager->subscribers[id].push_back(&eventinternal->callback);
@@ -48,7 +49,7 @@ namespace wi::eventhandler
 		return handle;
 	}
 
-	void Subscribe_Once(int id, std::function<void(uint64_t)> callback)
+	void Subscribe_Once(int id, const std::function<void(uint64_t)>& callback)
 	{
 		std::scoped_lock lck(manager->locker);
 		manager->subscribers_once[id].push_back(callback);

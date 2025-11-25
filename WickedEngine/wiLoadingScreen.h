@@ -31,11 +31,11 @@ namespace wi
 		} background_mode = BackgroundMode::Fill;
 
 		//Add a loading task which should be executed
-		void addLoadingFunction(std::function<void(wi::jobsystem::JobArgs)> loadingFunction);
+		void addLoadingFunction(const std::function<void(wi::jobsystem::JobArgs)>& loadingFunction);
 		//Helper for loading a whole renderable component
 		void addLoadingComponent(RenderPath* component, Application* main, float fadeSeconds = 0, wi::Color fadeColor = wi::Color(0, 0, 0, 255), wi::FadeManager::FadeType fadetype = wi::FadeManager::FadeType::FadeToColor);
 		//Set a function that should be called when the loading finishes
-		void onFinished(std::function<void()> finishFunction);
+		void onFinished(const std::function<void()>& finishFunction);
 		//See if the loading is currently running
 		bool isActive() const;
 		// See if there are any loading tasks that are still not finished

@@ -1111,7 +1111,7 @@ namespace vulkan_internal
 		SwapChain_Vulkan* internal_state,
 		VkPhysicalDevice physicalDevice,
 		VkDevice device,
-		wi::allocator::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler
+		const wi::allocator::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler>& allocationhandler
 	)
 	{
 		// In vulkan, the swapchain recreate can happen whenever it gets outdated, it's not in application's control
