@@ -396,6 +396,13 @@ constexpr const char* relative_path(const char* path)
 	return startPosition;
 }
 
+constexpr auto relative_path_storage(const char* path)
+{
+	StackString ret;
+	ret.push_back(relative_path(path));
+	return ret;
+}
+
 // Extract function name from a string at compile-time
 constexpr auto extract_function_name(const char* str)
 {
