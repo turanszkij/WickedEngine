@@ -919,9 +919,9 @@ void TerrainWindow::Create(EditorComponent* _editor)
 			break;
 		}
 
-		std::shared_ptr<wi::terrain::PerlinModifier> terrain_perlin = std::make_shared<wi::terrain::PerlinModifier>();
+		wi::allocator::shared_ptr<wi::terrain::PerlinModifier> terrain_perlin = wi::allocator::make_shared_single<wi::terrain::PerlinModifier>();
 		terrain->modifiers.emplace_back() = terrain_perlin;
-		std::shared_ptr<wi::terrain::VoronoiModifier> terrain_voronoi = std::make_shared<wi::terrain::VoronoiModifier>();
+		wi::allocator::shared_ptr<wi::terrain::VoronoiModifier> terrain_voronoi = wi::allocator::make_shared_single<wi::terrain::VoronoiModifier>();
 		terrain->modifiers.emplace_back() = terrain_voronoi;
 
 		perlin->Bind(terrain_perlin.get());
@@ -959,7 +959,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 		case 0:
 			{
 				PerlinModifierWindow* ptr = new PerlinModifierWindow;
-				std::shared_ptr<wi::terrain::PerlinModifier> modifier = std::make_shared<wi::terrain::PerlinModifier>();
+				wi::allocator::shared_ptr<wi::terrain::PerlinModifier> modifier = wi::allocator::make_shared_single<wi::terrain::PerlinModifier>();
 				terrain->modifiers.push_back(modifier);
 				ptr->From(modifier.get());
 				AddModifier(ptr);
@@ -968,7 +968,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 		case 1:
 			{
 				VoronoiModifierWindow* ptr = new VoronoiModifierWindow;
-				std::shared_ptr<wi::terrain::VoronoiModifier> modifier = std::make_shared<wi::terrain::VoronoiModifier>();
+				wi::allocator::shared_ptr<wi::terrain::VoronoiModifier> modifier = wi::allocator::make_shared_single<wi::terrain::VoronoiModifier>();
 				terrain->modifiers.push_back(modifier);
 				ptr->From(modifier.get());
 				AddModifier(ptr);
@@ -977,7 +977,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 		case 2:
 			{
 				HeightmapModifierWindow* ptr = new HeightmapModifierWindow;
-				std::shared_ptr<wi::terrain::HeightmapModifier> modifier = std::make_shared<wi::terrain::HeightmapModifier>();
+				wi::allocator::shared_ptr<wi::terrain::HeightmapModifier> modifier = wi::allocator::make_shared_single<wi::terrain::HeightmapModifier>();
 				terrain->modifiers.push_back(modifier);
 				ptr->From(modifier.get());
 				AddModifier(ptr);

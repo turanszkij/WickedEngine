@@ -67,7 +67,7 @@ void ConstraintWindow::Create(EditorComponent* _editor)
 	collisionCheckBox.SetTooltip("Disable collision between the two bodies that this constraint targets.\nNote: changing this will recreate the constraint in the current pose relative to the bodies.");
 	collisionCheckBox.OnClick(forEachSelected([] (auto physicscomponent, auto args) {
 		physicscomponent->SetDisableSelfCollision(args.bValue);
-		physicscomponent->physicsobject = nullptr;
+		physicscomponent->physicsobject.reset();
 	}));
 	AddWidget(&collisionCheckBox);
 
@@ -80,7 +80,7 @@ void ConstraintWindow::Create(EditorComponent* _editor)
 
 	rebindButton.Create("Rebind Constraint");
 	rebindButton.OnClick(forEachSelected([](auto physicscomponent, auto args) {
-		physicscomponent->physicsobject = nullptr;
+		physicscomponent->physicsobject.reset();
 	}));
 	AddWidget(&rebindButton);
 
@@ -97,7 +97,7 @@ void ConstraintWindow::Create(EditorComponent* _editor)
 		PhysicsConstraintComponent::Type type = (PhysicsConstraintComponent::Type)args.userdata;
 		if (physicscomponent->type != type)
 		{
-			physicscomponent->physicsobject = nullptr;
+			physicscomponent->physicsobject.reset();
 			physicscomponent->type = type;
 		}
 	}));
@@ -109,14 +109,14 @@ void ConstraintWindow::Create(EditorComponent* _editor)
 	bodyAComboBox.Create("Body A: ");
 	bodyAComboBox.OnSelect(forEachSelected([](auto physicscomponent, auto args) {
 		physicscomponent->bodyA = args.userdata;
-		physicscomponent->physicsobject = nullptr;
+		physicscomponent->physicsobject.reset();
 	}));
 	AddWidget(&bodyAComboBox);
 
 	bodyBComboBox.Create("Body B: ");
 	bodyBComboBox.OnSelect(forEachSelected([](auto physicscomponent, auto args) {
 		physicscomponent->bodyB = args.userdata;
-		physicscomponent->physicsobject = nullptr;
+		physicscomponent->physicsobject.reset();
 	}));
 	AddWidget(&bodyBComboBox);
 

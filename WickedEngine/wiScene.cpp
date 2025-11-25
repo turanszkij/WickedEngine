@@ -5865,7 +5865,7 @@ namespace wi::scene
 
 				if (character.pathfinding_thread == nullptr && character.process_goal)
 				{
-					character.pathfinding_thread = std::make_shared<CharacterComponent::PathfindingThreadContext>();
+					character.pathfinding_thread = wi::allocator::make_shared<CharacterComponent::PathfindingThreadContext>();
 				}
 				if (character.pathfinding_thread)
 				{

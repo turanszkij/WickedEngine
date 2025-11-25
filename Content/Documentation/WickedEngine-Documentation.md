@@ -495,7 +495,7 @@ bool IsDoubleSided() const { return _flags & DOUBLE_SIDED; }
 void SetDoubleSided(bool value) { if (value) { _flags |= DOUBLE_SIDED; } else { _flags &= ~DOUBLE_SIDED; } }
 ```
 
-It is good practice to not implement constructors and destructors for components. Wherever possible, initialization of values in declaration should be preferred. If desctructors are defined, move contructors, etc. will also need to be defined for compatibility with the [ComponentManager](#componentmanager), so default constructors and destructors should be preferred. Member objects should be able to desctruct themselves implicitly. If pointers need to be stored within the component that manage object lifetime, std::unique_ptr or std::shared_ptr can be used, which will be destructed implicitly.
+It is good practice to not implement constructors and destructors for components. Wherever possible, initialization of values in declaration should be preferred. If desctructors are defined, move contructors, etc. will also need to be defined for compatibility with the [ComponentManager](#componentmanager), so default constructors and destructors should be preferred. Member objects should be able to desctruct themselves implicitly. If pointers need to be stored within the component that manage object lifetime, std::unique_ptr or wi::allocator::shared_ptr can be used, which will be destructed implicitly.
 
 #### NameComponent
 [[Header]](../../WickedEngine/wiScene.h) [[Cpp]](../../WickedEngine/wiScene.cpp)

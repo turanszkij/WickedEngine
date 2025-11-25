@@ -1,14 +1,14 @@
 #pragma once
 #include "CommonInclude.h"
+#include "wiAllocator.h"
 
-#include <memory>
 #include <array>
 
 namespace wi::network
 {
 	struct Socket
 	{
-		std::shared_ptr<void> internal_state;
+		wi::allocator::shared_ptr<void> internal_state;
 		inline bool IsValid() const { return internal_state.get() != nullptr; }
 	};
 

@@ -40,7 +40,7 @@ namespace wi::network
 
 	bool CreateSocket(Socket* sock)
 	{
-		std::shared_ptr<SocketInternal> socketinternal = std::make_shared<SocketInternal>();
+		wi::allocator::shared_ptr<SocketInternal> socketinternal = wi::allocator::make_shared<SocketInternal>();
 		sock->internal_state = socketinternal;
 
 		socketinternal->handle = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);

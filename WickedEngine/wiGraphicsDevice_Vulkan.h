@@ -210,7 +210,7 @@ namespace wi::graphics
 			wi::vector<uint32_t> swapchainImageIndices;
 
 			bool sparse_binding_supported = false;
-			std::shared_ptr<std::mutex> locker;
+			wi::allocator::shared_ptr<std::mutex> locker;
 
 			void clear();
 			void signal(VkSemaphore semaphore);
@@ -894,12 +894,12 @@ namespace wi::graphics
 				});
 			}
 		};
-		std::shared_ptr<AllocationHandler> allocationhandler;
+		wi::allocator::shared_ptr<AllocationHandler> allocationhandler;
 
 
 		struct PSOLayout
 		{
-			std::shared_ptr<AllocationHandler> allocationhandler;
+			wi::allocator::shared_ptr<AllocationHandler> allocationhandler;
 			VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
 			VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
 			wi::vector<VkDescriptorSet> bindlessSets;
@@ -915,7 +915,7 @@ namespace wi::graphics
 				allocationhandler->destroylocker.unlock();
 			}
 		};
-		mutable wi::unordered_map<PSOLayoutHash, std::shared_ptr<PSOLayout>> pso_layout_cache;
+		mutable wi::unordered_map<PSOLayoutHash, wi::allocator::shared_ptr<PSOLayout>> pso_layout_cache;
 		mutable std::mutex pso_layout_cache_mutex;
 	};
 }

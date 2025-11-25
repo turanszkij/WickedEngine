@@ -524,7 +524,7 @@ namespace wi::scene
 		} character;
 
 		// Non-serialized attributes:
-		std::shared_ptr<void> physicsobject = nullptr; // You can set to null to recreate the physics object the next time phsyics system will be running.
+		wi::allocator::shared_ptr<void> physicsobject; // You can reset this to recreate the physics object the next time phsyics system will be running.
 
 		constexpr void SetDisableDeactivation(bool value) { if (value) { _flags |= DISABLE_DEACTIVATION; } else { _flags &= ~DISABLE_DEACTIVATION; } }
 		constexpr void SetKinematic(bool value) { if (value) { _flags |= KINEMATIC; } else { _flags &= ~KINEMATIC; } }
@@ -637,7 +637,7 @@ namespace wi::scene
 		float break_distance = FLT_MAX; // how much the constraint is allowed to be exerted before breaking, calculated as relative distance
 
 		// Non-serialized attributes:
-		std::shared_ptr<void> physicsobject = nullptr; // You can set to null to recreate the physics object the next time phsyics system will be running.
+		wi::allocator::shared_ptr<void> physicsobject; // You can reset this to recreate the physics object the next time phsyics system will be running.
 
 		// Request refreshing of constraint settings without recreating the constraint
 		constexpr void SetRefreshParametersNeeded(bool value = true) { if (value) { _flags |= REFRESH_PARAMETERS_REQUEST; } else { _flags &= ~REFRESH_PARAMETERS_REQUEST; } }
@@ -1269,7 +1269,7 @@ namespace wi::scene
 		wi::vector<float> weights; // weight per physics vertex controlling the mass. (0: disable weight (no physics, only animation), 1: default weight)
 
 		// Non-serialized attributes:
-		std::shared_ptr<void> physicsobject = nullptr; // You can set to null to recreate the physics object the next time phsyics system will be running.
+		wi::allocator::shared_ptr<void> physicsobject; // You can reset this to recreate the physics object the next time phsyics system will be running.
 		XMFLOAT4X4 worldMatrix = wi::math::IDENTITY_MATRIX;
 		wi::vector<ShaderTransform> boneData; // simulated soft body nodes as bone matrices that can be fed into skinning
 		wi::primitive::AABB aabb;
@@ -1284,7 +1284,7 @@ namespace wi::scene
 		{
 			physicsIndices.clear();
 			physicsToGraphicsVertexMapping.clear();
-			physicsobject = {};
+			physicsobject.reset();
 		}
 
 		void SetDetail(float loddetail)
@@ -1481,7 +1481,7 @@ namespace wi::scene
 			wi::graphics::Texture depthstencil_resolved;
 			XMUINT2 tileCount = {};
 			wi::graphics::GPUBuffer entityTiles;
-			std::shared_ptr<void> visibility;
+			wi::allocator::shared_ptr<void> visibility;
 		} render_to_texture;
 
 		void CreateOrtho(float newWidth, float newHeight, float newNear, float newFar, float newVerticalSize = 1);
@@ -2333,7 +2333,7 @@ namespace wi::scene
 		XMFLOAT4 lookAtDeltaRotationState_Head = XMFLOAT4(0, 0, 0, 1);
 		XMFLOAT4 lookAtDeltaRotationState_LeftEye = XMFLOAT4(0, 0, 0, 1);
 		XMFLOAT4 lookAtDeltaRotationState_RightEye = XMFLOAT4(0, 0, 0, 1);
-		std::shared_ptr<void> ragdoll = nullptr; // physics system implementation-specific object
+		wi::allocator::shared_ptr<void> ragdoll; // physics system implementation-specific object
 		float default_facing = 0; // 0 = not yet computed, otherwise Z direction
 		float knee_bending = 0; // 0 = not yet computed, otherwise Z direction
 
@@ -2523,7 +2523,7 @@ namespace wi::scene
 				wi::jobsystem::Wait(ctx);
 			}
 		};
-		std::shared_ptr<PathfindingThreadContext> pathfinding_thread; // separate allocation, mustn't be reallocated while path finding thread is running
+		wi::allocator::shared_ptr<PathfindingThreadContext> pathfinding_thread; // separate allocation, mustn't be reallocated while path finding thread is running
 		const wi::VoxelGrid* voxelgrid = nullptr;
 
 		// Apply movement to the character in the next update

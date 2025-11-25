@@ -655,7 +655,7 @@ namespace vulkan_internal
 	};
 	struct Buffer_Vulkan
 	{
-		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
+		wi::allocator::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
 		VmaAllocation allocation = nullptr;
 		VkBuffer resource = VK_NULL_HANDLE;
 		struct BufferSubresource
@@ -753,7 +753,7 @@ namespace vulkan_internal
 	};
 	struct Texture_Vulkan
 	{
-		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
+		wi::allocator::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
 		VmaAllocation allocation = nullptr;
 		VkImage resource = VK_NULL_HANDLE;
 		VkImageLayout defaultLayout = VK_IMAGE_LAYOUT_GENERAL;
@@ -864,7 +864,7 @@ namespace vulkan_internal
 	};
 	struct Sampler_Vulkan
 	{
-		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
+		wi::allocator::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
 		VkSampler resource = VK_NULL_HANDLE;
 		int index = -1;
 
@@ -881,7 +881,7 @@ namespace vulkan_internal
 	};
 	struct QueryHeap_Vulkan
 	{
-		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
+		wi::allocator::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
 		VkQueryPool pool = VK_NULL_HANDLE;
 
 		~QueryHeap_Vulkan()
@@ -896,11 +896,11 @@ namespace vulkan_internal
 	};
 	struct Shader_Vulkan
 	{
-		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
+		wi::allocator::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
 		VkShaderModule shaderModule = VK_NULL_HANDLE;
 		VkPipeline pipeline_cs = VK_NULL_HANDLE;
 		VkPipelineShaderStageCreateInfo stageInfo = {};
-		std::shared_ptr<GraphicsDevice_Vulkan::PSOLayout> layout_lifetime; // lifetime management only
+		wi::allocator::shared_ptr<GraphicsDevice_Vulkan::PSOLayout> layout_lifetime; // lifetime management only
 		VkPipelineLayout pipelineLayout_cs = VK_NULL_HANDLE; // no lifetime management here
 		VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE; // no lifetime management here
 		wi::vector<VkDescriptorSetLayoutBinding> layoutBindings;
@@ -928,9 +928,9 @@ namespace vulkan_internal
 	};
 	struct PipelineState_Vulkan
 	{
-		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
+		wi::allocator::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
 		VkPipeline pipeline = VK_NULL_HANDLE;
-		std::shared_ptr<GraphicsDevice_Vulkan::PSOLayout> layout_lifetime; // lifetime management only
+		wi::allocator::shared_ptr<GraphicsDevice_Vulkan::PSOLayout> layout_lifetime; // lifetime management only
 		VkPipelineLayout pipelineLayout = VK_NULL_HANDLE; // no lifetime management here
 		VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE; // no lifetime management here
 		wi::vector<VkDescriptorSetLayoutBinding> layoutBindings;
@@ -968,7 +968,7 @@ namespace vulkan_internal
 	};
 	struct BVH_Vulkan
 	{
-		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
+		wi::allocator::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
 		VmaAllocation allocation = nullptr;
 		VkBuffer buffer = VK_NULL_HANDLE;
 		VkAccelerationStructureKHR resource = VK_NULL_HANDLE;
@@ -996,7 +996,7 @@ namespace vulkan_internal
 	};
 	struct RTPipelineState_Vulkan
 	{
-		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
+		wi::allocator::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
 		VkPipeline pipeline;
 
 		~RTPipelineState_Vulkan()
@@ -1011,7 +1011,7 @@ namespace vulkan_internal
 	};
 	struct SwapChain_Vulkan
 	{
-		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
+		wi::allocator::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
 		VkSwapchainKHR swapChain = VK_NULL_HANDLE;
 		VkFormat swapChainImageFormat;
 		VkExtent2D swapChainExtent;
@@ -1061,7 +1061,7 @@ namespace vulkan_internal
 	};
 	struct VideoDecoder_Vulkan
 	{
-		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
+		wi::allocator::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
 		VkVideoSessionKHR video_session = VK_NULL_HANDLE;
 		VkVideoSessionParametersKHR session_parameters = VK_NULL_HANDLE;
 		wi::vector<VmaAllocation> allocations;
@@ -1111,7 +1111,7 @@ namespace vulkan_internal
 		SwapChain_Vulkan* internal_state,
 		VkPhysicalDevice physicalDevice,
 		VkDevice device,
-		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler
+		wi::allocator::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler
 	)
 	{
 		// In vulkan, the swapchain recreate can happen whenever it gets outdated, it's not in application's control
@@ -2325,7 +2325,7 @@ using namespace vulkan_internal;
 		//	Issue: https://github.com/KhronosGroup/Vulkan-Docs/issues/2079
 		capabilities |= GraphicsDeviceCapability::COPY_BETWEEN_DIFFERENT_IMAGE_ASPECTS_NOT_SUPPORTED;
 
-		wi::unordered_map<uint32_t, std::shared_ptr<std::mutex>> queue_lockers;
+		wi::unordered_map<uint32_t, wi::allocator::shared_ptr<std::mutex>> queue_lockers;
 
 		TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = sizeof(VkAccelerationStructureInstanceKHR);
 
@@ -3087,7 +3087,7 @@ using namespace vulkan_internal;
 			float queuePriority = 1.0f;
 			for (uint32_t queueFamily : uniqueQueueFamilies)
 			{
-				queue_lockers.emplace(queueFamily, std::make_shared<std::mutex>());
+				queue_lockers.emplace(queueFamily, wi::allocator::make_shared_single<std::mutex>());
 				VkDeviceQueueCreateInfo queueCreateInfo = {};
 				queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 				queueCreateInfo.queueFamilyIndex = queueFamily;
@@ -3165,7 +3165,7 @@ using namespace vulkan_internal;
 			capabilities |= GraphicsDeviceCapability::CACHE_COHERENT_UMA;
 		}
 
-		allocationhandler = std::make_shared<AllocationHandler>();
+		allocationhandler = wi::allocator::make_shared_single<AllocationHandler>();
 		allocationhandler->device = device;
 		allocationhandler->instance = instance;
 
@@ -5028,7 +5028,7 @@ using namespace vulkan_internal;
 					if (res == VK_SUCCESS)
 					{
 						auto& cached_layout = pso_layout_cache[layout_hasher];
-						cached_layout = std::make_shared<PSOLayout>();
+						cached_layout = wi::allocator::make_shared<PSOLayout>();
 						cached_layout->allocationhandler = allocationhandler;
 						cached_layout->descriptorSetLayout = internal_state->descriptorSetLayout;
 						cached_layout->pipelineLayout = internal_state->pipelineLayout_cs;
@@ -5532,7 +5532,7 @@ using namespace vulkan_internal;
 				if (res == VK_SUCCESS)
 				{
 					auto& cached_layout = pso_layout_cache[layout_hasher];
-					cached_layout = std::make_shared<PSOLayout>();
+					cached_layout = wi::allocator::make_shared<PSOLayout>();
 					cached_layout->allocationhandler = allocationhandler;
 					cached_layout->descriptorSetLayout = internal_state->descriptorSetLayout;
 					cached_layout->pipelineLayout = internal_state->pipelineLayout;

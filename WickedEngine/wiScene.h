@@ -75,7 +75,7 @@ namespace wi::scene
 
 		float time = 0;
 		CameraComponent camera; // for LOD and 3D sound update
-		std::shared_ptr<void> physics_scene;
+		wi::allocator::shared_ptr<void> physics_scene;
 		wi::SpinLock locker;
 		wi::primitive::AABB bounds;
 		wi::vector<wi::primitive::AABB> parallel_bounds;
