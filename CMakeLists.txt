@@ -140,7 +140,7 @@ else()
         # security checks disabled in Release:
         $<$<CONFIG:Release>:-fno-stack-protector>
         $<$<CONFIG:Release>:-fcf-protection=none>
-        $<$<CONFIG:Release>:-fno-stack-clash-protection>
+        $<$<AND:$<CONFIG:Release>,$<NOT:$<PLATFORM_ID:Windows>>>:-fno-stack-clash-protection>
         $<$<CONFIG:Release>:-fno-stack-check>
         $<$<CONFIG:Release>:-fno-asynchronous-unwind-tables>
     )
