@@ -59,7 +59,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			RigidBodyPhysicsComponent::CollisionShape shape = (RigidBodyPhysicsComponent::CollisionShape)args.userdata;
 			if (physicscomponent->shape != shape)
 			{
-				physicscomponent->physicsobject = nullptr;
+				physicscomponent->physicsobject.reset();
 				physicscomponent->shape = shape;
 			}
 		})(args);
@@ -87,7 +87,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			physicscomponent->capsule.height = args.fValue;
 			break;
 		}
-		physicscomponent->physicsobject = nullptr;
+		physicscomponent->physicsobject.reset();
 	}));
 
 	ZSlider.SetLocalizationEnabled(false);
@@ -106,7 +106,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			physicsComponent->capsule.radius = args.fValue;
 			break;
 		}
-		physicsComponent->physicsobject = nullptr;
+		physicsComponent->physicsobject.reset();
 	}));
 	ZSlider.SetLocalizationEnabled(false);
 	AddWidget(&YSlider);
@@ -121,7 +121,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 			physicscomponent->box.halfextents.z = args.fValue;
 			break;
 		}
-		physicscomponent->physicsobject = nullptr;
+		physicscomponent->physicsobject.reset();
 	}));
 	ZSlider.SetLocalizationEnabled(false);
 	AddWidget(&ZSlider);
@@ -173,7 +173,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 	physicsMeshLODSlider.OnSlide(forEachSelectedPhysicsComponentWithRefresh([](auto physicscomponent, auto args) {
 		if (physicscomponent->mesh_lod != uint32_t(args.iValue))
 		{
-			physicscomponent->physicsobject = nullptr; // will be recreated automatically
+			physicscomponent->physicsobject.reset(); // will be recreated automatically
 			physicscomponent->mesh_lod = uint32_t(args.iValue);
 		}
 		physicscomponent->mesh_lod = uint32_t(args.iValue);

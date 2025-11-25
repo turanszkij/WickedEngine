@@ -281,7 +281,7 @@ namespace wi::physics
 		{
 			if (scene.physics_scene == nullptr)
 			{
-				auto physics_scene = std::make_shared<PhysicsScene>();
+				auto physics_scene = wi::allocator::make_shared_single<PhysicsScene>();
 
 				physics_scene->physics_system.Init(
 					cMaxBodies,
@@ -300,7 +300,7 @@ namespace wi::physics
 
 		struct RigidBody
 		{
-			std::shared_ptr<void> physics_scene;
+			wi::allocator::shared_ptr<void> physics_scene;
 			Entity entity = INVALID_ENTITY;
 			ShapeRefC shape;
 			BodyID bodyID;
@@ -384,7 +384,7 @@ namespace wi::physics
 		};
 		struct SoftBody
 		{
-			std::shared_ptr<void> physics_scene;
+			wi::allocator::shared_ptr<void> physics_scene;
 			Entity entity = INVALID_ENTITY;
 			BodyID bodyID;
 			float friction = 0;
@@ -415,7 +415,7 @@ namespace wi::physics
 		};
 		struct Constraint
 		{
-			std::shared_ptr<void> physics_scene;
+			wi::allocator::shared_ptr<void> physics_scene;
 			Entity entity = INVALID_ENTITY;
 			Ref<TwoBodyConstraint> constraint;
 			BodyID body1_self;
@@ -456,7 +456,7 @@ namespace wi::physics
 		{
 			if (physicscomponent.physicsobject == nullptr)
 			{
-				physicscomponent.physicsobject = std::make_shared<RigidBody>();
+				physicscomponent.physicsobject = wi::allocator::make_shared<RigidBody>();
 			}
 			return *(RigidBody*)physicscomponent.physicsobject.get();
 		}
@@ -468,7 +468,7 @@ namespace wi::physics
 		{
 			if (physicscomponent.physicsobject == nullptr)
 			{
-				physicscomponent.physicsobject = std::make_shared<SoftBody>();
+				physicscomponent.physicsobject = wi::allocator::make_shared<SoftBody>();
 			}
 			return *(SoftBody*)physicscomponent.physicsobject.get();
 		}
@@ -480,7 +480,7 @@ namespace wi::physics
 		{
 			if (physicscomponent.physicsobject == nullptr)
 			{
-				physicscomponent.physicsobject = std::make_shared<Constraint>();
+				physicscomponent.physicsobject = wi::allocator::make_shared<Constraint>();
 			}
 			return *(Constraint*)physicscomponent.physicsobject.get();
 		}
@@ -1289,7 +1289,7 @@ namespace wi::physics
 				BODYPART_COUNT
 			};
 
-			std::shared_ptr<void> physics_scene;
+			wi::allocator::shared_ptr<void> physics_scene;
 			RigidBody rigidbodies[BODYPART_COUNT];
 			Entity saved_parents[BODYPART_COUNT] = {};
 			Skeleton skeleton;
@@ -2150,7 +2150,7 @@ namespace wi::physics
 			}
 			if (humanoid.ragdoll == nullptr)
 			{
-				humanoid.ragdoll = std::make_shared<Ragdoll>(scene, humanoid, humanoidEntity, scale);
+				humanoid.ragdoll = wi::allocator::make_shared<Ragdoll>(scene, humanoid, humanoidEntity, scale);
 			}
 		});
 
@@ -2160,12 +2160,12 @@ namespace wi::physics
 			PhysicsConstraintComponent& physicscomponent = scene.constraints[args.jobIndex];
 			if (physicscomponent.bodyA == INVALID_ENTITY && physicscomponent.bodyB == INVALID_ENTITY)
 			{
-				physicscomponent.physicsobject = nullptr;
+				physicscomponent.physicsobject.reset();
 				return;
 			}
 			if (!scene.rigidbodies.Contains(physicscomponent.bodyA) && !scene.rigidbodies.Contains(physicscomponent.bodyB))
 			{
-				physicscomponent.physicsobject = nullptr;
+				physicscomponent.physicsobject.reset();
 				return;
 			}
 			if (physicscomponent.physicsobject != nullptr)
@@ -2181,7 +2181,7 @@ namespace wi::physics
 						if (body.bodyID != constraint.body1_ref)
 						{
 							// Rigidbody to constraint object mismatch!
-							physicscomponent.physicsobject = nullptr;
+							physicscomponent.physicsobject.reset();
 							return;
 						}
 					}
@@ -2195,7 +2195,7 @@ namespace wi::physics
 						if (body.bodyID != constraint.body2_ref)
 						{
 							// Rigidbody to constraint object mismatch!
-							physicscomponent.physicsobject = nullptr;
+							physicscomponent.physicsobject.reset();
 							return;
 						}
 					}
@@ -3927,7 +3927,7 @@ namespace wi::physics
 
 	struct PickDragOperation_Jolt
 	{
-		std::shared_ptr<void> physics_scene;
+		wi::allocator::shared_ptr<void> physics_scene;
 		Ref<TwoBodyConstraint> constraint;
 		float pick_distance = 0;
 		Body* bodyA = nullptr;
@@ -4005,7 +4005,7 @@ namespace wi::physics
 				return;
 			Body* body = (Body*)result.physicsobject;
 
-			auto internal_state = std::make_shared<PickDragOperation_Jolt>();
+			auto internal_state = wi::allocator::make_shared<PickDragOperation_Jolt>();
 			internal_state->physics_scene = scene.physics_scene;
 			internal_state->pick_distance = wi::math::Distance(ray.origin, result.position);
 			internal_state->bodyB = body;

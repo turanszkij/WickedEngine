@@ -417,7 +417,7 @@ namespace wi::terrain
 
 		grass_properties.viewDistance = chunk_width;
 
-		generator = std::make_shared<Generator>();
+		generator = wi::allocator::make_shared_single<Generator>();
 
 		materialEntities.resize(MATERIAL_COUNT);
 	}
@@ -2391,7 +2391,7 @@ namespace wi::terrain
 				default:
 				case Modifier::Type::Perlin:
 					{
-						std::shared_ptr<PerlinModifier> modifier = std::make_shared<PerlinModifier>();
+						wi::allocator::shared_ptr<PerlinModifier> modifier = wi::allocator::make_shared_single<PerlinModifier>();
 						modifiers[i] = modifier;
 						archive >> modifier->octaves;
 						archive >> modifier->seed;
@@ -2400,7 +2400,7 @@ namespace wi::terrain
 					break;
 				case Modifier::Type::Voronoi:
 					{
-						std::shared_ptr<VoronoiModifier> modifier = std::make_shared<VoronoiModifier>();
+						wi::allocator::shared_ptr<VoronoiModifier> modifier = wi::allocator::make_shared_single<VoronoiModifier>();
 						modifiers[i] = modifier;
 						archive >> modifier->fade;
 						archive >> modifier->shape;
@@ -2412,7 +2412,7 @@ namespace wi::terrain
 					break;
 				case Modifier::Type::Heightmap:
 					{
-						std::shared_ptr<HeightmapModifier> modifier = std::make_shared<HeightmapModifier>();
+						wi::allocator::shared_ptr<HeightmapModifier> modifier = wi::allocator::make_shared_single<HeightmapModifier>();
 						modifiers[i] = modifier;
 						archive >> modifier->amount;
 						archive >> modifier->data;

@@ -295,7 +295,7 @@ namespace wi::terrain
 
 		// For generating scene on a background thread:
 		float generation_time_budget_milliseconds = 8; // after this much time, the generation thread will start to exit. This can help avoid a very long running, resource consuming and slow cancellation generation
-		std::shared_ptr<Generator> generator;
+		wi::allocator::shared_ptr<Generator> generator;
 
 		wi::vector<VirtualTexture*> virtual_textures_in_use;
 		wi::graphics::Sampler sampler;
@@ -332,7 +332,7 @@ namespace wi::terrain
 		float region2 = 2;
 		float region3 = 8;
 
-		wi::vector<std::shared_ptr<Modifier>> modifiers;
+		wi::vector<wi::allocator::shared_ptr<Modifier>> modifiers;
 		wi::vector<Modifier*> modifiers_to_remove;
 
 		Terrain();

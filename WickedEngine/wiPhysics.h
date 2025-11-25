@@ -235,7 +235,7 @@ namespace wi::physics
 
 	struct PickDragOperation
 	{
-		std::shared_ptr<void> internal_state;
+		wi::allocator::shared_ptr<void> internal_state;
 		inline bool IsValid() const { return internal_state != nullptr; }
 	};
 	enum class ConstraintType

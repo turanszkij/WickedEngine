@@ -139,7 +139,7 @@ namespace wi::initializer
 		}
 
 #ifdef _DEBUG
-		wilog("\nNumber of shared block allocated types: %d", (int)wi::allocator::get_shared_block_allocator_count());
+		wilog("\nNumber of shared allocators (there is one per object type): %d", (int)wi::allocator::get_shared_allocator_count());
 #endif // _DEBUG
 
 		wi::backlog::post("");
