@@ -9986,7 +9986,7 @@ void VXGI_Voxelize(
 void VXGI_Resolve(
 	const VXGIResources& res,
 	const Scene& scene,
-	Texture texture_lineardepth,
+	const Texture& texture_lineardepth,
 	CommandList cmd
 )
 {

@@ -252,7 +252,7 @@ namespace wi::gui
 		bool IsVisible() const { return visible; }
 
 		void SetColor(wi::Color color, int id = -1);
-		void SetImage(wi::Resource resource, int id = -1);
+		void SetImage(const wi::Resource& resource, int id = -1);
 		void SetShadowColor(wi::Color color);
 		void SetTheme(const Theme& theme, int id = -1);
 
@@ -385,11 +385,11 @@ namespace wi::gui
 	class Button : public Widget
 	{
 	protected:
-		std::function<void(EventArgs args)> onClick;
-		std::function<void(EventArgs args)> onRightClick;
-		std::function<void(EventArgs args)> onDragStart;
-		std::function<void(EventArgs args)> onDrag;
-		std::function<void(EventArgs args)> onDragEnd;
+		std::function<void(const EventArgs& args)> onClick;
+		std::function<void(const EventArgs& args)> onRightClick;
+		std::function<void(const EventArgs& args)> onDragStart;
+		std::function<void(const EventArgs& args)> onDrag;
+		std::function<void(const EventArgs& args)> onDragEnd;
 		XMFLOAT2 dragStart = XMFLOAT2(0, 0);
 		XMFLOAT2 prevPos = XMFLOAT2(0, 0);
 		bool disableClicking = false;
@@ -401,11 +401,11 @@ namespace wi::gui
 		void SetTheme(const Theme& theme, int id = -1) override;
 		const char* GetWidgetTypeName() const override { return "Button"; }
 
-		void OnClick(std::function<void(EventArgs args)> func);
-		void OnRightClick(std::function<void(EventArgs args)> func);
-		void OnDragStart(std::function<void(EventArgs args)> func);
-		void OnDrag(std::function<void(EventArgs args)> func);
-		void OnDragEnd(std::function<void(EventArgs args)> func);
+		void OnClick(std::function<void(const EventArgs& args)> func);
+		void OnRightClick(std::function<void(const EventArgs& args)> func);
+		void OnDragStart(std::function<void(const EventArgs& args)> func);
+		void OnDrag(std::function<void(const EventArgs& args)> func);
+		void OnDragEnd(std::function<void(const EventArgs& args)> func);
 
 		wi::SpriteFont font_description;
 		void SetDescription(const std::string& desc) { font_description.SetText(desc); }
@@ -515,8 +515,8 @@ namespace wi::gui
 	class TextInputField : public Widget
 	{
 	protected:
-		std::function<void(EventArgs args)> onInputAccepted;
-		std::function<void(EventArgs args)> onInput;
+		std::function<void(const EventArgs& args)> onInputAccepted;
+		std::function<void(const EventArgs& args)> onInput;
 		static wi::SpriteFont font_input;
 		bool cancel_input_enabled = true;
 		int float_precision = -1;
@@ -553,9 +553,9 @@ namespace wi::gui
 		const char* GetWidgetTypeName() const override { return "TextInputField"; }
 
 		// Called when input was accepted with ENTER key:
-		void OnInputAccepted(std::function<void(EventArgs args)> func);
+		void OnInputAccepted(std::function<void(const EventArgs& args)> func);
 		// Called when input was updated with new character:
-		void OnInput(std::function<void(EventArgs args)> func);
+		void OnInput(std::function<void(const EventArgs& args)> func);
 
 		wi::SpriteFont font_description;
 		void SetDescription(const std::string& desc) { font_description.SetText(desc); }
@@ -569,7 +569,7 @@ namespace wi::gui
 	class Slider : public Widget
 	{
 	protected:
-		std::function<void(EventArgs args)> onSlide;
+		std::function<void(const EventArgs& args)> onSlide;
 		float start = 0, end = 1;
 		float step = 1000;
 		float value = 0;
@@ -595,7 +595,7 @@ namespace wi::gui
 		const char* GetWidgetTypeName() const override { return "Slider"; }
 		WIDGETSTATE GetState() const override { return std::max(state, valueInputField.GetState()); };
 
-		void OnSlide(std::function<void(EventArgs args)> func);
+		void OnSlide(std::function<void(const EventArgs& args)> func);
 
 		TextInputField valueInputField;
 	};
@@ -604,7 +604,7 @@ namespace wi::gui
 	class CheckBox :public Widget
 	{
 	protected:
-		std::function<void(EventArgs args)> onClick;
+		std::function<void(const EventArgs& args)> onClick;
 		bool checked = false;
 		std::wstring check_text;
 		std::wstring uncheck_text;
@@ -618,7 +618,7 @@ namespace wi::gui
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 		const char* GetWidgetTypeName() const override { return "CheckBox"; }
 
-		void OnClick(std::function<void(EventArgs args)> func);
+		void OnClick(std::function<void(const EventArgs& args)> func);
 
 		static void SetCheckTextGlobal(const std::string& text);
 		void SetCheckText(const std::string& text);
@@ -629,7 +629,7 @@ namespace wi::gui
 	class ComboBox :public Widget
 	{
 	protected:
-		std::function<void(EventArgs args)> onSelect;
+		std::function<void(const EventArgs& args)> onSelect;
 		int selected = -1;
 		int maxVisibleItemCount = 8;
 		int firstItemVisible = 0;
@@ -696,7 +696,7 @@ namespace wi::gui
 		void SetTheme(const Theme& theme, int id = -1) override;
 		const char* GetWidgetTypeName() const override { return "ComboBox"; }
 
-		void OnSelect(std::function<void(EventArgs args)> func);
+		void OnSelect(std::function<void(const EventArgs& args)> func);
 
 		wi::SpriteFont selected_font;
 
@@ -719,8 +719,8 @@ namespace wi::gui
 		bool right_aligned_image = false;
 		Widget scrollable_area;
 		float control_size = 20;
-		std::function<void(EventArgs args)> onClose;
-		std::function<void(EventArgs args)> onCollapse;
+		std::function<void(const EventArgs& args)> onClose;
+		std::function<void(const EventArgs& args)> onCollapse;
 		std::function<void()> onResize;
 
 		float resizehitboxwidth = 6;
@@ -940,8 +940,8 @@ namespace wi::gui
 		XMFLOAT2 GetSize() const override; // For the window, the returned size can be modified by collapsed state
 		XMFLOAT2 GetWidgetAreaSize() const;
 
-		void OnClose(std::function<void(EventArgs args)> func);
-		void OnCollapse(std::function<void(EventArgs args)> func);
+		void OnClose(std::function<void(const EventArgs& args)> func);
+		void OnCollapse(std::function<void(const EventArgs& args)> func);
 		void OnResize(std::function<void()> func);
 
 		Button closeButton;
@@ -965,7 +965,7 @@ namespace wi::gui
 	class ColorPicker : public Window
 	{
 	protected:
-		std::function<void(EventArgs args)> onColorChanged;
+		std::function<void(const EventArgs& args)> onColorChanged;
 		enum COLORPICKERSTATE
 		{
 			CPS_IDLE,
@@ -990,7 +990,7 @@ namespace wi::gui
 		wi::Color GetPickColor() const;
 		void SetPickColor(wi::Color value);
 
-		void OnColorChanged(std::function<void(EventArgs args)> func);
+		void OnColorChanged(std::function<void(const EventArgs& args)> func);
 
 		TextInputField text_R;
 		TextInputField text_G;
@@ -1015,9 +1015,9 @@ namespace wi::gui
 			bool selected = false;
 		};
 	protected:
-		std::function<void(EventArgs args)> onSelect;
-		std::function<void(EventArgs args)> onDelete;
-		std::function<void(EventArgs args)> onDoubleClick;
+		std::function<void(const EventArgs& args)> onSelect;
+		std::function<void(const EventArgs& args)> onDelete;
+		std::function<void(const EventArgs& args)> onDoubleClick;
 		int item_highlight = -1;
 		int opener_highlight = -1;
 
@@ -1063,9 +1063,9 @@ namespace wi::gui
 		void SetTheme(const Theme& theme, int id = -1) override;
 		const char* GetWidgetTypeName() const override { return "TreeList"; }
 
-		void OnSelect(std::function<void(EventArgs args)> func);
-		void OnDelete(std::function<void(EventArgs args)> func);
-		void OnDoubleClick(std::function<void(EventArgs args)> func);
+		void OnSelect(std::function<void(const EventArgs& args)> func);
+		void OnDelete(std::function<void(const EventArgs& args)> func);
+		void OnDoubleClick(std::function<void(const EventArgs& args)> func);
 
 		ScrollBar scrollbar;
 	};

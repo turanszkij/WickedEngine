@@ -78,5 +78,5 @@ namespace wi::backlog
 	// It's also not considered part of the API and can change at any time.
 	//
 	// Use getText() instead, unless absolutely necessary.
-	void _forEachLogEntry_unsafe(std::function<void(const LogEntry&)> cb);
+	void _forEachLogEntry_unsafe(const std::function<void(const LogEntry&)>& cb);
 };

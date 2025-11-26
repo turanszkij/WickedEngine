@@ -1396,7 +1396,7 @@ namespace wi::helper
 #endif // _WIN32
 	}
 
-	void FileDialog(const FileDialogParams& params, std::function<void(std::string fileName)> onSuccess, std::function<void()> onFailure)
+	void FileDialog(const FileDialogParams& params, const std::function<void(std::string fileName)>& onSuccess, const std::function<void()>& onFailure)
 	{
 #ifdef PLATFORM_WINDOWS_DESKTOP
 		std::thread([=] {
@@ -1568,7 +1568,7 @@ namespace wi::helper
 #endif // __SCE__
 	}
 
-	void GetFileNamesInDirectory(const std::string& directory, std::function<void(std::string fileName)> onSuccess, const std::string& filter_extension)
+	void GetFileNamesInDirectory(const std::string& directory, const std::function<void(std::string fileName)>& onSuccess, const std::string& filter_extension)
 	{
 		std::filesystem::path directory_path = ToNativeString(directory);
 		if (!std::filesystem::exists(directory_path))
@@ -1586,7 +1586,7 @@ namespace wi::helper
 		}
 	}
 
-	void GetFolderNamesInDirectory(const std::string& directory, std::function<void(std::string folderName)> onSuccess)
+	void GetFolderNamesInDirectory(const std::string& directory, const std::function<void(std::string folderName)>& onSuccess)
 	{
 		std::filesystem::path directory_path = ToNativeString(directory);
 		if (!std::filesystem::exists(directory_path))

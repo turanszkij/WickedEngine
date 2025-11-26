@@ -28,7 +28,7 @@ namespace wi
 		return (int)std::round(percent * 100);
 	}
 
-	void LoadingScreen::addLoadingFunction(std::function<void(wi::jobsystem::JobArgs)> loadingFunction)
+	void LoadingScreen::addLoadingFunction(const std::function<void(wi::jobsystem::JobArgs)>& loadingFunction)
 	{
 		if (loadingFunction != nullptr)
 		{
@@ -46,7 +46,7 @@ namespace wi
 			});
 	}
 
-	void LoadingScreen::onFinished(std::function<void()> finishFunction)
+	void LoadingScreen::onFinished(const std::function<void()>& finishFunction)
 	{
 		if (finishFunction != nullptr)
 			finish = finishFunction;

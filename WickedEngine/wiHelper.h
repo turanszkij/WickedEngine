@@ -154,13 +154,13 @@ namespace wi::helper
 		wi::vector<std::string> extensions;
 		bool multiselect = true; // only for TYPE::OPEN
 	};
-	void FileDialog(const FileDialogParams& params, std::function<void(std::string fileName)> onSuccess, std::function<void()> onFailure = nullptr);
+	void FileDialog(const FileDialogParams& params, const std::function<void(std::string fileName)>& onSuccess, const std::function<void()>& onFailure = nullptr);
 
 	std::string FolderDialog(const std::string& description = "Select folder");
 
-	void GetFileNamesInDirectory(const std::string& directory, std::function<void(std::string fileName)> onSuccess, const std::string& filter_extension = "");
+	void GetFileNamesInDirectory(const std::string& directory, const std::function<void(std::string fileName)>& onSuccess, const std::string& filter_extension = "");
 
-	void GetFolderNamesInDirectory(const std::string& directory, std::function<void(std::string folderName)> onSuccess);
+	void GetFolderNamesInDirectory(const std::string& directory, const std::function<void(std::string folderName)>& onSuccess);
 
 	// Converts a file into a C++ header file that contains the file contents as byte array.
 	//	dataName : the byte array's name
