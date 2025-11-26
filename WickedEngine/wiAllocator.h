@@ -546,6 +546,7 @@ namespace wi::allocator
 			}
 			Allocation& operator=(const Allocation& other)
 			{
+				if (&other == this) return *this;
 				Reset();
 				allocator = other.allocator;
 				internal_state = other.internal_state;
