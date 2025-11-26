@@ -219,7 +219,7 @@ namespace wi::audio
 		WAVEFORMATEX wfx = {};
 		wi::vector<uint8_t> audioData;
 	};
-	struct SoundInstanceInternal : public IXAudio2VoiceCallback
+	struct SoundInstanceInternal final : public IXAudio2VoiceCallback
 	{
 		wi::allocator::shared_ptr<AudioInternal> audio;
 		wi::allocator::shared_ptr<SoundInternal> soundinternal;

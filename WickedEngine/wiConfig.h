@@ -41,7 +41,7 @@ namespace wi::config
 		std::unordered_map<std::string, std::string> values;
 	};
 
-	struct File : public Section
+	struct File final : public Section
 	{
 		// Open a config file (.ini format)
 		bool Open(const char* filename);

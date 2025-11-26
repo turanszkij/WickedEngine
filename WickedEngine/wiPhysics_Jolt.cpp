@@ -180,7 +180,7 @@ namespace wi::physics
 		};
 
 		/// Class that determines if two object layers can collide
-		class ObjectLayerPairFilterImpl : public ObjectLayerPairFilter
+		class ObjectLayerPairFilterImpl final : public ObjectLayerPairFilter
 		{
 		public:
 			bool ShouldCollide(ObjectLayer inObject1, ObjectLayer inObject2) const override
@@ -231,7 +231,7 @@ namespace wi::physics
 		};
 
 		/// Class that determines if an object layer can collide with a broadphase layer
-		class ObjectVsBroadPhaseLayerFilterImpl : public ObjectVsBroadPhaseLayerFilter
+		class ObjectVsBroadPhaseLayerFilterImpl final : public ObjectVsBroadPhaseLayerFilter
 		{
 		public:
 			virtual bool ShouldCollide(ObjectLayer inLayer1, BroadPhaseLayer inLayer2) const override
@@ -2974,7 +2974,7 @@ namespace wi::physics
 #ifdef JPH_DEBUG_RENDERER
 		if (IsDebugDrawEnabled())
 		{
-			class JoltDebugRenderer : public DebugRendererSimple
+			class JoltDebugRenderer final : public DebugRendererSimple
 			{
 				void DrawLine(RVec3Arg inFrom, RVec3Arg inTo, ColorArg inColor) override
 				{
@@ -3003,7 +3003,7 @@ namespace wi::physics
 			static JoltDebugRenderer debug_renderer;
 			debug_renderer.SetCameraPos(cast(scene.camera.Eye));
 
-			class DistanceCullingBodyFilter : public BodyDrawFilter
+			class DistanceCullingBodyFilter final : public BodyDrawFilter
 			{
 			public:
 				XMVECTOR camera_pos;
@@ -3816,7 +3816,7 @@ namespace wi::physics
 	}
 
 	template <class CollectorType>
-	class WickedClosestHitCollector : public JPH::ClosestHitCollisionCollector<CollectorType>
+	class WickedClosestHitCollector final : public JPH::ClosestHitCollisionCollector<CollectorType>
 	{
 	public:
 		const Scene* scene = nullptr;

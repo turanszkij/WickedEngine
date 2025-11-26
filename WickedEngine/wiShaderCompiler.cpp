@@ -441,7 +441,7 @@ namespace wi::shadercompiler
 		Source.Size = shadersourcedata.size();
 		Source.Encoding = DXC_CP_ACP;
 
-		struct IncludeHandler : public IDxcIncludeHandler
+		struct IncludeHandler final : public IDxcIncludeHandler
 		{
 			const CompilerInput* input = nullptr;
 			CompilerOutput* output = nullptr;
@@ -655,7 +655,7 @@ namespace wi::shadercompiler
 			break;
 		}
 
-		struct IncludeHandler : public ID3DInclude
+		struct IncludeHandler final : public ID3DInclude
 		{
 			const CompilerInput* input = nullptr;
 			CompilerOutput* output = nullptr;
