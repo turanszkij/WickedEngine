@@ -1003,6 +1003,8 @@ namespace dx12_internal
 			return Format::BC7_UNORM;
 		case DXGI_FORMAT_BC7_UNORM_SRGB:
 			return Format::BC7_UNORM_SRGB;
+		default:
+			break;
 		}
 		return Format::UNKNOWN;
 	}

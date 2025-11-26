@@ -82,7 +82,7 @@ namespace wi::network
 
 	bool Send(const Socket* sock, const Connection* connection, const void* data, size_t dataSize)
 	{
-		if (socket != nullptr && sock->IsValid())
+		if (sock != nullptr && sock->IsValid())
 		{
 			sockaddr_in target;
 			target.sin_family = AF_INET;
@@ -109,7 +109,7 @@ namespace wi::network
 
 	bool ListenPort(const Socket* sock, uint16_t port)
 	{
-		if (socket != nullptr && sock->IsValid())
+		if (sock != nullptr && sock->IsValid())
 		{
 			sockaddr_in target;
 			target.sin_family = AF_INET;
@@ -133,7 +133,7 @@ namespace wi::network
 
 	bool CanReceive(const Socket* sock, long timeout_microseconds)
 	{
-		if (socket != nullptr && sock->IsValid())
+		if (sock != nullptr && sock->IsValid())
 		{
 			auto socketinternal = to_internal(sock);
 
@@ -159,7 +159,7 @@ namespace wi::network
 
 	bool Receive(const Socket* sock, Connection* connection, void* data, size_t dataSize)
 	{
-		if (socket != nullptr && sock->IsValid())
+		if (sock != nullptr && sock->IsValid())
 		{
 			auto socketinternal = to_internal(sock);
 

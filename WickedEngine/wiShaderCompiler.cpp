@@ -621,9 +621,9 @@ namespace wi::shadercompiler
 		}
 
 		D3D_SHADER_MACRO defines[] = {
-			"HLSL5", "1",
-			"DISABLE_WAVE_INTRINSICS", "1",
-			NULL, NULL,
+			{"HLSL5", "1"},
+			{"DISABLE_WAVE_INTRINSICS", "1"},
+			{NULL, NULL},
 		};
 
 		const char* target = nullptr;

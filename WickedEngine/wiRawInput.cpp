@@ -354,6 +354,8 @@ namespace wi::input::rawinput
 						case POV_LEFTUP:
 							controller.buttons |= 1 << (wi::input::GAMEPAD_BUTTON_UP - wi::input::GAMEPAD_RANGE_START - 1);
 							break;
+						default:
+							break;
 						}
 						switch (pov)
 						{
@@ -361,6 +363,8 @@ namespace wi::input::rawinput
 						case POV_UPRIGHT:
 						case POV_RIGHTDOWN:
 							controller.buttons |= 1 << (wi::input::GAMEPAD_BUTTON_RIGHT - wi::input::GAMEPAD_RANGE_START - 1);
+							break;
+						default:
 							break;
 						}
 						switch (pov)
@@ -370,6 +374,8 @@ namespace wi::input::rawinput
 						case POV_DOWNLEFT:
 							controller.buttons |= 1 << (wi::input::GAMEPAD_BUTTON_DOWN - wi::input::GAMEPAD_RANGE_START - 1);
 							break;
+						default:
+							break;
 						}
 						switch (pov)
 						{
@@ -377,6 +383,8 @@ namespace wi::input::rawinput
 						case POV_DOWNLEFT:
 						case POV_LEFTUP:
 							controller.buttons |= 1 << (wi::input::GAMEPAD_BUTTON_LEFT - wi::input::GAMEPAD_RANGE_START - 1);
+							break;
+						default:
 							break;
 						}
 					}
