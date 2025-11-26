@@ -1713,6 +1713,35 @@ void EditorComponent::Update(float dt)
 		componentsWnd.nameWnd.nameInput.SetAsActive(true);
 	}
 
+	// Duplicate Entity
+	if (!GetGUI().IsTyping() && CheckInput(EditorActions::DUPLICATE_ENTITY))
+	{
+		wi::Archive& archive = AdvanceHistory();
+		archive << HISTORYOP_ADD;
+		RecordSelection(archive);
+
+		auto& prevSel = translator.selectedEntitiesNonRecursive;
+		wi::vector<Entity> addedEntities;
+		for (auto& x : prevSel)
+		{
+			wi::scene::PickResult picked;
+			picked.entity = scene.Entity_Duplicate(x);
+			addedEntities.push_back(picked.entity);
+		}
+
+		ClearSelected();
+
+		for (auto& x : addedEntities)
+		{
+			AddSelected(x);
+		}
+
+		RecordSelection(archive);
+		RecordEntity(archive, addedEntities);
+
+		componentsWnd.RefreshEntityTree();
+	}
+
 	// Camera control:
 	if (!drive_mode && !wi::backlog::isActive() && !GetGUI().HasFocus())
 	{
@@ -2580,35 +2609,6 @@ void EditorComponent::Update(float dt)
 				picked.entity = scene.Entity_Serialize(clipboard, seri, INVALID_ENTITY, Scene::EntitySerializeFlags::RECURSIVE);
 				AddSelected(picked);
 				addedEntities.push_back(picked.entity);
-			}
-
-			RecordSelection(archive);
-			RecordEntity(archive, addedEntities);
-
-			componentsWnd.RefreshEntityTree();
-		}
-
-		// Duplicate Entity
-		if (CheckInput(EditorActions::DUPLICATE_ENTITY))
-		{
-			wi::Archive& archive = AdvanceHistory();
-			archive << HISTORYOP_ADD;
-			RecordSelection(archive);
-
-			auto& prevSel = translator.selectedEntitiesNonRecursive;
-			wi::vector<Entity> addedEntities;
-			for (auto& x : prevSel)
-			{
-				wi::scene::PickResult picked;
-				picked.entity = scene.Entity_Duplicate(x);
-				addedEntities.push_back(picked.entity);
-			}
-
-			ClearSelected();
-
-			for (auto& x : addedEntities)
-			{
-				AddSelected(x);
 			}
 
 			RecordSelection(archive);
