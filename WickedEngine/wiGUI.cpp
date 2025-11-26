@@ -1684,10 +1684,15 @@ namespace wi::gui
 				}
 			}
 
-			bool clicked = false;
+			bool leftButtonClicked = false;
 			if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
 			{
-				clicked = true;
+				leftButtonClicked = true;
+			}
+			bool rightButtonClicked = false;
+			if (wi::input::Press(wi::input::MOUSE_BUTTON_RIGHT))
+			{
+				rightButtonClicked = true;
 			}
 
 			if (state == ACTIVE)
@@ -1738,7 +1743,7 @@ namespace wi::gui
 					}
 					caret_timer.record();
 				}
-				else if ((clicked && !intersectsPointer) || wi::input::Press(wi::input::KEYBOARD_BUTTON_ESCAPE))
+				else if ((leftButtonClicked && !intersectsPointer) || (rightButtonClicked && !intersectsPointer) || wi::input::Press(wi::input::KEYBOARD_BUTTON_ESCAPE))
 				{
 					// cancel input
 					font_input.text.clear();
@@ -1761,7 +1766,7 @@ namespace wi::gui
 							break;
 						}
 					}
-					if (clicked && intersectsPointer)
+					if (leftButtonClicked && intersectsPointer)
 					{
 						caret_begin = caret_pos;
 					}
@@ -1780,7 +1785,7 @@ namespace wi::gui
 
 			}
 
-			if (clicked && state == FOCUS)
+			if (leftButtonClicked && state == FOCUS)
 			{
 				// activate
 				SetAsActive();
