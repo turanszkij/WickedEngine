@@ -46,6 +46,7 @@ int sdl_loop()
                         case SDL_WINDOWEVENT_RESIZED:
                             // Tells the engine to reload window configuration (size and dpi)
                             editor.SetWindow(editor.window);
+                            editor.SaveWindowSize();
                             break;
                         case SDL_WINDOWEVENT_FOCUS_LOST:
                             editor.is_window_active = false;

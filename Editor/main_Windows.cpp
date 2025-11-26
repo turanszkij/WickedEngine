@@ -23,7 +23,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		case WM_SIZE:
 		case WM_DPICHANGED:
 			if (editor.is_window_active && LOWORD(lParam) > 0 && HIWORD(lParam) > 0)
+			{
 				editor.SetWindow(hWnd);
+				editor.SaveWindowSize();
+			}
 			break;
 		case WM_CHAR:
 			switch (wParam)
