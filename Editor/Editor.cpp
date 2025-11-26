@@ -372,6 +372,43 @@ bool Editor::KeepRunning() {
 	return !exit_requested || renderComponent.save_in_progress;
 }
 
+void Editor::SaveWindowSize()
+{
+	if (window != nullptr)
+	{
+#ifdef _WIN32
+		WINDOWPLACEMENT placement = {};
+		placement.length = sizeof(WINDOWPLACEMENT);
+		if (GetWindowPlacement(window, &placement) && placement.showCmd != SW_SHOWMAXIMIZED)
+		{
+			RECT rect;
+			GetWindowRect(window, &rect);
+			int width = rect.right - rect.left;
+			int height = rect.bottom - rect.top;
+			if (width > 0 && height > 0)
+			{
+				config.Set("width", width);
+				config.Set("height", height);
+				config.Commit();
+			}
+		}
+#elif defined(SDL2)
+		if (!(SDL_GetWindowFlags(window) & SDL_WINDOW_MAXIMIZED))
+		{
+			int width = 0;
+			int height = 0;
+			SDL_GetWindowSize(window, &width, &height);
+			if (width > 0 && height > 0)
+			{
+				config.Set("width", width);
+				config.Set("height", height);
+				config.Commit();
+			}
+		}
+#endif
+	}
+}
+
 void Editor::Exit()
 {
 	// Check all scenes for unsaved changes
@@ -382,6 +419,10 @@ void Editor::Exit()
 			return;
 		}
 	}
+
+	// Save window size to config
+	SaveWindowSize();
+
 	// main loop will need to quit for us
 	exit_requested = true;
 }
