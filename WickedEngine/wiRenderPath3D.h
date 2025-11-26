@@ -368,8 +368,8 @@ namespace wi
 		wi::graphics::Texture CreateScreenshotWithAlphaBackground();
 
 		// This is an identifier of RenderPath subtype that is used for lua binding.
-		static constexpr const char* script_check_identifier = relative_path(__FILE__);
-		const char* GetScriptBindingID() const override { return script_check_identifier; }
+		static constexpr const auto script_check_identifier = relative_path_storage(__FILE__);
+		const char* GetScriptBindingID() const override { return script_check_identifier.c_str(); }
 	};
 
 }
