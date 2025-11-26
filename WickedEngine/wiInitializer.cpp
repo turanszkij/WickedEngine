@@ -43,7 +43,19 @@ namespace wi::initializer
 		static constexpr const char* platform_string = "Xbox";
 #endif // PLATFORM
 
-		wilog("\n[wi::initializer] Initializing Wicked Engine, please wait...\nVersion: %s\nPlatform: %s", wi::version::GetVersionString(), platform_string);
+#if defined(_MSC_VER) && defined(__clang__)
+		static constexpr const char* compiler_string = "CLANG-CL";
+#elif defined(__clang__)
+		static constexpr const char* compiler_string = "CLANG";
+#elif defined(_MSC_VER)
+		static constexpr const char* compiler_string = "MSVC";
+#elif defined(__GNUC__)
+		static constexpr const char* compiler_string = "GCC";
+#else
+		static constexpr const char* compiler_string = "UNKNOWN";
+#endif
+
+		wilog("\n[wi::initializer] Initializing Wicked Engine, please wait...\nVersion: %s\nPlatform: %s\nCompiler: %s", wi::version::GetVersionString(), platform_string, compiler_string);
 
 		StackString<1024> cpustring;
 #if defined(PLATFORM_WINDOWS_DESKTOP) || defined(PLATFORM_LINUX)
