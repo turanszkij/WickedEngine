@@ -140,9 +140,9 @@ else()
         # security checks disabled in Release:
         $<$<CONFIG:Release>:-fno-stack-protector>
         $<$<CONFIG:Release>:-fcf-protection=none>
-        $<$<AND:$<CONFIG:Release>,$<NOT:$<PLATFORM_ID:Windows>>>:-fno-stack-clash-protection>
+        $<$<AND:$<CONFIG:Release>,$<NOT:$<PLATFORM_ID:Windows>>>:-fno-stack-clash-protection> # not supported on Windows
         $<$<CONFIG:Release>:-fno-stack-check>
-        $<$<CONFIG:Release>:-fno-asynchronous-unwind-tables>
+        $<$<AND:$<CONFIG:Release>,$<NOT:$<PLATFORM_ID:Windows>>>:-fno-asynchronous-unwind-tables>  # seems to crash LUA evaluation on Windows
     )
 endif()
 
