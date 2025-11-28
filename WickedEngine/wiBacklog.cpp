@@ -58,7 +58,7 @@ namespace wi::backlog
 			_forEachLogEntry_unsafe([&](auto&& entry) {retval += entry.text;});
 			return retval;
 		}
-		inline void _forEachLogEntry_unsafe(std::function<void(const LogEntry&)> cb)
+		inline void _forEachLogEntry_unsafe(const std::function<void(const LogEntry&)>& cb)
 		{
 			for (auto& entry : entries)
 			{
@@ -136,7 +136,7 @@ namespace wi::backlog
 					created = true;
 					inputField.Create("");
 					inputField.SetCancelInputEnabled(false);
-					inputField.OnInputAccepted([](wi::gui::EventArgs args) {
+					inputField.OnInputAccepted([](const wi::gui::EventArgs& args) {
 						historyPos = 0;
 						post(args.sValue);
 						LogEntry entry;
@@ -169,7 +169,7 @@ namespace wi::backlog
 					inputField.font.params.shadowColor = wi::Color::Transparent();
 
 					toggleButton.Create("V");
-					toggleButton.OnClick([](wi::gui::EventArgs args) {
+					toggleButton.OnClick([](const wi::gui::EventArgs& args) {
 						Toggle();
 						});
 					toggleButton.SetColor(theme_color_idle, wi::gui::IDLE);
@@ -352,7 +352,7 @@ namespace wi::backlog
 		return internal_state.getText();
 	}
 	// You generally don't want to use this. See notes in header
-	void _forEachLogEntry_unsafe(std::function<void(const LogEntry&)> cb)
+	void _forEachLogEntry_unsafe(const std::function<void(const LogEntry&)>& cb)
 	{
 		internal_state._forEachLogEntry_unsafe(cb);
 	}

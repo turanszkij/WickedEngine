@@ -1,6 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiMath.h"
+#include "wiAllocator.h"
 
 #include <memory>
 #include <string>
@@ -28,14 +29,14 @@ namespace wi::audio
 	//	Use SoundInstance for playback the sound data
 	struct Sound
 	{
-		std::shared_ptr<void> internal_state;
-		inline bool IsValid() const { return internal_state.get() != nullptr; }
+		wi::allocator::shared_ptr<void> internal_state;
+		constexpr bool IsValid() const { return internal_state.IsValid(); }
 	};
 	// SoundInstance can be used to play back a Sound with specified effects
 	struct SoundInstance
 	{
-		std::shared_ptr<void> internal_state;
-		inline bool IsValid() const { return internal_state.get() != nullptr; }
+		wi::allocator::shared_ptr<void> internal_state;
+		constexpr bool IsValid() const { return internal_state.IsValid(); }
 
 		// You can specify these params before creating the sound instance:
 		//	The sound instance will need to be recreated for changes to take effect

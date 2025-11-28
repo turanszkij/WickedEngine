@@ -94,6 +94,7 @@ namespace wi::physics
 		bool INTERPOLATION = true;
 		float CHARACTER_COLLISION_TOLERANCE = 0.05f;
 		float DEBUG_MAX_DRAW_DISTANCE = 500.0f;
+		int COLLISION_STEPS = 1;
 
 		// Physics shape cache data structures for reusing complex shapes across multiple rigid bodies
 		struct PhysicsShapeCacheKey
@@ -179,7 +180,7 @@ namespace wi::physics
 		};
 
 		/// Class that determines if two object layers can collide
-		class ObjectLayerPairFilterImpl : public ObjectLayerPairFilter
+		class ObjectLayerPairFilterImpl final : public ObjectLayerPairFilter
 		{
 		public:
 			bool ShouldCollide(ObjectLayer inObject1, ObjectLayer inObject2) const override
@@ -230,7 +231,7 @@ namespace wi::physics
 		};
 
 		/// Class that determines if an object layer can collide with a broadphase layer
-		class ObjectVsBroadPhaseLayerFilterImpl : public ObjectVsBroadPhaseLayerFilter
+		class ObjectVsBroadPhaseLayerFilterImpl final : public ObjectVsBroadPhaseLayerFilter
 		{
 		public:
 			virtual bool ShouldCollide(ObjectLayer inLayer1, BroadPhaseLayer inLayer2) const override
@@ -280,7 +281,7 @@ namespace wi::physics
 		{
 			if (scene.physics_scene == nullptr)
 			{
-				auto physics_scene = std::make_shared<PhysicsScene>();
+				auto physics_scene = wi::allocator::make_shared_single<PhysicsScene>();
 
 				physics_scene->physics_system.Init(
 					cMaxBodies,
@@ -299,7 +300,7 @@ namespace wi::physics
 
 		struct RigidBody
 		{
-			std::shared_ptr<void> physics_scene;
+			wi::allocator::shared_ptr<void> physics_scene;
 			Entity entity = INVALID_ENTITY;
 			ShapeRefC shape;
 			BodyID bodyID;
@@ -383,7 +384,7 @@ namespace wi::physics
 		};
 		struct SoftBody
 		{
-			std::shared_ptr<void> physics_scene;
+			wi::allocator::shared_ptr<void> physics_scene;
 			Entity entity = INVALID_ENTITY;
 			BodyID bodyID;
 			float friction = 0;
@@ -414,7 +415,7 @@ namespace wi::physics
 		};
 		struct Constraint
 		{
-			std::shared_ptr<void> physics_scene;
+			wi::allocator::shared_ptr<void> physics_scene;
 			Entity entity = INVALID_ENTITY;
 			Ref<TwoBodyConstraint> constraint;
 			BodyID body1_self;
@@ -455,7 +456,7 @@ namespace wi::physics
 		{
 			if (physicscomponent.physicsobject == nullptr)
 			{
-				physicscomponent.physicsobject = std::make_shared<RigidBody>();
+				physicscomponent.physicsobject = wi::allocator::make_shared<RigidBody>();
 			}
 			return *(RigidBody*)physicscomponent.physicsobject.get();
 		}
@@ -467,7 +468,7 @@ namespace wi::physics
 		{
 			if (physicscomponent.physicsobject == nullptr)
 			{
-				physicscomponent.physicsobject = std::make_shared<SoftBody>();
+				physicscomponent.physicsobject = wi::allocator::make_shared<SoftBody>();
 			}
 			return *(SoftBody*)physicscomponent.physicsobject.get();
 		}
@@ -479,7 +480,7 @@ namespace wi::physics
 		{
 			if (physicscomponent.physicsobject == nullptr)
 			{
-				physicscomponent.physicsobject = std::make_shared<Constraint>();
+				physicscomponent.physicsobject = wi::allocator::make_shared<Constraint>();
 			}
 			return *(Constraint*)physicscomponent.physicsobject.get();
 		}
@@ -1288,7 +1289,7 @@ namespace wi::physics
 				BODYPART_COUNT
 			};
 
-			std::shared_ptr<void> physics_scene;
+			wi::allocator::shared_ptr<void> physics_scene;
 			RigidBody rigidbodies[BODYPART_COUNT];
 			Entity saved_parents[BODYPART_COUNT] = {};
 			Skeleton skeleton;
@@ -2067,6 +2068,9 @@ namespace wi::physics
 	float GetFrameRate() { return 1.0f / TIMESTEP; }
 	void SetFrameRate(float value) { TIMESTEP = 1.0f / value; }
 
+	float GetCharacterCollisionTolerance() { return CHARACTER_COLLISION_TOLERANCE; }
+	void SetCharacterCollisionTolerance(float value) { CHARACTER_COLLISION_TOLERANCE = value; }
+
 	void RunPhysicsUpdateSystem(
 		wi::jobsystem::context& ctx,
 		wi::scene::Scene& scene,
@@ -2146,7 +2150,7 @@ namespace wi::physics
 			}
 			if (humanoid.ragdoll == nullptr)
 			{
-				humanoid.ragdoll = std::make_shared<Ragdoll>(scene, humanoid, humanoidEntity, scale);
+				humanoid.ragdoll = wi::allocator::make_shared<Ragdoll>(scene, humanoid, humanoidEntity, scale);
 			}
 		});
 
@@ -2156,12 +2160,12 @@ namespace wi::physics
 			PhysicsConstraintComponent& physicscomponent = scene.constraints[args.jobIndex];
 			if (physicscomponent.bodyA == INVALID_ENTITY && physicscomponent.bodyB == INVALID_ENTITY)
 			{
-				physicscomponent.physicsobject = nullptr;
+				physicscomponent.physicsobject.reset();
 				return;
 			}
 			if (!scene.rigidbodies.Contains(physicscomponent.bodyA) && !scene.rigidbodies.Contains(physicscomponent.bodyB))
 			{
-				physicscomponent.physicsobject = nullptr;
+				physicscomponent.physicsobject.reset();
 				return;
 			}
 			if (physicscomponent.physicsobject != nullptr)
@@ -2177,7 +2181,7 @@ namespace wi::physics
 						if (body.bodyID != constraint.body1_ref)
 						{
 							// Rigidbody to constraint object mismatch!
-							physicscomponent.physicsobject = nullptr;
+							physicscomponent.physicsobject.reset();
 							return;
 						}
 					}
@@ -2191,7 +2195,7 @@ namespace wi::physics
 						if (body.bodyID != constraint.body2_ref)
 						{
 							// Rigidbody to constraint object mismatch!
-							physicscomponent.physicsobject = nullptr;
+							physicscomponent.physicsobject.reset();
 							return;
 						}
 					}
@@ -2789,7 +2793,7 @@ namespace wi::physics
 					wi::jobsystem::Wait(ctx);
 				}
 
-				physics_scene.physics_system.Update(TIMESTEP, 1, &temp_allocator, &job_system);
+				physics_scene.physics_system.Update(TIMESTEP, COLLISION_STEPS, &temp_allocator, &job_system);
 				physics_scene.accumulator = next_accumulator;
 			}
 			physics_scene.alpha = physics_scene.accumulator / TIMESTEP;
@@ -2970,7 +2974,7 @@ namespace wi::physics
 #ifdef JPH_DEBUG_RENDERER
 		if (IsDebugDrawEnabled())
 		{
-			class JoltDebugRenderer : public DebugRendererSimple
+			class JoltDebugRenderer final : public DebugRendererSimple
 			{
 				void DrawLine(RVec3Arg inFrom, RVec3Arg inTo, ColorArg inColor) override
 				{
@@ -2999,7 +3003,7 @@ namespace wi::physics
 			static JoltDebugRenderer debug_renderer;
 			debug_renderer.SetCameraPos(cast(scene.camera.Eye));
 
-			class DistanceCullingBodyFilter : public BodyDrawFilter
+			class DistanceCullingBodyFilter final : public BodyDrawFilter
 			{
 			public:
 				XMVECTOR camera_pos;
@@ -3812,7 +3816,7 @@ namespace wi::physics
 	}
 
 	template <class CollectorType>
-	class WickedClosestHitCollector : public JPH::ClosestHitCollisionCollector<CollectorType>
+	class WickedClosestHitCollector final : public JPH::ClosestHitCollisionCollector<CollectorType>
 	{
 	public:
 		const Scene* scene = nullptr;
@@ -3923,7 +3927,7 @@ namespace wi::physics
 
 	struct PickDragOperation_Jolt
 	{
-		std::shared_ptr<void> physics_scene;
+		wi::allocator::shared_ptr<void> physics_scene;
 		Ref<TwoBodyConstraint> constraint;
 		float pick_distance = 0;
 		Body* bodyA = nullptr;
@@ -4001,7 +4005,7 @@ namespace wi::physics
 				return;
 			Body* body = (Body*)result.physicsobject;
 
-			auto internal_state = std::make_shared<PickDragOperation_Jolt>();
+			auto internal_state = wi::allocator::make_shared<PickDragOperation_Jolt>();
 			internal_state->physics_scene = scene.physics_scene;
 			internal_state->pick_distance = wi::math::Distance(ray.origin, result.position);
 			internal_state->bodyB = body;

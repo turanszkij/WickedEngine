@@ -157,7 +157,7 @@ namespace wi::graphics
 		virtual bool IsSwapChainSupportsHDR(const SwapChain* swapchain) const = 0;
 
 		// Returns the minimum required alignment for buffer offsets when creating subresources
-		virtual uint64_t GetMinOffsetAlignment(const GPUBufferDesc* desc) const = 0;
+		virtual uint32_t GetMinOffsetAlignment(const GPUBufferDesc* desc) const = 0;
 
 		struct MemoryUsage
 		{

@@ -372,6 +372,43 @@ bool Editor::KeepRunning() {
 	return !exit_requested || renderComponent.save_in_progress;
 }
 
+void Editor::SaveWindowSize()
+{
+	if (window != nullptr)
+	{
+#ifdef _WIN32
+		WINDOWPLACEMENT placement = {};
+		placement.length = sizeof(WINDOWPLACEMENT);
+		if (GetWindowPlacement(window, &placement) && placement.showCmd != SW_SHOWMAXIMIZED)
+		{
+			RECT rect;
+			GetWindowRect(window, &rect);
+			int width = rect.right - rect.left;
+			int height = rect.bottom - rect.top;
+			if (width > 0 && height > 0)
+			{
+				config.Set("width", width);
+				config.Set("height", height);
+				config.Commit();
+			}
+		}
+#elif defined(SDL2)
+		if (!(SDL_GetWindowFlags(window) & SDL_WINDOW_MAXIMIZED))
+		{
+			int width = 0;
+			int height = 0;
+			SDL_GetWindowSize(window, &width, &height);
+			if (width > 0 && height > 0)
+			{
+				config.Set("width", width);
+				config.Set("height", height);
+				config.Commit();
+			}
+		}
+#endif
+	}
+}
+
 void Editor::Exit()
 {
 	// Check all scenes for unsaved changes
@@ -382,6 +419,10 @@ void Editor::Exit()
 			return;
 		}
 	}
+
+	// Save window size to config
+	SaveWindowSize();
+
 	// main loop will need to quit for us
 	exit_requested = true;
 }
@@ -1713,6 +1754,35 @@ void EditorComponent::Update(float dt)
 		componentsWnd.nameWnd.nameInput.SetAsActive(true);
 	}
 
+	// Duplicate Entity
+	if (!GetGUI().IsTyping() && CheckInput(EditorActions::DUPLICATE_ENTITY))
+	{
+		wi::Archive& archive = AdvanceHistory();
+		archive << HISTORYOP_ADD;
+		RecordSelection(archive);
+
+		auto& prevSel = translator.selectedEntitiesNonRecursive;
+		wi::vector<Entity> addedEntities;
+		for (auto& x : prevSel)
+		{
+			wi::scene::PickResult picked;
+			picked.entity = scene.Entity_Duplicate(x);
+			addedEntities.push_back(picked.entity);
+		}
+
+		ClearSelected();
+
+		for (auto& x : addedEntities)
+		{
+			AddSelected(x);
+		}
+
+		RecordSelection(archive);
+		RecordEntity(archive, addedEntities);
+
+		componentsWnd.RefreshEntityTree();
+	}
+
 	// Camera control:
 	if (!drive_mode && !wi::backlog::isActive() && !GetGUI().HasFocus())
 	{
@@ -2580,35 +2650,6 @@ void EditorComponent::Update(float dt)
 				picked.entity = scene.Entity_Serialize(clipboard, seri, INVALID_ENTITY, Scene::EntitySerializeFlags::RECURSIVE);
 				AddSelected(picked);
 				addedEntities.push_back(picked.entity);
-			}
-
-			RecordSelection(archive);
-			RecordEntity(archive, addedEntities);
-
-			componentsWnd.RefreshEntityTree();
-		}
-
-		// Duplicate Entity
-		if (CheckInput(EditorActions::DUPLICATE_ENTITY))
-		{
-			wi::Archive& archive = AdvanceHistory();
-			archive << HISTORYOP_ADD;
-			RecordSelection(archive);
-
-			auto& prevSel = translator.selectedEntitiesNonRecursive;
-			wi::vector<Entity> addedEntities;
-			for (auto& x : prevSel)
-			{
-				wi::scene::PickResult picked;
-				picked.entity = scene.Entity_Duplicate(x);
-				addedEntities.push_back(picked.entity);
-			}
-
-			ClearSelected();
-
-			for (auto& x : addedEntities)
-			{
-				AddSelected(x);
 			}
 
 			RecordSelection(archive);
@@ -5227,7 +5268,7 @@ void EditorComponent::Open(std::string filename)
 
 	wi::jobsystem::Execute(loadmodel_workload, [=] (wi::jobsystem::JobArgs) {
 		wi::backlog::post("[Editor] started loading model: " + filename);
-		std::shared_ptr<Scene> scene = std::make_shared<Scene>();
+		wi::allocator::shared_ptr<Scene> scene = wi::allocator::make_shared_single<Scene>();
 		if (type == FileType::WISCENE)
 		{
 			wi::scene::LoadModel(*scene, filename);

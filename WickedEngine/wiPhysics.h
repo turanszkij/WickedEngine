@@ -48,6 +48,12 @@ namespace wi::physics
 	void SetFrameRate(float value);
 	float GetFrameRate();
 
+	// Set character collision tolerance
+	//	Higher values push the character farther from surfaces,
+	//	preventing it from falling through large triangles or complex geometry
+	void SetCharacterCollisionTolerance(float value);
+	float GetCharacterCollisionTolerance();
+
 	// Update the physics state, run simulation, etc.
 	void RunPhysicsUpdateSystem(
 		wi::jobsystem::context& ctx,
@@ -229,7 +235,7 @@ namespace wi::physics
 
 	struct PickDragOperation
 	{
-		std::shared_ptr<void> internal_state;
+		wi::allocator::shared_ptr<void> internal_state;
 		inline bool IsValid() const { return internal_state != nullptr; }
 	};
 	enum class ConstraintType

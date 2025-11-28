@@ -7,6 +7,7 @@
 #include "wiVector.h"
 #include "wiVideo.h"
 #include "wiUnorderedSet.h"
+#include "wiAllocator.h"
 
 #include <memory>
 #include <string>
@@ -17,7 +18,7 @@ namespace wi
 	//	It can be loaded from file or memory using wi::resourcemanager::Load()
 	struct Resource
 	{
-		std::shared_ptr<void> internal_state;
+		wi::allocator::shared_ptr<void> internal_state;
 		inline bool IsValid() const { return internal_state.get() != nullptr; }
 
 		const wi::vector<uint8_t>& GetFileData() const;

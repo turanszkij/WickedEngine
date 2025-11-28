@@ -417,7 +417,7 @@ namespace wi::terrain
 
 		grass_properties.viewDistance = chunk_width;
 
-		generator = std::make_shared<Generator>();
+		generator = wi::allocator::make_shared_single<Generator>();
 
 		materialEntities.resize(MATERIAL_COUNT);
 	}
@@ -629,18 +629,7 @@ namespace wi::terrain
 
 				if (spline_terrain_invalidation)
 				{
-					for (auto it = chunks.begin(); it != chunks.end(); it++)
-					{
-						ChunkData& chunk_data = it->second;
-						if (chunk_data.invalidated)
-							continue;
-						BoundingBox bb(chunk_data.sphere.center, XMFLOAT3(chunk_data.sphere.radius, 1000000, chunk_data.sphere.radius));
-						if (spline.bvh.IntersectsFirst(bb, [&](uint32_t index) { return spline.precomputed_obbs[index].Intersects(bb); }))
-						{
-							chunk_data.invalidated = true;
-							generator->priority_invalidation.push_back(it->first);
-						}
-					}
+					InvalidateChunksAtSpline(spline);
 				}
 			}
 		}
@@ -930,6 +919,23 @@ namespace wi::terrain
 		// Start the generation on a background thread and keep it running until the next frame
 		generator->cancelled.store(false);
 		generator->workload.priority = wi::jobsystem::Priority::Low;
+		size_t terrain_spline_count_scene = 0; // Count the current terrain modifier splines in scene
+		for (size_t i = 0; i < scene->splines.GetCount(); ++i)
+		{
+			const SplineComponent& spline = scene->splines[i];
+			if (spline.terrain_modifier_amount > 0)
+			{
+				terrain_spline_count_scene++;
+			}
+		}
+		if (terrain_spline_count_scene != generator->splines.size())
+		{
+			// Need to invalidate terrain if spline was removed:
+			for (const SplineComponent& spline : generator->splines)
+			{
+				InvalidateChunksAtSpline(spline);
+			}
+		}
 		generator->splines.clear();
 		for (size_t i = 0; i < scene->splines.GetCount(); ++i)
 		{
@@ -1632,7 +1638,7 @@ namespace wi::terrain
 
 			if (chunk_data.vt == nullptr)
 			{
-				chunk_data.vt = std::make_shared<VirtualTexture>();
+				chunk_data.vt = wi::allocator::make_shared<VirtualTexture>();
 			}
 			VirtualTexture& vt = *chunk_data.vt;
 
@@ -2183,6 +2189,22 @@ namespace wi::terrain
 		}
 	}
 
+	void Terrain::InvalidateChunksAtSpline(const wi::scene::SplineComponent& spline)
+	{
+		for (auto it = chunks.begin(); it != chunks.end(); it++)
+		{
+			ChunkData& chunk_data = it->second;
+			if (chunk_data.invalidated)
+				continue;
+			BoundingBox bb(chunk_data.sphere.center, XMFLOAT3(chunk_data.sphere.radius, 1000000, chunk_data.sphere.radius));
+			if (spline.bvh.IntersectsFirst(bb, [&](uint32_t index) { return spline.precomputed_obbs[index].Intersects(bb); }))
+			{
+				chunk_data.invalidated = true;
+				generator->priority_invalidation.push_back(it->first);
+			}
+		}
+	}
+
 	void Terrain::Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri)
 	{
 		Generation_Cancel();
@@ -2369,7 +2391,7 @@ namespace wi::terrain
 				default:
 				case Modifier::Type::Perlin:
 					{
-						std::shared_ptr<PerlinModifier> modifier = std::make_shared<PerlinModifier>();
+						wi::allocator::shared_ptr<PerlinModifier> modifier = wi::allocator::make_shared_single<PerlinModifier>();
 						modifiers[i] = modifier;
 						archive >> modifier->octaves;
 						archive >> modifier->seed;
@@ -2378,7 +2400,7 @@ namespace wi::terrain
 					break;
 				case Modifier::Type::Voronoi:
 					{
-						std::shared_ptr<VoronoiModifier> modifier = std::make_shared<VoronoiModifier>();
+						wi::allocator::shared_ptr<VoronoiModifier> modifier = wi::allocator::make_shared_single<VoronoiModifier>();
 						modifiers[i] = modifier;
 						archive >> modifier->fade;
 						archive >> modifier->shape;
@@ -2390,7 +2412,7 @@ namespace wi::terrain
 					break;
 				case Modifier::Type::Heightmap:
 					{
-						std::shared_ptr<HeightmapModifier> modifier = std::make_shared<HeightmapModifier>();
+						wi::allocator::shared_ptr<HeightmapModifier> modifier = wi::allocator::make_shared_single<HeightmapModifier>();
 						modifiers[i] = modifier;
 						archive >> modifier->amount;
 						archive >> modifier->data;

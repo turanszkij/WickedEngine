@@ -441,7 +441,7 @@ namespace wi::shadercompiler
 		Source.Size = shadersourcedata.size();
 		Source.Encoding = DXC_CP_ACP;
 
-		struct IncludeHandler : public IDxcIncludeHandler
+		struct IncludeHandler final : public IDxcIncludeHandler
 		{
 			const CompilerInput* input = nullptr;
 			CompilerOutput* output = nullptr;
@@ -549,7 +549,7 @@ namespace wi::shadercompiler
 			output.shadersize = pShader->GetBufferSize();
 
 			// keep the blob alive == keep shader pointer valid!
-			auto internal_state = std::make_shared<ComPtr<IDxcBlob>>();
+			auto internal_state = wi::allocator::make_shared<ComPtr<IDxcBlob>>();
 			*internal_state = pShader;
 			output.internal_state = internal_state;
 		}
@@ -621,9 +621,9 @@ namespace wi::shadercompiler
 		}
 
 		D3D_SHADER_MACRO defines[] = {
-			"HLSL5", "1",
-			"DISABLE_WAVE_INTRINSICS", "1",
-			NULL, NULL,
+			{"HLSL5", "1"},
+			{"DISABLE_WAVE_INTRINSICS", "1"},
+			{NULL, NULL},
 		};
 
 		const char* target = nullptr;
@@ -655,7 +655,7 @@ namespace wi::shadercompiler
 			break;
 		}
 
-		struct IncludeHandler : public ID3DInclude
+		struct IncludeHandler final : public ID3DInclude
 		{
 			const CompilerInput* input = nullptr;
 			CompilerOutput* output = nullptr;
@@ -724,7 +724,7 @@ namespace wi::shadercompiler
 			output.shadersize = code->GetBufferSize();
 
 			// keep the blob alive == keep shader pointer valid!
-			auto internal_state = std::make_shared<ComPtr<ID3D10Blob>>();
+			auto internal_state = wi::allocator::make_shared<ComPtr<ID3D10Blob>>();
 			*internal_state = code;
 			output.internal_state = internal_state;
 		}

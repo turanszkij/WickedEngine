@@ -1003,6 +1003,8 @@ namespace dx12_internal
 			return Format::BC7_UNORM;
 		case DXGI_FORMAT_BC7_UNORM_SRGB:
 			return Format::BC7_UNORM_SRGB;
+		default:
+			break;
 		}
 		return Format::UNKNOWN;
 	}
@@ -1172,7 +1174,7 @@ namespace dx12_internal
 
 	struct SingleDescriptor
 	{
-		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
+		wi::allocator::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
 		D3D12_CPU_DESCRIPTOR_HANDLE handle = {};
 		D3D12_DESCRIPTOR_HEAP_TYPE type = {};
 		int index = -1; // bindless
@@ -1334,7 +1336,7 @@ namespace dx12_internal
 
 	struct Resource_DX12
 	{
-		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
+		wi::allocator::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
 		ComPtr<D3D12MA::Allocation> allocation;
 		ComPtr<ID3D12Resource> resource;
 		SingleDescriptor srv;
@@ -1376,7 +1378,7 @@ namespace dx12_internal
 			destroy_subresources();
 		}
 	};
-	struct Texture_DX12 : public Resource_DX12
+	struct Texture_DX12 final : public Resource_DX12
 	{
 		SingleDescriptor rtv = {};
 		SingleDescriptor dsv = {};
@@ -1404,7 +1406,7 @@ namespace dx12_internal
 	};
 	struct Sampler_DX12
 	{
-		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
+		wi::allocator::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
 		SingleDescriptor descriptor;
 
 		~Sampler_DX12()
@@ -1416,7 +1418,7 @@ namespace dx12_internal
 	};
 	struct QueryHeap_DX12
 	{
-		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
+		wi::allocator::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
 		ComPtr<ID3D12QueryHeap> heap;
 
 		~QueryHeap_DX12()
@@ -1428,7 +1430,7 @@ namespace dx12_internal
 	};
 	struct PipelineState_DX12
 	{
-		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
+		wi::allocator::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
 		ComPtr<ID3D12PipelineState> resource;
 		ComPtr<ID3D12RootSignature> rootSignature;
 
@@ -1438,7 +1440,7 @@ namespace dx12_internal
 
 		ComPtr<ID3D12VersionedRootSignatureDeserializer> rootsig_deserializer;
 		const D3D12_VERSIONED_ROOT_SIGNATURE_DESC* rootsig_desc = nullptr;
-		std::shared_ptr<void> rootsig_desc_lifetime_extender;
+		wi::allocator::shared_ptr<void> rootsig_desc_lifetime_extender;
 		RootSignatureOptimizer rootsig_optimizer;
 
 		struct PSO_STREAM
@@ -1479,7 +1481,7 @@ namespace dx12_internal
 			if (rootSignature) allocationhandler->destroyer_rootSignatures.push_back(std::make_pair(rootSignature, framecount));
 		}
 	};
-	struct BVH_DX12 : public Resource_DX12
+	struct BVH_DX12 final : public Resource_DX12
 	{
 		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS desc = {};
 		wi::vector<D3D12_RAYTRACING_GEOMETRY_DESC> geometries;
@@ -1488,7 +1490,7 @@ namespace dx12_internal
 	};
 	struct RTPipelineState_DX12
 	{
-		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
+		wi::allocator::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
 		ComPtr<ID3D12StateObject> resource;
 
 		ComPtr<ID3D12StateObjectProperties> stateObjectProperties;
@@ -1508,7 +1510,7 @@ namespace dx12_internal
 	};
 	struct SwapChain_DX12
 	{
-		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
+		wi::allocator::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
 #ifdef PLATFORM_XBOX
 		uint32_t bufferIndex = 0;
 #else
@@ -1545,7 +1547,7 @@ namespace dx12_internal
 	};
 	struct VideoDecoder_DX12
 	{
-		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
+		wi::allocator::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
 		ComPtr<ID3D12VideoDecoderHeap> decoder_heap;
 		ComPtr<ID3D12VideoDecoder> decoder;
 
@@ -2441,7 +2443,7 @@ std::mutex queue_locker;
 		allocatorDesc.Flags |= D3D12MA::ALLOCATOR_FLAG_DEFAULT_POOLS_NOT_ZEROED;
 		allocatorDesc.Flags |= D3D12MA::ALLOCATOR_FLAG_MSAA_TEXTURES_ALWAYS_COMMITTED;
 
-		allocationhandler = std::make_shared<AllocationHandler>();
+		allocationhandler = wi::allocator::make_shared_single<AllocationHandler>();
 		allocationhandler->device = device;
 
 		hr = dx12_check(D3D12MA::CreateAllocator(&allocatorDesc, &allocationhandler->allocator));
@@ -3046,11 +3048,7 @@ std::mutex queue_locker;
 
 	bool GraphicsDevice_DX12::CreateSwapChain(const SwapChainDesc* desc, wi::platform::window_type window, SwapChain* swapchain) const
 	{
-		auto internal_state = std::static_pointer_cast<SwapChain_DX12>(swapchain->internal_state);
-		if (swapchain->internal_state == nullptr)
-		{
-			internal_state = std::make_shared<SwapChain_DX12>();
-		}
+		auto internal_state = swapchain->IsValid() ? wi::allocator::shared_ptr<SwapChain_DX12>(swapchain->internal_state) : wi::allocator::make_shared<SwapChain_DX12>();
 		internal_state->allocationhandler = allocationhandler;
 		swapchain->internal_state = internal_state;
 		swapchain->desc = *desc;
@@ -3264,7 +3262,7 @@ std::mutex queue_locker;
 	}
 	bool GraphicsDevice_DX12::CreateBuffer2(const GPUBufferDesc* desc, const std::function<void(void*)>& init_callback, GPUBuffer* buffer, const GPUResource* alias, uint64_t alias_offset) const
 	{
-		auto internal_state = std::make_shared<Resource_DX12>();
+		auto internal_state = wi::allocator::make_shared<Resource_DX12>();
 		internal_state->allocationhandler = allocationhandler;
 		buffer->internal_state = internal_state;
 		buffer->type = GPUResource::Type::BUFFER;
@@ -3495,7 +3493,7 @@ std::mutex queue_locker;
 	}
 	bool GraphicsDevice_DX12::CreateTexture(const TextureDesc* desc, const SubresourceData* initial_data, Texture* texture, const GPUResource* alias, uint64_t alias_offset) const
 	{
-		auto internal_state = std::make_shared<Texture_DX12>();
+		auto internal_state = wi::allocator::make_shared<Texture_DX12>();
 		internal_state->allocationhandler = allocationhandler;
 		texture->internal_state = internal_state;
 		texture->type = GPUResource::Type::TEXTURE;
@@ -3914,7 +3912,7 @@ std::mutex queue_locker;
 	}
 	bool GraphicsDevice_DX12::CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader) const
 	{
-		auto internal_state = std::make_shared<PipelineState_DX12>();
+		auto internal_state = wi::allocator::make_shared<PipelineState_DX12>();
 		internal_state->allocationhandler = allocationhandler;
 		shader->internal_state = internal_state;
 
@@ -3974,7 +3972,7 @@ std::mutex queue_locker;
 	}
 	bool GraphicsDevice_DX12::CreateSampler(const SamplerDesc* desc, Sampler* sampler) const
 	{
-		auto internal_state = std::make_shared<Sampler_DX12>();
+		auto internal_state = wi::allocator::make_shared<Sampler_DX12>();
 		internal_state->allocationhandler = allocationhandler;
 		sampler->internal_state = internal_state;
 
@@ -4020,7 +4018,7 @@ std::mutex queue_locker;
 	}
 	bool GraphicsDevice_DX12::CreateQueryHeap(const GPUQueryHeapDesc* desc, GPUQueryHeap* queryheap) const
 	{
-		auto internal_state = std::make_shared<QueryHeap_DX12>();
+		auto internal_state = wi::allocator::make_shared<QueryHeap_DX12>();
 		internal_state->allocationhandler = allocationhandler;
 		queryheap->internal_state = internal_state;
 		queryheap->desc = *desc;
@@ -4046,7 +4044,7 @@ std::mutex queue_locker;
 	}
 	bool GraphicsDevice_DX12::CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso, const RenderPassInfo* renderpass_info) const
 	{
-		auto internal_state = std::make_shared<PipelineState_DX12>();
+		auto internal_state = wi::allocator::make_shared<PipelineState_DX12>();
 		internal_state->allocationhandler = allocationhandler;
 		pso->internal_state = internal_state;
 
@@ -4286,7 +4284,7 @@ std::mutex queue_locker;
 	}
 	bool GraphicsDevice_DX12::CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* desc, RaytracingAccelerationStructure* bvh) const
 	{
-		auto internal_state = std::make_shared<BVH_DX12>();
+		auto internal_state = wi::allocator::make_shared<BVH_DX12>();
 		internal_state->allocationhandler = allocationhandler;
 		bvh->internal_state = internal_state;
 		bvh->type = GPUResource::Type::RAYTRACING_ACCELERATION_STRUCTURE;
@@ -4423,7 +4421,7 @@ std::mutex queue_locker;
 	}
 	bool GraphicsDevice_DX12::CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* desc, RaytracingPipelineState* rtpso) const
 	{
-		auto internal_state = std::make_shared<RTPipelineState_DX12>();
+		auto internal_state = wi::allocator::make_shared<RTPipelineState_DX12>();
 		internal_state->allocationhandler = allocationhandler;
 		rtpso->internal_state = internal_state;
 		rtpso->desc = *desc;
@@ -4605,7 +4603,7 @@ std::mutex queue_locker;
 			video_decoder->support |= VideoDecoderSupportFlags::DPB_INDIVIDUAL_TEXTURES_SUPPORTED;
 		}
 
-		auto internal_state = std::make_shared<VideoDecoder_DX12>();
+		auto internal_state = wi::allocator::make_shared<VideoDecoder_DX12>();
 		internal_state->allocationhandler = allocationhandler;
 		video_decoder->internal_state = internal_state;
 		video_decoder->desc = *desc;
@@ -5790,7 +5788,7 @@ std::mutex queue_locker;
 	{
 		auto swapchain_internal = to_internal(swapchain);
 
-		auto internal_state = std::make_shared<Texture_DX12>();
+		auto internal_state = wi::allocator::make_shared<Texture_DX12>();
 		internal_state->allocationhandler = allocationhandler;
 		internal_state->resource = swapchain_internal->backBuffers[swapchain_internal->GetBufferIndex()];
 
@@ -6877,33 +6875,40 @@ std::mutex queue_locker;
 		auto internal_state_src = to_internal(pSrc);
 		auto internal_state_dst = to_internal(pDst);
 
-		const TextureDesc& src_desc = ((const Texture*)pSrc)->GetDesc();
-		const TextureDesc& dst_desc = ((const Texture*)pDst)->GetDesc();
-
-		if (src_desc.usage == Usage::UPLOAD)
+		if (pDst->IsTexture() && pSrc->IsTexture())
 		{
-			for (uint32_t layer = 0; layer < dst_desc.array_size; ++layer)
+			const TextureDesc& src_desc = ((const Texture*)pSrc)->GetDesc();
+			const TextureDesc& dst_desc = ((const Texture*)pDst)->GetDesc();
+
+			if (src_desc.usage == Usage::UPLOAD)
 			{
-				for (uint32_t mip = 0; mip < dst_desc.mip_levels; ++mip)
+				for (uint32_t layer = 0; layer < dst_desc.array_size; ++layer)
 				{
-					UINT subresource = D3D12CalcSubresource(mip, layer, 0, dst_desc.mip_levels, dst_desc.array_size);
-					CD3DX12_TEXTURE_COPY_LOCATION Src(internal_state_src->resource.Get(), internal_state_src->footprints[layer * dst_desc.mip_levels + mip]);
-					CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state_dst->resource.Get(), subresource);
-					commandlist.GetGraphicsCommandList()->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
+					for (uint32_t mip = 0; mip < dst_desc.mip_levels; ++mip)
+					{
+						UINT subresource = D3D12CalcSubresource(mip, layer, 0, dst_desc.mip_levels, dst_desc.array_size);
+						CD3DX12_TEXTURE_COPY_LOCATION Src(internal_state_src->resource.Get(), internal_state_src->footprints[layer * dst_desc.mip_levels + mip]);
+						CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state_dst->resource.Get(), subresource);
+						commandlist.GetGraphicsCommandList()->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
+					}
 				}
 			}
-		}
-		else if (dst_desc.usage == Usage::READBACK)
-		{
-			for (uint32_t layer = 0; layer < dst_desc.array_size; ++layer)
+			else if (dst_desc.usage == Usage::READBACK)
 			{
-				for (uint32_t mip = 0; mip < dst_desc.mip_levels; ++mip)
+				for (uint32_t layer = 0; layer < dst_desc.array_size; ++layer)
 				{
-					UINT subresource = D3D12CalcSubresource(mip, layer, 0, dst_desc.mip_levels, dst_desc.array_size);
-					CD3DX12_TEXTURE_COPY_LOCATION Src(internal_state_src->resource.Get(), subresource);
-					CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state_dst->resource.Get(), internal_state_dst->footprints[layer * dst_desc.mip_levels + mip]);
-					commandlist.GetGraphicsCommandList()->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
+					for (uint32_t mip = 0; mip < dst_desc.mip_levels; ++mip)
+					{
+						UINT subresource = D3D12CalcSubresource(mip, layer, 0, dst_desc.mip_levels, dst_desc.array_size);
+						CD3DX12_TEXTURE_COPY_LOCATION Src(internal_state_src->resource.Get(), subresource);
+						CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state_dst->resource.Get(), internal_state_dst->footprints[layer * dst_desc.mip_levels + mip]);
+						commandlist.GetGraphicsCommandList()->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
+					}
 				}
+			}
+			else
+			{
+				commandlist.GetGraphicsCommandList()->CopyResource(internal_state_dst->resource.Get(), internal_state_src->resource.Get());
 			}
 		}
 		else

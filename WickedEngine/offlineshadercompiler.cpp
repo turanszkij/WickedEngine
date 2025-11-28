@@ -554,7 +554,7 @@ int main(int argc, char* argv[])
 						{
 							if (shaderdump_enabled)
 							{
-								auto vec = std::make_shared<std::vector<uint8_t>>();
+								auto vec = wi::allocator::make_shared<std::vector<uint8_t>>();
 
 								if (wi::helper::FileRead(shaderbinaryfilename, *vec))
 								{
@@ -566,7 +566,8 @@ int main(int argc, char* argv[])
 									std::cout << "up-to-date: " << shaderbinaryfilename << std::endl;
 									locker.unlock();
 								}
-								else {
+								else
+								{
 									locker.lock();
 									std::cerr << "ERROR reading binary shader: " << shaderbinaryfilename << std::endl;
 									locker.unlock();

@@ -502,7 +502,7 @@ namespace wi::renderer
 	void VXGI_Resolve(
 		const VXGIResources& res,
 		const wi::scene::Scene& scene,
-		wi::graphics::Texture texture_lineardepth,
+		const wi::graphics::Texture& texture_lineardepth,
 		wi::graphics::CommandList cmd
 	);
 

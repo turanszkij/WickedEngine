@@ -2640,7 +2640,7 @@ namespace wi
 				camera.render_to_texture.tileCount = tiledres.tileCount;
 				camera.render_to_texture.entityTiles = tiledres.entityTiles;
 
-				camera.render_to_texture.visibility = std::make_shared<wi::renderer::Visibility>();
+				camera.render_to_texture.visibility = wi::allocator::make_shared<wi::renderer::Visibility>();
 			}
 			if (getSceneUpdateEnabled())
 			{

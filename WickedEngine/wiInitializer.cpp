@@ -43,7 +43,19 @@ namespace wi::initializer
 		static constexpr const char* platform_string = "Xbox";
 #endif // PLATFORM
 
-		wilog("\n[wi::initializer] Initializing Wicked Engine, please wait...\nVersion: %s\nPlatform: %s", wi::version::GetVersionString(), platform_string);
+#if defined(_MSC_VER) && defined(__clang__)
+		static constexpr const char* compiler_string = "CLANG-CL";
+#elif defined(__clang__)
+		static constexpr const char* compiler_string = "CLANG";
+#elif defined(_MSC_VER)
+		static constexpr const char* compiler_string = "MSVC";
+#elif defined(__GNUC__)
+		static constexpr const char* compiler_string = "GCC";
+#else
+		static constexpr const char* compiler_string = "UNKNOWN";
+#endif
+
+		wilog("\n[wi::initializer] Initializing Wicked Engine, please wait...\nVersion: %s\nPlatform: %s\nCompiler: %s", wi::version::GetVersionString(), platform_string, compiler_string);
 
 		StackString<1024> cpustring;
 #if defined(PLATFORM_WINDOWS_DESKTOP) || defined(PLATFORM_LINUX)
@@ -137,6 +149,10 @@ namespace wi::initializer
 		{
 			wilog("\nNo embedded shaders found, shaders will be compiled at runtime if needed.\n\tShader source path: %s\n\tShader binary path: %s", wi::renderer::GetShaderSourcePath().c_str(), wi::renderer::GetShaderPath().c_str());
 		}
+
+#ifdef _DEBUG
+		wilog("\nNumber of shared allocators (there is one per object type): %d", (int)wi::allocator::get_shared_allocator_count());
+#endif // _DEBUG
 
 		wi::backlog::post("");
 		wi::jobsystem::Initialize();

@@ -206,23 +206,23 @@ namespace wi::audio
 
 		constexpr bool IsValid() const { return success; }
 	};
-	static std::shared_ptr<AudioInternal> audio_internal;
+	static wi::allocator::shared_ptr<AudioInternal> audio_internal;
 
 	void Initialize()
 	{
-		audio_internal = std::make_shared<AudioInternal>();
+		audio_internal = wi::allocator::make_shared_single<AudioInternal>();
 	}
 
 	struct SoundInternal
 	{
-		std::shared_ptr<AudioInternal> audio;
+		wi::allocator::shared_ptr<AudioInternal> audio;
 		WAVEFORMATEX wfx = {};
 		wi::vector<uint8_t> audioData;
 	};
-	struct SoundInstanceInternal : public IXAudio2VoiceCallback
+	struct SoundInstanceInternal final : public IXAudio2VoiceCallback
 	{
-		std::shared_ptr<AudioInternal> audio;
-		std::shared_ptr<SoundInternal> soundinternal;
+		wi::allocator::shared_ptr<AudioInternal> audio;
+		wi::allocator::shared_ptr<SoundInternal> soundinternal;
 		IXAudio2SourceVoice* sourceVoice = nullptr;
 		XAUDIO2_VOICE_DETAILS voiceDetails = {};
 		wi::vector<float> outputMatrix;
@@ -352,7 +352,7 @@ namespace wi::audio
 	{
 		if (audio_internal == nullptr || !audio_internal->IsValid())
 			return false;
-		std::shared_ptr<SoundInternal> soundinternal = std::make_shared<SoundInternal>();
+		auto soundinternal = wi::allocator::make_shared<SoundInternal>();
 		soundinternal->audio = audio_internal;
 		sound->internal_state = soundinternal;
 
@@ -429,8 +429,8 @@ namespace wi::audio
 		if (sound == nullptr || !sound->IsValid())
 			return false;
 		HRESULT hr;
-		const auto& soundinternal = std::static_pointer_cast<SoundInternal>(sound->internal_state);
-		std::shared_ptr<SoundInstanceInternal> instanceinternal = std::make_shared<SoundInstanceInternal>();
+		auto soundinternal = wi::allocator::shared_ptr<SoundInternal>(sound->internal_state);
+		auto instanceinternal = wi::allocator::make_shared<SoundInstanceInternal>();
 		instance->internal_state = instanceinternal;
 
 		instanceinternal->audio = audio_internal;
@@ -879,21 +879,21 @@ namespace wi::audio
 		}
 		constexpr bool IsValid() const { return success; }
 	};
-	static std::shared_ptr<AudioInternal> audio_internal;
+	static wi::allocator::shared_ptr<AudioInternal> audio_internal;
 
 	void Initialize()
 	{
-		audio_internal = std::make_shared<AudioInternal>();
+		audio_internal = wi::allocator::make_shared_single<AudioInternal>();
 	}
 
 	struct SoundInternal{
-		std::shared_ptr<AudioInternal> audio;
+		wi::allocator::shared_ptr<AudioInternal> audio;
 		FAudioWaveFormatEx wfx = {};
 		wi::vector<uint8_t> audioData;
 	};
 	struct SoundInstanceInternal{
-		std::shared_ptr<AudioInternal> audio;
-		std::shared_ptr<SoundInternal> soundinternal;
+		wi::allocator::shared_ptr<AudioInternal> audio;
+		wi::allocator::shared_ptr<SoundInternal> soundinternal;
 		FAudioSourceVoice* sourceVoice = nullptr;
 		FAudioVoiceDetails voiceDetails = {};
 		wi::vector<float> outputMatrix;
@@ -979,7 +979,7 @@ namespace wi::audio
 	{
 		if (audio_internal == nullptr || !audio_internal->IsValid())
 			return false;
-		std::shared_ptr<SoundInternal> soundinternal = std::make_shared<SoundInternal>();
+		auto soundinternal = wi::allocator::make_shared<SoundInternal>();
 		soundinternal->audio = audio_internal;
 		sound->internal_state = soundinternal;
 
@@ -1056,8 +1056,8 @@ namespace wi::audio
 		if (sound == nullptr || !sound->IsValid())
 			return false;
 		uint32_t res;
-		const auto& soundinternal = std::static_pointer_cast<SoundInternal>(sound->internal_state);
-		std::shared_ptr<SoundInstanceInternal> instanceinternal = std::make_shared<SoundInstanceInternal>();
+		auto soundinternal = wi::allocator::shared_ptr<SoundInternal>(sound->internal_state);
+		auto instanceinternal = wi::allocator::make_shared<SoundInstanceInternal>();
 		instance->internal_state = instanceinternal;
 
 		instanceinternal->audio = audio_internal;

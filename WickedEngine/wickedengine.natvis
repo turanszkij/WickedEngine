@@ -12,5 +12,13 @@
 			</ArrayItems>
 		</Expand>
 	</Type>
+
+	<Type Name="wi::allocator::shared_ptr&lt;*&gt;">
+		<DisplayString>{{ handle={handle} }}</DisplayString>
+		<Expand>
+			<Item Name="[ptr]">reinterpret_cast&lt;$T1*&gt;(handle &amp; (~0ull &lt;&lt; 8ull))</Item>
+			<Item Name="[allocator]">shared_allocators[handle &amp; 0xFF]</Item>
+		</Expand>
+	</Type>
 	
 </AutoVisualizer>

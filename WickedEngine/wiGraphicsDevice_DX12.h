@@ -332,36 +332,36 @@ namespace wi::graphics
 		ColorSpace GetSwapChainColorSpace(const SwapChain* swapchain) const override;
 		bool IsSwapChainSupportsHDR(const SwapChain* swapchain) const override;
 
-		uint64_t GetMinOffsetAlignment(const GPUBufferDesc* desc) const override
+		uint32_t GetMinOffsetAlignment(const GPUBufferDesc* desc) const override
 		{
-			uint64_t alignment = 1u;
+			uint32_t alignment = 1u;
 			if (has_flag(desc->bind_flags, BindFlag::CONSTANT_BUFFER))
 			{
-				alignment = std::max(alignment, (uint64_t)D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+				alignment = std::max(alignment, (uint32_t)D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 			}
 			if (has_flag(desc->misc_flags, ResourceMiscFlag::BUFFER_RAW))
 			{
-				alignment = std::max(alignment, (uint64_t)D3D12_RAW_UAV_SRV_BYTE_ALIGNMENT);
+				alignment = std::max(alignment, (uint32_t)D3D12_RAW_UAV_SRV_BYTE_ALIGNMENT);
 			}
 			if (has_flag(desc->misc_flags, ResourceMiscFlag::BUFFER_STRUCTURED))
 			{
-				alignment = std::max(alignment, (uint64_t)desc->stride);
+				alignment = std::max(alignment, desc->stride);
 			}
 			if (desc->format != Format::UNKNOWN || has_flag(desc->misc_flags, ResourceMiscFlag::TYPED_FORMAT_CASTING))
 			{
-				alignment = std::max(alignment, 16ull);
+				alignment = std::max(alignment, 16u);
 			}
 			if (has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_BUFFER))
 			{
-				alignment = std::max(alignment, (uint64_t)D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
+				alignment = std::max(alignment, (uint32_t)D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
 			}
 			if (has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_NON_RT_DS))
 			{
-				alignment = std::max(alignment, (uint64_t)D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
+				alignment = std::max(alignment, (uint32_t)D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
 			}
 			if (has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_RT_DS))
 			{
-				alignment = std::max(alignment, (uint64_t)D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
+				alignment = std::max(alignment, (uint32_t)D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
 			}
 			return alignment;
 		}
@@ -617,7 +617,7 @@ namespace wi::graphics
 				}
 			}
 		};
-		std::shared_ptr<AllocationHandler> allocationhandler;
+		wi::allocator::shared_ptr<AllocationHandler> allocationhandler;
 
 	};
 

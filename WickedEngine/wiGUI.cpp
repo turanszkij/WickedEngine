@@ -13,6 +13,7 @@
 
 #include <sstream>
 #include <iomanip> // setprecision
+#include <utility>
 
 using namespace wi::graphics;
 using namespace wi::primitive;
@@ -219,7 +220,7 @@ namespace wi::gui
 			widget->SetColor(color, id);
 		}
 	}
-	void GUI::SetImage(wi::Resource resource, int id)
+	void GUI::SetImage(const wi::Resource& resource, int id)
 	{
 		for (auto& widget : widgets)
 		{
@@ -828,11 +829,11 @@ namespace wi::gui
 	{
 		SetName(name);
 		SetText(name);
-		OnClick([](EventArgs args) {});
-		OnRightClick([](EventArgs args) {});
-		OnDragStart([](EventArgs args) {});
-		OnDrag([](EventArgs args) {});
-		OnDragEnd([](EventArgs args) {});
+		OnClick([](const EventArgs& args) {});
+		OnRightClick([](const EventArgs& args) {});
+		OnDragStart([](const EventArgs& args) {});
+		OnDrag([](const EventArgs& args) {});
+		OnDragEnd([](const EventArgs& args) {});
 		SetSize(XMFLOAT2(100, 20));
 
 		font.params.h_align = wi::font::WIFALIGN_CENTER;
@@ -1066,25 +1067,25 @@ namespace wi::gui
 		sprites[state].Draw(cmd);
 		font.Draw(cmd);
 	}
-	void Button::OnClick(std::function<void(EventArgs args)> func)
+	void Button::OnClick(std::function<void(const EventArgs& args)> func)
 	{
-		onClick = func;
+		onClick = std::move(func);
 	}
-	void Button::OnRightClick(std::function<void(EventArgs args)> func)
+	void Button::OnRightClick(std::function<void(const EventArgs& args)> func)
 	{
-		onRightClick = func;
+		onRightClick = std::move(func);
 	}
-	void Button::OnDragStart(std::function<void(EventArgs args)> func)
+	void Button::OnDragStart(std::function<void(const EventArgs& args)> func)
 	{
-		onDragStart = func;
+		onDragStart = std::move(func);
 	}
-	void Button::OnDrag(std::function<void(EventArgs args)> func)
+	void Button::OnDrag(std::function<void(const EventArgs& args)> func)
 	{
-		onDrag = func;
+		onDrag = std::move(func);
 	}
-	void Button::OnDragEnd(std::function<void(EventArgs args)> func)
+	void Button::OnDragEnd(std::function<void(const EventArgs& args)> func)
 	{
-		onDragEnd = func;
+		onDragEnd = std::move(func);
 	}
 	void Button::SetTheme(const Theme& theme, int id)
 	{
@@ -1594,7 +1595,7 @@ namespace wi::gui
 	{
 		SetName(name);
 		SetText(name);
-		OnInputAccepted([](EventArgs args) {});
+		OnInputAccepted([](const EventArgs& args) {});
 		SetSize(XMFLOAT2(100, 20));
 
 		font.params.v_align = wi::font::WIFALIGN_CENTER;
@@ -1684,10 +1685,15 @@ namespace wi::gui
 				}
 			}
 
-			bool clicked = false;
+			bool leftButtonClicked = false;
 			if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
 			{
-				clicked = true;
+				leftButtonClicked = true;
+			}
+			bool rightButtonClicked = false;
+			if (wi::input::Press(wi::input::MOUSE_BUTTON_RIGHT))
+			{
+				rightButtonClicked = true;
 			}
 
 			if (state == ACTIVE)
@@ -1738,7 +1744,7 @@ namespace wi::gui
 					}
 					caret_timer.record();
 				}
-				else if ((clicked && !intersectsPointer) || wi::input::Press(wi::input::KEYBOARD_BUTTON_ESCAPE))
+				else if ((leftButtonClicked && !intersectsPointer) || (rightButtonClicked && !intersectsPointer) || wi::input::Press(wi::input::KEYBOARD_BUTTON_ESCAPE))
 				{
 					// cancel input
 					font_input.text.clear();
@@ -1761,7 +1767,7 @@ namespace wi::gui
 							break;
 						}
 					}
-					if (clicked && intersectsPointer)
+					if (leftButtonClicked && intersectsPointer)
 					{
 						caret_begin = caret_pos;
 					}
@@ -1780,7 +1786,7 @@ namespace wi::gui
 
 			}
 
-			if (clicked && state == FOCUS)
+			if (leftButtonClicked && state == FOCUS)
 			{
 				// activate
 				SetAsActive();
@@ -1940,13 +1946,13 @@ namespace wi::gui
 			font.Draw(cmd);
 		}
 	}
-	void TextInputField::OnInputAccepted(std::function<void(EventArgs args)> func)
+	void TextInputField::OnInputAccepted(std::function<void(const EventArgs& args)> func)
 	{
-		onInputAccepted = func;
+		onInputAccepted = std::move(func);
 	}
-	void TextInputField::OnInput(std::function<void(EventArgs args)> func)
+	void TextInputField::OnInput(std::function<void(const EventArgs& args)> func)
 	{
-		onInput = func;
+		onInput = std::move(func);
 	}
 	void TextInputField::AddInput(const wchar_t inputChar)
 	{
@@ -1985,7 +1991,7 @@ namespace wi::gui
 				{
 					// Copy:
 					caret_pos = caret_pos_prev;
-					std::wstring text = font_input.GetText();
+					const std::wstring& text = font_input.GetText();
 					int start = std::min(caret_begin, caret_pos);
 					int end = std::max(caret_begin, caret_pos);
 					std::wstring clipboard = std::wstring(text.c_str() + start, text.c_str() + end);
@@ -1996,7 +2002,7 @@ namespace wi::gui
 				{
 					// Cut:
 					caret_pos = caret_pos_prev;
-					std::wstring text = font_input.GetText();
+					const std::wstring& text = font_input.GetText();
 					int start = std::min(caret_begin, caret_pos);
 					int end = std::max(caret_begin, caret_pos);
 					std::wstring clipboard = std::wstring(text.c_str() + start, text.c_str() + end);
@@ -2098,7 +2104,7 @@ namespace wi::gui
 
 		SetName(name);
 		SetText(name);
-		OnSlide([](EventArgs args) {});
+		OnSlide([](const EventArgs& args) {});
 		SetSize(XMFLOAT2(200, 20));
 
 		valueInputField.Create(name + "_endInputField");
@@ -2106,26 +2112,20 @@ namespace wi::gui
 		valueInputField.SetShadowRadius(0);
 		valueInputField.SetTooltip("Enter number to modify value even outside slider limits. Other inputs:\n - reset : reset slider to initial state.\n - FLT_MAX : float max value\n - -FLT_MAX : negative float max value.");
 		valueInputField.SetValue(end);
-		valueInputField.OnInputAccepted([this, start, end, defaultValue](EventArgs args) {
+		valueInputField.OnInputAccepted([this, start, end, defaultValue](const EventArgs& args) {
 			if (args.sValue.compare("reset") == 0)
 			{
 				this->value = defaultValue;
 				this->start = start;
 				this->end = end;
-				args.fValue = this->value;
-				args.iValue = (int)this->value;
 			}
 			else if (args.sValue.compare("FLT_MAX") == 0)
 			{
 				this->value = FLT_MAX;
-				args.fValue = this->value;
-				args.iValue = (int)this->value;
 			}
 			else if (args.sValue.compare("-FLT_MAX") == 0)
 			{
 				this->value = -FLT_MAX;
-				args.fValue = this->value;
-				args.iValue = (int)this->value;
 			}
 			else
 			{
@@ -2343,9 +2343,9 @@ namespace wi::gui
 		Widget::RenderTooltip(canvas, cmd);
 		valueInputField.RenderTooltip(canvas, cmd);
 	}
-	void Slider::OnSlide(std::function<void(EventArgs args)> func)
+	void Slider::OnSlide(std::function<void(const EventArgs& args)> func)
 	{
-		onSlide = func;
+		onSlide = std::move(func);
 	}
 	void Slider::SetColor(wi::Color color, int id)
 	{
@@ -2390,7 +2390,7 @@ namespace wi::gui
 	{
 		SetName(name);
 		SetText(name);
-		OnClick([](EventArgs args) {});
+		OnClick([](const EventArgs& args) {});
 		SetSize(XMFLOAT2(20, 20));
 
 		font.params.h_align = wi::font::WIFALIGN_RIGHT;
@@ -2573,9 +2573,9 @@ namespace wi::gui
 		}
 
 	}
-	void CheckBox::OnClick(std::function<void(EventArgs args)> func)
+	void CheckBox::OnClick(std::function<void(const EventArgs& args)> func)
 	{
-		onClick = func;
+		onClick = std::move(func);
 	}
 	void CheckBox::SetCheck(bool value)
 	{
@@ -2608,7 +2608,7 @@ namespace wi::gui
 	{
 		SetName(name);
 		SetText(name);
-		OnSelect([](EventArgs args) {});
+		OnSelect([](const EventArgs& args) {});
 		SetSize(XMFLOAT2(100, 20));
 
 		font.params.h_align = wi::font::WIFALIGN_RIGHT;
@@ -3150,9 +3150,9 @@ namespace wi::gui
 			}
 		}
 	}
-	void ComboBox::OnSelect(std::function<void(EventArgs args)> func)
+	void ComboBox::OnSelect(std::function<void(const EventArgs& args)> func)
 	{
-		onSelect = func;
+		onSelect = std::move(func);
 	}
 	void ComboBox::AddItem(const std::string& name, uint64_t userdata)
 	{
@@ -3360,7 +3360,7 @@ namespace wi::gui
 				moveDragger.SetShadowRadius(0);
 				moveDragger.SetText(name);
 				moveDragger.font.params.h_align = wi::font::WIFALIGN_LEFT;
-				moveDragger.OnDrag([this](EventArgs args) {
+				moveDragger.OnDrag([this](const EventArgs& args) {
 					auto saved_parent = this->parent;
 					this->Detach();
 					this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
@@ -3377,11 +3377,11 @@ namespace wi::gui
 				closeButton.SetLocalizationEnabled(LocalizationEnabled::None);
 				closeButton.SetShadowRadius(0);
 				closeButton.SetText("x");
-				closeButton.OnClick([this](EventArgs args) {
+				closeButton.OnClick([this](const EventArgs& args) {
 					this->SetVisible(false);
 					if (onClose)
 					{
-						onClose(args);
+						onClose(std::move(args));
 					}
 					});
 				closeButton.SetTooltip("Close window");
@@ -3396,7 +3396,7 @@ namespace wi::gui
 				collapseButton.SetLocalizationEnabled(LocalizationEnabled::None);
 				collapseButton.SetShadowRadius(0);
 				collapseButton.SetText("-");
-				collapseButton.OnClick([this](EventArgs args) {
+				collapseButton.OnClick([this](const EventArgs& args) {
 					this->SetMinimized(!this->IsMinimized());
 					if (onCollapse)
 					{
@@ -4328,17 +4328,17 @@ namespace wi::gui
 		}
 		return size;
 	}
-	void Window::OnClose(std::function<void(EventArgs args)> func)
+	void Window::OnClose(std::function<void(const EventArgs& args)> func)
 	{
-		onClose = func;
+		onClose = std::move(func);
 	}
-	void Window::OnCollapse(std::function<void(EventArgs args)> func)
+	void Window::OnCollapse(std::function<void(const EventArgs& args)> func)
 	{
-		onCollapse = func;
+		onCollapse = std::move(func);
 	}
 	void Window::OnResize(std::function<void()> func)
 	{
-		onResize = func;
+		onResize = std::move(func);
 	}
 	void Window::SetColor(wi::Color color, int id)
 	{
@@ -4632,7 +4632,7 @@ namespace wi::gui
 		text_R.SetText("");
 		text_R.SetTooltip("Enter value for RED channel (0-255)");
 		text_R.SetDescription("R: ");
-		text_R.OnInputAccepted([this](EventArgs args) {
+		text_R.OnInputAccepted([this](const EventArgs& args) {
 			wi::Color color = GetPickColor();
 			color.setR((uint8_t)args.iValue);
 			SetPickColor(color);
@@ -4647,7 +4647,7 @@ namespace wi::gui
 		text_G.SetText("");
 		text_G.SetTooltip("Enter value for GREEN channel (0-255)");
 		text_G.SetDescription("G: ");
-		text_G.OnInputAccepted([this](EventArgs args) {
+		text_G.OnInputAccepted([this](const EventArgs& args) {
 			wi::Color color = GetPickColor();
 			color.setG((uint8_t)args.iValue);
 			SetPickColor(color);
@@ -4662,7 +4662,7 @@ namespace wi::gui
 		text_B.SetText("");
 		text_B.SetTooltip("Enter value for BLUE channel (0-255)");
 		text_B.SetDescription("B: ");
-		text_B.OnInputAccepted([this](EventArgs args) {
+		text_B.OnInputAccepted([this](const EventArgs& args) {
 			wi::Color color = GetPickColor();
 			color.setB((uint8_t)args.iValue);
 			SetPickColor(color);
@@ -4678,7 +4678,7 @@ namespace wi::gui
 		text_H.SetText("");
 		text_H.SetTooltip("Enter value for HUE channel (0-360)");
 		text_H.SetDescription("H: ");
-		text_H.OnInputAccepted([this](EventArgs args) {
+		text_H.OnInputAccepted([this](const EventArgs& args) {
 			hue = wi::math::Clamp(args.fValue, 0, 360.0f);
 			FireEvents();
 			});
@@ -4691,7 +4691,7 @@ namespace wi::gui
 		text_S.SetText("");
 		text_S.SetTooltip("Enter value for SATURATION channel (0-100)");
 		text_S.SetDescription("S: ");
-		text_S.OnInputAccepted([this](EventArgs args) {
+		text_S.OnInputAccepted([this](const EventArgs& args) {
 			saturation = wi::math::Clamp(args.fValue / 100.0f, 0, 1);
 			FireEvents();
 			});
@@ -4704,7 +4704,7 @@ namespace wi::gui
 		text_V.SetText("");
 		text_V.SetTooltip("Enter value for LUMINANCE channel (0-100)");
 		text_V.SetDescription("V: ");
-		text_V.OnInputAccepted([this](EventArgs args) {
+		text_V.OnInputAccepted([this](const EventArgs& args) {
 			luminance = wi::math::Clamp(args.fValue / 100.0f, 0, 1);
 			FireEvents();
 			});
@@ -4718,7 +4718,7 @@ namespace wi::gui
 		text_hex.SetTooltip("Enter RGBA hex value");
 		text_hex.SetDescription("#");
 		text_hex.font_description.params.scaling = 1.2f;
-		text_hex.OnInputAccepted([this](EventArgs args) {
+		text_hex.OnInputAccepted([this](const EventArgs& args) {
 			wi::Color color(args.sValue.c_str());
 			SetPickColor(color);
 			FireEvents();
@@ -4731,7 +4731,7 @@ namespace wi::gui
 		alphaSlider.SetSize(XMFLOAT2(150, 18));
 		alphaSlider.SetText("A: ");
 		alphaSlider.SetTooltip("Value for ALPHA - TRANSPARENCY channel (0-255)");
-		alphaSlider.OnSlide([this](EventArgs args) {
+		alphaSlider.OnSlide([this](const EventArgs& args) {
 			FireEvents();
 			});
 		AddWidget(&alphaSlider);
@@ -5327,9 +5327,9 @@ namespace wi::gui
 		args.color = GetPickColor();
 		onColorChanged(args);
 	}
-	void ColorPicker::OnColorChanged(std::function<void(EventArgs args)> func)
+	void ColorPicker::OnColorChanged(std::function<void(const EventArgs& args)> func)
 	{
-		onColorChanged = func;
+		onColorChanged = std::move(func);
 	}
 
 
@@ -5340,7 +5340,7 @@ namespace wi::gui
 	{
 		SetName(name);
 		SetText(name);
-		OnSelect([](EventArgs args) {});
+		OnSelect([](const EventArgs& args) {});
 
 		SetColor(wi::Color(100, 100, 100, 100), wi::gui::IDLE);
 		for (int i = FOCUS + 1; i < WIDGETSTATE_COUNT; ++i)
@@ -5850,17 +5850,17 @@ namespace wi::gui
 			wi::font::Draw(item.name, fp, cmd);
 		}
 	}
-	void TreeList::OnSelect(std::function<void(EventArgs args)> func)
+	void TreeList::OnSelect(std::function<void(const EventArgs& args)> func)
 	{
-		onSelect = func;
+		onSelect = std::move(func);
 	}
-	void TreeList::OnDelete(std::function<void(EventArgs args)> func)
+	void TreeList::OnDelete(std::function<void(const EventArgs& args)> func)
 	{
-		onDelete = func;
+		onDelete = std::move(func);
 	}
-	void TreeList::OnDoubleClick(std::function<void(EventArgs args)> func)
+	void TreeList::OnDoubleClick(std::function<void(const EventArgs& args)> func)
 	{
-		onDoubleClick = func;
+		onDoubleClick = std::move(func);
 	}
 	void TreeList::AddItem(const Item& item)
 	{

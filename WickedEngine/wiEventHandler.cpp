@@ -4,6 +4,7 @@
 
 #include <list>
 #include <mutex>
+#include <utility>
 
 namespace wi::eventhandler
 {
@@ -14,11 +15,11 @@ namespace wi::eventhandler
 		wi::unordered_map<int, std::list<std::function<void(uint64_t)>>> subscribers_once;
 		std::mutex locker;
 	};
-	std::shared_ptr<EventManager> manager = std::make_shared<EventManager>();
+	wi::allocator::shared_ptr<EventManager> manager = wi::allocator::make_shared_single<EventManager>();
 
 	struct EventInternal
 	{
-		std::shared_ptr<EventManager> manager;
+		wi::allocator::shared_ptr<EventManager> manager;
 		int id = 0;
 		std::function<void(uint64_t)> callback;
 
@@ -36,11 +37,11 @@ namespace wi::eventhandler
 	Handle Subscribe(int id, std::function<void(uint64_t)> callback)
 	{
 		Handle handle;
-		auto eventinternal = std::make_shared<EventInternal>();
+		auto eventinternal = wi::allocator::make_shared<EventInternal>();
 		handle.internal_state = eventinternal;
 		eventinternal->manager = manager;
 		eventinternal->id = id;
-		eventinternal->callback = callback;
+		eventinternal->callback = std::move(callback);
 
 		std::scoped_lock lck(manager->locker);
 		manager->subscribers[id].push_back(&eventinternal->callback);
@@ -48,7 +49,7 @@ namespace wi::eventhandler
 		return handle;
 	}
 
-	void Subscribe_Once(int id, std::function<void(uint64_t)> callback)
+	void Subscribe_Once(int id, const std::function<void(uint64_t)>& callback)
 	{
 		std::scoped_lock lck(manager->locker);
 		manager->subscribers_once[id].push_back(callback);

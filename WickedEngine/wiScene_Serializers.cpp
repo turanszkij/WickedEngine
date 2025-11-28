@@ -1388,17 +1388,26 @@ namespace wi::scene
 					CreateRenderData();
 				}
 			}
+
+			if (seri.GetVersion() >= 2)
+			{
+				archive >> realtime_update_interval;
+			}
 		}
 		else
 		{
 			seri.RegisterResource(textureName);
-
 			archive << _flags;
 
 			if (seri.GetVersion() >= 1)
 			{
 				archive << resolution;
 				archive << wi::helper::GetPathRelative(dir, textureName);
+			}
+
+			if (seri.GetVersion() >= 2)
+			{
+				archive << realtime_update_interval;
 			}
 		}
 	}

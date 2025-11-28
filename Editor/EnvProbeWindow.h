@@ -13,6 +13,7 @@ public:
 	wi::gui::Label infoLabel;
 	wi::gui::CheckBox realTimeCheckBox;
 	wi::gui::CheckBox msaaCheckBox;
+	wi::gui::Slider realtimeFrameIntervalSlider;
 	wi::gui::Button refreshButton;
 	wi::gui::Button refreshAllButton;
 	wi::gui::Button importButton;

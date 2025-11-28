@@ -266,6 +266,8 @@ public:
 
 	bool KeepRunning();
 
+	void SaveWindowSize();
+
 	void Exit() override;
 
 	~Editor() override

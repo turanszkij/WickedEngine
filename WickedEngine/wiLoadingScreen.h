@@ -31,11 +31,11 @@ namespace wi
 		} background_mode = BackgroundMode::Fill;
 
 		//Add a loading task which should be executed
-		void addLoadingFunction(std::function<void(wi::jobsystem::JobArgs)> loadingFunction);
+		void addLoadingFunction(const std::function<void(wi::jobsystem::JobArgs)>& loadingFunction);
 		//Helper for loading a whole renderable component
 		void addLoadingComponent(RenderPath* component, Application* main, float fadeSeconds = 0, wi::Color fadeColor = wi::Color(0, 0, 0, 255), wi::FadeManager::FadeType fadetype = wi::FadeManager::FadeType::FadeToColor);
 		//Set a function that should be called when the loading finishes
-		void onFinished(std::function<void()> finishFunction);
+		void onFinished(const std::function<void()>& finishFunction);
 		//See if the loading is currently running
 		bool isActive() const;
 		// See if there are any loading tasks that are still not finished
@@ -49,8 +49,8 @@ namespace wi
 		void Compose(wi::graphics::CommandList cmd) const override;
 
 		// This is an identifier of RenderPath subtype that is used for lua binding.
-		static constexpr const char* script_check_identifier = relative_path(__FILE__);
-		virtual const char* GetScriptBindingID() const { return script_check_identifier; }
+		static constexpr const auto script_check_identifier = relative_path_storage(__FILE__);
+		const char* GetScriptBindingID() const override { return script_check_identifier.c_str(); }
 	};
 
 }
