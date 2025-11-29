@@ -130,8 +130,7 @@ namespace wi::lua::backlog
 	int backlog_open(lua_State* L)
 	{
 		wi::backlog::Flush();
-		std::string logfile = wi::helper::GetCurrentPath() + "/log.txt";
-		wi::backlog::GetLogFile(logfile);
+		std::string logfile = wi::backlog::GetLogFile();
 #ifdef PLATFORM_WINDOWS_DESKTOP
 		const std::string op = "start \"\" \"" + logfile + "\"";
 		const int status = system(op.c_str());

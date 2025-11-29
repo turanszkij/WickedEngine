@@ -67,6 +67,7 @@ namespace wi::backlog
 
 	void SetLogFile(const std::string& path);
 	void GetLogFile(std::string& path);
+	std::string GetLogFile();
 
 	// Flush pending log writes to file
 	void Flush();

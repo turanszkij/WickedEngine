@@ -54,7 +54,8 @@ namespace wi::backlog
 	{
 		std::thread writerThread;
 		std::mutex queueMutex;
-		std::condition_variable queueCondition;
+		std::condition_variable queueEntriesCondition;
+		std::condition_variable queueEmptyCondition;
 		std::deque<std::string> writeQueue;
 		std::atomic<bool> running{ false };
 		std::atomic<bool> initialized{ false };
@@ -94,7 +95,7 @@ namespace wi::backlog
 			}
 
 			running = false;
-			queueCondition.notify_all();
+			queueEntriesCondition.notify_all();
 
 			if (writerThread.joinable())
 			{
@@ -121,7 +122,7 @@ namespace wi::backlog
 
 				// Wait for new entries or timeout for periodic flush
 				auto timeout = std::chrono::milliseconds(100);
-				queueCondition.wait_for(lock, timeout, [this]() {
+				queueEntriesCondition.wait_for(lock, timeout, [this]() {
 					return !writeQueue.empty() || !running.load();
 				});
 
@@ -132,6 +133,9 @@ namespace wi::backlog
 				std::deque<std::string> localQueue;
 				std::swap(localQueue, writeQueue);
 				lock.unlock();
+
+				// Notify waiters that queue is now empty after swap
+				queueEmptyCondition.notify_all();
 
 				WriteEntries(localQueue);
 
@@ -188,7 +192,7 @@ namespace wi::backlog
 				std::scoped_lock lock(queueMutex);
 				writeQueue.push_back(text);
 			}
-			queueCondition.notify_one();
+			queueEntriesCondition.notify_one();
 		}
 
 		void FlushSync()
@@ -201,12 +205,10 @@ namespace wi::backlog
 
 			// Signal and wait for queue to be processed
 			std::unique_lock queueLock(queueMutex);
-			while (!writeQueue.empty())
+			if (!writeQueue.empty())
 			{
-				queueLock.unlock();
-				queueCondition.notify_one();
-				std::this_thread::sleep_for(std::chrono::milliseconds(1));
-				queueLock.lock();
+				queueEntriesCondition.notify_one();
+				queueEmptyCondition.wait(queueLock, [this] { return writeQueue.empty(); });
 			}
 			queueLock.unlock();
 
@@ -273,15 +275,6 @@ namespace wi::backlog
 			}
 		}
 	} internal_state;
-
-	static std::string GetLogFilePath()
-	{
-		if (logfile_path.empty() || !wi::helper::DirectoryExists(wi::helper::GetDirectoryFromPath(logfile_path)))
-		{
-			return wi::helper::GetCurrentPath() + "/log.txt";
-		}
-		return logfile_path;
-	}
 
 	void Flush()
 	{
@@ -574,7 +567,7 @@ namespace wi::backlog
 		// Initialize async writer on first log
 		if (!asyncWriter.initialized.load())
 		{
-			asyncWriter.Start(GetLogFilePath());
+			asyncWriter.Start(GetLogFile());
 		}
 
 		std::string str;
@@ -724,7 +717,7 @@ namespace wi::backlog
 		logfile_path = path;
 		if (asyncWriter.initialized.load())
 		{
-			asyncWriter.UpdateLogFilePath(GetLogFilePath());
+			asyncWriter.UpdateLogFilePath(GetLogFile());
 		}
 	}
 
@@ -734,5 +727,14 @@ namespace wi::backlog
 		{
 			path = logfile_path;
 		}
+	}
+
+	std::string GetLogFile()
+	{
+		if (logfile_path.empty() || !wi::helper::DirectoryExists(wi::helper::GetDirectoryFromPath(logfile_path)))
+		{
+			return wi::helper::GetCurrentPath() + "/log.txt";
+		}
+		return logfile_path;
 	}
 }
