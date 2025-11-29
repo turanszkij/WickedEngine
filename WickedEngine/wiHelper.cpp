@@ -1274,11 +1274,6 @@ namespace wi::helper
 			return;
 		}
 
-#ifdef _DEBUG
-		StripDuplicatedAbsolutePaths(path);
-		StripDuplicatedRootdirPrefix(rootdir, path);
-#endif // _DEBUG
-
 		const std::filesystem::path filepath = ToNativeString(path);
 		if (filepath.is_absolute())
 		{
