@@ -1332,6 +1332,7 @@ namespace dx12_internal
 		uint32_t mipCount = 0;
 		uint32_t firstSlice = 0;
 		uint32_t sliceCount = 0;
+		uint64_t buffer_offset = 0;
 	};
 
 	struct Resource_DX12
@@ -2000,13 +2001,19 @@ std::mutex queue_locker;
 				{
 					assert(param.Descriptor.ShaderRegister < DESCRIPTORBINDER_SRV_COUNT);
 					const GPUResource& resource = table.SRV[param.Descriptor.ShaderRegister];
-					int subresource = table.SRV_index[param.Descriptor.ShaderRegister];
 
 					D3D12_GPU_VIRTUAL_ADDRESS address = {};
 					if (resource.IsValid())
 					{
+						assert(resource.IsBuffer());
 						auto internal_state = to_internal(&resource);
 						address = internal_state->gpu_address;
+
+						const int subresource = table.SRV_index[param.Descriptor.ShaderRegister];
+						if (subresource >= 0)
+						{
+							address += internal_state->subresources_srv[subresource].buffer_offset; // note: root descriptor can only be buffer in DX12
+						}
 					}
 
 					if (graphics)
@@ -2030,13 +2037,19 @@ std::mutex queue_locker;
 				{
 					assert(param.Descriptor.ShaderRegister < DESCRIPTORBINDER_UAV_COUNT);
 					const GPUResource& resource = table.UAV[param.Descriptor.ShaderRegister];
-					int subresource = table.UAV_index[param.Descriptor.ShaderRegister];
 
 					D3D12_GPU_VIRTUAL_ADDRESS address = {};
 					if (resource.IsValid())
 					{
+						assert(resource.IsBuffer());
 						auto internal_state = to_internal(&resource);
 						address = internal_state->gpu_address;
+
+						const int subresource = table.UAV_index[param.Descriptor.ShaderRegister];
+						if (subresource >= 0)
+						{
+							address += internal_state->subresources_uav[subresource].buffer_offset; // note: root descriptor can only be buffer in DX12
+						}
 					}
 
 					if (graphics)
@@ -5050,6 +5063,7 @@ std::mutex queue_locker;
 
 			SingleDescriptor descriptor;
 			descriptor.init(this, srv_desc, internal_state->resource.Get());
+			descriptor.buffer_offset = offset;
 
 			if (!internal_state->srv.IsValid())
 			{
