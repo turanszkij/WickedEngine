@@ -185,7 +185,7 @@ namespace wi
 				wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
 					if (!fontStyleName.empty())
 					{
-						fontStyleName = dir + fontStyleName;
+						wi::helper::MakePathAbsolute(dir, fontStyleName);
 						fontStyleResource = wi::resourcemanager::Load(fontStyleName);
 						params.style = fontStyleResource.GetFontStyle();
 					}

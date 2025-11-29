@@ -1372,7 +1372,7 @@ namespace wi
 
 				size_t file_offset = archive.GetPos() - resource.filesize;
 				
-				resource.name = archive.GetSourceDirectory() + resource.name;
+				wi::helper::MakePathAbsolute(archive.GetSourceDirectory(), resource.name);
 
 				if (Contains(resource.name))
 					continue;

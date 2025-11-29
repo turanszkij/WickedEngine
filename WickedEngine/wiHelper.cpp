@@ -1194,6 +1194,79 @@ namespace wi::helper
 		return ret;
 	}
 
+	void StripDuplicatedAbsolutePaths(std::string& path)
+	{
+		if (path.empty())
+		{
+			return;
+		}
+
+		// Look for embedded absolute paths (drive letters like "X:/" appearing after position 2)
+		// A valid absolute path starts at position 0, any drive letter after that indicates corruption
+		// We search for patterns like "C:/" or "C:\" appearing after the start
+		size_t searchStart = 2; // Skip the first possible drive letter
+		size_t lastAbsolutePos = std::string::npos;
+
+		while (searchStart < path.length())
+		{
+			// Look for drive letter pattern: single letter followed by colon
+			for (size_t i = searchStart; i + 1 < path.length(); ++i)
+			{
+				const char c = path[i];
+				const char next = path[i + 1];
+				// Check for drive letter pattern (letter followed by colon)
+				if (((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')) && next == ':')
+				{
+					// Verify it looks like a path (followed by slash or end)
+					if (i + 2 >= path.length() || path[i + 2] == '/' || path[i + 2] == '\\')
+					{
+						lastAbsolutePos = i;
+					}
+				}
+			}
+
+			if (lastAbsolutePos != std::string::npos && lastAbsolutePos > searchStart)
+			{
+				// Found an embedded absolute path, strip everything before it
+				path = path.substr(lastAbsolutePos);
+				// Continue searching in case there are more
+				searchStart = 2;
+				lastAbsolutePos = std::string::npos;
+			}
+			else
+			{
+				break; // No more embedded paths found
+			}
+		}
+	}
+
+	void StripDuplicatedRootdirPrefix(const std::string& rootdir, std::string& path)
+	{
+		if (rootdir.empty() || path.empty())
+		{
+			return;
+		}
+
+		// Now strip rootdir prefix if present (handles case where path starts with rootdir)
+		std::string pathLower = path;
+		std::string rootLower = rootdir;
+		std::transform(pathLower.begin(), pathLower.end(), pathLower.begin(), [](const unsigned char c) { return std::tolower(c); });
+		std::transform(rootLower.begin(), rootLower.end(), rootLower.begin(), [](const unsigned char c) { return std::tolower(c); });
+
+		// Keep stripping rootdir prefix until it's no longer present
+		while (pathLower.find(rootLower) == 0)
+		{
+			path = path.substr(rootdir.length());
+			// Remove any leading slashes that might remain
+			while (!path.empty() && (path[0] == '/' || path[0] == '\\'))
+			{
+				path = path.substr(1);
+			}
+			pathLower = path;
+			std::transform(pathLower.begin(), pathLower.end(), pathLower.begin(), [](const unsigned char c) { return std::tolower(c); });
+		}
+	}
+
 	void MakePathRelative(const std::string& rootdir, std::string& path)
 	{
 		if (rootdir.empty() || path.empty())
@@ -1201,22 +1274,55 @@ namespace wi::helper
 			return;
 		}
 
-		std::filesystem::path filepath = ToNativeString(path);
+#ifdef _DEBUG
+		StripDuplicatedAbsolutePaths(path);
+		StripDuplicatedRootdirPrefix(rootdir, path);
+#endif // _DEBUG
+
+		const std::filesystem::path filepath = ToNativeString(path);
 		if (filepath.is_absolute())
 		{
-			std::filesystem::path rootpath = ToNativeString(rootdir);
-			std::filesystem::path relative = std::filesystem::relative(filepath, rootpath);
+			const std::filesystem::path rootpath = ToNativeString(rootdir);
+			const std::filesystem::path relative = std::filesystem::relative(filepath, rootpath);
 			if (!relative.empty())
 			{
 				StringConvert(relative.generic_wstring(), path);
 			}
 		}
+	}
 
+	void MakePathAbsolute(const std::string& rootdir, std::string& path)
+	{
+		if (rootdir.empty() || path.empty())
+		{
+			return;
+		}
+
+#ifdef _DEBUG
+		StripDuplicatedAbsolutePaths(path);
+		StripDuplicatedRootdirPrefix(rootdir, path);
+#endif // _DEBUG
+
+		const std::filesystem::path filepath = ToNativeString(path);
+		if (!filepath.is_absolute())
+		{
+			const std::filesystem::path rootpath = ToNativeString(rootdir);
+			const std::filesystem::path absolute = rootpath / filepath;
+			if (!absolute.empty())
+			{
+				StringConvert(absolute.generic_wstring(), path);
+			}
+		}
 	}
 
 	void MakePathAbsolute(std::string& path)
 	{
-		std::filesystem::path absolute = std::filesystem::absolute(ToNativeString(path));
+		if (path.empty())
+		{
+			return;
+		}
+
+		const std::filesystem::path absolute = std::filesystem::absolute(ToNativeString(path));
 		if (!absolute.empty())
 		{
 			StringConvert(absolute.generic_wstring(), path);

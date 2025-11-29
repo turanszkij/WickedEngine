@@ -275,7 +275,7 @@ namespace wi::scene
 			{
 				if (!x.name.empty())
 				{
-					x.name = dir + x.name;
+					wi::helper::MakePathAbsolute(dir, x.name);
 				}
 			}
 
@@ -1234,7 +1234,7 @@ namespace wi::scene
 				{
 					if (!lensFlareNames[i].empty())
 					{
-						lensFlareNames[i] = dir + lensFlareNames[i];
+						wi::helper::MakePathAbsolute(dir, lensFlareNames[i]);
 						lensFlareRimTextures[i] = wi::resourcemanager::Load(lensFlareNames[i]);
 					}
 				}
@@ -1384,7 +1384,7 @@ namespace wi::scene
 
 				if (!textureName.empty())
 				{
-					textureName = dir + textureName;
+					wi::helper::MakePathAbsolute(dir, textureName);
 					CreateRenderData();
 				}
 			}
@@ -1656,7 +1656,7 @@ namespace wi::scene
 				archive >> skyMapName;
 				if (!skyMapName.empty())
 				{
-					skyMapName = dir + skyMapName;
+					wi::helper::MakePathAbsolute(dir, skyMapName);
 					skyMap = wi::resourcemanager::Load(skyMapName);
 				}
 			}
@@ -1669,7 +1669,7 @@ namespace wi::scene
 				archive >> colorGradingMapName;
 				if (!colorGradingMapName.empty())
 				{
-					colorGradingMapName = dir + colorGradingMapName;
+					wi::helper::MakePathAbsolute(dir, colorGradingMapName);
 					colorGradingMap = wi::resourcemanager::Load(colorGradingMapName, wi::resourcemanager::Flags::IMPORT_COLORGRADINGLUT);
 				}
 			}
@@ -1801,7 +1801,7 @@ namespace wi::scene
 				archive >> volumetricCloudsWeatherMapFirstName;
 				if (!volumetricCloudsWeatherMapFirstName.empty())
 				{
-					volumetricCloudsWeatherMapFirstName = dir + volumetricCloudsWeatherMapFirstName;
+					wi::helper::MakePathAbsolute(dir, volumetricCloudsWeatherMapFirstName);
 					volumetricCloudsWeatherMapFirst = wi::resourcemanager::Load(volumetricCloudsWeatherMapFirstName);
 				}
 			}
@@ -1811,7 +1811,7 @@ namespace wi::scene
 				archive >> volumetricCloudsWeatherMapSecondName;
 				if (!volumetricCloudsWeatherMapSecondName.empty())
 				{
-					volumetricCloudsWeatherMapSecondName = dir + volumetricCloudsWeatherMapSecondName;
+					wi::helper::MakePathAbsolute(dir, volumetricCloudsWeatherMapSecondName);
 					volumetricCloudsWeatherMapSecond = wi::resourcemanager::Load(volumetricCloudsWeatherMapSecondName);
 				}
 
@@ -2129,7 +2129,7 @@ namespace wi::scene
 			wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
 				if (!filename.empty())
 				{
-					filename = dir + filename;
+					wi::helper::MakePathAbsolute(dir, filename);
 					soundResource = wi::resourcemanager::Load(filename);
 					// Note: sound instance can't be created yet, as soundResource is not necessarily ready at this point
 					//	Consider when multiple threads are loading the same sound, one thread will be loading the data,
@@ -2172,7 +2172,7 @@ namespace wi::scene
 			wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
 				if (!filename.empty())
 				{
-					filename = dir + filename;
+					wi::helper::MakePathAbsolute(dir, filename);
 					videoResource = wi::resourcemanager::Load(filename);
 					// Note: video instance can't be created yet, as videoResource is not necessarily ready at this point
 					//	Consider when multiple threads are loading the same sound, one thread will be loading the data,
@@ -2796,6 +2796,31 @@ namespace wi::scene
 		}
 
 		wilog("Scene::Serialize took %.2f seconds", timer.elapsed_seconds());
+
+#ifdef _DEBUG
+		// Print all texture names after scene loading
+		if (archive.IsReadMode())
+		{
+			wilog("[DEBUG] Texture names in loaded scene:");
+			for (size_t i = 0; i < materials.GetCount(); ++i)
+			{
+				const MaterialComponent& material = materials[i];
+				Entity entity = materials.GetEntity(i);
+				const NameComponent* name = names.GetComponent(entity);
+				for (int slot = 0; slot < MaterialComponent::TEXTURESLOT_COUNT; ++slot)
+				{
+					const auto& texture = material.textures[slot];
+					if (!texture.name.empty())
+					{
+						wilog("  Material[%s] slot[%d]: %s", 
+							name ? name->name.c_str() : "unnamed", 
+							slot, 
+							texture.name.c_str());
+					}
+				}
+			}
+		}
+#endif // _DEBUG
 	}
 
 	void Scene::DDGI::Serialize(wi::Archive& archive)

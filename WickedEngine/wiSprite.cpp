@@ -227,12 +227,12 @@ namespace wi
 				wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
 					if (!textureName.empty())
 					{
-						textureName = dir + textureName;
+						wi::helper::MakePathAbsolute(dir, textureName);
 						textureResource = wi::resourcemanager::Load(textureName);
 					}
 					if (!maskName.empty())
 					{
-						maskName = dir + maskName;
+						wi::helper::MakePathAbsolute(dir, maskName);
 						maskResource = wi::resourcemanager::Load(maskName);
 					}
 				});

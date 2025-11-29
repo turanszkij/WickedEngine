@@ -23,13 +23,13 @@ namespace wi::helper
 		seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 	}
 
-	constexpr size_t string_hash(const char* input) 
+	constexpr size_t string_hash(const char* input)
 	{
 		// https://stackoverflow.com/questions/2111667/compile-time-string-hashing
 		size_t hash = sizeof(size_t) == 8 ? 0xcbf29ce484222325 : 0x811c9dc5;
 		const size_t prime = sizeof(size_t) == 8 ? 0x00000100000001b3 : 0x01000193;
 
-		while (*input) 
+		while (*input)
 		{
 			hash ^= static_cast<size_t>(*input);
 			hash *= prime;
@@ -110,7 +110,15 @@ namespace wi::helper
 
 	std::string GetPathRelative(const std::string& rootdir, const std::string& path);
 
+	// Strips embedded absolute paths from a path
+	void StripDuplicatedAbsolutePaths(std::string& path);
+
+	// Strips duplicated rootdir prefix from a path
+	void StripDuplicatedRootdirPrefix(const std::string& rootdir, std::string& path);
+
 	void MakePathRelative(const std::string& rootdir, std::string& path);
+
+	void MakePathAbsolute(const std::string& rootdir, std::string& path);
 
 	void MakePathAbsolute(std::string& path);
 
