@@ -219,7 +219,7 @@ namespace wi::backlog
 			}
 		}
 
-		void SetAutoFlushInterval(const uint32_t ms)
+		void SetAutoFlushInterval(uint32_t ms)
 		{
 			autoFlushInterval = ms;
 		}
@@ -291,11 +291,11 @@ namespace wi::backlog
 		enabled = !enabled;
 		was_ever_enabled = true;
 	}
-	void Scroll(const float direction)
+	void Scroll(float direction)
 	{
 		scroll += direction;
 	}
-	void Update(const wi::Canvas& canvas, const float dt)
+	void Update(const wi::Canvas& canvas, float dt)
 	{
 		if (!locked)
 		{
@@ -416,8 +416,8 @@ namespace wi::backlog
 	}
 	void Draw(
 		const wi::Canvas& canvas,
-		const CommandList cmd,
-		const ColorSpace colorspace
+		CommandList cmd,
+		ColorSpace colorspace
 	)
 	{
 		if (!was_ever_enabled || pos <= -canvas.GetLogicalHeight())
@@ -490,8 +490,8 @@ namespace wi::backlog
 
 	void DrawOutputText(
 		const wi::Canvas& canvas,
-		const CommandList cmd,
-		const ColorSpace colorspace
+		CommandList cmd,
+		ColorSpace colorspace
 	)
 	{
 		wi::font::SetCanvas(canvas); // always set here as it can be called from outside...
@@ -557,7 +557,7 @@ namespace wi::backlog
 		internal_state.entries.clear();
 		scroll = 0;
 	}
-	void post(const char* input, const LogLevel level)
+	void post(const char* input, LogLevel level)
 	{
 		if (logLevel > level)
 		{
@@ -628,7 +628,7 @@ namespace wi::backlog
 		}
 	}
 
-	void post(const std::string& input, const LogLevel level)
+	void post(const std::string& input, LogLevel level)
 	{
 		post(input.c_str(), level);
 	}
@@ -660,23 +660,23 @@ namespace wi::backlog
 		}
 	}
 
-	void setBackground(const Texture* texture)
+	void setBackground(Texture* texture)
 	{
 		backgroundTex = *texture;
 	}
-	void setBackgroundColor(const wi::Color color)
+	void setBackgroundColor(wi::Color color)
 	{
 		backgroundColor = color;
 	}
-	void setFontSize(const int value)
+	void setFontSize(int value)
 	{
 		font_params.size = value;
 	}
-	void setFontRowspacing(const float value)
+	void setFontRowspacing(float value)
 	{
 		font_params.spacingY = value;
 	}
-	void setFontColor(const wi::Color color)
+	void setFontColor(wi::Color color)
 	{
 		font_params.color = color;
 	}
@@ -702,7 +702,7 @@ namespace wi::backlog
 		blockLuaExec = false;
 	}
 
-	void SetLogLevel(const LogLevel newLevel)
+	void SetLogLevel(LogLevel newLevel)
 	{
 		logLevel = newLevel;
 	}
