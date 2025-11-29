@@ -1238,23 +1238,66 @@ namespace wi::physics
 				return;
 			}
 
+			CollisionGroup& group1 = body1->GetCollisionGroup();
+			CollisionGroup& group2 = body2->GetCollisionGroup();
+
 			if (physicscomponent.IsDisableSelfCollision())
 			{
-				uint32_t groupID = collisionGroupID.fetch_add(1);
-				body1->GetCollisionGroup().SetGroupID(groupID);
-				body1->GetCollisionGroup().SetSubGroupID(0);
-				body2->GetCollisionGroup().SetGroupID(groupID);
-				body2->GetCollisionGroup().SetSubGroupID(1);
+				// The many cheks here ensure that if either body was already part of a group, then it will be handled (chain links with more than 2 parts)
+				if (group1.GetGroupID() == CollisionGroup::cInvalidGroup && group2.GetGroupID() == CollisionGroup::cInvalidGroup)
+				{
+					uint32_t groupID = collisionGroupID.fetch_add(1);
+					group1.SetGroupID(groupID);
+					group2.SetGroupID(groupID);
+				}
+				else if(group1.GetGroupID() == CollisionGroup::cInvalidGroup)
+				{
+					group1.SetGroupID(group2.GetGroupID());
+				}
+				else if (group2.GetGroupID() == CollisionGroup::cInvalidGroup)
+				{
+					group2.SetGroupID(group1.GetGroupID());
+				}
 
-				Ref<GroupFilterTable> group_filter = new GroupFilterTable(2);
-				group_filter->DisableCollision(0, 1);
-				body1->GetCollisionGroup().SetGroupFilter(group_filter);
-				body2->GetCollisionGroup().SetGroupFilter(group_filter);
+				if (group1.GetSubGroupID() == CollisionGroup::cInvalidSubGroup && group2.GetSubGroupID() == CollisionGroup::cInvalidSubGroup)
+				{
+					group1.SetSubGroupID(0);
+					group2.SetSubGroupID(1);
+				}
+				else if (group1.GetSubGroupID() == CollisionGroup::cInvalidSubGroup)
+				{
+					group1.SetSubGroupID(group2.GetSubGroupID() + 1);
+				}
+				else if (group2.GetSubGroupID() == CollisionGroup::cInvalidSubGroup)
+				{
+					group2.SetSubGroupID(group1.GetSubGroupID() + 1);
+				}
+
+				if (group1.GetGroupFilter() == nullptr && group2.GetGroupFilter() == nullptr)
+				{
+					Ref<GroupFilterTable> group_filter = new GroupFilterTable(32); // 32 subgroups supported at max for now
+					group_filter->DisableCollision(group1.GetSubGroupID(), group2.GetSubGroupID());
+					group1.SetGroupFilter(group_filter);
+					group2.SetGroupFilter(group_filter);
+				}
+				else if (group1.GetGroupFilter() == nullptr)
+				{
+					GroupFilterTable* table = (GroupFilterTable*)group2.GetGroupFilter();
+					group1.SetGroupFilter(table);
+					table->DisableCollision(group1.GetSubGroupID(), group2.GetSubGroupID());
+				}
+				else if (group2.GetGroupFilter() == nullptr)
+				{
+					GroupFilterTable* table = (GroupFilterTable*)group1.GetGroupFilter();
+					group2.SetGroupFilter(table);
+					table->DisableCollision(group1.GetSubGroupID(), group2.GetSubGroupID());
+				}
+
 			}
 			else
 			{
-				body1->GetCollisionGroup().SetGroupFilter(nullptr);
-				body2->GetCollisionGroup().SetGroupFilter(nullptr);
+				group1.SetGroupFilter(nullptr);
+				group2.SetGroupFilter(nullptr);
 			}
 
 			physicsobject.bind_distance = (body1->GetCenterOfMassPosition() - body2->GetCenterOfMassPosition()).Length();
