@@ -130,7 +130,7 @@ namespace wi::backlog
 					break;
 
 				// Process all queued entries
-				std::deque<std::string> localQueue;
+				static std::deque<std::string> localQueue;
 				std::swap(localQueue, writeQueue);
 				lock.unlock();
 
@@ -138,6 +138,7 @@ namespace wi::backlog
 				queueEmptyCondition.notify_all();
 
 				WriteEntries(localQueue);
+				localQueue.clear();
 
 				// Check for auto-flush interval
 				auto now = std::chrono::steady_clock::now();
@@ -173,11 +174,12 @@ namespace wi::backlog
 		void FlushQueue()
 		{
 			std::unique_lock lock(queueMutex);
-			std::deque<std::string> localQueue;
+			static thread_local std::deque<std::string> localQueue;
 			std::swap(localQueue, writeQueue);
 			lock.unlock();
 
 			WriteEntries(localQueue);
+			localQueue.clear();
 
 			if (logFileStream.is_open())
 			{
@@ -281,7 +283,7 @@ namespace wi::backlog
 		asyncWriter.FlushSync();
 	}
 
-	void SetAutoFlushInterval(const uint32_t milliseconds)
+	void SetAutoFlushInterval(uint32_t milliseconds)
 	{
 		asyncWriter.SetAutoFlushInterval(milliseconds);
 	}
