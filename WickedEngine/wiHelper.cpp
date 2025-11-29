@@ -1247,7 +1247,7 @@ namespace wi::helper
 			return;
 		}
 
-		// Now strip rootdir prefix if present (handles case where path starts with rootdir)
+		// Strip rootdir prefix if present (handles case where path starts with rootdir)
 		std::string pathLower = path;
 		std::string rootLower = rootdir;
 		std::transform(pathLower.begin(), pathLower.end(), pathLower.begin(), [](const unsigned char c) { return std::tolower(c); });
