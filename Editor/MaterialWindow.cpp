@@ -1254,6 +1254,7 @@ void MaterialWindow::ResizeLayout()
 		{
 			windowTitle += " (Entity: " + name->name + ")";
 		}
+		windowTitle += " [Texture slot: " + textureSlotComboBox.GetItemText(textureSlotComboBox.GetSelected()) + "]";
 		texturePickerWindow.moveDragger.SetText(windowTitle);
 
 		if (!texturePickerButtons.empty())
