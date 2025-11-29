@@ -10,6 +10,7 @@
 #include "wiPlatform.h"
 #include "wiHelper.h"
 #include "wiGUI.h"
+#include "wiTimer.h"
 
 #include <mutex>
 #include <deque>
@@ -22,7 +23,6 @@
 #include <chrono>
 
 using namespace wi::graphics;
-using namespace std::chrono_literals;
 
 namespace wi::backlog
 {
@@ -60,7 +60,7 @@ namespace wi::backlog
 		std::atomic<bool> running{ false };
 		std::atomic<bool> initialized{ false };
 		std::atomic<uint32_t> autoFlushInterval{ 1000 };
-		std::chrono::steady_clock::time_point lastFlushTime;
+		wi::Timer lastFlushTimer;
 		std::ofstream logFileStream;
 		std::string currentLogFilePath;
 		std::mutex flushMutex; // Synchronous flush requests
@@ -74,7 +74,7 @@ namespace wi::backlog
 
 			currentLogFilePath = filepath;
 			running = true;
-			lastFlushTime = std::chrono::steady_clock::now();
+			lastFlushTimer.record();
 
 			logFileStream.open(filepath, std::ios::binary | std::ios::trunc);
 			if (!logFileStream.is_open())
@@ -141,19 +141,14 @@ namespace wi::backlog
 				localQueue.clear();
 
 				// Check for auto-flush interval
-				auto now = std::chrono::steady_clock::now();
 				const auto interval = autoFlushInterval.load();
-				if (interval > 0)
+				if (interval > 0 && lastFlushTimer.elapsed_milliseconds() >= interval)
 				{
-					const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastFlushTime).count();
-					if (elapsed >= interval)
+					if (logFileStream.is_open())
 					{
-						if (logFileStream.is_open())
-						{
-							logFileStream.flush();
-						}
-						lastFlushTime = now;
+						logFileStream.flush();
 					}
+					lastFlushTimer.record();
 				}
 			}
 		}
@@ -185,7 +180,7 @@ namespace wi::backlog
 			{
 				logFileStream.flush();
 			}
-			lastFlushTime = std::chrono::steady_clock::now();
+			lastFlushTimer.record();
 		}
 
 		void Enqueue(const std::string& text)
