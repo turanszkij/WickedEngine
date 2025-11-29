@@ -6,6 +6,10 @@
 
 #include <string>
 
+#ifdef PLATFORM_WINDOWS_DESKTOP
+#include <shellapi.h>
+#endif
+
 namespace wi::lua::backlog
 {
 	int backlog_clear(lua_State* L)
@@ -130,11 +134,10 @@ namespace wi::lua::backlog
 	int backlog_open(lua_State* L)
 	{
 		wi::backlog::Flush();
-		std::string logfile = wi::backlog::GetLogFile();
+		const std::string logfile = wi::backlog::GetLogFile();
 #ifdef PLATFORM_WINDOWS_DESKTOP
-		const std::string op = "start \"\" \"" + logfile + "\"";
-		const int status = system(op.c_str());
-		if (status == 0)
+		HINSTANCE result = ShellExecuteA(NULL, "open", logfile.c_str(), NULL, NULL, SW_SHOWNORMAL);
+		if ((INT_PTR)result > 32)
 		{
 			wi::backlog::post("Opening log file: " + logfile);
 		}
