@@ -30,7 +30,7 @@ typedef void* HMODULE;
 #endif // _WIN32
 
 #ifdef SDL2
-#include <SDL2/SDL.h>
+#include <SDL.h>
 #include <SDL_vulkan.h>
 #include "sdl2.h"
 #endif
@@ -38,27 +38,26 @@ typedef void* HMODULE;
 
 namespace wi::platform
 {
-#ifdef _WIN32
-	using window_type = HWND;
-	using error_type = HRESULT;
-#elif defined(SDL2)
+#ifdef SDL2
 	using window_type = SDL_Window*;
 	using error_type = int;
+#elif defined(_WIN32)
+	using window_type = HWND;
+	using error_type = HRESULT;
 #else
 	using window_type = void*;
 	using error_type = int;
-#endif // _WIN32
+#endif // SDL2
 
 	inline void Exit()
 	{
-#ifdef _WIN32
-		PostQuitMessage(0);
-#endif // _WIN32
 #ifdef SDL2
 		SDL_Event quit_event;
 		quit_event.type = SDL_QUIT;
 		SDL_PushEvent(&quit_event);
-#endif
+#elif defined(_WIN32)
+		PostQuitMessage(0);
+#endif // SDL2
 	}
 
 	struct WindowProperties
@@ -69,7 +68,7 @@ namespace wi::platform
 	};
 	inline void GetWindowProperties(window_type window, WindowProperties* dest)
 	{
-#ifdef PLATFORM_WINDOWS_DESKTOP
+#if defined(PLATFORM_WINDOWS_DESKTOP) && !defined(SDL2)
 		dest->dpi = (float)GetDpiForWindow(window);
 #endif // WINDOWS_DESKTOP
 
@@ -77,18 +76,17 @@ namespace wi::platform
 		dest->dpi = 96.f;
 #endif // PLATFORM_XBOX
 
-#if defined(PLATFORM_WINDOWS_DESKTOP) || defined(PLATFORM_XBOX)
+#ifdef SDL2
+		int window_width, window_height;
+		SDL_GetWindowSize(window, &window_width, &window_height);
+		SDL_Vulkan_GetDrawableSize(window, &dest->width, &dest->height);
+		dest->dpi = ((float)dest->width / (float)window_width) * 96.f;
+#elif defined(PLATFORM_WINDOWS_DESKTOP) || defined(PLATFORM_XBOX)
 		RECT rect;
 		GetClientRect(window, &rect);
 		dest->width = int(rect.right - rect.left);
 		dest->height = int(rect.bottom - rect.top);
 #endif // PLATFORM_WINDOWS_DESKTOP || PLATFORM_XBOX
 
-#ifdef PLATFORM_LINUX
-		int window_width, window_height;
-		SDL_GetWindowSize(window, &window_width, &window_height);
-		SDL_Vulkan_GetDrawableSize(window, &dest->width, &dest->height);
-		dest->dpi = ((float)dest->width / (float)window_width) * 96.f;
-#endif // PLATFORM_LINUX
 	}
 }

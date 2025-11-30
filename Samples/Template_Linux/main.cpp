@@ -1,5 +1,5 @@
 #include "WickedEngine.h"
-#include <SDL2/SDL.h>
+#include <SDL.h>
 
 wi::Application application;
 

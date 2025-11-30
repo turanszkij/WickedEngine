@@ -835,8 +835,9 @@ namespace wi
 
 	void Application::SetFullScreen(bool fullscreen)
 	{
-#if defined(PLATFORM_WINDOWS_DESKTOP)
-
+#ifdef SDL2
+		SDL_SetWindowFullscreen(window, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+#elif defined(PLATFORM_WINDOWS_DESKTOP)
 		// Based on: https://devblogs.microsoft.com/oldnewthing/20100412-00/?p=14353
 		static WINDOWPLACEMENT wp = {};
 		DWORD dwStyle = GetWindowLong(window, GWL_STYLE);
@@ -863,9 +864,6 @@ namespace wi
 				SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
 				SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
 		}
-
-#elif defined(PLATFORM_LINUX)
-		SDL_SetWindowFullscreen(window, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
 #endif // PLATFORM_WINDOWS_DESKTOP
 	}
 

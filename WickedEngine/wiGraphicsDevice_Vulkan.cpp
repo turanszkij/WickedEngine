@@ -22,7 +22,7 @@
 #include "Utility/vk_mem_alloc.h"
 
 #ifdef SDL2
-#include <SDL2/SDL_vulkan.h>
+#include <SDL_vulkan.h>
 #include "sdl2.h"
 #endif
 
@@ -3765,19 +3765,19 @@ using namespace vulkan_internal;
 		// Surface creation:
 		if(internal_state->surface == VK_NULL_HANDLE)
 		{
-#ifdef _WIN32
+#ifdef SDL2
+			if (!SDL_Vulkan_CreateSurface(window, instance, &internal_state->surface))
+			{
+				wilog_messagebox("Error creating a vulkan surface with SDL_Vulkan_CreateSurface!");
+				wi::platform::Exit();
+			}
+#elif defined(_WIN32)
 			VkWin32SurfaceCreateInfoKHR createInfo = {};
 			createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
 			createInfo.hwnd = window;
 			createInfo.hinstance = GetModuleHandle(nullptr);
 
 			vulkan_check(vkCreateWin32SurfaceKHR(instance, &createInfo, nullptr, &internal_state->surface));
-#elif defined(SDL2)
-			if (!SDL_Vulkan_CreateSurface(window, instance, &internal_state->surface))
-			{
-				wilog_messagebox("Error creating a vulkan surface with SDL_Vulkan_CreateSurface!");
-				wi::platform::Exit();
-			}
 #else
 #error WICKEDENGINE VULKAN DEVICE ERROR: PLATFORM NOT SUPPORTED
 #endif // _WIN32

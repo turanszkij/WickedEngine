@@ -1,7 +1,7 @@
 #include "wiSDLInput.h"
 
 #ifdef SDL2
-#include <SDL2/SDL.h>
+#include <SDL.h>
 
 #include "wiUnorderedMap.h"
 #include "wiBacklog.h"

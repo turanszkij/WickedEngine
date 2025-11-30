@@ -4,7 +4,7 @@
 #include "wiVector.h"
 
 #ifdef SDL2
-#include <SDL2/SDL.h>
+#include <SDL.h>
 #endif
 
 namespace wi::input::sdlinput
