@@ -2,8 +2,13 @@
 #include "wiBacklog.h"
 #include "wiLua.h"
 #include "wiMath_BindLua.h"
+#include "wiHelper.h"
 
 #include <string>
+
+#ifdef PLATFORM_WINDOWS_DESKTOP
+#include <shellapi.h>
+#endif
 
 namespace wi::lua::backlog
 {
@@ -126,6 +131,52 @@ namespace wi::lua::backlog
 		wi::backlog::UnblockLuaExecution();
 		return 0;
 	}
+	int backlog_open(lua_State* L)
+	{
+		wi::backlog::Flush();
+		const std::string logfile = wi::backlog::GetLogFile();
+#ifdef PLATFORM_WINDOWS_DESKTOP
+		HINSTANCE result = ShellExecuteA(NULL, "open", logfile.c_str(), NULL, NULL, SW_SHOWNORMAL);
+		if ((INT_PTR)result > 32)
+		{
+			wi::backlog::post("Opening log file: " + logfile);
+		}
+		else
+		{
+			wi::backlog::post("Failed to open log file: " + logfile, wi::backlog::LogLevel::Error);
+		}
+#elif defined(PLATFORM_LINUX)
+		std::string op = "xdg-open \"" + logfile + "\"";
+		int status = system(op.c_str());
+		if (status == 0)
+		{
+			wi::backlog::post("Opening log file: " + logfile);
+		}
+		else
+		{
+			wi::backlog::post("Failed to open log file: " + logfile, wi::backlog::LogLevel::Error);
+		}
+#else
+		wi::backlog::post("backlog_open(): not implemented for this operating system!", wi::backlog::LogLevel::Warning);
+#endif
+		return 0;
+	}
+	int backlog_flush(lua_State* L)
+	{
+		wi::backlog::Flush();
+		return 0;
+	}
+	int backlog_setautoflushinterval(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			wi::backlog::SetAutoFlushInterval((uint32_t)wi::lua::SGetInt(L, 1));
+		}
+		else
+			wi::lua::SError(L, "backlog_setautoflushinterval(int milliseconds) not enough arguments!");
+		return 0;
+	}
 
 	void Bind()
 	{
@@ -143,6 +194,9 @@ namespace wi::lua::backlog
 			wi::lua::RegisterFunc("backlog_unlock", backlog_unlock);
 			wi::lua::RegisterFunc("backlog_blocklua", backlog_blocklua);
 			wi::lua::RegisterFunc("backlog_unblocklua", backlog_unblocklua);
+			wi::lua::RegisterFunc("backlog_open", backlog_open);
+			wi::lua::RegisterFunc("backlog_flush", backlog_flush);
+			wi::lua::RegisterFunc("backlog_setautoflushinterval", backlog_setautoflushinterval);
 		}
 	}
 }

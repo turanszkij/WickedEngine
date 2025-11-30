@@ -32,7 +32,7 @@ namespace wi::backlog
 		Error,
 	};
 	void Toggle();
-	void Scroll(int direction);
+	void Scroll(float direction);
 	void Update(const wi::Canvas& canvas, float dt = 1.0f / 60.0f);
 	void Draw(
 		const wi::Canvas& canvas,
@@ -72,6 +72,13 @@ namespace wi::backlog
 	LogLevel GetUnseenLogLevelMax();
 
 	void SetLogFile(const std::string& path);
+	void GetLogFile(std::string& path);
+	std::string GetLogFile();
+
+	// Flush pending log writes to file
+	void Flush();
+	// Set the interval for automatic periodic flushes (in milliseconds, 0 = disabled, default = 1000ms)
+	void SetAutoFlushInterval(uint32_t milliseconds);
 
 	struct LogEntry
 	{

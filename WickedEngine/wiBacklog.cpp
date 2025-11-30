@@ -10,21 +10,26 @@
 #include "wiPlatform.h"
 #include "wiHelper.h"
 #include "wiGUI.h"
+#include "wiTimer.h"
 
 #include <mutex>
 #include <deque>
 #include <limits>
 #include <iostream>
+#include <thread>
+#include <condition_variable>
+#include <atomic>
+#include <fstream>
+#include <chrono>
 
 using namespace wi::graphics;
-using namespace std::chrono_literals;
 
 namespace wi::backlog
 {
 	bool enabled = false;
 	bool was_ever_enabled = enabled;
 	const float speed = 4000.0f;
-	const size_t deletefromline = 500;
+	const size_t deleteFromLine = 500; // Only limits in-memory display buffer, not file
 	float pos = 5;
 	float scroll = 0;
 	int historyPos = 0;
@@ -45,11 +50,212 @@ namespace wi::backlog
 	std::mutex historyLock;
 	std::string logfile_path = "";
 
+	struct AsyncWriter
+	{
+		std::thread writerThread;
+		std::mutex queueMutex;
+		std::condition_variable queueEntriesCondition;
+		std::condition_variable queueEmptyCondition;
+		std::deque<std::string> writeQueue;
+		std::atomic<bool> running{ false };
+		std::atomic<bool> initialized{ false };
+		std::atomic<uint32_t> autoFlushInterval{ 1000 };
+		wi::Timer lastFlushTimer;
+		std::ofstream logFileStream;
+		std::string currentLogFilePath;
+		std::mutex flushMutex; // Synchronous flush requests
+
+		void Start(const std::string& filepath)
+		{
+			if (initialized.exchange(true))
+			{
+				return;
+			}
+
+			currentLogFilePath = filepath;
+			running = true;
+			lastFlushTimer.record();
+
+			logFileStream.open(filepath, std::ios::binary | std::ios::trunc);
+			if (!logFileStream.is_open())
+			{
+				wi::helper::DebugOut("Failed to open log file: " + filepath + "\n", wi::helper::DebugLevel::Error);
+			}
+
+			writerThread = std::thread([this]() {
+				WriterLoop();
+			});
+		}
+
+		void Stop()
+		{
+			if (!initialized.load())
+			{
+				return;
+			}
+
+			running = false;
+			queueEntriesCondition.notify_all();
+
+			if (writerThread.joinable())
+			{
+				writerThread.join();
+			}
+
+			// Final flush of any remaining entries
+			FlushQueue();
+
+			if (logFileStream.is_open())
+			{
+				logFileStream.flush();
+				logFileStream.close();
+			}
+
+			initialized = false;
+		}
+
+		void WriterLoop()
+		{
+			while (running.load())
+			{
+				std::unique_lock lock(queueMutex);
+
+				// Wait for new entries or timeout for periodic flush
+				auto timeout = std::chrono::milliseconds(100);
+				queueEntriesCondition.wait_for(lock, timeout, [this]() {
+					return !writeQueue.empty() || !running.load();
+				});
+
+				if (!running.load() && writeQueue.empty())
+					break;
+
+				// Process all queued entries
+				static std::deque<std::string> localQueue;
+				std::swap(localQueue, writeQueue);
+				lock.unlock();
+
+				// Notify waiters that queue is now empty after swap
+				queueEmptyCondition.notify_all();
+
+				WriteEntries(localQueue);
+				localQueue.clear();
+
+				// Check for auto-flush interval
+				const auto interval = autoFlushInterval.load();
+				if (interval > 0 && lastFlushTimer.elapsed_milliseconds() >= interval)
+				{
+					if (logFileStream.is_open())
+					{
+						logFileStream.flush();
+					}
+					lastFlushTimer.record();
+				}
+			}
+		}
+
+		void WriteEntries(const std::deque<std::string>& entries)
+		{
+			if (!logFileStream.is_open())
+			{
+				return;
+			}
+
+			for (const auto& entry : entries)
+			{
+				logFileStream.write(entry.c_str(), entry.length());
+			}
+		}
+
+		void FlushQueue()
+		{
+			std::unique_lock lock(queueMutex);
+			static thread_local std::deque<std::string> localQueue;
+			std::swap(localQueue, writeQueue);
+			lock.unlock();
+
+			WriteEntries(localQueue);
+			localQueue.clear();
+
+			if (logFileStream.is_open())
+			{
+				logFileStream.flush();
+			}
+			lastFlushTimer.record();
+		}
+
+		void Enqueue(const std::string& text)
+		{
+			{
+				std::scoped_lock lock(queueMutex);
+				writeQueue.push_back(text);
+			}
+			queueEntriesCondition.notify_one();
+		}
+
+		void FlushSync()
+		{
+			std::scoped_lock lock(flushMutex);
+			if (!initialized.load())
+			{
+				return;
+			}
+
+			// Signal and wait for queue to be processed
+			std::unique_lock queueLock(queueMutex);
+			if (!writeQueue.empty())
+			{
+				queueEntriesCondition.notify_one();
+				queueEmptyCondition.wait(queueLock, [this] { return writeQueue.empty(); });
+			}
+			queueLock.unlock();
+
+			// Force file flush
+			if (logFileStream.is_open())
+			{
+				logFileStream.flush();
+			}
+		}
+
+		void SetAutoFlushInterval(uint32_t ms)
+		{
+			autoFlushInterval = ms;
+		}
+
+		void UpdateLogFilePath(const std::string& newPath)
+		{
+			std::scoped_lock lock(flushMutex);
+
+			// Flush and close current file
+			FlushQueue();
+			if (logFileStream.is_open())
+			{
+				logFileStream.close();
+			}
+
+			// Open new file
+			currentLogFilePath = newPath;
+			logFileStream.open(newPath, std::ios::binary | std::ios::trunc);
+		}
+	};
+
+	static AsyncWriter asyncWriter;
+
 	struct InternalState
 	{
 		// These must have common lifetime and destruction order, so keep them together in a struct:
 		std::deque<LogEntry> entries;
 		std::mutex entriesLock;
+
+		InternalState() = default;
+		~InternalState()
+		{
+			asyncWriter.Stop();
+		}
+
+		InternalState(const InternalState&) = delete;
+		InternalState& operator=(const InternalState&) = delete;
+		InternalState(InternalState&&) = delete;
+		InternalState& operator=(InternalState&&) = delete;
 
 		std::string getText()
 		{
@@ -58,47 +264,33 @@ namespace wi::backlog
 			_forEachLogEntry_unsafe([&](auto&& entry) {retval += entry.text;});
 			return retval;
 		}
-		inline void _forEachLogEntry_unsafe(const std::function<void(const LogEntry&)>& cb)
+		void _forEachLogEntry_unsafe(const std::function<void(const LogEntry&)>& cb) const
 		{
 			for (auto& entry : entries)
 			{
 				cb(entry);
 			}
 		}
-		void writeLogfile()
-		{
-			std::string filename;
-
-			if (logfile_path.empty() || !wi::helper::DirectoryExists(wi::helper::GetDirectoryFromPath(logfile_path)))
-			{
-				filename = wi::helper::GetCurrentPath() + "/log.txt";
-			}
-			else
-			{
-				filename = logfile_path;
-			}
-			std::string text = getText();
-			static std::mutex writelocker;
-			std::scoped_lock lck(writelocker); // to not write the logfile from multiple threads
-			wi::helper::FileWrite(filename, (const uint8_t*)text.c_str(), text.length());
-		}
-
-		~InternalState()
-		{
-			// The object will automatically write out the backlog to the temp folder when it's destroyed
-			//	Should happen on application exit
-			writeLogfile();
-		}
 	} internal_state;
+
+	void Flush()
+	{
+		asyncWriter.FlushSync();
+	}
+
+	void SetAutoFlushInterval(uint32_t milliseconds)
+	{
+		asyncWriter.SetAutoFlushInterval(milliseconds);
+	}
 
 	void Toggle()
 	{
 		enabled = !enabled;
 		was_ever_enabled = true;
 	}
-	void Scroll(float dir)
+	void Scroll(float direction)
 	{
-		scroll += dir;
+		scroll += direction;
 	}
 	void Update(const wi::Canvas& canvas, float dt)
 	{
@@ -145,7 +337,7 @@ namespace wi::backlog
 						{
 							std::scoped_lock lock(historyLock);
 							history.push_back(entry);
-							if (history.size() > deletefromline)
+							if (history.size() > deleteFromLine)
 							{
 								history.pop_front();
 							}
@@ -225,10 +417,10 @@ namespace wi::backlog
 		ColorSpace colorspace
 	)
 	{
-		if (!was_ever_enabled)
+		if (!was_ever_enabled || pos <= -canvas.GetLogicalHeight())
+		{
 			return;
-		if (pos <= -canvas.GetLogicalHeight())
-			return;
+		}
 
 		GraphicsDevice* device = GetDevice();
 		device->EventBegin("Backlog", cmd);
@@ -304,8 +496,8 @@ namespace wi::backlog
 		params.cursor = {};
 		if (refitscroll)
 		{
-			float textheight = wi::font::TextHeight(getText(), params);
-			float limit = canvas.GetLogicalHeight() - 50;
+			const float textheight = wi::font::TextHeight(getText(), params);
+			const float limit = canvas.GetLogicalHeight() - 50;
 			if (scroll + textheight > limit)
 			{
 				scroll = limit - textheight;
@@ -369,6 +561,12 @@ namespace wi::backlog
 			return;
 		}
 
+		// Initialize async writer on first log
+		if (!asyncWriter.initialized.load())
+		{
+			asyncWriter.Start(GetLogFile());
+		}
+
 		std::string str;
 		switch (level)
 		{
@@ -389,13 +587,17 @@ namespace wi::backlog
 		entry.text = str;
 		entry.level = level;
 
+		// Add to in-memory display buffer
 		internal_state.entriesLock.lock();
 		internal_state.entries.push_back(entry);
-		if (internal_state.entries.size() > deletefromline)
+		if (internal_state.entries.size() > deleteFromLine)
 		{
 			internal_state.entries.pop_front();
 		}
 		internal_state.entriesLock.unlock();
+
+		// Enqueue for async file writing
+		asyncWriter.Enqueue(str);
 
 		refitscroll = true;
 
@@ -415,9 +617,11 @@ namespace wi::backlog
 
 		unseen = std::max(unseen, level);
 
+		// Force an immediate flush on errors to prevent potential data loss
+		//	in case the application is about to crash
 		if (level >= LogLevel::Error)
 		{
-			internal_state.writeLogfile();  // will lock mutex
+			asyncWriter.FlushSync();
 		}
 	}
 
@@ -508,5 +712,26 @@ namespace wi::backlog
 	void SetLogFile(const std::string& path)
 	{
 		logfile_path = path;
+		if (asyncWriter.initialized.load())
+		{
+			asyncWriter.UpdateLogFilePath(GetLogFile());
+		}
+	}
+
+	void GetLogFile(std::string& path)
+	{
+		if (!logfile_path.empty())
+		{
+			path = logfile_path;
+		}
+	}
+
+	std::string GetLogFile()
+	{
+		if (logfile_path.empty() || !wi::helper::DirectoryExists(wi::helper::GetDirectoryFromPath(logfile_path)))
+		{
+			return wi::helper::GetCurrentPath() + "/log.txt";
+		}
+		return logfile_path;
 	}
 }
