@@ -1210,6 +1210,10 @@ namespace wi::helper
 			{
 				StringConvert(relative.generic_wstring(), path);
 			}
+			else
+			{
+				path = GetFileNameFromPath(path); // force it to be in relative format, if this happened then it could mean path is absolute but relative couldn't be resolved (drive letter change)
+			}
 		}
 
 	}

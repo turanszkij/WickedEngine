@@ -19,7 +19,7 @@ namespace wi
 	struct Resource
 	{
 		wi::allocator::shared_ptr<void> internal_state;
-		inline bool IsValid() const { return internal_state.get() != nullptr; }
+		constexpr bool IsValid() const { return internal_state.IsValid(); }
 
 		const wi::vector<uint8_t>& GetFileData() const;
 		const wi::graphics::Texture& GetTexture() const;

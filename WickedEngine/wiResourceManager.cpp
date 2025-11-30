@@ -1377,6 +1377,8 @@ namespace wi
 				if (Contains(resource.name))
 					continue;
 
+				resource_log("Resource read from archive: %s", resource.name.c_str());
+
 				// "Loading" the resource can happen asynchronously to serialization of file data, to improve performance
 				wi::jobsystem::Execute(ctx, [i, &temp_resources, &seri, &archive, file_offset](wi::jobsystem::JobArgs args) {
 					auto& tmp_resource = temp_resources[i];
@@ -1460,6 +1462,8 @@ namespace wi
 						archive << name;
 						archive << (uint32_t)resource->flags;
 						archive << resource->filedata;
+
+						resource_log("Resource writtenn to archive: %s", name.c_str());
 
 						if (!archive.GetSourceFileName().empty())
 						{

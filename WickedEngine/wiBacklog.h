@@ -15,6 +15,12 @@
 #define wilog(str,...) {wilog_level(str, wi::backlog::LogLevel::Default, ## __VA_ARGS__);}
 #define wilog_assert(cond,str,...) {if(!(cond)){wilog_error(str, ## __VA_ARGS__); assert(cond);}}
 
+#ifdef _DEBUG
+#define wilog_debug(str,...) {wilog_level(str, wi::backlog::LogLevel::Default, ## __VA_ARGS__);}
+#else
+#define wilog_debug(str,...)
+#endif // DEBUG
+
 namespace wi::backlog
 {
 	// Do not modify the order, as this is exposed to LUA scripts as int!
