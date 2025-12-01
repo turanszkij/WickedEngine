@@ -1015,8 +1015,7 @@ namespace vulkan_internal
 		VkSwapchainKHR swapChain = VK_NULL_HANDLE;
 		VkFormat swapChainImageFormat;
 		VkExtent2D swapChainExtent;
-		wi::vector<VkImage> swapChainImages;
-		wi::vector<VkImageView> swapChainImageViews;
+		wi::vector<wi::allocator::shared_ptr<Texture_Vulkan>> textures; // shared_ptr is used because they can be given out by GetBackBuffer()
 
 		Texture dummyTexture;
 
@@ -1038,9 +1037,8 @@ namespace vulkan_internal
 			allocationhandler->destroylocker.lock();
 			uint64_t framecount = allocationhandler->framecount;
 
-			for (size_t i = 0; i < swapChainImages.size(); ++i)
+			for (size_t i = 0; i < swapchainAcquireSemaphores.size(); ++i)
 			{
-				allocationhandler->destroyer_imageviews.push_back(std::make_pair(swapChainImageViews[i], framecount));
 				allocationhandler->destroyer_semaphores.push_back(std::make_pair(swapchainAcquireSemaphores[i], framecount));
 				allocationhandler->destroyer_semaphores.push_back(std::make_pair(swapchainReleaseSemaphores[i], framecount));
 			}
@@ -1210,7 +1208,7 @@ namespace vulkan_internal
 		createInfo.imageColorSpace = surfaceFormat.colorSpace;
 		createInfo.imageExtent = internal_state->swapChainExtent;
 		createInfo.imageArrayLayers = 1;
-		createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+		createInfo.imageUsage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 		createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 		createInfo.preTransform = swapchain_capabilities.currentTransform;
@@ -1244,17 +1242,18 @@ namespace vulkan_internal
 		}
 
 		vulkan_check(vkGetSwapchainImagesKHR(device, internal_state->swapChain, &imageCount, nullptr));
-		internal_state->swapChainImages.resize(imageCount);
-		vulkan_check(vkGetSwapchainImagesKHR(device, internal_state->swapChain, &imageCount, internal_state->swapChainImages.data()));
+		VkImage swapChainImages[32] = {};
+		assert(arraysize(swapChainImages) >= imageCount);
+		vulkan_check(vkGetSwapchainImagesKHR(device, internal_state->swapChain, &imageCount, swapChainImages));
 		internal_state->swapChainImageFormat = surfaceFormat.format;
 
 		// Create swap chain render targets:
-		internal_state->swapChainImageViews.resize(internal_state->swapChainImages.size());
-		for (size_t i = 0; i < internal_state->swapChainImages.size(); ++i)
+		internal_state->textures.resize(imageCount);
+		for (uint32_t i = 0; i < imageCount; ++i)
 		{
 			VkImageViewCreateInfo createInfo = {};
 			createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-			createInfo.image = internal_state->swapChainImages[i];
+			createInfo.image = swapChainImages[i];
 			createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
 			createInfo.format = internal_state->swapChainImageFormat;
 			createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -1267,15 +1266,22 @@ namespace vulkan_internal
 			createInfo.subresourceRange.baseArrayLayer = 0;
 			createInfo.subresourceRange.layerCount = 1;
 
-			if (internal_state->swapChainImageViews[i] != VK_NULL_HANDLE)
+			if (internal_state->textures[i].IsValid())
 			{
 				allocationhandler->destroylocker.lock();
-				allocationhandler->destroyer_imageviews.push_back(std::make_pair(internal_state->swapChainImageViews[i], allocationhandler->framecount));
+				internal_state->textures[i]->rtv = {};
+				internal_state->textures[i]->srv = {};
 				allocationhandler->destroylocker.unlock();
 			}
-			vulkan_check(vkCreateImageView(device, &createInfo, nullptr, &internal_state->swapChainImageViews[i]));
+			else
+			{
+				internal_state->textures[i] = wi::allocator::make_shared<Texture_Vulkan>();
+			}
+			internal_state->textures[i]->resource = swapChainImages[i];
+			internal_state->textures[i]->defaultLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			vulkan_check(vkCreateImageView(device, &createInfo, nullptr, &internal_state->textures[i]->rtv.image_view));
+			vulkan_check(vkCreateImageView(device, &createInfo, nullptr, &internal_state->textures[i]->srv.image_view));
 		}
-
 
 		VkSemaphoreCreateInfo semaphoreInfo = {};
 		semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -1299,7 +1305,7 @@ namespace vulkan_internal
 
 		if (internal_state->swapchainAcquireSemaphores.empty())
 		{
-			for (size_t i = 0; i < internal_state->swapChainImages.size(); ++i)
+			for (size_t i = 0; i < internal_state->textures.size(); ++i)
 			{
 				vulkan_check(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &internal_state->swapchainAcquireSemaphores.emplace_back()));
 			}
@@ -1307,7 +1313,7 @@ namespace vulkan_internal
 
 		if (internal_state->swapchainReleaseSemaphores.empty())
 		{
-			for (size_t i = 0; i < internal_state->swapChainImages.size(); ++i)
+			for (size_t i = 0; i < internal_state->textures.size(); ++i)
 			{
 				vulkan_check(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &internal_state->swapchainReleaseSemaphores.emplace_back()));
 			}
@@ -7534,8 +7540,7 @@ using namespace vulkan_internal;
 	{
 		auto swapchain_internal = to_internal(swapchain);
 
-		auto internal_state = wi::allocator::make_shared<Texture_Vulkan>();
-		internal_state->resource = swapchain_internal->swapChainImages[swapchain_internal->swapChainImageIndex];
+		auto internal_state = swapchain_internal->textures[swapchain_internal->swapChainImageIndex];
 
 		Texture result;
 		result.type = GPUResource::Type::TEXTURE;
@@ -7545,6 +7550,7 @@ using namespace vulkan_internal;
 		result.desc.height = swapchain_internal->swapChainExtent.height;
 		result.desc.format = swapchain->desc.format;
 		result.desc.layout = ResourceState::SWAPCHAIN;
+		result.desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::RENDER_TARGET;
 		return result;
 	}
 	ColorSpace GraphicsDevice_Vulkan::GetSwapChainColorSpace(const SwapChain* swapchain) const
@@ -7854,7 +7860,7 @@ using namespace vulkan_internal;
 
 		VkRenderingAttachmentInfo color_attachment = {};
 		color_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-		color_attachment.imageView = internal_state->swapChainImageViews[internal_state->swapChainImageIndex];
+		color_attachment.imageView = internal_state->textures[internal_state->swapChainImageIndex]->rtv.image_view;
 		color_attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 		color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -7868,7 +7874,7 @@ using namespace vulkan_internal;
 
 		VkImageMemoryBarrier2 barrier = {};
 		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
-		barrier.image = internal_state->swapChainImages[internal_state->swapChainImageIndex];
+		barrier.image = internal_state->textures[internal_state->swapChainImageIndex]->resource;
 		barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;

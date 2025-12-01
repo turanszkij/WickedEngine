@@ -1517,25 +1517,10 @@ namespace dx12_internal
 #else
 		ComPtr<IDXGISwapChain3> swapChain;
 #endif // PLATFORM_XBOX
-		wi::vector<ComPtr<ID3D12Resource>> backBuffers;
-		wi::vector<D3D12_CPU_DESCRIPTOR_HANDLE> backbufferRTV;
+		wi::vector<wi::allocator::shared_ptr<Texture_DX12>> textures; // shared_ptr is used because they can be given out by GetBackBuffer()
 
 		Texture dummyTexture;
 		ColorSpace colorSpace = ColorSpace::SRGB;
-
-		~SwapChain_DX12()
-		{
-			std::scoped_lock lck(allocationhandler->destroylocker);
-			uint64_t framecount = allocationhandler->framecount;
-			for (auto& x : backBuffers)
-			{
-				allocationhandler->destroyer_resources.push_back(std::make_pair(x, framecount));
-			}
-			for (auto& x : backbufferRTV)
-			{
-				allocationhandler->descriptors_rtv.free(x);
-			}
-		}
 
 		inline uint32_t GetBufferIndex() const
 		{
@@ -3067,17 +3052,28 @@ std::mutex queue_locker;
 		swapchain->desc = *desc;
 		HRESULT hr = E_FAIL;
 
-		if (!internal_state->backbufferRTV.empty())
+		if (!internal_state->textures.empty())
 		{
 			// Delete back buffer resources if they exist before resizing swap chain:
 			WaitForGPU();
-			internal_state->backBuffers.clear();
-			for (auto& x : internal_state->backbufferRTV)
+			for (auto& x : internal_state->textures)
 			{
-				allocationhandler->descriptors_rtv.free(x);
+				x->resource.Reset(); // forced immediate reset
 			}
-			internal_state->backbufferRTV.clear();
+			internal_state->textures.clear();
 		}
+
+		// We can create swapchain just with given supported format, thats why we specify format in RTV
+		// For example: BGRA8UNorm for SwapChain BGRA8UNormSrgb for RTV.
+		D3D12_RENDER_TARGET_VIEW_DESC rtv_desc = {};
+		rtv_desc.Format = _ConvertFormat(desc->format);
+		rtv_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+
+		D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
+		srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srv_desc.Format = rtv_desc.Format;
+		srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srv_desc.Texture2D.MipLevels = 1;
 
 #ifdef PLATFORM_XBOX
 
@@ -3087,17 +3083,13 @@ std::mutex queue_locker;
 
 		D3D12_RESOURCE_DESC resource_desc = {};
 		resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-		resource_desc.Format = _ConvertFormat(swapchain->desc.format);
+		resource_desc.Format = rtv_desc.Format;
 		resource_desc.Width = swapchain->desc.width;
 		resource_desc.Height = swapchain->desc.height;
 		resource_desc.DepthOrArraySize = 1;
 		resource_desc.MipLevels = 1;
 		resource_desc.SampleDesc.Count = 1;
 		resource_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-
-		D3D12_RENDER_TARGET_VIEW_DESC rtv_desc = {};
-		rtv_desc.Format = resource_desc.Format;
-		rtv_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 
 		D3D12_CLEAR_VALUE clear_value = {};
 		clear_value.Format = resource_desc.Format;
@@ -3106,23 +3098,23 @@ std::mutex queue_locker;
 		clear_value.Color[2] = swapchain->desc.clear_color[2];
 		clear_value.Color[3] = swapchain->desc.clear_color[3];
 
-		internal_state->backBuffers.resize(swapchain->desc.buffer_count);
-		internal_state->backbufferRTV.resize(swapchain->desc.buffer_count);
+		internal_state->textures.resize(swapchain->desc.buffer_count);
 		for (uint32_t i = 0; i < swapchain->desc.buffer_count; ++i)
 		{
+			internal_state->textures[i] = wi::allocator::make_shared<Texture_DX12>();
 			dx12_check(device->CreateCommittedResource(
 				&heap_properties,
 				D3D12_HEAP_FLAG_ALLOW_DISPLAY,
 				&resource_desc,
 				D3D12_RESOURCE_STATE_PRESENT,
 				&clear_value,
-				PPV_ARGS(internal_state->backBuffers[i])
+				PPV_ARGS(internal_state->textures[i]->resource)
 			));
 
-			dx12_check(internal_state->backBuffers[i]->SetName(L"BackBufferXBOX"));
+			dx12_check(internal_state->textures[i]->resource->SetName(L"BackBufferXBOX"));
 
-			internal_state->backbufferRTV[i] = allocationhandler->descriptors_rtv.allocate();
-			device->CreateRenderTargetView(internal_state->backBuffers[i].Get(), &rtv_desc, internal_state->backbufferRTV[i]);
+			internal_state->textures[i]->rtv.init(this, rtv_desc, internal_state->textures[i]->resource.Get());
+			internal_state->textures[i]->srv.init(this, srv_desc, internal_state->textures[i]->resource.Get());
 		}
 
 #else
@@ -3140,11 +3132,11 @@ std::mutex queue_locker;
 			DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
 			swapChainDesc.Width = desc->width;
 			swapChainDesc.Height = desc->height;
-			swapChainDesc.Format = _ConvertFormat(desc->format);
+			swapChainDesc.Format = rtv_desc.Format;
 			swapChainDesc.Stereo = false;
 			swapChainDesc.SampleDesc.Count = 1;
 			swapChainDesc.SampleDesc.Quality = 0;
-			swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+			swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT | DXGI_USAGE_SHADER_INPUT;
 			swapChainDesc.BufferCount = desc->buffer_count;
 			swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 			swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
@@ -3250,21 +3242,15 @@ std::mutex queue_locker;
 			}
 		}
 
-		internal_state->backBuffers.resize(desc->buffer_count);
-		internal_state->backbufferRTV.resize(desc->buffer_count);
-
-		// We can create swapchain just with given supported format, thats why we specify format in RTV
-		// For example: BGRA8UNorm for SwapChain BGRA8UNormSrgb for RTV.
-		D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
-		rtvDesc.Format = _ConvertFormat(desc->format);
-		rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+		internal_state->textures.resize(desc->buffer_count);
 
 		for (uint32_t i = 0; i < desc->buffer_count; ++i)
 		{
-			dx12_check(internal_state->swapChain->GetBuffer(i, PPV_ARGS(internal_state->backBuffers[i])));
-
-			internal_state->backbufferRTV[i] = allocationhandler->descriptors_rtv.allocate();
-			device->CreateRenderTargetView(internal_state->backBuffers[i].Get(), &rtvDesc, internal_state->backbufferRTV[i]);
+			internal_state->textures[i] = wi::allocator::make_shared<Texture_DX12>();
+			internal_state->textures[i]->allocationhandler = allocationhandler;
+			dx12_check(internal_state->swapChain->GetBuffer(i, PPV_ARGS(internal_state->textures[i]->resource)));
+			internal_state->textures[i]->rtv.init(this, rtv_desc, internal_state->textures[i]->resource.Get());
+			internal_state->textures[i]->srv.init(this, srv_desc, internal_state->textures[i]->resource.Get());
 		}
 #endif // PLATFORM_XBOX
 
@@ -5802,9 +5788,7 @@ std::mutex queue_locker;
 	{
 		auto swapchain_internal = to_internal(swapchain);
 
-		auto internal_state = wi::allocator::make_shared<Texture_DX12>();
-		internal_state->allocationhandler = allocationhandler;
-		internal_state->resource = swapchain_internal->backBuffers[swapchain_internal->GetBufferIndex()];
+		auto internal_state = swapchain_internal->textures[swapchain_internal->GetBufferIndex()];
 
 		D3D12_RESOURCE_DESC resourcedesc = internal_state->resource->GetDesc();
 		internal_state->total_size = 0;
@@ -5826,6 +5810,7 @@ std::mutex queue_locker;
 		result.type = GPUResource::Type::TEXTURE;
 		result.internal_state = internal_state;
 		result.desc = _ConvertTextureDesc_Inv(resourcedesc);
+		result.desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::RENDER_TARGET;
 		result.desc.layout = ResourceState::SWAPCHAIN;
 		return result;
 	}
@@ -5972,7 +5957,7 @@ std::mutex queue_locker;
 
 		D3D12_RESOURCE_BARRIER barrier = {};
 		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-		barrier.Transition.pResource = internal_state->backBuffers[internal_state->GetBufferIndex()].Get();
+		barrier.Transition.pResource = internal_state->textures[internal_state->GetBufferIndex()]->resource.Get();
 		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
@@ -5998,7 +5983,7 @@ std::mutex queue_locker;
 		);
 #else
 		D3D12_RENDER_PASS_RENDER_TARGET_DESC RTV = {};
-		RTV.cpuDescriptor = internal_state->backbufferRTV[internal_state->GetBufferIndex()];
+		RTV.cpuDescriptor = internal_state->textures[internal_state->GetBufferIndex()]->rtv.handle;
 		RTV.BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
 		RTV.BeginningAccess.Clear.ClearValue.Color[0] = swapchain->desc.clear_color[0];
 		RTV.BeginningAccess.Clear.ClearValue.Color[1] = swapchain->desc.clear_color[1];

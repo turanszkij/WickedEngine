@@ -1118,6 +1118,15 @@ namespace wi::renderer
 		BORDEREXPANDSTYLE borderExpand = BORDEREXPAND_DISABLE,
 		bool srgb_convert = false
 	);
+	// Performs copy operation even between different texture formats
+	//	Simplified function overload
+	void CopyTexture2D(
+		const wi::graphics::Texture& dst,
+		const wi::graphics::Texture& src,
+		wi::graphics::CommandList cmd,
+		BORDEREXPANDSTYLE borderExpand = BORDEREXPAND_DISABLE,
+		bool srgb_convert = false
+	);
 
 	void DrawWaterRipples(const Visibility& vis, wi::graphics::CommandList cmd);
 
