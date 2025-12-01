@@ -3063,8 +3063,6 @@ std::mutex queue_locker;
 			internal_state->textures.clear();
 		}
 
-		// We can create swapchain just with given supported format, thats why we specify format in RTV
-		// For example: BGRA8UNorm for SwapChain BGRA8UNormSrgb for RTV.
 		D3D12_RENDER_TARGET_VIEW_DESC rtv_desc = {};
 		rtv_desc.Format = _ConvertFormat(desc->format);
 		rtv_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
@@ -3186,7 +3184,7 @@ std::mutex queue_locker;
 				desc->buffer_count,
 				desc->width,
 				desc->height,
-				_ConvertFormat(desc->format),
+				rtv_desc.Format,
 				swapChainFlags
 			));
 
