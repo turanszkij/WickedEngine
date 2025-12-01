@@ -10656,9 +10656,9 @@ void CopyTexture2D(const Texture& dst, int DstMIP, int DstX, int DstY, const Tex
 	cb.xCopyDst.y = DstY;
 	cb.xCopySrc.x = SrcX;
 	cb.xCopySrc.y = SrcY;
-	cb.xCopySrcSize.x = desc_src.width >> SrcMIP;
-	cb.xCopySrcSize.y = desc_src.height >> SrcMIP;
-	cb.xCopySrcMIP = SrcMIP;
+	cb.xCopySrcSize.x = SrcMIP >= 0 ? (desc_src.width >> SrcMIP) : desc_src.width;
+	cb.xCopySrcSize.y = SrcMIP >= 0 ? (desc_src.height >> SrcMIP) : desc_src.height;
+	cb.xCopySrcMIP = SrcMIP >= 0 ? SrcMIP : 0;
 	cb.xCopyFlags = 0;
 	if (borderExpand == BORDEREXPAND_WRAP)
 	{
@@ -10674,27 +10674,31 @@ void CopyTexture2D(const Texture& dst, int DstMIP, int DstX, int DstY, const Tex
 
 	device->BindUAV(&dst, 0, cmd, DstMIP);
 
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&dst,dst.desc.layout,ResourceState::UNORDERED_ACCESS, DstMIP),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
+	PushBarrier(GPUBarrier::Image(&src, src.desc.layout, ResourceState::SHADER_RESOURCE_COMPUTE, DstMIP));
+	PushBarrier(GPUBarrier::Image(&dst, dst.desc.layout, ResourceState::UNORDERED_ACCESS, DstMIP));
+	FlushBarriers(cmd);
 
 	XMUINT2 copy_dim = XMUINT2(
-		std::min((uint32_t)cb.xCopySrcSize.x, uint32_t((desc_dst.width - DstX) >> DstMIP)),
-		std::min((uint32_t)cb.xCopySrcSize.y, uint32_t((desc_dst.height - DstY) >> DstMIP))
+		std::min((uint32_t)cb.xCopySrcSize.x, DstMIP >= 0 ? uint32_t((desc_dst.width - DstX) >> DstMIP) : desc_dst.width),
+		std::min((uint32_t)cb.xCopySrcSize.y, DstMIP >= 0 ? uint32_t((desc_dst.height - DstY) >> DstMIP) : desc_dst.height)
 	);
 	device->Dispatch((copy_dim.x + 7) / 8, (copy_dim.y + 7) / 8, 1, cmd);
 
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&dst,ResourceState::UNORDERED_ACCESS,dst.desc.layout, DstMIP),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
+	PushBarrier(GPUBarrier::Image(&src, ResourceState::SHADER_RESOURCE_COMPUTE, src.desc.layout, DstMIP));
+	PushBarrier(GPUBarrier::Image(&dst, ResourceState::UNORDERED_ACCESS, dst.desc.layout, DstMIP));
+	FlushBarriers(cmd);
 
 	device->EventEnd(cmd);
+}
+void CopyTexture2D(
+	const Texture& dst,
+	const Texture& src,
+	CommandList cmd,
+	BORDEREXPANDSTYLE borderExpand,
+	bool srgb_convert
+)
+{
+	CopyTexture2D(dst, -1, 0, 0, src, -1, 0, 0, cmd, borderExpand, srgb_convert);
 }
 
 
