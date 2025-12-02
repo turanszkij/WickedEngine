@@ -2691,209 +2691,212 @@ namespace wi::gui
 		const float drop_width = fixed_drop_width > 0 ? fixed_drop_width : (scale.x - 1 - scale.y);
 		const float drop_x = GetDropX(canvas);
 
-		if (IsEnabled() && dt > 0)
+		if (dt > 0)
 		{
-			float drop_offset = GetDropOffset(canvas);
+			if (IsEnabled())
+			{
+				float drop_offset = GetDropOffset(canvas);
 
-			if (state == FOCUS)
-			{
-				state = IDLE;
-			}
-			if (state == DEACTIVATING)
-			{
-				state = IDLE;
-			}
-			if (state == ACTIVE && combostate == COMBOSTATE_SELECTING)
-			{
-				hovered = -1;
-				Deactivate();
-			}
-			if (state == IDLE)
-			{
-				combostate = COMBOSTATE_INACTIVE;
-			}
-
-			hitBox.pos.x = translation.x;
-			hitBox.pos.y = translation.y;
-			hitBox.siz.x = scale.x;
-			if (drop_arrow)
-			{
-				hitBox.siz.x += scale.y + 1; // + drop-down indicator arrow + little offset
-			}
-			hitBox.siz.y = scale.y;
-
-			Hitbox2D pointerHitbox = GetPointerHitbox();
-
-			bool clicked = false;
-			// hover the button
-			if (pointerHitbox.intersects(hitBox))
-			{
-				if (state == IDLE)
+				if (state == FOCUS)
 				{
-					state = FOCUS;
+					state = IDLE;
 				}
-			}
-
-			if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
-			{
-				// activate
-				clicked = true;
-			}
-
-			bool click_down = false;
-			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
-			{
-				click_down = true;
 				if (state == DEACTIVATING)
 				{
-					// Keep pressed until mouse is released
-					Activate();
+					state = IDLE;
 				}
-			}
-
-
-			if (clicked && state == FOCUS)
-			{
-				Activate();
-			}
-
-			if (state == ACTIVE)
-			{
-				filteredItemCount = int(items.size());
-				if (!filterText.empty())
+				if (state == ACTIVE && combostate == COMBOSTATE_SELECTING)
 				{
-					filteredItemCount = 0;
-					for (int i = 0; i < (int)items.size(); ++i)
+					hovered = -1;
+					Deactivate();
+				}
+				if (state == IDLE)
+				{
+					combostate = COMBOSTATE_INACTIVE;
+				}
+
+				hitBox.pos.x = translation.x;
+				hitBox.pos.y = translation.y;
+				hitBox.siz.x = scale.x;
+				if (drop_arrow)
+				{
+					hitBox.siz.x += scale.y + 1; // + drop-down indicator arrow + little offset
+				}
+				hitBox.siz.y = scale.y;
+
+				Hitbox2D pointerHitbox = GetPointerHitbox();
+
+				bool clicked = false;
+				// hover the button
+				if (pointerHitbox.intersects(hitBox))
+				{
+					if (state == IDLE)
 					{
-						if (wi::helper::toUpper(items[i].name).find(filterText) == std::string::npos)
-							continue;
-						filteredItemCount++;
+						state = FOCUS;
 					}
 				}
 
-				const float scrollbar_begin = translation.y + scale.y + drop_offset + scale.y * 0.5f;
-				const float scrollbar_end = scrollbar_begin + std::max(0.0f, (float)std::min(maxVisibleItemCount, filteredItemCount) - 1) * combo_height();
-
-				pointerHitbox = GetPointerHitbox(false); // get the hitbox again, but this time it won't be constrained to parent
-				if (HasScrollbar())
+				if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
 				{
-					if (combostate != COMBOSTATE_SELECTING && combostate != COMBOSTATE_INACTIVE)
+					// activate
+					clicked = true;
+				}
+
+				bool click_down = false;
+				if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+				{
+					click_down = true;
+					if (state == DEACTIVATING)
 					{
-						if (combostate == COMBOSTATE_SCROLLBAR_GRABBED || pointerHitbox.intersects(Hitbox2D(XMFLOAT2(drop_x + drop_width + 1, translation.y + scale.y + drop_offset), XMFLOAT2(scale.y, (float)std::min(maxVisibleItemCount, filteredItemCount) * combo_height()))))
+						// Keep pressed until mouse is released
+						Activate();
+					}
+				}
+
+
+				if (clicked && state == FOCUS)
+				{
+					Activate();
+				}
+
+				if (state == ACTIVE)
+				{
+					filteredItemCount = int(items.size());
+					if (!filterText.empty())
+					{
+						filteredItemCount = 0;
+						for (int i = 0; i < (int)items.size(); ++i)
 						{
-							if (click_down)
+							if (wi::helper::toUpper(items[i].name).find(filterText) == std::string::npos)
+								continue;
+							filteredItemCount++;
+						}
+					}
+
+					const float scrollbar_begin = translation.y + scale.y + drop_offset + scale.y * 0.5f;
+					const float scrollbar_end = scrollbar_begin + std::max(0.0f, (float)std::min(maxVisibleItemCount, filteredItemCount) - 1) * combo_height();
+
+					pointerHitbox = GetPointerHitbox(false); // get the hitbox again, but this time it won't be constrained to parent
+					if (HasScrollbar())
+					{
+						if (combostate != COMBOSTATE_SELECTING && combostate != COMBOSTATE_INACTIVE)
+						{
+							if (combostate == COMBOSTATE_SCROLLBAR_GRABBED || pointerHitbox.intersects(Hitbox2D(XMFLOAT2(drop_x + drop_width + 1, translation.y + scale.y + drop_offset), XMFLOAT2(scale.y, (float)std::min(maxVisibleItemCount, filteredItemCount) * combo_height()))))
 							{
-								filter.SetAsActive();
-								combostate = COMBOSTATE_SCROLLBAR_GRABBED;
-								scrollbar_delta = wi::math::Clamp(pointerHitbox.pos.y, scrollbar_begin, scrollbar_end) - scrollbar_begin;
-								const float scrollbar_value = wi::math::InverseLerp(scrollbar_begin, scrollbar_end, scrollbar_begin + scrollbar_delta);
-								firstItemVisible = int(float(std::max(0, filteredItemCount - maxVisibleItemCount)) * scrollbar_value + 0.5f);
-								firstItemVisible = std::max(0, std::min(filteredItemCount - maxVisibleItemCount, firstItemVisible));
+								if (click_down)
+								{
+									filter.SetAsActive();
+									combostate = COMBOSTATE_SCROLLBAR_GRABBED;
+									scrollbar_delta = wi::math::Clamp(pointerHitbox.pos.y, scrollbar_begin, scrollbar_end) - scrollbar_begin;
+									const float scrollbar_value = wi::math::InverseLerp(scrollbar_begin, scrollbar_end, scrollbar_begin + scrollbar_delta);
+									firstItemVisible = int(float(std::max(0, filteredItemCount - maxVisibleItemCount)) * scrollbar_value + 0.5f);
+									firstItemVisible = std::max(0, std::min(filteredItemCount - maxVisibleItemCount, firstItemVisible));
+								}
+								else
+								{
+									combostate = COMBOSTATE_SCROLLBAR_HOVER;
+								}
+							}
+							else if (!click_down)
+							{
+								combostate = COMBOSTATE_HOVER;
+							}
+						}
+					}
+
+					if (combostate == COMBOSTATE_INACTIVE)
+					{
+						combostate = COMBOSTATE_HOVER;
+						filter.SetAsActive();
+					}
+					else if (combostate == COMBOSTATE_SELECTING || wi::input::Press(wi::input::KEYBOARD_BUTTON_ESCAPE))
+					{
+						Deactivate();
+						combostate = COMBOSTATE_INACTIVE;
+					}
+					else if (combostate == COMBOSTATE_HOVER && scroll_allowed)
+					{
+						scroll_allowed = false;
+
+						if (HasScrollbar())
+						{
+							int scroll = (int)wi::input::GetPointer().z;
+							firstItemVisible -= scroll;
+							firstItemVisible = std::max(0, std::min(filteredItemCount - maxVisibleItemCount, firstItemVisible));
+							if (scroll)
+							{
+								const float scrollbar_value = wi::math::InverseLerp(0, float(std::max(0, filteredItemCount - maxVisibleItemCount)), float(firstItemVisible));
+								scrollbar_delta = wi::math::Lerp(scrollbar_begin, scrollbar_end, scrollbar_value) - scrollbar_begin;
+							}
+						}
+
+						hovered = -1;
+						int visible_items = 0;
+						for (int i = firstItemVisible; (i < (int)items.size()) && (visible_items < maxVisibleItemCount); ++i)
+						{
+							if (!filterText.empty() && wi::helper::toUpper(items[i].name).find(filterText) == std::string::npos)
+								continue;
+							visible_items++;
+							Hitbox2D itembox;
+							itembox.pos.x = drop_x;
+							itembox.pos.y = translation.y + GetItemOffset(canvas, i);
+							itembox.siz.x = drop_width;
+							itembox.siz.y = combo_height();
+							if (pointerHitbox.intersects(itembox))
+							{
+								hovered = i;
+								break;
+							}
+						}
+
+						if (clicked)
+						{
+							if (pointerHitbox.intersects(filter.hitBox))
+							{
+								combostate = COMBOSTATE_FILTER_INTERACT;
 							}
 							else
 							{
-								combostate = COMBOSTATE_SCROLLBAR_HOVER;
-							}
-						}
-						else if (!click_down)
-						{
-							combostate = COMBOSTATE_HOVER;
-						}
-					}
-				}
-
-				if (combostate == COMBOSTATE_INACTIVE)
-				{
-					combostate = COMBOSTATE_HOVER;
-					filter.SetAsActive();
-				}
-				else if (combostate == COMBOSTATE_SELECTING || wi::input::Press(wi::input::KEYBOARD_BUTTON_ESCAPE))
-				{
-					Deactivate();
-					combostate = COMBOSTATE_INACTIVE;
-				}
-				else if (combostate == COMBOSTATE_HOVER && scroll_allowed)
-				{
-					scroll_allowed = false;
-
-					if (HasScrollbar())
-					{
-						int scroll = (int)wi::input::GetPointer().z;
-						firstItemVisible -= scroll;
-						firstItemVisible = std::max(0, std::min(filteredItemCount - maxVisibleItemCount, firstItemVisible));
-						if (scroll)
-						{
-							const float scrollbar_value = wi::math::InverseLerp(0, float(std::max(0, filteredItemCount - maxVisibleItemCount)), float(firstItemVisible));
-							scrollbar_delta = wi::math::Lerp(scrollbar_begin, scrollbar_end, scrollbar_value) - scrollbar_begin;
-						}
-					}
-
-					hovered = -1;
-					int visible_items = 0;
-					for (int i = firstItemVisible; (i < (int)items.size()) && (visible_items < maxVisibleItemCount); ++i)
-					{
-						if (!filterText.empty() && wi::helper::toUpper(items[i].name).find(filterText) == std::string::npos)
-							continue;
-						visible_items++;
-						Hitbox2D itembox;
-						itembox.pos.x = drop_x;
-						itembox.pos.y = translation.y + GetItemOffset(canvas, i);
-						itembox.siz.x = drop_width;
-						itembox.siz.y = combo_height();
-						if (pointerHitbox.intersects(itembox))
-						{
-							hovered = i;
-							break;
-						}
-					}
-
-					if (clicked)
-					{
-						if (pointerHitbox.intersects(filter.hitBox))
-						{
-							combostate = COMBOSTATE_FILTER_INTERACT;
-						}
-						else
-						{
-							combostate = COMBOSTATE_SELECTING;
-							if (hovered >= 0)
-							{
-								SetSelected(hovered);
+								combostate = COMBOSTATE_SELECTING;
+								if (hovered >= 0)
+								{
+									SetSelected(hovered);
+								}
 							}
 						}
 					}
-				}
-				else if (combostate == COMBOSTATE_FILTER_INTERACT)
-				{
-					// nothing here, but this holds main widget active while filter interaction is detected
-					if (clicked && !pointerHitbox.intersects(filter.hitBox))
+					else if (combostate == COMBOSTATE_FILTER_INTERACT)
 					{
-						combostate = COMBOSTATE_INACTIVE;
+						// nothing here, but this holds main widget active while filter interaction is detected
+						if (clicked && !pointerHitbox.intersects(filter.hitBox))
+						{
+							combostate = COMBOSTATE_INACTIVE;
+						}
 					}
 				}
-			}
 
-			if (state == ACTIVE) // intentionally checks base state again!
-			{
-				filter.Activate();
-				filter.scale_local.x = drop_width;
-				filter.scale_local.y = combo_height() - filter.GetShadowRadius() * 2;
-				filter.translation_local.x = drop_x;
-				filter.translation_local.y = translation.y + scale.y + drop_offset - combo_height() + filter.GetShadowRadius();
-				filter.SetDirty();
-				filterText = wi::helper::toUpper(filter.GetText());
-				filter.font.params.size = int(filter.scale_local.y - 4);
+				if (state == ACTIVE) // intentionally checks base state again!
+				{
+					filter.Activate();
+					filter.scale_local.x = drop_width;
+					filter.scale_local.y = combo_height() - filter.GetShadowRadius() * 2;
+					filter.translation_local.x = drop_x;
+					filter.translation_local.y = translation.y + scale.y + drop_offset - combo_height() + filter.GetShadowRadius();
+					filter.SetDirty();
+					filterText = wi::helper::toUpper(filter.GetText());
+					filter.font.params.size = int(filter.scale_local.y - 4);
+				}
+				else
+				{
+					filter.Deactivate();
+					filter.SetText("");
+					filterText = "";
+				}
 			}
 			else
 			{
 				filter.Deactivate();
-				filter.SetText("");
-				filterText = "";
 			}
-		}
-		else
-		{
-			filter.Deactivate();
 		}
 
 		filter.SetEnabled(enabled);
