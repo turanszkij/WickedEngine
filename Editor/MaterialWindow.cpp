@@ -5,6 +5,29 @@ using namespace wi::graphics;
 using namespace wi::ecs;
 using namespace wi::scene;
 
+void AddTexturePropertiesString(const wi::graphics::TextureDesc& desc, std::string& str)
+{
+	str += "\nResolution: " + std::to_string(desc.width) + " * " + std::to_string(desc.height);
+	if (desc.array_size > 1)
+	{
+		str += " * " + std::to_string(desc.array_size);
+	}
+	if (desc.depth > 1)
+	{
+		str += " * " + std::to_string(desc.depth);
+	}
+	if (has_flag(desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
+	{
+		str += " (cubemap)";
+	}
+	str += "\nMip levels: " + std::to_string(desc.mip_levels);
+	str += "\nFormat: ";
+	str += GetFormatString(desc.format);
+	str += "\nSwizzle: ";
+	str += GetSwizzleString(desc.swizzle);
+	str += "\nMemory: " + wi::helper::GetMemorySizeText(ComputeTextureMemorySizeInBytes(desc));
+}
+
 MaterialComponent* get_material(Scene& scene, PickResult x)
 {
 	MaterialComponent* material = scene.materials.GetComponent(x.entity);
@@ -746,21 +769,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 			if (material->textures[args.iValue].resource.IsValid())
 			{
 				const Texture& texture = material->textures[args.iValue].resource.GetTexture();
-				tooltiptext += "\nResolution: " + std::to_string(texture.desc.width) + " * " + std::to_string(texture.desc.height);
-				if (texture.desc.array_size > 0)
-				{
-					tooltiptext += " * " + std::to_string(texture.desc.array_size);
-				}
-				if (has_flag(texture.desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
-				{
-					tooltiptext += " (cubemap)";
-				}
-				tooltiptext += "\nMip levels: " + std::to_string(texture.desc.mip_levels);
-				tooltiptext += "\nFormat: ";
-				tooltiptext += GetFormatString(texture.desc.format);
-				tooltiptext += "\nSwizzle: ";
-				tooltiptext += GetSwizzleString(texture.desc.swizzle);
-				tooltiptext += "\nMemory: " + wi::helper::GetMemorySizeText(ComputeTextureMemorySizeInBytes(texture.desc));
+				AddTexturePropertiesString(texture.GetDesc(), tooltiptext);
 			}
 		}
 
@@ -1094,7 +1103,7 @@ void MaterialWindow::RecreateTexturePickerButtons()
 
 	// Create buttons for each unique texture
 	uniqueTextures.clear();
-	wi::resourcemanager::CollectResources(uniqueTextures);
+	wi::resourcemanager::CollectResources(uniqueTextures, wi::resourcemanager::ResourceType::TEXTURE);
 	for (auto& [textureName, textureResource] : uniqueTextures)
 	{
 		texturePickerButtons.emplace_back();
@@ -1102,7 +1111,9 @@ void MaterialWindow::RecreateTexturePickerButtons()
 
 		button.Create("");
 		button.SetImage(textureResource);
-		button.SetTooltip(wi::helper::GetFileNameFromPath(textureName));
+		std::string tooltipText = wi::helper::GetFileNameFromPath(textureName) + "\nFull path: " + textureName;
+		AddTexturePropertiesString(textureResource.GetTexture().GetDesc(), tooltipText);
+		button.SetTooltip(tooltipText);
 		texturePickerWindow.AddWidget(&button);
 		button.SetVisible(false);
 
@@ -1129,6 +1140,7 @@ void MaterialWindow::RecreateTexturePickerButtons()
 			editor->RecordEntity(archive, entity);
 		});
 	}
+	uniqueTextures.clear(); // don't hold onto resources that were queried
 
 	ResizeLayout();
 }
@@ -1144,12 +1156,13 @@ void MaterialWindow::ResizeLayout()
 	if (texturePickerWindow.IsVisible())
 	{
 		uniqueTextures.clear();
-		wi::resourcemanager::CollectResources(uniqueTextures);
+		wi::resourcemanager::CollectResources(uniqueTextures, wi::resourcemanager::ResourceType::TEXTURE);
 		if (texturePickerButtons.size() != uniqueTextures.size())
 		{
 			RecreateTexturePickerButtons();
 			return;
 		}
+		uniqueTextures.clear(); // don't hold onto resources that were queried
 	}
 
 	layout.add_fullwidth(materialNameField);
@@ -1298,3 +1311,4 @@ void MaterialWindow::ResizeLayout()
 		}
 	}
 }
+
