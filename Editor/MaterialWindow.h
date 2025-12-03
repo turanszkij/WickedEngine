@@ -74,14 +74,12 @@ public:
 	wi::gui::Label textureSlotLabel;
 	wi::gui::TextInputField textureSlotUvsetField;
 
+	wi::unordered_map<std::string, wi::Resource> uniqueTextures;
 	wi::gui::Window texturePickerWindow;
 	std::deque<wi::gui::Button> texturePickerButtons;
 
 	void RecreateTexturePickerButtons();
 
 	void ResizeLayout() override;
-
-private:
-	wi::unordered_map<std::string, wi::Resource> CollectUniqueTextures() const;
 };
 

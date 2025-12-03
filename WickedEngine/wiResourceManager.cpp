@@ -1335,6 +1335,42 @@ namespace wi
 			}
 		}
 
+		void CollectResources(wi::unordered_map<std::string, wi::Resource>& out_resources, ResourceType types)
+		{
+			std::scoped_lock lck(locker);
+			for (auto& x : resources)
+			{
+				auto resourceinternal = x.second.lock();
+				if (resourceinternal == nullptr)
+					continue;
+
+				bool valid = false;
+				if (has_flag(types, ResourceType::TEXTURE) && resourceinternal->texture.IsValid())
+				{
+					valid = true;
+				}
+				else if (has_flag(types, ResourceType::VIDEO) && resourceinternal->video.IsValid())
+				{
+					valid = true;
+				}
+				else if (has_flag(types, ResourceType::SOUND) && resourceinternal->sound.IsValid())
+				{
+					valid = true;
+				}
+				else if (has_flag(types, ResourceType::SCRIPT) && resourceinternal->script_hash != 0)
+				{
+					valid = true;
+				}
+				else if (has_flag(types, ResourceType::FONT) && resourceinternal->font_style >= 0)
+				{
+					valid = true;
+				}
+				if (!valid)
+					continue;
+				out_resources[x.first].internal_state = resourceinternal;
+			}
+		}
+
 		void Serialize_READ(wi::Archive& archive, ResourceSerializer& seri)
 		{
 			assert(archive.IsReadMode());

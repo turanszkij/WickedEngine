@@ -1093,7 +1093,8 @@ void MaterialWindow::RecreateTexturePickerButtons()
 	texturePickerButtons.clear();
 
 	// Create buttons for each unique texture
-	wi::unordered_map<std::string, wi::Resource> uniqueTextures = CollectUniqueTextures();
+	uniqueTextures.clear();
+	wi::resourcemanager::CollectResources(uniqueTextures);
 	for (auto& [textureName, textureResource] : uniqueTextures)
 	{
 		texturePickerButtons.emplace_back();
@@ -1142,8 +1143,8 @@ void MaterialWindow::ResizeLayout()
 
 	if (texturePickerWindow.IsVisible())
 	{
-		wi::unordered_map<std::string, wi::Resource> uniqueTextures = CollectUniqueTextures();
-
+		uniqueTextures.clear();
+		wi::resourcemanager::CollectResources(uniqueTextures);
 		if (texturePickerButtons.size() != uniqueTextures.size())
 		{
 			RecreateTexturePickerButtons();
@@ -1296,28 +1297,4 @@ void MaterialWindow::ResizeLayout()
 			}
 		}
 	}
-}
-
-wi::unordered_map<std::string, wi::Resource> MaterialWindow::CollectUniqueTextures() const
-{
-	wi::unordered_map<std::string, wi::Resource> uniqueTextures;
-
-	if (editor == nullptr)
-		return uniqueTextures;
-
-	const wi::scene::Scene& scene = editor->GetCurrentScene();
-
-	for (size_t i = 0; i < scene.materials.GetCount(); ++i)
-	{
-		const MaterialComponent& material = scene.materials[i];
-		for (const auto& texture : material.textures)
-		{
-			if (texture.resource.IsValid() && !texture.name.empty())
-			{
-				uniqueTextures[texture.name] = texture.resource;
-			}
-		}
-	}
-
-	return uniqueTextures;
 }
