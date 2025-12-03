@@ -215,6 +215,13 @@ struct Surface
 			f0 = surfaceMap.b = surfaceMap.a = 0;
 		}
 
+#ifndef ENVMAPRENDERING
+		if (GetFrame().options & OPTION_BIT_FORCE_UNLIT)
+#endif // ENVMAPRENDERING
+		{
+			albedo = baseColor.rgb;
+		}
+
 		[branch]
 		if (material.IsUsingSpecularGlossinessWorkflow())
 		{
@@ -302,7 +309,7 @@ struct Surface
 #endif // CARTOON
 		
 #ifndef ENVMAPRENDERING
-		if (GetFrame().options & OPTION_BIT_FORCE_DIFFUSE_LIGHTING)
+		if (GetFrame().options & OPTION_BIT_FORCE_DIFFUSE_LIGHTING || GetFrame().options & OPTION_BIT_FORCE_UNLIT)
 #endif // ENVMAPRENDERING
 		{
 			F = 0;

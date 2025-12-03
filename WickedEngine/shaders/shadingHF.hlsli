@@ -39,6 +39,11 @@ inline half3 PlanarReflection(in Surface surface, in half2 bumpColor)
 
 inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 {
+	if (GetFrame().options & OPTION_BIT_FORCE_UNLIT)
+	{
+		return;
+	}
+
 #ifndef DISABLE_ENVMAPS
 	// Apply environment maps:
 	half4 envmapAccumulation = 0;
@@ -282,6 +287,11 @@ inline uint GetFlatTileIndex(min16uint2 pixel)
 
 inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint flatTileIndex)
 {
+	if (GetFrame().options & OPTION_BIT_FORCE_UNLIT)
+	{
+		return;
+	}
+
 #ifndef DISABLE_ENVMAPS
 	// Apply environment maps:
 	half4 envmapAccumulation = 0;
