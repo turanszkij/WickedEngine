@@ -182,8 +182,6 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	freezeCullingCameraCheckBox.SetCheck(wi::renderer::GetFreezeCullingCameraEnabled());
 	AddWidget(&freezeCullingCameraCheckBox);
 
-
-
 	disableAlbedoMapsCheckBox.Create("Disable albedo maps: ");
 	disableAlbedoMapsCheckBox.SetTooltip("Disables albedo maps on objects for easier lighting debugging");
 	disableAlbedoMapsCheckBox.OnClick([](wi::gui::EventArgs args) {
@@ -200,6 +198,15 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		});
 	forceDiffuseLightingCheckBox.SetCheck(wi::renderer::IsForceDiffuseLighting());
 	AddWidget(&forceDiffuseLightingCheckBox);
+
+	forceUnlitCheckBox.Create("Force unlit: ");
+	forceUnlitCheckBox.SetTooltip("Sets every surface without lighting and shadows");
+	forceUnlitCheckBox.OnClick([](wi::gui::EventArgs args) {
+		wi::renderer::SetForceUnlit(args.bValue);
+		});
+	forceUnlitCheckBox.SetCheck(wi::renderer::IsForceUnlit());
+	AddWidget(&forceUnlitCheckBox);
+
 
 	focusModeCheckBox.Create(ICON_EYE " Focus mode GUI: ");
 	focusModeCheckBox.SetCheckText(ICON_EYE);
@@ -1547,6 +1554,7 @@ void GeneralWindow::ResizeLayout()
 	layout.add_right(freezeCullingCameraCheckBox);
 	layout.add_right(disableAlbedoMapsCheckBox);
 	layout.add_right(forceDiffuseLightingCheckBox);
+	layout.add_right(forceUnlitCheckBox);
 
 	layout.jump();
 
