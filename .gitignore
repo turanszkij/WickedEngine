@@ -228,6 +228,9 @@ wiShaderdump.h
 .clangd
 compile_commands.json
 
+# MAC:
+xcuserdata/
+
 # Others
 log.txt
 wicked-editor-crash-log.txt
