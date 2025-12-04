@@ -4,7 +4,8 @@
 #include <thread>
 #include <atomic>
 
-#if defined(PLATFORM_WINDOWS_DESKTOP) || defined(PLATFORM_LINUX)
+#if !defined(_M_ARM64) && (defined(PLATFORM_WINDOWS_DESKTOP) || defined(PLATFORM_LINUX))
+#define CPUINFO_AVAILABLE
 #include "Utility/cpuinfo.hpp"
 #endif // defined(PLATFORM_WINDOWS_DESKTOP) || defined(PLATFORM_LINUX)
 
@@ -58,7 +59,7 @@ namespace wi::initializer
 		wilog("\n[wi::initializer] Initializing Wicked Engine, please wait...\nVersion: %s\nPlatform: %s\nCompiler: %s", wi::version::GetVersionString(), platform_string, compiler_string);
 
 		StackString<1024> cpustring;
-#if defined(PLATFORM_WINDOWS_DESKTOP) || defined(PLATFORM_LINUX)
+#ifdef CPUINFO_AVAILABLE
 		CPUInfo cpuinfo;
 		cpustring.push_back("\nCPU: ");
 		cpustring.push_back(cpuinfo.model().c_str());
@@ -103,7 +104,8 @@ namespace wi::initializer
 		{
 			cpustring.push_back("AVX 512; ");
 		}
-#endif // defined(PLATFORM_WINDOWS_DESKTOP) || defined(PLATFORM_LINUX)
+#endif // CPUINFO_AVAILABLE
+
 		cpustring.push_back("\n\tFeatures used: ");
 #ifdef _XM_SSE_INTRINSICS_
 		cpustring.push_back("SSE; ");

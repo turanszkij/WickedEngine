@@ -1,10 +1,18 @@
 #pragma once
 #include <atomic>
 #include <thread>
+
+#ifdef _M_ARM64
+#include <mutex>
+#else
 #include <emmintrin.h> // _mm_pause()
+#endif // _M_ARM64
 
 namespace wi
 {
+#ifdef _M_ARM64
+	using SpinLock = std::mutex;
+#else
 	class SpinLock
 	{
 	private:
@@ -36,4 +44,5 @@ namespace wi
 			lck.clear(std::memory_order_release);
 		}
 	};
+#endif // _M_ARM64
 }

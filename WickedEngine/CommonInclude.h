@@ -123,6 +123,9 @@ struct StackVector
 #if defined(_WIN32)
 // Windows, Xbox:
 #include <intrin.h>
+#if defined(_M_ARM64)
+#include <arm64intr.h>
+#endif // _M_ARM64
 inline long AtomicAnd(volatile long* ptr, long mask)
 {
 	return _InterlockedAnd(ptr, mask);

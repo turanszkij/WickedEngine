@@ -141,6 +141,13 @@ namespace wi::noise
 			);
 		}
 
+#ifdef _M_ARM64
+		// TODO: this will not be equivalent to X64 right now!
+		inline XMFLOAT2 sin(XMFLOAT2 p)
+		{
+			return XMFLOAT2(std::sin(p.x), std::sin(p.y));
+		}
+#else
 		// Backwards compatibility implementation for XMVectorSin() without FMA instruction:
 		inline XMVECTOR XM_CALLCONV FMADD_COMPAT(XMVECTOR a, XMVECTOR b, XMVECTOR c) noexcept { return _mm_add_ps(_mm_mul_ps((a), (b)), (c)); }
 		inline XMVECTOR XM_CALLCONV FNMADD_COMPAT(XMVECTOR a, XMVECTOR b, XMVECTOR c) noexcept { return _mm_sub_ps((c), _mm_mul_ps((a), (b))); }
@@ -197,6 +204,7 @@ namespace wi::noise
 			XMStoreFloat2(&ret, P);
 			return ret;
 		}
+#endif // _M_ARM64
 
 		inline XMFLOAT2 hash(XMFLOAT2 p)
 		{

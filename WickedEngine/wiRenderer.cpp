@@ -36,6 +36,7 @@
 #include <algorithm>
 #include <atomic>
 #include <mutex>
+#include <malloc.h> // alloca
 
 using namespace wi::primitive;
 using namespace wi::graphics;
