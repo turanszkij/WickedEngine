@@ -120,7 +120,8 @@ struct StackVector
 };
 
 // CPU intrinsics:
-#ifdef _WIN32
+#if defined(_WIN32)
+// Windows, Xbox:
 #include <intrin.h>
 #if defined(_M_ARM64)
 #include <arm64intr.h>
@@ -224,6 +225,7 @@ inline unsigned long firstbitlow(unsigned long long value)
 	return 0;
 }
 #else
+// Linux, PlayStation:
 inline long AtomicAnd(volatile long* ptr, long mask)
 {
 	return __atomic_fetch_and(ptr, mask, __ATOMIC_SEQ_CST);
