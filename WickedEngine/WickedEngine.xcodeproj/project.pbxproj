@@ -268,6 +268,7 @@
 		1EDA80692EE1F57900210D41 /* lgc.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F412EE1F57900210D41 /* lgc.c */; };
 		1EDA806A2EE1F57900210D41 /* partition.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7FC92EE1F57900210D41 /* partition.cpp */; };
 		1EDA806C2EE1F57900210D41 /* lopcodes.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F4F2EE1F57900210D41 /* lopcodes.c */; };
+		1EDA806F2EE22BB800210D41 /* wiPhysics_Jolt.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA806E2EE22BB800210D41 /* wiPhysics_Jolt.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -1003,6 +1004,7 @@
 		1EDA80162EE1F57900210D41 /* stb_vorbis.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = stb_vorbis.c; sourceTree = "<group>"; };
 		1EDA80172EE1F57900210D41 /* utility_common.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = utility_common.cpp; sourceTree = "<group>"; };
 		1EDA801C2EE1F57900210D41 /* win32ico.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = win32ico.h; sourceTree = "<group>"; };
+		1EDA806E2EE22BB800210D41 /* wiPhysics_Jolt.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = wiPhysics_Jolt.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1022,6 +1024,7 @@
 				1EDA7F6B2EE1F57900210D41 /* LUA */,
 				1EDA801D2EE1F57900210D41 /* Utility */,
 				1EDA7D832EE1EC9500210D41 /* Jolt */,
+				1EDA806E2EE22BB800210D41 /* wiPhysics_Jolt.cpp */,
 				1EDA7A572EE1DFE300210D41 /* CommonInclude.h */,
 				1EDA7A582EE1DFE300210D41 /* logo.h */,
 				1EDA7A592EE1DFE300210D41 /* waterripple.h */,
@@ -2029,6 +2032,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EDA806F2EE22BB800210D41 /* wiPhysics_Jolt.cpp in Sources */,
 				1EDA7A562EE1DF2100210D41 /* wiArchive.cpp in Sources */,
 				1EDA7B042EE1DFE300210D41 /* wiNetwork_Linux.cpp in Sources */,
 				1EDA7B062EE1DFE300210D41 /* wiScene_Components.cpp in Sources */,
@@ -2342,6 +2346,7 @@
 					"DEBUG=1",
 					"$(inherited)",
 				);
+				GCC_USE_STANDARD_INCLUDE_SEARCHING = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
@@ -2353,8 +2358,10 @@
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CPLUSPLUSFLAGS = "$(OTHER_CFLAGS)";
 				PRECOMPS_INCLUDE_HEADERS_FROM_BUILT_PRODUCTS_DIR = YES;
 				SDKROOT = macosx;
+				SYSTEM_HEADER_SEARCH_PATHS = "";
 				USER_HEADER_SEARCH_PATHS = "";
 			};
 			name = Debug;
@@ -2399,6 +2406,7 @@
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_USE_STANDARD_INCLUDE_SEARCHING = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
@@ -2409,8 +2417,10 @@
 				MACOSX_DEPLOYMENT_TARGET = 15.6;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
+				OTHER_CPLUSPLUSFLAGS = "$(OTHER_CFLAGS)";
 				PRECOMPS_INCLUDE_HEADERS_FROM_BUILT_PRODUCTS_DIR = YES;
 				SDKROOT = macosx;
+				SYSTEM_HEADER_SEARCH_PATHS = "";
 				USER_HEADER_SEARCH_PATHS = "";
 			};
 			name = Release;
@@ -2421,11 +2431,13 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CODE_SIGN_STYLE = Automatic;
 				EXECUTABLE_PREFIX = lib;
+				GCC_PREPROCESSOR_DEFINITIONS = JPH_DEBUG_RENDERER;
+				GCC_USE_STANDARD_INCLUDE_SEARCHING = YES;
 				HEADER_SEARCH_PATHS = "";
 				OTHER_CPLUSPLUSFLAGS = "$(OTHER_CFLAGS)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
-				SYSTEM_HEADER_SEARCH_PATHS = Jolt/;
+				SYSTEM_HEADER_SEARCH_PATHS = "$(SRCROOT)";
 				USER_HEADER_SEARCH_PATHS = "";
 			};
 			name = Debug;
@@ -2436,11 +2448,13 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CODE_SIGN_STYLE = Automatic;
 				EXECUTABLE_PREFIX = lib;
+				GCC_PREPROCESSOR_DEFINITIONS = JPH_DEBUG_RENDERER;
+				GCC_USE_STANDARD_INCLUDE_SEARCHING = YES;
 				HEADER_SEARCH_PATHS = "";
 				OTHER_CPLUSPLUSFLAGS = "$(OTHER_CFLAGS)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
-				SYSTEM_HEADER_SEARCH_PATHS = Jolt/;
+				SYSTEM_HEADER_SEARCH_PATHS = "$(SRCROOT)";
 				USER_HEADER_SEARCH_PATHS = "";
 			};
 			name = Release;
