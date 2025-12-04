@@ -112,7 +112,7 @@ jobs:
     - name: Move files
       shell: cmd
       run: |
-        move BUILD\x64\Release\Editor_Windows\Editor_Windows.exe .\
+        move BUILD\ARM64\Release\Editor_Windows\Editor_Windows.exe .\
         move Editor\config.ini .\
         move Editor\startup.lua .\
         move Editor\languages .\
