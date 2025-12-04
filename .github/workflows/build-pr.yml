@@ -19,6 +19,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - uses: microsoft/setup-msbuild@v2
+      with:
+        msbuild-architecture: x64
+
     - name: Restore Ccache database
       id: restore-ccache
       uses: actions/cache/restore@v4
@@ -37,7 +41,6 @@ jobs:
     - name: Initial compile
       shell: cmd
       run: |
-        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
         MSBuild WickedEngine.sln /t:OfflineShaderCompiler /m /p:Configuration=Release /p:Platform=x64
 
     - name: Generate shader dump
@@ -49,7 +52,6 @@ jobs:
     - name: Recompile with shader dump
       shell: cmd
       run: |
-        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
         MSBuild WickedEngine.sln /t:clean /m /p:Configuration=Release /p:Platform=x64
         MSBuild WickedEngine.sln /t:Editor_Windows /m /p:Configuration=Release /p:Platform=x64
 
@@ -74,6 +76,79 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: Editor (Windows)
+        path: |
+          languages/
+          fonts/
+          config.ini
+          startup.lua
+          Editor_Windows.exe
+          
+  windows:
+    runs-on: windows-latest
+    env:
+      # needed on Windows because wiRenderer conditionally includes wiShaderDump.h
+      # and only our CMake config has a workaround for it
+      CCACHE_NODIRECT: 1
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: microsoft/setup-msbuild@v2
+      with:
+        msbuild-architecture: x64
+
+    - name: Restore Ccache database
+      id: restore-ccache
+      uses: actions/cache/restore@v4
+      with:
+        path: C:\Users\runneradmin\AppData\Local\ccache
+        key: ccache-win-${{ github.run_id }}
+        restore-keys: ccache-win-
+
+    - name: Install Ccache
+      run: |
+        curl -sOSL https://github.com/ccache/ccache/releases/download/v$Env:CCACHE_VERSION/ccache-$Env:CCACHE_VERSION-windows-x86_64.zip
+        unzip -qj ccache-$Env:CCACHE_VERSION-windows-x86_64.zip ccache-$Env:CCACHE_VERSION-windows-x86_64/ccache.exe
+        mv ccache.exe cl.exe
+        mv .github/workflows/Directory.Build.props.ghbuild Directory.Build.props
+
+    - name: Initial compile
+      shell: cmd
+      run: |
+        MSBuild WickedEngine.sln /t:OfflineShaderCompiler /m /p:Configuration=Release /p:Platform=x64
+
+    - name: Generate shader dump
+      shell: cmd
+      run: |
+        cd "WickedEngine"
+        "../BUILD/ARM64/Release/OfflineShaderCompiler/OfflineShaderCompiler.exe" hlsl6 spirv shaderdump strip_reflection
+
+    - name: Recompile with shader dump
+      shell: cmd
+      run: |
+        MSBuild WickedEngine.sln /t:clean /m /p:Configuration=Release /p:Platform=ARM64
+        MSBuild WickedEngine.sln /t:Editor_Windows /m /p:Configuration=Release /p:Platform=ARM64
+
+    - name: Save Ccache database
+      id: save-ccache
+      if: always() && steps.restore-ccache.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: C:\Users\runneradmin\AppData\Local\ccache
+        key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
+
+    - name: Move files
+      shell: cmd
+      run: |
+        move BUILD\x64\Release\Editor_Windows\Editor_Windows.exe .\
+        move Editor\config.ini .\
+        move Editor\startup.lua .\
+        move Editor\languages .\
+        move Editor\fonts .\
+
+    - name: Package Editor
+      uses: actions/upload-artifact@v4
+      with:
+        name: Editor (Windows, ARM64)
         path: |
           languages/
           fonts/

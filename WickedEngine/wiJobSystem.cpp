@@ -11,6 +11,7 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
+#include <malloc.h> // alloca
 
 #ifdef PLATFORM_LINUX
 #include <pthread.h>

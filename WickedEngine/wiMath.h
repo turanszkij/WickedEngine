@@ -5,10 +5,10 @@
 #include <algorithm>
 #include <limits>
 
-#ifndef WICKED_CMAKE_BUILD
-  #define _XM_F16C_INTRINSICS_
-  #define _XM_FMA3_INTRINSICS_
-#endif
+#if !defined(WICKED_CMAKE_BUILD) && !defined(_M_ARM64)
+#define _XM_F16C_INTRINSICS_
+#define _XM_FMA3_INTRINSICS_
+#endif // !defined(WICKED_CMAKE_BUILD) && !defined(_M_ARM64)
 
 #if __has_include(<DirectXMath.h>)
 // In this case, DirectXMath is coming from Windows SDK.

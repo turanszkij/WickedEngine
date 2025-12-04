@@ -120,9 +120,105 @@ struct StackVector
 };
 
 // CPU intrinsics:
-#if defined(_WIN32)
-// Windows, Xbox:
+#if defined(__clang__)
+inline long AtomicAnd(volatile long* ptr, long mask)
+{
+	return __atomic_fetch_and(ptr, mask, __ATOMIC_SEQ_CST);
+}
+inline long long AtomicAnd(volatile long long* ptr, long long mask)
+{
+	return __atomic_fetch_and(ptr, mask, __ATOMIC_SEQ_CST);
+}
+inline long AtomicOr(volatile long* ptr, long mask)
+{
+	return __atomic_fetch_or(ptr, mask, __ATOMIC_SEQ_CST);
+}
+inline long long AtomicOr(volatile long long* ptr, long long mask)
+{
+	return __atomic_fetch_or(ptr, mask, __ATOMIC_SEQ_CST);
+}
+inline long AtomicXor(volatile long* ptr, long mask)
+{
+	return __atomic_fetch_xor(ptr, mask, __ATOMIC_SEQ_CST);
+}
+inline long long AtomicXor(volatile long long* ptr, long long mask)
+{
+	return __atomic_fetch_xor(ptr, mask, __ATOMIC_SEQ_CST);
+}
+inline long AtomicAdd(volatile long* ptr, long val)
+{
+	return __atomic_fetch_add(ptr, val, __ATOMIC_SEQ_CST);
+}
+inline long long AtomicAdd(volatile long long* ptr, long long val)
+{
+	return __atomic_fetch_add(ptr, val, __ATOMIC_SEQ_CST);
+}
+inline unsigned int countbits(unsigned int value)
+{
+	return __builtin_popcount(value);
+}
+inline unsigned long long countbits(unsigned long value)
+{
+	return __builtin_popcountl(value);
+}
+inline unsigned long long countbits(unsigned long long value)
+{
+	return __builtin_popcountll(value);
+}
+inline unsigned long firstbithigh(unsigned int value)
+{
+	if (value == 0)
+	{
+		return 0;
+	}
+	return __builtin_clz(value);
+}
+inline unsigned long firstbithigh(unsigned long value)
+{
+	if (value == 0)
+	{
+		return 0;
+	}
+	return __builtin_clzl(value);
+}
+inline unsigned long firstbithigh(unsigned long long value)
+{
+	if (value == 0)
+	{
+		return 0;
+	}
+	return __builtin_clzll(value);
+}
+inline unsigned long firstbitlow(unsigned int value)
+{
+	if (value == 0)
+	{
+		return 0;
+	}
+	return __builtin_ctz(value);
+}
+inline unsigned long firstbitlow(unsigned long value)
+{
+	if (value == 0)
+	{
+		return 0;
+	}
+	return __builtin_ctzl(value);
+}
+inline unsigned long firstbitlow(unsigned long long value)
+{
+	if (value == 0)
+	{
+		return 0;
+	}
+	return __builtin_ctzll(value);
+}
+
+#elif defined(_MSC_VER)
 #include <intrin.h>
+#if defined(_M_ARM64)
+#include <arm64intr.h>
+#endif // _M_ARM64
 inline long AtomicAnd(volatile long* ptr, long mask)
 {
 	return _InterlockedAnd(ptr, mask);
@@ -221,101 +317,7 @@ inline unsigned long firstbitlow(unsigned long long value)
 	}
 	return 0;
 }
-#else
-// Linux, PlayStation:
-inline long AtomicAnd(volatile long* ptr, long mask)
-{
-	return __atomic_fetch_and(ptr, mask, __ATOMIC_SEQ_CST);
-}
-inline long long AtomicAnd(volatile long long* ptr, long long mask)
-{
-	return __atomic_fetch_and(ptr, mask, __ATOMIC_SEQ_CST);
-}
-inline long AtomicOr(volatile long* ptr, long mask)
-{
-	return __atomic_fetch_or(ptr, mask, __ATOMIC_SEQ_CST);
-}
-inline long long AtomicOr(volatile long long* ptr, long long mask)
-{
-	return __atomic_fetch_or(ptr, mask, __ATOMIC_SEQ_CST);
-}
-inline long AtomicXor(volatile long* ptr, long mask)
-{
-	return __atomic_fetch_xor(ptr, mask, __ATOMIC_SEQ_CST);
-}
-inline long long AtomicXor(volatile long long* ptr, long long mask)
-{
-	return __atomic_fetch_xor(ptr, mask, __ATOMIC_SEQ_CST);
-}
-inline long AtomicAdd(volatile long* ptr, long val)
-{
-	return __atomic_fetch_add(ptr, val, __ATOMIC_SEQ_CST);
-}
-inline long long AtomicAdd(volatile long long* ptr, long long val)
-{
-	return __atomic_fetch_add(ptr, val, __ATOMIC_SEQ_CST);
-}
-inline unsigned int countbits(unsigned int value)
-{
-	return __builtin_popcount(value);
-}
-inline unsigned long long countbits(unsigned long value)
-{
-	return __builtin_popcountl(value);
-}
-inline unsigned long long countbits(unsigned long long value)
-{
-	return __builtin_popcountll(value);
-}
-inline unsigned long firstbithigh(unsigned int value)
-{
-	if (value == 0)
-	{
-		return 0;
-	}
-	return __builtin_clz(value);
-}
-inline unsigned long firstbithigh(unsigned long value)
-{
-	if (value == 0)
-	{
-		return 0;
-	}
-	return __builtin_clzl(value);
-}
-inline unsigned long firstbithigh(unsigned long long value)
-{
-	if (value == 0)
-	{
-		return 0;
-	}
-	return __builtin_clzll(value);
-}
-inline unsigned long firstbitlow(unsigned int value)
-{
-	if (value == 0)
-	{
-		return 0;
-	}
-	return __builtin_ctz(value);
-}
-inline unsigned long firstbitlow(unsigned long value)
-{
-	if (value == 0)
-	{
-		return 0;
-	}
-	return __builtin_ctzl(value);
-}
-inline unsigned long firstbitlow(unsigned long long value)
-{
-	if (value == 0)
-	{
-		return 0;
-	}
-	return __builtin_ctzll(value);
-}
-#endif // _WIN32
+#endif // __clang__
 
 inline long AtomicLoad(const volatile long* ptr)
 {
