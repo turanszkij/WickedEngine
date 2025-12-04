@@ -120,7 +120,7 @@ jobs:
       shell: cmd
       run: |
         cd "WickedEngine"
-        "../BUILD/ARM64/Release/OfflineShaderCompiler/OfflineShaderCompiler.exe" hlsl6 spirv shaderdump strip_reflection
+        "../BUILD/x64/Release/OfflineShaderCompiler/OfflineShaderCompiler.exe" hlsl6 spirv shaderdump strip_reflection
 
     - name: Recompile with shader dump
       shell: cmd
