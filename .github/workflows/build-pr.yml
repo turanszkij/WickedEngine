@@ -83,7 +83,7 @@ jobs:
           startup.lua
           Editor_Windows.exe
           
-  windows:
+  windows-arm64:
     runs-on: windows-latest
     env:
       # needed on Windows because wiRenderer conditionally includes wiShaderDump.h
