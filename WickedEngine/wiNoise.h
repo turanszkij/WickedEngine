@@ -141,7 +141,7 @@ namespace wi::noise
 			);
 		}
 
-#ifdef _M_ARM64
+#if defined(_M_ARM64) || defined(__arm64__)
 		// TODO: this will not be equivalent to X64 right now!
 		inline XMFLOAT2 sin(XMFLOAT2 p)
 		{
@@ -204,7 +204,7 @@ namespace wi::noise
 			XMStoreFloat2(&ret, P);
 			return ret;
 		}
-#endif // _M_ARM64
+#endif // defined(_M_ARM64) || defined(__arm64__)
 
 		inline XMFLOAT2 hash(XMFLOAT2 p)
 		{

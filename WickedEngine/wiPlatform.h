@@ -21,6 +21,8 @@
 #define wiGetProcAddress(handle,name) GetProcAddress(handle, name)
 #elif defined(__SCE__)
 #define PLATFORM_PS5
+#elif defined(__APPLE__)
+#define PLATFORM_APPLE
 #else
 #define PLATFORM_LINUX
 #include <dlfcn.h>

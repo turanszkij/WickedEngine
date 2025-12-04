@@ -17,8 +17,10 @@
 #include "wiEventHandler.h"
 #include "wiPlatform.h"
 
-#ifdef PLATFORM_PS5
+#if defined(PLATFORM_PS5)
 #include "wiGraphicsDevice_PS5.h"
+#elif defined(PLATFORM_APPLE)
+
 #else
 #include "wiGraphicsDevice_DX12.h"
 #include "wiGraphicsDevice_Vulkan.h"

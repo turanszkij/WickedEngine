@@ -78,6 +78,22 @@ namespace wi::input
 	static SDL_Cursor* cursor_table[arraysize(cursor_table_original)] = {};
 #endif // SDL2
 
+#ifdef __APPLE__
+	static const int cursor_table_original[] = {
+	   0,
+	   0,
+	   0,
+	   0,
+	   0,
+	   0,
+	   0,
+	   0,
+	   0,
+	   0,
+   };
+   static int cursor_table[arraysize(cursor_table_original)] = {};
+#endif // __APPLE__
+
 	const KeyboardState& GetKeyboardState() { return keyboard; }
 	const MouseState& GetMouseState() { return mouse; }
 
