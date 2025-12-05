@@ -1,4 +1,5 @@
 #pragma once
+#ifdef __APPLE__
 #include "CommonInclude.h"
 #include "wiPlatform.h"
 #include "wiAllocator.h"
@@ -190,3 +191,4 @@ namespace wi::graphics
 		wi::allocator::shared_ptr<AllocationHandler> allocationhandler;
 	};
 }
+#endif // __APPLE__

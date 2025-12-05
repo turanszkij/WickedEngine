@@ -1,3 +1,4 @@
+#ifdef __APPLE__
 #define NS_PRIVATE_IMPLEMENTATION
 #define CA_PRIVATE_IMPLEMENTATION
 #define MTL_PRIVATE_IMPLEMENTATION
@@ -721,3 +722,5 @@ using namespace metal_internal;
 	{
 	}
 }
+
+#endif // __APPLE__

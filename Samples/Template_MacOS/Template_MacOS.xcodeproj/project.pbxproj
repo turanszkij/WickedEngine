@@ -8,6 +8,10 @@
 
 /* Begin PBXBuildFile section */
 		1EDA80B52EE2C9BD00210D41 /* libWickedEngine.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1EDA80B42EE2C9BD00210D41 /* libWickedEngine.a */; };
+		1EDA820D2EE3753F00210D41 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA820B2EE3753600210D41 /* main.cpp */; };
+		1EDA82202EE3802C00210D41 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1EDA821F2EE3802C00210D41 /* Metal.framework */; };
+		1EDA82222EE3804800210D41 /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1EDA82212EE3804700210D41 /* MetalKit.framework */; };
+		1EDA82242EE3805700210D41 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1EDA82232EE3805700210D41 /* Foundation.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -23,21 +27,20 @@
 /* Begin PBXFileReference section */
 		1EDA807B2EE2C1DB00210D41 /* Template_MacOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Template_MacOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EDA809E2EE2C5AD00210D41 /* WickedEngine.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = WickedEngine.xcodeproj; path = ../../WickedEngine/WickedEngine.xcodeproj; sourceTree = "<group>"; };
+		1EDA820B2EE3753600210D41 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		1EDA821F2EE3802C00210D41 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
+		1EDA82212EE3804700210D41 /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
+		1EDA82232EE3805700210D41 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
-
-/* Begin PBXFileSystemSynchronizedRootGroup section */
-		1EDA807D2EE2C1DB00210D41 /* Template_MacOS */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Template_MacOS;
-			sourceTree = "<group>";
-		};
-/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		1EDA80782EE2C1DB00210D41 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EDA82242EE3805700210D41 /* Foundation.framework in Frameworks */,
+				1EDA82222EE3804800210D41 /* MetalKit.framework in Frameworks */,
+				1EDA82202EE3802C00210D41 /* Metal.framework in Frameworks */,
 				1EDA80B52EE2C9BD00210D41 /* libWickedEngine.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -48,7 +51,7 @@
 		1EDA80722EE2C1DB00210D41 = {
 			isa = PBXGroup;
 			children = (
-				1EDA807D2EE2C1DB00210D41 /* Template_MacOS */,
+				1EDA820B2EE3753600210D41 /* main.cpp */,
 				1EDA809D2EE2C5AD00210D41 /* Frameworks */,
 				1EDA807C2EE2C1DB00210D41 /* Products */,
 			);
@@ -65,6 +68,9 @@
 		1EDA809D2EE2C5AD00210D41 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				1EDA82232EE3805700210D41 /* Foundation.framework */,
+				1EDA82212EE3804700210D41 /* MetalKit.framework */,
+				1EDA821F2EE3802C00210D41 /* Metal.framework */,
 				1EDA809E2EE2C5AD00210D41 /* WickedEngine.xcodeproj */,
 			);
 			name = Frameworks;
@@ -92,9 +98,6 @@
 			buildRules = (
 			);
 			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				1EDA807D2EE2C1DB00210D41 /* Template_MacOS */,
 			);
 			name = Template_MacOS;
 			packageProductDependencies = (
@@ -167,6 +170,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EDA820D2EE3753F00210D41 /* main.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -315,6 +319,7 @@
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SYSTEM_HEADER_SEARCH_PATHS = "$(SRCROOT)/../../WickedEngine/Utility/metal";
 			};
 			name = Debug;
 		};
@@ -343,6 +348,7 @@
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SYSTEM_HEADER_SEARCH_PATHS = "$(SRCROOT)/../../WickedEngine/Utility/metal";
 			};
 			name = Release;
 		};

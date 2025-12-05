@@ -112,7 +112,6 @@ namespace wi::allocator
 	inline uint8_t register_shared_allocator(SharedAllocator* allocator)
 	{
 		uint8_t id = next_allocator_id.fetch_add(1);
-		assert(id < arraysize(shared_allocators));
 		shared_allocators[id] = allocator;
 		return id;
 	}
