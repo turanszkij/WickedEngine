@@ -1,4 +1,6 @@
 /**
+ * Made by Anthony Gaudino for Wicked Engine Mac Arm64 compatibility
+ * 
  * Apple Silicon NEON shim layer for missing legacy intrinsics and signature
  * mismatch definitions expected by some third-party code. This file is
  * force-included (see CMakeLists.txt) only on macOS arm64 builds.
