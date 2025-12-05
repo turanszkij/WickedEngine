@@ -62,6 +62,7 @@ namespace wi::graphics
 		SPIRV,		// SPIR-V
 		HLSL6_XS,	// XBOX Series Native
 		PS5,		// Playstation 5
+		METAL,		// Apple Metal
 	};
 	enum class ShaderModel : uint8_t
 	{
