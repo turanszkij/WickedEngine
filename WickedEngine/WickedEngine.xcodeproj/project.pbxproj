@@ -269,6 +269,9 @@
 		1EDA806A2EE1F57900210D41 /* partition.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7FC92EE1F57900210D41 /* partition.cpp */; };
 		1EDA806C2EE1F57900210D41 /* lopcodes.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F4F2EE1F57900210D41 /* lopcodes.c */; };
 		1EDA80712EE236A900210D41 /* wiPhysics_Jolt.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA80702EE236A900210D41 /* wiPhysics_Jolt.cpp */; };
+		1EDA80BC2EE2CA6000210D41 /* wiSDLInput.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA80B92EE2CA6000210D41 /* wiSDLInput.cpp */; };
+		1EDA80BD2EE2CA6000210D41 /* wiXInput.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA80BB2EE2CA6000210D41 /* wiXInput.cpp */; };
+		1EDA80BE2EE2CA6000210D41 /* wiRawInput.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA80B72EE2CA6000210D41 /* wiRawInput.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -1005,6 +1008,12 @@
 		1EDA80172EE1F57900210D41 /* utility_common.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = utility_common.cpp; sourceTree = "<group>"; };
 		1EDA801C2EE1F57900210D41 /* win32ico.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = win32ico.h; sourceTree = "<group>"; };
 		1EDA80702EE236A900210D41 /* wiPhysics_Jolt.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = wiPhysics_Jolt.cpp; sourceTree = "<group>"; };
+		1EDA80B62EE2CA6000210D41 /* wiRawInput.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = wiRawInput.h; sourceTree = "<group>"; };
+		1EDA80B72EE2CA6000210D41 /* wiRawInput.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = wiRawInput.cpp; sourceTree = "<group>"; };
+		1EDA80B82EE2CA6000210D41 /* wiSDLInput.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = wiSDLInput.h; sourceTree = "<group>"; };
+		1EDA80B92EE2CA6000210D41 /* wiSDLInput.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = wiSDLInput.cpp; sourceTree = "<group>"; };
+		1EDA80BA2EE2CA6000210D41 /* wiXInput.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = wiXInput.h; sourceTree = "<group>"; };
+		1EDA80BB2EE2CA6000210D41 /* wiXInput.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = wiXInput.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1025,6 +1034,12 @@
 				1EDA801D2EE1F57900210D41 /* Utility */,
 				1EDA7D832EE1EC9500210D41 /* Jolt */,
 				1EDA80702EE236A900210D41 /* wiPhysics_Jolt.cpp */,
+				1EDA80B62EE2CA6000210D41 /* wiRawInput.h */,
+				1EDA80B72EE2CA6000210D41 /* wiRawInput.cpp */,
+				1EDA80B82EE2CA6000210D41 /* wiSDLInput.h */,
+				1EDA80B92EE2CA6000210D41 /* wiSDLInput.cpp */,
+				1EDA80BA2EE2CA6000210D41 /* wiXInput.h */,
+				1EDA80BB2EE2CA6000210D41 /* wiXInput.cpp */,
 				1EDA7A572EE1DFE300210D41 /* CommonInclude.h */,
 				1EDA7A582EE1DFE300210D41 /* logo.h */,
 				1EDA7A592EE1DFE300210D41 /* waterripple.h */,
@@ -2244,6 +2259,9 @@
 				1EDA7DFC2EE1EC9500210D41 /* AABBTreeBuilder.cpp in Sources */,
 				1EDA7DFD2EE1EC9500210D41 /* TaperedCylinderShape.cpp in Sources */,
 				1EDA7DFE2EE1EC9500210D41 /* Color.cpp in Sources */,
+				1EDA80BC2EE2CA6000210D41 /* wiSDLInput.cpp in Sources */,
+				1EDA80BD2EE2CA6000210D41 /* wiXInput.cpp in Sources */,
+				1EDA80BE2EE2CA6000210D41 /* wiRawInput.cpp in Sources */,
 				1EDA7DFF2EE1EC9500210D41 /* ObjectStreamBinaryOut.cpp in Sources */,
 				1EDA7E002EE1EC9500210D41 /* JobSystemThreadPool.cpp in Sources */,
 				1EDA7E012EE1EC9500210D41 /* SphereShape.cpp in Sources */,
