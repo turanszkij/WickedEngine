@@ -4,6 +4,8 @@
 #include "wiAllocator.h"
 #include "wiGraphicsDevice.h"
 
+#include <Metal/Metal.hpp>
+
 #include <mutex>
 
 namespace wi::graphics
@@ -11,12 +13,22 @@ namespace wi::graphics
 	class GraphicsDevice_Metal final : public GraphicsDevice
 	{
 	private:
+		MTL::Device* device = nullptr;
+		MTL::CommandQueue* commandqueue = nullptr;
+		
 		struct CommandList_Metal
 		{
+			MTL::CommandBuffer* commandbuffer = nullptr;
 			GPULinearAllocator frame_allocators[BUFFERCOUNT];
 			RenderPassInfo renderpass_info;
 			uint32_t id = 0;
 			QUEUE_TYPE queue = QUEUE_COUNT;
+			
+			~CommandList_Metal()
+			{
+				if(commandbuffer != nullptr)
+					commandbuffer->release();
+			}
 
 			void reset(uint32_t bufferindex)
 			{

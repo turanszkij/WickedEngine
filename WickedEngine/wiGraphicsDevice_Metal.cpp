@@ -1,6 +1,15 @@
+#define NS_PRIVATE_IMPLEMENTATION
+#define CA_PRIVATE_IMPLEMENTATION
+#define MTL_PRIVATE_IMPLEMENTATION
+#define MTK_PRIVATE_IMPLEMENTATION
 #include "wiGraphicsDevice_Metal.h"
 #include "wiTimer.h"
 #include "wiBacklog.h"
+
+#include <AppKit/AppKit.hpp>
+#include <MetalKit/MetalKit.hpp>
+#include <QuartzCore/QuartzCore.hpp>
+#include <Foundation/Foundation.hpp>
 
 namespace wi::graphics
 {
@@ -124,6 +133,7 @@ namespace metal_internal
 	{
 		wi::allocator::shared_ptr<GraphicsDevice_Metal::AllocationHandler> allocationhandler;
 		ColorSpace colorSpace = ColorSpace::SRGB;
+		MTK::View* view = nullptr;
 
 		~SwapChain_Metal()
 		{
@@ -179,20 +189,36 @@ using namespace metal_internal;
 	GraphicsDevice_Metal::GraphicsDevice_Metal(ValidationMode validationMode_, GPUPreference preference)
 	{
 		wi::Timer timer;
+		device = MTL::CreateSystemDefaultDevice();
+		commandqueue = device->newCommandQueue();
+		allocationhandler = wi::allocator::make_shared_single<AllocationHandler>();
 		wilog("Created GraphicsDevice_Metal (%d ms)", (int)std::round(timer.elapsed()));
 	}
 	GraphicsDevice_Metal::~GraphicsDevice_Metal()
 	{
+		commandlists.clear();
+		commandqueue->release();
+		device->release();
 	}
 
-	bool GraphicsDevice_Metal::CreateSwapChain(const SwapChainDesc* desc, wi::platform::window_type window, SwapChain* swapchain) const
+	bool GraphicsDevice_Metal::CreateSwapChain(const SwapChainDesc* desc, wi::platform::window_type _window, SwapChain* swapchain) const
 	{
 		auto internal_state = swapchain->IsValid() ? wi::allocator::shared_ptr<SwapChain_Metal>(swapchain->internal_state) : wi::allocator::make_shared<SwapChain_Metal>();
 		internal_state->allocationhandler = allocationhandler;
 		swapchain->internal_state = internal_state;
 		swapchain->desc = *desc;
+		
+		NS::Window* window = (NS::Window*)_window;
+		
+		CGRect frame = (CGRect){ {0.0f, 0.0f}, {float(desc->width), float(desc->height)} };
+		internal_state->view = MTK::View::alloc()->init( frame, device );
+		
+		internal_state->view->setColorPixelFormat( MTL::PixelFormat::PixelFormatBGRA8Unorm_sRGB );
+		internal_state->view->setClearColor( MTL::ClearColor::Make( 1.0, 0.0, 0.0, 1.0 ) );
 
-		return false;
+		window->setContentView( internal_state->view );
+
+		return true;
 	}
 	bool GraphicsDevice_Metal::CreateBuffer2(const GPUBufferDesc* desc, const std::function<void(void*)>& init_callback, GPUBuffer* buffer, const GPUResource* alias, uint64_t alias_offset) const
 	{
@@ -366,6 +392,7 @@ using namespace metal_internal;
 		if (cmd_current >= commandlists.size())
 		{
 			commandlists.push_back(std::make_unique<CommandList_Metal>());
+			commandlists.back()->commandbuffer = commandqueue->commandBuffer();
 		}
 		CommandList cmd;
 		cmd.internal_state = commandlists[cmd_current].get();
