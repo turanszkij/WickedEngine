@@ -1,6 +1,7 @@
 #include "WickedEngine.h"
 
 #include <AppKit/AppKit.hpp>
+#include <MetalKit/MetalKit.hpp>
 
 wi::Application application;
 
@@ -12,32 +13,41 @@ int main( int argc, char* argv[] )
 	CGRect frame = (CGRect){ {100.0, 100.0}, {512.0, 512.0} };
 	NS::Window* window = NS::Window::alloc()->init(
 		 frame,
-		 NS::WindowStyleMaskClosable|NS::WindowStyleMaskTitled,
+		 NS::WindowStyleMaskClosable|NS::WindowStyleMaskResizable|NS::WindowStyleMaskMiniaturizable|NS::WindowStyleMaskTitled,
 		 NS::BackingStoreBuffered,
 		 false
 	);
 	window->setTitle(NS::String::string("Wicked Engine MacOS Template", NS::StringEncoding::UTF8StringEncoding));
 	window->makeKeyAndOrderFront( nullptr );
 	
-	application.SetWindow(window);
+	MTK::View* view = MTK::View::alloc();
 	
-	class MyAppDelegate : public NS::ApplicationDelegate
+	application.canvas.width = (uint32_t)frame.size.width;
+	application.canvas.height = (uint32_t)frame.size.height;
+	application.SetWindow(view);
+	
+	class MyMTKViewDelegate : public MTK::ViewDelegate
 	{
 	public:
-		virtual void applicationWillFinishLaunching( NS::Notification* pNotification ) override{}
-		virtual void applicationDidFinishLaunching( NS::Notification* pNotification ) override{
-			std::thread([]{
-				while(true){
-					application.Run();
-				}
-			}).detach();
+		void drawInMTKView( MTK::View* pView ) override
+		{
+			application.Run();
 		}
-		virtual bool applicationShouldTerminateAfterLastWindowClosed( NS::Application* pSender ) override {return  true;}
-	} application_delegate;
+		void drawableSizeWillChange( class MTK::View* pView, CGSize size ) override
+		{
+			application.canvas.width = (uint32_t)size.width;
+			application.canvas.height = (uint32_t)size.height;
+			application.SetWindow(pView);
+		}
+	} view_delegate;
+	view->setDelegate(&view_delegate);
 	
-	pSharedApplication->setDelegate( &application_delegate );
+	window->setContentView(view);
 	
 	pSharedApplication->run();
+	
+	wi::jobsystem::ShutDown();
+	
 	pAutoreleasePool->release();
 	return 0;
 }

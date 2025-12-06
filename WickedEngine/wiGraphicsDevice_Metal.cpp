@@ -202,22 +202,23 @@ using namespace metal_internal;
 		device->release();
 	}
 
-	bool GraphicsDevice_Metal::CreateSwapChain(const SwapChainDesc* desc, wi::platform::window_type _window, SwapChain* swapchain) const
+	bool GraphicsDevice_Metal::CreateSwapChain(const SwapChainDesc* desc, wi::platform::window_type window, SwapChain* swapchain) const
 	{
 		auto internal_state = swapchain->IsValid() ? wi::allocator::shared_ptr<SwapChain_Metal>(swapchain->internal_state) : wi::allocator::make_shared<SwapChain_Metal>();
 		internal_state->allocationhandler = allocationhandler;
 		swapchain->internal_state = internal_state;
 		swapchain->desc = *desc;
 		
-		NS::Window* window = (NS::Window*)_window;
-		
 		CGRect frame = (CGRect){ {0.0f, 0.0f}, {float(desc->width), float(desc->height)} };
-		internal_state->view = MTK::View::alloc()->init( frame, device );
 		
-		internal_state->view->setColorPixelFormat( MTL::PixelFormat::PixelFormatBGRA8Unorm_sRGB );
-		internal_state->view->setClearColor( MTL::ClearColor::Make( 1.0, 0.0, 0.0, 1.0 ) );
-
-		window->setContentView( internal_state->view );
+		if(internal_state->view == nullptr)
+		{
+			internal_state->view = (MTK::View*)window;
+			internal_state->view->init( frame, device );
+			
+			internal_state->view->setColorPixelFormat( MTL::PixelFormat::PixelFormatBGRA8Unorm_sRGB );
+			internal_state->view->setClearColor( MTL::ClearColor::Make( 1.0, 0.0, 0.0, 1.0 ) );
+		}
 
 		return true;
 	}
@@ -393,7 +394,7 @@ using namespace metal_internal;
 		if (cmd_current >= commandlists.size())
 		{
 			commandlists.push_back(std::make_unique<CommandList_Metal>());
-			commandlists.back()->commandbuffer = commandqueue->commandBuffer();
+			//commandlists.back()->commandbuffer = commandqueue->commandBuffer();
 		}
 		CommandList cmd;
 		cmd.internal_state = commandlists[cmd_current].get();
@@ -403,11 +404,25 @@ using namespace metal_internal;
 		commandlist.reset(GetBufferIndex());
 		commandlist.queue = queue;
 		commandlist.id = cmd_current;
+		commandlist.commandbuffer = commandqueue->commandBuffer();
 
 		return cmd;
 	}
 	void GraphicsDevice_Metal::SubmitCommandLists()
 	{
+		uint32_t cmd_last = cmd_count;
+		cmd_count= 0;
+		for(uint32_t cmd = 0; cmd < cmd_last; ++cmd)
+		{
+			auto commandlist = commandlists[cmd].get();
+			if (commandlist->present)
+			{
+				MTK::View* view = (MTK::View*)commandlist->present;
+				commandlist->commandbuffer->presentDrawable( view->currentDrawable() );
+			}
+			commandlist->commandbuffer->commit();
+		}
+		
 		// From here, we begin a new frame, this affects GetBufferIndex()!
 		FRAMECOUNT++;
 
@@ -452,6 +467,11 @@ using namespace metal_internal;
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		auto internal_state = to_internal(swapchain);
+		
+		commandlist.present = internal_state->view;
+		
+		MTL::RenderPassDescriptor* pRpd = internal_state->view->currentRenderPassDescriptor();
+		commandlist.encoder = commandlist.commandbuffer->renderCommandEncoder( pRpd );
 
 		commandlist.renderpass_info = RenderPassInfo::from(swapchain->desc);
 	}
@@ -464,6 +484,8 @@ using namespace metal_internal;
 	void GraphicsDevice_Metal::RenderPassEnd(CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		
+		commandlist.encoder->endEncoding();
 
 		commandlist.renderpass_info = {};
 	}

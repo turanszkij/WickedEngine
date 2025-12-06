@@ -800,7 +800,9 @@ namespace wi
 		}
 		wi::graphics::GetDevice() = graphicsDevice.get();
 
+#ifndef __APPLE__
 		canvas.init(window);
+#endif // __APPLE__
 
 		SwapChainDesc desc = swapChain.desc;
 		if (!swapChain.IsValid())

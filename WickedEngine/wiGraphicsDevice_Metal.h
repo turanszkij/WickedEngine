@@ -25,6 +25,9 @@ namespace wi::graphics
 			uint32_t id = 0;
 			QUEUE_TYPE queue = QUEUE_COUNT;
 			
+			void* present = nullptr;
+			MTL::RenderCommandEncoder* encoder = nullptr;
+			
 			~CommandList_Metal()
 			{
 				if(commandbuffer != nullptr)
@@ -37,6 +40,8 @@ namespace wi::graphics
 				renderpass_info = {};
 				id = 0;
 				queue = QUEUE_COUNT;
+				present = nullptr;
+				encoder = nullptr;
 			}
 		};
 		wi::vector<std::unique_ptr<CommandList_Metal>> commandlists;
