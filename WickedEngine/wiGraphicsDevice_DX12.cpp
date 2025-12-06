@@ -5389,7 +5389,7 @@ std::mutex queue_locker;
 					else
 					{
 						allocationhandler->destroylocker.lock();
-						allocationhandler->destroyer_pipelines.push_back(std::make_pair(x.second, FRAMECOUNT));
+						allocationhandler->destroyer_pipelines.push_back(std::make_pair(x.second, GetFrameCount()));
 						allocationhandler->destroylocker.unlock();
 					}
 				}
@@ -5768,7 +5768,7 @@ std::mutex queue_locker;
 
 		for (auto& x : pipelines_global)
 		{
-			allocationhandler->destroyer_pipelines.push_back(std::make_pair(x.second, FRAMECOUNT));
+			allocationhandler->destroyer_pipelines.push_back(std::make_pair(x.second, GetFrameCount()));
 		}
 		pipelines_global.clear();
 
@@ -5776,7 +5776,7 @@ std::mutex queue_locker;
 		{
 			for (auto& y : x->pipelines_worker)
 			{
-				allocationhandler->destroyer_pipelines.push_back(std::make_pair(y.second, FRAMECOUNT));
+				allocationhandler->destroyer_pipelines.push_back(std::make_pair(y.second, GetFrameCount()));
 			}
 			x->pipelines_worker.clear();
 		}

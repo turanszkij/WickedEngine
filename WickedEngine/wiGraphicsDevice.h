@@ -3,6 +3,7 @@
 #include "wiGraphics.h"
 #include "wiPlatform.h"
 
+#include <atomic>
 #include <cassert>
 #include <cstring>
 #include <algorithm>
@@ -52,7 +53,7 @@ namespace wi::graphics
 	{
 	protected:
 		static constexpr uint32_t BUFFERCOUNT = 2;
-		uint64_t FRAMECOUNT = 0;
+		std::atomic<uint64_t> FRAMECOUNT = 0;
 		size_t SHADER_IDENTIFIER_SIZE = 0;
 		size_t TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = 0;
 		uint64_t TIMESTAMP_FREQUENCY = 0;
@@ -116,9 +117,15 @@ namespace wi::graphics
 		//	One PipelineState object can be compiled internally for multiple render target or depth-stencil formats, or sample counts
 		virtual size_t GetActivePipelineCount() const = 0;
 
+
+#if defined(_MSC_VER) && !defined(__clang__)
+    #define constexpr_no_msvc
+#else
+	#define constexpr_no_msvc constexpr
+#endif
 		// Returns the number of elapsed frames (submits)
 		//	It is incremented when calling SubmitCommandLists()
-		constexpr uint64_t GetFrameCount() const { return FRAMECOUNT; }
+		constexpr_no_msvc uint64_t GetFrameCount() const { return FRAMECOUNT; }
 
 		// Check whether the graphics device supports a feature or not
 		constexpr bool CheckCapability(GraphicsDeviceCapability capability) const { return has_flag(capabilities, capability); }
@@ -126,7 +133,7 @@ namespace wi::graphics
 		// Returns the buffer count, which is the array size of buffered resources used by both the CPU and GPU
 		static constexpr uint32_t GetBufferCount() { return BUFFERCOUNT; }
 		// Returns the current buffer index, which is in range [0, GetBufferCount() - 1]
-		constexpr uint32_t GetBufferIndex() const { return GetFrameCount() % GetBufferCount(); }
+		constexpr_no_msvc uint32_t GetBufferIndex() const { return GetFrameCount() % GetBufferCount(); }
 
 		// Returns whether the graphics debug layer is enabled. It can be enabled when creating the device.
 		constexpr bool IsDebugDevice() const { return validationMode != ValidationMode::Disabled; }
@@ -294,7 +301,7 @@ namespace wi::graphics
 			inline bool IsValid() const { return data != nullptr && buffer.IsValid(); }
 		};
 
-		// Allocates temporary memory that the CPU can write and GPU can read. 
+		// Allocates temporary memory that the CPU can write and GPU can read.
 		//	It is only alive for one frame and automatically invalidated after that.
 		GPUAllocation AllocateGPU(uint64_t dataSize, CommandList cmd)
 		{

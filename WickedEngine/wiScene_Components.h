@@ -49,22 +49,41 @@ namespace wi::scene
 			EMPTY = 0,
 			DIRTY = 1 << 0,
 		};
-
+		//private:
 		XMFLOAT3 scale_local = XMFLOAT3(1, 1, 1);
-		uint32_t _flags = DIRTY;
+		wi::copyable_atomic<uint32_t> _flags = DIRTY;
 		XMFLOAT4 rotation_local = XMFLOAT4(0, 0, 0, 1);	// this is a quaternion
 		XMFLOAT3 translation_local = XMFLOAT3(0, 0, 0);
 
 		// Non-serialized attributes:
 		float _padding = 0;
-
+		mutable std::shared_mutex _mutex;
 		// The world matrix can be computed from local scale, rotation, translation
 		//	- by calling UpdateTransform()
 		//	- or by calling SetDirty() and letting the TransformUpdateSystem handle the updating
 		XMFLOAT4X4 world = wi::math::IDENTITY_MATRIX;
-
+		public:
+		TransformComponent() = default;
+		TransformComponent(const TransformComponent& other) : _mutex() {
+			std::shared_lock lock(other._mutex);
+			_flags = other._flags;
+			scale_local = other.scale_local;
+			rotation_local = other.rotation_local;
+			translation_local = other.translation_local;
+			world = other.world;
+		}
+		TransformComponent& operator=(const TransformComponent& other) {
+			std::shared_lock lock(other._mutex);
+			std::unique_lock lock2(_mutex);
+			_flags = other._flags;
+			scale_local = other.scale_local;
+			rotation_local = other.rotation_local;
+			translation_local = other.translation_local;
+			world = other.world;
+			return *this;
+		}
 		constexpr void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
-		constexpr bool IsDirty() const { return _flags & DIRTY; }
+		WI_ATOMIC_CONSTEXPR bool IsDirty() const { return _flags & DIRTY; }
 
 		XMFLOAT3 GetPosition() const;
 		XMFLOAT4 GetRotation() const;
@@ -82,7 +101,7 @@ namespace wi::scene
 		// Computes the local space matrix from scale, rotation, translation and returns it
 		XMMATRIX GetLocalMatrix() const;
 		// Returns the stored world matrix that was computed the last time UpdateTransform() was called
-		XMMATRIX GetWorldMatrix() const { return XMLoadFloat4x4(&world); };
+		XMMATRIX GetWorldMatrix() const { std::shared_lock lock(_mutex); return XMLoadFloat4x4(&world); };
 		// Applies the local space to the world space matrix. This overwrites world matrix
 		void UpdateTransform();
 		// Apply a parent transform relative to the local space. This overwrites world matrix
@@ -105,7 +124,10 @@ namespace wi::scene
 		void CatmullRom(const TransformComponent& a, const TransformComponent& b, const TransformComponent& c, const TransformComponent& d, float t);
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+	private:
+		XMMATRIX GetLocalMatrixNoLock() const;
 	};
+	static_assert(sizeof(TransformComponent) % 16 == 0);
 
 	struct alignas(16) HierarchyComponent
 	{
@@ -140,7 +162,7 @@ namespace wi::scene
 			DISABLE_CAPSULE_SHADOW = 1 << 17,
 			INTERNAL = 1 << 18 // used only for internal purposes
 		};
-		uint32_t _flags = CAST_SHADOW;
+		wi::copyable_atomic<uint32_t> _flags = CAST_SHADOW;
 
 		enum SHADERTYPE
 		{
@@ -280,10 +302,10 @@ namespace wi::scene
 		constexpr bool HasPlanarReflection() const { return shaderType == SHADERTYPE_PBR_PLANARREFLECTION || shaderType == SHADERTYPE_WATER; }
 
 		constexpr void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
-		constexpr bool IsDirty() const { return _flags & DIRTY; }
+		WI_ATOMIC_CONSTEXPR bool IsDirty() const { return _flags & DIRTY; }
 
 		constexpr void SetInternal(bool value = true) { if (value) { _flags |= INTERNAL; } else { _flags &= ~INTERNAL; } }
-		constexpr bool IsInternal() const { return _flags & INTERNAL; }
+		WI_ATOMIC_CONSTEXPR bool IsInternal() const { return _flags & INTERNAL; }
 
 		constexpr void SetCastShadow(bool value) { SetDirty(); if (value) { _flags |= CAST_SHADOW; } else { _flags &= ~CAST_SHADOW; } }
 		constexpr void SetReceiveShadow(bool value) { SetDirty(); if (value) { _flags &= ~DISABLE_RECEIVE_SHADOW; } else { _flags |= DISABLE_RECEIVE_SHADOW; } }
@@ -292,21 +314,21 @@ namespace wi::scene
 
 		wi::enums::BLENDMODE GetBlendMode() const { if (userBlendMode == wi::enums::BLENDMODE_OPAQUE && (GetFilterMask() & wi::enums::FILTER_TRANSPARENT)) return wi::enums::BLENDMODE_ALPHA; else return userBlendMode; }
 
-		constexpr bool IsCastingShadow() const { return _flags & CAST_SHADOW; }
-		constexpr bool IsAlphaTestEnabled() const { return alphaRef <= 1.0f - 1.0f / 256.0f; }
-		constexpr bool IsUsingVertexColors() const { return _flags & USE_VERTEXCOLORS; }
-		constexpr bool IsUsingWind() const { return _flags & USE_WIND; }
-		constexpr bool IsReceiveShadow() const { return (_flags & DISABLE_RECEIVE_SHADOW) == 0; }
-		constexpr bool IsUsingSpecularGlossinessWorkflow() const { return _flags & SPECULAR_GLOSSINESS_WORKFLOW; }
-		constexpr bool IsOcclusionEnabled_Primary() const { return _flags & OCCLUSION_PRIMARY; }
-		constexpr bool IsOcclusionEnabled_Secondary() const { return _flags & OCCLUSION_SECONDARY; }
-		constexpr bool IsCustomShader() const { return customShaderID >= 0; }
-		constexpr bool IsDoubleSided() const { return _flags & DOUBLE_SIDED; }
-		constexpr bool IsOutlineEnabled() const { return _flags & OUTLINE; }
-		constexpr bool IsPreferUncompressedTexturesEnabled() const { return _flags & PREFER_UNCOMPRESSED_TEXTURES; }
-		constexpr bool IsVertexAODisabled() const { return _flags & DISABLE_VERTEXAO; }
-		constexpr bool IsTextureStreamingDisabled() const { return _flags & DISABLE_TEXTURE_STREAMING; }
-		constexpr bool IsCoplanarBlending() const { return _flags & COPLANAR_BLENDING; }
+		WI_ATOMIC_CONSTEXPR bool IsCastingShadow() const { return _flags & CAST_SHADOW; }
+		WI_ATOMIC_CONSTEXPR bool IsAlphaTestEnabled() const { return alphaRef <= 1.0f - 1.0f / 256.0f; }
+		WI_ATOMIC_CONSTEXPR bool IsUsingVertexColors() const { return _flags & USE_VERTEXCOLORS; }
+		WI_ATOMIC_CONSTEXPR bool IsUsingWind() const { return _flags & USE_WIND; }
+		WI_ATOMIC_CONSTEXPR bool IsReceiveShadow() const { return (_flags & DISABLE_RECEIVE_SHADOW) == 0; }
+		WI_ATOMIC_CONSTEXPR bool IsUsingSpecularGlossinessWorkflow() const { return _flags & SPECULAR_GLOSSINESS_WORKFLOW; }
+		WI_ATOMIC_CONSTEXPR bool IsOcclusionEnabled_Primary() const { return _flags & OCCLUSION_PRIMARY; }
+		WI_ATOMIC_CONSTEXPR bool IsOcclusionEnabled_Secondary() const { return _flags & OCCLUSION_SECONDARY; }
+		WI_ATOMIC_CONSTEXPR bool IsCustomShader() const { return customShaderID >= 0; }
+		WI_ATOMIC_CONSTEXPR bool IsDoubleSided() const { return _flags & DOUBLE_SIDED; }
+		WI_ATOMIC_CONSTEXPR bool IsOutlineEnabled() const { return _flags & OUTLINE; }
+		WI_ATOMIC_CONSTEXPR bool IsPreferUncompressedTexturesEnabled() const { return _flags & PREFER_UNCOMPRESSED_TEXTURES; }
+		WI_ATOMIC_CONSTEXPR bool IsVertexAODisabled() const { return _flags & DISABLE_VERTEXAO; }
+		WI_ATOMIC_CONSTEXPR bool IsTextureStreamingDisabled() const { return _flags & DISABLE_TEXTURE_STREAMING; }
+		WI_ATOMIC_CONSTEXPR bool IsCoplanarBlending() const { return _flags & COPLANAR_BLENDING; }
 
 		constexpr void SetBaseColor(const XMFLOAT4& value) { SetDirty(); baseColor = value; }
 		constexpr void SetSpecularColor(const XMFLOAT4& value) { SetDirty(); specularColor = value; }
@@ -377,7 +399,7 @@ namespace wi::scene
 			interiorMappingRotation = value;
 		}
 
-		constexpr bool IsCapsuleShadowDisabled() const { return _flags & DISABLE_CAPSULE_SHADOW; }
+		WI_ATOMIC_CONSTEXPR bool IsCapsuleShadowDisabled() const { return _flags & DISABLE_CAPSULE_SHADOW; }
 		constexpr void SetCapsuleShadowDisabled(bool value = true) { if (value) { _flags |= DISABLE_CAPSULE_SHADOW; } else { _flags &= ~DISABLE_CAPSULE_SHADOW; } }
 
 		constexpr void SetMeshBlend(float value) { mesh_blend = value; SetDirty(); }
@@ -414,7 +436,7 @@ namespace wi::scene
 			REFRESH_PARAMETERS_REQUEST = 1 << 3,
 			CHARACTER_PHYSICS = 1 << 4,
 		};
-		uint32_t _flags = EMPTY;
+		wi::copyable_atomic<uint32_t> _flags = EMPTY;
 
 		enum CollisionShape : uint32_t
 		{
@@ -530,18 +552,18 @@ namespace wi::scene
 		constexpr void SetKinematic(bool value) { if (value) { _flags |= KINEMATIC; } else { _flags &= ~KINEMATIC; } }
 		constexpr void SetStartDeactivated(bool value) { if (value) { _flags |= START_DEACTIVATED; } else { _flags &= ~START_DEACTIVATED; } }
 
-		constexpr bool IsVehicle() const { return vehicle.type != Vehicle::Type::None; }
-		constexpr bool IsCar() const { return vehicle.type == Vehicle::Type::Car; }
-		constexpr bool IsMotorcycle() const { return vehicle.type == Vehicle::Type::Motorcycle; }
-		constexpr bool IsDisableDeactivation() const { return _flags & DISABLE_DEACTIVATION; }
-		constexpr bool IsKinematic() const { return _flags & KINEMATIC; }
-		constexpr bool IsStartDeactivated() const { return _flags & START_DEACTIVATED; }
+		WI_ATOMIC_CONSTEXPR bool IsVehicle() const { return vehicle.type != Vehicle::Type::None; }
+		WI_ATOMIC_CONSTEXPR bool IsCar() const { return vehicle.type == Vehicle::Type::Car; }
+		WI_ATOMIC_CONSTEXPR bool IsMotorcycle() const { return vehicle.type == Vehicle::Type::Motorcycle; }
+		WI_ATOMIC_CONSTEXPR bool IsDisableDeactivation() const { return _flags & DISABLE_DEACTIVATION; }
+		WI_ATOMIC_CONSTEXPR bool IsKinematic() const { return _flags & KINEMATIC; }
+		WI_ATOMIC_CONSTEXPR bool IsStartDeactivated() const { return _flags & START_DEACTIVATED; }
 
 		constexpr void SetRefreshParametersNeeded(bool value = true) { if (value) { _flags |= REFRESH_PARAMETERS_REQUEST; } else { _flags &= ~REFRESH_PARAMETERS_REQUEST; } }
-		constexpr bool IsRefreshParametersNeeded() const { return _flags & REFRESH_PARAMETERS_REQUEST; }
+		WI_ATOMIC_CONSTEXPR bool IsRefreshParametersNeeded() const { return _flags & REFRESH_PARAMETERS_REQUEST; }
 
 		constexpr void SetCharacterPhysics(bool value = true) { if (value) { _flags |= CHARACTER_PHYSICS; } else { _flags &= ~CHARACTER_PHYSICS; } }
-		constexpr bool IsCharacterPhysics() const { return _flags & CHARACTER_PHYSICS; }
+		WI_ATOMIC_CONSTEXPR bool IsCharacterPhysics() const { return _flags & CHARACTER_PHYSICS; }
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
@@ -554,7 +576,7 @@ namespace wi::scene
 			REFRESH_PARAMETERS_REQUEST = 1 << 0,
 			DISABLE_SELF_COLLISION = 1 << 1,
 		};
-		uint32_t _flags = EMPTY;
+		wi::copyable_atomic<uint32_t> _flags = EMPTY;
 
 		// Note: the constraint axes are taken from the TransformComponent on the constraint's entity
 		//	RIGHT axis means X axis in the default orientation
@@ -641,11 +663,11 @@ namespace wi::scene
 
 		// Request refreshing of constraint settings without recreating the constraint
 		constexpr void SetRefreshParametersNeeded(bool value = true) { if (value) { _flags |= REFRESH_PARAMETERS_REQUEST; } else { _flags &= ~REFRESH_PARAMETERS_REQUEST; } }
-		constexpr bool IsRefreshParametersNeeded() const { return _flags & REFRESH_PARAMETERS_REQUEST; }
+		WI_ATOMIC_CONSTEXPR bool IsRefreshParametersNeeded() const { return _flags & REFRESH_PARAMETERS_REQUEST; }
 
 		// Enable/disable collision between the two bodies that this constraint targets
 		constexpr void SetDisableSelfCollision(bool value = true) { if (value) { _flags |= DISABLE_SELF_COLLISION; } else { _flags &= ~DISABLE_SELF_COLLISION; } }
-		constexpr bool IsDisableSelfCollision() const { return _flags & DISABLE_SELF_COLLISION; }
+		WI_ATOMIC_CONSTEXPR bool IsDisableSelfCollision() const { return _flags & DISABLE_SELF_COLLISION; }
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
@@ -666,7 +688,7 @@ namespace wi::scene
 			BVH_ENABLED = 1 << 8,
 			QUANTIZED_POSITIONS_DISABLED = 1 << 9,
 		};
-		// *uint32_t _flags is moved down for better struct padding...
+		// *wi::copyable_atomic<uint32_t> _flags is moved down for better struct padding...
 
 		wi::vector<XMFLOAT3> vertex_positions;
 		wi::vector<XMFLOAT3> vertex_normals;
@@ -698,7 +720,7 @@ namespace wi::scene
 			uint32_t materialIndex = 0;
 			uint32_t flags = 0;
 
-			constexpr bool IsDoubleSided() const { return flags & MESH_SUBSET_DOUBLESIDED; }
+			WI_ATOMIC_CONSTEXPR bool IsDoubleSided() const { return flags & MESH_SUBSET_DOUBLESIDED; }
 		};
 		wi::vector<MeshSubset> subsets;
 
@@ -736,7 +758,7 @@ namespace wi::scene
 			int subresource_uav = -1;
 			int descriptor_uav = -1;
 
-			constexpr bool IsValid() const
+			WI_ATOMIC_CONSTEXPR bool IsValid() const
 			{
 				return offset != ~0ull;
 			}
@@ -779,7 +801,7 @@ namespace wi::scene
 
 		RigidBodyPhysicsComponent precomputed_rigidbody_physics_shape; // you can precompute a physics shape here if you need without using a real rigid body component yet
 
-		uint32_t _flags = RENDERABLE; // *this is serialized but put here for better struct padding
+		wi::copyable_atomic<uint32_t> _flags = RENDERABLE; // *this is serialized but put here for better struct padding
 
 		enum BLAS_STATE
 		{
@@ -803,15 +825,15 @@ namespace wi::scene
 		//	This should be enabled for connecting meshes like terrain chunks if their AABB is not consistent with each other
 		constexpr void SetQuantizedPositionsDisabled(bool value) { if (value) { _flags |= QUANTIZED_POSITIONS_DISABLED; } else { _flags &= ~QUANTIZED_POSITIONS_DISABLED; } }
 
-		constexpr bool IsRenderable() const { return _flags & RENDERABLE; }
-		constexpr bool IsDoubleSided() const { return _flags & DOUBLE_SIDED; }
-		constexpr bool IsDoubleSidedShadow() const { return _flags & DOUBLE_SIDED_SHADOW; }
-		constexpr bool IsDynamic() const { return _flags & DYNAMIC; }
-		constexpr bool IsBVHEnabled() const { return _flags & BVH_ENABLED; }
-		constexpr bool IsQuantizedPositionsDisabled() const { return _flags & QUANTIZED_POSITIONS_DISABLED; }
+		WI_ATOMIC_CONSTEXPR bool IsRenderable() const { return _flags & RENDERABLE; }
+		WI_ATOMIC_CONSTEXPR bool IsDoubleSided() const { return _flags & DOUBLE_SIDED; }
+		WI_ATOMIC_CONSTEXPR bool IsDoubleSidedShadow() const { return _flags & DOUBLE_SIDED_SHADOW; }
+		WI_ATOMIC_CONSTEXPR bool IsDynamic() const { return _flags & DYNAMIC; }
+		WI_ATOMIC_CONSTEXPR bool IsBVHEnabled() const { return _flags & BVH_ENABLED; }
+		WI_ATOMIC_CONSTEXPR bool IsQuantizedPositionsDisabled() const { return _flags & QUANTIZED_POSITIONS_DISABLED; }
 
 		constexpr float GetTessellationFactor() const { return tessellationFactor; }
-		constexpr bool IsSkinned() const { return armatureID != wi::ecs::INVALID_ENTITY; }
+		WI_ATOMIC_CONSTEXPR bool IsSkinned() const { return armatureID != wi::ecs::INVALID_ENTITY; }
 
 		inline wi::graphics::IndexBufferFormat GetIndexFormat() const { return wi::graphics::GetIndexBufferFormat((uint32_t)vertex_positions.size()); }
 		inline size_t GetIndexStride() const { return GetIndexFormat() == wi::graphics::IndexBufferFormat::UINT32 ? sizeof(uint32_t) : sizeof(uint16_t); }
@@ -1126,7 +1148,7 @@ namespace wi::scene
 			EMPTY = 0,
 			DIRTY = 1 << 0,
 		};
-		uint32_t _flags = DIRTY;
+		wi::copyable_atomic<uint32_t> _flags = DIRTY;
 
 		float swapInDistance = 100.0f;
 
@@ -1135,7 +1157,7 @@ namespace wi::scene
 		int textureIndex = -1;
 
 		constexpr void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
-		constexpr bool IsDirty() const { return _flags & DIRTY; }
+		WI_ATOMIC_CONSTEXPR bool IsDirty() const { return _flags & DIRTY; }
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
@@ -1157,7 +1179,7 @@ namespace wi::scene
 			NOT_VISIBLE_IN_REFLECTIONS = 1 << 9,
 			WETMAP_ENABLED = 1 << 10,
 		};
-		uint32_t _flags = RENDERABLE | CAST_SHADOW;
+		wi::copyable_atomic<uint32_t> _flags = RENDERABLE | CAST_SHADOW;
 
 		uint8_t userStencilRef = 0;
 		wi::ecs::Entity meshID = wi::ecs::INVALID_ENTITY;
@@ -1212,16 +1234,16 @@ namespace wi::scene
 		constexpr void SetNotVisibleInReflections(bool value) { if (value) { _flags |= NOT_VISIBLE_IN_REFLECTIONS; } else { _flags &= ~NOT_VISIBLE_IN_REFLECTIONS; } }
 		constexpr void SetWetmapEnabled(bool value) { if (value) { _flags |= WETMAP_ENABLED; } else { _flags &= ~WETMAP_ENABLED; } }
 
-		constexpr bool IsRenderable() const { return (_flags & RENDERABLE) && (GetTransparency() < 0.99f); }
-		constexpr bool IsCastingShadow() const { return _flags & CAST_SHADOW; }
-		constexpr bool IsDynamic() const { return _flags & DYNAMIC; }
-		constexpr bool IsRequestPlanarReflection() const { return _flags & REQUEST_PLANAR_REFLECTION; }
-		constexpr bool IsLightmapRenderRequested() const { return _flags & LIGHTMAP_RENDER_REQUEST; }
-		constexpr bool IsLightmapDisableBlockCompression() const { return _flags & LIGHTMAP_DISABLE_BLOCK_COMPRESSION; }
-		constexpr bool IsForeground() const { return _flags & FOREGROUND; }
-		constexpr bool IsNotVisibleInMainCamera() const { return _flags & NOT_VISIBLE_IN_MAIN_CAMERA; }
-		constexpr bool IsNotVisibleInReflections() const { return _flags & NOT_VISIBLE_IN_REFLECTIONS; }
-		constexpr bool IsWetmapEnabled() const { return _flags & WETMAP_ENABLED; }
+		WI_ATOMIC_CONSTEXPR bool IsRenderable() const { return (_flags & RENDERABLE) && (GetTransparency() < 0.99f); }
+		WI_ATOMIC_CONSTEXPR bool IsCastingShadow() const { return _flags & CAST_SHADOW; }
+		WI_ATOMIC_CONSTEXPR bool IsDynamic() const { return _flags & DYNAMIC; }
+		WI_ATOMIC_CONSTEXPR bool IsRequestPlanarReflection() const { return _flags & REQUEST_PLANAR_REFLECTION; }
+		WI_ATOMIC_CONSTEXPR bool IsLightmapRenderRequested() const { return _flags & LIGHTMAP_RENDER_REQUEST; }
+		WI_ATOMIC_CONSTEXPR bool IsLightmapDisableBlockCompression() const { return _flags & LIGHTMAP_DISABLE_BLOCK_COMPRESSION; }
+		WI_ATOMIC_CONSTEXPR bool IsForeground() const { return _flags & FOREGROUND; }
+		WI_ATOMIC_CONSTEXPR bool IsNotVisibleInMainCamera() const { return _flags & NOT_VISIBLE_IN_MAIN_CAMERA; }
+		WI_ATOMIC_CONSTEXPR bool IsNotVisibleInReflections() const { return _flags & NOT_VISIBLE_IN_REFLECTIONS; }
+		WI_ATOMIC_CONSTEXPR bool IsWetmapEnabled() const { return _flags & WETMAP_ENABLED; }
 
 		constexpr float GetTransparency() const { return 1 - color.w; }
 		constexpr uint32_t GetFilterMask() const { return filterMask | filterMaskDynamic; }
@@ -1255,7 +1277,7 @@ namespace wi::scene
 			_DEPRECATED_FORCE_RESET = 1 << 2,
 			WIND = 1 << 3,
 		};
-		uint32_t _flags = DISABLE_DEACTIVATION;
+		wi::copyable_atomic<uint32_t> _flags = DISABLE_DEACTIVATION;
 
 		float mass = 1.0f;
 		float friction = 0.5f;
@@ -1277,8 +1299,8 @@ namespace wi::scene
 		constexpr void SetDisableDeactivation(bool value) { if (value) { _flags |= DISABLE_DEACTIVATION; } else { _flags &= ~DISABLE_DEACTIVATION; } }
 		constexpr void SetWindEnabled(bool value) { if (value) { _flags |= WIND; } else { _flags &= ~WIND; } }
 
-		constexpr bool IsDisableDeactivation() const { return _flags & DISABLE_DEACTIVATION; }
-		constexpr bool IsWindEnabled() const { return _flags & WIND; }
+		WI_ATOMIC_CONSTEXPR bool IsDisableDeactivation() const { return _flags & DISABLE_DEACTIVATION; }
+		WI_ATOMIC_CONSTEXPR bool IsWindEnabled() const { return _flags & WIND; }
 
 		void Reset()
 		{
@@ -1305,7 +1327,7 @@ namespace wi::scene
 		{
 			EMPTY = 0,
 		};
-		uint32_t _flags = EMPTY;
+		wi::copyable_atomic<uint32_t> _flags = EMPTY;
 		uint32_t gpuBoneOffset = 0; // non-serialized, but better padding here
 
 		wi::vector<wi::ecs::Entity> boneCollection;
@@ -1329,7 +1351,7 @@ namespace wi::scene
 			LIGHTMAPONLY_STATIC = 1 << 3,
 			VOLUMETRICCLOUDS = 1 << 4,
 		};
-		uint32_t _flags = EMPTY;
+		wi::copyable_atomic<uint32_t> _flags = EMPTY;
 
 		enum LightType : uint32_t
 		{
@@ -1374,12 +1396,12 @@ namespace wi::scene
 		constexpr void SetStatic(bool value) { if (value) { _flags |= LIGHTMAPONLY_STATIC; } else { _flags &= ~LIGHTMAPONLY_STATIC; } }
 		constexpr void SetVolumetricCloudsEnabled(bool value) { if (value) { _flags |= VOLUMETRICCLOUDS; } else { _flags &= ~VOLUMETRICCLOUDS; } }
 
-		constexpr bool IsCastingShadow() const { return _flags & CAST_SHADOW; }
-		constexpr bool IsVolumetricsEnabled() const { return _flags & VOLUMETRICS; }
-		constexpr bool IsVisualizerEnabled() const { return _flags & VISUALIZER; }
-		constexpr bool IsStatic() const { return _flags & LIGHTMAPONLY_STATIC; }
-		constexpr bool IsVolumetricCloudsEnabled() const { return _flags & VOLUMETRICCLOUDS; }
-		constexpr bool IsInactive() const { return intensity < 0.0001f || range < 0.0001f; }
+		WI_ATOMIC_CONSTEXPR bool IsCastingShadow() const { return _flags & CAST_SHADOW; }
+		WI_ATOMIC_CONSTEXPR bool IsVolumetricsEnabled() const { return _flags & VOLUMETRICS; }
+		WI_ATOMIC_CONSTEXPR bool IsVisualizerEnabled() const { return _flags & VISUALIZER; }
+		WI_ATOMIC_CONSTEXPR bool IsStatic() const { return _flags & LIGHTMAPONLY_STATIC; }
+		WI_ATOMIC_CONSTEXPR bool IsVolumetricCloudsEnabled() const { return _flags & VOLUMETRICCLOUDS; }
+		WI_ATOMIC_CONSTEXPR bool IsInactive() const { return intensity < 0.0001f || range < 0.0001f; }
 
 		constexpr float GetRange() const
 		{
@@ -1421,7 +1443,7 @@ namespace wi::scene
 			ORTHO = 1 << 2,
 			CRT_FILTER = 1 << 3,
 		};
-		uint32_t _flags = EMPTY;
+		wi::copyable_atomic<uint32_t> _flags = EMPTY;
 
 		float width = 0.0f;
 		float height = 0.0f;
@@ -1509,10 +1531,10 @@ namespace wi::scene
 		constexpr void SetCustomProjectionEnabled(bool value = true) { if (value) { _flags |= CUSTOM_PROJECTION; } else { _flags &= ~CUSTOM_PROJECTION; } }
 		constexpr void SetOrtho(bool value = true) { if (value) { _flags |= ORTHO; } else { _flags &= ~ORTHO; } SetDirty(); }
 		constexpr void SetCRT(bool value = true) { if (value) { _flags |= CRT_FILTER; } else { _flags &= ~CRT_FILTER; } SetDirty(); }
-		constexpr bool IsDirty() const { return _flags & DIRTY; }
-		constexpr bool IsCustomProjectionEnabled() const { return _flags & CUSTOM_PROJECTION; }
-		constexpr bool IsOrtho() const { return _flags & ORTHO; }
-		constexpr bool IsCRT() const { return _flags & CRT_FILTER; }
+		WI_ATOMIC_CONSTEXPR bool IsDirty() const { return _flags & DIRTY; }
+		WI_ATOMIC_CONSTEXPR bool IsCustomProjectionEnabled() const { return _flags & CUSTOM_PROJECTION; }
+		WI_ATOMIC_CONSTEXPR bool IsOrtho() const { return _flags & ORTHO; }
+		WI_ATOMIC_CONSTEXPR bool IsCRT() const { return _flags & CRT_FILTER; }
 
 		void Lerp(const CameraComponent& a, const CameraComponent& b, float t);
 
@@ -1529,7 +1551,7 @@ namespace wi::scene
 			REALTIME = 1 << 1,
 			MSAA = 1 << 2,
 		};
-		uint32_t _flags = DIRTY;
+		wi::copyable_atomic<uint32_t> _flags = DIRTY;
 		uint32_t resolution = 128; // power of two
 		float realtime_update_interval = 0.0f; // how often to render when realtime (in seconds, 0 = every frame)
 		std::string textureName; // if texture is coming from an asset
@@ -1570,7 +1592,7 @@ namespace wi::scene
 		{
 			EMPTY = 0,
 		};
-		uint32_t _flags = EMPTY;
+		wi::copyable_atomic<uint32_t> _flags = EMPTY;
 
 		enum class Type
 		{
@@ -1597,14 +1619,14 @@ namespace wi::scene
 			EMPTY = 0,
 			BASECOLOR_ONLY_ALPHA = 1 << 0,
 		};
-		uint32_t _flags = EMPTY;
+		wi::copyable_atomic<uint32_t> _flags = EMPTY;
 
 		float slopeBlendPower = 0;
 
 		// Set decal to only use alpha from base color texture. Useful for blending normalmap-only decals
 		constexpr void SetBaseColorOnlyAlpha(bool value) { if (value) { _flags |= BASECOLOR_ONLY_ALPHA; } else { _flags &= ~BASECOLOR_ONLY_ALPHA; } }
 
-		constexpr bool IsBaseColorOnlyAlpha() const { return _flags & BASECOLOR_ONLY_ALPHA; }
+		WI_ATOMIC_CONSTEXPR bool IsBaseColorOnlyAlpha() const { return _flags & BASECOLOR_ONLY_ALPHA; }
 
 		// Non-serialized attributes:
 		float emissive;
@@ -1633,7 +1655,7 @@ namespace wi::scene
 		{
 			EMPTY = 0,
 		};
-		uint32_t _flags = EMPTY;
+		wi::copyable_atomic<uint32_t> _flags = EMPTY;
 
 		wi::vector<float> keyframe_times;
 		wi::vector<float> keyframe_data;
@@ -1651,7 +1673,7 @@ namespace wi::scene
 			ROOT_MOTION = 1 << 2,
 			PING_PONG = 1 << 3,
 		};
-		uint32_t _flags = LOOPED;
+		wi::copyable_atomic<uint32_t> _flags = LOOPED;
 		float start = 0;
 		float end = 0;
 		float timer = 0;
@@ -1664,7 +1686,7 @@ namespace wi::scene
 			{
 				EMPTY = 0,
 			};
-			uint32_t _flags = EMPTY;
+			wi::copyable_atomic<uint32_t> _flags = EMPTY;
 
 			wi::ecs::Entity target = wi::ecs::INVALID_ENTITY;
 			int samplerIndex = -1;
@@ -1741,7 +1763,7 @@ namespace wi::scene
 			{
 				EMPTY = 0,
 			};
-			uint32_t _flags = LOOPED;
+			wi::copyable_atomic<uint32_t> _flags = LOOPED;
 
 			wi::ecs::Entity data = wi::ecs::INVALID_ENTITY;
 
@@ -1786,23 +1808,23 @@ namespace wi::scene
 		float prevRotTimer;
 		// Root Motion
 
-		constexpr bool IsPlaying() const { return _flags & PLAYING; }
-		constexpr bool IsLooped() const { return _flags & LOOPED; }
-		constexpr bool IsPingPong() const { return _flags & PING_PONG; }
-		constexpr bool IsPlayingOnce() const { return (_flags & (LOOPED | PING_PONG)) == 0; }
+		WI_ATOMIC_CONSTEXPR bool IsPlaying() const { return _flags & PLAYING; }
+		WI_ATOMIC_CONSTEXPR bool IsLooped() const { return _flags & LOOPED; }
+		WI_ATOMIC_CONSTEXPR bool IsPingPong() const { return _flags & PING_PONG; }
+		WI_ATOMIC_CONSTEXPR bool IsPlayingOnce() const { return (_flags & (LOOPED | PING_PONG)) == 0; }
 		constexpr float GetLength() const { return end - start; }
-		constexpr bool IsEnded() const { return timer >= end; }
-		constexpr bool IsRootMotion() const { return _flags & ROOT_MOTION; }
+		WI_ATOMIC_CONSTEXPR bool IsEnded() const { return timer >= end; }
+		WI_ATOMIC_CONSTEXPR bool IsRootMotion() const { return _flags & ROOT_MOTION; }
 
-		constexpr void Play() { _flags |= PLAYING; }
-		constexpr void Pause() { _flags &= ~PLAYING; }
-		constexpr void Stop() { Pause(); timer = 0.0f; last_update_time = timer; }
-		constexpr void SetLooped(bool value = true) { if (value) { _flags |= LOOPED; _flags &= ~PING_PONG; } else { _flags &= ~LOOPED; } }
-		constexpr void SetPingPong(bool value = true) { if (value) { _flags |= PING_PONG; _flags &= ~LOOPED; } else { _flags &= ~PING_PONG; } }
-		constexpr void SetPlayOnce() { _flags &= ~(LOOPED | PING_PONG); }
+		WI_ATOMIC_CONSTEXPR void Play() { _flags |= PLAYING; }
+		WI_ATOMIC_CONSTEXPR void Pause() { _flags &= ~PLAYING; }
+		WI_ATOMIC_CONSTEXPR void Stop() { Pause(); timer = 0.0f; last_update_time = timer; }
+		WI_ATOMIC_CONSTEXPR void SetLooped(bool value = true) { if (value) { _flags |= LOOPED; _flags &= ~PING_PONG; } else { _flags &= ~LOOPED; } }
+		WI_ATOMIC_CONSTEXPR void SetPingPong(bool value = true) { if (value) { _flags |= PING_PONG; _flags &= ~LOOPED; } else { _flags &= ~PING_PONG; } }
+		WI_ATOMIC_CONSTEXPR void SetPlayOnce() { _flags &= ~(LOOPED | PING_PONG); }
 
-		constexpr void RootMotionOn() { _flags |= ROOT_MOTION; }
-		constexpr void RootMotionOff() { _flags &= ~ROOT_MOTION; }
+		WI_ATOMIC_CONSTEXPR void RootMotionOn() { _flags |= ROOT_MOTION; }
+		WI_ATOMIC_CONSTEXPR void RootMotionOff() { _flags &= ~ROOT_MOTION; }
 		constexpr XMFLOAT3 GetRootTranslation() const { return rootTranslationOffset; }
 		constexpr XMFLOAT4 GetRootRotation() const { return rootRotationOffset; }
 		constexpr wi::ecs::Entity GetRootMotionBone() const { return rootMotionBone; }
@@ -1828,29 +1850,29 @@ namespace wi::scene
 			REALISTIC_SKY_RECEIVE_SHADOW = 1 << 9,
 			VOLUMETRIC_CLOUDS_RECEIVE_SHADOW = 1 << 10,
 		};
-		uint32_t _flags = EMPTY;
+		wi::copyable_atomic<uint32_t> _flags = EMPTY;
 
-		constexpr bool IsOceanEnabled() const { return _flags & OCEAN_ENABLED; }
-		constexpr bool IsRealisticSky() const { return _flags & REALISTIC_SKY; }
-		constexpr bool IsVolumetricClouds() const { return _flags & VOLUMETRIC_CLOUDS; }
-		constexpr bool IsHeightFog() const { return _flags & HEIGHT_FOG; }
-		constexpr bool IsVolumetricCloudsCastShadow() const { return _flags & VOLUMETRIC_CLOUDS_CAST_SHADOW; }
-		constexpr bool IsOverrideFogColor() const { return _flags & OVERRIDE_FOG_COLOR; }
-		constexpr bool IsRealisticSkyAerialPerspective() const { return _flags & REALISTIC_SKY_AERIAL_PERSPECTIVE; }
-		constexpr bool IsRealisticSkyHighQuality() const { return _flags & REALISTIC_SKY_HIGH_QUALITY; }
-		constexpr bool IsRealisticSkyReceiveShadow() const { return _flags & REALISTIC_SKY_RECEIVE_SHADOW; }
-		constexpr bool IsVolumetricCloudsReceiveShadow() const { return _flags & VOLUMETRIC_CLOUDS_RECEIVE_SHADOW; }
+		WI_ATOMIC_CONSTEXPR bool IsOceanEnabled() const { return _flags & OCEAN_ENABLED; }
+		WI_ATOMIC_CONSTEXPR bool IsRealisticSky() const { return _flags & REALISTIC_SKY; }
+		WI_ATOMIC_CONSTEXPR bool IsVolumetricClouds() const { return _flags & VOLUMETRIC_CLOUDS; }
+		WI_ATOMIC_CONSTEXPR bool IsHeightFog() const { return _flags & HEIGHT_FOG; }
+		WI_ATOMIC_CONSTEXPR bool IsVolumetricCloudsCastShadow() const { return _flags & VOLUMETRIC_CLOUDS_CAST_SHADOW; }
+		WI_ATOMIC_CONSTEXPR bool IsOverrideFogColor() const { return _flags & OVERRIDE_FOG_COLOR; }
+		WI_ATOMIC_CONSTEXPR bool IsRealisticSkyAerialPerspective() const { return _flags & REALISTIC_SKY_AERIAL_PERSPECTIVE; }
+		WI_ATOMIC_CONSTEXPR bool IsRealisticSkyHighQuality() const { return _flags & REALISTIC_SKY_HIGH_QUALITY; }
+		WI_ATOMIC_CONSTEXPR bool IsRealisticSkyReceiveShadow() const { return _flags & REALISTIC_SKY_RECEIVE_SHADOW; }
+		WI_ATOMIC_CONSTEXPR bool IsVolumetricCloudsReceiveShadow() const { return _flags & VOLUMETRIC_CLOUDS_RECEIVE_SHADOW; }
 
-		constexpr void SetOceanEnabled(bool value = true) { if (value) { _flags |= OCEAN_ENABLED; } else { _flags &= ~OCEAN_ENABLED; } }
-		constexpr void SetRealisticSky(bool value = true) { if (value) { _flags |= REALISTIC_SKY; } else { _flags &= ~REALISTIC_SKY; } }
-		constexpr void SetVolumetricClouds(bool value = true) { if (value) { _flags |= VOLUMETRIC_CLOUDS; } else { _flags &= ~VOLUMETRIC_CLOUDS; } }
-		constexpr void SetHeightFog(bool value = true) { if (value) { _flags |= HEIGHT_FOG; } else { _flags &= ~HEIGHT_FOG; } }
-		constexpr void SetVolumetricCloudsCastShadow(bool value = true) { if (value) { _flags |= VOLUMETRIC_CLOUDS_CAST_SHADOW; } else { _flags &= ~VOLUMETRIC_CLOUDS_CAST_SHADOW; } }
-		constexpr void SetOverrideFogColor(bool value = true) { if (value) { _flags |= OVERRIDE_FOG_COLOR; } else { _flags &= ~OVERRIDE_FOG_COLOR; } }
-		constexpr void SetRealisticSkyAerialPerspective(bool value = true) { if (value) { _flags |= REALISTIC_SKY_AERIAL_PERSPECTIVE; } else { _flags &= ~REALISTIC_SKY_AERIAL_PERSPECTIVE; } }
-		constexpr void SetRealisticSkyHighQuality(bool value = true) { if (value) { _flags |= REALISTIC_SKY_HIGH_QUALITY; } else { _flags &= ~REALISTIC_SKY_HIGH_QUALITY; } }
-		constexpr void SetRealisticSkyReceiveShadow(bool value = true) { if (value) { _flags |= REALISTIC_SKY_RECEIVE_SHADOW; } else { _flags &= ~REALISTIC_SKY_RECEIVE_SHADOW; } }
-		constexpr void SetVolumetricCloudsReceiveShadow(bool value = true) { if (value) { _flags |= VOLUMETRIC_CLOUDS_RECEIVE_SHADOW; } else { _flags &= ~VOLUMETRIC_CLOUDS_RECEIVE_SHADOW; } }
+		WI_ATOMIC_CONSTEXPR void SetOceanEnabled(bool value = true) { if (value) { _flags |= OCEAN_ENABLED; } else { _flags &= ~OCEAN_ENABLED; } }
+		WI_ATOMIC_CONSTEXPR void SetRealisticSky(bool value = true) { if (value) { _flags |= REALISTIC_SKY; } else { _flags &= ~REALISTIC_SKY; } }
+		WI_ATOMIC_CONSTEXPR void SetVolumetricClouds(bool value = true) { if (value) { _flags |= VOLUMETRIC_CLOUDS; } else { _flags &= ~VOLUMETRIC_CLOUDS; } }
+		WI_ATOMIC_CONSTEXPR void SetHeightFog(bool value = true) { if (value) { _flags |= HEIGHT_FOG; } else { _flags &= ~HEIGHT_FOG; } }
+		WI_ATOMIC_CONSTEXPR void SetVolumetricCloudsCastShadow(bool value = true) { if (value) { _flags |= VOLUMETRIC_CLOUDS_CAST_SHADOW; } else { _flags &= ~VOLUMETRIC_CLOUDS_CAST_SHADOW; } }
+		WI_ATOMIC_CONSTEXPR void SetOverrideFogColor(bool value = true) { if (value) { _flags |= OVERRIDE_FOG_COLOR; } else { _flags &= ~OVERRIDE_FOG_COLOR; } }
+		WI_ATOMIC_CONSTEXPR void SetRealisticSkyAerialPerspective(bool value = true) { if (value) { _flags |= REALISTIC_SKY_AERIAL_PERSPECTIVE; } else { _flags &= ~REALISTIC_SKY_AERIAL_PERSPECTIVE; } }
+		WI_ATOMIC_CONSTEXPR void SetRealisticSkyHighQuality(bool value = true) { if (value) { _flags |= REALISTIC_SKY_HIGH_QUALITY; } else { _flags &= ~REALISTIC_SKY_HIGH_QUALITY; } }
+		WI_ATOMIC_CONSTEXPR void SetRealisticSkyReceiveShadow(bool value = true) { if (value) { _flags |= REALISTIC_SKY_RECEIVE_SHADOW; } else { _flags &= ~REALISTIC_SKY_RECEIVE_SHADOW; } }
+		WI_ATOMIC_CONSTEXPR void SetVolumetricCloudsReceiveShadow(bool value = true) { if (value) { _flags |= VOLUMETRIC_CLOUDS_RECEIVE_SHADOW; } else { _flags &= ~VOLUMETRIC_CLOUDS_RECEIVE_SHADOW; } }
 
 		XMFLOAT3 sunColor = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 sunDirection = XMFLOAT3(0, 1, 0);
@@ -1905,16 +1927,16 @@ namespace wi::scene
 			LOOPED = 1 << 1,
 			DISABLE_3D = 1 << 2,
 		};
-		uint32_t _flags = LOOPED;
+		wi::copyable_atomic<uint32_t> _flags = LOOPED;
 
 		std::string filename;
 		wi::Resource soundResource;
 		wi::audio::SoundInstance soundinstance;
 		float volume = 1;
 
-		constexpr bool IsPlaying() const { return _flags & PLAYING; }
-		constexpr bool IsLooped() const { return _flags & LOOPED; }
-		constexpr bool IsDisable3D() const { return _flags & DISABLE_3D; }
+		WI_ATOMIC_CONSTEXPR bool IsPlaying() const { return _flags & PLAYING; }
+		WI_ATOMIC_CONSTEXPR bool IsLooped() const { return _flags & LOOPED; }
+		WI_ATOMIC_CONSTEXPR bool IsDisable3D() const { return _flags & DISABLE_3D; }
 
 		void Play();
 		void Stop();
@@ -1932,20 +1954,20 @@ namespace wi::scene
 			PLAYING = 1 << 0,
 			LOOPED = 1 << 1,
 		};
-		uint32_t _flags = LOOPED;
+		wi::copyable_atomic<uint32_t> _flags = LOOPED;
 
 		std::string filename;
 		wi::Resource videoResource;
 		wi::video::VideoInstance videoinstance;
 		float currentTimer = 0; // The current playback timer is reflected in this
 
-		constexpr bool IsPlaying() const { return _flags & PLAYING; }
-		constexpr bool IsLooped() const { return _flags & LOOPED; }
+		WI_ATOMIC_CONSTEXPR bool IsPlaying() const { return _flags & PLAYING; }
+		WI_ATOMIC_CONSTEXPR bool IsLooped() const { return _flags & LOOPED; }
 
-		constexpr void Play() { _flags |= PLAYING; }
-		constexpr void Pause() { _flags &= ~PLAYING; }
+		WI_ATOMIC_CONSTEXPR void Play() { _flags |= PLAYING; }
+		WI_ATOMIC_CONSTEXPR void Pause() { _flags &= ~PLAYING; }
 		void Stop() { Pause(); Seek(0); }
-		constexpr void SetLooped(bool value = true) { if (value) { _flags |= LOOPED; } else { _flags &= ~LOOPED; } }
+		WI_ATOMIC_CONSTEXPR void SetLooped(bool value = true) { if (value) { _flags |= LOOPED; } else { _flags &= ~LOOPED; } }
 
 		// Get total length of video in seconds
 		float GetLength() const;
@@ -1963,7 +1985,7 @@ namespace wi::scene
 			EMPTY = 0,
 			DISABLED = 1 << 0,
 		};
-		uint32_t _flags = EMPTY;
+		wi::copyable_atomic<uint32_t> _flags = EMPTY;
 
 		wi::ecs::Entity target = wi::ecs::INVALID_ENTITY; // which entity to follow (must have a transform component)
 		uint32_t chain_length = 0; // recursive depth
@@ -1973,8 +1995,8 @@ namespace wi::scene
 		bool use_target_position = false;
 		XMFLOAT3 target_position = XMFLOAT3(0, 0, 0);
 
-		constexpr void SetDisabled(bool value = true) { if (value) { _flags |= DISABLED; } else { _flags &= ~DISABLED; } }
-		constexpr bool IsDisabled() const { return _flags & DISABLED; }
+		WI_ATOMIC_CONSTEXPR void SetDisabled(bool value = true) { if (value) { _flags |= DISABLED; } else { _flags &= ~DISABLED; } }
+		WI_ATOMIC_CONSTEXPR bool IsDisabled() const { return _flags & DISABLED; }
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
@@ -1989,7 +2011,7 @@ namespace wi::scene
 			_DEPRECATED_STRETCH_ENABLED = 1 << 2,
 			GRAVITY_ENABLED = 1 << 3,
 		};
-		uint32_t _flags = RESET | GRAVITY_ENABLED;
+		wi::copyable_atomic<uint32_t> _flags = RESET | GRAVITY_ENABLED;
 
 		float stiffnessForce = 0.5f;
 		float dragForce = 0.5f;
@@ -2010,13 +2032,13 @@ namespace wi::scene
 		TransformComponent* transform = nullptr;
 		TransformComponent* parent_transform = nullptr;
 
-		constexpr void Reset(bool value = true) { if (value) { _flags |= RESET; } else { _flags &= ~RESET; } }
-		constexpr void SetDisabled(bool value = true) { if (value) { _flags |= DISABLED; } else { _flags &= ~DISABLED; } }
-		constexpr void SetGravityEnabled(bool value) { if (value) { _flags |= GRAVITY_ENABLED; } else { _flags &= ~GRAVITY_ENABLED; } }
+		WI_ATOMIC_CONSTEXPR void Reset(bool value = true) { if (value) { _flags |= RESET; } else { _flags &= ~RESET; } }
+		WI_ATOMIC_CONSTEXPR void SetDisabled(bool value = true) { if (value) { _flags |= DISABLED; } else { _flags &= ~DISABLED; } }
+		WI_ATOMIC_CONSTEXPR void SetGravityEnabled(bool value) { if (value) { _flags |= GRAVITY_ENABLED; } else { _flags &= ~GRAVITY_ENABLED; } }
 
-		constexpr bool IsResetting() const { return _flags & RESET; }
-		constexpr bool IsDisabled() const { return _flags & DISABLED; }
-		constexpr bool IsGravityEnabled() const { return _flags & GRAVITY_ENABLED; }
+		WI_ATOMIC_CONSTEXPR bool IsResetting() const { return _flags & RESET; }
+		WI_ATOMIC_CONSTEXPR bool IsDisabled() const { return _flags & DISABLED; }
+		WI_ATOMIC_CONSTEXPR bool IsGravityEnabled() const { return _flags & GRAVITY_ENABLED; }
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
@@ -2030,15 +2052,15 @@ namespace wi::scene
 			GPU = 1 << 1,
 			CAPSULE_SHADOW = 1 << 2,
 		};
-		uint32_t _flags = CPU;
+		wi::copyable_atomic<uint32_t> _flags = CPU;
 
-		constexpr void SetCPUEnabled(bool value = true) { if (value) { _flags |= CPU; } else { _flags &= ~CPU; } }
-		constexpr void SetGPUEnabled(bool value = true) { if (value) { _flags |= GPU; } else { _flags &= ~GPU; } }
-		constexpr void SetCapsuleShadowEnabled(bool value = true) { if (value) { _flags |= CAPSULE_SHADOW; } else { _flags &= ~CAPSULE_SHADOW; } }
+		WI_ATOMIC_CONSTEXPR void SetCPUEnabled(bool value = true) { if (value) { _flags |= CPU; } else { _flags &= ~CPU; } }
+		WI_ATOMIC_CONSTEXPR void SetGPUEnabled(bool value = true) { if (value) { _flags |= GPU; } else { _flags &= ~GPU; } }
+		WI_ATOMIC_CONSTEXPR void SetCapsuleShadowEnabled(bool value = true) { if (value) { _flags |= CAPSULE_SHADOW; } else { _flags &= ~CAPSULE_SHADOW; } }
 
-		constexpr bool IsCPUEnabled() const { return _flags & CPU; }
-		constexpr bool IsGPUEnabled() const { return _flags & GPU; }
-		constexpr bool IsCapsuleShadowEnabled() const { return _flags & CAPSULE_SHADOW; }
+		WI_ATOMIC_CONSTEXPR bool IsCPUEnabled() const { return _flags & CPU; }
+		WI_ATOMIC_CONSTEXPR bool IsGPUEnabled() const { return _flags & GPU; }
+		WI_ATOMIC_CONSTEXPR bool IsCapsuleShadowEnabled() const { return _flags & CAPSULE_SHADOW; }
 
 		enum class Shape
 		{
@@ -2077,18 +2099,18 @@ namespace wi::scene
 			PLAYING = 1 << 0,
 			PLAY_ONCE = 1 << 1,
 		};
-		uint32_t _flags = EMPTY;
+		wi::copyable_atomic<uint32_t> _flags = EMPTY;
 
 		// Non-serialized attributes:
 		wi::Resource resource;
 		size_t script_hash = 0;
 
-		constexpr void Play() { _flags |= PLAYING; }
-		constexpr void SetPlayOnce(bool once = true) { if (once) { _flags |= PLAY_ONCE; } else { _flags &= ~PLAY_ONCE; } }
-		constexpr void Stop() { _flags &= ~PLAYING; }
+		WI_ATOMIC_CONSTEXPR void Play() { _flags |= PLAYING; }
+		WI_ATOMIC_CONSTEXPR void SetPlayOnce(bool once = true) { if (once) { _flags |= PLAY_ONCE; } else { _flags &= ~PLAY_ONCE; } }
+		WI_ATOMIC_CONSTEXPR void Stop() { _flags &= ~PLAYING; }
 
-		constexpr bool IsPlaying() const { return _flags & PLAYING; }
-		constexpr bool IsPlayingOnlyOnce() const { return _flags & PLAY_ONCE; }
+		WI_ATOMIC_CONSTEXPR bool IsPlaying() const { return _flags & PLAYING; }
+		WI_ATOMIC_CONSTEXPR bool IsPlayingOnlyOnce() const { return _flags & PLAY_ONCE; }
 
 		void CreateFromFile(const std::string& filename);
 
@@ -2103,7 +2125,7 @@ namespace wi::scene
 			FORCE_TALKING = 1 << 0,
 			TALKING_ENDED = 1 << 1,
 		};
-		uint32_t _flags = EMPTY;
+		wi::copyable_atomic<uint32_t> _flags = EMPTY;
 
 		// Preset expressions can have common behaviours assigned:
 		//	https://github.com/vrm-c/vrm-specification/blob/bd205a6c3839993f2729e4e7c3a74af89877cfce/specification/VRMC_vrm-1.0-beta/expressions.md#preset-expressions
@@ -2168,7 +2190,7 @@ namespace wi::scene
 				DIRTY = 1 << 0,
 				BINARY = 1 << 1,
 			};
-			uint32_t _flags = EMPTY;
+			wi::copyable_atomic<uint32_t> _flags = EMPTY;
 
 			std::string name;
 			float weight = 0;
@@ -2186,11 +2208,11 @@ namespace wi::scene
 			};
 			wi::vector<MorphTargetBinding> morph_target_bindings;
 
-			constexpr bool IsDirty() const { return _flags & DIRTY; }
-			constexpr bool IsBinary() const { return _flags & BINARY; }
+			WI_ATOMIC_CONSTEXPR bool IsDirty() const { return _flags & DIRTY; }
+			WI_ATOMIC_CONSTEXPR bool IsBinary() const { return _flags & BINARY; }
 
-			constexpr void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
-			constexpr void SetBinary(bool value = true) { if (value) { _flags |= BINARY; } else { _flags &= ~BINARY; } }
+			WI_ATOMIC_CONSTEXPR void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
+			WI_ATOMIC_CONSTEXPR void SetBinary(bool value = true) { if (value) { _flags |= BINARY; } else { _flags &= ~BINARY; } }
 
 			// Set weight of expression (also sets dirty state if value is out of date)
 			inline void SetWeight(float value)
@@ -2204,10 +2226,10 @@ namespace wi::scene
 		};
 		wi::vector<Expression> expressions;
 
-		constexpr bool IsForceTalkingEnabled() const { return _flags & FORCE_TALKING; }
+		WI_ATOMIC_CONSTEXPR bool IsForceTalkingEnabled() const { return _flags & FORCE_TALKING; }
 
 		// Force continuous talking animation, even if no voice is playing
-		constexpr void SetForceTalkingEnabled(bool value = true) { if (value) { _flags |= FORCE_TALKING; } else { _flags &= ~FORCE_TALKING; _flags |= TALKING_ENDED; } }
+		WI_ATOMIC_CONSTEXPR void SetForceTalkingEnabled(bool value = true) { if (value) { _flags |= FORCE_TALKING; } else { _flags &= ~FORCE_TALKING; _flags |= TALKING_ENDED; } }
 
 		// Non-serialized attributes:
 		float blink_timer = 0;
@@ -2230,7 +2252,7 @@ namespace wi::scene
 			DISABLE_INTERSECTION = 1 << 2,
 			DISABLE_CAPSULE_SHADOW = 1 << 3,
 		};
-		uint32_t _flags = LOOKAT;
+		wi::copyable_atomic<uint32_t> _flags = LOOKAT;
 
 		// https://github.com/vrm-c/vrm-specification/blob/master/specification/VRMC_vrm-1.0-beta/humanoid.md#list-of-humanoid-bones
 		enum class HumanoidBone
@@ -2304,15 +2326,15 @@ namespace wi::scene
 		};
 		wi::ecs::Entity bones[size_t(HumanoidBone::Count)] = {};
 
-		constexpr bool IsLookAtEnabled() const { return _flags & LOOKAT; }
-		constexpr bool IsRagdollPhysicsEnabled() const { return _flags & RAGDOLL_PHYSICS; }
-		constexpr bool IsIntersectionDisabled() const { return _flags & DISABLE_INTERSECTION; }
-		constexpr bool IsCapsuleShadowDisabled() const { return _flags & DISABLE_CAPSULE_SHADOW; }
+		WI_ATOMIC_CONSTEXPR bool IsLookAtEnabled() const { return _flags & LOOKAT; }
+		WI_ATOMIC_CONSTEXPR bool IsRagdollPhysicsEnabled() const { return _flags & RAGDOLL_PHYSICS; }
+		WI_ATOMIC_CONSTEXPR bool IsIntersectionDisabled() const { return _flags & DISABLE_INTERSECTION; }
+		WI_ATOMIC_CONSTEXPR bool IsCapsuleShadowDisabled() const { return _flags & DISABLE_CAPSULE_SHADOW; }
 
-		constexpr void SetLookAtEnabled(bool value = true) { if (value) { _flags |= LOOKAT; } else { _flags &= ~LOOKAT; } }
-		constexpr void SetRagdollPhysicsEnabled(bool value = true) { if (value) { _flags |= RAGDOLL_PHYSICS; } else { _flags &= ~RAGDOLL_PHYSICS; } }
-		constexpr void SetIntersectionDisabled(bool value = true) { if (value) { _flags |= DISABLE_INTERSECTION; } else { _flags &= ~DISABLE_INTERSECTION; } }
-		constexpr void SetCapsuleShadowDisabled(bool value = true) { if (value) { _flags |= DISABLE_CAPSULE_SHADOW; } else { _flags &= ~DISABLE_CAPSULE_SHADOW; } }
+		WI_ATOMIC_CONSTEXPR void SetLookAtEnabled(bool value = true) { if (value) { _flags |= LOOKAT; } else { _flags &= ~LOOKAT; } }
+		WI_ATOMIC_CONSTEXPR void SetRagdollPhysicsEnabled(bool value = true) { if (value) { _flags |= RAGDOLL_PHYSICS; } else { _flags &= ~RAGDOLL_PHYSICS; } }
+		WI_ATOMIC_CONSTEXPR void SetIntersectionDisabled(bool value = true) { if (value) { _flags |= DISABLE_INTERSECTION; } else { _flags &= ~DISABLE_INTERSECTION; } }
+		WI_ATOMIC_CONSTEXPR void SetCapsuleShadowDisabled(bool value = true) { if (value) { _flags |= DISABLE_CAPSULE_SHADOW; } else { _flags &= ~DISABLE_CAPSULE_SHADOW; } }
 
 		XMFLOAT2 head_rotation_max = XMFLOAT2(XM_PI / 3.0f, XM_PI / 6.0f);
 		XMFLOAT2 eye_rotation_max = XMFLOAT2(XM_PI / 20.0f, XM_PI / 20.0f);
@@ -2358,7 +2380,7 @@ namespace wi::scene
 		{
 			NONE = 0,
 		};
-		uint32_t _flags = NONE;
+		wi::copyable_atomic<uint32_t> _flags = NONE;
 
 		enum class Preset
 		{
@@ -2462,7 +2484,7 @@ namespace wi::scene
 			DEDICATED_SHADOW = 1 << 1,
 			ACTIVE = 1 << 2,
 		};
-		uint32_t _flags = ACTIVE;
+		wi::copyable_atomic<uint32_t> _flags = ACTIVE;
 
 		int health = 100;
 		float width = 0.4f; // capsule radius
@@ -2626,7 +2648,7 @@ namespace wi::scene
 			LOOPED = 1 << 1,
 			DIRTY = 1 << 2,
 		};
-		uint32_t _flags = NONE;
+		wi::copyable_atomic<uint32_t> _flags = NONE;
 
 		float width = 1; // overall width multiplier for all nodes (affects mesh generation)
 		float rotation = 0; // rotation of nodes in radians around the spline axis (affects mesh generation)
