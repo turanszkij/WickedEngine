@@ -36,7 +36,7 @@ namespace wi::graphics
 
 namespace vulkan_internal
 {
-	static constexpr uint64_t timeout_value = 2000000000ull; // 2 seconds
+	static constexpr uint64_t timeout_value = 3'000'000'000ull; // 3 seconds
 
 	// These shifts are made so that Vulkan resource bindings slots don't interfere with each other across shader stages:
 	//	These are also defined in wi::shadercompiler.cpp as hard coded compiler arguments for SPIRV, so they need to be the same
