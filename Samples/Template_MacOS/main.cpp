@@ -36,6 +36,8 @@ int main( int argc, char* argv[] )
 	canvas.height = (uint32_t)frame.size.height;
 	application.SetWindow(view.get(), canvas);
 	
+	wi::renderer::SetShaderPath(wi::renderer::GetShaderSourcePath() + "metal/");
+	
 	class MyMTKViewDelegate : public MTK::ViewDelegate
 	{
 	public:
