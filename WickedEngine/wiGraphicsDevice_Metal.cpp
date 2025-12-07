@@ -7,11 +7,6 @@
 #include "wiTimer.h"
 #include "wiBacklog.h"
 
-#include <AppKit/AppKit.hpp>
-#include <MetalKit/MetalKit.hpp>
-#include <QuartzCore/QuartzCore.hpp>
-#include <Foundation/Foundation.hpp>
-
 namespace wi::graphics
 {
 
@@ -190,16 +185,13 @@ using namespace metal_internal;
 	GraphicsDevice_Metal::GraphicsDevice_Metal(ValidationMode validationMode_, GPUPreference preference)
 	{
 		wi::Timer timer;
-		device = MTL::CreateSystemDefaultDevice();
-		commandqueue = device->newCommandQueue();
+		device = NS::TransferPtr(MTL::CreateSystemDefaultDevice());
+		commandqueue = NS::TransferPtr(device->newCommandQueue());
 		allocationhandler = wi::allocator::make_shared_single<AllocationHandler>();
 		wilog("Created GraphicsDevice_Metal (%d ms)", (int)std::round(timer.elapsed()));
 	}
 	GraphicsDevice_Metal::~GraphicsDevice_Metal()
 	{
-		commandlists.clear();
-		commandqueue->release();
-		device->release();
 	}
 
 	bool GraphicsDevice_Metal::CreateSwapChain(const SwapChainDesc* desc, wi::platform::window_type window, SwapChain* swapchain) const
@@ -209,15 +201,13 @@ using namespace metal_internal;
 		swapchain->internal_state = internal_state;
 		swapchain->desc = *desc;
 		
-		CGRect frame = (CGRect){ {0.0f, 0.0f}, {float(desc->width), float(desc->height)} };
-		
 		if(internal_state->view == nullptr)
 		{
+			CGRect frame = (CGRect){ {0.0f, 0.0f}, {float(desc->width), float(desc->height)} };
 			internal_state->view = (MTK::View*)window;
-			internal_state->view->init( frame, device );
-			
-			internal_state->view->setColorPixelFormat( MTL::PixelFormat::PixelFormatBGRA8Unorm_sRGB );
-			internal_state->view->setClearColor( MTL::ClearColor::Make( 1.0, 0.0, 0.0, 1.0 ) );
+			internal_state->view->init( frame, device.get() );
+			internal_state->view->setColorPixelFormat(MTL::PixelFormat::PixelFormatBGRA8Unorm_sRGB);
+			internal_state->view->setClearColor(MTL::ClearColor::Make(desc->clear_color[0], desc->clear_color[1], desc->clear_color[2], desc->clear_color[3]));
 		}
 
 		return true;
@@ -394,7 +384,6 @@ using namespace metal_internal;
 		if (cmd_current >= commandlists.size())
 		{
 			commandlists.push_back(std::make_unique<CommandList_Metal>());
-			//commandlists.back()->commandbuffer = commandqueue->commandBuffer();
 		}
 		CommandList cmd;
 		cmd.internal_state = commandlists[cmd_current].get();
@@ -404,7 +393,7 @@ using namespace metal_internal;
 		commandlist.reset(GetBufferIndex());
 		commandlist.queue = queue;
 		commandlist.id = cmd_current;
-		commandlist.commandbuffer = commandqueue->commandBuffer();
+		commandlist.commandbuffer = commandqueue->commandBufferWithUnretainedReferences();
 
 		return cmd;
 	}
@@ -415,10 +404,9 @@ using namespace metal_internal;
 		for(uint32_t cmd = 0; cmd < cmd_last; ++cmd)
 		{
 			auto commandlist = commandlists[cmd].get();
-			if (commandlist->present)
+			for (MTK::View* view : commandlist->presents)
 			{
-				MTK::View* view = (MTK::View*)commandlist->present;
-				commandlist->commandbuffer->presentDrawable( view->currentDrawable() );
+				commandlist->commandbuffer->presentDrawable(view->currentDrawable());
 			}
 			commandlist->commandbuffer->commit();
 		}
@@ -468,10 +456,10 @@ using namespace metal_internal;
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		auto internal_state = to_internal(swapchain);
 		
-		commandlist.present = internal_state->view;
+		commandlist.presents.push_back(internal_state->view);
 		
-		MTL::RenderPassDescriptor* pRpd = internal_state->view->currentRenderPassDescriptor();
-		commandlist.encoder = commandlist.commandbuffer->renderCommandEncoder( pRpd );
+		MTL::RenderPassDescriptor* renderpass_descriptor = internal_state->view->currentRenderPassDescriptor();
+		commandlist.encoder = commandlist.commandbuffer->renderCommandEncoder(renderpass_descriptor);
 
 		commandlist.renderpass_info = RenderPassInfo::from(swapchain->desc);
 	}

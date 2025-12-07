@@ -702,7 +702,11 @@ namespace wi
 		wi::platform::Exit();
 	}
 
-	void Application::SetWindow(wi::platform::window_type window)
+#ifdef __APPLE__
+void Application::SetWindow(wi::platform::window_type window, const wi::Canvas& in_canvas)
+#else
+void Application::SetWindow(wi::platform::window_type window)
+#endif // __APPLE__
 	{
 		this->window = window;
 
@@ -800,7 +804,9 @@ namespace wi
 		}
 		wi::graphics::GetDevice() = graphicsDevice.get();
 
-#ifndef __APPLE__
+#ifdef __APPLE__
+		canvas = in_canvas;
+#else
 		canvas.init(window);
 #endif // __APPLE__
 

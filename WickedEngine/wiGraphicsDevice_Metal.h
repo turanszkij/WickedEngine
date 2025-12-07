@@ -6,16 +6,21 @@
 #include "wiGraphicsDevice.h"
 
 #include <Metal/Metal.hpp>
+#include <AppKit/AppKit.hpp>
+#include <MetalKit/MetalKit.hpp>
+#include <QuartzCore/QuartzCore.hpp>
+#include <Foundation/Foundation.hpp>
 
 #include <mutex>
+#include <deque>
 
 namespace wi::graphics
 {
 	class GraphicsDevice_Metal final : public GraphicsDevice
 	{
 	private:
-		MTL::Device* device = nullptr;
-		MTL::CommandQueue* commandqueue = nullptr;
+		NS::SharedPtr<MTL::Device> device;
+		NS::SharedPtr<MTL::CommandQueue> commandqueue;
 		
 		struct CommandList_Metal
 		{
@@ -25,22 +30,17 @@ namespace wi::graphics
 			uint32_t id = 0;
 			QUEUE_TYPE queue = QUEUE_COUNT;
 			
-			void* present = nullptr;
+			wi::vector<MTK::View*> presents;
 			MTL::RenderCommandEncoder* encoder = nullptr;
-			
-			~CommandList_Metal()
-			{
-				if(commandbuffer != nullptr)
-					commandbuffer->release();
-			}
 
 			void reset(uint32_t bufferindex)
 			{
+				commandbuffer = nullptr;
 				frame_allocators[bufferindex].reset();
 				renderpass_info = {};
 				id = 0;
 				queue = QUEUE_COUNT;
-				present = nullptr;
+				presents.clear();
 				encoder = nullptr;
 			}
 		};
