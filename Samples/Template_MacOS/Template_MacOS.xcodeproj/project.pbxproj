@@ -12,6 +12,7 @@
 		1EDA82202EE3802C00210D41 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1EDA821F2EE3802C00210D41 /* Metal.framework */; };
 		1EDA82222EE3804800210D41 /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1EDA82212EE3804700210D41 /* MetalKit.framework */; };
 		1EDA82242EE3805700210D41 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1EDA82232EE3805700210D41 /* Foundation.framework */; };
+		1EDA82582EE5CDAE00210D41 /* libdxcompiler.dylib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EDA82572EE5CDA600210D41 /* libdxcompiler.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -24,6 +25,19 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		1EDA824E2EE5CA4600210D41 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				1EDA82582EE5CDAE00210D41 /* libdxcompiler.dylib in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		1EDA807B2EE2C1DB00210D41 /* Template_MacOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Template_MacOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EDA809E2EE2C5AD00210D41 /* WickedEngine.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = WickedEngine.xcodeproj; path = ../../WickedEngine/WickedEngine.xcodeproj; sourceTree = "<group>"; };
@@ -31,6 +45,7 @@
 		1EDA821F2EE3802C00210D41 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
 		1EDA82212EE3804700210D41 /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
 		1EDA82232EE3805700210D41 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		1EDA82572EE5CDA600210D41 /* libdxcompiler.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libdxcompiler.dylib; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -51,6 +66,7 @@
 		1EDA80722EE2C1DB00210D41 = {
 			isa = PBXGroup;
 			children = (
+				1EDA82572EE5CDA600210D41 /* libdxcompiler.dylib */,
 				1EDA820B2EE3753600210D41 /* main.cpp */,
 				1EDA809D2EE2C5AD00210D41 /* Frameworks */,
 				1EDA807C2EE2C1DB00210D41 /* Products */,
@@ -94,6 +110,7 @@
 				1EDA80772EE2C1DB00210D41 /* Sources */,
 				1EDA80782EE2C1DB00210D41 /* Frameworks */,
 				1EDA80792EE2C1DB00210D41 /* Resources */,
+				1EDA824E2EE5CA4600210D41 /* CopyFiles */,
 			);
 			buildRules = (
 			);
@@ -302,8 +319,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				ENABLE_APP_SANDBOX = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
+				ENABLE_APP_SANDBOX = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				HEADER_SEARCH_PATHS = "$(SRCROOT)/../../WickedEngine";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -312,6 +328,10 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)",
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "turanszkij.Template-MacOS";
@@ -331,8 +351,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				ENABLE_APP_SANDBOX = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
+				ENABLE_APP_SANDBOX = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				HEADER_SEARCH_PATHS = "$(SRCROOT)/../../WickedEngine";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -341,6 +360,10 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)",
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "turanszkij.Template-MacOS";

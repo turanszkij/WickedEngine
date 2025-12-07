@@ -15,13 +15,13 @@
 using namespace Microsoft::WRL;
 #endif // _WIN32
 
-#ifdef PLATFORM_LINUX
+#if defined(PLATFORM_LINUX) || defined(PLATFORM_APPLE)
 #define SHADERCOMPILER_ENABLED
 #define SHADERCOMPILER_ENABLED_DXCOMPILER
 #define __RPC_FAR
 #define ComPtr CComPtr
 #include "Utility/dxc/WinAdapter.h"
-#endif // PLATFORM_LINUX
+#endif // defined(PLATFORM_LINUX) || defined(PLATFORM_APPLE)
 
 #ifdef SHADERCOMPILER_ENABLED_DXCOMPILER
 #include "Utility/dxc/dxcapi.h"
@@ -58,6 +58,9 @@ namespace wi::shadercompiler
 			HMODULE dxcompiler = wiLoadLibrary(library.c_str());
 #elif defined(PLATFORM_LINUX)
 			const std::string library = "./libdxcompiler" + modifier + ".so";
+			HMODULE dxcompiler = wiLoadLibrary(library.c_str());
+#elif defined(PLATFORM_APPLE)
+			const std::string library = "./libdxcompiler" + modifier + ".dylib";
 			HMODULE dxcompiler = wiLoadLibrary(library.c_str());
 #endif
 			if (dxcompiler != nullptr)
@@ -151,6 +154,7 @@ namespace wi::shadercompiler
 		{
 		case ShaderFormat::HLSL6:
 		case ShaderFormat::HLSL6_XS:
+		case ShaderFormat::METAL:
 			args.push_back(L"-rootsig-define"); args.push_back(L"WICKED_ENGINE_DEFAULT_ROOTSIGNATURE");
 			if (has_flag(input.flags, Flags::STRIP_REFLECTION))
 			{
@@ -745,6 +749,7 @@ namespace wi::shadercompiler
 		case ShaderFormat::HLSL6:
 		case ShaderFormat::SPIRV:
 		case ShaderFormat::HLSL6_XS:
+		case ShaderFormat::METAL:
 			Compile_DXCompiler(input, output);
 			break;
 #endif // SHADERCOMPILER_ENABLED_DXCOMPILER

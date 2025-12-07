@@ -273,6 +273,7 @@
 		1EDA80BD2EE2CA6000210D41 /* wiXInput.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA80BB2EE2CA6000210D41 /* wiXInput.cpp */; };
 		1EDA80BE2EE2CA6000210D41 /* wiRawInput.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA80B72EE2CA6000210D41 /* wiRawInput.cpp */; };
 		1EDA80C12EE30E5400210D41 /* wiGraphicsDevice_Metal.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA80C02EE30E5400210D41 /* wiGraphicsDevice_Metal.cpp */; };
+		1EDA82492EE5C90700210D41 /* libdxcompiler.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 1EDA82482EE5C90700210D41 /* libdxcompiler.dylib */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -1166,6 +1167,7 @@
 		1EDA81F72EE320DB00210D41 /* QuartzCore.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = QuartzCore.hpp; sourceTree = "<group>"; };
 		1EDA81F92EE320DB00210D41 /* LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE.txt; sourceTree = "<group>"; };
 		1EDA81FA2EE320DB00210D41 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		1EDA82482EE5C90700210D41 /* libdxcompiler.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libdxcompiler.dylib; path = ../Samples/Template_MacOS/libdxcompiler.dylib; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1173,6 +1175,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EDA82492EE5C90700210D41 /* libdxcompiler.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1182,6 +1185,7 @@
 		1EDA71632EE0978C00210D41 = {
 			isa = PBXGroup;
 			children = (
+				1EDA82482EE5C90700210D41 /* libdxcompiler.dylib */,
 				1EDA7F6B2EE1F57900210D41 /* LUA */,
 				1EDA801D2EE1F57900210D41 /* Utility */,
 				1EDA7D832EE1EC9500210D41 /* Jolt */,
@@ -2812,6 +2816,10 @@
 				GCC_PREPROCESSOR_DEFINITIONS = JPH_DEBUG_RENDERER;
 				GCC_USE_STANDARD_INCLUDE_SEARCHING = YES;
 				HEADER_SEARCH_PATHS = "";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)",
+				);
 				OTHER_CPLUSPLUSFLAGS = "$(OTHER_CFLAGS)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -2832,6 +2840,10 @@
 				GCC_PREPROCESSOR_DEFINITIONS = JPH_DEBUG_RENDERER;
 				GCC_USE_STANDARD_INCLUDE_SEARCHING = YES;
 				HEADER_SEARCH_PATHS = "";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)",
+				);
 				OTHER_CPLUSPLUSFLAGS = "$(OTHER_CFLAGS)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
