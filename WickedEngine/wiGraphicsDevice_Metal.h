@@ -186,11 +186,17 @@ namespace wi::graphics
 		{
 			std::mutex destroylocker;
 			uint64_t framecount = 0;
+			std::deque<std::pair<NS::SharedPtr<MTL::Resource>, uint64_t>> destroyer_resources;
 
 			void Update(uint64_t FRAMECOUNT, uint32_t BUFFERCOUNT)
 			{
 				std::scoped_lock lck(destroylocker);
 				framecount = FRAMECOUNT;
+				while (!destroyer_resources.empty() && destroyer_resources.front().second + BUFFERCOUNT < FRAMECOUNT)
+				{
+					destroyer_resources.pop_front();
+					// SharedPtr auto delete
+				}
 			}
 		};
 		wi::allocator::shared_ptr<AllocationHandler> allocationhandler;

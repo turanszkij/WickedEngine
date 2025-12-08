@@ -1168,6 +1168,7 @@
 		1EDA81F92EE320DB00210D41 /* LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE.txt; sourceTree = "<group>"; };
 		1EDA81FA2EE320DB00210D41 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		1EDA8A692EE5D68100210D41 /* libdxcompiler.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libdxcompiler.dylib; sourceTree = "<group>"; };
+		1EDA8D8A2EE6FB3900210D41 /* globals.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; name = globals.hlsli; path = shaders/globals.hlsli; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1185,6 +1186,7 @@
 		1EDA71632EE0978C00210D41 = {
 			isa = PBXGroup;
 			children = (
+				1EDA8D8A2EE6FB3900210D41 /* globals.hlsli */,
 				1EDA8A692EE5D68100210D41 /* libdxcompiler.dylib */,
 				1EDA7F6B2EE1F57900210D41 /* LUA */,
 				1EDA801D2EE1F57900210D41 /* Utility */,
@@ -2826,6 +2828,7 @@
 				SYSTEM_HEADER_SEARCH_PATHS = (
 					"$(SRCROOT)",
 					"$(SRCROOT)/Utility/metal",
+					/usr/local/include,
 				);
 				USER_HEADER_SEARCH_PATHS = "";
 			};
@@ -2850,6 +2853,7 @@
 				SYSTEM_HEADER_SEARCH_PATHS = (
 					"$(SRCROOT)",
 					"$(SRCROOT)/Utility/metal",
+					/usr/local/include,
 				);
 				USER_HEADER_SEARCH_PATHS = "";
 			};

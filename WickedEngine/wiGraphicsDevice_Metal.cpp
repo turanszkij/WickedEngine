@@ -12,9 +12,152 @@ namespace wi::graphics
 
 namespace metal_internal
 {
+	
+	constexpr MTL::PixelFormat _ConvertPixelFormat(Format value)
+	{
+	   switch (value)
+	   {
+	   case Format::UNKNOWN:
+		   return MTL::PixelFormatInvalid;
+	   case Format::R32G32B32A32_FLOAT:
+		   return MTL::PixelFormatRGBA32Float;
+	   case Format::R32G32B32A32_UINT:
+		   return MTL::PixelFormatRGBA32Uint;
+	   case Format::R32G32B32A32_SINT:
+		   return MTL::PixelFormatRGBA32Sint;
+	   case Format::R32G32B32_FLOAT:
+		   return MTL::PixelFormatInvalid;
+	   case Format::R32G32B32_UINT:
+		   return MTL::PixelFormatInvalid;
+	   case Format::R32G32B32_SINT:
+		   return MTL::PixelFormatInvalid;
+	   case Format::R16G16B16A16_FLOAT:
+		   return MTL::PixelFormatRGBA16Float;
+	   case Format::R16G16B16A16_UNORM:
+		   return MTL::PixelFormatRGBA16Unorm;
+	   case Format::R16G16B16A16_UINT:
+		   return MTL::PixelFormatRGBA16Uint;
+	   case Format::R16G16B16A16_SNORM:
+		   return MTL::PixelFormatRGBA16Snorm;
+	   case Format::R16G16B16A16_SINT:
+		   return MTL::PixelFormatRGBA16Sint;
+	   case Format::R32G32_FLOAT:
+		   return MTL::PixelFormatRG32Float;
+	   case Format::R32G32_UINT:
+		   return MTL::PixelFormatRG32Uint;
+	   case Format::R32G32_SINT:
+		   return MTL::PixelFormatRG32Sint;
+	   case Format::D32_FLOAT_S8X24_UINT:
+		   return MTL::PixelFormatDepth32Float_Stencil8;
+	   case Format::R10G10B10A2_UNORM:
+		   return MTL::PixelFormatBGR10A2Unorm;
+	   case Format::R10G10B10A2_UINT:
+		   return MTL::PixelFormatInvalid;
+	   case Format::R11G11B10_FLOAT:
+		   return MTL::PixelFormatRG11B10Float;
+	   case Format::R8G8B8A8_UNORM:
+		   return MTL::PixelFormatRGBA8Unorm;
+	   case Format::R8G8B8A8_UNORM_SRGB:
+		   return MTL::PixelFormatRGBA8Unorm_sRGB;
+	   case Format::R8G8B8A8_UINT:
+		   return MTL::PixelFormatRGBA8Uint;
+	   case Format::R8G8B8A8_SNORM:
+		   return MTL::PixelFormatRGBA8Snorm;
+	   case Format::R8G8B8A8_SINT:
+		   return MTL::PixelFormatRGBA8Sint;
+	   case Format::R16G16_FLOAT:
+		   return MTL::PixelFormatRG16Float;
+	   case Format::R16G16_UNORM:
+		   return MTL::PixelFormatRG16Unorm;
+	   case Format::R16G16_UINT:
+		   return MTL::PixelFormatRG16Uint;
+	   case Format::R16G16_SNORM:
+		   return MTL::PixelFormatRG16Snorm;
+	   case Format::R16G16_SINT:
+		   return MTL::PixelFormatRG16Sint;
+	   case Format::D32_FLOAT:
+		   return MTL::PixelFormatDepth32Float;
+	   case Format::R32_FLOAT:
+		   return MTL::PixelFormatR32Float;
+	   case Format::R32_UINT:
+		   return MTL::PixelFormatR32Uint;
+	   case Format::R32_SINT:
+		   return MTL::PixelFormatR32Sint;
+	   case Format::D24_UNORM_S8_UINT:
+		   return MTL::PixelFormatDepth24Unorm_Stencil8;
+	   case Format::R9G9B9E5_SHAREDEXP:
+		   return MTL::PixelFormatRGB9E5Float;
+	   case Format::R8G8_UNORM:
+		   return MTL::PixelFormatRG8Unorm;
+	   case Format::R8G8_UINT:
+		   return MTL::PixelFormatRG8Uint;
+	   case Format::R8G8_SNORM:
+		   return MTL::PixelFormatRG8Snorm;
+	   case Format::R8G8_SINT:
+		   return MTL::PixelFormatRG8Sint;
+	   case Format::R16_FLOAT:
+		   return MTL::PixelFormatR16Float;
+	   case Format::D16_UNORM:
+		   return MTL::PixelFormatDepth16Unorm;
+	   case Format::R16_UNORM:
+		   return MTL::PixelFormatR16Unorm;
+	   case Format::R16_UINT:
+		   return MTL::PixelFormatR16Uint;
+	   case Format::R16_SNORM:
+		   return MTL::PixelFormatR16Snorm;
+	   case Format::R16_SINT:
+		   return MTL::PixelFormatR16Sint;
+	   case Format::R8_UNORM:
+		   return MTL::PixelFormatR8Unorm;
+	   case Format::R8_UINT:
+		   return MTL::PixelFormatR8Uint;
+	   case Format::R8_SNORM:
+		   return MTL::PixelFormatR8Snorm;
+	   case Format::R8_SINT:
+		   return MTL::PixelFormatR8Sint;
+	   case Format::BC1_UNORM:
+		   return MTL::PixelFormatBC1_RGBA;
+	   case Format::BC1_UNORM_SRGB:
+		   return MTL::PixelFormatBC1_RGBA_sRGB;
+	   case Format::BC2_UNORM:
+		   return MTL::PixelFormatBC2_RGBA;
+	   case Format::BC2_UNORM_SRGB:
+		   return MTL::PixelFormatBC2_RGBA_sRGB;
+	   case Format::BC3_UNORM:
+		   return MTL::PixelFormatBC3_RGBA;
+	   case Format::BC3_UNORM_SRGB:
+		   return MTL::PixelFormatBC3_RGBA_sRGB;
+	   case Format::BC4_UNORM:
+		   return MTL::PixelFormatBC4_RUnorm;
+	   case Format::BC4_SNORM:
+		   return MTL::PixelFormatBC4_RSnorm;
+	   case Format::BC5_UNORM:
+		   return MTL::PixelFormatBC5_RGUnorm;
+	   case Format::BC5_SNORM:
+		   return MTL::PixelFormatBC5_RGSnorm;
+	   case Format::B8G8R8A8_UNORM:
+		   return MTL::PixelFormatBGRA8Unorm;
+	   case Format::B8G8R8A8_UNORM_SRGB:
+		   return MTL::PixelFormatBGRA8Unorm_sRGB;
+	   case Format::BC6H_UF16:
+		   return MTL::PixelFormatBC6H_RGBUfloat;
+	   case Format::BC6H_SF16:
+		   return MTL::PixelFormatBC6H_RGBFloat;
+	   case Format::BC7_UNORM:
+		   return MTL::PixelFormatBC7_RGBAUnorm;
+	   case Format::BC7_UNORM_SRGB:
+		   return MTL::PixelFormatBC7_RGBAUnorm_sRGB;
+	   case Format::NV12:
+		   return MTL::PixelFormatInvalid;
+	   }
+	   return MTL::PixelFormatInvalid;
+	}
+
 	struct Buffer_Metal
 	{
 		wi::allocator::shared_ptr<GraphicsDevice_Metal::AllocationHandler> allocationhandler;
+		NS::SharedPtr<MTL::Buffer> buffer;
+		
 		void destroy_subresources()
 		{
 		}
@@ -25,6 +168,7 @@ namespace metal_internal
 				return;
 			allocationhandler->destroylocker.lock();
 			uint64_t framecount = allocationhandler->framecount;
+			allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(buffer), framecount));
 			destroy_subresources();
 			allocationhandler->destroylocker.unlock();
 		}
@@ -32,6 +176,8 @@ namespace metal_internal
 	struct Texture_Metal
 	{
 		wi::allocator::shared_ptr<GraphicsDevice_Metal::AllocationHandler> allocationhandler;
+		NS::SharedPtr<MTL::Texture> texture;
+		
 		void destroy_subresources()
 		{
 		}
@@ -42,6 +188,7 @@ namespace metal_internal
 				return;
 			allocationhandler->destroylocker.lock();
 			uint64_t framecount = allocationhandler->framecount;
+			allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(texture), framecount));
 			destroy_subresources();
 			allocationhandler->destroylocker.unlock();
 		}
@@ -205,7 +352,7 @@ using namespace metal_internal;
 		{
 			CGRect frame = (CGRect){ {0.0f, 0.0f}, {float(desc->width), float(desc->height)} };
 			internal_state->view = (MTK::View*)window;
-			internal_state->view->init( frame, device.get() );
+			internal_state->view->init(frame, device.get());
 			internal_state->view->setColorPixelFormat(MTL::PixelFormat::PixelFormatBGRA8Unorm_sRGB);
 			internal_state->view->setClearColor(MTL::ClearColor::Make(desc->clear_color[0], desc->clear_color[1], desc->clear_color[2], desc->clear_color[3]));
 		}
@@ -221,6 +368,14 @@ using namespace metal_internal;
 		buffer->mapped_data = nullptr;
 		buffer->mapped_size = 0;
 		buffer->desc = *desc;
+		
+		MTL::ResourceOptions options = desc->usage == Usage::DEFAULT ? MTL::ResourceStorageModePrivate : MTL::ResourceStorageModeShared;
+		internal_state->buffer = NS::TransferPtr(device->newBuffer(desc->size, options));
+		if(options != MTL::ResourceStorageModePrivate)
+		{
+			buffer->mapped_data = internal_state->buffer->contents();
+			buffer->mapped_size = internal_state->buffer->allocatedSize();
+		}
 
 		return false;
 	}
@@ -236,7 +391,43 @@ using namespace metal_internal;
 		texture->mapped_subresource_count = 0;
 		texture->sparse_properties = nullptr;
 		texture->desc = *desc;
-
+		
+		NS::SharedPtr<MTL::TextureDescriptor> descriptor = NS::TransferPtr(MTL::TextureDescriptor::alloc()->init());
+		descriptor->setWidth(desc->width);
+		descriptor->setHeight(desc->height);
+		descriptor->setDepth(desc->depth);
+		descriptor->setArrayLength(desc->array_size);
+		descriptor->setMipmapLevelCount(desc->mip_levels);
+		descriptor->setPixelFormat(_ConvertPixelFormat(desc->format));
+		descriptor->setSampleCount(desc->sample_count);
+		switch (desc->type) {
+			case TextureDesc::Type::TEXTURE_1D:
+				descriptor->setTextureType(desc->array_size > 1 ? MTL::TextureType1DArray : MTL::TextureType1D);
+				break;
+			case TextureDesc::Type::TEXTURE_2D:
+				if(desc->sample_count > 1)
+				{
+					descriptor->setTextureType(desc->array_size > 1 ? MTL::TextureType2DMultisampleArray : MTL::TextureType2DMultisample);
+				}
+				else
+				{
+					descriptor->setTextureType(desc->array_size > 1 ? MTL::TextureType2DArray : MTL::TextureType2D);
+				}
+				break;
+			case TextureDesc::Type::TEXTURE_3D:
+				descriptor->setTextureType(MTL::TextureType3D);
+				break;
+			default:
+				break;
+		}
+		if(has_flag(desc->misc_flags, ResourceMiscFlag::TEXTURECUBE))
+		{
+			descriptor->setTextureType(desc->array_size > 6 ? MTL::TextureTypeCubeArray : MTL::TextureTypeCube);
+			descriptor->setArrayLength(desc->array_size / 6);
+		}
+		
+		internal_state->texture = NS::TransferPtr(device->newTexture(descriptor.get()));
+		
 		return false;
 	}
 	bool GraphicsDevice_Metal::CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader) const
