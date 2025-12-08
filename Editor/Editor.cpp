@@ -5416,12 +5416,13 @@ void EditorComponent::Save(const std::string& filename)
 					thumbnailRenderPath.PreRender();
 					thumbnailRenderPath.Render();
 					thumbnailScreenshot = CreateThumbnail(*thumbnailRenderPath.GetLastPostprocessRT(), 256, 128);
-					thumbnailRenderPath.DeleteGPUResources();
 				}
 				else
 				{
 					thumbnailScreenshot = CreateThumbnail(*renderPath->GetLastPostprocessRT(), 256, 128);
 				}
+
+				thumbnailRenderPath.DeleteGPUResources();
 
 				archive.SetThumbnailAndResetPos(thumbnailScreenshot);
 			}
