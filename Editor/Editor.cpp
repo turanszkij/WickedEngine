@@ -5367,10 +5367,10 @@ void EditorComponent::Save(const std::string& filename)
 		~SetAndClearFlagOnExit() { flag = false; }
 	} scoped(save_in_progress);
 
-	std::string extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(filename));
+	const std::string extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(filename));
 
-	FileType type = FileType::INVALID;
-	auto it = filetypes.find(extension);
+	auto type = FileType::INVALID;
+	const auto it = filetypes.find(extension);
 	if (it != filetypes.end())
 	{
 		type = it->second;
@@ -5378,7 +5378,7 @@ void EditorComponent::Save(const std::string& filename)
 	if (type == FileType::INVALID)
 		return;
 
-	if(type == FileType::WISCENE || type == FileType::HEADER || type == FileType::CPP)
+	if (type == FileType::WISCENE || type == FileType::HEADER || type == FileType::CPP)
 	{
 		const bool dump_to_header = type == FileType::HEADER;
 		const bool dump_to_cpp = type == FileType::CPP;
@@ -5394,7 +5394,36 @@ void EditorComponent::Save(const std::string& filename)
 			else
 			{
 				archive.SetCompressionEnabled(generalWnd.saveCompressionCheckBox.GetCheck());
-				archive.SetThumbnailAndResetPos(CreateThumbnailScreenshot());
+
+				Scene& currentScene = GetCurrentScene();
+				currentScene.Update(0);
+
+				// Create dedicated thumbnail renderpath with fixed dimensions
+				wi::RenderPath3D thumbnailRenderPath;
+				thumbnailRenderPath.width = 512;
+				thumbnailRenderPath.height = 256;
+				thumbnailRenderPath.scene = &currentScene;
+
+				Texture thumbnailScreenshot;
+
+				// Setup camera for single root entity scene thumbnail
+				if (SetupThumbnailCamera(thumbnailRenderPath))
+				{
+					// Render the thumbnail
+					thumbnailRenderPath.PreUpdate();
+					thumbnailRenderPath.Update(0);
+					thumbnailRenderPath.PostUpdate();
+					thumbnailRenderPath.PreRender();
+					thumbnailRenderPath.Render();
+					thumbnailScreenshot = CreateThumbnail(*thumbnailRenderPath.GetLastPostprocessRT(), 256, 128);
+					thumbnailRenderPath.DeleteGPUResources();
+				}
+				else
+				{
+					thumbnailScreenshot = CreateThumbnail(*renderPath->GetLastPostprocessRT(), 256, 128);
+				}
+
+				archive.SetThumbnailAndResetPos(thumbnailScreenshot);
 			}
 
 			Scene& scene = GetCurrentScene();
@@ -5556,9 +5585,100 @@ Texture EditorComponent::CreateThumbnail(Texture texture, uint32_t target_width,
 
 	return thumbnail;
 }
-Texture EditorComponent::CreateThumbnailScreenshot() const
+
+bool EditorComponent::SetupThumbnailCamera(wi::RenderPath3D& thumbnailRenderPath)
 {
-	return CreateThumbnail(*renderPath->GetLastPostprocessRT(), 256, 128);
+	Scene& scene = GetCurrentScene();
+
+	// Check if scene has exactly one root entity
+	wi::unordered_set<Entity> all_entities;
+	scene.FindAllEntities(all_entities);
+
+	Entity root_entity = INVALID_ENTITY;
+	for (Entity entity : all_entities)
+	{
+		const HierarchyComponent* hierarchy_component = scene.hierarchy.GetComponent(entity);
+		if (hierarchy_component == nullptr || hierarchy_component->parentID == INVALID_ENTITY)
+		{
+			if (root_entity != INVALID_ENTITY)
+			{
+				return false; // More than one root entity found
+			}
+			root_entity = entity;
+		}
+	}
+
+	if (root_entity == INVALID_ENTITY)
+		return false;
+
+	AABB combined_bounds;
+	bool has_bounds = false;
+
+	auto add_entity_bounds = [&](const Entity entity) {
+		const ObjectComponent* object = scene.objects.GetComponent(entity);
+		if (object != nullptr && object->meshID != INVALID_ENTITY)
+		{
+			const MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
+			const TransformComponent* transform = scene.transforms.GetComponent(entity);
+			if (mesh != nullptr && transform != nullptr && mesh->aabb.IsValid())
+			{
+				const XMMATRIX world_transform = XMLoadFloat4x4(&transform->world);
+				AABB world_aabb = mesh->aabb.transform(world_transform);
+				combined_bounds = has_bounds ? AABB::Merge(combined_bounds, world_aabb) : world_aabb;
+				has_bounds = true;
+			}
+		}
+	};
+
+	add_entity_bounds(root_entity);
+
+	scene.ForEachChild(root_entity, [&](const Entity child) {
+		add_entity_bounds(child);
+	});
+
+	// Only adjust camera if we have valid bounds
+	if (!has_bounds || combined_bounds.getArea() <= 0)
+		return false;
+
+	// Create temp camera for thumbnail
+	XMFLOAT3 bounds_center = combined_bounds.getCenter();
+	float bounds_radius = combined_bounds.getRadius();
+	float camera_distance = bounds_radius * 2.0f; // Distance multiplier for framing
+
+	float horizontal_angle = wi::math::DegreesToRadians(-50.0f);
+	float elevation_angle = wi::math::DegreesToRadians(20.0f);
+	float horizontal_distance = camera_distance * std::cos(elevation_angle);
+	float vertical_offset = camera_distance * std::sin(elevation_angle);
+
+	auto camera_position = XMFLOAT3(
+		bounds_center.x + horizontal_distance * std::cos(horizontal_angle),
+		bounds_center.y + vertical_offset,
+		bounds_center.z + horizontal_distance * std::sin(horizontal_angle)
+	);
+
+	TransformComponent temp_camera_transform;
+	temp_camera_transform.Translate(XMLoadFloat3(&camera_position));
+	temp_camera_transform.UpdateTransform();
+
+	XMVECTOR eye = XMLoadFloat3(&camera_position);
+	XMVECTOR at = XMLoadFloat3(&bounds_center);
+	XMVECTOR up = XMVectorSet(0, 1, 0, 0);
+	XMMATRIX view = XMMatrixLookAtLH(eye, at, up);
+	XMMATRIX view_inv = XMMatrixInverse(nullptr, view);
+	XMStoreFloat4x4(&temp_camera_transform.world, view_inv);
+
+	CameraComponent temp_camera;
+	temp_camera.fov = wi::math::DegreesToRadians(60.0f);
+	temp_camera.width = (float)thumbnailRenderPath.width;
+	temp_camera.height = (float)thumbnailRenderPath.height;
+	temp_camera.TransformCamera(temp_camera_transform);
+	temp_camera.UpdateCamera();
+
+	// Set the thumbnail renderpath camera
+	thumbnail_saved_camera = temp_camera;
+	thumbnailRenderPath.camera = &thumbnail_saved_camera;
+
+	return true;
 }
 
 void EditorComponent::PostSaveText(const std::string& message, const std::string& filename, float time_seconds)
