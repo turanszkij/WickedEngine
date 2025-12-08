@@ -428,6 +428,34 @@ using namespace metal_internal;
 		
 		internal_state->texture = NS::TransferPtr(device->newTexture(descriptor.get()));
 		
+		if(initial_data != nullptr)
+		{
+			const uint32_t data_stride = GetFormatStride(desc->format);
+			uint32_t initDataIdx = 0;
+			for (uint32_t slice = 0; slice < desc->array_size; ++slice)
+			{
+				uint32_t width = desc->width;
+				uint32_t height = desc->height;
+				uint32_t depth = desc->depth;
+				for (uint32_t mip = 0; mip < desc->mip_levels; ++mip)
+				{
+					const SubresourceData& subresourceData = initial_data[initDataIdx++];
+					const uint32_t block_size = GetFormatBlockSize(desc->format);
+					const uint32_t num_blocks_x = std::max(1u, width / block_size);
+					const uint32_t num_blocks_y = std::max(1u, height / block_size);
+					const uint64_t datasize = data_stride * num_blocks_x * num_blocks_y * depth;
+					MTL::Region region = {};
+					region.size.width = width;
+					region.size.height = height;
+					region.size.depth = depth;
+					internal_state->texture->replaceRegion(region, mip, slice, subresourceData.data_ptr, subresourceData.row_pitch, datasize);
+					width = std::max(block_size, width / 2);
+					height = std::max(block_size, height / 2);
+					depth = std::max(1u, depth / 2);
+				}
+			}
+		}
+		
 		return false;
 	}
 	bool GraphicsDevice_Metal::CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader) const
