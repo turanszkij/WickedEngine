@@ -203,6 +203,36 @@ float3x3 adjoint(in float4x4 m)
 //	The shader compiler will take the defined name: WICKED_ENGINE_DEFAULT_ROOTSIGNATURE and use it as root signature
 //	If you wish to specify custom root signature, make sure that this define is not available
 //		(for example: not including this file, or using #undef WICKED_ENGINE_DEFAULT_ROOTSIGNATURE)
+#ifdef __hlsl_dx_compiler
+#if __SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6
+// This version uses the newer HLSL6.6+ feature where heap can be indexed instead of dummy descriptor tables:
+#define WICKED_ENGINE_DEFAULT_ROOTSIGNATURE \
+	"RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED | SAMPLER_HEAP_DIRECTLY_INDEXED), " \
+	"RootConstants(num32BitConstants=12, b999), " \
+	"CBV(b0), " \
+	"CBV(b1), " \
+	"CBV(b2), " \
+	"DescriptorTable( " \
+		"CBV(b3, numDescriptors = 11, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE)," \
+		"SRV(t0, numDescriptors = 16, flags = DESCRIPTORS_VOLATILE | DATA_STATIC_WHILE_SET_AT_EXECUTE)," \
+		"UAV(u0, numDescriptors = 16, flags = DESCRIPTORS_VOLATILE | DATA_STATIC_WHILE_SET_AT_EXECUTE)" \
+	")," \
+	"DescriptorTable( " \
+		"Sampler(s0, offset = 0, numDescriptors = 8, flags = DESCRIPTORS_VOLATILE)" \
+	")," \
+	"StaticSampler(s100, addressU = TEXTURE_ADDRESS_CLAMP, addressV = TEXTURE_ADDRESS_CLAMP, addressW = TEXTURE_ADDRESS_CLAMP, filter = FILTER_MIN_MAG_MIP_LINEAR)," \
+	"StaticSampler(s101, addressU = TEXTURE_ADDRESS_WRAP, addressV = TEXTURE_ADDRESS_WRAP, addressW = TEXTURE_ADDRESS_WRAP, filter = FILTER_MIN_MAG_MIP_LINEAR)," \
+	"StaticSampler(s102, addressU = TEXTURE_ADDRESS_MIRROR, addressV = TEXTURE_ADDRESS_MIRROR, addressW = TEXTURE_ADDRESS_MIRROR, filter = FILTER_MIN_MAG_MIP_LINEAR)," \
+	"StaticSampler(s103, addressU = TEXTURE_ADDRESS_CLAMP, addressV = TEXTURE_ADDRESS_CLAMP, addressW = TEXTURE_ADDRESS_CLAMP, filter = FILTER_MIN_MAG_MIP_POINT)," \
+	"StaticSampler(s104, addressU = TEXTURE_ADDRESS_WRAP, addressV = TEXTURE_ADDRESS_WRAP, addressW = TEXTURE_ADDRESS_WRAP, filter = FILTER_MIN_MAG_MIP_POINT)," \
+	"StaticSampler(s105, addressU = TEXTURE_ADDRESS_MIRROR, addressV = TEXTURE_ADDRESS_MIRROR, addressW = TEXTURE_ADDRESS_MIRROR, filter = FILTER_MIN_MAG_MIP_POINT)," \
+	"StaticSampler(s106, addressU = TEXTURE_ADDRESS_CLAMP, addressV = TEXTURE_ADDRESS_CLAMP, addressW = TEXTURE_ADDRESS_CLAMP, filter = FILTER_ANISOTROPIC, maxAnisotropy = 16)," \
+	"StaticSampler(s107, addressU = TEXTURE_ADDRESS_WRAP, addressV = TEXTURE_ADDRESS_WRAP, addressW = TEXTURE_ADDRESS_WRAP, filter = FILTER_ANISOTROPIC, maxAnisotropy = 16)," \
+	"StaticSampler(s108, addressU = TEXTURE_ADDRESS_MIRROR, addressV = TEXTURE_ADDRESS_MIRROR, addressW = TEXTURE_ADDRESS_MIRROR, filter = FILTER_ANISOTROPIC, maxAnisotropy = 16)," \
+	"StaticSampler(s109, addressU = TEXTURE_ADDRESS_CLAMP, addressV = TEXTURE_ADDRESS_CLAMP, addressW = TEXTURE_ADDRESS_CLAMP, filter = FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT, comparisonFunc = COMPARISON_GREATER_EQUAL),"
+
+#else
+// This version uses the older bindless descriptor tables, compatible with Windows 10:
 #define WICKED_ENGINE_DEFAULT_ROOTSIGNATURE \
 	"RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT), " \
 	"RootConstants(num32BitConstants=12, b999), " \
@@ -286,7 +316,9 @@ float3x3 adjoint(in float4x4 m)
 	"StaticSampler(s107, addressU = TEXTURE_ADDRESS_WRAP, addressV = TEXTURE_ADDRESS_WRAP, addressW = TEXTURE_ADDRESS_WRAP, filter = FILTER_ANISOTROPIC, maxAnisotropy = 16)," \
 	"StaticSampler(s108, addressU = TEXTURE_ADDRESS_MIRROR, addressV = TEXTURE_ADDRESS_MIRROR, addressW = TEXTURE_ADDRESS_MIRROR, filter = FILTER_ANISOTROPIC, maxAnisotropy = 16)," \
 	"StaticSampler(s109, addressU = TEXTURE_ADDRESS_CLAMP, addressV = TEXTURE_ADDRESS_CLAMP, addressW = TEXTURE_ADDRESS_CLAMP, filter = FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT, comparisonFunc = COMPARISON_GREATER_EQUAL),"
-
+#endif // __SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6
+#endif // __hlsl_dx_compiler
+	
 #ifndef __PSSL__
 // These are static samplers, they don't need to be bound:
 //	They are also on slots that are not bindable as sampler bind slots must be in [0, DESCRIPTORBINDER_SAMPLER_COUNT] range!
@@ -302,53 +334,72 @@ SamplerState sampler_aniso_mirror : register(s108);
 SamplerComparisonState sampler_cmp_depth : register(s109);
 #endif // __PSSL__
 
-#if defined(__PSSL__)
+// Direct heap indexing compatibility functions for HLSL6.6+:
+//	Note: on PS5 this feature is implemented in the preincluded HLSL_to_PSSL.h file
+#if defined(__hlsl_dx_compiler) && __SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6
+template<typename T>
+struct BindlessResource
+{
+	T operator[](uint index) { return T(ResourceDescriptorHeap[index]); }
+};
+template<>
+struct BindlessResource<SamplerState>
+{
+	SamplerState operator[](uint index) { return SamplerState(SamplerDescriptorHeap[index]); }
+};
+#endif // defined(__hlsl_dx_compiler) && __SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6
+
+#if defined(__PSSL__) || (defined(__hlsl_dx_compiler) && __SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6)
 static const BindlessResource<SamplerState> bindless_samplers;
 static const BindlessResource<Texture2D> bindless_textures;
 static const BindlessResource<ByteAddressBuffer> bindless_buffers;
-static const BindlessResource<Buffer<uint>> bindless_buffers_uint;
-static const BindlessResource<Buffer<uint2>> bindless_buffers_uint2;
-static const BindlessResource<Buffer<uint3>> bindless_buffers_uint3;
-static const BindlessResource<Buffer<uint4>> bindless_buffers_uint4;
-static const BindlessResource<Buffer<float>> bindless_buffers_float;
-static const BindlessResource<Buffer<float2>> bindless_buffers_float2;
-static const BindlessResource<Buffer<float3>> bindless_buffers_float3;
-static const BindlessResource<Buffer<float4>> bindless_buffers_float4;
-static const BindlessResource<Buffer<half>> bindless_buffers_half;
-static const BindlessResource<Buffer<half2>> bindless_buffers_half2;
-static const BindlessResource<Buffer<half3>> bindless_buffers_half3;
-static const BindlessResource<Buffer<half4>> bindless_buffers_half4;
+static const BindlessResource<Buffer<uint> > bindless_buffers_uint;
+static const BindlessResource<Buffer<uint2> > bindless_buffers_uint2;
+static const BindlessResource<Buffer<uint3> > bindless_buffers_uint3;
+static const BindlessResource<Buffer<uint4> > bindless_buffers_uint4;
+static const BindlessResource<Buffer<float> > bindless_buffers_float;
+static const BindlessResource<Buffer<float2> > bindless_buffers_float2;
+static const BindlessResource<Buffer<float3> > bindless_buffers_float3;
+static const BindlessResource<Buffer<float4> > bindless_buffers_float4;
+static const BindlessResource<Buffer<half> > bindless_buffers_half;
+static const BindlessResource<Buffer<half2> > bindless_buffers_half2;
+static const BindlessResource<Buffer<half3> > bindless_buffers_half3;
+static const BindlessResource<Buffer<half4> > bindless_buffers_half4;
 static const BindlessResource<Texture2DArray> bindless_textures2DArray;
-static const BindlessResource<Texture2DArray<half4>> bindless_textures2DArray_half4;
+static const BindlessResource<Texture2DArray<half4> > bindless_textures2DArray_half4;
 static const BindlessResource<TextureCube> bindless_cubemaps;
-static const BindlessResource<TextureCube<half4>> bindless_cubemaps_half4;
+static const BindlessResource<TextureCube<half4> > bindless_cubemaps_half4;
 static const BindlessResource<TextureCubeArray> bindless_cubearrays;
 static const BindlessResource<Texture3D> bindless_textures3D;
-static const BindlessResource<Texture3D<half4>> bindless_textures3D_half4;
-static const BindlessResource<Texture2D<float>> bindless_textures_float;
-static const BindlessResource<Texture2D<float2>> bindless_textures_float2;
-static const BindlessResource<Texture2D<uint>> bindless_textures_uint;
-static const BindlessResource<Texture2D<uint4>> bindless_textures_uint4;
-static const BindlessResource<Texture2D<half4>> bindless_textures_half4;
-static const BindlessResource<Texture1D<float4>> bindless_textures1D;
-static const BindlessResource<Texture1D<half4>> bindless_textures1D_half4;
+static const BindlessResource<Texture3D<half4> > bindless_textures3D_half4;
+static const BindlessResource<Texture2D<float> > bindless_textures_float;
+static const BindlessResource<Texture2D<float2> > bindless_textures_float2;
+static const BindlessResource<Texture2D<uint> > bindless_textures_uint;
+static const BindlessResource<Texture2D<uint4> > bindless_textures_uint4;
+static const BindlessResource<Texture2D<half4> > bindless_textures_half4;
+static const BindlessResource<Texture1D<float4> > bindless_textures1D;
+static const BindlessResource<Texture1D<half4> > bindless_textures1D_half4;
 
-static const BindlessResource<RWTexture2D<float4>> bindless_rwtextures;
+static const BindlessResource<RWTexture2D<float4> > bindless_rwtextures;
 static const BindlessResource<RWByteAddressBuffer> bindless_rwbuffers;
-static const BindlessResource<RWBuffer<uint>> bindless_rwbuffers_uint;
-static const BindlessResource<RWBuffer<uint2>> bindless_rwbuffers_uint2;
-static const BindlessResource<RWBuffer<uint3>> bindless_rwbuffers_uint3;
-static const BindlessResource<RWBuffer<uint4>> bindless_rwbuffers_uint4;
-static const BindlessResource<RWBuffer<float>> bindless_rwbuffers_float;
-static const BindlessResource<RWBuffer<float2>> bindless_rwbuffers_float2;
-static const BindlessResource<RWBuffer<float3>> bindless_rwbuffers_float3;
-static const BindlessResource<RWBuffer<float4>> bindless_rwbuffers_float4;
-static const BindlessResource<RWTexture2DArray<float4>> bindless_rwtextures2DArray;
-static const BindlessResource<RWTexture3D<float4>> bindless_rwtextures3D;
-static const BindlessResource<RWTexture2D<uint>> bindless_rwtextures_uint;
-static const BindlessResource<RWTexture2D<uint2>> bindless_rwtextures_uint2;
-static const BindlessResource<RWTexture2D<uint3>> bindless_rwtextures_uint3;
-static const BindlessResource<RWTexture2D<uint4>> bindless_rwtextures_uint4;
+static const BindlessResource<RWBuffer<uint> > bindless_rwbuffers_uint;
+static const BindlessResource<RWBuffer<uint2> > bindless_rwbuffers_uint2;
+static const BindlessResource<RWBuffer<uint3> > bindless_rwbuffers_uint3;
+static const BindlessResource<RWBuffer<uint4> > bindless_rwbuffers_uint4;
+static const BindlessResource<RWBuffer<float> > bindless_rwbuffers_float;
+static const BindlessResource<RWBuffer<float2> > bindless_rwbuffers_float2;
+static const BindlessResource<RWBuffer<float3> > bindless_rwbuffers_float3;
+static const BindlessResource<RWBuffer<float4> > bindless_rwbuffers_float4;
+static const BindlessResource<RWTexture2DArray<float4> > bindless_rwtextures2DArray;
+static const BindlessResource<RWTexture3D<float4> > bindless_rwtextures3D;
+static const BindlessResource<RWTexture2D<uint> > bindless_rwtextures_uint;
+static const BindlessResource<RWTexture2D<uint2> > bindless_rwtextures_uint2;
+static const BindlessResource<RWTexture2D<uint3> > bindless_rwtextures_uint3;
+static const BindlessResource<RWTexture2D<uint4> > bindless_rwtextures_uint4;
+
+#ifdef __hlsl_dx_compiler
+static const BindlessResource<RaytracingAccelerationStructure> bindless_accelerationstructures;
+#endif // __hlsl_dx_compiler
 
 #elif defined(__spirv__)
 // In Vulkan, we can manually overlap descriptor sets to reduce bindings:
@@ -468,16 +519,16 @@ RWTexture2D<uint4> bindless_rwtextures_uint4[] : register(space115);
 
 #include "ShaderInterop_Renderer.h"
 
-#if defined(__PSSL__)
-static const BindlessResource<StructuredBuffer<ShaderMeshInstance>> bindless_structured_meshinstance;
-static const BindlessResource<StructuredBuffer<ShaderGeometry>> bindless_structured_geometry;
-static const BindlessResource<StructuredBuffer<ShaderMeshlet>> bindless_structured_meshlet;
-static const BindlessResource<StructuredBuffer<ShaderCluster>> bindless_structured_cluster;
-static const BindlessResource<StructuredBuffer<ShaderClusterBounds>> bindless_structured_cluster_bounds;
-static const BindlessResource<StructuredBuffer<ShaderMaterial>> bindless_structured_material;
-static const BindlessResource<StructuredBuffer<uint>> bindless_structured_uint;
-static const BindlessResource<StructuredBuffer<ShaderTerrainChunk>> bindless_structured_terrain_chunks;
-static const BindlessResource<StructuredBuffer<DDGIProbe>> bindless_structured_ddi_probes;
+#if defined(__PSSL__) || (__SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6)
+static const BindlessResource<StructuredBuffer<ShaderMeshInstance> > bindless_structured_meshinstance;
+static const BindlessResource<StructuredBuffer<ShaderGeometry> > bindless_structured_geometry;
+static const BindlessResource<StructuredBuffer<ShaderMeshlet> > bindless_structured_meshlet;
+static const BindlessResource<StructuredBuffer<ShaderCluster> > bindless_structured_cluster;
+static const BindlessResource<StructuredBuffer<ShaderClusterBounds> > bindless_structured_cluster_bounds;
+static const BindlessResource<StructuredBuffer<ShaderMaterial> > bindless_structured_material;
+static const BindlessResource<StructuredBuffer<uint> > bindless_structured_uint;
+static const BindlessResource<StructuredBuffer<ShaderTerrainChunk> > bindless_structured_terrain_chunks;
+static const BindlessResource<StructuredBuffer<DDGIProbe> > bindless_structured_ddi_probes;
 #elif defined(__spirv__)
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderMeshInstance> bindless_structured_meshinstance[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderGeometry> bindless_structured_geometry[];

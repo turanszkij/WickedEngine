@@ -2,8 +2,14 @@
 
 PUSHCONSTANT(push, SkinningPushConstants);
 
-#ifndef __PSSL__
+#ifdef __hlsl_dx_compiler
 #undef WICKED_ENGINE_DEFAULT_ROOTSIGNATURE // don't use auto root signature!
+#if __SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6
+[RootSignature(
+	"RootFlags(CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED), " \
+	"RootConstants(num32BitConstants=20, b999)"
+)]
+#else
 [RootSignature(
 	"RootConstants(num32BitConstants=20, b999),"
 	"DescriptorTable( "
@@ -56,7 +62,8 @@ PUSHCONSTANT(push, SkinningPushConstants);
 		"SRV(t0, space = 206, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)" \
 	")"
 )]
-#endif // __PSSL__
+#endif // __SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6
+#endif // __hlsl_dx_compiler
 
 [numthreads(64, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
