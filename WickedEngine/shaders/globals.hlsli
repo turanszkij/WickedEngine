@@ -335,6 +335,7 @@ SamplerComparisonState sampler_cmp_depth : register(s109);
 #endif // __PSSL__
 
 // Direct heap indexing compatibility functions for HLSL6.6+:
+//	Note: on PS5 this feature is implemented in the preincluded HLSL_to_PSSL.h file
 #if defined(__hlsl_dx_compiler) && __SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6
 template<typename T>
 struct BindlessResource
