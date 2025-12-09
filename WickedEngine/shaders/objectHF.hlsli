@@ -35,9 +35,9 @@
 #define TEXTURE_SLOT_NONUNIFORM
 #endif // TERRAINBLENDED
 
-#ifndef OBJECTSHADER_LAYOUT_COMMON
+#if !defined(OBJECTSHADER_LAYOUT_COMMON) && !defined(ENVMAPRENDERING)
 #define DISABLE_SVT
-#endif // OBJECTSHADER_LAYOUT_COMMON
+#endif // !defined(OBJECTSHADER_LAYOUT_COMMON) && !defined(ENVMAPRENDERING)
 
 #include "globals.hlsli"
 #include "brdf.hlsli"

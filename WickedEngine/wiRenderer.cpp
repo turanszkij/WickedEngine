@@ -238,6 +238,7 @@ struct alignas(16) RenderBatch
 
 	// opaque sorting
 	//	Priority is set to mesh index to have more instancing
+	//  LOD is included to group same-mesh objects for better batching
 	//	distance is second priority (front to back Z-buffering)
 	constexpr bool operator<(const RenderBatch& other) const
 	{
@@ -247,24 +248,28 @@ struct alignas(16) RenderBatch
 			{
 				// The order of members is important here, it means the sort priority (low to high)!
 				uint64_t distance : 16;
+				uint64_t lod : 8;
 				uint64_t meshIndex : 16;
-				uint64_t sort_bits : 32;
+				uint64_t sort_bits : 24;
 			} bits;
 			uint64_t value;
 		};
 		static_assert(sizeof(SortKey) == sizeof(uint64_t));
 		SortKey a = {};
 		a.bits.distance = distance;
+		a.bits.lod = lod_override;
 		a.bits.meshIndex = meshIndex;
 		a.bits.sort_bits = sort_bits;
 		SortKey b = {};
 		b.bits.distance = other.distance;
+		b.bits.lod = other.lod_override;
 		b.bits.meshIndex = other.meshIndex;
 		b.bits.sort_bits = other.sort_bits;
 		return a.value < b.value;
 	}
 	// transparent sorting
 	//	Priority is distance for correct alpha blending (back to front rendering)
+	//  LOD is included to group same-mesh objects for better batching
 	//	mesh index is second priority for instancing
 	constexpr bool operator>(const RenderBatch& other) const
 	{
@@ -273,8 +278,9 @@ struct alignas(16) RenderBatch
 			struct
 			{
 				// The order of members is important here, it means the sort priority (low to high)!
+				uint64_t lod : 8;
 				uint64_t meshIndex : 16;
-				uint64_t sort_bits : 32;
+				uint64_t sort_bits : 24;
 				uint64_t distance : 16;
 			} bits;
 			uint64_t value;
@@ -283,10 +289,12 @@ struct alignas(16) RenderBatch
 		SortKey a = {};
 		a.bits.distance = distance;
 		a.bits.sort_bits = sort_bits;
+		a.bits.lod = lod_override;
 		a.bits.meshIndex = meshIndex;
 		SortKey b = {};
 		b.bits.distance = other.distance;
 		b.bits.sort_bits = other.sort_bits;
+		b.bits.lod = other.lod_override;
 		b.bits.meshIndex = other.meshIndex;
 		return a.value > b.value;
 	}

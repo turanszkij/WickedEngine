@@ -459,6 +459,35 @@ namespace wi::scene
 		// Gathers all direct and indirect children of an entity
 		void GatherChildren(wi::ecs::Entity parent, wi::vector<wi::ecs::Entity>& children) const;
 
+		// Iterates over each child of an entity and executes a lambda function for each child
+		//	parent		: the parent entity whose children will be iterated
+		//	function	: lambda function that takes a child entity as parameter
+		//				  If function returns bool, iteration stops when it returns false
+		//				  If function returns void, iteration continues for all children
+		template<typename Func>
+		void ForEachChild(const wi::ecs::Entity parent, Func function) const
+		{
+			for (size_t i = 0; i < hierarchy.GetCount(); ++i)
+			{
+				wi::ecs::Entity child = hierarchy.GetEntity(i);
+
+				if (Entity_IsDescendant(child, parent))
+				{
+					if constexpr (std::is_same_v<decltype(function(child)), bool>)
+					{
+						// Function returns bool - stop iteration if it returns false
+						if (!function(child))
+							break;
+					}
+					else
+					{
+						// Function returns void - continue iteration
+						function(child);
+					}
+				}
+			}
+		}
+
 		// Read/write whole scene into an archive
 		void Serialize(wi::Archive& archive);
 

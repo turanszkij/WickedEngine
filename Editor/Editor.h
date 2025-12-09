@@ -191,7 +191,8 @@ public:
 	bool save_in_progress = false;
 
 	wi::graphics::Texture CreateThumbnail(wi::graphics::Texture texture, uint32_t target_width, uint32_t target_height, bool mipmaps = false) const;
-	wi::graphics::Texture CreateThumbnailScreenshot() const;
+	bool SetupThumbnailCamera(wi::RenderPath3D& thumbnailRenderPath);
+	wi::scene::CameraComponent thumbnail_saved_camera;
 
 	std::string save_text_message = "";
 	std::string save_text_filename = "";
