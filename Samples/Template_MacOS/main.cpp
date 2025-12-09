@@ -31,11 +31,16 @@ int main( int argc, char* argv[] )
 	
 	NS::SharedPtr<MTK::View> view = NS::TransferPtr(MTK::View::alloc());
 	
+	application.infoDisplay.active = true;
+	application.infoDisplay.watermark = true;
+	application.infoDisplay.fpsinfo = true;
+	
 	wi::Canvas canvas;
 	canvas.width = (uint32_t)frame.size.width;
 	canvas.height = (uint32_t)frame.size.height;
 	application.SetWindow(view.get(), canvas);
 	
+	// The shader binary path is set to source path because that is a writeable folder on Mac OS
 	wi::renderer::SetShaderPath(wi::renderer::GetShaderSourcePath() + "metal/");
 	
 	class MyMTKViewDelegate : public MTK::ViewDelegate

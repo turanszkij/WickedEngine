@@ -29,7 +29,8 @@ namespace wi::graphics
 			RenderPassInfo renderpass_info;
 			uint32_t id = 0;
 			QUEUE_TYPE queue = QUEUE_COUNT;
-			
+			const PipelineState* active_pso = nullptr;
+			bool dirty_pso = false;
 			wi::vector<MTK::View*> presents;
 			MTL::RenderCommandEncoder* encoder = nullptr;
 
@@ -40,6 +41,8 @@ namespace wi::graphics
 				renderpass_info = {};
 				id = 0;
 				queue = QUEUE_COUNT;
+				active_pso = nullptr;
+				dirty_pso = false;
 				presents.clear();
 				encoder = nullptr;
 			}
@@ -53,6 +56,10 @@ namespace wi::graphics
 			assert(cmd.IsValid());
 			return *(CommandList_Metal*)cmd.internal_state;
 		}
+		
+		void pso_validate(CommandList cmd);
+		void predraw(CommandList cmd);
+		void predispatch(CommandList cmd);
 
 	public:
 		GraphicsDevice_Metal(ValidationMode validationMode = ValidationMode::Disabled, GPUPreference preference = GPUPreference::Discrete);
@@ -187,6 +194,11 @@ namespace wi::graphics
 			std::mutex destroylocker;
 			uint64_t framecount = 0;
 			std::deque<std::pair<NS::SharedPtr<MTL::Resource>, uint64_t>> destroyer_resources;
+			std::deque<std::pair<NS::SharedPtr<MTL::SamplerState>, uint64_t>> destroyer_samplers;
+			std::deque<std::pair<NS::SharedPtr<MTL::Library>, uint64_t>> destroyer_libraries;
+			std::deque<std::pair<NS::SharedPtr<MTL::Function>, uint64_t>> destroyer_functions;
+			std::deque<std::pair<NS::SharedPtr<MTL::RenderPipelineState>, uint64_t>> destroyer_render_pipelines;
+			std::deque<std::pair<NS::SharedPtr<MTL::ComputePipelineState>, uint64_t>> destroyer_compute_pipelines;
 
 			void Update(uint64_t FRAMECOUNT, uint32_t BUFFERCOUNT)
 			{
@@ -195,6 +207,31 @@ namespace wi::graphics
 				while (!destroyer_resources.empty() && destroyer_resources.front().second + BUFFERCOUNT < FRAMECOUNT)
 				{
 					destroyer_resources.pop_front();
+					// SharedPtr auto delete
+				}
+				while (!destroyer_samplers.empty() && destroyer_samplers.front().second + BUFFERCOUNT < FRAMECOUNT)
+				{
+					destroyer_samplers.pop_front();
+					// SharedPtr auto delete
+				}
+				while (!destroyer_libraries.empty() && destroyer_libraries.front().second + BUFFERCOUNT < FRAMECOUNT)
+				{
+					destroyer_libraries.pop_front();
+					// SharedPtr auto delete
+				}
+				while (!destroyer_functions.empty() && destroyer_functions.front().second + BUFFERCOUNT < FRAMECOUNT)
+				{
+					destroyer_functions.pop_front();
+					// SharedPtr auto delete
+				}
+				while (!destroyer_render_pipelines.empty() && destroyer_render_pipelines.front().second + BUFFERCOUNT < FRAMECOUNT)
+				{
+					destroyer_render_pipelines.pop_front();
+					// SharedPtr auto delete
+				}
+				while (!destroyer_compute_pipelines.empty() && destroyer_compute_pipelines.front().second + BUFFERCOUNT < FRAMECOUNT)
+				{
+					destroyer_compute_pipelines.pop_front();
 					// SharedPtr auto delete
 				}
 			}

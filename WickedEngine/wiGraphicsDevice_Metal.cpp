@@ -12,7 +12,112 @@ namespace wi::graphics
 
 namespace metal_internal
 {
-	
+	constexpr MTL::VertexFormat _ConvertVertexFormat(Format value)
+	{
+		switch (value)
+		{
+		default:
+		case Format::UNKNOWN:
+			return MTL::VertexFormatInvalid;
+		case Format::R32G32B32A32_FLOAT:
+			return MTL::VertexFormatFloat4;
+		case Format::R32G32B32A32_UINT:
+			return MTL::VertexFormatUInt4;
+		case Format::R32G32B32A32_SINT:
+			return MTL::VertexFormatInt4;
+		case Format::R32G32B32_FLOAT:
+			return MTL::VertexFormatFloat3;
+		case Format::R32G32B32_UINT:
+			return MTL::VertexFormatUInt3;
+		case Format::R32G32B32_SINT:
+			return MTL::VertexFormatInt3;
+		case Format::R16G16B16A16_FLOAT:
+			return MTL::VertexFormatHalf4;
+		case Format::R16G16B16A16_UNORM:
+			return MTL::VertexFormatUShort4Normalized;
+		case Format::R16G16B16A16_UINT:
+			return MTL::VertexFormatUShort4;
+		case Format::R16G16B16A16_SNORM:
+			return MTL::VertexFormatShort4Normalized;
+		case Format::R16G16B16A16_SINT:
+			return MTL::VertexFormatShort4;
+		case Format::R32G32_FLOAT:
+			return MTL::VertexFormatFloat2;
+		case Format::R32G32_UINT:
+			return MTL::VertexFormatUInt2;
+		case Format::R32G32_SINT:
+			return MTL::VertexFormatInt2;
+		case Format::D32_FLOAT_S8X24_UINT:
+			return MTL::VertexFormatInvalid;
+		case Format::R10G10B10A2_UNORM:
+			return MTL::VertexFormatUInt1010102Normalized;
+		case Format::R10G10B10A2_UINT:
+			return MTL::VertexFormatInvalid;
+		case Format::R11G11B10_FLOAT:
+			return MTL::VertexFormatFloatRG11B10;
+		case Format::R8G8B8A8_UNORM:
+			return MTL::VertexFormatUChar4Normalized;
+		case Format::R8G8B8A8_UNORM_SRGB:
+			return MTL::VertexFormatInvalid;
+		case Format::R8G8B8A8_UINT:
+			return MTL::VertexFormatUChar4;
+		case Format::R8G8B8A8_SNORM:
+			return MTL::VertexFormatChar4Normalized;
+		case Format::R8G8B8A8_SINT:
+			return MTL::VertexFormatChar4;
+		case Format::R16G16_FLOAT:
+			return MTL::VertexFormatHalf2;
+		case Format::R16G16_UNORM:
+			return MTL::VertexFormatUShort2Normalized;
+		case Format::R16G16_UINT:
+			return MTL::VertexFormatUShort2;
+		case Format::R16G16_SNORM:
+			return MTL::VertexFormatShort2Normalized;
+		case Format::R16G16_SINT:
+			return MTL::VertexFormatShort2;
+		case Format::D32_FLOAT:
+			return MTL::VertexFormatInvalid;
+		case Format::R32_FLOAT:
+			return MTL::VertexFormatFloat;
+		case Format::R32_UINT:
+			return MTL::VertexFormatUInt;
+		case Format::R32_SINT:
+			return MTL::VertexFormatInt;
+		case Format::D24_UNORM_S8_UINT:
+			return MTL::VertexFormatInvalid;
+		case Format::R9G9B9E5_SHAREDEXP:
+			return MTL::VertexFormatFloatRGB9E5;
+		case Format::R8G8_UNORM:
+			return MTL::VertexFormatUChar2Normalized;
+		case Format::R8G8_UINT:
+			return MTL::VertexFormatUChar2;
+		case Format::R8G8_SNORM:
+			return MTL::VertexFormatChar2Normalized;
+		case Format::R8G8_SINT:
+			return MTL::VertexFormatChar2;
+		case Format::R16_FLOAT:
+			return MTL::VertexFormatHalf;
+		case Format::D16_UNORM:
+			return MTL::VertexFormatInvalid;
+		case Format::R16_UNORM:
+			return MTL::VertexFormatUShortNormalized;
+		case Format::R16_UINT:
+			return MTL::VertexFormatUShort;
+		case Format::R16_SNORM:
+			return MTL::VertexFormatShortNormalized;
+		case Format::R16_SINT:
+			return MTL::VertexFormatShort;
+		case Format::R8_UNORM:
+			return MTL::VertexFormatUCharNormalized;
+		case Format::R8_UINT:
+			return MTL::VertexFormatUChar;
+		case Format::R8_SNORM:
+			return MTL::VertexFormatCharNormalized;
+		case Format::R8_SINT:
+			return MTL::VertexFormatChar;
+		}
+		return MTL::VertexFormatInvalid;
+	}
 	constexpr MTL::PixelFormat _ConvertPixelFormat(Format value)
 	{
 	   switch (value)
@@ -197,6 +302,7 @@ namespace metal_internal
 	{
 		wi::allocator::shared_ptr<GraphicsDevice_Metal::AllocationHandler> allocationhandler;
 		int index = -1;
+		NS::SharedPtr<MTL::SamplerState> sampler;
 
 		~Sampler_Metal()
 		{
@@ -204,6 +310,7 @@ namespace metal_internal
 				return;
 			allocationhandler->destroylocker.lock();
 			uint64_t framecount = allocationhandler->framecount;
+			allocationhandler->destroyer_samplers.push_back(std::make_pair(std::move(sampler), framecount));
 			allocationhandler->destroylocker.unlock();
 		}
 	};
@@ -223,6 +330,9 @@ namespace metal_internal
 	struct Shader_Metal
 	{
 		wi::allocator::shared_ptr<GraphicsDevice_Metal::AllocationHandler> allocationhandler;
+		NS::SharedPtr<MTL::Library> library;
+		NS::SharedPtr<MTL::Function> function;
+		NS::SharedPtr<MTL::ComputePipelineState> compute_pipeline;
 
 		~Shader_Metal()
 		{
@@ -230,12 +340,16 @@ namespace metal_internal
 				return;
 			allocationhandler->destroylocker.lock();
 			uint64_t framecount = allocationhandler->framecount;
+			allocationhandler->destroyer_libraries.push_back(std::make_pair(std::move(library), framecount));
+			allocationhandler->destroyer_functions.push_back(std::make_pair(std::move(function), framecount));
+			allocationhandler->destroyer_compute_pipelines.push_back(std::make_pair(std::move(compute_pipeline), framecount));
 			allocationhandler->destroylocker.unlock();
 		}
 	};
 	struct PipelineState_Metal
 	{
 		wi::allocator::shared_ptr<GraphicsDevice_Metal::AllocationHandler> allocationhandler;
+		NS::SharedPtr<MTL::RenderPipelineState> render_pipeline;
 
 		~PipelineState_Metal()
 		{
@@ -243,6 +357,7 @@ namespace metal_internal
 				return;
 			allocationhandler->destroylocker.lock();
 			uint64_t framecount = allocationhandler->framecount;
+			allocationhandler->destroyer_render_pipelines.push_back(std::make_pair(std::move(render_pipeline), framecount));
 			allocationhandler->destroylocker.unlock();
 		}
 	};
@@ -328,6 +443,28 @@ namespace metal_internal
 
 }
 using namespace metal_internal;
+
+
+	void GraphicsDevice_Metal::pso_validate(CommandList cmd)
+	{
+		CommandList_Metal& commandlist = GetCommandList(cmd);
+		if (!commandlist.dirty_pso)
+			return;
+		
+		const PipelineState* pso = commandlist.active_pso;
+		auto internal_state = to_internal(pso);
+		
+		if (internal_state->render_pipeline.get() != nullptr)
+			return;
+	}
+	void GraphicsDevice_Metal::predraw(CommandList cmd)
+	{
+		pso_validate(cmd);
+	}
+	void GraphicsDevice_Metal::predispatch(CommandList cmd)
+	{
+	   
+	}
 
 	GraphicsDevice_Metal::GraphicsDevice_Metal(ValidationMode validationMode_, GPUPreference preference)
 	{
@@ -463,8 +600,42 @@ using namespace metal_internal;
 		auto internal_state = wi::allocator::make_shared<Shader_Metal>();
 		internal_state->allocationhandler = allocationhandler;
 		shader->internal_state = internal_state;
+		
+		dispatch_data_t bytecodeData = dispatch_data_create(shadercode, shadercode_size, dispatch_get_main_queue(), nullptr);
+		NS::Error* error = nullptr;
+		internal_state->library = NS::TransferPtr(device->newLibrary(bytecodeData, &error));
+		if(error != nullptr)
+		{
+			NS::String* errDesc = error->localizedDescription();
+			wilog_error("%s", errDesc->utf8String());
+			assert(0);
+		}
+		assert(internal_state->library.get() != nullptr);
+		
+		NS::SharedPtr<NS::String> entry = NS::TransferPtr(NS::String::alloc()->init("main", NS::UTF8StringEncoding));
+		NS::SharedPtr<MTL::FunctionConstantValues> constants = NS::TransferPtr(MTL::FunctionConstantValues::alloc()->init());
+		
+		if (stage == ShaderStage::HS || stage == ShaderStage::DS || stage == ShaderStage::GS)
+			return false; // TODO
+		
+		bool tessellationEnabled = false;
+		int vertex_shader_output_size_fc = 1024;
+		if (stage == ShaderStage::HS || stage == ShaderStage::DS || stage == ShaderStage::GS)
+		{
+			constants->setConstantValue(&tessellationEnabled, MTL::DataTypeBool, (NS::UInteger)0);
+			constants->setConstantValue(&vertex_shader_output_size_fc, MTL::DataTypeInt, (NS::UInteger)1);
+		}
+		
+		internal_state->function = NS::TransferPtr(internal_state->library->newFunction(entry.get(), constants.get(), &error));
+		if(error != nullptr)
+		{
+			NS::String* errDesc = error->localizedDescription();
+			wilog_error("%s", errDesc->utf8String());
+			assert(0);
+		}
+		assert(internal_state->function.get() != nullptr);
 
-		return false;
+		return internal_state->function.get() != nullptr;
 	}
 	bool GraphicsDevice_Metal::CreateSampler(const SamplerDesc* desc, Sampler* sampler) const
 	{
@@ -490,8 +661,88 @@ using namespace metal_internal;
 		internal_state->allocationhandler = allocationhandler;
 		pso->internal_state = internal_state;
 		pso->desc = *desc;
-
-		return false;
+		
+		NS::SharedPtr<MTL::RenderPipelineDescriptor> descriptor = NS::TransferPtr(MTL::RenderPipelineDescriptor::alloc()->init());
+		
+		if (desc->vs != nullptr)
+		{
+			descriptor->setVertexFunction(to_internal(desc->vs)->function.get());
+		}
+		if (desc->ps != nullptr)
+		{
+			descriptor->setFragmentFunction(to_internal(desc->ps)->function.get());
+		}
+		if (desc->ds != nullptr)
+		{
+			return false; // TODO
+		}
+		if (desc->hs != nullptr)
+		{
+			return false; // TODO
+		}
+		if (desc->gs != nullptr)
+		{
+			return false; // TODO
+		}
+		if (desc->as != nullptr)
+		{
+			return false; // TODO
+		}
+		if (desc->ms != nullptr)
+		{
+			return false; // TODO
+		}
+		
+		NS::SharedPtr<MTL::VertexDescriptor> vertex_descriptor;
+		if (desc->il != nullptr)
+		{
+			NS::Array* attributes = to_internal(desc->vs)->function->vertexAttributes();
+			if (attributes != nullptr)
+			{
+				vertex_descriptor = NS::TransferPtr(MTL::VertexDescriptor::alloc()->init());
+				uint32_t index = 0;
+				uint32_t offset = 0;
+				for (NS::UInteger i = 0; i < attributes->count(); ++i)
+				{
+					MTL::VertexAttribute* attr = (MTL::VertexAttribute*)attributes->object(i);
+					const uint64_t attribute_index = attr->attributeIndex();
+					if (attr != nullptr && attr->isActive())
+					{
+						const InputLayout::Element& element = desc->il->elements[index++];
+						MTL::VertexBufferLayoutDescriptor* layout = vertex_descriptor->layouts()->object(attribute_index);
+						const uint64_t stride = GetFormatStride(element.format);
+						layout->setStride(stride);
+						layout->setStepFunction(element.input_slot_class == InputClassification::PER_VERTEX_DATA ? MTL::VertexStepFunctionPerVertex : MTL::VertexStepFunctionPerInstance);
+						layout->setStepRate(1);
+						MTL::VertexAttributeDescriptor* attribute = vertex_descriptor->attributes()->object(attribute_index);
+						attribute->setFormat(_ConvertVertexFormat(element.format));
+						attribute->setOffset(element.aligned_byte_offset == InputLayout::APPEND_ALIGNED_ELEMENT ? offset : element.aligned_byte_offset);
+						attribute->setBufferIndex(attribute_index);
+						if (element.aligned_byte_offset != InputLayout::APPEND_ALIGNED_ELEMENT)
+						{
+							offset = element.aligned_byte_offset;
+						}
+						offset += stride;
+					}
+				}
+				descriptor->setVertexDescriptor(vertex_descriptor.get());
+			}
+		}
+		
+		if (renderpass_info != nullptr)
+		{
+			NS::Error* error = nullptr;
+			internal_state->render_pipeline = NS::TransferPtr(device->newRenderPipelineState(descriptor.get(), &error));
+			if(error != nullptr)
+			{
+				NS::String* errDesc = error->localizedDescription();
+				wilog_error("%s", errDesc->utf8String());
+				assert(0);
+			}
+			return internal_state->render_pipeline.get() != nullptr;
+		}
+		
+		return true;
 	}
 	bool GraphicsDevice_Metal::CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* desc, RaytracingAccelerationStructure* bvh) const
 	{
