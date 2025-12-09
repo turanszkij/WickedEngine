@@ -761,13 +761,15 @@ void EditorComponent::Load()
 			break;
 		case NEW_SOUND:
 		{
+			const uint64_t target_scene_id = GetCurrentEditorScene().id;
 			wi::helper::FileDialogParams params;
 			params.type = wi::helper::FileDialogParams::OPEN;
 			params.description = "Sound";
 			params.extensions = wi::resourcemanager::GetSupportedSoundExtensions();
-			wi::helper::FileDialog(params, [=](std::string fileName) {
+			wi::helper::FileDialog(params, [=](const std::string& fileName) {
 				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-					Entity entity = GetCurrentScene().Entity_CreateSound(wi::helper::GetFileNameFromPath(fileName), fileName);
+					EditorScene& target_editorscene = GetOrCreateEditorSceneForLoading(target_scene_id);
+					const Entity entity = target_editorscene.scene.Entity_CreateSound(wi::helper::GetFileNameFromPath(fileName), fileName);
 
 					wi::Archive& archive = AdvanceHistory();
 					archive << EditorComponent::HISTORYOP_ADD;
@@ -788,13 +790,15 @@ void EditorComponent::Load()
 		break;
 		case NEW_VIDEO:
 		{
+			const uint64_t target_scene_id = GetCurrentEditorScene().id;
 			wi::helper::FileDialogParams params;
 			params.type = wi::helper::FileDialogParams::OPEN;
 			params.description = "Video";
 			params.extensions = wi::resourcemanager::GetSupportedVideoExtensions();
-			wi::helper::FileDialog(params, [=](std::string fileName) {
+			wi::helper::FileDialog(params, [=](const std::string& fileName) {
 				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-					Entity entity = GetCurrentScene().Entity_CreateVideo(wi::helper::GetFileNameFromPath(fileName), fileName);
+					EditorScene& target_editorscene = GetOrCreateEditorSceneForLoading(target_scene_id);
+					const Entity entity = target_editorscene.scene.Entity_CreateVideo(wi::helper::GetFileNameFromPath(fileName), fileName);
 
 					wi::Archive& archive = AdvanceHistory();
 					archive << EditorComponent::HISTORYOP_ADD;
@@ -1121,6 +1125,7 @@ void EditorComponent::Load()
 	openButton.SetColor(wi::Color(50, 100, 255, 180), wi::gui::WIDGETSTATE::IDLE);
 	openButton.SetColor(wi::Color(120, 160, 255, 255), wi::gui::WIDGETSTATE::FOCUS);
 	openButton.OnClick([this](wi::gui::EventArgs args) {
+		const uint64_t target_scene_id = GetCurrentEditorScene().id;
 		wi::helper::FileDialogParams params;
 		params.type = wi::helper::FileDialogParams::OPEN;
 		params.description = ".wiscene, .obj, .gltf, .glb, .vrm, .fbx, .lua, .mp4, .png, ...";
@@ -1133,23 +1138,37 @@ void EditorComponent::Load()
 		params.extensions.push_back("fbx");
 		params.extensions.push_back("lua");
 		params.extensions.push_back("txt");
-		auto ext_video = wi::resourcemanager::GetSupportedVideoExtensions();
+		const auto ext_video = wi::resourcemanager::GetSupportedVideoExtensions();
 		for (auto& x : ext_video)
 		{
 			params.extensions.push_back(x);
 		}
-		auto ext_sound = wi::resourcemanager::GetSupportedSoundExtensions();
+		const auto ext_sound = wi::resourcemanager::GetSupportedSoundExtensions();
 		for (auto& x : ext_sound)
 		{
 			params.extensions.push_back(x);
 		}
-		auto ext_image = wi::resourcemanager::GetSupportedImageExtensions();
+		const auto ext_image = wi::resourcemanager::GetSupportedImageExtensions();
 		for (auto& x : ext_image)
 		{
 			params.extensions.push_back(x);
 		}
-		wi::helper::FileDialog(params, [&](std::string fileName) {
+		wi::helper::FileDialog(params, [=](const std::string& fileName) {
 			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+				// Switch to the target scene before opening the file
+				const EditorScene* target = FindEditorSceneByID(target_scene_id);
+				if (target != nullptr)
+				{
+					// Find index and switch to that scene
+					for (int i = 0; i < (int)scenes.size(); ++i)
+					{
+						if (scenes[i].get() == target)
+						{
+							SetCurrentScene(i);
+							break;
+						}
+					}
+				}
 				Open(fileName);
 				});
 			});
@@ -5264,7 +5283,9 @@ void EditorComponent::Open(std::string filename)
 
 	RegisterRecentlyUsed(filename);
 
-	size_t camera_count_prev = GetCurrentScene().cameras.GetCount();
+	// Capture the current scene ID to ensure content is loaded into the correct tab
+	// even if the user switches tabs during async loading
+	const uint64_t target_scene_id = GetCurrentEditorScene().id;
 
 	wi::jobsystem::Execute(loadmodel_workload, [=] (wi::jobsystem::JobArgs) {
 		wi::backlog::post("[Editor] started loading model: " + filename);
@@ -5288,22 +5309,29 @@ void EditorComponent::Open(std::string filename)
 
 		wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=] (uint64_t userdata) {
 
-			if (type == FileType::WISCENE && GetCurrentEditorScene().path.empty())
+			// Get the target scene (the one that was selected when Open was triggered)
+			// If it was closed during loading, a new empty tab is created as fallback
+			EditorScene& target_editorscene = GetOrCreateEditorSceneForLoading(target_scene_id);
+			wi::scene::Scene& target_scene = target_editorscene.scene;
+
+			const size_t camera_count_prev = target_scene.cameras.GetCount();
+			const size_t transform_count_prev = target_scene.transforms.GetCount();
+
+			if (type == FileType::WISCENE && target_editorscene.path.empty())
 			{
-				GetCurrentEditorScene().path = filename;
+				target_editorscene.path = filename;
 			}
 
-			const size_t transform_count_prev = GetCurrentScene().transforms.GetCount();
-			GetCurrentScene().Merge(*scene);
+			target_scene.Merge(*scene);
 
 			// Place the imported model in front of the camera:
 			if (type != FileType::WISCENE && generalWnd.placeInFrontOfCameraCheckBox.GetCheck())
 			{
 				// Imported models always have a root transform entity
-				if (transform_count_prev < GetCurrentScene().transforms.GetCount())
+				if (transform_count_prev < target_scene.transforms.GetCount())
 				{
-					const Entity rootEntity = GetCurrentScene().transforms.GetEntity(transform_count_prev);
-					TransformComponent* transform = GetCurrentScene().transforms.GetComponent(rootEntity);
+					const Entity rootEntity = target_scene.transforms.GetEntity(transform_count_prev);
+					TransformComponent* transform = target_scene.transforms.GetComponent(rootEntity);
 					if (transform != nullptr)
 					{
 						transform->translation_local = GetPositionInFrontOfCamera();
@@ -5313,37 +5341,36 @@ void EditorComponent::Open(std::string filename)
 			}
 
 			// Detect when the new scene contains a new camera, and snap the camera onto it:
-			const size_t camera_count = GetCurrentScene().cameras.GetCount();
+			const size_t camera_count = target_scene.cameras.GetCount();
 			if (camera_count > 0 && camera_count > camera_count_prev)
 			{
-				const Entity entity = GetCurrentScene().cameras.GetEntity(camera_count_prev);
+				const Entity entity = target_scene.cameras.GetEntity(camera_count_prev);
 				if (entity != INVALID_ENTITY)
 				{
-					CameraComponent* cam = GetCurrentScene().cameras.GetComponent(entity);
+					const CameraComponent* cam = target_scene.cameras.GetComponent(entity);
 					if (cam != nullptr)
 					{
-						EditorScene& editorscene = GetCurrentEditorScene();
-						editorscene.camera.Eye = cam->Eye;
-						editorscene.camera.At = cam->At;
-						editorscene.camera.Up = cam->Up;
-						editorscene.camera.fov = cam->fov;
-						editorscene.camera.zNearP = cam->zNearP;
-						editorscene.camera.zFarP = cam->zFarP;
-						editorscene.camera.focal_length = cam->focal_length;
-						editorscene.camera.aperture_size = cam->aperture_size;
-						editorscene.camera.aperture_shape = cam->aperture_shape;
+						target_editorscene.camera.Eye = cam->Eye;
+						target_editorscene.camera.At = cam->At;
+						target_editorscene.camera.Up = cam->Up;
+						target_editorscene.camera.fov = cam->fov;
+						target_editorscene.camera.zNearP = cam->zNearP;
+						target_editorscene.camera.zFarP = cam->zFarP;
+						target_editorscene.camera.focal_length = cam->focal_length;
+						target_editorscene.camera.aperture_size = cam->aperture_size;
+						target_editorscene.camera.aperture_shape = cam->aperture_shape;
 						// camera aspect should be always for the current screen
-						editorscene.camera.width = (float)renderPath->GetInternalResolution().x;
-						editorscene.camera.height = (float)renderPath->GetInternalResolution().y;
+						target_editorscene.camera.width = (float)renderPath->GetInternalResolution().x;
+						target_editorscene.camera.height = (float)renderPath->GetInternalResolution().y;
 
-						const TransformComponent* camera_transform = GetCurrentScene().transforms.GetComponent(entity);
+						const TransformComponent* camera_transform = target_scene.transforms.GetComponent(entity);
 						if (camera_transform != nullptr)
 						{
-							editorscene.camera_transform = *camera_transform;
-							editorscene.camera.TransformCamera(editorscene.camera_transform);
+							target_editorscene.camera_transform = *camera_transform;
+							target_editorscene.camera.TransformCamera(target_editorscene.camera_transform);
 						}
 
-						editorscene.camera.UpdateCamera();
+						target_editorscene.camera.UpdateCamera();
 					}
 				}
 			}
@@ -5352,7 +5379,7 @@ void EditorComponent::Open(std::string filename)
 			componentsWnd.weatherWnd.UpdateData();
 			componentsWnd.RefreshEntityTree();
 
-			GetCurrentEditorScene().has_unsaved_changes = false;
+			target_editorscene.has_unsaved_changes = false;
 			RefreshSceneList();
 
 			wi::backlog::post("[Editor] finished loading model: " + filename);
@@ -5477,7 +5504,7 @@ void EditorComponent::SaveAs()
 	params.extensions.push_back("glb");
 	params.extensions.push_back("h");
 	params.extensions.push_back("cpp");
-	wi::helper::FileDialog(params, [=](std::string fileName) {
+	wi::helper::FileDialog(params, [=](const std::string& fileName) {
 		wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 			auto extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(fileName));
 			std::string filename = (!extension.compare("GLTF") || !extension.compare("GLB") || !extension.compare("H") || !extension.compare("CPP")) ? fileName : wi::helper::ForceExtension(fileName, params.extensions.front());
@@ -6369,6 +6396,7 @@ void EditorComponent::NewScene()
 	int scene_id = int(scenes.size());
 	scenes.push_back(std::make_unique<EditorScene>());
 	auto& editorscene = scenes.back();
+	editorscene->id = next_scene_id++;
 	editorscene->tabSelectButton.Create("");
 	editorscene->tabSelectButton.SetLocalizationEnabled(false);
 	editorscene->tabCloseButton.Create("X");
@@ -6380,6 +6408,29 @@ void EditorComponent::NewScene()
 	RefreshSceneList();
 	UpdateDynamicWidgets();
 	cameraWnd.ResetCam();
+}
+
+EditorComponent::EditorScene* EditorComponent::FindEditorSceneByID(uint64_t id) const
+{
+	for (auto& scene : scenes)
+	{
+		if (scene->id == id)
+		{
+			return scene.get();
+		}
+	}
+	return nullptr;
+}
+
+EditorComponent::EditorScene& EditorComponent::GetOrCreateEditorSceneForLoading(uint64_t target_scene_id)
+{
+	EditorScene* target = FindEditorSceneByID(target_scene_id);
+	if (target != nullptr)
+	{
+		return *target;
+	}
+	NewScene();
+	return GetCurrentEditorScene();
 }
 
 bool EditorComponent::CheckUnsavedChanges(int scene_index)

@@ -204,6 +204,7 @@ public:
 
 	struct EditorScene
 	{
+		uint64_t id = 0; // unique ID for scene tabs
 		std::string path;
 		wi::scene::Scene scene;
 		XMFLOAT3 cam_move = {};
@@ -218,11 +219,16 @@ public:
 		wi::gui::Button tabCloseButton;
 	};
 	wi::vector<std::unique_ptr<EditorScene>> scenes;
+	uint64_t next_scene_id = 1;
 	int current_scene = 0;
 	EditorScene& GetCurrentEditorScene() { return *scenes[current_scene].get(); }
 	const EditorScene& GetCurrentEditorScene() const { return *scenes[current_scene].get(); }
 	wi::scene::Scene& GetCurrentScene() { return scenes[current_scene].get()->scene; }
 	const wi::scene::Scene& GetCurrentScene() const { return scenes[current_scene].get()->scene; }
+	// Find EditorScene by ID, returns pointer or nullptr if not found (e.g., tab was closed)
+	EditorScene* FindEditorSceneByID(uint64_t id) const;
+	// Get or create an EditorScene for content loading: returns the scene with given ID, or creates a new one if not found
+	EditorScene& GetOrCreateEditorSceneForLoading(uint64_t target_scene_id);
 	void SetCurrentScene(int index);
 	void RefreshSceneList();
 	void NewScene();
