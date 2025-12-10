@@ -20,11 +20,7 @@ set(LIB_DXCOMPILER "libdxcompiler.so")
 add_executable(Template_Linux ${SOURCE_FILES})
 
 target_link_libraries(Template_Linux PUBLIC
-    # These are cmake generator expressions. They seem more daunting than they are
-    # Basically if the variable is ON it will give WickedEngine,
-    # if it's off, it will give WickedEngine::WickedEngine
-    $<$<NOT:$<BOOL:${INSTALLED_ENGINE}>>:WickedEngine>
-    $<$<BOOL:${INSTALLED_ENGINE}>:WickedEngine::WickedEngine>
+    $<IF:$<BOOL:${INSTALLED_ENGINE}>,WickedEngine::WickedEngine,WickedEngine>
 )
 
 if(WICKED_ENABLE_IPO)

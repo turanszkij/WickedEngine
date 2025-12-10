@@ -18,7 +18,7 @@ if (WIN32)
     add_executable(Editor WIN32 ${SOURCE_FILES})
 
     target_link_libraries(Editor PUBLIC
-        WickedEngine_Windows
+        WickedEngine
     )
 
     # Work around clang bug, see
@@ -84,4 +84,3 @@ install(FILES
         ${CMAKE_CURRENT_SOURCE_DIR}/wicked.ico
         ${CMAKE_CURRENT_SOURCE_DIR}/startup.lua
         DESTINATION ${EDITOR_INSTALL_FOLDER})
-

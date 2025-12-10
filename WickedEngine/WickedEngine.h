@@ -76,6 +76,8 @@
 #include "wiPathQuery.h"
 #include "wiTrailRenderer.h"
 
+#ifndef WICKED_CMAKE_BUILD
+
 #ifdef PLATFORM_WINDOWS_DESKTOP
 #pragma comment(lib,"WickedEngine_Windows.lib")
 #endif // PLATFORM_WINDOWS_DESKTOP
@@ -88,6 +90,7 @@
 #pragma comment(lib,"WickedEngine_PS5.a")
 #endif // PLATFORM_PS5
 
+#endif // WICKED_CMAKE_BUILD
 
 // After version 0.59.11, namespaces were refactored into nested namespaces under the wi:: root namespace.
 // To allow compatibility with older user code, the backwards compatibility definitions are included below.
