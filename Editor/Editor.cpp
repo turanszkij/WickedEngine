@@ -5692,7 +5692,13 @@ void EditorComponent::PostSaveText(const std::string& message, const std::string
 
 void EditorComponent::CheckBonePickingEnabled()
 {
-	Scene& scene = GetCurrentScene();
+	const Scene& scene = GetCurrentScene();
+
+	if (generalWnd.bonePickerOpacitySlider.GetValue() <= 0.0f)
+	{
+		bone_picking = false;
+		return;
+	}
 
 	if (generalWnd.skeletonsVisibleCheckBox.GetCheck())
 	{
