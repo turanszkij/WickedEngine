@@ -1,5 +1,5 @@
 /**
- * meshoptimizer - version 0.25
+ * meshoptimizer - version 1.0
  *
  * Copyright (C) 2016-2025, by Arseny Kapoulkine (arseny.kapoulkine@gmail.com)
  * Report bugs and download new versions at https://github.com/zeux/meshoptimizer
@@ -12,7 +12,7 @@
 #include <stddef.h>
 
 /* Version macro; major * 1000 + minor * 10 + patch */
-#define MESHOPTIMIZER_VERSION 250 /* 0.25 */
+#define MESHOPTIMIZER_VERSION 1000 /* 1.0 */
 
 /* If no API is defined, assume default */
 #ifndef MESHOPTIMIZER_API
@@ -179,7 +179,7 @@ MESHOPTIMIZER_API size_t meshopt_generateProvokingIndexBuffer(unsigned int* dest
 /**
  * Vertex transform cache optimizer
  * Reorders indices to reduce the number of GPU vertex shader invocations
- * If index buffer contains multiple ranges for multiple draw calls, this functions needs to be called on each range individually.
+ * If index buffer contains multiple ranges for multiple draw calls, this function needs to be called on each range individually.
  *
  * destination must contain enough space for the resulting index buffer (index_count elements)
  */
@@ -198,7 +198,7 @@ MESHOPTIMIZER_API void meshopt_optimizeVertexCacheStrip(unsigned int* destinatio
  * Vertex transform cache optimizer for FIFO caches
  * Reorders indices to reduce the number of GPU vertex shader invocations
  * Generally takes ~3x less time to optimize meshes but produces inferior results compared to meshopt_optimizeVertexCache
- * If index buffer contains multiple ranges for multiple draw calls, this functions needs to be called on each range individually.
+ * If index buffer contains multiple ranges for multiple draw calls, this function needs to be called on each range individually.
  *
  * destination must contain enough space for the resulting index buffer (index_count elements)
  * cache_size should be less than the actual GPU cache size to avoid cache thrashing
@@ -208,7 +208,7 @@ MESHOPTIMIZER_API void meshopt_optimizeVertexCacheFifo(unsigned int* destination
 /**
  * Overdraw optimizer
  * Reorders indices to reduce the number of GPU vertex shader invocations and the pixel overdraw
- * If index buffer contains multiple ranges for multiple draw calls, this functions needs to be called on each range individually.
+ * If index buffer contains multiple ranges for multiple draw calls, this function needs to be called on each range individually.
  *
  * destination must contain enough space for the resulting index buffer (index_count elements)
  * indices must contain index data that is the result of meshopt_optimizeVertexCache (*not* the original mesh indices!)
@@ -221,7 +221,7 @@ MESHOPTIMIZER_API void meshopt_optimizeOverdraw(unsigned int* destination, const
  * Vertex fetch cache optimizer
  * Reorders vertices and changes indices to reduce the amount of GPU memory fetches during vertex processing
  * Returns the number of unique vertices, which is the same as input vertex count unless some vertices are unused
- * This functions works for a single vertex stream; for multiple vertex streams, use meshopt_optimizeVertexFetchRemap + meshopt_remapVertexBuffer for each stream.
+ * This function works for a single vertex stream; for multiple vertex streams, use meshopt_optimizeVertexFetchRemap + meshopt_remapVertexBuffer for each stream.
  *
  * destination must contain enough space for the resulting vertex buffer (vertex_count elements)
  * indices is used both as an input and as an output index buffer
@@ -351,29 +351,29 @@ MESHOPTIMIZER_API int meshopt_decodeVertexVersion(const unsigned char* buffer, s
  * Vertex buffer filters
  * These functions can be used to filter output of meshopt_decodeVertexBuffer in-place.
  *
- * meshopt_decodeFilterOct decodes octahedral encoding of a unit vector with K-bit (K <= 16) signed X/Y as an input; Z must store 1.0f.
+ * meshopt_decodeFilterOct decodes octahedral encoding of a unit vector with K-bit signed X/Y as an input; Z must store 1.0f.
  * Each component is stored as an 8-bit or 16-bit normalized integer; stride must be equal to 4 or 8. W is preserved as is.
  *
- * meshopt_decodeFilterQuat decodes 3-component quaternion encoding with K-bit (4 <= K <= 16) component encoding and a 2-bit component index indicating which component to reconstruct.
+ * meshopt_decodeFilterQuat decodes 3-component quaternion encoding with K-bit component encoding and a 2-bit component index indicating which component to reconstruct.
  * Each component is stored as an 16-bit integer; stride must be equal to 8.
  *
  * meshopt_decodeFilterExp decodes exponential encoding of floating-point data with 8-bit exponent and 24-bit integer mantissa as 2^E*M.
  * Each 32-bit component is decoded in isolation; stride must be divisible by 4.
  *
- * Experimental: meshopt_decodeFilterColor decodes YCoCg (+A) color encoding where RGB is converted to YCoCg space with variable bit quantization.
+ * meshopt_decodeFilterColor decodes RGBA colors from YCoCg (+A) color encoding where RGB is converted to YCoCg space with K-bit component encoding, and A is stored using K-1 bits.
  * Each component is stored as an 8-bit or 16-bit normalized integer; stride must be equal to 4 or 8.
  */
 MESHOPTIMIZER_API void meshopt_decodeFilterOct(void* buffer, size_t count, size_t stride);
 MESHOPTIMIZER_API void meshopt_decodeFilterQuat(void* buffer, size_t count, size_t stride);
 MESHOPTIMIZER_API void meshopt_decodeFilterExp(void* buffer, size_t count, size_t stride);
-MESHOPTIMIZER_EXPERIMENTAL void meshopt_decodeFilterColor(void* buffer, size_t count, size_t stride);
+MESHOPTIMIZER_API void meshopt_decodeFilterColor(void* buffer, size_t count, size_t stride);
 
 /**
  * Vertex buffer filter encoders
  * These functions can be used to encode data in a format that meshopt_decodeFilter can decode
  *
- * meshopt_encodeFilterOct encodes unit vectors with K-bit (K <= 16) signed X/Y as an output.
- * Each component is stored as an 8-bit or 16-bit normalized integer; stride must be equal to 4 or 8. W is preserved as is.
+ * meshopt_encodeFilterOct encodes unit vectors with K-bit (2 <= K <= 16) signed X/Y as an output.
+ * Each component is stored as an 8-bit or 16-bit normalized integer; stride must be equal to 4 or 8. Z will store 1.0f, W is preserved as is.
  * Input data must contain 4 floats for every vector (count*4 total).
  *
  * meshopt_encodeFilterQuat encodes unit quaternions with K-bit (4 <= K <= 16) component encoding.
@@ -384,7 +384,7 @@ MESHOPTIMIZER_EXPERIMENTAL void meshopt_decodeFilterColor(void* buffer, size_t c
  * Exponent can be shared between all components of a given vector as defined by stride or all values of a given component; stride must be divisible by 4.
  * Input data must contain stride/4 floats for every vector (count*stride/4 total).
  *
- * Experimental: meshopt_encodeFilterColor encodes RGBA color data by converting RGB to YCoCg color space with variable bit quantization.
+ * meshopt_encodeFilterColor encodes RGBA color data by converting RGB to YCoCg color space with K-bit (2 <= K <= 16) component encoding; A is stored using K-1 bits.
  * Each component is stored as an 8-bit or 16-bit integer; stride must be equal to 4 or 8.
  * Input data must contain 4 floats for every color (count*4 total).
  */
@@ -403,7 +403,7 @@ enum meshopt_EncodeExpMode
 MESHOPTIMIZER_API void meshopt_encodeFilterOct(void* destination, size_t count, size_t stride, int bits, const float* data);
 MESHOPTIMIZER_API void meshopt_encodeFilterQuat(void* destination, size_t count, size_t stride, int bits, const float* data);
 MESHOPTIMIZER_API void meshopt_encodeFilterExp(void* destination, size_t count, size_t stride, int bits, const float* data, enum meshopt_EncodeExpMode mode);
-MESHOPTIMIZER_EXPERIMENTAL void meshopt_encodeFilterColor(void* destination, size_t count, size_t stride, int bits, const float* data);
+MESHOPTIMIZER_API void meshopt_encodeFilterColor(void* destination, size_t count, size_t stride, int bits, const float* data);
 
 /**
  * Simplification options
@@ -418,7 +418,7 @@ enum
 	meshopt_SimplifyErrorAbsolute = 1 << 2,
 	/* Remove disconnected parts of the mesh during simplification incrementally, regardless of the topological restrictions inside components. */
 	meshopt_SimplifyPrune = 1 << 3,
-	/* Experimental: Produce more regular triangle sizes and shapes during simplification, at some cost to geometric quality. */
+	/* Produce more regular triangle sizes and shapes during simplification, at some cost to geometric and attribute quality. */
 	meshopt_SimplifyRegularize = 1 << 4,
 	/* Experimental: Allow collapses across attribute discontinuities, except for vertices that are tagged with meshopt_SimplifyVertex_Protect in vertex_lock. */
 	meshopt_SimplifyPermissive = 1 << 5,
@@ -478,7 +478,7 @@ MESHOPTIMIZER_API size_t meshopt_simplify(unsigned int* destination, const unsig
 MESHOPTIMIZER_API size_t meshopt_simplifyWithAttributes(unsigned int* destination, const unsigned int* indices, size_t index_count, const float* vertex_positions, size_t vertex_count, size_t vertex_positions_stride, const float* vertex_attributes, size_t vertex_attributes_stride, const float* attribute_weights, size_t attribute_count, const unsigned char* vertex_lock, size_t target_index_count, float target_error, unsigned int options, float* result_error);
 
 /**
- * Experimental: Mesh simplifier with position/attribute update
+ * Mesh simplifier with position/attribute update
  * Reduces the number of triangles in the mesh, attempting to preserve mesh appearance as much as possible.
  * Similar to meshopt_simplifyWithAttributes, but destructively updates positions and attribute values for optimal appearance.
  * The algorithm tries to preserve mesh topology and can stop short of the target goal based on topology constraints or target error.
@@ -498,7 +498,7 @@ MESHOPTIMIZER_API size_t meshopt_simplifyWithAttributes(unsigned int* destinatio
  * options must be a bitmask composed of meshopt_SimplifyX options; 0 is a safe default
  * result_error can be NULL; when it's not NULL, it will contain the resulting (relative) error after simplification
  */
-MESHOPTIMIZER_EXPERIMENTAL size_t meshopt_simplifyWithUpdate(unsigned int* indices, size_t index_count, float* vertex_positions, size_t vertex_count, size_t vertex_positions_stride, float* vertex_attributes, size_t vertex_attributes_stride, const float* attribute_weights, size_t attribute_count, const unsigned char* vertex_lock, size_t target_index_count, float target_error, unsigned int options, float* result_error);
+MESHOPTIMIZER_API size_t meshopt_simplifyWithUpdate(unsigned int* indices, size_t index_count, float* vertex_positions, size_t vertex_count, size_t vertex_positions_stride, float* vertex_attributes, size_t vertex_attributes_stride, const float* attribute_weights, size_t attribute_count, const unsigned char* vertex_lock, size_t target_index_count, float target_error, unsigned int options, float* result_error);
 
 /**
  * Mesh simplifier (sloppy)
@@ -645,7 +645,7 @@ struct meshopt_Meshlet
 	unsigned int vertex_offset;
 	unsigned int triangle_offset;
 
-	/* number of vertices and triangles used in the meshlet; data is stored in consecutive range defined by offset and count */
+	/* number of vertices and triangles used in the meshlet; data is stored in consecutive range [offset..offset+count) for vertices and [offset..offset+count*3) for triangles */
 	unsigned int vertex_count;
 	unsigned int triangle_count;
 };
@@ -699,10 +699,9 @@ MESHOPTIMIZER_API size_t meshopt_buildMeshletsSpatial(struct meshopt_Meshlet* me
 
 /**
  * Meshlet optimizer
- * Reorders meshlet vertices and triangles to maximize locality to improve rasterizer throughput
+ * Reorders meshlet vertices and triangles to maximize locality which can improve rasterizer throughput or ray tracing performance when using fast-build modes.
  *
- * meshlet_triangles and meshlet_vertices must refer to meshlet triangle and vertex index data; when buildMeshlets* is used, these
- * need to be computed from meshlet's vertex_offset and triangle_offset
+ * meshlet_triangles and meshlet_vertices must refer to meshlet data; when buildMeshlets* is used, these need to be computed from meshlet's vertex_offset and triangle_offset
  * triangle_count and vertex_count must not exceed implementation limits (vertex_count <= 256, triangle_count <= 512)
  */
 MESHOPTIMIZER_API void meshopt_optimizeMeshlet(unsigned int* meshlet_vertices, unsigned char* meshlet_triangles, size_t triangle_count, size_t vertex_count);
@@ -811,7 +810,7 @@ MESHOPTIMIZER_API unsigned short meshopt_quantizeHalf(float v);
 
 /**
  * Quantize a float into a floating point value with a limited number of significant mantissa bits, preserving the IEEE-754 fp32 binary representation
- * Generates +-inf for overflow, preserves NaN, flushes denormals to zero, rounds to nearest
+ * Preserves infinities/NaN, flushes denormals to zero, rounds to nearest
  * Assumes N is in a valid mantissa precision range, which is 1..23
  */
 MESHOPTIMIZER_API float meshopt_quantizeFloat(float v, int N);
@@ -918,7 +917,7 @@ inline size_t meshopt_stripify(T* destination, const T* indices, size_t index_co
 template <typename T>
 inline size_t meshopt_unstripify(T* destination, const T* indices, size_t index_count, T restart_index);
 template <typename T>
-inline meshopt_VertexCacheStatistics meshopt_analyzeVertexCache(const T* indices, size_t index_count, size_t vertex_count, unsigned int cache_size, unsigned int warp_size, unsigned int buffer_size);
+inline meshopt_VertexCacheStatistics meshopt_analyzeVertexCache(const T* indices, size_t index_count, size_t vertex_count, unsigned int cache_size, unsigned int warp_size, unsigned int primgroup_size);
 template <typename T>
 inline meshopt_VertexFetchStatistics meshopt_analyzeVertexFetch(const T* indices, size_t index_count, size_t vertex_count, size_t vertex_size);
 template <typename T>
@@ -1333,11 +1332,11 @@ inline size_t meshopt_unstripify(T* destination, const T* indices, size_t index_
 }
 
 template <typename T>
-inline meshopt_VertexCacheStatistics meshopt_analyzeVertexCache(const T* indices, size_t index_count, size_t vertex_count, unsigned int cache_size, unsigned int warp_size, unsigned int buffer_size)
+inline meshopt_VertexCacheStatistics meshopt_analyzeVertexCache(const T* indices, size_t index_count, size_t vertex_count, unsigned int cache_size, unsigned int warp_size, unsigned int primgroup_size)
 {
 	meshopt_IndexAdapter<T> in(NULL, indices, index_count);
 
-	return meshopt_analyzeVertexCache(in.data, index_count, vertex_count, cache_size, warp_size, buffer_size);
+	return meshopt_analyzeVertexCache(in.data, index_count, vertex_count, cache_size, warp_size, primgroup_size);
 }
 
 template <typename T>
