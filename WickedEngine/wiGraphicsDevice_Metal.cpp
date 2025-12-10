@@ -349,6 +349,7 @@ namespace metal_internal
 	struct PipelineState_Metal
 	{
 		wi::allocator::shared_ptr<GraphicsDevice_Metal::AllocationHandler> allocationhandler;
+		NS::SharedPtr<MTL::RenderPipelineDescriptor> descriptor;
 		NS::SharedPtr<MTL::RenderPipelineState> render_pipeline;
 
 		~PipelineState_Metal()
@@ -451,11 +452,22 @@ using namespace metal_internal;
 		if (!commandlist.dirty_pso)
 			return;
 		
+		assert(commandlist.render_encoder != nullptr); // We must be inside renderpass at this point!
+		
 		const PipelineState* pso = commandlist.active_pso;
 		auto internal_state = to_internal(pso);
 		
-		if (internal_state->render_pipeline.get() != nullptr)
-			return;
+		if (internal_state->render_pipeline.get() == nullptr)
+		{
+			// Just in time PSO:
+		}
+		else
+		{
+			// Precompiled PSO:
+			commandlist.render_encoder->setRenderPipelineState(internal_state->render_pipeline.get());
+		}
+		
+		commandlist.dirty_pso = false;
 	}
 	void GraphicsDevice_Metal::predraw(CommandList cmd)
 	{
@@ -662,15 +674,15 @@ using namespace metal_internal;
 		pso->internal_state = internal_state;
 		pso->desc = *desc;
 		
-		NS::SharedPtr<MTL::RenderPipelineDescriptor> descriptor = NS::TransferPtr(MTL::RenderPipelineDescriptor::alloc()->init());
+		internal_state->descriptor = NS::TransferPtr(MTL::RenderPipelineDescriptor::alloc()->init());
 		
 		if (desc->vs != nullptr)
 		{
-			descriptor->setVertexFunction(to_internal(desc->vs)->function.get());
+			internal_state->descriptor->setVertexFunction(to_internal(desc->vs)->function.get());
 		}
 		if (desc->ps != nullptr)
 		{
-			descriptor->setFragmentFunction(to_internal(desc->ps)->function.get());
+			internal_state->descriptor->setFragmentFunction(to_internal(desc->ps)->function.get());
 		}
 		if (desc->ds != nullptr)
 		{
@@ -725,14 +737,41 @@ using namespace metal_internal;
 						offset += stride;
 					}
 				}
-				descriptor->setVertexDescriptor(vertex_descriptor.get());
+				internal_state->descriptor->setVertexDescriptor(vertex_descriptor.get());
 			}
+		}
+		
+		switch (desc->pt)
+		{
+			case PrimitiveTopology::TRIANGLELIST:
+			case PrimitiveTopology::TRIANGLESTRIP:
+			case PrimitiveTopology::PATCHLIST:
+				internal_state->descriptor->setInputPrimitiveTopology(MTL::PrimitiveTopologyClassTriangle);
+				break;
+			case PrimitiveTopology::LINELIST:
+			case PrimitiveTopology::LINESTRIP:
+				internal_state->descriptor->setInputPrimitiveTopology(MTL::PrimitiveTopologyClassLine);
+				break;
+			case PrimitiveTopology::POINTLIST:
+				internal_state->descriptor->setInputPrimitiveTopology(MTL::PrimitiveTopologyClassPoint);
+				break;
+			default:
+				break;
 		}
 		
 		if (renderpass_info != nullptr)
 		{
+			internal_state->descriptor->setDepthAttachmentPixelFormat(_ConvertPixelFormat(renderpass_info->ds_format));
+			
+			uint32_t sample_count = renderpass_info->sample_count;
+			while (sample_count > 1 && !device->supportsTextureSampleCount(sample_count))
+			{
+				sample_count /= 2;
+			}
+			internal_state->descriptor->setSampleCount(sample_count);
+			
 			NS::Error* error = nullptr;
-			internal_state->render_pipeline = NS::TransferPtr(device->newRenderPipelineState(descriptor.get(), &error));
+			internal_state->render_pipeline = NS::TransferPtr(device->newRenderPipelineState(internal_state->descriptor.get(), &error));
 			if(error != nullptr)
 			{
 				NS::String* errDesc = error->localizedDescription();
@@ -864,6 +903,8 @@ using namespace metal_internal;
 		commandlist.queue = queue;
 		commandlist.id = cmd_current;
 		commandlist.commandbuffer = commandqueue->commandBufferWithUnretainedReferences();
+		commandlist.compute_encoder = commandlist.commandbuffer->computeCommandEncoder();
+		commandlist.blit_encoder = commandlist.commandbuffer->blitCommandEncoder();
 
 		return cmd;
 	}
@@ -929,7 +970,7 @@ using namespace metal_internal;
 		commandlist.presents.push_back(internal_state->view);
 		
 		MTL::RenderPassDescriptor* renderpass_descriptor = internal_state->view->currentRenderPassDescriptor();
-		commandlist.encoder = commandlist.commandbuffer->renderCommandEncoder(renderpass_descriptor);
+		commandlist.render_encoder = commandlist.commandbuffer->renderCommandEncoder(renderpass_descriptor);
 
 		commandlist.renderpass_info = RenderPassInfo::from(swapchain->desc);
 	}
@@ -943,9 +984,10 @@ using namespace metal_internal;
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		
-		commandlist.encoder->endEncoding();
+		commandlist.render_encoder->endEncoding();
 
 		commandlist.renderpass_info = {};
+		commandlist.render_encoder = nullptr;
 	}
 	void GraphicsDevice_Metal::BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd)
 	{
@@ -1003,93 +1045,124 @@ using namespace metal_internal;
 	}
 	void GraphicsDevice_Metal::BindIndexBuffer(const GPUBuffer* indexBuffer, const IndexBufferFormat format, uint64_t offset, CommandList cmd)
 	{
-		if (indexBuffer != nullptr)
-		{
-			auto internal_state = to_internal(indexBuffer);
-			CommandList_Metal& commandlist = GetCommandList(cmd);
-		}
+		if (indexBuffer == nullptr)
+			return;
+		auto internal_state = to_internal(indexBuffer);
+		CommandList_Metal& commandlist = GetCommandList(cmd);
+		commandlist.index_buffer = internal_state->buffer;
+		commandlist.index_type = format == IndexBufferFormat::UINT32 ? MTL::IndexTypeUInt32 : MTL::IndexTypeUInt16;
 	}
 	void GraphicsDevice_Metal::BindStencilRef(uint32_t value, CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		commandlist.render_encoder->setStencilReferenceValue(value);
 	}
 	void GraphicsDevice_Metal::BindBlendFactor(float r, float g, float b, float a, CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		commandlist.render_encoder->setBlendColor(r, g, b, a);
 	}
 	void GraphicsDevice_Metal::BindShadingRate(ShadingRate rate, CommandList cmd)
 	{
-		CommandList_Metal& commandlist = GetCommandList(cmd);
 	}
 	void GraphicsDevice_Metal::BindPipelineState(const PipelineState* pso, CommandList cmd)
-	{
+{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		if (commandlist.active_pso == pso)
+			return;
+		commandlist.active_pso = pso;
+		commandlist.dirty_pso = true;
 	}
 	void GraphicsDevice_Metal::BindComputeShader(const Shader* cs, CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		auto internal_state = to_internal(cs);
+		commandlist.compute_encoder->setComputePipelineState(internal_state->compute_pipeline.get());
 	}
 	void GraphicsDevice_Metal::BindDepthBounds(float min_bounds, float max_bounds, CommandList cmd)
 	{
+		CommandList_Metal& commandlist = GetCommandList(cmd);
+		commandlist.render_encoder->setDepthTestBounds(min_bounds, max_bounds);
 	}
 	void GraphicsDevice_Metal::Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd)
 	{
+		predraw(cmd);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		commandlist.render_encoder->drawPrimitives(commandlist.primitive_type, startVertexLocation, vertexCount, 1);
 	}
 	void GraphicsDevice_Metal::DrawIndexed(uint32_t indexCount, uint32_t startIndexLocation, int32_t baseVertexLocation, CommandList cmd)
 	{
+		predraw(cmd);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		commandlist.render_encoder->drawIndexedPrimitives(commandlist.primitive_type, indexCount, commandlist.index_type, commandlist.index_buffer.get(), startIndexLocation, 1);
 	}
 	void GraphicsDevice_Metal::DrawInstanced(uint32_t vertexCount, uint32_t instanceCount, uint32_t startVertexLocation, uint32_t startInstanceLocation, CommandList cmd)
 	{
+		predraw(cmd);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		commandlist.render_encoder->drawPrimitives(commandlist.primitive_type, startVertexLocation, vertexCount, instanceCount, startInstanceLocation);
 	}
 	void GraphicsDevice_Metal::DrawIndexedInstanced(uint32_t indexCount, uint32_t instanceCount, uint32_t startIndexLocation, int32_t baseVertexLocation, uint32_t startInstanceLocation, CommandList cmd)
 	{
+		predraw(cmd);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		commandlist.render_encoder->drawIndexedPrimitives(commandlist.primitive_type, indexCount, commandlist.index_type, commandlist.index_buffer.get(), startIndexLocation, instanceCount, baseVertexLocation, startInstanceLocation);
 	}
 	void GraphicsDevice_Metal::DrawInstancedIndirect(const GPUBuffer* args, uint64_t args_offset, CommandList cmd)
 	{
+		predraw(cmd);
 		auto internal_state = to_internal(args);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		commandlist.render_encoder->drawPrimitives(commandlist.primitive_type, internal_state->buffer.get(), args_offset);
 	}
 	void GraphicsDevice_Metal::DrawIndexedInstancedIndirect(const GPUBuffer* args, uint64_t args_offset, CommandList cmd)
 	{
+		predraw(cmd);
 		auto internal_state = to_internal(args);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		commandlist.render_encoder->drawIndexedPrimitives(commandlist.primitive_type, commandlist.index_type, commandlist.index_buffer.get(), 0, internal_state->buffer.get(), args_offset);
 	}
 	void GraphicsDevice_Metal::DrawInstancedIndirectCount(const GPUBuffer* args, uint64_t args_offset, const GPUBuffer* count, uint64_t count_offset, uint32_t max_count, CommandList cmd)
 	{
+		predraw(cmd);
 		auto args_internal = to_internal(args);
 		auto count_internal = to_internal(count);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 	}
 	void GraphicsDevice_Metal::DrawIndexedInstancedIndirectCount(const GPUBuffer* args, uint64_t args_offset, const GPUBuffer* count, uint64_t count_offset, uint32_t max_count, CommandList cmd)
 	{
+		predraw(cmd);
 		auto args_internal = to_internal(args);
 		auto count_internal = to_internal(count);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 	}
 	void GraphicsDevice_Metal::Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd)
 	{
+		predispatch(cmd);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		commandlist.compute_encoder->dispatchThreadgroups({threadGroupCountX, threadGroupCountY, threadGroupCountZ}, {1, 1, 1});
 	}
 	void GraphicsDevice_Metal::DispatchIndirect(const GPUBuffer* args, uint64_t args_offset, CommandList cmd)
 	{
+		predispatch(cmd);
 		auto internal_state = to_internal(args);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		commandlist.compute_encoder->dispatchThreadgroups(internal_state->buffer.get(), args_offset, {1, 1, 1});
 	}
 	void GraphicsDevice_Metal::DispatchMesh(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd)
 	{
+		predraw(cmd);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 	}
 	void GraphicsDevice_Metal::DispatchMeshIndirect(const GPUBuffer* args, uint64_t args_offset, CommandList cmd)
 	{
+		predraw(cmd);
 		auto internal_state = to_internal(args);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 	}
 	void GraphicsDevice_Metal::DispatchMeshIndirectCount(const GPUBuffer* args, uint64_t args_offset, const GPUBuffer* count, uint64_t count_offset, uint32_t max_count, CommandList cmd)
 	{
+		predraw(cmd);
 		auto args_internal = to_internal(args);
 		auto count_internal = to_internal(count);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
@@ -1097,20 +1170,33 @@ using namespace metal_internal;
 	void GraphicsDevice_Metal::CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		
 	}
 	void GraphicsDevice_Metal::CopyBuffer(const GPUBuffer* pDst, uint64_t dst_offset, const GPUBuffer* pSrc, uint64_t src_offset, uint64_t size, CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		auto internal_state_src = to_internal(pSrc);
 		auto internal_state_dst = to_internal(pDst);
-
+		commandlist.commandbuffer->blitCommandEncoder()->copyFromBuffer(internal_state_src->buffer.get(), src_offset, internal_state_dst->buffer.get(), dst_offset, size);
 	}
 	void GraphicsDevice_Metal::CopyTexture(const Texture* dst, uint32_t dstX, uint32_t dstY, uint32_t dstZ, uint32_t dstMip, uint32_t dstSlice, const Texture* src, uint32_t srcMip, uint32_t srcSlice, CommandList cmd, const Box* srcbox, ImageAspect dst_aspect, ImageAspect src_aspect)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		auto src_internal = to_internal(src);
 		auto dst_internal = to_internal(dst);
-
+		MTL::Origin srcOrigin = {};
+		MTL::Size srcSize = {};
+		MTL::Origin dstOrigin = { dstX, dstY, dstZ };
+		if (srcbox != nullptr)
+		{
+			srcOrigin.x = srcbox->left;
+			srcOrigin.y = srcbox->top;
+			srcOrigin.z = srcbox->front;
+			srcSize.width = srcbox->right - srcbox->left;
+			srcSize.height = srcbox->bottom - srcbox->top;
+			srcSize.depth = srcbox->back - srcbox->front;
+		}
+		commandlist.blit_encoder->copyFromTexture(src_internal->texture.get(), srcSlice, srcMip, srcOrigin, srcSize, dst_internal->texture.get(), dstSlice, dstMip, dstOrigin);
 	}
 	void GraphicsDevice_Metal::QueryBegin(const GPUQueryHeap* heap, uint32_t index, CommandList cmd)
 	{
@@ -1156,6 +1242,7 @@ using namespace metal_internal;
 	}
 	void GraphicsDevice_Metal::DispatchRays(const DispatchRaysDesc* desc, CommandList cmd)
 	{
+		predispatch(cmd);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 	}
 	void GraphicsDevice_Metal::PushConstants(const void* data, uint32_t size, CommandList cmd, uint32_t offset)
@@ -1180,7 +1267,6 @@ using namespace metal_internal;
 	void GraphicsDevice_Metal::ClearUAV(const GPUResource* resource, uint32_t value, CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-
 	}
 	void GraphicsDevice_Metal::VideoDecode(const VideoDecoder* video_decoder, const VideoDecodeOperation* op, CommandList cmd)
 	{

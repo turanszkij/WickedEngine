@@ -32,7 +32,12 @@ namespace wi::graphics
 			const PipelineState* active_pso = nullptr;
 			bool dirty_pso = false;
 			wi::vector<MTK::View*> presents;
-			MTL::RenderCommandEncoder* encoder = nullptr;
+			MTL::RenderCommandEncoder* render_encoder = nullptr;
+			MTL::ComputeCommandEncoder* compute_encoder = nullptr;
+			MTL::BlitCommandEncoder* blit_encoder = nullptr;
+			MTL::PrimitiveType primitive_type = MTL::PrimitiveTypeTriangle;
+			NS::SharedPtr<MTL::Buffer> index_buffer;
+			MTL::IndexType index_type = MTL::IndexTypeUInt32;
 
 			void reset(uint32_t bufferindex)
 			{
@@ -44,7 +49,12 @@ namespace wi::graphics
 				active_pso = nullptr;
 				dirty_pso = false;
 				presents.clear();
-				encoder = nullptr;
+				render_encoder = nullptr;
+				compute_encoder = nullptr;
+				blit_encoder = nullptr;
+				primitive_type = MTL::PrimitiveTypeTriangle;
+				index_buffer.reset();
+				index_type = MTL::IndexTypeUInt32;
 			}
 		};
 		wi::vector<std::unique_ptr<CommandList_Metal>> commandlists;
