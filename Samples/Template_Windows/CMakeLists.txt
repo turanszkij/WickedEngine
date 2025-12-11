@@ -10,7 +10,7 @@ add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 set_property(TARGET ${PROJECT_NAME} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
-    WickedEngine_Windows
+    WickedEngine
 )
 
 if(MSVC)

@@ -37,7 +37,7 @@ if (WIN32)
 
 	target_link_libraries(Example_ImGui
 		PUBLIC
-		WickedEngine_Windows
+		WickedEngine
 
 		PRIVATE
 		Example_ImGui_Lib

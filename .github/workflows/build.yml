@@ -116,22 +116,10 @@ jobs:
         sudo apt update
         sudo apt install libsdl2-dev ccache
 
-    - name: Initial compile
+    - name: Compile with embedded shaders
       run: |
-        mkdir build
-        cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DWICKED_ENABLE_IPO=NO
-        make -j$(nproc)
-    - name: Generate shader dump
-      run: |
-        cd build/WickedEngine
-        ./offlineshadercompiler spirv rebuild shaderdump
-        mv wiShaderDump.h ../../WickedEngine/
-
-    - name: Recompile with shader dump
-      run: |
-        cd build
-        make -j $(nproc)
+        CC=${{ matrix.cc }} CXX=${{ matrix.cxx }} cmake -B build -DWICKED_ENABLE_IPO=YES -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DWICKED_EMBED_SHADERS=YES
+        make -C build -j$(nproc)
 
     - name: Save Ccache database
       id: save-ccache
