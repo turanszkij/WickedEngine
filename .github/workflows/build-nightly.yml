@@ -64,7 +64,7 @@ jobs:
 
     - name: Compile with embedded shaders
       run: |
-        cmake -B build -DCMAKE_BUILD_TYPE=Release -DWICKED_EMBED_SHADERS=YES -DWICKED_ENABLE_IPO=YES
+        cmake -B build -DCMAKE_BUILD_TYPE=Release -DWICKED_EMBED_SHADERS=YES -DWICKED_ENABLE_IPO=NO
         make -C build -j$(nproc)
 
     - name: Move files
