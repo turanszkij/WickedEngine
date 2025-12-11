@@ -2433,10 +2433,12 @@ namespace wi::physics
 
 			if (currentMotionType == EMotionType::Dynamic && is_active)
 			{
+				const Vec3 com = body_interface.GetCenterOfMassPosition(physicsobject.bodyID);
+				bool is_underwater = false;
+
 				// Apply effects on dynamics if needed:
 				if (scene.weather.IsOceanEnabled())
 				{
-					const Vec3 com = body_interface.GetCenterOfMassPosition(physicsobject.bodyID);
 					const Vec3 surface_position = cast(scene.GetOceanPosAt(cast(com)));
 					const float diff = com.GetY() - surface_position.GetY();
 					if (diff < 0)
@@ -2460,13 +2462,48 @@ namespace wi::physics
 						if (!physicsobject.was_underwater)
 						{
 							physicsobject.was_underwater = true;
+							is_underwater = true;
 							scene.PutWaterRipple(cast(surface_position));
 						}
 					}
 					else
 					{
-						physicsobject.was_underwater = false;
+						is_underwater = false;
 					}
+				}
+
+				if (!is_underwater)
+				{
+					// Check for water volumes (non-ocean water bodies)
+					XMFLOAT3 pos = cast(com);
+					wi::primitive::Ray ray_down(XMFLOAT3(pos.x, pos.y + 10.0f, pos.z), XMFLOAT3(0, -1, 0), 0, 100);
+					wi::scene::Scene::RayIntersectionResult result = scene.Intersects(ray_down, wi::enums::FILTER_WATER);
+					if (result.entity != INVALID_ENTITY && result.position.y > pos.y)
+					{
+						body_interface.ApplyBuoyancyImpulse(
+							physicsobject.bodyID,
+							cast(result.position),
+							cast(result.normal),
+							physicscomponent.buoyancy,
+							0.8f,
+							0.6f,
+							Vec3::sZero(),
+							physics_scene.physics_system.GetGravity(),
+							scene.dt
+						);
+
+						if (!physicsobject.was_underwater)
+						{
+							physicsobject.was_underwater = true;
+							is_underwater = true;
+							scene.PutWaterRipple(result.position);
+						}
+					}
+				}
+
+				if (!is_underwater)
+				{
+					physicsobject.was_underwater = false;
 				}
 			}
 
@@ -2609,16 +2646,18 @@ namespace wi::physics
 				if (humanoid.IsRagdollPhysicsEnabled())
 				{
 					// Apply effects on dynamics if needed:
-					if (scene.weather.IsOceanEnabled())
+					static const Ragdoll::BODYPART floating_bodyparts[] = {
+						Ragdoll::BODYPART_PELVIS,
+						Ragdoll::BODYPART_SPINE,
+					};
+					for (auto& bodypart : floating_bodyparts)
 					{
-						static const Ragdoll::BODYPART floating_bodyparts[] = {
-							Ragdoll::BODYPART_PELVIS,
-							Ragdoll::BODYPART_SPINE,
-						};
-						for (auto& bodypart : floating_bodyparts)
+						auto& rb = ragdoll.rigidbodies[bodypart];
+						const Vec3 com = body_interface.GetCenterOfMassPosition(rb.bodyID);
+						bool is_underwater = false;
+
+						if (scene.weather.IsOceanEnabled())
 						{
-							auto& rb = ragdoll.rigidbodies[bodypart];
-							const Vec3 com = body_interface.GetCenterOfMassPosition(rb.bodyID);
 							const Vec3 surface_position = cast(scene.GetOceanPosAt(cast(com)));
 							const float diff = com.GetY() - surface_position.GetY();
 							if (diff < 0)
@@ -2647,8 +2686,42 @@ namespace wi::physics
 							}
 							else
 							{
-								rb.was_underwater = false;
+								is_underwater = false;
 							}
+						}
+
+						if (!is_underwater)
+						{
+							// Check for water volumes (non-ocean water bodies)
+							XMFLOAT3 pos = cast(com);
+							wi::primitive::Ray ray_down(XMFLOAT3(pos.x, pos.y + 10.0f, pos.z), XMFLOAT3(0, -1, 0), 0, 100);
+							wi::scene::Scene::RayIntersectionResult result = scene.Intersects(ray_down, wi::enums::FILTER_WATER);
+							if (result.entity != INVALID_ENTITY && result.position.y > pos.y)
+							{
+								body_interface.ApplyBuoyancyImpulse(
+									rb.bodyID,
+									cast(result.position),
+									cast(result.normal),
+									6.0f,
+									0.8f,
+									0.6f,
+									Vec3::sZero(),
+									physics_scene.physics_system.GetGravity(),
+									scene.dt
+								);
+
+								if (!rb.was_underwater)
+								{
+									rb.was_underwater = true;
+									is_underwater = true;
+									scene.PutWaterRipple(result.position);
+								}
+							}
+						}
+
+						if (!is_underwater)
+						{
+							rb.was_underwater = false;
 						}
 					}
 				}
