@@ -85,6 +85,239 @@ void MaterialWindow::Create(EditorComponent* _editor)
 		};
 	};
 
+	presetLoadButton.Create("Load preset");
+	presetLoadButton.SetTooltip("Load material preset from file");
+	presetLoadButton.SetSize(XMFLOAT2(wid, hei));
+	presetLoadButton.OnClick([this](wi::gui::EventArgs args) {
+		wi::helper::FileDialogParams params;
+		params.type = wi::helper::FileDialogParams::OPEN;
+		params.description = "Material Preset (.ini)";
+		params.extensions = { "ini" };
+		wi::helper::FileDialog(params, [this](std::string fileName) {
+			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this, fileName](uint64_t userdata) {
+				wi::config::File config;
+				if (!config.Open(fileName.c_str()))
+				{
+					wi::backlog::post("Failed to load material preset: " + fileName, wi::backlog::LogLevel::Warning);
+					return;
+				}
+
+				if (!config.HasSection("material"))
+				{
+					wi::backlog::post("Invalid material preset: " + fileName, wi::backlog::LogLevel::Warning);
+					return;
+				}
+
+				const wi::config::Section& materialSection = config.GetSection("material");
+
+				// Apply preset to all selected materials
+				wi::scene::Scene& scene = editor->GetCurrentScene();
+				for (const auto& selected : editor->translator.selected)
+				{
+					MaterialComponent* material = get_material(scene, selected);
+					if (material == nullptr)
+						continue;
+
+					// Load combobox values
+					if (materialSection.Has("ShaderType")) material->shaderType = (MaterialComponent::SHADERTYPE)materialSection.GetInt("ShaderType");
+					if (materialSection.Has("BlendMode")) material->userBlendMode = (wi::enums::BLENDMODE)materialSection.GetInt("BlendMode");
+					if (materialSection.Has("ShadingRate")) material->shadingRate = (wi::graphics::ShadingRate)materialSection.GetInt("ShadingRate");
+
+					// Load checkbox values
+					if (materialSection.Has("ReceiveShadow")) material->SetReceiveShadow(materialSection.GetBool("ReceiveShadow"));
+					if (materialSection.Has("CastShadow")) material->SetCastShadow(materialSection.GetBool("CastShadow"));
+					if (materialSection.Has("UseVertexColors")) material->SetUseVertexColors(materialSection.GetBool("UseVertexColors"));
+					if (materialSection.Has("SpecularGlossiness")) material->SetUseSpecularGlossinessWorkflow(materialSection.GetBool("SpecularGlossiness"));
+					if (materialSection.Has("OcclusionPrimary")) material->SetOcclusionEnabled_Primary(materialSection.GetBool("OcclusionPrimary"));
+					if (materialSection.Has("OcclusionSecondary")) material->SetOcclusionEnabled_Secondary(materialSection.GetBool("OcclusionSecondary"));
+					if (materialSection.Has("VertexAO")) material->SetVertexAODisabled(!materialSection.GetBool("VertexAO"));
+					if (materialSection.Has("Wind")) material->SetUseWind(materialSection.GetBool("Wind"));
+					if (materialSection.Has("DoubleSided")) material->SetDoubleSided(materialSection.GetBool("DoubleSided"));
+					if (materialSection.Has("Outline")) material->SetOutlineEnabled(materialSection.GetBool("Outline"));
+					if (materialSection.Has("PreferUncompressed")) material->SetPreferUncompressedTexturesEnabled(materialSection.GetBool("PreferUncompressed"));
+					if (materialSection.Has("DisableStreaming")) material->SetTextureStreamingDisabled(materialSection.GetBool("DisableStreaming"));
+					if (materialSection.Has("CoplanarBlending")) material->SetCoplanarBlending(materialSection.GetBool("CoplanarBlending"));
+					if (materialSection.Has("CapsuleShadowDisabled")) material->SetCapsuleShadowDisabled(materialSection.GetBool("CapsuleShadowDisabled"));
+
+					// Load slider values
+					if (materialSection.Has("NormalMapStrength")) material->normalMapStrength = materialSection.GetFloat("NormalMapStrength");
+					if (materialSection.Has("Roughness")) material->roughness = materialSection.GetFloat("Roughness");
+					if (materialSection.Has("Reflectance")) material->reflectance = materialSection.GetFloat("Reflectance");
+					if (materialSection.Has("Metalness")) material->metalness = materialSection.GetFloat("Metalness");
+					if (materialSection.Has("AlphaRef")) material->alphaRef = materialSection.GetFloat("AlphaRef");
+					if (materialSection.Has("EmissiveStrength")) material->emissiveColor.w = materialSection.GetFloat("EmissiveStrength");
+					if (materialSection.Has("Saturation")) material->saturation = materialSection.GetFloat("Saturation");
+					if (materialSection.Has("Cloak")) material->cloak = materialSection.GetFloat("Cloak");
+					if (materialSection.Has("ChromaticAberration")) material->chromatic_aberration = materialSection.GetFloat("ChromaticAberration");
+					if (materialSection.Has("Transmission")) material->transmission = materialSection.GetFloat("Transmission");
+					if (materialSection.Has("Refraction")) material->refraction = materialSection.GetFloat("Refraction");
+					if (materialSection.Has("ParallaxOcclusionMapping")) material->parallaxOcclusionMapping = materialSection.GetFloat("ParallaxOcclusionMapping");
+					if (materialSection.Has("AnisotropyStrength")) material->anisotropy_strength = materialSection.GetFloat("AnisotropyStrength");
+					if (materialSection.Has("AnisotropyRotation")) material->anisotropy_rotation = materialSection.GetFloat("AnisotropyRotation");
+					if (materialSection.Has("DisplacementMapping")) material->displacementMapping = materialSection.GetFloat("DisplacementMapping");
+					if (materialSection.Has("SubsurfaceScatteringStrength")) material->subsurfaceScattering.w = materialSection.GetFloat("SubsurfaceScatteringStrength");
+					if (materialSection.Has("TexAnimFrameRate")) material->texAnimFrameRate = materialSection.GetFloat("TexAnimFrameRate");
+					if (materialSection.Has("TexAnimDirectionU")) material->texAnimDirection.x = materialSection.GetFloat("TexAnimDirectionU");
+					if (materialSection.Has("TexAnimDirectionV")) material->texAnimDirection.y = materialSection.GetFloat("TexAnimDirectionV");
+					if (materialSection.Has("TexMulX")) material->texMulAdd.x = materialSection.GetFloat("TexMulX");
+					if (materialSection.Has("TexMulY")) material->texMulAdd.y = materialSection.GetFloat("TexMulY");
+					if (materialSection.Has("SheenRoughness")) material->sheenRoughness = materialSection.GetFloat("SheenRoughness");
+					if (materialSection.Has("Clearcoat")) material->clearcoat = materialSection.GetFloat("Clearcoat");
+					if (materialSection.Has("ClearcoatRoughness")) material->clearcoatRoughness = materialSection.GetFloat("ClearcoatRoughness");
+					if (materialSection.Has("BlendTerrain")) material->blend_with_terrain_height = materialSection.GetFloat("BlendTerrain");
+					if (materialSection.Has("Meshblend")) material->mesh_blend = materialSection.GetFloat("Meshblend");
+					if (materialSection.Has("InteriorScaleX")) material->interiorMappingScale.x = materialSection.GetFloat("InteriorScaleX");
+					if (materialSection.Has("InteriorScaleY")) material->interiorMappingScale.y = materialSection.GetFloat("InteriorScaleY");
+					if (materialSection.Has("InteriorScaleZ")) material->interiorMappingScale.z = materialSection.GetFloat("InteriorScaleZ");
+					if (materialSection.Has("InteriorOffsetX")) material->interiorMappingOffset.x = materialSection.GetFloat("InteriorOffsetX");
+					if (materialSection.Has("InteriorOffsetY")) material->interiorMappingOffset.y = materialSection.GetFloat("InteriorOffsetY");
+					if (materialSection.Has("InteriorOffsetZ")) material->interiorMappingOffset.z = materialSection.GetFloat("InteriorOffsetZ");
+					if (materialSection.Has("InteriorRotation")) material->interiorMappingRotation = materialSection.GetFloat("InteriorRotation");
+
+					// Load color values
+					if (materialSection.Has("BaseColorR") && materialSection.Has("BaseColorG") && materialSection.Has("BaseColorB") && materialSection.Has("BaseColorA"))
+					{
+						material->baseColor = XMFLOAT4(materialSection.GetFloat("BaseColorR"), materialSection.GetFloat("BaseColorG"), materialSection.GetFloat("BaseColorB"), materialSection.GetFloat("BaseColorA"));
+					}
+					if (materialSection.Has("SpecularColorR") && materialSection.Has("SpecularColorG") && materialSection.Has("SpecularColorB") && materialSection.Has("SpecularColorA"))
+					{
+						material->specularColor = XMFLOAT4(materialSection.GetFloat("SpecularColorR"), materialSection.GetFloat("SpecularColorG"), materialSection.GetFloat("SpecularColorB"), materialSection.GetFloat("SpecularColorA"));
+					}
+					if (materialSection.Has("EmissiveColorR") && materialSection.Has("EmissiveColorG") && materialSection.Has("EmissiveColorB") && materialSection.Has("EmissiveColorA"))
+					{
+						material->emissiveColor = XMFLOAT4(materialSection.GetFloat("EmissiveColorR"), materialSection.GetFloat("EmissiveColorG"), materialSection.GetFloat("EmissiveColorB"), materialSection.GetFloat("EmissiveColorA"));
+					}
+					if (materialSection.Has("SubsurfaceColorR") && materialSection.Has("SubsurfaceColorG") && materialSection.Has("SubsurfaceColorB") && materialSection.Has("SubsurfaceColorA"))
+					{
+						material->subsurfaceScattering = XMFLOAT4(materialSection.GetFloat("SubsurfaceColorR"), materialSection.GetFloat("SubsurfaceColorG"), materialSection.GetFloat("SubsurfaceColorB"), materialSection.GetFloat("SubsurfaceColorA"));
+					}
+					if (materialSection.Has("SheenColorR") && materialSection.Has("SheenColorG") && materialSection.Has("SheenColorB") && materialSection.Has("SheenColorA"))
+					{
+						material->sheenColor = XMFLOAT4(materialSection.GetFloat("SheenColorR"), materialSection.GetFloat("SheenColorG"), materialSection.GetFloat("SheenColorB"), materialSection.GetFloat("SheenColorA"));
+					}
+					if (materialSection.Has("ExtinctionColorR") && materialSection.Has("ExtinctionColorG") && materialSection.Has("ExtinctionColorB") && materialSection.Has("ExtinctionColorA"))
+					{
+						material->extinctionColor = XMFLOAT4(materialSection.GetFloat("ExtinctionColorR"), materialSection.GetFloat("ExtinctionColorG"), materialSection.GetFloat("ExtinctionColorB"), materialSection.GetFloat("ExtinctionColorA"));
+					}
+
+					material->SetDirty();
+				}
+
+				SetEntity(entity);
+			});
+		});
+	});
+	AddWidget(&presetLoadButton);
+
+	presetSaveButton.Create("Save preset");
+	presetSaveButton.SetTooltip("Save material preset to file");
+	presetSaveButton.SetSize(XMFLOAT2(wid, hei));
+	presetSaveButton.OnClick([this](wi::gui::EventArgs args) {
+		MaterialComponent* material = editor->GetCurrentScene().materials.GetComponent(entity);
+		if (material == nullptr)
+			return;
+
+		wi::helper::FileDialogParams params;
+		params.type = wi::helper::FileDialogParams::SAVE;
+		params.description = "Material Preset (.ini)";
+		params.extensions = { "ini" };
+		wi::helper::FileDialog(params, [this, material](std::string fileName) {
+			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this, material, fileName](uint64_t userdata) {
+				const std::string filePath = wi::helper::ForceExtension(fileName, "ini");
+				wi::config::File config;
+				config.Open(filePath.c_str());
+
+				wi::config::Section& materialSection = config.GetSection("material");
+
+				// Save combobox values
+				materialSection.Set("ShaderType", (int)material->shaderType);
+				materialSection.Set("BlendMode", (int)material->userBlendMode);
+				materialSection.Set("ShadingRate", (int)material->shadingRate);
+
+				// Save checkbox values
+				materialSection.Set("ReceiveShadow", material->IsReceiveShadow());
+				materialSection.Set("CastShadow", material->IsCastingShadow());
+				materialSection.Set("UseVertexColors", material->IsUsingVertexColors());
+				materialSection.Set("SpecularGlossiness", material->IsUsingSpecularGlossinessWorkflow());
+				materialSection.Set("OcclusionPrimary", material->IsOcclusionEnabled_Primary());
+				materialSection.Set("OcclusionSecondary", material->IsOcclusionEnabled_Secondary());
+				materialSection.Set("VertexAO", !material->IsVertexAODisabled());
+				materialSection.Set("Wind", material->IsUsingWind());
+				materialSection.Set("DoubleSided", material->IsDoubleSided());
+				materialSection.Set("Outline", material->IsOutlineEnabled());
+				materialSection.Set("PreferUncompressed", material->IsPreferUncompressedTexturesEnabled());
+				materialSection.Set("DisableStreaming", material->IsTextureStreamingDisabled());
+				materialSection.Set("CoplanarBlending", material->IsCoplanarBlending());
+				materialSection.Set("CapsuleShadowDisabled", material->IsCapsuleShadowDisabled());
+
+				// Save slider values
+				materialSection.Set("NormalMapStrength", material->normalMapStrength);
+				materialSection.Set("Roughness", material->roughness);
+				materialSection.Set("Reflectance", material->reflectance);
+				materialSection.Set("Metalness", material->metalness);
+				materialSection.Set("AlphaRef", material->alphaRef);
+				materialSection.Set("EmissiveStrength", material->emissiveColor.w);
+				materialSection.Set("Saturation", material->saturation);
+				materialSection.Set("Cloak", material->cloak);
+				materialSection.Set("ChromaticAberration", material->chromatic_aberration);
+				materialSection.Set("Transmission", material->transmission);
+				materialSection.Set("Refraction", material->refraction);
+				materialSection.Set("ParallaxOcclusionMapping", material->parallaxOcclusionMapping);
+				materialSection.Set("AnisotropyStrength", material->anisotropy_strength);
+				materialSection.Set("AnisotropyRotation", material->anisotropy_rotation);
+				materialSection.Set("DisplacementMapping", material->displacementMapping);
+				materialSection.Set("SubsurfaceScatteringStrength", material->subsurfaceScattering.w);
+				materialSection.Set("TexAnimFrameRate", material->texAnimFrameRate);
+				materialSection.Set("TexAnimDirectionU", material->texAnimDirection.x);
+				materialSection.Set("TexAnimDirectionV", material->texAnimDirection.y);
+				materialSection.Set("TexMulX", material->texMulAdd.x);
+				materialSection.Set("TexMulY", material->texMulAdd.y);
+				materialSection.Set("SheenRoughness", material->sheenRoughness);
+				materialSection.Set("Clearcoat", material->clearcoat);
+				materialSection.Set("ClearcoatRoughness", material->clearcoatRoughness);
+				materialSection.Set("BlendTerrain", material->blend_with_terrain_height);
+				materialSection.Set("Meshblend", material->mesh_blend);
+				materialSection.Set("InteriorScaleX", material->interiorMappingScale.x);
+				materialSection.Set("InteriorScaleY", material->interiorMappingScale.y);
+				materialSection.Set("InteriorScaleZ", material->interiorMappingScale.z);
+				materialSection.Set("InteriorOffsetX", material->interiorMappingOffset.x);
+				materialSection.Set("InteriorOffsetY", material->interiorMappingOffset.y);
+				materialSection.Set("InteriorOffsetZ", material->interiorMappingOffset.z);
+				materialSection.Set("InteriorRotation", material->interiorMappingRotation);
+
+				// Save color values
+				materialSection.Set("BaseColorR", material->baseColor.x);
+				materialSection.Set("BaseColorG", material->baseColor.y);
+				materialSection.Set("BaseColorB", material->baseColor.z);
+				materialSection.Set("BaseColorA", material->baseColor.w);
+				materialSection.Set("SpecularColorR", material->specularColor.x);
+				materialSection.Set("SpecularColorG", material->specularColor.y);
+				materialSection.Set("SpecularColorB", material->specularColor.z);
+				materialSection.Set("SpecularColorA", material->specularColor.w);
+				materialSection.Set("EmissiveColorR", material->emissiveColor.x);
+				materialSection.Set("EmissiveColorG", material->emissiveColor.y);
+				materialSection.Set("EmissiveColorB", material->emissiveColor.z);
+				materialSection.Set("EmissiveColorA", material->emissiveColor.w);
+				materialSection.Set("SubsurfaceColorR", material->subsurfaceScattering.x);
+				materialSection.Set("SubsurfaceColorG", material->subsurfaceScattering.y);
+				materialSection.Set("SubsurfaceColorB", material->subsurfaceScattering.z);
+				materialSection.Set("SubsurfaceColorA", material->subsurfaceScattering.w);
+				materialSection.Set("SheenColorR", material->sheenColor.x);
+				materialSection.Set("SheenColorG", material->sheenColor.y);
+				materialSection.Set("SheenColorB", material->sheenColor.z);
+				materialSection.Set("SheenColorA", material->sheenColor.w);
+				materialSection.Set("ExtinctionColorR", material->extinctionColor.x);
+				materialSection.Set("ExtinctionColorG", material->extinctionColor.y);
+				materialSection.Set("ExtinctionColorB", material->extinctionColor.z);
+				materialSection.Set("ExtinctionColorA", material->extinctionColor.w);
+
+				config.Commit();
+				wi::backlog::post("Material preset saved: " + filePath);
+			});
+		});
+	});
+	AddWidget(&presetSaveButton);
+
 	shadowReceiveCheckBox.Create("Receive Shadow: ");
 	shadowReceiveCheckBox.SetTooltip("Receives shadow or not?");
 	shadowReceiveCheckBox.SetPos(XMFLOAT2(x, y));
@@ -1166,6 +1399,14 @@ void MaterialWindow::ResizeLayout()
 	}
 
 	layout.add_fullwidth(materialNameField);
+
+	const float preset_button_width = layout.width / 2.0f - layout.padding * 1.5f;
+	presetLoadButton.SetSize(XMFLOAT2(preset_button_width, presetLoadButton.GetSize().y));
+	presetLoadButton.SetPos(XMFLOAT2(layout.padding, layout.y));
+	presetSaveButton.SetSize(XMFLOAT2(preset_button_width, presetSaveButton.GetSize().y));
+	presetSaveButton.SetPos(XMFLOAT2(presetLoadButton.GetPos().x + presetLoadButton.GetSize().x + layout.padding, layout.y));
+	layout.y += presetLoadButton.GetSize().y + layout.padding;
+
 	layout.add_right(shadowReceiveCheckBox);
 	layout.add_right(shadowCasterCheckBox);
 	layout.add_right(useVertexColorsCheckBox);
