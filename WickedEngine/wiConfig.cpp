@@ -359,4 +359,8 @@ namespace wi::config
 	{
 		return sections[name];
 	}
+	bool File::HasSection(const char* name) const
+	{
+		return sections.find(name) != sections.end();
+	}
 }
