@@ -183,17 +183,13 @@ void MaterialWindow::Create(EditorComponent* _editor)
 					{
 						material->specularColor = XMFLOAT4(materialSection.GetFloat("SpecularColorR"), materialSection.GetFloat("SpecularColorG"), materialSection.GetFloat("SpecularColorB"), materialSection.GetFloat("SpecularColorA"));
 					}
-					if (materialSection.Has("EmissiveColorR") && materialSection.Has("EmissiveColorG") && materialSection.Has("EmissiveColorB"))
+					if (materialSection.Has("EmissiveColorR") && materialSection.Has("EmissiveColorG") && materialSection.Has("EmissiveColorB") && materialSection.Has("EmissiveColorA"))
 					{
-						material->emissiveColor.x = materialSection.GetFloat("EmissiveColorR");
-						material->emissiveColor.y = materialSection.GetFloat("EmissiveColorG");
-						material->emissiveColor.z = materialSection.GetFloat("EmissiveColorB");
+						material->emissiveColor = XMFLOAT4(materialSection.GetFloat("EmissiveColorR"), materialSection.GetFloat("EmissiveColorG"), materialSection.GetFloat("EmissiveColorB"), materialSection.GetFloat("EmissiveColorA"));
 					}
-					if (materialSection.Has("SubsurfaceColorR") && materialSection.Has("SubsurfaceColorG") && materialSection.Has("SubsurfaceColorB"))
+					if (materialSection.Has("SubsurfaceColorR") && materialSection.Has("SubsurfaceColorG") && materialSection.Has("SubsurfaceColorB") && materialSection.Has("SubsurfaceColorA"))
 					{
-						material->subsurfaceScattering.x = materialSection.GetFloat("SubsurfaceColorR");
-						material->subsurfaceScattering.y = materialSection.GetFloat("SubsurfaceColorG");
-						material->subsurfaceScattering.z = materialSection.GetFloat("SubsurfaceColorB");
+						material->subsurfaceScattering = XMFLOAT4(materialSection.GetFloat("SubsurfaceColorR"), materialSection.GetFloat("SubsurfaceColorG"), materialSection.GetFloat("SubsurfaceColorB"), materialSection.GetFloat("SubsurfaceColorA"));
 					}
 					if (materialSection.Has("SheenColorR") && materialSection.Has("SheenColorG") && materialSection.Has("SheenColorB") && materialSection.Has("SheenColorA"))
 					{
@@ -301,9 +297,11 @@ void MaterialWindow::Create(EditorComponent* _editor)
 				materialSection.Set("EmissiveColorR", material->emissiveColor.x);
 				materialSection.Set("EmissiveColorG", material->emissiveColor.y);
 				materialSection.Set("EmissiveColorB", material->emissiveColor.z);
+				materialSection.Set("EmissiveColorA", material->emissiveColor.w);
 				materialSection.Set("SubsurfaceColorR", material->subsurfaceScattering.x);
 				materialSection.Set("SubsurfaceColorG", material->subsurfaceScattering.y);
 				materialSection.Set("SubsurfaceColorB", material->subsurfaceScattering.z);
+				materialSection.Set("SubsurfaceColorA", material->subsurfaceScattering.w);
 				materialSection.Set("SheenColorR", material->sheenColor.x);
 				materialSection.Set("SheenColorG", material->sheenColor.y);
 				materialSection.Set("SheenColorB", material->sheenColor.z);
