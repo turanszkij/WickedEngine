@@ -97,7 +97,7 @@ endif()
 
 if(WICKED_ENABLE_SAN_ALWAYS)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${SANITIZE_OPTIONS}")
-    add_link_options(${SANITIZE_LINK_OPTIONS)
+    add_link_options(${SANITIZE_LINK_OPTIONS})
 else()
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${SANITIZE_OPTIONS}")
     add_link_options($<$<CONFIG:Debug>:${SANITIZE_LINK_OPTIONS}>)
