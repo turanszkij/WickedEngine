@@ -335,40 +335,6 @@ struct RenderQueue
 static thread_local RenderQueue renderQueue;
 static thread_local RenderQueue renderQueue_transparent;
 
-
-const Sampler* GetSampler(SAMPLERTYPES id)
-{
-	return &samplers[id];
-}
-const Shader* GetShader(SHADERTYPE id)
-{
-	return &shaders[id];
-}
-const InputLayout* GetInputLayout(ILTYPES id)
-{
-	return &inputLayouts[id];
-}
-const RasterizerState* GetRasterizerState(RSTYPES id)
-{
-	return &rasterizers[id];
-}
-const DepthStencilState* GetDepthStencilState(DSSTYPES id)
-{
-	return &depthStencils[id];
-}
-const BlendState* GetBlendState(BSTYPES id)
-{
-	return &blendStates[id];
-}
-const GPUBuffer* GetBuffer(BUFFERTYPES id)
-{
-	return &buffers[id];
-}
-const Texture* GetTexture(TEXTYPES id)
-{
-	return &textures[id];
-}
-
 enum OBJECT_MESH_SHADER_PSO
 {
 	OBJECT_MESH_SHADER_PSO_DISABLED,
@@ -741,6 +707,49 @@ size_t GetShaderErrorCount()
 size_t GetShaderMissingCount()
 {
 	return SHADER_MISSING.load();
+}
+
+
+const Sampler* GetSampler(SAMPLERTYPES id)
+{
+	return &samplers[id];
+}
+const Shader* GetShader(SHADERTYPE id)
+{
+	// Note: we must wait for shader creation background threads when trying to get shader from outside code
+	//	This GetShader() function is NOT used within this file, because here we don't wait for these shaders to be completely loaded!!
+	if ((id >= PSTYPE_OBJECT_PERMUTATION_BEGIN && id <= PSTYPE_OBJECT_PERMUTATION_END) || (id >= PSTYPE_OBJECT_TRANSPARENT_PERMUTATION_BEGIN && id <= PSTYPE_OBJECT_TRANSPARENT_PERMUTATION_END))
+	{
+		wi::jobsystem::Wait(objectps_ctx);
+	}
+	wi::jobsystem::Wait(raytracing_ctx);
+	wi::jobsystem::Wait(mesh_shader_ctx);
+
+	return &shaders[id];
+}
+const InputLayout* GetInputLayout(ILTYPES id)
+{
+	return &inputLayouts[id];
+}
+const RasterizerState* GetRasterizerState(RSTYPES id)
+{
+	return &rasterizers[id];
+}
+const DepthStencilState* GetDepthStencilState(DSSTYPES id)
+{
+	return &depthStencils[id];
+}
+const BlendState* GetBlendState(BSTYPES id)
+{
+	return &blendStates[id];
+}
+const GPUBuffer* GetBuffer(BUFFERTYPES id)
+{
+	return &buffers[id];
+}
+const Texture* GetTexture(TEXTYPES id)
+{
+	return &textures[id];
 }
 
 bool LoadShader(
