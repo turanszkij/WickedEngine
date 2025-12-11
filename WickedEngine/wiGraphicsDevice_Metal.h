@@ -4,6 +4,7 @@
 #include "wiPlatform.h"
 #include "wiAllocator.h"
 #include "wiGraphicsDevice.h"
+#include "wiUnorderedMap.h"
 
 #include <Metal/Metal.hpp>
 #include <AppKit/AppKit.hpp>
@@ -31,6 +32,7 @@ namespace wi::graphics
 			QUEUE_TYPE queue = QUEUE_COUNT;
 			const PipelineState* active_pso = nullptr;
 			bool dirty_pso = false;
+			const Shader* active_cs = nullptr;
 			wi::vector<MTK::View*> presents;
 			MTL::RenderCommandEncoder* render_encoder = nullptr;
 			MTL::ComputeCommandEncoder* compute_encoder = nullptr;
@@ -38,6 +40,10 @@ namespace wi::graphics
 			MTL::PrimitiveType primitive_type = MTL::PrimitiveTypeTriangle;
 			NS::SharedPtr<MTL::Buffer> index_buffer;
 			MTL::IndexType index_type = MTL::IndexTypeUInt32;
+			wi::vector<std::pair<PipelineHash, NS::SharedPtr<MTL::RenderPipelineState>>> pipelines_worker;
+			PipelineHash pipeline_hash;
+			DescriptorBindingTable binding_table;
+			bool dirty_bindings = false;
 
 			void reset(uint32_t bufferindex)
 			{
@@ -47,6 +53,7 @@ namespace wi::graphics
 				id = 0;
 				queue = QUEUE_COUNT;
 				active_pso = nullptr;
+				active_cs = nullptr;
 				dirty_pso = false;
 				presents.clear();
 				render_encoder = nullptr;
@@ -55,11 +62,23 @@ namespace wi::graphics
 				primitive_type = MTL::PrimitiveTypeTriangle;
 				index_buffer.reset();
 				index_type = MTL::IndexTypeUInt32;
+				pipelines_worker.clear();
+				pipeline_hash = {};
+				binding_table = {};
+				dirty_bindings = true;
 			}
 		};
 		wi::vector<std::unique_ptr<CommandList_Metal>> commandlists;
 		uint32_t cmd_count = 0;
 		wi::SpinLock cmd_locker;
+		
+		wi::unordered_map<PipelineHash, NS::SharedPtr<MTL::RenderPipelineState>> pipelines_global;
+		
+		NS::SharedPtr<MTL::Buffer> argument_buffer;
+		uint8_t* argument_buffer_data = nullptr;
+		uint64_t argument_buffer_bindless_sampler_capacity = 2048;
+		std::atomic<uint64_t> argument_buffer_offset{0};
+		void binder_flush(CommandList cmd);
 
 		constexpr CommandList_Metal& GetCommandList(CommandList cmd) const
 		{
@@ -70,6 +89,7 @@ namespace wi::graphics
 		void pso_validate(CommandList cmd);
 		void predraw(CommandList cmd);
 		void predispatch(CommandList cmd);
+		void precopy(CommandList cmd);
 
 	public:
 		GraphicsDevice_Metal(ValidationMode validationMode = ValidationMode::Disabled, GPUPreference preference = GPUPreference::Discrete);
@@ -209,6 +229,10 @@ namespace wi::graphics
 			std::deque<std::pair<NS::SharedPtr<MTL::Function>, uint64_t>> destroyer_functions;
 			std::deque<std::pair<NS::SharedPtr<MTL::RenderPipelineState>, uint64_t>> destroyer_render_pipelines;
 			std::deque<std::pair<NS::SharedPtr<MTL::ComputePipelineState>, uint64_t>> destroyer_compute_pipelines;
+			std::deque<std::pair<int, uint64_t>> destroyer_bindless_res;
+			std::deque<std::pair<int, uint64_t>> destroyer_bindless_sam;
+			wi::vector<int> free_bindless_res;
+			wi::vector<int> free_bindless_sam;
 
 			void Update(uint64_t FRAMECOUNT, uint32_t BUFFERCOUNT)
 			{
@@ -244,6 +268,35 @@ namespace wi::graphics
 					destroyer_compute_pipelines.pop_front();
 					// SharedPtr auto delete
 				}
+				while (!destroyer_bindless_res.empty() && destroyer_bindless_res.front().second + BUFFERCOUNT < FRAMECOUNT)
+				{
+					free_bindless_res.push_back(destroyer_bindless_res.front().first);
+					destroyer_bindless_res.pop_front();
+				}
+				while (!destroyer_bindless_sam.empty() && destroyer_bindless_sam.front().second + BUFFERCOUNT < FRAMECOUNT)
+				{
+					free_bindless_sam.push_back(destroyer_bindless_sam.front().first);
+					destroyer_bindless_sam.pop_front();
+				}
+			}
+			
+			int allocate_bindless_res()
+			{
+				std::scoped_lock lck(destroylocker);
+				if(free_bindless_res.empty())
+					return -1;
+				int ret = free_bindless_res.back();
+				free_bindless_res.pop_back();
+				return ret;
+			}
+			int allocate_bindless_sam()
+			{
+				std::scoped_lock lck(destroylocker);
+				if(free_bindless_sam.empty())
+					return -1;
+				int ret = free_bindless_sam.back();
+				free_bindless_sam.pop_back();
+				return ret;
 			}
 		};
 		wi::allocator::shared_ptr<AllocationHandler> allocationhandler;

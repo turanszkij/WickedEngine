@@ -12,6 +12,9 @@ namespace wi::graphics
 
 namespace metal_internal
 {
+	static constexpr uint64_t argument_buffer_capacity = 1000000;
+	static constexpr uint64_t argument_buffer_bindless_resource_capacity = 500000;
+
 	constexpr MTL::VertexFormat _ConvertVertexFormat(Format value)
 	{
 		switch (value)
@@ -263,8 +266,42 @@ namespace metal_internal
 		wi::allocator::shared_ptr<GraphicsDevice_Metal::AllocationHandler> allocationhandler;
 		NS::SharedPtr<MTL::Buffer> buffer;
 		
+		struct Subresource
+		{
+			NS::SharedPtr<MTL::Buffer> buffer;
+			int index = -1;
+		};
+		Subresource srv;
+		Subresource uav;
+		wi::vector<Subresource> subresources_srv;
+		wi::vector<Subresource> subresources_uav;
+		
 		void destroy_subresources()
 		{
+			uint64_t framecount = allocationhandler->framecount;
+			
+			allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(srv.buffer), framecount));
+			if (srv.index >= 0)
+				allocationhandler->destroyer_bindless_res.push_back(std::make_pair(srv.index, framecount));
+			
+			allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(uav.buffer), framecount));
+			if (uav.index >= 0)
+				allocationhandler->destroyer_bindless_res.push_back(std::make_pair(uav.index, framecount));
+			
+			for (auto& x : subresources_srv)
+			{
+				allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(buffer), framecount));
+				if (x.index >= 0)
+					allocationhandler->destroyer_bindless_res.push_back(std::make_pair(x.index, framecount));
+			}
+			subresources_srv.clear();
+			for (auto& x : subresources_uav)
+			{
+				allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(buffer), framecount));
+				if (x.index >= 0)
+					allocationhandler->destroyer_bindless_res.push_back(std::make_pair(x.index, framecount));
+			}
+			subresources_uav.clear();
 		}
 
 		~Buffer_Metal()
@@ -283,8 +320,64 @@ namespace metal_internal
 		wi::allocator::shared_ptr<GraphicsDevice_Metal::AllocationHandler> allocationhandler;
 		NS::SharedPtr<MTL::Texture> texture;
 		
+		struct Subresource
+		{
+			NS::SharedPtr<MTL::Texture> texture;
+			int index = -1;
+		};
+		Subresource srv;
+		Subresource uav;
+		Subresource rtv;
+		Subresource dsv;
+		wi::vector<Subresource> subresources_srv;
+		wi::vector<Subresource> subresources_uav;
+		wi::vector<Subresource> subresources_rtv;
+		wi::vector<Subresource> subresources_dsv;
+		
 		void destroy_subresources()
 		{
+			uint64_t framecount = allocationhandler->framecount;
+			
+			allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(srv.texture), framecount));
+			if (srv.index >= 0)
+				allocationhandler->destroyer_bindless_res.push_back(std::make_pair(srv.index, framecount));
+			
+			allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(uav.texture), framecount));
+			if (uav.index >= 0)
+				allocationhandler->destroyer_bindless_res.push_back(std::make_pair(uav.index, framecount));
+			
+			allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(rtv.texture), framecount));
+			if (rtv.index >= 0)
+				allocationhandler->destroyer_bindless_res.push_back(std::make_pair(rtv.index, framecount));
+			
+			allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(dsv.texture), framecount));
+			if (dsv.index >= 0)
+				allocationhandler->destroyer_bindless_res.push_back(std::make_pair(dsv.index, framecount));
+			
+			for (auto& x : subresources_srv)
+			{
+				allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(texture), framecount));
+				if (x.index >= 0)
+					allocationhandler->destroyer_bindless_res.push_back(std::make_pair(x.index, framecount));
+			}
+			subresources_srv.clear();
+			for (auto& x : subresources_uav)
+			{
+				allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(texture), framecount));
+				if (x.index >= 0)
+					allocationhandler->destroyer_bindless_res.push_back(std::make_pair(x.index, framecount));
+			}
+			subresources_uav.clear();
+			for (auto& x : subresources_rtv)
+			{
+				allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(texture), framecount));
+			}
+			subresources_rtv.clear();
+			for (auto& x : subresources_dsv)
+			{
+				allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(texture), framecount));
+			}
+			subresources_dsv.clear();
 		}
 
 		~Texture_Metal()
@@ -445,6 +538,27 @@ namespace metal_internal
 }
 using namespace metal_internal;
 
+	void GraphicsDevice_Metal::binder_flush(CommandList cmd)
+	{
+		CommandList_Metal& commandlist = GetCommandList(cmd);
+		if (!commandlist.dirty_bindings)
+			return;
+		commandlist.dirty_bindings = false;
+		
+		uint64_t offset = 0;
+		
+		if (commandlist.render_encoder != nullptr)
+		{
+			if (commandlist.active_pso->desc.vs != nullptr)
+			{
+				commandlist.render_encoder->setVertexBuffer(argument_buffer.get(), offset, 0);
+			}
+			if (commandlist.active_pso->desc.ps != nullptr)
+			{
+				commandlist.render_encoder->setFragmentBuffer(argument_buffer.get(), offset, 0);
+			}
+		}
+	}
 
 	void GraphicsDevice_Metal::pso_validate(CommandList cmd)
 	{
@@ -454,12 +568,41 @@ using namespace metal_internal;
 		
 		assert(commandlist.render_encoder != nullptr); // We must be inside renderpass at this point!
 		
+		PipelineHash pipeline_hash = commandlist.pipeline_hash;
 		const PipelineState* pso = commandlist.active_pso;
 		auto internal_state = to_internal(pso);
 		
 		if (internal_state->render_pipeline.get() == nullptr)
 		{
 			// Just in time PSO:
+			MTL::RenderPipelineState* pipeline = nullptr;
+			auto it = pipelines_global.find(pipeline_hash);
+			if (it == pipelines_global.end())
+			{
+				for (auto& x : commandlist.pipelines_worker)
+				{
+					if (pipeline_hash == x.first)
+					{
+						pipeline = x.second.get();
+						break;
+					}
+				}
+			}
+			if (pipeline == nullptr)
+			{
+				RenderPassInfo renderpass_info = GetRenderPassInfo(cmd);
+				PipelineState newPSO;
+				bool success = CreatePipelineState(&pso->desc, &newPSO, &renderpass_info);
+				assert(success);
+				assert(newPSO.IsValid());
+
+				auto internal_new = to_internal(&newPSO);
+				assert(internal_new->render_pipeline.get() != nullptr);
+				commandlist.pipelines_worker.push_back(std::make_pair(pipeline_hash, internal_new->render_pipeline));
+				pipeline = internal_new->render_pipeline.get();
+			}
+			assert(pipeline != nullptr);
+			commandlist.render_encoder->setRenderPipelineState(pipeline);
 		}
 		else
 		{
@@ -471,11 +614,49 @@ using namespace metal_internal;
 	}
 	void GraphicsDevice_Metal::predraw(CommandList cmd)
 	{
+		CommandList_Metal& commandlist = GetCommandList(cmd);
+		commandlist.active_cs = nullptr;
+		assert(commandlist.render_encoder != nullptr);
 		pso_validate(cmd);
+		binder_flush(cmd);
 	}
 	void GraphicsDevice_Metal::predispatch(CommandList cmd)
 	{
-	   
+		CommandList_Metal& commandlist = GetCommandList(cmd);
+		commandlist.active_pso = nullptr;
+		if (commandlist.render_encoder != nullptr)
+		{
+			commandlist.render_encoder->endEncoding();
+			commandlist.render_encoder = nullptr;
+		}
+		if (commandlist.blit_encoder != nullptr)
+		{
+			commandlist.blit_encoder->endEncoding();
+			commandlist.blit_encoder = nullptr;
+		}
+		if (commandlist.compute_encoder == nullptr)
+		{
+			commandlist.compute_encoder = commandlist.commandbuffer->computeCommandEncoder();
+		}
+		binder_flush(cmd);
+	}
+	void GraphicsDevice_Metal::precopy(CommandList cmd)
+	{
+		CommandList_Metal& commandlist = GetCommandList(cmd);
+		if (commandlist.render_encoder != nullptr)
+		{
+			commandlist.render_encoder->endEncoding();
+			commandlist.render_encoder = nullptr;
+		}
+		if (commandlist.compute_encoder != nullptr)
+		{
+			commandlist.compute_encoder->endEncoding();
+			commandlist.compute_encoder = nullptr;
+		}
+		if (commandlist.blit_encoder == nullptr)
+		{
+			commandlist.blit_encoder = commandlist.commandbuffer->blitCommandEncoder();
+		}
 	}
 
 	GraphicsDevice_Metal::GraphicsDevice_Metal(ValidationMode validationMode_, GPUPreference preference)
@@ -484,6 +665,19 @@ using namespace metal_internal;
 		device = NS::TransferPtr(MTL::CreateSystemDefaultDevice());
 		commandqueue = NS::TransferPtr(device->newCommandQueue());
 		allocationhandler = wi::allocator::make_shared_single<AllocationHandler>();
+		argument_buffer_bindless_sampler_capacity = std::min(argument_buffer_bindless_sampler_capacity, (uint64_t)device->maxArgumentBufferSamplerCount());
+		argument_buffer = NS::TransferPtr(device->newBuffer(argument_buffer_capacity * sizeof(MTL::ResourceID), MTL::ResourceStorageModeShared | MTL::ResourceHazardTrackingModeUntracked));
+		argument_buffer_data = (uint8_t*)argument_buffer->contents();
+		allocationhandler->free_bindless_res.reserve(argument_buffer_bindless_resource_capacity);
+		allocationhandler->free_bindless_sam.reserve(argument_buffer_bindless_sampler_capacity);
+		for (int i = 0; i < argument_buffer_bindless_sampler_capacity; ++i)
+		{
+			allocationhandler->free_bindless_sam.push_back((int)argument_buffer_bindless_sampler_capacity - i - 1);
+		}
+		for (int i = 0; i < argument_buffer_bindless_resource_capacity; ++i)
+		{
+			allocationhandler->free_bindless_res.push_back((int)argument_buffer_bindless_sampler_capacity + (int)argument_buffer_bindless_resource_capacity - i - 1);
+		}
 		wilog("Created GraphicsDevice_Metal (%d ms)", (int)std::round(timer.elapsed()));
 	}
 	GraphicsDevice_Metal::~GraphicsDevice_Metal()
@@ -518,15 +712,42 @@ using namespace metal_internal;
 		buffer->mapped_size = 0;
 		buffer->desc = *desc;
 		
-		MTL::ResourceOptions options = desc->usage == Usage::DEFAULT ? MTL::ResourceStorageModePrivate : MTL::ResourceStorageModeShared;
+		MTL::ResourceOptions options = {};
+		if (desc->usage == Usage::DEFAULT)
+		{
+			options |= MTL::ResourceStorageModePrivate;
+		}
+		else if (desc->usage == Usage::UPLOAD)
+		{
+			options |= MTL::ResourceStorageModeShared;
+			options |= MTL::ResourceCPUCacheModeWriteCombined;
+		}
+		else if (desc->usage == Usage::READBACK)
+		{
+			options |= MTL::ResourceStorageModeShared;
+		}
+		options |= MTL::ResourceHazardTrackingModeUntracked;
+		
 		internal_state->buffer = NS::TransferPtr(device->newBuffer(desc->size, options));
-		if(options != MTL::ResourceStorageModePrivate)
+		if ((options & MTL::ResourceStorageModePrivate) == 0)
 		{
 			buffer->mapped_data = internal_state->buffer->contents();
 			buffer->mapped_size = internal_state->buffer->allocatedSize();
 		}
-
-		return false;
+		
+		if (!has_flag(desc->misc_flags, ResourceMiscFlag::NO_DEFAULT_DESCRIPTORS))
+		{
+			if (has_flag(desc->bind_flags, BindFlag::SHADER_RESOURCE))
+			{
+				CreateSubresource(buffer, SubresourceType::SRV, 0);
+			}
+			if (has_flag(desc->bind_flags, BindFlag::UNORDERED_ACCESS))
+			{
+				CreateSubresource(buffer, SubresourceType::UAV, 0);
+			}
+		}
+		
+		return internal_state->buffer.get() != nullptr;
 	}
 	bool GraphicsDevice_Metal::CreateTexture(const TextureDesc* desc, const SubresourceData* initial_data, Texture* texture, const GPUResource* alias, uint64_t alias_offset) const
 	{
@@ -605,7 +826,27 @@ using namespace metal_internal;
 			}
 		}
 		
-		return false;
+		if (!has_flag(desc->misc_flags, ResourceMiscFlag::NO_DEFAULT_DESCRIPTORS))
+		{
+			if (has_flag(texture->desc.bind_flags, BindFlag::RENDER_TARGET))
+			{
+				CreateSubresource(texture, SubresourceType::RTV, 0, -1, 0, -1);
+			}
+			if (has_flag(texture->desc.bind_flags, BindFlag::DEPTH_STENCIL))
+			{
+				CreateSubresource(texture, SubresourceType::DSV, 0, -1, 0, -1);
+			}
+			if (has_flag(texture->desc.bind_flags, BindFlag::SHADER_RESOURCE))
+			{
+				CreateSubresource(texture, SubresourceType::SRV, 0, -1, 0, -1);
+			}
+			if (has_flag(texture->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
+			{
+				CreateSubresource(texture, SubresourceType::UAV, 0, -1, 0, -1);
+			}
+		}
+		
+		return internal_state->texture.get() != nullptr;
 	}
 	bool GraphicsDevice_Metal::CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader) const
 	{
@@ -678,11 +919,13 @@ using namespace metal_internal;
 		
 		if (desc->vs != nullptr)
 		{
-			internal_state->descriptor->setVertexFunction(to_internal(desc->vs)->function.get());
+			auto shader_internal = to_internal(desc->vs);
+			internal_state->descriptor->setVertexFunction(shader_internal->function.get());
 		}
 		if (desc->ps != nullptr)
 		{
-			internal_state->descriptor->setFragmentFunction(to_internal(desc->ps)->function.get());
+			auto shader_internal = to_internal(desc->ps);
+			internal_state->descriptor->setFragmentFunction(shader_internal->function.get());
 		}
 		if (desc->ds != nullptr)
 		{
@@ -708,7 +951,8 @@ using namespace metal_internal;
 		NS::SharedPtr<MTL::VertexDescriptor> vertex_descriptor;
 		if (desc->il != nullptr)
 		{
-			NS::Array* attributes = to_internal(desc->vs)->function->vertexAttributes();
+			auto vs_internal = to_internal(desc->vs);
+			NS::Array* attributes = vs_internal->function->vertexAttributes();
 			if (attributes != nullptr)
 			{
 				vertex_descriptor = NS::TransferPtr(MTL::VertexDescriptor::alloc()->init());
@@ -778,6 +1022,7 @@ using namespace metal_internal;
 				wilog_error("%s", errDesc->utf8String());
 				assert(0);
 			}
+			
 			return internal_state->render_pipeline.get() != nullptr;
 		}
 		
@@ -821,6 +1066,23 @@ using namespace metal_internal;
 		if (format_change != nullptr)
 		{
 			format = *format_change;
+		}
+		
+		sliceCount = std::min(sliceCount, texture->desc.array_size - firstSlice);
+		mipCount = std::min(mipCount, texture->desc.mip_levels - firstMip);
+		
+		switch (type) {
+			case SubresourceType::SRV:
+				{
+					auto& subresource = internal_state->subresources_srv.emplace_back();
+					subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(_ConvertPixelFormat(format), internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
+					subresource.index = allocationhandler->allocate_bindless_res();
+					MTL::ResourceID gpu_handle = subresource.texture->gpuResourceID();
+				}
+				break;
+				
+			default:
+				break;
 		}
 
 		return -1;
@@ -903,8 +1165,6 @@ using namespace metal_internal;
 		commandlist.queue = queue;
 		commandlist.id = cmd_current;
 		commandlist.commandbuffer = commandqueue->commandBufferWithUnretainedReferences();
-		commandlist.compute_encoder = commandlist.commandbuffer->computeCommandEncoder();
-		commandlist.blit_encoder = commandlist.commandbuffer->blitCommandEncoder();
 
 		return cmd;
 	}
@@ -914,12 +1174,27 @@ using namespace metal_internal;
 		cmd_count= 0;
 		for(uint32_t cmd = 0; cmd < cmd_last; ++cmd)
 		{
-			auto commandlist = commandlists[cmd].get();
-			for (MTK::View* view : commandlist->presents)
+			auto& commandlist = *commandlists[cmd].get();
+			for (MTK::View* view : commandlist.presents)
 			{
-				commandlist->commandbuffer->presentDrawable(view->currentDrawable());
+				commandlist.commandbuffer->presentDrawable(view->currentDrawable());
 			}
-			commandlist->commandbuffer->commit();
+			commandlist.commandbuffer->commit();
+			
+			for (auto& x : commandlist.pipelines_worker)
+			{
+				if (pipelines_global.count(x.first) == 0)
+				{
+				   pipelines_global[x.first] = x.second;
+				}
+				else
+				{
+				   allocationhandler->destroylocker.lock();
+				   allocationhandler->destroyer_render_pipelines.push_back(std::make_pair(x.second, FRAMECOUNT));
+				   allocationhandler->destroylocker.unlock();
+				}
+			}
+			commandlist.pipelines_worker.clear();
 		}
 		
 		// From here, we begin a new frame, this affects GetBufferIndex()!
@@ -965,6 +1240,18 @@ using namespace metal_internal;
 	void GraphicsDevice_Metal::RenderPassBegin(const SwapChain* swapchain, CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		assert(commandlist.render_encoder == nullptr);
+		if (commandlist.compute_encoder != nullptr)
+		{
+			commandlist.compute_encoder->endEncoding();
+			commandlist.compute_encoder = nullptr;
+		}
+		if (commandlist.blit_encoder != nullptr)
+		{
+			commandlist.blit_encoder->endEncoding();
+			commandlist.blit_encoder = nullptr;
+		}
+		
 		auto internal_state = to_internal(swapchain);
 		
 		commandlist.presents.push_back(internal_state->view);
@@ -977,12 +1264,119 @@ using namespace metal_internal;
 	void GraphicsDevice_Metal::RenderPassBegin(const RenderPassImage* images, uint32_t image_count, CommandList cmd, RenderPassFlags flags)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		assert(commandlist.render_encoder == nullptr);
+		if (commandlist.compute_encoder != nullptr)
+		{
+			commandlist.compute_encoder->endEncoding();
+			commandlist.compute_encoder = nullptr;
+		}
+		if (commandlist.blit_encoder != nullptr)
+		{
+			commandlist.blit_encoder->endEncoding();
+			commandlist.blit_encoder = nullptr;
+		}
+		
+		static thread_local NS::SharedPtr<MTL::RenderPassDescriptor> descriptor = NS::TransferPtr(MTL::RenderPassDescriptor::alloc());
+		static thread_local NS::SharedPtr<MTL::RenderPassColorAttachmentDescriptor> color_attachment_descriptors[8] = {
+			NS::TransferPtr(MTL::RenderPassColorAttachmentDescriptor::alloc()),
+			NS::TransferPtr(MTL::RenderPassColorAttachmentDescriptor::alloc()),
+			NS::TransferPtr(MTL::RenderPassColorAttachmentDescriptor::alloc()),
+			NS::TransferPtr(MTL::RenderPassColorAttachmentDescriptor::alloc()),
+			NS::TransferPtr(MTL::RenderPassColorAttachmentDescriptor::alloc()),
+			NS::TransferPtr(MTL::RenderPassColorAttachmentDescriptor::alloc()),
+			NS::TransferPtr(MTL::RenderPassColorAttachmentDescriptor::alloc()),
+			NS::TransferPtr(MTL::RenderPassColorAttachmentDescriptor::alloc()),
+		};
+		static thread_local NS::SharedPtr<MTL::RenderPassDepthAttachmentDescriptor> depth_attachment_descriptor = NS::TransferPtr(MTL::RenderPassDepthAttachmentDescriptor::alloc());
+		static thread_local NS::SharedPtr<MTL::RenderPassStencilAttachmentDescriptor> stencil_attachment_descriptor = NS::TransferPtr(MTL::RenderPassStencilAttachmentDescriptor::alloc());
+		
+		if (image_count > 0)
+		{
+			descriptor->setRenderTargetWidth(images[0].texture->desc.width);
+			descriptor->setRenderTargetHeight(images[0].texture->desc.height);
+			descriptor->setRenderTargetArrayLength(images[0].texture->desc.array_size);
+		}
+		
+		uint32_t color_attachment_index = 0;
+		for (uint32_t i = 0; i < image_count; ++i)
+		{
+			const RenderPassImage& image = images[i];
+			
+			MTL::LoadAction load_action;
+			switch (image.loadop) {
+				case RenderPassImage::LoadOp::DONTCARE:
+					load_action = MTL::LoadActionDontCare;
+					break;
+				case RenderPassImage::LoadOp::LOAD:
+					load_action = MTL::LoadActionLoad;
+					break;
+				case RenderPassImage::LoadOp::CLEAR:
+					load_action = MTL::LoadActionClear;
+					break;
+				default:
+					break;
+			}
+			MTL::StoreAction store_action;
+			switch (image.storeop) {
+			  case RenderPassImage::StoreOp::DONTCARE:
+				  store_action = MTL::StoreActionDontCare;
+				  break;
+			  case RenderPassImage::StoreOp::STORE:
+				  store_action = MTL::StoreActionStore;
+				  break;
+			  default:
+				  break;
+			}
+			
+			switch (image.type) {
+				case RenderPassImage::Type::RENDERTARGET:
+				{
+					auto internal_state = to_internal(image.texture);
+					MTL::RenderPassColorAttachmentDescriptor* color_attachment_descriptor = color_attachment_descriptors[i].get();
+					color_attachment_descriptor->init();
+					color_attachment_descriptor->setTexture(internal_state->texture.get());
+					color_attachment_descriptor->setClearColor(MTL::ClearColor::Make(image.texture->desc.clear.color[0], image.texture->desc.clear.color[1], image.texture->desc.clear.color[2], image.texture->desc.clear.color[3]));
+					color_attachment_descriptor->setLoadAction(load_action);
+					color_attachment_descriptor->setStoreAction(store_action);
+					descriptor->colorAttachments()->setObject(color_attachment_descriptor, color_attachment_index);
+					color_attachment_index++;
+					break;
+				}
+				case RenderPassImage::Type::DEPTH_STENCIL:
+				{
+					depth_attachment_descriptor->init();
+					depth_attachment_descriptor->setClearDepth(image.texture->desc.clear.depth_stencil.depth);
+					depth_attachment_descriptor->setLoadAction(load_action);
+					depth_attachment_descriptor->setStoreAction(store_action);
+					descriptor->setDepthAttachment(depth_attachment_descriptor.get());
+					if (IsFormatStencilSupport(image.texture->desc.format))
+					{
+						stencil_attachment_descriptor->init();
+						stencil_attachment_descriptor->setClearStencil(image.texture->desc.clear.depth_stencil.stencil);
+						stencil_attachment_descriptor->setLoadAction(load_action);
+						stencil_attachment_descriptor->setStoreAction(store_action);
+						descriptor->setStencilAttachment(stencil_attachment_descriptor.get());
+					}
+					break;
+				}
+				case RenderPassImage::Type::RESOLVE:
+					break;
+				case RenderPassImage::Type::RESOLVE_DEPTH:
+					break;
+				default:
+					assert(0);
+					break;
+			}
+		}
+		
+		commandlist.commandbuffer->renderCommandEncoder(descriptor.get());
 
 		commandlist.renderpass_info = RenderPassInfo::from(images, image_count);
 	}
 	void GraphicsDevice_Metal::RenderPassEnd(CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		assert(commandlist.render_encoder != nullptr);
 		
 		commandlist.render_encoder->endEncoding();
 
@@ -1003,6 +1397,11 @@ using namespace metal_internal;
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		assert(slot < DESCRIPTORBINDER_SRV_COUNT);
+		if (commandlist.binding_table.SRV[slot].internal_state == resource->internal_state && commandlist.binding_table.SRV_index[slot] == subresource)
+			return;
+		commandlist.dirty_bindings = true;
+		commandlist.binding_table.SRV[slot] = *resource;
+		commandlist.binding_table.SRV_index[slot] = subresource;
 	}
 	void GraphicsDevice_Metal::BindResources(const GPUResource *const* resources, uint32_t slot, uint32_t count, CommandList cmd)
 	{
@@ -1018,6 +1417,11 @@ using namespace metal_internal;
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		assert(slot < DESCRIPTORBINDER_UAV_COUNT);
+		if (commandlist.binding_table.UAV[slot].internal_state == resource->internal_state && commandlist.binding_table.UAV_index[slot] == subresource)
+			return;
+		commandlist.dirty_bindings = true;
+		commandlist.binding_table.UAV[slot] = *resource;
+		commandlist.binding_table.UAV_index[slot] = subresource;
 	}
 	void GraphicsDevice_Metal::BindUAVs(const GPUResource *const* resources, uint32_t slot, uint32_t count, CommandList cmd)
 	{
@@ -1033,11 +1437,20 @@ using namespace metal_internal;
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		assert(slot < DESCRIPTORBINDER_SAMPLER_COUNT);
+		if (commandlist.binding_table.SAM[slot].internal_state == sampler->internal_state)
+			return;
+		commandlist.dirty_bindings = true;
+		commandlist.binding_table.SAM[slot] = *sampler;
 	}
 	void GraphicsDevice_Metal::BindConstantBuffer(const GPUBuffer* buffer, uint32_t slot, CommandList cmd, uint64_t offset)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		assert(slot < DESCRIPTORBINDER_CBV_COUNT);
+		if (commandlist.binding_table.CBV[slot].internal_state == buffer->internal_state && commandlist.binding_table.CBV_offset[slot] == offset)
+			return;
+		commandlist.dirty_bindings = true;
+		commandlist.binding_table.CBV[slot] = *buffer;
+		commandlist.binding_table.CBV_offset[slot] = offset;
 	}
 	void GraphicsDevice_Metal::BindVertexBuffers(const GPUBuffer *const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint64_t* offsets, CommandList cmd)
 	{
@@ -1068,14 +1481,40 @@ using namespace metal_internal;
 	void GraphicsDevice_Metal::BindPipelineState(const PipelineState* pso, CommandList cmd)
 {
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-		if (commandlist.active_pso == pso)
-			return;
+		auto internal_state = to_internal(pso);
+		
+		if(internal_state->render_pipeline.get() == nullptr)
+		{
+			// Just in time pso:
+			PipelineHash pipeline_hash;
+			pipeline_hash.pso = pso;
+			pipeline_hash.renderpass_hash = commandlist.renderpass_info.get_hash();
+			if (commandlist.pipeline_hash != pipeline_hash)
+			{
+				commandlist.dirty_pso = true;
+				commandlist.pipeline_hash = pipeline_hash;
+			}
+		}
+		else
+		{
+			// Precompiled pso:
+			if (commandlist.active_pso != pso)
+			{
+				commandlist.active_pso = pso;
+				commandlist.dirty_pso = true;
+				commandlist.pipeline_hash = {};
+			}
+		}
 		commandlist.active_pso = pso;
-		commandlist.dirty_pso = true;
 	}
 	void GraphicsDevice_Metal::BindComputeShader(const Shader* cs, CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		if(commandlist.active_cs == cs)
+			return;
+		
+		commandlist.active_cs = cs;
+		
 		auto internal_state = to_internal(cs);
 		commandlist.compute_encoder->setComputePipelineState(internal_state->compute_pipeline.get());
 	}
@@ -1169,11 +1608,13 @@ using namespace metal_internal;
 	}
 	void GraphicsDevice_Metal::CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd)
 	{
+		precopy(cmd);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		
 	}
 	void GraphicsDevice_Metal::CopyBuffer(const GPUBuffer* pDst, uint64_t dst_offset, const GPUBuffer* pSrc, uint64_t src_offset, uint64_t size, CommandList cmd)
 	{
+		precopy(cmd);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		auto internal_state_src = to_internal(pSrc);
 		auto internal_state_dst = to_internal(pDst);
@@ -1181,6 +1622,7 @@ using namespace metal_internal;
 	}
 	void GraphicsDevice_Metal::CopyTexture(const Texture* dst, uint32_t dstX, uint32_t dstY, uint32_t dstZ, uint32_t dstMip, uint32_t dstSlice, const Texture* src, uint32_t srcMip, uint32_t srcSlice, CommandList cmd, const Box* srcbox, ImageAspect dst_aspect, ImageAspect src_aspect)
 	{
+		precopy(cmd);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		auto src_internal = to_internal(src);
 		auto dst_internal = to_internal(dst);
