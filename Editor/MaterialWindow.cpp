@@ -138,7 +138,6 @@ void MaterialWindow::Create(EditorComponent* _editor)
 					if (materialSection.Has("DisableStreaming")) material->SetTextureStreamingDisabled(materialSection.GetBool("DisableStreaming"));
 					if (materialSection.Has("CoplanarBlending")) material->SetCoplanarBlending(materialSection.GetBool("CoplanarBlending"));
 					if (materialSection.Has("CapsuleShadowDisabled")) material->SetCapsuleShadowDisabled(materialSection.GetBool("CapsuleShadowDisabled"));
-					if (materialSection.Has("EnvprobeLighting")) material->SetEnvprobeLighting(materialSection.GetBool("EnvprobeLighting"));
 
 					// Load slider values
 					if (materialSection.Has("NormalMapStrength")) material->normalMapStrength = materialSection.GetFloat("NormalMapStrength");
@@ -157,10 +156,6 @@ void MaterialWindow::Create(EditorComponent* _editor)
 					if (materialSection.Has("AnisotropyRotation")) material->anisotropy_rotation = materialSection.GetFloat("AnisotropyRotation");
 					if (materialSection.Has("DisplacementMapping")) material->displacementMapping = materialSection.GetFloat("DisplacementMapping");
 					if (materialSection.Has("SubsurfaceScatteringStrength")) material->subsurfaceScattering.w = materialSection.GetFloat("SubsurfaceScatteringStrength");
-					if (materialSection.Has("DetailMapScale")) material->detailMapScale = materialSection.GetFloat("DetailMapScale");
-					if (materialSection.Has("DetailMapDistance")) material->detailMapDistance = materialSection.GetFloat("DetailMapDistance");
-					if (materialSection.Has("DetailColorBrightness")) material->detailColorBrightness = materialSection.GetFloat("DetailColorBrightness");
-					if (materialSection.Has("DetailColorBlend")) material->detailColorBlend = materialSection.GetFloat("DetailColorBlend");
 					if (materialSection.Has("TexAnimFrameRate")) material->texAnimFrameRate = materialSection.GetFloat("TexAnimFrameRate");
 					if (materialSection.Has("TexAnimDirectionU")) material->texAnimDirection.x = materialSection.GetFloat("TexAnimDirectionU");
 					if (materialSection.Has("TexAnimDirectionV")) material->texAnimDirection.y = materialSection.GetFloat("TexAnimDirectionV");
@@ -207,10 +202,6 @@ void MaterialWindow::Create(EditorComponent* _editor)
 					if (materialSection.Has("ExtinctionColorR") && materialSection.Has("ExtinctionColorG") && materialSection.Has("ExtinctionColorB") && materialSection.Has("ExtinctionColorA"))
 					{
 						material->extinctionColor = XMFLOAT4(materialSection.GetFloat("ExtinctionColorR"), materialSection.GetFloat("ExtinctionColorG"), materialSection.GetFloat("ExtinctionColorB"), materialSection.GetFloat("ExtinctionColorA"));
-					}
-					if (materialSection.Has("DetailColorR") && materialSection.Has("DetailColorG") && materialSection.Has("DetailColorB") && materialSection.Has("DetailColorA"))
-					{
-						material->detailColor = XMFLOAT4(materialSection.GetFloat("DetailColorR"), materialSection.GetFloat("DetailColorG"), materialSection.GetFloat("DetailColorB"), materialSection.GetFloat("DetailColorA"));
 					}
 
 					material->SetDirty();
@@ -262,7 +253,6 @@ void MaterialWindow::Create(EditorComponent* _editor)
 				materialSection.Set("DisableStreaming", material->IsTextureStreamingDisabled());
 				materialSection.Set("CoplanarBlending", material->IsCoplanarBlending());
 				materialSection.Set("CapsuleShadowDisabled", material->IsCapsuleShadowDisabled());
-				materialSection.Set("EnvprobeLighting", material->IsEnvprobeLighting());
 
 				// Save slider values
 				materialSection.Set("NormalMapStrength", material->normalMapStrength);
@@ -281,10 +271,6 @@ void MaterialWindow::Create(EditorComponent* _editor)
 				materialSection.Set("AnisotropyRotation", material->anisotropy_rotation);
 				materialSection.Set("DisplacementMapping", material->displacementMapping);
 				materialSection.Set("SubsurfaceScatteringStrength", material->subsurfaceScattering.w);
-				materialSection.Set("DetailMapScale", material->detailMapScale);
-				materialSection.Set("DetailMapDistance", material->detailMapDistance);
-				materialSection.Set("DetailColorBrightness", material->detailColorBrightness);
-				materialSection.Set("DetailColorBlend", material->detailColorBlend);
 				materialSection.Set("TexAnimFrameRate", material->texAnimFrameRate);
 				materialSection.Set("TexAnimDirectionU", material->texAnimDirection.x);
 				materialSection.Set("TexAnimDirectionV", material->texAnimDirection.y);
@@ -326,10 +312,6 @@ void MaterialWindow::Create(EditorComponent* _editor)
 				materialSection.Set("ExtinctionColorG", material->extinctionColor.y);
 				materialSection.Set("ExtinctionColorB", material->extinctionColor.z);
 				materialSection.Set("ExtinctionColorA", material->extinctionColor.w);
-				materialSection.Set("DetailColorR", material->detailColor.x);
-				materialSection.Set("DetailColorG", material->detailColor.y);
-				materialSection.Set("DetailColorB", material->detailColor.z);
-				materialSection.Set("DetailColorA", material->detailColor.w);
 
 				config.Commit();
 				wi::backlog::post("Material preset saved: " + filePath);
