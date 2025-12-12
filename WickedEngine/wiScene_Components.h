@@ -2229,6 +2229,7 @@ namespace wi::scene
 			RAGDOLL_PHYSICS = 1 << 1,
 			DISABLE_INTERSECTION = 1 << 2,
 			DISABLE_CAPSULE_SHADOW = 1 << 3,
+			RAGDOLL_DISABLED = 1 << 4,
 		};
 		uint32_t _flags = LOOKAT;
 
@@ -2308,11 +2309,13 @@ namespace wi::scene
 		constexpr bool IsRagdollPhysicsEnabled() const { return _flags & RAGDOLL_PHYSICS; }
 		constexpr bool IsIntersectionDisabled() const { return _flags & DISABLE_INTERSECTION; }
 		constexpr bool IsCapsuleShadowDisabled() const { return _flags & DISABLE_CAPSULE_SHADOW; }
+		constexpr bool IsRagdollDisabled() const { return _flags & RAGDOLL_DISABLED; }
 
 		constexpr void SetLookAtEnabled(bool value = true) { if (value) { _flags |= LOOKAT; } else { _flags &= ~LOOKAT; } }
 		constexpr void SetRagdollPhysicsEnabled(bool value = true) { if (value) { _flags |= RAGDOLL_PHYSICS; } else { _flags &= ~RAGDOLL_PHYSICS; } }
 		constexpr void SetIntersectionDisabled(bool value = true) { if (value) { _flags |= DISABLE_INTERSECTION; } else { _flags &= ~DISABLE_INTERSECTION; } }
 		constexpr void SetCapsuleShadowDisabled(bool value = true) { if (value) { _flags |= DISABLE_CAPSULE_SHADOW; } else { _flags &= ~DISABLE_CAPSULE_SHADOW; } }
+		constexpr void SetRagdollDisabled(bool value = true) { if (value) { _flags |= RAGDOLL_DISABLED; } else { _flags &= ~RAGDOLL_DISABLED; } }
 
 		XMFLOAT2 head_rotation_max = XMFLOAT2(XM_PI / 3.0f, XM_PI / 6.0f);
 		XMFLOAT2 eye_rotation_max = XMFLOAT2(XM_PI / 20.0f, XM_PI / 20.0f);

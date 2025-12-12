@@ -60,7 +60,19 @@ void HumanoidWindow::Create(EditorComponent* _editor)
 	}));
 	AddWidget(&lookatEntityCombo);
 
-	ragdollCheckBox.Create("Ragdoll: ");
+	ragdollDisabledCheckBox.Create("Ragdoll Disabled: ");
+	ragdollDisabledCheckBox.SetTooltip("Completely disable ragdoll physics creation for this humanoid.\nUseful for cases where the humanoid skeleton should not have any physics interaction.");
+	ragdollDisabledCheckBox.OnClick(forEachSelected([this] (auto humanoid, auto args) {
+		humanoid->SetRagdollDisabled(args.bValue);
+		if (args.bValue)
+		{
+			humanoid->ragdoll = {}; // immediately delete ragdoll if disabled
+		}
+		ragdollCheckBox.SetEnabled(!args.bValue);
+	}));
+	AddWidget(&ragdollDisabledCheckBox);
+
+	ragdollCheckBox.Create("Ragdoll Physics Enabled: ");
 	ragdollCheckBox.SetTooltip("Activate dynamic ragdoll physics.\nNote that kinematic ragdoll physics is always active (ragdoll is animation-driven/kinematic by default).\nNote that scaling humanoid will disable ragdoll physics and you need to re-enable if you want to.");
 	ragdollCheckBox.OnClick(forEachSelected([] (auto humanoid, auto args) {
 		humanoid->SetRagdollPhysicsEnabled(args.bValue);
@@ -318,7 +330,9 @@ void HumanoidWindow::SetEntity(Entity entity)
 		if (humanoid != nullptr)
 		{
 			lookatCheckBox.SetCheck(humanoid->IsLookAtEnabled());
+			ragdollDisabledCheckBox.SetCheck(humanoid->IsRagdollDisabled());
 			ragdollCheckBox.SetCheck(humanoid->IsRagdollPhysicsEnabled());
+			ragdollCheckBox.SetEnabled(!humanoid->IsRagdollDisabled());
 			capsuleShadowCheckBox.SetCheck(humanoid->IsCapsuleShadowDisabled());
 			headRotMaxXSlider.SetValue(wi::math::RadiansToDegrees(humanoid->head_rotation_max.x));
 			headRotMaxYSlider.SetValue(wi::math::RadiansToDegrees(humanoid->head_rotation_max.y));
@@ -602,6 +616,7 @@ void HumanoidWindow::ResizeLayout()
 	layout.add_right(lookatCheckBox);
 	lookatMouseCheckBox.SetPos(XMFLOAT2(lookatCheckBox.GetPos().x - 120, lookatCheckBox.GetPos().y));
 	layout.add(lookatEntityCombo);
+	layout.add_right(ragdollDisabledCheckBox);
 	layout.add_right(ragdollCheckBox);
 	layout.add_right(capsuleShadowCheckBox);
 	layout.add(headRotMaxXSlider);
