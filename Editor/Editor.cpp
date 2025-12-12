@@ -1966,9 +1966,24 @@ void EditorComponent::Update(float dt)
 			if (!paintToolWnd.IsVisible() && std::abs(currentMouse.z) > 0.1f)
 			{
 				float current = cameraWnd.movespeedSlider.GetValue();
-				float increment = current > 10 ? 2.0f : 1.0f;
-				float add = currentMouse.z < 0 ? -increment : increment;
-				cameraWnd.movespeedSlider.SetValue(std::max(0.1f, std::ceil(current + add)));
+				bool scrollingDown = currentMouse.z < 0;
+				float newValue;
+
+				if (current < 1.0f || (current == 1.0f && scrollingDown))
+				{
+					// Below 1.0 threshold: use 0.1 increments
+					float add = scrollingDown ? -0.1f : 0.1f;
+					newValue = std::max(0.1f, current + add);
+				}
+				else
+				{
+					// Above 1.0 threshold
+					float increment = current > 10 ? 2.0f : 1.0f;
+					float add = scrollingDown ? -increment : increment;
+					newValue = std::max(0.1f, std::ceil(current + add));
+				}
+
+				cameraWnd.movespeedSlider.SetValue(newValue);
 				char txt[256];
 				snprintf(txt, arraysize(txt), "Camera speed: %.1f", cameraWnd.movespeedSlider.GetValue());
 				save_text_message = txt;
