@@ -599,7 +599,6 @@ void TransformWindow::ResizeLayout()
 
 	layout.add_fullwidth(clearButton);
 	layout.add_fullwidth(moveToEditorCameraButton);
-	layout.add_fullwidth(applyScaleToObjectButton);
 
 	float safe_width = layout.width - 100 - 20 - layout.padding;
 	txInput.SetSize(XMFLOAT2(safe_width / 3.0f - layout.padding, txInput.GetSize().y));
@@ -639,6 +638,8 @@ void TransformWindow::ResizeLayout()
 	rzInput.SetPos(XMFLOAT2(rwInput.GetPos().x - rzInput.GetSize().x - layout.padding, rwInput.GetPos().y));
 	ryInput.SetPos(XMFLOAT2(rzInput.GetPos().x - ryInput.GetSize().x - layout.padding, rzInput.GetPos().y));
 	rxInput.SetPos(XMFLOAT2(ryInput.GetPos().x - rxInput.GetSize().x - layout.padding, ryInput.GetPos().y));
+
+	layout.add_fullwidth(applyScaleToObjectButton);
 
 	layout.jump();
 
