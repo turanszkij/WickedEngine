@@ -1298,6 +1298,7 @@ void EditorComponent::Load()
 		ss += "Move camera: " + GetInputString(EditorActions::MOVE_CAMERA_FORWARD) + ", " + GetInputString(EditorActions::MOVE_CAMERA_LEFT) + ", " + GetInputString(EditorActions::MOVE_CAMERA_BACKWARD) + ", " + GetInputString(EditorActions::MOVE_CAMERA_RIGHT) + ", or Controller left stick or D - pad\n";
 		ss += "Look: Right mouse button / arrow keys / controller right stick\n";
 		ss += "Select: Left mouse button\n";
+		ss += "Select top-level parent: Alt + Left mouse button\n";
 		ss += "Interact with physics/water/grass: Middle mouse button\n";
 		ss += "Faster camera: Left Shift button or controller R2/RT\n";
 		ss += "Snap to grid transform: Ctrl (hold while transforming)\n";
@@ -1322,6 +1323,7 @@ void EditorComponent::Load()
 		ss += "Move Toggle: " + GetInputString(EditorActions::MOVE_TOGGLE_ACTION) + "\n";
 		ss += "Rotate Toggle: " + GetInputString(EditorActions::ROTATE_TOGGLE_ACTION) + "\n";
 		ss += "Scale Toggle: " + GetInputString(EditorActions::SCALE_TOGGLE_ACTION) + "\n";
+		ss += "Reload terrain props: " + GetInputString(EditorActions::RELOAD_TERRAIN_PROPS) + "\n";
 		ss += "Wireframe mode: " + GetInputString(EditorActions::WIREFRAME_MODE) + "\n";
 		ss += "Screenshot (saved into Editor's screenshots folder): " + GetInputString(EditorActions::SCREENSHOT) + "\n";
 		ss += "Screenshot with background as alpha (saved into Editor's screenshots folder): " + GetInputString(EditorActions::SCREENSHOT_ALPHA) + "\n";
@@ -1818,6 +1820,16 @@ void EditorComponent::Update(float dt)
 			paintToolWnd.GetMode() == PaintToolWindow::MODE::MODE_DISABLED && // paint tool shouldn't be active
 			(!componentsWnd.decalWnd.IsEnabled() || !componentsWnd.decalWnd.placementCheckBox.GetCheck()) && // decal placement shouldn't be active
 			!(wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) && wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT)) && // instance placement shouldn't be active
+			!wi::input::Down(wi::input::KEYBOARD_BUTTON_ALT) &&
+			viewport3D_hitbox.intersects(XMFLOAT2(currentMouse.x, currentMouse.y)) &&
+			wi::input::Press(wi::input::MOUSE_BUTTON_LEFT);
+
+		// Alt+Click to select parent entity:
+		const bool altmouse_select_parent =
+			!translator.IsInteracting() &&
+			paintToolWnd.GetMode() == PaintToolWindow::MODE::MODE_DISABLED &&
+			(!componentsWnd.decalWnd.IsEnabled() || !componentsWnd.decalWnd.placementCheckBox.GetCheck()) &&
+			wi::input::Down(wi::input::KEYBOARD_BUTTON_ALT) &&
 			viewport3D_hitbox.intersects(XMFLOAT2(currentMouse.x, currentMouse.y)) &&
 			wi::input::Press(wi::input::MOUSE_BUTTON_LEFT);
 
@@ -2486,6 +2498,36 @@ void EditorComponent::Update(float dt)
 						}
 					}
 				}
+			}
+		}
+
+		// Select top-level parent...
+		if (altmouse_select_parent && hovered.entity != INVALID_ENTITY)
+		{
+			const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(hovered.entity);
+			if (hierarchy != nullptr && hierarchy->parentID != INVALID_ENTITY)
+			{
+				Entity topParent = hierarchy->parentID;
+				const HierarchyComponent* parentHierarchy = scene.hierarchy.GetComponent(topParent);
+				while (parentHierarchy != nullptr && parentHierarchy->parentID != INVALID_ENTITY)
+				{
+					topParent = parentHierarchy->parentID;
+					parentHierarchy = scene.hierarchy.GetComponent(topParent);
+				}
+
+				wi::Archive& archive = AdvanceHistory(true);
+				archive << HISTORYOP_SELECTION;
+				// record PREVIOUS selection state...
+				RecordSelection(archive);
+
+				// Select the top-level parent entity:
+				translator.selected.clear();
+				AddSelected(topParent);
+
+				// record NEW selection state...
+				RecordSelection(archive);
+
+				componentsWnd.RefreshEntityTree();
 			}
 		}
 
