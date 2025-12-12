@@ -416,6 +416,138 @@ void TransformWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&resetRotationButton);
 
+	applyScaleToObjectButton.Create("Apply Scale to Object");
+	applyScaleToObjectButton.SetTooltip("Recomputes the vertex positions of child object meshes, morph target positions, and armature bones to apply the current transform scale");
+	applyScaleToObjectButton.SetSize(XMFLOAT2(wid + hei + 1, hei));
+	applyScaleToObjectButton.OnClick([=](wi::gui::EventArgs args) {
+		Scene& scene = editor->GetCurrentScene();
+		TransformComponent* transform = scene.transforms.GetComponent(entity);
+		if (transform == nullptr)
+			return;
+
+		const XMFLOAT3& scale = transform->scale_local;
+		if (scale.x == 1.0f && scale.y == 1.0f && scale.z == 1.0f)
+			return;
+
+		wi::Archive& archive = editor->AdvanceHistory();
+		archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+		editor->RecordEntity(archive, entity);
+
+		wi::vector<Entity> entities_to_process;
+		entities_to_process.push_back(entity);
+		scene.GetChildren(entity, entities_to_process);
+
+		wi::unordered_set<Entity> processed_meshes;
+		wi::unordered_set<Entity> processed_armatures;
+
+		for (Entity e : entities_to_process)
+		{
+			// Process ObjectComponent meshes
+			ObjectComponent* object = scene.objects.GetComponent(e);
+			if (object != nullptr && object->meshID != INVALID_ENTITY)
+			{
+				if (processed_meshes.count(object->meshID) == 0)
+				{
+					processed_meshes.insert(object->meshID);
+
+					MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
+					if (mesh != nullptr)
+					{
+						editor->RecordEntity(archive, object->meshID);
+
+						// Apply scale to all vertex positions
+						for (XMFLOAT3& pos : mesh->vertex_positions)
+						{
+							pos.x *= scale.x;
+							pos.y *= scale.y;
+							pos.z *= scale.z;
+						}
+
+						// Apply scale to morph target positions
+						for (MeshComponent::MorphTarget& morph : mesh->morph_targets)
+						{
+							for (XMFLOAT3& pos : morph.vertex_positions)
+							{
+								pos.x *= scale.x;
+								pos.y *= scale.y;
+								pos.z *= scale.z;
+							}
+						}
+
+						// Process the armature associated with this mesh
+						if (mesh->armatureID != INVALID_ENTITY && processed_armatures.count(mesh->armatureID) == 0)
+						{
+							processed_armatures.insert(mesh->armatureID);
+
+							ArmatureComponent* armature = scene.armatures.GetComponent(mesh->armatureID);
+							if (armature != nullptr)
+							{
+								editor->RecordEntity(archive, mesh->armatureID);
+
+								// Apply scale to inverse bind matrices
+								for (XMFLOAT4X4& bind : armature->inverseBindMatrices)
+								{
+									XMVECTOR V_S, V_R, V_T;
+									XMMatrixDecompose(&V_S, &V_R, &V_T, XMLoadFloat4x4(&bind));
+									XMFLOAT3 pos, bindScale;
+									XMFLOAT4 rot;
+									XMStoreFloat3(&bindScale, V_S);
+									XMStoreFloat3(&pos, V_T);
+									XMStoreFloat4(&rot, V_R);
+
+									// Scale the translation component
+									pos.x *= scale.x;
+									pos.y *= scale.y;
+									pos.z *= scale.z;
+
+									XMMATRIX newBind =
+										XMMatrixScalingFromVector(XMLoadFloat3(&bindScale)) *
+										XMMatrixRotationQuaternion(XMLoadFloat4(&rot)) *
+										XMMatrixTranslationFromVector(XMLoadFloat3(&pos));
+									XMStoreFloat4x4(&bind, newBind);
+								}
+
+								// Apply scale to bone transforms
+								for (Entity boneEntity : armature->boneCollection)
+								{
+									TransformComponent* boneTransform = scene.transforms.GetComponent(boneEntity);
+									if (boneTransform != nullptr)
+									{
+										editor->RecordEntity(archive, boneEntity);
+
+										boneTransform->translation_local.x *= scale.x;
+										boneTransform->translation_local.y *= scale.y;
+										boneTransform->translation_local.z *= scale.z;
+										boneTransform->SetDirty();
+
+										editor->RecordEntity(archive, boneEntity);
+									}
+								}
+
+								editor->RecordEntity(archive, mesh->armatureID);
+							}
+						}
+
+						// Recreate render data for the modified mesh
+						mesh->CreateRenderData();
+						if (!mesh->BLASes.empty())
+						{
+							mesh->CreateRaytracingRenderData();
+						}
+
+						editor->RecordEntity(archive, object->meshID);
+					}
+				}
+			}
+		}
+
+		transform->scale_local = XMFLOAT3(1, 1, 1);
+		transform->SetDirty();
+
+		editor->RecordEntity(archive, entity);
+	});
+	AddWidget(&applyScaleToObjectButton);
+
 
 	SetMinimized(true);
 	SetVisible(false);
@@ -467,6 +599,7 @@ void TransformWindow::ResizeLayout()
 
 	layout.add_fullwidth(clearButton);
 	layout.add_fullwidth(moveToEditorCameraButton);
+	layout.add_fullwidth(applyScaleToObjectButton);
 
 	float safe_width = layout.width - 100 - 20 - layout.padding;
 	txInput.SetSize(XMFLOAT2(safe_width / 3.0f - layout.padding, txInput.GetSize().y));
@@ -512,5 +645,4 @@ void TransformWindow::ResizeLayout()
 	layout.add_right(snapScaleInput);
 	layout.add_right(snapRotateInput);
 	layout.add_right(snapTranslateInput);
-
 }
