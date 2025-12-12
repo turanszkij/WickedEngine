@@ -435,7 +435,7 @@ void TransformWindow::Create(EditorComponent* _editor)
 
 		wi::vector<Entity> entities_to_process;
 		entities_to_process.push_back(entity);
-		scene.GetChildren(entity, entities_to_process);
+		scene.GatherChildren(entity, entities_to_process);
 
 		wi::unordered_set<Entity> processed_meshes;
 		wi::unordered_set<Entity> processed_armatures;
