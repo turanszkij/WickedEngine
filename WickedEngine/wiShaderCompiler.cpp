@@ -570,7 +570,9 @@ namespace wi::shadercompiler
 				{
 #define LINK_IR(name) using PFN_##name = decltype(&name); static PFN_##name name = (PFN_##name)wiGetProcAddress(irconverter, #name);
 					LINK_IR(IRCompilerCreate)
+					LINK_IR(IRCompilerSetValidationFlags)
 					LINK_IR(IRCompilerSetEntryPointName)
+					LINK_IR(IRCompilerSetStageInGenerationMode)
 					LINK_IR(IRObjectCreateFromDXIL)
 					LINK_IR(IRCompilerAllocCompileAndLink)
 					LINK_IR(IRErrorDestroy)
@@ -737,8 +739,10 @@ namespace wi::shadercompiler
 					}
 					
 					IRCompiler* pCompiler = IRCompilerCreate();
+					IRCompilerSetValidationFlags(pCompiler, IRCompilerValidationFlagAll);
 					IRCompilerSetEntryPointName(pCompiler, input.entrypoint.c_str());
 					IRCompilerSetGlobalRootSignature(pCompiler, pRootSig);
+					IRCompilerSetStageInGenerationMode(pCompiler, IRStageInCodeGenerationModeUseMetalVertexFetch);
 					IRObject* pDXIL = IRObjectCreateFromDXIL(output.shaderdata, output.shadersize, IRBytecodeOwnershipNone);
 					IRError* pError = nullptr;
 					IRObject* pOutIR = IRCompilerAllocCompileAndLink(pCompiler, NULL, pDXIL, &pError);

@@ -44,6 +44,15 @@ namespace wi::graphics
 			PipelineHash pipeline_hash;
 			DescriptorBindingTable binding_table;
 			bool dirty_bindings = false;
+			
+			struct VertexBufferBinding
+			{
+				GPUBuffer buffer;
+				uint64_t offset = 0;
+				uint32_t stride = 0;
+			};
+			VertexBufferBinding vertex_buffers[32];
+			bool dirty_vb = false;
 
 			void reset(uint32_t bufferindex)
 			{
@@ -66,6 +75,11 @@ namespace wi::graphics
 				pipeline_hash = {};
 				binding_table = {};
 				dirty_bindings = true;
+				for (auto& x : vertex_buffers)
+				{
+					x = {};
+				}
+				dirty_vb = false;
 			}
 		};
 		wi::vector<std::unique_ptr<CommandList_Metal>> commandlists;
@@ -233,6 +247,7 @@ namespace wi::graphics
 			std::deque<std::pair<int, uint64_t>> destroyer_bindless_sam;
 			wi::vector<int> free_bindless_res;
 			wi::vector<int> free_bindless_sam;
+			uint8_t* argument_buffer_data = nullptr;
 
 			void Update(uint64_t FRAMECOUNT, uint32_t BUFFERCOUNT)
 			{
@@ -280,23 +295,40 @@ namespace wi::graphics
 				}
 			}
 			
-			int allocate_bindless_res()
+			static_assert(sizeof(MTL::ResourceID) == sizeof(MTL::GPUAddress));
+			int allocate_bindless(MTL::Texture* res)
 			{
 				std::scoped_lock lck(destroylocker);
 				if(free_bindless_res.empty())
 					return -1;
-				int ret = free_bindless_res.back();
+				int index = free_bindless_res.back();
 				free_bindless_res.pop_back();
-				return ret;
+				MTL::ResourceID handle = res->gpuResourceID();
+				std::memcpy(argument_buffer_data + index * sizeof(handle), &handle, sizeof(handle));
+				return index;
 			}
-			int allocate_bindless_sam()
+			int allocate_bindless(MTL::Buffer* res, uint64_t offset = 0)
+			{
+				std::scoped_lock lck(destroylocker);
+				if(free_bindless_res.empty())
+					return -1;
+				int index = free_bindless_res.back();
+				free_bindless_res.pop_back();
+				MTL::GPUAddress handle = res->gpuAddress();
+				handle += offset;
+				std::memcpy(argument_buffer_data + index * sizeof(handle), &handle, sizeof(handle));
+				return index;
+			}
+			int allocate_bindless(MTL::SamplerState* res)
 			{
 				std::scoped_lock lck(destroylocker);
 				if(free_bindless_sam.empty())
 					return -1;
-				int ret = free_bindless_sam.back();
+				int index = free_bindless_sam.back();
 				free_bindless_sam.pop_back();
-				return ret;
+				MTL::ResourceID handle = res->gpuResourceID();
+				std::memcpy(argument_buffer_data + index * sizeof(handle), &handle, sizeof(handle));
+				return index;
 			}
 		};
 		wi::allocator::shared_ptr<AllocationHandler> allocationhandler;

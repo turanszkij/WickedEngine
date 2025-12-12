@@ -269,6 +269,8 @@ namespace metal_internal
 		struct Subresource
 		{
 			NS::SharedPtr<MTL::Buffer> buffer;
+			uint64_t offset = 0;
+			uint64_t size = 0;
 			int index = -1;
 		};
 		Subresource srv;
@@ -404,6 +406,8 @@ namespace metal_internal
 			allocationhandler->destroylocker.lock();
 			uint64_t framecount = allocationhandler->framecount;
 			allocationhandler->destroyer_samplers.push_back(std::make_pair(std::move(sampler), framecount));
+			if (index >= 0)
+				allocationhandler->destroyer_bindless_sam.push_back(std::make_pair(index, framecount));
 			allocationhandler->destroylocker.unlock();
 		}
 	};
@@ -444,6 +448,7 @@ namespace metal_internal
 		wi::allocator::shared_ptr<GraphicsDevice_Metal::AllocationHandler> allocationhandler;
 		NS::SharedPtr<MTL::RenderPipelineDescriptor> descriptor;
 		NS::SharedPtr<MTL::RenderPipelineState> render_pipeline;
+		uint32_t vertex_attribute_mapping[32] = {};
 
 		~PipelineState_Metal()
 		{
@@ -541,21 +546,46 @@ using namespace metal_internal;
 	void GraphicsDevice_Metal::binder_flush(CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-		if (!commandlist.dirty_bindings)
-			return;
-		commandlist.dirty_bindings = false;
-		
-		uint64_t offset = 0;
-		
-		if (commandlist.render_encoder != nullptr)
+		if (commandlist.dirty_bindings)
 		{
-			if (commandlist.active_pso->desc.vs != nullptr)
+			commandlist.dirty_bindings = false;
+			
+			uint64_t offset = 0;
+			
+			if (commandlist.render_encoder != nullptr)
 			{
-				commandlist.render_encoder->setVertexBuffer(argument_buffer.get(), offset, 0);
+				if (commandlist.active_pso->desc.vs != nullptr)
+				{
+					commandlist.render_encoder->setVertexBuffer(argument_buffer.get(), offset, 0);
+					commandlist.render_encoder->setVertexBuffer(argument_buffer.get(), offset, 1);
+					commandlist.render_encoder->setVertexBuffer(argument_buffer.get(), offset, 2);
+					commandlist.render_encoder->setVertexBuffer(argument_buffer.get(), offset, 3);
+				}
+				if (commandlist.active_pso->desc.ps != nullptr)
+				{
+					commandlist.render_encoder->setFragmentBuffer(argument_buffer.get(), offset, 0);
+					commandlist.render_encoder->setFragmentBuffer(argument_buffer.get(), offset, 1);
+					commandlist.render_encoder->setFragmentBuffer(argument_buffer.get(), offset, 2);
+					commandlist.render_encoder->setFragmentBuffer(argument_buffer.get(), offset, 3);
+				}
 			}
-			if (commandlist.active_pso->desc.ps != nullptr)
+		}
+		if(commandlist.dirty_vb)
+		{
+			commandlist.dirty_vb = false;
+			
+			if (commandlist.active_pso != nullptr && commandlist.active_pso->desc.vs != nullptr)
 			{
-				commandlist.render_encoder->setFragmentBuffer(argument_buffer.get(), offset, 0);
+				auto pso_internal = to_internal(commandlist.active_pso);
+				for (uint32_t i = 0; i < arraysize(commandlist.vertex_buffers); ++i)
+				{
+					auto& vb = commandlist.vertex_buffers[i];
+					if (!vb.buffer.IsValid())
+						continue;
+					uint32_t bind_slot = pso_internal->vertex_attribute_mapping[i];
+					auto buffer_internal = to_internal(&vb.buffer);
+					commandlist.render_encoder->setVertexBuffer(buffer_internal->buffer.get(), vb.offset, bind_slot);
+				}
 			}
 		}
 	}
@@ -668,6 +698,7 @@ using namespace metal_internal;
 		argument_buffer_bindless_sampler_capacity = std::min(argument_buffer_bindless_sampler_capacity, (uint64_t)device->maxArgumentBufferSamplerCount());
 		argument_buffer = NS::TransferPtr(device->newBuffer(argument_buffer_capacity * sizeof(MTL::ResourceID), MTL::ResourceStorageModeShared | MTL::ResourceHazardTrackingModeUntracked));
 		argument_buffer_data = (uint8_t*)argument_buffer->contents();
+		allocationhandler->argument_buffer_data = argument_buffer_data;
 		allocationhandler->free_bindless_res.reserve(argument_buffer_bindless_resource_capacity);
 		allocationhandler->free_bindless_sam.reserve(argument_buffer_bindless_sampler_capacity);
 		for (int i = 0; i < argument_buffer_bindless_sampler_capacity; ++i)
@@ -696,7 +727,7 @@ using namespace metal_internal;
 			CGRect frame = (CGRect){ {0.0f, 0.0f}, {float(desc->width), float(desc->height)} };
 			internal_state->view = (MTK::View*)window;
 			internal_state->view->init(frame, device.get());
-			internal_state->view->setColorPixelFormat(MTL::PixelFormat::PixelFormatBGRA8Unorm_sRGB);
+			internal_state->view->setColorPixelFormat(_ConvertPixelFormat(desc->format));
 			internal_state->view->setClearColor(MTL::ClearColor::Make(desc->clear_color[0], desc->clear_color[1], desc->clear_color[2], desc->clear_color[3]));
 		}
 
@@ -870,14 +901,13 @@ using namespace metal_internal;
 		
 		if (stage == ShaderStage::HS || stage == ShaderStage::DS || stage == ShaderStage::GS)
 			return false; // TODO
-		
-		bool tessellationEnabled = false;
-		int vertex_shader_output_size_fc = 1024;
-		if (stage == ShaderStage::HS || stage == ShaderStage::DS || stage == ShaderStage::GS)
-		{
-			constants->setConstantValue(&tessellationEnabled, MTL::DataTypeBool, (NS::UInteger)0);
-			constants->setConstantValue(&vertex_shader_output_size_fc, MTL::DataTypeInt, (NS::UInteger)1);
-		}
+		//bool tessellationEnabled = false;
+		//int vertex_shader_output_size_fc = 1024;
+		//if (stage == ShaderStage::HS || stage == ShaderStage::DS || stage == ShaderStage::GS)
+		//{
+		//	constants->setConstantValue(&tessellationEnabled, MTL::DataTypeBool, (NS::UInteger)0);
+		//	constants->setConstantValue(&vertex_shader_output_size_fc, MTL::DataTypeInt, (NS::UInteger)1);
+		//}
 		
 		internal_state->function = NS::TransferPtr(internal_state->library->newFunction(entry.get(), constants.get(), &error));
 		if(error != nullptr)
@@ -896,15 +926,21 @@ using namespace metal_internal;
 		internal_state->allocationhandler = allocationhandler;
 		sampler->internal_state = internal_state;
 		sampler->desc = *desc;
+		
+		NS::SharedPtr<MTL::SamplerDescriptor> descriptor = NS::TransferPtr(MTL::SamplerDescriptor::alloc()->init());
+		descriptor->setSupportArgumentBuffers(true);
+		// TODO
+		internal_state->sampler = NS::TransferPtr(device->newSamplerState(descriptor.get()));
+		allocationhandler->allocate_bindless(internal_state->sampler.get());
 
 		return false;
 	}
 	bool GraphicsDevice_Metal::CreateQueryHeap(const GPUQueryHeapDesc* desc, GPUQueryHeap* queryheap) const
 	{
-		auto internal_state = wi::allocator::make_shared<QueryHeap_Metal>();
-		internal_state->allocationhandler = allocationhandler;
-		queryheap->internal_state = internal_state;
-		queryheap->desc = *desc;
+		//auto internal_state = wi::allocator::make_shared<QueryHeap_Metal>();
+		//internal_state->allocationhandler = allocationhandler;
+		//queryheap->internal_state = internal_state;
+		//queryheap->desc = *desc;
 
 		return false;
 	}
@@ -961,10 +997,11 @@ using namespace metal_internal;
 				for (NS::UInteger i = 0; i < attributes->count(); ++i)
 				{
 					MTL::VertexAttribute* attr = (MTL::VertexAttribute*)attributes->object(i);
-					const uint64_t attribute_index = attr->attributeIndex();
+					const uint32_t attribute_index = (uint32_t)attr->attributeIndex();
 					if (attr != nullptr && attr->isActive())
 					{
 						const InputLayout::Element& element = desc->il->elements[index++];
+						internal_state->vertex_attribute_mapping[index] = attribute_index;
 						MTL::VertexBufferLayoutDescriptor* layout = vertex_descriptor->layouts()->object(attribute_index);
 						const uint64_t stride = GetFormatStride(element.format);
 						layout->setStride(stride);
@@ -1005,6 +1042,22 @@ using namespace metal_internal;
 		
 		if (renderpass_info != nullptr)
 		{
+			NS::SharedPtr<MTL::RenderPipelineColorAttachmentDescriptor> attachments[8] = {
+				NS::TransferPtr(MTL::RenderPipelineColorAttachmentDescriptor::alloc()->init()),
+				NS::TransferPtr(MTL::RenderPipelineColorAttachmentDescriptor::alloc()->init()),
+				NS::TransferPtr(MTL::RenderPipelineColorAttachmentDescriptor::alloc()->init()),
+				NS::TransferPtr(MTL::RenderPipelineColorAttachmentDescriptor::alloc()->init()),
+				NS::TransferPtr(MTL::RenderPipelineColorAttachmentDescriptor::alloc()->init()),
+				NS::TransferPtr(MTL::RenderPipelineColorAttachmentDescriptor::alloc()->init()),
+				NS::TransferPtr(MTL::RenderPipelineColorAttachmentDescriptor::alloc()->init()),
+				NS::TransferPtr(MTL::RenderPipelineColorAttachmentDescriptor::alloc()->init()),
+			};
+			for (uint32_t i = 0; i < renderpass_info->rt_count; ++i)
+			{
+				MTL::RenderPipelineColorAttachmentDescriptor& attachment = *attachments[i].get();
+				attachments[i]->setPixelFormat(_ConvertPixelFormat(renderpass_info->rt_formats[i]));
+				internal_state->descriptor->colorAttachments()->setObject(&attachment, i);
+			}
 			internal_state->descriptor->setDepthAttachmentPixelFormat(_ConvertPixelFormat(renderpass_info->ds_format));
 			
 			uint32_t sample_count = renderpass_info->sample_count;
@@ -1030,30 +1083,30 @@ using namespace metal_internal;
 	}
 	bool GraphicsDevice_Metal::CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* desc, RaytracingAccelerationStructure* bvh) const
 	{
-		auto internal_state = wi::allocator::make_shared<BVH_Metal>();
-		internal_state->allocationhandler = allocationhandler;
-		bvh->internal_state = internal_state;
-		bvh->type = GPUResource::Type::RAYTRACING_ACCELERATION_STRUCTURE;
-		bvh->desc = *desc;
-		bvh->size = 0;
+		//auto internal_state = wi::allocator::make_shared<BVH_Metal>();
+		//internal_state->allocationhandler = allocationhandler;
+		//bvh->internal_state = internal_state;
+		//bvh->type = GPUResource::Type::RAYTRACING_ACCELERATION_STRUCTURE;
+		//bvh->desc = *desc;
+		//bvh->size = 0;
 
 		return false;
 	}
 	bool GraphicsDevice_Metal::CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* desc, RaytracingPipelineState* rtpso) const
 	{
-		auto internal_state = wi::allocator::make_shared<RTPipelineState_Metal>();
-		internal_state->allocationhandler = allocationhandler;
-		rtpso->internal_state = internal_state;
-		rtpso->desc = *desc;
+		//auto internal_state = wi::allocator::make_shared<RTPipelineState_Metal>();
+		//internal_state->allocationhandler = allocationhandler;
+		//rtpso->internal_state = internal_state;
+		//rtpso->desc = *desc;
 
 		return false;
 	}
 	bool GraphicsDevice_Metal::CreateVideoDecoder(const VideoDesc* desc, VideoDecoder* video_decoder) const
 	{
-		auto internal_state = wi::allocator::make_shared<VideoDecoder_Metal>();
-		internal_state->allocationhandler = allocationhandler;
-		video_decoder->internal_state = internal_state;
-		video_decoder->desc = *desc;
+		//auto internal_state = wi::allocator::make_shared<VideoDecoder_Metal>();
+		//internal_state->allocationhandler = allocationhandler;
+		//video_decoder->internal_state = internal_state;
+		//video_decoder->desc = *desc;
 
 		return false;
 	}
@@ -1074,10 +1127,20 @@ using namespace metal_internal;
 		switch (type) {
 			case SubresourceType::SRV:
 				{
-					auto& subresource = internal_state->subresources_srv.emplace_back();
-					subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(_ConvertPixelFormat(format), internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
-					subresource.index = allocationhandler->allocate_bindless_res();
-					MTL::ResourceID gpu_handle = subresource.texture->gpuResourceID();
+					if(internal_state->srv.texture.get() == nullptr)
+					{
+						auto& subresource = internal_state->srv;
+						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(_ConvertPixelFormat(format), internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
+						subresource.index = allocationhandler->allocate_bindless(subresource.texture.get());
+						return -1;
+					}
+					else
+					{
+						auto& subresource = internal_state->subresources_srv.emplace_back();
+						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(_ConvertPixelFormat(format), internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
+						subresource.index = allocationhandler->allocate_bindless(subresource.texture.get());
+						return (int)internal_state->subresources_srv.size() - 1;
+					}
 				}
 				break;
 				
@@ -1090,6 +1153,56 @@ using namespace metal_internal;
 	int GraphicsDevice_Metal::CreateSubresource(GPUBuffer* buffer, SubresourceType type, uint64_t offset, uint64_t size, const Format* format_change, const uint32_t* structuredbuffer_stride_change) const
 	{
 		auto internal_state = to_internal(buffer);
+		
+		size = std::min(size, buffer->desc.size);
+		
+		switch (type) {
+			case SubresourceType::SRV:
+				{
+					if(internal_state->srv.buffer.get() == nullptr)
+					{
+						internal_state->srv.buffer = internal_state->buffer;
+						internal_state->srv.offset = offset;
+						internal_state->srv.size = size;
+						internal_state->srv.index = allocationhandler->allocate_bindless(internal_state->srv.buffer.get(), offset);
+						return -1;
+					}
+					else
+					{
+						auto& subresource = internal_state->subresources_srv.emplace_back();
+						subresource.buffer = internal_state->buffer;
+						subresource.offset = offset;
+						subresource.size = size;
+						subresource.index = allocationhandler->allocate_bindless(internal_state->srv.buffer.get(), offset);
+						return (int)internal_state->subresources_srv.size() - 1;
+					}
+				}
+				break;
+			case SubresourceType::UAV:
+				{
+					if(internal_state->uav.buffer.get() == nullptr)
+					{
+						internal_state->uav.buffer = internal_state->buffer;
+						internal_state->uav.offset = offset;
+						internal_state->uav.size = size;
+						internal_state->uav.index = allocationhandler->allocate_bindless(internal_state->uav.buffer.get(), offset);
+						return -1;
+					}
+					else
+					{
+						auto& subresource = internal_state->subresources_uav.emplace_back();
+						subresource.buffer = internal_state->buffer;
+						subresource.offset = offset;
+						subresource.size = size;
+						subresource.index = allocationhandler->allocate_bindless(internal_state->uav.buffer.get(), offset);
+						return (int)internal_state->subresources_uav.size() - 1;
+					}
+				}
+				break;
+			default:
+				break;
+		}
+		
 		return -1;
 	}
 
@@ -1116,13 +1229,41 @@ using namespace metal_internal;
 		if (resource == nullptr || !resource->IsValid())
 			return -1;
 
+		if (resource->IsTexture())
+		{
+			auto internal_state = to_internal<Texture>(resource);
+			switch (type) {
+				case SubresourceType::SRV:
+					return subresource < 0 ? internal_state->srv.index : internal_state->subresources_srv[subresource].index;
+				case SubresourceType::UAV:
+					return subresource < 0 ? internal_state->uav.index : internal_state->subresources_uav[subresource].index;
+				default:
+					break;
+			}
+		}
+		else if (resource->IsBuffer())
+		{
+			auto internal_state = to_internal<GPUBuffer>(resource);
+			switch (type) {
+				case SubresourceType::SRV:
+					return subresource < 0 ? internal_state->srv.index : internal_state->subresources_srv[subresource].index;
+				case SubresourceType::UAV:
+					return subresource < 0 ? internal_state->uav.index : internal_state->subresources_uav[subresource].index;
+				default:
+					break;
+			}
+		}
+		else if (resource->IsAccelerationStructure())
+		{
+			auto internal_state = to_internal<RaytracingAccelerationStructure>(resource);
+		}
 		return -1;
 	}
 	int GraphicsDevice_Metal::GetDescriptorIndex(const Sampler* sampler) const
 	{
 		if (sampler == nullptr || !sampler->IsValid())
 			return -1;
-
+		
 		auto internal_state = to_internal(sampler);
 		return internal_state->index;
 	}
@@ -1141,11 +1282,28 @@ using namespace metal_internal;
 	{
 		if (pResource == nullptr || !pResource->IsValid())
 			return;
+		if (pResource->IsTexture())
+		{
+			auto internal_state = to_internal<Texture>(pResource);
+			internal_state->texture->setLabel(NS::String::string(name, NS::UTF8StringEncoding));
+		}
+		else if (pResource->IsBuffer())
+		{
+			auto internal_state = to_internal<GPUBuffer>(pResource);
+			internal_state->buffer->setLabel(NS::String::string(name, NS::UTF8StringEncoding));
+		}
+		else if (pResource->IsAccelerationStructure())
+		{
+			auto internal_state = to_internal<RaytracingAccelerationStructure>(pResource);
+			// TODO
+		}
 	}
 	void GraphicsDevice_Metal::SetName(Shader* shader, const char* name) const
 	{
 		if (shader == nullptr || !shader->IsValid())
 			return;
+		auto internal_state = to_internal(shader);
+		internal_state->library->setLabel(NS::String::string(name, NS::UTF8StringEncoding));
 	}
 
 	CommandList GraphicsDevice_Metal::BeginCommandList(QUEUE_TYPE queue)
@@ -1455,6 +1613,14 @@ using namespace metal_internal;
 	void GraphicsDevice_Metal::BindVertexBuffers(const GPUBuffer *const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint64_t* offsets, CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		commandlist.dirty_vb = true;
+		for (uint32_t i = 0; i < count; ++i)
+		{
+			auto& vb = commandlist.vertex_buffers[slot + i];
+			vb.buffer = *vertexBuffers[i];
+			vb.offset = offsets == nullptr ? 0 : offsets[i];
+			vb.stride = strides[i];
+		}
 	}
 	void GraphicsDevice_Metal::BindIndexBuffer(const GPUBuffer* indexBuffer, const IndexBufferFormat format, uint64_t offset, CommandList cmd)
 	{
@@ -1721,10 +1887,12 @@ using namespace metal_internal;
 	void GraphicsDevice_Metal::EventBegin(const char* name, CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		commandlist.commandbuffer->pushDebugGroup(NS::String::string(name, NS::UTF8StringEncoding));
 	}
 	void GraphicsDevice_Metal::EventEnd(CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		commandlist.commandbuffer->popDebugGroup();
 	}
 	void GraphicsDevice_Metal::SetMarker(const char* name, CommandList cmd)
 	{
