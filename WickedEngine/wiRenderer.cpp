@@ -3165,6 +3165,7 @@ void RenderMeshes(
 		;
 	const bool skip_planareflection_objects = flags & DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS;
 	const bool wireframe_overlay = flags & DRAWSCENE_WIREFRAME_OVERLAY;
+	const bool wireframe = wireframe_overlay || (IsWireRender() && GetWireframeMode() != WIREFRAME_OVERLAY);
 
 	// Do we need to compute a light mask for this pass on the CPU?
 	const bool forwardLightmaskRequest =
@@ -3215,7 +3216,6 @@ void RenderMeshes(
 		const float tessF = mesh.GetTessellationFactor();
 		const bool tessellatorRequested = tessF > 0 && tessellation;
 		const bool meshShaderRequested = !tessellatorRequested && mesh_shader && mesh.vb_clu.IsValid();
-		const bool wireframe = wireframe_overlay || (IsWireRender() && GetWireframeMode() != WIREFRAME_OVERLAY);
 
 		// Notes on provoking index buffer:
 		//	Normally it's used for primitiveID generation, so it would be only used in PREPASS
@@ -7231,11 +7231,6 @@ void DrawScene(
 	{
 		filterMask |= FILTER_TRANSPARENT;
 		filterMask |= FILTER_WATER;
-	}
-
-	if (IsWireRender())
-	{
-		filterMask = FILTER_ALL;
 	}
 
 	if (opaque || transparent)
