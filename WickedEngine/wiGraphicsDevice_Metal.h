@@ -23,6 +23,32 @@ namespace wi::graphics
 		NS::SharedPtr<MTL::Device> device;
 		NS::SharedPtr<MTL::CommandQueue> commandqueue;
 		
+		enum ROOT_SLOT
+		{
+			ROOT_SLOT_CONSTANTS,
+			ROOT_SLOT_CBV0,
+			ROOT_SLOT_CBV1,
+			ROOT_SLOT_CBV2,
+			ROOT_SLOT_RESOURCE_BINDING,
+			ROOT_SLOT_SAMPLER_BINDING,
+			ROOT_SLOT_SAMPLER_BINDLESS,
+			ROOT_SLOT_RESOURCE_BINDLESS,
+			
+			ROOT_SLOT_COUNT,
+		};
+		
+		static constexpr uint64_t root_table_sizes[] = {
+			0, // ROOT_SLOT_CONSTANTS
+			0, // ROOT_SLOT_CBV0,
+			0, // ROOT_SLOT_CBV1,
+			0, // ROOT_SLOT_CBV2,
+			arraysize(DescriptorBindingTable::CBV) - 3 + arraysize(DescriptorBindingTable::SRV) + arraysize(DescriptorBindingTable::UAV), // ROOT_SLOT_RESOURCE_BINDING,
+			arraysize(DescriptorBindingTable::SAM), // ROOT_SLOT_SAMPLER_BINDING,
+			0, // ROOT_SLOT_SAMPLER_BINDLESS,
+			0, // ROOT_SLOT_RESOURCE_BINDLESS,
+		};
+		static constexpr uint64_t descriptor_wrap_reservation = std::max(root_table_sizes[ROOT_SLOT_SAMPLER_BINDING], root_table_sizes[ROOT_SLOT_RESOURCE_BINDING]);
+		
 		struct CommandList_Metal
 		{
 			MTL::CommandBuffer* commandbuffer = nullptr;
@@ -43,7 +69,7 @@ namespace wi::graphics
 			wi::vector<std::pair<PipelineHash, NS::SharedPtr<MTL::RenderPipelineState>>> pipelines_worker;
 			PipelineHash pipeline_hash;
 			DescriptorBindingTable binding_table;
-			bool dirty_bindings = false;
+			bool dirty_root[ROOT_SLOT_COUNT] = {};
 			
 			struct VertexBufferBinding
 			{
@@ -74,7 +100,10 @@ namespace wi::graphics
 				pipelines_worker.clear();
 				pipeline_hash = {};
 				binding_table = {};
-				dirty_bindings = true;
+				for (auto& x : dirty_root)
+				{
+					x = true;
+				}
 				for (auto& x : vertex_buffers)
 				{
 					x = {};
@@ -90,7 +119,8 @@ namespace wi::graphics
 		
 		NS::SharedPtr<MTL::Buffer> argument_buffer;
 		uint8_t* argument_buffer_data = nullptr;
-		uint64_t argument_buffer_bindless_sampler_capacity = 2048;
+		uint64_t argument_buffer_sampler_capacity = 2048;
+		uint64_t argument_buffer_bindless_sampler_capacity = 256;
 		std::atomic<uint64_t> argument_buffer_offset{0};
 		void binder_flush(CommandList cmd);
 
