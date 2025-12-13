@@ -17,8 +17,10 @@
 #include "wiEventHandler.h"
 #include "wiPlatform.h"
 
-#ifdef PLATFORM_PS5
+#if defined(PLATFORM_PS5)
 #include "wiGraphicsDevice_PS5.h"
+#elif defined(PLATFORM_APPLE)
+#include "wiGraphicsDevice_Metal.h"
 #else
 #include "wiGraphicsDevice_DX12.h"
 #include "wiGraphicsDevice_Vulkan.h"
@@ -681,7 +683,7 @@ namespace wi
 
 			if (infoDisplay.rect.right > 0)
 			{
-				Rect rect;
+				wi::graphics::Rect rect;
 				rect.right = canvas.width;
 				rect.bottom = canvas.height;
 				graphicsDevice->BindScissorRects(1, &rect, cmd);
@@ -700,7 +702,11 @@ namespace wi
 		wi::platform::Exit();
 	}
 
-	void Application::SetWindow(wi::platform::window_type window)
+#ifdef __APPLE__
+void Application::SetWindow(wi::platform::window_type window, const wi::Canvas& in_canvas)
+#else
+void Application::SetWindow(wi::platform::window_type window)
+#endif // __APPLE__
 	{
 		this->window = window;
 
@@ -742,6 +748,9 @@ namespace wi
 #ifdef PLATFORM_PS5
 			wi::renderer::SetShaderPath(wi::renderer::GetShaderPath() + "ps5/");
 			graphicsDevice = std::make_unique<GraphicsDevice_PS5>(validationMode);
+#elif defined(PLATFORM_APPLE)
+			wi::renderer::SetShaderPath(wi::renderer::GetShaderPath() + "metal/");
+			graphicsDevice = std::make_unique<GraphicsDevice_Metal>(validationMode, preference);
 
 #else
 			bool use_dx12 = wi::arguments::HasArgument("dx12");
@@ -795,7 +804,11 @@ namespace wi
 		}
 		wi::graphics::GetDevice() = graphicsDevice.get();
 
+#ifdef __APPLE__
+		canvas = in_canvas;
+#else
 		canvas.init(window);
+#endif // __APPLE__
 
 		SwapChainDesc desc = swapChain.desc;
 		if (!swapChain.IsValid())

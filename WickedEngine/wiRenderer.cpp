@@ -36,7 +36,10 @@
 #include <algorithm>
 #include <atomic>
 #include <mutex>
+
+#ifdef _WIN32
 #include <malloc.h> // alloca
+#endif // _WIN32
 
 using namespace wi::primitive;
 using namespace wi::graphics;

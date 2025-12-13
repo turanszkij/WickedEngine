@@ -21,12 +21,10 @@
 #define wiGetProcAddress(handle,name) GetProcAddress(handle, name)
 #elif defined(__SCE__)
 #define PLATFORM_PS5
+#elif defined(__APPLE__)
+#define PLATFORM_APPLE
 #else
 #define PLATFORM_LINUX
-#include <dlfcn.h>
-#define wiLoadLibrary(name) dlopen(name, RTLD_LAZY)
-#define wiGetProcAddress(handle,name) dlsym(handle, name)
-typedef void* HMODULE;
 #endif // _WIN32
 
 #ifdef SDL2
@@ -35,6 +33,12 @@ typedef void* HMODULE;
 #include "sdl2.h"
 #endif
 
+#if defined(PLATFORM_LINUX) || defined(PLATFORM_APPLE)
+#include <dlfcn.h>
+#define wiLoadLibrary(name) dlopen(name, RTLD_LAZY)
+#define wiGetProcAddress(handle,name) dlsym(handle, name)
+typedef void* HMODULE;
+#endif // defined(PLATFORM_LINUX) || defined(PLATFORM_APPLE)
 
 namespace wi::platform
 {

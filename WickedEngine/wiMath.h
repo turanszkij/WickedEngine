@@ -5,10 +5,15 @@
 #include <algorithm>
 #include <limits>
 
-#if !defined(WICKED_CMAKE_BUILD) && !defined(_M_ARM64)
+#if !defined(WICKED_CMAKE_BUILD) && !defined(_M_ARM64) && !defined(__arm64__)
 #define _XM_F16C_INTRINSICS_
 #define _XM_FMA3_INTRINSICS_
 #endif // !defined(WICKED_CMAKE_BUILD) && !defined(_M_ARM64)
+
+#ifdef __APPLE__
+#define __EMULATE_UUID
+#include "Utility/NeonIntrinsicsAppleShim.h"
+#endif // __APPLE__
 
 #if __has_include(<DirectXMath.h>)
 // In this case, DirectXMath is coming from Windows SDK.

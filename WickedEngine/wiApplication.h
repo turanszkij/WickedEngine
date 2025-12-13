@@ -91,7 +91,12 @@ namespace wi
 		virtual void Exit();
 
 		// You need to call this before calling Run() or Initialize() if you want to render
-		void SetWindow(wi::platform::window_type);
+#ifdef __APPLE__
+		// on Apple, the canvas has to be set from outside, eg. event handler
+		void SetWindow(wi::platform::window_type window, const wi::Canvas& in_canvas);
+#else
+		void SetWindow(wi::platform::window_type window);
+#endif // __APPLE__
 
 		void SetFullScreen(bool fullscreen);
 
