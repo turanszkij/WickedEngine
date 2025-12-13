@@ -221,8 +221,8 @@ void MaterialWindow::Create(EditorComponent* _editor)
 		params.type = wi::helper::FileDialogParams::SAVE;
 		params.description = "Material Preset (.ini)";
 		params.extensions = { "ini" };
-		wi::helper::FileDialog(params, [this, material](std::string fileName) {
-			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this, material, fileName](uint64_t userdata) {
+		wi::helper::FileDialog(params, [material](std::string fileName) {
+			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [material, fileName](uint64_t userdata) {
 				const std::string filePath = wi::helper::ForceExtension(fileName, "ini");
 				wi::config::File config;
 				config.Open(filePath.c_str());
@@ -1552,4 +1552,3 @@ void MaterialWindow::ResizeLayout()
 		}
 	}
 }
-
