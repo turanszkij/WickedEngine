@@ -1919,6 +1919,8 @@ namespace wi::lua::scene
 		int SetLookAt(lua_State* L);
 		int SetRagdollPhysicsEnabled(lua_State* L);
 		int IsRagdollPhysicsEnabled(lua_State* L);
+		int SetRagdollDisabled(lua_State* L);
+		int IsRagdollDisabled(lua_State* L);
 		int SetIntersectionDisabled(lua_State* L);
 		int IsIntersectionDisabled(lua_State* L);
 		int SetRagdollFatness(lua_State* L);

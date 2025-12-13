@@ -2175,6 +2175,11 @@ namespace wi::physics
 		});
 		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.humanoids.GetCount(), 1, [&scene](wi::jobsystem::JobArgs args) {
 			HumanoidComponent& humanoid = scene.humanoids[args.jobIndex];
+			if (humanoid.IsRagdollDisabled())
+			{
+				humanoid.ragdoll = {}; // delete ragdoll if it was previously created
+				return;
+			}
 			Entity humanoidEntity = scene.humanoids.GetEntity(args.jobIndex);
 			float scale = 1;
 			if (scene.transforms.Contains(humanoidEntity))

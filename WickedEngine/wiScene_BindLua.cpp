@@ -7767,6 +7767,8 @@ Luna<HumanoidComponent_BindLua>::FunctionType HumanoidComponent_BindLua::methods
 	lunamethod(HumanoidComponent_BindLua, SetLookAt),
 	lunamethod(HumanoidComponent_BindLua, SetRagdollPhysicsEnabled),
 	lunamethod(HumanoidComponent_BindLua, IsRagdollPhysicsEnabled),
+	lunamethod(HumanoidComponent_BindLua, SetRagdollDisabled),
+	lunamethod(HumanoidComponent_BindLua, IsRagdollDisabled),
 	lunamethod(HumanoidComponent_BindLua, SetIntersectionDisabled),
 	lunamethod(HumanoidComponent_BindLua, IsIntersectionDisabled),
 	lunamethod(HumanoidComponent_BindLua, SetRagdollFatness),
@@ -7858,6 +7860,24 @@ int HumanoidComponent_BindLua::SetRagdollPhysicsEnabled(lua_State* L)
 int HumanoidComponent_BindLua::IsRagdollPhysicsEnabled(lua_State* L)
 {
 	wi::lua::SSetBool(L, component->IsRagdollPhysicsEnabled());
+	return 1;
+}
+int HumanoidComponent_BindLua::SetRagdollDisabled(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->SetRagdollDisabled(wi::lua::SGetBool(L, 1));
+	}
+	else
+	{
+		wi::lua::SError(L, "SetRagdollDisabled(bool value) not enough arguments!");
+	}
+	return 0;
+}
+int HumanoidComponent_BindLua::IsRagdollDisabled(lua_State* L)
+{
+	wi::lua::SSetBool(L, component->IsRagdollDisabled());
 	return 1;
 }
 int HumanoidComponent_BindLua::SetIntersectionDisabled(lua_State* L)
