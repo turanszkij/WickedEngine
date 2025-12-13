@@ -95,9 +95,11 @@ jobs:
         include:
         - cc: gcc
           cxx: g++
+          linker_type: DEFAULT
           package_bins: true
         - cc: clang
           cxx: clang++
+          linker_type: LLD
           package_bins: false
 
     steps:
@@ -118,7 +120,7 @@ jobs:
 
     - name: Compile with embedded shaders
       run: |
-        CC=${{ matrix.cc }} CXX=${{ matrix.cxx }} cmake -B build -DWICKED_ENABLE_IPO=NO -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DWICKED_EMBED_SHADERS=YES
+        CC=${{ matrix.cc }} CXX=${{ matrix.cxx }} cmake -B build -DWICKED_ENABLE_IPO=YES -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_LINKER_TYPE=${{ matrix.linker_type }} -DWICKED_EMBED_SHADERS=YES
         make -C build -j$(nproc)
 
     - name: Save Ccache database
