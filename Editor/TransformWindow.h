@@ -12,6 +12,7 @@ public:
 
 	wi::gui::Button clearButton;
 	wi::gui::Button moveToEditorCameraButton;
+	wi::gui::Button applyScaleToObjectButton;
 
 	wi::gui::TextInputField txInput;
 	wi::gui::TextInputField tyInput;
