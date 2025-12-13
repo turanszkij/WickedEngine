@@ -844,7 +844,7 @@ namespace wi
 		GraphicsDevice* device = wi::graphics::GetDevice();
 		device->EventBegin("EmittedParticle", cmd);
 
-		if (wi::renderer::IsWireRender())
+		if (wi::renderer::GetWireframeMode() == wi::renderer::WIREFRAME_ONLY)
 		{
 			device->BindPipelineState(&PSO_wire, cmd);
 		}
@@ -873,6 +873,19 @@ namespace wi
 		else
 		{
 			device->DrawInstancedIndirect(&indirectBuffers, ARGUMENTBUFFER_OFFSET_DRAWPARTICLES, cmd);
+		}
+
+		if (wi::renderer::GetWireframeMode() == wi::renderer::WIREFRAME_OVERLAY)
+		{
+			device->BindPipelineState(&PSO_wire, cmd);
+			if (ALLOW_MESH_SHADER && device->CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
+			{
+				device->DispatchMeshIndirect(&indirectBuffers, ARGUMENTBUFFER_OFFSET_DRAWPARTICLES, cmd);
+			}
+			else
+			{
+				device->DrawInstancedIndirect(&indirectBuffers, ARGUMENTBUFFER_OFFSET_DRAWPARTICLES, cmd);
+			}
 		}
 
 		device->EventEnd(cmd);

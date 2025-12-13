@@ -6,10 +6,8 @@ include(CMakeFindDependencyMacro)
 
 if (WIN32)
     # TODO: Choose whether to use SDL2 on windows as well
-    set(TARGET_NAME WickedEngine::WickedEngine_Windows)
     set(LIBDXCOMPILER "dxcompiler.dll")
 else ()
-    set(TARGET_NAME WickedEngine::WickedEngine_Linux)
     find_package(Vulkan REQUIRED)
     find_package(SDL2 REQUIRED)
     find_package(OpenImageDenoise QUIET)
@@ -38,14 +36,13 @@ endif()
 
 if (NOT TARGET WickedEngine::WickedEngine)
     include("${WICKED_CMAKE_DIR}/WickedEngineTargets.cmake")
-    add_library(WickedEngine::WickedEngine ALIAS ${TARGET_NAME})
 
     set(WickedEngine_SHADER_DIR "@_CONFIG_INSTALL_DIR_INCLUDE@/WickedEngine/shaders/")
-    target_compile_definitions(${TARGET_NAME} INTERFACE "WickedEngine_SHADER_DIR=\"${WickedEngine_SHADER_DIR}\"")
+    target_compile_definitions(WickedEngine::WickedEngine INTERFACE "WickedEngine_SHADER_DIR=\"${WickedEngine_SHADER_DIR}\"")
 
     add_library(WickedEngine::dxcompiler SHARED IMPORTED)
     set_property(TARGET WickedEngine::dxcompiler PROPERTY
             IMPORTED_LOCATION "@_CONFIG_INSTALL_DIR_LIB@/WickedEngine/${LIBDXCOMPILER}" )
 endif()
 
-set(WickedEngine_LIBRARIES WickedEngine::WickedEngine ${TARGET_NAME})
+set(WickedEngine_LIBRARIES WickedEngine::WickedEngine)

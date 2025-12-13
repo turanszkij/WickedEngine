@@ -5,7 +5,7 @@ on:
     - cron:  '0 0 * * *'
 
 jobs:
-  
+
   windows:
     runs-on: windows-latest
     steps:
@@ -29,7 +29,7 @@ jobs:
       run: |
         MSBuild WickedEngine.sln /t:clean /m /p:Configuration=Release /p:Platform=x64
         MSBuild WickedEngine.sln /t:Editor_Windows /m /p:Configuration=Release /p:Platform=x64
-    
+
     - name: Move files
       shell: cmd
       run: |
@@ -50,7 +50,7 @@ jobs:
           startup.lua
           Editor_Windows.exe
 
-    
+
   linux:
     name: linux (gcc)
     runs-on: ubuntu-latest
@@ -62,24 +62,11 @@ jobs:
         sudo apt update
         sudo apt install libsdl2-dev
 
-    - name: Initial compile
+    - name: Compile with embedded shaders
       run: |
-        mkdir build
-        cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release
-        make -j$(nproc)
-      
-    - name: Generate shader dump
-      run: |
-        cd build/WickedEngine
-        ./offlineshadercompiler spirv rebuild shaderdump
-        mv wiShaderDump.h ../../WickedEngine/
+        cmake -B build -DCMAKE_BUILD_TYPE=Release -DWICKED_EMBED_SHADERS=YES -DWICKED_ENABLE_IPO=NO
+        make -C build -j$(nproc)
 
-    - name: Recompile with shader dump
-      run: |
-        cd build
-        make -j $(nproc)
-        
     - name: Move files
       run: |
         mv build/Editor/Editor ./Editor_Linux

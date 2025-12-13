@@ -11,6 +11,8 @@ public:
 	void SetEntity(wi::ecs::Entity entity);
 
 	wi::gui::TextInputField materialNameField;
+	wi::gui::Button presetLoadButton;
+	wi::gui::Button presetSaveButton;
 	wi::gui::CheckBox shadowReceiveCheckBox;
 	wi::gui::CheckBox shadowCasterCheckBox;
 	wi::gui::CheckBox useVertexColorsCheckBox;

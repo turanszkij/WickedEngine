@@ -580,11 +580,8 @@ namespace wi
 			return;
 
 		GraphicsDevice* device = wi::graphics::GetDevice();
-		device->EventBegin("HairParticle - Draw", cmd);
 
-		device->BindStencilRef(STENCILREF_DEFAULT, cmd);
-
-		if (wi::renderer::IsWireRender())
+		if (wi::renderer::GetWireframeMode() == wi::renderer::WIREFRAME_ONLY)
 		{
 			if (renderPass == RENDERPASS_PREPASS || renderPass == RENDERPASS_PREPASS_DEPTHONLY)
 			{
@@ -602,12 +599,22 @@ namespace wi
 			}
 		}
 
+		device->EventBegin("HairParticle - Draw", cmd);
+
+		device->BindStencilRef(STENCILREF_DEFAULT, cmd);
+
 		device->BindConstantBuffer(&constantBuffer, CB_GETBINDSLOT(HairParticleCB), cmd);
 		device->BindResource(&generalBuffer, 0, cmd, prim_view.subresource_srv);
 
 		device->BindIndexBuffer(&generalBuffer, GetIndexBufferFormat(GetVertexCount()), ib_culled.offset, cmd);
 
 		device->DrawIndexedInstancedIndirect(&generalBuffer, indirect_view.offset, cmd);
+
+		if (renderPass == RENDERPASS_MAIN && wi::renderer::GetWireframeMode() == wi::renderer::WIREFRAME_OVERLAY)
+		{
+			device->BindPipelineState(&PSO_wire, cmd);
+			device->DrawIndexedInstancedIndirect(&generalBuffer, indirect_view.offset, cmd);
+		}
 
 		device->EventEnd(cmd);
 	}
