@@ -216,7 +216,7 @@ jobs:
 
     - name: Compile with embedded shaders
       run: |
-        CC=${{ matrix.cc }} CXX=${{ matrix.cxx }} cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DWICKED_ENABLE_IPO=NO -DWICKED_EMBED_SHADERS=YES
+        CC=${{ matrix.cc }} CXX=${{ matrix.cxx }} cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DWICKED_ENABLE_IPO=NO -DWICKED_EMBED_SHADERS=YES -DCMAKE_CXX_FLAGS_RELEASE=-O0
         make -C build -j$(nproc)
 
     - name: Save Ccache database
