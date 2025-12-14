@@ -100,10 +100,11 @@ namespace wi::allocator
 		virtual void init_refcount(void* ptr) = 0;
 		virtual uint32_t get_refcount(void* ptr) = 0;
 		virtual uint32_t inc_refcount(void* ptr) = 0;
-		virtual uint32_t dec_refcount(void* ptr, bool destruct_on_zero = true) = 0;
+		virtual uint32_t dec_refcount(void* ptr) = 0;
 		virtual uint32_t get_refcount_weak(void* ptr) = 0;
 		virtual uint32_t inc_refcount_weak(void* ptr) = 0;
 		virtual uint32_t dec_refcount_weak(void* ptr) = 0;
+		virtual bool try_inc_refcount(void* ptr) = 0;
 	};
 
 	// The per-type block allocators can be indexed with bottom 8 bits of the shared_ptr's handle:
@@ -210,16 +211,13 @@ namespace wi::allocator
 			SharedAllocator* alloc = get_allocator();
 			T* ptr = get_ptr();
 
-			uint32_t old_strong = alloc->inc_refcount(ptr);
-			if (old_strong == 0)
+			if (alloc->try_inc_refcount(ptr))
 			{
-				alloc->dec_refcount(ptr, false); // undo refcount (not allowed to destruct, already destructed)
-				return {};
+				shared_ptr<T> ret;
+				ret.handle = handle;
+				return ret;
 			}
-
-			shared_ptr<T> ret;
-			ret.handle = handle;
-			return ret; // Already incremented refcount
+			return {};
 		}
 
 		void reset() noexcept
@@ -247,7 +245,7 @@ namespace wi::allocator
 			handle = other.handle;
 			other.handle = 0;
 		}
-		uint32_t use_count() const { return get_allocator()->get_refcount(get_ptr()); }
+		uint32_t use_count() const { return IsValid() ? get_allocator()->get_refcount(get_ptr()) : 0; }
 		bool expired() const noexcept
 		{
 			return !IsValid() || use_count() == 0;
@@ -324,12 +322,12 @@ namespace wi::allocator
 		{
 			return static_cast<RawStruct*>(ptr)->refcount.fetch_add(1, std::memory_order_relaxed);
 		}
-		uint32_t dec_refcount(void* ptr, bool destruct_on_zero) override
+		uint32_t dec_refcount(void* ptr) override
 		{
 			uint32_t old = static_cast<RawStruct*>(ptr)->refcount.fetch_sub(1, std::memory_order_acq_rel);
 			if (old == 1)
 			{
-				if (destruct_on_zero) static_cast<T*>(ptr)->~T();
+				static_cast<T*>(ptr)->~T();
 				dec_refcount_weak(ptr);
 			}
 			return old;
@@ -350,6 +348,17 @@ namespace wi::allocator
 				reclaim(ptr);
 			}
 			return old;
+		}
+		bool try_inc_refcount(void* ptr) override
+		{
+			auto& ref = static_cast<RawStruct*>(ptr)->refcount;
+			uint32_t expected = ref.load(std::memory_order_acquire);
+			do {
+				if (expected == 0) {
+					return false;
+				}
+			} while (!ref.compare_exchange_weak(expected, expected + 1, std::memory_order_acq_rel, std::memory_order_acquire));
+			return true;
 		}
 	};
 
@@ -396,12 +405,12 @@ namespace wi::allocator
 		{
 			return static_cast<RawStruct*>(ptr)->refcount.fetch_add(1, std::memory_order_relaxed);
 		}
-		uint32_t dec_refcount(void* ptr, bool destruct_on_zero) override
+		uint32_t dec_refcount(void* ptr) override
 		{
 			uint32_t old = static_cast<RawStruct*>(ptr)->refcount.fetch_sub(1, std::memory_order_acq_rel);
 			if (old == 1)
 			{
-				if (destruct_on_zero) static_cast<T*>(ptr)->~T();
+				static_cast<T*>(ptr)->~T();
 				dec_refcount_weak(ptr);
 			}
 			return old;
@@ -422,6 +431,17 @@ namespace wi::allocator
 				reclaim(ptr);
 			}
 			return old;
+		}
+		bool try_inc_refcount(void* ptr) override
+		{
+			auto& ref = static_cast<RawStruct*>(ptr)->refcount;
+			uint32_t expected = ref.load(std::memory_order_acquire);
+			do {
+				if (expected == 0) {
+					return false;
+				}
+			} while (!ref.compare_exchange_weak(expected, expected + 1, std::memory_order_acq_rel, std::memory_order_acquire));
+			return true;
 		}
 	};
 
