@@ -448,8 +448,8 @@ struct Surface
 
 			const float lod_uvset0 = compute_texture_lod(65536, 65536, lod_constant0, ray_direction, surf_normal, cone_width);
 			const float lod_uvset1 = compute_texture_lod(65536, 65536, lod_constant1, ray_direction, surf_normal, cone_width);
-			const uint resolution0 = 65536u >> uint(max(0, lod_uvset0));
-			const uint resolution1 = 65536u >> uint(max(0, lod_uvset1));
+			const uint resolution0 = 65536u >> clamp(uint(lod_uvset0), 1u, 16u);
+			const uint resolution1 = 65536u >> clamp(uint(lod_uvset1), 1u, 16u);
 			write_mipmap_feedback(geometry.materialIndex, resolution0, resolution1);
 #endif // SURFACE_LOAD_MIPCONE
 
