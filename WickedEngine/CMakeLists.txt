@@ -98,8 +98,6 @@ file(GLOB SHADER_FILES CONFIGURE_DEPENDS shaders/*.hlsl shaders/*.hlsli)
 # one. The "no shaders" is needed because the offlineshadercompiler that compiles
 # the shaders depends on the wicked library as well, so we have a chicken-and-egg
 # problem.
-# note that this target will "share" properties with the WickedEngine_common target
-# see further down for more information
 add_library(WickedEngine_common OBJECT ${SOURCE_FILES} ${HEADER_FILES})
 
 # the version without embedded shaders
