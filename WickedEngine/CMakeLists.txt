@@ -340,7 +340,7 @@ add_dependencies(WickedEngine_emb_shaders generate_wishaderdump)
 set_target_properties(generate_wishaderdump PROPERTIES FOLDER "CMake support targets")
 
 # only this target will see the wiShaderDump.h file, so the _ext_shaders target will not have embedded shaders.
-target_include_directories(WickedEngine_emb_shaders PRIVATE ${CMAKE_BINARY_DIR}/WickedEngine)
+target_include_directories(WickedEngine_emb_shaders PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
 install(TARGETS offlineshadercompiler
         RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/WickedEngine")
