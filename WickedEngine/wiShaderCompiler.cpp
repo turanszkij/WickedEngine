@@ -566,10 +566,12 @@ namespace wi::shadercompiler
 			if (input.format == ShaderFormat::METAL)
 			{
 				static HMODULE irconverter = wiLoadLibrary("/usr/local/lib/libmetalirconverter.dylib");
+				assert(irconverter); // You must install the metal shader converter
 				if(irconverter != nullptr)
 				{
 #define LINK_IR(name) using PFN_##name = decltype(&name); static PFN_##name name = (PFN_##name)wiGetProcAddress(irconverter, #name);
 					LINK_IR(IRCompilerCreate)
+					LINK_IR(IRCompilerSetCompatibilityFlags)
 					LINK_IR(IRCompilerSetValidationFlags)
 					LINK_IR(IRCompilerSetEntryPointName)
 					LINK_IR(IRCompilerSetStageInGenerationMode)
@@ -585,12 +587,11 @@ namespace wi::shadercompiler
 					LINK_IR(IRCompilerDestroy)
 					LINK_IR(IRRootSignatureCreateFromDescriptor)
 					LINK_IR(IRCompilerSetGlobalRootSignature)
-					LINK_IR(IRRootSignatureDestroy)
+					//LINK_IR(IRRootSignatureDestroy)
 					static constexpr uint32_t unbounded = ~0u;
 					
 					static IRDescriptorRange1 binding_resources[] =
 					{
-						{ .RangeType = IRDescriptorRangeTypeCBV, .BaseShaderRegister = 3, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = IRDescriptorRangeOffsetAppend, .NumDescriptors = 11, .Flags = IRDescriptorRangeFlagDataStaticWhileSetAtExecute },
 						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = IRDescriptorRangeOffsetAppend, .NumDescriptors = 16, .Flags = IRDescriptorRangeFlagDataStaticWhileSetAtExecute },
 						{ .RangeType = IRDescriptorRangeTypeUAV, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = IRDescriptorRangeOffsetAppend, .NumDescriptors = 16, .Flags = IRDescriptorRangeFlagDataStaticWhileSetAtExecute },
 					};
@@ -739,6 +740,7 @@ namespace wi::shadercompiler
 					}
 					
 					IRCompiler* pCompiler = IRCompilerCreate();
+					IRCompilerSetCompatibilityFlags(pCompiler, IRCompatibilityFlags(IRCompatibilityFlagBoundsCheck | IRCompatibilityFlagPositionInvariance));
 					IRCompilerSetValidationFlags(pCompiler, IRCompilerValidationFlagAll);
 					IRCompilerSetEntryPointName(pCompiler, input.entrypoint.c_str());
 					IRCompilerSetGlobalRootSignature(pCompiler, pRootSig);

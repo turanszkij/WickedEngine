@@ -3,6 +3,7 @@
 #define CA_PRIVATE_IMPLEMENTATION
 #define MTL_PRIVATE_IMPLEMENTATION
 #define MTK_PRIVATE_IMPLEMENTATION
+#define IR_PRIVATE_IMPLEMENTATION
 #include "wiGraphicsDevice_Metal.h"
 #include "wiTimer.h"
 #include "wiBacklog.h"
@@ -451,7 +452,6 @@ namespace metal_internal
 		wi::allocator::shared_ptr<GraphicsDevice_Metal::AllocationHandler> allocationhandler;
 		NS::SharedPtr<MTL::RenderPipelineDescriptor> descriptor;
 		NS::SharedPtr<MTL::RenderPipelineState> render_pipeline;
-		uint32_t vertex_attribute_mapping[32] = {};
 
 		~PipelineState_Metal()
 		{
@@ -549,157 +549,158 @@ using namespace metal_internal;
 	void GraphicsDevice_Metal::binder_flush(CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-		const uint64_t descriptor_binding_start = argument_buffer_bindless_sampler_capacity + argument_buffer_bindless_resource_capacity;
-		const uint64_t descriptor_binding_range = argument_buffer_capacity - descriptor_binding_start;
 		
-		for (uint32_t root_slot = ROOT_SLOT_CONSTANTS + 1; root_slot < ROOT_SLOT_COUNT; ++root_slot)
+		if (commandlist.dirty_root)
 		{
-			if (!commandlist.dirty_root[root_slot])
-				continue;
-			commandlist.dirty_root[root_slot] = false;
+			static constexpr uint32_t resource_binding_size = arraysize(DescriptorBindingTable::CBV) - 3 + arraysize(DescriptorBindingTable::SRV) + arraysize(DescriptorBindingTable::UAV);
+			static constexpr uint32_t sampler_binding_size = arraysize(DescriptorBindingTable::SAM);
+				
+			struct RootLayout
+			{
+				uint32_t constants[16];
+				MTL::GPUAddress root_cbv[3];
+				//uint64_t resource_table_ptr;
+				//uint64_t sampler_table_ptr;
+				IRDescriptorTableEntry resource_table[resource_binding_size];
+				IRDescriptorTableEntry sampler_table[sampler_binding_size];
+			};
+			const uint64_t descriptor_binding_byte_start = align(uint64_t((argument_buffer_bindless_sampler_capacity + argument_buffer_bindless_resource_capacity) * sizeof(IRDescriptorTableEntry)), uint64_t(sizeof(RootLayout)));
+			const uint64_t descriptor_binding_byte_range = argument_buffer_capacity * sizeof(IRDescriptorTableEntry) - descriptor_binding_byte_start;
+			const uint64_t descriptor_binding_element_range = descriptor_binding_byte_range / sizeof(RootLayout);
 			
-			switch (root_slot) {
-				case ROOT_SLOT_CBV0:
-				case ROOT_SLOT_CBV1:
-				case ROOT_SLOT_CBV2:
+			const uint64_t wrapped_offset = argument_buffer_offset.fetch_add(1) % descriptor_binding_element_range;
+			const uint64_t root_byte_offset = descriptor_binding_byte_start + wrapped_offset * sizeof(RootLayout);
+			RootLayout* root_data = (RootLayout*)(argument_buffer_data + root_byte_offset);
+			
+			//root_data->resource_table_ptr = (uint64_t)root_data->resource_table;
+			//root_data->sampler_table_ptr = (uint64_t)root_data->sampler_table;
+			
+			// push constants:
+			std::memcpy(root_data->constants, commandlist.push_constants, std::min(sizeof(root_data->constants), sizeof(commandlist.push_constants)));
+			
+			// root CBVs:
+			for (uint32_t i = 0; i < arraysize(root_data->root_cbv); ++i)
+			{
+				MTL::GPUAddress gpu_address = argument_buffer->gpuAddress();
+				if (commandlist.binding_table.CBV[i].IsValid())
 				{
-					const uint32_t cbv_slot = root_slot - ROOT_SLOT_CBV0;
-					MTL::Buffer* buffer = argument_buffer.get();
-					uint64_t offset = 0;
-					if (commandlist.binding_table.CBV[cbv_slot].IsValid())
-					{
-						auto internal_state = to_internal(&commandlist.binding_table.CBV[cbv_slot]);
-						buffer = internal_state->buffer.get();
-						offset = commandlist.binding_table.CBV_offset[cbv_slot];
-					}
-					if (commandlist.render_encoder != nullptr)
-					{
-						if (commandlist.active_pso->desc.vs != nullptr)
-						{
-							commandlist.render_encoder->setVertexBuffer(buffer, offset, root_slot);
-						}
-						if (commandlist.active_pso->desc.ps != nullptr)
-						{
-							commandlist.render_encoder->setFragmentBuffer(buffer, offset, root_slot);
-						}
-					}
-					else if (commandlist.compute_encoder != nullptr)
-					{
-						commandlist.compute_encoder->setBuffer(buffer, offset, root_slot);
-					}
-					break;
+					auto internal_state = to_internal(&commandlist.binding_table.CBV[i]);
+					gpu_address = internal_state->gpu_address +commandlist.binding_table.CBV_offset[i];
 				}
-				case ROOT_SLOT_RESOURCE_BINDING:
-				case ROOT_SLOT_SAMPLER_BINDING:
+				root_data->root_cbv[i] = gpu_address;
+			}
+			
+			uint32_t resource_table_offset = 0;
+			
+			// normal CBVs:
+			for (uint32_t i = arraysize(root_data->root_cbv); i < arraysize(DescriptorBindingTable::CBV); ++i)
+			{
+				if (commandlist.binding_table.CBV[i].IsValid())
 				{
-					const uint64_t table_size = root_table_sizes[root_slot];
-					const uint64_t offset = argument_buffer_offset.fetch_add(table_size);
-					const uint64_t descriptor_wrap_range = descriptor_binding_range - descriptor_wrap_reservation; // max table size is reserved for multithreaded wrap behaviour
-					const uint64_t wrapped_offset = descriptor_binding_start + (offset % descriptor_wrap_range);
-					const uint64_t table_byte_offset = wrapped_offset * sizeof(MTL::ResourceID);
-					uint8_t* descriptor_heap_start = argument_buffer_data + table_byte_offset;
-					
-					if (root_slot == ROOT_SLOT_RESOURCE_BINDING)
+					auto internal_state = to_internal(&commandlist.binding_table.CBV[i]);
+					const uint64_t offset = commandlist.binding_table.CBV_offset[i];
+					const MTL::GPUAddress gpu_address = internal_state->gpu_address + offset;
+					const uint64_t metadata = 0;
+					IRDescriptorTableSetBuffer(root_data->resource_table + resource_table_offset, gpu_address, metadata);
+				}
+				resource_table_offset++;
+			}
+			
+			// SRVs:
+			for (uint32_t i = 0; i < arraysize(commandlist.binding_table.SRV); ++i)
+			{
+				if (commandlist.binding_table.SRV[i].IsValid())
+				{
+					if (commandlist.binding_table.SRV[i].IsBuffer())
 					{
-						for (uint32_t i = 3; i < arraysize(commandlist.binding_table.CBV); ++i)
-						{
-							if (!commandlist.binding_table.CBV[i].IsValid())
-								continue;
-							auto internal_state = to_internal(&commandlist.binding_table.CBV[i]);
-							const uint64_t offset = commandlist.binding_table.CBV_offset[i];
-							MTL::GPUAddress gpu_address = internal_state->gpu_address + offset;
-							std::memcpy(descriptor_heap_start + i * sizeof(gpu_address), &gpu_address, sizeof(gpu_address));
-						}
-						descriptor_heap_start += (arraysize(commandlist.binding_table.CBV) - 3) * sizeof(MTL::GPUAddress);
-						for (uint32_t i = 0; i < arraysize(commandlist.binding_table.SRV); ++i)
-						{
-							if (!commandlist.binding_table.SRV[i].IsValid())
-								continue;
-							if (commandlist.binding_table.SRV[i].IsBuffer())
-							{
-								auto internal_state = to_internal<GPUBuffer>(&commandlist.binding_table.SRV[i]);
-								const int subresource_index = commandlist.binding_table.SRV_index[i];
-								const auto& subresource = subresource_index < 0 ? internal_state->srv : internal_state->subresources_srv[subresource_index];
-								MTL::GPUAddress gpu_address = internal_state->gpu_address + subresource.offset;
-								std::memcpy(descriptor_heap_start + i * sizeof(gpu_address), &gpu_address, sizeof(gpu_address));
-							}
-							else if (commandlist.binding_table.SRV[i].IsTexture())
-							{
-								auto internal_state = to_internal<Texture>(&commandlist.binding_table.SRV[i]);
-								const int subresource_index = commandlist.binding_table.SRV_index[i];
-								const auto& subresource = subresource_index < 0 ? internal_state->srv : internal_state->subresources_srv[subresource_index];
-								std::memcpy(descriptor_heap_start + i * sizeof(subresource.resource_id), &subresource.resource_id, sizeof(subresource.resource_id));
-							}
-							else if (commandlist.binding_table.SRV[i].IsAccelerationStructure())
-							{
-								
-							}
-						}
-						descriptor_heap_start += arraysize(commandlist.binding_table.SRV) * sizeof(MTL::ResourceID);
+						auto internal_state = to_internal<GPUBuffer>(&commandlist.binding_table.SRV[i]);
+						const int subresource_index = commandlist.binding_table.SRV_index[i];
+						const auto& subresource = subresource_index < 0 ? internal_state->srv : internal_state->subresources_srv[subresource_index];
+						IRBufferView buffer_view = {};
+						buffer_view.buffer = subresource.buffer.get();
+						buffer_view.bufferOffset = subresource.offset;
+						buffer_view.bufferSize = subresource.size;
+						IRDescriptorTableSetBufferView(root_data->resource_table + resource_table_offset, &buffer_view);
+					}
+					else if (commandlist.binding_table.SRV[i].IsTexture())
+					{
+						auto internal_state = to_internal<Texture>(&commandlist.binding_table.SRV[i]);
+						const int subresource_index = commandlist.binding_table.SRV_index[i];
+						const auto& subresource = subresource_index < 0 ? internal_state->srv : internal_state->subresources_srv[subresource_index];
+						const uint64_t metadata = 0;
+						IRDescriptorTableSetTexture(root_data->resource_table + resource_table_offset, subresource.texture.get(), 0, metadata);
+					}
+					else if (commandlist.binding_table.SRV[i].IsAccelerationStructure())
+					{
 						
-						if (commandlist.render_encoder != nullptr)
-						{
-							if (commandlist.active_pso->desc.vs != nullptr)
-							{
-								commandlist.render_encoder->setVertexBuffer(argument_buffer.get(), table_byte_offset, root_slot);
-							}
-							if (commandlist.active_pso->desc.ps != nullptr)
-							{
-								commandlist.render_encoder->setFragmentBuffer(argument_buffer.get(), table_byte_offset, root_slot);
-							}
-						}
-						else if (commandlist.compute_encoder != nullptr)
-						{
-							commandlist.compute_encoder->setBuffer(argument_buffer.get(), table_byte_offset, root_slot);
-						}
 					}
-					else if (root_slot == ROOT_SLOT_SAMPLER_BINDING)
-					{
-						for (uint32_t i = 3; i < arraysize(commandlist.binding_table.SAM); ++i)
-						{
-							if (!commandlist.binding_table.SAM[i].IsValid())
-								continue;
-							auto internal_state = to_internal(&commandlist.binding_table.SAM[i]);
-							std::memcpy(descriptor_heap_start + i * sizeof(internal_state->resource_id), &internal_state->resource_id, sizeof(internal_state->resource_id));
-						}
-					}
-					break;
 				}
-				default:
-				case ROOT_SLOT_RESOURCE_BINDLESS:
-				case ROOT_SLOT_SAMPLER_BINDLESS:
+				resource_table_offset++;
+			}
+			
+			// UAVs:
+			for (uint32_t i = 0; i < arraysize(commandlist.binding_table.UAV); ++i)
+			{
+				if (commandlist.binding_table.UAV[i].IsValid())
 				{
-					if (commandlist.render_encoder != nullptr)
+					if (commandlist.binding_table.UAV[i].IsBuffer())
 					{
-						if (commandlist.active_pso->desc.vs != nullptr)
-						{
-							commandlist.render_encoder->setVertexBuffer(argument_buffer.get(), 0, root_slot);
-						}
-						if (commandlist.active_pso->desc.ps != nullptr)
-						{
-							commandlist.render_encoder->setFragmentBuffer(argument_buffer.get(), 0, root_slot);
-						}
+						auto internal_state = to_internal<GPUBuffer>(&commandlist.binding_table.UAV[i]);
+						const int subresource_index = commandlist.binding_table.UAV_index[i];
+						const auto& subresource = subresource_index < 0 ? internal_state->uav : internal_state->subresources_uav[subresource_index];
+						IRBufferView buffer_view = {};
+						buffer_view.buffer = subresource.buffer.get();
+						buffer_view.bufferOffset = subresource.offset;
+						buffer_view.bufferSize = subresource.size;
+						IRDescriptorTableSetBufferView(root_data->resource_table + resource_table_offset, &buffer_view);
 					}
-					break;
+					else if (commandlist.binding_table.UAV[i].IsTexture())
+					{
+						auto internal_state = to_internal<Texture>(&commandlist.binding_table.UAV[i]);
+						const int subresource_index = commandlist.binding_table.UAV_index[i];
+						const auto& subresource = subresource_index < 0 ? internal_state->uav : internal_state->subresources_uav[subresource_index];
+						const uint64_t metadata = 0;
+						IRDescriptorTableSetTexture(root_data->resource_table + resource_table_offset, subresource.texture.get(), 0, metadata);
+					}
 				}
+				resource_table_offset++;
+			}
+			
+			// Samplers:
+			for (uint32_t i = 0; i < arraysize(commandlist.binding_table.SAM); ++i)
+			{
+				if (!commandlist.binding_table.SAM[i].IsValid())
+					continue;
+				auto internal_state = to_internal(&commandlist.binding_table.SAM[i]);
+				IRDescriptorTableSetSampler(root_data->sampler_table + i, internal_state->sampler.get(), 0);
+			}
+			
+			if (commandlist.render_encoder != nullptr)
+			{
+				if (commandlist.active_pso->desc.vs != nullptr)
+				{
+					commandlist.render_encoder->setVertexBuffer(argument_buffer.get(), root_byte_offset, kIRArgumentBufferBindPoint);
+				}
+				if (commandlist.active_pso->desc.ps != nullptr)
+				{
+					commandlist.render_encoder->setFragmentBuffer(argument_buffer.get(), root_byte_offset, kIRArgumentBufferBindPoint);
+				}
+			}
+			else if (commandlist.compute_encoder != nullptr)
+			{
+				commandlist.compute_encoder->setBuffer(argument_buffer.get(), root_byte_offset, kIRArgumentBufferBindPoint);
 			}
 		}
 		if(commandlist.dirty_vb)
 		{
 			commandlist.dirty_vb = false;
-			
-			if (commandlist.active_pso != nullptr && commandlist.active_pso->desc.vs != nullptr)
+			for (uint32_t i = 0; i < arraysize(commandlist.vertex_buffers); ++i)
 			{
-				auto pso_internal = to_internal(commandlist.active_pso);
-				for (uint32_t i = 0; i < arraysize(commandlist.vertex_buffers); ++i)
-				{
-					auto& vb = commandlist.vertex_buffers[i];
-					if (!vb.buffer.IsValid())
-						continue;
-					uint32_t bind_slot = pso_internal->vertex_attribute_mapping[i];
-					auto buffer_internal = to_internal(&vb.buffer);
-					commandlist.render_encoder->setVertexBuffer(buffer_internal->buffer.get(), vb.offset, bind_slot);
-				}
+				auto& vb = commandlist.vertex_buffers[i];
+				if (!vb.buffer.IsValid())
+					continue;
+				auto buffer_internal = to_internal(&vb.buffer);
+				commandlist.render_encoder->setVertexBuffer(buffer_internal->buffer.get(), vb.offset, kIRVertexBufferBindPoint + i);
 			}
 		}
 	}
@@ -754,6 +755,17 @@ using namespace metal_internal;
 			commandlist.render_encoder->setRenderPipelineState(internal_state->render_pipeline.get());
 		}
 		
+		if (commandlist.active_pso->desc.vs != nullptr)
+		{
+			commandlist.render_encoder->setVertexBuffer(argument_buffer.get(), 0, kIRDescriptorHeapBindPoint);
+			commandlist.render_encoder->setVertexBuffer(argument_buffer.get(), 0, kIRSamplerHeapBindPoint);
+		}
+		if (commandlist.active_pso->desc.ps != nullptr)
+		{
+			commandlist.render_encoder->setFragmentBuffer(argument_buffer.get(), 0, kIRDescriptorHeapBindPoint);
+			commandlist.render_encoder->setFragmentBuffer(argument_buffer.get(), 0, kIRSamplerHeapBindPoint);
+		}
+		
 		commandlist.dirty_pso = false;
 	}
 	void GraphicsDevice_Metal::predraw(CommandList cmd)
@@ -781,6 +793,8 @@ using namespace metal_internal;
 		if (commandlist.compute_encoder == nullptr)
 		{
 			commandlist.compute_encoder = commandlist.commandbuffer->computeCommandEncoder();
+			commandlist.compute_encoder->setBuffer(argument_buffer.get(), 0, kIRDescriptorHeapBindPoint);
+			commandlist.compute_encoder->setBuffer(argument_buffer.get(), 0, kIRSamplerHeapBindPoint);
 		}
 		binder_flush(cmd);
 	}
@@ -811,10 +825,10 @@ using namespace metal_internal;
 		allocationhandler = wi::allocator::make_shared_single<AllocationHandler>();
 		argument_buffer_sampler_capacity = std::min(argument_buffer_sampler_capacity, (uint64_t)device->maxArgumentBufferSamplerCount());
 		argument_buffer_bindless_sampler_capacity = std::min(argument_buffer_bindless_sampler_capacity, argument_buffer_sampler_capacity / 2);
-		argument_buffer = NS::TransferPtr(device->newBuffer(argument_buffer_capacity * sizeof(MTL::ResourceID), MTL::ResourceStorageModeShared | MTL::ResourceHazardTrackingModeUntracked));
+		argument_buffer = NS::TransferPtr(device->newBuffer(argument_buffer_capacity * sizeof(IRDescriptorTableEntry), MTL::ResourceStorageModeShared | MTL::ResourceHazardTrackingModeUntracked));
 		argument_buffer->setLabel(NS::String::string("argument_buffer", NS::UTF8StringEncoding));
 		argument_buffer_data = (uint8_t*)argument_buffer->contents();
-		allocationhandler->argument_buffer_data = argument_buffer_data;
+		allocationhandler->descriptor_heap_data = (IRDescriptorTableEntry*)argument_buffer_data;
 		allocationhandler->free_bindless_res.reserve(argument_buffer_bindless_resource_capacity);
 		allocationhandler->free_bindless_sam.reserve(argument_buffer_bindless_sampler_capacity);
 		for (int i = 0; i < argument_buffer_bindless_sampler_capacity; ++i)
@@ -1040,9 +1054,7 @@ using namespace metal_internal;
 		if (stage == ShaderStage::CS)
 		{
 			error = nullptr;
-			MTL::PipelineOption options = MTL::PipelineOptionArgumentInfo | MTL::PipelineOptionBufferTypeInfo;
-			MTL::AutoreleasedComputePipelineReflection reflection = nullptr;
-			internal_state->compute_pipeline = NS::TransferPtr(device->newComputePipelineState(internal_state->function.get(), options, &reflection, &error));
+			internal_state->compute_pipeline = NS::TransferPtr(device->newComputePipelineState(internal_state->function.get(), &error));
 			if(error != nullptr)
 			{
 				NS::String* errDesc = error->localizedDescription();
@@ -1122,39 +1134,26 @@ using namespace metal_internal;
 		NS::SharedPtr<MTL::VertexDescriptor> vertex_descriptor;
 		if (desc->il != nullptr)
 		{
-			auto vs_internal = to_internal(desc->vs);
-			NS::Array* attributes = vs_internal->function->vertexAttributes();
-			if (attributes != nullptr)
+			uint64_t offset = 0;
+			for (size_t i = 0; i < desc->il->elements.size(); ++i)
 			{
-				vertex_descriptor = NS::TransferPtr(MTL::VertexDescriptor::alloc()->init());
-				uint32_t index = 0;
-				uint32_t offset = 0;
-				for (NS::UInteger i = 0; i < attributes->count(); ++i)
+				const InputLayout::Element& element = desc->il->elements[i];
+				MTL::VertexBufferLayoutDescriptor* layout = vertex_descriptor->layouts()->object(kIRStageInAttributeStartIndex + i);
+				const uint64_t stride = GetFormatStride(element.format);
+				layout->setStride(stride);
+				layout->setStepFunction(element.input_slot_class == InputClassification::PER_VERTEX_DATA ? MTL::VertexStepFunctionPerVertex : MTL::VertexStepFunctionPerInstance);
+				layout->setStepRate(1);
+				MTL::VertexAttributeDescriptor* attribute = vertex_descriptor->attributes()->object(kIRStageInAttributeStartIndex + i);
+				attribute->setFormat(_ConvertVertexFormat(element.format));
+				attribute->setOffset(element.aligned_byte_offset == InputLayout::APPEND_ALIGNED_ELEMENT ? offset : element.aligned_byte_offset);
+				attribute->setBufferIndex(kIRVertexBufferBindPoint + i);
+				if (element.aligned_byte_offset != InputLayout::APPEND_ALIGNED_ELEMENT)
 				{
-					MTL::VertexAttribute* attr = (MTL::VertexAttribute*)attributes->object(i);
-					const uint32_t attribute_index = (uint32_t)attr->attributeIndex();
-					if (attr != nullptr && attr->isActive())
-					{
-						const InputLayout::Element& element = desc->il->elements[index++];
-						internal_state->vertex_attribute_mapping[index] = attribute_index;
-						MTL::VertexBufferLayoutDescriptor* layout = vertex_descriptor->layouts()->object(attribute_index);
-						const uint64_t stride = GetFormatStride(element.format);
-						layout->setStride(stride);
-						layout->setStepFunction(element.input_slot_class == InputClassification::PER_VERTEX_DATA ? MTL::VertexStepFunctionPerVertex : MTL::VertexStepFunctionPerInstance);
-						layout->setStepRate(1);
-						MTL::VertexAttributeDescriptor* attribute = vertex_descriptor->attributes()->object(attribute_index);
-						attribute->setFormat(_ConvertVertexFormat(element.format));
-						attribute->setOffset(element.aligned_byte_offset == InputLayout::APPEND_ALIGNED_ELEMENT ? offset : element.aligned_byte_offset);
-						attribute->setBufferIndex(attribute_index);
-						if (element.aligned_byte_offset != InputLayout::APPEND_ALIGNED_ELEMENT)
-						{
-							offset = element.aligned_byte_offset;
-						}
-						offset += stride;
-					}
+					offset = element.aligned_byte_offset;
 				}
-				internal_state->descriptor->setVertexDescriptor(vertex_descriptor.get());
+				offset += stride;
 			}
+			internal_state->descriptor->setVertexDescriptor(vertex_descriptor.get());
 		}
 		
 		switch (desc->pt)
@@ -1203,25 +1202,13 @@ using namespace metal_internal;
 			internal_state->descriptor->setSampleCount(sample_count);
 			
 			NS::Error* error = nullptr;
-			MTL::PipelineOption options = MTL::PipelineOptionArgumentInfo | MTL::PipelineOptionBufferTypeInfo;
-			MTL::AutoreleasedRenderPipelineReflection reflection = nullptr;
-			internal_state->render_pipeline = NS::TransferPtr(device->newRenderPipelineState(internal_state->descriptor.get(), options, &reflection, &error));
+			internal_state->render_pipeline = NS::TransferPtr(device->newRenderPipelineState(internal_state->descriptor.get(), &error));
 			if(error != nullptr)
 			{
 				NS::String* errDesc = error->localizedDescription();
 				wilog_error("%s", errDesc->utf8String());
 				assert(0);
 				error->release();
-			}
-			
-			NS::Array* args = reflection->vertexArguments();
-			for (NS::UInteger i = 0; i < args->count(); ++i) {
-				MTL::Argument* arg = (MTL::Argument*)args->object(i);
-				if (arg->type() == MTL::ArgumentTypeBuffer) {
-					uint64_t index = arg->index();
-					auto name = arg->name()->cString(NS::UTF8StringEncoding);
-					name = name;
-				}
 			}
 			
 			return internal_state->render_pipeline.get() != nullptr;
@@ -1707,7 +1694,7 @@ using namespace metal_internal;
 		assert(slot < DESCRIPTORBINDER_SRV_COUNT);
 		if (commandlist.binding_table.SRV[slot].internal_state == resource->internal_state && commandlist.binding_table.SRV_index[slot] == subresource)
 			return;
-		commandlist.dirty_root[ROOT_SLOT_RESOURCE_BINDING] = true;
+		commandlist.dirty_root = true;
 		commandlist.binding_table.SRV[slot] = *resource;
 		commandlist.binding_table.SRV_index[slot] = subresource;
 	}
@@ -1727,7 +1714,7 @@ using namespace metal_internal;
 		assert(slot < DESCRIPTORBINDER_UAV_COUNT);
 		if (commandlist.binding_table.UAV[slot].internal_state == resource->internal_state && commandlist.binding_table.UAV_index[slot] == subresource)
 			return;
-		commandlist.dirty_root[ROOT_SLOT_RESOURCE_BINDING] = true;
+		commandlist.dirty_root = true;
 		commandlist.binding_table.UAV[slot] = *resource;
 		commandlist.binding_table.UAV_index[slot] = subresource;
 	}
@@ -1747,7 +1734,7 @@ using namespace metal_internal;
 		assert(slot < DESCRIPTORBINDER_SAMPLER_COUNT);
 		if (commandlist.binding_table.SAM[slot].internal_state == sampler->internal_state)
 			return;
-		commandlist.dirty_root[ROOT_SLOT_SAMPLER_BINDING] = true;
+		commandlist.dirty_root= true;
 		commandlist.binding_table.SAM[slot] = *sampler;
 	}
 	void GraphicsDevice_Metal::BindConstantBuffer(const GPUBuffer* buffer, uint32_t slot, CommandList cmd, uint64_t offset)
@@ -1756,7 +1743,7 @@ using namespace metal_internal;
 		assert(slot < DESCRIPTORBINDER_CBV_COUNT);
 		if (commandlist.binding_table.CBV[slot].internal_state == buffer->internal_state && commandlist.binding_table.CBV_offset[slot] == offset)
 			return;
-		commandlist.dirty_root[slot < 3 ? (ROOT_SLOT_CBV0 + slot) : ROOT_SLOT_RESOURCE_BINDING] = true;
+		commandlist.dirty_root = true;
 		commandlist.binding_table.CBV[slot] = *buffer;
 		commandlist.binding_table.CBV_offset[slot] = offset;
 	}
@@ -1840,42 +1827,48 @@ using namespace metal_internal;
 		commandlist.render_encoder->setDepthTestBounds(min_bounds, max_bounds);
 	}
 	void GraphicsDevice_Metal::Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd)
-	{
+{
 		predraw(cmd);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-		commandlist.render_encoder->drawPrimitives(commandlist.primitive_type, startVertexLocation, vertexCount, 1);
+		//commandlist.render_encoder->drawPrimitives(commandlist.primitive_type, startVertexLocation, vertexCount, 1);
+		IRRuntimeDrawPrimitives(commandlist.render_encoder, commandlist.primitive_type, startVertexLocation, vertexCount);
 	}
 	void GraphicsDevice_Metal::DrawIndexed(uint32_t indexCount, uint32_t startIndexLocation, int32_t baseVertexLocation, CommandList cmd)
 	{
 		predraw(cmd);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-		commandlist.render_encoder->drawIndexedPrimitives(commandlist.primitive_type, indexCount, commandlist.index_type, commandlist.index_buffer.get(), startIndexLocation, 1);
+		//commandlist.render_encoder->drawIndexedPrimitives(commandlist.primitive_type, indexCount, commandlist.index_type, commandlist.index_buffer.get(), startIndexLocation, 1);
+		IRRuntimeDrawIndexedPrimitives(commandlist.render_encoder, commandlist.primitive_type, indexCount, commandlist.index_type, commandlist.index_buffer.get(), startIndexLocation);
 	}
 	void GraphicsDevice_Metal::DrawInstanced(uint32_t vertexCount, uint32_t instanceCount, uint32_t startVertexLocation, uint32_t startInstanceLocation, CommandList cmd)
 	{
 		predraw(cmd);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-		commandlist.render_encoder->drawPrimitives(commandlist.primitive_type, startVertexLocation, vertexCount, instanceCount, startInstanceLocation);
+		//commandlist.render_encoder->drawPrimitives(commandlist.primitive_type, startVertexLocation, vertexCount, instanceCount, startInstanceLocation);
+		IRRuntimeDrawPrimitives(commandlist.render_encoder, commandlist.primitive_type, startVertexLocation, vertexCount, instanceCount, startInstanceLocation);
 	}
 	void GraphicsDevice_Metal::DrawIndexedInstanced(uint32_t indexCount, uint32_t instanceCount, uint32_t startIndexLocation, int32_t baseVertexLocation, uint32_t startInstanceLocation, CommandList cmd)
 	{
 		predraw(cmd);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-		commandlist.render_encoder->drawIndexedPrimitives(commandlist.primitive_type, indexCount, commandlist.index_type, commandlist.index_buffer.get(), startIndexLocation, instanceCount, baseVertexLocation, startInstanceLocation);
+		//commandlist.render_encoder->drawIndexedPrimitives(commandlist.primitive_type, indexCount, commandlist.index_type, commandlist.index_buffer.get(), startIndexLocation, instanceCount, baseVertexLocation, startInstanceLocation);
+		IRRuntimeDrawIndexedPrimitives(commandlist.render_encoder, commandlist.primitive_type, indexCount, commandlist.index_type, commandlist.index_buffer.get(), startIndexLocation, instanceCount, baseVertexLocation, startInstanceLocation);
 	}
 	void GraphicsDevice_Metal::DrawInstancedIndirect(const GPUBuffer* args, uint64_t args_offset, CommandList cmd)
 	{
 		predraw(cmd);
 		auto internal_state = to_internal(args);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-		commandlist.render_encoder->drawPrimitives(commandlist.primitive_type, internal_state->buffer.get(), args_offset);
+		//commandlist.render_encoder->drawPrimitives(commandlist.primitive_type, internal_state->buffer.get(), args_offset);
+		IRRuntimeDrawPrimitives(commandlist.render_encoder, commandlist.primitive_type, internal_state->buffer.get(), args_offset);
 	}
 	void GraphicsDevice_Metal::DrawIndexedInstancedIndirect(const GPUBuffer* args, uint64_t args_offset, CommandList cmd)
 	{
 		predraw(cmd);
 		auto internal_state = to_internal(args);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-		commandlist.render_encoder->drawIndexedPrimitives(commandlist.primitive_type, commandlist.index_type, commandlist.index_buffer.get(), 0, internal_state->buffer.get(), args_offset);
+		//commandlist.render_encoder->drawIndexedPrimitives(commandlist.primitive_type, commandlist.index_type, commandlist.index_buffer.get(), 0, internal_state->buffer.get(), args_offset);
+		IRRuntimeDrawIndexedPrimitives(commandlist.render_encoder, commandlist.primitive_type, commandlist.index_type, commandlist.index_buffer.get(), 0, internal_state->buffer.get(), args_offset);
 	}
 	void GraphicsDevice_Metal::DrawInstancedIndirectCount(const GPUBuffer* args, uint64_t args_offset, const GPUBuffer* count, uint64_t count_offset, uint32_t max_count, CommandList cmd)
 	{
@@ -2006,21 +1999,8 @@ using namespace metal_internal;
 	void GraphicsDevice_Metal::PushConstants(const void* data, uint32_t size, CommandList cmd, uint32_t offset)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-		if (commandlist.render_encoder != nullptr)
-		{
-			if (commandlist.active_pso->desc.vs != nullptr)
-			{
-				commandlist.render_encoder->setVertexBytes(data, size, ROOT_SLOT_CONSTANTS);
-			}
-			if (commandlist.active_pso->desc.ps != nullptr)
-			{
-				commandlist.render_encoder->setFragmentBytes(data, size, ROOT_SLOT_CONSTANTS);
-			}
-		}
-		else if (commandlist.compute_encoder != nullptr)
-		{
-			commandlist.compute_encoder->setBytes(data, size, ROOT_SLOT_CONSTANTS);
-		}
+		std::memcpy((uint8_t*)commandlist.push_constants + offset, data, size);
+		commandlist.dirty_root = true;
 	}
 	void GraphicsDevice_Metal::PredicationBegin(const GPUBuffer* buffer, uint64_t offset, PredicationOp op, CommandList cmd)
 	{

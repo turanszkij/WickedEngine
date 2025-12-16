@@ -12,6 +12,9 @@
 #include <QuartzCore/QuartzCore.hpp>
 #include <Foundation/Foundation.hpp>
 
+#define IR_RUNTIME_METALCPP
+#include <metal_irconverter_runtime/metal_irconverter_runtime.h>
+
 #include <mutex>
 #include <deque>
 
@@ -22,32 +25,6 @@ namespace wi::graphics
 	private:
 		NS::SharedPtr<MTL::Device> device;
 		NS::SharedPtr<MTL::CommandQueue> commandqueue;
-		
-		enum ROOT_SLOT
-		{
-			ROOT_SLOT_CONSTANTS,
-			ROOT_SLOT_CBV0,
-			ROOT_SLOT_CBV1,
-			ROOT_SLOT_CBV2,
-			ROOT_SLOT_RESOURCE_BINDING,
-			ROOT_SLOT_SAMPLER_BINDING,
-			ROOT_SLOT_SAMPLER_BINDLESS,
-			ROOT_SLOT_RESOURCE_BINDLESS,
-			
-			ROOT_SLOT_COUNT,
-		};
-		
-		static constexpr uint64_t root_table_sizes[] = {
-			0, // ROOT_SLOT_CONSTANTS
-			0, // ROOT_SLOT_CBV0,
-			0, // ROOT_SLOT_CBV1,
-			0, // ROOT_SLOT_CBV2,
-			arraysize(DescriptorBindingTable::CBV) - 3 + arraysize(DescriptorBindingTable::SRV) + arraysize(DescriptorBindingTable::UAV), // ROOT_SLOT_RESOURCE_BINDING,
-			arraysize(DescriptorBindingTable::SAM), // ROOT_SLOT_SAMPLER_BINDING,
-			0, // ROOT_SLOT_SAMPLER_BINDLESS,
-			0, // ROOT_SLOT_RESOURCE_BINDLESS,
-		};
-		static constexpr uint64_t descriptor_wrap_reservation = std::max(root_table_sizes[ROOT_SLOT_SAMPLER_BINDING], root_table_sizes[ROOT_SLOT_RESOURCE_BINDING]);
 		
 		struct CommandList_Metal
 		{
@@ -69,7 +46,8 @@ namespace wi::graphics
 			wi::vector<std::pair<PipelineHash, NS::SharedPtr<MTL::RenderPipelineState>>> pipelines_worker;
 			PipelineHash pipeline_hash;
 			DescriptorBindingTable binding_table;
-			bool dirty_root[ROOT_SLOT_COUNT] = {};
+			bool dirty_root = false;
+			uint32_t push_constants[256] = {};
 			
 			struct VertexBufferBinding
 			{
@@ -100,10 +78,7 @@ namespace wi::graphics
 				pipelines_worker.clear();
 				pipeline_hash = {};
 				binding_table = {};
-				for (auto& x : dirty_root)
-				{
-					x = true;
-				}
+				dirty_root = false;
 				for (auto& x : vertex_buffers)
 				{
 					x = {};
@@ -277,7 +252,7 @@ namespace wi::graphics
 			std::deque<std::pair<int, uint64_t>> destroyer_bindless_sam;
 			wi::vector<int> free_bindless_res;
 			wi::vector<int> free_bindless_sam;
-			uint8_t* argument_buffer_data = nullptr;
+			IRDescriptorTableEntry* descriptor_heap_data = nullptr;
 
 			void Update(uint64_t FRAMECOUNT, uint32_t BUFFERCOUNT)
 			{
@@ -325,39 +300,49 @@ namespace wi::graphics
 				}
 			}
 			
-			static_assert(sizeof(MTL::ResourceID) == sizeof(MTL::GPUAddress));
-			int allocate_bindless(MTL::Texture* res)
+			int allocate_bindless(MTL::Texture* res, float min_lod_clamp = 0)
 			{
 				std::scoped_lock lck(destroylocker);
 				if(free_bindless_res.empty())
 					return -1;
 				int index = free_bindless_res.back();
 				free_bindless_res.pop_back();
-				MTL::ResourceID handle = res->gpuResourceID();
-				std::memcpy(argument_buffer_data + index * sizeof(handle), &handle, sizeof(handle));
+				uint32_t metadata = 0;
+				IRDescriptorTableSetTexture(descriptor_heap_data + index, res, min_lod_clamp, metadata);
 				return index;
 			}
-			int allocate_bindless(MTL::Buffer* res, uint64_t offset = 0)
+			int allocate_bindless(MTL::Buffer* res, uint64_t size, uint64_t offset = 0, MTL::Texture* texture_buffer_view = nullptr, Format format = Format::UNKNOWN)
 			{
 				std::scoped_lock lck(destroylocker);
 				if(free_bindless_res.empty())
 					return -1;
 				int index = free_bindless_res.back();
 				free_bindless_res.pop_back();
-				MTL::GPUAddress handle = res->gpuAddress();
-				handle += offset;
-				std::memcpy(argument_buffer_data + index * sizeof(handle), &handle, sizeof(handle));
+				IRBufferView view = {};
+				view.buffer = res;
+				view.bufferSize = size;
+				view.bufferOffset = offset;
+				if (texture_buffer_view == nullptr)
+				{
+					view.typedBuffer = false;
+				}
+				else
+				{
+					view.typedBuffer = true;
+					view.textureBufferView = texture_buffer_view;
+					view.textureViewOffsetInElements = uint32_t(offset / (uint64_t)GetFormatStride(format));
+				}
+				IRDescriptorTableSetBufferView(descriptor_heap_data + index, &view);
 				return index;
 			}
-			int allocate_bindless(MTL::SamplerState* res)
+			int allocate_bindless(MTL::SamplerState* sam, float lod_bias = 0)
 			{
 				std::scoped_lock lck(destroylocker);
 				if(free_bindless_sam.empty())
 					return -1;
 				int index = free_bindless_sam.back();
 				free_bindless_sam.pop_back();
-				MTL::ResourceID handle = res->gpuResourceID();
-				std::memcpy(argument_buffer_data + index * sizeof(handle), &handle, sizeof(handle));
+				IRDescriptorTableSetSampler(descriptor_heap_data + index, sam, lod_bias);
 				return index;
 			}
 		};
