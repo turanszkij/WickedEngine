@@ -1,5 +1,11 @@
 cmake_minimum_required(VERSION 3.19)
 
+# enable "codegen" target if supported by CMake
+if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.31)
+    cmake_policy(SET CMP0171 NEW)
+    set(codegen CODEGEN)
+endif()
+
 if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
     message(FATAL_ERROR
         "In-source builds are not supported!\n"
