@@ -92,11 +92,17 @@ namespace wi::graphics
 		
 		wi::unordered_map<PipelineHash, NS::SharedPtr<MTL::RenderPipelineState>> pipelines_global;
 		
-		NS::SharedPtr<MTL::Buffer> argument_buffer;
-		uint8_t* argument_buffer_data = nullptr;
-		uint64_t argument_buffer_sampler_capacity = 2048;
-		uint64_t argument_buffer_bindless_sampler_capacity = 256;
-		std::atomic<uint64_t> argument_buffer_offset{0};
+		NS::SharedPtr<MTL::Buffer> descriptor_heap_res;
+		NS::SharedPtr<MTL::Buffer> descriptor_heap_sam;
+		
+		NS::SharedPtr<MTL::ResidencySet> residency_set;
+		void make_resident(const MTL::Allocation* allocation) const
+		{
+			static std::mutex residency_set_locker;
+			std::scoped_lock locker(residency_set_locker);
+			residency_set->addAllocation(allocation);
+		}
+		
 		void binder_flush(CommandList cmd);
 
 		constexpr CommandList_Metal& GetCommandList(CommandList cmd) const
@@ -156,7 +162,7 @@ namespace wi::graphics
 
 		uint32_t GetMinOffsetAlignment(const GPUBufferDesc* desc) const override
 		{
-			uint32_t alignment = 1u;
+			uint32_t alignment = 16u;
 			return alignment;
 		}
 
@@ -252,7 +258,8 @@ namespace wi::graphics
 			std::deque<std::pair<int, uint64_t>> destroyer_bindless_sam;
 			wi::vector<int> free_bindless_res;
 			wi::vector<int> free_bindless_sam;
-			IRDescriptorTableEntry* descriptor_heap_data = nullptr;
+			IRDescriptorTableEntry* descriptor_heap_res_data = nullptr;
+			IRDescriptorTableEntry* descriptor_heap_sam_data = nullptr;
 
 			void Update(uint64_t FRAMECOUNT, uint32_t BUFFERCOUNT)
 			{
@@ -308,7 +315,7 @@ namespace wi::graphics
 				int index = free_bindless_res.back();
 				free_bindless_res.pop_back();
 				uint32_t metadata = 0;
-				IRDescriptorTableSetTexture(descriptor_heap_data + index, res, min_lod_clamp, metadata);
+				IRDescriptorTableSetTexture(descriptor_heap_res_data + index, res, min_lod_clamp, metadata);
 				return index;
 			}
 			int allocate_bindless(MTL::Buffer* res, uint64_t size, uint64_t offset = 0, MTL::Texture* texture_buffer_view = nullptr, Format format = Format::UNKNOWN)
@@ -332,7 +339,7 @@ namespace wi::graphics
 					view.textureBufferView = texture_buffer_view;
 					view.textureViewOffsetInElements = uint32_t(offset / (uint64_t)GetFormatStride(format));
 				}
-				IRDescriptorTableSetBufferView(descriptor_heap_data + index, &view);
+				IRDescriptorTableSetBufferView(descriptor_heap_res_data + index, &view);
 				return index;
 			}
 			int allocate_bindless(MTL::SamplerState* sam, float lod_bias = 0)
@@ -342,7 +349,7 @@ namespace wi::graphics
 					return -1;
 				int index = free_bindless_sam.back();
 				free_bindless_sam.pop_back();
-				IRDescriptorTableSetSampler(descriptor_heap_data + index, sam, lod_bias);
+				IRDescriptorTableSetSampler(descriptor_heap_sam_data + index, sam, lod_bias);
 				return index;
 			}
 		};

@@ -190,6 +190,13 @@ namespace wi::shadercompiler
 		{
 			minshadermodel = ShaderModel::SM_6_6;
 		}
+		
+		if (input.format == ShaderFormat::METAL)
+		{
+			args.push_back(L"-Od");
+			args.push_back(L"-Zi");
+			args.push_back(L"-Qembed_debug");
+		}
 
 		args.push_back(L"-T");
 		switch (input.stage)
@@ -592,6 +599,7 @@ namespace wi::shadercompiler
 					
 					static IRDescriptorRange1 binding_resources[] =
 					{
+						{ .RangeType = IRDescriptorRangeTypeCBV, .BaseShaderRegister = 3, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = IRDescriptorRangeOffsetAppend, .NumDescriptors = 11, .Flags = IRDescriptorRangeFlagDataStaticWhileSetAtExecute },
 						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = IRDescriptorRangeOffsetAppend, .NumDescriptors = 16, .Flags = IRDescriptorRangeFlagDataStaticWhileSetAtExecute },
 						{ .RangeType = IRDescriptorRangeTypeUAV, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = IRDescriptorRangeOffsetAppend, .NumDescriptors = 16, .Flags = IRDescriptorRangeFlagDataStaticWhileSetAtExecute },
 					};

@@ -13,8 +13,8 @@ namespace wi::graphics
 
 namespace metal_internal
 {
-	static constexpr uint64_t argument_buffer_capacity = 1000000;
-	static constexpr uint64_t argument_buffer_bindless_resource_capacity = 500000;
+	static constexpr uint64_t bindless_resource_capacity = 500000;
+	static constexpr uint64_t bindless_sampler_capacity = 256;
 
 	constexpr MTL::VertexFormat _ConvertVertexFormat(Format value)
 	{
@@ -552,28 +552,28 @@ using namespace metal_internal;
 		
 		if (commandlist.dirty_root)
 		{
-			static constexpr uint32_t resource_binding_size = arraysize(DescriptorBindingTable::CBV) - 3 + arraysize(DescriptorBindingTable::SRV) + arraysize(DescriptorBindingTable::UAV);
-			static constexpr uint32_t sampler_binding_size = arraysize(DescriptorBindingTable::SAM);
-				
+			struct ResourceTable
+			{
+				IRDescriptorTableEntry descriptors[arraysize(DescriptorBindingTable::CBV) - 3 + arraysize(DescriptorBindingTable::SRV) + arraysize(DescriptorBindingTable::UAV)];
+			};
+			struct SamplerTable
+			{
+				IRDescriptorTableEntry descriptors[arraysize(DescriptorBindingTable::SAM)];
+			};
 			struct RootLayout
 			{
 				uint32_t constants[16];
 				MTL::GPUAddress root_cbv[3];
-				//uint64_t resource_table_ptr;
-				//uint64_t sampler_table_ptr;
-				IRDescriptorTableEntry resource_table[resource_binding_size];
-				IRDescriptorTableEntry sampler_table[sampler_binding_size];
+				uint64_t resource_table_ptr;
+				uint64_t sampler_table_ptr;
 			};
-			const uint64_t descriptor_binding_byte_start = align(uint64_t((argument_buffer_bindless_sampler_capacity + argument_buffer_bindless_resource_capacity) * sizeof(IRDescriptorTableEntry)), uint64_t(sizeof(RootLayout)));
-			const uint64_t descriptor_binding_byte_range = argument_buffer_capacity * sizeof(IRDescriptorTableEntry) - descriptor_binding_byte_start;
-			const uint64_t descriptor_binding_element_range = descriptor_binding_byte_range / sizeof(RootLayout);
 			
-			const uint64_t wrapped_offset = argument_buffer_offset.fetch_add(1) % descriptor_binding_element_range;
-			const uint64_t root_byte_offset = descriptor_binding_byte_start + wrapped_offset * sizeof(RootLayout);
-			RootLayout* root_data = (RootLayout*)(argument_buffer_data + root_byte_offset);
+			GPUAllocation root_allocation = AllocateGPU(sizeof(RootLayout), cmd);
+			GPUAllocation resource_table_allocation = AllocateGPU(sizeof(ResourceTable), cmd);
+			GPUAllocation sampler_table_allocation = AllocateGPU(sizeof(SamplerTable), cmd);
 			
-			//root_data->resource_table_ptr = (uint64_t)root_data->resource_table;
-			//root_data->sampler_table_ptr = (uint64_t)root_data->sampler_table;
+			RootLayout* root_data = (RootLayout*)root_allocation.data;
+			*root_data = {};
 			
 			// push constants:
 			std::memcpy(root_data->constants, commandlist.push_constants, std::min(sizeof(root_data->constants), sizeof(commandlist.push_constants)));
@@ -581,18 +581,18 @@ using namespace metal_internal;
 			// root CBVs:
 			for (uint32_t i = 0; i < arraysize(root_data->root_cbv); ++i)
 			{
-				MTL::GPUAddress gpu_address = argument_buffer->gpuAddress();
-				if (commandlist.binding_table.CBV[i].IsValid())
-				{
-					auto internal_state = to_internal(&commandlist.binding_table.CBV[i]);
-					gpu_address = internal_state->gpu_address +commandlist.binding_table.CBV_offset[i];
-				}
+				if (!commandlist.binding_table.CBV[i].IsValid())
+					continue;
+				auto internal_state = to_internal(&commandlist.binding_table.CBV[i]);
+				const uint64_t gpu_address = internal_state->gpu_address +commandlist.binding_table.CBV_offset[i];
 				root_data->root_cbv[i] = gpu_address;
 			}
 			
-			uint32_t resource_table_offset = 0;
+			root_data->resource_table_ptr = (uint64_t)resource_table_allocation.data;
+			root_data->sampler_table_ptr = (uint64_t)resource_table_allocation.data;
 			
-			// normal CBVs:
+			// Descriptor tables:
+			uint32_t resource_table_offset = 0;
 			for (uint32_t i = arraysize(root_data->root_cbv); i < arraysize(DescriptorBindingTable::CBV); ++i)
 			{
 				if (commandlist.binding_table.CBV[i].IsValid())
@@ -601,12 +601,10 @@ using namespace metal_internal;
 					const uint64_t offset = commandlist.binding_table.CBV_offset[i];
 					const MTL::GPUAddress gpu_address = internal_state->gpu_address + offset;
 					const uint64_t metadata = 0;
-					IRDescriptorTableSetBuffer(root_data->resource_table + resource_table_offset, gpu_address, metadata);
+					IRDescriptorTableSetBuffer((IRDescriptorTableEntry*)resource_table_allocation.data + resource_table_offset, gpu_address, metadata);
 				}
 				resource_table_offset++;
 			}
-			
-			// SRVs:
 			for (uint32_t i = 0; i < arraysize(commandlist.binding_table.SRV); ++i)
 			{
 				if (commandlist.binding_table.SRV[i].IsValid())
@@ -620,7 +618,7 @@ using namespace metal_internal;
 						buffer_view.buffer = subresource.buffer.get();
 						buffer_view.bufferOffset = subresource.offset;
 						buffer_view.bufferSize = subresource.size;
-						IRDescriptorTableSetBufferView(root_data->resource_table + resource_table_offset, &buffer_view);
+						IRDescriptorTableSetBufferView((IRDescriptorTableEntry*)resource_table_allocation.data + resource_table_offset, &buffer_view);
 					}
 					else if (commandlist.binding_table.SRV[i].IsTexture())
 					{
@@ -628,7 +626,7 @@ using namespace metal_internal;
 						const int subresource_index = commandlist.binding_table.SRV_index[i];
 						const auto& subresource = subresource_index < 0 ? internal_state->srv : internal_state->subresources_srv[subresource_index];
 						const uint64_t metadata = 0;
-						IRDescriptorTableSetTexture(root_data->resource_table + resource_table_offset, subresource.texture.get(), 0, metadata);
+						IRDescriptorTableSetTexture((IRDescriptorTableEntry*)resource_table_allocation.data + resource_table_offset, subresource.texture.get(), 0, metadata);
 					}
 					else if (commandlist.binding_table.SRV[i].IsAccelerationStructure())
 					{
@@ -637,8 +635,6 @@ using namespace metal_internal;
 				}
 				resource_table_offset++;
 			}
-			
-			// UAVs:
 			for (uint32_t i = 0; i < arraysize(commandlist.binding_table.UAV); ++i)
 			{
 				if (commandlist.binding_table.UAV[i].IsValid())
@@ -652,7 +648,7 @@ using namespace metal_internal;
 						buffer_view.buffer = subresource.buffer.get();
 						buffer_view.bufferOffset = subresource.offset;
 						buffer_view.bufferSize = subresource.size;
-						IRDescriptorTableSetBufferView(root_data->resource_table + resource_table_offset, &buffer_view);
+						IRDescriptorTableSetBufferView((IRDescriptorTableEntry*)resource_table_allocation.data + resource_table_offset, &buffer_view);
 					}
 					else if (commandlist.binding_table.UAV[i].IsTexture())
 					{
@@ -660,35 +656,37 @@ using namespace metal_internal;
 						const int subresource_index = commandlist.binding_table.UAV_index[i];
 						const auto& subresource = subresource_index < 0 ? internal_state->uav : internal_state->subresources_uav[subresource_index];
 						const uint64_t metadata = 0;
-						IRDescriptorTableSetTexture(root_data->resource_table + resource_table_offset, subresource.texture.get(), 0, metadata);
+						IRDescriptorTableSetTexture((IRDescriptorTableEntry*)resource_table_allocation.data + resource_table_offset, subresource.texture.get(), 0, metadata);
 					}
 				}
 				resource_table_offset++;
 			}
-			
-			// Samplers:
 			for (uint32_t i = 0; i < arraysize(commandlist.binding_table.SAM); ++i)
 			{
 				if (!commandlist.binding_table.SAM[i].IsValid())
 					continue;
 				auto internal_state = to_internal(&commandlist.binding_table.SAM[i]);
-				IRDescriptorTableSetSampler(root_data->sampler_table + i, internal_state->sampler.get(), 0);
+				IRDescriptorTableSetSampler((IRDescriptorTableEntry*)sampler_table_allocation.data + i, internal_state->sampler.get(), 0);
 			}
+			
+			auto root_allocation_internal = to_internal(&root_allocation.buffer);
+			auto resource_table_allocation_internal = to_internal(&resource_table_allocation.buffer);
+			auto sampler_table_allocation_internal = to_internal(&sampler_table_allocation.buffer);
 			
 			if (commandlist.render_encoder != nullptr)
 			{
 				if (commandlist.active_pso->desc.vs != nullptr)
 				{
-					commandlist.render_encoder->setVertexBuffer(argument_buffer.get(), root_byte_offset, kIRArgumentBufferBindPoint);
+					commandlist.render_encoder->setVertexBuffer(root_allocation_internal->buffer.get(), root_allocation.offset, kIRArgumentBufferBindPoint);
 				}
 				if (commandlist.active_pso->desc.ps != nullptr)
 				{
-					commandlist.render_encoder->setFragmentBuffer(argument_buffer.get(), root_byte_offset, kIRArgumentBufferBindPoint);
+					commandlist.render_encoder->setFragmentBuffer(root_allocation_internal->buffer.get(), root_allocation.offset, kIRArgumentBufferBindPoint);
 				}
 			}
 			else if (commandlist.compute_encoder != nullptr)
 			{
-				commandlist.compute_encoder->setBuffer(argument_buffer.get(), root_byte_offset, kIRArgumentBufferBindPoint);
+				commandlist.compute_encoder->setBuffer(root_allocation_internal->buffer.get(), root_allocation.offset, kIRArgumentBufferBindPoint);
 			}
 		}
 		if(commandlist.dirty_vb)
@@ -757,13 +755,13 @@ using namespace metal_internal;
 		
 		if (commandlist.active_pso->desc.vs != nullptr)
 		{
-			commandlist.render_encoder->setVertexBuffer(argument_buffer.get(), 0, kIRDescriptorHeapBindPoint);
-			commandlist.render_encoder->setVertexBuffer(argument_buffer.get(), 0, kIRSamplerHeapBindPoint);
+			commandlist.render_encoder->setVertexBuffer(descriptor_heap_res.get(), 0, kIRDescriptorHeapBindPoint);
+			commandlist.render_encoder->setVertexBuffer(descriptor_heap_sam.get(), 0, kIRSamplerHeapBindPoint);
 		}
 		if (commandlist.active_pso->desc.ps != nullptr)
 		{
-			commandlist.render_encoder->setFragmentBuffer(argument_buffer.get(), 0, kIRDescriptorHeapBindPoint);
-			commandlist.render_encoder->setFragmentBuffer(argument_buffer.get(), 0, kIRSamplerHeapBindPoint);
+			commandlist.render_encoder->setFragmentBuffer(descriptor_heap_res.get(), 0, kIRDescriptorHeapBindPoint);
+			commandlist.render_encoder->setFragmentBuffer(descriptor_heap_sam.get(), 0, kIRSamplerHeapBindPoint);
 		}
 		
 		commandlist.dirty_pso = false;
@@ -793,8 +791,8 @@ using namespace metal_internal;
 		if (commandlist.compute_encoder == nullptr)
 		{
 			commandlist.compute_encoder = commandlist.commandbuffer->computeCommandEncoder();
-			commandlist.compute_encoder->setBuffer(argument_buffer.get(), 0, kIRDescriptorHeapBindPoint);
-			commandlist.compute_encoder->setBuffer(argument_buffer.get(), 0, kIRSamplerHeapBindPoint);
+			commandlist.compute_encoder->setBuffer(descriptor_heap_res.get(), 0, kIRDescriptorHeapBindPoint);
+			commandlist.compute_encoder->setBuffer(descriptor_heap_sam.get(), 0, kIRSamplerHeapBindPoint);
 		}
 		binder_flush(cmd);
 	}
@@ -823,22 +821,41 @@ using namespace metal_internal;
 		device = NS::TransferPtr(MTL::CreateSystemDefaultDevice());
 		commandqueue = NS::TransferPtr(device->newCommandQueue());
 		allocationhandler = wi::allocator::make_shared_single<AllocationHandler>();
-		argument_buffer_sampler_capacity = std::min(argument_buffer_sampler_capacity, (uint64_t)device->maxArgumentBufferSamplerCount());
-		argument_buffer_bindless_sampler_capacity = std::min(argument_buffer_bindless_sampler_capacity, argument_buffer_sampler_capacity / 2);
-		argument_buffer = NS::TransferPtr(device->newBuffer(argument_buffer_capacity * sizeof(IRDescriptorTableEntry), MTL::ResourceStorageModeShared | MTL::ResourceHazardTrackingModeUntracked));
-		argument_buffer->setLabel(NS::String::string("argument_buffer", NS::UTF8StringEncoding));
-		argument_buffer_data = (uint8_t*)argument_buffer->contents();
-		allocationhandler->descriptor_heap_data = (IRDescriptorTableEntry*)argument_buffer_data;
-		allocationhandler->free_bindless_res.reserve(argument_buffer_bindless_resource_capacity);
-		allocationhandler->free_bindless_sam.reserve(argument_buffer_bindless_sampler_capacity);
-		for (int i = 0; i < argument_buffer_bindless_sampler_capacity; ++i)
+		
+		descriptor_heap_res = NS::TransferPtr(device->newBuffer(bindless_resource_capacity * sizeof(IRDescriptorTableEntry), MTL::ResourceStorageModeShared | MTL::ResourceHazardTrackingModeUntracked));
+		descriptor_heap_res->setLabel(NS::String::string("descriptor_heap_res", NS::UTF8StringEncoding));
+		
+		const uint64_t real_bindless_sampler_capacity = std::min(bindless_sampler_capacity, (uint64_t)device->maxArgumentBufferSamplerCount());
+		descriptor_heap_sam = NS::TransferPtr(device->newBuffer(real_bindless_sampler_capacity * sizeof(IRDescriptorTableEntry), MTL::ResourceStorageModeShared | MTL::ResourceHazardTrackingModeUntracked));
+		descriptor_heap_sam->setLabel(NS::String::string("descriptor_heap_sam", NS::UTF8StringEncoding));
+		
+		allocationhandler->descriptor_heap_res_data = (IRDescriptorTableEntry*)descriptor_heap_res->contents();
+		allocationhandler->descriptor_heap_sam_data = (IRDescriptorTableEntry*)descriptor_heap_sam->contents();
+		allocationhandler->free_bindless_res.reserve(bindless_resource_capacity);
+		allocationhandler->free_bindless_sam.reserve(real_bindless_sampler_capacity);
+		for (int i = 0; i < real_bindless_sampler_capacity; ++i)
 		{
-			allocationhandler->free_bindless_sam.push_back((int)argument_buffer_bindless_sampler_capacity - i - 1);
+			allocationhandler->free_bindless_sam.push_back((int)real_bindless_sampler_capacity - i - 1);
 		}
-		for (int i = 0; i < argument_buffer_bindless_resource_capacity; ++i)
+		for (int i = 0; i < bindless_resource_capacity; ++i)
 		{
-			allocationhandler->free_bindless_res.push_back((int)argument_buffer_bindless_sampler_capacity + (int)argument_buffer_bindless_resource_capacity - i - 1);
+			allocationhandler->free_bindless_res.push_back((int)bindless_resource_capacity - i - 1);
 		}
+		
+		NS::SharedPtr<MTL::ResidencySetDescriptor> residency_set_descriptor = NS::TransferPtr(MTL::ResidencySetDescriptor::alloc()->init());
+		residency_set_descriptor->setInitialCapacity(bindless_resource_capacity + real_bindless_sampler_capacity);
+		NS::Error* error = nullptr;
+		residency_set = NS::TransferPtr(device->newResidencySet(residency_set_descriptor.get(), &error));
+		if(error != nullptr)
+		{
+			NS::String* errDesc = error->localizedDescription();
+			wilog_error("%s", errDesc->utf8String());
+			assert(0);
+			error->release();
+		}
+		make_resident(descriptor_heap_res.get());
+		make_resident(descriptor_heap_sam.get());
+		
 		wilog("Created GraphicsDevice_Metal (%d ms)", (int)std::round(timer.elapsed()));
 	}
 	GraphicsDevice_Metal::~GraphicsDevice_Metal()
@@ -1268,6 +1285,7 @@ using namespace metal_internal;
 						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(_ConvertPixelFormat(format), internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
 						subresource.index = allocationhandler->allocate_bindless(subresource.texture.get());
 						subresource.resource_id = subresource.texture->gpuResourceID();
+						make_resident(subresource.texture.get());
 						return -1;
 					}
 					else
@@ -1276,6 +1294,7 @@ using namespace metal_internal;
 						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(_ConvertPixelFormat(format), internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
 						subresource.index = allocationhandler->allocate_bindless(subresource.texture.get());
 						subresource.resource_id = subresource.texture->gpuResourceID();
+						make_resident(subresource.texture.get());
 						return (int)internal_state->subresources_srv.size() - 1;
 					}
 				}
@@ -1302,6 +1321,7 @@ using namespace metal_internal;
 						internal_state->srv.offset = offset;
 						internal_state->srv.size = size;
 						internal_state->srv.index = allocationhandler->allocate_bindless(internal_state->srv.buffer.get(), offset);
+						make_resident(internal_state->srv.buffer.get());
 						return -1;
 					}
 					else
@@ -1311,6 +1331,7 @@ using namespace metal_internal;
 						subresource.offset = offset;
 						subresource.size = size;
 						subresource.index = allocationhandler->allocate_bindless(internal_state->srv.buffer.get(), offset);
+						make_resident(subresource.buffer.get());
 						return (int)internal_state->subresources_srv.size() - 1;
 					}
 				}
@@ -1323,6 +1344,7 @@ using namespace metal_internal;
 						internal_state->uav.offset = offset;
 						internal_state->uav.size = size;
 						internal_state->uav.index = allocationhandler->allocate_bindless(internal_state->uav.buffer.get(), offset);
+						make_resident(internal_state->uav.buffer.get());
 						return -1;
 					}
 					else
@@ -1332,6 +1354,7 @@ using namespace metal_internal;
 						subresource.offset = offset;
 						subresource.size = size;
 						subresource.index = allocationhandler->allocate_bindless(internal_state->uav.buffer.get(), offset);
+						make_resident(subresource.buffer.get());
 						return (int)internal_state->subresources_uav.size() - 1;
 					}
 				}
@@ -1460,11 +1483,14 @@ using namespace metal_internal;
 		commandlist.queue = queue;
 		commandlist.id = cmd_current;
 		commandlist.commandbuffer = commandqueue->commandBufferWithUnretainedReferences();
+		commandlist.commandbuffer->useResidencySet(residency_set.get());
 
 		return cmd;
 	}
 	void GraphicsDevice_Metal::SubmitCommandLists()
 	{
+		residency_set->commit();
+		
 		uint32_t cmd_last = cmd_count;
 		cmd_count= 0;
 		for(uint32_t cmd = 0; cmd < cmd_last; ++cmd)
