@@ -193,7 +193,7 @@ namespace wi::shadercompiler
 		
 		if (input.format == ShaderFormat::METAL)
 		{
-			args.push_back(L"-Od");
+			//args.push_back(L"-Od");
 			args.push_back(L"-Zi");
 			args.push_back(L"-Qembed_debug");
 		}
@@ -578,6 +578,7 @@ namespace wi::shadercompiler
 				{
 #define LINK_IR(name) using PFN_##name = decltype(&name); static PFN_##name name = (PFN_##name)wiGetProcAddress(irconverter, #name);
 					LINK_IR(IRCompilerCreate)
+					LINK_IR(IRCompilerSetMinimumGPUFamily)
 					LINK_IR(IRCompilerSetCompatibilityFlags)
 					LINK_IR(IRCompilerSetValidationFlags)
 					LINK_IR(IRCompilerSetEntryPointName)
@@ -748,6 +749,7 @@ namespace wi::shadercompiler
 					}
 					
 					IRCompiler* pCompiler = IRCompilerCreate();
+					IRCompilerSetMinimumGPUFamily(pCompiler, IRGPUFamilyMetal3);
 					IRCompilerSetCompatibilityFlags(pCompiler, IRCompatibilityFlags(IRCompatibilityFlagBoundsCheck | IRCompatibilityFlagPositionInvariance));
 					IRCompilerSetValidationFlags(pCompiler, IRCompilerValidationFlagAll);
 					IRCompilerSetEntryPointName(pCompiler, input.entrypoint.c_str());
