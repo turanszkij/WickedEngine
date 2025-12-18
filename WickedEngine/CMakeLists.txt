@@ -98,8 +98,6 @@ file(GLOB SHADER_FILES CONFIGURE_DEPENDS shaders/*.hlsl shaders/*.hlsli)
 # one. The "no shaders" is needed because the offlineshadercompiler that compiles
 # the shaders depends on the wicked library as well, so we have a chicken-and-egg
 # problem.
-# note that this target will "share" properties with the WickedEngine_common target
-# see further down for more information
 add_library(WickedEngine_common OBJECT ${SOURCE_FILES} ${HEADER_FILES})
 
 # the version without embedded shaders
@@ -111,8 +109,7 @@ add_library(WickedEngine_ext_shaders ${WICKED_LIBRARY_TYPE}
 # used if WICKED_EMBED_SHADERS is not set, though it could still be
 # used in other CMakeLists as an explicit target instead of the "WickedEngine"
 # alias.
-# Note that while the sources are the same as the ext_shaders version,
-# we will later set specific include directory that contains the
+# Note that we will later set specific include directory that contains the
 # generated wiShaderDump.h file. Since wiRenderer.cpp uses __hasinclude
 # the end result will actually differ.
 # This is also the reason for the "common" object library; since include
@@ -120,6 +117,7 @@ add_library(WickedEngine_ext_shaders ${WICKED_LIBRARY_TYPE}
 # is only necessary for wiRenderer.cpp
 add_library(WickedEngine_emb_shaders EXCLUDE_FROM_ALL ${WICKED_LIBRARY_TYPE}
     wiRenderer.cpp
+	${CMAKE_CURRENT_BINARY_DIR}/wiShaderDump.h
 )
 
 # all the flag does is define what the WickedEngine target refers to
@@ -332,15 +330,8 @@ target_link_libraries(offlineshadercompiler
     PUBLIC WickedEngine_ext_shaders
 )
 
-# pseudo target to make the emb_shaders library depend on the generated wiShaderDump.h
-add_custom_target(generate_wishaderdump
-    DEPENDS wiShaderDump.h
-)
-add_dependencies(WickedEngine_emb_shaders generate_wishaderdump)
-set_target_properties(generate_wishaderdump PROPERTIES FOLDER "CMake support targets")
-
 # only this target will see the wiShaderDump.h file, so the _ext_shaders target will not have embedded shaders.
-target_include_directories(WickedEngine_emb_shaders PRIVATE ${CMAKE_BINARY_DIR}/WickedEngine)
+target_include_directories(WickedEngine_emb_shaders PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
 install(TARGETS offlineshadercompiler
         RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/WickedEngine")

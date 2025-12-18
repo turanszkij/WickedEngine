@@ -5573,6 +5573,10 @@ void EditorComponent::SaveAs()
 Texture EditorComponent::CreateThumbnail(Texture texture, uint32_t target_width, uint32_t target_height, bool mipmaps) const
 {
 	GraphicsDevice* device = GetDevice();
+	// Ensure GPU has finished rendering before creating thumbnail
+	device->SubmitCommandLists();
+	device->WaitForGPU();
+
 	CommandList cmd = device->BeginCommandList();
 	Texture thumbnail = texture;
 
