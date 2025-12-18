@@ -43,6 +43,7 @@ namespace wi::graphics
 			MTL::PrimitiveType primitive_type = MTL::PrimitiveTypeTriangle;
 			NS::SharedPtr<MTL::Buffer> index_buffer;
 			MTL::IndexType index_type = MTL::IndexTypeUInt32;
+			uint64_t index_buffer_offset = 0;
 			wi::vector<std::pair<PipelineHash, NS::SharedPtr<MTL::RenderPipelineState>>> pipelines_worker;
 			PipelineHash pipeline_hash;
 			DescriptorBindingTable binding_table;
@@ -74,6 +75,7 @@ namespace wi::graphics
 				blit_encoder = nullptr;
 				primitive_type = MTL::PrimitiveTypeTriangle;
 				index_buffer.reset();
+				index_buffer_offset = 0;
 				index_type = MTL::IndexTypeUInt32;
 				pipelines_worker.clear();
 				pipeline_hash = {};

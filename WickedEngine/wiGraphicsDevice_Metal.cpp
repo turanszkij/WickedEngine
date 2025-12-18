@@ -1880,6 +1880,15 @@ using namespace metal_internal;
 		auto internal_state = to_internal(indexBuffer);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		commandlist.index_buffer = internal_state->buffer;
+		commandlist.index_buffer_offset = offset;
+		if (format == IndexBufferFormat::UINT32)
+		{
+			commandlist.index_buffer_offset /= sizeof(uint32_t);
+		}
+		else
+		{
+			commandlist.index_buffer_offset /= sizeof(uint16_t);
+		}
 		commandlist.index_type = format == IndexBufferFormat::UINT32 ? MTL::IndexTypeUInt32 : MTL::IndexTypeUInt16;
 	}
 	void GraphicsDevice_Metal::BindStencilRef(uint32_t value, CommandList cmd)
@@ -1941,7 +1950,7 @@ using namespace metal_internal;
 		commandlist.render_encoder->setDepthTestBounds(min_bounds, max_bounds);
 	}
 	void GraphicsDevice_Metal::Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd)
-{
+	{
 		predraw(cmd);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		//commandlist.render_encoder->drawPrimitives(commandlist.primitive_type, startVertexLocation, vertexCount, 1);
@@ -1952,7 +1961,7 @@ using namespace metal_internal;
 		predraw(cmd);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		//commandlist.render_encoder->drawIndexedPrimitives(commandlist.primitive_type, indexCount, commandlist.index_type, commandlist.index_buffer.get(), startIndexLocation, 1);
-		IRRuntimeDrawIndexedPrimitives(commandlist.render_encoder, commandlist.primitive_type, indexCount, commandlist.index_type, commandlist.index_buffer.get(), startIndexLocation);
+		IRRuntimeDrawIndexedPrimitives(commandlist.render_encoder, commandlist.primitive_type, indexCount, commandlist.index_type, commandlist.index_buffer.get(), commandlist.index_buffer_offset + startIndexLocation);
 	}
 	void GraphicsDevice_Metal::DrawInstanced(uint32_t vertexCount, uint32_t instanceCount, uint32_t startVertexLocation, uint32_t startInstanceLocation, CommandList cmd)
 	{
@@ -1966,7 +1975,7 @@ using namespace metal_internal;
 		predraw(cmd);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		//commandlist.render_encoder->drawIndexedPrimitives(commandlist.primitive_type, indexCount, commandlist.index_type, commandlist.index_buffer.get(), startIndexLocation, instanceCount, baseVertexLocation, startInstanceLocation);
-		IRRuntimeDrawIndexedPrimitives(commandlist.render_encoder, commandlist.primitive_type, indexCount, commandlist.index_type, commandlist.index_buffer.get(), startIndexLocation, instanceCount, baseVertexLocation, startInstanceLocation);
+		IRRuntimeDrawIndexedPrimitives(commandlist.render_encoder, commandlist.primitive_type, indexCount, commandlist.index_type, commandlist.index_buffer.get(), startIndexLocation, instanceCount, baseVertexLocation, commandlist.index_buffer_offset + startInstanceLocation);
 	}
 	void GraphicsDevice_Metal::DrawInstancedIndirect(const GPUBuffer* args, uint64_t args_offset, CommandList cmd)
 	{
@@ -1982,7 +1991,7 @@ using namespace metal_internal;
 		auto internal_state = to_internal(args);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		//commandlist.render_encoder->drawIndexedPrimitives(commandlist.primitive_type, commandlist.index_type, commandlist.index_buffer.get(), 0, internal_state->buffer.get(), args_offset);
-		IRRuntimeDrawIndexedPrimitives(commandlist.render_encoder, commandlist.primitive_type, commandlist.index_type, commandlist.index_buffer.get(), 0, internal_state->buffer.get(), args_offset);
+		IRRuntimeDrawIndexedPrimitives(commandlist.render_encoder, commandlist.primitive_type, commandlist.index_type, commandlist.index_buffer.get(), commandlist.index_buffer_offset, internal_state->buffer.get(), args_offset);
 	}
 	void GraphicsDevice_Metal::DrawInstancedIndirectCount(const GPUBuffer* args, uint64_t args_offset, const GPUBuffer* count, uint64_t count_offset, uint32_t max_count, CommandList cmd)
 	{
