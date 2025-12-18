@@ -193,8 +193,8 @@ T inverse_lerp(T value1, T value2, T pos)
 float3x3 adjoint(in float4x4 m)
 {
 	return float3x3(
-		cross(m[1].xyz, m[2].xyz), 
-		cross(m[2].xyz, m[0].xyz), 
+		cross(m[1].xyz, m[2].xyz),
+		cross(m[2].xyz, m[0].xyz),
 		cross(m[0].xyz, m[1].xyz)
 	);
 }
@@ -318,7 +318,7 @@ float3x3 adjoint(in float4x4 m)
 	"StaticSampler(s109, addressU = TEXTURE_ADDRESS_CLAMP, addressV = TEXTURE_ADDRESS_CLAMP, addressW = TEXTURE_ADDRESS_CLAMP, filter = FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT, comparisonFunc = COMPARISON_GREATER_EQUAL),"
 #endif // __SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6
 #endif // __hlsl_dx_compiler
-	
+
 #ifndef __PSSL__
 // These are static samplers, they don't need to be bound:
 //	They are also on slots that are not bindable as sampler bind slots must be in [0, DESCRIPTORBINDER_SAMPLER_COUNT] range!
@@ -577,8 +577,8 @@ inline void write_mipmap_feedback(uint materialIndex, float4 uvsets_dx, float4 u
 	{
 		const float lod_uvset0 = get_lod(65536u, uvsets_dx.xy, uvsets_dy.xy);
 		const float lod_uvset1 = get_lod(65536u, uvsets_dx.zw, uvsets_dy.zw);
-		const uint resolution0 = 65536u >> uint(max(0, lod_uvset0));
-		const uint resolution1 = 65536u >> uint(max(0, lod_uvset1));
+		const uint resolution0 = 65536u >> clamp(uint(lod_uvset0), 1u, 16u);
+		const uint resolution1 = 65536u >> clamp(uint(lod_uvset1), 1u, 16u);
 		const uint mask = resolution0 | (resolution1 << 16u);
 		const uint wave_mask = WaveActiveBitOr(mask);
 		if(WaveIsFirstLane())
@@ -1340,7 +1340,7 @@ inline float3x3 compute_tangent_frame(float3 N, float3 P, float2 UV)
 	float3 T = dp2perp * duv1.x + dp1perp * duv2.x;
 	float3 B = dp2perp * duv1.y + dp1perp * duv2.y;
 
-	// construct a scale-invariant frame 
+	// construct a scale-invariant frame
 	float invmax = rcp(sqrt(max(dot(T, T), dot(B, B))));
 	return float3x3(T * invmax, B * invmax, N);
 #else
@@ -1380,7 +1380,7 @@ inline float compute_inverse_lineardepth(in float lin, in float near, in float f
 {
 	if (ortho)
 		return 1 - (lin - near) / (far - near);
-	
+
 	// Perspective:
 	float z_n = ((lin - 2 * far) * near + far * lin) / (lin * near - far * lin);
 	float z = (z_n + 1) / 2;
@@ -1577,7 +1577,7 @@ inline float3 uv_to_cubemap_cross(in float2 uv)
 
 	if (result_face >= 0)
 		return uv_to_cubemap(cross_uv, result_face);
-		
+
 	return 0;
 }
 
@@ -1707,14 +1707,14 @@ half3 decode_hemioct(half2 e)
 // Source: https://github.com/GPUOpen-Effects/FidelityFX-Denoiser/blob/master/ffx-shadows-dnsr/ffx_denoiser_shadows_util.h
 //  LANE TO 8x8 MAPPING
 //  ===================
-//  00 01 08 09 10 11 18 19 
+//  00 01 08 09 10 11 18 19
 //  02 03 0a 0b 12 13 1a 1b
 //  04 05 0c 0d 14 15 1c 1d
-//  06 07 0e 0f 16 17 1e 1f 
-//  20 21 28 29 30 31 38 39 
+//  06 07 0e 0f 16 17 1e 1f
+//  20 21 28 29 30 31 38 39
 //  22 23 2a 2b 32 33 3a 3b
 //  24 25 2c 2d 34 35 3c 3d
-//  26 27 2e 2f 36 37 3e 3f 
+//  26 27 2e 2f 36 37 3e 3f
 uint bitfield_extract(uint src, uint off, uint bits) { uint mask = (1u << bits) - 1; return (src >> off) & mask; } // ABfe
 uint bitfield_insert(uint src, uint ins, uint bits) { uint mask = (1u << bits) - 1; return (ins & mask) | (src & (~mask)); } // ABfiM
 uint2 remap_lane_8x8(uint lane) {
@@ -1900,10 +1900,10 @@ float3 point_on_plane(float3 P, float3 planeOrigin, float3 planeNormal)
 {
     // Ensure the plane normal is normalized
     planeNormal = normalize(planeNormal);
-    
+
     // Compute the distance from the point to the plane
     float distance = dot(P - planeOrigin, planeNormal);
-    
+
     // Project the point onto the plane
     return P - distance * planeNormal;
 }
@@ -1978,7 +1978,7 @@ T closest_point_on_line(T a, T b, T c)
 	float t = dot(c - a, ab) / dot(ab, ab);
 	return a + t * ab;
 }
-// Return the closest point on the segment (with limit) 
+// Return the closest point on the segment (with limit)
 template <typename T>
 T closest_point_on_segment(T a, T b, T c)
 {
@@ -2249,7 +2249,7 @@ inline void ParallaxOcclusionMapping_Impl(
 	[branch]
 	if (strength <= 0)
 		return;
-		
+
 	TBN[0] = normalize(TBN[0]);
 	TBN[1] = normalize(TBN[1]);
 	TBN[2] = normalize(TBN[2]);
@@ -2373,7 +2373,7 @@ float4 matrix_to_quaternion(float4x4 m)
 
     if (tr > 0)
     {
-        float s = sqrt(tr + 1.0) * 2; // S=4*qw 
+        float s = sqrt(tr + 1.0) * 2; // S=4*qw
         q.w = 0.25 * s;
         q.x = (m[2][1] - m[1][2]) / s;
         q.y = (m[0][2] - m[2][0]) / s;
@@ -2381,7 +2381,7 @@ float4 matrix_to_quaternion(float4x4 m)
     }
     else if ((m[0][0] > m[1][1]) && (m[0][0] > m[2][2]))
     {
-        float s = sqrt(1.0 + m[0][0] - m[1][1] - m[2][2]) * 2; // S=4*qx 
+        float s = sqrt(1.0 + m[0][0] - m[1][1] - m[2][2]) * 2; // S=4*qx
         q.w = (m[2][1] - m[1][2]) / s;
         q.x = 0.25 * s;
         q.y = (m[0][1] + m[1][0]) / s;
