@@ -551,48 +551,53 @@ using namespace metal_internal;
 		
 		if (commandlist.dirty_root)
 		{
+			struct RootLayout
+			{
+				uint32_t constants[16];
+				MTL::GPUAddress root_cbv[3];
+				MTL::GPUAddress resource_table_ptr;
+				MTL::GPUAddress sampler_table_ptr;
+			};
 			struct ResourceTable
 			{
-				IRDescriptorTableEntry descriptors[arraysize(DescriptorBindingTable::CBV) - 3 + arraysize(DescriptorBindingTable::SRV) + arraysize(DescriptorBindingTable::UAV)];
+				IRDescriptorTableEntry descriptors[arraysize(DescriptorBindingTable::CBV) - arraysize(RootLayout::root_cbv) + arraysize(DescriptorBindingTable::SRV) + arraysize(DescriptorBindingTable::UAV)];
 			};
 			struct SamplerTable
 			{
 				IRDescriptorTableEntry descriptors[arraysize(DescriptorBindingTable::SAM)];
 			};
-			struct RootLayout
-			{
-				uint32_t constants[16];
-				MTL::GPUAddress root_cbv[3];
-				uint64_t resource_table_ptr;
-				uint64_t sampler_table_ptr;
-			};
+			
+			RootLayout root = {};
+			ResourceTable resource_table = {};
+			SamplerTable sampler_table = {};
 			
 			GPUAllocation root_allocation = AllocateGPU(sizeof(RootLayout), cmd);
 			GPUAllocation resource_table_allocation = AllocateGPU(sizeof(ResourceTable), cmd);
 			GPUAllocation sampler_table_allocation = AllocateGPU(sizeof(SamplerTable), cmd);
 			
-			RootLayout* root_data = (RootLayout*)root_allocation.data;
-			*root_data = {};
+			auto root_allocation_internal = to_internal(&root_allocation.buffer);
+			auto resource_table_allocation_internal = to_internal(&resource_table_allocation.buffer);
+			auto sampler_table_allocation_internal = to_internal(&sampler_table_allocation.buffer);
 			
 			// push constants:
-			std::memcpy(root_data->constants, commandlist.push_constants, std::min(sizeof(root_data->constants), sizeof(commandlist.push_constants)));
+			std::memcpy(root.constants, commandlist.push_constants, std::min(sizeof(root.constants), sizeof(commandlist.push_constants)));
 			
 			// root CBVs:
-			for (uint32_t i = 0; i < arraysize(root_data->root_cbv); ++i)
+			for (uint32_t i = 0; i < arraysize(root.root_cbv); ++i)
 			{
 				if (!commandlist.binding_table.CBV[i].IsValid())
 					continue;
 				auto internal_state = to_internal(&commandlist.binding_table.CBV[i]);
-				const uint64_t gpu_address = internal_state->gpu_address + commandlist.binding_table.CBV_offset[i];
-				root_data->root_cbv[i] = gpu_address;
+				root.root_cbv[i] = internal_state->gpu_address + commandlist.binding_table.CBV_offset[i];
 			}
 			
-			root_data->resource_table_ptr = (uint64_t)resource_table_allocation.data;
-			root_data->sampler_table_ptr = (uint64_t)resource_table_allocation.data;
+			// Pointers to binding descriptor tables:
+			root.resource_table_ptr = resource_table_allocation_internal->gpu_address + resource_table_allocation.offset;
+			root.sampler_table_ptr = sampler_table_allocation_internal->gpu_address + sampler_table_allocation.offset;
 			
 			// Descriptor tables:
 			uint32_t resource_table_offset = 0;
-			for (uint32_t i = arraysize(root_data->root_cbv); i < arraysize(DescriptorBindingTable::CBV); ++i)
+			for (uint32_t i = arraysize(root.root_cbv); i < arraysize(DescriptorBindingTable::CBV); ++i)
 			{
 				if (commandlist.binding_table.CBV[i].IsValid())
 				{
@@ -600,7 +605,7 @@ using namespace metal_internal;
 					const uint64_t offset = commandlist.binding_table.CBV_offset[i];
 					const MTL::GPUAddress gpu_address = internal_state->gpu_address + offset;
 					const uint64_t metadata = 0;
-					IRDescriptorTableSetBuffer((IRDescriptorTableEntry*)resource_table_allocation.data + resource_table_offset, gpu_address, metadata);
+					IRDescriptorTableSetBuffer(&resource_table.descriptors[resource_table_offset], gpu_address, metadata);
 				}
 				resource_table_offset++;
 			}
@@ -617,7 +622,7 @@ using namespace metal_internal;
 						buffer_view.buffer = subresource.buffer.get();
 						buffer_view.bufferOffset = subresource.offset;
 						buffer_view.bufferSize = subresource.size;
-						IRDescriptorTableSetBufferView((IRDescriptorTableEntry*)resource_table_allocation.data + resource_table_offset, &buffer_view);
+						IRDescriptorTableSetBufferView(&resource_table.descriptors[resource_table_offset], &buffer_view);
 					}
 					else if (commandlist.binding_table.SRV[i].IsTexture())
 					{
@@ -625,7 +630,7 @@ using namespace metal_internal;
 						const int subresource_index = commandlist.binding_table.SRV_index[i];
 						const auto& subresource = subresource_index < 0 ? internal_state->srv : internal_state->subresources_srv[subresource_index];
 						const uint64_t metadata = 0;
-						IRDescriptorTableSetTexture((IRDescriptorTableEntry*)resource_table_allocation.data + resource_table_offset, subresource.texture.get(), 0, metadata);
+						IRDescriptorTableSetTexture(&resource_table.descriptors[resource_table_offset], subresource.texture.get(), 0, metadata);
 					}
 					else if (commandlist.binding_table.SRV[i].IsAccelerationStructure())
 					{
@@ -647,7 +652,7 @@ using namespace metal_internal;
 						buffer_view.buffer = subresource.buffer.get();
 						buffer_view.bufferOffset = subresource.offset;
 						buffer_view.bufferSize = subresource.size;
-						IRDescriptorTableSetBufferView((IRDescriptorTableEntry*)resource_table_allocation.data + resource_table_offset, &buffer_view);
+						IRDescriptorTableSetBufferView(&resource_table.descriptors[resource_table_offset], &buffer_view);
 					}
 					else if (commandlist.binding_table.UAV[i].IsTexture())
 					{
@@ -655,7 +660,7 @@ using namespace metal_internal;
 						const int subresource_index = commandlist.binding_table.UAV_index[i];
 						const auto& subresource = subresource_index < 0 ? internal_state->uav : internal_state->subresources_uav[subresource_index];
 						const uint64_t metadata = 0;
-						IRDescriptorTableSetTexture((IRDescriptorTableEntry*)resource_table_allocation.data + resource_table_offset, subresource.texture.get(), 0, metadata);
+						IRDescriptorTableSetTexture(&resource_table.descriptors[resource_table_offset], subresource.texture.get(), 0, metadata);
 					}
 				}
 				resource_table_offset++;
@@ -665,12 +670,13 @@ using namespace metal_internal;
 				if (!commandlist.binding_table.SAM[i].IsValid())
 					continue;
 				auto internal_state = to_internal(&commandlist.binding_table.SAM[i]);
-				IRDescriptorTableSetSampler((IRDescriptorTableEntry*)sampler_table_allocation.data + i, internal_state->sampler.get(), 0);
+				IRDescriptorTableSetSampler(&sampler_table.descriptors[i], internal_state->sampler.get(), 0);
 			}
 			
-			auto root_allocation_internal = to_internal(&root_allocation.buffer);
-			auto resource_table_allocation_internal = to_internal(&resource_table_allocation.buffer);
-			auto sampler_table_allocation_internal = to_internal(&sampler_table_allocation.buffer);
+			// Copy to GPU allocations:
+			std::memcpy(root_allocation.data, &root, sizeof(root));
+			std::memcpy(resource_table_allocation.data, &resource_table, sizeof(resource_table));
+			std::memcpy(sampler_table_allocation.data, &sampler_table, sizeof(sampler_table));
 			
 			if (commandlist.render_encoder != nullptr)
 			{
@@ -844,7 +850,7 @@ using namespace metal_internal;
 		NS::SharedPtr<MTL::ResidencySetDescriptor> residency_set_descriptor = NS::TransferPtr(MTL::ResidencySetDescriptor::alloc()->init());
 		residency_set_descriptor->setInitialCapacity(bindless_resource_capacity + real_bindless_sampler_capacity);
 		NS::Error* error = nullptr;
-		residency_set = NS::TransferPtr(device->newResidencySet(residency_set_descriptor.get(), &error));
+		allocationhandler->residency_set = NS::TransferPtr(device->newResidencySet(residency_set_descriptor.get(), &error));
 		if(error != nullptr)
 		{
 			NS::String* errDesc = error->localizedDescription();
@@ -852,8 +858,8 @@ using namespace metal_internal;
 			assert(0);
 			error->release();
 		}
-		make_resident(descriptor_heap_res.get());
-		make_resident(descriptor_heap_sam.get());
+		allocationhandler->make_resident(descriptor_heap_res.get());
+		allocationhandler->make_resident(descriptor_heap_sam.get());
 		
 		wilog("Created GraphicsDevice_Metal (%d ms)", (int)std::round(timer.elapsed()));
 	}
@@ -906,6 +912,7 @@ using namespace metal_internal;
 		options |= MTL::ResourceHazardTrackingModeUntracked;
 		
 		internal_state->buffer = NS::TransferPtr(device->newBuffer(desc->size, options));
+		allocationhandler->make_resident(internal_state->buffer.get());
 		internal_state->gpu_address = internal_state->buffer->gpuAddress();
 		if ((options & MTL::ResourceStorageModePrivate) == 0)
 		{
@@ -975,6 +982,7 @@ using namespace metal_internal;
 		}
 		
 		internal_state->texture = NS::TransferPtr(device->newTexture(descriptor.get()));
+		allocationhandler->make_resident(internal_state->texture.get());
 		
 		if(initial_data != nullptr)
 		{
@@ -1283,7 +1291,7 @@ using namespace metal_internal;
 						auto& subresource = internal_state->srv;
 						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(_ConvertPixelFormat(format), internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
 						subresource.index = allocationhandler->allocate_bindless(subresource.texture.get(), min_lod_clamp);
-						make_resident(subresource.texture.get());
+						allocationhandler->make_resident(subresource.texture.get());
 						return -1;
 					}
 					else
@@ -1291,7 +1299,7 @@ using namespace metal_internal;
 						auto& subresource = internal_state->subresources_srv.emplace_back();
 						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(_ConvertPixelFormat(format), internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
 						subresource.index = allocationhandler->allocate_bindless(subresource.texture.get(), min_lod_clamp);
-						make_resident(subresource.texture.get());
+						allocationhandler->make_resident(subresource.texture.get());
 						return (int)internal_state->subresources_srv.size() - 1;
 					}
 				}
@@ -1304,7 +1312,7 @@ using namespace metal_internal;
 						auto& subresource = internal_state->uav;
 						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(_ConvertPixelFormat(format), internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
 						subresource.index = allocationhandler->allocate_bindless(subresource.texture.get(), min_lod_clamp);
-						make_resident(subresource.texture.get());
+						allocationhandler->make_resident(subresource.texture.get());
 						return -1;
 					}
 					else
@@ -1312,7 +1320,7 @@ using namespace metal_internal;
 						auto& subresource = internal_state->subresources_uav.emplace_back();
 						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(_ConvertPixelFormat(format), internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
 						subresource.index = allocationhandler->allocate_bindless(subresource.texture.get(), min_lod_clamp);
-						make_resident(subresource.texture.get());
+						allocationhandler->make_resident(subresource.texture.get());
 						return (int)internal_state->subresources_uav.size() - 1;
 					}
 				}
@@ -1325,7 +1333,7 @@ using namespace metal_internal;
 						auto& subresource = internal_state->rtv;
 						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(_ConvertPixelFormat(format), internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
 						subresource.index = allocationhandler->allocate_bindless(subresource.texture.get(), min_lod_clamp);
-						make_resident(subresource.texture.get());
+						allocationhandler->make_resident(subresource.texture.get());
 						return -1;
 					}
 					else
@@ -1333,7 +1341,7 @@ using namespace metal_internal;
 						auto& subresource = internal_state->subresources_rtv.emplace_back();
 						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(_ConvertPixelFormat(format), internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
 						subresource.index = allocationhandler->allocate_bindless(subresource.texture.get(), min_lod_clamp);
-						make_resident(subresource.texture.get());
+						allocationhandler->make_resident(subresource.texture.get());
 						return (int)internal_state->subresources_rtv.size() - 1;
 					}
 				}
@@ -1346,7 +1354,7 @@ using namespace metal_internal;
 						auto& subresource = internal_state->dsv;
 						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(_ConvertPixelFormat(format), internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
 						subresource.index = allocationhandler->allocate_bindless(subresource.texture.get(), min_lod_clamp);
-						make_resident(subresource.texture.get());
+						allocationhandler->make_resident(subresource.texture.get());
 						return -1;
 					}
 					else
@@ -1354,7 +1362,7 @@ using namespace metal_internal;
 						auto& subresource = internal_state->subresources_dsv.emplace_back();
 						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(_ConvertPixelFormat(format), internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
 						subresource.index = allocationhandler->allocate_bindless(subresource.texture.get(), min_lod_clamp);
-						make_resident(subresource.texture.get());
+						allocationhandler->make_resident(subresource.texture.get());
 						return (int)internal_state->subresources_dsv.size() - 1;
 					}
 				}
@@ -1394,7 +1402,7 @@ using namespace metal_internal;
 							subresource.texture_buffer_view = NS::TransferPtr(device->newTexture(view_descriptor.get()));
 						}
 						subresource.index = allocationhandler->allocate_bindless(subresource.buffer.get(), size, offset, subresource.texture_buffer_view.get(), format);
-						make_resident(subresource.buffer.get());
+						allocationhandler->make_resident(subresource.buffer.get());
 						return -1;
 					}
 					else
@@ -1410,7 +1418,7 @@ using namespace metal_internal;
 							subresource.texture_buffer_view = NS::TransferPtr(device->newTexture(view_descriptor.get()));
 						}
 						subresource.index = allocationhandler->allocate_bindless(subresource.buffer.get(), size, offset, subresource.texture_buffer_view.get(), format);
-						make_resident(subresource.buffer.get());
+						allocationhandler->make_resident(subresource.buffer.get());
 						return (int)internal_state->subresources_srv.size() - 1;
 					}
 				}
@@ -1424,7 +1432,7 @@ using namespace metal_internal;
 						subresource.offset = offset;
 						subresource.size = size;
 						subresource.index = allocationhandler->allocate_bindless(subresource.buffer.get(), size, offset);
-						make_resident(subresource.buffer.get());
+						allocationhandler->make_resident(subresource.buffer.get());
 						return -1;
 					}
 					else
@@ -1434,7 +1442,7 @@ using namespace metal_internal;
 						subresource.offset = offset;
 						subresource.size = size;
 						subresource.index = allocationhandler->allocate_bindless(subresource.buffer.get(), size, offset);
-						make_resident(subresource.buffer.get());
+						allocationhandler->make_resident(subresource.buffer.get());
 						return (int)internal_state->subresources_uav.size() - 1;
 					}
 				}
@@ -1563,13 +1571,13 @@ using namespace metal_internal;
 		commandlist.queue = queue;
 		commandlist.id = cmd_current;
 		commandlist.commandbuffer = commandqueue->commandBufferWithUnretainedReferences();
-		commandlist.commandbuffer->useResidencySet(residency_set.get());
+		commandlist.commandbuffer->useResidencySet(allocationhandler->residency_set.get());
 
 		return cmd;
 	}
 	void GraphicsDevice_Metal::SubmitCommandLists()
 	{
-		residency_set->commit();
+		allocationhandler->residency_set->commit();
 		
 		uint32_t cmd_last = cmd_count;
 		cmd_count = 0;

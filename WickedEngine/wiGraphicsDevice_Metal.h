@@ -95,14 +95,6 @@ namespace wi::graphics
 		NS::SharedPtr<MTL::Buffer> descriptor_heap_res;
 		NS::SharedPtr<MTL::Buffer> descriptor_heap_sam;
 		
-		NS::SharedPtr<MTL::ResidencySet> residency_set;
-		void make_resident(const MTL::Allocation* allocation) const
-		{
-			static std::mutex residency_set_locker;
-			std::scoped_lock locker(residency_set_locker);
-			residency_set->addAllocation(allocation);
-		}
-		
 		void binder_flush(CommandList cmd);
 
 		constexpr CommandList_Metal& GetCommandList(CommandList cmd) const
@@ -267,6 +259,7 @@ namespace wi::graphics
 				framecount = FRAMECOUNT;
 				while (!destroyer_resources.empty() && destroyer_resources.front().second + BUFFERCOUNT < FRAMECOUNT)
 				{
+					remove_resident(destroyer_resources.front().first.get());
 					destroyer_resources.pop_front();
 					// SharedPtr auto delete
 				}
@@ -310,7 +303,7 @@ namespace wi::graphics
 			int allocate_bindless(MTL::Texture* res, float min_lod_clamp = 0)
 			{
 				std::scoped_lock lck(destroylocker);
-				if(free_bindless_res.empty())
+				if (free_bindless_res.empty())
 					return -1;
 				int index = free_bindless_res.back();
 				free_bindless_res.pop_back();
@@ -321,7 +314,7 @@ namespace wi::graphics
 			int allocate_bindless(MTL::Buffer* res, uint64_t size, uint64_t offset = 0, MTL::Texture* texture_buffer_view = nullptr, Format format = Format::UNKNOWN)
 			{
 				std::scoped_lock lck(destroylocker);
-				if(free_bindless_res.empty())
+				if (free_bindless_res.empty())
 					return -1;
 				int index = free_bindless_res.back();
 				free_bindless_res.pop_back();
@@ -345,12 +338,27 @@ namespace wi::graphics
 			int allocate_bindless(MTL::SamplerState* sam, float lod_bias = 0)
 			{
 				std::scoped_lock lck(destroylocker);
-				if(free_bindless_sam.empty())
+				if (free_bindless_sam.empty())
 					return -1;
 				int index = free_bindless_sam.back();
 				free_bindless_sam.pop_back();
 				IRDescriptorTableSetSampler(descriptor_heap_sam_data + index, sam, lod_bias);
 				return index;
+			}
+			
+			NS::SharedPtr<MTL::ResidencySet> residency_set;
+			void make_resident(const MTL::Allocation* allocation)
+			{
+				if (allocation == nullptr)
+					return;
+				std::scoped_lock locker(destroylocker);
+				residency_set->addAllocation(allocation);
+			}
+			void remove_resident(const MTL::Allocation* allocation)
+			{
+				if (allocation == nullptr)
+					return;
+				residency_set->removeAllocation(allocation);
 			}
 		};
 		wi::allocator::shared_ptr<AllocationHandler> allocationhandler;
