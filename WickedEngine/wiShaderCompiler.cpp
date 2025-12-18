@@ -154,6 +154,12 @@ namespace wi::shadercompiler
 		{
 			args.push_back(L"-Od");
 		}
+		
+		if (has_flag(input.flags, Flags::KEEP_DEBUG_INFORMATION))
+		{
+			args.push_back(L"-Zi");
+			args.push_back(L"-Qembed_debug");
+		}
 
 		switch (input.format)
 		{
@@ -193,6 +199,9 @@ namespace wi::shadercompiler
 		
 		if (input.format == ShaderFormat::METAL)
 		{
+			// handling SM6.6 style bindless in Metal API is simpler than unbounded descriptor tables:
+			minshadermodel = ShaderModel::SM_6_6;
+			
 			//args.push_back(L"-Od");
 			args.push_back(L"-Zi");
 			args.push_back(L"-Qembed_debug");
@@ -596,7 +605,6 @@ namespace wi::shadercompiler
 					LINK_IR(IRRootSignatureCreateFromDescriptor)
 					LINK_IR(IRCompilerSetGlobalRootSignature)
 					//LINK_IR(IRRootSignatureDestroy)
-					static constexpr uint32_t unbounded = ~0u;
 					
 					static IRDescriptorRange1 binding_resources[] =
 					{
@@ -607,69 +615,6 @@ namespace wi::shadercompiler
 					static IRDescriptorRange1 binding_samplers[] =
 					{
 						{ .RangeType = IRDescriptorRangeTypeSampler, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = IRDescriptorRangeOffsetAppend, .NumDescriptors = 8, .Flags = IRDescriptorRangeFlagDescriptorsVolatile },
-					};
-					static IRDescriptorRange1 bindless_samplers[] =
-					{
-						{ .RangeType = IRDescriptorRangeTypeSampler, .BaseShaderRegister = 0, .RegisterSpace = 1, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-					};
-					static IRDescriptorRange1 bindless_resources[] =
-					{
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 2, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 3, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 4, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 5, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 6, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 7, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 8, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 9, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 10, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 11, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 12, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 13, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 14, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 15, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 16, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 17, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 18, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 19, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 20, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 21, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 22, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 23, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 24, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 25, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 26, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 27, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 28, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 29, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 30, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						
-						{ .RangeType = IRDescriptorRangeTypeUAV, .BaseShaderRegister = 0, .RegisterSpace = 100, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeUAV, .BaseShaderRegister = 0, .RegisterSpace = 101, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeUAV, .BaseShaderRegister = 0, .RegisterSpace = 102, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeUAV, .BaseShaderRegister = 0, .RegisterSpace = 103, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeUAV, .BaseShaderRegister = 0, .RegisterSpace = 104, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeUAV, .BaseShaderRegister = 0, .RegisterSpace = 105, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeUAV, .BaseShaderRegister = 0, .RegisterSpace = 106, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeUAV, .BaseShaderRegister = 0, .RegisterSpace = 107, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeUAV, .BaseShaderRegister = 0, .RegisterSpace = 108, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeUAV, .BaseShaderRegister = 0, .RegisterSpace = 109, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeUAV, .BaseShaderRegister = 0, .RegisterSpace = 110, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeUAV, .BaseShaderRegister = 0, .RegisterSpace = 111, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeUAV, .BaseShaderRegister = 0, .RegisterSpace = 112, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeUAV, .BaseShaderRegister = 0, .RegisterSpace = 113, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeUAV, .BaseShaderRegister = 0, .RegisterSpace = 114, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeUAV, .BaseShaderRegister = 0, .RegisterSpace = 115, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 200, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 201, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 202, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 203, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 204, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 205, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 206, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 207, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 208, .OffsetInDescriptorsFromTableStart = 0, .NumDescriptors = unbounded, .Flags = IRDescriptorRangeFlags(IRDescriptorRangeFlagDescriptorsVolatile | IRDescriptorRangeFlagDataVolatile) },
 					};
 					static IRRootParameter1 root_parameters[] =
 					{
@@ -701,16 +646,6 @@ namespace wi::shadercompiler
 						{
 							.ParameterType = IRRootParameterTypeDescriptorTable,
 							.DescriptorTable = { .NumDescriptorRanges = arraysize(binding_samplers), .pDescriptorRanges = binding_samplers },
-							.ShaderVisibility = IRShaderVisibilityAll
-						},
-						{
-							.ParameterType = IRRootParameterTypeDescriptorTable,
-							.DescriptorTable = { .NumDescriptorRanges = arraysize(bindless_samplers), .pDescriptorRanges = bindless_samplers },
-							.ShaderVisibility = IRShaderVisibilityAll
-						},
-						{
-							.ParameterType = IRRootParameterTypeDescriptorTable,
-							.DescriptorTable = { .NumDescriptorRanges = arraysize(bindless_resources), .pDescriptorRanges = bindless_resources },
 							.ShaderVisibility = IRShaderVisibilityAll
 						},
 					};
@@ -758,7 +693,7 @@ namespace wi::shadercompiler
 					IRObject* pDXIL = IRObjectCreateFromDXIL(output.shaderdata, output.shadersize, IRBytecodeOwnershipNone);
 					IRError* pError = nullptr;
 					IRObject* pOutIR = IRCompilerAllocCompileAndLink(pCompiler, NULL, pDXIL, &pError);
-					if (!pOutIR)
+					if (pOutIR == nullptr)
 					{
 						assert(0);
 						IRErrorDestroy(pError);
