@@ -9,7 +9,7 @@ Texture2D<float4> input_velocity : register(t1);
 RWTexture2D<unorm float> output_mip0 : register(u0);
 RWTexture2D<unorm float> output_mip1 : register(u1);
 
-[numthreads(8, 8, 1)]
+[numthreads(64, 1, 1)]
 void main(uint2 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
 	ShaderCamera camera = GetCamera();

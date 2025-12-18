@@ -32,7 +32,7 @@ inline uint coord_to_cache(int2 coord)
 static const float depthThreshold = 0.1;
 static const float normalThreshold = 64;
 
-[numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
+[numthreads(POSTPROCESS_BLOCKSIZE * POSTPROCESS_BLOCKSIZE, 1, 1)]
 void main(uint2 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
 	const uint2 GTid = remap_lane_8x8(groupIndex);
