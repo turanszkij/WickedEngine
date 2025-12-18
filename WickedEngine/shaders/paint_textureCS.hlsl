@@ -3,7 +3,7 @@
 
 PUSHCONSTANT(push, PaintTexturePushConstants);
 
-[numthreads(PAINT_TEXTURE_BLOCKSIZE, PAINT_TEXTURE_BLOCKSIZE, 1)]
+[numthreads(PAINT_TEXTURE_BLOCKSIZE * PAINT_TEXTURE_BLOCKSIZE, 1, 1)]
 void main(uint groupIndex : SV_GroupIndex, uint2 Gid : SV_GroupID)
 {
 	const uint2 GTid = remap_lane_8x8(groupIndex);
