@@ -22,6 +22,23 @@ namespace wi::graphics
 {
 	class GraphicsDevice_Metal final : public GraphicsDevice
 	{
+	public:
+		struct RootLayout
+		{
+			uint32_t constants[32];
+			MTL::GPUAddress root_cbv[3];
+			MTL::GPUAddress resource_table_ptr;
+			MTL::GPUAddress sampler_table_ptr;
+		};
+		struct ResourceTable
+		{
+			IRDescriptorTableEntry descriptors[arraysize(DescriptorBindingTable::CBV) - arraysize(RootLayout::root_cbv) + arraysize(DescriptorBindingTable::SRV) + arraysize(DescriptorBindingTable::UAV)];
+		};
+		struct SamplerTable
+		{
+			IRDescriptorTableEntry descriptors[arraysize(DescriptorBindingTable::SAM)];
+		};
+		
 	private:
 		NS::SharedPtr<MTL::Device> device;
 		NS::SharedPtr<MTL::CommandQueue> commandqueue;
@@ -48,7 +65,9 @@ namespace wi::graphics
 			PipelineHash pipeline_hash;
 			DescriptorBindingTable binding_table;
 			bool dirty_root = false;
-			uint32_t push_constants[256] = {};
+			bool dirty_resource = false;
+			bool dirty_sampler = false;
+			RootLayout root = {};
 			
 			struct VertexBufferBinding
 			{
@@ -80,7 +99,10 @@ namespace wi::graphics
 				pipelines_worker.clear();
 				pipeline_hash = {};
 				binding_table = {};
-				dirty_root = false;
+				dirty_root = true;
+				dirty_resource = true;
+				dirty_sampler = true;
+				root = {};
 				for (auto& x : vertex_buffers)
 				{
 					x = {};

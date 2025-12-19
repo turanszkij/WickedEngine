@@ -44,6 +44,7 @@ using namespace Microsoft::WRL;
 #ifdef PLATFORM_APPLE
 #define SHADERCOMPILER_APPLE_INCLUDED
 #include <metal_irconverter/metal_irconverter.h>
+#include "wiGraphicsDevice_Metal.h"
 #endif // PLATFORM_APPLE
 
 using namespace wi::graphics;
@@ -608,7 +609,7 @@ namespace wi::shadercompiler
 					
 					static IRDescriptorRange1 binding_resources[] =
 					{
-						{ .RangeType = IRDescriptorRangeTypeCBV, .BaseShaderRegister = 3, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = IRDescriptorRangeOffsetAppend, .NumDescriptors = 11, .Flags = IRDescriptorRangeFlagDataStaticWhileSetAtExecute },
+						{ .RangeType = IRDescriptorRangeTypeCBV, .BaseShaderRegister = arraysize(GraphicsDevice_Metal::RootLayout::root_cbv), .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = IRDescriptorRangeOffsetAppend, .NumDescriptors = (arraysize(DescriptorBindingTable::CBV) - arraysize(GraphicsDevice_Metal::RootLayout::root_cbv)), .Flags = IRDescriptorRangeFlagDataStaticWhileSetAtExecute },
 						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = IRDescriptorRangeOffsetAppend, .NumDescriptors = 16, .Flags = IRDescriptorRangeFlagDataStaticWhileSetAtExecute },
 						{ .RangeType = IRDescriptorRangeTypeUAV, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = IRDescriptorRangeOffsetAppend, .NumDescriptors = 16, .Flags = IRDescriptorRangeFlagDataStaticWhileSetAtExecute },
 					};
@@ -620,7 +621,7 @@ namespace wi::shadercompiler
 					{
 						{
 							.ParameterType = IRRootParameterType32BitConstants,
-							.Constants = { .ShaderRegister = 999, .Num32BitValues = 16, .RegisterSpace = 0 },
+							.Constants = { .ShaderRegister = 999, .Num32BitValues = arraysize(GraphicsDevice_Metal::RootLayout::constants), .RegisterSpace = 0 },
 							.ShaderVisibility = IRShaderVisibilityAll
 						},
 						{
@@ -685,7 +686,7 @@ namespace wi::shadercompiler
 					
 					IRCompiler* pCompiler = IRCompilerCreate();
 					IRCompilerSetMinimumGPUFamily(pCompiler, IRGPUFamilyMetal3);
-					IRCompilerSetCompatibilityFlags(pCompiler, IRCompatibilityFlags(IRCompatibilityFlagBoundsCheck | IRCompatibilityFlagPositionInvariance));
+					IRCompilerSetCompatibilityFlags(pCompiler, IRCompatibilityFlags(IRCompatibilityFlagBoundsCheck | IRCompatibilityFlagPositionInvariance | IRCompatibilityFlagTextureMinLODClamp | IRCompatibilityFlagSamplerLODBias));
 					IRCompilerSetValidationFlags(pCompiler, IRCompilerValidationFlagAll);
 					IRCompilerSetEntryPointName(pCompiler, input.entrypoint.c_str());
 					IRCompilerSetGlobalRootSignature(pCompiler, pRootSig);

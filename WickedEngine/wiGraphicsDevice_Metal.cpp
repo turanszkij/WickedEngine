@@ -261,6 +261,64 @@ namespace metal_internal
 	   }
 	   return MTL::PixelFormatInvalid;
 	}
+	constexpr MTL::BlendOperation _ConvertBlendOp(BlendOp value)
+	{
+		switch (value)
+		{
+			case BlendOp::ADD:
+				return MTL::BlendOperationAdd;
+			case BlendOp::SUBTRACT:
+				return MTL::BlendOperationSubtract;
+			case BlendOp::REV_SUBTRACT:
+				return MTL::BlendOperationReverseSubtract;
+			case BlendOp::MIN:
+				return MTL::BlendOperationMin;
+			case BlendOp::MAX:
+				return MTL::BlendOperationMax;
+		}
+		return MTL::BlendOperationUnspecialized;
+	}
+	constexpr MTL::BlendFactor _ConvertBlendFactor(Blend value)
+	{
+		switch (value)
+		{
+			case Blend::ZERO:
+				return MTL::BlendFactorZero;
+			case Blend::ONE:
+				return MTL::BlendFactorOne;
+			case Blend::BLEND_FACTOR:
+				return MTL::BlendFactorBlendColor;
+			case Blend::INV_BLEND_FACTOR:
+				return MTL::BlendFactorOneMinusBlendColor;
+			case Blend::DEST_ALPHA:
+				return MTL::BlendFactorDestinationAlpha;
+			case Blend::DEST_COLOR:
+				return MTL::BlendFactorDestinationColor;
+			case Blend::INV_DEST_ALPHA:
+				return MTL::BlendFactorOneMinusDestinationAlpha;
+			case Blend::INV_DEST_COLOR:
+				return MTL::BlendFactorOneMinusDestinationColor;
+			case Blend::SRC_ALPHA:
+				return MTL::BlendFactorSourceAlpha;
+			case Blend::SRC_COLOR:
+				return MTL::BlendFactorSourceColor;
+			case Blend::INV_SRC_ALPHA:
+				return MTL::BlendFactorOneMinusSourceAlpha;
+			case Blend::INV_SRC_COLOR:
+				return MTL::BlendFactorOneMinusSourceColor;
+			case Blend::SRC1_ALPHA:
+				return MTL::BlendFactorSource1Alpha;
+			case Blend::SRC1_COLOR:
+				return MTL::BlendFactorSource1Color;
+			case Blend::INV_SRC1_ALPHA:
+				return MTL::BlendFactorOneMinusSource1Alpha;
+			case Blend::INV_SRC1_COLOR:
+				return MTL::BlendFactorOneMinusSource1Color;
+			case Blend::SRC_ALPHA_SAT:
+				return MTL::BlendFactorSourceAlphaSaturated;
+		}
+		return MTL::BlendFactorUnspecialized;
+	}
 
 	struct Buffer_Metal
 	{
@@ -361,26 +419,26 @@ namespace metal_internal
 			
 			for (auto& x : subresources_srv)
 			{
-				allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(texture), framecount));
+				allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(x.texture), framecount));
 				if (x.index >= 0)
 					allocationhandler->destroyer_bindless_res.push_back(std::make_pair(x.index, framecount));
 			}
 			subresources_srv.clear();
 			for (auto& x : subresources_uav)
 			{
-				allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(texture), framecount));
+				allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(x.texture), framecount));
 				if (x.index >= 0)
 					allocationhandler->destroyer_bindless_res.push_back(std::make_pair(x.index, framecount));
 			}
 			subresources_uav.clear();
 			for (auto& x : subresources_rtv)
 			{
-				allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(texture), framecount));
+				allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(x.texture), framecount));
 			}
 			subresources_rtv.clear();
 			for (auto& x : subresources_dsv)
 			{
-				allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(texture), framecount));
+				allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(x.texture), framecount));
 			}
 			subresources_dsv.clear();
 		}
@@ -551,132 +609,120 @@ using namespace metal_internal;
 		
 		if (commandlist.dirty_root)
 		{
-			struct RootLayout
-			{
-				uint32_t constants[16];
-				MTL::GPUAddress root_cbv[3];
-				MTL::GPUAddress resource_table_ptr;
-				MTL::GPUAddress sampler_table_ptr;
-			};
-			struct ResourceTable
-			{
-				IRDescriptorTableEntry descriptors[arraysize(DescriptorBindingTable::CBV) - arraysize(RootLayout::root_cbv) + arraysize(DescriptorBindingTable::SRV) + arraysize(DescriptorBindingTable::UAV)];
-			};
-			struct SamplerTable
-			{
-				IRDescriptorTableEntry descriptors[arraysize(DescriptorBindingTable::SAM)];
-			};
-			
-			RootLayout root = {};
-			ResourceTable resource_table = {};
-			SamplerTable sampler_table = {};
-			
+			commandlist.dirty_root = false;
 			GPUAllocation root_allocation = AllocateGPU(sizeof(RootLayout), cmd);
-			GPUAllocation resource_table_allocation = AllocateGPU(sizeof(ResourceTable), cmd);
-			GPUAllocation sampler_table_allocation = AllocateGPU(sizeof(SamplerTable), cmd);
-			
 			auto root_allocation_internal = to_internal(&root_allocation.buffer);
-			auto resource_table_allocation_internal = to_internal(&resource_table_allocation.buffer);
-			auto sampler_table_allocation_internal = to_internal(&sampler_table_allocation.buffer);
-			
-			// push constants:
-			std::memcpy(root.constants, commandlist.push_constants, std::min(sizeof(root.constants), sizeof(commandlist.push_constants)));
 			
 			// root CBVs:
-			for (uint32_t i = 0; i < arraysize(root.root_cbv); ++i)
+			for (uint32_t i = 0; i < arraysize(commandlist.root.root_cbv); ++i)
 			{
 				if (!commandlist.binding_table.CBV[i].IsValid())
 					continue;
 				auto internal_state = to_internal(&commandlist.binding_table.CBV[i]);
-				root.root_cbv[i] = internal_state->gpu_address + commandlist.binding_table.CBV_offset[i];
+				commandlist.root.root_cbv[i] = internal_state->gpu_address + commandlist.binding_table.CBV_offset[i];
 			}
 			
-			// Pointers to binding descriptor tables:
-			root.resource_table_ptr = resource_table_allocation_internal->gpu_address + resource_table_allocation.offset;
-			root.sampler_table_ptr = sampler_table_allocation_internal->gpu_address + sampler_table_allocation.offset;
-			
-			// Descriptor tables:
-			uint32_t resource_table_offset = 0;
-			for (uint32_t i = arraysize(root.root_cbv); i < arraysize(DescriptorBindingTable::CBV); ++i)
+			if (commandlist.dirty_resource)
 			{
-				if (commandlist.binding_table.CBV[i].IsValid())
+				commandlist.dirty_resource = false;
+				ResourceTable resource_table = {};
+				GPUAllocation resource_table_allocation = AllocateGPU(sizeof(ResourceTable), cmd);
+				auto resource_table_allocation_internal = to_internal(&resource_table_allocation.buffer);
+				commandlist.root.resource_table_ptr = resource_table_allocation_internal->gpu_address + resource_table_allocation.offset;
+				
+				uint32_t resource_table_offset = 0;
+				for (uint32_t i = arraysize(commandlist.root.root_cbv); i < arraysize(DescriptorBindingTable::CBV); ++i)
 				{
-					auto internal_state = to_internal(&commandlist.binding_table.CBV[i]);
-					const uint64_t offset = commandlist.binding_table.CBV_offset[i];
-					const MTL::GPUAddress gpu_address = internal_state->gpu_address + offset;
-					const uint64_t metadata = 0;
-					IRDescriptorTableSetBuffer(&resource_table.descriptors[resource_table_offset], gpu_address, metadata);
-				}
-				resource_table_offset++;
-			}
-			for (uint32_t i = 0; i < arraysize(commandlist.binding_table.SRV); ++i)
-			{
-				if (commandlist.binding_table.SRV[i].IsValid())
-				{
-					if (commandlist.binding_table.SRV[i].IsBuffer())
+					if (commandlist.binding_table.CBV[i].IsValid())
 					{
-						auto internal_state = to_internal<GPUBuffer>(&commandlist.binding_table.SRV[i]);
-						const int subresource_index = commandlist.binding_table.SRV_index[i];
-						const auto& subresource = subresource_index < 0 ? internal_state->srv : internal_state->subresources_srv[subresource_index];
-						IRBufferView buffer_view = {};
-						buffer_view.buffer = subresource.buffer.get();
-						buffer_view.bufferOffset = subresource.offset;
-						buffer_view.bufferSize = subresource.size;
-						IRDescriptorTableSetBufferView(&resource_table.descriptors[resource_table_offset], &buffer_view);
-					}
-					else if (commandlist.binding_table.SRV[i].IsTexture())
-					{
-						auto internal_state = to_internal<Texture>(&commandlist.binding_table.SRV[i]);
-						const int subresource_index = commandlist.binding_table.SRV_index[i];
-						const auto& subresource = subresource_index < 0 ? internal_state->srv : internal_state->subresources_srv[subresource_index];
+						auto internal_state = to_internal(&commandlist.binding_table.CBV[i]);
+						const uint64_t offset = commandlist.binding_table.CBV_offset[i];
+						const MTL::GPUAddress gpu_address = internal_state->gpu_address + offset;
 						const uint64_t metadata = 0;
-						IRDescriptorTableSetTexture(&resource_table.descriptors[resource_table_offset], subresource.texture.get(), 0, metadata);
+						IRDescriptorTableSetBuffer(&resource_table.descriptors[resource_table_offset], gpu_address, metadata);
 					}
-					else if (commandlist.binding_table.SRV[i].IsAccelerationStructure())
-					{
-						
-					}
+					resource_table_offset++;
 				}
-				resource_table_offset++;
-			}
-			for (uint32_t i = 0; i < arraysize(commandlist.binding_table.UAV); ++i)
-			{
-				if (commandlist.binding_table.UAV[i].IsValid())
+				for (uint32_t i = 0; i < arraysize(commandlist.binding_table.SRV); ++i)
 				{
-					if (commandlist.binding_table.UAV[i].IsBuffer())
+					if (commandlist.binding_table.SRV[i].IsValid())
 					{
-						auto internal_state = to_internal<GPUBuffer>(&commandlist.binding_table.UAV[i]);
-						const int subresource_index = commandlist.binding_table.UAV_index[i];
-						const auto& subresource = subresource_index < 0 ? internal_state->uav : internal_state->subresources_uav[subresource_index];
-						IRBufferView buffer_view = {};
-						buffer_view.buffer = subresource.buffer.get();
-						buffer_view.bufferOffset = subresource.offset;
-						buffer_view.bufferSize = subresource.size;
-						IRDescriptorTableSetBufferView(&resource_table.descriptors[resource_table_offset], &buffer_view);
+						if (commandlist.binding_table.SRV[i].IsBuffer())
+						{
+							auto internal_state = to_internal<GPUBuffer>(&commandlist.binding_table.SRV[i]);
+							const int subresource_index = commandlist.binding_table.SRV_index[i];
+							const auto& subresource = subresource_index < 0 ? internal_state->srv : internal_state->subresources_srv[subresource_index];
+							IRBufferView buffer_view = {};
+							buffer_view.buffer = subresource.buffer.get();
+							buffer_view.bufferOffset = subresource.offset;
+							buffer_view.bufferSize = subresource.size;
+							IRDescriptorTableSetBufferView(&resource_table.descriptors[resource_table_offset], &buffer_view);
+						}
+						else if (commandlist.binding_table.SRV[i].IsTexture())
+						{
+							auto internal_state = to_internal<Texture>(&commandlist.binding_table.SRV[i]);
+							const int subresource_index = commandlist.binding_table.SRV_index[i];
+							const auto& subresource = subresource_index < 0 ? internal_state->srv : internal_state->subresources_srv[subresource_index];
+							const uint64_t metadata = 0;
+							IRDescriptorTableSetTexture(&resource_table.descriptors[resource_table_offset], subresource.texture.get(), 0, metadata);
+						}
+						else if (commandlist.binding_table.SRV[i].IsAccelerationStructure())
+						{
+							
+						}
 					}
-					else if (commandlist.binding_table.UAV[i].IsTexture())
-					{
-						auto internal_state = to_internal<Texture>(&commandlist.binding_table.UAV[i]);
-						const int subresource_index = commandlist.binding_table.UAV_index[i];
-						const auto& subresource = subresource_index < 0 ? internal_state->uav : internal_state->subresources_uav[subresource_index];
-						const uint64_t metadata = 0;
-						IRDescriptorTableSetTexture(&resource_table.descriptors[resource_table_offset], subresource.texture.get(), 0, metadata);
-					}
+					resource_table_offset++;
 				}
-				resource_table_offset++;
+				for (uint32_t i = 0; i < arraysize(commandlist.binding_table.UAV); ++i)
+				{
+					if (commandlist.binding_table.UAV[i].IsValid())
+					{
+						if (commandlist.binding_table.UAV[i].IsBuffer())
+						{
+							auto internal_state = to_internal<GPUBuffer>(&commandlist.binding_table.UAV[i]);
+							const int subresource_index = commandlist.binding_table.UAV_index[i];
+							const auto& subresource = subresource_index < 0 ? internal_state->uav : internal_state->subresources_uav[subresource_index];
+							IRBufferView buffer_view = {};
+							buffer_view.buffer = subresource.buffer.get();
+							buffer_view.bufferOffset = subresource.offset;
+							buffer_view.bufferSize = subresource.size;
+							IRDescriptorTableSetBufferView(&resource_table.descriptors[resource_table_offset], &buffer_view);
+						}
+						else if (commandlist.binding_table.UAV[i].IsTexture())
+						{
+							auto internal_state = to_internal<Texture>(&commandlist.binding_table.UAV[i]);
+							const int subresource_index = commandlist.binding_table.UAV_index[i];
+							const auto& subresource = subresource_index < 0 ? internal_state->uav : internal_state->subresources_uav[subresource_index];
+							const uint64_t metadata = 0;
+							IRDescriptorTableSetTexture(&resource_table.descriptors[resource_table_offset], subresource.texture.get(), 0, metadata);
+						}
+					}
+					resource_table_offset++;
+				}
+				
+				std::memcpy(resource_table_allocation.data, &resource_table, sizeof(resource_table));
 			}
-			for (uint32_t i = 0; i < arraysize(commandlist.binding_table.SAM); ++i)
+			if (commandlist.dirty_sampler)
 			{
-				if (!commandlist.binding_table.SAM[i].IsValid())
-					continue;
-				auto internal_state = to_internal(&commandlist.binding_table.SAM[i]);
-				IRDescriptorTableSetSampler(&sampler_table.descriptors[i], internal_state->sampler.get(), 0);
+				commandlist.dirty_sampler = false;
+				SamplerTable sampler_table = {};
+				GPUAllocation sampler_table_allocation = AllocateGPU(sizeof(SamplerTable), cmd);
+				auto sampler_table_allocation_internal = to_internal(&sampler_table_allocation.buffer);
+				commandlist.root.sampler_table_ptr = sampler_table_allocation_internal->gpu_address + sampler_table_allocation.offset;
+				
+				for (uint32_t i = 0; i < arraysize(commandlist.binding_table.SAM); ++i)
+				{
+					if (!commandlist.binding_table.SAM[i].IsValid())
+						continue;
+					auto internal_state = to_internal(&commandlist.binding_table.SAM[i]);
+					IRDescriptorTableSetSampler(&sampler_table.descriptors[i], internal_state->sampler.get(), 0);
+				}
+				
+				std::memcpy(sampler_table_allocation.data, &sampler_table, sizeof(sampler_table));
 			}
 			
-			// Copy to GPU allocations:
-			std::memcpy(root_allocation.data, &root, sizeof(root));
-			std::memcpy(resource_table_allocation.data, &resource_table, sizeof(resource_table));
-			std::memcpy(sampler_table_allocation.data, &sampler_table, sizeof(sampler_table));
+			// Root data CPU -> GPU:
+			std::memcpy(root_allocation.data, &commandlist.root, sizeof(commandlist.root));
 			
 			if (commandlist.render_encoder != nullptr)
 			{
@@ -1210,10 +1256,38 @@ using namespace metal_internal;
 				NS::TransferPtr(MTL::RenderPipelineColorAttachmentDescriptor::alloc()->init()),
 				NS::TransferPtr(MTL::RenderPipelineColorAttachmentDescriptor::alloc()->init()),
 			};
+			const BlendState& bs = desc->bs == nullptr ? BlendState() : *desc->bs;
 			for (uint32_t i = 0; i < renderpass_info->rt_count; ++i)
 			{
 				MTL::RenderPipelineColorAttachmentDescriptor& attachment = *attachments[i].get();
-				attachments[i]->setPixelFormat(_ConvertPixelFormat(renderpass_info->rt_formats[i]));
+				attachment.setPixelFormat(_ConvertPixelFormat(renderpass_info->rt_formats[i]));
+				
+				const BlendState::RenderTargetBlendState& bs_rt = bs.render_target[i];
+				MTL::ColorWriteMask color_write_mask = {};
+				if (has_flag(bs_rt.render_target_write_mask, ColorWrite::ENABLE_RED))
+				{
+					color_write_mask |= MTL::ColorWriteMaskRed;
+				}
+				if (has_flag(bs_rt.render_target_write_mask, ColorWrite::ENABLE_GREEN))
+				{
+					color_write_mask |= MTL::ColorWriteMaskGreen;
+				}
+				if (has_flag(bs_rt.render_target_write_mask, ColorWrite::ENABLE_BLUE))
+				{
+					color_write_mask |= MTL::ColorWriteMaskBlue;
+				}
+				if (has_flag(bs_rt.render_target_write_mask, ColorWrite::ENABLE_ALPHA))
+				{
+					color_write_mask |= MTL::ColorWriteMaskAlpha;
+				}
+				attachment.setWriteMask(color_write_mask);
+				attachment.setBlendingEnabled(bs_rt.blend_enable);
+				attachment.setRgbBlendOperation(_ConvertBlendOp(bs_rt.blend_op));
+				attachment.setAlphaBlendOperation(_ConvertBlendOp(bs_rt.blend_op_alpha));
+				attachment.setSourceRGBBlendFactor(_ConvertBlendFactor(bs_rt.src_blend));
+				attachment.setSourceAlphaBlendFactor(_ConvertBlendFactor(bs_rt.src_blend_alpha));
+				attachment.setDestinationRGBBlendFactor(_ConvertBlendFactor(bs_rt.dest_blend));
+				attachment.setDestinationAlphaBlendFactor(_ConvertBlendFactor(bs_rt.dest_blend_alpha));
 				internal_state->descriptor->colorAttachments()->setObject(&attachment, i);
 			}
 			internal_state->descriptor->setDepthAttachmentPixelFormat(_ConvertPixelFormat(renderpass_info->ds_format));
@@ -1809,6 +1883,7 @@ using namespace metal_internal;
 		if (commandlist.binding_table.SRV[slot].internal_state == resource->internal_state && commandlist.binding_table.SRV_index[slot] == subresource)
 			return;
 		commandlist.dirty_root = true;
+		commandlist.dirty_resource = true;
 		commandlist.binding_table.SRV[slot] = *resource;
 		commandlist.binding_table.SRV_index[slot] = subresource;
 	}
@@ -1829,6 +1904,7 @@ using namespace metal_internal;
 		if (commandlist.binding_table.UAV[slot].internal_state == resource->internal_state && commandlist.binding_table.UAV_index[slot] == subresource)
 			return;
 		commandlist.dirty_root = true;
+		commandlist.dirty_resource = true;
 		commandlist.binding_table.UAV[slot] = *resource;
 		commandlist.binding_table.UAV_index[slot] = subresource;
 	}
@@ -1848,7 +1924,8 @@ using namespace metal_internal;
 		assert(slot < DESCRIPTORBINDER_SAMPLER_COUNT);
 		if (commandlist.binding_table.SAM[slot].internal_state == sampler->internal_state)
 			return;
-		commandlist.dirty_root= true;
+		commandlist.dirty_root = true;
+		commandlist.dirty_sampler = true;
 		commandlist.binding_table.SAM[slot] = *sampler;
 	}
 	void GraphicsDevice_Metal::BindConstantBuffer(const GPUBuffer* buffer, uint32_t slot, CommandList cmd, uint64_t offset)
@@ -1858,6 +1935,10 @@ using namespace metal_internal;
 		if (commandlist.binding_table.CBV[slot].internal_state == buffer->internal_state && commandlist.binding_table.CBV_offset[slot] == offset)
 			return;
 		commandlist.dirty_root = true;
+		if (slot >= arraysize(RootLayout::root_cbv))
+		{
+			commandlist.dirty_resource = true;
+		}
 		commandlist.binding_table.CBV[slot] = *buffer;
 		commandlist.binding_table.CBV_offset[slot] = offset;
 	}
@@ -1932,6 +2013,30 @@ using namespace metal_internal;
 			}
 		}
 		commandlist.active_pso = pso;
+		
+		switch (pso->desc.pt)
+		{
+			case PrimitiveTopology::TRIANGLELIST:
+				commandlist.primitive_type = MTL::PrimitiveTypeTriangle;
+				break;
+			case PrimitiveTopology::TRIANGLESTRIP:
+				commandlist.primitive_type = MTL::PrimitiveTypeTriangleStrip;
+				break;
+			case PrimitiveTopology::LINELIST:
+				commandlist.primitive_type = MTL::PrimitiveTypeLine;
+				break;
+			case PrimitiveTopology::LINESTRIP:
+				commandlist.primitive_type = MTL::PrimitiveTypeLineStrip;
+				break;
+			case PrimitiveTopology::POINTLIST:
+				commandlist.primitive_type = MTL::PrimitiveTypePoint;
+				break;
+			case PrimitiveTopology::PATCHLIST:
+				commandlist.primitive_type = MTL::PrimitiveTypeTriangle;
+				break;
+			default:
+				break;
+		}
 	}
 	void GraphicsDevice_Metal::BindComputeShader(const Shader* cs, CommandList cmd)
 	{
@@ -2121,8 +2226,9 @@ using namespace metal_internal;
 	}
 	void GraphicsDevice_Metal::PushConstants(const void* data, uint32_t size, CommandList cmd, uint32_t offset)
 	{
+		assert(offset + size < sizeof(RootLayout::constants));
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-		std::memcpy((uint8_t*)commandlist.push_constants + offset, data, size);
+		std::memcpy((uint8_t*)commandlist.root.constants + offset, data, size);
 		commandlist.dirty_root = true;
 	}
 	void GraphicsDevice_Metal::PredicationBegin(const GPUBuffer* buffer, uint64_t offset, PredicationOp op, CommandList cmd)
