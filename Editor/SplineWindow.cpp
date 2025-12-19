@@ -55,10 +55,28 @@ void SplineWindow::Create(EditorComponent* _editor)
 	};
 
 	loopedCheck.Create("Looped: ");
-	loopedCheck.OnClick(forEachSelectedAndIndirect([] (auto spline, auto args) {
-		spline->SetLooped(args.bValue);
-	}));
+	loopedCheck.OnClick([this, forEachSelectedAndIndirect](wi::gui::EventArgs args) {
+		forEachSelectedAndIndirect([](auto spline, auto args) {
+			spline->SetLooped(args.bValue);
+		})(args);
+
+		filledCheck.SetEnabled(args.bValue);
+		if (!args.bValue)
+		{
+			filledCheck.SetCheck(false);
+			forEachSelectedAndIndirect([](auto spline, auto args) {
+				spline->SetFilled(false);
+			})(args);
+		}
+	});
 	AddWidget(&loopedCheck);
+
+	filledCheck.Create("Filled: ");
+	filledCheck.SetTooltip("Fill the interior of the looped spline.");
+	filledCheck.OnClick(forEachSelectedAndIndirect([] (auto spline, auto args) {
+		spline->SetFilled(args.bValue);
+	}));
+	AddWidget(&filledCheck);
 
 	alignedCheck.Create("Draw Aligned: ");
 	alignedCheck.OnClick(forEachSelectedAndIndirect([] (auto spline, auto args) {
@@ -116,6 +134,78 @@ void SplineWindow::Create(EditorComponent* _editor)
 	}));
 	AddWidget(&terrainPushdownSlider);
 
+	recenterButton.Create("Recenter");
+	recenterButton.SetTooltip("Recompute the parent transform position to the center of spline nodes.");
+	recenterButton.OnClick([this](wi::gui::EventArgs args) {
+		auto recenterSpline = [](wi::scene::Scene& scene, Entity splineEntity) {
+			SplineComponent* spline = scene.splines.GetComponent(splineEntity);
+			if (spline == nullptr || spline->spline_node_entities.empty())
+				return;
+
+			TransformComponent* parent_transform = scene.transforms.GetComponent(splineEntity);
+			if (parent_transform == nullptr)
+				return;
+
+			// Compute centroid of all spline nodes in local space
+			XMVECTOR localCentroid = XMVectorZero();
+			size_t validCount = 0;
+			for (size_t i = 0; i < spline->spline_node_entities.size(); ++i)
+			{
+				const Entity node_entity = spline->spline_node_entities[i];
+				const TransformComponent* node_transform = scene.transforms.GetComponent(node_entity);
+				if (node_transform != nullptr)
+				{
+					localCentroid = XMVectorAdd(localCentroid, XMLoadFloat3(&node_transform->translation_local));
+					validCount++;
+				}
+			}
+
+			if (validCount == 0)
+				return;
+
+			localCentroid = XMVectorScale(localCentroid, 1.0f / float(validCount));
+
+			// Offset each child node's local position by negative centroid, so they stay in place after parent moves
+			for (size_t i = 0; i < spline->spline_node_entities.size(); ++i)
+			{
+				const Entity node_entity = spline->spline_node_entities[i];
+				TransformComponent* node_transform = scene.transforms.GetComponent(node_entity);
+				if (node_transform != nullptr)
+				{
+					const XMVECTOR newLocalPos = XMVectorSubtract(XMLoadFloat3(&node_transform->translation_local), localCentroid);
+					XMStoreFloat3(&node_transform->translation_local, newLocalPos);
+					node_transform->SetDirty();
+				}
+			}
+
+			// Move the parent transform by the local centroid, transformed to world space
+			const XMVECTOR worldOffset = XMVector3TransformNormal(localCentroid, XMLoadFloat4x4(&parent_transform->world));
+			const XMVECTOR newParentPos = XMVectorAdd(XMLoadFloat3(&parent_transform->translation_local), worldOffset);
+			XMStoreFloat3(&parent_transform->translation_local, newParentPos);
+			parent_transform->SetDirty();
+
+			spline->SetDirty();
+		};
+
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		// Apply to all selected splines
+		for (auto& x : editor->translator.selected)
+		{
+			if (scene.splines.Contains(x.entity))
+			{
+				recenterSpline(scene, x.entity);
+			}
+		}
+		// Also apply to indirect entity
+		if (scene.splines.Contains(entity))
+		{
+			recenterSpline(scene, entity);
+		}
+
+		editor->componentsWnd.RefreshEntityTree();
+	});
+	AddWidget(&recenterButton);
+
 	addButton.Create("AddNode");
 	addButton.SetText("+");
 	addButton.SetTooltip("Add an entity as a node to the spline (it must have TransformComponent). Hotkey: Ctrl + E");
@@ -144,6 +234,8 @@ void SplineWindow::SetEntity(Entity entity)
 
 		alignedCheck.SetCheck(spline->IsDrawAligned());
 		loopedCheck.SetCheck(spline->IsLooped());
+		filledCheck.SetCheck(spline->IsFilled());
+		filledCheck.SetEnabled(spline->IsLooped());
 		widthSlider.SetValue(spline->width);
 		rotSlider.SetValue(wi::math::RadiansToDegrees(spline->rotation));
 		subdivSlider.SetValue(spline->mesh_generation_subdivision);
@@ -174,7 +266,7 @@ void SplineWindow::RefreshEntries()
 	}
 	entries.clear();
 
-	Scene& scene = editor->GetCurrentScene();
+	const Scene& scene = editor->GetCurrentScene();
 	SplineComponent* spline = scene.splines.GetComponent(entity);
 	if (spline == nullptr)
 		return;
@@ -262,10 +354,12 @@ void SplineWindow::ResizeLayout()
 	layout.add(widthSlider);
 	layout.add(rotSlider);
 	layout.add_right(loopedCheck);
+	layout.add_right(filledCheck);
 	layout.add_right(alignedCheck);
 
 	layout.y += layout.padding * 2;
 
+	layout.add_fullwidth(recenterButton);
 	layout.add_fullwidth(addButton);
 
 	for (auto& entry : entries)

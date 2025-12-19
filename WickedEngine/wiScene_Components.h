@@ -2628,6 +2628,7 @@ namespace wi::scene
 			DRAW_ALIGNED = 1 << 0,
 			LOOPED = 1 << 1,
 			DIRTY = 1 << 2,
+			FILLED = 1 << 3,
 		};
 		uint32_t _flags = NONE;
 
@@ -2656,6 +2657,7 @@ namespace wi::scene
 		mutable int prev_terrain_generation_nodes = 0;
 		mutable bool dirty_terrain = false;
 		bool prev_looped = false;
+		bool prev_filled = false;
 		wi::ecs::Entity materialEntity = wi::ecs::INVALID_ENTITY; // temp for terrain usage
 		mutable wi::ecs::Entity materialEntity_terrainPrev = wi::ecs::INVALID_ENTITY; // temp for terrain usage
 		wi::vector<BoundingOrientedBox> precomputed_obbs; // an array of OBBs that approximate the spline's volume
@@ -2692,6 +2694,9 @@ namespace wi::scene
 
 		bool IsDirty() const { return _flags & DIRTY; }
 		void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
+
+		bool IsFilled() const { return _flags & FILLED; }
+		void SetFilled(bool value = true) { if (value) { _flags |= FILLED; } else { _flags &= ~FILLED; } }
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
