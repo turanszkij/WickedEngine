@@ -1,4 +1,3 @@
-#define ENTITY_TILE_UNIFORM
 #define SHADOW_MASK_ENABLED
 #define DISABLE_DECALS // decals were applied in surface shader
 //#define DISABLE_VOXELGI
@@ -29,7 +28,7 @@ Texture2D<uint4> input_payload_1 : register(t3);
 
 RWTexture2D<float4> output : register(u0);
 
-[numthreads(VISIBILITY_BLOCKSIZE, VISIBILITY_BLOCKSIZE, 1)]
+[numthreads(VISIBILITY_BLOCKSIZE * VISIBILITY_BLOCKSIZE, 1, 1)]
 void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
 	const uint tile_offset = push.global_tile_offset + Gid.x;
