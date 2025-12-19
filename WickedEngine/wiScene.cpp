@@ -6219,7 +6219,7 @@ namespace wi::scene
 							}
 							centroid = XMVectorScale(centroid, 1.0f / float(segmentCount));
 
-							// Compute fill plane normal
+							// Compute fill plane normal for UV basis
 							XMVECTOR fillNormal = XMVectorZero();
 							for (size_t i = 0; i < segmentCount; ++i)
 							{
@@ -6229,12 +6229,6 @@ namespace wi::scene
 								fillNormal = XMVectorAdd(fillNormal, XMVector3Cross(current - centroid, next - centroid));
 							}
 							fillNormal = XMVector3Normalize(fillNormal);
-
-							// Compute tangent for the fill surface using the first edge direction
-							XMVECTOR fillTangent = XMVector3Normalize(
-								XMLoadFloat3(&mesh->vertex_positions[1]) - XMLoadFloat3(&mesh->vertex_positions[0])
-							);
-							fillTangent = XMVectorSetW(fillTangent, 1.0f);
 
 							// Compute UV basis vectors by projecting onto the fill plane
 							XMVECTOR uAxis = XMVector3Normalize(XMVector3Cross(fillNormal, XMVectorSet(0, 1, 0, 0)));
@@ -6261,13 +6255,9 @@ namespace wi::scene
 							if (rangeU < 0.001f) rangeU = 1.0f;
 							if (rangeV < 0.001f) rangeV = 1.0f;
 
-							// Update normals and UVs for edge vertices to match fill surface
+							// Update UVs for edge vertices
 							for (size_t i = 0; i < segmentCount; ++i)
 							{
-								XMStoreFloat3(&mesh->vertex_normals[i], fillNormal);
-								XMStoreFloat4(&mesh->vertex_tangents[i], fillTangent);
-
-								// Compute proper UV for this vertex
 								XMVECTOR pos = XMLoadFloat3(&mesh->vertex_positions[i]);
 								XMVECTOR offset = pos - centroid;
 								float u = (XMVectorGetX(XMVector3Dot(offset, uAxis)) - minU) / rangeU;
@@ -6278,8 +6268,8 @@ namespace wi::scene
 							// Add centroid vertex
 							const uint32_t centroidIndex = (uint32_t)mesh->vertex_positions.size();
 							XMStoreFloat3(&mesh->vertex_positions.emplace_back(), centroid);
-							XMStoreFloat3(&mesh->vertex_normals.emplace_back(), fillNormal);
-							XMStoreFloat4(&mesh->vertex_tangents.emplace_back(), fillTangent);
+							mesh->vertex_normals.emplace_back();
+							mesh->vertex_tangents.emplace_back();
 							mesh->vertex_uvset_0.push_back(XMFLOAT2(0.5f, 0.5f)); // center UV
 
 							// Generate triangle fan from centroid to edge vertices
@@ -6291,6 +6281,8 @@ namespace wi::scene
 								mesh->indices.push_back(current);
 								mesh->indices.push_back(next);
 							}
+
+							mesh->ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH_FAST);
 						}
 						MeshComponent::MeshSubset& subset = mesh->subsets.front();
 						subset.indexCount = (uint32_t)mesh->indices.size();
