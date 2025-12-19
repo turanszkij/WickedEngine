@@ -319,6 +319,52 @@ namespace metal_internal
 		}
 		return MTL::BlendFactorUnspecialized;
 	}
+	constexpr MTL::CompareFunction _ConvertCompareFunction(ComparisonFunc value)
+	{
+		switch (value)
+		{
+			case ComparisonFunc::ALWAYS:
+				return MTL::CompareFunctionAlways;
+			case ComparisonFunc::NEVER:
+				return MTL::CompareFunctionNever;
+			case ComparisonFunc::EQUAL:
+				return MTL::CompareFunctionEqual;
+			case ComparisonFunc::NOT_EQUAL:
+				return MTL::CompareFunctionNotEqual;
+			case ComparisonFunc::LESS:
+				return MTL::CompareFunctionLess;
+			case ComparisonFunc::LESS_EQUAL:
+				return MTL::CompareFunctionLessEqual;
+			case ComparisonFunc::GREATER:
+				return MTL::CompareFunctionGreater;
+			case ComparisonFunc::GREATER_EQUAL:
+				return MTL::CompareFunctionGreaterEqual;
+		}
+		return MTL::CompareFunctionNever;
+	}
+	constexpr MTL::StencilOperation _ConvertStencilOperation(StencilOp value)
+	{
+		switch (value)
+		{
+			case StencilOp::KEEP:
+				return MTL::StencilOperationKeep;
+			case StencilOp::REPLACE:
+				return MTL::StencilOperationReplace;
+			case StencilOp::ZERO:
+				return MTL::StencilOperationZero;
+			case StencilOp::INVERT:
+				return MTL::StencilOperationInvert;
+			case StencilOp::INCR:
+				return MTL::StencilOperationIncrementWrap;
+			case StencilOp::INCR_SAT:
+				return MTL::StencilOperationIncrementClamp;
+			case StencilOp::DECR:
+				return MTL::StencilOperationDecrementWrap;
+			case StencilOp::DECR_SAT:
+				return MTL::StencilOperationDecrementClamp;
+		}
+		return MTL::StencilOperationKeep;
+	}
 
 	struct Buffer_Metal
 	{
@@ -509,6 +555,7 @@ namespace metal_internal
 		wi::allocator::shared_ptr<GraphicsDevice_Metal::AllocationHandler> allocationhandler;
 		NS::SharedPtr<MTL::RenderPipelineDescriptor> descriptor;
 		NS::SharedPtr<MTL::RenderPipelineState> render_pipeline;
+		NS::SharedPtr<MTL::DepthStencilState> depth_stencil_state;
 
 		~PipelineState_Metal()
 		{
@@ -517,6 +564,7 @@ namespace metal_internal
 			allocationhandler->destroylocker.lock();
 			uint64_t framecount = allocationhandler->framecount;
 			allocationhandler->destroyer_render_pipelines.push_back(std::make_pair(std::move(render_pipeline), framecount));
+			allocationhandler->destroyer_depth_stencil_states.push_back(std::make_pair(std::move(depth_stencil_state), framecount));
 			allocationhandler->destroylocker.unlock();
 		}
 	};
@@ -668,7 +716,7 @@ using namespace metal_internal;
 						}
 						else if (commandlist.binding_table.SRV[i].IsAccelerationStructure())
 						{
-							
+							// TODO
 						}
 					}
 					resource_table_offset++;
@@ -815,6 +863,38 @@ using namespace metal_internal;
 			commandlist.render_encoder->setFragmentBuffer(descriptor_heap_sam.get(), 0, kIRSamplerHeapBindPoint);
 		}
 		
+		commandlist.render_encoder->setDepthStencilState(internal_state->depth_stencil_state.get());
+		
+		const RasterizerState& rs = commandlist.active_pso->desc.rs == nullptr ? RasterizerState() : *commandlist.active_pso->desc.rs;
+		MTL::CullMode cull_mode = {};
+		switch (rs.cull_mode)
+		{
+			case CullMode::BACK:
+				cull_mode = MTL::CullModeBack;
+				break;
+			case CullMode::FRONT:
+				cull_mode = MTL::CullModeFront;
+				break;
+			case CullMode::NONE:
+				cull_mode = MTL::CullModeNone;
+				break;
+		}
+		commandlist.render_encoder->setCullMode(cull_mode);
+		commandlist.render_encoder->setDepthBias((float)rs.depth_bias, rs.slope_scaled_depth_bias, rs.depth_bias_clamp);
+		commandlist.render_encoder->setDepthClipMode(rs.depth_clip_enable ? MTL::DepthClipModeClip : MTL::DepthClipModeClamp);
+		MTL::TriangleFillMode fill_mode = {};
+		switch (rs.fill_mode)
+		{
+			case FillMode::SOLID:
+				fill_mode = MTL::TriangleFillModeFill;
+				break;
+			case FillMode::WIREFRAME:
+				fill_mode = MTL::TriangleFillModeLines;
+				break;
+		}
+		commandlist.render_encoder->setTriangleFillMode(fill_mode);
+		commandlist.render_encoder->setFrontFacingWinding(rs.front_counter_clockwise ? MTL::WindingCounterClockwise : MTL::WindingClockwise);
+		
 		commandlist.dirty_pso = false;
 	}
 	void GraphicsDevice_Metal::predraw(CommandList cmd)
@@ -824,6 +904,17 @@ using namespace metal_internal;
 		assert(commandlist.render_encoder != nullptr);
 		pso_validate(cmd);
 		binder_flush(cmd);
+		
+		if (commandlist.dirty_scissor)
+		{
+			commandlist.dirty_scissor = false;
+			commandlist.render_encoder->setScissorRects(commandlist.scissors, commandlist.scissor_count);
+		}
+		if (commandlist.dirty_viewport)
+		{
+			commandlist.dirty_viewport = false;
+			commandlist.render_encoder->setViewports(commandlist.viewports, commandlist.viewport_count);
+		}
 	}
 	void GraphicsDevice_Metal::predispatch(CommandList cmd)
 	{
@@ -1001,7 +1092,8 @@ using namespace metal_internal;
 		descriptor->setMipmapLevelCount(desc->mip_levels);
 		descriptor->setPixelFormat(_ConvertPixelFormat(desc->format));
 		descriptor->setSampleCount(desc->sample_count);
-		switch (desc->type) {
+		switch (desc->type)
+		{
 			case TextureDesc::Type::TEXTURE_1D:
 				descriptor->setTextureType(desc->array_size > 1 ? MTL::TextureType1DArray : MTL::TextureType1D);
 				break;
@@ -1021,7 +1113,7 @@ using namespace metal_internal;
 			default:
 				break;
 		}
-		if(has_flag(desc->misc_flags, ResourceMiscFlag::TEXTURECUBE))
+		if (has_flag(desc->misc_flags, ResourceMiscFlag::TEXTURECUBE))
 		{
 			descriptor->setTextureType(desc->array_size > 6 ? MTL::TextureTypeCubeArray : MTL::TextureTypeCube);
 			descriptor->setArrayLength(desc->array_size / 6);
@@ -1030,7 +1122,7 @@ using namespace metal_internal;
 		internal_state->texture = NS::TransferPtr(device->newTexture(descriptor.get()));
 		allocationhandler->make_resident(internal_state->texture.get());
 		
-		if(initial_data != nullptr)
+		if (initial_data != nullptr)
 		{
 			const uint32_t data_stride = GetFormatStride(desc->format);
 			uint32_t initDataIdx = 0;
@@ -1146,7 +1238,133 @@ using namespace metal_internal;
 		
 		NS::SharedPtr<MTL::SamplerDescriptor> descriptor = NS::TransferPtr(MTL::SamplerDescriptor::alloc()->init());
 		descriptor->setSupportArgumentBuffers(true);
-		// TODO
+		MTL::SamplerMipFilter mip_filter = {};
+		switch (desc->filter)
+		{
+			case Filter::MIN_MAG_MIP_POINT:
+			case Filter::MIN_POINT_MAG_LINEAR_MIP_POINT:
+			case Filter::MIN_LINEAR_MAG_MIP_POINT:
+			case Filter::MIN_MAG_LINEAR_MIP_POINT:
+			case Filter::COMPARISON_MIN_MAG_MIP_POINT:
+			case Filter::COMPARISON_MIN_POINT_MAG_LINEAR_MIP_POINT:
+			case Filter::COMPARISON_MIN_LINEAR_MAG_MIP_POINT:
+			case Filter::COMPARISON_MIN_MAG_LINEAR_MIP_POINT:
+			case Filter::MINIMUM_MIN_MAG_MIP_POINT:
+			case Filter::MINIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT:
+			case Filter::MINIMUM_MIN_LINEAR_MAG_MIP_POINT:
+			case Filter::MINIMUM_MIN_MAG_LINEAR_MIP_POINT:
+			case Filter::MAXIMUM_MIN_MAG_MIP_POINT:
+			case Filter::MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT:
+			case Filter::MAXIMUM_MIN_LINEAR_MAG_MIP_POINT:
+			case Filter::MAXIMUM_MIN_MAG_LINEAR_MIP_POINT:
+				mip_filter = MTL::SamplerMipFilterNearest;
+				break;
+			default:
+				mip_filter = MTL::SamplerMipFilterLinear;
+				break;
+		}
+		descriptor->setMipFilter(mip_filter);
+		MTL::SamplerMinMagFilter min_filter = {};
+		switch (desc->filter)
+		{
+			case Filter::MIN_MAG_MIP_POINT:
+			case Filter::MIN_MAG_POINT_MIP_LINEAR:
+			case Filter::MIN_POINT_MAG_LINEAR_MIP_POINT:
+			case Filter::MIN_POINT_MAG_MIP_LINEAR:
+			case Filter::COMPARISON_MIN_MAG_MIP_POINT:
+			case Filter::COMPARISON_MIN_MAG_POINT_MIP_LINEAR:
+			case Filter::COMPARISON_MIN_POINT_MAG_LINEAR_MIP_POINT:
+			case Filter::COMPARISON_MIN_POINT_MAG_MIP_LINEAR:
+			case Filter::MINIMUM_MIN_MAG_MIP_POINT:
+			case Filter::MINIMUM_MIN_MAG_POINT_MIP_LINEAR:
+			case Filter::MINIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT:
+			case Filter::MINIMUM_MIN_POINT_MAG_MIP_LINEAR:
+			case Filter::MAXIMUM_MIN_MAG_MIP_POINT:
+			case Filter::MAXIMUM_MIN_MAG_POINT_MIP_LINEAR:
+			case Filter::MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT:
+			case Filter::MAXIMUM_MIN_POINT_MAG_MIP_LINEAR:
+				min_filter = MTL::SamplerMinMagFilterNearest;
+				break;
+			default:
+				min_filter = MTL::SamplerMinMagFilterLinear;
+				break;
+		}
+		descriptor->setMinFilter(min_filter);
+		MTL::SamplerMinMagFilter mag_filter = {};
+		switch (desc->filter)
+		{
+			case Filter::MIN_MAG_MIP_POINT:
+			case Filter::MIN_MAG_POINT_MIP_LINEAR:
+			case Filter::MIN_LINEAR_MAG_MIP_POINT:
+			case Filter::MIN_LINEAR_MAG_POINT_MIP_LINEAR:
+			case Filter::COMPARISON_MIN_MAG_MIP_POINT:
+			case Filter::COMPARISON_MIN_MAG_POINT_MIP_LINEAR:
+			case Filter::COMPARISON_MIN_LINEAR_MAG_MIP_POINT:
+			case Filter::COMPARISON_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
+			case Filter::MINIMUM_MIN_MAG_MIP_POINT:
+			case Filter::MINIMUM_MIN_MAG_POINT_MIP_LINEAR:
+			case Filter::MINIMUM_MIN_LINEAR_MAG_MIP_POINT:
+			case Filter::MINIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
+			case Filter::MAXIMUM_MIN_MAG_MIP_POINT:
+			case Filter::MAXIMUM_MIN_MAG_POINT_MIP_LINEAR:
+			case Filter::MAXIMUM_MIN_LINEAR_MAG_MIP_POINT:
+			case Filter::MAXIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
+				mag_filter = MTL::SamplerMinMagFilterNearest;
+				break;
+			default:
+				mag_filter = MTL::SamplerMinMagFilterLinear;
+				break;
+		}
+		descriptor->setMagFilter(mag_filter);
+		MTL::SamplerReductionMode reduction_mode = {};
+		switch (desc->filter)
+		{
+			case Filter::MINIMUM_MIN_MAG_MIP_POINT:
+			case Filter::MINIMUM_MIN_MAG_POINT_MIP_LINEAR:
+			case Filter::MINIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT:
+			case Filter::MINIMUM_MIN_POINT_MAG_MIP_LINEAR:
+			case Filter::MINIMUM_MIN_LINEAR_MAG_MIP_POINT:
+			case Filter::MINIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
+			case Filter::MINIMUM_MIN_MAG_LINEAR_MIP_POINT:
+			case Filter::MINIMUM_MIN_MAG_MIP_LINEAR:
+			case Filter::MINIMUM_ANISOTROPIC:
+				reduction_mode = MTL::SamplerReductionModeMinimum;
+				break;
+			case Filter::MAXIMUM_MIN_MAG_MIP_POINT:
+			case Filter::MAXIMUM_MIN_MAG_POINT_MIP_LINEAR:
+			case Filter::MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT:
+			case Filter::MAXIMUM_MIN_POINT_MAG_MIP_LINEAR:
+			case Filter::MAXIMUM_MIN_LINEAR_MAG_MIP_POINT:
+			case Filter::MAXIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
+			case Filter::MAXIMUM_MIN_MAG_LINEAR_MIP_POINT:
+			case Filter::MAXIMUM_MIN_MAG_MIP_LINEAR:
+			case Filter::MAXIMUM_ANISOTROPIC:
+				reduction_mode = MTL::SamplerReductionModeMaximum;
+				break;
+			default:
+				reduction_mode = MTL::SamplerReductionModeWeightedAverage;
+				break;
+		}
+		descriptor->setReductionMode(reduction_mode);
+		descriptor->setCompareFunction(_ConvertCompareFunction(desc->comparison_func));
+		descriptor->setLodMinClamp(desc->min_lod);
+		descriptor->setLodMaxClamp(desc->max_lod);
+		descriptor->setMaxAnisotropy(clamp(desc->max_anisotropy, 1u, 16u));
+		descriptor->setLodBias(desc->mip_lod_bias);
+		MTL::SamplerBorderColor border_color = {};
+		switch (desc->border_color)
+		{
+			case SamplerBorderColor::TRANSPARENT_BLACK:
+				border_color = MTL::SamplerBorderColorTransparentBlack;
+				break;
+			case SamplerBorderColor::OPAQUE_BLACK:
+				border_color = MTL::SamplerBorderColorOpaqueBlack;
+				break;
+			case SamplerBorderColor::OPAQUE_WHITE:
+				border_color = MTL::SamplerBorderColorOpaqueWhite;
+				break;
+		}
+		descriptor->setBorderColor(border_color);
 		internal_state->sampler = NS::TransferPtr(device->newSamplerState(descriptor.get()));
 		allocationhandler->allocate_bindless(internal_state->sampler.get());
 
@@ -1201,6 +1419,36 @@ using namespace metal_internal;
 			return false; // TODO
 		}
 		
+		const DepthStencilState& dss = desc->dss == nullptr ? DepthStencilState() : *desc->dss;
+		NS::SharedPtr<MTL::DepthStencilDescriptor> depth_stencil_desc = NS::TransferPtr(MTL::DepthStencilDescriptor::alloc()->init());
+		if (dss.depth_enable)
+		{
+			depth_stencil_desc->setDepthCompareFunction(_ConvertCompareFunction(dss.depth_func));
+			depth_stencil_desc->setDepthWriteEnabled(dss.depth_write_mask == DepthWriteMask::ALL);
+		}
+		NS::SharedPtr<MTL::StencilDescriptor> stencil_front;
+		NS::SharedPtr<MTL::StencilDescriptor> stencil_back;
+		if (dss.stencil_enable)
+		{
+			stencil_front = NS::TransferPtr(MTL::StencilDescriptor::alloc()->init());
+			stencil_back = NS::TransferPtr(MTL::StencilDescriptor::alloc()->init());
+			stencil_front->setReadMask(dss.stencil_read_mask);
+			stencil_front->setWriteMask(dss.stencil_write_mask);
+			stencil_front->setStencilCompareFunction(_ConvertCompareFunction(dss.front_face.stencil_func));
+			stencil_front->setStencilFailureOperation(_ConvertStencilOperation(dss.front_face.stencil_fail_op));
+			stencil_front->setDepthFailureOperation(_ConvertStencilOperation(dss.front_face.stencil_depth_fail_op));
+			stencil_front->setDepthStencilPassOperation(_ConvertStencilOperation(dss.front_face.stencil_pass_op));
+			stencil_back->setReadMask(dss.stencil_read_mask);
+			stencil_back->setWriteMask(dss.stencil_write_mask);
+			stencil_back->setStencilCompareFunction(_ConvertCompareFunction(dss.back_face.stencil_func));
+			stencil_back->setStencilFailureOperation(_ConvertStencilOperation(dss.back_face.stencil_fail_op));
+			stencil_back->setDepthFailureOperation(_ConvertStencilOperation(dss.back_face.stencil_depth_fail_op));
+			stencil_back->setDepthStencilPassOperation(_ConvertStencilOperation(dss.back_face.stencil_pass_op));
+			depth_stencil_desc->setFrontFaceStencil(stencil_front.get());
+			depth_stencil_desc->setBackFaceStencil(stencil_back.get());
+		}
+		internal_state->depth_stencil_state = NS::TransferPtr(device->newDepthStencilState(depth_stencil_desc.get()));
+		
 		NS::SharedPtr<MTL::VertexDescriptor> vertex_descriptor;
 		if (desc->il != nullptr)
 		{
@@ -1246,6 +1494,7 @@ using namespace metal_internal;
 		
 		if (renderpass_info != nullptr)
 		{
+			// When renderpass_info is provided, it will be a completely precompiled pipeline state only useable by that renderpass type:
 			NS::SharedPtr<MTL::RenderPipelineColorAttachmentDescriptor> attachments[8] = {
 				NS::TransferPtr(MTL::RenderPipelineColorAttachmentDescriptor::alloc()->init()),
 				NS::TransferPtr(MTL::RenderPipelineColorAttachmentDescriptor::alloc()->init()),
@@ -1257,6 +1506,7 @@ using namespace metal_internal;
 				NS::TransferPtr(MTL::RenderPipelineColorAttachmentDescriptor::alloc()->init()),
 			};
 			const BlendState& bs = desc->bs == nullptr ? BlendState() : *desc->bs;
+			internal_state->descriptor->setAlphaToCoverageEnabled(bs.alpha_to_coverage_enable);
 			for (uint32_t i = 0; i < renderpass_info->rt_count; ++i)
 			{
 				MTL::RenderPipelineColorAttachmentDescriptor& attachment = *attachments[i].get();
@@ -1291,6 +1541,10 @@ using namespace metal_internal;
 				internal_state->descriptor->colorAttachments()->setObject(&attachment, i);
 			}
 			internal_state->descriptor->setDepthAttachmentPixelFormat(_ConvertPixelFormat(renderpass_info->ds_format));
+			if (IsFormatStencilSupport(renderpass_info->ds_format))
+			{
+				internal_state->descriptor->setStencilAttachmentPixelFormat(_ConvertPixelFormat(renderpass_info->ds_format));
+			}
 			
 			uint32_t sample_count = renderpass_info->sample_count;
 			while (sample_count > 1 && !device->supportsTextureSampleCount(sample_count))
@@ -1312,6 +1566,7 @@ using namespace metal_internal;
 			return internal_state->render_pipeline.get() != nullptr;
 		}
 		
+		// If we get here, this pipeline state is not complete, but it will be reuseable by different render passes (and compiled just in time at runtime)
 		return true;
 	}
 	bool GraphicsDevice_Metal::CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* desc, RaytracingAccelerationStructure* bvh) const
@@ -1688,15 +1943,24 @@ using namespace metal_internal;
 
 	void GraphicsDevice_Metal::WaitForGPU() const
 	{
+		// TODO
 	}
 	void GraphicsDevice_Metal::ClearPipelineStateCache()
 	{
+		std::scoped_lock locker(allocationhandler->destroylocker);
+		uint64_t framecount = allocationhandler->framecount;
+		for (auto& x : pipelines_global)
+		{
+			allocationhandler->destroyer_render_pipelines.push_back(std::make_pair(std::move(x.second), framecount));
+		}
+		pipelines_global.clear();
 	}
 
 	Texture GraphicsDevice_Metal::GetBackBuffer(const SwapChain* swapchain) const
 	{
 		auto swapchain_internal = to_internal(swapchain);
 		Texture result;
+		// TODO
 		return result;
 	}
 	ColorSpace GraphicsDevice_Metal::GetSwapChainColorSpace(const SwapChain* swapchain) const
@@ -1707,11 +1971,13 @@ using namespace metal_internal;
 	bool GraphicsDevice_Metal::IsSwapChainSupportsHDR(const SwapChain* swapchain) const
 	{
 		auto internal_state = to_internal(swapchain);
+		// TODO
 		return false;
 	}
 
 	void GraphicsDevice_Metal::SparseUpdate(QUEUE_TYPE queue, const SparseUpdateCommand* commands, uint32_t command_count)
 	{
+		// TODO
 	}
 
 	void GraphicsDevice_Metal::WaitCommandList(CommandList cmd, CommandList wait_for)
@@ -1852,7 +2118,7 @@ using namespace metal_internal;
 			}
 		}
 		
-		commandlist.commandbuffer->renderCommandEncoder(descriptor.get());
+		commandlist.render_encoder = commandlist.commandbuffer->renderCommandEncoder(descriptor.get());
 
 		commandlist.renderpass_info = RenderPassInfo::from(images, image_count);
 	}
@@ -1870,11 +2136,31 @@ using namespace metal_internal;
 	{
 		assert(rects != nullptr);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		for (uint32_t i = 0; i < numRects; ++i)
+		{
+			commandlist.scissors[i].x = uint32_t(rects[i].left);
+			commandlist.scissors[i].y = uint32_t(rects[i].top);
+			commandlist.scissors[i].width = uint32_t(rects[i].right - rects[i].left);
+			commandlist.scissors[i].height = uint32_t(rects[i].bottom - rects[i].top);
+		}
+		commandlist.scissor_count = numRects;
+		commandlist.dirty_scissor = true;
 	}
 	void GraphicsDevice_Metal::BindViewports(uint32_t NumViewports, const Viewport* pViewports, CommandList cmd)
 	{
 		assert(pViewports != nullptr);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		for (uint32_t i = 0; i < NumViewports; ++i)
+		{
+			commandlist.viewports[i].originX = pViewports[i].top_left_x;
+			commandlist.viewports[i].originY = pViewports[i].top_left_y;
+			commandlist.viewports[i].width = pViewports[i].width;
+			commandlist.viewports[i].height = pViewports[i].height;
+			commandlist.viewports[i].znear = pViewports[i].min_depth;
+			commandlist.viewports[i].zfar = pViewports[i].max_depth;
+		}
+		commandlist.viewport_count = NumViewports;
+		commandlist.dirty_viewport = true;
 	}
 	void GraphicsDevice_Metal::BindResource(const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
 	{

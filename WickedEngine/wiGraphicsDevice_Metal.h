@@ -68,6 +68,12 @@ namespace wi::graphics
 			bool dirty_resource = false;
 			bool dirty_sampler = false;
 			RootLayout root = {};
+			bool dirty_scissor = false;
+			uint32_t scissor_count = 0;
+			MTL::ScissorRect scissors[16] = {};
+			bool dirty_viewport = false;
+			uint32_t viewport_count = 0;
+			MTL::Viewport viewports[16] = {};
 			
 			struct VertexBufferBinding
 			{
@@ -108,6 +114,18 @@ namespace wi::graphics
 					x = {};
 				}
 				dirty_vb = false;
+				dirty_viewport = false;
+				dirty_scissor = false;
+				scissor_count = 0;
+				viewport_count = 0;
+				for (auto& x : scissors)
+				{
+					x = {};
+				}
+				for (auto& x : viewports)
+				{
+					x = {};
+				}
 			}
 		};
 		wi::vector<std::unique_ptr<CommandList_Metal>> commandlists;
@@ -270,6 +288,7 @@ namespace wi::graphics
 			std::deque<std::pair<NS::SharedPtr<MTL::Function>, uint64_t>> destroyer_functions;
 			std::deque<std::pair<NS::SharedPtr<MTL::RenderPipelineState>, uint64_t>> destroyer_render_pipelines;
 			std::deque<std::pair<NS::SharedPtr<MTL::ComputePipelineState>, uint64_t>> destroyer_compute_pipelines;
+			std::deque<std::pair<NS::SharedPtr<MTL::DepthStencilState>, uint64_t>> destroyer_depth_stencil_states;
 			std::deque<std::pair<int, uint64_t>> destroyer_bindless_res;
 			std::deque<std::pair<int, uint64_t>> destroyer_bindless_sam;
 			wi::vector<int> free_bindless_res;
@@ -310,6 +329,11 @@ namespace wi::graphics
 				while (!destroyer_compute_pipelines.empty() && destroyer_compute_pipelines.front().second + BUFFERCOUNT < FRAMECOUNT)
 				{
 					destroyer_compute_pipelines.pop_front();
+					// SharedPtr auto delete
+				}
+				while (!destroyer_depth_stencil_states.empty() && destroyer_depth_stencil_states.front().second + BUFFERCOUNT < FRAMECOUNT)
+				{
+					destroyer_depth_stencil_states.pop_front();
 					// SharedPtr auto delete
 				}
 				while (!destroyer_bindless_res.empty() && destroyer_bindless_res.front().second + BUFFERCOUNT < FRAMECOUNT)
