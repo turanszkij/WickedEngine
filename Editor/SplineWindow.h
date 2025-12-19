@@ -12,6 +12,7 @@ public:
 
 	wi::gui::Label infoLabel;
 	wi::gui::CheckBox loopedCheck;
+	wi::gui::CheckBox filledCheck;
 	wi::gui::CheckBox alignedCheck;
 	wi::gui::Slider widthSlider;
 	wi::gui::Slider rotSlider;
@@ -20,6 +21,7 @@ public:
 	wi::gui::Slider terrainSlider;
 	wi::gui::Slider terrainTexSlider;
 	wi::gui::Slider terrainPushdownSlider;
+	wi::gui::Button recenterButton;
 	wi::gui::Button addButton;
 
 	struct Entry

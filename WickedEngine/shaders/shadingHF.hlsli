@@ -306,11 +306,9 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 		{
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
-
-#ifndef ENTITY_TILE_UNIFORM
+			
 			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
 			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
-#endif // ENTITY_TILE_UNIFORM
 
 			[loop]
 			while (WaveActiveAnyTrue(bucket_bits != 0 && envmapAccumulation.a < 0.99))
@@ -444,11 +442,9 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 		{
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
-
-#ifndef ENTITY_TILE_UNIFORM
+			
 			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
 			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
-#endif // ENTITY_TILE_UNIFORM
 
 			[loop]
 			while (bucket_bits != 0)
@@ -488,11 +484,9 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 		{
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
-
-#ifndef ENTITY_TILE_UNIFORM
+			
 			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
 			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
-#endif // ENTITY_TILE_UNIFORM
 
 			[loop]
 			while (bucket_bits != 0)
@@ -532,11 +526,9 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 		{
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
-
-#ifndef ENTITY_TILE_UNIFORM
+			
 			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
 			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
-#endif // ENTITY_TILE_UNIFORM
 
 			[loop]
 			while (bucket_bits != 0)
@@ -582,11 +574,9 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 		{
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
-
-#ifndef ENTITY_TILE_UNIFORM
+			
 			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
 			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
-#endif // ENTITY_TILE_UNIFORM
 
 			[loop]
 			while ((bucket_bits != 0) && (capsuleshadow > 0 || capsulereflection > 0))
@@ -659,11 +649,9 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex, inout half4 s
 	{
 		uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 		bucket_bits = iterator.mask_entity(bucket, bucket_bits);
-
-#ifndef ENTITY_TILE_UNIFORM
+		
 		// This is the wave scalarizer from Improved Culling - Siggraph 2017 [Drobot]:
 		bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
-#endif // ENTITY_TILE_UNIFORM
 
 		[loop]
 		while (WaveActiveAnyTrue(bucket_bits != 0 && decalAccumulation.a < 1 && decalBumpAccumulation.a < 1 && decalSurfaceAccumulationAlpha < 1))

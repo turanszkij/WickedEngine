@@ -519,7 +519,7 @@ RWTexture2D<uint4> bindless_rwtextures_uint4[] : register(space115);
 
 #include "ShaderInterop_Renderer.h"
 
-#if defined(__PSSL__) || (__SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6)
+#if defined(__PSSL__) || (defined(__hlsl_dx_compiler) && __SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6)
 static const BindlessResource<StructuredBuffer<ShaderMeshInstance> > bindless_structured_meshinstance;
 static const BindlessResource<StructuredBuffer<ShaderGeometry> > bindless_structured_geometry;
 static const BindlessResource<StructuredBuffer<ShaderMeshlet> > bindless_structured_meshlet;
