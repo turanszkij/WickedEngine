@@ -40,6 +40,10 @@ int main( int argc, char* argv[] )
 	canvas.height = (uint32_t)frame.size.height;
 	application.SetWindow(view.get(), canvas);
 	
+	wi::RenderPath3D path;
+	application.ActivatePath(&path);
+	wi::scene::LoadModel("/Users/turanszkij/PROJECTS/WickedEngine/Content/models/Sponza/Sponza.wiscene");
+	
 	// The shader binary path is set to source path because that is a writeable folder on Mac OS
 	wi::renderer::SetShaderPath(wi::renderer::GetShaderSourcePath() + "metal/");
 	

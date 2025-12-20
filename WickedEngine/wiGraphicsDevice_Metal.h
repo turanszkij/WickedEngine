@@ -43,6 +43,13 @@ namespace wi::graphics
 		NS::SharedPtr<MTL::Device> device;
 		NS::SharedPtr<MTL::CommandQueue> commandqueue;
 		
+		struct FrameResources
+		{
+			NS::SharedPtr<MTL::SharedEvent> event;
+		} frame_resources[BUFFERCOUNT];
+		
+		FrameResources& GetFrameResources() { return frame_resources[GetBufferIndex()]; }
+		
 		struct CommandList_Metal
 		{
 			MTL::CommandBuffer* commandbuffer = nullptr;
