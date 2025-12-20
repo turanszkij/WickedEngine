@@ -407,8 +407,13 @@ int main(int argc, char* argv[])
 	*out << "\tstrip_reflection : \tReflection will be stripped from shader binary to reduce file size\n";
 	*out << "\tshaderdump : \t\tShaders will be saved to wiShaderDump.h C++ header file (can be combined with \"rebuild\")\n";
 	*out << "\tquiet : \t\tOnly print errors\n";
+	*out << "\tsm6.1 : \t\tIncrease all compilations to shader model 6.1\n";
+	*out << "\tsm6.2 : \t\tIncrease all compilations to shader model 6.2\n";
+	*out << "\tsm6.3 : \t\tIncrease all compilations to shader model 6.3\n";
+	*out << "\tsm6.4 : \t\tIncrease all compilations to shader model 6.4\n";
+	*out << "\tsm6.5 : \t\tIncrease all compilations to shader model 6.5\n";
+	*out << "\tsm6.6 : \t\tIncrease all compilations to shader model 6.6\n";
 	*out << "Command arguments used: ";
-
 
 	if (wi::arguments::HasArgument("hlsl5"))
 	{
@@ -458,6 +463,43 @@ int main(int argc, char* argv[])
 	{
 		compile_flags |= wi::shadercompiler::Flags::STRIP_REFLECTION;
 		*out << "strip_reflection ";
+	}
+
+	ShaderModel minshadermodel_override = ShaderModel::SM_5_0;
+	if (wi::arguments::HasArgument("sm6.1"))
+	{
+		minshadermodel_override = ShaderModel::SM_6_1;
+		*out << "sm6.1 ";
+	}
+	if (wi::arguments::HasArgument("sm6.2"))
+	{
+		minshadermodel_override = ShaderModel::SM_6_2;
+		*out << "sm6.2 ";
+	}
+	if (wi::arguments::HasArgument("sm6.3"))
+	{
+		minshadermodel_override = ShaderModel::SM_6_3;
+		*out << "sm6.3 ";
+	}
+	if (wi::arguments::HasArgument("sm6.4"))
+	{
+		minshadermodel_override = ShaderModel::SM_6_4;
+		*out << "sm6.4 ";
+	}
+	if (wi::arguments::HasArgument("sm6.5"))
+	{
+		minshadermodel_override = ShaderModel::SM_6_5;
+		*out << "sm6.5 ";
+	}
+	if (wi::arguments::HasArgument("sm6.6"))
+	{
+		minshadermodel_override = ShaderModel::SM_6_6;
+		*out << "sm6.6 ";
+	}
+	if (wi::arguments::HasArgument("sm6.7"))
+	{
+		minshadermodel_override = ShaderModel::SM_6_7;
+		*out << "sm6.7 ";
 	}
 
 	*out << "\n";
@@ -562,7 +604,7 @@ int main(int argc, char* argv[])
 
 			for (auto& permutation : shader.permutations)
 			{
-				wi::jobsystem::Execute(ctx, [&target, &permutation, &shader, &out, SHADERPATH, compile_flags](wi::jobsystem::JobArgs args) {
+				wi::jobsystem::Execute(ctx, [&target, &permutation, &shader, &out, SHADERPATH, compile_flags, minshadermodel_override](wi::jobsystem::JobArgs args) {
 
 					std::string shaderbinaryfilename = SHADERPATH + shader.name;
 					for (auto& def : permutation.defines)
@@ -609,7 +651,7 @@ int main(int argc, char* argv[])
 					input.shadersourcefilename = SHADERSOURCEPATH + shader.name + ".hlsl";
 					input.include_directories.push_back(SHADERSOURCEPATH);
 					input.include_directories.push_back(SHADERSOURCEPATH + wi::helper::GetDirectoryFromPath(shader.name));
-					input.minshadermodel = shader.minshadermodel;
+					input.minshadermodel = std::max(shader.minshadermodel, minshadermodel_override);
 					input.defines = permutation.defines;
 
 					if (input.minshadermodel > ShaderModel::SM_5_0 && target.format == ShaderFormat::HLSL5)
