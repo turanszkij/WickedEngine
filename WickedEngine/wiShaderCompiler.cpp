@@ -203,7 +203,7 @@ namespace wi::shadercompiler
 			// handling SM6.6 style bindless in Metal API is simpler than unbounded descriptor tables:
 			minshadermodel = ShaderModel::SM_6_6;
 			
-			//args.push_back(L"-Od");
+			args.push_back(L"-Od");
 			args.push_back(L"-Zi");
 			args.push_back(L"-Qembed_debug");
 		}

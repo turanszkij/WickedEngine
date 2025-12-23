@@ -203,7 +203,7 @@ namespace wi::graphics
 
 		uint32_t GetMinOffsetAlignment(const GPUBufferDesc* desc) const override
 		{
-			uint32_t alignment = 16u;
+			uint32_t alignment = 256u;
 			return alignment;
 		}
 

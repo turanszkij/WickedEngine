@@ -823,8 +823,14 @@ using namespace metal_internal;
 			// Just in time PSO:
 			MTL::RenderPipelineState* pipeline = nullptr;
 			auto it = pipelines_global.find(pipeline_hash);
-			if (it == pipelines_global.end())
+			if (it != pipelines_global.end())
 			{
+				// Exists in global just in time PSO map:
+				pipeline = it->second.get();
+			}
+			else
+			{
+				// Doesn't yet exist in global just in time PSO map, but maybe exists on this thread temporary PSO array:
 				for (auto& x : commandlist.pipelines_worker)
 				{
 					if (pipeline_hash == x.first)
@@ -898,6 +904,30 @@ using namespace metal_internal;
 		}
 		commandlist.render_encoder->setTriangleFillMode(fill_mode);
 		commandlist.render_encoder->setFrontFacingWinding(rs.front_counter_clockwise ? MTL::WindingCounterClockwise : MTL::WindingClockwise);
+		
+		switch (pso->desc.pt)
+		{
+			case PrimitiveTopology::TRIANGLELIST:
+				commandlist.primitive_type = MTL::PrimitiveTypeTriangle;
+				break;
+			case PrimitiveTopology::TRIANGLESTRIP:
+				commandlist.primitive_type = MTL::PrimitiveTypeTriangleStrip;
+				break;
+			case PrimitiveTopology::LINELIST:
+				commandlist.primitive_type = MTL::PrimitiveTypeLine;
+				break;
+			case PrimitiveTopology::LINESTRIP:
+				commandlist.primitive_type = MTL::PrimitiveTypeLineStrip;
+				break;
+			case PrimitiveTopology::POINTLIST:
+				commandlist.primitive_type = MTL::PrimitiveTypePoint;
+				break;
+			case PrimitiveTopology::PATCHLIST:
+				commandlist.primitive_type = MTL::PrimitiveTypeTriangle;
+				break;
+			default:
+				break;
+		}
 		
 		commandlist.dirty_pso = false;
 	}
@@ -1074,7 +1104,37 @@ using namespace metal_internal;
 		}
 		options |= MTL::ResourceHazardTrackingModeUntracked;
 		
-		internal_state->buffer = NS::TransferPtr(device->newBuffer(desc->size, options));
+		if (has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_BUFFER))
+		{
+			// This is an aliasing storage:
+			NS::SharedPtr<MTL::HeapDescriptor> heap_desc = NS::TransferPtr(MTL::HeapDescriptor::alloc()->init());
+			heap_desc->setResourceOptions(options);
+			heap_desc->setSize(desc->size);
+			heap_desc->setType(MTL::HeapTypePlacement);
+			NS::SharedPtr<MTL::Heap> heap = NS::TransferPtr(device->newHeap(heap_desc.get()));
+			internal_state->buffer = NS::TransferPtr(heap->newBuffer(desc->size, options, 0));
+			internal_state->buffer->makeAliasable();
+		}
+		else if (alias != nullptr)
+		{
+			// This is an aliasing view:
+			if (alias->IsBuffer())
+			{
+				auto alias_internal = to_internal<GPUBuffer>(alias);
+				internal_state->buffer = NS::TransferPtr(alias_internal->buffer->heap()->newBuffer(desc->size, options, alias_internal->buffer->heapOffset() + alias_offset));
+			}
+			else if (alias->IsTexture())
+			{
+				auto alias_internal = to_internal<Texture>(alias);
+				internal_state->buffer = NS::TransferPtr(alias_internal->texture->heap()->newBuffer(desc->size, options, alias_internal->texture->heapOffset() + alias_offset));
+			}
+		}
+		else
+		{
+			// This is a standalone buffer:
+			internal_state->buffer = NS::TransferPtr(device->newBuffer(desc->size, options));
+		}
+		
 		allocationhandler->make_resident(internal_state->buffer.get());
 		internal_state->gpu_address = internal_state->buffer->gpuAddress();
 		if ((options & MTL::ResourceStorageModePrivate) == 0)
@@ -1813,7 +1873,7 @@ using namespace metal_internal;
 			format = *format_change;
 		}
 		
-		size = std::min(size, buffer->desc.size);
+		size = std::min(size, buffer->desc.size - offset);
 		
 		switch (type) {
 			case SubresourceType::SRV:
@@ -1827,7 +1887,7 @@ using namespace metal_internal;
 						if (format != Format::UNKNOWN)
 						{
 							NS::SharedPtr<MTL::TextureDescriptor> view_descriptor = NS::TransferPtr(MTL::TextureDescriptor::alloc()->init());
-							view_descriptor->textureBufferDescriptor(_ConvertPixelFormat(format), size / GetFormatStride(format), subresource.buffer->resourceOptions(), MTL::TextureUsageShaderRead);
+							view_descriptor->textureBufferDescriptor(_ConvertPixelFormat(format), size / GetFormatStride(format), subresource.buffer->resourceOptions(), MTL::TextureUsageShaderRead | MTL::TextureUsagePixelFormatView);
 							subresource.texture_buffer_view = NS::TransferPtr(device->newTexture(view_descriptor.get()));
 						}
 						subresource.index = allocationhandler->allocate_bindless(subresource.buffer.get(), size, offset, subresource.texture_buffer_view.get(), format);
@@ -1843,7 +1903,7 @@ using namespace metal_internal;
 						if (format != Format::UNKNOWN)
 						{
 							NS::SharedPtr<MTL::TextureDescriptor> view_descriptor = NS::TransferPtr(MTL::TextureDescriptor::alloc()->init());
-							view_descriptor->textureBufferDescriptor(_ConvertPixelFormat(format), size / GetFormatStride(format), subresource.buffer->resourceOptions(), MTL::TextureUsageShaderRead | MTL::TextureUsageShaderWrite);
+							view_descriptor->textureBufferDescriptor(_ConvertPixelFormat(format), size / GetFormatStride(format), subresource.buffer->resourceOptions(), MTL::TextureUsageShaderRead | MTL::TextureUsagePixelFormatView);
 							subresource.texture_buffer_view = NS::TransferPtr(device->newTexture(view_descriptor.get()));
 						}
 						subresource.index = allocationhandler->allocate_bindless(subresource.buffer.get(), size, offset, subresource.texture_buffer_view.get(), format);
@@ -1860,6 +1920,12 @@ using namespace metal_internal;
 						subresource.buffer = internal_state->buffer;
 						subresource.offset = offset;
 						subresource.size = size;
+						if (format != Format::UNKNOWN)
+						{
+							NS::SharedPtr<MTL::TextureDescriptor> view_descriptor = NS::TransferPtr(MTL::TextureDescriptor::alloc()->init());
+							view_descriptor->textureBufferDescriptor(_ConvertPixelFormat(format), size / GetFormatStride(format), subresource.buffer->resourceOptions(), MTL::TextureUsageShaderRead | MTL::TextureUsageShaderWrite | MTL::TextureUsagePixelFormatView);
+							subresource.texture_buffer_view = NS::TransferPtr(device->newTexture(view_descriptor.get()));
+						}
 						subresource.index = allocationhandler->allocate_bindless(subresource.buffer.get(), size, offset);
 						allocationhandler->make_resident(subresource.buffer.get());
 						return -1;
@@ -1870,6 +1936,12 @@ using namespace metal_internal;
 						subresource.buffer = internal_state->buffer;
 						subresource.offset = offset;
 						subresource.size = size;
+						if (format != Format::UNKNOWN)
+						{
+							NS::SharedPtr<MTL::TextureDescriptor> view_descriptor = NS::TransferPtr(MTL::TextureDescriptor::alloc()->init());
+							view_descriptor->textureBufferDescriptor(_ConvertPixelFormat(format), size / GetFormatStride(format), subresource.buffer->resourceOptions(), MTL::TextureUsageShaderRead | MTL::TextureUsageShaderWrite | MTL::TextureUsagePixelFormatView);
+							subresource.texture_buffer_view = NS::TransferPtr(device->newTexture(view_descriptor.get()));
+						}
 						subresource.index = allocationhandler->allocate_bindless(subresource.buffer.get(), size, offset);
 						allocationhandler->make_resident(subresource.buffer.get());
 						return (int)internal_state->subresources_uav.size() - 1;
@@ -2001,7 +2073,7 @@ using namespace metal_internal;
 		commandlist.id = cmd_current;
 		commandlist.commandbuffer = commandqueue->commandBufferWithUnretainedReferences();
 		commandlist.commandbuffer->useResidencySet(allocationhandler->residency_set.get());
-
+		
 		return cmd;
 	}
 	void GraphicsDevice_Metal::SubmitCommandLists()
@@ -2040,7 +2112,7 @@ using namespace metal_internal;
 			{
 				if (pipelines_global.count(x.first) == 0)
 				{
-				   pipelines_global[x.first] = x.second;
+				   pipelines_global[x.first] = std::move(x.second);
 				}
 				else
 				{
@@ -2055,7 +2127,9 @@ using namespace metal_internal;
 		// From here, we begin a new frame, this affects GetBufferIndex()!
 		FRAMECOUNT++;
 		
+		// The new frame event must be completed when we start using it from CPU:
 		GetFrameResources().event->waitUntilSignaledValue(1, ~0ull);
+		GetFrameResources().event->setSignaledValue(0);
 
 		allocationhandler->Update(FRAMECOUNT, BUFFERCOUNT);
 	}
@@ -2417,30 +2491,6 @@ using namespace metal_internal;
 			}
 		}
 		commandlist.active_pso = pso;
-		
-		switch (pso->desc.pt)
-		{
-			case PrimitiveTopology::TRIANGLELIST:
-				commandlist.primitive_type = MTL::PrimitiveTypeTriangle;
-				break;
-			case PrimitiveTopology::TRIANGLESTRIP:
-				commandlist.primitive_type = MTL::PrimitiveTypeTriangleStrip;
-				break;
-			case PrimitiveTopology::LINELIST:
-				commandlist.primitive_type = MTL::PrimitiveTypeLine;
-				break;
-			case PrimitiveTopology::LINESTRIP:
-				commandlist.primitive_type = MTL::PrimitiveTypeLineStrip;
-				break;
-			case PrimitiveTopology::POINTLIST:
-				commandlist.primitive_type = MTL::PrimitiveTypePoint;
-				break;
-			case PrimitiveTopology::PATCHLIST:
-				commandlist.primitive_type = MTL::PrimitiveTypeTriangle;
-				break;
-			default:
-				break;
-		}
 	}
 	void GraphicsDevice_Metal::BindComputeShader(const Shader* cs, CommandList cmd)
 	{
@@ -2485,7 +2535,6 @@ using namespace metal_internal;
 		predraw(cmd);
 		auto internal_state = to_internal(args);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-		//commandlist.render_encoder->drawPrimitives(commandlist.primitive_type, internal_state->buffer.get(), args_offset);
 		IRRuntimeDrawPrimitives(commandlist.render_encoder, commandlist.primitive_type, internal_state->buffer.get(), args_offset);
 	}
 	void GraphicsDevice_Metal::DrawIndexedInstancedIndirect(const GPUBuffer* args, uint64_t args_offset, CommandList cmd)
@@ -2656,7 +2705,6 @@ using namespace metal_internal;
 	}
 	void GraphicsDevice_Metal::ClearUAV(const GPUResource* resource, uint32_t value, CommandList cmd)
 	{
-		precopy(cmd);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		if (resource->IsTexture())
 		{
@@ -2664,6 +2712,7 @@ using namespace metal_internal;
 		}
 		else if (resource->IsBuffer())
 		{
+			precopy(cmd);
 			auto internal_state = to_internal<GPUBuffer>(resource);
 			assert(value == uint8_t(value)); // The fillBuffer only works with uint8_t
 			commandlist.blit_encoder->fillBuffer(internal_state->buffer.get(), {0, internal_state->buffer->length()}, (uint8_t)value);
@@ -2676,17 +2725,62 @@ using namespace metal_internal;
 	void GraphicsDevice_Metal::EventBegin(const char* name, CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-		commandlist.commandbuffer->pushDebugGroup(NS::String::string(name, NS::UTF8StringEncoding));
+		if (commandlist.render_encoder != nullptr)
+		{
+			commandlist.render_encoder->pushDebugGroup(NS::String::string(name, NS::UTF8StringEncoding));
+		}
+		else if (commandlist.compute_encoder != nullptr)
+		{
+			commandlist.compute_encoder->pushDebugGroup(NS::String::string(name, NS::UTF8StringEncoding));
+		}
+		else if (commandlist.blit_encoder != nullptr)
+		{
+			commandlist.blit_encoder->pushDebugGroup(NS::String::string(name, NS::UTF8StringEncoding));
+		}
+		else
+		{
+			commandlist.commandbuffer->pushDebugGroup(NS::String::string(name, NS::UTF8StringEncoding));
+		}
 	}
 	void GraphicsDevice_Metal::EventEnd(CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-		commandlist.commandbuffer->popDebugGroup();
+		if (commandlist.render_encoder != nullptr)
+		{
+			commandlist.render_encoder->popDebugGroup();
+		}
+		else if (commandlist.compute_encoder != nullptr)
+		{
+			commandlist.compute_encoder->popDebugGroup();
+		}
+		else if (commandlist.blit_encoder != nullptr)
+		{
+			commandlist.blit_encoder->popDebugGroup();
+		}
+		else
+		{
+			commandlist.commandbuffer->popDebugGroup();
+		}
 	}
 	void GraphicsDevice_Metal::SetMarker(const char* name, CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-		commandlist.commandbuffer->setLabel(NS::String::string(name, NS::UTF8StringEncoding));
+		if (commandlist.render_encoder != nullptr)
+		{
+			commandlist.render_encoder->setLabel(NS::String::string(name, NS::UTF8StringEncoding));
+		}
+		else if (commandlist.compute_encoder != nullptr)
+		{
+			commandlist.compute_encoder->setLabel(NS::String::string(name, NS::UTF8StringEncoding));
+		}
+		else if (commandlist.blit_encoder != nullptr)
+		{
+			commandlist.blit_encoder->setLabel(NS::String::string(name, NS::UTF8StringEncoding));
+		}
+		else
+		{
+			commandlist.commandbuffer->setLabel(NS::String::string(name, NS::UTF8StringEncoding));
+		}
 	}
 }
 

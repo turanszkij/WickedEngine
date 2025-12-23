@@ -40,12 +40,28 @@ int main( int argc, char* argv[] )
 	canvas.height = (uint32_t)frame.size.height;
 	application.SetWindow(view.get(), canvas);
 	
-	wi::RenderPath3D path;
-	application.ActivatePath(&path);
-	wi::scene::LoadModel("/Users/turanszkij/PROJECTS/WickedEngine/Content/models/Sponza/Sponza.wiscene");
-	
 	// The shader binary path is set to source path because that is a writeable folder on Mac OS
 	wi::renderer::SetShaderPath(wi::renderer::GetShaderSourcePath() + "metal/");
+	
+	wi::initializer::InitializeComponentsImmediate();
+	wi::RenderPath3D path;
+	application.ActivatePath(&path);
+	auto& cam = wi::scene::GetCamera();
+	cam.CreatePerspective(canvas.width, canvas.height, 0.01f, 1000.0f);
+	cam.Eye = XMFLOAT3(0, 1, -3);
+	cam.UpdateCamera();
+	auto& scene = wi::scene::GetScene();
+	scene.weather.ambient = XMFLOAT3(0.5f, 0.5f, 0.5f);
+	scene.Entity_CreateCube("cube");
+	//wi::scene::LoadModel("/Users/turanszkij/PROJECTS/WickedEngine/Content/models/Sponza/Sponza.wiscene");
+	wi::renderer::SetOcclusionCullingEnabled(false);
+	
+	wi::Sprite sprite;
+	sprite.textureResource.SetTexture(*wi::texturehelper::getLogo());
+	sprite.params = wi::image::Params(100, 100, 256, 256);
+	sprite.params.enableCornerRounding();
+	sprite.params.corners_rounding[0].radius = 40;
+	path.AddSprite(&sprite);
 	
 	class MyMTKViewDelegate : public MTK::ViewDelegate
 	{
@@ -60,6 +76,10 @@ int main( int argc, char* argv[] )
 			canvas.width = (uint32_t)size.width;
 			canvas.height = (uint32_t)size.height;
 			application.SetWindow(pView, canvas);
+			
+			auto& cam = wi::scene::GetCamera();
+			cam.CreatePerspective(canvas.width, canvas.height, 0.01f, 1000.0f);
+			cam.UpdateCamera();
 		}
 	} view_delegate;
 	view->setDelegate(&view_delegate);
