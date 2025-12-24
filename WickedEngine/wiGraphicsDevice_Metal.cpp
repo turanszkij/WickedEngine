@@ -1612,13 +1612,21 @@ using namespace metal_internal;
 		if (desc->il != nullptr)
 		{
 			vertex_descriptor = NS::TransferPtr(MTL::VertexDescriptor::alloc()->init());
+			// WARNING: the whole input slot strides are precalculated here at PSO creation based on formats. This doesn't support user supplied dynamic stride at draw time!
+			uint64_t input_slot_strides[32] = {};
+			for (size_t i = 0; i < desc->il->elements.size(); ++i)
+			{
+				const InputLayout::Element& element = desc->il->elements[i];
+				input_slot_strides[element.input_slot] += GetFormatStride(element.format);
+			}
 			uint64_t offset = 0;
 			for (size_t i = 0; i < desc->il->elements.size(); ++i)
 			{
 				const InputLayout::Element& element = desc->il->elements[i];
+				const uint64_t element_stride = GetFormatStride(element.format);
+				const uint64_t input_slot_stride = input_slot_strides[element.input_slot];
 				MTL::VertexBufferLayoutDescriptor* layout = vertex_descriptor->layouts()->object(kIRVertexBufferBindPoint + i);
-				const uint64_t stride = GetFormatStride(element.format);
-				layout->setStride(stride);
+				layout->setStride(input_slot_stride);
 				layout->setStepFunction(element.input_slot_class == InputClassification::PER_VERTEX_DATA ? MTL::VertexStepFunctionPerVertex : MTL::VertexStepFunctionPerInstance);
 				layout->setStepRate(1);
 				MTL::VertexAttributeDescriptor* attribute = vertex_descriptor->attributes()->object(kIRStageInAttributeStartIndex + i);
@@ -1629,7 +1637,7 @@ using namespace metal_internal;
 				{
 					offset = element.aligned_byte_offset;
 				}
-				offset += stride;
+				offset += element_stride;
 			}
 			internal_state->descriptor->setVertexDescriptor(vertex_descriptor.get());
 		}
