@@ -23,10 +23,7 @@
 //	We init null descriptors for bindless index = 0 for access safety
 //	Because shader compiler sometimes incorrectly loads descriptor outside of safety branch
 //	Note: descriptor index 0 always contains a preinitialized null descriptor
-inline uint descriptor_index(in int x)
-{
-	return max(0, x);
-}
+#define descriptor_index(x) (max(0, x))
 
 #include "ColorSpaceUtility.hlsli"
 #include "PixelPacking_R11G11B10.hlsli"

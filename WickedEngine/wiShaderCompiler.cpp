@@ -609,13 +609,13 @@ namespace wi::shadercompiler
 					
 					static IRDescriptorRange1 binding_resources[] =
 					{
-						{ .RangeType = IRDescriptorRangeTypeCBV, .BaseShaderRegister = arraysize(GraphicsDevice_Metal::RootLayout::root_cbv), .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = IRDescriptorRangeOffsetAppend, .NumDescriptors = (arraysize(DescriptorBindingTable::CBV) - arraysize(GraphicsDevice_Metal::RootLayout::root_cbv)), .Flags = IRDescriptorRangeFlagDataStaticWhileSetAtExecute },
-						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = IRDescriptorRangeOffsetAppend, .NumDescriptors = 16, .Flags = IRDescriptorRangeFlagDataStaticWhileSetAtExecute },
-						{ .RangeType = IRDescriptorRangeTypeUAV, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = IRDescriptorRangeOffsetAppend, .NumDescriptors = 16, .Flags = IRDescriptorRangeFlagDataStaticWhileSetAtExecute },
+						{ .RangeType = IRDescriptorRangeTypeCBV, .BaseShaderRegister = arraysize(GraphicsDevice_Metal::RootLayout::root_cbvs), .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = IRDescriptorRangeOffsetAppend, .NumDescriptors = (arraysize(DescriptorBindingTable::CBV) - arraysize(GraphicsDevice_Metal::RootLayout::root_cbvs)), .Flags = IRDescriptorRangeFlagDataStaticWhileSetAtExecute },
+						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = IRDescriptorRangeOffsetAppend, .NumDescriptors = arraysize(DescriptorBindingTable::SRV), .Flags = IRDescriptorRangeFlagDataStaticWhileSetAtExecute },
+						{ .RangeType = IRDescriptorRangeTypeUAV, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = IRDescriptorRangeOffsetAppend, .NumDescriptors = arraysize(DescriptorBindingTable::UAV), .Flags = IRDescriptorRangeFlagDataStaticWhileSetAtExecute },
 					};
 					static IRDescriptorRange1 binding_samplers[] =
 					{
-						{ .RangeType = IRDescriptorRangeTypeSampler, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = IRDescriptorRangeOffsetAppend, .NumDescriptors = 8, .Flags = IRDescriptorRangeFlagDescriptorsVolatile },
+						{ .RangeType = IRDescriptorRangeTypeSampler, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = IRDescriptorRangeOffsetAppend, .NumDescriptors = arraysize(DescriptorBindingTable::SAM), .Flags = IRDescriptorRangeFlagDescriptorsVolatile },
 					};
 					static IRRootParameter1 root_parameters[] =
 					{

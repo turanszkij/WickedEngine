@@ -25,18 +25,20 @@ namespace wi::graphics
 	public:
 		struct RootLayout
 		{
-			uint32_t constants[32];
-			MTL::GPUAddress root_cbv[3];
+			uint32_t constants[22];
+			MTL::GPUAddress root_cbvs[3];
 			MTL::GPUAddress resource_table_ptr;
 			MTL::GPUAddress sampler_table_ptr;
 		};
 		struct ResourceTable
 		{
-			IRDescriptorTableEntry descriptors[arraysize(DescriptorBindingTable::CBV) - arraysize(RootLayout::root_cbv) + arraysize(DescriptorBindingTable::SRV) + arraysize(DescriptorBindingTable::UAV)];
+			IRDescriptorTableEntry cbvs[arraysize(DescriptorBindingTable::CBV)];
+			IRDescriptorTableEntry srvs[arraysize(DescriptorBindingTable::SRV)];
+			IRDescriptorTableEntry uavs[arraysize(DescriptorBindingTable::UAV)];
 		};
 		struct SamplerTable
 		{
-			IRDescriptorTableEntry descriptors[arraysize(DescriptorBindingTable::SAM)];
+			IRDescriptorTableEntry samplers[arraysize(DescriptorBindingTable::SAM)];
 		};
 		
 	private:
@@ -59,6 +61,7 @@ namespace wi::graphics
 			QUEUE_TYPE queue = QUEUE_COUNT;
 			const PipelineState* active_pso = nullptr;
 			bool dirty_pso = false;
+			bool dirty_cs = false;
 			const Shader* active_cs = nullptr;
 			wi::vector<MTK::View*> presents;
 			MTL::RenderCommandEncoder* render_encoder = nullptr;
@@ -101,6 +104,7 @@ namespace wi::graphics
 				active_pso = nullptr;
 				active_cs = nullptr;
 				dirty_pso = false;
+				dirty_cs = false;
 				presents.clear();
 				render_encoder = nullptr;
 				compute_encoder = nullptr;
@@ -204,6 +208,10 @@ namespace wi::graphics
 		uint32_t GetMinOffsetAlignment(const GPUBufferDesc* desc) const override
 		{
 			uint32_t alignment = 256u;
+			if (has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_BUFFER) || has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_NON_RT_DS) || has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_RT_DS))
+			{
+				alignment = std::max(alignment, uint32_t(64 * 1024)); // 64KB safety to match DX12
+			}
 			return alignment;
 		}
 
@@ -362,8 +370,7 @@ namespace wi::graphics
 					return -1;
 				int index = free_bindless_res.back();
 				free_bindless_res.pop_back();
-				uint32_t metadata = 0;
-				IRDescriptorTableSetTexture(descriptor_heap_res_data + index, res, min_lod_clamp, metadata);
+				IRDescriptorTableSetTexture(descriptor_heap_res_data + index, res, min_lod_clamp, 0);
 				return index;
 			}
 			int allocate_bindless(MTL::Buffer* res, uint64_t size, uint64_t offset = 0, MTL::Texture* texture_buffer_view = nullptr, Format format = Format::UNKNOWN)
