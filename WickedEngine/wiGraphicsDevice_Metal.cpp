@@ -667,6 +667,7 @@ using namespace metal_internal;
 					continue;
 				auto internal_state = to_internal(&commandlist.binding_table.CBV[i]);
 				commandlist.root.root_cbvs[i] = internal_state->gpu_address + commandlist.binding_table.CBV_offset[i];
+				assert(IsAligned(commandlist.root.root_cbvs[i], MTL::GPUAddress(256)));
 			}
 			
 			if (commandlist.dirty_resource)
@@ -1103,7 +1104,7 @@ using namespace metal_internal;
 		}
 		options |= MTL::ResourceHazardTrackingModeUntracked;
 		
-		if (has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_BUFFER))
+		if (has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_BUFFER) || has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_NON_RT_DS) || has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_RT_DS))
 		{
 			// This is an aliasing storage:
 			NS::SharedPtr<MTL::HeapDescriptor> heap_desc = NS::TransferPtr(MTL::HeapDescriptor::alloc()->init());
@@ -2680,7 +2681,55 @@ using namespace metal_internal;
 	void GraphicsDevice_Metal::Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-
+		for (uint32_t i = 0; i < numBarriers; ++i)
+		{
+			const GPUBarrier& barrier = barriers[i];
+			switch (barrier.type) {
+				case GPUBarrier::Type::MEMORY:
+					if (commandlist.render_encoder != nullptr)
+					{
+						if (barrier.memory.resource == nullptr)
+						{
+							commandlist.render_encoder->memoryBarrier(MTL::BarrierScopeBuffers, MTL::RenderStageVertex | MTL::RenderStageFragment, MTL::RenderStageVertex | MTL::RenderStageFragment);
+						}
+						else if (barrier.memory.resource->IsBuffer())
+						{
+							auto internal_state = to_internal<GPUBuffer>(barrier.memory.resource);
+							MTL::Resource* resources[] = {internal_state->buffer.get()};
+							commandlist.render_encoder->memoryBarrier(resources, arraysize(resources), MTL::RenderStageVertex | MTL::RenderStageFragment, MTL::RenderStageVertex | MTL::RenderStageFragment);
+						}
+						else if (barrier.memory.resource->IsTexture())
+						{
+							auto internal_state = to_internal<Texture>(barrier.memory.resource);
+							MTL::Resource* resources[] = {internal_state->texture.get()};
+							commandlist.render_encoder->memoryBarrier(resources, arraysize(resources), MTL::RenderStageVertex | MTL::RenderStageFragment, MTL::RenderStageVertex | MTL::RenderStageFragment);
+						}
+					}
+					else if (commandlist.compute_encoder != nullptr)
+					{
+						if (barrier.memory.resource == nullptr)
+						{
+							commandlist.compute_encoder->memoryBarrier(MTL::BarrierScopeBuffers);
+						}
+						else if (barrier.memory.resource->IsBuffer())
+						{
+							auto internal_state = to_internal<GPUBuffer>(barrier.memory.resource);
+							MTL::Resource* resources[] = {internal_state->buffer.get()};
+							commandlist.compute_encoder->memoryBarrier(resources, arraysize(resources));
+						}
+						else if (barrier.memory.resource->IsTexture())
+						{
+							auto internal_state = to_internal<Texture>(barrier.memory.resource);
+							MTL::Resource* resources[] = {internal_state->texture.get()};
+							commandlist.compute_encoder->memoryBarrier(resources, arraysize(resources));
+						}
+					}
+					break;
+					
+				default:
+					break;
+			}
+		}
 	}
 	void GraphicsDevice_Metal::BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src)
 	{

@@ -55,6 +55,7 @@ int main( int argc, char* argv[] )
 	scene.Entity_CreateCube("cube");
 	//wi::scene::LoadModel("/Users/turanszkij/PROJECTS/WickedEngine/Content/models/Sponza/Sponza.wiscene");
 	wi::renderer::SetOcclusionCullingEnabled(false);
+	wi::renderer::SetToDrawGridHelper(true);
 	
 	wi::Sprite sprite;
 	sprite.textureResource.SetTexture(*wi::texturehelper::getLogo());
