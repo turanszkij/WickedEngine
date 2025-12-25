@@ -521,6 +521,7 @@ namespace metal_internal
 	{
 		wi::allocator::shared_ptr<GraphicsDevice_Metal::AllocationHandler> allocationhandler;
 		NS::SharedPtr<MTL::Buffer> buffer;
+		NS::SharedPtr<MTL::CounterSampleBuffer> timestamp_buffer;
 
 		~QueryHeap_Metal()
 		{
@@ -529,6 +530,7 @@ namespace metal_internal
 			allocationhandler->destroylocker.lock();
 			uint64_t framecount = allocationhandler->framecount;
 			allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(buffer), framecount));
+			allocationhandler->destroyer_counters.push_back(std::make_pair(std::move(timestamp_buffer), framecount));
 			allocationhandler->destroylocker.unlock();
 		}
 	};
@@ -649,6 +651,8 @@ namespace metal_internal
 		return static_cast<typename MetalType<T>::type*>(res->internal_state.get());
 	}
 
+	static wi::SpinLock occlusionqueryheap_locker;
+	static wi::allocator::weak_ptr<QueryHeap_Metal> occlusionqueryheap;
 }
 using namespace metal_internal;
 
@@ -1534,8 +1538,39 @@ using namespace metal_internal;
 		queryheap->internal_state = internal_state;
 		queryheap->desc = *desc;
 		
-		internal_state->buffer = NS::TransferPtr(device->newBuffer(desc->query_count * sizeof(uint64_t), MTL::ResourceStorageModePrivate));
-
+		switch (desc->type)
+		{
+			case GpuQueryType::OCCLUSION:
+			case GpuQueryType::OCCLUSION_BINARY:
+				internal_state->buffer = NS::TransferPtr(device->newBuffer(desc->query_count * sizeof(uint64_t), MTL::ResourceStorageModePrivate));
+				occlusionqueryheap_locker.lock();
+				occlusionqueryheap = internal_state;
+				occlusionqueryheap_locker.unlock();
+				break;
+				
+			case GpuQueryType::TIMESTAMP:
+			{
+				NS::SharedPtr<MTL::CounterSampleBufferDescriptor> descriptor = NS::TransferPtr(MTL::CounterSampleBufferDescriptor::alloc()->init());
+				descriptor->setCounterSet(device->counterSets()->object<MTL::CounterSet>(0)); // wtf
+				descriptor->setStorageMode(MTL::StorageModeShared);
+				descriptor->setSampleCount(desc->query_count);
+				NS::Error* error = nullptr;
+				internal_state->timestamp_buffer = NS::TransferPtr(device->newCounterSampleBuffer(descriptor.get(), &error));
+				if (error != nullptr)
+				{
+					NS::String* errDesc = error->localizedDescription();
+					wilog_error("%s", errDesc->utf8String());
+					assert(0);
+					error->release();
+				}
+				internal_state->buffer = NS::TransferPtr(device->newBuffer(desc->query_count * sizeof(uint64_t), MTL::ResourceStorageModeShared));
+			}
+			break;
+				
+			default:
+				break;
+		}
+		
 		return internal_state->buffer.get() != nullptr;
 	}
 	bool GraphicsDevice_Metal::CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso, const RenderPassInfo* renderpass_info) const
@@ -1723,7 +1758,7 @@ using namespace metal_internal;
 			
 			NS::Error* error = nullptr;
 			internal_state->render_pipeline = NS::TransferPtr(device->newRenderPipelineState(internal_state->descriptor.get(), &error));
-			if(error != nullptr)
+			if (error != nullptr)
 			{
 				NS::String* errDesc = error->localizedDescription();
 				wilog_error("%s", errDesc->utf8String());
@@ -2334,7 +2369,20 @@ using namespace metal_internal;
 			}
 		}
 		
+		occlusionqueryheap_locker.lock();
+		auto occlusionquery = occlusionqueryheap.lock();
+		if (occlusionquery.IsValid())
+		{
+			descriptor->setVisibilityResultBuffer(occlusionquery->buffer.get());
+			descriptor->setVisibilityResultType(MTL::VisibilityResultTypeReset);
+		}
+		occlusionqueryheap_locker.unlock();
+		
 		commandlist.render_encoder = commandlist.commandbuffer->renderCommandEncoder(descriptor.get());
+		if (occlusionquery.IsValid())
+		{
+			commandlist.render_encoder->setVisibilityResultMode(MTL::VisibilityResultModeDisabled, 0);
+		}
 		commandlist.dirty_vb = true;
 		commandlist.dirty_root = true;
 		commandlist.dirty_sampler = true;
@@ -2662,29 +2710,99 @@ using namespace metal_internal;
 	void GraphicsDevice_Metal::QueryBegin(const GPUQueryHeap* heap, uint32_t index, CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-		auto internal_state = to_internal(heap);
-
+		switch (heap->desc.type)
+		{
+			case GpuQueryType::OCCLUSION:
+				assert(commandlist.render_encoder != nullptr);
+				commandlist.render_encoder->setVisibilityResultMode(MTL::VisibilityResultModeCounting, index);
+				break;
+			case GpuQueryType::OCCLUSION_BINARY:
+				assert(commandlist.render_encoder != nullptr);
+				commandlist.render_encoder->setVisibilityResultMode(MTL::VisibilityResultModeBoolean, index);
+				break;
+			case GpuQueryType::TIMESTAMP:
+				break;
+			default:
+				break;
+		}
 	}
 	void GraphicsDevice_Metal::QueryEnd(const GPUQueryHeap* heap, uint32_t index, CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		auto internal_state = to_internal(heap);
-
+		switch (heap->desc.type)
+		{
+			case GpuQueryType::OCCLUSION:
+			case GpuQueryType::OCCLUSION_BINARY:
+				assert(commandlist.render_encoder != nullptr);
+				commandlist.render_encoder->setVisibilityResultMode(MTL::VisibilityResultModeDisabled, index);
+				break;
+			case GpuQueryType::TIMESTAMP:
+				if (commandlist.render_encoder != nullptr && device->supportsCounterSampling(MTL::CounterSamplingPointAtDrawBoundary))
+				{
+					commandlist.render_encoder->sampleCountersInBuffer(internal_state->timestamp_buffer.get(), index, false);
+				}
+				else if (commandlist.compute_encoder != nullptr && device->supportsCounterSampling(MTL::CounterSamplingPointAtDispatchBoundary))
+				{
+					commandlist.compute_encoder->sampleCountersInBuffer(internal_state->timestamp_buffer.get(), index, false);
+				}
+				else if (device->supportsCounterSampling(MTL::CounterSamplingPointAtBlitBoundary))
+				{
+					precopy(cmd); // last resort: use current or create new blit encoder
+					commandlist.blit_encoder->sampleCountersInBuffer(internal_state->timestamp_buffer.get(), index, false);
+				}
+				break;
+			default:
+				break;
+		}
 	}
 	void GraphicsDevice_Metal::QueryResolve(const GPUQueryHeap* heap, uint32_t index, uint32_t count, const GPUBuffer* dest, uint64_t dest_offset, CommandList cmd)
 	{
+		precopy(cmd);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 
 		auto internal_state = to_internal(heap);
 		auto dst_internal = to_internal(dest);
+		
+		switch (heap->desc.type)
+		{
+			case GpuQueryType::OCCLUSION:
+			case GpuQueryType::OCCLUSION_BINARY:
+				commandlist.blit_encoder->copyFromBuffer(internal_state->buffer.get(), index * sizeof(uint64_t), dst_internal->buffer.get(), dest_offset, count * sizeof(uint64_t));
+				break;
+			case GpuQueryType::TIMESTAMP:
+				commandlist.commandbuffer->addCompletedHandler(^(MTL::CommandBuffer* cb){
+					NS::Data* data = internal_state->timestamp_buffer->resolveCounterRange({index, count});
+					void* src = data->mutableBytes();
+					size_t src_size = data->length();
+					void* dst = dst_internal->buffer->contents();
+					size_t dst_size = dst_internal->buffer->allocatedSize();
+					std::memcpy(dst, src, std::min(src_size, dst_size));
+				});
+				break;
+			default:
+				break;
+		}
 
 	}
 	void GraphicsDevice_Metal::QueryReset(const GPUQueryHeap* heap, uint32_t index, uint32_t count, CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-
 		auto internal_state = to_internal(heap);
-
+		
+		switch (heap->desc.type)
+		{
+			case GpuQueryType::OCCLUSION:
+			case GpuQueryType::OCCLUSION_BINARY:
+				precopy(cmd);
+				commandlist.blit_encoder->fillBuffer(internal_state->buffer.get(), {0, internal_state->buffer->allocatedSize()}, 0);
+				break;
+			case GpuQueryType::TIMESTAMP:
+				break;
+			default:
+				break;
+		}
+		
 	}
 	void GraphicsDevice_Metal::Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd)
 	{

@@ -54,8 +54,9 @@ int main( int argc, char* argv[] )
 	scene.weather.ambient = XMFLOAT3(0.5f, 0.5f, 0.5f);
 	scene.Entity_CreateCube("cube");
 	//wi::scene::LoadModel("/Users/turanszkij/PROJECTS/WickedEngine/Content/models/Sponza/Sponza.wiscene");
-	wi::renderer::SetOcclusionCullingEnabled(false);
+	//wi::renderer::SetOcclusionCullingEnabled(false);
 	wi::renderer::SetToDrawGridHelper(true);
+	//wi::profiler::SetEnabled(true);
 	
 	wi::Sprite sprite;
 	sprite.textureResource.SetTexture(*wi::texturehelper::getLogo());
