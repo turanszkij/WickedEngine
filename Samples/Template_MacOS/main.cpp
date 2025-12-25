@@ -43,11 +43,11 @@ int main( int argc, char* argv[] )
 	// The shader binary path is set to source path because that is a writeable folder on Mac OS
 	wi::renderer::SetShaderPath(wi::renderer::GetShaderSourcePath() + "metal/");
 	
-	wi::initializer::InitializeComponentsImmediate();
+	//wi::initializer::InitializeComponentsImmediate();
 	wi::RenderPath3D path;
 	application.ActivatePath(&path);
 	auto& cam = wi::scene::GetCamera();
-	cam.CreatePerspective(canvas.width, canvas.height, 0.1f, 1000.0f);
+	cam.CreatePerspective(canvas.width, canvas.height, 0.01f, 1000.0f);
 	cam.Eye = XMFLOAT3(0, 1, -3);
 	cam.UpdateCamera();
 	auto& scene = wi::scene::GetScene();
@@ -58,12 +58,12 @@ int main( int argc, char* argv[] )
 	wi::renderer::SetToDrawGridHelper(true);
 	//wi::profiler::SetEnabled(true);
 	
-	wi::Sprite sprite;
-	sprite.textureResource.SetTexture(*wi::texturehelper::getLogo());
-	sprite.params = wi::image::Params(300, 100, 256, 256);
-	sprite.params.enableCornerRounding();
-	sprite.params.corners_rounding[0].radius = 40;
-	path.AddSprite(&sprite);
+	//wi::Sprite sprite;
+	//sprite.textureResource.SetTexture(*wi::texturehelper::getLogo());
+	//sprite.params = wi::image::Params(300, 100, 256, 256);
+	//sprite.params.enableCornerRounding();
+	//sprite.params.corners_rounding[0].radius = 40;
+	//path.AddSprite(&sprite);
 	
 	wi::gui::ColorPicker colorpicker;
 	colorpicker.Create("Color");

@@ -369,48 +369,24 @@ namespace wi::graphics
 				}
 			}
 			
-			int allocate_bindless(MTL::Texture* res, float min_lod_clamp = 0)
+			int allocate_bindless(const IRDescriptorTableEntry& entry)
 			{
 				std::scoped_lock lck(destroylocker);
 				if (free_bindless_res.empty())
 					return -1;
 				int index = free_bindless_res.back();
 				free_bindless_res.pop_back();
-				IRDescriptorTableSetTexture(descriptor_heap_res_data + index, res, min_lod_clamp, 0);
+				std::memcpy(descriptor_heap_res_data + index, &entry, sizeof(entry));
 				return index;
 			}
-			int allocate_bindless(MTL::Buffer* res, uint64_t size, uint64_t offset = 0, MTL::Texture* texture_buffer_view = nullptr, Format format = Format::UNKNOWN)
-			{
-				std::scoped_lock lck(destroylocker);
-				if (free_bindless_res.empty())
-					return -1;
-				int index = free_bindless_res.back();
-				free_bindless_res.pop_back();
-				IRBufferView view = {};
-				view.buffer = res;
-				view.bufferSize = size;
-				view.bufferOffset = offset;
-				if (texture_buffer_view == nullptr)
-				{
-					view.typedBuffer = false;
-				}
-				else
-				{
-					view.typedBuffer = true;
-					view.textureBufferView = texture_buffer_view;
-					view.textureViewOffsetInElements = uint32_t(offset / (uint64_t)GetFormatStride(format));
-				}
-				IRDescriptorTableSetBufferView(descriptor_heap_res_data + index, &view);
-				return index;
-			}
-			int allocate_bindless(MTL::SamplerState* sam, float lod_bias = 0)
+			int allocate_bindless_sampler(const IRDescriptorTableEntry& entry)
 			{
 				std::scoped_lock lck(destroylocker);
 				if (free_bindless_sam.empty())
 					return -1;
 				int index = free_bindless_sam.back();
 				free_bindless_sam.pop_back();
-				IRDescriptorTableSetSampler(descriptor_heap_sam_data + index, sam, lod_bias);
+				std::memcpy(descriptor_heap_sam_data + index, &entry, sizeof(entry));
 				return index;
 			}
 			
