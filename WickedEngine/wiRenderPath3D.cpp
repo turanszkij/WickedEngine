@@ -994,7 +994,7 @@ namespace wi
 			device->EventBegin("Opaque Z-prepass", cmd);
 			auto range = wi::profiler::BeginRangeGPU("Z-Prepass", cmd);
 
-			Rect scissor = GetScissorInternalResolution();
+			wi::graphics::Rect scissor = GetScissorInternalResolution();
 			device->BindScissorRects(1, &scissor, cmd);
 
 			Viewport vp;
@@ -1203,7 +1203,7 @@ namespace wi
 				};
 				device->RenderPassBegin(rp, arraysize(rp), cmd);
 
-				Rect scissor = GetScissorInternalResolution();
+				wi::graphics::Rect scissor = GetScissorInternalResolution();
 				device->BindScissorRects(1, &scissor, cmd);
 
 				Viewport vp;
@@ -1549,7 +1549,7 @@ namespace wi
 			vp.height = (float)depthBuffer_Main.GetDesc().height;
 			device->BindViewports(1, &vp, cmd);
 
-			Rect scissor = GetScissorInternalResolution();
+			wi::graphics::Rect scissor = GetScissorInternalResolution();
 			device->BindScissorRects(1, &scissor, cmd);
 
 			if (getOutlineEnabled())
@@ -1965,7 +1965,7 @@ namespace wi
 				vp.height = (float)depthBuffer_Main.GetDesc().height;
 				device->BindViewports(1, &vp, cmd);
 
-				Rect scissor = GetScissorInternalResolution();
+				wi::graphics::Rect scissor = GetScissorInternalResolution();
 				device->BindScissorRects(1, &scissor, cmd);
 
 				wi::renderer::DrawSun(cmd);
@@ -2103,7 +2103,7 @@ namespace wi
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		Rect scissor = GetScissorInternalResolution();
+		wi::graphics::Rect scissor = GetScissorInternalResolution();
 		device->BindScissorRects(1, &scissor, cmd);
 
 		Viewport vp;
@@ -2682,7 +2682,7 @@ namespace wi
 					camera,
 					cmd
 				);
-				Rect scissor;
+				wi::graphics::Rect scissor;
 				scissor.right = (int32_t)camera.render_to_texture.depthstencil.desc.width;
 				scissor.bottom = (int32_t)camera.render_to_texture.depthstencil.desc.height;
 				device->BindScissorRects(1, &scissor, cmd);

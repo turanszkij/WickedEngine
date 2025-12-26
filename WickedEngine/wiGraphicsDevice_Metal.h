@@ -78,6 +78,8 @@ namespace wi::graphics
 			bool dirty_resource = false;
 			bool dirty_sampler = false;
 			RootLayout root = {};
+			uint32_t render_width = 0;
+			uint32_t render_height = 0;
 			bool dirty_scissor = false;
 			uint32_t scissor_count = 0;
 			MTL::ScissorRect scissors[16] = {};
@@ -125,6 +127,8 @@ namespace wi::graphics
 					x = {};
 				}
 				dirty_vb = false;
+				render_width = 0;
+				render_height = 0;
 				dirty_viewport = false;
 				dirty_scissor = false;
 				scissor_count = 0;

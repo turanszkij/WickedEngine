@@ -637,7 +637,7 @@ namespace metal_internal
 	{
 		wi::allocator::shared_ptr<GraphicsDevice_Metal::AllocationHandler> allocationhandler;
 		ColorSpace colorSpace = ColorSpace::SRGB;
-		MTK::View* view = nullptr;
+		NS::SharedPtr<MTK::View> view;
 
 		~SwapChain_Metal()
 		{
@@ -963,7 +963,17 @@ using namespace metal_internal;
 		if (commandlist.dirty_scissor && commandlist.scissor_count > 0)
 		{
 			commandlist.dirty_scissor = false;
-			commandlist.render_encoder->setScissorRects(commandlist.scissors, commandlist.scissor_count);
+			MTL::ScissorRect scissors[arraysize(commandlist.scissors)];
+			std::memcpy(&scissors, commandlist.scissors, sizeof(commandlist.scissors));
+			for (uint32_t i = 0; i < commandlist.scissor_count; ++i)
+			{
+				MTL::ScissorRect& scissor = scissors[i];
+				scissor.x = clamp(scissor.x, NS::UInteger(0), NS::UInteger(commandlist.render_width));
+				scissor.y = clamp(scissor.y, NS::UInteger(0), NS::UInteger(commandlist.render_height));
+				scissor.width = clamp(scissor.width, NS::UInteger(0), NS::UInteger(commandlist.render_width) - scissor.x);
+				scissor.height = clamp(scissor.height, NS::UInteger(0), NS::UInteger(commandlist.render_height) - scissor.y);
+			}
+			commandlist.render_encoder->setScissorRects(scissors, commandlist.scissor_count);
 		}
 		if (commandlist.dirty_viewport && commandlist.viewport_count > 0)
 		{
@@ -1092,13 +1102,13 @@ using namespace metal_internal;
 		swapchain->internal_state = internal_state;
 		swapchain->desc = *desc;
 		
-		if(internal_state->view == nullptr)
+		if(internal_state->view.get() == nullptr)
 		{
 			CGRect frame = (CGRect){ {0.0f, 0.0f}, {float(desc->width), float(desc->height)} };
-			internal_state->view = (MTK::View*)window;
-			internal_state->view->init(frame, device.get());
+			internal_state->view = NS::TransferPtr(MTK::View::alloc()->init(frame, device.get()));
 			internal_state->view->setColorPixelFormat(_ConvertPixelFormat(desc->format));
 			internal_state->view->setClearColor(MTL::ClearColor::Make(desc->clear_color[0], desc->clear_color[1], desc->clear_color[2], desc->clear_color[3]));
+			window->setContentView(internal_state->view.get());
 		}
 
 		return true;
@@ -2313,7 +2323,7 @@ using namespace metal_internal;
 		
 		auto internal_state = to_internal(swapchain);
 		
-		commandlist.presents.push_back(internal_state->view);
+		commandlist.presents.push_back(internal_state->view.get());
 		
 		MTL::RenderPassDescriptor* renderpass_descriptor = internal_state->view->currentRenderPassDescriptor();
 		commandlist.render_encoder = commandlist.commandbuffer->renderCommandEncoder(renderpass_descriptor);
@@ -2324,6 +2334,9 @@ using namespace metal_internal;
 		commandlist.dirty_scissor = true;
 		commandlist.dirty_viewport = true;
 		commandlist.dirty_pso = true;
+		
+		commandlist.render_width = swapchain->desc.width;
+		commandlist.render_height = swapchain->desc.height;
 		
 		commandlist.renderpass_info = RenderPassInfo::from(swapchain->desc);
 	}
@@ -2364,6 +2377,8 @@ using namespace metal_internal;
 			descriptor->setRenderTargetWidth(images[0].texture->desc.width);
 			descriptor->setRenderTargetHeight(images[0].texture->desc.height);
 			descriptor->setRenderTargetArrayLength(images[0].texture->desc.array_size);
+			commandlist.render_width = images[0].texture->desc.width;
+			commandlist.render_height = images[0].texture->desc.height;
 		}
 		
 		uint32_t color_attachment_index = 0;
@@ -2471,6 +2486,9 @@ using namespace metal_internal;
 		
 		commandlist.render_encoder->endEncoding();
 		commandlist.dirty_pso = true;
+		
+		commandlist.render_width = 0;
+		commandlist.render_height = 0;
 
 		commandlist.renderpass_info = {};
 		commandlist.render_encoder = nullptr;
@@ -2785,11 +2803,11 @@ using namespace metal_internal;
 		{
 			case GpuQueryType::OCCLUSION:
 				assert(commandlist.render_encoder != nullptr);
-				commandlist.render_encoder->setVisibilityResultMode(MTL::VisibilityResultModeCounting, index);
+				commandlist.render_encoder->setVisibilityResultMode(MTL::VisibilityResultModeCounting, index * sizeof(uint64_t));
 				break;
 			case GpuQueryType::OCCLUSION_BINARY:
 				assert(commandlist.render_encoder != nullptr);
-				commandlist.render_encoder->setVisibilityResultMode(MTL::VisibilityResultModeBoolean, index);
+				commandlist.render_encoder->setVisibilityResultMode(MTL::VisibilityResultModeBoolean, index * sizeof(uint64_t));
 				break;
 			case GpuQueryType::TIMESTAMP:
 				break;
@@ -2806,7 +2824,7 @@ using namespace metal_internal;
 			case GpuQueryType::OCCLUSION:
 			case GpuQueryType::OCCLUSION_BINARY:
 				assert(commandlist.render_encoder != nullptr);
-				commandlist.render_encoder->setVisibilityResultMode(MTL::VisibilityResultModeDisabled, index);
+				commandlist.render_encoder->setVisibilityResultMode(MTL::VisibilityResultModeDisabled, index * sizeof(uint64_t));
 				break;
 			case GpuQueryType::TIMESTAMP:
 				if (commandlist.render_encoder != nullptr && device->supportsCounterSampling(MTL::CounterSamplingPointAtDrawBoundary))

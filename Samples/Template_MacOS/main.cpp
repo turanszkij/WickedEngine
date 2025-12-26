@@ -20,7 +20,7 @@ int main( int argc, char* argv[] )
 	pSharedApplication->setDelegate(&application_delegate);
 	
 	CGRect frame = (CGRect){ {100.0, 100.0}, {512.0, 512.0} };
-	NS::Window* window = NS::Window::alloc()->init(
+	static NS::Window* window = NS::Window::alloc()->init(
 		 frame,
 		 NS::WindowStyleMaskClosable|NS::WindowStyleMaskResizable|NS::WindowStyleMaskMiniaturizable|NS::WindowStyleMaskTitled,
 		 NS::BackingStoreBuffered,
@@ -29,16 +29,14 @@ int main( int argc, char* argv[] )
 	window->setTitle(NS::String::string("Wicked Engine MacOS Template", NS::StringEncoding::UTF8StringEncoding));
 	window->makeKeyAndOrderFront( nullptr );
 	
-	NS::SharedPtr<MTK::View> view = NS::TransferPtr(MTK::View::alloc());
-	
 	application.infoDisplay.active = true;
 	application.infoDisplay.watermark = true;
 	application.infoDisplay.fpsinfo = true;
+	application.infoDisplay.logical_size = true;
+	application.infoDisplay.resolution = true;
+	application.infoDisplay.mouse_info = true;
 	
-	wi::Canvas canvas;
-	canvas.width = (uint32_t)frame.size.width;
-	canvas.height = (uint32_t)frame.size.height;
-	application.SetWindow(view.get(), canvas);
+	application.SetWindow(window);
 	
 	// The shader binary path is set to source path because that is a writeable folder on Mac OS
 	wi::renderer::SetShaderPath(wi::renderer::GetShaderSourcePath() + "metal/");
@@ -47,7 +45,7 @@ int main( int argc, char* argv[] )
 	wi::RenderPath3D path;
 	application.ActivatePath(&path);
 	auto& cam = wi::scene::GetCamera();
-	cam.CreatePerspective(canvas.width, canvas.height, 0.01f, 1000.0f);
+	cam.CreatePerspective(application.canvas.width, application.canvas.height, 0.01f, 1000.0f);
 	cam.Eye = XMFLOAT3(0, 1, -3);
 	cam.UpdateCamera();
 	auto& scene = wi::scene::GetScene();
@@ -81,19 +79,17 @@ int main( int argc, char* argv[] )
 		void drawableSizeWillChange( class MTK::View* pView, CGSize size ) override
 		{
 			NS::SharedPtr<NS::AutoreleasePool> pAutoreleasePool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init());
-			wi::Canvas canvas;
-			canvas.width = (uint32_t)size.width;
-			canvas.height = (uint32_t)size.height;
-			application.SetWindow(pView, canvas);
+			
+			application.SetWindow(window);
 			
 			auto& cam = wi::scene::GetCamera();
-			cam.CreatePerspective(canvas.width, canvas.height, 0.01f, 1000.0f);
+			cam.CreatePerspective(application.canvas.width, application.canvas.height, 0.01f, 1000.0f);
 			cam.UpdateCamera();
 		}
 	} view_delegate;
-	view->setDelegate(&view_delegate);
 	
-	window->setContentView(view.get());
+	MTK::View* view = wi::apple::GetMTKViewFromWindow(window);
+	view->setDelegate(&view_delegate);
 	
 	pSharedApplication->run();
 	

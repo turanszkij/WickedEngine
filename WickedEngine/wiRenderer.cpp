@@ -6726,7 +6726,7 @@ void DrawShadowmaps(
 				break;
 
 			Viewport* viewports = (Viewport*)alloca(sizeof(Viewport) * cascade_count);
-			Rect* scissors = (Rect*)alloca(sizeof(Rect) * cascade_count);
+			wi::graphics::Rect* scissors = (wi::graphics::Rect*)alloca(sizeof(wi::graphics::Rect) * cascade_count);
 			SHCAM* shcams = (SHCAM*)alloca(sizeof(SHCAM) * cascade_count);
 			CreateDirLightShadowCams(light, *vis.camera, shcams, cascade_count, shadow_rect, vis.scene->character_dedicated_shadows.data(), vis.scene->character_dedicated_shadows.size());
 
@@ -6831,7 +6831,7 @@ void DrawShadowmaps(
 					vp.height = float(shadow_rect.h);
 					device->BindViewports(1, &vp, cmd);
 
-					Rect scissor;
+					wi::graphics::Rect scissor;
 					scissor.from_viewport(vp);
 					device->BindScissorRects(1, &scissor, cmd);
 
@@ -6924,7 +6924,7 @@ void DrawShadowmaps(
 				vp.height = float(shadow_rect.h);
 				device->BindViewports(1, &vp, cmd);
 
-				Rect scissor;
+				wi::graphics::Rect scissor;
 				scissor.from_viewport(vp);
 				device->BindScissorRects(1, &scissor, cmd);
 
@@ -6948,7 +6948,7 @@ void DrawShadowmaps(
 				vp.height = float(shadow_rect.h);
 				device->BindViewports(1, &vp, cmd);
 
-				Rect scissor;
+				wi::graphics::Rect scissor;
 				scissor.from_viewport(vp);
 				device->BindScissorRects(1, &scissor, cmd);
 
@@ -6984,7 +6984,7 @@ void DrawShadowmaps(
 			SHCAM cameras[6];
 			CreateCubemapCameras(light.position, zNearP, zFarP, cameras, arraysize(cameras));
 			Viewport vp[arraysize(cameras)];
-			Rect scissors[arraysize(cameras)];
+			wi::graphics::Rect scissors[arraysize(cameras)];
 			Frustum frusta[arraysize(cameras)];
 			uint32_t camera_count = 0;
 
@@ -7099,7 +7099,7 @@ void DrawShadowmaps(
 					vp.height = float(shadow_rect.h);
 					device->BindViewports(1, &vp, cmd);
 
-					Rect scissor;
+					wi::graphics::Rect scissor;
 					scissor.from_viewport(vp);
 					device->BindScissorRects(1, &scissor, cmd);
 
@@ -7178,7 +7178,7 @@ void DrawShadowmaps(
 			device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 			device->BindViewports(1, &vp, cmd);
 
-			Rect scissor;
+			wi::graphics::Rect scissor;
 			scissor.from_viewport(vp);
 			device->BindScissorRects(1, &scissor, cmd);
 
@@ -18515,7 +18515,7 @@ void CopyDepthStencil(
 		vp.height = (float)output_depth_stencil.desc.height;
 		device->BindViewports(1, &vp, cmd);
 
-		Rect rect;
+		wi::graphics::Rect rect;
 		rect.left = 0;
 		rect.right = output_depth_stencil.desc.width;
 		rect.top = 0;
@@ -18692,7 +18692,7 @@ void ExtractStencil(
 		vp.height = (float)output.desc.height;
 		device->BindViewports(1, &vp, cmd);
 
-		Rect rect;
+		wi::graphics::Rect rect;
 		rect.left = 0;
 		rect.right = output.desc.width;
 		rect.top = 0;

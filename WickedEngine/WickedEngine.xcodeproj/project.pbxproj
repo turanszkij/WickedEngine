@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1E79298A2EFE75E400B9E35C /* wiAppleHelper.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1E7929892EFE75BA00B9E35C /* wiAppleHelper.mm */; };
 		1EDA7A562EE1DF2100210D41 /* wiArchive.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7A552EE1DF2100210D41 /* wiArchive.cpp */; };
 		1EDA7B042EE1DFE300210D41 /* wiNetwork_Linux.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7AA82EE1DFE300210D41 /* wiNetwork_Linux.cpp */; };
 		1EDA7B062EE1DFE300210D41 /* wiScene_Components.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7AD92EE1DFE300210D41 /* wiScene_Components.cpp */; };
@@ -277,6 +278,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		1E7929892EFE75BA00B9E35C /* wiAppleHelper.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = wiAppleHelper.mm; sourceTree = "<group>"; };
+		1E79298B2EFE76C500B9E35C /* wiAppleHelper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = wiAppleHelper.h; sourceTree = "<group>"; };
 		1EDA7A552EE1DF2100210D41 /* wiArchive.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = wiArchive.cpp; sourceTree = "<group>"; };
 		1EDA7A572EE1DFE300210D41 /* CommonInclude.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CommonInclude.h; sourceTree = "<group>"; };
 		1EDA7A582EE1DFE300210D41 /* logo.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = logo.h; sourceTree = "<group>"; };
@@ -1187,6 +1190,8 @@
 		1EDA71632EE0978C00210D41 = {
 			isa = PBXGroup;
 			children = (
+				1E79298B2EFE76C500B9E35C /* wiAppleHelper.h */,
+				1E7929892EFE75BA00B9E35C /* wiAppleHelper.mm */,
 				1EE22F932EFB2EB500CDE645 /* objectHF.hlsli */,
 				1EDA8D8A2EE6FB3900210D41 /* globals.hlsli */,
 				1EDA8A692EE5D68100210D41 /* libdxcompiler.dylib */,
@@ -2614,6 +2619,7 @@
 				1EDA7DF02EE1EC9500210D41 /* NarrowPhaseQuery.cpp in Sources */,
 				1EDA7DF12EE1EC9500210D41 /* BodyManager.cpp in Sources */,
 				1EDA7DF22EE1EC9500210D41 /* QuadTree.cpp in Sources */,
+				1E79298A2EFE75E400B9E35C /* wiAppleHelper.mm in Sources */,
 				1EDA7DF32EE1EC9500210D41 /* NarrowPhaseStats.cpp in Sources */,
 				1EDA7DF42EE1EC9500210D41 /* ConvexHullBuilder2D.cpp in Sources */,
 				1EDA7DF52EE1EC9500210D41 /* ManifoldBetweenTwoFaces.cpp in Sources */,

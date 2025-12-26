@@ -23,6 +23,31 @@
 #include "wiInput_PS5.h"
 #endif // PLATFORM_PS5
 
+#ifdef __APPLE__
+#include <ApplicationServices/ApplicationServices.h>
+#include <Carbon/Carbon.h>
+namespace wi::input::apple
+{
+bool isLeftMouseButtonPressed()
+{
+	return CGEventSourceButtonState(kCGEventSourceStateCombinedSessionState, kCGMouseButtonLeft) != 0;
+}
+bool isRightMouseButtonPressed()
+{
+	return CGEventSourceButtonState(kCGEventSourceStateCombinedSessionState, kCGMouseButtonRight) != 0;
+}
+bool isMiddleMouseButtonPressed()
+{
+	return CGEventSourceButtonState(kCGEventSourceStateCombinedSessionState, kCGMouseButtonCenter) != 0;
+}
+bool IsKeyDown(CGKeyCode keyCode)
+{
+	return CGEventSourceKeyState(kCGEventSourceStateCombinedSessionState, keyCode) != 0;
+}
+}
+using namespace wi::input::apple;
+#endif // __APPLE__
+
 namespace wi::input
 {
 #ifdef _WIN32
@@ -189,6 +214,12 @@ namespace wi::input
 #elif defined(SDL2)
 		wi::input::sdlinput::GetMouseState(&mouse);
 		wi::input::sdlinput::GetKeyboardState(&keyboard);
+#elif defined(__APPLE__)
+		mouse = {};
+		mouse.position = wi::apple::GetMousePositionInWindow(window);
+		mouse.left_button_press = isLeftMouseButtonPressed();
+		mouse.right_button_press = isRightMouseButtonPressed();
+		mouse.middle_button_press = isMiddleMouseButtonPressed();
 #endif
 
 		if (pen_override)
@@ -485,6 +516,7 @@ namespace wi::input
 			}
 
 			uint16_t keycode = (uint16_t)button;
+			constexpr uint16_t unknown = 65535;
 
 			switch (button)
 			{
@@ -649,10 +681,164 @@ namespace wi::input
 				keycode = VK_RMENU;
 				break;
 #endif // _WIN32
+					
+#ifdef __APPLE__
+			case wi::input::KEYBOARD_BUTTON_UP:
+				keycode = kVK_UpArrow;
+				break;
+			case wi::input::KEYBOARD_BUTTON_DOWN:
+				keycode = kVK_DownArrow;
+				break;
+			case wi::input::KEYBOARD_BUTTON_LEFT:
+				keycode = kVK_LeftArrow;
+				break;
+			case wi::input::KEYBOARD_BUTTON_RIGHT:
+				keycode = kVK_RightArrow;
+				break;
+			case wi::input::KEYBOARD_BUTTON_SPACE:
+				keycode = kVK_Space;
+				break;
+			case wi::input::KEYBOARD_BUTTON_RSHIFT:
+				keycode = kVK_RightShift;
+				break;
+			case wi::input::KEYBOARD_BUTTON_LSHIFT:
+				keycode = kVK_Shift;
+				break;
+			case wi::input::KEYBOARD_BUTTON_F1:
+				keycode = kVK_F1;
+				break;
+			case wi::input::KEYBOARD_BUTTON_F2:
+				keycode = kVK_F2;
+				break;
+			case wi::input::KEYBOARD_BUTTON_F3:
+				keycode = kVK_F3;
+				break;
+			case wi::input::KEYBOARD_BUTTON_F4:
+				keycode = kVK_F4;
+				break;
+			case wi::input::KEYBOARD_BUTTON_F5:
+				keycode = kVK_F5;
+				break;
+			case wi::input::KEYBOARD_BUTTON_F6:
+				keycode = kVK_F6;
+				break;
+			case wi::input::KEYBOARD_BUTTON_F7:
+				keycode = kVK_F7;
+				break;
+			case wi::input::KEYBOARD_BUTTON_F8:
+				keycode = kVK_F8;
+				break;
+			case wi::input::KEYBOARD_BUTTON_F9:
+				keycode = kVK_F9;
+				break;
+			case wi::input::KEYBOARD_BUTTON_F10:
+				keycode = kVK_F10;
+				break;
+			case wi::input::KEYBOARD_BUTTON_F11:
+				keycode = kVK_F11;
+				break;
+			case wi::input::KEYBOARD_BUTTON_F12:
+				keycode = kVK_F12;
+				break;
+			case wi::input::KEYBOARD_BUTTON_ENTER:
+				keycode = kVK_Return;
+				break;
+			case wi::input::KEYBOARD_BUTTON_ESCAPE:
+				keycode = kVK_Escape;
+				break;
+			case wi::input::KEYBOARD_BUTTON_HOME:
+				keycode = kVK_Home;
+				break;
+			case wi::input::KEYBOARD_BUTTON_LCONTROL:
+				keycode = kVK_Control;
+				break;
+			case wi::input::KEYBOARD_BUTTON_RCONTROL:
+				keycode = kVK_RightControl;
+				break;
+			case wi::input::KEYBOARD_BUTTON_INSERT:
+				keycode = unknown;
+				break;
+			case wi::input::KEYBOARD_BUTTON_DELETE:
+				keycode = kVK_ForwardDelete;
+				break;
+			case wi::input::KEYBOARD_BUTTON_BACKSPACE:
+				keycode = kVK_Delete;
+				break;
+			case wi::input::KEYBOARD_BUTTON_PAGEDOWN:
+				keycode = kVK_PageDown;
+				break;
+			case wi::input::KEYBOARD_BUTTON_PAGEUP:
+				keycode = kVK_PageUp;
+				break;
+			case KEYBOARD_BUTTON_NUMPAD0:
+				keycode = kVK_ANSI_Keypad0;
+				break;
+			case KEYBOARD_BUTTON_NUMPAD1:
+				keycode = kVK_ANSI_Keypad1;
+				break;
+			case KEYBOARD_BUTTON_NUMPAD2:
+				keycode = kVK_ANSI_Keypad2;
+				break;
+			case KEYBOARD_BUTTON_NUMPAD3:
+				keycode = kVK_ANSI_Keypad3;
+				break;
+			case KEYBOARD_BUTTON_NUMPAD4:
+				keycode = kVK_ANSI_Keypad4;
+				break;
+			case KEYBOARD_BUTTON_NUMPAD5:
+				keycode = kVK_ANSI_Keypad5;
+				break;
+			case KEYBOARD_BUTTON_NUMPAD6:
+				keycode = kVK_ANSI_Keypad6;
+				break;
+			case KEYBOARD_BUTTON_NUMPAD7:
+				keycode = kVK_ANSI_Keypad7;
+				break;
+			case KEYBOARD_BUTTON_NUMPAD8:
+				keycode = kVK_ANSI_Keypad8;
+				break;
+			case KEYBOARD_BUTTON_NUMPAD9:
+				keycode = kVK_ANSI_Keypad9;
+				break;
+			case KEYBOARD_BUTTON_MULTIPLY:
+				keycode = kVK_ANSI_KeypadMultiply;
+				break;
+			case KEYBOARD_BUTTON_ADD:
+				keycode = kVK_ANSI_KeypadPlus;
+				break;
+			case KEYBOARD_BUTTON_SEPARATOR:
+				keycode = unknown;
+				break;
+			case KEYBOARD_BUTTON_SUBTRACT:
+				keycode = kVK_ANSI_KeypadMinus;
+				break;
+			case KEYBOARD_BUTTON_DECIMAL:
+				keycode = kVK_ANSI_KeypadDecimal;
+				break;
+			case KEYBOARD_BUTTON_DIVIDE:
+				keycode = kVK_ANSI_KeypadDivide;
+				break;
+			case KEYBOARD_BUTTON_TAB:
+				keycode = kVK_Tab;
+				break;
+			case KEYBOARD_BUTTON_TILDE:
+				keycode = unknown;
+				break;
+			case KEYBOARD_BUTTON_ALT:
+				keycode = kVK_Option;
+				break;
+			case KEYBOARD_BUTTON_ALTGR:
+				keycode = kVK_RightOption;
+				break;
+#endif // __APPLE__
+					
+					
 				default: break;
 			}
 #if defined(_WIN32) && !defined(PLATFORM_XBOX)
 			return KEY_DOWN(keycode) || KEY_TOGGLE(keycode);
+#elif defined(__APPLE__)
+			return IsKeyDown(keycode);
 #elif defined(SDL2)
 			return keyboard.buttons[keycode] == 1;
 #endif

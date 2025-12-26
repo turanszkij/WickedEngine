@@ -600,7 +600,25 @@ namespace wi
 					infodisplay_str += "Pending pipeline creations by graphics driver: " + std::to_string(pipeline_creation) + ". Some rendering will be skipped.\n";
 				}
 			}
-
+			
+			if (infoDisplay.mouse_info)
+			{
+				infodisplay_str += "Mouse = (" + std::to_string(wi::input::GetPointer().x) + ", " + std::to_string(wi::input::GetPointer().y) + ") ";
+				if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+				{
+					infodisplay_str += "| Left ";
+				}
+				if (wi::input::Down(wi::input::MOUSE_BUTTON_MIDDLE))
+				{
+					infodisplay_str += "| Middle ";
+				}
+				if (wi::input::Down(wi::input::MOUSE_BUTTON_RIGHT))
+				{
+					infodisplay_str += "| Right ";
+				}
+				infodisplay_str += "\n";
+			}
+			
 			wi::font::Params params = wi::font::Params(
 				4 + canvas.PhysicalToLogical((uint32_t)infoDisplay.rect.left),
 				4 + canvas.PhysicalToLogical((uint32_t)infoDisplay.rect.top),
@@ -702,11 +720,7 @@ namespace wi
 		wi::platform::Exit();
 	}
 
-#ifdef __APPLE__
-void Application::SetWindow(wi::platform::window_type window, const wi::Canvas& in_canvas)
-#else
 void Application::SetWindow(wi::platform::window_type window)
-#endif // __APPLE__
 	{
 		this->window = window;
 
@@ -804,11 +818,7 @@ void Application::SetWindow(wi::platform::window_type window)
 		}
 		wi::graphics::GetDevice() = graphicsDevice.get();
 
-#ifdef __APPLE__
-		canvas = in_canvas;
-#else
 		canvas.init(window);
-#endif // __APPLE__
 
 		SwapChainDesc desc = swapChain.desc;
 		if (!swapChain.IsValid())
