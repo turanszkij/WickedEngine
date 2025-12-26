@@ -584,7 +584,7 @@ namespace wi::shadercompiler
 			{
 				static HMODULE irconverter = wiLoadLibrary("/usr/local/lib/libmetalirconverter.dylib");
 				assert(irconverter); // You must install the metal shader converter
-				if(irconverter != nullptr)
+				if (irconverter != nullptr)
 				{
 #define LINK_IR(name) using PFN_##name = decltype(&name); static PFN_##name name = (PFN_##name)wiGetProcAddress(irconverter, #name);
 					LINK_IR(IRCompilerCreate)
@@ -734,6 +734,25 @@ namespace wi::shadercompiler
 					size_t metallibSize = IRMetalLibGetBytecodeSize(pMetallib);
 					auto internal_state = wi::allocator::make_shared<wi::vector<uint8_t>>(metallibSize); // lifetime storage of pointer
 					IRMetalLibGetBytecode(pMetallib, internal_state->data());
+					if (input.stage == ShaderStage::CS)
+					{
+						LINK_IR(IRShaderReflectionCreate)
+						LINK_IR(IRObjectGetReflection)
+						LINK_IR(IRShaderReflectionCopyComputeInfo)
+						LINK_IR(IRShaderReflectionDestroy)
+						
+						// Add the numthreads information to end of the shader:
+						IRShaderReflection* reflection = IRShaderReflectionCreate();
+						bool success = IRObjectGetReflection(pOutIR, IRShaderStageCompute, reflection);
+						assert(success);
+						IRVersionedCSInfo cs_info = {};
+						success = IRShaderReflectionCopyComputeInfo(reflection, IRReflectionVersion_1_0, &cs_info);
+						assert(success);
+						const uint32_t numthreads[3] = { cs_info.info_1_0.tg_size[0], cs_info.info_1_0.tg_size[1], cs_info.info_1_0.tg_size[2] };
+						internal_state->resize(internal_state->size() + sizeof(numthreads));
+						std::memcpy(internal_state->data() + internal_state->size() - sizeof(numthreads), numthreads, sizeof(numthreads));
+						IRShaderReflectionDestroy(reflection);
+					}
 					output.internal_state = internal_state;
 					output.shaderdata = internal_state->data();
 					output.shadersize = internal_state->size();

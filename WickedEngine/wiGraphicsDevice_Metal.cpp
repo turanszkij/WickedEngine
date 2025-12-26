@@ -571,11 +571,12 @@ namespace metal_internal
 		}
 	};
 	struct Shader_Metal
-	{
+{
 		wi::allocator::shared_ptr<GraphicsDevice_Metal::AllocationHandler> allocationhandler;
 		NS::SharedPtr<MTL::Library> library;
 		NS::SharedPtr<MTL::Function> function;
 		NS::SharedPtr<MTL::ComputePipelineState> compute_pipeline;
+		MTL::Size numthreads = {};
 
 		~Shader_Metal()
 		{
@@ -1412,6 +1413,13 @@ using namespace metal_internal;
 		internal_state->allocationhandler = allocationhandler;
 		shader->internal_state = internal_state;
 		
+		uint32_t numthreads[3] = {};
+		if (stage == ShaderStage::CS)
+		{
+			shadercode_size -= sizeof(numthreads);
+			std::memcpy(numthreads, (uint8_t*)shadercode + shadercode_size, sizeof(numthreads));
+		}
+		
 		dispatch_data_t bytecodeData = dispatch_data_create(shadercode, shadercode_size, dispatch_get_main_queue(), nullptr);
 		NS::Error* error = nullptr;
 		internal_state->library = NS::TransferPtr(device->newLibrary(bytecodeData, &error));
@@ -1459,6 +1467,9 @@ using namespace metal_internal;
 				assert(0);
 				error->release();
 			}
+			
+			internal_state->numthreads = { numthreads[0], numthreads[1], numthreads[2] };
+			
 			return internal_state->compute_pipeline.get() != nullptr;
 		}
 
@@ -2629,7 +2640,7 @@ using namespace metal_internal;
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		auto internal_state = to_internal(pso);
 		
-		if(internal_state->render_pipeline.get() == nullptr)
+		if (internal_state->render_pipeline.get() == nullptr)
 		{
 			// Just in time pso:
 			PipelineHash pipeline_hash;
@@ -2724,14 +2735,16 @@ using namespace metal_internal;
 	{
 		predispatch(cmd);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-		commandlist.compute_encoder->dispatchThreadgroups({threadGroupCountX, threadGroupCountY, threadGroupCountZ}, {1, 1, 1});
+		auto cs_internal = to_internal(commandlist.active_cs);
+		commandlist.compute_encoder->dispatchThreadgroups({threadGroupCountX, threadGroupCountY, threadGroupCountZ}, cs_internal->numthreads);
 	}
 	void GraphicsDevice_Metal::DispatchIndirect(const GPUBuffer* args, uint64_t args_offset, CommandList cmd)
 	{
 		predispatch(cmd);
 		auto internal_state = to_internal(args);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-		commandlist.compute_encoder->dispatchThreadgroups(internal_state->buffer.get(), args_offset, {1, 1, 1});
+		auto cs_internal = to_internal(commandlist.active_cs);
+		commandlist.compute_encoder->dispatchThreadgroups(internal_state->buffer.get(), args_offset, cs_internal->numthreads);
 	}
 	void GraphicsDevice_Metal::DispatchMesh(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd)
 	{
