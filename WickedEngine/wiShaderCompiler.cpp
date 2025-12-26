@@ -734,21 +734,51 @@ namespace wi::shadercompiler
 					size_t metallibSize = IRMetalLibGetBytecodeSize(pMetallib);
 					auto internal_state = wi::allocator::make_shared<wi::vector<uint8_t>>(metallibSize); // lifetime storage of pointer
 					IRMetalLibGetBytecode(pMetallib, internal_state->data());
-					if (input.stage == ShaderStage::CS)
+					if (
+						input.stage == ShaderStage::CS ||
+						input.stage == ShaderStage::MS ||
+						input.stage == ShaderStage::AS
+						)
 					{
 						LINK_IR(IRShaderReflectionCreate)
 						LINK_IR(IRObjectGetReflection)
 						LINK_IR(IRShaderReflectionCopyComputeInfo)
+						LINK_IR(IRShaderReflectionCopyMeshInfo)
+						LINK_IR(IRShaderReflectionCopyAmplificationInfo)
 						LINK_IR(IRShaderReflectionDestroy)
 						
 						// Add the numthreads information to end of the shader:
 						IRShaderReflection* reflection = IRShaderReflectionCreate();
-						bool success = IRObjectGetReflection(pOutIR, IRShaderStageCompute, reflection);
+						bool success = IRObjectGetReflection(pOutIR, irstage, reflection);
 						assert(success);
-						IRVersionedCSInfo cs_info = {};
-						success = IRShaderReflectionCopyComputeInfo(reflection, IRReflectionVersion_1_0, &cs_info);
-						assert(success);
-						const uint32_t numthreads[3] = { cs_info.info_1_0.tg_size[0], cs_info.info_1_0.tg_size[1], cs_info.info_1_0.tg_size[2] };
+						uint32_t numthreads[3] = {};
+						if (input.stage == ShaderStage::CS)
+						{
+							IRVersionedCSInfo cs_info = {};
+							success = IRShaderReflectionCopyComputeInfo(reflection, IRReflectionVersion_1_0, &cs_info);
+							assert(success);
+							numthreads[0] = cs_info.info_1_0.tg_size[0];
+							numthreads[1] = cs_info.info_1_0.tg_size[1];
+							numthreads[2] = cs_info.info_1_0.tg_size[2];
+						}
+						else if (input.stage == ShaderStage::MS)
+						{
+							IRVersionedMSInfo ms_info = {};
+							success = IRShaderReflectionCopyMeshInfo(reflection, IRReflectionVersion_1_0, &ms_info);
+							assert(success);
+							numthreads[0] = ms_info.info_1_0.num_threads[0];
+							numthreads[1] = ms_info.info_1_0.num_threads[1];
+							numthreads[2] = ms_info.info_1_0.num_threads[2];
+						}
+						else if (input.stage == ShaderStage::AS)
+						{
+							IRVersionedASInfo as_info = {};
+							success = IRShaderReflectionCopyAmplificationInfo(reflection, IRReflectionVersion_1_0, &as_info);
+							assert(success);
+							numthreads[0] = as_info.info_1_0.num_threads[0];
+							numthreads[1] = as_info.info_1_0.num_threads[1];
+							numthreads[2] = as_info.info_1_0.num_threads[2];
+						}
 						internal_state->resize(internal_state->size() + sizeof(numthreads));
 						std::memcpy(internal_state->data() + internal_state->size() - sizeof(numthreads), numthreads, sizeof(numthreads));
 						IRShaderReflectionDestroy(reflection);

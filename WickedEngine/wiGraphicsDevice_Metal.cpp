@@ -1413,11 +1413,17 @@ using namespace metal_internal;
 		internal_state->allocationhandler = allocationhandler;
 		shader->internal_state = internal_state;
 		
+		// The numthreads was gathered by offline shader reflection system in wiShaderCompiler.cpp and attached to the end of shadercode data:
 		uint32_t numthreads[3] = {};
-		if (stage == ShaderStage::CS)
+		if (
+			stage == ShaderStage::CS ||
+			stage == ShaderStage::MS ||
+			stage == ShaderStage::AS
+			)
 		{
 			shadercode_size -= sizeof(numthreads);
 			std::memcpy(numthreads, (uint8_t*)shadercode + shadercode_size, sizeof(numthreads));
+			internal_state->numthreads = { numthreads[0], numthreads[1], numthreads[2] };
 		}
 		
 		dispatch_data_t bytecodeData = dispatch_data_create(shadercode, shadercode_size, dispatch_get_main_queue(), nullptr);
@@ -1467,8 +1473,6 @@ using namespace metal_internal;
 				assert(0);
 				error->release();
 			}
-			
-			internal_state->numthreads = { numthreads[0], numthreads[1], numthreads[2] };
 			
 			return internal_state->compute_pipeline.get() != nullptr;
 		}
@@ -2202,8 +2206,8 @@ using namespace metal_internal;
 		commandlist.reset(GetBufferIndex());
 		commandlist.queue = queue;
 		commandlist.id = cmd_current;
-		//commandlist.commandbuffer = commandqueue->commandBufferWithUnretainedReferences();
-		commandlist.commandbuffer = commandqueue->commandBuffer();
+		commandlist.commandbuffer = commandqueue->commandBufferWithUnretainedReferences();
+		//commandlist.commandbuffer = commandqueue->commandBuffer();
 		commandlist.commandbuffer->useResidencySet(allocationhandler->residency_set.get());
 		
 		return cmd;

@@ -73,13 +73,10 @@ int main( int argc, char* argv[] )
 	public:
 		void drawInMTKView( MTK::View* pView ) override
 		{
-			NS::SharedPtr<NS::AutoreleasePool> pAutoreleasePool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init());
 			application.Run();
 		}
 		void drawableSizeWillChange( class MTK::View* pView, CGSize size ) override
 		{
-			NS::SharedPtr<NS::AutoreleasePool> pAutoreleasePool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init());
-			
 			application.SetWindow(window);
 			
 			auto& cam = wi::scene::GetCamera();
