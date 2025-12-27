@@ -21,12 +21,11 @@
 #define wiGetProcAddress(handle,name) GetProcAddress(handle, name)
 #elif defined(__SCE__)
 #define PLATFORM_PS5
+#elif defined(__APPLE__)
+#define PLATFORM_APPLE
+#include "wiAppleHelper.h"
 #else
 #define PLATFORM_LINUX
-#include <dlfcn.h>
-#define wiLoadLibrary(name) dlopen(name, RTLD_LAZY)
-#define wiGetProcAddress(handle,name) dlsym(handle, name)
-typedef void* HMODULE;
 #endif // _WIN32
 
 #ifdef SDL2
@@ -35,6 +34,12 @@ typedef void* HMODULE;
 #include "sdl2.h"
 #endif
 
+#if defined(PLATFORM_LINUX) || defined(PLATFORM_APPLE)
+#include <dlfcn.h>
+#define wiLoadLibrary(name) dlopen(name, RTLD_LAZY)
+#define wiGetProcAddress(handle,name) dlsym(handle, name)
+typedef void* HMODULE;
+#endif // defined(PLATFORM_LINUX) || defined(PLATFORM_APPLE)
 
 namespace wi::platform
 {
@@ -43,6 +48,9 @@ namespace wi::platform
 	using error_type = HRESULT;
 #elif defined(SDL2)
 	using window_type = SDL_Window*;
+	using error_type = int;
+#elif defined(__APPLE__)
+	using window_type = NS::Window*;
 	using error_type = int;
 #else
 	using window_type = void*;
@@ -90,5 +98,12 @@ namespace wi::platform
 		SDL_Vulkan_GetDrawableSize(window, &dest->width, &dest->height);
 		dest->dpi = ((float)dest->width / (float)window_width) * 96.f;
 #endif // PLATFORM_LINUX
+		
+#ifdef PLATFORM_APPLE
+		XMUINT2 size = wi::apple::GetWindowSize(window);
+		dest->width = size.x;
+		dest->height = size.y;
+		dest->dpi = wi::apple::GetDPIForWindow(window);
+#endif // PLATFORM_APPLE
 	}
 }
