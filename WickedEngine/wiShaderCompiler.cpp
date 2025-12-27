@@ -686,7 +686,7 @@ namespace wi::shadercompiler
 					
 					IRCompiler* pCompiler = IRCompilerCreate();
 					IRCompilerSetMinimumGPUFamily(pCompiler, IRGPUFamilyMetal3);
-					//IRCompilerSetCompatibilityFlags(pCompiler, IRCompatibilityFlags(IRCompatibilityFlagBoundsCheck | IRCompatibilityFlagPositionInvariance | IRCompatibilityFlagTextureMinLODClamp | IRCompatibilityFlagSamplerLODBias));
+					IRCompilerSetCompatibilityFlags(pCompiler, IRCompatibilityFlags(IRCompatibilityFlagBoundsCheck | IRCompatibilityFlagPositionInvariance | IRCompatibilityFlagTextureMinLODClamp | IRCompatibilityFlagSamplerLODBias));
 					IRCompilerSetValidationFlags(pCompiler, IRCompilerValidationFlagAll);
 					IRCompilerSetEntryPointName(pCompiler, input.entrypoint.c_str());
 					IRCompilerSetGlobalRootSignature(pCompiler, pRootSig);

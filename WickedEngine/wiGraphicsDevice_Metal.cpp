@@ -365,6 +365,27 @@ namespace metal_internal
 		}
 		return MTL::StencilOperationKeep;
 	}
+	constexpr MTL::TextureSwizzle _ConvertComponentSwizzle(ComponentSwizzle value)
+	{
+		switch (value)
+		{
+			case ComponentSwizzle::R:
+				return MTL::TextureSwizzleRed;
+			case ComponentSwizzle::G:
+				return MTL::TextureSwizzleGreen;
+			case ComponentSwizzle::B:
+				return MTL::TextureSwizzleBlue;
+			case ComponentSwizzle::A:
+				return MTL::TextureSwizzleAlpha;
+			case ComponentSwizzle::ONE:
+				return MTL::TextureSwizzleOne;
+			case ComponentSwizzle::ZERO:
+				return MTL::TextureSwizzleZero;
+			default:
+				return MTL::TextureSwizzleOne;
+		}
+		return MTL::TextureSwizzleOne;
+	}
 
 	IRDescriptorTableEntry create_entry(MTL::Texture* res, float min_lod_clamp = 0)
 	{
@@ -1318,6 +1339,16 @@ using namespace metal_internal;
 		}
 		descriptor->setUsage(usage);
 		
+		if (!has_flag(desc->bind_flags, BindFlag::UNORDERED_ACCESS))
+		{
+			MTL::TextureSwizzleChannels swizzle = MTL::TextureSwizzleChannels::Default();
+			swizzle.red = _ConvertComponentSwizzle(desc->swizzle.r);
+			swizzle.green = _ConvertComponentSwizzle(desc->swizzle.g);
+			swizzle.blue = _ConvertComponentSwizzle(desc->swizzle.b);
+			swizzle.alpha = _ConvertComponentSwizzle(desc->swizzle.a);
+			descriptor->setSwizzle(swizzle);
+		}
+		
 		internal_state->texture = NS::TransferPtr(device->newTexture(descriptor.get()));
 		allocationhandler->make_resident(internal_state->texture.get());
 		
@@ -1908,10 +1939,20 @@ using namespace metal_internal;
 		switch (type) {
 			case SubresourceType::SRV:
 				{
+					MTL::TextureSwizzleChannels mtlswizzle = MTL::TextureSwizzleChannels::Default();
+					Swizzle requested_swizzle = texture->desc.swizzle;
+					if (swizzle != nullptr)
+					{
+						requested_swizzle = *swizzle;
+					}
+					mtlswizzle.red = _ConvertComponentSwizzle(requested_swizzle.r);
+					mtlswizzle.green = _ConvertComponentSwizzle(requested_swizzle.g);
+					mtlswizzle.blue = _ConvertComponentSwizzle(requested_swizzle.b);
+					mtlswizzle.alpha = _ConvertComponentSwizzle(requested_swizzle.a);
 					if(internal_state->srv.texture.get() == nullptr)
 					{
 						auto& subresource = internal_state->srv;
-						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(_ConvertPixelFormat(format), internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
+						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(_ConvertPixelFormat(format), internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}, mtlswizzle));
 						subresource.entry = create_entry(subresource.texture.get(), min_lod_clamp);
 						subresource.index = allocationhandler->allocate_bindless(subresource.entry);
 						allocationhandler->make_resident(subresource.texture.get());
@@ -1920,7 +1961,7 @@ using namespace metal_internal;
 					else
 					{
 						auto& subresource = internal_state->subresources_srv.emplace_back();
-						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(_ConvertPixelFormat(format), internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
+						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(_ConvertPixelFormat(format), internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}, mtlswizzle));
 						subresource.entry = create_entry(subresource.texture.get(), min_lod_clamp);
 						subresource.index = allocationhandler->allocate_bindless(subresource.entry);
 						allocationhandler->make_resident(subresource.texture.get());
@@ -2392,6 +2433,7 @@ using namespace metal_internal;
 			descriptor->setRenderTargetWidth(images[0].texture->desc.width);
 			descriptor->setRenderTargetHeight(images[0].texture->desc.height);
 			descriptor->setRenderTargetArrayLength(images[0].texture->desc.array_size);
+			descriptor->setDefaultRasterSampleCount(images[0].texture->desc.sample_count);
 			commandlist.render_width = images[0].texture->desc.width;
 			commandlist.render_height = images[0].texture->desc.height;
 		}

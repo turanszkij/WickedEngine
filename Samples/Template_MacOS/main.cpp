@@ -41,7 +41,7 @@ int main( int argc, char* argv[] )
 	// The shader binary path is set to source path because that is a writeable folder on Mac OS
 	wi::renderer::SetShaderPath(wi::renderer::GetShaderSourcePath() + "metal/");
 	
-	//wi::initializer::InitializeComponentsImmediate();
+	wi::initializer::InitializeComponentsImmediate();
 	wi::RenderPath3D path;
 	application.ActivatePath(&path);
 	auto& cam = wi::scene::GetCamera();
@@ -52,7 +52,7 @@ int main( int argc, char* argv[] )
 	scene.weather.ambient = XMFLOAT3(0.5f, 0.5f, 0.5f);
 	scene.Entity_CreateCube("cube");
 	//wi::scene::LoadModel("/Users/turanszkij/PROJECTS/WickedEngine/Content/models/Sponza/Sponza.wiscene");
-	//wi::renderer::SetOcclusionCullingEnabled(false);
+	wi::renderer::SetOcclusionCullingEnabled(false);
 	wi::renderer::SetToDrawGridHelper(true);
 	//wi::profiler::SetEnabled(true);
 	
@@ -67,6 +67,9 @@ int main( int argc, char* argv[] )
 	colorpicker.Create("Color");
 	colorpicker.SetPos(XMFLOAT2(50,100));
 	path.GetGUI().AddWidget(&colorpicker);
+	
+	//application.Run();
+	//wi::lua::RunFile("/Users/turanszkij/PROJECTS/WickedEngine/Content/scripts/character_controller/character_controller.lua");
 	
 	class MyMTKViewDelegate : public MTK::ViewDelegate
 	{

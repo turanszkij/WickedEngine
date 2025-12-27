@@ -830,6 +830,84 @@ namespace wi::input
 			case KEYBOARD_BUTTON_ALTGR:
 				keycode = kVK_RightOption;
 				break;
+			case (BUTTON)'A':
+				keycode = kVK_ANSI_A;
+				break;
+			case (BUTTON)'B':
+				 keycode = kVK_ANSI_B;
+				 break;
+			case (BUTTON)'C':
+				 keycode = kVK_ANSI_C;
+				 break;
+			case (BUTTON)'D':
+				 keycode = kVK_ANSI_D;
+				 break;
+			case (BUTTON)'E':
+				 keycode = kVK_ANSI_E;
+				 break;
+			case (BUTTON)'F':
+				 keycode = kVK_ANSI_F;
+				 break;
+			case (BUTTON)'G':
+				 keycode = kVK_ANSI_G;
+				 break;
+			case (BUTTON)'H':
+				 keycode = kVK_ANSI_H;
+				 break;
+			case (BUTTON)'I':
+				 keycode = kVK_ANSI_I;
+				 break;
+			case (BUTTON)'J':
+				 keycode = kVK_ANSI_J;
+				 break;
+			case (BUTTON)'K':
+				 keycode = kVK_ANSI_K;
+				 break;
+			case (BUTTON)'L':
+				 keycode = kVK_ANSI_L;
+				 break;
+			case (BUTTON)'M':
+				 keycode = kVK_ANSI_M;
+				 break;
+			case (BUTTON)'N':
+				 keycode = kVK_ANSI_N;
+				 break;
+			case (BUTTON)'O':
+				 keycode = kVK_ANSI_O;
+				 break;
+			case (BUTTON)'P':
+				 keycode = kVK_ANSI_P;
+				 break;
+			case (BUTTON)'Q':
+				 keycode = kVK_ANSI_Q;
+				 break;
+			case (BUTTON)'R':
+				 keycode = kVK_ANSI_R;
+				 break;
+			case (BUTTON)'S':
+				 keycode = kVK_ANSI_S;
+				 break;
+			case (BUTTON)'T':
+				 keycode = kVK_ANSI_T;
+				 break;
+			case (BUTTON)'U':
+				 keycode = kVK_ANSI_U;
+				 break;
+			case (BUTTON)'V':
+				 keycode = kVK_ANSI_V;
+				 break;
+			case (BUTTON)'W':
+				 keycode = kVK_ANSI_W;
+				 break;
+			case (BUTTON)'X':
+				 keycode = kVK_ANSI_X;
+				 break;
+			case (BUTTON)'Y':
+				 keycode = kVK_ANSI_Y;
+				 break;
+			case (BUTTON)'Z':
+				 keycode = kVK_ANSI_Z;
+				 break;
 #endif // __APPLE__
 					
 					
