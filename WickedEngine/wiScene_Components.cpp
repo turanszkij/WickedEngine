@@ -806,6 +806,14 @@ namespace wi::scene
 				}
 			}
 		}
+		
+#ifdef __APPLE__
+		if (position_format == Vertex_POS32::FORMAT)
+		{
+			// Apple Metal API can't do rgb32float format, so I add a wasted alpha channel for these cases:
+			position_format = Vertex_POS32W::FORMAT;
+		}
+#endif // __APPLE__
 
 		// Determine UV range for normalization:
 		size_t uv_stride = sizeof(Vertex_UVS);

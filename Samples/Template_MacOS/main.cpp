@@ -41,17 +41,20 @@ int main( int argc, char* argv[] )
 	// The shader binary path is set to source path because that is a writeable folder on Mac OS
 	wi::renderer::SetShaderPath(wi::renderer::GetShaderSourcePath() + "metal/");
 	
-	wi::initializer::InitializeComponentsImmediate();
+	//wi::initializer::InitializeComponentsImmediate();
 	wi::RenderPath3D path;
 	application.ActivatePath(&path);
 	auto& cam = wi::scene::GetCamera();
 	cam.CreatePerspective(application.canvas.width, application.canvas.height, 0.01f, 1000.0f);
-	cam.Eye = XMFLOAT3(0, 1, -3);
+	cam.Eye = XMFLOAT3(0, 1.8f, -6);
 	cam.UpdateCamera();
 	auto& scene = wi::scene::GetScene();
 	scene.weather.ambient = XMFLOAT3(0.5f, 0.5f, 0.5f);
-	scene.Entity_CreateCube("cube");
-	//wi::scene::LoadModel("/Users/turanszkij/PROJECTS/WickedEngine/Content/models/Sponza/Sponza.wiscene");
+	
+	//wi::ecs::Entity entity = scene.Entity_CreateCube("cube");
+	
+	wi::scene::LoadModel("/Users/turanszkij/PROJECTS/WickedEngine/Content/models/Sponza/Sponza.wiscene");
+	
 	wi::renderer::SetOcclusionCullingEnabled(false);
 	wi::renderer::SetToDrawGridHelper(true);
 	//wi::profiler::SetEnabled(true);
@@ -63,10 +66,10 @@ int main( int argc, char* argv[] )
 	//sprite.params.corners_rounding[0].radius = 40;
 	//path.AddSprite(&sprite);
 	
-	wi::gui::ColorPicker colorpicker;
-	colorpicker.Create("Color");
-	colorpicker.SetPos(XMFLOAT2(50,100));
-	path.GetGUI().AddWidget(&colorpicker);
+	//wi::gui::ColorPicker colorpicker;
+	//colorpicker.Create("Color");
+	//colorpicker.SetPos(XMFLOAT2(50,100));
+	//path.GetGUI().AddWidget(&colorpicker);
 	
 	//application.Run();
 	//wi::lua::RunFile("/Users/turanszkij/PROJECTS/WickedEngine/Content/scripts/character_controller/character_controller.lua");

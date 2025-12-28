@@ -280,6 +280,425 @@
 /* Begin PBXFileReference section */
 		1E7929892EFE75BA00B9E35C /* wiAppleHelper.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = wiAppleHelper.mm; sourceTree = "<group>"; };
 		1E79298B2EFE76C500B9E35C /* wiAppleHelper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = wiAppleHelper.h; sourceTree = "<group>"; };
+		1ED576B82F0115B40032621C /* bcn_common_api.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = bcn_common_api.h; sourceTree = "<group>"; };
+		1ED576B92F0115B40032621C /* bcn_common_kernel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = bcn_common_kernel.h; sourceTree = "<group>"; };
+		1ED576BA2F0115B40032621C /* common_def.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = common_def.h; sourceTree = "<group>"; };
+		1ED576BC2F0115B40032621C /* ffx_a.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ffx_a.h; sourceTree = "<group>"; };
+		1ED576BD2F0115B40032621C /* ffx_fsr1.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ffx_fsr1.h; sourceTree = "<group>"; };
+		1ED576BF2F0115B40032621C /* ffx_common_types.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ffx_common_types.h; sourceTree = "<group>"; };
+		1ED576C02F0115B40032621C /* ffx_core.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ffx_core.h; sourceTree = "<group>"; };
+		1ED576C12F0115B40032621C /* ffx_core_cpu.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ffx_core_cpu.h; sourceTree = "<group>"; };
+		1ED576C22F0115B40032621C /* ffx_core_gpu_common.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ffx_core_gpu_common.h; sourceTree = "<group>"; };
+		1ED576C32F0115B40032621C /* ffx_core_gpu_common_half.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ffx_core_gpu_common_half.h; sourceTree = "<group>"; };
+		1ED576C42F0115B40032621C /* ffx_core_hlsl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ffx_core_hlsl.h; sourceTree = "<group>"; };
+		1ED576C52F0115B40032621C /* ffx_core_portability.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ffx_core_portability.h; sourceTree = "<group>"; };
+		1ED576C62F0115B40032621C /* ffx_fsr1.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ffx_fsr1.h; sourceTree = "<group>"; };
+		1ED576C72F0115B40032621C /* ffx_fsr2_accumulate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ffx_fsr2_accumulate.h; sourceTree = "<group>"; };
+		1ED576C82F0115B40032621C /* ffx_fsr2_accumulate_pass.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = ffx_fsr2_accumulate_pass.hlsl; sourceTree = "<group>"; };
+		1ED576C92F0115B40032621C /* ffx_fsr2_autogen_reactive_pass.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = ffx_fsr2_autogen_reactive_pass.hlsl; sourceTree = "<group>"; };
+		1ED576CA2F0115B40032621C /* ffx_fsr2_callbacks_hlsl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ffx_fsr2_callbacks_hlsl.h; sourceTree = "<group>"; };
+		1ED576CB2F0115B40032621C /* ffx_fsr2_common.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ffx_fsr2_common.h; sourceTree = "<group>"; };
+		1ED576CC2F0115B40032621C /* ffx_fsr2_compute_luminance_pyramid.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ffx_fsr2_compute_luminance_pyramid.h; sourceTree = "<group>"; };
+		1ED576CD2F0115B40032621C /* ffx_fsr2_compute_luminance_pyramid_pass.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = ffx_fsr2_compute_luminance_pyramid_pass.hlsl; sourceTree = "<group>"; };
+		1ED576CE2F0115B40032621C /* ffx_fsr2_depth_clip.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ffx_fsr2_depth_clip.h; sourceTree = "<group>"; };
+		1ED576CF2F0115B40032621C /* ffx_fsr2_depth_clip_pass.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = ffx_fsr2_depth_clip_pass.hlsl; sourceTree = "<group>"; };
+		1ED576D02F0115B40032621C /* ffx_fsr2_lock.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ffx_fsr2_lock.h; sourceTree = "<group>"; };
+		1ED576D12F0115B40032621C /* ffx_fsr2_lock_pass.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = ffx_fsr2_lock_pass.hlsl; sourceTree = "<group>"; };
+		1ED576D22F0115B40032621C /* ffx_fsr2_postprocess_lock_status.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ffx_fsr2_postprocess_lock_status.h; sourceTree = "<group>"; };
+		1ED576D32F0115B40032621C /* ffx_fsr2_prepare_input_color.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ffx_fsr2_prepare_input_color.h; sourceTree = "<group>"; };
+		1ED576D42F0115B40032621C /* ffx_fsr2_prepare_input_color_pass.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = ffx_fsr2_prepare_input_color_pass.hlsl; sourceTree = "<group>"; };
+		1ED576D52F0115B40032621C /* ffx_fsr2_rcas.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ffx_fsr2_rcas.h; sourceTree = "<group>"; };
+		1ED576D62F0115B40032621C /* ffx_fsr2_rcas_pass.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = ffx_fsr2_rcas_pass.hlsl; sourceTree = "<group>"; };
+		1ED576D72F0115B40032621C /* ffx_fsr2_reconstruct_dilated_velocity_and_previous_depth.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ffx_fsr2_reconstruct_dilated_velocity_and_previous_depth.h; sourceTree = "<group>"; };
+		1ED576D82F0115B40032621C /* ffx_fsr2_reconstruct_previous_depth_pass.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = ffx_fsr2_reconstruct_previous_depth_pass.hlsl; sourceTree = "<group>"; };
+		1ED576D92F0115B40032621C /* ffx_fsr2_reproject.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ffx_fsr2_reproject.h; sourceTree = "<group>"; };
+		1ED576DA2F0115B40032621C /* ffx_fsr2_resources.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ffx_fsr2_resources.h; sourceTree = "<group>"; };
+		1ED576DB2F0115B40032621C /* ffx_fsr2_sample.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ffx_fsr2_sample.h; sourceTree = "<group>"; };
+		1ED576DC2F0115B40032621C /* ffx_fsr2_upsample.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ffx_fsr2_upsample.h; sourceTree = "<group>"; };
+		1ED576DD2F0115B40032621C /* ffx_spd.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ffx_spd.h; sourceTree = "<group>"; };
+		1ED576DF2F0115B40032621C /* ffx_denoiser_shadows_filter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ffx_denoiser_shadows_filter.h; sourceTree = "<group>"; };
+		1ED576E02F0115B40032621C /* ffx_denoiser_shadows_prepare.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ffx_denoiser_shadows_prepare.h; sourceTree = "<group>"; };
+		1ED576E12F0115B40032621C /* ffx_denoiser_shadows_tileclassification.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ffx_denoiser_shadows_tileclassification.h; sourceTree = "<group>"; };
+		1ED576E22F0115B40032621C /* ffx_denoiser_shadows_util.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ffx_denoiser_shadows_util.h; sourceTree = "<group>"; };
+		1ED576E42F0115B40032621C /* aerialPerspectiveCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = aerialPerspectiveCS.hlsl; sourceTree = "<group>"; };
+		1ED576E52F0115B40032621C /* aerialPerspectiveCS_capture.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = aerialPerspectiveCS_capture.hlsl; sourceTree = "<group>"; };
+		1ED576E62F0115B40032621C /* aerialPerspectiveCS_capture_MSAA.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = aerialPerspectiveCS_capture_MSAA.hlsl; sourceTree = "<group>"; };
+		1ED576E72F0115B40032621C /* bc6h.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = bc6h.hlsli; sourceTree = "<group>"; };
+		1ED576E82F0115B40032621C /* bitonicSortHF.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = bitonicSortHF.hlsli; sourceTree = "<group>"; };
+		1ED576E92F0115B40032621C /* BlockCompress.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = BlockCompress.hlsli; sourceTree = "<group>"; };
+		1ED576EA2F0115B40032621C /* blockcompressCS_BC1.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = blockcompressCS_BC1.hlsl; sourceTree = "<group>"; };
+		1ED576EB2F0115B40032621C /* blockcompressCS_BC3.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = blockcompressCS_BC3.hlsl; sourceTree = "<group>"; };
+		1ED576EC2F0115B40032621C /* blockcompressCS_BC4.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = blockcompressCS_BC4.hlsl; sourceTree = "<group>"; };
+		1ED576ED2F0115B40032621C /* blockcompressCS_BC5.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = blockcompressCS_BC5.hlsl; sourceTree = "<group>"; };
+		1ED576EE2F0115B40032621C /* blockcompressCS_BC6H.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = blockcompressCS_BC6H.hlsl; sourceTree = "<group>"; };
+		1ED576EF2F0115B40032621C /* blockcompressCS_BC6H_cubemap.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = blockcompressCS_BC6H_cubemap.hlsl; sourceTree = "<group>"; };
+		1ED576F02F0115B40032621C /* bloomseparateCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = bloomseparateCS.hlsl; sourceTree = "<group>"; };
+		1ED576F12F0115B40032621C /* blur_bilateral_float1CS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = blur_bilateral_float1CS.hlsl; sourceTree = "<group>"; };
+		1ED576F22F0115B40032621C /* blur_bilateral_float4CS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = blur_bilateral_float4CS.hlsl; sourceTree = "<group>"; };
+		1ED576F32F0115B40032621C /* blur_bilateral_wide_float1CS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = blur_bilateral_wide_float1CS.hlsl; sourceTree = "<group>"; };
+		1ED576F42F0115B40032621C /* blur_bilateral_wide_float4CS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = blur_bilateral_wide_float4CS.hlsl; sourceTree = "<group>"; };
+		1ED576F52F0115B40032621C /* blur_gaussian_float1CS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = blur_gaussian_float1CS.hlsl; sourceTree = "<group>"; };
+		1ED576F62F0115B40032621C /* blur_gaussian_float4CS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = blur_gaussian_float4CS.hlsl; sourceTree = "<group>"; };
+		1ED576F72F0115B40032621C /* blur_gaussian_wide_float1CS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = blur_gaussian_wide_float1CS.hlsl; sourceTree = "<group>"; };
+		1ED576F82F0115B40032621C /* blur_gaussian_wide_float4CS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = blur_gaussian_wide_float4CS.hlsl; sourceTree = "<group>"; };
+		1ED576F92F0115B40032621C /* brdf.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = brdf.hlsli; sourceTree = "<group>"; };
+		1ED576FA2F0115B40032621C /* bvh_hierarchyCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = bvh_hierarchyCS.hlsl; sourceTree = "<group>"; };
+		1ED576FB2F0115B40032621C /* bvh_primitivesCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = bvh_primitivesCS.hlsl; sourceTree = "<group>"; };
+		1ED576FC2F0115B40032621C /* bvh_propagateaabbCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = bvh_propagateaabbCS.hlsl; sourceTree = "<group>"; };
+		1ED576FD2F0115B40032621C /* capsuleShadowHF.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = capsuleShadowHF.hlsli; sourceTree = "<group>"; };
+		1ED576FE2F0115B40032621C /* captureImpostorPS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = captureImpostorPS.hlsl; sourceTree = "<group>"; };
+		1ED576FF2F0115B40032621C /* causticsCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = causticsCS.hlsl; sourceTree = "<group>"; };
+		1ED577002F0115B40032621C /* chromatic_aberrationCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = chromatic_aberrationCS.hlsl; sourceTree = "<group>"; };
+		1ED577012F0115B40032621C /* circle.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = circle.hlsli; sourceTree = "<group>"; };
+		1ED577022F0115B40032621C /* circlePS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = circlePS.hlsl; sourceTree = "<group>"; };
+		1ED577032F0115B40032621C /* ColorSpaceUtility.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = ColorSpaceUtility.hlsli; sourceTree = "<group>"; };
+		1ED577042F0115B40032621C /* cone.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = cone.hlsli; sourceTree = "<group>"; };
+		1ED577052F0115B40032621C /* copyDepthPS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = copyDepthPS.hlsl; sourceTree = "<group>"; };
+		1ED577062F0115B40032621C /* copyStencilBitPS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = copyStencilBitPS.hlsl; sourceTree = "<group>"; };
+		1ED577072F0115B40032621C /* copytexture2D_float4_borderexpandCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = copytexture2D_float4_borderexpandCS.hlsl; sourceTree = "<group>"; };
+		1ED577082F0115B40032621C /* copytexture2D_float4CS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = copytexture2D_float4CS.hlsl; sourceTree = "<group>"; };
+		1ED577092F0115B40032621C /* crt_screenCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = crt_screenCS.hlsl; sourceTree = "<group>"; };
+		1ED5770A2F0115B40032621C /* cube.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = cube.hlsli; sourceTree = "<group>"; };
+		1ED5770B2F0115B40032621C /* cubeMapPS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = cubeMapPS.hlsl; sourceTree = "<group>"; };
+		1ED5770C2F0115B40032621C /* cullingShaderHF.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = cullingShaderHF.hlsli; sourceTree = "<group>"; };
+		1ED5770D2F0115B40032621C /* cylinder.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = cylinder.hlsli; sourceTree = "<group>"; };
+		1ED5770E2F0115B40032621C /* ddgi_debugPS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = ddgi_debugPS.hlsl; sourceTree = "<group>"; };
+		1ED5770F2F0115B40032621C /* ddgi_debugVS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = ddgi_debugVS.hlsl; sourceTree = "<group>"; };
+		1ED577102F0115B40032621C /* ddgi_indirectprepareCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = ddgi_indirectprepareCS.hlsl; sourceTree = "<group>"; };
+		1ED577112F0115B40032621C /* ddgi_rayallocationCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = ddgi_rayallocationCS.hlsl; sourceTree = "<group>"; };
+		1ED577122F0115B40032621C /* ddgi_raytraceCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = ddgi_raytraceCS.hlsl; sourceTree = "<group>"; };
+		1ED577132F0115B40032621C /* ddgi_raytraceCS_rtapi.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = ddgi_raytraceCS_rtapi.hlsl; sourceTree = "<group>"; };
+		1ED577142F0115B40032621C /* ddgi_updateCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = ddgi_updateCS.hlsl; sourceTree = "<group>"; };
+		1ED577152F0115B40032621C /* ddgi_updateCS_depth.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = ddgi_updateCS_depth.hlsl; sourceTree = "<group>"; };
+		1ED577162F0115B40032621C /* depth_pyramidCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = depth_pyramidCS.hlsl; sourceTree = "<group>"; };
+		1ED577172F0115B40032621C /* depth_reprojectCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = depth_reprojectCS.hlsl; sourceTree = "<group>"; };
+		1ED577182F0115B40032621C /* depthoffield_mainCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = depthoffield_mainCS.hlsl; sourceTree = "<group>"; };
+		1ED577192F0115B40032621C /* depthoffield_mainCS_cheap.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = depthoffield_mainCS_cheap.hlsl; sourceTree = "<group>"; };
+		1ED5771A2F0115B40032621C /* depthoffield_mainCS_earlyexit.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = depthoffield_mainCS_earlyexit.hlsl; sourceTree = "<group>"; };
+		1ED5771B2F0115B40032621C /* depthoffield_neighborhoodMaxCOCCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = depthoffield_neighborhoodMaxCOCCS.hlsl; sourceTree = "<group>"; };
+		1ED5771C2F0115B40032621C /* depthoffield_postfilterCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = depthoffield_postfilterCS.hlsl; sourceTree = "<group>"; };
+		1ED5771D2F0115B40032621C /* depthoffield_prepassCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = depthoffield_prepassCS.hlsl; sourceTree = "<group>"; };
+		1ED5771E2F0115B40032621C /* depthoffield_prepassCS_earlyexit.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = depthoffield_prepassCS_earlyexit.hlsl; sourceTree = "<group>"; };
+		1ED5771F2F0115B40032621C /* depthoffield_tileMaxCOC_horizontalCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = depthoffield_tileMaxCOC_horizontalCS.hlsl; sourceTree = "<group>"; };
+		1ED577202F0115B40032621C /* depthoffield_tileMaxCOC_verticalCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = depthoffield_tileMaxCOC_verticalCS.hlsl; sourceTree = "<group>"; };
+		1ED577212F0115B40032621C /* depthoffield_upsampleCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = depthoffield_upsampleCS.hlsl; sourceTree = "<group>"; };
+		1ED577222F0115B40032621C /* depthOfFieldHF.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = depthOfFieldHF.hlsli; sourceTree = "<group>"; };
+		1ED577232F0115B40032621C /* downsample4xCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = downsample4xCS.hlsl; sourceTree = "<group>"; };
+		1ED577242F0115B40032621C /* downsampleDepthBuffer4xPS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = downsampleDepthBuffer4xPS.hlsl; sourceTree = "<group>"; };
+		1ED577252F0115B40032621C /* emittedparticle_emitCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = emittedparticle_emitCS.hlsl; sourceTree = "<group>"; };
+		1ED577262F0115B40032621C /* emittedparticle_emitCS_FROMMESH.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = emittedparticle_emitCS_FROMMESH.hlsl; sourceTree = "<group>"; };
+		1ED577272F0115B40032621C /* emittedparticle_emitCS_volume.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = emittedparticle_emitCS_volume.hlsl; sourceTree = "<group>"; };
+		1ED577282F0115B40032621C /* emittedparticle_finishUpdateCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = emittedparticle_finishUpdateCS.hlsl; sourceTree = "<group>"; };
+		1ED577292F0115B40032621C /* emittedparticle_kickoffUpdateCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = emittedparticle_kickoffUpdateCS.hlsl; sourceTree = "<group>"; };
+		1ED5772A2F0115B40032621C /* emittedparticle_simulateCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = emittedparticle_simulateCS.hlsl; sourceTree = "<group>"; };
+		1ED5772B2F0115B40032621C /* emittedparticle_simulateCS_DEPTHCOLLISIONS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = emittedparticle_simulateCS_DEPTHCOLLISIONS.hlsl; sourceTree = "<group>"; };
+		1ED5772C2F0115B40032621C /* emittedparticle_simulateCS_SORTING.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = emittedparticle_simulateCS_SORTING.hlsl; sourceTree = "<group>"; };
+		1ED5772D2F0115B40032621C /* emittedparticle_simulateCS_SORTING_DEPTHCOLLISIONS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = emittedparticle_simulateCS_SORTING_DEPTHCOLLISIONS.hlsl; sourceTree = "<group>"; };
+		1ED5772E2F0115B40032621C /* emittedparticle_sphbinningCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = emittedparticle_sphbinningCS.hlsl; sourceTree = "<group>"; };
+		1ED5772F2F0115B40032621C /* emittedparticle_sphcellallocationCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = emittedparticle_sphcellallocationCS.hlsl; sourceTree = "<group>"; };
+		1ED577302F0115B40032621C /* emittedparticle_sphdensityCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = emittedparticle_sphdensityCS.hlsl; sourceTree = "<group>"; };
+		1ED577312F0115B40032621C /* emittedparticle_sphforceCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = emittedparticle_sphforceCS.hlsl; sourceTree = "<group>"; };
+		1ED577322F0115B40032621C /* emittedparticle_sphpartitionCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = emittedparticle_sphpartitionCS.hlsl; sourceTree = "<group>"; };
+		1ED577332F0115B40032621C /* emittedparticleHF.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = emittedparticleHF.hlsli; sourceTree = "<group>"; };
+		1ED577342F0115B40032621C /* emittedparticleMS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = emittedparticleMS.hlsl; sourceTree = "<group>"; };
+		1ED577352F0115B40032621C /* emittedparticlePS_simple.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = emittedparticlePS_simple.hlsl; sourceTree = "<group>"; };
+		1ED577362F0115B40032621C /* emittedparticlePS_soft.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = emittedparticlePS_soft.hlsl; sourceTree = "<group>"; };
+		1ED577372F0115B40032621C /* emittedparticlePS_soft_distortion.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = emittedparticlePS_soft_distortion.hlsl; sourceTree = "<group>"; };
+		1ED577382F0115B40032621C /* emittedparticlePS_soft_lighting.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = emittedparticlePS_soft_lighting.hlsl; sourceTree = "<group>"; };
+		1ED577392F0115B40032621C /* emittedparticleVS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = emittedparticleVS.hlsl; sourceTree = "<group>"; };
+		1ED5773A2F0115B40032621C /* envMap_skyPS_dynamic.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = envMap_skyPS_dynamic.hlsl; sourceTree = "<group>"; };
+		1ED5773B2F0115B40032621C /* envMap_skyPS_static.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = envMap_skyPS_static.hlsl; sourceTree = "<group>"; };
+		1ED5773C2F0115B40032621C /* envMap_skyVS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = envMap_skyVS.hlsl; sourceTree = "<group>"; };
+		1ED5773D2F0115B40032621C /* envMapPS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = envMapPS.hlsl; sourceTree = "<group>"; };
+		1ED5773E2F0115B40032621C /* envMapVS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = envMapVS.hlsl; sourceTree = "<group>"; };
+		1ED5773F2F0115B40032621C /* extractStencilBitPS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = extractStencilBitPS.hlsl; sourceTree = "<group>"; };
+		1ED577402F0115B40032621C /* fft_512x512_c2c_CS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = fft_512x512_c2c_CS.hlsl; sourceTree = "<group>"; };
+		1ED577412F0115B40032621C /* fft_512x512_c2c_v2_CS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = fft_512x512_c2c_v2_CS.hlsl; sourceTree = "<group>"; };
+		1ED577422F0115B40032621C /* filterEnvMapCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = filterEnvMapCS.hlsl; sourceTree = "<group>"; };
+		1ED577432F0115B40032621C /* fogHF.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = fogHF.hlsli; sourceTree = "<group>"; };
+		1ED577442F0115B40032621C /* fontPS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = fontPS.hlsl; sourceTree = "<group>"; };
+		1ED577452F0115B40032621C /* fontVS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = fontVS.hlsl; sourceTree = "<group>"; };
+		1ED577462F0115B40032621C /* forceFieldPlaneVisualizerVS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = forceFieldPlaneVisualizerVS.hlsl; sourceTree = "<group>"; };
+		1ED577472F0115B40032621C /* forceFieldPointVisualizerVS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = forceFieldPointVisualizerVS.hlsl; sourceTree = "<group>"; };
+		1ED577482F0115B40032621C /* forceFieldVisualizerPS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = forceFieldVisualizerPS.hlsl; sourceTree = "<group>"; };
+		1ED577492F0115B40032621C /* fsr_sharpenCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = fsr_sharpenCS.hlsl; sourceTree = "<group>"; };
+		1ED5774A2F0115B40032621C /* fsr_upscalingCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = fsr_upscalingCS.hlsl; sourceTree = "<group>"; };
+		1ED5774B2F0115B40032621C /* fxaa.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = fxaa.hlsli; sourceTree = "<group>"; };
+		1ED5774C2F0115B40032621C /* fxaaCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = fxaaCS.hlsl; sourceTree = "<group>"; };
+		1ED5774D2F0115B40032621C /* generateMIPChain2DCS_float4.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = generateMIPChain2DCS_float4.hlsl; sourceTree = "<group>"; };
+		1ED5774E2F0115B40032621C /* generateMIPChain3DCS_float4.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = generateMIPChain3DCS_float4.hlsl; sourceTree = "<group>"; };
+		1ED5774F2F0115B40032621C /* generateMIPChainCubeArrayCS_float4.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = generateMIPChainCubeArrayCS_float4.hlsl; sourceTree = "<group>"; };
+		1ED577502F0115B40032621C /* generateMIPChainCubeCS_float4.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = generateMIPChainCubeCS_float4.hlsl; sourceTree = "<group>"; };
+		1ED577512F0115B40032621C /* globals.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = globals.hlsli; sourceTree = "<group>"; };
+		1ED577522F0115B40032621C /* gpusortlib_kickoffSortCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = gpusortlib_kickoffSortCS.hlsl; sourceTree = "<group>"; };
+		1ED577532F0115B40032621C /* gpusortlib_sortCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = gpusortlib_sortCS.hlsl; sourceTree = "<group>"; };
+		1ED577542F0115B40032621C /* gpusortlib_sortInnerCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = gpusortlib_sortInnerCS.hlsl; sourceTree = "<group>"; };
+		1ED577552F0115B40032621C /* gpusortlib_sortStepCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = gpusortlib_sortStepCS.hlsl; sourceTree = "<group>"; };
+		1ED577562F0115B40032621C /* hairparticle_simulateCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = hairparticle_simulateCS.hlsl; sourceTree = "<group>"; };
+		1ED577572F0115B40032621C /* hairparticleHF.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = hairparticleHF.hlsli; sourceTree = "<group>"; };
+		1ED577582F0115B40032621C /* hairparticlePS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = hairparticlePS.hlsl; sourceTree = "<group>"; };
+		1ED577592F0115B40032621C /* hairparticlePS_prepass.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = hairparticlePS_prepass.hlsl; sourceTree = "<group>"; };
+		1ED5775A2F0115B40032621C /* hairparticlePS_prepass_depthonly.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = hairparticlePS_prepass_depthonly.hlsl; sourceTree = "<group>"; };
+		1ED5775B2F0115B40032621C /* hairparticlePS_shadow.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = hairparticlePS_shadow.hlsl; sourceTree = "<group>"; };
+		1ED5775C2F0115B40032621C /* hairparticlePS_simple.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = hairparticlePS_simple.hlsl; sourceTree = "<group>"; };
+		1ED5775D2F0115B40032621C /* hairparticleVS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = hairparticleVS.hlsl; sourceTree = "<group>"; };
+		1ED5775E2F0115B40032621C /* hbaoCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = hbaoCS.hlsl; sourceTree = "<group>"; };
+		1ED5775F2F0115B40032621C /* icosphere.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = icosphere.hlsli; sourceTree = "<group>"; };
+		1ED577602F0115B40032621C /* imageHF.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = imageHF.hlsli; sourceTree = "<group>"; };
+		1ED577612F0115B40032621C /* imagePS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = imagePS.hlsl; sourceTree = "<group>"; };
+		1ED577622F0115B40032621C /* imageVS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = imageVS.hlsl; sourceTree = "<group>"; };
+		1ED577632F0115B40032621C /* impostor_prepareCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = impostor_prepareCS.hlsl; sourceTree = "<group>"; };
+		1ED577642F0115B40032621C /* impostorHF.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = impostorHF.hlsli; sourceTree = "<group>"; };
+		1ED577652F0115B40032621C /* impostorPS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = impostorPS.hlsl; sourceTree = "<group>"; };
+		1ED577662F0115B40032621C /* impostorPS_prepass.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = impostorPS_prepass.hlsl; sourceTree = "<group>"; };
+		1ED577672F0115B40032621C /* impostorPS_prepass_depthonly.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = impostorPS_prepass_depthonly.hlsl; sourceTree = "<group>"; };
+		1ED577682F0115B40032621C /* impostorPS_simple.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = impostorPS_simple.hlsl; sourceTree = "<group>"; };
+		1ED577692F0115B40032621C /* impostorVS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = impostorVS.hlsl; sourceTree = "<group>"; };
+		1ED5776A2F0115B40032621C /* lensFlarePS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = lensFlarePS.hlsl; sourceTree = "<group>"; };
+		1ED5776B2F0115B40032621C /* lensFlareVS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = lensFlareVS.hlsl; sourceTree = "<group>"; };
+		1ED5776C2F0115B40032621C /* lightCullingCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = lightCullingCS.hlsl; sourceTree = "<group>"; };
+		1ED5776D2F0115B40032621C /* lightCullingCS_ADVANCED.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = lightCullingCS_ADVANCED.hlsl; sourceTree = "<group>"; };
+		1ED5776E2F0115B40032621C /* lightCullingCS_ADVANCED_DEBUG.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = lightCullingCS_ADVANCED_DEBUG.hlsl; sourceTree = "<group>"; };
+		1ED5776F2F0115B40032621C /* lightCullingCS_DEBUG.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = lightCullingCS_DEBUG.hlsl; sourceTree = "<group>"; };
+		1ED577702F0115B40032621C /* lightingHF.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = lightingHF.hlsli; sourceTree = "<group>"; };
+		1ED577712F0115B40032621C /* lightmap_expandCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = lightmap_expandCS.hlsl; sourceTree = "<group>"; };
+		1ED577722F0115B40032621C /* lightShaftsCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = lightShaftsCS.hlsl; sourceTree = "<group>"; };
+		1ED577732F0115B40032621C /* lightVisualizerPS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = lightVisualizerPS.hlsl; sourceTree = "<group>"; };
+		1ED577742F0115B40032621C /* lineardepthCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = lineardepthCS.hlsl; sourceTree = "<group>"; };
+		1ED577752F0115B40032621C /* luminancePass1CS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = luminancePass1CS.hlsl; sourceTree = "<group>"; };
+		1ED577762F0115B40032621C /* luminancePass2CS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = luminancePass2CS.hlsl; sourceTree = "<group>"; };
+		1ED577772F0115B40032621C /* mesh_blend_expandCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = mesh_blend_expandCS.hlsl; sourceTree = "<group>"; };
+		1ED577782F0115B40032621C /* mesh_blend_prepareCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = mesh_blend_prepareCS.hlsl; sourceTree = "<group>"; };
+		1ED577792F0115B40032621C /* mesh_blendPS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = mesh_blendPS.hlsl; sourceTree = "<group>"; };
+		1ED5777A2F0115B40032621C /* meshlet_prepareCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = meshlet_prepareCS.hlsl; sourceTree = "<group>"; };
+		1ED5777B2F0115B40032621C /* motionblur_neighborhoodMaxVelocityCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = motionblur_neighborhoodMaxVelocityCS.hlsl; sourceTree = "<group>"; };
+		1ED5777C2F0115B40032621C /* motionblur_tileMaxVelocity_horizontalCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = motionblur_tileMaxVelocity_horizontalCS.hlsl; sourceTree = "<group>"; };
+		1ED5777D2F0115B40032621C /* motionblur_tileMaxVelocity_verticalCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = motionblur_tileMaxVelocity_verticalCS.hlsl; sourceTree = "<group>"; };
+		1ED5777E2F0115B40032621C /* motionblurCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = motionblurCS.hlsl; sourceTree = "<group>"; };
+		1ED5777F2F0115B40032621C /* motionblurCS_cheap.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = motionblurCS_cheap.hlsl; sourceTree = "<group>"; };
+		1ED577802F0115B40032621C /* motionblurCS_earlyexit.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = motionblurCS_earlyexit.hlsl; sourceTree = "<group>"; };
+		1ED577812F0115B40032621C /* msao_blurupsampleCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = msao_blurupsampleCS.hlsl; sourceTree = "<group>"; };
+		1ED577822F0115B40032621C /* msao_blurupsampleCS_blendout.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = msao_blurupsampleCS_blendout.hlsl; sourceTree = "<group>"; };
+		1ED577832F0115B40032621C /* msao_blurupsampleCS_premin.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = msao_blurupsampleCS_premin.hlsl; sourceTree = "<group>"; };
+		1ED577842F0115B40032621C /* msao_blurupsampleCS_premin_blendout.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = msao_blurupsampleCS_premin_blendout.hlsl; sourceTree = "<group>"; };
+		1ED577852F0115B40032621C /* msao_interleaveCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = msao_interleaveCS.hlsl; sourceTree = "<group>"; };
+		1ED577862F0115B40032621C /* msao_preparedepthbuffers1CS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = msao_preparedepthbuffers1CS.hlsl; sourceTree = "<group>"; };
+		1ED577872F0115B40032621C /* msao_preparedepthbuffers2CS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = msao_preparedepthbuffers2CS.hlsl; sourceTree = "<group>"; };
+		1ED577882F0115B40032621C /* msaoCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = msaoCS.hlsl; sourceTree = "<group>"; };
+		1ED577892F0115B40032621C /* normalsfromdepthCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = normalsfromdepthCS.hlsl; sourceTree = "<group>"; };
+		1ED5778A2F0115B40032621C /* objectAS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectAS.hlsl; sourceTree = "<group>"; };
+		1ED5778B2F0115B40032621C /* objectDS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectDS.hlsl; sourceTree = "<group>"; };
+		1ED5778C2F0115B40032621C /* objectDS_prepass.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectDS_prepass.hlsl; sourceTree = "<group>"; };
+		1ED5778D2F0115B40032621C /* objectDS_prepass_alphatest.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectDS_prepass_alphatest.hlsl; sourceTree = "<group>"; };
+		1ED5778E2F0115B40032621C /* objectDS_simple.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectDS_simple.hlsl; sourceTree = "<group>"; };
+		1ED5778F2F0115B40032621C /* objectGS_voxelizer.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectGS_voxelizer.hlsl; sourceTree = "<group>"; };
+		1ED577902F0115B40032621C /* objectHF.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectHF.hlsli; sourceTree = "<group>"; };
+		1ED577912F0115B40032621C /* objectHF_mesh_shading.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectHF_mesh_shading.hlsli; sourceTree = "<group>"; };
+		1ED577922F0115B40032621C /* objectHF_tessellation.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectHF_tessellation.hlsli; sourceTree = "<group>"; };
+		1ED577932F0115B40032621C /* objectHS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectHS.hlsl; sourceTree = "<group>"; };
+		1ED577942F0115B40032621C /* objectHS_prepass.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectHS_prepass.hlsl; sourceTree = "<group>"; };
+		1ED577952F0115B40032621C /* objectHS_prepass_alphatest.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectHS_prepass_alphatest.hlsl; sourceTree = "<group>"; };
+		1ED577962F0115B40032621C /* objectHS_simple.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectHS_simple.hlsl; sourceTree = "<group>"; };
+		1ED577972F0115B40032621C /* objectMS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectMS.hlsl; sourceTree = "<group>"; };
+		1ED577982F0115B40032621C /* objectMS_prepass.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectMS_prepass.hlsl; sourceTree = "<group>"; };
+		1ED577992F0115B40032621C /* objectMS_prepass_alphatest.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectMS_prepass_alphatest.hlsl; sourceTree = "<group>"; };
+		1ED5779A2F0115B40032621C /* objectMS_simple.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectMS_simple.hlsl; sourceTree = "<group>"; };
+		1ED5779B2F0115B40032621C /* objectPS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectPS.hlsl; sourceTree = "<group>"; };
+		1ED5779C2F0115B40032621C /* objectPS_debug.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectPS_debug.hlsl; sourceTree = "<group>"; };
+		1ED5779D2F0115B40032621C /* objectPS_hologram.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectPS_hologram.hlsl; sourceTree = "<group>"; };
+		1ED5779E2F0115B40032621C /* objectPS_paintradius.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectPS_paintradius.hlsl; sourceTree = "<group>"; };
+		1ED5779F2F0115B40032621C /* objectPS_prepass.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectPS_prepass.hlsl; sourceTree = "<group>"; };
+		1ED577A02F0115B40032621C /* objectPS_prepass_alphatest.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectPS_prepass_alphatest.hlsl; sourceTree = "<group>"; };
+		1ED577A12F0115B40032621C /* objectPS_prepass_depthonly.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectPS_prepass_depthonly.hlsl; sourceTree = "<group>"; };
+		1ED577A22F0115B40032621C /* objectPS_prepass_depthonly_alphatest.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectPS_prepass_depthonly_alphatest.hlsl; sourceTree = "<group>"; };
+		1ED577A32F0115B40032621C /* objectPS_simple.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectPS_simple.hlsl; sourceTree = "<group>"; };
+		1ED577A42F0115B40032621C /* objectPS_voxelizer.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectPS_voxelizer.hlsl; sourceTree = "<group>"; };
+		1ED577A52F0115B40032621C /* objectVS_common.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectVS_common.hlsl; sourceTree = "<group>"; };
+		1ED577A62F0115B40032621C /* objectVS_common_tessellation.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectVS_common_tessellation.hlsl; sourceTree = "<group>"; };
+		1ED577A72F0115B40032621C /* objectVS_debug.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectVS_debug.hlsl; sourceTree = "<group>"; };
+		1ED577A82F0115B40032621C /* objectVS_prepass.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectVS_prepass.hlsl; sourceTree = "<group>"; };
+		1ED577A92F0115B40032621C /* objectVS_prepass_alphatest.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectVS_prepass_alphatest.hlsl; sourceTree = "<group>"; };
+		1ED577AA2F0115B40032621C /* objectVS_prepass_alphatest_tessellation.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectVS_prepass_alphatest_tessellation.hlsl; sourceTree = "<group>"; };
+		1ED577AB2F0115B40032621C /* objectVS_prepass_tessellation.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectVS_prepass_tessellation.hlsl; sourceTree = "<group>"; };
+		1ED577AC2F0115B40032621C /* objectVS_simple.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectVS_simple.hlsl; sourceTree = "<group>"; };
+		1ED577AD2F0115B40032621C /* objectVS_simple_tessellation.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectVS_simple_tessellation.hlsl; sourceTree = "<group>"; };
+		1ED577AE2F0115B40032621C /* objectVS_voxelizer.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectVS_voxelizer.hlsl; sourceTree = "<group>"; };
+		1ED577AF2F0115B40032621C /* occludeeVS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = occludeeVS.hlsl; sourceTree = "<group>"; };
+		1ED577B02F0115B40032621C /* oceanSimulatorCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = oceanSimulatorCS.hlsl; sourceTree = "<group>"; };
+		1ED577B12F0115B40032621C /* oceanSurfaceHF.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = oceanSurfaceHF.hlsli; sourceTree = "<group>"; };
+		1ED577B22F0115B40032621C /* oceanSurfacePS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = oceanSurfacePS.hlsl; sourceTree = "<group>"; };
+		1ED577B32F0115B40032621C /* oceanSurfaceSimplePS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = oceanSurfaceSimplePS.hlsl; sourceTree = "<group>"; };
+		1ED577B42F0115B40032621C /* oceanSurfaceVS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = oceanSurfaceVS.hlsl; sourceTree = "<group>"; };
+		1ED577B52F0115B40032621C /* oceanUpdateDisplacementMapCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = oceanUpdateDisplacementMapCS.hlsl; sourceTree = "<group>"; };
+		1ED577B62F0115B40032621C /* oceanUpdateGradientFoldingCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = oceanUpdateGradientFoldingCS.hlsl; sourceTree = "<group>"; };
+		1ED577B72F0115B40032621C /* outlinePS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = outlinePS.hlsl; sourceTree = "<group>"; };
+		1ED577B82F0115B40032621C /* paint_textureCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = paint_textureCS.hlsl; sourceTree = "<group>"; };
+		1ED577B92F0115B40032621C /* paintdecalPS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = paintdecalPS.hlsl; sourceTree = "<group>"; };
+		1ED577BA2F0115B40032621C /* paintdecalVS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = paintdecalVS.hlsl; sourceTree = "<group>"; };
+		1ED577BB2F0115B40032621C /* PixelPacking_R11G11B10.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = PixelPacking_R11G11B10.hlsli; sourceTree = "<group>"; };
+		1ED577BC2F0115B40032621C /* PixelPacking_RGBE.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = PixelPacking_RGBE.hlsli; sourceTree = "<group>"; };
+		1ED577BD2F0115B40032621C /* postprocessVS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = postprocessVS.hlsl; sourceTree = "<group>"; };
+		1ED577BE2F0115B40032621C /* quad.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = quad.hlsli; sourceTree = "<group>"; };
+		1ED577BF2F0115B40032621C /* raytrace_debugbvhPS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = raytrace_debugbvhPS.hlsl; sourceTree = "<group>"; };
+		1ED577C02F0115B40032621C /* raytrace_screenVS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = raytrace_screenVS.hlsl; sourceTree = "<group>"; };
+		1ED577C12F0115B40032621C /* raytraceCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = raytraceCS.hlsl; sourceTree = "<group>"; };
+		1ED577C22F0115B40032621C /* raytraceCS_rtapi.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = raytraceCS_rtapi.hlsl; sourceTree = "<group>"; };
+		1ED577C32F0115B40032621C /* raytracingHF.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = raytracingHF.hlsli; sourceTree = "<group>"; };
+		1ED577C42F0115B40032621C /* renderlightmapPS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = renderlightmapPS.hlsl; sourceTree = "<group>"; };
+		1ED577C52F0115B40032621C /* renderlightmapPS_rtapi.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = renderlightmapPS_rtapi.hlsl; sourceTree = "<group>"; };
+		1ED577C62F0115B40032621C /* renderlightmapVS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = renderlightmapVS.hlsl; sourceTree = "<group>"; };
+		1ED577C72F0115B40032621C /* resolveMSAADepthStencilCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = resolveMSAADepthStencilCS.hlsl; sourceTree = "<group>"; };
+		1ED577C82F0115B40032621C /* rtao_denoise_filterCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = rtao_denoise_filterCS.hlsl; sourceTree = "<group>"; };
+		1ED577C92F0115B40032621C /* rtao_denoise_tileclassificationCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = rtao_denoise_tileclassificationCS.hlsl; sourceTree = "<group>"; };
+		1ED577CA2F0115B40032621C /* rtaoCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = rtaoCS.hlsl; sourceTree = "<group>"; };
+		1ED577CB2F0115B40032621C /* rtdiffuse_spatialCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = rtdiffuse_spatialCS.hlsl; sourceTree = "<group>"; };
+		1ED577CC2F0115B40032621C /* rtdiffuse_temporalCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = rtdiffuse_temporalCS.hlsl; sourceTree = "<group>"; };
+		1ED577CD2F0115B40032621C /* rtdiffuse_upsampleCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = rtdiffuse_upsampleCS.hlsl; sourceTree = "<group>"; };
+		1ED577CE2F0115B40032621C /* rtdiffuseCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = rtdiffuseCS.hlsl; sourceTree = "<group>"; };
+		1ED577CF2F0115B40032621C /* rtreflectionCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = rtreflectionCS.hlsl; sourceTree = "<group>"; };
+		1ED577D02F0115B40032621C /* rtreflectionLIB.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = rtreflectionLIB.hlsl; sourceTree = "<group>"; };
+		1ED577D12F0115B40032621C /* rtshadow_denoise_filterCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = rtshadow_denoise_filterCS.hlsl; sourceTree = "<group>"; };
+		1ED577D22F0115B40032621C /* rtshadow_denoise_temporalCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = rtshadow_denoise_temporalCS.hlsl; sourceTree = "<group>"; };
+		1ED577D32F0115B40032621C /* rtshadow_denoise_tileclassificationCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = rtshadow_denoise_tileclassificationCS.hlsl; sourceTree = "<group>"; };
+		1ED577D42F0115B40032621C /* rtshadow_upsampleCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = rtshadow_upsampleCS.hlsl; sourceTree = "<group>"; };
+		1ED577D52F0115B40032621C /* rtshadowCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = rtshadowCS.hlsl; sourceTree = "<group>"; };
+		1ED577D62F0115B40032621C /* screenspaceshadowCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = screenspaceshadowCS.hlsl; sourceTree = "<group>"; };
+		1ED577D72F0115B40032621C /* screenVS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = screenVS.hlsl; sourceTree = "<group>"; };
+		1ED577D82F0115B40032621C /* SH_Lite.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = SH_Lite.hlsli; sourceTree = "<group>"; };
+		1ED577D92F0115B40032621C /* ShaderInterop.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderInterop.h; sourceTree = "<group>"; };
+		1ED577DA2F0115B40032621C /* ShaderInterop_BVH.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderInterop_BVH.h; sourceTree = "<group>"; };
+		1ED577DB2F0115B40032621C /* ShaderInterop_DDGI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderInterop_DDGI.h; sourceTree = "<group>"; };
+		1ED577DC2F0115B40032621C /* ShaderInterop_EmittedParticle.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderInterop_EmittedParticle.h; sourceTree = "<group>"; };
+		1ED577DD2F0115B40032621C /* ShaderInterop_FFTGenerator.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderInterop_FFTGenerator.h; sourceTree = "<group>"; };
+		1ED577DE2F0115B40032621C /* ShaderInterop_Font.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderInterop_Font.h; sourceTree = "<group>"; };
+		1ED577DF2F0115B40032621C /* ShaderInterop_FSR2.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderInterop_FSR2.h; sourceTree = "<group>"; };
+		1ED577E02F0115B40032621C /* ShaderInterop_GPUSortLib.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderInterop_GPUSortLib.h; sourceTree = "<group>"; };
+		1ED577E12F0115B40032621C /* ShaderInterop_HairParticle.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderInterop_HairParticle.h; sourceTree = "<group>"; };
+		1ED577E22F0115B40032621C /* ShaderInterop_Image.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderInterop_Image.h; sourceTree = "<group>"; };
+		1ED577E32F0115B40032621C /* ShaderInterop_Ocean.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderInterop_Ocean.h; sourceTree = "<group>"; };
+		1ED577E42F0115B40032621C /* ShaderInterop_Postprocess.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderInterop_Postprocess.h; sourceTree = "<group>"; };
+		1ED577E52F0115B40032621C /* ShaderInterop_Raytracing.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderInterop_Raytracing.h; sourceTree = "<group>"; };
+		1ED577E62F0115B40032621C /* ShaderInterop_Renderer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderInterop_Renderer.h; sourceTree = "<group>"; };
+		1ED577E72F0115B40032621C /* ShaderInterop_SurfelGI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderInterop_SurfelGI.h; sourceTree = "<group>"; };
+		1ED577E82F0115B40032621C /* ShaderInterop_Terrain.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderInterop_Terrain.h; sourceTree = "<group>"; };
+		1ED577E92F0115B40032621C /* ShaderInterop_VoxelGrid.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderInterop_VoxelGrid.h; sourceTree = "<group>"; };
+		1ED577EA2F0115B40032621C /* ShaderInterop_VXGI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderInterop_VXGI.h; sourceTree = "<group>"; };
+		1ED577EB2F0115B40032621C /* ShaderInterop_Weather.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderInterop_Weather.h; sourceTree = "<group>"; };
+		1ED577EC2F0115B40032621C /* Shaders_SOURCE.vcxitems */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Shaders_SOURCE.vcxitems; sourceTree = "<group>"; };
+		1ED577ED2F0115B40032621C /* Shaders_SOURCE.vcxitems.filters */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Shaders_SOURCE.vcxitems.filters; sourceTree = "<group>"; };
+		1ED577EE2F0115B40032621C /* shadingHF.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = shadingHF.hlsli; sourceTree = "<group>"; };
+		1ED577EF2F0115B40032621C /* shadingRateClassificationCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = shadingRateClassificationCS.hlsl; sourceTree = "<group>"; };
+		1ED577F02F0115B40032621C /* shadingRateClassificationCS_DEBUG.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = shadingRateClassificationCS_DEBUG.hlsl; sourceTree = "<group>"; };
+		1ED577F12F0115B40032621C /* shadowHF.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = shadowHF.hlsli; sourceTree = "<group>"; };
+		1ED577F22F0115B40032621C /* shadowMS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = shadowMS.hlsl; sourceTree = "<group>"; };
+		1ED577F32F0115B40032621C /* shadowMS_alphatest.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = shadowMS_alphatest.hlsl; sourceTree = "<group>"; };
+		1ED577F42F0115B40032621C /* shadowMS_transparent.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = shadowMS_transparent.hlsl; sourceTree = "<group>"; };
+		1ED577F52F0115B40032621C /* shadowPS_alphatest.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = shadowPS_alphatest.hlsl; sourceTree = "<group>"; };
+		1ED577F62F0115B40032621C /* shadowPS_transparent.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = shadowPS_transparent.hlsl; sourceTree = "<group>"; };
+		1ED577F72F0115B40032621C /* shadowPS_water.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = shadowPS_water.hlsl; sourceTree = "<group>"; };
+		1ED577F82F0115B40032621C /* shadowVS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = shadowVS.hlsl; sourceTree = "<group>"; };
+		1ED577F92F0115B40032621C /* shadowVS_alphatest.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = shadowVS_alphatest.hlsl; sourceTree = "<group>"; };
+		1ED577FA2F0115B40032621C /* shadowVS_transparent.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = shadowVS_transparent.hlsl; sourceTree = "<group>"; };
+		1ED577FB2F0115B40032621C /* sharpenCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = sharpenCS.hlsl; sourceTree = "<group>"; };
+		1ED577FC2F0115B40032621C /* skinningCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = skinningCS.hlsl; sourceTree = "<group>"; };
+		1ED577FD2F0115B40032621C /* skyAtmosphere.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = skyAtmosphere.hlsli; sourceTree = "<group>"; };
+		1ED577FE2F0115B40032621C /* skyAtmosphere_cameraVolumeLutCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = skyAtmosphere_cameraVolumeLutCS.hlsl; sourceTree = "<group>"; };
+		1ED577FF2F0115B40032621C /* skyAtmosphere_multiScatteredLuminanceLutCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = skyAtmosphere_multiScatteredLuminanceLutCS.hlsl; sourceTree = "<group>"; };
+		1ED578002F0115B40032621C /* skyAtmosphere_skyLuminanceLutCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = skyAtmosphere_skyLuminanceLutCS.hlsl; sourceTree = "<group>"; };
+		1ED578012F0115B40032621C /* skyAtmosphere_skyViewLutCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = skyAtmosphere_skyViewLutCS.hlsl; sourceTree = "<group>"; };
+		1ED578022F0115B40032621C /* skyAtmosphere_transmittanceLutCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = skyAtmosphere_transmittanceLutCS.hlsl; sourceTree = "<group>"; };
+		1ED578032F0115B40032621C /* skyHF.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = skyHF.hlsli; sourceTree = "<group>"; };
+		1ED578042F0115B40032621C /* skyPS_dynamic.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = skyPS_dynamic.hlsl; sourceTree = "<group>"; };
+		1ED578052F0115B40032621C /* skyPS_static.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = skyPS_static.hlsl; sourceTree = "<group>"; };
+		1ED578062F0115B40032621C /* skyVS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = skyVS.hlsl; sourceTree = "<group>"; };
+		1ED578072F0115B40032621C /* sphereVS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = sphereVS.hlsl; sourceTree = "<group>"; };
+		1ED578082F0115B40032621C /* ssaoCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = ssaoCS.hlsl; sourceTree = "<group>"; };
+		1ED578092F0115B40032621C /* ssgi_deinterleaveCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = ssgi_deinterleaveCS.hlsl; sourceTree = "<group>"; };
+		1ED5780A2F0115B40032621C /* ssgi_upsampleCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = ssgi_upsampleCS.hlsl; sourceTree = "<group>"; };
+		1ED5780B2F0115B40032621C /* ssgiCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = ssgiCS.hlsl; sourceTree = "<group>"; };
+		1ED5780C2F0115B40032621C /* ssr_depthHierarchyCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = ssr_depthHierarchyCS.hlsl; sourceTree = "<group>"; };
+		1ED5780D2F0115B40032621C /* ssr_raytraceCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = ssr_raytraceCS.hlsl; sourceTree = "<group>"; };
+		1ED5780E2F0115B40032621C /* ssr_raytraceCS_cheap.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = ssr_raytraceCS_cheap.hlsl; sourceTree = "<group>"; };
+		1ED5780F2F0115B40032621C /* ssr_raytraceCS_earlyexit.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = ssr_raytraceCS_earlyexit.hlsl; sourceTree = "<group>"; };
+		1ED578102F0115B40032621C /* ssr_resolveCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = ssr_resolveCS.hlsl; sourceTree = "<group>"; };
+		1ED578112F0115B40032621C /* ssr_temporalCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = ssr_temporalCS.hlsl; sourceTree = "<group>"; };
+		1ED578122F0115B40032621C /* ssr_tileMaxRoughness_horizontalCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = ssr_tileMaxRoughness_horizontalCS.hlsl; sourceTree = "<group>"; };
+		1ED578132F0115B40032621C /* ssr_tileMaxRoughness_verticalCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = ssr_tileMaxRoughness_verticalCS.hlsl; sourceTree = "<group>"; };
+		1ED578142F0115B40032621C /* ssr_upsampleCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = ssr_upsampleCS.hlsl; sourceTree = "<group>"; };
+		1ED578152F0115B40032621C /* stochasticSSRHF.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = stochasticSSRHF.hlsli; sourceTree = "<group>"; };
+		1ED578162F0115B40032621C /* sunPS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = sunPS.hlsl; sourceTree = "<group>"; };
+		1ED578172F0115B40032621C /* surfaceHF.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = surfaceHF.hlsli; sourceTree = "<group>"; };
+		1ED578182F0115B40032621C /* surfel_binningCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = surfel_binningCS.hlsl; sourceTree = "<group>"; };
+		1ED578192F0115B40032621C /* surfel_coverageCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = surfel_coverageCS.hlsl; sourceTree = "<group>"; };
+		1ED5781A2F0115B40032621C /* surfel_gridoffsetsCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = surfel_gridoffsetsCS.hlsl; sourceTree = "<group>"; };
+		1ED5781B2F0115B40032621C /* surfel_indirectprepareCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = surfel_indirectprepareCS.hlsl; sourceTree = "<group>"; };
+		1ED5781C2F0115B40032621C /* surfel_integrateCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = surfel_integrateCS.hlsl; sourceTree = "<group>"; };
+		1ED5781D2F0115B40032621C /* surfel_raytraceCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = surfel_raytraceCS.hlsl; sourceTree = "<group>"; };
+		1ED5781E2F0115B40032621C /* surfel_raytraceCS_rtapi.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = surfel_raytraceCS_rtapi.hlsl; sourceTree = "<group>"; };
+		1ED5781F2F0115B40032621C /* surfel_updateCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = surfel_updateCS.hlsl; sourceTree = "<group>"; };
+		1ED578202F0115B40032621C /* temporalaaCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = temporalaaCS.hlsl; sourceTree = "<group>"; };
+		1ED578212F0115B40032621C /* terrainVirtualTextureUpdateCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = terrainVirtualTextureUpdateCS.hlsl; sourceTree = "<group>"; };
+		1ED578222F0115B40032621C /* terrainVirtualTextureUpdateCS_emissivemap.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = terrainVirtualTextureUpdateCS_emissivemap.hlsl; sourceTree = "<group>"; };
+		1ED578232F0115B40032621C /* terrainVirtualTextureUpdateCS_normalmap.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = terrainVirtualTextureUpdateCS_normalmap.hlsl; sourceTree = "<group>"; };
+		1ED578242F0115B40032621C /* terrainVirtualTextureUpdateCS_surfacemap.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = terrainVirtualTextureUpdateCS_surfacemap.hlsl; sourceTree = "<group>"; };
+		1ED578252F0115B40032621C /* tonemapCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = tonemapCS.hlsl; sourceTree = "<group>"; };
+		1ED578262F0115B40032621C /* trailPS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = trailPS.hlsl; sourceTree = "<group>"; };
+		1ED578272F0115B40032621C /* trailVS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = trailVS.hlsl; sourceTree = "<group>"; };
+		1ED578282F0115B40032621C /* underwaterCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = underwaterCS.hlsl; sourceTree = "<group>"; };
+		1ED578292F0115B40032621C /* upsample_bilateral_float1CS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = upsample_bilateral_float1CS.hlsl; sourceTree = "<group>"; };
+		1ED5782A2F0115B40032621C /* upsample_bilateral_float4CS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = upsample_bilateral_float4CS.hlsl; sourceTree = "<group>"; };
+		1ED5782B2F0115B40032621C /* upsample_bilateralPS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = upsample_bilateralPS.hlsl; sourceTree = "<group>"; };
+		1ED5782C2F0115B40032621C /* uvsphere.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = uvsphere.hlsli; sourceTree = "<group>"; };
+		1ED5782D2F0115B40032621C /* vertexcolorPS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = vertexcolorPS.hlsl; sourceTree = "<group>"; };
+		1ED5782E2F0115B40032621C /* vertexcolorVS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = vertexcolorVS.hlsl; sourceTree = "<group>"; };
+		1ED5782F2F0115B40032621C /* virtualTextureResidencyUpdateCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = virtualTextureResidencyUpdateCS.hlsl; sourceTree = "<group>"; };
+		1ED578302F0115B40032621C /* virtualTextureTileAllocateCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = virtualTextureTileAllocateCS.hlsl; sourceTree = "<group>"; };
+		1ED578312F0115B40032621C /* virtualTextureTileRequestsCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = virtualTextureTileRequestsCS.hlsl; sourceTree = "<group>"; };
+		1ED578322F0115B40032621C /* visibility_indirect_prepareCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = visibility_indirect_prepareCS.hlsl; sourceTree = "<group>"; };
+		1ED578332F0115B40032621C /* visibility_resolveCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = visibility_resolveCS.hlsl; sourceTree = "<group>"; };
+		1ED578342F0115B40032621C /* visibility_resolveCS_MSAA.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = visibility_resolveCS_MSAA.hlsl; sourceTree = "<group>"; };
+		1ED578352F0115B40032621C /* visibility_shadeCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = visibility_shadeCS.hlsl; sourceTree = "<group>"; };
+		1ED578362F0115B40032621C /* visibility_skyCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = visibility_skyCS.hlsl; sourceTree = "<group>"; };
+		1ED578372F0115B40032621C /* visibility_surfaceCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = visibility_surfaceCS.hlsl; sourceTree = "<group>"; };
+		1ED578382F0115B40032621C /* visibility_velocityCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = visibility_velocityCS.hlsl; sourceTree = "<group>"; };
+		1ED578392F0115B40032621C /* volumetricCloud_curlnoiseCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = volumetricCloud_curlnoiseCS.hlsl; sourceTree = "<group>"; };
+		1ED5783A2F0115B40032621C /* volumetricCloud_detailnoiseCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = volumetricCloud_detailnoiseCS.hlsl; sourceTree = "<group>"; };
+		1ED5783B2F0115B40032621C /* volumetricCloud_renderCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = volumetricCloud_renderCS.hlsl; sourceTree = "<group>"; };
+		1ED5783C2F0115B40032621C /* volumetricCloud_renderCS_capture.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = volumetricCloud_renderCS_capture.hlsl; sourceTree = "<group>"; };
+		1ED5783D2F0115B40032621C /* volumetricCloud_renderCS_capture_MSAA.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = volumetricCloud_renderCS_capture_MSAA.hlsl; sourceTree = "<group>"; };
+		1ED5783E2F0115B40032621C /* volumetricCloud_reprojectCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = volumetricCloud_reprojectCS.hlsl; sourceTree = "<group>"; };
+		1ED5783F2F0115B40032621C /* volumetricCloud_shadow_renderCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = volumetricCloud_shadow_renderCS.hlsl; sourceTree = "<group>"; };
+		1ED578402F0115B40032621C /* volumetricCloud_shapenoiseCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = volumetricCloud_shapenoiseCS.hlsl; sourceTree = "<group>"; };
+		1ED578412F0115B40032621C /* volumetricCloud_upsamplePS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = volumetricCloud_upsamplePS.hlsl; sourceTree = "<group>"; };
+		1ED578422F0115B40032621C /* volumetricCloud_weathermapCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = volumetricCloud_weathermapCS.hlsl; sourceTree = "<group>"; };
+		1ED578432F0115B40032621C /* volumetricCloudsHF.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = volumetricCloudsHF.hlsli; sourceTree = "<group>"; };
+		1ED578442F0115B40032621C /* volumetricLight_DirectionalPS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = volumetricLight_DirectionalPS.hlsl; sourceTree = "<group>"; };
+		1ED578452F0115B40032621C /* volumetriclight_directionalVS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = volumetriclight_directionalVS.hlsl; sourceTree = "<group>"; };
+		1ED578462F0115B40032621C /* volumetricLight_PointPS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = volumetricLight_PointPS.hlsl; sourceTree = "<group>"; };
+		1ED578472F0115B40032621C /* volumetriclight_pointVS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = volumetriclight_pointVS.hlsl; sourceTree = "<group>"; };
+		1ED578482F0115B40032621C /* volumetriclight_rectanglePS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = volumetriclight_rectanglePS.hlsl; sourceTree = "<group>"; };
+		1ED578492F0115B40032621C /* volumetriclight_rectangleVS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = volumetriclight_rectangleVS.hlsl; sourceTree = "<group>"; };
+		1ED5784A2F0115B40032621C /* volumetricLight_SpotPS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = volumetricLight_SpotPS.hlsl; sourceTree = "<group>"; };
+		1ED5784B2F0115B40032621C /* volumetriclight_spotVS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = volumetriclight_spotVS.hlsl; sourceTree = "<group>"; };
+		1ED5784C2F0115B40032621C /* volumetricLightHF.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = volumetricLightHF.hlsli; sourceTree = "<group>"; };
+		1ED5784D2F0115B40032621C /* voxelConeTracingHF.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = voxelConeTracingHF.hlsli; sourceTree = "<group>"; };
+		1ED5784E2F0115B40032621C /* voxelGS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = voxelGS.hlsl; sourceTree = "<group>"; };
+		1ED5784F2F0115B40032621C /* voxelHF.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = voxelHF.hlsli; sourceTree = "<group>"; };
+		1ED578502F0115B40032621C /* voxelPS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = voxelPS.hlsl; sourceTree = "<group>"; };
+		1ED578512F0115B40032621C /* voxelVS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = voxelVS.hlsl; sourceTree = "<group>"; };
+		1ED578522F0115B40032621C /* vPointLightVS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = vPointLightVS.hlsl; sourceTree = "<group>"; };
+		1ED578532F0115B40032621C /* vRectLightPS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = vRectLightPS.hlsl; sourceTree = "<group>"; };
+		1ED578542F0115B40032621C /* vRectLightVS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = vRectLightVS.hlsl; sourceTree = "<group>"; };
+		1ED578552F0115B40032621C /* vSpotLightVS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = vSpotLightVS.hlsl; sourceTree = "<group>"; };
+		1ED578562F0115B40032621C /* vxgi_offsetprevCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = vxgi_offsetprevCS.hlsl; sourceTree = "<group>"; };
+		1ED578572F0115B40032621C /* vxgi_resolve_diffuseCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = vxgi_resolve_diffuseCS.hlsl; sourceTree = "<group>"; };
+		1ED578582F0115B40032621C /* vxgi_resolve_specularCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = vxgi_resolve_specularCS.hlsl; sourceTree = "<group>"; };
+		1ED578592F0115B40032621C /* vxgi_sdf_jumpfloodCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = vxgi_sdf_jumpfloodCS.hlsl; sourceTree = "<group>"; };
+		1ED5785A2F0115B40032621C /* vxgi_temporalCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = vxgi_temporalCS.hlsl; sourceTree = "<group>"; };
+		1ED5785B2F0115B40032621C /* waveeffectPS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = waveeffectPS.hlsl; sourceTree = "<group>"; };
+		1ED5785C2F0115B40032621C /* wetmap_updateCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = wetmap_updateCS.hlsl; sourceTree = "<group>"; };
+		1ED5785D2F0115B40032621C /* windCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = windCS.hlsl; sourceTree = "<group>"; };
+		1ED5785E2F0115B40032621C /* yuv_to_rgbCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = yuv_to_rgbCS.hlsl; sourceTree = "<group>"; };
 		1EDA7A552EE1DF2100210D41 /* wiArchive.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = wiArchive.cpp; sourceTree = "<group>"; };
 		1EDA7A572EE1DFE300210D41 /* CommonInclude.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CommonInclude.h; sourceTree = "<group>"; };
 		1EDA7A582EE1DFE300210D41 /* logo.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = logo.h; sourceTree = "<group>"; };
@@ -1171,8 +1590,6 @@
 		1EDA81F92EE320DB00210D41 /* LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE.txt; sourceTree = "<group>"; };
 		1EDA81FA2EE320DB00210D41 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		1EDA8A692EE5D68100210D41 /* libdxcompiler.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libdxcompiler.dylib; sourceTree = "<group>"; };
-		1EDA8D8A2EE6FB3900210D41 /* globals.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; name = globals.hlsli; path = shaders/globals.hlsli; sourceTree = "<group>"; };
-		1EE22F932EFB2EB500CDE645 /* objectHF.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; name = objectHF.hlsli; path = shaders/objectHF.hlsli; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1187,13 +1604,470 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		1ED576BB2F0115B40032621C /* compressonator */ = {
+			isa = PBXGroup;
+			children = (
+				1ED576B82F0115B40032621C /* bcn_common_api.h */,
+				1ED576B92F0115B40032621C /* bcn_common_kernel.h */,
+				1ED576BA2F0115B40032621C /* common_def.h */,
+			);
+			path = compressonator;
+			sourceTree = "<group>";
+		};
+		1ED576BE2F0115B40032621C /* ffx-fsr */ = {
+			isa = PBXGroup;
+			children = (
+				1ED576BC2F0115B40032621C /* ffx_a.h */,
+				1ED576BD2F0115B40032621C /* ffx_fsr1.h */,
+			);
+			path = "ffx-fsr";
+			sourceTree = "<group>";
+		};
+		1ED576DE2F0115B40032621C /* ffx-fsr2 */ = {
+			isa = PBXGroup;
+			children = (
+				1ED576BF2F0115B40032621C /* ffx_common_types.h */,
+				1ED576C02F0115B40032621C /* ffx_core.h */,
+				1ED576C12F0115B40032621C /* ffx_core_cpu.h */,
+				1ED576C22F0115B40032621C /* ffx_core_gpu_common.h */,
+				1ED576C32F0115B40032621C /* ffx_core_gpu_common_half.h */,
+				1ED576C42F0115B40032621C /* ffx_core_hlsl.h */,
+				1ED576C52F0115B40032621C /* ffx_core_portability.h */,
+				1ED576C62F0115B40032621C /* ffx_fsr1.h */,
+				1ED576C72F0115B40032621C /* ffx_fsr2_accumulate.h */,
+				1ED576C82F0115B40032621C /* ffx_fsr2_accumulate_pass.hlsl */,
+				1ED576C92F0115B40032621C /* ffx_fsr2_autogen_reactive_pass.hlsl */,
+				1ED576CA2F0115B40032621C /* ffx_fsr2_callbacks_hlsl.h */,
+				1ED576CB2F0115B40032621C /* ffx_fsr2_common.h */,
+				1ED576CC2F0115B40032621C /* ffx_fsr2_compute_luminance_pyramid.h */,
+				1ED576CD2F0115B40032621C /* ffx_fsr2_compute_luminance_pyramid_pass.hlsl */,
+				1ED576CE2F0115B40032621C /* ffx_fsr2_depth_clip.h */,
+				1ED576CF2F0115B40032621C /* ffx_fsr2_depth_clip_pass.hlsl */,
+				1ED576D02F0115B40032621C /* ffx_fsr2_lock.h */,
+				1ED576D12F0115B40032621C /* ffx_fsr2_lock_pass.hlsl */,
+				1ED576D22F0115B40032621C /* ffx_fsr2_postprocess_lock_status.h */,
+				1ED576D32F0115B40032621C /* ffx_fsr2_prepare_input_color.h */,
+				1ED576D42F0115B40032621C /* ffx_fsr2_prepare_input_color_pass.hlsl */,
+				1ED576D52F0115B40032621C /* ffx_fsr2_rcas.h */,
+				1ED576D62F0115B40032621C /* ffx_fsr2_rcas_pass.hlsl */,
+				1ED576D72F0115B40032621C /* ffx_fsr2_reconstruct_dilated_velocity_and_previous_depth.h */,
+				1ED576D82F0115B40032621C /* ffx_fsr2_reconstruct_previous_depth_pass.hlsl */,
+				1ED576D92F0115B40032621C /* ffx_fsr2_reproject.h */,
+				1ED576DA2F0115B40032621C /* ffx_fsr2_resources.h */,
+				1ED576DB2F0115B40032621C /* ffx_fsr2_sample.h */,
+				1ED576DC2F0115B40032621C /* ffx_fsr2_upsample.h */,
+				1ED576DD2F0115B40032621C /* ffx_spd.h */,
+			);
+			path = "ffx-fsr2";
+			sourceTree = "<group>";
+		};
+		1ED576E32F0115B40032621C /* ffx-shadows-dnsr */ = {
+			isa = PBXGroup;
+			children = (
+				1ED576DF2F0115B40032621C /* ffx_denoiser_shadows_filter.h */,
+				1ED576E02F0115B40032621C /* ffx_denoiser_shadows_prepare.h */,
+				1ED576E12F0115B40032621C /* ffx_denoiser_shadows_tileclassification.h */,
+				1ED576E22F0115B40032621C /* ffx_denoiser_shadows_util.h */,
+			);
+			path = "ffx-shadows-dnsr";
+			sourceTree = "<group>";
+		};
+		1ED5785F2F0115B40032621C /* shaders */ = {
+			isa = PBXGroup;
+			children = (
+				1ED576BB2F0115B40032621C /* compressonator */,
+				1ED576BE2F0115B40032621C /* ffx-fsr */,
+				1ED576DE2F0115B40032621C /* ffx-fsr2 */,
+				1ED576E32F0115B40032621C /* ffx-shadows-dnsr */,
+				1ED576E42F0115B40032621C /* aerialPerspectiveCS.hlsl */,
+				1ED576E52F0115B40032621C /* aerialPerspectiveCS_capture.hlsl */,
+				1ED576E62F0115B40032621C /* aerialPerspectiveCS_capture_MSAA.hlsl */,
+				1ED576E72F0115B40032621C /* bc6h.hlsli */,
+				1ED576E82F0115B40032621C /* bitonicSortHF.hlsli */,
+				1ED576E92F0115B40032621C /* BlockCompress.hlsli */,
+				1ED576EA2F0115B40032621C /* blockcompressCS_BC1.hlsl */,
+				1ED576EB2F0115B40032621C /* blockcompressCS_BC3.hlsl */,
+				1ED576EC2F0115B40032621C /* blockcompressCS_BC4.hlsl */,
+				1ED576ED2F0115B40032621C /* blockcompressCS_BC5.hlsl */,
+				1ED576EE2F0115B40032621C /* blockcompressCS_BC6H.hlsl */,
+				1ED576EF2F0115B40032621C /* blockcompressCS_BC6H_cubemap.hlsl */,
+				1ED576F02F0115B40032621C /* bloomseparateCS.hlsl */,
+				1ED576F12F0115B40032621C /* blur_bilateral_float1CS.hlsl */,
+				1ED576F22F0115B40032621C /* blur_bilateral_float4CS.hlsl */,
+				1ED576F32F0115B40032621C /* blur_bilateral_wide_float1CS.hlsl */,
+				1ED576F42F0115B40032621C /* blur_bilateral_wide_float4CS.hlsl */,
+				1ED576F52F0115B40032621C /* blur_gaussian_float1CS.hlsl */,
+				1ED576F62F0115B40032621C /* blur_gaussian_float4CS.hlsl */,
+				1ED576F72F0115B40032621C /* blur_gaussian_wide_float1CS.hlsl */,
+				1ED576F82F0115B40032621C /* blur_gaussian_wide_float4CS.hlsl */,
+				1ED576F92F0115B40032621C /* brdf.hlsli */,
+				1ED576FA2F0115B40032621C /* bvh_hierarchyCS.hlsl */,
+				1ED576FB2F0115B40032621C /* bvh_primitivesCS.hlsl */,
+				1ED576FC2F0115B40032621C /* bvh_propagateaabbCS.hlsl */,
+				1ED576FD2F0115B40032621C /* capsuleShadowHF.hlsli */,
+				1ED576FE2F0115B40032621C /* captureImpostorPS.hlsl */,
+				1ED576FF2F0115B40032621C /* causticsCS.hlsl */,
+				1ED577002F0115B40032621C /* chromatic_aberrationCS.hlsl */,
+				1ED577012F0115B40032621C /* circle.hlsli */,
+				1ED577022F0115B40032621C /* circlePS.hlsl */,
+				1ED577032F0115B40032621C /* ColorSpaceUtility.hlsli */,
+				1ED577042F0115B40032621C /* cone.hlsli */,
+				1ED577052F0115B40032621C /* copyDepthPS.hlsl */,
+				1ED577062F0115B40032621C /* copyStencilBitPS.hlsl */,
+				1ED577072F0115B40032621C /* copytexture2D_float4_borderexpandCS.hlsl */,
+				1ED577082F0115B40032621C /* copytexture2D_float4CS.hlsl */,
+				1ED577092F0115B40032621C /* crt_screenCS.hlsl */,
+				1ED5770A2F0115B40032621C /* cube.hlsli */,
+				1ED5770B2F0115B40032621C /* cubeMapPS.hlsl */,
+				1ED5770C2F0115B40032621C /* cullingShaderHF.hlsli */,
+				1ED5770D2F0115B40032621C /* cylinder.hlsli */,
+				1ED5770E2F0115B40032621C /* ddgi_debugPS.hlsl */,
+				1ED5770F2F0115B40032621C /* ddgi_debugVS.hlsl */,
+				1ED577102F0115B40032621C /* ddgi_indirectprepareCS.hlsl */,
+				1ED577112F0115B40032621C /* ddgi_rayallocationCS.hlsl */,
+				1ED577122F0115B40032621C /* ddgi_raytraceCS.hlsl */,
+				1ED577132F0115B40032621C /* ddgi_raytraceCS_rtapi.hlsl */,
+				1ED577142F0115B40032621C /* ddgi_updateCS.hlsl */,
+				1ED577152F0115B40032621C /* ddgi_updateCS_depth.hlsl */,
+				1ED577162F0115B40032621C /* depth_pyramidCS.hlsl */,
+				1ED577172F0115B40032621C /* depth_reprojectCS.hlsl */,
+				1ED577182F0115B40032621C /* depthoffield_mainCS.hlsl */,
+				1ED577192F0115B40032621C /* depthoffield_mainCS_cheap.hlsl */,
+				1ED5771A2F0115B40032621C /* depthoffield_mainCS_earlyexit.hlsl */,
+				1ED5771B2F0115B40032621C /* depthoffield_neighborhoodMaxCOCCS.hlsl */,
+				1ED5771C2F0115B40032621C /* depthoffield_postfilterCS.hlsl */,
+				1ED5771D2F0115B40032621C /* depthoffield_prepassCS.hlsl */,
+				1ED5771E2F0115B40032621C /* depthoffield_prepassCS_earlyexit.hlsl */,
+				1ED5771F2F0115B40032621C /* depthoffield_tileMaxCOC_horizontalCS.hlsl */,
+				1ED577202F0115B40032621C /* depthoffield_tileMaxCOC_verticalCS.hlsl */,
+				1ED577212F0115B40032621C /* depthoffield_upsampleCS.hlsl */,
+				1ED577222F0115B40032621C /* depthOfFieldHF.hlsli */,
+				1ED577232F0115B40032621C /* downsample4xCS.hlsl */,
+				1ED577242F0115B40032621C /* downsampleDepthBuffer4xPS.hlsl */,
+				1ED577252F0115B40032621C /* emittedparticle_emitCS.hlsl */,
+				1ED577262F0115B40032621C /* emittedparticle_emitCS_FROMMESH.hlsl */,
+				1ED577272F0115B40032621C /* emittedparticle_emitCS_volume.hlsl */,
+				1ED577282F0115B40032621C /* emittedparticle_finishUpdateCS.hlsl */,
+				1ED577292F0115B40032621C /* emittedparticle_kickoffUpdateCS.hlsl */,
+				1ED5772A2F0115B40032621C /* emittedparticle_simulateCS.hlsl */,
+				1ED5772B2F0115B40032621C /* emittedparticle_simulateCS_DEPTHCOLLISIONS.hlsl */,
+				1ED5772C2F0115B40032621C /* emittedparticle_simulateCS_SORTING.hlsl */,
+				1ED5772D2F0115B40032621C /* emittedparticle_simulateCS_SORTING_DEPTHCOLLISIONS.hlsl */,
+				1ED5772E2F0115B40032621C /* emittedparticle_sphbinningCS.hlsl */,
+				1ED5772F2F0115B40032621C /* emittedparticle_sphcellallocationCS.hlsl */,
+				1ED577302F0115B40032621C /* emittedparticle_sphdensityCS.hlsl */,
+				1ED577312F0115B40032621C /* emittedparticle_sphforceCS.hlsl */,
+				1ED577322F0115B40032621C /* emittedparticle_sphpartitionCS.hlsl */,
+				1ED577332F0115B40032621C /* emittedparticleHF.hlsli */,
+				1ED577342F0115B40032621C /* emittedparticleMS.hlsl */,
+				1ED577352F0115B40032621C /* emittedparticlePS_simple.hlsl */,
+				1ED577362F0115B40032621C /* emittedparticlePS_soft.hlsl */,
+				1ED577372F0115B40032621C /* emittedparticlePS_soft_distortion.hlsl */,
+				1ED577382F0115B40032621C /* emittedparticlePS_soft_lighting.hlsl */,
+				1ED577392F0115B40032621C /* emittedparticleVS.hlsl */,
+				1ED5773A2F0115B40032621C /* envMap_skyPS_dynamic.hlsl */,
+				1ED5773B2F0115B40032621C /* envMap_skyPS_static.hlsl */,
+				1ED5773C2F0115B40032621C /* envMap_skyVS.hlsl */,
+				1ED5773D2F0115B40032621C /* envMapPS.hlsl */,
+				1ED5773E2F0115B40032621C /* envMapVS.hlsl */,
+				1ED5773F2F0115B40032621C /* extractStencilBitPS.hlsl */,
+				1ED577402F0115B40032621C /* fft_512x512_c2c_CS.hlsl */,
+				1ED577412F0115B40032621C /* fft_512x512_c2c_v2_CS.hlsl */,
+				1ED577422F0115B40032621C /* filterEnvMapCS.hlsl */,
+				1ED577432F0115B40032621C /* fogHF.hlsli */,
+				1ED577442F0115B40032621C /* fontPS.hlsl */,
+				1ED577452F0115B40032621C /* fontVS.hlsl */,
+				1ED577462F0115B40032621C /* forceFieldPlaneVisualizerVS.hlsl */,
+				1ED577472F0115B40032621C /* forceFieldPointVisualizerVS.hlsl */,
+				1ED577482F0115B40032621C /* forceFieldVisualizerPS.hlsl */,
+				1ED577492F0115B40032621C /* fsr_sharpenCS.hlsl */,
+				1ED5774A2F0115B40032621C /* fsr_upscalingCS.hlsl */,
+				1ED5774B2F0115B40032621C /* fxaa.hlsli */,
+				1ED5774C2F0115B40032621C /* fxaaCS.hlsl */,
+				1ED5774D2F0115B40032621C /* generateMIPChain2DCS_float4.hlsl */,
+				1ED5774E2F0115B40032621C /* generateMIPChain3DCS_float4.hlsl */,
+				1ED5774F2F0115B40032621C /* generateMIPChainCubeArrayCS_float4.hlsl */,
+				1ED577502F0115B40032621C /* generateMIPChainCubeCS_float4.hlsl */,
+				1ED577512F0115B40032621C /* globals.hlsli */,
+				1ED577522F0115B40032621C /* gpusortlib_kickoffSortCS.hlsl */,
+				1ED577532F0115B40032621C /* gpusortlib_sortCS.hlsl */,
+				1ED577542F0115B40032621C /* gpusortlib_sortInnerCS.hlsl */,
+				1ED577552F0115B40032621C /* gpusortlib_sortStepCS.hlsl */,
+				1ED577562F0115B40032621C /* hairparticle_simulateCS.hlsl */,
+				1ED577572F0115B40032621C /* hairparticleHF.hlsli */,
+				1ED577582F0115B40032621C /* hairparticlePS.hlsl */,
+				1ED577592F0115B40032621C /* hairparticlePS_prepass.hlsl */,
+				1ED5775A2F0115B40032621C /* hairparticlePS_prepass_depthonly.hlsl */,
+				1ED5775B2F0115B40032621C /* hairparticlePS_shadow.hlsl */,
+				1ED5775C2F0115B40032621C /* hairparticlePS_simple.hlsl */,
+				1ED5775D2F0115B40032621C /* hairparticleVS.hlsl */,
+				1ED5775E2F0115B40032621C /* hbaoCS.hlsl */,
+				1ED5775F2F0115B40032621C /* icosphere.hlsli */,
+				1ED577602F0115B40032621C /* imageHF.hlsli */,
+				1ED577612F0115B40032621C /* imagePS.hlsl */,
+				1ED577622F0115B40032621C /* imageVS.hlsl */,
+				1ED577632F0115B40032621C /* impostor_prepareCS.hlsl */,
+				1ED577642F0115B40032621C /* impostorHF.hlsli */,
+				1ED577652F0115B40032621C /* impostorPS.hlsl */,
+				1ED577662F0115B40032621C /* impostorPS_prepass.hlsl */,
+				1ED577672F0115B40032621C /* impostorPS_prepass_depthonly.hlsl */,
+				1ED577682F0115B40032621C /* impostorPS_simple.hlsl */,
+				1ED577692F0115B40032621C /* impostorVS.hlsl */,
+				1ED5776A2F0115B40032621C /* lensFlarePS.hlsl */,
+				1ED5776B2F0115B40032621C /* lensFlareVS.hlsl */,
+				1ED5776C2F0115B40032621C /* lightCullingCS.hlsl */,
+				1ED5776D2F0115B40032621C /* lightCullingCS_ADVANCED.hlsl */,
+				1ED5776E2F0115B40032621C /* lightCullingCS_ADVANCED_DEBUG.hlsl */,
+				1ED5776F2F0115B40032621C /* lightCullingCS_DEBUG.hlsl */,
+				1ED577702F0115B40032621C /* lightingHF.hlsli */,
+				1ED577712F0115B40032621C /* lightmap_expandCS.hlsl */,
+				1ED577722F0115B40032621C /* lightShaftsCS.hlsl */,
+				1ED577732F0115B40032621C /* lightVisualizerPS.hlsl */,
+				1ED577742F0115B40032621C /* lineardepthCS.hlsl */,
+				1ED577752F0115B40032621C /* luminancePass1CS.hlsl */,
+				1ED577762F0115B40032621C /* luminancePass2CS.hlsl */,
+				1ED577772F0115B40032621C /* mesh_blend_expandCS.hlsl */,
+				1ED577782F0115B40032621C /* mesh_blend_prepareCS.hlsl */,
+				1ED577792F0115B40032621C /* mesh_blendPS.hlsl */,
+				1ED5777A2F0115B40032621C /* meshlet_prepareCS.hlsl */,
+				1ED5777B2F0115B40032621C /* motionblur_neighborhoodMaxVelocityCS.hlsl */,
+				1ED5777C2F0115B40032621C /* motionblur_tileMaxVelocity_horizontalCS.hlsl */,
+				1ED5777D2F0115B40032621C /* motionblur_tileMaxVelocity_verticalCS.hlsl */,
+				1ED5777E2F0115B40032621C /* motionblurCS.hlsl */,
+				1ED5777F2F0115B40032621C /* motionblurCS_cheap.hlsl */,
+				1ED577802F0115B40032621C /* motionblurCS_earlyexit.hlsl */,
+				1ED577812F0115B40032621C /* msao_blurupsampleCS.hlsl */,
+				1ED577822F0115B40032621C /* msao_blurupsampleCS_blendout.hlsl */,
+				1ED577832F0115B40032621C /* msao_blurupsampleCS_premin.hlsl */,
+				1ED577842F0115B40032621C /* msao_blurupsampleCS_premin_blendout.hlsl */,
+				1ED577852F0115B40032621C /* msao_interleaveCS.hlsl */,
+				1ED577862F0115B40032621C /* msao_preparedepthbuffers1CS.hlsl */,
+				1ED577872F0115B40032621C /* msao_preparedepthbuffers2CS.hlsl */,
+				1ED577882F0115B40032621C /* msaoCS.hlsl */,
+				1ED577892F0115B40032621C /* normalsfromdepthCS.hlsl */,
+				1ED5778A2F0115B40032621C /* objectAS.hlsl */,
+				1ED5778B2F0115B40032621C /* objectDS.hlsl */,
+				1ED5778C2F0115B40032621C /* objectDS_prepass.hlsl */,
+				1ED5778D2F0115B40032621C /* objectDS_prepass_alphatest.hlsl */,
+				1ED5778E2F0115B40032621C /* objectDS_simple.hlsl */,
+				1ED5778F2F0115B40032621C /* objectGS_voxelizer.hlsl */,
+				1ED577902F0115B40032621C /* objectHF.hlsli */,
+				1ED577912F0115B40032621C /* objectHF_mesh_shading.hlsli */,
+				1ED577922F0115B40032621C /* objectHF_tessellation.hlsli */,
+				1ED577932F0115B40032621C /* objectHS.hlsl */,
+				1ED577942F0115B40032621C /* objectHS_prepass.hlsl */,
+				1ED577952F0115B40032621C /* objectHS_prepass_alphatest.hlsl */,
+				1ED577962F0115B40032621C /* objectHS_simple.hlsl */,
+				1ED577972F0115B40032621C /* objectMS.hlsl */,
+				1ED577982F0115B40032621C /* objectMS_prepass.hlsl */,
+				1ED577992F0115B40032621C /* objectMS_prepass_alphatest.hlsl */,
+				1ED5779A2F0115B40032621C /* objectMS_simple.hlsl */,
+				1ED5779B2F0115B40032621C /* objectPS.hlsl */,
+				1ED5779C2F0115B40032621C /* objectPS_debug.hlsl */,
+				1ED5779D2F0115B40032621C /* objectPS_hologram.hlsl */,
+				1ED5779E2F0115B40032621C /* objectPS_paintradius.hlsl */,
+				1ED5779F2F0115B40032621C /* objectPS_prepass.hlsl */,
+				1ED577A02F0115B40032621C /* objectPS_prepass_alphatest.hlsl */,
+				1ED577A12F0115B40032621C /* objectPS_prepass_depthonly.hlsl */,
+				1ED577A22F0115B40032621C /* objectPS_prepass_depthonly_alphatest.hlsl */,
+				1ED577A32F0115B40032621C /* objectPS_simple.hlsl */,
+				1ED577A42F0115B40032621C /* objectPS_voxelizer.hlsl */,
+				1ED577A52F0115B40032621C /* objectVS_common.hlsl */,
+				1ED577A62F0115B40032621C /* objectVS_common_tessellation.hlsl */,
+				1ED577A72F0115B40032621C /* objectVS_debug.hlsl */,
+				1ED577A82F0115B40032621C /* objectVS_prepass.hlsl */,
+				1ED577A92F0115B40032621C /* objectVS_prepass_alphatest.hlsl */,
+				1ED577AA2F0115B40032621C /* objectVS_prepass_alphatest_tessellation.hlsl */,
+				1ED577AB2F0115B40032621C /* objectVS_prepass_tessellation.hlsl */,
+				1ED577AC2F0115B40032621C /* objectVS_simple.hlsl */,
+				1ED577AD2F0115B40032621C /* objectVS_simple_tessellation.hlsl */,
+				1ED577AE2F0115B40032621C /* objectVS_voxelizer.hlsl */,
+				1ED577AF2F0115B40032621C /* occludeeVS.hlsl */,
+				1ED577B02F0115B40032621C /* oceanSimulatorCS.hlsl */,
+				1ED577B12F0115B40032621C /* oceanSurfaceHF.hlsli */,
+				1ED577B22F0115B40032621C /* oceanSurfacePS.hlsl */,
+				1ED577B32F0115B40032621C /* oceanSurfaceSimplePS.hlsl */,
+				1ED577B42F0115B40032621C /* oceanSurfaceVS.hlsl */,
+				1ED577B52F0115B40032621C /* oceanUpdateDisplacementMapCS.hlsl */,
+				1ED577B62F0115B40032621C /* oceanUpdateGradientFoldingCS.hlsl */,
+				1ED577B72F0115B40032621C /* outlinePS.hlsl */,
+				1ED577B82F0115B40032621C /* paint_textureCS.hlsl */,
+				1ED577B92F0115B40032621C /* paintdecalPS.hlsl */,
+				1ED577BA2F0115B40032621C /* paintdecalVS.hlsl */,
+				1ED577BB2F0115B40032621C /* PixelPacking_R11G11B10.hlsli */,
+				1ED577BC2F0115B40032621C /* PixelPacking_RGBE.hlsli */,
+				1ED577BD2F0115B40032621C /* postprocessVS.hlsl */,
+				1ED577BE2F0115B40032621C /* quad.hlsli */,
+				1ED577BF2F0115B40032621C /* raytrace_debugbvhPS.hlsl */,
+				1ED577C02F0115B40032621C /* raytrace_screenVS.hlsl */,
+				1ED577C12F0115B40032621C /* raytraceCS.hlsl */,
+				1ED577C22F0115B40032621C /* raytraceCS_rtapi.hlsl */,
+				1ED577C32F0115B40032621C /* raytracingHF.hlsli */,
+				1ED577C42F0115B40032621C /* renderlightmapPS.hlsl */,
+				1ED577C52F0115B40032621C /* renderlightmapPS_rtapi.hlsl */,
+				1ED577C62F0115B40032621C /* renderlightmapVS.hlsl */,
+				1ED577C72F0115B40032621C /* resolveMSAADepthStencilCS.hlsl */,
+				1ED577C82F0115B40032621C /* rtao_denoise_filterCS.hlsl */,
+				1ED577C92F0115B40032621C /* rtao_denoise_tileclassificationCS.hlsl */,
+				1ED577CA2F0115B40032621C /* rtaoCS.hlsl */,
+				1ED577CB2F0115B40032621C /* rtdiffuse_spatialCS.hlsl */,
+				1ED577CC2F0115B40032621C /* rtdiffuse_temporalCS.hlsl */,
+				1ED577CD2F0115B40032621C /* rtdiffuse_upsampleCS.hlsl */,
+				1ED577CE2F0115B40032621C /* rtdiffuseCS.hlsl */,
+				1ED577CF2F0115B40032621C /* rtreflectionCS.hlsl */,
+				1ED577D02F0115B40032621C /* rtreflectionLIB.hlsl */,
+				1ED577D12F0115B40032621C /* rtshadow_denoise_filterCS.hlsl */,
+				1ED577D22F0115B40032621C /* rtshadow_denoise_temporalCS.hlsl */,
+				1ED577D32F0115B40032621C /* rtshadow_denoise_tileclassificationCS.hlsl */,
+				1ED577D42F0115B40032621C /* rtshadow_upsampleCS.hlsl */,
+				1ED577D52F0115B40032621C /* rtshadowCS.hlsl */,
+				1ED577D62F0115B40032621C /* screenspaceshadowCS.hlsl */,
+				1ED577D72F0115B40032621C /* screenVS.hlsl */,
+				1ED577D82F0115B40032621C /* SH_Lite.hlsli */,
+				1ED577D92F0115B40032621C /* ShaderInterop.h */,
+				1ED577DA2F0115B40032621C /* ShaderInterop_BVH.h */,
+				1ED577DB2F0115B40032621C /* ShaderInterop_DDGI.h */,
+				1ED577DC2F0115B40032621C /* ShaderInterop_EmittedParticle.h */,
+				1ED577DD2F0115B40032621C /* ShaderInterop_FFTGenerator.h */,
+				1ED577DE2F0115B40032621C /* ShaderInterop_Font.h */,
+				1ED577DF2F0115B40032621C /* ShaderInterop_FSR2.h */,
+				1ED577E02F0115B40032621C /* ShaderInterop_GPUSortLib.h */,
+				1ED577E12F0115B40032621C /* ShaderInterop_HairParticle.h */,
+				1ED577E22F0115B40032621C /* ShaderInterop_Image.h */,
+				1ED577E32F0115B40032621C /* ShaderInterop_Ocean.h */,
+				1ED577E42F0115B40032621C /* ShaderInterop_Postprocess.h */,
+				1ED577E52F0115B40032621C /* ShaderInterop_Raytracing.h */,
+				1ED577E62F0115B40032621C /* ShaderInterop_Renderer.h */,
+				1ED577E72F0115B40032621C /* ShaderInterop_SurfelGI.h */,
+				1ED577E82F0115B40032621C /* ShaderInterop_Terrain.h */,
+				1ED577E92F0115B40032621C /* ShaderInterop_VoxelGrid.h */,
+				1ED577EA2F0115B40032621C /* ShaderInterop_VXGI.h */,
+				1ED577EB2F0115B40032621C /* ShaderInterop_Weather.h */,
+				1ED577EC2F0115B40032621C /* Shaders_SOURCE.vcxitems */,
+				1ED577ED2F0115B40032621C /* Shaders_SOURCE.vcxitems.filters */,
+				1ED577EE2F0115B40032621C /* shadingHF.hlsli */,
+				1ED577EF2F0115B40032621C /* shadingRateClassificationCS.hlsl */,
+				1ED577F02F0115B40032621C /* shadingRateClassificationCS_DEBUG.hlsl */,
+				1ED577F12F0115B40032621C /* shadowHF.hlsli */,
+				1ED577F22F0115B40032621C /* shadowMS.hlsl */,
+				1ED577F32F0115B40032621C /* shadowMS_alphatest.hlsl */,
+				1ED577F42F0115B40032621C /* shadowMS_transparent.hlsl */,
+				1ED577F52F0115B40032621C /* shadowPS_alphatest.hlsl */,
+				1ED577F62F0115B40032621C /* shadowPS_transparent.hlsl */,
+				1ED577F72F0115B40032621C /* shadowPS_water.hlsl */,
+				1ED577F82F0115B40032621C /* shadowVS.hlsl */,
+				1ED577F92F0115B40032621C /* shadowVS_alphatest.hlsl */,
+				1ED577FA2F0115B40032621C /* shadowVS_transparent.hlsl */,
+				1ED577FB2F0115B40032621C /* sharpenCS.hlsl */,
+				1ED577FC2F0115B40032621C /* skinningCS.hlsl */,
+				1ED577FD2F0115B40032621C /* skyAtmosphere.hlsli */,
+				1ED577FE2F0115B40032621C /* skyAtmosphere_cameraVolumeLutCS.hlsl */,
+				1ED577FF2F0115B40032621C /* skyAtmosphere_multiScatteredLuminanceLutCS.hlsl */,
+				1ED578002F0115B40032621C /* skyAtmosphere_skyLuminanceLutCS.hlsl */,
+				1ED578012F0115B40032621C /* skyAtmosphere_skyViewLutCS.hlsl */,
+				1ED578022F0115B40032621C /* skyAtmosphere_transmittanceLutCS.hlsl */,
+				1ED578032F0115B40032621C /* skyHF.hlsli */,
+				1ED578042F0115B40032621C /* skyPS_dynamic.hlsl */,
+				1ED578052F0115B40032621C /* skyPS_static.hlsl */,
+				1ED578062F0115B40032621C /* skyVS.hlsl */,
+				1ED578072F0115B40032621C /* sphereVS.hlsl */,
+				1ED578082F0115B40032621C /* ssaoCS.hlsl */,
+				1ED578092F0115B40032621C /* ssgi_deinterleaveCS.hlsl */,
+				1ED5780A2F0115B40032621C /* ssgi_upsampleCS.hlsl */,
+				1ED5780B2F0115B40032621C /* ssgiCS.hlsl */,
+				1ED5780C2F0115B40032621C /* ssr_depthHierarchyCS.hlsl */,
+				1ED5780D2F0115B40032621C /* ssr_raytraceCS.hlsl */,
+				1ED5780E2F0115B40032621C /* ssr_raytraceCS_cheap.hlsl */,
+				1ED5780F2F0115B40032621C /* ssr_raytraceCS_earlyexit.hlsl */,
+				1ED578102F0115B40032621C /* ssr_resolveCS.hlsl */,
+				1ED578112F0115B40032621C /* ssr_temporalCS.hlsl */,
+				1ED578122F0115B40032621C /* ssr_tileMaxRoughness_horizontalCS.hlsl */,
+				1ED578132F0115B40032621C /* ssr_tileMaxRoughness_verticalCS.hlsl */,
+				1ED578142F0115B40032621C /* ssr_upsampleCS.hlsl */,
+				1ED578152F0115B40032621C /* stochasticSSRHF.hlsli */,
+				1ED578162F0115B40032621C /* sunPS.hlsl */,
+				1ED578172F0115B40032621C /* surfaceHF.hlsli */,
+				1ED578182F0115B40032621C /* surfel_binningCS.hlsl */,
+				1ED578192F0115B40032621C /* surfel_coverageCS.hlsl */,
+				1ED5781A2F0115B40032621C /* surfel_gridoffsetsCS.hlsl */,
+				1ED5781B2F0115B40032621C /* surfel_indirectprepareCS.hlsl */,
+				1ED5781C2F0115B40032621C /* surfel_integrateCS.hlsl */,
+				1ED5781D2F0115B40032621C /* surfel_raytraceCS.hlsl */,
+				1ED5781E2F0115B40032621C /* surfel_raytraceCS_rtapi.hlsl */,
+				1ED5781F2F0115B40032621C /* surfel_updateCS.hlsl */,
+				1ED578202F0115B40032621C /* temporalaaCS.hlsl */,
+				1ED578212F0115B40032621C /* terrainVirtualTextureUpdateCS.hlsl */,
+				1ED578222F0115B40032621C /* terrainVirtualTextureUpdateCS_emissivemap.hlsl */,
+				1ED578232F0115B40032621C /* terrainVirtualTextureUpdateCS_normalmap.hlsl */,
+				1ED578242F0115B40032621C /* terrainVirtualTextureUpdateCS_surfacemap.hlsl */,
+				1ED578252F0115B40032621C /* tonemapCS.hlsl */,
+				1ED578262F0115B40032621C /* trailPS.hlsl */,
+				1ED578272F0115B40032621C /* trailVS.hlsl */,
+				1ED578282F0115B40032621C /* underwaterCS.hlsl */,
+				1ED578292F0115B40032621C /* upsample_bilateral_float1CS.hlsl */,
+				1ED5782A2F0115B40032621C /* upsample_bilateral_float4CS.hlsl */,
+				1ED5782B2F0115B40032621C /* upsample_bilateralPS.hlsl */,
+				1ED5782C2F0115B40032621C /* uvsphere.hlsli */,
+				1ED5782D2F0115B40032621C /* vertexcolorPS.hlsl */,
+				1ED5782E2F0115B40032621C /* vertexcolorVS.hlsl */,
+				1ED5782F2F0115B40032621C /* virtualTextureResidencyUpdateCS.hlsl */,
+				1ED578302F0115B40032621C /* virtualTextureTileAllocateCS.hlsl */,
+				1ED578312F0115B40032621C /* virtualTextureTileRequestsCS.hlsl */,
+				1ED578322F0115B40032621C /* visibility_indirect_prepareCS.hlsl */,
+				1ED578332F0115B40032621C /* visibility_resolveCS.hlsl */,
+				1ED578342F0115B40032621C /* visibility_resolveCS_MSAA.hlsl */,
+				1ED578352F0115B40032621C /* visibility_shadeCS.hlsl */,
+				1ED578362F0115B40032621C /* visibility_skyCS.hlsl */,
+				1ED578372F0115B40032621C /* visibility_surfaceCS.hlsl */,
+				1ED578382F0115B40032621C /* visibility_velocityCS.hlsl */,
+				1ED578392F0115B40032621C /* volumetricCloud_curlnoiseCS.hlsl */,
+				1ED5783A2F0115B40032621C /* volumetricCloud_detailnoiseCS.hlsl */,
+				1ED5783B2F0115B40032621C /* volumetricCloud_renderCS.hlsl */,
+				1ED5783C2F0115B40032621C /* volumetricCloud_renderCS_capture.hlsl */,
+				1ED5783D2F0115B40032621C /* volumetricCloud_renderCS_capture_MSAA.hlsl */,
+				1ED5783E2F0115B40032621C /* volumetricCloud_reprojectCS.hlsl */,
+				1ED5783F2F0115B40032621C /* volumetricCloud_shadow_renderCS.hlsl */,
+				1ED578402F0115B40032621C /* volumetricCloud_shapenoiseCS.hlsl */,
+				1ED578412F0115B40032621C /* volumetricCloud_upsamplePS.hlsl */,
+				1ED578422F0115B40032621C /* volumetricCloud_weathermapCS.hlsl */,
+				1ED578432F0115B40032621C /* volumetricCloudsHF.hlsli */,
+				1ED578442F0115B40032621C /* volumetricLight_DirectionalPS.hlsl */,
+				1ED578452F0115B40032621C /* volumetriclight_directionalVS.hlsl */,
+				1ED578462F0115B40032621C /* volumetricLight_PointPS.hlsl */,
+				1ED578472F0115B40032621C /* volumetriclight_pointVS.hlsl */,
+				1ED578482F0115B40032621C /* volumetriclight_rectanglePS.hlsl */,
+				1ED578492F0115B40032621C /* volumetriclight_rectangleVS.hlsl */,
+				1ED5784A2F0115B40032621C /* volumetricLight_SpotPS.hlsl */,
+				1ED5784B2F0115B40032621C /* volumetriclight_spotVS.hlsl */,
+				1ED5784C2F0115B40032621C /* volumetricLightHF.hlsli */,
+				1ED5784D2F0115B40032621C /* voxelConeTracingHF.hlsli */,
+				1ED5784E2F0115B40032621C /* voxelGS.hlsl */,
+				1ED5784F2F0115B40032621C /* voxelHF.hlsli */,
+				1ED578502F0115B40032621C /* voxelPS.hlsl */,
+				1ED578512F0115B40032621C /* voxelVS.hlsl */,
+				1ED578522F0115B40032621C /* vPointLightVS.hlsl */,
+				1ED578532F0115B40032621C /* vRectLightPS.hlsl */,
+				1ED578542F0115B40032621C /* vRectLightVS.hlsl */,
+				1ED578552F0115B40032621C /* vSpotLightVS.hlsl */,
+				1ED578562F0115B40032621C /* vxgi_offsetprevCS.hlsl */,
+				1ED578572F0115B40032621C /* vxgi_resolve_diffuseCS.hlsl */,
+				1ED578582F0115B40032621C /* vxgi_resolve_specularCS.hlsl */,
+				1ED578592F0115B40032621C /* vxgi_sdf_jumpfloodCS.hlsl */,
+				1ED5785A2F0115B40032621C /* vxgi_temporalCS.hlsl */,
+				1ED5785B2F0115B40032621C /* waveeffectPS.hlsl */,
+				1ED5785C2F0115B40032621C /* wetmap_updateCS.hlsl */,
+				1ED5785D2F0115B40032621C /* windCS.hlsl */,
+				1ED5785E2F0115B40032621C /* yuv_to_rgbCS.hlsl */,
+			);
+			path = shaders;
+			sourceTree = "<group>";
+		};
 		1EDA71632EE0978C00210D41 = {
 			isa = PBXGroup;
 			children = (
+				1ED5785F2F0115B40032621C /* shaders */,
 				1E79298B2EFE76C500B9E35C /* wiAppleHelper.h */,
 				1E7929892EFE75BA00B9E35C /* wiAppleHelper.mm */,
-				1EE22F932EFB2EB500CDE645 /* objectHF.hlsli */,
-				1EDA8D8A2EE6FB3900210D41 /* globals.hlsli */,
 				1EDA8A692EE5D68100210D41 /* libdxcompiler.dylib */,
 				1EDA7F6B2EE1F57900210D41 /* LUA */,
 				1EDA801D2EE1F57900210D41 /* Utility */,

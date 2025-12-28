@@ -166,7 +166,6 @@ namespace wi::shadercompiler
 		{
 		case ShaderFormat::HLSL6:
 		case ShaderFormat::HLSL6_XS:
-		case ShaderFormat::METAL:
 			args.push_back(L"-rootsig-define"); args.push_back(L"WICKED_ENGINE_DEFAULT_ROOTSIGNATURE");
 			if (has_flag(input.flags, Flags::STRIP_REFLECTION))
 			{
@@ -182,6 +181,8 @@ namespace wi::shadercompiler
 			args.push_back(L"-fvk-t-shift"); args.push_back(L"1000"); args.push_back(L"0");
 			args.push_back(L"-fvk-u-shift"); args.push_back(L"2000"); args.push_back(L"0");
 			args.push_back(L"-fvk-s-shift"); args.push_back(L"3000"); args.push_back(L"0");
+			break;
+		case ShaderFormat::METAL:
 			break;
 		default:
 			assert(0);
@@ -670,7 +671,7 @@ namespace wi::shadercompiler
 					
 					static const IRVersionedRootSignatureDescriptor desc = {
 						.version = IRRootSignatureVersion_1_1,
-						.desc_1_1.Flags = IRRootSignatureFlagAllowInputAssemblerInputLayout,
+						.desc_1_1.Flags = IRRootSignatureFlags(IRRootSignatureFlagAllowInputAssemblerInputLayout | IRRootSignatureFlagCBVSRVUAVHeapDirectlyIndexed | IRRootSignatureFlagSamplerHeapDirectlyIndexed),
 						.desc_1_1.NumParameters = arraysize(root_parameters),
 						.desc_1_1.pParameters = root_parameters,
 						.desc_1_1.NumStaticSamplers = arraysize(static_samplers),

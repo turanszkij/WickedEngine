@@ -402,7 +402,7 @@ namespace metal_internal
 		view.bufferOffset = offset;
 		if (texture_buffer_view == nullptr)
 		{
-			view.typedBuffer = structured;
+			view.typedBuffer = structured || (format != Format::UNKNOWN);
 		}
 		else
 		{
@@ -1267,6 +1267,7 @@ using namespace metal_internal;
 			sample_count /= 2;
 		}
 		descriptor->setSampleCount(sample_count);
+		texture->desc.sample_count = sample_count;
 		
 		switch (desc->type)
 		{
@@ -1295,7 +1296,7 @@ using namespace metal_internal;
 			descriptor->setArrayLength(desc->array_size / 6);
 		}
 		
-		MTL::ResourceOptions resource_options = MTL::ResourceHazardTrackingModeUntracked;
+		MTL::ResourceOptions resource_options = {};
 		if (has_flag(desc->misc_flags, ResourceMiscFlag::TRANSIENT_ATTACHMENT))
 		{
 			resource_options |= MTL::ResourceStorageModeMemoryless;
@@ -1312,6 +1313,7 @@ using namespace metal_internal;
 			resource_options |= MTL::ResourceStorageModeShared;
 			descriptor->setStorageMode(MTL::StorageModeShared);
 		}
+		resource_options |= MTL::ResourceHazardTrackingModeUntracked;
 		descriptor->setResourceOptions(resource_options);
 		
 		MTL::TextureUsage usage = {};
@@ -1933,6 +1935,9 @@ using namespace metal_internal;
 			format = *format_change;
 		}
 		
+		const MTL::PixelFormat pixelformat = _ConvertPixelFormat(format);
+		assert(pixelformat != MTL::PixelFormatInvalid);
+		
 		sliceCount = std::min(sliceCount, texture->desc.array_size - firstSlice);
 		mipCount = std::min(mipCount, texture->desc.mip_levels - firstMip);
 		
@@ -1952,7 +1957,7 @@ using namespace metal_internal;
 					if(internal_state->srv.texture.get() == nullptr)
 					{
 						auto& subresource = internal_state->srv;
-						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(_ConvertPixelFormat(format), internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}, mtlswizzle));
+						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}, mtlswizzle));
 						subresource.entry = create_entry(subresource.texture.get(), min_lod_clamp);
 						subresource.index = allocationhandler->allocate_bindless(subresource.entry);
 						allocationhandler->make_resident(subresource.texture.get());
@@ -1961,7 +1966,7 @@ using namespace metal_internal;
 					else
 					{
 						auto& subresource = internal_state->subresources_srv.emplace_back();
-						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(_ConvertPixelFormat(format), internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}, mtlswizzle));
+						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}, mtlswizzle));
 						subresource.entry = create_entry(subresource.texture.get(), min_lod_clamp);
 						subresource.index = allocationhandler->allocate_bindless(subresource.entry);
 						allocationhandler->make_resident(subresource.texture.get());
@@ -1975,7 +1980,7 @@ using namespace metal_internal;
 					if(internal_state->uav.texture.get() == nullptr)
 					{
 						auto& subresource = internal_state->uav;
-						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(_ConvertPixelFormat(format), internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
+						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
 						subresource.entry = create_entry(subresource.texture.get(), min_lod_clamp);
 						subresource.index = allocationhandler->allocate_bindless(subresource.entry);
 						allocationhandler->make_resident(subresource.texture.get());
@@ -1984,7 +1989,7 @@ using namespace metal_internal;
 					else
 					{
 						auto& subresource = internal_state->subresources_uav.emplace_back();
-						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(_ConvertPixelFormat(format), internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
+						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
 						subresource.entry = create_entry(subresource.texture.get(), min_lod_clamp);
 						subresource.index = allocationhandler->allocate_bindless(subresource.entry);
 						allocationhandler->make_resident(subresource.texture.get());
@@ -1998,14 +2003,14 @@ using namespace metal_internal;
 					if(internal_state->rtv.texture.get() == nullptr)
 					{
 						auto& subresource = internal_state->rtv;
-						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(_ConvertPixelFormat(format), internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
+						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
 						allocationhandler->make_resident(subresource.texture.get());
 						return -1;
 					}
 					else
 					{
 						auto& subresource = internal_state->subresources_rtv.emplace_back();
-						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(_ConvertPixelFormat(format), internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
+						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
 						allocationhandler->make_resident(subresource.texture.get());
 						return (int)internal_state->subresources_rtv.size() - 1;
 					}
@@ -2017,14 +2022,14 @@ using namespace metal_internal;
 					if(internal_state->dsv.texture.get() == nullptr)
 					{
 						auto& subresource = internal_state->dsv;
-						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(_ConvertPixelFormat(format), internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
+						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
 						allocationhandler->make_resident(subresource.texture.get());
 						return -1;
 					}
 					else
 					{
 						auto& subresource = internal_state->subresources_dsv.emplace_back();
-						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(_ConvertPixelFormat(format), internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
+						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
 						allocationhandler->make_resident(subresource.texture.get());
 						return (int)internal_state->subresources_dsv.size() - 1;
 					}
@@ -2040,6 +2045,9 @@ using namespace metal_internal;
 	int GraphicsDevice_Metal::CreateSubresource(GPUBuffer* buffer, SubresourceType type, uint64_t offset, uint64_t size, const Format* format_change, const uint32_t* structuredbuffer_stride_change) const
 	{
 		auto internal_state = to_internal(buffer);
+		NS::SharedPtr<MTL::TextureDescriptor> texture_descriptor;
+		
+		size = std::min(size, buffer->desc.size - offset);
 		
 		Format format = buffer->GetDesc().format;
 		if (format_change != nullptr)
@@ -2047,9 +2055,33 @@ using namespace metal_internal;
 			format = *format_change;
 		}
 		
-		size = std::min(size, buffer->desc.size - offset);
-		
 		const bool structured = has_flag(buffer->desc.misc_flags, ResourceMiscFlag::BUFFER_STRUCTURED) || (structuredbuffer_stride_change != nullptr);
+		
+		const MTL::PixelFormat pixelformat = _ConvertPixelFormat(format);
+		if (pixelformat != MTL::PixelFormatInvalid)
+		{
+			texture_descriptor = NS::TransferPtr(MTL::TextureDescriptor::alloc()->init());
+			texture_descriptor->setPixelFormat(pixelformat);
+			texture_descriptor->setTextureType(MTL::TextureTypeTextureBuffer);
+			texture_descriptor->setResourceOptions(internal_state->buffer->resourceOptions());
+			texture_descriptor->setWidth(size / GetFormatStride(format));
+			MTL::TextureUsage texture_usage = MTL::TextureUsageShaderRead | MTL::TextureUsagePixelFormatView;
+			if (type == SubresourceType::UAV)
+			{
+				texture_usage |= MTL::TextureUsageShaderWrite;
+				switch (texture_descriptor->pixelFormat())
+				{
+					case MTL::PixelFormatR32Uint:
+					case MTL::PixelFormatR32Sint:
+					case MTL::PixelFormatRG32Uint:
+						texture_usage |= MTL::TextureUsageShaderAtomic;
+						break;
+					default:
+						break;
+				}
+			}
+			texture_descriptor->setUsage(texture_usage);
+		}
 		
 		switch (type) {
 			case SubresourceType::SRV:
@@ -2059,11 +2091,9 @@ using namespace metal_internal;
 						auto& subresource = internal_state->srv;
 						subresource.offset = offset;
 						subresource.size = size;
-						if (format != Format::UNKNOWN)
+						if (texture_descriptor.get() != nullptr)
 						{
-							NS::SharedPtr<MTL::TextureDescriptor> view_descriptor = NS::TransferPtr(MTL::TextureDescriptor::alloc()->init());
-							view_descriptor->textureBufferDescriptor(_ConvertPixelFormat(format), size / GetFormatStride(format), internal_state->buffer->resourceOptions(), MTL::TextureUsageShaderRead | MTL::TextureUsagePixelFormatView);
-							subresource.texture_buffer_view = NS::TransferPtr(device->newTexture(view_descriptor.get()));
+							subresource.texture_buffer_view = NS::TransferPtr(internal_state->buffer->newTexture(texture_descriptor.get(), offset, size));
 						}
 						subresource.entry = create_entry(internal_state->buffer.get(), size, offset, subresource.texture_buffer_view.get(), format, structured);
 						subresource.index = allocationhandler->allocate_bindless(subresource.entry);
@@ -2075,11 +2105,9 @@ using namespace metal_internal;
 						auto& subresource = internal_state->subresources_srv.emplace_back();
 						subresource.offset = offset;
 						subresource.size = size;
-						if (format != Format::UNKNOWN)
+						if (texture_descriptor.get() != nullptr)
 						{
-							NS::SharedPtr<MTL::TextureDescriptor> view_descriptor = NS::TransferPtr(MTL::TextureDescriptor::alloc()->init());
-							view_descriptor->textureBufferDescriptor(_ConvertPixelFormat(format), size / GetFormatStride(format), internal_state->buffer->resourceOptions(), MTL::TextureUsageShaderRead | MTL::TextureUsagePixelFormatView);
-							subresource.texture_buffer_view = NS::TransferPtr(device->newTexture(view_descriptor.get()));
+							subresource.texture_buffer_view = NS::TransferPtr(internal_state->buffer->newTexture(texture_descriptor.get(), offset, size));
 						}
 						subresource.entry = create_entry(internal_state->buffer.get(), size, offset, subresource.texture_buffer_view.get(), format, structured);
 						subresource.index = allocationhandler->allocate_bindless(subresource.entry);
@@ -2095,11 +2123,9 @@ using namespace metal_internal;
 						auto& subresource = internal_state->uav;
 						subresource.offset = offset;
 						subresource.size = size;
-						if (format != Format::UNKNOWN)
+						if (texture_descriptor.get() != nullptr)
 						{
-							NS::SharedPtr<MTL::TextureDescriptor> view_descriptor = NS::TransferPtr(MTL::TextureDescriptor::alloc()->init());
-							view_descriptor->textureBufferDescriptor(_ConvertPixelFormat(format), size / GetFormatStride(format), internal_state->buffer->resourceOptions(), MTL::TextureUsageShaderRead | MTL::TextureUsageShaderWrite | MTL::TextureUsagePixelFormatView);
-							subresource.texture_buffer_view = NS::TransferPtr(device->newTexture(view_descriptor.get()));
+							subresource.texture_buffer_view = NS::TransferPtr(internal_state->buffer->newTexture(texture_descriptor.get(), offset, size));
 						}
 						subresource.entry = create_entry(internal_state->buffer.get(), size, offset, subresource.texture_buffer_view.get(), format, structured);
 						subresource.index = allocationhandler->allocate_bindless(subresource.entry);
@@ -2111,11 +2137,9 @@ using namespace metal_internal;
 						auto& subresource = internal_state->subresources_uav.emplace_back();
 						subresource.offset = offset;
 						subresource.size = size;
-						if (format != Format::UNKNOWN)
+						if (texture_descriptor.get() != nullptr)
 						{
-							NS::SharedPtr<MTL::TextureDescriptor> view_descriptor = NS::TransferPtr(MTL::TextureDescriptor::alloc()->init());
-							view_descriptor->textureBufferDescriptor(_ConvertPixelFormat(format), size / GetFormatStride(format), internal_state->buffer->resourceOptions(), MTL::TextureUsageShaderRead | MTL::TextureUsageShaderWrite | MTL::TextureUsagePixelFormatView);
-							subresource.texture_buffer_view = NS::TransferPtr(device->newTexture(view_descriptor.get()));
+							subresource.texture_buffer_view = NS::TransferPtr(internal_state->buffer->newTexture(texture_descriptor.get(), offset, size));
 						}
 						subresource.entry = create_entry(internal_state->buffer.get(), size, offset, subresource.texture_buffer_view.get(), format, structured);
 						subresource.index = allocationhandler->allocate_bindless(subresource.entry);
