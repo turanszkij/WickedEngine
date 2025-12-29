@@ -5041,6 +5041,7 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 		}
 		break;
 		case HISTORYOP_ADD:
+		case HISTORYOP_ADD_TO_SPLINE:
 		{
 			// Read selections states from archive:
 
@@ -5072,6 +5073,19 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 				archive >> sel.distance;
 
 				selectedAFTER.push_back(sel);
+			}
+
+			if (type == HISTORYOP_ADD_TO_SPLINE)
+			{
+				wi::vector<Entity> modifiedSplineEntities;
+				archive >> modifiedSplineEntities;
+				EntitySerializer seri;
+				seri.allow_remap = false;
+				for (size_t i = 0; i < modifiedSplineEntities.size(); ++i)
+				{
+					scene.Entity_Remove(modifiedSplineEntities[i], false); // no recursive!!!
+					scene.Entity_Serialize(archive, seri, INVALID_ENTITY, wi::scene::Scene::EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES); // no recursive!!!
+				}
 			}
 
 			wi::vector<Entity> addedEntities;

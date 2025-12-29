@@ -335,8 +335,19 @@ void SplineWindow::NewNode()
 	spline->spline_node_transforms.push_back(transform);
 	scene.Component_Attach(node_entity, entity);
 	RefreshEntries();
+
+	wi::Archive& archive = editor->AdvanceHistory();
+	archive << EditorComponent::HISTORYOP_ADD_TO_SPLINE;
+	editor->RecordSelection(archive);
+
 	editor->ClearSelected();
 	editor->AddSelected(node_entity);
+
+	editor->RecordSelection(archive);
+
+	editor->RecordEntity(archive, entity);
+	editor->RecordEntity(archive, node_entity);
+
 	editor->componentsWnd.RefreshEntityTree();
 }
 

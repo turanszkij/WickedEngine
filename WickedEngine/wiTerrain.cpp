@@ -184,6 +184,7 @@ namespace wi::terrain
 		wi::jobsystem::context workload;
 		std::atomic_bool cancelled{ false };
 		wi::vector<SplineComponent> splines;
+		wi::vector<wi::ecs::Entity> spline_entities;
 		wi::vector<Chunk> removable_chunks; // chunks that were invalidated are regenerated on the generator thread. Before merging them with the scene, the previous version of them will need to be removed from the destination scene
 		std::deque<Chunk> priority_invalidation; // to not let invalidation stuck at same chunks every frame while editing splines, for more appealing visual feedback
 	};
@@ -928,21 +929,43 @@ namespace wi::terrain
 				terrain_spline_count_scene++;
 			}
 		}
-		if (terrain_spline_count_scene != generator->splines.size())
+		// Check mismatches between current and previous slines (removal, undo, etc.)
+		for (size_t i = 0; i < generator->splines.size(); ++i)
 		{
-			// Need to invalidate terrain if spline was removed:
-			for (const SplineComponent& spline : generator->splines)
+			const SplineComponent& spline = generator->splines[i];
+			Entity entity = generator->spline_entities[i];
+			bool invalidation_required = false;
+			invalidation_required |= !scene->splines.Contains(entity); // no longer exists in scene, was deleted
+			if (!invalidation_required)
+			{
+				// If spline exists in scene, need to compare for changes:
+				const SplineComponent& other = *scene->splines.GetComponent(entity);
+				invalidation_required |= spline.width != other.width;
+				invalidation_required |= spline.rotation != other.rotation;
+				invalidation_required |= spline.terrain_modifier_amount != other.terrain_modifier_amount;
+				invalidation_required |= spline.terrain_pushdown != other.terrain_pushdown;
+				invalidation_required |= spline.terrain_texture_falloff != other.terrain_texture_falloff;
+				invalidation_required |= spline.spline_node_transforms.size() != other.spline_node_transforms.size();
+				if (!invalidation_required)
+				{
+					// Last resort compare whole node transform array:
+					invalidation_required |= std::memcmp(spline.spline_node_transforms.data(), other.spline_node_transforms.data(), spline.spline_node_transforms.size() * sizeof(TransformComponent)) != 0;
+				}
+			}
+			if (invalidation_required)
 			{
 				InvalidateChunksAtSpline(spline);
 			}
 		}
 		generator->splines.clear();
+		generator->spline_entities.clear();
 		for (size_t i = 0; i < scene->splines.GetCount(); ++i)
 		{
 			const SplineComponent& spline = scene->splines[i];
 			if (spline.terrain_modifier_amount > 0)
 			{
 				generator->splines.push_back(spline);
+				generator->spline_entities.push_back(scene->splines.GetEntity(i));
 			}
 		}
 		wi::jobsystem::Execute(generator->workload, [=](wi::jobsystem::JobArgs a) {
