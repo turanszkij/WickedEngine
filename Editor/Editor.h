@@ -167,6 +167,7 @@ public:
 		HISTORYOP_DELETE,			// entity removed
 		HISTORYOP_COMPONENT_DATA,	// generic component data changed
 		HISTORYOP_PAINTTOOL,		// paint tool interaction
+		HISTORYOP_ADD_TO_SPLINE,	// Spline node added
 		HISTORYOP_NONE
 	};
 
