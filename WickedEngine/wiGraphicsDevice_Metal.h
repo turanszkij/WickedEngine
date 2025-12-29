@@ -95,6 +95,8 @@ namespace wi::graphics
 			};
 			VertexBufferBinding vertex_buffers[32];
 			bool dirty_vb = false;
+			
+			wi::vector<GPUBarrier> barriers;
 
 			void reset(uint32_t bufferindex)
 			{
@@ -141,6 +143,7 @@ namespace wi::graphics
 				{
 					x = {};
 				}
+				barriers.clear();
 			}
 		};
 		wi::vector<std::unique_ptr<CommandList_Metal>> commandlists;
@@ -158,6 +161,36 @@ namespace wi::graphics
 		{
 			assert(cmd.IsValid());
 			return *(CommandList_Metal*)cmd.internal_state;
+		}
+		
+		struct Semaphore
+		{
+			NS::SharedPtr<MTL::SharedEvent> event;
+		};
+		wi::vector<Semaphore> free_semaphores;
+		std::mutex semaphore_locker;
+		
+		Semaphore new_semaphore()
+		{
+			semaphore_locker.lock();
+			if (free_semaphores.empty())
+			{
+				free_semaphores.resize(256);
+			}
+			Semaphore semaphore = free_semaphores.back();
+			free_semaphores.pop_back();
+			semaphore_locker.unlock();
+			if (semaphore.event.get() == nullptr)
+			{
+				semaphore.event = NS::TransferPtr(device->newSharedEvent());
+			}
+			semaphore.event->setSignaledValue(0);
+			return semaphore;
+		}
+		void free_semaphore(const Semaphore& semaphore)
+		{
+			std::scoped_lock lck(semaphore_locker);
+			free_semaphores.push_back(semaphore);
 		}
 		
 		void pso_validate(CommandList cmd);

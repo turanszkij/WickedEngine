@@ -382,9 +382,27 @@ namespace metal_internal
 			case ComponentSwizzle::ZERO:
 				return MTL::TextureSwizzleZero;
 			default:
-				return MTL::TextureSwizzleOne;
+				break;
 		}
 		return MTL::TextureSwizzleOne;
+	}
+	constexpr MTL::SamplerAddressMode _ConvertAddressMode(TextureAddressMode value)
+	{
+		switch (value) {
+			case TextureAddressMode::CLAMP:
+				return MTL::SamplerAddressModeClampToEdge;
+			case TextureAddressMode::WRAP:
+				return MTL::SamplerAddressModeRepeat;
+			case TextureAddressMode::MIRROR_ONCE:
+				return MTL::SamplerAddressModeMirrorClampToEdge;
+			case TextureAddressMode::MIRROR:
+				return MTL::SamplerAddressModeMirrorRepeat;
+			case TextureAddressMode::BORDER:
+				return MTL::SamplerAddressModeClampToBorderColor;
+			default:
+				break;
+		}
+		return MTL::SamplerAddressModeClampToEdge;
 	}
 
 	IRDescriptorTableEntry create_entry(MTL::Texture* res, float min_lod_clamp = 0)
@@ -433,6 +451,8 @@ namespace metal_internal
 			uint64_t offset = 0;
 			uint64_t size = 0;
 			int index = -1;
+			
+			bool IsValid() const { return entry.gpuVA != 0; }
 		};
 		Subresource srv;
 		Subresource uav;
@@ -446,10 +466,12 @@ namespace metal_internal
 			allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(srv.texture_buffer_view), framecount));
 			if (srv.index >= 0)
 				allocationhandler->destroyer_bindless_res.push_back(std::make_pair(srv.index, framecount));
+			srv = {};
 			
 			allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(uav.texture_buffer_view), framecount));
 			if (uav.index >= 0)
 				allocationhandler->destroyer_bindless_res.push_back(std::make_pair(uav.index, framecount));
+			uav = {};
 			
 			for (auto& x : subresources_srv)
 			{
@@ -488,6 +510,8 @@ namespace metal_internal
 			IRDescriptorTableEntry entry = {};
 			NS::SharedPtr<MTL::Texture> texture;
 			int index = -1;
+			
+			bool IsValid() const { return entry.textureViewID != 0; }
 		};
 		Subresource srv;
 		Subresource uav;
@@ -505,10 +529,12 @@ namespace metal_internal
 			allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(srv.texture), framecount));
 			if (srv.index >= 0)
 				allocationhandler->destroyer_bindless_res.push_back(std::make_pair(srv.index, framecount));
+			srv = {};
 			
 			allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(uav.texture), framecount));
 			if (uav.index >= 0)
 				allocationhandler->destroyer_bindless_res.push_back(std::make_pair(uav.index, framecount));
+			uav = {};
 			
 			allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(rtv.texture), framecount));
 			if (rtv.index >= 0)
@@ -1002,6 +1028,65 @@ using namespace metal_internal;
 			commandlist.dirty_viewport = false;
 			commandlist.render_encoder->setViewports(commandlist.viewports, commandlist.viewport_count);
 		}
+		
+		const MTL::RenderStages stages = MTL::RenderStageVertex;
+		for (auto& barrier : commandlist.barriers)
+		{
+			switch (barrier.type)
+			{
+				case GPUBarrier::Type::MEMORY:
+					if (barrier.memory.resource == nullptr)
+					{
+						commandlist.render_encoder->memoryBarrier(MTL::BarrierScopeBuffers | MTL::BarrierScopeTextures, stages, stages);
+					}
+					else if (barrier.memory.resource->IsBuffer())
+					{
+						if (barrier.memory.resource == nullptr || !barrier.memory.resource->IsValid())
+							break;
+						auto internal_state = to_internal<GPUBuffer>(barrier.memory.resource);
+						MTL::Resource* resources[] = {internal_state->buffer.get()};
+						commandlist.render_encoder->memoryBarrier(resources, arraysize(resources), stages, stages);
+					}
+					else if (barrier.memory.resource->IsTexture())
+					{
+						if (barrier.memory.resource == nullptr || !barrier.memory.resource->IsValid())
+							break;
+						auto internal_state = to_internal<Texture>(barrier.memory.resource);
+						MTL::Resource* resources[] = {internal_state->texture.get()};
+						commandlist.render_encoder->memoryBarrier(resources, arraysize(resources), stages, stages);
+					}
+					break;
+				//case GPUBarrier::Type::IMAGE:
+				//{
+				//	if (barrier.image.texture == nullptr || !barrier.image.texture->IsValid())
+				//		break;
+				//	auto internal_state = to_internal<Texture>(barrier.image.texture);
+				//	MTL::ResourceUsage usage = MTL::ResourceUsageRead;
+				//	if (barrier.image.layout_after == ResourceState::UNORDERED_ACCESS)
+				//	{
+				//		usage = MTL::ResourceUsageWrite;
+				//	}
+				//	commandlist.render_encoder->useResource(internal_state->texture.get(), usage);
+				//}
+				//break;
+				//case GPUBarrier::Type::BUFFER:
+				//{
+				//	if (barrier.buffer.buffer == nullptr || !barrier.buffer.buffer->IsValid())
+				//		break;
+				//	auto internal_state = to_internal<GPUBuffer>(barrier.buffer.buffer);
+				//	MTL::ResourceUsage usage = MTL::ResourceUsageRead;
+				//	if (barrier.buffer.state_after == ResourceState::UNORDERED_ACCESS)
+				//	{
+				//		usage = MTL::ResourceUsageWrite;
+				//	}
+				//	commandlist.render_encoder->useResource(internal_state->buffer.get(), usage);
+				//}
+				//break;
+				default:
+					commandlist.render_encoder->barrierAfterQueueStages(MTL::StageAll, MTL::StageAll);
+					break;
+			}
+		}
 	}
 	void GraphicsDevice_Metal::predispatch(CommandList cmd)
 	{
@@ -1039,6 +1124,64 @@ using namespace metal_internal;
 		}
 		
 		binder_flush(cmd);
+		
+		for (auto& barrier : commandlist.barriers)
+		{
+			switch (barrier.type)
+			{
+				case GPUBarrier::Type::MEMORY:
+					if (barrier.memory.resource == nullptr)
+					{
+						commandlist.compute_encoder->memoryBarrier(MTL::BarrierScopeBuffers | MTL::BarrierScopeTextures);
+					}
+					else if (barrier.memory.resource->IsBuffer())
+					{
+						if (barrier.memory.resource == nullptr || !barrier.memory.resource->IsValid())
+							break;
+						auto internal_state = to_internal<GPUBuffer>(barrier.memory.resource);
+						MTL::Resource* resources[] = {internal_state->buffer.get()};
+						commandlist.compute_encoder->memoryBarrier(resources, arraysize(resources));
+					}
+					else if (barrier.memory.resource->IsTexture())
+					{
+						if (barrier.memory.resource == nullptr || !barrier.memory.resource->IsValid())
+							break;
+						auto internal_state = to_internal<Texture>(barrier.memory.resource);
+						MTL::Resource* resources[] = {internal_state->texture.get()};
+						commandlist.compute_encoder->memoryBarrier(resources, arraysize(resources));
+					}
+					break;
+				//case GPUBarrier::Type::IMAGE:
+				//{
+				//	if (barrier.image.texture == nullptr || !barrier.image.texture->IsValid())
+				//		break;
+				//	auto internal_state = to_internal<Texture>(barrier.image.texture);
+				//	MTL::ResourceUsage usage = MTL::ResourceUsageRead;
+				//	if (barrier.image.layout_after == ResourceState::UNORDERED_ACCESS)
+				//	{
+				//		usage = MTL::ResourceUsageWrite;
+				//	}
+				//	commandlist.compute_encoder->useResource(internal_state->texture.get(), usage);
+				//}
+				//break;
+				//case GPUBarrier::Type::BUFFER:
+				//{
+				//	if (barrier.buffer.buffer == nullptr || !barrier.buffer.buffer->IsValid())
+				//		break;
+				//	auto internal_state = to_internal<GPUBuffer>(barrier.buffer.buffer);
+				//	MTL::ResourceUsage usage = MTL::ResourceUsageRead;
+				//	if (barrier.buffer.state_after == ResourceState::UNORDERED_ACCESS)
+				//	{
+				//		usage = MTL::ResourceUsageWrite;
+				//	}
+				//	commandlist.compute_encoder->useResource(internal_state->buffer.get(), usage);
+				//}
+				//break;
+				default:
+					commandlist.compute_encoder->barrierAfterQueueStages(MTL::StageAll, MTL::StageAll);
+					break;
+			}
+		}
 	}
 	void GraphicsDevice_Metal::precopy(CommandList cmd)
 	{
@@ -1056,6 +1199,11 @@ using namespace metal_internal;
 		if (commandlist.blit_encoder == nullptr)
 		{
 			commandlist.blit_encoder = commandlist.commandbuffer->blitCommandEncoder();
+		}
+		
+		for (auto& barrier : commandlist.barriers)
+		{
+			commandlist.blit_encoder->barrierAfterQueueStages(MTL::StageAll, MTL::StageAll);
 		}
 	}
 
@@ -1252,6 +1400,11 @@ using namespace metal_internal;
 		texture->mapped_subresource_count = 0;
 		texture->sparse_properties = nullptr;
 		texture->desc = *desc;
+		
+		if (texture->desc.mip_levels == 0)
+		{
+			texture->desc.mip_levels = GetMipCount(texture->desc.width, texture->desc.height, texture->desc.depth);
+		}
 		
 		NS::SharedPtr<MTL::TextureDescriptor> descriptor = NS::TransferPtr(MTL::TextureDescriptor::alloc()->init());
 		descriptor->setWidth(desc->width);
@@ -1648,6 +1801,9 @@ using namespace metal_internal;
 				break;
 		}
 		descriptor->setBorderColor(border_color);
+		descriptor->setSAddressMode(_ConvertAddressMode(desc->address_u));
+		descriptor->setTAddressMode(_ConvertAddressMode(desc->address_v));
+		descriptor->setRAddressMode(_ConvertAddressMode(desc->address_w));
 		internal_state->sampler = NS::TransferPtr(device->newSamplerState(descriptor.get()));
 		internal_state->entry = create_entry(internal_state->sampler.get());
 		internal_state->index = allocationhandler->allocate_bindless_sampler(internal_state->entry);
@@ -1954,7 +2110,7 @@ using namespace metal_internal;
 					mtlswizzle.green = _ConvertComponentSwizzle(requested_swizzle.g);
 					mtlswizzle.blue = _ConvertComponentSwizzle(requested_swizzle.b);
 					mtlswizzle.alpha = _ConvertComponentSwizzle(requested_swizzle.a);
-					if(internal_state->srv.texture.get() == nullptr)
+					if (!internal_state->srv.IsValid())
 					{
 						auto& subresource = internal_state->srv;
 						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}, mtlswizzle));
@@ -1977,7 +2133,7 @@ using namespace metal_internal;
 				
 			case SubresourceType::UAV:
 				{
-					if(internal_state->uav.texture.get() == nullptr)
+					if (!internal_state->uav.IsValid())
 					{
 						auto& subresource = internal_state->uav;
 						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
@@ -2000,7 +2156,7 @@ using namespace metal_internal;
 				
 			case SubresourceType::RTV:
 				{
-					if(internal_state->rtv.texture.get() == nullptr)
+					if (!internal_state->rtv.IsValid())
 					{
 						auto& subresource = internal_state->rtv;
 						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
@@ -2019,7 +2175,7 @@ using namespace metal_internal;
 				
 			case SubresourceType::DSV:
 				{
-					if(internal_state->dsv.texture.get() == nullptr)
+					if (!internal_state->dsv.IsValid())
 					{
 						auto& subresource = internal_state->dsv;
 						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
@@ -2086,7 +2242,7 @@ using namespace metal_internal;
 		switch (type) {
 			case SubresourceType::SRV:
 				{
-					if(internal_state->srv.index < 0)
+					if (!internal_state->srv.IsValid())
 					{
 						auto& subresource = internal_state->srv;
 						subresource.offset = offset;
@@ -2118,7 +2274,7 @@ using namespace metal_internal;
 				break;
 			case SubresourceType::UAV:
 				{
-					if(internal_state->uav.index < 0)
+					if (!internal_state->uav.IsValid())
 					{
 						auto& subresource = internal_state->uav;
 						subresource.offset = offset;
@@ -2157,19 +2313,16 @@ using namespace metal_internal;
 
 	void GraphicsDevice_Metal::DeleteSubresources(GPUResource* resource)
 	{
+		std::scoped_lock lck(allocationhandler->destroylocker);
 		if (resource->IsTexture())
 		{
 			auto internal_state = to_internal<Texture>(resource);
-			internal_state->allocationhandler->destroylocker.lock();
 			internal_state->destroy_subresources();
-			internal_state->allocationhandler->destroylocker.unlock();
 		}
 		else if (resource->IsBuffer())
 		{
 			auto internal_state = to_internal<GPUBuffer>(resource);
-			internal_state->allocationhandler->destroylocker.lock();
 			internal_state->destroy_subresources();
-			internal_state->allocationhandler->destroylocker.unlock();
 		}
 	}
 
@@ -2181,7 +2334,8 @@ using namespace metal_internal;
 		if (resource->IsTexture())
 		{
 			auto internal_state = to_internal<Texture>(resource);
-			switch (type) {
+			switch (type)
+			{
 				case SubresourceType::SRV:
 					return subresource < 0 ? internal_state->srv.index : internal_state->subresources_srv[subresource].index;
 				case SubresourceType::UAV:
@@ -2193,7 +2347,8 @@ using namespace metal_internal;
 		else if (resource->IsBuffer())
 		{
 			auto internal_state = to_internal<GPUBuffer>(resource);
-			switch (type) {
+			switch (type)
+			{
 				case SubresourceType::SRV:
 					return subresource < 0 ? internal_state->srv.index : internal_state->subresources_srv[subresource].index;
 				case SubresourceType::UAV:
@@ -2503,6 +2658,7 @@ using namespace metal_internal;
 					color_attachment_descriptor->setClearColor(MTL::ClearColor::Make(image.texture->desc.clear.color[0], image.texture->desc.clear.color[1], image.texture->desc.clear.color[2], image.texture->desc.clear.color[3]));
 					color_attachment_descriptor->setLoadAction(load_action);
 					color_attachment_descriptor->setStoreAction(store_action);
+					color_attachment_descriptor->setStoreActionOptions(MTL::StoreActionOptionNone);
 					descriptor->colorAttachments()->setObject(color_attachment_descriptor, color_attachment_index);
 					color_attachment_index++;
 					break;
@@ -2868,7 +3024,13 @@ using namespace metal_internal;
 		MTL::Origin srcOrigin = {};
 		MTL::Size srcSize = {};
 		MTL::Origin dstOrigin = { dstX, dstY, dstZ };
-		if (srcbox != nullptr)
+		if (srcbox == nullptr)
+		{
+			srcSize.width = src_internal->texture->width();
+			srcSize.height = src_internal->texture->height();
+			srcSize.depth = src_internal->texture->depth();
+		}
+		else
 		{
 			srcOrigin.x = srcbox->left;
 			srcOrigin.y = srcbox->top;
@@ -2982,52 +3144,7 @@ using namespace metal_internal;
 		for (uint32_t i = 0; i < numBarriers; ++i)
 		{
 			const GPUBarrier& barrier = barriers[i];
-			switch (barrier.type) {
-				case GPUBarrier::Type::MEMORY:
-					if (commandlist.render_encoder != nullptr)
-					{
-						if (barrier.memory.resource == nullptr)
-						{
-							commandlist.render_encoder->memoryBarrier(MTL::BarrierScopeBuffers, MTL::RenderStageVertex | MTL::RenderStageFragment, MTL::RenderStageVertex | MTL::RenderStageFragment);
-						}
-						else if (barrier.memory.resource->IsBuffer())
-						{
-							auto internal_state = to_internal<GPUBuffer>(barrier.memory.resource);
-							MTL::Resource* resources[] = {internal_state->buffer.get()};
-							commandlist.render_encoder->memoryBarrier(resources, arraysize(resources), MTL::RenderStageVertex | MTL::RenderStageFragment, MTL::RenderStageVertex | MTL::RenderStageFragment);
-						}
-						else if (barrier.memory.resource->IsTexture())
-						{
-							auto internal_state = to_internal<Texture>(barrier.memory.resource);
-							MTL::Resource* resources[] = {internal_state->texture.get()};
-							commandlist.render_encoder->memoryBarrier(resources, arraysize(resources), MTL::RenderStageVertex | MTL::RenderStageFragment, MTL::RenderStageVertex | MTL::RenderStageFragment);
-						}
-					}
-					else
-					{
-						predispatch(cmd); // use or create compute encoder
-						if (barrier.memory.resource == nullptr)
-						{
-							commandlist.compute_encoder->memoryBarrier(MTL::BarrierScopeBuffers);
-						}
-						else if (barrier.memory.resource->IsBuffer())
-						{
-							auto internal_state = to_internal<GPUBuffer>(barrier.memory.resource);
-							MTL::Resource* resources[] = {internal_state->buffer.get()};
-							commandlist.compute_encoder->memoryBarrier(resources, arraysize(resources));
-						}
-						else if (barrier.memory.resource->IsTexture())
-						{
-							auto internal_state = to_internal<Texture>(barrier.memory.resource);
-							MTL::Resource* resources[] = {internal_state->texture.get()};
-							commandlist.compute_encoder->memoryBarrier(resources, arraysize(resources));
-						}
-					}
-					break;
-					
-				default:
-					break;
-			}
+			commandlist.barriers.push_back(barrier);
 		}
 	}
 	void GraphicsDevice_Metal::BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src)
