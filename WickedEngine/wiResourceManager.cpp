@@ -305,7 +305,7 @@ namespace wi
 
 		bool LoadResourceDirectly(
 			const std::string& name,
-			Flags flags,
+			Flags& flags, // flags is modified by this function!
 			const uint8_t* filedata,
 			size_t filesize,
 			ResourceInternal* resource
@@ -1081,7 +1081,7 @@ namespace wi
 			{
 				wi::allocator::weak_ptr<ResourceInternal>& weak_resource = x.second;
 				wi::allocator::shared_ptr<ResourceInternal> resource = weak_resource.lock();
-				if (resource != nullptr && resource->texture.IsValid() && has_flag(resource->flags, Flags::STREAMING))
+				if (resource != nullptr && resource->texture.IsValid() && has_flag(resource->flags, Flags::STREAMING) && resource->streaming_texture.mip_count > 1)
 				{
 					const TextureDesc& desc = resource->texture.desc;
 					const float mip_offset = float(resource->streaming_texture.mip_count - desc.mip_levels);
