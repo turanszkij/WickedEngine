@@ -36,9 +36,15 @@ namespace wi::graphics
 			IRDescriptorTableEntry srvs[arraysize(DescriptorBindingTable::SRV)];
 			IRDescriptorTableEntry uavs[arraysize(DescriptorBindingTable::UAV)];
 		};
+		NS::SharedPtr<MTL::SamplerState> static_samplers[10];
+		struct StaticSamplerDescriptors
+		{
+			IRDescriptorTableEntry samplers[arraysize(static_samplers)]; // workaround for static sampler, they are not supported by Metal Shader Converter
+		} static_sampler_descriptors;
 		struct SamplerTable
 		{
 			IRDescriptorTableEntry samplers[arraysize(DescriptorBindingTable::SAM)];
+			StaticSamplerDescriptors static_samplers;
 		};
 		
 	private:

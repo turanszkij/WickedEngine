@@ -828,6 +828,7 @@ using namespace metal_internal;
 			{
 				commandlist.dirty_sampler = false;
 				SamplerTable sampler_table = {};
+				sampler_table.static_samplers = static_sampler_descriptors;
 				GPUAllocation sampler_table_allocation = AllocateGPU(sizeof(SamplerTable), cmd);
 				auto sampler_table_allocation_internal = to_internal(&sampler_table_allocation.buffer);
 				commandlist.root.sampler_table_ptr = sampler_table_allocation_internal->gpu_address + sampler_table_allocation.offset;
@@ -1029,63 +1030,69 @@ using namespace metal_internal;
 			commandlist.render_encoder->setViewports(commandlist.viewports, commandlist.viewport_count);
 		}
 		
-		const MTL::RenderStages stages = MTL::RenderStageVertex;
-		for (auto& barrier : commandlist.barriers)
+		//const MTL::RenderStages stages = MTL::RenderStageVertex;
+		//for (auto& barrier : commandlist.barriers)
+		//{
+		//	switch (barrier.type)
+		//	{
+		//		case GPUBarrier::Type::MEMORY:
+		//			if (barrier.memory.resource == nullptr)
+		//			{
+		//				commandlist.render_encoder->memoryBarrier(MTL::BarrierScopeBuffers | MTL::BarrierScopeTextures, stages, stages);
+		//			}
+		//			else if (barrier.memory.resource->IsBuffer())
+		//			{
+		//				if (barrier.memory.resource == nullptr || !barrier.memory.resource->IsValid())
+		//					break;
+		//				auto internal_state = to_internal<GPUBuffer>(barrier.memory.resource);
+		//				MTL::Resource* resources[] = {internal_state->buffer.get()};
+		//				commandlist.render_encoder->memoryBarrier(resources, arraysize(resources), stages, stages);
+		//			}
+		//			else if (barrier.memory.resource->IsTexture())
+		//			{
+		//				if (barrier.memory.resource == nullptr || !barrier.memory.resource->IsValid())
+		//					break;
+		//				auto internal_state = to_internal<Texture>(barrier.memory.resource);
+		//				MTL::Resource* resources[] = {internal_state->texture.get()};
+		//				commandlist.render_encoder->memoryBarrier(resources, arraysize(resources), stages, stages);
+		//			}
+		//			break;
+		//		//case GPUBarrier::Type::IMAGE:
+		//		//{
+		//		//	if (barrier.image.texture == nullptr || !barrier.image.texture->IsValid())
+		//		//		break;
+		//		//	auto internal_state = to_internal<Texture>(barrier.image.texture);
+		//		//	MTL::ResourceUsage usage = MTL::ResourceUsageRead;
+		//		//	if (barrier.image.layout_after == ResourceState::UNORDERED_ACCESS)
+		//		//	{
+		//		//		usage = MTL::ResourceUsageWrite;
+		//		//	}
+		//		//	commandlist.render_encoder->useResource(internal_state->texture.get(), usage);
+		//		//}
+		//		//break;
+		//		//case GPUBarrier::Type::BUFFER:
+		//		//{
+		//		//	if (barrier.buffer.buffer == nullptr || !barrier.buffer.buffer->IsValid())
+		//		//		break;
+		//		//	auto internal_state = to_internal<GPUBuffer>(barrier.buffer.buffer);
+		//		//	MTL::ResourceUsage usage = MTL::ResourceUsageRead;
+		//		//	if (barrier.buffer.state_after == ResourceState::UNORDERED_ACCESS)
+		//		//	{
+		//		//		usage = MTL::ResourceUsageWrite;
+		//		//	}
+		//		//	commandlist.render_encoder->useResource(internal_state->buffer.get(), usage);
+		//		//}
+		//		//break;
+		//		default:
+		//			commandlist.render_encoder->barrierAfterQueueStages(MTL::StageAll, MTL::StageAll);
+		//			break;
+		//	}
+		//}
+		
+		if (!commandlist.barriers.empty())
 		{
-			switch (barrier.type)
-			{
-				case GPUBarrier::Type::MEMORY:
-					if (barrier.memory.resource == nullptr)
-					{
-						commandlist.render_encoder->memoryBarrier(MTL::BarrierScopeBuffers | MTL::BarrierScopeTextures, stages, stages);
-					}
-					else if (barrier.memory.resource->IsBuffer())
-					{
-						if (barrier.memory.resource == nullptr || !barrier.memory.resource->IsValid())
-							break;
-						auto internal_state = to_internal<GPUBuffer>(barrier.memory.resource);
-						MTL::Resource* resources[] = {internal_state->buffer.get()};
-						commandlist.render_encoder->memoryBarrier(resources, arraysize(resources), stages, stages);
-					}
-					else if (barrier.memory.resource->IsTexture())
-					{
-						if (barrier.memory.resource == nullptr || !barrier.memory.resource->IsValid())
-							break;
-						auto internal_state = to_internal<Texture>(barrier.memory.resource);
-						MTL::Resource* resources[] = {internal_state->texture.get()};
-						commandlist.render_encoder->memoryBarrier(resources, arraysize(resources), stages, stages);
-					}
-					break;
-				//case GPUBarrier::Type::IMAGE:
-				//{
-				//	if (barrier.image.texture == nullptr || !barrier.image.texture->IsValid())
-				//		break;
-				//	auto internal_state = to_internal<Texture>(barrier.image.texture);
-				//	MTL::ResourceUsage usage = MTL::ResourceUsageRead;
-				//	if (barrier.image.layout_after == ResourceState::UNORDERED_ACCESS)
-				//	{
-				//		usage = MTL::ResourceUsageWrite;
-				//	}
-				//	commandlist.render_encoder->useResource(internal_state->texture.get(), usage);
-				//}
-				//break;
-				//case GPUBarrier::Type::BUFFER:
-				//{
-				//	if (barrier.buffer.buffer == nullptr || !barrier.buffer.buffer->IsValid())
-				//		break;
-				//	auto internal_state = to_internal<GPUBuffer>(barrier.buffer.buffer);
-				//	MTL::ResourceUsage usage = MTL::ResourceUsageRead;
-				//	if (barrier.buffer.state_after == ResourceState::UNORDERED_ACCESS)
-				//	{
-				//		usage = MTL::ResourceUsageWrite;
-				//	}
-				//	commandlist.render_encoder->useResource(internal_state->buffer.get(), usage);
-				//}
-				//break;
-				default:
-					commandlist.render_encoder->barrierAfterQueueStages(MTL::StageAll, MTL::StageAll);
-					break;
-			}
+			commandlist.render_encoder->barrierAfterQueueStages(MTL::StageAll, MTL::StageAll);
+			commandlist.barriers.clear();
 		}
 	}
 	void GraphicsDevice_Metal::predispatch(CommandList cmd)
@@ -1125,62 +1132,68 @@ using namespace metal_internal;
 		
 		binder_flush(cmd);
 		
-		for (auto& barrier : commandlist.barriers)
+		//for (auto& barrier : commandlist.barriers)
+		//{
+		//	switch (barrier.type)
+		//	{
+		//		case GPUBarrier::Type::MEMORY:
+		//			if (barrier.memory.resource == nullptr)
+		//			{
+		//				commandlist.compute_encoder->memoryBarrier(MTL::BarrierScopeBuffers | MTL::BarrierScopeTextures);
+		//			}
+		//			else if (barrier.memory.resource->IsBuffer())
+		//			{
+		//				if (barrier.memory.resource == nullptr || !barrier.memory.resource->IsValid())
+		//					break;
+		//				auto internal_state = to_internal<GPUBuffer>(barrier.memory.resource);
+		//				MTL::Resource* resources[] = {internal_state->buffer.get()};
+		//				commandlist.compute_encoder->memoryBarrier(resources, arraysize(resources));
+		//			}
+		//			else if (barrier.memory.resource->IsTexture())
+		//			{
+		//				if (barrier.memory.resource == nullptr || !barrier.memory.resource->IsValid())
+		//					break;
+		//				auto internal_state = to_internal<Texture>(barrier.memory.resource);
+		//				MTL::Resource* resources[] = {internal_state->texture.get()};
+		//				commandlist.compute_encoder->memoryBarrier(resources, arraysize(resources));
+		//			}
+		//			break;
+		//		//case GPUBarrier::Type::IMAGE:
+		//		//{
+		//		//	if (barrier.image.texture == nullptr || !barrier.image.texture->IsValid())
+		//		//		break;
+		//		//	auto internal_state = to_internal<Texture>(barrier.image.texture);
+		//		//	MTL::ResourceUsage usage = MTL::ResourceUsageRead;
+		//		//	if (barrier.image.layout_after == ResourceState::UNORDERED_ACCESS)
+		//		//	{
+		//		//		usage = MTL::ResourceUsageWrite;
+		//		//	}
+		//		//	commandlist.compute_encoder->useResource(internal_state->texture.get(), usage);
+		//		//}
+		//		//break;
+		//		//case GPUBarrier::Type::BUFFER:
+		//		//{
+		//		//	if (barrier.buffer.buffer == nullptr || !barrier.buffer.buffer->IsValid())
+		//		//		break;
+		//		//	auto internal_state = to_internal<GPUBuffer>(barrier.buffer.buffer);
+		//		//	MTL::ResourceUsage usage = MTL::ResourceUsageRead;
+		//		//	if (barrier.buffer.state_after == ResourceState::UNORDERED_ACCESS)
+		//		//	{
+		//		//		usage = MTL::ResourceUsageWrite;
+		//		//	}
+		//		//	commandlist.compute_encoder->useResource(internal_state->buffer.get(), usage);
+		//		//}
+		//		//break;
+		//		default:
+		//			commandlist.compute_encoder->barrierAfterQueueStages(MTL::StageAll, MTL::StageAll);
+		//			break;
+		//	}
+		//}
+		
+		if (!commandlist.barriers.empty())
 		{
-			switch (barrier.type)
-			{
-				case GPUBarrier::Type::MEMORY:
-					if (barrier.memory.resource == nullptr)
-					{
-						commandlist.compute_encoder->memoryBarrier(MTL::BarrierScopeBuffers | MTL::BarrierScopeTextures);
-					}
-					else if (barrier.memory.resource->IsBuffer())
-					{
-						if (barrier.memory.resource == nullptr || !barrier.memory.resource->IsValid())
-							break;
-						auto internal_state = to_internal<GPUBuffer>(barrier.memory.resource);
-						MTL::Resource* resources[] = {internal_state->buffer.get()};
-						commandlist.compute_encoder->memoryBarrier(resources, arraysize(resources));
-					}
-					else if (barrier.memory.resource->IsTexture())
-					{
-						if (barrier.memory.resource == nullptr || !barrier.memory.resource->IsValid())
-							break;
-						auto internal_state = to_internal<Texture>(barrier.memory.resource);
-						MTL::Resource* resources[] = {internal_state->texture.get()};
-						commandlist.compute_encoder->memoryBarrier(resources, arraysize(resources));
-					}
-					break;
-				//case GPUBarrier::Type::IMAGE:
-				//{
-				//	if (barrier.image.texture == nullptr || !barrier.image.texture->IsValid())
-				//		break;
-				//	auto internal_state = to_internal<Texture>(barrier.image.texture);
-				//	MTL::ResourceUsage usage = MTL::ResourceUsageRead;
-				//	if (barrier.image.layout_after == ResourceState::UNORDERED_ACCESS)
-				//	{
-				//		usage = MTL::ResourceUsageWrite;
-				//	}
-				//	commandlist.compute_encoder->useResource(internal_state->texture.get(), usage);
-				//}
-				//break;
-				//case GPUBarrier::Type::BUFFER:
-				//{
-				//	if (barrier.buffer.buffer == nullptr || !barrier.buffer.buffer->IsValid())
-				//		break;
-				//	auto internal_state = to_internal<GPUBuffer>(barrier.buffer.buffer);
-				//	MTL::ResourceUsage usage = MTL::ResourceUsageRead;
-				//	if (barrier.buffer.state_after == ResourceState::UNORDERED_ACCESS)
-				//	{
-				//		usage = MTL::ResourceUsageWrite;
-				//	}
-				//	commandlist.compute_encoder->useResource(internal_state->buffer.get(), usage);
-				//}
-				//break;
-				default:
-					commandlist.compute_encoder->barrierAfterQueueStages(MTL::StageAll, MTL::StageAll);
-					break;
-			}
+			commandlist.compute_encoder->barrierAfterQueueStages(MTL::StageAll, MTL::StageAll);
+			commandlist.barriers.clear();
 		}
 	}
 	void GraphicsDevice_Metal::precopy(CommandList cmd)
@@ -1201,9 +1214,10 @@ using namespace metal_internal;
 			commandlist.blit_encoder = commandlist.commandbuffer->blitCommandEncoder();
 		}
 		
-		for (auto& barrier : commandlist.barriers)
+		if (!commandlist.barriers.empty())
 		{
 			commandlist.blit_encoder->barrierAfterQueueStages(MTL::StageAll, MTL::StageAll);
+			commandlist.barriers.clear();
 		}
 	}
 
@@ -1257,6 +1271,74 @@ using namespace metal_internal;
 		{
 			frame.event = NS::TransferPtr(device->newSharedEvent());
 			frame.event->setSignaledValue(1);
+		}
+		
+		// Static samplers workaround:
+		NS::SharedPtr<MTL::SamplerDescriptor> sampler_descriptor = NS::TransferPtr(MTL::SamplerDescriptor::alloc()->init());
+		sampler_descriptor->setLodMinClamp(0);
+		sampler_descriptor->setLodMaxClamp(FLT_MAX);
+		sampler_descriptor->setBorderColor(MTL::SamplerBorderColorTransparentBlack);
+		sampler_descriptor->setMaxAnisotropy(1);
+		sampler_descriptor->setReductionMode(MTL::SamplerReductionModeWeightedAverage);
+		sampler_descriptor->setSupportArgumentBuffers(true);
+		
+		sampler_descriptor->setMinFilter(MTL::SamplerMinMagFilterLinear);
+		sampler_descriptor->setMagFilter(MTL::SamplerMinMagFilterLinear);
+		sampler_descriptor->setMipFilter(MTL::SamplerMipFilterLinear);
+		sampler_descriptor->setSAddressMode(MTL::SamplerAddressModeClampToEdge);
+		sampler_descriptor->setRAddressMode(MTL::SamplerAddressModeClampToEdge);
+		sampler_descriptor->setTAddressMode(MTL::SamplerAddressModeClampToEdge);
+		static_samplers[0] = NS::TransferPtr(device->newSamplerState(sampler_descriptor.get()));
+		sampler_descriptor->setSAddressMode(MTL::SamplerAddressModeRepeat);
+		sampler_descriptor->setRAddressMode(MTL::SamplerAddressModeRepeat);
+		sampler_descriptor->setTAddressMode(MTL::SamplerAddressModeRepeat);
+		static_samplers[1] = NS::TransferPtr(device->newSamplerState(sampler_descriptor.get()));
+		sampler_descriptor->setSAddressMode(MTL::SamplerAddressModeMirrorRepeat);
+		sampler_descriptor->setRAddressMode(MTL::SamplerAddressModeMirrorRepeat);
+		sampler_descriptor->setTAddressMode(MTL::SamplerAddressModeMirrorRepeat);
+		static_samplers[2] = NS::TransferPtr(device->newSamplerState(sampler_descriptor.get()));
+		
+		sampler_descriptor->setMinFilter(MTL::SamplerMinMagFilterNearest);
+		sampler_descriptor->setMagFilter(MTL::SamplerMinMagFilterNearest);
+		sampler_descriptor->setMipFilter(MTL::SamplerMipFilterNearest);
+		sampler_descriptor->setSAddressMode(MTL::SamplerAddressModeClampToEdge);
+		sampler_descriptor->setRAddressMode(MTL::SamplerAddressModeClampToEdge);
+		sampler_descriptor->setTAddressMode(MTL::SamplerAddressModeClampToEdge);
+		static_samplers[3] = NS::TransferPtr(device->newSamplerState(sampler_descriptor.get()));
+		sampler_descriptor->setSAddressMode(MTL::SamplerAddressModeRepeat);
+		sampler_descriptor->setRAddressMode(MTL::SamplerAddressModeRepeat);
+		sampler_descriptor->setTAddressMode(MTL::SamplerAddressModeRepeat);
+		static_samplers[4] = NS::TransferPtr(device->newSamplerState(sampler_descriptor.get()));
+		sampler_descriptor->setSAddressMode(MTL::SamplerAddressModeMirrorRepeat);
+		sampler_descriptor->setRAddressMode(MTL::SamplerAddressModeMirrorRepeat);
+		sampler_descriptor->setTAddressMode(MTL::SamplerAddressModeMirrorRepeat);
+		static_samplers[5] = NS::TransferPtr(device->newSamplerState(sampler_descriptor.get()));
+		
+		sampler_descriptor->setMaxAnisotropy(16);
+		sampler_descriptor->setMinFilter(MTL::SamplerMinMagFilterLinear);
+		sampler_descriptor->setMagFilter(MTL::SamplerMinMagFilterLinear);
+		sampler_descriptor->setMipFilter(MTL::SamplerMipFilterLinear);
+		sampler_descriptor->setSAddressMode(MTL::SamplerAddressModeClampToEdge);
+		sampler_descriptor->setRAddressMode(MTL::SamplerAddressModeClampToEdge);
+		sampler_descriptor->setTAddressMode(MTL::SamplerAddressModeClampToEdge);
+		static_samplers[6] = NS::TransferPtr(device->newSamplerState(sampler_descriptor.get()));
+		sampler_descriptor->setSAddressMode(MTL::SamplerAddressModeRepeat);
+		sampler_descriptor->setRAddressMode(MTL::SamplerAddressModeRepeat);
+		sampler_descriptor->setTAddressMode(MTL::SamplerAddressModeRepeat);
+		static_samplers[7] = NS::TransferPtr(device->newSamplerState(sampler_descriptor.get()));
+		sampler_descriptor->setSAddressMode(MTL::SamplerAddressModeMirrorRepeat);
+		sampler_descriptor->setRAddressMode(MTL::SamplerAddressModeMirrorRepeat);
+		sampler_descriptor->setTAddressMode(MTL::SamplerAddressModeMirrorRepeat);
+		static_samplers[8] = NS::TransferPtr(device->newSamplerState(sampler_descriptor.get()));
+		
+		sampler_descriptor->setMaxAnisotropy(1);
+		sampler_descriptor->setLodMaxClamp(0);
+		sampler_descriptor->setCompareFunction(MTL::CompareFunctionGreaterEqual);
+		static_samplers[9] = NS::TransferPtr(device->newSamplerState(sampler_descriptor.get()));
+		
+		for (uint32_t i = 0; i < arraysize(static_samplers); ++i)
+		{
+			IRDescriptorTableSetSampler(&static_sampler_descriptors.samplers[i], static_samplers[i].get(), 0);
 		}
 		
 		wilog("Created GraphicsDevice_Metal (%d ms)", (int)std::round(timer.elapsed()));
@@ -1653,7 +1735,7 @@ using namespace metal_internal;
 		{
 			error = nullptr;
 			internal_state->compute_pipeline = NS::TransferPtr(device->newComputePipelineState(internal_state->function.get(), &error));
-			if(error != nullptr)
+			if (error != nullptr)
 			{
 				NS::String* errDesc = error->localizedDescription();
 				wilog_error("%s", errDesc->utf8String());

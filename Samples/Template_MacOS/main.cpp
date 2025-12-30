@@ -42,6 +42,7 @@ int main( int argc, char* argv[] )
 	wi::renderer::SetShaderPath(wi::renderer::GetShaderSourcePath() + "metal/");
 	
 	//wi::initializer::InitializeComponentsImmediate();
+	
 	wi::RenderPath3D path;
 	application.ActivatePath(&path);
 	auto& cam = wi::scene::GetCamera();
@@ -52,6 +53,9 @@ int main( int argc, char* argv[] )
 	scene.weather.ambient = XMFLOAT3(0.5f, 0.5f, 0.5f);
 	
 	//wi::ecs::Entity entity = scene.Entity_CreateCube("cube");
+	//auto& material = *scene.materials.GetComponent(entity);
+	//material.textures[0].name = "/Users/turanszkij/PROJECTS/WickedEngine/Content/models/Sponza/textures/lion.png";
+	//material.CreateRenderData();
 	
 	wi::scene::LoadModel("/Users/turanszkij/PROJECTS/WickedEngine/Content/models/Sponza/Sponza.wiscene");
 	
