@@ -1263,6 +1263,7 @@ using namespace metal_internal;
 	}
 	GraphicsDevice_Metal::~GraphicsDevice_Metal()
 	{
+		WaitForGPU();
 	}
 
 	bool GraphicsDevice_Metal::CreateSwapChain(const SwapChainDesc* desc, wi::platform::window_type window, SwapChain* swapchain) const

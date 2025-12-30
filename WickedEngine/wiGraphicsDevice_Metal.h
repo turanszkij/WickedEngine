@@ -32,7 +32,7 @@ namespace wi::graphics
 		};
 		struct ResourceTable
 		{
-			IRDescriptorTableEntry cbvs[arraysize(DescriptorBindingTable::CBV)];
+			IRDescriptorTableEntry cbvs[arraysize(DescriptorBindingTable::CBV) - arraysize(RootLayout::root_cbvs)];
 			IRDescriptorTableEntry srvs[arraysize(DescriptorBindingTable::SRV)];
 			IRDescriptorTableEntry uavs[arraysize(DescriptorBindingTable::UAV)];
 		};
