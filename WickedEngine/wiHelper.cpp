@@ -1502,7 +1502,7 @@ namespace wi::helper
 			}).detach();
 #endif // PLATFORM_WINDOWS_DESKTOP
 
-#ifdef PLATFORM_LINUX
+#if defined(PLATFORM_LINUX) || defined(PLATFORM_APPLE)
 		if (!pfd::settings::available())
 		{
 			wilog_messagebox("[wi::helper::FileDialog()] No file dialog backend available! Install zenity or kdialog.");
@@ -1555,7 +1555,7 @@ namespace wi::helper
 				break;
 			}
 		}
-#endif // PLATFORM_LINUX
+#endif // defined(PLATFORM_LINUX) || defined(PLATFORM_APPLE)
 	}
 
 	std::string FolderDialog(const std::string& description)

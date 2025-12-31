@@ -2293,7 +2293,12 @@ namespace wi::scene
 		desc.height = resolution;
 		desc.width = resolution;
 		desc.usage = Usage::DEFAULT;
+#ifdef __APPLE__
+		// TODO: we can't block compress the same way in Metal API as other graphics APIs
+		desc.format = wi::renderer::format_rendertarget_envprobe;
+#else
 		desc.format = Format::BC6H_UF16;
+#endif // __APPLE__
 		desc.sample_count = 1; // Note that this texture is always non-MSAA, even if probe is rendered as MSAA, because this contains resolved result
 		desc.bind_flags = BindFlag::SHADER_RESOURCE;
 		desc.mip_levels = GetMipCount(resolution, resolution, 1, 16);

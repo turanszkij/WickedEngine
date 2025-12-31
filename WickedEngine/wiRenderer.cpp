@@ -9535,8 +9535,16 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		}
 		device->EventEnd(cmd);
 
-		// Finally, the complete envmap is block compressed into the probe's texture:
-		BlockCompress(envrenderingColorBuffer_Filtered, probe.texture, cmd);
+		if (IsFormatBlockCompressed(probe.texture.desc.format))
+		{
+			// Finally, the complete envmap is block compressed into the probe's texture:
+			BlockCompress(envrenderingColorBuffer_Filtered, probe.texture, cmd);
+		}
+		else
+		{
+			// In this case, block compression is not used, simply copy render result into final probe tex:
+			device->CopyResource(&probe.texture, &envrenderingColorBuffer_Filtered, cmd);
+		}
 	};
 
 	if (vis.scene->probes.GetCount() == 0)

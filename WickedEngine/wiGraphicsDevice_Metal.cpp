@@ -511,6 +511,11 @@ namespace metal_internal
 			NS::SharedPtr<MTL::Texture> texture;
 			int index = -1;
 			
+			uint32_t firstMip = 0;
+			uint32_t mipCount = 0;
+			uint32_t firstSlice = 0;
+			uint32_t sliceCount = 0;
+			
 			bool IsValid() const { return entry.textureViewID != 0; }
 		};
 		Subresource srv;
@@ -892,11 +897,13 @@ using namespace metal_internal;
 		{
 			// Just in time PSO:
 			MTL::RenderPipelineState* pipeline = nullptr;
+			MTL::DepthStencilState* depth_stencil_state = nullptr;
 			auto it = pipelines_global.find(pipeline_hash);
 			if (it != pipelines_global.end())
 			{
 				// Exists in global just in time PSO map:
-				pipeline = it->second.get();
+				pipeline = it->second.pipeline.get();
+				depth_stencil_state = it->second.depth_stencil_state.get();
 			}
 			else
 			{
@@ -905,7 +912,8 @@ using namespace metal_internal;
 				{
 					if (pipeline_hash == x.first)
 					{
-						pipeline = x.second.get();
+						pipeline = x.second.pipeline.get();
+						depth_stencil_state = x.second.depth_stencil_state.get();
 						break;
 					}
 				}
@@ -920,16 +928,24 @@ using namespace metal_internal;
 
 				auto internal_new = to_internal(&newPSO);
 				assert(internal_new->render_pipeline.get() != nullptr);
-				commandlist.pipelines_worker.push_back(std::make_pair(pipeline_hash, internal_new->render_pipeline));
+				assert(internal_new->depth_stencil_state.get() != nullptr);
+				JustInTimePSO just_in_time_pso;
+				just_in_time_pso.pipeline = internal_new->render_pipeline;
+				just_in_time_pso.depth_stencil_state = internal_new->depth_stencil_state;
+				commandlist.pipelines_worker.push_back(std::make_pair(pipeline_hash, std::move(just_in_time_pso)));
 				pipeline = internal_new->render_pipeline.get();
+				depth_stencil_state = internal_new->depth_stencil_state.get();
 			}
 			assert(pipeline != nullptr);
+			assert(depth_stencil_state != nullptr);
 			commandlist.render_encoder->setRenderPipelineState(pipeline);
+			commandlist.render_encoder->setDepthStencilState(depth_stencil_state);
 		}
 		else
 		{
 			// Precompiled PSO:
 			commandlist.render_encoder->setRenderPipelineState(internal_state->render_pipeline.get());
+			commandlist.render_encoder->setDepthStencilState(internal_state->depth_stencil_state.get());
 		}
 		
 		if (commandlist.active_pso->desc.vs != nullptr)
@@ -942,8 +958,6 @@ using namespace metal_internal;
 			commandlist.render_encoder->setFragmentBuffer(descriptor_heap_res.get(), 0, kIRDescriptorHeapBindPoint);
 			commandlist.render_encoder->setFragmentBuffer(descriptor_heap_sam.get(), 0, kIRSamplerHeapBindPoint);
 		}
-		
-		commandlist.render_encoder->setDepthStencilState(internal_state->depth_stencil_state.get());
 		
 		const RasterizerState& rs = commandlist.active_pso->desc.rs == nullptr ? RasterizerState() : *commandlist.active_pso->desc.rs;
 		MTL::CullMode cull_mode = {};
@@ -1361,6 +1375,7 @@ using namespace metal_internal;
 			internal_state->view = NS::TransferPtr(MTK::View::alloc()->init(frame, device.get()));
 			internal_state->view->setColorPixelFormat(_ConvertPixelFormat(desc->format));
 			internal_state->view->setClearColor(MTL::ClearColor::Make(desc->clear_color[0], desc->clear_color[1], desc->clear_color[2], desc->clear_color[3]));
+			internal_state->view->setFramebufferOnly(false); // GetBackBuffer() srv
 			window->setContentView(internal_state->view.get());
 		}
 
@@ -1601,7 +1616,7 @@ using namespace metal_internal;
 		}
 		descriptor->setUsage(usage);
 		
-		if (!has_flag(desc->bind_flags, BindFlag::UNORDERED_ACCESS))
+		if (!has_flag(desc->bind_flags, BindFlag::UNORDERED_ACCESS) && !has_flag(desc->bind_flags, BindFlag::RENDER_TARGET))
 		{
 			MTL::TextureSwizzleChannels swizzle = MTL::TextureSwizzleChannels::Default();
 			swizzle.red = _ConvertComponentSwizzle(desc->swizzle.r);
@@ -1999,36 +2014,6 @@ using namespace metal_internal;
 			return false; // TODO
 		}
 		
-		const DepthStencilState& dss = desc->dss == nullptr ? DepthStencilState() : *desc->dss;
-		NS::SharedPtr<MTL::DepthStencilDescriptor> depth_stencil_desc = NS::TransferPtr(MTL::DepthStencilDescriptor::alloc()->init());
-		if (dss.depth_enable)
-		{
-			depth_stencil_desc->setDepthCompareFunction(_ConvertCompareFunction(dss.depth_func));
-			depth_stencil_desc->setDepthWriteEnabled(dss.depth_write_mask == DepthWriteMask::ALL);
-		}
-		NS::SharedPtr<MTL::StencilDescriptor> stencil_front;
-		NS::SharedPtr<MTL::StencilDescriptor> stencil_back;
-		if (dss.stencil_enable)
-		{
-			stencil_front = NS::TransferPtr(MTL::StencilDescriptor::alloc()->init());
-			stencil_back = NS::TransferPtr(MTL::StencilDescriptor::alloc()->init());
-			stencil_front->setReadMask(dss.stencil_read_mask);
-			stencil_front->setWriteMask(dss.stencil_write_mask);
-			stencil_front->setStencilCompareFunction(_ConvertCompareFunction(dss.front_face.stencil_func));
-			stencil_front->setStencilFailureOperation(_ConvertStencilOperation(dss.front_face.stencil_fail_op));
-			stencil_front->setDepthFailureOperation(_ConvertStencilOperation(dss.front_face.stencil_depth_fail_op));
-			stencil_front->setDepthStencilPassOperation(_ConvertStencilOperation(dss.front_face.stencil_pass_op));
-			stencil_back->setReadMask(dss.stencil_read_mask);
-			stencil_back->setWriteMask(dss.stencil_write_mask);
-			stencil_back->setStencilCompareFunction(_ConvertCompareFunction(dss.back_face.stencil_func));
-			stencil_back->setStencilFailureOperation(_ConvertStencilOperation(dss.back_face.stencil_fail_op));
-			stencil_back->setDepthFailureOperation(_ConvertStencilOperation(dss.back_face.stencil_depth_fail_op));
-			stencil_back->setDepthStencilPassOperation(_ConvertStencilOperation(dss.back_face.stencil_pass_op));
-			depth_stencil_desc->setFrontFaceStencil(stencil_front.get());
-			depth_stencil_desc->setBackFaceStencil(stencil_back.get());
-		}
-		internal_state->depth_stencil_state = NS::TransferPtr(device->newDepthStencilState(depth_stencil_desc.get()));
-		
 		NS::SharedPtr<MTL::VertexDescriptor> vertex_descriptor;
 		if (desc->il != nullptr)
 		{
@@ -2142,6 +2127,37 @@ using namespace metal_internal;
 			}
 			internal_state->descriptor->setSampleCount(sample_count);
 			
+			const DepthStencilState& dss = desc->dss == nullptr ? DepthStencilState() : *desc->dss;
+			NS::SharedPtr<MTL::DepthStencilDescriptor> depth_stencil_desc = NS::TransferPtr(MTL::DepthStencilDescriptor::alloc()->init());
+			if (dss.depth_enable && renderpass_info->ds_format != Format::UNKNOWN)
+			{
+				depth_stencil_desc->setDepthCompareFunction(_ConvertCompareFunction(dss.depth_func));
+				depth_stencil_desc->setDepthWriteEnabled(dss.depth_write_mask == DepthWriteMask::ALL);
+			}
+			NS::SharedPtr<MTL::StencilDescriptor> stencil_front;
+			NS::SharedPtr<MTL::StencilDescriptor> stencil_back;
+			if (dss.stencil_enable && IsFormatStencilSupport(renderpass_info->ds_format))
+			{
+				stencil_front = NS::TransferPtr(MTL::StencilDescriptor::alloc()->init());
+				stencil_back = NS::TransferPtr(MTL::StencilDescriptor::alloc()->init());
+				stencil_front->setReadMask(dss.stencil_read_mask);
+				stencil_front->setWriteMask(dss.stencil_write_mask);
+				stencil_front->setStencilCompareFunction(_ConvertCompareFunction(dss.front_face.stencil_func));
+				stencil_front->setStencilFailureOperation(_ConvertStencilOperation(dss.front_face.stencil_fail_op));
+				stencil_front->setDepthFailureOperation(_ConvertStencilOperation(dss.front_face.stencil_depth_fail_op));
+				stencil_front->setDepthStencilPassOperation(_ConvertStencilOperation(dss.front_face.stencil_pass_op));
+				stencil_back->setReadMask(dss.stencil_read_mask);
+				stencil_back->setWriteMask(dss.stencil_write_mask);
+				stencil_back->setStencilCompareFunction(_ConvertCompareFunction(dss.back_face.stencil_func));
+				stencil_back->setStencilFailureOperation(_ConvertStencilOperation(dss.back_face.stencil_fail_op));
+				stencil_back->setDepthFailureOperation(_ConvertStencilOperation(dss.back_face.stencil_depth_fail_op));
+				stencil_back->setDepthStencilPassOperation(_ConvertStencilOperation(dss.back_face.stencil_pass_op));
+				depth_stencil_desc->setFrontFaceStencil(stencil_front.get());
+				depth_stencil_desc->setBackFaceStencil(stencil_back.get());
+			}
+			internal_state->depth_stencil_state = NS::TransferPtr(device->newDepthStencilState(depth_stencil_desc.get()));
+			
+			
 			NS::Error* error = nullptr;
 			internal_state->render_pipeline = NS::TransferPtr(device->newRenderPipelineState(internal_state->descriptor.get(), &error));
 			if (error != nullptr)
@@ -2223,6 +2239,10 @@ using namespace metal_internal;
 						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}, mtlswizzle));
 						subresource.entry = create_entry(subresource.texture.get(), min_lod_clamp);
 						subresource.index = allocationhandler->allocate_bindless(subresource.entry);
+						subresource.firstMip = firstMip;
+						subresource.mipCount = mipCount;
+						subresource.firstSlice = firstSlice;
+						subresource.sliceCount = sliceCount;
 						allocationhandler->make_resident(subresource.texture.get());
 						return -1;
 					}
@@ -2232,6 +2252,10 @@ using namespace metal_internal;
 						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}, mtlswizzle));
 						subresource.entry = create_entry(subresource.texture.get(), min_lod_clamp);
 						subresource.index = allocationhandler->allocate_bindless(subresource.entry);
+						subresource.firstMip = firstMip;
+						subresource.mipCount = mipCount;
+						subresource.firstSlice = firstSlice;
+						subresource.sliceCount = sliceCount;
 						allocationhandler->make_resident(subresource.texture.get());
 						return (int)internal_state->subresources_srv.size() - 1;
 					}
@@ -2246,6 +2270,10 @@ using namespace metal_internal;
 						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
 						subresource.entry = create_entry(subresource.texture.get(), min_lod_clamp);
 						subresource.index = allocationhandler->allocate_bindless(subresource.entry);
+						subresource.firstMip = firstMip;
+						subresource.mipCount = mipCount;
+						subresource.firstSlice = firstSlice;
+						subresource.sliceCount = sliceCount;
 						allocationhandler->make_resident(subresource.texture.get());
 						return -1;
 					}
@@ -2255,6 +2283,10 @@ using namespace metal_internal;
 						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
 						subresource.entry = create_entry(subresource.texture.get(), min_lod_clamp);
 						subresource.index = allocationhandler->allocate_bindless(subresource.entry);
+						subresource.firstMip = firstMip;
+						subresource.mipCount = mipCount;
+						subresource.firstSlice = firstSlice;
+						subresource.sliceCount = sliceCount;
 						allocationhandler->make_resident(subresource.texture.get());
 						return (int)internal_state->subresources_uav.size() - 1;
 					}
@@ -2267,6 +2299,10 @@ using namespace metal_internal;
 					{
 						auto& subresource = internal_state->rtv;
 						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
+						subresource.firstMip = firstMip;
+						subresource.mipCount = mipCount;
+						subresource.firstSlice = firstSlice;
+						subresource.sliceCount = sliceCount;
 						allocationhandler->make_resident(subresource.texture.get());
 						return -1;
 					}
@@ -2274,6 +2310,10 @@ using namespace metal_internal;
 					{
 						auto& subresource = internal_state->subresources_rtv.emplace_back();
 						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
+						subresource.firstMip = firstMip;
+						subresource.mipCount = mipCount;
+						subresource.firstSlice = firstSlice;
+						subresource.sliceCount = sliceCount;
 						allocationhandler->make_resident(subresource.texture.get());
 						return (int)internal_state->subresources_rtv.size() - 1;
 					}
@@ -2286,6 +2326,10 @@ using namespace metal_internal;
 					{
 						auto& subresource = internal_state->dsv;
 						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
+						subresource.firstMip = firstMip;
+						subresource.mipCount = mipCount;
+						subresource.firstSlice = firstSlice;
+						subresource.sliceCount = sliceCount;
 						allocationhandler->make_resident(subresource.texture.get());
 						return -1;
 					}
@@ -2293,6 +2337,10 @@ using namespace metal_internal;
 					{
 						auto& subresource = internal_state->subresources_dsv.emplace_back();
 						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
+						subresource.firstMip = firstMip;
+						subresource.mipCount = mipCount;
+						subresource.firstSlice = firstSlice;
+						subresource.sliceCount = sliceCount;
 						allocationhandler->make_resident(subresource.texture.get());
 						return (int)internal_state->subresources_dsv.size() - 1;
 					}
@@ -2583,9 +2631,10 @@ using namespace metal_internal;
 				}
 				else
 				{
-				   allocationhandler->destroylocker.lock();
-				   allocationhandler->destroyer_render_pipelines.push_back(std::make_pair(x.second, FRAMECOUNT));
-				   allocationhandler->destroylocker.unlock();
+					allocationhandler->destroylocker.lock();
+					allocationhandler->destroyer_render_pipelines.push_back(std::make_pair(x.second.pipeline, allocationhandler->framecount));
+					allocationhandler->destroyer_depth_stencil_states.push_back(std::make_pair(x.second.depth_stencil_state, allocationhandler->framecount));
+					allocationhandler->destroylocker.unlock();
 				}
 			}
 			commandlist.pipelines_worker.clear();
@@ -2613,7 +2662,8 @@ using namespace metal_internal;
 		uint64_t framecount = allocationhandler->framecount;
 		for (auto& x : pipelines_global)
 		{
-			allocationhandler->destroyer_render_pipelines.push_back(std::make_pair(std::move(x.second), framecount));
+			allocationhandler->destroyer_render_pipelines.push_back(std::make_pair(std::move(x.second.pipeline), framecount));
+			allocationhandler->destroyer_depth_stencil_states.push_back(std::make_pair(std::move(x.second.depth_stencil_state), framecount));
 		}
 		pipelines_global.clear();
 	}
@@ -2622,7 +2672,16 @@ using namespace metal_internal;
 	{
 		auto swapchain_internal = to_internal(swapchain);
 		Texture result;
-		// TODO
+		auto texture_internal = wi::allocator::make_shared<Texture_Metal>();
+		texture_internal->texture = NS::TransferPtr(swapchain_internal->view->currentDrawable()->texture());
+		texture_internal->srv.texture = texture_internal->texture;
+		texture_internal->srv.entry = create_entry(texture_internal->srv.texture.get(), 0);
+		texture_internal->srv.index = allocationhandler->allocate_bindless(texture_internal->srv.entry);
+		result.internal_state = texture_internal;
+		result.desc.width = (uint32_t)texture_internal->texture->width();
+		result.desc.height = (uint32_t)texture_internal->texture->height();
+		result.desc.bind_flags = BindFlag::SHADER_RESOURCE;
+		result.desc.format = swapchain->desc.format;
 		return result;
 	}
 	ColorSpace GraphicsDevice_Metal::GetSwapChainColorSpace(const SwapChain* swapchain) const
@@ -2725,6 +2784,7 @@ using namespace metal_internal;
 		}
 		
 		uint32_t color_attachment_index = 0;
+		uint32_t resolve_index = 0;
 		for (uint32_t i = 0; i < image_count; ++i)
 		{
 			const RenderPassImage& image = images[i];
@@ -2759,24 +2819,33 @@ using namespace metal_internal;
 			switch (image.type) {
 				case RenderPassImage::Type::RENDERTARGET:
 				{
-					MTL::RenderPassColorAttachmentDescriptor* color_attachment_descriptor = color_attachment_descriptors[i].get();
+					Texture_Metal::Subresource& subresource = image.subresource < 0 ? internal_state->rtv : internal_state->subresources_rtv[image.subresource];
+					MTL::RenderPassColorAttachmentDescriptor* color_attachment_descriptor = color_attachment_descriptors[color_attachment_index].get();
 					color_attachment_descriptor->init();
 					color_attachment_descriptor->setTexture(internal_state->texture.get());
+					color_attachment_descriptor->setLevel(subresource.firstMip);
+					color_attachment_descriptor->setSlice(subresource.firstSlice);
 					color_attachment_descriptor->setClearColor(MTL::ClearColor::Make(image.texture->desc.clear.color[0], image.texture->desc.clear.color[1], image.texture->desc.clear.color[2], image.texture->desc.clear.color[3]));
 					color_attachment_descriptor->setLoadAction(load_action);
 					color_attachment_descriptor->setStoreAction(store_action);
-					color_attachment_descriptor->setStoreActionOptions(MTL::StoreActionOptionNone);
+					color_attachment_descriptor->setResolveTexture(nullptr);
+					color_attachment_descriptor->setResolveLevel(0);
+					color_attachment_descriptor->setResolveSlice(0);
 					descriptor->colorAttachments()->setObject(color_attachment_descriptor, color_attachment_index);
 					color_attachment_index++;
 					break;
 				}
 				case RenderPassImage::Type::DEPTH_STENCIL:
 				{
+					Texture_Metal::Subresource& subresource = image.subresource < 0 ? internal_state->dsv : internal_state->subresources_dsv[image.subresource];
 					depth_attachment_descriptor->init();
 					depth_attachment_descriptor->setTexture(internal_state->texture.get());
+					depth_attachment_descriptor->setLevel(subresource.firstMip);
+					depth_attachment_descriptor->setSlice(subresource.firstSlice);
 					depth_attachment_descriptor->setClearDepth(image.texture->desc.clear.depth_stencil.depth);
 					depth_attachment_descriptor->setLoadAction(load_action);
 					depth_attachment_descriptor->setStoreAction(store_action);
+					depth_attachment_descriptor->setResolveTexture(nullptr);
 					descriptor->setDepthAttachment(depth_attachment_descriptor.get());
 					if (IsFormatStencilSupport(image.texture->desc.format))
 					{
@@ -2790,9 +2859,27 @@ using namespace metal_internal;
 					break;
 				}
 				case RenderPassImage::Type::RESOLVE:
+				{
+					Texture_Metal::Subresource& subresource = image.subresource < 0 ? internal_state->srv : internal_state->subresources_srv[image.subresource];
+					MTL::RenderPassColorAttachmentDescriptor* color_attachment_descriptor = color_attachment_descriptors[resolve_index].get();
+					color_attachment_descriptor->setResolveTexture(internal_state->texture.get());
+					color_attachment_descriptor->setResolveLevel(subresource.firstMip);
+					color_attachment_descriptor->setResolveSlice(subresource.firstSlice);
+					color_attachment_descriptor->setStoreAction(color_attachment_descriptor->storeAction() == MTL::StoreActionStore ? MTL::StoreActionStoreAndMultisampleResolve : MTL::StoreActionMultisampleResolve);
+					descriptor->colorAttachments()->setObject(color_attachment_descriptor, resolve_index);
+					resolve_index++;
 					break;
+				}
 				case RenderPassImage::Type::RESOLVE_DEPTH:
+				{
+					Texture_Metal::Subresource& subresource = image.subresource < 0 ? internal_state->dsv : internal_state->subresources_dsv[image.subresource];
+					depth_attachment_descriptor->setResolveTexture(internal_state->texture.get());
+					depth_attachment_descriptor->setResolveLevel(subresource.firstMip);
+					depth_attachment_descriptor->setResolveSlice(subresource.firstSlice);
+					depth_attachment_descriptor->setStoreAction(depth_attachment_descriptor->storeAction() == MTL::StoreActionStore ? MTL::StoreActionStoreAndMultisampleResolve : MTL::StoreActionMultisampleResolve);
+					descriptor->setDepthAttachment(depth_attachment_descriptor.get());
 					break;
+				}
 				default:
 					assert(0);
 					break;

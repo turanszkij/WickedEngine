@@ -24,6 +24,7 @@
 #elif defined(__APPLE__)
 #define PLATFORM_APPLE
 #include "wiAppleHelper.h"
+#include <cstdlib>
 #else
 #define PLATFORM_LINUX
 #endif // _WIN32
@@ -59,14 +60,16 @@ namespace wi::platform
 
 	inline void Exit()
 	{
-#ifdef _WIN32
+#if defined(_WIN32)
 		PostQuitMessage(0);
-#endif // _WIN32
-#ifdef SDL2
+#elif defined(SDL2)
 		SDL_Event quit_event;
 		quit_event.type = SDL_QUIT;
 		SDL_PushEvent(&quit_event);
+#else
+		std::exit(0);
 #endif
+		
 	}
 
 	struct WindowProperties

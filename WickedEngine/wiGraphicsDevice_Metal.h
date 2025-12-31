@@ -58,6 +58,12 @@ namespace wi::graphics
 		
 		FrameResources& GetFrameResources() { return frame_resources[GetBufferIndex()]; }
 		
+		struct JustInTimePSO
+		{
+			NS::SharedPtr<MTL::RenderPipelineState> pipeline;
+			NS::SharedPtr<MTL::DepthStencilState> depth_stencil_state;
+		};
+		
 		struct CommandList_Metal
 		{
 			MTL::CommandBuffer* commandbuffer = nullptr;
@@ -77,7 +83,7 @@ namespace wi::graphics
 			NS::SharedPtr<MTL::Buffer> index_buffer;
 			MTL::IndexType index_type = MTL::IndexTypeUInt32;
 			uint64_t index_buffer_offset = 0;
-			wi::vector<std::pair<PipelineHash, NS::SharedPtr<MTL::RenderPipelineState>>> pipelines_worker;
+			wi::vector<std::pair<PipelineHash, JustInTimePSO>> pipelines_worker;
 			PipelineHash pipeline_hash;
 			DescriptorBindingTable binding_table;
 			bool dirty_root = false;
@@ -156,7 +162,7 @@ namespace wi::graphics
 		uint32_t cmd_count = 0;
 		wi::SpinLock cmd_locker;
 		
-		wi::unordered_map<PipelineHash, NS::SharedPtr<MTL::RenderPipelineState>> pipelines_global;
+		wi::unordered_map<PipelineHash, JustInTimePSO> pipelines_global;
 		
 		NS::SharedPtr<MTL::Buffer> descriptor_heap_res;
 		NS::SharedPtr<MTL::Buffer> descriptor_heap_sam;
@@ -167,36 +173,6 @@ namespace wi::graphics
 		{
 			assert(cmd.IsValid());
 			return *(CommandList_Metal*)cmd.internal_state;
-		}
-		
-		struct Semaphore
-		{
-			NS::SharedPtr<MTL::SharedEvent> event;
-		};
-		wi::vector<Semaphore> free_semaphores;
-		std::mutex semaphore_locker;
-		
-		Semaphore new_semaphore()
-		{
-			semaphore_locker.lock();
-			if (free_semaphores.empty())
-			{
-				free_semaphores.resize(256);
-			}
-			Semaphore semaphore = free_semaphores.back();
-			free_semaphores.pop_back();
-			semaphore_locker.unlock();
-			if (semaphore.event.get() == nullptr)
-			{
-				semaphore.event = NS::TransferPtr(device->newSharedEvent());
-			}
-			semaphore.event->setSignaledValue(0);
-			return semaphore;
-		}
-		void free_semaphore(const Semaphore& semaphore)
-		{
-			std::scoped_lock lck(semaphore_locker);
-			free_semaphores.push_back(semaphore);
 		}
 		
 		void pso_validate(CommandList cmd);

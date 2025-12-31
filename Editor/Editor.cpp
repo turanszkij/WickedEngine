@@ -4608,7 +4608,7 @@ void EditorComponent::Render() const
 			vp.height = (float)gui_background_effect.desc.height;
 			device->BindViewports(1, &vp, cmd);
 
-			Rect rect;
+			wi::graphics::Rect rect;
 			rect.from_viewport(vp);
 			device->BindScissorRects(1, &rect, cmd);
 
