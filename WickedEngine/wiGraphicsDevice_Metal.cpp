@@ -1544,8 +1544,32 @@ using namespace metal_internal;
 			resource_options |= MTL::ResourceStorageModePrivate;
 			descriptor->setStorageMode(MTL::StorageModePrivate);
 		}
+		else if (
+				 has_flag(desc->bind_flags, BindFlag::RENDER_TARGET) ||
+				 has_flag(desc->bind_flags, BindFlag::DEPTH_STENCIL) ||
+				 has_flag(desc->bind_flags, BindFlag::UNORDERED_ACCESS)
+				 )
+		{
+			// optimized storage for render efficiency even on UMA GPU:
+			resource_options |= MTL::ResourceStorageModePrivate;
+			descriptor->setStorageMode(MTL::StorageModePrivate);
+		}
+		else if (desc->usage == Usage::UPLOAD)
+		{
+			resource_options |= MTL::ResourceStorageModeShared;
+			resource_options |= MTL::ResourceOptionCPUCacheModeWriteCombined;
+			descriptor->setStorageMode(MTL::StorageModeShared);
+			descriptor->setTextureType(MTL::TextureTypeTextureBuffer);
+		}
+		else if (desc->usage == Usage::READBACK)
+		{
+			resource_options |= MTL::ResourceStorageModeShared;
+			descriptor->setStorageMode(MTL::StorageModeShared);
+			descriptor->setTextureType(MTL::TextureTypeTextureBuffer);
+		}
 		else
 		{
+			// CPU accessible or UMA GPU zero-copy optimized:
 			resource_options |= MTL::ResourceStorageModeShared;
 			descriptor->setStorageMode(MTL::StorageModeShared);
 		}
