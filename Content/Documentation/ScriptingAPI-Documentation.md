@@ -2020,6 +2020,7 @@ Query input devices
 - SetCursor(int cursor)	-- sets the current cursor type. Values can be of the cursor values, see below
 - SetCursorFromFile(int cursor, string filename)	-- sets the specified cursor type to an image from a cursor file
 - ResetCursor(int cursor)	-- resets the specified cursor to the default one
+- ResetCursors()	-- resets all cursors to the defaults
 
 #### ControllerFeedback
 Describes controller feedback such as touch and LED color which can be replayed on a controller

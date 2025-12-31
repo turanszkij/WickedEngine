@@ -893,6 +893,14 @@ namespace wi::input
 		cursor_current = CURSOR_COUNT;
 	}
 
+	void ResetCursors()
+	{
+		for (int i = 0; i < CURSOR_COUNT; ++i)
+		{
+			ResetCursor(CURSOR(i));
+		}
+	}
+
 	void NotifyCursorChanged()
 	{
 		cursor_current = CURSOR_COUNT;

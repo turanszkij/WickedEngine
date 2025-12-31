@@ -67,6 +67,7 @@ namespace wi::lua
 		{
 			KillProcesses();
 			editorApplication->ActivatePath(editorRenderPath);
+			wi::input::ResetCursors();
 		}
 		return 0;
 	}
