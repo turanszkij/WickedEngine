@@ -356,7 +356,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	vxgiReflectionsCheckBox.SetCheck(wi::renderer::GetVXGIReflectionsEnabled());
 	AddWidget(&vxgiReflectionsCheckBox);
 
-	vxgiVoxelSizeSlider.Create(0.125f, 0.5f, 1, 7, "VXGI Voxel Size: ");
+	vxgiVoxelSizeSlider.Create(0.125f, 0.5f, 0.125f, 7, "VXGI Voxel Size: ");
 	vxgiVoxelSizeSlider.SetTooltip("Adjust the voxel size for VXGI calculations.");
 	vxgiVoxelSizeSlider.SetSize(XMFLOAT2(wid, itemheight));
 	vxgiVoxelSizeSlider.SetPos(XMFLOAT2(x, y += step));

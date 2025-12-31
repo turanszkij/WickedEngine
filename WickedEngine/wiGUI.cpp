@@ -2112,20 +2112,23 @@ namespace wi::gui
 		valueInputField.SetShadowRadius(0);
 		valueInputField.SetTooltip("Enter number to modify value even outside slider limits. Other inputs:\n - reset : reset slider to initial state.\n - FLT_MAX : float max value\n - -FLT_MAX : negative float max value.");
 		valueInputField.SetValue(end);
-		valueInputField.OnInputAccepted([this, start, end, defaultValue](const EventArgs& args) {
+		valueInputField.OnInputAccepted([this, start, end, defaultValue](EventArgs args) {
 			if (args.sValue.compare("reset") == 0)
 			{
 				this->value = defaultValue;
 				this->start = start;
 				this->end = end;
+				args.fValue = this->value;
 			}
 			else if (args.sValue.compare("FLT_MAX") == 0)
 			{
 				this->value = FLT_MAX;
+				args.fValue = this->value;
 			}
 			else if (args.sValue.compare("-FLT_MAX") == 0)
 			{
 				this->value = -FLT_MAX;
+				args.fValue = this->value;
 			}
 			else
 			{
@@ -2134,7 +2137,7 @@ namespace wi::gui
 				this->end = std::max(this->end, args.fValue);
 			}
 			onSlide(args);
-			});
+		});
 
 		for (int i = IDLE; i < WIDGETSTATE_COUNT; ++i)
 		{
