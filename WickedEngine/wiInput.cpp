@@ -102,22 +102,6 @@ namespace wi::input
 	std::deque<float> mouse_scroll_events;
 	std::deque<XMFLOAT2> mouse_move_events;
 
-#ifdef _WIN32
-	static const HCURSOR cursor_table_original[] = {
-		::LoadCursor(nullptr, IDC_ARROW),
-		::LoadCursor(nullptr, IDC_IBEAM),
-		::LoadCursor(nullptr, IDC_SIZEALL),
-		::LoadCursor(nullptr, IDC_SIZENS),
-		::LoadCursor(nullptr, IDC_SIZEWE),
-		::LoadCursor(nullptr, IDC_SIZENESW),
-		::LoadCursor(nullptr, IDC_SIZENWSE),
-		::LoadCursor(nullptr, IDC_HAND),
-		::LoadCursor(nullptr, IDC_NO),
-		::LoadCursor(nullptr, IDC_CROSS),
-	};
-	static HCURSOR cursor_table[arraysize(cursor_table_original)] = {};
-#endif // _WIN32
-
 #ifdef SDL2
 	static SDL_Cursor* cursor_table_original[] = {
 		SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW),
@@ -132,7 +116,22 @@ namespace wi::input
 		SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_CROSSHAIR),
 	};
 	static SDL_Cursor* cursor_table[arraysize(cursor_table_original)] = {};
-#endif // SDL2
+#elif defined(_WIN32)
+	static const HCURSOR cursor_table_original[] = {
+		::LoadCursor(nullptr, IDC_ARROW),
+		::LoadCursor(nullptr, IDC_IBEAM),
+		::LoadCursor(nullptr, IDC_SIZEALL),
+		::LoadCursor(nullptr, IDC_SIZENS),
+		::LoadCursor(nullptr, IDC_SIZEWE),
+		::LoadCursor(nullptr, IDC_SIZENESW),
+		::LoadCursor(nullptr, IDC_SIZENWSE),
+		::LoadCursor(nullptr, IDC_HAND),
+		::LoadCursor(nullptr, IDC_NO),
+		::LoadCursor(nullptr, IDC_CROSS),
+	};
+	static HCURSOR cursor_table[arraysize(cursor_table_original)] = {};
+#endif
+
 
 #ifdef __APPLE__
 	static void* cursor_table_original[CURSOR_COUNT] = {};
@@ -142,7 +141,7 @@ namespace wi::input
 	const KeyboardState& GetKeyboardState() { return keyboard; }
 	const MouseState& GetMouseState() { return mouse; }
 
-	struct Input 
+	struct Input
 	{
 		BUTTON button = BUTTON_NONE;
 		int playerIndex = 0;
@@ -187,7 +186,7 @@ namespace wi::input
 #ifdef PLATFORM_PS5
 		wi::input::ps5::Initialize();
 #endif // PLATFORM_PS5
-		
+
 #ifdef __APPLE__
 		wi::input::apple::Initialize();
 		wi::apple::CursorInit(cursor_table_original);
@@ -221,9 +220,12 @@ namespace wi::input
 		wi::input::ps5::Update();
 #endif // PLATFORM_PS5
 
-#if defined(_WIN32) && !defined(PLATFORM_XBOX)
+#ifdef SDL2
+		wi::input::sdlinput::GetMouseState(&mouse);
+		wi::input::sdlinput::GetKeyboardState(&keyboard);
+#elif defined(_WIN32) && !defined(PLATFORM_XBOX)
 		wi::input::rawinput::GetMouseState(&mouse); // currently only the relative data can be used from this
-		wi::input::rawinput::GetKeyboardState(&keyboard); 
+		wi::input::rawinput::GetKeyboardState(&keyboard);
 
 		// apparently checking the mouse here instead of Down() avoids missing the button presses (review!)
 		mouse.left_button_press |= KEY_DOWN(VK_LBUTTON);
@@ -249,18 +251,15 @@ namespace wi::input
 		mouse.middle_button_press = false;
 		mouse.delta_position = XMFLOAT2(0, 0);
 		mouse.delta_wheel = 0;
-#elif defined(SDL2)
-		wi::input::sdlinput::GetMouseState(&mouse);
-		wi::input::sdlinput::GetKeyboardState(&keyboard);
 #endif
-		
+
 		for (auto& x : mouse_move_events)
 		{
 			mouse.delta_position.x += x.x;
 			mouse.delta_position.y += x.y;
 		}
 		mouse_move_events.clear();
-		
+
 		for (auto& x : mouse_scroll_events)
 		{
 			mouse.delta_wheel += x;
@@ -280,7 +279,7 @@ namespace wi::input
 		mouse.position.x = canvas.PhysicalToLogical(mouse.position.x);
 		mouse.position.y = canvas.PhysicalToLogical(mouse.position.y);
 #endif // PLATFORM_IOS
-		
+
 		// Primary touch can act as mouse pointer override:
 		static bool pan_continue = false; // helps avoid non-continuous delta jump on pan begin
 		if (!touches.empty())
@@ -310,7 +309,7 @@ namespace wi::input
 		{
 			pan_continue = false;
 		}
-		
+
 		// Find pinch and pan gesture:
 		float prev_pinch_scale = pinch.scale;
 		pinch = {};
@@ -582,7 +581,7 @@ namespace wi::input
 				cursor_next = CURSOR_DEFAULT;
 			}
 			auto cursorhandle = cursor_table[cursor_next] ? cursor_table[cursor_next] : cursor_table[CURSOR_DEFAULT];
-			
+
 #ifdef PLATFORM_WINDOWS_DESKTOP
 			::SetCursor(cursorhandle);
 #elif defined(__APPLE__)
@@ -591,6 +590,11 @@ namespace wi::input
 			SDL_SetCursor(cursorhandle);
 #endif // SDL2
 
+#ifdef SDL2
+			SDL_SetCursor(cursor_table[cursor_next] ? cursor_table[cursor_next] : cursor_table[CURSOR_DEFAULT]);
+#elif defined(PLATFORM_WINDOWS_DESKTOP)
+			::SetCursor(cursor_table[cursor_next]);
+#endif
 			cursor_current = cursor_next;
 		}
 		cursor_next = CURSOR_DEFAULT;
@@ -668,15 +672,15 @@ namespace wi::input
 			switch (button)
 			{
 			case wi::input::MOUSE_BUTTON_LEFT:
-				if (mouse.left_button_press) 
+				if (mouse.left_button_press)
 					return true;
 				return false;
 			case wi::input::MOUSE_BUTTON_RIGHT:
-				if (mouse.right_button_press) 
+				if (mouse.right_button_press)
 					return true;
 				return false;
 			case wi::input::MOUSE_BUTTON_MIDDLE:
-				if (mouse.middle_button_press) 
+				if (mouse.middle_button_press)
 					return true;
 				return false;
 #ifdef _WIN32
@@ -701,7 +705,7 @@ namespace wi::input
 			case wi::input::KEYBOARD_BUTTON_LSHIFT:
 				keycode = VK_LSHIFT;
 				break;
-			case wi::input::KEYBOARD_BUTTON_F1: 
+			case wi::input::KEYBOARD_BUTTON_F1:
 				keycode = VK_F1;
 				break;
 			case wi::input::KEYBOARD_BUTTON_F2:
@@ -831,7 +835,7 @@ namespace wi::input
 				keycode = VK_END;
 				break;
 #endif // _WIN32
-					
+
 #ifdef PLATFORM_MACOS
 			case wi::input::KEYBOARD_BUTTON_UP:
 				keycode = kVK_UpArrow;
@@ -1098,16 +1102,18 @@ namespace wi::input
 				  keycode = kVK_ANSI_9;
 				  break;
 #endif // PLATFORM_MACOS
-					
-					
+
+
 				default: break;
 			}
-#if defined(_WIN32) && !defined(PLATFORM_XBOX)
+#if defined(SDL2)
+			return keyboard.buttons[keycode] == 1;
+#elif defined(_WIN32) && !defined(PLATFORM_XBOX)
 			return KEY_DOWN(keycode) || KEY_TOGGLE(keycode);
 #elif defined(__APPLE__)
 			return IsKeyDown(keycode);
-#elif defined(SDL2)
-			return keyboard.buttons[keycode] == 1;
+#elif defined(_WIN32) && !defined(PLATFORM_XBOX)
+			return KEY_DOWN(keycode) || KEY_TOGGLE(keycode);
 #endif
 		}
 
@@ -1181,7 +1187,9 @@ namespace wi::input
 		const uint32_t posX = canvas.LogicalToPhysical(props.x);
 		const uint32_t posY = canvas.LogicalToPhysical(props.y);
 
-#if defined(PLATFORM_WINDOWS_DESKTOP)
+#ifdef SDL2
+		SDL_WarpMouseInWindow(window, posX, posY);
+#elif defined(PLATFORM_WINDOWS_DESKTOP)
 		HWND hWnd = window;
 		POINT p;
 		p.x = (LONG)(posX);
@@ -1190,13 +1198,13 @@ namespace wi::input
 		SetCursorPos(p.x, p.y);
 #elif defined(__APPLE__)
 		wi::apple::SetMousePositionInWindow(window, XMFLOAT2(float(posX), float(posY)));
-#elif defined(SDL2)
-		SDL_WarpMouseInWindow(window, posX, posY);
 #endif // SDL2
 	}
 	void HidePointer(bool value)
 	{
-#ifdef _WIN32
+#ifdef SDL2
+		SDL_SetRelativeMouseMode(value ? SDL_TRUE : SDL_FALSE);
+#elif defined(_WIN32)
 		if (value)
 		{
 			while (ShowCursor(false) >= 0) {};
@@ -1207,8 +1215,6 @@ namespace wi::input
 		}
 #elif defined(__APPLE__)
 		wi::apple::CursorHide(value);
-#elif defined(SDL2)
-		SDL_SetRelativeMouseMode(value ? SDL_TRUE : SDL_FALSE);
 #endif // _WIN32
 	}
 
@@ -1308,23 +1314,26 @@ namespace wi::input
 		wi::helper::StringConvert(filename, wfilename, arraysize(wfilename));
 		cursor_table[cursor] = LoadCursorFromFile(wfilename);
 #endif // PLATFORM_WINDOWS_DESKTOP
-		
+
 #if defined(SDL2) || defined(PLATFORM_MACOS)
 		// On other platforms, extract the raw color data from win32 .CUR file and create cursor from that:
+	{
+#ifdef SDL2
+		// In SDL extract the raw color data from win32 .CUR file and use SDL to create cursor:
 		wi::vector<uint8_t> data;
 		if (wi::helper::FileRead(filename, data))
 		{
 			// Extract only the first image data:
 			ico::ICONDIRENTRY* icondirentry = (ico::ICONDIRENTRY*)(data.data() + sizeof(ico::ICONDIR));
-			
+
 			int hotspotX = icondirentry->wPlanes;
 			int hotspotY = icondirentry->wBitCount;
-			
+
 			uint8_t* pixeldata = (data.data() + icondirentry->dwImageOffset + sizeof(ico::BITMAPINFOHEADER));
-			
+
 			const uint32_t width = icondirentry->bWidth;
 			const uint32_t height = icondirentry->bHeight;
-			
+
 			// Convert BGRA to ARGB and flip vertically
 			wi::vector<wi::Color> colors;
 			colors.reserve(width * height);
@@ -1337,7 +1346,7 @@ namespace wi::input
 					src += 4;
 				}
 			}
-			
+
 #ifdef SDL2
 			SDL_Surface* surface = SDL_CreateRGBSurfaceFrom(
 															colors.data(),
@@ -1350,7 +1359,7 @@ namespace wi::input
 															0xff000000,
 															0x000000ff
 															);
-			
+
 			if (surface != nullptr)
 			{
 				cursor_table[cursor] = SDL_CreateColorCursor(surface, hotspotX, hotspotY);
@@ -1361,7 +1370,15 @@ namespace wi::input
 #endif // SDL2
 		}
 #endif // defined(SDL2) || defined(PLATFORM_MACOS)
-		
+
+		}
+#elif defined(PLATFORM_WINDOWS_DESKTOP)
+		wchar_t wfilename[1024] = {};
+		wi::helper::StringConvert(filename, wfilename, arraysize(wfilename));
+		cursor_table[cursor] = LoadCursorFromFile(wfilename);
+#endif // PLATFORM_WINDOWS_DESKTOP
+
+
 		// refresh in case we set the current one:
 		cursor_next = cursor_current;
 		cursor_current = CURSOR_COUNT;

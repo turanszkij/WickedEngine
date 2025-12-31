@@ -51,32 +51,31 @@ typedef void* HMODULE;
 
 namespace wi::platform
 {
-#ifdef _WIN32
-	using window_type = HWND;
-	using error_type = HRESULT;
-#elif defined(SDL2)
+#ifdef SDL2
 	using window_type = SDL_Window*;
 	using error_type = int;
 #elif defined(__APPLE__)
 	using window_type = void*;
 	using error_type = int;
+#elif defined(_WIN32)
+	using window_type = HWND;
+	using error_type = HRESULT;
 #else
 	using window_type = void*;
 	using error_type = int;
-#endif // _WIN32
+#endif
 
 	inline void Exit()
 	{
-#if defined(_WIN32)
-		PostQuitMessage(0);
-#elif defined(SDL2)
+#ifdef SDL2
 		SDL_Event quit_event;
 		quit_event.type = SDL_QUIT;
 		SDL_PushEvent(&quit_event);
+#elif defined(_WIN32)
+		PostQuitMessage(0);
 #elif defined(__APPLE__)
 		std::exit(0);
-#endif
-		
+#endif // SDL2
 	}
 
 	struct WindowProperties
@@ -112,7 +111,7 @@ namespace wi::platform
 		SDL_Vulkan_GetDrawableSize(window, &dest->width, &dest->height);
 		dest->dpi = ((float)dest->width / (float)window_width) * 96.f;
 #endif // PLATFORM_LINUX
-		
+
 #ifdef PLATFORM_APPLE
 		XMUINT2 size = wi::apple::GetWindowSize(window);
 		dest->width = size.x;

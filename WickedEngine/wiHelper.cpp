@@ -157,9 +157,9 @@ namespace wi::helper
 		default: return MessageBoxResult::Cancel;
 		}
 #elif defined(__APPLE__)
-		
+
 		return (MessageBoxResult)wi::apple::MessageBox(caption.c_str(), msg.c_str(), buttons.c_str());
-		
+
 #elif defined(SDL2)
 		const SDL_MessageBoxButtonData buttons_data[] = {
 			{ SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 0, "Yes" },
@@ -661,7 +661,7 @@ namespace wi::helper
 				float g = ((pixel >> 10) & 1023) / 1023.0f;
 				float b = ((pixel >> 20) & 1023) / 1023.0f;
 				float a = ((pixel >> 30) & 3) / 3.0f;
-				
+
 #ifdef __APPLE__
 				// The R10G10B10A2_UNORM format only has BGRA equivalent in Metal API and we use that:
 				std::swap(r, b);
@@ -2060,7 +2060,7 @@ namespace wi::helper
 		wi::backlog::post("wi::helper::OpenUrl(" + url + ") returned status: " + std::to_string(status));
 		return;
 #endif // PLATFORM_WINDOWS_DESKTOP
-		
+
 #ifdef __APPLE__
 		wi::apple::OpenUrl(url.c_str());
 		return;
@@ -2080,7 +2080,7 @@ namespace wi::helper
 		assert(ret);
 		mem.total_physical = memInfo.ullTotalPhys;
 		mem.total_virtual = memInfo.ullTotalVirtual;
-		
+
 		PROCESS_MEMORY_COUNTERS_EX pmc = {};
 		GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc));
 		mem.process_physical = pmc.WorkingSetSize;
@@ -2127,7 +2127,7 @@ namespace wi::helper
 		// Format of statm:
 		// size resident shared trs lrs drs dt
 		// see linux Documentation/filesystems/proc.rst
-		
+
 		// we want "resident", the second number, so just read the first one
 		// and discard it
 		statm >> l;
