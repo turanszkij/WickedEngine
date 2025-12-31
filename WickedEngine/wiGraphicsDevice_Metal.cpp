@@ -3286,6 +3286,8 @@ using namespace metal_internal;
 	}
 	void GraphicsDevice_Metal::QueryResolve(const GPUQueryHeap* heap, uint32_t index, uint32_t count, const GPUBuffer* dest, uint64_t dest_offset, CommandList cmd)
 	{
+		if (count == 0)
+			return;
 		precopy(cmd);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 
