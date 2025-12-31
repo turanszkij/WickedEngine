@@ -1348,6 +1348,11 @@ namespace dx12_internal
 
 		D3D12_GPU_VIRTUAL_ADDRESS gpu_address = 0;
 
+		SingleDescriptor rtv = {};
+		SingleDescriptor dsv = {};
+		wi::vector<SingleDescriptor> subresources_rtv;
+		wi::vector<SingleDescriptor> subresources_dsv;
+		wi::vector<SubresourceData> mapped_subresources;
 		UINT64 total_size = 0;
 		wi::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> footprints;
 		wi::vector<UINT64> rowSizesInBytes;
@@ -1358,6 +1363,8 @@ namespace dx12_internal
 		{
 			srv.destroy();
 			uav.destroy();
+			rtv.destroy();
+			dsv.destroy();
 			for (auto& x : subresources_srv)
 			{
 				x.destroy();
@@ -1368,41 +1375,25 @@ namespace dx12_internal
 				x.destroy();
 			}
 			subresources_uav.clear();
+			for (auto& x : subresources_rtv)
+			{
+				x.destroy();
+			}
+			subresources_rtv.clear();
+			for (auto& x : subresources_dsv)
+			{
+				x.destroy();
+			}
+			subresources_dsv.clear();
 		}
 
-		virtual ~Resource_DX12()
+		~Resource_DX12()
 		{
 			std::scoped_lock lck(allocationhandler->destroylocker);
 			uint64_t framecount = allocationhandler->framecount;
 			if (allocation) allocationhandler->destroyer_allocations.push_back(std::make_pair(allocation, framecount));
 			if (resource) allocationhandler->destroyer_resources.push_back(std::make_pair(resource, framecount));
 			destroy_subresources();
-		}
-	};
-	struct Texture_DX12 final : public Resource_DX12
-	{
-		SingleDescriptor rtv = {};
-		SingleDescriptor dsv = {};
-		wi::vector<SingleDescriptor> subresources_rtv;
-		wi::vector<SingleDescriptor> subresources_dsv;
-
-		wi::vector<SubresourceData> mapped_subresources;
-
-		~Texture_DX12() override
-		{
-			std::scoped_lock lck(allocationhandler->destroylocker);
-			uint64_t framecount = allocationhandler->framecount;
-
-			rtv.destroy();
-			dsv.destroy();
-			for (auto& x : subresources_rtv)
-			{
-				x.destroy();
-			}
-			for (auto& x : subresources_dsv)
-			{
-				x.destroy();
-			}
 		}
 	};
 	struct Sampler_DX12
@@ -1517,7 +1508,7 @@ namespace dx12_internal
 #else
 		ComPtr<IDXGISwapChain3> swapChain;
 #endif // PLATFORM_XBOX
-		wi::vector<wi::allocator::shared_ptr<Texture_DX12>> textures; // shared_ptr is used because they can be given out by GetBackBuffer()
+		wi::vector<wi::allocator::shared_ptr<Resource_DX12>> textures; // shared_ptr is used because they can be given out by GetBackBuffer()
 
 		Texture dummyTexture;
 		ColorSpace colorSpace = ColorSpace::SRGB;
@@ -1549,7 +1540,7 @@ namespace dx12_internal
 	template<typename T> struct DX12Type;
 	template<> struct DX12Type<GPUResource> { using type = Resource_DX12; };
 	template<> struct DX12Type<GPUBuffer> { using type = Resource_DX12; };
-	template<> struct DX12Type<Texture> { using type = Texture_DX12; };
+	template<> struct DX12Type<Texture> { using type = Resource_DX12; };
 	template<> struct DX12Type<Sampler> { using type = Sampler_DX12; };
 	template<> struct DX12Type<GPUQueryHeap> { using type = QueryHeap_DX12; };
 	template<> struct DX12Type<Shader> { using type = PipelineState_DX12; };
@@ -3100,7 +3091,7 @@ std::mutex queue_locker;
 		internal_state->textures.resize(swapchain->desc.buffer_count);
 		for (uint32_t i = 0; i < swapchain->desc.buffer_count; ++i)
 		{
-			internal_state->textures[i] = wi::allocator::make_shared<Texture_DX12>();
+			internal_state->textures[i] = wi::allocator::make_shared<Resource_DX12>();
 			dx12_check(device->CreateCommittedResource(
 				&heap_properties,
 				D3D12_HEAP_FLAG_ALLOW_DISPLAY,
@@ -3245,7 +3236,7 @@ std::mutex queue_locker;
 
 		for (uint32_t i = 0; i < desc->buffer_count; ++i)
 		{
-			internal_state->textures[i] = wi::allocator::make_shared<Texture_DX12>();
+			internal_state->textures[i] = wi::allocator::make_shared<Resource_DX12>();
 			internal_state->textures[i]->allocationhandler = allocationhandler;
 			dx12_check(internal_state->swapChain->GetBuffer(i, PPV_ARGS(internal_state->textures[i]->resource)));
 			internal_state->textures[i]->rtv.init(this, rtv_desc, internal_state->textures[i]->resource.Get());
@@ -3491,7 +3482,7 @@ std::mutex queue_locker;
 	}
 	bool GraphicsDevice_DX12::CreateTexture(const TextureDesc* desc, const SubresourceData* initial_data, Texture* texture, const GPUResource* alias, uint64_t alias_offset) const
 	{
-		auto internal_state = wi::allocator::make_shared<Texture_DX12>();
+		auto internal_state = wi::allocator::make_shared<Resource_DX12>();
 		internal_state->allocationhandler = allocationhandler;
 		texture->internal_state = internal_state;
 		texture->type = GPUResource::Type::TEXTURE;
