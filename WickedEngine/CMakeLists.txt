@@ -32,16 +32,19 @@ else()
     message(STATUS "Building WickedEngine as a static library")
 endif()
 
-if (WIN32)
-    if (MSVC)
-        add_compile_options(
-            /bigobj
-        )
-    endif()
-else ()
+
+if (MSVC)
+	add_compile_options(
+		/bigobj
+	)
+endif()
+
+if(SDL2)
     find_package(SDL2 REQUIRED)
     find_package(OpenImageDenoise "${MIN_OpenImageDenoise_VERSION}" QUIET)
-    find_package(Threads REQUIRED)
+    if(UNIX)
+		find_package(Threads REQUIRED)
+	endif()
     if(NOT ${OpenImageDenoise_FOUND})
         message("OpenImageDenoise>=${MIN_OpenImageDenoise_VERSION} not found, it will be disabled.")
     else()

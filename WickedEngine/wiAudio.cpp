@@ -15,6 +15,7 @@ static constexpr T AlignTo(T value, T alignment)
 	return ((value + alignment - T(1)) / alignment) * alignment;
 }
 
+//FIXME: Use FAudio on Windows SDL?
 #ifdef _WIN32
 
 #include <wrl/client.h> // ComPtr
@@ -454,7 +455,7 @@ namespace wi::audio
 		}
 
 		instanceinternal->sourceVoice->GetVoiceDetails(&instanceinternal->voiceDetails);
-		
+
 		instanceinternal->outputMatrix.resize(size_t(instanceinternal->voiceDetails.InputChannels) * size_t(instanceinternal->audio->masteringVoiceDetails.InputChannels));
 		instanceinternal->channelAzimuths.resize(instanceinternal->voiceDetails.InputChannels);
 		for (size_t i = 0; i < instanceinternal->channelAzimuths.size(); ++i)
@@ -678,7 +679,7 @@ namespace wi::audio
 				settings.pMatrixCoefficients
 			));
 
-			
+
 			XAUDIO2_FILTER_PARAMETERS FilterParametersDirect = { LowPassFilter, 2.0f * sinf(X3DAUDIO_PI / 6.0f * settings.LPFDirectCoefficient), 1.0f };
 			xaudio_check(instanceinternal->sourceVoice->SetOutputFilterParameters(instanceinternal->audio->submixVoices[instance->type], &FilterParametersDirect));
 
@@ -778,10 +779,10 @@ namespace wi::audio
 			}
 
 			res = FAudio_CreateMasteringVoice(
-				audioEngine, 
-				&masteringVoice, 
-				FAUDIO_DEFAULT_CHANNELS, 
-				FAUDIO_DEFAULT_SAMPLERATE, 
+				audioEngine,
+				&masteringVoice,
+				FAUDIO_DEFAULT_CHANNELS,
+				FAUDIO_DEFAULT_SAMPLERATE,
 				0, 0, NULL);
 			if (res != 0)
 			{
@@ -790,15 +791,15 @@ namespace wi::audio
 				wi::backlog::post(ss.str(), wi::backlog::LogLevel::Error);
 				return;
 			}
-		
+
 			FAudioVoice_GetVoiceDetails(masteringVoice, &masteringVoiceDetails);
 
 			for (int i=0; i<SUBMIX_TYPE_COUNT; ++i){
 				res = FAudio_CreateSubmixVoice(
-					audioEngine, 
-					&submixVoices[i], 
-					masteringVoiceDetails.InputChannels, 
-					masteringVoiceDetails.InputSampleRate, 
+					audioEngine,
+					&submixVoices[i],
+					masteringVoiceDetails.InputChannels,
+					masteringVoiceDetails.InputSampleRate,
 					0, 0, NULL, NULL);
 				if (res != 0)
 				{
@@ -834,15 +835,15 @@ namespace wi::audio
 
 				FAudioEffectDescriptor effects[] = { { reverbEffect, 1, 1 } };
 				FAudioEffectChain effectChain = { arraysize(effects), effects };
-				
+
 				res = FAudio_CreateSubmixVoice(
-					audioEngine, 
-					&reverbSubmix, 
-					1, 
-					masteringVoiceDetails.InputSampleRate, 
-					0, 
-					0, 
-					nullptr, 
+					audioEngine,
+					&reverbSubmix,
+					1,
+					masteringVoiceDetails.InputSampleRate,
+					0,
+					0,
+					nullptr,
 					&effectChain
 				);
 				if (res != 0)
@@ -966,7 +967,7 @@ namespace wi::audio
 
 	}
 
-	bool CreateSound(const std::string& filename, Sound* sound) { 
+	bool CreateSound(const std::string& filename, Sound* sound) {
 		wi::vector<uint8_t> filedata;
 		bool success = wi::helper::FileRead(filename, filedata);
 		if (!success)
@@ -1072,7 +1073,7 @@ namespace wi::audio
 			instance->IsEnableReverb() ? (uint32_t)arraysize(SFXSend) : 1,
 			SFXSend
 		};
-		
+
 		res = FAudio_CreateSourceVoice(instanceinternal->audio->audioEngine, &instanceinternal->sourceVoice, &soundinternal->wfx,
 			0, FAUDIO_DEFAULT_FREQ_RATIO, NULL, &SFXSendList, NULL);
 		if(res != 0){
@@ -1225,10 +1226,10 @@ namespace wi::audio
 		uint32_t res = FAudioVoice_SetVolume(audio_internal->submixVoices[type], volume, FAUDIO_COMMIT_NOW);
 		assert(res == 0);
 	}
-	float GetSubmixVolume(SUBMIX_TYPE type) { 
+	float GetSubmixVolume(SUBMIX_TYPE type) {
 		float volume;
 		FAudioVoice_GetVolume(audio_internal->submixVoices[type], &volume);
-		return volume; 
+		return volume;
 	}
 
 	void Update3D(SoundInstance* instance, const SoundInstance3D& instance3D) {
@@ -1238,13 +1239,13 @@ namespace wi::audio
 			listener.Position = (F3DAUDIO_VECTOR){ instance3D.listenerPos.x, instance3D.listenerPos.y, instance3D.listenerPos.z };
 			listener.OrientFront = (F3DAUDIO_VECTOR){ instance3D.listenerFront.x, instance3D.listenerFront.y, instance3D.listenerFront.z };
 			listener.OrientTop = (F3DAUDIO_VECTOR){ instance3D.listenerUp.x, instance3D.listenerUp.y, instance3D.listenerUp.z };
-			listener.Velocity = (F3DAUDIO_VECTOR){ instance3D.listenerVelocity.x, instance3D.listenerVelocity.y, instance3D.listenerVelocity.z }; 
+			listener.Velocity = (F3DAUDIO_VECTOR){ instance3D.listenerVelocity.x, instance3D.listenerVelocity.y, instance3D.listenerVelocity.z };
 
 			F3DAUDIO_EMITTER emitter = {};
 			emitter.Position = (F3DAUDIO_VECTOR){ instance3D.emitterPos.x, instance3D.emitterPos.y, instance3D.emitterPos.z };
 			emitter.OrientFront = (F3DAUDIO_VECTOR){ instance3D.emitterFront.x, instance3D.emitterFront.y, instance3D.emitterFront.z };
 			emitter.OrientTop = (F3DAUDIO_VECTOR){ instance3D.emitterUp.x, instance3D.emitterUp.y, instance3D.emitterUp.z };
-			emitter.Velocity = (F3DAUDIO_VECTOR){ instance3D.emitterVelocity.x, instance3D.emitterVelocity.y, instance3D.emitterVelocity.z }; 
+			emitter.Velocity = (F3DAUDIO_VECTOR){ instance3D.emitterVelocity.x, instance3D.emitterVelocity.y, instance3D.emitterVelocity.z };
 			emitter.InnerRadius = instance3D.emitterRadius;
 			emitter.InnerRadiusAngle = F3DAUDIO_PI / 4.0f;
 			emitter.ChannelCount = instanceinternal->voiceDetails.InputChannels;
@@ -1277,11 +1278,11 @@ namespace wi::audio
 			assert(res == 0);
 
 			res = FAudioVoice_SetOutputMatrix(
-				instanceinternal->sourceVoice, 
+				instanceinternal->sourceVoice,
 				instanceinternal->audio->submixVoices[instance->type],
-				settings.SrcChannelCount, 
-				settings.DstChannelCount, 
-				settings.pMatrixCoefficients, 
+				settings.SrcChannelCount,
+				settings.DstChannelCount,
+				settings.pMatrixCoefficients,
 				FAUDIO_COMMIT_NOW);
 			assert(res == 0);
 

@@ -46,22 +46,6 @@ namespace wi::input
 	CURSOR cursor_current = CURSOR_COUNT; // something that's not default, because at least once code should change it to default
 	CURSOR cursor_next = CURSOR_DEFAULT;
 
-#ifdef _WIN32
-	static const HCURSOR cursor_table_original[] = {
-		::LoadCursor(nullptr, IDC_ARROW),
-		::LoadCursor(nullptr, IDC_IBEAM),
-		::LoadCursor(nullptr, IDC_SIZEALL),
-		::LoadCursor(nullptr, IDC_SIZENS),
-		::LoadCursor(nullptr, IDC_SIZEWE),
-		::LoadCursor(nullptr, IDC_SIZENESW),
-		::LoadCursor(nullptr, IDC_SIZENWSE),
-		::LoadCursor(nullptr, IDC_HAND),
-		::LoadCursor(nullptr, IDC_NO),
-		::LoadCursor(nullptr, IDC_CROSS),
-	};
-	static HCURSOR cursor_table[arraysize(cursor_table_original)] = {};
-#endif // _WIN32
-
 #ifdef SDL2
 	static SDL_Cursor* cursor_table_original[] = {
 		SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW),
@@ -76,12 +60,27 @@ namespace wi::input
 		SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_CROSSHAIR),
 	};
 	static SDL_Cursor* cursor_table[arraysize(cursor_table_original)] = {};
-#endif // SDL2
+#elif defined(_WIN32)
+	static const HCURSOR cursor_table_original[] = {
+		::LoadCursor(nullptr, IDC_ARROW),
+		::LoadCursor(nullptr, IDC_IBEAM),
+		::LoadCursor(nullptr, IDC_SIZEALL),
+		::LoadCursor(nullptr, IDC_SIZENS),
+		::LoadCursor(nullptr, IDC_SIZEWE),
+		::LoadCursor(nullptr, IDC_SIZENESW),
+		::LoadCursor(nullptr, IDC_SIZENWSE),
+		::LoadCursor(nullptr, IDC_HAND),
+		::LoadCursor(nullptr, IDC_NO),
+		::LoadCursor(nullptr, IDC_CROSS),
+	};
+	static HCURSOR cursor_table[arraysize(cursor_table_original)] = {};
+#endif
+
 
 	const KeyboardState& GetKeyboardState() { return keyboard; }
 	const MouseState& GetMouseState() { return mouse; }
 
-	struct Input 
+	struct Input
 	{
 		BUTTON button = BUTTON_NONE;
 		int playerIndex = 0;
@@ -154,9 +153,12 @@ namespace wi::input
 		wi::input::ps5::Update();
 #endif // PLATFORM_PS5
 
-#if defined(_WIN32) && !defined(PLATFORM_XBOX)
+#ifdef SDL2
+		wi::input::sdlinput::GetMouseState(&mouse);
+		wi::input::sdlinput::GetKeyboardState(&keyboard);
+#elif defined(_WIN32) && !defined(PLATFORM_XBOX)
 		wi::input::rawinput::GetMouseState(&mouse); // currently only the relative data can be used from this
-		wi::input::rawinput::GetKeyboardState(&keyboard); 
+		wi::input::rawinput::GetKeyboardState(&keyboard);
 
 		// apparently checking the mouse here instead of Down() avoids missing the button presses (review!)
 		mouse.left_button_press |= KEY_DOWN(VK_LBUTTON);
@@ -169,10 +171,6 @@ namespace wi::input
 		ScreenToClient(window, &p);
 		mouse.position.x = (float)p.x;
 		mouse.position.y = (float)p.y;
-
-#elif defined(SDL2)
-		wi::input::sdlinput::GetMouseState(&mouse);
-		wi::input::sdlinput::GetKeyboardState(&keyboard);
 #endif
 
 		if (pen_override)
@@ -389,14 +387,11 @@ namespace wi::input
 		// Cursor update:
 		if(cursor_next != cursor_current || cursor_next != CURSOR_DEFAULT)
 		{
-#ifdef PLATFORM_WINDOWS_DESKTOP
-			::SetCursor(cursor_table[cursor_next]);
-#endif // PLATFORM_WINDOWS_DESKTOP
-
 #ifdef SDL2
 			SDL_SetCursor(cursor_table[cursor_next] ? cursor_table[cursor_next] : cursor_table[CURSOR_DEFAULT]);
-#endif // SDL2
-
+#elif defined(PLATFORM_WINDOWS_DESKTOP)
+			::SetCursor(cursor_table[cursor_next]);
+#endif
 			cursor_current = cursor_next;
 		}
 		cursor_next = CURSOR_DEFAULT;
@@ -473,15 +468,15 @@ namespace wi::input
 			switch (button)
 			{
 			case wi::input::MOUSE_BUTTON_LEFT:
-				if (mouse.left_button_press) 
+				if (mouse.left_button_press)
 					return true;
 				return false;
 			case wi::input::MOUSE_BUTTON_RIGHT:
-				if (mouse.right_button_press) 
+				if (mouse.right_button_press)
 					return true;
 				return false;
 			case wi::input::MOUSE_BUTTON_MIDDLE:
-				if (mouse.middle_button_press) 
+				if (mouse.middle_button_press)
 					return true;
 				return false;
 #ifdef _WIN32
@@ -506,7 +501,7 @@ namespace wi::input
 			case wi::input::KEYBOARD_BUTTON_LSHIFT:
 				keycode = VK_LSHIFT;
 				break;
-			case wi::input::KEYBOARD_BUTTON_F1: 
+			case wi::input::KEYBOARD_BUTTON_F1:
 				keycode = VK_F1;
 				break;
 			case wi::input::KEYBOARD_BUTTON_F2:
@@ -635,10 +630,10 @@ namespace wi::input
 #endif // _WIN32
 				default: break;
 			}
-#if defined(_WIN32) && !defined(PLATFORM_XBOX)
-			return KEY_DOWN(keycode) || KEY_TOGGLE(keycode);
-#elif defined(SDL2)
+#ifdef SDL2
 			return keyboard.buttons[keycode] == 1;
+#elif defined(_WIN32) && !defined(PLATFORM_XBOX)
+			return KEY_DOWN(keycode) || KEY_TOGGLE(keycode);
 #endif
 		}
 
@@ -712,20 +707,22 @@ namespace wi::input
 		const uint32_t posX = canvas.LogicalToPhysical(props.x);
 		const uint32_t posY = canvas.LogicalToPhysical(props.y);
 
-#if defined(PLATFORM_WINDOWS_DESKTOP)
+#ifdef SDL2
+		SDL_WarpMouseInWindow(window, posX, posY);
+#elif defined(PLATFORM_WINDOWS_DESKTOP)
 		HWND hWnd = window;
 		POINT p;
 		p.x = (LONG)(posX);
 		p.y = (LONG)(posY);
 		ClientToScreen(hWnd, &p);
 		SetCursorPos(p.x, p.y);
-#elif defined(SDL2)
-		SDL_WarpMouseInWindow(window, posX, posY);
 #endif // SDL2
 	}
 	void HidePointer(bool value)
 	{
-#ifdef _WIN32
+#ifdef SDL2
+		SDL_SetRelativeMouseMode(value ? SDL_TRUE : SDL_FALSE);
+#elif defined(_WIN32)
 		if (value)
 		{
 			while (ShowCursor(false) >= 0) {};
@@ -734,8 +731,6 @@ namespace wi::input
 		{
 			while (ShowCursor(true) < 0) {};
 		}
-#elif defined(SDL2)
-		SDL_SetRelativeMouseMode(value ? SDL_TRUE : SDL_FALSE);
 #endif // _WIN32
 	}
 
@@ -824,12 +819,6 @@ namespace wi::input
 
 	void SetCursorFromFile(CURSOR cursor, const char* filename)
 	{
-#ifdef PLATFORM_WINDOWS_DESKTOP
-		wchar_t wfilename[1024] = {};
-		wi::helper::StringConvert(filename, wfilename, arraysize(wfilename));
-		cursor_table[cursor] = LoadCursorFromFile(wfilename);
-#endif // PLATFORM_WINDOWS_DESKTOP
-
 #ifdef SDL2
 		// In SDL extract the raw color data from win32 .CUR file and use SDL to create cursor:
 		wi::vector<uint8_t> data;
@@ -877,7 +866,12 @@ namespace wi::input
 				SDL_FreeSurface(surface);
 			}
 		}
-#endif // SDL2
+#elif defined(PLATFORM_WINDOWS_DESKTOP)
+		wchar_t wfilename[1024] = {};
+		wi::helper::StringConvert(filename, wfilename, arraysize(wfilename));
+		cursor_table[cursor] = LoadCursorFromFile(wfilename);
+#endif // PLATFORM_WINDOWS_DESKTOP
+
 
 		// refresh in case we set the current one:
 		cursor_next = cursor_current;

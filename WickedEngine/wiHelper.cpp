@@ -101,9 +101,7 @@ namespace wi::helper
 		StringConvert(msg, wmsg);
 		StringConvert(caption, wcaption);
 		MessageBox(GetActiveWindow(), wmsg.c_str(), wcaption.c_str(), 0);
-#endif // PLATFORM_WINDOWS_DESKTOP
-
-#ifdef SDL2
+#elif defined(SDL2)
 		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, caption.c_str(), msg.c_str(), NULL);
 #endif // SDL2
 	}
@@ -151,9 +149,7 @@ namespace wi::helper
 		case IDIGNORE: return MessageBoxResult::Ignore;
 		default: return MessageBoxResult::Cancel;
 		}
-#endif // PLATFORM_WINDOWS_DESKTOP
-
-#ifdef SDL2
+#elif defined(SDL2)
 		const SDL_MessageBoxButtonData buttons_data[] = {
 			{ SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 0, "Yes" },
 			{ 0, 1, "No" },

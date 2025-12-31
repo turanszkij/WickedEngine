@@ -38,27 +38,26 @@ typedef void* HMODULE;
 
 namespace wi::platform
 {
-#ifdef _WIN32
-	using window_type = HWND;
-	using error_type = HRESULT;
-#elif defined(SDL2)
+#ifdef SDL2
 	using window_type = SDL_Window*;
 	using error_type = int;
+#elif defined(_WIN32)
+	using window_type = HWND;
+	using error_type = HRESULT;
 #else
 	using window_type = void*;
 	using error_type = int;
-#endif // _WIN32
+#endif
 
 	inline void Exit()
 	{
-#ifdef _WIN32
-		PostQuitMessage(0);
-#endif // _WIN32
 #ifdef SDL2
 		SDL_Event quit_event;
 		quit_event.type = SDL_QUIT;
 		SDL_PushEvent(&quit_event);
-#endif
+#elif defined(_WIN32)
+		PostQuitMessage(0);
+#endif // _WIN32
 	}
 
 	struct WindowProperties

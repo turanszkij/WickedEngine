@@ -4,10 +4,10 @@
 #include "ImGui/imgui.h"
 #include "ImGui/imgui_internal.h"
 
-#ifdef _WIN32
-#include "ImGui/imgui_impl_win32.h"
-#elif defined(SDL2)
+#ifdef SDL2
 #include "ImGui/imgui_impl_sdl.h"
+#elif defined(_WIN32)
+#include "ImGui/imgui_impl_win32.h"
 #endif
 
 #include <fstream>
@@ -97,10 +97,10 @@ Example_ImGui::~Example_ImGui()
 {
 	// Cleanup
 	//ImGui_ImplDX11_Shutdown();
-#ifdef _WIN32
-	ImGui_ImplWin32_Shutdown();
-#elif defined(SDL2)
+#ifdef SDL2
 	ImGui_ImplSDL2_Shutdown();
+#elif defined(_WIN32)
+	ImGui_ImplWin32_Shutdown();
 #endif
 	ImGui::DestroyContext();
 }
@@ -129,10 +129,11 @@ void Example_ImGui::Initialize()
 	ImGui::StyleColorsDark();
 	//ImGui::StyleColorsClassic();
 
-#ifdef _WIN32
-	ImGui_ImplWin32_Init(window);
-#elif defined(SDL2)
+#ifdef SDL2
+	//FIXME: add DX12 on windows
 	ImGui_ImplSDL2_InitForVulkan(window);
+#elif defined(_WIN32)
+	ImGui_ImplWin32_Init(window);
 #endif
 
 	IM_ASSERT(io.BackendRendererUserData == NULL && "Already initialized a renderer backend!");
@@ -374,10 +375,10 @@ void Example_ImGuiRenderer::Update(float dt)
 		ImGui_Impl_CreateDeviceObjects();
 	}
 
-#ifdef _WIN32
-	ImGui_ImplWin32_NewFrame();
-#elif defined(SDL2)
+#ifdef SDL2
 	ImGui_ImplSDL2_NewFrame();
+#elif defined(_WIN32)
+	ImGui_ImplWin32_NewFrame();
 #endif
 	ImGui::NewFrame();
 

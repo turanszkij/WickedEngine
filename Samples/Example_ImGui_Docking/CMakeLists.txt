@@ -25,7 +25,19 @@ set(IMGUI_FILES
 	ImGui/IconsMaterialDesign.h
 )
 
-if (WIN32)
+if(SDL2)
+	list(APPEND SOURCE_FILES
+		main_SDL2.cpp
+	)
+	list(APPEND IMGUI_FILES
+		ImGui/imgui_impl_sdl.cpp
+		ImGui/imgui_impl_sdl.h
+	)
+	add_library(Example_ImGui_Docking_Lib OBJECT ${IMGUI_FILES})
+	find_package(SDL2 REQUIRED)
+	target_link_libraries(Example_ImGui_Docking_Lib PRIVATE SDL2::SDL2)
+	add_executable(Example_ImGui_Docking ${SOURCE_FILES})
+elseif(WIN32)
 	list(APPEND SOURCE_FILES
 		main_Windows.cpp
 		main_Windows.h
@@ -38,48 +50,31 @@ if (WIN32)
 	add_library(Example_ImGui_Docking_Lib OBJECT ${IMGUI_FILES})
 
 	add_executable(Example_ImGui_Docking WIN32 ${SOURCE_FILES})
+endif()
 
-	target_link_libraries(Example_ImGui_Docking
-		PUBLIC
-		WickedEngine
+target_link_libraries(Example_ImGui_Docking
+	PUBLIC
+	WickedEngine
+	$<UNIX:Threads::Threads>
 
-		PRIVATE
-		Example_ImGui_Docking_Lib
-	)
+	PRIVATE
+	Example_ImGui_Docking_Lib
+)
+
+if(WIN32)
 	set(LIB_DXCOMPILER "dxcompiler.dll")
 else()
-	list(APPEND SOURCE_FILES
-		main_SDL2.cpp
-	)
-	list(APPEND IMGUI_FILES
-		ImGui/imgui_impl_sdl.cpp
-		ImGui/imgui_impl_sdl.h
-	)
-	add_library(Example_ImGui_Docking_Lib OBJECT ${IMGUI_FILES})
-	find_package(SDL2 REQUIRED)
-	target_link_libraries(Example_ImGui_Docking_Lib PRIVATE SDL2::SDL2)
-	add_executable(Example_ImGui_Docking ${SOURCE_FILES})
-
-	target_link_libraries(Example_ImGui_Docking
-		PUBLIC
-		WickedEngine
-		Threads::Threads
-
-		PRIVATE
-		Example_ImGui_Docking_Lib
-	)
-
-	# Copy shaders and font to build and source folders just to be safe:
-	add_custom_command(
-		TARGET Example_ImGui_Docking POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/ImGuiPS.hlsl ${CMAKE_CURRENT_BINARY_DIR}
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/ImGuiVS.hlsl ${CMAKE_CURRENT_BINARY_DIR}
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/Roboto-Medium.ttf ${CMAKE_CURRENT_BINARY_DIR}
-		COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/MaterialIcons-Regular.ttf ${CMAKE_CURRENT_BINARY_DIR}
-	)
-
 	set(LIB_DXCOMPILER "libdxcompiler.so")
-endif ()
+endif()
+
+# Copy shaders and font to build and source folders just to be safe:
+add_custom_command(
+	TARGET Example_ImGui_Docking POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/ImGuiPS.hlsl ${CMAKE_CURRENT_BINARY_DIR}
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/ImGuiVS.hlsl ${CMAKE_CURRENT_BINARY_DIR}
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/Roboto-Medium.ttf ${CMAKE_CURRENT_BINARY_DIR}
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/MaterialIcons-Regular.ttf ${CMAKE_CURRENT_BINARY_DIR}
+)
 
 if(WICKED_ENABLE_IPO)
 set_target_properties(Example_ImGui_Docking PROPERTIES
