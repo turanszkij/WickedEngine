@@ -1521,7 +1521,11 @@ namespace wi::scene
 
 	struct alignas(32) EnvironmentProbeComponent
 	{
+#ifdef __APPLE__
+		static constexpr uint32_t envmapMSAASampleCount = 4;
+#else
 		static constexpr uint32_t envmapMSAASampleCount = 8;
+#endif // __APPLE__
 		enum FLAGS
 		{
 			EMPTY = 0,
