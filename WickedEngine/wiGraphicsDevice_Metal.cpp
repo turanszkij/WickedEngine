@@ -1284,7 +1284,7 @@ using namespace metal_internal;
 		for (auto& frame : frame_resources)
 		{
 			frame.event = NS::TransferPtr(device->newSharedEvent());
-			frame.event->setSignaledValue(1);
+			frame.event->setSignaledValue(frame.requiredValue);
 		}
 		
 		// Static samplers workaround:
@@ -2616,12 +2616,14 @@ using namespace metal_internal;
 			{
 				commandlist.commandbuffer->presentDrawable(view->currentDrawable());
 			}
-			commandlist.commandbuffer->commit();
 			
 			if (cmd == cmd_last - 1)
 			{
-				commandlist.commandbuffer->encodeSignalEvent(GetFrameResources().event.get(), 1);
+				FrameResources& frame = GetFrameResources();
+				commandlist.commandbuffer->encodeSignalEvent(frame.event.get(), ++frame.requiredValue);
 			}
+			
+			commandlist.commandbuffer->commit();
 			
 			for (auto& x : commandlist.pipelines_worker)
 			{
@@ -2644,8 +2646,8 @@ using namespace metal_internal;
 		FRAMECOUNT++;
 		
 		// The new frame event must be completed when we start using it from CPU:
-		GetFrameResources().event->waitUntilSignaledValue(1, ~0ull);
-		GetFrameResources().event->setSignaledValue(0);
+		FrameResources& frame = GetFrameResources();
+		frame.event->waitUntilSignaledValue(frame.requiredValue, ~0ull);
 
 		allocationhandler->Update(FRAMECOUNT, BUFFERCOUNT);
 	}

@@ -54,6 +54,7 @@ namespace wi::graphics
 		struct FrameResources
 		{
 			NS::SharedPtr<MTL::SharedEvent> event;
+			uint64_t requiredValue = 0;
 		} frame_resources[BUFFERCOUNT];
 		
 		FrameResources& GetFrameResources() { return frame_resources[GetBufferIndex()]; }

@@ -7,6 +7,26 @@ Editor editor;
 
 int main( int argc, char* argv[] )
 {
+	int width = 1920;
+	int height = 1080;
+	bool fullscreen = false;
+	bool borderless = false;
+	
+	wi::Timer timer;
+	if (editor.config.Open("config.ini"))
+	{
+		if (editor.config.Has("width"))
+		{
+			width = editor.config.GetInt("width");
+			height = editor.config.GetInt("height");
+		}
+		fullscreen = editor.config.GetBool("fullscreen");
+		borderless = editor.config.GetBool("borderless");
+		editor.allow_hdr = editor.config.GetBool("allow_hdr");
+
+		wilog("config.ini loaded in %.2f milliseconds\n", (float)timer.elapsed_milliseconds());
+	}
+	
 	NS::SharedPtr<NS::AutoreleasePool> pAutoreleasePool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init());
 	NS::SharedPtr<NS::Application> pSharedApplication = NS::TransferPtr(NS::Application::sharedApplication());
 	
@@ -19,7 +39,7 @@ int main( int argc, char* argv[] )
 	} application_delegate;
 	pSharedApplication->setDelegate(&application_delegate);
 	
-	CGRect frame = (CGRect){ {100.0, 100.0}, {1920, 1080} };
+	CGRect frame = (CGRect){ {100.0, 100.0}, {(float)width, (float)height} };
 	static NS::Window* window = NS::Window::alloc()->init(
 		 frame,
 		 NS::WindowStyleMaskClosable|NS::WindowStyleMaskResizable|NS::WindowStyleMaskMiniaturizable|NS::WindowStyleMaskTitled,
