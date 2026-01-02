@@ -68,5 +68,6 @@ namespace wi::config
 			std::string comment;
 		};
 		std::vector<Line> opened_order;
+		std::mutex locker;
 	};
 }
