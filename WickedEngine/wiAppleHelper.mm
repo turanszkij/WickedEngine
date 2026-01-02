@@ -1,8 +1,13 @@
 #include "wiAppleHelper.h"
+#include "wiHelper.h"
 
 #include <AppKit/AppKit.h>
 #include <CoreGraphics/CoreGraphics.h>
 #include <MetalKit/MTKView.h>
+
+#include <mach-o/dyld.h>
+
+#import <Cocoa/Cocoa.h>
 
 namespace wi::apple
 {
@@ -118,6 +123,86 @@ XMFLOAT2 GetMousePositionInWindow(NS::Window* handle)
 	CGFloat scale = mtkView.window.backingScaleFactor;
 
 	return XMFLOAT2((float)(mouseInView.x * scale), (float)(mouseInView.y * scale));
+}
+
+int MessageBox(const char* title, const char* message, const char* buttons)
+{
+	@autoreleasepool {
+		NSAlert *alert = [[NSAlert alloc] init];
+		[alert setMessageText:@(title)];          // Title
+		[alert setInformativeText:@(message)];    // Body text
+		[alert setAlertStyle:NSAlertStyleInformational];
+		
+		if (buttons == nullptr)
+		{
+			[alert addButtonWithTitle:@"OK"];
+			[alert runModal];  // Blocks until user dismisses
+		}
+		else if (strcmp(buttons, "YesNo") == 0)
+		{
+			[alert addButtonWithTitle:@"Yes"];
+			[alert addButtonWithTitle:@"No"];
+			NSInteger button = [alert runModal];
+			switch (button) {
+				case NSAlertFirstButtonReturn:  return (int)wi::helper::MessageBoxResult::Yes;
+				case NSAlertSecondButtonReturn: return (int)wi::helper::MessageBoxResult::No;
+				default:  return (int)wi::helper::MessageBoxResult::Cancel;
+			}
+		}
+		else if (strcmp(buttons, "YesNoCancel") == 0)
+		{
+			[alert addButtonWithTitle:@"Yes"];
+			[alert addButtonWithTitle:@"No"];
+			[alert addButtonWithTitle:@"Cancel"];
+			NSInteger button = [alert runModal];
+			switch (button) {
+				case NSAlertFirstButtonReturn:  return (int)wi::helper::MessageBoxResult::Yes;
+				case NSAlertSecondButtonReturn: return (int)wi::helper::MessageBoxResult::No;
+				default:  return (int)wi::helper::MessageBoxResult::Cancel;
+			}
+		}
+		else if (strcmp(buttons, "OKCancel") == 0)
+		{
+			[alert addButtonWithTitle:@"OK"];
+			[alert addButtonWithTitle:@"Cancel"];
+			NSInteger button = [alert runModal];
+			switch (button) {
+				case NSAlertFirstButtonReturn:  return (int)wi::helper::MessageBoxResult::OK;
+				default:  return (int)wi::helper::MessageBoxResult::Cancel;
+			}
+		}
+		else if (strcmp(buttons, "AbortRetryIgnore") == 0)
+		{
+			[alert addButtonWithTitle:@"Abort"];
+			[alert addButtonWithTitle:@"Retry"];
+			[alert addButtonWithTitle:@"Ignore"];
+			NSInteger button = [alert runModal];
+			switch (button) {
+				case NSAlertFirstButtonReturn:  return (int)wi::helper::MessageBoxResult::Abort;
+				case NSAlertSecondButtonReturn:  return (int)wi::helper::MessageBoxResult::Retry;
+				default:  return (int)wi::helper::MessageBoxResult::Ignore;
+			}
+		}
+
+	}
+	return (int)wi::helper::MessageBoxResult::OK;
+}
+
+std::string GetExecutablePath()
+{
+	char rawPath[PATH_MAX];
+	uint32_t rawLength = sizeof(rawPath);
+	
+	if (_NSGetExecutablePath(rawPath, &rawLength) != 0)
+		return {};
+	
+	char* resolved = realpath(rawPath, nullptr);
+	if (!resolved)
+		return {};
+	
+	std::string path(resolved);
+	free(resolved);
+	return path;
 }
 
 }

@@ -37,6 +37,8 @@ int main( int argc, char* argv[] )
 	class MyMTKViewDelegate : public MTK::ViewDelegate
 	{
 	public:
+		Editor editor;
+		
 		void drawInMTKView( MTK::View* pView ) override
 		{
 			editor.Run();

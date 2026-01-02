@@ -2082,7 +2082,7 @@ void LoadShaders()
 											renderpass_info.rt_formats[0] = renderPass == RENDERPASS_MAIN ? format_rendertarget_main : format_idbuffer;
 										}
 										renderpass_info.ds_format = format_depthbuffer_main;
-										const uint32_t msaa_support[] = { 1,2,4,8 };
+										constexpr uint32_t msaa_support[] = { 1,2,4,8 };
 										for (uint32_t msaa : msaa_support)
 										{
 											variant.bits.sample_count = msaa;
@@ -2102,7 +2102,12 @@ void LoadShaders()
 										renderpass_info.rt_count = 1;
 										renderpass_info.rt_formats[0] = format_rendertarget_envprobe;
 										renderpass_info.ds_format = format_depthbuffer_envprobe;
-										const uint32_t msaa_support[] = { 1,EnvironmentProbeComponent::envmapMSAASampleCount };
+#ifdef __APPLE__
+										// Note: Apple doesn't necessarily support all MSAA smaple counts, so try to create for all possible ones:
+										constexpr uint32_t msaa_support[] = { 1,2,4,8 };
+#else
+										constexpr uint32_t msaa_support[] = { 1,EnvironmentProbeComponent::envmapMSAASampleCount };
+#endif // __APPLE__
 										for (uint32_t msaa : msaa_support)
 										{
 											variant.bits.sample_count = msaa;
