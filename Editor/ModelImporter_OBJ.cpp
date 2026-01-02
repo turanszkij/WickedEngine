@@ -75,6 +75,31 @@ private:
 // Transform the data from OBJ space to engine-space:
 static const bool transform_to_LH = true;
 
+
+struct index_and_mat
+{
+	tinyobj::index_t index;
+	int materialIndex;
+	constexpr bool operator==(const index_and_mat& other) const
+	{
+		return std::tuple(index.normal_index, index.texcoord_index, index.vertex_index, materialIndex)
+			== std::tuple(other.index.normal_index, other.index.texcoord_index, other.index.vertex_index, other.materialIndex);
+	}
+};
+template<>
+struct std::hash<index_and_mat>
+{
+	constexpr std::size_t operator()(const index_and_mat& o) const noexcept
+	{
+		size_t vertexHash = 0;
+		wi::helper::hash_combine(vertexHash, o.index.vertex_index);
+		wi::helper::hash_combine(vertexHash, o.index.normal_index);
+		wi::helper::hash_combine(vertexHash, o.index.texcoord_index);
+		wi::helper::hash_combine(vertexHash, o.materialIndex);
+		return vertexHash;
+	}
+};
+
 void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 {
 	std::string directory = wi::helper::GetDirectoryFromPath(fileName);
@@ -176,7 +201,7 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 			object.meshID = meshEntity;
 
 			wi::unordered_map<int, int> registered_materialIndices = {};
-			wi::unordered_map<size_t, uint32_t> uniqueVertices = {};
+			wi::unordered_map<index_and_mat, uint32_t> uniqueVertices = {};
 
 			for (size_t i = 0; i < shape.mesh.indices.size(); i += 3)
 			{
@@ -236,21 +261,15 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 						nor.z *= -1;
 					}
 
-					// eliminate duplicate vertices by means of hashing:
-					size_t vertexHash = 0;
-					wi::helper::hash_combine(vertexHash, index.vertex_index);
-					wi::helper::hash_combine(vertexHash, index.normal_index);
-					wi::helper::hash_combine(vertexHash, index.texcoord_index);
-					wi::helper::hash_combine(vertexHash, materialIndex);
-
-					if (uniqueVertices.count(vertexHash) == 0)
+					const index_and_mat im = {index, materialIndex};
+					if (uniqueVertices.count(im) == 0)
 					{
-						uniqueVertices[vertexHash] = (uint32_t)mesh.vertex_positions.size();
+						uniqueVertices[im] = (uint32_t)mesh.vertex_positions.size();
 						mesh.vertex_positions.push_back(pos);
 						mesh.vertex_normals.push_back(nor);
 						mesh.vertex_uvset_0.push_back(tex);
 					}
-					mesh.indices.push_back(uniqueVertices[vertexHash]);
+					mesh.indices.push_back(uniqueVertices[im]);
 					mesh.subsets.back().indexCount++;
 				}
 			}
