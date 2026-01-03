@@ -623,7 +623,7 @@ namespace metal_internal
 		}
 	};
 	struct Shader_Metal
-{
+	{
 		wi::allocator::shared_ptr<GraphicsDevice_Metal::AllocationHandler> allocationhandler;
 		NS::SharedPtr<MTL::Library> library;
 		NS::SharedPtr<MTL::Function> function;
@@ -739,9 +739,6 @@ namespace metal_internal
 	{
 		return static_cast<typename MetalType<T>::type*>(res->internal_state.get());
 	}
-
-	static wi::SpinLock occlusionqueryheap_locker;
-	static wi::allocator::weak_ptr<QueryHeap_Metal> occlusionqueryheap;
 }
 using namespace metal_internal;
 
@@ -1105,6 +1102,7 @@ using namespace metal_internal;
 		
 		if (!commandlist.barriers.empty())
 		{
+			//commandlist.render_encoder->memoryBarrier(MTL::BarrierScopeBuffers | MTL::BarrierScopeTextures, MTL::RenderStageVertex, MTL::RenderStageFragment);
 			commandlist.render_encoder->barrierAfterQueueStages(MTL::StageAll, MTL::StageAll);
 			commandlist.barriers.clear();
 		}
@@ -1206,6 +1204,7 @@ using namespace metal_internal;
 		
 		if (!commandlist.barriers.empty())
 		{
+			//commandlist.compute_encoder->memoryBarrier(MTL::BarrierScopeBuffers | MTL::BarrierScopeTextures);
 			commandlist.compute_encoder->barrierAfterQueueStages(MTL::StageAll, MTL::StageAll);
 			commandlist.barriers.clear();
 		}
@@ -1247,12 +1246,18 @@ using namespace metal_internal;
 			capabilities |= GraphicsDeviceCapability::CACHE_COHERENT_UMA;
 		}
 		
+		capabilities |= GraphicsDeviceCapability::SAMPLER_MINMAX;
+		capabilities |= GraphicsDeviceCapability::ALIASING_GENERIC;
+		capabilities |= GraphicsDeviceCapability::DEPTH_BOUNDS_TEST;
+		capabilities |= GraphicsDeviceCapability::UAV_LOAD_FORMAT_COMMON;
+		capabilities |= GraphicsDeviceCapability::UAV_LOAD_FORMAT_R11G11B10_FLOAT;
+		
 		descriptor_heap_res = NS::TransferPtr(device->newBuffer(bindless_resource_capacity * sizeof(IRDescriptorTableEntry), MTL::ResourceStorageModeShared | MTL::ResourceHazardTrackingModeUntracked));
-		descriptor_heap_res->setLabel(NS::String::string("descriptor_heap_res", NS::UTF8StringEncoding));
+		descriptor_heap_res->setLabel(NS::TransferPtr(NS::String::alloc()->init("descriptor_heap_res", NS::UTF8StringEncoding)).get());
 		
 		const uint64_t real_bindless_sampler_capacity = std::min(bindless_sampler_capacity, (uint64_t)device->maxArgumentBufferSamplerCount());
 		descriptor_heap_sam = NS::TransferPtr(device->newBuffer(real_bindless_sampler_capacity * sizeof(IRDescriptorTableEntry), MTL::ResourceStorageModeShared | MTL::ResourceHazardTrackingModeUntracked));
-		descriptor_heap_sam->setLabel(NS::String::string("descriptor_heap_sam", NS::UTF8StringEncoding));
+		descriptor_heap_sam->setLabel(NS::TransferPtr(NS::String::alloc()->init("descriptor_heap_sam", NS::UTF8StringEncoding)).get());
 		
 		allocationhandler->descriptor_heap_res_data = (IRDescriptorTableEntry*)descriptor_heap_res->contents();
 		allocationhandler->descriptor_heap_sam_data = (IRDescriptorTableEntry*)descriptor_heap_sam->contents();
@@ -1347,6 +1352,12 @@ using namespace metal_internal;
 		
 		sampler_descriptor->setMaxAnisotropy(1);
 		sampler_descriptor->setLodMaxClamp(0);
+		sampler_descriptor->setMinFilter(MTL::SamplerMinMagFilterLinear);
+		sampler_descriptor->setMagFilter(MTL::SamplerMinMagFilterLinear);
+		sampler_descriptor->setMipFilter(MTL::SamplerMipFilterNearest);
+		sampler_descriptor->setSAddressMode(MTL::SamplerAddressModeClampToEdge);
+		sampler_descriptor->setRAddressMode(MTL::SamplerAddressModeClampToEdge);
+		sampler_descriptor->setTAddressMode(MTL::SamplerAddressModeClampToEdge);
 		sampler_descriptor->setCompareFunction(MTL::CompareFunctionGreaterEqual);
 		static_samplers[9] = NS::TransferPtr(device->newSamplerState(sampler_descriptor.get()));
 		
@@ -1369,7 +1380,7 @@ using namespace metal_internal;
 		swapchain->internal_state = internal_state;
 		swapchain->desc = *desc;
 		
-		if(internal_state->view.get() == nullptr)
+		if (internal_state->view.get() == nullptr)
 		{
 			CGRect frame = (CGRect){ {0.0f, 0.0f}, {float(desc->width), float(desc->height)} };
 			internal_state->view = NS::TransferPtr(MTK::View::alloc()->init(frame, device.get()));
@@ -1391,38 +1402,39 @@ using namespace metal_internal;
 		buffer->mapped_size = 0;
 		buffer->desc = *desc;
 		
-		MTL::ResourceOptions options = {};
+		MTL::ResourceOptions resource_options = {};
 		if (desc->usage == Usage::DEFAULT)
 		{
 			if (CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
 			{
-				options |= MTL::ResourceStorageModeShared;
+				resource_options |= MTL::ResourceStorageModeShared;
 			}
 			else
 			{
-				options |= MTL::ResourceStorageModePrivate;
+				resource_options |= MTL::ResourceStorageModePrivate;
 			}
 		}
 		else if (desc->usage == Usage::UPLOAD)
 		{
-			options |= MTL::ResourceStorageModeShared;
-			options |= MTL::ResourceCPUCacheModeWriteCombined;
+			resource_options |= MTL::ResourceStorageModeShared;
+			resource_options |= MTL::ResourceCPUCacheModeWriteCombined;
 		}
 		else if (desc->usage == Usage::READBACK)
 		{
-			options |= MTL::ResourceStorageModeShared;
+			resource_options |= MTL::ResourceStorageModeShared;
 		}
-		options |= MTL::ResourceHazardTrackingModeUntracked;
+		resource_options |= MTL::ResourceHazardTrackingModeUntracked;
 		
 		if (has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_BUFFER) || has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_NON_RT_DS) || has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_RT_DS))
 		{
 			// This is an aliasing storage:
+			MTL::SizeAndAlign sizealign = device->heapBufferSizeAndAlign(desc->size, resource_options);
 			NS::SharedPtr<MTL::HeapDescriptor> heap_desc = NS::TransferPtr(MTL::HeapDescriptor::alloc()->init());
-			heap_desc->setResourceOptions(options);
-			heap_desc->setSize(desc->size);
+			heap_desc->setResourceOptions(resource_options);
+			heap_desc->setSize(sizealign.size);
 			heap_desc->setType(MTL::HeapTypePlacement);
 			NS::SharedPtr<MTL::Heap> heap = NS::TransferPtr(device->newHeap(heap_desc.get()));
-			internal_state->buffer = NS::TransferPtr(heap->newBuffer(desc->size, options, 0));
+			internal_state->buffer = NS::TransferPtr(heap->newBuffer(desc->size, resource_options, 0));
 			internal_state->buffer->makeAliasable();
 		}
 		else if (alias != nullptr)
@@ -1431,23 +1443,23 @@ using namespace metal_internal;
 			if (alias->IsBuffer())
 			{
 				auto alias_internal = to_internal<GPUBuffer>(alias);
-				internal_state->buffer = NS::TransferPtr(alias_internal->buffer->heap()->newBuffer(desc->size, options, alias_internal->buffer->heapOffset() + alias_offset));
+				internal_state->buffer = NS::TransferPtr(alias_internal->buffer->heap()->newBuffer(desc->size, resource_options, alias_internal->buffer->heapOffset() + alias_offset));
 			}
 			else if (alias->IsTexture())
 			{
 				auto alias_internal = to_internal<Texture>(alias);
-				internal_state->buffer = NS::TransferPtr(alias_internal->texture->heap()->newBuffer(desc->size, options, alias_internal->texture->heapOffset() + alias_offset));
+				internal_state->buffer = NS::TransferPtr(alias_internal->texture->heap()->newBuffer(desc->size, resource_options, alias_internal->texture->heapOffset() + alias_offset));
 			}
 		}
 		else
 		{
 			// This is a standalone buffer:
-			internal_state->buffer = NS::TransferPtr(device->newBuffer(desc->size, options));
+			internal_state->buffer = NS::TransferPtr(device->newBuffer(desc->size, resource_options));
 		}
 		
 		allocationhandler->make_resident(internal_state->buffer.get());
 		internal_state->gpu_address = internal_state->buffer->gpuAddress();
-		if ((options & MTL::ResourceStorageModePrivate) == 0)
+		if ((resource_options & MTL::ResourceStorageModePrivate) == 0)
 		{
 			buffer->mapped_data = internal_state->buffer->contents();
 			buffer->mapped_size = internal_state->buffer->allocatedSize();
@@ -1626,7 +1638,37 @@ using namespace metal_internal;
 			descriptor->setSwizzle(swizzle);
 		}
 		
-		internal_state->texture = NS::TransferPtr(device->newTexture(descriptor.get()));
+		if (has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_BUFFER) || has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_NON_RT_DS) || has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_RT_DS))
+		{
+			// This is an aliasing storage:
+			MTL::SizeAndAlign sizealign = device->heapTextureSizeAndAlign(descriptor.get());
+			NS::SharedPtr<MTL::HeapDescriptor> heap_desc = NS::TransferPtr(MTL::HeapDescriptor::alloc()->init());
+			heap_desc->setResourceOptions(resource_options);
+			heap_desc->setSize(sizealign.size);
+			heap_desc->setType(MTL::HeapTypePlacement);
+			NS::SharedPtr<MTL::Heap> heap = NS::TransferPtr(device->newHeap(heap_desc.get()));
+			internal_state->texture = NS::TransferPtr(heap->newTexture(descriptor.get(), 0));
+			internal_state->texture->makeAliasable();
+		}
+		else if (alias != nullptr)
+		{
+			// This is an aliasing view:
+			if (alias->IsBuffer())
+			{
+				auto alias_internal = to_internal<GPUBuffer>(alias);
+				internal_state->texture = NS::TransferPtr(alias_internal->buffer->heap()->newTexture(descriptor.get(), alias_internal->buffer->heapOffset() + alias_offset));
+			}
+			else if (alias->IsTexture())
+			{
+				auto alias_internal = to_internal<Texture>(alias);
+				internal_state->texture = NS::TransferPtr(alias_internal->texture->heap()->newTexture(descriptor.get(), alias_internal->texture->heapOffset() + alias_offset));
+			}
+		}
+		else
+		{
+			internal_state->texture = NS::TransferPtr(device->newTexture(descriptor.get()));
+		}
+		
 		allocationhandler->make_resident(internal_state->texture.get());
 		
 		if (initial_data != nullptr)
@@ -1944,9 +1986,6 @@ using namespace metal_internal;
 			case GpuQueryType::OCCLUSION:
 			case GpuQueryType::OCCLUSION_BINARY:
 				internal_state->buffer = NS::TransferPtr(device->newBuffer(desc->query_count * sizeof(uint64_t), MTL::ResourceStorageModePrivate));
-				occlusionqueryheap_locker.lock();
-				occlusionqueryheap = internal_state;
-				occlusionqueryheap_locker.unlock();
 				break;
 				
 			case GpuQueryType::TIMESTAMP:
@@ -2541,15 +2580,16 @@ using namespace metal_internal;
 	{
 		if (pResource == nullptr || !pResource->IsValid())
 			return;
+		NS::SharedPtr<NS::String> str = NS::TransferPtr(NS::String::alloc()->init(name, NS::UTF8StringEncoding));
 		if (pResource->IsTexture())
 		{
 			auto internal_state = to_internal<Texture>(pResource);
-			internal_state->texture->setLabel(NS::String::string(name, NS::UTF8StringEncoding));
+			internal_state->texture->setLabel(str.get());
 		}
 		else if (pResource->IsBuffer())
 		{
 			auto internal_state = to_internal<GPUBuffer>(pResource);
-			internal_state->buffer->setLabel(NS::String::string(name, NS::UTF8StringEncoding));
+			internal_state->buffer->setLabel(str.get());
 		}
 		else if (pResource->IsAccelerationStructure())
 		{
@@ -2561,8 +2601,9 @@ using namespace metal_internal;
 	{
 		if (shader == nullptr || !shader->IsValid())
 			return;
+		NS::SharedPtr<NS::String> str = NS::TransferPtr(NS::String::alloc()->init(name, NS::UTF8StringEncoding));
 		auto internal_state = to_internal(shader);
-		internal_state->library->setLabel(NS::String::string(name, NS::UTF8StringEncoding));
+		internal_state->library->setLabel(str.get());
 	}
 
 	CommandList GraphicsDevice_Metal::BeginCommandList(QUEUE_TYPE queue)
@@ -2730,6 +2771,7 @@ using namespace metal_internal;
 		
 		MTL::RenderPassDescriptor* renderpass_descriptor = internal_state->view->currentRenderPassDescriptor();
 		commandlist.render_encoder = commandlist.commandbuffer->renderCommandEncoder(renderpass_descriptor);
+		commandlist.render_encoder->barrierAfterQueueStages(MTL::StageAll, MTL::StageAll);
 		commandlist.dirty_vb = true;
 		commandlist.dirty_root = true;
 		commandlist.dirty_sampler = true;
@@ -2738,12 +2780,13 @@ using namespace metal_internal;
 		commandlist.dirty_viewport = true;
 		commandlist.dirty_pso = true;
 		
-		commandlist.render_width = swapchain->desc.width;
-		commandlist.render_height = swapchain->desc.height;
+		CGSize size = internal_state->view->drawableSize();
+		commandlist.render_width = size.width;
+		commandlist.render_height = size.height;
 		
 		commandlist.renderpass_info = RenderPassInfo::from(swapchain->desc);
 	}
-	void GraphicsDevice_Metal::RenderPassBegin(const RenderPassImage* images, uint32_t image_count, CommandList cmd, RenderPassFlags flags)
+	void GraphicsDevice_Metal::RenderPassBegin(const RenderPassImage* images, uint32_t image_count, const GPUQueryHeap* occlusionqueries, CommandList cmd, RenderPassFlags flags)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		assert(commandlist.render_encoder == nullptr);
@@ -2758,22 +2801,10 @@ using namespace metal_internal;
 			commandlist.blit_encoder = nullptr;
 		}
 		
-		static thread_local NS::SharedPtr<MTL::RenderPassDescriptor> descriptor = NS::TransferPtr(MTL::RenderPassDescriptor::alloc());
-		static thread_local NS::SharedPtr<MTL::RenderPassColorAttachmentDescriptor> color_attachment_descriptors[8] = {
-			NS::TransferPtr(MTL::RenderPassColorAttachmentDescriptor::alloc()),
-			NS::TransferPtr(MTL::RenderPassColorAttachmentDescriptor::alloc()),
-			NS::TransferPtr(MTL::RenderPassColorAttachmentDescriptor::alloc()),
-			NS::TransferPtr(MTL::RenderPassColorAttachmentDescriptor::alloc()),
-			NS::TransferPtr(MTL::RenderPassColorAttachmentDescriptor::alloc()),
-			NS::TransferPtr(MTL::RenderPassColorAttachmentDescriptor::alloc()),
-			NS::TransferPtr(MTL::RenderPassColorAttachmentDescriptor::alloc()),
-			NS::TransferPtr(MTL::RenderPassColorAttachmentDescriptor::alloc()),
-		};
-		static thread_local NS::SharedPtr<MTL::RenderPassDepthAttachmentDescriptor> depth_attachment_descriptor = NS::TransferPtr(MTL::RenderPassDepthAttachmentDescriptor::alloc());
-		static thread_local NS::SharedPtr<MTL::RenderPassStencilAttachmentDescriptor> stencil_attachment_descriptor = NS::TransferPtr(MTL::RenderPassStencilAttachmentDescriptor::alloc());
-		
-		descriptor->init();
-		descriptor->setDefaultRasterSampleCount(1);
+		NS::SharedPtr<MTL::RenderPassDescriptor> descriptor = NS::TransferPtr(MTL::RenderPassDescriptor::alloc()->init());
+		NS::SharedPtr<MTL::RenderPassColorAttachmentDescriptor> color_attachment_descriptors[8];
+		NS::SharedPtr<MTL::RenderPassDepthAttachmentDescriptor> depth_attachment_descriptor;
+		NS::SharedPtr<MTL::RenderPassStencilAttachmentDescriptor> stencil_attachment_descriptor;
 		
 		if (image_count > 0)
 		{
@@ -2783,6 +2814,10 @@ using namespace metal_internal;
 			descriptor->setDefaultRasterSampleCount(images[0].texture->desc.sample_count);
 			commandlist.render_width = images[0].texture->desc.width;
 			commandlist.render_height = images[0].texture->desc.height;
+		}
+		else
+		{
+			descriptor->setDefaultRasterSampleCount(1);
 		}
 		
 		uint32_t color_attachment_index = 0;
@@ -2822,7 +2857,8 @@ using namespace metal_internal;
 				case RenderPassImage::Type::RENDERTARGET:
 				{
 					Texture_Metal::Subresource& subresource = image.subresource < 0 ? internal_state->rtv : internal_state->subresources_rtv[image.subresource];
-					MTL::RenderPassColorAttachmentDescriptor* color_attachment_descriptor = color_attachment_descriptors[color_attachment_index].get();
+					auto& color_attachment_descriptor = color_attachment_descriptors[color_attachment_index];
+					color_attachment_descriptor = NS::TransferPtr(MTL::RenderPassColorAttachmentDescriptor::alloc()->init());
 					color_attachment_descriptor->init();
 					color_attachment_descriptor->setTexture(internal_state->texture.get());
 					color_attachment_descriptor->setLevel(subresource.firstMip);
@@ -2833,14 +2869,14 @@ using namespace metal_internal;
 					color_attachment_descriptor->setResolveTexture(nullptr);
 					color_attachment_descriptor->setResolveLevel(0);
 					color_attachment_descriptor->setResolveSlice(0);
-					descriptor->colorAttachments()->setObject(color_attachment_descriptor, color_attachment_index);
+					descriptor->colorAttachments()->setObject(color_attachment_descriptor.get(), color_attachment_index);
 					color_attachment_index++;
 					break;
 				}
 				case RenderPassImage::Type::DEPTH_STENCIL:
 				{
 					Texture_Metal::Subresource& subresource = image.subresource < 0 ? internal_state->dsv : internal_state->subresources_dsv[image.subresource];
-					depth_attachment_descriptor->init();
+					depth_attachment_descriptor = NS::TransferPtr(MTL::RenderPassDepthAttachmentDescriptor::alloc()->init());
 					depth_attachment_descriptor->setTexture(internal_state->texture.get());
 					depth_attachment_descriptor->setLevel(subresource.firstMip);
 					depth_attachment_descriptor->setSlice(subresource.firstSlice);
@@ -2851,7 +2887,7 @@ using namespace metal_internal;
 					descriptor->setDepthAttachment(depth_attachment_descriptor.get());
 					if (IsFormatStencilSupport(image.texture->desc.format))
 					{
-						stencil_attachment_descriptor->init();
+						stencil_attachment_descriptor = NS::TransferPtr(MTL::RenderPassStencilAttachmentDescriptor::alloc()->init());
 						stencil_attachment_descriptor->setTexture(internal_state->texture.get());
 						stencil_attachment_descriptor->setClearStencil(image.texture->desc.clear.depth_stencil.stencil);
 						stencil_attachment_descriptor->setLoadAction(load_action);
@@ -2863,12 +2899,12 @@ using namespace metal_internal;
 				case RenderPassImage::Type::RESOLVE:
 				{
 					Texture_Metal::Subresource& subresource = image.subresource < 0 ? internal_state->srv : internal_state->subresources_srv[image.subresource];
-					MTL::RenderPassColorAttachmentDescriptor* color_attachment_descriptor = color_attachment_descriptors[resolve_index].get();
+					auto& color_attachment_descriptor = color_attachment_descriptors[resolve_index];
 					color_attachment_descriptor->setResolveTexture(internal_state->texture.get());
 					color_attachment_descriptor->setResolveLevel(subresource.firstMip);
 					color_attachment_descriptor->setResolveSlice(subresource.firstSlice);
 					color_attachment_descriptor->setStoreAction(color_attachment_descriptor->storeAction() == MTL::StoreActionStore ? MTL::StoreActionStoreAndMultisampleResolve : MTL::StoreActionMultisampleResolve);
-					descriptor->colorAttachments()->setObject(color_attachment_descriptor, resolve_index);
+					descriptor->colorAttachments()->setObject(color_attachment_descriptor.get(), resolve_index);
 					resolve_index++;
 					break;
 				}
@@ -2888,17 +2924,16 @@ using namespace metal_internal;
 			}
 		}
 		
-		occlusionqueryheap_locker.lock();
-		auto occlusionquery = occlusionqueryheap.lock();
-		if (occlusionquery.IsValid())
+		if (occlusionqueries != nullptr && occlusionqueries->IsValid())
 		{
-			descriptor->setVisibilityResultBuffer(occlusionquery->buffer.get());
-			descriptor->setVisibilityResultType(MTL::VisibilityResultTypeReset);
+			auto occlusionquery_internal = to_internal(occlusionqueries);
+			descriptor->setVisibilityResultBuffer(occlusionquery_internal->buffer.get());
+			descriptor->setVisibilityResultType(MTL::VisibilityResultTypeAccumulate);
 		}
-		occlusionqueryheap_locker.unlock();
 		
 		commandlist.render_encoder = commandlist.commandbuffer->renderCommandEncoder(descriptor.get());
-		if (occlusionquery.IsValid())
+		commandlist.render_encoder->barrierAfterQueueStages(MTL::StageAll, MTL::StageAll);
+		if (occlusionqueries != nullptr && occlusionqueries->IsValid())
 		{
 			commandlist.render_encoder->setVisibilityResultMode(MTL::VisibilityResultModeDisabled, 0);
 		}
@@ -2917,6 +2952,7 @@ using namespace metal_internal;
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		assert(commandlist.render_encoder != nullptr);
 		
+		commandlist.render_encoder->barrierAfterQueueStages(MTL::StageAll, MTL::StageAll);
 		commandlist.render_encoder->endEncoding();
 		commandlist.dirty_pso = true;
 		
@@ -3327,7 +3363,7 @@ using namespace metal_internal;
 			case GpuQueryType::OCCLUSION:
 			case GpuQueryType::OCCLUSION_BINARY:
 				precopy(cmd);
-				commandlist.blit_encoder->fillBuffer(internal_state->buffer.get(), {0, internal_state->buffer->allocatedSize()}, 0);
+				commandlist.blit_encoder->fillBuffer(internal_state->buffer.get(), {index * sizeof(uint64_t), count * sizeof(uint64_t)}, 0);
 				break;
 			case GpuQueryType::TIMESTAMP:
 				break;
@@ -3404,21 +3440,22 @@ using namespace metal_internal;
 	void GraphicsDevice_Metal::EventBegin(const char* name, CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		NS::SharedPtr<NS::String> str = NS::TransferPtr(NS::String::alloc()->init(name, NS::UTF8StringEncoding));
 		if (commandlist.render_encoder != nullptr)
 		{
-			commandlist.render_encoder->pushDebugGroup(NS::String::string(name, NS::UTF8StringEncoding));
+			commandlist.render_encoder->pushDebugGroup(str.get());
 		}
 		else if (commandlist.compute_encoder != nullptr)
 		{
-			commandlist.compute_encoder->pushDebugGroup(NS::String::string(name, NS::UTF8StringEncoding));
+			commandlist.compute_encoder->pushDebugGroup(str.get());
 		}
 		else if (commandlist.blit_encoder != nullptr)
 		{
-			commandlist.blit_encoder->pushDebugGroup(NS::String::string(name, NS::UTF8StringEncoding));
+			commandlist.blit_encoder->pushDebugGroup(str.get());
 		}
 		else
 		{
-			commandlist.commandbuffer->pushDebugGroup(NS::String::string(name, NS::UTF8StringEncoding));
+			commandlist.commandbuffer->pushDebugGroup(str.get());
 		}
 	}
 	void GraphicsDevice_Metal::EventEnd(CommandList cmd)
@@ -3444,21 +3481,22 @@ using namespace metal_internal;
 	void GraphicsDevice_Metal::SetMarker(const char* name, CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		NS::SharedPtr<NS::String> str = NS::TransferPtr(NS::String::alloc()->init(name, NS::UTF8StringEncoding));
 		if (commandlist.render_encoder != nullptr)
 		{
-			commandlist.render_encoder->setLabel(NS::String::string(name, NS::UTF8StringEncoding));
+			commandlist.render_encoder->setLabel(str.get());
 		}
 		else if (commandlist.compute_encoder != nullptr)
 		{
-			commandlist.compute_encoder->setLabel(NS::String::string(name, NS::UTF8StringEncoding));
+			commandlist.compute_encoder->setLabel(str.get());
 		}
 		else if (commandlist.blit_encoder != nullptr)
 		{
-			commandlist.blit_encoder->setLabel(NS::String::string(name, NS::UTF8StringEncoding));
+			commandlist.blit_encoder->setLabel(str.get());
 		}
 		else
 		{
-			commandlist.commandbuffer->setLabel(NS::String::string(name, NS::UTF8StringEncoding));
+			commandlist.commandbuffer->setLabel(str.get());
 		}
 	}
 }

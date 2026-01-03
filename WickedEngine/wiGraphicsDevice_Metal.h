@@ -251,7 +251,8 @@ namespace wi::graphics
 
 		void WaitCommandList(CommandList cmd, CommandList wait_for) override;
 		void RenderPassBegin(const SwapChain* swapchain, CommandList cmd) override;
-		void RenderPassBegin(const RenderPassImage* images, uint32_t image_count, CommandList cmd, RenderPassFlags flags = RenderPassFlags::NONE) override;
+		void RenderPassBegin(const RenderPassImage* images, uint32_t image_count, CommandList cmd, RenderPassFlags flags = RenderPassFlags::NONE) override { RenderPassBegin(images, image_count, nullptr, cmd, flags); };
+		void RenderPassBegin(const RenderPassImage* images, uint32_t image_count, const GPUQueryHeap* occlusionqueries, CommandList cmd, RenderPassFlags flags = RenderPassFlags::NONE) override;
 		void RenderPassEnd(CommandList cmd) override;
 		void BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd) override;
 		void BindViewports(uint32_t NumViewports, const Viewport *pViewports, CommandList cmd) override;

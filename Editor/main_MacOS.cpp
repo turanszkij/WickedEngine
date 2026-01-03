@@ -7,8 +7,8 @@ Editor editor;
 
 int main( int argc, char* argv[] )
 {
-	int width = 1920;
-	int height = 1080;
+	int width = 1280;
+	int height = 720;
 	bool fullscreen = false;
 	bool borderless = false;
 	
@@ -68,6 +68,7 @@ int main( int argc, char* argv[] )
 		void drawableSizeWillChange( class MTK::View* pView, CGSize size ) override
 		{
 			editor.SetWindow(window);
+			editor.SaveWindowSize();
 		}
 	} view_delegate;
 	
