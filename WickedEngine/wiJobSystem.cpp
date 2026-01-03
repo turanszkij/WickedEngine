@@ -11,7 +11,10 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
+
+#ifdef _WIN32
 #include <malloc.h> // alloca
+#endif // _WIN32
 
 #ifdef PLATFORM_LINUX
 #include <pthread.h>

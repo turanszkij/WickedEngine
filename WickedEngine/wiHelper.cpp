@@ -95,22 +95,22 @@ namespace wi::helper
 
 	void messageBox(const std::string& msg, const std::string& caption)
 	{
-#ifdef PLATFORM_WINDOWS_DESKTOP
+#if defined(PLATFORM_WINDOWS_DESKTOP)
 		std::wstring wmsg;
 		std::wstring wcaption;
 		StringConvert(msg, wmsg);
 		StringConvert(caption, wcaption);
 		MessageBox(GetActiveWindow(), wmsg.c_str(), wcaption.c_str(), 0);
-#endif // PLATFORM_WINDOWS_DESKTOP
-
-#ifdef SDL2
+#elif defined(__APPLE__)
+		wi::apple::MessageBox(caption.c_str(), msg.c_str());
+#elif defined(SDL2)
 		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, caption.c_str(), msg.c_str(), NULL);
-#endif // SDL2
+#endif
 	}
 
 	MessageBoxResult messageBoxCustom(const std::string& msg, const std::string& caption, const std::string& buttons)
 	{
-#ifdef PLATFORM_WINDOWS_DESKTOP
+#if defined(PLATFORM_WINDOWS_DESKTOP)
 		std::wstring wmsg;
 		std::wstring wcaption;
 		StringConvert(msg, wmsg);
@@ -151,9 +151,11 @@ namespace wi::helper
 		case IDIGNORE: return MessageBoxResult::Ignore;
 		default: return MessageBoxResult::Cancel;
 		}
-#endif // PLATFORM_WINDOWS_DESKTOP
-
-#ifdef SDL2
+#elif defined(__APPLE__)
+		
+		return (MessageBoxResult)wi::apple::MessageBox(caption.c_str(), msg.c_str(), buttons.c_str());
+		
+#elif defined(SDL2)
 		const SDL_MessageBoxButtonData buttons_data[] = {
 			{ SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 0, "Yes" },
 			{ 0, 1, "No" },
@@ -180,7 +182,7 @@ namespace wi::helper
 		case 2: return MessageBoxResult::Cancel;
 		default: return MessageBoxResult::Cancel;
 		}
-#endif // SDL2
+#endif
 
 		return MessageBoxResult::Cancel;
 	}
@@ -1349,22 +1351,22 @@ namespace wi::helper
 
 	std::string GetCacheDirectoryPath()
 	{
-		#ifdef PLATFORM_LINUX
-			const char* xdg_cache = std::getenv("XDG_CACHE_HOME");
-			if (xdg_cache == nullptr || *xdg_cache == '\0') {
-				const char* home = std::getenv("HOME");
-				if (home != nullptr) {
-					return std::string(home) + "/.cache";
-				} else {
-					// shouldn't happen, just to be safe
-					return GetTempDirectoryPath();
-				}
+#ifdef PLATFORM_LINUX
+		const char* xdg_cache = std::getenv("XDG_CACHE_HOME");
+		if (xdg_cache == nullptr || *xdg_cache == '\0') {
+			const char* home = std::getenv("HOME");
+			if (home != nullptr) {
+				return std::string(home) + "/.cache";
 			} else {
-				return xdg_cache;
+				// shouldn't happen, just to be safe
+				return GetTempDirectoryPath();
 			}
-		#else
-			return GetTempDirectoryPath();
-		#endif
+		} else {
+			return xdg_cache;
+		}
+#else
+		return GetTempDirectoryPath();
+#endif
 	}
 
 	std::string GetCurrentPath()
@@ -1395,6 +1397,8 @@ namespace wi::helper
 			return std::string();
 		}
 		return std::string(str, length);
+#elif defined(__APPLE__)  // Add __APPLE__ for macOS
+		return wi::apple::GetExecutablePath();
 #else
 		return std::filesystem::canonical("/proc/self/exe").string();
 #endif // _WIN32
@@ -1502,7 +1506,7 @@ namespace wi::helper
 			}).detach();
 #endif // PLATFORM_WINDOWS_DESKTOP
 
-#ifdef PLATFORM_LINUX
+#if defined(PLATFORM_LINUX) || defined(PLATFORM_APPLE)
 		if (!pfd::settings::available())
 		{
 			wilog_messagebox("[wi::helper::FileDialog()] No file dialog backend available! Install zenity or kdialog.");
@@ -1555,7 +1559,7 @@ namespace wi::helper
 				break;
 			}
 		}
-#endif // PLATFORM_LINUX
+#endif // defined(PLATFORM_LINUX) || defined(PLATFORM_APPLE)
 	}
 
 	std::string FolderDialog(const std::string& description)

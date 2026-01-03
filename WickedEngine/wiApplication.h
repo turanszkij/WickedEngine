@@ -91,7 +91,7 @@ namespace wi
 		virtual void Exit();
 
 		// You need to call this before calling Run() or Initialize() if you want to render
-		void SetWindow(wi::platform::window_type);
+		void SetWindow(wi::platform::window_type window);
 
 		void SetFullScreen(bool fullscreen);
 
@@ -123,6 +123,8 @@ namespace wi
 			int size = 16;
 			// display default color grading helper texture in top left corner of the screen
 			bool colorgrading_helper = false;
+			// mouse position and button informations
+			bool mouse_info = false;
 			// rect to specify where to render the information
 			wi::graphics::Rect rect;
 		};

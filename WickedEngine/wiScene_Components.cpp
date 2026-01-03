@@ -806,6 +806,14 @@ namespace wi::scene
 				}
 			}
 		}
+		
+#ifdef __APPLE__
+		if (position_format == Vertex_POS32::FORMAT)
+		{
+			// Apple Metal API can't do rgb32float format, so I add a wasted alpha channel for these cases:
+			position_format = Vertex_POS32W::FORMAT;
+		}
+#endif // __APPLE__
 
 		// Determine UV range for normalization:
 		size_t uv_stride = sizeof(Vertex_UVS);
@@ -853,17 +861,17 @@ namespace wi::scene
 		}
 		const uint64_t alignment = device->GetMinOffsetAlignment(&bd);
 		bd.size =
-			AlignTo(vertex_positions.size() * position_stride, alignment) + // position will be first to have 0 offset for flexible alignment!
-			AlignTo(provoke.size() * GetProvokingIndexStride(), alignment) +
-			AlignTo(reorder.size() * GetIndexStride(), alignment) +
-			AlignTo(indices.size() * GetIndexStride(), alignment) +
-			AlignTo(vertex_normals.size() * sizeof(Vertex_NOR), alignment) +
-			AlignTo(vertex_tangents.size() * sizeof(Vertex_TAN), alignment) +
-			AlignTo(uv_count * uv_stride, alignment) +
-			AlignTo(vertex_atlas.size() * sizeof(Vertex_TEX), alignment) +
-			AlignTo(vertex_colors.size() * sizeof(Vertex_COL), alignment) +
-			AlignTo(vertex_boneindices.size() * sizeof(Vertex_BON), alignment) +
-			AlignTo(vertex_boneindices2.size() * sizeof(Vertex_BON), alignment)
+			AlignTo(uint64_t(vertex_positions.size() * position_stride), alignment) + // position will be first to have 0 offset for flexible alignment!
+			AlignTo(uint64_t(provoke.size() * GetProvokingIndexStride()), alignment) +
+			AlignTo(uint64_t(reorder.size() * GetIndexStride()), alignment) +
+			AlignTo(uint64_t(indices.size() * GetIndexStride()), alignment) +
+			AlignTo(uint64_t(vertex_normals.size() * sizeof(Vertex_NOR)), alignment) +
+			AlignTo(uint64_t(vertex_tangents.size() * sizeof(Vertex_TAN)), alignment) +
+			AlignTo(uint64_t(uv_count * uv_stride), alignment) +
+			AlignTo(uint64_t(vertex_atlas.size() * sizeof(Vertex_TEX)), alignment) +
+			AlignTo(uint64_t(vertex_colors.size() * sizeof(Vertex_COL)), alignment) +
+			AlignTo(uint64_t(vertex_boneindices.size() * sizeof(Vertex_BON)), alignment) +
+			AlignTo(uint64_t(vertex_boneindices2.size() * sizeof(Vertex_BON)), alignment)
 			;
 
 		constexpr Format morph_format = Format::R16G16B16A16_FLOAT;
@@ -872,11 +880,11 @@ namespace wi::scene
 		{
 			if (!morph.vertex_positions.empty())
 			{
-				bd.size += AlignTo(vertex_positions.size() * morph_stride, alignment);
+				bd.size += AlignTo(uint64_t(vertex_positions.size() * morph_stride), alignment);
 			}
 			if (!morph.vertex_normals.empty())
 			{
-				bd.size += AlignTo(vertex_normals.size() * morph_stride, alignment);
+				bd.size += AlignTo(uint64_t(vertex_normals.size() * morph_stride), alignment);
 			}
 		}
 
@@ -983,11 +991,11 @@ namespace wi::scene
 				}
 			}
 
-			bd.size = AlignTo(bd.size, sizeof(ShaderCluster));
-			bd.size = AlignTo(bd.size + clusters.size() * sizeof(ShaderCluster), alignment);
+			bd.size = AlignTo(bd.size, uint64_t(sizeof(ShaderCluster)));
+			bd.size = AlignTo(uint64_t(bd.size + clusters.size() * sizeof(ShaderCluster)), alignment);
 
-			bd.size = AlignTo(bd.size, sizeof(ShaderClusterBounds));
-			bd.size = AlignTo(bd.size + cluster_bounds.size() * sizeof(ShaderClusterBounds), alignment);
+			bd.size = AlignTo(bd.size, uint64_t(sizeof(ShaderClusterBounds)));
+			bd.size = AlignTo(uint64_t(bd.size + cluster_bounds.size() * sizeof(ShaderClusterBounds)), alignment);
 		}
 
 		auto init_callback = [&](void* dest) {
@@ -1301,7 +1309,7 @@ namespace wi::scene
 								XMStoreHalf4(vertices + ind, XMLoadFloat3(&morph.vertex_positions[i]));
 							}
 						}
-						buffer_offset += AlignTo(morph.vertex_positions.size() * sizeof(XMHALF4), alignment);
+						buffer_offset += AlignTo(uint64_t(morph.vertex_positions.size() * sizeof(XMHALF4)), alignment);
 					}
 					if (!morph.vertex_normals.empty())
 					{
@@ -1325,7 +1333,7 @@ namespace wi::scene
 								XMStoreHalf4(vertices + ind, XMLoadFloat3(&morph.vertex_normals[i]));
 							}
 						}
-						buffer_offset += AlignTo(morph.vertex_normals.size() * sizeof(XMHALF4), alignment);
+						buffer_offset += AlignTo(uint64_t(morph.vertex_normals.size() * sizeof(XMHALF4)), alignment);
 					}
 				}
 				vb_mor.size = buffer_offset - vb_mor.offset;
@@ -1333,7 +1341,7 @@ namespace wi::scene
 
 			if (!clusters.empty())
 			{
-				buffer_offset = AlignTo(buffer_offset, sizeof(ShaderCluster));
+				buffer_offset = AlignTo(buffer_offset, uint64_t(sizeof(ShaderCluster)));
 				vb_clu.offset = buffer_offset;
 				vb_clu.size = clusters.size() * sizeof(ShaderCluster);
 				std::memcpy(buffer_data + buffer_offset, clusters.data(), vb_clu.size);
@@ -1341,7 +1349,7 @@ namespace wi::scene
 			}
 			if (!cluster_bounds.empty())
 			{
-				buffer_offset = AlignTo(buffer_offset, sizeof(ShaderClusterBounds));
+				buffer_offset = AlignTo(buffer_offset, uint64_t(sizeof(ShaderClusterBounds)));
 				vb_bou.offset = buffer_offset;
 				vb_bou.size = cluster_bounds.size() * sizeof(ShaderClusterBounds);
 				std::memcpy(buffer_data + buffer_offset, cluster_bounds.data(), vb_bou.size);
@@ -1451,10 +1459,10 @@ namespace wi::scene
 
 		const uint64_t alignment = device->GetMinOffsetAlignment(&desc) * sizeof(Vertex_POS32); // additional alignment for RGB32F
 		desc.size =
-			AlignTo(vertex_positions.size() * sizeof(Vertex_POS32W), alignment) + // pos
-			AlignTo(vertex_positions.size() * sizeof(Vertex_POS32W), alignment) + // prevpos
-			AlignTo(vertex_normals.size() * sizeof(Vertex_NOR), alignment) +
-			AlignTo(vertex_tangents.size() * sizeof(Vertex_TAN), alignment)
+			AlignTo(uint64_t(vertex_positions.size() * sizeof(Vertex_POS32W)), alignment) + // pos
+			AlignTo(uint64_t(vertex_positions.size() * sizeof(Vertex_POS32W)), alignment) + // prevpos
+			AlignTo(uint64_t(vertex_normals.size() * sizeof(Vertex_NOR)), alignment) +
+			AlignTo(uint64_t(vertex_tangents.size() * sizeof(Vertex_TAN)), alignment)
 			;
 
 		bool success = device->CreateBuffer(&desc, nullptr, &streamoutBuffer);
@@ -2285,7 +2293,12 @@ namespace wi::scene
 		desc.height = resolution;
 		desc.width = resolution;
 		desc.usage = Usage::DEFAULT;
+#ifdef __APPLE__
+		// TODO: we can't block compress the same way in Metal API as other graphics APIs
+		desc.format = wi::renderer::format_rendertarget_envprobe;
+#else
 		desc.format = Format::BC6H_UF16;
+#endif // __APPLE__
 		desc.sample_count = 1; // Note that this texture is always non-MSAA, even if probe is rendered as MSAA, because this contains resolved result
 		desc.bind_flags = BindFlag::SHADER_RESOURCE;
 		desc.mip_levels = GetMipCount(resolution, resolution, 1, 16);

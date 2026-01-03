@@ -258,10 +258,11 @@ struct VertexSurface
 
 	inline void create(in ShaderMaterial material, in VertexInput input)
 	{
+		ShaderMeshInstance inst = input.GetInstance();
 		float4 pos_wind = input.GetPositionWind();
 		position = float4(pos_wind.xyz, 1);
 		normal = input.GetNormal();
-		color = half4(material.GetBaseColor() * input.GetInstance().GetColor());
+		color = half4(material.GetBaseColor() * inst.GetColor());
 		color.a *= half(1 - input.GetInstancePointer().GetDither());
 
 		[branch]
@@ -280,11 +281,11 @@ struct VertexSurface
 			ao = 1;
 		}
 
-		normal = mul(input.GetInstance().transformRaw.GetMatrixAdjoint(), normal);
+		normal = mul(inst.transformRaw.GetMatrixAdjoint(), normal);
 		normal = any(normal) ? normalize(normal) : 0;
 
 		tangent = input.GetTangent();
-		tangent.xyz = mul(input.GetInstance().transformRaw.GetMatrixAdjoint(), tangent.xyz);
+		tangent.xyz = mul(inst.transformRaw.GetMatrixAdjoint(), tangent.xyz);
 		tangent.xyz = any(tangent.xyz) ? normalize(tangent.xyz) : 0;
 		
 		uvsets = input.GetUVSets();
@@ -292,7 +293,7 @@ struct VertexSurface
 
 		atlas = input.GetAtlasUV();
 
-		position = mul(input.GetInstance().transform.GetMatrix(), position);
+		position = mul(inst.transform.GetMatrix(), position);
 
 		wet = input.GetWetmap();
 
@@ -411,8 +412,10 @@ struct PixelInput
 
 PixelInput vertex_to_pixel_export(VertexInput input)
 {
+	ShaderMaterial material = GetMaterial();
+
 	VertexSurface surface;
-	surface.create(GetMaterial(), input);
+	surface.create(material, input);
 
 	PixelInput Out;
 	

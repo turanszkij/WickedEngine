@@ -36,7 +36,10 @@
 #include <algorithm>
 #include <atomic>
 #include <mutex>
+
+#ifdef _WIN32
 #include <malloc.h> // alloca
+#endif // _WIN32
 
 using namespace wi::primitive;
 using namespace wi::graphics;
@@ -2079,7 +2082,7 @@ void LoadShaders()
 											renderpass_info.rt_formats[0] = renderPass == RENDERPASS_MAIN ? format_rendertarget_main : format_idbuffer;
 										}
 										renderpass_info.ds_format = format_depthbuffer_main;
-										const uint32_t msaa_support[] = { 1,2,4,8 };
+										constexpr uint32_t msaa_support[] = { 1,2,4,8 };
 										for (uint32_t msaa : msaa_support)
 										{
 											variant.bits.sample_count = msaa;
@@ -2099,7 +2102,12 @@ void LoadShaders()
 										renderpass_info.rt_count = 1;
 										renderpass_info.rt_formats[0] = format_rendertarget_envprobe;
 										renderpass_info.ds_format = format_depthbuffer_envprobe;
-										const uint32_t msaa_support[] = { 1,8 };
+#ifdef __APPLE__
+										// Note: Apple doesn't necessarily support all MSAA smaple counts, so try to create for all possible ones:
+										constexpr uint32_t msaa_support[] = { 1,2,4,8 };
+#else
+										constexpr uint32_t msaa_support[] = { 1,EnvironmentProbeComponent::envmapMSAASampleCount };
+#endif // __APPLE__
 										for (uint32_t msaa : msaa_support)
 										{
 											variant.bits.sample_count = msaa;
@@ -6723,7 +6731,7 @@ void DrawShadowmaps(
 				break;
 
 			Viewport* viewports = (Viewport*)alloca(sizeof(Viewport) * cascade_count);
-			Rect* scissors = (Rect*)alloca(sizeof(Rect) * cascade_count);
+			wi::graphics::Rect* scissors = (wi::graphics::Rect*)alloca(sizeof(wi::graphics::Rect) * cascade_count);
 			SHCAM* shcams = (SHCAM*)alloca(sizeof(SHCAM) * cascade_count);
 			CreateDirLightShadowCams(light, *vis.camera, shcams, cascade_count, shadow_rect, vis.scene->character_dedicated_shadows.data(), vis.scene->character_dedicated_shadows.size());
 
@@ -6828,7 +6836,7 @@ void DrawShadowmaps(
 					vp.height = float(shadow_rect.h);
 					device->BindViewports(1, &vp, cmd);
 
-					Rect scissor;
+					wi::graphics::Rect scissor;
 					scissor.from_viewport(vp);
 					device->BindScissorRects(1, &scissor, cmd);
 
@@ -6921,7 +6929,7 @@ void DrawShadowmaps(
 				vp.height = float(shadow_rect.h);
 				device->BindViewports(1, &vp, cmd);
 
-				Rect scissor;
+				wi::graphics::Rect scissor;
 				scissor.from_viewport(vp);
 				device->BindScissorRects(1, &scissor, cmd);
 
@@ -6945,7 +6953,7 @@ void DrawShadowmaps(
 				vp.height = float(shadow_rect.h);
 				device->BindViewports(1, &vp, cmd);
 
-				Rect scissor;
+				wi::graphics::Rect scissor;
 				scissor.from_viewport(vp);
 				device->BindScissorRects(1, &scissor, cmd);
 
@@ -6981,7 +6989,7 @@ void DrawShadowmaps(
 			SHCAM cameras[6];
 			CreateCubemapCameras(light.position, zNearP, zFarP, cameras, arraysize(cameras));
 			Viewport vp[arraysize(cameras)];
-			Rect scissors[arraysize(cameras)];
+			wi::graphics::Rect scissors[arraysize(cameras)];
 			Frustum frusta[arraysize(cameras)];
 			uint32_t camera_count = 0;
 
@@ -7096,7 +7104,7 @@ void DrawShadowmaps(
 					vp.height = float(shadow_rect.h);
 					device->BindViewports(1, &vp, cmd);
 
-					Rect scissor;
+					wi::graphics::Rect scissor;
 					scissor.from_viewport(vp);
 					device->BindScissorRects(1, &scissor, cmd);
 
@@ -7175,7 +7183,7 @@ void DrawShadowmaps(
 			device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 			device->BindViewports(1, &vp, cmd);
 
-			Rect scissor;
+			wi::graphics::Rect scissor;
 			scissor.from_viewport(vp);
 			device->BindScissorRects(1, &scissor, cmd);
 
@@ -9532,8 +9540,16 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		}
 		device->EventEnd(cmd);
 
-		// Finally, the complete envmap is block compressed into the probe's texture:
-		BlockCompress(envrenderingColorBuffer_Filtered, probe.texture, cmd);
+		if (IsFormatBlockCompressed(probe.texture.desc.format))
+		{
+			// Finally, the complete envmap is block compressed into the probe's texture:
+			BlockCompress(envrenderingColorBuffer_Filtered, probe.texture, cmd);
+		}
+		else
+		{
+			// In this case, block compression is not used, simply copy render result into final probe tex:
+			device->CopyResource(&probe.texture, &envrenderingColorBuffer_Filtered, cmd);
+		}
 	};
 
 	if (vis.scene->probes.GetCount() == 0)
@@ -18512,7 +18528,7 @@ void CopyDepthStencil(
 		vp.height = (float)output_depth_stencil.desc.height;
 		device->BindViewports(1, &vp, cmd);
 
-		Rect rect;
+		wi::graphics::Rect rect;
 		rect.left = 0;
 		rect.right = output_depth_stencil.desc.width;
 		rect.top = 0;
@@ -18689,7 +18705,7 @@ void ExtractStencil(
 		vp.height = (float)output.desc.height;
 		device->BindViewports(1, &vp, cmd);
 
-		Rect rect;
+		wi::graphics::Rect rect;
 		rect.left = 0;
 		rect.right = output.desc.width;
 		rect.top = 0;
