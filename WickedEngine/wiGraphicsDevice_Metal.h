@@ -67,6 +67,7 @@ namespace wi::graphics
 		
 		struct CommandList_Metal
 		{
+			NS::SharedPtr<NS::AutoreleasePool> autorelease_pool;
 			MTL::CommandBuffer* commandbuffer = nullptr;
 			GPULinearAllocator frame_allocators[BUFFERCOUNT];
 			RenderPassInfo renderpass_info;
@@ -157,6 +158,40 @@ namespace wi::graphics
 					x = {};
 				}
 				barriers.clear();
+			}
+			
+			void assert_noencoder()
+			{
+				assert(render_encoder == nullptr);
+				assert(compute_encoder == nullptr);
+				assert(blit_encoder == nullptr);
+			}
+			
+			void autorelease_start()
+			{
+				if (autorelease_pool.get() != nullptr)
+					return;
+				// this needs to be carefully only created and destroyed/drained on the same thread exactly while an encoder object is being used on not the main thread
+				autorelease_pool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init());
+			}
+			void autorelease_end()
+			{
+				if (autorelease_pool.get() == nullptr)
+					return;
+				// The encoders need to always closed before autorelease pool is drained
+				//	This means that we cannot delay encoder closings to batch more commands, because they must be closed exactly on same thread that they were opened in
+				assert(render_encoder == nullptr); //	Note: the render encoder cannot be closed here, only in RenderPassEnd because it cannot be just reopened anytime
+				if (compute_encoder != nullptr)
+				{
+					compute_encoder->endEncoding();
+					compute_encoder = nullptr;
+				}
+				if (blit_encoder != nullptr)
+				{
+					blit_encoder->endEncoding();
+					blit_encoder = nullptr;
+				}
+				autorelease_pool.reset();
 			}
 		};
 		wi::vector<std::unique_ptr<CommandList_Metal>> commandlists;

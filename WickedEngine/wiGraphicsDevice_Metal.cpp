@@ -1110,30 +1110,19 @@ using namespace metal_internal;
 	void GraphicsDevice_Metal::predispatch(CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		commandlist.assert_noencoder();
+		commandlist.autorelease_start();
+		commandlist.compute_encoder = commandlist.commandbuffer->computeCommandEncoder();
 		commandlist.active_pso = nullptr;
-		if (commandlist.render_encoder != nullptr)
-		{
-			commandlist.render_encoder->endEncoding();
-			commandlist.render_encoder = nullptr;
-		}
-		if (commandlist.blit_encoder != nullptr)
-		{
-			commandlist.blit_encoder->endEncoding();
-			commandlist.blit_encoder = nullptr;
-		}
-		if (commandlist.compute_encoder == nullptr)
-		{
-			commandlist.compute_encoder = commandlist.commandbuffer->computeCommandEncoder();
-			commandlist.dirty_vb = true;
-			commandlist.dirty_root = true;
-			commandlist.dirty_sampler = true;
-			commandlist.dirty_resource = true;
-			commandlist.dirty_scissor = true;
-			commandlist.dirty_viewport = true;
-			commandlist.dirty_cs = true;
-			commandlist.compute_encoder->setBuffer(descriptor_heap_res.get(), 0, kIRDescriptorHeapBindPoint);
-			commandlist.compute_encoder->setBuffer(descriptor_heap_sam.get(), 0, kIRSamplerHeapBindPoint);
-		}
+		commandlist.dirty_vb = true;
+		commandlist.dirty_root = true;
+		commandlist.dirty_sampler = true;
+		commandlist.dirty_resource = true;
+		commandlist.dirty_scissor = true;
+		commandlist.dirty_viewport = true;
+		commandlist.dirty_cs = true;
+		commandlist.compute_encoder->setBuffer(descriptor_heap_res.get(), 0, kIRDescriptorHeapBindPoint);
+		commandlist.compute_encoder->setBuffer(descriptor_heap_sam.get(), 0, kIRSamplerHeapBindPoint);
 		
 		if (commandlist.dirty_cs && commandlist.active_cs != nullptr)
 		{
@@ -1212,20 +1201,9 @@ using namespace metal_internal;
 	void GraphicsDevice_Metal::precopy(CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-		if (commandlist.render_encoder != nullptr)
-		{
-			commandlist.render_encoder->endEncoding();
-			commandlist.render_encoder = nullptr;
-		}
-		if (commandlist.compute_encoder != nullptr)
-		{
-			commandlist.compute_encoder->endEncoding();
-			commandlist.compute_encoder = nullptr;
-		}
-		if (commandlist.blit_encoder == nullptr)
-		{
-			commandlist.blit_encoder = commandlist.commandbuffer->blitCommandEncoder();
-		}
+		commandlist.assert_noencoder();
+		commandlist.autorelease_start();
+		commandlist.blit_encoder = commandlist.commandbuffer->blitCommandEncoder();
 		
 		if (!commandlist.barriers.empty())
 		{
@@ -1471,6 +1449,7 @@ using namespace metal_internal;
 			{
 				NS::SharedPtr<MTL::Buffer> uploadbuffer = NS::TransferPtr(device->newBuffer(desc->size, MTL::ResourceStorageModeShared | MTL::ResourceOptionCPUCacheModeWriteCombined));
 				init_callback(uploadbuffer->contents());
+				NS::SharedPtr<NS::AutoreleasePool> autorelease_pool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init()); // scoped drain!
 				MTL::CommandBuffer* commandbuffer = commandqueue->commandBuffer();
 				MTL::BlitCommandEncoder* blit_encoder = commandbuffer->blitCommandEncoder();
 				blit_encoder->copyFromBuffer(uploadbuffer.get(), 0, internal_state->buffer.get(), 0, desc->size);
@@ -1676,9 +1655,11 @@ using namespace metal_internal;
 			MTL::CommandBuffer* commandbuffer = nullptr;
 			MTL::BlitCommandEncoder* blit_encoder = nullptr;
 			NS::SharedPtr<MTL::Buffer> uploadbuffer;
+			NS::SharedPtr<NS::AutoreleasePool> autorelease_pool; // scoped drain!
 			uint8_t* upload_data = nullptr;
 			if (descriptor->storageMode() == MTL::StorageModePrivate)
 			{
+				autorelease_pool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init());
 				commandbuffer = commandqueue->commandBuffer();
 				blit_encoder = commandbuffer->blitCommandEncoder();
 				uploadbuffer = NS::TransferPtr(device->newBuffer(internal_state->texture->allocatedSize(), MTL::ResourceStorageModeShared | MTL::ResourceOptionCPUCacheModeWriteCombined));
@@ -2259,6 +2240,14 @@ using namespace metal_internal;
 		sliceCount = std::min(sliceCount, texture->desc.array_size - firstSlice);
 		mipCount = std::min(mipCount, texture->desc.mip_levels - firstMip);
 		
+		MTL::TextureType texture_type = internal_state->texture->textureType();
+		if (type != SubresourceType::SRV &&
+			(texture_type == MTL::TextureTypeCube || texture_type == MTL::TextureTypeCubeArray)
+			)
+		{
+			texture_type = MTL::TextureType2DArray;
+		}
+		
 		switch (type) {
 			case SubresourceType::SRV:
 				{
@@ -2275,7 +2264,7 @@ using namespace metal_internal;
 					if (!internal_state->srv.IsValid())
 					{
 						auto& subresource = internal_state->srv;
-						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}, mtlswizzle));
+						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, texture_type, {firstMip, mipCount}, {firstSlice, sliceCount}, mtlswizzle));
 						subresource.entry = create_entry(subresource.texture.get(), min_lod_clamp);
 						subresource.index = allocationhandler->allocate_bindless(subresource.entry);
 						subresource.firstMip = firstMip;
@@ -2288,7 +2277,7 @@ using namespace metal_internal;
 					else
 					{
 						auto& subresource = internal_state->subresources_srv.emplace_back();
-						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}, mtlswizzle));
+						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, texture_type, {firstMip, mipCount}, {firstSlice, sliceCount}, mtlswizzle));
 						subresource.entry = create_entry(subresource.texture.get(), min_lod_clamp);
 						subresource.index = allocationhandler->allocate_bindless(subresource.entry);
 						subresource.firstMip = firstMip;
@@ -2306,7 +2295,7 @@ using namespace metal_internal;
 					if (!internal_state->uav.IsValid())
 					{
 						auto& subresource = internal_state->uav;
-						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
+						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, texture_type, {firstMip, mipCount}, {firstSlice, sliceCount}));
 						subresource.entry = create_entry(subresource.texture.get(), min_lod_clamp);
 						subresource.index = allocationhandler->allocate_bindless(subresource.entry);
 						subresource.firstMip = firstMip;
@@ -2319,7 +2308,7 @@ using namespace metal_internal;
 					else
 					{
 						auto& subresource = internal_state->subresources_uav.emplace_back();
-						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
+						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, texture_type, {firstMip, mipCount}, {firstSlice, sliceCount}));
 						subresource.entry = create_entry(subresource.texture.get(), min_lod_clamp);
 						subresource.index = allocationhandler->allocate_bindless(subresource.entry);
 						subresource.firstMip = firstMip;
@@ -2337,7 +2326,7 @@ using namespace metal_internal;
 					if (!internal_state->rtv.IsValid())
 					{
 						auto& subresource = internal_state->rtv;
-						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
+						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, texture_type, {firstMip, mipCount}, {firstSlice, sliceCount}));
 						subresource.firstMip = firstMip;
 						subresource.mipCount = mipCount;
 						subresource.firstSlice = firstSlice;
@@ -2348,7 +2337,7 @@ using namespace metal_internal;
 					else
 					{
 						auto& subresource = internal_state->subresources_rtv.emplace_back();
-						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
+						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, texture_type, {firstMip, mipCount}, {firstSlice, sliceCount}));
 						subresource.firstMip = firstMip;
 						subresource.mipCount = mipCount;
 						subresource.firstSlice = firstSlice;
@@ -2364,7 +2353,7 @@ using namespace metal_internal;
 					if (!internal_state->dsv.IsValid())
 					{
 						auto& subresource = internal_state->dsv;
-						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
+						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, texture_type, {firstMip, mipCount}, {firstSlice, sliceCount}));
 						subresource.firstMip = firstMip;
 						subresource.mipCount = mipCount;
 						subresource.firstSlice = firstSlice;
@@ -2375,7 +2364,7 @@ using namespace metal_internal;
 					else
 					{
 						auto& subresource = internal_state->subresources_dsv.emplace_back();
-						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, internal_state->texture->textureType(), {firstMip, mipCount}, {firstSlice, sliceCount}));
+						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, texture_type, {firstMip, mipCount}, {firstSlice, sliceCount}));
 						subresource.firstMip = firstMip;
 						subresource.mipCount = mipCount;
 						subresource.firstSlice = firstSlice;
@@ -2641,18 +2630,8 @@ using namespace metal_internal;
 		for (uint32_t cmd = 0; cmd < cmd_last; ++cmd)
 		{
 			auto& commandlist = *commandlists[cmd].get();
-			if (commandlist.render_encoder != nullptr)
-			{
-				commandlist.render_encoder->endEncoding();
-			}
-			if (commandlist.compute_encoder != nullptr)
-			{
-				commandlist.compute_encoder->endEncoding();
-			}
-			if (commandlist.blit_encoder != nullptr)
-			{
-				commandlist.blit_encoder->endEncoding();
-			}
+			commandlist.assert_noencoder();
+			
 			for (MTK::View* view : commandlist.presents)
 			{
 				commandlist.commandbuffer->presentDrawable(view->currentDrawable());
@@ -2753,17 +2732,8 @@ using namespace metal_internal;
 	void GraphicsDevice_Metal::RenderPassBegin(const SwapChain* swapchain, CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-		assert(commandlist.render_encoder == nullptr);
-		if (commandlist.compute_encoder != nullptr)
-		{
-			commandlist.compute_encoder->endEncoding();
-			commandlist.compute_encoder = nullptr;
-		}
-		if (commandlist.blit_encoder != nullptr)
-		{
-			commandlist.blit_encoder->endEncoding();
-			commandlist.blit_encoder = nullptr;
-		}
+		commandlist.assert_noencoder();
+		commandlist.autorelease_start();
 		
 		auto internal_state = to_internal(swapchain);
 		
@@ -2789,17 +2759,8 @@ using namespace metal_internal;
 	void GraphicsDevice_Metal::RenderPassBegin(const RenderPassImage* images, uint32_t image_count, const GPUQueryHeap* occlusionqueries, CommandList cmd, RenderPassFlags flags)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-		assert(commandlist.render_encoder == nullptr);
-		if (commandlist.compute_encoder != nullptr)
-		{
-			commandlist.compute_encoder->endEncoding();
-			commandlist.compute_encoder = nullptr;
-		}
-		if (commandlist.blit_encoder != nullptr)
-		{
-			commandlist.blit_encoder->endEncoding();
-			commandlist.blit_encoder = nullptr;
-		}
+		commandlist.assert_noencoder();
+		commandlist.autorelease_start();
 		
 		NS::SharedPtr<MTL::RenderPassDescriptor> descriptor = NS::TransferPtr(MTL::RenderPassDescriptor::alloc()->init());
 		NS::SharedPtr<MTL::RenderPassColorAttachmentDescriptor> color_attachment_descriptors[8];
@@ -2961,6 +2922,8 @@ using namespace metal_internal;
 
 		commandlist.renderpass_info = {};
 		commandlist.render_encoder = nullptr;
+		
+		commandlist.autorelease_end();
 	}
 	void GraphicsDevice_Metal::BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd)
 	{
@@ -3195,14 +3158,16 @@ using namespace metal_internal;
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		auto cs_internal = to_internal(commandlist.active_cs);
 		commandlist.compute_encoder->dispatchThreadgroups({threadGroupCountX, threadGroupCountY, threadGroupCountZ}, cs_internal->numthreads);
+		commandlist.autorelease_end();
 	}
 	void GraphicsDevice_Metal::DispatchIndirect(const GPUBuffer* args, uint64_t args_offset, CommandList cmd)
 	{
 		predispatch(cmd);
-		auto internal_state = to_internal(args);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		auto cs_internal = to_internal(commandlist.active_cs);
+		auto internal_state = to_internal(args);
 		commandlist.compute_encoder->dispatchThreadgroups(internal_state->buffer.get(), args_offset, cs_internal->numthreads);
+		commandlist.autorelease_end();
 	}
 	void GraphicsDevice_Metal::DispatchMesh(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd)
 	{
@@ -3238,6 +3203,7 @@ using namespace metal_internal;
 			auto dst_internal = to_internal<GPUBuffer>(pDst);
 			commandlist.blit_encoder->copyFromBuffer(src_internal->buffer.get(), 0, dst_internal->buffer.get(), 0, dst_internal->buffer->length());
 		}
+		commandlist.autorelease_end();
 	}
 	void GraphicsDevice_Metal::CopyBuffer(const GPUBuffer* pDst, uint64_t dst_offset, const GPUBuffer* pSrc, uint64_t src_offset, uint64_t size, CommandList cmd)
 	{
@@ -3246,6 +3212,7 @@ using namespace metal_internal;
 		auto internal_state_src = to_internal(pSrc);
 		auto internal_state_dst = to_internal(pDst);
 		commandlist.blit_encoder->copyFromBuffer(internal_state_src->buffer.get(), src_offset, internal_state_dst->buffer.get(), dst_offset, size);
+		commandlist.autorelease_end();
 	}
 	void GraphicsDevice_Metal::CopyTexture(const Texture* dst, uint32_t dstX, uint32_t dstY, uint32_t dstZ, uint32_t dstMip, uint32_t dstSlice, const Texture* src, uint32_t srcMip, uint32_t srcSlice, CommandList cmd, const Box* srcbox, ImageAspect dst_aspect, ImageAspect src_aspect)
 	{
@@ -3272,6 +3239,7 @@ using namespace metal_internal;
 			srcSize.depth = srcbox->back - srcbox->front;
 		}
 		commandlist.blit_encoder->copyFromTexture(src_internal->texture.get(), srcSlice, srcMip, srcOrigin, srcSize, dst_internal->texture.get(), dstSlice, dstMip, dstOrigin);
+		commandlist.autorelease_end();
 	}
 	void GraphicsDevice_Metal::QueryBegin(const GPUQueryHeap* heap, uint32_t index, CommandList cmd)
 	{
@@ -3304,18 +3272,24 @@ using namespace metal_internal;
 				commandlist.render_encoder->setVisibilityResultMode(MTL::VisibilityResultModeDisabled, index * sizeof(uint64_t));
 				break;
 			case GpuQueryType::TIMESTAMP:
-				if (commandlist.render_encoder != nullptr && device->supportsCounterSampling(MTL::CounterSamplingPointAtDrawBoundary))
+				if (commandlist.render_encoder != nullptr)
 				{
-					commandlist.render_encoder->sampleCountersInBuffer(internal_state->timestamp_buffer.get(), index, false);
+					if (device->supportsCounterSampling(MTL::CounterSamplingPointAtDrawBoundary))
+					{
+						commandlist.render_encoder->sampleCountersInBuffer(internal_state->timestamp_buffer.get(), index, false);
+					}
 				}
-				else if (commandlist.compute_encoder != nullptr && device->supportsCounterSampling(MTL::CounterSamplingPointAtDispatchBoundary))
+				else if (device->supportsCounterSampling(MTL::CounterSamplingPointAtDispatchBoundary))
 				{
+					predispatch(cmd);
 					commandlist.compute_encoder->sampleCountersInBuffer(internal_state->timestamp_buffer.get(), index, false);
+					commandlist.autorelease_end();
 				}
 				else if (device->supportsCounterSampling(MTL::CounterSamplingPointAtBlitBoundary))
 				{
-					precopy(cmd); // last resort: use current or create new blit encoder
+					precopy(cmd);
 					commandlist.blit_encoder->sampleCountersInBuffer(internal_state->timestamp_buffer.get(), index, false);
+					commandlist.autorelease_end();
 				}
 				break;
 			default:
@@ -3351,7 +3325,7 @@ using namespace metal_internal;
 			default:
 				break;
 		}
-
+		commandlist.autorelease_end();
 	}
 	void GraphicsDevice_Metal::QueryReset(const GPUQueryHeap* heap, uint32_t index, uint32_t count, CommandList cmd)
 	{
@@ -3370,7 +3344,7 @@ using namespace metal_internal;
 			default:
 				break;
 		}
-		
+		commandlist.autorelease_end();
 	}
 	void GraphicsDevice_Metal::Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd)
 	{
@@ -3432,6 +3406,7 @@ using namespace metal_internal;
 			assert(value == uint8_t(value)); // The fillBuffer only works with uint8_t
 			commandlist.blit_encoder->fillBuffer(internal_state->buffer.get(), {0, internal_state->buffer->length()}, (uint8_t)value);
 		}
+		commandlist.autorelease_end();
 	}
 	void GraphicsDevice_Metal::VideoDecode(const VideoDecoder* video_decoder, const VideoDecodeOperation* op, CommandList cmd)
 	{
