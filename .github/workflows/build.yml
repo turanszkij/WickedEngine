@@ -148,6 +148,46 @@ jobs:
           startup.lua
           Editor_Linux
 
+  macos:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Compile Offlineshadercompiler
+      run: |
+        xcodebuild clean build -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -configuration Release
+
+    - name: Generate shader dump
+      run: |
+        BUILD_PATH="$(xcodebuild -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -configuration Release -showBuildSettings | grep -m 1 "BUILT_PRODUCTS_DIR" | awk -F' = ' '{print $2}')"
+        cd WickedEngine
+        "${BUILD_PATH}/offlineshadercompiler" metal rebuild shaderdump
+        cd ..
+
+    - name: Build Editor
+      run: |
+        xcodebuild clean build -project Editor/Editor.xcodeproj -scheme Editor -configuration Release
+
+    - name: Move files
+      run: |
+        BUILD_PATH="$(xcodebuild -project Editor/Editor.xcodeproj -scheme Editor -configuration Release -showBuildSettings | grep -m 1 "BUILT_PRODUCTS_DIR" | awk -F' = ' '{print $2}')"
+        mv "${BUILD_PATH}/Editor" ./Editor_MacOS
+        mv Editor/config.ini ./
+        mv Editor/startup.lua ./
+        mv Editor/languages ./
+        mv Editor/fonts ./
+
+    - name: Package Editor
+      uses: actions/upload-artifact@v4
+      with:
+        name: Editor (Mac OS)
+        path: |
+          languages/
+          fonts/
+          config.ini
+          startup.lua
+          Editor_MacOS
+
   content:
     runs-on: windows-latest
     steps:
