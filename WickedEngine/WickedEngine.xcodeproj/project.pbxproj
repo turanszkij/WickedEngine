@@ -1618,13 +1618,6 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		1E73E7412F053D110090D1DA /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			name = Frameworks;
-			sourceTree = "<group>";
-		};
 		1ED576BB2F0115B40032621C /* compressonator */ = {
 			isa = PBXGroup;
 			children = (
@@ -2271,7 +2264,6 @@
 				1EDA7B032EE1DFE300210D41 /* wiVoxelGrid_BindLua.cpp */,
 				1EDA7A552EE1DF2100210D41 /* wiArchive.cpp */,
 				1EDA7BB12EE1E60500210D41 /* libWickedEngine.a */,
-				1E73E7412F053D110090D1DA /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};

@@ -60,10 +60,7 @@ int main( int argc, char* argv[] )
 		
 		[NSApp activateIgnoringOtherApps:YES];
 		
-		editor.SetWindow((__bridge NS::Window*)window);
-		
-		// The shader binary path is set to source path because that is a writeable folder on Mac OS
-		wi::renderer::SetShaderPath(wi::renderer::GetShaderSourcePath() + "metal/");
+		editor.SetWindow((__bridge wi::platform::window_type)window);
 		
 		while (!editor.exit_requested)
 		{
@@ -131,7 +128,7 @@ int main( int argc, char* argv[] )
 }
 - (void)windowDidResize:(NSNotification *)notification {
 	NSWindow* nsWindow = (NSWindow*)notification.object;
-	editor.SetWindow((__bridge NS::Window*)nsWindow);
+	editor.SetWindow((__bridge wi::platform::window_type)nsWindow);
 	editor.SaveWindowSize();
 }
 - (void)windowDidBecomeMain:(NSNotification *)notification {

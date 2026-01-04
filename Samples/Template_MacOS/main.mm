@@ -32,7 +32,7 @@ int main( int argc, char* argv[] )
 		
 		[NSApp activateIgnoringOtherApps:YES];
 		
-		application.SetWindow((__bridge NS::Window*)window);
+		application.SetWindow((__bridge wi::platform::window_type)window);
 		
 		application.infoDisplay.active = true;
 		application.infoDisplay.watermark = true;
@@ -40,9 +40,6 @@ int main( int argc, char* argv[] )
 		application.infoDisplay.resolution = true;
 		application.infoDisplay.logical_size = true;
 		application.infoDisplay.mouse_info = true;
-		
-		// The shader binary path is set to source path because that is a writeable folder on Mac OS
-		wi::renderer::SetShaderPath(wi::renderer::GetShaderSourcePath() + "metal/");
 		
 		while (running)
 		{
@@ -99,6 +96,6 @@ int main( int argc, char* argv[] )
 }
 - (void)windowDidResize:(NSNotification *)notification {
 	NSWindow* nsWindow = (NSWindow*)notification.object;
-	application.SetWindow((__bridge NS::Window*)nsWindow);
+	application.SetWindow((__bridge wi::platform::window_type)nsWindow);
 }
 @end

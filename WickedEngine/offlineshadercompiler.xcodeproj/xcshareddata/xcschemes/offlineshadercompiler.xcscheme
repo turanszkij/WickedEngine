@@ -15,10 +15,10 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "1EDA807A2EE2C1DB00210D41"
-               BuildableName = "Template_MacOS.app"
-               BlueprintName = "Template_MacOS"
-               ReferencedContainer = "container:Template_MacOS.xcodeproj">
+               BlueprintIdentifier = "1E640FA92F0ADD19003D9FC7"
+               BuildableName = "offlineshadercompiler"
+               BlueprintName = "offlineshadercompiler"
+               ReferencedContainer = "container:offlineshadercompiler.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -40,15 +40,16 @@
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
       debugServiceExtension = "internal"
-      allowLocationSimulation = "YES">
+      allowLocationSimulation = "YES"
+      viewDebuggingEnabled = "No">
       <BuildableProductRunnable
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "1EDA807A2EE2C1DB00210D41"
-            BuildableName = "Template_MacOS.app"
-            BlueprintName = "Template_MacOS"
-            ReferencedContainer = "container:Template_MacOS.xcodeproj">
+            BlueprintIdentifier = "1E640FA92F0ADD19003D9FC7"
+            BuildableName = "offlineshadercompiler"
+            BlueprintName = "offlineshadercompiler"
+            ReferencedContainer = "container:offlineshadercompiler.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -62,10 +63,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "1EDA807A2EE2C1DB00210D41"
-            BuildableName = "Template_MacOS.app"
-            BlueprintName = "Template_MacOS"
-            ReferencedContainer = "container:Template_MacOS.xcodeproj">
+            BlueprintIdentifier = "1E640FA92F0ADD19003D9FC7"
+            BuildableName = "offlineshadercompiler"
+            BlueprintName = "offlineshadercompiler"
+            ReferencedContainer = "container:offlineshadercompiler.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

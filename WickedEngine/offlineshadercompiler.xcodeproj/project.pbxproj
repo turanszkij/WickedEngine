@@ -7,75 +7,87 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		1E79298D2EFE77ED00B9E35C /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1E79298C2EFE77ED00B9E35C /* main.mm */; };
-		1E79298F2EFE783B00B9E35C /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E79298E2EFE783B00B9E35C /* AppKit.framework */; };
-		1EDA80B52EE2C9BD00210D41 /* libWickedEngine.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1EDA80B42EE2C9BD00210D41 /* libWickedEngine.a */; };
-		1EDA82202EE3802C00210D41 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1EDA821F2EE3802C00210D41 /* Metal.framework */; };
+		1E640FB52F0AE03E003D9FC7 /* offlineshadercompiler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E640FB42F0AE03E003D9FC7 /* offlineshadercompiler.cpp */; };
+		1E640FC92F0AE1C3003D9FC7 /* libWickedEngine.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E640FC22F0AE07B003D9FC7 /* libWickedEngine.a */; };
+		1E640FD02F0AE275003D9FC7 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E640FCF2F0AE275003D9FC7 /* Metal.framework */; };
+		1E640FD42F0AE282003D9FC7 /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E640FD32F0AE282003D9FC7 /* AppKit.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		1EDA80B32EE2C9BD00210D41 /* PBXContainerItemProxy */ = {
+		1E640FC12F0AE07B003D9FC7 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = 1EDA809E2EE2C5AD00210D41 /* WickedEngine.xcodeproj */;
+			containerPortal = 1E640FBD2F0AE07B003D9FC7 /* WickedEngine.xcodeproj */;
 			proxyType = 2;
 			remoteGlobalIDString = 1EDA7BB12EE1E60500210D41;
 			remoteInfo = WickedEngine;
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		1E640FA82F0ADD19003D9FC7 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
-		1E79298C2EFE77ED00B9E35C /* main.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
-		1E79298E2EFE783B00B9E35C /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
-		1EDA807B2EE2C1DB00210D41 /* Template_MacOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Template_MacOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		1EDA809E2EE2C5AD00210D41 /* WickedEngine.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = WickedEngine.xcodeproj; path = ../../WickedEngine/WickedEngine.xcodeproj; sourceTree = "<group>"; };
-		1EDA821F2EE3802C00210D41 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
+		1E640FAA2F0ADD19003D9FC7 /* offlineshadercompiler */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = offlineshadercompiler; sourceTree = BUILT_PRODUCTS_DIR; };
+		1E640FB42F0AE03E003D9FC7 /* offlineshadercompiler.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = offlineshadercompiler.cpp; sourceTree = "<group>"; };
+		1E640FBD2F0AE07B003D9FC7 /* WickedEngine.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = WickedEngine.xcodeproj; sourceTree = "<group>"; };
+		1E640FCF2F0AE275003D9FC7 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
+		1E640FD32F0AE282003D9FC7 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		1EDA80782EE2C1DB00210D41 /* Frameworks */ = {
+		1E640FA72F0ADD19003D9FC7 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1E79298F2EFE783B00B9E35C /* AppKit.framework in Frameworks */,
-				1EDA82202EE3802C00210D41 /* Metal.framework in Frameworks */,
-				1EDA80B52EE2C9BD00210D41 /* libWickedEngine.a in Frameworks */,
+				1E640FD02F0AE275003D9FC7 /* Metal.framework in Frameworks */,
+				1E640FD42F0AE282003D9FC7 /* AppKit.framework in Frameworks */,
+				1E640FC92F0AE1C3003D9FC7 /* libWickedEngine.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		1EDA80722EE2C1DB00210D41 = {
+		1E640FA12F0ADD19003D9FC7 = {
 			isa = PBXGroup;
 			children = (
-				1E79298C2EFE77ED00B9E35C /* main.mm */,
-				1EDA809D2EE2C5AD00210D41 /* Frameworks */,
-				1EDA807C2EE2C1DB00210D41 /* Products */,
+				1E640FB42F0AE03E003D9FC7 /* offlineshadercompiler.cpp */,
+				1E640FBC2F0AE07B003D9FC7 /* Frameworks */,
+				1E640FAB2F0ADD19003D9FC7 /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		1EDA807C2EE2C1DB00210D41 /* Products */ = {
+		1E640FAB2F0ADD19003D9FC7 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				1EDA807B2EE2C1DB00210D41 /* Template_MacOS.app */,
+				1E640FAA2F0ADD19003D9FC7 /* offlineshadercompiler */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		1EDA809D2EE2C5AD00210D41 /* Frameworks */ = {
+		1E640FBC2F0AE07B003D9FC7 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				1E79298E2EFE783B00B9E35C /* AppKit.framework */,
-				1EDA821F2EE3802C00210D41 /* Metal.framework */,
-				1EDA809E2EE2C5AD00210D41 /* WickedEngine.xcodeproj */,
+				1E640FD32F0AE282003D9FC7 /* AppKit.framework */,
+				1E640FCF2F0AE275003D9FC7 /* Metal.framework */,
+				1E640FBD2F0AE07B003D9FC7 /* WickedEngine.xcodeproj */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		1EDA809F2EE2C5AD00210D41 /* Products */ = {
+		1E640FBE2F0AE07B003D9FC7 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				1EDA80B42EE2C9BD00210D41 /* libWickedEngine.a */,
+				1E640FC22F0AE07B003D9FC7 /* libWickedEngine.a */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -83,86 +95,87 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		1EDA807A2EE2C1DB00210D41 /* Template_MacOS */ = {
+		1E640FA92F0ADD19003D9FC7 /* offlineshadercompiler */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 1EDA808D2EE2C1DC00210D41 /* Build configuration list for PBXNativeTarget "Template_MacOS" */;
+			buildConfigurationList = 1E640FB12F0ADD19003D9FC7 /* Build configuration list for PBXNativeTarget "offlineshadercompiler" */;
 			buildPhases = (
-				1EDA80772EE2C1DB00210D41 /* Sources */,
-				1EDA80782EE2C1DB00210D41 /* Frameworks */,
+				1E640FA62F0ADD19003D9FC7 /* Sources */,
+				1E640FA72F0ADD19003D9FC7 /* Frameworks */,
+				1E640FA82F0ADD19003D9FC7 /* CopyFiles */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
-			name = Template_MacOS;
+			name = offlineshadercompiler;
 			packageProductDependencies = (
 			);
-			productName = Template_MacOS;
-			productReference = 1EDA807B2EE2C1DB00210D41 /* Template_MacOS.app */;
-			productType = "com.apple.product-type.application";
+			productName = offlineshadercompiler;
+			productReference = 1E640FAA2F0ADD19003D9FC7 /* offlineshadercompiler */;
+			productType = "com.apple.product-type.tool";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		1EDA80732EE2C1DB00210D41 /* Project object */ = {
+		1E640FA22F0ADD19003D9FC7 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastUpgradeCheck = 2610;
 				TargetAttributes = {
-					1EDA807A2EE2C1DB00210D41 = {
+					1E640FA92F0ADD19003D9FC7 = {
 						CreatedOnToolsVersion = 26.1.1;
 					};
 				};
 			};
-			buildConfigurationList = 1EDA80762EE2C1DB00210D41 /* Build configuration list for PBXProject "Template_MacOS" */;
+			buildConfigurationList = 1E640FA52F0ADD19003D9FC7 /* Build configuration list for PBXProject "offlineshadercompiler" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
 				Base,
 			);
-			mainGroup = 1EDA80722EE2C1DB00210D41;
+			mainGroup = 1E640FA12F0ADD19003D9FC7;
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
-			productRefGroup = 1EDA807C2EE2C1DB00210D41 /* Products */;
+			productRefGroup = 1E640FAB2F0ADD19003D9FC7 /* Products */;
 			projectDirPath = "";
 			projectReferences = (
 				{
-					ProductGroup = 1EDA809F2EE2C5AD00210D41 /* Products */;
-					ProjectRef = 1EDA809E2EE2C5AD00210D41 /* WickedEngine.xcodeproj */;
+					ProductGroup = 1E640FBE2F0AE07B003D9FC7 /* Products */;
+					ProjectRef = 1E640FBD2F0AE07B003D9FC7 /* WickedEngine.xcodeproj */;
 				},
 			);
 			projectRoot = "";
 			targets = (
-				1EDA807A2EE2C1DB00210D41 /* Template_MacOS */,
+				1E640FA92F0ADD19003D9FC7 /* offlineshadercompiler */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXReferenceProxy section */
-		1EDA80B42EE2C9BD00210D41 /* libWickedEngine.a */ = {
+		1E640FC22F0AE07B003D9FC7 /* libWickedEngine.a */ = {
 			isa = PBXReferenceProxy;
 			fileType = archive.ar;
 			path = libWickedEngine.a;
-			remoteRef = 1EDA80B32EE2C9BD00210D41 /* PBXContainerItemProxy */;
+			remoteRef = 1E640FC12F0AE07B003D9FC7 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
 /* End PBXReferenceProxy section */
 
 /* Begin PBXSourcesBuildPhase section */
-		1EDA80772EE2C1DB00210D41 /* Sources */ = {
+		1E640FA62F0ADD19003D9FC7 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1E79298D2EFE77ED00B9E35C /* main.mm in Sources */,
+				1E640FB52F0AE03E003D9FC7 /* offlineshadercompiler.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		1EDA808B2EE2C1DC00210D41 /* Debug */ = {
+		1E640FAF2F0ADD19003D9FC7 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -214,9 +227,8 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				HEADER_SEARCH_PATHS = "";
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 15.6;
+				MACOSX_DEPLOYMENT_TARGET = 26.1;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -224,7 +236,7 @@
 			};
 			name = Debug;
 		};
-		1EDA808C2EE2C1DC00210D41 /* Release */ = {
+		1E640FB02F0ADD19003D9FC7 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -270,105 +282,52 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				HEADER_SEARCH_PATHS = "";
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 15.6;
+				MACOSX_DEPLOYMENT_TARGET = 26.1;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
 			};
 			name = Release;
 		};
-		1EDA808E2EE2C1DC00210D41 /* Debug */ = {
+		1E640FB22F0ADD19003D9FC7 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				ENABLE_APP_SANDBOX = NO;
-				"GCC_PREPROCESSOR_DEFINITIONS[arch=*]" = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
-				GENERATE_INFOPLIST_FILE = YES;
-				HEADER_SEARCH_PATHS = "$(SRCROOT)/../../WickedEngine";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_NSMainStoryboardFile = Main;
-				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(PROJECT_DIR)",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "turanszkij.Template-MacOS";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				REGISTER_APP_GROUPS = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SYSTEM_HEADER_SEARCH_PATHS = "$(SRCROOT)/../../WickedEngine/Utility/metal";
 			};
 			name = Debug;
 		};
-		1EDA808F2EE2C1DC00210D41 /* Release */ = {
+		1E640FB32F0ADD19003D9FC7 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				ENABLE_APP_SANDBOX = NO;
-				GENERATE_INFOPLIST_FILE = YES;
-				HEADER_SEARCH_PATHS = "$(SRCROOT)/../../WickedEngine";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_NSMainStoryboardFile = Main;
-				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(PROJECT_DIR)",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "turanszkij.Template-MacOS";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				REGISTER_APP_GROUPS = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SYSTEM_HEADER_SEARCH_PATHS = "$(SRCROOT)/../../WickedEngine/Utility/metal";
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		1EDA80762EE2C1DB00210D41 /* Build configuration list for PBXProject "Template_MacOS" */ = {
+		1E640FA52F0ADD19003D9FC7 /* Build configuration list for PBXProject "offlineshadercompiler" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				1EDA808B2EE2C1DC00210D41 /* Debug */,
-				1EDA808C2EE2C1DC00210D41 /* Release */,
+				1E640FAF2F0ADD19003D9FC7 /* Debug */,
+				1E640FB02F0ADD19003D9FC7 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		1EDA808D2EE2C1DC00210D41 /* Build configuration list for PBXNativeTarget "Template_MacOS" */ = {
+		1E640FB12F0ADD19003D9FC7 /* Build configuration list for PBXNativeTarget "offlineshadercompiler" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				1EDA808E2EE2C1DC00210D41 /* Debug */,
-				1EDA808F2EE2C1DC00210D41 /* Release */,
+				1E640FB22F0ADD19003D9FC7 /* Debug */,
+				1E640FB32F0ADD19003D9FC7 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
-	rootObject = 1EDA80732EE2C1DB00210D41 /* Project object */;
+	rootObject = 1E640FA22F0ADD19003D9FC7 /* Project object */;
 }

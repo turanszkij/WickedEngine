@@ -13,7 +13,7 @@
 namespace wi::apple
 {
 
-void SetMetalLayerToWindow(NS::Window* _window, CA::MetalLayer* _layer)
+void SetMetalLayerToWindow(void* _window, void* _layer)
 {
 	NSWindow* window = (__bridge NSWindow*)_window;
 	if (!window)
@@ -25,17 +25,17 @@ void SetMetalLayerToWindow(NS::Window* _window, CA::MetalLayer* _layer)
 	window.contentView.layer = layer;
 }
 
-NS::View* GetViewFromWindow(NS::Window* handle)
+void* GetViewFromWindow(void* handle)
 {
 	NSWindow* window = (__bridge NSWindow*)handle;
 	if (!window)
 		return nullptr;
 
 	NSView* contentView = window.contentView;
-	return (__bridge NS::View*)contentView;
+	return (__bridge void*)contentView;
 }
 
-XMUINT2 GetWindowSize(NS::Window* handle)
+XMUINT2 GetWindowSize(void* handle)
 {
 	if (!handle)
 		return XMUINT2(0, 0);
@@ -54,7 +54,7 @@ XMUINT2 GetWindowSize(NS::Window* handle)
 	return XMUINT2(pixelWidth, pixelHeight);
 }
 
-float GetDPIForWindow(NS::Window* handle)
+float GetDPIForWindow(void* handle)
 {
 	NSWindow* window = (__bridge NSWindow*)handle;
 	if (!window || !window.screen)
@@ -91,7 +91,7 @@ float GetDPIForWindow(NS::Window* handle)
 	return (inchesWidth > 0) ? (float)(pixelWidth / inchesWidth) : 96.0f;
 }
 
-XMFLOAT2 GetMousePositionInWindow(NS::Window* handle)
+XMFLOAT2 GetMousePositionInWindow(void* handle)
 {
 	NSWindow* window = (__bridge NSWindow*)handle;
 	NSView* view = (__bridge NSView*)GetViewFromWindow(handle);

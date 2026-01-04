@@ -51,7 +51,7 @@ namespace wi::platform
 	using window_type = SDL_Window*;
 	using error_type = int;
 #elif defined(__APPLE__)
-	using window_type = NS::Window*;
+	using window_type = void*;
 	using error_type = int;
 #else
 	using window_type = void*;

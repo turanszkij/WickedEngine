@@ -93,8 +93,8 @@ bool FFX_DNSR_Shadows_IsShadowReciever(uint2 did)
 #define INVERTED_DEPTH_RANGE
 #include "ffx-shadows-dnsr/ffx_denoiser_shadows_tileclassification.h"
 
-[numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
-void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
+[numthreads(POSTPROCESS_BLOCKSIZE * POSTPROCESS_BLOCKSIZE, 1, 1)]
+void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
 	FFX_DNSR_Shadows_TileClassification(groupIndex, Gid.xy);
 }
