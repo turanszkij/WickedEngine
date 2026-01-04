@@ -246,7 +246,7 @@ jobs:
           startup.lua
           Editor_Linux
         
-  mac-os:
+  mac_os:
     runs-on: macos-latest
     
     steps:
