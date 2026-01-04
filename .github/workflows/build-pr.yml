@@ -269,7 +269,7 @@ jobs:
     - name: Move files
       run: |
         BUILD_PATH="$(xcodebuild -project Editor/Editor.xcodeproj -scheme Editor -configuration Release -showBuildSettings | grep -m 1 "BUILT_PRODUCTS_DIR" | awk -F' = ' '{print $2}')"
-        mv "${BUILD_PATH}/Editor.app" ./Editor_MacOS
+        mv "${BUILD_PATH}/Editor.app" ./Editor_MacOS.app
         mv Editor/config.ini ./
         mv Editor/startup.lua ./
         mv Editor/languages ./
@@ -284,7 +284,7 @@ jobs:
           fonts/
           config.ini
           startup.lua
-          Editor_MacOS.exe
+          Editor_MacOS.app
 
 
   content:
