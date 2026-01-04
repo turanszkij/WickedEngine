@@ -253,7 +253,7 @@ jobs:
 
     - name: Compile Offlineshadercompiler
       run: |
-        xcodebuild clean build -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -configuration Release -sdk macosx CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
+        xcodebuild clean build -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -configuration Release -sdk macosx
 
     - name: Generate shader dump
       run: |
@@ -264,7 +264,7 @@ jobs:
 
     - name: Build Editor
       run: |
-        xcodebuild clean build -project Editor/Editor.xcodeproj -scheme Editor -configuration Release -sdk macosx CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
+        xcodebuild clean build -project Editor/Editor.xcodeproj -scheme Editor -configuration Release -sdk macosx
 
     - name: Move files
       run: |
