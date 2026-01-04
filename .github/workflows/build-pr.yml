@@ -252,12 +252,10 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Compile Offlineshadercompiler
-      shell: cmd
       run: |
         xcodebuild clean build -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -configuration Release -sdk macosx CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
 
     - name: Generate shader dump
-      shell: cmd
       run: |
         BUILD_PATH="$(xcodebuild -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -configuration Release -showBuildSettings | grep -m 1 "BUILT_PRODUCTS_DIR" | awk -F' = ' '{print $2}')"
         cd WickedEngine
@@ -265,12 +263,10 @@ jobs:
         cd ..
 
     - name: Build Editor
-      shell: cmd
       run: |
         xcodebuild clean build -project Editor/Editor.xcodeproj -scheme Editor -configuration Release -sdk macosx CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
 
     - name: Move files
-      shell: cmd
       run: |
         BUILD_PATH="$(xcodebuild -project Editor/Editor.xcodeproj -scheme Editor -configuration Release -showBuildSettings | grep -m 1 "BUILT_PRODUCTS_DIR" | awk -F' = ' '{print $2}')"
         mv "${BUILD_PATH}/Editor" ./Editor_MacOS
