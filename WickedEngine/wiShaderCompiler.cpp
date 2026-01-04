@@ -43,9 +43,6 @@ using namespace Microsoft::WRL;
 
 #ifdef PLATFORM_APPLE
 #define SHADERCOMPILER_APPLE_INCLUDED
-#if !__has_include(<metal_irconverter/metal_irconverter.h>)
-#error "You must install the metal shader converter: https://developer.apple.com/metal/shader-converter/"
-#endif //!__has_include(<metal_irconverter/metal_irconverter.h>)
 #include <metal_irconverter/metal_irconverter.h>
 #include "wiGraphicsDevice_Metal.h"
 #endif // PLATFORM_APPLE
@@ -586,7 +583,7 @@ namespace wi::shadercompiler
 #ifdef SHADERCOMPILER_APPLE_INCLUDED
 			if (input.format == ShaderFormat::METAL)
 			{
-				static HMODULE irconverter = wiLoadLibrary("/usr/local/lib/libmetalirconverter.dylib");
+				static HMODULE irconverter = wiLoadLibrary("libmetalirconverter.dylib");
 				assert(irconverter); // You must install the metal shader converter
 				if (irconverter != nullptr)
 				{

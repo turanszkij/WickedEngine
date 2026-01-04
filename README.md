@@ -83,8 +83,6 @@ To build  the engine for Mac OS, use the provided .xcodeproj files with the Xcod
 - Editor/Editor.xcodeproj to build the Wicked Editor
 - Samples/Template_MacOS/Template_MacOS.xcodeproj to build a minimal template application for MacOS
 
-To build shaders, the (Metal Shader Converter)[https://developer.apple.com/metal/shader-converter/] will be required which needs to be downloaded with an Apple developer account and installed on your computer to this location: `/usr/local/lib/libmetalirconverter.dylib`, it is not included with Wicked Engine.
-
 If you want to develop an application that uses Wicked Engine, you will have to link to libWickedEngine.a and `#include "WickedEngine.h"` into the source code. You also need to add references to the following Apple SDKs: `Metal`, `AppKit`. I also recommend to set up a custom working directory in the Product->Scheme->Edit Scheme->Options->custom working directory = `$(PROJECT_DIR)`, this will better match the development experience in Visual Studio. For examples, look at the Template_MacOS and Editor projects.
 
 #### Xbox Series X|S
