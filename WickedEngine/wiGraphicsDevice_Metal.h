@@ -13,6 +13,9 @@
 #include <Foundation/Foundation.hpp>
 
 #define IR_RUNTIME_METALCPP
+#if !__has_include(<metal_irconverter_runtime/metal_irconverter_runtime.h>)
+#error "You must install the metal shader converter: https://developer.apple.com/metal/shader-converter/"
+#endif //!__has_include(<metal_irconverter_runtime/metal_irconverter_runtime.h>)
 #include <metal_irconverter_runtime/metal_irconverter_runtime.h>
 
 #include <mutex>

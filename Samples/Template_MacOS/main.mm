@@ -1,21 +1,12 @@
 #include "WickedEngine.h"
 
 #import <AppKit/AppKit.h>
+#include <Carbon/Carbon.h>
 
 wi::Application application;
 bool running = true;
 
 @interface WindowDelegate : NSObject <NSWindowDelegate>
-@end
-
-@implementation WindowDelegate
-- (void)windowWillClose:(NSNotification *)notification {
-	running = false;
-}
-- (void)windowDidResize:(NSNotification *)notification {
-	NSWindow* nsWindow = (NSWindow*)notification.object;
-	application.SetWindow((__bridge NS::Window*)nsWindow);
-}
 @end
 
 int main( int argc, char* argv[] )
@@ -62,15 +53,32 @@ int main( int argc, char* argv[] )
 													  inMode:NSDefaultRunLoopMode
 													 dequeue:YES]))
 				{
-					if (event.type == NSEventTypeKeyDown || event.type == NSEventTypeKeyUp)
-					{
-						uint16_t keyCode = event.keyCode;
-						bool isDown = (event.type == NSEventTypeKeyDown);
-						bool repeat = event.isARepeat;
-					}
-					else
-					{
-						[NSApp sendEvent:event];
+					switch (event.type) {
+						case NSEventTypeKeyDown:
+							switch (event.keyCode) {
+								case kVK_Delete:
+									wi::gui::TextInputField::DeleteFromInput();
+									break;
+								case kVK_Return:
+									break;
+								default:
+								{
+									NSString* characters = event.characters;
+									if (characters && characters.length > 0)
+									{
+										unichar c = [characters characterAtIndex:0];
+										wchar_t wchar = (wchar_t)c;
+										wi::gui::TextInputField::AddInput(wchar);
+									}
+								}
+								break;
+							}
+							break;
+						case NSEventTypeKeyUp:
+							break;
+						default:
+							[NSApp sendEvent:event];
+							break;
 					}
 				}
 				
@@ -84,3 +92,13 @@ int main( int argc, char* argv[] )
 	
 	return 0;
 }
+
+@implementation WindowDelegate
+- (void)windowWillClose:(NSNotification *)notification {
+	running = false;
+}
+- (void)windowDidResize:(NSNotification *)notification {
+	NSWindow* nsWindow = (NSWindow*)notification.object;
+	application.SetWindow((__bridge NS::Window*)nsWindow);
+}
+@end

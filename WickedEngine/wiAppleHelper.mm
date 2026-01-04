@@ -4,11 +4,11 @@
 
 #include <AppKit/AppKit.h>
 #include <CoreGraphics/CoreGraphics.h>
-#include <MetalKit/MTKView.h>
 
 #include <mach-o/dyld.h>
 
 #import <Cocoa/Cocoa.h>
+#import <QuartzCore/QuartzCore.h>
 
 namespace wi::apple
 {
@@ -37,46 +37,23 @@ NS::View* GetViewFromWindow(NS::Window* handle)
 
 XMUINT2 GetWindowSize(NS::Window* handle)
 {
-	NSWindow* window = (__bridge NSWindow*)handle;
-	if (!window)
+	if (!handle)
 		return XMUINT2(0, 0);
-	
+
+	NSWindow* window = (__bridge NSWindow*)handle;
 	NSView* contentView = window.contentView;
 	if (!contentView)
 		return XMUINT2(0, 0);
-	
-	// Case 1: contentView is directly an MTKView (most common in Metal apps)
-	if ([contentView isKindOfClass:[MTKView class]])
-	{
-		MTKView* mtkView = (MTKView*)contentView;
-		CGSize drawableSize = mtkView.drawableSize;
-		return XMUINT2((uint32_t)drawableSize.width, (uint32_t)drawableSize.height);
-	}
-	
-	// Case 2: Search for an MTKView in the subview hierarchy
-	__block MTKView* foundMTKView = nil;
-	[contentView.subviews enumerateObjectsUsingBlock:^(NSView* subview, NSUInteger idx, BOOL* stop) {
-		if ([subview isKindOfClass:[MTKView class]]) {
-			foundMTKView = (MTKView*)subview;
-			*stop = YES;
-		}
-	}];
-	
-	if (foundMTKView)
-	{
-		CGSize drawableSize = foundMTKView.drawableSize;
-		return XMUINT2((uint32_t)drawableSize.width, (uint32_t)drawableSize.height);
-	}
-	
-	// Fallback: Return the backing pixel size of the content view
-	// (useful if using CAMetalLayer directly or custom setup)
+
 	CGRect bounds = contentView.bounds;
-	CGFloat scale = window.backingScaleFactor;
-	uint32_t pixelWidth  = (uint32_t)(bounds.size.width * scale);
-	uint32_t pixelHeight = (uint32_t)(bounds.size.height * scale);
-	
+	CGFloat scale = window.backingScaleFactor;  // 1.0 on non-Retina, 2.0 on Retina
+
+	uint32_t pixelWidth  = (uint32_t)round(bounds.size.width * scale);
+	uint32_t pixelHeight = (uint32_t)round(bounds.size.height * scale);
+
 	return XMUINT2(pixelWidth, pixelHeight);
 }
+
 float GetDPIForWindow(NS::Window* handle)
 {
 	NSWindow* window = (__bridge NSWindow*)handle;

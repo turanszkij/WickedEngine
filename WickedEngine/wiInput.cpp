@@ -13,6 +13,7 @@
 #include <map>
 #include <atomic>
 #include <thread>
+#include <deque>
 
 #ifdef SDL2
 #include <SDL2/SDL.h>
@@ -70,6 +71,7 @@ namespace wi::input
 	XMFLOAT2 doubleclick_prevpos = XMFLOAT2(0, 0);
 	CURSOR cursor_current = CURSOR_COUNT; // something that's not default, because at least once code should change it to default
 	CURSOR cursor_next = CURSOR_DEFAULT;
+	std::deque<float> mouse_scroll_events;
 
 #ifdef _WIN32
 	static const HCURSOR cursor_table_original[] = {
@@ -203,17 +205,22 @@ namespace wi::input
 		ScreenToClient(window, &p);
 		mouse.position.x = (float)p.x;
 		mouse.position.y = (float)p.y;
-
-#elif defined(SDL2)
-		wi::input::sdlinput::GetMouseState(&mouse);
-		wi::input::sdlinput::GetKeyboardState(&keyboard);
 #elif defined(__APPLE__)
 		mouse = {};
 		mouse.position = wi::apple::GetMousePositionInWindow(window);
 		mouse.left_button_press = isLeftMouseButtonPressed();
 		mouse.right_button_press = isRightMouseButtonPressed();
 		mouse.middle_button_press = isMiddleMouseButtonPressed();
+#elif defined(SDL2)
+		wi::input::sdlinput::GetMouseState(&mouse);
+		wi::input::sdlinput::GetKeyboardState(&keyboard);
 #endif
+		
+		for (auto& x : mouse_scroll_events)
+		{
+			mouse.delta_wheel += x;
+		}
+		mouse_scroll_events.clear();
 
 		if (pen_override)
 		{
@@ -992,6 +999,8 @@ namespace wi::input
 		p.y = (LONG)(posY);
 		ClientToScreen(hWnd, &p);
 		SetCursorPos(p.x, p.y);
+#elif defined(__APPLE__)
+		
 #elif defined(SDL2)
 		SDL_WarpMouseInWindow(window, posX, posY);
 #endif // SDL2
@@ -1562,4 +1571,9 @@ namespace wi::input
 		return "";
 	}
 
+
+	void AddMouseScrollEvent(float value)
+	{
+		mouse_scroll_events.push_back(value);
+	}
 }

@@ -295,5 +295,7 @@ namespace wi::input
 	};
 	ShortReturnString ButtonToString(BUTTON button, CONTROLLER_PREFERENCE preference = CONTROLLER_PREFERENCE_GENERIC);
 
+
+	void AddMouseScrollEvent(float value);
 };
 

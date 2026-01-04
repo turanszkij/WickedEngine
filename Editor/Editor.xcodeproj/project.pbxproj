@@ -67,7 +67,6 @@
 		1E73E7502F053DB00090D1DA /* ApplicationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E73E74F2F053DB00090D1DA /* ApplicationServices.framework */; };
 		1E73E7522F053DB80090D1DA /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E73E7512F053DB80090D1DA /* Foundation.framework */; };
 		1E73E7552F053DBE0090D1DA /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E73E7532F053DBE0090D1DA /* Metal.framework */; };
-		1E73E7562F053DBE0090D1DA /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E73E7542F053DBE0090D1DA /* MetalKit.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -229,7 +228,6 @@
 		1E73E74F2F053DB00090D1DA /* ApplicationServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ApplicationServices.framework; path = System/Library/Frameworks/ApplicationServices.framework; sourceTree = SDKROOT; };
 		1E73E7512F053DB80090D1DA /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		1E73E7532F053DBE0090D1DA /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
-		1E73E7542F053DBE0090D1DA /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -240,7 +238,6 @@
 				1E73E7392F0513710090D1DA /* libWickedEngine.a in Frameworks */,
 				1E73E7502F053DB00090D1DA /* ApplicationServices.framework in Frameworks */,
 				1E73E7552F053DBE0090D1DA /* Metal.framework in Frameworks */,
-				1E73E7562F053DBE0090D1DA /* MetalKit.framework in Frameworks */,
 				1E73E74E2F053DAB0090D1DA /* AppKit.framework in Frameworks */,
 				1E73E7522F053DB80090D1DA /* Foundation.framework in Frameworks */,
 			);
@@ -415,7 +412,6 @@
 			isa = PBXGroup;
 			children = (
 				1E73E7532F053DBE0090D1DA /* Metal.framework */,
-				1E73E7542F053DBE0090D1DA /* MetalKit.framework */,
 				1E73E7512F053DB80090D1DA /* Foundation.framework */,
 				1E73E74F2F053DB00090D1DA /* ApplicationServices.framework */,
 				1E73E74D2F053DAB0090D1DA /* AppKit.framework */,
