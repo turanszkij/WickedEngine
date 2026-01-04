@@ -201,31 +201,15 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Restore Ccache database
-      id: restore-ccache
-      uses: actions/cache/restore@v4
-      with:
-        path: ~/.cache/ccache
-        key: ccache-${{ matrix.cc }}-${{ github.run_id }}
-        restore-keys: ccache-${{ matrix.cc }}-
-
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install libsdl2-dev ccache
+        sudo apt install libsdl2-dev
 
     - name: Compile with embedded shaders
       run: |
-        CC=${{ matrix.cc }} CXX=${{ matrix.cxx }} cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DWICKED_ENABLE_IPO=NO -DWICKED_EMBED_SHADERS=YES
+        CC=${{ matrix.cc }} CXX=${{ matrix.cxx }} cmake -B build -DCMAKE_BUILD_TYPE=Release -DWICKED_ENABLE_IPO=NO -DWICKED_EMBED_SHADERS=YES
         make -C build -j$(nproc)
-
-    - name: Save Ccache database
-      id: save-ccache
-      if: always() && steps.restore-ccache.cache-hit != 'true'
-      uses: actions/cache/save@v4
-      with:
-        path: ~/.cache/ccache
-        key: ${{ steps.restore-ccache.outputs.cache-primary-key }}
 
     - name: Move binaries
       if: matrix.package_bins
