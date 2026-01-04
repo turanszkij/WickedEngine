@@ -7,9 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		1E640F962F0AB08E003D9FC7 /* libdxcompiler.dylib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EDA8A692EE5D68100210D41 /* libdxcompiler.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		1E640FE22F0AEC0B003D9FC7 /* libmetalirconverter.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E640FE12F0AEC0B003D9FC7 /* libmetalirconverter.dylib */; };
-		1E640FE32F0AEC13003D9FC7 /* libmetalirconverter.dylib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E640FE12F0AEC0B003D9FC7 /* libmetalirconverter.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		1E640FEA2F0B0565003D9FC7 /* libdxcompiler.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 1EDA8A692EE5D68100210D41 /* libdxcompiler.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		1E640FEC2F0B0567003D9FC7 /* libmetalirconverter.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 1E640FE12F0AEC0B003D9FC7 /* libmetalirconverter.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		1E79298A2EFE75E400B9E35C /* wiAppleHelper.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1E7929892EFE75BA00B9E35C /* wiAppleHelper.mm */; };
 		1EDA7A562EE1DF2100210D41 /* wiArchive.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7A552EE1DF2100210D41 /* wiArchive.cpp */; };
 		1EDA7B042EE1DFE300210D41 /* wiNetwork_Linux.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7AA82EE1DFE300210D41 /* wiNetwork_Linux.cpp */; };
@@ -281,15 +281,16 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		1E640F952F0AB085003D9FC7 /* CopyFiles */ = {
+		1E640FEB2F0B0565003D9FC7 /* Embed Libraries */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				1E640F962F0AB08E003D9FC7 /* libdxcompiler.dylib in CopyFiles */,
-				1E640FE32F0AEC13003D9FC7 /* libmetalirconverter.dylib in CopyFiles */,
+				1E640FEC2F0B0567003D9FC7 /* libmetalirconverter.dylib in Embed Libraries */,
+				1E640FEA2F0B0565003D9FC7 /* libdxcompiler.dylib in Embed Libraries */,
 			);
+			name = "Embed Libraries";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -3263,7 +3264,7 @@
 			buildPhases = (
 				1EDA71692EE0978C00210D41 /* Sources */,
 				1EDA716A2EE0978C00210D41 /* Frameworks */,
-				1E640F952F0AB085003D9FC7 /* CopyFiles */,
+				1E640FEB2F0B0565003D9FC7 /* Embed Libraries */,
 			);
 			buildRules = (
 			);

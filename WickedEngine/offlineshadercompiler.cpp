@@ -433,7 +433,7 @@ int main(int argc, char* argv[])
 	}
 	if (wi::arguments::HasArgument("metal"))
 	{
-		targets.push_back({ ShaderFormat::SPIRV, "shaders/metal/" });
+		targets.push_back({ ShaderFormat::METAL, "shaders/metal/" });
 		*out << "metal ";
 	}
 	if (wi::arguments::HasArgument("hlsl6_xs"))
