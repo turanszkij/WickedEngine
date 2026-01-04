@@ -278,7 +278,7 @@ jobs:
     - name: Package Editor
       uses: actions/upload-artifact@v4
       with:
-        name: Editor (Windows, ARM64)
+        name: Editor (Mac OS)
         path: |
           languages/
           fonts/
