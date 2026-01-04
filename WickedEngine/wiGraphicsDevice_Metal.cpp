@@ -527,6 +527,8 @@ namespace metal_internal
 		wi::vector<Subresource> subresources_rtv;
 		wi::vector<Subresource> subresources_dsv;
 		
+		SparseTextureProperties sparse_properties;
+		
 		void destroy_subresources()
 		{
 			uint64_t framecount = allocationhandler->framecount;
@@ -1232,6 +1234,7 @@ using namespace metal_internal;
 		capabilities |= GraphicsDeviceCapability::DEPTH_BOUNDS_TEST;
 		capabilities |= GraphicsDeviceCapability::UAV_LOAD_FORMAT_COMMON;
 		capabilities |= GraphicsDeviceCapability::UAV_LOAD_FORMAT_R11G11B10_FLOAT;
+		capabilities |= GraphicsDeviceCapability::COPY_BETWEEN_DIFFERENT_IMAGE_ASPECTS_NOT_SUPPORTED;
 		
 		descriptor_heap_res = NS::TransferPtr(device->newBuffer(bindless_resource_capacity * sizeof(IRDescriptorTableEntry), MTL::ResourceStorageModeShared | MTL::ResourceHazardTrackingModeUntracked));
 		descriptor_heap_res->setLabel(NS::TransferPtr(NS::String::alloc()->init("descriptor_heap_res", NS::UTF8StringEncoding)).get());
@@ -1500,6 +1503,8 @@ using namespace metal_internal;
 		texture->sparse_properties = nullptr;
 		texture->desc = *desc;
 		
+		const bool sparse = has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE);
+		
 		if (texture->desc.mip_levels == 0)
 		{
 			texture->desc.mip_levels = GetMipCount(texture->desc.width, texture->desc.height, texture->desc.depth);
@@ -1561,6 +1566,7 @@ using namespace metal_internal;
 			descriptor->setStorageMode(MTL::StorageModePrivate);
 		}
 		else if (
+				 sparse ||
 				 has_flag(desc->bind_flags, BindFlag::RENDER_TARGET) ||
 				 has_flag(desc->bind_flags, BindFlag::DEPTH_STENCIL) ||
 				 has_flag(desc->bind_flags, BindFlag::UNORDERED_ACCESS)
@@ -1617,6 +1623,22 @@ using namespace metal_internal;
 		}
 		descriptor->setUsage(usage);
 		
+		descriptor->setAllowGPUOptimizedContents(true);
+		
+		if (sparse)
+		{
+			constexpr MTL::SparsePageSize sparse_page_size = MTL::SparsePageSize64;
+			descriptor->setPlacementSparsePageSize(sparse_page_size);
+			texture->sparse_page_size = (uint32_t)device->sparseTileSizeInBytes(sparse_page_size);
+			texture->sparse_properties = &internal_state->sparse_properties;
+			const MTL::Size sparse_size = device->sparseTileSize(descriptor->textureType(), descriptor->pixelFormat(), descriptor->sampleCount(), sparse_page_size);
+			internal_state->sparse_properties.tile_width = (uint32_t)sparse_size.width;
+			internal_state->sparse_properties.tile_height = (uint32_t)sparse_size.height;
+			internal_state->sparse_properties.tile_depth = (uint32_t)sparse_size.depth;
+			const MTL::SizeAndAlign sizealign = device->heapTextureSizeAndAlign(descriptor.get());
+			internal_state->sparse_properties.total_tile_count = uint32_t(sizealign.size / (uint64_t)texture->sparse_page_size);
+		}
+		
 		if (!has_flag(desc->bind_flags, BindFlag::UNORDERED_ACCESS) && !has_flag(desc->bind_flags, BindFlag::RENDER_TARGET))
 		{
 			MTL::TextureSwizzleChannels swizzle = MTL::TextureSwizzleChannels::Default();
@@ -1627,17 +1649,31 @@ using namespace metal_internal;
 			descriptor->setSwizzle(swizzle);
 		}
 		
-		if (has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_BUFFER) || has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_NON_RT_DS) || has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_RT_DS))
+		if (has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_BUFFER) || has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_NON_RT_DS) || has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_RT_DS) || sparse)
 		{
 			// This is an aliasing storage:
 			MTL::SizeAndAlign sizealign = device->heapTextureSizeAndAlign(descriptor.get());
 			NS::SharedPtr<MTL::HeapDescriptor> heap_desc = NS::TransferPtr(MTL::HeapDescriptor::alloc()->init());
 			heap_desc->setResourceOptions(resource_options);
 			heap_desc->setSize(sizealign.size);
-			heap_desc->setType(MTL::HeapTypePlacement);
+			if (sparse)
+			{
+				heap_desc->setType(MTL::HeapTypeSparse);
+			}
+			else
+			{
+				heap_desc->setType(MTL::HeapTypePlacement);
+			}
 			NS::SharedPtr<MTL::Heap> heap = NS::TransferPtr(device->newHeap(heap_desc.get()));
-			internal_state->texture = NS::TransferPtr(heap->newTexture(descriptor.get(), 0));
-			internal_state->texture->makeAliasable();
+			if (sparse)
+			{
+				internal_state->texture = NS::TransferPtr(heap->newTexture(descriptor.get()));
+			}
+			else
+			{
+				internal_state->texture = NS::TransferPtr(heap->newTexture(descriptor.get(), 0));
+				internal_state->texture->makeAliasable();
+			}
 		}
 		else if (alias != nullptr)
 		{
@@ -1658,7 +1694,10 @@ using namespace metal_internal;
 			internal_state->texture = NS::TransferPtr(device->newTexture(descriptor.get()));
 		}
 		
-		allocationhandler->make_resident(internal_state->texture.get());
+		if (!has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE))
+		{
+			allocationhandler->make_resident(internal_state->texture.get());
+		}
 		
 		if (initial_data != nullptr)
 		{
@@ -2733,7 +2772,36 @@ using namespace metal_internal;
 
 	void GraphicsDevice_Metal::SparseUpdate(QUEUE_TYPE queue, const SparseUpdateCommand* commands, uint32_t command_count)
 	{
-		// TODO
+		NS::SharedPtr<NS::AutoreleasePool> autorelease_pool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init());
+		MTL::CommandBuffer* commandbuffer = commandqueue->commandBufferWithUnretainedReferences();
+		MTL::ResourceStateCommandEncoder* encoder = commandbuffer->resourceStateCommandEncoder();
+		for (uint32_t i = 0; i < command_count; ++i)
+		{
+			const SparseUpdateCommand& command = commands[i];
+			if (!command.sparse_resource->IsTexture())
+				continue;
+			auto tilepool_internal = to_internal<GPUBuffer>(command.tile_pool);
+			auto sparse_internal = to_internal<Texture>(command.sparse_resource);
+			// TODO: remove heap allocs
+			wi::vector<MTL::Region> regions(command.num_resource_regions);
+			wi::vector<NS::UInteger> mips(command.num_resource_regions);
+			wi::vector<NS::UInteger> slices(command.num_resource_regions);
+			for (uint32_t j = 0; j < command.num_resource_regions; ++j)
+			{
+				const SparseResourceCoordinate& coordinate = command.coordinates[j];
+				const SparseRegionSize& size = command.sizes[j];
+				regions[j].origin.x = coordinate.x;
+				regions[j].origin.y = coordinate.y;
+				regions[j].origin.z = coordinate.z;
+				regions[j].size.width = size.width;
+				regions[j].size.height = size.height;
+				regions[j].size.depth = size.depth;
+				mips[j] = coordinate.mip;
+				slices[j] = coordinate.slice;
+			}
+			encoder->updateTextureMappings(sparse_internal->texture.get(), MTL::SparseTextureMappingModeMap, regions.data(), mips.data(), slices.data(), command.num_resource_regions);
+		}
+		encoder->endEncoding();
 	}
 
 	void GraphicsDevice_Metal::WaitCommandList(CommandList cmd, CommandList wait_for)
