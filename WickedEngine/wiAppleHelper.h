@@ -10,10 +10,14 @@
 
 namespace wi::apple
 {
-MTK::View* GetMTKViewFromWindow(NS::Window* window);
+void SetMetalLayerToWindow(NS::Window* window, CA::MetalLayer* layer);
+NS::View* GetViewFromWindow(NS::Window* window);
 XMUINT2 GetWindowSize(NS::Window* handle);
 float GetDPIForWindow(NS::Window* handle);
 XMFLOAT2 GetMousePositionInWindow(NS::Window* handle);
 int MessageBox(const char* title, const char* message, const char* buttons = nullptr);
 std::string GetExecutablePath();
+void CursorInit(void** cursor_table);
+void CursorSet(void* cursor);
+void CursorHide(bool hide);
 }

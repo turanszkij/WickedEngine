@@ -1,5 +1,6 @@
 #include "wiAppleHelper.h"
 #include "wiHelper.h"
+#include "wiInput.h"
 
 #include <AppKit/AppKit.h>
 #include <CoreGraphics/CoreGraphics.h>
@@ -12,17 +13,26 @@
 namespace wi::apple
 {
 
-MTK::View* GetMTKViewFromWindow(NS::Window* handle)
+void SetMetalLayerToWindow(NS::Window* _window, CA::MetalLayer* _layer)
+{
+	NSWindow* window = (__bridge NSWindow*)_window;
+	if (!window)
+		return;
+	CAMetalLayer* layer = (__bridge CAMetalLayer*)_layer;
+	if (!layer)
+		return;
+	window.contentView.wantsLayer = true;
+	window.contentView.layer = layer;
+}
+
+NS::View* GetViewFromWindow(NS::Window* handle)
 {
 	NSWindow* window = (__bridge NSWindow*)handle;
 	if (!window)
 		return nullptr;
 
 	NSView* contentView = window.contentView;
-	if ([contentView isKindOfClass:[MTKView class]]) {
-		return (__bridge MTK::View*)contentView;
-	}
-	return nullptr;
+	return (__bridge NS::View*)contentView;
 }
 
 XMUINT2 GetWindowSize(NS::Window* handle)
@@ -107,20 +117,20 @@ float GetDPIForWindow(NS::Window* handle)
 XMFLOAT2 GetMousePositionInWindow(NS::Window* handle)
 {
 	NSWindow* window = (__bridge NSWindow*)handle;
-	MTKView* mtkView = (__bridge MTKView*)GetMTKViewFromWindow(handle);
-	if (!window || !mtkView)
+	NSView* view = (__bridge NSView*)GetViewFromWindow(handle);
+	if (!window || !view)
 		return XMFLOAT2(-1.f, -1.f);
 
 	NSPoint mouseLocScreen = [NSEvent mouseLocation];
 	NSPoint mouseInWindow = [window convertRectFromScreen:NSMakeRect(mouseLocScreen.x, mouseLocScreen.y, 0, 0)].origin;
-	NSPoint mouseInView = [mtkView convertPoint:mouseInWindow fromView:nil];
+	NSPoint mouseInView = [view convertPoint:mouseInWindow fromView:nil];
 
 	// Flip Y
-	CGFloat heightPoints = mtkView.bounds.size.height;
+	CGFloat heightPoints = view.bounds.size.height;
 	mouseInView.y = heightPoints - mouseInView.y;
 
 	// Use the actual drawable scale (most accurate)
-	CGFloat scale = mtkView.window.backingScaleFactor;
+	CGFloat scale = view.window.backingScaleFactor;
 
 	return XMFLOAT2((float)(mouseInView.x * scale), (float)(mouseInView.y * scale));
 }
@@ -203,6 +213,35 @@ std::string GetExecutablePath()
 	std::string path(resolved);
 	free(resolved);
 	return path;
+}
+
+void CursorInit(void** cursor_table)
+{
+	cursor_table[wi::input::CURSOR_DEFAULT] = (__bridge void*)[NSCursor arrowCursor];
+	cursor_table[wi::input::CURSOR_TEXTINPUT] = (__bridge void*)[NSCursor IBeamCursor];
+	cursor_table[wi::input::CURSOR_RESIZEALL] = (__bridge void*)[NSCursor closedHandCursor];
+	cursor_table[wi::input::CURSOR_RESIZE_NS] = (__bridge void*)[NSCursor resizeUpDownCursor];
+	cursor_table[wi::input::CURSOR_RESIZE_EW] = (__bridge void*)[NSCursor resizeLeftRightCursor];
+	cursor_table[wi::input::CURSOR_RESIZE_NESW] = (__bridge void*)[NSCursor closedHandCursor];
+	cursor_table[wi::input::CURSOR_RESIZE_NWSE] = (__bridge void*)[NSCursor closedHandCursor];
+	cursor_table[wi::input::CURSOR_HAND] = (__bridge void*)[NSCursor pointingHandCursor];
+	cursor_table[wi::input::CURSOR_NOTALLOWED] = (__bridge void*)[NSCursor operationNotAllowedCursor];
+}
+void CursorSet(void* cursor)
+{
+	NSCursor* _cursor = (__bridge NSCursor*)cursor;
+	[_cursor set];
+}
+void CursorHide(bool hide)
+{
+	if (hide)
+	{
+		[NSCursor hide];
+	}
+	else
+	{
+		[NSCursor unhide];
+	}
 }
 
 }

@@ -8,7 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		1E7929882EFD9E9800B9E35C /* ApplicationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E7929862EFD9E9800B9E35C /* ApplicationServices.framework */; };
-		1E79298D2EFE77ED00B9E35C /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E79298C2EFE77ED00B9E35C /* main.cpp */; };
+		1E79298D2EFE77ED00B9E35C /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1E79298C2EFE77ED00B9E35C /* main.mm */; };
 		1E79298F2EFE783B00B9E35C /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E79298E2EFE783B00B9E35C /* AppKit.framework */; };
 		1EDA80B52EE2C9BD00210D41 /* libWickedEngine.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1EDA80B42EE2C9BD00210D41 /* libWickedEngine.a */; };
 		1EDA82202EE3802C00210D41 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1EDA821F2EE3802C00210D41 /* Metal.framework */; };
@@ -43,7 +43,7 @@
 
 /* Begin PBXFileReference section */
 		1E7929862EFD9E9800B9E35C /* ApplicationServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ApplicationServices.framework; path = System/Library/Frameworks/ApplicationServices.framework; sourceTree = SDKROOT; };
-		1E79298C2EFE77ED00B9E35C /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		1E79298C2EFE77ED00B9E35C /* main.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
 		1E79298E2EFE783B00B9E35C /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
 		1EDA807B2EE2C1DB00210D41 /* Template_MacOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Template_MacOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EDA809E2EE2C5AD00210D41 /* WickedEngine.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = WickedEngine.xcodeproj; path = ../../WickedEngine/WickedEngine.xcodeproj; sourceTree = "<group>"; };
@@ -74,7 +74,7 @@
 		1EDA80722EE2C1DB00210D41 = {
 			isa = PBXGroup;
 			children = (
-				1E79298C2EFE77ED00B9E35C /* main.cpp */,
+				1E79298C2EFE77ED00B9E35C /* main.mm */,
 				1EDA8A6E2EE5D6D600210D41 /* libdxcompiler.dylib */,
 				1EDA809D2EE2C5AD00210D41 /* Frameworks */,
 				1EDA807C2EE2C1DB00210D41 /* Products */,
@@ -186,7 +186,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1E79298D2EFE77ED00B9E35C /* main.cpp in Sources */,
+				1E79298D2EFE77ED00B9E35C /* main.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -690,7 +690,10 @@ namespace metal_internal
 	{
 		wi::allocator::shared_ptr<GraphicsDevice_Metal::AllocationHandler> allocationhandler;
 		ColorSpace colorSpace = ColorSpace::SRGB;
-		NS::SharedPtr<MTK::View> view;
+		CA::MetalLayer* layer = nullptr;
+		NS::SharedPtr<CA::MetalDrawable> current_drawable;
+		NS::SharedPtr<MTL::Texture> current_texture;
+		dispatch_semaphore_t sema = {};
 
 		~SwapChain_Metal()
 		{
@@ -1358,17 +1361,24 @@ using namespace metal_internal;
 		swapchain->internal_state = internal_state;
 		swapchain->desc = *desc;
 		
-		if (internal_state->view.get() == nullptr)
+		swapchain->desc.buffer_count = clamp(desc->buffer_count, 2u, 3u);
+		
+		if (internal_state->layer == nullptr)
 		{
-			CGRect frame = (CGRect){ {0.0f, 0.0f}, {float(desc->width), float(desc->height)} };
-			internal_state->view = NS::TransferPtr(MTK::View::alloc()->init(frame, device.get()));
-			internal_state->view->setColorPixelFormat(_ConvertPixelFormat(desc->format));
-			internal_state->view->setClearColor(MTL::ClearColor::Make(desc->clear_color[0], desc->clear_color[1], desc->clear_color[2], desc->clear_color[3]));
-			internal_state->view->setFramebufferOnly(false); // GetBackBuffer() srv
-			window->setContentView(internal_state->view.get());
+			internal_state->layer = CA::MetalLayer::layer();
+			internal_state->layer->setDevice(device.get());
+			internal_state->layer->setMaximumDrawableCount(swapchain->desc.buffer_count);
+			internal_state->sema = dispatch_semaphore_create(swapchain->desc.buffer_count);
+			internal_state->layer->setFramebufferOnly(false); // GetBackBuffer() srv
+			wi::apple::SetMetalLayerToWindow(window, internal_state->layer);
 		}
+		
+		CGSize size = {(CGFloat)desc->width, (CGFloat)desc->height};
+		internal_state->layer->setDrawableSize(size);
+		internal_state->layer->setDisplaySyncEnabled(desc->vsync);
+		internal_state->layer->setPixelFormat(_ConvertPixelFormat(desc->format));
 
-		return true;
+		return internal_state->layer != nullptr;
 	}
 	bool GraphicsDevice_Metal::CreateBuffer2(const GPUBufferDesc* desc, const std::function<void(void*)>& init_callback, GPUBuffer* buffer, const GPUResource* alias, uint64_t alias_offset) const
 	{
@@ -2632,9 +2642,12 @@ using namespace metal_internal;
 			auto& commandlist = *commandlists[cmd].get();
 			commandlist.assert_noencoder();
 			
-			for (MTK::View* view : commandlist.presents)
+			for (auto& x : commandlist.presents)
 			{
-				commandlist.commandbuffer->presentDrawable(view->currentDrawable());
+				commandlist.commandbuffer->presentDrawable(x.first.get());
+				commandlist.commandbuffer->addCompletedHandler(^(MTL::CommandBuffer*) {
+					 dispatch_semaphore_signal(x.second);
+				});
 			}
 			
 			if (cmd == cmd_last - 1)
@@ -2695,7 +2708,7 @@ using namespace metal_internal;
 		auto swapchain_internal = to_internal(swapchain);
 		Texture result;
 		auto texture_internal = wi::allocator::make_shared<Texture_Metal>();
-		texture_internal->texture = NS::TransferPtr(swapchain_internal->view->currentDrawable()->texture());
+		texture_internal->texture = swapchain_internal->current_texture;
 		texture_internal->srv.texture = texture_internal->texture;
 		texture_internal->srv.entry = create_entry(texture_internal->srv.texture.get(), 0);
 		texture_internal->srv.index = allocationhandler->allocate_bindless(texture_internal->srv.entry);
@@ -2737,10 +2750,32 @@ using namespace metal_internal;
 		
 		auto internal_state = to_internal(swapchain);
 		
-		commandlist.presents.push_back(internal_state->view.get());
+		CA::MetalDrawable* drawable = internal_state->layer->nextDrawable();
+		while (drawable == nullptr)
+		{
+			dispatch_semaphore_wait(internal_state->sema, ~0ull);
+			drawable = internal_state->layer->nextDrawable();
+		}
+		internal_state->current_drawable = NS::TransferPtr(drawable->retain());
+		internal_state->current_texture = NS::TransferPtr(drawable->texture()->retain());
 		
-		MTL::RenderPassDescriptor* renderpass_descriptor = internal_state->view->currentRenderPassDescriptor();
-		commandlist.render_encoder = commandlist.commandbuffer->renderCommandEncoder(renderpass_descriptor);
+		commandlist.presents.push_back(std::make_pair(internal_state->current_drawable, internal_state->sema));
+		
+		NS::SharedPtr<MTL::RenderPassDescriptor> descriptor = NS::TransferPtr(MTL::RenderPassDescriptor::alloc()->init());
+		NS::SharedPtr<MTL::RenderPassColorAttachmentDescriptor> color_attachment_descriptor = NS::TransferPtr(MTL::RenderPassColorAttachmentDescriptor::alloc()->init());
+		
+		CGSize size = internal_state->layer->drawableSize();
+		descriptor->setRenderTargetWidth(size.width);
+		descriptor->setRenderTargetHeight(size.height);
+		descriptor->setDefaultRasterSampleCount(1);
+		
+		color_attachment_descriptor->setTexture(internal_state->current_drawable->texture());
+		color_attachment_descriptor->setClearColor(MTL::ClearColor::Make(swapchain->desc.clear_color[0], swapchain->desc.clear_color[1], swapchain->desc.clear_color[2], swapchain->desc.clear_color[3]));
+		color_attachment_descriptor->setLoadAction(MTL::LoadActionClear);
+		color_attachment_descriptor->setStoreAction(MTL::StoreActionStore);
+		descriptor->colorAttachments()->setObject(color_attachment_descriptor.get(), 0);
+		
+		commandlist.render_encoder = commandlist.commandbuffer->renderCommandEncoder(descriptor.get());
 		commandlist.render_encoder->barrierAfterQueueStages(MTL::StageAll, MTL::StageAll);
 		commandlist.dirty_vb = true;
 		commandlist.dirty_root = true;
@@ -2750,7 +2785,6 @@ using namespace metal_internal;
 		commandlist.dirty_viewport = true;
 		commandlist.dirty_pso = true;
 		
-		CGSize size = internal_state->view->drawableSize();
 		commandlist.render_width = size.width;
 		commandlist.render_height = size.height;
 		

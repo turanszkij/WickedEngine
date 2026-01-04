@@ -104,19 +104,8 @@ namespace wi::input
 #endif // SDL2
 
 #ifdef __APPLE__
-	static const int cursor_table_original[] = {
-	   0,
-	   0,
-	   0,
-	   0,
-	   0,
-	   0,
-	   0,
-	   0,
-	   0,
-	   0,
-   };
-   static int cursor_table[arraysize(cursor_table_original)] = {};
+	static void* cursor_table_original[CURSOR_COUNT] = {};
+	static void* cursor_table[arraysize(cursor_table_original)] = {};
 #endif // __APPLE__
 
 	const KeyboardState& GetKeyboardState() { return keyboard; }
@@ -166,6 +155,10 @@ namespace wi::input
 #ifdef PLATFORM_PS5
 		wi::input::ps5::Initialize();
 #endif // PLATFORM_PS5
+		
+#ifdef __APPLE__
+		wi::apple::CursorInit(cursor_table_original);
+#endif // __APPLE__
 
 		for (int i = 0; i < arraysize(cursor_table); ++i)
 		{
@@ -434,13 +427,13 @@ namespace wi::input
 		}
 
 		// Cursor update:
-		if(cursor_next != cursor_current || cursor_next != CURSOR_DEFAULT)
+		if (cursor_next != cursor_current || cursor_next != CURSOR_DEFAULT)
 		{
 #ifdef PLATFORM_WINDOWS_DESKTOP
 			::SetCursor(cursor_table[cursor_next]);
-#endif // PLATFORM_WINDOWS_DESKTOP
-
-#ifdef SDL2
+#elif defined(__APPLE__)
+			wi::apple::CursorSet(cursor_table[cursor_next]);
+#elif defined(SDL2)
 			SDL_SetCursor(cursor_table[cursor_next] ? cursor_table[cursor_next] : cursor_table[CURSOR_DEFAULT]);
 #endif // SDL2
 
@@ -1014,6 +1007,8 @@ namespace wi::input
 		{
 			while (ShowCursor(true) < 0) {};
 		}
+#elif defined(__APPLE__)
+		wi::apple::CursorHide(value);
 #elif defined(SDL2)
 		SDL_SetRelativeMouseMode(value ? SDL_TRUE : SDL_FALSE);
 #endif // _WIN32

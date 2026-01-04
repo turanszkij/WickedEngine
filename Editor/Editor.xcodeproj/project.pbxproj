@@ -61,7 +61,7 @@
 		1E73E7102F0510A90090D1DA /* MaterialWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E69D2F0510A90090D1DA /* MaterialWindow.cpp */; };
 		1E73E7112F0510A90090D1DA /* ObjectWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6A92F0510A90090D1DA /* ObjectWindow.cpp */; };
 		1E73E7122F0510A90090D1DA /* HumanoidWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6892F0510A90090D1DA /* HumanoidWindow.cpp */; };
-		1E73E7142F0510C10090D1DA /* main_MacOS.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E7132F0510B40090D1DA /* main_MacOS.cpp */; };
+		1E73E7142F0510C10090D1DA /* main_MacOS.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E7132F0510B40090D1DA /* main_MacOS.mm */; };
 		1E73E7392F0513710090D1DA /* libWickedEngine.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E73E7382F0513620090D1DA /* libWickedEngine.a */; };
 		1E73E74E2F053DAB0090D1DA /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E73E74D2F053DAB0090D1DA /* AppKit.framework */; };
 		1E73E7502F053DB00090D1DA /* ApplicationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E73E74F2F053DB00090D1DA /* ApplicationServices.framework */; };
@@ -223,7 +223,7 @@
 		1E73E6D52F0510A90090D1DA /* wicked.ico */ = {isa = PBXFileReference; lastKnownFileType = image.ico; path = wicked.ico; sourceTree = "<group>"; };
 		1E73E6D62F0510A90090D1DA /* xatlas.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = xatlas.h; sourceTree = "<group>"; };
 		1E73E6D72F0510A90090D1DA /* xatlas.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = xatlas.cpp; sourceTree = "<group>"; };
-		1E73E7132F0510B40090D1DA /* main_MacOS.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main_MacOS.cpp; sourceTree = "<group>"; };
+		1E73E7132F0510B40090D1DA /* main_MacOS.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main_MacOS.mm; sourceTree = "<group>"; };
 		1E73E7312F0513620090D1DA /* WickedEngine.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = WickedEngine.xcodeproj; path = ../WickedEngine/WickedEngine.xcodeproj; sourceTree = SOURCE_ROOT; };
 		1E73E74D2F053DAB0090D1DA /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
 		1E73E74F2F053DB00090D1DA /* ApplicationServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ApplicationServices.framework; path = System/Library/Frameworks/ApplicationServices.framework; sourceTree = SDKROOT; };
@@ -252,7 +252,7 @@
 		1E73E6392F05105A0090D1DA = {
 			isa = PBXGroup;
 			children = (
-				1E73E7132F0510B40090D1DA /* main_MacOS.cpp */,
+				1E73E7132F0510B40090D1DA /* main_MacOS.mm */,
 				1E73E64C2F0510A90090D1DA /* AnimationWindow.h */,
 				1E73E64D2F0510A90090D1DA /* AnimationWindow.cpp */,
 				1E73E64E2F0510A90090D1DA /* ArmatureWindow.h */,
@@ -550,7 +550,7 @@
 				1E73E7032F0510A90090D1DA /* ContentBrowserWindow.cpp in Sources */,
 				1E73E7042F0510A90090D1DA /* ProjectCreatorWindow.cpp in Sources */,
 				1E73E7052F0510A90090D1DA /* MeshWindow.cpp in Sources */,
-				1E73E7142F0510C10090D1DA /* main_MacOS.cpp in Sources */,
+				1E73E7142F0510C10090D1DA /* main_MacOS.mm in Sources */,
 				1E73E7062F0510A90090D1DA /* SplineWindow.cpp in Sources */,
 				1E73E7072F0510A90090D1DA /* ModelImporter_FBX.cpp in Sources */,
 				1E73E7082F0510A90090D1DA /* Editor.cpp in Sources */,

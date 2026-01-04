@@ -77,7 +77,7 @@ namespace wi::graphics
 			bool dirty_pso = false;
 			bool dirty_cs = false;
 			const Shader* active_cs = nullptr;
-			wi::vector<MTK::View*> presents;
+			wi::vector<std::pair<NS::SharedPtr<CA::MetalDrawable>, dispatch_semaphore_t>> presents;
 			MTL::RenderCommandEncoder* render_encoder = nullptr;
 			MTL::ComputeCommandEncoder* compute_encoder = nullptr;
 			MTL::BlitCommandEncoder* blit_encoder = nullptr;
