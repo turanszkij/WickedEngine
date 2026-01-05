@@ -12,6 +12,7 @@ void* GetViewFromWindow(void* window);
 XMUINT2 GetWindowSize(void* handle);
 float GetDPIForWindow(void* handle);
 XMFLOAT2 GetMousePositionInWindow(void* handle);
+void SetMousePositionInWindow(void* window, XMFLOAT2 value);
 int MessageBox(const char* title, const char* message, const char* buttons = nullptr);
 std::string GetExecutablePath();
 void CursorInit(void** cursor_table);

@@ -104,6 +104,12 @@ int main( int argc, char* argv[] )
 							wi::input::AddMouseScrollEvent(amount);
 						}
 						break;
+						case NSEventTypeMouseMoved:
+						case NSEventTypeLeftMouseDragged:
+						case NSEventTypeRightMouseDragged:
+						case NSEventTypeOtherMouseDragged:
+							wi::input::AddMouseMoveDeltaEvent(XMFLOAT2(event.deltaX, event.deltaY));
+							break;
 						default:
 							[NSApp sendEvent:event];
 							break;

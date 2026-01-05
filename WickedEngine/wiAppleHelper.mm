@@ -97,33 +97,50 @@ XMFLOAT2 GetMousePositionInWindow(void* handle)
 	NSView* view = (__bridge NSView*)GetViewFromWindow(handle);
 	if (!window || !view)
 		return XMFLOAT2(-1.f, -1.f);
-
 	NSPoint mouseLocScreen = [NSEvent mouseLocation];
 	NSPoint mouseInWindow = [window convertRectFromScreen:NSMakeRect(mouseLocScreen.x, mouseLocScreen.y, 0, 0)].origin;
 	NSPoint mouseInView = [view convertPoint:mouseInWindow fromView:nil];
-
-	// Flip Y
 	CGFloat heightPoints = view.bounds.size.height;
 	mouseInView.y = heightPoints - mouseInView.y;
-
-	// Use the actual drawable scale (most accurate)
 	CGFloat scale = view.window.backingScaleFactor;
-
 	return XMFLOAT2((float)(mouseInView.x * scale), (float)(mouseInView.y * scale));
+}
+void SetMousePositionInWindow(void* handle, XMFLOAT2 value)
+{
+	NSWindow* window = (__bridge NSWindow*)handle;
+	if (!window)
+		return;
+	NSView* view = window.contentView;
+	if (!view)
+		return;
+	CGFloat scale = view.window.backingScaleFactor;
+	CGFloat pixelX = value.x;
+	CGFloat pixelY = value.y;
+	CGFloat pointX = pixelX / scale;
+	CGFloat pointY = pixelY / scale;
+	CGFloat heightPoints = view.bounds.size.height;
+	CGFloat flippedY = heightPoints - pointY;
+	NSPoint localPointInView = NSMakePoint(pointX, flippedY);
+	NSPoint pointInWindow = [view convertPoint:localPointInView toView:nil];
+	NSPoint pointOnScreen = [window convertPointToScreen:pointInWindow];
+	NSScreen* screen = window.screen;
+	CGFloat screenHeight = screen.frame.size.height;
+	pointOnScreen.y = screenHeight - pointOnScreen.y;
+	CGWarpMouseCursorPosition(pointOnScreen);
 }
 
 int MessageBox(const char* title, const char* message, const char* buttons)
 {
 	@autoreleasepool {
 		NSAlert *alert = [[NSAlert alloc] init];
-		[alert setMessageText:@(title)];          // Title
-		[alert setInformativeText:@(message)];    // Body text
+		[alert setMessageText:@(title)];
+		[alert setInformativeText:@(message)];
 		[alert setAlertStyle:NSAlertStyleInformational];
 		
 		if (buttons == nullptr)
 		{
 			[alert addButtonWithTitle:@"OK"];
-			[alert runModal];  // Blocks until user dismisses
+			[alert runModal];
 		}
 		else if (strcmp(buttons, "YesNo") == 0)
 		{
@@ -211,12 +228,18 @@ void CursorSet(void* cursor)
 }
 void CursorHide(bool hide)
 {
+	static bool hidden = false;
 	if (hide)
 	{
-		[NSCursor hide];
+		if (!hidden)
+		{
+			hidden = true;
+			[NSCursor hide];
+		}
 	}
 	else
 	{
+		hidden = false;
 		[NSCursor unhide];
 	}
 }

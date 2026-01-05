@@ -72,6 +72,7 @@ namespace wi::input
 	CURSOR cursor_current = CURSOR_COUNT; // something that's not default, because at least once code should change it to default
 	CURSOR cursor_next = CURSOR_DEFAULT;
 	std::deque<float> mouse_scroll_events;
+	std::deque<XMFLOAT2> mouse_move_events;
 
 #ifdef _WIN32
 	static const HCURSOR cursor_table_original[] = {
@@ -215,6 +216,13 @@ namespace wi::input
 		wi::input::sdlinput::GetMouseState(&mouse);
 		wi::input::sdlinput::GetKeyboardState(&keyboard);
 #endif
+		
+		for (auto& x : mouse_move_events)
+		{
+			mouse.delta_position.x += x.x;
+			mouse.delta_position.y += x.y;
+		}
+		mouse_move_events.clear();
 		
 		for (auto& x : mouse_scroll_events)
 		{
@@ -1000,7 +1008,7 @@ namespace wi::input
 		ClientToScreen(hWnd, &p);
 		SetCursorPos(p.x, p.y);
 #elif defined(__APPLE__)
-		
+		wi::apple::SetMousePositionInWindow(window, XMFLOAT2(float(posX), float(posY)));
 #elif defined(SDL2)
 		SDL_WarpMouseInWindow(window, posX, posY);
 #endif // SDL2
@@ -1575,5 +1583,10 @@ namespace wi::input
 	void AddMouseScrollEvent(float value)
 	{
 		mouse_scroll_events.push_back(value);
+	}
+
+	void AddMouseMoveDeltaEvent(XMFLOAT2 value)
+	{
+		mouse_move_events.push_back(value);
 	}
 }

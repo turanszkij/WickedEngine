@@ -297,5 +297,6 @@ namespace wi::input
 
 
 	void AddMouseScrollEvent(float value);
+	void AddMouseMoveDeltaEvent(XMFLOAT2 value);
 };
 
