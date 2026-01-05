@@ -15,7 +15,108 @@ namespace metal_internal
 {
 	static constexpr uint64_t bindless_resource_capacity = 500000;
 	static constexpr uint64_t bindless_sampler_capacity = 256;
+	static constexpr uint64_t blas_capacity = 10000;
 
+	constexpr MTL::AttributeFormat _ConvertAttributeFormat(Format value)
+	{
+		switch (value) {
+			case Format::R32G32B32A32_FLOAT:
+				return MTL::AttributeFormatFloat4;
+			case Format::R32G32B32_FLOAT:
+				return MTL::AttributeFormatFloat3;
+			case Format::R32G32_FLOAT:
+				return MTL::AttributeFormatFloat2;
+			case Format::R32_FLOAT:
+				return MTL::AttributeFormatFloat;
+				
+			case Format::R16G16B16A16_FLOAT:
+				return MTL::AttributeFormatHalf4;
+			case Format::R16G16_FLOAT:
+				return MTL::AttributeFormatHalf2;
+			case Format::R16_FLOAT:
+				return MTL::AttributeFormatHalf;
+				
+			case Format::R32G32B32A32_UINT:
+				return MTL::AttributeFormatUInt4;
+			case Format::R32G32B32_UINT:
+				return MTL::AttributeFormatUInt3;
+			case Format::R32G32_UINT:
+				return MTL::AttributeFormatUInt2;
+			case Format::R32_UINT:
+				return MTL::AttributeFormatUInt;
+				
+			case Format::R32G32B32A32_SINT:
+				return MTL::AttributeFormatInt4;
+			case Format::R32G32B32_SINT:
+				return MTL::AttributeFormatInt3;
+			case Format::R32G32_SINT:
+				return MTL::AttributeFormatInt2;
+			case Format::R32_SINT:
+				return MTL::AttributeFormatInt;
+				
+			case Format::R16G16B16A16_UINT:
+				return MTL::AttributeFormatUShort4;
+			case Format::R16G16_UINT:
+				return MTL::AttributeFormatUShort2;
+			case Format::R16_UINT:
+				return MTL::AttributeFormatUShort;
+				
+			case Format::R16G16B16A16_SINT:
+				return MTL::AttributeFormatShort4;
+			case Format::R16G16_SINT:
+				return MTL::AttributeFormatShort2;
+			case Format::R16_SINT:
+				return MTL::AttributeFormatShort;
+				
+			case Format::R16G16B16A16_UNORM:
+				return MTL::AttributeFormatUShort4Normalized;
+			case Format::R16G16_UNORM:
+				return MTL::AttributeFormatUShort2Normalized;
+			case Format::R16_UNORM:
+				return MTL::AttributeFormatUShortNormalized;
+				
+			case Format::R16G16B16A16_SNORM:
+				return MTL::AttributeFormatShort4Normalized;
+			case Format::R16G16_SNORM:
+				return MTL::AttributeFormatShort2Normalized;
+			case Format::R16_SNORM:
+				return MTL::AttributeFormatShortNormalized;
+				
+			case Format::R8G8B8A8_UINT:
+				return MTL::AttributeFormatUChar4;
+			case Format::R8G8_UINT:
+				return MTL::AttributeFormatUChar2;
+			case Format::R8_UINT:
+				return MTL::AttributeFormatUChar;
+				
+			case Format::B8G8R8A8_UNORM:
+				return MTL::AttributeFormatUChar4Normalized_BGRA;
+			case Format::R8G8B8A8_UNORM:
+				return MTL::AttributeFormatUChar4Normalized;
+			case Format::R8G8_UNORM:
+				return MTL::AttributeFormatUChar2Normalized;
+			case Format::R8_UNORM:
+				return MTL::AttributeFormatUCharNormalized;
+				
+			case Format::R8G8B8A8_SNORM:
+				return MTL::AttributeFormatChar4Normalized;
+			case Format::R8G8_SNORM:
+				return MTL::AttributeFormatChar2Normalized;
+			case Format::R8_SNORM:
+				return MTL::AttributeFormatCharNormalized;
+				
+			case Format::R10G10B10A2_UNORM:
+				return MTL::AttributeFormatUInt1010102Normalized;
+			case Format::R11G11B10_FLOAT:
+				return MTL::AttributeFormatFloatRG11B10;
+			case Format::R9G9B9E5_SHAREDEXP:
+				return MTL::AttributeFormatFloatRGB9E5;
+				
+			default:
+				break;
+		}
+		return MTL::AttributeFormatInvalid;
+	}
 	constexpr MTL::VertexFormat _ConvertVertexFormat(Format value)
 	{
 		switch (value)
@@ -665,6 +766,13 @@ namespace metal_internal
 	struct BVH_Metal
 	{
 		wi::allocator::shared_ptr<GraphicsDevice_Metal::AllocationHandler> allocationhandler;
+		NS::SharedPtr<MTL::AccelerationStructure> acceleration_structure;
+		NS::SharedPtr<MTL::Buffer> scratch;
+		NS::SharedPtr<MTL::Buffer> tlas_header;
+		NS::SharedPtr<MTL::Buffer> tlas_instance_contributions;
+		int blas_index = -1;
+		int descriptor_index = -1;
+		IRDescriptorTableEntry entry = {};
 
 		~BVH_Metal()
 		{
@@ -672,6 +780,16 @@ namespace metal_internal
 				return;
 			allocationhandler->destroylocker.lock();
 			uint64_t framecount = allocationhandler->framecount;
+			allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(acceleration_structure), framecount));
+			allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(scratch), framecount));
+			if (tlas_header.get() != nullptr)
+				allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(tlas_header), framecount));
+			if (tlas_instance_contributions.get() != nullptr)
+				allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(tlas_instance_contributions), framecount));
+			if (blas_index >= 0)
+				allocationhandler->unregister_blas(blas_index);
+			if (descriptor_index >= 0)
+				allocationhandler->destroyer_bindless_res.push_back(std::make_pair(descriptor_index, framecount));
 			allocationhandler->destroylocker.unlock();
 		}
 	};
@@ -744,6 +862,109 @@ namespace metal_internal
 	{
 		return static_cast<typename MetalType<T>::type*>(res->internal_state.get());
 	}
+
+	NS::SharedPtr<MTL::AccelerationStructureDescriptor> acceleration_structure_descriptor(const RaytracingAccelerationStructureDesc* desc, GraphicsDevice_Metal::AllocationHandler* allocationhandler)
+	{
+		NS::SharedPtr<MTL::AccelerationStructureDescriptor> descriptor = NS::TransferPtr(MTL::AccelerationStructureDescriptor::alloc()->init());
+		NS::SharedPtr<NS::Array> object_array;
+		wi::vector<NS::Object*> objects;
+		wi::vector<NS::SharedPtr<MTL::AccelerationStructureGeometryDescriptor>> geometry_descs;
+		
+		if (desc->type == RaytracingAccelerationStructureDesc::Type::TOPLEVEL)
+		{
+			auto instance_descriptor = NS::TransferPtr(MTL::InstanceAccelerationStructureDescriptor::alloc()->init());
+			descriptor = instance_descriptor;
+			
+			instance_descriptor->setInstanceCount(desc->top_level.count);
+			auto buffer_internal = to_internal(&desc->top_level.instance_buffer);
+			instance_descriptor->setInstanceDescriptorBufferOffset(desc->top_level.offset);
+			instance_descriptor->setInstanceDescriptorBuffer(buffer_internal->buffer.get());
+			instance_descriptor->setInstanceDescriptorStride(sizeof(MTL::AccelerationStructureInstanceDescriptor));
+			instance_descriptor->setInstanceDescriptorType(MTL::AccelerationStructureInstanceDescriptorTypeDefault);
+			instance_descriptor->setInstancedAccelerationStructures(allocationhandler->get_blas_nsarray().get());
+		}
+		else
+		{
+			auto primitive_descriptor = NS::TransferPtr(MTL::PrimitiveAccelerationStructureDescriptor::alloc()->init());
+			descriptor = primitive_descriptor;
+			
+			for (auto& x : desc->bottom_level.geometries)
+			{
+				if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::Type::TRIANGLES)
+				{
+					auto geo = NS::TransferPtr(MTL::AccelerationStructureTriangleGeometryDescriptor::alloc()->init());
+					geometry_descs.push_back(geo);
+					geo->setOpaque(x.flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE);
+					auto ib_internal = to_internal(&x.triangles.index_buffer);
+					auto vb_internal = to_internal(&x.triangles.vertex_buffer);
+					geo->setIndexType(x.triangles.index_format == IndexBufferFormat::UINT32 ? MTL::IndexTypeUInt32 : MTL::IndexTypeUInt16);
+					geo->setIndexBuffer(ib_internal->buffer.get());
+					uint64_t index_offset = x.triangles.index_offset;
+					if (x.triangles.index_format == IndexBufferFormat::UINT32)
+					{
+						index_offset *= sizeof(uint32_t);
+					}
+					else
+					{
+						index_offset *= sizeof(uint16_t);
+					}
+					geo->setIndexBufferOffset(index_offset);
+					geo->setVertexFormat(_ConvertAttributeFormat(x.triangles.vertex_format));
+					geo->setVertexBuffer(vb_internal->buffer.get());
+					geo->setVertexBufferOffset(x.triangles.vertex_byte_offset);
+					geo->setVertexStride(x.triangles.vertex_stride);
+					geo->setTriangleCount(x.triangles.index_count / 3);
+					if (x.triangles.transform_3x4_buffer.IsValid())
+					{
+						auto transform_internal = to_internal(&x.triangles.transform_3x4_buffer);
+						geo->setTransformationMatrixBuffer(transform_internal->buffer.get());
+						geo->setTransformationMatrixBufferOffset(x.triangles.transform_3x4_buffer_offset);
+						geo->setTransformationMatrixLayout(MTL::MatrixLayoutRowMajor); // I think this mode matches DX12 and Vulkan but should be tested
+					}
+				}
+				else
+				{
+					auto geo = NS::TransferPtr(MTL::AccelerationStructureBoundingBoxGeometryDescriptor::alloc()->init());
+					geometry_descs.push_back(geo);
+					geo->setOpaque(x.flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE);
+					geo->setBoundingBoxCount(x.aabbs.count);
+					auto buffer_internal = to_internal(&x.aabbs.aabb_buffer);
+					geo->setBoundingBoxBuffer(buffer_internal->buffer.get());
+					geo->setBoundingBoxBufferOffset(x.aabbs.offset);
+					geo->setBoundingBoxStride(x.aabbs.stride);
+				}
+			}
+			
+			objects.reserve(geometry_descs.size());
+			for (auto& x : geometry_descs)
+			{
+				objects.push_back(x.get());
+			}
+			object_array = NS::TransferPtr(NS::Array::alloc()->init(objects.data(), objects.size()));
+			primitive_descriptor->setGeometryDescriptors(object_array.get());
+		}
+		
+		MTL::AccelerationStructureUsage usage = MTL::AccelerationStructureUsageNone;
+		if (desc->flags & RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE)
+		{
+			usage |= MTL::AccelerationStructureUsageRefit;
+		}
+		if (desc->flags & RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD)
+		{
+			usage |= MTL::AccelerationStructureUsagePreferFastBuild;
+		}
+		if (desc->flags & RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_TRACE)
+		{
+			usage |= MTL::AccelerationStructureUsagePreferFastIntersection;
+		}
+		if (desc->flags & RaytracingAccelerationStructureDesc::FLAG_MINIMIZE_MEMORY)
+		{
+			usage |= MTL::AccelerationStructureUsageMinimizeMemory;
+		}
+		descriptor->setUsage(usage);
+		
+		return descriptor;
+	}
 }
 using namespace metal_internal;
 
@@ -805,7 +1026,8 @@ using namespace metal_internal;
 					}
 					else if (commandlist.binding_table.SRV[i].IsAccelerationStructure())
 					{
-						// TODO
+						auto internal_state = to_internal<RaytracingAccelerationStructure>(&commandlist.binding_table.SRV[i]);
+						resource_table.srvs[i] = internal_state->entry;
 					}
 				}
 				for (uint32_t i = 0; i < arraysize(commandlist.binding_table.UAV); ++i)
@@ -1224,17 +1446,23 @@ using namespace metal_internal;
 		commandqueue = NS::TransferPtr(device->newCommandQueue());
 		allocationhandler = wi::allocator::make_shared_single<AllocationHandler>();
 		
-		if (device->hasUnifiedMemory())
-		{
-			capabilities |= GraphicsDeviceCapability::CACHE_COHERENT_UMA;
-		}
-		
 		capabilities |= GraphicsDeviceCapability::SAMPLER_MINMAX;
 		capabilities |= GraphicsDeviceCapability::ALIASING_GENERIC;
 		capabilities |= GraphicsDeviceCapability::DEPTH_BOUNDS_TEST;
 		capabilities |= GraphicsDeviceCapability::UAV_LOAD_FORMAT_COMMON;
 		capabilities |= GraphicsDeviceCapability::UAV_LOAD_FORMAT_R11G11B10_FLOAT;
 		capabilities |= GraphicsDeviceCapability::COPY_BETWEEN_DIFFERENT_IMAGE_ASPECTS_NOT_SUPPORTED;
+		
+		if (device->hasUnifiedMemory())
+		{
+			capabilities |= GraphicsDeviceCapability::CACHE_COHERENT_UMA;
+		}
+		if (device->supportsRaytracing())
+		{
+			// TODO: everything in place, now debug and make it work
+			//capabilities |= GraphicsDeviceCapability::RAYTRACING;
+			//TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = sizeof(MTL::AccelerationStructureInstanceDescriptor);
+		}
 		
 		descriptor_heap_res = NS::TransferPtr(device->newBuffer(bindless_resource_capacity * sizeof(IRDescriptorTableEntry), MTL::ResourceStorageModeShared | MTL::ResourceHazardTrackingModeUntracked));
 		descriptor_heap_res->setLabel(NS::TransferPtr(NS::String::alloc()->init("descriptor_heap_res", NS::UTF8StringEncoding)).get());
@@ -2245,14 +2473,83 @@ using namespace metal_internal;
 	}
 	bool GraphicsDevice_Metal::CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* desc, RaytracingAccelerationStructure* bvh) const
 	{
-		//auto internal_state = wi::allocator::make_shared<BVH_Metal>();
-		//internal_state->allocationhandler = allocationhandler;
-		//bvh->internal_state = internal_state;
-		//bvh->type = GPUResource::Type::RAYTRACING_ACCELERATION_STRUCTURE;
-		//bvh->desc = *desc;
-		//bvh->size = 0;
+		// First ensure that global TLAS-BLAS indexing structures are created:
+		{
+			std::scoped_lock lck(allocationhandler->destroylocker);
+			
+			if (allocationhandler->dummyblas.get() == nullptr)
+			{
+				// Need to create dummy blas because indexing table can't have empty slots:
+				NS::SharedPtr<MTL::PrimitiveAccelerationStructureDescriptor> emptydesc = NS::TransferPtr(MTL::PrimitiveAccelerationStructureDescriptor::alloc()->init());
+				NS::SharedPtr<MTL::AccelerationStructureBoundingBoxGeometryDescriptor> geo = NS::TransferPtr(MTL::AccelerationStructureBoundingBoxGeometryDescriptor::alloc()->init());
+				MTL::AxisAlignedBoundingBox box = {};
+				allocationhandler->dummyblasbuffer = NS::TransferPtr(device->newBuffer(sizeof(box), MTL::ResourceStorageModeShared));
+				std::memcpy(allocationhandler->dummyblasbuffer->contents(), &box, sizeof(box));
+				geo->setBoundingBoxBuffer(allocationhandler->dummyblasbuffer.get());
+				geo->setBoundingBoxStride(sizeof(box));
+				geo->setBoundingBoxCount(1);
+				NS::Object* objects[] = { geo.get() };
+				NS::SharedPtr<NS::Array> array = NS::TransferPtr(NS::Array::alloc()->init(objects, arraysize(objects)));
+				emptydesc->setGeometryDescriptors(array.get());
+				MTL::AccelerationStructureSizes size = device->accelerationStructureSizes(emptydesc.get());
+				allocationhandler->dummyblas = NS::TransferPtr(device->newAccelerationStructure(size.accelerationStructureSize));
+				NS::SharedPtr<MTL::Buffer> scratch = NS::TransferPtr(device->newBuffer(size.buildScratchBufferSize, MTL::ResourceStorageModePrivate));
+				MTL::CommandBuffer* commandbuffer = commandqueue->commandBuffer();
+				allocationhandler->residency_set->addAllocation(allocationhandler->dummyblasbuffer.get());
+				allocationhandler->residency_set->addAllocation(allocationhandler->dummyblas.get());
+				allocationhandler->residency_set->addAllocation(scratch.get());
+				allocationhandler->residency_set->commit();
+				commandbuffer->useResidencySet(allocationhandler->residency_set.get());
+				MTL::AccelerationStructureCommandEncoder* encoder = commandbuffer->accelerationStructureCommandEncoder();
+				encoder->buildAccelerationStructure(allocationhandler->dummyblas.get(), emptydesc.get(), scratch.get(), 0);
+				encoder->endEncoding();
+				commandbuffer->commit();
+				commandbuffer->waitUntilCompleted();
+				
+				allocationhandler->blas_array.reserve(blas_capacity);
+				allocationhandler->free_blas_indices.reserve(blas_capacity);
+				for (int i = 0; i < blas_capacity; ++i)
+				{
+					allocationhandler->blas_array.push_back(allocationhandler->dummyblas.get());
+					allocationhandler->free_blas_indices.push_back((int)blas_capacity - i - 1);
+				}
+				allocationhandler->update_blas_nsarray();
+			}
+		}
+		
+		auto internal_state = wi::allocator::make_shared<BVH_Metal>();
+		internal_state->allocationhandler = allocationhandler;
+		bvh->internal_state = internal_state;
+		bvh->type = GPUResource::Type::RAYTRACING_ACCELERATION_STRUCTURE;
+		bvh->desc = *desc;
+		bvh->size = 0;
+		
+		NS::SharedPtr<MTL::AccelerationStructureDescriptor> descriptor = acceleration_structure_descriptor(desc, allocationhandler);
+		
+		MTL::AccelerationStructureSizes size = device->accelerationStructureSizes(descriptor.get());
+		internal_state->acceleration_structure = NS::TransferPtr(device->newAccelerationStructure(size.accelerationStructureSize));
+		internal_state->scratch = NS::TransferPtr(device->newBuffer(std::max(size.buildScratchBufferSize, size.refitScratchBufferSize), MTL::ResourceStorageModePrivate | MTL::ResourceHazardTrackingModeUntracked));
 
-		return false;
+		allocationhandler->make_resident(internal_state->acceleration_structure.get());
+		allocationhandler->make_resident(internal_state->scratch.get());
+		
+		if (desc->type == RaytracingAccelerationStructureDesc::Type::TOPLEVEL)
+		{
+			internal_state->tlas_header = NS::TransferPtr(device->newBuffer(sizeof(IRRaytracingAccelerationStructureGPUHeader), MTL::ResourceStorageModeShared));
+			internal_state->tlas_instance_contributions = NS::TransferPtr(device->newBuffer(sizeof(uint32_t) * desc->top_level.count, MTL::ResourceStorageModeShared));
+			allocationhandler->make_resident(internal_state->tlas_header.get());
+			allocationhandler->make_resident(internal_state->tlas_instance_contributions.get());
+			wi::vector<uint32_t> instance_contributions(desc->top_level.count); // TODO: how to make this data available here???
+			IRRaytracingSetAccelerationStructure((uint8_t*)internal_state->tlas_header->contents(), internal_state->acceleration_structure->gpuResourceID(), (uint8_t*)internal_state->tlas_instance_contributions->contents(), internal_state->tlas_instance_contributions->gpuAddress(), instance_contributions.data(), desc->top_level.count);
+			IRDescriptorTableSetAccelerationStructure(&internal_state->entry, internal_state->tlas_header->gpuAddress());
+			internal_state->descriptor_index = allocationhandler->allocate_bindless(internal_state->entry);
+		}
+		else
+		{
+			internal_state->blas_index = allocationhandler->register_blas(internal_state->acceleration_structure.get());
+		}
+		
+		return internal_state->acceleration_structure.get() != nullptr;
 	}
 	bool GraphicsDevice_Metal::CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* desc, RaytracingPipelineState* rtpso) const
 	{
@@ -2609,6 +2906,34 @@ using namespace metal_internal;
 	}
 	void GraphicsDevice_Metal::WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) const
 	{
+		MTL::AccelerationStructureInstanceDescriptor descriptor = {};
+		descriptor.options = MTL::AccelerationStructureInstanceOptionNone;
+		if (instance->flags & RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_CULL_DISABLE)
+		{
+			descriptor.options |= MTL::AccelerationStructureInstanceOptionDisableTriangleCulling;
+		}
+		if (instance->flags & RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE)
+		{
+			descriptor.options |= MTL::AccelerationStructureInstanceOptionTriangleFrontFacingWindingCounterClockwise;
+		}
+		if (instance->flags & RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_FORCE_OPAQUE)
+		{
+			descriptor.options |= MTL::AccelerationStructureInstanceOptionOpaque;
+		}
+		if (instance->flags & RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_FORCE_NON_OPAQUE)
+		{
+			descriptor.options |= MTL::AccelerationStructureInstanceOptionNonOpaque;
+		}
+		descriptor.mask = instance->instance_mask;
+		descriptor.intersectionFunctionTableOffset = 0;
+		if (instance->bottom_level != nullptr)
+		{
+			auto blas_internal = to_internal<RaytracingAccelerationStructure>(instance->bottom_level);
+			assert(blas_internal->blas_index >= 0);
+			descriptor.accelerationStructureIndex = (uint32_t)blas_internal->blas_index;
+		}
+		std::memcpy(&descriptor.transformationMatrix, instance->transform, sizeof(descriptor.transformationMatrix));
+		std::memcpy(dest, &descriptor, sizeof(descriptor)); // force memcpy into potentially write combined cache memory
 	}
 	void GraphicsDevice_Metal::WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) const
 	{
@@ -2632,7 +2957,7 @@ using namespace metal_internal;
 		else if (pResource->IsAccelerationStructure())
 		{
 			auto internal_state = to_internal<RaytracingAccelerationStructure>(pResource);
-			// TODO
+			internal_state->acceleration_structure->setLabel(str.get());
 		}
 	}
 	void GraphicsDevice_Metal::SetName(Shader* shader, const char* name) const
@@ -2772,6 +3097,8 @@ using namespace metal_internal;
 
 	void GraphicsDevice_Metal::SparseUpdate(QUEUE_TYPE queue, const SparseUpdateCommand* commands, uint32_t command_count)
 	{
+		// Note: there is functionality missing here, we can't specify custom tile pool
+		//	Or maybe it could be done if placement heap was supported for sparse resource, but it is not supported on my computer
 		NS::SharedPtr<NS::AutoreleasePool> autorelease_pool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init());
 		MTL::CommandBuffer* commandbuffer = commandqueue->commandBufferWithUnretainedReferences();
 		MTL::ResourceStateCommandEncoder* encoder = commandbuffer->resourceStateCommandEncoder();
@@ -2809,6 +3136,7 @@ using namespace metal_internal;
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		CommandList_Metal& commandlist_wait_for = GetCommandList(wait_for);
 		assert(commandlist_wait_for.id < commandlist.id); // can't wait for future command list!
+		// TODO
 	}
 	void GraphicsDevice_Metal::RenderPassBegin(const SwapChain* swapchain, CommandList cmd)
 	{
@@ -3458,10 +3786,31 @@ using namespace metal_internal;
 		}
 	}
 	void GraphicsDevice_Metal::BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src)
-	{
+{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		commandlist.assert_noencoder();
+		commandlist.autorelease_start();
 		auto dst_internal = to_internal(dst);
-
+		MTL::AccelerationStructureCommandEncoder* encoder = commandlist.commandbuffer->accelerationStructureCommandEncoder();
+		
+		encoder->barrierAfterQueueStages(MTL::StageAll, MTL::StageAll);
+		
+		NS::SharedPtr<MTL::AccelerationStructureDescriptor> descriptor = acceleration_structure_descriptor(&dst->desc, allocationhandler);
+		
+		if (src != nullptr && (dst->desc.flags & RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE))
+		{
+			auto src_internal = to_internal(src);
+			encoder->refitAccelerationStructure(src_internal->acceleration_structure.get(), descriptor.get(), dst_internal->acceleration_structure.get(), dst_internal->scratch.get(), 0);
+		}
+		else
+		{
+			encoder->buildAccelerationStructure(dst_internal->acceleration_structure.get(), descriptor.get(), dst_internal->scratch.get(), 0);
+		}
+		
+		encoder->barrierAfterQueueStages(MTL::StageAll, MTL::StageAll);
+		
+		encoder->endEncoding();
+		commandlist.autorelease_end();
 	}
 	void GraphicsDevice_Metal::BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd)
 	{

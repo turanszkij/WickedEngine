@@ -463,11 +463,53 @@ namespace wi::graphics
 				std::scoped_lock locker(destroylocker);
 				residency_set->addAllocation(allocation);
 			}
+			void make_resident(const MTL::AccelerationStructure* allocation)
+			{
+				if (allocation == nullptr)
+					return;
+				std::scoped_lock locker(destroylocker);
+				residency_set->addAllocation(allocation);
+			}
 			void remove_resident(const MTL::Allocation* allocation)
 			{
 				if (allocation == nullptr)
 					return;
 				residency_set->removeAllocation(allocation);
+			}
+			
+			NS::SharedPtr<MTL::Buffer> dummyblasbuffer;
+			NS::SharedPtr<MTL::AccelerationStructure> dummyblas;
+			wi::vector<NS::Object*> blas_array;
+			NS::SharedPtr<NS::Array> blas_nsarray;
+			wi::vector<int> free_blas_indices;
+			NS::SharedPtr<NS::Array> get_blas_nsarray()
+			{
+				std::scoped_lock locker(destroylocker);
+				return blas_nsarray;
+			}
+			void update_blas_nsarray()
+			{
+				blas_nsarray = NS::TransferPtr(NS::Array::alloc()->init(blas_array.data(), blas_array.size()));
+			}
+			int register_blas(MTL::AccelerationStructure* blas)
+			{
+				std::scoped_lock locker(destroylocker);
+				if (free_blas_indices.empty())
+					return -1;
+				int index = free_blas_indices.back();
+				free_blas_indices.pop_back();
+				blas_array[index] = blas;
+				update_blas_nsarray();
+				return index;
+			}
+			void unregister_blas(int index)
+			{
+				if (index < 0)
+					return;
+				std::scoped_lock locker(destroylocker);
+				free_blas_indices.push_back(index);
+				blas_array[index] = dummyblas.get();
+				update_blas_nsarray();
 			}
 		};
 		wi::allocator::shared_ptr<AllocationHandler> allocationhandler;
