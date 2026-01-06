@@ -779,7 +779,7 @@ namespace metal_internal
 		NS::SharedPtr<MTL::Buffer> tlas_instance_count;
 		int tlas_descriptor_index = -1;
 		IRDescriptorTableEntry tlas_entry = {};
-		MTL::ResourceID blas_resourceid = {};
+		MTL::ResourceID resourceid = {};
 
 		~BVH_Metal()
 		{
@@ -2525,20 +2525,20 @@ using namespace metal_internal;
 		allocationhandler->make_resident(internal_state->acceleration_structure.get());
 		allocationhandler->make_resident(internal_state->scratch.get());
 		
+		internal_state->resourceid = internal_state->acceleration_structure->gpuResourceID();
+		
 		if (desc->type == RaytracingAccelerationStructureDesc::Type::TOPLEVEL)
 		{
 			internal_state->tlas_header = NS::TransferPtr(device->newBuffer(sizeof(IRRaytracingAccelerationStructureGPUHeader), MTL::ResourceStorageModeShared));
 			internal_state->tlas_instance_contributions = NS::TransferPtr(device->newBuffer(sizeof(uint32_t) * desc->top_level.count, MTL::ResourceStorageModeShared));
 			allocationhandler->make_resident(internal_state->tlas_header.get());
 			allocationhandler->make_resident(internal_state->tlas_instance_contributions.get());
-			wi::vector<uint32_t> instance_contributions(desc->top_level.count); // TODO: how to make this data available here???
-			IRRaytracingSetAccelerationStructure((uint8_t*)internal_state->tlas_header->contents(), internal_state->acceleration_structure->gpuResourceID(), (uint8_t*)internal_state->tlas_instance_contributions->contents(), internal_state->tlas_instance_contributions->gpuAddress(), instance_contributions.data(), desc->top_level.count);
+			wi::vector<uint32_t> instance_contributions(desc->top_level.count);
+			std::fill(instance_contributions.begin(), instance_contributions.end(), 0); // TODO: how to make this data available here???
+			IRRaytracingAccelerationStructureGPUHeader* header = (IRRaytracingAccelerationStructureGPUHeader*)internal_state->tlas_header->contents();
+			IRRaytracingSetAccelerationStructure((uint8_t*)header, internal_state->resourceid, (uint8_t*)internal_state->tlas_instance_contributions->contents(), internal_state->tlas_instance_contributions->gpuAddress(), instance_contributions.data(), desc->top_level.count);
 			IRDescriptorTableSetAccelerationStructure(&internal_state->tlas_entry, internal_state->tlas_header->gpuAddress());
 			internal_state->tlas_descriptor_index = allocationhandler->allocate_bindless(internal_state->tlas_entry);
-		}
-		else
-		{
-			internal_state->blas_resourceid = internal_state->acceleration_structure->gpuResourceID();
 		}
 		
 		return internal_state->acceleration_structure.get() != nullptr;
@@ -2925,7 +2925,7 @@ using namespace metal_internal;
 			descriptor.mask = instance->instance_mask;
 			descriptor.intersectionFunctionTableOffset = 0;
 			auto blas_internal = to_internal<RaytracingAccelerationStructure>(instance->bottom_level);
-			descriptor.accelerationStructureID = blas_internal->blas_resourceid;
+			descriptor.accelerationStructureID = blas_internal->resourceid;
 			descriptor.transformationMatrix.columns[0][0] = instance->transform[0][0];
 			descriptor.transformationMatrix.columns[0][1] = instance->transform[1][0];
 			descriptor.transformationMatrix.columns[0][2] = instance->transform[2][0];
@@ -3797,11 +3797,13 @@ using namespace metal_internal;
 		commandlist.assert_noencoder();
 		commandlist.autorelease_start();
 		auto dst_internal = to_internal(dst);
+		
+		// descriptor is recreated because buffer references might have changed since creation:
+		NS::SharedPtr<MTL::AccelerationStructureDescriptor> descriptor = acceleration_structure_descriptor(&dst->desc, dst_internal);
+		
 		MTL::AccelerationStructureCommandEncoder* encoder = commandlist.commandbuffer->accelerationStructureCommandEncoder();
 		
 		encoder->barrierAfterQueueStages(MTL::StageAll, MTL::StageAll);
-		
-		NS::SharedPtr<MTL::AccelerationStructureDescriptor> descriptor = acceleration_structure_descriptor(&dst->desc, dst_internal);
 		
 		if (src != nullptr && (dst->desc.flags & RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE))
 		{
