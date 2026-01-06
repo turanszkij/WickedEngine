@@ -449,7 +449,13 @@ namespace wi::scene
 					bufdesc.misc_flags |= ResourceMiscFlag::RAY_TRACING;
 					bufdesc.stride = (uint32_t)device->GetTopLevelAccelerationStructureInstanceSize();
 					bufdesc.size = bufdesc.stride * desc.top_level.count;
-					bool success = device->CreateBuffer(&bufdesc, nullptr, &desc.top_level.instance_buffer);
+					auto safety_init = [&](void* dest) {
+						for (uint32_t i = 0; i < desc.top_level.count; ++i)
+						{
+							device->WriteTopLevelAccelerationStructureInstance(nullptr, (uint8_t*)dest + i * bufdesc.stride);
+						}
+					};
+					bool success = device->CreateBuffer2(&bufdesc, safety_init, &desc.top_level.instance_buffer);
 					assert(success);
 					device->SetName(&desc.top_level.instance_buffer, "Scene::TLAS.instanceBuffer");
 					success = device->CreateRaytracingAccelerationStructure(&desc, &TLAS);
