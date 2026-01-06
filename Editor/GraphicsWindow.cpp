@@ -1000,6 +1000,22 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&aoSampleCountSlider);
 
+	reflectionsCheckBox.Create("Reflections: ");
+	reflectionsCheckBox.SetTooltip("Enable reflections for materials such as Water and Planar Reflection.");
+	reflectionsCheckBox.SetScriptTip("RenderPath3D::SetReflectionsEnabled(bool value)");
+	reflectionsCheckBox.SetSize(XMFLOAT2(hei, hei));
+	reflectionsCheckBox.SetPos(XMFLOAT2(x, y += step));
+	if (editor->main->config.GetSection("graphics").Has("reflections"))
+	{
+		editor->renderPath->setReflectionsEnabled(editor->main->config.GetSection("graphics").GetBool("reflections"));
+	}
+	reflectionsCheckBox.OnClick([=](wi::gui::EventArgs args) {
+		editor->renderPath->setReflectionsEnabled(args.bValue);
+		editor->main->config.GetSection("graphics").Set("reflections", args.bValue);
+		editor->main->config.Commit();
+		});
+	AddWidget(&reflectionsCheckBox);
+
 	ssrCheckBox.Create("SSR: ");
 	ssrCheckBox.SetTooltip("Enable Screen Space Reflections. This can not reflect anything that is outside of the screen.");
 	ssrCheckBox.SetScriptTip("RenderPath3D::SetSSREnabled(bool value)");
@@ -1708,6 +1724,7 @@ void GraphicsWindow::UpdateData()
 
 	aoRangeSlider.SetValue((float)editor->renderPath->getAORange());
 	aoSampleCountSlider.SetValue((float)editor->renderPath->getAOSampleCount());
+	reflectionsCheckBox.SetCheck(editor->renderPath->getReflectionsEnabled());
 	ssrCheckBox.SetCheck(editor->renderPath->getSSREnabled());
 	reflectionsRoughnessCutoffSlider.SetValue(editor->renderPath->getReflectionRoughnessCutoff());
 	raytracedReflectionsCheckBox.SetCheck(editor->renderPath->getRaytracedReflectionEnabled());
@@ -1954,6 +1971,7 @@ void GraphicsWindow::ResizeLayout()
 	layout.add(aoPowerSlider);
 	layout.add(aoRangeSlider);
 	layout.add(aoSampleCountSlider);
+	layout.add_right(reflectionsCheckBox);
 	layout.add_right(reflectionsRoughnessCutoffSlider);
 	ssrCheckBox.SetPos(XMFLOAT2(reflectionsRoughnessCutoffSlider.GetPos().x - ssrCheckBox.GetSize().x - 80, reflectionsRoughnessCutoffSlider.GetPos().y));
 	layout.add_right(raytracedReflectionsRangeSlider);
