@@ -1807,6 +1807,16 @@ namespace wi::graphics
 	{
 		return vertex_count > 65536 ? Format::R32_UINT : Format::R16_UINT;
 	}
+	constexpr uint32_t GetIndexStride(IndexBufferFormat format)
+	{
+		switch (format) {
+			default:
+			case IndexBufferFormat::UINT32:
+				return sizeof(uint32_t);
+			case IndexBufferFormat::UINT16:
+				return sizeof(uint16_t);
+		}
+	}
 	constexpr const char* GetIndexBufferFormatString(IndexBufferFormat format)
 	{
 		switch (format)

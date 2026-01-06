@@ -7,10 +7,7 @@
 #include "wiUnorderedMap.h"
 
 #include <Metal/Metal.hpp>
-#include <AppKit/AppKit.hpp>
-#include <MetalKit/MetalKit.hpp>
 #include <QuartzCore/QuartzCore.hpp>
-#include <Foundation/Foundation.hpp>
 
 #define IR_RUNTIME_METALCPP
 #include <metal_irconverter_runtime/metal_irconverter_runtime.h>
@@ -202,6 +199,10 @@ namespace wi::graphics
 		
 		NS::SharedPtr<MTL::Buffer> descriptor_heap_res;
 		NS::SharedPtr<MTL::Buffer> descriptor_heap_sam;
+		
+		NS::SharedPtr<MTL::Buffer> dummyblasbuffer;
+		NS::SharedPtr<MTL::AccelerationStructure> dummyblas;
+		MTL::ResourceID dummyblas_resourceid = {};
 		
 		void binder_flush(CommandList cmd);
 
@@ -475,41 +476,6 @@ namespace wi::graphics
 				if (allocation == nullptr)
 					return;
 				residency_set->removeAllocation(allocation);
-			}
-			
-			NS::SharedPtr<MTL::Buffer> dummyblasbuffer;
-			NS::SharedPtr<MTL::AccelerationStructure> dummyblas;
-			wi::vector<NS::Object*> blas_array;
-			NS::SharedPtr<NS::Array> blas_nsarray;
-			wi::vector<int> free_blas_indices;
-			NS::SharedPtr<NS::Array> get_blas_nsarray()
-			{
-				std::scoped_lock locker(destroylocker);
-				return blas_nsarray;
-			}
-			void update_blas_nsarray()
-			{
-				blas_nsarray = NS::TransferPtr(NS::Array::alloc()->init(blas_array.data(), blas_array.size()));
-			}
-			int register_blas(MTL::AccelerationStructure* blas)
-			{
-				std::scoped_lock locker(destroylocker);
-				if (free_blas_indices.empty())
-					return -1;
-				int index = free_blas_indices.back();
-				free_blas_indices.pop_back();
-				blas_array[index] = blas;
-				update_blas_nsarray();
-				return index;
-			}
-			void unregister_blas(int index)
-			{
-				if (index < 0)
-					return;
-				std::scoped_lock locker(destroylocker);
-				free_blas_indices.push_back(index);
-				blas_array[index] = dummyblas.get();
-				update_blas_nsarray();
 			}
 		};
 		wi::allocator::shared_ptr<AllocationHandler> allocationhandler;

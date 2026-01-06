@@ -17,6 +17,12 @@ namespace metal_internal
 	static constexpr uint64_t bindless_sampler_capacity = 256;
 	static constexpr uint64_t blas_capacity = 10000;
 
+	template <typename T>
+	inline static auto create_nsarray(T** objects, size_t count)
+	{
+		return NS::TransferPtr((NS::Array*)CFArrayCreate(kCFAllocatorDefault, (const void**)objects, count, &kCFTypeArrayCallBacks));
+	}
+
 	constexpr MTL::AttributeFormat _ConvertAttributeFormat(Format value)
 	{
 		switch (value) {
@@ -770,9 +776,10 @@ namespace metal_internal
 		NS::SharedPtr<MTL::Buffer> scratch;
 		NS::SharedPtr<MTL::Buffer> tlas_header;
 		NS::SharedPtr<MTL::Buffer> tlas_instance_contributions;
-		int blas_index = -1;
-		int descriptor_index = -1;
-		IRDescriptorTableEntry entry = {};
+		NS::SharedPtr<MTL::Buffer> tlas_instance_count;
+		int tlas_descriptor_index = -1;
+		IRDescriptorTableEntry tlas_entry = {};
+		MTL::ResourceID blas_resourceid = {};
 
 		~BVH_Metal()
 		{
@@ -786,10 +793,10 @@ namespace metal_internal
 				allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(tlas_header), framecount));
 			if (tlas_instance_contributions.get() != nullptr)
 				allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(tlas_instance_contributions), framecount));
-			if (blas_index >= 0)
-				allocationhandler->unregister_blas(blas_index);
-			if (descriptor_index >= 0)
-				allocationhandler->destroyer_bindless_res.push_back(std::make_pair(descriptor_index, framecount));
+			if (tlas_instance_count.get() != nullptr)
+				allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(tlas_instance_count), framecount));
+			if (tlas_descriptor_index >= 0)
+				allocationhandler->destroyer_bindless_res.push_back(std::make_pair(tlas_descriptor_index, framecount));
 			allocationhandler->destroylocker.unlock();
 		}
 	};
@@ -863,52 +870,42 @@ namespace metal_internal
 		return static_cast<typename MetalType<T>::type*>(res->internal_state.get());
 	}
 
-	NS::SharedPtr<MTL::AccelerationStructureDescriptor> acceleration_structure_descriptor(const RaytracingAccelerationStructureDesc* desc, GraphicsDevice_Metal::AllocationHandler* allocationhandler)
+	NS::SharedPtr<MTL::AccelerationStructureDescriptor> acceleration_structure_descriptor(const RaytracingAccelerationStructureDesc* desc, BVH_Metal* internal_state)
 	{
 		NS::SharedPtr<MTL::AccelerationStructureDescriptor> descriptor = NS::TransferPtr(MTL::AccelerationStructureDescriptor::alloc()->init());
 		NS::SharedPtr<NS::Array> object_array;
-		wi::vector<NS::Object*> objects;
-		wi::vector<NS::SharedPtr<MTL::AccelerationStructureGeometryDescriptor>> geometry_descs;
 		
 		if (desc->type == RaytracingAccelerationStructureDesc::Type::TOPLEVEL)
 		{
-			auto instance_descriptor = NS::TransferPtr(MTL::InstanceAccelerationStructureDescriptor::alloc()->init());
-			descriptor = instance_descriptor;
-			
-			instance_descriptor->setInstanceCount(desc->top_level.count);
+			NS::SharedPtr<MTL::IndirectInstanceAccelerationStructureDescriptor> instance_descriptor = NS::TransferPtr(MTL::IndirectInstanceAccelerationStructureDescriptor::alloc()->init());
+			instance_descriptor->setMaxInstanceCount(desc->top_level.count);
+			instance_descriptor->setInstanceCountBuffer(internal_state->tlas_instance_count.get());
+			instance_descriptor->setInstanceCountBufferOffset(0);
 			auto buffer_internal = to_internal(&desc->top_level.instance_buffer);
-			instance_descriptor->setInstanceDescriptorBufferOffset(desc->top_level.offset);
 			instance_descriptor->setInstanceDescriptorBuffer(buffer_internal->buffer.get());
-			instance_descriptor->setInstanceDescriptorStride(sizeof(MTL::AccelerationStructureInstanceDescriptor));
-			instance_descriptor->setInstanceDescriptorType(MTL::AccelerationStructureInstanceDescriptorTypeDefault);
-			instance_descriptor->setInstancedAccelerationStructures(allocationhandler->get_blas_nsarray().get());
+			instance_descriptor->setInstanceDescriptorBufferOffset(desc->top_level.offset);
+			instance_descriptor->setInstanceDescriptorStride(sizeof(MTL::IndirectAccelerationStructureInstanceDescriptor));
+			instance_descriptor->setInstanceDescriptorType(MTL::AccelerationStructureInstanceDescriptorTypeIndirect);
+			descriptor = std::move(instance_descriptor);
 		}
 		else
 		{
 			auto primitive_descriptor = NS::TransferPtr(MTL::PrimitiveAccelerationStructureDescriptor::alloc()->init());
-			descriptor = primitive_descriptor;
+			wi::vector<NS::SharedPtr<MTL::AccelerationStructureGeometryDescriptor>> geometry_descs;
+			wi::vector<MTL::AccelerationStructureGeometryDescriptor*> geometry_descs_raw;
 			
 			for (auto& x : desc->bottom_level.geometries)
 			{
 				if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::Type::TRIANGLES)
 				{
-					auto geo = NS::TransferPtr(MTL::AccelerationStructureTriangleGeometryDescriptor::alloc()->init());
+					NS::SharedPtr<MTL::AccelerationStructureTriangleGeometryDescriptor> geo = NS::TransferPtr(MTL::AccelerationStructureTriangleGeometryDescriptor::alloc()->init());
 					geometry_descs.push_back(geo);
 					geo->setOpaque(x.flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE);
 					auto ib_internal = to_internal(&x.triangles.index_buffer);
 					auto vb_internal = to_internal(&x.triangles.vertex_buffer);
 					geo->setIndexType(x.triangles.index_format == IndexBufferFormat::UINT32 ? MTL::IndexTypeUInt32 : MTL::IndexTypeUInt16);
 					geo->setIndexBuffer(ib_internal->buffer.get());
-					uint64_t index_offset = x.triangles.index_offset;
-					if (x.triangles.index_format == IndexBufferFormat::UINT32)
-					{
-						index_offset *= sizeof(uint32_t);
-					}
-					else
-					{
-						index_offset *= sizeof(uint16_t);
-					}
-					geo->setIndexBufferOffset(index_offset);
+					geo->setIndexBufferOffset(x.triangles.index_offset * GetIndexStride(x.triangles.index_format));
 					geo->setVertexFormat(_ConvertAttributeFormat(x.triangles.vertex_format));
 					geo->setVertexBuffer(vb_internal->buffer.get());
 					geo->setVertexBufferOffset(x.triangles.vertex_byte_offset);
@@ -919,12 +916,12 @@ namespace metal_internal
 						auto transform_internal = to_internal(&x.triangles.transform_3x4_buffer);
 						geo->setTransformationMatrixBuffer(transform_internal->buffer.get());
 						geo->setTransformationMatrixBufferOffset(x.triangles.transform_3x4_buffer_offset);
-						geo->setTransformationMatrixLayout(MTL::MatrixLayoutRowMajor); // I think this mode matches DX12 and Vulkan but should be tested
+						geo->setTransformationMatrixLayout(MTL::MatrixLayoutRowMajor);
 					}
 				}
 				else
 				{
-					auto geo = NS::TransferPtr(MTL::AccelerationStructureBoundingBoxGeometryDescriptor::alloc()->init());
+					NS::SharedPtr<MTL::AccelerationStructureBoundingBoxGeometryDescriptor> geo = NS::TransferPtr(MTL::AccelerationStructureBoundingBoxGeometryDescriptor::alloc()->init());
 					geometry_descs.push_back(geo);
 					geo->setOpaque(x.flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE);
 					geo->setBoundingBoxCount(x.aabbs.count);
@@ -935,13 +932,14 @@ namespace metal_internal
 				}
 			}
 			
-			objects.reserve(geometry_descs.size());
+			geometry_descs_raw.reserve(geometry_descs.size());
 			for (auto& x : geometry_descs)
 			{
-				objects.push_back(x.get());
+				geometry_descs_raw.push_back(x.get());
 			}
-			object_array = NS::TransferPtr(NS::Array::alloc()->init(objects.data(), objects.size()));
+			object_array = create_nsarray(geometry_descs_raw.data(), geometry_descs_raw.size());
 			primitive_descriptor->setGeometryDescriptors(object_array.get());
+			descriptor = std::move(primitive_descriptor);
 		}
 		
 		MTL::AccelerationStructureUsage usage = MTL::AccelerationStructureUsageNone;
@@ -1027,7 +1025,7 @@ using namespace metal_internal;
 					else if (commandlist.binding_table.SRV[i].IsAccelerationStructure())
 					{
 						auto internal_state = to_internal<RaytracingAccelerationStructure>(&commandlist.binding_table.SRV[i]);
-						resource_table.srvs[i] = internal_state->entry;
+						resource_table.srvs[i] = internal_state->tlas_entry;
 					}
 				}
 				for (uint32_t i = 0; i < arraysize(commandlist.binding_table.UAV); ++i)
@@ -1459,9 +1457,8 @@ using namespace metal_internal;
 		}
 		if (device->supportsRaytracing())
 		{
-			// TODO: everything in place, now debug and make it work
-			//capabilities |= GraphicsDeviceCapability::RAYTRACING;
-			//TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = sizeof(MTL::AccelerationStructureInstanceDescriptor);
+			capabilities |= GraphicsDeviceCapability::RAYTRACING;
+			TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = sizeof(MTL::IndirectAccelerationStructureInstanceDescriptor);
 		}
 		
 		descriptor_heap_res = NS::TransferPtr(device->newBuffer(bindless_resource_capacity * sizeof(IRDescriptorTableEntry), MTL::ResourceStorageModeShared | MTL::ResourceHazardTrackingModeUntracked));
@@ -1576,6 +1573,37 @@ using namespace metal_internal;
 		for (uint32_t i = 0; i < arraysize(static_samplers); ++i)
 		{
 			IRDescriptorTableSetSampler(&static_sampler_descriptors.samplers[i], static_samplers[i].get(), 0);
+		}
+		
+		if (CheckCapability(GraphicsDeviceCapability::RAYTRACING))
+		{
+			NS::SharedPtr<MTL::PrimitiveAccelerationStructureDescriptor> emptydesc = NS::TransferPtr(MTL::PrimitiveAccelerationStructureDescriptor::alloc()->init());
+			NS::SharedPtr<MTL::AccelerationStructureBoundingBoxGeometryDescriptor> geo = NS::TransferPtr(MTL::AccelerationStructureBoundingBoxGeometryDescriptor::alloc()->init());
+			MTL::AxisAlignedBoundingBox box = {};
+			dummyblasbuffer = NS::TransferPtr(device->newBuffer(sizeof(box), MTL::ResourceStorageModeShared));
+			std::memcpy(dummyblasbuffer->contents(), &box, sizeof(box));
+			geo->setBoundingBoxBuffer(dummyblasbuffer.get());
+			geo->setBoundingBoxStride(sizeof(box));
+			geo->setBoundingBoxCount(1);
+			MTL::AccelerationStructureBoundingBoxGeometryDescriptor* geos[] = { geo.get() };
+			NS::SharedPtr<NS::Array> array = create_nsarray(geos, arraysize(geos));
+			emptydesc->setGeometryDescriptors(array.get());
+			MTL::AccelerationStructureSizes size = device->accelerationStructureSizes(emptydesc.get());
+			dummyblas = NS::TransferPtr(device->newAccelerationStructure(size.accelerationStructureSize));
+			dummyblas->setLabel(NS::TransferPtr(NS::String::alloc()->init("dummyBLAS", NS::UTF8StringEncoding)).get());
+			dummyblas_resourceid = dummyblas->gpuResourceID();
+			NS::SharedPtr<MTL::Buffer> scratch = NS::TransferPtr(device->newBuffer(size.buildScratchBufferSize, MTL::ResourceStorageModePrivate));
+			MTL::CommandBuffer* commandbuffer = commandqueue->commandBuffer();
+			allocationhandler->residency_set->addAllocation(dummyblasbuffer.get());
+			allocationhandler->residency_set->addAllocation(dummyblas.get());
+			allocationhandler->residency_set->addAllocation(scratch.get());
+			allocationhandler->residency_set->commit();
+			commandbuffer->useResidencySet(allocationhandler->residency_set.get());
+			MTL::AccelerationStructureCommandEncoder* encoder = commandbuffer->accelerationStructureCommandEncoder();
+			encoder->buildAccelerationStructure(dummyblas.get(), emptydesc.get(), scratch.get(), 0);
+			encoder->endEncoding();
+			commandbuffer->commit();
+			commandbuffer->waitUntilCompleted();
 		}
 		
 		wilog("Created GraphicsDevice_Metal (%d ms)", (int)std::round(timer.elapsed()));
@@ -2473,50 +2501,6 @@ using namespace metal_internal;
 	}
 	bool GraphicsDevice_Metal::CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* desc, RaytracingAccelerationStructure* bvh) const
 	{
-		// First ensure that global TLAS-BLAS indexing structures are created:
-		{
-			std::scoped_lock lck(allocationhandler->destroylocker);
-			
-			if (allocationhandler->dummyblas.get() == nullptr)
-			{
-				// Need to create dummy blas because indexing table can't have empty slots:
-				NS::SharedPtr<MTL::PrimitiveAccelerationStructureDescriptor> emptydesc = NS::TransferPtr(MTL::PrimitiveAccelerationStructureDescriptor::alloc()->init());
-				NS::SharedPtr<MTL::AccelerationStructureBoundingBoxGeometryDescriptor> geo = NS::TransferPtr(MTL::AccelerationStructureBoundingBoxGeometryDescriptor::alloc()->init());
-				MTL::AxisAlignedBoundingBox box = {};
-				allocationhandler->dummyblasbuffer = NS::TransferPtr(device->newBuffer(sizeof(box), MTL::ResourceStorageModeShared));
-				std::memcpy(allocationhandler->dummyblasbuffer->contents(), &box, sizeof(box));
-				geo->setBoundingBoxBuffer(allocationhandler->dummyblasbuffer.get());
-				geo->setBoundingBoxStride(sizeof(box));
-				geo->setBoundingBoxCount(1);
-				NS::Object* objects[] = { geo.get() };
-				NS::SharedPtr<NS::Array> array = NS::TransferPtr(NS::Array::alloc()->init(objects, arraysize(objects)));
-				emptydesc->setGeometryDescriptors(array.get());
-				MTL::AccelerationStructureSizes size = device->accelerationStructureSizes(emptydesc.get());
-				allocationhandler->dummyblas = NS::TransferPtr(device->newAccelerationStructure(size.accelerationStructureSize));
-				NS::SharedPtr<MTL::Buffer> scratch = NS::TransferPtr(device->newBuffer(size.buildScratchBufferSize, MTL::ResourceStorageModePrivate));
-				MTL::CommandBuffer* commandbuffer = commandqueue->commandBuffer();
-				allocationhandler->residency_set->addAllocation(allocationhandler->dummyblasbuffer.get());
-				allocationhandler->residency_set->addAllocation(allocationhandler->dummyblas.get());
-				allocationhandler->residency_set->addAllocation(scratch.get());
-				allocationhandler->residency_set->commit();
-				commandbuffer->useResidencySet(allocationhandler->residency_set.get());
-				MTL::AccelerationStructureCommandEncoder* encoder = commandbuffer->accelerationStructureCommandEncoder();
-				encoder->buildAccelerationStructure(allocationhandler->dummyblas.get(), emptydesc.get(), scratch.get(), 0);
-				encoder->endEncoding();
-				commandbuffer->commit();
-				commandbuffer->waitUntilCompleted();
-				
-				allocationhandler->blas_array.reserve(blas_capacity);
-				allocationhandler->free_blas_indices.reserve(blas_capacity);
-				for (int i = 0; i < blas_capacity; ++i)
-				{
-					allocationhandler->blas_array.push_back(allocationhandler->dummyblas.get());
-					allocationhandler->free_blas_indices.push_back((int)blas_capacity - i - 1);
-				}
-				allocationhandler->update_blas_nsarray();
-			}
-		}
-		
 		auto internal_state = wi::allocator::make_shared<BVH_Metal>();
 		internal_state->allocationhandler = allocationhandler;
 		bvh->internal_state = internal_state;
@@ -2524,7 +2508,15 @@ using namespace metal_internal;
 		bvh->desc = *desc;
 		bvh->size = 0;
 		
-		NS::SharedPtr<MTL::AccelerationStructureDescriptor> descriptor = acceleration_structure_descriptor(desc, allocationhandler);
+		if (desc->type == RaytracingAccelerationStructureDesc::Type::TOPLEVEL)
+		{
+			internal_state->tlas_instance_count = NS::TransferPtr(device->newBuffer(sizeof(uint64_t), MTL::ResourceStorageModeShared | MTL::ResourceHazardTrackingModeUntracked));
+			internal_state->tlas_instance_count->setLabel(NS::TransferPtr(NS::String::alloc()->init("TLAS_instance_count", NS::UTF8StringEncoding)).get());
+			std::memcpy(internal_state->tlas_instance_count->contents(), &desc->top_level.count, sizeof(desc->top_level.count));
+			allocationhandler->make_resident(internal_state->tlas_instance_count.get());
+		}
+		
+		NS::SharedPtr<MTL::AccelerationStructureDescriptor> descriptor = acceleration_structure_descriptor(desc, internal_state);
 		
 		MTL::AccelerationStructureSizes size = device->accelerationStructureSizes(descriptor.get());
 		internal_state->acceleration_structure = NS::TransferPtr(device->newAccelerationStructure(size.accelerationStructureSize));
@@ -2541,12 +2533,12 @@ using namespace metal_internal;
 			allocationhandler->make_resident(internal_state->tlas_instance_contributions.get());
 			wi::vector<uint32_t> instance_contributions(desc->top_level.count); // TODO: how to make this data available here???
 			IRRaytracingSetAccelerationStructure((uint8_t*)internal_state->tlas_header->contents(), internal_state->acceleration_structure->gpuResourceID(), (uint8_t*)internal_state->tlas_instance_contributions->contents(), internal_state->tlas_instance_contributions->gpuAddress(), instance_contributions.data(), desc->top_level.count);
-			IRDescriptorTableSetAccelerationStructure(&internal_state->entry, internal_state->tlas_header->gpuAddress());
-			internal_state->descriptor_index = allocationhandler->allocate_bindless(internal_state->entry);
+			IRDescriptorTableSetAccelerationStructure(&internal_state->tlas_entry, internal_state->tlas_header->gpuAddress());
+			internal_state->tlas_descriptor_index = allocationhandler->allocate_bindless(internal_state->tlas_entry);
 		}
 		else
 		{
-			internal_state->blas_index = allocationhandler->register_blas(internal_state->acceleration_structure.get());
+			internal_state->blas_resourceid = internal_state->acceleration_structure->gpuResourceID();
 		}
 		
 		return internal_state->acceleration_structure.get() != nullptr;
@@ -2906,33 +2898,47 @@ using namespace metal_internal;
 	}
 	void GraphicsDevice_Metal::WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) const
 	{
-		MTL::AccelerationStructureInstanceDescriptor descriptor = {};
+		MTL::IndirectAccelerationStructureInstanceDescriptor descriptor = {};
 		descriptor.options = MTL::AccelerationStructureInstanceOptionNone;
-		if (instance->flags & RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_CULL_DISABLE)
+		if (instance == nullptr)
 		{
-			descriptor.options |= MTL::AccelerationStructureInstanceOptionDisableTriangleCulling;
+			descriptor.accelerationStructureID = dummyblas_resourceid;
 		}
-		if (instance->flags & RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE)
+		else
 		{
-			descriptor.options |= MTL::AccelerationStructureInstanceOptionTriangleFrontFacingWindingCounterClockwise;
-		}
-		if (instance->flags & RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_FORCE_OPAQUE)
-		{
-			descriptor.options |= MTL::AccelerationStructureInstanceOptionOpaque;
-		}
-		if (instance->flags & RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_FORCE_NON_OPAQUE)
-		{
-			descriptor.options |= MTL::AccelerationStructureInstanceOptionNonOpaque;
-		}
-		descriptor.mask = instance->instance_mask;
-		descriptor.intersectionFunctionTableOffset = 0;
-		if (instance->bottom_level != nullptr)
-		{
+			if (instance->flags & RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_CULL_DISABLE)
+			{
+				descriptor.options |= MTL::AccelerationStructureInstanceOptionDisableTriangleCulling;
+			}
+			if (instance->flags & RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE)
+			{
+				descriptor.options |= MTL::AccelerationStructureInstanceOptionTriangleFrontFacingWindingCounterClockwise;
+			}
+			if (instance->flags & RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_FORCE_OPAQUE)
+			{
+				descriptor.options |= MTL::AccelerationStructureInstanceOptionOpaque;
+			}
+			if (instance->flags & RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_FORCE_NON_OPAQUE)
+			{
+				descriptor.options |= MTL::AccelerationStructureInstanceOptionNonOpaque;
+			}
+			descriptor.mask = instance->instance_mask;
+			descriptor.intersectionFunctionTableOffset = 0;
 			auto blas_internal = to_internal<RaytracingAccelerationStructure>(instance->bottom_level);
-			assert(blas_internal->blas_index >= 0);
-			descriptor.accelerationStructureIndex = (uint32_t)blas_internal->blas_index;
+			descriptor.accelerationStructureID = blas_internal->blas_resourceid;
+			descriptor.transformationMatrix.columns[0][0] = instance->transform[0][0];
+			descriptor.transformationMatrix.columns[0][1] = instance->transform[1][0];
+			descriptor.transformationMatrix.columns[0][2] = instance->transform[2][0];
+			descriptor.transformationMatrix.columns[1][0] = instance->transform[0][1];
+			descriptor.transformationMatrix.columns[1][1] = instance->transform[1][1];
+			descriptor.transformationMatrix.columns[1][2] = instance->transform[2][1];
+			descriptor.transformationMatrix.columns[2][0] = instance->transform[0][2];
+			descriptor.transformationMatrix.columns[2][1] = instance->transform[1][2];
+			descriptor.transformationMatrix.columns[2][2] = instance->transform[2][2];
+			descriptor.transformationMatrix.columns[3][0] = instance->transform[0][3];
+			descriptor.transformationMatrix.columns[3][1] = instance->transform[1][3];
+			descriptor.transformationMatrix.columns[3][2] = instance->transform[2][3];
 		}
-		std::memcpy(&descriptor.transformationMatrix, instance->transform, sizeof(descriptor.transformationMatrix));
 		std::memcpy(dest, &descriptor, sizeof(descriptor)); // force memcpy into potentially write combined cache memory
 	}
 	void GraphicsDevice_Metal::WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) const
@@ -3795,7 +3801,7 @@ using namespace metal_internal;
 		
 		encoder->barrierAfterQueueStages(MTL::StageAll, MTL::StageAll);
 		
-		NS::SharedPtr<MTL::AccelerationStructureDescriptor> descriptor = acceleration_structure_descriptor(&dst->desc, allocationhandler);
+		NS::SharedPtr<MTL::AccelerationStructureDescriptor> descriptor = acceleration_structure_descriptor(&dst->desc, dst_internal);
 		
 		if (src != nullptr && (dst->desc.flags & RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE))
 		{
