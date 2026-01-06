@@ -286,8 +286,14 @@ namespace wi::scene
 			TLAS_instancesMapped = TLAS_instancesUpload[cpu_gpu_mapped_resource_index].mapped_data;
 
 			wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
-				// Must not keep inactive TLAS instances, so zero them out for safety:
-				std::memset(TLAS_instancesMapped, 0, TLAS_instancesUpload->desc.size);
+				// Must not keep inactive TLAS instances, so zero them out for safety with invalid instances:
+				//	Note: instead of memsetting, I use WriteTopLevelAccelerationStructureInstance with null instance, so if device requires setup other than zeroing (Metal API) it will stil work
+				const uint32_t instanceCount = uint32_t(TLAS_instancesUpload->desc.size / TLAS_instancesUpload->desc.stride);
+				const size_t instanceSize = device->GetTopLevelAccelerationStructureInstanceSize();
+				for (uint32_t i = 0; i < instanceCount; ++i)
+				{
+					device->WriteTopLevelAccelerationStructureInstance(nullptr, (uint8_t*)TLAS_instancesMapped + i * instanceSize);
+				}
 			});
 		}
 

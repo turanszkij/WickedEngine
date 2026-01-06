@@ -4408,7 +4408,10 @@ std::mutex queue_locker;
 		srv_desc.ViewDimension = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
 		srv_desc.RaytracingAccelerationStructure.Location = internal_state->gpu_address;
 
-		internal_state->srv.init(this, srv_desc, nullptr);
+		if (desc->type == RaytracingAccelerationStructureDesc::Type::TOPLEVEL)
+		{
+			internal_state->srv.init(this, srv_desc, nullptr);
+		}
 
 		GPUBufferDesc scratch_desc;
 		scratch_desc.size = (uint32_t)std::max(internal_state->info.ScratchDataSizeInBytes, internal_state->info.UpdateScratchDataSizeInBytes);
@@ -5186,15 +5189,18 @@ std::mutex queue_locker;
 	}
 	void GraphicsDevice_DX12::WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) const
 	{
-		D3D12_RAYTRACING_INSTANCE_DESC tmp;
-		tmp.AccelerationStructure = to_internal(instance->bottom_level)->gpu_address;
-		std::memcpy(tmp.Transform, &instance->transform, sizeof(tmp.Transform));
-		tmp.InstanceID = instance->instance_id;
-		tmp.InstanceMask = instance->instance_mask;
-		tmp.InstanceContributionToHitGroupIndex = instance->instance_contribution_to_hit_group_index;
-		tmp.Flags = instance->flags;
-
-		std::memcpy(dest, &tmp, sizeof(D3D12_RAYTRACING_INSTANCE_DESC)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
+		D3D12_RAYTRACING_INSTANCE_DESC tmp = {};
+		if (instance != nullptr)
+		{
+			auto internal_state = to_internal(instance->bottom_level);
+			tmp.AccelerationStructure = internal_state->gpu_address;
+			std::memcpy(tmp.Transform, &instance->transform, sizeof(tmp.Transform));
+			tmp.InstanceID = instance->instance_id;
+			tmp.InstanceMask = instance->instance_mask;
+			tmp.InstanceContributionToHitGroupIndex = instance->instance_contribution_to_hit_group_index;
+			tmp.Flags = instance->flags;
+		}
+		std::memcpy(dest, &tmp, sizeof(tmp)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
 	}
 	void GraphicsDevice_DX12::WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) const
 	{
