@@ -331,6 +331,11 @@ void SplineWindow::NewNode()
 		transform.Translate(D);
 		transform.UpdateTransform();
 	}
+	else if (editor->generalWnd.placeInFrontOfCameraCheckBox.GetCheck())
+	{
+		transform.translation_local = editor->GetPositionInFrontOfCamera();
+		transform.SetDirty();
+	}
 	spline->spline_node_entities.push_back(node_entity);
 	spline->spline_node_transforms.push_back(transform);
 	scene.Component_Attach(node_entity, entity);
