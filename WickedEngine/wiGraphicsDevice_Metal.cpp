@@ -612,6 +612,10 @@ namespace metal_internal
 		wi::allocator::shared_ptr<GraphicsDevice_Metal::AllocationHandler> allocationhandler;
 		NS::SharedPtr<MTL::Texture> texture;
 		
+		// Things for readback and upload texture types, linear tiling, using buffer:
+		NS::SharedPtr<MTL::Buffer> buffer;
+		wi::vector<SubresourceData> mapped_subresources;
+		
 		struct Subresource
 		{
 			IRDescriptorTableEntry entry = {};
@@ -690,7 +694,10 @@ namespace metal_internal
 				return;
 			allocationhandler->destroylocker.lock();
 			uint64_t framecount = allocationhandler->framecount;
-			allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(texture), framecount));
+			if (texture.get() != nullptr)
+				allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(texture), framecount));
+			if (buffer.get() != nullptr)
+				allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(buffer), framecount));
 			destroy_subresources();
 			allocationhandler->destroylocker.unlock();
 		}
@@ -1947,10 +1954,29 @@ using namespace metal_internal;
 		}
 		else
 		{
-			internal_state->texture = NS::TransferPtr(device->newTexture(descriptor.get()));
+			if (desc->usage == Usage::READBACK || desc->usage == Usage::UPLOAD)
+			{
+				// Note: we are creating a buffer instead of linear image because linear image cannot have mips
+				//	With a buffer, we can tightly pack mips linearly into a buffer so it won't have that limitation
+				const size_t buffersize = ComputeTextureMemorySizeInBytes(*desc);
+				internal_state->buffer = NS::TransferPtr(device->newBuffer(buffersize, resource_options));
+				allocationhandler->make_resident(internal_state->buffer.get());
+				
+				texture->mapped_data = internal_state->buffer->contents();
+				texture->mapped_size = buffersize;
+				
+				CreateTextureSubresourceDatas(*desc, texture->mapped_data, internal_state->mapped_subresources);
+				texture->mapped_subresources = internal_state->mapped_subresources.data();
+				texture->mapped_subresource_count = internal_state->mapped_subresources.size();
+				assert(texture->mapped_subresources != nullptr);
+			}
+			else
+			{
+				internal_state->texture = NS::TransferPtr(device->newTexture(descriptor.get()));
+			}
 		}
 		
-		if (!has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE))
+		if (internal_state->texture.get() != nullptr && !has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE))
 		{
 			allocationhandler->make_resident(internal_state->texture.get());
 		}
@@ -1962,7 +1988,12 @@ using namespace metal_internal;
 			NS::SharedPtr<MTL::Buffer> uploadbuffer;
 			NS::SharedPtr<NS::AutoreleasePool> autorelease_pool; // scoped drain!
 			uint8_t* upload_data = nullptr;
-			if (descriptor->storageMode() == MTL::StorageModePrivate)
+			if (internal_state->buffer.get() != nullptr)
+			{
+				// readback or upload, linear memory:
+				upload_data = (uint8_t*)internal_state->buffer->contents();
+			}
+			else if (descriptor->storageMode() == MTL::StorageModePrivate)
 			{
 				autorelease_pool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init());
 				commandbuffer = commandqueue->commandBuffer();
@@ -1990,7 +2021,12 @@ using namespace metal_internal;
 					region.size.width = width;
 					region.size.height = height;
 					region.size.depth = depth;
-					if (descriptor->storageMode() == MTL::StorageModePrivate)
+					if (internal_state->buffer.get() != nullptr)
+					{
+						// readback or upload, linear memory:
+						std::memcpy(upload_data + src_offset, subresourceData.data_ptr, datasize);
+					}
+					else if (descriptor->storageMode() == MTL::StorageModePrivate)
 					{
 						std::memcpy(upload_data + src_offset, subresourceData.data_ptr, datasize);
 						MTL::Origin origin = {};
@@ -2041,7 +2077,7 @@ using namespace metal_internal;
 			}
 		}
 		
-		return internal_state->texture.get() != nullptr;
+		return internal_state->texture.get() != nullptr || internal_state->buffer.get() != nullptr;
 	}
 	bool GraphicsDevice_Metal::CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader) const
 	{
@@ -3627,13 +3663,55 @@ using namespace metal_internal;
 	{
 		precopy(cmd);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-		if (pDst->IsTexture())
+		if (pDst->IsTexture() && pSrc->IsTexture())
 		{
+			const Texture& srctex = *(Texture*)pSrc;
+			const Texture& dsttex = *(Texture*)pDst;
 			auto src_internal = to_internal<Texture>(pSrc);
 			auto dst_internal = to_internal<Texture>(pDst);
-			commandlist.blit_encoder->copyFromTexture(src_internal->texture.get(), dst_internal->texture.get());
+			if (src_internal->texture.get() != nullptr && dst_internal->texture.get() != nullptr)
+			{
+				// Normal texture->texture copy
+				commandlist.blit_encoder->copyFromTexture(src_internal->texture.get(), dst_internal->texture.get());
+			}
+			else if(src_internal->texture.get() != nullptr && dst_internal->buffer.get() != nullptr)
+			{
+				// Texture->linear copy:
+				const uint64_t data_begin = (uint64_t)dsttex.mapped_subresources[0].data_ptr;
+				uint32_t subresource_index = 0;
+				for (uint32_t slice = 0; slice < srctex.desc.array_size; ++slice)
+				{
+					for (uint32_t mip = 0; mip < srctex.desc.mip_levels; ++mip)
+					{
+						const uint32_t mip_width = std::max(1u, srctex.desc.width >> mip);
+						const uint32_t mip_height = std::max(1u, srctex.desc.height >> mip);
+						const uint32_t mip_depth = std::max(1u, srctex.desc.depth >> mip);
+						const SubresourceData& subresource_data = dsttex.mapped_subresources[subresource_index++];
+						uint64_t data_offset = uint64_t((uint64_t)subresource_data.data_ptr - data_begin);
+						commandlist.blit_encoder->copyFromTexture(src_internal->texture.get(), slice, mip, {0,0,0}, {mip_width, mip_height, mip_depth}, dst_internal->buffer.get(), data_offset, subresource_data.row_pitch, subresource_data.slice_pitch * mip_depth);
+					}
+				}
+			}
+			else if(src_internal->texture.get() != nullptr && dst_internal->buffer.get() != nullptr)
+			{
+				// Linear->texture copy:
+				const uint64_t data_begin = (uint64_t)srctex.mapped_subresources[0].data_ptr;
+				uint32_t subresource_index = 0;
+				for (uint32_t slice = 0; slice < dsttex.desc.array_size; ++slice)
+				{
+					for (uint32_t mip = 0; mip < dsttex.desc.mip_levels; ++mip)
+					{
+						const uint32_t mip_width = std::max(1u, dsttex.desc.width >> mip);
+						const uint32_t mip_height = std::max(1u, dsttex.desc.height >> mip);
+						const uint32_t mip_depth = std::max(1u, dsttex.desc.depth >> mip);
+						const SubresourceData& subresource_data = srctex.mapped_subresources[subresource_index++];
+						uint64_t data_offset = uint64_t((uint64_t)subresource_data.data_ptr - data_begin);
+						commandlist.blit_encoder->copyFromBuffer(src_internal->buffer.get(), data_offset, subresource_data.row_pitch, subresource_data.slice_pitch * mip_depth, {mip_width,mip_height,mip_depth}, dst_internal->texture.get(), slice, mip, {0,0,0});
+					}
+				}
+			}
 		}
-		else if (pDst->IsBuffer())
+		else if (pDst->IsBuffer() && pSrc->IsBuffer())
 		{
 			auto src_internal = to_internal<GPUBuffer>(pSrc);
 			auto dst_internal = to_internal<GPUBuffer>(pDst);
