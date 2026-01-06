@@ -3106,7 +3106,9 @@ namespace wi
 		else
 		{
 			rtReflection = {};
+			rtReflection_resolved = {};
 			depthBuffer_Reflection = {};
+			depthBuffer_Reflection_resolved = {};
 			tiledLightResources_planarReflection = {};
 		}
 	}
@@ -3129,8 +3131,8 @@ namespace wi
 
 		if (value)
 		{
-			GraphicsDevice* device = wi::graphics::GetDevice();
-			XMUINT2 internalResolution = GetInternalResolution();
+			const GraphicsDevice* device = wi::graphics::GetDevice();
+			const XMUINT2 internalResolution = GetInternalResolution();
 			if (internalResolution.x == 0 || internalResolution.y == 0)
 				return;
 
