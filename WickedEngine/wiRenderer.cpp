@@ -368,6 +368,9 @@ wi::jobsystem::context object_pso_job_ctx;
 PipelineState PSO_object_wire;
 PipelineState PSO_object_wire_tessellation;
 PipelineState PSO_object_wire_mesh_shader;
+PipelineState PSO_object_wire_doublesided;
+PipelineState PSO_object_wire_tessellation_doublesided;
+PipelineState PSO_object_wire_mesh_shader_doublesided;
 
 wi::jobsystem::context raytracing_ctx;
 wi::jobsystem::context objectps_ctx;
@@ -1246,6 +1249,9 @@ void LoadShaders()
 			desc.dss = &depthStencils[DSSTYPE_DEFAULT];
 			desc.pt = PrimitiveTopology::TRIANGLELIST;
 			device->CreatePipelineState(&desc, &PSO_object_wire_mesh_shader);
+
+			desc.rs = &rasterizers[RSTYPE_WIRE_DOUBLESIDED];
+			device->CreatePipelineState(&desc, &PSO_object_wire_mesh_shader_doublesided);
 		});
 
 		wi::jobsystem::Execute(mesh_shader_ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::MS, shaders[MSTYPE_OBJECT], "objectMS.cso"); });
@@ -1305,11 +1311,18 @@ void LoadShaders()
 
 		device->CreatePipelineState(&desc, &PSO_object_wire);
 
+		desc.rs = &rasterizers[RSTYPE_WIRE_DOUBLESIDED];
+		device->CreatePipelineState(&desc, &PSO_object_wire_doublesided);
+
 		desc.pt = PrimitiveTopology::PATCHLIST;
+		desc.rs = &rasterizers[RSTYPE_WIRE];
 		desc.vs = &shaders[VSTYPE_OBJECT_SIMPLE_TESSELLATION];
 		desc.hs = &shaders[HSTYPE_OBJECT_SIMPLE];
 		desc.ds = &shaders[DSTYPE_OBJECT_SIMPLE];
 		device->CreatePipelineState(&desc, &PSO_object_wire_tessellation);
+
+		desc.rs = &rasterizers[RSTYPE_WIRE_DOUBLESIDED];
+		device->CreatePipelineState(&desc, &PSO_object_wire_tessellation_doublesided);
 		});
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
 		PipelineStateDesc desc;
@@ -3287,15 +3300,25 @@ void RenderMeshes(
 					switch (renderPass)
 					{
 					case RENDERPASS_MAIN:
+					{
+						const bool doublesided = mesh.IsDoubleSided() || material.IsDoubleSided();
 						if (meshShaderRequested)
 						{
-							pso = &PSO_object_wire_mesh_shader;
+							pso = doublesided ? &PSO_object_wire_mesh_shader_doublesided : &PSO_object_wire_mesh_shader;
 						}
 						else
 						{
-							pso = tessellatorRequested ? &PSO_object_wire_tessellation : &PSO_object_wire;
+							if (tessellatorRequested)
+							{
+								pso = doublesided ? &PSO_object_wire_tessellation_doublesided : &PSO_object_wire_tessellation;
+							}
+							else
+							{
+								pso = doublesided ? &PSO_object_wire_doublesided : &PSO_object_wire;
+							}
 						}
-						break;
+					}
+					break;
 					default:
 						break;
 					}
