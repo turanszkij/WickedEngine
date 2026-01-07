@@ -7,6 +7,7 @@
 #include "wiUnorderedMap.h"
 
 #include <Metal/Metal.hpp>
+#include <Metal/MTL4AccelerationStructure.hpp>
 #include <QuartzCore/QuartzCore.hpp>
 
 #define IR_RUNTIME_METALCPP
@@ -46,7 +47,12 @@ namespace wi::graphics
 		
 	private:
 		NS::SharedPtr<MTL::Device> device;
-		NS::SharedPtr<MTL::CommandQueue> commandqueue;
+		NS::SharedPtr<MTL4::CommandQueue> commandqueue;
+		NS::SharedPtr<MTL4::CommandQueue> uploadqueue;
+		
+		NS::SharedPtr<MTL4::ArgumentTableDescriptor> argument_table_desc;
+		
+		wi::vector<MTL4::CommandBuffer*> submit_cmds;
 		
 		struct FrameResources
 		{
@@ -65,7 +71,9 @@ namespace wi::graphics
 		struct CommandList_Metal
 		{
 			NS::SharedPtr<NS::AutoreleasePool> autorelease_pool;
-			MTL::CommandBuffer* commandbuffer = nullptr;
+			NS::SharedPtr<MTL4::CommandAllocator> commandallocators[BUFFERCOUNT];
+			NS::SharedPtr<MTL4::CommandBuffer> commandbuffer;
+			NS::SharedPtr<MTL4::ArgumentTable> argument_table;
 			GPULinearAllocator frame_allocators[BUFFERCOUNT];
 			RenderPassInfo renderpass_info;
 			uint32_t id = 0;
@@ -75,9 +83,8 @@ namespace wi::graphics
 			bool dirty_cs = false;
 			const Shader* active_cs = nullptr;
 			wi::vector<std::pair<NS::SharedPtr<CA::MetalDrawable>, dispatch_semaphore_t>> presents;
-			MTL::RenderCommandEncoder* render_encoder = nullptr;
-			MTL::ComputeCommandEncoder* compute_encoder = nullptr;
-			MTL::BlitCommandEncoder* blit_encoder = nullptr;
+			MTL4::RenderCommandEncoder* render_encoder = nullptr;
+			MTL4::ComputeCommandEncoder* compute_encoder = nullptr;
 			MTL::PrimitiveType primitive_type = MTL::PrimitiveTypeTriangle;
 			NS::SharedPtr<MTL::Buffer> index_buffer;
 			MTL::IndexType index_type = MTL::IndexTypeUInt32;
@@ -111,7 +118,6 @@ namespace wi::graphics
 
 			void reset(uint32_t bufferindex)
 			{
-				commandbuffer = nullptr;
 				frame_allocators[bufferindex].reset();
 				renderpass_info = {};
 				id = 0;
@@ -123,7 +129,6 @@ namespace wi::graphics
 				presents.clear();
 				render_encoder = nullptr;
 				compute_encoder = nullptr;
-				blit_encoder = nullptr;
 				primitive_type = MTL::PrimitiveTypeTriangle;
 				index_buffer.reset();
 				index_buffer_offset = 0;
@@ -161,7 +166,6 @@ namespace wi::graphics
 			{
 				assert(render_encoder == nullptr);
 				assert(compute_encoder == nullptr);
-				assert(blit_encoder == nullptr);
 			}
 			
 			void autorelease_start()
@@ -182,11 +186,6 @@ namespace wi::graphics
 				{
 					compute_encoder->endEncoding();
 					compute_encoder = nullptr;
-				}
-				if (blit_encoder != nullptr)
-				{
-					blit_encoder->endEncoding();
-					blit_encoder = nullptr;
 				}
 				autorelease_pool.reset();
 			}
