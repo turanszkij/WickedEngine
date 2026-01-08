@@ -86,9 +86,8 @@ namespace wi::graphics
 			MTL4::RenderCommandEncoder* render_encoder = nullptr;
 			MTL4::ComputeCommandEncoder* compute_encoder = nullptr;
 			MTL::PrimitiveType primitive_type = MTL::PrimitiveTypeTriangle;
-			NS::SharedPtr<MTL::Buffer> index_buffer;
+			MTL4::BufferRange index_buffer = {};
 			MTL::IndexType index_type = MTL::IndexTypeUInt32;
-			uint64_t index_buffer_offset = 0;
 			wi::vector<std::pair<PipelineHash, JustInTimePSO>> pipelines_worker;
 			PipelineHash pipeline_hash;
 			DescriptorBindingTable binding_table;
@@ -107,11 +106,10 @@ namespace wi::graphics
 			
 			struct VertexBufferBinding
 			{
-				GPUBuffer buffer;
-				uint64_t offset = 0;
+				MTL::GPUAddress gpu_address = 0;
 				uint32_t stride = 0;
 			};
-			VertexBufferBinding vertex_buffers[32];
+			VertexBufferBinding vertex_buffers[16];
 			bool dirty_vb = false;
 			
 			wi::vector<GPUBarrier> barriers;
@@ -130,8 +128,7 @@ namespace wi::graphics
 				render_encoder = nullptr;
 				compute_encoder = nullptr;
 				primitive_type = MTL::PrimitiveTypeTriangle;
-				index_buffer.reset();
-				index_buffer_offset = 0;
+				index_buffer = {};
 				index_type = MTL::IndexTypeUInt32;
 				pipelines_worker.clear();
 				pipeline_hash = {};

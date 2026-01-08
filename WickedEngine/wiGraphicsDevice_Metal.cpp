@@ -974,8 +974,6 @@ using namespace metal_internal;
 		
 		if (commandlist.dirty_root)
 		{
-			commandlist.dirty_root = false;
-			
 			// root CBVs:
 			for (uint32_t i = 0; i < arraysize(RootLayout::root_cbvs); ++i)
 			{
@@ -1077,39 +1075,34 @@ using namespace metal_internal;
 			std::memcpy(alloc.data, &commandlist.root, sizeof(commandlist.root));
 			auto alloc_internal = to_internal(&alloc.buffer);
 			commandlist.argument_table->setAddress(alloc_internal->gpu_address + alloc.offset, kIRArgumentBufferBindPoint);
-			
-			if (commandlist.render_encoder != nullptr)
-			{
-				MTL::RenderStages stages = {};
-				if (commandlist.active_pso->desc.vs != nullptr)
-				{
-					stages |= MTL::RenderStageVertex;
-				}
-				if (commandlist.active_pso->desc.ps != nullptr)
-				{
-					stages |= MTL::RenderStageFragment;
-				}
-				commandlist.render_encoder->setArgumentTable(commandlist.argument_table.get(), stages);
-			}
-			else if (commandlist.compute_encoder != nullptr)
-			{
-				commandlist.compute_encoder->setArgumentTable(commandlist.argument_table.get());
-			}
 		}
 		if (commandlist.dirty_vb && commandlist.active_pso != nullptr && commandlist.active_pso->desc.il != nullptr)
 		{
-			commandlist.dirty_vb = false;
 			const InputLayout& il = *commandlist.active_pso->desc.il;
 			for (size_t i = 0; i < il.elements.size(); ++i)
 			{
 				auto& element = il.elements[i];
 				auto& vb = commandlist.vertex_buffers[element.input_slot];
-				if (!vb.buffer.IsValid())
+				if (vb.gpu_address == 0)
 					continue;
-				auto buffer_internal = to_internal(&vb.buffer);
-				commandlist.argument_table->setAddress(buffer_internal->gpu_address + vb.offset, vb.stride, kIRVertexBufferBindPoint + i);
+				commandlist.argument_table->setAddress(vb.gpu_address, vb.stride, kIRVertexBufferBindPoint + i);
 			}
-			commandlist.render_encoder->setArgumentTable(commandlist.argument_table.get(), MTL::RenderStageVertex);
+		}
+		
+		// Flushing argument table updates to encoder:
+		if (commandlist.dirty_root && commandlist.dirty_vb)
+		{
+			commandlist.dirty_root = false;
+			commandlist.dirty_vb = false;
+			
+			if (commandlist.render_encoder != nullptr)
+			{
+				commandlist.render_encoder->setArgumentTable(commandlist.argument_table.get(), MTL::RenderStageVertex | MTL::RenderStageFragment);
+			}
+			else if (commandlist.compute_encoder != nullptr)
+			{
+				commandlist.compute_encoder->setArgumentTable(commandlist.argument_table.get());
+			}
 		}
 	}
 
@@ -3440,19 +3433,22 @@ using namespace metal_internal;
 		for (uint32_t i = 0; i < count; ++i)
 		{
 			auto& vb = commandlist.vertex_buffers[slot + i];
-			vb.buffer = *vertexBuffers[i];
-			vb.offset = offsets == nullptr ? 0 : offsets[i];
+			if (vertexBuffers[i] == nullptr || !vertexBuffers[i]->IsValid())
+				continue;
+			auto internal_state = to_internal(vertexBuffers[i]);
+			const uint64_t offset = offsets == nullptr ? 0 : offsets[i];
+			vb.gpu_address = internal_state->gpu_address + offset;
 			vb.stride = strides[i];
 		}
 	}
 	void GraphicsDevice_Metal::BindIndexBuffer(const GPUBuffer* indexBuffer, const IndexBufferFormat format, uint64_t offset, CommandList cmd)
 	{
-		if (indexBuffer == nullptr)
+		if (indexBuffer == nullptr || !indexBuffer->IsValid())
 			return;
 		auto internal_state = to_internal(indexBuffer);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-		commandlist.index_buffer = internal_state->buffer;
-		commandlist.index_buffer_offset = offset;
+		commandlist.index_buffer.bufferAddress = internal_state->gpu_address + offset;
+		commandlist.index_buffer.length = internal_state->buffer->length();
 		commandlist.index_type = format == IndexBufferFormat::UINT32 ? MTL::IndexTypeUInt32 : MTL::IndexTypeUInt16;
 	}
 	void GraphicsDevice_Metal::BindStencilRef(uint32_t value, CommandList cmd)
@@ -3519,8 +3515,8 @@ using namespace metal_internal;
 		predraw(cmd);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		const uint64_t index_stride = commandlist.index_type == MTL::IndexTypeUInt32 ? sizeof(uint32_t) : sizeof(uint16_t);
-		const uint64_t indexBufferOffset = commandlist.index_buffer_offset + startIndexLocation * index_stride;
-		commandlist.render_encoder->drawIndexedPrimitives(commandlist.primitive_type, indexCount, commandlist.index_type, commandlist.index_buffer->gpuAddress() + indexBufferOffset, commandlist.index_buffer->length());
+		const uint64_t indexBufferOffset = startIndexLocation * index_stride;
+		commandlist.render_encoder->drawIndexedPrimitives(commandlist.primitive_type, indexCount, commandlist.index_type, commandlist.index_buffer.bufferAddress + indexBufferOffset, commandlist.index_buffer.length);
 	}
 	void GraphicsDevice_Metal::DrawInstanced(uint32_t vertexCount, uint32_t instanceCount, uint32_t startVertexLocation, uint32_t startInstanceLocation, CommandList cmd)
 {
@@ -3533,8 +3529,8 @@ using namespace metal_internal;
 		predraw(cmd);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		const uint64_t index_stride = commandlist.index_type == MTL::IndexTypeUInt32 ? sizeof(uint32_t) : sizeof(uint16_t);
-		const uint64_t indexBufferOffset = commandlist.index_buffer_offset + startIndexLocation * index_stride;
-		commandlist.render_encoder->drawIndexedPrimitives(commandlist.primitive_type, indexCount, commandlist.index_type, commandlist.index_buffer->gpuAddress() + indexBufferOffset, commandlist.index_buffer->length(), instanceCount, baseVertexLocation, startInstanceLocation);
+		const uint64_t indexBufferOffset = startIndexLocation * index_stride;
+		commandlist.render_encoder->drawIndexedPrimitives(commandlist.primitive_type, indexCount, commandlist.index_type, commandlist.index_buffer.bufferAddress + indexBufferOffset, commandlist.index_buffer.length, instanceCount, baseVertexLocation, startInstanceLocation);
 	}
 	void GraphicsDevice_Metal::DrawInstancedIndirect(const GPUBuffer* args, uint64_t args_offset, CommandList cmd)
 {
@@ -3548,7 +3544,7 @@ using namespace metal_internal;
 		predraw(cmd);
 		auto internal_state = to_internal(args);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-		commandlist.render_encoder->drawIndexedPrimitives(commandlist.primitive_type, commandlist.index_type, commandlist.index_buffer->gpuAddress() + commandlist.index_buffer_offset, commandlist.index_buffer->length(), internal_state->gpu_address + args_offset);
+		commandlist.render_encoder->drawIndexedPrimitives(commandlist.primitive_type, commandlist.index_type, commandlist.index_buffer.bufferAddress, commandlist.index_buffer.length, internal_state->gpu_address + args_offset);
 	}
 	void GraphicsDevice_Metal::DrawInstancedIndirectCount(const GPUBuffer* args, uint64_t args_offset, const GPUBuffer* count, uint64_t count_offset, uint32_t max_count, CommandList cmd)
 	{
