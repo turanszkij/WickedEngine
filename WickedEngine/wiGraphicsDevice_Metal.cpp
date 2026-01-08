@@ -1859,7 +1859,7 @@ using namespace metal_internal;
 			}
 		}
 		
-		if (internal_state->texture.get() != nullptr && !sparse)
+		if (internal_state->texture.get() != nullptr)
 		{
 			allocationhandler->make_resident(internal_state->texture.get());
 		}
@@ -3069,11 +3069,12 @@ using namespace metal_internal;
 		{
 			const SparseUpdateCommand& command = commands[i];
 			auto tilepool_internal = to_internal<GPUBuffer>(command.tile_pool);
+			MTL::Heap* heap = tilepool_internal->buffer->heap();
+			assert(heap != nullptr);
 			
 			if (command.sparse_resource->IsTexture())
 			{
 				auto sparse_internal = to_internal<Texture>(command.sparse_resource);
-				// TODO: remove heap allocs
 				wi::vector<MTL4::UpdateSparseTextureMappingOperation> operations;
 				operations.reserve(command.num_resource_regions);
 				for (uint32_t j = 0; j < command.num_resource_regions; ++j)
@@ -3092,9 +3093,34 @@ using namespace metal_internal;
 					op.textureRegion.size.height = size.height;
 					op.textureRegion.size.depth = size.depth;
 				}
-				commandqueue->updateTextureMappings(sparse_internal->texture.get(), tilepool_internal->buffer->heap(), operations.data(), operations.size());
+				commandqueue->updateTextureMappings(sparse_internal->texture.get(), heap, operations.data(), operations.size());
+			}
+			else if (command.sparse_resource->IsBuffer())
+			{
+				auto sparse_internal = to_internal<GPUBuffer>(command.sparse_resource);
+				wi::vector<MTL4::UpdateSparseBufferMappingOperation> operations;
+				operations.reserve(command.num_resource_regions);
+				for (uint32_t j = 0; j < command.num_resource_regions; ++j)
+				{
+					const SparseResourceCoordinate& coordinate = command.coordinates[j];
+					const SparseRegionSize& size = command.sizes[j];
+					MTL4::UpdateSparseBufferMappingOperation op = {
+						command.range_flags[j] == TileRangeFlags::Null ? MTL::SparseTextureMappingModeUnmap : MTL::SparseTextureMappingModeMap,
+						{coordinate.x, size.width},
+						command.range_start_offsets[j]
+					};
+					operations.push_back(op);
+				}
+				commandqueue->updateBufferMappings(sparse_internal->buffer.get(), heap, operations.data(), operations.size());
 			}
 		}
+		
+#if 1
+		NS::SharedPtr<MTL::SharedEvent> event = NS::TransferPtr(device->newSharedEvent());
+		event->setSignaledValue(0);
+		commandqueue->signalEvent(event.get(), 1);
+		event->waitUntilSignaledValue(1, ~0ull);
+#endif
 	}
 
 	void GraphicsDevice_Metal::WaitCommandList(CommandList cmd, CommandList wait_for)
