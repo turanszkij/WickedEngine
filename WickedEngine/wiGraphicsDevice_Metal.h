@@ -83,9 +83,8 @@ namespace wi::graphics
 			}
 		} queues[QUEUE_COUNT];
 		
-		uint64_t frame_fence_cpu_values[BUFFERCOUNT] = {};
-		NS::SharedPtr<MTL::SharedEvent> frame_fence_cpu[BUFFERCOUNT][QUEUE_COUNT];
-		NS::SharedPtr<MTL::SharedEvent> frame_fence_gpu[BUFFERCOUNT][QUEUE_COUNT];
+		uint64_t frame_fence_values[BUFFERCOUNT] = {};
+		NS::SharedPtr<MTL::SharedEvent> frame_fence[BUFFERCOUNT][QUEUE_COUNT];
 		
 		NS::SharedPtr<MTL4::ArgumentTableDescriptor> argument_table_desc;
 		

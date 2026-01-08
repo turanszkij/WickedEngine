@@ -1464,10 +1464,8 @@ using namespace metal_internal;
 			{
 				if (queues[q].queue.get() == nullptr)
 					continue;
-				frame_fence_cpu[i][q] = NS::TransferPtr(device->newSharedEvent());
-				frame_fence_cpu[i][q]->setSignaledValue(0);
-				frame_fence_gpu[i][q] = NS::TransferPtr(device->newSharedEvent());
-				frame_fence_gpu[i][q]->setSignaledValue(0);
+				frame_fence[i][q] = NS::TransferPtr(device->newSharedEvent());
+				frame_fence[i][q]->setSignaledValue(0);
 			}
 		}
 		
@@ -3032,7 +3030,7 @@ using namespace metal_internal;
 		}
 		
 		// Mark the completion of queues for this frame:
-		frame_fence_cpu_values[GetBufferIndex()]++;
+		frame_fence_values[GetBufferIndex()]++;
 		for (int q = 0; q < QUEUE_COUNT; ++q)
 		{
 			CommandQueue& queue = queues[q];
@@ -3041,8 +3039,7 @@ using namespace metal_internal;
 			
 			queue.submit();
 			
-			queue.queue->signalEvent(frame_fence_cpu[GetBufferIndex()][q].get(), frame_fence_cpu_values[GetBufferIndex()]); // gpu will write 1 into the fence when finished with the work (1 = free to reuse)
-			queue.queue->signalEvent(frame_fence_gpu[GetBufferIndex()][q].get(), FRAMECOUNT);
+			queue.queue->signalEvent(frame_fence[GetBufferIndex()][q].get(), frame_fence_values[GetBufferIndex()]);
 		}
 		
 		// Presents submit:
@@ -3073,8 +3070,8 @@ using namespace metal_internal;
 					continue;
 				if (queues[queue2].queue.get() == nullptr)
 					continue;
-				MTL::SharedEvent* fence = frame_fence_gpu[GetBufferIndex()][queue2].get();
-				queues[queue1].queue->wait(fence, FRAMECOUNT);
+				MTL::SharedEvent* fence = frame_fence[GetBufferIndex()][queue2].get();
+				queues[queue1].queue->wait(fence, frame_fence_values[GetBufferIndex()]);
 			}
 		}
 		
@@ -3087,10 +3084,10 @@ using namespace metal_internal;
 		{
 			if (queues[queue].queue.get() == nullptr)
 				continue;
-			MTL::SharedEvent* fence = frame_fence_cpu[bufferindex][queue].get();
-			if (fence->signaledValue() < frame_fence_cpu_values[GetBufferIndex()])
+			MTL::SharedEvent* fence = frame_fence[bufferindex][queue].get();
+			if (fence->signaledValue() < frame_fence_values[GetBufferIndex()])
 			{
-				fence->waitUntilSignaledValue(frame_fence_cpu_values[GetBufferIndex()], ~0ull);
+				fence->waitUntilSignaledValue(frame_fence_values[GetBufferIndex()], ~0ull);
 			}
 		}
 		
