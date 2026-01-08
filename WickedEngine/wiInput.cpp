@@ -444,12 +444,18 @@ namespace wi::input
 		// Cursor update:
 		if (cursor_next != cursor_current || cursor_next != CURSOR_DEFAULT)
 		{
+			if (cursor_next >= arraysize(cursor_table))
+			{
+				cursor_next = CURSOR_DEFAULT;
+			}
+			auto cursorhandle = cursor_table[cursor_next] ? cursor_table[cursor_next] : cursor_table[CURSOR_DEFAULT];
+			
 #ifdef PLATFORM_WINDOWS_DESKTOP
-			::SetCursor(cursor_table[cursor_next]);
+			::SetCursor(cursorhandle);
 #elif defined(__APPLE__)
-			wi::apple::CursorSet(cursor_table[cursor_next]);
+			wi::apple::CursorSet(cursorhandle);
 #elif defined(SDL2)
-			SDL_SetCursor(cursor_table[cursor_next] ? cursor_table[cursor_next] : cursor_table[CURSOR_DEFAULT]);
+			SDL_SetCursor(cursorhandle);
 #endif // SDL2
 
 			cursor_current = cursor_next;
