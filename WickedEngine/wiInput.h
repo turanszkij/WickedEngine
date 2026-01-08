@@ -267,6 +267,9 @@ namespace wi::input
 	// Resets specified cursor to the original:
 	void ResetCursor(CURSOR cursor);
 
+	// Resets all cursors to original:
+	void ResetCursors();
+
 	// Notify the engine's input system that the OS changed the cursor from outside
 	void NotifyCursorChanged();
 

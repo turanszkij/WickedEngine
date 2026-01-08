@@ -23,6 +23,7 @@ namespace wi::lua
 		lunamethod(Input_BindLua, SetCursor),
 		lunamethod(Input_BindLua, SetCursorFromFile),
 		lunamethod(Input_BindLua, ResetCursor),
+		lunamethod(Input_BindLua, ResetCursors),
 		{ NULL, NULL }
 	};
 	Luna<Input_BindLua>::PropertyType Input_BindLua::properties[] = {
@@ -291,6 +292,11 @@ namespace wi::lua
 			return 0;
 		}
 		wi::lua::SError(L, "ResetCursor(int cursor) not enough arguments!");
+		return 0;
+	}
+	int Input_BindLua::ResetCursors(lua_State* L)
+	{
+		wi::input::ResetCursors();
 		return 0;
 	}
 

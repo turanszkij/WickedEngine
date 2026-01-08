@@ -33,6 +33,7 @@ namespace wi::lua
 		int SetCursor(lua_State* L);
 		int SetCursorFromFile(lua_State* L);
 		int ResetCursor(lua_State* L);
+		int ResetCursors(lua_State* L);
 
 		static void Bind();
 	};
