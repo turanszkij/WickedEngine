@@ -676,15 +676,9 @@ namespace metal_internal
 					allocationhandler->destroyer_bindless_res.push_back(std::make_pair(x.index, framecount));
 			}
 			subresources_uav.clear();
-			for (auto& x : subresources_rtv)
-			{
-				allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(x.texture), framecount));
-			}
+			
+			// RTV and DSV can just be cleared, they don't have any gpu-referenced resources:
 			subresources_rtv.clear();
-			for (auto& x : subresources_dsv)
-			{
-				allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(x.texture), framecount));
-			}
 			subresources_dsv.clear();
 		}
 
@@ -2622,7 +2616,6 @@ using namespace metal_internal;
 					if (!internal_state->rtv.IsValid())
 					{
 						auto& subresource = internal_state->rtv;
-						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, texture_type, {firstMip, mipCount}, {firstSlice, sliceCount}));
 						subresource.firstMip = firstMip;
 						subresource.mipCount = mipCount;
 						subresource.firstSlice = firstSlice;
@@ -2633,7 +2626,6 @@ using namespace metal_internal;
 					else
 					{
 						auto& subresource = internal_state->subresources_rtv.emplace_back();
-						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, texture_type, {firstMip, mipCount}, {firstSlice, sliceCount}));
 						subresource.firstMip = firstMip;
 						subresource.mipCount = mipCount;
 						subresource.firstSlice = firstSlice;
@@ -2649,7 +2641,6 @@ using namespace metal_internal;
 					if (!internal_state->dsv.IsValid())
 					{
 						auto& subresource = internal_state->dsv;
-						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, texture_type, {firstMip, mipCount}, {firstSlice, sliceCount}));
 						subresource.firstMip = firstMip;
 						subresource.mipCount = mipCount;
 						subresource.firstSlice = firstSlice;
@@ -2660,7 +2651,6 @@ using namespace metal_internal;
 					else
 					{
 						auto& subresource = internal_state->subresources_dsv.emplace_back();
-						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, texture_type, {firstMip, mipCount}, {firstSlice, sliceCount}));
 						subresource.firstMip = firstMip;
 						subresource.mipCount = mipCount;
 						subresource.firstSlice = firstSlice;
