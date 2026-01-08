@@ -813,8 +813,7 @@ namespace wi
 
 							wi::renderer::AddDeferredMIPGen(resource->texture, true);
 
-#ifndef __APPLE__ // TODO: implement block compression on Metal API where the copy texture->texture command can't do this what is possible in every other gfx API
-							if (has_flag(flags, Flags::IMPORT_BLOCK_COMPRESSED))
+							if (has_flag(flags, Flags::IMPORT_BLOCK_COMPRESSED) && !device->CheckCapability(GraphicsDeviceCapability::COPY_TEXTURE_REINTERPRET_NOT_SUPPORTED))
 							{
 								// Schedule additional task to compress into BC format and replace resource texture:
 								Texture uncompressed_src = std::move(resource->texture);
@@ -853,7 +852,6 @@ namespace wi
 
 								wi::renderer::AddDeferredBlockCompression(uncompressed_src, resource->texture);
 							}
-#endif // __APPLE__
 						}
 					}
 					stbi_image_free(rgba);

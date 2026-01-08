@@ -1334,6 +1334,14 @@ using namespace metal_internal;
 		capabilities |= GraphicsDeviceCapability::UAV_LOAD_FORMAT_COMMON;
 		capabilities |= GraphicsDeviceCapability::UAV_LOAD_FORMAT_R11G11B10_FLOAT;
 		capabilities |= GraphicsDeviceCapability::COPY_BETWEEN_DIFFERENT_IMAGE_ASPECTS_NOT_SUPPORTED;
+		capabilities |= GraphicsDeviceCapability::SPARSE_BUFFER;
+		capabilities |= GraphicsDeviceCapability::SPARSE_TEXTURE2D;
+		capabilities |= GraphicsDeviceCapability::SPARSE_TEXTURE3D;
+		capabilities |= GraphicsDeviceCapability::SPARSE_NULL_MAPPING;
+		capabilities |= GraphicsDeviceCapability::DEPTH_RESOLVE_MIN_MAX;
+		capabilities |= GraphicsDeviceCapability::STENCIL_RESOLVE_MIN_MAX;
+		capabilities |= GraphicsDeviceCapability::COPY_BETWEEN_DIFFERENT_IMAGE_ASPECTS_NOT_SUPPORTED;
+		capabilities |= GraphicsDeviceCapability::COPY_TEXTURE_REINTERPRET_NOT_SUPPORTED;
 		
 		if (device->hasUnifiedMemory())
 		{
