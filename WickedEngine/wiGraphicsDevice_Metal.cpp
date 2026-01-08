@@ -797,7 +797,6 @@ namespace metal_internal
 		NS::SharedPtr<MTL::Buffer> scratch;
 		NS::SharedPtr<MTL::Buffer> tlas_header;
 		NS::SharedPtr<MTL::Buffer> tlas_instance_contributions;
-		NS::SharedPtr<MTL::Buffer> tlas_instance_count;
 		int tlas_descriptor_index = -1;
 		IRDescriptorTableEntry tlas_entry = {};
 		MTL::ResourceID resourceid = {};
@@ -814,8 +813,6 @@ namespace metal_internal
 				allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(tlas_header), framecount));
 			if (tlas_instance_contributions.get() != nullptr)
 				allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(tlas_instance_contributions), framecount));
-			if (tlas_instance_count.get() != nullptr)
-				allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(tlas_instance_count), framecount));
 			if (tlas_descriptor_index >= 0)
 				allocationhandler->destroyer_bindless_res.push_back(std::make_pair(tlas_descriptor_index, framecount));
 			allocationhandler->destroylocker.unlock();
@@ -897,13 +894,13 @@ namespace metal_internal
 		
 		if (desc->type == RaytracingAccelerationStructureDesc::Type::TOPLEVEL)
 		{
-			NS::SharedPtr<MTL4::IndirectInstanceAccelerationStructureDescriptor> instance_descriptor = NS::TransferPtr(MTL4::IndirectInstanceAccelerationStructureDescriptor::alloc()->init());
-			instance_descriptor->setMaxInstanceCount(desc->top_level.count);
-			instance_descriptor->setInstanceCountBuffer({internal_state->tlas_instance_count->gpuAddress(), internal_state->tlas_instance_count->length()});
+			NS::SharedPtr<MTL4::InstanceAccelerationStructureDescriptor> instance_descriptor = NS::TransferPtr(MTL4::InstanceAccelerationStructureDescriptor::alloc()->init());
+			instance_descriptor->setInstanceCount(desc->top_level.count);
 			auto buffer_internal = to_internal(&desc->top_level.instance_buffer);
 			instance_descriptor->setInstanceDescriptorBuffer({buffer_internal->gpu_address + desc->top_level.offset, buffer_internal->buffer->length()});
 			instance_descriptor->setInstanceDescriptorStride(sizeof(MTL::IndirectAccelerationStructureInstanceDescriptor));
 			instance_descriptor->setInstanceDescriptorType(MTL::AccelerationStructureInstanceDescriptorTypeIndirect);
+			instance_descriptor->setInstanceTransformationMatrixLayout(MTL::MatrixLayoutRowMajor);
 			descriptor = std::move(instance_descriptor);
 		}
 		else
@@ -2510,14 +2507,6 @@ using namespace metal_internal;
 		bvh->type = GPUResource::Type::RAYTRACING_ACCELERATION_STRUCTURE;
 		bvh->desc = *desc;
 		bvh->size = 0;
-		
-		if (desc->type == RaytracingAccelerationStructureDesc::Type::TOPLEVEL)
-		{
-			internal_state->tlas_instance_count = NS::TransferPtr(device->newBuffer(sizeof(uint64_t), MTL::ResourceStorageModeShared | MTL::ResourceHazardTrackingModeUntracked));
-			internal_state->tlas_instance_count->setLabel(NS::TransferPtr(NS::String::alloc()->init("TLAS_instance_count", NS::UTF8StringEncoding)).get());
-			std::memcpy(internal_state->tlas_instance_count->contents(), &desc->top_level.count, sizeof(desc->top_level.count));
-			allocationhandler->make_resident(internal_state->tlas_instance_count.get());
-		}
 		
 		NS::SharedPtr<MTL4::AccelerationStructureDescriptor> descriptor = acceleration_structure_descriptor(desc, internal_state);
 		
