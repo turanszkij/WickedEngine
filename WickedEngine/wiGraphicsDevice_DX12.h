@@ -116,9 +116,8 @@ namespace wi::graphics
 		};
 		mutable CopyAllocator copyAllocator;
 
-		uint64_t frame_fence_cpu_values[BUFFERCOUNT] = {};
-		Microsoft::WRL::ComPtr<ID3D12Fence> frame_fence_cpu[BUFFERCOUNT][QUEUE_COUNT];
-		Microsoft::WRL::ComPtr<ID3D12Fence> frame_fence_gpu[BUFFERCOUNT][QUEUE_COUNT];
+		uint64_t frame_fence_values[BUFFERCOUNT] = {};
+		Microsoft::WRL::ComPtr<ID3D12Fence> frame_fence[BUFFERCOUNT][QUEUE_COUNT];
 
 		struct DescriptorBinder
 		{

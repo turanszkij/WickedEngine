@@ -2601,7 +2601,7 @@ std::mutex queue_locker;
 		{
 			for (int queue = 0; queue < QUEUE_COUNT; ++queue)
 			{
-				hr = dx12_check(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(frame_fence_cpu[buffer][queue])));
+				hr = dx12_check(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(frame_fence[buffer][queue])));
 				if (FAILED(hr))
 				{
 					wilog_messagebox("ID3D12Device::CreateFence[FRAME] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
@@ -2610,38 +2610,16 @@ std::mutex queue_locker;
 				switch (queue)
 				{
 				case QUEUE_GRAPHICS:
-					dx12_check(frame_fence_cpu[buffer][queue]->SetName(L"frame_fence_cpu[QUEUE_GRAPHICS]"));
+					dx12_check(frame_fence[buffer][queue]->SetName(L"frame_fence[QUEUE_GRAPHICS]"));
 					break;
 				case QUEUE_COMPUTE:
-					dx12_check(frame_fence_cpu[buffer][queue]->SetName(L"frame_fence_cpu[QUEUE_COMPUTE]"));
+					dx12_check(frame_fence[buffer][queue]->SetName(L"frame_fence[QUEUE_COMPUTE]"));
 					break;
 				case QUEUE_COPY:
-					dx12_check(frame_fence_cpu[buffer][queue]->SetName(L"frame_fence_cpu[QUEUE_COPY]"));
+					dx12_check(frame_fence[buffer][queue]->SetName(L"frame_fence[QUEUE_COPY]"));
 					break;
 				case QUEUE_VIDEO_DECODE:
-					dx12_check(frame_fence_cpu[buffer][queue]->SetName(L"frame_fence_cpu[QUEUE_VIDEO_DECODE]"));
-					break;
-				};
-
-				hr = dx12_check(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(frame_fence_gpu[buffer][queue])));
-				if (FAILED(hr))
-				{
-					wilog_messagebox("ID3D12Device::CreateFence[FRAME] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
-					wi::platform::Exit();
-				}
-				switch (queue)
-				{
-				case QUEUE_GRAPHICS:
-					dx12_check(frame_fence_gpu[buffer][queue]->SetName(L"frame_fence_gpu[QUEUE_GRAPHICS]"));
-					break;
-				case QUEUE_COMPUTE:
-					dx12_check(frame_fence_gpu[buffer][queue]->SetName(L"frame_fence_gpu[QUEUE_COMPUTE]"));
-					break;
-				case QUEUE_COPY:
-					dx12_check(frame_fence_gpu[buffer][queue]->SetName(L"frame_fence_gpu[QUEUE_COPY]"));
-					break;
-				case QUEUE_VIDEO_DECODE:
-					dx12_check(frame_fence_gpu[buffer][queue]->SetName(L"frame_fence_gpu[QUEUE_VIDEO_DECODE]"));
+					dx12_check(frame_fence[buffer][queue]->SetName(L"frame_fence[QUEUE_VIDEO_DECODE]"));
 					break;
 				};
 			}
@@ -5402,7 +5380,7 @@ std::mutex queue_locker;
 			}
 
 			// Mark the completion of queues for this frame:
-			frame_fence_cpu_values[GetBufferIndex()]++;
+			frame_fence_values[GetBufferIndex()]++;
 			for (int q = 0; q < QUEUE_COUNT; ++q)
 			{
 				CommandQueue& queue = queues[q];
@@ -5411,8 +5389,7 @@ std::mutex queue_locker;
 
 				queue.submit();
 
-				dx12_check(queue.queue->Signal(frame_fence_cpu[GetBufferIndex()][q].Get(), frame_fence_cpu_values[GetBufferIndex()]));
-				dx12_check(queue.queue->Signal(frame_fence_gpu[GetBufferIndex()][q].Get(), FRAMECOUNT));
+				dx12_check(queue.queue->Signal(frame_fence[GetBufferIndex()][q].Get(), frame_fence_values[GetBufferIndex()]));
 			}
 
 			for (uint32_t cmd = 0; cmd < cmd_last; ++cmd)
@@ -5467,8 +5444,8 @@ std::mutex queue_locker;
 					continue;
 				if (queues[queue2].queue == nullptr)
 					continue;
-				ID3D12Fence* fence = frame_fence_gpu[GetBufferIndex()][queue2].Get();
-				queues[queue1].queue->Wait(fence, FRAMECOUNT);
+				ID3D12Fence* fence = frame_fence[GetBufferIndex()][queue2].Get();
+				queues[queue1].queue->Wait(fence, frame_fence_values[GetBufferIndex()]);
 			}
 		}
 
@@ -5484,12 +5461,12 @@ std::mutex queue_locker;
 		{
 			if (queues[queue].queue == nullptr)
 				continue;
-			ID3D12Fence* fence = frame_fence_cpu[bufferindex][queue].Get();
-			if (fence->GetCompletedValue() < frame_fence_cpu_values[GetBufferIndex()])
+			ID3D12Fence* fence = frame_fence[bufferindex][queue].Get();
+			if (fence->GetCompletedValue() < frame_fence_values[GetBufferIndex()])
 			{
 				// nullptr event handle will simply wait immediately:
 				//	https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12fence-seteventoncompletion#remarks
-				dx12_check(fence->SetEventOnCompletion(frame_fence_cpu_values[GetBufferIndex()], nullptr));
+				dx12_check(fence->SetEventOnCompletion(frame_fence_values[GetBufferIndex()], nullptr));
 			}
 		}
 
