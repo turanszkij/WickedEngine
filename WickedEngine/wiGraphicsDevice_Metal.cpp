@@ -915,6 +915,7 @@ namespace metal_internal
 				{
 					NS::SharedPtr<MTL4::AccelerationStructureTriangleGeometryDescriptor> geo = NS::TransferPtr(MTL4::AccelerationStructureTriangleGeometryDescriptor::alloc()->init());
 					geometry_descs.push_back(geo);
+					geo->setAllowDuplicateIntersectionFunctionInvocation((x.flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_NO_DUPLICATE_ANYHIT_INVOCATION) == 0);
 					geo->setOpaque(x.flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE);
 					auto ib_internal = to_internal(&x.triangles.index_buffer);
 					auto vb_internal = to_internal(&x.triangles.vertex_buffer);
@@ -2931,6 +2932,11 @@ using namespace metal_internal;
 			descriptor.intersectionFunctionTableOffset = 0;
 			auto blas_internal = to_internal<RaytracingAccelerationStructure>(instance->bottom_level);
 			descriptor.accelerationStructureID = blas_internal->resourceid;
+#if 1
+			// The top level descriptor can specify row major layout now like directx:
+			std::memcpy(&descriptor.transformationMatrix, instance->transform, sizeof(descriptor.transformationMatrix));
+#else
+			// Conversion from row major to column major:
 			descriptor.transformationMatrix.columns[0][0] = instance->transform[0][0];
 			descriptor.transformationMatrix.columns[0][1] = instance->transform[1][0];
 			descriptor.transformationMatrix.columns[0][2] = instance->transform[2][0];
@@ -2943,6 +2949,7 @@ using namespace metal_internal;
 			descriptor.transformationMatrix.columns[3][0] = instance->transform[0][3];
 			descriptor.transformationMatrix.columns[3][1] = instance->transform[1][3];
 			descriptor.transformationMatrix.columns[3][2] = instance->transform[2][3];
+#endif
 		}
 		std::memcpy(dest, &descriptor, sizeof(descriptor)); // force memcpy into potentially write combined cache memory
 	}
