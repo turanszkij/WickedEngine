@@ -512,15 +512,24 @@ namespace metal_internal
 		return MTL::SamplerAddressModeClampToEdge;
 	}
 
-	IRDescriptorTableEntry create_entry(MTL::Texture* res, float min_lod_clamp = 0)
+	IRDescriptorTableEntry create_entry(MTL::Texture* res, float min_lod_clamp = 0, uint32_t metadata = 0)
 	{
-		IRDescriptorTableEntry ret;
-		IRDescriptorTableSetTexture(&ret, res, min_lod_clamp, 0);
-		return ret;
+		IRDescriptorTableEntry entry;
+		IRDescriptorTableSetTexture(&entry, res, min_lod_clamp, metadata);
+		return entry;
+	}
+	IRDescriptorTableEntry create_entry(MTL::ResourceID resourceID, float min_lod_clamp = 0, uint32_t metadata = 0)
+	{
+		// This is the expanded version of IRDescriptorTableSetTexture, made to be compatible with texture view pooling
+		IRDescriptorTableEntry entry;
+		entry.gpuVA = 0;
+		entry.textureViewID = resourceID._impl;
+		entry.metadata = (uint64_t)(*((uint32_t*)&min_lod_clamp) | ((uint64_t)metadata) << 32);
+		return entry;
 	}
 	IRDescriptorTableEntry create_entry(MTL::Buffer* res, uint64_t size, uint64_t offset = 0, MTL::Texture* texture_buffer_view = nullptr, Format format = Format::UNKNOWN, bool structured = false)
 	{
-		IRDescriptorTableEntry ret;
+		IRDescriptorTableEntry entry;
 		IRBufferView view = {};
 		view.buffer = res;
 		view.bufferSize = size;
@@ -535,14 +544,36 @@ namespace metal_internal
 			view.textureBufferView = texture_buffer_view;
 			view.textureViewOffsetInElements = uint32_t(offset / (uint64_t)GetFormatStride(format));
 		}
-		IRDescriptorTableSetBufferView(&ret, &view);
-		return ret;
+		IRDescriptorTableSetBufferView(&entry, &view);
+		return entry;
+	}
+	IRDescriptorTableEntry create_entry(MTL::Buffer* res, uint64_t size, uint64_t offset = 0, MTL::ResourceID resourceID = {}, Format format = Format::UNKNOWN, bool structured = false)
+	{
+		// This is the expanded version of IRDescriptorTableSetBufferView, made to be compatible with texture view pooling
+		IRDescriptorTableEntry entry;
+		entry.gpuVA = res->gpuAddress() + offset;
+		entry.textureViewID = resourceID._impl;
+		entry.metadata = (size & kIRBufSizeMask) << kIRBufSizeOffset;
+		bool typedBuffer = false;
+		uint64_t textureViewOffsetInElements = 0;
+		if (entry.textureViewID == 0)
+		{
+			typedBuffer = structured || (format != Format::UNKNOWN);
+		}
+		else
+		{
+			typedBuffer = true;
+			textureViewOffsetInElements = uint32_t(offset / (uint64_t)GetFormatStride(format));
+		}
+		entry.metadata |= ((uint64_t)textureViewOffsetInElements & kIRTexViewMask) << kIRTexViewOffset;
+		entry.metadata |= (uint64_t)typedBuffer << kIRTypedBufferOffset;
+		return entry;
 	}
 	IRDescriptorTableEntry create_entry(MTL::SamplerState* sam, float lod_bias = 0)
 	{
-		IRDescriptorTableEntry ret;
-		IRDescriptorTableSetSampler(&ret, sam, lod_bias);
-		return ret;
+		IRDescriptorTableEntry entry;
+		IRDescriptorTableSetSampler(&entry, sam, lod_bias);
+		return entry;
 	}
 
 	struct Buffer_Metal
@@ -554,7 +585,6 @@ namespace metal_internal
 		struct Subresource
 		{
 			IRDescriptorTableEntry entry = {};
-			NS::SharedPtr<MTL::Texture> texture_buffer_view;
 			uint64_t offset = 0;
 			uint64_t size = 0;
 			int index = -1;
@@ -570,26 +600,22 @@ namespace metal_internal
 		{
 			uint64_t framecount = allocationhandler->framecount;
 			
-			allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(srv.texture_buffer_view), framecount));
 			if (srv.index >= 0)
 				allocationhandler->destroyer_bindless_res.push_back(std::make_pair(srv.index, framecount));
 			srv = {};
 			
-			allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(uav.texture_buffer_view), framecount));
 			if (uav.index >= 0)
 				allocationhandler->destroyer_bindless_res.push_back(std::make_pair(uav.index, framecount));
 			uav = {};
 			
 			for (auto& x : subresources_srv)
 			{
-				allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(x.texture_buffer_view), framecount));
 				if (x.index >= 0)
 					allocationhandler->destroyer_bindless_res.push_back(std::make_pair(x.index, framecount));
 			}
 			subresources_srv.clear();
 			for (auto& x : subresources_uav)
 			{
-				allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(x.texture_buffer_view), framecount));
 				if (x.index >= 0)
 					allocationhandler->destroyer_bindless_res.push_back(std::make_pair(x.index, framecount));
 			}
@@ -619,7 +645,6 @@ namespace metal_internal
 		struct Subresource
 		{
 			IRDescriptorTableEntry entry = {};
-			NS::SharedPtr<MTL::Texture> texture;
 			int index = -1;
 			
 			uint32_t firstMip = 0;
@@ -644,34 +669,28 @@ namespace metal_internal
 		{
 			uint64_t framecount = allocationhandler->framecount;
 			
-			allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(srv.texture), framecount));
 			if (srv.index >= 0)
 				allocationhandler->destroyer_bindless_res.push_back(std::make_pair(srv.index, framecount));
 			srv = {};
 			
-			allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(uav.texture), framecount));
 			if (uav.index >= 0)
 				allocationhandler->destroyer_bindless_res.push_back(std::make_pair(uav.index, framecount));
 			uav = {};
 			
-			allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(rtv.texture), framecount));
 			if (rtv.index >= 0)
 				allocationhandler->destroyer_bindless_res.push_back(std::make_pair(rtv.index, framecount));
 			
-			allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(dsv.texture), framecount));
 			if (dsv.index >= 0)
 				allocationhandler->destroyer_bindless_res.push_back(std::make_pair(dsv.index, framecount));
 			
 			for (auto& x : subresources_srv)
 			{
-				allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(x.texture), framecount));
 				if (x.index >= 0)
 					allocationhandler->destroyer_bindless_res.push_back(std::make_pair(x.index, framecount));
 			}
 			subresources_srv.clear();
 			for (auto& x : subresources_uav)
 			{
-				allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(x.texture), framecount));
 				if (x.index >= 0)
 					allocationhandler->destroyer_bindless_res.push_back(std::make_pair(x.index, framecount));
 			}
@@ -821,7 +840,6 @@ namespace metal_internal
 		CA::MetalLayer* layer = nullptr;
 		NS::SharedPtr<CA::MetalDrawable> current_drawable;
 		NS::SharedPtr<MTL::Texture> current_texture;
-		dispatch_semaphore_t sema = {};
 
 		~SwapChain_Metal()
 		{
@@ -1344,8 +1362,9 @@ using namespace metal_internal;
 		descriptor_heap_sam = NS::TransferPtr(device->newBuffer(real_bindless_sampler_capacity * sizeof(IRDescriptorTableEntry), MTL::ResourceStorageModeShared | MTL::ResourceHazardTrackingModeUntracked));
 		descriptor_heap_sam->setLabel(NS::TransferPtr(NS::String::alloc()->init("descriptor_heap_sam", NS::UTF8StringEncoding)).get());
 		
-		allocationhandler->descriptor_heap_res_data = (IRDescriptorTableEntry*)descriptor_heap_res->contents();
-		allocationhandler->descriptor_heap_sam_data = (IRDescriptorTableEntry*)descriptor_heap_sam->contents();
+		descriptor_heap_res_data = (IRDescriptorTableEntry*)descriptor_heap_res->contents();
+		descriptor_heap_sam_data = (IRDescriptorTableEntry*)descriptor_heap_sam->contents();
+		
 		allocationhandler->free_bindless_res.reserve(bindless_resource_capacity);
 		allocationhandler->free_bindless_sam.reserve(real_bindless_sampler_capacity);
 		for (int i = 0; i < real_bindless_sampler_capacity; ++i)
@@ -1370,6 +1389,16 @@ using namespace metal_internal;
 		uploadqueue->addResidencySet(allocationhandler->residency_set.get());
 		allocationhandler->make_resident(descriptor_heap_res.get());
 		allocationhandler->make_resident(descriptor_heap_sam.get());
+		
+		NS::SharedPtr<MTL::ResourceViewPoolDescriptor> view_pool_desc = NS::TransferPtr(MTL::ResourceViewPoolDescriptor::alloc()->init());
+		view_pool_desc->setResourceViewCount(bindless_resource_capacity);
+		texture_view_pool = NS::TransferPtr(device->newTextureViewPool(view_pool_desc.get(), &error));
+		if (error != nullptr)
+		{
+			NS::String* errDesc = error->localizedDescription();
+			wilog_assert(0, "%s", errDesc->utf8String());
+			error->release();
+		}
 		
 		// Static samplers workaround:
 		NS::SharedPtr<MTL::SamplerDescriptor> sampler_descriptor = NS::TransferPtr(MTL::SamplerDescriptor::alloc()->init());
@@ -1520,7 +1549,6 @@ using namespace metal_internal;
 			internal_state->layer = CA::MetalLayer::layer();
 			internal_state->layer->setDevice(device.get());
 			internal_state->layer->setMaximumDrawableCount(swapchain->desc.buffer_count);
-			internal_state->sema = dispatch_semaphore_create(swapchain->desc.buffer_count);
 			internal_state->layer->setFramebufferOnly(false); // GetBackBuffer() srv
 			wi::apple::SetMetalLayerToWindow(window, internal_state->layer);
 		}
@@ -2209,8 +2237,9 @@ using namespace metal_internal;
 		descriptor->setTAddressMode(_ConvertAddressMode(desc->address_v));
 		descriptor->setRAddressMode(_ConvertAddressMode(desc->address_w));
 		internal_state->sampler = NS::TransferPtr(device->newSamplerState(descriptor.get()));
+		internal_state->index = allocationhandler->allocate_sampler_index();
 		internal_state->entry = create_entry(internal_state->sampler.get());
-		internal_state->index = allocationhandler->allocate_bindless_sampler(internal_state->entry);
+		std::memcpy(descriptor_heap_sam_data + internal_state->index, &internal_state->entry, sizeof(internal_state->entry));
 
 		return internal_state->sampler.get() != nullptr;
 	}
@@ -2490,7 +2519,8 @@ using namespace metal_internal;
 			IRRaytracingAccelerationStructureGPUHeader* header = (IRRaytracingAccelerationStructureGPUHeader*)internal_state->tlas_header->contents();
 			IRRaytracingSetAccelerationStructure((uint8_t*)header, internal_state->resourceid, (uint8_t*)internal_state->tlas_instance_contributions->contents(), internal_state->tlas_instance_contributions->gpuAddress(), instance_contributions.data(), desc->top_level.count);
 			IRDescriptorTableSetAccelerationStructure(&internal_state->tlas_entry, internal_state->tlas_header->gpuAddress());
-			internal_state->tlas_descriptor_index = allocationhandler->allocate_bindless(internal_state->tlas_entry);
+			internal_state->tlas_descriptor_index = allocationhandler->allocate_resource_index();
+			std::memcpy(descriptor_heap_res_data + internal_state->tlas_descriptor_index, &internal_state->tlas_entry, sizeof(internal_state->tlas_entry));
 		}
 		
 		return internal_state->acceleration_structure.get() != nullptr;
@@ -2538,6 +2568,21 @@ using namespace metal_internal;
 			texture_type = MTL::TextureType2DArray;
 		}
 		
+		NS::SharedPtr<MTL::TextureViewDescriptor> view_desc;
+		
+		switch (type) {
+			case SubresourceType::SRV:
+			case SubresourceType::UAV:
+				view_desc = NS::TransferPtr(MTL::TextureViewDescriptor::alloc()->init());
+				view_desc->setLevelRange({firstMip, mipCount});
+				view_desc->setSliceRange({firstSlice, sliceCount});
+				view_desc->setPixelFormat(pixelformat);
+				view_desc->setTextureType(texture_type);
+				break;
+			default:
+				break;
+		};
+		
 		switch (type) {
 			case SubresourceType::SRV:
 				{
@@ -2551,30 +2596,31 @@ using namespace metal_internal;
 					mtlswizzle.green = _ConvertComponentSwizzle(requested_swizzle.g);
 					mtlswizzle.blue = _ConvertComponentSwizzle(requested_swizzle.b);
 					mtlswizzle.alpha = _ConvertComponentSwizzle(requested_swizzle.a);
+					view_desc->setSwizzle(mtlswizzle);
 					if (!internal_state->srv.IsValid())
 					{
 						auto& subresource = internal_state->srv;
-						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, texture_type, {firstMip, mipCount}, {firstSlice, sliceCount}, mtlswizzle));
-						subresource.entry = create_entry(subresource.texture.get(), min_lod_clamp);
-						subresource.index = allocationhandler->allocate_bindless(subresource.entry);
+						subresource.index = allocationhandler->allocate_resource_index();
+						MTL::ResourceID resourceID = texture_view_pool->setTextureView(internal_state->texture.get(), view_desc.get(), subresource.index);
+						subresource.entry = create_entry(resourceID, min_lod_clamp);
+						std::memcpy(descriptor_heap_res_data + subresource.index, &subresource.entry, sizeof(subresource.entry));
 						subresource.firstMip = firstMip;
 						subresource.mipCount = mipCount;
 						subresource.firstSlice = firstSlice;
 						subresource.sliceCount = sliceCount;
-						allocationhandler->make_resident(subresource.texture.get());
 						return -1;
 					}
 					else
 					{
 						auto& subresource = internal_state->subresources_srv.emplace_back();
-						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, texture_type, {firstMip, mipCount}, {firstSlice, sliceCount}, mtlswizzle));
-						subresource.entry = create_entry(subresource.texture.get(), min_lod_clamp);
-						subresource.index = allocationhandler->allocate_bindless(subresource.entry);
+						subresource.index = allocationhandler->allocate_resource_index();
+						MTL::ResourceID resourceID = texture_view_pool->setTextureView(internal_state->texture.get(), view_desc.get(), subresource.index);
+						subresource.entry = create_entry(resourceID, min_lod_clamp);
+						std::memcpy(descriptor_heap_res_data + subresource.index, &subresource.entry, sizeof(subresource.entry));
 						subresource.firstMip = firstMip;
 						subresource.mipCount = mipCount;
 						subresource.firstSlice = firstSlice;
 						subresource.sliceCount = sliceCount;
-						allocationhandler->make_resident(subresource.texture.get());
 						return (int)internal_state->subresources_srv.size() - 1;
 					}
 				}
@@ -2585,27 +2631,27 @@ using namespace metal_internal;
 					if (!internal_state->uav.IsValid())
 					{
 						auto& subresource = internal_state->uav;
-						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, texture_type, {firstMip, mipCount}, {firstSlice, sliceCount}));
-						subresource.entry = create_entry(subresource.texture.get(), min_lod_clamp);
-						subresource.index = allocationhandler->allocate_bindless(subresource.entry);
+						subresource.index = allocationhandler->allocate_resource_index();
+						MTL::ResourceID resourceID = texture_view_pool->setTextureView(internal_state->texture.get(), view_desc.get(), subresource.index);
+						subresource.entry = create_entry(resourceID, min_lod_clamp);
+						std::memcpy(descriptor_heap_res_data + subresource.index, &subresource.entry, sizeof(subresource.entry));
 						subresource.firstMip = firstMip;
 						subresource.mipCount = mipCount;
 						subresource.firstSlice = firstSlice;
 						subresource.sliceCount = sliceCount;
-						allocationhandler->make_resident(subresource.texture.get());
 						return -1;
 					}
 					else
 					{
 						auto& subresource = internal_state->subresources_uav.emplace_back();
-						subresource.texture = NS::TransferPtr(internal_state->texture->newTextureView(pixelformat, texture_type, {firstMip, mipCount}, {firstSlice, sliceCount}));
-						subresource.entry = create_entry(subresource.texture.get(), min_lod_clamp);
-						subresource.index = allocationhandler->allocate_bindless(subresource.entry);
+						subresource.index = allocationhandler->allocate_resource_index();
+						MTL::ResourceID resourceID = texture_view_pool->setTextureView(internal_state->texture.get(), view_desc.get(), subresource.index);
+						subresource.entry = create_entry(resourceID, min_lod_clamp);
+						std::memcpy(descriptor_heap_res_data + subresource.index, &subresource.entry, sizeof(subresource.entry));
 						subresource.firstMip = firstMip;
 						subresource.mipCount = mipCount;
 						subresource.firstSlice = firstSlice;
 						subresource.sliceCount = sliceCount;
-						allocationhandler->make_resident(subresource.texture.get());
 						return (int)internal_state->subresources_uav.size() - 1;
 					}
 				}
@@ -2620,7 +2666,6 @@ using namespace metal_internal;
 						subresource.mipCount = mipCount;
 						subresource.firstSlice = firstSlice;
 						subresource.sliceCount = sliceCount;
-						allocationhandler->make_resident(subresource.texture.get());
 						return -1;
 					}
 					else
@@ -2630,7 +2675,6 @@ using namespace metal_internal;
 						subresource.mipCount = mipCount;
 						subresource.firstSlice = firstSlice;
 						subresource.sliceCount = sliceCount;
-						allocationhandler->make_resident(subresource.texture.get());
 						return (int)internal_state->subresources_rtv.size() - 1;
 					}
 				}
@@ -2645,7 +2689,6 @@ using namespace metal_internal;
 						subresource.mipCount = mipCount;
 						subresource.firstSlice = firstSlice;
 						subresource.sliceCount = sliceCount;
-						allocationhandler->make_resident(subresource.texture.get());
 						return -1;
 					}
 					else
@@ -2655,7 +2698,6 @@ using namespace metal_internal;
 						subresource.mipCount = mipCount;
 						subresource.firstSlice = firstSlice;
 						subresource.sliceCount = sliceCount;
-						allocationhandler->make_resident(subresource.texture.get());
 						return (int)internal_state->subresources_dsv.size() - 1;
 					}
 				}
@@ -2714,29 +2756,31 @@ using namespace metal_internal;
 					if (!internal_state->srv.IsValid())
 					{
 						auto& subresource = internal_state->srv;
+						subresource.index = allocationhandler->allocate_resource_index();
 						subresource.offset = offset;
 						subresource.size = size;
+						MTL::ResourceID resourceID = {};
 						if (texture_descriptor.get() != nullptr)
 						{
-							subresource.texture_buffer_view = NS::TransferPtr(internal_state->buffer->newTexture(texture_descriptor.get(), offset, size));
+							resourceID = texture_view_pool->setTextureViewFromBuffer(internal_state->buffer.get(), texture_descriptor.get(), offset, size, subresource.index);
 						}
-						subresource.entry = create_entry(internal_state->buffer.get(), size, offset, subresource.texture_buffer_view.get(), format, structured);
-						subresource.index = allocationhandler->allocate_bindless(subresource.entry);
-						allocationhandler->make_resident(subresource.texture_buffer_view.get());
+						subresource.entry = create_entry(internal_state->buffer.get(), size, offset, resourceID, format, structured);
+						std::memcpy(descriptor_heap_res_data + subresource.index, &subresource.entry, sizeof(subresource.entry));
 						return -1;
 					}
 					else
 					{
 						auto& subresource = internal_state->subresources_srv.emplace_back();
+						subresource.index = allocationhandler->allocate_resource_index();
 						subresource.offset = offset;
 						subresource.size = size;
+						MTL::ResourceID resourceID = {};
 						if (texture_descriptor.get() != nullptr)
 						{
-							subresource.texture_buffer_view = NS::TransferPtr(internal_state->buffer->newTexture(texture_descriptor.get(), offset, size));
+							resourceID = texture_view_pool->setTextureViewFromBuffer(internal_state->buffer.get(), texture_descriptor.get(), offset, size, subresource.index);
 						}
-						subresource.entry = create_entry(internal_state->buffer.get(), size, offset, subresource.texture_buffer_view.get(), format, structured);
-						subresource.index = allocationhandler->allocate_bindless(subresource.entry);
-						allocationhandler->make_resident(subresource.texture_buffer_view.get());
+						subresource.entry = create_entry(internal_state->buffer.get(), size, offset, resourceID, format, structured);
+						std::memcpy(descriptor_heap_res_data + subresource.index, &subresource.entry, sizeof(subresource.entry));
 						return (int)internal_state->subresources_srv.size() - 1;
 					}
 				}
@@ -2746,29 +2790,31 @@ using namespace metal_internal;
 					if (!internal_state->uav.IsValid())
 					{
 						auto& subresource = internal_state->uav;
+						subresource.index = allocationhandler->allocate_resource_index();
 						subresource.offset = offset;
 						subresource.size = size;
+						MTL::ResourceID resourceID = {};
 						if (texture_descriptor.get() != nullptr)
 						{
-							subresource.texture_buffer_view = NS::TransferPtr(internal_state->buffer->newTexture(texture_descriptor.get(), offset, size));
+							resourceID = texture_view_pool->setTextureViewFromBuffer(internal_state->buffer.get(), texture_descriptor.get(), offset, size, subresource.index);
 						}
-						subresource.entry = create_entry(internal_state->buffer.get(), size, offset, subresource.texture_buffer_view.get(), format, structured);
-						subresource.index = allocationhandler->allocate_bindless(subresource.entry);
-						allocationhandler->make_resident(subresource.texture_buffer_view.get());
+						subresource.entry = create_entry(internal_state->buffer.get(), size, offset, resourceID, format, structured);
+						std::memcpy(descriptor_heap_res_data + subresource.index, &subresource.entry, sizeof(subresource.entry));
 						return -1;
 					}
 					else
 					{
 						auto& subresource = internal_state->subresources_uav.emplace_back();
+						subresource.index = allocationhandler->allocate_resource_index();
 						subresource.offset = offset;
 						subresource.size = size;
+						MTL::ResourceID resourceID = {};
 						if (texture_descriptor.get() != nullptr)
 						{
-							subresource.texture_buffer_view = NS::TransferPtr(internal_state->buffer->newTexture(texture_descriptor.get(), offset, size));
+							resourceID = texture_view_pool->setTextureViewFromBuffer(internal_state->buffer.get(), texture_descriptor.get(), offset, size, subresource.index);
 						}
-						subresource.entry = create_entry(internal_state->buffer.get(), size, offset, subresource.texture_buffer_view.get(), format, structured);
-						subresource.index = allocationhandler->allocate_bindless(subresource.entry);
-						allocationhandler->make_resident(subresource.texture_buffer_view.get());
+						subresource.entry = create_entry(internal_state->buffer.get(), size, offset, resourceID, format, structured);
+						std::memcpy(descriptor_heap_res_data + subresource.index, &subresource.entry, sizeof(subresource.entry));
 						return (int)internal_state->subresources_uav.size() - 1;
 					}
 				}
@@ -2968,6 +3014,19 @@ using namespace metal_internal;
 		
 		uint32_t cmd_last = cmd_count;
 		cmd_count = 0;
+		
+		// Presents wait:
+		for (uint32_t cmd = 0; cmd < cmd_last; ++cmd)
+		{
+			auto& commandlist = *commandlists[cmd].get();
+			for (auto& x : commandlist.presents)
+			{
+				CommandQueue& queue = queues[commandlist.queue];
+				queue.queue->wait(x.get());
+			}
+		}
+		
+		// Submit work and resolve dependencies:
 		for (uint32_t cmd = 0; cmd < cmd_last; ++cmd)
 		{
 			auto& commandlist = *commandlists[cmd].get();
@@ -3002,6 +3061,7 @@ using namespace metal_internal;
 				commandlist.signals.clear();
 			}
 			
+			// Worker pipelines are merged in to global:
 			for (auto& x : commandlist.pipelines_worker)
 			{
 				if (pipelines_global.count(x.first) == 0)
@@ -3039,12 +3099,8 @@ using namespace metal_internal;
 			for (auto& x : commandlist.presents)
 			{
 				CommandQueue& queue = queues[commandlist.queue];
-				queue.queue->wait(x.first.get());
-				queue.queue->signalDrawable(x.first.get());
-				x.first->addPresentedHandler(^(MTL::Drawable *) {
-					dispatch_semaphore_signal(x.second);
-				});
-				x.first->present();
+				queue.queue->signalDrawable(x.get());
+				x->present();
 			}
 		}
 		
@@ -3114,13 +3170,14 @@ using namespace metal_internal;
 		Texture result;
 		auto texture_internal = wi::allocator::make_shared<Texture_Metal>();
 		texture_internal->texture = swapchain_internal->current_texture;
-		texture_internal->srv.texture = texture_internal->texture;
-		texture_internal->srv.entry = create_entry(texture_internal->srv.texture.get(), 0);
-		texture_internal->srv.index = allocationhandler->allocate_bindless(texture_internal->srv.entry);
+		texture_internal->srv.index = allocationhandler->allocate_resource_index();
+		MTL::ResourceID resourceID = texture_view_pool->setTextureView(texture_internal->texture.get(), texture_internal->srv.index);
+		texture_internal->srv.entry = create_entry(resourceID);
+		std::memcpy(descriptor_heap_res_data + texture_internal->srv.index, &texture_internal->srv.entry, sizeof(texture_internal->srv.entry));
 		result.internal_state = texture_internal;
 		result.desc.width = (uint32_t)texture_internal->texture->width();
 		result.desc.height = (uint32_t)texture_internal->texture->height();
-		result.desc.bind_flags = BindFlag::SHADER_RESOURCE;
+		result.desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::RENDER_TARGET;
 		result.desc.format = swapchain->desc.format;
 		return result;
 	}
@@ -3217,13 +3274,12 @@ using namespace metal_internal;
 		CA::MetalDrawable* drawable = internal_state->layer->nextDrawable();
 		while (drawable == nullptr)
 		{
-			dispatch_semaphore_wait(internal_state->sema, ~0ull);
 			drawable = internal_state->layer->nextDrawable();
 		}
 		internal_state->current_drawable = NS::TransferPtr(drawable->retain());
 		internal_state->current_texture = NS::TransferPtr(drawable->texture()->retain());
 		
-		commandlist.presents.push_back(std::make_pair(internal_state->current_drawable, internal_state->sema));
+		commandlist.presents.push_back(internal_state->current_drawable);
 		
 		NS::SharedPtr<MTL4::RenderPassDescriptor> descriptor = NS::TransferPtr(MTL4::RenderPassDescriptor::alloc()->init());
 		NS::SharedPtr<MTL::RenderPassColorAttachmentDescriptor> color_attachment_descriptor = NS::TransferPtr(MTL::RenderPassColorAttachmentDescriptor::alloc()->init());

@@ -130,7 +130,7 @@ namespace wi::graphics
 			bool dirty_pso = false;
 			bool dirty_cs = false;
 			const Shader* active_cs = nullptr;
-			wi::vector<std::pair<NS::SharedPtr<CA::MetalDrawable>, dispatch_semaphore_t>> presents;
+			wi::vector<NS::SharedPtr<CA::MetalDrawable>> presents;
 			MTL4::RenderCommandEncoder* render_encoder = nullptr;
 			MTL4::ComputeCommandEncoder* compute_encoder = nullptr;
 			MTL::PrimitiveType primitive_type = MTL::PrimitiveTypeTriangle;
@@ -247,6 +247,10 @@ namespace wi::graphics
 		
 		NS::SharedPtr<MTL::Buffer> descriptor_heap_res;
 		NS::SharedPtr<MTL::Buffer> descriptor_heap_sam;
+		IRDescriptorTableEntry* descriptor_heap_res_data = nullptr;
+		IRDescriptorTableEntry* descriptor_heap_sam_data = nullptr;
+		
+		NS::SharedPtr<MTL::TextureViewPool> texture_view_pool;
 		
 		NS::SharedPtr<MTL::Buffer> dummyblasbuffer;
 		NS::SharedPtr<MTL::AccelerationStructure> dummyblas;
@@ -414,8 +418,6 @@ namespace wi::graphics
 			std::deque<std::pair<int, uint64_t>> destroyer_bindless_sam;
 			wi::vector<int> free_bindless_res;
 			wi::vector<int> free_bindless_sam;
-			IRDescriptorTableEntry* descriptor_heap_res_data = nullptr;
-			IRDescriptorTableEntry* descriptor_heap_sam_data = nullptr;
 
 			void Update(uint64_t FRAMECOUNT, uint32_t BUFFERCOUNT)
 			{
@@ -474,24 +476,22 @@ namespace wi::graphics
 				}
 			}
 			
-			int allocate_bindless(const IRDescriptorTableEntry& entry)
+			int allocate_resource_index()
 			{
 				std::scoped_lock lck(destroylocker);
 				if (free_bindless_res.empty())
 					return -1;
 				int index = free_bindless_res.back();
 				free_bindless_res.pop_back();
-				std::memcpy(descriptor_heap_res_data + index, &entry, sizeof(entry));
 				return index;
 			}
-			int allocate_bindless_sampler(const IRDescriptorTableEntry& entry)
+			int allocate_sampler_index()
 			{
 				std::scoped_lock lck(destroylocker);
 				if (free_bindless_sam.empty())
 					return -1;
 				int index = free_bindless_sam.back();
 				free_bindless_sam.pop_back();
-				std::memcpy(descriptor_heap_sam_data + index, &entry, sizeof(entry));
 				return index;
 			}
 			
