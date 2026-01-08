@@ -2607,7 +2607,6 @@ std::mutex queue_locker;
 					wilog_messagebox("ID3D12Device::CreateFence[FRAME] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
 					wi::platform::Exit();
 				}
-				dx12_check(frame_fence_cpu[buffer][queue]->Signal(1)); // immediately write 1 into fence (1 = free to reuse)
 				switch (queue)
 				{
 				case QUEUE_GRAPHICS:
@@ -5403,17 +5402,16 @@ std::mutex queue_locker;
 			}
 
 			// Mark the completion of queues for this frame:
+			frame_fence_cpu_values[GetBufferIndex()]++;
 			for (int q = 0; q < QUEUE_COUNT; ++q)
 			{
 				CommandQueue& queue = queues[q];
 				if (queue.queue == nullptr)
 					continue;
 
-				dx12_check(frame_fence_cpu[GetBufferIndex()][q]->Signal(0)); // write 0 into fence immediately (0 = in use)
-
 				queue.submit();
 
-				dx12_check(queue.queue->Signal(frame_fence_cpu[GetBufferIndex()][q].Get(), 1)); // gpu will write 1 into the fence when finished with the work (1 = free to reuse)
+				dx12_check(queue.queue->Signal(frame_fence_cpu[GetBufferIndex()][q].Get(), frame_fence_cpu_values[GetBufferIndex()]));
 				dx12_check(queue.queue->Signal(frame_fence_gpu[GetBufferIndex()][q].Get(), FRAMECOUNT));
 			}
 
@@ -5487,11 +5485,11 @@ std::mutex queue_locker;
 			if (queues[queue].queue == nullptr)
 				continue;
 			ID3D12Fence* fence = frame_fence_cpu[bufferindex][queue].Get();
-			if (fence->GetCompletedValue() < 1)
+			if (fence->GetCompletedValue() < frame_fence_cpu_values[GetBufferIndex()])
 			{
 				// nullptr event handle will simply wait immediately:
 				//	https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12fence-seteventoncompletion#remarks
-				dx12_check(fence->SetEventOnCompletion(1, nullptr));
+				dx12_check(fence->SetEventOnCompletion(frame_fence_cpu_values[GetBufferIndex()], nullptr));
 			}
 		}
 
