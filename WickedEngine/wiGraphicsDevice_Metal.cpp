@@ -1312,12 +1312,9 @@ using namespace metal_internal;
 	{
 		wi::Timer timer;
 		device = NS::TransferPtr(MTL::CreateSystemDefaultDevice());
-		commandqueue = NS::TransferPtr(device->newMTL4CommandQueue());
-		uploadqueue = NS::TransferPtr(device->newMTL4CommandQueue());
-		allocationhandler = wi::allocator::make_shared_single<AllocationHandler>();
-		
 		wilog_assert(device->supportsFamily(MTL::GPUFamilyMetal4), "Metal 4 must be supported!");
 		wilog_assert(device->argumentBuffersSupport(), "Argument buffers must be supported!");
+		wilog_assert(device->supportsBCTextureCompression(), "Block compressed textures must be supported!");
 		
 		capabilities |= GraphicsDeviceCapability::SAMPLER_MINMAX;
 		capabilities |= GraphicsDeviceCapability::ALIASING_GENERIC;
@@ -1335,6 +1332,9 @@ using namespace metal_internal;
 			capabilities |= GraphicsDeviceCapability::RAYTRACING;
 			TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = sizeof(MTL::IndirectAccelerationStructureInstanceDescriptor);
 		}
+		
+		uploadqueue = NS::TransferPtr(device->newMTL4CommandQueue());
+		allocationhandler = wi::allocator::make_shared_single<AllocationHandler>();
 		
 		argument_table_desc = NS::TransferPtr(MTL4::ArgumentTableDescriptor::alloc()->init());
 		argument_table_desc->setInitializeBindings(false);
@@ -1373,16 +1373,9 @@ using namespace metal_internal;
 			wilog_assert(0, "%s", errDesc->utf8String());
 			error->release();
 		}
-		commandqueue->addResidencySet(allocationhandler->residency_set.get());
 		uploadqueue->addResidencySet(allocationhandler->residency_set.get());
 		allocationhandler->make_resident(descriptor_heap_res.get());
 		allocationhandler->make_resident(descriptor_heap_sam.get());
-		
-		for (auto& frame : frame_resources)
-		{
-			frame.event = NS::TransferPtr(device->newSharedEvent());
-			frame.event->setSignaledValue(frame.requiredValue);
-		}
 		
 		// Static samplers workaround:
 		NS::SharedPtr<MTL::SamplerDescriptor> sampler_descriptor = NS::TransferPtr(MTL::SamplerDescriptor::alloc()->init());
@@ -1458,6 +1451,26 @@ using namespace metal_internal;
 			IRDescriptorTableSetSampler(&static_sampler_descriptors.samplers[i], static_samplers[i].get(), 0);
 		}
 		
+		queues[QUEUE_GRAPHICS].queue = NS::TransferPtr(device->newMTL4CommandQueue());
+		queues[QUEUE_GRAPHICS].queue->addResidencySet(allocationhandler->residency_set.get());
+		queues[QUEUE_COMPUTE].queue = NS::TransferPtr(device->newMTL4CommandQueue());
+		queues[QUEUE_COMPUTE].queue->addResidencySet(allocationhandler->residency_set.get());
+		queues[QUEUE_COPY].queue = NS::TransferPtr(device->newMTL4CommandQueue());
+		queues[QUEUE_COPY].queue->addResidencySet(allocationhandler->residency_set.get());
+		
+		for (uint32_t q = 0; q < QUEUE_COUNT; ++q)
+		{
+			for (uint32_t i = 0; i < BUFFERCOUNT; ++i)
+			{
+				if (queues[q].queue.get() == nullptr)
+					continue;
+				frame_fence_cpu[i][q] = NS::TransferPtr(device->newSharedEvent());
+				frame_fence_cpu[i][q]->setSignaledValue(0);
+				frame_fence_gpu[i][q] = NS::TransferPtr(device->newSharedEvent());
+				frame_fence_gpu[i][q]->setSignaledValue(0);
+			}
+		}
+		
 		if (CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 		{
 			NS::SharedPtr<MTL4::PrimitiveAccelerationStructureDescriptor> emptydesc = NS::TransferPtr(MTL4::PrimitiveAccelerationStructureDescriptor::alloc()->init());
@@ -1491,7 +1504,7 @@ using namespace metal_internal;
 			encoder->endEncoding();
 			commandbuffer->endCommandBuffer();
 			MTL4::CommandBuffer* cmds[] = {commandbuffer.get()};
-			commandqueue->commit(cmds, arraysize(cmds));
+			uploadqueue->commit(cmds, arraysize(cmds));
 		}
 		
 		wilog("Created GraphicsDevice_Metal (%d ms)", (int)std::round(timer.elapsed()));
@@ -1537,10 +1550,18 @@ using namespace metal_internal;
 		buffer->mapped_size = 0;
 		buffer->desc = *desc;
 		
+		const bool sparse = has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE);
+		const bool aliasing_storage = has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_BUFFER) || has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_NON_RT_DS) || has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_RT_DS);
+		
 		MTL::ResourceOptions resource_options = {};
 		if (desc->usage == Usage::DEFAULT)
 		{
-			if (CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
+			if (aliasing_storage)
+			{
+				// potentially used for sparse or other private requirement resource
+				resource_options |= MTL::ResourceStorageModePrivate;
+			}
+			else if (CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
 			{
 				resource_options |= MTL::ResourceStorageModeShared;
 			}
@@ -1560,7 +1581,7 @@ using namespace metal_internal;
 		}
 		resource_options |= MTL::ResourceHazardTrackingModeUntracked;
 		
-		if (has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_BUFFER) || has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_NON_RT_DS) || has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_RT_DS))
+		if (aliasing_storage)
 		{
 			// This is an aliasing storage:
 			MTL::SizeAndAlign sizealign = device->heapBufferSizeAndAlign(desc->size, resource_options);
@@ -1586,6 +1607,11 @@ using namespace metal_internal;
 				auto alias_internal = to_internal<Texture>(alias);
 				internal_state->buffer = NS::TransferPtr(alias_internal->texture->heap()->newBuffer(desc->size, resource_options, alias_internal->texture->heapOffset() + alias_offset));
 			}
+		}
+		else if (sparse)
+		{
+			// This is a placement sparse buffer:
+			internal_state->buffer = NS::TransferPtr(device->newBuffer(desc->size, resource_options, MTL::SparsePageSize64));
 		}
 		else
 		{
@@ -1663,6 +1689,7 @@ using namespace metal_internal;
 		texture->desc = *desc;
 		
 		const bool sparse = has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE);
+		const bool aliasing_storage = has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_BUFFER) || has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_NON_RT_DS) || has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_RT_DS);
 		
 		if (texture->desc.mip_levels == 0)
 		{
@@ -1808,7 +1835,7 @@ using namespace metal_internal;
 			descriptor->setSwizzle(swizzle);
 		}
 		
-		if (has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_BUFFER) || has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_NON_RT_DS) || has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_RT_DS))
+		if (aliasing_storage)
 		{
 			// This is an aliasing storage:
 			MTL::SizeAndAlign sizealign = device->heapTextureSizeAndAlign(descriptor.get());
@@ -2946,29 +2973,52 @@ using namespace metal_internal;
 		return cmd;
 	}
 	void GraphicsDevice_Metal::SubmitCommandLists()
-	{
+{
 		allocationhandler->destroylocker.lock();
 		allocationhandler->residency_set->commit();
 		allocationhandler->destroylocker.unlock();
 		
-		cmd_locker.lock();
 		uint32_t cmd_last = cmd_count;
 		cmd_count = 0;
-		cmd_locker.unlock();
-		submit_cmds.clear();
 		for (uint32_t cmd = 0; cmd < cmd_last; ++cmd)
 		{
 			auto& commandlist = *commandlists[cmd].get();
 			commandlist.assert_noencoder();
 			commandlist.commandbuffer->endCommandBuffer();
 			
-			submit_cmds.push_back(commandlist.commandbuffer.get());
+			CommandQueue& queue = queues[commandlist.queue];
+			const bool dependency = !commandlist.signals.empty() || !commandlist.waits.empty();
+			if (dependency)
+			{
+				queue.submit();
+			}
+			
+			queue.submit_cmds.push_back(commandlist.commandbuffer.get());
+			
+			if (dependency)
+			{
+				for (auto& semaphore : commandlist.waits)
+				{
+					queue.wait(semaphore);
+					// recycle semaphore only in signals
+				}
+				commandlist.waits.clear();
+				
+				queue.submit();
+				
+				for (auto& semaphore : commandlist.signals)
+				{
+					queue.signal(semaphore);
+					free_semaphore(semaphore);
+				}
+				commandlist.signals.clear();
+			}
 			
 			for (auto& x : commandlist.pipelines_worker)
 			{
 				if (pipelines_global.count(x.first) == 0)
 				{
-				   pipelines_global[x.first] = std::move(x.second);
+					pipelines_global[x.first] = std::move(x.second);
 				}
 				else
 				{
@@ -2981,12 +3031,18 @@ using namespace metal_internal;
 			commandlist.pipelines_worker.clear();
 		}
 		
-		commandqueue->commit(submit_cmds.data(), submit_cmds.size());
-		
-		// Current frame submit:
+		// Mark the completion of queues for this frame:
+		frame_fence_cpu_values[GetBufferIndex()]++;
+		for (int q = 0; q < QUEUE_COUNT; ++q)
 		{
-			FrameResources& frame = GetFrameResources();
-			commandqueue->signalEvent(frame.event.get(), ++frame.requiredValue);
+			CommandQueue& queue = queues[q];
+			if (queue.queue.get() == nullptr)
+				continue;
+			
+			queue.submit();
+			
+			queue.queue->signalEvent(frame_fence_cpu[GetBufferIndex()][q].get(), frame_fence_cpu_values[GetBufferIndex()]); // gpu will write 1 into the fence when finished with the work (1 = free to reuse)
+			queue.queue->signalEvent(frame_fence_gpu[GetBufferIndex()][q].get(), FRAMECOUNT);
 		}
 		
 		// Presents submit:
@@ -2995,8 +3051,9 @@ using namespace metal_internal;
 			auto& commandlist = *commandlists[cmd].get();
 			for (auto& x : commandlist.presents)
 			{
-				commandqueue->wait(x.first.get());
-				commandqueue->signalDrawable(x.first.get());
+				CommandQueue& queue = queues[commandlist.queue];
+				queue.queue->wait(x.first.get());
+				queue.queue->signalDrawable(x.first.get());
 				x.first->addPresentedHandler(^(MTL::Drawable *) {
 					dispatch_semaphore_signal(x.second);
 				});
@@ -3004,24 +3061,53 @@ using namespace metal_internal;
 			}
 		}
 		
+		// Sync up every queue to every other queue at the end of the frame:
+		//	Note: it disables overlapping queues into the next frame
+		for (int queue1 = 0; queue1 < QUEUE_COUNT; ++queue1)
+		{
+			if (queues[queue1].queue.get() == nullptr)
+				continue;
+			for (int queue2 = 0; queue2 < QUEUE_COUNT; ++queue2)
+			{
+				if (queue1 == queue2)
+					continue;
+				if (queues[queue2].queue.get() == nullptr)
+					continue;
+				MTL::SharedEvent* fence = frame_fence_gpu[GetBufferIndex()][queue2].get();
+				queues[queue1].queue->wait(fence, FRAMECOUNT);
+			}
+		}
+		
 		// From here, we begin a new frame, this affects GetBufferIndex()!
 		FRAMECOUNT++;
 		
-		// The new frame event must be completed when we start using it from CPU:
+		// Initiate stalling CPU when GPU is not yet finished with next frame:
+		const uint32_t bufferindex = GetBufferIndex();
+		for (int queue = 0; queue < QUEUE_COUNT; ++queue)
 		{
-			FrameResources& frame = GetFrameResources();
-			frame.event->waitUntilSignaledValue(frame.requiredValue, ~0ull);
+			if (queues[queue].queue.get() == nullptr)
+				continue;
+			MTL::SharedEvent* fence = frame_fence_cpu[bufferindex][queue].get();
+			if (fence->signaledValue() < frame_fence_cpu_values[GetBufferIndex()])
+			{
+				fence->waitUntilSignaledValue(frame_fence_cpu_values[GetBufferIndex()], ~0ull);
+			}
 		}
-
+		
 		allocationhandler->Update(FRAMECOUNT, BUFFERCOUNT);
 	}
 
 	void GraphicsDevice_Metal::WaitForGPU() const
 	{
 		NS::SharedPtr<MTL::SharedEvent> event = NS::TransferPtr(device->newSharedEvent());
-		event->setSignaledValue(0);
-		uploadqueue->signalEvent(event.get(), 1);
-		event->waitUntilSignaledValue(1, ~0ull);
+		for (auto& queue : queues)
+		{
+			if (queue.queue.get() == nullptr)
+				continue;
+			event->setSignaledValue(0);
+			queue.queue->signalEvent(event.get(), 1);
+			event->waitUntilSignaledValue(1, ~0ull);
+		}
 	}
 	void GraphicsDevice_Metal::ClearPipelineStateCache()
 	{
@@ -3065,6 +3151,7 @@ using namespace metal_internal;
 
 	void GraphicsDevice_Metal::SparseUpdate(QUEUE_TYPE queue, const SparseUpdateCommand* commands, uint32_t command_count)
 	{
+		MTL4::CommandQueue* commandqueue = queues[queue].queue.get();
 		for (uint32_t i = 0; i < command_count; ++i)
 		{
 			const SparseUpdateCommand& command = commands[i];
@@ -3115,7 +3202,7 @@ using namespace metal_internal;
 			}
 		}
 		
-#if 1
+#if 0
 		NS::SharedPtr<MTL::SharedEvent> event = NS::TransferPtr(device->newSharedEvent());
 		event->setSignaledValue(0);
 		commandqueue->signalEvent(event.get(), 1);
@@ -3128,7 +3215,9 @@ using namespace metal_internal;
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		CommandList_Metal& commandlist_wait_for = GetCommandList(wait_for);
 		assert(commandlist_wait_for.id < commandlist.id); // can't wait for future command list!
-		// TODO
+		Semaphore sema = new_semaphore();
+		commandlist.waits.push_back(sema);
+		commandlist_wait_for.signals.push_back(sema);
 	}
 	void GraphicsDevice_Metal::RenderPassBegin(const SwapChain* swapchain, CommandList cmd)
 	{

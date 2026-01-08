@@ -47,20 +47,69 @@ namespace wi::graphics
 		
 	private:
 		NS::SharedPtr<MTL::Device> device;
-		NS::SharedPtr<MTL4::CommandQueue> commandqueue;
 		NS::SharedPtr<MTL4::CommandQueue> uploadqueue;
+		
+		struct Semaphore
+		{
+			NS::SharedPtr<MTL::SharedEvent> event;
+			uint64_t fenceValue = 0;
+		};
+		
+		struct CommandQueue
+		{
+			NS::SharedPtr<MTL4::CommandQueue> queue;
+			wi::vector<MTL4::CommandBuffer*> submit_cmds;
+			
+			void signal(const Semaphore& sema)
+			{
+				if (queue.get() == nullptr)
+					return;
+				queue->signalEvent(sema.event.get(), sema.fenceValue);
+			}
+			void wait(const Semaphore& sema)
+			{
+				if (queue.get() == nullptr)
+					return;
+				queue->wait(sema.event.get(), sema.fenceValue);
+			}
+			void submit()
+			{
+				if (queue.get() == nullptr)
+					return;
+				if (submit_cmds.empty())
+					return;
+				queue->commit(submit_cmds.data(), submit_cmds.size());
+				submit_cmds.clear();
+			}
+		} queues[QUEUE_COUNT];
+		
+		uint64_t frame_fence_cpu_values[BUFFERCOUNT] = {};
+		NS::SharedPtr<MTL::SharedEvent> frame_fence_cpu[BUFFERCOUNT][QUEUE_COUNT];
+		NS::SharedPtr<MTL::SharedEvent> frame_fence_gpu[BUFFERCOUNT][QUEUE_COUNT];
 		
 		NS::SharedPtr<MTL4::ArgumentTableDescriptor> argument_table_desc;
 		
-		wi::vector<MTL4::CommandBuffer*> submit_cmds;
-		
-		struct FrameResources
+		wi::vector<Semaphore> semaphore_pool;
+		std::mutex semaphore_pool_locker;
+		Semaphore new_semaphore()
 		{
-			NS::SharedPtr<MTL::SharedEvent> event;
-			uint64_t requiredValue = 0;
-		} frame_resources[BUFFERCOUNT];
-		
-		FrameResources& GetFrameResources() { return frame_resources[GetBufferIndex()]; }
+			std::scoped_lock lck(semaphore_pool_locker);
+			if (semaphore_pool.empty())
+			{
+				Semaphore& sema = semaphore_pool.emplace_back();
+				sema.event = NS::TransferPtr(device->newSharedEvent());
+				sema.event->setSignaledValue(0);
+			}
+			Semaphore sema = semaphore_pool.back();
+			semaphore_pool.pop_back();
+			sema.fenceValue++;
+			return sema;
+		}
+		void free_semaphore(const Semaphore& sema)
+		{
+			std::scoped_lock lck(semaphore_pool_locker);
+			semaphore_pool.push_back(sema);
+		}
 		
 		struct JustInTimePSO
 		{
@@ -103,6 +152,8 @@ namespace wi::graphics
 			bool dirty_viewport = false;
 			uint32_t viewport_count = 0;
 			MTL::Viewport viewports[16] = {};
+			wi::vector<Semaphore> waits;
+			wi::vector<Semaphore> signals;
 			
 			struct VertexBufferBinding
 			{
@@ -157,6 +208,8 @@ namespace wi::graphics
 					x = {};
 				}
 				barriers.clear();
+				assert(waits.empty());
+				assert(signals.empty());
 			}
 			
 			void assert_noencoder()
