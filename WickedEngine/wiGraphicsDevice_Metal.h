@@ -153,6 +153,8 @@ namespace wi::graphics
 			MTL::Viewport viewports[16] = {};
 			wi::vector<Semaphore> waits;
 			wi::vector<Semaphore> signals;
+			bool drawargs_required = false;
+			bool dirty_drawargs = false;
 			
 			struct VertexBufferBinding
 			{
@@ -209,6 +211,8 @@ namespace wi::graphics
 				barriers.clear();
 				assert(waits.empty());
 				assert(signals.empty());
+				drawargs_required = false;
+				dirty_drawargs = false;
 			}
 			
 			void assert_noencoder()

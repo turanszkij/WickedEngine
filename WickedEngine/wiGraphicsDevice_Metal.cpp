@@ -758,6 +758,7 @@ namespace metal_internal
 		NS::SharedPtr<MTL::Function> function;
 		NS::SharedPtr<MTL::ComputePipelineState> compute_pipeline;
 		MTL::Size numthreads = {};
+		bool needs_draw_params = false;
 
 		~Shader_Metal()
 		{
@@ -777,6 +778,7 @@ namespace metal_internal
 		NS::SharedPtr<MTL::RenderPipelineDescriptor> descriptor;
 		NS::SharedPtr<MTL::RenderPipelineState> render_pipeline;
 		NS::SharedPtr<MTL::DepthStencilState> depth_stencil_state;
+		bool needs_draw_params = false;
 
 		~PipelineState_Metal()
 		{
@@ -1102,10 +1104,11 @@ using namespace metal_internal;
 		}
 		
 		// Flushing argument table updates to encoder:
-		if (commandlist.dirty_root && commandlist.dirty_vb)
+		if (commandlist.dirty_root || commandlist.dirty_vb || commandlist.dirty_drawargs)
 		{
 			commandlist.dirty_root = false;
 			commandlist.dirty_vb = false;
+			commandlist.dirty_drawargs = false;
 			
 			if (commandlist.render_encoder != nullptr)
 			{
@@ -2039,17 +2042,29 @@ using namespace metal_internal;
 		internal_state->allocationhandler = allocationhandler;
 		shader->internal_state = internal_state;
 		
-		// The numthreads was gathered by offline shader reflection system in wiShaderCompiler.cpp and attached to the end of shadercode data:
-		uint32_t numthreads[3] = {};
+		// The needs_draw_param or numthreads was gathered by offline shader reflection system in wiShaderCompiler.cpp and attached to the end of shadercode data:
+		uint32_t reflection_append[3] = {};
 		if (
+			stage == ShaderStage::VS ||
 			stage == ShaderStage::CS ||
 			stage == ShaderStage::MS ||
 			stage == ShaderStage::AS
 			)
 		{
-			shadercode_size -= sizeof(numthreads);
-			std::memcpy(numthreads, (uint8_t*)shadercode + shadercode_size, sizeof(numthreads));
-			internal_state->numthreads = { numthreads[0], numthreads[1], numthreads[2] };
+			shadercode_size -= sizeof(reflection_append);
+			std::memcpy(reflection_append, (uint8_t*)shadercode + shadercode_size, sizeof(reflection_append));
+			if (stage == ShaderStage::VS)
+			{
+				internal_state->needs_draw_params = reflection_append[0] != 0;
+			}
+			else if (
+				stage == ShaderStage::CS ||
+				stage == ShaderStage::MS ||
+				stage == ShaderStage::AS
+				)
+			{
+				internal_state->numthreads = { reflection_append[0], reflection_append[1], reflection_append[2] };
+			}
 		}
 		
 		dispatch_data_t bytecodeData = dispatch_data_create(shadercode, shadercode_size, dispatch_get_main_queue(), nullptr);
@@ -2301,6 +2316,7 @@ using namespace metal_internal;
 		{
 			auto shader_internal = to_internal(desc->vs);
 			internal_state->descriptor->setVertexFunction(shader_internal->function.get());
+			internal_state->needs_draw_params = shader_internal->needs_draw_params;
 		}
 		if (desc->ps != nullptr)
 		{
@@ -3657,6 +3673,7 @@ using namespace metal_internal;
 			}
 		}
 		commandlist.active_pso = pso;
+		commandlist.drawargs_required = internal_state->needs_draw_params;
 	}
 	void GraphicsDevice_Metal::BindComputeShader(const Shader* cs, CommandList cmd)
 	{
@@ -3669,46 +3686,154 @@ using namespace metal_internal;
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		commandlist.render_encoder->setDepthTestBounds(min_bounds, max_bounds);
 	}
+
 	void GraphicsDevice_Metal::Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd)
-{
-		predraw(cmd);
+	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		
+		// Draw args binding is a requirement of metal shader converter to match DirectX behaviour of vertexID and instanceID:
+		if (commandlist.drawargs_required)
+		{
+			commandlist.dirty_drawargs = true;
+			IRRuntimeDrawArgument da = {
+				.vertexCountPerInstance = vertexCount,
+				.instanceCount = 1,
+				.startVertexLocation = startVertexLocation,
+				.startInstanceLocation = 0
+			};
+			IRRuntimeDrawParams dp = { .draw = da };
+			auto alloc = AllocateGPU(sizeof(dp), cmd);
+			std::memcpy(alloc.data, &dp, sizeof(dp));
+			commandlist.argument_table->setAddress(to_internal(&alloc.buffer)->gpu_address + alloc.offset, kIRArgumentBufferDrawArgumentsBindPoint);
+			alloc = AllocateGPU(sizeof(uint16_t), cmd);
+			std::memcpy(alloc.data, &kIRNonIndexedDraw, sizeof(uint16_t));
+			commandlist.argument_table->setAddress(to_internal(&alloc.buffer)->gpu_address + alloc.offset, kIRArgumentBufferUniformsBindPoint);
+		}
+		
+		predraw(cmd);
 		commandlist.render_encoder->drawPrimitives(commandlist.primitive_type, startVertexLocation, vertexCount);
 	}
 	void GraphicsDevice_Metal::DrawIndexed(uint32_t indexCount, uint32_t startIndexLocation, int32_t baseVertexLocation, CommandList cmd)
-{
-		predraw(cmd);
+	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		
+		// Draw args binding is a requirement of metal shader converter to match DirectX behaviour of vertexID and instanceID:
+		if (commandlist.drawargs_required)
+		{
+			commandlist.dirty_drawargs = true;
+			IRRuntimeDrawIndexedArgument da = {
+				.indexCountPerInstance = indexCount,
+				.instanceCount = 1,
+				.startIndexLocation = startIndexLocation,
+				.baseVertexLocation = baseVertexLocation,
+				.startInstanceLocation = 0
+			};
+			IRRuntimeDrawParams dp = { .drawIndexed = da };
+			auto alloc = AllocateGPU(sizeof(dp), cmd);
+			std::memcpy(alloc.data, &dp, sizeof(dp));
+			commandlist.argument_table->setAddress(to_internal(&alloc.buffer)->gpu_address + alloc.offset, kIRArgumentBufferDrawArgumentsBindPoint);
+			alloc = AllocateGPU(sizeof(uint16_t), cmd);
+			uint16_t irindextype = IRMetalIndexToIRIndex(commandlist.index_type);
+			std::memcpy(alloc.data, &irindextype, sizeof(uint16_t));
+			commandlist.argument_table->setAddress(to_internal(&alloc.buffer)->gpu_address + alloc.offset, kIRArgumentBufferUniformsBindPoint);
+		}
+		
+		predraw(cmd);
 		const uint64_t index_stride = commandlist.index_type == MTL::IndexTypeUInt32 ? sizeof(uint32_t) : sizeof(uint16_t);
 		const uint64_t indexBufferOffset = startIndexLocation * index_stride;
 		commandlist.render_encoder->drawIndexedPrimitives(commandlist.primitive_type, indexCount, commandlist.index_type, commandlist.index_buffer.bufferAddress + indexBufferOffset, commandlist.index_buffer.length);
 	}
 	void GraphicsDevice_Metal::DrawInstanced(uint32_t vertexCount, uint32_t instanceCount, uint32_t startVertexLocation, uint32_t startInstanceLocation, CommandList cmd)
-{
-		predraw(cmd);
+	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		
+		// Draw args binding is a requirement of metal shader converter to match DirectX behaviour of vertexID and instanceID:
+		if (commandlist.drawargs_required)
+		{
+			commandlist.dirty_drawargs = true;
+			IRRuntimeDrawArgument da = {
+				.vertexCountPerInstance = vertexCount,
+				.instanceCount = instanceCount,
+				.startVertexLocation = startVertexLocation,
+				.startInstanceLocation = startInstanceLocation
+			};
+			IRRuntimeDrawParams dp = { .draw = da };
+			auto alloc = AllocateGPU(sizeof(dp), cmd);
+			std::memcpy(alloc.data, &dp, sizeof(dp));
+			commandlist.argument_table->setAddress(to_internal(&alloc.buffer)->gpu_address + alloc.offset, kIRArgumentBufferDrawArgumentsBindPoint);
+			alloc = AllocateGPU(sizeof(uint16_t), cmd);
+			std::memcpy(alloc.data, &kIRNonIndexedDraw, sizeof(uint16_t));
+			commandlist.argument_table->setAddress(to_internal(&alloc.buffer)->gpu_address + alloc.offset, kIRArgumentBufferUniformsBindPoint);
+		}
+		
+		predraw(cmd);
 		commandlist.render_encoder->drawPrimitives(commandlist.primitive_type, startVertexLocation, vertexCount, instanceCount, startInstanceLocation);
 	}
 	void GraphicsDevice_Metal::DrawIndexedInstanced(uint32_t indexCount, uint32_t instanceCount, uint32_t startIndexLocation, int32_t baseVertexLocation, uint32_t startInstanceLocation, CommandList cmd)
-{
-		predraw(cmd);
+	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		
+		// Draw args binding is a requirement of metal shader converter to match DirectX behaviour of vertexID and instanceID:
+		if (commandlist.drawargs_required)
+		{
+			commandlist.dirty_drawargs = true;
+			IRRuntimeDrawIndexedArgument da = {
+				.indexCountPerInstance = indexCount,
+				.instanceCount = instanceCount,
+				.startIndexLocation = startIndexLocation,
+				.baseVertexLocation = baseVertexLocation,
+				.startInstanceLocation = startInstanceLocation
+			};
+			IRRuntimeDrawParams dp = { .drawIndexed = da };
+			auto alloc = AllocateGPU(sizeof(dp), cmd);
+			std::memcpy(alloc.data, &dp, sizeof(dp));
+			commandlist.argument_table->setAddress(to_internal(&alloc.buffer)->gpu_address + alloc.offset, kIRArgumentBufferDrawArgumentsBindPoint);
+			alloc = AllocateGPU(sizeof(uint16_t), cmd);
+			uint16_t irindextype = IRMetalIndexToIRIndex(commandlist.index_type);
+			std::memcpy(alloc.data, &irindextype, sizeof(uint16_t));
+			commandlist.argument_table->setAddress(to_internal(&alloc.buffer)->gpu_address + alloc.offset, kIRArgumentBufferUniformsBindPoint);
+		}
+		
+		predraw(cmd);
 		const uint64_t index_stride = commandlist.index_type == MTL::IndexTypeUInt32 ? sizeof(uint32_t) : sizeof(uint16_t);
 		const uint64_t indexBufferOffset = startIndexLocation * index_stride;
 		commandlist.render_encoder->drawIndexedPrimitives(commandlist.primitive_type, indexCount, commandlist.index_type, commandlist.index_buffer.bufferAddress + indexBufferOffset, commandlist.index_buffer.length, instanceCount, baseVertexLocation, startInstanceLocation);
 	}
 	void GraphicsDevice_Metal::DrawInstancedIndirect(const GPUBuffer* args, uint64_t args_offset, CommandList cmd)
-{
-		predraw(cmd);
+	{
 		auto internal_state = to_internal(args);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		
+		// Draw args binding is a requirement of metal shader converter to match DirectX behaviour of vertexID and instanceID:
+		if (commandlist.drawargs_required)
+		{
+			commandlist.dirty_drawargs = true;
+			commandlist.argument_table->setAddress(internal_state->gpu_address + args_offset, kIRArgumentBufferDrawArgumentsBindPoint);
+			auto alloc = AllocateGPU(sizeof(uint16_t), cmd);
+			std::memcpy(alloc.data, &kIRNonIndexedDraw, sizeof(uint16_t));
+			commandlist.argument_table->setAddress(to_internal(&alloc.buffer)->gpu_address + alloc.offset, kIRArgumentBufferUniformsBindPoint);
+		}
+		
+		predraw(cmd);
 		commandlist.render_encoder->drawPrimitives(commandlist.primitive_type, internal_state->gpu_address + args_offset);
 	}
 	void GraphicsDevice_Metal::DrawIndexedInstancedIndirect(const GPUBuffer* args, uint64_t args_offset, CommandList cmd)
-{
-		predraw(cmd);
+	{
 		auto internal_state = to_internal(args);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		
+		// Draw args binding is a requirement of metal shader converter to match DirectX behaviour of vertexID and instanceID:
+		if (commandlist.drawargs_required)
+		{
+			commandlist.dirty_drawargs = true;
+			commandlist.argument_table->setAddress(internal_state->gpu_address + args_offset, kIRArgumentBufferDrawArgumentsBindPoint);
+			auto alloc = AllocateGPU(sizeof(uint16_t), cmd);
+			uint16_t irindextype = IRMetalIndexToIRIndex(commandlist.index_type);
+			std::memcpy(alloc.data, &irindextype, sizeof(uint16_t));
+			commandlist.argument_table->setAddress(to_internal(&alloc.buffer)->gpu_address + alloc.offset, kIRArgumentBufferUniformsBindPoint);
+		}
+		
+		predraw(cmd);
 		commandlist.render_encoder->drawIndexedPrimitives(commandlist.primitive_type, commandlist.index_type, commandlist.index_buffer.bufferAddress, commandlist.index_buffer.length, internal_state->gpu_address + args_offset);
 	}
 	void GraphicsDevice_Metal::DrawInstancedIndirectCount(const GPUBuffer* args, uint64_t args_offset, const GPUBuffer* count, uint64_t count_offset, uint32_t max_count, CommandList cmd)
