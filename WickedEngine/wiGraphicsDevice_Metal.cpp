@@ -15,7 +15,6 @@ namespace metal_internal
 {
 	static constexpr uint64_t bindless_resource_capacity = 500000;
 	static constexpr uint64_t bindless_sampler_capacity = 256;
-	static constexpr uint64_t blas_capacity = 10000;
 
 	template <typename T>
 	inline static auto create_nsarray(T** objects, size_t count)
