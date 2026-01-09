@@ -1024,7 +1024,7 @@ using namespace metal_internal;
 					continue;
 				auto internal_state = to_internal(&commandlist.binding_table.CBV[i]);
 				commandlist.root.root_cbvs[i] = internal_state->gpu_address + commandlist.binding_table.CBV_offset[i];
-				assert(IsAligned(commandlist.root.root_cbvs[i], MTL::GPUAddress(256)));
+				assert(is_aligned(commandlist.root.root_cbvs[i], MTL::GPUAddress(256)));
 			}
 			
 			if (commandlist.dirty_resource)
