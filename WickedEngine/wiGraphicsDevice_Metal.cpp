@@ -587,6 +587,9 @@ namespace metal_internal
 			uint64_t offset = 0;
 			uint64_t size = 0;
 			int index = -1;
+#ifndef USE_TEXTURE_VIEW_POOL
+			NS::SharedPtr<MTL::Texture> view;
+#endif // USE_TEXTURE_VIEW_POOL
 			
 			bool IsValid() const { return entry.gpuVA != 0; }
 		};
@@ -598,6 +601,19 @@ namespace metal_internal
 		void destroy_subresources()
 		{
 			uint64_t framecount = allocationhandler->framecount;
+			
+#ifndef USE_TEXTURE_VIEW_POOL
+			allocationhandler->destroyer_resources.push_back(std::make_pair(srv.view, framecount));
+			allocationhandler->destroyer_resources.push_back(std::make_pair(uav.view, framecount));
+			for (auto& x : subresources_srv)
+			{
+				allocationhandler->destroyer_resources.push_back(std::make_pair(x.view, framecount));
+			}
+			for (auto& x : subresources_uav)
+			{
+				allocationhandler->destroyer_resources.push_back(std::make_pair(x.view, framecount));
+			}
+#endif // USE_TEXTURE_VIEW_POOL
 			
 			if (srv.index >= 0)
 				allocationhandler->destroyer_bindless_res.push_back(std::make_pair(srv.index, framecount));
@@ -645,6 +661,9 @@ namespace metal_internal
 		{
 			IRDescriptorTableEntry entry = {};
 			int index = -1;
+#ifndef USE_TEXTURE_VIEW_POOL
+			NS::SharedPtr<MTL::Texture> view;
+#endif // USE_TEXTURE_VIEW_POOL
 			
 			uint32_t firstMip = 0;
 			uint32_t mipCount = 0;
@@ -667,6 +686,19 @@ namespace metal_internal
 		void destroy_subresources()
 		{
 			uint64_t framecount = allocationhandler->framecount;
+			
+#ifndef USE_TEXTURE_VIEW_POOL
+			allocationhandler->destroyer_resources.push_back(std::make_pair(srv.view, framecount));
+			allocationhandler->destroyer_resources.push_back(std::make_pair(uav.view, framecount));
+			for (auto& x : subresources_srv)
+			{
+				allocationhandler->destroyer_resources.push_back(std::make_pair(x.view, framecount));
+			}
+			for (auto& x : subresources_uav)
+			{
+				allocationhandler->destroyer_resources.push_back(std::make_pair(x.view, framecount));
+			}
+#endif // USE_TEXTURE_VIEW_POOL
 			
 			if (srv.index >= 0)
 				allocationhandler->destroyer_bindless_res.push_back(std::make_pair(srv.index, framecount));
@@ -1397,6 +1429,7 @@ using namespace metal_internal;
 		allocationhandler->make_resident(descriptor_heap_res.get());
 		allocationhandler->make_resident(descriptor_heap_sam.get());
 		
+#ifdef USE_TEXTURE_VIEW_POOL
 		NS::SharedPtr<MTL::ResourceViewPoolDescriptor> view_pool_desc = NS::TransferPtr(MTL::ResourceViewPoolDescriptor::alloc()->init());
 		view_pool_desc->setResourceViewCount(bindless_resource_capacity);
 		texture_view_pool = NS::TransferPtr(device->newTextureViewPool(view_pool_desc.get(), &error));
@@ -1406,6 +1439,7 @@ using namespace metal_internal;
 			wilog_assert(0, "%s", errDesc->utf8String());
 			error->release();
 		}
+#endif // USE_TEXTURE_VIEW_POOL
 		
 		// Static samplers workaround:
 		NS::SharedPtr<MTL::SamplerDescriptor> sampler_descriptor = NS::TransferPtr(MTL::SamplerDescriptor::alloc()->init());
@@ -2613,8 +2647,13 @@ using namespace metal_internal;
 					{
 						auto& subresource = internal_state->srv;
 						subresource.index = allocationhandler->allocate_resource_index();
+#ifdef USE_TEXTURE_VIEW_POOL
 						MTL::ResourceID resourceID = texture_view_pool->setTextureView(internal_state->texture.get(), view_desc.get(), subresource.index);
 						subresource.entry = create_entry(resourceID, min_lod_clamp);
+#else
+						subresource.view = NS::TransferPtr(internal_state->texture->newTextureView(view_desc.get()));
+						subresource.entry = create_entry(subresource.view.get());
+#endif // USE_TEXTURE_VIEW_POOL
 						std::memcpy(descriptor_heap_res_data + subresource.index, &subresource.entry, sizeof(subresource.entry));
 						subresource.firstMip = firstMip;
 						subresource.mipCount = mipCount;
@@ -2626,8 +2665,13 @@ using namespace metal_internal;
 					{
 						auto& subresource = internal_state->subresources_srv.emplace_back();
 						subresource.index = allocationhandler->allocate_resource_index();
+#ifdef USE_TEXTURE_VIEW_POOL
 						MTL::ResourceID resourceID = texture_view_pool->setTextureView(internal_state->texture.get(), view_desc.get(), subresource.index);
 						subresource.entry = create_entry(resourceID, min_lod_clamp);
+#else
+						subresource.view = NS::TransferPtr(internal_state->texture->newTextureView(view_desc.get()));
+						subresource.entry = create_entry(subresource.view.get());
+#endif // USE_TEXTURE_VIEW_POOL
 						std::memcpy(descriptor_heap_res_data + subresource.index, &subresource.entry, sizeof(subresource.entry));
 						subresource.firstMip = firstMip;
 						subresource.mipCount = mipCount;
@@ -2644,8 +2688,13 @@ using namespace metal_internal;
 					{
 						auto& subresource = internal_state->uav;
 						subresource.index = allocationhandler->allocate_resource_index();
+#ifdef USE_TEXTURE_VIEW_POOL
 						MTL::ResourceID resourceID = texture_view_pool->setTextureView(internal_state->texture.get(), view_desc.get(), subresource.index);
 						subresource.entry = create_entry(resourceID, min_lod_clamp);
+#else
+						subresource.view = NS::TransferPtr(internal_state->texture->newTextureView(view_desc.get()));
+						subresource.entry = create_entry(subresource.view.get());
+#endif // USE_TEXTURE_VIEW_POOL
 						std::memcpy(descriptor_heap_res_data + subresource.index, &subresource.entry, sizeof(subresource.entry));
 						subresource.firstMip = firstMip;
 						subresource.mipCount = mipCount;
@@ -2657,8 +2706,13 @@ using namespace metal_internal;
 					{
 						auto& subresource = internal_state->subresources_uav.emplace_back();
 						subresource.index = allocationhandler->allocate_resource_index();
+#ifdef USE_TEXTURE_VIEW_POOL
 						MTL::ResourceID resourceID = texture_view_pool->setTextureView(internal_state->texture.get(), view_desc.get(), subresource.index);
 						subresource.entry = create_entry(resourceID, min_lod_clamp);
+#else
+						subresource.view = NS::TransferPtr(internal_state->texture->newTextureView(view_desc.get()));
+						subresource.entry = create_entry(subresource.view.get());
+#endif // USE_TEXTURE_VIEW_POOL
 						std::memcpy(descriptor_heap_res_data + subresource.index, &subresource.entry, sizeof(subresource.entry));
 						subresource.firstMip = firstMip;
 						subresource.mipCount = mipCount;
@@ -2771,12 +2825,20 @@ using namespace metal_internal;
 						subresource.index = allocationhandler->allocate_resource_index();
 						subresource.offset = offset;
 						subresource.size = size;
+#ifdef USE_TEXTURE_VIEW_POOL
 						MTL::ResourceID resourceID = {};
 						if (texture_descriptor.get() != nullptr)
 						{
 							resourceID = texture_view_pool->setTextureViewFromBuffer(internal_state->buffer.get(), texture_descriptor.get(), offset, size, subresource.index);
 						}
 						subresource.entry = create_entry(internal_state->buffer.get(), size, offset, resourceID, format, structured);
+#else
+						if (texture_descriptor.get() != nullptr)
+						{
+							subresource.view = NS::TransferPtr(internal_state->buffer->newTexture(texture_descriptor.get(), offset, size));
+						}
+						subresource.entry = create_entry(internal_state->buffer.get(), size, offset, subresource.view.get(), format, structured);
+#endif // USE_TEXTURE_VIEW_POOL
 						std::memcpy(descriptor_heap_res_data + subresource.index, &subresource.entry, sizeof(subresource.entry));
 						return -1;
 					}
@@ -2786,12 +2848,20 @@ using namespace metal_internal;
 						subresource.index = allocationhandler->allocate_resource_index();
 						subresource.offset = offset;
 						subresource.size = size;
+#ifdef USE_TEXTURE_VIEW_POOL
 						MTL::ResourceID resourceID = {};
 						if (texture_descriptor.get() != nullptr)
 						{
 							resourceID = texture_view_pool->setTextureViewFromBuffer(internal_state->buffer.get(), texture_descriptor.get(), offset, size, subresource.index);
 						}
 						subresource.entry = create_entry(internal_state->buffer.get(), size, offset, resourceID, format, structured);
+#else
+						if (texture_descriptor.get() != nullptr)
+						{
+							subresource.view = NS::TransferPtr(internal_state->buffer->newTexture(texture_descriptor.get(), offset, size));
+						}
+						subresource.entry = create_entry(internal_state->buffer.get(), size, offset, subresource.view.get(), format, structured);
+#endif // USE_TEXTURE_VIEW_POOL
 						std::memcpy(descriptor_heap_res_data + subresource.index, &subresource.entry, sizeof(subresource.entry));
 						return (int)internal_state->subresources_srv.size() - 1;
 					}
@@ -2805,12 +2875,20 @@ using namespace metal_internal;
 						subresource.index = allocationhandler->allocate_resource_index();
 						subresource.offset = offset;
 						subresource.size = size;
+#ifdef USE_TEXTURE_VIEW_POOL
 						MTL::ResourceID resourceID = {};
 						if (texture_descriptor.get() != nullptr)
 						{
 							resourceID = texture_view_pool->setTextureViewFromBuffer(internal_state->buffer.get(), texture_descriptor.get(), offset, size, subresource.index);
 						}
 						subresource.entry = create_entry(internal_state->buffer.get(), size, offset, resourceID, format, structured);
+#else
+						if (texture_descriptor.get() != nullptr)
+						{
+							subresource.view = NS::TransferPtr(internal_state->buffer->newTexture(texture_descriptor.get(), offset, size));
+						}
+						subresource.entry = create_entry(internal_state->buffer.get(), size, offset, subresource.view.get(), format, structured);
+#endif // USE_TEXTURE_VIEW_POOL
 						std::memcpy(descriptor_heap_res_data + subresource.index, &subresource.entry, sizeof(subresource.entry));
 						return -1;
 					}
@@ -2820,12 +2898,20 @@ using namespace metal_internal;
 						subresource.index = allocationhandler->allocate_resource_index();
 						subresource.offset = offset;
 						subresource.size = size;
+#ifdef USE_TEXTURE_VIEW_POOL
 						MTL::ResourceID resourceID = {};
 						if (texture_descriptor.get() != nullptr)
 						{
 							resourceID = texture_view_pool->setTextureViewFromBuffer(internal_state->buffer.get(), texture_descriptor.get(), offset, size, subresource.index);
 						}
 						subresource.entry = create_entry(internal_state->buffer.get(), size, offset, resourceID, format, structured);
+#else
+						if (texture_descriptor.get() != nullptr)
+						{
+							subresource.view = NS::TransferPtr(internal_state->buffer->newTexture(texture_descriptor.get(), offset, size));
+						}
+						subresource.entry = create_entry(internal_state->buffer.get(), size, offset, subresource.view.get(), format, structured);
+#endif // USE_TEXTURE_VIEW_POOL
 						std::memcpy(descriptor_heap_res_data + subresource.index, &subresource.entry, sizeof(subresource.entry));
 						return (int)internal_state->subresources_uav.size() - 1;
 					}
@@ -3190,8 +3276,7 @@ using namespace metal_internal;
 		auto texture_internal = wi::allocator::make_shared<Texture_Metal>();
 		texture_internal->texture = swapchain_internal->current_texture;
 		texture_internal->srv.index = allocationhandler->allocate_resource_index();
-		MTL::ResourceID resourceID = texture_view_pool->setTextureView(texture_internal->texture.get(), texture_internal->srv.index);
-		texture_internal->srv.entry = create_entry(resourceID);
+		texture_internal->srv.entry = create_entry(texture_internal->texture.get());
 		std::memcpy(descriptor_heap_res_data + texture_internal->srv.index, &texture_internal->srv.entry, sizeof(texture_internal->srv.entry));
 		result.internal_state = texture_internal;
 		result.desc.width = (uint32_t)texture_internal->texture->width();

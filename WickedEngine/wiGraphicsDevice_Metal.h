@@ -16,6 +16,9 @@
 #include <mutex>
 #include <deque>
 
+// There are crashes with this in graphics debugger, so this can be disabled:
+//#define USE_TEXTURE_VIEW_POOL
+
 namespace wi::graphics
 {
 	class GraphicsDevice_Metal final : public GraphicsDevice
@@ -254,7 +257,9 @@ namespace wi::graphics
 		IRDescriptorTableEntry* descriptor_heap_res_data = nullptr;
 		IRDescriptorTableEntry* descriptor_heap_sam_data = nullptr;
 		
+#ifdef USE_TEXTURE_VIEW_POOL
 		NS::SharedPtr<MTL::TextureViewPool> texture_view_pool;
+#endif // USE_TEXTURE_VIEW_POOL
 		
 		NS::SharedPtr<MTL::Buffer> dummyblasbuffer;
 		NS::SharedPtr<MTL::AccelerationStructure> dummyblas;
