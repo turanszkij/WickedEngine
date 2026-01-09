@@ -1834,6 +1834,12 @@ void EditorComponent::Update(float dt)
 		componentsWnd.RefreshEntityTree();
 	}
 
+	// Ensure pointer is visible when right mouse button is not held:
+	if (!wi::input::Down(wi::input::MOUSE_BUTTON_RIGHT))
+	{
+		wi::input::HidePointer(false);
+	}
+
 	// Camera control:
 	if (!drive_mode && !wi::backlog::isActive() && !GetGUI().HasFocus())
 	{
@@ -1969,7 +1975,7 @@ void EditorComponent::Update(float dt)
 			moveNew += XMVectorSet(leftStick.x, 0, leftStick.y, 0);
 			moveNew *= speed;
 
-			move = XMVectorLerp(move, moveNew, cameraWnd.accelerationSlider.GetValue() * clampedDT / 0.0166f); // smooth the movement a bit
+			move = XMVectorLerp(move, moveNew, std::min(1.0f, cameraWnd.accelerationSlider.GetValue() * clampedDT / 0.0166f)); // smooth the movement a bit
 			float moveLength = XMVectorGetX(XMVector3Length(move));
 
 			if (moveLength < 0.0001f)
