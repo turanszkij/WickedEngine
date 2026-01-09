@@ -6013,13 +6013,16 @@ void DrawSoftParticles(
 	CommandList cmd
 )
 {
+	size_t emitterCount = vis.visibleEmitters.size();
+	if (emitterCount == 0)
+		return;
+	
 	auto range = distortion ?
 		wi::profiler::BeginRangeGPU("EmittedParticles - Render (Distortion)", cmd) :
 		wi::profiler::BeginRangeGPU("EmittedParticles - Render", cmd);
 
 	BindCommonResources(cmd);
 
-	size_t emitterCount = vis.visibleEmitters.size();
 	if (emitterCount > 0)
 	{
 		// Sort emitters based on distance:

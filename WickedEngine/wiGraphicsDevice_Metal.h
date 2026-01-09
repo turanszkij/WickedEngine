@@ -211,7 +211,7 @@ namespace wi::graphics
 				{
 					x = {};
 				}
-				barriers.clear();
+				assert(barriers.empty());
 				assert(waits.empty());
 				assert(signals.empty());
 				drawargs_required = false;

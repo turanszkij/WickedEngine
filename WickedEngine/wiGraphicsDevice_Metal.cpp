@@ -1301,12 +1301,6 @@ using namespace metal_internal;
 			commandlist.dirty_viewport = false;
 			commandlist.render_encoder->setViewports(commandlist.viewports, commandlist.viewport_count);
 		}
-		
-		if (!commandlist.barriers.empty())
-		{
-			commandlist.render_encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, MTL4::VisibilityOptionDevice);
-			commandlist.barriers.clear();
-		}
 	}
 	void GraphicsDevice_Metal::predispatch(CommandList cmd)
 	{
@@ -1334,7 +1328,7 @@ using namespace metal_internal;
 		
 		if (!commandlist.barriers.empty())
 		{
-			commandlist.compute_encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, MTL4::VisibilityOptionDevice);
+			commandlist.compute_encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, MTL4::VisibilityOptionNone);
 			commandlist.barriers.clear();
 		}
 	}
@@ -1347,7 +1341,7 @@ using namespace metal_internal;
 		
 		if (!commandlist.barriers.empty())
 		{
-			commandlist.compute_encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, MTL4::VisibilityOptionDevice);
+			commandlist.compute_encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, MTL4::VisibilityOptionNone);
 			commandlist.barriers.clear();
 		}
 	}
@@ -3137,6 +3131,13 @@ using namespace metal_internal;
 		{
 			auto& commandlist = *commandlists[cmd].get();
 			commandlist.assert_noencoder();
+			if (!commandlist.barriers.empty())
+			{
+				MTL4::ComputeCommandEncoder* encoder = commandlist.commandbuffer->computeCommandEncoder();
+				encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, MTL4::VisibilityOptionNone);
+				encoder->endEncoding();
+				commandlist.barriers.clear();
+			}
 			commandlist.commandbuffer->endCommandBuffer();
 			
 			CommandQueue& queue = queues[commandlist.queue];
@@ -3402,7 +3403,6 @@ using namespace metal_internal;
 		descriptor->colorAttachments()->setObject(color_attachment_descriptor.get(), 0);
 		
 		commandlist.render_encoder = commandlist.commandbuffer->renderCommandEncoder(descriptor.get());
-		commandlist.render_encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, MTL4::VisibilityOptionDevice);
 		commandlist.dirty_vb = true;
 		commandlist.dirty_root = true;
 		commandlist.dirty_sampler = true;
@@ -3562,7 +3562,6 @@ using namespace metal_internal;
 			options |= MTL4::RenderEncoderOptionResuming;
 		}
 		commandlist.render_encoder = commandlist.commandbuffer->renderCommandEncoder(descriptor.get(), options);
-		commandlist.render_encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, MTL4::VisibilityOptionDevice);
 		if (occlusionqueries != nullptr && occlusionqueries->IsValid())
 		{
 			commandlist.render_encoder->setVisibilityResultMode(MTL::VisibilityResultModeDisabled, 0);
@@ -3582,7 +3581,7 @@ using namespace metal_internal;
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		assert(commandlist.render_encoder != nullptr);
 		
-		commandlist.render_encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, MTL4::VisibilityOptionDevice);
+		commandlist.render_encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, MTL4::VisibilityOptionNone);
 		commandlist.render_encoder->endEncoding();
 		commandlist.dirty_pso = true;
 		
@@ -4097,6 +4096,7 @@ using namespace metal_internal;
 			case GpuQueryType::TIMESTAMP:
 				if (commandlist.render_encoder != nullptr)
 				{
+					// Note: fMTL::RenderStageFragment timestamp is unreliable if no fragment was rendered. But we can't determine here in a non-intrusive way whether a fragment was rendered or not in the current render pass for this timestamp
 					commandlist.render_encoder->writeTimestamp(MTL4::TimestampGranularityPrecise, MTL::RenderStageFragment, internal_state->counter_heap.get(), index);
 				}
 				else
