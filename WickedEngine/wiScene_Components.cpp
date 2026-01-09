@@ -861,17 +861,17 @@ namespace wi::scene
 		}
 		const uint64_t alignment = device->GetMinOffsetAlignment(&bd);
 		bd.size =
-			AlignTo(uint64_t(vertex_positions.size() * position_stride), alignment) + // position will be first to have 0 offset for flexible alignment!
-			AlignTo(uint64_t(provoke.size() * GetProvokingIndexStride()), alignment) +
-			AlignTo(uint64_t(reorder.size() * GetIndexStride()), alignment) +
-			AlignTo(uint64_t(indices.size() * GetIndexStride()), alignment) +
-			AlignTo(uint64_t(vertex_normals.size() * sizeof(Vertex_NOR)), alignment) +
-			AlignTo(uint64_t(vertex_tangents.size() * sizeof(Vertex_TAN)), alignment) +
-			AlignTo(uint64_t(uv_count * uv_stride), alignment) +
-			AlignTo(uint64_t(vertex_atlas.size() * sizeof(Vertex_TEX)), alignment) +
-			AlignTo(uint64_t(vertex_colors.size() * sizeof(Vertex_COL)), alignment) +
-			AlignTo(uint64_t(vertex_boneindices.size() * sizeof(Vertex_BON)), alignment) +
-			AlignTo(uint64_t(vertex_boneindices2.size() * sizeof(Vertex_BON)), alignment)
+			align(uint64_t(vertex_positions.size() * position_stride), alignment) + // position will be first to have 0 offset for flexible alignment!
+			align(uint64_t(provoke.size() * GetProvokingIndexStride()), alignment) +
+			align(uint64_t(reorder.size() * GetIndexStride()), alignment) +
+			align(uint64_t(indices.size() * GetIndexStride()), alignment) +
+			align(uint64_t(vertex_normals.size() * sizeof(Vertex_NOR)), alignment) +
+			align(uint64_t(vertex_tangents.size() * sizeof(Vertex_TAN)), alignment) +
+			align(uint64_t(uv_count * uv_stride), alignment) +
+			align(uint64_t(vertex_atlas.size() * sizeof(Vertex_TEX)), alignment) +
+			align(uint64_t(vertex_colors.size() * sizeof(Vertex_COL)), alignment) +
+			align(uint64_t(vertex_boneindices.size() * sizeof(Vertex_BON)), alignment) +
+			align(uint64_t(vertex_boneindices2.size() * sizeof(Vertex_BON)), alignment)
 			;
 
 		constexpr Format morph_format = Format::R16G16B16A16_FLOAT;
@@ -880,11 +880,11 @@ namespace wi::scene
 		{
 			if (!morph.vertex_positions.empty())
 			{
-				bd.size += AlignTo(uint64_t(vertex_positions.size() * morph_stride), alignment);
+				bd.size += align(uint64_t(vertex_positions.size() * morph_stride), alignment);
 			}
 			if (!morph.vertex_normals.empty())
 			{
-				bd.size += AlignTo(uint64_t(vertex_normals.size() * morph_stride), alignment);
+				bd.size += align(uint64_t(vertex_normals.size() * morph_stride), alignment);
 			}
 		}
 
@@ -991,11 +991,11 @@ namespace wi::scene
 				}
 			}
 
-			bd.size = AlignTo(bd.size, uint64_t(sizeof(ShaderCluster)));
-			bd.size = AlignTo(uint64_t(bd.size + clusters.size() * sizeof(ShaderCluster)), alignment);
+			bd.size = align(bd.size, uint64_t(sizeof(ShaderCluster)));
+			bd.size = align(uint64_t(bd.size + clusters.size() * sizeof(ShaderCluster)), alignment);
 
-			bd.size = AlignTo(bd.size, uint64_t(sizeof(ShaderClusterBounds)));
-			bd.size = AlignTo(uint64_t(bd.size + cluster_bounds.size() * sizeof(ShaderClusterBounds)), alignment);
+			bd.size = align(bd.size, uint64_t(sizeof(ShaderClusterBounds)));
+			bd.size = align(uint64_t(bd.size + cluster_bounds.size() * sizeof(ShaderClusterBounds)), alignment);
 		}
 
 		auto init_callback = [&](void* dest) {
@@ -1010,7 +1010,7 @@ namespace wi::scene
 				vb_pos_wind.offset = buffer_offset;
 				vb_pos_wind.size = vertex_positions.size() * sizeof(Vertex_POS16);
 				Vertex_POS16* vertices = (Vertex_POS16*)(buffer_data + buffer_offset);
-				buffer_offset += AlignTo(vb_pos_wind.size, alignment);
+				buffer_offset += align(vb_pos_wind.size, alignment);
 				for (size_t i = 0; i < vertex_positions.size(); ++i)
 				{
 					XMFLOAT3 pos = vertex_positions[i];
@@ -1026,7 +1026,7 @@ namespace wi::scene
 				vb_pos_wind.offset = buffer_offset;
 				vb_pos_wind.size = vertex_positions.size() * sizeof(Vertex_POS32);
 				Vertex_POS32* vertices = (Vertex_POS32*)(buffer_data + buffer_offset);
-				buffer_offset += AlignTo(vb_pos_wind.size, alignment);
+				buffer_offset += align(vb_pos_wind.size, alignment);
 				for (size_t i = 0; i < vertex_positions.size(); ++i)
 				{
 					const XMFLOAT3& pos = vertex_positions[i];
@@ -1042,7 +1042,7 @@ namespace wi::scene
 				vb_pos_wind.offset = buffer_offset;
 				vb_pos_wind.size = vertex_positions.size() * sizeof(Vertex_POS32W);
 				Vertex_POS32W* vertices = (Vertex_POS32W*)(buffer_data + buffer_offset);
-				buffer_offset += AlignTo(vb_pos_wind.size, alignment);
+				buffer_offset += align(vb_pos_wind.size, alignment);
 				for (size_t i = 0; i < vertex_positions.size(); ++i)
 				{
 					const XMFLOAT3& pos = vertex_positions[i];
@@ -1064,7 +1064,7 @@ namespace wi::scene
 				ib_provoke.offset = buffer_offset;
 				ib_provoke.size = provoke.size() * sizeof(uint32_t);
 				uint32_t* indexdata = (uint32_t*)(buffer_data + buffer_offset);
-				buffer_offset += AlignTo(ib_provoke.size, alignment);
+				buffer_offset += align(ib_provoke.size, alignment);
 				std::memcpy(indexdata, provoke.data(), ib_provoke.size);
 			}
 			else
@@ -1072,7 +1072,7 @@ namespace wi::scene
 				ib_provoke.offset = buffer_offset;
 				ib_provoke.size = provoke.size() * sizeof(uint16_t);
 				uint16_t* indexdata = (uint16_t*)(buffer_data + buffer_offset);
-				buffer_offset += AlignTo(ib_provoke.size, alignment);
+				buffer_offset += align(ib_provoke.size, alignment);
 				for (size_t i = 0; i < provoke.size(); ++i)
 				{
 					std::memcpy(indexdata + i, &provoke[i], sizeof(uint16_t));
@@ -1085,7 +1085,7 @@ namespace wi::scene
 				ib_reorder.offset = buffer_offset;
 				ib_reorder.size = reorder.size() * sizeof(uint32_t);
 				uint32_t* indexdata = (uint32_t*)(buffer_data + buffer_offset);
-				buffer_offset += AlignTo(ib_reorder.size, alignment);
+				buffer_offset += align(ib_reorder.size, alignment);
 				std::memcpy(indexdata, reorder.data(), ib_reorder.size);
 			}
 			else
@@ -1093,7 +1093,7 @@ namespace wi::scene
 				ib_reorder.offset = buffer_offset;
 				ib_reorder.size = reorder.size() * sizeof(uint16_t);
 				uint16_t* indexdata = (uint16_t*)(buffer_data + buffer_offset);
-				buffer_offset += AlignTo(ib_reorder.size, alignment);
+				buffer_offset += align(ib_reorder.size, alignment);
 				for (size_t i = 0; i < reorder.size(); ++i)
 				{
 					std::memcpy(indexdata + i, &reorder[i], sizeof(uint16_t));
@@ -1106,7 +1106,7 @@ namespace wi::scene
 				ib.offset = buffer_offset;
 				ib.size = indices.size() * sizeof(uint32_t);
 				uint32_t* indexdata = (uint32_t*)(buffer_data + buffer_offset);
-				buffer_offset += AlignTo(ib.size, alignment);
+				buffer_offset += align(ib.size, alignment);
 				std::memcpy(indexdata, indices.data(), ib.size);
 			}
 			else
@@ -1114,7 +1114,7 @@ namespace wi::scene
 				ib.offset = buffer_offset;
 				ib.size = indices.size() * sizeof(uint16_t);
 				uint16_t* indexdata = (uint16_t*)(buffer_data + buffer_offset);
-				buffer_offset += AlignTo(ib.size, alignment);
+				buffer_offset += align(ib.size, alignment);
 				for (size_t i = 0; i < indices.size(); ++i)
 				{
 					std::memcpy(indexdata + i, &indices[i], sizeof(uint16_t));
@@ -1127,7 +1127,7 @@ namespace wi::scene
 				vb_nor.offset = buffer_offset;
 				vb_nor.size = vertex_normals.size() * sizeof(Vertex_NOR);
 				Vertex_NOR* vertices = (Vertex_NOR*)(buffer_data + buffer_offset);
-				buffer_offset += AlignTo(vb_nor.size, alignment);
+				buffer_offset += align(vb_nor.size, alignment);
 				for (size_t i = 0; i < vertex_normals.size(); ++i)
 				{
 					Vertex_NOR vert;
@@ -1142,7 +1142,7 @@ namespace wi::scene
 				vb_tan.offset = buffer_offset;
 				vb_tan.size = vertex_tangents.size() * sizeof(Vertex_TAN);
 				Vertex_TAN* vertices = (Vertex_TAN*)(buffer_data + buffer_offset);
-				buffer_offset += AlignTo(vb_tan.size, alignment);
+				buffer_offset += align(vb_tan.size, alignment);
 				for (size_t i = 0; i < vertex_tangents.size(); ++i)
 				{
 					Vertex_TAN vert;
@@ -1162,7 +1162,7 @@ namespace wi::scene
 				if (uv_stride == sizeof(Vertex_UVS))
 				{
 					Vertex_UVS* vertices = (Vertex_UVS*)(buffer_data + buffer_offset);
-					buffer_offset += AlignTo(vb_uvs.size, alignment);
+					buffer_offset += align(vb_uvs.size, alignment);
 					for (size_t i = 0; i < uv_count; ++i)
 					{
 						Vertex_UVS vert;
@@ -1174,7 +1174,7 @@ namespace wi::scene
 				else
 				{
 					Vertex_UVS32* vertices = (Vertex_UVS32*)(buffer_data + buffer_offset);
-					buffer_offset += AlignTo(vb_uvs.size, alignment);
+					buffer_offset += align(vb_uvs.size, alignment);
 					for (size_t i = 0; i < uv_count; ++i)
 					{
 						Vertex_UVS32 vert;
@@ -1191,7 +1191,7 @@ namespace wi::scene
 				vb_atl.offset = buffer_offset;
 				vb_atl.size = vertex_atlas.size() * sizeof(Vertex_TEX);
 				Vertex_TEX* vertices = (Vertex_TEX*)(buffer_data + buffer_offset);
-				buffer_offset += AlignTo(vb_atl.size, alignment);
+				buffer_offset += align(vb_atl.size, alignment);
 				for (size_t i = 0; i < vertex_atlas.size(); ++i)
 				{
 					Vertex_TEX vert;
@@ -1206,7 +1206,7 @@ namespace wi::scene
 				vb_col.offset = buffer_offset;
 				vb_col.size = vertex_colors.size() * sizeof(Vertex_COL);
 				Vertex_COL* vertices = (Vertex_COL*)(buffer_data + buffer_offset);
-				buffer_offset += AlignTo(vb_col.size, alignment);
+				buffer_offset += align(vb_col.size, alignment);
 				for (size_t i = 0; i < vertex_colors.size(); ++i)
 				{
 					Vertex_COL vert;
@@ -1222,7 +1222,7 @@ namespace wi::scene
 				const size_t influence_div4 = GetBoneInfluenceDiv4();
 				vb_bon.size = (vertex_boneindices.size() + vertex_boneindices2.size()) * sizeof(Vertex_BON);
 				Vertex_BON* vertices = (Vertex_BON*)(buffer_data + buffer_offset);
-				buffer_offset += AlignTo(vb_bon.size, alignment);
+				buffer_offset += align(vb_bon.size, alignment);
 				assert(vertex_boneindices.size() == vertex_boneweights.size()); // must have same number of indices as weights
 				assert(vertex_boneindices2.empty() || vertex_boneindices2.size() == vertex_boneindices.size()); // if second influence stream exists, it must be as large as the first
 				assert(vertex_boneindices2.size() == vertex_boneweights2.size()); // must have same number of indices as weights
@@ -1309,7 +1309,7 @@ namespace wi::scene
 								XMStoreHalf4(vertices + ind, XMLoadFloat3(&morph.vertex_positions[i]));
 							}
 						}
-						buffer_offset += AlignTo(uint64_t(morph.vertex_positions.size() * sizeof(XMHALF4)), alignment);
+						buffer_offset += align(uint64_t(morph.vertex_positions.size() * sizeof(XMHALF4)), alignment);
 					}
 					if (!morph.vertex_normals.empty())
 					{
@@ -1333,7 +1333,7 @@ namespace wi::scene
 								XMStoreHalf4(vertices + ind, XMLoadFloat3(&morph.vertex_normals[i]));
 							}
 						}
-						buffer_offset += AlignTo(uint64_t(morph.vertex_normals.size() * sizeof(XMHALF4)), alignment);
+						buffer_offset += align(uint64_t(morph.vertex_normals.size() * sizeof(XMHALF4)), alignment);
 					}
 				}
 				vb_mor.size = buffer_offset - vb_mor.offset;
@@ -1341,19 +1341,19 @@ namespace wi::scene
 
 			if (!clusters.empty())
 			{
-				buffer_offset = AlignTo(buffer_offset, uint64_t(sizeof(ShaderCluster)));
+				buffer_offset = align(buffer_offset, uint64_t(sizeof(ShaderCluster)));
 				vb_clu.offset = buffer_offset;
 				vb_clu.size = clusters.size() * sizeof(ShaderCluster);
 				std::memcpy(buffer_data + buffer_offset, clusters.data(), vb_clu.size);
-				buffer_offset += AlignTo(vb_clu.size, alignment);
+				buffer_offset += align(vb_clu.size, alignment);
 			}
 			if (!cluster_bounds.empty())
 			{
-				buffer_offset = AlignTo(buffer_offset, uint64_t(sizeof(ShaderClusterBounds)));
+				buffer_offset = align(buffer_offset, uint64_t(sizeof(ShaderClusterBounds)));
 				vb_bou.offset = buffer_offset;
 				vb_bou.size = cluster_bounds.size() * sizeof(ShaderClusterBounds);
 				std::memcpy(buffer_data + buffer_offset, cluster_bounds.data(), vb_bou.size);
-				buffer_offset += AlignTo(vb_bou.size, alignment);
+				buffer_offset += align(vb_bou.size, alignment);
 			}
 		};
 
@@ -1459,10 +1459,10 @@ namespace wi::scene
 
 		const uint64_t alignment = device->GetMinOffsetAlignment(&desc) * sizeof(Vertex_POS32); // additional alignment for RGB32F
 		desc.size =
-			AlignTo(uint64_t(vertex_positions.size() * sizeof(Vertex_POS32W)), alignment) + // pos
-			AlignTo(uint64_t(vertex_positions.size() * sizeof(Vertex_POS32W)), alignment) + // prevpos
-			AlignTo(uint64_t(vertex_normals.size() * sizeof(Vertex_NOR)), alignment) +
-			AlignTo(uint64_t(vertex_tangents.size() * sizeof(Vertex_TAN)), alignment)
+			align(uint64_t(vertex_positions.size() * sizeof(Vertex_POS32W)), alignment) + // pos
+			align(uint64_t(vertex_positions.size() * sizeof(Vertex_POS32W)), alignment) + // prevpos
+			align(uint64_t(vertex_normals.size() * sizeof(Vertex_NOR)), alignment) +
+			align(uint64_t(vertex_tangents.size() * sizeof(Vertex_TAN)), alignment)
 			;
 
 		bool success = device->CreateBuffer(&desc, nullptr, &streamoutBuffer);
@@ -1473,7 +1473,7 @@ namespace wi::scene
 
 		so_pos.offset = buffer_offset;
 		so_pos.size = vertex_positions.size() * sizeof(Vertex_POS32W);
-		buffer_offset += AlignTo(so_pos.size, alignment);
+		buffer_offset += align(so_pos.size, alignment);
 		so_pos.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, so_pos.offset, so_pos.size, &Vertex_POS32W::FORMAT);
 		so_pos.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, so_pos.offset, so_pos.size, &Vertex_POS32W::FORMAT); // UAV can't have RGB32_F format!
 		so_pos.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, so_pos.subresource_srv);
@@ -1481,7 +1481,7 @@ namespace wi::scene
 
 		so_pre.offset = buffer_offset;
 		so_pre.size = so_pos.size;
-		buffer_offset += AlignTo(so_pre.size, alignment);
+		buffer_offset += align(so_pre.size, alignment);
 		so_pre.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, so_pre.offset, so_pre.size, &Vertex_POS32W::FORMAT);
 		so_pre.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, so_pre.offset, so_pre.size, &Vertex_POS32W::FORMAT); // UAV can't have RGB32_F format!
 		so_pre.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, so_pre.subresource_srv);
@@ -1491,7 +1491,7 @@ namespace wi::scene
 		{
 			so_nor.offset = buffer_offset;
 			so_nor.size = vb_nor.size;
-			buffer_offset += AlignTo(so_nor.size, alignment);
+			buffer_offset += align(so_nor.size, alignment);
 			so_nor.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, so_nor.offset, so_nor.size, &Vertex_NOR::FORMAT);
 			so_nor.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, so_nor.offset, so_nor.size, &Vertex_NOR::FORMAT);
 			so_nor.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, so_nor.subresource_srv);
@@ -1502,7 +1502,7 @@ namespace wi::scene
 		{
 			so_tan.offset = buffer_offset;
 			so_tan.size = vb_tan.size;
-			buffer_offset += AlignTo(so_tan.size, alignment);
+			buffer_offset += align(so_tan.size, alignment);
 			so_tan.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, so_tan.offset, so_tan.size, &Vertex_TAN::FORMAT);
 			so_tan.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, so_tan.offset, so_tan.size, &Vertex_TAN::FORMAT);
 			so_tan.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, so_tan.subresource_srv);

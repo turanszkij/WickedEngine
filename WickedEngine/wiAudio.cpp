@@ -9,12 +9,6 @@
 
 #include <sstream>
 
-template<typename T>
-static constexpr T AlignTo(T value, T alignment)
-{
-	return ((value + alignment - T(1)) / alignment) * alignment;
-}
-
 #ifdef _WIN32
 
 #include <wrl/client.h> // ComPtr
@@ -467,22 +461,22 @@ namespace wi::audio
 		instanceinternal->buffer.AudioBytes = (uint32_t)soundinternal->audioData.size();
 		if (instance->begin > 0)
 		{
-			const uint32_t bytes_from_beginning = AlignTo(std::min(instanceinternal->buffer.AudioBytes, uint32_t(instance->begin * bytes_per_second)), 4u);
+			const uint32_t bytes_from_beginning = align(std::min(instanceinternal->buffer.AudioBytes, uint32_t(instance->begin * bytes_per_second)), 4u);
 			instanceinternal->buffer.pAudioData += bytes_from_beginning;
 			instanceinternal->buffer.AudioBytes -= bytes_from_beginning;
 		}
 		if (instance->length > 0)
 		{
-			instanceinternal->buffer.AudioBytes = AlignTo(std::min(instanceinternal->buffer.AudioBytes, uint32_t(instance->length * bytes_per_second)), 4u);
+			instanceinternal->buffer.AudioBytes = align(std::min(instanceinternal->buffer.AudioBytes, uint32_t(instance->length * bytes_per_second)), 4u);
 		}
 
 		uint32_t num_remaining_samples = instanceinternal->buffer.AudioBytes / (soundinternal->wfx.nChannels * sizeof(short));
 		if (instance->loop_begin > 0)
 		{
-			instanceinternal->buffer.LoopBegin = AlignTo(std::min(num_remaining_samples, uint32_t(instance->loop_begin * soundinternal->wfx.nSamplesPerSec)), 4u);
+			instanceinternal->buffer.LoopBegin = align(std::min(num_remaining_samples, uint32_t(instance->loop_begin * soundinternal->wfx.nSamplesPerSec)), 4u);
 			num_remaining_samples -= instanceinternal->buffer.LoopBegin;
 		}
-		instanceinternal->buffer.LoopLength = AlignTo(std::min(num_remaining_samples, uint32_t(instance->loop_length * soundinternal->wfx.nSamplesPerSec)), 4u);
+		instanceinternal->buffer.LoopLength = align(std::min(num_remaining_samples, uint32_t(instance->loop_length * soundinternal->wfx.nSamplesPerSec)), 4u);
 
 		instanceinternal->buffer.Flags = XAUDIO2_END_OF_STREAM;
 		instanceinternal->buffer.LoopCount = instance->IsLooped() ? XAUDIO2_LOOP_INFINITE : 0;
@@ -1093,22 +1087,22 @@ namespace wi::audio
 		instanceinternal->buffer.AudioBytes = (uint32_t)soundinternal->audioData.size();
 		if (instance->begin > 0)
 		{
-			const uint32_t bytes_from_beginning = AlignTo(std::min(instanceinternal->buffer.AudioBytes, uint32_t(instance->begin * bytes_per_second)), 4u);
+			const uint32_t bytes_from_beginning = align(std::min(instanceinternal->buffer.AudioBytes, uint32_t(instance->begin * bytes_per_second)), 4u);
 			instanceinternal->buffer.pAudioData += bytes_from_beginning;
 			instanceinternal->buffer.AudioBytes -= bytes_from_beginning;
 		}
 		if (instance->length > 0)
 		{
-			instanceinternal->buffer.AudioBytes = AlignTo(std::min(instanceinternal->buffer.AudioBytes, uint32_t(instance->length * bytes_per_second)), 4u);
+			instanceinternal->buffer.AudioBytes = align(std::min(instanceinternal->buffer.AudioBytes, uint32_t(instance->length * bytes_per_second)), 4u);
 		}
 
 		uint32_t num_remaining_samples = instanceinternal->buffer.AudioBytes / (soundinternal->wfx.nChannels * sizeof(short));
 		if (instance->loop_begin > 0)
 		{
-			instanceinternal->buffer.LoopBegin = AlignTo(std::min(num_remaining_samples, uint32_t(instance->loop_begin * soundinternal->wfx.nSamplesPerSec)), 4u);
+			instanceinternal->buffer.LoopBegin = align(std::min(num_remaining_samples, uint32_t(instance->loop_begin * soundinternal->wfx.nSamplesPerSec)), 4u);
 			num_remaining_samples -= instanceinternal->buffer.LoopBegin;
 		}
-		instanceinternal->buffer.LoopLength = AlignTo(std::min(num_remaining_samples, uint32_t(instance->loop_length * soundinternal->wfx.nSamplesPerSec)), 4u);
+		instanceinternal->buffer.LoopLength = align(std::min(num_remaining_samples, uint32_t(instance->loop_length * soundinternal->wfx.nSamplesPerSec)), 4u);
 
 		instanceinternal->buffer.Flags = FAUDIO_END_OF_STREAM;
 		instanceinternal->buffer.LoopCount = instance->IsLooped() ? FAUDIO_LOOP_INFINITE : 0;

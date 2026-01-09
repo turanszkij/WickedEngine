@@ -335,7 +335,7 @@ namespace wi::video
 							break;
 						}
 
-						aligned_size += AlignTo(info.size, alignment);
+						aligned_size += align(info.size, alignment);
 						info.duration_seconds = float(double(duration) * timescale_rcp);
 					}
 

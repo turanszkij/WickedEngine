@@ -313,7 +313,7 @@ namespace wi::graphics
 				desc.bind_flags = BindFlag::CONSTANT_BUFFER | BindFlag::VERTEX_BUFFER | BindFlag::INDEX_BUFFER | BindFlag::SHADER_RESOURCE;
 				desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
 				allocator.alignment = GetMinOffsetAlignment(&desc);
-				desc.size = AlignTo((allocator.buffer.desc.size + dataSize) * 2, allocator.alignment);
+				desc.size = align((allocator.buffer.desc.size + dataSize) * 2, allocator.alignment);
 				CreateBuffer(&desc, nullptr, &allocator.buffer);
 				SetName(&allocator.buffer, "frame_allocator");
 				allocator.offset = 0;
@@ -323,7 +323,7 @@ namespace wi::graphics
 			allocation.offset = allocator.offset;
 			allocation.data = (void*)((size_t)allocator.buffer.mapped_data + allocator.offset);
 
-			allocator.offset += AlignTo(dataSize, allocator.alignment);
+			allocator.offset += align(dataSize, allocator.alignment);
 
 			assert(allocation.IsValid());
 			return allocation;

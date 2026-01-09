@@ -29,6 +29,12 @@ constexpr T align(T value, T alignment)
 	return ((value + alignment - T(1)) / alignment) * alignment;
 }
 
+template<typename T>
+constexpr bool is_aligned(T value, T alignment)
+{
+	return align(value, alignment) == value;
+}
+
 template <typename T>
 constexpr T sqr(T x) { return x * x; }
 

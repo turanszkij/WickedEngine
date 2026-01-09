@@ -459,8 +459,8 @@ namespace wi
 
 						if (IsFormatBlockCompressed(desc.format))
 						{
-							desc.width = AlignTo(desc.width, GetFormatBlockSize(desc.format));
-							desc.height = AlignTo(desc.height, GetFormatBlockSize(desc.format));
+							desc.width = align(desc.width, GetFormatBlockSize(desc.format));
+							desc.height = align(desc.height, GetFormatBlockSize(desc.format));
 						}
 
 						wi::vector<SubresourceData> initdata_heap;

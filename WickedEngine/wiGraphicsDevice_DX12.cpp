@@ -1894,7 +1894,7 @@ std::mutex queue_locker;
 									D3D12_CONSTANT_BUFFER_VIEW_DESC cbv;
 									cbv.BufferLocation = internal_state->gpu_address;
 									cbv.BufferLocation += offset;
-									cbv.SizeInBytes = AlignTo(UINT(buffer.desc.size - offset), (UINT)D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+									cbv.SizeInBytes = align(UINT(buffer.desc.size - offset), (UINT)D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 									cbv.SizeInBytes = std::min(cbv.SizeInBytes, 65536u);
 
 									device->device->CreateConstantBufferView(&cbv, cpu_handle);
@@ -3241,7 +3241,7 @@ std::mutex queue_locker;
 		UINT64 alignedSize = desc->size;
 		if (has_flag(desc->bind_flags, BindFlag::CONSTANT_BUFFER))
 		{
-			alignedSize = AlignTo(alignedSize, (UINT64)D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+			alignedSize = align(alignedSize, (UINT64)D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 		}
 
 		D3D12_RESOURCE_DESC resourceDesc;
@@ -3296,7 +3296,7 @@ std::mutex queue_locker;
 			D3D12_RESOURCE_ALLOCATION_INFO allocationInfo = device->GetResourceAllocationInfo(0, 1, &resourceDesc);
 
 			// D3D12MA ValidateAllocateMemoryParameters requires this, wasn't always true on Xbox:
-			allocationInfo.SizeInBytes = AlignTo(allocationInfo.SizeInBytes, (UINT64)D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
+			allocationInfo.SizeInBytes = align(allocationInfo.SizeInBytes, (UINT64)D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
 			allocationInfo.Alignment = std::max(allocationInfo.Alignment, (UINT64)D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
 
 			if (resource_heap_tier >= D3D12_RESOURCE_HEAP_TIER_2)
@@ -3642,7 +3642,7 @@ std::mutex queue_locker;
 			D3D12_RESOURCE_ALLOCATION_INFO allocationInfo = device->GetResourceAllocationInfo(0, 1, &resourcedesc);
 
 			// D3D12MA ValidateAllocateMemoryParameters requires this, wasn't always true on Xbox:
-			allocationInfo.SizeInBytes = AlignTo(allocationInfo.SizeInBytes, (UINT64)D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
+			allocationInfo.SizeInBytes = align(allocationInfo.SizeInBytes, (UINT64)D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
 			allocationInfo.Alignment = std::max(allocationInfo.Alignment, (UINT64)D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
 
 			if (resource_heap_tier >= D3D12_RESOURCE_HEAP_TIER_2)
@@ -4339,7 +4339,7 @@ std::mutex queue_locker;
 
 
 		UINT64 alignment = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT;
-		UINT64 alignedSize = AlignTo(internal_state->info.ResultDataMaxSizeInBytes, alignment);
+		UINT64 alignedSize = align(internal_state->info.ResultDataMaxSizeInBytes, alignment);
 
 		D3D12_RESOURCE_DESC resourcedesc;
 		resourcedesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
@@ -4588,8 +4588,8 @@ std::mutex queue_locker;
 
 		if (video_decode_support.ConfigurationFlags & D3D12_VIDEO_DECODE_CONFIGURATION_FLAG_HEIGHT_ALIGNMENT_MULTIPLE_32_REQUIRED)
 		{
-			heap_desc.DecodeWidth = AlignTo(video_decode_support.Width, 32u);
-			heap_desc.DecodeHeight = AlignTo(video_decode_support.Height, 32u);
+			heap_desc.DecodeWidth = align(video_decode_support.Width, 32u);
+			heap_desc.DecodeHeight = align(video_decode_support.Height, 32u);
 		}
 
 #if 0
@@ -4989,7 +4989,7 @@ std::mutex queue_locker;
 					{
 						stride = *structuredbuffer_stride_change;
 					}
-					assert(IsAligned(offset, (uint64_t)stride)); // structured buffer offset must be aligned to structure stride!
+					assert(is_aligned(offset, (uint64_t)stride)); // structured buffer offset must be aligned to structure stride!
 					srv_desc.Format = DXGI_FORMAT_UNKNOWN;
 					srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 					srv_desc.Buffer.FirstElement = UINT(offset / stride);
@@ -5046,7 +5046,7 @@ std::mutex queue_locker;
 					{
 						stride = *structuredbuffer_stride_change;
 					}
-					assert(IsAligned(offset, (uint64_t)stride)); // structured buffer offset must be aligned to structure stride!
+					assert(is_aligned(offset, (uint64_t)stride)); // structured buffer offset must be aligned to structure stride!
 					uav_desc.Format = DXGI_FORMAT_UNKNOWN;
 					uav_desc.Buffer.FirstElement = UINT(offset / stride);
 					uav_desc.Buffer.NumElements = UINT(std::min(size, desc.size - offset) / stride);

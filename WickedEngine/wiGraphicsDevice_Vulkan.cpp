@@ -3936,7 +3936,7 @@ using namespace vulkan_internal;
 			{
 				memory_requirements.alignment = GetMinOffsetAlignment(desc);
 			}
-			memory_requirements.size = AlignTo(desc->size, memory_requirements.alignment);
+			memory_requirements.size = align(desc->size, memory_requirements.alignment);
 			memory_requirements.memoryTypeBits = ~0u;
 
 			VmaAllocationCreateInfo create_info = {};
@@ -4587,7 +4587,7 @@ using namespace vulkan_internal;
 					}
 
 					copyOffset += dst_slicepitch * depth;
-					copyOffset = AlignTo(copyOffset, VkDeviceSize(4)); // fix for validation: on transfer queue the srcOffset must be 4-byte aligned
+					copyOffset = align(copyOffset, VkDeviceSize(4)); // fix for validation: on transfer queue the srcOffset must be 4-byte aligned
 
 					width = std::max(1u, width / 2);
 					height = std::max(1u, height / 2);
@@ -9443,7 +9443,7 @@ using namespace vulkan_internal;
 			decode_info.sType = VK_STRUCTURE_TYPE_VIDEO_DECODE_INFO_KHR;
 			decode_info.srcBuffer = stream_internal->resource;
 			decode_info.srcBufferOffset = (VkDeviceSize)op->stream_offset;
-			decode_info.srcBufferRange = (VkDeviceSize)AlignTo(op->stream_size, VIDEO_DECODE_BITSTREAM_ALIGNMENT);
+			decode_info.srcBufferRange = (VkDeviceSize)align(op->stream_size, VIDEO_DECODE_BITSTREAM_ALIGNMENT);
 			if (op->output == nullptr)
 			{
 				decode_info.dstPictureResource = *reference_slot_infos[op->current_dpb].pPictureResource;

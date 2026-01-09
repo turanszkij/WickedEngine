@@ -110,10 +110,10 @@ namespace wi
 			vb_col.size = sizeof(MeshComponent::Vertex_COL) * 4 * MAX_PARTICLES;
 
 			bd.size =
-				AlignTo(vb_pos.size, alignment) +
-				AlignTo(vb_nor.size, alignment) +
-				AlignTo(vb_uvs.size, alignment) +
-				AlignTo(vb_col.size, alignment)
+				align(vb_pos.size, alignment) +
+				align(vb_nor.size, alignment) +
+				align(vb_uvs.size, alignment) +
+				align(vb_col.size, alignment)
 			;
 
 			device->CreateBuffer(&bd, nullptr, &generalBuffer);
@@ -121,7 +121,7 @@ namespace wi
 
 			uint64_t buffer_offset = 0ull;
 
-			buffer_offset = AlignTo(buffer_offset, alignment);
+			buffer_offset = align(buffer_offset, alignment);
 			vb_pos.offset = buffer_offset;
 			vb_pos.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_pos.offset, vb_pos.size, &MeshComponent::Vertex_POS32W::FORMAT);
 			vb_pos.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_pos.offset, vb_pos.size, &MeshComponent::Vertex_POS32W::FORMAT); // UAV can't have RGB32_F format!
@@ -129,7 +129,7 @@ namespace wi
 			vb_pos.descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, vb_pos.subresource_uav);
 			buffer_offset += vb_pos.size;
 
-			buffer_offset = AlignTo(buffer_offset, alignment);
+			buffer_offset = align(buffer_offset, alignment);
 			vb_nor.offset = buffer_offset;
 			vb_nor.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_nor.offset, vb_nor.size, &MeshComponent::Vertex_NOR::FORMAT);
 			vb_nor.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_nor.offset, vb_nor.size, &MeshComponent::Vertex_NOR::FORMAT);
@@ -137,7 +137,7 @@ namespace wi
 			vb_nor.descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, vb_nor.subresource_uav);
 			buffer_offset += vb_nor.size;
 
-			buffer_offset = AlignTo(buffer_offset, alignment);
+			buffer_offset = align(buffer_offset, alignment);
 			vb_uvs.offset = buffer_offset;
 			vb_uvs.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_uvs.offset, vb_uvs.size, &MeshComponent::Vertex_UVS::FORMAT);
 			vb_uvs.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_uvs.offset, vb_uvs.size, &MeshComponent::Vertex_UVS::FORMAT);
@@ -145,7 +145,7 @@ namespace wi
 			vb_uvs.descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, vb_uvs.subresource_uav);
 			buffer_offset += vb_uvs.size;
 
-			buffer_offset = AlignTo(buffer_offset, alignment);
+			buffer_offset = align(buffer_offset, alignment);
 			vb_col.offset = buffer_offset;
 			vb_col.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_col.offset, vb_col.size, &MeshComponent::Vertex_COL::FORMAT);
 			vb_col.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_col.offset, vb_col.size, &MeshComponent::Vertex_COL::FORMAT);
@@ -242,9 +242,9 @@ namespace wi
 			bd.bind_flags = BindFlag::UNORDERED_ACCESS;
 			bd.misc_flags = ResourceMiscFlag::BUFFER_RAW | ResourceMiscFlag::INDIRECT_ARGS;
 			bd.size =
-				AlignTo((uint64_t)sizeof(IndirectDispatchArgs), (uint64_t)IndirectDispatchArgsAlignment) +
-				AlignTo((uint64_t)sizeof(IndirectDispatchArgs), (uint64_t)IndirectDispatchArgsAlignment) +
-				AlignTo((uint64_t)sizeof(IndirectDrawArgsInstanced), (uint64_t)IndirectDrawArgsAlignment);
+				align((uint64_t)sizeof(IndirectDispatchArgs), (uint64_t)IndirectDispatchArgsAlignment) +
+				align((uint64_t)sizeof(IndirectDispatchArgs), (uint64_t)IndirectDispatchArgsAlignment) +
+				align((uint64_t)sizeof(IndirectDrawArgsInstanced), (uint64_t)IndirectDrawArgsAlignment);
 			device->CreateBufferZeroed(&bd, &indirectBuffers);
 			device->SetName(&indirectBuffers, "EmittedParticleSystem::indirectBuffers");
 

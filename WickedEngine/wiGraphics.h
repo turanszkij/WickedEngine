@@ -1912,17 +1912,6 @@ namespace wi::graphics
 		return swizzle;
 	}
 
-	template<typename T>
-	constexpr T AlignTo(T value, T alignment)
-	{
-		return ((value + alignment - T(1)) / alignment) * alignment;
-	}
-	template<typename T>
-	constexpr bool IsAligned(T value, T alignment)
-	{
-		return value == AlignTo(value, alignment);
-	}
-
 	// Get mipmap count for a given texture dimension.
 	//	width, height, depth: dimensions of the texture
 	//	min_dimension: break when all dimensions go below a specified dimension (optional, default: 1x1x1)

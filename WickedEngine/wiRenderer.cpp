@@ -13961,8 +13961,8 @@ void CreateSSGIResources(SSGIResources& res, XMUINT2 resolution)
 	desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 	desc.format = Format::R11G11B10_FLOAT;
 
-	resolution.x = AlignTo(resolution.x, 64u);
-	resolution.y = AlignTo(resolution.y, 64u);
+	resolution.x = align(resolution.x, 64u);
+	resolution.y = align(resolution.y, 64u);
 
 	desc.width = (resolution.x + 7) / 8;
 	desc.height = (resolution.y + 7) / 8;
@@ -14355,8 +14355,8 @@ void Postprocess_SSGI(
 			device->BindUAV(&output, 0, cmd);
 
 			const TextureDesc& desc = output.desc;
-			postprocess.resolution.x = AlignTo(desc.width, 64u);	// align = uv correction!
-			postprocess.resolution.y = AlignTo(desc.height, 64u);	// align = uv correction!
+			postprocess.resolution.x = align(desc.width, 64u);	// align = uv correction!
+			postprocess.resolution.y = align(desc.height, 64u);	// align = uv correction!
 			postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 			postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 			postprocess.params0.x = 1; // range
