@@ -48,7 +48,8 @@ int main( int argc, char* argv[] )
 																  NSWindowStyleMaskResizable)
 														 backing:NSBackingStoreBuffered
 														   defer:NO];
-		[window setTitle:@"Wicked Editor"];
+		
+		[window setTitle:[NSString stringWithUTF8String:wi::helper::StringRemoveTrailingWhitespaces(exe_customization.name_padded).c_str()]];
 		[window center];
 		[window makeKeyAndOrderFront:nil];
 		

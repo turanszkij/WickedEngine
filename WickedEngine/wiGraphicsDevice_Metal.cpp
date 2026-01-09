@@ -3186,6 +3186,7 @@ using namespace metal_internal;
 	{
 		auto swapchain_internal = to_internal(swapchain);
 		Texture result;
+		result.type = GPUResource::Type::TEXTURE;
 		auto texture_internal = wi::allocator::make_shared<Texture_Metal>();
 		texture_internal->texture = swapchain_internal->current_texture;
 		texture_internal->srv.index = allocationhandler->allocate_resource_index();

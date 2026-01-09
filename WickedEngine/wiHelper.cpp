@@ -636,6 +636,11 @@ namespace wi::helper
 				float g = ((pixel >> 10) & 1023) / 1023.0f;
 				float b = ((pixel >> 20) & 1023) / 1023.0f;
 				float a = ((pixel >> 30) & 3) / 3.0f;
+				
+#ifdef __APPLE__
+				// The R10G10B10A2_UNORM format only has BGRA equivalent in Metal API and we use that:
+				std::swap(r, b);
+#endif // __APPLE__
 
 				uint32_t rgba8 = 0;
 				rgba8 |= (uint32_t)(r * 255.0f) << 0;
