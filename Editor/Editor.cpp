@@ -1834,6 +1834,12 @@ void EditorComponent::Update(float dt)
 		componentsWnd.RefreshEntityTree();
 	}
 
+	// Ensure pointer is visible when right mouse button is not held:
+	if (!wi::input::Down(wi::input::MOUSE_BUTTON_RIGHT))
+	{
+		wi::input::HidePointer(false);
+	}
+
 	// Camera control:
 	if (!drive_mode && !wi::backlog::isActive() && !GetGUI().HasFocus())
 	{
