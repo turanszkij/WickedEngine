@@ -112,6 +112,16 @@ public:
 	XMFLOAT4 originalMouse = XMFLOAT4(0, 0, 0, 0);
 	XMFLOAT4 currentMouse = XMFLOAT4(0, 0, 0, 0);
 
+	bool cinema_mode_saved_debugEnvProbes = false;
+	bool cinema_mode_saved_debugCameras = false;
+	bool cinema_mode_saved_debugColliders = false;
+	bool cinema_mode_saved_debugEmitters = false;
+	bool cinema_mode_saved_debugForceFields = false;
+	bool cinema_mode_saved_debugBoneLines = false;
+	bool cinema_mode_saved_debugPartitionTree = false;
+	bool cinema_mode_saved_debugSprings = false;
+	bool cinema_mode_saved_gridHelper = false;
+
 	enum EDITORSTENCILREF
 	{
 		EDITORSTENCILREF_CLEAR = 0x00,

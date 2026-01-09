@@ -212,7 +212,7 @@ void Translator::Update(const CameraComponent& camera, const XMFLOAT4& currentMo
 					state = TRANSLATOR_XYZ;
 					XMStoreFloat3(&axis, screen_normal);
 				}
-				
+
 			}
 			else
 			{
@@ -386,11 +386,26 @@ void Translator::Update(const CameraComponent& camera, const XMFLOAT4& currentMo
 					// xyz
 					planeNormal = camera.GetAt();
 				}
-				plane = XMPlaneFromPointNormal(pos, XMVector3Normalize(planeNormal));
 
-				if (XMVectorGetX(XMVectorAbs(XMVector3Dot(planeNormal, rayDir))) < 0.001f)
+				// Use stored plane from drag start to avoid drift
+				if (dragging)
 				{
-					state = TRANSLATOR_IDLE;
+					plane = XMLoadFloat4(&drag_plane);
+				}
+				else
+				{
+					plane = XMPlaneFromPointNormal(pos, XMVector3Normalize(planeNormal));
+				}
+
+				// Check if ray is nearly parallel to plane - only abort if not already dragging
+				if (XMVectorGetX(XMVectorAbs(XMVector3Dot(XMPlaneNormalize(plane), rayDir))) < 0.001f)
+				{
+					if (!dragging)
+					{
+						state = TRANSLATOR_IDLE;
+						return;
+					}
+					// If already dragging, skip this frame's update but maintain state
 					return;
 				}
 				XMVECTOR intersection = XMPlaneIntersectLine(plane, rayOrigin, rayOrigin + rayDir * camera.zFarP);
@@ -400,28 +415,30 @@ void Translator::Update(const CameraComponent& camera, const XMFLOAT4& currentMo
 					dragStarted = true;
 					transform_start = transform;
 					XMStoreFloat3(&intersection_start, intersection);
+					XMStoreFloat4(&drag_plane, plane);
 					matrices_start = matrices_current;
 				}
 				XMVECTOR intersectionPrev = XMLoadFloat3(&intersection_start);
 
+				XMVECTOR startPosition = transform_start.GetPositionV();
 				XMVECTOR deltaV;
 				if (state == TRANSLATOR_X)
 				{
-					XMVECTOR A = pos, B = pos + XMVectorSet(1, 0, 0, 0);
+					XMVECTOR A = startPosition, B = startPosition + XMVectorSet(1, 0, 0, 0);
 					XMVECTOR P = wi::math::ClosestPointOnLine(A, B, intersection);
 					XMVECTOR PPrev = wi::math::ClosestPointOnLine(A, B, intersectionPrev);
 					deltaV = P - PPrev;
 				}
 				else if (state == TRANSLATOR_Y)
 				{
-					XMVECTOR A = pos, B = pos + XMVectorSet(0, 1, 0, 0);
+					XMVECTOR A = startPosition, B = startPosition + XMVectorSet(0, 1, 0, 0);
 					XMVECTOR P = wi::math::ClosestPointOnLine(A, B, intersection);
 					XMVECTOR PPrev = wi::math::ClosestPointOnLine(A, B, intersectionPrev);
 					deltaV = P - PPrev;
 				}
 				else if (state == TRANSLATOR_Z)
 				{
-					XMVECTOR A = pos, B = pos + XMVectorSet(0, 0, 1, 0);
+					XMVECTOR A = startPosition, B = startPosition + XMVectorSet(0, 0, 1, 0);
 					XMVECTOR P = wi::math::ClosestPointOnLine(A, B, intersection);
 					XMVECTOR PPrev = wi::math::ClosestPointOnLine(A, B, intersectionPrev);
 					deltaV = P - PPrev;
@@ -534,7 +551,7 @@ void Translator::Update(const CameraComponent& camera, const XMFLOAT4& currentMo
 				PostTranslate();
 			}
 		}
-		
+
 		if (!wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
 		{
 			if (dragging)

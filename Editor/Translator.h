@@ -8,6 +8,7 @@ private:
 	bool dragEnded = false;
 	XMFLOAT3 intersection_start = XMFLOAT3(0, 0, 0);
 	XMFLOAT3 axis = XMFLOAT3(1, 0, 0);
+	XMFLOAT4 drag_plane = XMFLOAT4(0, 0, 0, 0);
 	float angle = 0;
 	float angle_start = 0;
 	bool has_selected_transform = false;

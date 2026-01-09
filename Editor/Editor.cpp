@@ -1228,6 +1228,26 @@ void EditorComponent::Load()
 	cinemaButton.SetColor(wi::Color(50, 160, 200, 180), wi::gui::WIDGETSTATE::IDLE);
 	cinemaButton.SetColor(wi::Color(120, 200, 200, 255), wi::gui::WIDGETSTATE::FOCUS);
 	cinemaButton.OnClick([this](wi::gui::EventArgs args) {
+		cinema_mode_saved_debugEnvProbes = wi::renderer::GetToDrawDebugEnvProbes();
+		cinema_mode_saved_debugCameras = wi::renderer::GetToDrawDebugCameras();
+		cinema_mode_saved_debugColliders = wi::renderer::GetToDrawDebugColliders();
+		cinema_mode_saved_debugEmitters = wi::renderer::GetToDrawDebugEmitters();
+		cinema_mode_saved_debugForceFields = wi::renderer::GetToDrawDebugForceFields();
+		cinema_mode_saved_debugBoneLines = wi::renderer::GetToDrawDebugBoneLines();
+		cinema_mode_saved_debugPartitionTree = wi::renderer::GetToDrawDebugPartitionTree();
+		cinema_mode_saved_debugSprings = wi::renderer::GetToDrawDebugSprings();
+		cinema_mode_saved_gridHelper = wi::renderer::GetToDrawGridHelper();
+
+		wi::renderer::SetToDrawDebugEnvProbes(false);
+		wi::renderer::SetToDrawDebugCameras(false);
+		wi::renderer::SetToDrawDebugColliders(false);
+		wi::renderer::SetToDrawDebugEmitters(false);
+		wi::renderer::SetToDrawDebugForceFields(false);
+		wi::renderer::SetToDrawDebugBoneLines(false);
+		wi::renderer::SetToDrawDebugPartitionTree(false);
+		wi::renderer::SetToDrawDebugSprings(false);
+		wi::renderer::SetToDrawGridHelper(false);
+
 		if (renderPath != nullptr)
 		{
 			renderPath->GetGUI().SetVisible(false);
@@ -1609,6 +1629,16 @@ void EditorComponent::Update(float dt)
 		if (!GetGUI().IsVisible())
 		{
 			// Exit cinema mode:
+			wi::renderer::SetToDrawDebugEnvProbes(cinema_mode_saved_debugEnvProbes);
+			wi::renderer::SetToDrawDebugCameras(cinema_mode_saved_debugCameras);
+			wi::renderer::SetToDrawDebugColliders(cinema_mode_saved_debugColliders);
+			wi::renderer::SetToDrawDebugEmitters(cinema_mode_saved_debugEmitters);
+			wi::renderer::SetToDrawDebugForceFields(cinema_mode_saved_debugForceFields);
+			wi::renderer::SetToDrawDebugBoneLines(cinema_mode_saved_debugBoneLines);
+			wi::renderer::SetToDrawDebugPartitionTree(cinema_mode_saved_debugPartitionTree);
+			wi::renderer::SetToDrawDebugSprings(cinema_mode_saved_debugSprings);
+			wi::renderer::SetToDrawGridHelper(cinema_mode_saved_gridHelper);
+
 			if (renderPath != nullptr)
 			{
 				renderPath->GetGUI().SetVisible(true);
