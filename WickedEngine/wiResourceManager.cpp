@@ -813,7 +813,7 @@ namespace wi
 
 							wi::renderer::AddDeferredMIPGen(resource->texture, true);
 
-							if (has_flag(flags, Flags::IMPORT_BLOCK_COMPRESSED) && !device->CheckCapability(GraphicsDeviceCapability::COPY_TEXTURE_REINTERPRET_NOT_SUPPORTED))
+							if (has_flag(flags, Flags::IMPORT_BLOCK_COMPRESSED))
 							{
 								// Schedule additional task to compress into BC format and replace resource texture:
 								Texture uncompressed_src = std::move(resource->texture);

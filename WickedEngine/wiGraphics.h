@@ -459,7 +459,6 @@ namespace wi::graphics
 		VIDEO_DECODE_H265 = 1 << 22,
 		R9G9B9E5_SHAREDEXP_RENDERABLE = 1 << 23, // indicates supporting R9G9B9E5_SHAREDEXP format for rendering to
 		COPY_BETWEEN_DIFFERENT_IMAGE_ASPECTS_NOT_SUPPORTED = 1 << 24, // indicates that CopyTexture src and dst ImageAspect must match
-		COPY_TEXTURE_REINTERPRET_NOT_SUPPORTED = 1 << 25, // copy between textures can not reinterpret format (UINT -> BC format copy not supported)
 		
 		// Compat:
 		GENERIC_SPARSE_TILE_POOL = ALIASING_GENERIC,
@@ -1926,6 +1925,29 @@ namespace wi::graphics
 			mips++;
 		}
 		return mips;
+	}
+
+	// Compute the texture memory usage for one row in a specific mip level
+	constexpr size_t ComputeTextureMipRowPitch(const TextureDesc& desc, uint32_t mip)
+	{
+		const uint32_t bytes_per_block = GetFormatStride(desc.format);
+		const uint32_t pixels_per_block = GetFormatBlockSize(desc.format);
+		const uint32_t mip_width = std::max(1u, desc.width >> mip);
+		const uint32_t num_blocks_x = (mip_width + pixels_per_block - 1) / pixels_per_block;
+		return num_blocks_x * bytes_per_block * desc.sample_count;
+	}
+
+	// Compute the texture memory usage for one mip level
+	constexpr size_t ComputeTextureMipMemorySizeInBytes(const TextureDesc& desc, uint32_t mip)
+	{
+		const uint32_t bytes_per_block = GetFormatStride(desc.format);
+		const uint32_t pixels_per_block = GetFormatBlockSize(desc.format);
+		const uint32_t mip_width = std::max(1u, desc.width >> mip);
+		const uint32_t mip_height = std::max(1u, desc.height >> mip);
+		const uint32_t mip_depth = std::max(1u, desc.depth >> mip);
+		const uint32_t num_blocks_x = (mip_width + pixels_per_block - 1) / pixels_per_block;
+		const uint32_t num_blocks_y = (mip_height + pixels_per_block - 1) / pixels_per_block;
+		return num_blocks_x * num_blocks_y * mip_depth * bytes_per_block * desc.sample_count;
 	}
 
 	// Compute the approximate texture memory usage

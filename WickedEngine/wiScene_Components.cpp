@@ -2293,14 +2293,7 @@ namespace wi::scene
 		desc.height = resolution;
 		desc.width = resolution;
 		desc.usage = Usage::DEFAULT;
-		if (device->CheckCapability(GraphicsDeviceCapability::COPY_TEXTURE_REINTERPRET_NOT_SUPPORTED))
-		{
-			desc.format = wi::renderer::format_rendertarget_envprobe;
-		}
-		else
-		{
-			desc.format = Format::BC6H_UF16;
-		}
+		desc.format = Format::BC6H_UF16;
 		desc.sample_count = 1; // Note that this texture is always non-MSAA, even if probe is rendered as MSAA, because this contains resolved result
 		desc.bind_flags = BindFlag::SHADER_RESOURCE;
 		desc.mip_levels = GetMipCount(resolution, resolution, 1, 16);
