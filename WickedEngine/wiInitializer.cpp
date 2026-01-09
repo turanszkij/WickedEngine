@@ -106,6 +106,8 @@ namespace wi::initializer
 		{
 			cpustring.push_back("AVX 512; ");
 		}
+#else
+		cpustring.push_back("\nCPU: unrecognized");
 #endif // CPUINFO_AVAILABLE
 
 		cpustring.push_back("\n\tFeatures used: ");

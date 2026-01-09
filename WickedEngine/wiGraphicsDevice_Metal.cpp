@@ -769,7 +769,7 @@ namespace metal_internal
 	{
 		wi::allocator::shared_ptr<GraphicsDevice_Metal::AllocationHandler> allocationhandler;
 		NS::SharedPtr<MTL::Buffer> buffer;
-		NS::SharedPtr<MTL::CounterSampleBuffer> timestamp_buffer;
+		NS::SharedPtr<MTL4::CounterHeap> counter_heap;
 
 		~QueryHeap_Metal()
 		{
@@ -778,7 +778,7 @@ namespace metal_internal
 			allocationhandler->destroylocker.lock();
 			uint64_t framecount = allocationhandler->framecount;
 			allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(buffer), framecount));
-			allocationhandler->destroyer_counters.push_back(std::make_pair(std::move(timestamp_buffer), framecount));
+			allocationhandler->destroyer_counter_heaps.push_back(std::make_pair(std::move(counter_heap), framecount));
 			allocationhandler->destroylocker.unlock();
 		}
 	};
@@ -1380,9 +1380,12 @@ using namespace metal_internal;
 		}
 		if (device->supportsRaytracing())
 		{
-			capabilities |= GraphicsDeviceCapability::RAYTRACING;
-			TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = sizeof(MTL::IndirectAccelerationStructureInstanceDescriptor);
+			// TODO: fix hardware raytracing issues
+			//capabilities |= GraphicsDeviceCapability::RAYTRACING;
+			//TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = sizeof(MTL::IndirectAccelerationStructureInstanceDescriptor);
 		}
+		
+		TIMESTAMP_FREQUENCY = device->queryTimestampFrequency();
 		
 		uploadqueue = NS::TransferPtr(device->newMTL4CommandQueue());
 		allocationhandler = wi::allocator::make_shared_single<AllocationHandler>();
@@ -2312,12 +2315,11 @@ using namespace metal_internal;
 				
 			case GpuQueryType::TIMESTAMP:
 			{
-				NS::SharedPtr<MTL::CounterSampleBufferDescriptor> descriptor = NS::TransferPtr(MTL::CounterSampleBufferDescriptor::alloc()->init());
-				descriptor->setCounterSet(device->counterSets()->object<MTL::CounterSet>(0)); // wtf
-				descriptor->setStorageMode(MTL::StorageModeShared);
-				descriptor->setSampleCount(desc->query_count);
+				NS::SharedPtr<MTL4::CounterHeapDescriptor> descriptor = NS::TransferPtr(MTL4::CounterHeapDescriptor::alloc()->init());
+				descriptor->setType(MTL4::CounterHeapTypeTimestamp);
+				descriptor->setCount(desc->query_count);
 				NS::Error* error = nullptr;
-				internal_state->timestamp_buffer = NS::TransferPtr(device->newCounterSampleBuffer(descriptor.get(), &error));
+				internal_state->counter_heap = NS::TransferPtr(device->newCounterHeap(descriptor.get(), &error));
 				if (error != nullptr)
 				{
 					NS::String* errDesc = error->localizedDescription();
@@ -4093,6 +4095,20 @@ using namespace metal_internal;
 				commandlist.render_encoder->setVisibilityResultMode(MTL::VisibilityResultModeDisabled, index * sizeof(uint64_t));
 				break;
 			case GpuQueryType::TIMESTAMP:
+				if (commandlist.render_encoder != nullptr)
+				{
+					commandlist.render_encoder->writeTimestamp(MTL4::TimestampGranularityPrecise, MTL::RenderStageFragment, internal_state->counter_heap.get(), index);
+				}
+				else
+				{
+#if 0
+					precopy(cmd);
+					commandlist.compute_encoder->writeTimestamp(MTL4::TimestampGranularityPrecise, internal_state->counter_heap.get(), index);
+					commandlist.autorelease_end();
+#else
+					commandlist.commandbuffer->writeTimestampIntoHeap(internal_state->counter_heap.get(), index);
+#endif
+				}
 				break;
 			default:
 				break;
@@ -4102,7 +4118,6 @@ using namespace metal_internal;
 	{
 		if (count == 0)
 			return;
-		precopy(cmd);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 
 		auto internal_state = to_internal(heap);
@@ -4112,14 +4127,16 @@ using namespace metal_internal;
 		{
 			case GpuQueryType::OCCLUSION:
 			case GpuQueryType::OCCLUSION_BINARY:
+				precopy(cmd);
 				commandlist.compute_encoder->copyFromBuffer(internal_state->buffer.get(), index * sizeof(uint64_t), dst_internal->buffer.get(), dest_offset, count * sizeof(uint64_t));
+				commandlist.autorelease_end();
 				break;
 			case GpuQueryType::TIMESTAMP:
+				commandlist.commandbuffer->resolveCounterHeap(internal_state->counter_heap.get(), {index, count}, {dst_internal->gpu_address, count * sizeof(uint64_t)}, nullptr, nullptr);
 				break;
 			default:
 				break;
 		}
-		commandlist.autorelease_end();
 	}
 	void GraphicsDevice_Metal::QueryReset(const GPUQueryHeap* heap, uint32_t index, uint32_t count, CommandList cmd)
 	{

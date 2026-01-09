@@ -422,7 +422,7 @@ namespace wi::graphics
 			std::deque<std::pair<NS::SharedPtr<MTL::RenderPipelineState>, uint64_t>> destroyer_render_pipelines;
 			std::deque<std::pair<NS::SharedPtr<MTL::ComputePipelineState>, uint64_t>> destroyer_compute_pipelines;
 			std::deque<std::pair<NS::SharedPtr<MTL::DepthStencilState>, uint64_t>> destroyer_depth_stencil_states;
-			std::deque<std::pair<NS::SharedPtr<MTL::CounterSampleBuffer>, uint64_t>> destroyer_counters;
+			std::deque<std::pair<NS::SharedPtr<MTL4::CounterHeap>, uint64_t>> destroyer_counter_heaps;
 			std::deque<std::pair<int, uint64_t>> destroyer_bindless_res;
 			std::deque<std::pair<int, uint64_t>> destroyer_bindless_sam;
 			wi::vector<int> free_bindless_res;
@@ -468,9 +468,9 @@ namespace wi::graphics
 					destroyer_depth_stencil_states.pop_front();
 					// SharedPtr auto delete
 				}
-				while (!destroyer_counters.empty() && destroyer_counters.front().second + BUFFERCOUNT < FRAMECOUNT)
+				while (!destroyer_counter_heaps.empty() && destroyer_counter_heaps.front().second + BUFFERCOUNT < FRAMECOUNT)
 				{
-					destroyer_counters.pop_front();
+					destroyer_counter_heaps.pop_front();
 					// SharedPtr auto delete
 				}
 				while (!destroyer_bindless_res.empty() && destroyer_bindless_res.front().second + BUFFERCOUNT < FRAMECOUNT)
