@@ -4404,23 +4404,7 @@ using namespace vulkan_internal;
 				//	With a buffer, we can tightly pack mips linearly into a buffer so it won't have that limitation
 				VkBufferCreateInfo bufferInfo = {};
 				bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-				bufferInfo.size = 0;
-				const uint32_t data_stride = GetFormatStride(texture->desc.format);
-				const uint32_t block_size = GetFormatBlockSize(texture->desc.format);
-				const uint32_t num_blocks_x = texture->desc.width / block_size;
-				const uint32_t num_blocks_y = texture->desc.height / block_size;
-				uint32_t mip_width = num_blocks_x;
-				uint32_t mip_height = num_blocks_y;
-				uint32_t mip_depth = texture->desc.depth;
-				for (uint32_t mip = 0; mip < texture->desc.mip_levels; ++mip)
-				{
-					bufferInfo.size += mip_width * mip_height * mip_depth;
-					mip_width = std::max(1u, mip_width / 2);
-					mip_height = std::max(1u, mip_height / 2);
-					mip_depth = std::max(1u, mip_depth / 2);
-				}
-				bufferInfo.size *= imageInfo.arrayLayers;
-				bufferInfo.size *= data_stride;
+				bufferInfo.size = ComputeTextureMemorySizeInBytes(*desc);
 
 				allocInfo.flags |= VMA_ALLOCATION_CREATE_MAPPED_BIT;
 				if (texture->desc.usage == Usage::READBACK)
@@ -4441,26 +4425,7 @@ using namespace vulkan_internal;
 					texture->mapped_data = internal_state->allocation->GetMappedData();
 					texture->mapped_size = internal_state->allocation->GetSize();
 
-					internal_state->mapped_subresources.resize(texture->desc.array_size * texture->desc.mip_levels);
-					size_t subresourceIndex = 0;
-					size_t subresourceDataOffset = 0;
-					for (uint32_t layer = 0; layer < texture->desc.array_size; ++layer)
-					{
-						uint32_t rowpitch = (uint32_t)num_blocks_x * GetFormatStride(desc->format); // the buffer is tightly packed, no padding in row pitch
-						uint32_t slicepitch = (uint32_t)rowpitch * num_blocks_y;
-						uint32_t mip_width = num_blocks_x;
-						for (uint32_t mip = 0; mip < texture->desc.mip_levels; ++mip)
-						{
-							SubresourceData& subresourcedata = internal_state->mapped_subresources[subresourceIndex++];
-							subresourcedata.data_ptr = (uint8_t*)texture->mapped_data + subresourceDataOffset;
-							subresourcedata.row_pitch = rowpitch;
-							subresourcedata.slice_pitch = slicepitch;
-							subresourceDataOffset += std::max(rowpitch * mip_width, slicepitch);
-							rowpitch = std::max(data_stride, rowpitch / 2);
-							slicepitch = std::max(data_stride, slicepitch / 4); // squared reduction
-							mip_width = std::max(1u, mip_width / 2);
-						}
-					}
+					CreateTextureSubresourceDatas(*desc, texture->mapped_data, internal_state->mapped_subresources);
 					texture->mapped_subresources = internal_state->mapped_subresources.data();
 					texture->mapped_subresource_count = internal_state->mapped_subresources.size();
 				}
@@ -4566,6 +4531,9 @@ using namespace vulkan_internal;
 
 			wi::vector<VkBufferImageCopy> copyRegions;
 
+			const uint32_t data_stride = GetFormatStride(desc->format);
+			const uint32_t block_size = GetFormatBlockSize(desc->format);
+
 			VkDeviceSize copyOffset = 0;
 			uint32_t initDataIdx = 0;
 			for (uint32_t layer = 0; layer < desc->array_size; ++layer)
@@ -4576,10 +4544,9 @@ using namespace vulkan_internal;
 				for (uint32_t mip = 0; mip < desc->mip_levels; ++mip)
 				{
 					const SubresourceData& subresourceData = initial_data[initDataIdx++];
-					const uint32_t block_size = GetFormatBlockSize(desc->format);
 					const uint32_t num_blocks_x = std::max(1u, width / block_size);
 					const uint32_t num_blocks_y = std::max(1u, height / block_size);
-					const uint32_t dst_rowpitch = num_blocks_x * GetFormatStride(desc->format);
+					const uint32_t dst_rowpitch = num_blocks_x * data_stride;
 					const uint32_t dst_slicepitch = dst_rowpitch * num_blocks_y;
 					const uint32_t src_rowpitch = subresourceData.row_pitch;
 					const uint32_t src_slicepitch = subresourceData.slice_pitch;
@@ -8663,34 +8630,39 @@ using namespace vulkan_internal;
 			if (src_desc.usage == Usage::UPLOAD)
 			{
 				VkBufferImageCopy copy = {};
-				copy.imageSubresource.baseArrayLayer = 0;
-				copy.imageSubresource.layerCount = dst_desc.array_size;
 				copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				const uint32_t data_stride = GetFormatStride(dst_desc.format);
-				uint32_t mip_width = dst_desc.width;
-				uint32_t mip_height = dst_desc.height;
-				uint32_t mip_depth = dst_desc.depth;
-				for (uint32_t mip = 0; mip < dst_desc.mip_levels; ++mip)
+				const uint32_t block_size = GetFormatBlockSize(dst_desc.format);
+				for (uint32_t slice = 0; slice < dst_desc.array_size; ++slice)
 				{
-					copy.imageExtent.width = mip_width;
-					copy.imageExtent.height = mip_height;
-					copy.imageExtent.depth = mip_depth;
-					copy.imageSubresource.mipLevel = mip;
-					vkCmdCopyBufferToImage(
-						commandlist.GetCommandBuffer(),
-						internal_state_src->staging_resource,
-						internal_state_dst->resource,
-						_ConvertImageLayout(ResourceState::COPY_DST),
-						1,
-						&copy
-					);
+					copy.imageSubresource.baseArrayLayer = slice;
+					copy.imageSubresource.layerCount = 1;
+					uint32_t mip_width = dst_desc.width;
+					uint32_t mip_height = dst_desc.height;
+					uint32_t mip_depth = dst_desc.depth;
+					for (uint32_t mip = 0; mip < dst_desc.mip_levels; ++mip)
+					{
+						const uint32_t num_blocks_x = mip_width / block_size;
+						const uint32_t num_blocks_y = mip_height / block_size;
+						copy.imageExtent.width = mip_width;
+						copy.imageExtent.height = mip_height;
+						copy.imageExtent.depth = mip_depth;
+						copy.imageSubresource.mipLevel = mip;
+						vkCmdCopyBufferToImage(
+							commandlist.GetCommandBuffer(),
+							internal_state_src->staging_resource,
+							internal_state_dst->resource,
+							_ConvertImageLayout(ResourceState::COPY_DST),
+							1,
+							&copy
+						);
 
-					copy.bufferOffset += mip_width * mip_height * mip_depth * data_stride;
-					mip_width = std::max(1u, mip_width / 2);
-					mip_height = std::max(1u, mip_height / 2);
-					mip_depth = std::max(1u, mip_depth / 2);
+						copy.bufferOffset += num_blocks_x * num_blocks_y * mip_depth * data_stride;
+						mip_width = std::max(1u, mip_width / 2);
+						mip_height = std::max(1u, mip_height / 2);
+						mip_depth = std::max(1u, mip_depth / 2);
+					}
 				}
-
 			}
 			else if (dst_desc.usage == Usage::READBACK)
 			{
@@ -8698,19 +8670,17 @@ using namespace vulkan_internal;
 				copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				const uint32_t data_stride = GetFormatStride(dst_desc.format);
 				const uint32_t block_size = GetFormatBlockSize(dst_desc.format);
-				const uint32_t num_blocks_x = dst_desc.width / block_size;
-				const uint32_t num_blocks_y = dst_desc.height / block_size;
 				for (uint32_t slice = 0; slice < dst_desc.array_size; ++slice)
 				{
 					copy.imageSubresource.baseArrayLayer = slice;
 					copy.imageSubresource.layerCount = 1;
-					uint32_t mip_blocks_x = num_blocks_x;
-					uint32_t mip_blocks_y = num_blocks_y;
 					uint32_t mip_width = dst_desc.width;
 					uint32_t mip_height = dst_desc.height;
 					uint32_t mip_depth = dst_desc.depth;
 					for (uint32_t mip = 0; mip < dst_desc.mip_levels; ++mip)
 					{
+						const uint32_t num_blocks_x = mip_width / block_size;
+						const uint32_t num_blocks_y = mip_height / block_size;
 						copy.imageExtent.width = mip_width;
 						copy.imageExtent.height = mip_height;
 						copy.imageExtent.depth = mip_depth;
@@ -8724,9 +8694,7 @@ using namespace vulkan_internal;
 							&copy
 						);
 
-						copy.bufferOffset += mip_blocks_x * mip_blocks_y * mip_depth * data_stride;
-						mip_blocks_x = std::max(1u, mip_blocks_x / 2);
-						mip_blocks_y = std::max(1u, mip_blocks_y / 2);
+						copy.bufferOffset += num_blocks_x * num_blocks_y * mip_depth * data_stride;
 						mip_width = std::max(1u, mip_width / 2);
 						mip_height = std::max(1u, mip_height / 2);
 						mip_depth = std::max(1u, mip_depth / 2);
