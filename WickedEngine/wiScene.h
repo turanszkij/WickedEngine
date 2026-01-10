@@ -74,7 +74,7 @@ namespace wi::scene
 		uint32_t flags = EMPTY;
 
 		float time = 0;
-		CameraComponent camera; // for LOD and 3D sound update
+		CameraComponent camera; // only for LOD and 3D sound update; use GetCamera() or set RenderPath3D's camera to your own
 		wi::allocator::shared_ptr<void> physics_scene;
 		wi::SpinLock locker;
 		wi::primitive::AABB bounds;
