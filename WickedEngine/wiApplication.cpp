@@ -339,13 +339,10 @@ namespace wi
 				)
 			{
 				TextureDesc desc = backbuffer.desc;
-				if (desc.width > 0 && desc.height > 0)
-				{
-					desc.bind_flags = BindFlag::SHADER_RESOURCE;
-					bool success = graphicsDevice->CreateTexture(&desc, nullptr, &fadeManager.crossFadeTexture);
-					assert(success);
-					graphicsDevice->SetName(&fadeManager.crossFadeTexture, "wiFadeManager::crossFadeTexture");
-				}
+				desc.bind_flags = BindFlag::SHADER_RESOURCE;
+				bool success = graphicsDevice->CreateTexture(&desc, nullptr, &fadeManager.crossFadeTexture);
+				assert(success);
+				graphicsDevice->SetName(&fadeManager.crossFadeTexture, "wiFadeManager::crossFadeTexture");
 			}
 			wi::renderer::PushBarrier(GPUBarrier::Image(&backbuffer, backbuffer.desc.layout, ResourceState::COPY_SRC));
 			wi::renderer::PushBarrier(GPUBarrier::Image(&fadeManager.crossFadeTexture, fadeManager.crossFadeTexture.desc.layout, ResourceState::COPY_DST));
@@ -723,7 +720,7 @@ namespace wi
 		wi::platform::Exit();
 	}
 
-void Application::SetWindow(wi::platform::window_type window)
+	void Application::SetWindow(wi::platform::window_type window)
 	{
 		this->window = window;
 
