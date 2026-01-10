@@ -16,12 +16,6 @@ namespace metal_internal
 	static constexpr uint64_t bindless_resource_capacity = 500000;
 	static constexpr uint64_t bindless_sampler_capacity = 256;
 
-	template <typename T>
-	inline static auto create_nsarray(T** objects, size_t count)
-	{
-		return NS::TransferPtr((NS::Array*)CFArrayCreate(kCFAllocatorDefault, (const void**)objects, count, &kCFTypeArrayCallBacks));
-	}
-
 	constexpr MTL::AttributeFormat _ConvertAttributeFormat(Format value)
 	{
 		switch (value) {
@@ -982,7 +976,7 @@ namespace metal_internal
 			{
 				geometry_descs_raw.push_back(x.get());
 			}
-			object_array = create_nsarray(geometry_descs_raw.data(), geometry_descs_raw.size());
+			object_array = NS::TransferPtr(NS::Array::array((NS::Object**)geometry_descs_raw.data(), geometry_descs_raw.size())->retain());
 			primitive_descriptor->setGeometryDescriptors(object_array.get());
 			descriptor = std::move(primitive_descriptor);
 		}
@@ -1540,7 +1534,7 @@ using namespace metal_internal;
 			geo->setBoundingBoxStride(sizeof(box));
 			geo->setBoundingBoxCount(1);
 			MTL4::AccelerationStructureBoundingBoxGeometryDescriptor* geos[] = { geo.get() };
-			NS::SharedPtr<NS::Array> array = create_nsarray(geos, arraysize(geos));
+			NS::SharedPtr<NS::Array> array = NS::TransferPtr(NS::Array::array((NS::Object**)geos, arraysize(geos))->retain());
 			emptydesc->setGeometryDescriptors(array.get());
 			MTL::AccelerationStructureSizes size = device->accelerationStructureSizes(emptydesc.get());
 			dummyblas = NS::TransferPtr(device->newAccelerationStructure(size.accelerationStructureSize));
