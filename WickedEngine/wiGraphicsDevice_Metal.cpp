@@ -912,96 +912,6 @@ namespace metal_internal
 	{
 		return static_cast<typename MetalType<T>::type*>(res->internal_state.get());
 	}
-
-	NS::SharedPtr<MTL4::AccelerationStructureDescriptor> acceleration_structure_descriptor(const RaytracingAccelerationStructureDesc* desc, BVH_Metal* internal_state)
-	{
-		NS::SharedPtr<MTL4::AccelerationStructureDescriptor> descriptor = NS::TransferPtr(MTL4::AccelerationStructureDescriptor::alloc()->init());
-		NS::SharedPtr<NS::Array> object_array;
-		
-		if (desc->type == RaytracingAccelerationStructureDesc::Type::TOPLEVEL)
-		{
-			NS::SharedPtr<MTL4::InstanceAccelerationStructureDescriptor> instance_descriptor = NS::TransferPtr(MTL4::InstanceAccelerationStructureDescriptor::alloc()->init());
-			instance_descriptor->setInstanceCount(desc->top_level.count);
-			auto buffer_internal = to_internal(&desc->top_level.instance_buffer);
-			instance_descriptor->setInstanceDescriptorBuffer({buffer_internal->gpu_address + desc->top_level.offset, buffer_internal->buffer->length()});
-			instance_descriptor->setInstanceDescriptorStride(sizeof(MTL::IndirectAccelerationStructureInstanceDescriptor));
-			instance_descriptor->setInstanceDescriptorType(MTL::AccelerationStructureInstanceDescriptorTypeIndirect);
-			instance_descriptor->setInstanceTransformationMatrixLayout(MTL::MatrixLayoutRowMajor);
-			descriptor = std::move(instance_descriptor);
-		}
-		else
-		{
-			auto primitive_descriptor = NS::TransferPtr(MTL4::PrimitiveAccelerationStructureDescriptor::alloc()->init());
-			wi::vector<NS::SharedPtr<MTL4::AccelerationStructureGeometryDescriptor>> geometry_descs;
-			wi::vector<MTL4::AccelerationStructureGeometryDescriptor*> geometry_descs_raw;
-			
-			for (auto& x : desc->bottom_level.geometries)
-			{
-				if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::Type::TRIANGLES)
-				{
-					NS::SharedPtr<MTL4::AccelerationStructureTriangleGeometryDescriptor> geo = NS::TransferPtr(MTL4::AccelerationStructureTriangleGeometryDescriptor::alloc()->init());
-					geometry_descs.push_back(geo);
-					geo->setAllowDuplicateIntersectionFunctionInvocation((x.flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_NO_DUPLICATE_ANYHIT_INVOCATION) == 0);
-					geo->setOpaque(x.flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE);
-					auto ib_internal = to_internal(&x.triangles.index_buffer);
-					auto vb_internal = to_internal(&x.triangles.vertex_buffer);
-					geo->setIndexType(x.triangles.index_format == IndexBufferFormat::UINT32 ? MTL::IndexTypeUInt32 : MTL::IndexTypeUInt16);
-					const uint64_t index_byteoffset = x.triangles.index_offset * GetIndexStride(x.triangles.index_format);
-					geo->setIndexBuffer({ib_internal->gpu_address + index_byteoffset, ib_internal->buffer->length()});
-					geo->setVertexFormat(_ConvertAttributeFormat(x.triangles.vertex_format));
-					geo->setVertexBuffer({vb_internal->gpu_address + x.triangles.vertex_byte_offset, vb_internal->buffer->length()});
-					geo->setVertexStride(x.triangles.vertex_stride);
-					geo->setTriangleCount(x.triangles.index_count / 3);
-					if (x.triangles.transform_3x4_buffer.IsValid())
-					{
-						auto transform_internal = to_internal(&x.triangles.transform_3x4_buffer);
-						geo->setTransformationMatrixBuffer({transform_internal->gpu_address + x.triangles.transform_3x4_buffer_offset, transform_internal->buffer->length()});
-						geo->setTransformationMatrixLayout(MTL::MatrixLayoutRowMajor);
-					}
-				}
-				else
-				{
-					NS::SharedPtr<MTL4::AccelerationStructureBoundingBoxGeometryDescriptor> geo = NS::TransferPtr(MTL4::AccelerationStructureBoundingBoxGeometryDescriptor::alloc()->init());
-					geometry_descs.push_back(geo);
-					geo->setOpaque(x.flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE);
-					geo->setBoundingBoxCount(x.aabbs.count);
-					auto buffer_internal = to_internal(&x.aabbs.aabb_buffer);
-					geo->setBoundingBoxBuffer({buffer_internal->gpu_address + x.aabbs.offset, buffer_internal->buffer->length()});
-					geo->setBoundingBoxStride(x.aabbs.stride);
-				}
-			}
-			
-			geometry_descs_raw.reserve(geometry_descs.size());
-			for (auto& x : geometry_descs)
-			{
-				geometry_descs_raw.push_back(x.get());
-			}
-			object_array = NS::TransferPtr(NS::Array::array((NS::Object**)geometry_descs_raw.data(), geometry_descs_raw.size())->retain());
-			primitive_descriptor->setGeometryDescriptors(object_array.get());
-			descriptor = std::move(primitive_descriptor);
-		}
-		
-		MTL::AccelerationStructureUsage usage = MTL::AccelerationStructureUsageNone;
-		if (desc->flags & RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE)
-		{
-			usage |= MTL::AccelerationStructureUsageRefit;
-		}
-		if (desc->flags & RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD)
-		{
-			usage |= MTL::AccelerationStructureUsagePreferFastBuild;
-		}
-		if (desc->flags & RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_TRACE)
-		{
-			usage |= MTL::AccelerationStructureUsagePreferFastIntersection;
-		}
-		if (desc->flags & RaytracingAccelerationStructureDesc::FLAG_MINIMIZE_MEMORY)
-		{
-			usage |= MTL::AccelerationStructureUsageMinimizeMemory;
-		}
-		descriptor->setUsage(usage);
-		
-		return descriptor;
-	}
 }
 using namespace metal_internal;
 
@@ -1525,6 +1435,7 @@ using namespace metal_internal;
 		
 		if (CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 		{
+			// This creates a dummy BLAS that will be a stand-in for unused TLAS instances:
 			NS::SharedPtr<MTL4::PrimitiveAccelerationStructureDescriptor> emptydesc = NS::TransferPtr(MTL4::PrimitiveAccelerationStructureDescriptor::alloc()->init());
 			NS::SharedPtr<MTL4::AccelerationStructureBoundingBoxGeometryDescriptor> geo = NS::TransferPtr(MTL4::AccelerationStructureBoundingBoxGeometryDescriptor::alloc()->init());
 			MTL::AxisAlignedBoundingBox box = {};
@@ -2522,6 +2433,98 @@ using namespace metal_internal;
 		
 		// If we get here, this pipeline state is not complete, but it will be reuseable by different render passes (and compiled just in time at runtime)
 		return true;
+	}
+
+	static NS::SharedPtr<MTL4::AccelerationStructureDescriptor> acceleration_structure_descriptor(const RaytracingAccelerationStructureDesc* desc, BVH_Metal* internal_state)
+	{
+		NS::SharedPtr<MTL4::AccelerationStructureDescriptor> descriptor = NS::TransferPtr(MTL4::AccelerationStructureDescriptor::alloc()->init());
+		
+		NS::SharedPtr<NS::Array> object_array;
+		wi::vector<NS::SharedPtr<MTL4::AccelerationStructureGeometryDescriptor>> geometry_descs;
+		wi::vector<MTL4::AccelerationStructureGeometryDescriptor*> geometry_descs_raw;
+		
+		if (desc->type == RaytracingAccelerationStructureDesc::Type::TOPLEVEL)
+		{
+			NS::SharedPtr<MTL4::InstanceAccelerationStructureDescriptor> instance_descriptor = NS::TransferPtr(MTL4::InstanceAccelerationStructureDescriptor::alloc()->init());
+			instance_descriptor->setInstanceCount(desc->top_level.count);
+			auto buffer_internal = to_internal(&desc->top_level.instance_buffer);
+			instance_descriptor->setInstanceDescriptorBuffer({buffer_internal->gpu_address + desc->top_level.offset, buffer_internal->buffer->length()});
+			instance_descriptor->setInstanceDescriptorStride(sizeof(MTL::IndirectAccelerationStructureInstanceDescriptor));
+			instance_descriptor->setInstanceDescriptorType(MTL::AccelerationStructureInstanceDescriptorTypeIndirect);
+			instance_descriptor->setInstanceTransformationMatrixLayout(MTL::MatrixLayoutRowMajor);
+			descriptor = std::move(instance_descriptor);
+		}
+		else
+		{
+			auto primitive_descriptor = NS::TransferPtr(MTL4::PrimitiveAccelerationStructureDescriptor::alloc()->init());
+			geometry_descs.reserve(desc->bottom_level.geometries.size());
+			
+			for (auto& x : desc->bottom_level.geometries)
+			{
+				if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::Type::TRIANGLES)
+				{
+					NS::SharedPtr<MTL4::AccelerationStructureTriangleGeometryDescriptor> geo = NS::TransferPtr(MTL4::AccelerationStructureTriangleGeometryDescriptor::alloc()->init());
+					geometry_descs.push_back(geo);
+					geo->setAllowDuplicateIntersectionFunctionInvocation((x.flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_NO_DUPLICATE_ANYHIT_INVOCATION) == 0);
+					geo->setOpaque(x.flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE);
+					auto ib_internal = to_internal(&x.triangles.index_buffer);
+					auto vb_internal = to_internal(&x.triangles.vertex_buffer);
+					geo->setIndexType(x.triangles.index_format == IndexBufferFormat::UINT32 ? MTL::IndexTypeUInt32 : MTL::IndexTypeUInt16);
+					const uint64_t index_byteoffset = x.triangles.index_offset * GetIndexStride(x.triangles.index_format);
+					geo->setIndexBuffer({ib_internal->gpu_address + index_byteoffset, ib_internal->buffer->length()});
+					geo->setVertexFormat(_ConvertAttributeFormat(x.triangles.vertex_format));
+					geo->setVertexBuffer({vb_internal->gpu_address + x.triangles.vertex_byte_offset, vb_internal->buffer->length()});
+					geo->setVertexStride(x.triangles.vertex_stride);
+					geo->setTriangleCount(x.triangles.index_count / 3);
+					if (x.triangles.transform_3x4_buffer.IsValid())
+					{
+						auto transform_internal = to_internal(&x.triangles.transform_3x4_buffer);
+						geo->setTransformationMatrixBuffer({transform_internal->gpu_address + x.triangles.transform_3x4_buffer_offset, transform_internal->buffer->length()});
+						geo->setTransformationMatrixLayout(MTL::MatrixLayoutRowMajor);
+					}
+				}
+				else
+				{
+					NS::SharedPtr<MTL4::AccelerationStructureBoundingBoxGeometryDescriptor> geo = NS::TransferPtr(MTL4::AccelerationStructureBoundingBoxGeometryDescriptor::alloc()->init());
+					geometry_descs.push_back(geo);
+					geo->setOpaque(x.flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE);
+					geo->setBoundingBoxCount(x.aabbs.count);
+					auto buffer_internal = to_internal(&x.aabbs.aabb_buffer);
+					geo->setBoundingBoxBuffer({buffer_internal->gpu_address + x.aabbs.offset, buffer_internal->buffer->length()});
+					geo->setBoundingBoxStride(x.aabbs.stride);
+				}
+			}
+			
+			geometry_descs_raw.reserve(geometry_descs.size());
+			for (auto& x : geometry_descs)
+			{
+				geometry_descs_raw.push_back(x.get());
+			}
+			object_array = NS::TransferPtr(NS::Array::array((NS::Object**)geometry_descs_raw.data(), geometry_descs_raw.size())->retain());
+			primitive_descriptor->setGeometryDescriptors(object_array.get());
+			descriptor = std::move(primitive_descriptor);
+		}
+		
+		MTL::AccelerationStructureUsage usage = MTL::AccelerationStructureUsageNone;
+		if (desc->flags & RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE)
+		{
+			usage |= MTL::AccelerationStructureUsageRefit;
+		}
+		if (desc->flags & RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD)
+		{
+			usage |= MTL::AccelerationStructureUsagePreferFastBuild;
+		}
+		if (desc->flags & RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_TRACE)
+		{
+			usage |= MTL::AccelerationStructureUsagePreferFastIntersection;
+		}
+		if (desc->flags & RaytracingAccelerationStructureDesc::FLAG_MINIMIZE_MEMORY)
+		{
+			usage |= MTL::AccelerationStructureUsageMinimizeMemory;
+		}
+		descriptor->setUsage(usage);
+		
+		return descriptor;
 	}
 	bool GraphicsDevice_Metal::CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* desc, RaytracingAccelerationStructure* bvh) const
 	{
