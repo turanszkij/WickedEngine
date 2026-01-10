@@ -1254,9 +1254,17 @@ using namespace metal_internal;
 	{
 		wi::Timer timer;
 		device = NS::TransferPtr(MTL::CreateSystemDefaultDevice());
-		wilog_assert(device->supportsFamily(MTL::GPUFamilyMetal4), "Metal 4 must be supported!");
-		wilog_assert(device->argumentBuffersSupport(), "Argument buffers must be supported!");
-		wilog_assert(device->supportsBCTextureCompression(), "Block compressed textures must be supported!");
+		
+		if (device.get() == nullptr)
+		{
+			wilog_messagebox("Metal graphics device creation failed, exiting!");
+			wi::platform::Exit();
+		}
+		if (!device->supportsFamily(MTL::GPUFamilyMetal4))
+		{
+			wilog_messagebox("Metal 4 graphics is not supported by your system, exiting!");
+			wi::platform::Exit();
+		}
 		
 		capabilities |= GraphicsDeviceCapability::SAMPLER_MINMAX;
 		capabilities |= GraphicsDeviceCapability::ALIASING_GENERIC;
@@ -1649,6 +1657,8 @@ using namespace metal_internal;
 		texture->mapped_subresource_count = 0;
 		texture->sparse_properties = nullptr;
 		texture->desc = *desc;
+		
+		wilog_assert(!IsFormatBlockCompressed(desc->format) || device->supportsBCTextureCompression(), "Block compressed textures are not supported by this device!");
 		
 		const bool sparse = has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE);
 		const bool aliasing_storage = has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_BUFFER) || has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_NON_RT_DS) || has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_RT_DS);
