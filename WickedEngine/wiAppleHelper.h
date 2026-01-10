@@ -9,6 +9,7 @@ namespace wi::apple
 {
 void SetMetalLayerToWindow(void* window, void* layer);
 void* GetViewFromWindow(void* window);
+XMUINT2 GetWindowSizeNoScaling(void* handle);
 XMUINT2 GetWindowSize(void* handle);
 float GetDPIForWindow(void* handle);
 XMFLOAT2 GetMousePositionInWindow(void* handle);
@@ -18,4 +19,5 @@ std::string GetExecutablePath();
 void CursorInit(void** cursor_table);
 void CursorSet(void* cursor);
 void CursorHide(bool hide);
+void SetWindowFullScreen(void* handle, bool fullscreen);
 }

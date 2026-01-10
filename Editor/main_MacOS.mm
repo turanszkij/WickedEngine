@@ -53,6 +53,8 @@ int main( int argc, char* argv[] )
 		[window center];
 		[window makeKeyAndOrderFront:nil];
 		
+		XMUINT2 siz = wi::apple::GetWindowSize((__bridge wi::platform::window_type)window);
+		
 		WindowDelegate *delegate = [[WindowDelegate alloc] init];
 		[window setDelegate:delegate];
 		
@@ -60,6 +62,11 @@ int main( int argc, char* argv[] )
 		[window setContentView:contentView];
 		
 		[NSApp activateIgnoringOtherApps:YES];
+		
+		if (fullscreen)
+		{
+			wi::apple::SetWindowFullScreen((__bridge wi::platform::window_type)window, fullscreen);
+		}
 		
 		editor.SetWindow((__bridge wi::platform::window_type)window);
 		
@@ -97,10 +104,10 @@ int main( int argc, char* argv[] )
 							break;
 						case NSEventTypeScrollWheel:
 						{
-							float amount = event.scrollingDeltaY;
+							float amount = -event.scrollingDeltaY;
 							if (event.hasPreciseScrollingDeltas)
 							{
-								amount *= 0.05f;
+								amount *= -0.05f; // reversed touchpad scrolling
 							}
 							wi::input::AddMouseScrollEvent(amount);
 						}

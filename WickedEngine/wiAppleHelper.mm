@@ -35,6 +35,23 @@ void* GetViewFromWindow(void* handle)
 	return (__bridge void*)contentView;
 }
 
+XMUINT2 GetWindowSizeNoScaling(void* handle)
+{
+	if (!handle)
+		return XMUINT2(0, 0);
+
+	NSWindow* window = (__bridge NSWindow*)handle;
+	NSView* contentView = window.contentView;
+	if (!contentView)
+		return XMUINT2(0, 0);
+
+	CGRect bounds = contentView.bounds;
+
+	uint32_t pixelWidth  = (uint32_t)round(bounds.size.width);
+	uint32_t pixelHeight = (uint32_t)round(bounds.size.height);
+
+	return XMUINT2(pixelWidth, pixelHeight);
+}
 XMUINT2 GetWindowSize(void* handle)
 {
 	if (!handle)
@@ -58,37 +75,9 @@ float GetDPIForWindow(void* handle)
 {
 	NSWindow* window = (__bridge NSWindow*)handle;
 	if (!window || !window.screen)
-		return 96.0f; // Fallback
-
-	NSScreen* screen = window.screen;
-
-	NSDictionary* desc = [screen deviceDescription];
-	
-	// Get logical size in points
-	NSValue* sizeValue = [desc objectForKey:NSDeviceSize];
-	if (!sizeValue)
 		return 96.0f;
-	NSSize logicalSize = [sizeValue sizeValue];
-
-	// Get CGDisplay ID
-	NSNumber* screenNumber = [desc objectForKey:@"NSScreenNumber"];
-	if (!screenNumber)
-		return 96.0f;
-	CGDirectDisplayID displayID = [screenNumber unsignedIntValue];
-
-	// Physical size in mm
-	CGSize physicalSizeMM = CGDisplayScreenSize(displayID);
-	if (physicalSizeMM.width <= 0 || physicalSizeMM.height <= 0)
-		return 96.0f;
-
-	// Backing scale (1.0 or 2.0 usually)
-	CGFloat scale = screen.backingScaleFactor;
-
-	// Native pixel width
-	double pixelWidth = logicalSize.width * scale;
-	double inchesWidth = physicalSizeMM.width / 25.4;
-
-	return (inchesWidth > 0) ? (float)(pixelWidth / inchesWidth) : 96.0f;
+	CGFloat scale = window.screen.backingScaleFactor;
+	return scale * 96.0f;
 }
 
 XMFLOAT2 GetMousePositionInWindow(void* handle)
@@ -242,6 +231,25 @@ void CursorHide(bool hide)
 		hidden = false;
 		[NSCursor unhide];
 	}
+}
+
+void SetWindowFullScreen(void* handle, bool fullscreen)
+{
+	NSWindow* window = (__bridge NSWindow*)handle;
+	if (window == nil)
+		return;
+	bool isCurrentlyFullscreen = (window.styleMask & NSWindowStyleMaskFullScreen) != 0;
+	if (isCurrentlyFullscreen == fullscreen)
+		return;
+	if (fullscreen)
+	{
+		NSWindowCollectionBehavior currentBehavior = window.collectionBehavior;
+		if ((currentBehavior & NSWindowCollectionBehaviorFullScreenPrimary) == 0 &&
+			(currentBehavior & NSWindowCollectionBehaviorFullScreenAuxiliary) == 0) {
+			window.collectionBehavior |= NSWindowCollectionBehaviorFullScreenPrimary;
+		}
+	}
+	[window toggleFullScreen:nil];
 }
 
 }

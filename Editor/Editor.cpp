@@ -405,6 +405,11 @@ void Editor::SaveWindowSize()
 				config.Commit();
 			}
 		}
+#elif defined(__APPLE__)
+		XMUINT2 size = wi::apple::GetWindowSizeNoScaling(window);
+		config.Set("width", size.x);
+		config.Set("height", size.y);
+		config.Commit();
 #endif
 	}
 }

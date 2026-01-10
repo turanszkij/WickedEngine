@@ -23,6 +23,11 @@
 #define PLATFORM_PS5
 #elif defined(__APPLE__)
 #define PLATFORM_APPLE
+#if TARGET_OS_OSX
+#define PLATFORM_MACOS
+#elif TARGET_OS_IOS
+#define PLATFORM_IOS
+#endif // TARGET_OS_OSX
 #include "wiAppleHelper.h"
 #include <cstdlib>
 #else

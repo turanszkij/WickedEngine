@@ -889,6 +889,8 @@ namespace wi
 
 #elif defined(PLATFORM_LINUX)
 		SDL_SetWindowFullscreen(window, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+#elif defined(__APPLE__)
+		wi::apple::SetWindowFullScreen(window, fullscreen);
 #endif // PLATFORM_WINDOWS_DESKTOP
 	}
 
