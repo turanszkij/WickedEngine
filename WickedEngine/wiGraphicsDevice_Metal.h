@@ -218,12 +218,6 @@ namespace wi::graphics
 				dirty_drawargs = false;
 			}
 			
-			void assert_noencoder()
-			{
-				assert(render_encoder == nullptr);
-				assert(compute_encoder == nullptr);
-			}
-			
 			void autorelease_start()
 			{
 				if (autorelease_pool.get() != nullptr)

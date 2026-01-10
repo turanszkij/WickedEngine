@@ -821,8 +821,7 @@ namespace metal_internal
 		wi::allocator::shared_ptr<GraphicsDevice_Metal::AllocationHandler> allocationhandler;
 		NS::SharedPtr<MTL::AccelerationStructure> acceleration_structure;
 		NS::SharedPtr<MTL::Buffer> scratch;
-		NS::SharedPtr<MTL::Buffer> tlas_header;
-		NS::SharedPtr<MTL::Buffer> tlas_instance_contributions;
+		NS::SharedPtr<MTL::Buffer> tlas_header_instancecontributions;
 		int tlas_descriptor_index = -1;
 		IRDescriptorTableEntry tlas_entry = {};
 		MTL::ResourceID resourceid = {};
@@ -835,10 +834,8 @@ namespace metal_internal
 			uint64_t framecount = allocationhandler->framecount;
 			allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(acceleration_structure), framecount));
 			allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(scratch), framecount));
-			if (tlas_header.get() != nullptr)
-				allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(tlas_header), framecount));
-			if (tlas_instance_contributions.get() != nullptr)
-				allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(tlas_instance_contributions), framecount));
+			if (tlas_header_instancecontributions.get() != nullptr)
+				allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(tlas_header_instancecontributions), framecount));
 			if (tlas_descriptor_index >= 0)
 				allocationhandler->destroyer_bindless_res.push_back(std::make_pair(tlas_descriptor_index, framecount));
 			allocationhandler->destroylocker.unlock();
@@ -1209,9 +1206,11 @@ using namespace metal_internal;
 	void GraphicsDevice_Metal::predispatch(CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-		commandlist.assert_noencoder();
 		commandlist.autorelease_start();
-		commandlist.compute_encoder = commandlist.commandbuffer->computeCommandEncoder();
+		if (commandlist.compute_encoder == nullptr)
+		{
+			commandlist.compute_encoder = commandlist.commandbuffer->computeCommandEncoder();
+		}
 		commandlist.active_pso = nullptr;
 		commandlist.dirty_vb = true;
 		commandlist.dirty_root = true;
@@ -1239,9 +1238,11 @@ using namespace metal_internal;
 	void GraphicsDevice_Metal::precopy(CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-		commandlist.assert_noencoder();
 		commandlist.autorelease_start();
-		commandlist.compute_encoder = commandlist.commandbuffer->computeCommandEncoder();
+		if (commandlist.compute_encoder == nullptr)
+		{
+			commandlist.compute_encoder = commandlist.commandbuffer->computeCommandEncoder();
+		}
 		
 		if (!commandlist.barriers.empty())
 		{
@@ -1285,9 +1286,8 @@ using namespace metal_internal;
 		}
 		if (device->supportsRaytracing())
 		{
-			// TODO: fix hardware raytracing issues
-			//capabilities |= GraphicsDeviceCapability::RAYTRACING;
-			//TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = sizeof(MTL::IndirectAccelerationStructureInstanceDescriptor);
+			capabilities |= GraphicsDeviceCapability::RAYTRACING;
+			TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = sizeof(MTL::IndirectAccelerationStructureInstanceDescriptor);
 		}
 		
 		TIMESTAMP_FREQUENCY = device->queryTimestampFrequency();
@@ -2445,9 +2445,9 @@ using namespace metal_internal;
 		return true;
 	}
 
-	static NS::SharedPtr<MTL4::AccelerationStructureDescriptor> acceleration_structure_descriptor(const RaytracingAccelerationStructureDesc* desc, BVH_Metal* internal_state)
+	static NS::SharedPtr<MTL4::AccelerationStructureDescriptor> mtl_acceleration_structure_descriptor(const RaytracingAccelerationStructureDesc* desc)
 	{
-		NS::SharedPtr<MTL4::AccelerationStructureDescriptor> descriptor = NS::TransferPtr(MTL4::AccelerationStructureDescriptor::alloc()->init());
+		NS::SharedPtr<MTL4::AccelerationStructureDescriptor> descriptor;
 		
 		NS::SharedPtr<NS::Array> object_array;
 		wi::vector<NS::SharedPtr<MTL4::AccelerationStructureGeometryDescriptor>> geometry_descs;
@@ -2462,7 +2462,7 @@ using namespace metal_internal;
 			instance_descriptor->setInstanceDescriptorStride(sizeof(MTL::IndirectAccelerationStructureInstanceDescriptor));
 			instance_descriptor->setInstanceDescriptorType(MTL::AccelerationStructureInstanceDescriptorTypeIndirect);
 			instance_descriptor->setInstanceTransformationMatrixLayout(MTL::MatrixLayoutRowMajor);
-			descriptor = std::move(instance_descriptor);
+			descriptor = instance_descriptor;
 		}
 		else
 		{
@@ -2512,7 +2512,7 @@ using namespace metal_internal;
 			}
 			object_array = NS::TransferPtr(NS::Array::array((NS::Object**)geometry_descs_raw.data(), geometry_descs_raw.size())->retain());
 			primitive_descriptor->setGeometryDescriptors(object_array.get());
-			descriptor = std::move(primitive_descriptor);
+			descriptor = primitive_descriptor;
 		}
 		
 		MTL::AccelerationStructureUsage usage = MTL::AccelerationStructureUsageNone;
@@ -2545,11 +2545,11 @@ using namespace metal_internal;
 		bvh->desc = *desc;
 		bvh->size = 0;
 		
-		NS::SharedPtr<MTL4::AccelerationStructureDescriptor> descriptor = acceleration_structure_descriptor(desc, internal_state);
+		NS::SharedPtr<MTL4::AccelerationStructureDescriptor> descriptor = mtl_acceleration_structure_descriptor(desc);
 		
-		MTL::AccelerationStructureSizes size = device->accelerationStructureSizes(descriptor.get());
+		const MTL::AccelerationStructureSizes size = device->accelerationStructureSizes(descriptor.get());
 		internal_state->acceleration_structure = NS::TransferPtr(device->newAccelerationStructure(size.accelerationStructureSize));
-		internal_state->scratch = NS::TransferPtr(device->newBuffer(std::max(size.buildScratchBufferSize, size.refitScratchBufferSize), MTL::ResourceStorageModePrivate | MTL::ResourceHazardTrackingModeUntracked));
+		internal_state->scratch = NS::TransferPtr(device->newBuffer(std::max(size.buildScratchBufferSize, size.refitScratchBufferSize), MTL::ResourceStorageModePrivate));
 
 		allocationhandler->make_resident(internal_state->acceleration_structure.get());
 		allocationhandler->make_resident(internal_state->scratch.get());
@@ -2558,15 +2558,16 @@ using namespace metal_internal;
 		
 		if (desc->type == RaytracingAccelerationStructureDesc::Type::TOPLEVEL)
 		{
-			internal_state->tlas_header = NS::TransferPtr(device->newBuffer(sizeof(IRRaytracingAccelerationStructureGPUHeader), MTL::ResourceStorageModeShared));
-			internal_state->tlas_instance_contributions = NS::TransferPtr(device->newBuffer(sizeof(uint32_t) * desc->top_level.count, MTL::ResourceStorageModeShared));
-			allocationhandler->make_resident(internal_state->tlas_header.get());
-			allocationhandler->make_resident(internal_state->tlas_instance_contributions.get());
+			internal_state->tlas_header_instancecontributions = NS::TransferPtr(device->newBuffer(sizeof(IRRaytracingAccelerationStructureGPUHeader) + sizeof(uint32_t) * desc->top_level.count, MTL::ResourceStorageModeShared));
+			allocationhandler->make_resident(internal_state->tlas_header_instancecontributions.get());
 			wi::vector<uint32_t> instance_contributions(desc->top_level.count);
-			std::fill(instance_contributions.begin(), instance_contributions.end(), 0); // TODO: how to make this data available here???
-			IRRaytracingAccelerationStructureGPUHeader* header = (IRRaytracingAccelerationStructureGPUHeader*)internal_state->tlas_header->contents();
-			IRRaytracingSetAccelerationStructure((uint8_t*)header, internal_state->resourceid, (uint8_t*)internal_state->tlas_instance_contributions->contents(), internal_state->tlas_instance_contributions->gpuAddress(), instance_contributions.data(), desc->top_level.count);
-			IRDescriptorTableSetAccelerationStructure(&internal_state->tlas_entry, internal_state->tlas_header->gpuAddress());
+			std::fill(instance_contributions.begin(), instance_contributions.end(), 0);
+			IRRaytracingAccelerationStructureGPUHeader* header = (IRRaytracingAccelerationStructureGPUHeader*)internal_state->tlas_header_instancecontributions->contents();
+			uint8_t* instancecontributions_gpudata = (uint8_t*)header + sizeof(IRRaytracingAccelerationStructureGPUHeader);
+			MTL::GPUAddress header_gpuaddress = internal_state->tlas_header_instancecontributions->gpuAddress();
+			MTL::GPUAddress instancecontributions_gpuaddress = header_gpuaddress + sizeof(IRRaytracingAccelerationStructureGPUHeader);
+			IRRaytracingSetAccelerationStructure((uint8_t*)header, internal_state->resourceid, instancecontributions_gpudata, instancecontributions_gpuaddress, instance_contributions.data(), desc->top_level.count);
+			IRDescriptorTableSetAccelerationStructure(&internal_state->tlas_entry, header_gpuaddress);
 			internal_state->tlas_descriptor_index = allocationhandler->allocate_resource_index();
 			std::memcpy(descriptor_heap_res_data + internal_state->tlas_descriptor_index, &internal_state->tlas_entry, sizeof(internal_state->tlas_entry));
 		}
@@ -2975,6 +2976,7 @@ using namespace metal_internal;
 		else if (resource->IsAccelerationStructure())
 		{
 			auto internal_state = to_internal<RaytracingAccelerationStructure>(resource);
+			return internal_state->tlas_descriptor_index;
 		}
 		return -1;
 	}
@@ -3136,13 +3138,19 @@ using namespace metal_internal;
 		for (uint32_t cmd = 0; cmd < cmd_last; ++cmd)
 		{
 			auto& commandlist = *commandlists[cmd].get();
-			commandlist.assert_noencoder();
 			if (!commandlist.barriers.empty())
 			{
-				MTL4::ComputeCommandEncoder* encoder = commandlist.commandbuffer->computeCommandEncoder();
-				encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, MTL4::VisibilityOptionNone);
-				encoder->endEncoding();
+				if (commandlist.compute_encoder == nullptr)
+				{
+					commandlist.compute_encoder = commandlist.commandbuffer->computeCommandEncoder();
+				}
+				commandlist.compute_encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, MTL4::VisibilityOptionNone);
 				commandlist.barriers.clear();
+			}
+			if (commandlist.compute_encoder != nullptr)
+			{
+				commandlist.compute_encoder->endEncoding();
+				commandlist.compute_encoder = nullptr;
 			}
 			commandlist.commandbuffer->endCommandBuffer();
 			
@@ -3379,7 +3387,11 @@ using namespace metal_internal;
 	void GraphicsDevice_Metal::RenderPassBegin(const SwapChain* swapchain, CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-		commandlist.assert_noencoder();
+		if (commandlist.compute_encoder != nullptr)
+		{
+			commandlist.compute_encoder->endEncoding();
+			commandlist.compute_encoder = nullptr;
+		}
 		commandlist.autorelease_start();
 		
 		auto internal_state = to_internal(swapchain);
@@ -3425,7 +3437,11 @@ using namespace metal_internal;
 	void GraphicsDevice_Metal::RenderPassBegin(const RenderPassImage* images, uint32_t image_count, const GPUQueryHeap* occlusionqueries, CommandList cmd, RenderPassFlags flags)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-		commandlist.assert_noencoder();
+		if (commandlist.compute_encoder != nullptr)
+		{
+			commandlist.compute_encoder->endEncoding();
+			commandlist.compute_encoder = nullptr;
+		}
 		commandlist.autorelease_start();
 		
 		NS::SharedPtr<MTL4::RenderPassDescriptor> descriptor = NS::TransferPtr(MTL4::RenderPassDescriptor::alloc()->init());
@@ -4227,7 +4243,7 @@ using namespace metal_internal;
 		auto dst_internal = to_internal(dst);
 		
 		// descriptor is recreated because buffer references might have changed since creation:
-		NS::SharedPtr<MTL4::AccelerationStructureDescriptor> descriptor = acceleration_structure_descriptor(&dst->desc, dst_internal);
+		NS::SharedPtr<MTL4::AccelerationStructureDescriptor> descriptor = mtl_acceleration_structure_descriptor(&dst->desc);
 		
 		if (src != nullptr && (dst->desc.flags & RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE))
 		{
@@ -4239,7 +4255,12 @@ using namespace metal_internal;
 			commandlist.compute_encoder->buildAccelerationStructure(dst_internal->acceleration_structure.get(), descriptor.get(), {dst_internal->scratch->gpuAddress(), dst_internal->scratch->length()});
 		}
 		
-		commandlist.autorelease_end();
+		if (dst->desc.type == RaytracingAccelerationStructureDesc::Type::TOPLEVEL)
+		{
+			// Note: this is workaround for Metal API issue: FB21571936
+			//	This reuses the compute encoder for all blas and tlas builds and then closes autorelease
+			commandlist.autorelease_end();
+		}
 	}
 	void GraphicsDevice_Metal::BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd)
 	{
