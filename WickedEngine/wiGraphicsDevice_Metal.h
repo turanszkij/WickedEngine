@@ -158,6 +158,8 @@ namespace wi::graphics
 			wi::vector<Semaphore> signals;
 			bool drawargs_required = false;
 			bool dirty_drawargs = false;
+			MTL::Size numthreads_as = {};
+			MTL::Size numthreads_ms = {};
 			
 			struct VertexBufferBinding
 			{
@@ -216,6 +218,8 @@ namespace wi::graphics
 				assert(signals.empty());
 				drawargs_required = false;
 				dirty_drawargs = false;
+				numthreads_as = {};
+				numthreads_ms = {};
 			}
 			
 			void autorelease_start()

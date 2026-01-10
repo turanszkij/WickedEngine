@@ -1949,6 +1949,13 @@ void LoadShaders()
 									}
 
 									SHADERTYPE realPS = GetPSTYPE((RENDERPASS)renderPass, alphatest, transparency, (MaterialComponent::SHADERTYPE)shaderType);
+#ifdef __APPLE__
+									if (mesh_shader && realPS == SHADERTYPE_COUNT)
+									{
+										// Apple Metal workaround: mesh shader must have pixel shader
+										realPS = PSTYPE_OBJECT_DEBUG;
+									}
+#endif // __APPLE__
 									desc.ps = realPS < SHADERTYPE_COUNT ? &shaders[realPS] : nullptr;
 
 									switch (blendMode)

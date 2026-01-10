@@ -801,8 +801,11 @@ namespace metal_internal
 	{
 		wi::allocator::shared_ptr<GraphicsDevice_Metal::AllocationHandler> allocationhandler;
 		NS::SharedPtr<MTL::RenderPipelineDescriptor> descriptor;
+		NS::SharedPtr<MTL::MeshRenderPipelineDescriptor> ms_descriptor;
 		NS::SharedPtr<MTL::RenderPipelineState> render_pipeline;
 		NS::SharedPtr<MTL::DepthStencilState> depth_stencil_state;
+		MTL::Size numthreads_as = {};
+		MTL::Size numthreads_ms = {};
 		bool needs_draw_params = false;
 
 		~PipelineState_Metal()
@@ -1042,7 +1045,7 @@ using namespace metal_internal;
 			
 			if (commandlist.render_encoder != nullptr)
 			{
-				commandlist.render_encoder->setArgumentTable(commandlist.argument_table.get(), MTL::RenderStageVertex | MTL::RenderStageFragment);
+				commandlist.render_encoder->setArgumentTable(commandlist.argument_table.get(), MTL::RenderStageVertex | MTL::RenderStageObject | MTL::RenderStageMesh | MTL::RenderStageFragment);
 			}
 			else if (commandlist.compute_encoder != nullptr)
 			{
@@ -1278,6 +1281,7 @@ using namespace metal_internal;
 		capabilities |= GraphicsDeviceCapability::SPARSE_NULL_MAPPING;
 		capabilities |= GraphicsDeviceCapability::DEPTH_RESOLVE_MIN_MAX;
 		capabilities |= GraphicsDeviceCapability::STENCIL_RESOLVE_MIN_MAX;
+		capabilities |= GraphicsDeviceCapability::MESH_SHADER;
 		capabilities |= GraphicsDeviceCapability::COPY_BETWEEN_DIFFERENT_IMAGE_ASPECTS_NOT_SUPPORTED;
 		
 		if (device->hasUnifiedMemory())
@@ -2251,18 +2255,12 @@ using namespace metal_internal;
 		pso->internal_state = internal_state;
 		pso->desc = *desc;
 		
-		internal_state->descriptor = NS::TransferPtr(MTL::RenderPipelineDescriptor::alloc()->init());
-		
 		if (desc->vs != nullptr)
 		{
+			internal_state->descriptor = NS::TransferPtr(MTL::RenderPipelineDescriptor::alloc()->init());
 			auto shader_internal = to_internal(desc->vs);
 			internal_state->descriptor->setVertexFunction(shader_internal->function.get());
 			internal_state->needs_draw_params = shader_internal->needs_draw_params;
-		}
-		if (desc->ps != nullptr)
-		{
-			auto shader_internal = to_internal(desc->ps);
-			internal_state->descriptor->setFragmentFunction(shader_internal->function.get());
 		}
 		if (desc->ds != nullptr)
 		{
@@ -2276,20 +2274,32 @@ using namespace metal_internal;
 		{
 			return false; // TODO
 		}
-		if (desc->as != nullptr)
-		{
-			return false; // TODO
-		}
 		if (desc->ms != nullptr)
 		{
-			return false; // TODO
+			internal_state->ms_descriptor = NS::TransferPtr(MTL::MeshRenderPipelineDescriptor::alloc()->init());
+			auto shader_internal = to_internal(desc->ms);
+			internal_state->ms_descriptor->setMeshFunction(shader_internal->function.get());
+			internal_state->numthreads_ms = shader_internal->numthreads;
+		}
+		if (desc->as != nullptr)
+		{
+			auto shader_internal = to_internal(desc->as);
+			internal_state->ms_descriptor->setObjectFunction(shader_internal->function.get());
+			internal_state->numthreads_as = shader_internal->numthreads;
+		}
+		if (desc->ps != nullptr)
+		{
+			auto shader_internal = to_internal(desc->ps);
+			if (internal_state->descriptor.get() != nullptr)
+				internal_state->descriptor->setFragmentFunction(shader_internal->function.get());
+			else
+				internal_state->ms_descriptor->setFragmentFunction(shader_internal->function.get());
 		}
 		
 		NS::SharedPtr<MTL::VertexDescriptor> vertex_descriptor;
-		if (desc->il != nullptr)
+		if (desc->il != nullptr && internal_state->descriptor.get() != nullptr)
 		{
 			vertex_descriptor = NS::TransferPtr(MTL::VertexDescriptor::alloc()->init());
-			// WARNING: the whole input slot strides are precalculated here at PSO creation based on formats. This doesn't support user supplied dynamic stride at draw time!
 			uint64_t input_slot_strides[32] = {};
 			for (size_t i = 0; i < desc->il->elements.size(); ++i)
 			{
@@ -2319,22 +2329,25 @@ using namespace metal_internal;
 			internal_state->descriptor->setVertexDescriptor(vertex_descriptor.get());
 		}
 		
-		switch (desc->pt)
+		if (internal_state->descriptor.get() != nullptr)
 		{
-			case PrimitiveTopology::TRIANGLELIST:
-			case PrimitiveTopology::TRIANGLESTRIP:
-			case PrimitiveTopology::PATCHLIST:
-				internal_state->descriptor->setInputPrimitiveTopology(MTL::PrimitiveTopologyClassTriangle);
-				break;
-			case PrimitiveTopology::LINELIST:
-			case PrimitiveTopology::LINESTRIP:
-				internal_state->descriptor->setInputPrimitiveTopology(MTL::PrimitiveTopologyClassLine);
-				break;
-			case PrimitiveTopology::POINTLIST:
-				internal_state->descriptor->setInputPrimitiveTopology(MTL::PrimitiveTopologyClassPoint);
-				break;
-			default:
-				break;
+			switch (desc->pt)
+			{
+				case PrimitiveTopology::TRIANGLELIST:
+				case PrimitiveTopology::TRIANGLESTRIP:
+				case PrimitiveTopology::PATCHLIST:
+					internal_state->descriptor->setInputPrimitiveTopology(MTL::PrimitiveTopologyClassTriangle);
+					break;
+				case PrimitiveTopology::LINELIST:
+				case PrimitiveTopology::LINESTRIP:
+					internal_state->descriptor->setInputPrimitiveTopology(MTL::PrimitiveTopologyClassLine);
+					break;
+				case PrimitiveTopology::POINTLIST:
+					internal_state->descriptor->setInputPrimitiveTopology(MTL::PrimitiveTopologyClassPoint);
+					break;
+				default:
+					break;
+			}
 		}
 		
 		if (renderpass_info != nullptr)
@@ -2351,7 +2364,10 @@ using namespace metal_internal;
 				NS::TransferPtr(MTL::RenderPipelineColorAttachmentDescriptor::alloc()->init()),
 			};
 			const BlendState& bs = desc->bs == nullptr ? BlendState() : *desc->bs;
-			internal_state->descriptor->setAlphaToCoverageEnabled(bs.alpha_to_coverage_enable);
+			if (internal_state->descriptor.get() != nullptr)
+				internal_state->descriptor->setAlphaToCoverageEnabled(bs.alpha_to_coverage_enable);
+			else
+				internal_state->ms_descriptor->setAlphaToCoverageEnabled(bs.alpha_to_coverage_enable);
 			for (uint32_t i = 0; i < renderpass_info->rt_count; ++i)
 			{
 				MTL::RenderPipelineColorAttachmentDescriptor& attachment = *attachments[i].get();
@@ -2383,12 +2399,26 @@ using namespace metal_internal;
 				attachment.setSourceAlphaBlendFactor(_ConvertBlendFactor(bs_rt.src_blend_alpha));
 				attachment.setDestinationRGBBlendFactor(_ConvertBlendFactor(bs_rt.dest_blend));
 				attachment.setDestinationAlphaBlendFactor(_ConvertBlendFactor(bs_rt.dest_blend_alpha));
-				internal_state->descriptor->colorAttachments()->setObject(&attachment, i);
+				if (internal_state->descriptor.get() != nullptr)
+					internal_state->descriptor->colorAttachments()->setObject(&attachment, i);
+				else
+					internal_state->ms_descriptor->colorAttachments()->setObject(&attachment, i);
 			}
-			internal_state->descriptor->setDepthAttachmentPixelFormat(_ConvertPixelFormat(renderpass_info->ds_format));
-			if (IsFormatStencilSupport(renderpass_info->ds_format))
+			if (internal_state->descriptor.get() != nullptr)
 			{
-				internal_state->descriptor->setStencilAttachmentPixelFormat(_ConvertPixelFormat(renderpass_info->ds_format));
+				internal_state->descriptor->setDepthAttachmentPixelFormat(_ConvertPixelFormat(renderpass_info->ds_format));
+				if (IsFormatStencilSupport(renderpass_info->ds_format))
+				{
+					internal_state->descriptor->setStencilAttachmentPixelFormat(_ConvertPixelFormat(renderpass_info->ds_format));
+				}
+			}
+			else
+			{
+				internal_state->ms_descriptor->setDepthAttachmentPixelFormat(_ConvertPixelFormat(renderpass_info->ds_format));
+				if (IsFormatStencilSupport(renderpass_info->ds_format))
+				{
+					internal_state->ms_descriptor->setStencilAttachmentPixelFormat(_ConvertPixelFormat(renderpass_info->ds_format));
+				}
 			}
 			
 			uint32_t sample_count = renderpass_info->sample_count;
@@ -2396,7 +2426,10 @@ using namespace metal_internal;
 			{
 				sample_count /= 2;
 			}
-			internal_state->descriptor->setSampleCount(sample_count);
+			if (internal_state->descriptor.get() != nullptr)
+				internal_state->descriptor->setRasterSampleCount(sample_count);
+			else
+				internal_state->ms_descriptor->setRasterSampleCount(sample_count);
 			
 			const DepthStencilState& dss = desc->dss == nullptr ? DepthStencilState() : *desc->dss;
 			NS::SharedPtr<MTL::DepthStencilDescriptor> depth_stencil_desc = NS::TransferPtr(MTL::DepthStencilDescriptor::alloc()->init());
@@ -2428,9 +2461,12 @@ using namespace metal_internal;
 			}
 			internal_state->depth_stencil_state = NS::TransferPtr(device->newDepthStencilState(depth_stencil_desc.get()));
 			
-			
+			MTL::AutoreleasedRenderPipelineReflection* reflection = nullptr;
 			NS::Error* error = nullptr;
-			internal_state->render_pipeline = NS::TransferPtr(device->newRenderPipelineState(internal_state->descriptor.get(), &error));
+			if (internal_state->descriptor.get() != nullptr)
+				internal_state->render_pipeline = NS::TransferPtr(device->newRenderPipelineState(internal_state->descriptor.get(), &error));
+			else
+				internal_state->render_pipeline = NS::TransferPtr(device->newRenderPipelineState(internal_state->ms_descriptor.get(), MTL::PipelineOptionNone, reflection, &error));
 			if (error != nullptr)
 			{
 				NS::String* errDesc = error->localizedDescription();
@@ -3778,6 +3814,8 @@ using namespace metal_internal;
 		}
 		commandlist.active_pso = pso;
 		commandlist.drawargs_required = internal_state->needs_draw_params;
+		commandlist.numthreads_as = internal_state->numthreads_as;
+		commandlist.numthreads_ms = internal_state->numthreads_ms;
 	}
 	void GraphicsDevice_Metal::BindComputeShader(const Shader* cs, CommandList cmd)
 	{
@@ -3975,12 +4013,14 @@ using namespace metal_internal;
 	{
 		predraw(cmd);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		commandlist.render_encoder->drawMeshThreadgroups({threadGroupCountX, threadGroupCountY, threadGroupCountZ}, commandlist.numthreads_as, commandlist.numthreads_ms);
 	}
 	void GraphicsDevice_Metal::DispatchMeshIndirect(const GPUBuffer* args, uint64_t args_offset, CommandList cmd)
 	{
 		predraw(cmd);
 		auto internal_state = to_internal(args);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		commandlist.render_encoder->drawMeshThreadgroups(internal_state->gpu_address + args_offset, commandlist.numthreads_as, commandlist.numthreads_ms);
 	}
 	void GraphicsDevice_Metal::DispatchMeshIndirectCount(const GPUBuffer* args, uint64_t args_offset, const GPUBuffer* count, uint64_t count_offset, uint32_t max_count, CommandList cmd)
 	{
