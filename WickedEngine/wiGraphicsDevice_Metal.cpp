@@ -1293,6 +1293,8 @@ using namespace metal_internal;
 			wi::platform::Exit();
 		}
 		
+		adapterName = device->name()->cString(NS::UTF8StringEncoding);
+		
 		capabilities |= GraphicsDeviceCapability::SAMPLER_MINMAX;
 		capabilities |= GraphicsDeviceCapability::ALIASING_GENERIC;
 		capabilities |= GraphicsDeviceCapability::DEPTH_BOUNDS_TEST;
