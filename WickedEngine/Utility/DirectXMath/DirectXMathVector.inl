@@ -1755,8 +1755,12 @@ inline XMVECTOR XM_CALLCONV XMVectorNearEqual
     return Control.v;
 
 #elif defined(_XM_ARM_NEON_INTRINSICS_)
-    XMVECTOR vDelta = vsubq_f32(V1,V2);
-    return vacleq_f32( vDelta, Epsilon );
+    //XMVECTOR vDelta = vsubq_f32(V1,V2);
+    //return vacleq_f32( vDelta, Epsilon );
+	
+	// Wicked Engine fix:
+	XMVECTOR vDelta = vsubq_f32(V1, V2);
+	return vreinterpretq_f32_u32(vacleq_f32( vabsq_f32(vDelta), Epsilon));
 #elif defined(_XM_SSE_INTRINSICS_)
     // Get the difference
     XMVECTOR vDelta = _mm_sub_ps(V1,V2);

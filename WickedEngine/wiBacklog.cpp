@@ -463,7 +463,7 @@ namespace wi::backlog
 		}
 		inputField.Render(canvas, cmd);
 
-		Rect rect;
+		wi::graphics::Rect rect;
 		rect.left = 0;
 		rect.right = (int32_t)canvas.GetPhysicalWidth();
 		rect.top = 0;

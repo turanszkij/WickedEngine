@@ -36,7 +36,10 @@
 #include <algorithm>
 #include <atomic>
 #include <mutex>
+
+#ifdef _WIN32
 #include <malloc.h> // alloca
+#endif // _WIN32
 
 using namespace wi::primitive;
 using namespace wi::graphics;
@@ -1946,6 +1949,13 @@ void LoadShaders()
 									}
 
 									SHADERTYPE realPS = GetPSTYPE((RENDERPASS)renderPass, alphatest, transparency, (MaterialComponent::SHADERTYPE)shaderType);
+#ifdef __APPLE__
+									if (mesh_shader && realPS == SHADERTYPE_COUNT)
+									{
+										// Apple Metal workaround: mesh shader must have pixel shader
+										realPS = PSTYPE_OBJECT_DEBUG;
+									}
+#endif // __APPLE__
 									desc.ps = realPS < SHADERTYPE_COUNT ? &shaders[realPS] : nullptr;
 
 									switch (blendMode)
@@ -2092,7 +2102,7 @@ void LoadShaders()
 											renderpass_info.rt_formats[0] = renderPass == RENDERPASS_MAIN ? format_rendertarget_main : format_idbuffer;
 										}
 										renderpass_info.ds_format = format_depthbuffer_main;
-										const uint32_t msaa_support[] = { 1,2,4,8 };
+										constexpr uint32_t msaa_support[] = { 1,2,4,8 };
 										for (uint32_t msaa : msaa_support)
 										{
 											variant.bits.sample_count = msaa;
@@ -2112,7 +2122,12 @@ void LoadShaders()
 										renderpass_info.rt_count = 1;
 										renderpass_info.rt_formats[0] = format_rendertarget_envprobe;
 										renderpass_info.ds_format = format_depthbuffer_envprobe;
-										const uint32_t msaa_support[] = { 1,8 };
+#ifdef __APPLE__
+										// Note: Apple doesn't necessarily support all MSAA smaple counts, so try to create for all possible ones:
+										constexpr uint32_t msaa_support[] = { 1,2,4,8 };
+#else
+										constexpr uint32_t msaa_support[] = { 1,EnvironmentProbeComponent::envmapMSAASampleCount };
+#endif // __APPLE__
 										for (uint32_t msaa : msaa_support)
 										{
 											variant.bits.sample_count = msaa;
@@ -3234,12 +3249,14 @@ void RenderMeshes(
 		//	Normally it's used for primitiveID generation, so it would be only used in PREPASS
 		//	PREPASS_DEPTHONLY doesn't use separate shader variants, so it will also use provoking index buffer
 		//	RENDERPASS_MAIN requires it to fix depth mismatch only on Intel GPU between prepass and color passes
+		//	RENDERPASS_VOXELIZE only needs it because it uses common layout, currently it's easier to fix here
 		//	tessellation requires it to match same primitive order between prepass and color pass to have exact same tessellation
 		const bool provokingIBRequired =
 			!wireframe && (
 				renderPass == RENDERPASS_PREPASS ||
 				renderPass == RENDERPASS_PREPASS_DEPTHONLY ||
 				renderPass == RENDERPASS_MAIN ||
+				renderPass == RENDERPASS_VOXELIZE ||
 				tessellatorRequested
 			);
 
@@ -6005,13 +6022,16 @@ void DrawSoftParticles(
 	CommandList cmd
 )
 {
+	size_t emitterCount = vis.visibleEmitters.size();
+	if (emitterCount == 0)
+		return;
+	
 	auto range = distortion ?
 		wi::profiler::BeginRangeGPU("EmittedParticles - Render (Distortion)", cmd) :
 		wi::profiler::BeginRangeGPU("EmittedParticles - Render", cmd);
 
 	BindCommonResources(cmd);
 
-	size_t emitterCount = vis.visibleEmitters.size();
 	if (emitterCount > 0)
 	{
 		// Sort emitters based on distance:
@@ -6746,7 +6766,7 @@ void DrawShadowmaps(
 				break;
 
 			Viewport* viewports = (Viewport*)alloca(sizeof(Viewport) * cascade_count);
-			Rect* scissors = (Rect*)alloca(sizeof(Rect) * cascade_count);
+			wi::graphics::Rect* scissors = (wi::graphics::Rect*)alloca(sizeof(wi::graphics::Rect) * cascade_count);
 			SHCAM* shcams = (SHCAM*)alloca(sizeof(SHCAM) * cascade_count);
 			CreateDirLightShadowCams(light, *vis.camera, shcams, cascade_count, shadow_rect, vis.scene->character_dedicated_shadows.data(), vis.scene->character_dedicated_shadows.size());
 
@@ -6851,7 +6871,7 @@ void DrawShadowmaps(
 					vp.height = float(shadow_rect.h);
 					device->BindViewports(1, &vp, cmd);
 
-					Rect scissor;
+					wi::graphics::Rect scissor;
 					scissor.from_viewport(vp);
 					device->BindScissorRects(1, &scissor, cmd);
 
@@ -6944,7 +6964,7 @@ void DrawShadowmaps(
 				vp.height = float(shadow_rect.h);
 				device->BindViewports(1, &vp, cmd);
 
-				Rect scissor;
+				wi::graphics::Rect scissor;
 				scissor.from_viewport(vp);
 				device->BindScissorRects(1, &scissor, cmd);
 
@@ -6968,7 +6988,7 @@ void DrawShadowmaps(
 				vp.height = float(shadow_rect.h);
 				device->BindViewports(1, &vp, cmd);
 
-				Rect scissor;
+				wi::graphics::Rect scissor;
 				scissor.from_viewport(vp);
 				device->BindScissorRects(1, &scissor, cmd);
 
@@ -7004,7 +7024,7 @@ void DrawShadowmaps(
 			SHCAM cameras[6];
 			CreateCubemapCameras(light.position, zNearP, zFarP, cameras, arraysize(cameras));
 			Viewport vp[arraysize(cameras)];
-			Rect scissors[arraysize(cameras)];
+			wi::graphics::Rect scissors[arraysize(cameras)];
 			Frustum frusta[arraysize(cameras)];
 			uint32_t camera_count = 0;
 
@@ -7119,7 +7139,7 @@ void DrawShadowmaps(
 					vp.height = float(shadow_rect.h);
 					device->BindViewports(1, &vp, cmd);
 
-					Rect scissor;
+					wi::graphics::Rect scissor;
 					scissor.from_viewport(vp);
 					device->BindScissorRects(1, &scissor, cmd);
 
@@ -7198,7 +7218,7 @@ void DrawShadowmaps(
 			device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 			device->BindViewports(1, &vp, cmd);
 
-			Rect scissor;
+			wi::graphics::Rect scissor;
 			scissor.from_viewport(vp);
 			device->BindScissorRects(1, &scissor, cmd);
 
@@ -9555,8 +9575,16 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		}
 		device->EventEnd(cmd);
 
-		// Finally, the complete envmap is block compressed into the probe's texture:
-		BlockCompress(envrenderingColorBuffer_Filtered, probe.texture, cmd);
+		if (IsFormatBlockCompressed(probe.texture.desc.format))
+		{
+			// Finally, the complete envmap is block compressed into the probe's texture:
+			BlockCompress(envrenderingColorBuffer_Filtered, probe.texture, cmd);
+		}
+		else
+		{
+			// In this case, block compression is not used, simply copy render result into final probe tex:
+			device->CopyResource(&probe.texture, &envrenderingColorBuffer_Filtered, cmd);
+		}
 	};
 
 	if (vis.scene->probes.GetCount() == 0)
@@ -13945,8 +13973,8 @@ void CreateSSGIResources(SSGIResources& res, XMUINT2 resolution)
 	desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 	desc.format = Format::R11G11B10_FLOAT;
 
-	resolution.x = AlignTo(resolution.x, 64u);
-	resolution.y = AlignTo(resolution.y, 64u);
+	resolution.x = align(resolution.x, 64u);
+	resolution.y = align(resolution.y, 64u);
 
 	desc.width = (resolution.x + 7) / 8;
 	desc.height = (resolution.y + 7) / 8;
@@ -14339,8 +14367,8 @@ void Postprocess_SSGI(
 			device->BindUAV(&output, 0, cmd);
 
 			const TextureDesc& desc = output.desc;
-			postprocess.resolution.x = AlignTo(desc.width, 64u);	// align = uv correction!
-			postprocess.resolution.y = AlignTo(desc.height, 64u);	// align = uv correction!
+			postprocess.resolution.x = align(desc.width, 64u);	// align = uv correction!
+			postprocess.resolution.y = align(desc.height, 64u);	// align = uv correction!
 			postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 			postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 			postprocess.params0.x = 1; // range
@@ -18535,7 +18563,7 @@ void CopyDepthStencil(
 		vp.height = (float)output_depth_stencil.desc.height;
 		device->BindViewports(1, &vp, cmd);
 
-		Rect rect;
+		wi::graphics::Rect rect;
 		rect.left = 0;
 		rect.right = output_depth_stencil.desc.width;
 		rect.top = 0;
@@ -18712,7 +18740,7 @@ void ExtractStencil(
 		vp.height = (float)output.desc.height;
 		device->BindViewports(1, &vp, cmd);
 
-		Rect rect;
+		wi::graphics::Rect rect;
 		rect.left = 0;
 		rect.right = output.desc.width;
 		rect.top = 0;

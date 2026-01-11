@@ -105,7 +105,7 @@ struct EmitLocation
 static const uint THREADCOUNT_MESH_SHADER = 32;
 
 static const uint ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION = 0;
-static const uint ARGUMENTBUFFER_OFFSET_DRAWPARTICLES = wi::graphics::AlignTo(ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION + (3 * 4), IndirectDrawArgsAlignment);
+static const uint ARGUMENTBUFFER_OFFSET_DRAWPARTICLES = align(ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION + (3 * 4), IndirectDrawArgsAlignment);
 
 
 // If this is not defined, SPH will be resolved as N-body simulation (O(n^2) complexity)

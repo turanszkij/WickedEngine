@@ -239,7 +239,7 @@ namespace wi
 		vp.height = (float)rtFinal.GetDesc().height;
 		device->BindViewports(1, &vp, cmd);
 
-		Rect rect;
+		wi::graphics::Rect rect;
 		rect.left = 0;
 		rect.right = (int32_t)rtFinal.GetDesc().width;
 		rect.top = 0;

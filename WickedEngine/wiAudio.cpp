@@ -9,12 +9,6 @@
 
 #include <sstream>
 
-template<typename T>
-static constexpr T AlignTo(T value, T alignment)
-{
-	return ((value + alignment - T(1)) / alignment) * alignment;
-}
-
 #ifdef _WIN32
 
 #include <wrl/client.h> // ComPtr
@@ -467,22 +461,22 @@ namespace wi::audio
 		instanceinternal->buffer.AudioBytes = (uint32_t)soundinternal->audioData.size();
 		if (instance->begin > 0)
 		{
-			const uint32_t bytes_from_beginning = AlignTo(std::min(instanceinternal->buffer.AudioBytes, uint32_t(instance->begin * bytes_per_second)), 4u);
+			const uint32_t bytes_from_beginning = align(std::min(instanceinternal->buffer.AudioBytes, uint32_t(instance->begin * bytes_per_second)), 4u);
 			instanceinternal->buffer.pAudioData += bytes_from_beginning;
 			instanceinternal->buffer.AudioBytes -= bytes_from_beginning;
 		}
 		if (instance->length > 0)
 		{
-			instanceinternal->buffer.AudioBytes = AlignTo(std::min(instanceinternal->buffer.AudioBytes, uint32_t(instance->length * bytes_per_second)), 4u);
+			instanceinternal->buffer.AudioBytes = align(std::min(instanceinternal->buffer.AudioBytes, uint32_t(instance->length * bytes_per_second)), 4u);
 		}
 
 		uint32_t num_remaining_samples = instanceinternal->buffer.AudioBytes / (soundinternal->wfx.nChannels * sizeof(short));
 		if (instance->loop_begin > 0)
 		{
-			instanceinternal->buffer.LoopBegin = AlignTo(std::min(num_remaining_samples, uint32_t(instance->loop_begin * soundinternal->wfx.nSamplesPerSec)), 4u);
+			instanceinternal->buffer.LoopBegin = align(std::min(num_remaining_samples, uint32_t(instance->loop_begin * soundinternal->wfx.nSamplesPerSec)), 4u);
 			num_remaining_samples -= instanceinternal->buffer.LoopBegin;
 		}
-		instanceinternal->buffer.LoopLength = AlignTo(std::min(num_remaining_samples, uint32_t(instance->loop_length * soundinternal->wfx.nSamplesPerSec)), 4u);
+		instanceinternal->buffer.LoopLength = align(std::min(num_remaining_samples, uint32_t(instance->loop_length * soundinternal->wfx.nSamplesPerSec)), 4u);
 
 		instanceinternal->buffer.Flags = XAUDIO2_END_OF_STREAM;
 		instanceinternal->buffer.LoopCount = instance->IsLooped() ? XAUDIO2_LOOP_INFINITE : 0;
@@ -1093,22 +1087,22 @@ namespace wi::audio
 		instanceinternal->buffer.AudioBytes = (uint32_t)soundinternal->audioData.size();
 		if (instance->begin > 0)
 		{
-			const uint32_t bytes_from_beginning = AlignTo(std::min(instanceinternal->buffer.AudioBytes, uint32_t(instance->begin * bytes_per_second)), 4u);
+			const uint32_t bytes_from_beginning = align(std::min(instanceinternal->buffer.AudioBytes, uint32_t(instance->begin * bytes_per_second)), 4u);
 			instanceinternal->buffer.pAudioData += bytes_from_beginning;
 			instanceinternal->buffer.AudioBytes -= bytes_from_beginning;
 		}
 		if (instance->length > 0)
 		{
-			instanceinternal->buffer.AudioBytes = AlignTo(std::min(instanceinternal->buffer.AudioBytes, uint32_t(instance->length * bytes_per_second)), 4u);
+			instanceinternal->buffer.AudioBytes = align(std::min(instanceinternal->buffer.AudioBytes, uint32_t(instance->length * bytes_per_second)), 4u);
 		}
 
 		uint32_t num_remaining_samples = instanceinternal->buffer.AudioBytes / (soundinternal->wfx.nChannels * sizeof(short));
 		if (instance->loop_begin > 0)
 		{
-			instanceinternal->buffer.LoopBegin = AlignTo(std::min(num_remaining_samples, uint32_t(instance->loop_begin * soundinternal->wfx.nSamplesPerSec)), 4u);
+			instanceinternal->buffer.LoopBegin = align(std::min(num_remaining_samples, uint32_t(instance->loop_begin * soundinternal->wfx.nSamplesPerSec)), 4u);
 			num_remaining_samples -= instanceinternal->buffer.LoopBegin;
 		}
-		instanceinternal->buffer.LoopLength = AlignTo(std::min(num_remaining_samples, uint32_t(instance->loop_length * soundinternal->wfx.nSamplesPerSec)), 4u);
+		instanceinternal->buffer.LoopLength = align(std::min(num_remaining_samples, uint32_t(instance->loop_length * soundinternal->wfx.nSamplesPerSec)), 4u);
 
 		instanceinternal->buffer.Flags = FAUDIO_END_OF_STREAM;
 		instanceinternal->buffer.LoopCount = instance->IsLooped() ? FAUDIO_LOOP_INFINITE : 0;
@@ -1304,6 +1298,277 @@ namespace wi::audio
 		ReverbConvertI3DL2ToNative(&reverbPresets[preset], &native);
 		uint32_t res = FAudioVoice_SetEffectParameters(audio_internal->reverbSubmix, 0, &native, sizeof(native), FAUDIO_COMMIT_NOW);
 		assert(res == 0);
+	}
+}
+
+#elif defined(__APPLE__)
+#define MA_IMPLEMENTATION
+#define MA_NO_ENCODING
+#define MA_DR_FLAC_NO_NEON
+#define MA_API static
+
+#include "Utility/miniaudio.h"
+
+namespace wi::audio
+{
+	struct WrappedEngine : ma_engine
+	{
+		WrappedEngine()
+		{
+			ma_result res = ma_engine_init(nullptr, this);
+			wilog_assert(res == MA_SUCCESS, "MiniAudio engine failed to initialize");
+		}
+
+		~WrappedEngine()
+		{
+			ma_engine_uninit(this);
+		}
+	};
+
+	struct WrappedSound : ma_sound
+	{
+		ma_audio_buffer* buffer = nullptr;
+		bool playing = false;
+
+		WrappedSound() {}
+
+		// Just for testing
+		WrappedSound(WrappedSound& other) = delete;
+
+		ma_result Create(ma_engine* engine, const ma_audio_buffer_config& config)
+		{
+			buffer = new ma_audio_buffer();
+			ma_audio_buffer_init(&config, buffer);
+			ma_result res = ma_sound_init_from_data_source(engine, buffer, 0, nullptr, this);
+			return res;
+		}
+
+		~WrappedSound()
+		{
+			ma_sound_uninit(this);
+			if (buffer != nullptr) delete buffer;
+		}
+	};
+
+	struct WrappedSampleInfo : SampleInfo
+	{
+		~WrappedSampleInfo()
+		{
+			delete samples;
+		}
+	};
+
+	static wi::allocator::shared_ptr<WrappedEngine> engine;
+
+	static WrappedSound* get_ma_sound(const SoundInstance* instance)
+	{
+		return instance == nullptr ? nullptr : (WrappedSound*)instance->internal_state.get();
+	}
+
+	void Initialize()
+	{
+		wi::Timer timer;
+		engine = wi::allocator::make_shared_single<WrappedEngine>();
+		wilog("wi::audio Initialized [miniaudio] (%d ms)", (int)std::round(timer.elapsed()));
+	}
+
+	static bool CreateSoundInternal(std::function<ma_result (ma_decoder_config* config, ma_uint64* frameCount, void** pcmFrames)> decoder, Sound* sound)
+	{
+		auto info = wi::allocator::make_shared<WrappedSampleInfo>();
+		ma_decoder_config config{};
+		info->channel_count = config.channels = 1;
+		info->sample_rate = config.sampleRate = ma_engine_get_sample_rate(engine.get());
+		config.format = ma_format_s16;
+		ma_uint64 count;
+		ma_result res = decoder(&config, &count, (void**)(&info->samples));
+		info->sample_count = count;
+		if (res == MA_SUCCESS)
+		{
+			sound->internal_state = info;
+			info->sample_count *= info->channel_count;
+		}
+		assert(res == MA_SUCCESS);
+		return res == MA_SUCCESS;
+
+	}
+
+	bool CreateSound(const std::string& filename, Sound* sound)
+	{
+		return CreateSoundInternal(
+			[filename](auto config, auto frameCount, auto frames) {
+				return ma_decode_file(filename.c_str(), config, frameCount, frames);
+			},
+			sound
+		);
+	}
+
+	bool CreateSound(const uint8_t* data, size_t size, Sound* sound)
+	{
+		return CreateSoundInternal(
+			[data, size](auto config, auto frameCount, auto frames) {
+				return ma_decode_memory(data, size, config, frameCount, frames);
+			},
+			sound
+		);
+	}
+
+	bool CreateSoundInstance(const Sound* sound, SoundInstance* instance)
+	{
+		auto info = (WrappedSampleInfo*)sound->internal_state.get();
+		auto wrapped_sound = wi::allocator::make_shared<WrappedSound>();
+
+		ma_audio_buffer_config config{};
+		config.channels = info->channel_count;
+		config.format = ma_format_s16;
+		config.sampleRate = info->sample_rate;
+		config.sizeInFrames = info->sample_count / info->channel_count;
+		config.pData = info->samples;
+		ma_result res = wrapped_sound->Create(engine.get(), config);
+		if (res == MA_SUCCESS)
+		{
+			instance->internal_state = wrapped_sound;
+		}
+		assert(res == MA_SUCCESS);
+		return res == MA_SUCCESS;
+	}
+
+	void Play(SoundInstance* instance)
+	{
+		auto sound = get_ma_sound(instance);
+		
+		if (sound->playing) return;
+		sound->playing = true;
+		ma_sound_set_looping(sound, instance->IsLooped());
+		if (instance->begin > 0.f)
+		{
+			ma_sound_seek_to_second(sound, instance->begin);
+		}
+		if (instance->length > 0.f)
+		{
+			ma_sound_set_stop_time_in_milliseconds(sound, ma_engine_get_time_in_milliseconds(engine.get()) + ma_uint64(instance->length * 1000.f));
+		}
+		else
+		{
+			ma_sound_set_stop_time_in_milliseconds(sound, UINT64_MAX);
+		}
+
+		ma_sound_start(sound);
+	}
+
+	void Pause(SoundInstance* instance)
+	{
+		ma_sound_stop(get_ma_sound(instance));
+		get_ma_sound(instance)->playing = false;
+	}
+
+	void Stop(SoundInstance* instance)
+	{
+		ma_sound_stop(get_ma_sound(instance));
+		ma_sound_seek_to_pcm_frame(get_ma_sound(instance), 0);
+		get_ma_sound(instance)->playing = false;
+	}
+
+	void SetVolume(float volume, SoundInstance* instance)
+	{
+		// FIXME: temporary hack because Island level has background sounds set at volume 10
+		// and XAudio doesn't seem to support amplifiying sounds
+		ma_sound_set_volume(get_ma_sound(instance), std::min(1.f, volume));
+	}
+
+	float GetVolume(const SoundInstance* instance)
+	{
+		return ma_sound_get_volume(get_ma_sound(instance));
+	}
+
+	void ExitLoop(SoundInstance* instance)
+	{
+
+	}
+	bool IsEnded(SoundInstance* instance)
+	{
+		// FIXME: Dirty hack for character_controller demo, this would be true for paused sounds as well,
+		// which is incorrect.
+		return !get_ma_sound(instance)->playing || ma_sound_at_end(get_ma_sound(instance));
+	}
+
+	SampleInfo GetSampleInfo(const Sound* sound)
+	{
+		return *(SampleInfo*)sound->internal_state.get();
+	}
+
+	uint64_t GetTotalSamplesPlayed(const SoundInstance* instance)
+	{
+		// FIXME: multiply by channels
+		return ma_sound_get_time_in_pcm_frames(get_ma_sound(instance));
+	}
+
+	void SetSubmixVolume(SUBMIX_TYPE type, float volume)
+	{
+
+	}
+
+	float GetSubmixVolume(SUBMIX_TYPE type)
+	{
+		return 0.;
+	}
+
+	void Update3D(SoundInstance* instance, const SoundInstance3D& instance3D)
+	{
+		ma_sound_set_position(
+			get_ma_sound(instance),
+			instance3D.emitterPos.x,
+			instance3D.emitterPos.y,
+			-instance3D.emitterPos.z
+		);
+		ma_sound_set_direction(
+			get_ma_sound(instance),
+			instance3D.emitterFront.x,
+			instance3D.emitterFront.y,
+			-instance3D.emitterFront.z
+		);
+		// TODO: emitterUp
+		ma_sound_set_velocity(
+			get_ma_sound(instance),
+			instance3D.emitterVelocity.x,
+			instance3D.emitterVelocity.y,
+			-instance3D.emitterVelocity.z
+		);
+		ma_sound_set_max_distance(get_ma_sound(instance), instance3D.emitterRadius);
+
+		ma_engine_listener_set_position(
+			engine.get(),
+			0,
+			instance3D.listenerPos.x,
+			instance3D.listenerPos.y,
+			-instance3D.listenerPos.z
+		);
+		ma_engine_listener_set_velocity(
+			engine.get(),
+			0,
+			instance3D.listenerVelocity.x,
+			instance3D.listenerVelocity.y,
+			-instance3D.listenerVelocity.z
+		);
+		ma_engine_listener_set_world_up(
+			engine.get(),
+			0,
+			instance3D.listenerUp.x,
+			instance3D.listenerUp.y,
+			-instance3D.listenerUp.z
+		);
+		ma_engine_listener_set_direction(
+			engine.get(),
+			0,
+			instance3D.listenerFront.x,
+			instance3D.listenerFront.y,
+			-instance3D.listenerFront.z
+		);
+
+	}
+
+	void SetReverb(REVERB_PRESET preset)
+	{
+
 	}
 }
 

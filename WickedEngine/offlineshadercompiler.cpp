@@ -400,6 +400,7 @@ int main(int argc, char* argv[])
 	*out << "\thlsl5 : \t\tCompile shaders to hlsl5 (dx11) format (using d3dcompiler)\n";
 	*out << "\thlsl6 : \t\tCompile shaders to hlsl6 (dx12) format (using dxcompiler)\n";
 	*out << "\tspirv : \t\tCompile shaders to spirv (vulkan) format (using dxcompiler)\n";
+	*out << "\tmetal : \t\tCompile shaders to Apple Metal format (using dxcompiler and metal shader converter)\n";
 	*out << "\thlsl6_xs : \t\tCompile shaders to hlsl6 Xbox Series native (dx12) format (requires Xbox SDK)\n";
 	*out << "\tps5 : \t\t\tCompile shaders to PlayStation 5 native format (requires PlayStation 5 SDK)\n";
 	*out << "\trebuild : \t\tAll shaders will be rebuilt, regardless if they are outdated or not\n";
@@ -429,6 +430,11 @@ int main(int argc, char* argv[])
 	{
 		targets.push_back({ ShaderFormat::SPIRV, "shaders/spirv/" });
 		*out << "spirv ";
+	}
+	if (wi::arguments::HasArgument("metal"))
+	{
+		targets.push_back({ ShaderFormat::METAL, "shaders/metal/" });
+		*out << "metal ";
 	}
 	if (wi::arguments::HasArgument("hlsl6_xs"))
 	{
@@ -507,9 +513,13 @@ int main(int argc, char* argv[])
 	if (targets.empty())
 	{
 		targets = {
+#ifdef __APPLE__
+			{ ShaderFormat::METAL, "shaders/metal/" },
+#else
 			//{ ShaderFormat::HLSL5, "shaders/hlsl5/" },
 			{ ShaderFormat::HLSL6, "shaders/hlsl6/" },
 			{ ShaderFormat::SPIRV, "shaders/spirv/" },
+#endif // __APPLE__
 		};
 		*out << "No shader formats were specified, assuming command arguments: spirv hlsl6\n";
 	}

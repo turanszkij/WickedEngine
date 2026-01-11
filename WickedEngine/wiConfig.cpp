@@ -351,7 +351,6 @@ namespace wi::config
 				}
 			}
 		}
-		static std::mutex locker;
 		std::scoped_lock lck(locker);
 		wi::helper::FileWrite(filename, (const uint8_t*)text.c_str(), text.length());
 	}

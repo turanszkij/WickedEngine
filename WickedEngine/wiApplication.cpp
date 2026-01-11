@@ -17,8 +17,10 @@
 #include "wiEventHandler.h"
 #include "wiPlatform.h"
 
-#ifdef PLATFORM_PS5
+#if defined(PLATFORM_PS5)
 #include "wiGraphicsDevice_PS5.h"
+#elif defined(PLATFORM_APPLE)
+#include "wiGraphicsDevice_Metal.h"
 #else
 #include "wiGraphicsDevice_DX12.h"
 #include "wiGraphicsDevice_Vulkan.h"
@@ -598,7 +600,25 @@ namespace wi
 					infodisplay_str += "Pending pipeline creations by graphics driver: " + std::to_string(pipeline_creation) + ". Some rendering will be skipped.\n";
 				}
 			}
-
+			
+			if (infoDisplay.mouse_info)
+			{
+				infodisplay_str += "Mouse = (" + std::to_string(wi::input::GetPointer().x) + ", " + std::to_string(wi::input::GetPointer().y) + ") ";
+				if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+				{
+					infodisplay_str += "| Left ";
+				}
+				if (wi::input::Down(wi::input::MOUSE_BUTTON_MIDDLE))
+				{
+					infodisplay_str += "| Middle ";
+				}
+				if (wi::input::Down(wi::input::MOUSE_BUTTON_RIGHT))
+				{
+					infodisplay_str += "| Right ";
+				}
+				infodisplay_str += "\n";
+			}
+			
 			wi::font::Params params = wi::font::Params(
 				4 + canvas.PhysicalToLogical((uint32_t)infoDisplay.rect.left),
 				4 + canvas.PhysicalToLogical((uint32_t)infoDisplay.rect.top),
@@ -681,7 +701,7 @@ namespace wi
 
 			if (infoDisplay.rect.right > 0)
 			{
-				Rect rect;
+				wi::graphics::Rect rect;
 				rect.right = canvas.width;
 				rect.bottom = canvas.height;
 				graphicsDevice->BindScissorRects(1, &rect, cmd);
@@ -742,6 +762,9 @@ namespace wi
 #ifdef PLATFORM_PS5
 			wi::renderer::SetShaderPath(wi::renderer::GetShaderPath() + "ps5/");
 			graphicsDevice = std::make_unique<GraphicsDevice_PS5>(validationMode);
+#elif defined(PLATFORM_APPLE)
+			wi::renderer::SetShaderPath(wi::renderer::GetShaderPath() + "metal/");
+			graphicsDevice = std::make_unique<GraphicsDevice_Metal>(validationMode, preference);
 
 #else
 			bool use_dx12 = wi::arguments::HasArgument("dx12");
@@ -866,6 +889,8 @@ namespace wi
 
 #elif defined(PLATFORM_LINUX)
 		SDL_SetWindowFullscreen(window, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+#elif defined(__APPLE__)
+		wi::apple::SetWindowFullScreen(window, fullscreen);
 #endif // PLATFORM_WINDOWS_DESKTOP
 	}
 

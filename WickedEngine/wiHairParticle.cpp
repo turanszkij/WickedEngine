@@ -156,16 +156,16 @@ namespace wi
 			vb_pos_raytracing.size = position_stride * gfx_vertexcount;
 
 			bd.size =
-				AlignTo(indirect_view.size, alignment) +
-				AlignTo(simulation_view.size, alignment) +
-				AlignTo(vb_pos[0].size, alignment) +
-				AlignTo(vb_pos[1].size, alignment) +
-				AlignTo(vb_nor.size, alignment) +
-				AlignTo(vb_uvs.size, alignment) +
-				AlignTo(wetmap.size, alignment) +
-				AlignTo(ib_culled.size, alignment) +
-				AlignTo(prim_view.size, alignment) +
-				AlignTo(vb_pos_raytracing.size, alignment)
+				align(indirect_view.size, alignment) +
+				align(simulation_view.size, alignment) +
+				align(vb_pos[0].size, alignment) +
+				align(vb_pos[1].size, alignment) +
+				align(vb_nor.size, alignment) +
+				align(vb_uvs.size, alignment) +
+				align(wetmap.size, alignment) +
+				align(ib_culled.size, alignment) +
+				align(prim_view.size, alignment) +
+				align(vb_pos_raytracing.size, alignment)
 				;
 #if 0 // Suballocation is disabled for hair particle system for now, there is some memory overwrite-like issue somewhere
 			wi::renderer::BufferSuballocation suballoc = wi::renderer::SuballocateGPUBuffer(bd.size);
@@ -190,7 +190,7 @@ namespace wi
 			uint64_t buffer_offset = 0ull;
 
 			const uint32_t indirect_stride = sizeof(IndirectDrawArgsIndexedInstanced);
-			buffer_offset = AlignTo(buffer_offset, alignment);
+			buffer_offset = align(buffer_offset, alignment);
 			indirect_view.offset = buffer_offset;
 			indirect_view.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, indirect_view.offset, indirect_view.size, nullptr, &indirect_stride);
 			indirect_view.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, indirect_view.offset, indirect_view.size, nullptr, &indirect_stride);
@@ -199,7 +199,7 @@ namespace wi
 			buffer_offset += indirect_view.size;
 
 			const uint32_t simulation_stride = sizeof(PatchSimulationData);
-			buffer_offset = AlignTo(buffer_offset, alignment);
+			buffer_offset = align(buffer_offset, alignment);
 			simulation_view.offset = buffer_offset;
 			simulation_view.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, simulation_view.offset, simulation_view.size, nullptr, &simulation_stride);
 			simulation_view.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, simulation_view.offset, simulation_view.size, nullptr, &simulation_stride);
@@ -207,7 +207,7 @@ namespace wi
 			simulation_view.descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, simulation_view.subresource_uav);
 			buffer_offset += simulation_view.size;
 
-			buffer_offset = AlignTo(buffer_offset, alignment);
+			buffer_offset = align(buffer_offset, alignment);
 			vb_pos[0].offset = buffer_offset;
 			vb_pos[0].subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_pos[0].offset, vb_pos[0].size, &position_format);
 			vb_pos[0].subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_pos[0].offset, vb_pos[0].size, &position_format);
@@ -215,7 +215,7 @@ namespace wi
 			vb_pos[0].descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, vb_pos[0].subresource_uav);
 			buffer_offset += vb_pos[0].size;
 
-			buffer_offset = AlignTo(buffer_offset, alignment);
+			buffer_offset = align(buffer_offset, alignment);
 			vb_pos[1].offset = buffer_offset;
 			vb_pos[1].subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_pos[1].offset, vb_pos[1].size, &position_format);
 			vb_pos[1].subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_pos[1].offset, vb_pos[1].size, &position_format);
@@ -223,7 +223,7 @@ namespace wi
 			vb_pos[1].descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, vb_pos[1].subresource_uav);
 			buffer_offset += vb_pos[1].size;
 
-			buffer_offset = AlignTo(buffer_offset, alignment);
+			buffer_offset = align(buffer_offset, alignment);
 			vb_nor.offset = buffer_offset;
 			vb_nor.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_nor.offset, vb_nor.size, &MeshComponent::Vertex_NOR::FORMAT);
 			vb_nor.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_nor.offset, vb_nor.size, &MeshComponent::Vertex_NOR::FORMAT);
@@ -231,7 +231,7 @@ namespace wi
 			vb_nor.descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, vb_nor.subresource_uav);
 			buffer_offset += vb_nor.size;
 
-			buffer_offset = AlignTo(buffer_offset, alignment);
+			buffer_offset = align(buffer_offset, alignment);
 			vb_uvs.offset = buffer_offset;
 			vb_uvs.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_uvs.offset, vb_uvs.size, &MeshComponent::Vertex_UVS::FORMAT);
 			vb_uvs.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_uvs.offset, vb_uvs.size, &MeshComponent::Vertex_UVS::FORMAT);
@@ -240,7 +240,7 @@ namespace wi
 			buffer_offset += vb_uvs.size;
 
 			constexpr Format wetmap_fmt = Format::R16_UNORM;
-			buffer_offset = AlignTo(buffer_offset, alignment);
+			buffer_offset = align(buffer_offset, alignment);
 			wetmap.offset = buffer_offset;
 			wetmap.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, wetmap.offset, wetmap.size, &wetmap_fmt);
 			wetmap.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, wetmap.offset, wetmap.size, &wetmap_fmt);
@@ -248,7 +248,7 @@ namespace wi
 			wetmap.descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, wetmap.subresource_uav);
 			buffer_offset += wetmap.size;
 
-			buffer_offset = AlignTo(buffer_offset, alignment);
+			buffer_offset = align(buffer_offset, alignment);
 			ib_culled.offset = buffer_offset;
 			ib_culled.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, ib_culled.offset, ib_culled.size, &ib_format);
 			ib_culled.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, ib_culled.offset, ib_culled.size, &ib_format);
@@ -256,7 +256,7 @@ namespace wi
 			ib_culled.descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, ib_culled.subresource_uav);
 			buffer_offset += ib_culled.size;
 
-			buffer_offset = AlignTo(buffer_offset, alignment);
+			buffer_offset = align(buffer_offset, alignment);
 			prim_view.offset = buffer_offset;
 			prim_view.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, prim_view.offset, prim_view.size, &ib_format);
 			prim_view.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, prim_view.offset, prim_view.size, &ib_format);
@@ -264,7 +264,7 @@ namespace wi
 			prim_view.descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, prim_view.subresource_uav);
 			buffer_offset += prim_view.size;
 
-			buffer_offset = AlignTo(buffer_offset, alignment);
+			buffer_offset = align(buffer_offset, alignment);
 			vb_pos_raytracing.offset = buffer_offset;
 			vb_pos_raytracing.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_pos_raytracing.offset, vb_pos_raytracing.size, &position_format);
 			vb_pos_raytracing.descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, vb_pos_raytracing.subresource_uav);

@@ -62,6 +62,7 @@ namespace wi::graphics
 		SPIRV,		// SPIR-V
 		HLSL6_XS,	// XBOX Series Native
 		PS5,		// Playstation 5
+		METAL,		// Apple Metal
 	};
 	enum class ShaderModel : uint8_t
 	{
@@ -458,7 +459,7 @@ namespace wi::graphics
 		VIDEO_DECODE_H265 = 1 << 22,
 		R9G9B9E5_SHAREDEXP_RENDERABLE = 1 << 23, // indicates supporting R9G9B9E5_SHAREDEXP format for rendering to
 		COPY_BETWEEN_DIFFERENT_IMAGE_ASPECTS_NOT_SUPPORTED = 1 << 24, // indicates that CopyTexture src and dst ImageAspect must match
-
+		
 		// Compat:
 		GENERIC_SPARSE_TILE_POOL = ALIASING_GENERIC,
 	};
@@ -1806,6 +1807,16 @@ namespace wi::graphics
 	{
 		return vertex_count > 65536 ? Format::R32_UINT : Format::R16_UINT;
 	}
+	constexpr uint32_t GetIndexStride(IndexBufferFormat format)
+	{
+		switch (format) {
+			default:
+			case IndexBufferFormat::UINT32:
+				return sizeof(uint32_t);
+			case IndexBufferFormat::UINT16:
+				return sizeof(uint16_t);
+		}
+	}
 	constexpr const char* GetIndexBufferFormatString(IndexBufferFormat format)
 	{
 		switch (format)
@@ -1900,17 +1911,6 @@ namespace wi::graphics
 		return swizzle;
 	}
 
-	template<typename T>
-	constexpr T AlignTo(T value, T alignment)
-	{
-		return ((value + alignment - T(1)) / alignment) * alignment;
-	}
-	template<typename T>
-	constexpr bool IsAligned(T value, T alignment)
-	{
-		return value == AlignTo(value, alignment);
-	}
-
 	// Get mipmap count for a given texture dimension.
 	//	width, height, depth: dimensions of the texture
 	//	min_dimension: break when all dimensions go below a specified dimension (optional, default: 1x1x1)
@@ -1925,6 +1925,29 @@ namespace wi::graphics
 			mips++;
 		}
 		return mips;
+	}
+
+	// Compute the texture memory usage for one row in a specific mip level
+	constexpr size_t ComputeTextureMipRowPitch(const TextureDesc& desc, uint32_t mip)
+	{
+		const uint32_t bytes_per_block = GetFormatStride(desc.format);
+		const uint32_t pixels_per_block = GetFormatBlockSize(desc.format);
+		const uint32_t mip_width = std::max(1u, desc.width >> mip);
+		const uint32_t num_blocks_x = (mip_width + pixels_per_block - 1) / pixels_per_block;
+		return num_blocks_x * bytes_per_block * desc.sample_count;
+	}
+
+	// Compute the texture memory usage for one mip level
+	constexpr size_t ComputeTextureMipMemorySizeInBytes(const TextureDesc& desc, uint32_t mip)
+	{
+		const uint32_t bytes_per_block = GetFormatStride(desc.format);
+		const uint32_t pixels_per_block = GetFormatBlockSize(desc.format);
+		const uint32_t mip_width = std::max(1u, desc.width >> mip);
+		const uint32_t mip_height = std::max(1u, desc.height >> mip);
+		const uint32_t mip_depth = std::max(1u, desc.depth >> mip);
+		const uint32_t num_blocks_x = (mip_width + pixels_per_block - 1) / pixels_per_block;
+		const uint32_t num_blocks_y = (mip_height + pixels_per_block - 1) / pixels_per_block;
+		return num_blocks_x * num_blocks_y * mip_depth * bytes_per_block * desc.sample_count;
 	}
 
 	// Compute the approximate texture memory usage
@@ -1949,6 +1972,33 @@ namespace wi::graphics
 		}
 		size *= desc.sample_count;
 		return size;
+	}
+
+	// Creates tightly packed texture SubresourceData array
+	inline void CreateTextureSubresourceDatas(const TextureDesc& desc, void* data_ptr, wi::vector<SubresourceData>& subresource_datas)
+	{
+		const uint32_t bytes_per_block = GetFormatStride(desc.format);
+		const uint32_t pixels_per_block = GetFormatBlockSize(desc.format);
+		const uint32_t mips = desc.mip_levels == 0 ? GetMipCount(desc.width, desc.height, desc.depth) : desc.mip_levels;
+		subresource_datas.resize(desc.array_size * mips);
+		size_t subresource_index = 0;
+		size_t subresource_data_offset = 0;
+		for (uint32_t layer = 0; layer < desc.array_size; ++layer)
+		{
+			for (uint32_t mip = 0; mip < mips; ++mip)
+			{
+				const uint32_t mip_width = std::max(1u, desc.width >> mip);
+				const uint32_t mip_height = std::max(1u, desc.height >> mip);
+				const uint32_t mip_depth = std::max(1u, desc.depth >> mip);
+				const uint32_t num_blocks_x = (mip_width + pixels_per_block - 1) / pixels_per_block;
+				const uint32_t num_blocks_y = (mip_height + pixels_per_block - 1) / pixels_per_block;
+				SubresourceData& subresource_data = subresource_datas[subresource_index++];
+				subresource_data.data_ptr = (uint8_t*)data_ptr + subresource_data_offset;
+				subresource_data.row_pitch = (uint32_t)num_blocks_x * bytes_per_block; // the buffer is tightly packed, no padding in row pitch
+				subresource_data.slice_pitch = (uint32_t)subresource_data.row_pitch * num_blocks_y;
+				subresource_data_offset += subresource_data.slice_pitch * mip_depth;
+			}
+		}
 	}
 
 

@@ -7,6 +7,7 @@ struct GSInput
 	float4 uvsets : UVSETS;
 	half4 color : COLOR;
 	float3 nor : NORMAL;
+	float3 P : POSITION3D;
 };
 
 // Note: centroid interpolation is used to avoid floating voxels in some cases

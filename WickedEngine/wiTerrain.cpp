@@ -15,6 +15,14 @@
 #include <atomic>
 #include <deque>
 
+// This will do terrain rendering without sparse texture usage, with extra tile copies for block compression:
+//#define NOSPARSE
+
+#ifdef __APPLE__
+// On Apple Metal API the sparse texture doesn't seem to work with block compression aliasing, so use this mode as workaround:
+#define NOSPARSE
+#endif // __APPLE__
+
 using namespace wi::ecs;
 using namespace wi::scene;
 using namespace wi::graphics;
@@ -1546,8 +1554,14 @@ namespace wi::terrain
 
 			if (!atlas.IsValid())
 			{
+#ifdef NOSPARSE
+				// Try to account for memory increase in no-sparse mode, reduce atlas size:
+				const uint32_t physical_width = 16384u;
+				const uint32_t physical_height = 8192u;
+#else
 				const uint32_t physical_width = 16384u;
 				const uint32_t physical_height = 16384u;
+#endif // NOSPARSE
 				GPUBufferDesc tile_pool_desc;
 
 				for (uint32_t map_type = 0; map_type < arraysize(atlas.maps); ++map_type)
@@ -1555,7 +1569,9 @@ namespace wi::terrain
 					TextureDesc desc;
 					desc.width = physical_width;
 					desc.height = physical_height;
+#ifndef NOSPARSE
 					desc.misc_flags = ResourceMiscFlag::SPARSE;
+#endif // NOSPARSE
 					desc.bind_flags = BindFlag::SHADER_RESOURCE;
 					desc.mip_levels = 1;
 					desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
@@ -1596,12 +1612,14 @@ namespace wi::terrain
 					assert(success);
 					device->SetName(&atlas.maps[map_type].texture_raw_block, "VirtualTextureAtlas::texture_raw_block");
 
+#ifndef NOSPARSE
 					assert(atlas.maps[map_type].texture.sparse_properties->total_tile_count == atlas.maps[map_type].texture_raw_block.sparse_properties->total_tile_count);
 					assert(atlas.maps[map_type].texture.sparse_page_size == atlas.maps[map_type].texture_raw_block.sparse_page_size);
 
 					tile_pool_desc.size += atlas.maps[map_type].texture.sparse_properties->total_tile_count * atlas.maps[map_type].texture.sparse_page_size;
 					tile_pool_desc.alignment = std::max(tile_pool_desc.alignment, atlas.maps[map_type].texture.sparse_page_size);
-
+#endif // NOSPARSE
+					
 					for (uint32_t i = 0; i < atlas.maps[map_type].texture_raw_block.desc.mip_levels; ++i)
 					{
 						int subresource_index = device->CreateSubresource(&atlas.maps[map_type].texture_raw_block, SubresourceType::UAV, 0, 1, i, 1);
@@ -1609,9 +1627,11 @@ namespace wi::terrain
 					}
 				}
 
+#ifndef NOSPARSE
 				tile_pool_desc.misc_flags = ResourceMiscFlag::SPARSE_TILE_POOL_TEXTURE_NON_RT_DS;
 				bool success = device->CreateBuffer(&tile_pool_desc, nullptr, &atlas.tile_pool);
 				assert(success);
+#endif // NOSPARSE
 
 				atlas.physical_tile_count_x = uint8_t(physical_width / SVT_TILE_SIZE_PADDED);
 				atlas.physical_tile_count_y = uint8_t(physical_height / SVT_TILE_SIZE_PADDED);
@@ -1631,6 +1651,7 @@ namespace wi::terrain
 					}
 				}
 
+#ifndef NOSPARSE
 				uint32_t offset = 0;
 				for (uint32_t map_type = 0; map_type < arraysize(atlas.maps); ++map_type)
 				{
@@ -1657,6 +1678,7 @@ namespace wi::terrain
 					device->SparseUpdate(QUEUE_COMPUTE, commands, arraysize(commands));
 					offset += count;
 				}
+#endif // NOSPARSE
 			}
 
 			if (chunk_data.vt == nullptr)
@@ -1869,6 +1891,8 @@ namespace wi::terrain
 		GraphicsDevice* device = GetDevice();
 		device->EventBegin("Terrain - UpdateVirtualTexturesGPU", cmd);
 		auto range = wi::profiler::BeginRangeGPU("Terrain - UpdateVirtualTexturesGPU", cmd);
+		
+		device->Barrier(GPUBarrier::Memory(), cmd); // on Apple this fixes corruption so better be safe on all platforms, do not remove
 
 		device->EventBegin("Update Residency Maps", cmd);
 		device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_VIRTUALTEXTURE_RESIDENCYUPDATE), cmd);
@@ -2015,12 +2039,55 @@ namespace wi::terrain
 							cmd
 						);
 					}
+					
+#ifdef NOSPARSE
+					push.write_offset = write_offset_original;
+					push.write_size = SVT_TILE_SIZE_PADDED / 4u;
+					NoSparseCopy nosparse;
+					nosparse.texture_src = &atlas.maps[map_type].texture_raw_block;
+					nosparse.texture_dst = &atlas.maps[map_type].texture;
+					nosparse.srcbox.left = push.write_offset.x;
+					nosparse.srcbox.right = nosparse.srcbox.left + push.write_size;
+					nosparse.srcbox.top = push.write_offset.y;
+					nosparse.srcbox.bottom = nosparse.srcbox.top + push.write_size;
+					nosparse.srcbox.back = 1;
+					nosparse_copies.push_back(nosparse);
+#endif // NOSPARSE
 				}
 			}
 			vt->update_requests.clear();
 		}
 		device->Barrier(GPUBarrier::Memory(), cmd);
 		device->EventEnd(cmd);
+
+#ifdef NOSPARSE
+		device->EventBegin("Terrain - Nosparse Copies", cmd);
+		// Batch all of the Block compression copies after the region updating when sparse texture is disabled:
+		for (auto& map : atlas.maps)
+		{
+			if (!map.texture.IsValid())
+				continue;
+			wi::renderer::PushBarrier(GPUBarrier::Image(&map.texture, ResourceState::SHADER_RESOURCE, ResourceState::COPY_DST));
+			wi::renderer::PushBarrier(GPUBarrier::Image(&map.texture_raw_block, ResourceState::UNORDERED_ACCESS, ResourceState::COPY_SRC));
+		}
+		wi::renderer::FlushBarriers(cmd);
+
+		for (auto& x : nosparse_copies)
+		{
+			device->CopyTexture(x.texture_dst, x.srcbox.left * 4, x.srcbox.top * 4, 0, 0, 0, x.texture_src, 0, 0, cmd, &x.srcbox);
+		}
+		nosparse_copies.clear();
+
+		for (auto& map : atlas.maps)
+		{
+			if (!map.texture.IsValid())
+				continue;
+			wi::renderer::PushBarrier(GPUBarrier::Image(&map.texture, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
+			wi::renderer::PushBarrier(GPUBarrier::Image(&map.texture_raw_block, ResourceState::COPY_SRC, ResourceState::UNORDERED_ACCESS));
+		}
+		wi::renderer::FlushBarriers(cmd);
+		device->EventEnd(cmd);
+#endif // NOSPARSE
 
 		wi::profiler::EndRange(range);
 		device->EventEnd(cmd);

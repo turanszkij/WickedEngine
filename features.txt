@@ -3,6 +3,7 @@ Feature list
 
 DirectX 12 renderer
 Vulkan renderer
+Metal renderer
 Image rendering
 Font rendering (True Type)
 Networking (UDP)

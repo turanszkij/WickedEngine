@@ -31,6 +31,7 @@ You can get the full source code by using Git version control and cloning https:
 ### Platforms:
 - Windows 10+
 - Linux
+- Mac OS
 - Xbox Series X|S
 - PlayStation 5
 
@@ -75,6 +76,14 @@ make
 <img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/character_grass.gif" width="320px"/>
 
 If you want to develop an application that uses Wicked Engine, you will have to link to libWickedEngine.a and `#include "WickedEngine.h"` into the source code. For examples, look at the Cmake files, or the Tests and the Editor applications.
+
+#### Mac OS
+To build  the engine for Mac OS, use the provided .xcodeproj files with the Xcode development environment, for example:
+- WickedEngine/WickedEngine.xcodeproj to build static library
+- Editor/Editor.xcodeproj to build the Wicked Editor
+- Samples/Template_MacOS/Template_MacOS.xcodeproj to build a minimal template application for MacOS
+
+If you want to develop an application that uses Wicked Engine, you will have to link to libWickedEngine.a and `#include "WickedEngine.h"` into the source code. You also need to add references to the following Apple SDKs: `Metal`, `AppKit`. I also recommend to set up a custom working directory in the Product->Scheme->Edit Scheme->Options->custom working directory = `$(PROJECT_DIR)`, this will better match the development experience in Visual Studio. For examples, look at the Template_MacOS and Editor projects.
 
 #### Xbox Series X|S
 Xbox Series specific extension files required for building are currently private.

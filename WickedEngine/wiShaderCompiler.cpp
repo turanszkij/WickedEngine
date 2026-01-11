@@ -15,13 +15,13 @@
 using namespace Microsoft::WRL;
 #endif // _WIN32
 
-#ifdef PLATFORM_LINUX
+#if defined(PLATFORM_LINUX) || defined(PLATFORM_APPLE)
 #define SHADERCOMPILER_ENABLED
 #define SHADERCOMPILER_ENABLED_DXCOMPILER
 #define __RPC_FAR
 #define ComPtr CComPtr
 #include "Utility/dxc/WinAdapter.h"
-#endif // PLATFORM_LINUX
+#endif // defined(PLATFORM_LINUX) || defined(PLATFORM_APPLE)
 
 #ifdef SHADERCOMPILER_ENABLED_DXCOMPILER
 #include "Utility/dxc/dxcapi.h"
@@ -41,6 +41,12 @@ using namespace Microsoft::WRL;
 #define SHADERCOMPILER_PS5_INCLUDED
 #endif // __has_include("wiShaderCompiler_PS5.h") && !PLATFORM_PS5
 
+#ifdef PLATFORM_APPLE
+#define SHADERCOMPILER_APPLE_INCLUDED
+#include <metal_irconverter/metal_irconverter.h>
+#include "wiGraphicsDevice_Metal.h"
+#endif // PLATFORM_APPLE
+
 using namespace wi::graphics;
 
 namespace wi::shadercompiler
@@ -58,6 +64,9 @@ namespace wi::shadercompiler
 			HMODULE dxcompiler = wiLoadLibrary(library.c_str());
 #elif defined(PLATFORM_LINUX)
 			const std::string library = "./libdxcompiler" + modifier + ".so";
+			HMODULE dxcompiler = wiLoadLibrary(library.c_str());
+#elif defined(PLATFORM_APPLE)
+			const std::string library = "./libdxcompiler" + modifier + ".dylib";
 			HMODULE dxcompiler = wiLoadLibrary(library.c_str());
 #endif
 			if (dxcompiler != nullptr)
@@ -146,6 +155,12 @@ namespace wi::shadercompiler
 		{
 			args.push_back(L"-Od");
 		}
+		
+		if (has_flag(input.flags, Flags::KEEP_DEBUG_INFORMATION))
+		{
+			args.push_back(L"-Zi");
+			args.push_back(L"-Qembed_debug");
+		}
 
 		switch (input.format)
 		{
@@ -167,6 +182,9 @@ namespace wi::shadercompiler
 			args.push_back(L"-fvk-u-shift"); args.push_back(L"2000"); args.push_back(L"0");
 			args.push_back(L"-fvk-s-shift"); args.push_back(L"3000"); args.push_back(L"0");
 			break;
+		case ShaderFormat::METAL:
+			args.push_back(L"-D"); args.push_back(L"__metal__");
+			break;
 		default:
 			assert(0);
 			return;
@@ -179,6 +197,12 @@ namespace wi::shadercompiler
 
 		if (input.format == ShaderFormat::HLSL6_XS)
 		{
+			minshadermodel = ShaderModel::SM_6_6;
+		}
+		
+		if (input.format == ShaderFormat::METAL)
+		{
+			// handling SM6.6 style bindless in Metal API is simpler than unbounded descriptor tables:
 			minshadermodel = ShaderModel::SM_6_6;
 		}
 
@@ -547,11 +571,253 @@ namespace wi::shadercompiler
 			output.dependencies.push_back(input.shadersourcefilename);
 			output.shaderdata = (const uint8_t*)pShader->GetBufferPointer();
 			output.shadersize = pShader->GetBufferSize();
-
+			
 			// keep the blob alive == keep shader pointer valid!
 			auto internal_state = wi::allocator::make_shared<ComPtr<IDxcBlob>>();
 			*internal_state = pShader;
 			output.internal_state = internal_state;
+			
+#ifdef SHADERCOMPILER_APPLE_INCLUDED
+			if (input.format == ShaderFormat::METAL)
+			{
+				static HMODULE irconverter = wiLoadLibrary("libmetalirconverter.dylib");
+				assert(irconverter); // You must install the metal shader converter
+				if (irconverter != nullptr)
+				{
+#define LINK_IR(name) using PFN_##name = decltype(&name); static PFN_##name name = (PFN_##name)wiGetProcAddress(irconverter, #name);
+					LINK_IR(IRCompilerCreate)
+					LINK_IR(IRCompilerSetMinimumGPUFamily)
+					LINK_IR(IRCompilerSetCompatibilityFlags)
+					LINK_IR(IRCompilerSetValidationFlags)
+					LINK_IR(IRCompilerSetEntryPointName)
+					LINK_IR(IRCompilerSetStageInGenerationMode)
+					LINK_IR(IRObjectCreateFromDXIL)
+					LINK_IR(IRCompilerAllocCompileAndLink)
+					LINK_IR(IRErrorDestroy)
+					LINK_IR(IRMetalLibBinaryCreate)
+					LINK_IR(IRObjectGetMetalLibBinary)
+					LINK_IR(IRMetalLibGetBytecodeSize)
+					LINK_IR(IRMetalLibGetBytecode)
+					LINK_IR(IRMetalLibBinaryDestroy)
+					LINK_IR(IRObjectDestroy)
+					LINK_IR(IRCompilerDestroy)
+					LINK_IR(IRRootSignatureCreateFromDescriptor)
+					LINK_IR(IRCompilerSetGlobalRootSignature)
+					LINK_IR(IRCompilerEnableGeometryAndTessellationEmulation)
+					//LINK_IR(IRRootSignatureDestroy)
+					
+					static IRDescriptorRange1 binding_resources[] =
+					{
+						{ .RangeType = IRDescriptorRangeTypeCBV, .BaseShaderRegister = arraysize(GraphicsDevice_Metal::RootLayout::root_cbvs), .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = IRDescriptorRangeOffsetAppend, .NumDescriptors = (arraysize(DescriptorBindingTable::CBV) - arraysize(GraphicsDevice_Metal::RootLayout::root_cbvs)), .Flags = IRDescriptorRangeFlagDataStaticWhileSetAtExecute },
+						{ .RangeType = IRDescriptorRangeTypeSRV, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = IRDescriptorRangeOffsetAppend, .NumDescriptors = arraysize(DescriptorBindingTable::SRV), .Flags = IRDescriptorRangeFlagDataStaticWhileSetAtExecute },
+						{ .RangeType = IRDescriptorRangeTypeUAV, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = IRDescriptorRangeOffsetAppend, .NumDescriptors = arraysize(DescriptorBindingTable::UAV), .Flags = IRDescriptorRangeFlagDataStaticWhileSetAtExecute },
+					};
+					static IRDescriptorRange1 binding_samplers[] =
+					{
+						{ .RangeType = IRDescriptorRangeTypeSampler, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = IRDescriptorRangeOffsetAppend, .NumDescriptors = arraysize(DescriptorBindingTable::SAM), .Flags = IRDescriptorRangeFlagDescriptorsVolatile },
+						{ .RangeType = IRDescriptorRangeTypeSampler, .BaseShaderRegister = 100, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = IRDescriptorRangeOffsetAppend, .NumDescriptors = arraysize(GraphicsDevice_Metal::StaticSamplerDescriptors::samplers), .Flags = IRDescriptorRangeFlagDescriptorsVolatile }, // static samplers workaround (**)
+					};
+					static IRRootParameter1 root_parameters[] =
+					{
+						{
+							.ParameterType = IRRootParameterType32BitConstants,
+							.Constants = { .ShaderRegister = 999, .Num32BitValues = arraysize(GraphicsDevice_Metal::RootLayout::constants), .RegisterSpace = 0 },
+							.ShaderVisibility = IRShaderVisibilityAll
+						},
+						{
+							.ParameterType = IRRootParameterTypeCBV,
+							.Descriptor = { .ShaderRegister = 0, .RegisterSpace = 0, .Flags = IRRootDescriptorFlagNone },
+							.ShaderVisibility = IRShaderVisibilityAll
+						},
+						{
+							.ParameterType = IRRootParameterTypeCBV,
+							.Descriptor = { .ShaderRegister = 1, .RegisterSpace = 0, .Flags = IRRootDescriptorFlagNone },
+							.ShaderVisibility = IRShaderVisibilityAll
+						},
+						{
+							.ParameterType = IRRootParameterTypeCBV,
+							.Descriptor = { .ShaderRegister = 2, .RegisterSpace = 0, .Flags = IRRootDescriptorFlagNone },
+							.ShaderVisibility = IRShaderVisibilityAll
+						},
+						{
+							.ParameterType = IRRootParameterTypeDescriptorTable,
+							.DescriptorTable = { .NumDescriptorRanges = arraysize(binding_resources), .pDescriptorRanges = binding_resources },
+							.ShaderVisibility = IRShaderVisibilityAll
+						},
+						{
+							.ParameterType = IRRootParameterTypeDescriptorTable,
+							.DescriptorTable = { .NumDescriptorRanges = arraysize(binding_samplers), .pDescriptorRanges = binding_samplers },
+							.ShaderVisibility = IRShaderVisibilityAll
+						},
+					};
+					
+					// Actually the static samplers don't work in Metal so I don't know why there is an API to describe them:
+					//	Instead they will be put into the binding sampler table as a workaround (**)
+					
+					//static IRStaticSamplerDescriptor static_samplers[] =
+					//{
+					//	{ .ShaderRegister = 100, .RegisterSpace = 0, .Filter = IRFilterMinMagMipLinear, .AddressU = IRTextureAddressModeClamp, .AddressV = IRTextureAddressModeClamp, .AddressW = IRTextureAddressModeClamp, .MipLODBias = 0, .MaxAnisotropy = 1, .ComparisonFunc = IRComparisonFunctionNever, .BorderColor = IRStaticBorderColorOpaqueBlack, .MinLOD = 0, .MaxLOD = FLT_MAX, .ShaderVisibility = IRShaderVisibilityAll },
+					//	{ .ShaderRegister = 101, .RegisterSpace = 0, .Filter = IRFilterMinMagMipLinear, .AddressU = IRTextureAddressModeWrap, .AddressV = IRTextureAddressModeWrap, .AddressW = IRTextureAddressModeWrap, .MipLODBias = 0, .MaxAnisotropy = 1, .ComparisonFunc = IRComparisonFunctionNever, .BorderColor = IRStaticBorderColorOpaqueBlack, .MinLOD = 0, .MaxLOD = FLT_MAX, .ShaderVisibility = IRShaderVisibilityAll },
+					//	{ .ShaderRegister = 102, .RegisterSpace = 0, .Filter = IRFilterMinMagMipLinear, .AddressU = IRTextureAddressModeMirror, .AddressV = IRTextureAddressModeMirror, .AddressW = IRTextureAddressModeMirror, .MipLODBias = 0, .MaxAnisotropy = 1, .ComparisonFunc = IRComparisonFunctionNever, .BorderColor = IRStaticBorderColorOpaqueBlack, .MinLOD = 0, .MaxLOD = FLT_MAX, .ShaderVisibility = IRShaderVisibilityAll },
+					//
+					//	{ .ShaderRegister = 103, .RegisterSpace = 0, .Filter = IRFilterMinMagMipPoint, .AddressU = IRTextureAddressModeClamp, .AddressV = IRTextureAddressModeClamp, .AddressW = IRTextureAddressModeClamp, .MipLODBias = 0, .MaxAnisotropy = 1, .ComparisonFunc = IRComparisonFunctionNever, .BorderColor = IRStaticBorderColorOpaqueBlack, .MinLOD = 0, .MaxLOD = FLT_MAX, .ShaderVisibility = IRShaderVisibilityAll },
+					//	{ .ShaderRegister = 104, .RegisterSpace = 0, .Filter = IRFilterMinMagMipPoint, .AddressU = IRTextureAddressModeWrap, .AddressV = IRTextureAddressModeWrap, .AddressW = IRTextureAddressModeWrap, .MipLODBias = 0, .MaxAnisotropy = 1, .ComparisonFunc = IRComparisonFunctionNever, .BorderColor = IRStaticBorderColorOpaqueBlack, .MinLOD = 0, .MaxLOD = FLT_MAX, .ShaderVisibility = IRShaderVisibilityAll },
+					//	{ .ShaderRegister = 105, .RegisterSpace = 0, .Filter = IRFilterMinMagMipPoint, .AddressU = IRTextureAddressModeMirror, .AddressV = IRTextureAddressModeMirror, .AddressW = IRTextureAddressModeMirror, .MipLODBias = 0, .MaxAnisotropy = 1, .ComparisonFunc = IRComparisonFunctionNever, .BorderColor = IRStaticBorderColorOpaqueBlack, .MinLOD = 0, .MaxLOD = FLT_MAX, .ShaderVisibility = IRShaderVisibilityAll },
+					//
+					//	{ .ShaderRegister = 106, .RegisterSpace = 0, .Filter = IRFilterAnisotropic, .AddressU = IRTextureAddressModeClamp, .AddressV = IRTextureAddressModeClamp, .AddressW = IRTextureAddressModeClamp, .MipLODBias = 0, .MaxAnisotropy = 16, .ComparisonFunc = IRComparisonFunctionNever, .BorderColor = IRStaticBorderColorOpaqueBlack, .MinLOD = 0, .MaxLOD = FLT_MAX, .ShaderVisibility = IRShaderVisibilityAll },
+					//	{ .ShaderRegister = 107, .RegisterSpace = 0, .Filter = IRFilterAnisotropic, .AddressU = IRTextureAddressModeWrap, .AddressV = IRTextureAddressModeWrap, .AddressW = IRTextureAddressModeWrap, .MipLODBias = 0, .MaxAnisotropy = 16, .ComparisonFunc = IRComparisonFunctionNever, .BorderColor = IRStaticBorderColorOpaqueBlack, .MinLOD = 0, .MaxLOD = FLT_MAX, .ShaderVisibility = IRShaderVisibilityAll },
+					//	{ .ShaderRegister = 108, .RegisterSpace = 0, .Filter = IRFilterAnisotropic, .AddressU = IRTextureAddressModeMirror, .AddressV = IRTextureAddressModeMirror, .AddressW = IRTextureAddressModeMirror, .MipLODBias = 0, .MaxAnisotropy = 16, .ComparisonFunc = IRComparisonFunctionNever, .BorderColor = IRStaticBorderColorOpaqueBlack, .MinLOD = 0, .MaxLOD = FLT_MAX, .ShaderVisibility = IRShaderVisibilityAll },
+					//
+					//	{ .ShaderRegister = 109, .RegisterSpace = 0, .Filter = IRFilterComparisonMinMagLinearMipPoint, .AddressU = IRTextureAddressModeClamp, .AddressV = IRTextureAddressModeClamp, .AddressW = IRTextureAddressModeClamp, .MipLODBias = 0, .MaxAnisotropy = 1, .ComparisonFunc = IRComparisonFunctionGreaterEqual, .BorderColor = IRStaticBorderColorOpaqueBlack, .MinLOD = 0, .MaxLOD = 0, .ShaderVisibility = IRShaderVisibilityAll },
+					//};
+					
+					static const IRVersionedRootSignatureDescriptor desc = {
+						.version = IRRootSignatureVersion_1_1,
+						.desc_1_1.Flags = IRRootSignatureFlags(IRRootSignatureFlagAllowInputAssemblerInputLayout | IRRootSignatureFlagCBVSRVUAVHeapDirectlyIndexed | IRRootSignatureFlagSamplerHeapDirectlyIndexed),
+						.desc_1_1.NumParameters = arraysize(root_parameters),
+						.desc_1_1.pParameters = root_parameters,
+						//.desc_1_1.NumStaticSamplers = arraysize(static_samplers),
+						//.desc_1_1.pStaticSamplers = static_samplers,
+					};
+					static IRError* pRootSigError = nullptr;
+					static IRRootSignature* pRootSig = IRRootSignatureCreateFromDescriptor(&desc, &pRootSigError);
+					if (pRootSig == nullptr)
+					{
+						assert(0);
+						IRErrorDestroy(pRootSigError);
+					}
+					
+					IRCompiler* pCompiler = IRCompilerCreate();
+					IRCompilerSetMinimumGPUFamily(pCompiler, IRGPUFamilyMetal3);
+					IRCompilerSetCompatibilityFlags(pCompiler, IRCompatibilityFlags(IRCompatibilityFlagBoundsCheck | IRCompatibilityFlagPositionInvariance | IRCompatibilityFlagTextureMinLODClamp | IRCompatibilityFlagSamplerLODBias));
+					IRCompilerSetValidationFlags(pCompiler, IRCompilerValidationFlagAll);
+					IRCompilerSetEntryPointName(pCompiler, input.entrypoint.c_str());
+					IRCompilerSetGlobalRootSignature(pCompiler, pRootSig);
+					IRCompilerSetStageInGenerationMode(pCompiler, IRStageInCodeGenerationModeUseMetalVertexFetch);
+					//IRCompilerEnableGeometryAndTessellationEmulation(pCompiler, true);
+					IRObject* pDXIL = IRObjectCreateFromDXIL(output.shaderdata, output.shadersize, IRBytecodeOwnershipNone);
+					IRError* pError = nullptr;
+					IRObject* pOutIR = IRCompilerAllocCompileAndLink(pCompiler, NULL, pDXIL, &pError);
+					if (pOutIR == nullptr)
+					{
+						assert(0);
+						IRErrorDestroy(pError);
+					}
+					IRMetalLibBinary* pMetallib = IRMetalLibBinaryCreate();
+					IRShaderStage irstage = {};
+					switch (input.stage) {
+						case ShaderStage::VS:
+							irstage = IRShaderStageVertex;
+							break;
+						case ShaderStage::PS:
+							irstage = IRShaderStageFragment;
+							break;
+						case ShaderStage::GS:
+							irstage = IRShaderStageGeometry;
+							break;
+						case ShaderStage::HS:
+							irstage = IRShaderStageHull;
+							break;
+						case ShaderStage::DS:
+							irstage = IRShaderStageDomain;
+							break;
+						case ShaderStage::MS:
+							irstage = IRShaderStageMesh;
+							break;
+						case ShaderStage::AS:
+							irstage = IRShaderStageAmplification;
+							break;
+						case ShaderStage::CS:
+							irstage = IRShaderStageCompute;
+							break;
+						default:
+							assert(0);
+							break;
+					}
+					IRObjectGetMetalLibBinary(pOutIR, irstage, pMetallib);
+					size_t metallibSize = IRMetalLibGetBytecodeSize(pMetallib);
+					auto internal_state = wi::allocator::make_shared<wi::vector<uint8_t>>(metallibSize); // lifetime storage of pointer
+					IRMetalLibGetBytecode(pMetallib, internal_state->data());
+					if (
+						input.stage == ShaderStage::VS ||
+						input.stage == ShaderStage::GS ||
+						input.stage == ShaderStage::CS ||
+						input.stage == ShaderStage::MS ||
+						input.stage == ShaderStage::AS
+						)
+					{
+						LINK_IR(IRShaderReflectionCreate)
+						LINK_IR(IRObjectGetReflection)
+						LINK_IR(IRShaderReflectionCopyVertexInfo)
+						LINK_IR(IRShaderReflectionCopyGeometryInfo)
+						LINK_IR(IRShaderReflectionCopyComputeInfo)
+						LINK_IR(IRShaderReflectionCopyMeshInfo)
+						LINK_IR(IRShaderReflectionCopyAmplificationInfo)
+						LINK_IR(IRShaderReflectionDestroy)
+						
+						// Add the numthreads information to end of the shader:
+						IRShaderReflection* reflection = IRShaderReflectionCreate();
+						bool success = IRObjectGetReflection(pOutIR, irstage, reflection);
+						assert(success);
+						wi::graphics::GraphicsDevice_Metal::ShaderAdditionalData reflection_append = {};
+						if (input.stage == ShaderStage::VS)
+						{
+							IRVersionedVSInfo vs_info = {};
+							success = IRShaderReflectionCopyVertexInfo(reflection, IRReflectionVersion_1_0, &vs_info);
+							assert(success);
+							reflection_append.needs_draw_params = vs_info.info_1_0.needs_draw_params ? 1 : 0;
+							reflection_append.vertex_output_size_in_bytes = vs_info.info_1_0.vertex_output_size_in_bytes;
+						}
+						if (input.stage == ShaderStage::GS)
+						{
+							IRVersionedGSInfo gs_info = {};
+							success = IRShaderReflectionCopyGeometryInfo(reflection, IRReflectionVersion_1_0, &gs_info);
+							assert(success);
+							reflection_append.max_input_primitives_per_mesh_threadgroup = gs_info.info_1_0.max_input_primitives_per_mesh_threadgroup;
+						}
+						if (input.stage == ShaderStage::CS)
+						{
+							IRVersionedCSInfo cs_info = {};
+							success = IRShaderReflectionCopyComputeInfo(reflection, IRReflectionVersion_1_0, &cs_info);
+							assert(success);
+							reflection_append.numthreads.width = cs_info.info_1_0.tg_size[0];
+							reflection_append.numthreads.height = cs_info.info_1_0.tg_size[1];
+							reflection_append.numthreads.depth = cs_info.info_1_0.tg_size[2];
+						}
+						else if (input.stage == ShaderStage::MS)
+						{
+							IRVersionedMSInfo ms_info = {};
+							success = IRShaderReflectionCopyMeshInfo(reflection, IRReflectionVersion_1_0, &ms_info);
+							assert(success);
+							reflection_append.numthreads.width = ms_info.info_1_0.num_threads[0];
+							reflection_append.numthreads.height = ms_info.info_1_0.num_threads[1];
+							reflection_append.numthreads.depth = ms_info.info_1_0.num_threads[2];
+						}
+						else if (input.stage == ShaderStage::AS)
+						{
+							IRVersionedASInfo as_info = {};
+							success = IRShaderReflectionCopyAmplificationInfo(reflection, IRReflectionVersion_1_0, &as_info);
+							assert(success);
+							reflection_append.numthreads.width = as_info.info_1_0.num_threads[0];
+							reflection_append.numthreads.height = as_info.info_1_0.num_threads[1];
+							reflection_append.numthreads.depth = as_info.info_1_0.num_threads[2];
+						}
+						internal_state->resize(internal_state->size() + sizeof(reflection_append));
+						std::memcpy(internal_state->data() + internal_state->size() - sizeof(reflection_append), &reflection_append, sizeof(reflection_append));
+						IRShaderReflectionDestroy(reflection);
+					}
+					output.internal_state = internal_state;
+					output.shaderdata = internal_state->data();
+					output.shadersize = internal_state->size();
+					IRMetalLibBinaryDestroy(pMetallib);
+					IRObjectDestroy(pDXIL);
+					IRObjectDestroy(pOutIR);
+					IRCompilerDestroy(pCompiler);
+					//IRRootSignatureDestroy(pRootSig);
+				}
+			}
+#endif // SHADERCOMPILER_APPLE_INCLUDED
+			
 		}
 
 		if (input.format == ShaderFormat::HLSL6)
@@ -745,6 +1011,7 @@ namespace wi::shadercompiler
 		case ShaderFormat::HLSL6:
 		case ShaderFormat::SPIRV:
 		case ShaderFormat::HLSL6_XS:
+		case ShaderFormat::METAL:
 			Compile_DXCompiler(input, output);
 			break;
 #endif // SHADERCOMPILER_ENABLED_DXCOMPILER

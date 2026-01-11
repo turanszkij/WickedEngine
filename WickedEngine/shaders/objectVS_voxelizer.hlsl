@@ -8,9 +8,7 @@ struct VSOut
 	float4 uvsets : UVSETS;
 	half4 color : COLOR;
 	float3 N : NORMAL;
-#ifndef VOXELIZATION_GEOMETRY_SHADER_ENABLED
 	float3 P : POSITION3D;
-#endif // VOXELIZATION_GEOMETRY_SHADER_ENABLED
 };
 
 VSOut main(VertexInput input)
@@ -23,10 +21,9 @@ VSOut main(VertexInput input)
 	Out.color = surface.color;
 	Out.uvsets = surface.uvsets;
 	Out.N = surface.normal;
-
-#ifndef VOXELIZATION_GEOMETRY_SHADER_ENABLED
 	Out.P = surface.position.xyz;
 
+#ifndef VOXELIZATION_GEOMETRY_SHADER_ENABLED
 	VoxelClipMap clipmap = GetFrame().vxgi.clipmaps[g_xVoxelizer.clipmap_index];
 
 	// World space -> Voxel grid space:

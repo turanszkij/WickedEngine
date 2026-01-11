@@ -131,6 +131,11 @@ namespace wi::profiler
 					const uint64_t begin_result = queryResults[begin_idx];
 					const uint64_t end_result = queryResults[end_idx];
 					range.time = (float)abs((double)(end_result - begin_result) / gpu_frequency);
+					if (range.time > 1000000.0f)
+					{
+						// can happen in Apple TBDR GPU, if no pixel was drawn, timestamp becomes invalid and produce huge values
+						range.time = 0;
+					}
 				}
 				range.gpuBegin[queryheap_idx] = -1;
 				range.gpuEnd[queryheap_idx] = -1;

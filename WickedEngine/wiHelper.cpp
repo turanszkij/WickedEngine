@@ -48,6 +48,11 @@
 #include <comdef.h> // com_error
 #endif // PLATFORM_WINDOWS_DESKTOP
 
+#ifdef __APPLE__
+#include <mach/mach.h>
+#include <sys/sysctl.h>
+#endif // __APPLE__
+
 namespace wi::helper
 {
 
@@ -95,22 +100,22 @@ namespace wi::helper
 
 	void messageBox(const std::string& msg, const std::string& caption)
 	{
-#ifdef PLATFORM_WINDOWS_DESKTOP
+#if defined(PLATFORM_WINDOWS_DESKTOP)
 		std::wstring wmsg;
 		std::wstring wcaption;
 		StringConvert(msg, wmsg);
 		StringConvert(caption, wcaption);
 		MessageBox(GetActiveWindow(), wmsg.c_str(), wcaption.c_str(), 0);
-#endif // PLATFORM_WINDOWS_DESKTOP
-
-#ifdef SDL2
+#elif defined(__APPLE__)
+		wi::apple::MessageBox(caption.c_str(), msg.c_str());
+#elif defined(SDL2)
 		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, caption.c_str(), msg.c_str(), NULL);
-#endif // SDL2
+#endif
 	}
 
 	MessageBoxResult messageBoxCustom(const std::string& msg, const std::string& caption, const std::string& buttons)
 	{
-#ifdef PLATFORM_WINDOWS_DESKTOP
+#if defined(PLATFORM_WINDOWS_DESKTOP)
 		std::wstring wmsg;
 		std::wstring wcaption;
 		StringConvert(msg, wmsg);
@@ -151,9 +156,11 @@ namespace wi::helper
 		case IDIGNORE: return MessageBoxResult::Ignore;
 		default: return MessageBoxResult::Cancel;
 		}
-#endif // PLATFORM_WINDOWS_DESKTOP
-
-#ifdef SDL2
+#elif defined(__APPLE__)
+		
+		return (MessageBoxResult)wi::apple::MessageBox(caption.c_str(), msg.c_str(), buttons.c_str());
+		
+#elif defined(SDL2)
 		const SDL_MessageBoxButtonData buttons_data[] = {
 			{ SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 0, "Yes" },
 			{ 0, 1, "No" },
@@ -180,7 +187,7 @@ namespace wi::helper
 		case 2: return MessageBoxResult::Cancel;
 		default: return MessageBoxResult::Cancel;
 		}
-#endif // SDL2
+#endif
 
 		return MessageBoxResult::Cancel;
 	}
@@ -634,6 +641,11 @@ namespace wi::helper
 				float g = ((pixel >> 10) & 1023) / 1023.0f;
 				float b = ((pixel >> 20) & 1023) / 1023.0f;
 				float a = ((pixel >> 30) & 3) / 3.0f;
+				
+#ifdef __APPLE__
+				// The R10G10B10A2_UNORM format only has BGRA equivalent in Metal API and we use that:
+				std::swap(r, b);
+#endif // __APPLE__
 
 				uint32_t rgba8 = 0;
 				rgba8 |= (uint32_t)(r * 255.0f) << 0;
@@ -1241,12 +1253,12 @@ namespace wi::helper
 
 	size_t FileSize(const std::string& fileName)
 	{
-#if defined(PLATFORM_LINUX) || defined(PLATFORM_PS5)
+#ifdef _WIN32
+		std::ifstream file(ToNativeString(fileName), std::ios::binary | std::ios::ate);
+#else
 		std::string filepath = fileName;
 		std::replace(filepath.begin(), filepath.end(), '\\', '/'); // Linux cannot handle backslash in file path, need to convert it to forward slash
 		std::ifstream file(filepath, std::ios::binary | std::ios::ate);
-#else
-		std::ifstream file(ToNativeString(fileName), std::ios::binary | std::ios::ate);
 #endif // PLATFORM_LINUX || PLATFORM_PS5
 
 		if (file.is_open())
@@ -1261,12 +1273,12 @@ namespace wi::helper
 	template<template<typename T, typename A> typename vector_interface>
 	bool FileRead_Impl(const std::string& fileName, vector_interface<uint8_t, std::allocator<uint8_t>>& data, size_t max_read, size_t offset)
 	{
-#if defined(PLATFORM_LINUX) || defined(PLATFORM_PS5)
+#ifdef _WIN32
+		std::ifstream file(ToNativeString(fileName), std::ios::binary | std::ios::ate);
+#else
 		std::string filepath = fileName;
 		std::replace(filepath.begin(), filepath.end(), '\\', '/'); // Linux cannot handle backslash in file path, need to convert it to forward slash
 		std::ifstream file(filepath, std::ios::binary | std::ios::ate);
-#else
-		std::ifstream file(ToNativeString(fileName), std::ios::binary | std::ios::ate);
 #endif // PLATFORM_LINUX || PLATFORM_PS5
 
 		if (file.is_open())
@@ -1349,22 +1361,22 @@ namespace wi::helper
 
 	std::string GetCacheDirectoryPath()
 	{
-		#ifdef PLATFORM_LINUX
-			const char* xdg_cache = std::getenv("XDG_CACHE_HOME");
-			if (xdg_cache == nullptr || *xdg_cache == '\0') {
-				const char* home = std::getenv("HOME");
-				if (home != nullptr) {
-					return std::string(home) + "/.cache";
-				} else {
-					// shouldn't happen, just to be safe
-					return GetTempDirectoryPath();
-				}
+#ifdef PLATFORM_LINUX
+		const char* xdg_cache = std::getenv("XDG_CACHE_HOME");
+		if (xdg_cache == nullptr || *xdg_cache == '\0') {
+			const char* home = std::getenv("HOME");
+			if (home != nullptr) {
+				return std::string(home) + "/.cache";
 			} else {
-				return xdg_cache;
+				// shouldn't happen, just to be safe
+				return GetTempDirectoryPath();
 			}
-		#else
-			return GetTempDirectoryPath();
-		#endif
+		} else {
+			return xdg_cache;
+		}
+#else
+		return GetTempDirectoryPath();
+#endif
 	}
 
 	std::string GetCurrentPath()
@@ -1395,6 +1407,8 @@ namespace wi::helper
 			return std::string();
 		}
 		return std::string(str, length);
+#elif defined(__APPLE__)  // Add __APPLE__ for macOS
+		return wi::apple::GetExecutablePath();
 #else
 		return std::filesystem::canonical("/proc/self/exe").string();
 #endif // _WIN32
@@ -1502,7 +1516,7 @@ namespace wi::helper
 			}).detach();
 #endif // PLATFORM_WINDOWS_DESKTOP
 
-#ifdef PLATFORM_LINUX
+#if defined(PLATFORM_LINUX) || defined(PLATFORM_APPLE)
 		if (!pfd::settings::available())
 		{
 			wilog_messagebox("[wi::helper::FileDialog()] No file dialog backend available! Install zenity or kdialog.");
@@ -1555,7 +1569,7 @@ namespace wi::helper
 				break;
 			}
 		}
-#endif // PLATFORM_LINUX
+#endif // defined(PLATFORM_LINUX) || defined(PLATFORM_APPLE)
 	}
 
 	std::string FolderDialog(const std::string& description)
@@ -1985,12 +1999,16 @@ namespace wi::helper
 		wi::backlog::post("wi::helper::OpenUrl(" + url + ") returned status: " + std::to_string(status));
 		return;
 #endif // PLATFORM_WINDOWS_DESKTOP
+		
+#ifdef __APPLE__
+		wi::apple::OpenUrl(url.c_str());
+#endif // __APPLE__
 
 		wi::backlog::post("wi::helper::OpenUrl(" + url + "): not implemented for this operating system!", wi::backlog::LogLevel::Warning);
 	}
 
 	MemoryUsage GetMemoryUsage()
-	{
+{
 		MemoryUsage mem;
 #if defined(_WIN32)
 		// https://stackoverflow.com/questions/63166/how-to-determine-cpu-and-memory-consumption-from-inside-a-process
@@ -2000,7 +2018,7 @@ namespace wi::helper
 		assert(ret);
 		mem.total_physical = memInfo.ullTotalPhys;
 		mem.total_virtual = memInfo.ullTotalVirtual;
-
+		
 		PROCESS_MEMORY_COUNTERS_EX pmc = {};
 		GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc));
 		mem.process_physical = pmc.WorkingSetSize;
@@ -2047,7 +2065,7 @@ namespace wi::helper
 		// Format of statm:
 		// size resident shared trs lrs drs dt
 		// see linux Documentation/filesystems/proc.rst
-
+		
 		// we want "resident", the second number, so just read the first one
 		// and discard it
 		statm >> l;
@@ -2059,6 +2077,24 @@ namespace wi::helper
 		wi::graphics::GraphicsDevice::MemoryUsage gpumem = wi::graphics::GetDevice()->GetMemoryUsage();
 		mem.process_physical = mem.total_physical = gpumem.budget;
 		mem.process_virtual = mem.total_virtual = gpumem.usage;
+#elif defined(__APPLE__)
+		task_vm_info_data_t vm_info;
+		mach_msg_type_number_t count = TASK_VM_INFO_COUNT;
+		kern_return_t result = task_info(mach_task_self(), TASK_VM_INFO, (task_info_t)&vm_info, &count);
+		if (result == KERN_SUCCESS)
+		{
+			mem.process_physical = vm_info.phys_footprint;
+			mem.process_virtual = vm_info.virtual_size;
+		}
+		{
+			int mib[2] = { CTL_HW, HW_MEMSIZE };
+			uint64_t ram_bytes = 0;
+			size_t len = sizeof(ram_bytes);
+			if (sysctl(mib, 2, &ram_bytes, &len, nullptr, 0) == 0)
+			{
+				mem.total_physical = ram_bytes;
+			}
+		}
 #endif // defined(_WIN32)
 		return mem;
 	}
@@ -2181,6 +2217,9 @@ namespace wi::helper
 		}
 		::GlobalUnlock(wbuf_handle);
 		::CloseClipboard();
+#elif defined(__APPLE__)
+		std::string str = wi::apple::GetClipboardText();
+		StringConvert(str, wstr);
 #endif // PLATFORM_WINDOWS_DESKTOP
 
 		return wstr;
@@ -2205,6 +2244,10 @@ namespace wi::helper
 		if (::SetClipboardData(CF_UNICODETEXT, wbuf_handle) == NULL)
 			::GlobalFree(wbuf_handle);
 		::CloseClipboard();
+#elif defined(__APPLE__)
+		std::string str;
+		StringConvert(wstr, str);
+		wi::apple::SetClipboardText(str.c_str());
 #endif // PLATFORM_WINDOWS_DESKTOP
 	}
 }
