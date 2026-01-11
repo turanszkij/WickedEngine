@@ -252,4 +252,41 @@ void SetWindowFullScreen(void* handle, bool fullscreen)
 	[window toggleFullScreen:nil];
 }
 
+void OpenUrl(const char* url)
+{
+	@autoreleasepool
+	{
+		NSString* nsurl = [NSString stringWithUTF8String:url];
+		NSURL* nsURL = [NSURL URLWithString:nsurl];
+		
+		if (nsURL)
+		{
+			[[NSWorkspace sharedWorkspace] openURL:nsURL];
+		}
+	}
+}
+
+std::string GetClipboardText()
+{
+	std::string ret;
+	NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
+	NSString* available = [pasteboard availableTypeFromArray: [NSArray arrayWithObject:NSPasteboardTypeString]];
+	if (![available isEqualToString:NSPasteboardTypeString])
+		return ret;
+	NSString* string = [pasteboard stringForType:NSPasteboardTypeString];
+	if (string == nil)
+		return ret;
+	const char* string_c = (const char*)[string UTF8String];
+	size_t string_len = strlen(string_c);
+	ret.resize((int)string_len);
+	strcpy(ret.data(), string_c);
+	return ret;
+}
+void SetClipboardText(const char* str)
+{
+	NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
+	[pasteboard declareTypes:[NSArray arrayWithObject:NSPasteboardTypeString] owner:nil];
+	[pasteboard setString:[NSString stringWithUTF8String:str] forType:NSPasteboardTypeString];
+}
+
 }

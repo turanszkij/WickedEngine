@@ -328,8 +328,10 @@ namespace wi::graphics
 
 		MemoryUsage GetMemoryUsage() const override
 		{
-			MemoryUsage retval;
-			return retval;
+			MemoryUsage mem;
+			mem.budget = device->recommendedMaxWorkingSetSize();
+			mem.usage = device->currentAllocatedSize();
+			return mem;
 		}
 
 		uint32_t GetMaxViewportCount() const override { return 16; };

@@ -769,6 +769,12 @@ namespace wi::input
 			case wi::input::KEYBOARD_BUTTON_RCONTROL:
 				keycode = kVK_RightControl;
 				break;
+			case wi::input::KEYBOARD_BUTTON_LCOMMAND:
+				keycode = kVK_Command;
+				break;
+			case wi::input::KEYBOARD_BUTTON_RCOMMAND:
+				keycode = kVK_RightCommand;
+				break;
 			case wi::input::KEYBOARD_BUTTON_INSERT:
 				keycode = unknown;
 				break;

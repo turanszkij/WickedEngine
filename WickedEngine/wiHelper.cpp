@@ -48,6 +48,11 @@
 #include <comdef.h> // com_error
 #endif // PLATFORM_WINDOWS_DESKTOP
 
+#ifdef __APPLE__
+#include <mach/mach.h>
+#include <sys/sysctl.h>
+#endif // __APPLE__
+
 namespace wi::helper
 {
 
@@ -1248,12 +1253,12 @@ namespace wi::helper
 
 	size_t FileSize(const std::string& fileName)
 	{
-#if defined(PLATFORM_LINUX) || defined(PLATFORM_PS5)
+#ifdef _WIN32
+		std::ifstream file(ToNativeString(fileName), std::ios::binary | std::ios::ate);
+#else
 		std::string filepath = fileName;
 		std::replace(filepath.begin(), filepath.end(), '\\', '/'); // Linux cannot handle backslash in file path, need to convert it to forward slash
 		std::ifstream file(filepath, std::ios::binary | std::ios::ate);
-#else
-		std::ifstream file(ToNativeString(fileName), std::ios::binary | std::ios::ate);
 #endif // PLATFORM_LINUX || PLATFORM_PS5
 
 		if (file.is_open())
@@ -1268,12 +1273,12 @@ namespace wi::helper
 	template<template<typename T, typename A> typename vector_interface>
 	bool FileRead_Impl(const std::string& fileName, vector_interface<uint8_t, std::allocator<uint8_t>>& data, size_t max_read, size_t offset)
 	{
-#if defined(PLATFORM_LINUX) || defined(PLATFORM_PS5)
+#ifdef _WIN32
+		std::ifstream file(ToNativeString(fileName), std::ios::binary | std::ios::ate);
+#else
 		std::string filepath = fileName;
 		std::replace(filepath.begin(), filepath.end(), '\\', '/'); // Linux cannot handle backslash in file path, need to convert it to forward slash
 		std::ifstream file(filepath, std::ios::binary | std::ios::ate);
-#else
-		std::ifstream file(ToNativeString(fileName), std::ios::binary | std::ios::ate);
 #endif // PLATFORM_LINUX || PLATFORM_PS5
 
 		if (file.is_open())
@@ -1994,12 +1999,16 @@ namespace wi::helper
 		wi::backlog::post("wi::helper::OpenUrl(" + url + ") returned status: " + std::to_string(status));
 		return;
 #endif // PLATFORM_WINDOWS_DESKTOP
+		
+#ifdef __APPLE__
+		wi::apple::OpenUrl(url.c_str());
+#endif // __APPLE__
 
 		wi::backlog::post("wi::helper::OpenUrl(" + url + "): not implemented for this operating system!", wi::backlog::LogLevel::Warning);
 	}
 
 	MemoryUsage GetMemoryUsage()
-	{
+{
 		MemoryUsage mem;
 #if defined(_WIN32)
 		// https://stackoverflow.com/questions/63166/how-to-determine-cpu-and-memory-consumption-from-inside-a-process
@@ -2009,7 +2018,7 @@ namespace wi::helper
 		assert(ret);
 		mem.total_physical = memInfo.ullTotalPhys;
 		mem.total_virtual = memInfo.ullTotalVirtual;
-
+		
 		PROCESS_MEMORY_COUNTERS_EX pmc = {};
 		GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc));
 		mem.process_physical = pmc.WorkingSetSize;
@@ -2056,7 +2065,7 @@ namespace wi::helper
 		// Format of statm:
 		// size resident shared trs lrs drs dt
 		// see linux Documentation/filesystems/proc.rst
-
+		
 		// we want "resident", the second number, so just read the first one
 		// and discard it
 		statm >> l;
@@ -2068,6 +2077,24 @@ namespace wi::helper
 		wi::graphics::GraphicsDevice::MemoryUsage gpumem = wi::graphics::GetDevice()->GetMemoryUsage();
 		mem.process_physical = mem.total_physical = gpumem.budget;
 		mem.process_virtual = mem.total_virtual = gpumem.usage;
+#elif defined(__APPLE__)
+		task_vm_info_data_t vm_info;
+		mach_msg_type_number_t count = TASK_VM_INFO_COUNT;
+		kern_return_t result = task_info(mach_task_self(), TASK_VM_INFO, (task_info_t)&vm_info, &count);
+		if (result == KERN_SUCCESS)
+		{
+			mem.process_physical = vm_info.phys_footprint;
+			mem.process_virtual = vm_info.virtual_size;
+		}
+		{
+			int mib[2] = { CTL_HW, HW_MEMSIZE };
+			uint64_t ram_bytes = 0;
+			size_t len = sizeof(ram_bytes);
+			if (sysctl(mib, 2, &ram_bytes, &len, nullptr, 0) == 0)
+			{
+				mem.total_physical = ram_bytes;
+			}
+		}
 #endif // defined(_WIN32)
 		return mem;
 	}
@@ -2190,6 +2217,9 @@ namespace wi::helper
 		}
 		::GlobalUnlock(wbuf_handle);
 		::CloseClipboard();
+#elif defined(__APPLE__)
+		std::string str = wi::apple::GetClipboardText();
+		StringConvert(str, wstr);
 #endif // PLATFORM_WINDOWS_DESKTOP
 
 		return wstr;
@@ -2214,6 +2244,10 @@ namespace wi::helper
 		if (::SetClipboardData(CF_UNICODETEXT, wbuf_handle) == NULL)
 			::GlobalFree(wbuf_handle);
 		::CloseClipboard();
+#elif defined(__APPLE__)
+		std::string str;
+		StringConvert(wstr, str);
+		wi::apple::SetClipboardText(str.c_str());
 #endif // PLATFORM_WINDOWS_DESKTOP
 	}
 }

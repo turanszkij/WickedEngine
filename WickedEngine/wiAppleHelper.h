@@ -20,4 +20,7 @@ void CursorInit(void** cursor_table);
 void CursorSet(void* cursor);
 void CursorHide(bool hide);
 void SetWindowFullScreen(void* handle, bool fullscreen);
+void OpenUrl(const char* url);
+std::string GetClipboardText();
+void SetClipboardText(const char* str);
 }

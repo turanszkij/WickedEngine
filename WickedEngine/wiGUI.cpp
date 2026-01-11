@@ -1978,7 +1978,11 @@ namespace wi::gui
 				caret_pos = offset;
 			}
 			int num = 0;
+#ifdef __APPLE__
+			if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LCOMMAND) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RCOMMAND))
+#else
 			if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RCONTROL))
+#endif // __APPLE__
 			{
 				if (wi::input::Down((wi::input::BUTTON)'V'))
 				{
