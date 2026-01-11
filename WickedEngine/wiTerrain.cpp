@@ -16,7 +16,7 @@
 #include <deque>
 
 // This will do terrain rendering without sparse texture usage, with extra tile copies for block compression:
-#define NOSPARSE
+//#define NOSPARSE
 
 #ifdef __APPLE__
 // On Apple Metal API the sparse texture doesn't seem to work with block compression aliasing, so use this mode as workaround:
