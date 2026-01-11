@@ -3032,6 +3032,7 @@ using namespace metal_internal;
 				descriptor.options |= MTL::AccelerationStructureInstanceOptionNonOpaque;
 			}
 			descriptor.mask = instance->instance_mask;
+			descriptor.userID = instance->instance_id;
 			descriptor.intersectionFunctionTableOffset = 0;
 			auto blas_internal = to_internal<RaytracingAccelerationStructure>(instance->bottom_level);
 			descriptor.accelerationStructureID = blas_internal->resourceid;
