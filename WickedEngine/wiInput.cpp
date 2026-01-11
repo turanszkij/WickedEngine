@@ -928,6 +928,36 @@ namespace wi::input
 			case (BUTTON)'Z':
 				 keycode = kVK_ANSI_Z;
 				 break;
+				case (BUTTON)'0':
+				  keycode = kVK_ANSI_0;
+				  break;
+				case (BUTTON)'1':
+				  keycode = kVK_ANSI_1;
+				  break;
+				case (BUTTON)'2':
+				  keycode = kVK_ANSI_2;
+				  break;
+				case (BUTTON)'3':
+				  keycode = kVK_ANSI_3;
+				  break;
+				case (BUTTON)'4':
+				  keycode = kVK_ANSI_4;
+				  break;
+				case (BUTTON)'5':
+				  keycode = kVK_ANSI_5;
+				  break;
+				case (BUTTON)'6':
+				  keycode = kVK_ANSI_6;
+				  break;
+				case (BUTTON)'7':
+				  keycode = kVK_ANSI_7;
+				  break;
+				case (BUTTON)'8':
+				  keycode = kVK_ANSI_8;
+				  break;
+				case (BUTTON)'9':
+				  keycode = kVK_ANSI_9;
+				  break;
 #endif // __APPLE__
 					
 					
