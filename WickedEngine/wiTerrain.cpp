@@ -1555,6 +1555,7 @@ namespace wi::terrain
 			if (!atlas.IsValid())
 			{
 #ifdef NOSPARSE
+				// Try to account for memory increase in no-sparse mode, reduce atlas size:
 				const uint32_t physical_width = 16384u;
 				const uint32_t physical_height = 8192u;
 #else
@@ -1890,6 +1891,8 @@ namespace wi::terrain
 		GraphicsDevice* device = GetDevice();
 		device->EventBegin("Terrain - UpdateVirtualTexturesGPU", cmd);
 		auto range = wi::profiler::BeginRangeGPU("Terrain - UpdateVirtualTexturesGPU", cmd);
+		
+		device->Barrier(GPUBarrier::Memory(), cmd); // on Apple this fixes corruption so better be safe on all platforms, do not remove
 
 		device->EventBegin("Update Residency Maps", cmd);
 		device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_VIRTUALTEXTURE_RESIDENCYUPDATE), cmd);
@@ -2055,8 +2058,10 @@ namespace wi::terrain
 			vt->update_requests.clear();
 		}
 		device->Barrier(GPUBarrier::Memory(), cmd);
+		device->EventEnd(cmd);
 
 #ifdef NOSPARSE
+		device->EventBegin("Terrain - Nosparse Copies", cmd);
 		// Batch all of the Block compression copies after the region updating when sparse texture is disabled:
 		for (auto& map : atlas.maps)
 		{
@@ -2081,9 +2086,8 @@ namespace wi::terrain
 			wi::renderer::PushBarrier(GPUBarrier::Image(&map.texture_raw_block, ResourceState::COPY_SRC, ResourceState::UNORDERED_ACCESS));
 		}
 		wi::renderer::FlushBarriers(cmd);
-#endif // NOSPARSE
-		
 		device->EventEnd(cmd);
+#endif // NOSPARSE
 
 		wi::profiler::EndRange(range);
 		device->EventEnd(cmd);

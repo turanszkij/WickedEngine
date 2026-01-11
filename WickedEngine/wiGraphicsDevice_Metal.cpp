@@ -1323,11 +1323,11 @@ using namespace metal_internal;
 		argument_table_desc->setMaxTextureBindCount(0);
 		argument_table_desc->setMaxSamplerStateBindCount(0);
 		
-		descriptor_heap_res = NS::TransferPtr(device->newBuffer(bindless_resource_capacity * sizeof(IRDescriptorTableEntry), MTL::ResourceStorageModeShared | MTL::ResourceHazardTrackingModeUntracked));
+		descriptor_heap_res = NS::TransferPtr(device->newBuffer(bindless_resource_capacity * sizeof(IRDescriptorTableEntry), MTL::ResourceStorageModeShared));
 		descriptor_heap_res->setLabel(NS::TransferPtr(NS::String::alloc()->init("descriptor_heap_res", NS::UTF8StringEncoding)).get());
 		
 		const uint64_t real_bindless_sampler_capacity = std::min(bindless_sampler_capacity, (uint64_t)device->maxArgumentBufferSamplerCount());
-		descriptor_heap_sam = NS::TransferPtr(device->newBuffer(real_bindless_sampler_capacity * sizeof(IRDescriptorTableEntry), MTL::ResourceStorageModeShared | MTL::ResourceHazardTrackingModeUntracked));
+		descriptor_heap_sam = NS::TransferPtr(device->newBuffer(real_bindless_sampler_capacity * sizeof(IRDescriptorTableEntry), MTL::ResourceStorageModeShared));
 		descriptor_heap_sam->setLabel(NS::TransferPtr(NS::String::alloc()->init("descriptor_heap_sam", NS::UTF8StringEncoding)).get());
 		
 		descriptor_heap_res_data = (IRDescriptorTableEntry*)descriptor_heap_res->contents();
@@ -1533,7 +1533,6 @@ using namespace metal_internal;
 		{
 			resource_options |= MTL::ResourceStorageModeShared;
 		}
-		resource_options |= MTL::ResourceHazardTrackingModeUntracked;
 		
 		if (aliasing_storage)
 		{
@@ -1737,7 +1736,6 @@ using namespace metal_internal;
 			resource_options |= MTL::ResourceStorageModeShared;
 			descriptor->setStorageMode(MTL::StorageModeShared);
 		}
-		resource_options |= MTL::ResourceHazardTrackingModeUntracked;
 		descriptor->setResourceOptions(resource_options);
 		
 		MTL::TextureUsage usage = {};
@@ -4115,9 +4113,8 @@ using namespace metal_internal;
 				reinterpret_buffer[commandlist.queue]->setLabel(NS::TransferPtr(NS::String::alloc()->init("reinterpret_buffer", NS::UTF8StringEncoding)).get());
 				allocationhandler->make_resident(reinterpret_buffer[commandlist.queue].get());
 			}
-			commandlist.compute_encoder->barrierAfterEncoderStages(MTL::StageBlit, MTL::StageDispatch | MTL::StageBlit, MTL4::VisibilityOptionNone);
 			commandlist.compute_encoder->copyFromTexture(src_internal->texture.get(), srcSlice, srcMip, srcOrigin, srcSize, reinterpret_buffer[commandlist.queue].get(), 0, row_pitch, buffer_size);
-			commandlist.compute_encoder->barrierAfterEncoderStages(MTL::StageBlit, MTL::StageBlit, MTL4::VisibilityOptionNone);
+			commandlist.compute_encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, MTL4::VisibilityOptionNone);
 			if (!IsFormatBlockCompressed(src->desc.format) && IsFormatBlockCompressed(dst->desc.format))
 			{
 				// raw -> block compressed copy
@@ -4133,7 +4130,7 @@ using namespace metal_internal;
 				srcSize.height = std::max(1u, (uint32_t)srcSize.height / block_size);
 			}
 			commandlist.compute_encoder->copyFromBuffer(reinterpret_buffer[commandlist.queue].get(), 0, row_pitch, buffer_size, srcSize, dst_internal->texture.get(), dstSlice, dstMip, dstOrigin);
-			commandlist.compute_encoder->barrierAfterEncoderStages(MTL::StageDispatch | MTL::StageBlit, MTL::StageBlit, MTL4::VisibilityOptionNone);
+			commandlist.compute_encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, MTL4::VisibilityOptionNone);
 		}
 		else
 		{
