@@ -3249,12 +3249,14 @@ void RenderMeshes(
 		//	Normally it's used for primitiveID generation, so it would be only used in PREPASS
 		//	PREPASS_DEPTHONLY doesn't use separate shader variants, so it will also use provoking index buffer
 		//	RENDERPASS_MAIN requires it to fix depth mismatch only on Intel GPU between prepass and color passes
+		//	RENDERPASS_VOXELIZE only needs it because it uses common layout, currently it's easier to fix here
 		//	tessellation requires it to match same primitive order between prepass and color pass to have exact same tessellation
 		const bool provokingIBRequired =
 			!wireframe && (
 				renderPass == RENDERPASS_PREPASS ||
 				renderPass == RENDERPASS_PREPASS_DEPTHONLY ||
 				renderPass == RENDERPASS_MAIN ||
+				renderPass == RENDERPASS_VOXELIZE ||
 				tessellatorRequested
 			);
 
