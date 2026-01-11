@@ -7,9 +7,9 @@ namespace wi::version
 	// main engine core
 	const int major = 0;
 	// minor features, major updates, breaking compatibility changes
-	const int minor = 71;
+	const int minor = 72;
 	// minor bug fixes, alterations, refactors, updates
-	const int revision = 874;
+	const int revision = 0;
 
 	const std::string version_string = std::to_string(major) + "." + std::to_string(minor) + "." + std::to_string(revision);
 
