@@ -15,9 +15,12 @@
 #include <atomic>
 #include <deque>
 
+// This will do terrain rendering without sparse texture usage, with extra tile copies for block compression:
+#define NOSPARSE
+
 #ifdef __APPLE__
-// Do terrain rendering without sparse texture usage, with extra tile copies for block compression:
-//#define NOSPARSE
+// On Apple Metal API the sparse texture doesn't seem to work with block compression aliasing, so use this mode as workaround:
+#define NOSPARSE
 #endif // __APPLE__
 
 using namespace wi::ecs;
@@ -1551,8 +1554,13 @@ namespace wi::terrain
 
 			if (!atlas.IsValid())
 			{
+#ifdef NOSPARSE
+				const uint32_t physical_width = 16384u;
+				const uint32_t physical_height = 8192u;
+#else
 				const uint32_t physical_width = 16384u;
 				const uint32_t physical_height = 16384u;
+#endif // NOSPARSE
 				GPUBufferDesc tile_pool_desc;
 
 				for (uint32_t map_type = 0; map_type < arraysize(atlas.maps); ++map_type)
@@ -2032,19 +2040,48 @@ namespace wi::terrain
 #ifdef NOSPARSE
 					push.write_offset = write_offset_original;
 					push.write_size = SVT_TILE_SIZE_PADDED / 4u;
-					Box srcbox = {};
-					srcbox.left = push.write_offset.x;
-					srcbox.right = srcbox.left + push.write_size;
-					srcbox.top = push.write_offset.y;
-					srcbox.bottom = srcbox.top + push.write_size;
-					srcbox.back = 1;
-					device->CopyTexture(&atlas.maps[map_type].texture, push.write_offset.x * 4, push.write_offset.y * 4, 0, 0, 0, &atlas.maps[map_type].texture_raw_block, 0, 0, cmd, &srcbox);
+					NoSparseCopy nosparse;
+					nosparse.texture_src = &atlas.maps[map_type].texture_raw_block;
+					nosparse.texture_dst = &atlas.maps[map_type].texture;
+					nosparse.srcbox.left = push.write_offset.x;
+					nosparse.srcbox.right = nosparse.srcbox.left + push.write_size;
+					nosparse.srcbox.top = push.write_offset.y;
+					nosparse.srcbox.bottom = nosparse.srcbox.top + push.write_size;
+					nosparse.srcbox.back = 1;
+					nosparse_copies.push_back(nosparse);
 #endif // NOSPARSE
 				}
 			}
 			vt->update_requests.clear();
 		}
 		device->Barrier(GPUBarrier::Memory(), cmd);
+
+#ifdef NOSPARSE
+		// Batch all of the Block compression copies after the region updating when sparse texture is disabled:
+		for (auto& map : atlas.maps)
+		{
+			if (!map.texture.IsValid())
+				continue;
+			wi::renderer::PushBarrier(GPUBarrier::Image(&map.texture, ResourceState::SHADER_RESOURCE, ResourceState::COPY_DST));
+			wi::renderer::PushBarrier(GPUBarrier::Image(&map.texture_raw_block, ResourceState::UNORDERED_ACCESS, ResourceState::COPY_SRC));
+		}
+		wi::renderer::FlushBarriers(cmd);
+
+		for (auto& x : nosparse_copies)
+		{
+			device->CopyTexture(x.texture_dst, x.srcbox.left * 4, x.srcbox.top * 4, 0, 0, 0, x.texture_src, 0, 0, cmd, &x.srcbox);
+		}
+		nosparse_copies.clear();
+
+		for (auto& map : atlas.maps)
+		{
+			if (!map.texture.IsValid())
+				continue;
+			wi::renderer::PushBarrier(GPUBarrier::Image(&map.texture, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
+			wi::renderer::PushBarrier(GPUBarrier::Image(&map.texture_raw_block, ResourceState::COPY_SRC, ResourceState::UNORDERED_ACCESS));
+		}
+		wi::renderer::FlushBarriers(cmd);
+#endif // NOSPARSE
 		
 		device->EventEnd(cmd);
 

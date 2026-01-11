@@ -164,7 +164,7 @@ namespace wi::terrain
 		}
 		inline bool IsValid() const
 		{
-			return tile_pool.IsValid();
+			return maps[0].texture.IsValid();
 		}
 	};
 
@@ -300,6 +300,14 @@ namespace wi::terrain
 		wi::vector<VirtualTexture*> virtual_textures_in_use;
 		wi::graphics::Sampler sampler;
 		VirtualTextureAtlas atlas;
+
+		struct NoSparseCopy
+		{
+			const wi::graphics::Texture* texture_src = nullptr;
+			const wi::graphics::Texture* texture_dst = nullptr;
+			wi::graphics::Box srcbox = {};
+		};
+		mutable wi::vector<NoSparseCopy> nosparse_copies;
 
 		wi::graphics::GPUBuffer chunk_buffer;
 		int chunk_buffer_range = 3; // how many chunks to upload to GPU in X and Z directions
