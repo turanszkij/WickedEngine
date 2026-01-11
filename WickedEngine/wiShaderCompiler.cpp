@@ -183,6 +183,7 @@ namespace wi::shadercompiler
 			args.push_back(L"-fvk-s-shift"); args.push_back(L"3000"); args.push_back(L"0");
 			break;
 		case ShaderFormat::METAL:
+			args.push_back(L"-D"); args.push_back(L"__metal__");
 			break;
 		default:
 			assert(0);

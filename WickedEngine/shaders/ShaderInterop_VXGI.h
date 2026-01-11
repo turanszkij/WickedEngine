@@ -5,7 +5,9 @@
 
 // If enabled, geometry shader will be used to voxelize, and axis will be selected by geometry shader
 //	If disabled, vertex shader with instance replication will be used for each axis
+#if !defined(__APPLE__) && !defined(__metal__)
 #define VOXELIZATION_GEOMETRY_SHADER_ENABLED
+#endif // !defined(__APPLE__) && !defined(__metal__)
 
 // If enabled, conservative rasterization will be used to voxelize
 //	This can more accurately voxelize thin geometry, but slower

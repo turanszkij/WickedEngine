@@ -3460,6 +3460,8 @@ using namespace metal_internal;
 		}
 		else
 		{
+			descriptor->setRenderTargetWidth(commandlist.viewports[0].width);
+			descriptor->setRenderTargetHeight(commandlist.viewports[0].height);
 			descriptor->setDefaultRasterSampleCount(1);
 		}
 		
