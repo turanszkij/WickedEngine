@@ -15,6 +15,11 @@
 #include <atomic>
 #include <deque>
 
+#ifdef __APPLE__
+// Do terrain rendering without sparse texture usage, with extra tile copies for block compression:
+//#define NOSPARSE
+#endif // __APPLE__
+
 using namespace wi::ecs;
 using namespace wi::scene;
 using namespace wi::graphics;
@@ -1555,7 +1560,9 @@ namespace wi::terrain
 					TextureDesc desc;
 					desc.width = physical_width;
 					desc.height = physical_height;
+#ifndef NOSPARSE
 					desc.misc_flags = ResourceMiscFlag::SPARSE;
+#endif // NOSPARSE
 					desc.bind_flags = BindFlag::SHADER_RESOURCE;
 					desc.mip_levels = 1;
 					desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
@@ -1596,12 +1603,14 @@ namespace wi::terrain
 					assert(success);
 					device->SetName(&atlas.maps[map_type].texture_raw_block, "VirtualTextureAtlas::texture_raw_block");
 
+#ifndef NOSPARSE
 					assert(atlas.maps[map_type].texture.sparse_properties->total_tile_count == atlas.maps[map_type].texture_raw_block.sparse_properties->total_tile_count);
 					assert(atlas.maps[map_type].texture.sparse_page_size == atlas.maps[map_type].texture_raw_block.sparse_page_size);
 
 					tile_pool_desc.size += atlas.maps[map_type].texture.sparse_properties->total_tile_count * atlas.maps[map_type].texture.sparse_page_size;
 					tile_pool_desc.alignment = std::max(tile_pool_desc.alignment, atlas.maps[map_type].texture.sparse_page_size);
-
+#endif // NOSPARSE
+					
 					for (uint32_t i = 0; i < atlas.maps[map_type].texture_raw_block.desc.mip_levels; ++i)
 					{
 						int subresource_index = device->CreateSubresource(&atlas.maps[map_type].texture_raw_block, SubresourceType::UAV, 0, 1, i, 1);
@@ -1609,9 +1618,11 @@ namespace wi::terrain
 					}
 				}
 
+#ifndef NOSPARSE
 				tile_pool_desc.misc_flags = ResourceMiscFlag::SPARSE_TILE_POOL_TEXTURE_NON_RT_DS;
 				bool success = device->CreateBuffer(&tile_pool_desc, nullptr, &atlas.tile_pool);
 				assert(success);
+#endif // NOSPARSE
 
 				atlas.physical_tile_count_x = uint8_t(physical_width / SVT_TILE_SIZE_PADDED);
 				atlas.physical_tile_count_y = uint8_t(physical_height / SVT_TILE_SIZE_PADDED);
@@ -1631,6 +1642,7 @@ namespace wi::terrain
 					}
 				}
 
+#ifndef NOSPARSE
 				uint32_t offset = 0;
 				for (uint32_t map_type = 0; map_type < arraysize(atlas.maps); ++map_type)
 				{
@@ -1657,6 +1669,7 @@ namespace wi::terrain
 					device->SparseUpdate(QUEUE_COMPUTE, commands, arraysize(commands));
 					offset += count;
 				}
+#endif // NOSPARSE
 			}
 
 			if (chunk_data.vt == nullptr)
@@ -2015,11 +2028,24 @@ namespace wi::terrain
 							cmd
 						);
 					}
+					
+#ifdef NOSPARSE
+					push.write_offset = write_offset_original;
+					push.write_size = SVT_TILE_SIZE_PADDED / 4u;
+					Box srcbox = {};
+					srcbox.left = push.write_offset.x;
+					srcbox.right = srcbox.left + push.write_size;
+					srcbox.top = push.write_offset.y;
+					srcbox.bottom = srcbox.top + push.write_size;
+					srcbox.back = 1;
+					device->CopyTexture(&atlas.maps[map_type].texture, push.write_offset.x * 4, push.write_offset.y * 4, 0, 0, 0, &atlas.maps[map_type].texture_raw_block, 0, 0, cmd, &srcbox);
+#endif // NOSPARSE
 				}
 			}
 			vt->update_requests.clear();
 		}
 		device->Barrier(GPUBarrier::Memory(), cmd);
+		
 		device->EventEnd(cmd);
 
 		wi::profiler::EndRange(range);

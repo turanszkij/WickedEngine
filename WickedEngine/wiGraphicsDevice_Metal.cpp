@@ -15,6 +15,7 @@ namespace metal_internal
 {
 	static constexpr uint64_t bindless_resource_capacity = 500000;
 	static constexpr uint64_t bindless_sampler_capacity = 256;
+	static constexpr MTL::SparsePageSize sparse_page_size = MTL::SparsePageSize256;
 
 	constexpr MTL::AttributeFormat _ConvertAttributeFormat(Format value)
 	{
@@ -1232,9 +1233,17 @@ using namespace metal_internal;
 		
 		binder_flush(cmd);
 		
+		MTL4::VisibilityOptions visibility_options = MTL4::VisibilityOptionNone;
 		if (!commandlist.barriers.empty())
 		{
-			commandlist.compute_encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, MTL4::VisibilityOptionNone);
+			for (auto& x : commandlist.barriers)
+			{
+				if (x.type == GPUBarrier::Type::ALIASING)
+				{
+					visibility_options |= MTL4::VisibilityOptionResourceAlias;
+				}
+			}
+			commandlist.compute_encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, visibility_options);
 			commandlist.barriers.clear();
 		}
 	}
@@ -1247,9 +1256,17 @@ using namespace metal_internal;
 			commandlist.compute_encoder = commandlist.commandbuffer->computeCommandEncoder();
 		}
 		
+		MTL4::VisibilityOptions visibility_options = MTL4::VisibilityOptionNone;
 		if (!commandlist.barriers.empty())
 		{
-			commandlist.compute_encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, MTL4::VisibilityOptionNone);
+			for (auto& x : commandlist.barriers)
+			{
+				if (x.type == GPUBarrier::Type::ALIASING)
+				{
+					visibility_options |= MTL4::VisibilityOptionResourceAlias;
+				}
+			}
+			commandlist.compute_encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, visibility_options);
 			commandlist.barriers.clear();
 		}
 	}
@@ -1526,7 +1543,7 @@ using namespace metal_internal;
 			heap_desc->setResourceOptions(resource_options);
 			heap_desc->setSize(sizealign.size);
 			heap_desc->setType(MTL::HeapTypePlacement);
-			heap_desc->setMaxCompatiblePlacementSparsePageSize(MTL::SparsePageSize64);
+			heap_desc->setMaxCompatiblePlacementSparsePageSize(sparse_page_size);
 			NS::SharedPtr<MTL::Heap> heap = NS::TransferPtr(device->newHeap(heap_desc.get()));
 			internal_state->buffer = NS::TransferPtr(heap->newBuffer(desc->size, resource_options, 0));
 			internal_state->buffer->makeAliasable();
@@ -1548,7 +1565,7 @@ using namespace metal_internal;
 		else if (sparse)
 		{
 			// This is a placement sparse buffer:
-			internal_state->buffer = NS::TransferPtr(device->newBuffer(desc->size, resource_options, MTL::SparsePageSize64));
+			internal_state->buffer = NS::TransferPtr(device->newBuffer(desc->size, resource_options, sparse_page_size));
 		}
 		else
 		{
@@ -1752,7 +1769,6 @@ using namespace metal_internal;
 		
 		if (sparse)
 		{
-			constexpr MTL::SparsePageSize sparse_page_size = MTL::SparsePageSize64;
 			descriptor->setPlacementSparsePageSize(sparse_page_size);
 			texture->sparse_page_size = (uint32_t)device->sparseTileSizeInBytes(sparse_page_size);
 			texture->sparse_properties = &internal_state->sparse_properties;
@@ -1782,7 +1798,7 @@ using namespace metal_internal;
 			heap_desc->setResourceOptions(resource_options);
 			heap_desc->setSize(sizealign.size);
 			heap_desc->setType(MTL::HeapTypePlacement);
-			heap_desc->setMaxCompatiblePlacementSparsePageSize(MTL::SparsePageSize64);
+			heap_desc->setMaxCompatiblePlacementSparsePageSize(sparse_page_size);
 			NS::SharedPtr<MTL::Heap> heap = NS::TransferPtr(device->newHeap(heap_desc.get()));
 			internal_state->texture = NS::TransferPtr(heap->newTexture(descriptor.get(), 0));
 			internal_state->texture->makeAliasable();
@@ -3122,7 +3138,15 @@ using namespace metal_internal;
 				{
 					commandlist.compute_encoder = commandlist.commandbuffer->computeCommandEncoder();
 				}
-				commandlist.compute_encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, MTL4::VisibilityOptionNone);
+				MTL4::VisibilityOptions visibility_options = MTL4::VisibilityOptionNone;
+				for (auto& x : commandlist.barriers)
+				{
+					if (x.type == GPUBarrier::Type::ALIASING)
+					{
+						visibility_options |= MTL4::VisibilityOptionResourceAlias;
+					}
+				}
+				commandlist.compute_encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, visibility_options);
 				commandlist.barriers.clear();
 			}
 			if (commandlist.compute_encoder != nullptr)
@@ -4091,6 +4115,7 @@ using namespace metal_internal;
 				reinterpret_buffer[commandlist.queue]->setLabel(NS::TransferPtr(NS::String::alloc()->init("reinterpret_buffer", NS::UTF8StringEncoding)).get());
 				allocationhandler->make_resident(reinterpret_buffer[commandlist.queue].get());
 			}
+			commandlist.compute_encoder->barrierAfterEncoderStages(MTL::StageBlit, MTL::StageDispatch | MTL::StageBlit, MTL4::VisibilityOptionNone);
 			commandlist.compute_encoder->copyFromTexture(src_internal->texture.get(), srcSlice, srcMip, srcOrigin, srcSize, reinterpret_buffer[commandlist.queue].get(), 0, row_pitch, buffer_size);
 			commandlist.compute_encoder->barrierAfterEncoderStages(MTL::StageBlit, MTL::StageBlit, MTL4::VisibilityOptionNone);
 			if (!IsFormatBlockCompressed(src->desc.format) && IsFormatBlockCompressed(dst->desc.format))
@@ -4108,6 +4133,7 @@ using namespace metal_internal;
 				srcSize.height = std::max(1u, (uint32_t)srcSize.height / block_size);
 			}
 			commandlist.compute_encoder->copyFromBuffer(reinterpret_buffer[commandlist.queue].get(), 0, row_pitch, buffer_size, srcSize, dst_internal->texture.get(), dstSlice, dstMip, dstOrigin);
+			commandlist.compute_encoder->barrierAfterEncoderStages(MTL::StageDispatch | MTL::StageBlit, MTL::StageBlit, MTL4::VisibilityOptionNone);
 		}
 		else
 		{
