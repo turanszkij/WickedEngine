@@ -1445,43 +1445,6 @@ using namespace metal_internal;
 			}
 		}
 		
-		if (CheckCapability(GraphicsDeviceCapability::RAYTRACING))
-		{
-			// This creates a dummy BLAS that will be a stand-in for unused TLAS instances:
-			NS::SharedPtr<MTL4::PrimitiveAccelerationStructureDescriptor> emptydesc = NS::TransferPtr(MTL4::PrimitiveAccelerationStructureDescriptor::alloc()->init());
-			NS::SharedPtr<MTL4::AccelerationStructureBoundingBoxGeometryDescriptor> geo = NS::TransferPtr(MTL4::AccelerationStructureBoundingBoxGeometryDescriptor::alloc()->init());
-			MTL::AxisAlignedBoundingBox box = {};
-			dummyblasbuffer = NS::TransferPtr(device->newBuffer(sizeof(box), MTL::ResourceStorageModeShared));
-			std::memcpy(dummyblasbuffer->contents(), &box, sizeof(box));
-			geo->setBoundingBoxBuffer({dummyblasbuffer->gpuAddress(), dummyblasbuffer->length()});
-			geo->setBoundingBoxStride(sizeof(box));
-			geo->setBoundingBoxCount(1);
-			MTL4::AccelerationStructureBoundingBoxGeometryDescriptor* geos[] = { geo.get() };
-			NS::SharedPtr<NS::Array> array = NS::TransferPtr(NS::Array::array((NS::Object**)geos, arraysize(geos))->retain());
-			emptydesc->setGeometryDescriptors(array.get());
-			MTL::AccelerationStructureSizes size = device->accelerationStructureSizes(emptydesc.get());
-			dummyblas = NS::TransferPtr(device->newAccelerationStructure(size.accelerationStructureSize));
-			dummyblas->setLabel(NS::TransferPtr(NS::String::alloc()->init("dummyBLAS", NS::UTF8StringEncoding)).get());
-			dummyblas_resourceid = dummyblas->gpuResourceID();
-			NS::SharedPtr<MTL::Buffer> scratch = NS::TransferPtr(device->newBuffer(size.buildScratchBufferSize, MTL::ResourceStorageModePrivate));
-			NS::SharedPtr<MTL4::CommandBuffer> commandbuffer = NS::TransferPtr(device->newCommandBuffer());
-			NS::SharedPtr<MTL4::CommandAllocator> commandallocator = NS::TransferPtr(device->newCommandAllocator());
-			commandbuffer->beginCommandBuffer(commandallocator.get());
-			allocationhandler->residency_set->addAllocation(dummyblasbuffer.get());
-			allocationhandler->residency_set->addAllocation(dummyblas.get());
-			allocationhandler->residency_set->addAllocation(scratch.get());
-			allocationhandler->residency_set->commit();
-			MTL4::ComputeCommandEncoder* encoder = commandbuffer->computeCommandEncoder();
-			MTL4::BufferRange scratch_range = {};
-			scratch_range.bufferAddress = scratch->gpuAddress();
-			scratch_range.length = scratch->length();
-			encoder->buildAccelerationStructure(dummyblas.get(), emptydesc.get(), scratch_range);
-			encoder->endEncoding();
-			commandbuffer->endCommandBuffer();
-			MTL4::CommandBuffer* cmds[] = {commandbuffer.get()};
-			uploadqueue->commit(cmds, arraysize(cmds));
-		}
-		
 		wilog("Created GraphicsDevice_Metal (%d ms)", (int)std::round(timer.elapsed()));
 	}
 	GraphicsDevice_Metal::~GraphicsDevice_Metal()
@@ -3031,13 +2994,9 @@ using namespace metal_internal;
 	void GraphicsDevice_Metal::WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) const
 	{
 		MTL::IndirectAccelerationStructureInstanceDescriptor descriptor = {};
-		descriptor.options = MTL::AccelerationStructureInstanceOptionNone;
-		if (instance == nullptr)
+		if (instance != nullptr)
 		{
-			descriptor.accelerationStructureID = dummyblas_resourceid;
-		}
-		else
-		{
+			descriptor.options = MTL::AccelerationStructureInstanceOptionNone;
 			if (instance->flags & RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_CULL_DISABLE)
 			{
 				descriptor.options |= MTL::AccelerationStructureInstanceOptionDisableTriangleCulling;
@@ -3058,24 +3017,7 @@ using namespace metal_internal;
 			descriptor.intersectionFunctionTableOffset = 0;
 			auto blas_internal = to_internal<RaytracingAccelerationStructure>(instance->bottom_level);
 			descriptor.accelerationStructureID = blas_internal->resourceid;
-#if 1
-			// The top level descriptor can specify row major layout now like directx:
-			std::memcpy(&descriptor.transformationMatrix, instance->transform, sizeof(descriptor.transformationMatrix));
-#else
-			// Conversion from row major to column major:
-			descriptor.transformationMatrix.columns[0][0] = instance->transform[0][0];
-			descriptor.transformationMatrix.columns[0][1] = instance->transform[1][0];
-			descriptor.transformationMatrix.columns[0][2] = instance->transform[2][0];
-			descriptor.transformationMatrix.columns[1][0] = instance->transform[0][1];
-			descriptor.transformationMatrix.columns[1][1] = instance->transform[1][1];
-			descriptor.transformationMatrix.columns[1][2] = instance->transform[2][1];
-			descriptor.transformationMatrix.columns[2][0] = instance->transform[0][2];
-			descriptor.transformationMatrix.columns[2][1] = instance->transform[1][2];
-			descriptor.transformationMatrix.columns[2][2] = instance->transform[2][2];
-			descriptor.transformationMatrix.columns[3][0] = instance->transform[0][3];
-			descriptor.transformationMatrix.columns[3][1] = instance->transform[1][3];
-			descriptor.transformationMatrix.columns[3][2] = instance->transform[2][3];
-#endif
+			std::memcpy(&descriptor.transformationMatrix, instance->transform, sizeof(descriptor.transformationMatrix)); // MatrixLayoutRowMajor instance setup!
 		}
 		std::memcpy(dest, &descriptor, sizeof(descriptor)); // force memcpy into potentially write combined cache memory
 	}

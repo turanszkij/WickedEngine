@@ -259,10 +259,6 @@ namespace wi::graphics
 		NS::SharedPtr<MTL::TextureViewPool> texture_view_pool;
 #endif // USE_TEXTURE_VIEW_POOL
 		
-		NS::SharedPtr<MTL::Buffer> dummyblasbuffer;
-		NS::SharedPtr<MTL::AccelerationStructure> dummyblas;
-		MTL::ResourceID dummyblas_resourceid = {};
-		
 		void binder_flush(CommandList cmd);
 
 		constexpr CommandList_Metal& GetCommandList(CommandList cmd) const
