@@ -48,6 +48,17 @@ namespace wi::graphics
 			StaticSamplerDescriptors static_samplers;
 		};
 		
+		union ShaderAdditionalData
+		{
+			MTL::Size numthreads; // compute, mesh, amplification
+			struct // vertex
+			{
+				uint32_t vertex_output_size_in_bytes;
+				bool needs_draw_params;
+			};
+			uint32_t max_input_primitives_per_mesh_threadgroup; // geometry
+		};
+		
 	private:
 		NS::SharedPtr<MTL::Device> device;
 		NS::SharedPtr<MTL4::CommandQueue> uploadqueue;
@@ -137,6 +148,7 @@ namespace wi::graphics
 			MTL4::RenderCommandEncoder* render_encoder = nullptr;
 			MTL4::ComputeCommandEncoder* compute_encoder = nullptr;
 			MTL::PrimitiveType primitive_type = MTL::PrimitiveTypeTriangle;
+			IRRuntimePrimitiveType ir_primitive_type = IRRuntimePrimitiveTypeTriangle;
 			MTL4::BufferRange index_buffer = {};
 			MTL::IndexType index_type = MTL::IndexTypeUInt32;
 			wi::vector<std::pair<PipelineHash, JustInTimePSO>> pipelines_worker;
@@ -160,6 +172,7 @@ namespace wi::graphics
 			bool dirty_drawargs = false;
 			MTL::Size numthreads_as = {};
 			MTL::Size numthreads_ms = {};
+			IRGeometryEmulationPipelineDescriptor gs_desc = {};
 			
 			struct VertexBufferBinding
 			{
@@ -185,6 +198,7 @@ namespace wi::graphics
 				render_encoder = nullptr;
 				compute_encoder = nullptr;
 				primitive_type = MTL::PrimitiveTypeTriangle;
+				ir_primitive_type = IRRuntimePrimitiveTypeTriangle;
 				index_buffer = {};
 				index_type = MTL::IndexTypeUInt32;
 				pipelines_worker.clear();

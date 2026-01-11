@@ -603,6 +603,7 @@ namespace wi::shadercompiler
 					LINK_IR(IRCompilerDestroy)
 					LINK_IR(IRRootSignatureCreateFromDescriptor)
 					LINK_IR(IRCompilerSetGlobalRootSignature)
+					LINK_IR(IRCompilerEnableGeometryAndTessellationEmulation)
 					//LINK_IR(IRRootSignatureDestroy)
 					
 					static IRDescriptorRange1 binding_resources[] =
@@ -693,6 +694,7 @@ namespace wi::shadercompiler
 					IRCompilerSetEntryPointName(pCompiler, input.entrypoint.c_str());
 					IRCompilerSetGlobalRootSignature(pCompiler, pRootSig);
 					IRCompilerSetStageInGenerationMode(pCompiler, IRStageInCodeGenerationModeUseMetalVertexFetch);
+					//IRCompilerEnableGeometryAndTessellationEmulation(pCompiler, true);
 					IRObject* pDXIL = IRObjectCreateFromDXIL(output.shaderdata, output.shadersize, IRBytecodeOwnershipNone);
 					IRError* pError = nullptr;
 					IRObject* pOutIR = IRCompilerAllocCompileAndLink(pCompiler, NULL, pDXIL, &pError);
@@ -738,6 +740,7 @@ namespace wi::shadercompiler
 					IRMetalLibGetBytecode(pMetallib, internal_state->data());
 					if (
 						input.stage == ShaderStage::VS ||
+						input.stage == ShaderStage::GS ||
 						input.stage == ShaderStage::CS ||
 						input.stage == ShaderStage::MS ||
 						input.stage == ShaderStage::AS
@@ -746,6 +749,7 @@ namespace wi::shadercompiler
 						LINK_IR(IRShaderReflectionCreate)
 						LINK_IR(IRObjectGetReflection)
 						LINK_IR(IRShaderReflectionCopyVertexInfo)
+						LINK_IR(IRShaderReflectionCopyGeometryInfo)
 						LINK_IR(IRShaderReflectionCopyComputeInfo)
 						LINK_IR(IRShaderReflectionCopyMeshInfo)
 						LINK_IR(IRShaderReflectionCopyAmplificationInfo)
@@ -755,43 +759,51 @@ namespace wi::shadercompiler
 						IRShaderReflection* reflection = IRShaderReflectionCreate();
 						bool success = IRObjectGetReflection(pOutIR, irstage, reflection);
 						assert(success);
-						uint32_t reflection_append[3] = {};
+						wi::graphics::GraphicsDevice_Metal::ShaderAdditionalData reflection_append = {};
 						if (input.stage == ShaderStage::VS)
 						{
 							IRVersionedVSInfo vs_info = {};
 							success = IRShaderReflectionCopyVertexInfo(reflection, IRReflectionVersion_1_0, &vs_info);
 							assert(success);
-							reflection_append[0] = vs_info.info_1_0.needs_draw_params ? 1 : 0;
+							reflection_append.needs_draw_params = vs_info.info_1_0.needs_draw_params ? 1 : 0;
+							reflection_append.vertex_output_size_in_bytes = vs_info.info_1_0.vertex_output_size_in_bytes;
+						}
+						if (input.stage == ShaderStage::GS)
+						{
+							IRVersionedGSInfo gs_info = {};
+							success = IRShaderReflectionCopyGeometryInfo(reflection, IRReflectionVersion_1_0, &gs_info);
+							assert(success);
+							reflection_append.max_input_primitives_per_mesh_threadgroup = gs_info.info_1_0.max_input_primitives_per_mesh_threadgroup;
 						}
 						if (input.stage == ShaderStage::CS)
 						{
 							IRVersionedCSInfo cs_info = {};
 							success = IRShaderReflectionCopyComputeInfo(reflection, IRReflectionVersion_1_0, &cs_info);
 							assert(success);
-							reflection_append[0] = cs_info.info_1_0.tg_size[0];
-							reflection_append[1] = cs_info.info_1_0.tg_size[1];
-							reflection_append[2] = cs_info.info_1_0.tg_size[2];
+							reflection_append.numthreads.width = cs_info.info_1_0.tg_size[0];
+							reflection_append.numthreads.height = cs_info.info_1_0.tg_size[1];
+							reflection_append.numthreads.depth = cs_info.info_1_0.tg_size[2];
 						}
 						else if (input.stage == ShaderStage::MS)
 						{
 							IRVersionedMSInfo ms_info = {};
 							success = IRShaderReflectionCopyMeshInfo(reflection, IRReflectionVersion_1_0, &ms_info);
 							assert(success);
-							reflection_append[0] = ms_info.info_1_0.num_threads[0];
-							reflection_append[1] = ms_info.info_1_0.num_threads[1];
-							reflection_append[2] = ms_info.info_1_0.num_threads[2];
+							reflection_append.numthreads.width = ms_info.info_1_0.num_threads[0];
+							reflection_append.numthreads.height = ms_info.info_1_0.num_threads[1];
+							reflection_append.numthreads.depth = ms_info.info_1_0.num_threads[2];
 						}
 						else if (input.stage == ShaderStage::AS)
 						{
 							IRVersionedASInfo as_info = {};
 							success = IRShaderReflectionCopyAmplificationInfo(reflection, IRReflectionVersion_1_0, &as_info);
 							assert(success);
-							reflection_append[0] = as_info.info_1_0.num_threads[0];
-							reflection_append[1] = as_info.info_1_0.num_threads[1];
-							reflection_append[2] = as_info.info_1_0.num_threads[2];
+							reflection_append.numthreads.width = as_info.info_1_0.num_threads[0];
+							reflection_append.numthreads.height = as_info.info_1_0.num_threads[1];
+							reflection_append.numthreads.depth = as_info.info_1_0.num_threads[2];
 						}
 						internal_state->resize(internal_state->size() + sizeof(reflection_append));
-						std::memcpy(internal_state->data() + internal_state->size() - sizeof(reflection_append), reflection_append, sizeof(reflection_append));
+						std::memcpy(internal_state->data() + internal_state->size() - sizeof(reflection_append), &reflection_append, sizeof(reflection_append));
 						IRShaderReflectionDestroy(reflection);
 					}
 					output.internal_state = internal_state;

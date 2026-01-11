@@ -783,8 +783,7 @@ namespace metal_internal
 		NS::SharedPtr<MTL::Library> library;
 		NS::SharedPtr<MTL::Function> function;
 		NS::SharedPtr<MTL::ComputePipelineState> compute_pipeline;
-		MTL::Size numthreads = {};
-		bool needs_draw_params = false;
+		GraphicsDevice_Metal::ShaderAdditionalData additional_data;
 
 		~Shader_Metal()
 		{
@@ -808,6 +807,7 @@ namespace metal_internal
 		MTL::Size numthreads_as = {};
 		MTL::Size numthreads_ms = {};
 		bool needs_draw_params = false;
+		IRGeometryEmulationPipelineDescriptor gs_desc = {};
 
 		~PipelineState_Metal()
 		{
@@ -1156,21 +1156,27 @@ using namespace metal_internal;
 		{
 			case PrimitiveTopology::TRIANGLELIST:
 				commandlist.primitive_type = MTL::PrimitiveTypeTriangle;
+				commandlist.ir_primitive_type = IRRuntimePrimitiveTypeTriangle;
 				break;
 			case PrimitiveTopology::TRIANGLESTRIP:
 				commandlist.primitive_type = MTL::PrimitiveTypeTriangleStrip;
+				commandlist.ir_primitive_type = IRRuntimePrimitiveTypeTriangleStrip;
 				break;
 			case PrimitiveTopology::LINELIST:
 				commandlist.primitive_type = MTL::PrimitiveTypeLine;
+				commandlist.ir_primitive_type = IRRuntimePrimitiveTypeLine;
 				break;
 			case PrimitiveTopology::LINESTRIP:
 				commandlist.primitive_type = MTL::PrimitiveTypeLineStrip;
+				commandlist.ir_primitive_type = IRRuntimePrimitiveTypeLineStrip;
 				break;
 			case PrimitiveTopology::POINTLIST:
 				commandlist.primitive_type = MTL::PrimitiveTypePoint;
+				commandlist.ir_primitive_type = IRRuntimePrimitiveTypePoint;
 				break;
 			case PrimitiveTopology::PATCHLIST:
 				commandlist.primitive_type = MTL::PrimitiveTypeTriangle;
+				commandlist.ir_primitive_type = IRRuntimePrimitiveType3ControlPointPatchlist;
 				break;
 			default:
 				break;
@@ -1965,29 +1971,17 @@ using namespace metal_internal;
 		internal_state->allocationhandler = allocationhandler;
 		shader->internal_state = internal_state;
 		
-		// The needs_draw_param or numthreads was gathered by offline shader reflection system in wiShaderCompiler.cpp and attached to the end of shadercode data:
-		uint32_t reflection_append[3] = {};
+		// Offline reflection gathered data that's required to bring HLSL shaders to Metal is stored tightly after shadercode data:
 		if (
 			stage == ShaderStage::VS ||
+			stage == ShaderStage::GS ||
 			stage == ShaderStage::CS ||
 			stage == ShaderStage::MS ||
 			stage == ShaderStage::AS
 			)
 		{
-			shadercode_size -= sizeof(reflection_append);
-			std::memcpy(reflection_append, (uint8_t*)shadercode + shadercode_size, sizeof(reflection_append));
-			if (stage == ShaderStage::VS)
-			{
-				internal_state->needs_draw_params = reflection_append[0] != 0;
-			}
-			else if (
-				stage == ShaderStage::CS ||
-				stage == ShaderStage::MS ||
-				stage == ShaderStage::AS
-				)
-			{
-				internal_state->numthreads = { reflection_append[0], reflection_append[1], reflection_append[2] };
-			}
+			shadercode_size -= sizeof(internal_state->additional_data);
+			std::memcpy(&internal_state->additional_data, (uint8_t*)shadercode + shadercode_size, sizeof(internal_state->additional_data));
 		}
 		
 		dispatch_data_t bytecodeData = dispatch_data_create(shadercode, shadercode_size, dispatch_get_main_queue(), nullptr);
@@ -2005,14 +1999,10 @@ using namespace metal_internal;
 		NS::SharedPtr<MTL::FunctionConstantValues> constants = NS::TransferPtr(MTL::FunctionConstantValues::alloc()->init());
 		
 		if (stage == ShaderStage::HS || stage == ShaderStage::DS || stage == ShaderStage::GS)
-			return false; // TODO
-		//bool tessellationEnabled = false;
-		//int vertex_shader_output_size_fc = 1024;
-		//if (stage == ShaderStage::HS || stage == ShaderStage::DS || stage == ShaderStage::GS)
-		//{
-		//	constants->setConstantValue(&tessellationEnabled, MTL::DataTypeBool, (NS::UInteger)0);
-		//	constants->setConstantValue(&vertex_shader_output_size_fc, MTL::DataTypeInt, (NS::UInteger)1);
-		//}
+		{
+			// These will be used only by emulated pipeline creation, not native shader functions:
+			return internal_state->library.get() != nullptr;
+		}
 		
 		error = nullptr;
 		internal_state->function = NS::TransferPtr(internal_state->library->newFunction(entry.get(), constants.get(), &error));
@@ -2020,7 +2010,6 @@ using namespace metal_internal;
 		{
 			NS::String* errDesc = error->localizedDescription();
 			wilog_error("%s", errDesc->utf8String());
-			assert(0);
 			error->release();
 		}
 		assert(internal_state->function.get() != nullptr);
@@ -2237,7 +2226,11 @@ using namespace metal_internal;
 			internal_state->descriptor = NS::TransferPtr(MTL::RenderPipelineDescriptor::alloc()->init());
 			auto shader_internal = to_internal(desc->vs);
 			internal_state->descriptor->setVertexFunction(shader_internal->function.get());
-			internal_state->needs_draw_params = shader_internal->needs_draw_params;
+			internal_state->needs_draw_params = shader_internal->additional_data.needs_draw_params;
+			internal_state->gs_desc.vertexLibrary = shader_internal->library.get();
+			internal_state->gs_desc.vertexFunctionName = "main";
+			internal_state->gs_desc.stageInLibrary = shader_internal->library.get();
+			internal_state->gs_desc.pipelineConfig.gsVertexSizeInBytes = shader_internal->additional_data.vertex_output_size_in_bytes;
 		}
 		if (desc->ds != nullptr)
 		{
@@ -2249,20 +2242,25 @@ using namespace metal_internal;
 		}
 		if (desc->gs != nullptr)
 		{
-			return false; // TODO
+			internal_state->ms_descriptor = NS::TransferPtr(MTL::MeshRenderPipelineDescriptor::alloc()->init());
+			auto shader_internal = to_internal(desc->gs);
+			internal_state->gs_desc.basePipelineDescriptor = internal_state->ms_descriptor.get();
+			internal_state->gs_desc.geometryLibrary = shader_internal->library.get();
+			internal_state->gs_desc.geometryFunctionName = "main";
+			internal_state->gs_desc.pipelineConfig.gsMaxInputPrimitivesPerMeshThreadgroup = shader_internal->additional_data.max_input_primitives_per_mesh_threadgroup;
 		}
 		if (desc->ms != nullptr)
 		{
 			internal_state->ms_descriptor = NS::TransferPtr(MTL::MeshRenderPipelineDescriptor::alloc()->init());
 			auto shader_internal = to_internal(desc->ms);
 			internal_state->ms_descriptor->setMeshFunction(shader_internal->function.get());
-			internal_state->numthreads_ms = shader_internal->numthreads;
+			internal_state->numthreads_ms = shader_internal->additional_data.numthreads;
 		}
 		if (desc->as != nullptr)
 		{
 			auto shader_internal = to_internal(desc->as);
 			internal_state->ms_descriptor->setObjectFunction(shader_internal->function.get());
-			internal_state->numthreads_as = shader_internal->numthreads;
+			internal_state->numthreads_as = shader_internal->additional_data.numthreads;
 		}
 		if (desc->ps != nullptr)
 		{
@@ -2271,6 +2269,8 @@ using namespace metal_internal;
 				internal_state->descriptor->setFragmentFunction(shader_internal->function.get());
 			else
 				internal_state->ms_descriptor->setFragmentFunction(shader_internal->function.get());
+			internal_state->gs_desc.fragmentLibrary = shader_internal->library.get();
+			internal_state->gs_desc.fragmentFunctionName = "main";
 		}
 		
 		NS::SharedPtr<MTL::VertexDescriptor> vertex_descriptor;
@@ -2440,7 +2440,9 @@ using namespace metal_internal;
 			
 			MTL::AutoreleasedRenderPipelineReflection* reflection = nullptr;
 			NS::Error* error = nullptr;
-			if (internal_state->descriptor.get() != nullptr)
+			if (internal_state->gs_desc.basePipelineDescriptor != nullptr)
+				internal_state->render_pipeline = NS::TransferPtr(IRRuntimeNewGeometryEmulationPipeline(device.get(), &internal_state->gs_desc, &error));
+			else if (internal_state->descriptor.get() != nullptr)
 				internal_state->render_pipeline = NS::TransferPtr(device->newRenderPipelineState(internal_state->descriptor.get(), &error));
 			else
 				internal_state->render_pipeline = NS::TransferPtr(device->newRenderPipelineState(internal_state->ms_descriptor.get(), MTL::PipelineOptionNone, reflection, &error));
@@ -3782,6 +3784,7 @@ using namespace metal_internal;
 		commandlist.drawargs_required = internal_state->needs_draw_params;
 		commandlist.numthreads_as = internal_state->numthreads_as;
 		commandlist.numthreads_ms = internal_state->numthreads_ms;
+		commandlist.gs_desc = internal_state->gs_desc;
 	}
 	void GraphicsDevice_Metal::BindComputeShader(const Shader* cs, CommandList cmd)
 	{
@@ -3799,8 +3802,48 @@ using namespace metal_internal;
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		
-		// Draw args binding is a requirement of metal shader converter to match DirectX behaviour of vertexID and instanceID:
-		if (commandlist.drawargs_required)
+		if (commandlist.gs_desc.basePipelineDescriptor != nullptr)
+		{
+			// IRRuntimeDrawPrimitivesGeometryEmulation Metal4 port:
+			IRRuntimeDrawInfo drawInfo = IRRuntimeCalculateDrawInfoForGSEmulation(commandlist.ir_primitive_type,
+																				  (indextype_t)-1,
+																				  commandlist.gs_desc.pipelineConfig.gsVertexSizeInBytes,
+																				  commandlist.gs_desc.pipelineConfig.gsMaxInputPrimitivesPerMeshThreadgroup,
+																				  1);
+			drawInfo.indexType = kIRNonIndexedDraw;
+			
+			mtlsize_t objectThreadgroupCount = IRRuntimeCalculateObjectTgCountForTessellationAndGeometryEmulation(vertexCount,
+																												  drawInfo.objectThreadgroupVertexStride,
+																												  commandlist.ir_primitive_type,
+																												  1);
+			
+			uint32_t objectThreadgroupSize,meshThreadgroupSize;
+			IRRuntimeCalculateThreadgroupSizeForGeometry(commandlist.ir_primitive_type,
+														 commandlist.gs_desc.pipelineConfig.gsMaxInputPrimitivesPerMeshThreadgroup,
+														 drawInfo.objectThreadgroupVertexStride,
+														 &objectThreadgroupSize,
+														 &meshThreadgroupSize);
+			
+			IRRuntimeDrawArgument da = {
+				.vertexCountPerInstance = vertexCount,
+				.instanceCount = 1,
+				.startVertexLocation = startVertexLocation,
+				.startInstanceLocation = 0
+			};
+			IRRuntimeDrawParams dp = { .draw = da };
+			
+			auto alloc = AllocateGPU(sizeof(drawInfo), cmd);
+			std::memcpy(alloc.data, &drawInfo, sizeof(drawInfo));
+			commandlist.argument_table->setAddress(to_internal(&alloc.buffer)->gpu_address + alloc.offset, kIRArgumentBufferUniformsBindPoint);
+			alloc = AllocateGPU(sizeof(dp), cmd);
+			std::memcpy(alloc.data, &dp, sizeof(dp));
+			commandlist.argument_table->setAddress(to_internal(&alloc.buffer)->gpu_address + alloc.offset, kIRArgumentBufferDrawArgumentsBindPoint);
+			
+			predraw(cmd);
+			commandlist.render_encoder->drawMeshThreadgroups(objectThreadgroupCount, MTL::Size::Make(objectThreadgroupSize, 1, 1), MTL::Size::Make(meshThreadgroupSize, 1, 1));
+			return;
+		}
+		else if (commandlist.drawargs_required)
 		{
 			commandlist.dirty_drawargs = true;
 			IRRuntimeDrawArgument da = {
@@ -3824,9 +3867,53 @@ using namespace metal_internal;
 	void GraphicsDevice_Metal::DrawIndexed(uint32_t indexCount, uint32_t startIndexLocation, int32_t baseVertexLocation, CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		const uint64_t index_stride = commandlist.index_type == MTL::IndexTypeUInt32 ? sizeof(uint32_t) : sizeof(uint16_t);
+		const uint64_t indexBufferOffset = startIndexLocation * index_stride;
 		
-		// Draw args binding is a requirement of metal shader converter to match DirectX behaviour of vertexID and instanceID:
-		if (commandlist.drawargs_required)
+		if (commandlist.gs_desc.basePipelineDescriptor != nullptr)
+		{
+			// IRRuntimeDrawIndexedPrimitivesGeometryEmulation Metal4 port:
+			IRRuntimeDrawInfo drawInfo = IRRuntimeCalculateDrawInfoForGSEmulation(commandlist.ir_primitive_type,
+																				  commandlist.index_type,
+																				  commandlist.gs_desc.pipelineConfig.gsVertexSizeInBytes,
+																				  commandlist.gs_desc.pipelineConfig.gsMaxInputPrimitivesPerMeshThreadgroup,
+																				  1);
+			
+			mtlsize_t objectThreadgroupCount = IRRuntimeCalculateObjectTgCountForTessellationAndGeometryEmulation(indexCount,
+																												  drawInfo.objectThreadgroupVertexStride,
+																												  commandlist.ir_primitive_type,
+																												  1);
+			
+			uint32_t objectThreadgroupSize,meshThreadgroupSize;
+			IRRuntimeCalculateThreadgroupSizeForGeometry(commandlist.ir_primitive_type,
+														 commandlist.gs_desc.pipelineConfig.gsMaxInputPrimitivesPerMeshThreadgroup,
+														 drawInfo.objectThreadgroupVertexStride,
+														 &objectThreadgroupSize,
+														 &meshThreadgroupSize);
+			
+			IRRuntimeDrawIndexedArgument da = {
+				.indexCountPerInstance = indexCount,
+				.instanceCount = 1,
+				.startIndexLocation = startIndexLocation,
+				.baseVertexLocation = baseVertexLocation,
+				.startInstanceLocation = 0
+			};
+			IRRuntimeDrawParams dp = { .drawIndexed = da };
+			
+			drawInfo.indexBuffer = commandlist.index_buffer.bufferAddress + indexBufferOffset;
+			
+			auto alloc = AllocateGPU(sizeof(drawInfo), cmd);
+			std::memcpy(alloc.data, &drawInfo, sizeof(drawInfo));
+			commandlist.argument_table->setAddress(to_internal(&alloc.buffer)->gpu_address + alloc.offset, kIRArgumentBufferUniformsBindPoint);
+			alloc = AllocateGPU(sizeof(dp), cmd);
+			std::memcpy(alloc.data, &dp, sizeof(dp));
+			commandlist.argument_table->setAddress(to_internal(&alloc.buffer)->gpu_address + alloc.offset, kIRArgumentBufferDrawArgumentsBindPoint);
+			
+			predraw(cmd);
+			commandlist.render_encoder->drawMeshThreadgroups(objectThreadgroupCount, MTL::Size::Make(objectThreadgroupSize, 1, 1), MTL::Size::Make(meshThreadgroupSize, 1, 1));
+			return;
+		}
+		else if (commandlist.drawargs_required)
 		{
 			commandlist.dirty_drawargs = true;
 			IRRuntimeDrawIndexedArgument da = {
@@ -3847,16 +3934,54 @@ using namespace metal_internal;
 		}
 		
 		predraw(cmd);
-		const uint64_t index_stride = commandlist.index_type == MTL::IndexTypeUInt32 ? sizeof(uint32_t) : sizeof(uint16_t);
-		const uint64_t indexBufferOffset = startIndexLocation * index_stride;
 		commandlist.render_encoder->drawIndexedPrimitives(commandlist.primitive_type, indexCount, commandlist.index_type, commandlist.index_buffer.bufferAddress + indexBufferOffset, commandlist.index_buffer.length);
 	}
 	void GraphicsDevice_Metal::DrawInstanced(uint32_t vertexCount, uint32_t instanceCount, uint32_t startVertexLocation, uint32_t startInstanceLocation, CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		
-		// Draw args binding is a requirement of metal shader converter to match DirectX behaviour of vertexID and instanceID:
-		if (commandlist.drawargs_required)
+		if (commandlist.gs_desc.basePipelineDescriptor != nullptr)
+		{
+			// IRRuntimeDrawPrimitivesGeometryEmulation Metal4 port:
+			IRRuntimeDrawInfo drawInfo = IRRuntimeCalculateDrawInfoForGSEmulation(commandlist.ir_primitive_type,
+																				  (indextype_t)-1,
+																				  commandlist.gs_desc.pipelineConfig.gsVertexSizeInBytes,
+																				  commandlist.gs_desc.pipelineConfig.gsMaxInputPrimitivesPerMeshThreadgroup,
+																				  instanceCount);
+			drawInfo.indexType = kIRNonIndexedDraw;
+			
+			mtlsize_t objectThreadgroupCount = IRRuntimeCalculateObjectTgCountForTessellationAndGeometryEmulation(vertexCount,
+																												  drawInfo.objectThreadgroupVertexStride,
+																												  commandlist.ir_primitive_type,
+																												  instanceCount);
+			
+			uint32_t objectThreadgroupSize,meshThreadgroupSize;
+			IRRuntimeCalculateThreadgroupSizeForGeometry(commandlist.ir_primitive_type,
+														 commandlist.gs_desc.pipelineConfig.gsMaxInputPrimitivesPerMeshThreadgroup,
+														 drawInfo.objectThreadgroupVertexStride,
+														 &objectThreadgroupSize,
+														 &meshThreadgroupSize);
+			
+			IRRuntimeDrawArgument da = {
+				.vertexCountPerInstance = vertexCount,
+				.instanceCount = instanceCount,
+				.startVertexLocation = startVertexLocation,
+				.startInstanceLocation = startInstanceLocation
+			};
+			IRRuntimeDrawParams dp = { .draw = da };
+			
+			auto alloc = AllocateGPU(sizeof(drawInfo), cmd);
+			std::memcpy(alloc.data, &drawInfo, sizeof(drawInfo));
+			commandlist.argument_table->setAddress(to_internal(&alloc.buffer)->gpu_address + alloc.offset, kIRArgumentBufferUniformsBindPoint);
+			alloc = AllocateGPU(sizeof(dp), cmd);
+			std::memcpy(alloc.data, &dp, sizeof(dp));
+			commandlist.argument_table->setAddress(to_internal(&alloc.buffer)->gpu_address + alloc.offset, kIRArgumentBufferDrawArgumentsBindPoint);
+			
+			predraw(cmd);
+			commandlist.render_encoder->drawMeshThreadgroups(objectThreadgroupCount, MTL::Size::Make(objectThreadgroupSize, 1, 1), MTL::Size::Make(meshThreadgroupSize, 1, 1));
+			return;
+		}
+		else if (commandlist.drawargs_required)
 		{
 			commandlist.dirty_drawargs = true;
 			IRRuntimeDrawArgument da = {
@@ -3880,9 +4005,52 @@ using namespace metal_internal;
 	void GraphicsDevice_Metal::DrawIndexedInstanced(uint32_t indexCount, uint32_t instanceCount, uint32_t startIndexLocation, int32_t baseVertexLocation, uint32_t startInstanceLocation, CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		const uint64_t index_stride = commandlist.index_type == MTL::IndexTypeUInt32 ? sizeof(uint32_t) : sizeof(uint16_t);
+		const uint64_t indexBufferOffset = startIndexLocation * index_stride;
 		
-		// Draw args binding is a requirement of metal shader converter to match DirectX behaviour of vertexID and instanceID:
-		if (commandlist.drawargs_required)
+		if (commandlist.gs_desc.basePipelineDescriptor != nullptr)
+		{
+			// IRRuntimeDrawIndexedPrimitivesGeometryEmulation Metal4 port:
+			IRRuntimeDrawInfo drawInfo = IRRuntimeCalculateDrawInfoForGSEmulation(commandlist.ir_primitive_type,
+																				  commandlist.index_type,
+																				  commandlist.gs_desc.pipelineConfig.gsVertexSizeInBytes,
+																				  commandlist.gs_desc.pipelineConfig.gsMaxInputPrimitivesPerMeshThreadgroup,
+																				  instanceCount);
+			
+			mtlsize_t objectThreadgroupCount = IRRuntimeCalculateObjectTgCountForTessellationAndGeometryEmulation(indexCount,
+																												  drawInfo.objectThreadgroupVertexStride,
+																												  commandlist.ir_primitive_type,
+																												  instanceCount);
+			
+			uint32_t objectThreadgroupSize,meshThreadgroupSize;
+			IRRuntimeCalculateThreadgroupSizeForGeometry(commandlist.ir_primitive_type,
+														 commandlist.gs_desc.pipelineConfig.gsMaxInputPrimitivesPerMeshThreadgroup,
+														 drawInfo.objectThreadgroupVertexStride,
+														 &objectThreadgroupSize,
+														 &meshThreadgroupSize);
+			
+			IRRuntimeDrawIndexedArgument da = {
+				.indexCountPerInstance = indexCount,
+				.instanceCount = 1,
+				.startIndexLocation = startIndexLocation,
+				.baseVertexLocation = baseVertexLocation,
+				.startInstanceLocation = startInstanceLocation
+			};
+			IRRuntimeDrawParams dp = { .drawIndexed = da };
+			
+			drawInfo.indexBuffer = commandlist.index_buffer.bufferAddress + indexBufferOffset;
+			
+			auto alloc = AllocateGPU(sizeof(drawInfo), cmd);
+			std::memcpy(alloc.data, &drawInfo, sizeof(drawInfo));
+			commandlist.argument_table->setAddress(to_internal(&alloc.buffer)->gpu_address + alloc.offset, kIRArgumentBufferUniformsBindPoint);
+			alloc = AllocateGPU(sizeof(dp), cmd);
+			std::memcpy(alloc.data, &dp, sizeof(dp));
+			commandlist.argument_table->setAddress(to_internal(&alloc.buffer)->gpu_address + alloc.offset, kIRArgumentBufferDrawArgumentsBindPoint);
+			predraw(cmd);
+			commandlist.render_encoder->drawMeshThreadgroups(objectThreadgroupCount, MTL::Size::Make(objectThreadgroupSize, 1, 1), MTL::Size::Make(meshThreadgroupSize, 1, 1));
+			return;
+		}
+		else if (commandlist.drawargs_required)
 		{
 			commandlist.dirty_drawargs = true;
 			IRRuntimeDrawIndexedArgument da = {
@@ -3903,8 +4071,6 @@ using namespace metal_internal;
 		}
 		
 		predraw(cmd);
-		const uint64_t index_stride = commandlist.index_type == MTL::IndexTypeUInt32 ? sizeof(uint32_t) : sizeof(uint16_t);
-		const uint64_t indexBufferOffset = startIndexLocation * index_stride;
 		commandlist.render_encoder->drawIndexedPrimitives(commandlist.primitive_type, indexCount, commandlist.index_type, commandlist.index_buffer.bufferAddress + indexBufferOffset, commandlist.index_buffer.length, instanceCount, baseVertexLocation, startInstanceLocation);
 	}
 	void GraphicsDevice_Metal::DrawInstancedIndirect(const GPUBuffer* args, uint64_t args_offset, CommandList cmd)
@@ -3912,7 +4078,8 @@ using namespace metal_internal;
 		auto internal_state = to_internal(args);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		
-		// Draw args binding is a requirement of metal shader converter to match DirectX behaviour of vertexID and instanceID:
+		assert(commandlist.gs_desc.basePipelineDescriptor == nullptr); // indirect geometry shader emulation not supported because instance count is not available to compute emulation info
+		
 		if (commandlist.drawargs_required)
 		{
 			commandlist.dirty_drawargs = true;
@@ -3930,7 +4097,8 @@ using namespace metal_internal;
 		auto internal_state = to_internal(args);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		
-		// Draw args binding is a requirement of metal shader converter to match DirectX behaviour of vertexID and instanceID:
+		assert(commandlist.gs_desc.basePipelineDescriptor == nullptr); // indirect geometry shader emulation not supported because instance count is not available to compute emulation info
+		
 		if (commandlist.drawargs_required)
 		{
 			commandlist.dirty_drawargs = true;
@@ -3963,7 +4131,7 @@ using namespace metal_internal;
 		predispatch(cmd);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		auto cs_internal = to_internal(commandlist.active_cs);
-		commandlist.compute_encoder->dispatchThreadgroups({threadGroupCountX, threadGroupCountY, threadGroupCountZ}, cs_internal->numthreads);
+		commandlist.compute_encoder->dispatchThreadgroups({threadGroupCountX, threadGroupCountY, threadGroupCountZ}, cs_internal->additional_data.numthreads);
 		commandlist.autorelease_end();
 	}
 	void GraphicsDevice_Metal::DispatchIndirect(const GPUBuffer* args, uint64_t args_offset, CommandList cmd)
@@ -3972,7 +4140,7 @@ using namespace metal_internal;
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		auto cs_internal = to_internal(commandlist.active_cs);
 		auto internal_state = to_internal(args);
-		commandlist.compute_encoder->dispatchThreadgroups(internal_state->gpu_address + args_offset, cs_internal->numthreads);
+		commandlist.compute_encoder->dispatchThreadgroups(internal_state->gpu_address + args_offset, cs_internal->additional_data.numthreads);
 		commandlist.autorelease_end();
 	}
 	void GraphicsDevice_Metal::DispatchMesh(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd)
