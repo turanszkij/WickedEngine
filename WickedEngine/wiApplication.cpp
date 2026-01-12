@@ -818,7 +818,16 @@ namespace wi
 		}
 		wi::graphics::GetDevice() = graphicsDevice.get();
 
-		canvas.init(window);
+		if (renderWidth > 0 && renderHeight > 0)
+		{
+			platform::WindowProperties windowprops;
+			platform::GetWindowProperties(window, &windowprops);
+			canvas.init(renderWidth, renderHeight, windowprops.dpi);
+		}
+		else
+		{
+			canvas.init(window);
+		}
 
 		SwapChainDesc desc = swapChain.desc;
 		if (!swapChain.IsValid())
@@ -856,6 +865,26 @@ namespace wi
 
 	}
 
+	void Application::SetRenderResolution(uint32_t width, uint32_t height)
+	{
+		renderWidth = width;
+		renderHeight = height;
+	}
+
+	void Application::GetRenderResolution(uint32_t& width, uint32_t& height) const
+	{
+		if (renderWidth > 0 && renderHeight > 0)
+		{
+			width = renderWidth;
+			height = renderHeight;
+		}
+		else
+		{
+			width = canvas.GetPhysicalWidth();
+			height = canvas.GetPhysicalHeight();
+		}
+	}
+
 	void Application::SetFullScreen(bool fullscreen)
 	{
 #if defined(PLATFORM_WINDOWS_DESKTOP)
@@ -863,8 +892,9 @@ namespace wi
 		// Based on: https://devblogs.microsoft.com/oldnewthing/20100412-00/?p=14353
 		static WINDOWPLACEMENT wp = {};
 		DWORD dwStyle = GetWindowLong(window, GWL_STYLE);
-		bool currently_windowed = dwStyle & WS_OVERLAPPEDWINDOW;
-		if (currently_windowed && fullscreen) {
+		bool has_overlapped_style = dwStyle & WS_OVERLAPPEDWINDOW;
+
+		if (fullscreen && !isFullScreen) {
 			MONITORINFO mi = { sizeof(mi) };
 			if (GetWindowPlacement(window, &wp) &&
 				GetMonitorInfo(MonitorFromWindow(window,
@@ -876,21 +906,27 @@ namespace wi
 					mi.rcMonitor.right - mi.rcMonitor.left,
 					mi.rcMonitor.bottom - mi.rcMonitor.top,
 					SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+				isFullScreen = true;
 			}
 		}
-		else if (!currently_windowed && !fullscreen) {
-			SetWindowLong(window, GWL_STYLE,
-				dwStyle | WS_OVERLAPPEDWINDOW);
+		else if (!fullscreen && isFullScreen) {
+			if (has_overlapped_style) {
+				SetWindowLong(window, GWL_STYLE,
+					dwStyle | WS_OVERLAPPEDWINDOW);
+			}
 			SetWindowPlacement(window, &wp);
 			SetWindowPos(window, NULL, 0, 0, 0, 0,
 				SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
 				SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+			isFullScreen = false;
 		}
 
 #elif defined(PLATFORM_LINUX)
 		SDL_SetWindowFullscreen(window, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+		isFullScreen = fullscreen;
 #elif defined(__APPLE__)
 		wi::apple::SetWindowFullScreen(window, fullscreen);
+		isFullScreen = fullscreen;
 #endif // PLATFORM_WINDOWS_DESKTOP
 	}
 
