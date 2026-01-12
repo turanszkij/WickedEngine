@@ -53,8 +53,6 @@ int main( int argc, char* argv[] )
 		[window center];
 		[window makeKeyAndOrderFront:nil];
 		
-		XMUINT2 siz = wi::apple::GetWindowSize((__bridge wi::platform::window_type)window);
-		
 		WindowDelegate *delegate = [[WindowDelegate alloc] init];
 		[window setDelegate:delegate];
 		

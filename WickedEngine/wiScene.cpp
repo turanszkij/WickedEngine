@@ -268,7 +268,7 @@ namespace wi::scene
 
 		// This must be after lightmap requests were determined:
 		TLAS_instancesMapped = nullptr;
-		if (IsAccelerationStructureUpdateRequested() && device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
+		if (instanceArraySize > 0 && IsAccelerationStructureUpdateRequested() && device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 		{
 			GPUBufferDesc desc;
 			desc.stride = (uint32_t)device->GetTopLevelAccelerationStructureInstanceSize();
@@ -287,7 +287,7 @@ namespace wi::scene
 
 			wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
 				// Must not keep inactive TLAS instances, so zero them out for safety with invalid instances:
-				//	Note: instead of memsetting, I use WriteTopLevelAccelerationStructureInstance with null instance, so if device requires setup other than zeroing (Metal API) it will stil work
+				//	Note: instead of memsetting, I use WriteTopLevelAccelerationStructureInstance with null instance, so if device requires setup other than zeroing it will still work
 				const uint32_t instanceCount = uint32_t(TLAS_instancesUpload->desc.size / TLAS_instancesUpload->desc.stride);
 				const size_t instanceSize = device->GetTopLevelAccelerationStructureInstanceSize();
 				for (uint32_t i = 0; i < instanceCount; ++i)

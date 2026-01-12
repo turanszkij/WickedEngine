@@ -3243,7 +3243,7 @@ void RenderMeshes(
 
 		const float tessF = mesh.GetTessellationFactor();
 		const bool tessellatorRequested = tessF > 0 && tessellation;
-		const bool meshShaderRequested = !tessellatorRequested && mesh_shader && mesh.vb_clu.IsValid();
+		const bool meshShaderRequested = !tessellatorRequested && mesh_shader && mesh.vb_clu.IsValid() && !wireframe;
 
 		// Notes on provoking index buffer:
 		//	Normally it's used for primitiveID generation, so it would be only used in PREPASS
