@@ -13,7 +13,7 @@ namespace wi::config
 
 	bool Section::GetBool(const char* name) const
 	{
-		auto it = values.find(name);
+		const auto it = values.find(name);
 		if (it == values.end())
 		{
 			return 0;
@@ -26,11 +26,15 @@ namespace wi::config
 		{
 			return false;
 		}
+		if (it->second.empty())
+		{
+			return 0;
+		}
 		return std::stoi(it->second) != 0;
 	}
 	int Section::GetInt(const char* name) const
 	{
-		auto it = values.find(name);
+		const auto it = values.find(name);
 		if (it == values.end())
 		{
 			return 0;
@@ -43,11 +47,15 @@ namespace wi::config
 		{
 			return 0;
 		}
+		if (it->second.empty())
+		{
+			return 0;
+		}
 		return std::stoi(it->second);
 	}
 	uint32_t Section::GetUint(const char* name) const
 	{
-		auto it = values.find(name);
+		const auto it = values.find(name);
 		if (it == values.end())
 		{
 			return 0u;
@@ -60,11 +68,15 @@ namespace wi::config
 		{
 			return 0u;
 		}
+		if (it->second.empty())
+		{
+			return 0u;
+		}
 		return (uint32_t)std::stoul(it->second);
 	}
 	float Section::GetFloat(const char* name) const
 	{
-		auto it = values.find(name);
+		const auto it = values.find(name);
 		if (it == values.end())
 		{
 			return 0;
@@ -77,11 +89,15 @@ namespace wi::config
 		{
 			return 0;
 		}
+		if (it->second.empty())
+		{
+			return 0;
+		}
 		return std::stof(it->second);
 	}
 	std::string Section::GetText(const char* name) const
 	{
-		auto it = values.find(name);
+		const auto it = values.find(name);
 		if (it == values.end())
 		{
 			return "";
