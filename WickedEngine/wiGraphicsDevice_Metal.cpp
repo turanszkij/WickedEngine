@@ -3578,7 +3578,7 @@ using namespace metal_internal;
 		{
 			auto occlusionquery_internal = to_internal(occlusionqueries);
 			descriptor->setVisibilityResultBuffer(occlusionquery_internal->buffer.get());
-			descriptor->setVisibilityResultType(MTL::VisibilityResultTypeAccumulate);
+			descriptor->setVisibilityResultType(MTL::VisibilityResultTypeReset);
 		}
 		
 		MTL4::RenderEncoderOptions options = MTL4::RenderEncoderOptionNone;
@@ -4385,25 +4385,6 @@ using namespace metal_internal;
 			default:
 				break;
 		}
-	}
-	void GraphicsDevice_Metal::QueryReset(const GPUQueryHeap* heap, uint32_t index, uint32_t count, CommandList cmd)
-	{
-		CommandList_Metal& commandlist = GetCommandList(cmd);
-		auto internal_state = to_internal(heap);
-		
-		switch (heap->desc.type)
-		{
-			case GpuQueryType::OCCLUSION:
-			case GpuQueryType::OCCLUSION_BINARY:
-				precopy(cmd);
-				commandlist.compute_encoder->fillBuffer(internal_state->buffer.get(), {index * sizeof(uint64_t), count * sizeof(uint64_t)}, 0);
-				break;
-			case GpuQueryType::TIMESTAMP:
-				break;
-			default:
-				break;
-		}
-		commandlist.autorelease_end();
 	}
 	void GraphicsDevice_Metal::Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd)
 	{
