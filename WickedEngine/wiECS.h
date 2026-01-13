@@ -407,6 +407,7 @@ namespace wi::ecs
 		// Retrieve component index by entity handle (if doesn't exist, returns INVALID_INDEX value)
 		inline size_t GetIndex(Entity entity) const
 		{
+			assert(entity != INVALID_ENTITY);
 			return lookup.get(entity);
 		}
 
@@ -415,15 +416,15 @@ namespace wi::ecs
 
 		// Directly index a specific component without indirection
 		//	0 <= index < GetCount()
-		inline Entity GetEntity(size_t index) const { return entities[index]; }
+		inline Entity GetEntity(size_t index) const { assert(index != INVALID_INDEX); return entities[index]; }
 
 		// Directly index a specific [read/write] component without indirection
 		//	0 <= index < GetCount()
-		inline Component& operator[](size_t index) { return components[index]; }
+		inline Component& operator[](size_t index) { assert(index != INVALID_INDEX); return components[index]; }
 
 		// Directly index a specific [read only] component without indirection
 		//	0 <= index < GetCount()
-		inline const Component& operator[](size_t index) const { return components[index]; }
+		inline const Component& operator[](size_t index) const { assert(index != INVALID_INDEX); return components[index]; }
 
 		// Returns the tightly packed [read only] entity array
 		inline const wi::vector<Entity>& GetEntityArray() const { return entities; }
