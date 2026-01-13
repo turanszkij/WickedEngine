@@ -37,6 +37,7 @@ int sdl_loop()
         SDL_Event event;
         while(SDL_PollEvent(&event)){
             bool textinput_action_delete = false;
+            wi::input::sdlinput::ProcessEvent(event);
             switch(event.type){
                 case SDL_QUIT:
                     editor.Exit();
@@ -59,12 +60,20 @@ int sdl_loop()
                             break;
                     }
                 case SDL_KEYDOWN:
-                    if(event.key.keysym.scancode == SDL_SCANCODE_BACKSPACE 
-                        || event.key.keysym.scancode == SDL_SCANCODE_DELETE
-                        || event.key.keysym.scancode == SDL_SCANCODE_KP_BACKSPACE){
-                            wi::gui::TextInputField::DeleteFromInput();
-                            textinput_action_delete = true;
-                        }
+                    if(event.key.keysym.scancode == SDL_SCANCODE_BACKSPACE
+                       || event.key.keysym.scancode == SDL_SCANCODE_KP_BACKSPACE) {
+                        wi::gui::TextInputField::DeleteFromInput();
+                        textinput_action_delete = true;
+                    } else if(wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RCONTROL)) {
+						// HACK: AddInput will check if Ctrl is pressed and
+						// handle Ctrl-C/Ctrl-V/Ctrl-X for us, but
+						// wi::input::Down will only be accurate after
+						// wi::input::Update was run, which will happen next
+						// frame, which is too late for us. So we just call it
+						// now and then call AddInput
+						wi::input::Update(editor.window, editor.canvas);
+						wi::gui::TextInputField::AddInput('?'); // AddInput actually ignores the argument when Ctrl is pressed
+					}
                     break;
                 case SDL_TEXTINPUT:
                     if(!textinput_action_delete){
@@ -80,7 +89,6 @@ int sdl_loop()
                 default:
                     break;
             }
-            wi::input::sdlinput::ProcessEvent(event);
         }
     }
 
@@ -108,7 +116,7 @@ void set_window_icon(SDL_Window *window) {
         rmask, gmask, bmask, amask);
 
     SDL_SetWindowIcon(window, icon);
- 
+
     SDL_FreeSurface(icon);
 }
 

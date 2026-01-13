@@ -2217,6 +2217,10 @@ namespace wi::helper
 		}
 		::GlobalUnlock(wbuf_handle);
 		::CloseClipboard();
+#elif defined(SDL2)
+		char* str = SDL_GetClipboardText();
+		StringConvert(str, wstr);
+		SDL_free(str);
 #elif defined(__APPLE__)
 		std::string str = wi::apple::GetClipboardText();
 		StringConvert(str, wstr);
@@ -2244,6 +2248,10 @@ namespace wi::helper
 		if (::SetClipboardData(CF_UNICODETEXT, wbuf_handle) == NULL)
 			::GlobalFree(wbuf_handle);
 		::CloseClipboard();
+#elif defined(SDL2)
+		std::string str;
+		StringConvert(wstr, str);
+		SDL_SetClipboardText(str.c_str());
 #elif defined(__APPLE__)
 		std::string str;
 		StringConvert(wstr, str);
