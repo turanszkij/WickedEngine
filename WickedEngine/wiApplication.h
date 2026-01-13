@@ -44,6 +44,10 @@ namespace wi
 
 		wi::graphics::Texture rendertargetPreHDR10;
 
+		uint32_t renderWidth = 0;
+		uint32_t renderHeight = 0;
+		bool isFullScreen = false;
+
 	public:
 		virtual ~Application() = default;
 
@@ -93,7 +97,13 @@ namespace wi
 		// You need to call this before calling Run() or Initialize() if you want to render
 		void SetWindow(wi::platform::window_type window);
 
+		// Set a fixed render resolution independent of window size (for borderless fullscreen)
+		// Pass 0,0 to clear the fixed resolution and use window size
+		void SetRenderResolution(uint32_t width, uint32_t height);
+		void GetRenderResolution(uint32_t& width, uint32_t& height) const;
+
 		void SetFullScreen(bool fullscreen);
+		bool IsFullScreen() const { return isFullScreen; }
 
 		struct InfoDisplayer
 		{
