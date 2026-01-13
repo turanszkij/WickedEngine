@@ -289,4 +289,37 @@ void SetClipboardText(const char* str)
 	[pasteboard setString:[NSString stringWithUTF8String:str] forType:NSPasteboardTypeString];
 }
 
+void* CreateCursorFromARGB8ImageData(const void* data, uint32_t width, uint32_t height, int hotspotX, int hotspotY)
+{
+	const size_t bytesPerRow = width * sizeof(uint32_t);
+	NSBitmapImageRep* bitmap = [[NSBitmapImageRep alloc]
+								initWithBitmapDataPlanes: nullptr
+								pixelsWide: width
+								pixelsHigh: height
+								bitsPerSample: 8
+								samplesPerPixel: 4
+								hasAlpha: YES
+								isPlanar: NO
+								colorSpaceName: NSDeviceRGBColorSpace
+								bitmapFormat: NSBitmapFormatAlphaNonpremultiplied | NSBitmapFormatAlphaFirst
+								bytesPerRow: bytesPerRow
+								bitsPerPixel: 32];
+	
+	uint8_t* dst = [bitmap bitmapData];
+	size_t bytesToCopy = size_t(height) * bytesPerRow;
+	std::memcpy(dst, data, bytesToCopy);
+	
+	NSImage* image = [[NSImage alloc] initWithSize:NSMakeSize(width, height)];
+	[image addRepresentation:bitmap];
+	
+	NSCursor* cursor = [[NSCursor alloc]
+						initWithImage:image
+						hotSpot:NSMakePoint(hotspotX, hotspotY)];
+	
+	static wi::vector<NSCursor*> cursors; // Lifetime extender, a proper solution would require engine to know about autorelease pools lifetimes and manage cursor lifetime with that
+	cursors.push_back(cursor);
+	
+	return (__bridge void*)cursor;
+}
+
 }

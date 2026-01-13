@@ -23,4 +23,5 @@ void SetWindowFullScreen(void* handle, bool fullscreen);
 void OpenUrl(const char* url);
 std::string GetClipboardText();
 void SetClipboardText(const char* str);
+void* CreateCursorFromARGB8ImageData(const void* data, uint32_t width, uint32_t height, int hotspotX, int hotspotY);
 }

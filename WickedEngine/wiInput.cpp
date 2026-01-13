@@ -9,6 +9,8 @@
 #include "wiColor.h"
 #include "wiTimer.h"
 
+#include "Utility/win32ico.h"
+
 #include <algorithm>
 #include <map>
 #include <atomic>
@@ -17,7 +19,6 @@
 
 #ifdef SDL2
 #include <SDL2/SDL.h>
-#include "Utility/win32ico.h"
 #endif // SDL2
 
 #ifdef PLATFORM_PS5
@@ -1157,32 +1158,32 @@ namespace wi::input
 	}
 
 	void SetCursorFromFile(CURSOR cursor, const char* filename)
-	{
+{
 #ifdef PLATFORM_WINDOWS_DESKTOP
 		wchar_t wfilename[1024] = {};
 		wi::helper::StringConvert(filename, wfilename, arraysize(wfilename));
 		cursor_table[cursor] = LoadCursorFromFile(wfilename);
 #endif // PLATFORM_WINDOWS_DESKTOP
-
-#ifdef SDL2
-		// In SDL extract the raw color data from win32 .CUR file and use SDL to create cursor:
+		
+#if defined(SDL2) || defined(PLATFORM_MACOS)
+		// On other platforms, extract the raw color data from win32 .CUR file and create cursor from that:
 		wi::vector<uint8_t> data;
 		if (wi::helper::FileRead(filename, data))
 		{
 			// Extract only the first image data:
 			ico::ICONDIRENTRY* icondirentry = (ico::ICONDIRENTRY*)(data.data() + sizeof(ico::ICONDIR));
-
+			
 			int hotspotX = icondirentry->wPlanes;
 			int hotspotY = icondirentry->wBitCount;
-
+			
 			uint8_t* pixeldata = (data.data() + icondirentry->dwImageOffset + sizeof(ico::BITMAPINFOHEADER));
-
+			
 			const uint32_t width = icondirentry->bWidth;
 			const uint32_t height = icondirentry->bHeight;
-
+			
 			// Convert BGRA to ARGB and flip vertically
-            wi::vector<wi::Color> colors;
-            colors.reserve(width * height);
+			wi::vector<wi::Color> colors;
+			colors.reserve(width * height);
 			for (uint32_t y = height; y > 0; --y)
 			{
 				uint8_t* src = pixeldata + (y - 1) * width * 4;
@@ -1192,27 +1193,31 @@ namespace wi::input
 					src += 4;
 				}
 			}
-
+			
+#ifdef SDL2
 			SDL_Surface* surface = SDL_CreateRGBSurfaceFrom(
-				colors.data(),
-				width,
-				height,
-				4 * 8,
-				4 * width,
-				0x0000ff00,
-				0x00ff0000,
-				0xff000000,
-				0x000000ff
-			);
-
+															colors.data(),
+															width,
+															height,
+															4 * 8,
+															4 * width,
+															0x0000ff00,
+															0x00ff0000,
+															0xff000000,
+															0x000000ff
+															);
+			
 			if (surface != nullptr)
 			{
 				cursor_table[cursor] = SDL_CreateColorCursor(surface, hotspotX, hotspotY);
 				SDL_FreeSurface(surface);
 			}
-		}
+#elif defined(PLATFORM_MACOS)
+			cursor_table[cursor] = wi::apple::CreateCursorFromARGB8ImageData(colors.data(), width, height, hotspotX, hotspotY);
 #endif // SDL2
-
+		}
+#endif // defined(SDL2) || defined(PLATFORM_MACOS)
+		
 		// refresh in case we set the current one:
 		cursor_next = cursor_current;
 		cursor_current = CURSOR_COUNT;
