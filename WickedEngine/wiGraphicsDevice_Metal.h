@@ -132,7 +132,6 @@ namespace wi::graphics
 		
 		struct CommandList_Metal
 		{
-			NS::SharedPtr<NS::AutoreleasePool> autorelease_pool;
 			NS::SharedPtr<MTL4::CommandAllocator> commandallocators[BUFFERCOUNT];
 			NS::SharedPtr<MTL4::CommandBuffer> commandbuffer;
 			NS::SharedPtr<MTL4::ArgumentTable> argument_table;
@@ -145,8 +144,8 @@ namespace wi::graphics
 			bool dirty_cs = false;
 			const Shader* active_cs = nullptr;
 			wi::vector<NS::SharedPtr<CA::MetalDrawable>> presents;
-			MTL4::RenderCommandEncoder* render_encoder = nullptr;
-			MTL4::ComputeCommandEncoder* compute_encoder = nullptr;
+			NS::SharedPtr<MTL4::RenderCommandEncoder> render_encoder;
+			NS::SharedPtr<MTL4::ComputeCommandEncoder> compute_encoder;
 			MTL::PrimitiveType primitive_type = MTL::PrimitiveTypeTriangle;
 			IRRuntimePrimitiveType ir_primitive_type = IRRuntimePrimitiveTypeTriangle;
 			MTL4::BufferRange index_buffer = {};
@@ -195,8 +194,8 @@ namespace wi::graphics
 				dirty_pso = false;
 				dirty_cs = false;
 				presents.clear();
-				render_encoder = nullptr;
-				compute_encoder = nullptr;
+				render_encoder.reset();
+				compute_encoder.reset();
 				primitive_type = MTL::PrimitiveTypeTriangle;
 				ir_primitive_type = IRRuntimePrimitiveTypeTriangle;
 				index_buffer = {};
@@ -235,28 +234,6 @@ namespace wi::graphics
 				numthreads_as = {};
 				numthreads_ms = {};
 			}
-			
-			void autorelease_start()
-			{
-				if (autorelease_pool.get() != nullptr)
-					return;
-				// this needs to be carefully only created and destroyed/drained on the same thread exactly while an encoder object is being used on not the main thread
-				autorelease_pool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init());
-			}
-			void autorelease_end()
-			{
-				if (autorelease_pool.get() == nullptr)
-					return;
-				// The encoders need to always closed before autorelease pool is drained
-				//	This means that we cannot delay encoder closings to batch more commands, because they must be closed exactly on same thread that they were opened in
-				assert(render_encoder == nullptr); //	Note: the render encoder cannot be closed here, only in RenderPassEnd because it cannot be just reopened anytime
-				if (compute_encoder != nullptr)
-				{
-					compute_encoder->endEncoding();
-					compute_encoder = nullptr;
-				}
-				autorelease_pool.reset();
-			}
 		};
 		wi::vector<std::unique_ptr<CommandList_Metal>> commandlists;
 		uint32_t cmd_count = 0;
@@ -274,6 +251,7 @@ namespace wi::graphics
 #endif // USE_TEXTURE_VIEW_POOL
 		
 		void binder_flush(CommandList cmd);
+		void barrier_flush(CommandList cmd);
 
 		constexpr CommandList_Metal& GetCommandList(CommandList cmd) const
 		{
@@ -433,6 +411,7 @@ namespace wi::graphics
 			std::deque<std::pair<NS::SharedPtr<MTL::ComputePipelineState>, uint64_t>> destroyer_compute_pipelines;
 			std::deque<std::pair<NS::SharedPtr<MTL::DepthStencilState>, uint64_t>> destroyer_depth_stencil_states;
 			std::deque<std::pair<NS::SharedPtr<MTL4::CounterHeap>, uint64_t>> destroyer_counter_heaps;
+			std::deque<std::pair<NS::SharedPtr<CA::MetalDrawable>, uint64_t>> destroyer_drawables;
 			std::deque<std::pair<int, uint64_t>> destroyer_bindless_res;
 			std::deque<std::pair<int, uint64_t>> destroyer_bindless_sam;
 			wi::vector<int> free_bindless_res;
@@ -481,6 +460,11 @@ namespace wi::graphics
 				while (!destroyer_counter_heaps.empty() && destroyer_counter_heaps.front().second + BUFFERCOUNT < FRAMECOUNT)
 				{
 					destroyer_counter_heaps.pop_front();
+					// SharedPtr auto delete
+				}
+				while (!destroyer_drawables.empty() && destroyer_drawables.front().second + BUFFERCOUNT < FRAMECOUNT)
+				{
+					destroyer_drawables.pop_front();
 					// SharedPtr auto delete
 				}
 				while (!destroyer_bindless_res.empty() && destroyer_bindless_res.front().second + BUFFERCOUNT < FRAMECOUNT)

@@ -872,6 +872,8 @@ namespace metal_internal
 				return;
 			allocationhandler->destroylocker.lock();
 			uint64_t framecount = allocationhandler->framecount;
+			allocationhandler->destroyer_resources.push_back(std::make_pair(current_texture, framecount));
+			allocationhandler->destroyer_drawables.push_back(std::make_pair(current_drawable, framecount));
 			allocationhandler->destroylocker.unlock();
 		}
 	};
@@ -1044,15 +1046,41 @@ using namespace metal_internal;
 			commandlist.dirty_vb = false;
 			commandlist.dirty_drawargs = false;
 			
-			if (commandlist.render_encoder != nullptr)
+			if (commandlist.render_encoder.get() != nullptr)
 			{
 				commandlist.render_encoder->setArgumentTable(commandlist.argument_table.get(), MTL::RenderStageVertex | MTL::RenderStageObject | MTL::RenderStageMesh | MTL::RenderStageFragment);
 			}
-			else if (commandlist.compute_encoder != nullptr)
+			else if (commandlist.compute_encoder.get() != nullptr)
 			{
 				commandlist.compute_encoder->setArgumentTable(commandlist.argument_table.get());
 			}
 		}
+	}
+
+	void GraphicsDevice_Metal::barrier_flush(CommandList cmd)
+	{
+		CommandList_Metal& commandlist = GetCommandList(cmd);
+		if (commandlist.barriers.empty())
+			return;
+		MTL4::VisibilityOptions visibility_options = MTL4::VisibilityOptionNone;
+		for (auto& x : commandlist.barriers)
+		{
+			if (x.type == GPUBarrier::Type::ALIASING)
+			{
+				visibility_options |= MTL4::VisibilityOptionResourceAlias;
+			}
+		}
+		if (commandlist.render_encoder.get() != nullptr)
+		{
+			commandlist.render_encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, visibility_options);
+			commandlist.render_encoder->barrierAfterEncoderStages(MTL::StageVertex | MTL::StageObject | MTL::StageMesh | MTL::StageFragment, MTL::StageVertex | MTL::StageObject | MTL::StageMesh | MTL::StageFragment, visibility_options);
+		}
+		else if (commandlist.compute_encoder.get() != nullptr)
+		{
+			commandlist.compute_encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, visibility_options);
+			commandlist.compute_encoder->barrierAfterEncoderStages(MTL::StageDispatch | MTL::StageBlit | MTL::StageAccelerationStructure, MTL::StageDispatch | MTL::StageBlit | MTL::StageAccelerationStructure, visibility_options);
+		}
+		commandlist.barriers.clear();
 	}
 
 	void GraphicsDevice_Metal::pso_validate(CommandList cmd)
@@ -1061,7 +1089,7 @@ using namespace metal_internal;
 		if (!commandlist.dirty_pso)
 			return;
 		
-		assert(commandlist.render_encoder != nullptr); // We must be inside renderpass at this point!
+		assert(commandlist.render_encoder.get() != nullptr); // We must be inside renderpass at this point!
 		
 		PipelineHash pipeline_hash = commandlist.pipeline_hash;
 		const PipelineState* pso = commandlist.active_pso;
@@ -1188,7 +1216,7 @@ using namespace metal_internal;
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		commandlist.active_cs = nullptr;
-		assert(commandlist.render_encoder != nullptr);
+		assert(commandlist.render_encoder.get() != nullptr);
 		pso_validate(cmd);
 		binder_flush(cmd);
 		
@@ -1216,10 +1244,10 @@ using namespace metal_internal;
 	void GraphicsDevice_Metal::predispatch(CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-		commandlist.autorelease_start();
-		if (commandlist.compute_encoder == nullptr)
+		if (commandlist.compute_encoder.get() == nullptr)
 		{
-			commandlist.compute_encoder = commandlist.commandbuffer->computeCommandEncoder();
+			NS::SharedPtr<NS::AutoreleasePool> autorelease_pool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init());
+			commandlist.compute_encoder = NS::TransferPtr(commandlist.commandbuffer->computeCommandEncoder()->retain());
 		}
 		commandlist.active_pso = nullptr;
 		commandlist.dirty_vb = true;
@@ -1238,43 +1266,18 @@ using namespace metal_internal;
 		}
 		
 		binder_flush(cmd);
-		
-		MTL4::VisibilityOptions visibility_options = MTL4::VisibilityOptionNone;
-		if (!commandlist.barriers.empty())
-		{
-			for (auto& x : commandlist.barriers)
-			{
-				if (x.type == GPUBarrier::Type::ALIASING)
-				{
-					visibility_options |= MTL4::VisibilityOptionResourceAlias;
-				}
-			}
-			commandlist.compute_encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, visibility_options);
-			commandlist.barriers.clear();
-		}
+		barrier_flush(cmd);
 	}
 	void GraphicsDevice_Metal::precopy(CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-		commandlist.autorelease_start();
-		if (commandlist.compute_encoder == nullptr)
+		if (commandlist.compute_encoder.get() == nullptr)
 		{
-			commandlist.compute_encoder = commandlist.commandbuffer->computeCommandEncoder();
+			NS::SharedPtr<NS::AutoreleasePool> autorelease_pool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init());
+			commandlist.compute_encoder = NS::TransferPtr(commandlist.commandbuffer->computeCommandEncoder()->retain());
 		}
 		
-		MTL4::VisibilityOptions visibility_options = MTL4::VisibilityOptionNone;
-		if (!commandlist.barriers.empty())
-		{
-			for (auto& x : commandlist.barriers)
-			{
-				if (x.type == GPUBarrier::Type::ALIASING)
-				{
-					visibility_options |= MTL4::VisibilityOptionResourceAlias;
-				}
-			}
-			commandlist.compute_encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, visibility_options);
-			commandlist.barriers.clear();
-		}
+		barrier_flush(cmd);
 	}
 
 	GraphicsDevice_Metal::GraphicsDevice_Metal(ValidationMode validationMode_, GPUPreference preference)
@@ -1678,7 +1681,8 @@ using namespace metal_internal;
 		switch (desc->type)
 		{
 			case TextureDesc::Type::TEXTURE_1D:
-				descriptor->setTextureType(desc->array_size > 1 ? MTL::TextureType1DArray : MTL::TextureType1D);
+				//descriptor->setTextureType(desc->array_size > 1 ? MTL::TextureType1DArray : MTL::TextureType1D);
+				descriptor->setTextureType(desc->array_size > 1 ? MTL::TextureType2DArray : MTL::TextureType2D); // NOTE: This seems to be broken! Real Texture1D type doesn't work in shaders, but creating Texture2D instead works! Issue FB21629558
 				break;
 			case TextureDesc::Type::TEXTURE_2D:
 				if(desc->sample_count > 1)
@@ -1754,6 +1758,7 @@ using namespace metal_internal;
 		if (has_flag(desc->bind_flags, BindFlag::UNORDERED_ACCESS))
 		{
 			usage |= MTL::TextureUsageShaderWrite;
+			usage |= MTL::TextureUsageRenderTarget; // support for ClearUAV
 			switch (descriptor->pixelFormat())
 			{
 				case MTL::PixelFormatR32Uint:
@@ -2593,20 +2598,12 @@ using namespace metal_internal;
 	}
 	bool GraphicsDevice_Metal::CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* desc, RaytracingPipelineState* rtpso) const
 	{
-		//auto internal_state = wi::allocator::make_shared<RTPipelineState_Metal>();
-		//internal_state->allocationhandler = allocationhandler;
-		//rtpso->internal_state = internal_state;
-		//rtpso->desc = *desc;
-
+		// TODO
 		return false;
 	}
 	bool GraphicsDevice_Metal::CreateVideoDecoder(const VideoDesc* desc, VideoDecoder* video_decoder) const
 	{
-		//auto internal_state = wi::allocator::make_shared<VideoDecoder_Metal>();
-		//internal_state->allocationhandler = allocationhandler;
-		//video_decoder->internal_state = internal_state;
-		//video_decoder->desc = *desc;
-
+		// TODO
 		return false;
 	}
 
@@ -3008,6 +3005,7 @@ using namespace metal_internal;
 
 	void GraphicsDevice_Metal::WriteShadingRateValue(ShadingRate rate, void* dest) const
 	{
+		// TODO
 	}
 	void GraphicsDevice_Metal::WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) const
 	{
@@ -3042,6 +3040,7 @@ using namespace metal_internal;
 	}
 	void GraphicsDevice_Metal::WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) const
 	{
+		// TODO
 	}
 
 	void GraphicsDevice_Metal::SetName(GPUResource* pResource, const char* name) const
@@ -3137,9 +3136,9 @@ using namespace metal_internal;
 			auto& commandlist = *commandlists[cmd].get();
 			if (!commandlist.barriers.empty())
 			{
-				if (commandlist.compute_encoder == nullptr)
+				if (commandlist.compute_encoder.get() == nullptr)
 				{
-					commandlist.compute_encoder = commandlist.commandbuffer->computeCommandEncoder();
+					commandlist.compute_encoder = NS::TransferPtr(commandlist.commandbuffer->computeCommandEncoder()->retain());
 				}
 				MTL4::VisibilityOptions visibility_options = MTL4::VisibilityOptionNone;
 				for (auto& x : commandlist.barriers)
@@ -3152,9 +3151,10 @@ using namespace metal_internal;
 				commandlist.compute_encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, visibility_options);
 				commandlist.barriers.clear();
 			}
-			if (commandlist.compute_encoder != nullptr)
+			if (commandlist.compute_encoder.get() != nullptr)
 			{
 				commandlist.compute_encoder->endEncoding();
+				commandlist.compute_encoder.reset();
 				commandlist.compute_encoder = nullptr;
 			}
 			commandlist.commandbuffer->endCommandBuffer();
@@ -3314,7 +3314,6 @@ using namespace metal_internal;
 	}
 	bool GraphicsDevice_Metal::IsSwapChainSupportsHDR(const SwapChain* swapchain) const
 	{
-		auto internal_state = to_internal(swapchain);
 		// TODO
 		return false;
 	}
@@ -3391,13 +3390,14 @@ using namespace metal_internal;
 	}
 	void GraphicsDevice_Metal::RenderPassBegin(const SwapChain* swapchain, CommandList cmd)
 	{
+		NS::SharedPtr<NS::AutoreleasePool> autorelease_pool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init());
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-		if (commandlist.compute_encoder != nullptr)
+		if (commandlist.compute_encoder.get() != nullptr)
 		{
 			commandlist.compute_encoder->endEncoding();
+			commandlist.compute_encoder.reset();
 			commandlist.compute_encoder = nullptr;
 		}
-		commandlist.autorelease_start();
 		
 		auto internal_state = to_internal(swapchain);
 		
@@ -3425,7 +3425,7 @@ using namespace metal_internal;
 		color_attachment_descriptor->setStoreAction(MTL::StoreActionStore);
 		descriptor->colorAttachments()->setObject(color_attachment_descriptor.get(), 0);
 		
-		commandlist.render_encoder = commandlist.commandbuffer->renderCommandEncoder(descriptor.get());
+		commandlist.render_encoder = NS::TransferPtr(commandlist.commandbuffer->renderCommandEncoder(descriptor.get())->retain());
 		commandlist.dirty_vb = true;
 		commandlist.dirty_root = true;
 		commandlist.dirty_sampler = true;
@@ -3438,16 +3438,19 @@ using namespace metal_internal;
 		commandlist.render_height = size.height;
 		
 		commandlist.renderpass_info = RenderPassInfo::from(swapchain->desc);
+		
+		barrier_flush(cmd);
 	}
 	void GraphicsDevice_Metal::RenderPassBegin(const RenderPassImage* images, uint32_t image_count, const GPUQueryHeap* occlusionqueries, CommandList cmd, RenderPassFlags flags)
 	{
+		NS::SharedPtr<NS::AutoreleasePool> autorelease_pool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init());
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-		if (commandlist.compute_encoder != nullptr)
+		if (commandlist.compute_encoder.get() != nullptr)
 		{
 			commandlist.compute_encoder->endEncoding();
+			commandlist.compute_encoder.reset();
 			commandlist.compute_encoder = nullptr;
 		}
-		commandlist.autorelease_start();
 		
 		NS::SharedPtr<MTL4::RenderPassDescriptor> descriptor = NS::TransferPtr(MTL4::RenderPassDescriptor::alloc()->init());
 		NS::SharedPtr<MTL::RenderPassColorAttachmentDescriptor> color_attachment_descriptors[8];
@@ -3590,7 +3593,7 @@ using namespace metal_internal;
 		{
 			options |= MTL4::RenderEncoderOptionResuming;
 		}
-		commandlist.render_encoder = commandlist.commandbuffer->renderCommandEncoder(descriptor.get(), options);
+		commandlist.render_encoder = NS::TransferPtr(commandlist.commandbuffer->renderCommandEncoder(descriptor.get(), options)->retain());
 		if (occlusionqueries != nullptr && occlusionqueries->IsValid())
 		{
 			commandlist.render_encoder->setVisibilityResultMode(MTL::VisibilityResultModeDisabled, 0);
@@ -3604,14 +3607,17 @@ using namespace metal_internal;
 		commandlist.dirty_pso = true;
 		
 		commandlist.renderpass_info = RenderPassInfo::from(images, image_count);
+		
+		barrier_flush(cmd);
 	}
 	void GraphicsDevice_Metal::RenderPassEnd(CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-		assert(commandlist.render_encoder != nullptr);
+		assert(commandlist.render_encoder.get() != nullptr);
 		
 		commandlist.render_encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, MTL4::VisibilityOptionNone);
 		commandlist.render_encoder->endEncoding();
+		commandlist.render_encoder.reset();
 		commandlist.dirty_pso = true;
 		
 		commandlist.render_width = 0;
@@ -3619,8 +3625,6 @@ using namespace metal_internal;
 
 		commandlist.renderpass_info = {};
 		commandlist.render_encoder = nullptr;
-		
-		commandlist.autorelease_end();
 	}
 	void GraphicsDevice_Metal::BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd)
 	{
@@ -4117,17 +4121,11 @@ using namespace metal_internal;
 	}
 	void GraphicsDevice_Metal::DrawInstancedIndirectCount(const GPUBuffer* args, uint64_t args_offset, const GPUBuffer* count, uint64_t count_offset, uint32_t max_count, CommandList cmd)
 	{
-		predraw(cmd);
-		auto args_internal = to_internal(args);
-		auto count_internal = to_internal(count);
-		CommandList_Metal& commandlist = GetCommandList(cmd);
+		// TODO
 	}
 	void GraphicsDevice_Metal::DrawIndexedInstancedIndirectCount(const GPUBuffer* args, uint64_t args_offset, const GPUBuffer* count, uint64_t count_offset, uint32_t max_count, CommandList cmd)
 	{
-		predraw(cmd);
-		auto args_internal = to_internal(args);
-		auto count_internal = to_internal(count);
-		CommandList_Metal& commandlist = GetCommandList(cmd);
+		// TODO
 	}
 	void GraphicsDevice_Metal::Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd)
 	{
@@ -4135,7 +4133,6 @@ using namespace metal_internal;
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		auto cs_internal = to_internal(commandlist.active_cs);
 		commandlist.compute_encoder->dispatchThreadgroups({threadGroupCountX, threadGroupCountY, threadGroupCountZ}, cs_internal->additional_data.numthreads);
-		commandlist.autorelease_end();
 	}
 	void GraphicsDevice_Metal::DispatchIndirect(const GPUBuffer* args, uint64_t args_offset, CommandList cmd)
 	{
@@ -4144,7 +4141,6 @@ using namespace metal_internal;
 		auto cs_internal = to_internal(commandlist.active_cs);
 		auto internal_state = to_internal(args);
 		commandlist.compute_encoder->dispatchThreadgroups(internal_state->gpu_address + args_offset, cs_internal->additional_data.numthreads);
-		commandlist.autorelease_end();
 	}
 	void GraphicsDevice_Metal::DispatchMesh(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd)
 	{
@@ -4161,10 +4157,7 @@ using namespace metal_internal;
 	}
 	void GraphicsDevice_Metal::DispatchMeshIndirectCount(const GPUBuffer* args, uint64_t args_offset, const GPUBuffer* count, uint64_t count_offset, uint32_t max_count, CommandList cmd)
 	{
-		predraw(cmd);
-		auto args_internal = to_internal(args);
-		auto count_internal = to_internal(count);
-		CommandList_Metal& commandlist = GetCommandList(cmd);
+		// TODO
 	}
 	void GraphicsDevice_Metal::CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd)
 	{
@@ -4224,7 +4217,6 @@ using namespace metal_internal;
 			auto dst_internal = to_internal<GPUBuffer>(pDst);
 			commandlist.compute_encoder->copyFromBuffer(src_internal->buffer.get(), 0, dst_internal->buffer.get(), 0, dst_internal->buffer->length());
 		}
-		commandlist.autorelease_end();
 	}
 	void GraphicsDevice_Metal::CopyBuffer(const GPUBuffer* pDst, uint64_t dst_offset, const GPUBuffer* pSrc, uint64_t src_offset, uint64_t size, CommandList cmd)
 	{
@@ -4233,7 +4225,6 @@ using namespace metal_internal;
 		auto internal_state_src = to_internal(pSrc);
 		auto internal_state_dst = to_internal(pDst);
 		commandlist.compute_encoder->copyFromBuffer(internal_state_src->buffer.get(), src_offset, internal_state_dst->buffer.get(), dst_offset, size);
-		commandlist.autorelease_end();
 	}
 	void GraphicsDevice_Metal::CopyTexture(const Texture* dst, uint32_t dstX, uint32_t dstY, uint32_t dstZ, uint32_t dstMip, uint32_t dstSlice, const Texture* src, uint32_t srcMip, uint32_t srcSlice, CommandList cmd, const Box* srcbox, ImageAspect dst_aspect, ImageAspect src_aspect)
 	{
@@ -4244,7 +4235,6 @@ using namespace metal_internal;
 		const uint32_t srcDepth = std::max(1u, src->desc.depth >> srcMip);
 		const uint32_t dstWidth = std::max(1u, dst->desc.width >> dstMip);
 		const uint32_t dstHeight = std::max(1u, dst->desc.height >> dstMip);
-		const uint32_t dstDepth = std::max(1u, dst->desc.depth >> dstMip);
 		auto src_internal = to_internal(src);
 		auto dst_internal = to_internal(dst);
 		MTL::Origin srcOrigin = {};
@@ -4309,7 +4299,6 @@ using namespace metal_internal;
 		{
 			commandlist.compute_encoder->copyFromTexture(src_internal->texture.get(), srcSlice, srcMip, srcOrigin, srcSize, dst_internal->texture.get(), dstSlice, dstMip, dstOrigin);
 		}
-		commandlist.autorelease_end();
 	}
 	void GraphicsDevice_Metal::QueryBegin(const GPUQueryHeap* heap, uint32_t index, CommandList cmd)
 	{
@@ -4317,11 +4306,11 @@ using namespace metal_internal;
 		switch (heap->desc.type)
 		{
 			case GpuQueryType::OCCLUSION:
-				assert(commandlist.render_encoder != nullptr);
+				assert(commandlist.render_encoder.get() != nullptr);
 				commandlist.render_encoder->setVisibilityResultMode(MTL::VisibilityResultModeCounting, index * sizeof(uint64_t));
 				break;
 			case GpuQueryType::OCCLUSION_BINARY:
-				assert(commandlist.render_encoder != nullptr);
+				assert(commandlist.render_encoder.get() != nullptr);
 				commandlist.render_encoder->setVisibilityResultMode(MTL::VisibilityResultModeBoolean, index * sizeof(uint64_t));
 				break;
 			case GpuQueryType::TIMESTAMP:
@@ -4338,24 +4327,22 @@ using namespace metal_internal;
 		{
 			case GpuQueryType::OCCLUSION:
 			case GpuQueryType::OCCLUSION_BINARY:
-				assert(commandlist.render_encoder != nullptr);
+				assert(commandlist.render_encoder.get() != nullptr);
 				commandlist.render_encoder->setVisibilityResultMode(MTL::VisibilityResultModeDisabled, index * sizeof(uint64_t));
 				break;
 			case GpuQueryType::TIMESTAMP:
-				if (commandlist.render_encoder != nullptr)
+				if (commandlist.render_encoder.get() != nullptr)
 				{
 					// Note: fMTL::RenderStageFragment timestamp is unreliable if no fragment was rendered. But we can't determine here in a non-intrusive way whether a fragment was rendered or not in the current render pass for this timestamp
 					commandlist.render_encoder->writeTimestamp(MTL4::TimestampGranularityPrecise, MTL::RenderStageFragment, internal_state->counter_heap.get(), index);
 				}
+				else if (commandlist.compute_encoder.get() != nullptr)
+				{
+					commandlist.compute_encoder->writeTimestamp(MTL4::TimestampGranularityPrecise, internal_state->counter_heap.get(), index);
+				}
 				else
 				{
-#if 0
-					precopy(cmd);
-					commandlist.compute_encoder->writeTimestamp(MTL4::TimestampGranularityPrecise, internal_state->counter_heap.get(), index);
-					commandlist.autorelease_end();
-#else
 					commandlist.commandbuffer->writeTimestampIntoHeap(internal_state->counter_heap.get(), index);
-#endif
 				}
 				break;
 			default:
@@ -4377,9 +4364,13 @@ using namespace metal_internal;
 			case GpuQueryType::OCCLUSION_BINARY:
 				precopy(cmd);
 				commandlist.compute_encoder->copyFromBuffer(internal_state->buffer.get(), index * sizeof(uint64_t), dst_internal->buffer.get(), dest_offset, count * sizeof(uint64_t));
-				commandlist.autorelease_end();
 				break;
 			case GpuQueryType::TIMESTAMP:
+				if (commandlist.compute_encoder.get() != nullptr)
+				{
+					commandlist.compute_encoder->endEncoding();
+					commandlist.compute_encoder.reset();
+				}
 				commandlist.commandbuffer->resolveCounterHeap(internal_state->counter_heap.get(), {index, count}, {dst_internal->gpu_address, count * sizeof(uint64_t)}, nullptr, nullptr);
 				break;
 			default:
@@ -4413,22 +4404,14 @@ using namespace metal_internal;
 		{
 			commandlist.compute_encoder->buildAccelerationStructure(dst_internal->acceleration_structure.get(), descriptor.get(), {dst_internal->scratch->gpuAddress(), dst_internal->scratch->length()});
 		}
-		
-		if (dst->desc.type == RaytracingAccelerationStructureDesc::Type::TOPLEVEL)
-		{
-			// Note: this is workaround for Metal API issue: FB21571936
-			//	This reuses the compute encoder for all blas and tlas builds and then closes autorelease
-			commandlist.autorelease_end();
-		}
 	}
 	void GraphicsDevice_Metal::BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd)
 	{
-		CommandList_Metal& commandlist = GetCommandList(cmd);
+		// TODO
 	}
 	void GraphicsDevice_Metal::DispatchRays(const DispatchRaysDesc* desc, CommandList cmd)
 	{
-		predispatch(cmd);
-		CommandList_Metal& commandlist = GetCommandList(cmd);
+		// TODO
 	}
 	void GraphicsDevice_Metal::PushConstants(const void* data, uint32_t size, CommandList cmd, uint32_t offset)
 	{
@@ -4439,34 +4422,43 @@ using namespace metal_internal;
 	}
 	void GraphicsDevice_Metal::PredicationBegin(const GPUBuffer* buffer, uint64_t offset, PredicationOp op, CommandList cmd)
 	{
-		if (CheckCapability(GraphicsDeviceCapability::PREDICATION))
-		{
-			CommandList_Metal& commandlist = GetCommandList(cmd);
-			auto internal_state = to_internal(buffer);
-		}
+		// This is not supported in Metal API
 	}
 	void GraphicsDevice_Metal::PredicationEnd(CommandList cmd)
 	{
-		if (CheckCapability(GraphicsDeviceCapability::PREDICATION))
-		{
-			CommandList_Metal& commandlist = GetCommandList(cmd);
-		}
+		// This is not supported in Metal API
 	}
 	void GraphicsDevice_Metal::ClearUAV(const GPUResource* resource, uint32_t value, CommandList cmd)
 	{
+		// Note: the clears with Metal API don't always match up with the uint32_t clear value that is provided to this function, but in the usual case for clearing to 0 or some common values it will work
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		if (resource->IsTexture())
 		{
+			if (commandlist.compute_encoder.get() != nullptr)
+			{
+				commandlist.compute_encoder->endEncoding();
+				commandlist.compute_encoder.reset();
+			}
 			auto internal_state = to_internal<Texture>(resource);
+			NS::SharedPtr<NS::AutoreleasePool> autorelease_pool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init());
+			NS::SharedPtr<MTL4::RenderPassDescriptor> descriptor = NS::TransferPtr(MTL4::RenderPassDescriptor::alloc()->init());
+			NS::SharedPtr<MTL::RenderPassColorAttachmentDescriptor> color_attachment_descriptor = NS::TransferPtr(MTL::RenderPassColorAttachmentDescriptor::alloc()->init());
+			color_attachment_descriptor->setTexture(internal_state->texture.get());
+			color_attachment_descriptor->setClearColor(MTL::ClearColor::Make((value & 0xFF) / 255.0f, ((value >> 8u) & 0xFF) / 255.0f, ((value >> 16u) & 0xFF) / 255.0f, ((value >> 24u) & 0xFF) / 255.0f));
+			color_attachment_descriptor->setLoadAction(MTL::LoadActionClear);
+			color_attachment_descriptor->setStoreAction(MTL::StoreActionStore);
+			descriptor->colorAttachments()->setObject(color_attachment_descriptor.get(), 0);
+			MTL4::RenderCommandEncoder* encoder = commandlist.commandbuffer->renderCommandEncoder(descriptor.get());
+			encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, MTL4::VisibilityOptionNone); // TODO: flickering issues in several places without this
+			commandlist.barriers.clear();
+			encoder->endEncoding();
 		}
 		else if (resource->IsBuffer())
 		{
 			precopy(cmd);
 			auto internal_state = to_internal<GPUBuffer>(resource);
-			assert(value == uint8_t(value)); // The fillBuffer only works with uint8_t
 			commandlist.compute_encoder->fillBuffer(internal_state->buffer.get(), {0, internal_state->buffer->length()}, (uint8_t)value);
 		}
-		commandlist.autorelease_end();
 	}
 	void GraphicsDevice_Metal::VideoDecode(const VideoDecoder* video_decoder, const VideoDecodeOperation* op, CommandList cmd)
 	{
@@ -4476,11 +4468,11 @@ using namespace metal_internal;
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		NS::SharedPtr<NS::String> str = NS::TransferPtr(NS::String::alloc()->init(name, NS::UTF8StringEncoding));
-		if (commandlist.render_encoder != nullptr)
+		if (commandlist.render_encoder.get() != nullptr)
 		{
 			commandlist.render_encoder->pushDebugGroup(str.get());
 		}
-		else if (commandlist.compute_encoder != nullptr)
+		else if (commandlist.compute_encoder.get() != nullptr)
 		{
 			commandlist.compute_encoder->pushDebugGroup(str.get());
 		}
@@ -4492,11 +4484,11 @@ using namespace metal_internal;
 	void GraphicsDevice_Metal::EventEnd(CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
-		if (commandlist.render_encoder != nullptr)
+		if (commandlist.render_encoder.get() != nullptr)
 		{
 			commandlist.render_encoder->popDebugGroup();
 		}
-		else if (commandlist.compute_encoder != nullptr)
+		else if (commandlist.compute_encoder.get() != nullptr)
 		{
 			commandlist.compute_encoder->popDebugGroup();
 		}
@@ -4509,11 +4501,11 @@ using namespace metal_internal;
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		NS::SharedPtr<NS::String> str = NS::TransferPtr(NS::String::alloc()->init(name, NS::UTF8StringEncoding));
-		if (commandlist.render_encoder != nullptr)
+		if (commandlist.render_encoder.get() != nullptr)
 		{
 			commandlist.render_encoder->setLabel(str.get());
 		}
-		else if (commandlist.compute_encoder != nullptr)
+		else if (commandlist.compute_encoder.get() != nullptr)
 		{
 			commandlist.compute_encoder->setLabel(str.get());
 		}
