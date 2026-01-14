@@ -71,7 +71,7 @@ namespace wi::platform
 		SDL_Event quit_event;
 		quit_event.type = SDL_QUIT;
 		SDL_PushEvent(&quit_event);
-#else
+#elif defined(__APPLE__)
 		std::exit(0);
 #endif
 		

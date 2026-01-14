@@ -28,6 +28,10 @@
 #include "wiJobSystem_PS5.h"
 #endif // PLATFORM_PS5
 
+#ifdef __APPLE__
+#include <sys/qos.h>
+#endif // __APPLE__
+
 namespace wi::jobsystem
 {
 	struct alignas(64) Job
@@ -302,6 +306,21 @@ namespace wi::jobsystem
 						break;
 					case Priority::High:
 						// nothing to do
+						break;
+					default:
+						assert(0);
+					}
+#elif defined(__APPLE__)
+					switch (priority)
+					{
+					case Priority::High:
+						pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0);
+						break;
+					case Priority::Low:
+						pthread_set_qos_class_self_np(QOS_CLASS_UTILITY, 0);
+						break;
+					case Priority::Streaming:
+						pthread_set_qos_class_self_np(QOS_CLASS_BACKGROUND, 0);
 						break;
 					default:
 						assert(0);
