@@ -1160,7 +1160,7 @@ namespace wi::physics
 				settings.mSpace = EConstraintSpace::WorldSpace;
 				settings.mPoint1 = settings.mPoint2 = cast(transform.GetPosition());
 				settings.mMinDistance = physicscomponent.distance_constraint.min_distance;
-				settings.mMinDistance = physicscomponent.distance_constraint.max_distance;
+				settings.mMaxDistance = physicscomponent.distance_constraint.max_distance;
 				physicsobject.constraint = settings.Create(*body1, *body2);
 			}
 			else if (physicscomponent.type == PhysicsConstraintComponent::Type::Hinge)
