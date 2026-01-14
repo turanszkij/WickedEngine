@@ -924,6 +924,8 @@ void TerrainWindow::Create(EditorComponent* _editor)
 		wi::allocator::shared_ptr<wi::terrain::VoronoiModifier> terrain_voronoi = wi::allocator::make_shared_single<wi::terrain::VoronoiModifier>();
 		terrain->modifiers.emplace_back() = terrain_voronoi;
 
+		editor->GetCurrentEditorScene().scene.weathers.Clear();
+
 		perlin->Bind(terrain_perlin.get());
 		voronoi->Bind(terrain_voronoi.get());
 		AddModifier(perlin);
