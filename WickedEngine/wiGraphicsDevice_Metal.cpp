@@ -3079,7 +3079,7 @@ using namespace metal_internal;
 		uint32_t cmd_current = cmd_count++;
 		if (cmd_current >= commandlists.size())
 		{
-			commandlists.push_back(std::make_unique<CommandList_Metal>());
+			commandlists.push_back(cmd_allocator.allocate());
 			auto& commandlist = commandlists.back();
 			commandlist->commandbuffer = NS::TransferPtr(device->newCommandBuffer());
 			for (auto& x : commandlist->commandallocators)
@@ -3096,7 +3096,7 @@ using namespace metal_internal;
 			}
 		}
 		CommandList cmd;
-		cmd.internal_state = commandlists[cmd_current].get();
+		cmd.internal_state = commandlists[cmd_current];
 		cmd_locker.unlock();
 
 		CommandList_Metal& commandlist = GetCommandList(cmd);
@@ -3122,7 +3122,7 @@ using namespace metal_internal;
 		// Presents wait:
 		for (uint32_t cmd = 0; cmd < cmd_last; ++cmd)
 		{
-			auto& commandlist = *commandlists[cmd].get();
+			auto& commandlist = *commandlists[cmd];
 			for (auto& x : commandlist.presents)
 			{
 				CommandQueue& queue = queues[commandlist.queue];
@@ -3133,7 +3133,7 @@ using namespace metal_internal;
 		// Submit work and resolve dependencies:
 		for (uint32_t cmd = 0; cmd < cmd_last; ++cmd)
 		{
-			auto& commandlist = *commandlists[cmd].get();
+			auto& commandlist = *commandlists[cmd];
 			if (!commandlist.barriers.empty())
 			{
 				if (commandlist.compute_encoder.get() == nullptr)
@@ -3221,7 +3221,7 @@ using namespace metal_internal;
 		// Presents submit:
 		for (uint32_t cmd = 0; cmd < cmd_last; ++cmd)
 		{
-			auto& commandlist = *commandlists[cmd].get();
+			auto& commandlist = *commandlists[cmd];
 			for (auto& x : commandlist.presents)
 			{
 				CommandQueue& queue = queues[commandlist.queue];

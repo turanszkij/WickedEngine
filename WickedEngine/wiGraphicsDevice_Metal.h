@@ -235,7 +235,8 @@ namespace wi::graphics
 				numthreads_ms = {};
 			}
 		};
-		wi::vector<std::unique_ptr<CommandList_Metal>> commandlists;
+		wi::allocator::BlockAllocator<CommandList_Metal, 64> cmd_allocator;
+		wi::vector<CommandList_Metal*> commandlists;
 		uint32_t cmd_count = 0;
 		wi::SpinLock cmd_locker;
 		
