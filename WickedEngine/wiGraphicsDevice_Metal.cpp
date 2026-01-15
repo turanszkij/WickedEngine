@@ -3111,7 +3111,7 @@ using namespace metal_internal;
 		return cmd;
 	}
 	void GraphicsDevice_Metal::SubmitCommandLists()
-{
+	{
 		allocationhandler->destroylocker.lock();
 		allocationhandler->residency_set->commit();
 		allocationhandler->destroylocker.unlock();

@@ -65,7 +65,7 @@ namespace wi::graphics
 		
 		struct Semaphore
 		{
-			NS::SharedPtr<MTL::SharedEvent> event;
+			NS::SharedPtr<MTL::Event> event;
 			uint64_t fenceValue = 0;
 		};
 		
@@ -110,8 +110,7 @@ namespace wi::graphics
 			if (semaphore_pool.empty())
 			{
 				Semaphore& sema = semaphore_pool.emplace_back();
-				sema.event = NS::TransferPtr(device->newSharedEvent());
-				sema.event->setSignaledValue(0);
+				sema.event = NS::TransferPtr(device->newEvent());
 			}
 			Semaphore sema = semaphore_pool.back();
 			semaphore_pool.pop_back();
