@@ -7129,10 +7129,10 @@ using namespace vulkan_internal;
 		uint32_t cmd_current = cmd_count++;
 		if (cmd_current >= commandlists.size())
 		{
-			commandlists.push_back(std::make_unique<CommandList_Vulkan>());
+			commandlists.push_back(cmd_allocator.allocate());
 		}
 		CommandList cmd;
-		cmd.internal_state = commandlists[cmd_current].get();
+		cmd.internal_state = commandlists[cmd_current];
 		cmd_locker.unlock();
 
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
@@ -7309,7 +7309,7 @@ using namespace vulkan_internal;
 			cmd_count = 0;
 			for (uint32_t cmd = 0; cmd < cmd_last; ++cmd)
 			{
-				CommandList_Vulkan& commandlist = *commandlists[cmd].get();
+				CommandList_Vulkan& commandlist = *commandlists[cmd];
 				vulkan_check(vkEndCommandBuffer(commandlist.GetCommandBuffer()));
 
 				CommandQueue& queue = queues[commandlist.queue];

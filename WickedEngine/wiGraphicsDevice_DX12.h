@@ -264,7 +264,8 @@ namespace wi::graphics
 				return (ID3D12VideoDecodeCommandList*)commandLists[queue].Get();
 			}
 		};
-		wi::vector<std::unique_ptr<CommandList_DX12>> commandlists;
+		wi::allocator::BlockAllocator<CommandList_DX12, 64> cmd_allocator;
+		wi::vector<CommandList_DX12*> commandlists;
 		uint32_t cmd_count = 0;
 		wi::SpinLock cmd_locker;
 

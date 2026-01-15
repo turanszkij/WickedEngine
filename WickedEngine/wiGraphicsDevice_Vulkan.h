@@ -386,7 +386,8 @@ namespace wi::graphics
 				return commandBuffers[buffer_index][queue];
 			}
 		};
-		wi::vector<std::unique_ptr<CommandList_Vulkan>> commandlists;
+		wi::allocator::BlockAllocator<CommandList_Vulkan, 64> cmd_allocator;
+		wi::vector<CommandList_Vulkan*> commandlists;
 		uint32_t cmd_count = 0;
 		wi::SpinLock cmd_locker;
 
