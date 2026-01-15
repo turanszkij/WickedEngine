@@ -649,6 +649,7 @@ void ImportModel_FBX(const std::string& filename, wi::scene::Scene& scene)
 			inverseBindMatrix._42 = node->geometry_to_world.m13;
 			inverseBindMatrix._43 = node->geometry_to_world.m23;
 
+			XMStoreFloat4x4(&inverseBindMatrix, XMMatrixInverse(nullptr, XMLoadFloat4x4(&inverseBindMatrix)));
 			armatureWithoutMesh.inverseBindMatrices.push_back(inverseBindMatrix);
 
 			Import_Mixamo_Bone(scene, rootEntity, boneEntity);
