@@ -120,7 +120,7 @@ void HierarchyWindow::SetEntity(Entity entity)
 			std::string depth_indicator;
 			if (depth > 3)
 			{
-				depth_indicator = ">" + std::to_string(depth);
+				depth_indicator = "> " + std::to_string(depth) + " >";
 			}
 			else
 			{
