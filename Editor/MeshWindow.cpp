@@ -42,6 +42,14 @@ void MeshWindow::Create(EditorComponent* _editor)
 		editor->componentsWnd.RefreshEntityTree();
 	});
 
+	float x = 80;
+	float xx = x;
+	float y = 4;
+	float step = 25;
+	float siz = 50;
+	float hei = 20;
+	float wid = 200;
+
 	meshInfoLabel.Create("Mesh Info");
 	meshInfoLabel.SetColor(wi::Color::Transparent());
 	meshInfoLabel.SetFitTextEnabled(true);
@@ -287,17 +295,61 @@ void MeshWindow::Create(EditorComponent* _editor)
 
 	recenterButton.Create("Recenter");
 	recenterButton.SetTooltip("Recenter mesh to AABB center.");
-	recenterButton.OnClick(changeSelectedMesh([] (auto mesh) {
+	recenterButton.OnClick(changeSelectedMesh([this] (auto mesh) {
 		mesh->Recenter();
+		UpdateRecenterInputs(mesh->aabb.getCenter());
 	}));
 	AddWidget(&recenterButton);
 
-	recenterToBottomButton.Create("RecenterToBottom");
+	recenterToBottomButton.Create("Recenter to Bottom");
 	recenterToBottomButton.SetTooltip("Recenter mesh to AABB bottom.");
-	recenterToBottomButton.OnClick(changeSelectedMesh([] (auto mesh) {
+	recenterToBottomButton.OnClick(changeSelectedMesh([this] (auto mesh) {
 		mesh->RecenterToBottom();
+		UpdateRecenterInputs(mesh->aabb.getCenter());
 	}));
 	AddWidget(&recenterToBottomButton);
+
+	recenterToXInput.Create("");
+	recenterToXInput.SetDescription("Center: ");
+	recenterToXInput.SetValue(0.0f);
+	recenterToXInput.SetSize(XMFLOAT2(siz, hei));
+	recenterToXInput.OnInputAccepted([this, changeSelectedMesh](wi::gui::EventArgs args) {
+		const float recenterX = args.fValue;
+		const float recenterY = std::atof(recenterToYInput.GetValue().c_str());
+		const float recenterZ = std::atof(recenterToZInput.GetValue().c_str());
+		changeSelectedMesh([recenterX, recenterY, recenterZ](auto mesh) {
+			mesh->RecenterTo(recenterX, recenterY, recenterZ);
+		})(args);
+	});
+	AddWidget(&recenterToXInput);
+
+	recenterToYInput.Create("");
+	recenterToYInput.SetDescription("");
+	recenterToYInput.SetValue(0.0f);
+	recenterToYInput.SetSize(XMFLOAT2(siz, hei));
+	recenterToYInput.OnInputAccepted([this, changeSelectedMesh](wi::gui::EventArgs args) {
+		const float recenterX = std::atof(recenterToXInput.GetValue().c_str());
+		const float recenterY = args.fValue;
+		const float recenterZ = std::atof(recenterToZInput.GetValue().c_str());
+		changeSelectedMesh([recenterX, recenterY, recenterZ](auto mesh) {
+			mesh->RecenterTo(recenterX, recenterY, recenterZ);
+		})(args);
+	});
+	AddWidget(&recenterToYInput);
+
+	recenterToZInput.Create("");
+	recenterToZInput.SetDescription("");
+	recenterToZInput.SetValue(0.0f);
+	recenterToZInput.SetSize(XMFLOAT2(siz, hei));
+	recenterToZInput.OnInputAccepted([this, changeSelectedMesh](wi::gui::EventArgs args) {
+		const float recenterX = std::atof(recenterToXInput.GetValue().c_str());
+		const float recenterY = std::atof(recenterToYInput.GetValue().c_str());
+		const float recenterZ = args.fValue;
+		changeSelectedMesh([recenterX, recenterY, recenterZ](auto mesh) {
+			mesh->RecenterTo(recenterX, recenterY, recenterZ);
+		})(args);
+	});
+	AddWidget(&recenterToZInput);
 
 	mergeButton.Create("Merge Selected");
 	mergeButton.SetTooltip("Merges selected objects/meshes into one.\nAll selected object transformations will be applied to meshes and all meshes will be baked into a single mesh.");
@@ -1028,6 +1080,8 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 		}
 		tessellationFactorSlider.SetValue(mesh->GetTessellationFactor());
 
+		UpdateRecenterInputs(mesh->aabb.getCenter());
+
 		uint8_t selected = morphTargetCombo.GetSelected();
 		morphTargetCombo.ClearItems();
 		for (size_t i = 0; i < mesh->morph_targets.size(); i++)
@@ -1060,6 +1114,13 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 	mergeButton.SetEnabled(true);
 }
 
+void MeshWindow::UpdateRecenterInputs(const XMFLOAT3 center)
+{
+	recenterToXInput.SetValue(center.x);
+	recenterToYInput.SetValue(center.y);
+	recenterToZInput.SetValue(center.z);
+}
+
 void MeshWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
@@ -1085,6 +1146,18 @@ void MeshWindow::ResizeLayout()
 	layout.add_fullwidth(computeNormalsHardButton);
 	layout.add_fullwidth(recenterButton);
 	layout.add_fullwidth(recenterToBottomButton);
+
+	const float safe_width = layout.width - 100 - layout.padding;
+	const float input_width = safe_width / 3.0f - layout.padding;
+	layout.add_right(recenterToXInput);
+	const float recenter_row_y = recenterToXInput.GetPos().y;
+	recenterToXInput.SetSize(XMFLOAT2(input_width, recenterToXInput.GetSize().y));
+	recenterToXInput.SetPos(XMFLOAT2(layout.margin_left, recenter_row_y));
+	recenterToYInput.SetSize(XMFLOAT2(input_width, recenterToYInput.GetSize().y));
+	recenterToYInput.SetPos(XMFLOAT2(recenterToXInput.GetPos().x + recenterToXInput.GetSize().x + layout.padding, recenter_row_y));
+	recenterToZInput.SetSize(XMFLOAT2(input_width, recenterToZInput.GetSize().y));
+	recenterToZInput.SetPos(XMFLOAT2(recenterToYInput.GetPos().x + recenterToYInput.GetSize().x + layout.padding, recenter_row_y));
+
 	layout.add_fullwidth(mergeButton);
 	layout.add_fullwidth(optimizeButton);
 	layout.add_fullwidth(exportHeaderButton);

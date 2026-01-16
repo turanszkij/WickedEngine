@@ -806,7 +806,7 @@ namespace wi::scene
 				}
 			}
 		}
-		
+
 #ifdef __APPLE__
 		if (position_format == Vertex_POS32::FORMAT)
 		{
@@ -1951,7 +1951,7 @@ namespace wi::scene
 	}
 	void MeshComponent::Recenter()
 	{
-		XMFLOAT3 center = aabb.getCenter();
+		const XMFLOAT3 center = aabb.getCenter();
 
 		for (auto& pos : vertex_positions)
 		{
@@ -1972,6 +1972,19 @@ namespace wi::scene
 			pos.x -= center.x;
 			pos.y -= center.y;
 			pos.z -= center.z;
+		}
+
+		CreateRenderData();
+	}
+	void MeshComponent::RecenterTo(float x, float y, float z)
+	{
+		const XMFLOAT3 center = aabb.getCenter();
+
+		for (auto& pos : vertex_positions)
+		{
+			pos.x -= center.x - x;
+			pos.y -= center.y - y;
+			pos.z -= center.z - z;
 		}
 
 		CreateRenderData();

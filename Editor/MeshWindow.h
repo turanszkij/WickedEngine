@@ -10,6 +10,7 @@ public:
 	wi::ecs::Entity entity;
 	int subset = -1;
 	void SetEntity(wi::ecs::Entity entity, int subset);
+	void UpdateRecenterInputs(XMFLOAT3 center);
 
 	wi::gui::Label meshInfoLabel;
 	wi::gui::Button subsetRemoveButton;
@@ -30,6 +31,9 @@ public:
 	wi::gui::Button computeNormalsHardButton;
 	wi::gui::Button recenterButton;
 	wi::gui::Button recenterToBottomButton;
+	wi::gui::TextInputField recenterToXInput;
+	wi::gui::TextInputField recenterToYInput;
+	wi::gui::TextInputField recenterToZInput;
 	wi::gui::Button mergeButton;
 	wi::gui::Button optimizeButton;
 	wi::gui::Button exportHeaderButton;

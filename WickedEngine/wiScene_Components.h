@@ -871,6 +871,7 @@ namespace wi::scene
 		void FlipNormals();
 		void Recenter();
 		void RecenterToBottom();
+		void RecenterTo(float x, float y, float z);
 		wi::primitive::Sphere GetBoundingSphere() const;
 
 		uint32_t GetBoneInfluenceDiv4() const
