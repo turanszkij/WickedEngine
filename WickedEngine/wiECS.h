@@ -22,14 +22,20 @@ namespace wi::ecs
 	//	The entity can be a different value on a different run of the application, if it was serialized
 	//	It must be only serialized with the SerializeEntity() function if persistence is needed across different program runs,
 	//		this will ensure that entities still match with their components correctly after serialization
-	using Entity = uint64_t;
+	//using Entity = uint64_t;
+	struct Entity {
+		uint64_t value;
+		constexpr Entity(uint64_t v) : value(v) {}
+	private:
+		static inline std::atomic<uint64_t> next { 1 };
+	public:
+		constexpr Entity() : Entity([&]() {return next.fetch_add(1);}()) {}
+		constexpr operator uint64_t() const { return value; }
+	};
+	static_assert(sizeof(Entity) == sizeof(uint64_t));
 	inline static constexpr Entity INVALID_ENTITY = 0;
 	// Runtime can create a new entity with this
-	inline Entity CreateEntity()
-	{
-		static std::atomic<Entity> next{ INVALID_ENTITY + 1 };
-		return next.fetch_add(1);
-	}
+	inline Entity CreateEntity() { return Entity(); }
 	inline static constexpr size_t INVALID_INDEX = ~0ull;
 
 	class ComponentLibrary;
@@ -894,5 +900,9 @@ namespace wi::ecs
 		}
 	};
 }
+
+template<>
+struct std::hash<wi::ecs::Entity> { std::size_t operator()(const wi::ecs::Entity& e) const noexcept { return std::hash<uint64_t>{}(e.value); } };
+
 
 #endif // WI_ENTITY_COMPONENT_SYSTEM_H
