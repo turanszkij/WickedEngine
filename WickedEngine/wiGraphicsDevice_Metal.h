@@ -499,23 +499,7 @@ namespace wi::graphics
 			}
 			
 			NS::SharedPtr<MTL::ResidencySet> residency_set;
-			void make_resident(const MTL::Texture* allocation)
-			{
-				if (allocation == nullptr)
-					return;
-				if (allocation->isSparse())
-					return;
-				std::scoped_lock locker(destroylocker);
-				residency_set->addAllocation(allocation);
-			}
-			void make_resident(const MTL::Buffer* allocation)
-			{
-				if (allocation == nullptr)
-					return;
-				std::scoped_lock locker(destroylocker);
-				residency_set->addAllocation(allocation);
-			}
-			void make_resident(const MTL::AccelerationStructure* allocation)
+			void make_resident(const MTL::Resource* allocation)
 			{
 				if (allocation == nullptr)
 					return;
