@@ -207,6 +207,7 @@ namespace wi::terrain
 		x = x * 255.0f;
 		x = (float)uint8_t(x);
 		x = x / 255.0f;
+		x = saturate(x);
 		return x;
 	}
 	constexpr void weight_norm(XMFLOAT4& weights)
@@ -1347,18 +1348,66 @@ namespace wi::terrain
 										f = 1 - f;
 										g = 1 - g;
 									}
+									const XMFLOAT3 pos01 = XMFLOAT3(
+										pos1.x - pos0.x,
+										pos1.y - pos0.y,
+										pos1.z - pos0.z
+									);
+									const XMFLOAT3 pos01f = XMFLOAT3(
+										pos01.x * f,
+										pos01.y * f,
+										pos01.z * f
+									);
+									const XMFLOAT3 pos02 = XMFLOAT3(
+										pos2.x - pos0.x,
+										pos2.y - pos0.y,
+										pos2.z - pos0.z
+									);
+									const XMFLOAT3 pos02g = XMFLOAT3(
+										pos02.x * g,
+										pos02.y * g,
+										pos02.z * g
+									);
 									const XMFLOAT3 vertex_pos = XMFLOAT3(
-										pos0.x + f * (pos1.x - pos0.x) + g * (pos2.x - pos0.x),
-										pos0.y + f * (pos1.y - pos0.y) + g * (pos2.y - pos0.y),
-										pos0.z + f * (pos1.z - pos0.z) + g * (pos2.z - pos0.z)
+										pos0.x + pos01f.x + pos02g.x,
+										pos0.y + pos01f.y + pos02g.y,
+										pos0.z + pos01f.z + pos02g.z
+									);
+									const XMFLOAT4 region01 = XMFLOAT4(
+										region1.x - region0.x,
+										region1.y - region0.y,
+										region1.z - region0.z,
+										region1.w - region0.w
+									);
+									const XMFLOAT4 region01f = XMFLOAT4(
+										region01.x * f,
+										region01.y * f,
+										region01.z * f,
+										region01.w * f
+									);
+									const XMFLOAT4 region02 = XMFLOAT4(
+										region2.x - region0.x,
+										region2.y - region0.y,
+										region2.z - region0.z,
+										region2.w - region0.w
+									);
+									const XMFLOAT4 region02g = XMFLOAT4(
+										region02.x * g,
+										region02.y * g,
+										region02.z * g,
+										region02.w * g
 									);
 									const XMFLOAT4 region = XMFLOAT4(
-										region0.x + f * (region1.x - region0.x) + g * (region2.x - region0.x),
-										region0.y + f * (region1.y - region0.y) + g * (region2.y - region0.y),
-										region0.z + f * (region1.z - region0.z) + g * (region2.z - region0.z),
-										region0.w + f * (region1.w - region0.w) + g * (region2.w - region0.w)
+										region0.x + region01f.x + region02g.x,
+										region0.y + region01f.y + region02g.y,
+										region0.z + region01f.z + region02g.z,
+										region0.w + region01f.w + region02g.w
 									);
-									const float spline_factor = spline_factor0 + f * (spline_factor1 - spline_factor0) + g * (spline_factor2 - spline_factor0);
+									const float spline_factor01 = spline_factor1 - spline_factor0;
+									const float spline_factor01f = spline_factor01 * f;
+									const float spline_factor02 = spline_factor2 - spline_factor0;
+									const float spline_factor02g = spline_factor02 * g;
+									const float spline_factor = spline_factor0 + spline_factor01f + spline_factor02g;
 
 									const float noise = quantize(std::pow(perlin_noise.compute((vertex_pos.x + chunk_data.position.x) * prop.noise_frequency, vertex_pos.y * prop.noise_frequency, (vertex_pos.z + chunk_data.position.z) * prop.noise_frequency) * 0.5f + 0.5f, prop.noise_power));
 									const float chance = quantize(std::pow(((float*)&region)[prop.region], prop.region_power) * noise * (1 - saturate(spline_factor)));
