@@ -154,8 +154,8 @@ namespace wi::noise
 		}
 		inline float modangles_compat(float angle) noexcept
 		{
-			const float ReciprocalTwoPi = 0.159154943f;
-			const float TwoPi = 6.283185307f;
+			constexpr float ReciprocalTwoPi = 0.159154943f;
+			constexpr float TwoPi = 6.283185307f;
 			float vResult = angle * ReciprocalTwoPi;
 			vResult = std::nearbyint(vResult);
 			return fnmadd_compat(vResult, TwoPi, angle);

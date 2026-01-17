@@ -201,6 +201,14 @@ namespace wi::terrain
 
 	static std::mutex locker;
 
+	constexpr float quantize(float x)
+	{
+		x = saturate(x);
+		x = x * 255.0f;
+		x = (float)uint8_t(x);
+		x = x / 255.0f;
+		return x;
+	}
 	constexpr void weight_norm(XMFLOAT4& weights)
 	{
 		const float norm = 1.0f / (weights.x + weights.y + weights.z + weights.w);
@@ -208,6 +216,10 @@ namespace wi::terrain
 		weights.y *= norm;
 		weights.z *= norm;
 		weights.w *= norm;
+		weights.x = quantize(weights.x);
+		weights.y = quantize(weights.y);
+		weights.z = quantize(weights.z);
+		weights.w = quantize(weights.w);
 	};
 
 
@@ -1182,7 +1194,7 @@ namespace wi::terrain
 
 						const float grass_noise_frequency = 0.1f;
 						const float grass_noise = perlin_noise.compute(vertex_pos.x * grass_noise_frequency, vertex_pos.y * grass_noise_frequency, vertex_pos.z * grass_noise_frequency) * 0.5f + 0.5f;
-						const float region_grass = std::pow(materialBlendWeights.x * (1 - materialBlendWeights.w), 8.0f) * grass_noise * (1 - saturate(spline_factor));
+						const float region_grass = quantize(std::pow(materialBlendWeights.x * (1 - materialBlendWeights.w), 8.0f) * grass_noise * (1 - saturate(spline_factor)));
 						if (region_grass > 0.1f)
 						{
 							grass_valid_vertex_count.fetch_add(1);
@@ -1328,8 +1340,8 @@ namespace wi::terrain
 										spline_factor2 *= rcp;
 									}
 									// random barycentric coords on the triangle:
-									float f = rng.next_float();
-									float g = rng.next_float();
+									float f = quantize(rng.next_float());
+									float g = quantize(rng.next_float());
 									if (f + g > 1)
 									{
 										f = 1 - f;
@@ -1348,8 +1360,8 @@ namespace wi::terrain
 									);
 									const float spline_factor = spline_factor0 + f * (spline_factor1 - spline_factor0) + g * (spline_factor2 - spline_factor0);
 
-									const float noise = std::pow(perlin_noise.compute((vertex_pos.x + chunk_data.position.x) * prop.noise_frequency, vertex_pos.y * prop.noise_frequency, (vertex_pos.z + chunk_data.position.z) * prop.noise_frequency) * 0.5f + 0.5f, prop.noise_power);
-									const float chance = std::pow(((float*)&region)[prop.region], prop.region_power) * noise * (1 - saturate(spline_factor));
+									const float noise = quantize(std::pow(perlin_noise.compute((vertex_pos.x + chunk_data.position.x) * prop.noise_frequency, vertex_pos.y * prop.noise_frequency, (vertex_pos.z + chunk_data.position.z) * prop.noise_frequency) * 0.5f + 0.5f, prop.noise_power));
+									const float chance = quantize(std::pow(((float*)&region)[prop.region], prop.region_power) * noise * (1 - saturate(spline_factor)));
 									if (chance > prop.threshold)
 									{
 										wi::Archive archive = wi::Archive(prop.data.data(), prop.data.size());
