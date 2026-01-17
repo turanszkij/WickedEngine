@@ -1349,7 +1349,7 @@ namespace wi::terrain
 									const float spline_factor = spline_factor0 + f * (spline_factor1 - spline_factor0) + g * (spline_factor2 - spline_factor0);
 
 									const float noise = std::pow(perlin_noise.compute((vertex_pos.x + chunk_data.position.x) * prop.noise_frequency, vertex_pos.y * prop.noise_frequency, (vertex_pos.z + chunk_data.position.z) * prop.noise_frequency) * 0.5f + 0.5f, prop.noise_power);
-									const float chance = std::pow(((float*)&region)[prop.region], prop.region_power) * noise * (1 - saturate(spline_factor));
+									const float chance = std::pow(((float*)&region)[clamp(prop.region, 0, 3)], prop.region_power) * noise * (1 - saturate(spline_factor));
 									if (chance > prop.threshold)
 									{
 										wi::Archive archive = wi::Archive(prop.data.data(), prop.data.size());

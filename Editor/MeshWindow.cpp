@@ -315,8 +315,8 @@ void MeshWindow::Create(EditorComponent* _editor)
 	recenterToXInput.SetSize(XMFLOAT2(siz, hei));
 	recenterToXInput.OnInputAccepted([this, changeSelectedMesh](wi::gui::EventArgs args) {
 		const float recenterX = args.fValue;
-		const float recenterY = std::atof(recenterToYInput.GetValue().c_str());
-		const float recenterZ = std::atof(recenterToZInput.GetValue().c_str());
+		const float recenterY = (float)std::atof(recenterToYInput.GetValue().c_str());
+		const float recenterZ = (float)std::atof(recenterToZInput.GetValue().c_str());
 		changeSelectedMesh([recenterX, recenterY, recenterZ](auto mesh) {
 			mesh->RecenterTo(recenterX, recenterY, recenterZ);
 		})(args);
@@ -328,9 +328,9 @@ void MeshWindow::Create(EditorComponent* _editor)
 	recenterToYInput.SetValue(0.0f);
 	recenterToYInput.SetSize(XMFLOAT2(siz, hei));
 	recenterToYInput.OnInputAccepted([this, changeSelectedMesh](wi::gui::EventArgs args) {
-		const float recenterX = std::atof(recenterToXInput.GetValue().c_str());
+		const float recenterX = (float)std::atof(recenterToXInput.GetValue().c_str());
 		const float recenterY = args.fValue;
-		const float recenterZ = std::atof(recenterToZInput.GetValue().c_str());
+		const float recenterZ = (float)std::atof(recenterToZInput.GetValue().c_str());
 		changeSelectedMesh([recenterX, recenterY, recenterZ](auto mesh) {
 			mesh->RecenterTo(recenterX, recenterY, recenterZ);
 		})(args);
@@ -342,8 +342,8 @@ void MeshWindow::Create(EditorComponent* _editor)
 	recenterToZInput.SetValue(0.0f);
 	recenterToZInput.SetSize(XMFLOAT2(siz, hei));
 	recenterToZInput.OnInputAccepted([this, changeSelectedMesh](wi::gui::EventArgs args) {
-		const float recenterX = std::atof(recenterToXInput.GetValue().c_str());
-		const float recenterY = std::atof(recenterToYInput.GetValue().c_str());
+		const float recenterX = (float)std::atof(recenterToXInput.GetValue().c_str());
+		const float recenterY = (float)std::atof(recenterToYInput.GetValue().c_str());
 		const float recenterZ = args.fValue;
 		changeSelectedMesh([recenterX, recenterY, recenterZ](auto mesh) {
 			mesh->RecenterTo(recenterX, recenterY, recenterZ);
