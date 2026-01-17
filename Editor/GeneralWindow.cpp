@@ -1026,11 +1026,11 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			}
 
 			if (gui_round_enabled) {
-				editor->scaleButton.sprites[i].params.enableCornerRounding();
-				editor->scaleButton.sprites[i].params.corners_rounding[2].radius = gui_round_radius_default;
-				editor->scaleButton.sprites[i].params.corners_rounding[3].radius = gui_round_radius_default;
+				editor->localGlobalButton.sprites[i].params.enableCornerRounding();
+				editor->localGlobalButton.sprites[i].params.corners_rounding[2].radius = gui_round_radius_default;
+				editor->localGlobalButton.sprites[i].params.corners_rounding[3].radius = gui_round_radius_default;
 			} else {
-				editor->scaleButton.sprites[i].params.disableCornerRounding();
+				editor->localGlobalButton.sprites[i].params.disableCornerRounding();
 			}
 
 			if (gui_round_enabled) {
