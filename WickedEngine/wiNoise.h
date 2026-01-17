@@ -157,7 +157,7 @@ namespace wi::noise
 			const float ReciprocalTwoPi = 0.159154943f;
 			const float TwoPi = 6.283185307f;
 			float vResult = angle * ReciprocalTwoPi;
-			vResult = nearbyintf(vResult);
+			vResult = std::nearbyint(vResult);
 			return fnmadd_compat(vResult, TwoPi, angle);
 		}
 		inline float compute_sin(float x) noexcept
@@ -171,9 +171,8 @@ namespace wi::noise
 			constexpr float Coeff4 = 2.7525562e-06f;
 			constexpr float Coeff5 = -2.3889859e-08f;
 			x = modangles_compat(x);
-			float sign = std::copysignf(0.0f, x);
-			float c = std::copysignf(Pi, x);
-			float absx = std::fabsf(x);
+			float c = std::copysign(Pi, x);
+			float absx = std::abs(x);
 			float rflx = c - x;
 			bool comp = (absx <= HalfPi);
 			x = comp ? x : rflx;
