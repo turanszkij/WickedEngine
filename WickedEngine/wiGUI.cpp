@@ -1734,10 +1734,13 @@ namespace wi::gui
 					}
 					caret_timer.record();
 				}
-				else if (wi::input::Press(wi::input::KEYBOARD_BUTTON_RIGHT) && caret_pos < font_input.GetText().size())
+				else if (wi::input::Press(wi::input::KEYBOARD_BUTTON_RIGHT))
 				{
 					// caret repositioning right:
-					caret_pos++;
+					if (caret_pos < font_input.GetText().size())
+					{
+						caret_pos++;
+					}
 					if (!wi::input::Down(wi::input::BUTTON::KEYBOARD_BUTTON_LSHIFT) && !wi::input::Down(wi::input::BUTTON::KEYBOARD_BUTTON_RSHIFT))
 					{
 						caret_begin = caret_pos;
