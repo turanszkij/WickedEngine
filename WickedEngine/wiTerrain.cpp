@@ -23,6 +23,19 @@
 #define NOSPARSE
 #endif // __APPLE__
 
+// Strict float computations in this file to make the randomizations cross platform:
+#ifdef _MSC_VER
+#pragma float_control(push)
+#pragma fenv_access(push)
+#pragma fp_contract(push)
+#pragma float_control(precise, on)
+#pragma fenv_access(on)
+#pragma fp_contract(off)
+#elif defined(__clang__)
+#pragma STDC FP_CONTRACT off
+#pragma STDC FENV_ACCESS on
+#endif
+
 using namespace wi::ecs;
 using namespace wi::scene;
 using namespace wi::graphics;
@@ -2721,3 +2734,9 @@ namespace wi::terrain
 	}
 
 }
+
+#ifdef _MSC_VER
+#pragma fp_contract(pop)
+#pragma fenv_access(pop)
+#pragma float_control(pop)
+#endif
