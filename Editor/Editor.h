@@ -26,6 +26,7 @@ public:
 	wi::gui::Button translateButton;
 	wi::gui::Button rotateButton;
 	wi::gui::Button scaleButton;
+	wi::gui::Button localGlobalButton;
 
 	wi::gui::Button physicsButton;
 
@@ -166,6 +167,7 @@ public:
 	wi::unordered_map<wi::ecs::Entity, wi::primitive::Capsule> bone_picking_items;
 
 	void UpdateDynamicWidgets();
+	void UpdateLocalGlobalButton();
 
 	wi::Archive clipboard;
 

@@ -81,6 +81,7 @@ enum class EditorActions
 	MOVE_TOGGLE_ACTION,
 	ROTATE_TOGGLE_ACTION,
 	SCALE_TOGGLE_ACTION,
+	LOCAL_GLOBAL_TOGGLE_ACTION,
 
 	// Engine actions
 	SCREENSHOT,
@@ -139,6 +140,7 @@ HotkeyInfo hotkeyActions[size_t(EditorActions::COUNT)] = {
 	{wi::input::BUTTON('1'),					/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//MOVE_TOGGLE_ACTION,
 	{wi::input::BUTTON('2'),					/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//ROTATE_TOGGLE_ACTION,
 	{wi::input::BUTTON('3'),					/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//SCALE_TOGGLE_ACTION,
+	{wi::input::BUTTON('4'),					/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//LOCAL_GLOBAL_TOGGLE_ACTION,
 	{wi::input::BUTTON::KEYBOARD_BUTTON_F3,		/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//SCREENSHOT,
 	{wi::input::BUTTON::KEYBOARD_BUTTON_F4,		/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//SCREENSHOT_ALPHA,
 	{wi::input::BUTTON('I'),					/*press=*/ false,		/*control=*/ false,		/*shift=*/ false},	//INSPECTOR_MODE,
@@ -215,6 +217,7 @@ void HotkeyRemap(Editor* main)
 		{"MOVE_TOGGLE_ACTION", EditorActions::MOVE_TOGGLE_ACTION},
 		{"ROTATE_TOGGLE_ACTION", EditorActions::ROTATE_TOGGLE_ACTION},
 		{"SCALE_TOGGLE_ACTION", EditorActions::SCALE_TOGGLE_ACTION},
+		{"LOCAL_GLOBAL_TOGGLE_ACTION", EditorActions::LOCAL_GLOBAL_TOGGLE_ACTION},
 		{"MAKE_NEW_SCREENSHOT", EditorActions::SCREENSHOT},
 		{"MAKE_NEW_SCREENSHOT_ALPHA", EditorActions::SCREENSHOT_ALPHA},
 		{"INSPECTOR_MODE", EditorActions::INSPECTOR_MODE},
@@ -1004,6 +1007,16 @@ void EditorComponent::Load()
 		GetGUI().AddWidget(&translateButton);
 	}
 
+	localGlobalButton.Create(ICON_GLOBAL_SPACE);
+	localGlobalButton.SetShadowRadius(2);
+	localGlobalButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
+	UpdateLocalGlobalButton();
+	localGlobalButton.OnClick([this](wi::gui::EventArgs args) {
+		translator.isLocalSpace = !translator.isLocalSpace;
+		UpdateLocalGlobalButton();
+	});
+	GetGUI().AddWidget(&localGlobalButton);
+
 	physicsButton.Create(ICON_RIGIDBODY);
 	physicsButton.SetShadowRadius(2);
 	physicsButton.SetTooltip("Toggle Physics Simulation On/Off\n\tOr: press while holding left Ctrl to reset physics bodies");
@@ -1348,6 +1361,7 @@ void EditorComponent::Load()
 		ss += "Move Toggle: " + GetInputString(EditorActions::MOVE_TOGGLE_ACTION) + "\n";
 		ss += "Rotate Toggle: " + GetInputString(EditorActions::ROTATE_TOGGLE_ACTION) + "\n";
 		ss += "Scale Toggle: " + GetInputString(EditorActions::SCALE_TOGGLE_ACTION) + "\n";
+		ss += "Local/Global Toggle: " + GetInputString(EditorActions::LOCAL_GLOBAL_TOGGLE_ACTION) + "\n";
 		ss += "Reload terrain props: " + GetInputString(EditorActions::RELOAD_TERRAIN_PROPS) + "\n";
 		ss += "Wireframe mode: " + GetInputString(EditorActions::WIREFRAME_MODE) + "\n";
 		ss += "Screenshot (saved into Editor's screenshots folder): " + GetInputString(EditorActions::SCREENSHOT) + "\n";
@@ -2859,6 +2873,11 @@ void EditorComponent::Update(float dt)
 			translator.isScalator = !translator.isScalator;
 			translator.isTranslator = false;
 			translator.isRotator = false;
+		}
+		else if (CheckInput(EditorActions::LOCAL_GLOBAL_TOGGLE_ACTION))
+		{
+			translator.isLocalSpace = !translator.isLocalSpace;
+			UpdateLocalGlobalButton();
 		}
 	}
 
@@ -6002,6 +6021,20 @@ void EditorComponent::CheckBonePickingEnabled()
 	}
 }
 
+void EditorComponent::UpdateLocalGlobalButton()
+{
+	if (translator.isLocalSpace)
+	{
+		localGlobalButton.SetText(ICON_LOCAL_SPACE);
+		localGlobalButton.SetTooltip("Toggle from Local coordinate space to Global for Translate and Rotate\nHotkey: " + GetInputString(EditorActions::LOCAL_GLOBAL_TOGGLE_ACTION));
+	}
+	else
+	{
+		localGlobalButton.SetText(ICON_GLOBAL_SPACE);
+		localGlobalButton.SetTooltip("Toggle from Global coordinate space to Local for Translate and Rotate\nHotkey: " + GetInputString(EditorActions::LOCAL_GLOBAL_TOGGLE_ACTION));
+	}
+}
+
 void EditorComponent::UpdateDynamicWidgets()
 {
 	float screenW = GetLogicalWidth();
@@ -6208,7 +6241,12 @@ void EditorComponent::UpdateDynamicWidgets()
 	scaleButton.SetSize(XMFLOAT2(hei, hei));
 	scaleButton.SetPos(XMFLOAT2(ofs, y));
 	scaleButton.Update(*this, 0);
-	y += scaleButton.GetSize().y + padding;
+	y += scaleButton.GetSize().y + scaleButton.GetShadowRadius();
+
+	localGlobalButton.SetSize(XMFLOAT2(hei, hei));
+	localGlobalButton.SetPos(XMFLOAT2(ofs, y));
+	localGlobalButton.Update(*this, 0);
+	y += localGlobalButton.GetSize().y + padding;
 
 	physicsButton.SetSize(XMFLOAT2(hei, hei));
 	physicsButton.SetPos(XMFLOAT2(ofs, y));
