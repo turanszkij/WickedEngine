@@ -7,6 +7,7 @@
 
 #ifdef PLATFORM_XBOX
 DEFINE_GUID(D3D12_VIDEO_DECODE_PROFILE_H264, 0x1b81be68, 0xa0c7, 0x11d3, 0xb9, 0x84, 0x00, 0xc0, 0x4f, 0x2e, 0x73, 0xc5);
+DEFINE_GUID(D3D12_VIDEO_DECODE_PROFILE_HEVC_MAIN, 0x5b11d51b, 0x2f4c, 0x4452, 0xbc, 0xc3, 0x09, 0xf2, 0xa1, 0x16, 0x0c, 0xc0);
 #else
 #include "Utility/dx12/dxgiformat.h"
 #include "Utility/dx12/d3dx12_default.h"
@@ -2640,7 +2641,6 @@ std::mutex queue_locker;
 		capabilities |= GraphicsDeviceCapability::RAYTRACING;
 		capabilities |= GraphicsDeviceCapability::UAV_LOAD_FORMAT_R11G11B10_FLOAT;
 		capabilities |= GraphicsDeviceCapability::UAV_LOAD_FORMAT_COMMON;
-		capabilities |= GraphicsDeviceCapability::RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS;
 		capabilities |= GraphicsDeviceCapability::SPARSE_BUFFER;
 		capabilities |= GraphicsDeviceCapability::SPARSE_TEXTURE2D;
 		capabilities |= GraphicsDeviceCapability::SPARSE_NULL_MAPPING;
@@ -2728,10 +2728,6 @@ std::mutex queue_locker;
 		if (features.ROVsSupported() == TRUE)
 		{
 			capabilities |= GraphicsDeviceCapability::RASTERIZER_ORDERED_VIEWS;
-		}
-		if (features.VPAndRTArrayIndexFromAnyShaderFeedingRasterizerSupportedWithoutGSEmulation() == TRUE)
-		{
-			capabilities |= GraphicsDeviceCapability::RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS;
 		}
 		if (features.TiledResourcesTier() >= D3D12_TILED_RESOURCES_TIER_1)
 		{
@@ -3058,6 +3054,9 @@ std::mutex queue_locker;
 		resource_desc.SampleDesc.Count = 1;
 		resource_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
 
+		D3D12_HEAP_FLAGS heap_flags = D3D12_HEAP_FLAG_ALLOW_DISPLAY;
+		wi::graphics::xbox::ApplyTextureCreationFlags({}, resource_desc.Flags, heap_flags);
+
 		D3D12_CLEAR_VALUE clear_value = {};
 		clear_value.Format = resource_desc.Format;
 		clear_value.Color[0] = swapchain->desc.clear_color[0];
@@ -3071,7 +3070,7 @@ std::mutex queue_locker;
 			internal_state->textures[i] = wi::allocator::make_shared<Resource_DX12>();
 			dx12_check(device->CreateCommittedResource(
 				&heap_properties,
-				D3D12_HEAP_FLAG_ALLOW_DISPLAY,
+				heap_flags,
 				&resource_desc,
 				D3D12_RESOURCE_STATE_PRESENT,
 				&clear_value,
@@ -3518,10 +3517,12 @@ std::mutex queue_locker;
 			resourcedesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS;
 		}
 
+#ifndef PLATFORM_XBOX
 		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_DPB_ONLY))
 		{
 			resourcedesc.Flags = D3D12_RESOURCE_FLAG_VIDEO_DECODE_REFERENCE_ONLY | D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 		}
+#endif // PLATFORM_XBOX
 
 		if (
 			has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE) ||
@@ -5395,11 +5396,11 @@ std::mutex queue_locker;
 					wi::graphics::xbox::Present(
 						device.Get(),
 						queues[QUEUE_GRAPHICS].queue.Get(),
-						swapchain_internal->backBuffers[swapchain_internal->bufferIndex].Get(),
+						swapchain_internal->textures[swapchain_internal->bufferIndex]->resource.Get(),
 						swapchain->desc.vsync
 					);
 
-					swapchain_internal->bufferIndex = (swapchain_internal->bufferIndex + 1) % (uint32_t)swapchain_internal->backBuffers.size();
+					swapchain_internal->bufferIndex = (swapchain_internal->bufferIndex + 1) % (uint32_t)swapchain_internal->textures.size();
 
 #else
 					UINT presentFlags = 0;
@@ -5942,12 +5943,12 @@ std::mutex queue_locker;
 #ifdef DISABLE_RENDERPASS
 		commandlist.GetGraphicsCommandList()->OMSetRenderTargets(
 			1,
-			&internal_state->backbufferRTV[internal_state->GetBufferIndex()],
+			&internal_state->textures[internal_state->GetBufferIndex()]->rtv.handle,
 			TRUE,
 			nullptr
 		);
 		commandlist.GetGraphicsCommandList()->ClearRenderTargetView(
-			internal_state->backbufferRTV[internal_state->GetBufferIndex()],
+			internal_state->textures[internal_state->GetBufferIndex()]->rtv.handle,
 			swapchain->desc.clear_color,
 			0,
 			nullptr

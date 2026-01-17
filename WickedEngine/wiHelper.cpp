@@ -12,9 +12,9 @@
 #include "Utility/zstd/zstd.h"
 #include "Utility/win32ico.h"
 
-#ifndef __SCE__
+#if !defined(__SCE__) && !defined(PLATFORM_XBOX)
 #include "Utility/portable-file-dialogs.h"
-#endif // __SCE__
+#endif // !defined(__SCE__) && !defined(PLATFORM_XBOX)
 
 #include <thread>
 #include <locale>
@@ -1574,16 +1574,16 @@ namespace wi::helper
 
 	std::string FolderDialog(const std::string& description)
 	{
-#ifdef __SCE__
-		return "";
-#else
+#if !defined(__SCE__) && !defined(PLATFORM_XBOX)
 		if (!pfd::settings::available())
 		{
 			messageBox("No dialog backend available!", "Error!");
 			return "";
 		}
 		return pfd::select_folder(description).result();
-#endif // __SCE__
+#else
+		return "";
+#endif // !defined(__SCE__) && !defined(PLATFORM_XBOX)
 	}
 
 	void GetFileNamesInDirectory(const std::string& directory, const std::function<void(std::string fileName)>& onSuccess, const std::string& filter_extension)

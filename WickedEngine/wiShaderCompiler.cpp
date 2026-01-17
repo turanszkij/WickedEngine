@@ -60,6 +60,9 @@ namespace wi::shadercompiler
 		InternalState_DXC(const std::string& modifier = "")
 		{
 #ifdef _WIN32
+#ifdef SHADERCOMPILER_XBOX_INCLUDED
+			wi::shadercompiler::xbox::GetSetSDKPath(); // Sets Xbox SDK path globally for DLL loading
+#endif // SHADERCOMPILER_XBOX_INCLUDED
 			const std::string library = "dxcompiler" + modifier + ".dll";
 			HMODULE dxcompiler = wiLoadLibrary(library.c_str());
 #elif defined(PLATFORM_LINUX)
@@ -197,7 +200,8 @@ namespace wi::shadercompiler
 
 		if (input.format == ShaderFormat::HLSL6_XS)
 		{
-			minshadermodel = ShaderModel::SM_6_6;
+			minshadermodel = ShaderModel::SM_6_2;
+			args.push_back(L"-enable-16bit-types");
 		}
 		
 		if (input.format == ShaderFormat::METAL)

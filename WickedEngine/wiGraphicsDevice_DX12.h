@@ -27,6 +27,9 @@
 
 #define D3D12MA_D3D12_HEADERS_ALREADY_INCLUDED
 #define __ID3D12Device1_INTERFACE_DEFINED__
+#ifdef PLATFORM_XBOX
+#define D3D12MA_OPTIONS16_SUPPORTED 0
+#endif // PLATFORM_XBOX
 #include "Utility/D3D12MemAlloc.h"
 
 #include <deque>
