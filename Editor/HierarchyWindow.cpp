@@ -118,9 +118,16 @@ void HierarchyWindow::SetEntity(Entity entity)
 			}
 
 			std::string depth_indicator;
-			for (int i = 0; i < depth; ++i)
+			if (depth > 3)
 			{
-				depth_indicator += ">";
+				depth_indicator = "> " + std::to_string(depth) + " >";
+			}
+			else
+			{
+				for (int i = 0; i < depth; ++i)
+				{
+					depth_indicator += ">";
+				}
 			}
 
 			const NameComponent* parent_name = scene.names.GetComponent(candidate_hierarchy->parentID);
