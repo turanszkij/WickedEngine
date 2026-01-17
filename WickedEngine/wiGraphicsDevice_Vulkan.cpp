@@ -2799,10 +2799,6 @@ using namespace vulkan_internal;
 			{
 				capabilities |= GraphicsDeviceCapability::UAV_LOAD_FORMAT_COMMON;
 			}
-			if (features_1_2.shaderOutputLayer == VK_TRUE && features_1_2.shaderOutputViewportIndex)
-			{
-				capabilities |= GraphicsDeviceCapability::RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS;
-			}
 
 			if (
 				raytracing_features.rayTracingPipeline == VK_TRUE &&

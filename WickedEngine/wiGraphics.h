@@ -418,11 +418,10 @@ namespace wi::graphics
 		VIDEO_DECODE_OUTPUT_ONLY = 1 << 14,	// resource is usabe in video decoding operations but as output only and not as DPB (used for DPB textures when DPB_AND_OUTPUT_COINCIDE is NOT supported)
 		VIDEO_DECODE_DPB_ONLY = 1 << 15,	// resource is usabe in video decoding operations but as strictly DPB only (used for output textures when DPB_AND_OUTPUT_COINCIDE is NOT supported)
 		NO_DEFAULT_DESCRIPTORS = 1 << 16, // skips creation of default descriptors for resources
-		TEXTURE_COMPATIBLE_COMPRESSION = 1 << 17, // optimization that can enable sampling from compressed textures (console only)
-		SHARED = 1 << 18, // shared texture
+		SHARED = 1 << 17, // shared texture
 
-		VIDEO_COMPATIBILITY_H264 = 1 << 19,	// required for vulkan resource creation for every resource (biotstream buffer, DPB, output) that will be used in a H264 decode session
-		VIDEO_COMPATIBILITY_H265 = 1 << 20,	// required for vulkan resource creation for every resource (biotstream buffer, DPB, output) that will be used in a H265 decode session
+		VIDEO_COMPATIBILITY_H264 = 1 << 18,	// required for vulkan resource creation for every resource (bitstream buffer, DPB, output) that will be used in a H264 decode session
+		VIDEO_COMPATIBILITY_H265 = 1 << 19,	// required for vulkan resource creation for every resource (bitstream buffer, DPB, output) that will be used in a H265 decode session
 
 		// Compat:
 		SPARSE_TILE_POOL_BUFFER = ALIASING_BUFFER,
@@ -439,26 +438,25 @@ namespace wi::graphics
 		RASTERIZER_ORDERED_VIEWS = 1 << 2,
 		UAV_LOAD_FORMAT_COMMON = 1 << 3, // eg: R16G16B16A16_FLOAT, R8G8B8A8_UNORM and more common ones
 		UAV_LOAD_FORMAT_R11G11B10_FLOAT = 1 << 4,
-		RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS = 1 << 5,
-		VARIABLE_RATE_SHADING = 1 << 6,
-		VARIABLE_RATE_SHADING_TIER2 = 1 << 7,
-		MESH_SHADER = 1 << 8,
-		RAYTRACING = 1 << 9,
-		PREDICATION = 1 << 10,
-		SAMPLER_MINMAX = 1 << 11,
-		DEPTH_BOUNDS_TEST = 1 << 12,
-		SPARSE_BUFFER = 1 << 13,
-		SPARSE_TEXTURE2D = 1 << 14,
-		SPARSE_TEXTURE3D = 1 << 15,
-		SPARSE_NULL_MAPPING = 1 << 16,
-		ALIASING_GENERIC = 1 << 17, // allows using ResourceMiscFlag::ALIASING (non resource type specific version)
-		DEPTH_RESOLVE_MIN_MAX = 1 << 18,
-		STENCIL_RESOLVE_MIN_MAX = 1 << 19,
-		CACHE_COHERENT_UMA = 1 << 20,	// https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_feature_data_architecture
-		VIDEO_DECODE_H264 = 1 << 21,
-		VIDEO_DECODE_H265 = 1 << 22,
-		R9G9B9E5_SHAREDEXP_RENDERABLE = 1 << 23, // indicates supporting R9G9B9E5_SHAREDEXP format for rendering to
-		COPY_BETWEEN_DIFFERENT_IMAGE_ASPECTS_NOT_SUPPORTED = 1 << 24, // indicates that CopyTexture src and dst ImageAspect must match
+		VARIABLE_RATE_SHADING = 1 << 5,
+		VARIABLE_RATE_SHADING_TIER2 = 1 << 6,
+		MESH_SHADER = 1 << 7,
+		RAYTRACING = 1 << 8,
+		PREDICATION = 1 << 9,
+		SAMPLER_MINMAX = 1 << 10,
+		DEPTH_BOUNDS_TEST = 1 << 11,
+		SPARSE_BUFFER = 1 << 12,
+		SPARSE_TEXTURE2D = 1 << 13,
+		SPARSE_TEXTURE3D = 1 << 14,
+		SPARSE_NULL_MAPPING = 1 << 15,
+		ALIASING_GENERIC = 1 << 16, // allows using ResourceMiscFlag::ALIASING (non resource type specific version)
+		DEPTH_RESOLVE_MIN_MAX = 1 << 17,
+		STENCIL_RESOLVE_MIN_MAX = 1 << 18,
+		CACHE_COHERENT_UMA = 1 << 19,	// https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_feature_data_architecture
+		VIDEO_DECODE_H264 = 1 << 20,
+		VIDEO_DECODE_H265 = 1 << 21,
+		R9G9B9E5_SHAREDEXP_RENDERABLE = 1 << 22, // indicates supporting R9G9B9E5_SHAREDEXP format for rendering to
+		COPY_BETWEEN_DIFFERENT_IMAGE_ASPECTS_NOT_SUPPORTED = 1 << 23, // indicates that CopyTexture src and dst ImageAspect must match
 		
 		// Compat:
 		GENERIC_SPARSE_TILE_POOL = ALIASING_GENERIC,
