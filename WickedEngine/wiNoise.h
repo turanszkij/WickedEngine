@@ -141,70 +141,58 @@ namespace wi::noise
 			);
 		}
 
-#if defined(_M_ARM64) || defined(__arm64__)
-		// TODO: this will not be equivalent to X64 right now!
-		inline XMFLOAT2 sin(XMFLOAT2 p)
+		// Backwards compatibility implementation for XMVectorSin() without intrinsics, but strictly matching with SSE version:
+		inline float fmadd_compat(float a, float b, float c) noexcept
 		{
-			return XMFLOAT2(std::sin(p.x), std::sin(p.y));
+			float t = a * b;
+			return t + c;
 		}
-#else
-		// Backwards compatibility implementation for XMVectorSin() without FMA instruction:
-		inline XMVECTOR XM_CALLCONV FMADD_COMPAT(XMVECTOR a, XMVECTOR b, XMVECTOR c) noexcept { return _mm_add_ps(_mm_mul_ps((a), (b)), (c)); }
-		inline XMVECTOR XM_CALLCONV FNMADD_COMPAT(XMVECTOR a, XMVECTOR b, XMVECTOR c) noexcept { return _mm_sub_ps((c), _mm_mul_ps((a), (b))); }
-		inline XMVECTOR XM_CALLCONV XMVectorModAngles_COMPAT(FXMVECTOR Angles) noexcept
+		inline float fnmadd_compat(float a, float b, float c) noexcept
 		{
-			// Modulo the range of the given angles such that -XM_PI <= Angles < XM_PI
-			XMVECTOR vResult = _mm_mul_ps(Angles, g_XMReciprocalTwoPi);
-			// Use the inline function due to complexity for rounding
-			vResult = XMVectorRound(vResult);
-			return FNMADD_COMPAT(vResult, g_XMTwoPi, Angles);
+			float t = a * b;
+			return c - t;
 		}
-		inline XMFLOAT2 sin(XMFLOAT2 p)
+		inline float modangles_compat(float angle) noexcept
 		{
-			XMVECTOR P = XMLoadFloat2(&p);
-			//P = XMVectorSin(P);
-			{
-				// Force the value within the bounds of pi
-				XMVECTOR x = XMVectorModAngles_COMPAT(P);
-
-				// Map in [-pi/2,pi/2] with sin(y) = sin(x).
-				__m128 sign = _mm_and_ps(x, g_XMNegativeZero);
-				__m128 c = _mm_or_ps(g_XMPi, sign);  // pi when x >= 0, -pi when x < 0
-				__m128 absx = _mm_andnot_ps(sign, x);  // |x|
-				__m128 rflx = _mm_sub_ps(c, x);
-				__m128 comp = _mm_cmple_ps(absx, g_XMHalfPi);
-				__m128 select0 = _mm_and_ps(comp, x);
-				__m128 select1 = _mm_andnot_ps(comp, rflx);
-				x = _mm_or_ps(select0, select1);
-
-				__m128 x2 = _mm_mul_ps(x, x);
-
-				// Compute polynomial approximation
-				const XMVECTOR SC1 = g_XMSinCoefficients1;
-				__m128 vConstantsB = XM_PERMUTE_PS(SC1, _MM_SHUFFLE(0, 0, 0, 0));
-				const XMVECTOR SC0 = g_XMSinCoefficients0;
-				__m128 vConstants = XM_PERMUTE_PS(SC0, _MM_SHUFFLE(3, 3, 3, 3));
-				__m128 Result = FMADD_COMPAT(vConstantsB, x2, vConstants);
-
-				vConstants = XM_PERMUTE_PS(SC0, _MM_SHUFFLE(2, 2, 2, 2));
-				Result = FMADD_COMPAT(Result, x2, vConstants);
-
-				vConstants = XM_PERMUTE_PS(SC0, _MM_SHUFFLE(1, 1, 1, 1));
-				Result = FMADD_COMPAT(Result, x2, vConstants);
-
-				vConstants = XM_PERMUTE_PS(SC0, _MM_SHUFFLE(0, 0, 0, 0));
-				Result = FMADD_COMPAT(Result, x2, vConstants);
-
-				Result = FMADD_COMPAT(Result, x2, g_XMOne);
-				Result = _mm_mul_ps(Result, x);
-
-				P = Result;
-			}
+			const float ReciprocalTwoPi = 0.159154943f;
+			const float TwoPi = 6.283185307f;
+			float vResult = angle * ReciprocalTwoPi;
+			vResult = nearbyintf(vResult);
+			return fnmadd_compat(vResult, TwoPi, angle);
+		}
+		inline float compute_sin(float x) noexcept
+		{
+			constexpr float Pi = 3.141592654f;
+			constexpr float HalfPi = 1.570796327f;
+			constexpr float One = 1.0f;
+			constexpr float Coeff1 = -0.16666667f;
+			constexpr float Coeff2 = 0.0083333310f;
+			constexpr float Coeff3 = -0.00019840874f;
+			constexpr float Coeff4 = 2.7525562e-06f;
+			constexpr float Coeff5 = -2.3889859e-08f;
+			x = modangles_compat(x);
+			float sign = std::copysignf(0.0f, x);
+			float c = std::copysignf(Pi, x);
+			float absx = std::fabsf(x);
+			float rflx = c - x;
+			bool comp = (absx <= HalfPi);
+			x = comp ? x : rflx;
+			float x2 = x * x;
+			float result = fmadd_compat(Coeff5, x2, Coeff4);
+			result = fmadd_compat(result, x2, Coeff3);
+			result = fmadd_compat(result, x2, Coeff2);
+			result = fmadd_compat(result, x2, Coeff1);
+			result = fmadd_compat(result, x2, One);
+			result *= x;
+			return result;
+		}
+		inline XMFLOAT2 sin(XMFLOAT2 p) noexcept
+		{
 			XMFLOAT2 ret;
-			XMStoreFloat2(&ret, P);
+			ret.x = compute_sin(p.x);
+			ret.y = compute_sin(p.y);
 			return ret;
 		}
-#endif // defined(_M_ARM64) || defined(__arm64__)
 
 		inline XMFLOAT2 hash(XMFLOAT2 p)
 		{
