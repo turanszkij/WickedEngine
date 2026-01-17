@@ -43,22 +43,25 @@ namespace wi::random
 		}
 
 		// gives an int64 in range [-INT64_MAX, INT64_MAX]
-		inline int64_t next_int()
+		constexpr int64_t next_int()
 		{
-			const uint64_t u = next_uint();
-			int64_t i = 0;
-			std::memcpy(&i, &u, sizeof(u));
-			return i;
+			union
+			{
+				uint64_t u;
+				int64_t i;
+			} value = {};
+			value.u = next_uint();
+			return value.i;
 		}
 		// gives an int64 in range [min, max]
-		inline int64_t next_int(int64_t min, int64_t max)
+		constexpr int64_t next_int(int64_t min, int64_t max)
 		{
 			if (min == max)
 				return min;
 			return min + int64_t(next_uint() % (std::min(std::numeric_limits<int64_t>::max() - int64_t(1), std::max(int64_t(1), max - min)) + int64_t(1))); // we roll next_uint here to avoid negative value messing with range mapping
 		}
 		// gives an int32 in range [min, max]
-		inline int32_t next_int(int32_t min, int32_t max)
+		constexpr int32_t next_int(int32_t min, int32_t max)
 		{
 			if (min == max)
 				return min;
@@ -66,19 +69,20 @@ namespace wi::random
 		}
 
 		// gives a float in range [0, 1]
-		inline float next_float()
+		constexpr float next_float()
 		{
-			const uint32_t u = 0x3f800000u | (uint32_t(next_uint()) >> 9);
-			float f = 0;
-			std::memcpy(&f, &u, sizeof(u));
-			return f - 1.0f;
+			union
+			{
+				uint32_t u;
+				float f;
+			} value = {};
+			value.u = 0x3f800000u | (uint32_t(next_uint()) >> 9);
+			return value.f - 1.0f;
 		}
 		// gives a float in range [min, max]
-		inline float next_float(float min, float max)
+		constexpr float next_float(float min, float max)
 		{
-			const float range = max - min;
-			const float t = range * next_float();
-			return min + t;
+			return min + (max - min) * next_float();
 		}
 	};
 

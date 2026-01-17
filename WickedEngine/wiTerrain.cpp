@@ -201,15 +201,6 @@ namespace wi::terrain
 
 	static std::mutex locker;
 
-	constexpr float quantize(float x)
-	{
-		x = saturate(x);
-		x = x * 255.0f;
-		x = (float)uint8_t(x);
-		x = x / 255.0f;
-		x = saturate(x);
-		return x;
-	}
 	constexpr void weight_norm(XMFLOAT4& weights)
 	{
 		const float norm = 1.0f / (weights.x + weights.y + weights.z + weights.w);
@@ -217,10 +208,6 @@ namespace wi::terrain
 		weights.y *= norm;
 		weights.z *= norm;
 		weights.w *= norm;
-		weights.x = quantize(weights.x);
-		weights.y = quantize(weights.y);
-		weights.z = quantize(weights.z);
-		weights.w = quantize(weights.w);
 	};
 
 
@@ -899,7 +886,7 @@ namespace wi::terrain
 						rigidbody->shape = RigidBodyPhysicsComponent::HEIGHTFIELD;
 					}
 				}
-				else if(rigidbody != nullptr)
+				else if (rigidbody != nullptr)
 				{
 					scene->rigidbodies.Remove(chunk_data.entity);
 				}
@@ -995,472 +982,424 @@ namespace wi::terrain
 			bool generated_something = false;
 
 			auto request_chunk = [&](int offset_x, int offset_z)
-			{
-				Chunk chunk = center_chunk;
-				chunk.x += offset_x;
-				chunk.z += offset_z;
-				auto it = chunks.find(chunk);
-				if (it == chunks.end() || it->second.entity == INVALID_ENTITY || it->second.invalidated)
 				{
-					// Generate a new chunk:
-					ChunkData& chunk_data = chunks[chunk];
-
-					std::string chunk_name = "chunk_" + std::to_string(chunk.x) + "_" + std::to_string(chunk.z);
-					if (chunk_data.entity == INVALID_ENTITY)
+					Chunk chunk = center_chunk;
+					chunk.x += offset_x;
+					chunk.z += offset_z;
+					auto it = chunks.find(chunk);
+					if (it == chunks.end() || it->second.entity == INVALID_ENTITY || it->second.invalidated)
 					{
-						chunk_data.entity = generator->scene.Entity_CreateObject(chunk_name);
-					}
-					else
-					{
-						// replacement will be made instead of simple merge, entity ID can be reused:
-						generator->scene.names.Create(chunk_data.entity) = std::move(chunk_name);
-						generator->scene.layers.Create(chunk_data.entity);
-						generator->scene.transforms.Create(chunk_data.entity);
-						generator->scene.objects.Create(chunk_data.entity);
-						generator->removable_chunks.push_back(chunk);
-					}
-					ObjectComponent& object = *generator->scene.objects.GetComponent(chunk_data.entity);
-					object.lod_bias = lod_bias;
-					object.filterMask |= wi::enums::FILTER_NAVIGATION_MESH;
-					object.filterMask |= wi::enums::FILTER_TERRAIN;
-					generator->scene.Component_Attach(chunk_data.entity, chunkGroupEntity);
-
-					TransformComponent& transform = *generator->scene.transforms.GetComponent(chunk_data.entity);
-					transform.ClearTransform();
-					chunk_data.position = XMFLOAT3(float(chunk.x * (chunk_width - 1)) * chunk_scale, 0, float(chunk.z * (chunk_width - 1)) * chunk_scale);
-					transform.Translate(chunk_data.position);
-					transform.UpdateTransform();
-
-					MaterialComponent& material = generator->scene.materials.Create(chunk_data.entity);
-					// material params will be 1 because they will be created from only texture maps
-					//	because region materials are blended together into one texture
-					material.SetInternal();
-					material.SetRoughness(1);
-					material.SetMetalness(1);
-					material.SetReflectance(1);
-					material.SetEmissiveStrength(100);
-
-					MeshComponent& mesh = generator->scene.meshes.Create(chunk_data.entity);
-					mesh.SetQuantizedPositionsDisabled(true); // connecting meshes quantization is not correct because mismatching AABBs
-					object.meshID = chunk_data.entity;
-					mesh.indices = chunk_indices().indices;
-					for (auto& lod : chunk_indices().lods)
-					{
-						mesh.subsets.emplace_back();
-						mesh.subsets.back().materialID = chunk_data.entity;
-						mesh.subsets.back().indexCount = lod.indexCount;
-						mesh.subsets.back().indexOffset = lod.indexOffset;
-					}
-					mesh.subsets_per_lod = 1;
-					mesh.vertex_positions.resize(vertexCount);
-					mesh.vertex_normals.resize(vertexCount);
-					mesh.vertex_tangents.resize(vertexCount);
-					mesh.vertex_uvset_0.resize(vertexCount);
-
-					chunk_data.blendmap_layers.resize(4);
-					for (auto& x : chunk_data.blendmap_layers)
-					{
-						x.pixels.resize(vertexCount);
-					}
-
-					chunk_data.spline_blendmap_layers.resize(splineMaterialEntities.size());
-					for (auto& x : chunk_data.spline_blendmap_layers)
-					{
-						x.pixels.resize(vertexCount);
-					}
-
-					chunk_data.mesh_vertex_positions = mesh.vertex_positions.data();
-
-					chunk_data.heightmap_data.resize(vertexCount);
-
-					wi::HairParticleSystem grass = grass_properties;
-					grass.vertex_lengths.resize(vertexCount);
-					std::atomic<uint32_t> grass_valid_vertex_count{ 0 };
-
-					// Shadow casting will only be enabled for sloped terrain chunks:
-					std::atomic_bool slope_cast_shadow;
-					slope_cast_shadow.store(false);
-
-					// Do a parallel for loop over all the chunk's vertices and compute their properties:
-					wi::jobsystem::context ctx;
-					ctx.priority = wi::jobsystem::Priority::Low;
-
-					// Preload height grid with padding, because neighbors will need to be accessed to determine slopes:
-					constexpr int chunk_width_padded = chunk_width + 1;
-					constexpr uint32_t vertexCount_padded = chunk_width_padded * chunk_width_padded;
-					float heights_padded[chunk_width_padded][chunk_width_padded];
-					const XMVECTOR UP = XMVectorSet(0, 1, 0, 0);
-					wi::jobsystem::Dispatch(ctx, vertexCount_padded, chunk_width_padded * 4, [&](wi::jobsystem::JobArgs args) {
-						const uint32_t index = args.jobIndex;
-						const XMUINT2 coord = XMUINT2(index % chunk_width_padded, index / chunk_width_padded);
-						const float x = (float(coord.x) - chunk_half_width) * chunk_scale;
-						const float z = (float(coord.y) - chunk_half_width) * chunk_scale;
-
-						float height = 0;
-						const XMFLOAT2 world_pos = XMFLOAT2(chunk_data.position.x + x, chunk_data.position.z + z);
-						for (auto& modifier : modifiers)
-						{
-							modifier->Apply(world_pos, height);
-						}
-						height = lerp(bottomLevel, topLevel, height);
-
-						const bool is_real_vertex = coord.x < chunk_width && coord.y < chunk_width;
-						const uint32_t real_index = coord.x + coord.y * chunk_width;
-
-						// Apply splines to height only:
-						const XMVECTOR P = XMVectorSet(world_pos.x, -100000, world_pos.y, 0);
-						const wi::primitive::Ray ray(P, UP);
-						int splinematerialcnt = -1;
-						for (size_t j = 0; j < generator->splines.size(); ++j)
-						{
-							const SplineComponent& spline = generator->splines[j];
-							if (spline.materialEntity != INVALID_ENTITY)
-								splinematerialcnt++;
-							if (!spline.bvh.IntersectsFirst(ray, [&](uint32_t index) { return spline.precomputed_aabbs[index].intersects(ray); }))
-								continue;
-							XMVECTOR S = spline.TraceSplinePlane(P, UP, 4);
-							S = spline.ClosestPointOnSpline(S, 4);
-							const float splineheight = XMVectorGetY(S);
-							const float splinedist = wi::math::Distance(XMVectorSetY(P, splineheight), S);
-							const float splinefactor = 1.0f - smoothstep(0.0f, 1.0f, saturate(splinedist * sqr(spline.terrain_modifier_amount)));
-							if (is_real_vertex && spline.materialEntity != INVALID_ENTITY)
-							{
-								chunk_data.spline_blendmap_layers[splinematerialcnt].pixels[real_index] = uint8_t(smoothstep(clamp(spline.terrain_texture_falloff, 0.0f, 0.999f), 1.0f, splinefactor) * 255);
-							}
-							height = lerp(height, splineheight - spline.terrain_pushdown, splinefactor);
-						}
-
-						heights_padded[coord.x][coord.y] = height;
-					});
-					wi::jobsystem::Wait(ctx);
-
-					wi::jobsystem::Dispatch(ctx, vertexCount, chunk_width * 4, [&](wi::jobsystem::JobArgs args) {
+						// Generate a new chunk:
 						ChunkData& chunk_data = chunks[chunk];
-						const uint32_t index = args.jobIndex;
-						const XMUINT2 coord = XMUINT2(index % chunk_width, index / chunk_width);
-						const float x = (float(coord.x) - chunk_half_width) * chunk_scale;
-						const float z = (float(coord.y) - chunk_half_width) * chunk_scale;
-						const float height = heights_padded[coord.x][coord.y];
-						const XMVECTOR corners[3] = {
-							XMVectorSet(chunk_data.position.x + x, height, chunk_data.position.z + z, 0),
-							XMVectorSet(chunk_data.position.x + x + 1, heights_padded[coord.x + 1][coord.y], chunk_data.position.z + z, 0),
-							XMVectorSet(chunk_data.position.x + x, heights_padded[coord.x][coord.y + 1], chunk_data.position.z + z + 1, 0),
-						};
-						const XMVECTOR T = XMVectorSubtract(corners[1], corners[2]);
-						const XMVECTOR B = XMVectorSubtract(corners[0], corners[1]);
-						const XMVECTOR N = XMVector3Normalize(XMVector3Cross(T, B));
-						XMFLOAT3 normal;
-						XMStoreFloat3(&normal, N);
 
-						const float slope_amount = 1.0f - saturate(normal.y);
-						if (slope_amount > 0.1f)
-							slope_cast_shadow.store(true);
-
-						float region_base = 1;
-						float region_slope = region1 == 0 ? 1 : smoothstep(0.0f, region1, slope_amount);
-						float region_low_altitude = region2 == 0 ? 1 : smoothstep(0.0f, region2, wi::math::InverseLerp(0, bottomLevel, height));
-						float region_high_altitude = region3 == 0 ? 1 : smoothstep(0.0f, region3, wi::math::InverseLerp(0, topLevel, height));
-
-						region_low_altitude = saturate(region_low_altitude - region_slope);
-						region_high_altitude = saturate(region_high_altitude - region_slope);
-
-						XMFLOAT4 materialBlendWeights(region_base, region_slope, region_low_altitude, region_high_altitude);
-
-						chunk_data.blendmap_layers[0].pixels[index] = uint8_t(materialBlendWeights.x * 255);
-						chunk_data.blendmap_layers[1].pixels[index] = uint8_t(materialBlendWeights.y * 255);
-						chunk_data.blendmap_layers[2].pixels[index] = uint8_t(materialBlendWeights.z * 255);
-						chunk_data.blendmap_layers[3].pixels[index] = uint8_t(materialBlendWeights.w * 255);
-
-						// Normalize after store, blending shader wants unnormalized!
-						weight_norm(materialBlendWeights);
-
-						mesh.vertex_positions[index] = XMFLOAT3(x, height, z);
-						mesh.vertex_normals[index] = normal;
-						XMStoreFloat4(&mesh.vertex_tangents[index], T);
-						mesh.vertex_tangents[index].w = 1;
-						const XMFLOAT2 uv = XMFLOAT2(x * chunk_scale_rcp * chunk_width_rcp + 0.5f, z * chunk_scale_rcp * chunk_width_rcp + 0.5f);
-						mesh.vertex_uvset_0[index] = uv;
-
-						XMFLOAT3 vertex_pos(chunk_data.position.x + x, height, chunk_data.position.z + z);
-
-						float spline_factor = 0;
-						if (!chunk_data.spline_blendmap_layers.empty())
+						std::string chunk_name = "chunk_" + std::to_string(chunk.x) + "_" + std::to_string(chunk.z);
+						if (chunk_data.entity == INVALID_ENTITY)
 						{
-							for (auto& y : chunk_data.spline_blendmap_layers)
-							{
-								spline_factor += float(y.pixels[index]) / 255.0f;
-							}
-							spline_factor /= float(chunk_data.spline_blendmap_layers.size());
-						}
-
-						const float grass_noise_frequency = 0.1f;
-						const float grass_noise = perlin_noise.compute(vertex_pos.x * grass_noise_frequency, vertex_pos.y * grass_noise_frequency, vertex_pos.z * grass_noise_frequency) * 0.5f + 0.5f;
-						const float region_grass = quantize(std::pow(materialBlendWeights.x * (1 - materialBlendWeights.w), 8.0f) * grass_noise * (1 - saturate(spline_factor)));
-						if (region_grass > 0.1f)
-						{
-							grass_valid_vertex_count.fetch_add(1);
-							grass.vertex_lengths[index] = region_grass;
+							chunk_data.entity = generator->scene.Entity_CreateObject(chunk_name);
 						}
 						else
 						{
-							grass.vertex_lengths[index] = 0;
+							// replacement will be made instead of simple merge, entity ID can be reused:
+							generator->scene.names.Create(chunk_data.entity) = std::move(chunk_name);
+							generator->scene.layers.Create(chunk_data.entity);
+							generator->scene.transforms.Create(chunk_data.entity);
+							generator->scene.objects.Create(chunk_data.entity);
+							generator->removable_chunks.push_back(chunk);
 						}
-						chunk_data.heightmap_data[index] = uint16_t(inverse_lerp(bottomLevel, topLevel, height) * 65535);
-					});
-					wi::jobsystem::Wait(ctx); // wait until chunk's vertex buffer is fully generated
+						ObjectComponent& object = *generator->scene.objects.GetComponent(chunk_data.entity);
+						object.lod_bias = lod_bias;
+						object.filterMask |= wi::enums::FILTER_NAVIGATION_MESH;
+						object.filterMask |= wi::enums::FILTER_TERRAIN;
+						generator->scene.Component_Attach(chunk_data.entity, chunkGroupEntity);
 
-					object.SetCastShadow(slope_cast_shadow.load());
-					mesh.SetDoubleSidedShadow(slope_cast_shadow.load());
+						TransformComponent& transform = *generator->scene.transforms.GetComponent(chunk_data.entity);
+						transform.ClearTransform();
+						chunk_data.position = XMFLOAT3(float(chunk.x * (chunk_width - 1)) * chunk_scale, 0, float(chunk.z * (chunk_width - 1)) * chunk_scale);
+						transform.Translate(chunk_data.position);
+						transform.UpdateTransform();
 
-					wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
-						mesh.CreateRenderData();
-						chunk_data.sphere.center = mesh.aabb.getCenter();
-						chunk_data.sphere.center.x += chunk_data.position.x;
-						chunk_data.sphere.center.y += chunk_data.position.y;
-						chunk_data.sphere.center.z += chunk_data.position.z;
-						chunk_data.sphere.radius = mesh.aabb.getRadius();
-						mesh.SetBVHEnabled(true);
-					});
+						MaterialComponent& material = generator->scene.materials.Create(chunk_data.entity);
+						// material params will be 1 because they will be created from only texture maps
+						//	because region materials are blended together into one texture
+						material.SetInternal();
+						material.SetRoughness(1);
+						material.SetMetalness(1);
+						material.SetReflectance(1);
+						material.SetEmissiveStrength(100);
 
-					// If there were any vertices in this chunk that could be valid for grass, store the grass particle system:
-					if (grass_valid_vertex_count.load() > 0)
-					{
-						chunk_data.grass = std::move(grass); // the grass will be added to the scene later, only when the chunk is close to the camera (center chunk's neighbors)
-						chunk_data.grass.meshID = chunk_data.entity;
-						chunk_data.grass.strandCount = uint32_t(grass_valid_vertex_count.load() * 3 * chunk_scale * chunk_scale); // chunk_scale * chunk_scale : grass density increases with squared amount with chunk scale (x*z)
-						chunk_data.grass.CreateFromMesh(mesh);
-					}
-
-					// Create the textures for virtual texture update:
-					chunk_data.heightmap = {};
-					chunk_data.blendmap = {};
-					CreateChunkRegionTexture(chunk_data);
-
-					if (IsPhysicsEnabled())
-					{
-						// Precompute the physics shape here on separate thread, because computing shape for triangle mesh would be slow on main thread:
-						//	Note that this is mesh.precomputed_rigidbody_physics_shape and not a component in scene.rigidbodies, so this only contains the shape, not the simulated rigid bodies
-						RigidBodyPhysicsComponent& newrigidbody = mesh.precomputed_rigidbody_physics_shape;
-						newrigidbody.shape = RigidBodyPhysicsComponent::HEIGHTFIELD;
-						newrigidbody.mass = 0; // terrain chunks are static
-						newrigidbody.friction = 0.8f;
-						//newrigidbody.mesh_lod = 2;
-						wi::physics::CreateRigidBodyShape(newrigidbody, transform.scale_local, &mesh);
-					}
-
-					wi::jobsystem::Wait(ctx); // wait until mesh.CreateRenderData() async task finishes
-
-					generated_something = true;
-				}
-
-				const int dist = std::max(std::abs(center_chunk.x - chunk.x), std::abs(center_chunk.z - chunk.z));
-
-				// Grass patch placement:
-				if (dist <= grass_chunk_dist && IsGrassEnabled())
-				{
-					it = chunks.find(chunk);
-					if (it != chunks.end() && it->second.entity != INVALID_ENTITY)
-					{
-						ChunkData& chunk_data = it->second;
-						if ((chunk_data.grass_entity == INVALID_ENTITY || chunk_data.invalidated) && chunk_data.grass.meshID != INVALID_ENTITY)
+						MeshComponent& mesh = generator->scene.meshes.Create(chunk_data.entity);
+						mesh.SetQuantizedPositionsDisabled(true); // connecting meshes quantization is not correct because mismatching AABBs
+						object.meshID = chunk_data.entity;
+						mesh.indices = chunk_indices().indices;
+						for (auto& lod : chunk_indices().lods)
 						{
-							// add patch for this chunk
-							if (chunk_data.grass_entity == INVALID_ENTITY)
+							mesh.subsets.emplace_back();
+							mesh.subsets.back().materialID = chunk_data.entity;
+							mesh.subsets.back().indexCount = lod.indexCount;
+							mesh.subsets.back().indexOffset = lod.indexOffset;
+						}
+						mesh.subsets_per_lod = 1;
+						mesh.vertex_positions.resize(vertexCount);
+						mesh.vertex_normals.resize(vertexCount);
+						mesh.vertex_tangents.resize(vertexCount);
+						mesh.vertex_uvset_0.resize(vertexCount);
+
+						chunk_data.blendmap_layers.resize(4);
+						for (auto& x : chunk_data.blendmap_layers)
+						{
+							x.pixels.resize(vertexCount);
+						}
+
+						chunk_data.spline_blendmap_layers.resize(splineMaterialEntities.size());
+						for (auto& x : chunk_data.spline_blendmap_layers)
+						{
+							x.pixels.resize(vertexCount);
+						}
+
+						chunk_data.mesh_vertex_positions = mesh.vertex_positions.data();
+
+						chunk_data.heightmap_data.resize(vertexCount);
+
+						wi::HairParticleSystem grass = grass_properties;
+						grass.vertex_lengths.resize(vertexCount);
+						std::atomic<uint32_t> grass_valid_vertex_count{ 0 };
+
+						// Shadow casting will only be enabled for sloped terrain chunks:
+						std::atomic_bool slope_cast_shadow;
+						slope_cast_shadow.store(false);
+
+						// Do a parallel for loop over all the chunk's vertices and compute their properties:
+						wi::jobsystem::context ctx;
+						ctx.priority = wi::jobsystem::Priority::Low;
+
+						// Preload height grid with padding, because neighbors will need to be accessed to determine slopes:
+						constexpr int chunk_width_padded = chunk_width + 1;
+						constexpr uint32_t vertexCount_padded = chunk_width_padded * chunk_width_padded;
+						float heights_padded[chunk_width_padded][chunk_width_padded];
+						const XMVECTOR UP = XMVectorSet(0, 1, 0, 0);
+						wi::jobsystem::Dispatch(ctx, vertexCount_padded, chunk_width_padded * 4, [&](wi::jobsystem::JobArgs args) {
+							const uint32_t index = args.jobIndex;
+							const XMUINT2 coord = XMUINT2(index % chunk_width_padded, index / chunk_width_padded);
+							const float x = (float(coord.x) - chunk_half_width) * chunk_scale;
+							const float z = (float(coord.y) - chunk_half_width) * chunk_scale;
+
+							float height = 0;
+							const XMFLOAT2 world_pos = XMFLOAT2(chunk_data.position.x + x, chunk_data.position.z + z);
+							for (auto& modifier : modifiers)
 							{
-								chunk_data.grass_entity = CreateEntity();
+								modifier->Apply(world_pos, height);
 							}
-							wi::HairParticleSystem& grass = generator->scene.hairs.Create(chunk_data.grass_entity);
-							grass = chunk_data.grass;
-							chunk_data.grass_density_current = grass_density;
-							grass.strandCount = uint32_t(grass.strandCount * chunk_data.grass_density_current);
-							grass.CreateRenderData();
-							generator->scene.materials.Create(chunk_data.grass_entity) = grass_material;
-							generator->scene.transforms.Create(chunk_data.grass_entity);
-							generator->scene.names.Create(chunk_data.grass_entity) = "grass";
-							generator->scene.Component_Attach(chunk_data.grass_entity, chunk_data.entity, true);
-							generated_something = true;
+							height = lerp(bottomLevel, topLevel, height);
+
+							const bool is_real_vertex = coord.x < chunk_width && coord.y < chunk_width;
+							const uint32_t real_index = coord.x + coord.y * chunk_width;
+
+							// Apply splines to height only:
+							const XMVECTOR P = XMVectorSet(world_pos.x, -100000, world_pos.y, 0);
+							const wi::primitive::Ray ray(P, UP);
+							int splinematerialcnt = -1;
+							for (size_t j = 0; j < generator->splines.size(); ++j)
+							{
+								const SplineComponent& spline = generator->splines[j];
+								if (spline.materialEntity != INVALID_ENTITY)
+									splinematerialcnt++;
+								if (!spline.bvh.IntersectsFirst(ray, [&](uint32_t index) { return spline.precomputed_aabbs[index].intersects(ray); }))
+									continue;
+								XMVECTOR S = spline.TraceSplinePlane(P, UP, 4);
+								S = spline.ClosestPointOnSpline(S, 4);
+								const float splineheight = XMVectorGetY(S);
+								const float splinedist = wi::math::Distance(XMVectorSetY(P, splineheight), S);
+								const float splinefactor = 1.0f - smoothstep(0.0f, 1.0f, saturate(splinedist * sqr(spline.terrain_modifier_amount)));
+								if (is_real_vertex && spline.materialEntity != INVALID_ENTITY)
+								{
+									chunk_data.spline_blendmap_layers[splinematerialcnt].pixels[real_index] = uint8_t(smoothstep(clamp(spline.terrain_texture_falloff, 0.0f, 0.999f), 1.0f, splinefactor) * 255);
+								}
+								height = lerp(height, splineheight - spline.terrain_pushdown, splinefactor);
+							}
+
+							heights_padded[coord.x][coord.y] = height;
+							});
+						wi::jobsystem::Wait(ctx);
+
+						wi::jobsystem::Dispatch(ctx, vertexCount, chunk_width * 4, [&](wi::jobsystem::JobArgs args) {
+							ChunkData& chunk_data = chunks[chunk];
+							const uint32_t index = args.jobIndex;
+							const XMUINT2 coord = XMUINT2(index % chunk_width, index / chunk_width);
+							const float x = (float(coord.x) - chunk_half_width) * chunk_scale;
+							const float z = (float(coord.y) - chunk_half_width) * chunk_scale;
+							const float height = heights_padded[coord.x][coord.y];
+							const XMVECTOR corners[3] = {
+								XMVectorSet(chunk_data.position.x + x, height, chunk_data.position.z + z, 0),
+								XMVectorSet(chunk_data.position.x + x + 1, heights_padded[coord.x + 1][coord.y], chunk_data.position.z + z, 0),
+								XMVectorSet(chunk_data.position.x + x, heights_padded[coord.x][coord.y + 1], chunk_data.position.z + z + 1, 0),
+							};
+							const XMVECTOR T = XMVectorSubtract(corners[1], corners[2]);
+							const XMVECTOR B = XMVectorSubtract(corners[0], corners[1]);
+							const XMVECTOR N = XMVector3Normalize(XMVector3Cross(T, B));
+							XMFLOAT3 normal;
+							XMStoreFloat3(&normal, N);
+
+							const float slope_amount = 1.0f - saturate(normal.y);
+							if (slope_amount > 0.1f)
+								slope_cast_shadow.store(true);
+
+							float region_base = 1;
+							float region_slope = region1 == 0 ? 1 : smoothstep(0.0f, region1, slope_amount);
+							float region_low_altitude = region2 == 0 ? 1 : smoothstep(0.0f, region2, wi::math::InverseLerp(0, bottomLevel, height));
+							float region_high_altitude = region3 == 0 ? 1 : smoothstep(0.0f, region3, wi::math::InverseLerp(0, topLevel, height));
+
+							region_low_altitude = saturate(region_low_altitude - region_slope);
+							region_high_altitude = saturate(region_high_altitude - region_slope);
+
+							XMFLOAT4 materialBlendWeights(region_base, region_slope, region_low_altitude, region_high_altitude);
+
+							chunk_data.blendmap_layers[0].pixels[index] = uint8_t(materialBlendWeights.x * 255);
+							chunk_data.blendmap_layers[1].pixels[index] = uint8_t(materialBlendWeights.y * 255);
+							chunk_data.blendmap_layers[2].pixels[index] = uint8_t(materialBlendWeights.z * 255);
+							chunk_data.blendmap_layers[3].pixels[index] = uint8_t(materialBlendWeights.w * 255);
+
+							// Normalize after store, blending shader wants unnormalized!
+							weight_norm(materialBlendWeights);
+
+							mesh.vertex_positions[index] = XMFLOAT3(x, height, z);
+							mesh.vertex_normals[index] = normal;
+							XMStoreFloat4(&mesh.vertex_tangents[index], T);
+							mesh.vertex_tangents[index].w = 1;
+							const XMFLOAT2 uv = XMFLOAT2(x * chunk_scale_rcp * chunk_width_rcp + 0.5f, z * chunk_scale_rcp * chunk_width_rcp + 0.5f);
+							mesh.vertex_uvset_0[index] = uv;
+
+							XMFLOAT3 vertex_pos(chunk_data.position.x + x, height, chunk_data.position.z + z);
+
+							float spline_factor = 0;
+							if (!chunk_data.spline_blendmap_layers.empty())
+							{
+								for (auto& y : chunk_data.spline_blendmap_layers)
+								{
+									spline_factor += float(y.pixels[index]) / 255.0f;
+								}
+								spline_factor /= float(chunk_data.spline_blendmap_layers.size());
+							}
+
+							const float grass_noise_frequency = 0.1f;
+							const float grass_noise = perlin_noise.compute(vertex_pos.x * grass_noise_frequency, vertex_pos.y * grass_noise_frequency, vertex_pos.z * grass_noise_frequency) * 0.5f + 0.5f;
+							const float region_grass = std::pow(materialBlendWeights.x * (1 - materialBlendWeights.w), 8.0f) * grass_noise * (1 - saturate(spline_factor));
+							if (region_grass > 0.1f)
+							{
+								grass_valid_vertex_count.fetch_add(1);
+								grass.vertex_lengths[index] = region_grass;
+							}
+							else
+							{
+								grass.vertex_lengths[index] = 0;
+							}
+							chunk_data.heightmap_data[index] = uint16_t(inverse_lerp(bottomLevel, topLevel, height) * 65535);
+							});
+						wi::jobsystem::Wait(ctx); // wait until chunk's vertex buffer is fully generated
+
+						object.SetCastShadow(slope_cast_shadow.load());
+						mesh.SetDoubleSidedShadow(slope_cast_shadow.load());
+
+						wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
+							mesh.CreateRenderData();
+							chunk_data.sphere.center = mesh.aabb.getCenter();
+							chunk_data.sphere.center.x += chunk_data.position.x;
+							chunk_data.sphere.center.y += chunk_data.position.y;
+							chunk_data.sphere.center.z += chunk_data.position.z;
+							chunk_data.sphere.radius = mesh.aabb.getRadius();
+							mesh.SetBVHEnabled(true);
+							});
+
+						// If there were any vertices in this chunk that could be valid for grass, store the grass particle system:
+						if (grass_valid_vertex_count.load() > 0)
+						{
+							chunk_data.grass = std::move(grass); // the grass will be added to the scene later, only when the chunk is close to the camera (center chunk's neighbors)
+							chunk_data.grass.meshID = chunk_data.entity;
+							chunk_data.grass.strandCount = uint32_t(grass_valid_vertex_count.load() * 3 * chunk_scale * chunk_scale); // chunk_scale * chunk_scale : grass density increases with squared amount with chunk scale (x*z)
+							chunk_data.grass.CreateFromMesh(mesh);
+						}
+
+						// Create the textures for virtual texture update:
+						chunk_data.heightmap = {};
+						chunk_data.blendmap = {};
+						CreateChunkRegionTexture(chunk_data);
+
+						if (IsPhysicsEnabled())
+						{
+							// Precompute the physics shape here on separate thread, because computing shape for triangle mesh would be slow on main thread:
+							//	Note that this is mesh.precomputed_rigidbody_physics_shape and not a component in scene.rigidbodies, so this only contains the shape, not the simulated rigid bodies
+							RigidBodyPhysicsComponent& newrigidbody = mesh.precomputed_rigidbody_physics_shape;
+							newrigidbody.shape = RigidBodyPhysicsComponent::HEIGHTFIELD;
+							newrigidbody.mass = 0; // terrain chunks are static
+							newrigidbody.friction = 0.8f;
+							//newrigidbody.mesh_lod = 2;
+							wi::physics::CreateRigidBodyShape(newrigidbody, transform.scale_local, &mesh);
+						}
+
+						wi::jobsystem::Wait(ctx); // wait until mesh.CreateRenderData() async task finishes
+
+						generated_something = true;
+					}
+
+					const int dist = std::max(std::abs(center_chunk.x - chunk.x), std::abs(center_chunk.z - chunk.z));
+
+					// Grass patch placement:
+					if (dist <= grass_chunk_dist && IsGrassEnabled())
+					{
+						it = chunks.find(chunk);
+						if (it != chunks.end() && it->second.entity != INVALID_ENTITY)
+						{
+							ChunkData& chunk_data = it->second;
+							if ((chunk_data.grass_entity == INVALID_ENTITY || chunk_data.invalidated) && chunk_data.grass.meshID != INVALID_ENTITY)
+							{
+								// add patch for this chunk
+								if (chunk_data.grass_entity == INVALID_ENTITY)
+								{
+									chunk_data.grass_entity = CreateEntity();
+								}
+								wi::HairParticleSystem& grass = generator->scene.hairs.Create(chunk_data.grass_entity);
+								grass = chunk_data.grass;
+								chunk_data.grass_density_current = grass_density;
+								grass.strandCount = uint32_t(grass.strandCount * chunk_data.grass_density_current);
+								grass.CreateRenderData();
+								generator->scene.materials.Create(chunk_data.grass_entity) = grass_material;
+								generator->scene.transforms.Create(chunk_data.grass_entity);
+								generator->scene.names.Create(chunk_data.grass_entity) = "grass";
+								generator->scene.Component_Attach(chunk_data.grass_entity, chunk_data.entity, true);
+								generated_something = true;
+							}
 						}
 					}
-				}
 
-				// Prop placement:
-				if (dist <= prop_generation)
-				{
-					it = chunks.find(chunk);
-					if (it != chunks.end() && it->second.entity != INVALID_ENTITY)
+					// Prop placement:
+					if (dist <= prop_generation)
 					{
-						ChunkData& chunk_data = it->second;
-
-						if (prop_density > 0 && chunk_data.props_entity == INVALID_ENTITY && chunk_data.mesh_vertex_positions != nullptr)
+						it = chunks.find(chunk);
+						if (it != chunks.end() && it->second.entity != INVALID_ENTITY)
 						{
-							chunk_data.props_entity = CreateEntity();
-							generator->scene.transforms.Create(chunk_data.props_entity);
-							generator->scene.names.Create(chunk_data.props_entity) = "props";
-							generator->scene.Component_Attach(chunk_data.props_entity, chunk_data.entity, true);
-							chunk_data.prop_density_current = prop_density;
+							ChunkData& chunk_data = it->second;
 
-							wi::random::RNG rng(chunk.compute_hash());
-
-							for (const auto& prop : props)
+							if (prop_density > 0 && chunk_data.props_entity == INVALID_ENTITY && chunk_data.mesh_vertex_positions != nullptr)
 							{
-								if (prop.data.empty())
-									continue;
-								const int gen_count = rng.next_int(
-									int(std::floor(float(prop.min_count_per_chunk) * chunk_data.prop_density_current)),
-									int(std::ceil(float(prop.max_count_per_chunk) * chunk_data.prop_density_current))
-								);
-								for (int i = 0; i < gen_count; ++i)
-								{
-									const uint32_t tri = rng.next_uint(0, chunk_indices().lods[0].indexCount / 3); // random triangle on the chunk mesh
-									const uint32_t ind0 = chunk_indices().indices[tri * 3 + 0];
-									const uint32_t ind1 = chunk_indices().indices[tri * 3 + 1];
-									const uint32_t ind2 = chunk_indices().indices[tri * 3 + 2];
-									const XMFLOAT3& pos0 = chunk_data.mesh_vertex_positions[ind0];
-									const XMFLOAT3& pos1 = chunk_data.mesh_vertex_positions[ind1];
-									const XMFLOAT3& pos2 = chunk_data.mesh_vertex_positions[ind2];
-									XMFLOAT4 region0 = wi::Color(chunk_data.blendmap_layers[0].pixels[ind0], chunk_data.blendmap_layers[1].pixels[ind0], chunk_data.blendmap_layers[2].pixels[ind0], chunk_data.blendmap_layers[3].pixels[ind0]);
-									XMFLOAT4 region1 = wi::Color(chunk_data.blendmap_layers[0].pixels[ind1], chunk_data.blendmap_layers[1].pixels[ind1], chunk_data.blendmap_layers[2].pixels[ind1], chunk_data.blendmap_layers[3].pixels[ind1]);
-									XMFLOAT4 region2 = wi::Color(chunk_data.blendmap_layers[0].pixels[ind2], chunk_data.blendmap_layers[1].pixels[ind2], chunk_data.blendmap_layers[2].pixels[ind2], chunk_data.blendmap_layers[3].pixels[ind2]);
-									weight_norm(region0);
-									weight_norm(region1);
-									weight_norm(region2);
-									float spline_factor0 = 0;
-									float spline_factor1 = 0;
-									float spline_factor2 = 0;
-									if (!chunk_data.spline_blendmap_layers.empty())
-									{
-										for (auto& y : chunk_data.spline_blendmap_layers)
-										{
-											spline_factor0 += float(y.pixels[ind0]) / 255.0f;
-											spline_factor1 += float(y.pixels[ind1]) / 255.0f;
-											spline_factor2 += float(y.pixels[ind2]) / 255.0f;
-										}
-										const float rcp = 1.0f / float(chunk_data.spline_blendmap_layers.size());
-										spline_factor0 *= rcp;
-										spline_factor1 *= rcp;
-										spline_factor2 *= rcp;
-									}
-									// random barycentric coords on the triangle:
-									float f = quantize(rng.next_float());
-									float g = quantize(rng.next_float());
-									if (f + g > 1)
-									{
-										f = 1 - f;
-										g = 1 - g;
-									}
-									const XMFLOAT3 pos01 = XMFLOAT3(
-										pos1.x - pos0.x,
-										pos1.y - pos0.y,
-										pos1.z - pos0.z
-									);
-									const XMFLOAT3 pos01f = XMFLOAT3(
-										pos01.x * f,
-										pos01.y * f,
-										pos01.z * f
-									);
-									const XMFLOAT3 pos02 = XMFLOAT3(
-										pos2.x - pos0.x,
-										pos2.y - pos0.y,
-										pos2.z - pos0.z
-									);
-									const XMFLOAT3 pos02g = XMFLOAT3(
-										pos02.x * g,
-										pos02.y * g,
-										pos02.z * g
-									);
-									const XMFLOAT3 vertex_pos = XMFLOAT3(
-										pos0.x + pos01f.x + pos02g.x,
-										pos0.y + pos01f.y + pos02g.y,
-										pos0.z + pos01f.z + pos02g.z
-									);
-									const XMFLOAT4 region01 = XMFLOAT4(
-										region1.x - region0.x,
-										region1.y - region0.y,
-										region1.z - region0.z,
-										region1.w - region0.w
-									);
-									const XMFLOAT4 region01f = XMFLOAT4(
-										region01.x * f,
-										region01.y * f,
-										region01.z * f,
-										region01.w * f
-									);
-									const XMFLOAT4 region02 = XMFLOAT4(
-										region2.x - region0.x,
-										region2.y - region0.y,
-										region2.z - region0.z,
-										region2.w - region0.w
-									);
-									const XMFLOAT4 region02g = XMFLOAT4(
-										region02.x * g,
-										region02.y * g,
-										region02.z * g,
-										region02.w * g
-									);
-									const XMFLOAT4 region = XMFLOAT4(
-										region0.x + region01f.x + region02g.x,
-										region0.y + region01f.y + region02g.y,
-										region0.z + region01f.z + region02g.z,
-										region0.w + region01f.w + region02g.w
-									);
-									const float spline_factor01 = spline_factor1 - spline_factor0;
-									const float spline_factor01f = spline_factor01 * f;
-									const float spline_factor02 = spline_factor2 - spline_factor0;
-									const float spline_factor02g = spline_factor02 * g;
-									const float spline_factor = spline_factor0 + spline_factor01f + spline_factor02g;
+								chunk_data.props_entity = CreateEntity();
+								generator->scene.transforms.Create(chunk_data.props_entity);
+								generator->scene.names.Create(chunk_data.props_entity) = "props";
+								generator->scene.Component_Attach(chunk_data.props_entity, chunk_data.entity, true);
+								chunk_data.prop_density_current = prop_density;
 
-									const float noise = quantize(std::pow(perlin_noise.compute((vertex_pos.x + chunk_data.position.x) * prop.noise_frequency, vertex_pos.y * prop.noise_frequency, (vertex_pos.z + chunk_data.position.z) * prop.noise_frequency) * 0.5f + 0.5f, prop.noise_power));
-									const float chance = quantize(std::pow(((float*)&region)[prop.region], prop.region_power) * noise * (1 - saturate(spline_factor)));
-									if (chance > prop.threshold)
+								wi::random::RNG rng(chunk.compute_hash());
+
+								for (const auto& prop : props)
+								{
+									if (prop.data.empty())
+										continue;
+									const int gen_count = rng.next_int(
+										int(std::floor(float(prop.min_count_per_chunk) * chunk_data.prop_density_current)),
+										int(std::ceil(float(prop.max_count_per_chunk) * chunk_data.prop_density_current))
+									);
+									for (int i = 0; i < gen_count; ++i)
 									{
-										wi::Archive archive = wi::Archive(prop.data.data(), prop.data.size());
-										EntitySerializer seri;
-										Entity entity = generator->scene.Entity_Serialize(
-											archive,
-											seri,
-											INVALID_ENTITY,
-											wi::scene::Scene::EntitySerializeFlags::RECURSIVE |
-											wi::scene::Scene::EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES
+										const uint32_t tri = rng.next_uint(0, chunk_indices().lods[0].indexCount / 3); // random triangle on the chunk mesh
+										const uint32_t ind0 = chunk_indices().indices[tri * 3 + 0];
+										const uint32_t ind1 = chunk_indices().indices[tri * 3 + 1];
+										const uint32_t ind2 = chunk_indices().indices[tri * 3 + 2];
+										const XMFLOAT3& pos0 = chunk_data.mesh_vertex_positions[ind0];
+										const XMFLOAT3& pos1 = chunk_data.mesh_vertex_positions[ind1];
+										const XMFLOAT3& pos2 = chunk_data.mesh_vertex_positions[ind2];
+										XMFLOAT4 region0 = wi::Color(chunk_data.blendmap_layers[0].pixels[ind0], chunk_data.blendmap_layers[1].pixels[ind0], chunk_data.blendmap_layers[2].pixels[ind0], chunk_data.blendmap_layers[3].pixels[ind0]);
+										XMFLOAT4 region1 = wi::Color(chunk_data.blendmap_layers[0].pixels[ind1], chunk_data.blendmap_layers[1].pixels[ind1], chunk_data.blendmap_layers[2].pixels[ind1], chunk_data.blendmap_layers[3].pixels[ind1]);
+										XMFLOAT4 region2 = wi::Color(chunk_data.blendmap_layers[0].pixels[ind2], chunk_data.blendmap_layers[1].pixels[ind2], chunk_data.blendmap_layers[2].pixels[ind2], chunk_data.blendmap_layers[3].pixels[ind2]);
+										weight_norm(region0);
+										weight_norm(region1);
+										weight_norm(region2);
+										float spline_factor0 = 0;
+										float spline_factor1 = 0;
+										float spline_factor2 = 0;
+										if (!chunk_data.spline_blendmap_layers.empty())
+										{
+											for (auto& y : chunk_data.spline_blendmap_layers)
+											{
+												spline_factor0 += float(y.pixels[ind0]) / 255.0f;
+												spline_factor1 += float(y.pixels[ind1]) / 255.0f;
+												spline_factor2 += float(y.pixels[ind2]) / 255.0f;
+											}
+											const float rcp = 1.0f / float(chunk_data.spline_blendmap_layers.size());
+											spline_factor0 *= rcp;
+											spline_factor1 *= rcp;
+											spline_factor2 *= rcp;
+										}
+										// random barycentric coords on the triangle:
+										float f = rng.next_float();
+										float g = rng.next_float();
+										if (f + g > 1)
+										{
+											f = 1 - f;
+											g = 1 - g;
+										}
+										const XMFLOAT3 vertex_pos = XMFLOAT3(
+											pos0.x + f * (pos1.x - pos0.x) + g * (pos2.x - pos0.x),
+											pos0.y + f * (pos1.y - pos0.y) + g * (pos2.y - pos0.y),
+											pos0.z + f * (pos1.z - pos0.z) + g * (pos2.z - pos0.z)
 										);
-										NameComponent* name = generator->scene.names.GetComponent(entity);
-										if (name != nullptr)
+										const XMFLOAT4 region = XMFLOAT4(
+											region0.x + f * (region1.x - region0.x) + g * (region2.x - region0.x),
+											region0.y + f * (region1.y - region0.y) + g * (region2.y - region0.y),
+											region0.z + f * (region1.z - region0.z) + g * (region2.z - region0.z),
+											region0.w + f * (region1.w - region0.w) + g * (region2.w - region0.w)
+										);
+										const float spline_factor = spline_factor0 + f * (spline_factor1 - spline_factor0) + g * (spline_factor2 - spline_factor0);
+
+										const float noise = std::pow(perlin_noise.compute((vertex_pos.x + chunk_data.position.x) * prop.noise_frequency, vertex_pos.y * prop.noise_frequency, (vertex_pos.z + chunk_data.position.z) * prop.noise_frequency) * 0.5f + 0.5f, prop.noise_power);
+										const float chance = std::pow(((float*)&region)[clamp(prop.region, 0, 3)], prop.region_power) * noise * (1 - saturate(spline_factor));
+										if (chance > prop.threshold)
 										{
-											name->name += std::to_string(i);
+											wi::Archive archive = wi::Archive(prop.data.data(), prop.data.size());
+											EntitySerializer seri;
+											Entity entity = generator->scene.Entity_Serialize(
+												archive,
+												seri,
+												INVALID_ENTITY,
+												wi::scene::Scene::EntitySerializeFlags::RECURSIVE |
+												wi::scene::Scene::EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES
+											);
+											NameComponent* name = generator->scene.names.GetComponent(entity);
+											if (name != nullptr)
+											{
+												name->name += std::to_string(i);
+											}
+											TransformComponent* transform = generator->scene.transforms.GetComponent(entity);
+											if (transform == nullptr)
+											{
+												transform = &generator->scene.transforms.Create(entity);
+											}
+											transform->translation_local = vertex_pos;
+											transform->translation_local.y += wi::math::Lerp(prop.min_y_offset, prop.max_y_offset, rng.next_float());
+											const float scaling = wi::math::Lerp(prop.min_size, prop.max_size, rng.next_float());
+											transform->Scale(XMFLOAT3(scaling, scaling, scaling));
+											transform->RotateRollPitchYaw(XMFLOAT3(0, XM_2PI * rng.next_float(), 0));
+											transform->SetDirty();
+											transform->UpdateTransform();
+											generator->scene.Component_Attach(entity, chunk_data.props_entity, true);
+											generated_something = true;
 										}
-										TransformComponent* transform = generator->scene.transforms.GetComponent(entity);
-										if (transform == nullptr)
-										{
-											transform = &generator->scene.transforms.Create(entity);
-										}
-										transform->translation_local = vertex_pos;
-										transform->translation_local.y += wi::math::Lerp(prop.min_y_offset, prop.max_y_offset, rng.next_float());
-										const float scaling = wi::math::Lerp(prop.min_size, prop.max_size, rng.next_float());
-										transform->Scale(XMFLOAT3(scaling, scaling, scaling));
-										transform->RotateRollPitchYaw(XMFLOAT3(0, XM_2PI * rng.next_float(), 0));
-										transform->SetDirty();
-										transform->UpdateTransform();
-										generator->scene.Component_Attach(entity, chunk_data.props_entity, true);
-										generated_something = true;
 									}
 								}
 							}
 						}
 					}
-				}
 
-				it = chunks.find(chunk); // re-query!
-				if (it != chunks.end() && it->second.entity != INVALID_ENTITY)
-				{
-					ChunkData& chunk_data = it->second;
-					chunk_data.invalidated = false;
-				}
+					it = chunks.find(chunk); // re-query!
+					if (it != chunks.end() && it->second.entity != INVALID_ENTITY)
+					{
+						ChunkData& chunk_data = it->second;
+						chunk_data.invalidated = false;
+					}
 
-				if (generated_something && timer.elapsed_milliseconds() > generation_time_budget_milliseconds)
-				{
-					generator->cancelled.store(true);
-				}
+					if (generated_something && timer.elapsed_milliseconds() > generation_time_budget_milliseconds)
+					{
+						generator->cancelled.store(true);
+					}
 
-			};
+				};
 
 			// priority invalidation queue:
 			//	This doesn't necessarily finish every frame, that's why it's a queue, next frame will pick up earlier requests before newer ones
@@ -1680,7 +1619,7 @@ namespace wi::terrain
 					tile_pool_desc.size += atlas.maps[map_type].texture.sparse_properties->total_tile_count * atlas.maps[map_type].texture.sparse_page_size;
 					tile_pool_desc.alignment = std::max(tile_pool_desc.alignment, atlas.maps[map_type].texture.sparse_page_size);
 #endif // NOSPARSE
-					
+
 					for (uint32_t i = 0; i < atlas.maps[map_type].texture_raw_block.desc.mip_levels; ++i)
 					{
 						int subresource_index = device->CreateSubresource(&atlas.maps[map_type].texture_raw_block, SubresourceType::UAV, 0, 1, i, 1);
@@ -1903,7 +1842,7 @@ namespace wi::terrain
 			// Sort them by unused frame counts, this will make them be given out in least recently used (LRU) order:
 			std::sort(atlas.free_tiles.begin(), atlas.free_tiles.end(), [&](const VirtualTextureAtlas::Tile& a, const VirtualTextureAtlas::Tile& b) {
 				return atlas.get_tile_frames(a) < atlas.get_tile_frames(b);
-			});
+				});
 
 			// Fulfill new allocation requests:
 			for (VirtualTexture* vt : virtual_textures_in_use)
@@ -1943,7 +1882,7 @@ namespace wi::terrain
 					std::memcpy(page_buffer + i, &page, sizeof(page));
 				}
 			}
-		});
+			});
 	}
 
 	void Terrain::UpdateVirtualTexturesGPU(CommandList cmd) const
@@ -1952,7 +1891,7 @@ namespace wi::terrain
 		GraphicsDevice* device = GetDevice();
 		device->EventBegin("Terrain - UpdateVirtualTexturesGPU", cmd);
 		auto range = wi::profiler::BeginRangeGPU("Terrain - UpdateVirtualTexturesGPU", cmd);
-		
+
 		device->Barrier(GPUBarrier::Memory(), cmd); // on Apple this fixes corruption so better be safe on all platforms, do not remove
 
 		device->EventBegin("Update Residency Maps", cmd);
@@ -2100,7 +2039,7 @@ namespace wi::terrain
 							cmd
 						);
 					}
-					
+
 #ifdef NOSPARSE
 					push.write_offset = write_offset_original;
 					push.write_size = SVT_TILE_SIZE_PADDED / 4u;
@@ -2541,36 +2480,36 @@ namespace wi::terrain
 				{
 				default:
 				case Modifier::Type::Perlin:
-					{
-						wi::allocator::shared_ptr<PerlinModifier> modifier = wi::allocator::make_shared_single<PerlinModifier>();
-						modifiers[i] = modifier;
-						archive >> modifier->octaves;
-						archive >> modifier->seed;
-						modifier->perlin_noise.Serialize(archive);
-					}
-					break;
+				{
+					wi::allocator::shared_ptr<PerlinModifier> modifier = wi::allocator::make_shared_single<PerlinModifier>();
+					modifiers[i] = modifier;
+					archive >> modifier->octaves;
+					archive >> modifier->seed;
+					modifier->perlin_noise.Serialize(archive);
+				}
+				break;
 				case Modifier::Type::Voronoi:
-					{
-						wi::allocator::shared_ptr<VoronoiModifier> modifier = wi::allocator::make_shared_single<VoronoiModifier>();
-						modifiers[i] = modifier;
-						archive >> modifier->fade;
-						archive >> modifier->shape;
-						archive >> modifier->falloff;
-						archive >> modifier->perturbation;
-						archive >> modifier->seed;
-						modifier->perlin_noise.Serialize(archive);
-					}
-					break;
+				{
+					wi::allocator::shared_ptr<VoronoiModifier> modifier = wi::allocator::make_shared_single<VoronoiModifier>();
+					modifiers[i] = modifier;
+					archive >> modifier->fade;
+					archive >> modifier->shape;
+					archive >> modifier->falloff;
+					archive >> modifier->perturbation;
+					archive >> modifier->seed;
+					modifier->perlin_noise.Serialize(archive);
+				}
+				break;
 				case Modifier::Type::Heightmap:
-					{
-						wi::allocator::shared_ptr<HeightmapModifier> modifier = wi::allocator::make_shared_single<HeightmapModifier>();
-						modifiers[i] = modifier;
-						archive >> modifier->amount;
-						archive >> modifier->data;
-						archive >> modifier->width;
-						archive >> modifier->height;
-					}
-					break;
+				{
+					wi::allocator::shared_ptr<HeightmapModifier> modifier = wi::allocator::make_shared_single<HeightmapModifier>();
+					modifiers[i] = modifier;
+					archive >> modifier->amount;
+					archive >> modifier->data;
+					archive >> modifier->width;
+					archive >> modifier->height;
+				}
+				break;
 				}
 
 				Modifier* modifier = modifiers[i].get();
