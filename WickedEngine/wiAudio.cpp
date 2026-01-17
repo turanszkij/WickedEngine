@@ -1470,9 +1470,16 @@ namespace wi::audio
 
 	void SetVolume(float volume, SoundInstance* instance)
 	{
-		// FIXME: temporary hack because Island level has background sounds set at volume 10
-		// and XAudio doesn't seem to support amplifiying sounds
-		ma_sound_set_volume(get_ma_sound(instance), std::min(1.f, volume));
+		if (instance == nullptr)
+		{
+			ma_engine_set_volume(engine.get(), std::min(1.f, volume));
+		}
+		else
+		{
+			// FIXME: temporary hack because Island level has background sounds set at volume 10
+			// and XAudio doesn't seem to support amplifiying sounds
+			ma_sound_set_volume(get_ma_sound(instance), std::min(1.f, volume));
+		}
 	}
 
 	float GetVolume(const SoundInstance* instance)
