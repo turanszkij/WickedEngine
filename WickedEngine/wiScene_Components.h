@@ -285,7 +285,7 @@ namespace wi::scene
 		constexpr bool IsInternal() const { return _flags & INTERNAL; }
 
 		constexpr void SetCastShadow(bool value) { SetDirty(); set_flag(_flags, CAST_SHADOW, value); }
-		constexpr void SetReceiveShadow(bool value) { SetDirty(); set_flag(_flags, DISABLE_RECEIVE_SHADOW, value); }
+		constexpr void SetReceiveShadow(bool value) { SetDirty(); if (value) { _flags &= ~DISABLE_RECEIVE_SHADOW; } else { _flags |= DISABLE_RECEIVE_SHADOW; } }
 		constexpr void SetOcclusionEnabled_Primary(bool value) { SetDirty(); set_flag(_flags, OCCLUSION_PRIMARY, value); }
 		constexpr void SetOcclusionEnabled_Secondary(bool value) { SetDirty(); set_flag(_flags, OCCLUSION_SECONDARY, value); }
 
