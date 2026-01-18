@@ -1931,16 +1931,14 @@ namespace wi::graphics
 		switch (aspect)
 		{
 		case wi::graphics::ImageAspect::COLOR:
-			return 0;
 		case wi::graphics::ImageAspect::DEPTH:
-			return 0;
-		case wi::graphics::ImageAspect::STENCIL:
-			return 1;
 		case wi::graphics::ImageAspect::LUMINANCE:
 			return 0;
+		case wi::graphics::ImageAspect::STENCIL:
 		case wi::graphics::ImageAspect::CHROMINANCE:
 			return 1;
 		default:
+			assert(0); // invalid aspect
 			break;
 		}
 		return 0;
