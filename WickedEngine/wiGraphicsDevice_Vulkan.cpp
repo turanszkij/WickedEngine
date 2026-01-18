@@ -8623,8 +8623,9 @@ using namespace vulkan_internal;
 			const TextureDesc& src_desc = ((const Texture*)pSrc)->GetDesc();
 			const TextureDesc& dst_desc = ((const Texture*)pDst)->GetDesc();
 
-			if (src_desc.usage == Usage::UPLOAD)
+			if (src_desc.usage == Usage::UPLOAD && dst_desc.usage == Usage::DEFAULT)
 			{
+				// CPU (buffer) -> GPU (texture)
 				VkBufferImageCopy copy = {};
 				copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				const uint32_t data_stride = GetFormatStride(dst_desc.format);
@@ -8660,8 +8661,9 @@ using namespace vulkan_internal;
 					}
 				}
 			}
-			else if (dst_desc.usage == Usage::READBACK)
+			else if (src_desc.usage == Usage::DEFAULT && dst_desc.usage == Usage::READBACK)
 			{
+				// GPU (texture) -> CPU (buffer)
 				VkBufferImageCopy copy = {};
 				copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				const uint32_t data_stride = GetFormatStride(dst_desc.format);
@@ -8697,8 +8699,9 @@ using namespace vulkan_internal;
 					}
 				}
 			}
-			else
+			else if (src_desc.usage == Usage::DEFAULT && dst_desc.usage == Usage::DEFAULT)
 			{
+				// GPU (texture) -> GPU (texture)
 				VkImageCopy copy = {};
 				copy.extent.width = dst_desc.width;
 				copy.extent.height = dst_desc.height;
@@ -8750,6 +8753,20 @@ using namespace vulkan_internal;
 					1, &copy
 				);
 			}
+			else
+			{
+				// CPU (buffer) -> CPU (buffer)
+				VkBufferCopy copy = {};
+				copy.srcOffset = 0;
+				copy.dstOffset = 0;
+				copy.size = std::min(pSrc->mapped_size, pSrc->mapped_size);
+
+				vkCmdCopyBuffer(commandlist.GetCommandBuffer(),
+					internal_state_src->staging_resource,
+					internal_state_dst->staging_resource,
+					1, &copy
+				);
+			}
 		}
 		else if (pDst->type == GPUResource::Type::BUFFER && pSrc->type == GPUResource::Type::BUFFER)
 		{
@@ -8797,7 +8814,7 @@ using namespace vulkan_internal;
 		const TextureDesc& src_desc = src->GetDesc();
 		const TextureDesc& dst_desc = dst->GetDesc();
 
-		if (src_desc.usage == Usage::UPLOAD)
+		if (src_desc.usage == Usage::UPLOAD && dst_desc.usage == Usage::DEFAULT)
 		{
 			// CPU (buffer) -> GPU (texture)
 			VkBufferImageCopy copy = {};
@@ -8830,7 +8847,7 @@ using namespace vulkan_internal;
 			}
 			vkCmdCopyBufferToImage(commandlist.GetCommandBuffer(), src_internal->staging_resource, dst_internal->resource, _ConvertImageLayout(ResourceState::COPY_DST), 1, &copy);
 		}
-		else if (dst_desc.usage == Usage::READBACK)
+		else if (src_desc.usage == Usage::DEFAULT && dst_desc.usage == Usage::READBACK)
 		{
 			// GPU (texture) -> CPU (buffer)
 			VkBufferImageCopy copy = {};
@@ -8862,7 +8879,7 @@ using namespace vulkan_internal;
 			}
 			vkCmdCopyImageToBuffer(commandlist.GetCommandBuffer(), src_internal->resource, _ConvertImageLayout(ResourceState::COPY_SRC), dst_internal->staging_resource, 1, &copy);
 		}
-		else
+		else if (src_desc.usage == Usage::DEFAULT && dst_desc.usage == Usage::DEFAULT)
 		{
 			// GPU (texture) -> GPU (texture)
 			VkImageCopy copy = {};
@@ -8919,6 +8936,10 @@ using namespace vulkan_internal;
 				1,
 				&copy
 			);
+		}
+		else
+		{
+			assert(0); // not supported
 		}
 	}
 	void GraphicsDevice_Vulkan::QueryBegin(const GPUQueryHeap* heap, uint32_t index, CommandList cmd)

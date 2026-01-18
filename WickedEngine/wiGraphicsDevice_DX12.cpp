@@ -6851,8 +6851,9 @@ std::mutex queue_locker;
 			const TextureDesc& src_desc = ((const Texture*)pSrc)->GetDesc();
 			const TextureDesc& dst_desc = ((const Texture*)pDst)->GetDesc();
 
-			if (src_desc.usage == Usage::UPLOAD)
+			if (src_desc.usage == Usage::UPLOAD && dst_desc.usage == Usage::DEFAULT)
 			{
+				// CPU (buffer) -> GPU (texture)
 				for (uint32_t layer = 0; layer < dst_desc.array_size; ++layer)
 				{
 					for (uint32_t mip = 0; mip < dst_desc.mip_levels; ++mip)
@@ -6864,8 +6865,9 @@ std::mutex queue_locker;
 					}
 				}
 			}
-			else if (dst_desc.usage == Usage::READBACK)
+			else if (src_desc.usage == Usage::DEFAULT && dst_desc.usage == Usage::READBACK)
 			{
+				// GPU (texture) -> CPU (buffer)
 				for (uint32_t layer = 0; layer < dst_desc.array_size; ++layer)
 				{
 					for (uint32_t mip = 0; mip < dst_desc.mip_levels; ++mip)
@@ -6911,23 +6913,29 @@ std::mutex queue_locker;
 
 		CD3DX12_TEXTURE_COPY_LOCATION src_location;
 		CD3DX12_TEXTURE_COPY_LOCATION dst_location;
-		if (src_desc.usage == Usage::UPLOAD)
+		if (src_desc.usage == Usage::UPLOAD && dst_desc.usage == Usage::DEFAULT)
 		{
 			// CPU (buffer) -> GPU (texture)
 			src_location = CD3DX12_TEXTURE_COPY_LOCATION(src_internal->resource.Get(), src_internal->footprints[src_subresource]);
 			dst_location = CD3DX12_TEXTURE_COPY_LOCATION(dst_internal->resource.Get(), dst_subresource);
 		}
-		else if (dst_desc.usage == Usage::READBACK)
+		else if (src_desc.usage == Usage::DEFAULT && dst_desc.usage == Usage::READBACK)
 		{
 			// GPU (texture) -> CPU (buffer)
 			src_location = CD3DX12_TEXTURE_COPY_LOCATION(src_internal->resource.Get(), src_subresource);
 			dst_location = CD3DX12_TEXTURE_COPY_LOCATION(dst_internal->resource.Get(), dst_internal->footprints[dst_subresource]);
 		}
-		else
+		else if (src_desc.usage == Usage::DEFAULT && dst_desc.usage == Usage::DEFAULT)
 		{
 			// GPU (texture) -> GPU (texture)
 			src_location = CD3DX12_TEXTURE_COPY_LOCATION(src_internal->resource.Get(), src_subresource);
 			dst_location = CD3DX12_TEXTURE_COPY_LOCATION(dst_internal->resource.Get(), dst_subresource);
+		}
+		else
+		{
+			// CPU (buffer) -> CPU (buffer)
+			src_location = CD3DX12_TEXTURE_COPY_LOCATION(src_internal->resource.Get(), src_internal->footprints[src_subresource]);
+			dst_location = CD3DX12_TEXTURE_COPY_LOCATION(dst_internal->resource.Get(), dst_internal->footprints[dst_subresource]);
 		}
 		if (srcbox == nullptr)
 		{
