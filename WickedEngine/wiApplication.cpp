@@ -717,7 +717,13 @@ namespace wi
 
 	void Application::Exit()
 	{
+		ShutDown();
 		wi::platform::Exit();
+	}
+
+	void Application::ShutDown()
+	{
+		graphicsDevice.reset(nullptr);
 	}
 
 	void Application::SetWindow(wi::platform::window_type window)

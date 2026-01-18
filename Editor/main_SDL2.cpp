@@ -271,6 +271,7 @@ int main(int argc, char *argv[])
     int ret = sdl_loop();
 
 	wi::jobsystem::ShutDown();
+	editor.ShutDown();
 
     return ret;
 }

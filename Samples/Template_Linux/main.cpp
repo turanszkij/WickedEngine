@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
 	}
 
 	wi::jobsystem::ShutDown(); // waits for jobs to finish before shutdown
-
+	application.ShutDown();
     SDL_Quit();
 
     return 0;

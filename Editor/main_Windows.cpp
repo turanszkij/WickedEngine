@@ -255,6 +255,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	}
 
 	wi::jobsystem::ShutDown();
+	editor.ShutDown();
 
     return (int)msg.wParam;
 }

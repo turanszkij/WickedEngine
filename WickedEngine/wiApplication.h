@@ -49,8 +49,7 @@ namespace wi
 		bool isFullScreen = false;
 
 	public:
-		virtual ~Application() = default;
-
+		virtual ~Application() { ShutDown(); }
 		bool is_window_active = true;
 		bool allow_hdr = true;
 		wi::graphics::SwapChain swapChain;
@@ -93,6 +92,8 @@ namespace wi
 		virtual void Compose(wi::graphics::CommandList cmd);
 		// This is where the application about to exit.
 		virtual void Exit();
+		// Shut down the application cleanly (Exit and the destructor already call this, but it can be useful to call it explicitly when using Vulkan debug layers that don't like Vulkan calls in atexit() functions)
+		virtual void ShutDown();
 
 		// You need to call this before calling Run() or Initialize() if you want to render
 		void SetWindow(wi::platform::window_type window);

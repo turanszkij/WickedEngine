@@ -95,6 +95,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	}
 
 	wi::jobsystem::ShutDown(); // waits for jobs to finish before shutdown
+	application.ShutDown();
 
 	return (int)msg.wParam;
 }
