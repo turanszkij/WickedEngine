@@ -785,10 +785,10 @@ namespace wi::graphics
 
 	struct Rect
 	{
-		int32_t left = 0;
-		int32_t top = 0;
-		int32_t right = 0;
-		int32_t bottom = 0;
+		int32_t left = 0;	// start width
+		int32_t top = 0;	// start height
+		int32_t right = 0;	// end width
+		int32_t bottom = 0;	// end height
 
 		constexpr void from_viewport(const Viewport& vp)
 		{
@@ -801,12 +801,12 @@ namespace wi::graphics
 
 	struct Box
 	{
-		uint32_t left = 0;
-		uint32_t top = 0;
-		uint32_t front = 0;
-		uint32_t right = 0;
-		uint32_t bottom = 0;
-		uint32_t back = 0;
+		uint32_t left = 0;		// start width
+		uint32_t top = 0;		// start height
+		uint32_t front = 0;		// start depth
+		uint32_t right = 0;		// end width
+		uint32_t bottom = 0;	// end height
+		uint32_t back = 0;		// end depth
 	};
 
 	struct SparseTextureProperties
@@ -1923,6 +1923,37 @@ namespace wi::graphics
 			mips++;
 		}
 		return mips;
+	}
+
+	// Returns the plane slice index for an aspect
+	constexpr uint32_t GetPlaneSlice(ImageAspect aspect)
+	{
+		switch (aspect)
+		{
+		case wi::graphics::ImageAspect::COLOR:
+		case wi::graphics::ImageAspect::DEPTH:
+		case wi::graphics::ImageAspect::LUMINANCE:
+			return 0;
+		case wi::graphics::ImageAspect::STENCIL:
+		case wi::graphics::ImageAspect::CHROMINANCE:
+			return 1;
+		default:
+			assert(0); // invalid aspect
+			break;
+		}
+		return 0;
+	}
+
+	// Computes the subresource index for indexing SubresourceData arrays
+	constexpr uint32_t ComputeSubresource(uint32_t mip, uint32_t slice, uint32_t plane, uint32_t mip_count, uint32_t array_size)
+	{
+		return mip + slice * mip_count + plane * mip_count * array_size;
+	}
+
+	// Computes the subresource index for indexing SubresourceData arrays
+	constexpr uint32_t ComputeSubresource(uint32_t mip, uint32_t slice, ImageAspect aspect, uint32_t mip_count, uint32_t array_size)
+	{
+		return ComputeSubresource(mip, slice, GetPlaneSlice(aspect), mip_count, array_size);
 	}
 
 	// Compute the texture memory usage for one row in a specific mip level

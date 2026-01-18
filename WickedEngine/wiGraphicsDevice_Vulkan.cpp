@@ -8623,8 +8623,9 @@ using namespace vulkan_internal;
 			const TextureDesc& src_desc = ((const Texture*)pSrc)->GetDesc();
 			const TextureDesc& dst_desc = ((const Texture*)pDst)->GetDesc();
 
-			if (src_desc.usage == Usage::UPLOAD)
+			if (src_desc.usage == Usage::UPLOAD && dst_desc.usage == Usage::DEFAULT)
 			{
+				// CPU (buffer) -> GPU (texture)
 				VkBufferImageCopy copy = {};
 				copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				const uint32_t data_stride = GetFormatStride(dst_desc.format);
@@ -8660,8 +8661,9 @@ using namespace vulkan_internal;
 					}
 				}
 			}
-			else if (dst_desc.usage == Usage::READBACK)
+			else if (src_desc.usage == Usage::DEFAULT && dst_desc.usage == Usage::READBACK)
 			{
+				// GPU (texture) -> CPU (buffer)
 				VkBufferImageCopy copy = {};
 				copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				const uint32_t data_stride = GetFormatStride(dst_desc.format);
@@ -8697,8 +8699,9 @@ using namespace vulkan_internal;
 					}
 				}
 			}
-			else
+			else if (src_desc.usage == Usage::DEFAULT && dst_desc.usage == Usage::DEFAULT)
 			{
+				// GPU (texture) -> GPU (texture)
 				VkImageCopy copy = {};
 				copy.extent.width = dst_desc.width;
 				copy.extent.height = dst_desc.height;
@@ -8750,6 +8753,20 @@ using namespace vulkan_internal;
 					1, &copy
 				);
 			}
+			else
+			{
+				// CPU (buffer) -> CPU (buffer)
+				VkBufferCopy copy = {};
+				copy.srcOffset = 0;
+				copy.dstOffset = 0;
+				copy.size = std::min(pSrc->mapped_size, pSrc->mapped_size);
+
+				vkCmdCopyBuffer(commandlist.GetCommandBuffer(),
+					internal_state_src->staging_resource,
+					internal_state_dst->staging_resource,
+					1, &copy
+				);
+			}
 		}
 		else if (pDst->type == GPUResource::Type::BUFFER && pSrc->type == GPUResource::Type::BUFFER)
 		{
@@ -8794,60 +8811,136 @@ using namespace vulkan_internal;
 		auto src_internal = to_internal(src);
 		auto dst_internal = to_internal(dst);
 
-		VkImageCopy copy = {};
-		copy.dstSubresource.aspectMask = _ConvertImageAspect(dst_aspect);
-		copy.dstSubresource.baseArrayLayer = dstSlice;
-		copy.dstSubresource.layerCount = 1;
-		copy.dstSubresource.mipLevel = dstMip;
-		copy.dstOffset.x = dstX;
-		copy.dstOffset.y = dstY;
-		copy.dstOffset.z = dstZ;
+		const TextureDesc& src_desc = src->GetDesc();
+		const TextureDesc& dst_desc = dst->GetDesc();
 
-		copy.srcSubresource.aspectMask = _ConvertImageAspect(src_aspect);
-		copy.srcSubresource.baseArrayLayer = srcSlice;
-		copy.srcSubresource.layerCount = 1;
-		copy.srcSubresource.mipLevel = srcMip;
-
-		if (srcbox == nullptr)
+		if (src_desc.usage == Usage::UPLOAD && dst_desc.usage == Usage::DEFAULT)
 		{
-			copy.srcOffset.x = 0;
-			copy.srcOffset.y = 0;
-			copy.srcOffset.z = 0;
-			if (src->desc.format == Format::NV12 && src_aspect == ImageAspect::CHROMINANCE)
+			// CPU (buffer) -> GPU (texture)
+			VkBufferImageCopy copy = {};
+			const uint32_t subresource_index = ComputeSubresource(srcMip, srcSlice, src_aspect, src_desc.mip_levels, src_desc.array_size);
+			assert(src->mapped_subresource_count > subresource_index);
+			const SubresourceData& data0 = src->mapped_subresources[0];
+			const SubresourceData& data = src->mapped_subresources[subresource_index];
+			copy.bufferOffset = (uint64_t)data.data_ptr - (uint64_t)data0.data_ptr;
+			copy.bufferRowLength = std::max(1u, src_desc.width >> srcMip);
+			copy.bufferImageHeight = std::max(1u, src_desc.height >> srcMip);
+			copy.imageSubresource.mipLevel = dstMip;
+			copy.imageSubresource.baseArrayLayer = dstSlice;
+			copy.imageSubresource.layerCount = 1;
+			copy.imageSubresource.aspectMask = _ConvertImageAspect(dst_aspect);
+			copy.imageOffset.x = dstX;
+			copy.imageOffset.y = dstY;
+			copy.imageOffset.z = dstZ;
+			if (srcbox == nullptr)
 			{
-				copy.extent.width = std::min(dst->desc.width, src->desc.width / 2);
-				copy.extent.height = std::min(dst->desc.height, src->desc.height / 2);
+				copy.imageExtent.width = src_desc.width;
+				copy.imageExtent.height = src_desc.height;
+				copy.imageExtent.depth = src_desc.depth;
 			}
 			else
 			{
-				copy.extent.width = std::min(dst->desc.width, src->desc.width);
-				copy.extent.height = std::min(dst->desc.height, src->desc.height);
+				copy.imageExtent.width = srcbox->right - srcbox->left;
+				copy.imageExtent.height = srcbox->bottom - srcbox->top;
+				copy.imageExtent.depth = srcbox->back - srcbox->front;
+				copy.bufferOffset += srcbox->top * data.row_pitch + srcbox->left * GetFormatStride(src_desc.format) / GetFormatBlockSize(src_desc.format);
 			}
-			copy.extent.depth = std::min(dst->desc.depth, src->desc.depth);
+			vkCmdCopyBufferToImage(commandlist.GetCommandBuffer(), src_internal->staging_resource, dst_internal->resource, _ConvertImageLayout(ResourceState::COPY_DST), 1, &copy);
+		}
+		else if (src_desc.usage == Usage::DEFAULT && dst_desc.usage == Usage::READBACK)
+		{
+			// GPU (texture) -> CPU (buffer)
+			VkBufferImageCopy copy = {};
+			const uint32_t subresource_index = ComputeSubresource(dstMip, dstSlice, dst_aspect, dst_desc.mip_levels, dst_desc.array_size);
+			assert(dst->mapped_subresource_count > subresource_index);
+			const SubresourceData& data0 = dst->mapped_subresources[0];
+			const SubresourceData& data = dst->mapped_subresources[subresource_index];
+			copy.bufferOffset = (uint64_t)data.data_ptr - (uint64_t)data0.data_ptr;
+			copy.bufferRowLength = std::max(1u, dst_desc.width >> dstMip);
+			copy.bufferImageHeight = std::max(1u, dst_desc.height >> dstMip);
+			copy.imageSubresource.mipLevel = srcMip;
+			copy.imageSubresource.baseArrayLayer = srcSlice;
+			copy.imageSubresource.layerCount = 1;
+			copy.imageSubresource.aspectMask = _ConvertImageAspect(src_aspect);
+			if (srcbox == nullptr)
+			{
+				copy.imageExtent.width = src_desc.width;
+				copy.imageExtent.height = src_desc.height;
+				copy.imageExtent.depth = src_desc.depth;
+			}
+			else
+			{
+				copy.imageExtent.width = srcbox->right - srcbox->left;
+				copy.imageExtent.height = srcbox->bottom - srcbox->top;
+				copy.imageExtent.depth = srcbox->back - srcbox->front;
+				copy.imageOffset.x = srcbox->left;
+				copy.imageOffset.y = srcbox->top;
+				copy.imageOffset.z = srcbox->front;
+			}
+			vkCmdCopyImageToBuffer(commandlist.GetCommandBuffer(), src_internal->resource, _ConvertImageLayout(ResourceState::COPY_SRC), dst_internal->staging_resource, 1, &copy);
+		}
+		else if (src_desc.usage == Usage::DEFAULT && dst_desc.usage == Usage::DEFAULT)
+		{
+			// GPU (texture) -> GPU (texture)
+			VkImageCopy copy = {};
+			copy.dstSubresource.aspectMask = _ConvertImageAspect(dst_aspect);
+			copy.dstSubresource.baseArrayLayer = dstSlice;
+			copy.dstSubresource.layerCount = 1;
+			copy.dstSubresource.mipLevel = dstMip;
+			copy.dstOffset.x = dstX;
+			copy.dstOffset.y = dstY;
+			copy.dstOffset.z = dstZ;
 
-			copy.extent.width = std::max(1u, copy.extent.width >> srcMip);
-			copy.extent.height = std::max(1u, copy.extent.height >> srcMip);
-			copy.extent.depth = std::max(1u, copy.extent.depth >> srcMip);
+			copy.srcSubresource.aspectMask = _ConvertImageAspect(src_aspect);
+			copy.srcSubresource.baseArrayLayer = srcSlice;
+			copy.srcSubresource.layerCount = 1;
+			copy.srcSubresource.mipLevel = srcMip;
+
+			if (srcbox == nullptr)
+			{
+				copy.srcOffset.x = 0;
+				copy.srcOffset.y = 0;
+				copy.srcOffset.z = 0;
+				if (src->desc.format == Format::NV12 && src_aspect == ImageAspect::CHROMINANCE)
+				{
+					copy.extent.width = std::min(dst->desc.width, src->desc.width / 2);
+					copy.extent.height = std::min(dst->desc.height, src->desc.height / 2);
+				}
+				else
+				{
+					copy.extent.width = std::min(dst->desc.width, src->desc.width);
+					copy.extent.height = std::min(dst->desc.height, src->desc.height);
+				}
+				copy.extent.depth = std::min(dst->desc.depth, src->desc.depth);
+
+				copy.extent.width = std::max(1u, copy.extent.width >> srcMip);
+				copy.extent.height = std::max(1u, copy.extent.height >> srcMip);
+				copy.extent.depth = std::max(1u, copy.extent.depth >> srcMip);
+			}
+			else
+			{
+				copy.srcOffset.x = srcbox->left;
+				copy.srcOffset.y = srcbox->top;
+				copy.srcOffset.z = srcbox->front;
+				copy.extent.width = srcbox->right - srcbox->left;
+				copy.extent.height = srcbox->bottom - srcbox->top;
+				copy.extent.depth = srcbox->back - srcbox->front;
+			}
+
+			vkCmdCopyImage(
+				commandlist.GetCommandBuffer(),
+				src_internal->resource,
+				_ConvertImageLayout(ResourceState::COPY_SRC),
+				dst_internal->resource,
+				_ConvertImageLayout(ResourceState::COPY_DST),
+				1,
+				&copy
+			);
 		}
 		else
 		{
-			copy.srcOffset.x = srcbox->left;
-			copy.srcOffset.y = srcbox->top;
-			copy.srcOffset.z = srcbox->front;
-			copy.extent.width = srcbox->right - srcbox->left;
-			copy.extent.height = srcbox->bottom - srcbox->top;
-			copy.extent.depth = srcbox->back - srcbox->front;
+			assert(0); // not supported
 		}
-
-		vkCmdCopyImage(
-			commandlist.GetCommandBuffer(),
-			src_internal->resource,
-			_ConvertImageLayout(ResourceState::COPY_SRC),
-			dst_internal->resource,
-			_ConvertImageLayout(ResourceState::COPY_DST),
-			1,
-			&copy
-		);
 	}
 	void GraphicsDevice_Vulkan::QueryBegin(const GPUQueryHeap* heap, uint32_t index, CommandList cmd)
 	{

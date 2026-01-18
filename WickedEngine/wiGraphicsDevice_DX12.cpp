@@ -6851,8 +6851,9 @@ std::mutex queue_locker;
 			const TextureDesc& src_desc = ((const Texture*)pSrc)->GetDesc();
 			const TextureDesc& dst_desc = ((const Texture*)pDst)->GetDesc();
 
-			if (src_desc.usage == Usage::UPLOAD)
+			if (src_desc.usage == Usage::UPLOAD && dst_desc.usage == Usage::DEFAULT)
 			{
+				// CPU (buffer) -> GPU (texture)
 				for (uint32_t layer = 0; layer < dst_desc.array_size; ++layer)
 				{
 					for (uint32_t mip = 0; mip < dst_desc.mip_levels; ++mip)
@@ -6864,8 +6865,9 @@ std::mutex queue_locker;
 					}
 				}
 			}
-			else if (dst_desc.usage == Usage::READBACK)
+			else if (src_desc.usage == Usage::DEFAULT && dst_desc.usage == Usage::READBACK)
 			{
+				// GPU (texture) -> CPU (buffer)
 				for (uint32_t layer = 0; layer < dst_desc.array_size; ++layer)
 				{
 					for (uint32_t mip = 0; mip < dst_desc.mip_levels; ++mip)
@@ -6898,12 +6900,43 @@ std::mutex queue_locker;
 	void GraphicsDevice_DX12::CopyTexture(const Texture* dst, uint32_t dstX, uint32_t dstY, uint32_t dstZ, uint32_t dstMip, uint32_t dstSlice, const Texture* src, uint32_t srcMip, uint32_t srcSlice, CommandList cmd, const Box* srcbox, ImageAspect dst_aspect, ImageAspect src_aspect)
 	{
 		CommandList_DX12& commandlist = GetCommandList(cmd);
-		auto src_internal = to_internal<GPUBuffer>(src);
-		auto dst_internal = to_internal<GPUBuffer>(dst);
-		UINT srcPlane = src_aspect == ImageAspect::STENCIL ? 1 : 0;
-		UINT dstPlane = dst_aspect == ImageAspect::STENCIL ? 1 : 0;
-		CD3DX12_TEXTURE_COPY_LOCATION src_location(src_internal->resource.Get(), D3D12CalcSubresource(srcMip, srcSlice, srcPlane, src->desc.mip_levels, src->desc.array_size));
-		CD3DX12_TEXTURE_COPY_LOCATION dst_location(dst_internal->resource.Get(), D3D12CalcSubresource(dstMip, dstSlice, dstPlane, dst->desc.mip_levels, dst->desc.array_size));
+		auto src_internal = to_internal(src);
+		auto dst_internal = to_internal(dst);
+
+		const TextureDesc& src_desc = src->GetDesc();
+		const TextureDesc& dst_desc = dst->GetDesc();
+
+		const UINT srcPlane = GetPlaneSlice(src_aspect);
+		const UINT dstPlane = GetPlaneSlice(dst_aspect);
+		const UINT src_subresource = D3D12CalcSubresource(srcMip, srcSlice, srcPlane, src->desc.mip_levels, src->desc.array_size);
+		const UINT dst_subresource = D3D12CalcSubresource(dstMip, dstSlice, dstPlane, dst->desc.mip_levels, dst->desc.array_size);
+
+		CD3DX12_TEXTURE_COPY_LOCATION src_location;
+		CD3DX12_TEXTURE_COPY_LOCATION dst_location;
+		if (src_desc.usage == Usage::UPLOAD && dst_desc.usage == Usage::DEFAULT)
+		{
+			// CPU (buffer) -> GPU (texture)
+			src_location = CD3DX12_TEXTURE_COPY_LOCATION(src_internal->resource.Get(), src_internal->footprints[src_subresource]);
+			dst_location = CD3DX12_TEXTURE_COPY_LOCATION(dst_internal->resource.Get(), dst_subresource);
+		}
+		else if (src_desc.usage == Usage::DEFAULT && dst_desc.usage == Usage::READBACK)
+		{
+			// GPU (texture) -> CPU (buffer)
+			src_location = CD3DX12_TEXTURE_COPY_LOCATION(src_internal->resource.Get(), src_subresource);
+			dst_location = CD3DX12_TEXTURE_COPY_LOCATION(dst_internal->resource.Get(), dst_internal->footprints[dst_subresource]);
+		}
+		else if (src_desc.usage == Usage::DEFAULT && dst_desc.usage == Usage::DEFAULT)
+		{
+			// GPU (texture) -> GPU (texture)
+			src_location = CD3DX12_TEXTURE_COPY_LOCATION(src_internal->resource.Get(), src_subresource);
+			dst_location = CD3DX12_TEXTURE_COPY_LOCATION(dst_internal->resource.Get(), dst_subresource);
+		}
+		else
+		{
+			// CPU (buffer) -> CPU (buffer)
+			src_location = CD3DX12_TEXTURE_COPY_LOCATION(src_internal->resource.Get(), src_internal->footprints[src_subresource]);
+			dst_location = CD3DX12_TEXTURE_COPY_LOCATION(dst_internal->resource.Get(), dst_internal->footprints[dst_subresource]);
+		}
 		if (srcbox == nullptr)
 		{
 			commandlist.GetGraphicsCommandList()->CopyTextureRegion(
