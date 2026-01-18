@@ -4235,6 +4235,7 @@ using namespace metal_internal;
 		const uint32_t srcDepth = std::max(1u, src->desc.depth >> srcMip);
 		const uint32_t dstWidth = std::max(1u, dst->desc.width >> dstMip);
 		const uint32_t dstHeight = std::max(1u, dst->desc.height >> dstMip);
+		const uint32_t dstDepth = std::max(1u, dst->desc.depth >> dstMip);
 		auto src_internal = to_internal(src);
 		auto dst_internal = to_internal(dst);
 		MTL::Origin srcOrigin = {};
@@ -4255,49 +4256,79 @@ using namespace metal_internal;
 			srcSize.height = srcbox->bottom - srcbox->top;
 			srcSize.depth = srcbox->back - srcbox->front;
 		}
-		if (dst->desc.format != src->desc.format)
+		
+		if (src_internal->texture.get() != nullptr && dst_internal->texture.get() != nullptr)
 		{
-			// Hack:
-			//	Metal cannot do format reinterpret texture->texture copy, so instead of rewriting my block compression shaders,
-			//	I implement texture->buffer->texture copy as a workaround
-			const size_t buffer_size = ComputeTextureMipMemorySizeInBytes(src->desc, srcMip);
-			const size_t row_pitch = ComputeTextureMipRowPitch(src->desc, srcMip);
-			static NS::SharedPtr<MTL::Buffer> reinterpret_buffer[QUEUE_COUNT]; // one per queue for correct gpu multi-queue hazard safety
-			static std::mutex locker;
-			std::scoped_lock lck(locker);
-			if (reinterpret_buffer[commandlist.queue].get() == nullptr || reinterpret_buffer[commandlist.queue]->length() < buffer_size)
+			// normal texture -> texture copy
+			if (dst->desc.format != src->desc.format)
 			{
-				if (reinterpret_buffer[commandlist.queue].get() != nullptr)
+				// Hack:
+				//	Metal cannot do format reinterpret texture->texture copy, so instead of rewriting my block compression shaders,
+				//	I implement texture->buffer->texture copy as a workaround
+				const size_t buffer_size = ComputeTextureMipMemorySizeInBytes(src->desc, srcMip);
+				const size_t row_pitch = ComputeTextureMipRowPitch(src->desc, srcMip);
+				static NS::SharedPtr<MTL::Buffer> reinterpret_buffer[QUEUE_COUNT]; // one per queue for correct gpu multi-queue hazard safety
+				static std::mutex locker;
+				std::scoped_lock lck(locker);
+				if (reinterpret_buffer[commandlist.queue].get() == nullptr || reinterpret_buffer[commandlist.queue]->length() < buffer_size)
 				{
-					std::scoped_lock lck2(allocationhandler->destroylocker);
-					allocationhandler->destroyer_resources.push_back(std::make_pair(reinterpret_buffer[commandlist.queue], allocationhandler->framecount));
+					if (reinterpret_buffer[commandlist.queue].get() != nullptr)
+					{
+						std::scoped_lock lck2(allocationhandler->destroylocker);
+						allocationhandler->destroyer_resources.push_back(std::make_pair(reinterpret_buffer[commandlist.queue], allocationhandler->framecount));
+					}
+					reinterpret_buffer[commandlist.queue] = NS::TransferPtr(device->newBuffer(buffer_size, MTL::ResourceStorageModePrivate));
+					reinterpret_buffer[commandlist.queue]->setLabel(NS::TransferPtr(NS::String::alloc()->init("reinterpret_buffer", NS::UTF8StringEncoding)).get());
+					allocationhandler->make_resident(reinterpret_buffer[commandlist.queue].get());
 				}
-				reinterpret_buffer[commandlist.queue] = NS::TransferPtr(device->newBuffer(buffer_size, MTL::ResourceStorageModePrivate));
-				reinterpret_buffer[commandlist.queue]->setLabel(NS::TransferPtr(NS::String::alloc()->init("reinterpret_buffer", NS::UTF8StringEncoding)).get());
-				allocationhandler->make_resident(reinterpret_buffer[commandlist.queue].get());
+				commandlist.compute_encoder->copyFromTexture(src_internal->texture.get(), srcSlice, srcMip, srcOrigin, srcSize, reinterpret_buffer[commandlist.queue].get(), 0, row_pitch, buffer_size);
+				commandlist.compute_encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, MTL4::VisibilityOptionNone);
+				if (!IsFormatBlockCompressed(src->desc.format) && IsFormatBlockCompressed(dst->desc.format))
+				{
+					// raw -> block compressed copy
+					const uint32_t block_size = GetFormatBlockSize(dst->desc.format);
+					srcSize.width = std::min((uint32_t)srcSize.width * block_size, dstWidth);
+					srcSize.height = std::min((uint32_t)srcSize.height * block_size, dstHeight);
+				}
+				if (IsFormatBlockCompressed(src->desc.format) && !IsFormatBlockCompressed(dst->desc.format))
+				{
+					// block compressed -> raw copy
+					const uint32_t block_size = GetFormatBlockSize(dst->desc.format);
+					srcSize.width = std::max(1u, (uint32_t)srcSize.width / block_size);
+					srcSize.height = std::max(1u, (uint32_t)srcSize.height / block_size);
+				}
+				commandlist.compute_encoder->copyFromBuffer(reinterpret_buffer[commandlist.queue].get(), 0, row_pitch, buffer_size, srcSize, dst_internal->texture.get(), dstSlice, dstMip, dstOrigin);
+				commandlist.compute_encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, MTL4::VisibilityOptionNone);
 			}
-			commandlist.compute_encoder->copyFromTexture(src_internal->texture.get(), srcSlice, srcMip, srcOrigin, srcSize, reinterpret_buffer[commandlist.queue].get(), 0, row_pitch, buffer_size);
-			commandlist.compute_encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, MTL4::VisibilityOptionNone);
-			if (!IsFormatBlockCompressed(src->desc.format) && IsFormatBlockCompressed(dst->desc.format))
+			else
 			{
-				// raw -> block compressed copy
-				const uint32_t block_size = GetFormatBlockSize(dst->desc.format);
-				srcSize.width = std::min((uint32_t)srcSize.width * block_size, dstWidth);
-				srcSize.height = std::min((uint32_t)srcSize.height * block_size, dstHeight);
+				commandlist.compute_encoder->copyFromTexture(src_internal->texture.get(), srcSlice, srcMip, srcOrigin, srcSize, dst_internal->texture.get(), dstSlice, dstMip, dstOrigin);
 			}
-			if (IsFormatBlockCompressed(src->desc.format) && !IsFormatBlockCompressed(dst->desc.format))
-			{
-				// block compressed -> raw copy
-				const uint32_t block_size = GetFormatBlockSize(dst->desc.format);
-				srcSize.width = std::max(1u, (uint32_t)srcSize.width / block_size);
-				srcSize.height = std::max(1u, (uint32_t)srcSize.height / block_size);
-			}
-			commandlist.compute_encoder->copyFromBuffer(reinterpret_buffer[commandlist.queue].get(), 0, row_pitch, buffer_size, srcSize, dst_internal->texture.get(), dstSlice, dstMip, dstOrigin);
-			commandlist.compute_encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, MTL4::VisibilityOptionNone);
+		}
+		else if (src_internal->texture.get() != nullptr && dst_internal->buffer.get() != nullptr)
+		{
+			// texture -> linear copy
+			const uint32_t subresource = ComputeSubresource(dstMip, dstSlice, dst_aspect, dst->desc.mip_levels, dst->desc.array_size);
+			assert(dst->mapped_subresource_count > subresource);
+			const SubresourceData& data0 = dst->mapped_subresources[0];
+			const SubresourceData& data = dst->mapped_subresources[subresource];
+			const uint64_t dst_offset = (uint64_t)data.data_ptr - (uint64_t)data0.data_ptr;
+			commandlist.compute_encoder->copyFromTexture(src_internal->texture.get(), srcSlice, srcMip, srcOrigin, srcSize, dst_internal->buffer.get(), dst_offset, data.row_pitch, data.row_pitch * dstHeight * dstDepth);
+		}
+		else if (src_internal->buffer.get() != nullptr && dst_internal->texture.get() != nullptr)
+		{
+			// linear -> texture copy
+			const uint32_t subresource = ComputeSubresource(srcMip, srcSlice, src_aspect, src->desc.mip_levels, src->desc.array_size);
+			assert(src->mapped_subresource_count > subresource);
+			const SubresourceData& data0 = src->mapped_subresources[0];
+			const SubresourceData& data = src->mapped_subresources[subresource];
+			uint64_t src_offset = (uint64_t)data.data_ptr - (uint64_t)data0.data_ptr;
+			src_offset += srcbox->top * data.row_pitch + srcbox->left * GetFormatStride(src->desc.format) / GetFormatBlockSize(src->desc.format);
+			commandlist.compute_encoder->copyFromBuffer(src_internal->buffer.get(), src_offset, data.row_pitch, data.row_pitch * srcHeight * srcDepth, srcSize, dst_internal->texture.get(), dstSlice, dstMip, dstOrigin);
 		}
 		else
 		{
-			commandlist.compute_encoder->copyFromTexture(src_internal->texture.get(), srcSlice, srcMip, srcOrigin, srcSize, dst_internal->texture.get(), dstSlice, dstMip, dstOrigin);
+			assert(0); // not implemented
 		}
 	}
 	void GraphicsDevice_Metal::QueryBegin(const GPUQueryHeap* heap, uint32_t index, CommandList cmd)
