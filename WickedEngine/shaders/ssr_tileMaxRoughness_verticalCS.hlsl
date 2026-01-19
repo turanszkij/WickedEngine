@@ -14,7 +14,6 @@ RWStructuredBuffer<uint> tiles_tracing_expensive : register(u3);
 RWTexture2D<float2> tile_minmax_roughness : register(u4);
 
 static const float SSRRoughnessCheap = 0.35;
-static const uint tile_tracing_replicate = sqr(SSR_TILESIZE / 2 / POSTPROCESS_BLOCKSIZE);
 
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
@@ -39,6 +38,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	}
 
 	const uint tile = (DTid.x & 0xFFFF) | ((DTid.y & 0xFFFF) << 16);
+	const uint tile_tracing_replicate = sqr(SSR_TILESIZE / ssr_downscalefactor / POSTPROCESS_BLOCKSIZE);
 
 	uint prevCount;
 	if (minRoughness < SSRRoughnessCheap)

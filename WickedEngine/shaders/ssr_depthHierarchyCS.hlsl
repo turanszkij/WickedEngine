@@ -17,7 +17,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			uint2 dim;
 			texture_depth.GetDimensions(dim.x, dim.y);
 
-			float2 uv = (DTid.xy + 0.5) / dim * 2; // Account for half-res
+			float2 uv = (DTid.xy + 0.5) / dim * ssr_downscalefactor;
 
 			float4 depths = texture_depth.GatherRed(sampler_point_clamp, uv);
 

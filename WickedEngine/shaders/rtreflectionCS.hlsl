@@ -27,7 +27,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
 {
 	const float2 uv = ((float2)DTid.xy + 0.5) * postprocess.resolution_rcp;
 
-	const uint downsampleFactor = 2;
+	const float downsampleFactor = rtreflection_downscalefactor;
 
 	// This is necessary for accurate upscaling. This is so we don't reuse the same half-res pixels
 	uint2 screenJitter = floor(blue_noise(uint2(0, 0)).xy * downsampleFactor);

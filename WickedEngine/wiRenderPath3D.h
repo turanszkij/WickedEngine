@@ -59,6 +59,9 @@ namespace wi
 		float ssgiDepthRejection = 8;
 		wi::renderer::Tonemap tonemap = wi::renderer::Tonemap::ACES;
 		float hdr_calibration = 1;
+		wi::renderer::PostProcessQuality raytracedDiffuseQuality = wi::renderer::PostProcessQuality::Medium;
+		wi::renderer::PostProcessQuality raytracedReflectionsQuality = wi::renderer::PostProcessQuality::Medium;
+		wi::renderer::PostProcessQuality ssrQuality = wi::renderer::PostProcessQuality::Medium;
 
 		AO ao = AO_DISABLED;
 		bool fxaaEnabled = false;
@@ -252,6 +255,9 @@ namespace wi
 		constexpr float getReflectionRoughnessCutoff() const { return reflectionRoughnessCutoff; }
 		constexpr float getSSGIDepthRejection() const { return ssgiDepthRejection; }
 		constexpr wi::renderer::Tonemap getTonemap() const { return tonemap; }
+		constexpr wi::renderer::PostProcessQuality getRaytracedDiffuseQuality() const { return raytracedDiffuseQuality; }
+		constexpr wi::renderer::PostProcessQuality getRaytracedReflectionsQuality() const { return raytracedReflectionsQuality; }
+		constexpr wi::renderer::PostProcessQuality getSSRQuality() const { return ssrQuality; }
 
 		constexpr bool getAOEnabled() const { return ao != AO_DISABLED; }
 		constexpr AO getAO() const { return ao; }
@@ -312,6 +318,9 @@ namespace wi
 		constexpr void setSSGIDepthRejection(float value) { ssgiDepthRejection = value; }
 		constexpr void setTonemap(wi::renderer::Tonemap value) { tonemap = value; }
 		constexpr void setVisibilityComputeShadingEnabled(bool value) { visibility_shading_in_compute = value; }
+		constexpr void setRaytracedDiffuseQuality(wi::renderer::PostProcessQuality value) { raytracedDiffuseQuality = value; }
+		constexpr void setRaytracedReflectionsQuality(wi::renderer::PostProcessQuality value) { raytracedReflectionsQuality = value; }
+		constexpr void setSSRQuality(wi::renderer::PostProcessQuality value) { ssrQuality = value; }
 
 		void setAO(AO value);
 		void setSSREnabled(bool value);

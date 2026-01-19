@@ -227,10 +227,7 @@ float ValidateHit(float3 hit, float hitDepth, float2 prevHitUV)
 [numthreads(POSTPROCESS_BLOCKSIZE * POSTPROCESS_BLOCKSIZE, 1, 1)]
 void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 {
-	// This pass is rendered at half-res
-	const uint downsampleFactor = 2;
-
-	const uint2 pixel = GetReflectionIndirectDispatchCoord(Gid, GTid, tiles, downsampleFactor);
+	const uint2 pixel = GetReflectionIndirectDispatchCoord(Gid, GTid, tiles, ssr_downscalefactor);
 	const float2 uv = (pixel + 0.5f) * postprocess.resolution_rcp;
 
 #ifdef SSR_EARLYEXIT
@@ -242,8 +239,8 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 #else
 
 	// This is necessary for accurate upscaling. This is so we don't reuse the same half-res pixels
-	uint2 screenJitter = floor(blue_noise(uint2(0, 0)).xy * downsampleFactor);
-	uint2 jitterPixel = screenJitter + pixel * downsampleFactor;
+	uint2 screenJitter = floor(blue_noise(uint2(0, 0)).xy * ssr_downscalefactor);
+	uint2 jitterPixel = screenJitter + pixel * ssr_downscalefactor;
 	float2 jitterUV = (screenJitter + pixel + 0.5f) * postprocess.resolution_rcp;
 
 	// Due to HiZ tracing, the tracing and the pass components must match depth.
@@ -330,9 +327,9 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 	rayEndScreen.xy = rayEndScreen.xy * float2(0.5, -0.5) + float2(0.5, 0.5);
 
 #ifdef SSR_CHEAP
-
-	rayStartScreen.xy *= postprocess.params1.xy; // Ratio factor between hierarchy and pass
-	rayEndScreen.xy *= postprocess.params1.xy;
+	const float2 ratiofactor = float2(ssr_ratiofactorx, ssr_ratiofactory);
+	rayStartScreen.xy *= ratiofactor; // Ratio factor between hierarchy and pass
+	rayEndScreen.xy *= ratiofactor;
 
 	float3 rayDirectionScreen = rayEndScreen - rayStartScreen;
 
@@ -342,7 +339,7 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 	bool validHit = false;
 	float3 hit = RayMarch(rayStartScreen, rayDirectionScreen, roughness, jitter, validHit);
 
-	hit.xy *= postprocess.params1.zw; // Undo ratio
+	hit.xy /= ratiofactor; // Undo ratio
 
 #else
 

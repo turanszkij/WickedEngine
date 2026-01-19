@@ -3,6 +3,8 @@
 #include "stochasticSSRHF.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
+PUSHCONSTANT(postprocess, PostProcess);
+
 Texture2D<float4> texture_rayIndirectDiffuse : register(t0);
 
 RWTexture2D<float4> texture_resolve : register(u0);
@@ -59,13 +61,13 @@ void main(uint3 DTid : SV_DispatchThreadID)
 {
 	const uint2 tracingCoord = DTid.xy;
 
-	const float depth = texture_depth[DTid.xy * 2];
+	const float depth = texture_depth[DTid.xy * rtdiffuse_downscalefactor];
 
 	const float farplane = GetCamera().z_far;
-	const float lineardepth = texture_lineardepth[DTid.xy * 2] * farplane;
+	const float lineardepth = texture_lineardepth[DTid.xy * rtdiffuse_downscalefactor] * farplane;
 
 	// Everthing in world space:
-	const float3 N = decode_oct(texture_normal[DTid.xy * 2]);
+	const float3 N = decode_oct(texture_normal[DTid.xy * rtdiffuse_downscalefactor]);
 
 	float4 result = 0.0f;
 	float weightSum = 0.0f;
@@ -83,7 +85,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		float2 offset = (hammersley2d_random(i, sampleCount, random) - 0.5) * resolveSpatialSize;
 
 		int2 neighborTracingCoord = tracingCoord + offset;
-		int2 neighborCoord = DTid.xy * 2 + offset;
+		int2 neighborCoord = DTid.xy * rtdiffuse_downscalefactor + offset;
 
 		float neighbor_lineardepth = texture_lineardepth[neighborCoord] * farplane;
 		if (neighbor_lineardepth < farplane)

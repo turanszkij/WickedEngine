@@ -13712,14 +13712,16 @@ void Postprocess_RTAO(
 	wi::profiler::EndRange(prof_range);
 	device->EventEnd(cmd);
 }
-void CreateRTDiffuseResources(RTDiffuseResources& res, XMUINT2 resolution)
+void CreateRTDiffuseResources(RTDiffuseResources& res, XMUINT2 resolution, PostProcessQuality quality)
 {
 	res.frame = 0;
+	res.quality = quality;
+	const uint32_t downscale = quality_downscalefactor(quality);
 
 	TextureDesc desc;
 	desc.type = TextureDesc::Type::TEXTURE_2D;
-	desc.width = resolution.x / 2;
-	desc.height = resolution.y / 2;
+	desc.width = resolution.x / downscale;
+	desc.height = resolution.y / downscale;
 	desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 	desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 
@@ -13800,16 +13802,14 @@ void Postprocess_RTDiffuse(
 
 	BindCommonResources(cmd);
 
-	const TextureDesc& desc = output.desc;
-
-	// Render half-res:
 	PostProcess postprocess;
-	postprocess.resolution.x = desc.width / 2;
-	postprocess.resolution.y = desc.height / 2;
+	postprocess.resolution.x = res.texture_rayIndirectDiffuse.desc.width;
+	postprocess.resolution.y = res.texture_rayIndirectDiffuse.desc.height;
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 	rtdiffuse_range = range;
 	rtdiffuse_frame = (float)res.frame;
+	rtdiffuse_downscalefactor = quality_downscalefactor(res.quality);
 	uint8_t instanceInclusionMask = 0xFF;
 	std::memcpy(&postprocess.params1.x, &instanceInclusionMask, sizeof(instanceInclusionMask));
 
@@ -13846,6 +13846,8 @@ void Postprocess_RTDiffuse(
 	{
 		device->EventBegin("RTDiffuse - spatial resolve", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTDIFFUSE_SPATIAL], cmd);
+
+		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 		const GPUResource* resarray[] = {
 			&res.texture_rayIndirectDiffuse,
@@ -13914,6 +13916,8 @@ void Postprocess_RTDiffuse(
 
 		device->EventEnd(cmd);
 	}
+
+	const TextureDesc& desc = output.desc;
 
 	// Full res:
 	postprocess.resolution.x = desc.width;
@@ -14399,14 +14403,16 @@ void Postprocess_SSGI(
 	wi::profiler::EndRange(profilerRange);
 	device->EventEnd(cmd);
 }
-void CreateRTReflectionResources(RTReflectionResources& res, XMUINT2 resolution)
+void CreateRTReflectionResources(RTReflectionResources& res, XMUINT2 resolution, PostProcessQuality quality)
 {
 	res.frame = 0;
+	res.quality = quality;
+	const uint32_t downscale = quality_downscalefactor(quality);
 
 	TextureDesc desc;
 	desc.type = TextureDesc::Type::TEXTURE_2D;
-	desc.width = resolution.x / 2;
-	desc.height = resolution.y / 2;
+	desc.width = resolution.x / downscale;
+	desc.height = resolution.y / downscale;
 	desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 	desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 
@@ -14417,8 +14423,6 @@ void CreateRTReflectionResources(RTReflectionResources& res, XMUINT2 resolution)
 	device->CreateTexture(&desc, nullptr, &res.texture_rayLengths);
 	device->SetName(&res.texture_rayLengths, "ssr_rayLengths");
 
-	desc.width = resolution.x / 2;
-	desc.height = resolution.y / 2;
 	desc.format = Format::R16G16B16A16_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.texture_resolve);
 	device->CreateTexture(&desc, nullptr, &res.texture_temporal[0]);
@@ -14495,17 +14499,15 @@ void Postprocess_RTReflection(
 
 	device->ClearUAV(&output, 0, cmd);
 
-	const TextureDesc& desc = output.desc;
-
-	// Render half-res:
 	PostProcess postprocess;
-	postprocess.resolution.x = desc.width / 2;
-	postprocess.resolution.y = desc.height / 2;
+	postprocess.resolution.x = res.texture_rayIndirectSpecular.desc.width;
+	postprocess.resolution.y = res.texture_rayIndirectSpecular.desc.height;
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 	rtreflection_range = range;
 	rtreflection_roughness_cutoff = roughnessCutoff;
 	rtreflection_frame = (float)res.frame;
+	rtreflection_downscalefactor = quality_downscalefactor(res.quality);
 	uint8_t instanceInclusionMask = raytracing_inclusion_mask_reflection;
 	std::memcpy(&postprocess.params1.x, &instanceInclusionMask, sizeof(instanceInclusionMask));
 
@@ -14686,6 +14688,8 @@ void Postprocess_RTReflection(
 		device->EventEnd(cmd);
 	}
 
+	const TextureDesc& desc = output.desc;
+
 	// Upscale to full-res:
 	postprocess.resolution.x = desc.width;
 	postprocess.resolution.y = desc.height;
@@ -14731,9 +14735,11 @@ void Postprocess_RTReflection(
 	wi::profiler::EndRange(profilerRange);
 	device->EventEnd(cmd);
 }
-void CreateSSRResources(SSRResources& res, XMUINT2 resolution)
+void CreateSSRResources(SSRResources& res, XMUINT2 resolution, PostProcessQuality quality)
 {
 	res.frame = 0;
+	res.quality = quality;
+	const uint32_t downscale = quality_downscalefactor(quality);
 
 	TextureDesc tile_desc;
 	tile_desc.type = TextureDesc::Type::TEXTURE_2D;
@@ -14765,8 +14771,8 @@ void CreateSSRResources(SSRResources& res, XMUINT2 resolution)
 
 	TextureDesc desc;
 	desc.type = TextureDesc::Type::TEXTURE_2D;
-	desc.width = resolution.x / 2;
-	desc.height = resolution.y / 2;
+	desc.width = resolution.x / downscale;
+	desc.height = resolution.y / downscale;
 	desc.format = Format::R16G16B16A16_FLOAT;
 	desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 	desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
@@ -14775,9 +14781,6 @@ void CreateSSRResources(SSRResources& res, XMUINT2 resolution)
 	desc.format = Format::R16_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.texture_rayLengths);
 	device->SetName(&res.texture_rayLengths, "ssr_rayLengths");
-
-	desc.width = resolution.x / 2;
-	desc.height = resolution.y / 2;
 	desc.format = Format::R16G16B16A16_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.texture_resolve);
 	device->CreateTexture(&desc, nullptr, &res.texture_temporal[0]);
@@ -14788,8 +14791,8 @@ void CreateSSRResources(SSRResources& res, XMUINT2 resolution)
 	device->CreateTexture(&desc, nullptr, &res.texture_temporal_variance[0]);
 	device->CreateTexture(&desc, nullptr, &res.texture_temporal_variance[1]);
 
-	desc.width = (uint32_t)std::pow(2.0f, 1.0f + std::floor(std::log2((float)resolution.x / 2)));
-	desc.height = (uint32_t)std::pow(2.0f, 1.0f + std::floor(std::log2((float)resolution.y / 2)));
+	desc.width = (uint32_t)std::pow(2.0f, 1.0f + std::floor(std::log2((float)resolution.x / downscale)));
+	desc.height = (uint32_t)std::pow(2.0f, 1.0f + std::floor(std::log2((float)resolution.y / downscale)));
 	desc.format = Format::R32G32_FLOAT;
 	desc.mip_levels = 1 + (uint32_t)std::floor(std::log2f(std::max((float)desc.width, (float)desc.height)));
 	device->CreateTexture(&desc, nullptr, &res.texture_depth_hierarchy);
@@ -14822,6 +14825,9 @@ void Postprocess_SSR(
 
 	{
 		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&res.texture_rayIndirectSpecular, res.texture_rayIndirectSpecular.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_rayDirectionPDF, res.texture_rayDirectionPDF.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_rayLengths, res.texture_rayLengths.desc.layout, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Image(&res.texture_tile_minmax_roughness_horizontal, res.texture_tile_minmax_roughness_horizontal.desc.layout, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Image(&res.texture_tile_minmax_roughness, res.texture_tile_minmax_roughness.desc.layout, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Image(&res.texture_resolve, res.texture_resolve.desc.layout, ResourceState::UNORDERED_ACCESS),
@@ -14843,6 +14849,9 @@ void Postprocess_SSR(
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
+		device->ClearUAV(&res.texture_rayIndirectSpecular, 0, cmd);
+		device->ClearUAV(&res.texture_rayDirectionPDF, 0, cmd);
+		device->ClearUAV(&res.texture_rayLengths, 0, cmd);
 		device->ClearUAV(&res.texture_tile_minmax_roughness_horizontal, 0, cmd);
 		device->ClearUAV(&res.texture_tile_minmax_roughness, 0, cmd);
 		device->ClearUAV(&res.texture_resolve, 0, cmd);
@@ -14886,6 +14895,7 @@ void Postprocess_SSR(
 	PostProcess postprocess;
 	ssr_roughness_cutoff = roughnessCutoff;
 	ssr_frame = (float)res.frame;
+	ssr_downscalefactor = quality_downscalefactor(res.quality);
 
 	// Compute tile classification (horizontal):
 	{
@@ -15029,21 +15039,16 @@ void Postprocess_SSR(
 		device->EventEnd(cmd);
 	}
 
-	const TextureDesc& desc = output.GetDesc();
-
 	// Render half-res:
-	postprocess.resolution.x = desc.width / 2;
-	postprocess.resolution.y = desc.height / 2;
+	postprocess.resolution.x = res.texture_rayIndirectSpecular.desc.width;
+	postprocess.resolution.y = res.texture_rayIndirectSpecular.desc.height;
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 	ssr_roughness_cutoff = roughnessCutoff;
 	ssr_frame = (float)res.frame;
-
-	// Factor to scale ratio between hierarchy and trace pass
-	postprocess.params1.x = (float)postprocess.resolution.x / (float)res.texture_depth_hierarchy.GetDesc().width;
-	postprocess.params1.y = (float)postprocess.resolution.y / (float)res.texture_depth_hierarchy.GetDesc().height;
-	postprocess.params1.z = 1.0f / postprocess.params1.x;
-	postprocess.params1.w = 1.0f / postprocess.params1.y;
+	ssr_ratiofactorx = (float)postprocess.resolution.x / (float)res.texture_depth_hierarchy.GetDesc().width;
+	ssr_ratiofactory = (float)postprocess.resolution.y / (float)res.texture_depth_hierarchy.GetDesc().height;
+	ssr_downscalefactor = quality_downscalefactor(res.quality);
 
 	// Raytrace pass:
 	{
@@ -15071,9 +15076,6 @@ void Postprocess_SSR(
 				GPUBarrier::Buffer(&res.buffer_tiles_tracing_earlyexit, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 				GPUBarrier::Buffer(&res.buffer_tiles_tracing_cheap, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 				GPUBarrier::Buffer(&res.buffer_tiles_tracing_expensive, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-				GPUBarrier::Image(&res.texture_rayIndirectSpecular, res.texture_rayIndirectSpecular.desc.layout, ResourceState::UNORDERED_ACCESS),
-				GPUBarrier::Image(&res.texture_rayDirectionPDF, res.texture_rayDirectionPDF.desc.layout, ResourceState::UNORDERED_ACCESS),
-				GPUBarrier::Image(&res.texture_rayLengths, res.texture_rayLengths.desc.layout, ResourceState::UNORDERED_ACCESS),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -15179,6 +15181,8 @@ void Postprocess_SSR(
 
 		device->EventEnd(cmd);
 	}
+
+	const TextureDesc& desc = output.GetDesc();
 
 	// Upscale to full-res:
 	postprocess.resolution.x = desc.width;
