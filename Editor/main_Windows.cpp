@@ -6,14 +6,15 @@
 
 #pragma comment(lib, "dwmapi.lib")
 
-Editor editor;
+Editor* editor;
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
-                     _In_opt_ HINSTANCE hPrevInstance,
-                     _In_ LPWSTR    lpCmdLine,
-                     _In_ int       nCmdShow)
+					 _In_opt_ HINSTANCE hPrevInstance,
+					 _In_ LPWSTR    lpCmdLine,
+					 _In_ int       nCmdShow)
 {
 	wi::arguments::Parse(lpCmdLine);
+	editor = new Editor();
 
 	SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
@@ -22,10 +23,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		{
 		case WM_SIZE:
 		case WM_DPICHANGED:
-			if (editor.is_window_active && LOWORD(lParam) > 0 && HIWORD(lParam) > 0)
+			if (editor->is_window_active && LOWORD(lParam) > 0 && HIWORD(lParam) > 0)
 			{
-				editor.SetWindow(hWnd);
-				editor.SaveWindowSize();
+				editor->SetWindow(hWnd);
+				editor->SaveWindowSize();
 			}
 			break;
 		case WM_CHAR:
@@ -43,7 +44,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			}
 			break;
 		case WM_INPUT:
-			if (editor.is_window_active)
+			if (editor->is_window_active)
 			{
 				wi::input::rawinput::ParseMessage((void*)lParam);
 			}
@@ -63,11 +64,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		}
 		break;
 		case WM_KILLFOCUS:
-			editor.is_window_active = false;
+			editor->is_window_active = false;
 			break;
 		case WM_SETFOCUS:
-			editor.is_window_active = true;
-			editor.HotReload();
+			editor->is_window_active = true;
+			editor->HotReload();
 			break;
 		case WM_DROPFILES:
 		{
@@ -85,13 +86,13 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 				}
 				std::string filename;
 				wi::helper::StringConvert(wfilename, filename);
-				editor.renderComponent.Open(filename);
+				editor->renderComponent.Open(filename);
 			}
 			SetForegroundWindow(hWnd);
 		}
 		break;
 		case WM_CLOSE:
-			editor.Exit();
+			editor->Exit();
 			break;
 		case WM_DESTROY:
 			PostQuitMessage(0);
@@ -118,7 +119,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		case WM_SYSCHAR:
 		case WM_SYSKEYDOWN:
 		case WM_SYSKEYUP:
-			if (editor.config.GetBool("bypass_system_key") && wParam != VK_F4)
+			if (editor->config.GetBool("bypass_system_key") && wParam != VK_F4)
 			{
 				// Handle system key messages (like Alt key) to prevent menu bar activation freeze
 				// Return 0 to indicate we processed the message and prevent default behavior
@@ -171,16 +172,16 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	bool borderless = false;
 
 	wi::Timer timer;
-	if (editor.config.Open("config.ini"))
+	if (editor->config.Open("config.ini"))
 	{
-		if (editor.config.Has("width"))
+		if (editor->config.Has("width"))
 		{
-			width = editor.config.GetInt("width");
-			height = editor.config.GetInt("height");
+			width = editor->config.GetInt("width");
+			height = editor->config.GetInt("height");
 		}
-		fullscreen = editor.config.GetBool("fullscreen");
-		borderless = editor.config.GetBool("borderless");
-		editor.allow_hdr = editor.config.GetBool("allow_hdr");
+		fullscreen = editor->config.GetBool("fullscreen");
+		borderless = editor->config.GetBool("borderless");
+		editor->allow_hdr = editor->config.GetBool("allow_hdr");
 
 		wilog("config.ini loaded in %.2f milliseconds\n", (float)timer.elapsed_milliseconds());
 	}
@@ -237,11 +238,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	UpdateWindow(hWnd);
 	DragAcceptFiles(hWnd, TRUE);
 
-	editor.SetWindow(hWnd);
+	editor->SetWindow(hWnd);
 
 	MSG msg = { 0 };
 
-	while (editor.KeepRunning())
+	while (editor->KeepRunning())
 	{
 		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
 			TranslateMessage(&msg);
@@ -249,12 +250,16 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		}
 		else {
 
-			editor.Run();
+			editor->Run();
 
 		}
 	}
 
 	wi::jobsystem::ShutDown();
 
-    return (int)msg.wParam;
+	// explicitly deleting prevents issues with Vulkan debug layers (debugdevice)
+	// which don't like vulkan calls happening during C++ application shutdown
+	delete editor;
+
+	return (int)msg.wParam;
 }

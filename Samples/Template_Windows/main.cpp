@@ -1,12 +1,13 @@
 #include "WickedEngine.h"
 
-wi::Application application;
+wi::Application* application;
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	_In_opt_ HINSTANCE hPrevInstance,
 	_In_ LPWSTR    lpCmdLine,
 	_In_ int       nCmdShow)
 {
+	application = new wi::Application();
 	// Win32 window and message loop setup:
 	static auto WndProc = [](HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) -> LRESULT
 	{
@@ -14,8 +15,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		{
 		case WM_SIZE:
 		case WM_DPICHANGED:
-			if (application.is_window_active)
-				application.SetWindow(hWnd);
+			if (application->is_window_active)
+				application->SetWindow(hWnd);
 			break;
 		case WM_CHAR:
 			switch (wParam)
@@ -37,10 +38,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 			wi::input::rawinput::ParseMessage((void*)lParam);
 			break;
 		case WM_KILLFOCUS:
-			application.is_window_active = false;
+			application->is_window_active = false;
 			break;
 		case WM_SETFOCUS:
-			application.is_window_active = true;
+			application->is_window_active = true;
 			break;
 		case WM_DESTROY:
 			PostQuitMessage(0);
@@ -69,16 +70,16 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	ShowWindow(hWnd, SW_SHOWDEFAULT);
 
 	// set Win32 window to engine:
-	application.SetWindow(hWnd);
+	application->SetWindow(hWnd);
 
 	// process command line string:
 	wi::arguments::Parse(lpCmdLine);
 
 	// just show some basic info:
-	application.infoDisplay.active = true;
-	application.infoDisplay.watermark = true;
-	application.infoDisplay.resolution = true;
-	application.infoDisplay.fpsinfo = true;
+	application->infoDisplay.active = true;
+	application->infoDisplay.watermark = true;
+	application->infoDisplay.resolution = true;
+	application->infoDisplay.fpsinfo = true;
 
 	MSG msg = { 0 };
 	while (msg.message != WM_QUIT)
@@ -89,12 +90,16 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		}
 		else {
 
-			application.Run();
+			application->Run();
 
 		}
 	}
 
 	wi::jobsystem::ShutDown(); // waits for jobs to finish before shutdown
+    // explicitly deleting prevents issues with Vulkan debug layers (debugdevice)
+    // which don't like vulkan calls happening during C++ application shutdown
+    delete application;
+
 
 	return (int)msg.wParam;
 }

@@ -12,7 +12,7 @@
 HINSTANCE hInst;                                // current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
-Example_ImGui example_imgui;
+Example_ImGui* example_imgui;
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -28,6 +28,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
+	example_imgui = new Example_ImGui();
     // TODO: Place code here.
 
     BOOL dpi_success = SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
@@ -59,11 +60,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		}
 		else {
 
-			example_imgui.Run();
+			example_imgui->Run();
 
 		}
 	}
-
+	delete example_imgui;
     return (int) msg.wParam;
 }
 
@@ -117,14 +118,14 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
 	   rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, nullptr, nullptr, hInstance, nullptr);
 
-   
+
    if (!hWnd)
    {
       return FALSE;
    }
 
-   example_imgui.allow_hdr = false; // Imgui doesn't support HDR
-   example_imgui.SetWindow(hWnd);
+   example_imgui->allow_hdr = false; // Imgui doesn't support HDR
+   example_imgui->SetWindow(hWnd);
 
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
@@ -171,8 +172,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
     case WM_SIZE:
     case WM_DPICHANGED:
-		if (example_imgui.is_window_active)
-			example_imgui.SetWindow(hWnd);
+		if (example_imgui->is_window_active)
+			example_imgui->SetWindow(hWnd);
         break;
 	case WM_CHAR:
 		switch (wParam)
@@ -194,10 +195,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		wi::input::rawinput::ParseMessage((void*)lParam);
 		break;
 	case WM_KILLFOCUS:
-		example_imgui.is_window_active = false;
+		example_imgui->is_window_active = false;
 		break;
 	case WM_SETFOCUS:
-		example_imgui.is_window_active = true;
+		example_imgui->is_window_active = true;
 		break;
     case WM_PAINT:
         {

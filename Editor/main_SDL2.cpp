@@ -27,34 +27,34 @@ public:
 	{
 		return graphicsDevice == nullptr ? "(no device)" : graphicsDevice->GetDriverDescription().c_str();
 	}
-} editor;
+}* editor;
 
 int sdl_loop()
 {
-    while (editor.KeepRunning())
+    while (editor->KeepRunning())
     {
-        editor.Run();
+        editor->Run();
         SDL_Event event;
         while(SDL_PollEvent(&event)){
             bool textinput_action_delete = false;
             wi::input::sdlinput::ProcessEvent(event);
             switch(event.type){
                 case SDL_QUIT:
-                    editor.Exit();
+                    editor->Exit();
                     break;
                 case SDL_WINDOWEVENT:
                     switch (event.window.event) {
                         case SDL_WINDOWEVENT_RESIZED:
                             // Tells the engine to reload window configuration (size and dpi)
-                            editor.SetWindow(editor.window);
-                            editor.SaveWindowSize();
+                            editor->SetWindow(editor->window);
+                            editor->SaveWindowSize();
                             break;
                         case SDL_WINDOWEVENT_FOCUS_LOST:
-                            editor.is_window_active = false;
+                            editor->is_window_active = false;
                             break;
                         case SDL_WINDOWEVENT_FOCUS_GAINED:
-                            editor.is_window_active = true;
-							editor.HotReload();
+                            editor->is_window_active = true;
+							editor->HotReload();
                             break;
                         default:
                             break;
@@ -71,7 +71,7 @@ int sdl_loop()
 						// wi::input::Update was run, which will happen next
 						// frame, which is too late for us. So we just call it
 						// now and then call AddInput
-						wi::input::Update(editor.window, editor.canvas);
+						wi::input::Update(editor->window, editor->canvas);
 						wi::gui::TextInputField::AddInput('?'); // AddInput actually ignores the argument when Ctrl is pressed
 					}
                     break;
@@ -83,8 +83,8 @@ int sdl_loop()
                     }
                     break;
                 case SDL_DROPFILE:
-				    editor.renderComponent.Open(event.drop.file);
-                    editor.is_window_active = true;
+                    editor->renderComponent.Open(event.drop.file);
+                    editor->is_window_active = true;
                     break;
                 default:
                     break;
@@ -164,8 +164,8 @@ void crash_handler(int sig)
 		"Stacktrace:\n",
 		sig, sigdescr_np(sig),
 		wi::version::GetVersionString(),
-		editor.GetAdapterName(),
-		editor.GetDriverDescription()
+		editor->GetAdapterName(),
+		editor->GetDriverDescription()
 	);
 
 	fprintf(
@@ -222,6 +222,8 @@ int main(int argc, char *argv[])
 
 	wi::arguments::Parse(argc, argv);
 
+	editor = new EditorWithDevInfo();
+
     sdl2::sdlsystem_ptr_t system = sdl2::make_sdlsystem(SDL_INIT_EVERYTHING | SDL_INIT_EVENTS);
     if (*system) {
 		wilog_error("Error creating SDL2 system");
@@ -232,15 +234,15 @@ int main(int argc, char *argv[])
 	bool fullscreen = false;
 
 	wi::Timer timer;
-	if (editor.config.Open("config.ini"))
+	if (editor->config.Open("config.ini"))
 	{
-		if (editor.config.Has("width"))
+		if (editor->config.Has("width"))
 		{
-			width = editor.config.GetInt("width");
-			height = editor.config.GetInt("height");
+			width = editor->config.GetInt("width");
+			height = editor->config.GetInt("height");
 		}
-		fullscreen = editor.config.GetBool("fullscreen");
-		editor.allow_hdr = editor.config.GetBool("allow_hdr");
+		fullscreen = editor->config.GetBool("fullscreen");
+		editor->allow_hdr = editor->config.GetBool("allow_hdr");
 
 		wilog("config.ini loaded in %.2f milliseconds\n", (float)timer.elapsed_milliseconds());
 	}
@@ -266,11 +268,15 @@ int main(int argc, char *argv[])
 		SDL_SetWindowFullscreen(window.get(), SDL_WINDOW_FULLSCREEN_DESKTOP);
 	}
 
-    editor.SetWindow(window.get());
+    editor->SetWindow(window.get());
 
     int ret = sdl_loop();
 
 	wi::jobsystem::ShutDown();
+
+    // explicitly deleting prevents issues with Vulkan debug layers (debugdevice)
+    // which don't like vulkan calls happening during C++ application shutdown
+    delete editor;
 
     return ret;
 }
