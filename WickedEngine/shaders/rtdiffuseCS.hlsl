@@ -25,11 +25,9 @@ void main(uint2 DTid : SV_DispatchThreadID)
 {
 	const float2 uv = ((float2)DTid.xy + 0.5) * postprocess.resolution_rcp;
 
-	const uint downsampleFactor = 2;
-
 	// This is necessary for accurate upscaling. This is so we don't reuse the same half-res pixels
-	uint2 screenJitter = floor(blue_noise(uint2(0, 0)).xy * downsampleFactor);
-	uint2 jitterPixel = screenJitter + DTid.xy * downsampleFactor;
+	uint2 screenJitter = floor(blue_noise(uint2(0, 0)).xy * rtdiffuse_downscalefactor);
+	uint2 jitterPixel = screenJitter + DTid.xy * rtdiffuse_downscalefactor;
 	float2 jitterUV = (screenJitter + DTid.xy + 0.5f) * postprocess.resolution_rcp;
 
 	const float depth = texture_depth.SampleLevel(sampler_linear_clamp, jitterUV, 0);

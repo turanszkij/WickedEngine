@@ -141,8 +141,8 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint3 DTid : SV
 		return;
 	}
 
-	const float depth = texture_depth[DTid.xy * 2];
-	const float roughness = texture_roughness[DTid.xy * 2];
+	const float depth = texture_depth[DTid.xy * ssr_downscalefactor];
+	const float roughness = texture_roughness[DTid.xy * ssr_downscalefactor];
 
 	if (!NeedReflection(roughness, depth, ssr_roughness_cutoff))
 	{
@@ -177,7 +177,7 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint3 DTid : SV
 	// Secondary reprojection based on ray lengths:
 	//	https://www.ea.com/seed/news/seed-dd18-presentation-slides-raytracing (Slide 45)
 
-	float2 velocity = texture_velocity[DTid.xy * 2];
+	float2 velocity = texture_velocity[DTid.xy * ssr_downscalefactor];
 	float reprojectionDepth = texture_reprojectionDepth[DTid.xy];
 
 	float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;

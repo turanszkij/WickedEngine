@@ -458,6 +458,27 @@ namespace wi::renderer
 		wi::graphics::CommandList cmd
 	);
 
+	enum class PostProcessQuality
+	{
+		Low,
+		Medium,
+		High
+	};
+	inline constexpr uint32_t quality_downscalefactor(PostProcessQuality quality)
+	{
+		switch (quality)
+		{
+		case wi::renderer::PostProcessQuality::Low:
+			return 4;
+		case wi::renderer::PostProcessQuality::Medium:
+			return 2;
+		case wi::renderer::PostProcessQuality::High:
+		default:
+			break;
+		}
+		return 1;
+	}
+
 	// Surfel GI: diffuse GI with ray tracing from surfels
 	struct SurfelGIResources
 	{
@@ -604,13 +625,14 @@ namespace wi::renderer
 	struct RTDiffuseResources
 	{
 		mutable int frame = 0;
+		PostProcessQuality quality = PostProcessQuality::Medium;
 		wi::graphics::Texture texture_rayIndirectDiffuse;
 		wi::graphics::Texture texture_spatial;
 		wi::graphics::Texture texture_spatial_variance;
 		wi::graphics::Texture texture_temporal[2];
 		wi::graphics::Texture texture_temporal_variance[2];
 	};
-	void CreateRTDiffuseResources(RTDiffuseResources& res, XMUINT2 resolution);
+	void CreateRTDiffuseResources(RTDiffuseResources& res, XMUINT2 resolution, PostProcessQuality quality = PostProcessQuality::Medium);
 	void Postprocess_RTDiffuse(
 		const RTDiffuseResources& res,
 		const wi::scene::Scene& scene,
@@ -640,6 +662,7 @@ namespace wi::renderer
 	struct RTReflectionResources
 	{
 		mutable int frame = 0;
+		PostProcessQuality quality = PostProcessQuality::Medium;
 		wi::graphics::Texture texture_rayIndirectSpecular;
 		wi::graphics::Texture texture_rayDirectionPDF;
 		wi::graphics::Texture texture_rayLengths;
@@ -649,7 +672,7 @@ namespace wi::renderer
 		wi::graphics::Texture texture_temporal[2];
 		wi::graphics::Texture texture_temporal_variance[2];
 	};
-	void CreateRTReflectionResources(RTReflectionResources& res, XMUINT2 resolution);
+	void CreateRTReflectionResources(RTReflectionResources& res, XMUINT2 resolution, PostProcessQuality quality = PostProcessQuality::Medium);
 	void Postprocess_RTReflection(
 		const RTReflectionResources& res,
 		const wi::scene::Scene& scene,
@@ -661,6 +684,7 @@ namespace wi::renderer
 	struct SSRResources
 	{
 		mutable int frame = 0;
+		PostProcessQuality quality = PostProcessQuality::Medium;
 		wi::graphics::Texture texture_tile_minmax_roughness_horizontal;
 		wi::graphics::Texture texture_tile_minmax_roughness;
 		wi::graphics::Texture texture_depth_hierarchy;
@@ -677,7 +701,7 @@ namespace wi::renderer
 		wi::graphics::GPUBuffer buffer_tiles_tracing_cheap;
 		wi::graphics::GPUBuffer buffer_tiles_tracing_expensive;
 	};
-	void CreateSSRResources(SSRResources& res, XMUINT2 resolution);
+	void CreateSSRResources(SSRResources& res, XMUINT2 resolution, PostProcessQuality quality = PostProcessQuality::Medium);
 	void Postprocess_SSR(
 		const SSRResources& res,
 		const wi::graphics::Texture& input,

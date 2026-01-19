@@ -43,6 +43,9 @@ struct Bloom
 static const uint SSR_TILESIZE = 32;
 #define ssr_roughness_cutoff postprocess.params0.z
 #define ssr_frame postprocess.params0.w
+#define ssr_ratiofactorx postprocess.params1.x
+#define ssr_ratiofactory postprocess.params1.y
+#define ssr_downscalefactor postprocess.params1.z
 
 #define ssao_range postprocess.params0.x
 #define ssao_samplecount postprocess.params0.y
@@ -55,11 +58,13 @@ static const uint SSR_TILESIZE = 32;
 
 #define rtdiffuse_range ssao_range
 #define rtdiffuse_frame ssr_frame
+#define rtdiffuse_downscalefactor ssr_downscalefactor
 #define ssgi_frame ssr_frame
 
 #define rtreflection_range ssao_range
 #define rtreflection_roughness_cutoff ssr_roughness_cutoff
 #define rtreflection_frame ssr_frame
+#define rtreflection_downscalefactor ssr_downscalefactor
 
 static const uint POSTPROCESS_HBAO_THREADCOUNT = 320;
 #define hbao_direction postprocess.params0.xy

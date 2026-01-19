@@ -88,8 +88,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 {
 	const float2 uv = (DTid.xy + 0.5) * postprocess.resolution_rcp;
 
-	const float depth = texture_depth[DTid.xy * 2];
-	const float roughness = texture_roughness[DTid.xy * 2];
+	const float depth = texture_depth[DTid.xy * ssr_downscalefactor];
+	const float roughness = texture_roughness[DTid.xy * ssr_downscalefactor];
 
 	if (!NeedReflection(roughness, depth, ssr_roughness_cutoff))
 	{
@@ -101,7 +101,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	// Everthing in world space:
 	const float3 P = reconstruct_position(uv, depth);
-	const float3 N = decode_oct(texture_normal[DTid.xy * 2]);
+	const float3 N = decode_oct(texture_normal[DTid.xy * ssr_downscalefactor]);
 	const float3 V = normalize(GetCamera().frustum_corners.screen_to_nearplane(uv) - P); // ortho support
 	const float NdotV = saturate(dot(N, V));
 
@@ -125,7 +125,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		
 		int2 neighborCoord = DTid.xy + offset;
 
-		float neighborDepth = texture_depth[neighborCoord * 2];
+		float neighborDepth = texture_depth[neighborCoord * ssr_downscalefactor];
 		if (neighborDepth > 0.0)
 		{
 			float weight = GetWeight(neighborCoord, V, N, roughness, NdotV);
@@ -153,7 +153,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float resolveVariance = S / weightSum;
 
 	// Convert to post-projection depth so we can construct dual source reprojection buffers later
-	const float lineardepth = texture_lineardepth[DTid.xy * 2] * GetCamera().z_far;
+	const float lineardepth = texture_lineardepth[DTid.xy * ssr_downscalefactor] * GetCamera().z_far;
 	float reprojectionDepth = compute_inverse_lineardepth(lineardepth + closestRayLength);
 
 	texture_resolve[DTid.xy] = max(result, 0.00001f);

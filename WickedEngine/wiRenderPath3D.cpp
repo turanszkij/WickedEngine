@@ -2858,7 +2858,7 @@ namespace wi
 			device->CreateTexture(&desc, nullptr, &rtSSR);
 			device->SetName(&rtSSR, "rtSSR");
 
-			wi::renderer::CreateSSRResources(ssrResources, internalResolution);
+			wi::renderer::CreateSSRResources(ssrResources, internalResolution, ssrQuality);
 		}
 		else
 		{
@@ -2911,7 +2911,7 @@ namespace wi
 			device->CreateTexture(&desc, nullptr, &rtSSR);
 			device->SetName(&rtSSR, "rtSSR");
 
-			wi::renderer::CreateRTReflectionResources(rtreflectionResources, internalResolution);
+			wi::renderer::CreateRTReflectionResources(rtreflectionResources, internalResolution, raytracedReflectionsQuality);
 		}
 		else
 		{
@@ -2937,7 +2937,7 @@ namespace wi
 			device->CreateTexture(&desc, nullptr, &rtRaytracedDiffuse);
 			device->SetName(&rtRaytracedDiffuse, "rtRaytracedDiffuse");
 
-			wi::renderer::CreateRTDiffuseResources(rtdiffuseResources, internalResolution);
+			wi::renderer::CreateRTDiffuseResources(rtdiffuseResources, internalResolution, raytracedDiffuseQuality);
 		}
 		else
 		{
