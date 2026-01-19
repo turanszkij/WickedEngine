@@ -2596,6 +2596,10 @@ namespace wi::scene
 				archive >> terrain_pushdown;
 				archive >> terrain_texture_falloff;
 			}
+			if (seri.GetVersion() >= 4)
+			{
+				archive >> (uint32_t&)fill_normals_mode;
+			}
 		}
 		else
 		{
@@ -2619,6 +2623,10 @@ namespace wi::scene
 			{
 				archive << terrain_pushdown;
 				archive << terrain_texture_falloff;
+			}
+			if (seri.GetVersion() >= 4)
+			{
+				archive << (uint32_t)fill_normals_mode;
 			}
 		}
 	}

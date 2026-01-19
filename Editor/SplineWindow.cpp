@@ -68,14 +68,18 @@ void SplineWindow::Create(EditorComponent* _editor)
 				spline->SetFilled(false);
 			})(args);
 		}
+		fillNormalsComboBox.SetEnabled(args.bValue && filledCheck.GetCheck());
 	});
 	AddWidget(&loopedCheck);
 
 	filledCheck.Create("Filled: ");
 	filledCheck.SetTooltip("Fill the interior of the looped spline.");
-	filledCheck.OnClick(forEachSelectedAndIndirect([] (auto spline, auto args) {
-		spline->SetFilled(args.bValue);
-	}));
+	filledCheck.OnClick([this, forEachSelectedAndIndirect](wi::gui::EventArgs args) {
+		forEachSelectedAndIndirect([](auto spline, auto args) {
+			spline->SetFilled(args.bValue);
+		})(args);
+		fillNormalsComboBox.SetEnabled(args.bValue);
+	});
 	AddWidget(&filledCheck);
 
 	alignedCheck.Create("Draw Aligned: ");
@@ -206,6 +210,16 @@ void SplineWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&recenterButton);
 
+	fillNormalsComboBox.Create("Compute Normals for Fill: ");
+	fillNormalsComboBox.SetTooltip("Select the normals computation method for the filled spline mesh.");
+	fillNormalsComboBox.AddItem("SMOOTH", (uint64_t)wi::scene::MeshComponent::COMPUTE_NORMALS_SMOOTH);
+	fillNormalsComboBox.AddItem("HARD", (uint64_t)wi::scene::MeshComponent::COMPUTE_NORMALS_HARD);
+	fillNormalsComboBox.OnSelect(forEachSelectedAndIndirect([](auto spline, auto args) {
+		spline->fill_normals_mode = (wi::scene::MeshComponent::COMPUTE_NORMALS)args.userdata;
+		spline->SetDirty();
+	}));
+	AddWidget(&fillNormalsComboBox);
+
 	addButton.Create("AddNode");
 	addButton.SetText("+");
 	addButton.SetTooltip("Add an entity as a node to the spline (it must have TransformComponent). Hotkey: Ctrl + E");
@@ -236,6 +250,8 @@ void SplineWindow::SetEntity(Entity entity)
 		loopedCheck.SetCheck(spline->IsLooped());
 		filledCheck.SetCheck(spline->IsFilled());
 		filledCheck.SetEnabled(spline->IsLooped());
+		fillNormalsComboBox.SetSelectedByUserdataWithoutCallback((uint64_t)spline->fill_normals_mode);
+		fillNormalsComboBox.SetEnabled(spline->IsFilled());
 		widthSlider.SetValue(spline->width);
 		rotSlider.SetValue(wi::math::RadiansToDegrees(spline->rotation));
 		subdivSlider.SetValue(spline->mesh_generation_subdivision);
@@ -376,6 +392,7 @@ void SplineWindow::ResizeLayout()
 	layout.y += layout.padding * 2;
 
 	layout.add_fullwidth(recenterButton);
+	layout.add(fillNormalsComboBox);
 	layout.add_fullwidth(addButton);
 
 	for (auto& entry : entries)

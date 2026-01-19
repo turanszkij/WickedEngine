@@ -22,6 +22,7 @@ public:
 	wi::gui::Slider terrainTexSlider;
 	wi::gui::Slider terrainPushdownSlider;
 	wi::gui::Button recenterButton;
+	wi::gui::ComboBox fillNormalsComboBox;
 	wi::gui::Button addButton;
 
 	struct Entry
