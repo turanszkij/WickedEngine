@@ -2639,6 +2639,7 @@ namespace wi::scene
 		float terrain_modifier_amount = 0; // increase above 0 to affect terrain generation (greater values increase the strength of the terrain trying to match the spline plane)
 		float terrain_pushdown = 0; // push down the terrain below the spline plane (or above if negative value)
 		float terrain_texture_falloff = 0.8f; // texture blend falloff for terrain modifier spline
+		MeshComponent::COMPUTE_NORMALS fill_normals_mode = MeshComponent::COMPUTE_NORMALS_SMOOTH; // normals computation method for filled spline
 
 		wi::vector<wi::ecs::Entity> spline_node_entities;
 
@@ -2648,6 +2649,7 @@ namespace wi::scene
 		float precomputed_total_distance = 0;
 		float prev_width = 1;
 		float prev_rotation = 0;
+		MeshComponent::COMPUTE_NORMALS prev_fill_normals_mode = MeshComponent::COMPUTE_NORMALS_SMOOTH;
 		int prev_mesh_generation_subdivision = 0;
 		int prev_mesh_generation_vertical_subdivision = 0;
 		int prev_mesh_generation_nodes = 0;

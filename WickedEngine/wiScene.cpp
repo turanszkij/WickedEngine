@@ -5987,6 +5987,7 @@ namespace wi::scene
 			dirty |= spline.prev_filled != spline.IsFilled();
 			dirty |= spline.prev_width != spline.width;
 			dirty |= spline.prev_rotation != spline.rotation;
+			dirty |= spline.prev_fill_normals_mode != spline.fill_normals_mode;
 
 			bool dirty_terrain = spline.prev_terrain_modifier_amount != spline.terrain_modifier_amount;
 			dirty_terrain |= spline.prev_terrain_pushdown != spline.terrain_pushdown;
@@ -5998,6 +5999,7 @@ namespace wi::scene
 
 			spline.prev_width = spline.width;
 			spline.prev_rotation = spline.rotation;
+			spline.prev_fill_normals_mode = spline.fill_normals_mode;
 			spline.prev_looped = spline.IsLooped();
 			spline.prev_filled = spline.IsFilled();
 
@@ -6294,7 +6296,7 @@ namespace wi::scene
 								mesh->indices.push_back(next);
 							}
 
-							mesh->ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH_FAST);
+							mesh->ComputeNormals(spline.fill_normals_mode);
 						}
 						MeshComponent::MeshSubset& subset = mesh->subsets.front();
 						subset.indexCount = (uint32_t)mesh->indices.size();
