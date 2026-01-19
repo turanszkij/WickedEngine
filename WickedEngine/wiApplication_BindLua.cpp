@@ -59,6 +59,11 @@ namespace wi::lua
 		}
 
 		wi::RenderPath* renderpath = component->GetActivePath();
+		if (renderpath == nullptr)
+		{
+			wi::lua::SError(L, "GetActivePath() returned null! No path was registered yet!");
+			return 0;
+		}
 
 		//return 3d component if the active one is of that type
 		if (renderpath->GetScriptBindingID() == wi::RenderPath3D::script_check_identifier)
