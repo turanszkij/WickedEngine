@@ -114,6 +114,9 @@ namespace wi
 
 				device->CreateTexture(&desc, nullptr, &rtMain_render);
 				device->SetName(&rtMain_render, "rtMain_render");
+				
+				// Note: graphics API can downgrade sample count for last supported value, this will be reflected in the renderpath setting too
+				msaaSampleCount = std::min(msaaSampleCount, rtMain_render.desc.sample_count);
 			}
 			else
 			{

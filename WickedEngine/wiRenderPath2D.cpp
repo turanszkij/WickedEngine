@@ -71,6 +71,10 @@ namespace wi
 				desc.layout = ResourceState::RENDERTARGET;
 				device->CreateTexture(&desc, nullptr, &rtFinal_MSAA);
 				device->SetName(&rtFinal_MSAA, "rtFinal_MSAA");
+				
+				// Note: graphics API can downgrade sample count for last supported value, this will be reflected in the renderpath setting too
+				msaaSampleCount = std::min(msaaSampleCount, rtFinal_MSAA.desc.sample_count);
+				msaaSampleCount2D = std::min(msaaSampleCount2D, rtFinal_MSAA.desc.sample_count);
 			}
 		}
 	}
