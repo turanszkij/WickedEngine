@@ -7,7 +7,6 @@
 #include "wiUnorderedMap.h"
 
 #include <Metal/Metal.hpp>
-#include <Metal/MTL4AccelerationStructure.hpp>
 #include <QuartzCore/QuartzCore.hpp>
 
 #define IR_RUNTIME_METALCPP
@@ -171,6 +170,7 @@ namespace wi::graphics
 			MTL::Size numthreads_as = {};
 			MTL::Size numthreads_ms = {};
 			IRGeometryEmulationPipelineDescriptor gs_desc = {};
+			wi::vector<std::pair<NS::SharedPtr<MTL::Texture>, uint32_t>> texture_clears;
 			
 			struct VertexBufferBinding
 			{
@@ -252,6 +252,7 @@ namespace wi::graphics
 		
 		void binder_flush(CommandList cmd);
 		void barrier_flush(CommandList cmd);
+		void clear_flush(CommandList cmd);
 
 		constexpr CommandList_Metal& GetCommandList(CommandList cmd) const
 		{

@@ -8,6 +8,8 @@
 #include "wiTimer.h"
 #include "wiBacklog.h"
 
+#include <Metal/MTL4AccelerationStructure.hpp>
+
 namespace wi::graphics
 {
 
@@ -1083,6 +1085,45 @@ using namespace metal_internal;
 		commandlist.barriers.clear();
 	}
 
+	void GraphicsDevice_Metal::clear_flush(CommandList cmd)
+	{
+		CommandList_Metal& commandlist = GetCommandList(cmd);
+		if (commandlist.texture_clears.empty())
+			return;
+		
+		if (commandlist.compute_encoder.get() != nullptr)
+		{
+			commandlist.compute_encoder->endEncoding();
+			commandlist.compute_encoder.reset();
+		}
+		NS::SharedPtr<NS::AutoreleasePool> autorelease_pool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init());
+		constexpr size_t batching = 8; // batch up to 8 clears into one pass (probably more will not be supported by renderpass)
+		size_t offset = 0;
+		while (offset < commandlist.texture_clears.size())
+		{
+			NS::SharedPtr<MTL4::RenderPassDescriptor> descriptor = NS::TransferPtr(MTL4::RenderPassDescriptor::alloc()->init());
+			NS::SharedPtr<MTL::RenderPassColorAttachmentDescriptor> color_attachment_descriptors[8];
+			for (size_t i = 0; (i < batching) && ((offset + i) < commandlist.texture_clears.size()); ++i)
+			{
+				const size_t index = offset + i;
+				NS::SharedPtr<MTL::RenderPassColorAttachmentDescriptor>& color_attachment_descriptor = color_attachment_descriptors[i];
+				color_attachment_descriptor = NS::TransferPtr(MTL::RenderPassColorAttachmentDescriptor::alloc()->init());
+				const uint32_t value = commandlist.texture_clears[index].second;
+				color_attachment_descriptor->setTexture(commandlist.texture_clears[index].first.get());
+				color_attachment_descriptor->setClearColor(MTL::ClearColor::Make((value & 0xFF) / 255.0f, ((value >> 8u) & 0xFF) / 255.0f, ((value >> 16u) & 0xFF) / 255.0f, ((value >> 24u) & 0xFF) / 255.0f));
+				color_attachment_descriptor->setLoadAction(MTL::LoadActionClear);
+				color_attachment_descriptor->setStoreAction(MTL::StoreActionStore);
+				descriptor->colorAttachments()->setObject(color_attachment_descriptor.get(), i);
+			}
+			MTL4::RenderCommandEncoder* encoder = commandlist.commandbuffer->renderCommandEncoder(descriptor.get());
+			encoder->setLabel(NS::String::string("ClearUAV", NS::UTF8StringEncoding));
+			encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, MTL4::VisibilityOptionNone); // TODO: flickering issues in several places without this
+			encoder->endEncoding();
+			offset += batching;
+		}
+		commandlist.texture_clears.clear();
+	}
+
 	void GraphicsDevice_Metal::pso_validate(CommandList cmd)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
@@ -1243,6 +1284,7 @@ using namespace metal_internal;
 	}
 	void GraphicsDevice_Metal::predispatch(CommandList cmd)
 	{
+		clear_flush(cmd);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		if (commandlist.compute_encoder.get() == nullptr)
 		{
@@ -1270,6 +1312,7 @@ using namespace metal_internal;
 	}
 	void GraphicsDevice_Metal::precopy(CommandList cmd)
 	{
+		clear_flush(cmd);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		if (commandlist.compute_encoder.get() == nullptr)
 		{
@@ -3390,6 +3433,7 @@ using namespace metal_internal;
 	}
 	void GraphicsDevice_Metal::RenderPassBegin(const SwapChain* swapchain, CommandList cmd)
 	{
+		clear_flush(cmd);
 		NS::SharedPtr<NS::AutoreleasePool> autorelease_pool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init());
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		if (commandlist.compute_encoder.get() != nullptr)
@@ -3443,6 +3487,7 @@ using namespace metal_internal;
 	}
 	void GraphicsDevice_Metal::RenderPassBegin(const RenderPassImage* images, uint32_t image_count, const GPUQueryHeap* occlusionqueries, CommandList cmd, RenderPassFlags flags)
 	{
+		clear_flush(cmd);
 		NS::SharedPtr<NS::AutoreleasePool> autorelease_pool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init());
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		if (commandlist.compute_encoder.get() != nullptr)
@@ -4465,24 +4510,21 @@ using namespace metal_internal;
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		if (resource->IsTexture())
 		{
-			if (commandlist.compute_encoder.get() != nullptr)
-			{
-				commandlist.compute_encoder->endEncoding();
-				commandlist.compute_encoder.reset();
-			}
 			auto internal_state = to_internal<Texture>(resource);
-			NS::SharedPtr<NS::AutoreleasePool> autorelease_pool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init());
-			NS::SharedPtr<MTL4::RenderPassDescriptor> descriptor = NS::TransferPtr(MTL4::RenderPassDescriptor::alloc()->init());
-			NS::SharedPtr<MTL::RenderPassColorAttachmentDescriptor> color_attachment_descriptor = NS::TransferPtr(MTL::RenderPassColorAttachmentDescriptor::alloc()->init());
-			color_attachment_descriptor->setTexture(internal_state->texture.get());
-			color_attachment_descriptor->setClearColor(MTL::ClearColor::Make((value & 0xFF) / 255.0f, ((value >> 8u) & 0xFF) / 255.0f, ((value >> 16u) & 0xFF) / 255.0f, ((value >> 24u) & 0xFF) / 255.0f));
-			color_attachment_descriptor->setLoadAction(MTL::LoadActionClear);
-			color_attachment_descriptor->setStoreAction(MTL::StoreActionStore);
-			descriptor->colorAttachments()->setObject(color_attachment_descriptor.get(), 0);
-			MTL4::RenderCommandEncoder* encoder = commandlist.commandbuffer->renderCommandEncoder(descriptor.get());
-			encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, MTL4::VisibilityOptionNone); // TODO: flickering issues in several places without this
-			commandlist.barriers.clear();
-			encoder->endEncoding();
+			bool found = false;
+			for (auto& x : commandlist.texture_clears)
+			{
+				if (x.first.get() == internal_state->texture.get())
+				{
+					// Avoid adding batched clear command twice
+					found = true;
+					break;
+				}
+			}
+			if (!found)
+			{
+				commandlist.texture_clears.push_back(std::make_pair(internal_state->texture, value));
+			}
 		}
 		else if (resource->IsBuffer())
 		{
