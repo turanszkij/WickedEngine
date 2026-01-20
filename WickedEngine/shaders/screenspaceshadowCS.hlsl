@@ -16,9 +16,11 @@ RWTexture2D<uint4> output : register(u0);
 #ifdef RTSHADOW
 RWTexture2D<float3> output_normals : register(u1);
 RWStructuredBuffer<uint4> output_tiles : register(u2);
+[numthreads(8, 4, 1)]
+#else
+[numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 #endif // RTSHADOW
 
-[numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint groupIndex : SV_GroupIndex)
 {
 	const float2 uv = ((float2)DTid.xy + 0.5) * postprocess.resolution_rcp;
@@ -311,26 +313,16 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 #ifdef RTSHADOW
 	output_normals[DTid.xy] = saturate(N * 0.5 + 0.5);
 	
-	uint flatTileIdx = 0;
-	if (GTid.y < 4)
-	{
-		flatTileIdx = flatten2D(Gid.xy * uint2(1, 2) + uint2(0, 0), (postprocess.resolution + uint2(7, 3)) / uint2(8, 4));
-	}
-	else
-	{
-		flatTileIdx = flatten2D(Gid.xy * uint2(1, 2) + uint2(0, 1), (postprocess.resolution + uint2(7, 3)) / uint2(8, 4));
-	}
+	const uint flatTileIdx = flatten2D(Gid.xy, (postprocess.resolution + uint2(7, 3)) / uint2(8, 4));
 
 	// pack 4 lights into tile bitmask:
-	int lane_index = (DTid.y % 4) * 8 + (DTid.x % 8);
 	for (uint i = 0; i < 4; ++i)
 	{
-		uint bit = ((shadow_mask[0] >> (i * 8)) & 0xFF) ? (1u << lane_index) : 0;
+		uint bit = ((shadow_mask[0] >> (i * 8)) & 0xFF) ? (1u << groupIndex) : 0;
 		InterlockedOr(output_tiles[flatTileIdx][i], bit);
 	}
-	output[DTid.xy] = uint4(shadow_mask[0], shadow_mask[1], shadow_mask[2], shadow_mask[3]);
-#else
-	output[DTid.xy] = shadow_mask;
 #endif // RTSHADOW
+
+	output[DTid.xy] = shadow_mask;
 
 }

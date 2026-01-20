@@ -91,7 +91,7 @@ void ray_clip_plane(inout RayDesc ray, float4 clip_plane)
 
 // have the stack in shared memory instead of registers:
 #ifdef RAYTRACE_STACK_SHARED
-groupshared uint stack[RAYTRACE_STACKSIZE][RAYTRACING_LAUNCH_BLOCKSIZE * RAYTRACING_LAUNCH_BLOCKSIZE];
+groupshared uint stack[RAYTRACE_STACKSIZE][8 * 4];
 #endif // RAYTRACE_STACK_SHARED
 
 #define primitiveCounterBuffer bindless_buffers[descriptor_index(GetScene().BVH_counter)]

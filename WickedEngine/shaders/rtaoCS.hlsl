@@ -14,22 +14,14 @@ static const uint TILE_SIZE = POSTPROCESS_BLOCKSIZE + TILE_BORDER * 2;
 groupshared float2 tile_XY[TILE_SIZE * TILE_SIZE];
 groupshared float tile_Z[TILE_SIZE * TILE_SIZE];
 
-[numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
+[numthreads(8, 4, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint groupIndex : SV_GroupIndex)
 {
 	uint primitiveID = texture_primitiveID[DTid.xy * 2];
 	if (!any(primitiveID))
 		return;
 
-	uint flatTileIdx = 0;
-	if (GTid.y < 4)
-	{
-		flatTileIdx = flatten2D(Gid.xy * uint2(1, 2) + uint2(0, 0), (postprocess.resolution + uint2(7, 3)) / uint2(8, 4));
-	}
-	else
-	{
-		flatTileIdx = flatten2D(Gid.xy * uint2(1, 2) + uint2(0, 1), (postprocess.resolution + uint2(7, 3)) / uint2(8, 4));
-	}
+	const uint flatTileIdx = flatten2D(Gid.xy, (postprocess.resolution + uint2(7, 3)) / uint2(8, 4));
 	output_tiles[flatTileIdx] = 0;
 
 	const float2 uv = ((float2)DTid.xy + 0.5) * postprocess.resolution_rcp;
@@ -97,7 +89,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	output_normals[DTid.xy] = saturate(N * 0.5 + 0.5);
 
 	uint2 pixel_pos = DTid.xy;
-	int lane_index = (pixel_pos.y % 4) * 8 + (pixel_pos.x % 8);
-	uint bit = (shadow > 0) ? (1u << lane_index) : 0;
+	uint bit = (shadow > 0) ? (1u << groupIndex) : 0;
 	InterlockedOr(output_tiles[flatTileIdx], bit);
 }

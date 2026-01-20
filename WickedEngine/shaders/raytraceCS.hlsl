@@ -20,14 +20,12 @@ RWTexture2D<float> output_depth : register(u3);
 RWTexture2D<uint> output_stencil : register(u4);
 RWTexture2D<uint> output_primitiveID : register(u5);
 
-[numthreads(RAYTRACING_LAUNCH_BLOCKSIZE, RAYTRACING_LAUNCH_BLOCKSIZE, 1)]
+[numthreads(8, 4, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 {
 	uint2 pixel = DTid.xy;
 	if (pixel.x >= xTraceResolution.x || pixel.y >= xTraceResolution.y)
-	{
 		return;
-	}
 	float3 result = 0;
 	float3 energy = 1;
 

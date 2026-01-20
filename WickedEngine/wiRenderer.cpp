@@ -10886,8 +10886,8 @@ void RayTraceScene(
 	}
 
 	device->Dispatch(
-		(desc.width + RAYTRACING_LAUNCH_BLOCKSIZE - 1) / RAYTRACING_LAUNCH_BLOCKSIZE,
-		(desc.height + RAYTRACING_LAUNCH_BLOCKSIZE - 1) / RAYTRACING_LAUNCH_BLOCKSIZE,
+		(desc.width + 7) / 8,
+		(desc.height + 3) / 4,
 		1,
 		cmd
 	);
@@ -13529,8 +13529,8 @@ void Postprocess_RTAO(
 	device->ClearUAV(&output, 0, cmd);
 
 	device->Dispatch(
-		(postprocess.resolution.x + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-		(postprocess.resolution.y + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		(postprocess.resolution.x + 7) / 8,
+		(postprocess.resolution.y + 3) / 4,
 		1,
 		cmd
 	);
@@ -13809,7 +13809,7 @@ void Postprocess_RTDiffuse(
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 	rtdiffuse_range = range;
 	rtdiffuse_frame = (float)res.frame;
-	rtdiffuse_downscalefactor = quality_downscalefactor(res.quality);
+	rtdiffuse_downscalefactor = (float)quality_downscalefactor(res.quality);
 	uint8_t instanceInclusionMask = 0xFF;
 	std::memcpy(&postprocess.params1.x, &instanceInclusionMask, sizeof(instanceInclusionMask));
 
@@ -14507,7 +14507,7 @@ void Postprocess_RTReflection(
 	rtreflection_range = range;
 	rtreflection_roughness_cutoff = roughnessCutoff;
 	rtreflection_frame = (float)res.frame;
-	rtreflection_downscalefactor = quality_downscalefactor(res.quality);
+	rtreflection_downscalefactor = (float)quality_downscalefactor(res.quality);
 	uint8_t instanceInclusionMask = raytracing_inclusion_mask_reflection;
 	std::memcpy(&postprocess.params1.x, &instanceInclusionMask, sizeof(instanceInclusionMask));
 
@@ -14895,7 +14895,7 @@ void Postprocess_SSR(
 	PostProcess postprocess;
 	ssr_roughness_cutoff = roughnessCutoff;
 	ssr_frame = (float)res.frame;
-	ssr_downscalefactor = quality_downscalefactor(res.quality);
+	ssr_downscalefactor = (float)quality_downscalefactor(res.quality);
 
 	// Compute tile classification (horizontal):
 	{
@@ -15048,7 +15048,7 @@ void Postprocess_SSR(
 	ssr_frame = (float)res.frame;
 	ssr_ratiofactorx = (float)postprocess.resolution.x / (float)res.texture_depth_hierarchy.GetDesc().width;
 	ssr_ratiofactory = (float)postprocess.resolution.y / (float)res.texture_depth_hierarchy.GetDesc().height;
-	ssr_downscalefactor = quality_downscalefactor(res.quality);
+	ssr_downscalefactor = (float)quality_downscalefactor(res.quality);
 
 	// Raytrace pass:
 	{
@@ -15396,8 +15396,8 @@ void Postprocess_RTShadow(
 	device->Barrier(GPUBarrier::Memory(), cmd);
 
 	device->Dispatch(
-		(postprocess.resolution.x + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-		(postprocess.resolution.y + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		(postprocess.resolution.x + 7) / 8,
+		(postprocess.resolution.y + 3) / 4,
 		1,
 		cmd
 	);
