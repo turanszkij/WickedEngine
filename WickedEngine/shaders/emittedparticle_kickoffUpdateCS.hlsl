@@ -15,11 +15,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	counterBuffer.Store(PARTICLECOUNTER_OFFSET_ALIVECOUNT, aliveCount);
 	counterBuffer.Store(PARTICLECOUNTER_OFFSET_ALIVECOUNT_AFTERSIMULATION, 0);
 	
-#ifdef __PSSL__
-	counterBuffer.TypedStore<int>(PARTICLECOUNTER_OFFSET_DEADCOUNT, max(0, deadCount));
-#else
 	counterBuffer.Store<int>(PARTICLECOUNTER_OFFSET_DEADCOUNT, max(0, deadCount));
-#endif // __PSSL__
 	
 	counterBuffer.Store(PARTICLECOUNTER_OFFSET_CULLEDCOUNT, 0);
 	

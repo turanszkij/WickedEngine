@@ -1009,11 +1009,7 @@ inline void draw_line(float3 a, float3 b, float4 color = 1)
 	debugline.posB = float4(b, 1);
 	debugline.colorA = color;
 	debugline.colorB = color;
-#ifdef __PSSL__
-	indirect_debug_buffer.TypedStore<DebugLine>(sizeof(IndirectDrawArgsInstanced) + sizeof(DebugLine) * prevCount / 2, debugline);
-#else
 	indirect_debug_buffer.Store<DebugLine>(sizeof(IndirectDrawArgsInstanced) + sizeof(DebugLine) * prevCount / 2, debugline);
-#endif // __PSSL__
 }
 inline void draw_point(float3 pos, float size = 1, float4 color = 1)
 {
