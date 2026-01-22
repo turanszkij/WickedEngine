@@ -1590,6 +1590,7 @@ namespace wi::gui
 	int caret_begin = 0;
 	int caret_delay = 0;
 	bool input_updated = false;
+	bool doubleclick_select = false;
 	wi::Timer caret_timer;
 	void TextInputField::Create(const std::string& name)
 	{
@@ -1698,6 +1699,10 @@ namespace wi::gui
 
 			if (state == ACTIVE)
 			{
+				if (!wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+				{
+					doubleclick_select = false;
+				}
 				if (wi::input::Press(wi::input::KEYBOARD_BUTTON_ENTER))
 				{
 					// accept input...
@@ -1751,9 +1756,17 @@ namespace wi::gui
 				{
 					// cancel input
 					font_input.text.clear();
-					Deactivate();
+					typing_active = false;
+					state = IDLE;
 				}
-				else if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+				else if (leftButtonClicked && intersectsPointer && wi::input::IsDoubleClicked())
+				{
+					caret_begin = 0;
+					caret_pos = (int)font_input.GetText().size();
+					caret_timer.record();
+					doubleclick_select = true;
+				}
+				else if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT) && !doubleclick_select)
 				{
 					// caret repositioning by mouse click:
 					caret_timer.record();
@@ -1792,7 +1805,9 @@ namespace wi::gui
 			if (leftButtonClicked && state == FOCUS)
 			{
 				// activate
-				SetAsActive();
+				const bool select_all = intersectsPointer && wi::input::IsDoubleClicked();
+				SetAsActive(select_all);
+				doubleclick_select = select_all;
 			}
 		}
 
