@@ -13,10 +13,33 @@ void ContentBrowserWindow::Create(EditorComponent* _editor)
 
 	RemoveWidget(&scrollbar_horizontal);
 
+	sortingComboBox.Create("");
+	sortingComboBox.AddItem("By recent", SORTING_RECENT);
+	sortingComboBox.AddItem("By name", SORTING_NAME);
+	sortingComboBox.AddItem("By path", SORTING_PATH);
+	sortingComboBox.AddItem("By size", SORTING_SIZE);
+	sortingComboBox.SetTooltip("Choose how items are sorted in the content browser.\nBy recent: Most recently used items first\nBy name: Alphabetically by file name\nBy path: Alphabetically by full path\nBy size: Largest files first");
+	sortingComboBox.SetLocalizationEnabled(false);
+	if (editor->main->config.GetSection("options").Has("content_browser_sorting"))
+	{
+		current_sorting = (SORTING)editor->main->config.GetSection("options").GetInt("content_browser_sorting");
+	}
+	sortingComboBox.SetSelected((int)current_sorting);
+	sortingComboBox.OnSelect([this](wi::gui::EventArgs args) {
+		current_sorting = (SORTING)args.iValue;
+		editor->main->config.GetSection("options").Set("content_browser_sorting", args.iValue);
+		editor->main->config.Commit();
+		if (current_selection != SELECTION_COUNT)
+		{
+			SetSelection(current_selection);
+		}
+	});
+	AddWidget(&sortingComboBox);
+
 	SetVisible(false);
 }
 
-static const float separator = 140;
+static constexpr float separator = 140; // width of the left selection folder buttons and sorting combobox
 void ContentBrowserWindow::Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const
 {
 	wi::gui::Window::Render(canvas, cmd);
@@ -123,9 +146,14 @@ void ContentBrowserWindow::Update(const wi::Canvas& canvas, float dt)
 void ContentBrowserWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
-	const float padding = 4;
+	constexpr float padding = 4;
 	const float width = GetWidgetAreaSize().x;
 	float y = padding;
+
+	sortingComboBox.Detach();
+	sortingComboBox.SetPos(XMFLOAT2(translation.x + separator + 10, translation.y + control_size + padding));
+	sortingComboBox.SetSize(XMFLOAT2(separator, 25));
+	sortingComboBox.AttachTo(this);
 
 	openFolderButton.Detach();
 	openFolderButton.SetPos(XMFLOAT2(translation.x + padding, translation.y + scale.y - openFolderButton.GetSize().y - padding));
@@ -145,7 +173,7 @@ void ContentBrowserWindow::ResizeLayout()
 			y += x.GetSize().y + padding;
 	}
 
-	y = padding + 10;
+	y = padding + 10 + 35;
 
 	float sep = separator + 10;
 	float hoffset = sep;
@@ -181,18 +209,18 @@ void ContentBrowserWindow::RefreshContent()
 
 	if (!editor->recentFilenames.empty())
 	{
-		wi::gui::Button& button = folderButtons[SELECTION_RECENT];
-		button.Create("Recently Used");
+		wi::gui::Button& button = folderButtons[SELECTION_ALL];
+		button.Create("All");
 		button.SetTooltip("List all recently used files, not grouped by folders.");
 		button.SetLocalizationEnabled(false);
 		button.SetSize(XMFLOAT2(wid, hei));
 		button.OnClick([this](wi::gui::EventArgs args) {
-			SetSelection(SELECTION_RECENT);
+			SetSelection(SELECTION_ALL);
 			});
 		AddWidget(&button, wi::gui::Window::AttachmentOptions::NONE);
 		if (current_selection == SELECTION_COUNT)
 		{
-			current_selection = SELECTION_RECENT;
+			current_selection = SELECTION_ALL;
 		}
 	}
 	if (wi::helper::DirectoryExists(content_folder + "models"))
@@ -237,7 +265,7 @@ void ContentBrowserWindow::RefreshContent()
 			folder.pop_back();
 		}
 
-		auto last_slash = folder.find_last_of("/\\");
+		const auto last_slash = folder.find_last_of("/\\");
 		if (last_slash != folder.npos) {
 			folder = folder.substr(last_slash);
 		}
@@ -260,15 +288,17 @@ void ContentBrowserWindow::RefreshContent()
 		SetSelection(current_selection);
 	}
 }
+
 void ContentBrowserWindow::SetSelection(SELECTION selection)
 {
-	wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+	wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this, selection](uint64_t userdata) {
 		current_selection = selection;
 		for (auto& x : itemButtons)
 		{
 			RemoveWidget(&x);
 		}
 		itemButtons.clear();
+		added_items.clear();
 
 		RemoveWidget(&openFolderButton);
 		openFolderButton.Create(ICON_OPEN " Go to location");
@@ -296,42 +326,42 @@ void ContentBrowserWindow::SetSelection(SELECTION selection)
 				});
 			AddWidget(&openFolderButton, wi::gui::Window::AttachmentOptions::NONE);
 			break;
-		case SELECTION_RECENT:
+		case SELECTION_ALL:
 			for (size_t i = 0; i < editor->recentFilenames.size(); ++i)
 			{
-				const std::string& filename = editor->recentFilenames[editor->recentFilenames.size() - 1 - i];
-				std::string ext = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(filename));
+				const std::string& fileName = editor->recentFilenames[editor->recentFilenames.size() - 1 - i];
+				std::string ext = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(fileName));
 				if (!ext.compare("LUA"))
 				{
-					AddItem(filename, ICON_SCRIPT);
+					AddItem(fileName, ICON_SCRIPT);
 				}
-				if (!ext.compare("WISCENE"))
+				else if (!ext.compare("WISCENE"))
 				{
-					AddItem(filename, ICON_OBJECT);
+					AddItem(fileName, ICON_OBJECT);
 				}
-				if (!ext.compare("VRMA"))
+				else if (!ext.compare("VRMA"))
 				{
-					AddItem(filename, ICON_ANIMATION);
+					AddItem(fileName, ICON_ANIMATION);
 				}
-				if (!ext.compare("VRM"))
+				else if (!ext.compare("VRM"))
 				{
-					AddItem(filename, ICON_HUMANOID);
+					AddItem(fileName, ICON_HUMANOID);
 				}
-				if (!ext.compare("GLTF"))
+				else if (!ext.compare("GLTF"))
 				{
-					AddItem(filename, ICON_OBJECT);
+					AddItem(fileName, ICON_OBJECT);
 				}
-				if (!ext.compare("GLB"))
+				else if (!ext.compare("GLB"))
 				{
-					AddItem(filename, ICON_OBJECT);
+					AddItem(fileName, ICON_OBJECT);
 				}
-				if (!ext.compare("FBX"))
+				else if (!ext.compare("FBX"))
 				{
-					AddItem(filename, ICON_OBJECT);
+					AddItem(fileName, ICON_OBJECT);
 				}
-				if (!ext.compare("OBJ"))
+				else if (!ext.compare("OBJ"))
 				{
-					AddItem(filename, ICON_OBJECT);
+					AddItem(fileName, ICON_OBJECT);
 				}
 			}
 			break;
@@ -356,6 +386,8 @@ void ContentBrowserWindow::SetSelection(SELECTION selection)
 			break;
 		}
 
+		SortAndCreateItemButtons();
+
 		for (auto& x : itemButtons)
 		{
 			AddWidget(&x);
@@ -365,60 +397,128 @@ void ContentBrowserWindow::SetSelection(SELECTION selection)
 
 	});
 }
+
 void ContentBrowserWindow::AddItems(const std::string& folder, const std::string& extension, const std::string& icon)
 {
 	// Folders parse:
-	wi::helper::GetFolderNamesInDirectory(folder, [&](std::string foldername) {
-		std::string itemname = foldername.substr(folder.size()) + "." + extension;
-		std::string filename = foldername + "/" + itemname;
-		if (wi::helper::FileExists(filename))
+	wi::helper::GetFolderNamesInDirectory(folder, [&](const std::string& folderName) {
+		const std::string itemName = folderName.substr(folder.size()) + "." + extension;
+		const std::string fileName = folderName + "/" + itemName;
+		if (wi::helper::FileExists(fileName))
 		{
-			AddItem(filename, icon);
+			AddItem(fileName, icon);
 		}
 	});
 
 	// Individual items:
-	wi::helper::GetFileNamesInDirectory(folder, [&](std::string filename) {
-		AddItem(filename, icon);
+	wi::helper::GetFileNamesInDirectory(folder, [&](const std::string& fileName) {
+		AddItem(fileName, icon);
 		}, extension);
 }
-void ContentBrowserWindow::AddItem(const std::string& filename, const std::string& icon)
-{
-	static const XMFLOAT2 siz = XMFLOAT2(240, 120);
 
-	if (!wi::helper::FileExists(filename))
+void ContentBrowserWindow::AddItem(const std::string& fileName, const std::string& icon)
+{
+	if (!wi::helper::FileExists(fileName))
 		return;
 
-	std::string itemname = wi::helper::GetFileNameFromPath(filename);
-	std::string foldername = wi::helper::GetDirectoryFromPath(filename);
-	std::string ext = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(filename));
+	for (const auto& item : added_items)
+	{
+		if (item.fileName == fileName)
+			return;
+	}
+
+	ItemInfo info;
+	info.fileName = fileName;
+	info.icon = icon;
+	info.file_size = wi::helper::FileSize(fileName);
+
+	// Find index in recent filenames list (lower - more recent)
+	info.recent_index = SIZE_MAX;
+	for (size_t i = 0; i < editor->recentFilenames.size(); ++i)
+	{
+		// Check from the end (most recent) to beginning
+		const size_t idx = editor->recentFilenames.size() - 1 - i;
+		if (editor->recentFilenames[idx] == fileName)
+		{
+			info.recent_index = i;
+			break;
+		}
+	}
+
+	added_items.push_back(info);
+}
+
+void ContentBrowserWindow::SortAndCreateItemButtons()
+{
+	switch (current_sorting)
+	{
+	case SORTING_RECENT:
+		std::stable_sort(added_items.begin(), added_items.end(), [](const ItemInfo& a, const ItemInfo& b) {
+			return a.recent_index < b.recent_index;
+		});
+		break;
+	case SORTING_NAME:
+		std::sort(added_items.begin(), added_items.end(), [](const ItemInfo& a, const ItemInfo& b) {
+			return wi::helper::toUpper(wi::helper::GetFileNameFromPath(a.fileName)) < wi::helper::toUpper(wi::helper::GetFileNameFromPath(b.fileName));
+		});
+		break;
+	case SORTING_PATH:
+		std::sort(added_items.begin(), added_items.end(), [](const ItemInfo& a, const ItemInfo& b) {
+			return wi::helper::toUpper(a.fileName) < wi::helper::toUpper(b.fileName);
+		});
+		break;
+	case SORTING_SIZE:
+		std::sort(added_items.begin(), added_items.end(), [](const ItemInfo& a, const ItemInfo& b) {
+			return a.file_size > b.file_size;
+		});
+		break;
+	default:
+		break;
+	}
+
+	for (const auto& item : added_items)
+	{
+		CreateItemButton(item.fileName, item.icon);
+	}
+}
+
+void ContentBrowserWindow::CreateItemButton(const std::string& fileName, const std::string& icon)
+{
+	static constexpr auto siz = XMFLOAT2(240, 120);
+
+	if (!wi::helper::FileExists(fileName))
+		return;
+
+	const std::string itemName = wi::helper::GetFileNameFromPath(fileName);
+	const std::string folderName = wi::helper::GetDirectoryFromPath(fileName);
+	const std::string extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(fileName));
 
 	wi::gui::Button& button = itemButtons.emplace_back();
 	button.Create(icon);
 	button.SetSize(siz);
 	button.SetLocalizationEnabled(false);
-	button.SetDescription(itemname);
-	button.OnClick([this, filename](wi::gui::EventArgs args) {
-		wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-			editor->Open(filename);
+	button.SetDescription(itemName);
+	button.OnClick([this, fileName](wi::gui::EventArgs args) {
+		wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this, fileName](uint64_t userdata) {
+			editor->Open(fileName);
 			});
 		this->SetVisible(false);
 		});
-	button.OnRightClick([this, filename](wi::gui::EventArgs args) {
-		wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+	button.OnRightClick([this, fileName](wi::gui::EventArgs args) {
+		wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this, fileName](uint64_t userdata) {
 			editor->NewScene();
-			editor->Open(filename);
+			editor->Open(fileName);
 			});
 		this->SetVisible(false);
 		});
 	button.font_description.params.h_align = wi::font::WIFALIGN_CENTER;
 	button.font_description.params.v_align = wi::font::WIFALIGN_TOP;
 	button.font.params.size = 42;
-	button.SetTooltip(filename + "\nSize: " + wi::helper::GetMemorySizeText(wi::helper::FileSize(filename)));
-	if (ext.compare("WISCENE") == 0)
+	button.SetTooltip(fileName + "\nSize: " + wi::helper::GetMemorySizeText(wi::helper::FileSize(fileName)));
+	if (extension.compare("WISCENE") == 0)
 	{
 		wi::Archive::Header archive_header;
-		wi::graphics::Texture archiveThumbnail = wi::Archive::PeekThumbnail(filename, &archive_header);
+		wi::graphics::Texture archiveThumbnail = wi::Archive::PeekThumbnail(fileName, &archive_header);
 		if (archiveThumbnail.IsValid())
 		{
 			for (int i = 0; i < arraysize(sprites); ++i)
@@ -431,7 +531,7 @@ void ContentBrowserWindow::AddItem(const std::string& filename, const std::strin
 	}
 	else
 	{
-		std::string thumbnailName = foldername + "/thumbnail.png";
+		std::string thumbnailName = folderName + "/thumbnail.png";
 		if (wi::helper::FileExists(thumbnailName))
 		{
 			wi::Resource thumbnail = wi::resourcemanager::Load(thumbnailName);
