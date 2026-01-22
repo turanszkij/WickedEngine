@@ -223,6 +223,7 @@ wiShaderdump.h
 *.a
 *.elf
 *.prx
+*.agsd
 
 # clangd
 .clangd

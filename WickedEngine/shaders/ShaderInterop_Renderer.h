@@ -1196,11 +1196,6 @@ struct ShaderEntityIterator
 	// This masks out inactive entities for the current bucket type when processing either the first or the last bucket in the list
 	inline uint mask_entity(uint bucket, uint bucket_bits)
 	{
-#if defined(__hlsl_dx_compiler) && __SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6
-		if (IsHelperLane()) // some kind of helper lane issue can get into here in shader model 6.6 and greater
-			return bucket_bits;
-#endif // defined(__hlsl_dx_compiler) && __SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6
-
 		if (bucket == first_bucket())
 			bucket_bits &= first_bucket_entity_mask();
 		if (bucket == last_bucket())

@@ -200,7 +200,7 @@ float3x3 adjoint(in float4x4 m)
 //	The shader compiler will take the defined name: WICKED_ENGINE_DEFAULT_ROOTSIGNATURE and use it as root signature
 //	If you wish to specify custom root signature, make sure that this define is not available
 //		(for example: not including this file, or using #undef WICKED_ENGINE_DEFAULT_ROOTSIGNATURE)
-#ifdef __hlsl_dx_compiler
+#if defined(__hlsl_dx_compiler) && !defined(__spirv__)
 #if __SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6
 // This version uses the newer HLSL6.6+ feature where heap can be indexed instead of dummy descriptor tables:
 #define WICKED_ENGINE_DEFAULT_ROOTSIGNATURE \
@@ -333,7 +333,7 @@ SamplerComparisonState sampler_cmp_depth : register(s109);
 
 // Direct heap indexing compatibility functions for HLSL6.6+:
 //	Note: on PS5 this feature is implemented in the preincluded HLSL_to_PSSL.h file
-#if defined(__hlsl_dx_compiler) && __SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6
+#if defined(__hlsl_dx_compiler) && !defined(__spirv__) && __SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6
 template<typename T>
 struct BindlessResource
 {
@@ -344,9 +344,9 @@ struct BindlessResource<SamplerState>
 {
 	SamplerState operator[](uint index) { return SamplerState(SamplerDescriptorHeap[index]); }
 };
-#endif // defined(__hlsl_dx_compiler) && __SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6
+#endif // defined(__hlsl_dx_compiler) && !defined(__spirv__) && __SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6
 
-#if defined(__PSSL__) || (defined(__hlsl_dx_compiler) && __SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6)
+#if defined(__PSSL__) || (defined(__hlsl_dx_compiler) && !defined(__spirv__) && __SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6)
 static const BindlessResource<SamplerState> bindless_samplers;
 static const BindlessResource<Texture2D> bindless_textures;
 static const BindlessResource<ByteAddressBuffer> bindless_buffers;
@@ -516,7 +516,7 @@ RWTexture2D<uint4> bindless_rwtextures_uint4[] : register(space115);
 
 #include "ShaderInterop_Renderer.h"
 
-#if defined(__PSSL__) || (defined(__hlsl_dx_compiler) && __SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6)
+#if defined(__PSSL__) || (defined(__hlsl_dx_compiler) && !defined(__spirv__) && __SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6)
 static const BindlessResource<StructuredBuffer<ShaderMeshInstance> > bindless_structured_meshinstance;
 static const BindlessResource<StructuredBuffer<ShaderGeometry> > bindless_structured_geometry;
 static const BindlessResource<StructuredBuffer<ShaderMeshlet> > bindless_structured_meshlet;
@@ -546,7 +546,7 @@ StructuredBuffer<ShaderMaterial> bindless_structured_material[] : register(space
 StructuredBuffer<uint> bindless_structured_uint[] : register(space206);
 StructuredBuffer<ShaderTerrainChunk> bindless_structured_terrain_chunks[] : register(space207);
 StructuredBuffer<DDGIProbe> bindless_structured_ddi_probes[] : register(space208);
-#endif // __spirv__
+#endif // defined(__PSSL__) || (defined(__hlsl_dx_compiler) && !defined(__spirv__) && __SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6)
 
 // Note: these are macros, the SPIRV compilation is a LOT slower and uses a LOT more memory when functions return large structs, issue: https://github.com/microsoft/DirectXShaderCompiler/issues/7493
 #define GetFrame() (g_xFrame)

@@ -407,6 +407,7 @@ int main(int argc, char* argv[])
 	*out << "\tdisable_optimization : \tShaders will be compiled without optimizations\n";
 	*out << "\tstrip_reflection : \tReflection will be stripped from shader binary to reduce file size\n";
 	*out << "\tshaderdump : \t\tShaders will be saved to wiShaderDump.h C++ header file (can be combined with \"rebuild\")\n";
+	*out << "\tdebuginfo : \t\tKeep symbol data for shader debugging\n";
 	*out << "\tquiet : \t\tOnly print errors\n";
 	*out << "\tsm6.1 : \t\tIncrease all compilations to shader model 6.1\n";
 	*out << "\tsm6.2 : \t\tIncrease all compilations to shader model 6.2\n";
@@ -463,6 +464,12 @@ int main(int argc, char* argv[])
 	{
 		compile_flags |= wi::shadercompiler::Flags::DISABLE_OPTIMIZATION;
 		*out << "disable_optimization ";
+	}
+
+	if (wi::arguments::HasArgument("debuginfo"))
+	{
+		compile_flags |= wi::shadercompiler::Flags::KEEP_DEBUG_INFORMATION;
+		*out << "debuginfo ";
 	}
 
 	if (wi::arguments::HasArgument("strip_reflection"))
