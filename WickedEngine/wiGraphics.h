@@ -1925,6 +1925,12 @@ namespace wi::graphics
 		return mips;
 	}
 
+	// Get mipmap count from a texture description (if the description specified 0 mipmaps then this will return the max allowed)
+	constexpr uint32_t GetMipCount(const TextureDesc& desc)
+	{
+		return desc.mip_levels == 0 ? GetMipCount(desc.width, desc.height, desc.depth) : desc.mip_levels;
+	}
+
 	// Returns the plane slice index for an aspect
 	constexpr uint32_t GetPlaneSlice(ImageAspect aspect)
 	{
@@ -1986,7 +1992,7 @@ namespace wi::graphics
 		size_t size = 0;
 		const uint32_t bytes_per_block = GetFormatStride(desc.format);
 		const uint32_t pixels_per_block = GetFormatBlockSize(desc.format);
-		const uint32_t mips = desc.mip_levels == 0 ? GetMipCount(desc.width, desc.height, desc.depth) : desc.mip_levels;
+		const uint32_t mips = GetMipCount(desc);
 		for (uint32_t layer = 0; layer < desc.array_size; ++layer)
 		{
 			for (uint32_t mip = 0; mip < mips; ++mip)
@@ -2003,12 +2009,19 @@ namespace wi::graphics
 		return size;
 	}
 
-	// Creates tightly packed texture SubresourceData array
-	inline void CreateTextureSubresourceDatas(const TextureDesc& desc, void* data_ptr, wi::vector<SubresourceData>& subresource_datas)
+	constexpr size_t GetTextureSubresourceCount(const TextureDesc& desc)
+	{
+		const uint32_t mips = GetMipCount(desc);
+		return desc.array_size * mips;
+	}
+
+	// Creates texture SubresourceData array
+	//	alignment	: it can be used to force GPU-specific rowpitch alignment for linear tile mode (in bytes)
+	inline void CreateTextureSubresourceDatas(const TextureDesc& desc, void* data_ptr, wi::vector<SubresourceData>& subresource_datas, uint32_t alignment = 1)
 	{
 		const uint32_t bytes_per_block = GetFormatStride(desc.format);
 		const uint32_t pixels_per_block = GetFormatBlockSize(desc.format);
-		const uint32_t mips = desc.mip_levels == 0 ? GetMipCount(desc.width, desc.height, desc.depth) : desc.mip_levels;
+		const uint32_t mips = GetMipCount(desc);
 		subresource_datas.resize(desc.array_size * mips);
 		size_t subresource_index = 0;
 		size_t subresource_data_offset = 0;
@@ -2023,7 +2036,7 @@ namespace wi::graphics
 				const uint32_t num_blocks_y = (mip_height + pixels_per_block - 1) / pixels_per_block;
 				SubresourceData& subresource_data = subresource_datas[subresource_index++];
 				subresource_data.data_ptr = (uint8_t*)data_ptr + subresource_data_offset;
-				subresource_data.row_pitch = (uint32_t)num_blocks_x * bytes_per_block; // the buffer is tightly packed, no padding in row pitch
+				subresource_data.row_pitch = align((uint32_t)num_blocks_x * bytes_per_block, alignment);
 				subresource_data.slice_pitch = (uint32_t)subresource_data.row_pitch * num_blocks_y;
 				subresource_data_offset += subresource_data.slice_pitch * mip_depth;
 			}
