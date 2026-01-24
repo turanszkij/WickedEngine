@@ -1510,16 +1510,14 @@ namespace wi::graphics
 		}
 		return 1u;
 	}
+
+	// Returns the byte size of one element for a given texture format
+	//	For uncompressed formats, element = pixel
+	//	For block compressed formats, element = block
 	constexpr uint32_t GetFormatStride(Format format)
 	{
 		switch (format)
 		{
-		case Format::BC1_UNORM:
-		case Format::BC1_UNORM_SRGB:
-		case Format::BC4_SNORM:
-		case Format::BC4_UNORM:
-			return 8u;
-
 		case Format::R32G32B32A32_FLOAT:
 		case Format::R32G32B32A32_UINT:
 		case Format::R32G32B32A32_SINT:
@@ -1545,12 +1543,14 @@ namespace wi::graphics
 		case Format::R16G16B16A16_UINT:
 		case Format::R16G16B16A16_SNORM:
 		case Format::R16G16B16A16_SINT:
-			return 8u;
-
 		case Format::R32G32_FLOAT:
 		case Format::R32G32_UINT:
 		case Format::R32G32_SINT:
 		case Format::D32_FLOAT_S8X24_UINT:
+		case Format::BC1_UNORM:
+		case Format::BC1_UNORM_SRGB:
+		case Format::BC4_SNORM:
+		case Format::BC4_UNORM:
 			return 8u;
 
 		case Format::R10G10B10A2_UNORM:
@@ -2009,7 +2009,7 @@ namespace wi::graphics
 		return size;
 	}
 
-	constexpr size_t GetTextureSubresourceCount(const TextureDesc& desc)
+	constexpr uint32_t GetTextureSubresourceCount(const TextureDesc& desc)
 	{
 		const uint32_t mips = GetMipCount(desc);
 		return desc.array_size * mips;
@@ -2022,7 +2022,7 @@ namespace wi::graphics
 		const uint32_t bytes_per_block = GetFormatStride(desc.format);
 		const uint32_t pixels_per_block = GetFormatBlockSize(desc.format);
 		const uint32_t mips = GetMipCount(desc);
-		subresource_datas.resize(desc.array_size * mips);
+		subresource_datas.resize(GetTextureSubresourceCount(desc));
 		size_t subresource_index = 0;
 		size_t subresource_data_offset = 0;
 		for (uint32_t layer = 0; layer < desc.array_size; ++layer)
