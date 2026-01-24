@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		1E79298D2EFE77ED00B9E35C /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1E79298C2EFE77ED00B9E35C /* main.mm */; };
 		1E79298F2EFE783B00B9E35C /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E79298E2EFE783B00B9E35C /* AppKit.framework */; };
+		1EBD1C112F2525E900C29B34 /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1EBD1C0F2F2525E900C29B34 /* GameController.framework */; };
 		1EDA80B52EE2C9BD00210D41 /* libWickedEngine.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1EDA80B42EE2C9BD00210D41 /* libWickedEngine.a */; };
 		1EDA82202EE3802C00210D41 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1EDA821F2EE3802C00210D41 /* Metal.framework */; };
 /* End PBXBuildFile section */
@@ -26,6 +27,7 @@
 /* Begin PBXFileReference section */
 		1E79298C2EFE77ED00B9E35C /* main.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
 		1E79298E2EFE783B00B9E35C /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
+		1EBD1C0F2F2525E900C29B34 /* GameController.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GameController.framework; path = System/Library/Frameworks/GameController.framework; sourceTree = SDKROOT; };
 		1EDA807B2EE2C1DB00210D41 /* Template_MacOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Template_MacOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EDA809E2EE2C5AD00210D41 /* WickedEngine.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = WickedEngine.xcodeproj; path = ../../WickedEngine/WickedEngine.xcodeproj; sourceTree = "<group>"; };
 		1EDA821F2EE3802C00210D41 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
@@ -38,6 +40,7 @@
 			files = (
 				1E79298F2EFE783B00B9E35C /* AppKit.framework in Frameworks */,
 				1EDA82202EE3802C00210D41 /* Metal.framework in Frameworks */,
+				1EBD1C112F2525E900C29B34 /* GameController.framework in Frameworks */,
 				1EDA80B52EE2C9BD00210D41 /* libWickedEngine.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -65,6 +68,7 @@
 		1EDA809D2EE2C5AD00210D41 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				1EBD1C0F2F2525E900C29B34 /* GameController.framework */,
 				1E79298E2EFE783B00B9E35C /* AppKit.framework */,
 				1EDA821F2EE3802C00210D41 /* Metal.framework */,
 				1EDA809E2EE2C5AD00210D41 /* WickedEngine.xcodeproj */,

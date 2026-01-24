@@ -3,6 +3,7 @@
 #include "wiXInput.h"
 #include "wiRawInput.h"
 #include "wiSDLInput.h"
+#include "wiInput_Apple.h"
 #include "wiHelper.h"
 #include "wiBacklog.h"
 #include "wiProfiler.h"
@@ -141,6 +142,7 @@ namespace wi::input
 			RAWINPUT,
 			SDLINPUT,
 			PS5,
+			APPLE,
 		};
 		DeviceType deviceType;
 		int deviceIndex;
@@ -161,6 +163,7 @@ namespace wi::input
 #endif // PLATFORM_PS5
 		
 #ifdef __APPLE__
+		wi::input::apple::Initialize();
 		wi::apple::CursorInit(cursor_table_original);
 #endif // __APPLE__
 
@@ -335,6 +338,37 @@ namespace wi::input
 				controllers[slot].deviceIndex = i;
 			}
 		}
+		
+		// Check if low-level Apple controller is not registered for playerindex slot and register:
+		for (int i = 0; i < wi::input::apple::GetMaxControllerCount(); ++i)
+		{
+			if (wi::input::apple::GetControllerState(nullptr, i))
+			{
+				int slot = -1;
+				for (int j = 0; j < (int)controllers.size(); ++j)
+				{
+					if (slot < 0 && controllers[j].deviceType == Controller::DISCONNECTED)
+					{
+						// take the first disconnected slot
+						slot = j;
+					}
+					if (controllers[j].deviceType == Controller::APPLE && controllers[j].deviceIndex == i)
+					{
+						// it is already registered to this slot
+						slot = j;
+						break;
+					}
+				}
+				if (slot == -1)
+				{
+					// no disconnected slot was found, and it was not registered
+					slot = (int)controllers.size();
+					controllers.emplace_back();
+				}
+				controllers[slot].deviceType = Controller::APPLE;
+				controllers[slot].deviceIndex = i;
+			}
+		}
 
 #ifdef PLATFORM_PS5
 		// Check if low-level PS5 controller is not registered for playerindex slot and register:
@@ -388,6 +422,9 @@ namespace wi::input
 #ifdef PLATFORM_PS5
 					connected = wi::input::ps5::GetControllerState(&controller.state, controller.deviceIndex);
 #endif // PLATFORM_PS5
+					break;
+				case Controller::APPLE:
+					connected = wi::input::apple::GetControllerState(&controller.state, controller.deviceIndex);
 					break;
 				case Controller::DISCONNECTED:
 					connected = false;

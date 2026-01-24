@@ -15,7 +15,6 @@
 Wicked Engine is an open-source 3D engine with modern graphics. Use this as a C++ framework for your graphics projects, a standalone 3D editor, LUA scripting or just for learning.<br/>
 
 - [Website](https://wickedengine.net/)<br/>
-- [Forum](https://wickedengine.net/forum/)<br/>
 - [Features](features.txt)<br/>
 - [Editor Manual](Content/Documentation/WickedEditor-Manual.pdf)<br/>
 - [C++ Documentation](Content/Documentation/WickedEngine-Documentation.md)<br/>
@@ -83,7 +82,7 @@ To build  the engine for Mac OS, use the provided .xcodeproj files with the Xcod
 - Editor/Editor.xcodeproj to build the Wicked Editor
 - Samples/Template_MacOS/Template_MacOS.xcodeproj to build a minimal template application for MacOS
 
-If you want to develop an application that uses Wicked Engine, you will have to link to libWickedEngine.a and `#include "WickedEngine.h"` into the source code. You also need to add references to the following Apple SDKs: `Metal`, `AppKit`. I also recommend to set up a custom working directory in the Product->Scheme->Edit Scheme->Options->custom working directory = `$(PROJECT_DIR)`, this will better match the development experience in Visual Studio. For examples, look at the Template_MacOS and Editor projects.
+If you want to develop an application that uses Wicked Engine, you will have to link to libWickedEngine.a and `#include "WickedEngine.h"` into the source code. You also need to add references to the following Apple SDKs: `Metal`, `AppKit`, `GameController`. I also recommend to set up a custom working directory in the Product->Scheme->Edit Scheme->Options->custom working directory = `$(PROJECT_DIR)`, this will better match the development experience in Visual Studio. For examples, look at the Template_MacOS and Editor projects.
 
 #### Xbox Series X|S
 Xbox Series specific extension files required for building are currently private.
