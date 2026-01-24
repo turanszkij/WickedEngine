@@ -2158,7 +2158,8 @@ void LoadShaders()
 									case RENDERPASS_RAINBLOCKER:
 									{
 										RenderPassInfo renderpass_info;
-										renderpass_info.rt_count = 0;
+										renderpass_info.rt_count = 1;
+										renderpass_info.rt_formats[0] = format_rendertarget_shadowmap; // Note: crash on Apple when rendertarget format is not set while renderpass has rendertarget (even though we do't use pixel shader for these)
 										renderpass_info.ds_format = format_depthbuffer_shadowmap;
 										PipelineState pso;
 										device->CreatePipelineState(&desc, &pso, &renderpass_info);
@@ -6021,7 +6022,7 @@ void DrawSoftParticles(
 )
 {
 	size_t emitterCount = vis.visibleEmitters.size();
-	if (emitterCount == 0)
+	if (emitterCount == 0 && vis.scene->weather.rain_amount == 0)
 		return;
 	
 	auto range = distortion ?
