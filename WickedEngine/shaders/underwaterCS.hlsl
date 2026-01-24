@@ -41,7 +41,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		color = input.SampleLevel(sampler_linear_mirror, uv, 0);
 #endif
 
-		const float depth = texture_depth[DTid.xy];
+		const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 0);
 		float3 surface_position = reconstruct_position(uv, depth);
 
 		const float3 V = normalize(GetCamera().position.xyz - unproj.xyz);
