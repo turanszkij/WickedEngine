@@ -80,7 +80,7 @@ constexpr float deadzone(float x)
 
 constexpr uint64_t buttonToBit(int button)
 {
-	return 1ULL << (button - GAMEPAD_RANGE_START - 1);
+	return 1ull << (button - GAMEPAD_RANGE_START - 1);
 }
 bool GetControllerState(wi::input::ControllerState* state, int index)
 {
@@ -137,9 +137,9 @@ void SetControllerFeedback(const wi::input::ControllerFeedback& data, int index)
 
 }
 #else
-namespace wi::input::xinput
+namespace wi::input::apple
 {
-	void Update() {}
+	void Initialize() {}
 	int GetMaxControllerCount() { return 0; }
 	bool GetControllerState(wi::input::ControllerState* state, int index) { return false; }
 	void SetControllerFeedback(const wi::input::ControllerFeedback& data, int index) {}
