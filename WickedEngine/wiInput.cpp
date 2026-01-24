@@ -3,7 +3,6 @@
 #include "wiXInput.h"
 #include "wiRawInput.h"
 #include "wiSDLInput.h"
-#include "wiInput_Apple.h"
 #include "wiHelper.h"
 #include "wiBacklog.h"
 #include "wiProfiler.h"
@@ -27,6 +26,7 @@
 #endif // PLATFORM_PS5
 
 #ifdef __APPLE__
+#include "wiInput_Apple.h"
 #include <ApplicationServices/ApplicationServices.h>
 #include <Carbon/Carbon.h>
 namespace wi::input::apple
@@ -338,7 +338,8 @@ namespace wi::input
 				controllers[slot].deviceIndex = i;
 			}
 		}
-		
+
+#ifdef __APPLE__
 		// Check if low-level Apple controller is not registered for playerindex slot and register:
 		for (int i = 0; i < wi::input::apple::GetMaxControllerCount(); ++i)
 		{
@@ -369,6 +370,7 @@ namespace wi::input
 				controllers[slot].deviceIndex = i;
 			}
 		}
+#endif // __APPLE__
 
 #ifdef PLATFORM_PS5
 		// Check if low-level PS5 controller is not registered for playerindex slot and register:
@@ -424,7 +426,9 @@ namespace wi::input
 #endif // PLATFORM_PS5
 					break;
 				case Controller::APPLE:
+#ifdef __APPLE__
 					connected = wi::input::apple::GetControllerState(&controller.state, controller.deviceIndex);
+#endif // __APPLE__
 					break;
 				case Controller::DISCONNECTED:
 					connected = false;

@@ -136,12 +136,4 @@ void SetControllerFeedback(const wi::input::ControllerFeedback& data, int index)
 }
 
 }
-#else
-namespace wi::input::apple
-{
-	void Initialize() {}
-	int GetMaxControllerCount() { return 0; }
-	bool GetControllerState(wi::input::ControllerState* state, int index) { return false; }
-	void SetControllerFeedback(const wi::input::ControllerFeedback& data, int index) {}
-}
 #endif // __APPLE__
