@@ -1699,11 +1699,8 @@ using namespace metal_internal;
 		
 		const bool sparse = has_flag(desc->misc_flags, ResourceMiscFlag::SPARSE);
 		const bool aliasing_storage = has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_BUFFER) || has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_NON_RT_DS) || has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_RT_DS);
-		
-		if (texture->desc.mip_levels == 0)
-		{
-			texture->desc.mip_levels = GetMipCount(texture->desc.width, texture->desc.height, texture->desc.depth);
-		}
+
+		texture->desc.mip_levels = GetMipCount(texture->desc);
 		
 		NS::SharedPtr<MTL::TextureDescriptor> descriptor = NS::TransferPtr(MTL::TextureDescriptor::alloc()->init());
 		descriptor->setWidth(desc->width);
@@ -1938,7 +1935,7 @@ using namespace metal_internal;
 				uint32_t width = desc->width;
 				uint32_t height = desc->height;
 				uint32_t depth = desc->depth;
-				for (uint32_t mip = 0; mip < desc->mip_levels; ++mip)
+				for (uint32_t mip = 0; mip < texture->desc.mip_levels; ++mip)
 				{
 					const SubresourceData& subresourceData = initial_data[initDataIdx++];
 					const uint32_t block_size = GetFormatBlockSize(desc->format);

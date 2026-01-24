@@ -17363,7 +17363,7 @@ void CreateFSR2Resources(FSR2Resources& res, XMUINT2 render_resolution, XMUINT2 
 	desc.width = render_resolution.x / 2;
 	desc.height = render_resolution.y / 2;
 	desc.format = Format::R16_FLOAT;
-	desc.mip_levels = 0;
+	desc.mip_levels = GetMipCount(desc.width, desc.height);
 	success = device->CreateTexture(&desc, nullptr, &res.luminance_current);
 	assert(success);
 	device->SetName(&res.luminance_current, "fsr2::luminance_current");

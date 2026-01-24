@@ -169,7 +169,7 @@ namespace wi
 		tex_desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 
 		tex_desc.format = Format::R16G16B16A16_FLOAT;
-		tex_desc.mip_levels = 0;
+		tex_desc.mip_levels = GetMipCount(tex_desc.width, tex_desc.height);
 		tex_desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 		device->CreateTexture(&tex_desc, nullptr, &gradientMap);
 		device->SetName(&gradientMap, "gradientMap");

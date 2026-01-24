@@ -3471,6 +3471,8 @@ std::mutex queue_locker;
 
 		bool require_format_casting = has_flag(desc->misc_flags, ResourceMiscFlag::TYPED_FORMAT_CASTING);
 
+		texture->desc.mip_levels = GetMipCount(texture->desc);
+
 		HRESULT hr = E_FAIL;
 
 		D3D12MA::ALLOCATION_DESC allocationDesc = {};
@@ -3480,7 +3482,7 @@ std::mutex queue_locker;
 		resourcedesc.Format = _ConvertFormat(desc->format);
 		resourcedesc.Width = desc->width;
 		resourcedesc.Height = desc->height;
-		resourcedesc.MipLevels = desc->mip_levels;
+		resourcedesc.MipLevels = texture->desc.mip_levels;
 		resourcedesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
 		resourcedesc.DepthOrArraySize = (UINT16)desc->array_size;
 		resourcedesc.SampleDesc.Count = desc->sample_count;
@@ -3573,13 +3575,8 @@ std::mutex queue_locker;
 			resourceState = D3D12_RESOURCE_STATE_COMMON;
 		}
 
-		if (texture->desc.mip_levels == 0)
-		{
-			texture->desc.mip_levels = GetMipCount(texture->desc.width, texture->desc.height, texture->desc.depth);
-		}
-
 		internal_state->total_size = 0;
-		internal_state->footprints.resize(desc->array_size * std::max(1u, desc->mip_levels));
+		internal_state->footprints.resize(GetTextureSubresourceCount(texture->desc));
 		internal_state->rowSizesInBytes.resize(internal_state->footprints.size());
 		internal_state->numRows.resize(internal_state->footprints.size());
 		device->GetCopyableFootprints(

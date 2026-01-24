@@ -4172,10 +4172,7 @@ using namespace vulkan_internal;
 		texture->sparse_properties = nullptr;
 		texture->desc = *desc;
 
-		if (texture->desc.mip_levels == 0)
-		{
-			texture->desc.mip_levels = GetMipCount(texture->desc.width, texture->desc.height, texture->desc.depth);
-		}
+		texture->desc.mip_levels = GetMipCount(texture->desc);
 
 		VkImageCreateInfo imageInfo = {};
 		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -4421,7 +4418,7 @@ using namespace vulkan_internal;
 					texture->mapped_data = internal_state->allocation->GetMappedData();
 					texture->mapped_size = internal_state->allocation->GetSize();
 
-					CreateTextureSubresourceDatas(*desc, texture->mapped_data, internal_state->mapped_subresources);
+					CreateTextureSubresourceDatas(*desc, texture->mapped_data, internal_state->mapped_subresources, (uint32_t)properties2.properties.limits.optimalBufferCopyRowPitchAlignment);
 					texture->mapped_subresources = internal_state->mapped_subresources.data();
 					texture->mapped_subresource_count = internal_state->mapped_subresources.size();
 				}
@@ -4537,7 +4534,7 @@ using namespace vulkan_internal;
 				uint32_t width = imageInfo.extent.width;
 				uint32_t height = imageInfo.extent.height;
 				uint32_t depth = imageInfo.extent.depth;
-				for (uint32_t mip = 0; mip < desc->mip_levels; ++mip)
+				for (uint32_t mip = 0; mip < texture->desc.mip_levels; ++mip)
 				{
 					const SubresourceData& subresourceData = initial_data[initDataIdx++];
 					const uint32_t num_blocks_x = std::max(1u, width / block_size);

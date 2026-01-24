@@ -790,7 +790,7 @@ namespace wi::video
 				td.format = Format::R8G8B8A8_UNORM;
 				if (has_flag(instance->flags, VideoInstance::Flags::Mipmapped))
 				{
-					td.mip_levels = 0; // max mipcount
+					td.mip_levels = GetMipCount(td.width, td.height);
 				}
 				td.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
 				td.misc_flags = ResourceMiscFlag::TYPED_FORMAT_CASTING;

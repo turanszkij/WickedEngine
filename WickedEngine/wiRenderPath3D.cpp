@@ -2580,7 +2580,7 @@ namespace wi
 				desc.height = camera.render_to_texture.resolution.y;
 				desc.format = wi::renderer::format_rendertarget_main;
 				desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-				desc.mip_levels = 0;
+				desc.mip_levels = GetMipCount(desc.width, desc.height);
 				bool success = device->CreateTexture(&desc, nullptr, &camera.render_to_texture.rendertarget_render);
 				assert(success);
 				device->SetName(&camera.render_to_texture.rendertarget_render, "CameraComponent::RenderToTexture::rendertarget_render");
