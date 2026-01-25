@@ -1173,6 +1173,12 @@ namespace wi::input
 			{
 				wi::input::sdlinput::SetControllerFeedback(data, controller.deviceIndex);
 			}
+#ifdef __APPLE__
+			else if (controller.deviceType == Controller::APPLE)
+			{
+				wi::input::apple::SetControllerFeedback(data, controller.deviceIndex);
+			}
+#endif // __APPLE__
 #ifdef PLATFORM_PS5
 			else if (controller.deviceType == Controller::PS5)
 			{

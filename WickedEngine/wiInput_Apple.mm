@@ -8,8 +8,8 @@
 
 namespace wi::input::apple
 {
-static GCController* controllers[8] = {};
 static std::mutex locker;
+static GCController* controllers[8] = {};
 
 void Initialize()
 {
@@ -132,7 +132,19 @@ bool GetControllerState(wi::input::ControllerState* state, int index)
 
 void SetControllerFeedback(const wi::input::ControllerFeedback& data, int index)
 {
-	// TODO vibration
+	std::scoped_lock lck(locker);
+	if (index < 0 || index >= arraysize(controllers))
+		return;
+
+	GCController* controller = controllers[index];
+	if (controller == nullptr)
+		return;
+	
+	if (controller.light)
+	{
+		XMFLOAT3 color = data.led_color.toFloat3();
+		controller.light.color = [[GCColor alloc] initWithRed:color.x green:color.y blue:color.z];
+	}
 }
 
 }
