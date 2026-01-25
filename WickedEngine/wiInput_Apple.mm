@@ -1,4 +1,3 @@
-#ifdef __APPLE__
 #include "wiInput_Apple.h"
 
 #import <Cocoa/Cocoa.h>
@@ -145,7 +144,8 @@ void SetControllerFeedback(const wi::input::ControllerFeedback& data, int index)
 		XMFLOAT3 color = data.led_color.toFloat3();
 		controller.light.color = [[GCColor alloc] initWithRed:color.x green:color.y blue:color.z];
 	}
+	
+	// TODO: vibration
 }
 
 }
-#endif // __APPLE__
