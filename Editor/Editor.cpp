@@ -547,6 +547,15 @@ void EditorComponent::Load()
 	loadmodel_font.params.v_align = wi::font::WIFALIGN_TOP;
 	AddFont(&loadmodel_font);
 
+	terrain_generation_font.SetText("Generating terrain...");
+	terrain_generation_font.anim.typewriter.time = 2;
+	terrain_generation_font.anim.typewriter.looped = true;
+	terrain_generation_font.anim.typewriter.character_start = 19;
+	terrain_generation_font.params.size = 22;
+	terrain_generation_font.params.h_align = wi::font::WIFALIGN_LEFT;
+	terrain_generation_font.params.v_align = wi::font::WIFALIGN_TOP;
+	AddFont(&terrain_generation_font);
+
 	topmenuWnd.Create("", wi::gui::Window::WindowControls::NONE);
 	topmenuWnd.SetShadowRadius(2);
 	GetGUI().AddWidget(&topmenuWnd);
@@ -1618,6 +1627,25 @@ void EditorComponent::Update(float dt)
 	}
 
 	loadmodel_font.SetHidden(!wi::jobsystem::IsBusy(loadmodel_workload));
+
+	bool terrain_generating = false;
+	for (size_t i = 0; i < GetCurrentScene().terrains.GetCount(); ++i)
+	{
+		if (GetCurrentScene().terrains[i].IsGenerationBusy())
+		{
+			terrain_generating = true;
+			break;
+		}
+	}
+	if (terrain_generating)
+	{
+		terrain_generation_font_timeout = 0.5f;
+	}
+	else
+	{
+		terrain_generation_font_timeout -= dt;
+	}
+	terrain_generation_font.SetHidden(terrain_generation_font_timeout <= 0);
 
 	Scene& scene = GetCurrentScene();
 	EditorScene& editorscene = GetCurrentEditorScene();
@@ -4887,9 +4915,14 @@ void EditorComponent::ResizeViewport3D()
 		main->infoDisplay.rect.from_viewport(viewport3D);
 		main->infoDisplay.rect.left = LogicalToPhysical(generalButton.translation_local.x + generalButton.scale_local.x + 10);
 	}
+
 	loadmodel_font.params.posX = PhysicalToLogical(uint32_t(viewport3D.top_left_x + viewport3D.width * 0.5f));
 	loadmodel_font.params.posX -= wi::font::TextWidth(loadmodel_font.GetText(), loadmodel_font.params) * 0.5f;
 	loadmodel_font.params.posY = PhysicalToLogical(uint32_t(viewport3D.top_left_y)) + 15;
+
+	terrain_generation_font.params.posX = PhysicalToLogical(uint32_t(viewport3D.top_left_x + viewport3D.width * 0.5f));
+	terrain_generation_font.params.posX -= wi::font::TextWidth(terrain_generation_font.GetText(), terrain_generation_font.params) * 0.5f;
+	terrain_generation_font.params.posY = PhysicalToLogical(uint32_t(viewport3D.top_left_y)) + 45;
 
 	viewport3D_hitbox = Hitbox2D(
 		XMFLOAT2(PhysicalToLogical(uint32_t(viewport3D.top_left_x)), PhysicalToLogical(uint32_t(viewport3D.top_left_y))),

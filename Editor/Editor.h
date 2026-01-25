@@ -269,6 +269,8 @@ public:
 
 	wi::jobsystem::context loadmodel_workload;
 	wi::SpriteFont loadmodel_font;
+	wi::SpriteFont terrain_generation_font;
+	float terrain_generation_font_timeout = 0;
 
 	wi::TrailRenderer spline_renderer;
 };

@@ -353,6 +353,8 @@ namespace wi::terrain
 		void Generation_Update(const wi::scene::CameraComponent& camera);
 		// Tells the generation thread that it should be cancelled and blocks until that is confirmed
 		void Generation_Cancel();
+		// Check if the terrain generation is currently busy (running in background)
+		bool IsGenerationBusy() const;
 		// Creates the textures for a chunk data
 		void CreateChunkRegionTexture(ChunkData& chunk_data);
 

@@ -1464,6 +1464,13 @@ namespace wi::terrain
 		generator->cancelled.store(false); // the next generation can run
 	}
 
+	bool Terrain::IsGenerationBusy() const
+	{
+		if (generator == nullptr)
+			return false;
+		return wi::jobsystem::IsBusy(generator->workload);
+	}
+
 	void Terrain::CreateChunkRegionTexture(ChunkData& chunk_data)
 	{
 		GraphicsDevice* device = GetDevice();
