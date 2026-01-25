@@ -11,6 +11,7 @@
 		1E640FC92F0AE1C3003D9FC7 /* libWickedEngine.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E640FC22F0AE07B003D9FC7 /* libWickedEngine.a */; };
 		1E640FD02F0AE275003D9FC7 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E640FCF2F0AE275003D9FC7 /* Metal.framework */; };
 		1E640FD42F0AE282003D9FC7 /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E640FD32F0AE282003D9FC7 /* AppKit.framework */; };
+		1EBD1C0D2F2525BD00C29B34 /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1EBD1C0B2F2525BD00C29B34 /* GameController.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -41,6 +42,7 @@
 		1E640FBD2F0AE07B003D9FC7 /* WickedEngine.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = WickedEngine.xcodeproj; sourceTree = "<group>"; };
 		1E640FCF2F0AE275003D9FC7 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
 		1E640FD32F0AE282003D9FC7 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
+		1EBD1C0B2F2525BD00C29B34 /* GameController.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GameController.framework; path = System/Library/Frameworks/GameController.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -50,6 +52,7 @@
 			files = (
 				1E640FD02F0AE275003D9FC7 /* Metal.framework in Frameworks */,
 				1E640FD42F0AE282003D9FC7 /* AppKit.framework in Frameworks */,
+				1EBD1C0D2F2525BD00C29B34 /* GameController.framework in Frameworks */,
 				1E640FC92F0AE1C3003D9FC7 /* libWickedEngine.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -77,6 +80,7 @@
 		1E640FBC2F0AE07B003D9FC7 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				1EBD1C0B2F2525BD00C29B34 /* GameController.framework */,
 				1E640FD32F0AE282003D9FC7 /* AppKit.framework */,
 				1E640FCF2F0AE275003D9FC7 /* Metal.framework */,
 				1E640FBD2F0AE07B003D9FC7 /* WickedEngine.xcodeproj */,

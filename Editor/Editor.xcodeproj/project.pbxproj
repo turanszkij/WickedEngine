@@ -65,6 +65,7 @@
 		1E73E7142F0510C10090D1DA /* main_MacOS.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E7132F0510B40090D1DA /* main_MacOS.mm */; };
 		1E73E7392F0513710090D1DA /* libWickedEngine.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E73E7382F0513620090D1DA /* libWickedEngine.a */; };
 		1E73E7552F053DBE0090D1DA /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E73E7532F053DBE0090D1DA /* Metal.framework */; };
+		1EBD1C072F251B7E00C29B34 /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1EBD1C052F251B7E00C29B34 /* GameController.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -225,6 +226,7 @@
 		1E73E74D2F053DAB0090D1DA /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
 		1E73E7512F053DB80090D1DA /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		1E73E7532F053DBE0090D1DA /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
+		1EBD1C052F251B7E00C29B34 /* GameController.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GameController.framework; path = System/Library/Frameworks/GameController.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -232,6 +234,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1EBD1C072F251B7E00C29B34 /* GameController.framework in Frameworks */,
 				1E640FDB2F0AE648003D9FC7 /* AppKit.framework in Frameworks */,
 				1E73E7392F0513710090D1DA /* libWickedEngine.a in Frameworks */,
 				1E73E7552F053DBE0090D1DA /* Metal.framework in Frameworks */,
@@ -406,6 +409,7 @@
 		1E73E7162F0511130090D1DA /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				1EBD1C052F251B7E00C29B34 /* GameController.framework */,
 				1E73E7532F053DBE0090D1DA /* Metal.framework */,
 				1E73E7512F053DB80090D1DA /* Foundation.framework */,
 				1E73E74D2F053DAB0090D1DA /* AppKit.framework */,
