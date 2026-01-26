@@ -159,6 +159,10 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
 struct PrimitiveAttributes
 {
+#if defined(OBJECTSHADER_USE_INSTANCEINDEX) || defined(OBJECTSHADER_USE_DITHERING) || defined(OBJECTSHADER_USE_CAMERAINDEX)
+	uint poi : INSTANCEPOINTER;
+#endif // OBJECTSHADER_USE_INSTANCEINDEX || OBJECTSHADER_USE_DITHERING || OBJECTSHADER_USE_CAMERAINDEX
+
 #if defined(OBJECTSHADER_LAYOUT_PREPASS) || defined(OBJECTSHADER_LAYOUT_PREPASS_TEX)
 	uint primitiveID : PRIMITIVEID;
 #endif // defined(OBJECTSHADER_LAYOUT_PREPASS) || defined(OBJECTSHADER_LAYOUT_PREPASS_TEX)
@@ -178,10 +182,10 @@ void main(
 	uint DTid : SV_DispatchThreadID,
 	uint Gid : SV_GroupID,
 	uint groupIndex : SV_GroupIndex,
-    in payload AmplificationPayload amplification_payload,
-	out vertices PixelInput verts[MESHLET_VERTEX_COUNT],
-	out indices uint3 triangles[MESHLET_TRIANGLE_COUNT]
-#if defined(OBJECTSHADER_LAYOUT_PREPASS) || defined(OBJECTSHADER_LAYOUT_PREPASS_TEX) || defined(OBJECTSHADER_USE_RENDERTARGETARRAYINDEX) || defined(OBJECTSHADER_USE_VIEWPORTARRAYINDEX)
+	in payload AmplificationPayload amplification_payload,
+	out indices uint3 triangles[MESHLET_TRIANGLE_COUNT],
+	out vertices PixelInput verts[MESHLET_VERTEX_COUNT]
+#if defined(OBJECTSHADER_LAYOUT_PREPASS) || defined(OBJECTSHADER_LAYOUT_PREPASS_TEX) || defined(OBJECTSHADER_USE_INSTANCEINDEX) || defined(OBJECTSHADER_USE_DITHERING) || defined(OBJECTSHADER_USE_RENDERTARGETARRAYINDEX) || defined(OBJECTSHADER_USE_VIEWPORTARRAYINDEX)
 	,out primitives PrimitiveAttributes primitives[MESHLET_TRIANGLE_COUNT]
 #endif
 	)
@@ -210,6 +214,14 @@ void main(
 	{
 		triangles[ti] = cluster.triangles[ti].tri();
 		
+#if defined(OBJECTSHADER_USE_INSTANCEINDEX) || defined(OBJECTSHADER_USE_DITHERING) || defined(OBJECTSHADER_USE_CAMERAINDEX)
+		primitives[ti].poi = poi.data;
+#endif // defined(OBJECTSHADER_USE_INSTANCEINDEX) || defined(OBJECTSHADER_USE_DITHERING) || defined(OBJECTSHADER_USE_CAMERAINDEX)
+		
+#if defined(OBJECTSHADER_LAYOUT_PREPASS) || defined(OBJECTSHADER_LAYOUT_PREPASS_TEX)
+		primitives[ti].primitiveID = (meshletID - geometry.meshletOffset) * MESHLET_TRIANGLE_COUNT + ti + geometry.indexOffset / 3;
+#endif // defined(OBJECTSHADER_LAYOUT_PREPASS) || defined(OBJECTSHADER_LAYOUT_PREPASS_TEX)
+		
 #ifdef OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
 		primitives[ti].RTIndex = GetCameraIndexed(frustum_index).output_index;
 #endif // OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
@@ -217,10 +229,6 @@ void main(
 #ifdef OBJECTSHADER_USE_VIEWPORTARRAYINDEX
 		primitives[ti].VPIndex = GetCameraIndexed(frustum_index).output_index;
 #endif // OBJECTSHADER_USE_VIEWPORTARRAYINDEX
-		
-#if defined(OBJECTSHADER_LAYOUT_PREPASS) || defined(OBJECTSHADER_LAYOUT_PREPASS_TEX)
-		primitives[ti].primitiveID = (meshletID - geometry.meshletOffset) * MESHLET_TRIANGLE_COUNT + ti + geometry.indexOffset / 3;
-#endif // defined(OBJECTSHADER_LAYOUT_PREPASS) || defined(OBJECTSHADER_LAYOUT_PREPASS_TEX)
 
 	}
 }
