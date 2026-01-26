@@ -743,19 +743,10 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)objectVS_prepass_tessellation.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)objectVS_prepass_alphatest_tessellation.hlsl">
-      <Filter>VS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)objectHS_prepass.hlsl">
       <Filter>HS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)objectHS_prepass_alphatest.hlsl">
-      <Filter>HS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)objectDS_prepass.hlsl">
-      <Filter>DS</Filter>
-    </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)objectDS_prepass_alphatest.hlsl">
       <Filter>DS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)screenspaceshadowCS.hlsl">

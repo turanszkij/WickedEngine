@@ -330,7 +330,6 @@ wi::vector<ShaderEntry> shaders = {
 	{"objectVS_prepass", wi::graphics::ShaderStage::VS },
 	{"objectVS_prepass_alphatest", wi::graphics::ShaderStage::VS },
 	{"objectVS_prepass_tessellation", wi::graphics::ShaderStage::VS },
-	{"objectVS_prepass_alphatest_tessellation", wi::graphics::ShaderStage::VS },
 	{"objectVS_simple_tessellation", wi::graphics::ShaderStage::VS },
 	{"shadowVS", wi::graphics::ShaderStage::VS },
 	{"shadowVS_alphatest", wi::graphics::ShaderStage::VS },
@@ -342,13 +341,11 @@ wi::vector<ShaderEntry> shaders = {
 
 	{"objectDS", wi::graphics::ShaderStage::DS },
 	{"objectDS_prepass", wi::graphics::ShaderStage::DS },
-	{"objectDS_prepass_alphatest", wi::graphics::ShaderStage::DS },
 	{"objectDS_simple", wi::graphics::ShaderStage::DS },
 
 
 	{"objectHS", wi::graphics::ShaderStage::HS },
 	{"objectHS_prepass", wi::graphics::ShaderStage::HS },
-	{"objectHS_prepass_alphatest", wi::graphics::ShaderStage::HS },
 	{"objectHS_simple", wi::graphics::ShaderStage::HS },
 
 	{"emittedparticleMS", wi::graphics::ShaderStage::MS },
