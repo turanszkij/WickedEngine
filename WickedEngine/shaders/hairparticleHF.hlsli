@@ -10,11 +10,11 @@
 struct VertexToPixel
 {
 	precise float4 pos : SV_POSITION;
-	float clip : SV_ClipDistance0;
 	float2 tex : TEXCOORD;
-	nointerpolation float fade : DITHERFADE;
-	uint primitiveID : PRIMITIVEID;
 	half4 nor_wet : NORMAL_WET;
+	float clip : SV_ClipDistance0;
+	nointerpolation float fade : DITHERFADE;
+	nointerpolation uint primitiveID : PRIMITIVEID;
 	
 	inline float3 GetPos3D()
 	{

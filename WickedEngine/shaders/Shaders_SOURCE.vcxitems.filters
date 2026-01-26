@@ -1136,15 +1136,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)crt_screenCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)objectPS_prepass_tessellation.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)objectPS_prepass_alphatest_tessellation.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)objectPS_prepass_depthonly_alphatest_tessellation.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop.h">

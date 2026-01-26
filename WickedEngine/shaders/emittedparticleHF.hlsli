@@ -10,9 +10,9 @@
 struct VertextoPixel
 {
 	float4 pos : SV_POSITION;
-	float clip : SV_ClipDistance0;
 	float4 tex : TEXCOORD0;
 	half2 unrotated_uv : UNROTATED_UV;
+	float clip : SV_ClipDistance0;
 	nointerpolation half frameBlend : FRAMEBLEND;
 	nointerpolation half size : PARTICLESIZE;
 	nointerpolation uint color : PARTICLECOLOR;

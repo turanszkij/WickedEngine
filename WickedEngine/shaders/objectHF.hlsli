@@ -311,6 +311,25 @@ struct PixelInput
 {
 	precise float4 pos : SV_Position;
 
+#ifdef OBJECTSHADER_USE_COLOR
+	half4 color : COLOR;
+#endif // OBJECTSHADER_USE_COLOR
+	
+#ifndef OBJECTSHADER_COMPILE_MS // Per-primitive params are handled separately by mesh shader
+#if defined(OBJECTSHADER_USE_INSTANCEINDEX) || defined(OBJECTSHADER_USE_DITHERING) || defined(OBJECTSHADER_USE_CAMERAINDEX)
+	uint poi : INSTANCEPOINTER;
+#endif // OBJECTSHADER_USE_INSTANCEINDEX || OBJECTSHADER_USE_DITHERING || OBJECTSHADER_USE_CAMERAINDEX
+
+#if defined(PREPASS)
+	uint primitiveID : PRIMITIVEID;
+#endif // defined(PREPASS)
+#endif // OBJECTSHADER_COMPILE_MS
+
+#ifdef OBJECTSHADER_USE_COMMON
+	float2 atl : ATLAS;
+	half2 ao_wet : COMMON;
+#endif // OBJECTSHADER_USE_COMMON
+
 #ifdef OBJECTSHADER_USE_UVSETS
 	float4 uvsets : UVSETS;
 #endif // OBJECTSHADER_USE_UVSETS
@@ -319,42 +338,28 @@ struct PixelInput
 	float4 tan : TANGENT;
 #endif // OBJECTSHADER_USE_TANGENT
 
+// Reminder: NORMAL is used by all tessellation shaders for PN-triangle smoothing, but it will be stripped from pixel shader in prepass, so anything that will be needed in
+//	both tessellation and pixel shaders can not be put after NORMAL!
 #ifdef OBJECTSHADER_USE_NORMAL
 	float3 nor : NORMAL;
 #endif // OBJECTSHADER_USE_NORMAL
 
+// Reminder: SV_ClipDistance0 is not required in pixel shader, so it can be stripped out even though it is still used by rasterizer
+#ifndef OBJECTSHADER_COMPILE_PS
 #ifdef OBJECTSHADER_USE_CLIPPLANE
 	float clip : SV_ClipDistance0;
 #endif // OBJECTSHADER_USE_CLIPPLANE
+#endif // OBJECTSHADER_COMPILE_PS
 
-#ifdef OBJECTSHADER_USE_COMMON
-	half2 ao_wet : COMMON;
-	float2 atl : ATLAS;
-#endif // OBJECTSHADER_USE_COMMON
-
-#ifdef OBJECTSHADER_USE_COLOR
-	half4 color : COLOR;
-#endif // OBJECTSHADER_USE_COLOR
-
-// Per-primitive attribute storage below this (for mesh shader these are exported separately):
-#ifndef OBJECTSHADER_COMPILE_MS
-
-#if defined(OBJECTSHADER_USE_INSTANCEINDEX) || defined(OBJECTSHADER_USE_DITHERING) || defined(OBJECTSHADER_USE_CAMERAINDEX)
-	uint poi : INSTANCEPOINTER;
-#endif // OBJECTSHADER_USE_INSTANCEINDEX || OBJECTSHADER_USE_DITHERING || OBJECTSHADER_USE_CAMERAINDEX
-
-#if defined(PREPASS)
-	uint primitiveID : PRIMITIVEID;
-#endif // defined(PREPASS)
-
-#if !defined(OBJECTSHADER_COMPILE_PS)
+#ifndef OBJECTSHADER_COMPILE_MS // Per-primitive params are handled separately by mesh shader
+#ifndef OBJECTSHADER_COMPILE_PS
 #ifdef OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
 	uint RTIndex : SV_RenderTargetArrayIndex;
 #endif // OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
 #ifdef OBJECTSHADER_USE_VIEWPORTARRAYINDEX
 	uint VPIndex : SV_ViewportArrayIndex;
 #endif // OBJECTSHADER_USE_VIEWPORTARRAYINDEX
-#endif // !defined(OBJECTSHADER_COMPILE_PS)
+#endif // OBJECTSHADER_COMPILE_PS
 
 #ifdef OBJECTSHADER_USE_INSTANCEINDEX
 	inline uint GetInstanceIndex()
@@ -436,9 +441,11 @@ PixelInput vertex_to_pixel_export(VertexInput input)
 	Out.pos = mul(camera.view_projection, Out.pos);
 #endif // OBJECTSHADER_USE_NOCAMERA
 
+#ifndef OBJECTSHADER_COMPILE_PS
 #ifdef OBJECTSHADER_USE_CLIPPLANE
 	Out.clip = dot(surface.position, camera.clip_plane);
 #endif // OBJECTSHADER_USE_CLIPPLANE
+#endif // OBJECTSHADER_COMPILE_PS
 
 #ifdef OBJECTSHADER_USE_COLOR
 	Out.color = surface.color;

@@ -579,33 +579,19 @@ SHADERTYPE GetPSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, b
 		realPS = SHADERTYPE((transparent ? PSTYPE_OBJECT_TRANSPARENT_PERMUTATION_BEGIN : PSTYPE_OBJECT_PERMUTATION_BEGIN) + shaderType);
 		break;
 	case RENDERPASS_PREPASS:
-		if (tessellation)
+		if (alphatest)
 		{
-			if (alphatest)
-			{
-				realPS = PSTYPE_OBJECT_PREPASS_ALPHATEST_TESSELLATION;
-			}
-			else
-			{
-				realPS = PSTYPE_OBJECT_PREPASS_TESSELLATION;
-			}
+			realPS = PSTYPE_OBJECT_PREPASS_ALPHATEST;
 		}
 		else
 		{
-			if (alphatest)
-			{
-				realPS = PSTYPE_OBJECT_PREPASS_ALPHATEST;
-			}
-			else
-			{
-				realPS = PSTYPE_OBJECT_PREPASS;
-			}
+			realPS = PSTYPE_OBJECT_PREPASS;
 		}
 		break;
 	case RENDERPASS_PREPASS_DEPTHONLY:
 		if (alphatest)
 		{
-			realPS = tessellation ? PSTYPE_OBJECT_PREPASS_DEPTHONLY_ALPHATEST_TESSELLATION : PSTYPE_OBJECT_PREPASS_DEPTHONLY_ALPHATEST;
+			realPS = PSTYPE_OBJECT_PREPASS_DEPTHONLY_ALPHATEST;
 		}
 		break;
 	case RENDERPASS_ENVMAPCAPTURE:
@@ -936,10 +922,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_SIMPLE], "objectPS_simple.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_PREPASS], "objectPS_prepass.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_PREPASS_ALPHATEST], "objectPS_prepass_alphatest.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_PREPASS_TESSELLATION], "objectPS_prepass_tessellation.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_PREPASS_ALPHATEST_TESSELLATION], "objectPS_prepass_alphatest_tessellation.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_PREPASS_DEPTHONLY_ALPHATEST], "objectPS_prepass_depthonly_alphatest.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_PREPASS_DEPTHONLY_ALPHATEST_TESSELLATION], "objectPS_prepass_depthonly_alphatest_tessellation.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_IMPOSTOR_PREPASS], "impostorPS_prepass.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_IMPOSTOR_PREPASS_DEPTHONLY], "impostorPS_prepass_depthonly.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_IMPOSTOR_SIMPLE], "impostorPS_simple.cso"); });
