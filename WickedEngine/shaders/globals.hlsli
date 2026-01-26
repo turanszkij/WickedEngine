@@ -707,7 +707,7 @@ struct PrimitiveID
 		ShaderMeshInstance inst = load_instance(instanceIndex);
 		ShaderGeometry geometry = load_geometry(inst.geometryOffset + subsetIndex);
 		[branch]
-		if (maybe_clustered && geometry.vb_clu >= 0)
+		if (maybe_clustered && geometry.vb_clu >= 0 && geometry.tessellation_factor == 0)
 		{
 			const uint clusterID = primitiveIndex >> 7u;
 			const uint triangleID = primitiveIndex & 0x7F;

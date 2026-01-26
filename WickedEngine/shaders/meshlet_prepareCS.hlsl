@@ -21,7 +21,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			meshlet.instanceIndex = instanceIndex;
 			meshlet.geometryIndex = geometryIndex;
 
-			if (mesh.vb_clu < 0)
+			if (mesh.vb_clu < 0 || mesh.tessellation_factor > 0)
 			{
 				meshlet.primitiveOffset = j * MESHLET_TRIANGLE_COUNT;
 			}

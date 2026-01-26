@@ -311,18 +311,6 @@ struct PixelInput
 {
 	precise float4 pos : SV_Position;
 
-#ifdef OBJECTSHADER_USE_CLIPPLANE
-	float clip : SV_ClipDistance0;
-#endif // OBJECTSHADER_USE_CLIPPLANE
-
-#if defined(OBJECTSHADER_USE_INSTANCEINDEX) || defined(OBJECTSHADER_USE_DITHERING) || defined(OBJECTSHADER_USE_CAMERAINDEX)
-	uint poi : INSTANCEPOINTER;
-#endif // OBJECTSHADER_USE_INSTANCEINDEX || OBJECTSHADER_USE_DITHERING || OBJECTSHADER_USE_CAMERAINDEX
-
-#if defined(PREPASS) && !defined(OBJECTSHADER_COMPILE_MS)
-	uint primitiveID : PRIMITIVEID;
-#endif // defined(PREPASS) && !defined(OBJECTSHADER_COMPILE_MS)
-
 #ifdef OBJECTSHADER_USE_UVSETS
 	float4 uvsets : UVSETS;
 #endif // OBJECTSHADER_USE_UVSETS
@@ -335,6 +323,10 @@ struct PixelInput
 	float3 nor : NORMAL;
 #endif // OBJECTSHADER_USE_NORMAL
 
+#ifdef OBJECTSHADER_USE_CLIPPLANE
+	float clip : SV_ClipDistance0;
+#endif // OBJECTSHADER_USE_CLIPPLANE
+
 #ifdef OBJECTSHADER_USE_COMMON
 	half2 ao_wet : COMMON;
 	float2 atl : ATLAS;
@@ -344,14 +336,25 @@ struct PixelInput
 	half4 color : COLOR;
 #endif // OBJECTSHADER_USE_COLOR
 
-#if !defined(OBJECTSHADER_COMPILE_PS) && !defined(OBJECTSHADER_COMPILE_MS)
+// Per-primitive attribute storage below this (for mesh shader these are exported separately):
+#ifndef OBJECTSHADER_COMPILE_MS
+
+#if defined(OBJECTSHADER_USE_INSTANCEINDEX) || defined(OBJECTSHADER_USE_DITHERING) || defined(OBJECTSHADER_USE_CAMERAINDEX)
+	uint poi : INSTANCEPOINTER;
+#endif // OBJECTSHADER_USE_INSTANCEINDEX || OBJECTSHADER_USE_DITHERING || OBJECTSHADER_USE_CAMERAINDEX
+
+#if defined(PREPASS)
+	uint primitiveID : PRIMITIVEID;
+#endif // defined(PREPASS)
+
+#if !defined(OBJECTSHADER_COMPILE_PS)
 #ifdef OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
 	uint RTIndex : SV_RenderTargetArrayIndex;
 #endif // OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
 #ifdef OBJECTSHADER_USE_VIEWPORTARRAYINDEX
 	uint VPIndex : SV_ViewportArrayIndex;
 #endif // OBJECTSHADER_USE_VIEWPORTARRAYINDEX
-#endif // !defined(OBJECTSHADER_COMPILE_PS) && !defined(OBJECTSHADER_COMPILE_MS)
+#endif // !defined(OBJECTSHADER_COMPILE_PS)
 
 #ifdef OBJECTSHADER_USE_INSTANCEINDEX
 	inline uint GetInstanceIndex()
@@ -408,6 +411,8 @@ struct PixelInput
 
 		return camera.screen_to_nearplane(pos) - GetPos3D(); // ortho support, cannot use cameraPos!
 	}
+
+#endif // OBJECTSHADER_COMPILE_MS
 };
 
 PixelInput vertex_to_pixel_export(VertexInput input)
@@ -426,10 +431,6 @@ PixelInput vertex_to_pixel_export(VertexInput input)
 #else
 	ShaderCamera camera = GetCamera();
 #endif // OBJECTSHADER_USE_CAMERAINDEX
-	
-#if defined(PREPASS) && defined(OBJECTSHADER_USE_PROVOKING_INDEX_BUFFER)
-	Out.primitiveID = input.GetPrimitiveID();
-#endif // defined(PREPASS) && defined(OBJECTSHADER_USE_PROVOKING_INDEX_BUFFER)
 
 #ifndef OBJECTSHADER_USE_NOCAMERA
 	Out.pos = mul(camera.view_projection, Out.pos);
@@ -438,10 +439,6 @@ PixelInput vertex_to_pixel_export(VertexInput input)
 #ifdef OBJECTSHADER_USE_CLIPPLANE
 	Out.clip = dot(surface.position, camera.clip_plane);
 #endif // OBJECTSHADER_USE_CLIPPLANE
-
-#if defined(OBJECTSHADER_USE_INSTANCEINDEX) || defined(OBJECTSHADER_USE_DITHERING) || defined(OBJECTSHADER_USE_CAMERAINDEX)
-	Out.poi = input.GetInstancePointer().data;
-#endif // OBJECTSHADER_USE_INSTANCEINDEX || OBJECTSHADER_USE_DITHERING || OBJECTSHADER_USE_CAMERAINDEX
 
 #ifdef OBJECTSHADER_USE_COLOR
 	Out.color = surface.color;
@@ -464,14 +461,28 @@ PixelInput vertex_to_pixel_export(VertexInput input)
 	Out.tan = surface.tangent;
 #endif // OBJECTSHADER_USE_TANGENT
 
-#if !defined(OBJECTSHADER_COMPILE_PS) && !defined(OBJECTSHADER_COMPILE_MS)
+// Per-primitive attribute export can go below here (excluded in mesh shaders)
+
+#ifndef OBJECTSHADER_COMPILE_MS
+
+#if defined(OBJECTSHADER_USE_INSTANCEINDEX) || defined(OBJECTSHADER_USE_DITHERING) || defined(OBJECTSHADER_USE_CAMERAINDEX)
+	Out.poi = input.GetInstancePointer().data;
+#endif // OBJECTSHADER_USE_INSTANCEINDEX || OBJECTSHADER_USE_DITHERING || OBJECTSHADER_USE_CAMERAINDEX
+	
+#if defined(PREPASS) && defined(OBJECTSHADER_USE_PROVOKING_INDEX_BUFFER)
+	Out.primitiveID = input.GetPrimitiveID();
+#endif // defined(PREPASS) && defined(OBJECTSHADER_USE_PROVOKING_INDEX_BUFFER)
+
+#if !defined(OBJECTSHADER_COMPILE_PS)
 #ifdef OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
 	Out.RTIndex = camera.output_index;
 #endif // OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
 #ifdef OBJECTSHADER_USE_VIEWPORTARRAYINDEX
 	Out.VPIndex = camera.output_index;
 #endif // OBJECTSHADER_USE_VIEWPORTARRAYINDEX
-#endif // !defined(OBJECTSHADER_COMPILE_PS) && !defined(OBJECTSHADER_COMPILE_MS)
+#endif // !defined(OBJECTSHADER_COMPILE_PS)
+
+#endif // OBJECTSHADER_COMPILE_MS
 
 	return Out;
 }
@@ -563,10 +574,12 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 
 
 #ifdef OBJECTSHADER_USE_NORMAL
+#if !defined(PREPASS) && !defined(DEPTHONLY)
 	if (is_frontface == false)
 	{
 		input.nor = -input.nor;
 	}
+#endif // !defined(PREPASS) && !defined(DEPTHONLY)
 	surface.N = normalize(input.nor);
 	surface.facenormal = surface.N;
 #endif // OBJECTSHADER_USE_NORMAL
