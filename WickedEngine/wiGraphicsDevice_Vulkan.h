@@ -34,80 +34,6 @@
 
 namespace wi::graphics
 {
-	struct PSOLayoutHash
-	{
-		VkPushConstantRange push = {};
-		struct Item
-		{
-			bool used = true;
-			VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_2D;
-			VkDescriptorSetLayoutBinding binding = {};
-		};
-		wi::vector<Item> items;
-		size_t hash = 0;
-
-		inline bool operator==(const PSOLayoutHash& other) const
-		{
-			if (hash != other.hash)
-				return false;
-			if (items.size() != other.items.size())
-				return false;
-			for (size_t i = 0; i < items.size(); ++i)
-			{
-				const Item& a = items[i];
-				const Item& b = other.items[i];
-				if (
-					a.used != b.used ||
-					a.viewType != b.viewType ||
-					a.binding.binding != b.binding.binding ||
-					a.binding.descriptorCount != b.binding.descriptorCount ||
-					a.binding.descriptorType != b.binding.descriptorType ||
-					a.binding.stageFlags != b.binding.stageFlags ||
-					a.binding.pImmutableSamplers != b.binding.pImmutableSamplers
-					)
-					return false;
-			}
-			return
-				push.offset == other.push.offset &&
-				push.size == other.push.size &&
-				push.stageFlags == other.push.stageFlags;
-		}
-		inline void embed_hash()
-		{
-			hash = 0;
-			for (auto& x : items)
-			{
-				wi::helper::hash_combine(hash, x.used);
-				wi::helper::hash_combine(hash, x.viewType);
-				wi::helper::hash_combine(hash, x.binding.binding);
-				wi::helper::hash_combine(hash, x.binding.descriptorCount);
-				wi::helper::hash_combine(hash, x.binding.descriptorType);
-				wi::helper::hash_combine(hash, x.binding.stageFlags);
-			}
-			wi::helper::hash_combine(hash, push.offset);
-			wi::helper::hash_combine(hash, push.size);
-			wi::helper::hash_combine(hash, push.stageFlags);
-		}
-		constexpr size_t get_hash() const
-		{
-			return hash;
-		}
-	};
-}
-namespace std
-{
-	template <>
-	struct hash<wi::graphics::PSOLayoutHash>
-	{
-		constexpr size_t operator()(const wi::graphics::PSOLayoutHash& hash) const
-		{
-			return hash.get_hash();
-		}
-	};
-}
-
-namespace wi::graphics
-{
 	class GraphicsDevice_Vulkan final : public GraphicsDevice
 	{
 		friend struct CommandQueue;
@@ -155,6 +81,7 @@ namespace wi::graphics
 		VkPhysicalDeviceRayQueryFeaturesKHR raytracing_query_features = {};
 		VkPhysicalDeviceFragmentShadingRateFeaturesKHR fragment_shading_rate_features = {};
 		VkPhysicalDeviceConditionalRenderingFeaturesEXT conditional_rendering_features = {};
+		VkPhysicalDeviceMutableDescriptorTypeFeaturesEXT mutable_descriptor_features = {};
 		VkPhysicalDeviceDepthClipEnableFeaturesEXT depth_clip_enable_features = {};
 		VkPhysicalDeviceImageViewMinLodFeaturesEXT image_view_min_lod_features = {};
 		VkPhysicalDeviceMeshShaderFeaturesEXT mesh_shader_features = {};
@@ -195,6 +122,25 @@ namespace wi::graphics
 		VkImageView		nullImageViewCube = VK_NULL_HANDLE;
 		VkImageView		nullImageViewCubeArray = VK_NULL_HANDLE;
 		VkImageView		nullImageView3D = VK_NULL_HANDLE;
+
+		VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
+
+		enum DESCRIPTOR_SET
+		{
+			DESCRIPTOR_SET_BINDINGS,
+
+			DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER,
+			DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER,
+			DESCRIPTOR_SET_BINDLESS_SAMPLER,
+			DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE,
+			DESCRIPTOR_SET_BINDLESS_STORAGE_IMAGE,
+			DESCRIPTOR_SET_BINDLESS_STORAGE_TEXEL_BUFFER,
+			DESCRIPTOR_SET_BINDLESS_ACCELERATION_STRUCTURE,
+
+			DESCRIPTOR_SET_COUNT,
+		};
+		VkDescriptorSet descriptor_sets[DESCRIPTOR_SET_COUNT] = {};
+		VkDescriptorSetLayout descriptor_set_layouts[DESCRIPTOR_SET_COUNT] = {};
 
 		struct CommandQueue
 		{
@@ -262,17 +208,7 @@ namespace wi::graphics
 		{
 			DescriptorBindingTable table;
 			GraphicsDevice_Vulkan* device;
-
-			wi::vector<VkWriteDescriptorSet> descriptorWrites;
-			wi::vector<VkDescriptorBufferInfo> bufferInfos;
-			wi::vector<VkDescriptorImageInfo> imageInfos;
-			wi::vector<VkBufferView> texelBufferViews;
-			wi::vector<VkWriteDescriptorSetAccelerationStructureKHR> accelerationStructureViews;
-
-			uint32_t uniform_buffer_dynamic_offsets[DESCRIPTORBINDER_CBV_COUNT] = {};
-
-			VkDescriptorSet descriptorSet_graphics = VK_NULL_HANDLE;
-			VkDescriptorSet descriptorSet_compute = VK_NULL_HANDLE;
+			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 
 			enum DIRTY_FLAGS
 			{
@@ -405,8 +341,7 @@ namespace wi::graphics
 		void predraw(CommandList cmd);
 		void predispatch(CommandList cmd);
 
-		static constexpr uint32_t immutable_sampler_slot_begin = 100;
-		wi::vector<VkSampler> immutable_samplers;
+		VkSampler immutable_samplers[10];
 
 		void set_fence_name(VkFence fence, const char* name);
 		void set_semaphore_name(VkSemaphore semaphore, const char* name);
@@ -897,27 +832,6 @@ namespace wi::graphics
 		};
 		wi::allocator::shared_ptr<AllocationHandler> allocationhandler;
 
-
-		struct PSOLayout
-		{
-			wi::allocator::shared_ptr<AllocationHandler> allocationhandler;
-			VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
-			VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
-			wi::vector<VkDescriptorSet> bindlessSets;
-			uint32_t bindlessFirstSet = 0;
-			~PSOLayout()
-			{
-				if (allocationhandler == nullptr)
-					return;
-				allocationhandler->destroylocker.lock();
-				uint64_t framecount = allocationhandler->framecount;
-				allocationhandler->destroyer_pipelineLayouts.push_back(std::make_pair(pipelineLayout, framecount));
-				allocationhandler->destroyer_descriptorSetLayouts.push_back(std::make_pair(descriptorSetLayout, framecount));
-				allocationhandler->destroylocker.unlock();
-			}
-		};
-		mutable wi::unordered_map<PSOLayoutHash, wi::allocator::shared_ptr<PSOLayout>> pso_layout_cache;
-		mutable std::mutex pso_layout_cache_mutex;
 	};
 }
 
