@@ -6309,14 +6309,16 @@ namespace wi::scene
 								mesh->indices.push_back(current);
 								mesh->indices.push_back(next);
 							}
-
+						}
+						assert(vertexCount == mesh->vertex_positions.size());
+						assert(indexCount == mesh->indices.size());
+						if (generateFill)
+						{
 							mesh->ComputeNormals(spline.fill_normals_mode);
 						}
 						MeshComponent::MeshSubset& subset = mesh->subsets.front();
 						subset.indexCount = (uint32_t)mesh->indices.size();
 						subset.indexOffset = 0;
-						assert(vertexCount == mesh->vertex_positions.size());
-						assert(indexCount == mesh->indices.size());
 						mesh->CreateRenderData();
 					}
 					ObjectComponent* object = objects.GetComponent(entity);
