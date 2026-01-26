@@ -35,6 +35,11 @@ namespace wi::graphics
 namespace vulkan_internal
 {
 	static constexpr uint64_t timeout_value = 3'000'000'000ull; // 3 seconds
+	static constexpr uint32_t bindless_resource_cout = 500000u;
+	static constexpr uint32_t bindless_sampler_cout = 256u;
+	static constexpr uint32_t pushconstant_count = 22;
+	static constexpr uint32_t dynamic_cbv_count = 3;
+	static constexpr uint64_t dynamic_cbv_maxsize = 64 * 1024;
 
 	// These shifts are made so that Vulkan resource bindings slots don't interfere with each other across shader stages:
 	//	These are also defined in wi::shadercompiler.cpp as hard coded compiler arguments for SPIRV, so they need to be the same
@@ -46,16 +51,6 @@ namespace vulkan_internal
 		VULKAN_BINDING_SHIFT_S = 3000,
 	};
 
-	// Note: limiting descriptors by constant amount is needed, because the bindless sets are bound to multiple slots to match DX12 layout
-	//	And binding to multiple slot adds up towards limits, so the limits will be quickly reached for some descriptor types
-	//	But not all descriptor types have this problem, like storage buffers that are not bound for multiple slots usually
-	//	Ideally, this shouldn't be the case, because Vulkan could have it's own layout in shaders
-	static constexpr uint32_t limit_bindless_descriptors = 100000u;
-
-	static constexpr uint32_t pushcosntant_count = 22;
-
-	static constexpr uint32_t dynamic_cbv_count = 3;
-	static constexpr uint64_t dynamic_cbv_maxsize = 64 * 1024;
 
 	// Converters:
 	constexpr VkFormat _ConvertFormat(Format value)
@@ -3396,37 +3391,37 @@ using namespace vulkan_internal;
 		// Bindless:
 		if (features_1_2.descriptorBindingSampledImageUpdateAfterBind == VK_TRUE)
 		{
-			allocationhandler->bindlessSampledImages.init(this, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, std::min(limit_bindless_descriptors, properties_1_2.maxDescriptorSetUpdateAfterBindSampledImages / 4));
+			allocationhandler->bindlessSampledImages.init(this, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, std::min(bindless_resource_cout, properties_1_2.maxDescriptorSetUpdateAfterBindSampledImages / 2));
 			descriptor_sets[DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE] = allocationhandler->bindlessSampledImages.descriptorSet;
 			descriptor_set_layouts[DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE] = allocationhandler->bindlessSampledImages.descriptorSetLayout;
 		}
 		if (features_1_2.descriptorBindingUniformTexelBufferUpdateAfterBind == VK_TRUE)
 		{
-			allocationhandler->bindlessUniformTexelBuffers.init(this, VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, std::min(limit_bindless_descriptors, properties_1_2.maxDescriptorSetUpdateAfterBindSampledImages / 4));
+			allocationhandler->bindlessUniformTexelBuffers.init(this, VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, std::min(bindless_resource_cout, properties_1_2.maxDescriptorSetUpdateAfterBindSampledImages / 2));
 			descriptor_sets[DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER] = allocationhandler->bindlessUniformTexelBuffers.descriptorSet;
 			descriptor_set_layouts[DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER] = allocationhandler->bindlessUniformTexelBuffers.descriptorSetLayout;
 		}
 		if (features_1_2.descriptorBindingStorageBufferUpdateAfterBind == VK_TRUE)
 		{
-			allocationhandler->bindlessStorageBuffers.init(this, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, properties_1_2.maxDescriptorSetUpdateAfterBindStorageBuffers / 4);
+			allocationhandler->bindlessStorageBuffers.init(this, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, std::min(bindless_resource_cout, properties_1_2.maxDescriptorSetUpdateAfterBindStorageBuffers));
 			descriptor_sets[DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER] = allocationhandler->bindlessStorageBuffers.descriptorSet;
 			descriptor_set_layouts[DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER] = allocationhandler->bindlessStorageBuffers.descriptorSetLayout;
 		}
 		if (features_1_2.descriptorBindingStorageImageUpdateAfterBind == VK_TRUE)
 		{
-			allocationhandler->bindlessStorageImages.init(this, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, std::min(limit_bindless_descriptors, properties_1_2.maxDescriptorSetUpdateAfterBindStorageImages / 4));
+			allocationhandler->bindlessStorageImages.init(this, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, std::min(bindless_resource_cout, properties_1_2.maxDescriptorSetUpdateAfterBindStorageImages / 2));
 			descriptor_sets[DESCRIPTOR_SET_BINDLESS_STORAGE_IMAGE] = allocationhandler->bindlessStorageImages.descriptorSet;
 			descriptor_set_layouts[DESCRIPTOR_SET_BINDLESS_STORAGE_IMAGE] = allocationhandler->bindlessStorageImages.descriptorSetLayout;
 		}
 		if (features_1_2.descriptorBindingStorageTexelBufferUpdateAfterBind == VK_TRUE)
 		{
-			allocationhandler->bindlessStorageTexelBuffers.init(this, VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, std::min(limit_bindless_descriptors, properties_1_2.maxDescriptorSetUpdateAfterBindStorageImages / 4));
+			allocationhandler->bindlessStorageTexelBuffers.init(this, VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, std::min(bindless_resource_cout, properties_1_2.maxDescriptorSetUpdateAfterBindStorageImages / 2));
 			descriptor_sets[DESCRIPTOR_SET_BINDLESS_STORAGE_TEXEL_BUFFER] = allocationhandler->bindlessStorageTexelBuffers.descriptorSet;
 			descriptor_set_layouts[DESCRIPTOR_SET_BINDLESS_STORAGE_TEXEL_BUFFER] = allocationhandler->bindlessStorageTexelBuffers.descriptorSetLayout;
 		}
 		if (features_1_2.descriptorBindingSampledImageUpdateAfterBind == VK_TRUE)
 		{
-			allocationhandler->bindlessSamplers.init(this, VK_DESCRIPTOR_TYPE_SAMPLER, 256);
+			allocationhandler->bindlessSamplers.init(this, VK_DESCRIPTOR_TYPE_SAMPLER, bindless_sampler_cout);
 			descriptor_sets[DESCRIPTOR_SET_BINDLESS_SAMPLER] = allocationhandler->bindlessSamplers.descriptorSet;
 			descriptor_set_layouts[DESCRIPTOR_SET_BINDLESS_SAMPLER] = allocationhandler->bindlessSamplers.descriptorSetLayout;
 		}
@@ -3441,7 +3436,7 @@ using namespace vulkan_internal;
 		// Pipeline layouts:
 		{
 			VkPushConstantRange range = {};
-			range.size = sizeof(uint32_t) * pushcosntant_count;
+			range.size = sizeof(uint32_t) * pushconstant_count;
 			range.stageFlags = VK_SHADER_STAGE_ALL;
 
 			VkPipelineLayoutCreateInfo info = {};
