@@ -107,39 +107,17 @@ namespace wi::graphics
 
 		VkBuffer		nullBuffer = VK_NULL_HANDLE;
 		VmaAllocation	nullBufferAllocation = VK_NULL_HANDLE;
-		VkBufferView	nullBufferView = VK_NULL_HANDLE;
 		VkSampler		nullSampler = VK_NULL_HANDLE;
-		VmaAllocation	nullImageAllocation1D = VK_NULL_HANDLE;
-		VmaAllocation	nullImageAllocation2D = VK_NULL_HANDLE;
-		VmaAllocation	nullImageAllocation3D = VK_NULL_HANDLE;
-		VkImage			nullImage1D = VK_NULL_HANDLE;
-		VkImage			nullImage2D = VK_NULL_HANDLE;
-		VkImage			nullImage3D = VK_NULL_HANDLE;
-		VkImageView		nullImageView1D = VK_NULL_HANDLE;
-		VkImageView		nullImageView1DArray = VK_NULL_HANDLE;
-		VkImageView		nullImageView2D = VK_NULL_HANDLE;
-		VkImageView		nullImageView2DArray = VK_NULL_HANDLE;
-		VkImageView		nullImageViewCube = VK_NULL_HANDLE;
-		VkImageView		nullImageViewCubeArray = VK_NULL_HANDLE;
-		VkImageView		nullImageView3D = VK_NULL_HANDLE;
 
 		VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
 
 		enum DESCRIPTOR_SET
 		{
 			DESCRIPTOR_SET_BINDINGS,
-
-			DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER,
-			DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER,
+			DESCRIPTOR_SET_BINDLESS_RESOURCE,
 			DESCRIPTOR_SET_BINDLESS_SAMPLER,
-			DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE,
-			DESCRIPTOR_SET_BINDLESS_STORAGE_IMAGE,
-			DESCRIPTOR_SET_BINDLESS_STORAGE_TEXEL_BUFFER,
-			DESCRIPTOR_SET_BINDLESS_ACCELERATION_STRUCTURE,
-
 			DESCRIPTOR_SET_COUNT,
 		};
-		VkDescriptorSet descriptor_sets[DESCRIPTOR_SET_COUNT] = {};
 		VkDescriptorSetLayout descriptor_set_layouts[DESCRIPTOR_SET_COUNT] = {};
 
 		struct CommandQueue
@@ -541,15 +519,6 @@ namespace wi::graphics
 
 					vulkan_check(vkCreateDescriptorPool(device->device, &poolInfo, nullptr, &descriptorPool));
 
-#if 0
-					VkDebugUtilsObjectNameInfoEXT info{ VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
-					info.pObjectName = "BindlessDescriptorHeap";
-					info.objectType = VK_OBJECT_TYPE_DESCRIPTOR_POOL;
-					info.objectHandle = (uint64_t)descriptorPool;
-					res = vkSetDebugUtilsObjectNameEXT(device->device, &info);
-					vulkan_check(res);
-#endif
-
 					VkDescriptorSetLayoutBinding binding = {};
 					binding.descriptorType = type;
 					binding.binding = 0;
@@ -574,6 +543,31 @@ namespace wi::graphics
 					bindingFlagsInfo.pBindingFlags = &bindingFlags;
 					layoutInfo.pNext = &bindingFlagsInfo;
 
+					const VkDescriptorType mutable_types[] = {
+						VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+						VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,
+						VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+						VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,
+						VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+						VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR // last one!
+					};
+					VkMutableDescriptorTypeListEXT list = {};
+					list.pDescriptorTypes = mutable_types;
+					list.descriptorTypeCount = arraysize(mutable_types);
+					if (!device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
+					{
+						// If raytracing not supported, remove this option from mutable descriptor type:
+						list.descriptorTypeCount--;
+					}
+					VkMutableDescriptorTypeCreateInfoEXT mutable_info = {};
+					mutable_info.sType = VK_STRUCTURE_TYPE_MUTABLE_DESCRIPTOR_TYPE_CREATE_INFO_EXT;
+					mutable_info.pMutableDescriptorTypeLists = &list;
+					mutable_info.mutableDescriptorTypeListCount = 1;
+					if (type == VK_DESCRIPTOR_TYPE_MUTABLE_EXT)
+					{
+						bindingFlagsInfo.pNext = &mutable_info;
+					}
+
 					vulkan_check(vkCreateDescriptorSetLayout(device->device, &layoutInfo, nullptr, &descriptorSetLayout));
 
 					VkDescriptorSetAllocateInfo allocInfo = {};
@@ -588,12 +582,12 @@ namespace wi::graphics
 						freelist.push_back((int)descriptorCount - i - 1);
 					}
 
-					if (type != VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR)
+					// Descriptor safety feature:
+					//	We init null descriptors for bindless index = 0 for access safety
+					//	Because shader compiler sometimes incorrectly loads descriptor outside of safety branch
+					//	Note: these are never freed, this is intentional
+					if (type == VK_DESCRIPTOR_TYPE_MUTABLE_EXT)
 					{
-						// Descriptor safety feature:
-						//	We init null descriptors for bindless index = 0 for access safety
-						//	Because shader compiler sometimes incorrectly loads descriptor outside of safety branch
-						//	Note: these are never freed, this is intentional
 						int index = allocate();
 						wilog_assert(index == 0, "Descriptor safety feature error: descriptor index must be 0!");
 						VkWriteDescriptorSet write = {};
@@ -603,39 +597,26 @@ namespace wi::graphics
 						write.dstArrayElement = index;
 						write.descriptorCount = 1;
 						write.dstSet = descriptorSet;
-
-						VkDescriptorImageInfo image_info = {};
 						VkDescriptorBufferInfo buffer_info = {};
-
-						switch (type)
-						{
-						case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
-							image_info.imageView = device->nullImageView2D;
-							image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-							write.pImageInfo = &image_info;
-							break;
-						case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
-						case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
-							write.pTexelBufferView = &device->nullBufferView;
-							break;
-						case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
-							buffer_info.buffer = device->nullBuffer;
-							buffer_info.range = VK_WHOLE_SIZE;
-							write.pBufferInfo = &buffer_info;
-							break;
-						case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-							image_info.imageView = device->nullImageView2D;
-							image_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-							write.pImageInfo = &image_info;
-							break;
-						case VK_DESCRIPTOR_TYPE_SAMPLER:
-							image_info.sampler = device->nullSampler;
-							write.pImageInfo = &image_info;
-							break;
-						default:
-							wilog_assert(0, "Descriptor safety feature error: descriptor type not handled!");
-							break;
-						}
+						buffer_info.buffer = device->nullBuffer;
+						buffer_info.range = VK_WHOLE_SIZE;
+						write.pBufferInfo = &buffer_info;
+						vkUpdateDescriptorSets(device->device, 1, &write, 0, nullptr);
+					}
+					else if (type == VK_DESCRIPTOR_TYPE_SAMPLER)
+					{
+						int index = allocate();
+						wilog_assert(index == 0, "Descriptor safety feature error: descriptor index must be 0!");
+						VkWriteDescriptorSet write = {};
+						write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+						write.descriptorType = type;
+						write.dstBinding = 0;
+						write.dstArrayElement = index;
+						write.descriptorCount = 1;
+						write.dstSet = descriptorSet;
+						VkDescriptorImageInfo image_info = {};
+						image_info.sampler = device->nullSampler;
+						write.pImageInfo = &image_info;
 						vkUpdateDescriptorSets(device->device, 1, &write, 0, nullptr);
 					}
 				}
@@ -677,13 +658,8 @@ namespace wi::graphics
 					}
 				}
 			};
-			BindlessDescriptorHeap bindlessSampledImages;
-			BindlessDescriptorHeap bindlessUniformTexelBuffers;
-			BindlessDescriptorHeap bindlessStorageBuffers;
-			BindlessDescriptorHeap bindlessStorageImages;
-			BindlessDescriptorHeap bindlessStorageTexelBuffers;
-			BindlessDescriptorHeap bindlessSamplers;
-			BindlessDescriptorHeap bindlessAccelerationStructures;
+			BindlessDescriptorHeap bindless_resources;
+			BindlessDescriptorHeap bindless_samplers;
 
 			std::deque<std::pair<VmaAllocation, uint64_t>> destroyer_allocations;
 			std::deque<std::pair<std::pair<VkImage, VmaAllocation>, uint64_t>> destroyer_images;
@@ -704,23 +680,13 @@ namespace wi::graphics
 			std::deque<std::pair<VkSemaphore, uint64_t>> destroyer_semaphores;
 			std::deque<std::pair<VkVideoSessionKHR, uint64_t>> destroyer_video_sessions;
 			std::deque<std::pair<VkVideoSessionParametersKHR, uint64_t>> destroyer_video_session_parameters;
-			std::deque<std::pair<int, uint64_t>> destroyer_bindlessSampledImages;
-			std::deque<std::pair<int, uint64_t>> destroyer_bindlessUniformTexelBuffers;
-			std::deque<std::pair<int, uint64_t>> destroyer_bindlessStorageBuffers;
-			std::deque<std::pair<int, uint64_t>> destroyer_bindlessStorageImages;
-			std::deque<std::pair<int, uint64_t>> destroyer_bindlessStorageTexelBuffers;
-			std::deque<std::pair<int, uint64_t>> destroyer_bindlessSamplers;
-			std::deque<std::pair<int, uint64_t>> destroyer_bindlessAccelerationStructures;
+			std::deque<std::pair<int, uint64_t>> destroyer_bindless_resources;
+			std::deque<std::pair<int, uint64_t>> destroyer_bindless_samplers;
 
 			~AllocationHandler()
 			{
-				bindlessSampledImages.destroy(device);
-				bindlessUniformTexelBuffers.destroy(device);
-				bindlessStorageBuffers.destroy(device);
-				bindlessStorageImages.destroy(device);
-				bindlessStorageTexelBuffers.destroy(device);
-				bindlessSamplers.destroy(device);
-				bindlessAccelerationStructures.destroy(device);
+				bindless_resources.destroy(device);
+				bindless_samplers.destroy(device);
 				Update(~0ull, 0); // destroy all remaining
 				vmaDestroyAllocator(allocator);
 				vmaDestroyAllocator(externalAllocator);
@@ -807,26 +773,11 @@ namespace wi::graphics
 				destroy(destroyer_video_session_parameters, [&](auto& item) {
 					vkDestroyVideoSessionParametersKHR(device, item, nullptr);
 				});
-				destroy(destroyer_bindlessSampledImages, [&](auto& item) {
-					bindlessSampledImages.free(item);
+				destroy(destroyer_bindless_resources, [&](auto& item) {
+					bindless_resources.free(item);
 				});
-				destroy(destroyer_bindlessUniformTexelBuffers, [&](auto& item) {
-					bindlessUniformTexelBuffers.free(item);
-				});
-				destroy(destroyer_bindlessStorageBuffers, [&](auto& item) {
-					bindlessStorageBuffers.free(item);
-				});
-				destroy(destroyer_bindlessStorageImages, [&](auto& item) {
-					bindlessStorageImages.free(item);
-				});
-				destroy(destroyer_bindlessStorageTexelBuffers, [&](auto& item) {
-					bindlessStorageTexelBuffers.free(item);
-				});
-				destroy(destroyer_bindlessSamplers, [&](auto& item) {
-					bindlessSamplers.free(item);
-				});
-				destroy(destroyer_bindlessAccelerationStructures, [&](auto& item) {
-					bindlessAccelerationStructures.free(item);
+				destroy(destroyer_bindless_samplers, [&](auto& item) {
+					bindless_samplers.free(item);
 				});
 			}
 		};
