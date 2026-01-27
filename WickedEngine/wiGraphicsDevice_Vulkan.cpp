@@ -7722,7 +7722,7 @@ using namespace vulkan_internal;
 
 		if (commandlist.active_pso == nullptr)
 		{
-			commandlist.binder.dirty |= DescriptorBinder::DIRTY_ALL;
+			commandlist.binder.dirty |= DescriptorBinder::DIRTY_OFFSET;
 		}
 
 		commandlist.active_pso = pso;
@@ -7739,7 +7739,7 @@ using namespace vulkan_internal;
 
 		if (commandlist.active_cs == nullptr)
 		{
-			commandlist.binder.dirty |= DescriptorBinder::DIRTY_ALL;
+			commandlist.binder.dirty |= DescriptorBinder::DIRTY_OFFSET;
 		}
 
 		commandlist.active_cs = cs;
