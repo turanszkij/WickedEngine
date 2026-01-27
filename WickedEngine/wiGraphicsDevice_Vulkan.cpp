@@ -1643,9 +1643,7 @@ using namespace vulkan_internal;
 			{
 				const GPUBuffer& buffer = table.CBV[i];
 				auto& info = bufferInfos.emplace_back();
-				info = {};
 				auto& write = descriptorWrites.emplace_back();
-				write = {};
 				write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 				write.descriptorType = i < device->dynamic_cbv_count ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 				write.dstBinding = VULKAN_BINDING_SHIFT_B + i;
@@ -1670,7 +1668,6 @@ using namespace vulkan_internal;
 			{
 				const GPUResource& res = table.SRV[i];
 				auto& write = descriptorWrites.emplace_back();
-				write = {};
 				write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 				write.dstBinding = VULKAN_BINDING_SHIFT_T + i;
 				write.descriptorCount = 1;
@@ -1700,7 +1697,6 @@ using namespace vulkan_internal;
 						int subresource = table.SRV_index[i];
 						auto& descriptor = subresource >= 0 ? internal_state->subresources_srv[subresource] : internal_state->srv;
 						auto& info = imageInfos.emplace_back();
-						info = {};
 						info.imageView = descriptor.image_view;
 						info.imageLayout = internal_state->defaultLayout;
 						write.pImageInfo = &info;
@@ -1710,7 +1706,6 @@ using namespace vulkan_internal;
 					{
 						auto internal_state = to_internal<RaytracingAccelerationStructure>(&res);
 						auto& info = accelerationStructureViews.emplace_back();
-						info = {};
 						info.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;
 						info.accelerationStructureCount = 1;
 						info.pAccelerationStructures = &internal_state->resource;
@@ -1729,7 +1724,6 @@ using namespace vulkan_internal;
 			{
 				const GPUResource& res = table.UAV[i];
 				auto& write = descriptorWrites.emplace_back();
-				write = {};
 				write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 				write.dstBinding = VULKAN_BINDING_SHIFT_U + i;
 				write.descriptorCount = 1;
@@ -1759,7 +1753,6 @@ using namespace vulkan_internal;
 						int subresource = table.UAV_index[i];
 						auto& descriptor = subresource >= 0 ? internal_state->subresources_uav[subresource] : internal_state->uav;
 						auto& info = imageInfos.emplace_back();
-						info = {};
 						info.imageView = descriptor.image_view;
 						info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 						write.pImageInfo = &info;
@@ -1777,14 +1770,12 @@ using namespace vulkan_internal;
 			{
 				const Sampler& sam = table.SAM[i];
 				auto& write = descriptorWrites.emplace_back();
-				write = {};
 				write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 				write.dstBinding = VULKAN_BINDING_SHIFT_S + i;
 				write.descriptorCount = 1;
 				write.dstSet = descriptorSet;
 				write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
 				auto& info = imageInfos.emplace_back();
-				info = {};
 				write.pImageInfo = &info;
 
 				if (sam.IsValid())
