@@ -51,6 +51,9 @@ namespace wi::graphics
 	//	These are faster to bind but there is a more limited number available, depending on device
 	static constexpr uint32_t ROOT_CBV_COUNT = 3;
 
+	// static sampler slot bindings will begin from this number
+	static constexpr uint32_t STATIC_SAMPLER_SLOT_BEGIN = 100;
+
 	// An example "root sigature" layout to check how the userdata might be laid out
 	//	It is an example, the real layout will be decided by GraphicsDevice
 	struct UserdataLayout

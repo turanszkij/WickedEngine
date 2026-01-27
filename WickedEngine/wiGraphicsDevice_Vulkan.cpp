@@ -3185,7 +3185,7 @@ using namespace vulkan_internal;
 			for (uint32_t i = 0; i < arraysize(table.IMMUTABLE_SAM); ++i)
 			{
 				VkDescriptorSetLayoutBinding& binding = table.IMMUTABLE_SAM[i];
-				binding.binding = VULKAN_BINDING_SHIFT_S + 100 + i;
+				binding.binding = VULKAN_BINDING_SHIFT_S + STATIC_SAMPLER_SLOT_BEGIN + i;
 				binding.descriptorCount = 1;
 				binding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
 				binding.stageFlags = VK_SHADER_STAGE_ALL;
