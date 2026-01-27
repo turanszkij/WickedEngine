@@ -2228,7 +2228,6 @@ using namespace vulkan_internal;
 
 			const wi::vector<const char*> required_deviceExtensions = {
 				VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-				VK_EXT_MUTABLE_DESCRIPTOR_TYPE_EXTENSION_NAME,
 			};
 			wi::vector<const char*> enabled_deviceExtensions;
 
@@ -2301,13 +2300,13 @@ using namespace vulkan_internal;
 
 				enabled_deviceExtensions = required_deviceExtensions;
 
-				// Mutable descriptor extension is a required device extension now:
+				if (checkExtensionSupport(VK_EXT_MUTABLE_DESCRIPTOR_TYPE_EXTENSION_NAME, available_deviceExtensions))
 				{
+					enabled_deviceExtensions.push_back(VK_EXT_MUTABLE_DESCRIPTOR_TYPE_EXTENSION_NAME);
 					mutable_descriptor_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MUTABLE_DESCRIPTOR_TYPE_FEATURES_EXT;
 					*features_chain = &mutable_descriptor_features;
 					features_chain = &mutable_descriptor_features.pNext;
 				}
-
 				if (checkExtensionSupport(VK_EXT_IMAGE_VIEW_MIN_LOD_EXTENSION_NAME, available_deviceExtensions))
 				{
 					enabled_deviceExtensions.push_back(VK_EXT_IMAGE_VIEW_MIN_LOD_EXTENSION_NAME);
@@ -2495,7 +2494,12 @@ using namespace vulkan_internal;
 			assert(features2.features.occlusionQueryPrecise == VK_TRUE);
 			assert(features_1_2.descriptorIndexing == VK_TRUE);
 			assert(features_1_3.dynamicRendering == VK_TRUE);
-			assert(mutable_descriptor_features.mutableDescriptorType == VK_TRUE);
+
+			if (mutable_descriptor_features.mutableDescriptorType == VK_FALSE)
+			{
+				// On GTX 1070 the support is not found, but this extension does work so I will attempt to use it anyway
+				wilog_warning("VK_EXT_mutable_descriptor_type support is missing! Trying to use it anyway!");
+			}
 
 			// Init adapter properties
 			vendorId = properties2.properties.vendorID;
