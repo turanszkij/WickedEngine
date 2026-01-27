@@ -1530,73 +1530,6 @@ using namespace vulkan_internal;
 		freelist.push_back(cmd);
 	}
 
-	void GraphicsDevice_Vulkan::DescriptorBinderPool::init(GraphicsDevice_Vulkan* device)
-	{
-		this->device = device;
-
-		// Create descriptor pool:
-		StackVector<VkDescriptorPoolSize, 16> poolSizes;
-		poolSizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, device->dynamic_cbv_count * poolSize });
-		if (device->dynamic_cbv_count < DESCRIPTORBINDER_CBV_COUNT)
-		{
-			poolSizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, (DESCRIPTORBINDER_CBV_COUNT - device->dynamic_cbv_count) * poolSize });
-		}
-		poolSizes.push_back({ VK_DESCRIPTOR_TYPE_MUTABLE_EXT, (DESCRIPTORBINDER_SRV_COUNT + DESCRIPTORBINDER_UAV_COUNT) * poolSize });
-		poolSizes.push_back({ VK_DESCRIPTOR_TYPE_SAMPLER, DESCRIPTORBINDER_SAMPLER_COUNT * poolSize });
-		if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
-		{
-			poolSizes.push_back({ VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, DESCRIPTORBINDER_SRV_COUNT * poolSize });
-		}
-
-		VkDescriptorPoolCreateInfo poolInfo = {};
-		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		poolInfo.poolSizeCount = poolSizes.size();
-		poolInfo.pPoolSizes = poolSizes.data();
-		poolInfo.maxSets = poolSize;
-
-		destroy(); // issues destroy if already exists, nop otherwise
-		vulkan_check(vkCreateDescriptorPool(device->device, &poolInfo, nullptr, &descriptorPool));
-
-#if 0
-		VkDebugUtilsObjectNameInfoEXT info{ VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
-		info.pObjectName = "DescriptorBinderPool";
-		info.objectType = VK_OBJECT_TYPE_DESCRIPTOR_POOL;
-		info.objectHandle = (uint64_t)descriptorPool;
-		vulkan_check(vkSetDebugUtilsObjectNameEXT(device->device, &info));
-#endif
-
-		// WARNING: MUST NOT CALL reset() HERE!
-		//	This is because init can be called mid-frame when there is allocation error, but the bindings must be retained!
-
-	}
-	void GraphicsDevice_Vulkan::DescriptorBinderPool::destroy()
-	{
-		if (descriptorPool != VK_NULL_HANDLE)
-		{
-			device->allocationhandler->destroylocker.lock();
-			device->allocationhandler->destroyer_descriptorPools.push_back(std::make_pair(descriptorPool, device->FRAMECOUNT));
-			descriptorPool = VK_NULL_HANDLE;
-			device->allocationhandler->destroylocker.unlock();
-		}
-	}
-	void GraphicsDevice_Vulkan::DescriptorBinderPool::reset()
-	{
-		if (descriptorPool != VK_NULL_HANDLE)
-		{
-			vulkan_check(vkResetDescriptorPool(device->device, descriptorPool, 0));
-		}
-	}
-
-	void GraphicsDevice_Vulkan::DescriptorBinder::init(GraphicsDevice_Vulkan* device)
-	{
-		this->device = device;
-	}
-	void GraphicsDevice_Vulkan::DescriptorBinder::reset()
-	{
-		table = {};
-		dirty = true;
-		descriptorSet = VK_NULL_HANDLE;
-	}
 	void GraphicsDevice_Vulkan::DescriptorBinder::flush(bool graphics, CommandList cmd)
 	{
 		if (dirty == DIRTY_NONE)
@@ -1617,21 +1550,7 @@ using namespace vulkan_internal;
 		{
 			auto& binder_pool = commandlist.binder_pools[device->GetBufferIndex()];
 
-			VkDescriptorSetAllocateInfo allocInfo = {};
-			allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-			allocInfo.descriptorPool = binder_pool.descriptorPool;
-			allocInfo.descriptorSetCount = 1;
-			allocInfo.pSetLayouts = &device->descriptor_set_layouts[DESCRIPTOR_SET_BINDINGS];
-
-			VkResult res = vkAllocateDescriptorSets(device->device, &allocInfo, &descriptorSet);
-			while (res == VK_ERROR_OUT_OF_POOL_MEMORY)
-			{
-				binder_pool.poolSize *= 2;
-				binder_pool.init(device);
-				allocInfo.descriptorPool = binder_pool.descriptorPool;
-				res = vkAllocateDescriptorSets(device->device, &allocInfo, &descriptorSet);
-			}
-			vulkan_assert(res >= VK_SUCCESS, "vkAllocateDescriptorSets");
+			descriptorSet = binder_pool.allocate();
 
 			struct DescriptorTableInfo
 			{
@@ -3280,6 +3199,18 @@ using namespace vulkan_internal;
 			layoutInfo.pNext = &mutable_info;
 
 			vulkan_check(vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &descriptor_set_layouts[DESCRIPTOR_SET_BINDINGS]));
+
+			binding_layout_allocations.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, dynamic_cbv_count * DescriptorBinderPool::pool_size });
+			if (dynamic_cbv_count < DESCRIPTORBINDER_CBV_COUNT)
+			{
+				binding_layout_allocations.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, (DESCRIPTORBINDER_CBV_COUNT - dynamic_cbv_count) * DescriptorBinderPool::pool_size });
+			}
+			binding_layout_allocations.push_back({ VK_DESCRIPTOR_TYPE_MUTABLE_EXT, (DESCRIPTORBINDER_SRV_COUNT + DESCRIPTORBINDER_UAV_COUNT) * DescriptorBinderPool::pool_size });
+			binding_layout_allocations.push_back({ VK_DESCRIPTOR_TYPE_SAMPLER, (DESCRIPTORBINDER_SAMPLER_COUNT + arraysize(table.IMMUTABLE_SAM)) * DescriptorBinderPool::pool_size }); // immutable samplers are part of the layout alocations unfortunately (debug layer)
+			if (CheckCapability(GraphicsDeviceCapability::RAYTRACING))
+			{
+				binding_layout_allocations.push_back({ VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, DESCRIPTORBINDER_SRV_COUNT * DescriptorBinderPool::pool_size });
+			}
 		}
 
 		// Bindless:

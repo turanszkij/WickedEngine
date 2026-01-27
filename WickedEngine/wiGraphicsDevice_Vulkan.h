@@ -121,6 +121,7 @@ namespace wi::graphics
 		VkDescriptorSetLayout descriptor_set_layouts[DESCRIPTOR_SET_COUNT] = {};
 
 		uint32_t dynamic_cbv_count = ROOT_CBV_COUNT;
+		wi::vector<VkDescriptorPoolSize> binding_layout_allocations;
 
 		struct CommandQueue
 		{
@@ -200,20 +201,101 @@ namespace wi::graphics
 			};
 			uint32_t dirty = DIRTY_NONE;
 
-			void init(GraphicsDevice_Vulkan* device);
-			void reset();
+			void init(GraphicsDevice_Vulkan* device)
+			{
+				this->device = device;
+			}
+			void reset()
+			{
+				table = {};
+				dirty = DIRTY_ALL;
+				descriptorSet = VK_NULL_HANDLE;
+			}
 			void flush(bool graphics, CommandList cmd);
 		};
 
 		struct DescriptorBinderPool
 		{
-			GraphicsDevice_Vulkan* device;
-			VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
-			uint32_t poolSize = 256;
+			static constexpr uint32_t pool_size = 256;
+			GraphicsDevice_Vulkan* device = nullptr;
+			wi::vector<VkDescriptorPool> pools;
+			wi::vector<VkDescriptorSet> free_sets;
+			VkDescriptorSetLayout layouts[pool_size] = {};
+			bool needs_reset = true;
 
-			void init(GraphicsDevice_Vulkan* device);
-			void destroy();
-			void reset();
+			void init(GraphicsDevice_Vulkan* device)
+			{
+				this->device = device;
+				for (auto& x : layouts)
+				{
+					x = device->descriptor_set_layouts[DESCRIPTOR_SET_BINDINGS];
+				}
+			}
+			VkDescriptorSet allocate()
+			{
+				if (needs_reset)
+				{
+					// Cannot simply recycle descriptor sets because then views that are set on them will be still "referenced" and invalid to free
+					//	So we will reset pools and realloc all sets
+					free_sets.clear();
+					for (auto& x : pools)
+					{
+						vulkan_check(vkResetDescriptorPool(device->device, x, 0));
+
+						VkDescriptorSetAllocateInfo allocInfo = {};
+						allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+						allocInfo.descriptorPool = x;
+						allocInfo.descriptorSetCount = pool_size;
+						allocInfo.pSetLayouts = layouts;
+
+						const size_t count = free_sets.size();
+						free_sets.resize(count + pool_size);
+						vulkan_check(vkAllocateDescriptorSets(device->device, &allocInfo, free_sets.data() + count));
+					}
+					needs_reset = false;
+				}
+				if (free_sets.empty())
+				{
+					VkDescriptorPoolCreateInfo poolInfo = {};
+					poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+					poolInfo.poolSizeCount = (uint32_t)device->binding_layout_allocations.size();
+					poolInfo.pPoolSizes = device->binding_layout_allocations.data();
+					poolInfo.maxSets = pool_size;
+
+					VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
+					vulkan_check(vkCreateDescriptorPool(device->device, &poolInfo, nullptr, &descriptorPool));
+
+					pools.push_back(descriptorPool);
+
+					VkDescriptorSetAllocateInfo allocInfo = {};
+					allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+					allocInfo.descriptorPool = descriptorPool;
+					allocInfo.descriptorSetCount = pool_size;
+					allocInfo.pSetLayouts = layouts;
+
+					free_sets.resize(pool_size);
+					vulkan_check(vkAllocateDescriptorSets(device->device, &allocInfo, free_sets.data()));
+				}
+				VkDescriptorSet descriptor_set = free_sets.back();
+				free_sets.pop_back();
+				return descriptor_set;
+			}
+			void destroy()
+			{
+				device->allocationhandler->destroylocker.lock();
+				for (auto& x : pools)
+				{
+					device->allocationhandler->destroyer_descriptorPools.push_back(std::make_pair(x, device->allocationhandler->framecount));
+				}
+				device->allocationhandler->destroylocker.unlock();
+				pools.clear();
+			}
+			void reset()
+			{
+				// Don't really reset here, but defer reset until first use
+				//	The first use will more likely be executed on worker thread instead of resetting new commandlists on main thread
+				needs_reset = true;
+			}
 		};
 
 		wi::vector<VkSemaphore> semaphore_pool;
@@ -534,11 +616,10 @@ namespace wi::graphics
 					layoutInfo.pBindings = &binding;
 					layoutInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
 
-					VkDescriptorBindingFlags bindingFlags =
+					const VkDescriptorBindingFlags bindingFlags =
 						VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT |
 						VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT |
 						VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT;
-					//| VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT;
 					VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlagsInfo = {};
 					bindingFlagsInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
 					bindingFlagsInfo.bindingCount = 1;
@@ -594,7 +675,7 @@ namespace wi::graphics
 						wilog_assert(index == 0, "Descriptor safety feature error: descriptor index must be 0!");
 						VkWriteDescriptorSet write = {};
 						write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-						write.descriptorType = type;
+						write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 						write.dstBinding = 0;
 						write.dstArrayElement = index;
 						write.descriptorCount = 1;
@@ -721,17 +802,17 @@ namespace wi::graphics
 				destroy(destroyer_allocations, [&](auto& item) {
 					vmaFreeMemory(allocator, item);
 				});
-				destroy(destroyer_images, [&](auto& item) {
-					vmaDestroyImage(allocator, item.first, item.second);
-				});
 				destroy(destroyer_imageviews, [&](auto& item) {
 					vkDestroyImageView(device, item, nullptr);
 				});
-				destroy(destroyer_buffers, [&](auto& item) {
-					vmaDestroyBuffer(allocator, item.first, item.second);
+				destroy(destroyer_images, [&](auto& item) {
+					vmaDestroyImage(allocator, item.first, item.second);
 				});
 				destroy(destroyer_bufferviews, [&](auto& item) {
 					vkDestroyBufferView(device, item, nullptr);
+				});
+				destroy(destroyer_buffers, [&](auto& item) {
+					vmaDestroyBuffer(allocator, item.first, item.second);
 				});
 				destroy(destroyer_bvhs, [&](auto& item) {
 					vkDestroyAccelerationStructureKHR(device, item, nullptr);
