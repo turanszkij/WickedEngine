@@ -1536,10 +1536,12 @@ using namespace vulkan_internal;
 
 		// Create descriptor pool:
 		StackVector<VkDescriptorPoolSize, 16> poolSizes;
-		poolSizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, DESCRIPTORBINDER_CBV_COUNT * poolSize });
-		poolSizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, DESCRIPTORBINDER_CBV_COUNT * poolSize });
-		poolSizes.push_back({ VK_DESCRIPTOR_TYPE_MUTABLE_EXT, DESCRIPTORBINDER_SRV_COUNT * poolSize });
-		poolSizes.push_back({ VK_DESCRIPTOR_TYPE_MUTABLE_EXT, DESCRIPTORBINDER_UAV_COUNT * poolSize });
+		poolSizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, device->dynamic_cbv_count * poolSize });
+		if (device->dynamic_cbv_count < DESCRIPTORBINDER_CBV_COUNT)
+		{
+			poolSizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, (DESCRIPTORBINDER_CBV_COUNT - device->dynamic_cbv_count) * poolSize });
+		}
+		poolSizes.push_back({ VK_DESCRIPTOR_TYPE_MUTABLE_EXT, (DESCRIPTORBINDER_SRV_COUNT + DESCRIPTORBINDER_UAV_COUNT) * poolSize });
 		poolSizes.push_back({ VK_DESCRIPTOR_TYPE_SAMPLER, DESCRIPTORBINDER_SAMPLER_COUNT * poolSize });
 		if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 		{
