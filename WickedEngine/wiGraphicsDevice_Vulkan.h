@@ -187,7 +187,7 @@ namespace wi::graphics
 		struct DescriptorBinder
 		{
 			DescriptorBindingTable table;
-			GraphicsDevice_Vulkan* device;
+			GraphicsDevice_Vulkan* device = nullptr;
 			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 
 			enum DIRTY_FLAGS

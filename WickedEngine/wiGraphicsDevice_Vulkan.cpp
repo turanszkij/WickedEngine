@@ -1633,10 +1633,23 @@ using namespace vulkan_internal;
 			}
 			vulkan_assert(res >= VK_SUCCESS, "vkAllocateDescriptorSets");
 
-			StackVector<VkWriteDescriptorSet, DESCRIPTORBINDER_CBV_COUNT + DESCRIPTORBINDER_SRV_COUNT + DESCRIPTORBINDER_UAV_COUNT + DESCRIPTORBINDER_SAMPLER_COUNT> descriptorWrites;
-			StackVector<VkDescriptorBufferInfo, DESCRIPTORBINDER_CBV_COUNT + DESCRIPTORBINDER_SRV_COUNT + DESCRIPTORBINDER_UAV_COUNT> bufferInfos;
-			StackVector<VkDescriptorImageInfo, DESCRIPTORBINDER_SRV_COUNT + DESCRIPTORBINDER_UAV_COUNT + DESCRIPTORBINDER_SAMPLER_COUNT> imageInfos; // samplers also here
-			StackVector<VkWriteDescriptorSetAccelerationStructureKHR, DESCRIPTORBINDER_SRV_COUNT> accelerationStructureViews;
+			struct DescriptorTableInfo
+			{
+				VkDescriptorBufferInfo CBV[DESCRIPTORBINDER_CBV_COUNT];
+				VkDescriptorImageInfo SRV[DESCRIPTORBINDER_SRV_COUNT];
+				VkDescriptorImageInfo UAV[DESCRIPTORBINDER_UAV_COUNT];
+				VkDescriptorImageInfo SAM[DESCRIPTORBINDER_SAMPLER_COUNT];
+				VkWriteDescriptorSetAccelerationStructureKHR AccelerationStructure[DESCRIPTORBINDER_SRV_COUNT];
+			} infos = {};
+
+			struct DescriptorTableWrites
+			{
+				VkWriteDescriptorSet CBV[DESCRIPTORBINDER_CBV_COUNT];
+				VkWriteDescriptorSet SRV[DESCRIPTORBINDER_SRV_COUNT];
+				VkWriteDescriptorSet UAV[DESCRIPTORBINDER_UAV_COUNT];
+				VkWriteDescriptorSet SAM[DESCRIPTORBINDER_SAMPLER_COUNT];
+			} writes = {};
+
 			VkDescriptorBufferInfo nullBufferInfo = {};
 			nullBufferInfo.buffer = device->nullBuffer;
 			nullBufferInfo.range = VK_WHOLE_SIZE;
@@ -1644,8 +1657,8 @@ using namespace vulkan_internal;
 			for (uint32_t i = 0; i < arraysize(table.CBV); ++i)
 			{
 				const GPUBuffer& buffer = table.CBV[i];
-				auto& info = bufferInfos.emplace_back();
-				auto& write = descriptorWrites.emplace_back();
+				auto& info = infos.CBV[i];
+				auto& write = writes.CBV[i];
 				write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 				write.descriptorType = i < device->dynamic_cbv_count ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 				write.dstBinding = VULKAN_BINDING_SHIFT_B + i;
@@ -1669,7 +1682,7 @@ using namespace vulkan_internal;
 			for (uint32_t i = 0; i < arraysize(table.SRV); ++i)
 			{
 				const GPUResource& res = table.SRV[i];
-				auto& write = descriptorWrites.emplace_back();
+				auto& write = writes.SRV[i];
 				write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 				write.dstBinding = VULKAN_BINDING_SHIFT_T + i;
 				write.descriptorCount = 1;
@@ -1698,7 +1711,7 @@ using namespace vulkan_internal;
 						auto internal_state = to_internal<Texture>(&res);
 						int subresource = table.SRV_index[i];
 						auto& descriptor = subresource >= 0 ? internal_state->subresources_srv[subresource] : internal_state->srv;
-						auto& info = imageInfos.emplace_back();
+						auto& info = infos.SRV[i];
 						info.imageView = descriptor.image_view;
 						info.imageLayout = internal_state->defaultLayout;
 						write.pImageInfo = &info;
@@ -1707,7 +1720,7 @@ using namespace vulkan_internal;
 					else if (res.IsAccelerationStructure())
 					{
 						auto internal_state = to_internal<RaytracingAccelerationStructure>(&res);
-						auto& info = accelerationStructureViews.emplace_back();
+						auto& info = infos.AccelerationStructure[i];
 						info.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;
 						info.accelerationStructureCount = 1;
 						info.pAccelerationStructures = &internal_state->resource;
@@ -1725,7 +1738,7 @@ using namespace vulkan_internal;
 			for (uint32_t i = 0; i < arraysize(table.UAV); ++i)
 			{
 				const GPUResource& res = table.UAV[i];
-				auto& write = descriptorWrites.emplace_back();
+				auto& write = writes.UAV[i];
 				write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 				write.dstBinding = VULKAN_BINDING_SHIFT_U + i;
 				write.descriptorCount = 1;
@@ -1754,7 +1767,7 @@ using namespace vulkan_internal;
 						auto internal_state = to_internal<Texture>(&res);
 						int subresource = table.UAV_index[i];
 						auto& descriptor = subresource >= 0 ? internal_state->subresources_uav[subresource] : internal_state->uav;
-						auto& info = imageInfos.emplace_back();
+						auto& info = infos.UAV[i];
 						info.imageView = descriptor.image_view;
 						info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 						write.pImageInfo = &info;
@@ -1771,13 +1784,13 @@ using namespace vulkan_internal;
 			for (uint32_t i = 0; i < arraysize(table.SAM); ++i)
 			{
 				const Sampler& sam = table.SAM[i];
-				auto& write = descriptorWrites.emplace_back();
+				auto& write = writes.SAM[i];
 				write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 				write.dstBinding = VULKAN_BINDING_SHIFT_S + i;
 				write.descriptorCount = 1;
 				write.dstSet = descriptorSet;
 				write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
-				auto& info = imageInfos.emplace_back();
+				auto& info = infos.SAM[i];
 				write.pImageInfo = &info;
 
 				if (sam.IsValid())
@@ -1795,8 +1808,8 @@ using namespace vulkan_internal;
 
 			vkUpdateDescriptorSets(
 				device->device,
-				descriptorWrites.size(),
-				descriptorWrites.data(),
+				sizeof(writes) / sizeof(VkWriteDescriptorSet),
+				(const VkWriteDescriptorSet*)&writes,
 				0,
 				nullptr
 			);
@@ -3176,12 +3189,12 @@ using namespace vulkan_internal;
 
 			struct MutableTypeLists
 			{
-				VkMutableDescriptorTypeListEXT CBV[DESCRIPTORBINDER_CBV_COUNT] = {};
-				VkMutableDescriptorTypeListEXT SRV[DESCRIPTORBINDER_SRV_COUNT] = {};
-				VkMutableDescriptorTypeListEXT UAV[DESCRIPTORBINDER_SRV_COUNT] = {};
-				VkMutableDescriptorTypeListEXT SAM[DESCRIPTORBINDER_SAMPLER_COUNT] = {};
-				VkMutableDescriptorTypeListEXT IMMUTABLE_SAM[arraysize(immutable_samplers)] = {};
-			} mutable_type_lists;
+				VkMutableDescriptorTypeListEXT CBV[DESCRIPTORBINDER_CBV_COUNT];
+				VkMutableDescriptorTypeListEXT SRV[DESCRIPTORBINDER_SRV_COUNT];
+				VkMutableDescriptorTypeListEXT UAV[DESCRIPTORBINDER_SRV_COUNT];
+				VkMutableDescriptorTypeListEXT SAM[DESCRIPTORBINDER_SAMPLER_COUNT];
+				VkMutableDescriptorTypeListEXT IMMUTABLE_SAM[arraysize(immutable_samplers)];
+			} mutable_type_lists = {};
 
 			uint32_t srv_type_count = arraysize(allowed_types_srv);
 			if (!CheckCapability(GraphicsDeviceCapability::RAYTRACING))
@@ -3207,12 +3220,12 @@ using namespace vulkan_internal;
 
 			struct VulkanDescriptorBindingTable
 			{
-				VkDescriptorSetLayoutBinding CBV[DESCRIPTORBINDER_CBV_COUNT] = {};
-				VkDescriptorSetLayoutBinding SRV[DESCRIPTORBINDER_SRV_COUNT] = {};
-				VkDescriptorSetLayoutBinding UAV[DESCRIPTORBINDER_UAV_COUNT] = {};
-				VkDescriptorSetLayoutBinding SAM[DESCRIPTORBINDER_SAMPLER_COUNT] = {};
-				VkDescriptorSetLayoutBinding IMMUTABLE_SAM[arraysize(immutable_samplers)] = {};
-			} table;
+				VkDescriptorSetLayoutBinding CBV[DESCRIPTORBINDER_CBV_COUNT];
+				VkDescriptorSetLayoutBinding SRV[DESCRIPTORBINDER_SRV_COUNT];
+				VkDescriptorSetLayoutBinding UAV[DESCRIPTORBINDER_UAV_COUNT];
+				VkDescriptorSetLayoutBinding SAM[DESCRIPTORBINDER_SAMPLER_COUNT];
+				VkDescriptorSetLayoutBinding IMMUTABLE_SAM[arraysize(immutable_samplers)];
+			} table = {};
 
 			for (uint32_t i = 0; i < arraysize(table.CBV); ++i)
 			{
@@ -8521,6 +8534,12 @@ using namespace vulkan_internal;
 	{
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 		commandlist.prev_pipeline_hash = {};
+
+		if (commandlist.active_rt == nullptr)
+		{
+			commandlist.binder.dirty |= DescriptorBinder::DIRTY_OFFSET;
+		}
+
 		commandlist.active_rt = rtpso;
 
 		BindComputeShader(rtpso->desc.shader_libraries.front().shader, cmd);
