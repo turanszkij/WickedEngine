@@ -120,6 +120,8 @@ namespace wi::graphics
 		};
 		VkDescriptorSetLayout descriptor_set_layouts[DESCRIPTOR_SET_COUNT] = {};
 
+		uint32_t dynamic_cbv_count = ROOT_CBV_COUNT;
+
 		struct CommandQueue
 		{
 			VkQueue queue = VK_NULL_HANDLE;

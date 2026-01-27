@@ -403,6 +403,7 @@ static const BindlessResource<RaytracingAccelerationStructure> bindless_accelera
 //	Note that HLSL register space declaration was not working correctly with overlapped spaces,
 //	But vk::binding works correctly in this case.
 //	HLSL register space declaration is working well with Vulkan when spaces are not overlapping.
+//	This layout with two descriptor sets can be implemented onn Vulkan side with mutable descriptors.
 static const uint DESCRIPTOR_SET_BINDLESS_RESOURCE = 1;
 static const uint DESCRIPTOR_SET_BINDLESS_SAMPLER = 2;
 

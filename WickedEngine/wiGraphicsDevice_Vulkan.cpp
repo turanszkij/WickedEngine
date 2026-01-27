@@ -35,10 +35,6 @@ namespace wi::graphics
 namespace vulkan_internal
 {
 	static constexpr uint64_t timeout_value = 3'000'000'000ull; // 3 seconds
-	static constexpr uint32_t bindless_resource_count = 500000u;
-	static constexpr uint32_t bindless_sampler_count = 256u;
-	static constexpr uint32_t pushconstant_count = 22;
-	static constexpr uint32_t dynamic_cbv_count = 3;
 	static constexpr uint64_t dynamic_cbv_maxsize = 64 * 1024;
 
 	// These shifts are made so that Vulkan resource bindings slots don't interfere with each other across shader stages:
@@ -1609,8 +1605,8 @@ using namespace vulkan_internal;
 		auto cs_internal = graphics ? nullptr : to_internal(commandlist.active_cs);
 		VkCommandBuffer commandBuffer = commandlist.GetCommandBuffer();
 
-		uint32_t uniform_buffer_dynamic_offsets[dynamic_cbv_count] = {};
-		for (size_t i = 0; i < arraysize(uniform_buffer_dynamic_offsets); ++i)
+		uint32_t uniform_buffer_dynamic_offsets[DESCRIPTORBINDER_CBV_COUNT] = {};
+		for (size_t i = 0; i < std::min((uint32_t)arraysize(uniform_buffer_dynamic_offsets), device->dynamic_cbv_count); ++i)
 		{
 			uniform_buffer_dynamic_offsets[i] = table.CBV[i].IsValid() ? (uint32_t)table.CBV_offset[i] : 0;
 		}
@@ -1651,7 +1647,7 @@ using namespace vulkan_internal;
 				auto& write = descriptorWrites.emplace_back();
 				write = {};
 				write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-				write.descriptorType = i < dynamic_cbv_count ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+				write.descriptorType = i < device->dynamic_cbv_count ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 				write.dstBinding = VULKAN_BINDING_SHIFT_B + i;
 				write.descriptorCount = 1;
 				write.dstSet = descriptorSet;
@@ -1661,7 +1657,7 @@ using namespace vulkan_internal;
 				{
 					auto internal_state = to_internal(&buffer);
 					info.buffer = internal_state->resource;
-					info.offset = i < dynamic_cbv_count ? 0 : table.CBV_offset[i];
+					info.offset = i < device->dynamic_cbv_count ? 0 : table.CBV_offset[i];
 					info.range = std::min(dynamic_cbv_maxsize, buffer.desc.size - table.CBV_offset[i]);
 				}
 				else
@@ -1830,7 +1826,7 @@ using namespace vulkan_internal;
 			0,
 			1,
 			&descriptorSet,
-			arraysize(uniform_buffer_dynamic_offsets),
+			device->dynamic_cbv_count,
 			uniform_buffer_dynamic_offsets
 		);
 
@@ -3028,6 +3024,8 @@ using namespace vulkan_internal;
 
 		TIMESTAMP_FREQUENCY = uint64_t(1.0 / double(properties2.properties.limits.timestampPeriod) * 1000 * 1000 * 1000);
 
+		dynamic_cbv_count = std::min(ROOT_CBV_COUNT, properties2.properties.limits.maxDescriptorSetUniformBuffersDynamic);
+
 		// Dynamic PSO states:
 		pso_dynamicStates.push_back(VK_DYNAMIC_STATE_VIEWPORT_WITH_COUNT);
 		pso_dynamicStates.push_back(VK_DYNAMIC_STATE_SCISSOR_WITH_COUNT);
@@ -3283,21 +3281,21 @@ using namespace vulkan_internal;
 			assert(features_1_2.descriptorBindingStorageTexelBufferUpdateAfterBind == VK_TRUE);
 			// Note: bindless uniform buffer is not used, don't need to check it
 
-			uint32_t bindless_resource_capacity_real = bindless_resource_count;
+			uint32_t bindless_resource_capacity_real = BINDLESS_RESOURCE_CAPACITY;
 			bindless_resource_capacity_real = std::min(bindless_resource_capacity_real, properties_1_2.maxDescriptorSetUpdateAfterBindSampledImages);
 			bindless_resource_capacity_real = std::min(bindless_resource_capacity_real, properties_1_2.maxDescriptorSetUpdateAfterBindStorageImages);
 			bindless_resource_capacity_real = std::min(bindless_resource_capacity_real, properties_1_2.maxDescriptorSetUpdateAfterBindStorageBuffers);
 			allocationhandler->bindless_resources.init(this, VK_DESCRIPTOR_TYPE_MUTABLE_EXT, bindless_resource_capacity_real);
 			descriptor_set_layouts[DESCRIPTOR_SET_BINDLESS_RESOURCE] = allocationhandler->bindless_resources.descriptorSetLayout;
 
-			allocationhandler->bindless_samplers.init(this, VK_DESCRIPTOR_TYPE_SAMPLER, std::min(bindless_sampler_count, properties_1_2.maxDescriptorSetUpdateAfterBindSampledImages));
+			allocationhandler->bindless_samplers.init(this, VK_DESCRIPTOR_TYPE_SAMPLER, std::min(BINDLESS_SAMPLER_CAPACITY, properties_1_2.maxDescriptorSetUpdateAfterBindSampledImages));
 			descriptor_set_layouts[DESCRIPTOR_SET_BINDLESS_SAMPLER] = allocationhandler->bindless_samplers.descriptorSetLayout;
 		}
 
 		// Pipeline layouts:
 		{
 			VkPushConstantRange range = {};
-			range.size = sizeof(uint32_t) * pushconstant_count;
+			range.size = sizeof(uint32_t) * PUSH_CONSTANT_COUNT;
 			range.stageFlags = VK_SHADER_STAGE_ALL;
 
 			VkPipelineLayoutCreateInfo info = {};

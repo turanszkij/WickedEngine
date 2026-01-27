@@ -38,6 +38,31 @@ namespace wi::graphics
 		Sampler SAM[DESCRIPTORBINDER_SAMPLER_COUNT];
 	};
 
+	// Bindless descriptor limits:
+	//	The device can allocate less than this, depending on capabilities
+	static constexpr uint32_t BINDLESS_RESOURCE_CAPACITY = 500000;
+	static constexpr uint32_t BINDLESS_SAMPLER_CAPACITY = 256; // it is chosen to be addressable by 8 bits
+
+	// Max number of push constants:
+	//	The number indicates how many 32 bit values can be set for common shaders
+	static constexpr uint32_t PUSH_CONSTANT_COUNT = 22;
+
+	// How many constant buffers are in the "root"
+	//	These are faster to bind but there is a more limited number available, depending on device
+	static constexpr uint32_t ROOT_CBV_COUNT = 3;
+
+	// An example "root sigature" layout to check how the userdata might be laid out
+	//	It is an example, the real layout will be decided by GraphicsDevice
+	struct UserdataLayout
+	{
+		uint32_t push_constants[PUSH_CONSTANT_COUNT] = {};
+		uint64_t root_cbvs[ROOT_CBV_COUNT] = {};
+		uint64_t resource_table_ptr = {};
+		uint64_t sampler_table_ptr = {};
+	};
+	static constexpr uint32_t MAX_USERDATA_LAYOUT_SIZE = sizeof(uint32_t) * 32; // chosen minimal that's supported on all platforms
+	static_assert(sizeof(UserdataLayout) <= MAX_USERDATA_LAYOUT_SIZE);
+
 	enum QUEUE_TYPE
 	{
 		QUEUE_GRAPHICS,
