@@ -3222,15 +3222,15 @@ using namespace vulkan_internal;
 			assert(features_1_2.descriptorBindingStorageTexelBufferUpdateAfterBind == VK_TRUE);
 			// Note: bindless uniform buffer is not used, don't need to check it
 
+			allocationhandler->bindless_samplers.init(this, VK_DESCRIPTOR_TYPE_SAMPLER, std::min(BINDLESS_SAMPLER_CAPACITY, properties_1_2.maxDescriptorSetUpdateAfterBindSampledImages));
+			descriptor_set_layouts[DESCRIPTOR_SET_BINDLESS_SAMPLER] = allocationhandler->bindless_samplers.descriptorSetLayout;
+
 			uint32_t bindless_resource_capacity_real = BINDLESS_RESOURCE_CAPACITY;
 			bindless_resource_capacity_real = std::min(bindless_resource_capacity_real, properties_1_2.maxDescriptorSetUpdateAfterBindSampledImages);
 			bindless_resource_capacity_real = std::min(bindless_resource_capacity_real, properties_1_2.maxDescriptorSetUpdateAfterBindStorageImages);
 			bindless_resource_capacity_real = std::min(bindless_resource_capacity_real, properties_1_2.maxDescriptorSetUpdateAfterBindStorageBuffers);
 			allocationhandler->bindless_resources.init(this, VK_DESCRIPTOR_TYPE_MUTABLE_EXT, bindless_resource_capacity_real);
 			descriptor_set_layouts[DESCRIPTOR_SET_BINDLESS_RESOURCE] = allocationhandler->bindless_resources.descriptorSetLayout;
-
-			allocationhandler->bindless_samplers.init(this, VK_DESCRIPTOR_TYPE_SAMPLER, std::min(BINDLESS_SAMPLER_CAPACITY, properties_1_2.maxDescriptorSetUpdateAfterBindSampledImages));
-			descriptor_set_layouts[DESCRIPTOR_SET_BINDLESS_SAMPLER] = allocationhandler->bindless_samplers.descriptorSetLayout;
 		}
 
 		// Pipeline layouts:
@@ -6392,8 +6392,8 @@ using namespace vulkan_internal;
 		vulkan_check(vkBeginCommandBuffer(commandlist.GetCommandBuffer(), &beginInfo));
 
 		const VkDescriptorSet descriptor_sets[] = {
-			allocationhandler->bindless_resources.descriptorSet,
 			allocationhandler->bindless_samplers.descriptorSet,
+			allocationhandler->bindless_resources.descriptorSet,
 		};
 
 		if (queue == QUEUE_GRAPHICS)
@@ -8483,8 +8483,8 @@ using namespace vulkan_internal;
 
 		// Note: bind descriptor set for RT here instead of BeginCommandList to not set it needlessly
 		const VkDescriptorSet descriptor_sets[] = {
-			allocationhandler->bindless_resources.descriptorSet,
 			allocationhandler->bindless_samplers.descriptorSet,
+			allocationhandler->bindless_resources.descriptorSet,
 		};
 		vkCmdBindDescriptorSets(
 			commandlist.GetCommandBuffer(),
