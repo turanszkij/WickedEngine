@@ -25,8 +25,8 @@ namespace wi::graphics
 	public:
 		struct RootLayout
 		{
-			uint32_t constants[22];
-			MTL::GPUAddress root_cbvs[3];
+			uint32_t constants[PUSH_CONSTANT_COUNT];
+			MTL::GPUAddress root_cbvs[ROOT_CBV_COUNT];
 			MTL::GPUAddress resource_table_ptr;
 			MTL::GPUAddress sampler_table_ptr;
 		};
