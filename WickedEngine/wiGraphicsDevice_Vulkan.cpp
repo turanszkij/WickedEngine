@@ -2144,9 +2144,7 @@ using namespace vulkan_internal;
 			bool suitable = false;
 			bool conservativeRasterization = false;
 
-			auto checkPhysicalDeviceAndFillProperties2 = [&](VkPhysicalDevice dev) {
-				suitable = true;
-
+			auto checkPhysicalDeviceAndFillPropertiesFeatures = [&](VkPhysicalDevice dev) {
 				uint32_t extensionCount;
 				vulkan_check(vkEnumerateDeviceExtensionProperties(dev, nullptr, &extensionCount, nullptr));
 				wi::vector<VkExtensionProperties> available_deviceExtensions(extensionCount);
@@ -2156,11 +2154,9 @@ using namespace vulkan_internal;
 				{
 					if (!checkExtensionSupport(x, available_deviceExtensions))
 					{
-						suitable = false;
+						return false;
 					}
 				}
-				if (!suitable)
-					return;
 
 				h264_decode_extension = false;
 				h265_decode_extension = false;
@@ -2336,17 +2332,14 @@ using namespace vulkan_internal;
 				*properties_chain = nullptr;
 				*features_chain = nullptr;
 				vkGetPhysicalDeviceProperties2(dev, &properties2);
+				vkGetPhysicalDeviceFeatures2(dev, &features2);
 
+				return true;
 			};
-
-			bool properties2_matches_physical_device = false;
 
 			for (const auto& dev : devices)
 			{
-				properties2_matches_physical_device = false;
-				checkPhysicalDeviceAndFillProperties2(dev);
-
-				if (!suitable)
+				if (!checkPhysicalDeviceAndFillPropertiesFeatures(dev))
 					continue;
 
 				bool priority = properties2.properties.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
@@ -2369,11 +2362,8 @@ using namespace vulkan_internal;
 				if (priority || physicalDevice == VK_NULL_HANDLE)
 				{
 					physicalDevice = dev;
-					properties2_matches_physical_device = true;
 					if (priority)
-					{
 						break; // if this is prioritized GPU type, look no further
-					}
 				}
 			}
 
@@ -2383,15 +2373,10 @@ using namespace vulkan_internal;
 				wi::platform::Exit();
 			}
 
-			if (!properties2_matches_physical_device) {
-				// this redoes a few checks, but since this code path is only
-				// executed once, it doesn't affect execution time all that much
-				checkPhysicalDeviceAndFillProperties2(physicalDevice);
-			}
+			// This fills the properties and features again of the finally selected graphics card:
+			checkPhysicalDeviceAndFillPropertiesFeatures(physicalDevice);
 
 			assert(properties2.properties.limits.timestampComputeAndGraphics == VK_TRUE);
-
-			vkGetPhysicalDeviceFeatures2(physicalDevice, &features2);
 
 			assert(features2.features.imageCubeArray == VK_TRUE);
 			assert(features2.features.independentBlend == VK_TRUE);
@@ -2400,14 +2385,7 @@ using namespace vulkan_internal;
 			assert(features2.features.shaderClipDistance == VK_TRUE);
 			assert(features2.features.textureCompressionBC == VK_TRUE);
 			assert(features2.features.occlusionQueryPrecise == VK_TRUE);
-			assert(features_1_2.descriptorIndexing == VK_TRUE);
 			assert(features_1_3.dynamicRendering == VK_TRUE);
-
-			if (mutable_descriptor_features.mutableDescriptorType == VK_FALSE)
-			{
-				// On GTX 1070 the support is not found, but this extension does work so I will attempt to use it anyway
-				wilog("VK_EXT_mutable_descriptor_type support is missing! Trying to use it anyway!");
-			}
 
 			// Init adapter properties
 			vendorId = properties2.properties.vendorID;
@@ -2924,22 +2902,6 @@ using namespace vulkan_internal;
 			}
 		}
 
-		// Create default null descriptors:
-		{
-			VkBufferCreateInfo bufferInfo = {};
-			bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-			bufferInfo.size = 4;
-			bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-			bufferInfo.flags = 0;
-			VmaAllocationCreateInfo allocInfo = {};
-			allocInfo.preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-			vulkan_check(vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &nullBuffer, &nullBufferAllocation, nullptr));
-
-			VkSamplerCreateInfo samplerInfo = {};
-			samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-			vulkan_check(vkCreateSampler(device, &samplerInfo, nullptr, &nullSampler));
-		}
-
 		TIMESTAMP_FREQUENCY = uint64_t(1.0 / double(properties2.properties.limits.timestampPeriod) * 1000 * 1000 * 1000);
 
 		dynamic_cbv_count = std::min(ROOT_CBV_COUNT, properties2.properties.limits.maxDescriptorSetUniformBuffersDynamic);
@@ -3084,8 +3046,30 @@ using namespace vulkan_internal;
 			vulkan_check(vkCreateSampler(device, &createInfo, nullptr, &immutable_samplers[9]));
 		}
 
+		// Create null descriptors for uninitialized bind slots and bindless safety fallback:
+		{
+			VkBufferCreateInfo bufferInfo = {};
+			bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+			bufferInfo.size = 4;
+			bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+			bufferInfo.flags = 0;
+			VmaAllocationCreateInfo allocInfo = {};
+			allocInfo.preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+			vulkan_check(vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &nullBuffer, &nullBufferAllocation, nullptr));
+
+			VkSamplerCreateInfo samplerInfo = {};
+			samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+			vulkan_check(vkCreateSampler(device, &samplerInfo, nullptr, &nullSampler));
+		}
+
 		// Bindings:
 		{
+			if (mutable_descriptor_features.mutableDescriptorType == VK_FALSE)
+			{
+				// On GTX 1070 the support is not found, but this extension does work so I will attempt to use it anyway
+				wilog("VK_EXT_mutable_descriptor_type support is missing! Trying to use it anyway!");
+			}
+
 			const VkDescriptorType allowed_types_srv[] = {
 				VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
 				VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,
@@ -3204,12 +3188,21 @@ using namespace vulkan_internal;
 
 		// Bindless:
 		{
+			assert(features_1_2.descriptorIndexing == VK_TRUE);
+			assert(features_1_2.runtimeDescriptorArray == VK_TRUE);
+			assert(features_1_2.descriptorBindingVariableDescriptorCount == VK_TRUE);
+			assert(features_1_2.descriptorBindingPartiallyBound == VK_TRUE);
+			assert(features_1_2.descriptorBindingUpdateUnusedWhilePending == VK_TRUE);
 			assert(features_1_2.descriptorBindingSampledImageUpdateAfterBind == VK_TRUE);
 			assert(features_1_2.descriptorBindingStorageImageUpdateAfterBind == VK_TRUE);
 			assert(features_1_2.descriptorBindingStorageBufferUpdateAfterBind == VK_TRUE);
 			assert(features_1_2.descriptorBindingUniformTexelBufferUpdateAfterBind == VK_TRUE);
 			assert(features_1_2.descriptorBindingStorageTexelBufferUpdateAfterBind == VK_TRUE);
-			// Note: bindless uniform buffer is not used, don't need to check it
+			assert(features_1_2.shaderSampledImageArrayNonUniformIndexing == VK_TRUE);
+			assert(features_1_2.shaderStorageBufferArrayNonUniformIndexing == VK_TRUE);
+			assert(features_1_2.shaderStorageImageArrayNonUniformIndexing == VK_TRUE);
+			assert(features_1_2.shaderUniformTexelBufferArrayNonUniformIndexing == VK_TRUE);
+			assert(features_1_2.shaderStorageTexelBufferArrayNonUniformIndexing == VK_TRUE);
 
 			uint32_t bindless_resource_capacity_real = BINDLESS_RESOURCE_CAPACITY;
 			bindless_resource_capacity_real = std::min(bindless_resource_capacity_real, properties_1_2.maxDescriptorSetUpdateAfterBindSampledImages);
