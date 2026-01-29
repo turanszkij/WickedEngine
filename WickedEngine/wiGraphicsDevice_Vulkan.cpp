@@ -2406,7 +2406,7 @@ using namespace vulkan_internal;
 			if (mutable_descriptor_features.mutableDescriptorType == VK_FALSE)
 			{
 				// On GTX 1070 the support is not found, but this extension does work so I will attempt to use it anyway
-				wilog_warning("VK_EXT_mutable_descriptor_type support is missing! Trying to use it anyway!");
+				wilog("VK_EXT_mutable_descriptor_type support is missing! Trying to use it anyway!");
 			}
 
 			// Init adapter properties
@@ -3433,6 +3433,8 @@ using namespace vulkan_internal;
 				wilog_messagebox("Error creating a vulkan surface with SDL_Vulkan_CreateSurface!");
 				wi::platform::Exit();
 			}
+#elif defined(__APPLE__)
+			wilog("Vulkan surface on Apple platform is not yet implemented");
 #else
 #error WICKEDENGINE VULKAN DEVICE ERROR: PLATFORM NOT SUPPORTED
 #endif // _WIN32
