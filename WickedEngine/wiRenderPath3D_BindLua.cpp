@@ -768,7 +768,7 @@ namespace wi::lua
 		return 0;
 	}
 
-	int RenderPath3D_BindLua::SetEyeAdaptionRate(lua_State *L)
+	int RenderPath3D_BindLua::SetEyeAdaptionRate(lua_State* L)
 	{
 		if (component == nullptr)
 		{
@@ -784,7 +784,7 @@ namespace wi::lua
 		return 0;
 	}
 
-	int RenderPath3D_BindLua::SetEyeAdaptionKey(lua_State *L)
+	int RenderPath3D_BindLua::SetEyeAdaptionKey(lua_State* L)
 	{
 		if (component == nullptr)
 		{
@@ -800,7 +800,7 @@ namespace wi::lua
 		return 0;
 	}
 
-	int RenderPath3D_BindLua::SetContrast(lua_State *L)
+	int RenderPath3D_BindLua::SetContrast(lua_State* L)
 	{
 		if (component == nullptr)
 		{
@@ -816,7 +816,7 @@ namespace wi::lua
 		return 0;
 	}
 
-	int RenderPath3D_BindLua::SetSaturation(lua_State *L)
+	int RenderPath3D_BindLua::SetSaturation(lua_State* L)
 	{
 		if (component == nullptr)
 		{
@@ -832,7 +832,7 @@ namespace wi::lua
 		return 0;
 	}
 
-	int RenderPath3D_BindLua::SetBrightness(lua_State *L)
+	int RenderPath3D_BindLua::SetBrightness(lua_State* L)
 	{
 		if (component == nullptr)
 		{
@@ -848,7 +848,7 @@ namespace wi::lua
 		return 0;
 	}
 
-	int RenderPath3D_BindLua::SetLightShaftsFadeSpeed(lua_State *L)
+	int RenderPath3D_BindLua::SetLightShaftsFadeSpeed(lua_State* L)
 	{
 		if (component == nullptr)
 		{
@@ -864,7 +864,7 @@ namespace wi::lua
 		return 0;
 	}
 
-	int RenderPath3D_BindLua::SetMeshBlendEnabled(lua_State *L)
+	int RenderPath3D_BindLua::SetMeshBlendEnabled(lua_State* L)
 	{
 		if (component == nullptr)
 		{
@@ -880,7 +880,7 @@ namespace wi::lua
 		return 0;
 	}
 
-	int RenderPath3D_BindLua::SetOcclusionCullingEnabled(lua_State *L)
+	int RenderPath3D_BindLua::SetOcclusionCullingEnabled(lua_State* L)
 	{
 		if (component == nullptr)
 		{
@@ -896,7 +896,7 @@ namespace wi::lua
 		return 0;
 	}
 
-	int RenderPath3D_BindLua::SetSSGIDepthRejection(lua_State *L)
+	int RenderPath3D_BindLua::SetSSGIDepthRejection(lua_State* L)
 	{
 		if (component == nullptr)
 		{
