@@ -1474,6 +1474,7 @@ namespace wi::scene
 		{
 			XMUINT2 resolution = XMUINT2(0, 0);
 			uint32_t sample_count = 1;
+			float update_interval = 0.0f;
 			wi::graphics::Texture rendertarget_MSAA;
 			wi::graphics::Texture rendertarget_render;
 			wi::graphics::Texture rendertarget_display;
@@ -1482,6 +1483,7 @@ namespace wi::scene
 			XMUINT2 tileCount = {};
 			wi::graphics::GPUBuffer entityTiles;
 			wi::allocator::shared_ptr<void> visibility;
+			float time_accumulator = 0.0f;
 		} render_to_texture;
 
 		void CreateOrtho(float newWidth, float newHeight, float newNear, float newFar, float newVerticalSize = 1);

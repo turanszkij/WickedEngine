@@ -1338,6 +1338,11 @@ namespace wi::scene
 				archive >> render_to_texture.sample_count;
 			}
 
+			if (seri.GetVersion() >= 3)
+			{
+				archive >> render_to_texture.update_interval;
+			}
+
 			SetDirty();
 		}
 		else
@@ -1365,6 +1370,11 @@ namespace wi::scene
 			{
 				archive << render_to_texture.resolution;
 				archive << render_to_texture.sample_count;
+			}
+
+			if (seri.GetVersion() >= 3)
+			{
+				archive << render_to_texture.update_interval;
 			}
 		}
 	}
