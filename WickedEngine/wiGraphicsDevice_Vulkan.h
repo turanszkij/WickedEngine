@@ -670,11 +670,17 @@ namespace wi::graphics
 
 					vulkan_check(vkCreateDescriptorSetLayout(device->device, &layoutInfo, nullptr, &descriptorSetLayout));
 
+					VkDescriptorSetVariableDescriptorCountAllocateInfo count_allocation_info = {};
+					count_allocation_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO;
+					count_allocation_info.descriptorSetCount = 1;
+					count_allocation_info.pDescriptorCounts = &descriptorCount;
+
 					VkDescriptorSetAllocateInfo allocInfo = {};
 					allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 					allocInfo.descriptorPool = descriptorPool;
 					allocInfo.descriptorSetCount = 1;
 					allocInfo.pSetLayouts = &descriptorSetLayout;
+					allocInfo.pNext = &count_allocation_info;
 					vulkan_check(vkAllocateDescriptorSets(device->device, &allocInfo, &descriptorSet));
 
 					for (int i = 0; i < (int)descriptorCount; ++i)
