@@ -337,12 +337,12 @@ SamplerComparisonState sampler_cmp_depth : register(s109);
 template<typename T>
 struct BindlessResource
 {
-	T operator[](uint index) { return T(ResourceDescriptorHeap[index]); }
+	T operator[](uint index) { return (T)ResourceDescriptorHeap[index]; }
 };
 template<>
 struct BindlessResource<SamplerState>
 {
-	SamplerState operator[](uint index) { return SamplerState(SamplerDescriptorHeap[index]); }
+	SamplerState operator[](uint index) { return (SamplerState)SamplerDescriptorHeap[index]; }
 };
 #endif // defined(__hlsl_dx_compiler) && __SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6
 
@@ -394,13 +394,9 @@ static const BindlessResource<RWTexture2D<uint2> > bindless_rwtextures_uint2;
 static const BindlessResource<RWTexture2D<uint3> > bindless_rwtextures_uint3;
 static const BindlessResource<RWTexture2D<uint4> > bindless_rwtextures_uint4;
 
-#ifdef RTAPI
-#ifdef __spirv__
-[[vk::binding(0, 1)]] RaytracingAccelerationStructure bindless_accelerationstructures[];
-#elif defined(__hlsl_dx_compiler)
+#if defined(RTAPI) && defined(__hlsl_dx_compiler)
 static const BindlessResource<RaytracingAccelerationStructure> bindless_accelerationstructures;
-#endif // __hlsl_dx_compiler
-#endif // RTAPI
+#endif // defined(RTAPI) && defined(__hlsl_dx_compiler)
 
 #else
 SamplerState bindless_samplers[] : register(space1);
