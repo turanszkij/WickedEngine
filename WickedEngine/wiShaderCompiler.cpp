@@ -25,6 +25,7 @@ using namespace Microsoft::WRL;
 
 #ifdef SHADERCOMPILER_ENABLED_DXCOMPILER
 #include "Utility/dxc/dxcapi.h"
+#include "wiGraphicsDevice_Vulkan.h"
 #endif // SHADERCOMPILER_ENABLED_DXCOMPILER
 
 #ifdef SHADERCOMPILER_ENABLED_D3DCOMPILER
@@ -180,10 +181,12 @@ namespace wi::shadercompiler
 			args.push_back(L"-fspv-target-env=vulkan1.3");
 			args.push_back(L"-fvk-use-dx-layout");
 			args.push_back(L"-fvk-use-dx-position-w");
-			//args.push_back(L"-fvk-b-shift"); args.push_back(L"0"); args.push_back(L"0");
-			args.push_back(L"-fvk-t-shift"); args.push_back(L"1000"); args.push_back(L"0");
-			args.push_back(L"-fvk-u-shift"); args.push_back(L"2000"); args.push_back(L"0");
-			args.push_back(L"-fvk-s-shift"); args.push_back(L"3000"); args.push_back(L"0");
+			args.push_back(L"-fvk-b-shift"); args.push_back(std::to_wstring((int)wi::graphics::GraphicsDevice_Vulkan::VULKAN_BINDING_SHIFT_B)); args.push_back(L"0");
+			args.push_back(L"-fvk-t-shift"); args.push_back(std::to_wstring((int)wi::graphics::GraphicsDevice_Vulkan::VULKAN_BINDING_SHIFT_T)); args.push_back(L"0");
+			args.push_back(L"-fvk-u-shift"); args.push_back(std::to_wstring((int)wi::graphics::GraphicsDevice_Vulkan::VULKAN_BINDING_SHIFT_U)); args.push_back(L"0");
+			args.push_back(L"-fvk-s-shift"); args.push_back(std::to_wstring((int)wi::graphics::GraphicsDevice_Vulkan::VULKAN_BINDING_SHIFT_S)); args.push_back(L"0");
+			args.push_back(L"-fvk-bind-resource-heap"); args.push_back(L"0"); args.push_back(std::to_wstring((int)wi::graphics::GraphicsDevice_Vulkan::DESCRIPTOR_SET_BINDLESS_RESOURCE));
+			args.push_back(L"-fvk-bind-sampler-heap"); args.push_back(L"0"); args.push_back(std::to_wstring((int)wi::graphics::GraphicsDevice_Vulkan::DESCRIPTOR_SET_BINDLESS_SAMPLER));
 			break;
 		case ShaderFormat::METAL:
 			args.push_back(L"-D"); args.push_back(L"__metal__");
@@ -204,10 +207,9 @@ namespace wi::shadercompiler
 			args.push_back(L"-enable-16bit-types");
 		}
 		
-		if (input.format == ShaderFormat::METAL)
+		if (input.format == ShaderFormat::SPIRV || input.format == ShaderFormat::METAL)
 		{
-			// handling SM6.6 style bindless in Metal API is simpler than unbounded descriptor tables:
-			minshadermodel = ShaderModel::SM_6_6;
+			minshadermodel = std::max(minshadermodel, ShaderModel::SM_6_6);
 		}
 
 		args.push_back(L"-T");

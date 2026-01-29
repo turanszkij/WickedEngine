@@ -37,6 +37,21 @@ namespace wi::graphics
 	class GraphicsDevice_Vulkan final : public GraphicsDevice
 	{
 		friend struct CommandQueue;
+	public:
+		enum VULKAN_BINDING_SHIFT
+		{
+			VULKAN_BINDING_SHIFT_B = 0,
+			VULKAN_BINDING_SHIFT_T = 1000,
+			VULKAN_BINDING_SHIFT_U = 2000,
+			VULKAN_BINDING_SHIFT_S = 3000,
+		};
+		enum DESCRIPTOR_SET
+		{
+			DESCRIPTOR_SET_BINDINGS,
+			DESCRIPTOR_SET_BINDLESS_RESOURCE,
+			DESCRIPTOR_SET_BINDLESS_SAMPLER,
+			DESCRIPTOR_SET_COUNT,
+		};
 	protected:
 		VkInstance instance = VK_NULL_HANDLE;
 	    VkDebugUtilsMessengerEXT debugUtilsMessenger = VK_NULL_HANDLE;
@@ -111,14 +126,15 @@ namespace wi::graphics
 
 		VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
 
-		enum DESCRIPTOR_SET
-		{
-			DESCRIPTOR_SET_BINDINGS,
-			DESCRIPTOR_SET_BINDLESS_SAMPLER,
-			DESCRIPTOR_SET_BINDLESS_RESOURCE,
-			DESCRIPTOR_SET_COUNT,
-		};
 		VkDescriptorSetLayout descriptor_set_layouts[DESCRIPTOR_SET_COUNT] = {};
+
+		enum DESCRIPTOR_HEAP
+		{
+			DESCRIPTOR_HEAP_RESOURCE,
+			DESCRIPTOR_HEAP_SAMPLER,
+			DESCRIPTOR_HEAP_COUNT,
+		};
+		VkDescriptorSet descriptor_heaps[DESCRIPTOR_HEAP_COUNT] = {};
 
 		uint32_t dynamic_cbv_count = ROOT_CBV_COUNT;
 		wi::vector<VkDescriptorPoolSize> binding_layout_allocations;

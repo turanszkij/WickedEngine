@@ -37,17 +37,6 @@ namespace vulkan_internal
 	static constexpr uint64_t timeout_value = 3'000'000'000ull; // 3 seconds
 	static constexpr uint64_t dynamic_cbv_maxsize = 64 * 1024;
 
-	// These shifts are made so that Vulkan resource bindings slots don't interfere with each other across shader stages:
-	//	These are also defined in wi::shadercompiler.cpp as hard coded compiler arguments for SPIRV, so they need to be the same
-	enum
-	{
-		VULKAN_BINDING_SHIFT_B = 0,
-		VULKAN_BINDING_SHIFT_T = 1000,
-		VULKAN_BINDING_SHIFT_U = 2000,
-		VULKAN_BINDING_SHIFT_S = 3000,
-	};
-
-
 	// Converters:
 	constexpr VkFormat _ConvertFormat(Format value)
 	{
@@ -3222,15 +3211,17 @@ using namespace vulkan_internal;
 			assert(features_1_2.descriptorBindingStorageTexelBufferUpdateAfterBind == VK_TRUE);
 			// Note: bindless uniform buffer is not used, don't need to check it
 
-			allocationhandler->bindless_samplers.init(this, VK_DESCRIPTOR_TYPE_SAMPLER, std::min(BINDLESS_SAMPLER_CAPACITY, properties_1_2.maxDescriptorSetUpdateAfterBindSampledImages));
-			descriptor_set_layouts[DESCRIPTOR_SET_BINDLESS_SAMPLER] = allocationhandler->bindless_samplers.descriptorSetLayout;
-
 			uint32_t bindless_resource_capacity_real = BINDLESS_RESOURCE_CAPACITY;
 			bindless_resource_capacity_real = std::min(bindless_resource_capacity_real, properties_1_2.maxDescriptorSetUpdateAfterBindSampledImages);
 			bindless_resource_capacity_real = std::min(bindless_resource_capacity_real, properties_1_2.maxDescriptorSetUpdateAfterBindStorageImages);
 			bindless_resource_capacity_real = std::min(bindless_resource_capacity_real, properties_1_2.maxDescriptorSetUpdateAfterBindStorageBuffers);
 			allocationhandler->bindless_resources.init(this, VK_DESCRIPTOR_TYPE_MUTABLE_EXT, bindless_resource_capacity_real);
 			descriptor_set_layouts[DESCRIPTOR_SET_BINDLESS_RESOURCE] = allocationhandler->bindless_resources.descriptorSetLayout;
+			descriptor_heaps[DESCRIPTOR_HEAP_RESOURCE] = allocationhandler->bindless_resources.descriptorSet;
+
+			allocationhandler->bindless_samplers.init(this, VK_DESCRIPTOR_TYPE_SAMPLER, std::min(BINDLESS_SAMPLER_CAPACITY, properties_1_2.maxDescriptorSetUpdateAfterBindSampledImages));
+			descriptor_set_layouts[DESCRIPTOR_SET_BINDLESS_SAMPLER] = allocationhandler->bindless_samplers.descriptorSetLayout;
+			descriptor_heaps[DESCRIPTOR_HEAP_SAMPLER] = allocationhandler->bindless_samplers.descriptorSet;
 		}
 
 		// Pipeline layouts:
@@ -6391,11 +6382,6 @@ using namespace vulkan_internal;
 
 		vulkan_check(vkBeginCommandBuffer(commandlist.GetCommandBuffer(), &beginInfo));
 
-		const VkDescriptorSet descriptor_sets[] = {
-			allocationhandler->bindless_samplers.descriptorSet,
-			allocationhandler->bindless_resources.descriptorSet,
-		};
-
 		if (queue == QUEUE_GRAPHICS)
 		{
 			vkCmdSetRasterizerDiscardEnable(commandlist.GetCommandBuffer(), VK_FALSE);
@@ -6449,8 +6435,8 @@ using namespace vulkan_internal;
 				VK_PIPELINE_BIND_POINT_GRAPHICS,
 				pipeline_layout,
 				1,
-				arraysize(descriptor_sets),
-				descriptor_sets,
+				arraysize(descriptor_heaps),
+				descriptor_heaps,
 				0,
 				nullptr
 			);
@@ -6460,8 +6446,8 @@ using namespace vulkan_internal;
 				VK_PIPELINE_BIND_POINT_COMPUTE,
 				pipeline_layout,
 				1,
-				arraysize(descriptor_sets),
-				descriptor_sets,
+				arraysize(descriptor_heaps),
+				descriptor_heaps,
 				0,
 				nullptr
 			);
@@ -6473,8 +6459,8 @@ using namespace vulkan_internal;
 				VK_PIPELINE_BIND_POINT_COMPUTE,
 				pipeline_layout,
 				1,
-				arraysize(descriptor_sets),
-				descriptor_sets,
+				arraysize(descriptor_heaps),
+				descriptor_heaps,
 				0,
 				nullptr
 			);
@@ -8482,17 +8468,13 @@ using namespace vulkan_internal;
 		vkCmdBindPipeline(commandlist.GetCommandBuffer(), VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, to_internal(rtpso)->pipeline);
 
 		// Note: bind descriptor set for RT here instead of BeginCommandList to not set it needlessly
-		const VkDescriptorSet descriptor_sets[] = {
-			allocationhandler->bindless_samplers.descriptorSet,
-			allocationhandler->bindless_resources.descriptorSet,
-		};
 		vkCmdBindDescriptorSets(
 			commandlist.GetCommandBuffer(),
 			VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
 			pipeline_layout,
 			1,
-			arraysize(descriptor_sets),
-			descriptor_sets,
+			arraysize(descriptor_heaps),
+			descriptor_heaps,
 			0,
 			nullptr
 		);
