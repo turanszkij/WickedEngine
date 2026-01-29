@@ -259,6 +259,13 @@ void CameraComponentWindow::Create(EditorComponent* _editor)
 	}));
 	AddWidget(&samplecountSlider);
 
+	updateIntervalSlider.Create(0.0f, 2.0f, 0.0f, 200, "Update Interval: ");
+	updateIntervalSlider.SetTooltip("Control how often the camera renders in seconds. 0 - every frame, 1.0 - once per second, etc.");
+	updateIntervalSlider.OnSlide(forEachSelectedCameraComponent([](auto camera, auto args) {
+		camera->render_to_texture.update_interval = args.fValue;
+	}));
+	AddWidget(&updateIntervalSlider);
+
 	crtCheckbox.Create("CRT: ");
 	crtCheckbox.SetTooltip("Toggle CRT TV mode for this camera (when render to texture is enabled)");
 	crtCheckbox.OnClick(forEachSelectedCameraComponent([](auto camera, auto args) {
@@ -299,6 +306,7 @@ void CameraComponentWindow::SetEntity(Entity entity)
 		resolutionXSlider.SetValue((int)camera->render_to_texture.resolution.x);
 		resolutionYSlider.SetValue((int)camera->render_to_texture.resolution.y);
 		samplecountSlider.SetValue((int)camera->render_to_texture.sample_count);
+		updateIntervalSlider.SetValue(camera->render_to_texture.update_interval);
 		crtCheckbox.SetCheck(camera->IsCRT());
 
 		preview.entity = entity;
@@ -336,11 +344,13 @@ void CameraComponentWindow::ResizeLayout()
 		resolutionXSlider.SetVisible(true);
 		resolutionYSlider.SetVisible(true);
 		samplecountSlider.SetVisible(true);
+		updateIntervalSlider.SetVisible(true);
 		crtCheckbox.SetVisible(true);
 
 		layout.add(resolutionXSlider);
 		layout.add(resolutionYSlider);
 		layout.add(samplecountSlider);
+		layout.add(updateIntervalSlider);
 		layout.add_right(crtCheckbox);
 	}
 	else
@@ -348,6 +358,7 @@ void CameraComponentWindow::ResizeLayout()
 		resolutionXSlider.SetVisible(false);
 		resolutionYSlider.SetVisible(false);
 		samplecountSlider.SetVisible(false);
+		updateIntervalSlider.SetVisible(false);
 		crtCheckbox.SetVisible(false);
 	}
 
