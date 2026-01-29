@@ -35,6 +35,7 @@ public:
 	wi::gui::Slider resolutionXSlider;
 	wi::gui::Slider resolutionYSlider;
 	wi::gui::Slider samplecountSlider;
+	wi::gui::Slider updateIntervalSlider;
 	wi::gui::CheckBox crtCheckbox;
 
 	CameraPreview preview;
