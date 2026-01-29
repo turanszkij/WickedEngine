@@ -2566,6 +2566,15 @@ namespace wi
 				continue;
 			}
 
+			camera.render_to_texture.time_accumulator += scene->dt;
+			bool should_render = (camera.render_to_texture.update_interval <= 0.0f) || 
+				(camera.render_to_texture.time_accumulator >= camera.render_to_texture.update_interval);
+			if (!should_render)
+			{
+				continue;
+			}
+			camera.render_to_texture.time_accumulator = 0.0f;
+
 			GraphicsDevice* device = GetDevice();
 			CommandList cmd = device->BeginCommandList();
 
@@ -2651,6 +2660,8 @@ namespace wi
 			}
 			camera.width = (float)camera.render_to_texture.resolution.x;
 			camera.height = (float)camera.render_to_texture.resolution.y;
+			camera.UpdateCamera();
+
 			if (camera.render_to_texture.depthstencil_resolved.IsValid())
 			{
 				camera.texture_depth_index = device->GetDescriptorIndex(&camera.render_to_texture.depthstencil_resolved, SubresourceType::SRV);
@@ -2752,7 +2763,8 @@ namespace wi
 
 					if (camera.IsCRT() && getSceneUpdateEnabled())
 					{
-						wi::renderer::Postprocess_CRT(camera.render_to_texture.rendertarget_render, camera.render_to_texture.rendertarget_display, cmd, 0.2f, frameCB.time * 100, false);
+						wi::renderer::Postprocess_CRT(camera.render_to_texture.rendertarget_render, camera.render_to_texture.rendertarget_display, cmd, 0, 0, false);
+						// Swap so rendertarget_render now contains the CRT-processed result for mipchain and display
 						std::swap(camera.render_to_texture.rendertarget_render, camera.render_to_texture.rendertarget_display);
 					}
 
