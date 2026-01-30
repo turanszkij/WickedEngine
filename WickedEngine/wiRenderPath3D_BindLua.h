@@ -82,6 +82,15 @@ namespace wi::lua
 
 		int SetChromaticAberrationEnabled(lua_State* L);
 		int SetChromaticAberrationAmount(lua_State* L);
+		int SetEyeAdaptionRate(lua_State* L);
+		int SetEyeAdaptionKey(lua_State* L);
+		int SetContrast(lua_State* L);
+		int SetSaturation(lua_State* L);
+		int SetBrightness(lua_State* L);
+		int SetLightShaftsFadeSpeed(lua_State* L);
+		int SetMeshBlendEnabled(lua_State* L);
+		int SetOcclusionCullingEnabled(lua_State* L);
+		int SetSSGIDepthRejection(lua_State* L);
 
 		static void Bind();
 	};
