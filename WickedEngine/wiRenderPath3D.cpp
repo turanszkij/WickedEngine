@@ -3133,7 +3133,10 @@ namespace wi
 
 		if (value)
 		{
-			wi::renderer::CreateBloomResources(bloomResources, GetInternalResolution());
+			const XMUINT2 internalResolution = GetInternalResolution();
+			if (internalResolution.x == 0 || internalResolution.y == 0)
+				return;
+			wi::renderer::CreateBloomResources(bloomResources, internalResolution);
 		}
 		else
 		{
