@@ -48,6 +48,17 @@ MaterialComponent* get_material(Scene& scene, PickResult x)
 	return material;
 };
 
+void ResetTexAnim(MaterialComponent* material)
+{
+	if (material->texAnimFrameRate == 0 && material->texAnimDirection.x == 0 && material->texAnimDirection.y == 0)
+	{
+		material->texAnimElapsedTime = 0;
+		material->texMulAdd.z = 0;
+		material->texMulAdd.w = 0;
+		material->SetDirty();
+	}
+}
+
 void MaterialWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
@@ -674,6 +685,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	texAnimFrameRateSlider.SetPos(XMFLOAT2(x, y += step));
 	texAnimFrameRateSlider.OnSlide(forEachSelected([] (auto material, auto args) {
 		material->texAnimFrameRate = args.fValue;
+		ResetTexAnim(material);
 	}));
 	AddWidget(&texAnimFrameRateSlider);
 
@@ -683,6 +695,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	texAnimDirectionSliderU.SetPos(XMFLOAT2(x, y += step));
 	texAnimDirectionSliderU.OnSlide(forEachSelected([] (auto material, auto args) {
 		material->texAnimDirection.x = args.fValue;
+		ResetTexAnim(material);
 	}));
 	AddWidget(&texAnimDirectionSliderU);
 
@@ -692,6 +705,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	texAnimDirectionSliderV.SetPos(XMFLOAT2(x, y += step));
 	texAnimDirectionSliderV.OnSlide(forEachSelected([] (auto material, auto args) {
 		material->texAnimDirection.y = args.fValue;
+		ResetTexAnim(material);
 	}));
 	AddWidget(&texAnimDirectionSliderV);
 
