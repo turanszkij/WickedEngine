@@ -1877,17 +1877,17 @@ It inherits functions from RenderPath2D, so it can render a 2D overlay.
 - SetCropBottom(float value) -- Sets cropping from bottom of the screen in logical units
 - GetLastPostProcessRT() : Texture -- returns the last post process render texture
 - SetDistortionOverlay(Texture texture) -- Set a normal map texture as full screen distortion mask
-- SetChromaticAberrationEnabled(bool value);
-- SetChromaticAberrationAmount(float value);
-- SetEyeAdaptionRate(float value);
-- SetEyeAdaptionKey(float value);
-- SetContrast(float value);
-- SetSaturation(float value);
-- SetBrightness(float value);
-- SetLightShaftsFadeSpeed(float value);
-- SetMeshBlendEnabled(bool value);
-- SetOcclusionCullingEnabled(bool value);
-- SetSSGIDepthRejection(float value);
+- SetChromaticAberrationEnabled(bool value)
+- SetChromaticAberrationAmount(float value)
+- SetEyeAdaptionRate(float value)
+- SetEyeAdaptionKey(float value)
+- SetContrast(float value)
+- SetSaturation(float value)
+- SetBrightness(float value)
+- SetLightShaftsFadeSpeed(float value)
+- SetMeshBlendEnabled(bool value)
+- SetOcclusionCullingEnabled(bool value)
+- SetSSGIDepthRejection(float value)
 
 
 ```lua
