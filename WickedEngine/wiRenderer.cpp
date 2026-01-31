@@ -3388,6 +3388,7 @@ void RenderMeshes(
 			push.instance_offset = (uint)instancedBatch.dataOffset;
 			assert(material.cached_wrapSampler >= 0 && material.cached_wrapSampler < 256);
 			assert(material.cached_clampSampler >= 0 && material.cached_clampSampler < 256);
+			static_assert(BINDLESS_SAMPLER_CAPACITY <= 256); // It is assumed for this structure that samplers can be indexed with 8 bits
 			push.wrapSamplerIndex = material.cached_wrapSampler;
 			push.clampSamplerIndex = material.cached_clampSampler;
 
@@ -14539,8 +14540,8 @@ void Postprocess_RTReflection(
 		dispatchraysdesc.hit_group.size = shaderIdentifierSize;
 		dispatchraysdesc.hit_group.stride = shaderIdentifierSize;
 
-		dispatchraysdesc.width = desc.width / 2;
-		dispatchraysdesc.height = desc.height / 2;
+		dispatchraysdesc.width = res.texture_rayIndirectSpecular.GetDesc().width;
+		dispatchraysdesc.height = res.texture_rayIndirectSpecular.GetDesc().height;
 
 		device->DispatchRays(&dispatchraysdesc, cmd);
 

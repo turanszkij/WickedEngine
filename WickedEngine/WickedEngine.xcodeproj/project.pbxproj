@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1E19DD052F2B6EB4009F2E30 /* wiGraphicsDevice_Vulkan.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E19DD042F2B6EB4009F2E30 /* wiGraphicsDevice_Vulkan.cpp */; };
 		1E640FE22F0AEC0B003D9FC7 /* libmetalirconverter.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E640FE12F0AEC0B003D9FC7 /* libmetalirconverter.dylib */; };
 		1E640FEA2F0B0565003D9FC7 /* libdxcompiler.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 1EDA8A692EE5D68100210D41 /* libdxcompiler.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		1E640FEC2F0B0567003D9FC7 /* libmetalirconverter.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 1E640FE12F0AEC0B003D9FC7 /* libmetalirconverter.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
@@ -297,6 +298,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		1E19DD032F2B6EB4009F2E30 /* wiGraphicsDevice_Vulkan.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = wiGraphicsDevice_Vulkan.h; sourceTree = "<group>"; };
+		1E19DD042F2B6EB4009F2E30 /* wiGraphicsDevice_Vulkan.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = wiGraphicsDevice_Vulkan.cpp; sourceTree = "<group>"; };
 		1E640FE12F0AEC0B003D9FC7 /* libmetalirconverter.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libmetalirconverter.dylib; sourceTree = "<group>"; };
 		1E7929892EFE75BA00B9E35C /* wiAppleHelper.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = wiAppleHelper.mm; sourceTree = "<group>"; };
 		1E79298B2EFE76C500B9E35C /* wiAppleHelper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = wiAppleHelper.h; sourceTree = "<group>"; };
@@ -2097,6 +2100,8 @@
 		1EDA71632EE0978C00210D41 = {
 			isa = PBXGroup;
 			children = (
+				1E19DD032F2B6EB4009F2E30 /* wiGraphicsDevice_Vulkan.h */,
+				1E19DD042F2B6EB4009F2E30 /* wiGraphicsDevice_Vulkan.cpp */,
 				1EBD1C002F2514E700C29B34 /* wiInput_Apple.mm */,
 				1EBD1BFF2F2514D700C29B34 /* wiInput_Apple.h */,
 				1E640FE12F0AEC0B003D9FC7 /* libmetalirconverter.dylib */,
@@ -3452,6 +3457,7 @@
 				1EDA80292EE1F57900210D41 /* vcacheoptimizer.cpp in Sources */,
 				1EDA802A2EE1F57900210D41 /* loslib.c in Sources */,
 				1EDA802B2EE1F57900210D41 /* simplifier.cpp in Sources */,
+				1E19DD052F2B6EB4009F2E30 /* wiGraphicsDevice_Vulkan.cpp in Sources */,
 				1EDA802C2EE1F57900210D41 /* utility_common.cpp in Sources */,
 				1EDA802E2EE1F57900210D41 /* stb_vorbis.c in Sources */,
 				1EDA802F2EE1F57900210D41 /* linit.c in Sources */,

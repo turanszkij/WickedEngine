@@ -119,9 +119,9 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 		lighting.create(0, 0, GetAmbient(surface.N), 0);
 
 		[loop]
-		for (uint iterator = 0; iterator < GetFrame().light_oterator.item_count(); iterator++)
+		for (uint iterator = 0; iterator < lights().item_count(); iterator++)
 		{
-			ShaderEntity light = load_entity(lights().forst_item() + iterator);
+			ShaderEntity light = load_entity(lights().first_item() + iterator);
 			if ((light.layerMask & surface.material.layerMask) == 0)
 				continue;
 

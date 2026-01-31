@@ -39,10 +39,6 @@ namespace wi::graphics
 {
 namespace dx12_internal
 {
-	// Bindless allocation limits:
-	static constexpr int BINDLESS_RESOURCE_CAPACITY = 500000;
-	static constexpr int BINDLESS_SAMPLER_CAPACITY = 256;
-
 #ifdef PLATFORM_XBOX
 // No renderpass API on xbox yet
 #define DISABLE_RENDERPASS

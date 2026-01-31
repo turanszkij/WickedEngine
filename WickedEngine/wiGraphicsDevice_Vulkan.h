@@ -2,7 +2,7 @@
 #include "CommonInclude.h"
 #include "wiPlatform.h"
 
-#if defined(PLATFORM_WINDOWS_DESKTOP) || defined(PLATFORM_LINUX)
+#if defined(PLATFORM_WINDOWS_DESKTOP) || defined(PLATFORM_LINUX) || defined(PLATFORM_APPLE)
 #define WICKEDENGINE_BUILD_VULKAN
 #endif // PLATFORM_WINDOWS_DESKTOP || PLATFORM_LINUX
 
@@ -34,83 +34,24 @@
 
 namespace wi::graphics
 {
-	struct PSOLayoutHash
-	{
-		VkPushConstantRange push = {};
-		struct Item
-		{
-			bool used = true;
-			VkImageViewType viewType = VK_IMAGE_VIEW_TYPE_2D;
-			VkDescriptorSetLayoutBinding binding = {};
-		};
-		wi::vector<Item> items;
-		size_t hash = 0;
-
-		inline bool operator==(const PSOLayoutHash& other) const
-		{
-			if (hash != other.hash)
-				return false;
-			if (items.size() != other.items.size())
-				return false;
-			for (size_t i = 0; i < items.size(); ++i)
-			{
-				const Item& a = items[i];
-				const Item& b = other.items[i];
-				if (
-					a.used != b.used ||
-					a.viewType != b.viewType ||
-					a.binding.binding != b.binding.binding ||
-					a.binding.descriptorCount != b.binding.descriptorCount ||
-					a.binding.descriptorType != b.binding.descriptorType ||
-					a.binding.stageFlags != b.binding.stageFlags ||
-					a.binding.pImmutableSamplers != b.binding.pImmutableSamplers
-					)
-					return false;
-			}
-			return
-				push.offset == other.push.offset &&
-				push.size == other.push.size &&
-				push.stageFlags == other.push.stageFlags;
-		}
-		inline void embed_hash()
-		{
-			hash = 0;
-			for (auto& x : items)
-			{
-				wi::helper::hash_combine(hash, x.used);
-				wi::helper::hash_combine(hash, x.viewType);
-				wi::helper::hash_combine(hash, x.binding.binding);
-				wi::helper::hash_combine(hash, x.binding.descriptorCount);
-				wi::helper::hash_combine(hash, x.binding.descriptorType);
-				wi::helper::hash_combine(hash, x.binding.stageFlags);
-			}
-			wi::helper::hash_combine(hash, push.offset);
-			wi::helper::hash_combine(hash, push.size);
-			wi::helper::hash_combine(hash, push.stageFlags);
-		}
-		constexpr size_t get_hash() const
-		{
-			return hash;
-		}
-	};
-}
-namespace std
-{
-	template <>
-	struct hash<wi::graphics::PSOLayoutHash>
-	{
-		constexpr size_t operator()(const wi::graphics::PSOLayoutHash& hash) const
-		{
-			return hash.get_hash();
-		}
-	};
-}
-
-namespace wi::graphics
-{
 	class GraphicsDevice_Vulkan final : public GraphicsDevice
 	{
 		friend struct CommandQueue;
+	public:
+		enum VULKAN_BINDING_SHIFT
+		{
+			VULKAN_BINDING_SHIFT_B = 0,
+			VULKAN_BINDING_SHIFT_T = 1000,
+			VULKAN_BINDING_SHIFT_U = 2000,
+			VULKAN_BINDING_SHIFT_S = 3000,
+		};
+		enum DESCRIPTOR_SET
+		{
+			DESCRIPTOR_SET_BINDINGS,
+			DESCRIPTOR_SET_BINDLESS_RESOURCE,
+			DESCRIPTOR_SET_BINDLESS_SAMPLER,
+			DESCRIPTOR_SET_COUNT,
+		};
 	protected:
 		VkInstance instance = VK_NULL_HANDLE;
 	    VkDebugUtilsMessengerEXT debugUtilsMessenger = VK_NULL_HANDLE;
@@ -155,6 +96,7 @@ namespace wi::graphics
 		VkPhysicalDeviceRayQueryFeaturesKHR raytracing_query_features = {};
 		VkPhysicalDeviceFragmentShadingRateFeaturesKHR fragment_shading_rate_features = {};
 		VkPhysicalDeviceConditionalRenderingFeaturesEXT conditional_rendering_features = {};
+		VkPhysicalDeviceMutableDescriptorTypeFeaturesEXT mutable_descriptor_features = {};
 		VkPhysicalDeviceDepthClipEnableFeaturesEXT depth_clip_enable_features = {};
 		VkPhysicalDeviceImageViewMinLodFeaturesEXT image_view_min_lod_features = {};
 		VkPhysicalDeviceMeshShaderFeaturesEXT mesh_shader_features = {};
@@ -180,21 +122,22 @@ namespace wi::graphics
 
 		VkBuffer		nullBuffer = VK_NULL_HANDLE;
 		VmaAllocation	nullBufferAllocation = VK_NULL_HANDLE;
-		VkBufferView	nullBufferView = VK_NULL_HANDLE;
 		VkSampler		nullSampler = VK_NULL_HANDLE;
-		VmaAllocation	nullImageAllocation1D = VK_NULL_HANDLE;
-		VmaAllocation	nullImageAllocation2D = VK_NULL_HANDLE;
-		VmaAllocation	nullImageAllocation3D = VK_NULL_HANDLE;
-		VkImage			nullImage1D = VK_NULL_HANDLE;
-		VkImage			nullImage2D = VK_NULL_HANDLE;
-		VkImage			nullImage3D = VK_NULL_HANDLE;
-		VkImageView		nullImageView1D = VK_NULL_HANDLE;
-		VkImageView		nullImageView1DArray = VK_NULL_HANDLE;
-		VkImageView		nullImageView2D = VK_NULL_HANDLE;
-		VkImageView		nullImageView2DArray = VK_NULL_HANDLE;
-		VkImageView		nullImageViewCube = VK_NULL_HANDLE;
-		VkImageView		nullImageViewCubeArray = VK_NULL_HANDLE;
-		VkImageView		nullImageView3D = VK_NULL_HANDLE;
+
+		VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
+
+		VkDescriptorSetLayout descriptor_set_layouts[DESCRIPTOR_SET_COUNT] = {};
+
+		enum DESCRIPTOR_HEAP
+		{
+			DESCRIPTOR_HEAP_RESOURCE,
+			DESCRIPTOR_HEAP_SAMPLER,
+			DESCRIPTOR_HEAP_COUNT,
+		};
+		VkDescriptorSet descriptor_heaps[DESCRIPTOR_HEAP_COUNT] = {};
+
+		uint32_t dynamic_cbv_count = ROOT_CBV_COUNT;
+		wi::vector<VkDescriptorPoolSize> binding_layout_allocations;
 
 		struct CommandQueue
 		{
@@ -261,18 +204,8 @@ namespace wi::graphics
 		struct DescriptorBinder
 		{
 			DescriptorBindingTable table;
-			GraphicsDevice_Vulkan* device;
-
-			wi::vector<VkWriteDescriptorSet> descriptorWrites;
-			wi::vector<VkDescriptorBufferInfo> bufferInfos;
-			wi::vector<VkDescriptorImageInfo> imageInfos;
-			wi::vector<VkBufferView> texelBufferViews;
-			wi::vector<VkWriteDescriptorSetAccelerationStructureKHR> accelerationStructureViews;
-
-			uint32_t uniform_buffer_dynamic_offsets[DESCRIPTORBINDER_CBV_COUNT] = {};
-
-			VkDescriptorSet descriptorSet_graphics = VK_NULL_HANDLE;
-			VkDescriptorSet descriptorSet_compute = VK_NULL_HANDLE;
+			GraphicsDevice_Vulkan* device = nullptr;
+			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 
 			enum DIRTY_FLAGS
 			{
@@ -284,20 +217,101 @@ namespace wi::graphics
 			};
 			uint32_t dirty = DIRTY_NONE;
 
-			void init(GraphicsDevice_Vulkan* device);
-			void reset();
+			void init(GraphicsDevice_Vulkan* device)
+			{
+				this->device = device;
+			}
+			void reset()
+			{
+				table = {};
+				dirty = DIRTY_ALL;
+				descriptorSet = VK_NULL_HANDLE;
+			}
 			void flush(bool graphics, CommandList cmd);
 		};
 
 		struct DescriptorBinderPool
 		{
-			GraphicsDevice_Vulkan* device;
-			VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
-			uint32_t poolSize = 256;
+			static constexpr uint32_t pool_size = 256;
+			GraphicsDevice_Vulkan* device = nullptr;
+			wi::vector<VkDescriptorPool> pools;
+			wi::vector<VkDescriptorSet> free_sets;
+			VkDescriptorSetLayout layouts[pool_size] = {};
+			bool needs_reset = true;
 
-			void init(GraphicsDevice_Vulkan* device);
-			void destroy();
-			void reset();
+			void init(GraphicsDevice_Vulkan* device)
+			{
+				this->device = device;
+				for (auto& x : layouts)
+				{
+					x = device->descriptor_set_layouts[DESCRIPTOR_SET_BINDINGS];
+				}
+			}
+			VkDescriptorSet allocate()
+			{
+				if (needs_reset)
+				{
+					// Cannot simply recycle descriptor sets because then views that are set on them will be still "referenced" and invalid to free
+					//	So we will reset pools and realloc all sets
+					free_sets.clear();
+					for (auto& x : pools)
+					{
+						vulkan_check(vkResetDescriptorPool(device->device, x, 0));
+
+						VkDescriptorSetAllocateInfo allocInfo = {};
+						allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+						allocInfo.descriptorPool = x;
+						allocInfo.descriptorSetCount = pool_size;
+						allocInfo.pSetLayouts = layouts;
+
+						const size_t count = free_sets.size();
+						free_sets.resize(count + pool_size);
+						vulkan_check(vkAllocateDescriptorSets(device->device, &allocInfo, free_sets.data() + count));
+					}
+					needs_reset = false;
+				}
+				if (free_sets.empty())
+				{
+					VkDescriptorPoolCreateInfo poolInfo = {};
+					poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+					poolInfo.poolSizeCount = (uint32_t)device->binding_layout_allocations.size();
+					poolInfo.pPoolSizes = device->binding_layout_allocations.data();
+					poolInfo.maxSets = pool_size;
+
+					VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
+					vulkan_check(vkCreateDescriptorPool(device->device, &poolInfo, nullptr, &descriptorPool));
+
+					pools.push_back(descriptorPool);
+
+					VkDescriptorSetAllocateInfo allocInfo = {};
+					allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+					allocInfo.descriptorPool = descriptorPool;
+					allocInfo.descriptorSetCount = pool_size;
+					allocInfo.pSetLayouts = layouts;
+
+					free_sets.resize(pool_size);
+					vulkan_check(vkAllocateDescriptorSets(device->device, &allocInfo, free_sets.data()));
+				}
+				VkDescriptorSet descriptor_set = free_sets.back();
+				free_sets.pop_back();
+				return descriptor_set;
+			}
+			void destroy()
+			{
+				device->allocationhandler->destroylocker.lock();
+				for (auto& x : pools)
+				{
+					device->allocationhandler->destroyer_descriptorPools.push_back(std::make_pair(x, device->allocationhandler->framecount));
+				}
+				device->allocationhandler->destroylocker.unlock();
+				pools.clear();
+			}
+			void reset()
+			{
+				// Don't really reset here, but defer reset until first use
+				//	The first use will more likely be executed on worker thread instead of resetting new commandlists on main thread
+				needs_reset = true;
+			}
 		};
 
 		wi::vector<VkSemaphore> semaphore_pool;
@@ -405,8 +419,7 @@ namespace wi::graphics
 		void predraw(CommandList cmd);
 		void predispatch(CommandList cmd);
 
-		static constexpr uint32_t immutable_sampler_slot_begin = 100;
-		wi::vector<VkSampler> immutable_samplers;
+		VkSampler immutable_samplers[10];
 
 		void set_fence_name(VkFence fence, const char* name);
 		void set_semaphore_name(VkSemaphore semaphore, const char* name);
@@ -606,15 +619,6 @@ namespace wi::graphics
 
 					vulkan_check(vkCreateDescriptorPool(device->device, &poolInfo, nullptr, &descriptorPool));
 
-#if 0
-					VkDebugUtilsObjectNameInfoEXT info{ VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
-					info.pObjectName = "BindlessDescriptorHeap";
-					info.objectType = VK_OBJECT_TYPE_DESCRIPTOR_POOL;
-					info.objectHandle = (uint64_t)descriptorPool;
-					res = vkSetDebugUtilsObjectNameEXT(device->device, &info);
-					vulkan_check(res);
-#endif
-
 					VkDescriptorSetLayoutBinding binding = {};
 					binding.descriptorType = type;
 					binding.binding = 0;
@@ -628,24 +632,55 @@ namespace wi::graphics
 					layoutInfo.pBindings = &binding;
 					layoutInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
 
-					VkDescriptorBindingFlags bindingFlags =
+					const VkDescriptorBindingFlags bindingFlags =
 						VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT |
 						VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT |
-						VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT;
-					//| VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT;
+						VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT |
+						VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT;
 					VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlagsInfo = {};
 					bindingFlagsInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
 					bindingFlagsInfo.bindingCount = 1;
 					bindingFlagsInfo.pBindingFlags = &bindingFlags;
 					layoutInfo.pNext = &bindingFlagsInfo;
 
+					const VkDescriptorType mutable_types[] = {
+						VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+						VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,
+						VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+						VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,
+						VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+						VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR // last one!
+					};
+					VkMutableDescriptorTypeListEXT list = {};
+					list.pDescriptorTypes = mutable_types;
+					list.descriptorTypeCount = arraysize(mutable_types);
+					if (!device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
+					{
+						// If raytracing not supported, remove this option from mutable descriptor type:
+						list.descriptorTypeCount--;
+					}
+					VkMutableDescriptorTypeCreateInfoEXT mutable_info = {};
+					mutable_info.sType = VK_STRUCTURE_TYPE_MUTABLE_DESCRIPTOR_TYPE_CREATE_INFO_EXT;
+					mutable_info.pMutableDescriptorTypeLists = &list;
+					mutable_info.mutableDescriptorTypeListCount = 1;
+					if (type == VK_DESCRIPTOR_TYPE_MUTABLE_EXT)
+					{
+						bindingFlagsInfo.pNext = &mutable_info;
+					}
+
 					vulkan_check(vkCreateDescriptorSetLayout(device->device, &layoutInfo, nullptr, &descriptorSetLayout));
+
+					VkDescriptorSetVariableDescriptorCountAllocateInfo count_allocation_info = {};
+					count_allocation_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO;
+					count_allocation_info.descriptorSetCount = 1;
+					count_allocation_info.pDescriptorCounts = &descriptorCount;
 
 					VkDescriptorSetAllocateInfo allocInfo = {};
 					allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 					allocInfo.descriptorPool = descriptorPool;
 					allocInfo.descriptorSetCount = 1;
 					allocInfo.pSetLayouts = &descriptorSetLayout;
+					allocInfo.pNext = &count_allocation_info;
 					vulkan_check(vkAllocateDescriptorSets(device->device, &allocInfo, &descriptorSet));
 
 					for (int i = 0; i < (int)descriptorCount; ++i)
@@ -653,12 +688,29 @@ namespace wi::graphics
 						freelist.push_back((int)descriptorCount - i - 1);
 					}
 
-					if (type != VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR)
+					// Descriptor safety feature:
+					//	We init null descriptors for bindless index = 0 for access safety
+					//	Because shader compiler sometimes incorrectly loads descriptor outside of safety branch
+					//	Note: these are never freed, this is intentional
+					if (type == VK_DESCRIPTOR_TYPE_MUTABLE_EXT)
 					{
-						// Descriptor safety feature:
-						//	We init null descriptors for bindless index = 0 for access safety
-						//	Because shader compiler sometimes incorrectly loads descriptor outside of safety branch
-						//	Note: these are never freed, this is intentional
+						int index = allocate();
+						wilog_assert(index == 0, "Descriptor safety feature error: descriptor index must be 0!");
+						VkWriteDescriptorSet write = {};
+						write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+						write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+						write.dstBinding = 0;
+						write.dstArrayElement = index;
+						write.descriptorCount = 1;
+						write.dstSet = descriptorSet;
+						VkDescriptorBufferInfo buffer_info = {};
+						buffer_info.buffer = device->nullBuffer;
+						buffer_info.range = VK_WHOLE_SIZE;
+						write.pBufferInfo = &buffer_info;
+						vkUpdateDescriptorSets(device->device, 1, &write, 0, nullptr);
+					}
+					else if (type == VK_DESCRIPTOR_TYPE_SAMPLER)
+					{
 						int index = allocate();
 						wilog_assert(index == 0, "Descriptor safety feature error: descriptor index must be 0!");
 						VkWriteDescriptorSet write = {};
@@ -668,39 +720,9 @@ namespace wi::graphics
 						write.dstArrayElement = index;
 						write.descriptorCount = 1;
 						write.dstSet = descriptorSet;
-
 						VkDescriptorImageInfo image_info = {};
-						VkDescriptorBufferInfo buffer_info = {};
-
-						switch (type)
-						{
-						case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
-							image_info.imageView = device->nullImageView2D;
-							image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-							write.pImageInfo = &image_info;
-							break;
-						case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
-						case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
-							write.pTexelBufferView = &device->nullBufferView;
-							break;
-						case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
-							buffer_info.buffer = device->nullBuffer;
-							buffer_info.range = VK_WHOLE_SIZE;
-							write.pBufferInfo = &buffer_info;
-							break;
-						case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-							image_info.imageView = device->nullImageView2D;
-							image_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-							write.pImageInfo = &image_info;
-							break;
-						case VK_DESCRIPTOR_TYPE_SAMPLER:
-							image_info.sampler = device->nullSampler;
-							write.pImageInfo = &image_info;
-							break;
-						default:
-							wilog_assert(0, "Descriptor safety feature error: descriptor type not handled!");
-							break;
-						}
+						image_info.sampler = device->nullSampler;
+						write.pImageInfo = &image_info;
 						vkUpdateDescriptorSets(device->device, 1, &write, 0, nullptr);
 					}
 				}
@@ -742,13 +764,8 @@ namespace wi::graphics
 					}
 				}
 			};
-			BindlessDescriptorHeap bindlessSampledImages;
-			BindlessDescriptorHeap bindlessUniformTexelBuffers;
-			BindlessDescriptorHeap bindlessStorageBuffers;
-			BindlessDescriptorHeap bindlessStorageImages;
-			BindlessDescriptorHeap bindlessStorageTexelBuffers;
-			BindlessDescriptorHeap bindlessSamplers;
-			BindlessDescriptorHeap bindlessAccelerationStructures;
+			BindlessDescriptorHeap bindless_resources;
+			BindlessDescriptorHeap bindless_samplers;
 
 			std::deque<std::pair<VmaAllocation, uint64_t>> destroyer_allocations;
 			std::deque<std::pair<std::pair<VkImage, VmaAllocation>, uint64_t>> destroyer_images;
@@ -769,23 +786,13 @@ namespace wi::graphics
 			std::deque<std::pair<VkSemaphore, uint64_t>> destroyer_semaphores;
 			std::deque<std::pair<VkVideoSessionKHR, uint64_t>> destroyer_video_sessions;
 			std::deque<std::pair<VkVideoSessionParametersKHR, uint64_t>> destroyer_video_session_parameters;
-			std::deque<std::pair<int, uint64_t>> destroyer_bindlessSampledImages;
-			std::deque<std::pair<int, uint64_t>> destroyer_bindlessUniformTexelBuffers;
-			std::deque<std::pair<int, uint64_t>> destroyer_bindlessStorageBuffers;
-			std::deque<std::pair<int, uint64_t>> destroyer_bindlessStorageImages;
-			std::deque<std::pair<int, uint64_t>> destroyer_bindlessStorageTexelBuffers;
-			std::deque<std::pair<int, uint64_t>> destroyer_bindlessSamplers;
-			std::deque<std::pair<int, uint64_t>> destroyer_bindlessAccelerationStructures;
+			std::deque<std::pair<int, uint64_t>> destroyer_bindless_resources;
+			std::deque<std::pair<int, uint64_t>> destroyer_bindless_samplers;
 
 			~AllocationHandler()
 			{
-				bindlessSampledImages.destroy(device);
-				bindlessUniformTexelBuffers.destroy(device);
-				bindlessStorageBuffers.destroy(device);
-				bindlessStorageImages.destroy(device);
-				bindlessStorageTexelBuffers.destroy(device);
-				bindlessSamplers.destroy(device);
-				bindlessAccelerationStructures.destroy(device);
+				bindless_resources.destroy(device);
+				bindless_samplers.destroy(device);
 				Update(~0ull, 0); // destroy all remaining
 				vmaDestroyAllocator(allocator);
 				vmaDestroyAllocator(externalAllocator);
@@ -818,17 +825,17 @@ namespace wi::graphics
 				destroy(destroyer_allocations, [&](auto& item) {
 					vmaFreeMemory(allocator, item);
 				});
-				destroy(destroyer_images, [&](auto& item) {
-					vmaDestroyImage(allocator, item.first, item.second);
-				});
 				destroy(destroyer_imageviews, [&](auto& item) {
 					vkDestroyImageView(device, item, nullptr);
 				});
-				destroy(destroyer_buffers, [&](auto& item) {
-					vmaDestroyBuffer(allocator, item.first, item.second);
+				destroy(destroyer_images, [&](auto& item) {
+					vmaDestroyImage(allocator, item.first, item.second);
 				});
 				destroy(destroyer_bufferviews, [&](auto& item) {
 					vkDestroyBufferView(device, item, nullptr);
+				});
+				destroy(destroyer_buffers, [&](auto& item) {
+					vmaDestroyBuffer(allocator, item.first, item.second);
 				});
 				destroy(destroyer_bvhs, [&](auto& item) {
 					vkDestroyAccelerationStructureKHR(device, item, nullptr);
@@ -872,52 +879,16 @@ namespace wi::graphics
 				destroy(destroyer_video_session_parameters, [&](auto& item) {
 					vkDestroyVideoSessionParametersKHR(device, item, nullptr);
 				});
-				destroy(destroyer_bindlessSampledImages, [&](auto& item) {
-					bindlessSampledImages.free(item);
+				destroy(destroyer_bindless_resources, [&](auto& item) {
+					bindless_resources.free(item);
 				});
-				destroy(destroyer_bindlessUniformTexelBuffers, [&](auto& item) {
-					bindlessUniformTexelBuffers.free(item);
-				});
-				destroy(destroyer_bindlessStorageBuffers, [&](auto& item) {
-					bindlessStorageBuffers.free(item);
-				});
-				destroy(destroyer_bindlessStorageImages, [&](auto& item) {
-					bindlessStorageImages.free(item);
-				});
-				destroy(destroyer_bindlessStorageTexelBuffers, [&](auto& item) {
-					bindlessStorageTexelBuffers.free(item);
-				});
-				destroy(destroyer_bindlessSamplers, [&](auto& item) {
-					bindlessSamplers.free(item);
-				});
-				destroy(destroyer_bindlessAccelerationStructures, [&](auto& item) {
-					bindlessAccelerationStructures.free(item);
+				destroy(destroyer_bindless_samplers, [&](auto& item) {
+					bindless_samplers.free(item);
 				});
 			}
 		};
 		wi::allocator::shared_ptr<AllocationHandler> allocationhandler;
 
-
-		struct PSOLayout
-		{
-			wi::allocator::shared_ptr<AllocationHandler> allocationhandler;
-			VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
-			VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
-			wi::vector<VkDescriptorSet> bindlessSets;
-			uint32_t bindlessFirstSet = 0;
-			~PSOLayout()
-			{
-				if (allocationhandler == nullptr)
-					return;
-				allocationhandler->destroylocker.lock();
-				uint64_t framecount = allocationhandler->framecount;
-				allocationhandler->destroyer_pipelineLayouts.push_back(std::make_pair(pipelineLayout, framecount));
-				allocationhandler->destroyer_descriptorSetLayouts.push_back(std::make_pair(descriptorSetLayout, framecount));
-				allocationhandler->destroylocker.unlock();
-			}
-		};
-		mutable wi::unordered_map<PSOLayoutHash, wi::allocator::shared_ptr<PSOLayout>> pso_layout_cache;
-		mutable std::mutex pso_layout_cache_mutex;
 	};
 }
 
