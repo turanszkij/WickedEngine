@@ -1545,7 +1545,7 @@ namespace wi::helper
 				{
 					options = options | pfd::opt::multiselect;
 				}
-				std::vector<std::string> selection = pfd::open_file("Open file", std::filesystem::current_path().string(), extensions, options).result();
+				std::vector<std::string> selection = pfd::open_file("Open file", "", extensions, options).result();
 				if (!selection.empty())
 				{
 					for (auto& x : selection)
@@ -1559,7 +1559,7 @@ namespace wi::helper
 			}
 			case FileDialogParams::SAVE:
 			{
-				std::string destination = pfd::save_file("Save file", std::filesystem::current_path().string(), extensions).result();
+				std::string destination = pfd::save_file("Save file", "", extensions).result();
 				if (!destination.empty())
 				{
 					onSuccess(destination);
