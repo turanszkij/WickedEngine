@@ -8994,6 +8994,8 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 	device->EventBegin("EnvironmentProbe Refresh", cmd);
 	auto range = wi::profiler::BeginRangeGPU("Environment Probe Refresh", cmd);
 
+	device->Barrier(GPUBarrier::Memory(), cmd); // safety
+
 	BindCommonResources(cmd);
 
 	const float zNearP = vis.camera->zNearP;
@@ -9348,7 +9350,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 			TextureDesc desc = envrenderingColorBuffer.GetDesc();
 
-			AerialPerspectiveCapturePushConstants push;
+			AerialPerspectiveCapturePushConstants push = {};
 			push.resolution.x = desc.width;
 			push.resolution.y = desc.height;
 			push.resolution_rcp.x = 1.0f / push.resolution.x;
@@ -9358,25 +9360,16 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 			device->PushConstants(&push, sizeof(push), cmd);
 
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&envrenderingColorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
+			device->Barrier(GPUBarrier::Image(&envrenderingColorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS), cmd);
 
 			device->Dispatch(
 				(desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
 				(desc.height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
 				6,
-				cmd);
+				cmd
+			);
 
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&envrenderingColorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
+			device->Barrier(GPUBarrier::Image(&envrenderingColorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE), cmd);
 
 			device->EventEnd(cmd);
 		}
@@ -9421,7 +9414,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 			TextureDesc desc = envrenderingColorBuffer.GetDesc();
 
-			VolumetricCloudCapturePushConstants push;
+			VolumetricCloudCapturePushConstants push = {};
 			push.resolution.x = desc.width;
 			push.resolution.y = desc.height;
 			push.resolution_rcp.x = 1.0f / push.resolution.x;
@@ -9447,12 +9440,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 			device->PushConstants(&push, sizeof(push), cmd);
 
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&envrenderingColorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
+			device->Barrier(GPUBarrier::Image(&envrenderingColorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS), cmd);
 
 			device->Dispatch(
 				(desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -9460,12 +9448,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 				6,
 				cmd);
 
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&envrenderingColorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
+			device->Barrier(GPUBarrier::Image(&envrenderingColorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE), cmd);
 
 			device->EventEnd(cmd);
 		}
@@ -9541,12 +9524,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 				desc.height *= 2;
 			}
 
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&envrenderingColorBuffer_Filtered, ResourceState::UNORDERED_ACCESS, envrenderingColorBuffer_Filtered.desc.layout),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
+			device->Barrier(GPUBarrier::Image(&envrenderingColorBuffer_Filtered, ResourceState::UNORDERED_ACCESS, envrenderingColorBuffer_Filtered.desc.layout), cmd);
 		}
 		device->EventEnd(cmd);
 
