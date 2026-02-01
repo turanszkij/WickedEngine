@@ -338,13 +338,13 @@ namespace wi::graphics
 				set_count *= 2;
 
 				StackVector<VkDescriptorPoolSize, 16> pool_sizes;
-				pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, DESCRIPTORBINDER_COUNT * set_count });
-				pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, DESCRIPTORBINDER_COUNT * set_count });
-				pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, DESCRIPTORBINDER_COUNT * set_count });
-				pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, DESCRIPTORBINDER_COUNT * set_count });
-				pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, DESCRIPTORBINDER_COUNT * set_count });
-				pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, DESCRIPTORBINDER_COUNT * set_count });
-				pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, DESCRIPTORBINDER_COUNT * set_count });
+				pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, DESCRIPTORBINDER_CBV_COUNT * set_count });
+				pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, DESCRIPTORBINDER_CBV_COUNT * set_count });
+				pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, (DESCRIPTORBINDER_SRV_COUNT + DESCRIPTORBINDER_UAV_COUNT) * set_count });
+				pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, DESCRIPTORBINDER_SRV_COUNT * set_count });
+				pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, DESCRIPTORBINDER_UAV_COUNT * set_count });
+				pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, DESCRIPTORBINDER_SRV_COUNT * set_count });
+				pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, DESCRIPTORBINDER_UAV_COUNT * set_count });
 				pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_SAMPLER, uint32_t(DESCRIPTORBINDER_SAMPLER_COUNT + arraysize(PSOLayout::VulkanDescriptorBindingTable::IMMUTABLE_SAM)) * set_count });
 				if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 				{
@@ -430,7 +430,7 @@ namespace wi::graphics
 			DescriptorBinderPool binder_pools[BUFFERCOUNT];
 			GPULinearAllocator frame_allocators[BUFFERCOUNT];
 
-			const PSOLayout* layout = nullptr;
+			PSOLayout layout;
 			wi::vector<std::pair<PipelineHash, VkPipeline>> pipelines_worker;
 			PipelineHash prev_pipeline_hash = {};
 			const PipelineState* active_pso = {};

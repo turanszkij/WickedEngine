@@ -1589,7 +1589,7 @@ using namespace vulkan_internal;
 			return;
 
 		CommandList_Vulkan& commandlist = device->GetCommandList(cmd);
-		assert(commandlist.layout != nullptr); // No pipeline was set!
+		assert(commandlist.layout.pipeline_layout != VK_NULL_HANDLE); // No pipeline was set!
 
 		uint32_t uniform_buffer_dynamic_offsets[DESCRIPTORBINDER_CBV_COUNT] = {};
 		for (size_t i = 0; i < std::min((uint32_t)arraysize(uniform_buffer_dynamic_offsets), device->dynamic_cbv_count); ++i)
@@ -1599,7 +1599,7 @@ using namespace vulkan_internal;
 
 		if (descriptorSet == VK_NULL_HANDLE || (dirty & DIRTY_DESCRIPTOR))
 		{
-			const PSOLayout& layout = *commandlist.layout;
+			const PSOLayout& layout = commandlist.layout;
 			auto& binder_pool = commandlist.binder_pools[device->GetBufferIndex()];
 			descriptorSet = binder_pool.allocate(layout.binding_layout);
 
@@ -1897,7 +1897,7 @@ using namespace vulkan_internal;
 		vkCmdBindDescriptorSets(
 			commandlist.GetCommandBuffer(),
 			bindPoint,
-			commandlist.layout->pipeline_layout,
+			commandlist.layout.pipeline_layout,
 			0,
 			arraysize(descriptor_sets.sets),
 			descriptor_sets.sets,
@@ -7928,9 +7928,9 @@ using namespace vulkan_internal;
 			commandlist.dirty_pso = true;
 		}
 
-		if (commandlist.layout != &internal_state->layout)
+		if (commandlist.layout.pipeline_layout != internal_state->layout.pipeline_layout)
 		{
-			commandlist.layout = &internal_state->layout;
+			commandlist.layout = internal_state->layout;
 			commandlist.binder.dirty |= DescriptorBinder::DIRTY_DESCRIPTOR;
 		}
 
@@ -7957,9 +7957,9 @@ using namespace vulkan_internal;
 			vkCmdBindPipeline(commandlist.GetCommandBuffer(), VK_PIPELINE_BIND_POINT_COMPUTE, internal_state->pipeline_cs);
 		}
 
-		if (commandlist.layout != &internal_state->layout)
+		if (commandlist.layout.pipeline_layout != internal_state->layout.pipeline_layout)
 		{
-			commandlist.layout = &internal_state->layout;
+			commandlist.layout = internal_state->layout;
 			commandlist.binder.dirty |= DescriptorBinder::DIRTY_DESCRIPTOR;
 		}
 
@@ -8789,11 +8789,11 @@ using namespace vulkan_internal;
 	void GraphicsDevice_Vulkan::PushConstants(const void* data, uint32_t size, CommandList cmd, uint32_t offset)
 	{
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
-		assert(commandlist.layout != nullptr); // No pipeline was set!
+		assert(commandlist.layout.pipeline_layout != VK_NULL_HANDLE); // No pipeline was set!
 
 		vkCmdPushConstants(
 			commandlist.GetCommandBuffer(),
-			commandlist.layout->pipeline_layout,
+			commandlist.layout.pipeline_layout,
 			VK_SHADER_STAGE_ALL,
 			offset,
 			size,
