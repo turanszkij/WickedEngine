@@ -132,7 +132,7 @@ namespace wi::graphics
 			VkImageViewType SRV_image_types[DESCRIPTORBINDER_SRV_COUNT] = {};
 			VkImageViewType UAV_image_types[DESCRIPTORBINDER_UAV_COUNT] = {};
 			VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
-			VkDescriptorSetLayout binding_layout = VK_NULL_HANDLE;
+			VkDescriptorSetLayout descriptor_set_layout = VK_NULL_HANDLE;
 		};
 
 	protected:
@@ -327,21 +327,20 @@ namespace wi::graphics
 
 		struct DescriptorBinderPool
 		{
+			static constexpr uint32_t set_count = 256;
+			static constexpr uint32_t set_batch = 32;
 			GraphicsDevice_Vulkan* device = nullptr;
-			VkDescriptorPool pool = VK_NULL_HANDLE;
-			uint32_t set_count = 128;
+			wi::vector<VkDescriptorPool> pools;
+			wi::unordered_map<VkDescriptorSetLayout, wi::vector<VkDescriptorSet>> free_sets;
+			wi::unordered_map<VkDescriptorSetLayout, wi::vector<VkDescriptorSet>> work_sets;
 
 			void init(GraphicsDevice_Vulkan* device)
 			{
 				this->device = device;
 			}
 
-			void grow()
+			void new_pool()
 			{
-				destroy();
-
-				set_count *= 2;
-
 				StackVector<VkDescriptorPoolSize, 16> pool_sizes;
 				pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, DESCRIPTORBINDER_CBV_COUNT * set_count });
 				pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, DESCRIPTORBINDER_CBV_COUNT * set_count });
@@ -361,39 +360,72 @@ namespace wi::graphics
 				poolInfo.poolSizeCount = pool_sizes.size();
 				poolInfo.pPoolSizes = pool_sizes.data();
 				poolInfo.maxSets = set_count;
+
+				VkDescriptorPool pool = VK_NULL_HANDLE;
 				vulkan_check(vkCreateDescriptorPool(device->device, &poolInfo, nullptr, &pool));
+
+				pools.push_back(pool);
 			}
 			VkDescriptorSet allocate(VkDescriptorSetLayout layout)
 			{
-				if (pool == VK_NULL_HANDLE)
+				wi::vector<VkDescriptorSet>& available = free_sets[layout];
+				if (available.empty())
 				{
-					grow();
+					VkDescriptorSetLayout descriptor_set_layouts[set_batch] = {};
+					VkDescriptorSet descriptor_sets[set_batch] = {};
+
+					for (auto& x : descriptor_set_layouts)
+					{
+						x = layout;
+					}
+
+					if (pools.empty())
+					{
+						new_pool();
+					}
+
+					VkDescriptorSetAllocateInfo allocInfo = {};
+					allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+					allocInfo.descriptorPool = pools.back();
+					allocInfo.descriptorSetCount = arraysize(descriptor_sets);
+					allocInfo.pSetLayouts = descriptor_set_layouts;
+					while (vkAllocateDescriptorSets(device->device, &allocInfo, descriptor_sets) == VK_ERROR_OUT_OF_POOL_MEMORY)
+					{
+						new_pool();
+						allocInfo.descriptorPool = pools.back();
+					}
+					for (auto& x : descriptor_sets)
+					{
+						available.push_back(x);
+					}
 				}
-				VkDescriptorSetAllocateInfo allocInfo = {};
-				allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-				allocInfo.descriptorPool = pool;
-				allocInfo.descriptorSetCount = 1;
-				allocInfo.pSetLayouts = &layout;
-				VkDescriptorSet descriptor_set = VK_NULL_HANDLE;
-				while (vkAllocateDescriptorSets(device->device, &allocInfo, &descriptor_set) == VK_ERROR_OUT_OF_POOL_MEMORY)
-				{
-					grow();
-					allocInfo.descriptorPool = pool;
-				}
+				VkDescriptorSet descriptor_set = available.back();
+				available.pop_back();
+				work_sets[layout].push_back(descriptor_set);
+				return descriptor_set;
+
 				return descriptor_set;
 			}
 			void destroy()
 			{
 				device->allocationhandler->destroylocker.lock();
-				device->allocationhandler->destroyer_descriptorPools.push_back(std::make_pair(pool, device->allocationhandler->framecount));
+				for (auto& x : pools)
+				{
+					device->allocationhandler->destroyer_descriptorPools.push_back(std::make_pair(x, device->allocationhandler->framecount));
+				}
 				device->allocationhandler->destroylocker.unlock();
-				pool = VK_NULL_HANDLE;
+				pools.clear();
 			}
 			void reset()
 			{
-				if (device == nullptr || pool == nullptr)
-					return;
-				vkResetDescriptorPool(device->device, pool, 0);
+				for (auto& x : work_sets)
+				{
+					for (auto& y : x.second)
+					{
+						free_sets[x.first].push_back(y);
+					}
+					x.second.clear();
+				}
 			}
 		};
 
@@ -726,31 +758,6 @@ namespace wi::graphics
 					bindingFlagsInfo.pBindingFlags = &bindingFlags;
 					layoutInfo.pNext = &bindingFlagsInfo;
 
-					const VkDescriptorType mutable_types[] = {
-						VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-						VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,
-						VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-						VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,
-						VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-						VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR // last one!
-					};
-					VkMutableDescriptorTypeListEXT list = {};
-					list.pDescriptorTypes = mutable_types;
-					list.descriptorTypeCount = arraysize(mutable_types);
-					if (!device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
-					{
-						// If raytracing not supported, remove this option from mutable descriptor type:
-						list.descriptorTypeCount--;
-					}
-					VkMutableDescriptorTypeCreateInfoEXT mutable_info = {};
-					mutable_info.sType = VK_STRUCTURE_TYPE_MUTABLE_DESCRIPTOR_TYPE_CREATE_INFO_EXT;
-					mutable_info.pMutableDescriptorTypeLists = &list;
-					mutable_info.mutableDescriptorTypeListCount = 1;
-					if (type == VK_DESCRIPTOR_TYPE_MUTABLE_EXT)
-					{
-						bindingFlagsInfo.pNext = &mutable_info;
-					}
-
 					vulkan_check(vkCreateDescriptorSetLayout(device->device, &layoutInfo, nullptr, &descriptorSetLayout));
 
 					VkDescriptorSetVariableDescriptorCountAllocateInfo count_allocation_info = {};
@@ -802,7 +809,6 @@ namespace wi::graphics
 							write.pTexelBufferView = &device->nullBufferView;
 							break;
 						case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
-						case VK_DESCRIPTOR_TYPE_MUTABLE_EXT:
 							buffer_info.buffer = device->nullBuffer;
 							buffer_info.range = VK_WHOLE_SIZE;
 							write.pBufferInfo = &buffer_info;

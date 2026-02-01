@@ -1332,9 +1332,21 @@ using namespace vulkan_internal;
 		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 		layoutInfo.bindingCount = sizeof(layout.table) / sizeof(VkDescriptorSetLayoutBinding);
 		layoutInfo.pBindings = (const VkDescriptorSetLayoutBinding*)&layout.table;
-		vulkan_check(vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &layout.binding_layout));
 
-		descriptor_set_layouts[DESCRIPTOR_SET_BINDINGS] = layout.binding_layout;
+		VkDescriptorBindingFlags bindingFlags[sizeof(layout.table) / sizeof(VkDescriptorSetLayoutBinding)] = {};
+		for (auto& x : bindingFlags)
+		{
+			x = VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT; // descriptor sets will be reused after they are no longer used by GPU
+		}
+		VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlagsInfo = {};
+		bindingFlagsInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
+		bindingFlagsInfo.bindingCount = layoutInfo.bindingCount;
+		bindingFlagsInfo.pBindingFlags = bindingFlags;
+		layoutInfo.pNext = &bindingFlagsInfo;
+
+		vulkan_check(vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &layout.descriptor_set_layout));
+
+		descriptor_set_layouts[DESCRIPTOR_SET_BINDINGS] = layout.descriptor_set_layout;
 		descriptor_set_layouts[DESCRIPTOR_SET_BINDLESS_SAMPLER] = allocationhandler->bindlessSamplers.descriptorSetLayout;
 		descriptor_set_layouts[DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER] = allocationhandler->bindlessStorageBuffers.descriptorSetLayout;
 		descriptor_set_layouts[DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER] = allocationhandler->bindlessUniformTexelBuffers.descriptorSetLayout;
@@ -1344,6 +1356,11 @@ using namespace vulkan_internal;
 		if (CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 		{
 			descriptor_set_layouts[DESCRIPTOR_SET_BINDLESS_ACCELERATION_STRUCTURE] = allocationhandler->bindlessAccelerationStructures.descriptorSetLayout;
+		}
+		else
+		{
+			// Unused, set dummy sampler set:
+			descriptor_set_layouts[DESCRIPTOR_SET_BINDLESS_ACCELERATION_STRUCTURE] = allocationhandler->bindlessSamplers.descriptorSetLayout;
 		}
 
 		VkPushConstantRange range = {};
@@ -1586,7 +1603,7 @@ using namespace vulkan_internal;
 		{
 			const PSOLayout& layout = commandlist.layout;
 			auto& binder_pool = commandlist.binder_pools[device->GetBufferIndex()];
-			descriptorSet = binder_pool.allocate(layout.binding_layout);
+			descriptorSet = binder_pool.allocate(layout.descriptor_set_layout);
 
 			struct DescriptorTableInfo
 			{
@@ -3244,6 +3261,11 @@ using namespace vulkan_internal;
 			{
 				allocationhandler->bindlessAccelerationStructures.init(this, VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 32);
 				descriptor_sets.sets[DESCRIPTOR_SET_BINDLESS_ACCELERATION_STRUCTURE] = allocationhandler->bindlessAccelerationStructures.descriptorSet;
+			}
+			else
+			{
+				// Unused, set dummy sampler set:
+				descriptor_sets.sets[DESCRIPTOR_SET_BINDLESS_ACCELERATION_STRUCTURE] = allocationhandler->bindlessSamplers.descriptorSet;
 			}
 		}
 
