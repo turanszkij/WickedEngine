@@ -333,7 +333,7 @@ SamplerComparisonState sampler_cmp_depth : register(s109);
 
 // Direct heap indexing compatibility functions for HLSL6.6+:
 //	Note: on PS5 this feature is implemented in the preincluded HLSL_to_PSSL.h file
-#if defined(__hlsl_dx_compiler) && __SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6
+#if defined(__hlsl_dx_compiler) && !defined(__spirv__) && __SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6
 template<typename T>
 struct BindlessResource
 {
@@ -344,9 +344,9 @@ struct BindlessResource<SamplerState>
 {
 	SamplerState operator[](uint index) { return (SamplerState)SamplerDescriptorHeap[index]; }
 };
-#endif // defined(__hlsl_dx_compiler) && __SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6
+#endif // defined(__hlsl_dx_compiler) && !defined(__spirv__) && __SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6
 
-#if defined(__PSSL__) || (defined(__hlsl_dx_compiler) && __SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6)
+#if defined(__PSSL__) || (defined(__hlsl_dx_compiler) && !defined(__spirv__) && __SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6)
 static const BindlessResource<SamplerState> bindless_samplers;
 static const BindlessResource<Texture2D> bindless_textures;
 static const BindlessResource<ByteAddressBuffer> bindless_buffers;
@@ -394,9 +394,65 @@ static const BindlessResource<RWTexture2D<uint2> > bindless_rwtextures_uint2;
 static const BindlessResource<RWTexture2D<uint3> > bindless_rwtextures_uint3;
 static const BindlessResource<RWTexture2D<uint4> > bindless_rwtextures_uint4;
 
-#if defined(RTAPI) && defined(__hlsl_dx_compiler)
+#ifdef __hlsl_dx_compiler
 static const BindlessResource<RaytracingAccelerationStructure> bindless_accelerationstructures;
-#endif // defined(RTAPI) && defined(__hlsl_dx_compiler)
+#endif // __hlsl_dx_compiler
+
+#elif defined(__spirv__)
+// In Vulkan, we can manually overlap descriptor sets to reduce bindings:
+//	Note that HLSL register space declaration was not working correctly with overlapped spaces,
+//	But vk::binding works correctly in this case.
+//	HLSL register space declaration is working well with Vulkan when spaces are not overlapping.
+//	These values are provided from shader compiler with defines
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLER)]] SamplerState bindless_samplers[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] ByteAddressBuffer bindless_buffers[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER)]] Buffer<uint> bindless_buffers_uint[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER)]] Buffer<uint2> bindless_buffers_uint2[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER)]] Buffer<uint3> bindless_buffers_uint3[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER)]] Buffer<uint4> bindless_buffers_uint4[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER)]] Buffer<float> bindless_buffers_float[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER)]] Buffer<float2> bindless_buffers_float2[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER)]] Buffer<float3> bindless_buffers_float3[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER)]] Buffer<float4> bindless_buffers_float4[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER)]] Buffer<half> bindless_buffers_half[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER)]] Buffer<half2> bindless_buffers_half2[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER)]] Buffer<half3> bindless_buffers_half3[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER)]] Buffer<half4> bindless_buffers_half4[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] Texture2D bindless_textures[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] Texture2DArray bindless_textures2DArray[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] Texture2DArray<half4> bindless_textures2DArray_half4[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] TextureCube bindless_cubemaps[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] TextureCube<half4> bindless_cubemaps_half4[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] TextureCubeArray bindless_cubearrays[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] Texture3D bindless_textures3D[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] Texture3D<half4> bindless_textures3D_half4[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] Texture2D<float> bindless_textures_float[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] Texture2D<float2> bindless_textures_float2[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] Texture2D<uint> bindless_textures_uint[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] Texture2D<uint4> bindless_textures_uint4[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] Texture2D<half4> bindless_textures_half4[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] Texture1D<half4> bindless_textures1D[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] Texture1D<half4> bindless_textures1D_half4[];
+
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] RWByteAddressBuffer bindless_rwbuffers[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_TEXEL_BUFFER)]] RWBuffer<uint> bindless_rwbuffers_uint[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_TEXEL_BUFFER)]] RWBuffer<uint2> bindless_rwbuffers_uint2[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_TEXEL_BUFFER)]] RWBuffer<uint3> bindless_rwbuffers_uint3[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_TEXEL_BUFFER)]] RWBuffer<uint4> bindless_rwbuffers_uint4[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_TEXEL_BUFFER)]] RWBuffer<float> bindless_rwbuffers_float[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_TEXEL_BUFFER)]] RWBuffer<float2> bindless_rwbuffers_float2[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_TEXEL_BUFFER)]] RWBuffer<float3> bindless_rwbuffers_float3[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_TEXEL_BUFFER)]] RWBuffer<float4> bindless_rwbuffers_float4[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_IMAGE)]] RWTexture2D<float4> bindless_rwtextures[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_IMAGE)]] RWTexture2DArray<float4> bindless_rwtextures2DArray[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_IMAGE)]] RWTexture3D<float4> bindless_rwtextures3D[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_IMAGE)]] RWTexture2D<uint> bindless_rwtextures_uint[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_IMAGE)]] RWTexture2D<uint2> bindless_rwtextures_uint2[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_IMAGE)]] RWTexture2D<uint3> bindless_rwtextures_uint3[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_IMAGE)]] RWTexture2D<uint4> bindless_rwtextures_uint4[];
+#ifdef RTAPI
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_ACCELERATION_STRUCTURE)]] RaytracingAccelerationStructure bindless_accelerationstructures[];
+#endif // RTAPI
 
 #else
 SamplerState bindless_samplers[] : register(space1);
@@ -449,11 +505,11 @@ RWTexture2D<uint2> bindless_rwtextures_uint2[] : register(space113);
 RWTexture2D<uint3> bindless_rwtextures_uint3[] : register(space114);
 RWTexture2D<uint4> bindless_rwtextures_uint4[] : register(space115);
 
-#endif // defined(__PSSL__) || (defined(__hlsl_dx_compiler) && __SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6)
+#endif // __spirv__
 
 #include "ShaderInterop_Renderer.h"
 
-#if defined(__PSSL__) || (defined(__hlsl_dx_compiler) && __SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6)
+#if defined(__PSSL__) || (defined(__hlsl_dx_compiler) && !defined(__spirv__) && __SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6)
 static const BindlessResource<StructuredBuffer<ShaderMeshInstance> > bindless_structured_meshinstance;
 static const BindlessResource<StructuredBuffer<ShaderGeometry> > bindless_structured_geometry;
 static const BindlessResource<StructuredBuffer<ShaderMeshlet> > bindless_structured_meshlet;
@@ -463,6 +519,16 @@ static const BindlessResource<StructuredBuffer<ShaderMaterial> > bindless_struct
 static const BindlessResource<StructuredBuffer<uint> > bindless_structured_uint;
 static const BindlessResource<StructuredBuffer<ShaderTerrainChunk> > bindless_structured_terrain_chunks;
 static const BindlessResource<StructuredBuffer<DDGIProbe> > bindless_structured_ddi_probes;
+#elif defined(__spirv__)
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderMeshInstance> bindless_structured_meshinstance[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderGeometry> bindless_structured_geometry[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderMeshlet> bindless_structured_meshlet[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderCluster> bindless_structured_cluster[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderClusterBounds> bindless_structured_cluster_bounds[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderMaterial> bindless_structured_material[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<uint> bindless_structured_uint[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<ShaderTerrainChunk> bindless_structured_terrain_chunks[];
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<DDGIProbe> bindless_structured_ddi_probes[];
 #else
 StructuredBuffer<ShaderMeshInstance> bindless_structured_meshinstance[] : register(space200);
 StructuredBuffer<ShaderGeometry> bindless_structured_geometry[] : register(space201);
@@ -473,7 +539,7 @@ StructuredBuffer<ShaderMaterial> bindless_structured_material[] : register(space
 StructuredBuffer<uint> bindless_structured_uint[] : register(space206);
 StructuredBuffer<ShaderTerrainChunk> bindless_structured_terrain_chunks[] : register(space207);
 StructuredBuffer<DDGIProbe> bindless_structured_ddi_probes[] : register(space208);
-#endif // defined(__PSSL__) || (defined(__hlsl_dx_compiler) && __SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6)
+#endif // defined(__PSSL__) || (defined(__hlsl_dx_compiler) && !defined(__spirv__) && __SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6)
 
 // Note: these are macros, the SPIRV compilation is a LOT slower and uses a LOT more memory when functions return large structs, issue: https://github.com/microsoft/DirectXShaderCompiler/issues/7493
 #define GetFrame() (g_xFrame)

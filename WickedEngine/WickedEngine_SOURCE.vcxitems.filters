@@ -1401,6 +1401,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFunction.h">
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv_reflect.h">
+      <Filter>UTILITY</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -2200,6 +2203,9 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\rasterizer.cpp">
       <Filter>UTILITY\meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\spirv_reflect.c">
+      <Filter>UTILITY</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

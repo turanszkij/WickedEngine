@@ -185,8 +185,20 @@ namespace wi::shadercompiler
 			args.push_back(L"-fvk-t-shift"); args.push_back(std::to_wstring((int)wi::graphics::GraphicsDevice_Vulkan::VULKAN_BINDING_SHIFT_T)); args.push_back(L"0");
 			args.push_back(L"-fvk-u-shift"); args.push_back(std::to_wstring((int)wi::graphics::GraphicsDevice_Vulkan::VULKAN_BINDING_SHIFT_U)); args.push_back(L"0");
 			args.push_back(L"-fvk-s-shift"); args.push_back(std::to_wstring((int)wi::graphics::GraphicsDevice_Vulkan::VULKAN_BINDING_SHIFT_S)); args.push_back(L"0");
-			args.push_back(L"-fvk-bind-resource-heap"); args.push_back(L"0"); args.push_back(std::to_wstring((int)wi::graphics::GraphicsDevice_Vulkan::DESCRIPTOR_SET_BINDLESS_RESOURCE));
-			args.push_back(L"-fvk-bind-sampler-heap"); args.push_back(L"0"); args.push_back(std::to_wstring((int)wi::graphics::GraphicsDevice_Vulkan::DESCRIPTOR_SET_BINDLESS_SAMPLER));
+
+			// These require mutable descriptor extension which have issues on linux so it's not used:
+			//args.push_back(L"-fvk-bind-sampler-heap"); args.push_back(L"0"); args.push_back(std::to_wstring((int)wi::graphics::GraphicsDevice_Vulkan::DESCRIPTOR_SET_BINDLESS_SAMPLER));
+			//args.push_back(L"-fvk-bind-resource-heap"); args.push_back(L"0"); args.push_back(std::to_wstring((int)wi::graphics::GraphicsDevice_Vulkan::DESCRIPTOR_SET_BINDLESS_RESOURCE));
+
+			// Non-mutable bindless descriptor heap bind points:
+			args.push_back(L"-D"); args.push_back(L"DESCRIPTOR_SET_BINDLESS_SAMPLER=" + std::to_wstring((int)wi::graphics::GraphicsDevice_Vulkan::DESCRIPTOR_SET_BINDLESS_SAMPLER));
+			args.push_back(L"-D"); args.push_back(L"DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER=" + std::to_wstring((int)wi::graphics::GraphicsDevice_Vulkan::DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER));
+			args.push_back(L"-D"); args.push_back(L"DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER=" + std::to_wstring((int)wi::graphics::GraphicsDevice_Vulkan::DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER));
+			args.push_back(L"-D"); args.push_back(L"DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE=" + std::to_wstring((int)wi::graphics::GraphicsDevice_Vulkan::DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE));
+			args.push_back(L"-D"); args.push_back(L"DESCRIPTOR_SET_BINDLESS_STORAGE_IMAGE=" + std::to_wstring((int)wi::graphics::GraphicsDevice_Vulkan::DESCRIPTOR_SET_BINDLESS_STORAGE_IMAGE));
+			args.push_back(L"-D"); args.push_back(L"DESCRIPTOR_SET_BINDLESS_STORAGE_TEXEL_BUFFER=" + std::to_wstring((int)wi::graphics::GraphicsDevice_Vulkan::DESCRIPTOR_SET_BINDLESS_STORAGE_TEXEL_BUFFER));
+			args.push_back(L"-D"); args.push_back(L"DESCRIPTOR_SET_BINDLESS_ACCELERATION_STRUCTURE=" + std::to_wstring((int)wi::graphics::GraphicsDevice_Vulkan::DESCRIPTOR_SET_BINDLESS_ACCELERATION_STRUCTURE));
+
 			break;
 		case ShaderFormat::METAL:
 			args.push_back(L"-D"); args.push_back(L"__metal__");

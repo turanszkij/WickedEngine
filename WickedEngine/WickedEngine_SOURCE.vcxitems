@@ -319,6 +319,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\offsetAllocator.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\pugiconfig.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\pugixml.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv_reflect.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\win32ico.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\WinAdapter.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiAsync_BindLua.h" />
@@ -618,6 +619,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\vfetchoptimizer.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\offsetAllocator.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\pugixml.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\spirv_reflect.c" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiAsync_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiConfig.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiLocalization.cpp" />
