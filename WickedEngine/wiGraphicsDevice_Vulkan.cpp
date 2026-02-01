@@ -1319,17 +1319,13 @@ using namespace vulkan_internal;
 	VkPipelineLayout GraphicsDevice_Vulkan::cache_pso_layout(PSOLayout& layout) const
 	{
 		PSOLayoutHash layout_hash;
-		for (auto& x : layout.table.SRV)
+		for (int i = 0; i < arraysize(layout.table.SRV); ++i)
 		{
-			if (x.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)
-				continue; // the default types are not hashed
-			layout_hash.bindings.push_back(x);
+			layout_hash.SRV[i] = layout.table.SRV[i];
 		}
-		for (auto& x : layout.table.UAV)
+		for (int i = 0; i < arraysize(layout.table.UAV); ++i)
 		{
-			if (x.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)
-				continue; // the default types are not hashed
-			layout_hash.bindings.push_back(x);
+			layout_hash.UAV[i] = layout.table.UAV[i];
 		}
 		layout_hash.embed_hash();
 
@@ -7902,6 +7898,12 @@ using namespace vulkan_internal;
 
 		auto internal_state = to_internal(pso);
 
+		if (commandlist.layout.pipeline_layout != internal_state->layout.pipeline_layout)
+		{
+			commandlist.layout = internal_state->layout;
+			commandlist.binder.dirty |= DescriptorBinder::DIRTY_DESCRIPTOR;
+		}
+
 		if (internal_state->pipeline != VK_NULL_HANDLE)
 		{
 			if (commandlist.active_pso != pso)
@@ -7926,12 +7928,6 @@ using namespace vulkan_internal;
 			}
 			commandlist.prev_pipeline_hash = pipeline_hash;
 			commandlist.dirty_pso = true;
-		}
-
-		if (commandlist.layout.pipeline_layout != internal_state->layout.pipeline_layout)
-		{
-			commandlist.layout = internal_state->layout;
-			commandlist.binder.dirty |= DescriptorBinder::DIRTY_DESCRIPTOR;
 		}
 
 		commandlist.active_pso = pso;

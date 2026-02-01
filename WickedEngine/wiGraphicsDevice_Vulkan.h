@@ -36,25 +36,23 @@ namespace wi::graphics::vulkan_internal
 {
 	struct PSOLayoutHash
 	{
-		StackVector<VkDescriptorSetLayoutBinding, DESCRIPTORBINDER_SRV_COUNT + DESCRIPTORBINDER_UAV_COUNT> bindings; // only srv and uav hash because those can change types
+		// Only the SRV and UAV bindings are hashed because those can have different types in different pipelines
+		VkDescriptorSetLayoutBinding SRV[DESCRIPTORBINDER_SRV_COUNT] = {};
+		VkDescriptorSetLayoutBinding UAV[DESCRIPTORBINDER_UAV_COUNT] = {};
 		size_t hash = 0;
 
 		constexpr bool operator==(const PSOLayoutHash& other) const
 		{
 			if (hash != other.hash)
 				return false;
-			if (bindings.size() != other.bindings.size())
-				return false;
-			for (unsigned i = 0; i < bindings.size(); ++i)
+			for (int i = 0; i < arraysize(SRV); ++i)
 			{
-				const VkDescriptorSetLayoutBinding& a = bindings[i];
-				const VkDescriptorSetLayoutBinding& b = other.bindings[i];
-				if (
-					a.binding != b.binding ||
-					a.descriptorCount != b.descriptorCount ||
-					a.descriptorType != b.descriptorType ||
-					a.stageFlags != b.stageFlags
-					)
+				if (SRV[i].descriptorType != other.SRV[i].descriptorType)
+					return false;
+			}
+			for (int i = 0; i < arraysize(UAV); ++i)
+			{
+				if (UAV[i].descriptorType != other.UAV[i].descriptorType)
 					return false;
 			}
 			return true;
@@ -62,7 +60,14 @@ namespace wi::graphics::vulkan_internal
 		constexpr void embed_hash()
 		{
 			hash = 0;
-			for (auto& x : bindings)
+			for (auto& x : SRV)
+			{
+				wi::helper::hash_combine(hash, x.binding);
+				wi::helper::hash_combine(hash, x.descriptorCount);
+				wi::helper::hash_combine(hash, x.descriptorType);
+				wi::helper::hash_combine(hash, x.stageFlags);
+			}
+			for (auto& x : UAV)
 			{
 				wi::helper::hash_combine(hash, x.binding);
 				wi::helper::hash_combine(hash, x.descriptorCount);
