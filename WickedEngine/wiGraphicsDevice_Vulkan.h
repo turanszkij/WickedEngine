@@ -436,7 +436,7 @@ namespace wi::graphics
 			GPULinearAllocator frame_allocators[BUFFERCOUNT];
 
 			PSOLayout layout;
-			wi::vector<std::pair<PipelineHash, VkPipeline>> pipelines_worker;
+			wi::vector<std::pair<PipelineHash, PipelineState>> pipelines_worker;
 			PipelineHash prev_pipeline_hash = {};
 			const PipelineState* active_pso = {};
 			const Shader* active_cs = {};
@@ -497,7 +497,7 @@ namespace wi::graphics
 		}
 
 		VkPipelineCache pipelineCache = VK_NULL_HANDLE;
-		wi::unordered_map<PipelineHash, VkPipeline> pipelines_global;
+		wi::unordered_map<PipelineHash, PipelineState> pipelines_global;
 
 		void pso_validate(CommandList cmd);
 

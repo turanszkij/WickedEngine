@@ -1424,7 +1424,6 @@ namespace dx12_internal
 		ComPtr<ID3D12RootSignature> rootSignature;
 
 		wi::vector<uint8_t> shadercode;
-		wi::vector<D3D12_INPUT_ELEMENT_DESC> input_elements;
 		D3D_PRIMITIVE_TOPOLOGY primitiveTopology;
 
 		ComPtr<ID3D12VersionedRootSignatureDeserializer> rootsig_deserializer;
@@ -2070,49 +2069,28 @@ std::mutex queue_locker;
 			{
 				if (pipeline_hash == x.first)
 				{
-					pipeline = x.second.Get();
+					auto pipeline_internal = to_internal(&x.second);
+					pipeline = pipeline_internal->resource.Get();
 					break;
 				}
 			}
 
 			if (pipeline == nullptr)
 			{
-				// make copy, mustn't overwrite internal_state from here!
-				PipelineState_DX12::PSO_STREAM stream = internal_state->stream;
+				PipelineState just_in_time_pso;
+				bool success = CreatePipelineState(&pso->desc, &just_in_time_pso, &commandlist.renderpass_info);
+				assert(success);
 
-				DXGI_FORMAT DSFormat = _ConvertFormat(commandlist.renderpass_info.ds_format);
-				D3D12_RT_FORMAT_ARRAY formats = {};
-				formats.NumRenderTargets = commandlist.renderpass_info.rt_count;
-				for (uint32_t i = 0; i < commandlist.renderpass_info.rt_count; ++i)
-				{
-					formats.RTFormats[i] = _ConvertFormat(commandlist.renderpass_info.rt_formats[i]);
-				}
-				DXGI_SAMPLE_DESC sampleDesc = {};
-				sampleDesc.Count = commandlist.renderpass_info.sample_count;
-				sampleDesc.Quality = 0;
+				commandlist.pipelines_worker.push_back(std::make_pair(pipeline_hash, just_in_time_pso));
 
-				stream.stream1.DSFormat = DSFormat;
-				stream.stream1.Formats = formats;
-				stream.stream1.SampleDesc = sampleDesc;
-
-				D3D12_PIPELINE_STATE_STREAM_DESC streamDesc = {};
-				streamDesc.pPipelineStateSubobjectStream = &stream;
-				streamDesc.SizeInBytes = sizeof(stream.stream1);
-				if (CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
-				{
-					streamDesc.SizeInBytes += sizeof(stream.stream2);
-				}
-
-				ComPtr<ID3D12PipelineState> newpso;
-				dx12_check(device->CreatePipelineState(&streamDesc, PPV_ARGS(newpso)));
-
-				commandlist.pipelines_worker.push_back(std::make_pair(pipeline_hash, newpso));
-				pipeline = newpso.Get();
+				auto pipeline_internal = to_internal(&just_in_time_pso);
+				pipeline = pipeline_internal->resource.Get();
 			}
 		}
 		else
 		{
-			pipeline = it->second.Get();
+			auto pipeline_internal = to_internal(&it->second);
+			pipeline = pipeline_internal->resource.Get();
 		}
 		assert(pipeline != nullptr);
 
@@ -4160,7 +4138,7 @@ std::mutex queue_locker;
 		}
 		stream.stream1.BD = bd;
 
-		auto& elements = internal_state->input_elements;
+		wi::vector<D3D12_INPUT_ELEMENT_DESC> elements;
 		D3D12_INPUT_LAYOUT_DESC il = {};
 		if (pso->desc.il != nullptr)
 		{
@@ -5354,12 +5332,6 @@ std::mutex queue_locker;
 					{
 						pipelines_global[x.first] = x.second;
 					}
-					else
-					{
-						allocationhandler->destroylocker.lock();
-						allocationhandler->destroyer_pipelines.push_back(std::make_pair(x.second, FRAMECOUNT));
-						allocationhandler->destroylocker.unlock();
-					}
 				}
 				commandlist.pipelines_worker.clear();
 			}
@@ -5732,18 +5704,10 @@ std::mutex queue_locker;
 	{
 		allocationhandler->destroylocker.lock();
 
-		for (auto& x : pipelines_global)
-		{
-			allocationhandler->destroyer_pipelines.push_back(std::make_pair(x.second, FRAMECOUNT));
-		}
 		pipelines_global.clear();
 
 		for (auto& x : commandlists)
 		{
-			for (auto& y : x->pipelines_worker)
-			{
-				allocationhandler->destroyer_pipelines.push_back(std::make_pair(y.second, FRAMECOUNT));
-			}
 			x->pipelines_worker.clear();
 		}
 		allocationhandler->destroylocker.unlock();

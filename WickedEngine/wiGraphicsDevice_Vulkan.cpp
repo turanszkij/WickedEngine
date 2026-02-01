@@ -908,17 +908,6 @@ namespace vulkan_internal
 		VkPipeline pipeline = VK_NULL_HANDLE;
 		GraphicsDevice_Vulkan::PSOLayout layout;
 
-		VkGraphicsPipelineCreateInfo pipelineInfo = {};
-		VkPipelineShaderStageCreateInfo shaderStages[static_cast<size_t>(ShaderStage::Count)] = {};
-		VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
-		VkPipelineRasterizationStateCreateInfo rasterizer = {};
-		VkPipelineRasterizationDepthClipStateCreateInfoEXT depthClipStateInfo = {};
-		VkPipelineRasterizationConservativeStateCreateInfoEXT rasterizationConservativeState = {};
-		VkPipelineViewportStateCreateInfo viewportState = {};
-		VkPipelineDepthStencilStateCreateInfo depthstencil = {};
-		VkSampleMask samplemask = {};
-		VkPipelineTessellationStateCreateInfo tessellationInfo = {};
-
 		~PipelineState_Vulkan()
 		{
 			if (allocationhandler == nullptr)
@@ -1922,180 +1911,28 @@ using namespace vulkan_internal;
 			{
 				if (pipeline_hash == x.first)
 				{
-					pipeline = x.second;
+					auto pipeline_internal = to_internal(&x.second);
+					pipeline = pipeline_internal->pipeline;
 					break;
 				}
 			}
 
 			if (pipeline == VK_NULL_HANDLE)
 			{
-				VkGraphicsPipelineCreateInfo pipelineInfo = internal_state->pipelineInfo; // make a copy here
+				PipelineState just_in_time_pso;
+				bool success = CreatePipelineState(&pso->desc, &just_in_time_pso, &commandlist.renderpass_info);
+				assert(success);
 
-				// MSAA:
-				VkPipelineMultisampleStateCreateInfo multisampling = {};
-				multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-				multisampling.sampleShadingEnable = VK_FALSE;
-				multisampling.rasterizationSamples = (VkSampleCountFlagBits)commandlist.renderpass_info.sample_count;
-				if (pso->desc.rs != nullptr)
-				{
-					const RasterizerState& desc = *pso->desc.rs;
-					if (desc.forced_sample_count > 1)
-					{
-						multisampling.rasterizationSamples = (VkSampleCountFlagBits)desc.forced_sample_count;
-					}
-				}
-				multisampling.minSampleShading = 1.0f;
-				VkSampleMask samplemask = internal_state->samplemask;
-				samplemask = pso->desc.sample_mask;
-				multisampling.pSampleMask = &samplemask;
-				if (pso->desc.bs != nullptr)
-				{
-					multisampling.alphaToCoverageEnable = pso->desc.bs->alpha_to_coverage_enable ? VK_TRUE : VK_FALSE;
-				}
-				else
-				{
-					multisampling.alphaToCoverageEnable = VK_FALSE;
-				}
-				multisampling.alphaToOneEnable = VK_FALSE;
+				commandlist.pipelines_worker.push_back(std::make_pair(pipeline_hash, just_in_time_pso));
 
-				pipelineInfo.pMultisampleState = &multisampling;
-
-
-				// Blending:
-				uint32_t numBlendAttachments = 0;
-				VkPipelineColorBlendAttachmentState colorBlendAttachments[8] = {};
-				static BlendState::RenderTargetBlendState default_blend;
-				for (size_t i = 0; i < commandlist.renderpass_info.rt_count; ++i)
-				{
-					size_t attachmentIndex = 0;
-					if (pso->desc.bs != nullptr && pso->desc.bs->independent_blend_enable)
-						attachmentIndex = i;
-
-					const auto& desc = pso->desc.bs == nullptr ? default_blend : pso->desc.bs->render_target[attachmentIndex];
-					VkPipelineColorBlendAttachmentState& attachment = colorBlendAttachments[numBlendAttachments];
-					numBlendAttachments++;
-
-					attachment.blendEnable = desc.blend_enable ? VK_TRUE : VK_FALSE;
-
-					attachment.colorWriteMask = 0;
-					if (has_flag(desc.render_target_write_mask, ColorWrite::ENABLE_RED))
-					{
-						attachment.colorWriteMask |= VK_COLOR_COMPONENT_R_BIT;
-					}
-					if (has_flag(desc.render_target_write_mask, ColorWrite::ENABLE_GREEN))
-					{
-						attachment.colorWriteMask |= VK_COLOR_COMPONENT_G_BIT;
-					}
-					if (has_flag(desc.render_target_write_mask, ColorWrite::ENABLE_BLUE))
-					{
-						attachment.colorWriteMask |= VK_COLOR_COMPONENT_B_BIT;
-					}
-					if (has_flag(desc.render_target_write_mask, ColorWrite::ENABLE_ALPHA))
-					{
-						attachment.colorWriteMask |= VK_COLOR_COMPONENT_A_BIT;
-					}
-
-					attachment.srcColorBlendFactor = _ConvertBlend(desc.src_blend);
-					attachment.dstColorBlendFactor = _ConvertBlend(desc.dest_blend);
-					attachment.colorBlendOp = _ConvertBlendOp(desc.blend_op);
-					attachment.srcAlphaBlendFactor = _ConvertBlend(desc.src_blend_alpha);
-					attachment.dstAlphaBlendFactor = _ConvertBlend(desc.dest_blend_alpha);
-					attachment.alphaBlendOp = _ConvertBlendOp(desc.blend_op_alpha);
-				}
-
-				VkPipelineColorBlendStateCreateInfo colorBlending = {};
-				colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-				colorBlending.logicOpEnable = VK_FALSE;
-				colorBlending.logicOp = VK_LOGIC_OP_COPY;
-				colorBlending.attachmentCount = numBlendAttachments;
-				colorBlending.pAttachments = colorBlendAttachments;
-				colorBlending.blendConstants[0] = 1.0f;
-				colorBlending.blendConstants[1] = 1.0f;
-				colorBlending.blendConstants[2] = 1.0f;
-				colorBlending.blendConstants[3] = 1.0f;
-
-				pipelineInfo.pColorBlendState = &colorBlending;
-
-				// Input layout:
-				VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
-				vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-				wi::vector<VkVertexInputBindingDescription> bindings;
-				wi::vector<VkVertexInputAttributeDescription> attributes;
-				if (pso->desc.il != nullptr)
-				{
-					uint32_t lastBinding = 0xFFFFFFFF;
-					for (auto& x : pso->desc.il->elements)
-					{
-						if (x.input_slot == lastBinding)
-							continue;
-						lastBinding = x.input_slot;
-						VkVertexInputBindingDescription& bind = bindings.emplace_back();
-						bind.binding = x.input_slot;
-						bind.inputRate = x.input_slot_class == InputClassification::PER_VERTEX_DATA ? VK_VERTEX_INPUT_RATE_VERTEX : VK_VERTEX_INPUT_RATE_INSTANCE;
-						bind.stride = GetFormatStride(x.format);
-					}
-
-					uint32_t offset = 0;
-					uint32_t i = 0;
-					lastBinding = 0xFFFFFFFF;
-					for (auto& x : pso->desc.il->elements)
-					{
-						VkVertexInputAttributeDescription attr = {};
-						attr.binding = x.input_slot;
-						if (attr.binding != lastBinding)
-						{
-							lastBinding = attr.binding;
-							offset = 0;
-						}
-						attr.format = _ConvertFormat(x.format);
-						attr.location = i;
-						attr.offset = x.aligned_byte_offset;
-						if (attr.offset == InputLayout::APPEND_ALIGNED_ELEMENT)
-						{
-							// need to manually resolve this from the format spec.
-							attr.offset = offset;
-							offset += GetFormatStride(x.format);
-						}
-
-						attributes.push_back(attr);
-
-						i++;
-					}
-
-					vertexInputInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(bindings.size());
-					vertexInputInfo.pVertexBindingDescriptions = bindings.data();
-					vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributes.size());
-					vertexInputInfo.pVertexAttributeDescriptions = attributes.data();
-				}
-				pipelineInfo.pVertexInputState = &vertexInputInfo;
-
-				pipelineInfo.renderPass = VK_NULL_HANDLE; // instead we use VkPipelineRenderingCreateInfo
-
-				VkPipelineRenderingCreateInfo renderingInfo = {};
-				renderingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
-				renderingInfo.viewMask = 0;
-				renderingInfo.colorAttachmentCount = commandlist.renderpass_info.rt_count;
-				VkFormat formats[8] = {};
-				for (uint32_t i = 0; i < commandlist.renderpass_info.rt_count; ++i)
-				{
-					formats[i] = _ConvertFormat(commandlist.renderpass_info.rt_formats[i]);
-				}
-				renderingInfo.pColorAttachmentFormats = formats;
-				renderingInfo.depthAttachmentFormat = _ConvertFormat(commandlist.renderpass_info.ds_format);
-				if (IsFormatStencilSupport(commandlist.renderpass_info.ds_format))
-				{
-					renderingInfo.stencilAttachmentFormat = renderingInfo.depthAttachmentFormat;
-				}
-				pipelineInfo.pNext = &renderingInfo;
-
-				vulkan_check(vkCreateGraphicsPipelines(device, pipelineCache, 1, &pipelineInfo, nullptr, &pipeline));
-
-				commandlist.pipelines_worker.push_back(std::make_pair(pipeline_hash, pipeline));
+				auto pipeline_internal = to_internal(&just_in_time_pso);
+				pipeline = pipeline_internal->pipeline;
 			}
 		}
 		else
 		{
-			pipeline = it->second;
+			auto pipeline_internal = to_internal(&it->second);
+			pipeline = pipeline_internal->pipeline;
 		}
 		assert(pipeline != VK_NULL_HANDLE);
 
@@ -3522,18 +3359,10 @@ using namespace vulkan_internal;
 					vkDestroyCommandPool(device, commandlist->commandPools[buffer][queue], nullptr);
 				}
 			}
-			for (auto& x : commandlist->pipelines_worker)
-			{
-				vkDestroyPipeline(device, x.second, nullptr);
-			}
 			for (auto& x : commandlist->binder_pools)
 			{
 				x.destroy();
 			}
-		}
-		for (auto& x : pipelines_global)
-		{
-			vkDestroyPipeline(device, x.second, nullptr);
 		}
 
 		for (auto& x : semaphore_pool)
@@ -4985,12 +4814,17 @@ using namespace vulkan_internal;
 
 		VkResult res = VK_SUCCESS;
 
-		VkGraphicsPipelineCreateInfo& pipelineInfo = internal_state->pipelineInfo;
-		//pipelineInfo.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
-		//if (CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING_TIER2))
-		//{
-		//	pipelineInfo.flags |= VK_PIPELINE_CREATE_RENDERING_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR;
-		//}
+		VkGraphicsPipelineCreateInfo pipelineInfo = {};
+		VkPipelineShaderStageCreateInfo shaderStages[static_cast<size_t>(ShaderStage::Count)] = {};
+		VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
+		VkPipelineRasterizationStateCreateInfo rasterizer = {};
+		VkPipelineRasterizationDepthClipStateCreateInfoEXT depthClipStateInfo = {};
+		VkPipelineRasterizationConservativeStateCreateInfoEXT rasterizationConservativeState = {};
+		VkPipelineViewportStateCreateInfo viewportState = {};
+		VkPipelineDepthStencilStateCreateInfo depthstencil = {};
+		VkSampleMask samplemask = {};
+		VkPipelineTessellationStateCreateInfo tessellationInfo = {};
+
 		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
@@ -5012,7 +4846,6 @@ using namespace vulkan_internal;
 		};
 
 		uint32_t shaderStageCount = 0;
-		auto& shaderStages = internal_state->shaderStages;
 		if (pso->desc.ms != nullptr && pso->desc.ms->IsValid())
 		{
 			auto shader_internal = to_internal(pso->desc.ms);
@@ -5063,7 +4896,6 @@ using namespace vulkan_internal;
 		// Fixed function states:
 
 		// Primitive type:
-		VkPipelineInputAssemblyStateCreateInfo& inputAssembly = internal_state->inputAssembly;
 		inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 		switch (pso->desc.pt)
 		{
@@ -5094,7 +4926,6 @@ using namespace vulkan_internal;
 
 
 		// Rasterizer:
-		VkPipelineRasterizationStateCreateInfo& rasterizer = internal_state->rasterizer;
 		rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 		rasterizer.depthClampEnable = VK_TRUE;
 		rasterizer.rasterizerDiscardEnable = VK_FALSE;
@@ -5110,7 +4941,6 @@ using namespace vulkan_internal;
 		const void** tail = &rasterizer.pNext;
 
 		// depth clip will be enabled via Vulkan 1.1 extension VK_EXT_depth_clip_enable:
-		VkPipelineRasterizationDepthClipStateCreateInfoEXT& depthClipStateInfo = internal_state->depthClipStateInfo;
 		depthClipStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_DEPTH_CLIP_STATE_CREATE_INFO_EXT;
 		depthClipStateInfo.depthClipEnable = VK_TRUE;
 		if (depth_clip_enable_features.depthClipEnable == VK_TRUE)
@@ -5157,7 +4987,6 @@ using namespace vulkan_internal;
 			// Depth clip will be enabled via Vulkan 1.1 extension VK_EXT_depth_clip_enable:
 			depthClipStateInfo.depthClipEnable = desc.depth_clip_enable ? VK_TRUE : VK_FALSE;
 
-			VkPipelineRasterizationConservativeStateCreateInfoEXT& rasterizationConservativeState = internal_state->rasterizationConservativeState;
 			if (CheckCapability(GraphicsDeviceCapability::CONSERVATIVE_RASTERIZATION) && desc.conservative_rasterization_enable)
 			{
 				rasterizationConservativeState.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_CONSERVATIVE_STATE_CREATE_INFO_EXT;
@@ -5170,7 +4999,6 @@ using namespace vulkan_internal;
 
 		pipelineInfo.pRasterizationState = &rasterizer;
 
-		VkPipelineViewportStateCreateInfo& viewportState = internal_state->viewportState;
 		viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
 		viewportState.viewportCount = 0;
 		viewportState.pViewports = nullptr;
@@ -5181,7 +5009,6 @@ using namespace vulkan_internal;
 
 
 		// Depth-Stencil:
-		VkPipelineDepthStencilStateCreateInfo& depthstencil = internal_state->depthstencil;
 		depthstencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 		if (pso->desc.dss != nullptr)
 		{
@@ -5244,7 +5071,6 @@ using namespace vulkan_internal;
 
 
 		// Tessellation:
-		VkPipelineTessellationStateCreateInfo& tessellationInfo = internal_state->tessellationInfo;
 		tessellationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
 		tessellationInfo.patchControlPoints = desc->patch_control_points;
 
@@ -5275,7 +5101,6 @@ using namespace vulkan_internal;
 				}
 			}
 			multisampling.minSampleShading = 1.0f;
-			VkSampleMask samplemask = internal_state->samplemask;
 			samplemask = pso->desc.sample_mask;
 			multisampling.pSampleMask = &samplemask;
 			if (pso->desc.bs != nullptr)
@@ -6862,12 +6687,6 @@ using namespace vulkan_internal;
 					{
 						pipelines_global[x.first] = x.second;
 					}
-					else
-					{
-						allocationhandler->destroylocker.lock();
-						allocationhandler->destroyer_pipelines.push_back(std::make_pair(x.second, FRAMECOUNT));
-						allocationhandler->destroylocker.unlock();
-					}
 				}
 				commandlist.pipelines_worker.clear();
 			}
@@ -6961,18 +6780,10 @@ using namespace vulkan_internal;
 		pso_layouts.clear();
 		layout_locker.unlock();
 
-		for (auto& x : pipelines_global)
-		{
-			allocationhandler->destroyer_pipelines.push_back(std::make_pair(x.second, FRAMECOUNT));
-		}
 		pipelines_global.clear();
 
 		for (auto& x : commandlists)
 		{
-			for (auto& y : x->pipelines_worker)
-			{
-				allocationhandler->destroyer_pipelines.push_back(std::make_pair(y.second, FRAMECOUNT));
-			}
 			x->pipelines_worker.clear();
 		}
 		allocationhandler->destroylocker.unlock();
