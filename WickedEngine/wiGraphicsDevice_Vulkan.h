@@ -127,6 +127,7 @@ namespace wi::graphics
 			VkImageViewType UAV_image_types[DESCRIPTORBINDER_UAV_COUNT] = {};
 			VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
 			VkDescriptorSetLayout descriptor_set_layout = VK_NULL_HANDLE;
+			uint32_t id = 0; // monotonic increasing id of cached layouts, can be used for array lookup
 		};
 
 	protected:
@@ -325,8 +326,8 @@ namespace wi::graphics
 			static constexpr uint32_t set_batch = 32;
 			GraphicsDevice_Vulkan* device = nullptr;
 			wi::vector<VkDescriptorPool> pools;
-			wi::unordered_map<VkDescriptorSetLayout, wi::vector<VkDescriptorSet>> free_sets;
-			wi::unordered_map<VkDescriptorSetLayout, wi::vector<VkDescriptorSet>> work_sets;
+			wi::vector<wi::vector<VkDescriptorSet>> free_sets;
+			wi::vector<wi::vector<VkDescriptorSet>> work_sets;
 
 			void init(GraphicsDevice_Vulkan* device)
 			{
@@ -360,9 +361,13 @@ namespace wi::graphics
 
 				pools.push_back(pool);
 			}
-			VkDescriptorSet allocate(VkDescriptorSetLayout layout)
+			VkDescriptorSet allocate(const PSOLayout& layout)
 			{
-				wi::vector<VkDescriptorSet>& available = free_sets[layout];
+				if (free_sets.size() <= layout.id)
+				{
+					free_sets.resize(layout.id + 1);
+				}
+				wi::vector<VkDescriptorSet>& available = free_sets[layout.id];
 				if (available.empty())
 				{
 					VkDescriptorSetLayout descriptor_set_layouts[set_batch] = {};
@@ -370,7 +375,7 @@ namespace wi::graphics
 
 					for (auto& x : descriptor_set_layouts)
 					{
-						x = layout;
+						x = layout.descriptor_set_layout;
 					}
 
 					if (pools.empty())
@@ -395,7 +400,11 @@ namespace wi::graphics
 				}
 				VkDescriptorSet descriptor_set = available.back();
 				available.pop_back();
-				work_sets[layout].push_back(descriptor_set);
+				if (work_sets.size() <= layout.id)
+				{
+					work_sets.resize(layout.id + 1);
+				}
+				work_sets[layout.id].push_back(descriptor_set);
 				return descriptor_set;
 			}
 			void destroy()
@@ -410,13 +419,13 @@ namespace wi::graphics
 			}
 			void reset()
 			{
-				for (auto& x : work_sets)
+				for (size_t i = 0; i < work_sets.size(); ++i)
 				{
-					for (auto& y : x.second)
+					for (auto& x : work_sets[i])
 					{
-						free_sets[x.first].push_back(y);
+						free_sets[i].push_back(x);
 					}
-					x.second.clear();
+					work_sets[i].clear();
 				}
 			}
 		};

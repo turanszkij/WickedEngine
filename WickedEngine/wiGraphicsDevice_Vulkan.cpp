@@ -1377,6 +1377,9 @@ using namespace vulkan_internal;
 		info.setLayoutCount = arraysize(descriptor_set_layouts);
 		vulkan_check(vkCreatePipelineLayout(device, &info, nullptr, &layout.pipeline_layout));
 
+		static uint32_t next_layout_id = 0;
+		layout.id = next_layout_id++;
+
 		pso_layouts[layout_hash] = layout;
 
 		return layout.pipeline_layout;
@@ -1605,7 +1608,7 @@ using namespace vulkan_internal;
 		{
 			const PSOLayout& layout = commandlist.layout;
 			auto& binder_pool = commandlist.binder_pools[device->GetBufferIndex()];
-			descriptorSet = binder_pool.allocate(layout.descriptor_set_layout);
+			descriptorSet = binder_pool.allocate(layout);
 
 			struct DescriptorTableInfo
 			{
