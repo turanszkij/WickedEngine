@@ -1370,7 +1370,22 @@ XMMATRIX Translator::GetLocalRotation() const
 		const TransformComponent* transform_selected = scene->transforms.GetComponent(x.entity);
 		if (transform_selected != nullptr)
 		{
-			return XMMatrixRotationQuaternion(XMLoadFloat4(&transform_selected->rotation_local));
+			XMMATRIX rotation = XMMatrixRotationQuaternion(XMLoadFloat4(&transform_selected->rotation_local));
+
+			const HierarchyComponent* hierarchy_component = scene->hierarchy.GetComponent(x.entity);
+			Entity parent = hierarchy_component != nullptr ? hierarchy_component->parentID : INVALID_ENTITY;
+			while (parent != INVALID_ENTITY)
+			{
+				const TransformComponent* parent_transform = scene->transforms.GetComponent(parent);
+				if (parent_transform != nullptr)
+				{
+					rotation = rotation * XMMatrixRotationQuaternion(XMLoadFloat4(&parent_transform->rotation_local));
+				}
+				const HierarchyComponent* parent_hierarchy = scene->hierarchy.GetComponent(parent);
+				parent = parent_hierarchy != nullptr ? parent_hierarchy->parentID : INVALID_ENTITY;
+			}
+
+			return rotation;
 		}
 	}
 	return XMMatrixIdentity();

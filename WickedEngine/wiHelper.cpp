@@ -1545,11 +1545,15 @@ namespace wi::helper
 				{
 					options = options | pfd::opt::multiselect;
 				}
-				std::vector<std::string> selection = pfd::open_file("Open file", std::filesystem::current_path().string(), extensions, options).result();
+				static std::string recent_dir_path = "";
+				std::vector<std::string> selection = pfd::open_file("Open file", recent_dir_path, extensions, options).result();
 				if (!selection.empty())
 				{
 					for (auto& x : selection)
 					{
+#ifdef PLATFORM_LINUX
+						recent_dir_path = GetDirectoryFromPath(x);
+#endif
 						onSuccess(x);
 					}
 				} else {
@@ -1559,9 +1563,13 @@ namespace wi::helper
 			}
 			case FileDialogParams::SAVE:
 			{
-				std::string destination = pfd::save_file("Save file", std::filesystem::current_path().string(), extensions).result();
+				static std::string recent_dir_path = "";
+				std::string destination = pfd::save_file("Save file", recent_dir_path, extensions).result();
 				if (!destination.empty())
 				{
+#ifdef PLATFORM_LINUX
+					recent_dir_path = GetDirectoryFromPath(destination);
+#endif
 					onSuccess(destination);
 				} else {
 					if (onFailure) onFailure();
