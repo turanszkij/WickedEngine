@@ -338,7 +338,7 @@ namespace wi::graphics
 
 		uint32_t GetMinOffsetAlignment(const GPUBufferDesc* desc) const override
 		{
-			uint32_t alignment = 1u;
+			uint32_t alignment = std::max(1u, desc->alignment);
 			if (has_flag(desc->bind_flags, BindFlag::CONSTANT_BUFFER))
 			{
 				alignment = std::max(alignment, (uint32_t)D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
