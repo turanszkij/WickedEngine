@@ -1036,22 +1036,22 @@ namespace dx12_internal
 	struct RootSignatureOptimizer
 	{
 		static constexpr uint8_t INVALID_ROOT_PARAMETER = 0xFF;
+		const D3D12_VERSIONED_ROOT_SIGNATURE_DESC* rootsig_desc = nullptr;
+		// This is the bitflag of all root parameters:
+		uint64_t root_mask = 0ull;
 		// These map shader registers in the binding space (space=0) to root parameters
 		uint8_t CBV[DESCRIPTORBINDER_CBV_COUNT];
 		uint8_t SRV[DESCRIPTORBINDER_SRV_COUNT];
 		uint8_t UAV[DESCRIPTORBINDER_UAV_COUNT];
 		uint8_t SAM[DESCRIPTORBINDER_SAMPLER_COUNT];
 		uint8_t PUSH;
-		// This is the bitflag of all root parameters:
-		uint64_t root_mask = 0ull;
 		// For each root parameter, store some statistics:
 		struct RootParameterStatistics
 		{
-			uint32_t descriptorCopyCount = 0u;
-			bool sampler_table = false;
+			uint16_t descriptorCopyCount = 0;
+			uint16_t is_sampler = 0;
 		};
-		wi::vector<RootParameterStatistics> root_stats;
-		const D3D12_VERSIONED_ROOT_SIGNATURE_DESC* rootsig_desc = nullptr;
+		StackVector<RootParameterStatistics, 64> root_stats;
 
 		void init(const D3D12_VERSIONED_ROOT_SIGNATURE_DESC& desc)
 		{
@@ -1095,7 +1095,7 @@ namespace dx12_internal
 					{
 						const D3D12_DESCRIPTOR_RANGE1& range = param.DescriptorTable.pDescriptorRanges[range_index];
 						stats.descriptorCopyCount += range.NumDescriptors == UINT_MAX ? 0 : range.NumDescriptors;
-						stats.sampler_table = range.RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
+						stats.is_sampler = range.RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
 
 						if (range.RegisterSpace != 0)
 							continue; // we only care for the binding space (space=0)
@@ -1729,7 +1729,7 @@ std::mutex queue_locker;
 
 			case D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE:
 			{
-				DescriptorHeapGPU& heap = stats.sampler_table ? device->descriptorheap_sam : device->descriptorheap_res;
+				DescriptorHeapGPU& heap = stats.is_sampler ? device->descriptorheap_sam : device->descriptorheap_res;
 				D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle = heap.start_gpu;
 
 				if (stats.descriptorCopyCount == 1 && param.DescriptorTable.pDescriptorRanges[0].RangeType != D3D12_DESCRIPTOR_RANGE_TYPE_CBV)
@@ -1789,8 +1789,8 @@ std::mutex queue_locker;
 				else if (stats.descriptorCopyCount > 0)
 				{
 					D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle = heap.start_cpu;
-					const uint32_t descriptorSize = stats.sampler_table ? device->sampler_descriptor_size : device->resource_descriptor_size;
-					const uint32_t bindless_capacity = stats.sampler_table ? BINDLESS_SAMPLER_CAPACITY : BINDLESS_RESOURCE_CAPACITY;
+					const uint32_t descriptorSize = stats.is_sampler ? device->sampler_descriptor_size : device->resource_descriptor_size;
+					const uint32_t bindless_capacity = stats.is_sampler ? BINDLESS_SAMPLER_CAPACITY : BINDLESS_RESOURCE_CAPACITY;
 
 					// Remarks:
 					//	This is allocating from the global shader visible descriptor heaps in a simple incrementing
@@ -1810,7 +1810,7 @@ std::mutex queue_locker;
 					// The reservation is the maximum amount of descriptors that can be allocated once
 					static constexpr uint32_t wrap_reservation_cbv_srv_uav = DESCRIPTORBINDER_CBV_COUNT + DESCRIPTORBINDER_SRV_COUNT + DESCRIPTORBINDER_UAV_COUNT;
 					static constexpr uint32_t wrap_reservation_sampler = DESCRIPTORBINDER_SAMPLER_COUNT;
-					const uint32_t wrap_reservation = stats.sampler_table ? wrap_reservation_sampler : wrap_reservation_cbv_srv_uav;
+					const uint32_t wrap_reservation = stats.is_sampler ? wrap_reservation_sampler : wrap_reservation_cbv_srv_uav;
 					const uint32_t wrap_effective_size = heap.heapDesc.NumDescriptors - bindless_capacity - wrap_reservation;
 					assert(wrap_reservation >= stats.descriptorCopyCount); // for correct lockless wrap behaviour
 
