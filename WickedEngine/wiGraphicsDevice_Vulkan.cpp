@@ -7249,8 +7249,11 @@ using namespace vulkan_internal;
 			int subresource = image.subresource;
 			auto internal_state = to_internal(texture);
 
-			info.renderArea.extent.width = std::min(info.renderArea.extent.width, desc.width);
-			info.renderArea.extent.height = std::min(info.renderArea.extent.height, desc.height);
+			if (image.type == RenderPassImage::Type::RENDERTARGET || image.type == RenderPassImage::Type::DEPTH_STENCIL)
+			{
+				info.renderArea.extent.width = std::min(info.renderArea.extent.width, desc.width);
+				info.renderArea.extent.height = std::min(info.renderArea.extent.height, desc.height);
+			}
 
 			VkAttachmentLoadOp loadOp;
 			switch (image.loadop)
