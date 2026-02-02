@@ -416,8 +416,6 @@ namespace wi::graphics
 				available.pop_back();
 				work_sets[layout].push_back(descriptor_set);
 				return descriptor_set;
-
-				return descriptor_set;
 			}
 			void destroy()
 			{
