@@ -15,8 +15,6 @@ namespace wi::graphics
 
 namespace metal_internal
 {
-	static constexpr uint64_t bindless_resource_capacity = 500000;
-	static constexpr uint64_t bindless_sampler_capacity = 256;
 	static constexpr MTL::SparsePageSize sparse_page_size = MTL::SparsePageSize256;
 
 	constexpr MTL::AttributeFormat _ConvertAttributeFormat(Format value)
@@ -1377,29 +1375,29 @@ using namespace metal_internal;
 		argument_table_desc->setMaxTextureBindCount(0);
 		argument_table_desc->setMaxSamplerStateBindCount(0);
 		
-		descriptor_heap_res = NS::TransferPtr(device->newBuffer(bindless_resource_capacity * sizeof(IRDescriptorTableEntry), MTL::ResourceStorageModeShared));
+		descriptor_heap_res = NS::TransferPtr(device->newBuffer(BINDLESS_RESOURCE_CAPACITY * sizeof(IRDescriptorTableEntry), MTL::ResourceStorageModeShared));
 		descriptor_heap_res->setLabel(NS::TransferPtr(NS::String::alloc()->init("descriptor_heap_res", NS::UTF8StringEncoding)).get());
 		
-		const uint64_t real_bindless_sampler_capacity = std::min(bindless_sampler_capacity, (uint64_t)device->maxArgumentBufferSamplerCount());
+		const uint64_t real_bindless_sampler_capacity = std::min(BINDLESS_SAMPLER_CAPACITY, (uint64_t)device->maxArgumentBufferSamplerCount());
 		descriptor_heap_sam = NS::TransferPtr(device->newBuffer(real_bindless_sampler_capacity * sizeof(IRDescriptorTableEntry), MTL::ResourceStorageModeShared));
 		descriptor_heap_sam->setLabel(NS::TransferPtr(NS::String::alloc()->init("descriptor_heap_sam", NS::UTF8StringEncoding)).get());
 		
 		descriptor_heap_res_data = (IRDescriptorTableEntry*)descriptor_heap_res->contents();
 		descriptor_heap_sam_data = (IRDescriptorTableEntry*)descriptor_heap_sam->contents();
 		
-		allocationhandler->free_bindless_res.reserve(bindless_resource_capacity);
+		allocationhandler->free_bindless_res.reserve(BINDLESS_RESOURCE_CAPACITY);
 		allocationhandler->free_bindless_sam.reserve(real_bindless_sampler_capacity);
 		for (int i = 0; i < real_bindless_sampler_capacity; ++i)
 		{
 			allocationhandler->free_bindless_sam.push_back((int)real_bindless_sampler_capacity - i - 1);
 		}
-		for (int i = 0; i < bindless_resource_capacity; ++i)
+		for (int i = 0; i < BINDLESS_RESOURCE_CAPACITY; ++i)
 		{
-			allocationhandler->free_bindless_res.push_back((int)bindless_resource_capacity - i - 1);
+			allocationhandler->free_bindless_res.push_back((int)BINDLESS_RESOURCE_CAPACITY - i - 1);
 		}
 		
 		NS::SharedPtr<MTL::ResidencySetDescriptor> residency_set_descriptor = NS::TransferPtr(MTL::ResidencySetDescriptor::alloc()->init());
-		residency_set_descriptor->setInitialCapacity(bindless_resource_capacity + real_bindless_sampler_capacity);
+		residency_set_descriptor->setInitialCapacity(BINDLESS_RESOURCE_CAPACITY + real_bindless_sampler_capacity);
 		NS::Error* error = nullptr;
 		allocationhandler->residency_set = NS::TransferPtr(device->newResidencySet(residency_set_descriptor.get(), &error));
 		if (error != nullptr)
@@ -1414,7 +1412,7 @@ using namespace metal_internal;
 		
 #ifdef USE_TEXTURE_VIEW_POOL
 		NS::SharedPtr<MTL::ResourceViewPoolDescriptor> view_pool_desc = NS::TransferPtr(MTL::ResourceViewPoolDescriptor::alloc()->init());
-		view_pool_desc->setResourceViewCount(bindless_resource_capacity);
+		view_pool_desc->setResourceViewCount(BINDLESS_RESOURCE_CAPACITY);
 		texture_view_pool = NS::TransferPtr(device->newTextureViewPool(view_pool_desc.get(), &error));
 		if (error != nullptr)
 		{

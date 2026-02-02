@@ -37,8 +37,8 @@ namespace wi::graphics::vulkan_internal
 	struct PSOLayoutHash
 	{
 		// Only the SRV and UAV bindings are hashed because those can have different types in different pipelines
-		VkDescriptorSetLayoutBinding SRV[DESCRIPTORBINDER_SRV_COUNT] = {};
-		VkDescriptorSetLayoutBinding UAV[DESCRIPTORBINDER_UAV_COUNT] = {};
+		VkDescriptorType SRV[DESCRIPTORBINDER_SRV_COUNT] = {};
+		VkDescriptorType UAV[DESCRIPTORBINDER_UAV_COUNT] = {};
 		size_t hash = 0;
 
 		constexpr bool operator==(const PSOLayoutHash& other) const
@@ -47,12 +47,12 @@ namespace wi::graphics::vulkan_internal
 				return false;
 			for (int i = 0; i < arraysize(SRV); ++i)
 			{
-				if (SRV[i].descriptorType != other.SRV[i].descriptorType)
+				if (SRV[i] != other.SRV[i])
 					return false;
 			}
 			for (int i = 0; i < arraysize(UAV); ++i)
 			{
-				if (UAV[i].descriptorType != other.UAV[i].descriptorType)
+				if (UAV[i] != other.UAV[i])
 					return false;
 			}
 			return true;
@@ -62,17 +62,11 @@ namespace wi::graphics::vulkan_internal
 			hash = 0;
 			for (auto& x : SRV)
 			{
-				wi::helper::hash_combine(hash, x.binding);
-				wi::helper::hash_combine(hash, x.descriptorCount);
-				wi::helper::hash_combine(hash, x.descriptorType);
-				wi::helper::hash_combine(hash, x.stageFlags);
+				wi::helper::hash_combine(hash, x);
 			}
 			for (auto& x : UAV)
 			{
-				wi::helper::hash_combine(hash, x.binding);
-				wi::helper::hash_combine(hash, x.descriptorCount);
-				wi::helper::hash_combine(hash, x.descriptorType);
-				wi::helper::hash_combine(hash, x.stageFlags);
+				wi::helper::hash_combine(hash, x);
 			}
 		}
 		constexpr size_t get_hash() const
@@ -127,7 +121,7 @@ namespace wi::graphics
 				VkDescriptorSetLayoutBinding SRV[DESCRIPTORBINDER_SRV_COUNT];
 				VkDescriptorSetLayoutBinding UAV[DESCRIPTORBINDER_UAV_COUNT];
 				VkDescriptorSetLayoutBinding SAM[DESCRIPTORBINDER_SAMPLER_COUNT];
-				VkDescriptorSetLayoutBinding IMMUTABLE_SAM[10];
+				VkDescriptorSetLayoutBinding IMMUTABLE_SAM[STATIC_SAMPLER_COUNT];
 			} table = {};
 			VkImageViewType SRV_image_types[DESCRIPTORBINDER_SRV_COUNT] = {};
 			VkImageViewType UAV_image_types[DESCRIPTORBINDER_UAV_COUNT] = {};
@@ -226,7 +220,7 @@ namespace wi::graphics
 		}  descriptor_sets;
 
 		PSOLayout layout_template;
-		VkSampler immutable_samplers[arraysize(PSOLayout::VulkanDescriptorBindingTable::IMMUTABLE_SAM)] = {};
+		VkSampler immutable_samplers[STATIC_SAMPLER_COUNT] = {};
 
 		mutable std::mutex layout_locker;
 		mutable wi::unordered_map<wi::graphics::vulkan_internal::PSOLayoutHash, PSOLayout> pso_layouts;
@@ -306,7 +300,7 @@ namespace wi::graphics
 			{
 				DIRTY_NONE = 0,
 				DIRTY_DESCRIPTOR = 1 << 1,
-				DIRTY_OFFSET = 1 << 2,
+				DIRTY_SET_OR_OFFSET = 1 << 2,
 
 				DIRTY_ALL = ~0,
 			};
@@ -349,7 +343,7 @@ namespace wi::graphics
 				pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, DESCRIPTORBINDER_UAV_COUNT * set_count });
 				pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, DESCRIPTORBINDER_SRV_COUNT * set_count });
 				pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, DESCRIPTORBINDER_UAV_COUNT * set_count });
-				pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_SAMPLER, uint32_t(DESCRIPTORBINDER_SAMPLER_COUNT + arraysize(PSOLayout::VulkanDescriptorBindingTable::IMMUTABLE_SAM)) * set_count });
+				pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_SAMPLER, (DESCRIPTORBINDER_SAMPLER_COUNT + STATIC_SAMPLER_COUNT) * set_count });
 				if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 				{
 					pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, DESCRIPTORBINDER_SRV_COUNT * set_count });

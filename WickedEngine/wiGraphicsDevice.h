@@ -27,6 +27,7 @@ namespace wi::graphics
 	static constexpr uint32_t DESCRIPTORBINDER_SRV_COUNT = 16;
 	static constexpr uint32_t DESCRIPTORBINDER_UAV_COUNT = 16;
 	static constexpr uint32_t DESCRIPTORBINDER_SAMPLER_COUNT = 8;
+	static constexpr uint32_t DESCRIPTORBINDER_ALL_COUNT = DESCRIPTORBINDER_CBV_COUNT + DESCRIPTORBINDER_SRV_COUNT + DESCRIPTORBINDER_UAV_COUNT + DESCRIPTORBINDER_SAMPLER_COUNT;
 	struct DescriptorBindingTable
 	{
 		GPUBuffer CBV[DESCRIPTORBINDER_CBV_COUNT];
@@ -53,6 +54,7 @@ namespace wi::graphics
 
 	// static sampler slot bindings will begin from this number
 	static constexpr uint32_t STATIC_SAMPLER_SLOT_BEGIN = 100;
+	static constexpr uint32_t STATIC_SAMPLER_COUNT = 10;
 
 	enum QUEUE_TYPE
 	{

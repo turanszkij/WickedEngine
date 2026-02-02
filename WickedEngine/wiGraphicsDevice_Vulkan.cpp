@@ -1310,11 +1310,11 @@ using namespace vulkan_internal;
 		PSOLayoutHash layout_hash;
 		for (int i = 0; i < arraysize(layout.table.SRV); ++i)
 		{
-			layout_hash.SRV[i] = layout.table.SRV[i];
+			layout_hash.SRV[i] = layout.table.SRV[i].descriptorType;
 		}
 		for (int i = 0; i < arraysize(layout.table.UAV); ++i)
 		{
-			layout_hash.UAV[i] = layout.table.UAV[i];
+			layout_hash.UAV[i] = layout.table.UAV[i].descriptorType;
 		}
 		layout_hash.embed_hash();
 
@@ -1336,7 +1336,9 @@ using namespace vulkan_internal;
 		VkDescriptorBindingFlags bindingFlags[sizeof(layout.table) / sizeof(VkDescriptorSetLayoutBinding)] = {};
 		for (auto& x : bindingFlags)
 		{
-			x = VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT; // descriptor sets will be reused after they are no longer used by GPU
+			x =
+				VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | // shuts up warning about format mismatches
+				VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT; // descriptor sets will be reused after they are no longer used by GPU
 		}
 		VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlagsInfo = {};
 		bindingFlagsInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
@@ -4408,7 +4410,7 @@ using namespace vulkan_internal;
 		moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 		moduleInfo.codeSize = shadercode_size;
 		moduleInfo.pCode = (const uint32_t*)shadercode;
-		vulkan_check(vkCreateShaderModule(device, &moduleInfo, nullptr, &internal_state->shaderModule));
+		res = vulkan_check(vkCreateShaderModule(device, &moduleInfo, nullptr, &internal_state->shaderModule));
 
 		internal_state->stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 		internal_state->stageInfo.module = internal_state->shaderModule;
@@ -4457,35 +4459,41 @@ using namespace vulkan_internal;
 			result = spvReflectEnumerateDescriptorBindings(&module, &binding_count, nullptr);
 			assert(result == SPV_REFLECT_RESULT_SUCCESS);
 
-			wi::vector<SpvReflectDescriptorBinding*> bindings(binding_count);
-			result = spvReflectEnumerateDescriptorBindings(&module, &binding_count, bindings.data());
+			SpvReflectDescriptorBinding* bindings[DESCRIPTORBINDER_ALL_COUNT] = {};
+			assert(binding_count < arraysize(bindings));
+			result = spvReflectEnumerateDescriptorBindings(&module, &binding_count, bindings);
 			assert(result == SPV_REFLECT_RESULT_SUCCESS);
 
-			for (auto& x : bindings)
+			for (uint32_t i = 0; i < binding_count; ++i)
 			{
-				if (x->set > 0)
+				if (bindings[i] == nullptr)
+					continue;
+				const auto& refl = *bindings[i];
+				if (refl.accessed == false)
+					continue;
+				if (refl.set > 0)
 					continue; // don't care about bindless here
-				if (x->resource_type != SPV_REFLECT_RESOURCE_FLAG_SRV && x->resource_type != SPV_REFLECT_RESOURCE_FLAG_UAV)
+				if (refl.resource_type != SPV_REFLECT_RESOURCE_FLAG_SRV && refl.resource_type != SPV_REFLECT_RESOURCE_FLAG_UAV)
 					continue; // don't care about anything other than SRV and UAV here, we reduce descriptor sets by hashing only based on SRV and UAV types
 
 				VkDescriptorSetLayoutBinding binding = {};
-				binding.binding = x->binding;
-				binding.descriptorCount = x->count;
-				binding.descriptorType = (VkDescriptorType)x->descriptor_type;
+				binding.binding = refl.binding;
+				binding.descriptorCount = refl.count;
+				binding.descriptorType = (VkDescriptorType)refl.descriptor_type;
 				binding.stageFlags = VK_SHADER_STAGE_ALL;
 
 				VkImageViewType view_type = {};
-				switch (x->descriptor_type)
+				switch (refl.descriptor_type)
 				{
 				default:
 					break;
 				case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
 				case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-					switch (x->image.dim)
+					switch (refl.image.dim)
 					{
 					default:
 					case SpvDim1D:
-						if (x->image.arrayed == 0)
+						if (refl.image.arrayed == 0)
 						{
 							view_type = VK_IMAGE_VIEW_TYPE_1D;
 						}
@@ -4495,7 +4503,7 @@ using namespace vulkan_internal;
 						}
 						break;
 					case SpvDim2D:
-						if (x->image.arrayed == 0)
+						if (refl.image.arrayed == 0)
 						{
 							view_type = VK_IMAGE_VIEW_TYPE_2D;
 						}
@@ -4508,7 +4516,7 @@ using namespace vulkan_internal;
 						view_type = VK_IMAGE_VIEW_TYPE_3D;
 						break;
 					case SpvDimCube:
-						if (x->image.arrayed == 0)
+						if (refl.image.arrayed == 0)
 						{
 							view_type = VK_IMAGE_VIEW_TYPE_CUBE;
 						}
@@ -4521,7 +4529,7 @@ using namespace vulkan_internal;
 					break;
 				}
 
-				switch (x->resource_type)
+				switch (refl.resource_type)
 				{
 				case SPV_REFLECT_RESOURCE_FLAG_SRV:
 				{
@@ -4556,7 +4564,7 @@ using namespace vulkan_internal;
 			// Create compute pipeline state in place:
 			pipelineInfo.stage = internal_state->stageInfo;
 
-			vulkan_check(vkCreateComputePipelines(device, pipelineCache, 1, &pipelineInfo, nullptr, &internal_state->pipeline_cs));
+			res = vulkan_check(vkCreateComputePipelines(device, pipelineCache, 1, &pipelineInfo, nullptr, &internal_state->pipeline_cs));
 		}
 
 		return res == VK_SUCCESS;
@@ -4834,10 +4842,8 @@ using namespace vulkan_internal;
 
 		internal_state->layout = layout_template;
 
-		VkResult res = VK_SUCCESS;
-
 		VkGraphicsPipelineCreateInfo pipelineInfo = {};
-		VkPipelineShaderStageCreateInfo shaderStages[static_cast<size_t>(ShaderStage::Count)] = {};
+		VkPipelineShaderStageCreateInfo shaderStages[size_t(ShaderStage::Count)] = {};
 		VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
 		VkPipelineRasterizationStateCreateInfo rasterizer = {};
 		VkPipelineRasterizationDepthClipStateCreateInfoEXT depthClipStateInfo = {};
@@ -5107,6 +5113,8 @@ using namespace vulkan_internal;
 			pipelineInfo.pDynamicState = &dynamicStateInfo_MeshShader;
 		}
 
+		VkResult res = VK_SUCCESS;
+
 		if (renderpass_info != nullptr)
 		{
 			// MSAA:
@@ -5264,7 +5272,7 @@ using namespace vulkan_internal;
 			}
 			pipelineInfo.pNext = &renderingInfo;
 
-			vulkan_check(vkCreateGraphicsPipelines(device, pipelineCache, 1, &pipelineInfo, nullptr, &internal_state->pipeline));
+			res = vulkan_check(vkCreateGraphicsPipelines(device, pipelineCache, 1, &pipelineInfo, nullptr, &internal_state->pipeline));
 		}
 
 		return res == VK_SUCCESS;
@@ -7579,7 +7587,7 @@ using namespace vulkan_internal;
 			binder.table.CBV_offset[slot] = offset;
 			if (slot < dynamic_cbv_count)
 			{
-				binder.dirty |= DescriptorBinder::DIRTY_OFFSET;
+				binder.dirty |= DescriptorBinder::DIRTY_SET_OR_OFFSET;
 			}
 			else
 			{
@@ -7724,7 +7732,7 @@ using namespace vulkan_internal;
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 		if (commandlist.active_cs != nullptr)
 		{
-			commandlist.binder.dirty |= DescriptorBinder::DIRTY_OFFSET; // need to refresh bind point at least when gfx/compute changes!
+			commandlist.binder.dirty |= DescriptorBinder::DIRTY_SET_OR_OFFSET; // need to refresh bind point at least when gfx/compute changes!
 		}
 		commandlist.active_cs = nullptr;
 		commandlist.active_rt = nullptr;
@@ -7772,7 +7780,7 @@ using namespace vulkan_internal;
 			return;
 		if (commandlist.active_pso != nullptr)
 		{
-			commandlist.binder.dirty |= DescriptorBinder::DIRTY_OFFSET; // need to refresh bind point at least when gfx/compute changes!
+			commandlist.binder.dirty |= DescriptorBinder::DIRTY_SET_OR_OFFSET; // need to refresh bind point at least when gfx/compute changes!
 		}
 		commandlist.active_pso = nullptr;
 		commandlist.active_rt = nullptr;
@@ -8566,7 +8574,7 @@ using namespace vulkan_internal;
 
 		if (commandlist.active_rt == nullptr)
 		{
-			commandlist.binder.dirty |= DescriptorBinder::DIRTY_OFFSET;
+			commandlist.binder.dirty |= DescriptorBinder::DIRTY_SET_OR_OFFSET;
 		}
 
 		commandlist.active_rt = rtpso;
