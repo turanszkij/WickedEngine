@@ -577,7 +577,7 @@ namespace wi::graphics
 
 		uint32_t GetMinOffsetAlignment(const GPUBufferDesc* desc) const override
 		{
-			uint32_t alignment = 1u;
+			uint32_t alignment = desc->alignment;
 			if (has_flag(desc->bind_flags, BindFlag::CONSTANT_BUFFER))
 			{
 				alignment = std::max(alignment, (uint32_t)properties2.properties.limits.minUniformBufferOffsetAlignment);
@@ -593,6 +593,10 @@ namespace wi::graphics
 			if (has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_BUFFER) || has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_NON_RT_DS) || has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_RT_DS))
 			{
 				alignment = std::max(alignment, uint32_t(64 * 1024)); // 64KB safety to match DX12, because cannot use vkGetBufferMemoryRequirements here
+			}
+			if (has_flag(desc->misc_flags, ResourceMiscFlag::RAY_TRACING))
+			{
+				alignment = std::max(alignment, raytracing_properties.shaderGroupBaseAlignment);
 			}
 			return alignment;
 		}

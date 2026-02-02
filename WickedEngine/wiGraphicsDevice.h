@@ -330,6 +330,10 @@ namespace wi::graphics
 				desc.usage = Usage::UPLOAD;
 				desc.bind_flags = BindFlag::CONSTANT_BUFFER | BindFlag::VERTEX_BUFFER | BindFlag::INDEX_BUFFER | BindFlag::SHADER_RESOURCE;
 				desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+				if (CheckCapability(GraphicsDeviceCapability::RAYTRACING))
+				{
+					desc.misc_flags |= ResourceMiscFlag::RAY_TRACING;
+				}
 				allocator.alignment = GetMinOffsetAlignment(&desc);
 				desc.size = align((allocator.buffer.desc.size + dataSize) * 2, allocator.alignment);
 				CreateBuffer(&desc, nullptr, &allocator.buffer);

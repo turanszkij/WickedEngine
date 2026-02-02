@@ -3540,6 +3540,8 @@ using namespace vulkan_internal;
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
 			bufferInfo.usage |= VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR;
+			buffer->desc.alignment = std::max(buffer->desc.alignment, 16u);
+			buffer->desc.alignment = std::max(buffer->desc.alignment, raytracing_properties.shaderGroupBaseAlignment);
 		}
 		if (has_flag(buffer->desc.misc_flags, ResourceMiscFlag::PREDICATION))
 		{
@@ -3600,7 +3602,7 @@ using namespace vulkan_internal;
 			has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_RT_DS))
 		{
 			VkMemoryRequirements memory_requirements = {};
-			memory_requirements.alignment = desc->alignment;
+			memory_requirements.alignment = buffer->desc.alignment;
 			if (memory_requirements.alignment == 0)
 			{
 				memory_requirements.alignment = GetMinOffsetAlignment(desc);
@@ -3699,7 +3701,7 @@ using namespace vulkan_internal;
 
 			if (alias == nullptr)
 			{
-				if (desc->alignment > 0)
+				if (buffer->desc.alignment > 0)
 				{
 					res = vulkan_check(vmaCreateBufferWithAlignment(
 						allocationhandler->allocator,
@@ -4565,6 +4567,10 @@ using namespace vulkan_internal;
 			pipelineInfo.stage = internal_state->stageInfo;
 
 			res = vulkan_check(vkCreateComputePipelines(device, pipelineCache, 1, &pipelineInfo, nullptr, &internal_state->pipeline_cs));
+		}
+		else if (stage == ShaderStage::LIB)
+		{
+			cache_pso_layout(internal_state->layout);
 		}
 
 		return res == VK_SUCCESS;

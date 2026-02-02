@@ -14373,20 +14373,29 @@ void CreateRTReflectionResources(RTReflectionResources& res, XMUINT2 resolution,
 
 	desc.format = Format::R16G16B16A16_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.texture_rayIndirectSpecular);
+	device->SetName(&res.texture_rayIndirectSpecular, "rtreflection.texture_rayIndirectSpecular");
 	device->CreateTexture(&desc, nullptr, &res.texture_rayDirectionPDF);
+	device->SetName(&res.texture_rayDirectionPDF, "rtreflection.texture_rayDirectionPDF");
 	desc.format = Format::R16_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.texture_rayLengths);
-	device->SetName(&res.texture_rayLengths, "ssr_rayLengths");
+	device->SetName(&res.texture_rayLengths, "rtreflection.texture_rayLengths");
 
 	desc.format = Format::R16G16B16A16_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.texture_resolve);
+	device->SetName(&res.texture_resolve, "rtreflection.texture_resolve");
 	device->CreateTexture(&desc, nullptr, &res.texture_temporal[0]);
+	device->SetName(&res.texture_temporal[0], "rtreflection.texture_temporal[0]");
 	device->CreateTexture(&desc, nullptr, &res.texture_temporal[1]);
+	device->SetName(&res.texture_temporal[1], "rtreflection.texture_temporal[1]");
 	desc.format = Format::R16_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.texture_resolve_variance);
+	device->SetName(&res.texture_resolve_variance, "rtreflection.texture_resolve_variance");
 	device->CreateTexture(&desc, nullptr, &res.texture_resolve_reprojectionDepth);
+	device->SetName(&res.texture_resolve_reprojectionDepth, "rtreflection.texture_resolve_reprojectionDepth");
 	device->CreateTexture(&desc, nullptr, &res.texture_temporal_variance[0]);
+	device->SetName(&res.texture_temporal_variance[0], "rtreflection.texture_temporal_variance[0]");
 	device->CreateTexture(&desc, nullptr, &res.texture_temporal_variance[1]);
+	device->SetName(&res.texture_temporal_variance[1], "rtreflection.texture_temporal_variance[1]");
 }
 void Postprocess_RTReflection(
 	const RTReflectionResources& res,
@@ -14442,6 +14451,7 @@ void Postprocess_RTReflection(
 		device->ClearUAV(&res.texture_temporal[1], 0, cmd);
 		device->ClearUAV(&res.texture_temporal_variance[0], 0, cmd);
 		device->ClearUAV(&res.texture_temporal_variance[1], 0, cmd);
+
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Memory(),
@@ -14566,15 +14576,6 @@ void Postprocess_RTReflection(
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&res.texture_resolve, res.texture_resolve.desc.layout, ResourceState::UNORDERED_ACCESS),
-				GPUBarrier::Image(&res.texture_resolve_variance, res.texture_resolve_variance.desc.layout, ResourceState::UNORDERED_ACCESS),
-				GPUBarrier::Image(&res.texture_resolve_reprojectionDepth, res.texture_resolve_reprojectionDepth.desc.layout, ResourceState::UNORDERED_ACCESS),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
 		device->Dispatch(
 			(res.texture_resolve.GetDesc().width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
 			(res.texture_resolve.GetDesc().height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -14584,7 +14585,6 @@ void Postprocess_RTReflection(
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
 				GPUBarrier::Image(&res.texture_resolve, ResourceState::UNORDERED_ACCESS, res.texture_resolve.desc.layout),
 				GPUBarrier::Image(&res.texture_resolve_variance, ResourceState::UNORDERED_ACCESS, res.texture_resolve_variance.desc.layout),
 				GPUBarrier::Image(&res.texture_resolve_reprojectionDepth, ResourceState::UNORDERED_ACCESS, res.texture_resolve_reprojectionDepth.desc.layout),
@@ -14615,14 +14615,6 @@ void Postprocess_RTReflection(
 			&res.texture_temporal_variance[temporal_output],
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&res.texture_temporal[temporal_output], res.texture_temporal[temporal_output].desc.layout, ResourceState::UNORDERED_ACCESS),
-				GPUBarrier::Image(&res.texture_temporal_variance[temporal_output], res.texture_temporal_variance[temporal_output].desc.layout, ResourceState::UNORDERED_ACCESS),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
 
 		device->Dispatch(
 			(res.texture_temporal[temporal_output].GetDesc().width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
