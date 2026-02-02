@@ -3388,6 +3388,7 @@ void RenderMeshes(
 			push.instance_offset = (uint)instancedBatch.dataOffset;
 			assert(material.cached_wrapSampler >= 0 && material.cached_wrapSampler < 256);
 			assert(material.cached_clampSampler >= 0 && material.cached_clampSampler < 256);
+			static_assert(BINDLESS_SAMPLER_CAPACITY <= 256); // It is assumed for this structure that samplers can be indexed with 8 bits
 			push.wrapSamplerIndex = material.cached_wrapSampler;
 			push.clampSamplerIndex = material.cached_clampSampler;
 
@@ -5258,7 +5259,7 @@ void UpdateRenderData(
 				mesh.streamoutBuffer.IsValid()
 				)
 			{
-				SkinningPushConstants push;
+				SkinningPushConstants push = {};
 				push.vb_pos_wind = mesh.vb_pos_wind.descriptor_srv;
 				push.vb_nor = mesh.vb_nor.descriptor_srv;
 				push.vb_tan = mesh.vb_tan.descriptor_srv;
@@ -8993,6 +8994,8 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 	device->EventBegin("EnvironmentProbe Refresh", cmd);
 	auto range = wi::profiler::BeginRangeGPU("Environment Probe Refresh", cmd);
 
+	device->Barrier(GPUBarrier::Memory(), cmd); // safety
+
 	BindCommonResources(cmd);
 
 	const float zNearP = vis.camera->zNearP;
@@ -9347,7 +9350,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 			TextureDesc desc = envrenderingColorBuffer.GetDesc();
 
-			AerialPerspectiveCapturePushConstants push;
+			AerialPerspectiveCapturePushConstants push = {};
 			push.resolution.x = desc.width;
 			push.resolution.y = desc.height;
 			push.resolution_rcp.x = 1.0f / push.resolution.x;
@@ -9357,25 +9360,16 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 			device->PushConstants(&push, sizeof(push), cmd);
 
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&envrenderingColorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
+			device->Barrier(GPUBarrier::Image(&envrenderingColorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS), cmd);
 
 			device->Dispatch(
 				(desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
 				(desc.height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
 				6,
-				cmd);
+				cmd
+			);
 
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&envrenderingColorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
+			device->Barrier(GPUBarrier::Image(&envrenderingColorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE), cmd);
 
 			device->EventEnd(cmd);
 		}
@@ -9420,7 +9414,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 			TextureDesc desc = envrenderingColorBuffer.GetDesc();
 
-			VolumetricCloudCapturePushConstants push;
+			VolumetricCloudCapturePushConstants push = {};
 			push.resolution.x = desc.width;
 			push.resolution.y = desc.height;
 			push.resolution_rcp.x = 1.0f / push.resolution.x;
@@ -9446,12 +9440,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 			device->PushConstants(&push, sizeof(push), cmd);
 
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&envrenderingColorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
+			device->Barrier(GPUBarrier::Image(&envrenderingColorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS), cmd);
 
 			device->Dispatch(
 				(desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -9459,12 +9448,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 				6,
 				cmd);
 
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&envrenderingColorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
+			device->Barrier(GPUBarrier::Image(&envrenderingColorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE), cmd);
 
 			device->EventEnd(cmd);
 		}
@@ -9540,12 +9524,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 				desc.height *= 2;
 			}
 
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&envrenderingColorBuffer_Filtered, ResourceState::UNORDERED_ACCESS, envrenderingColorBuffer_Filtered.desc.layout),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
+			device->Barrier(GPUBarrier::Image(&envrenderingColorBuffer_Filtered, ResourceState::UNORDERED_ACCESS, envrenderingColorBuffer_Filtered.desc.layout), cmd);
 		}
 		device->EventEnd(cmd);
 
@@ -14394,20 +14373,29 @@ void CreateRTReflectionResources(RTReflectionResources& res, XMUINT2 resolution,
 
 	desc.format = Format::R16G16B16A16_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.texture_rayIndirectSpecular);
+	device->SetName(&res.texture_rayIndirectSpecular, "rtreflection.texture_rayIndirectSpecular");
 	device->CreateTexture(&desc, nullptr, &res.texture_rayDirectionPDF);
+	device->SetName(&res.texture_rayDirectionPDF, "rtreflection.texture_rayDirectionPDF");
 	desc.format = Format::R16_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.texture_rayLengths);
-	device->SetName(&res.texture_rayLengths, "ssr_rayLengths");
+	device->SetName(&res.texture_rayLengths, "rtreflection.texture_rayLengths");
 
 	desc.format = Format::R16G16B16A16_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.texture_resolve);
+	device->SetName(&res.texture_resolve, "rtreflection.texture_resolve");
 	device->CreateTexture(&desc, nullptr, &res.texture_temporal[0]);
+	device->SetName(&res.texture_temporal[0], "rtreflection.texture_temporal[0]");
 	device->CreateTexture(&desc, nullptr, &res.texture_temporal[1]);
+	device->SetName(&res.texture_temporal[1], "rtreflection.texture_temporal[1]");
 	desc.format = Format::R16_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.texture_resolve_variance);
+	device->SetName(&res.texture_resolve_variance, "rtreflection.texture_resolve_variance");
 	device->CreateTexture(&desc, nullptr, &res.texture_resolve_reprojectionDepth);
+	device->SetName(&res.texture_resolve_reprojectionDepth, "rtreflection.texture_resolve_reprojectionDepth");
 	device->CreateTexture(&desc, nullptr, &res.texture_temporal_variance[0]);
+	device->SetName(&res.texture_temporal_variance[0], "rtreflection.texture_temporal_variance[0]");
 	device->CreateTexture(&desc, nullptr, &res.texture_temporal_variance[1]);
+	device->SetName(&res.texture_temporal_variance[1], "rtreflection.texture_temporal_variance[1]");
 }
 void Postprocess_RTReflection(
 	const RTReflectionResources& res,
@@ -14463,6 +14451,7 @@ void Postprocess_RTReflection(
 		device->ClearUAV(&res.texture_temporal[1], 0, cmd);
 		device->ClearUAV(&res.texture_temporal_variance[0], 0, cmd);
 		device->ClearUAV(&res.texture_temporal_variance[1], 0, cmd);
+
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Memory(),
@@ -14539,8 +14528,8 @@ void Postprocess_RTReflection(
 		dispatchraysdesc.hit_group.size = shaderIdentifierSize;
 		dispatchraysdesc.hit_group.stride = shaderIdentifierSize;
 
-		dispatchraysdesc.width = desc.width / 2;
-		dispatchraysdesc.height = desc.height / 2;
+		dispatchraysdesc.width = res.texture_rayIndirectSpecular.GetDesc().width;
+		dispatchraysdesc.height = res.texture_rayIndirectSpecular.GetDesc().height;
 
 		device->DispatchRays(&dispatchraysdesc, cmd);
 
@@ -14587,15 +14576,6 @@ void Postprocess_RTReflection(
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&res.texture_resolve, res.texture_resolve.desc.layout, ResourceState::UNORDERED_ACCESS),
-				GPUBarrier::Image(&res.texture_resolve_variance, res.texture_resolve_variance.desc.layout, ResourceState::UNORDERED_ACCESS),
-				GPUBarrier::Image(&res.texture_resolve_reprojectionDepth, res.texture_resolve_reprojectionDepth.desc.layout, ResourceState::UNORDERED_ACCESS),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
 		device->Dispatch(
 			(res.texture_resolve.GetDesc().width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
 			(res.texture_resolve.GetDesc().height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -14605,7 +14585,6 @@ void Postprocess_RTReflection(
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
 				GPUBarrier::Image(&res.texture_resolve, ResourceState::UNORDERED_ACCESS, res.texture_resolve.desc.layout),
 				GPUBarrier::Image(&res.texture_resolve_variance, ResourceState::UNORDERED_ACCESS, res.texture_resolve_variance.desc.layout),
 				GPUBarrier::Image(&res.texture_resolve_reprojectionDepth, ResourceState::UNORDERED_ACCESS, res.texture_resolve_reprojectionDepth.desc.layout),
@@ -14636,14 +14615,6 @@ void Postprocess_RTReflection(
 			&res.texture_temporal_variance[temporal_output],
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&res.texture_temporal[temporal_output], res.texture_temporal[temporal_output].desc.layout, ResourceState::UNORDERED_ACCESS),
-				GPUBarrier::Image(&res.texture_temporal_variance[temporal_output], res.texture_temporal_variance[temporal_output].desc.layout, ResourceState::UNORDERED_ACCESS),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
 
 		device->Dispatch(
 			(res.texture_temporal[temporal_output].GetDesc().width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,

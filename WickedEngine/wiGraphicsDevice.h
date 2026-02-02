@@ -27,6 +27,7 @@ namespace wi::graphics
 	static constexpr uint32_t DESCRIPTORBINDER_SRV_COUNT = 16;
 	static constexpr uint32_t DESCRIPTORBINDER_UAV_COUNT = 16;
 	static constexpr uint32_t DESCRIPTORBINDER_SAMPLER_COUNT = 8;
+	static constexpr uint32_t DESCRIPTORBINDER_ALL_COUNT = DESCRIPTORBINDER_CBV_COUNT + DESCRIPTORBINDER_SRV_COUNT + DESCRIPTORBINDER_UAV_COUNT + DESCRIPTORBINDER_SAMPLER_COUNT;
 	struct DescriptorBindingTable
 	{
 		GPUBuffer CBV[DESCRIPTORBINDER_CBV_COUNT];
@@ -37,6 +38,23 @@ namespace wi::graphics
 		int UAV_index[DESCRIPTORBINDER_UAV_COUNT] = {};
 		Sampler SAM[DESCRIPTORBINDER_SAMPLER_COUNT];
 	};
+
+	// Bindless descriptor limits:
+	//	The device can allocate less than this, depending on capabilities
+	static constexpr uint32_t BINDLESS_RESOURCE_CAPACITY = 500000;
+	static constexpr uint32_t BINDLESS_SAMPLER_CAPACITY = 256; // it is chosen to be addressable by 8 bits
+
+	// Max number of push constants:
+	//	The number indicates how many 32 bit values can be set for common shaders
+	static constexpr uint32_t PUSH_CONSTANT_COUNT = 22;
+
+	// How many constant buffers are in the "root"
+	//	These are faster to bind but there is a more limited number available, depending on device
+	static constexpr uint32_t ROOT_CBV_COUNT = 3;
+
+	// static sampler slot bindings will begin from this number
+	static constexpr uint32_t STATIC_SAMPLER_SLOT_BEGIN = 100;
+	static constexpr uint32_t STATIC_SAMPLER_COUNT = 10;
 
 	enum QUEUE_TYPE
 	{
@@ -312,6 +330,10 @@ namespace wi::graphics
 				desc.usage = Usage::UPLOAD;
 				desc.bind_flags = BindFlag::CONSTANT_BUFFER | BindFlag::VERTEX_BUFFER | BindFlag::INDEX_BUFFER | BindFlag::SHADER_RESOURCE;
 				desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+				if (CheckCapability(GraphicsDeviceCapability::RAYTRACING))
+				{
+					desc.misc_flags |= ResourceMiscFlag::RAY_TRACING;
+				}
 				allocator.alignment = GetMinOffsetAlignment(&desc);
 				desc.size = align((allocator.buffer.desc.size + dataSize) * 2, allocator.alignment);
 				CreateBuffer(&desc, nullptr, &allocator.buffer);

@@ -225,6 +225,7 @@ typedef struct SpvReflectPrvParser {
   uint32_t                        type_count;
   uint32_t                        descriptor_count;
   uint32_t                        push_constant_count;
+  uint32_t                        spec_constant_count;
 
   SpvReflectTypeDescription*      physical_pointer_check[MAX_RECURSIVE_PHYSICAL_POINTER_CHECK];
   uint32_t                        physical_pointer_count;
@@ -687,7 +688,7 @@ static SpvReflectResult ParseNodes(SpvReflectPrvParser* p_parser) {
     if (node_word_count == 0) {
       return SPV_REFLECT_RESULT_ERROR_SPIRV_INVALID_INSTRUCTION;
     }
-    if (op == SpvOpAccessChain) {
+    if (op == SpvOpAccessChain || op == SpvOpInBoundsAccessChain) {
       ++(p_parser->access_chain_count);
     }
     spirv_word_index += node_word_count;
@@ -845,6 +846,7 @@ static SpvReflectResult ParseNodes(SpvReflectPrvParser* p_parser) {
       case SpvOpTypeAccelerationStructureKHR:
       case SpvOpTypeRayQueryKHR:
       case SpvOpTypeHitObjectNV:
+      case SpvOpTypeCooperativeVectorNV:
       case SpvOpTypeCooperativeMatrixNV:
       case SpvOpTypeCooperativeMatrixKHR: {
         CHECKED_READU32(p_parser, p_node->word_offset + 1, p_node->result_id);
@@ -934,7 +936,8 @@ static SpvReflectResult ParseNodes(SpvReflectPrvParser* p_parser) {
         CHECKED_READU32(p_parser, p_node->word_offset + 2, p_node->result_id);
       } break;
 
-      case SpvOpAccessChain: {
+      case SpvOpAccessChain:
+      case SpvOpInBoundsAccessChain: {
         SpvReflectPrvAccessChain* p_access_chain = &(p_parser->access_chains[access_chain_index]);
         CHECKED_READU32(p_parser, p_node->word_offset + 1, p_access_chain->result_type_id);
         CHECKED_READU32(p_parser, p_node->word_offset + 2, p_access_chain->result_id);
@@ -1418,7 +1421,7 @@ static bool UserTypeMatches(const char* user_type, const char* pattern) {
   return false;
 }
 
-static SpvReflectResult ParseDecorations(SpvReflectPrvParser* p_parser, SpvReflectShaderModule* p_module) {
+static SpvReflectResult ParseDecorations(SpvReflectPrvParser* p_parser) {
   uint32_t spec_constant_count = 0;
   for (uint32_t i = 0; i < p_parser->node_count; ++i) {
     SpvReflectPrvNode* p_node = &(p_parser->nodes[i]);
@@ -1605,6 +1608,8 @@ static SpvReflectResult ParseDecorations(SpvReflectPrvParser* p_parser, SpvRefle
       } break;
 
       case SpvDecorationSpecId: {
+        uint32_t word_offset = p_node->word_offset + member_offset + 3;
+        CHECKED_READU32(p_parser, word_offset, p_target_decorations->spec_id);
         spec_constant_count++;
       } break;
 
@@ -1718,31 +1723,7 @@ static SpvReflectResult ParseDecorations(SpvReflectPrvParser* p_parser, SpvRefle
     }
   }
 
-  if (spec_constant_count > 0) {
-    p_module->spec_constants = (SpvReflectSpecializationConstant*)calloc(spec_constant_count, sizeof(*p_module->spec_constants));
-    if (IsNull(p_module->spec_constants)) {
-      return SPV_REFLECT_RESULT_ERROR_ALLOC_FAILED;
-    }
-  }
-  for (uint32_t i = 0; i < p_parser->node_count; ++i) {
-    SpvReflectPrvNode* p_node = &(p_parser->nodes[i]);
-    if (p_node->op == SpvOpDecorate) {
-      uint32_t decoration = (uint32_t)INVALID_VALUE;
-      CHECKED_READU32(p_parser, p_node->word_offset + 2, decoration);
-      if (decoration == SpvDecorationSpecId) {
-        const uint32_t count = p_module->spec_constant_count;
-        CHECKED_READU32(p_parser, p_node->word_offset + 1, p_module->spec_constants[count].spirv_id);
-        CHECKED_READU32(p_parser, p_node->word_offset + 3, p_module->spec_constants[count].constant_id);
-        // If being used for a OpSpecConstantComposite (ex. LocalSizeId), there won't be a name
-        SpvReflectPrvNode* target_node = FindNode(p_parser, p_module->spec_constants[count].spirv_id);
-        if (IsNotNull(target_node)) {
-          p_module->spec_constants[count].name = target_node->name;
-        }
-        p_module->spec_constant_count++;
-      }
-    }
-  }
-
+  p_parser->spec_constant_count = spec_constant_count;
   return SPV_REFLECT_RESULT_SUCCESS;
 }
 
@@ -3391,7 +3372,7 @@ static uint32_t GetUint32Constant(SpvReflectPrvParser* p_parser, uint32_t id) {
 }
 
 static bool HasByteAddressBufferOffset(SpvReflectPrvNode* p_node, SpvReflectDescriptorBinding* p_binding) {
-  return IsNotNull(p_node) && IsNotNull(p_binding) && p_node->op == SpvOpAccessChain && p_node->word_count == 6 &&
+  return IsNotNull(p_node) && IsNotNull(p_binding) && (p_node->op == SpvOpAccessChain || p_node->op == SpvOpInBoundsAccessChain) && p_node->word_count == 6 &&
          (p_binding->user_type == SPV_REFLECT_USER_TYPE_BYTE_ADDRESS_BUFFER ||
           p_binding->user_type == SPV_REFLECT_USER_TYPE_RW_BYTE_ADDRESS_BUFFER);
 }
@@ -3569,14 +3550,22 @@ static SpvReflectResult ParseStaticallyUsedResources(SpvReflectPrvParser* p_pars
     }
     used_acessed_count += p_parser->functions[j].accessed_variable_count;
   }
-  SpvReflectPrvAccessedVariable* p_used_accesses = NULL;
-  if (used_acessed_count > 0) {
-    p_used_accesses = (SpvReflectPrvAccessedVariable*)calloc(used_acessed_count, sizeof(SpvReflectPrvAccessedVariable));
-    if (IsNull(p_used_accesses)) {
-      SafeFree(p_called_functions);
-      return SPV_REFLECT_RESULT_ERROR_ALLOC_FAILED;
-    }
+
+  // If there are no used accessed, this is something like an empty function/early return
+  // Basically there is going to be nothing to reflect, but everything after this expects |p_used_accesses| to be allocated with
+  // real memory, see https://github.com/KhronosGroup/SPIRV-Reflect/issues/319
+  if (used_acessed_count == 0) {
+    SafeFree(p_called_functions);
+    return SPV_REFLECT_RESULT_SUCCESS;
   }
+
+  SpvReflectPrvAccessedVariable* p_used_accesses =
+      (SpvReflectPrvAccessedVariable*)calloc(used_acessed_count, sizeof(SpvReflectPrvAccessedVariable));
+  if (IsNull(p_used_accesses)) {
+    SafeFree(p_called_functions);
+    return SPV_REFLECT_RESULT_ERROR_ALLOC_FAILED;
+  }
+
   used_acessed_count = 0;
   for (size_t i = 0, j = 0; i < called_function_count; ++i) {
     while (p_parser->functions[j].id != p_called_functions[i]) {
@@ -4043,6 +4032,63 @@ static SpvReflectResult ParsePushConstantBlocks(SpvReflectPrvParser* p_parser, S
   return SPV_REFLECT_RESULT_SUCCESS;
 }
 
+static SpvReflectResult ParseSpecConstants(SpvReflectPrvParser* p_parser, SpvReflectShaderModule* p_module) {
+  if (p_parser->spec_constant_count > 0) {
+    p_module->spec_constants = (SpvReflectSpecializationConstant*)calloc(p_parser->spec_constant_count, sizeof(*p_module->spec_constants));
+    if (IsNull(p_module->spec_constants)) {
+      return SPV_REFLECT_RESULT_ERROR_ALLOC_FAILED;
+    }
+  } else {
+    return SPV_REFLECT_RESULT_SUCCESS;
+  }
+  for (uint32_t i = 0; i < p_parser->node_count; ++i) {
+    SpvReflectPrvNode* p_node = &(p_parser->nodes[i]);
+    if (p_node->op == SpvOpDecorate) {
+      uint32_t decoration = (uint32_t)INVALID_VALUE;
+      CHECKED_READU32(p_parser, p_node->word_offset + 2, decoration);
+      if (decoration == SpvDecorationSpecId) {
+        SpvReflectSpecializationConstant* p_spec_constant = &(p_module->spec_constants[p_module->spec_constant_count]);
+        CHECKED_READU32(p_parser, p_node->word_offset + 1, p_spec_constant->spirv_id);
+        CHECKED_READU32(p_parser, p_node->word_offset + 3, p_spec_constant->constant_id);
+        SpvReflectPrvNode* target_node = FindNode(p_parser, p_spec_constant->spirv_id);
+        if (IsNotNull(target_node)) {
+          // If being used for a OpSpecConstantComposite (ex. LocalSizeId), there won't be a name
+          p_spec_constant->name = target_node->name;
+
+          // During external specialization, Boolean values are true if non-zero and false if zero.
+          static uint32_t true_value = 1;
+          static uint32_t false_value = 0;
+          switch (target_node->op) {
+            default:
+              // Unexpected, since Spec states:
+              //   (SpecId) Apply only to a scalar specialization constant
+              SPV_REFLECT_ASSERT(false);
+              return SPV_REFLECT_RESULT_ERROR_SPIRV_INVALID_INSTRUCTION;
+            case SpvOpSpecConstantTrue:
+              p_spec_constant->default_value_size = sizeof(uint32_t);
+              p_spec_constant->default_value = &true_value;
+              break;
+            case SpvOpSpecConstantFalse:
+              p_spec_constant->default_value_size = sizeof(uint32_t);
+              p_spec_constant->default_value = &false_value;
+              break;
+            case SpvOpSpecConstant:
+              p_spec_constant->default_value_size = (target_node->word_count - 3) * sizeof(uint32_t);
+              p_spec_constant->default_value = p_parser->spirv_code + target_node->word_offset + 3;
+              break;
+          }
+          p_spec_constant->type_description = FindType(p_module, target_node->result_type_id);
+        } else {
+          // Decoration target not found
+          return SPV_REFLECT_RESULT_ERROR_SPIRV_INVALID_ID_REFERENCE;
+        }
+        p_module->spec_constant_count++;
+      }
+    }
+  }
+  return SPV_REFLECT_RESULT_SUCCESS;
+}
+
 static int SortCompareDescriptorSet(const void* a, const void* b) {
   const SpvReflectDescriptorSet* p_elem_a = (const SpvReflectDescriptorSet*)a;
   const SpvReflectDescriptorSet* p_elem_b = (const SpvReflectDescriptorSet*)b;
@@ -4295,7 +4341,7 @@ static SpvReflectResult CreateShaderModule(uint32_t flags, size_t size, const vo
     SPV_REFLECT_ASSERT(result == SPV_REFLECT_RESULT_SUCCESS);
   }
   if (result == SPV_REFLECT_RESULT_SUCCESS) {
-    result = ParseDecorations(&parser, p_module);
+    result = ParseDecorations(&parser);
     SPV_REFLECT_ASSERT(result == SPV_REFLECT_RESULT_SUCCESS);
   }
 
@@ -4334,6 +4380,10 @@ static SpvReflectResult CreateShaderModule(uint32_t flags, size_t size, const vo
   }
   if (result == SPV_REFLECT_RESULT_SUCCESS) {
     result = ParsePushConstantBlocks(&parser, p_module);
+    SPV_REFLECT_ASSERT(result == SPV_REFLECT_RESULT_SUCCESS);
+  }
+  if (result == SPV_REFLECT_RESULT_SUCCESS) {
+    result = ParseSpecConstants(&parser, p_module);
     SPV_REFLECT_ASSERT(result == SPV_REFLECT_RESULT_SUCCESS);
   }
   if (result == SPV_REFLECT_RESULT_SUCCESS) {
@@ -5475,6 +5525,14 @@ const char* spvReflectSourceLanguage(SpvSourceLanguage source_lang) {
       return "Hero C";
     case SpvSourceLanguageNZSL:
       return "NZSL";
+    case SpvSourceLanguageWGSL:
+      return "WGSL";
+    case SpvSourceLanguageSlang:
+      return "Slang";
+    case SpvSourceLanguageZig:
+      return "Zig";
+    case SpvSourceLanguageRust:
+      return "Rust";
     default:
       break;
   }

@@ -33,11 +33,9 @@ void RTReflection_Raygen()
 	uint2 DTid = DispatchRaysIndex().xy;
 	const float2 uv = ((float2)DTid.xy + 0.5) / (float2)DispatchRaysDimensions();
 
-	const uint downsampleFactor = 2;
-
 	// This is necessary for accurate upscaling. This is so we don't reuse the same half-res pixels
-	uint2 screenJitter = floor(blue_noise(uint2(0, 0)).xy * downsampleFactor);
-	uint2 jitterPixel = screenJitter + DTid.xy * downsampleFactor;
+	uint2 screenJitter = floor(blue_noise(uint2(0, 0)).xy * rtreflection_downscalefactor);
+	uint2 jitterPixel = screenJitter + DTid.xy * rtreflection_downscalefactor;
 	float2 jitterUV = (screenJitter + DTid.xy + 0.5f) / (float2)DispatchRaysDimensions();
 
 	const float depth = texture_depth.SampleLevel(sampler_linear_clamp, jitterUV, 0);
@@ -119,9 +117,9 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 		lighting.create(0, 0, GetAmbient(surface.N), 0);
 
 		[loop]
-		for (uint iterator = 0; iterator < GetFrame().light_oterator.item_count(); iterator++)
+		for (uint iterator = 0; iterator < lights().item_count(); iterator++)
 		{
-			ShaderEntity light = load_entity(lights().forst_item() + iterator);
+			ShaderEntity light = load_entity(lights().first_item() + iterator);
 			if ((light.layerMask & surface.material.layerMask) == 0)
 				continue;
 

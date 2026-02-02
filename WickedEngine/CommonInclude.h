@@ -109,6 +109,7 @@ struct StackVector
 {
 	T items[count] = {};
 	unsigned last = 0;
+	constexpr void resize(unsigned size) { last = size; }
 	constexpr unsigned size() const { return last; }
 	constexpr bool empty() const { return last == 0; }
 	constexpr void push_back(const T& item) { items[last++] = item; }

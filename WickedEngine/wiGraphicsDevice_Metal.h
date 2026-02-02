@@ -25,8 +25,8 @@ namespace wi::graphics
 	public:
 		struct RootLayout
 		{
-			uint32_t constants[22];
-			MTL::GPUAddress root_cbvs[3];
+			uint32_t constants[PUSH_CONSTANT_COUNT];
+			MTL::GPUAddress root_cbvs[ROOT_CBV_COUNT];
 			MTL::GPUAddress resource_table_ptr;
 			MTL::GPUAddress sampler_table_ptr;
 		};
@@ -36,10 +36,10 @@ namespace wi::graphics
 			IRDescriptorTableEntry srvs[arraysize(DescriptorBindingTable::SRV)];
 			IRDescriptorTableEntry uavs[arraysize(DescriptorBindingTable::UAV)];
 		};
-		NS::SharedPtr<MTL::SamplerState> static_samplers[10];
+		NS::SharedPtr<MTL::SamplerState> static_samplers[STATIC_SAMPLER_COUNT];
 		struct StaticSamplerDescriptors
 		{
-			IRDescriptorTableEntry samplers[arraysize(static_samplers)]; // workaround for static sampler, they are not supported by Metal Shader Converter
+			IRDescriptorTableEntry samplers[STATIC_SAMPLER_COUNT]; // workaround for static sampler, they are not supported by Metal Shader Converter
 		} static_sampler_descriptors;
 		struct SamplerTable
 		{

@@ -337,12 +337,12 @@ SamplerComparisonState sampler_cmp_depth : register(s109);
 template<typename T>
 struct BindlessResource
 {
-	T operator[](uint index) { return T(ResourceDescriptorHeap[index]); }
+	T operator[](uint index) { return (T)ResourceDescriptorHeap[index]; }
 };
 template<>
 struct BindlessResource<SamplerState>
 {
-	SamplerState operator[](uint index) { return SamplerState(SamplerDescriptorHeap[index]); }
+	SamplerState operator[](uint index) { return (SamplerState)SamplerDescriptorHeap[index]; }
 };
 #endif // defined(__hlsl_dx_compiler) && !defined(__spirv__) && __SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6
 
@@ -403,14 +403,8 @@ static const BindlessResource<RaytracingAccelerationStructure> bindless_accelera
 //	Note that HLSL register space declaration was not working correctly with overlapped spaces,
 //	But vk::binding works correctly in this case.
 //	HLSL register space declaration is working well with Vulkan when spaces are not overlapping.
-static const uint DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER = 1;
-static const uint DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER = 2;
-static const uint DESCRIPTOR_SET_BINDLESS_SAMPLER = 3;
-static const uint DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE = 4;
-static const uint DESCRIPTOR_SET_BINDLESS_STORAGE_IMAGE = 5;
-static const uint DESCRIPTOR_SET_BINDLESS_STORAGE_TEXEL_BUFFER = 6;
-static const uint DESCRIPTOR_SET_BINDLESS_ACCELERATION_STRUCTURE = 7;
-
+//	These values are provided from shader compiler with defines
+[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLER)]] SamplerState bindless_samplers[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] ByteAddressBuffer bindless_buffers[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER)]] Buffer<uint> bindless_buffers_uint[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER)]] Buffer<uint2> bindless_buffers_uint2[];
@@ -424,7 +418,6 @@ static const uint DESCRIPTOR_SET_BINDLESS_ACCELERATION_STRUCTURE = 7;
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER)]] Buffer<half2> bindless_buffers_half2[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER)]] Buffer<half3> bindless_buffers_half3[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_UNIFORM_TEXEL_BUFFER)]] Buffer<half4> bindless_buffers_half4[];
-[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLER)]] SamplerState bindless_samplers[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] Texture2D bindless_textures[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] Texture2DArray bindless_textures2DArray[];
 [[vk::binding(0, DESCRIPTOR_SET_BINDLESS_SAMPLED_IMAGE)]] Texture2DArray<half4> bindless_textures2DArray_half4[];
