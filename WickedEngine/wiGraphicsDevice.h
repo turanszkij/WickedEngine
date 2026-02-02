@@ -27,7 +27,6 @@ namespace wi::graphics
 	static constexpr uint32_t DESCRIPTORBINDER_SRV_COUNT = 16;
 	static constexpr uint32_t DESCRIPTORBINDER_UAV_COUNT = 16;
 	static constexpr uint32_t DESCRIPTORBINDER_SAMPLER_COUNT = 8;
-	static constexpr uint32_t DESCRIPTORBINDER_COUNT = DESCRIPTORBINDER_CBV_COUNT + DESCRIPTORBINDER_SRV_COUNT + DESCRIPTORBINDER_UAV_COUNT + DESCRIPTORBINDER_SAMPLER_COUNT;
 	struct DescriptorBindingTable
 	{
 		GPUBuffer CBV[DESCRIPTORBINDER_CBV_COUNT];
@@ -54,18 +53,6 @@ namespace wi::graphics
 
 	// static sampler slot bindings will begin from this number
 	static constexpr uint32_t STATIC_SAMPLER_SLOT_BEGIN = 100;
-
-	// An example "root sigature" layout to check how the userdata might be laid out
-	//	It is an example, the real layout will be decided by GraphicsDevice
-	struct UserdataLayout
-	{
-		uint32_t push_constants[PUSH_CONSTANT_COUNT] = {};
-		uint64_t root_cbvs[ROOT_CBV_COUNT] = {};
-		uint64_t resource_table_ptr = {};
-		uint64_t sampler_table_ptr = {};
-	};
-	static constexpr uint32_t MAX_USERDATA_LAYOUT_SIZE = sizeof(uint32_t) * 32; // chosen minimal that's supported on all platforms
-	static_assert(sizeof(UserdataLayout) <= MAX_USERDATA_LAYOUT_SIZE);
 
 	enum QUEUE_TYPE
 	{

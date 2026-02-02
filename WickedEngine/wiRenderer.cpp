@@ -5259,7 +5259,7 @@ void UpdateRenderData(
 				mesh.streamoutBuffer.IsValid()
 				)
 			{
-				SkinningPushConstants push;
+				SkinningPushConstants push = {};
 				push.vb_pos_wind = mesh.vb_pos_wind.descriptor_srv;
 				push.vb_nor = mesh.vb_nor.descriptor_srv;
 				push.vb_tan = mesh.vb_tan.descriptor_srv;

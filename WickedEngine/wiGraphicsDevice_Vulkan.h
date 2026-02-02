@@ -333,6 +333,7 @@ namespace wi::graphics
 			wi::vector<VkDescriptorPool> pools;
 			wi::unordered_map<VkDescriptorSetLayout, wi::vector<VkDescriptorSet>> free_sets;
 			wi::unordered_map<VkDescriptorSetLayout, wi::vector<VkDescriptorSet>> work_sets;
+			bool need_reset = true;
 
 			void init(GraphicsDevice_Vulkan* device)
 			{
@@ -368,6 +369,18 @@ namespace wi::graphics
 			}
 			VkDescriptorSet allocate(VkDescriptorSetLayout layout)
 			{
+				if (need_reset)
+				{
+					need_reset = false;
+					for (auto& x : work_sets)
+					{
+						for (auto& y : x.second)
+						{
+							free_sets[x.first].push_back(y);
+						}
+						x.second.clear();
+					}
+				}
 				wi::vector<VkDescriptorSet>& available = free_sets[layout];
 				if (available.empty())
 				{
@@ -418,14 +431,7 @@ namespace wi::graphics
 			}
 			void reset()
 			{
-				for (auto& x : work_sets)
-				{
-					for (auto& y : x.second)
-					{
-						free_sets[x.first].push_back(y);
-					}
-					x.second.clear();
-				}
+				need_reset = true;
 			}
 		};
 
