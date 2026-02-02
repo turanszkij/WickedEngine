@@ -4863,6 +4863,10 @@ using namespace vulkan_internal;
 		VkPipelineTessellationStateCreateInfo tessellationInfo = {};
 
 		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+		if (CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING_TIER2))
+		{
+			pipelineInfo.flags |= VK_PIPELINE_CREATE_RENDERING_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR;
+		}
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
 		auto insert_shader_layout = [&](Shader_Vulkan* shader_interal) {
