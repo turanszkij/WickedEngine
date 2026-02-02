@@ -219,7 +219,7 @@ namespace wi::shadercompiler
 			args.push_back(L"-enable-16bit-types");
 		}
 		
-		if (input.format == ShaderFormat::SPIRV || input.format == ShaderFormat::METAL)
+		if (input.format == ShaderFormat::METAL)
 		{
 			minshadermodel = std::max(minshadermodel, ShaderModel::SM_6_6);
 		}
