@@ -3985,8 +3985,11 @@ std::mutex queue_locker;
 		auto internal_state = wi::allocator::make_shared<PipelineState_DX12>();
 		internal_state->allocationhandler = allocationhandler;
 		pso->internal_state = internal_state;
-
 		pso->desc = *desc;
+
+		const RasterizerState& rs_desc = pso->desc.rs != nullptr ? *pso->desc.rs : default_rasterizerstate;
+		const DepthStencilState& dss_desc = pso->desc.dss != nullptr ? *pso->desc.dss : default_depthstencilstate;
+		const BlendState& bs_desc = pso->desc.bs != nullptr ? *pso->desc.bs : default_blendstate;
 
 		auto& stream = internal_state->stream;
 		//stream.stream1.Flags |= D3D12_PIPELINE_STATE_FLAG_DYNAMIC_DEPTH_BIAS; // doesn't work on windows 10
@@ -4080,40 +4083,38 @@ std::mutex queue_locker;
 		assert(internal_state->rootsig_desc != nullptr);
 		internal_state->rootsig_optimizer.init(*internal_state->rootsig_desc);
 
-		RasterizerState pRasterizerStateDesc = pso->desc.rs != nullptr ? *pso->desc.rs : RasterizerState();
 		CD3DX12_RASTERIZER_DESC rs = {};
-		rs.FillMode = _ConvertFillMode(pRasterizerStateDesc.fill_mode);
-		rs.CullMode = _ConvertCullMode(pRasterizerStateDesc.cull_mode);
-		rs.FrontCounterClockwise = pRasterizerStateDesc.front_counter_clockwise;
-		rs.DepthBias = pRasterizerStateDesc.depth_bias;
-		rs.DepthBiasClamp = pRasterizerStateDesc.depth_bias_clamp;
-		rs.SlopeScaledDepthBias = pRasterizerStateDesc.slope_scaled_depth_bias;
-		rs.DepthClipEnable = pRasterizerStateDesc.depth_clip_enable;
-		rs.MultisampleEnable = pRasterizerStateDesc.multisample_enable;
-		rs.AntialiasedLineEnable = pRasterizerStateDesc.antialiased_line_enable;
-		rs.ConservativeRaster = ((CheckCapability(GraphicsDeviceCapability::CONSERVATIVE_RASTERIZATION) && pRasterizerStateDesc.conservative_rasterization_enable) ? D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
-		rs.ForcedSampleCount = pRasterizerStateDesc.forced_sample_count;
+		rs.FillMode = _ConvertFillMode(rs_desc.fill_mode);
+		rs.CullMode = _ConvertCullMode(rs_desc.cull_mode);
+		rs.FrontCounterClockwise = rs_desc.front_counter_clockwise;
+		rs.DepthBias = rs_desc.depth_bias;
+		rs.DepthBiasClamp = rs_desc.depth_bias_clamp;
+		rs.SlopeScaledDepthBias = rs_desc.slope_scaled_depth_bias;
+		rs.DepthClipEnable = rs_desc.depth_clip_enable;
+		rs.MultisampleEnable = rs_desc.multisample_enable;
+		rs.AntialiasedLineEnable = rs_desc.antialiased_line_enable;
+		rs.ConservativeRaster = ((CheckCapability(GraphicsDeviceCapability::CONSERVATIVE_RASTERIZATION) && rs_desc.conservative_rasterization_enable) ? D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
+		rs.ForcedSampleCount = rs_desc.forced_sample_count;
 		stream.stream1.RS = rs;
 
-		DepthStencilState pDepthStencilStateDesc = pso->desc.dss != nullptr ? *pso->desc.dss : DepthStencilState();
 		CD3DX12_DEPTH_STENCIL_DESC1 dss = {};
-		dss.DepthEnable = pDepthStencilStateDesc.depth_enable;
-		dss.DepthWriteMask = _ConvertDepthWriteMask(pDepthStencilStateDesc.depth_write_mask);
-		dss.DepthFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.depth_func);
-		dss.StencilEnable = pDepthStencilStateDesc.stencil_enable;
-		dss.StencilReadMask = pDepthStencilStateDesc.stencil_read_mask;
-		dss.StencilWriteMask = pDepthStencilStateDesc.stencil_write_mask;
-		dss.FrontFace.StencilDepthFailOp = _ConvertStencilOp(pDepthStencilStateDesc.front_face.stencil_depth_fail_op);
-		dss.FrontFace.StencilFailOp = _ConvertStencilOp(pDepthStencilStateDesc.front_face.stencil_fail_op);
-		dss.FrontFace.StencilFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.front_face.stencil_func);
-		dss.FrontFace.StencilPassOp = _ConvertStencilOp(pDepthStencilStateDesc.front_face.stencil_pass_op);
-		dss.BackFace.StencilDepthFailOp = _ConvertStencilOp(pDepthStencilStateDesc.back_face.stencil_depth_fail_op);
-		dss.BackFace.StencilFailOp = _ConvertStencilOp(pDepthStencilStateDesc.back_face.stencil_fail_op);
-		dss.BackFace.StencilFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.back_face.stencil_func);
-		dss.BackFace.StencilPassOp = _ConvertStencilOp(pDepthStencilStateDesc.back_face.stencil_pass_op);
+		dss.DepthEnable = dss_desc.depth_enable;
+		dss.DepthWriteMask = _ConvertDepthWriteMask(dss_desc.depth_write_mask);
+		dss.DepthFunc = _ConvertComparisonFunc(dss_desc.depth_func);
+		dss.StencilEnable = dss_desc.stencil_enable;
+		dss.StencilReadMask = dss_desc.stencil_read_mask;
+		dss.StencilWriteMask = dss_desc.stencil_write_mask;
+		dss.FrontFace.StencilDepthFailOp = _ConvertStencilOp(dss_desc.front_face.stencil_depth_fail_op);
+		dss.FrontFace.StencilFailOp = _ConvertStencilOp(dss_desc.front_face.stencil_fail_op);
+		dss.FrontFace.StencilFunc = _ConvertComparisonFunc(dss_desc.front_face.stencil_func);
+		dss.FrontFace.StencilPassOp = _ConvertStencilOp(dss_desc.front_face.stencil_pass_op);
+		dss.BackFace.StencilDepthFailOp = _ConvertStencilOp(dss_desc.back_face.stencil_depth_fail_op);
+		dss.BackFace.StencilFailOp = _ConvertStencilOp(dss_desc.back_face.stencil_fail_op);
+		dss.BackFace.StencilFunc = _ConvertComparisonFunc(dss_desc.back_face.stencil_func);
+		dss.BackFace.StencilPassOp = _ConvertStencilOp(dss_desc.back_face.stencil_pass_op);
 		if (CheckCapability(GraphicsDeviceCapability::DEPTH_BOUNDS_TEST))
 		{
-			dss.DepthBoundsTestEnable = pDepthStencilStateDesc.depth_bounds_test_enable;
+			dss.DepthBoundsTestEnable = dss_desc.depth_bounds_test_enable;
 		}
 		else
 		{
@@ -4121,20 +4122,19 @@ std::mutex queue_locker;
 		}
 		stream.stream1.DSS = dss;
 
-		BlendState pBlendStateDesc = pso->desc.bs != nullptr ? *pso->desc.bs : BlendState();
 		CD3DX12_BLEND_DESC bd = {};
-		bd.AlphaToCoverageEnable = pBlendStateDesc.alpha_to_coverage_enable;
-		bd.IndependentBlendEnable = pBlendStateDesc.independent_blend_enable;
+		bd.AlphaToCoverageEnable = bs_desc.alpha_to_coverage_enable;
+		bd.IndependentBlendEnable = bs_desc.independent_blend_enable;
 		for (int i = 0; i < 8; ++i)
 		{
-			bd.RenderTarget[i].BlendEnable = pBlendStateDesc.render_target[i].blend_enable;
-			bd.RenderTarget[i].SrcBlend = _ConvertBlend(pBlendStateDesc.render_target[i].src_blend);
-			bd.RenderTarget[i].DestBlend = _ConvertBlend(pBlendStateDesc.render_target[i].dest_blend);
-			bd.RenderTarget[i].BlendOp = _ConvertBlendOp(pBlendStateDesc.render_target[i].blend_op);
-			bd.RenderTarget[i].SrcBlendAlpha = _ConvertAlphaBlend(pBlendStateDesc.render_target[i].src_blend_alpha);
-			bd.RenderTarget[i].DestBlendAlpha = _ConvertAlphaBlend(pBlendStateDesc.render_target[i].dest_blend_alpha);
-			bd.RenderTarget[i].BlendOpAlpha = _ConvertBlendOp(pBlendStateDesc.render_target[i].blend_op_alpha);
-			bd.RenderTarget[i].RenderTargetWriteMask = _ParseColorWriteMask(pBlendStateDesc.render_target[i].render_target_write_mask);
+			bd.RenderTarget[i].BlendEnable = bs_desc.render_target[i].blend_enable;
+			bd.RenderTarget[i].SrcBlend = _ConvertBlend(bs_desc.render_target[i].src_blend);
+			bd.RenderTarget[i].DestBlend = _ConvertBlend(bs_desc.render_target[i].dest_blend);
+			bd.RenderTarget[i].BlendOp = _ConvertBlendOp(bs_desc.render_target[i].blend_op);
+			bd.RenderTarget[i].SrcBlendAlpha = _ConvertAlphaBlend(bs_desc.render_target[i].src_blend_alpha);
+			bd.RenderTarget[i].DestBlendAlpha = _ConvertAlphaBlend(bs_desc.render_target[i].dest_blend_alpha);
+			bd.RenderTarget[i].BlendOpAlpha = _ConvertBlendOp(bs_desc.render_target[i].blend_op_alpha);
+			bd.RenderTarget[i].RenderTargetWriteMask = _ParseColorWriteMask(bs_desc.render_target[i].render_target_write_mask);
 		}
 		stream.stream1.BD = bd;
 

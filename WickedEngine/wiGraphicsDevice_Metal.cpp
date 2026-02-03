@@ -1188,10 +1188,10 @@ using namespace metal_internal;
 			commandlist.render_encoder->setRenderPipelineState(internal_state->render_pipeline.get());
 			commandlist.render_encoder->setDepthStencilState(internal_state->depth_stencil_state.get());
 		}
-		
-		const RasterizerState& rs = commandlist.active_pso->desc.rs == nullptr ? RasterizerState() : *commandlist.active_pso->desc.rs;
+
+		const RasterizerState& rs_desc = pso->desc.rs != nullptr ? *pso->desc.rs : default_rasterizerstate;
 		MTL::CullMode cull_mode = {};
-		switch (rs.cull_mode)
+		switch (rs_desc.cull_mode)
 		{
 			case CullMode::BACK:
 				cull_mode = MTL::CullModeBack;
@@ -1204,10 +1204,10 @@ using namespace metal_internal;
 				break;
 		}
 		commandlist.render_encoder->setCullMode(cull_mode);
-		commandlist.render_encoder->setDepthBias((float)rs.depth_bias, rs.slope_scaled_depth_bias, rs.depth_bias_clamp);
-		commandlist.render_encoder->setDepthClipMode(rs.depth_clip_enable ? MTL::DepthClipModeClip : MTL::DepthClipModeClamp);
+		commandlist.render_encoder->setDepthBias((float)rs_desc.depth_bias, rs_desc.slope_scaled_depth_bias, rs_desc.depth_bias_clamp);
+		commandlist.render_encoder->setDepthClipMode(rs_desc.depth_clip_enable ? MTL::DepthClipModeClip : MTL::DepthClipModeClamp);
 		MTL::TriangleFillMode fill_mode = {};
-		switch (rs.fill_mode)
+		switch (rs_desc.fill_mode)
 		{
 			case FillMode::SOLID:
 				fill_mode = MTL::TriangleFillModeFill;
@@ -1217,7 +1217,7 @@ using namespace metal_internal;
 				break;
 		}
 		commandlist.render_encoder->setTriangleFillMode(fill_mode);
-		commandlist.render_encoder->setFrontFacingWinding(rs.front_counter_clockwise ? MTL::WindingCounterClockwise : MTL::WindingClockwise);
+		commandlist.render_encoder->setFrontFacingWinding(rs_desc.front_counter_clockwise ? MTL::WindingCounterClockwise : MTL::WindingClockwise);
 		
 		switch (pso->desc.pt)
 		{
@@ -2265,6 +2265,9 @@ using namespace metal_internal;
 		internal_state->allocationhandler = allocationhandler;
 		pso->internal_state = internal_state;
 		pso->desc = *desc;
+
+		const DepthStencilState& dss_desc = pso->desc.dss != nullptr ? *pso->desc.dss : default_depthstencilstate;
+		const BlendState& bs_desc = pso->desc.bs != nullptr ? *pso->desc.bs : default_blendstate;
 		
 		if (desc->vs != nullptr)
 		{
@@ -2385,17 +2388,16 @@ using namespace metal_internal;
 				NS::TransferPtr(MTL::RenderPipelineColorAttachmentDescriptor::alloc()->init()),
 				NS::TransferPtr(MTL::RenderPipelineColorAttachmentDescriptor::alloc()->init()),
 			};
-			const BlendState& bs = desc->bs == nullptr ? BlendState() : *desc->bs;
 			if (internal_state->descriptor.get() != nullptr)
-				internal_state->descriptor->setAlphaToCoverageEnabled(bs.alpha_to_coverage_enable);
+				internal_state->descriptor->setAlphaToCoverageEnabled(bs_desc.alpha_to_coverage_enable);
 			else
-				internal_state->ms_descriptor->setAlphaToCoverageEnabled(bs.alpha_to_coverage_enable);
+				internal_state->ms_descriptor->setAlphaToCoverageEnabled(bs_desc.alpha_to_coverage_enable);
 			for (uint32_t i = 0; i < renderpass_info->rt_count; ++i)
 			{
 				MTL::RenderPipelineColorAttachmentDescriptor& attachment = *attachments[i].get();
 				attachment.setPixelFormat(_ConvertPixelFormat(renderpass_info->rt_formats[i]));
 				
-				const BlendState::RenderTargetBlendState& bs_rt = bs.render_target[i];
+				const BlendState::RenderTargetBlendState& bs_rt = bs_desc.render_target[i];
 				MTL::ColorWriteMask color_write_mask = {};
 				if (has_flag(bs_rt.render_target_write_mask, ColorWrite::ENABLE_RED))
 				{
@@ -2453,31 +2455,30 @@ using namespace metal_internal;
 			else
 				internal_state->ms_descriptor->setRasterSampleCount(sample_count);
 			
-			const DepthStencilState& dss = desc->dss == nullptr ? DepthStencilState() : *desc->dss;
 			NS::SharedPtr<MTL::DepthStencilDescriptor> depth_stencil_desc = NS::TransferPtr(MTL::DepthStencilDescriptor::alloc()->init());
-			if (dss.depth_enable && renderpass_info->ds_format != Format::UNKNOWN)
+			if (dss_desc.depth_enable && renderpass_info->ds_format != Format::UNKNOWN)
 			{
-				depth_stencil_desc->setDepthCompareFunction(_ConvertCompareFunction(dss.depth_func));
-				depth_stencil_desc->setDepthWriteEnabled(dss.depth_write_mask == DepthWriteMask::ALL);
+				depth_stencil_desc->setDepthCompareFunction(_ConvertCompareFunction(dss_desc.depth_func));
+				depth_stencil_desc->setDepthWriteEnabled(dss_desc.depth_write_mask == DepthWriteMask::ALL);
 			}
 			NS::SharedPtr<MTL::StencilDescriptor> stencil_front;
 			NS::SharedPtr<MTL::StencilDescriptor> stencil_back;
-			if (dss.stencil_enable && IsFormatStencilSupport(renderpass_info->ds_format))
+			if (dss_desc.stencil_enable && IsFormatStencilSupport(renderpass_info->ds_format))
 			{
 				stencil_front = NS::TransferPtr(MTL::StencilDescriptor::alloc()->init());
 				stencil_back = NS::TransferPtr(MTL::StencilDescriptor::alloc()->init());
-				stencil_front->setReadMask(dss.stencil_read_mask);
-				stencil_front->setWriteMask(dss.stencil_write_mask);
-				stencil_front->setStencilCompareFunction(_ConvertCompareFunction(dss.front_face.stencil_func));
-				stencil_front->setStencilFailureOperation(_ConvertStencilOperation(dss.front_face.stencil_fail_op));
-				stencil_front->setDepthFailureOperation(_ConvertStencilOperation(dss.front_face.stencil_depth_fail_op));
-				stencil_front->setDepthStencilPassOperation(_ConvertStencilOperation(dss.front_face.stencil_pass_op));
-				stencil_back->setReadMask(dss.stencil_read_mask);
-				stencil_back->setWriteMask(dss.stencil_write_mask);
-				stencil_back->setStencilCompareFunction(_ConvertCompareFunction(dss.back_face.stencil_func));
-				stencil_back->setStencilFailureOperation(_ConvertStencilOperation(dss.back_face.stencil_fail_op));
-				stencil_back->setDepthFailureOperation(_ConvertStencilOperation(dss.back_face.stencil_depth_fail_op));
-				stencil_back->setDepthStencilPassOperation(_ConvertStencilOperation(dss.back_face.stencil_pass_op));
+				stencil_front->setReadMask(dss_desc.stencil_read_mask);
+				stencil_front->setWriteMask(dss_desc.stencil_write_mask);
+				stencil_front->setStencilCompareFunction(_ConvertCompareFunction(dss_desc.front_face.stencil_func));
+				stencil_front->setStencilFailureOperation(_ConvertStencilOperation(dss_desc.front_face.stencil_fail_op));
+				stencil_front->setDepthFailureOperation(_ConvertStencilOperation(dss_desc.front_face.stencil_depth_fail_op));
+				stencil_front->setDepthStencilPassOperation(_ConvertStencilOperation(dss_desc.front_face.stencil_pass_op));
+				stencil_back->setReadMask(dss_desc.stencil_read_mask);
+				stencil_back->setWriteMask(dss_desc.stencil_write_mask);
+				stencil_back->setStencilCompareFunction(_ConvertCompareFunction(dss_desc.back_face.stencil_func));
+				stencil_back->setStencilFailureOperation(_ConvertStencilOperation(dss_desc.back_face.stencil_fail_op));
+				stencil_back->setDepthFailureOperation(_ConvertStencilOperation(dss_desc.back_face.stencil_depth_fail_op));
+				stencil_back->setDepthStencilPassOperation(_ConvertStencilOperation(dss_desc.back_face.stencil_pass_op));
 				depth_stencil_desc->setFrontFaceStencil(stencil_front.get());
 				depth_stencil_desc->setBackFaceStencil(stencil_back.get());
 			}
@@ -2558,10 +2559,10 @@ using namespace metal_internal;
 					NS::SharedPtr<MTL4::AccelerationStructureBoundingBoxGeometryDescriptor> geo = NS::TransferPtr(MTL4::AccelerationStructureBoundingBoxGeometryDescriptor::alloc()->init());
 					geometry_descs.push_back(geo);
 					geo->setOpaque(x.flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE);
-					geo->setBoundingBoxCount(x.aabbs.count);
-					auto buffer_internal = to_internal(&x.aabbs.aabb_buffer);
-					geo->setBoundingBoxBuffer({buffer_internal->gpu_address + x.aabbs.offset, buffer_internal->buffer->length()});
-					geo->setBoundingBoxStride(x.aabbs.stride);
+					geo->setBoundingBoxCount(x.aabbs_desc.count);
+					auto buffer_internal = to_internal(&x.aabbs_desc.aabb_buffer);
+					geo->setBoundingBoxBuffer({buffer_internal->gpu_address + x.aabbs_desc.offset, buffer_internal->buffer->length()});
+					geo->setBoundingBoxStride(x.aabbs_desc.stride);
 				}
 			}
 			

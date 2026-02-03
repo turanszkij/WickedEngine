@@ -4841,6 +4841,10 @@ using namespace vulkan_internal;
 		pso->internal_state = internal_state;
 		pso->desc = *desc;
 
+		const RasterizerState& rs_desc = pso->desc.rs != nullptr ? *pso->desc.rs : default_rasterizerstate;
+		const DepthStencilState& dss_desc = pso->desc.dss != nullptr ? *pso->desc.dss : default_depthstencilstate;
+		const BlendState& bs_desc = pso->desc.bs != nullptr ? *pso->desc.bs : default_blendstate;
+
 		internal_state->layout = layout_template;
 
 		VkGraphicsPipelineCreateInfo pipelineInfo = {};
@@ -4982,52 +4986,47 @@ using namespace vulkan_internal;
 			tail = &depthClipStateInfo.pNext;
 		}
 
-		if (pso->desc.rs != nullptr)
+		switch (rs_desc.fill_mode)
 		{
-			const RasterizerState& desc = *pso->desc.rs;
+		case FillMode::WIREFRAME:
+			rasterizer.polygonMode = VK_POLYGON_MODE_LINE;
+			break;
+		case FillMode::SOLID:
+		default:
+			rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+			break;
+		}
 
-			switch (desc.fill_mode)
-			{
-			case FillMode::WIREFRAME:
-				rasterizer.polygonMode = VK_POLYGON_MODE_LINE;
-				break;
-			case FillMode::SOLID:
-			default:
-				rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-				break;
-			}
+		switch (rs_desc.cull_mode)
+		{
+		case CullMode::BACK:
+			rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+			break;
+		case CullMode::FRONT:
+			rasterizer.cullMode = VK_CULL_MODE_FRONT_BIT;
+			break;
+		case CullMode::NONE:
+		default:
+			rasterizer.cullMode = VK_CULL_MODE_NONE;
+			break;
+		}
 
-			switch (desc.cull_mode)
-			{
-			case CullMode::BACK:
-				rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-				break;
-			case CullMode::FRONT:
-				rasterizer.cullMode = VK_CULL_MODE_FRONT_BIT;
-				break;
-			case CullMode::NONE:
-			default:
-				rasterizer.cullMode = VK_CULL_MODE_NONE;
-				break;
-			}
+		rasterizer.frontFace = rs_desc.front_counter_clockwise ? VK_FRONT_FACE_COUNTER_CLOCKWISE : VK_FRONT_FACE_CLOCKWISE;
+		rasterizer.depthBiasEnable = rs_desc.depth_bias != 0 || rs_desc.slope_scaled_depth_bias != 0;
+		rasterizer.depthBiasConstantFactor = static_cast<float>(rs_desc.depth_bias);
+		rasterizer.depthBiasClamp = rs_desc.depth_bias_clamp;
+		rasterizer.depthBiasSlopeFactor = rs_desc.slope_scaled_depth_bias;
 
-			rasterizer.frontFace = desc.front_counter_clockwise ? VK_FRONT_FACE_COUNTER_CLOCKWISE : VK_FRONT_FACE_CLOCKWISE;
-			rasterizer.depthBiasEnable = desc.depth_bias != 0 || desc.slope_scaled_depth_bias != 0;
-			rasterizer.depthBiasConstantFactor = static_cast<float>(desc.depth_bias);
-			rasterizer.depthBiasClamp = desc.depth_bias_clamp;
-			rasterizer.depthBiasSlopeFactor = desc.slope_scaled_depth_bias;
+		// Depth clip will be enabled via Vulkan 1.1 extension VK_EXT_depth_clip_enable:
+		depthClipStateInfo.depthClipEnable = rs_desc.depth_clip_enable ? VK_TRUE : VK_FALSE;
 
-			// Depth clip will be enabled via Vulkan 1.1 extension VK_EXT_depth_clip_enable:
-			depthClipStateInfo.depthClipEnable = desc.depth_clip_enable ? VK_TRUE : VK_FALSE;
-
-			if (CheckCapability(GraphicsDeviceCapability::CONSERVATIVE_RASTERIZATION) && desc.conservative_rasterization_enable)
-			{
-				rasterizationConservativeState.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_CONSERVATIVE_STATE_CREATE_INFO_EXT;
-				rasterizationConservativeState.conservativeRasterizationMode = VK_CONSERVATIVE_RASTERIZATION_MODE_OVERESTIMATE_EXT;
-				rasterizationConservativeState.extraPrimitiveOverestimationSize = 0.0f;
-				*tail = &rasterizationConservativeState;
-				tail = &rasterizationConservativeState.pNext;
-			}
+		if (CheckCapability(GraphicsDeviceCapability::CONSERVATIVE_RASTERIZATION) && rs_desc.conservative_rasterization_enable)
+		{
+			rasterizationConservativeState.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_CONSERVATIVE_STATE_CREATE_INFO_EXT;
+			rasterizationConservativeState.conservativeRasterizationMode = VK_CONSERVATIVE_RASTERIZATION_MODE_OVERESTIMATE_EXT;
+			rasterizationConservativeState.extraPrimitiveOverestimationSize = 0.0f;
+			*tail = &rasterizationConservativeState;
+			tail = &rasterizationConservativeState.pNext;
 		}
 
 		pipelineInfo.pRasterizationState = &rasterizer;
@@ -5043,61 +5042,58 @@ using namespace vulkan_internal;
 
 		// Depth-Stencil:
 		depthstencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-		if (pso->desc.dss != nullptr)
+		depthstencil.depthTestEnable = dss_desc.depth_enable ? VK_TRUE : VK_FALSE;
+		depthstencil.depthWriteEnable = dss_desc.depth_write_mask == DepthWriteMask::ZERO ? VK_FALSE : VK_TRUE;
+		depthstencil.depthCompareOp = _ConvertComparisonFunc(dss_desc.depth_func);
+
+		if (dss_desc.stencil_enable)
 		{
-			depthstencil.depthTestEnable = pso->desc.dss->depth_enable ? VK_TRUE : VK_FALSE;
-			depthstencil.depthWriteEnable = pso->desc.dss->depth_write_mask == DepthWriteMask::ZERO ? VK_FALSE : VK_TRUE;
-			depthstencil.depthCompareOp = _ConvertComparisonFunc(pso->desc.dss->depth_func);
+			depthstencil.stencilTestEnable = VK_TRUE;
 
-			if (pso->desc.dss->stencil_enable)
-			{
-				depthstencil.stencilTestEnable = VK_TRUE;
+			depthstencil.front.compareMask = dss_desc.stencil_read_mask;
+			depthstencil.front.writeMask = dss_desc.stencil_write_mask;
+			depthstencil.front.reference = 0; // runtime supplied
+			depthstencil.front.compareOp = _ConvertComparisonFunc(dss_desc.front_face.stencil_func);
+			depthstencil.front.passOp = _ConvertStencilOp(dss_desc.front_face.stencil_pass_op);
+			depthstencil.front.failOp = _ConvertStencilOp(dss_desc.front_face.stencil_fail_op);
+			depthstencil.front.depthFailOp = _ConvertStencilOp(dss_desc.front_face.stencil_depth_fail_op);
 
-				depthstencil.front.compareMask = pso->desc.dss->stencil_read_mask;
-				depthstencil.front.writeMask = pso->desc.dss->stencil_write_mask;
-				depthstencil.front.reference = 0; // runtime supplied
-				depthstencil.front.compareOp = _ConvertComparisonFunc(pso->desc.dss->front_face.stencil_func);
-				depthstencil.front.passOp = _ConvertStencilOp(pso->desc.dss->front_face.stencil_pass_op);
-				depthstencil.front.failOp = _ConvertStencilOp(pso->desc.dss->front_face.stencil_fail_op);
-				depthstencil.front.depthFailOp = _ConvertStencilOp(pso->desc.dss->front_face.stencil_depth_fail_op);
+			depthstencil.back.compareMask = dss_desc.stencil_read_mask;
+			depthstencil.back.writeMask = dss_desc.stencil_write_mask;
+			depthstencil.back.reference = 0; // runtime supplied
+			depthstencil.back.compareOp = _ConvertComparisonFunc(dss_desc.back_face.stencil_func);
+			depthstencil.back.passOp = _ConvertStencilOp(dss_desc.back_face.stencil_pass_op);
+			depthstencil.back.failOp = _ConvertStencilOp(dss_desc.back_face.stencil_fail_op);
+			depthstencil.back.depthFailOp = _ConvertStencilOp(dss_desc.back_face.stencil_depth_fail_op);
+		}
+		else
+		{
+			depthstencil.stencilTestEnable = VK_FALSE;
 
-				depthstencil.back.compareMask = pso->desc.dss->stencil_read_mask;
-				depthstencil.back.writeMask = pso->desc.dss->stencil_write_mask;
-				depthstencil.back.reference = 0; // runtime supplied
-				depthstencil.back.compareOp = _ConvertComparisonFunc(pso->desc.dss->back_face.stencil_func);
-				depthstencil.back.passOp = _ConvertStencilOp(pso->desc.dss->back_face.stencil_pass_op);
-				depthstencil.back.failOp = _ConvertStencilOp(pso->desc.dss->back_face.stencil_fail_op);
-				depthstencil.back.depthFailOp = _ConvertStencilOp(pso->desc.dss->back_face.stencil_depth_fail_op);
-			}
-			else
-			{
-				depthstencil.stencilTestEnable = VK_FALSE;
+			depthstencil.front.compareMask = 0;
+			depthstencil.front.writeMask = 0;
+			depthstencil.front.reference = 0;
+			depthstencil.front.compareOp = VK_COMPARE_OP_NEVER;
+			depthstencil.front.passOp = VK_STENCIL_OP_KEEP;
+			depthstencil.front.failOp = VK_STENCIL_OP_KEEP;
+			depthstencil.front.depthFailOp = VK_STENCIL_OP_KEEP;
 
-				depthstencil.front.compareMask = 0;
-				depthstencil.front.writeMask = 0;
-				depthstencil.front.reference = 0;
-				depthstencil.front.compareOp = VK_COMPARE_OP_NEVER;
-				depthstencil.front.passOp = VK_STENCIL_OP_KEEP;
-				depthstencil.front.failOp = VK_STENCIL_OP_KEEP;
-				depthstencil.front.depthFailOp = VK_STENCIL_OP_KEEP;
+			depthstencil.back.compareMask = 0;
+			depthstencil.back.writeMask = 0;
+			depthstencil.back.reference = 0; // runtime supplied
+			depthstencil.back.compareOp = VK_COMPARE_OP_NEVER;
+			depthstencil.back.passOp = VK_STENCIL_OP_KEEP;
+			depthstencil.back.failOp = VK_STENCIL_OP_KEEP;
+			depthstencil.back.depthFailOp = VK_STENCIL_OP_KEEP;
+		}
 
-				depthstencil.back.compareMask = 0;
-				depthstencil.back.writeMask = 0;
-				depthstencil.back.reference = 0; // runtime supplied
-				depthstencil.back.compareOp = VK_COMPARE_OP_NEVER;
-				depthstencil.back.passOp = VK_STENCIL_OP_KEEP;
-				depthstencil.back.failOp = VK_STENCIL_OP_KEEP;
-				depthstencil.back.depthFailOp = VK_STENCIL_OP_KEEP;
-			}
-
-			if (CheckCapability(GraphicsDeviceCapability::DEPTH_BOUNDS_TEST))
-			{
-				depthstencil.depthBoundsTestEnable = pso->desc.dss->depth_bounds_test_enable ? VK_TRUE : VK_FALSE;
-			}
-			else
-			{
-				depthstencil.depthBoundsTestEnable = VK_FALSE;
-			}
+		if (CheckCapability(GraphicsDeviceCapability::DEPTH_BOUNDS_TEST))
+		{
+			depthstencil.depthBoundsTestEnable = dss_desc.depth_bounds_test_enable ? VK_TRUE : VK_FALSE;
+		}
+		else
+		{
+			depthstencil.depthBoundsTestEnable = VK_FALSE;
 		}
 
 		pipelineInfo.pDepthStencilState = &depthstencil;
@@ -5127,25 +5123,14 @@ using namespace vulkan_internal;
 			multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 			multisampling.sampleShadingEnable = VK_FALSE;
 			multisampling.rasterizationSamples = (VkSampleCountFlagBits)renderpass_info->sample_count;
-			if (pso->desc.rs != nullptr)
+			if (rs_desc.forced_sample_count > 1)
 			{
-				const RasterizerState& desc = *pso->desc.rs;
-				if (desc.forced_sample_count > 1)
-				{
-					multisampling.rasterizationSamples = (VkSampleCountFlagBits)desc.forced_sample_count;
-				}
+				multisampling.rasterizationSamples = (VkSampleCountFlagBits)rs_desc.forced_sample_count;
 			}
 			multisampling.minSampleShading = 1.0f;
 			samplemask = pso->desc.sample_mask;
 			multisampling.pSampleMask = &samplemask;
-			if (pso->desc.bs != nullptr)
-			{
-				multisampling.alphaToCoverageEnable = pso->desc.bs->alpha_to_coverage_enable ? VK_TRUE : VK_FALSE;
-			}
-			else
-			{
-				multisampling.alphaToCoverageEnable = VK_FALSE;
-			}
+			multisampling.alphaToCoverageEnable = bs_desc.alpha_to_coverage_enable ? VK_TRUE : VK_FALSE;
 			multisampling.alphaToOneEnable = VK_FALSE;
 
 			pipelineInfo.pMultisampleState = &multisampling;
@@ -5157,10 +5142,10 @@ using namespace vulkan_internal;
 			for (size_t i = 0; i < renderpass_info->rt_count; ++i)
 			{
 				size_t attachmentIndex = 0;
-				if (pso->desc.bs->independent_blend_enable)
+				if (bs_desc.independent_blend_enable)
 					attachmentIndex = i;
 
-				const auto& desc = pso->desc.bs->render_target[attachmentIndex];
+				const auto& desc = bs_desc.render_target[attachmentIndex];
 				VkPipelineColorBlendAttachmentState& attachment = colorBlendAttachments[numBlendAttachments];
 				numBlendAttachments++;
 
