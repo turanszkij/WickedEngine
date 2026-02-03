@@ -607,6 +607,7 @@ namespace wi::graphics
 		bool conservative_rasterization_enable = false;
 		uint32_t forced_sample_count = 0;
 	};
+	inline static constexpr RasterizerState default_rasterizerstate;
 
 	struct DepthStencilState
 	{
@@ -628,6 +629,7 @@ namespace wi::graphics
 		DepthStencilOp back_face;
 		bool depth_bounds_test_enable = false;
 	};
+	inline static constexpr DepthStencilState default_depthstencilstate;
 
 	struct BlendState
 	{
@@ -647,6 +649,7 @@ namespace wi::graphics
 		};
 		RenderTargetBlendState render_target[8];
 	};
+	inline static constexpr BlendState default_blendstate;
 
 	struct GPUBufferDesc
 	{
