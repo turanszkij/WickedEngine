@@ -759,6 +759,7 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	tonemapCombo.SetScriptTip("RenderPath3D::SetTonemap(Tonemap value)");
 	tonemapCombo.AddItem("Reinhard", (uint64_t)wi::renderer::Tonemap::Reinhard);
 	tonemapCombo.AddItem("ACES", (uint64_t)wi::renderer::Tonemap::ACES);
+	tonemapCombo.AddItem("Uchimura", (uint64_t)wi::renderer::Tonemap::Uchimura);
 	tonemapCombo.OnSelect([=](wi::gui::EventArgs args) {
 		editor->renderPath->setTonemap((wi::renderer::Tonemap)args.iValue);
 		editor->main->config.GetSection("graphics").Set("tonemap", args.iValue);

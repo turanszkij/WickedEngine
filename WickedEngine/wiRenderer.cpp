@@ -17084,6 +17084,10 @@ void Postprocess_Tonemap(
 	{
 		tonemap_push.flags_hdrcalibration |= TONEMAP_FLAG_ACES;
 	}
+	if (tonemap == Tonemap::Uchimura)
+	{
+		tonemap_push.flags_hdrcalibration |= TONEMAP_FLAG_UCHIMURA;
+	}
 	if (display_colorspace == ColorSpace::SRGB)
 	{
 		tonemap_push.flags_hdrcalibration |= TONEMAP_FLAG_SRGB;
