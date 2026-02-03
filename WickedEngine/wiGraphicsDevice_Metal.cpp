@@ -2559,10 +2559,10 @@ using namespace metal_internal;
 					NS::SharedPtr<MTL4::AccelerationStructureBoundingBoxGeometryDescriptor> geo = NS::TransferPtr(MTL4::AccelerationStructureBoundingBoxGeometryDescriptor::alloc()->init());
 					geometry_descs.push_back(geo);
 					geo->setOpaque(x.flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE);
-					geo->setBoundingBoxCount(x.aabbs_desc.count);
-					auto buffer_internal = to_internal(&x.aabbs_desc.aabb_buffer);
-					geo->setBoundingBoxBuffer({buffer_internal->gpu_address + x.aabbs_desc.offset, buffer_internal->buffer->length()});
-					geo->setBoundingBoxStride(x.aabbs_desc.stride);
+					geo->setBoundingBoxCount(x.aabbs.count);
+					auto buffer_internal = to_internal(&x.aabbs.aabb_buffer);
+					geo->setBoundingBoxBuffer({buffer_internal->gpu_address + x.aabbs.offset, buffer_internal->buffer->length()});
+					geo->setBoundingBoxStride(x.aabbs.stride);
 				}
 			}
 			
