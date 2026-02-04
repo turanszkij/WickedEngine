@@ -59,7 +59,7 @@ namespace wi
 		void add(const VoxelGrid& other);
 		void subtract(const VoxelGrid& other);
 		void flood_fill();
-		void debugdraw(const XMFLOAT4X4& ViewProjection, wi::graphics::CommandList cmd) const;
+		void debugdraw(wi::graphics::CommandList cmd) const;
 
 		inline bool IsValid() const { return !voxels.empty(); }
 

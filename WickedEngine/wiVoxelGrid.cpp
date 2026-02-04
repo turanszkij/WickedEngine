@@ -684,13 +684,13 @@ namespace wi
 		static void LoadShaders()
 		{
 			PipelineStateDesc desc;
-			desc.vs = wi::renderer::GetShader(wi::enums::VSTYPE_VERTEXCOLOR);
+			desc.vs = wi::renderer::GetShader(wi::enums::VSTYPE_VOXELGRID);
 			desc.ps = wi::renderer::GetShader(wi::enums::PSTYPE_VERTEXCOLOR);
-			desc.il = wi::renderer::GetInputLayout(wi::enums::ILTYPE_VERTEXCOLOR);
+			desc.il = wi::renderer::GetInputLayout(wi::enums::ILTYPE_POSITION_INSTANCE);
 			desc.dss = wi::renderer::GetDepthStencilState(wi::enums::DSSTYPE_DEPTHREAD);
 			desc.rs = wi::renderer::GetRasterizerState(wi::enums::RSTYPE_FRONT);
 			desc.bs = wi::renderer::GetBlendState(wi::enums::BSTYPE_ADDITIVE);
-			desc.pt = PrimitiveTopology::TRIANGLELIST;
+			desc.pt = PrimitiveTopology::TRIANGLESTRIP;
 
 			GraphicsDevice* device = GetDevice();
 			device->CreatePipelineState(&desc, &pso);
@@ -698,7 +698,7 @@ namespace wi
 	}
 	using namespace VoxelGrid_internal;
 
-	void VoxelGrid::debugdraw(const XMFLOAT4X4& ViewProjection, CommandList cmd) const
+	void VoxelGrid::debugdraw(CommandList cmd) const
 	{
 		// add box renderer for whole volume:
 		XMFLOAT4X4 boxmat;
@@ -726,59 +726,20 @@ namespace wi
 			LoadShaders();
 		}
 
-		struct Vertex
-		{
-			XMFLOAT4 position;
-			XMFLOAT4 color;
-		};
-		static constexpr Vertex cubeVerts[] = {
-			{XMFLOAT4(-1,1,1,1),   XMFLOAT4(1,1,1,1)},
-			{XMFLOAT4(-1,-1,1,1),  XMFLOAT4(1,1,1,1)},
-			{XMFLOAT4(-1,-1,-1,1), XMFLOAT4(1,1,1,1)},
-			{XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1)},
-			{XMFLOAT4(1,-1,1,1),   XMFLOAT4(1,1,1,1)},
-			{XMFLOAT4(-1,-1,1,1),  XMFLOAT4(1,1,1,1)},
-			{XMFLOAT4(1,1,-1,1),   XMFLOAT4(1,1,1,1)},
-			{XMFLOAT4(1,-1,-1,1),  XMFLOAT4(1,1,1,1)},
-			{XMFLOAT4(1,-1,1,1),   XMFLOAT4(1,1,1,1)},
-			{XMFLOAT4(-1,1,-1,1),  XMFLOAT4(1,1,1,1)},
-			{XMFLOAT4(-1,-1,-1,1), XMFLOAT4(1,1,1,1)},
-			{XMFLOAT4(1,-1,-1,1),  XMFLOAT4(1,1,1,1)},
-			{XMFLOAT4(-1,-1,1,1),  XMFLOAT4(1,1,1,1)},
-			{XMFLOAT4(1,-1,1,1),   XMFLOAT4(1,1,1,1)},
-			{XMFLOAT4(1,-1,-1,1),  XMFLOAT4(1,1,1,1)},
-			{XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1)},
-			{XMFLOAT4(-1,1,1,1),   XMFLOAT4(1,1,1,1)},
-			{XMFLOAT4(-1,1,-1,1),  XMFLOAT4(1,1,1,1)},
-			{XMFLOAT4(-1,1,-1,1),  XMFLOAT4(1,1,1,1)},
-			{XMFLOAT4(-1,1,1,1),   XMFLOAT4(1,1,1,1)},
-			{XMFLOAT4(-1,-1,-1,1), XMFLOAT4(1,1,1,1)},
-			{XMFLOAT4(-1,1,1,1),   XMFLOAT4(1,1,1,1)},
-			{XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1)},
-			{XMFLOAT4(-1,-1,1,1),  XMFLOAT4(1,1,1,1)},
-			{XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1)},
-			{XMFLOAT4(1,1,-1,1),   XMFLOAT4(1,1,1,1)},
-			{XMFLOAT4(1,-1,1,1),   XMFLOAT4(1,1,1,1)},
-			{XMFLOAT4(1,1,-1,1),   XMFLOAT4(1,1,1,1)},
-			{XMFLOAT4(-1,1,-1,1),  XMFLOAT4(1,1,1,1)},
-			{XMFLOAT4(1,-1,-1,1),  XMFLOAT4(1,1,1,1)},
-			{XMFLOAT4(-1,-1,-1,1), XMFLOAT4(1,1,1,1)},
-			{XMFLOAT4(-1,-1,1,1),  XMFLOAT4(1,1,1,1)},
-			{XMFLOAT4(1,-1,-1,1),  XMFLOAT4(1,1,1,1)},
-			{XMFLOAT4(1,1,-1,1),   XMFLOAT4(1,1,1,1)},
-			{XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1)},
-			{XMFLOAT4(-1,1,-1,1),  XMFLOAT4(1,1,1,1)},
-		};
-
 		GraphicsDevice* device = GetDevice();
 
-		auto mem = device->AllocateGPU(sizeof(cubeVerts) * numVoxels, cmd);
+		auto mem = device->AllocateGPU(sizeof(XMFLOAT4) * numVoxels, cmd);
 
 		const XMVECTOR CENTER = XMLoadFloat3(&center);
 		const XMVECTOR RESOLUTION = XMLoadUInt3(&resolution);
 		const XMVECTOR RESOLUTION_RCP = XMLoadFloat3(&resolution_rcp);
 		const XMVECTOR VOXELSIZE = XMLoadFloat3(&voxelSize);
-		const XMVECTOR VOXELSIZE_RCP = XMLoadFloat3(&voxelSize_rcp);
+		union DBGColor
+		{
+			uint32_t rgba;
+			float rgbaf;
+		} dbg_color;
+		dbg_color.rgba = wi::math::CompressColor(debug_color);
 
 		size_t dst_offset = 0;
 		for (size_t i = 0; i < voxels.size(); ++i)
@@ -794,19 +755,9 @@ namespace wi
 				const uint3 sub_coord = unflatten3D(bit_index, uint3(4, 4, 4));
 				XMVECTOR uvw = XMVectorSet(coord.x * 4 + sub_coord.x + 0.5f, coord.y * 4 + sub_coord.y + 0.5f, coord.z * 4 + sub_coord.z + 0.5f, 1) * RESOLUTION_RCP;
 				XMVECTOR P = uvw_to_world(uvw, CENTER, RESOLUTION, VOXELSIZE);
-				Vertex verts[arraysize(cubeVerts)];
-				std::memcpy(verts, cubeVerts, sizeof(cubeVerts));
-				for (auto& v : verts)
-				{
-					XMVECTOR C = XMLoadFloat4(&v.position);
-					C *= VOXELSIZE;
-					C += P;
-					C = XMVectorSetW(C, 1);
-					XMStoreFloat4(&v.position, C);
-					v.color = debug_color;
-				}
-				std::memcpy((uint8_t*)mem.data + dst_offset, verts, sizeof(verts));
-				dst_offset += sizeof(verts);
+				P = XMVectorSetW(P, dbg_color.rgbaf);
+				XMStoreFloat4((XMFLOAT4*)mem.data + dst_offset, P);
+				dst_offset++;
 			}
 		}
 
@@ -814,19 +765,11 @@ namespace wi
 		auto dbg_voxel = [&](const XMUINT3& coord, const XMFLOAT4& color) {
 			XMFLOAT3 pos = coord_to_world(coord);
 			XMVECTOR P = XMLoadFloat3(&pos);
-			Vertex verts[arraysize(cubeVerts)];
-			std::memcpy(verts, cubeVerts, sizeof(cubeVerts));
-			for (auto& v : verts)
-			{
-				XMVECTOR C = XMLoadFloat4(&v.position);
-				C *= VOXELSIZE;
-				C += P;
-				C = XMVectorSetW(C, 1);
-				XMStoreFloat4(&v.position, C);
-				v.color = color;
-			}
-			std::memcpy((uint8_t*)mem.data + dst_offset, verts, sizeof(verts));
-			dst_offset += sizeof(verts);
+			DBGColor col;
+			col.rgba = wi::math::CompressColor(color);
+			P = XMVectorSetW(P, col.rgbaf);
+			XMStoreFloat4((XMFLOAT4*)mem.data + dst_offset, P);
+			dst_offset++;
 		};
 		for (auto& coord : debug_subject_coords)
 		{
@@ -852,7 +795,7 @@ namespace wi
 			&mem.buffer,
 		};
 		const uint32_t strides[] = {
-			sizeof(Vertex),
+			sizeof(XMFLOAT4),
 		};
 		const uint64_t offsets[] = {
 			mem.offset,
@@ -860,11 +803,11 @@ namespace wi
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
 
 		MiscCB sb;
-		sb.g_xTransform = ViewProjection;
+		XMStoreFloat4x4(&sb.g_xTransform, XMMatrixScaling(voxelSize.x, voxelSize.y, voxelSize.z));
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
 		device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 
-		device->Draw(arraysize(cubeVerts) * numVoxels, 0, cmd);
+		device->DrawInstanced(14, numVoxels, 0, 0, cmd); // 14 vertex cube trianglestrip
 
 		device->EventEnd(cmd);
 	}

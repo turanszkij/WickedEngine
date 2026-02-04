@@ -147,6 +147,7 @@ namespace wi::enums
 		VSTYPE_LENSFLARE,
 		VSTYPE_DDGI_DEBUG,
 		VSTYPE_SCREEN,
+		VSTYPE_VOXELGRID,
 
 
 		// pixel shaders
@@ -429,6 +430,7 @@ namespace wi::enums
 	{
 		ILTYPE_VERTEXCOLOR,
 		ILTYPE_POSITION,
+		ILTYPE_POSITION_INSTANCE,
 		ILTYPE_COUNT
 	};
 	// rasterizer states
