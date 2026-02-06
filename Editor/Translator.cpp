@@ -802,10 +802,11 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 		};
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
 
+		XMMATRIX mat_no_localrot = XMMatrixScaling(dist, dist, dist) * XMMatrixTranslationFromVector(transform.GetPositionV()) * VP;
 		XMStoreFloat4x4(&sb.g_xTransform,
 			XMMatrixRotationY(XM_PIDIV2) *
 			XMMatrixInverse(nullptr, XMMatrixLookToLH(XMVectorZero(), XMVector3Normalize(transform.GetPositionV() - camera.GetEye()), camera.GetUp())) *
-			mat
+			mat_no_localrot
 		);
 		sb.g_xColor = state == TRANSLATOR_XYZ ? highlight_color : XMFLOAT4(1, 1, 1, 0.5f);
 		sb.g_xColor.w *= opacity;
