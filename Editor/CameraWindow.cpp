@@ -207,6 +207,40 @@ void CameraWindow::Create(EditorComponent* _editor)
 	fpsCheckBox.OnClick([this](wi::gui::EventArgs args) {
 		editor->main->config.GetSection("camera").Set("fps", args.bValue);
 		editor->main->config.Commit();
+
+		if (!args.bValue)
+		{
+			// Transitioning from FPS to Orbital:
+			//	camera_transform holds full world transform from FPS mode,
+			//	decompose it into camera_target (pivot point with rotation)
+			//	and camera_transform (local Z offset as the orbit arm)
+			auto& editorscene = editor->GetCurrentEditorScene();
+			const CameraComponent& camera = editorscene.camera;
+
+			float arm_length = 10.0f;
+			XMVECTOR eye = camera.GetEye();
+			XMVECTOR at = camera.GetAt();
+			XMVECTOR target_pos = XMVectorAdd(eye, at * arm_length);
+
+			// Build a look-at rotation for the target (facing from target back to eye)
+			XMVECTOR target_forward = XMVector3Normalize(XMVectorSubtract(eye, target_pos));
+			XMVECTOR up = XMVectorSet(0, 1, 0, 0);
+			XMVECTOR right = XMVector3Normalize(XMVector3Cross(up, target_forward));
+			up = XMVector3Cross(target_forward, right);
+			XMMATRIX rot_matrix = XMMATRIX(right, up, target_forward, XMVectorSet(0, 0, 0, 1));
+			XMVECTOR target_quat = XMQuaternionRotationMatrix(rot_matrix);
+
+			editorscene.camera_target = {};
+			XMStoreFloat3(&editorscene.camera_target.translation_local, target_pos);
+			XMStoreFloat4(&editorscene.camera_target.rotation_local, target_quat);
+			editorscene.camera_target.UpdateTransform();
+
+			editorscene.camera_transform = {};
+			editorscene.camera_transform.translation_local = XMFLOAT3(0, 0, -arm_length);
+			editorscene.camera_transform.UpdateTransform_Parented(editorscene.camera_target);
+
+			editorscene.cam_move = {};
+		}
 		});
 	AddWidget(&fpsCheckBox);
 
