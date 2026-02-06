@@ -89,11 +89,14 @@ void MeshWindow::Create(EditorComponent* _editor)
 		MeshComponent* mesh = scene.meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
+			int selected = subsetComboBox.GetSelected();
+			uint32_t main_subset_count = mesh->subsets_per_lod > 0 ? mesh->subsets_per_lod : (uint32_t)mesh->subsets.size();
+			if (selected < 0 || selected >= (int)main_subset_count)
+				return;
+
 			wi::Archive& archive = editor->AdvanceHistory();
 			archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
 			editor->RecordEntity(archive, entity);
-
-			int selected = subsetComboBox.GetSelected();
 
 			mesh->DeleteSubset(uint32_t(selected));
 
@@ -111,11 +114,14 @@ void MeshWindow::Create(EditorComponent* _editor)
 		MeshComponent* mesh = scene.meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
+			int selected = subsetComboBox.GetSelected();
+			uint32_t main_subset_count = mesh->subsets_per_lod > 0 ? mesh->subsets_per_lod : (uint32_t)mesh->subsets.size();
+			if (selected < 0 || selected >= (int)main_subset_count)
+				return;
+
 			wi::Archive& archive = editor->AdvanceHistory();
 			archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
 			editor->RecordEntity(archive, entity);
-
-			int selected = subsetComboBox.GetSelected();
 
 			uint32_t lod_count = mesh->GetLODCount();
 			wi::vector<MeshComponent::MeshSubset> newSubsets;
