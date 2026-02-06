@@ -910,7 +910,7 @@ namespace wi
 			}
 		}
 		else if (!fullscreen && isFullScreen) {
-			if (has_overlapped_style) {
+			if (!has_overlapped_style) {
 				SetWindowLong(window, GWL_STYLE,
 					dwStyle | WS_OVERLAPPEDWINDOW);
 			}
