@@ -4138,11 +4138,11 @@ std::mutex queue_locker;
 		}
 		stream.stream1.BD = bd;
 
-		wi::vector<D3D12_INPUT_ELEMENT_DESC> elements;
+		StackVector<D3D12_INPUT_ELEMENT_DESC, D3D12_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT> elements;
 		D3D12_INPUT_LAYOUT_DESC il = {};
 		if (pso->desc.il != nullptr)
 		{
-			il.NumElements = (uint32_t)pso->desc.il->elements.size();
+			il.NumElements = std::min((uint32_t)pso->desc.il->elements.size(), (uint32_t)D3D12_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT);
 			elements.resize(il.NumElements);
 			for (uint32_t i = 0; i < il.NumElements; ++i)
 			{
@@ -4160,8 +4160,8 @@ std::mutex queue_locker;
 					elements[i].InstanceDataStepRate = 1;
 				}
 			}
+			il.pInputElementDescs = elements.data();
 		}
-		il.pInputElementDescs = elements.data();
 		stream.stream1.IL = il;
 
 		stream.stream1.SampleMask = pso->desc.sample_mask;

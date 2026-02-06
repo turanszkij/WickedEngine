@@ -5193,47 +5193,48 @@ using namespace vulkan_internal;
 			// Input layout:
 			VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
 			vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-			wi::vector<VkVertexInputBindingDescription> bindings;
-			wi::vector<VkVertexInputAttributeDescription> attributes;
+			static constexpr uint32_t max_il_elemet_count = 32;
+			StackVector<VkVertexInputBindingDescription, max_il_elemet_count> bindings;
+			StackVector<VkVertexInputAttributeDescription, max_il_elemet_count> attributes;
 			if (pso->desc.il != nullptr)
 			{
 				uint32_t lastBinding = 0xFFFFFFFF;
-				for (auto& x : pso->desc.il->elements)
+				const uint32_t element_count = std::min((uint32_t)pso->desc.il->elements.size(), max_il_elemet_count);
+				for (uint32_t i = 0; i < element_count; ++i)
 				{
-					if (x.input_slot == lastBinding)
+					auto& element = pso->desc.il->elements[i];
+					if (element.input_slot == lastBinding)
 						continue;
-					lastBinding = x.input_slot;
+					lastBinding = element.input_slot;
 					VkVertexInputBindingDescription& bind = bindings.emplace_back();
-					bind.binding = x.input_slot;
-					bind.inputRate = x.input_slot_class == InputClassification::PER_VERTEX_DATA ? VK_VERTEX_INPUT_RATE_VERTEX : VK_VERTEX_INPUT_RATE_INSTANCE;
-					bind.stride = GetFormatStride(x.format);
+					bind.binding = element.input_slot;
+					bind.inputRate = element.input_slot_class == InputClassification::PER_VERTEX_DATA ? VK_VERTEX_INPUT_RATE_VERTEX : VK_VERTEX_INPUT_RATE_INSTANCE;
+					bind.stride = GetFormatStride(element.format);
 				}
 
 				uint32_t offset = 0;
-				uint32_t i = 0;
 				lastBinding = 0xFFFFFFFF;
-				for (auto& x : pso->desc.il->elements)
+				for (uint32_t i = 0; i < element_count; ++i)
 				{
+					auto& element = pso->desc.il->elements[i];
 					VkVertexInputAttributeDescription attr = {};
-					attr.binding = x.input_slot;
+					attr.binding = element.input_slot;
 					if (attr.binding != lastBinding)
 					{
 						lastBinding = attr.binding;
 						offset = 0;
 					}
-					attr.format = _ConvertFormat(x.format);
+					attr.format = _ConvertFormat(element.format);
 					attr.location = i;
-					attr.offset = x.aligned_byte_offset;
+					attr.offset = element.aligned_byte_offset;
 					if (attr.offset == InputLayout::APPEND_ALIGNED_ELEMENT)
 					{
 						// need to manually resolve this from the format spec.
 						attr.offset = offset;
-						offset += GetFormatStride(x.format);
+						offset += GetFormatStride(element.format);
 					}
 
 					attributes.push_back(attr);
-
-					i++;
 				}
 
 				vertexInputInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(bindings.size());
