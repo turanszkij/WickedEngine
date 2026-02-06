@@ -6732,12 +6732,21 @@ void EditorComponent::FocusCameraOnSelected()
 		centerV = XMLoadFloat3(&aabb_center);
 	}
 
+	XMVECTOR target_forward = XMVector3Normalize(XMVectorNegate(camera.GetAt()));
+	XMVECTOR up = XMVectorSet(0, 1, 0, 0);
+	XMVECTOR right = XMVector3Normalize(XMVector3Cross(up, target_forward));
+	up = XMVector3Cross(target_forward, right);
+	XMMATRIX rot_matrix = XMMATRIX(right, up, target_forward, XMVectorSet(0, 0, 0, 1));
+	XMVECTOR target_quat = XMQuaternionRotationMatrix(rot_matrix);
+
 	editorscene.camera_target = {};
-	editorscene.camera_target.Translate(centerV);
+	XMStoreFloat3(&editorscene.camera_target.translation_local, centerV);
+	XMStoreFloat4(&editorscene.camera_target.rotation_local, target_quat);
 	editorscene.camera_target.UpdateTransform();
-	editorscene.camera_transform.translation_local = {};
-	editorscene.camera_transform.Translate(centerV - camera.GetAt() * focus_offset);
-	editorscene.camera_transform.UpdateTransform();
+
+	editorscene.camera_transform = {};
+	editorscene.camera_transform.translation_local = XMFLOAT3(0, 0, -focus_offset);
+	editorscene.camera_transform.UpdateTransform_Parented(editorscene.camera_target);
 	editorscene.cam_move = {};
 }
 
