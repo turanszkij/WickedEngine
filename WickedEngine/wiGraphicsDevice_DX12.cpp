@@ -5701,15 +5701,12 @@ std::mutex queue_locker;
 
 	void GraphicsDevice_DX12::ClearPipelineStateCache()
 	{
-		allocationhandler->destroylocker.lock();
-
 		pipelines_global.clear();
 
 		for (auto& x : commandlists)
 		{
 			x->pipelines_worker.clear();
 		}
-		allocationhandler->destroylocker.unlock();
 	}
 
 	Texture GraphicsDevice_DX12::GetBackBuffer(const SwapChain* swapchain) const

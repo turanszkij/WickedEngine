@@ -6795,8 +6795,6 @@ using namespace vulkan_internal;
 	}
 	void GraphicsDevice_Vulkan::ClearPipelineStateCache()
 	{
-		allocationhandler->destroylocker.lock();
-
 		layout_locker.lock();
 		pso_layouts.clear();
 		layout_locker.unlock();
@@ -6807,7 +6805,6 @@ using namespace vulkan_internal;
 		{
 			x->pipelines_worker.clear();
 		}
-		allocationhandler->destroylocker.unlock();
 
 		if (pipelineCache != VK_NULL_HANDLE)
 		{
