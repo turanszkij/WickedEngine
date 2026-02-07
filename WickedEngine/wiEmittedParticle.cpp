@@ -226,9 +226,10 @@ namespace wi
 
 			GPUBufferDesc bd;
 			bd.usage = Usage::DEFAULT;
-			bd.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-			bd.size = sizeof(counters);
-			bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+			bd.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS | BindFlag::CONSTANT_BUFFER;
+			bd.stride = sizeof(counters);
+			bd.size = bd.stride;
+			bd.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 			device->CreateBuffer(&bd, &counters, &counterBuffer);
 			device->SetName(&counterBuffer, "EmittedParticleSystem::counterBuffer");
 		}
@@ -762,7 +763,7 @@ namespace wi
 			{
 				GPUBarrier barriers[] = {
 					GPUBarrier::Memory(),
-					GPUBarrier::Buffer(&counterBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+					GPUBarrier::Buffer(&counterBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE | ResourceState::CONSTANT_BUFFER),
 					GPUBarrier::Buffer(&distanceBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
@@ -773,7 +774,8 @@ namespace wi
 
 		if (IsSorted())
 		{
-			wi::gpusortlib::Sort(MAX_PARTICLES, distanceBuffer, counterBuffer, PARTICLECOUNTER_OFFSET_CULLEDCOUNT, culledIndirectionBuffer, cmd);
+			static_assert(offsetof(ParticleCounters, culledCount) == 0); // it will be used for binding buffer with offset as constant buffer
+			wi::gpusortlib::Sort(MAX_PARTICLES, distanceBuffer, counterBuffer, culledIndirectionBuffer, cmd);
 		}
 
 		if (!IsPaused() && dt > 0)
@@ -809,19 +811,19 @@ namespace wi
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Memory(),
-				GPUBarrier::Buffer(&counterBuffer, ResourceState::SHADER_RESOURCE, ResourceState::COPY_SRC),
+				GPUBarrier::Buffer(&counterBuffer, ResourceState::SHADER_RESOURCE | ResourceState::CONSTANT_BUFFER, ResourceState::COPY_SRC),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
 		// Statistics is copied to readback:
 		const uint32_t oldest_stat_index = wi::graphics::GetDevice()->GetBufferIndex();
-		device->CopyResource(&statisticsReadbackBuffer[oldest_stat_index], &counterBuffer, cmd);
+		device->CopyBuffer(&statisticsReadbackBuffer[oldest_stat_index], 0, &counterBuffer, 0, sizeof(ParticleCounters), cmd);
 
 		{
 			const GPUBarrier barriers[] = {
 				GPUBarrier::Buffer(&indirectBuffers, ResourceState::UNORDERED_ACCESS, ResourceState::INDIRECT_ARGUMENT),
-				GPUBarrier::Buffer(&counterBuffer, ResourceState::COPY_SRC, ResourceState::SHADER_RESOURCE),
+				GPUBarrier::Buffer(&counterBuffer, ResourceState::COPY_SRC, ResourceState::SHADER_RESOURCE | ResourceState::CONSTANT_BUFFER),
 				GPUBarrier::Buffer(&particleBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 				GPUBarrier::Buffer(&aliveList[1], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 				GPUBarrier::Buffer(&generalBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),

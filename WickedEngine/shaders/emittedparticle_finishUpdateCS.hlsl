@@ -1,14 +1,14 @@
 #include "globals.hlsli"
 #include "ShaderInterop_EmittedParticle.h"
 
-ByteAddressBuffer counterBuffer : register(t0);
+StructuredBuffer<ParticleCounters> counterBuffer : register(t0);
 
 RWStructuredBuffer<EmitterIndirectArgs> indirectBuffer : register(u0);
 
 [numthreads(1, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )
 {
-	uint particleCount = counterBuffer.Load(PARTICLECOUNTER_OFFSET_CULLEDCOUNT);
+	uint particleCount = counterBuffer[0].culledCount;
 	
 	if (xEmitterOptions & EMITTER_OPTION_BIT_MESH_SHADER_ENABLED)
 	{

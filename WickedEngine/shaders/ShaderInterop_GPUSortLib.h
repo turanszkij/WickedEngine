@@ -6,8 +6,14 @@
 struct SortConstants
 {
 	int3 job_params;
-	uint counterReadOffset;
+	uint padding;
 };
 PUSHCONSTANT(sort, SortConstants);
+
+struct SortCount
+{
+	uint count;
+};
+CONSTANTBUFFER(counterBuffer, SortCount, CBSLOT_GPUSORTLIB);
 
 #endif // WI_SHADERINTEROP_GPUSORTLIB_H

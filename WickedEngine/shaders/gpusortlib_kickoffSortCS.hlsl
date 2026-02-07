@@ -1,15 +1,13 @@
 #include "globals.hlsli"
 #include "ShaderInterop_GPUSortLib.h"
 
-ByteAddressBuffer counterBuffer : register(t0);
-
 RWByteAddressBuffer indirectBuffers : register(u0);
 
 [numthreads(1, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )
 {
 	// retrieve GPU itemcount:
-	uint itemCount = counterBuffer.Load(sort.counterReadOffset);
+	uint itemCount = counterBuffer.count;
 
 	if (itemCount > 0)
 	{

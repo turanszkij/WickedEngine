@@ -529,11 +529,12 @@ namespace wi::scene
 				device->CreateBuffer2(&buf, fill_dead_indices, &surfelgi.deadBuffer);
 				device->SetName(&surfelgi.deadBuffer, "surfelgi.deadBuffer");
 
-				buf.stride = sizeof(uint);
-				buf.size = SURFEL_STATS_SIZE;
-				buf.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-				uint stats_data[] = { 0,0,SURFEL_CAPACITY,0,0,0 };
-				device->CreateBuffer(&buf, &stats_data, &surfelgi.statsBuffer);
+				buf.stride = sizeof(SurfelStats);
+				buf.size = buf.stride;
+				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
+				SurfelStats stats = {};
+				stats.deadCount = SURFEL_CAPACITY;
+				device->CreateBuffer(&buf, &stats, &surfelgi.statsBuffer);
 				device->SetName(&surfelgi.statsBuffer, "surfelgi.statsBuffer");
 
 				buf.stride = sizeof(uint);

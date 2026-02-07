@@ -14,7 +14,7 @@ Texture2D<float2> surfelMomentsTexture : register(t3);
 RWStructuredBuffer<SurfelData> surfelDataBuffer : register(u0);
 RWStructuredBuffer<uint> surfelDeadBuffer : register(u1);
 RWStructuredBuffer<uint> surfelAliveBuffer : register(u2);
-RWByteAddressBuffer surfelStatsBuffer : register(u3);
+RWStructuredBuffer<SurfelStats> surfelStatsBuffer : register(u3);
 RWTexture2D<float3> result : register(u4);
 RWTexture2D<unorm float4> debugUAV : register(u5);
 
@@ -237,14 +237,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 
 			// new particle index retrieved from dead list (pop):
 			int deadCount;
-			surfelStatsBuffer.InterlockedAdd(SURFEL_STATS_OFFSET_DEADCOUNT, -1, deadCount);
+			InterlockedAdd(surfelStatsBuffer[0].deadCount, -1, deadCount);
 			if (deadCount <= 0 || deadCount > SURFEL_CAPACITY)
 				return;
 			uint newSurfelIndex = surfelDeadBuffer[deadCount - 1];
 
 			// and add index to the alive list (push):
 			uint aliveCount;
-			surfelStatsBuffer.InterlockedAdd(SURFEL_STATS_OFFSET_NEXTCOUNT, 1, aliveCount);
+			InterlockedAdd(surfelStatsBuffer[0].nextCount, 1, aliveCount);
 			if (aliveCount < SURFEL_CAPACITY)
 			{
 				surfelAliveBuffer[aliveCount] = newSurfelIndex;

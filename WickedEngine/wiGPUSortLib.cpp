@@ -23,7 +23,6 @@ namespace wi::gpusortlib
 		wi::renderer::LoadShader(ShaderStage::CS, sortCS, "gpusortlib_sortCS.cso");
 		wi::renderer::LoadShader(ShaderStage::CS, sortInnerCS, "gpusortlib_sortInnerCS.cso");
 		wi::renderer::LoadShader(ShaderStage::CS, sortStepCS, "gpusortlib_sortStepCS.cso");
-
 	}
 
 	void Initialize()
@@ -47,8 +46,7 @@ namespace wi::gpusortlib
 	void Sort(
 		uint32_t maxCount, 
 		const GPUBuffer& comparisonBuffer_read, 
-		const GPUBuffer& counterBuffer_read, 
-		uint32_t counterReadOffset, 
+		const GPUBuffer& counterBuffer_read,
 		const GPUBuffer& indexBuffer_write,
 		CommandList cmd)
 	{
@@ -57,17 +55,13 @@ namespace wi::gpusortlib
 		device->EventBegin("GPUSortLib", cmd);
 
 
-		SortConstants sort;
-		sort.counterReadOffset = counterReadOffset;
+		SortConstants sort = {};
 
 		// initialize sorting arguments:
 		{
 			device->BindComputeShader(&kickoffSortCS, cmd);
 
-			const GPUResource* res[] = {
-				&counterBuffer_read,
-			};
-			device->BindResources(res, 0, arraysize(res), cmd);
+			device->BindConstantBuffer(&counterBuffer_read, 2, cmd);
 
 			const GPUResource* uavs[] = {
 				&indirectBuffer,
@@ -101,7 +95,6 @@ namespace wi::gpusortlib
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		const GPUResource* resources[] = {
-			&counterBuffer_read,
 			&comparisonBuffer_read,
 		};
 		device->BindResources(resources, 0, arraysize(resources), cmd);
@@ -171,7 +164,6 @@ namespace wi::gpusortlib
 					sort.job_params.y = nMergeSubSize;
 					sort.job_params.z = 1;
 				}
-				sort.counterReadOffset = counterReadOffset;
 
 				device->PushConstants(&sort, sizeof(sort), cmd);
 				device->Dispatch(numThreadGroups, 1, 1, cmd);

@@ -35,8 +35,7 @@
 //--------------------------------------------------------------------------------------
 // Structured Buffers
 //--------------------------------------------------------------------------------------
-ByteAddressBuffer counterBuffer : register(t0);
-StructuredBuffer<float> comparisonBuffer : register(t1);
+StructuredBuffer<float> comparisonBuffer : register(t0);
 
 RWStructuredBuffer<uint> indexBuffer : register(u0);
 
@@ -53,7 +52,7 @@ void main(uint3 Gid	: SV_GroupID,
 	uint3 GTid : SV_GroupThreadID,
 	uint	GI : SV_GroupIndex)
 {
-	uint NumElements = counterBuffer.Load(sort.counterReadOffset);
+	uint NumElements = counterBuffer.count;
 
 	uint4 tgp;
 
