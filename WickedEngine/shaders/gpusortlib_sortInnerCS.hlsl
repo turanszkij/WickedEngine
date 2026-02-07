@@ -32,19 +32,11 @@
 #define NUM_THREADS		(SORT_SIZE/2)
 #define INVERSION		(16*2 + 8*3)
 
-//--------------------------------------------------------------------------------------
-// Structured Buffers
-//--------------------------------------------------------------------------------------
 StructuredBuffer<float> comparisonBuffer : register(t0);
 
 RWStructuredBuffer<uint> indexBuffer : register(u0);
 
-
-//--------------------------------------------------------------------------------------
-// Bitonic Sort Compute Shader
-//--------------------------------------------------------------------------------------
 groupshared float2	g_LDS[SORT_SIZE];
-
 
 [numthreads(NUM_THREADS, 1, 1)]
 void main(uint3 Gid	: SV_GroupID,

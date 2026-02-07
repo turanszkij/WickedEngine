@@ -19,11 +19,11 @@ struct Particle
 
 struct ParticleCounters
 {
-	uint culledCount;
 	uint aliveCount;
 	uint deadCount;
 	uint realEmitCount;
 	uint aliveCount_afterSimulation;
+	uint culledCount;
 	uint cellAllocator;
 };
 

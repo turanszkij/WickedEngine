@@ -63,7 +63,7 @@ namespace wi
 		if (totalTriangles > 0 && !primitiveCounterBuffer.IsValid())
 		{
 			GPUBufferDesc desc;
-			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::CONSTANT_BUFFER;
+			desc.bind_flags = BindFlag::SHADER_RESOURCE;
 			desc.stride = sizeof(uint);
 			desc.size = desc.stride;
 			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
@@ -256,7 +256,7 @@ namespace wi
 		device->EventEnd(cmd);
 
 		device->EventBegin("BVH - Sort Primitive Mortons", cmd);
-		wi::gpusortlib::Sort(primitiveCount, primitiveMortonBuffer, primitiveCounterBuffer, primitiveIDBuffer, cmd);
+		wi::gpusortlib::Sort(primitiveCount, primitiveMortonBuffer, primitiveCounterBuffer, 0, primitiveIDBuffer, cmd);
 		device->EventEnd(cmd);
 
 		device->EventBegin("BVH - Build Hierarchy", cmd);

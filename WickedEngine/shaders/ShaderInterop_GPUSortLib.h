@@ -8,7 +8,6 @@ struct SortConstants
 	int3 job_params;
 	uint padding;
 };
-PUSHCONSTANT(sort, SortConstants);
 
 struct SortCount
 {

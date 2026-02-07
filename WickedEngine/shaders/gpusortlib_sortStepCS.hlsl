@@ -23,9 +23,8 @@
 #include "globals.hlsli"
 #include "ShaderInterop_GPUSortLib.h"
 
-//--------------------------------------------------------------------------------------
-// Structured Buffers
-//--------------------------------------------------------------------------------------
+PUSHCONSTANT(sort, SortConstants);
+
 StructuredBuffer<float> comparisonBuffer : register(t0);
 
 RWStructuredBuffer<uint> indexBuffer : register(u0);
