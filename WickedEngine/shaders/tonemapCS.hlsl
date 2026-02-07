@@ -44,6 +44,53 @@ half3 ACESFitted(half3 color)
 	return color;
 }
 
+// Uchimura tone mapping from Gran Turismo 7
+// Reference: "Driving Toward Reality: Physically Based Tone Mapping and Perceptual Fidelity in Gran Turismo 7"
+// https://www.desmos.com/calculator/gslcdxvipg
+half UchimuraCurve(half x, half P, half a, half m, half l, half c, half b)
+{
+	// P - Max brightness
+	// a - Contrast
+	// m - Linear section start
+	// l - Linear section length
+	// c - Black tightness (shape)
+	// b - Pedestal (black level)
+
+	half l0 = ((P - m) * l) / a;
+	half L0 = m - m / a;
+	half L1 = m + (1.0 - m) / a;
+	half S0 = m + l0;
+	half S1 = m + a * l0;
+	half C2 = (a * P) / (P - S1);
+	half CP = -C2 / P;
+
+	half w0 = 1.0 - smoothstep(0.0, m, x);
+	half w2 = step(m + l0, x);
+	half w1 = 1.0 - w0 - w2;
+
+	half T = m * pow(x / m, c) + b;
+	half S = P - (P - S1) * exp(CP * (x - S0));
+	half L = m + a * (x - m);
+
+	return T * w0 + L * w1 + S * w2;
+}
+
+half3 Uchimura(half3 color)
+{
+	// Default parameters tuned for Gran Turismo 7 style
+	const half P = 1.0;  // Max brightness
+	const half a = 1.0;  // Contrast
+	const half m = 0.22; // Linear section start
+	const half l = 0.4;  // Linear section length
+	const half c = 1.33; // Black tightness
+	const half b = 0.0;  // Pedestal
+
+	color.r = UchimuraCurve(color.r, P, a, m, l, c, b);
+	color.g = UchimuraCurve(color.g, P, a, m, l, c, b);
+	color.b = UchimuraCurve(color.b, P, a, m, l, c, b);
+	return color;
+}
+
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
@@ -105,6 +152,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		if (flags & TONEMAP_FLAG_ACES)
 		{
 			result.rgb = ACESFitted(result.rgb);
+		}
+		else if (flags & TONEMAP_FLAG_UCHIMURA)
+		{
+			result.rgb = Uchimura(result.rgb);
 		}
 		else
 		{

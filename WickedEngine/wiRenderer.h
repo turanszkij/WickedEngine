@@ -888,7 +888,8 @@ namespace wi::renderer
 	enum class Tonemap
 	{
 		Reinhard,
-		ACES
+		ACES,
+		Uchimura
 	};
 	void Postprocess_Tonemap(
 		const wi::graphics::Texture& input,
