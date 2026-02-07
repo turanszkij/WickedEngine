@@ -9,10 +9,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
 {
 	uint aliveCount = counterBuffer.Load(PARTICLECOUNTER_OFFSET_ALIVECOUNT_AFTERSIMULATION);
 	int deadCount = counterBuffer.Load<int>(PARTICLECOUNTER_OFFSET_DEADCOUNT);
-	
-	indirectBuffer[0].dispatch.ThreadGroupCountX = (aliveCount + THREADCOUNT_SIMULATION - 1) / THREADCOUNT_SIMULATION;
-	indirectBuffer[0].dispatch.ThreadGroupCountY = 1;
-	indirectBuffer[0].dispatch.ThreadGroupCountZ = 1;
+
+	IndirectDispatchArgs args;
+	args.ThreadGroupCountX = (aliveCount + THREADCOUNT_SIMULATION - 1) / THREADCOUNT_SIMULATION;
+	args.ThreadGroupCountY = 1;
+	args.ThreadGroupCountZ = 1;
+	indirectBuffer[0].dispatch = args;
 	
 	counterBuffer.Store(PARTICLECOUNTER_OFFSET_ALIVECOUNT, aliveCount);
 	counterBuffer.Store(PARTICLECOUNTER_OFFSET_ALIVECOUNT_AFTERSIMULATION, 0);

@@ -939,6 +939,12 @@ inline half3 clipspace_to_uv(in half3 clipspace)
 	return mad(clipspace, half3(0.5, -0.5, 1), half3(0.5, 0.5, 0));
 }
 
+// projection matrix clip space [-1,1]
+inline half3 clipspace_to_uvw(in half3 clipspace)
+{
+	return mad(clipspace, half3(0.5, -0.5, 0.5), half3(0.5, 0.5, 0.5));
+}
+
 // box matrix projection [-1,1] -> UV [0,1]
 inline float3 box_to_uv(in float3 box)
 {

@@ -164,7 +164,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 						{
 							float4x4 planeProjection = load_entitymatrix(entity.GetMatrixIndex());
 							const float3 clipSpacePos = mul(planeProjection, float4(particle.position, 1)).xyz;
-							const float3 uvw = clipspace_to_uv(clipSpacePos.xyz);
+							const float3 uvw = clipspace_to_uvw(clipSpacePos.xyz);
 							[branch]
 							if (is_saturated(uvw))
 							{
