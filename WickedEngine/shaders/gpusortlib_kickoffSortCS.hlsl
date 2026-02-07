@@ -1,7 +1,7 @@
 #include "globals.hlsli"
 #include "ShaderInterop_GPUSortLib.h"
 
-RWByteAddressBuffer indirectBuffers : register(u0);
+RWStructuredBuffer<IndirectDispatchArgs> indirectBuffers : register(u0);
 
 [numthreads(1, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )
@@ -9,17 +9,20 @@ void main( uint3 DTid : SV_DispatchThreadID )
 	// retrieve GPU itemcount:
 	uint itemCount = counterBuffer.count;
 
+	IndirectDispatchArgs args;
+
 	if (itemCount > 0)
 	{
-		// calculate threadcount:
-		uint threadCount = ((itemCount - 1) >> 9) + 1;
-
-		// and prepare to dispatch the sort for the alive simulated particles:
-		indirectBuffers.Store3(0, uint3(threadCount, 1, 1));
+		args.ThreadGroupCountX = ((itemCount - 1) >> 9) + 1;
+		args.ThreadGroupCountY = 1;
+		args.ThreadGroupCountZ = 1;
 	}
 	else
 	{
-		// dispatch nothing:
-		indirectBuffers.Store3(0, uint3(0, 0, 0));
+		args.ThreadGroupCountX = 0;
+		args.ThreadGroupCountY = 0;
+		args.ThreadGroupCountZ = 0;
 	}
+
+	indirectBuffers[0] = args;
 }

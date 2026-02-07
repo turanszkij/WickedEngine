@@ -37,8 +37,9 @@ namespace wi::gpusortlib
 		wi::graphics::GetDevice()->CreateBuffer(&bd, nullptr, &constantBuffer);
 
 		bd.bind_flags = BindFlag::UNORDERED_ACCESS;
-		bd.misc_flags = ResourceMiscFlag::INDIRECT_ARGS | ResourceMiscFlag::BUFFER_RAW;
-		bd.size = sizeof(IndirectDispatchArgs);
+		bd.misc_flags = ResourceMiscFlag::INDIRECT_ARGS | ResourceMiscFlag::BUFFER_STRUCTURED;
+		bd.stride = sizeof(IndirectDispatchArgs);
+		bd.size = bd.stride;
 		wi::graphics::GetDevice()->CreateBuffer(&bd, nullptr, &indirectBuffer);
 
 		static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
