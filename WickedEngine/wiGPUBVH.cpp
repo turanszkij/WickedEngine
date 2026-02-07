@@ -66,7 +66,7 @@ namespace wi
 			desc.bind_flags = BindFlag::SHADER_RESOURCE;
 			desc.stride = sizeof(uint);
 			desc.size = desc.stride;
-			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+			desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 			desc.usage = Usage::DEFAULT;
 			device->CreateBuffer(&desc, nullptr, &primitiveCounterBuffer);
 			device->SetName(&primitiveCounterBuffer, "GPUBVH::primitiveCounterBuffer");

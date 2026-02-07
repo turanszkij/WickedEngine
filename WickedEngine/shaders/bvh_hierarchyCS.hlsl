@@ -12,7 +12,7 @@
 // in "Maximizing Parallelism in the Construction of BVHs, Octrees,
 // and k-d Trees"
 
-ByteAddressBuffer primitiveCounterBuffer : register(t0);
+StructuredBuffer<uint> primitiveCounterBuffer : register(t0);
 StructuredBuffer<uint> primitiveIDBuffer : register(t1);
 StructuredBuffer<float> primitiveMortonBuffer : register(t2); // float because it was sorted
 
@@ -101,7 +101,7 @@ int FindSplit(int first, uint last, uint elementCount)
 void main( uint3 DTid : SV_DispatchThreadID )
 {
 	const uint idx = DTid.x;
-	const uint primitiveCount = primitiveCounterBuffer.Load(0);
+	const uint primitiveCount = primitiveCounterBuffer[0];
 
 	if (idx < primitiveCount - 1)
 	{
