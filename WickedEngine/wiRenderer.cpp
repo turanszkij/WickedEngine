@@ -12046,7 +12046,7 @@ void SurfelGI(
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-		device->DispatchIndirect(&scene.surfelgi.indirectBuffer, SURFEL_INDIRECT_OFFSET_ITERATE, cmd);
+		device->DispatchIndirect(&scene.surfelgi.indirectBuffer, offsetof(SurfelIndirectArgs, iterate), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -12110,7 +12110,7 @@ void SurfelGI(
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-		device->DispatchIndirect(&scene.surfelgi.indirectBuffer, SURFEL_INDIRECT_OFFSET_ITERATE, cmd);
+		device->DispatchIndirect(&scene.surfelgi.indirectBuffer, offsetof(SurfelIndirectArgs, iterate), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -12146,7 +12146,7 @@ void SurfelGI(
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-		device->DispatchIndirect(&scene.surfelgi.indirectBuffer, SURFEL_INDIRECT_OFFSET_RAYTRACE, cmd);
+		device->DispatchIndirect(&scene.surfelgi.indirectBuffer, offsetof(SurfelIndirectArgs, raytrace), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -12187,7 +12187,7 @@ void SurfelGI(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->DispatchIndirect(&scene.surfelgi.indirectBuffer, SURFEL_INDIRECT_OFFSET_INTEGRATE, cmd);
+		device->DispatchIndirect(&scene.surfelgi.indirectBuffer, offsetof(SurfelIndirectArgs, integrate), cmd);
 
 		{
 			GPUBarrier barriers[] = {

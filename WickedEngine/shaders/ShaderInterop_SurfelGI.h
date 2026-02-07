@@ -19,10 +19,6 @@ static const uint SURFEL_STATS_OFFSET_CELLALLOCATOR = SURFEL_STATS_OFFSET_DEADCO
 static const uint SURFEL_STATS_OFFSET_RAYCOUNT = SURFEL_STATS_OFFSET_CELLALLOCATOR + 4;
 static const uint SURFEL_STATS_OFFSET_SHORTAGE = SURFEL_STATS_OFFSET_RAYCOUNT + 4;
 static const uint SURFEL_STATS_SIZE = SURFEL_STATS_OFFSET_SHORTAGE + 4;
-static const uint SURFEL_INDIRECT_OFFSET_ITERATE = 0;
-static const uint SURFEL_INDIRECT_OFFSET_RAYTRACE = align(SURFEL_INDIRECT_OFFSET_ITERATE + 4 * 3, IndirectDispatchArgsAlignment);
-static const uint SURFEL_INDIRECT_OFFSET_INTEGRATE = align(SURFEL_INDIRECT_OFFSET_RAYTRACE + 4 * 3, IndirectDispatchArgsAlignment);
-static const uint SURFEL_INDIRECT_SIZE = SURFEL_INDIRECT_OFFSET_INTEGRATE + 4 * 3;
 static const uint SURFEL_INDIRECT_NUMTHREADS = 32;
 static const float SURFEL_TARGET_COVERAGE = 0.8f; // how many surfels should affect a pixel fully, higher values will increase quality and cost
 static const uint SURFEL_CELL_LIMIT = ~0; // limit the amount of allocated surfels in a cell
@@ -31,6 +27,13 @@ static const uint SURFEL_RAY_BOOST_MAX = 64; // max amount of rays per surfel
 #define SURFEL_GRID_CULLING // if defined, surfels will not be added to grid cells that they do not intersect
 #define SURFEL_USE_HASHING // if defined, hashing will be used to retrieve surfels, hashing is good because it supports infinite world trivially, but slower due to hash collisions
 #define SURFEL_ENABLE_INFINITE_BOUNCES // if defined, previous frame's surfel data will be sampled at ray tracing hit points
+
+struct SurfelIndirectArgs
+{
+	IndirectDispatchArgs iterate;
+	IndirectDispatchArgs raytrace;
+	IndirectDispatchArgs integrate;
+};
 
 #ifdef __cplusplus
 static_assert(SURFEL_RECYCLE_TIME < 256, "Must be < 256 because it is packed at 8 bits!");

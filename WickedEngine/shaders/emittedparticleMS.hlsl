@@ -22,9 +22,9 @@ static const uint PRIMITIVECOUNT = THREADCOUNT_MESH_SHADER * 2;
 struct VertextoPixel_MS
 {
 	float4 pos : SV_POSITION;
-	float clip : SV_ClipDistance0;
-	half4 tex : TEXCOORD0;
+	float4 tex : TEXCOORD0;
 	half2 unrotated_uv : UNROTATED_UV;
+	float clip : SV_ClipDistance0;
 };
 struct VertextoPixel_MS_PRIM
 {

@@ -2,7 +2,7 @@
 #include "ShaderInterop_SurfelGI.h"
 
 RWByteAddressBuffer surfelStatsBuffer : register(u0);
-RWByteAddressBuffer surfelIndirectBuffer : register(u1);
+RWStructuredBuffer<SurfelIndirectArgs> surfelIndirectBuffer : register(u1);
 
 [numthreads(1, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
@@ -23,7 +23,19 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	surfelStatsBuffer.Store(SURFEL_STATS_OFFSET_RAYCOUNT, 0);
 	surfelStatsBuffer.Store(SURFEL_STATS_OFFSET_SHORTAGE, shortage);
 
-	surfelIndirectBuffer.Store3(SURFEL_INDIRECT_OFFSET_ITERATE, uint3((surfel_count + SURFEL_INDIRECT_NUMTHREADS - 1) / SURFEL_INDIRECT_NUMTHREADS, 1, 1));
-	surfelIndirectBuffer.Store3(SURFEL_INDIRECT_OFFSET_RAYTRACE, uint3((ray_count + SURFEL_INDIRECT_NUMTHREADS - 1) / SURFEL_INDIRECT_NUMTHREADS, 1, 1));
-	surfelIndirectBuffer.Store3(SURFEL_INDIRECT_OFFSET_INTEGRATE, uint3(surfel_count, 1, 1));
+	SurfelIndirectArgs args;
+	
+	args.iterate.ThreadGroupCountX = (surfel_count + SURFEL_INDIRECT_NUMTHREADS - 1) / SURFEL_INDIRECT_NUMTHREADS;
+	args.iterate.ThreadGroupCountY = 1;
+	args.iterate.ThreadGroupCountZ = 1;
+	
+	args.raytrace.ThreadGroupCountX = (ray_count + SURFEL_INDIRECT_NUMTHREADS - 1) / SURFEL_INDIRECT_NUMTHREADS;
+	args.raytrace.ThreadGroupCountY = 1;
+	args.raytrace.ThreadGroupCountZ = 1;
+	
+	args.integrate.ThreadGroupCountX = surfel_count;
+	args.integrate.ThreadGroupCountY = 1;
+	args.integrate.ThreadGroupCountZ = 1;
+
+	surfelIndirectBuffer[0] = args;
 }

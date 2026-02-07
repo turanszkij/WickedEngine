@@ -537,8 +537,9 @@ namespace wi::scene
 				device->SetName(&surfelgi.statsBuffer, "surfelgi.statsBuffer");
 
 				buf.stride = sizeof(uint);
-				buf.size = SURFEL_INDIRECT_SIZE;
-				buf.misc_flags = ResourceMiscFlag::BUFFER_RAW | ResourceMiscFlag::INDIRECT_ARGS;
+				buf.stride = sizeof(SurfelIndirectArgs);
+				buf.size = buf.stride;
+				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED | ResourceMiscFlag::INDIRECT_ARGS;
 				device->CreateBufferZeroed(&buf, &surfelgi.indirectBuffer);
 				device->SetName(&surfelgi.indirectBuffer, "surfelgi.indirectBuffer");
 

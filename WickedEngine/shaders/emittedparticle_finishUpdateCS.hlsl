@@ -3,7 +3,7 @@
 
 ByteAddressBuffer counterBuffer : register(t0);
 
-RWByteAddressBuffer indirectBuffers : register(u0);
+RWStructuredBuffer<EmitterIndirectArgs> indirectBuffer : register(u0);
 
 [numthreads(1, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )
@@ -14,10 +14,10 @@ void main( uint3 DTid : SV_DispatchThreadID )
 	{
 		// Create DispatchMesh argument buffer:
 		IndirectDispatchArgs args;
-		args.ThreadGroupCountX = (particleCount + 31) / 32;
+		args.ThreadGroupCountX = (particleCount + THREADCOUNT_MESH_SHADER - 1) / THREADCOUNT_MESH_SHADER;
 		args.ThreadGroupCountY = 1;
 		args.ThreadGroupCountZ = 1;
-		indirectBuffers.Store<IndirectDispatchArgs>(ARGUMENTBUFFER_OFFSET_DRAWPARTICLES, args);
+		indirectBuffer[0].dispatch = args;
 	}
 	else
 	{
@@ -27,6 +27,6 @@ void main( uint3 DTid : SV_DispatchThreadID )
 		args.InstanceCount = particleCount;
 		args.StartVertexLocation = 0;
 		args.StartInstanceLocation = 0;
-		indirectBuffers.Store<IndirectDrawArgsInstanced>(ARGUMENTBUFFER_OFFSET_DRAWPARTICLES, args);
+		indirectBuffer[0].draw = args;
 	}
 }
