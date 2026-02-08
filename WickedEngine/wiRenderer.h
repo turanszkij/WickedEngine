@@ -851,6 +851,11 @@ namespace wi::renderer
 		const VolumetricCloudResources& res,
 		wi::graphics::CommandList cmd
 	);
+	void VolumetricClouds_CaptureCubemap(
+		const wi::scene::Scene& scene,
+		const wi::graphics::Texture& output,
+		wi::graphics::CommandList cmd
+	);
 	void Postprocess_FXAA(
 		const wi::graphics::Texture& input,
 		const wi::graphics::Texture& output,

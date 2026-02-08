@@ -911,6 +911,8 @@ namespace wi
 			);
 			wi::renderer::UpdateRenderDataAsync(visibility_main, frameCB, cmd);
 
+			wi::renderer::VolumetricClouds_CaptureCubemap(*scene, scene->cloudmap, cmd);
+
 			if (scene->IsWetmapProcessingRequired())
 			{
 				wi::renderer::RefreshWetmaps(visibility_main, cmd);
@@ -1158,20 +1160,20 @@ namespace wi
 					cmd
 				);
 			}
-			if (scene->weather.IsVolumetricClouds() && !scene->weather.IsVolumetricCloudsReceiveShadow())
-			{
-				// When volumetric cloud DOESN'T receive shadow it can be done async to shadow maps!
-				wi::renderer::Postprocess_VolumetricClouds(
-					volumetriccloudResources,
-					cmd,
-					*camera,
-					camera_previous,
-					camera_reflection,
-					(wi::renderer::GetTemporalAAEnabled() && wi::renderer::GetWireframeMode() == wi::renderer::WIREFRAME_DISABLED) || getFSR2Enabled(),
-					scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
-					scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
-				);
-			}
+			//if (scene->weather.IsVolumetricClouds() && !scene->weather.IsVolumetricCloudsReceiveShadow())
+			//{
+			//	// When volumetric cloud DOESN'T receive shadow it can be done async to shadow maps!
+			//	wi::renderer::Postprocess_VolumetricClouds(
+			//		volumetriccloudResources,
+			//		cmd,
+			//		*camera,
+			//		camera_previous,
+			//		camera_reflection,
+			//		(wi::renderer::GetTemporalAAEnabled() && wi::renderer::GetWireframeMode() == wi::renderer::WIREFRAME_DISABLED) || getFSR2Enabled(),
+			//		scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
+			//		scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
+			//	);
+			//}
 			if (getMeshBlendEnabled() && visibility_main.IsMeshBlendVisible())
 			{
 				wi::renderer::PostProcess_MeshBlend_EdgeProcess(meshblendResources, cmd);
@@ -1362,19 +1364,19 @@ namespace wi
 					cmd
 				);
 
-				if (scene->weather.IsVolumetricClouds())
-				{
-					wi::renderer::Postprocess_VolumetricClouds(
-						volumetriccloudResources_reflection,
-						cmd,
-						camera_reflection,
-						camera_reflection_previous,
-						camera_reflection,
-						(wi::renderer::GetTemporalAAEnabled() && wi::renderer::GetWireframeMode() == wi::renderer::WIREFRAME_DISABLED) || getFSR2Enabled(),
-						scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
-						scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
-					);
-				}
+				//if (scene->weather.IsVolumetricClouds())
+				//{
+				//	wi::renderer::Postprocess_VolumetricClouds(
+				//		volumetriccloudResources_reflection,
+				//		cmd,
+				//		camera_reflection,
+				//		camera_reflection_previous,
+				//		camera_reflection,
+				//		(wi::renderer::GetTemporalAAEnabled() && wi::renderer::GetWireframeMode() == wi::renderer::WIREFRAME_DISABLED) || getFSR2Enabled(),
+				//		scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
+				//		scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
+				//	);
+				//}
 				device->EventBegin("Planar reflections", cmd);
 				auto range = wi::profiler::BeginRangeGPU("Planar Reflections", cmd);
 
@@ -1434,17 +1436,17 @@ namespace wi
 					device->EventEnd(cmd);
 				}
 
-				// Blend the volumetric clouds on top:
-				//	For planar reflections, we don't use upsample, because there is no linear depth here
-				if (scene->weather.IsVolumetricClouds())
-				{
-					device->EventBegin("Volumetric Clouds Reflection Blend", cmd);
-					wi::image::Params fx;
-					fx.enableFullScreen();
-					fx.blendFlag = BLENDMODE_PREMULTIPLIED;
-					wi::image::Draw(&volumetriccloudResources_reflection.texture_reproject[volumetriccloudResources_reflection.GetTemporalOutputIndex()], fx, cmd);
-					device->EventEnd(cmd);
-				}
+				//// Blend the volumetric clouds on top:
+				////	For planar reflections, we don't use upsample, because there is no linear depth here
+				//if (scene->weather.IsVolumetricClouds())
+				//{
+				//	device->EventBegin("Volumetric Clouds Reflection Blend", cmd);
+				//	wi::image::Params fx;
+				//	fx.enableFullScreen();
+				//	fx.blendFlag = BLENDMODE_PREMULTIPLIED;
+				//	wi::image::Draw(&volumetriccloudResources_reflection.texture_reproject[volumetriccloudResources_reflection.GetTemporalOutputIndex()], fx, cmd);
+				//	device->EventEnd(cmd);
+				//}
 
 				wi::renderer::DrawSoftParticles(visibility_reflection, false, cmd);
 				wi::renderer::DrawSpritesAndFonts(*scene, camera_reflection, false, cmd);
@@ -1478,20 +1480,20 @@ namespace wi
 					cmd
 				);
 			}
-			if (scene->weather.IsVolumetricClouds() && scene->weather.IsVolumetricCloudsReceiveShadow())
-			{
-				// When volumetric cloud receives shadow it must be done AFTER shadow maps!
-				wi::renderer::Postprocess_VolumetricClouds(
-					volumetriccloudResources,
-					cmd,
-					*camera,
-					camera_previous,
-					camera_reflection,
-					(wi::renderer::GetTemporalAAEnabled() && wi::renderer::GetWireframeMode() == wi::renderer::WIREFRAME_DISABLED) || getFSR2Enabled(),
-					scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
-					scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
-				);
-			}
+			//if (scene->weather.IsVolumetricClouds() && scene->weather.IsVolumetricCloudsReceiveShadow())
+			//{
+			//	// When volumetric cloud receives shadow it must be done AFTER shadow maps!
+			//	wi::renderer::Postprocess_VolumetricClouds(
+			//		volumetriccloudResources,
+			//		cmd,
+			//		*camera,
+			//		camera_previous,
+			//		camera_reflection,
+			//		(wi::renderer::GetTemporalAAEnabled() && wi::renderer::GetWireframeMode() == wi::renderer::WIREFRAME_DISABLED) || getFSR2Enabled(),
+			//		scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
+			//		scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
+			//	);
+			//}
 			if (getRaytracedReflectionEnabled())
 			{
 				wi::renderer::Postprocess_RTReflection(
@@ -1653,11 +1655,11 @@ namespace wi
 				device->EventEnd(cmd);
 			}
 
-			// Blend the volumetric clouds on top:
-			if (scene->weather.IsVolumetricClouds())
-			{
-				wi::renderer::Postprocess_VolumetricClouds_Upsample(volumetriccloudResources, cmd);
-			}
+			//// Blend the volumetric clouds on top:
+			//if (scene->weather.IsVolumetricClouds())
+			//{
+			//	wi::renderer::Postprocess_VolumetricClouds_Upsample(volumetriccloudResources, cmd);
+			//}
 
 			RenderOutline(cmd);
 
@@ -1973,15 +1975,15 @@ namespace wi
 
 				wi::renderer::DrawSun(cmd);
 
-				if (scene->weather.IsVolumetricClouds())
-				{
-					device->EventBegin("Volumetric cloud occlusion mask", cmd);
-					wi::image::Params fx;
-					fx.enableFullScreen();
-					fx.blendFlag = BLENDMODE_MULTIPLY;
-					wi::image::Draw(&volumetriccloudResources.texture_cloudMask, fx, cmd);
-					device->EventEnd(cmd);
-				}
+				//if (scene->weather.IsVolumetricClouds())
+				//{
+				//	device->EventBegin("Volumetric cloud occlusion mask", cmd);
+				//	wi::image::Params fx;
+				//	fx.enableFullScreen();
+				//	fx.blendFlag = BLENDMODE_MULTIPLY;
+				//	wi::image::Draw(&volumetriccloudResources.texture_cloudMask, fx, cmd);
+				//	device->EventEnd(cmd);
+				//}
 
 				device->RenderPassEnd(cmd);
 			}

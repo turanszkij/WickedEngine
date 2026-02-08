@@ -836,6 +836,19 @@ namespace wi::scene
 			}
 		}
 
+		if (weather.IsVolumetricClouds() && !cloudmap.IsValid())
+		{
+			TextureDesc desc;
+			desc.format = Format::R16G16B16A16_FLOAT;
+			desc.width = 512;
+			desc.height = desc.width;
+			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+			bool success = device->CreateTexture(&desc, nullptr, &cloudmap);
+			assert(success);
+			device->SetName(&cloudmap, "cloudmap");
+			cloudmap_frame = 0;
+		}
+
 		// Shader scene resources:
 		if (device->CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
 		{
@@ -862,6 +875,7 @@ namespace wi::scene
 		{
 			shaderscene.globalenvmap = -1;
 		}
+		shaderscene.texture_cloudmap = device->GetDescriptorIndex(&cloudmap, SubresourceType::SRV);
 
 		if (probes.GetCount() > 0 && probes[0].texture.IsValid())
 		{

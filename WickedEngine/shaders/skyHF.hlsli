@@ -111,7 +111,7 @@ float3 AccurateAtmosphericScattering(float2 pixelPosition, float3 rayOrigin, flo
 		}
 	}
 
-    return totalColor;
+	return totalColor;
 }
 
 // Returns sky color modulated by the sun and clouds
@@ -145,7 +145,15 @@ float3 GetDynamicSkyColor(in float2 pixel, in float3 V, bool sun_enabled = true,
 
 	sky *= GetWeather().sky_exposure;
 
-    return sky;
+	if (sun_enabled && V.y > 0 && GetScene().texture_cloudmap >= 0)
+	{
+		float4 clouds = bindless_textures[descriptor_index(GetScene().texture_cloudmap)].SampleLevel(sampler_linear_clamp, encode_hemioct(V.xzy) * 0.5 + 0.5, 0);
+		if (dark_enabled)
+			clouds.rgb = 0;
+		sky.rgb = sky.rgb * (1.0 - clouds.a) + clouds.rgb;
+	}
+
+	return sky;
 }
 float3 GetDynamicSkyColor(in float3 V, bool sun_enabled = true, bool dark_enabled = false, bool stationary = false)
 {
@@ -174,6 +182,12 @@ float3 GetStaticSkyColor(in float3 V)
 	}
 	
 	sky *= GetWeather().sky_exposure;
+
+	if (V.y > 0 && GetScene().texture_cloudmap >= 0)
+	{
+		float4 clouds = bindless_textures[descriptor_index(GetScene().texture_cloudmap)].SampleLevel(sampler_linear_clamp, encode_hemioct(V.xzy) * 0.5 + 0.5, 0);
+		sky.rgb = sky.rgb * (1.0 - clouds.a) + clouds.rgb;
+	}
 
 	return sky;
 }

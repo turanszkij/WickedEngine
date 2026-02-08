@@ -482,19 +482,19 @@ namespace wi
 					cmd
 				);
 			}
-			if (scene->weather.IsVolumetricClouds())
-			{
-				wi::renderer::Postprocess_VolumetricClouds(
-					volumetriccloudResources,
-					cmd,
-					*camera,
-					camera_previous,
-					camera_reflection,
-					false,
-					scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
-					scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
-				);
-			}
+			//if (scene->weather.IsVolumetricClouds())
+			//{
+			//	wi::renderer::Postprocess_VolumetricClouds(
+			//		volumetriccloudResources,
+			//		cmd,
+			//		*camera,
+			//		camera_previous,
+			//		camera_reflection,
+			//		false,
+			//		scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
+			//		scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
+			//	);
+			//}
 
 			RenderVolumetrics(cmd);
 
@@ -541,11 +541,11 @@ namespace wi
 					device->EventEnd(cmd);
 				}
 
-				// Blend the volumetric clouds on top:
-				if (scene->weather.IsVolumetricClouds())
-				{
-					wi::renderer::Postprocess_VolumetricClouds_Upsample(volumetriccloudResources, cmd);
-				}
+				//// Blend the volumetric clouds on top:
+				//if (scene->weather.IsVolumetricClouds())
+				//{
+				//	wi::renderer::Postprocess_VolumetricClouds_Upsample(volumetriccloudResources, cmd);
+				//}
 
 				wi::renderer::DrawDebugWorld(*scene, *camera, *this, cmd);
 				wi::renderer::DrawLightVisualizers(visibility_main, cmd);
@@ -580,7 +580,7 @@ namespace wi
 					wi::renderer::DrawLensFlares(
 						visibility_main,
 						cmd,
-						scene->weather.IsVolumetricClouds() ? &volumetriccloudResources.texture_cloudMask : nullptr
+						/*scene->weather.IsVolumetricClouds() ? &volumetriccloudResources.texture_cloudMask :*/ nullptr
 					);
 				}
 

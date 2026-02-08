@@ -63,17 +63,10 @@ RWTexture2D<float2> texture_cloudDepth : register(u1);
 
 #define LOD_Max 3
 
-#ifdef VOLUMETRICCLOUD_CAPTURE
-	#define MAX_STEP_COUNT capture.maxStepCount
-	#define LOD_Min capture.LODMin
-	#define SHADOW_SAMPLE_COUNT capture.shadowSampleCount
-	#define GROUND_CONTRIBUTION_SAMPLE_COUNT capture.groundContributionSampleCount
-#else
-	#define MAX_STEP_COUNT GetWeather().volumetric_clouds.maxStepCount
-	#define LOD_Min GetWeather().volumetric_clouds.LODMin
-	#define SHADOW_SAMPLE_COUNT GetWeather().volumetric_clouds.shadowSampleCount
-	#define GROUND_CONTRIBUTION_SAMPLE_COUNT GetWeather().volumetric_clouds.groundContributionSampleCount
-#endif // VOLUMETRICCLOUD_CAPTURE
+#define MAX_STEP_COUNT GetWeather().volumetric_clouds.maxStepCount
+#define LOD_Min GetWeather().volumetric_clouds.LODMin
+#define SHADOW_SAMPLE_COUNT GetWeather().volumetric_clouds.shadowSampleCount
+#define GROUND_CONTRIBUTION_SAMPLE_COUNT GetWeather().volumetric_clouds.groundContributionSampleCount
 
 // Participating media is the term used to describe volumes filled with particles.
 // Such particles can be large impurities, e.g. dust, pollution, water droplets, or simply particles, e.g. molecules
@@ -569,14 +562,10 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 
 		steps = MAX_STEP_COUNT * saturate((tMax - tMin) * (1.0 / GetWeather().volumetric_clouds.inverseDistanceStepCount));
 		stepSize = (tMax - tMin) / steps;
-
-#ifdef VOLUMETRICCLOUD_CAPTURE
-		float offset = 0.5; // noise avg = 0.5
-#else
+		
 		//float offset = dither(DTid.xy + GetTemporalAASampleRotation());
 		//float offset = InterleavedGradientNoise(DTid.xy, GetFrame().frame_count % 16);
 		float offset = blue_noise(DTid.xy).x;
-#endif
 				
         //t = tMin + 0.5 * stepSize;
 		t = tMin + offset * stepSize;
@@ -667,11 +656,7 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 			{
 				const float sampleCountIni = 0.0;
 				const bool variableSampleCount = true;
-#ifdef VOLUMETRICCLOUD_CAPTURE
-				const bool perPixelNoise = false;
-#else
 				const bool perPixelNoise = true;
-#endif
 				const bool opaque = true;
 				const bool ground = false;
 				const bool mieRayPhase = true;
@@ -724,22 +709,11 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	RWTexture2DArray<float4> output = bindless_rwtextures2DArray[descriptor_index(capture.texture_output)];
+	RWTexture2D<float4> output = bindless_rwtextures[descriptor_index(capture.texture_output)];
 
 	const float2 uv = (DTid.xy + 0.5) * capture.resolution_rcp;
-	const float3 N = uv_to_cubemap(uv, DTid.z);
-
-#ifdef MSAA
-	float3 uv_slice = cubemap_to_uv(N);
-	uint2 cube_dim;
-	uint cube_elements;
-	uint cube_sam;
-	texture_input_depth_MSAA.GetDimensions(cube_dim.x, cube_dim.y, cube_elements, cube_sam);
-	uv_slice.xy *= cube_dim;
-	const float depth = texture_input_depth_MSAA.Load(uv_slice, 0);
-#else
-	const float depth = texture_input_depth.SampleLevel(sampler_point_clamp, N, 0).r;
-#endif // MSAA
+	const float3 N = decode_hemioct(uv * 2 - 1).xzy;
+	const float depth = 0;
 
 	float3 depthWorldPosition = reconstruct_position(uv, depth, GetCameraIndexed(DTid.z).inverse_view_projection);
 
@@ -750,10 +724,15 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float2 cloudDepth = 0;
 	RenderClouds(DTid, uv, depth, depthWorldPosition, rayOrigin, rayDirection, cloudColor, cloudDepth);
 
-	float4 composite = output[uint3(DTid.xy, DTid.z)];
-
-    // Output
-	output[uint3(DTid.xy, DTid.z)] = float4(composite.rgb * (1.0 - cloudColor.a) + cloudColor.rgb, composite.a * (1.0 - cloudColor.a));
+	if (capture.frame == 0)
+	{
+		output[DTid.xy] = cloudColor;
+	}
+	else
+	{
+		output[DTid.xy] = lerp(output[DTid.xy], cloudColor, 0.02);
+	}
+	
 }
 #else
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
