@@ -33,7 +33,7 @@ int sdl_loop()
                             break;
                         case SDL_WINDOWEVENT_FOCUS_GAINED:
                             exampleImGui.is_window_active = true;
-                            if (wi::shadercompiler::GetRegisteredShaderCount() > 0)
+                            if (wi::shadercompiler::GetRegisteredShaderCount() > 0 && !wi::renderer::IsPipelineCreationActive())
                             {
                                 std::thread([] {
                                     wi::backlog::post("[Shader check] Started checking " + std::to_string(wi::shadercompiler::GetRegisteredShaderCount()) + " registered shaders for changes...");
