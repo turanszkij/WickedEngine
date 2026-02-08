@@ -6,7 +6,7 @@ StructuredBuffer<Particle> particleBuffer : register(t1);
 StructuredBuffer<uint> particleCellBuffer : register(t2);
 StructuredBuffer<SPHGridCell> cellBuffer : register(t3);
 
-RWByteAddressBuffer counterBuffer : register(u0);
+RWStructuredBuffer<ParticleCounters> counterBuffer : register(u0);
 RWStructuredBuffer<float> densityBuffer : register(u1);
 
 #ifndef SPH_USE_ACCELERATION_GRID
@@ -25,7 +25,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 	const float p0 = xSPH_p0;		// reference density
 	const float e = xSPH_e;			// viscosity constant
 
-	uint aliveCount = counterBuffer.Load(PARTICLECOUNTER_OFFSET_ALIVECOUNT);
+	uint aliveCount = counterBuffer[0].aliveCount;
 
 	uint particleIndexA;
 	float3 positionA;

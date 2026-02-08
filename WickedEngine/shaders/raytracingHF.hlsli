@@ -94,7 +94,7 @@ void ray_clip_plane(inout RayDesc ray, float4 clip_plane)
 groupshared uint stack[RAYTRACE_STACKSIZE][8 * 4];
 #endif // RAYTRACE_STACK_SHARED
 
-#define primitiveCounterBuffer bindless_buffers[descriptor_index(GetScene().BVH_counter)]
+#define primitiveCounterBuffer bindless_structured_uint[descriptor_index(GetScene().BVH_counter)]
 #define bvhNodeBuffer bindless_buffers[descriptor_index(GetScene().BVH_nodes)]
 #define primitiveBuffer bindless_buffers[descriptor_index(GetScene().BVH_primitives)]
 
@@ -291,7 +291,7 @@ inline RayHit TraceRay_Closest(RayDesc ray, uint mask, inout RNG rng, uint group
 #endif // RAYTRACE_STACK_SHARED
 	uint stackpos = 0;
 
-	const uint primitiveCount = primitiveCounterBuffer.Load(0);
+	const uint primitiveCount = primitiveCounterBuffer[0];
 	const uint leafNodeOffset = primitiveCount - 1;
 
 	// push root node
@@ -352,8 +352,8 @@ inline bool TraceRay_Any(RayDesc ray, uint mask, inout RNG rng, uint groupIndex 
 	uint stack[RAYTRACE_STACKSIZE][1];
 #endif // RAYTRACE_STACK_SHARED
 	uint stackpos = 0;
-
-	const uint primitiveCount = primitiveCounterBuffer.Load(0);
+	
+	const uint primitiveCount = primitiveCounterBuffer[0];
 	const uint leafNodeOffset = primitiveCount - 1;
 
 	// push root node
@@ -417,8 +417,8 @@ inline uint TraceRay_DebugBVH(RayDesc ray)
 	// Emulated stack for tree traversal:
 	uint stack[RAYTRACE_STACKSIZE];
 	uint stackpos = 0;
-
-	const uint primitiveCount = primitiveCounterBuffer.Load(0);
+	
+	const uint primitiveCount = primitiveCounterBuffer[0];
 	const uint leafNodeOffset = primitiveCount - 1;
 
 	// push root node

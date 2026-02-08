@@ -109,6 +109,7 @@ struct IndirectDispatchArgs
 #define CBSLOT_MSAO								4
 #define CBSLOT_FSR								4
 #define CBSLOT_TRAILRENDERER					3
+#define CBSLOT_GPUSORTLIB						2
 
 #else
 // Don't use overlapping slots on PS5:
@@ -136,6 +137,7 @@ struct IndirectDispatchArgs
 #define CBSLOT_MSAO								4
 #define CBSLOT_FSR								4
 #define CBSLOT_TRAILRENDERER					4
+#define CBSLOT_GPUSORTLIB						4
 #endif // !__PSSL__ && !__SCE__
 
 #endif // WI_SHADERINTEROP_H

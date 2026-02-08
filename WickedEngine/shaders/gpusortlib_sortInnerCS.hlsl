@@ -32,20 +32,11 @@
 #define NUM_THREADS		(SORT_SIZE/2)
 #define INVERSION		(16*2 + 8*3)
 
-//--------------------------------------------------------------------------------------
-// Structured Buffers
-//--------------------------------------------------------------------------------------
-ByteAddressBuffer counterBuffer : register(t0);
-StructuredBuffer<float> comparisonBuffer : register(t1);
+StructuredBuffer<float> comparisonBuffer : register(t0);
 
 RWStructuredBuffer<uint> indexBuffer : register(u0);
 
-
-//--------------------------------------------------------------------------------------
-// Bitonic Sort Compute Shader
-//--------------------------------------------------------------------------------------
 groupshared float2	g_LDS[SORT_SIZE];
-
 
 [numthreads(NUM_THREADS, 1, 1)]
 void main(uint3 Gid	: SV_GroupID,
@@ -53,7 +44,7 @@ void main(uint3 Gid	: SV_GroupID,
 	uint3 GTid : SV_GroupThreadID,
 	uint	GI : SV_GroupIndex)
 {
-	uint NumElements = counterBuffer.Load(sort.counterReadOffset);
+	uint NumElements = counterBuffer.count;
 
 	uint4 tgp;
 

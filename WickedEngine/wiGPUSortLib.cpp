@@ -10,12 +10,12 @@ using namespace wi::graphics;
 
 namespace wi::gpusortlib
 {
+	static GPUBuffer constantBuffer;
 	static GPUBuffer indirectBuffer;
 	static Shader kickoffSortCS;
 	static Shader sortCS;
 	static Shader sortInnerCS;
 	static Shader sortStepCS;
-
 
 	void LoadShaders()
 	{
@@ -23,7 +23,6 @@ namespace wi::gpusortlib
 		wi::renderer::LoadShader(ShaderStage::CS, sortCS, "gpusortlib_sortCS.cso");
 		wi::renderer::LoadShader(ShaderStage::CS, sortInnerCS, "gpusortlib_sortInnerCS.cso");
 		wi::renderer::LoadShader(ShaderStage::CS, sortStepCS, "gpusortlib_sortStepCS.cso");
-
 	}
 
 	void Initialize()
@@ -32,9 +31,15 @@ namespace wi::gpusortlib
 
 		GPUBufferDesc bd;
 		bd.usage = Usage::DEFAULT;
+
+		bd.bind_flags = BindFlag::CONSTANT_BUFFER;
+		bd.size = sizeof(SortCount);
+		wi::graphics::GetDevice()->CreateBuffer(&bd, nullptr, &constantBuffer);
+
 		bd.bind_flags = BindFlag::UNORDERED_ACCESS;
-		bd.misc_flags = ResourceMiscFlag::INDIRECT_ARGS | ResourceMiscFlag::BUFFER_RAW;
-		bd.size = sizeof(IndirectDispatchArgs);
+		bd.misc_flags = ResourceMiscFlag::INDIRECT_ARGS | ResourceMiscFlag::BUFFER_STRUCTURED;
+		bd.stride = sizeof(IndirectDispatchArgs);
+		bd.size = bd.stride;
 		wi::graphics::GetDevice()->CreateBuffer(&bd, nullptr, &indirectBuffer);
 
 		static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
@@ -47,8 +52,8 @@ namespace wi::gpusortlib
 	void Sort(
 		uint32_t maxCount, 
 		const GPUBuffer& comparisonBuffer_read, 
-		const GPUBuffer& counterBuffer_read, 
-		uint32_t counterReadOffset, 
+		const GPUBuffer& counterBuffer_read,
+		uint counterReadOffset,
 		const GPUBuffer& indexBuffer_write,
 		CommandList cmd)
 	{
@@ -56,44 +61,42 @@ namespace wi::gpusortlib
 
 		device->EventBegin("GPUSortLib", cmd);
 
+		// init count constant buffer from source buffer and offset:
+		{
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Buffer(&counterBuffer_read, ResourceState::SHADER_RESOURCE, ResourceState::COPY_SRC),
+					GPUBarrier::Buffer(&constantBuffer, ResourceState::CONSTANT_BUFFER, ResourceState::COPY_DST),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+			device->CopyBuffer(&constantBuffer, offsetof(SortCount, count), &counterBuffer_read, counterReadOffset, sizeof(SortCount::count), cmd);
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Buffer(&counterBuffer_read, ResourceState::COPY_SRC, ResourceState::SHADER_RESOURCE),
+					GPUBarrier::Buffer(&constantBuffer, ResourceState::COPY_DST, ResourceState::CONSTANT_BUFFER),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
 
-		SortConstants sort;
-		sort.counterReadOffset = counterReadOffset;
+			device->BindConstantBuffer(&constantBuffer, CBSLOT_GPUSORTLIB, cmd);
+		}
 
 		// initialize sorting arguments:
 		{
 			device->BindComputeShader(&kickoffSortCS, cmd);
-
-			const GPUResource* res[] = {
-				&counterBuffer_read,
-			};
-			device->BindResources(res, 0, arraysize(res), cmd);
 
 			const GPUResource* uavs[] = {
 				&indirectBuffer,
 			};
 			device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Buffer(&indirectBuffer, ResourceState::INDIRECT_ARGUMENT, ResourceState::UNORDERED_ACCESS)
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
+			device->Barrier(GPUBarrier::Buffer(&indirectBuffer, ResourceState::INDIRECT_ARGUMENT, ResourceState::UNORDERED_ACCESS), cmd);
 
-			device->PushConstants(&sort, sizeof(sort), cmd);
 			device->Dispatch(1, 1, 1, cmd);
 
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Memory(),
-					GPUBarrier::Buffer(&indirectBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::INDIRECT_ARGUMENT)
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
-
+			device->Barrier(GPUBarrier::Buffer(&indirectBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::INDIRECT_ARGUMENT), cmd);
 		}
-
 
 		const GPUResource* uavs[] = {
 			&indexBuffer_write,
@@ -101,7 +104,6 @@ namespace wi::gpusortlib
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		const GPUResource* resources[] = {
-			&counterBuffer_read,
 			&comparisonBuffer_read,
 		};
 		device->BindResources(resources, 0, arraysize(resources), cmd);
@@ -125,13 +127,10 @@ namespace wi::gpusortlib
 
 			// sort all buffers of size 512 (and presort bigger ones)
 			device->BindComputeShader(&sortCS, cmd);
-			device->PushConstants(&sort, sizeof(sort), cmd);
+
 			device->DispatchIndirect(&indirectBuffer, 0, cmd);
 
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
+			device->Barrier(GPUBarrier::Memory(), cmd);
 		}
 
 		int presorted = 512;
@@ -171,7 +170,6 @@ namespace wi::gpusortlib
 					sort.job_params.y = nMergeSubSize;
 					sort.job_params.z = 1;
 				}
-				sort.counterReadOffset = counterReadOffset;
 
 				device->PushConstants(&sort, sizeof(sort), cmd);
 				device->Dispatch(numThreadGroups, 1, 1, cmd);
@@ -183,7 +181,6 @@ namespace wi::gpusortlib
 			}
 
 			device->BindComputeShader(&sortInnerCS, cmd);
-			device->PushConstants(&sort, sizeof(sort), cmd);
 			device->Dispatch(numThreadGroups, 1, 1, cmd);
 
 			GPUBarrier barriers[] = {

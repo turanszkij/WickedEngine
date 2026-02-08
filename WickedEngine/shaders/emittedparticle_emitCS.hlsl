@@ -15,7 +15,7 @@ RWStructuredBuffer<Particle> particleBuffer : register(u0);
 RWStructuredBuffer<uint> aliveBuffer_CURRENT : register(u1);
 RWStructuredBuffer<uint> aliveBuffer_NEW : register(u2);
 RWStructuredBuffer<uint> deadBuffer : register(u3);
-RWByteAddressBuffer counterBuffer : register(u4);
+RWStructuredBuffer<ParticleCounters> counterBuffer : register(u4);
 
 [numthreads(64, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
@@ -187,7 +187,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	
 	// new particle index retrieved from dead list (pop):
 	int deadCount;
-	counterBuffer.InterlockedAdd(PARTICLECOUNTER_OFFSET_DEADCOUNT, -1, deadCount);
+	InterlockedAdd(counterBuffer[0].deadCount, -1, deadCount);
 	if(deadCount < 1)
 		return;
 
@@ -198,6 +198,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	// and add index to the alive list (push):
 	uint aliveCount;
-	counterBuffer.InterlockedAdd(PARTICLECOUNTER_OFFSET_ALIVECOUNT_AFTERSIMULATION, 1, aliveCount);
+	InterlockedAdd(counterBuffer[0].aliveCount_afterSimulation, 1, aliveCount);
 	aliveBuffer_CURRENT[aliveCount] = newParticleIndex;
 }

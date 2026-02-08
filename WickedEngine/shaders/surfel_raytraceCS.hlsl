@@ -7,7 +7,7 @@
 PUSHCONSTANT(push, PushConstantsSurfelRaytrace);
 
 StructuredBuffer<Surfel> surfelBuffer : register(t0);
-ByteAddressBuffer surfelStatsBuffer : register(t1);
+StructuredBuffer<SurfelStats> surfelStatsBuffer : register(t1);
 StructuredBuffer<SurfelGridCell> surfelGridBuffer : register(t2);
 StructuredBuffer<uint> surfelCellBuffer : register(t3);
 StructuredBuffer<uint> surfelAliveBuffer : register(t4);
@@ -18,7 +18,7 @@ RWStructuredBuffer<SurfelRayDataPacked> surfelRayBuffer : register(u0);
 [numthreads(SURFEL_INDIRECT_NUMTHREADS, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	uint global_ray_count = surfelStatsBuffer.Load(SURFEL_STATS_OFFSET_RAYCOUNT);
+	uint global_ray_count = surfelStatsBuffer[0].rayCount;
 	if (DTid.x >= global_ray_count)
 		return;
 
