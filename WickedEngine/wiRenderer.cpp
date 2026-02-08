@@ -10857,6 +10857,14 @@ void RayTraceScene(
 	{
 		PushBarrier(GPUBarrier::Image(output_primitiveID, ResourceState::UNORDERED_ACCESS, output_primitiveID->desc.layout));
 	}
+	if (output_depth != nullptr)
+	{
+		PushBarrier(GPUBarrier::Image(output_depth, ResourceState::UNORDERED_ACCESS, output_depth->desc.layout));
+	}
+	if (output_stencil != nullptr)
+	{
+		PushBarrier(GPUBarrier::Image(output_stencil, ResourceState::UNORDERED_ACCESS, output_depth->desc.layout));
+	}
 
 	PushBarrier(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout));
 	FlushBarriers(cmd);

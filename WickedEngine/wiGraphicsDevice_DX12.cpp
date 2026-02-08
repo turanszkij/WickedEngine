@@ -3544,7 +3544,7 @@ std::mutex queue_locker;
 
 		D3D12_RESOURCE_STATES resourceState = _ParseResourceState(texture->desc.layout);
 
-		if (initial_data != nullptr)
+		if (initial_data != nullptr || (resourcedesc.Flags & D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS))
 		{
 			resourceState = D3D12_RESOURCE_STATE_COMMON;
 		}
