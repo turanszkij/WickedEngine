@@ -144,8 +144,8 @@ float3 GetDynamicSkyColor(in float2 pixel, in float3 V, bool sun_enabled = true,
     }
 
 	sky *= GetWeather().sky_exposure;
-
-	if (sun_enabled && V.y > 0 && GetScene().texture_cloudmap >= 0)
+	
+	if (V.y > 0 && GetScene().texture_cloudmap >= 0 && !stationary)
 	{
 		float4 clouds = bindless_textures[descriptor_index(GetScene().texture_cloudmap)].SampleLevel(sampler_linear_clamp, encode_hemioct(V.xzy) * 0.5 + 0.5, 0);
 		if (dark_enabled)

@@ -851,7 +851,7 @@ namespace wi::renderer
 		const VolumetricCloudResources& res,
 		wi::graphics::CommandList cmd
 	);
-	void VolumetricClouds_CaptureCubemap(
+	void VolumetricClouds_Capture(
 		const wi::scene::Scene& scene,
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd

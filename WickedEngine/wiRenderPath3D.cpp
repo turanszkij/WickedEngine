@@ -911,8 +911,6 @@ namespace wi
 			);
 			wi::renderer::UpdateRenderDataAsync(visibility_main, frameCB, cmd);
 
-			wi::renderer::VolumetricClouds_CaptureCubemap(*scene, scene->cloudmap, cmd);
-
 			if (scene->IsWetmapProcessingRequired())
 			{
 				wi::renderer::RefreshWetmaps(visibility_main, cmd);

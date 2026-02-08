@@ -26,12 +26,8 @@
  *     Small example: https://www.shadertoy.com/view/XlBSRz
  *
  */
-
-#ifdef VOLUMETRICCLOUD_CAPTURE
-PUSHCONSTANT(capture, VolumetricCloudCapturePushConstants);
-#else
+ 
 PUSHCONSTANT(postprocess, PostProcess);
-#endif // VOLUMETRICCLOUD_CAPTURE
 
 Texture3D<float4> texture_shapeNoise : register(t0);
 Texture3D<float4> texture_detailNoise : register(t1);
@@ -39,18 +35,10 @@ Texture2D<float4> texture_curlNoise : register(t2);
 Texture2D<float4> texture_weatherMapFirst : register(t3);
 Texture2D<float4> texture_weatherMapSecond : register(t4);
 
-#ifdef VOLUMETRICCLOUD_CAPTURE
-
-#ifdef MSAA
-Texture2DMSArray<float> texture_input_depth_MSAA : register(t5);
-#else
-TextureCube<float> texture_input_depth : register(t5);
-#endif // MSAA
-
-#else
 RWTexture2D<float4> texture_render : register(u0);
 RWTexture2D<float2> texture_cloudDepth : register(u1);
-#endif // VOLUMETRICCLOUD_CAPTURE
+
+static const uint2 halfResIndexToCoordinateOffset[4] = { uint2(0, 0), uint2(1, 0), uint2(0, 1), uint2(1, 1) };
 
 // Octaves for multiple-scattering approximation. 1 means single-scattering only.
 #define MS_COUNT 2
@@ -709,37 +697,33 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	RWTexture2D<float4> output = bindless_rwtextures[descriptor_index(capture.texture_output)];
+	const float blend = volumetricclouds_frame == 0 ? 1 : 0.025;
+	const uint unroll_count = volumetricclouds_frame == 0 ? 4 : 1; // render all checkerboard  samples on first frame
 
-	const float2 uv = (DTid.xy + 0.5) * capture.resolution_rcp;
-	const float3 N = decode_hemioct(uv * 2 - 1).xzy;
-	const float depth = 0;
-
-	float3 depthWorldPosition = reconstruct_position(uv, depth, GetCameraIndexed(DTid.z).inverse_view_projection);
-
-	float3 rayOrigin = GetCameraIndexed(DTid.z).position;
-	float3 rayDirection = normalize(N);
-
-	float4 cloudColor = 0;
-	float2 cloudDepth = 0;
-	RenderClouds(DTid, uv, depth, depthWorldPosition, rayOrigin, rayDirection, cloudColor, cloudDepth);
-
-	if (capture.frame == 0)
+	for (uint i = 0; i < unroll_count; ++i)
 	{
-		output[DTid.xy] = cloudColor;
-	}
-	else
-	{
-		output[DTid.xy] = lerp(output[DTid.xy], cloudColor, 0.02);
-	}
+		int subPixelIndex = uint(volumetricclouds_frame + i) % 4;
+		int checkerBoardIndex = ComputeCheckerBoardIndex(DTid.xy, subPixelIndex);
+		uint2 halfResCoord = DTid.xy * 2 + halfResIndexToCoordinateOffset[checkerBoardIndex];
 	
+		const float2 uv = (halfResCoord + 0.5) * postprocess.params0.zw;
+		const float3 N = decode_hemioct(uv * 2 - 1).xzy;
+		const float depth = 0;
+
+		float3 rayOrigin = GetCamera().position;
+		float3 rayDirection = normalize(N);
+
+		float4 cloudColor = 0;
+		float2 cloudDepth = 0;
+		RenderClouds(DTid, uv, depth, 0, rayOrigin, rayDirection, cloudColor, cloudDepth);
+
+		texture_render[halfResCoord] = lerp(texture_render[halfResCoord], cloudColor, blend);
+	}
 }
 #else
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	const uint2 halfResIndexToCoordinateOffset[4] = { uint2(0, 0), uint2(1, 0), uint2(0, 1), uint2(1, 1) };
-	
 	int subPixelIndex = uint(volumetricclouds_frame) % 4;
 	int checkerBoardIndex = ComputeCheckerBoardIndex(DTid.xy, subPixelIndex);
 	uint2 halfResCoord = DTid.xy * 2 + halfResIndexToCoordinateOffset[checkerBoardIndex];
@@ -761,7 +745,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float2 cloudDepth = 0;
 	RenderClouds(DTid, uv, depth, depthWorldPosition, rayOrigin, rayDirection, cloudColor, cloudDepth);
 	
-    // Output
+	// Output
 	texture_render[DTid.xy] = cloudColor;
 	texture_cloudDepth[DTid.xy] = cloudDepth;
 }

@@ -5609,6 +5609,11 @@ void UpdateRenderDataAsync(
 		}
 	}
 
+	if (vis.scene->weather.IsVolumetricClouds())
+	{
+		VolumetricClouds_Capture(*vis.scene, vis.scene->cloudmap, cmd);
+	}
+
 	// GPU Particle systems simulation/sorting/culling:
 	if (!vis.visibleEmitters.empty() || vis.scene->weather.rain_amount > 0)
 	{
@@ -16730,14 +16735,12 @@ void Postprocess_VolumetricClouds_Upsample(
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);
 }
-void VolumetricClouds_CaptureCubemap(
+void VolumetricClouds_Capture(
 	const wi::scene::Scene& scene,
 	const Texture& output,
 	CommandList cmd
 )
 {
-	if (!scene.weather.IsVolumetricClouds())
-		return;
 	auto range = wi::profiler::BeginRangeGPU("Volumetric Cloud Capture", cmd);
 	device->EventBegin("Volumetric Cloud Capture", cmd);
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_RENDER_CAPTURE], cmd);
@@ -16764,17 +16767,21 @@ void VolumetricClouds_CaptureCubemap(
 		device->BindResource(&texture_weatherMap, 4, cmd);
 	}
 
+	device->BindUAV(&scene.cloudmap, 0, cmd);
+
 	TextureDesc desc = scene.cloudmap.GetDesc();
 
-	VolumetricCloudCapturePushConstants push = {};
-	push.resolution.x = desc.width;
-	push.resolution.y = desc.height;
-	push.resolution_rcp.x = 1.0f / push.resolution.x;
-	push.resolution_rcp.y = 1.0f / push.resolution.y;
-	push.texture_output = device->GetDescriptorIndex(&scene.cloudmap, SubresourceType::UAV);
-	push.frame = scene.cloudmap_frame;
-
-	device->PushConstants(&push, sizeof(push), cmd);
+	PostProcess postprocess = {};
+	postprocess.resolution.x = desc.width / 2;
+	postprocess.resolution.y = desc.height / 2;
+	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	postprocess.params0.x = (float)postprocess.resolution.x * 2;
+	postprocess.params0.y = (float)postprocess.resolution.y * 2;
+	postprocess.params0.z = 1.0f / postprocess.params0.x;
+	postprocess.params0.w = 1.0f / postprocess.params0.y;
+	volumetricclouds_frame = (float)scene.cloudmap_frame;
+	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	device->Barrier(GPUBarrier::Image(&scene.cloudmap, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS), cmd);
 
@@ -16782,14 +16789,15 @@ void VolumetricClouds_CaptureCubemap(
 	{
 		device->ClearUAV(&scene.cloudmap, 0, cmd);
 		device->Barrier(GPUBarrier::Memory(&scene.cloudmap), cmd);
-		scene.cloudmap_frame++;
 	}
+	scene.cloudmap_frame++;
 
 	device->Dispatch(
 		(desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
 		(desc.height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
 		1,
-		cmd);
+		cmd
+	);
 
 	device->Barrier(GPUBarrier::Image(&scene.cloudmap, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE), cmd);
 

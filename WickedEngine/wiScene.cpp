@@ -836,17 +836,24 @@ namespace wi::scene
 			}
 		}
 
-		if (weather.IsVolumetricClouds() && !cloudmap.IsValid())
+		if (weather.IsVolumetricClouds())
 		{
-			TextureDesc desc;
-			desc.format = Format::R16G16B16A16_FLOAT;
-			desc.width = 512;
-			desc.height = desc.width;
-			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-			bool success = device->CreateTexture(&desc, nullptr, &cloudmap);
-			assert(success);
-			device->SetName(&cloudmap, "cloudmap");
-			cloudmap_frame = 0;
+			if (!cloudmap.IsValid())
+			{
+				TextureDesc desc;
+				desc.format = Format::R16G16B16A16_FLOAT;
+				desc.width = 512;
+				desc.height = desc.width;
+				desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+				bool success = device->CreateTexture(&desc, nullptr, &cloudmap);
+				assert(success);
+				device->SetName(&cloudmap, "cloudmap");
+				cloudmap_frame = 0;
+			}
+		}
+		else
+		{
+			cloudmap = {};
 		}
 
 		// Shader scene resources:
