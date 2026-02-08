@@ -724,7 +724,6 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	TextureCube input = bindless_cubemaps[descriptor_index(capture.texture_input)];
 	RWTexture2DArray<float4> output = bindless_rwtextures2DArray[descriptor_index(capture.texture_output)];
 
 	const float2 uv = (DTid.xy + 0.5) * capture.resolution_rcp;
@@ -751,7 +750,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float2 cloudDepth = 0;
 	RenderClouds(DTid, uv, depth, depthWorldPosition, rayOrigin, rayDirection, cloudColor, cloudDepth);
 
-	float4 composite = input.SampleLevel(sampler_linear_clamp, N, 0);
+	float4 composite = output[uint3(DTid.xy, DTid.z)];
 
     // Output
 	output[uint3(DTid.xy, DTid.z)] = float4(composite.rgb * (1.0 - cloudColor.a) + cloudColor.rgb, composite.a * (1.0 - cloudColor.a));

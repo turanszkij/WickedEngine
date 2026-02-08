@@ -95,7 +95,6 @@ void RenderAerialPerspective(uint3 DTid, float2 uv, float depth, float3 depthWor
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	TextureCube input = bindless_cubemaps[descriptor_index(capture.texture_input)];
 	RWTexture2DArray<float4> output = bindless_rwtextures2DArray[descriptor_index(capture.texture_output)];
 
 	const float2 uv = (DTid.xy + 0.5) * capture.resolution_rcp;
@@ -113,7 +112,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float depth = texture_input_depth.SampleLevel(sampler_point_clamp, N, 0).r;
 #endif // MSAA
 
-	float4 composite = input.SampleLevel(sampler_linear_clamp, N, 0);
+	float4 composite = output[uint3(DTid.xy, DTid.z)];
 
 	// Ignore skybox
 	if (depth == 0.0)

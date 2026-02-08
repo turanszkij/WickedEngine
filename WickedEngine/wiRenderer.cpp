@@ -9361,7 +9361,6 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			push.resolution.y = desc.height;
 			push.resolution_rcp.x = 1.0f / push.resolution.x;
 			push.resolution_rcp.y = 1.0f / push.resolution.y;
-			push.texture_input = device->GetDescriptorIndex(&envrenderingColorBuffer, SubresourceType::SRV);
 			push.texture_output = device->GetDescriptorIndex(&envrenderingColorBuffer, SubresourceType::UAV);
 
 			device->PushConstants(&push, sizeof(push), cmd);
@@ -9425,7 +9424,6 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			push.resolution.y = desc.height;
 			push.resolution_rcp.x = 1.0f / push.resolution.x;
 			push.resolution_rcp.y = 1.0f / push.resolution.y;
-			push.texture_input = device->GetDescriptorIndex(&envrenderingColorBuffer, SubresourceType::SRV);
 			push.texture_output = device->GetDescriptorIndex(&envrenderingColorBuffer, SubresourceType::UAV);
 
 			if (probe.IsRealTime())

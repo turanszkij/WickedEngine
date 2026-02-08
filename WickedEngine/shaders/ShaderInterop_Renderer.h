@@ -1720,10 +1720,10 @@ struct AerialPerspectiveCapturePushConstants
 	uint2 resolution;
 	float2 resolution_rcp;
 
-	int texture_input;
 	int texture_output;
 	float padding0;
 	float padding1;
+	float padding2;
 };
 
 struct VolumetricCloudCapturePushConstants
@@ -1731,15 +1731,15 @@ struct VolumetricCloudCapturePushConstants
 	uint2 resolution;
 	float2 resolution_rcp;
 
-	int texture_input;
 	int texture_output;
 	int maxStepCount;
 	float LODMin;
-
 	float shadowSampleCount;
+
 	float groundContributionSampleCount;
 	float padding0;
 	float padding1;
+	float padding2;
 };
 
 
