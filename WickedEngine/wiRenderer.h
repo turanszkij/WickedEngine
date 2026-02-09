@@ -853,7 +853,6 @@ namespace wi::renderer
 	);
 	void VolumetricClouds_Capture(
 		const wi::scene::Scene& scene,
-		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd
 	);
 	void Postprocess_FXAA(

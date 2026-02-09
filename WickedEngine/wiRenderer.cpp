@@ -5611,7 +5611,7 @@ void UpdateRenderDataAsync(
 
 	if (vis.scene->weather.IsVolumetricClouds())
 	{
-		VolumetricClouds_Capture(*vis.scene, vis.scene->cloudmap, cmd);
+		VolumetricClouds_Capture(*vis.scene, cmd);
 	}
 
 	// GPU Particle systems simulation/sorting/culling:
@@ -16737,7 +16737,6 @@ void Postprocess_VolumetricClouds_Upsample(
 }
 void VolumetricClouds_Capture(
 	const wi::scene::Scene& scene,
-	const Texture& output,
 	CommandList cmd
 )
 {
@@ -16768,6 +16767,7 @@ void VolumetricClouds_Capture(
 	}
 
 	device->BindUAV(&scene.cloudmap, 0, cmd);
+	device->BindUAV(&scene.cloudmap_variance, 2, cmd);
 
 	TextureDesc desc = scene.cloudmap.GetDesc();
 
@@ -16788,18 +16788,20 @@ void VolumetricClouds_Capture(
 	if (scene.cloudmap_frame == 0)
 	{
 		device->ClearUAV(&scene.cloudmap, 0, cmd);
-		device->Barrier(GPUBarrier::Memory(&scene.cloudmap), cmd);
+		device->ClearUAV(&scene.cloudmap_variance, 0, cmd);
+		device->Barrier(GPUBarrier::Memory(), cmd);
 	}
-	scene.cloudmap_frame++;
 
 	device->Dispatch(
-		(desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-		(desc.height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		(postprocess.resolution.x + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		(postprocess.resolution.y + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
 		1,
 		cmd
 	);
 
 	device->Barrier(GPUBarrier::Image(&scene.cloudmap, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE), cmd);
+
+	scene.cloudmap_frame++;
 
 	device->EventEnd(cmd);
 	wi::profiler::EndRange(range);

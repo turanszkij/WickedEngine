@@ -151,7 +151,6 @@ namespace wi
 		wi::renderer::AerialPerspectiveResources aerialperspectiveResources;
 		wi::renderer::AerialPerspectiveResources aerialperspectiveResources_reflection;
 		wi::renderer::VolumetricCloudResources volumetriccloudResources;
-		wi::renderer::VolumetricCloudResources volumetriccloudResources_reflection;
 		wi::renderer::BloomResources bloomResources;
 		wi::renderer::SurfelGIResources surfelGIResources;
 		wi::renderer::TemporalAAResources temporalAAResources;

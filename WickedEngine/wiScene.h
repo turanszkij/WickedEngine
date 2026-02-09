@@ -81,6 +81,7 @@ namespace wi::scene
 		wi::vector<wi::primitive::AABB> parallel_bounds;
 		WeatherComponent weather;
 		wi::graphics::Texture cloudmap;
+		wi::graphics::GPUBuffer cloudmap_variance;
 		mutable int cloudmap_frame = 0;
 		wi::graphics::RaytracingAccelerationStructure TLAS;
 		wi::graphics::GPUBuffer TLAS_instancesUpload[wi::graphics::GraphicsDevice::GetBufferCount()];

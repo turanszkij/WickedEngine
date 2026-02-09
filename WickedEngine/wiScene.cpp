@@ -840,6 +840,8 @@ namespace wi::scene
 		{
 			if (!cloudmap.IsValid())
 			{
+				cloudmap_frame = 0;
+
 				TextureDesc desc;
 				desc.format = Format::R16G16B16A16_FLOAT;
 				desc.width = 512;
@@ -848,12 +850,22 @@ namespace wi::scene
 				bool success = device->CreateTexture(&desc, nullptr, &cloudmap);
 				assert(success);
 				device->SetName(&cloudmap, "cloudmap");
-				cloudmap_frame = 0;
+
+				GPUBufferDesc bd;
+				bd.stride = sizeof(XMUINT4) * 4;
+				bd.size = bd.stride * (desc.width / 2) * (desc.height / 2);
+				bd.bind_flags = BindFlag::UNORDERED_ACCESS;
+				bd.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
+				success = device->CreateBuffer(&bd, nullptr, &cloudmap_variance);
+				device->SetName(&cloudmap_variance, "cloudmap_variance");
+
+				wilog("Created volumetric cloud map: %s", wi::helper::GetMemorySizeText(ComputeTextureMemorySizeInBytes(desc) + bd.size).c_str());
 			}
 		}
 		else
 		{
 			cloudmap = {};
+			cloudmap_variance = {};
 		}
 
 		// Shader scene resources:
