@@ -374,6 +374,13 @@ namespace wi
 				wi::renderer::BindCommonResources(cmd);
 				wi::renderer::UpdateRenderDataAsync(visibility_main, frameCB, cmd);
 
+				// just clear depth for safety:
+				RenderPassImage rp[] = {
+					RenderPassImage::DepthStencil(&depthBuffer_Main, RenderPassImage::LoadOp::CLEAR),
+				};
+				device->RenderPassBegin(rp, arraysize(rp), cmd);
+				device->RenderPassEnd(cmd);
+
 				if (scene->weather.IsRealisticSky())
 				{
 					wi::renderer::ComputeSkyAtmosphereTextures(cmd);
