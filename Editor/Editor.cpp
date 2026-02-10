@@ -2024,8 +2024,10 @@ void EditorComponent::Update(float dt)
 
 			move = XMVectorLerp(move, moveNew, std::min(1.0f, cameraWnd.accelerationSlider.GetValue() * clampedDT / 0.0166f)); // smooth the movement a bit
 			float moveLength = XMVectorGetX(XMVector3Length(move));
+			float moveNewLength = XMVectorGetX(XMVector3Length(moveNew));
 
-			if (moveLength < 0.0001f)
+			// Only zero out movement when there is no input
+			if (moveLength < 0.0001f && moveNewLength < 0.0001f)
 			{
 				move = XMVectorSet(0, 0, 0, 0);
 			}
