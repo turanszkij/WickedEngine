@@ -34,12 +34,18 @@ VertexOut main(uint vertexID : SV_VertexID)
 		for (float x = -range.x; x <= range.x; x += step.x)
 		{
 			samples++;
-			float vis = texture_occlusion.SampleLevel(sampler_linear_clamp, push.xLensFlarePos.xy + float2(x, y), 0).r;
-			vis *= texture_depth.SampleLevel(sampler_point_clamp, push.xLensFlarePos.xy + float2(x, y), 0).r <= referenceDepth ? 1 : 0;
-			visibility += vis;
+			visibility += texture_depth.SampleLevel(sampler_point_clamp, push.xLensFlarePos.xy + float2(x, y), 0).r <= referenceDepth ? 1 : 0;
 		}
 	}
 	visibility /= samples;
+
+	if (any(push.xLensFlareDirectionalLight) && GetScene().texture_cloudmap >= 0)
+	{
+		// Cloud mask directional occlusion:
+		half3 V = -unpack_half3(push.xLensFlareDirectionalLight);
+		float4 cloudmap = bindless_textures[descriptor_index(GetScene().texture_cloudmap)].SampleLevel(sampler_linear_clamp, encode_hemioct(V.xzy) * 0.5 + 0.5, 0);
+		visibility *= 1 - cloudmap.a;
+	}
 
 	Out.opacity = visibility;
 

@@ -668,22 +668,23 @@ namespace wi::graphics
 		uint32_t query_count = 0;
 	};
 
+	// This structure contains pointers to render state config, the pointers must be valid until the pipeline state is in use!
 	struct PipelineStateDesc
 	{
-		const Shader*			vs = nullptr;
-		const Shader*			ps = nullptr;
-		const Shader*			hs = nullptr;
-		const Shader*			ds = nullptr;
-		const Shader*			gs = nullptr;
-		const Shader*			ms = nullptr;
-		const Shader*			as = nullptr;
-		const BlendState*		bs = nullptr;
-		const RasterizerState*	rs = nullptr;
+		const Shader* vs = nullptr;
+		const Shader* ps = nullptr;
+		const Shader* hs = nullptr;
+		const Shader* ds = nullptr;
+		const Shader* gs = nullptr;
+		const Shader* ms = nullptr;
+		const Shader* as = nullptr;
+		const BlendState* bs = nullptr;
+		const RasterizerState* rs = nullptr;
 		const DepthStencilState* dss = nullptr;
-		const InputLayout*		il = nullptr;
-		PrimitiveTopology		pt = PrimitiveTopology::TRIANGLELIST;
-		uint32_t                patch_control_points = 3;
-		uint32_t				sample_mask = 0xFFFFFFFF;
+		const InputLayout* il = nullptr;
+		PrimitiveTopology pt = PrimitiveTopology::TRIANGLELIST;
+		uint32_t patch_control_points = 3;
+		uint32_t sample_mask = 0xFFFFFFFF;
 	};
 
 	struct GPUBarrier

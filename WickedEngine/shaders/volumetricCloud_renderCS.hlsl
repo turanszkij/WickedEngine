@@ -26,12 +26,8 @@
  *     Small example: https://www.shadertoy.com/view/XlBSRz
  *
  */
-
-#ifdef VOLUMETRICCLOUD_CAPTURE
-PUSHCONSTANT(capture, VolumetricCloudCapturePushConstants);
-#else
+ 
 PUSHCONSTANT(postprocess, PostProcess);
-#endif // VOLUMETRICCLOUD_CAPTURE
 
 Texture3D<float4> texture_shapeNoise : register(t0);
 Texture3D<float4> texture_detailNoise : register(t1);
@@ -39,18 +35,69 @@ Texture2D<float4> texture_curlNoise : register(t2);
 Texture2D<float4> texture_weatherMapFirst : register(t3);
 Texture2D<float4> texture_weatherMapSecond : register(t4);
 
-#ifdef VOLUMETRICCLOUD_CAPTURE
-
-#ifdef MSAA
-Texture2DMSArray<float> texture_input_depth_MSAA : register(t5);
-#else
-TextureCube<float> texture_input_depth : register(t5);
-#endif // MSAA
-
-#else
 RWTexture2D<float4> texture_render : register(u0);
 RWTexture2D<float2> texture_cloudDepth : register(u1);
-#endif // VOLUMETRICCLOUD_CAPTURE
+
+struct Variance
+{
+	float4 history[4];
+	float variance_smooth;
+
+	float update(float4 current)
+	{
+		float4 sum = current;
+		for (uint i = 0; i < arraysize(history); ++i)
+		{
+			sum += history[i];
+		}
+		float4 mean = sum / float(arraysize(history) + 1);
+
+		float4 variance = sqr(current - mean);
+		for (uint i = 0; i < arraysize(history); ++i)
+		{
+			variance += sqr(history[i] - mean);
+		}
+		variance /= (float)arraysize(history);
+
+		for (uint i = 0; i < arraysize(history) - 1; ++i)
+		{
+			history[i] = history[i + 1];
+		}
+		history[arraysize(history) - 1] = current;
+
+		float maxv = max4(variance);
+		variance_smooth = lerp(variance_smooth, maxv, maxv > variance_smooth ? 0.8 : 0.01);
+		return variance_smooth;
+	}
+};
+struct VariancePacked
+{
+	uint4 data0;
+	uint4 data1;
+	float variance_smooth;
+
+	void store(Variance variance)
+	{
+		data0.xy = pack_half4(variance.history[0]);
+		data0.zw = pack_half4(variance.history[1]);
+		data1.xy = pack_half4(variance.history[2]);
+		data1.zw = pack_half4(variance.history[3]);
+		variance_smooth = variance.variance_smooth;
+	};
+	Variance load()
+	{
+		Variance ret;
+		ret.history[0] = unpack_half4(data0.xy);
+		ret.history[1] = unpack_half4(data0.zw);
+		ret.history[2] = unpack_half4(data1.xy);
+		ret.history[3] = unpack_half4(data1.zw);
+		ret.variance_smooth = variance_smooth;
+		return ret;
+	}
+};
+RWStructuredBuffer<VariancePacked> variance_data : register(u2);
+
+static const uint2 halfResIndexToCoordinateOffset[4] = { uint2(0, 0), uint2(1, 0), uint2(0, 1), uint2(1, 1) };
 
 // Octaves for multiple-scattering approximation. 1 means single-scattering only.
 #define MS_COUNT 2
@@ -63,17 +110,10 @@ RWTexture2D<float2> texture_cloudDepth : register(u1);
 
 #define LOD_Max 3
 
-#ifdef VOLUMETRICCLOUD_CAPTURE
-	#define MAX_STEP_COUNT capture.maxStepCount
-	#define LOD_Min capture.LODMin
-	#define SHADOW_SAMPLE_COUNT capture.shadowSampleCount
-	#define GROUND_CONTRIBUTION_SAMPLE_COUNT capture.groundContributionSampleCount
-#else
-	#define MAX_STEP_COUNT GetWeather().volumetric_clouds.maxStepCount
-	#define LOD_Min GetWeather().volumetric_clouds.LODMin
-	#define SHADOW_SAMPLE_COUNT GetWeather().volumetric_clouds.shadowSampleCount
-	#define GROUND_CONTRIBUTION_SAMPLE_COUNT GetWeather().volumetric_clouds.groundContributionSampleCount
-#endif // VOLUMETRICCLOUD_CAPTURE
+#define MAX_STEP_COUNT GetWeather().volumetric_clouds.maxStepCount
+#define LOD_Min GetWeather().volumetric_clouds.LODMin
+#define SHADOW_SAMPLE_COUNT GetWeather().volumetric_clouds.shadowSampleCount
+#define GROUND_CONTRIBUTION_SAMPLE_COUNT GetWeather().volumetric_clouds.groundContributionSampleCount
 
 // Participating media is the term used to describe volumes filled with particles.
 // Such particles can be large impurities, e.g. dust, pollution, water droplets, or simply particles, e.g. molecules
@@ -299,7 +339,7 @@ ParticipatingMediaPhase SampleParticipatingMediaPhase(float basePhase, float bas
 // Exponential integral function (see https://mathworld.wolfram.com/ExponentialIntegral.html)
 /*float ExponentialIntegral(float x)
 {
-    // For x != 0
+	// For x != 0
 	return 0.5772156649015328606065 + log(1e-4 + abs(x)) + x * (1.0 + x * (0.25 + x * ((1.0 / 18.0) + x * ((1.0 / 96.0) + x * (1.0 / 600.0)))));
 }*/
 
@@ -341,50 +381,50 @@ float3 SampleLocalLights(float3 worldPosition)
 			// Only point and spot lights are available for now
 			switch (light.GetType())
 			{
-			case ENTITY_TYPE_POINTLIGHT:
+				case ENTITY_TYPE_POINTLIGHT:
 			{
-				L = light.position - worldPosition;
-				const float dist2 = dot(L, L);
-				const float range = light.GetRange();
-				const float range2 = range * range;
+						L = light.position - worldPosition;
+						const float dist2 = dot(L, L);
+						const float range = light.GetRange();
+						const float range2 = range * range;
 
 				[branch]
-				if (dist2 < range2)
-				{
-					dist = sqrt(dist2);
+						if (dist2 < range2)
+						{
+							dist = sqrt(dist2);
 
-					lightColor = light.GetColor().rgb;
-					lightColor = min(lightColor, HALF_FLT_MAX) * LOCAL_LIGHTS_INTENSITY_MULTIPLIER; 
-					lightColor *= attenuation_pointlight(dist2, range, range2);
-				}
-			}
-			break;
-			case ENTITY_TYPE_SPOTLIGHT:
+							lightColor = light.GetColor().rgb;
+							lightColor = min(lightColor, HALF_FLT_MAX) * LOCAL_LIGHTS_INTENSITY_MULTIPLIER;
+							lightColor *= attenuation_pointlight(dist2, range, range2);
+						}
+					}
+					break;
+				case ENTITY_TYPE_SPOTLIGHT:
 			{
-				L = light.position - worldPosition;
-				const float dist2 = dot(L, L);
-				const float range = light.GetRange();
-				const float range2 = range * range;
+						L = light.position - worldPosition;
+						const float dist2 = dot(L, L);
+						const float range = light.GetRange();
+						const float range2 = range * range;
 
 				[branch]
-				if (dist2 < range2)
-				{
-					dist = sqrt(dist2);
-					L /= dist;
+						if (dist2 < range2)
+						{
+							dist = sqrt(dist2);
+							L /= dist;
 
-					const float spotFactor = dot(L, light.GetDirection());
-					const float spotCutoff = light.GetConeAngleCos();
+							const float spotFactor = dot(L, light.GetDirection());
+							const float spotCutoff = light.GetConeAngleCos();
 
 					[branch]
-					if (spotFactor > spotCutoff)
-					{
-						lightColor = light.GetColor().rgb;
-						lightColor = min(lightColor, HALF_FLT_MAX) * LOCAL_LIGHTS_INTENSITY_MULTIPLIER;
-						lightColor *= attenuation_spotlight(dist2, range, range2, spotFactor, light.GetAngleScale(), light.GetAngleOffset());
+							if (spotFactor > spotCutoff)
+							{
+								lightColor = light.GetColor().rgb;
+								lightColor = min(lightColor, HALF_FLT_MAX) * LOCAL_LIGHTS_INTENSITY_MULTIPLIER;
+								lightColor *= attenuation_spotlight(dist2, range, range2, spotFactor, light.GetAngleScale(), light.GetAngleOffset());
+							}
+						}
 					}
-				}
-			}
-			break;
+					break;
 			}
 
 			localLightLuminance += lightColor * UniformPhase();
@@ -484,20 +524,20 @@ void VolumetricCloudLighting(AtmosphereParameters atmosphere, float3 startPositi
 
 float CalculateAtmosphereBlend(float tDepth)
 {
-    // Progressively increase alpha as clouds reaches the desired distance.
+	// Progressively increase alpha as clouds reaches the desired distance.
 	float fogDistance = saturate(tDepth * GetWeather().volumetric_clouds.horizonBlendAmount);
-    
+	
 	float fade = pow(fogDistance, GetWeather().volumetric_clouds.horizonBlendPower);
 	fade = smoothstep(0.0, 1.0, fade);
-        
+		
 	const float maxHorizonFade = 0.0;
 	fade = clamp(fade, maxHorizonFade, 1.0);
-        
+		
 	return fade;
 }
  
 void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition, float3 rayOrigin, float3 rayDirection, inout float4 cloudColor, inout float2 cloudDepth)
-{	
+{
 	AtmosphereParameters atmosphere = GetWeather().atmosphere;
 	
 	float tMin = -FLT_MAX;
@@ -506,24 +546,24 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 	float tToDepthBuffer;
 	float steps;
 	float stepSize;
-    {
+	{
 		float planetRadius = atmosphere.bottomRadius * SKY_UNIT_TO_M;
 		float3 planetCenterWorld = atmosphere.planetCenter * SKY_UNIT_TO_M;
 
 		const float cloudBottomRadius = planetRadius + GetWeather().volumetric_clouds.cloudStartHeight;
 		const float cloudTopRadius = planetRadius + GetWeather().volumetric_clouds.cloudStartHeight + GetWeather().volumetric_clouds.cloudThickness;
-        
+		
 		float2 tTopSolutions = RaySphereIntersect(rayOrigin, rayDirection, planetCenterWorld, cloudTopRadius);
 		if (tTopSolutions.x > 0.0 || tTopSolutions.y > 0.0)
 		{
 			float2 tBottomSolutions = RaySphereIntersect(rayOrigin, rayDirection, planetCenterWorld, cloudBottomRadius);
 			if (tBottomSolutions.x > 0.0 || tBottomSolutions.y > 0.0)
 			{
-                // If we see both intersections on the screen, keep the min closest, otherwise the max furthest
+				// If we see both intersections on the screen, keep the min closest, otherwise the max furthest
 				float tempTop = all(tTopSolutions > 0.0f) ? min(tTopSolutions.x, tTopSolutions.y) : max(tTopSolutions.x, tTopSolutions.y);
 				float tempBottom = all(tBottomSolutions > 0.0f) ? min(tBottomSolutions.x, tBottomSolutions.y) : max(tBottomSolutions.x, tBottomSolutions.y);
-                
-                // But if we can see the bottom of the layer, make sure we use the camera view or the highest top layer intersection
+				
+				// But if we can see the bottom of the layer, make sure we use the camera view or the highest top layer intersection
 				if (all(tBottomSolutions > 0.0f))
 				{
 					tempTop = max(0.0f, min(tTopSolutions.x, tTopSolutions.y));
@@ -537,7 +577,7 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 				tMin = tTopSolutions.x;
 				tMax = tTopSolutions.y;
 			}
-            
+			
 			tMin = max(0.0, tMin);
 			tMax = max(0.0, tMax);
 		}
@@ -569,16 +609,12 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 
 		steps = MAX_STEP_COUNT * saturate((tMax - tMin) * (1.0 / GetWeather().volumetric_clouds.inverseDistanceStepCount));
 		stepSize = (tMax - tMin) / steps;
-
-#ifdef VOLUMETRICCLOUD_CAPTURE
-		float offset = 0.5; // noise avg = 0.5
-#else
+		
 		//float offset = dither(DTid.xy + GetTemporalAASampleRotation());
 		//float offset = InterleavedGradientNoise(DTid.xy, GetFrame().frame_count % 16);
 		float offset = blue_noise(DTid.xy).x;
-#endif
 				
-        //t = tMin + 0.5 * stepSize;
+		//t = tMin + 0.5 * stepSize;
 		t = tMin + offset * stepSize;
 	}
 	
@@ -667,11 +703,7 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 			{
 				const float sampleCountIni = 0.0;
 				const bool variableSampleCount = true;
-#ifdef VOLUMETRICCLOUD_CAPTURE
-				const bool perPixelNoise = false;
-#else
 				const bool perPixelNoise = true;
-#endif
 				const bool opaque = true;
 				const bool ground = false;
 				const bool mieRayPhase = true;
@@ -708,7 +740,7 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 
 	float4 color = float4(luminance, 1.0 - grayScaleTransmittance);
 
-    // Blend clouds with horizon
+	// Blend clouds with horizon
 	if (depthWeightsSum > 0.0)
 	{
 		float atmosphereBlend = CalculateAtmosphereBlend(tDepth);
@@ -724,49 +756,52 @@ void RenderClouds(uint3 DTid, float2 uv, float depth, float3 depthWorldPosition,
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	RWTexture2DArray<float4> output = bindless_rwtextures2DArray[descriptor_index(capture.texture_output)];
+	const uint variance_idx = flatten2D(DTid.xy, (uint2)postprocess.resolution);
+	Variance variance = variance_data[variance_idx].load();
 
-	const float2 uv = (DTid.xy + 0.5) * capture.resolution_rcp;
-	const float3 N = uv_to_cubemap(uv, DTid.z);
+	const uint unroll_count = volumetricclouds_frame == 0 ? 4 : 1;
 
-#ifdef MSAA
-	float3 uv_slice = cubemap_to_uv(N);
-	uint2 cube_dim;
-	uint cube_elements;
-	uint cube_sam;
-	texture_input_depth_MSAA.GetDimensions(cube_dim.x, cube_dim.y, cube_elements, cube_sam);
-	uv_slice.xy *= cube_dim;
-	const float depth = texture_input_depth_MSAA.Load(uv_slice, 0);
-#else
-	const float depth = texture_input_depth.SampleLevel(sampler_point_clamp, N, 0).r;
-#endif // MSAA
+	for (uint i = 0; i < unroll_count; ++i)
+	{
+		int subPixelIndex = uint(volumetricclouds_frame + i) % 4;
+		int checkerBoardIndex = ComputeCheckerBoardIndex(DTid.xy, subPixelIndex);
+		int2 halfResCoord = DTid.xy * 2 + halfResIndexToCoordinateOffset[checkerBoardIndex];
+	
+		const float2 uv = (halfResCoord + 0.5) * postprocess.params0.zw;
+		const float3 N = decode_hemioct(uv * 2 - 1).xzy;
+		const float depth = 0;
 
-	float3 depthWorldPosition = reconstruct_position(uv, depth, GetCameraIndexed(DTid.z).inverse_view_projection);
+		float3 rayOrigin = GetCamera().position;
+		float3 rayDirection = normalize(N);
 
-	float3 rayOrigin = GetCameraIndexed(DTid.z).position;
-	float3 rayDirection = normalize(N);
+		float4 cloudColor = 0;
+		float2 cloudDepth = 0;
+		RenderClouds(DTid, uv, depth, 0, rayOrigin, rayDirection, cloudColor, cloudDepth);
 
-	float4 cloudColor = 0;
-	float2 cloudDepth = 0;
-	RenderClouds(DTid, uv, depth, depthWorldPosition, rayOrigin, rayDirection, cloudColor, cloudDepth);
+		float variance_amount = variance.update(cloudColor);
+		variance_amount = saturate(variance_amount);
+		variance_amount = 1 - pow4(1 - variance_amount);
+		float blend = lerp(0.1, 0.01, variance_amount);
+		blend = volumetricclouds_frame == 0 ? 1 : blend;
+		
+		cloudColor = lerp(texture_render[halfResCoord], cloudColor, blend);
+		
+		texture_render[halfResCoord] = cloudColor;
+		//texture_render[halfResCoord] = variance_amount;
+	}
 
-	float4 composite = output[uint3(DTid.xy, DTid.z)];
-
-    // Output
-	output[uint3(DTid.xy, DTid.z)] = float4(composite.rgb * (1.0 - cloudColor.a) + cloudColor.rgb, composite.a * (1.0 - cloudColor.a));
+	variance_data[variance_idx].store(variance);
 }
 #else
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	const uint2 halfResIndexToCoordinateOffset[4] = { uint2(0, 0), uint2(1, 0), uint2(0, 1), uint2(1, 1) };
-	
 	int subPixelIndex = uint(volumetricclouds_frame) % 4;
 	int checkerBoardIndex = ComputeCheckerBoardIndex(DTid.xy, subPixelIndex);
 	uint2 halfResCoord = DTid.xy * 2 + halfResIndexToCoordinateOffset[checkerBoardIndex];
 
 	const float2 uv = (halfResCoord + 0.5) * postprocess.params0.zw;
-	const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 1).r; // Second mip reprojection
+	const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 1).r;
 	
 	float2 screenPosition = uv_to_clipspace(uv);
 	
@@ -782,7 +817,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float2 cloudDepth = 0;
 	RenderClouds(DTid, uv, depth, depthWorldPosition, rayOrigin, rayDirection, cloudColor, cloudDepth);
 	
-    // Output
 	texture_render[DTid.xy] = cloudColor;
 	texture_cloudDepth[DTid.xy] = cloudDepth;
 }
