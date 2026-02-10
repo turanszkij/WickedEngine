@@ -1578,7 +1578,7 @@ struct LensFlarePush
 	float3 xLensFlarePos;
 	float xLensFlareOffset;
 	float2 xLensFlareSize;
-	float2 xLensFlare_padding;
+	uint2 xLensFlareDirectionalLight;
 };
 
 struct WetmapPush

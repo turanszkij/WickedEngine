@@ -852,7 +852,7 @@ namespace wi::scene
 				device->SetName(&cloudmap, "cloudmap");
 
 				GPUBufferDesc bd;
-				bd.stride = sizeof(XMUINT4) * 2;
+				bd.stride = sizeof(XMUINT4) * 2 + sizeof(float);
 				bd.size = bd.stride * (desc.width / 2) * (desc.height / 2);
 				bd.bind_flags = BindFlag::UNORDERED_ACCESS;
 				bd.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;

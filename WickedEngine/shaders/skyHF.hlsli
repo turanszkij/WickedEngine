@@ -117,7 +117,7 @@ float3 AccurateAtmosphericScattering(float2 pixelPosition, float3 rayOrigin, flo
 // Returns sky color modulated by the sun and clouds
 //	pixel	: screen pixel position
 //	V		: view direction
-float3 GetDynamicSkyColor(in float2 pixel, in float3 V, bool sun_enabled = true, bool dark_enabled = false, bool stationary = false, bool highQuality = false, bool perPixelNoise = false, bool receiveShadow = false)
+float3 GetDynamicSkyColor(in float2 pixel, in float3 V, bool sun_enabled = true, bool dark_enabled = false, bool stationary = false, bool highQuality = false, bool perPixelNoise = false, bool receiveShadow = false, bool clouds_enabled = true)
 {
     float3 sky = 0;
 
@@ -145,22 +145,22 @@ float3 GetDynamicSkyColor(in float2 pixel, in float3 V, bool sun_enabled = true,
 
 	sky *= GetWeather().sky_exposure;
 	
-	if (V.y > 0 && GetScene().texture_cloudmap >= 0 && !stationary)
+	if (clouds_enabled && V.y > 0 && GetScene().texture_cloudmap >= 0 && !stationary)
 	{
-		float4 clouds = bindless_textures[descriptor_index(GetScene().texture_cloudmap)].SampleLevel(sampler_linear_clamp, encode_hemioct(V.xzy) * 0.5 + 0.5, 0);
+		float4 cloudmap = bindless_textures[descriptor_index(GetScene().texture_cloudmap)].SampleLevel(sampler_linear_clamp, encode_hemioct(V.xzy) * 0.5 + 0.5, 0);
 		if (dark_enabled)
-			clouds.rgb = 0;
-		sky.rgb = sky.rgb * (1.0 - clouds.a) + clouds.rgb;
+			cloudmap.rgb = 0;
+		sky.rgb = sky.rgb * (1.0 - cloudmap.a) + cloudmap.rgb;
 	}
 
 	return sky;
 }
 float3 GetDynamicSkyColor(in float3 V, bool sun_enabled = true, bool dark_enabled = false, bool stationary = false)
 {
-	return GetDynamicSkyColor(float2(0.0f, 0.0f), V, sun_enabled, dark_enabled, stationary, false, false, false);
+	return GetDynamicSkyColor(float2(0.0f, 0.0f), V, sun_enabled, dark_enabled, stationary, false, false, false, true);
 }
 
-float3 GetStaticSkyColor(in float3 V)
+float3 GetStaticSkyColor(in float3 V, bool clouds_enabled = true)
 {
 	ShaderWeather weather = GetWeather();
 	float2x2 rot = float2x2(
@@ -178,15 +178,14 @@ float3 GetStaticSkyColor(in float3 V)
 	else
 	{
 		sky = bindless_cubemaps[descriptor_index(GetScene().globalenvmap)].SampleLevel(sampler_linear_clamp, V, 0).rgb;
-
 	}
 	
 	sky *= GetWeather().sky_exposure;
 
-	if (V.y > 0 && GetScene().texture_cloudmap >= 0)
+	if (clouds_enabled && V.y > 0 && GetScene().texture_cloudmap >= 0)
 	{
-		float4 clouds = bindless_textures[descriptor_index(GetScene().texture_cloudmap)].SampleLevel(sampler_linear_clamp, encode_hemioct(V.xzy) * 0.5 + 0.5, 0);
-		sky.rgb = sky.rgb * (1.0 - clouds.a) + clouds.rgb;
+		float4 cloudmap = bindless_textures[descriptor_index(GetScene().texture_cloudmap)].SampleLevel(sampler_linear_clamp, encode_hemioct(V.xzy) * 0.5 + 0.5, 0);
+		sky.rgb = sky.rgb * (1.0 - cloudmap.a) + cloudmap.rgb;
 	}
 
 	return sky;

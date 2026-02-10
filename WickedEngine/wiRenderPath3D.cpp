@@ -1600,7 +1600,7 @@ namespace wi
 					cmd,
 					drawscene_flags
 				);
-				wi::renderer::DrawSky(*scene, cmd);
+				wi::renderer::DrawSky(*scene, cmd, false); // Note: volumetric cloud sampling disabled in sky shader, instead the postprocess will be used for a high quality effect
 				wi::profiler::EndRange(range); // Opaque Scene
 			}
 
@@ -2207,8 +2207,7 @@ namespace wi
 		{
 			wi::renderer::DrawLensFlares(
 				visibility_main,
-				cmd,
-				scene->weather.IsVolumetricClouds() ? &volumetriccloudResources.texture_cloudMask : nullptr
+				cmd
 			);
 		}
 

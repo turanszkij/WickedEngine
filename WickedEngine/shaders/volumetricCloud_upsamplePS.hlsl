@@ -9,9 +9,7 @@ Texture2D<float2> cloud_depth_current : register(t1);
 static const int UPSAMPLE_SAMPLE_RADIUS = 1;
 
 #define GAUSSIAN_SIGMA_SPATIAL 0.5
-#define GAUSSIAN_SIGMA_RANGE 100.0
-
-#define UPSAMPLE_TOLERANCE 0.15
+#define GAUSSIAN_SIGMA_RANGE 1000.0
 
 half Gaussian(half x, half sigma)
 {

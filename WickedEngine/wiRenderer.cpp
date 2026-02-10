@@ -6572,8 +6572,7 @@ void DrawVolumeLights(
 }
 void DrawLensFlares(
 	const Visibility& vis,
-	CommandList cmd,
-	const Texture* texture_directional_occlusion
+	CommandList cmd
 )
 {
 	if (IsWireRender())
@@ -6589,6 +6588,8 @@ void DrawLensFlares(
 
 		if (!light.lensFlareRimTextures.empty())
 		{
+			LensFlarePush cb = {};
+
 			XMVECTOR POS;
 
 			if (light.GetType() == LightComponent::DIRECTIONAL)
@@ -6599,15 +6600,9 @@ void DrawLensFlares(
 					continue; // sun below horizon, skip lensflare
 				POS = vis.camera->GetEye() + D * -vis.camera->zFarP;
 
-				// Directional light can use occlusion texture (eg. clouds):
-				if (texture_directional_occlusion == nullptr)
-				{
-					device->BindResource(wi::texturehelper::getWhite(), 0, cmd);
-				}
-				else
-				{
-					device->BindResource(texture_directional_occlusion, 0, cmd);
-				}
+				XMFLOAT3 dir;
+				XMStoreFloat3(&dir, D);
+				cb.xLensFlareDirectionalLight = wi::math::pack_half3(dir);
 			}
 			else
 			{
@@ -6625,7 +6620,6 @@ void DrawLensFlares(
 				// Get the screen position of the flare:
 				XMVECTOR flarePos = XMVector3Project(POS, 0, 0, 1, 1, 1, 0, vis.camera->GetProjection(), vis.camera->GetView(), XMMatrixIdentity());
 
-				LensFlarePush cb;
 				XMStoreFloat3(&cb.xLensFlarePos, flarePos);
 
 				uint32_t i = 0;
@@ -8966,7 +8960,7 @@ void ComputeSkyAtmosphereCameraVolumeLut(CommandList cmd)
 	device->EventEnd(cmd);
 }
 
-void DrawSky(const Scene& scene, CommandList cmd)
+void DrawSky(const Scene& scene, CommandList cmd, bool clouds)
 {
 	device->EventBegin("DrawSky", cmd);
 
@@ -8980,6 +8974,9 @@ void DrawSky(const Scene& scene, CommandList cmd)
 	}
 
 	BindCommonResources(cmd);
+
+	uint clouds_enabled = clouds ? 1 : 0;
+	device->PushConstants(&clouds_enabled, sizeof(clouds_enabled), cmd);
 
 	device->Draw(3, 0, cmd);
 
@@ -16523,11 +16520,6 @@ void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resol
 	device->SetName(&res.texture_reproject_additional[0], "texture_reproject_additional[0]");
 	device->CreateTexture(&desc, nullptr, &res.texture_reproject_additional[1]);
 	device->SetName(&res.texture_reproject_additional[1], "texture_reproject_additional[1]");
-
-	desc.format = Format::R8_UNORM;
-	desc.swizzle = SwizzleFromString("rrr1");
-	device->CreateTexture(&desc, nullptr, &res.texture_cloudMask);
-	device->SetName(&res.texture_cloudMask, "texture_cloudMask");
 }
 void Postprocess_VolumetricClouds(
 	const VolumetricCloudResources& res,
@@ -16643,7 +16635,6 @@ void Postprocess_VolumetricClouds(
 			GPUBarrier::Image(&res.texture_reproject[temporal_output], res.texture_reproject[temporal_output].desc.layout, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Image(&res.texture_reproject_depth[temporal_output], res.texture_reproject_depth[temporal_output].desc.layout, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Image(&res.texture_reproject_additional[temporal_output], res.texture_reproject_additional[temporal_output].desc.layout, ResourceState::UNORDERED_ACCESS),
-			GPUBarrier::Image(&res.texture_cloudMask, res.texture_cloudMask.desc.layout, ResourceState::UNORDERED_ACCESS),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
@@ -16664,7 +16655,6 @@ void Postprocess_VolumetricClouds(
 			&res.texture_reproject[temporal_output],
 			&res.texture_reproject_depth[temporal_output],
 			&res.texture_reproject_additional[temporal_output],
-			&res.texture_cloudMask,
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
@@ -16683,7 +16673,6 @@ void Postprocess_VolumetricClouds(
 			GPUBarrier::Image(&res.texture_reproject[temporal_output], ResourceState::UNORDERED_ACCESS, res.texture_reproject[temporal_output].desc.layout),
 			GPUBarrier::Image(&res.texture_reproject_depth[temporal_output], ResourceState::UNORDERED_ACCESS, res.texture_reproject_depth[temporal_output].desc.layout),
 			GPUBarrier::Image(&res.texture_reproject_additional[temporal_output], ResourceState::UNORDERED_ACCESS, res.texture_reproject_additional[temporal_output].desc.layout),
-			GPUBarrier::Image(&res.texture_cloudMask, ResourceState::UNORDERED_ACCESS, res.texture_cloudMask.desc.layout),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
