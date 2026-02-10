@@ -777,18 +777,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		blend = volumetricclouds_frame == 0 ? 1 : blend;
 		
 		cloudColor = lerp(texture_render[halfResCoord], cloudColor, blend);
-
-		if (
-			halfResCoord.x == 0 || halfResCoord.x >= postprocess.params0.x - 1 ||
-			halfResCoord.y == 0 || halfResCoord.y >= postprocess.params0.y - 1
-			)
-		{
-			// 1 px border forced transparency, fixes artifact when camera in clouds and clamp sampler samples cloud edge
-			cloudColor = 0;
-		}
 		
 		texture_render[halfResCoord] = cloudColor;
-		//texture_render[halfResCoord] = variance_amount;
 	}
 
 	variance_data[variance_idx].store(variance);

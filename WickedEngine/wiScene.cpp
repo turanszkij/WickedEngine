@@ -844,15 +844,15 @@ namespace wi::scene
 
 				TextureDesc desc;
 				desc.format = Format::R16G16B16A16_FLOAT;
-				desc.width = 512;
-				desc.height = desc.width;
+				desc.width = cloudmap_resolution;
+				desc.height = cloudmap_resolution;
 				desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 				bool success = device->CreateTexture(&desc, nullptr, &cloudmap);
 				assert(success);
 				device->SetName(&cloudmap, "cloudmap");
 
 				GPUBufferDesc bd;
-				bd.stride = sizeof(XMUINT4) * 4;
+				bd.stride = sizeof(XMUINT4) * 2;
 				bd.size = bd.stride * (desc.width / 2) * (desc.height / 2);
 				bd.bind_flags = BindFlag::UNORDERED_ACCESS;
 				bd.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
