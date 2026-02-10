@@ -3710,7 +3710,7 @@ using namespace vulkan_internal;
 						allocationhandler->allocator,
 						&bufferInfo,
 						&create_info,
-						16ull,
+						buffer->desc.alignment,
 						&internal_state->resource,
 						&internal_state->allocation,
 						nullptr
