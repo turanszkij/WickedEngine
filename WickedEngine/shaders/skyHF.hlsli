@@ -155,9 +155,9 @@ float3 GetDynamicSkyColor(in float2 pixel, in float3 V, bool sun_enabled = true,
 
 	return sky;
 }
-float3 GetDynamicSkyColor(in float3 V, bool sun_enabled = true, bool dark_enabled = false, bool stationary = false)
+float3 GetDynamicSkyColor(in float3 V, bool sun_enabled = true, bool dark_enabled = false, bool stationary = false, bool highQuality = false, bool perPixelNoise = false, bool receiveShadow = false, bool clouds_enabled = true)
 {
-	return GetDynamicSkyColor(float2(0.0f, 0.0f), V, sun_enabled, dark_enabled, stationary, false, false, false, true);
+	return GetDynamicSkyColor(float2(0.0f, 0.0f), V, sun_enabled, dark_enabled, stationary, highQuality, perPixelNoise, receiveShadow, clouds_enabled);
 }
 
 float3 GetStaticSkyColor(in float3 V, bool clouds_enabled = true)

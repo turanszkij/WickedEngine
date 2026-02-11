@@ -141,15 +141,16 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		if (exit_sky)
 		{
 			float3 envColor;
+			bool clouds_enabled = bounce > 0;
 			[branch]
 			if (IsStaticSky())
 			{
 				// We have envmap information in a texture:
-				envColor = GetStaticSkyColor(ray.Direction);
+				envColor = GetStaticSkyColor(ray.Direction, clouds_enabled);
 			}
 			else
 			{
-				envColor = GetDynamicSkyColor(ray.Direction);
+				envColor = GetDynamicSkyColor(ray.Direction, true, false, false, false, false, false, clouds_enabled);
 			}
 			result += max(0, energy * envColor);
 			break;

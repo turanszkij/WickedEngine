@@ -851,25 +851,21 @@ namespace wi::graphics
 
 				int allocate()
 				{
-					locker.lock();
+					std::scoped_lock lck(locker);
 					if (!freelist.empty())
 					{
 						int index = freelist.back();
 						freelist.pop_back();
-						locker.unlock();
 						return index;
 					}
-					locker.unlock();
 					return -1;
 				}
 				void free(int index)
 				{
-					if (index >= 0)
-					{
-						locker.lock();
-						freelist.push_back(index);
-						locker.unlock();
-					}
+					if (index < 0)
+						return;
+					std::scoped_lock lck(locker);
+					freelist.push_back(index);
 				}
 			};
 			BindlessDescriptorHeap bindlessSampledImages;

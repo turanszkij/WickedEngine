@@ -433,6 +433,20 @@ namespace wi
 					wi::renderer::DrawShadowmaps(visibility_main, cmd);
 				}
 
+				if (scene->weather.IsVolumetricClouds())
+				{
+					wi::renderer::Postprocess_VolumetricClouds(
+						volumetriccloudResources,
+						cmd,
+						*camera,
+						camera_previous,
+						camera_reflection,
+						false,
+						scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
+						scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
+					);
+				}
+
 			});
 
 			if (scene->terrains.GetCount() > 0)
@@ -487,19 +501,6 @@ namespace wi
 				wi::renderer::Postprocess_AerialPerspective(
 					aerialperspectiveResources,
 					cmd
-				);
-			}
-			if (scene->weather.IsVolumetricClouds())
-			{
-				wi::renderer::Postprocess_VolumetricClouds(
-					volumetriccloudResources,
-					cmd,
-					*camera,
-					camera_previous,
-					camera_reflection,
-					false,
-					scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
-					scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
 				);
 			}
 
