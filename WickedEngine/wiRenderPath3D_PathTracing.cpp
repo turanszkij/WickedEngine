@@ -723,6 +723,9 @@ namespace wi
 				device->EventEnd(cmd);
 				wi::profiler::EndRange(range);
 			}
+
+			wi::renderer::TextureStreamingReadbackCopyPrepare(*scene, cmd);
+			wi::renderer::TextureStreamingReadbackCopy(*scene, cmd);
 		});
 
 		RenderPath2D::Render();

@@ -5643,7 +5643,7 @@ void UpdateRenderDataAsync(
 	device->EventEnd(cmd);
 }
 
-void TextureStreamingReadbackCopy(
+void TextureStreamingReadbackCopyPrepare(
 	const wi::scene::Scene& scene,
 	wi::graphics::CommandList cmd
 )
@@ -5651,6 +5651,16 @@ void TextureStreamingReadbackCopy(
 	if (scene.textureStreamingFeedbackBuffer.IsValid())
 	{
 		device->Barrier(GPUBarrier::Buffer(&scene.textureStreamingFeedbackBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::COPY_SRC), cmd);
+	}
+}
+
+void TextureStreamingReadbackCopy(
+	const wi::scene::Scene& scene,
+	wi::graphics::CommandList cmd
+)
+{
+	if (scene.textureStreamingFeedbackBuffer.IsValid())
+	{
 		device->CopyResource(
 			&scene.textureStreamingFeedbackBuffer_readback[scene.cpu_gpu_mapped_resource_index],
 			&scene.textureStreamingFeedbackBuffer,

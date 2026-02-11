@@ -228,7 +228,13 @@ namespace wi::renderer
 		wi::graphics::CommandList cmd
 	);
 
-	// Copies the texture streaming requests from GPU to CPU
+	// Prepares for TextureStreamingReadbackCopy, can be only on graphics or compute queue
+	void TextureStreamingReadbackCopyPrepare(
+		const wi::scene::Scene& scene,
+		wi::graphics::CommandList cmd
+	);
+
+	// Copies the texture streaming requests from GPU to CPU, can be on any type of queue
 	void TextureStreamingReadbackCopy(
 		const wi::scene::Scene& scene,
 		wi::graphics::CommandList cmd
