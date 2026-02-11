@@ -926,6 +926,8 @@ namespace wi::graphics
 			// Deferred destroy of resources that the GPU is already finished with:
 			void Update(uint64_t FRAMECOUNT, uint32_t BUFFERCOUNT)
 			{
+				std::scoped_lock lck(destroylocker);
+
 				const auto destroy = [&](auto&& queue, auto&& handler) {
 					while (!queue.empty()) {
 						if (queue.front().second + BUFFERCOUNT < FRAMECOUNT)
@@ -942,8 +944,6 @@ namespace wi::graphics
 				};
 
 				framecount = FRAMECOUNT;
-
-				std::scoped_lock lck(destroylocker);
 
 				destroy(destroyer_allocations, [&](auto& item) {
 					vmaFreeMemory(allocator, item);
