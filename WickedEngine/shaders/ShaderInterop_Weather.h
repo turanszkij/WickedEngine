@@ -357,8 +357,6 @@ struct alignas(16) ShaderWeather
 {
 	uint2 sun_direction; // packed half3
 	uint2 sun_color; // packed half3
-	float sun_eclipse_strength; // 0-1 multiplier describing moon shadow on sun
-	float padding_sun0;
 	uint2 moon_direction; // packed half3
 	uint2 moon_color; // packed half3
 
@@ -377,6 +375,9 @@ struct alignas(16) ShaderWeather
 	float moon_eclipse_strength; // 0-1 multiplier describing earth shadow on moon
 	uint moon_light_index;
 	uint padding_moon0;
+
+	float sun_eclipse_strength; // 0-1 multiplier describing moon shadow on sun
+	float padding_sun0;
 
 	float sky_rotation_sin;
 	float sky_rotation_cos;
