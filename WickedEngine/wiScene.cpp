@@ -87,6 +87,7 @@ namespace wi::scene
 		{
 			GPUBufferDesc desc;
 			desc.stride = sizeof(ShaderMeshInstance);
+			desc.alignment = alignof(ShaderMeshInstance);
 			desc.size = desc.stride * instanceArraySize * 2; // *2 to grow fast
 			desc.bind_flags = BindFlag::SHADER_RESOURCE;
 			desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
@@ -125,6 +126,7 @@ namespace wi::scene
 		{
 			GPUBufferDesc desc;
 			desc.stride = sizeof(ShaderMaterial);
+			desc.alignment = alignof(ShaderMaterial);
 			desc.size = desc.stride * materialArraySize * 2; // *2 to grow fast
 			desc.bind_flags = BindFlag::SHADER_RESOURCE;
 			desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
@@ -152,6 +154,7 @@ namespace wi::scene
 		{
 			GPUBufferDesc desc;
 			desc.stride = sizeof(uint32_t);
+			desc.alignment = alignof(uint32_t);
 			desc.size = desc.stride * materialArraySize * 2; // *2 to grow fast
 			desc.bind_flags = BindFlag::UNORDERED_ACCESS;
 			desc.format = Format::R32_UINT;
@@ -314,6 +317,7 @@ namespace wi::scene
 		{
 			GPUBufferDesc desc;
 			desc.stride = sizeof(ShaderGeometry);
+			desc.alignment = alignof(ShaderGeometry);
 			desc.size = desc.stride * geometryArraySize * 2; // *2 to grow fast
 			desc.bind_flags = BindFlag::SHADER_RESOURCE;
 			desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
