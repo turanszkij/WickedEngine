@@ -1194,6 +1194,8 @@ namespace wi::renderer
 	bool GetToDrawDebugSprings();
 	bool GetToDrawGridHelper();
 	void SetToDrawGridHelper(bool value);
+	void SetGridHelperColor(const XMFLOAT4& value);
+	XMFLOAT4 GetGridHelperColor();
 	bool GetToDrawVoxelHelper();
 	void SetToDrawVoxelHelper(bool value, int clipmap_level);
 	void SetDebugLightCulling(bool enabled);
