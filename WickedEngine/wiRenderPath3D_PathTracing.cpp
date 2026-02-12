@@ -724,7 +724,6 @@ namespace wi
 				wi::profiler::EndRange(range);
 			}
 
-			wi::renderer::TextureStreamingReadbackCopyPrepare(*scene, cmd);
 			wi::renderer::TextureStreamingReadbackCopy(*scene, cmd);
 		});
 

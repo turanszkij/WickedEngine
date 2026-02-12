@@ -1707,7 +1707,6 @@ namespace wi
 		cmd = cmd_postprocess;
 		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
 			RenderPostprocessChain(cmd);
-			wi::renderer::TextureStreamingReadbackCopyPrepare(*scene, cmd);
 		});
 
 		cmd = device->BeginCommandList(QUEUE_COPY);

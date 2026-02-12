@@ -7128,11 +7128,43 @@ std::mutex queue_locker;
 			break;
 			}
 
-			if (barrierdesc.Type == D3D12_RESOURCE_BARRIER_TYPE_TRANSITION && commandlist.queue > QUEUE_GRAPHICS)
+			if (commandlist.queue == QUEUE_COMPUTE && barrierdesc.Type == D3D12_RESOURCE_BARRIER_TYPE_TRANSITION)
 			{
-				// Only graphics queue can do pixel shader state:
+				// Compute queue can't transition pixel shader state:
 				barrierdesc.Transition.StateBefore &= ~D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 				barrierdesc.Transition.StateAfter &= ~D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+			}
+			else if (commandlist.queue == QUEUE_COPY && barrierdesc.Type == D3D12_RESOURCE_BARRIER_TYPE_TRANSITION)
+			{
+				// Copy queue can only transition from/to COPY_ and COMMON states, so we will overwrite anything else to COMMON,
+				//	but the video textures will be using D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS so that implicit transition can happen from COMMON in a different queue
+				if (barrierdesc.Transition.StateBefore != D3D12_RESOURCE_STATE_COPY_SOURCE && barrierdesc.Transition.StateBefore != D3D12_RESOURCE_STATE_COPY_DEST)
+				{
+					barrierdesc.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
+				}
+				if (barrierdesc.Transition.StateAfter != D3D12_RESOURCE_STATE_COPY_SOURCE && barrierdesc.Transition.StateAfter != D3D12_RESOURCE_STATE_COPY_DEST)
+				{
+					barrierdesc.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
+				}
+			}
+			else if (commandlist.queue == QUEUE_VIDEO_DECODE && barrierdesc.Type == D3D12_RESOURCE_BARRIER_TYPE_TRANSITION)
+			{
+				// Video queue can only transition from/to VIDEO_ and COMMON states, so we will overwrite anything else to COMMON,
+				//	but the video textures will be using D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS so that implicit transition can happen from COMMON in a different queue
+				if (barrierdesc.Transition.StateBefore != D3D12_RESOURCE_STATE_VIDEO_DECODE_READ && barrierdesc.Transition.StateBefore != D3D12_RESOURCE_STATE_VIDEO_DECODE_WRITE)
+				{
+					barrierdesc.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
+				}
+				if (barrierdesc.Transition.StateAfter != D3D12_RESOURCE_STATE_VIDEO_DECODE_READ && barrierdesc.Transition.StateAfter != D3D12_RESOURCE_STATE_VIDEO_DECODE_WRITE)
+				{
+					barrierdesc.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
+				}
+			}
+
+			if (barrierdesc.Type == D3D12_RESOURCE_BARRIER_TYPE_TRANSITION && barrierdesc.Transition.StateBefore == barrierdesc.Transition.StateAfter)
+			{
+				// skip nop barrier
+				continue;
 			}
 
 			barrierdescs.push_back(barrierdesc);
@@ -7142,22 +7174,6 @@ std::mutex queue_locker;
 		{
 			if (commandlist.queue == QUEUE_VIDEO_DECODE)
 			{
-				// Video queue can only transition from/to VIDEO_ and COMMON states, so we will overwrite anything else to COMMON,
-				//	but the video textures will be using D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS so that implicit transition can happen from COMMON in a different queue
-				for (auto& barrier : barrierdescs)
-				{
-					if (barrier.Type == D3D12_RESOURCE_BARRIER_TYPE_TRANSITION)
-					{
-						if (barrier.Transition.StateBefore != D3D12_RESOURCE_STATE_VIDEO_DECODE_READ && barrier.Transition.StateBefore != D3D12_RESOURCE_STATE_VIDEO_DECODE_WRITE)
-						{
-							barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
-						}
-						if (barrier.Transition.StateAfter != D3D12_RESOURCE_STATE_VIDEO_DECODE_READ && barrier.Transition.StateAfter != D3D12_RESOURCE_STATE_VIDEO_DECODE_WRITE)
-						{
-							barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
-						}
-					}
-				}
 				commandlist.GetVideoDecodeCommandList()->ResourceBarrier(
 					(UINT)barrierdescs.size(),
 					barrierdescs.data()

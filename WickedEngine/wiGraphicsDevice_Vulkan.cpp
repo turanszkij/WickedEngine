@@ -8391,6 +8391,15 @@ using namespace vulkan_internal;
 				barrierdesc.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 				barrierdesc.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
+				if (commandlist.queue == QUEUE_COPY)
+				{
+					// Simplified barrier on copy queue:
+					barrierdesc.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+					barrierdesc.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+					barrierdesc.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT | VK_ACCESS_2_TRANSFER_WRITE_BIT;
+					barrierdesc.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT | VK_ACCESS_2_TRANSFER_WRITE_BIT;
+				}
+
 				imageBarriers.push_back(barrierdesc);
 			}
 			break;
@@ -8424,6 +8433,15 @@ using namespace vulkan_internal;
 					assert(CheckCapability(GraphicsDeviceCapability::PREDICATION));
 					barrierdesc.srcStageMask |= _ConvertPipelineStage(ResourceState::PREDICATION);
 					barrierdesc.dstStageMask |= _ConvertPipelineStage(ResourceState::PREDICATION);
+				}
+
+				if (commandlist.queue == QUEUE_COPY)
+				{
+					// Simplified barrier on copy queue:
+					barrierdesc.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+					barrierdesc.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+					barrierdesc.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT | VK_ACCESS_2_TRANSFER_WRITE_BIT;
+					barrierdesc.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT | VK_ACCESS_2_TRANSFER_WRITE_BIT;
 				}
 
 				bufferBarriers.push_back(barrierdesc);
