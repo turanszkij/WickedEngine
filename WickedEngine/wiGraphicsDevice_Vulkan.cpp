@@ -8391,6 +8391,23 @@ using namespace vulkan_internal;
 				barrierdesc.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 				barrierdesc.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
+				if (commandlist.queue == QUEUE_COPY)
+				{
+					// Simplified barrier on copy queue:
+					barrierdesc.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+					barrierdesc.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+					barrierdesc.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT | VK_ACCESS_2_TRANSFER_WRITE_BIT;
+					barrierdesc.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT | VK_ACCESS_2_TRANSFER_WRITE_BIT;
+				}
+				else if (commandlist.queue == QUEUE_VIDEO_DECODE)
+				{
+					// Simplified barrier on video queue:
+					barrierdesc.srcStageMask = VK_PIPELINE_STAGE_2_VIDEO_DECODE_BIT_KHR;
+					barrierdesc.dstStageMask = VK_PIPELINE_STAGE_2_VIDEO_DECODE_BIT_KHR;
+					barrierdesc.srcAccessMask = VK_ACCESS_2_VIDEO_DECODE_READ_BIT_KHR | VK_ACCESS_2_VIDEO_DECODE_WRITE_BIT_KHR;
+					barrierdesc.dstAccessMask = VK_ACCESS_2_VIDEO_DECODE_READ_BIT_KHR | VK_ACCESS_2_VIDEO_DECODE_WRITE_BIT_KHR;
+				}
+
 				imageBarriers.push_back(barrierdesc);
 			}
 			break;
@@ -8424,6 +8441,23 @@ using namespace vulkan_internal;
 					assert(CheckCapability(GraphicsDeviceCapability::PREDICATION));
 					barrierdesc.srcStageMask |= _ConvertPipelineStage(ResourceState::PREDICATION);
 					barrierdesc.dstStageMask |= _ConvertPipelineStage(ResourceState::PREDICATION);
+				}
+
+				if (commandlist.queue == QUEUE_COPY)
+				{
+					// Simplified barrier on copy queue:
+					barrierdesc.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+					barrierdesc.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+					barrierdesc.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT | VK_ACCESS_2_TRANSFER_WRITE_BIT;
+					barrierdesc.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT | VK_ACCESS_2_TRANSFER_WRITE_BIT;
+				}
+				else if (commandlist.queue == QUEUE_VIDEO_DECODE)
+				{
+					// Simplified barrier on video queue:
+					barrierdesc.srcStageMask = VK_PIPELINE_STAGE_2_VIDEO_DECODE_BIT_KHR;
+					barrierdesc.dstStageMask = VK_PIPELINE_STAGE_2_VIDEO_DECODE_BIT_KHR;
+					barrierdesc.srcAccessMask = VK_ACCESS_2_VIDEO_DECODE_READ_BIT_KHR | VK_ACCESS_2_VIDEO_DECODE_WRITE_BIT_KHR;
+					barrierdesc.dstAccessMask = VK_ACCESS_2_VIDEO_DECODE_READ_BIT_KHR | VK_ACCESS_2_VIDEO_DECODE_WRITE_BIT_KHR;
 				}
 
 				bufferBarriers.push_back(barrierdesc);
