@@ -1490,14 +1490,18 @@ namespace wi::gui
 				Deactivate();
 			}
 
-			Hitbox2D pointerHitbox = GetPointerHitbox();
+			const Hitbox2D pointerHitbox = GetPointerHitbox();
 			if (scroll_allowed && scrollbar.IsEnabled() && scrollbar.IsScrollbarRequired() && pointerHitbox.intersects(hitBox))
 			{
-				scroll_allowed = false;
-				state = FOCUS;
-				// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
 				const float wheel_delta = wi::input::GetPointer().z;
-				scrollbar.Scroll(wheel_delta * 60.0f);
+				const bool at_begin = (wheel_delta > 0 && scrollbar.IsScrolledToBegin());
+				if (wheel_delta != 0.0f && !at_begin)
+				{
+					scroll_allowed = false;
+					// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
+					scrollbar.Scroll(wheel_delta * 60.0f);
+				}
+				state = FOCUS;
 			}
 			else
 			{
@@ -3912,9 +3916,13 @@ namespace wi::gui
 			const float wheel_delta = wi::input::GetPointer().z;
 			if (wheel_delta != 0.0f && scroll_allowed && scrollbar_vertical.IsScrollbarRequired() && pointerHitbox.intersects(hitBox)) // when window is in focus, but other widgets aren't
 			{
-				scroll_allowed = false;
-				// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
-				scrollbar_vertical.Scroll(wheel_delta * 60.0f);
+				const bool at_begin = (wheel_delta > 0 && scrollbar_vertical.IsScrolledToBegin());
+				if (!at_begin)
+				{
+					scroll_allowed = false;
+					// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
+					scrollbar_vertical.Scroll(wheel_delta * 60.0f);
+				}
 			}
 		}
 
@@ -5576,9 +5584,13 @@ namespace wi::gui
 			const float wheel_delta = wi::input::GetPointer().z;
 			if (wheel_delta != 0.0f && scroll_allowed && scrollbar.IsScrollbarRequired() && pointerHitbox.intersects(hitBox))
 			{
-				scroll_allowed = false;
-				// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
-				scrollbar.Scroll(wheel_delta * 40.0f);
+				const bool at_begin = (wheel_delta > 0 && scrollbar.IsScrolledToBegin());
+				if (!at_begin)
+				{
+					scroll_allowed = false;
+					// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
+					scrollbar.Scroll(wheel_delta * 40.0f);
+				}
 			}
 
 			Hitbox2D itemlist_box = GetHitbox_ListArea();
