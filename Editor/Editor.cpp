@@ -6365,18 +6365,28 @@ void EditorComponent::UpdateDynamicWidgets()
 
 	if (wi::backlog::GetUnseenLogLevelMax() >= wi::backlog::LogLevel::Error)
 	{
-		logButton.sprites[wi::gui::IDLE].params.color = wi::Color::Error();
+		const float pulse = std::sin(outlineTimer * XM_2PI * 1.5f) * 0.5f + 0.5f;
+		const XMFLOAT4 alertColor = wi::math::Lerp( wi::Color::Error(), XMFLOAT4(0, 0, 0, 1), pulse * 0.6f);
+		logButton.sprites[wi::gui::IDLE].params.color = alertColor;
 		logButton.sprites[wi::gui::IDLE].params.gradient = wi::image::Params::Gradient::None;
+		logButton.sprites[wi::gui::FOCUS].params.color = alertColor;
+		logButton.sprites[wi::gui::FOCUS].params.gradient = wi::image::Params::Gradient::None;
 	}
 	else if (wi::backlog::GetUnseenLogLevelMax() >= wi::backlog::LogLevel::Warning)
 	{
-		logButton.sprites[wi::gui::IDLE].params.color = wi::Color::Warning();
+		const float pulse = std::sin(outlineTimer * XM_2PI * 1.5f) * 0.5f + 0.5f;
+		const XMFLOAT4 alertColor = wi::math::Lerp(wi::Color::Warning(), XMFLOAT4(0, 0, 0, 1), pulse * 0.6f);
+		logButton.sprites[wi::gui::IDLE].params.color = alertColor;
 		logButton.sprites[wi::gui::IDLE].params.gradient = wi::image::Params::Gradient::None;
+		logButton.sprites[wi::gui::FOCUS].params.color = alertColor;
+		logButton.sprites[wi::gui::FOCUS].params.gradient = wi::image::Params::Gradient::None;
 	}
 	else
 	{
 		logButton.sprites[wi::gui::IDLE].params.color = color_off;
 		logButton.sprites[wi::gui::IDLE].params.gradient = generalWnd.disableGradientCheckBox.GetCheck() ? wi::image::Params::Gradient::None : wi::image::Params::Gradient::Linear;
+		logButton.sprites[wi::gui::FOCUS].params.color = color_on;
+		logButton.sprites[wi::gui::FOCUS].params.gradient = generalWnd.disableGradientCheckBox.GetCheck() ? wi::image::Params::Gradient::None : wi::image::Params::Gradient::Linear;
 	}
 
 
