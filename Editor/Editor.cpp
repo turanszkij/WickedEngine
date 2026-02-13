@@ -3671,7 +3671,7 @@ void EditorComponent::Render() const
 			if (renderPath->getMSAASampleCount() > 1)
 			{
 				RenderPassImage rp[] = {
-					RenderPassImage::RenderTarget(&rt_metadataDummies_MSAA, RenderPassImage::LoadOp::CLEAR),
+					RenderPassImage::RenderTarget(&rt_metadataDummies_MSAA, RenderPassImage::LoadOp::CLEAR, RenderPassImage::StoreOp::DONTCARE, ResourceState::RENDERTARGET, ResourceState::RENDERTARGET),
 					RenderPassImage::Resolve(&rt_metadataDummies),
 					RenderPassImage::DepthStencil(renderPath->GetDepthStencil()),
 				};
@@ -4906,6 +4906,7 @@ void EditorComponent::ResizeViewport3D()
 				desc.sample_count = renderPath->getMSAASampleCount();
 				desc.bind_flags = BindFlag::RENDER_TARGET;
 				desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
+				desc.layout = ResourceState::RENDERTARGET;
 				device->CreateTexture(&desc, nullptr, &rt_metadataDummies_MSAA);
 				device->SetName(&rt_metadataDummies_MSAA, "rt_metadataDummies_MSAA");
 			}
