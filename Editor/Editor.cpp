@@ -6386,7 +6386,7 @@ void EditorComponent::UpdateDynamicWidgets()
 		logButton.sprites[wi::gui::IDLE].params.color = color_off;
 		logButton.sprites[wi::gui::IDLE].params.gradient = generalWnd.disableGradientCheckBox.GetCheck() ? wi::image::Params::Gradient::None : wi::image::Params::Gradient::Linear;
 		logButton.sprites[wi::gui::FOCUS].params.color = color_on;
-		logButton.sprites[wi::gui::FOCUS].params.gradient = generalWnd.disableGradientCheckBox.GetCheck() ? wi::image::Params::Gradient::None : wi::image::Params::Gradient::Linear;
+		logButton.sprites[wi::gui::FOCUS].params.gradient = wi::image::Params::Gradient::None;
 	}
 
 
