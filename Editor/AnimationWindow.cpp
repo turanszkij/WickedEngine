@@ -1071,7 +1071,7 @@ void AnimationWindow::SetEntity(Entity entity)
 		wi::scene::Scene& scene = editor->GetCurrentScene();
 
 		AnimationComponent* animation = scene.animations.GetComponent(entity);
-		if (animation != nullptr || IsCollapsed())
+		if (animation != nullptr || (IsCollapsed() && entity == INVALID_ENTITY))
 		{
 			this->entity = entity;
 			RefreshKeyframesList();
