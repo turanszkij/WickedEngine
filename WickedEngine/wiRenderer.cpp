@@ -9580,21 +9580,21 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 				RenderPassImage::RenderTarget(
 					&scene.impostorRenderTarget_Albedo_MSAA,
 					RenderPassImage::LoadOp::CLEAR,
-					RenderPassImage::StoreOp::STORE,
+					RenderPassImage::StoreOp::DONTCARE,
 					ResourceState::RENDERTARGET,
 					ResourceState::RENDERTARGET
 				),
 				RenderPassImage::RenderTarget(
 					&scene.impostorRenderTarget_Normal_MSAA,
 					RenderPassImage::LoadOp::CLEAR,
-					RenderPassImage::StoreOp::STORE,
+					RenderPassImage::StoreOp::DONTCARE,
 					ResourceState::RENDERTARGET,
 					ResourceState::RENDERTARGET
 				),
 				RenderPassImage::RenderTarget(
 					&scene.impostorRenderTarget_Surface_MSAA,
 					RenderPassImage::LoadOp::CLEAR,
-					RenderPassImage::StoreOp::STORE,
+					RenderPassImage::StoreOp::DONTCARE,
 					ResourceState::RENDERTARGET,
 					ResourceState::RENDERTARGET
 				),
