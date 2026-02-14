@@ -781,7 +781,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		float variance_amount = variance.update(cloudColor);
 		variance_amount = saturate(variance_amount);
 		variance_amount = 1 - pow4(1 - variance_amount);
-		float blend = lerp(0.1, 0.01, variance_amount);
+		float blend = lerp(0.1, 0.05, variance_amount);
 		blend = volumetricclouds_frame == 0 ? 1 : blend;
 		
 		cloudColor = lerp(texture_render[halfResCoord], cloudColor, blend);
