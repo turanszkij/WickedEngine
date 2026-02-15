@@ -252,6 +252,14 @@ void SetWindowFullScreen(void* handle, bool fullscreen)
 	[window toggleFullScreen:nil];
 }
 
+bool IsWindowFullScreen(void* handle)
+{
+	NSWindow* window = (__bridge NSWindow*)handle;
+	if (window == nil)
+		return false;
+	return (window.styleMask & NSWindowStyleMaskFullScreen) != 0;
+}
+
 void OpenUrl(const char* url)
 {
 	@autoreleasepool
