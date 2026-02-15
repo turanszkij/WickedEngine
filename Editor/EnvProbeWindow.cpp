@@ -31,6 +31,9 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 	infoLabel.SetFitTextEnabled(true);
 	AddWidget(&infoLabel);
 
+	preview.Create("EnvmapPreview");
+	AddWidget(&preview);
+
 	auto forEachSelected = [this] (auto func) {
 		return [this, func] (auto args) {
 			wi::scene::Scene& scene = editor->GetCurrentScene();
@@ -194,9 +197,13 @@ void EnvProbeWindow::SetEntity(Entity entity)
 		msaaCheckBox.SetEnabled(false);
 		realtimeFrameIntervalSlider.SetEnabled(false);
 		refreshButton.SetEnabled(false);
+		preview.SetImage({});
 	}
 	else
 	{
+		wi::Resource res;
+		res.SetTexture(probe->texture);
+		preview.SetImage(res);
 		realTimeCheckBox.SetCheck(probe->IsRealTime());
 		realTimeCheckBox.SetEnabled(true);
 		msaaCheckBox.SetCheck(probe->IsMSAA());
@@ -249,7 +256,14 @@ void EnvProbeWindow::ResizeLayout()
 
 	layout.add(resolutionCombo);
 
-	layout.add_right(realTimeCheckBox);
-	layout.add_right(msaaCheckBox);
-	layout.add_right(realtimeFrameIntervalSlider);
+	layout.add_right(msaaCheckBox, realTimeCheckBox);
+	layout.add_fullwidth(realtimeFrameIntervalSlider);
+
+	layout.add_fullwidth_aspect(preview);
+	preview.SetColor(wi::Color::White());
+	for (auto& x : preview.sprites)
+	{
+		x.params.blendFlag = wi::enums::BLENDMODE_OPAQUE;
+		x.params.setBackgroundMap(wi::texturehelper::getBlack());
+	}
 }

@@ -833,7 +833,15 @@ namespace wi::gui
 				if (res.IsValid())
 				{
 					const wi::graphics::Texture& tex = res.GetTexture();
-					h_aspect = (float)tex.desc.height / (float)tex.desc.width;
+					if (has_flag(tex.desc.misc_flags, wi::graphics::ResourceMiscFlag::TEXTURECUBE))
+					{
+						// fixed aspect for cubemap cross:
+						h_aspect = 3.0f / 4.0f;
+					}
+					else
+					{
+						h_aspect = (float)tex.desc.height / (float)tex.desc.width;
+					}
 				}
 				const float w = width - x - padding - widget.GetShadowRadius();
 				widget.SetSize(XMFLOAT2(w, w * h_aspect));

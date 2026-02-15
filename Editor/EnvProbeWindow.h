@@ -11,6 +11,7 @@ public:
 	void SetEntity(wi::ecs::Entity entity);
 
 	wi::gui::Label infoLabel;
+	wi::gui::Image preview;
 	wi::gui::CheckBox realTimeCheckBox;
 	wi::gui::CheckBox msaaCheckBox;
 	wi::gui::Slider realtimeFrameIntervalSlider;
