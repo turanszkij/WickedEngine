@@ -2291,6 +2291,7 @@ namespace wi::scene
 		if (resource.IsValid())
 		{
 			texture = resource.GetTexture();
+			subresource = resource.GetTextureSRGBSubresource();
 			SetDirty(false);
 			return;
 		}
@@ -2314,6 +2315,7 @@ namespace wi::scene
 		desc.layout = ResourceState::SHADER_RESOURCE;
 		device->CreateTexture(&desc, nullptr, &texture);
 		device->SetName(&texture, "EnvironmentProbeComponent::texture");
+		subresource = -1;
 	}
 	void EnvironmentProbeComponent::DeleteResource()
 	{

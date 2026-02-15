@@ -4646,7 +4646,7 @@ void UpdatePerFrameData(
 			int texture = -1;
 			if (probe.texture.IsValid())
 			{
-				texture = device->GetDescriptorIndex(&probe.texture, SubresourceType::SRV);
+				texture = device->GetDescriptorIndex(&probe.texture, SubresourceType::SRV, probe.subresource);
 			}
 
 			shadermatrix.r[0] = XMVectorSetW(shadermatrix.r[0], *(float*)&texture);
@@ -8276,7 +8276,7 @@ void DrawDebugWorld(
 			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranslationFromVector(XMLoadFloat3(&probe.position)));
 			device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
-			device->BindResource(&probe.texture, 0, cmd);
+			device->BindResource(&probe.texture, 0, cmd, probe.subresource);
 
 			device->Draw(vertexCount_uvsphere, 0, cmd);
 		}

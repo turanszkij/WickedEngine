@@ -1538,6 +1538,7 @@ namespace wi::scene
 
 		// Non-serialized attributes:
 		wi::graphics::Texture texture;
+		int subresource = -1;
 		wi::Resource resource; // if texture is coming from an asset
 		XMFLOAT3 position;
 		float range;
