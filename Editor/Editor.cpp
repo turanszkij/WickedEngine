@@ -2024,8 +2024,10 @@ void EditorComponent::Update(float dt)
 
 			move = XMVectorLerp(move, moveNew, std::min(1.0f, cameraWnd.accelerationSlider.GetValue() * clampedDT / 0.0166f)); // smooth the movement a bit
 			float moveLength = XMVectorGetX(XMVector3Length(move));
+			float moveNewLength = XMVectorGetX(XMVector3Length(moveNew));
 
-			if (moveLength < 0.0001f)
+			// Only zero out movement when there is no input
+			if (moveLength < 0.0001f && moveNewLength < 0.0001f)
 			{
 				move = XMVectorSet(0, 0, 0, 0);
 			}
@@ -3669,7 +3671,7 @@ void EditorComponent::Render() const
 			if (renderPath->getMSAASampleCount() > 1)
 			{
 				RenderPassImage rp[] = {
-					RenderPassImage::RenderTarget(&rt_metadataDummies_MSAA, RenderPassImage::LoadOp::CLEAR),
+					RenderPassImage::RenderTarget(&rt_metadataDummies_MSAA, RenderPassImage::LoadOp::CLEAR, RenderPassImage::StoreOp::DONTCARE, ResourceState::RENDERTARGET, ResourceState::RENDERTARGET),
 					RenderPassImage::Resolve(&rt_metadataDummies),
 					RenderPassImage::DepthStencil(renderPath->GetDepthStencil()),
 				};
@@ -4904,6 +4906,7 @@ void EditorComponent::ResizeViewport3D()
 				desc.sample_count = renderPath->getMSAASampleCount();
 				desc.bind_flags = BindFlag::RENDER_TARGET;
 				desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
+				desc.layout = ResourceState::RENDERTARGET;
 				device->CreateTexture(&desc, nullptr, &rt_metadataDummies_MSAA);
 				device->SetName(&rt_metadataDummies_MSAA, "rt_metadataDummies_MSAA");
 			}
@@ -6363,18 +6366,28 @@ void EditorComponent::UpdateDynamicWidgets()
 
 	if (wi::backlog::GetUnseenLogLevelMax() >= wi::backlog::LogLevel::Error)
 	{
-		logButton.sprites[wi::gui::IDLE].params.color = wi::Color::Error();
+		const float pulse = std::sin(outlineTimer * XM_2PI * 1.5f) * 0.5f + 0.5f;
+		const XMFLOAT4 alertColor = wi::math::Lerp( wi::Color::Error(), XMFLOAT4(0, 0, 0, 1), pulse * 0.6f);
+		logButton.sprites[wi::gui::IDLE].params.color = alertColor;
 		logButton.sprites[wi::gui::IDLE].params.gradient = wi::image::Params::Gradient::None;
+		logButton.sprites[wi::gui::FOCUS].params.color = alertColor;
+		logButton.sprites[wi::gui::FOCUS].params.gradient = wi::image::Params::Gradient::None;
 	}
 	else if (wi::backlog::GetUnseenLogLevelMax() >= wi::backlog::LogLevel::Warning)
 	{
-		logButton.sprites[wi::gui::IDLE].params.color = wi::Color::Warning();
+		const float pulse = std::sin(outlineTimer * XM_2PI * 1.5f) * 0.5f + 0.5f;
+		const XMFLOAT4 alertColor = wi::math::Lerp(wi::Color::Warning(), XMFLOAT4(0, 0, 0, 1), pulse * 0.6f);
+		logButton.sprites[wi::gui::IDLE].params.color = alertColor;
 		logButton.sprites[wi::gui::IDLE].params.gradient = wi::image::Params::Gradient::None;
+		logButton.sprites[wi::gui::FOCUS].params.color = alertColor;
+		logButton.sprites[wi::gui::FOCUS].params.gradient = wi::image::Params::Gradient::None;
 	}
 	else
 	{
 		logButton.sprites[wi::gui::IDLE].params.color = color_off;
 		logButton.sprites[wi::gui::IDLE].params.gradient = generalWnd.disableGradientCheckBox.GetCheck() ? wi::image::Params::Gradient::None : wi::image::Params::Gradient::Linear;
+		logButton.sprites[wi::gui::FOCUS].params.color = color_on;
+		logButton.sprites[wi::gui::FOCUS].params.gradient = wi::image::Params::Gradient::None;
 	}
 
 

@@ -16,7 +16,7 @@ RWStructuredBuffer<Particle> particleBuffer : register(u0);
 RWStructuredBuffer<uint> aliveBuffer_CURRENT : register(u1);
 RWStructuredBuffer<uint> aliveBuffer_NEW : register(u2);
 RWStructuredBuffer<uint> deadBuffer : register(u3);
-RWByteAddressBuffer counterBuffer : register(u4);
+RWStructuredBuffer<ParticleCounters> counterBuffer : register(u4);
 RWStructuredBuffer<float> distanceBuffer : register(u6);
 RWBuffer<float4> vertexBuffer_POS : register(u7);
 RWBuffer<float4> vertexBuffer_NOR : register(u8);
@@ -32,7 +32,7 @@ RWStructuredBuffer<uint> culledIndirectionBuffer2 : register(u12);
 [numthreads(THREADCOUNT_SIMULATION, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 {
-	uint aliveCount = counterBuffer.Load(PARTICLECOUNTER_OFFSET_ALIVECOUNT);
+	uint aliveCount = counterBuffer[0].aliveCount;
 	if (DTid.x >= aliveCount)
 		return;
 		
@@ -272,7 +272,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 
 		// add to new alive list:
 		uint newAliveIndex;
-		counterBuffer.InterlockedAdd(PARTICLECOUNTER_OFFSET_ALIVECOUNT_AFTERSIMULATION, 1, newAliveIndex);
+		InterlockedAdd(counterBuffer[0].aliveCount_afterSimulation, 1, newAliveIndex);
 		aliveBuffer_NEW[newAliveIndex] = particleIndex;
 
 		// Write out render buffers:
@@ -339,7 +339,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 		if (GetCamera().frustum.intersects(sphere))
 		{
 			uint prevCount;
-			counterBuffer.InterlockedAdd(PARTICLECOUNTER_OFFSET_CULLEDCOUNT, 1, prevCount);
+			InterlockedAdd(counterBuffer[0].culledCount, 1, prevCount);
 
 			culledIndirectionBuffer[prevCount] = prevCount;
 			culledIndirectionBuffer2[prevCount] = particleIndex;
@@ -357,7 +357,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 	{
 		// kill:
 		uint deadIndex;
-		counterBuffer.InterlockedAdd(PARTICLECOUNTER_OFFSET_DEADCOUNT, 1, deadIndex);
+		InterlockedAdd(counterBuffer[0].deadCount, 1, deadIndex);
 		deadBuffer[deadIndex] = particleIndex;
 		
 		vertexBuffer_POS[v0 + 0] = 0;

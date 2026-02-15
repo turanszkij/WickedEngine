@@ -30,7 +30,7 @@ struct alignas(16) ShaderScene
 	float3 aabb_extents;		// enclosing AABB abs(max - min)
 	uint materialCount;
 	float3 aabb_extents_rcp;	// enclosing AABB 1.0f / abs(max - min)
-	float padding6;
+	int texture_cloudmap;
 
 	ShaderWeather weather;
 
@@ -1578,7 +1578,7 @@ struct LensFlarePush
 	float3 xLensFlarePos;
 	float xLensFlareOffset;
 	float2 xLensFlareSize;
-	float2 xLensFlare_padding;
+	uint2 xLensFlareDirectionalLight;
 };
 
 struct WetmapPush
@@ -1720,10 +1720,10 @@ struct AerialPerspectiveCapturePushConstants
 	uint2 resolution;
 	float2 resolution_rcp;
 
-	int texture_input;
 	int texture_output;
 	float padding0;
 	float padding1;
+	float padding2;
 };
 
 struct VolumetricCloudCapturePushConstants
@@ -1731,13 +1731,8 @@ struct VolumetricCloudCapturePushConstants
 	uint2 resolution;
 	float2 resolution_rcp;
 
-	int texture_input;
 	int texture_output;
-	int maxStepCount;
-	float LODMin;
-
-	float shadowSampleCount;
-	float groundContributionSampleCount;
+	int frame;
 	float padding0;
 	float padding1;
 };

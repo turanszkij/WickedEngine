@@ -3,7 +3,7 @@
 
 StructuredBuffer<Surfel> surfelBuffer : register(t0);
 StructuredBuffer<uint> surfelAliveBuffer : register(t1);
-ByteAddressBuffer surfelStatsBuffer : register(t2);
+StructuredBuffer<SurfelStats> surfelStatsBuffer : register(t2);
 
 RWStructuredBuffer<SurfelGridCell> surfelGridBuffer : register(u0);
 RWStructuredBuffer<uint> surfelCellBuffer : register(u1);
@@ -11,7 +11,7 @@ RWStructuredBuffer<uint> surfelCellBuffer : register(u1);
 [numthreads(SURFEL_INDIRECT_NUMTHREADS, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	uint surfel_count = surfelStatsBuffer.Load(SURFEL_STATS_OFFSET_COUNT);
+	uint surfel_count = surfelStatsBuffer[0].count;
 	if (DTid.x >= surfel_count)
 		return;
 

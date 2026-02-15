@@ -428,6 +428,7 @@ namespace wi
 						case dds::DXGI_FORMAT_BC6H_UF16: desc.format = Format::BC6H_UF16; break;
 						case dds::DXGI_FORMAT_BC7_UNORM: desc.format = Format::BC7_UNORM; break;
 						case dds::DXGI_FORMAT_BC7_UNORM_SRGB: desc.format = Format::BC7_UNORM_SRGB; break;
+						case dds::D3DFMT_R8G8B8: desc.format = Format::B8G8R8A8_UNORM_SRGB; break; // needs converting!
 						default:
 							assert(0); // incoming format is not supported 
 							break;
@@ -478,13 +479,39 @@ namespace wi
 							initdata = initdata_heap.data();
 						}
 
+						const uint8_t* texturedata = filedata;
+						wi::vector<uint8_t> converted_texturedata_D3DFMT_R8G8B8;
+
+						if (ddsFormat == dds::D3DFMT_R8G8B8)
+						{
+							// Have to expand with alpha:
+							struct RGBPixel
+							{
+								uint8_t r;
+								uint8_t g;
+								uint8_t b;
+							};
+							const RGBPixel* rgb_data = (RGBPixel*)(filedata + header.data_offset());
+							const size_t rgb_datasize = header.data_size();
+							const size_t pixelcount = rgb_datasize / sizeof(RGBPixel);
+							dds::write_header(&header, dds::DXGI_FORMAT_B8G8R8A8_UNORM_SRGB, header.width(), header.height(), header.mip_levels(), header.array_size(), header.is_cubemap(), header.depth());
+							converted_texturedata_D3DFMT_R8G8B8.resize(sizeof(dds::Header) + sizeof(wi::Color) * pixelcount);
+							texturedata = converted_texturedata_D3DFMT_R8G8B8.data();
+							wi::Color* rgba_data = (wi::Color*)(converted_texturedata_D3DFMT_R8G8B8.data() + header.data_offset());
+							for (size_t i = 0; i < pixelcount; ++i)
+							{
+								const RGBPixel& rgb = rgb_data[i];
+								rgba_data[i] = wi::Color(rgb.r, rgb.g, rgb.b, 255);
+							}
+						}
+
 						uint32_t subresource_index = 0;
 						for (uint32_t slice = 0; slice < desc.array_size; ++slice)
 						{
 							for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
 							{
 								SubresourceData& subresourceData = initdata[subresource_index++];
-								subresourceData.data_ptr = filedata + header.mip_offset(mip, slice);
+								subresourceData.data_ptr = texturedata + header.mip_offset(mip, slice);
 								subresourceData.row_pitch = header.row_pitch(mip);
 								subresourceData.slice_pitch = header.slice_pitch(mip);
 							}

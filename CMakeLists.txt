@@ -18,7 +18,6 @@ endif()
 project(WickedEngine)
 
 include(CheckIPOSupported)
-check_ipo_supported(RESULT ipo_supported)
 
 set(WICKED_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -28,7 +27,7 @@ option(USE_LIBCXX "Link WickedEngine to llvm libc++ library - only available wit
 option(WICKED_EDITOR "Build WickedEngine editor" ON)
 option(WICKED_TESTS "Build WickedEngine tests" ON)
 option(WICKED_IMGUI_EXAMPLE "Build WickedEngine imgui example" ON)
-option(WICKED_ENABLE_IPO "Enable IPO/LTO in non-debug builds" ${ipo_supported})
+option(WICKED_ENABLE_IPO "Enable IPO/LTO in non-debug builds" NO)
 option(WICKED_EMBED_SHADERS "Embed shaders into the library" NO)
 if(UNIX)
     option(WICKED_ENABLE_ASAN "Enable AddressSanitizer in debug builds" OFF)

@@ -301,7 +301,7 @@ namespace wi::renderer
 	void ComputeSkyAtmosphereCameraVolumeLut(wi::graphics::CommandList cmd);
 
 	// Draw skydome centered to camera.
-	void DrawSky(const wi::scene::Scene& scene, wi::graphics::CommandList cmd);
+	void DrawSky(const wi::scene::Scene& scene, wi::graphics::CommandList cmd, bool clouds = true);
 	// Draw shadow maps for each visible light that has associated shadow maps
 	void DrawSun(wi::graphics::CommandList cmd);
 	// Draw shadow maps for each visible light that has associated shadow maps
@@ -350,8 +350,7 @@ namespace wi::renderer
 	// Draw Lens Flares for lights that have them enabled
 	void DrawLensFlares(
 		const Visibility& vis,
-		wi::graphics::CommandList cmd,
-		const wi::graphics::Texture* texture_directional_occlusion = nullptr
+		wi::graphics::CommandList cmd
 	);
 	// Call once per frame to re-render out of date environment probes
 	void RefreshEnvProbes(const Visibility& vis, wi::graphics::CommandList cmd);
@@ -829,7 +828,6 @@ namespace wi::renderer
 		wi::graphics::Texture texture_reproject[2];
 		wi::graphics::Texture texture_reproject_depth[2];
 		wi::graphics::Texture texture_reproject_additional[2];
-		wi::graphics::Texture texture_cloudMask;
 
 		void ResetFrame() const { frame = -1; }
 		void AdvanceFrame() const { frame++; }
@@ -849,6 +847,10 @@ namespace wi::renderer
 	);
 	void Postprocess_VolumetricClouds_Upsample(
 		const VolumetricCloudResources& res,
+		wi::graphics::CommandList cmd
+	);
+	void VolumetricClouds_Capture(
+		const wi::scene::Scene& scene,
 		wi::graphics::CommandList cmd
 	);
 	void Postprocess_FXAA(
@@ -1192,6 +1194,8 @@ namespace wi::renderer
 	bool GetToDrawDebugSprings();
 	bool GetToDrawGridHelper();
 	void SetToDrawGridHelper(bool value);
+	void SetGridHelperColor(const XMFLOAT4& value);
+	XMFLOAT4 GetGridHelperColor();
 	bool GetToDrawVoxelHelper();
 	void SetToDrawVoxelHelper(bool value, int clipmap_level);
 	void SetDebugLightCulling(bool enabled);

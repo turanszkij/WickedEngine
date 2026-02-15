@@ -7,7 +7,7 @@
 //	Parent node will merge child AABBs and store
 //	Loop until we reach the root...
 
-ByteAddressBuffer primitiveCounterBuffer : register(t0);
+StructuredBuffer<uint> primitiveCounterBuffer : register(t0);
 StructuredBuffer<uint> primitiveIDBuffer : register(t1);
 ByteAddressBuffer primitiveBuffer : register(t2);
 StructuredBuffer<uint> bvhParentBuffer : register(t3);
@@ -18,7 +18,7 @@ RWStructuredBuffer<uint> bvhFlagBuffer : register(u1);
 [numthreads(BVH_BUILDER_GROUPSIZE, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	const uint primitiveCount = primitiveCounterBuffer.Load(0);
+	const uint primitiveCount = primitiveCounterBuffer[0];
 
 	if (DTid.x < primitiveCount)
 	{

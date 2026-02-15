@@ -9,14 +9,14 @@ RWStructuredBuffer<Surfel> surfelBuffer : register(u0);
 RWStructuredBuffer<SurfelGridCell> surfelGridBuffer : register(u1);
 RWStructuredBuffer<uint> surfelAliveBuffer_NEXT : register(u2);
 RWStructuredBuffer<uint> surfelDeadBuffer : register(u3);
-RWByteAddressBuffer surfelStatsBuffer : register(u4);
+RWStructuredBuffer<SurfelStats> surfelStatsBuffer : register(u4);
 RWStructuredBuffer<SurfelRayDataPacked> surfelRayBuffer : register(u5);
 RWStructuredBuffer<SurfelData> surfelDataBuffer : register(u6);
 
 [numthreads(SURFEL_INDIRECT_NUMTHREADS, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	uint surfel_count = surfelStatsBuffer.Load(SURFEL_STATS_OFFSET_COUNT);
+	uint surfel_count = surfelStatsBuffer[0].count;
 	if (DTid.x >= surfel_count)
 		return;
 
@@ -60,7 +60,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	}
 
 	bool shortage = true;
-	shortage = asint(surfelStatsBuffer.Load(SURFEL_STATS_OFFSET_SHORTAGE)) > 0;
+	shortage = surfelStatsBuffer[0].shortage > 0;
 	if (surfel_data.GetRecycle() > SURFEL_RECYCLE_TIME && shortage)
 	{
 		radius = 0;
@@ -69,7 +69,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	if (radius > 0)
 	{
 		uint aliveCount;
-		surfelStatsBuffer.InterlockedAdd(SURFEL_STATS_OFFSET_NEXTCOUNT, 1, aliveCount);
+		InterlockedAdd(surfelStatsBuffer[0].nextCount, 1, aliveCount);
 		surfelAliveBuffer_NEXT[aliveCount] = surfel_index;
 
 		// Determine ray count for surfel:
@@ -86,7 +86,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		uint rayOffset = 0;
 		if (rayCountRequest > 0)
 		{
-			surfelStatsBuffer.InterlockedAdd(SURFEL_STATS_OFFSET_RAYCOUNT, rayCountRequest, rayOffset);
+			InterlockedAdd(surfelStatsBuffer[0].rayCount, rayCountRequest, rayOffset);
 		}
 		uint rayCount = (rayOffset < SURFEL_RAY_BUDGET) ? rayCountRequest : 0;
 		rayCount = clamp(rayCount, 0, SURFEL_RAY_BUDGET - rayOffset);
@@ -111,7 +111,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	else
 	{
 		int deadCount;
-		surfelStatsBuffer.InterlockedAdd(SURFEL_STATS_OFFSET_DEADCOUNT, 1, deadCount);
+		InterlockedAdd(surfelStatsBuffer[0].deadCount, 1, deadCount);
 		surfelDeadBuffer[deadCount] = surfel_index;
 	}
 }

@@ -851,25 +851,21 @@ namespace wi::graphics
 
 				int allocate()
 				{
-					locker.lock();
+					std::scoped_lock lck(locker);
 					if (!freelist.empty())
 					{
 						int index = freelist.back();
 						freelist.pop_back();
-						locker.unlock();
 						return index;
 					}
-					locker.unlock();
 					return -1;
 				}
 				void free(int index)
 				{
-					if (index >= 0)
-					{
-						locker.lock();
-						freelist.push_back(index);
-						locker.unlock();
-					}
+					if (index < 0)
+						return;
+					std::scoped_lock lck(locker);
+					freelist.push_back(index);
 				}
 			};
 			BindlessDescriptorHeap bindlessSampledImages;
@@ -926,6 +922,8 @@ namespace wi::graphics
 			// Deferred destroy of resources that the GPU is already finished with:
 			void Update(uint64_t FRAMECOUNT, uint32_t BUFFERCOUNT)
 			{
+				std::scoped_lock lck(destroylocker);
+
 				const auto destroy = [&](auto&& queue, auto&& handler) {
 					while (!queue.empty()) {
 						if (queue.front().second + BUFFERCOUNT < FRAMECOUNT)
@@ -942,8 +940,6 @@ namespace wi::graphics
 				};
 
 				framecount = FRAMECOUNT;
-
-				std::scoped_lock lck(destroylocker);
 
 				destroy(destroyer_allocations, [&](auto& item) {
 					vmaFreeMemory(allocator, item);

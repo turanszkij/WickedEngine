@@ -374,6 +374,13 @@ namespace wi
 				wi::renderer::BindCommonResources(cmd);
 				wi::renderer::UpdateRenderDataAsync(visibility_main, frameCB, cmd);
 
+				// just clear depth for safety:
+				RenderPassImage rp[] = {
+					RenderPassImage::DepthStencil(&depthBuffer_Main, RenderPassImage::LoadOp::CLEAR),
+				};
+				device->RenderPassBegin(rp, arraysize(rp), cmd);
+				device->RenderPassEnd(cmd);
+
 				if (scene->weather.IsRealisticSky())
 				{
 					wi::renderer::ComputeSkyAtmosphereTextures(cmd);
@@ -424,6 +431,20 @@ namespace wi
 				if (getVolumeLightsEnabled() && visibility_main.IsRequestedVolumetricLights())
 				{
 					wi::renderer::DrawShadowmaps(visibility_main, cmd);
+				}
+
+				if (scene->weather.IsVolumetricClouds())
+				{
+					wi::renderer::Postprocess_VolumetricClouds(
+						volumetriccloudResources,
+						cmd,
+						*camera,
+						camera_previous,
+						camera_reflection,
+						false,
+						scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
+						scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
+					);
 				}
 
 			});
@@ -480,19 +501,6 @@ namespace wi
 				wi::renderer::Postprocess_AerialPerspective(
 					aerialperspectiveResources,
 					cmd
-				);
-			}
-			if (scene->weather.IsVolumetricClouds())
-			{
-				wi::renderer::Postprocess_VolumetricClouds(
-					volumetriccloudResources,
-					cmd,
-					*camera,
-					camera_previous,
-					camera_reflection,
-					false,
-					scene->weather.volumetricCloudsWeatherMapFirst.IsValid() ? &scene->weather.volumetricCloudsWeatherMapFirst.GetTexture() : nullptr,
-					scene->weather.volumetricCloudsWeatherMapSecond.IsValid() ? &scene->weather.volumetricCloudsWeatherMapSecond.GetTexture() : nullptr
 				);
 			}
 
@@ -579,8 +587,7 @@ namespace wi
 				{
 					wi::renderer::DrawLensFlares(
 						visibility_main,
-						cmd,
-						scene->weather.IsVolumetricClouds() ? &volumetriccloudResources.texture_cloudMask : nullptr
+						cmd
 					);
 				}
 
@@ -716,6 +723,8 @@ namespace wi
 				device->EventEnd(cmd);
 				wi::profiler::EndRange(range);
 			}
+
+			wi::renderer::TextureStreamingReadbackCopy(*scene, cmd);
 		});
 
 		RenderPath2D::Render();

@@ -87,6 +87,7 @@ namespace wi::scene
 		{
 			GPUBufferDesc desc;
 			desc.stride = sizeof(ShaderMeshInstance);
+			desc.alignment = alignof(ShaderMeshInstance);
 			desc.size = desc.stride * instanceArraySize * 2; // *2 to grow fast
 			desc.bind_flags = BindFlag::SHADER_RESOURCE;
 			desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
@@ -125,6 +126,7 @@ namespace wi::scene
 		{
 			GPUBufferDesc desc;
 			desc.stride = sizeof(ShaderMaterial);
+			desc.alignment = alignof(ShaderMaterial);
 			desc.size = desc.stride * materialArraySize * 2; // *2 to grow fast
 			desc.bind_flags = BindFlag::SHADER_RESOURCE;
 			desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
@@ -152,6 +154,7 @@ namespace wi::scene
 		{
 			GPUBufferDesc desc;
 			desc.stride = sizeof(uint32_t);
+			desc.alignment = alignof(uint32_t);
 			desc.size = desc.stride * materialArraySize * 2; // *2 to grow fast
 			desc.bind_flags = BindFlag::UNORDERED_ACCESS;
 			desc.format = Format::R32_UINT;
@@ -314,6 +317,7 @@ namespace wi::scene
 		{
 			GPUBufferDesc desc;
 			desc.stride = sizeof(ShaderGeometry);
+			desc.alignment = alignof(ShaderGeometry);
 			desc.size = desc.stride * geometryArraySize * 2; // *2 to grow fast
 			desc.bind_flags = BindFlag::SHADER_RESOURCE;
 			desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
@@ -529,11 +533,12 @@ namespace wi::scene
 				device->CreateBuffer2(&buf, fill_dead_indices, &surfelgi.deadBuffer);
 				device->SetName(&surfelgi.deadBuffer, "surfelgi.deadBuffer");
 
-				buf.stride = sizeof(uint);
-				buf.size = SURFEL_STATS_SIZE;
-				buf.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-				uint stats_data[] = { 0,0,SURFEL_CAPACITY,0,0,0 };
-				device->CreateBuffer(&buf, &stats_data, &surfelgi.statsBuffer);
+				buf.stride = sizeof(SurfelStats);
+				buf.size = buf.stride;
+				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
+				SurfelStats stats = {};
+				stats.deadCount = SURFEL_CAPACITY;
+				device->CreateBuffer(&buf, &stats, &surfelgi.statsBuffer);
 				device->SetName(&surfelgi.statsBuffer, "surfelgi.statsBuffer");
 
 				buf.stride = sizeof(uint);
@@ -835,6 +840,38 @@ namespace wi::scene
 			}
 		}
 
+		if (weather.IsVolumetricClouds())
+		{
+			if (!cloudmap.IsValid())
+			{
+				cloudmap_frame = 0;
+
+				TextureDesc desc;
+				desc.format = Format::R16G16B16A16_FLOAT;
+				desc.width = cloudmap_resolution;
+				desc.height = cloudmap_resolution;
+				desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+				bool success = device->CreateTexture(&desc, nullptr, &cloudmap);
+				assert(success);
+				device->SetName(&cloudmap, "cloudmap");
+
+				GPUBufferDesc bd;
+				bd.stride = sizeof(XMUINT4) * 2 + sizeof(float);
+				bd.size = bd.stride * (desc.width / 2) * (desc.height / 2);
+				bd.bind_flags = BindFlag::UNORDERED_ACCESS;
+				bd.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
+				success = device->CreateBuffer(&bd, nullptr, &cloudmap_variance);
+				device->SetName(&cloudmap_variance, "cloudmap_variance");
+
+				wilog("Created volumetric cloud map: %s", wi::helper::GetMemorySizeText(ComputeTextureMemorySizeInBytes(desc) + bd.size).c_str());
+			}
+		}
+		else
+		{
+			cloudmap = {};
+			cloudmap_variance = {};
+		}
+
 		// Shader scene resources:
 		if (device->CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
 		{
@@ -861,6 +898,7 @@ namespace wi::scene
 		{
 			shaderscene.globalenvmap = -1;
 		}
+		shaderscene.texture_cloudmap = device->GetDescriptorIndex(&cloudmap, SubresourceType::SRV);
 
 		if (probes.GetCount() > 0 && probes[0].texture.IsValid())
 		{

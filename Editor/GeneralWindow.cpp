@@ -625,6 +625,8 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		editor->themeEditorWnd.waveColor = wi::Color::fromFloat4(theme_color_wave);
 		editor->themeEditorWnd.UpdateColorPickerMode();
 
+		wi::renderer::SetGridHelperColor(wi::Color::lerp(theme_color_idle, theme_color_focus, 0.6f));
+
 		theme.shadow_highlight = !focusModeCheckBox.GetCheck();
 		theme.shadow_highlight_spread = 0.4f;
 		theme.shadow_highlight_color = theme_color_focus;

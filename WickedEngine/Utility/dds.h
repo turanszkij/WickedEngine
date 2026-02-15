@@ -276,7 +276,7 @@ namespace dds
 		DXGI_FORMAT_V408 = 132,
 		DXGI_FORMAT_SAMPLER_FEEDBACK_MIN_MIP_OPAQUE,
 		DXGI_FORMAT_SAMPLER_FEEDBACK_MIP_REGION_USED_OPAQUE,
-		D3DFMT_R8G8B8, // Note: you will need to handle conversion of this legacy format yourself
+		D3DFMT_R8G8B8, // Note: you will need to handle conversion of this legacy format yourself, the DXGI equivalent is DXGI_FORMAT_B8G8R8A8_UNORM_SRGB, but the alpha will need to be added
 		DXGI_FORMAT_FORCE_DWORD = 0xffffffff
 	};
 	enum D3D10_RESOURCE_DIMENSION {
@@ -639,11 +639,11 @@ namespace dds
 			case DXGI_FORMAT_AYUV:
 			case DXGI_FORMAT_Y410:
 			case DXGI_FORMAT_YUY2:
-			case D3DFMT_R8G8B8: // need to be expanded with alpha
 				return 32;
 
 			case DXGI_FORMAT_P010:
 			case DXGI_FORMAT_P016:
+			case D3DFMT_R8G8B8:
 				return 24;
 
 			case DXGI_FORMAT_R8G8_TYPELESS:

@@ -1,8 +1,13 @@
 #define DISABLE_SOFT_SHADOWMAP
 #define TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
-#include "objectHF.hlsli"
 #include "skyHF.hlsli"
 #include "fogHF.hlsli"
+
+struct PushData
+{
+	uint clouds_enabled;
+};
+PUSHCONSTANT(push, PushData);
 
 float4 main(float4 pos : SV_POSITION, float2 clipspace : TEXCOORD) : SV_TARGET
 {	
@@ -16,7 +21,7 @@ float4 main(float4 pos : SV_POSITION, float2 clipspace : TEXCOORD) : SV_TARGET
 	bool receiveShadow = GetFrame().options & OPTION_BIT_REALISTIC_SKY_RECEIVE_SHADOW;
 
 	// Calculate dynamic sky
-	float4 color = float4(GetDynamicSkyColor(pos.xy, V, true, false, false, highQuality, perPixelNoise, receiveShadow), 1);
+	float4 color = float4(GetDynamicSkyColor(pos.xy, V, true, false, false, highQuality, perPixelNoise, receiveShadow, push.clouds_enabled), 1);
 
 	color = saturateMediump(color);
 	return color;

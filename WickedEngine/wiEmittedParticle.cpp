@@ -227,8 +227,9 @@ namespace wi
 			GPUBufferDesc bd;
 			bd.usage = Usage::DEFAULT;
 			bd.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-			bd.size = sizeof(counters);
-			bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+			bd.stride = sizeof(counters);
+			bd.size = bd.stride;
+			bd.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 			device->CreateBuffer(&bd, &counters, &counterBuffer);
 			device->SetName(&counterBuffer, "EmittedParticleSystem::counterBuffer");
 		}
@@ -773,7 +774,7 @@ namespace wi
 
 		if (IsSorted())
 		{
-			wi::gpusortlib::Sort(MAX_PARTICLES, distanceBuffer, counterBuffer, PARTICLECOUNTER_OFFSET_CULLEDCOUNT, culledIndirectionBuffer, cmd);
+			wi::gpusortlib::Sort(MAX_PARTICLES, distanceBuffer, counterBuffer, offsetof(ParticleCounters, culledCount), culledIndirectionBuffer, cmd);
 		}
 
 		if (!IsPaused() && dt > 0)
@@ -816,7 +817,7 @@ namespace wi
 
 		// Statistics is copied to readback:
 		const uint32_t oldest_stat_index = wi::graphics::GetDevice()->GetBufferIndex();
-		device->CopyResource(&statisticsReadbackBuffer[oldest_stat_index], &counterBuffer, cmd);
+		device->CopyBuffer(&statisticsReadbackBuffer[oldest_stat_index], 0, &counterBuffer, 0, sizeof(ParticleCounters), cmd);
 
 		{
 			const GPUBarrier barriers[] = {

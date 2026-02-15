@@ -13,12 +13,21 @@ Texture2D<float> cloud_additional_history : register(t4);
 RWTexture2D<float4> output : register(u0);
 RWTexture2D<float2> output_depth : register(u1);
 RWTexture2D<float> output_additional : register(u2);
-RWTexture2D<unorm float> output_cloudMask : register(u3);
 
-static const float2 temporalResponseMinMax = float2(0.5, 0.9);
+static const float2 temporalResponseMinMax = float2(0.86, 0.96);
 
 // When moving fast reprojection cannot catch up. This value eliminates the ghosting but results in clipping artefacts
 //#define ADDITIONAL_BOX_CLAMP
+
+// Fallback to non-reprojected but slower updated cloudmap on disocclusions to avoid noisiness:
+void cloudmap_fallback(float depth, float3 V, inout float4 result)
+{
+	if (depth == 0 && V.y > 0 && GetScene().texture_cloudmap >= 0)
+	{
+		float4 cloudmap = bindless_textures[descriptor_index(GetScene().texture_cloudmap)].SampleLevel(sampler_linear_clamp, encode_hemioct(V.xzy) * 0.5 + 0.5, 0);
+		result = cloudmap;
+	}
+}
 
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
@@ -81,6 +90,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float2 depthResult = 0.0;
 	float additionalResult = 0.0;
 
+	float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 1).r; // Half res
+	float3 depthWorldPosition = reconstruct_position(uv, depth);
+	float tToDepthBuffer = length(depthWorldPosition - GetCamera().position);
+	float3 V = normalize(depthWorldPosition - GetCamera().position);
 
 #if 0 // Simple reprojection version
 	if (shouldUpdatePixel)
@@ -96,7 +109,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	output[DTid.xy] = result;
 	output_depth[DTid.xy] = depthResult;
 	output_additional[DTid.xy] = 0.0;
-	output_cloudMask[DTid.xy] = pow(saturate(1 - result.a), 64);
 	return;
 #endif
 
@@ -109,10 +121,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		float4 previousResult = cloud_history.SampleLevel(sampler_linear_clamp, prevUV, 0);
 		float2 previousDepthResult = cloud_depth_history.SampleLevel(sampler_linear_clamp, prevUV, 0);
 		float previousAdditionalResult = cloud_additional_history.SampleLevel(sampler_linear_clamp, prevUV, 0);
-		
-		float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 1).r; // Half res
-		float3 depthWorldPosition = reconstruct_position(uv, depth);
-		float tToDepthBuffer = length(depthWorldPosition - GetCamera().position);
 
 		// Fow now we use float values instead of half-float, we need to convert the cloud system to use kilometer unit and we can revert to half-float values
 		tToDepthBuffer = depth == 0.0 ? FLT_MAX : tToDepthBuffer;
@@ -124,6 +132,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				result = newResult;
 				depthResult = newDepthResult;
 				additionalResult = temporalResponseMinMax.x;
+				cloudmap_fallback(depth, V, result);
 			}
 			else
 			{
@@ -194,6 +203,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 							result = neighborResult;
 							depthResult = neighboorDepthResult;
 							additionalResult = temporalResponseMinMax.x;
+							cloudmap_fallback(depth, V, result);
 						}
 					}
 				}
@@ -244,10 +254,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		result = cloud_current.SampleLevel(sampler_linear_clamp, uv, 0);
 		depthResult = cloud_depth_current.SampleLevel(sampler_linear_clamp, uv, 0);
 		additionalResult = temporalResponseMinMax.x;
+		cloudmap_fallback(depth, V, result);
 	}
 	
 	output[DTid.xy] = result;
 	output_depth[DTid.xy] = depthResult;
 	output_additional[DTid.xy] = additionalResult;
-	output_cloudMask[DTid.xy] = pow(saturate(1 - result.a), 64);
 }

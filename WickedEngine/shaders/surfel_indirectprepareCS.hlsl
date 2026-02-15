@@ -1,27 +1,27 @@
 #include "globals.hlsli"
 #include "ShaderInterop_SurfelGI.h"
 
-RWByteAddressBuffer surfelStatsBuffer : register(u0);
+RWStructuredBuffer<SurfelStats> surfelStatsBuffer : register(u0);
 RWStructuredBuffer<SurfelIndirectArgs> surfelIndirectBuffer : register(u1);
 
 [numthreads(1, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	uint surfel_count = surfelStatsBuffer.Load(SURFEL_STATS_OFFSET_NEXTCOUNT);
+	uint surfel_count = surfelStatsBuffer[0].nextCount;
 	surfel_count = clamp(surfel_count, 0, SURFEL_CAPACITY);
 
-	int dead_count = asint(surfelStatsBuffer.Load(SURFEL_STATS_OFFSET_DEADCOUNT));
+	int dead_count = surfelStatsBuffer[0].deadCount;
 	int shortage = max(0, -dead_count); // if deadcount was negative, there was shortage
 	dead_count = clamp(dead_count, 0, (int)SURFEL_CAPACITY);
 
-	uint ray_count = surfelStatsBuffer.Load(SURFEL_STATS_OFFSET_RAYCOUNT);
+	uint ray_count = surfelStatsBuffer[0].rayCount;
 
-	surfelStatsBuffer.Store(SURFEL_STATS_OFFSET_COUNT, surfel_count);
-	surfelStatsBuffer.Store(SURFEL_STATS_OFFSET_NEXTCOUNT, 0);
-	surfelStatsBuffer.Store(SURFEL_STATS_OFFSET_DEADCOUNT, dead_count);
-	surfelStatsBuffer.Store(SURFEL_STATS_OFFSET_CELLALLOCATOR, 0);
-	surfelStatsBuffer.Store(SURFEL_STATS_OFFSET_RAYCOUNT, 0);
-	surfelStatsBuffer.Store(SURFEL_STATS_OFFSET_SHORTAGE, shortage);
+	surfelStatsBuffer[0].count = surfel_count;
+	surfelStatsBuffer[0].nextCount = 0;
+	surfelStatsBuffer[0].deadCount = dead_count;
+	surfelStatsBuffer[0].cellAllocator = 0;
+	surfelStatsBuffer[0].rayCount = 0;
+	surfelStatsBuffer[0].shortage = shortage;
 
 	SurfelIndirectArgs args;
 	
