@@ -16,6 +16,8 @@
 #include "shaders/ShaderInterop_SurfelGI.h"
 #include "shaders/ShaderInterop_DDGI.h"
 
+#include <cmath>
+
 #if __has_include(<sanitizer/asan_interface.h>)
 #include <sanitizer/asan_interface.h>
 #else
@@ -30,6 +32,111 @@ using namespace wi::primitive;
 namespace wi::scene
 {
 	static constexpr uint32_t small_subtask_groupsize = 256u;
+
+	static float ComputeMoonPhaseVisibility(const XMFLOAT3& sun_dir, const XMFLOAT3& moon_dir)
+	{
+		XMVECTOR sun = XMLoadFloat3(&sun_dir);
+		XMVECTOR moon = XMLoadFloat3(&moon_dir);
+		const float sun_len_sq = XMVectorGetX(XMVector3LengthSq(sun));
+		const float moon_len_sq = XMVectorGetX(XMVector3LengthSq(moon));
+		if (!std::isfinite(sun_len_sq) || !std::isfinite(moon_len_sq) || sun_len_sq < 1e-6f || moon_len_sq < 1e-6f)
+		{
+			return 1.0f;
+		}
+		sun = XMVector3Normalize(sun);
+		moon = XMVector3Normalize(moon);
+		const float dot_sm = XMVectorGetX(XMVector3Dot(sun, moon));
+		return wi::math::Clamp(0.5f * (1.0f - dot_sm), 0.0f, 1.0f);
+	}
+
+	static float ResolveSunEclipseStrength(const WeatherComponent& weather)
+	{
+		const float manual = wi::math::Clamp(weather.sunEclipseStrength, 0.0f, 1.0f);
+		if (!weather.sunEclipseAutomatic)
+		{
+			return manual;
+		}
+
+		XMVECTOR sun = XMLoadFloat3(&weather.sunDirection);
+		XMVECTOR moon = XMLoadFloat3(&weather.moonDirection);
+		const float sun_len_sq = XMVectorGetX(XMVector3LengthSq(sun));
+		const float moon_len_sq = XMVectorGetX(XMVector3LengthSq(moon));
+		if (!std::isfinite(sun_len_sq) || sun_len_sq < 1e-6f)
+		{
+			return manual;
+		}
+		XMFLOAT3 default_moon_dir = XMFLOAT3(0.0f, 0.5f, 0.8660254f);
+		if (!std::isfinite(moon_len_sq) || moon_len_sq < 1e-6f)
+		{
+			moon = XMLoadFloat3(&default_moon_dir);
+		}
+
+		sun = XMVector3Normalize(sun);
+		moon = XMVector3Normalize(moon);
+		const float alignment = wi::math::Clamp(XMVectorGetX(XMVector3Dot(sun, moon)), -1.0f, 1.0f);
+		if (alignment <= 0.0f)
+		{
+			return manual;
+		}
+
+		constexpr float sun_apparent_radius = wi::math::DegreesToRadians(0.27f);
+		constexpr float penumbra_padding = wi::math::DegreesToRadians(0.35f);
+		const float moon_radius = std::max(weather.moonSize, 0.0f);
+		const float totality_angle = std::max(moon_radius + sun_apparent_radius, 0.0f);
+		const float penumbra_angle = totality_angle + penumbra_padding;
+		const float cos_totality = std::cos(totality_angle);
+		const float cos_penumbra = std::cos(penumbra_angle);
+		if (cos_totality <= cos_penumbra)
+		{
+			return manual;
+		}
+
+		const float eclipse = wi::math::Clamp((alignment - cos_penumbra) / (cos_totality - cos_penumbra), 0.0f, 1.0f);
+		return eclipse;
+	}
+
+	static float ResolveMoonEclipseStrength(const WeatherComponent& weather)
+	{
+		const float manual = wi::math::Clamp(weather.moonEclipseStrength, 0.0f, 1.0f);
+		if (!weather.moonEclipseAutomatic)
+		{
+			return manual;
+		}
+
+		XMFLOAT3 sun_dir = weather.sunDirection;
+		XMFLOAT3 moon_dir = weather.moonDirection;
+		XMVECTOR sun = XMLoadFloat3(&sun_dir);
+		XMVECTOR moon = XMLoadFloat3(&moon_dir);
+		const float sun_len_sq = XMVectorGetX(XMVector3LengthSq(sun));
+		if (!std::isfinite(sun_len_sq) || sun_len_sq < 1e-6f)
+		{
+			return manual;
+		}
+		float moon_len_sq = XMVectorGetX(XMVector3LengthSq(moon));
+		if (!std::isfinite(moon_len_sq) || moon_len_sq < 1e-6f)
+		{
+			moon_dir = XMFLOAT3(0.0f, 0.5f, 0.8660254f);
+			moon = XMLoadFloat3(&moon_dir);
+			moon_len_sq = XMVectorGetX(XMVector3LengthSq(moon));
+		}
+
+		sun = XMVector3Normalize(sun);
+		moon = XMVector3Normalize(moon);
+		const float opposition = wi::math::Clamp(-XMVectorGetX(XMVector3Dot(sun, moon)), -1.0f, 1.0f);
+		constexpr float sun_apparent_radius = wi::math::DegreesToRadians(0.27f);
+		constexpr float penumbra_padding = wi::math::DegreesToRadians(0.35f);
+		const float totality_angle = std::max(weather.moonSize + sun_apparent_radius, 0.0f);
+		const float penumbra_angle = totality_angle + penumbra_padding;
+		const float cos_totality = std::cos(totality_angle);
+		const float cos_penumbra = std::cos(penumbra_angle);
+		if (cos_totality <= cos_penumbra)
+		{
+			return manual;
+		}
+
+		const float eclipse = wi::math::Clamp((opposition - cos_penumbra) / (cos_totality - cos_penumbra), 0.0f, 1.0f);
+		return eclipse;
+	}
 
 	void Scene::Update(float dt)
 	{
@@ -928,8 +1035,37 @@ namespace wi::scene
 		shaderscene.aabb_extents_rcp.y = 1.0f / shaderscene.aabb_extents.y;
 		shaderscene.aabb_extents_rcp.z = 1.0f / shaderscene.aabb_extents.z;
 
+		const float resolved_sun_eclipse = ResolveSunEclipseStrength(weather);
+		weather.resolvedSunEclipseStrength = resolved_sun_eclipse;
+		if (weathers.GetCount() > 0)
+		{
+			weathers[0].resolvedSunEclipseStrength = weather.resolvedSunEclipseStrength;
+		}
 		shaderscene.weather.sun_color = wi::math::pack_half3(weather.sunColor);
 		shaderscene.weather.sun_direction = wi::math::pack_half3(weather.sunDirection);
+		shaderscene.weather.sun_eclipse_strength = resolved_sun_eclipse;
+		shaderscene.weather.padding_sun0 = 0.0f;
+		auto moonDir = weather.moonDirection;
+		if (wi::math::LengthSquared(moonDir) < 1e-6f)
+		{
+			moonDir = XMFLOAT3(0.0f, 0.5f, 0.8660254f);
+		}
+		else
+		{
+			XMVECTOR moonDirVec = XMVector3Normalize(XMLoadFloat3(&moonDir));
+			XMStoreFloat3(&moonDir, moonDirVec);
+		}
+		shaderscene.weather.moon_color = wi::math::pack_half3(weather.moonColor);
+		shaderscene.weather.moon_direction = wi::math::pack_half3(moonDir);
+		shaderscene.weather.moon_params = XMFLOAT4(weather.moonSize, weather.moonGlowSize, weather.moonGlowSharpness, weather.moonGlowIntensity);
+		shaderscene.weather.moon_texture = weather.moonTexture.IsValid() ? device->GetDescriptorIndex(&weather.moonTexture.GetTexture(), SubresourceType::SRV, weather.moonTexture.GetTextureSRGBSubresource()) : -1;
+		shaderscene.weather.moon_texture_mip_bias = weather.moonTextureMipBias;
+		const float moon_phase_visibility = ComputeMoonPhaseVisibility(weather.sunDirection, moonDir);
+		const float resolved_moon_eclipse = ResolveMoonEclipseStrength(weather);
+		const float moon_eclipse_scale = wi::math::Clamp(1.0f - resolved_moon_eclipse, 0.0f, 1.0f);
+		shaderscene.weather.moon_light_intensity = weather.moonLightIntensity * moon_phase_visibility * moon_eclipse_scale;
+		shaderscene.weather.moon_eclipse_strength = resolved_moon_eclipse;
+		shaderscene.weather.moon_light_index = weather.moon_light_index;
 		shaderscene.weather.most_important_light_index = weather.most_important_light_index;
 		shaderscene.weather.ambient = wi::math::pack_half3(weather.ambient);
 		shaderscene.weather.sky_rotation_sin = std::sin(weather.sky_rotation);
@@ -1392,6 +1528,155 @@ namespace wi::scene
 		light.innerConeAngle = innerConeAngle;
 
 		return entity;
+	}
+
+	void Scene::EnsureMoonLight(WeatherComponent& weather_component)
+	{
+		if (weather_component.moonLight != INVALID_ENTITY)
+		{
+			if (!lights.Contains(weather_component.moonLight) || !transforms.Contains(weather_component.moonLight))
+			{
+				weather_component.moonLight = INVALID_ENTITY;
+			}
+		}
+
+		auto adopt_candidate = [&](Entity candidate)
+		{
+			if (candidate == INVALID_ENTITY)
+			{
+				return false;
+			}
+			if (!lights.Contains(candidate) || !transforms.Contains(candidate))
+			{
+				return false;
+			}
+			LightComponent& light = *lights.GetComponent(candidate);
+			if (light.GetType() != LightComponent::DIRECTIONAL)
+			{
+				return false;
+			}
+			light.SetMoonLight(true);
+			weather_component.moonLight = candidate;
+			return true;
+		};
+
+		if (weather_component.moonLight == INVALID_ENTITY)
+		{
+			for (size_t i = 0; i < lights.GetCount(); ++i)
+			{
+				Entity entity = lights.GetEntity(i);
+				LightComponent& light = lights[i];
+				if (light.IsMoonLight() && adopt_candidate(entity))
+				{
+					break;
+				}
+			}
+		}
+
+		if (weather_component.moonLight == INVALID_ENTITY)
+		{
+			for (size_t i = 0; i < lights.GetCount(); ++i)
+			{
+				Entity entity = lights.GetEntity(i);
+				const NameComponent* name = names.GetComponent(entity);
+				if (name != nullptr)
+				{
+					if (wi::helper::toLower(name->name) == "moon")
+					{
+						if (adopt_candidate(entity))
+						{
+							break;
+						}
+					}
+				}
+			}
+		}
+
+		const float moon_phase_visibility = ComputeMoonPhaseVisibility(weather_component.sunDirection, weather_component.moonDirection);
+		const float resolved_moon_eclipse = ResolveMoonEclipseStrength(weather_component);
+		weather_component.resolvedSunEclipseStrength = ResolveSunEclipseStrength(weather_component);
+		const float moon_eclipse_scale = wi::math::Clamp(1.0f - resolved_moon_eclipse, 0.0f, 1.0f);
+		const float moon_effective_intensity = weather_component.moonLightIntensity * moon_phase_visibility * moon_eclipse_scale;
+		const bool moon_active = moon_effective_intensity > 0.0f;
+
+		if (weather_component.moonLight == INVALID_ENTITY)
+		{
+			weather_component.moonLight = Entity_CreateLight("moon");
+			LightComponent& light = *lights.GetComponent(weather_component.moonLight);
+			light.SetType(LightComponent::DIRECTIONAL);
+			light.SetMoonLight(true);
+			light.SetCastShadow(moon_active);
+			light.SetVolumetricsEnabled(moon_active);
+			light.intensity = moon_effective_intensity;
+			light.color = weather_component.moonColor;
+			TransformComponent& transform = *transforms.GetComponent(weather_component.moonLight);
+			transform.Translate(XMFLOAT3(0, 4, 0));
+			transform.UpdateTransform();
+		}
+
+		LightComponent* light = lights.GetComponent(weather_component.moonLight);
+		if (light == nullptr)
+		{
+			weather_component.moonLight = INVALID_ENTITY;
+			return;
+		}
+		light->SetType(LightComponent::DIRECTIONAL);
+		light->SetMoonLight(true);
+		light->SetCastShadow(moon_active);
+		light->SetVolumetricsEnabled(moon_active);
+		light->color = weather_component.moonColor;
+		light->intensity = moon_effective_intensity;
+		light->SetVolumetricCloudsEnabled(moon_active);
+
+		TransformComponent* transform = transforms.GetComponent(weather_component.moonLight);
+		if (transform == nullptr)
+		{
+			return;
+		}
+
+		XMVECTOR target_dir = XMLoadFloat3(&weather_component.moonDirection);
+		XMFLOAT3 target_dir_f;
+		XMStoreFloat3(&target_dir_f, target_dir);
+		float dir_length_sq = wi::math::LengthSquared(target_dir_f);
+		if (!std::isfinite(dir_length_sq) || dir_length_sq < 1e-6f)
+		{
+			target_dir = XMVectorSet(0.0f, 0.5f, 0.8660254f, 0);
+		}
+		else
+		{
+			target_dir = XMVector3Normalize(target_dir);
+		}
+		target_dir = XMVector3Normalize(target_dir);
+		XMVECTOR default_dir = XMVectorSet(0, 1, 0, 0);
+		float dot = XMVectorGetX(XMVector3Dot(default_dir, target_dir));
+		dot = wi::math::Clamp(dot, -1.0f, 1.0f);
+		XMVECTOR rotationQuat;
+		if (dot > 0.9999f)
+		{
+			rotationQuat = XMQuaternionIdentity();
+		}
+		else if (dot < -0.9999f)
+		{
+			XMVECTOR axis = XMVector3Cross(default_dir, XMVectorSet(1, 0, 0, 0));
+			if (XMVectorGetX(XMVector3LengthSq(axis)) < 1e-6f)
+			{
+				axis = XMVectorSet(0, 0, 1, 0);
+			}
+			axis = XMVector3Normalize(axis);
+			rotationQuat = XMQuaternionRotationAxis(axis, XM_PI);
+		}
+		else
+		{
+			XMVECTOR axis = XMVector3Normalize(XMVector3Cross(default_dir, target_dir));
+			float angle = std::acos(dot);
+			rotationQuat = XMQuaternionRotationAxis(axis, angle);
+		}
+
+		XMFLOAT4 rotation;
+		XMStoreFloat4(&rotation, rotationQuat);
+		transform->rotation_local = rotation;
+		transform->SetDirty();
+		transform->UpdateTransform();
 	}
 	Entity Scene::Entity_CreateForce(
 		const std::string& name,
@@ -4972,18 +5257,30 @@ namespace wi::scene
 			case LightComponent::DIRECTIONAL:
 				XMStoreFloat3(&light.direction, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), W)));
 				aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX));
-				locker.lock();
-				if (args.jobIndex < weather.most_important_light_index)
+				if (!light.IsMoonLight())
 				{
-					weather.most_important_light_index = args.jobIndex;
-					weather.sunColor = light.color;
-					weather.sunColor.x *= light.intensity;
-					weather.sunColor.y *= light.intensity;
-					weather.sunColor.z *= light.intensity;
-					weather.sunDirection = light.direction;
-					weather.stars_rotation_quaternion = light.rotation;
+					locker.lock();
+					if (args.jobIndex < weather.most_important_light_index)
+					{
+						weather.most_important_light_index = args.jobIndex;
+						weather.sunColor = light.color;
+						weather.sunColor.x *= light.intensity;
+						weather.sunColor.y *= light.intensity;
+						weather.sunColor.z *= light.intensity;
+						weather.sunDirection = light.direction;
+						weather.stars_rotation_quaternion = light.rotation;
+					}
+					locker.unlock();
 				}
-				locker.unlock();
+				else
+				{
+					locker.lock();
+					if (args.jobIndex < weather.moon_light_index)
+					{
+						weather.moon_light_index = args.jobIndex;
+					}
+					locker.unlock();
+				}
 				break;
 			case LightComponent::SPOT:
 				XMStoreFloat3(&light.direction, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), W)));
@@ -5268,8 +5565,11 @@ namespace wi::scene
 	{
 		if (weathers.GetCount() > 0)
 		{
-			weather = weathers[0];
+			WeatherComponent& primary_weather = weathers[0];
+			EnsureMoonLight(primary_weather);
+			weather = primary_weather;
 			weather.most_important_light_index = ~0;
+			weather.moon_light_index = ~0;
 
 			if (weather.IsOceanEnabled() && !ocean.IsValid())
 			{
@@ -5300,6 +5600,11 @@ namespace wi::scene
 			}
 			ocean.occlusionQueries[queryheap_idx] = -1; // invalidate query
 		}
+		// else
+		// {
+		// 	EnsureMoonLight(weather);
+		// 	weather.most_important_light_index = ~0;
+		// }
 
 		if (ocean.IsValid())
 		{

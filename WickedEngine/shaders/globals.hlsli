@@ -972,8 +972,44 @@ float acosFastPositive(float x)
     return p * sqrt(1.0 - x);
 }
 
-inline half3 GetSunColor() { return unpack_half3(GetWeather().sun_color); } // sun color with intensity applied
+inline float GetSunEclipseStrength() { return saturate(GetWeather().sun_eclipse_strength); }
+inline half3 GetSunColor()
+{
+	const half3 rawColor = unpack_half3(GetWeather().sun_color);
+	const half eclipseScale = (half)(1.0f - GetSunEclipseStrength());
+	return rawColor * eclipseScale; // sun color with eclipse dimming applied
+}
+inline float3 GetMoonDirection()
+{
+	float3 dir = unpack_half3(GetWeather().moon_direction);
+	float len_sq = dot(dir, dir);
+	return len_sq > 0 ? dir * rsqrt(len_sq) : float3(0.0f, 0.5f, 0.8660254f);
+}
+inline half3 GetMoonColor() { return unpack_half3(GetWeather().moon_color); }
+inline float GetMoonSize() { return GetWeather().moon_params.x; }
+inline float GetMoonHaloSize() { return GetWeather().moon_params.y; }
+inline float GetMoonHaloSharpness() { return GetWeather().moon_params.z; }
+inline float GetMoonHaloIntensity() { return GetWeather().moon_params.w; }
+inline bool HasMoonTexture() { return GetWeather().moon_texture >= 0; }
+inline float GetMoonTextureMipBias() { return GetWeather().moon_texture_mip_bias; }
+inline float GetMoonLightIntensity() { return GetWeather().moon_light_intensity; }
 inline half3 GetSunDirection() { return normalize(unpack_half3(GetWeather().sun_direction)); }
+inline float GetMoonPhaseVisibility()
+{
+	float3 sunDir = (float3)GetSunDirection();
+	float3 moonDir = GetMoonDirection();
+	float sunLenSq = dot(sunDir, sunDir);
+	float moonLenSq = dot(moonDir, moonDir);
+	if (sunLenSq < 1e-6f || moonLenSq < 1e-6f)
+	{
+		return 1.0f;
+	}
+	sunDir *= rsqrt(sunLenSq);
+	moonDir *= rsqrt(moonLenSq);
+	return saturate(0.5f * (1.0f - dot(sunDir, moonDir)));
+}
+inline float GetMoonEclipseStrength() { return saturate(GetWeather().moon_eclipse_strength); }
+inline float3 GetMoonIlluminance() { return GetMoonColor() * GetMoonLightIntensity(); }
 inline half3 GetHorizonColor() { return unpack_half3(GetWeather().horizon); }
 inline half3 GetZenithColor() { return unpack_half3(GetWeather().zenith); }
 inline half3 GetAmbientColor() { return unpack_half3(GetWeather().ambient); }
