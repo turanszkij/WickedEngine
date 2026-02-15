@@ -46,7 +46,6 @@ namespace wi
 
 		uint32_t renderWidth = 0;
 		uint32_t renderHeight = 0;
-		bool isFullScreen = false;
 
 	public:
 		virtual ~Application() = default;
@@ -103,7 +102,7 @@ namespace wi
 		void GetRenderResolution(uint32_t& width, uint32_t& height) const;
 
 		void SetFullScreen(bool fullscreen);
-		bool IsFullScreen() const { return isFullScreen; }
+		bool IsFullScreen() const;
 
 		struct InfoDisplayer
 		{
