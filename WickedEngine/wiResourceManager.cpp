@@ -428,7 +428,7 @@ namespace wi
 						case dds::DXGI_FORMAT_BC6H_UF16: desc.format = Format::BC6H_UF16; break;
 						case dds::DXGI_FORMAT_BC7_UNORM: desc.format = Format::BC7_UNORM; break;
 						case dds::DXGI_FORMAT_BC7_UNORM_SRGB: desc.format = Format::BC7_UNORM_SRGB; break;
-						case dds::D3DFMT_R8G8B8: desc.format = Format::B8G8R8A8_UNORM_SRGB; break; // needs converting!
+						case dds::D3DFMT_R8G8B8: desc.format = Format::B8G8R8A8_UNORM; break; // needs converting!
 						default:
 							assert(0); // incoming format is not supported 
 							break;
@@ -494,7 +494,7 @@ namespace wi
 							const RGBPixel* rgb_data = (RGBPixel*)(filedata + header.data_offset());
 							const size_t rgb_datasize = header.data_size();
 							const size_t pixelcount = rgb_datasize / sizeof(RGBPixel);
-							dds::write_header(&header, dds::DXGI_FORMAT_B8G8R8A8_UNORM_SRGB, header.width(), header.height(), header.mip_levels(), header.array_size(), header.is_cubemap(), header.depth());
+							dds::write_header(&header, dds::DXGI_FORMAT_B8G8R8A8_UNORM, header.width(), header.height(), header.mip_levels(), header.array_size(), header.is_cubemap(), header.depth());
 							converted_texturedata_D3DFMT_R8G8B8.resize(sizeof(dds::Header) + sizeof(wi::Color) * pixelcount);
 							texturedata = converted_texturedata_D3DFMT_R8G8B8.data();
 							wi::Color* rgba_data = (wi::Color*)(converted_texturedata_D3DFMT_R8G8B8.data() + header.data_offset());
