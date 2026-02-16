@@ -319,7 +319,7 @@ void HumanoidWindow::SetEntity(Entity entity)
 		ragdollCheckBox.SetCheck(humanoid->IsRagdollPhysicsEnabled()); // this is always force updated
 	}
 
-	if (humanoid != nullptr || (IsCollapsed() && entity == INVALID_ENTITY))
+	if (humanoid != nullptr || (IsCollapsed() && !scene.Entity_IsDescendant(entity, this->entity)))
 	{
 		if (this->entity != entity)
 		{

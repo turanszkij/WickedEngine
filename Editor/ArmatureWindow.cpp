@@ -219,7 +219,7 @@ void ArmatureWindow::SetEntity(Entity entity)
 
 	const ArmatureComponent* armature = scene.armatures.GetComponent(entity);
 
-	if (armature != nullptr || (IsCollapsed() && entity == INVALID_ENTITY))
+	if (armature != nullptr || (IsCollapsed() && !scene.Entity_IsDescendant(entity, this->entity)))
 	{
 		this->entity = entity;
 		RefreshBoneList();
