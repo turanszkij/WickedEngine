@@ -36,8 +36,6 @@ namespace wi::texturehelper
 		HELPERTEXTURE_COUNT
 	};
 	wi::graphics::Texture helperTextures[HELPERTEXTURE_COUNT];
-	wi::unordered_map<unsigned long, wi::graphics::Texture> colorTextures;
-	wi::SpinLock colorlock;
 
 	void Initialize()
 	{
@@ -269,9 +267,7 @@ namespace wi::texturehelper
 	)
 	{
 		if (data == nullptr)
-		{
 			return false;
-		}
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
 		TextureDesc desc;

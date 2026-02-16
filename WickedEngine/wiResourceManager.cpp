@@ -1526,7 +1526,7 @@ namespace wi
 						archive << (uint32_t)resource->flags;
 						archive << resource->filedata;
 
-						resource_log("Resource writtenn to archive: %s", name.c_str());
+						resource_log("Resource written to archive: %s", name.c_str());
 
 						if (!archive.GetSourceFileName().empty())
 						{
