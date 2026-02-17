@@ -9321,7 +9321,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 		if (vis.scene->ocean.IsValid() && vis.scene->weather.IsOceanEnabled())
 		{
-			ForwardEntityMaskCB cb = ForwardEntityCullingCPU(vis, vis.scene->ocean.GetAABB());
+			ForwardEntityMaskCB cb = ForwardEntityCullingCPU(vis, vis.scene->ocean.GetAABB(probe.position));
 			device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
 
 			vis.scene->ocean.Render(*vis.camera, cmd, 6); // 6 instances so it will be replicated for every cubemap face

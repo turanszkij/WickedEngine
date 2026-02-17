@@ -617,10 +617,10 @@ namespace wi
 		return &gradientMap;
 	}
 
-	const wi::primitive::AABB Ocean::GetAABB() const
+	const wi::primitive::AABB Ocean::GetAABB(const XMFLOAT3& camera_pos) const
 	{
 		wi::primitive::AABB aabb;
-		aabb.createFromHalfWidth(XMFLOAT3(0, params.waterHeight, 0), XMFLOAT3(10000, 1, 10000));
+		aabb.createFromHalfWidth(XMFLOAT3(camera_pos.x, params.waterHeight, camera_pos.z), XMFLOAT3(1000, 10, 1000));
 		return aabb;
 	}
 

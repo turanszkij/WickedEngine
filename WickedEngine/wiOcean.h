@@ -50,7 +50,7 @@ namespace wi
 		const wi::graphics::Texture* getDisplacementMap() const;
 		const wi::graphics::Texture* getGradientMap() const;
 
-		const wi::primitive::AABB GetAABB() const;
+		const wi::primitive::AABB GetAABB(const XMFLOAT3& camera_pos) const;
 
 		static void Initialize();
 
