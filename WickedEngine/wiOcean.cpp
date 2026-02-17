@@ -485,17 +485,6 @@ namespace wi
 
 		device->EventBegin("Ocean Rendering into Cubemap", cmd);
 
-		bool wire = wi::renderer::IsWireRender();
-
-		if (wire)
-		{
-			device->BindPipelineState(&PSO_wire, cmd);
-		}
-		else
-		{
-			device->BindPipelineState(&PSO_envmap, cmd);
-		}
-
 		const uint2 dim = uint2(64, 64);
 		const uint index_count = dim.x * dim.y * 6;
 		const uint64_t indexbuffer_required_size = index_count * sizeof(uint16_t);
@@ -531,6 +520,8 @@ namespace wi
 			device->SetName(&indexBuffer_cubemap, "Ocean::indexBuffer_cubemap");
 		}
 		locker.unlock();
+
+		device->BindPipelineState(&PSO_envmap, cmd);
 
 		OceanCB cb = GetOceanCBAtDim(params, dim);
 		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(OceanCB), cmd);
