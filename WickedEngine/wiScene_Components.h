@@ -1535,6 +1535,7 @@ namespace wi::scene
 		uint32_t resolution = 128; // power of two
 		float realtime_update_interval = 0.0f; // how often to render when realtime (in seconds, 0 = every frame)
 		std::string textureName; // if texture is coming from an asset
+		float view_distance = -1; // -1: use main camera's view distance, > 0: custom view distance
 
 		// Non-serialized attributes:
 		wi::graphics::Texture texture;

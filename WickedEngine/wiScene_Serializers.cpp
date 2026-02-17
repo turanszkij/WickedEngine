@@ -1403,6 +1403,10 @@ namespace wi::scene
 			{
 				archive >> realtime_update_interval;
 			}
+			if (seri.GetVersion() >= 3)
+			{
+				archive >> view_distance;
+			}
 		}
 		else
 		{
@@ -1418,6 +1422,10 @@ namespace wi::scene
 			if (seri.GetVersion() >= 2)
 			{
 				archive << realtime_update_interval;
+			}
+			if (seri.GetVersion() >= 3)
+			{
+				archive << view_distance;
 			}
 		}
 	}

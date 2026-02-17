@@ -74,6 +74,15 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 	}));
 	AddWidget(&realtimeFrameIntervalSlider);
 
+	viewdistanceSlider.Create(0.0f, 1000.0f, -1.0f, 100, "View distance: ");
+	viewdistanceSlider.SetTooltip("Control the culling distance for this probe. -1: use main camera's view distance, > 0: custom view distance");
+	viewdistanceSlider.SetEnabled(false);
+	viewdistanceSlider.OnSlide(forEachSelected([] (auto probe, auto args) {
+		probe->view_distance = args.fValue;
+		probe->SetDirty();
+	}));
+	AddWidget(&viewdistanceSlider);
+
 	refreshButton.Create("Refresh");
 	refreshButton.SetTooltip("Re-renders the selected probe.");
 	refreshButton.SetEnabled(false);
@@ -196,6 +205,7 @@ void EnvProbeWindow::SetEntity(Entity entity)
 		realTimeCheckBox.SetEnabled(false);
 		msaaCheckBox.SetEnabled(false);
 		realtimeFrameIntervalSlider.SetEnabled(false);
+		viewdistanceSlider.SetEnabled(false);
 		refreshButton.SetEnabled(false);
 		preview.SetImage({});
 	}
@@ -210,6 +220,8 @@ void EnvProbeWindow::SetEntity(Entity entity)
 		msaaCheckBox.SetEnabled(true);
 		realtimeFrameIntervalSlider.SetValue(probe->realtime_update_interval);
 		realtimeFrameIntervalSlider.SetEnabled(true);
+		viewdistanceSlider.SetValue(probe->view_distance);
+		viewdistanceSlider.SetEnabled(true);
 		refreshButton.SetEnabled(true);
 		resolutionCombo.SetSelectedByUserdata(probe->resolution);
 
@@ -258,6 +270,7 @@ void EnvProbeWindow::ResizeLayout()
 
 	layout.add_right(msaaCheckBox, realTimeCheckBox);
 	layout.add_fullwidth(realtimeFrameIntervalSlider);
+	layout.add_fullwidth(viewdistanceSlider);
 
 	layout.add_fullwidth_aspect(preview);
 	preview.SetColor(wi::Color::White());

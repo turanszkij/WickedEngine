@@ -15,6 +15,7 @@ public:
 	wi::gui::CheckBox realTimeCheckBox;
 	wi::gui::CheckBox msaaCheckBox;
 	wi::gui::Slider realtimeFrameIntervalSlider;
+	wi::gui::Slider viewdistanceSlider;
 	wi::gui::Button refreshButton;
 	wi::gui::Button refreshAllButton;
 	wi::gui::Button importButton;

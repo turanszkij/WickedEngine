@@ -9003,12 +9003,12 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 	BindCommonResources(cmd);
 
-	const float zNearP = vis.camera->zNearP;
-	const float zFarP = vis.camera->zFarP;
-	const float zNearPRcp = 1.0f / zNearP;
-	const float zFarPRcp = 1.0f / zFarP;
-
 	auto render_probe = [&](const EnvironmentProbeComponent& probe, const AABB& probe_aabb) {
+
+		const float zNearP = vis.camera->zNearP;
+		const float zFarP = probe.view_distance < 0 ? vis.camera->zFarP : probe.view_distance;
+		const float zNearPRcp = 1.0f / zNearP;
+		const float zFarPRcp = 1.0f / zFarP;
 
 		Viewport vp;
 		vp.height = vp.width = (float)probe.texture.desc.width;
@@ -9045,7 +9045,6 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			XMStoreFloat4(&cb.cameras[i].frustum_corners.cornersFAR[1], XMVector3TransformCoord(XMVectorSet(1, 1, 0, 1), invVP));
 			XMStoreFloat4(&cb.cameras[i].frustum_corners.cornersFAR[2], XMVector3TransformCoord(XMVectorSet(-1, -1, 0, 1), invVP));
 			XMStoreFloat4(&cb.cameras[i].frustum_corners.cornersFAR[3], XMVector3TransformCoord(XMVectorSet(1, -1, 0, 1), invVP));
-
 		}
 		device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 
@@ -9295,17 +9294,21 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 					if (object.IsRenderable() && !object.IsNotVisibleInReflections())
 					{
 						uint8_t camera_mask = 0;
+						uint8_t probe_lod = 0xFF;
 						for (uint32_t camera_index = 0; camera_index < arraysize(cameras); ++camera_index)
 						{
 							if (cameras[camera_index].frustum.CheckBoxFast(aabb))
 							{
 								camera_mask |= 1 << camera_index;
+
+								const uint8_t candidate_lod = (uint8_t)vis.scene->ComputeObjectLODForView(object, aabb, vis.scene->meshes[object.mesh_index], cameras[camera_index].view_projection);
+								probe_lod = std::min(probe_lod, candidate_lod);
 							}
 						}
 						if (camera_mask == 0)
 							continue;
 
-						renderQueue.add(object.mesh_index, uint32_t(i), 0, object.sort_bits, camera_mask);
+						renderQueue.add(object.mesh_index, uint32_t(i), 0, object.sort_bits, camera_mask, probe_lod);
 					}
 				}
 			}
