@@ -479,7 +479,73 @@ namespace wi
 		device->EventEnd(cmd);
 	}
 
-	void Ocean::Render(const CameraComponent& camera, CommandList cmd, uint32_t instance_replication) const
+	void Ocean::RenderForCubemap(CommandList cmd) const
+	{
+		GraphicsDevice* device = wi::graphics::GetDevice();
+
+		device->EventBegin("Ocean Rendering into Cubemap", cmd);
+
+		bool wire = wi::renderer::IsWireRender();
+
+		if (wire)
+		{
+			device->BindPipelineState(&PSO_wire, cmd);
+		}
+		else
+		{
+			device->BindPipelineState(&PSO_envmap, cmd);
+		}
+
+		const uint2 dim = uint2(64, 64);
+		const uint index_count = dim.x * dim.y * 6;
+		const uint64_t indexbuffer_required_size = index_count * sizeof(uint16_t);
+		static std::mutex locker;
+		locker.lock(); // in case two threads draw the ocean the same time, index buffer creation must be locked
+		if (indexBuffer_cubemap.GetDesc().size != indexbuffer_required_size)
+		{
+			wi::vector<uint16_t> index_data(index_count);
+			size_t counter = 0;
+			for (uint16_t x = 0; x < dim.x - 1; x++)
+			{
+				for (uint16_t y = 0; y < dim.y - 1; y++)
+				{
+					uint16_t lowerLeft = x + y * dim.x;
+					uint16_t lowerRight = (x + 1) + y * dim.x;
+					uint16_t topLeft = x + (y + 1) * dim.x;
+					uint16_t topRight = (x + 1) + (y + 1) * dim.x;
+
+					index_data[counter++] = topLeft;
+					index_data[counter++] = lowerLeft;
+					index_data[counter++] = lowerRight;
+
+					index_data[counter++] = topLeft;
+					index_data[counter++] = lowerRight;
+					index_data[counter++] = topRight;
+				}
+			}
+
+			GPUBufferDesc desc;
+			desc.bind_flags = BindFlag::INDEX_BUFFER;
+			desc.size = indexbuffer_required_size;
+			device->CreateBuffer(&desc, index_data.data(), &indexBuffer_cubemap);
+			device->SetName(&indexBuffer_cubemap, "Ocean::indexBuffer_cubemap");
+		}
+		locker.unlock();
+
+		OceanCB cb = GetOceanCBAtDim(params, dim);
+		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(OceanCB), cmd);
+
+		device->BindResource(&displacementMap, 0, cmd);
+		device->BindResource(&gradientMap, 1, cmd);
+
+		device->BindIndexBuffer(&indexBuffer_cubemap, IndexBufferFormat::UINT16, 0, cmd);
+
+		device->DrawIndexedInstanced(index_count, 6, 0, 0, 0, cmd); // 6 instance for each cube side
+
+		device->EventEnd(cmd);
+	}
+
+	void Ocean::Render(const CameraComponent& camera, CommandList cmd) const
 	{
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
@@ -493,14 +559,7 @@ namespace wi
 		}
 		else
 		{
-			if (instance_replication > 1)
-			{
-				device->BindPipelineState(&PSO_envmap, cmd);
-			}
-			else
-			{
-				device->BindPipelineState(&PSO, cmd);
-			}
+			device->BindPipelineState(&PSO, cmd);
 		}
 
 		const uint2 dim = uint2(160 * params.surfaceDetail, 90 * params.surfaceDetail);
@@ -546,7 +605,7 @@ namespace wi
 
 		device->BindIndexBuffer(&indexBuffer, IndexBufferFormat::UINT32, 0, cmd);
 
-		device->DrawIndexedInstanced(index_count, instance_replication, 0, 0, 0, cmd);
+		device->DrawIndexed(index_count, 0, 0, cmd);
 
 		device->EventEnd(cmd);
 	}

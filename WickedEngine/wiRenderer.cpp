@@ -9324,7 +9324,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			ForwardEntityMaskCB cb = ForwardEntityCullingCPU(vis, vis.scene->ocean.GetAABB(probe.position));
 			device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
 
-			vis.scene->ocean.Render(*vis.camera, cmd, 6); // 6 instances so it will be replicated for every cubemap face
+			vis.scene->ocean.RenderForCubemap(cmd);
 		}
 
 		if (probe_aabb.layerMask & vis.layerMask) // only draw light visualizers if this is a hand placed probe
