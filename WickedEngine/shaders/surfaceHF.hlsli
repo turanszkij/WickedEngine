@@ -208,16 +208,12 @@ struct Surface
 		}
 		f0 = material.GetSpecular() * specularMap.rgb * specularMap.a;
 
-#ifndef ENVMAPRENDERING
 		if (GetFrame().options & OPTION_BIT_FORCE_DIFFUSE_LIGHTING)
-#endif // ENVMAPRENDERING
 		{
 			f0 = surfaceMap.b = surfaceMap.a = 0;
 		}
 
-#ifndef ENVMAPRENDERING
 		if (GetFrame().options & OPTION_BIT_FORCE_UNLIT)
-#endif // ENVMAPRENDERING
 		{
 			albedo = baseColor.rgb;
 		}
@@ -308,9 +304,7 @@ struct Surface
 		F = smoothstep(0.1, 0.5, F);
 #endif // CARTOON
 		
-#ifndef ENVMAPRENDERING
 		if (GetFrame().options & OPTION_BIT_FORCE_DIFFUSE_LIGHTING || GetFrame().options & OPTION_BIT_FORCE_UNLIT)
-#endif // ENVMAPRENDERING
 		{
 			F = 0;
 		}

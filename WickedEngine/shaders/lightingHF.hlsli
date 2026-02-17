@@ -545,16 +545,6 @@ inline half3 GetAmbient(in float3 N)
 {
 	half3 ambient;
 
-#ifdef ENVMAPRENDERING
-
-	// Set realistic_sky_stationary to true so we capture ambient at float3(0.0, 0.0, 0.0), similar to the standard sky to avoid flickering and weird behavior
-	ambient = lerp(
-		GetDynamicSkyColor(float3(0, -1, 0), false, false, true),
-		GetDynamicSkyColor(float3(0, 1, 0), false, false, true),
-		saturate(N.y * 0.5 + 0.5));
-
-#else
-
 	[branch]
 	if (GetScene().globalprobe >= 0)
 	{
@@ -564,8 +554,6 @@ inline half3 GetAmbient(in float3 N)
 		cubemap.GetDimensions(0, dim.x, dim.y, mipcount);
 		ambient = cubemap.SampleLevel(sampler_linear_clamp, N, mipcount).rgb;
 	}
-	
-#endif // ENVMAPRENDERING
 
 #ifndef NO_FLAT_AMBIENT
 	// This is not entirely correct if we have probes, because it shouldn't be added twice.
@@ -583,20 +571,6 @@ inline half3 GetAmbient(in float3 N)
 inline half3 EnvironmentReflection_Global(in Surface surface)
 {
 	half3 envColor;
-
-#ifdef ENVMAPRENDERING
-
-	// There is no access to envmaps, so approximate sky color:
-	// Set realistic_sky_stationary to true so we capture environment at float3(0.0, 0.0, 0.0), similar to the standard sky to avoid flickering and weird behavior
-	float3 skycolor_real = GetDynamicSkyColor(surface.R, false, false, true); // false: disable sun disk and clouds
-	float3 skycolor_rough = lerp(
-		GetDynamicSkyColor(float3(0, -1, 0), false, false, true),
-		GetDynamicSkyColor(float3(0, 1, 0), false, false, true),
-		saturate(surface.R.y * 0.5 + 0.5));
-
-	envColor = lerp(skycolor_real, skycolor_rough, surface.roughness) * surface.F;
-
-#else
 	
 	[branch]
 	if (GetScene().globalprobe < 0)
@@ -622,8 +596,6 @@ inline half3 EnvironmentReflection_Global(in Surface surface)
 	MIP = surface.clearcoat.roughness * mipcount16f;
 	envColor += cubemap.SampleLevel(sampler_linear_clamp, surface.clearcoat.R, MIP).rgb * surface.clearcoat.F;
 #endif // CLEARCOAT
-
-#endif // ENVMAPRENDERING
 
 	return envColor;
 }

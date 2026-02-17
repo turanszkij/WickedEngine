@@ -285,6 +285,22 @@ namespace wi::graphics
 			return CreateBufferCleared(desc, 0, buffer, alias, alias_offset);
 		}
 
+		// This can be used to create a texture filled with a single value
+		bool CreateTextureCleared(const TextureDesc* desc, uint8_t value, Texture* texture, const GPUResource* alias = nullptr, uint64_t alias_offset = 0ull) const
+		{
+			wi::vector<uint8_t> texturedata(ComputeTextureMemorySizeInBytes(*desc));
+			std::fill(texturedata.begin(), texturedata.end(), value);
+			wi::vector<SubresourceData> initdata;
+			CreateTextureSubresourceDatas(*desc, texturedata.data(), initdata);
+			return CreateTexture(desc, initdata.data(), texture, alias, alias_offset);
+		}
+
+		// This can be used to create a texture filled with zeroes
+		bool CreateTextureZeroed(const TextureDesc* desc, Texture* texture, const GPUResource* alias = nullptr, uint64_t alias_offset = 0ull) const
+		{
+			return CreateTextureCleared(desc, 0, texture, alias, alias_offset);
+		}
+
 		// Execute a single GPU barrier
 		void Barrier(const GPUBarrier& barrier, CommandList cmd)
 		{

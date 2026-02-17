@@ -2313,7 +2313,7 @@ namespace wi::scene
 		desc.mip_levels = GetMipCount(resolution, resolution, 1, 16);
 		desc.misc_flags = ResourceMiscFlag::TEXTURECUBE;
 		desc.layout = ResourceState::SHADER_RESOURCE;
-		device->CreateTexture(&desc, nullptr, &texture);
+		device->CreateTextureZeroed(&desc, &texture);
 		device->SetName(&texture, "EnvironmentProbeComponent::texture");
 		subresource = -1;
 	}

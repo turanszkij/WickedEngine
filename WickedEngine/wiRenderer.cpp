@@ -1055,8 +1055,6 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_MOTIONBLUR_CHEAP], "motionblurCS_cheap.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_BLOOMSEPARATE], "bloomseparateCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_AERIALPERSPECTIVE], "aerialPerspectiveCS.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_AERIALPERSPECTIVE_CAPTURE], "aerialPerspectiveCS_capture.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_AERIALPERSPECTIVE_CAPTURE_MSAA], "aerialPerspectiveCS_capture_MSAA.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_SHAPENOISE], "volumetricCloud_shapenoiseCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_DETAILNOISE], "volumetricCloud_detailnoiseCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_CURLNOISE], "volumetricCloud_curlnoiseCS.cso"); });
@@ -3070,7 +3068,7 @@ inline void CreateCubemapCameras(const XMFLOAT3& position, float zNearP, float z
 	shcams[5].init(position, XMFLOAT4(0, 0.707f, 0.707f, 0), zNearP, zFarP, XM_PIDIV2); //-z
 }
 
-ForwardEntityMaskCB ForwardEntityCullingCPU(const Visibility& vis, const AABB& batch_aabb, RENDERPASS renderPass)
+ForwardEntityMaskCB ForwardEntityCullingCPU(const Visibility& vis, const AABB& batch_aabb)
 {
 	// Performs CPU light culling for a renderable batch:
 	//	Similar to GPU-based tiled light culling, but this is only for simple forward passes (drawcall-granularity)
@@ -3107,17 +3105,14 @@ ForwardEntityMaskCB ForwardEntityCullingCPU(const Visibility& vis, const AABB& b
 		}
 	}
 
-	if (renderPass != RENDERPASS_ENVMAPCAPTURE)
+	for (size_t i = 0; i < std::min(size_t(32), vis.visibleEnvProbes.size()); ++i)
 	{
-		for (size_t i = 0; i < std::min(size_t(32), vis.visibleEnvProbes.size()); ++i)
+		const uint32_t probeIndex = vis.visibleEnvProbes[vis.visibleEnvProbes.size() - 1 - i]; // note: reverse order, for correct blending!
+		const AABB& probe_aabb = vis.scene->aabb_probes[probeIndex];
+		if (probe_aabb.intersects(batch_aabb))
 		{
-			const uint32_t probeIndex = vis.visibleEnvProbes[vis.visibleEnvProbes.size() - 1 - i]; // note: reverse order, for correct blending!
-			const AABB& probe_aabb = vis.scene->aabb_probes[probeIndex];
-			if (probe_aabb.intersects(batch_aabb))
-			{
-				const uint8_t bucket_place = uint8_t(i % 32);
-				cb.xForwardEnvProbeMask |= 1 << bucket_place;
-			}
+			const uint8_t bucket_place = uint8_t(i % 32);
+			cb.xForwardEnvProbeMask |= 1 << bucket_place;
 		}
 	}
 
@@ -3244,7 +3239,7 @@ void RenderMeshes(
 
 		if (forwardLightmaskRequest)
 		{
-			ForwardEntityMaskCB cb = ForwardEntityCullingCPU(vis, instancedBatch.aabb, renderPass);
+			ForwardEntityMaskCB cb = ForwardEntityCullingCPU(vis, instancedBatch.aabb);
 			device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
 		}
 
@@ -9109,12 +9104,9 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 				desc.mip_levels = 1;
 				desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
 				desc.format = format_depthbuffer_envprobe;
-				desc.layout = ResourceState::SHADER_RESOURCE;
+				desc.layout = ResourceState::DEPTHSTENCIL;
 				desc.sample_count = required_sample_count;
-				if (required_sample_count == 1)
-				{
-					desc.misc_flags = ResourceMiscFlag::TEXTURECUBE;
-				}
+				desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
 				device->CreateTexture(&desc, nullptr, &envrenderingDepthBuffer);
 				device->SetName(&envrenderingDepthBuffer, "envrenderingDepthBuffer");
 				render_textures[id_depth.raw] = envrenderingDepthBuffer;
@@ -9249,10 +9241,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 				RenderPassImage::DepthStencil(
 					&envrenderingDepthBuffer,
 					RenderPassImage::LoadOp::CLEAR,
-					RenderPassImage::StoreOp::STORE,
-					ResourceState::SHADER_RESOURCE,
-					ResourceState::DEPTHSTENCIL,
-					ResourceState::SHADER_RESOURCE
+					RenderPassImage::StoreOp::DONTCARE
 				),
 			};
 			device->RenderPassBegin(rp, arraysize(rp), cmd);
@@ -9260,21 +9249,18 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		else
 		{
 			const RenderPassImage rp[] = {
-				RenderPassImage::DepthStencil(
-					&envrenderingDepthBuffer,
-					RenderPassImage::LoadOp::CLEAR,
-					RenderPassImage::StoreOp::STORE,
-					ResourceState::SHADER_RESOURCE,
-					ResourceState::DEPTHSTENCIL,
-					ResourceState::SHADER_RESOURCE
-				),
 				RenderPassImage::RenderTarget(
 					&envrenderingColorBuffer,
 					RenderPassImage::LoadOp::CLEAR,
 					RenderPassImage::StoreOp::STORE,
 					ResourceState::SHADER_RESOURCE,
 					ResourceState::SHADER_RESOURCE
-				)
+				),
+				RenderPassImage::DepthStencil(
+					&envrenderingDepthBuffer,
+					RenderPassImage::LoadOp::CLEAR,
+					RenderPassImage::StoreOp::DONTCARE
+				),
 			};
 			device->RenderPassBegin(rp, arraysize(rp), cmd);
 		}
@@ -9333,53 +9319,20 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			device->DrawInstanced(240, 6, 0, 0, cmd); // 6 instances so it will be replicated for every cubemap face
 		}
 
+		if (vis.scene->ocean.IsValid() && vis.scene->weather.IsOceanEnabled())
+		{
+			ForwardEntityMaskCB cb = ForwardEntityCullingCPU(vis, vis.scene->ocean.GetAABB(probe.position));
+			device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
+
+			vis.scene->ocean.RenderForCubemap(cmd);
+		}
+
 		if (probe_aabb.layerMask & vis.layerMask) // only draw light visualizers if this is a hand placed probe
 		{
 			DrawLightVisualizers(vis, cmd, 6); // 6 instances so it will be replicated for every cubemap face
 		}
 
 		device->RenderPassEnd(cmd);
-
-		// Compute Aerial Perspective for environment map
-		if (vis.scene->weather.IsRealisticSky() && vis.scene->weather.IsRealisticSkyAerialPerspective() && (probe_aabb.layerMask & vis.layerMask))
-		{
-			if (probe.IsMSAA())
-			{
-				device->EventBegin("Aerial Perspective Capture [MSAA]", cmd);
-				device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_AERIALPERSPECTIVE_CAPTURE_MSAA], cmd);
-			}
-			else
-			{
-				device->EventBegin("Aerial Perspective Capture", cmd);
-				device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_AERIALPERSPECTIVE_CAPTURE], cmd);
-			}
-
-			device->BindResource(&envrenderingDepthBuffer, 0, cmd);
-
-			TextureDesc desc = envrenderingColorBuffer.GetDesc();
-
-			AerialPerspectiveCapturePushConstants push = {};
-			push.resolution.x = desc.width;
-			push.resolution.y = desc.height;
-			push.resolution_rcp.x = 1.0f / push.resolution.x;
-			push.resolution_rcp.y = 1.0f / push.resolution.y;
-			push.texture_output = device->GetDescriptorIndex(&envrenderingColorBuffer, SubresourceType::UAV);
-
-			device->PushConstants(&push, sizeof(push), cmd);
-
-			device->Barrier(GPUBarrier::Image(&envrenderingColorBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS), cmd);
-
-			device->Dispatch(
-				(desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-				(desc.height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-				6,
-				cmd
-			);
-
-			device->Barrier(GPUBarrier::Image(&envrenderingColorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE), cmd);
-
-			device->EventEnd(cmd);
-		}
 
 		GenerateMipChain(envrenderingColorBuffer, MIPGENFILTER_LINEAR, cmd);
 

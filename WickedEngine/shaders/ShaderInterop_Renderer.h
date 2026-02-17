@@ -1421,6 +1421,7 @@ struct alignas(16) ShaderCamera
 		position = {};
 		output_index = 0;
 		clip_plane = {};
+		reflection_plane = float4(0, 1, 0, 0);
 		forward = {};
 		z_near = {};
 		up = {};

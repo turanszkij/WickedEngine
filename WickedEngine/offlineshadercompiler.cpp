@@ -10,7 +10,7 @@ class nullbuf_t : public std::streambuf
 {
 protected:
 	virtual int_type overflow(int_type ch) override
-    {
+	{
 		return traits_type::not_eof(ch);
 	}
 } nullbuf;
@@ -174,8 +174,6 @@ wi::vector<ShaderEntry> shaders = {
 	{"shadingRateClassificationCS", wi::graphics::ShaderStage::CS },
 	{"shadingRateClassificationCS_DEBUG", wi::graphics::ShaderStage::CS },
 	{"aerialPerspectiveCS", wi::graphics::ShaderStage::CS },
-	{"aerialPerspectiveCS_capture", wi::graphics::ShaderStage::CS },
-	{"aerialPerspectiveCS_capture_MSAA", wi::graphics::ShaderStage::CS },
 	{"skyAtmosphere_cameraVolumeLutCS", wi::graphics::ShaderStage::CS },
 	{"skyAtmosphere_transmittanceLutCS", wi::graphics::ShaderStage::CS },
 	{"skyAtmosphere_skyViewLutCS", wi::graphics::ShaderStage::CS },
@@ -230,6 +228,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"imagePS", wi::graphics::ShaderStage::PS },
 	{"emittedparticlePS_soft_lighting", wi::graphics::ShaderStage::PS },
 	{"oceanSurfacePS", wi::graphics::ShaderStage::PS },
+	{"oceanSurfacePS_envmap", wi::graphics::ShaderStage::PS },
 	{"hairparticlePS", wi::graphics::ShaderStage::PS },
 	{"hairparticlePS_simple", wi::graphics::ShaderStage::PS },
 	{"hairparticlePS_prepass", wi::graphics::ShaderStage::PS },

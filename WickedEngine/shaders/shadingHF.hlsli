@@ -48,7 +48,6 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 	// Apply environment maps:
 	half4 envmapAccumulation = 0;
 
-#ifndef ENVMAPRENDERING
 #ifndef DISABLE_LOCALENVPMAPS
 	[branch]
 	if (xForwardEnvProbeMask != 0)
@@ -91,7 +90,6 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 		}
 	}
 #endif // DISABLE_LOCALENVPMAPS
-#endif //ENVMAPRENDERING
 
 	// Apply global envmap where there is no local envmap information:
 	[branch]
@@ -288,9 +286,7 @@ inline uint GetFlatTileIndex(min16uint2 pixel)
 inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint flatTileIndex)
 {
 	if (GetFrame().options & OPTION_BIT_FORCE_UNLIT)
-	{
 		return;
-	}
 
 #ifndef DISABLE_ENVMAPS
 	// Apply environment maps:

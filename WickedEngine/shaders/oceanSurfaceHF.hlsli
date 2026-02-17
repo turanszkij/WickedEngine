@@ -5,17 +5,18 @@
 
 struct PSIn
 {
-	float4 pos		: SV_POSITION;
-	float2 uv		: TEXCOORD0;
+	float4 pos : SV_POSITION;
+	float2 uv : TEXCOORD0;
+	min16uint cameraIndex : CAMERAINDEX;
 	
 	inline float3 GetPos3D()
 	{
-		return GetCamera().screen_to_world(pos);
+		return GetCameraIndexed(cameraIndex).screen_to_world(pos);
 	}
 
 	inline float3 GetViewVector()
 	{
-		return GetCamera().screen_to_nearplane(pos) - GetPos3D(); // ortho support, cannot use cameraPos!
+		return GetCameraIndexed(cameraIndex).screen_to_nearplane(pos) - GetPos3D(); // ortho support, cannot use cameraPos!
 	}
 };
 

@@ -24,13 +24,14 @@ namespace wi
 		Shader		oceanSurfVS;
 		Shader		wireframePS;
 		Shader		oceanSurfPS;
+		Shader		oceanSurfPS_envmap;
 
 		RasterizerState		rasterizerState;
 		RasterizerState		wireRS;
 		DepthStencilState	depthStencilState, depthStencilState_occlusionTest;
 		BlendState			blendState, blendState_occlusionTest;
 
-		PipelineState PSO, PSO_wire, PSO_occlusionTest;
+		PipelineState PSO, PSO_envmap, PSO_wire, PSO_occlusionTest;
 
 
 		void LoadShaders()
@@ -42,6 +43,7 @@ namespace wi
 			wi::renderer::LoadShader(ShaderStage::VS, oceanSurfVS, "oceanSurfaceVS.cso");
 
 			wi::renderer::LoadShader(ShaderStage::PS, oceanSurfPS, "oceanSurfacePS.cso");
+			wi::renderer::LoadShader(ShaderStage::PS, oceanSurfPS_envmap, "oceanSurfacePS_envmap.cso");
 			wi::renderer::LoadShader(ShaderStage::PS, wireframePS, "oceanSurfaceSimplePS.cso");
 
 
@@ -55,6 +57,9 @@ namespace wi
 				desc.rs = &rasterizerState;
 				desc.dss = &depthStencilState;
 				device->CreatePipelineState(&desc, &PSO);
+
+				desc.ps = &oceanSurfPS_envmap;
+				device->CreatePipelineState(&desc, &PSO_envmap);
 
 				desc.ps = &wireframePS;
 				desc.rs = &wireRS;
@@ -474,6 +479,63 @@ namespace wi
 		device->EventEnd(cmd);
 	}
 
+	void Ocean::RenderForCubemap(CommandList cmd) const
+	{
+		GraphicsDevice* device = wi::graphics::GetDevice();
+
+		device->EventBegin("Ocean Rendering into Cubemap", cmd);
+
+		const uint2 dim = uint2(64, 64);
+		const uint index_count = dim.x * dim.y * 6;
+		const uint64_t indexbuffer_required_size = index_count * sizeof(uint16_t);
+		static std::mutex locker;
+		locker.lock(); // in case two threads draw the ocean the same time, index buffer creation must be locked
+		if (indexBuffer_cubemap.GetDesc().size != indexbuffer_required_size)
+		{
+			wi::vector<uint16_t> index_data(index_count);
+			size_t counter = 0;
+			for (uint16_t x = 0; x < dim.x - 1; x++)
+			{
+				for (uint16_t y = 0; y < dim.y - 1; y++)
+				{
+					uint16_t lowerLeft = x + y * dim.x;
+					uint16_t lowerRight = (x + 1) + y * dim.x;
+					uint16_t topLeft = x + (y + 1) * dim.x;
+					uint16_t topRight = (x + 1) + (y + 1) * dim.x;
+
+					index_data[counter++] = topLeft;
+					index_data[counter++] = lowerLeft;
+					index_data[counter++] = lowerRight;
+
+					index_data[counter++] = topLeft;
+					index_data[counter++] = lowerRight;
+					index_data[counter++] = topRight;
+				}
+			}
+
+			GPUBufferDesc desc;
+			desc.bind_flags = BindFlag::INDEX_BUFFER;
+			desc.size = indexbuffer_required_size;
+			device->CreateBuffer(&desc, index_data.data(), &indexBuffer_cubemap);
+			device->SetName(&indexBuffer_cubemap, "Ocean::indexBuffer_cubemap");
+		}
+		locker.unlock();
+
+		device->BindPipelineState(&PSO_envmap, cmd);
+
+		OceanCB cb = GetOceanCBAtDim(params, dim);
+		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(OceanCB), cmd);
+
+		device->BindResource(&displacementMap, 0, cmd);
+		device->BindResource(&gradientMap, 1, cmd);
+
+		device->BindIndexBuffer(&indexBuffer_cubemap, IndexBufferFormat::UINT16, 0, cmd);
+
+		device->DrawIndexedInstanced(index_count, 6, 0, 0, 0, cmd); // 6 instance for each cube side
+
+		device->EventEnd(cmd);
+	}
+
 	void Ocean::Render(const CameraComponent& camera, CommandList cmd) const
 	{
 		GraphicsDevice* device = wi::graphics::GetDevice();
@@ -603,6 +665,13 @@ namespace wi
 	const Texture* Ocean::getGradientMap() const
 	{
 		return &gradientMap;
+	}
+
+	const wi::primitive::AABB Ocean::GetAABB(const XMFLOAT3& camera_pos) const
+	{
+		wi::primitive::AABB aabb;
+		aabb.createFromHalfWidth(XMFLOAT3(camera_pos.x, params.waterHeight, camera_pos.z), XMFLOAT3(1000, 10, 1000));
+		return aabb;
 	}
 
 }
