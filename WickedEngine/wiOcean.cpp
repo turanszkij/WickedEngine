@@ -24,13 +24,14 @@ namespace wi
 		Shader		oceanSurfVS;
 		Shader		wireframePS;
 		Shader		oceanSurfPS;
+		Shader		oceanSurfPS_envmap;
 
 		RasterizerState		rasterizerState;
 		RasterizerState		wireRS;
 		DepthStencilState	depthStencilState, depthStencilState_occlusionTest;
 		BlendState			blendState, blendState_occlusionTest;
 
-		PipelineState PSO, PSO_wire, PSO_occlusionTest;
+		PipelineState PSO, PSO_envmap, PSO_wire, PSO_occlusionTest;
 
 
 		void LoadShaders()
@@ -42,6 +43,7 @@ namespace wi
 			wi::renderer::LoadShader(ShaderStage::VS, oceanSurfVS, "oceanSurfaceVS.cso");
 
 			wi::renderer::LoadShader(ShaderStage::PS, oceanSurfPS, "oceanSurfacePS.cso");
+			wi::renderer::LoadShader(ShaderStage::PS, oceanSurfPS_envmap, "oceanSurfacePS_envmap.cso");
 			wi::renderer::LoadShader(ShaderStage::PS, wireframePS, "oceanSurfaceSimplePS.cso");
 
 
@@ -55,6 +57,9 @@ namespace wi
 				desc.rs = &rasterizerState;
 				desc.dss = &depthStencilState;
 				device->CreatePipelineState(&desc, &PSO);
+
+				desc.ps = &oceanSurfPS_envmap;
+				device->CreatePipelineState(&desc, &PSO_envmap);
 
 				desc.ps = &wireframePS;
 				desc.rs = &wireRS;
@@ -474,7 +479,7 @@ namespace wi
 		device->EventEnd(cmd);
 	}
 
-	void Ocean::Render(const CameraComponent& camera, CommandList cmd) const
+	void Ocean::Render(const CameraComponent& camera, CommandList cmd, uint32_t instance_replication) const
 	{
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
@@ -488,7 +493,14 @@ namespace wi
 		}
 		else
 		{
-			device->BindPipelineState(&PSO, cmd);
+			if (instance_replication > 1)
+			{
+				device->BindPipelineState(&PSO_envmap, cmd);
+			}
+			else
+			{
+				device->BindPipelineState(&PSO, cmd);
+			}
 		}
 
 		const uint2 dim = uint2(160 * params.surfaceDetail, 90 * params.surfaceDetail);
@@ -534,7 +546,7 @@ namespace wi
 
 		device->BindIndexBuffer(&indexBuffer, IndexBufferFormat::UINT32, 0, cmd);
 
-		device->DrawIndexed(index_count, 0, 0, cmd);
+		device->DrawIndexedInstanced(index_count, instance_replication, 0, 0, 0, cmd);
 
 		device->EventEnd(cmd);
 	}
@@ -603,6 +615,13 @@ namespace wi
 	const Texture* Ocean::getGradientMap() const
 	{
 		return &gradientMap;
+	}
+
+	const wi::primitive::AABB Ocean::GetAABB() const
+	{
+		wi::primitive::AABB aabb;
+		aabb.createFromHalfWidth(XMFLOAT3(0, params.waterHeight, 0), XMFLOAT3(10000, 1, 10000));
+		return aabb;
 	}
 
 }

@@ -977,12 +977,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)skyAtmosphere_cameraVolumeLutCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)aerialPerspectiveCS_capture.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)aerialPerspectiveCS_capture_MSAA.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)windCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
@@ -1138,6 +1132,9 @@
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)voxelgridVS.hlsl">
       <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)oceanSurfacePS_envmap.hlsl">
+      <Filter>PS</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

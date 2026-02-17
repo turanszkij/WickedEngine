@@ -1241,6 +1241,10 @@ namespace wi
 			cmd_updatetextures = device->BeginCommandList();
 			cmd = cmd_updatetextures;
 			device->WaitCommandList(cmd, cmd_prepareframe_async);
+			if (cmd_ocean.IsValid())
+			{
+				device->WaitCommandList(cmd, cmd_ocean);
+			}
 			wi::jobsystem::Execute(ctx, [cmd, this](wi::jobsystem::JobArgs args) {
 				wi::renderer::BindCommonResources(cmd);
 				wi::renderer::BindCameraCB(

@@ -1116,9 +1116,9 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 
 // Transparent objects has been rendered separately from opaque, so let's apply it now.
 // Must also be applied before fog since fog is layered over.
-#ifdef TRANSPARENT
+#if defined(TRANSPARENT) || defined(ENVMAPRENDERING)
 	ApplyAerialPerspective(ScreenCoord, surface.P, color);
-#endif // TRANSPARENT
+#endif // defined(TRANSPARENT) || defined(ENVMAPRENDERING)
 
 
 	ApplyFog(dist, surface.V, color);
