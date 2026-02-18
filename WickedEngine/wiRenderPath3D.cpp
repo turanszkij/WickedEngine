@@ -1197,6 +1197,71 @@ namespace wi
 			});
 		}
 
+		// Planar reflections depth prepass:
+		if (getReflectionsEnabled() && visibility_main.IsRequestedPlanarReflections())
+		{
+			cmd = device->BeginCommandList();
+			wi::jobsystem::Execute(ctx, [cmd, this](wi::jobsystem::JobArgs args) {
+
+				GraphicsDevice* device = wi::graphics::GetDevice();
+
+				wi::renderer::BindCameraCB(
+					camera_reflection,
+					camera_reflection_previous,
+					camera_reflection,
+					cmd
+				);
+
+				device->EventBegin("Planar reflections Z-Prepass", cmd);
+				auto range = wi::profiler::BeginRangeGPU("Planar Reflections Z-Prepass", cmd);
+
+				RenderPassImage rp[] = {
+					RenderPassImage::DepthStencil(
+						&depthBuffer_Reflection,
+						RenderPassImage::LoadOp::CLEAR,
+						RenderPassImage::StoreOp::STORE,
+						ResourceState::SHADER_RESOURCE,
+						ResourceState::DEPTHSTENCIL,
+						ResourceState::SHADER_RESOURCE
+					)
+				};
+				device->RenderPassBegin(rp, arraysize(rp), cmd);
+
+				Viewport vp;
+				vp.width = (float)depthBuffer_Reflection.GetDesc().width;
+				vp.height = (float)depthBuffer_Reflection.GetDesc().height;
+				vp.min_depth = 0;
+				vp.max_depth = 1;
+				device->BindViewports(1, &vp, cmd);
+
+				wi::renderer::DrawScene(
+					visibility_reflection,
+					RENDERPASS_PREPASS_DEPTHONLY,
+					cmd,
+					wi::renderer::DRAWSCENE_OPAQUE |
+					wi::renderer::DRAWSCENE_IMPOSTOR |
+					wi::renderer::DRAWSCENE_HAIRPARTICLE |
+					wi::renderer::DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS
+				);
+
+				device->RenderPassEnd(cmd);
+
+				wi::renderer::ResolveMSAADepthBuffer(depthBuffer_Reflection_resolved, depthBuffer_Reflection, cmd);
+
+				if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())
+				{
+					wi::renderer::Postprocess_AerialPerspective(
+						aerialperspectiveResources_reflection,
+						cmd
+					);
+				}
+
+				wi::profiler::EndRange(range); // Planar Reflections
+				device->EventEnd(cmd);
+
+			});
+		}
+
 		CommandList cmd_ocean;
 		if (scene->weather.IsOceanEnabled() && scene->ocean.IsValid())
 		{
@@ -1259,71 +1324,9 @@ namespace wi
 			});
 		}
 
+		// Planar reflections color pass:
 		if (getReflectionsEnabled() && visibility_main.IsRequestedPlanarReflections())
 		{
-			// Planar reflections depth prepass:
-			cmd = device->BeginCommandList();
-			wi::jobsystem::Execute(ctx, [cmd, this](wi::jobsystem::JobArgs args) {
-
-				GraphicsDevice* device = wi::graphics::GetDevice();
-
-				wi::renderer::BindCameraCB(
-					camera_reflection,
-					camera_reflection_previous,
-					camera_reflection,
-					cmd
-				);
-
-				device->EventBegin("Planar reflections Z-Prepass", cmd);
-				auto range = wi::profiler::BeginRangeGPU("Planar Reflections Z-Prepass", cmd);
-
-				RenderPassImage rp[] = {
-					RenderPassImage::DepthStencil(
-						&depthBuffer_Reflection,
-						RenderPassImage::LoadOp::CLEAR,
-						RenderPassImage::StoreOp::STORE,
-						ResourceState::SHADER_RESOURCE,
-						ResourceState::DEPTHSTENCIL,
-						ResourceState::SHADER_RESOURCE
-					)
-				};
-				device->RenderPassBegin(rp, arraysize(rp), cmd);
-
-				Viewport vp;
-				vp.width = (float)depthBuffer_Reflection.GetDesc().width;
-				vp.height = (float)depthBuffer_Reflection.GetDesc().height;
-				vp.min_depth = 0;
-				vp.max_depth = 1;
-				device->BindViewports(1, &vp, cmd);
-
-				wi::renderer::DrawScene(
-					visibility_reflection,
-					RENDERPASS_PREPASS_DEPTHONLY,
-					cmd,
-					wi::renderer::DRAWSCENE_OPAQUE |
-					wi::renderer::DRAWSCENE_IMPOSTOR |
-					wi::renderer::DRAWSCENE_HAIRPARTICLE |
-					wi::renderer::DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS
-				);
-
-				device->RenderPassEnd(cmd);
-
-				wi::renderer::ResolveMSAADepthBuffer(depthBuffer_Reflection_resolved, depthBuffer_Reflection, cmd);
-
-				if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())
-				{
-					wi::renderer::Postprocess_AerialPerspective(
-						aerialperspectiveResources_reflection,
-						cmd
-					);
-				}
-
-				wi::profiler::EndRange(range); // Planar Reflections
-				device->EventEnd(cmd);
-
-			});
-
-			// Planar reflections color pass:
 			cmd = device->BeginCommandList();
 			wi::jobsystem::Execute(ctx, [cmd, this](wi::jobsystem::JobArgs args) {
 

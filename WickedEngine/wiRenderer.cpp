@@ -4705,12 +4705,13 @@ void UpdatePerFrameData(
 
 			shaderentity.SetIndices(matrixCounter, 0);
 
-			const uint cascade_count = std::min(uint(light.cascade_distances.size() + vis.scene->character_dedicated_shadows.size()), MATRIXARRAY_COUNT - matrixCounter);
+			const uint32_t max_viewport_count = std::min(device->GetMaxViewportCount(), 16u);
+			const uint cascade_count = std::min(std::min(uint(light.cascade_distances.size() + vis.scene->character_dedicated_shadows.size()), MATRIXARRAY_COUNT - matrixCounter), max_viewport_count);
 			shaderentity.SetShadowCascadeCount(cascade_count);
 
 			if (shadowmap && cascade_count > 0)
 			{
-				SHCAM* shcams = (SHCAM*)alloca(sizeof(SHCAM) * cascade_count);
+				SHCAM shcams[16];
 				CreateDirLightShadowCams(light, *vis.camera, shcams, cascade_count, shadow_rect, vis.scene->character_dedicated_shadows.data(), vis.scene->character_dedicated_shadows.size());
 				for (size_t cascade = 0; cascade < cascade_count; ++cascade)
 				{
@@ -6694,7 +6695,10 @@ void DrawShadowmaps(
 
 	const XMVECTOR EYE = vis.camera->GetEye();
 
-	const uint32_t max_viewport_count = device->GetMaxViewportCount();
+	const uint32_t max_viewport_count = std::min(device->GetMaxViewportCount(), 16u);
+	Viewport viewports[16];
+	wi::graphics::Rect scissors[16];
+	SHCAM shcams[16];
 
 	const RenderPassImage rp[] = {
 		RenderPassImage::DepthStencil(
@@ -6740,9 +6744,6 @@ void DrawShadowmaps(
 			if (cascade_count == 0)
 				break;
 
-			Viewport* viewports = (Viewport*)alloca(sizeof(Viewport) * cascade_count);
-			wi::graphics::Rect* scissors = (wi::graphics::Rect*)alloca(sizeof(wi::graphics::Rect) * cascade_count);
-			SHCAM* shcams = (SHCAM*)alloca(sizeof(SHCAM) * cascade_count);
 			CreateDirLightShadowCams(light, *vis.camera, shcams, cascade_count, shadow_rect, vis.scene->character_dedicated_shadows.data(), vis.scene->character_dedicated_shadows.size());
 
 			for (size_t i = 0; i < vis.scene->aabb_objects.size(); ++i)
@@ -6806,12 +6807,11 @@ void DrawShadowmaps(
 					cb.cameras[cascade].forward.y = -light.direction.y;
 					cb.cameras[cascade].forward.z = -light.direction.z;
 
-					Viewport vp;
+					Viewport& vp = viewports[cascade];
 					vp.top_left_x = float(shadow_rect.x + cascade * shadow_rect.w);
 					vp.top_left_y = float(shadow_rect.y);
 					vp.width = float(shadow_rect.w);
 					vp.height = float(shadow_rect.h);
-					viewports[cascade] = vp; // instead of reference, copy it to be sure every member is initialized (alloca)
 					scissors[cascade].from_viewport(vp);
 				}
 
