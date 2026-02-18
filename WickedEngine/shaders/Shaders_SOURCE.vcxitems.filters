@@ -1136,6 +1136,9 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)oceanSurfacePS_envmap.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)emittedparticlePS_shadow.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop.h">

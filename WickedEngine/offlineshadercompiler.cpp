@@ -224,8 +224,9 @@ wi::vector<ShaderEntry> shaders = {
 	{"lightmap_expandCS", wi::graphics::ShaderStage::CS },
 
 
-	{"emittedparticlePS_soft", wi::graphics::ShaderStage::PS },
 	{"imagePS", wi::graphics::ShaderStage::PS },
+	{"emittedparticlePS_soft", wi::graphics::ShaderStage::PS },
+	{"emittedparticlePS_shadow", wi::graphics::ShaderStage::PS },
 	{"emittedparticlePS_soft_lighting", wi::graphics::ShaderStage::PS },
 	{"oceanSurfacePS", wi::graphics::ShaderStage::PS },
 	{"oceanSurfacePS_envmap", wi::graphics::ShaderStage::PS },

@@ -23,6 +23,7 @@ namespace wi
 {
 	static Shader vertexShader;
 	static Shader meshShader;
+	static Shader shadowPS;
 	static Shader pixelShader[EmittedParticleSystem::PARTICLESHADERTYPE_COUNT];
 	static Shader kickoffUpdateCS;
 	static Shader finishUpdateCS;
@@ -41,10 +42,13 @@ namespace wi
 
 	static BlendState			blendStates[BLENDMODE_COUNT];
 	static RasterizerState		rasterizerState;
+	static RasterizerState		rasterizerState_shadow;
 	static RasterizerState		wireFrameRS;
 	static DepthStencilState	depthStencilState;
+	static DepthStencilState	depthStencilState_shadow;
 	static PipelineState		PSO[BLENDMODE_COUNT][EmittedParticleSystem::PARTICLESHADERTYPE_COUNT];
 	static PipelineState		PSO_wire;
+	static PipelineState		PSO_shadow;
 
 	static bool ALLOW_MESH_SHADER = false;
 
@@ -890,6 +894,42 @@ namespace wi
 		device->EventEnd(cmd);
 	}
 
+	void EmittedParticleSystem::DrawForShadowmap(const MaterialComponent& material, CommandList cmd) const
+	{
+		if (IsInactive())
+			return;
+		if (material.GetBlendMode() != BLENDMODE_OPAQUE && material.GetBlendMode() != BLENDMODE_ALPHA)
+			return;
+		if (!material.IsCastingShadow())
+			return;
+
+		GraphicsDevice* device = wi::graphics::GetDevice();
+		device->EventBegin("EmittedParticle Shadow", cmd);
+
+		device->BindPipelineState(&PSO_shadow, cmd);
+
+		device->BindConstantBuffer(&constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), cmd);
+
+		const GPUResource* res[] = {
+			&counterBuffer,
+			&particleBuffer,
+			&culledIndirectionBuffer,
+			&culledIndirectionBuffer2,
+		};
+		device->BindResources(res, 0, arraysize(res), cmd);
+
+		if (ALLOW_MESH_SHADER && device->CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
+		{
+			device->DispatchMeshIndirect(&indirectBuffers, offsetof(EmitterIndirectArgs, dispatch), cmd);
+		}
+		else
+		{
+			device->DrawInstancedIndirect(&indirectBuffers, offsetof(EmitterIndirectArgs, draw), cmd);
+		}
+
+		device->EventEnd(cmd);
+	}
+
 	void EmittedParticleSystem::SetOpacityCurveControl(float peakStart, float peakEnd)
 	{
 		peakStart = saturate(peakStart);
@@ -938,6 +978,7 @@ namespace wi
 		void LoadShaders()
 		{
 			wi::renderer::LoadShader(ShaderStage::VS, vertexShader, "emittedparticleVS.cso");
+			wi::renderer::LoadShader(ShaderStage::PS, shadowPS, "emittedparticlePS_shadow.cso");
 
 			if (ALLOW_MESH_SHADER && wi::graphics::GetDevice()->CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
 			{
@@ -1009,6 +1050,25 @@ namespace wi
 				device->CreatePipelineState(&desc, &PSO_wire);
 			}
 
+			{
+				PipelineStateDesc desc;
+				desc.pt = PrimitiveTopology::TRIANGLESTRIP;
+				if (ALLOW_MESH_SHADER && wi::graphics::GetDevice()->CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
+				{
+					desc.ms = &meshShader;
+				}
+				else
+				{
+					desc.vs = &vertexShader;
+				}
+				desc.ps = &shadowPS;
+				desc.bs = &blendStates[BLENDMODE_OPAQUE];
+				desc.rs = &rasterizerState_shadow;
+				desc.dss = &depthStencilState_shadow;
+
+				device->CreatePipelineState(&desc, &PSO_shadow);
+			}
+
 		}
 	}
 
@@ -1027,6 +1087,18 @@ namespace wi
 		rs.multisample_enable = false;
 		rs.antialiased_line_enable = false;
 		rasterizerState = rs;
+
+		if (IsFormatUnorm(wi::renderer::format_depthbuffer_shadowmap))
+		{
+			rs.depth_bias = -1;
+			rs.slope_scaled_depth_bias = -4.0f;
+		}
+		else
+		{
+			rs.depth_bias = -10;
+			rs.slope_scaled_depth_bias = -3.4f;
+		}
+		rasterizerState_shadow = rs;
 
 
 		rs.fill_mode = FillMode::WIREFRAME;
@@ -1047,6 +1119,9 @@ namespace wi
 		dsd.depth_func = ComparisonFunc::GREATER_EQUAL;
 		dsd.stencil_enable = false;
 		depthStencilState = dsd;
+
+		dsd.depth_write_mask = DepthWriteMask::ALL;
+		depthStencilState_shadow = dsd;
 
 
 		BlendState bd;

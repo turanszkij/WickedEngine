@@ -6864,6 +6864,39 @@ void DrawShadowmaps(
 					}
 				}
 			}
+
+			if (!vis.visibleEmitters.empty())
+			{
+				cb.cameras[0].position = vis.camera->Eye;
+				for (uint32_t cascade = 0; cascade < std::min(2u + (uint32_t)vis.scene->character_dedicated_shadows.size(), cascade_count); ++cascade)
+				{
+					XMStoreFloat4x4(&cb.cameras[0].view_projection, shcams[cascade].view_projection);
+					cb.cameras[0].options = SHADERCAMERA_OPTION_ORTHO;
+					device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
+
+					Viewport vp;
+					vp.top_left_x = float(shadow_rect.x + cascade * shadow_rect.w);
+					vp.top_left_y = float(shadow_rect.y);
+					vp.width = float(shadow_rect.w);
+					vp.height = float(shadow_rect.h);
+					device->BindViewports(1, &vp, cmd);
+
+					wi::graphics::Rect scissor;
+					scissor.from_viewport(vp);
+					device->BindScissorRects(1, &scissor, cmd);
+
+					for (uint32_t emitterIndex : vis.visibleEmitters)
+					{
+						const EmittedParticleSystem& emitter = vis.scene->emitters[emitterIndex];
+						Entity entity = vis.scene->emitters.GetEntity(emitterIndex);
+						const MaterialComponent* material = vis.scene->materials.GetComponent(entity);
+						if (material != nullptr)
+						{
+							emitter.DrawForShadowmap(*material, cmd);
+						}
+					}
+				}
+			}
 		}
 		break;
 		case LightComponent::SPOT:
@@ -6977,6 +7010,36 @@ void DrawShadowmaps(
 					if (material != nullptr)
 					{
 						hair.Draw(*material, RENDERPASS_SHADOW, cmd);
+					}
+				}
+			}
+
+			if (!vis.visibleEmitters.empty())
+			{
+				cb.cameras[0].position = vis.camera->Eye;
+				cb.cameras[0].options = SHADERCAMERA_OPTION_NONE;
+				XMStoreFloat4x4(&cb.cameras[0].view_projection, shcam.view_projection);
+				device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
+
+				Viewport vp;
+				vp.top_left_x = float(shadow_rect.x);
+				vp.top_left_y = float(shadow_rect.y);
+				vp.width = float(shadow_rect.w);
+				vp.height = float(shadow_rect.h);
+				device->BindViewports(1, &vp, cmd);
+
+				wi::graphics::Rect scissor;
+				scissor.from_viewport(vp);
+				device->BindScissorRects(1, &scissor, cmd);
+
+				for (uint32_t emitterIndex : vis.visibleEmitters)
+				{
+					const EmittedParticleSystem& emitter = vis.scene->emitters[emitterIndex];
+					Entity entity = vis.scene->emitters.GetEntity(emitterIndex);
+					const MaterialComponent* material = vis.scene->materials.GetComponent(entity);
+					if (material != nullptr)
+					{
+						emitter.DrawForShadowmap(*material, cmd);
 					}
 				}
 			}
@@ -7128,6 +7191,38 @@ void DrawShadowmaps(
 						if (material != nullptr)
 						{
 							hair.Draw(*material, RENDERPASS_SHADOW, cmd);
+						}
+					}
+				}
+			}
+
+			if (!vis.visibleEmitters.empty())
+			{
+				cb.cameras[0].position = vis.camera->Eye;
+				for (uint32_t shcam = 0; shcam < arraysize(cameras); ++shcam)
+				{
+					XMStoreFloat4x4(&cb.cameras[0].view_projection, cameras[shcam].view_projection);
+					device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
+
+					Viewport vp;
+					vp.top_left_x = float(shadow_rect.x + shcam * shadow_rect.w);
+					vp.top_left_y = float(shadow_rect.y);
+					vp.width = float(shadow_rect.w);
+					vp.height = float(shadow_rect.h);
+					device->BindViewports(1, &vp, cmd);
+
+					wi::graphics::Rect scissor;
+					scissor.from_viewport(vp);
+					device->BindScissorRects(1, &scissor, cmd);
+
+					for (uint32_t emitterIndex : vis.visibleEmitters)
+					{
+						const EmittedParticleSystem& emitter = vis.scene->emitters[emitterIndex];
+						Entity entity = vis.scene->emitters.GetEntity(emitterIndex);
+						const MaterialComponent* material = vis.scene->materials.GetComponent(entity);
+						if (material != nullptr)
+						{
+							emitter.DrawForShadowmap(*material, cmd);
 						}
 					}
 				}
