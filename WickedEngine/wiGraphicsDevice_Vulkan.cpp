@@ -7280,7 +7280,7 @@ using namespace vulkan_internal;
 
 			case RenderPassImage::Type::RESOLVE:
 			{
-				descriptor = subresource < 0 ? internal_state->srv : internal_state->subresources_srv[subresource];
+				descriptor = subresource < 0 ? internal_state->rtv : internal_state->subresources_rtv[subresource];
 				VkRenderingAttachmentInfo& color_attachment = color_attachments[color_resolve_count++];
 				color_attachment.resolveImageView = descriptor.image_view;
 				color_attachment.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
