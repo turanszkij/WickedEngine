@@ -3592,7 +3592,7 @@ using namespace metal_internal;
 				}
 				case RenderPassImage::Type::RESOLVE:
 				{
-					Texture_Metal::Subresource& subresource = image.subresource < 0 ? internal_state->srv : internal_state->subresources_srv[image.subresource];
+					Texture_Metal::Subresource& subresource = image.subresource < 0 ? internal_state->rtv : internal_state->subresources_rtv[image.subresource];
 					auto& color_attachment_descriptor = color_attachment_descriptors[resolve_index];
 					color_attachment_descriptor->setResolveTexture(internal_state->texture.get());
 					color_attachment_descriptor->setResolveLevel(subresource.firstMip);

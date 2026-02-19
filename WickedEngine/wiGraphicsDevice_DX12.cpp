@@ -6024,7 +6024,7 @@ std::mutex queue_locker;
 
 			case RenderPassImage::Type::RESOLVE:
 			{
-				descriptor = subresource < 0 ? internal_state->srv : internal_state->subresources_srv[subresource];
+				descriptor = subresource < 0 ? internal_state->rtv : internal_state->subresources_rtv[subresource];
 				ResolveSourceInfo& resolve_src_info = RT_resolve_src_infos[rt_resolve_count];
 				D3D12_RENDER_PASS_RENDER_TARGET_DESC& RTV = RTVs[rt_resolve_count];
 				RTV.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE;
