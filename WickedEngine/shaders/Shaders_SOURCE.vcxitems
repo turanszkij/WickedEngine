@@ -290,6 +290,7 @@
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">4.0</ShaderModel>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)emittedparticlePS_shadow.hlsl" />
+    <FxCompile Include="$(MSBuildThisFileDirectory)emittedparticleVS_shadow.hlsl" />
     <FxCompile Include="$(MSBuildThisFileDirectory)extractStencilBitPS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
     </FxCompile>

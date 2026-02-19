@@ -105,7 +105,8 @@ static const uint THREADCOUNT_MESH_SHADER = 32;
 struct EmitterIndirectArgs
 {
 	IndirectDispatchArgs dispatch;
-	IndirectDrawArgsInstanced draw;
+	IndirectDrawArgsInstanced draw_culled;
+	IndirectDrawArgsInstanced draw_all;
 };
 
 

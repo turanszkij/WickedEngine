@@ -1139,6 +1139,9 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)emittedparticlePS_shadow.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)emittedparticleVS_shadow.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop.h">

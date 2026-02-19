@@ -7168,21 +7168,14 @@ void DrawShadowmaps(
 			if (!vis.visibleHairs.empty())
 			{
 				cb.cameras[0].position = vis.camera->Eye;
-				for (uint32_t shcam = 0; shcam < arraysize(cameras); ++shcam)
+				for (uint32_t cami = 0; cami < camera_count; ++cami)
 				{
+					const uint32_t shcam = cb.cameras[cami].output_index;
 					XMStoreFloat4x4(&cb.cameras[0].view_projection, cameras[shcam].view_projection);
 					device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 
-					Viewport vp;
-					vp.top_left_x = float(shadow_rect.x + shcam * shadow_rect.w);
-					vp.top_left_y = float(shadow_rect.y);
-					vp.width = float(shadow_rect.w);
-					vp.height = float(shadow_rect.h);
-					device->BindViewports(1, &vp, cmd);
-
-					wi::graphics::Rect scissor;
-					scissor.from_viewport(vp);
-					device->BindScissorRects(1, &scissor, cmd);
+					device->BindViewports(1, &vp[shcam], cmd);
+					device->BindScissorRects(1, &scissors[shcam], cmd);
 
 					for (uint32_t hairIndex : vis.visibleHairs)
 					{
@@ -7202,21 +7195,14 @@ void DrawShadowmaps(
 			if (!vis.visibleEmitters.empty())
 			{
 				cb.cameras[0].position = vis.camera->Eye;
-				for (uint32_t shcam = 0; shcam < arraysize(cameras); ++shcam)
+				for (uint32_t cami = 0; cami < camera_count; ++cami)
 				{
+					const uint32_t shcam = cb.cameras[cami].output_index;
 					XMStoreFloat4x4(&cb.cameras[0].view_projection, cameras[shcam].view_projection);
 					device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 
-					Viewport vp;
-					vp.top_left_x = float(shadow_rect.x + shcam * shadow_rect.w);
-					vp.top_left_y = float(shadow_rect.y);
-					vp.width = float(shadow_rect.w);
-					vp.height = float(shadow_rect.h);
-					device->BindViewports(1, &vp, cmd);
-
-					wi::graphics::Rect scissor;
-					scissor.from_viewport(vp);
-					device->BindScissorRects(1, &scissor, cmd);
+					device->BindViewports(1, &vp[shcam], cmd);
+					device->BindScissorRects(1, &scissors[shcam], cmd);
 
 					for (uint32_t emitterIndex : vis.visibleEmitters)
 					{

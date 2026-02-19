@@ -290,6 +290,7 @@ wi::vector<ShaderEntry> shaders = {
 
 	{"hairparticleVS", wi::graphics::ShaderStage::VS },
 	{"emittedparticleVS", wi::graphics::ShaderStage::VS },
+	{"emittedparticleVS_shadow", wi::graphics::ShaderStage::VS },
 	{"imageVS", wi::graphics::ShaderStage::VS },
 	{"fontVS", wi::graphics::ShaderStage::VS },
 	{"voxelVS", wi::graphics::ShaderStage::VS },

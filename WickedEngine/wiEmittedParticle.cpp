@@ -22,6 +22,7 @@ using namespace wi::enums;
 namespace wi
 {
 	static Shader vertexShader;
+	static Shader vertexShader_shadow;
 	static Shader meshShader;
 	static Shader shadowPS;
 	static Shader pixelShader[EmittedParticleSystem::PARTICLESHADERTYPE_COUNT];
@@ -876,7 +877,7 @@ namespace wi
 		}
 		else
 		{
-			device->DrawInstancedIndirect(&indirectBuffers, offsetof(EmitterIndirectArgs, draw), cmd);
+			device->DrawInstancedIndirect(&indirectBuffers, offsetof(EmitterIndirectArgs, draw_culled), cmd);
 		}
 
 		if (wi::renderer::GetWireframeMode() == wi::renderer::WIREFRAME_OVERLAY)
@@ -888,7 +889,7 @@ namespace wi
 			}
 			else
 			{
-				device->DrawInstancedIndirect(&indirectBuffers, offsetof(EmitterIndirectArgs, draw), cmd);
+				device->DrawInstancedIndirect(&indirectBuffers, offsetof(EmitterIndirectArgs, draw_culled), cmd);
 			}
 		}
 
@@ -914,19 +915,11 @@ namespace wi
 		const GPUResource* res[] = {
 			&counterBuffer,
 			&particleBuffer,
-			&culledIndirectionBuffer,
-			&culledIndirectionBuffer2,
+			&aliveList[1]
 		};
 		device->BindResources(res, 0, arraysize(res), cmd);
 
-		if (ALLOW_MESH_SHADER && device->CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
-		{
-			device->DispatchMeshIndirect(&indirectBuffers, offsetof(EmitterIndirectArgs, dispatch), cmd);
-		}
-		else
-		{
-			device->DrawInstancedIndirect(&indirectBuffers, offsetof(EmitterIndirectArgs, draw), cmd);
-		}
+		device->DrawInstancedIndirect(&indirectBuffers, offsetof(EmitterIndirectArgs, draw_all), cmd);
 
 		device->EventEnd(cmd);
 	}
@@ -979,6 +972,7 @@ namespace wi
 		void LoadShaders()
 		{
 			wi::renderer::LoadShader(ShaderStage::VS, vertexShader, "emittedparticleVS.cso");
+			wi::renderer::LoadShader(ShaderStage::VS, vertexShader_shadow, "emittedparticleVS_shadow.cso");
 			wi::renderer::LoadShader(ShaderStage::PS, shadowPS, "emittedparticlePS_shadow.cso");
 
 			if (ALLOW_MESH_SHADER && wi::graphics::GetDevice()->CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
@@ -1054,14 +1048,7 @@ namespace wi
 			{
 				PipelineStateDesc desc;
 				desc.pt = PrimitiveTopology::TRIANGLESTRIP;
-				if (ALLOW_MESH_SHADER && wi::graphics::GetDevice()->CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
-				{
-					desc.ms = &meshShader;
-				}
-				else
-				{
-					desc.vs = &vertexShader;
-				}
+				desc.vs = &vertexShader_shadow;
 				desc.ps = &shadowPS;
 				desc.bs = &blendState_shadow;
 				desc.rs = &rasterizerState_shadow;
