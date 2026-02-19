@@ -5091,13 +5091,11 @@ void UpdateRenderData(
 
 	PushBarrier(GPUBarrier::Image(&textures[TEXTYPE_3D_WIND], textures[TEXTYPE_3D_WIND].desc.layout, ResourceState::UNORDERED_ACCESS));
 	PushBarrier(GPUBarrier::Image(&textures[TEXTYPE_3D_WIND_PREV], textures[TEXTYPE_3D_WIND_PREV].desc.layout, ResourceState::UNORDERED_ACCESS));
-	PushBarrier(GPUBarrier::Image(&textures[TEXTYPE_2D_CAUSTICS], textures[TEXTYPE_2D_CAUSTICS].desc.layout, ResourceState::UNORDERED_ACCESS));
 	PushBarrier(GPUBarrier::Buffer(&buffers[BUFFERTYPE_INDIRECT_DEBUG_0], ResourceState::VERTEX_BUFFER | ResourceState::INDIRECT_ARGUMENT, ResourceState::COPY_SRC));
 	FlushBarriers(cmd);
 
 	device->ClearUAV(&textures[TEXTYPE_3D_WIND], 0, cmd);
 	device->ClearUAV(&textures[TEXTYPE_3D_WIND_PREV], 0, cmd);
-	device->ClearUAV(&textures[TEXTYPE_2D_CAUSTICS], 0, cmd);
 	PushBarrier(GPUBarrier::Memory());
 
 	device->CopyBuffer(&indirectDebugStatsReadback[device->GetBufferIndex()], 0, &buffers[BUFFERTYPE_INDIRECT_DEBUG_0], 0, sizeof(IndirectDrawArgsInstanced), cmd);
@@ -5222,17 +5220,6 @@ void UpdateRenderData(
 		}
 		PushBarrier(GPUBarrier::Image(&textures[TEXTYPE_3D_WIND], ResourceState::UNORDERED_ACCESS, textures[TEXTYPE_3D_WIND].desc.layout));
 		PushBarrier(GPUBarrier::Image(&textures[TEXTYPE_3D_WIND_PREV], ResourceState::UNORDERED_ACCESS, textures[TEXTYPE_3D_WIND_PREV].desc.layout));
-		device->EventEnd(cmd);
-		wi::profiler::EndRange(range);
-	}
-	{
-		auto range = wi::profiler::BeginRangeGPU("Caustics", cmd);
-		device->EventBegin("Caustics", cmd);
-		device->BindComputeShader(&shaders[CSTYPE_CAUSTICS], cmd);
-		device->BindUAV(&textures[TEXTYPE_2D_CAUSTICS], 0, cmd);
-		const TextureDesc& desc = textures[TEXTYPE_2D_CAUSTICS].GetDesc();
-		device->Dispatch(desc.width / 8, desc.height / 8, 1, cmd);
-		PushBarrier(GPUBarrier::Image(&textures[TEXTYPE_2D_CAUSTICS], ResourceState::UNORDERED_ACCESS, textures[TEXTYPE_2D_CAUSTICS].desc.layout));
 		device->EventEnd(cmd);
 		wi::profiler::EndRange(range);
 	}
@@ -5441,6 +5428,22 @@ void UpdateRenderDataAsync(
 	for (size_t i = 0; i < vis.scene->terrains.GetCount(); ++i)
 	{
 		vis.scene->terrains[i].UpdateVirtualTexturesGPU(cmd);
+	}
+
+	// Caustic effect:
+	{
+		auto range = wi::profiler::BeginRangeGPU("Caustics", cmd);
+		device->EventBegin("Caustics", cmd);
+		device->Barrier(GPUBarrier::Image(&textures[TEXTYPE_2D_CAUSTICS], textures[TEXTYPE_2D_CAUSTICS].desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
+		device->ClearUAV(&textures[TEXTYPE_2D_CAUSTICS], 0, cmd);
+		device->Barrier(GPUBarrier::Memory(&textures[TEXTYPE_2D_CAUSTICS]), cmd);
+		device->BindComputeShader(&shaders[CSTYPE_CAUSTICS], cmd);
+		device->BindUAV(&textures[TEXTYPE_2D_CAUSTICS], 0, cmd);
+		const TextureDesc& desc = textures[TEXTYPE_2D_CAUSTICS].GetDesc();
+		device->Dispatch(desc.width / 8, desc.height / 8, 1, cmd);
+		PushBarrier(GPUBarrier::Image(&textures[TEXTYPE_2D_CAUSTICS], ResourceState::UNORDERED_ACCESS, textures[TEXTYPE_2D_CAUSTICS].desc.layout));
+		device->EventEnd(cmd);
+		wi::profiler::EndRange(range);
 	}
 
 	// Wetmaps will be initialized:
