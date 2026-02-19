@@ -9102,7 +9102,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			if (!envrenderingDepthBuffer.IsValid())
 			{
 				desc.mip_levels = 1;
-				desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
+				desc.bind_flags = BindFlag::DEPTH_STENCIL;
 				desc.format = format_depthbuffer_envprobe;
 				desc.layout = ResourceState::DEPTHSTENCIL;
 				desc.sample_count = required_sample_count;
@@ -9141,6 +9141,8 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 					subresource_index = device->CreateSubresource(&envrenderingColorBuffer, SubresourceType::SRV, 0, envrenderingColorBuffer.desc.array_size, i, 1);
 					assert(subresource_index == i);
 					subresource_index = device->CreateSubresource(&envrenderingColorBuffer, SubresourceType::UAV, 0, envrenderingColorBuffer.desc.array_size, i, 1);
+					assert(subresource_index == i);
+					subresource_index = device->CreateSubresource(&envrenderingColorBuffer, SubresourceType::RTV, 0, envrenderingColorBuffer.desc.array_size, i, 1);
 					assert(subresource_index == i);
 				}
 

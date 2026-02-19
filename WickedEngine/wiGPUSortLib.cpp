@@ -29,18 +29,22 @@ namespace wi::gpusortlib
 	{
 		wi::Timer timer;
 
+		GraphicsDevice* device = GetDevice();
+
 		GPUBufferDesc bd;
 		bd.usage = Usage::DEFAULT;
 
 		bd.bind_flags = BindFlag::CONSTANT_BUFFER;
 		bd.size = sizeof(SortCount);
-		wi::graphics::GetDevice()->CreateBuffer(&bd, nullptr, &constantBuffer);
+		device->CreateBuffer(&bd, nullptr, &constantBuffer);
+		device->SetName(&constantBuffer, "gpusortlib::constantBuffer");
 
 		bd.bind_flags = BindFlag::UNORDERED_ACCESS;
 		bd.misc_flags = ResourceMiscFlag::INDIRECT_ARGS | ResourceMiscFlag::BUFFER_STRUCTURED;
 		bd.stride = sizeof(IndirectDispatchArgs);
 		bd.size = bd.stride;
-		wi::graphics::GetDevice()->CreateBuffer(&bd, nullptr, &indirectBuffer);
+		device->CreateBuffer(&bd, nullptr, &indirectBuffer);
+		device->SetName(&indirectBuffer, "gpusortlib::indirectBuffer");
 
 		static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
 		LoadShaders();
