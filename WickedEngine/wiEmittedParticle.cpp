@@ -41,6 +41,7 @@ namespace wi
 	static Shader simulateCS_SORTING_DEPTHCOLLISIONS;
 
 	static BlendState			blendStates[BLENDMODE_COUNT];
+	static BlendState			blendState_shadow;
 	static RasterizerState		rasterizerState;
 	static RasterizerState		rasterizerState_shadow;
 	static RasterizerState		wireFrameRS;
@@ -1062,7 +1063,7 @@ namespace wi
 					desc.vs = &vertexShader;
 				}
 				desc.ps = &shadowPS;
-				desc.bs = &blendStates[BLENDMODE_OPAQUE];
+				desc.bs = &blendState_shadow;
 				desc.rs = &rasterizerState_shadow;
 				desc.dss = &depthStencilState_shadow;
 
@@ -1120,7 +1121,7 @@ namespace wi
 		dsd.stencil_enable = false;
 		depthStencilState = dsd;
 
-		dsd.depth_write_mask = DepthWriteMask::ALL;
+		//dsd.depth_write_mask = DepthWriteMask::ALL;
 		depthStencilState_shadow = dsd;
 
 
@@ -1184,6 +1185,19 @@ namespace wi
 
 		bd.render_target[0].blend_enable = false;
 		blendStates[BLENDMODE_OPAQUE] = bd;
+
+		bd.render_target[0].blend_enable = true;
+		bd.render_target[0].src_blend = Blend::ZERO;
+		bd.render_target[0].dest_blend = Blend::SRC_COLOR;
+		bd.render_target[0].blend_op = BlendOp::ADD;
+		bd.render_target[0].src_blend_alpha = Blend::ONE;
+		bd.render_target[0].dest_blend_alpha = Blend::ONE;
+		bd.render_target[0].blend_op_alpha = BlendOp::MAX;
+		bd.render_target[0].blend_enable = true;
+		bd.render_target[0].render_target_write_mask = ColorWrite::ENABLE_ALL;
+		bd.alpha_to_coverage_enable = false;
+		bd.independent_blend_enable = false;
+		blendState_shadow = bd;
 
 		static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { EmittedParticleSystem_Internal::LoadShaders(); });
 		EmittedParticleSystem_Internal::LoadShaders();

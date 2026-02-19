@@ -3,7 +3,7 @@
 #include "ShaderInterop_EmittedParticle.h"
 #include "objectHF.hlsli"
 
-void main(VertextoPixel input) : SV_TARGET
+float4 main(VertextoPixel input) : SV_Target
 {
 	ShaderMaterial material = EmitterGetMaterial();
 
@@ -32,5 +32,12 @@ void main(VertextoPixel input) : SV_TARGET
 
 	opacity = saturate(opacity);
 
-	clip(opacity - dither(input.pos.xy));
+	clip(opacity - 1.0 / 255.0);
+
+	color.rgb = lerp(1, color.rgb, opacity);
+	color.rgb *= 1 - opacity;
+
+	color.a = input.pos.z; // secondary depth
+
+	return color;
 }
