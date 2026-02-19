@@ -2891,6 +2891,7 @@ void ClearWorld(Scene& scene)
 // Don't store this structure on heap!
 struct SHCAM
 {
+	XMMATRIX view;
 	XMMATRIX view_projection;
 	Frustum frustum;					// This frustum can be used for intersection test with wiPrimitive primitives
 	BoundingFrustum boundingfrustum;	// This boundingfrustum can be used for frustum vs frustum intersection test
@@ -2904,6 +2905,7 @@ struct SHCAM
 		const XMVECTOR up = XMVector3TransformNormal(default_up, rot);
 		const XMMATRIX V = XMMatrixLookToLH(E, to, up);
 		const XMMATRIX P = XMMatrixPerspectiveFovLH(fov, aspect, farPlane, nearPlane);
+		view = V;
 		view_projection = XMMatrixMultiply(V, P);
 		frustum.Create(view_projection);
 
@@ -3034,6 +3036,7 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 			_max.z = _center.z + ext;
 
 			const XMMATRIX lightProjection = XMMatrixOrthographicOffCenterLH(_min.x, _max.x, _min.y, _max.y, _max.z, _min.z); // notice reversed Z!
+			shcams[cascade].view = lightView;
 			shcams[cascade].view_projection = XMMatrixMultiply(lightView, lightProjection);
 		}
 
@@ -6799,6 +6802,7 @@ void DrawShadowmaps(
 			{
 				for (uint32_t cascade = 0; cascade < cascade_count; ++cascade)
 				{
+					XMStoreFloat4x4(&cb.cameras[cascade].view, shcams[cascade].view);
 					XMStoreFloat4x4(&cb.cameras[cascade].view_projection, shcams[cascade].view_projection);
 					cb.cameras[cascade].output_index = cascade;
 					for (int i = 0; i < arraysize(cb.cameras[cascade].frustum.planes); ++i)
@@ -6833,6 +6837,7 @@ void DrawShadowmaps(
 				cb.cameras[0].position = vis.camera->Eye;
 				for (uint32_t cascade = 0; cascade < std::min(2u + (uint32_t)vis.scene->character_dedicated_shadows.size(), cascade_count); ++cascade)
 				{
+					XMStoreFloat4x4(&cb.cameras[0].view, shcams[cascade].view);
 					XMStoreFloat4x4(&cb.cameras[0].view_projection, shcams[cascade].view_projection);
 					cb.cameras[0].options = SHADERCAMERA_OPTION_ORTHO;
 					if (cascade < vis.scene->character_dedicated_shadows.size())
@@ -6873,6 +6878,7 @@ void DrawShadowmaps(
 				cb.cameras[0].position = vis.camera->Eye;
 				for (uint32_t cascade = 0; cascade < std::min(2u + (uint32_t)vis.scene->character_dedicated_shadows.size(), cascade_count); ++cascade)
 				{
+					XMStoreFloat4x4(&cb.cameras[0].view, shcams[cascade].view);
 					XMStoreFloat4x4(&cb.cameras[0].view_projection, shcams[cascade].view_projection);
 					cb.cameras[0].options = SHADERCAMERA_OPTION_ORTHO;
 					device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
@@ -6960,6 +6966,7 @@ void DrawShadowmaps(
 
 			if (!renderQueue.empty() || !renderQueue_transparent.empty())
 			{
+				XMStoreFloat4x4(&cb.cameras[0].view, shcam.view);
 				XMStoreFloat4x4(&cb.cameras[0].view_projection, shcam.view_projection);
 				cb.cameras[0].output_index = 0;
 				for (int i = 0; i < arraysize(cb.cameras[0].frustum.planes); ++i)
@@ -6989,6 +6996,7 @@ void DrawShadowmaps(
 			{
 				cb.cameras[0].position = vis.camera->Eye;
 				cb.cameras[0].options = SHADERCAMERA_OPTION_NONE;
+				XMStoreFloat4x4(&cb.cameras[0].view, shcam.view);
 				XMStoreFloat4x4(&cb.cameras[0].view_projection, shcam.view_projection);
 				device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 
@@ -7021,6 +7029,7 @@ void DrawShadowmaps(
 			{
 				cb.cameras[0].position = vis.camera->Eye;
 				cb.cameras[0].options = SHADERCAMERA_OPTION_NONE;
+				XMStoreFloat4x4(&cb.cameras[0].view, shcam.view);
 				XMStoreFloat4x4(&cb.cameras[0].view_projection, shcam.view_projection);
 				device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 
@@ -7081,6 +7090,7 @@ void DrawShadowmaps(
 				// Check if cubemap face frustum is visible from main camera, otherwise, it will be skipped:
 				if (cam_frustum.Intersects(cameras[shcam].boundingfrustum))
 				{
+					XMStoreFloat4x4(&cb.cameras[camera_count].view, cameras[shcam].view);
 					XMStoreFloat4x4(&cb.cameras[camera_count].view_projection, cameras[shcam].view_projection);
 					// We no longer have a straight mapping from camera to viewport:
 					//	- there will be always 6 viewports
@@ -7171,6 +7181,7 @@ void DrawShadowmaps(
 				for (uint32_t cami = 0; cami < camera_count; ++cami)
 				{
 					const uint32_t shcam = cb.cameras[cami].output_index;
+					XMStoreFloat4x4(&cb.cameras[0].view, cameras[shcam].view);
 					XMStoreFloat4x4(&cb.cameras[0].view_projection, cameras[shcam].view_projection);
 					device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 
@@ -7198,6 +7209,7 @@ void DrawShadowmaps(
 				for (uint32_t cami = 0; cami < camera_count; ++cami)
 				{
 					const uint32_t shcam = cb.cameras[cami].output_index;
+					XMStoreFloat4x4(&cb.cameras[0].view, cameras[shcam].view);
 					XMStoreFloat4x4(&cb.cameras[0].view_projection, cameras[shcam].view_projection);
 					device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 
