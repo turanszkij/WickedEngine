@@ -900,8 +900,6 @@ namespace wi
 	{
 		if (IsInactive())
 			return;
-		if (material.GetBlendMode() != BLENDMODE_OPAQUE && material.GetBlendMode() != BLENDMODE_ALPHA)
-			return;
 		if (!material.IsCastingShadow())
 			return;
 
