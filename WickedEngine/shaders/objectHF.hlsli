@@ -263,13 +263,20 @@ struct VertexSurface
 		position = float4(pos_wind.xyz, 1);
 		normal = input.GetNormal();
 		color = half4(material.GetBaseColor() * inst.GetColor());
-		color.a *= half(1 - input.GetInstancePointer().GetDither());
 
 		[branch]
 		if (material.IsUsingVertexColors())
 		{
 			color *= input.GetVertexColor();
 		}
+
+		[branch]
+		if (!material.IsTransparent())
+		{
+			color.a = 1;
+		}
+
+		color.a *= half(1 - input.GetInstancePointer().GetDither());
 
 		[branch]
 		if (material.IsUsingVertexAO())

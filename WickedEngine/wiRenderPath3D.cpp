@@ -1498,11 +1498,23 @@ namespace wi
 				// Cut off outline source from linear depth:
 				device->EventBegin("Outline Source", cmd);
 
-				RenderPassImage rp[] = {
-					RenderPassImage::RenderTarget(&rtOutlineSource, RenderPassImage::LoadOp::CLEAR),
-					RenderPassImage::DepthStencil(&depthBuffer_Main, RenderPassImage::LoadOp::LOAD)
-				};
-				device->RenderPassBegin(rp, arraysize(rp), cmd);
+				if (getMSAASampleCount() > 1)
+				{
+					RenderPassImage rp[] = {
+						RenderPassImage::RenderTarget(&rtOutlineSource_MSAA, RenderPassImage::LoadOp::CLEAR, RenderPassImage::StoreOp::DONTCARE, ResourceState::RENDERTARGET, ResourceState::RENDERTARGET),
+						RenderPassImage::DepthStencil(&depthBuffer_Main, RenderPassImage::LoadOp::LOAD),
+						RenderPassImage::Resolve(&rtOutlineSource)
+					};
+					device->RenderPassBegin(rp, arraysize(rp), cmd);
+				}
+				else
+				{
+					RenderPassImage rp[] = {
+						RenderPassImage::RenderTarget(&rtOutlineSource, RenderPassImage::LoadOp::CLEAR),
+						RenderPassImage::DepthStencil(&depthBuffer_Main, RenderPassImage::LoadOp::LOAD)
+					};
+					device->RenderPassBegin(rp, arraysize(rp), cmd);
+				}
 				wi::image::Params params;
 				params.enableFullScreen();
 				params.stencilRefMode = wi::image::STENCILREFMODE_ENGINE;
@@ -3247,10 +3259,21 @@ namespace wi
 			desc.height = internalResolution.y;
 			device->CreateTexture(&desc, nullptr, &rtOutlineSource);
 			device->SetName(&rtOutlineSource, "rtOutlineSource");
+
+			if (getMSAASampleCount() > 1)
+			{
+				desc.bind_flags = BindFlag::RENDER_TARGET;
+				desc.sample_count = getMSAASampleCount();
+				desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
+				desc.layout = ResourceState::RENDERTARGET;
+				device->CreateTexture(&desc, nullptr, &rtOutlineSource_MSAA);
+				device->SetName(&rtOutlineSource_MSAA, "rtOutlineSource_MSAA");
+			}
 		}
 		else
 		{
 			rtOutlineSource = {};
+			rtOutlineSource_MSAA = {};
 		}
 	}
 
