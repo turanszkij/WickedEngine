@@ -122,6 +122,7 @@ namespace wi
 		wi::graphics::Texture rtShadingRate; // UINT8 shading rate per tile
 		wi::graphics::Texture rtFSR[2]; // FSR upscaling result (full resolution LDR)
 		wi::graphics::Texture rtOutlineSource; // linear depth but only the regions which have outline stencil
+		wi::graphics::Texture rtOutlineSource_MSAA; // linear depth but only the regions which have outline stencil
 
 		wi::graphics::Texture rtPostprocess; // ping-pong with main scene RT in post-process chain
 
