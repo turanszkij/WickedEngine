@@ -336,38 +336,69 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&entityTreeSortingComboBox);
 
-	outlineOpacitySlider.Create(0, 1, 1, 100, "Outline Opacity: ");
-	outlineOpacitySlider.SetTooltip("You can control the transparency of the selection outline");
-	outlineOpacitySlider.SetSize(XMFLOAT2(100, 18));
-	AddWidget(&outlineOpacitySlider);
-
-	transformToolOpacitySlider.Create(0, 1, 1, 100, "Transform Tool Opacity: ");
-	transformToolOpacitySlider.SetTooltip("You can control the transparency of the object placement tool");
+	transformToolOpacitySlider.Create(0, 1, 1, 100, "Opacity: ");
+	transformToolOpacitySlider.SetTooltip("You can control the transparency of the transform tool");
 	transformToolOpacitySlider.SetSize(XMFLOAT2(100, 18));
 	if (editor->main->config.GetSection("options").Has("transform_tool_opacity"))
 	{
 		transformToolOpacitySlider.SetValue(editor->main->config.GetSection("options").GetFloat("transform_tool_opacity"));
-		editor->translator.opacity = transformToolOpacitySlider.GetValue();
+		editor->translator.tool_opacity = transformToolOpacitySlider.GetValue();
 	}
 	transformToolOpacitySlider.OnSlide([=](wi::gui::EventArgs args) {
-		editor->translator.opacity = args.fValue;
+		editor->translator.tool_opacity = args.fValue;
 		editor->main->config.GetSection("options").Set("transform_tool_opacity", args.fValue);
 	});
 	AddWidget(&transformToolOpacitySlider);
 
 	transformToolDarkenSlider.Create(0, 1, 1, 100, "Darken Negative Axes: ");
-	transformToolDarkenSlider.SetTooltip("You can control the darkening of the object placement tool's negative axes");
+	transformToolDarkenSlider.SetTooltip("You can control the darkening of the transform tool's negative axes");
 	transformToolDarkenSlider.SetSize(XMFLOAT2(100, 18));
 	if (editor->main->config.GetSection("options").Has("transform_tool_darken_negative_axes"))
 	{
 		transformToolDarkenSlider.SetValue(editor->main->config.GetSection("options").GetFloat("transform_tool_darken_negative_axes"));
-		editor->translator.darken_negative_axes = transformToolDarkenSlider.GetValue();
+		editor->translator.tool_darken_negative_axes = transformToolDarkenSlider.GetValue();
 	}
 	transformToolDarkenSlider.OnSlide([=](wi::gui::EventArgs args) {
-		editor->translator.darken_negative_axes = args.fValue;
+		editor->translator.tool_darken_negative_axes = args.fValue;
 		editor->main->config.GetSection("options").Set("transform_tool_darken_negative_axes", args.fValue);
 	});
 	AddWidget(&transformToolDarkenSlider);
+
+	transformToolScaleSlider.Create(1, 2, 1, 100, "Scale: ");
+	transformToolScaleSlider.SetTooltip("Adjust the overall size of the transform tool");
+	transformToolScaleSlider.SetSize(XMFLOAT2(100, 18));
+	if (editor->main->config.GetSection("options").Has("transform_tool_scale"))
+	{
+		transformToolScaleSlider.SetValue(editor->main->config.GetSection("options").GetFloat("transform_tool_scale"));
+		editor->translator.tool_scale = transformToolScaleSlider.GetValue();
+	}
+	transformToolScaleSlider.OnSlide([=](wi::gui::EventArgs args) {
+		editor->translator.tool_scale = args.fValue;
+		editor->main->config.GetSection("options").Set("transform_tool_scale", args.fValue);
+	});
+	AddWidget(&transformToolScaleSlider);
+
+	transformToolThicknessSlider.Create(1, 2, 1, 100, "Thickness: ");
+	transformToolThicknessSlider.SetTooltip("Adjust the line and shape thickness of the transform tool");
+	transformToolThicknessSlider.SetSize(XMFLOAT2(100, 18));
+	if (editor->main->config.GetSection("options").Has("transform_tool_thickness"))
+	{
+		transformToolThicknessSlider.SetValue(editor->main->config.GetSection("options").GetFloat("transform_tool_thickness"));
+		editor->translator.tool_thickness = transformToolThicknessSlider.GetValue();
+	}
+	transformToolThicknessSlider.OnSlide([=](wi::gui::EventArgs args) {
+		editor->translator.tool_thickness = args.fValue;
+		editor->main->config.GetSection("options").Set("transform_tool_thickness", args.fValue);
+	});
+	AddWidget(&transformToolThicknessSlider);
+
+	outlineOpacitySlider.Create(0, 1, 1, 100, "Outline Opacity: ");
+	outlineOpacitySlider.SetTooltip("You can control the transparency of the selection outline");
+	outlineOpacitySlider.SetSize(XMFLOAT2(100, 18));
+	AddWidget(&outlineOpacitySlider);
+
+	transformToolLabel.Create("Transform Tool");
+	AddWidget(&transformToolLabel);
 
 	bonePickerOpacitySlider.Create(0, 1, 1, 100, "Bone Picker Opacity: ");
 	bonePickerOpacitySlider.SetTooltip("You can control the transparency of the bone selector tool");
@@ -1566,9 +1597,15 @@ void GeneralWindow::ResizeLayout()
 
 	layout.jump();
 
-	layout.add(outlineOpacitySlider);
+	layout.add_fullwidth(transformToolLabel);
 	layout.add(transformToolOpacitySlider);
 	layout.add(transformToolDarkenSlider);
+	layout.add(transformToolScaleSlider);
+	layout.add(transformToolThicknessSlider);
+
+	layout.jump();
+
+	layout.add(outlineOpacitySlider);
 	layout.add(bonePickerOpacitySlider);
 	layout.add_right(skeletonsVisibleCheckBox);
 

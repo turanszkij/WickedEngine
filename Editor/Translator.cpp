@@ -15,14 +15,15 @@ namespace Translator_Internal
 {
 	PipelineState pso_solidpart;
 	PipelineState pso_wirepart;
-	const float origin_size = 0.2f;
-	const float axis_length = 3.5f;
-	const float plane_min = 0.5f;
-	const float plane_max = 1.5f;
-	const float circle_radius = axis_length;
-	const float circle_width = 1;
-	const float circle2_radius = circle_radius + 0.7f;
-	const float circle2_width = 0.3f;
+	constexpr float origin_size = 0.12f;
+	constexpr float axis_length = 2.0f;
+	constexpr float plane_min = 0.35f;
+	constexpr float plane_max = 0.85f;
+	constexpr float circle_radius = axis_length;
+	constexpr float circle_width = 0.15f;
+	constexpr float circle2_radius = circle_radius + 0.35f;
+	constexpr float circle2_width = 0.12f;
+	constexpr float pick_tolerance = 0.3f;
 
 	void LoadShaders()
 	{
@@ -161,7 +162,7 @@ void Translator::Update(const CameraComponent& camera, const XMFLOAT4& currentMo
 			XMMATRIX W = XMMatrixIdentity();
 			XMFLOAT3 p = transform.GetPosition();
 
-			dist = std::max(wi::math::Distance(p, camera.Eye) * 0.05f, 0.0001f);
+			dist = std::max(wi::math::Distance(p, camera.Eye) * 0.05f, 0.0001f) * tool_scale;
 
 			if (isRotator)
 			{
@@ -184,8 +185,9 @@ void Translator::Update(const CameraComponent& camera, const XMFLOAT4& currentMo
 				float dist_z = XMVectorGetX(XMVector3LengthSq(intersection - rayOrigin));
 				float len_z = XMVectorGetX(XMVector3Length(intersection - pos)) / dist;
 
-				float range = circle_width * 0.5f;
-				float perimeter = circle_radius - range;
+				const float thick = tool_thickness;
+				float range = std::max(circle_width * thick * 0.5f, pick_tolerance);
+				float perimeter = circle_radius - circle_width * thick * 0.5f;
 				float best_dist = std::numeric_limits<float>::max();
 				if (std::abs(perimeter - len_x) <= range && dist_x < best_dist)
 				{
@@ -210,8 +212,8 @@ void Translator::Update(const CameraComponent& camera, const XMFLOAT4& currentMo
 				XMVECTOR plane_screen = XMPlaneFromPointNormal(pos, screen_normal);
 				intersection = XMPlaneIntersectLine(plane_screen, rayOrigin, rayOrigin + rayDir * camera.zFarP);
 				float len_screen = XMVectorGetX(XMVector3Length(intersection - pos)) / dist;
-				range = circle2_width * 0.5f;
-				perimeter = circle2_radius - range;
+				range = std::max(circle2_width * thick * 0.5f, pick_tolerance);
+				perimeter = circle2_radius - circle2_width * thick * 0.5f;
 				if (std::abs(perimeter - len_screen) <= range)
 				{
 					state = TRANSLATOR_XYZ;
@@ -615,8 +617,8 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 	XMMATRIX matY = XMMatrixRotationZ(XM_PIDIV2)*XMMatrixRotationY(XM_PIDIV2);
 	XMMATRIX matZ = XMMatrixRotationY(-XM_PIDIV2)*XMMatrixRotationZ(-XM_PIDIV2);
 
-	const float channel_min = 0.25f; // min color channel, to avoid pure red/green/blue
-	const XMFLOAT4 highlight_color = XMFLOAT4(1, 0.6f, 0, 1);
+	constexpr float channel_min = 0.25f; // min color channel, to avoid pure red/green/blue
+	constexpr XMFLOAT4 highlight_color = XMFLOAT4(1, 0.6f, 0, 1);
 
 	// Axes:
 	{
@@ -627,8 +629,8 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 
 		if (isRotator)
 		{
-			const uint32_t segmentCount = 90;
-			const uint32_t circle_triangleCount = segmentCount * 2;
+			constexpr uint32_t segmentCount = 90;
+			constexpr uint32_t circle_triangleCount = segmentCount * 2;
 			vertexCount = circle_triangleCount * 3;
 			mem = device->AllocateGPU(sizeof(Vertex) * vertexCount, cmd);
 			uint8_t* dst = (uint8_t*)mem.data;
@@ -638,8 +640,8 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 				const float angle1 = (float)(i + 1) / (float)segmentCount * XM_2PI;
 
 				// circle:
-				const float circle_radius_inner = circle_radius - circle_width;
-				const float circle_halfway = circle_radius - circle_width * 0.5f;
+				const float cw = circle_width * tool_thickness;
+				const float circle_radius_inner = circle_radius - cw;
 				const Vertex verts[] = {
 					{XMFLOAT4(0, std::sin(angle0) * circle_radius_inner, std::cos(angle0) * circle_radius_inner, 1), XMFLOAT4(1,1,1,1)},
 					{XMFLOAT4(0, std::sin(angle1) * circle_radius_inner, std::cos(angle1) * circle_radius_inner, 1), XMFLOAT4(1,1,1,1)},
@@ -654,9 +656,9 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 		}
 		else
 		{
-			const uint32_t segmentCount = 18;
-			const uint32_t cylinder_triangleCount = segmentCount * 2;
-			const uint32_t cone_triangleCount = cylinder_triangleCount;
+			constexpr uint32_t segmentCount = 18;
+			constexpr uint32_t cylinder_triangleCount = segmentCount * 2;
+			constexpr uint32_t cone_triangleCount = cylinder_triangleCount;
 			if (isTranslator)
 			{
 				vertexCount = (cylinder_triangleCount + cone_triangleCount) * 3;
@@ -667,7 +669,7 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 			}
 			mem = device->AllocateGPU(sizeof(Vertex) * vertexCount, cmd);
 
-			const float cone_length = 0.75f;
+			constexpr float cone_length = 0.35f;
 			float cylinder_length = axis_length;
 			if (isTranslator)
 			{
@@ -680,7 +682,7 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 				const float angle1 = (float)(i + 1) / (float)segmentCount * XM_2PI;
 				// cylinder base:
 				{
-					const float cylinder_radius = 0.075f;
+					const float cylinder_radius = 0.035f * tool_thickness;
 					const Vertex verts[] = {
 						{XMFLOAT4(origin_size, std::sin(angle0) * cylinder_radius, std::cos(angle0) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
 						{XMFLOAT4(origin_size, std::sin(angle1) * cylinder_radius, std::cos(angle1) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
@@ -695,7 +697,7 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 				if (isTranslator)
 				{
 					// cone cap:
-					const float cone_radius = origin_size;
+					const float cone_radius = 0.08f * tool_thickness;
 					const Vertex verts[] = {
 						{XMFLOAT4(cylinder_length, 0, 0, 1), XMFLOAT4(1,1,1,1)},
 						{XMFLOAT4(cylinder_length, std::sin(angle0) * cone_radius, std::cos(angle0) * cone_radius, 1), XMFLOAT4(1,1,1,1)},
@@ -715,9 +717,10 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 				for (uint32_t i = 0; i < arraysize(cubeVerts); ++i)
 				{
 					Vertex vert = cubeVerts[i];
-					vert.position.x = vert.position.x * origin_size + cylinder_length - origin_size;
-					vert.position.y = vert.position.y * origin_size;
-					vert.position.z = vert.position.z * origin_size;
+					const float cube_size = origin_size * tool_thickness;
+					vert.position.x = vert.position.x * cube_size + cylinder_length - cube_size;
+					vert.position.y = vert.position.y * cube_size;
+					vert.position.z = vert.position.z * cube_size;
 					std::memcpy(dst, &vert, sizeof(vert));
 					dst += sizeof(vert);
 				}
@@ -727,7 +730,7 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 		const GPUBuffer* vbs[] = {
 			&mem.buffer,
 		};
-		const uint32_t strides[] = {
+		constexpr uint32_t strides[] = {
 			sizeof(Vertex),
 		};
 		const uint64_t offsets[] = {
@@ -739,25 +742,25 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 
 		// x
 		XMStoreFloat4x4(&sb.g_xTransform, matX * GetMirrorMatrix(TRANSLATOR_X, camera) * mat);
-		darken = isLocalSpace ? 1 : (camera.Eye.x < transform.translation_local.x ? darken_negative_axes : 1);
+		darken = isLocalSpace ? 1 : (camera.Eye.x < transform.translation_local.x ? tool_darken_negative_axes : 1);
 		sb.g_xColor = state == TRANSLATOR_X ? highlight_color : XMFLOAT4(darken, channel_min * darken, channel_min * darken, 1);
-		sb.g_xColor.w *= opacity;
+		sb.g_xColor.w *= tool_opacity;
 		device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 		device->Draw(vertexCount, 0, cmd);
 
 		// y
 		XMStoreFloat4x4(&sb.g_xTransform, matY * GetMirrorMatrix(TRANSLATOR_Y, camera)* mat);
-		darken = isLocalSpace ? 1 : (camera.Eye.y < transform.translation_local.y ? darken_negative_axes : 1);
+		darken = isLocalSpace ? 1 : (camera.Eye.y < transform.translation_local.y ? tool_darken_negative_axes : 1);
 		sb.g_xColor = state == TRANSLATOR_Y ? highlight_color : XMFLOAT4(channel_min * darken, darken, channel_min * darken, 1);
-		sb.g_xColor.w *= opacity;
+		sb.g_xColor.w *= tool_opacity;
 		device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 		device->Draw(vertexCount, 0, cmd);
 
 		// z
 		XMStoreFloat4x4(&sb.g_xTransform, matZ * GetMirrorMatrix(TRANSLATOR_Z, camera)* mat);
-		darken = isLocalSpace ? 1 : (camera.Eye.z < transform.translation_local.z ? darken_negative_axes : 1);
+		darken = isLocalSpace ? 1 : (camera.Eye.z < transform.translation_local.z ? tool_darken_negative_axes : 1);
 		sb.g_xColor = state == TRANSLATOR_Z ? highlight_color : XMFLOAT4(channel_min * darken, channel_min * darken, darken, 1);
-		sb.g_xColor.w *= opacity;
+		sb.g_xColor.w *= tool_opacity;
 		device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 		device->Draw(vertexCount, 0, cmd);
 
@@ -765,9 +768,9 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 
 	if (isRotator)
 	{
-		// An other circle for rotator, a bit thinner and screen facing, so new geo:
-		const uint32_t segmentCount = 90;
-		const uint32_t circle2_triangleCount = segmentCount * 2;
+		// Another circle for rotator, a bit thinner and screen facing, so new geo:
+		constexpr uint32_t segmentCount = 90;
+		constexpr uint32_t circle2_triangleCount = segmentCount * 2;
 		uint32_t vertexCount = circle2_triangleCount * 3;
 		GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(Vertex) * vertexCount, cmd);
 		uint8_t* dst = (uint8_t*)mem.data;
@@ -777,8 +780,9 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 			const float angle1 = (float)(i + 1) / (float)segmentCount * XM_2PI;
 
 			// circle:
-			const float circle2_radius_inner = circle2_radius - circle2_width;
-			const float circle2_halfway = circle2_radius - circle2_width * 0.5f;
+			const float c2w = circle2_width * tool_thickness;
+			const float circle2_radius_inner = circle2_radius - c2w;
+			const float circle2_halfway = circle2_radius - c2w * 0.5f;
 			const Vertex verts[] = {
 				{XMFLOAT4(0, std::sin(angle0) * circle2_radius_inner, std::cos(angle0) * circle2_radius_inner, 1), XMFLOAT4(1,1,1,1)},
 				{XMFLOAT4(0, std::sin(angle1) * circle2_radius_inner, std::cos(angle1) * circle2_radius_inner, 1), XMFLOAT4(1,1,1,1)},
@@ -794,7 +798,7 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 		const GPUBuffer* vbs[] = {
 			&mem.buffer,
 		};
-		const uint32_t strides[] = {
+		constexpr uint32_t strides[] = {
 			sizeof(Vertex),
 		};
 		const uint64_t offsets[] = {
@@ -809,7 +813,7 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 			mat_no_localrot
 		);
 		sb.g_xColor = state == TRANSLATOR_XYZ ? highlight_color : XMFLOAT4(1, 1, 1, 0.5f);
-		sb.g_xColor.w *= opacity;
+		sb.g_xColor.w *= tool_opacity;
 		device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 		device->Draw(vertexCount, 0, cmd);
 	}
@@ -824,7 +828,7 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 		const GPUBuffer* vbs[] = {
 			&mem.buffer,
 		};
-		const uint32_t strides[] = {
+		constexpr uint32_t strides[] = {
 			sizeof(Vertex),
 		};
 		const uint64_t offsets[] = {
@@ -832,9 +836,10 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 		};
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
 
-		XMStoreFloat4x4(&sb.g_xTransform, XMMatrixScaling(origin_size, origin_size, origin_size) * mat);
+		const float os = origin_size * tool_thickness;
+		XMStoreFloat4x4(&sb.g_xTransform, XMMatrixScaling(os, os, os) * mat);
 		sb.g_xColor = state == TRANSLATOR_XYZ ? highlight_color : XMFLOAT4(0.5f, 0.5f, 0.5f, 1);
-		sb.g_xColor.w *= opacity;
+		sb.g_xColor.w *= tool_opacity;
 		device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 		device->Draw(arraysize(cubeVerts), 0, cmd);
 	}
@@ -864,7 +869,7 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 			const GPUBuffer* vbs[] = {
 				&mem.buffer,
 			};
-			const uint32_t strides[] = {
+			constexpr uint32_t strides[] = {
 				sizeof(Vertex),
 			};
 			const uint64_t offsets[] = {
@@ -875,21 +880,21 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 			// xy
 			XMStoreFloat4x4(&sb.g_xTransform, matX * GetMirrorMatrix(TRANSLATOR_XY, camera) * mat);
 			sb.g_xColor = state == TRANSLATOR_XY ? highlight_color : XMFLOAT4(channel_min, channel_min, 1, 1);
-			sb.g_xColor.w *= opacity;
+			sb.g_xColor.w *= tool_opacity;
 			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 			device->Draw(arraysize(verts), 0, cmd);
 
 			// xz
 			XMStoreFloat4x4(&sb.g_xTransform, matZ * GetMirrorMatrix(TRANSLATOR_XZ, camera) * mat);
 			sb.g_xColor = state == TRANSLATOR_XZ ? highlight_color : XMFLOAT4(channel_min, 1, channel_min, 1);
-			sb.g_xColor.w *= opacity;
+			sb.g_xColor.w *= tool_opacity;
 			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 			device->Draw(arraysize(verts), 0, cmd);
 
 			// yz
 			XMStoreFloat4x4(&sb.g_xTransform, matY * GetMirrorMatrix(TRANSLATOR_YZ, camera) * mat);
 			sb.g_xColor = state == TRANSLATOR_YZ ? highlight_color : XMFLOAT4(1, channel_min, channel_min, 1);
-			sb.g_xColor.w *= opacity;
+			sb.g_xColor.w *= tool_opacity;
 			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 			device->Draw(arraysize(verts), 0, cmd);
 		}
@@ -912,7 +917,7 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 			const GPUBuffer* vbs[] = {
 				&mem.buffer,
 			};
-			const uint32_t strides[] = {
+			constexpr uint32_t strides[] = {
 				sizeof(Vertex),
 			};
 			const uint64_t offsets[] = {
@@ -923,21 +928,21 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 			// xy
 			XMStoreFloat4x4(&sb.g_xTransform, matX * GetMirrorMatrix(TRANSLATOR_XY, camera) * mat);
 			sb.g_xColor = state == TRANSLATOR_XY ? highlight_color : XMFLOAT4(channel_min, channel_min, 1, 0.4f);
-			sb.g_xColor.w *= opacity;
+			sb.g_xColor.w *= tool_opacity;
 			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 			device->Draw(arraysize(verts), 0, cmd);
 
 			// xz
 			XMStoreFloat4x4(&sb.g_xTransform, matZ * GetMirrorMatrix(TRANSLATOR_XZ, camera) * mat);
 			sb.g_xColor = state == TRANSLATOR_XZ ? highlight_color : XMFLOAT4(channel_min, 1, channel_min, 0.4f);
-			sb.g_xColor.w *= opacity;
+			sb.g_xColor.w *= tool_opacity;
 			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 			device->Draw(arraysize(verts), 0, cmd);
 
 			// yz
 			XMStoreFloat4x4(&sb.g_xTransform, matY * GetMirrorMatrix(TRANSLATOR_YZ, camera) * mat);
 			sb.g_xColor = state == TRANSLATOR_YZ ? highlight_color : XMFLOAT4(1, channel_min, channel_min, 0.4f);
-			sb.g_xColor.w *= opacity;
+			sb.g_xColor.w *= tool_opacity;
 			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 			device->Draw(arraysize(verts), 0, cmd);
 		}
@@ -956,28 +961,28 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 		params.scaling = 0.04f * dist;
 		params.customProjection = &VP;
 		params.customRotation = &R;
-		params.shadowColor = wi::Color(0, 0, 0, uint8_t(127 * opacity));
+		params.shadowColor = wi::Color(0, 0, 0, uint8_t(127 * tool_opacity));
 		params.shadow_softness = 0.8f;
 		XMVECTOR pos = transform.GetPositionV();
 
 		float darken = 1;
-		darken = camera.Eye.x < transform.translation_local.x ? darken_negative_axes : 1;
-		params.color = wi::Color::fromFloat4(XMFLOAT4(darken, channel_min * darken, channel_min * darken, opacity));
-		XMStoreFloat3(&params.position, pos + XMVector3Transform(XMVectorSet(axis_length + 0.5f, 0, 0, 0) * dist, GetMirrorMatrix(TRANSLATOR_X, camera)));
+		darken = camera.Eye.x < transform.translation_local.x ? tool_darken_negative_axes : 1;
+		params.color = wi::Color::fromFloat4(XMFLOAT4(darken, channel_min * darken, channel_min * darken, tool_opacity));
+		XMStoreFloat3(&params.position, pos + XMVector3Transform(XMVectorSet(axis_length + 0.25f, 0, 0, 0) * dist, GetMirrorMatrix(TRANSLATOR_X, camera)));
 		std::memset(TEXT, 0, sizeof(TEXT));
 		WriteAxisText(TRANSLATOR_X, camera, TEXT);
 		wi::font::Draw(TEXT, strlen(TEXT), params, cmd);
 
-		darken = camera.Eye.y < transform.translation_local.y ? darken_negative_axes : 1;
-		params.color = wi::Color::fromFloat4(XMFLOAT4(channel_min * darken, darken, channel_min * darken, opacity));
-		XMStoreFloat3(&params.position, pos + XMVector3Transform(XMVectorSet(0, axis_length + 0.5f, 0, 0) * dist, GetMirrorMatrix(TRANSLATOR_Y, camera)));
+		darken = camera.Eye.y < transform.translation_local.y ? tool_darken_negative_axes : 1;
+		params.color = wi::Color::fromFloat4(XMFLOAT4(channel_min * darken, darken, channel_min * darken, tool_opacity));
+		XMStoreFloat3(&params.position, pos + XMVector3Transform(XMVectorSet(0, axis_length + 0.25f, 0, 0) * dist, GetMirrorMatrix(TRANSLATOR_Y, camera)));
 		std::memset(TEXT, 0, sizeof(TEXT));
 		WriteAxisText(TRANSLATOR_Y, camera, TEXT);
 		wi::font::Draw(TEXT, strlen(TEXT), params, cmd);
 
-		darken = camera.Eye.z < transform.translation_local.z ? darken_negative_axes : 1;
-		params.color = wi::Color::fromFloat4(XMFLOAT4(channel_min * darken, channel_min * darken, darken, opacity));
-		XMStoreFloat3(&params.position, pos + XMVector3Transform(XMVectorSet(0, 0, axis_length + 0.5f, 0) * dist, GetMirrorMatrix(TRANSLATOR_Z, camera)));
+		darken = camera.Eye.z < transform.translation_local.z ? tool_darken_negative_axes : 1;
+		params.color = wi::Color::fromFloat4(XMFLOAT4(channel_min * darken, channel_min * darken, darken, tool_opacity));
+		XMStoreFloat3(&params.position, pos + XMVector3Transform(XMVectorSet(0, 0, axis_length + 0.25f, 0) * dist, GetMirrorMatrix(TRANSLATOR_Z, camera)));
 		std::memset(TEXT, 0, sizeof(TEXT));
 		WriteAxisText(TRANSLATOR_Z, camera, TEXT);
 		wi::font::Draw(TEXT, strlen(TEXT), params, cmd);
@@ -993,8 +998,8 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 			{
 				device->BindPipelineState(&pso_solidpart, cmd);
 
-				const uint32_t segmentCount = 36;
-				const uint32_t vertexCount = segmentCount * 3;
+				constexpr uint32_t segmentCount = 36;
+				constexpr uint32_t vertexCount = segmentCount * 3;
 				GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(Vertex) * vertexCount, cmd);
 
 				uint8_t* dst = (uint8_t*)mem.data;
@@ -1016,7 +1021,7 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 				const GPUBuffer* vbs[] = {
 					&mem.buffer,
 				};
-				const uint32_t strides[] = {
+				constexpr uint32_t strides[] = {
 					sizeof(Vertex),
 				};
 				const uint64_t offsets[] = {
@@ -1031,7 +1036,7 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 					VP
 				);
 				sb.g_xColor = XMFLOAT4(1, 1, 1, 0.5f);
-				sb.g_xColor.w *= opacity;
+				sb.g_xColor.w *= tool_opacity;
 				device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 				device->Draw(vertexCount, 0, cmd);
 			}
@@ -1048,7 +1053,7 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 				const GPUBuffer* vbs[] = {
 					&mem.buffer,
 				};
-				const uint32_t strides[] = {
+				constexpr uint32_t strides[] = {
 					sizeof(Vertex),
 				};
 				const uint64_t offsets[] = {
@@ -1058,7 +1063,7 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 
 				XMStoreFloat4x4(&sb.g_xTransform, VP);
 				sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
-				sb.g_xColor.w *= opacity;
+				sb.g_xColor.w *= tool_opacity;
 				device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 				device->Draw(arraysize(verts), 0, cmd);
 			}
@@ -1067,8 +1072,8 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 		{
 			device->BindPipelineState(&pso_solidpart, cmd);
 
-			const uint32_t segmentCount = 90;
-			const uint32_t vertexCount = segmentCount * 3;
+			constexpr uint32_t segmentCount = 90;
+			constexpr uint32_t vertexCount = segmentCount * 3;
 			GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(Vertex) * vertexCount, cmd);
 
 			switch (state)
@@ -1099,7 +1104,7 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 				const float angle0 = (float)i / (float)segmentCount * angle + angle_start;
 				const float angle1 = (float)(i + 1) / (float)segmentCount * angle + angle_start;
 
-				const float radius = state == TRANSLATOR_XYZ ? (circle2_radius - circle2_width) : (circle_radius - circle_width);
+				const float radius = state == TRANSLATOR_XYZ ? (circle2_radius - circle2_width * tool_thickness) : (circle_radius - circle_width * tool_thickness);
 				const Vertex verts[] = {
 					{XMFLOAT4(0, 0, 0, 1), XMFLOAT4(1,1,1,1)},
 					{XMFLOAT4(0, std::cos(angle0) * radius, std::sin(angle0) * radius, 1), XMFLOAT4(1,1,1,1)},
@@ -1121,7 +1126,7 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
 
 			sb.g_xColor = XMFLOAT4(1, 1, 1, 0.5f);
-			sb.g_xColor.w *= opacity;
+			sb.g_xColor.w *= tool_opacity;
 			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 			device->Draw(vertexCount, 0, cmd);
 		}
@@ -1164,8 +1169,8 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 		{
 			snprintf(text, arraysize(text), "Scaling = %.2f, %.2f, %.2f", transform.scale_local.x / transform_start.scale_local.x, transform.scale_local.y / transform_start.scale_local.y, transform.scale_local.z / transform_start.scale_local.z);
 		}
-		params.shadowColor.setA(uint8_t(opacity * 255.0f));
-		params.color.setA(uint8_t(opacity * 255.0f));
+		params.shadowColor.setA(uint8_t(tool_opacity * 255.0f));
+		params.color.setA(uint8_t(tool_opacity * 255.0f));
 		wi::font::Draw(text, params, cmd);
 	}
 
@@ -1174,7 +1179,7 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 
 void Translator::PreTranslate()
 {
-	Scene& scene = *this->scene;
+	const Scene& scene = *this->scene;
 
 	if (!dragging)
 	{
@@ -1210,12 +1215,12 @@ void Translator::PreTranslate()
 	}
 
 	// translator "bind matrix"
-	XMMATRIX B = XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform.world));
+	const XMMATRIX B = XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform.world));
 
 	matrices_current.clear();
-	for (auto& x : selectedEntitiesNonRecursive)
+	for (const auto& x : selectedEntitiesNonRecursive)
 	{
-		TransformComponent* transform_selected = scene.transforms.GetComponent(x);
+		const TransformComponent* transform_selected = scene.transforms.GetComponent(x);
 		if (transform_selected != nullptr)
 		{
 			XMFLOAT4X4 m;
@@ -1224,9 +1229,9 @@ void Translator::PreTranslate()
 		}
 	}
 }
-void Translator::PostTranslate()
+void Translator::PostTranslate() const
 {
-	Scene& scene = *this->scene;
+	const Scene& scene = *this->scene;
 
 	int i = 0;
 	for (auto& x : selectedEntitiesNonRecursive)
@@ -1237,7 +1242,7 @@ void Translator::PostTranslate()
 			const XMFLOAT4X4& m = matrices_current[i++];
 
 			XMMATRIX W = XMLoadFloat4x4(&m);
-			XMMATRIX W_parent = XMLoadFloat4x4(&transform.world);
+			const XMMATRIX W_parent = XMLoadFloat4x4(&transform.world);
 			W = W * W_parent;
 			XMStoreFloat4x4(&transform_selected->world, W);
 
