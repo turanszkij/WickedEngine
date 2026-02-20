@@ -364,7 +364,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&transformToolDarkenSlider);
 
-	transformToolScaleSlider.Create(1, 2, 1, 100, "Scale: ");
+	transformToolScaleSlider.Create(0.5, 2, 1, 100, "Scale: ");
 	transformToolScaleSlider.SetTooltip("Adjust the overall size of the transform tool");
 	transformToolScaleSlider.SetSize(XMFLOAT2(100, 18));
 	if (editor->main->config.GetSection("options").Has("transform_tool_scale"))
@@ -378,7 +378,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&transformToolScaleSlider);
 
-	transformToolThicknessSlider.Create(1, 2, 1, 100, "Thickness: ");
+	transformToolThicknessSlider.Create(0.5, 2, 1, 100, "Thickness: ");
 	transformToolThicknessSlider.SetTooltip("Adjust the line and shape thickness of the transform tool");
 	transformToolThicknessSlider.SetSize(XMFLOAT2(100, 18));
 	if (editor->main->config.GetSection("options").Has("transform_tool_thickness"))

@@ -15,14 +15,14 @@ namespace Translator_Internal
 {
 	PipelineState pso_solidpart;
 	PipelineState pso_wirepart;
-	constexpr float origin_size = 0.12f;
-	constexpr float axis_length = 2.0f;
-	constexpr float plane_min = 0.35f;
-	constexpr float plane_max = 0.85f;
+	constexpr float origin_size = 0.2f;
+	constexpr float axis_length = 3.5f;
+	constexpr float plane_min = 0.5f;
+	constexpr float plane_max = 1.5f;
 	constexpr float circle_radius = axis_length;
-	constexpr float circle_width = 0.15f;
-	constexpr float circle2_radius = circle_radius + 0.35f;
-	constexpr float circle2_width = 0.12f;
+	constexpr float circle_width = 1.0f;
+	constexpr float circle2_radius = circle_radius + 0.7f;
+	constexpr float circle2_width = 0.3f;
 	constexpr float pick_tolerance = 0.3f;
 
 	void LoadShaders()
@@ -669,7 +669,7 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 			}
 			mem = device->AllocateGPU(sizeof(Vertex) * vertexCount, cmd);
 
-			constexpr float cone_length = 0.35f;
+			constexpr float cone_length = 0.75f;
 			float cylinder_length = axis_length;
 			if (isTranslator)
 			{
@@ -682,7 +682,7 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 				const float angle1 = (float)(i + 1) / (float)segmentCount * XM_2PI;
 				// cylinder base:
 				{
-					const float cylinder_radius = 0.035f * tool_thickness;
+					const float cylinder_radius = 0.075f * tool_thickness;
 					const Vertex verts[] = {
 						{XMFLOAT4(origin_size, std::sin(angle0) * cylinder_radius, std::cos(angle0) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
 						{XMFLOAT4(origin_size, std::sin(angle1) * cylinder_radius, std::cos(angle1) * cylinder_radius, 1), XMFLOAT4(1,1,1,1)},
@@ -697,7 +697,7 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 				if (isTranslator)
 				{
 					// cone cap:
-					const float cone_radius = 0.08f * tool_thickness;
+					const float cone_radius = origin_size * tool_thickness;
 					const Vertex verts[] = {
 						{XMFLOAT4(cylinder_length, 0, 0, 1), XMFLOAT4(1,1,1,1)},
 						{XMFLOAT4(cylinder_length, std::sin(angle0) * cone_radius, std::cos(angle0) * cone_radius, 1), XMFLOAT4(1,1,1,1)},
@@ -968,21 +968,21 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 		float darken = 1;
 		darken = camera.Eye.x < transform.translation_local.x ? tool_darken_negative_axes : 1;
 		params.color = wi::Color::fromFloat4(XMFLOAT4(darken, channel_min * darken, channel_min * darken, tool_opacity));
-		XMStoreFloat3(&params.position, pos + XMVector3Transform(XMVectorSet(axis_length + 0.25f, 0, 0, 0) * dist, GetMirrorMatrix(TRANSLATOR_X, camera)));
+		XMStoreFloat3(&params.position, pos + XMVector3Transform(XMVectorSet(axis_length + 0.5f, 0, 0, 0) * dist, GetMirrorMatrix(TRANSLATOR_X, camera)));
 		std::memset(TEXT, 0, sizeof(TEXT));
 		WriteAxisText(TRANSLATOR_X, camera, TEXT);
 		wi::font::Draw(TEXT, strlen(TEXT), params, cmd);
 
 		darken = camera.Eye.y < transform.translation_local.y ? tool_darken_negative_axes : 1;
 		params.color = wi::Color::fromFloat4(XMFLOAT4(channel_min * darken, darken, channel_min * darken, tool_opacity));
-		XMStoreFloat3(&params.position, pos + XMVector3Transform(XMVectorSet(0, axis_length + 0.25f, 0, 0) * dist, GetMirrorMatrix(TRANSLATOR_Y, camera)));
+		XMStoreFloat3(&params.position, pos + XMVector3Transform(XMVectorSet(0, axis_length + 0.5f, 0, 0) * dist, GetMirrorMatrix(TRANSLATOR_Y, camera)));
 		std::memset(TEXT, 0, sizeof(TEXT));
 		WriteAxisText(TRANSLATOR_Y, camera, TEXT);
 		wi::font::Draw(TEXT, strlen(TEXT), params, cmd);
 
 		darken = camera.Eye.z < transform.translation_local.z ? tool_darken_negative_axes : 1;
 		params.color = wi::Color::fromFloat4(XMFLOAT4(channel_min * darken, channel_min * darken, darken, tool_opacity));
-		XMStoreFloat3(&params.position, pos + XMVector3Transform(XMVectorSet(0, 0, axis_length + 0.25f, 0) * dist, GetMirrorMatrix(TRANSLATOR_Z, camera)));
+		XMStoreFloat3(&params.position, pos + XMVector3Transform(XMVectorSet(0, 0, axis_length + 0.5f, 0) * dist, GetMirrorMatrix(TRANSLATOR_Z, camera)));
 		std::memset(TEXT, 0, sizeof(TEXT));
 		WriteAxisText(TRANSLATOR_Z, camera, TEXT);
 		wi::font::Draw(TEXT, strlen(TEXT), params, cmd);
