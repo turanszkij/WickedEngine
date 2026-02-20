@@ -782,7 +782,7 @@ T pow8(T a)
 }
 
 #define arraysize(a) (sizeof(a) / sizeof(a[0]))
-#define saturateMediump(x) min(x, MEDIUMP_FLT_MAX)
+#define saturateMediump(x) clamp(x, 0, MEDIUMP_FLT_MAX)
 #define highp
 
 template<typename T>
