@@ -3226,6 +3226,7 @@ namespace wi
 
 			if (getMSAASampleCount() > 1)
 			{
+				desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
 				desc.width = internalResolution.x;
 				desc.height = internalResolution.y;
 				desc.sample_count = 1;
