@@ -1,5 +1,6 @@
 #define TRANSPARENT // uses transparent light lists
 #define LIGHTING_SCATTER
+#define DISABLE_TRANSPARENT_SHADOWMAP // particle casts transparent shadow layer, but particle self-shadow doesn't look good, there is mismatch due to camera-facingness
 #include "globals.hlsli"
 #include "emittedparticleHF.hlsli"
 #include "ShaderInterop_EmittedParticle.h"

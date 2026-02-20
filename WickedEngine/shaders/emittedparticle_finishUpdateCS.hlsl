@@ -8,25 +8,24 @@ RWStructuredBuffer<EmitterIndirectArgs> indirectBuffer : register(u0);
 [numthreads(1, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )
 {
-	uint particleCount = counterBuffer[0].culledCount;
+	uint culled_count = counterBuffer[0].culledCount;
+	uint alive_count = counterBuffer[0].aliveCount;
 	
-	if (xEmitterOptions & EMITTER_OPTION_BIT_MESH_SHADER_ENABLED)
-	{
-		// Create DispatchMesh argument buffer:
-		IndirectDispatchArgs args;
-		args.ThreadGroupCountX = (particleCount + THREADCOUNT_MESH_SHADER - 1) / THREADCOUNT_MESH_SHADER;
-		args.ThreadGroupCountY = 1;
-		args.ThreadGroupCountZ = 1;
-		indirectBuffer[0].dispatch = args;
-	}
-	else
-	{
-		// Create draw argument buffer
-		IndirectDrawArgsInstanced args;
-		args.VertexCountPerInstance = 4;
-		args.InstanceCount = particleCount;
-		args.StartVertexLocation = 0;
-		args.StartInstanceLocation = 0;
-		indirectBuffer[0].draw = args;
-	}
+	// Create DispatchMesh argument buffer:
+	IndirectDispatchArgs dispatch;
+	dispatch.ThreadGroupCountX = (culled_count + THREADCOUNT_MESH_SHADER - 1) / THREADCOUNT_MESH_SHADER;
+	dispatch.ThreadGroupCountY = 1;
+	dispatch.ThreadGroupCountZ = 1;
+	indirectBuffer[0].dispatch = dispatch;
+
+	// Create draw argument buffer
+	IndirectDrawArgsInstanced draw;
+	draw.VertexCountPerInstance = 4;
+	draw.InstanceCount = culled_count;
+	draw.StartVertexLocation = 0;
+	draw.StartInstanceLocation = 0;
+	indirectBuffer[0].draw_culled = draw;
+
+	draw.InstanceCount = alive_count;
+	indirectBuffer[0].draw_all = draw;
 }
