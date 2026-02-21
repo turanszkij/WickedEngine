@@ -424,17 +424,49 @@ half3 GetSunLuminance(float3 worldPosition, float3 worldDirection, float3 sunDir
 	float sunHalfApexAngleRadian = 0.5 * sunApexAngleDegree * PI / 180.0;
 	float sunCosHalfApexAngle = cos(sunHalfApexAngleRadian);
 
+	float3 sunDirNorm = normalize(sunDirection);
+	float sunEclipseStrength = GetSunEclipseStrength();
 	float3 retval = 0;
 
 	float t = RaySphereIntersectNearest(worldPosition, worldDirection, 0, atmosphere.bottomRadius);
 	if (t < 0) // no intersection
 	{
-		float VdotL = dot(worldDirection, normalize(sunDirection)); // weird... the sun disc shrinks near the horizon if we don't normalize sun direction
+		float VdotL = dot(worldDirection, sunDirNorm); // weird... the sun disc shrinks near the horizon if we don't normalize sun direction
 		if (VdotL > sunCosHalfApexAngle)
 		{
 			// Edge fade
 			const float halfCosHalfApex = sunCosHalfApexAngle + (1.0 - sunCosHalfApexAngle) * 0.25; // Start fading when at 75% distance from light disk center
-			const float weight = 1.0 - saturate((halfCosHalfApex - VdotL) / (halfCosHalfApex - sunCosHalfApexAngle));
+			float weight = 1.0 - saturate((halfCosHalfApex - VdotL) / (halfCosHalfApex - sunCosHalfApexAngle));
+
+			if (sunEclipseStrength > 0.0f)
+			{
+				float3 moonDir = GetMoonDirection();
+				float moonLenSq = dot(moonDir, moonDir);
+				if (moonLenSq > 1e-6f)
+				{
+					float3 moonDirNorm = moonDir * rsqrt(moonLenSq);
+					if (dot(moonDirNorm, sunDirNorm) > 0.0f)
+					{
+						float3 referenceUp = abs(sunDirNorm.y) > 0.95f ? float3(1, 0, 0) : float3(0, 1, 0);
+						float3 sunRight = normalize(cross(referenceUp, sunDirNorm));
+						float3 sunUp = normalize(cross(sunDirNorm, sunRight));
+
+						float2 sunPlane = float2(dot(worldDirection, sunRight), dot(worldDirection, sunUp));
+						float2 moonPlane = float2(dot(moonDirNorm, sunRight), dot(moonDirNorm, sunUp));
+						float sunRadius = sin(sunHalfApexAngleRadian);
+						float moonRadius = sin(GetMoonSize());
+						float2 delta = sunPlane - moonPlane;
+						float distSq = dot(delta, delta);
+						float moonRadiusSq = moonRadius * moonRadius;
+						if (moonRadiusSq > 1e-8f)
+						{
+							float coverage = saturate(1.0f - distSq / moonRadiusSq);
+							coverage = pow(coverage, 1.5f);
+							weight *= saturate(1.0f - sunEclipseStrength * coverage);
+						}
+					}
+				}
+			}
 
 			retval = weight * sunIlluminance;
 		}
