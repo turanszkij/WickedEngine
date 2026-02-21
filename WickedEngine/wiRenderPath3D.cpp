@@ -180,7 +180,7 @@ namespace wi
 			desc.width = internalResolution.x / 4;
 			desc.height = internalResolution.y / 4;
 			desc.mip_levels = std::min(8u, (uint32_t)std::log2(std::max(desc.width, desc.height)));
-			device->CreateTexture(&desc, nullptr, &rtSceneCopy);
+			device->CreateTextureZeroed(&desc, &rtSceneCopy);
 			device->SetName(&rtSceneCopy, "rtSceneCopy");
 			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS | BindFlag::RENDER_TARGET; // render target for aliasing
 			device->CreateTexture(&desc, nullptr, &rtSceneCopy_tmp, &rtPrimitiveID);
@@ -188,12 +188,6 @@ namespace wi
 
 			device->CreateMipgenSubresources(rtSceneCopy);
 			device->CreateMipgenSubresources(rtSceneCopy_tmp);
-
-			// because this is used by SSR and SSGI before it gets a chance to be normally rendered, it MUST be cleared!
-			CommandList cmd = device->BeginCommandList();
-			device->Barrier(GPUBarrier::Image(&rtSceneCopy, rtSceneCopy.desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
-			device->ClearUAV(&rtSceneCopy, 0, cmd);
-			device->Barrier(GPUBarrier::Image(&rtSceneCopy, ResourceState::UNORDERED_ACCESS, rtSceneCopy.desc.layout), cmd);
 		}
 		{
 			TextureDesc desc;
@@ -866,17 +860,11 @@ namespace wi
 			);
 			wi::renderer::UpdateRenderData(visibility_main, frameCB, cmd);
 
-			uint32_t num_barriers = 2;
 			GPUBarrier barriers[] = {
 				GPUBarrier::Image(&debugUAV, debugUAV.desc.layout, ResourceState::UNORDERED_ACCESS),
 				GPUBarrier::Aliasing(&rtPostprocess, &rtPrimitiveID),
-				GPUBarrier::Image(&rtMain, rtMain.desc.layout, ResourceState::SHADER_RESOURCE_COMPUTE), // prepares transition for discard in dx12
 			};
-			if (visibility_shading_in_compute)
-			{
-				num_barriers++;
-			}
-			device->Barrier(barriers, num_barriers, cmd);
+			device->Barrier(barriers, arraysize(barriers), cmd);
 
 		});
 
@@ -1461,15 +1449,6 @@ namespace wi
 				);
 			}
 
-			// Depth buffers were created on COMPUTE queue, so make them available for pixel shaders here:
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&rtLinearDepth, rtLinearDepth.desc.layout, ResourceState::SHADER_RESOURCE),
-					GPUBarrier::Image(&depthBuffer_Copy, depthBuffer_Copy.desc.layout, ResourceState::SHADER_RESOURCE),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
-
 			if (wi::renderer::GetRaytracedShadowsEnabled() || wi::renderer::GetScreenSpaceShadowsEnabled())
 			{
 				GPUBarrier barrier = GPUBarrier::Image(&rtShadow, rtShadow.desc.layout, ResourceState::SHADER_RESOURCE);
@@ -1596,12 +1575,6 @@ namespace wi
 			{
 				rp[0].loadop = RenderPassImage::LoadOp::LOAD;
 				wi::renderer::PostProcess_MeshBlend_Resolve(meshblendResources, rtMain, rp, rp_count, cmd);
-			}
-
-			if (wi::renderer::GetRaytracedShadowsEnabled() || wi::renderer::GetScreenSpaceShadowsEnabled())
-			{
-				GPUBarrier barrier = GPUBarrier::Image(&rtShadow, ResourceState::SHADER_RESOURCE, rtShadow.desc.layout);
-				device->Barrier(&barrier, 1, cmd);
 			}
 
 			if (rtAO.IsValid())
@@ -1760,16 +1733,6 @@ namespace wi
 			RenderVolumetrics(cmd);
 
 			RenderTransparents(cmd);
-
-			// Depth buffers expect a non-pixel shader resource state as they are generated on compute queue:
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&rtLinearDepth, ResourceState::SHADER_RESOURCE, rtLinearDepth.desc.layout),
-					GPUBarrier::Image(&depthBuffer_Copy, ResourceState::SHADER_RESOURCE, depthBuffer_Copy.desc.layout),
-					GPUBarrier::Image(&debugUAV, ResourceState::UNORDERED_ACCESS, debugUAV.desc.layout),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
 		});
 
 		RenderCameraComponents(ctx);
@@ -1778,6 +1741,9 @@ namespace wi
 		cmd = cmd_postprocess;
 		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
 			RenderPostprocessChain(cmd);
+
+			GraphicsDevice* device = wi::graphics::GetDevice();
+			device->Barrier(GPUBarrier::Image(&debugUAV, ResourceState::UNORDERED_ACCESS, debugUAV.desc.layout), cmd);
 		});
 
 		cmd = device->BeginCommandList(QUEUE_COPY);
@@ -2354,15 +2320,7 @@ namespace wi
 		const Texture* rt_write = &rtPostprocess;
 
 		// rtPostprocess aliasing transition:
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Aliasing(&rtPrimitiveID, &rtPostprocess),
-				GPUBarrier::Image(&rtPostprocess, rtPostprocess.desc.layout, ResourceState::UNORDERED_ACCESS),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-			device->ClearUAV(&rtPostprocess, 0, cmd);
-			device->Barrier(GPUBarrier::Image(&rtPostprocess, ResourceState::UNORDERED_ACCESS, rtPostprocess.desc.layout), cmd);
-		}
+		device->Barrier(GPUBarrier::Aliasing(&rtPrimitiveID, &rtPostprocess), cmd);
 
 		// 1.) HDR post process chain
 		{
