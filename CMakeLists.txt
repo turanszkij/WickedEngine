@@ -29,6 +29,7 @@ option(WICKED_TESTS "Build WickedEngine tests" ON)
 option(WICKED_IMGUI_EXAMPLE "Build WickedEngine imgui example" ON)
 option(WICKED_ENABLE_IPO "Enable IPO/LTO in non-debug builds" NO)
 option(WICKED_EMBED_SHADERS "Embed shaders into the library" NO)
+option(WICKED_ENABLE_RTTI "Enable RTTI" NO)
 if(UNIX)
     option(WICKED_ENABLE_ASAN "Enable AddressSanitizer in debug builds" OFF)
     option(WICKED_ENABLE_UBSAN "Enable UndefinedBehaviourSanitizer in debug builds" OFF)
@@ -123,7 +124,7 @@ if (MSVC)
         /W3 # warning level 3
         /MP # multi-processor compilation
         /EHsc- # exceptions disabled
-        /GR- # runtime type information disabled
+        $<$<AND:$<NOT:$<BOOL:${ubsan_active}>>,$<NOT:$<BOOL:${WICKED_ENABLE_RTTI}>>>:/GR-> # runtime type information disabled
         $<$<CONFIG:Release>:/GS-> # security check disabled in Release
     )
 else()
@@ -141,7 +142,7 @@ else()
         -Wno-sign-compare
 
         $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions> # exceptions disabled
-        $<$<AND:$<COMPILE_LANGUAGE:CXX>,$<NOT:${ubsan_active}>>:-fno-rtti> # runtime type information disabled
+        $<$<AND:$<COMPILE_LANGUAGE:CXX>,$<NOT:$<BOOL:${ubsan_active}>>,$<NOT:$<BOOL:${WICKED_ENABLE_RTTI}>>>:-fno-rtti> # runtime type information disabled
 
         # security checks disabled in Release:
         $<$<CONFIG:Release>:-fno-stack-protector>
