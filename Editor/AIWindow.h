@@ -23,4 +23,5 @@ public:
 
 	wi::Resource imageResource;
 	wi::jobsystem::context generation_status;
+	std::atomic<int> percentage{ 0 };
 };

@@ -86,9 +86,8 @@ void AIWindow::ResizeLayout()
 	{
 		generate.font.params.rotation += XM_PI * 0.016f;
 		preview.SetColor(wi::Color(255, 255, 255, 100));
-		preview.SetText(ICON_REFRESH);
+		preview.SetText(std::to_string(percentage.load()) + "%");
 		preview.font.params.scaling = 8;
-		preview.font.params.rotation = generate.font.params.rotation;
 	}
 	else
 	{
@@ -107,6 +106,34 @@ void AIWindow::ResizeLayout()
 
 	layout.add(widthInput, heightInput);
 	widthInput.SetPos(XMFLOAT2(widthInput.GetPos().x + 10, widthInput.GetPos().y)); // hm
+}
+
+void sd_callback(int step, int steps, float time, void* data)
+{
+	AIWindow* wnd = (AIWindow*)data;
+	wnd->percentage.store(int(saturate(float(step) / float(steps)) * 100));
+}
+void sd_log(enum sd_log_level_t level, const char* text, void* data)
+{
+	wi::backlog::LogLevel loglevel;
+	switch (level)
+	{
+	default:
+	case SD_LOG_DEBUG:
+#ifndef _DEBUG
+		return;
+#endif // _DEBUG
+	case SD_LOG_INFO:
+		loglevel = wi::backlog::LogLevel::Default;
+		break;
+	case SD_LOG_WARN:
+		loglevel = wi::backlog::LogLevel::Warning;
+		break;
+	case SD_LOG_ERROR:
+		loglevel = wi::backlog::LogLevel::Error;
+		break;
+	}
+	wi::backlog::post(text, loglevel);
 }
 
 void AIWindow::GenerateImage()
@@ -188,6 +215,8 @@ void AIWindow::GenerateImage()
 		LINK_DLL_FUNCTION(generate_image, stable_diffusion);
 		LINK_DLL_FUNCTION(sd_sample_params_init, stable_diffusion);
 		LINK_DLL_FUNCTION(free_sd_ctx, stable_diffusion);
+		LINK_DLL_FUNCTION(sd_set_progress_callback, stable_diffusion);
+		LINK_DLL_FUNCTION(sd_set_log_callback, stable_diffusion);
 
 		std::string model_name;
 
@@ -242,6 +271,9 @@ void AIWindow::GenerateImage()
 			img_params.sample_params.scheduler = KARRAS_SCHEDULER;
 			img_params.sample_params.guidance.txt_cfg = 7.5f;
 			img_params.sample_params.eta = 1.0f;
+
+			sd_set_progress_callback(sd_callback, this);
+			sd_set_log_callback(sd_log, this);
 
 			sd_image_t* image = generate_image(sd_ctx, &img_params);
 			if (image != nullptr)
