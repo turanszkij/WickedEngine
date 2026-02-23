@@ -63,14 +63,14 @@ void AIWindow::Create(EditorComponent* _editor)
 
 	widthInput.Create("AIGenerateWidth");
 	widthInput.SetCancelInputEnabled(false);
-	widthInput.SetText("512");
+	widthInput.SetValue("512");
 	widthInput.SetDescription("Width: ");
 	widthInput.SetSize(XMFLOAT2(40, widthInput.GetSize().y));
 	AddWidget(&widthInput);
 
 	heightInput.Create("AIGenerateHeight");
 	heightInput.SetCancelInputEnabled(false);
-	heightInput.SetText("512");
+	heightInput.SetValue("512");
 	heightInput.SetDescription("Height: ");
 	heightInput.SetSize(XMFLOAT2(40, heightInput.GetSize().y));
 	AddWidget(&heightInput);
@@ -86,15 +86,19 @@ void AIWindow::ResizeLayout()
 	{
 		generate.font.params.rotation += XM_PI * 0.016f;
 		preview.SetColor(wi::Color(255, 255, 255, 100));
-		preview.SetText(std::to_string(percentage.load()) + "%");
+		preview.SetText(std::to_string(progress.load()) + "%");
 		preview.font.params.scaling = 8;
 	}
 	else
 	{
 		generate.font.params.rotation = 0;
-		preview.SetImage(imageResource);
 		preview.SetColor(wi::Color::White());
 		preview.SetText("");
+	}
+
+	{
+		std::scoped_lock lck(preview_locker);
+		preview.SetImage(imageResource);
 	}
 
 	layout.add_fullwidth(infoLabel);
@@ -108,11 +112,6 @@ void AIWindow::ResizeLayout()
 	widthInput.SetPos(XMFLOAT2(widthInput.GetPos().x + 10, widthInput.GetPos().y)); // hm
 }
 
-void sd_callback(int step, int steps, float time, void* data)
-{
-	AIWindow* wnd = (AIWindow*)data;
-	wnd->percentage.store(int(saturate(float(step) / float(steps)) * 100));
-}
 void sd_log(enum sd_log_level_t level, const char* text, void* data)
 {
 	wi::backlog::LogLevel loglevel;
@@ -135,11 +134,43 @@ void sd_log(enum sd_log_level_t level, const char* text, void* data)
 	}
 	wi::backlog::post(text, loglevel);
 }
+void sd_callback(int step, int steps, float time, void* data)
+{
+	AIWindow* wnd = (AIWindow*)data;
+	wnd->progress.store(int(saturate(float(step) / float(steps)) * 100));
+}
+void sd_preview(int step, int frame_count, sd_image_t* frames, bool is_noisy, void* data)
+{
+	if (frame_count == 0)
+		return;
+	AIWindow* wnd = (AIWindow*)data;
+	sd_image_t& image = frames[0];
+
+	struct Color3
+	{
+		uint8_t r, g, b;
+	};
+	const Color3* rgb = (const Color3*)image.data;
+	const uint32_t count = image.width * image.height;
+	wi::vector<wi::Color> rgba(count);
+	for (size_t i = 0; i < count; ++i)
+	{
+		rgba[i] = wi::Color(rgb[i].r, rgb[i].g, rgb[i].b, 255);
+	}
+
+	Texture tex;
+	if (wi::texturehelper::CreateTexture(tex, rgba.data(), image.width, image.height, Format::R8G8B8A8_UNORM))
+	{
+		std::scoped_lock lck(wnd->preview_locker);
+		wnd->imageResource.SetTexture(tex);
+	}
+}
 
 void AIWindow::GenerateImage()
 {
 	wi::jobsystem::Wait(generation_status);
 	generation_status.priority = wi::jobsystem::Priority::Low;
+	progress.store(0);
 
 	wi::jobsystem::Execute(generation_status, [this](wi::jobsystem::JobArgs args) {
 
@@ -215,8 +246,9 @@ void AIWindow::GenerateImage()
 		LINK_DLL_FUNCTION(generate_image, stable_diffusion);
 		LINK_DLL_FUNCTION(sd_sample_params_init, stable_diffusion);
 		LINK_DLL_FUNCTION(free_sd_ctx, stable_diffusion);
-		LINK_DLL_FUNCTION(sd_set_progress_callback, stable_diffusion);
 		LINK_DLL_FUNCTION(sd_set_log_callback, stable_diffusion);
+		LINK_DLL_FUNCTION(sd_set_progress_callback, stable_diffusion);
+		LINK_DLL_FUNCTION(sd_set_preview_callback, stable_diffusion);
 
 		std::string model_name;
 
@@ -272,8 +304,9 @@ void AIWindow::GenerateImage()
 			img_params.sample_params.guidance.txt_cfg = 7.5f;
 			img_params.sample_params.eta = 1.0f;
 
-			sd_set_progress_callback(sd_callback, this);
 			sd_set_log_callback(sd_log, this);
+			sd_set_progress_callback(sd_callback, this);
+			sd_set_preview_callback(sd_preview, PREVIEW_PROJ, 4, true, false, this);
 
 			sd_image_t* image = generate_image(sd_ctx, &img_params);
 			if (image != nullptr)
@@ -299,6 +332,7 @@ void AIWindow::GenerateImage()
 				if (wi::helper::saveTextureToMemoryFile(rgba, desc, "PNG", filedata))
 				{
 					static int counter = 0;
+					std::scoped_lock lck(preview_locker);
 					imageResource = wi::resourcemanager::Load(prompt_text + std::to_string(counter++) + ".png", wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA, filedata.data(), filedata.size());
 				}
 				else

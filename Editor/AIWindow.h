@@ -21,7 +21,8 @@ public:
 
 	void GenerateImage();
 
+	std::mutex preview_locker;
 	wi::Resource imageResource;
 	wi::jobsystem::context generation_status;
-	std::atomic<int> percentage{ 0 };
+	std::atomic<int> progress{ 0 };
 };
