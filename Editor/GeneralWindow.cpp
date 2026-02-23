@@ -795,18 +795,21 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		editor->cameraButton.SetShadowRadius(1);
 		editor->materialsButton.SetShadowRadius(1);
 		editor->paintToolButton.SetShadowRadius(1);
+		editor->aiButton.SetShadowRadius(1);
 
 		editor->generalButton.SetShadowColor(wi::Color::Transparent());
 		editor->graphicsButton.SetShadowColor(wi::Color::Transparent());
 		editor->cameraButton.SetShadowColor(wi::Color::Transparent());
 		editor->materialsButton.SetShadowColor(wi::Color::Transparent());
 		editor->paintToolButton.SetShadowColor(wi::Color::Transparent());
+		editor->aiButton.SetShadowColor(wi::Color::Transparent());
 
 		editor->generalButton.SetShadowHighlightSpread(0.2f);
 		editor->graphicsButton.SetShadowHighlightSpread(0.2f);
 		editor->cameraButton.SetShadowHighlightSpread(0.2f);
 		editor->materialsButton.SetShadowHighlightSpread(0.2f);
 		editor->paintToolButton.SetShadowHighlightSpread(0.2f);
+		editor->aiButton.SetShadowHighlightSpread(0.2f);
 
 		if (editor->themeEditorWnd.imageResource.IsValid())
 		{
@@ -913,6 +916,17 @@ void GeneralWindow::Create(EditorComponent* _editor)
 				editor->paintToolButton.sprites[i].params.corners_rounding[3].radius = gui_round_radius_circular;
 			} else {
 				editor->paintToolButton.sprites[i].params.disableCornerRounding();
+			}
+
+			if (gui_round_enabled) {
+				editor->aiButton.sprites[i].params.enableCornerRounding();
+				editor->aiButton.sprites[i].params.corners_rounding[0].radius = gui_round_radius_circular;
+				editor->aiButton.sprites[i].params.corners_rounding[1].radius = gui_round_radius_circular;
+				editor->aiButton.sprites[i].params.corners_rounding[2].radius = gui_round_radius_circular;
+				editor->aiButton.sprites[i].params.corners_rounding[3].radius = gui_round_radius_circular;
+			}
+			else {
+				editor->aiButton.sprites[i].params.disableCornerRounding();
 			}
 
 			if (gui_round_enabled) {
@@ -1369,6 +1383,11 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			editor->paintToolButton.sprites[i].params.gradient_color = theme_color_gradient;
 			editor->paintToolButton.sprites[i].params.gradient_uv_start = gradient_start;
 			editor->paintToolButton.sprites[i].params.gradient_uv_end = gradient_end;
+
+			editor->aiButton.sprites[i].params.gradient = gradient;
+			editor->aiButton.sprites[i].params.gradient_color = theme_color_gradient;
+			editor->aiButton.sprites[i].params.gradient_uv_start = gradient_start;
+			editor->aiButton.sprites[i].params.gradient_uv_end = gradient_end;
 
 			editor->materialsButton.sprites[i].params.gradient = gradient;
 			editor->materialsButton.sprites[i].params.gradient_color = theme_color_gradient;

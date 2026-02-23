@@ -47,6 +47,8 @@
 typedef void* HMODULE;
 #endif // defined(PLATFORM_LINUX) || defined(PLATFORM_APPLE)
 
+#define LINK_DLL_FUNCTION(name, dll) using PFN_##name = decltype(&name); static PFN_##name name = (PFN_##name)wiGetProcAddress(dll, #name);
+
 namespace wi::platform
 {
 #ifdef _WIN32

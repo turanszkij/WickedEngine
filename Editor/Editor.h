@@ -10,6 +10,7 @@
 #include "CameraWindow.h"
 #include "MaterialPickerWindow.h"
 #include "PaintToolWindow.h"
+#include "AIWindow.h"
 #include "GeneralWindow.h"
 #include "IconDefinitions.h"
 
@@ -76,6 +77,7 @@ public:
 	wi::gui::Button cameraButton;
 	wi::gui::Button materialsButton;
 	wi::gui::Button paintToolButton;
+	wi::gui::Button aiButton;
 
 	wi::gui::ComboBox guiScalingCombo;
 
@@ -84,6 +86,7 @@ public:
 	CameraWindow cameraWnd;
 	MaterialPickerWindow materialPickerWnd;
 	PaintToolWindow paintToolWnd;
+	AIWindow aiWnd;
 
 	wi::primitive::Ray pickRay;
 	wi::physics::PickDragOperation physicsDragOp;

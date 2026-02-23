@@ -55,6 +55,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)SplineWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ProjectCreatorWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ThemeEditorWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)AIWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)AnimationWindow.h" />
@@ -115,6 +116,10 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)SplineWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ProjectCreatorWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ThemeEditorWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)stable-diffusion\stable-diffusion.h">
+      <Filter>stable-diffusion</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)AIWindow.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)startup.lua" />
@@ -126,6 +131,9 @@
     </Filter>
     <Filter Include="fonts">
       <UniqueIdentifier>{73a992f5-b6f9-436f-bdd3-eacf76ab0809}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="stable-diffusion">
+      <UniqueIdentifier>{7442b300-176d-43a7-95c0-fcf884852009}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

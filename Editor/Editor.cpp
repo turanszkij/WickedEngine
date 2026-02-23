@@ -569,6 +569,7 @@ void EditorComponent::Load()
 		cameraWnd.SetVisible(false);
 		materialPickerWnd.SetVisible(false);
 		paintToolWnd.SetVisible(false);
+		aiWnd.SetVisible(false);
 	});
 	generalButton.SetShadowRadius(0);
 	generalButton.SetTooltip("General options");
@@ -582,6 +583,7 @@ void EditorComponent::Load()
 		cameraWnd.SetVisible(false);
 		materialPickerWnd.SetVisible(false);
 		paintToolWnd.SetVisible(false);
+		aiWnd.SetVisible(false);
 	});
 	graphicsButton.SetShadowRadius(0);
 	graphicsButton.SetTooltip("Graphics options");
@@ -595,6 +597,7 @@ void EditorComponent::Load()
 		cameraWnd.SetVisible(!cameraWnd.IsVisible());
 		materialPickerWnd.SetVisible(false);
 		paintToolWnd.SetVisible(false);
+		aiWnd.SetVisible(false);
 	});
 	cameraButton.SetShadowRadius(0);
 	cameraButton.SetTooltip("Camera options");
@@ -606,6 +609,7 @@ void EditorComponent::Load()
 		generalWnd.SetVisible(false);
 		graphicsWnd.SetVisible(false);
 		cameraWnd.SetVisible(false);
+		aiWnd.SetVisible(false);
 		materialPickerWnd.SetVisible(!materialPickerWnd.IsVisible());
 		paintToolWnd.SetVisible(false);
 		if (materialPickerWnd.IsVisible())
@@ -624,12 +628,27 @@ void EditorComponent::Load()
 		graphicsWnd.SetVisible(false);
 		cameraWnd.SetVisible(false);
 		materialPickerWnd.SetVisible(false);
+		aiWnd.SetVisible(false);
 		paintToolWnd.SetVisible(!paintToolWnd.IsVisible());
 	});
 	paintToolButton.SetShadowRadius(0);
 	paintToolButton.SetTooltip("Paint tool");
 	paintToolButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
 	GetGUI().AddWidget(&paintToolButton);
+
+	aiButton.Create(ICON_AI);
+	aiButton.OnClick([this](wi::gui::EventArgs args) {
+		generalWnd.SetVisible(false);
+		graphicsWnd.SetVisible(false);
+		cameraWnd.SetVisible(false);
+		materialPickerWnd.SetVisible(false);
+		paintToolWnd.SetVisible(false);
+		aiWnd.SetVisible(!aiWnd.IsVisible());
+	});
+	aiButton.SetShadowRadius(0);
+	aiButton.SetTooltip("Artificial Intelligence tools");
+	aiButton.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
+	GetGUI().AddWidget(&aiButton);
 
 	graphicsWnd.Create(this);
 	GetGUI().AddWidget(&graphicsWnd);
@@ -639,6 +658,9 @@ void EditorComponent::Load()
 
 	paintToolWnd.Create(this);
 	GetGUI().AddWidget(&paintToolWnd);
+
+	aiWnd.Create(this);
+	GetGUI().AddWidget(&aiWnd);
 
 	materialPickerWnd.Create(this);
 	GetGUI().AddWidget(&materialPickerWnd);
@@ -3316,6 +3338,7 @@ void EditorComponent::Update(float dt)
 		generalWnd.background_overlay = {};
 		graphicsWnd.background_overlay = {};
 		paintToolWnd.background_overlay = {};
+		aiWnd.background_overlay = {};
 		cameraWnd.background_overlay = {};
 		materialPickerWnd.background_overlay = {};
 	}
@@ -3326,6 +3349,7 @@ void EditorComponent::Update(float dt)
 		generalWnd.background_overlay = gui_background_effect;
 		graphicsWnd.background_overlay = gui_background_effect;
 		paintToolWnd.background_overlay = gui_background_effect;
+		aiWnd.background_overlay = gui_background_effect;
 		cameraWnd.background_overlay = gui_background_effect;
 		materialPickerWnd.background_overlay = gui_background_effect;
 	}
@@ -4782,6 +4806,10 @@ void EditorComponent::ResizeViewport3D()
 		{
 			width -= LogicalToPhysical(paintToolWnd.scale_local.x);
 		}
+		if (aiWnd.IsVisible())
+		{
+			width -= LogicalToPhysical(aiWnd.scale_local.x);
+		}
 		height -= LogicalToPhysical(topmenuWnd.scale_local.y);
 	}
 	width = std::max(64, width);
@@ -4817,6 +4845,10 @@ void EditorComponent::ResizeViewport3D()
 			if (paintToolWnd.IsVisible())
 			{
 				viewport3D.top_left_x = (float)LogicalToPhysical(paintToolWnd.scale_local.x);
+			}
+			if (aiWnd.IsVisible())
+			{
+				viewport3D.top_left_x = (float)LogicalToPhysical(aiWnd.scale_local.x);
 			}
 			viewport3D.top_left_y = (float)LogicalToPhysical(topmenuWnd.scale_local.y);
 		}
@@ -6448,6 +6480,17 @@ void EditorComponent::UpdateDynamicWidgets()
 	{
 		paintToolButton.sprites[wi::gui::IDLE].params.color = color_off;
 	}
+	if (aiWnd.IsVisible())
+	{
+		aiWnd.SetPos(XMFLOAT2(0, topmenuWnd.scale_local.y + topmenuWnd.GetShadowRadius()));
+		aiWnd.SetSize(XMFLOAT2(aiWnd.scale_local.x, screenH - topmenuWnd.scale_local.y - topmenuWnd.GetShadowRadius()));
+		ofs += aiWnd.scale_local.x + aiWnd.GetShadowRadius();
+		aiButton.sprites[wi::gui::IDLE].params.color = color_on;
+	}
+	else
+	{
+		aiButton.sprites[wi::gui::IDLE].params.color = color_off;
+	}
 	y = padding + topmenuWnd.GetSize().y + topmenuWnd.GetShadowRadius();
 	hei = 40;
 
@@ -6476,6 +6519,10 @@ void EditorComponent::UpdateDynamicWidgets()
 	paintToolButton.Update(*this, 0);
 	y += hei + padding;
 
+	aiButton.SetPos(XMFLOAT2(ofs, y));
+	aiButton.SetSize(XMFLOAT2(hei, hei));
+	aiButton.Update(*this, 0);
+	y += hei + padding;
 
 	guiScalingCombo.SetSize(XMFLOAT2(50, 18));
 	guiScalingCombo.SetPos(XMFLOAT2(ofs, screenH - guiScalingCombo.GetSize().y - padding));

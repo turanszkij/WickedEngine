@@ -14,6 +14,7 @@
     <ProjectCapability Include="SourceItemsFromImports" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)AIWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)AnimationWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ArmatureWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)CameraComponentWindow.cpp" />
@@ -88,6 +89,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)AIWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)AnimationWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ArmatureWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)CameraComponentWindow.h" />
@@ -133,6 +135,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)SpringWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)SpriteRectWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)SpriteWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)stable-diffusion\stable-diffusion.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)stdafx.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)TerrainWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)FontWindow.h" />
