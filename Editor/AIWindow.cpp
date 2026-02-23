@@ -165,16 +165,17 @@ void AIWindow::GenerateImage()
 				char out_path[512] = {};
 				snprintf(out_path, sizeof(out_path), "%s/%s", out_dir.c_str(), filename_in_zip);
 
-				void* p = mz_zip_reader_extract_to_heap(&zip_archive, i, &file_stat.m_uncomp_size, 0);
+				size_t uncompressed_size = 0;
+				void* p = mz_zip_reader_extract_to_heap(&zip_archive, i, &uncompressed_size, 0);
 				if (p == nullptr)
 				{
 					mz_free(p);
 					mz_zip_reader_end(&zip_archive);
 				}
-				wi::helper::FileWrite(out_path, (const uint8_t*)p, file_stat.m_uncomp_size);
+				wi::helper::FileWrite(out_path, (const uint8_t*)p, uncompressed_size);
 				mz_free(p);
 
-				wilog("Extracted: %s (uncompressed size: %llu)\n", filename_in_zip, (unsigned long long)file_stat.m_uncomp_size);
+				wilog("Extracted: %s (uncompressed size: %llu)\n", filename_in_zip, (unsigned long long)uncompressed_size);
 			}
 			mz_zip_reader_end(&zip_archive);
 		}
@@ -204,7 +205,7 @@ void AIWindow::GenerateImage()
 			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [this](uint64_t userdata) {
 				modelCombo.AddItem(wi::helper::RemoveExtension(default_modelname));
 			});
-			model_name = default_modelname;
+			model_name = wi::helper::RemoveExtension(default_modelname);
 		}
 		else
 		{
