@@ -33,8 +33,27 @@ void ProfilerWindow::Create(EditorComponent* _editor)
 	profilerWidget.SetSize(XMFLOAT2(200, 1000));
 	AddWidget(&profilerWidget);
 
-	SetSize(XMFLOAT2(300, 400));
-	SetPos(XMFLOAT2(5, 100));
+	auto size = XMFLOAT2(300, 400);
+	if (editor->main->config.GetSection("layout").Has("profiler.width"))
+	{
+		size.x = editor->main->config.GetSection("layout").GetFloat("profiler.width");
+	}
+	if (editor->main->config.GetSection("layout").Has("profiler.height"))
+	{
+		size.y = editor->main->config.GetSection("layout").GetFloat("profiler.height");
+	}
+	SetSize(size);
+
+	auto pos = XMFLOAT2(5, 100);
+	if (editor->main->config.GetSection("layout").Has("profiler.x"))
+	{
+		pos.x = editor->main->config.GetSection("layout").GetFloat("profiler.x");
+	}
+	if (editor->main->config.GetSection("layout").Has("profiler.y"))
+	{
+		pos.y = editor->main->config.GetSection("layout").GetFloat("profiler.y");
+	}
+	SetPos(pos);
 	SetVisible(false);
 	SetShadowRadius(2);
 }
@@ -63,6 +82,11 @@ void ProfilerWindow::Update(const wi::Canvas& canvas, float dt)
 void ProfilerWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
+
+	editor->main->config.GetSection("layout").Set("profiler.width", GetSize().x);
+	editor->main->config.GetSection("layout").Set("profiler.height", GetSize().y);
+	editor->main->config.GetSection("layout").Set("profiler.x", translation.x);
+	editor->main->config.GetSection("layout").Set("profiler.y", translation.y);
 
 	profilerWidget.SetSize(XMFLOAT2(GetWidgetAreaSize().x - control_size, profilerWidget.GetSize().y));
 }
