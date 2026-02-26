@@ -1274,6 +1274,7 @@ namespace wi
 		{
 			cmd_shadowmap = device->BeginCommandList();
 			cmd = cmd_shadowmap;
+			device->WaitCommandList(cmd, cmd_prepareframe_async); // shadow map waits for UpdateRenderDataAsync (particle-shadowmap interaction)
 			wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
 				wi::renderer::DrawShadowmaps(visibility_main, cmd);
 			});
