@@ -1380,6 +1380,8 @@ namespace wi::terrain
 										transform->UpdateTransform();
 										generator->scene.Component_Attach(entity, chunk_data.props_entity, true);
 										generated_something = true;
+
+										wi::physics::OptimizeBroadPhase(*scene);
 									}
 								}
 							}
@@ -1626,7 +1628,7 @@ namespace wi::terrain
 					tile_pool_desc.size += atlas.maps[map_type].texture.sparse_properties->total_tile_count * atlas.maps[map_type].texture.sparse_page_size;
 					tile_pool_desc.alignment = std::max(tile_pool_desc.alignment, atlas.maps[map_type].texture.sparse_page_size);
 #endif // NOSPARSE
-					
+
 					for (uint32_t i = 0; i < atlas.maps[map_type].texture_raw_block.desc.mip_levels; ++i)
 					{
 						int subresource_index = device->CreateSubresource(&atlas.maps[map_type].texture_raw_block, SubresourceType::UAV, 0, 1, i, 1);
@@ -1898,7 +1900,7 @@ namespace wi::terrain
 		GraphicsDevice* device = GetDevice();
 		device->EventBegin("Terrain - UpdateVirtualTexturesGPU", cmd);
 		auto range = wi::profiler::BeginRangeGPU("Terrain - UpdateVirtualTexturesGPU", cmd);
-		
+
 		device->Barrier(GPUBarrier::Memory(), cmd); // on Apple this fixes corruption so better be safe on all platforms, do not remove
 
 		device->EventBegin("Update Residency Maps", cmd);
@@ -2046,7 +2048,7 @@ namespace wi::terrain
 							cmd
 						);
 					}
-					
+
 #ifdef NOSPARSE
 					push.write_offset = write_offset_original;
 					push.write_size = SVT_TILE_SIZE_PADDED / 4u;
@@ -2284,6 +2286,8 @@ namespace wi::terrain
 			ChunkData& chunk_data = it->second;
 			chunk_data.prop_density_current = 0;
 		}
+
+		wi::physics::OptimizeBroadPhase(*scene, true);
 	}
 
 	void Terrain::InvalidateChunksAtSpline(const wi::scene::SplineComponent& spline)
