@@ -525,12 +525,7 @@ namespace wi::lua
 				wi::lua::SError(L, "OptimizeBroadPhase(Scene scene) first argument is not a Scene!");
 				return 0;
 			}
-			bool force_update = false;
-			if (argc > 1)
-			{
-				force_update = wi::lua::SGetBool(L, 2);
-			}
-			wi::physics::OptimizeBroadPhase(*scene->scene, force_update);
+			wi::physics::OptimizeBroadPhase(*scene->scene);
 		}
 		else
 			wi::lua::SError(L, "OptimizeBroadPhase(Scene scene, [opt bool force]) not enough arguments!");

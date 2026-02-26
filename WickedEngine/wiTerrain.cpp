@@ -674,6 +674,8 @@ namespace wi::terrain
 			weather = *weather_component; // feedback default weather
 		}
 
+		bool props_regenerated = false;
+
 		// Invalidated chunks replacements, originals are removed before merging updated ones:
 		for (Chunk chunk : generator->removable_chunks)
 		{
@@ -692,6 +694,7 @@ namespace wi::terrain
 		generator->removable_chunks.clear();
 
 		// What was generated, will be merged in to the main scene
+		props_regenerated |= generator->scene.rigidbodies.GetCount() >= 1000;
 		scene->MergeFastInternal(generator->scene);
 
 		chunk_scale_rcp = 1.0f / chunk_scale;
@@ -833,6 +836,7 @@ namespace wi::terrain
 					{
 						scene->Entity_Remove(chunk_data.props_entity);
 						chunk_data.props_entity = INVALID_ENTITY; // prop can be generated here by generation thread...
+						props_regenerated = true;
 					}
 				}
 			}
@@ -900,6 +904,11 @@ namespace wi::terrain
 			}
 
 			it++;
+		}
+
+		if (props_regenerated)
+		{
+			wi::physics::OptimizeBroadPhase(*scene);
 		}
 
 		if (virtual_texture_any)
@@ -1380,8 +1389,6 @@ namespace wi::terrain
 										transform->UpdateTransform();
 										generator->scene.Component_Attach(entity, chunk_data.props_entity, true);
 										generated_something = true;
-
-										wi::physics::OptimizeBroadPhase(*scene);
 									}
 								}
 							}
@@ -2286,8 +2293,6 @@ namespace wi::terrain
 			ChunkData& chunk_data = it->second;
 			chunk_data.prop_density_current = 0;
 		}
-
-		wi::physics::OptimizeBroadPhase(*scene, true);
 	}
 
 	void Terrain::InvalidateChunksAtSpline(const wi::scene::SplineComponent& spline)
