@@ -366,6 +366,7 @@ PropWindow::PropWindow(wi::terrain::Terrain* terrain, wi::terrain::Prop* prop, w
 	regionCombo.AddItem("Slopes", 1);
 	regionCombo.AddItem("Low altitude ", 2);
 	regionCombo.AddItem("High altitude", 3);
+	regionCombo.SetSelectedByUserdataWithoutCallback(prop->region);
 	regionCombo.OnSelect([=](wi::gui::EventArgs args) {
 		prop->region = static_cast<int>(args.userdata);
 		generation_callback();
