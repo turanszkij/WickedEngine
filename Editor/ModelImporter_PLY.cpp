@@ -71,7 +71,7 @@ void ImportModel_PLY(const std::string& fileName, wi::scene::Scene& scene)
 			if (reader.find_properties(propIndices, 3, "f_dc_0", "f_dc_1", "f_dc_2"))
 			{
 				f_dc.resize(vertexCount);
-				reader.extract_properties(propIndices, 1, miniply::PLYPropertyType::Float, f_dc.data());
+				reader.extract_properties(propIndices, 3, miniply::PLYPropertyType::Float, f_dc.data());
 			}
 			if (reader.find_properties(propIndices, 45,
 				"f_rest_0", "f_rest_1", "f_rest_2", "f_rest_3", "f_rest_4", "f_rest_5",
