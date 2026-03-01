@@ -1142,6 +1142,15 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)emittedparticleVS_shadow.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)gaussian_splatCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)gaussian_splatVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)gaussian_splatPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop.h">
@@ -1295,6 +1304,9 @@
       <Filter>interop</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_VoxelGrid.h">
+      <Filter>interop</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_GaussianSplat.h">
       <Filter>interop</Filter>
     </ClInclude>
   </ItemGroup>

@@ -55,6 +55,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)SplineWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ProjectCreatorWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ThemeEditorWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)ModelImporter_PLY.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)AnimationWindow.h" />

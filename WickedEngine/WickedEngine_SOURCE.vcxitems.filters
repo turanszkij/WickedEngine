@@ -1404,6 +1404,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv_reflect.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiGaussianSplatModel.h">
+      <Filter>ENGINE\Graphics</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -2206,6 +2209,9 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\spirv_reflect.c">
       <Filter>UTILITY</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiGaussianSplatModel.cpp">
+      <Filter>ENGINE\Graphics</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

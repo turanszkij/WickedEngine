@@ -5638,6 +5638,14 @@ void UpdateRenderDataAsync(
 		wi::profiler::EndRange(range);
 	}
 
+	for (size_t i = 0; i < vis.scene->gaussian_splats.GetCount(); ++i)
+	{
+		const wi::GaussianSplatModel& splat = vis.scene->gaussian_splats[i];
+		if (!vis.camera->frustum.CheckBoxFast(splat.aabb))
+			continue;
+		vis.scene->gaussian_splats[i].Update(cmd);
+	}
+
 	if (vis.scene->textureStreamingFeedbackBuffer.IsValid())
 	{
 		device->ClearUAV(&vis.scene->textureStreamingFeedbackBuffer, 0, cmd);
@@ -6071,6 +6079,24 @@ void DrawSoftParticles(
 
 	device->BindShadingRate(ShadingRate::RATE_1X1, cmd);
 
+	wi::profiler::EndRange(range);
+}
+void DrawGaussianSplats(
+	const Scene& scene,
+	const CameraComponent& camera,
+	CommandList cmd
+)
+{
+	if (scene.gaussian_splats.GetCount() == 0)
+		return;
+	auto range = wi::profiler::BeginRangeGPU("Draw Gaussian Splats", cmd);
+	for (size_t i = 0; i < scene.gaussian_splats.GetCount(); ++i)
+	{
+		const wi::GaussianSplatModel& splat = scene.gaussian_splats[i];
+		if (!camera.frustum.CheckBoxFast(splat.aabb))
+			continue;
+		scene.gaussian_splats[i].Draw(cmd);
+	}
 	wi::profiler::EndRange(range);
 }
 void DrawSpritesAndFonts(
@@ -11206,6 +11232,8 @@ void BindCameraCB(
 	shadercam.canvas_size_rcp = float2(1.0f / shadercam.canvas_size.x, 1.0f / shadercam.canvas_size.y);
 	shadercam.internal_resolution = uint2((uint)camera.width, (uint)camera.height);
 	shadercam.internal_resolution_rcp = float2(1.0f / std::max(1u, shadercam.internal_resolution.x), 1.0f / std::max(1u, shadercam.internal_resolution.y));
+
+	shadercam.tan_halffov = std::tan(0.5f * camera.fov);
 
 	shadercam.scissor.x = camera.scissor.left;
 	shadercam.scissor.y = camera.scissor.top;
