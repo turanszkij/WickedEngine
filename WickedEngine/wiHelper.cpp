@@ -409,7 +409,7 @@ namespace wi::helper
 				dds_format = dds::DXGI_FORMAT_B8G8R8A8_UNORM;
 				break;
 			case wi::graphics::Format::B8G8R8A8_UNORM_SRGB:
-				dds_format = dds::DXGI_FORMAT_R16G16_SINT;
+				dds_format = dds::DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
 				break;
 			case wi::graphics::Format::R16G16_FLOAT:
 				dds_format = dds::DXGI_FORMAT_R16G16_FLOAT;

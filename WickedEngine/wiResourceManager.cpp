@@ -105,6 +105,13 @@ namespace wi
 		const ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
 		return resourceinternal->video;
 	}
+	uint32_t Resource::GetTextureFullMipCount() const
+	{
+		const ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
+		if (resourceinternal->streaming_texture.mip_count > 0)
+			return resourceinternal->streaming_texture.mip_count;
+		return resourceinternal->texture.GetDesc().mip_levels;
+	}
 	int Resource::GetTextureSRGBSubresource() const
 	{
 		const ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
@@ -132,7 +139,7 @@ namespace wi
 			internal_state = wi::allocator::make_shared<ResourceInternal>();
 		}
 		ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
-		resourceinternal->filedata = data;
+		resourceinternal->filedata = std::move(data);
 	}
 	void Resource::SetTexture(const wi::graphics::Texture& texture, int srgb_subresource)
 	{
