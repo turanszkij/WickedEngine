@@ -5638,6 +5638,30 @@ void UpdateRenderDataAsync(
 		wi::profiler::EndRange(range);
 	}
 
+	wi::profiler::range_id prof_splats = 0;
+	for (size_t i = 0; i < vis.scene->gaussian_splats.GetCount(); ++i)
+	{
+		const wi::GaussianSplatModel& splat = vis.scene->gaussian_splats[i];
+		if (!vis.camera->frustum.CheckBoxFast(splat.aabb))
+			continue;
+		XMFLOAT4X4 matrix = wi::math::IDENTITY_MATRIX;
+		Entity entity = vis.scene->gaussian_splats.GetEntity(i);
+		const TransformComponent* transform = vis.scene->transforms.GetComponent(entity);
+		if (transform != nullptr)
+		{
+			matrix = transform->world;
+		}
+		if (prof_splats == 0)
+		{
+			prof_splats = wi::profiler::BeginRangeGPU("Gaussian Splat Culling and Sorting", cmd);
+		}
+		vis.scene->gaussian_splats[i].Update(matrix, cmd);
+	}
+	if (prof_splats != 0)
+	{
+		wi::profiler::EndRange(prof_splats);
+	}
+
 	if (vis.scene->textureStreamingFeedbackBuffer.IsValid())
 	{
 		device->ClearUAV(&vis.scene->textureStreamingFeedbackBuffer, 0, cmd);
@@ -6071,6 +6095,24 @@ void DrawSoftParticles(
 
 	device->BindShadingRate(ShadingRate::RATE_1X1, cmd);
 
+	wi::profiler::EndRange(range);
+}
+void DrawGaussianSplats(
+	const Scene& scene,
+	const CameraComponent& camera,
+	CommandList cmd
+)
+{
+	if (scene.gaussian_splats.GetCount() == 0)
+		return;
+	auto range = wi::profiler::BeginRangeGPU("Draw Gaussian Splats", cmd);
+	for (size_t i = 0; i < scene.gaussian_splats.GetCount(); ++i)
+	{
+		const wi::GaussianSplatModel& splat = scene.gaussian_splats[i];
+		if (!camera.frustum.CheckBoxFast(splat.aabb))
+			continue;
+		scene.gaussian_splats[i].Draw(cmd);
+	}
 	wi::profiler::EndRange(range);
 }
 void DrawSpritesAndFonts(
@@ -11206,6 +11248,11 @@ void BindCameraCB(
 	shadercam.canvas_size_rcp = float2(1.0f / shadercam.canvas_size.x, 1.0f / shadercam.canvas_size.y);
 	shadercam.internal_resolution = uint2((uint)camera.width, (uint)camera.height);
 	shadercam.internal_resolution_rcp = float2(1.0f / std::max(1u, shadercam.internal_resolution.x), 1.0f / std::max(1u, shadercam.internal_resolution.y));
+
+	const float devicePixelRatio = 1.0f;
+	const float focalLengthX = shadercam.projection._11 * 0.5f * devicePixelRatio * shadercam.internal_resolution.x;
+	const float focalLengthY = shadercam.projection._22 * 0.5f * devicePixelRatio * shadercam.internal_resolution.y;
+	shadercam.focal = float2(focalLengthX, focalLengthY);
 
 	shadercam.scissor.x = camera.scissor.left;
 	shadercam.scissor.y = camera.scissor.top;

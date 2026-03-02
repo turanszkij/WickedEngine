@@ -328,6 +328,12 @@ namespace wi::renderer
 		bool distortion, 
 		wi::graphics::CommandList cmd
 	);
+	// Draw gaussian splats inside a render pass
+	void DrawGaussianSplats(
+		const wi::scene::Scene& scene,
+		const wi::scene::CameraComponent& camera,
+		wi::graphics::CommandList cmd
+	);
 	// Draw the sprites and fonts from the scene
 	void DrawSpritesAndFonts(
 		const wi::scene::Scene& scene,

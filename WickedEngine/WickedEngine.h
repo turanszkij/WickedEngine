@@ -75,6 +75,7 @@
 #include "wiVoxelGrid.h"
 #include "wiPathQuery.h"
 #include "wiTrailRenderer.h"
+#include "wiGaussianSplatModel.h"
 
 #ifndef WICKED_CMAKE_BUILD
 

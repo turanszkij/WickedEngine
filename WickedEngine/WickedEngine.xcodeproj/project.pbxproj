@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1E19DEF32F557EFB009F2E30 /* wiGaussianSplatModel.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E19DEF22F557EFB009F2E30 /* wiGaussianSplatModel.cpp */; };
 		1E640FE22F0AEC0B003D9FC7 /* libmetalirconverter.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E640FE12F0AEC0B003D9FC7 /* libmetalirconverter.dylib */; };
 		1E640FEA2F0B0565003D9FC7 /* libdxcompiler.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 1EDA8A692EE5D68100210D41 /* libdxcompiler.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		1E640FEC2F0B0567003D9FC7 /* libmetalirconverter.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 1E640FE12F0AEC0B003D9FC7 /* libmetalirconverter.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
@@ -297,6 +298,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		1E19DEF12F557EFB009F2E30 /* wiGaussianSplatModel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = wiGaussianSplatModel.h; sourceTree = "<group>"; };
+		1E19DEF22F557EFB009F2E30 /* wiGaussianSplatModel.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = wiGaussianSplatModel.cpp; sourceTree = "<group>"; };
 		1E640FE12F0AEC0B003D9FC7 /* libmetalirconverter.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libmetalirconverter.dylib; sourceTree = "<group>"; };
 		1E7929892EFE75BA00B9E35C /* wiAppleHelper.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = wiAppleHelper.mm; sourceTree = "<group>"; };
 		1E79298B2EFE76C500B9E35C /* wiAppleHelper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = wiAppleHelper.h; sourceTree = "<group>"; };
@@ -2097,6 +2100,8 @@
 		1EDA71632EE0978C00210D41 = {
 			isa = PBXGroup;
 			children = (
+				1E19DEF12F557EFB009F2E30 /* wiGaussianSplatModel.h */,
+				1E19DEF22F557EFB009F2E30 /* wiGaussianSplatModel.cpp */,
 				1EBD1C002F2514E700C29B34 /* wiInput_Apple.mm */,
 				1EBD1BFF2F2514D700C29B34 /* wiInput_Apple.h */,
 				1E640FE12F0AEC0B003D9FC7 /* libmetalirconverter.dylib */,
@@ -3348,6 +3353,7 @@
 				1EDA7B132EE1DFE300210D41 /* wiTextureHelper.cpp in Sources */,
 				1EDA7B142EE1DFE300210D41 /* wiLua.cpp in Sources */,
 				1EDA7B152EE1DFE300210D41 /* wiSpriteAnim_BindLua.cpp in Sources */,
+				1E19DEF32F557EFB009F2E30 /* wiGaussianSplatModel.cpp in Sources */,
 				1EDA7B162EE1DFE300210D41 /* wiTerrain.cpp in Sources */,
 				1EDA7B172EE1DFE300210D41 /* wiSpriteFont_BindLua.cpp in Sources */,
 				1EDA7B182EE1DFE300210D41 /* wiInitializer.cpp in Sources */,

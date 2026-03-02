@@ -1369,7 +1369,7 @@ struct alignas(16) ShaderCamera
 
 	float2 canvas_size;
 	float2 canvas_size_rcp;
-		   
+
 	uint2 internal_resolution;
 	float2 internal_resolution_rcp;
 
@@ -1409,10 +1409,9 @@ struct alignas(16) ShaderCamera
 	int texture_vxgi_diffuse_index;
 	int texture_vxgi_specular_index;
 
+	float2 focal;
 	int texture_reprojected_depth_index;
 	uint options;
-	uint padding0;
-	uint padding1;
 
 #ifdef __cplusplus
 	inline void init()

@@ -29,6 +29,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)EnvProbeWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ExpressionWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ForceFieldWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)GaussianSplatWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)GeneralWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)HairParticleWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)HierarchyWindow.cpp" />
@@ -40,9 +41,16 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)MaterialWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)MeshWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)MetadataWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)miniply.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)ModelImporter_FBX.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ModelImporter_GLTF.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ModelImporter_OBJ.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)ModelImporter_PLY.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)NameWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ObjectWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)PaintToolWindow.cpp" />
@@ -103,6 +111,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ExpressionWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)FontAwesomeV6.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ForceFieldWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)GaussianSplatWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)GeneralWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)HairParticleWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)HierarchyWindow.h" />

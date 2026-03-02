@@ -55,6 +55,9 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)SplineWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ProjectCreatorWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ThemeEditorWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)ModelImporter_PLY.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)miniply.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)GaussianSplatWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)AnimationWindow.h" />
@@ -115,6 +118,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)SplineWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ProjectCreatorWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ThemeEditorWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)GaussianSplatWindow.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)startup.lua" />

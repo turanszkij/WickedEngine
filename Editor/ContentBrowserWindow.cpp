@@ -321,6 +321,7 @@ void ContentBrowserWindow::SetSelection(SELECTION selection)
 			AddItems(content_folder + "models/", "glb", ICON_OBJECT);
 			AddItems(content_folder + "models/", "fbx", ICON_OBJECT);
 			AddItems(content_folder + "models/", "obj", ICON_OBJECT);
+			AddItems(content_folder + "models/", "ply", ICON_OBJECT);
 			openFolderButton.OnClick([this](wi::gui::EventArgs args) {
 				wi::helper::OpenUrl(content_folder + "models/");
 				});
@@ -363,6 +364,10 @@ void ContentBrowserWindow::SetSelection(SELECTION selection)
 				{
 					AddItem(fileName, ICON_OBJECT);
 				}
+				else if (!ext.compare("PLY"))
+				{
+					AddItem(fileName, ICON_OBJECT);
+				}
 			}
 			break;
 		default:
@@ -377,6 +382,7 @@ void ContentBrowserWindow::SetSelection(SELECTION selection)
 				AddItems(folder, "glb", ICON_OBJECT);
 				AddItems(folder, "fbx", ICON_OBJECT);
 				AddItems(folder, "obj", ICON_OBJECT);
+				AddItems(folder, "ply", ICON_OBJECT);
 				AddItems(folder, "lua", ICON_SCRIPT);
 				openFolderButton.OnClick([folder](wi::gui::EventArgs args) {
 					wi::helper::OpenUrl(folder);

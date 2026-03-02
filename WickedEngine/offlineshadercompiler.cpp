@@ -222,6 +222,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"depth_reprojectCS", wi::graphics::ShaderStage::CS },
 	{"depth_pyramidCS", wi::graphics::ShaderStage::CS },
 	{"lightmap_expandCS", wi::graphics::ShaderStage::CS },
+	{"gaussian_splatCS", wi::graphics::ShaderStage::CS },
 
 
 	{"imagePS", wi::graphics::ShaderStage::PS },
@@ -286,6 +287,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"extractStencilBitPS", wi::graphics::ShaderStage::PS },
 	{"trailPS", wi::graphics::ShaderStage::PS },
 	{"waveeffectPS", wi::graphics::ShaderStage::PS },
+	{"gaussian_splatPS", wi::graphics::ShaderStage::PS },
 
 
 	{"hairparticleVS", wi::graphics::ShaderStage::VS },
@@ -334,6 +336,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"screenVS", wi::graphics::ShaderStage::VS },
 	{"voxelgridVS", wi::graphics::ShaderStage::VS },
 	{"trailVS", wi::graphics::ShaderStage::VS },
+	{"gaussian_splatVS", wi::graphics::ShaderStage::VS },
 
 
 

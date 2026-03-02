@@ -29,6 +29,7 @@ enum class FileType
 	VRM,
 	VRMA,
 	FBX,
+	PLY,
 	IMAGE,
 	VIDEO,
 	SOUND,
@@ -45,6 +46,7 @@ static wi::unordered_map<std::string, FileType> filetypes = {
 	{"VRM", FileType::VRM},
 	{"VRMA", FileType::VRMA},
 	{"FBX", FileType::FBX},
+	{"PLY", FileType::PLY},
 	{"H", FileType::HEADER},
 	{"CPP", FileType::CPP},
 	{"TXT", FileType::TEXT},
@@ -1155,7 +1157,7 @@ void EditorComponent::Load()
 		const uint64_t target_scene_id = GetCurrentEditorScene().id;
 		wi::helper::FileDialogParams params;
 		params.type = wi::helper::FileDialogParams::OPEN;
-		params.description = ".wiscene, .obj, .gltf, .glb, .vrm, .fbx, .lua, .mp4, .png, ...";
+		params.description = ".wiscene, .obj, .gltf, .glb, .vrm, .fbx, .ply, .lua, .mp4, .png, ...";
 		params.extensions.push_back("wiscene");
 		params.extensions.push_back("obj");
 		params.extensions.push_back("gltf");
@@ -1163,6 +1165,7 @@ void EditorComponent::Load()
 		params.extensions.push_back("vrm");
 		params.extensions.push_back("vrma");
 		params.extensions.push_back("fbx");
+		params.extensions.push_back("ply");
 		params.extensions.push_back("lua");
 		params.extensions.push_back("txt");
 		const auto ext_video = wi::resourcemanager::GetSupportedVideoExtensions();
@@ -1388,7 +1391,7 @@ void EditorComponent::Load()
 		ss += "\nTips\n";
 		ss += "-------\n";
 		ss += "You can find sample scenes in the Content/models directory. Try to load one.\n";
-		ss += "You can also import models from .OBJ, .GLTF, .GLB, .VRM, .FBX files.\n";
+		ss += "You can also import models from .OBJ, .GLTF, .GLB, .VRM, .FBX, .PLY files.\n";
 		ss += "You can find a program configuration file at Editor/config.ini\n";
 		ss += "You can find sample LUA scripts in the Content/scripts directory. Try to load one.\n";
 		ss += "You can find a startup script in startup.lua (this will be executed on program start, if exists)\n";
@@ -2972,6 +2975,7 @@ void EditorComponent::Update(float dt)
 		componentsWnd.voxelGridWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.metadataWnd.SetEntity(INVALID_ENTITY);
 		componentsWnd.constraintWnd.SetEntity(INVALID_ENTITY);
+		componentsWnd.gaussiansplatWnd.SetEntity(INVALID_ENTITY);
 	}
 	else
 	{
@@ -3008,6 +3012,7 @@ void EditorComponent::Update(float dt)
 		componentsWnd.voxelGridWnd.SetEntity(picked.entity);
 		componentsWnd.metadataWnd.SetEntity(picked.entity);
 		componentsWnd.constraintWnd.SetEntity(picked.entity);
+		componentsWnd.gaussiansplatWnd.SetEntity(picked.entity);
 
 		bool found_object = false;
 		bool found_mesh = false;
@@ -5473,6 +5478,10 @@ void EditorComponent::Open(std::string filename)
 		{
 			ImportModel_FBX(filename, *scene);
 		}
+		else if (type == FileType::PLY)
+		{
+			ImportModel_PLY(filename, *scene);
+		}
 
 		wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=] (uint64_t userdata) {
 
@@ -6579,6 +6588,7 @@ void EditorComponent::RefreshSceneList()
 			componentsWnd.metadataWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 			componentsWnd.constraintWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 			componentsWnd.splineWnd.SetEntity(wi::ecs::INVALID_ENTITY);
+			componentsWnd.gaussiansplatWnd.SetEntity(wi::ecs::INVALID_ENTITY);
 
 			componentsWnd.RefreshEntityTree();
 			ResetHistory();

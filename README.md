@@ -214,6 +214,7 @@ In addition, the Editor supports importing some common model formats:
 - <b>FBX</b>
 - <b>GLTF, GLB</b>
 - <b>VRM, VRMA</b>
+- <b>PLY</b>
 
 You can import models into the Editor, and save them as <b>WISCENE</b>, then any Wicked Engine application can open them.<br/>
 
