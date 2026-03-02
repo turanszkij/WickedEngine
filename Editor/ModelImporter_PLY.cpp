@@ -3,7 +3,6 @@
 #include "ModelImporter.h"
 
 #include "miniply.h"
-#include "miniply.cpp"
 
 using namespace miniply;
 
