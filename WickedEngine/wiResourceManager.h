@@ -24,6 +24,7 @@ namespace wi
 
 		const wi::vector<uint8_t>& GetFileData() const;
 		const wi::graphics::Texture& GetTexture() const;
+		uint32_t GetTextureFullMipCount() const;
 		const wi::audio::Sound& GetSound() const;
 		const std::string& GetScript() const;
 		size_t GetScriptHash() const;
