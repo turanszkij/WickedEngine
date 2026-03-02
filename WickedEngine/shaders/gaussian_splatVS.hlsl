@@ -217,6 +217,7 @@ void main(in uint vertexID : SV_VertexID, in uint instanceID : SV_InstanceID, ou
 	color = unpack_half4(splats[splatIndex].color);
 	float3 viewDir = normalize(GetCamera().position - splatCenter);
 	color.rgb += fetchViewDependentRadiance(splatIndex, viewDir);
+	color.rgb = RemoveSRGBCurve_Fast(color.rgb); // Checked against SuperSplat Editor, result is more similar with gamma remove
 
 	const float4 viewCenter = mul(GetCamera().view, float4(splatCenter, 1.0));
 	const float4 clipCenter = mul(GetCamera().projection, viewCenter);

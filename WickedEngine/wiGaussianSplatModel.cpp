@@ -78,6 +78,7 @@ namespace wi
 		assert(success);
 		device->SetName(&splatBuffer, "GaussianSplatModel::splatBuffer");
 
+		// I create separate float16 array for view dependent SH data, it will be tightly packed and supports variable order SH without predefining it into the splat structured buffer
 		auto fill_gpu_sh = [&](void* dest) {
 			const uint32_t totalSphericalHarmonicsComponentCount = uint32_t(f_rest.size() / positions.size());
 			const uint32_t sphericalHarmonicsCoefficientsPerChannel = totalSphericalHarmonicsComponentCount / 3;
@@ -133,7 +134,6 @@ namespace wi
 				}
 			}
 		};
-
 		desc.format = Format::R16_FLOAT;
 		desc.stride = sizeof(uint16_t);
 		desc.size = f_rest.size() * desc.stride;
