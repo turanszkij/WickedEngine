@@ -5638,6 +5638,7 @@ void UpdateRenderDataAsync(
 		wi::profiler::EndRange(range);
 	}
 
+	wi::profiler::range_id prof_splats = 0;
 	for (size_t i = 0; i < vis.scene->gaussian_splats.GetCount(); ++i)
 	{
 		const wi::GaussianSplatModel& splat = vis.scene->gaussian_splats[i];
@@ -5650,7 +5651,15 @@ void UpdateRenderDataAsync(
 		{
 			matrix = transform->world;
 		}
+		if (prof_splats == 0)
+		{
+			prof_splats = wi::profiler::BeginRangeGPU("Gaussian Splat Culling and Sorting", cmd);
+		}
 		vis.scene->gaussian_splats[i].Update(matrix, cmd);
+	}
+	if (prof_splats != 0)
+	{
+		wi::profiler::EndRange(prof_splats);
 	}
 
 	if (vis.scene->textureStreamingFeedbackBuffer.IsValid())
