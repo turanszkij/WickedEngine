@@ -135,7 +135,6 @@ void ImportModel_PLY(const std::string& fileName, wi::scene::Scene& scene)
 				XMStoreFloat4(&x, Q);
 			}
 			splat.positions = std::move(positions);
-			splat.normals = std::move(normals);
 			splat.rotations = std::move(rotations);
 			splat.scales = std::move(scales);
 			splat.opacities = std::move(opacities);

@@ -14,7 +14,6 @@ namespace wi
 	{
 	public:
 		wi::vector<XMFLOAT3> positions;
-		wi::vector<XMFLOAT3> normals;
 		wi::vector<XMFLOAT4> rotations;
 		wi::vector<XMFLOAT3> scales;
 		wi::vector<float> opacities;

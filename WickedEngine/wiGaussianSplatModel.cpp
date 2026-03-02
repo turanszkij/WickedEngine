@@ -241,7 +241,6 @@ namespace wi
 		if (archive.IsReadMode())
 		{
 			archive >> positions;
-			archive >> normals;
 			archive >> rotations;
 			archive >> scales;
 			archive >> opacities;
@@ -251,7 +250,6 @@ namespace wi
 		else
 		{
 			archive << positions;
-			archive << normals;
 			archive << rotations;
 			archive << scales;
 			archive << opacities;
@@ -278,7 +276,7 @@ namespace wi
 		depthStencilState.depth_write_mask = DepthWriteMask::ZERO;
 		depthStencilState.depth_func = ComparisonFunc::GREATER;
 
-		rasterizerState.cull_mode = CullMode::NONE;
+		rasterizerState.cull_mode = CullMode::BACK;
 		rasterizerState.fill_mode = FillMode::SOLID;
 
 		blendState.render_target[0].blend_enable = true;
