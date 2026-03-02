@@ -55,22 +55,25 @@ namespace wi
 
 				GaussianSplat splat = {};
 				splat.position = positions[splatIdx];
-				splat.normal = normals[splatIdx];
-				splat.rotation = rotations[splatIdx];
 
-				splat.scale.x = std::exp(scales[splatIdx].x);
-				splat.scale.y = std::exp(scales[splatIdx].y);
-				splat.scale.z = std::exp(scales[splatIdx].z);
+				XMFLOAT3 scale = XMFLOAT3(std::exp(scales[splatIdx].x), std::exp(scales[splatIdx].y), std::exp(scales[splatIdx].z));
+				static const float sqrt8 = std::sqrt(8.0f);
+				splat.radius = std::max(scale.x, std::max(scale.y, scale.z)) * sqrt8; // culling
 
+				// f_dc is L0 spherical harmonics (not view dependent), so it's converted to rgb color here
+				// https://github.com/nvpro-samples/vk_gaussian_splatting/blob/main/src/splat_set_vk.cpp
 				static constexpr float SH_C0 = 0.28209479177387814f;
-				splat.f_dc.x = saturate(0.5f + SH_C0 * f_dc[splatIdx].x);
-				splat.f_dc.y = saturate(0.5f + SH_C0 * f_dc[splatIdx].y);
-				splat.f_dc.z = saturate(0.5f + SH_C0 * f_dc[splatIdx].z);
+				float4 color = {};
+				color.x = saturate(0.5f + SH_C0 * f_dc[splatIdx].x);
+				color.y = saturate(0.5f + SH_C0 * f_dc[splatIdx].y);
+				color.z = saturate(0.5f + SH_C0 * f_dc[splatIdx].z);
+				color.w = saturate(1.0f / (1.0f + std::exp(-opacities[splatIdx])));
+				splat.color = pack_half4(color);
 
-				splat.opacity = saturate(1.0f / (1.0f + std::exp(-opacities[splatIdx])));
-
-				const XMMATRIX scaleMatrix = XMMatrixScaling(splat.scale.x, splat.scale.y, splat.scale.z);
-				const XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(XMLoadFloat4(&splat.rotation));
+				// covariance from: https://github.com/nvpro-samples/vk_gaussian_splatting/blob/main/src/splat_set_vk.cpp
+				//	changed from glm to DirectXMath (column->row major, matrix mul order changed)
+				const XMMATRIX scaleMatrix = XMMatrixScaling(scale.x, scale.y, scale.z);
+				const XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(XMLoadFloat4(&rotations[splatIdx]));
 				const XMMATRIX covarianceMatrix = XMMatrixMultiply(scaleMatrix, rotationMatrix);
 				const XMMATRIX transformedCovarianceMatrix = XMMatrixMultiply(XMMatrixTranspose(covarianceMatrix), covarianceMatrix);
 				XMFLOAT3X3 transformedCovariance;
@@ -82,8 +85,9 @@ namespace wi
 				splat.cov3D_M22_M23_M33.y = transformedCovariance._23;
 				splat.cov3D_M22_M23_M33.z = transformedCovariance._33;
 
-				float* dst = (float*)splat.f_rest;
-
+				// View dependent SH data is deinterleaved, now I interleave it into 16x (rgb) vectors:
+				float3 sh3[15] = {};
+				float* dst = (float*)sh3;
 				const auto srcBase = splatStride * splatIdx;
 				int dstOffset = 0;
 				// degree 1, three coefs per component
@@ -112,6 +116,12 @@ namespace wi
 						const auto srcIndex = srcBase + (sphericalHarmonicsCoefficientsPerChannel * rgb + 3 + 5 + i);
 						dst[dstOffset++] = f_rest[srcIndex];
 					}
+				}
+
+				// pack data:
+				for (int i = 0; i < arraysize(sh3); ++i)
+				{
+					splat.f_rest[i] = pack_half3(sh3[i]);
 				}
 
 				std::memcpy(splat_dest + splatIdx, &splat, sizeof(splat)); // memcpy into uncached

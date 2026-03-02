@@ -5,14 +5,11 @@
 struct GaussianSplat
 {
 	float3 position;
-	float3 normal;
-	float4 rotation;
-	float3 scale;
-	float3 f_dc;
-	float opacity;
+	float radius;
+	uint2 color;
 	float3 cov3D_M11_M12_M13;
 	float3 cov3D_M22_M23_M33;
-	float3 f_rest[15];
+	uint2 f_rest[15]; // half3 array with some waste but simpler access
 };
 
 #endif // WI_SHADERINTEROP_GAUSSIAN_SPLAT_H
