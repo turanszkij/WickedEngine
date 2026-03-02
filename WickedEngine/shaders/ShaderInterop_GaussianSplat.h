@@ -9,7 +9,11 @@ struct GaussianSplat
 	uint2 color;
 	float3 cov3D_M11_M12_M13;
 	float3 cov3D_M22_M23_M33;
-	uint2 f_rest[15]; // half3 array with some waste but simpler access
+};
+struct GaussianSplatPush
+{
+	int sphericalHarmonicsDegree;
+	int splatStride;
 };
 
 #endif // WI_SHADERINTEROP_GAUSSIAN_SPLAT_H

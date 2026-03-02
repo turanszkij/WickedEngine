@@ -28,27 +28,6 @@ namespace wi
 
 		auto fill_gpu = [&](void* dest) {
 			GaussianSplat* splat_dest = (GaussianSplat*)dest;
-			const uint32_t totalSphericalHarmonicsComponentCount = uint32_t(f_rest.size() / positions.size());
-			const uint32_t sphericalHarmonicsCoefficientsPerChannel = totalSphericalHarmonicsComponentCount / 3;
-			int sphericalHarmonicsDegree = 0;
-			int splatStride = 0;
-			if (sphericalHarmonicsCoefficientsPerChannel >= 3)
-			{
-				sphericalHarmonicsDegree = 1;
-				splatStride += 3 * 3;
-			}
-			if (sphericalHarmonicsCoefficientsPerChannel >= 8)
-			{
-				sphericalHarmonicsDegree = 2;
-				splatStride += 5 * 3;
-			}
-			if (sphericalHarmonicsCoefficientsPerChannel == 15)
-			{
-				sphericalHarmonicsDegree = 3;
-				splatStride += 7 * 3;
-			}
-			int targetSplatStride = splatStride;
-
 			for (size_t splatIdx = 0; splatIdx < positions.size(); ++splatIdx)
 			{
 				aabb.AddPoint(positions[splatIdx]);
@@ -85,45 +64,6 @@ namespace wi
 				splat.cov3D_M22_M23_M33.y = transformedCovariance._23;
 				splat.cov3D_M22_M23_M33.z = transformedCovariance._33;
 
-				// View dependent SH data is deinterleaved, now I interleave it into 16x (rgb) vectors:
-				float3 sh3[15] = {};
-				float* dst = (float*)sh3;
-				const auto srcBase = splatStride * splatIdx;
-				int dstOffset = 0;
-				// degree 1, three coefs per component
-				for (auto i = 0; i < 3; i++)
-				{
-					for (auto rgb = 0; rgb < 3; rgb++)
-					{
-						const auto srcIndex = srcBase + (sphericalHarmonicsCoefficientsPerChannel * rgb + i);
-						dst[dstOffset++] = f_rest[srcIndex];
-					}
-				}
-				// degree 2, five coefs per component
-				for (auto i = 0; i < 5; i++)
-				{
-					for (auto rgb = 0; rgb < 3; rgb++)
-					{
-						const auto srcIndex = srcBase + (sphericalHarmonicsCoefficientsPerChannel * rgb + 3 + i);
-						dst[dstOffset++] = f_rest[srcIndex];
-					}
-				}
-				// degree 3, seven coefs per component
-				for (auto i = 0; i < 7; i++)
-				{
-					for (auto rgb = 0; rgb < 3; rgb++)
-					{
-						const auto srcIndex = srcBase + (sphericalHarmonicsCoefficientsPerChannel * rgb + 3 + 5 + i);
-						dst[dstOffset++] = f_rest[srcIndex];
-					}
-				}
-
-				// pack data:
-				for (int i = 0; i < arraysize(sh3); ++i)
-				{
-					splat.f_rest[i] = pack_half3(sh3[i]);
-				}
-
 				std::memcpy(splat_dest + splatIdx, &splat, sizeof(splat)); // memcpy into uncached
 			}
 		};
@@ -133,10 +73,77 @@ namespace wi
 		desc.size = positions.size() * desc.stride;
 		desc.bind_flags = BindFlag::SHADER_RESOURCE;
 		desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
+		desc.format = Format::UNKNOWN;
 		bool success = device->CreateBuffer2(&desc, fill_gpu, &splatBuffer);
 		assert(success);
 		device->SetName(&splatBuffer, "GaussianSplatModel::splatBuffer");
 
+		auto fill_gpu_sh = [&](void* dest) {
+			const uint32_t totalSphericalHarmonicsComponentCount = uint32_t(f_rest.size() / positions.size());
+			const uint32_t sphericalHarmonicsCoefficientsPerChannel = totalSphericalHarmonicsComponentCount / 3;
+			int sphericalHarmonicsDegree = 0;
+			int splatStride = 0;
+			if (sphericalHarmonicsCoefficientsPerChannel >= 3)
+			{
+				sphericalHarmonicsDegree = 1;
+				splatStride += 3 * 3;
+			}
+			if (sphericalHarmonicsCoefficientsPerChannel >= 8)
+			{
+				sphericalHarmonicsDegree = 2;
+				splatStride += 5 * 3;
+			}
+			if (sphericalHarmonicsCoefficientsPerChannel == 15)
+			{
+				sphericalHarmonicsDegree = 3;
+				splatStride += 7 * 3;
+			}
+			for (size_t splatIdx = 0; splatIdx < positions.size(); ++splatIdx)
+			{
+				// View dependent SH data is deinterleaved, now I interleave it into 16x (rgb) vectors per splat:
+				uint16_t* dst = (uint16_t*)dest + splatStride * splatIdx;
+				const auto srcBase = splatStride * splatIdx;
+				int dstOffset = 0;
+				// degree 1, three coefs per component
+				for (auto i = 0; i < 3; i++)
+				{
+					for (auto rgb = 0; rgb < 3; rgb++)
+					{
+						const auto srcIndex = srcBase + (sphericalHarmonicsCoefficientsPerChannel * rgb + i);
+						dst[dstOffset++] = XMConvertFloatToHalf(f_rest[srcIndex]);
+					}
+				}
+				// degree 2, five coefs per component
+				for (auto i = 0; i < 5; i++)
+				{
+					for (auto rgb = 0; rgb < 3; rgb++)
+					{
+						const auto srcIndex = srcBase + (sphericalHarmonicsCoefficientsPerChannel * rgb + 3 + i);
+						dst[dstOffset++] = XMConvertFloatToHalf(f_rest[srcIndex]);
+					}
+				}
+				// degree 3, seven coefs per component
+				for (auto i = 0; i < 7; i++)
+				{
+					for (auto rgb = 0; rgb < 3; rgb++)
+					{
+						const auto srcIndex = srcBase + (sphericalHarmonicsCoefficientsPerChannel * rgb + 3 + 5 + i);
+						dst[dstOffset++] = XMConvertFloatToHalf(f_rest[srcIndex]);
+					}
+				}
+			}
+		};
+
+		desc.format = Format::R16_FLOAT;
+		desc.stride = sizeof(uint16_t);
+		desc.size = f_rest.size() * desc.stride;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE;
+		desc.misc_flags = ResourceMiscFlag::NONE;
+		success = device->CreateBuffer2(&desc, fill_gpu_sh, &shBuffer);
+		assert(success);
+		device->SetName(&shBuffer, "GaussianSplatModel::shBuffer");
+
+		desc.format = Format::UNKNOWN;
 		desc.stride = sizeof(IndirectDrawArgsInstanced);
 		desc.size = desc.stride;
 		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
@@ -197,8 +204,34 @@ namespace wi
 		GraphicsDevice* device = GetDevice();
 		device->EventBegin("Gaussian Splat Render", cmd);
 		device->BindPipelineState(&pipelineState, cmd);
+
+		const uint32_t totalSphericalHarmonicsComponentCount = uint32_t(f_rest.size() / positions.size());
+		const uint32_t sphericalHarmonicsCoefficientsPerChannel = totalSphericalHarmonicsComponentCount / 3;
+		int sphericalHarmonicsDegree = 0;
+		int splatStride = 0;
+		if (sphericalHarmonicsCoefficientsPerChannel >= 3)
+		{
+			sphericalHarmonicsDegree = 1;
+			splatStride += 3 * 3;
+		}
+		if (sphericalHarmonicsCoefficientsPerChannel >= 8)
+		{
+			sphericalHarmonicsDegree = 2;
+			splatStride += 5 * 3;
+		}
+		if (sphericalHarmonicsCoefficientsPerChannel == 15)
+		{
+			sphericalHarmonicsDegree = 3;
+			splatStride += 7 * 3;
+		}
+		GaussianSplatPush push = {};
+		push.sphericalHarmonicsDegree = sphericalHarmonicsDegree;
+		push.splatStride = splatStride;
+		device->PushConstants(&push, sizeof(push), cmd);
+
 		device->BindResource(&splatBuffer, 0, cmd);
 		device->BindResource(&sortedIndexBuffer, 1, cmd);
+		device->BindResource(&shBuffer, 2, cmd);
 		device->DrawInstancedIndirect(&indirectBuffer, 0, cmd);
 		device->EventEnd(cmd);
 	}

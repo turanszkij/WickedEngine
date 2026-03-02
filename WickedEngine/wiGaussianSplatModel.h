@@ -24,6 +24,7 @@ namespace wi
 		wi::primitive::AABB aabb;
 
 		wi::graphics::GPUBuffer splatBuffer;
+		wi::graphics::GPUBuffer shBuffer;
 		wi::graphics::GPUBuffer indirectBuffer;
 		wi::graphics::GPUBuffer sortedIndexBuffer;
 		wi::graphics::GPUBuffer distanceBuffer;
