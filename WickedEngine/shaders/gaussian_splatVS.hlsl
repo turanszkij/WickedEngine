@@ -229,16 +229,18 @@ void main(in uint vertexID : SV_VertexID, in uint instanceID : SV_InstanceID, ou
 {
 	const uint splatIndex = sortedIndexBuffer[instanceID];
 
-	const float3 splatCenter = mul(cb.transform.GetMatrix(), float4(splats[splatIndex].position, 1)).xyz;
+	const float3 splatCenter = float4(splats[splatIndex].position, 1).xyz;
 	color = unpack_half4(splats[splatIndex].color);
 	float3 viewDir = normalize(mul(cb.transform_inverse.GetMatrix(), float4(GetCamera().position, 1)).xyz - splatCenter);
 	color.rgb += fetchViewDependentRadiance(splatIndex, viewDir);
 	color.rgb = RemoveSRGBCurve_Fast(color.rgb); // Checked against SuperSplat Editor, result is more similar with gamma remove
 
-	const float4 viewCenter = mul(GetCamera().view, float4(splatCenter, 1.0));
+	float4x4 modelViewMatrix = mul(GetCamera().view, cb.transform.GetMatrix());
+
+	const float4 viewCenter = mul(modelViewMatrix, float4(splatCenter, 1.0));
 	const float4 clipCenter = mul(GetCamera().projection, viewCenter);
 	const float3x3 cov3Dm = fetchCovariance(splatIndex);
-	const float3 cov2Dv = threedgsCovarianceProjection(cov3Dm, viewCenter, GetCamera().focal, GetCamera().view);  // computes the basis vectors of the extent of the projected covariance
+	const float3 cov2Dv = threedgsCovarianceProjection(cov3Dm, viewCenter, GetCamera().focal, modelViewMatrix);  // computes the basis vectors of the extent of the projected covariance
 	const float2 fragPos = BILLBOARD[vertexID].xy;
 
 	// We use sqrt(8) standard deviations instead of 3 to eliminate more of the splat with a very low opacity.
