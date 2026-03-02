@@ -246,6 +246,10 @@ namespace wi
 			archive >> opacities;
 			archive >> f_dc;
 			archive >> f_rest;
+
+			wi::jobsystem::Execute(seri.ctx, [this](wi::jobsystem::JobArgs args) {
+				CreateRenderData();
+			});
 		}
 		else
 		{
