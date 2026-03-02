@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1E19DEEF2F557EE7009F2E30 /* ModelImporter_PLY.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E19DEEE2F557EE7009F2E30 /* ModelImporter_PLY.cpp */; };
 		1E640FDB2F0AE648003D9FC7 /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E73E74D2F053DAB0090D1DA /* AppKit.framework */; };
 		1E73E6DA2F0510A90090D1DA /* Translator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6CC2F0510A90090D1DA /* Translator.cpp */; };
 		1E73E6DB2F0510A90090D1DA /* DummyVisualizer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6682F0510A90090D1DA /* DummyVisualizer.cpp */; };
@@ -91,6 +92,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		1E19DEEE2F557EE7009F2E30 /* ModelImporter_PLY.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ModelImporter_PLY.cpp; sourceTree = "<group>"; };
 		1E73E6422F05105A0090D1DA /* Editor */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Editor; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E73E64C2F0510A90090D1DA /* AnimationWindow.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AnimationWindow.h; sourceTree = "<group>"; };
 		1E73E64D2F0510A90090D1DA /* AnimationWindow.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AnimationWindow.cpp; sourceTree = "<group>"; };
@@ -247,6 +249,7 @@
 		1E73E6392F05105A0090D1DA = {
 			isa = PBXGroup;
 			children = (
+				1E19DEEE2F557EE7009F2E30 /* ModelImporter_PLY.cpp */,
 				1E73E7132F0510B40090D1DA /* main_MacOS.mm */,
 				1E73E64C2F0510A90090D1DA /* AnimationWindow.h */,
 				1E73E64D2F0510A90090D1DA /* AnimationWindow.cpp */,
@@ -523,6 +526,7 @@
 				1E73E6EC2F0510A90090D1DA /* DecalWindow.cpp in Sources */,
 				1E73E6ED2F0510A90090D1DA /* ArmatureWindow.cpp in Sources */,
 				1E73E6EE2F0510A90090D1DA /* VoxelGridWindow.cpp in Sources */,
+				1E19DEEF2F557EE7009F2E30 /* ModelImporter_PLY.cpp in Sources */,
 				1E73E6EF2F0510A90090D1DA /* MaterialPickerWindow.cpp in Sources */,
 				1E73E6F02F0510A90090D1DA /* EnvProbeWindow.cpp in Sources */,
 				1E73E6F12F0510A90090D1DA /* AnimationWindow.cpp in Sources */,
