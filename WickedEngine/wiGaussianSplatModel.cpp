@@ -233,7 +233,20 @@ namespace wi
 		device->BindUAV(&sortedIndexBuffer, 1, cmd);
 		device->BindUAV(&distanceBuffer, 2, cmd);
 		device->BindConstantBuffer(&constantBuffer, CBSLOT_GAUSSIANSPLAT, cmd);
-		device->Dispatch(((uint32_t)positions.size() + 63u) / 64u, 1, 1, cmd);
+
+		// Some GPU can't exceed dispatch group count of 65535 in single dimension (DX12 validation), so I do multiple dispatches with max 65535 group count each:
+		int remaining_threadgroups = ((int)positions.size() + GAUSSIAN_COMPUTE_THREADSIZE - 1) / GAUSSIAN_COMPUTE_THREADSIZE;
+		uint32_t group_offset = 0;
+		while (remaining_threadgroups > 0)
+		{
+			uint32_t dispatch_offset = group_offset * GAUSSIAN_COMPUTE_THREADSIZE;
+			device->PushConstants(&dispatch_offset, sizeof(dispatch_offset), cmd);
+			const uint32_t threadgroups = (uint32_t)std::min(remaining_threadgroups, 65535);
+			device->Dispatch(threadgroups, 1, 1, cmd);
+			remaining_threadgroups -= threadgroups;
+			group_offset += threadgroups;
+		}
+
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Buffer(&indirectBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
@@ -242,8 +255,10 @@ namespace wi
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
+
 		wi::gpusortlib::Sort((uint32_t)positions.size(), distanceBuffer, indirectBuffer, offsetof(IndirectDrawArgsInstanced, InstanceCount), sortedIndexBuffer, cmd);
 		device->Barrier(GPUBarrier::Buffer(&indirectBuffer, ResourceState::SHADER_RESOURCE, ResourceState::INDIRECT_ARGUMENT), cmd);
+
 		device->EventEnd(cmd);
 	}
 

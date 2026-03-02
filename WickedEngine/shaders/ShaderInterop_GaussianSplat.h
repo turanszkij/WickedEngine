@@ -22,4 +22,6 @@ struct GaussianSplatCB
 };
 CONSTANTBUFFER(cb, GaussianSplatCB, CBSLOT_GAUSSIANSPLAT);
 
+static const uint GAUSSIAN_COMPUTE_THREADSIZE = 64;
+
 #endif // WI_SHADERINTEROP_GAUSSIAN_SPLAT_H

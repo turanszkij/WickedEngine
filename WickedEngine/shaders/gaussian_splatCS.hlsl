@@ -7,16 +7,22 @@ RWStructuredBuffer<IndirectDrawArgsInstanced> indirectBuffer : register(u0);
 RWStructuredBuffer<uint> sortedIndexBuffer : register(u1);
 RWStructuredBuffer<float> distanceBuffer : register(u2);
 
-[numthreads(64, 1, 1)]
+struct Push
+{
+	uint dispatch_offset;
+};
+PUSHCONSTANT(push, Push);
+
+[numthreads(GAUSSIAN_COMPUTE_THREADSIZE, 1, 1)]
 void main(uint DTid : SV_DispatchThreadID)
 {
+	const uint splatIndex = push.dispatch_offset + DTid;
+
 	uint totalCount;
 	uint stride;
 	splats.GetDimensions(totalCount, stride);
-	if (DTid >= totalCount)
+	if (splatIndex >= totalCount)
 		return;
-
-	const uint splatIndex = DTid;
 
 	ShaderSphere sphere;
 	sphere.center = mul(cb.transform.GetMatrix(), float4(splats[splatIndex].position, 1)).xyz;
