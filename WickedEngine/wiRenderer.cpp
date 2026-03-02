@@ -5643,7 +5643,14 @@ void UpdateRenderDataAsync(
 		const wi::GaussianSplatModel& splat = vis.scene->gaussian_splats[i];
 		if (!vis.camera->frustum.CheckBoxFast(splat.aabb))
 			continue;
-		vis.scene->gaussian_splats[i].Update(cmd);
+		XMFLOAT4X4 matrix = wi::math::IDENTITY_MATRIX;
+		Entity entity = vis.scene->gaussian_splats.GetEntity(i);
+		const TransformComponent* transform = vis.scene->transforms.GetComponent(entity);
+		if (transform != nullptr)
+		{
+			matrix = transform->world;
+		}
+		vis.scene->gaussian_splats[i].Update(matrix, cmd);
 	}
 
 	if (vis.scene->textureStreamingFeedbackBuffer.IsValid())

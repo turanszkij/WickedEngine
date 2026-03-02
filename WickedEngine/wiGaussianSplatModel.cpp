@@ -167,43 +167,23 @@ namespace wi
 		success = device->CreateBuffer(&desc, nullptr, &distanceBuffer);
 		assert(success);
 		device->SetName(&distanceBuffer, "GaussianSplatModel::distanceBuffer");
+
+		desc.stride = sizeof(GaussianSplatCB);
+		desc.size = desc.stride;
+		desc.bind_flags = BindFlag::CONSTANT_BUFFER;
+		desc.misc_flags = ResourceMiscFlag::NONE;
+		success = device->CreateBuffer(&desc, nullptr, &constantBuffer);
+		assert(success);
+		device->SetName(&constantBuffer, "GaussianSplatModel::constantBuffer");
 	}
 
-	void GaussianSplatModel::Update(wi::graphics::CommandList cmd)
+	void GaussianSplatModel::Update(const XMFLOAT4X4& transform, wi::graphics::CommandList cmd)
 	{
 		GraphicsDevice* device = GetDevice();
 		device->EventBegin("Gaussian Splat Update", cmd);
 
-		IndirectDrawArgsInstanced args = {};
-		args.VertexCountPerInstance = 4;
-		args.InstanceCount = 0; // shader atomic dest
-		args.StartVertexLocation = 0;
-		args.StartInstanceLocation = 0;
-		device->UpdateBuffer(&indirectBuffer, &args, cmd);
-		device->Barrier(GPUBarrier::Buffer(&indirectBuffer, ResourceState::COPY_DST, ResourceState::UNORDERED_ACCESS), cmd);
-
-		device->BindComputeShader(&computeShader, cmd);
-		device->BindResource(&splatBuffer, 0, cmd);
-		device->BindUAV(&indirectBuffer, 0, cmd);
-		device->BindUAV(&sortedIndexBuffer, 1, cmd);
-		device->BindUAV(&distanceBuffer, 2, cmd);
-		device->Dispatch(((uint32_t)positions.size() + 63u) / 64u, 1, 1, cmd);
-		GPUBarrier barriers[] = {
-			GPUBarrier::Buffer(&indirectBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-			GPUBarrier::Buffer(&sortedIndexBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-			GPUBarrier::Buffer(&distanceBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-		wi::gpusortlib::Sort((uint32_t)positions.size(), distanceBuffer, indirectBuffer, offsetof(IndirectDrawArgsInstanced, InstanceCount), sortedIndexBuffer, cmd);
-		device->Barrier(GPUBarrier::Buffer(&indirectBuffer, ResourceState::SHADER_RESOURCE, ResourceState::INDIRECT_ARGUMENT), cmd);
-		device->EventEnd(cmd);
-	}
-
-	void GaussianSplatModel::Draw(wi::graphics::CommandList cmd)
-	{
-		GraphicsDevice* device = GetDevice();
-		device->EventBegin("Gaussian Splat Render", cmd);
-		device->BindPipelineState(&pipelineState, cmd);
+		XMFLOAT4X4 transform_inverse;
+		XMStoreFloat4x4(&transform_inverse, XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform)));
 
 		const uint32_t totalSphericalHarmonicsComponentCount = uint32_t(f_rest.size() / positions.size());
 		const uint32_t sphericalHarmonicsCoefficientsPerChannel = totalSphericalHarmonicsComponentCount / 3;
@@ -224,14 +204,58 @@ namespace wi
 			sphericalHarmonicsDegree = 3;
 			splatStride += 7 * 3;
 		}
-		GaussianSplatPush push = {};
-		push.sphericalHarmonicsDegree = sphericalHarmonicsDegree;
-		push.splatStride = splatStride;
-		device->PushConstants(&push, sizeof(push), cmd);
 
+		GaussianSplatCB cb = {};
+		cb.transform.Create(transform);
+		cb.transform_inverse.Create(transform_inverse);
+		cb.sphericalHarmonicsDegree = sphericalHarmonicsDegree;
+		cb.splatStride = splatStride;
+		device->UpdateBuffer(&constantBuffer, &cb, cmd);
+
+		IndirectDrawArgsInstanced args = {};
+		args.VertexCountPerInstance = 4;
+		args.InstanceCount = 0; // shader atomic dest
+		args.StartVertexLocation = 0;
+		args.StartInstanceLocation = 0;
+		device->UpdateBuffer(&indirectBuffer, &args, cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Buffer(&constantBuffer, ResourceState::COPY_DST, ResourceState::CONSTANT_BUFFER),
+				GPUBarrier::Buffer(&indirectBuffer, ResourceState::COPY_DST, ResourceState::UNORDERED_ACCESS),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->BindComputeShader(&computeShader, cmd);
+		device->BindResource(&splatBuffer, 0, cmd);
+		device->BindUAV(&indirectBuffer, 0, cmd);
+		device->BindUAV(&sortedIndexBuffer, 1, cmd);
+		device->BindUAV(&distanceBuffer, 2, cmd);
+		device->BindConstantBuffer(&constantBuffer, CBSLOT_GAUSSIANSPLAT, cmd);
+		device->Dispatch(((uint32_t)positions.size() + 63u) / 64u, 1, 1, cmd);
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Buffer(&indirectBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+				GPUBarrier::Buffer(&sortedIndexBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+				GPUBarrier::Buffer(&distanceBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+		wi::gpusortlib::Sort((uint32_t)positions.size(), distanceBuffer, indirectBuffer, offsetof(IndirectDrawArgsInstanced, InstanceCount), sortedIndexBuffer, cmd);
+		device->Barrier(GPUBarrier::Buffer(&indirectBuffer, ResourceState::SHADER_RESOURCE, ResourceState::INDIRECT_ARGUMENT), cmd);
+		device->EventEnd(cmd);
+	}
+
+	void GaussianSplatModel::Draw(wi::graphics::CommandList cmd)
+	{
+		GraphicsDevice* device = GetDevice();
+		device->EventBegin("Gaussian Splat Render", cmd);
+		device->BindPipelineState(&pipelineState, cmd);
 		device->BindResource(&splatBuffer, 0, cmd);
 		device->BindResource(&sortedIndexBuffer, 1, cmd);
 		device->BindResource(&shBuffer, 2, cmd);
+		device->BindConstantBuffer(&constantBuffer, CBSLOT_GAUSSIANSPLAT, cmd);
 		device->DrawInstancedIndirect(&indirectBuffer, 0, cmd);
 		device->EventEnd(cmd);
 	}

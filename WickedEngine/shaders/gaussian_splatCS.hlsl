@@ -16,11 +16,11 @@ void main(uint DTid : SV_DispatchThreadID)
 	if (DTid >= totalCount)
 		return;
 
-	const uint splatInndex = DTid;
+	const uint splatIndex = DTid;
 
 	ShaderSphere sphere;
-	sphere.center = splats[splatInndex].position;
-	sphere.radius = splats[splatInndex].radius;
+	sphere.center = mul(cb.transform.GetMatrix(), float4(splats[splatIndex].position, 1)).xyz;
+	sphere.radius = max3(mul(cb.transform.GetMatrixAdjoint(), splats[splatIndex].radius.xxx));
 
 	bool visible = GetCamera().frustum.intersects(sphere);
 
@@ -38,11 +38,11 @@ void main(uint DTid : SV_DispatchThreadID)
 	{
 		uint prevCount = waveOffset + WavePrefixSum(1);
 
-		sortedIndexBuffer[prevCount] = splatInndex;
+		sortedIndexBuffer[prevCount] = splatIndex;
 
 		float3 eyeVector = sphere.center - GetCamera().position;
 		float distSq = dot(eyeVector, eyeVector);
-		distanceBuffer[splatInndex] = -distSq;
+		distanceBuffer[splatIndex] = -distSq;
 	}
 
 }

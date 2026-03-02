@@ -5,8 +5,6 @@ StructuredBuffer<GaussianSplat> splats : register(t0);
 StructuredBuffer<uint> sortedIndexBuffer : register(t1);
 Buffer<half> shBuffer : register(t2);
 
-PUSHCONSTANT(push, GaussianSplatPush);
-
 static const float3 BILLBOARD[] = {
 	float3(-1, -1, 0),	// 0
 	float3(1, -1, 0),	// 1
@@ -141,13 +139,13 @@ half3 fetchViewDependentRadiance(in uint splatIndex, in float3 worldViewDir)
 	// contribution is null if MAX_SH_DEGREE < 1
 	half3 rgb = half3(0.0, 0.0, 0.0);
 
-	uint shIndex = splatIndex * push.splatStride;
+	uint shIndex = splatIndex * cb.splatStride;
 
 	const half x = worldViewDir.x;
 	const half y = worldViewDir.y;
 	const half z = worldViewDir.z;
 
-	if (push.sphericalHarmonicsDegree >= 1)
+	if (cb.sphericalHarmonicsDegree >= 1)
 	{
 		// SH coefficients for degree 1 (1,2,3)
 		half3 shd1[3] = {
@@ -166,7 +164,7 @@ half3 fetchViewDependentRadiance(in uint splatIndex, in float3 worldViewDir)
 	const half yz = y * z;
 	const half xz = x * z;
 
-	if (push.sphericalHarmonicsDegree >= 2)
+	if (cb.sphericalHarmonicsDegree >= 2)
 	{
 		// SH coefficients for degree 2 (4 5 6 7 8)
 		half3 shd2[5] = {
@@ -186,7 +184,7 @@ half3 fetchViewDependentRadiance(in uint splatIndex, in float3 worldViewDir)
 	const half zxx = z * xx;
 	const half xyz = x * y * z;
 
-	if (push.sphericalHarmonicsDegree >= 3)
+	if (cb.sphericalHarmonicsDegree >= 3)
 	{
 		// SH coefficients for degree 3 (9,10,11,12,13,14,15)
 		half3 shd3[7] = {
@@ -213,9 +211,9 @@ void main(in uint vertexID : SV_VertexID, in uint instanceID : SV_InstanceID, ou
 {
 	const uint splatIndex = sortedIndexBuffer[instanceID];
 
-	const float3 splatCenter = splats[splatIndex].position;
+	const float3 splatCenter = mul(cb.transform.GetMatrix(), float4(splats[splatIndex].position, 1)).xyz;
 	color = unpack_half4(splats[splatIndex].color);
-	float3 viewDir = normalize(GetCamera().position - splatCenter);
+	float3 viewDir = normalize(mul(cb.transform_inverse.GetMatrix(), float4(GetCamera().position, 1)).xyz - splatCenter);
 	color.rgb += fetchViewDependentRadiance(splatIndex, viewDir);
 	color.rgb = RemoveSRGBCurve_Fast(color.rgb); // Checked against SuperSplat Editor, result is more similar with gamma remove
 

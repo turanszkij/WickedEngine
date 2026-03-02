@@ -1,6 +1,7 @@
 #ifndef WI_SHADERINTEROP_GAUSSIAN_SPLAT_H
 #define WI_SHADERINTEROP_GAUSSIAN_SPLAT_H
 #include "ShaderInterop.h"
+#include "ShaderInterop_Renderer.h"
 
 struct GaussianSplat
 {
@@ -10,10 +11,15 @@ struct GaussianSplat
 	float3 cov3D_M11_M12_M13;
 	float3 cov3D_M22_M23_M33;
 };
-struct GaussianSplatPush
+struct GaussianSplatCB
 {
+	ShaderTransform transform;
+	ShaderTransform transform_inverse;
 	int sphericalHarmonicsDegree;
 	int splatStride;
+	int padding0;
+	int padding1;
 };
+CONSTANTBUFFER(cb, GaussianSplatCB, CBSLOT_GAUSSIANSPLAT);
 
 #endif // WI_SHADERINTEROP_GAUSSIAN_SPLAT_H
