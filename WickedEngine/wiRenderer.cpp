@@ -11233,7 +11233,10 @@ void BindCameraCB(
 	shadercam.internal_resolution = uint2((uint)camera.width, (uint)camera.height);
 	shadercam.internal_resolution_rcp = float2(1.0f / std::max(1u, shadercam.internal_resolution.x), 1.0f / std::max(1u, shadercam.internal_resolution.y));
 
-	shadercam.tan_halffov = std::tan(0.5f * camera.fov);
+	const float devicePixelRatio = 1.0f;
+	const float focalLengthX = shadercam.projection._11 * 0.5f * devicePixelRatio * shadercam.internal_resolution.x;
+	const float focalLengthY = shadercam.projection._22 * 0.5f * devicePixelRatio * shadercam.internal_resolution.y;
+	shadercam.focal = float2(focalLengthX, focalLengthY);
 
 	shadercam.scissor.x = camera.scissor.left;
 	shadercam.scissor.y = camera.scissor.top;

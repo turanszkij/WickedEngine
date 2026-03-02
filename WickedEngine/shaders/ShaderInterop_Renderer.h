@@ -1409,10 +1409,9 @@ struct alignas(16) ShaderCamera
 	int texture_vxgi_diffuse_index;
 	int texture_vxgi_specular_index;
 
+	float2 focal;
 	int texture_reprojected_depth_index;
 	uint options;
-	uint padding0;
-	float tan_halffov; // tan(0.5 * fov)
 
 #ifdef __cplusplus
 	inline void init()

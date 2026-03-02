@@ -62,17 +62,25 @@ namespace wi
 				splat.scale.y = std::exp(scales[splatIdx].y);
 				splat.scale.z = std::exp(scales[splatIdx].z);
 
-				static const float sqrt8 = std::sqrt(8.0f);
-				splat.scale.x *= sqrt8;
-				splat.scale.y *= sqrt8;
-				splat.scale.z *= sqrt8;
-
 				static constexpr float SH_C0 = 0.28209479177387814f;
 				splat.f_dc.x = saturate(0.5f + SH_C0 * f_dc[splatIdx].x);
 				splat.f_dc.y = saturate(0.5f + SH_C0 * f_dc[splatIdx].y);
 				splat.f_dc.z = saturate(0.5f + SH_C0 * f_dc[splatIdx].z);
 
 				splat.opacity = saturate(1.0f / (1.0f + std::exp(-opacities[splatIdx])));
+
+				const XMMATRIX scaleMatrix = XMMatrixScaling(splat.scale.x, splat.scale.y, splat.scale.z);
+				const XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(XMLoadFloat4(&splat.rotation));
+				const XMMATRIX covarianceMatrix = XMMatrixMultiply(scaleMatrix, rotationMatrix);
+				const XMMATRIX transformedCovarianceMatrix = XMMatrixMultiply(XMMatrixTranspose(covarianceMatrix), covarianceMatrix);
+				XMFLOAT3X3 transformedCovariance;
+				XMStoreFloat3x3(&transformedCovariance, transformedCovarianceMatrix);
+				splat.cov3D_M11_M12_M13.x = transformedCovariance._11;
+				splat.cov3D_M11_M12_M13.y = transformedCovariance._12;
+				splat.cov3D_M11_M12_M13.z = transformedCovariance._13;
+				splat.cov3D_M22_M23_M33.x = transformedCovariance._22;
+				splat.cov3D_M22_M23_M33.y = transformedCovariance._23;
+				splat.cov3D_M22_M23_M33.z = transformedCovariance._33;
 
 				float* dst = (float*)splat.f_rest;
 

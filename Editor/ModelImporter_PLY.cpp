@@ -121,16 +121,16 @@ void ImportModel_PLY(const std::string& fileName, wi::scene::Scene& scene)
 		{
 			// It's a gaussian splat model:
 			wi::GaussianSplatModel& splat = scene.gaussian_splats.Create(entity);
+			// These are flipping the model vertically, was needed on the gaussian models I tested with:
 			for (auto& x : positions)
 			{
-				//x.y *= -1;
+				x.y *= -1;
 			}
 			for (auto& x : rotations)
 			{
 				x = XMFLOAT4(x.y, x.z, x.w, x.x);
-				//x.x = -x.x;
-				//x.y = -x.y;
-				//x.z = -x.z;
+				x.x = -x.x;
+				x.z = -x.z;
 				XMVECTOR Q = XMLoadFloat4(&x);
 				Q = XMQuaternionNormalize(Q);
 				XMStoreFloat4(&x, Q);
