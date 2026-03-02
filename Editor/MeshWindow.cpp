@@ -814,8 +814,8 @@ void MeshWindow::Create(EditorComponent* _editor)
 	}));
 	AddWidget(&morphTargetSlider);
 
-	lodgenButton.Create("LOD Gen");
-	lodgenButton.SetTooltip("Generate LODs (levels of detail).");
+	lodgenButton.Create("Generate LODs");
+	lodgenButton.SetTooltip("Generate level of detail meshes.");
 	lodgenButton.OnClick([this, forEachSelected] (auto args) {
 		forEachSelected([this] (auto mesh, auto args) {
 			if (mesh->subsets_per_lod == 0)
@@ -926,6 +926,31 @@ void MeshWindow::Create(EditorComponent* _editor)
 		SetEntity(entity, subset);
 	});
 	AddWidget(&lodgenButton);
+
+	lodDeleteButton.Create("Delete LODs");
+	lodDeleteButton.SetTooltip("Remove all level of detail meshes.");
+	lodDeleteButton.OnClick([this, forEachSelected](auto args) {
+		forEachSelected([](auto mesh, auto args) {
+			if (mesh->subsets_per_lod == 0)
+				return;
+			uint32_t subsets_per_lod = mesh->subsets_per_lod;
+			mesh->subsets.resize(subsets_per_lod);
+			uint32_t index_count = 0;
+			for (uint32_t i = 0; i < subsets_per_lod; ++i)
+			{
+				index_count = std::max(index_count, mesh->subsets[i].indexOffset + mesh->subsets[i].indexCount);
+			}
+			mesh->indices.resize(index_count);
+			mesh->subsets_per_lod = 0;
+			mesh->CreateRenderData();
+			if (mesh->IsBVHEnabled())
+			{
+				mesh->BuildBVH();
+			}
+		})(args);
+		SetEntity(entity, subset);
+	});
+	AddWidget(&lodDeleteButton);
 
 	lodCountSlider.Create(2, 10, 6, 8, "LOD Count: ");
 	lodCountSlider.SetTooltip("This is how many levels of detail will be created.");
@@ -1172,6 +1197,7 @@ void MeshWindow::ResizeLayout()
 	layout.add(morphTargetSlider);
 
 	layout.add_fullwidth(lodgenButton);
+	layout.add_fullwidth(lodDeleteButton);
 	layout.add(lodCountSlider);
 	layout.add(lodQualitySlider);
 	layout.add(lodErrorSlider);

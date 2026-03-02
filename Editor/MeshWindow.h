@@ -42,6 +42,7 @@ public:
 	wi::gui::Slider morphTargetSlider;
 
 	wi::gui::Button lodgenButton;
+	wi::gui::Button lodDeleteButton;
 	wi::gui::Slider lodCountSlider;
 	wi::gui::Slider lodQualitySlider;
 	wi::gui::Slider lodErrorSlider;
