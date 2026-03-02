@@ -343,4 +343,46 @@ namespace wi
 
 		wilog("wi::GaussianSplatModel Initialized (%d ms)", (int)std::round(timer.elapsed()));
 	}
+
+	int GaussianSplatModel::GetSphericalHarmonicsDegree() const
+	{
+		const uint32_t totalSphericalHarmonicsComponentCount = uint32_t(f_rest.size() / positions.size());
+		const uint32_t sphericalHarmonicsCoefficientsPerChannel = totalSphericalHarmonicsComponentCount / 3;
+		int sphericalHarmonicsDegree = 0;
+		if (sphericalHarmonicsCoefficientsPerChannel >= 3)
+		{
+			sphericalHarmonicsDegree = 1;
+		}
+		if (sphericalHarmonicsCoefficientsPerChannel >= 8)
+		{
+			sphericalHarmonicsDegree = 2;
+		}
+		if (sphericalHarmonicsCoefficientsPerChannel == 15)
+		{
+			sphericalHarmonicsDegree = 3;
+		}
+		return sphericalHarmonicsDegree;
+	}
+	size_t GaussianSplatModel::GetMemorySizeCPU() const
+	{
+		size_t ret = 0;
+		ret += positions.size() * sizeof(XMFLOAT3);
+		ret += rotations.size() * sizeof(XMFLOAT4);
+		ret += scales.size() * sizeof(XMFLOAT3);
+		ret += opacities.size() * sizeof(float);
+		ret += f_dc.size() * sizeof(XMFLOAT3);
+		ret += f_rest.size() * sizeof(float);
+		return ret;
+	}
+	size_t GaussianSplatModel::GetMemorySizeGPU() const
+	{
+		size_t ret = 0;
+		ret += splatBuffer.desc.size;
+		ret += shBuffer.desc.size;
+		ret += indirectBuffer.desc.size;
+		ret += sortedIndexBuffer.desc.size;
+		ret += distanceBuffer.desc.size;
+		ret += constantBuffer.desc.size;
+		return ret;
+	}
 }

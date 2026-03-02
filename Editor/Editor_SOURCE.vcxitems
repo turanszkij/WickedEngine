@@ -29,6 +29,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)EnvProbeWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ExpressionWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)ForceFieldWindow.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)GaussianSplatWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)GeneralWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)HairParticleWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)HierarchyWindow.cpp" />
@@ -110,6 +111,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ExpressionWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)FontAwesomeV6.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ForceFieldWindow.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)GaussianSplatWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)GeneralWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)HairParticleWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)HierarchyWindow.h" />

@@ -29,6 +29,11 @@ namespace wi
 		wi::graphics::GPUBuffer distanceBuffer;
 		wi::graphics::GPUBuffer constantBuffer;
 
+		size_t GetSplatCount() const { return positions.size(); };
+		int GetSphericalHarmonicsDegree() const;
+		size_t GetMemorySizeCPU() const;
+		size_t GetMemorySizeGPU() const;
+
 		void CreateRenderData();
 
 		void Update(const XMFLOAT4X4& transform, wi::graphics::CommandList cmd);

@@ -52,6 +52,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	filterCombo.AddItem(ICON_VEHICLE, (uint64_t)Filter::Vehicle);
 	filterCombo.AddItem(ICON_CONSTRAINT, (uint64_t)Filter::Constraint);
 	filterCombo.AddItem(ICON_SPLINE, (uint64_t)Filter::Spline);
+	filterCombo.AddItem(ICON_GAUSSIAN_SPLAT, (uint64_t)Filter::GaussianSplat);
 	filterCombo.SetTooltip("Apply filtering to the Entities by components");
 	filterCombo.SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
 	filterCombo.OnSelect([this](wi::gui::EventArgs args) {
@@ -163,6 +164,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	metadataWnd.Create(editor);
 	constraintWnd.Create(editor);
 	splineWnd.Create(editor);
+	gaussiansplatWnd.Create(editor);
 
 	enum ADD_THING
 	{
@@ -543,6 +545,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	AddWidget(&metadataWnd);
 	AddWidget(&constraintWnd);
 	AddWidget(&splineWnd);
+	AddWidget(&gaussiansplatWnd);
 
 	materialWnd.SetVisible(false);
 	weatherWnd.SetVisible(false);
@@ -578,6 +581,7 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	metadataWnd.SetVisible(false);
 	constraintWnd.SetVisible(false);
 	splineWnd.SetVisible(false);
+	gaussiansplatWnd.SetVisible(false);
 
 	XMFLOAT2 size = XMFLOAT2(338, 500);
 	if (editor->main->config.GetSection("layout").Has("components.width"))
@@ -1101,6 +1105,19 @@ void ComponentsWindow::ResizeLayout()
 	{
 		metadataWnd.SetVisible(false);
 	}
+
+	if (scene.gaussian_splats.Contains(gaussiansplatWnd.entity))
+	{
+		gaussiansplatWnd.SetVisible(true);
+		gaussiansplatWnd.SetPos(pos);
+		gaussiansplatWnd.SetSize(XMFLOAT2(width, gaussiansplatWnd.GetScale().y));
+		pos.y += gaussiansplatWnd.GetSize().y;
+		pos.y += padding;
+	}
+	else
+	{
+		gaussiansplatWnd.SetVisible(false);
+	}
 }
 
 
@@ -1309,6 +1326,10 @@ void ComponentsWindow::PushToEntityTree(wi::ecs::Entity entity, int level)
 			if (scene.expressions.Contains(entity))
 			{
 				item.name += ICON_EXPRESSION " ";
+			}
+			if (scene.gaussian_splats.Contains(entity))
+			{
+				item.name += ICON_GAUSSIAN_SPLAT " ";
 			}
 			bool bone_found = false;
 			for (size_t i = 0; i < scene.armatures.GetCount() && !bone_found; ++i)
@@ -1520,6 +1541,7 @@ bool ComponentsWindow::CheckEntityFilter(const wi::ecs::Entity entity) const
 		(has_flag(filter, Filter::Metadata) && scene.metadatas.Contains(entity)) ||
 		(has_flag(filter, Filter::Constraint) && scene.constraints.Contains(entity)) ||
 		(has_flag(filter, Filter::Spline) && scene.splines.Contains(entity)) ||
+		(has_flag(filter, Filter::GaussianSplat) && scene.gaussian_splats.Contains(entity)) ||
 		(has_flag(filter, Filter::Vehicle) && (scene.rigidbodies.Contains(entity) && scene.rigidbodies.GetComponent(entity)->IsVehicle()))
 		)
 	{
