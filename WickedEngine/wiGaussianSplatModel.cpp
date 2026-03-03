@@ -14,6 +14,7 @@ using namespace wi::primitive;
 namespace wi
 {
 	static Shader computeShader;
+	static Shader computeShader_indirect;
 	static Shader vertexShader;
 	static Shader pixelShader;
 	static BlendState blendState;
@@ -186,7 +187,7 @@ namespace wi
 		aabb = aabb_rest.transform(matrix);
 	}
 
-	void GaussianSplatModel::UpdateGPU(const wi::scene::CameraComponent& camera, wi::graphics::CommandList cmd)
+	void GaussianSplatModel::UpdateGPU(wi::graphics::CommandList cmd, const XMFLOAT4X4* viewmatrices, uint32_t camera_count)
 	{
 		GraphicsDevice* device = GetDevice();
 		device->EventBegin("Gaussian Splat Update", cmd);
@@ -214,9 +215,14 @@ namespace wi
 		GaussianSplatCB cb = {};
 		cb.transform.Create(transform);
 		cb.transform_inverse.Create(transform_inverse);
-		XMStoreFloat4x4(&cb.modelViewMatrix, XMMatrixMultiply(XMLoadFloat4x4(&transform), camera.GetView()));
 		cb.sphericalHarmonicsDegree = sphericalHarmonicsDegree;
 		cb.splatStride = splatStride;
+		cb.cameraCount = camera_count;
+		const XMMATRIX modelMatrix = XMLoadFloat4x4(&transform);
+		for (uint32_t i = 0; i < camera_count; ++i)
+		{
+			XMStoreFloat4x4(cb.modelViewMatrices + i, XMMatrixMultiply(modelMatrix, XMLoadFloat4x4(viewmatrices + i)));
+		}
 		device->UpdateBuffer(&constantBuffer, &cb, cmd);
 
 		IndirectDrawArgsInstanced args = {};
@@ -264,7 +270,14 @@ namespace wi
 		}
 
 		wi::gpusortlib::Sort((uint32_t)positions.size(), distanceBuffer, indirectBuffer, offsetof(IndirectDrawArgsInstanced, InstanceCount), sortedIndexBuffer, cmd);
-		device->Barrier(GPUBarrier::Buffer(&indirectBuffer, ResourceState::SHADER_RESOURCE, ResourceState::INDIRECT_ARGUMENT), cmd);
+		device->Barrier(GPUBarrier::Buffer(&indirectBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS), cmd);
+
+		// InstanceCount multiplied by cameraCount on GPU after sorting:
+		device->BindComputeShader(&computeShader_indirect, cmd);
+		device->BindUAV(&indirectBuffer, 0, cmd);
+		device->BindConstantBuffer(&constantBuffer, CBSLOT_GAUSSIANSPLAT, cmd);
+		device->Dispatch(1, 1, 1, cmd);
+		device->Barrier(GPUBarrier::Buffer(&indirectBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::INDIRECT_ARGUMENT), cmd);
 
 		device->EventEnd(cmd);
 	}
@@ -314,6 +327,7 @@ namespace wi
 
 		static auto LoadShaders = []{
 			wi::renderer::LoadShader(ShaderStage::CS, computeShader, "gaussian_splatCS.cso");
+			wi::renderer::LoadShader(ShaderStage::CS, computeShader_indirect, "gaussian_splat_indirectCS.cso");
 			wi::renderer::LoadShader(ShaderStage::VS, vertexShader, "gaussian_splatVS.cso");
 			wi::renderer::LoadShader(ShaderStage::PS, pixelShader, "gaussian_splatPS.cso");
 		};
@@ -328,6 +342,7 @@ namespace wi
 
 		rasterizerState.cull_mode = CullMode::BACK;
 		rasterizerState.fill_mode = FillMode::SOLID;
+		rasterizerState.depth_clip_enable = true;
 
 		blendState.render_target[0].blend_enable = true;
 		blendState.render_target[0].src_blend = Blend::ONE;

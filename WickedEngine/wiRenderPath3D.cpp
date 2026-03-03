@@ -2102,6 +2102,8 @@ namespace wi
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
+		wi::renderer::UpdateGaussianSplatsForCamera(*scene, *camera, cmd);
+
 		wi::graphics::Rect scissor = GetScissorInternalResolution();
 		device->BindScissorRects(1, &scissor, cmd);
 

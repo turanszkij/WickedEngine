@@ -19,11 +19,11 @@ namespace wi
 		wi::vector<XMFLOAT3> scales;
 		wi::vector<float> opacities;
 		wi::vector<XMFLOAT3> f_dc;
-		wi::vector<float> f_rest; // number of floats depends on SH degree
+		wi::vector<float> f_rest; // number of floats depends on SH degree (L1:9, L2:24, L3:45)
 
 		// Below this are non-serialized attributes:
-		wi::primitive::AABB aabb_rest; // aabb without trasformation
-		wi::primitive::AABB aabb; // aabb with trasformation
+		wi::primitive::AABB aabb_rest; // aabb without transformation
+		wi::primitive::AABB aabb; // aabb with transformation
 		XMFLOAT4X4 transform = wi::math::IDENTITY_MATRIX;
 		XMFLOAT4X4 transform_inverse = wi::math::IDENTITY_MATRIX;
 		wi::graphics::GPUBuffer splatBuffer;
@@ -41,7 +41,7 @@ namespace wi
 		void CreateRenderData();
 
 		void Update(const XMFLOAT4X4& matrix);
-		void UpdateGPU(const wi::scene::CameraComponent& camera, wi::graphics::CommandList cmd); // culling and sorting
+		void UpdateGPU(wi::graphics::CommandList cmd, const XMFLOAT4X4* viewmatrices, uint32_t camera_count = 1); // culling and sorting. Multiple cameras can be provided when rendering will be performed to multiple destinations
 		void Draw(wi::graphics::CommandList cmd); // will be drawn with culling and sorting based on previous call to UpdateGPU
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);

@@ -15,11 +15,11 @@ struct GaussianSplatCB
 {
 	ShaderTransform transform;
 	ShaderTransform transform_inverse;
-	float4x4 modelViewMatrix;
+	float4x4 modelViewMatrices[6]; // 6 for cubemap rendering
 	int sphericalHarmonicsDegree;
 	int splatStride;
+	uint cameraCount;
 	int padding0;
-	int padding1;
 };
 CONSTANTBUFFER(cb, GaussianSplatCB, CBSLOT_GAUSSIANSPLAT);
 

@@ -328,7 +328,13 @@ namespace wi::renderer
 		bool distortion, 
 		wi::graphics::CommandList cmd
 	);
-	// Draw gaussian splats inside a render pass
+	// Does the gaussian splat culling and sorting for a single camera
+	void UpdateGaussianSplatsForCamera(
+		const wi::scene::Scene& scene,
+		const wi::scene::CameraComponent& camera,
+		wi::graphics::CommandList cmd
+	);
+	// Draw gaussian splats inside a render pass, the UpdateGaussianSplatsForCamera must have been called for this camera before this outside of render pass
 	void DrawGaussianSplats(
 		const wi::scene::Scene& scene,
 		const wi::scene::CameraComponent& camera,
