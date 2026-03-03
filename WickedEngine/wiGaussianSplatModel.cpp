@@ -5,6 +5,7 @@
 #include "wiTimer.h"
 #include "wiEventHandler.h"
 #include "wiGPUSortLib.h"
+#include "wiScene_Components.h"
 
 using namespace wi::math;
 using namespace wi::graphics;
@@ -24,13 +25,13 @@ namespace wi
 	{
 		GraphicsDevice* device = GetDevice();
 
-		aabb = AABB();
+		aabb_rest = AABB();
 
 		auto fill_gpu = [&](void* dest) {
 			GaussianSplat* splat_dest = (GaussianSplat*)dest;
 			for (size_t splatIdx = 0; splatIdx < positions.size(); ++splatIdx)
 			{
-				aabb.AddPoint(positions[splatIdx]);
+				aabb_rest.AddPoint(positions[splatIdx]);
 
 				GaussianSplat splat = {};
 				splat.position = positions[splatIdx];
@@ -177,13 +178,18 @@ namespace wi
 		device->SetName(&constantBuffer, "GaussianSplatModel::constantBuffer");
 	}
 
-	void GaussianSplatModel::Update(const XMFLOAT4X4& transform, wi::graphics::CommandList cmd)
+	void GaussianSplatModel::Update(const XMFLOAT4X4& matrix)
+	{
+		transform = matrix;
+		XMFLOAT4X4 transform_inverse;
+		XMStoreFloat4x4(&transform_inverse, XMMatrixInverse(nullptr, XMLoadFloat4x4(&matrix)));
+		aabb = aabb_rest.transform(matrix);
+	}
+
+	void GaussianSplatModel::UpdateGPU(const wi::scene::CameraComponent& camera, wi::graphics::CommandList cmd)
 	{
 		GraphicsDevice* device = GetDevice();
 		device->EventBegin("Gaussian Splat Update", cmd);
-
-		XMFLOAT4X4 transform_inverse;
-		XMStoreFloat4x4(&transform_inverse, XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform)));
 
 		const uint32_t totalSphericalHarmonicsComponentCount = uint32_t(f_rest.size() / positions.size());
 		const uint32_t sphericalHarmonicsCoefficientsPerChannel = totalSphericalHarmonicsComponentCount / 3;
@@ -208,6 +214,7 @@ namespace wi
 		GaussianSplatCB cb = {};
 		cb.transform.Create(transform);
 		cb.transform_inverse.Create(transform_inverse);
+		XMStoreFloat4x4(&cb.modelViewMatrix, XMMatrixMultiply(XMLoadFloat4x4(&transform), camera.GetView()));
 		cb.sphericalHarmonicsDegree = sphericalHarmonicsDegree;
 		cb.splatStride = splatStride;
 		device->UpdateBuffer(&constantBuffer, &cb, cmd);

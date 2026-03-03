@@ -5644,18 +5644,11 @@ void UpdateRenderDataAsync(
 		const wi::GaussianSplatModel& splat = vis.scene->gaussian_splats[i];
 		if (!vis.camera->frustum.CheckBoxFast(splat.aabb))
 			continue;
-		XMFLOAT4X4 matrix = wi::math::IDENTITY_MATRIX;
-		Entity entity = vis.scene->gaussian_splats.GetEntity(i);
-		const TransformComponent* transform = vis.scene->transforms.GetComponent(entity);
-		if (transform != nullptr)
-		{
-			matrix = transform->world;
-		}
 		if (prof_splats == 0)
 		{
 			prof_splats = wi::profiler::BeginRangeGPU("Gaussian Splat Culling and Sorting", cmd);
 		}
-		vis.scene->gaussian_splats[i].Update(matrix, cmd);
+		vis.scene->gaussian_splats[i].UpdateGPU(*vis.camera, cmd);
 	}
 	if (prof_splats != 0)
 	{

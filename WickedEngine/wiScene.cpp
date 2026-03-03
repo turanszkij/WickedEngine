@@ -5263,6 +5263,19 @@ namespace wi::scene
 			}
 
 		});
+
+		for (size_t i = 0; i < gaussian_splats.GetCount(); ++i)
+		{
+			const wi::GaussianSplatModel& splat = gaussian_splats[i];
+			XMFLOAT4X4 matrix = wi::math::IDENTITY_MATRIX;
+			Entity entity = gaussian_splats.GetEntity(i);
+			const TransformComponent* transform = transforms.GetComponent(entity);
+			if (transform != nullptr)
+			{
+				matrix = transform->world;
+			}
+			gaussian_splats[i].Update(matrix);
+		}
 	}
 	void Scene::RunWeatherUpdateSystem(wi::jobsystem::context& ctx)
 	{

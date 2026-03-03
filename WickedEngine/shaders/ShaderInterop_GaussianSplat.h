@@ -15,6 +15,7 @@ struct GaussianSplatCB
 {
 	ShaderTransform transform;
 	ShaderTransform transform_inverse;
+	float4x4 modelViewMatrix;
 	int sphericalHarmonicsDegree;
 	int splatStride;
 	int padding0;

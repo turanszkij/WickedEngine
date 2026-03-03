@@ -228,19 +228,18 @@ half3 fetchViewDependentRadiance(in uint splatIndex, in float3 worldViewDir)
 void main(in uint vertexID : SV_VertexID, in uint instanceID : SV_InstanceID, out float4 pos : SV_Position, out half4 color : COLOR, out half2 localPos : LOCALPOS)
 {
 	const uint splatIndex = sortedIndexBuffer[instanceID];
+	ShaderCamera camera = GetCamera();
 
 	const float3 splatCenter = float4(splats[splatIndex].position, 1).xyz;
 	color = unpack_half4(splats[splatIndex].color);
-	float3 viewDir = normalize(mul(cb.transform_inverse.GetMatrix(), float4(GetCamera().position, 1)).xyz - splatCenter);
+	float3 viewDir = normalize(mul(cb.transform_inverse.GetMatrix(), float4(camera.position, 1)).xyz - splatCenter);
 	color.rgb += fetchViewDependentRadiance(splatIndex, viewDir);
 	color.rgb = RemoveSRGBCurve_Fast(color.rgb); // Checked against SuperSplat Editor, result is more similar with gamma remove
 
-	float4x4 modelViewMatrix = mul(GetCamera().view, cb.transform.GetMatrix());
-
-	const float4 viewCenter = mul(modelViewMatrix, float4(splatCenter, 1.0));
-	const float4 clipCenter = mul(GetCamera().projection, viewCenter);
+	const float4 viewCenter = mul(cb.modelViewMatrix, float4(splatCenter, 1.0));
+	const float4 clipCenter = mul(camera.projection, viewCenter);
 	const float3x3 cov3Dm = fetchCovariance(splatIndex);
-	const float3 cov2Dv = threedgsCovarianceProjection(cov3Dm, viewCenter, GetCamera().focal, modelViewMatrix);  // computes the basis vectors of the extent of the projected covariance
+	const float3 cov2Dv = threedgsCovarianceProjection(cov3Dm, viewCenter, camera.focal, cb.modelViewMatrix);  // computes the basis vectors of the extent of the projected covariance
 	const float2 fragPos = BILLBOARD[vertexID].xy;
 
 	// We use sqrt(8) standard deviations instead of 3 to eliminate more of the splat with a very low opacity.
@@ -253,7 +252,7 @@ void main(in uint vertexID : SV_VertexID, in uint instanceID : SV_InstanceID, ou
 	else
 	{
 		const float3 ndcCenter = clipCenter.xyz / clipCenter.w;
-		const float2 ndcOffset = float2(fragPos.x * basisVector1 + fragPos.y * basisVector2) * /*frameInfo.basisViewport*/GetCamera().internal_resolution_rcp * 2.0 * /*frameInfo.inverseFocalAdjustment*/1.0;
+		const float2 ndcOffset = float2(fragPos.x * basisVector1 + fragPos.y * basisVector2) * /*frameInfo.basisViewport*/camera.internal_resolution_rcp * 2.0 * /*frameInfo.inverseFocalAdjustment*/1.0;
 		const float4 quadPos = float4(ndcCenter.xy + ndcOffset, ndcCenter.z, 1.0);
 		pos = quadPos;
 	}
