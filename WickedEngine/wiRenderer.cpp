@@ -2892,6 +2892,7 @@ void ClearWorld(Scene& scene)
 struct SHCAM
 {
 	XMMATRIX view;
+	XMMATRIX projection;
 	XMMATRIX view_projection;
 	Frustum frustum;					// This frustum can be used for intersection test with wiPrimitive primitives
 	BoundingFrustum boundingfrustum;	// This boundingfrustum can be used for frustum vs frustum intersection test
@@ -2903,15 +2904,14 @@ struct SHCAM
 		const XMMATRIX rot = XMMatrixRotationQuaternion(Q);
 		const XMVECTOR to = XMVector3TransformNormal(default_forward, rot);
 		const XMVECTOR up = XMVector3TransformNormal(default_up, rot);
-		const XMMATRIX V = XMMatrixLookToLH(E, to, up);
-		const XMMATRIX P = XMMatrixPerspectiveFovLH(fov, aspect, farPlane, nearPlane);
-		view = V;
-		view_projection = XMMatrixMultiply(V, P);
+		view = XMMatrixLookToLH(E, to, up);
+		projection = XMMatrixPerspectiveFovLH(fov, aspect, farPlane, nearPlane);
+		view_projection = XMMatrixMultiply(view, projection);
 		frustum.Create(view_projection);
 
-		BoundingFrustum::CreateFromMatrix(boundingfrustum, P);
+		BoundingFrustum::CreateFromMatrix(boundingfrustum, projection);
 		std::swap(boundingfrustum.Near, boundingfrustum.Far);
-		boundingfrustum.Transform(boundingfrustum, XMMatrixInverse(nullptr, V));
+		boundingfrustum.Transform(boundingfrustum, XMMatrixInverse(nullptr, view));
 		XMStoreFloat4(&boundingfrustum.Orientation, XMQuaternionNormalize(XMLoadFloat4(&boundingfrustum.Orientation)));
 	};
 };
@@ -3037,6 +3037,7 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 
 			const XMMATRIX lightProjection = XMMatrixOrthographicOffCenterLH(_min.x, _max.x, _min.y, _max.y, _max.z, _min.z); // notice reversed Z!
 			shcams[cascade].view = lightView;
+			shcams[cascade].projection = lightProjection;
 			shcams[cascade].view_projection = XMMatrixMultiply(lightView, lightProjection);
 		}
 
@@ -5638,23 +5639,6 @@ void UpdateRenderDataAsync(
 		wi::profiler::EndRange(range);
 	}
 
-	wi::profiler::range_id prof_splats = 0;
-	for (size_t i = 0; i < vis.scene->gaussian_splats.GetCount(); ++i)
-	{
-		const wi::GaussianSplatModel& splat = vis.scene->gaussian_splats[i];
-		if (!vis.camera->frustum.CheckBoxFast(splat.aabb))
-			continue;
-		if (prof_splats == 0)
-		{
-			prof_splats = wi::profiler::BeginRangeGPU("Gaussian Splat Culling and Sorting", cmd);
-		}
-		vis.scene->gaussian_splats[i].UpdateGPU(*vis.camera, cmd);
-	}
-	if (prof_splats != 0)
-	{
-		wi::profiler::EndRange(prof_splats);
-	}
-
 	if (vis.scene->textureStreamingFeedbackBuffer.IsValid())
 	{
 		device->ClearUAV(&vis.scene->textureStreamingFeedbackBuffer, 0, cmd);
@@ -6089,6 +6073,31 @@ void DrawSoftParticles(
 	device->BindShadingRate(ShadingRate::RATE_1X1, cmd);
 
 	wi::profiler::EndRange(range);
+}
+void UpdateGaussianSplatsForCamera(
+	const Scene& scene,
+	const CameraComponent& camera,
+	CommandList cmd
+)
+{
+	BindCommonResources(cmd);
+	BindCameraCB(camera, camera, camera, cmd);
+	wi::profiler::range_id prof_splats = 0;
+	for (size_t i = 0; i < scene.gaussian_splats.GetCount(); ++i)
+	{
+		const wi::GaussianSplatModel& splat = scene.gaussian_splats[i];
+		if (!camera.frustum.CheckBoxFast(splat.aabb))
+			continue;
+		if (prof_splats == 0)
+		{
+			prof_splats = wi::profiler::BeginRangeGPU("Gaussian Splat Culling and Sorting", cmd);
+		}
+		scene.gaussian_splats[i].UpdateGPU(cmd, &camera.View);
+	}
+	if (prof_splats != 0)
+	{
+		wi::profiler::EndRange(prof_splats);
+	}
 }
 void DrawGaussianSplats(
 	const Scene& scene,
@@ -9135,6 +9144,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		const float zFarP = probe.view_distance < 0 ? vis.camera->zFarP : probe.view_distance;
 		const float zNearPRcp = 1.0f / zNearP;
 		const float zFarPRcp = 1.0f / zFarP;
+		const Sphere culler(probe.position, zFarP);
 
 		Viewport vp;
 		vp.height = vp.width = (float)probe.texture.desc.width;
@@ -9147,32 +9157,56 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		cb.init();
 		for (uint32_t i = 0; i < arraysize(cameras); ++i)
 		{
-			XMStoreFloat4x4(&cb.cameras[i].view_projection, cameras[i].view_projection);
+			ShaderCamera& shadercam = cb.cameras[i];
+			XMStoreFloat4x4(&shadercam.view, cameras[i].view);
+			XMStoreFloat4x4(&shadercam.projection, cameras[i].projection);
+			XMStoreFloat4x4(&shadercam.view_projection, cameras[i].view_projection);
 			XMMATRIX invVP = XMMatrixInverse(nullptr, cameras[i].view_projection);
-			XMStoreFloat4x4(&cb.cameras[i].inverse_view_projection, invVP);
-			cb.cameras[i].position = probe.position;
-			cb.cameras[i].output_index = i;
-			cb.cameras[i].z_near = zNearP;
-			cb.cameras[i].z_near_rcp = zNearPRcp;
-			cb.cameras[i].z_far = zFarP;
-			cb.cameras[i].z_far_rcp = zFarPRcp;
-			cb.cameras[i].z_range = abs(zFarP - zNearP);
-			cb.cameras[i].z_range_rcp = 1.0f / std::max(0.0001f, cb.cameras[i].z_range);
-			cb.cameras[i].internal_resolution = uint2(probe.texture.desc.width, probe.texture.desc.height);
-			cb.cameras[i].internal_resolution_rcp.x = 1.0f / cb.cameras[i].internal_resolution.x;
-			cb.cameras[i].internal_resolution_rcp.y = 1.0f / cb.cameras[i].internal_resolution.y;
-			cb.cameras[i].sample_count = probe.GetSampleCount();
+			XMStoreFloat4x4(&shadercam.inverse_view_projection, invVP);
+			shadercam.position = probe.position;
+			shadercam.output_index = i;
+			shadercam.z_near = zNearP;
+			shadercam.z_near_rcp = zNearPRcp;
+			shadercam.z_far = zFarP;
+			shadercam.z_far_rcp = zFarPRcp;
+			shadercam.z_range = abs(zFarP - zNearP);
+			shadercam.z_range_rcp = 1.0f / std::max(0.0001f, shadercam.z_range);
+			shadercam.internal_resolution = uint2(probe.texture.desc.width, probe.texture.desc.height);
+			shadercam.internal_resolution_rcp.x = 1.0f / shadercam.internal_resolution.x;
+			shadercam.internal_resolution_rcp.y = 1.0f / shadercam.internal_resolution.y;
+			shadercam.sample_count = probe.GetSampleCount();
 
-			XMStoreFloat4(&cb.cameras[i].frustum_corners.cornersNEAR[0], XMVector3TransformCoord(XMVectorSet(-1, 1, 1, 1), invVP));
-			XMStoreFloat4(&cb.cameras[i].frustum_corners.cornersNEAR[1], XMVector3TransformCoord(XMVectorSet(1, 1, 1, 1), invVP));
-			XMStoreFloat4(&cb.cameras[i].frustum_corners.cornersNEAR[2], XMVector3TransformCoord(XMVectorSet(-1, -1, 1, 1), invVP));
-			XMStoreFloat4(&cb.cameras[i].frustum_corners.cornersNEAR[3], XMVector3TransformCoord(XMVectorSet(1, -1, 1, 1), invVP));
-			XMStoreFloat4(&cb.cameras[i].frustum_corners.cornersFAR[0], XMVector3TransformCoord(XMVectorSet(-1, 1, 0, 1), invVP));
-			XMStoreFloat4(&cb.cameras[i].frustum_corners.cornersFAR[1], XMVector3TransformCoord(XMVectorSet(1, 1, 0, 1), invVP));
-			XMStoreFloat4(&cb.cameras[i].frustum_corners.cornersFAR[2], XMVector3TransformCoord(XMVectorSet(-1, -1, 0, 1), invVP));
-			XMStoreFloat4(&cb.cameras[i].frustum_corners.cornersFAR[3], XMVector3TransformCoord(XMVectorSet(1, -1, 0, 1), invVP));
+			const float devicePixelRatio = 1.0f;
+			const float focalLengthX = shadercam.projection._11 * 0.5f * devicePixelRatio * shadercam.internal_resolution.x;
+			const float focalLengthY = shadercam.projection._22 * 0.5f * devicePixelRatio * shadercam.internal_resolution.y;
+			shadercam.focal = float2(focalLengthX, focalLengthY);
+
+			XMStoreFloat4(&shadercam.frustum_corners.cornersNEAR[0], XMVector3TransformCoord(XMVectorSet(-1, 1, 1, 1), invVP));
+			XMStoreFloat4(&shadercam.frustum_corners.cornersNEAR[1], XMVector3TransformCoord(XMVectorSet(1, 1, 1, 1), invVP));
+			XMStoreFloat4(&shadercam.frustum_corners.cornersNEAR[2], XMVector3TransformCoord(XMVectorSet(-1, -1, 1, 1), invVP));
+			XMStoreFloat4(&shadercam.frustum_corners.cornersNEAR[3], XMVector3TransformCoord(XMVectorSet(1, -1, 1, 1), invVP));
+			XMStoreFloat4(&shadercam.frustum_corners.cornersFAR[0], XMVector3TransformCoord(XMVectorSet(-1, 1, 0, 1), invVP));
+			XMStoreFloat4(&shadercam.frustum_corners.cornersFAR[1], XMVector3TransformCoord(XMVectorSet(1, 1, 0, 1), invVP));
+			XMStoreFloat4(&shadercam.frustum_corners.cornersFAR[2], XMVector3TransformCoord(XMVectorSet(-1, -1, 0, 1), invVP));
+			XMStoreFloat4(&shadercam.frustum_corners.cornersFAR[3], XMVector3TransformCoord(XMVectorSet(1, -1, 0, 1), invVP));
 		}
 		device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
+
+		if (probe_aabb.layerMask & vis.layerMask)
+		{
+			XMFLOAT4X4 viewmatrices[arraysize(cameras)];
+			for (uint32_t i = 0; i < arraysize(cameras); ++i)
+			{
+				viewmatrices[i] = cb.cameras[i].view;
+			}
+			for (size_t i = 0; i < vis.scene->gaussian_splats.GetCount(); ++i)
+			{
+				const wi::GaussianSplatModel& splat = vis.scene->gaussian_splats[i];
+				if (!culler.intersects(splat.aabb))
+					continue;
+				vis.scene->gaussian_splats[i].UpdateGPU(cmd, viewmatrices, arraysize(cameras));
+			}
+		}
 
 		if (vis.scene->weather.IsRealisticSky())
 		{
@@ -9401,8 +9435,6 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		// Scene will only be rendered if this is a real probe entity:
 		if (probe_aabb.layerMask & vis.layerMask)
 		{
-			Sphere culler(probe.position, zFarP);
-
 			renderQueue.init();
 			for (size_t i = 0; i < vis.scene->aabb_objects.size(); ++i)
 			{
@@ -9460,8 +9492,15 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			vis.scene->ocean.RenderForCubemap(cmd);
 		}
 
-		if (probe_aabb.layerMask & vis.layerMask) // only draw light visualizers if this is a hand placed probe
+		if (probe_aabb.layerMask & vis.layerMask) // only draw these if this is a hand placed probe
 		{
+			for (size_t i = 0; i < vis.scene->gaussian_splats.GetCount(); ++i)
+			{
+				const wi::GaussianSplatModel& splat = vis.scene->gaussian_splats[i];
+				if (!culler.intersects(splat.aabb))
+					continue;
+				vis.scene->gaussian_splats[i].Draw(cmd);
+			}
 			DrawLightVisualizers(vis, cmd, 6); // 6 instances so it will be replicated for every cubemap face
 		}
 

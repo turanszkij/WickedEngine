@@ -297,6 +297,7 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)gaussian_splatCS.hlsl" />
     <FxCompile Include="$(MSBuildThisFileDirectory)gaussian_splatPS.hlsl" />
     <FxCompile Include="$(MSBuildThisFileDirectory)gaussian_splatVS.hlsl" />
+    <FxCompile Include="$(MSBuildThisFileDirectory)gaussian_splat_indirectCS.hlsl" />
     <FxCompile Include="$(MSBuildThisFileDirectory)hairparticlePS_prepass_depthonly.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
     </FxCompile>

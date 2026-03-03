@@ -28,7 +28,17 @@ void main(uint DTid : SV_DispatchThreadID)
 	sphere.center = mul(cb.transform.GetMatrix(), float4(splats[splatIndex].position, 1)).xyz;
 	sphere.radius = max3(mul(cb.transform.GetMatrixAdjoint(), splats[splatIndex].radius.xxx));
 
-	bool visible = GetCamera().frustum.intersects(sphere);
+	const float3 eyeVector = sphere.center - GetCamera().position;
+	const float distSq = dot(eyeVector, eyeVector);
+
+	bool visible = false;
+	if (distSq < sqr(GetCamera().z_far))
+	{
+		for (uint i = 0; i < cb.cameraCount; ++i)
+		{
+			visible |= GetCameraIndexed(i).frustum.intersects(sphere);
+		}
+	}
 
 	// Optimization: reduce to 1 atomic operation per wave
 	const uint waveAppendCount = WaveActiveCountBits(visible);
@@ -43,11 +53,7 @@ void main(uint DTid : SV_DispatchThreadID)
 	if (visible)
 	{
 		uint prevCount = waveOffset + WavePrefixSum(1);
-
 		sortedIndexBuffer[prevCount] = splatIndex;
-
-		float3 eyeVector = sphere.center - GetCamera().position;
-		float distSq = dot(eyeVector, eyeVector);
 		distanceBuffer[splatIndex] = -distSq;
 	}
 
