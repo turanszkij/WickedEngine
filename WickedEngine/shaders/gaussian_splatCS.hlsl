@@ -1,14 +1,17 @@
 #include "globals.hlsli"
 #include "ShaderInterop_GaussianSplat.h"
 
-StructuredBuffer<GaussianSplat> splats : register(t0);
+StructuredBuffer<ShaderGaussianSplatModel> modelBuffer : register(t0);
 
 RWStructuredBuffer<IndirectDrawArgsInstanced> indirectBuffer : register(u0);
 RWStructuredBuffer<uint> sortedIndexBuffer : register(u1);
 RWStructuredBuffer<float> distanceBuffer : register(u2);
+RWStructuredBuffer<uint2> splatLookupBuffer : register(u3);
 
 struct Push
 {
+	uint model_index;
+	uint camera_count;
 	uint dispatch_offset;
 };
 PUSHCONSTANT(push, Push);
@@ -18,6 +21,9 @@ void main(uint DTid : SV_DispatchThreadID)
 {
 	const uint splatIndex = push.dispatch_offset + DTid;
 
+	ShaderGaussianSplatModel model = modelBuffer[push.model_index];
+	StructuredBuffer<GaussianSplat> splats = bindless_structured_gaussian_splats[descriptor_index(model.descriptor_splatBuffer)];
+
 	uint totalCount;
 	uint stride;
 	splats.GetDimensions(totalCount, stride);
@@ -25,8 +31,8 @@ void main(uint DTid : SV_DispatchThreadID)
 		return;
 
 	ShaderSphere sphere;
-	sphere.center = mul(cb.transform.GetMatrix(), float4(splats[splatIndex].position, 1)).xyz;
-	sphere.radius = max3(mul(cb.transform.GetMatrixAdjoint(), splats[splatIndex].radius.xxx));
+	sphere.center = mul(model.transform.GetMatrix(), float4(splats[splatIndex].position, 1)).xyz;
+	sphere.radius = max3(mul(model.transform.GetMatrixAdjoint(), splats[splatIndex].radius.xxx));
 
 	const float3 eyeVector = sphere.center - GetCamera().position;
 	const float distSq = dot(eyeVector, eyeVector);
@@ -34,7 +40,7 @@ void main(uint DTid : SV_DispatchThreadID)
 	bool visible = false;
 	if (distSq < sqr(GetCamera().z_far))
 	{
-		for (uint i = 0; i < cb.cameraCount; ++i)
+		for (uint i = 0; i < push.camera_count; ++i)
 		{
 			visible |= GetCameraIndexed(i).frustum.intersects(sphere);
 		}
@@ -53,8 +59,9 @@ void main(uint DTid : SV_DispatchThreadID)
 	if (visible)
 	{
 		uint prevCount = waveOffset + WavePrefixSum(1);
-		sortedIndexBuffer[prevCount] = splatIndex;
-		distanceBuffer[splatIndex] = -distSq;
+		sortedIndexBuffer[prevCount] = prevCount;
+		distanceBuffer[prevCount] = -distSq; // negative to sort back to front
+		splatLookupBuffer[prevCount] = uint2(push.model_index, splatIndex);
 	}
 
 }

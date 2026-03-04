@@ -1041,6 +1041,7 @@ namespace wi::scene
 		collider_count_gpu = 0;
 
 		topdown_hierarchy.clear();
+		gaussian_scene.Clear();
 	}
 	void Scene::MergeFastInternal(Scene& other)
 	{
@@ -5264,17 +5265,25 @@ namespace wi::scene
 
 		});
 
-		for (size_t i = 0; i < gaussian_splats.GetCount(); ++i)
+		if (gaussian_splats.GetCount() > 0)
 		{
-			const wi::GaussianSplatModel& splat = gaussian_splats[i];
-			XMFLOAT4X4 matrix = wi::math::IDENTITY_MATRIX;
-			Entity entity = gaussian_splats.GetEntity(i);
-			const TransformComponent* transform = transforms.GetComponent(entity);
-			if (transform != nullptr)
+			for (size_t i = 0; i < gaussian_splats.GetCount(); ++i)
 			{
-				matrix = transform->world;
+				const wi::GaussianSplatModel& splat = gaussian_splats[i];
+				XMFLOAT4X4 matrix = wi::math::IDENTITY_MATRIX;
+				Entity entity = gaussian_splats.GetEntity(i);
+				const TransformComponent* transform = transforms.GetComponent(entity);
+				if (transform != nullptr)
+				{
+					matrix = transform->world;
+				}
+				gaussian_splats[i].Update(matrix);
 			}
-			gaussian_splats[i].Update(matrix);
+			gaussian_scene.MakeReservations(gaussian_splats.GetData(), gaussian_splats.GetCount());
+		}
+		else
+		{
+			gaussian_scene.Clear();
 		}
 	}
 	void Scene::RunWeatherUpdateSystem(wi::jobsystem::context& ctx)
