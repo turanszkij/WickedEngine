@@ -1,9 +1,15 @@
 #include "globals.hlsli"
 #include "ShaderInterop_GaussianSplat.h"
 
-StructuredBuffer<GaussianSplat> splats : register(t0);
-StructuredBuffer<uint> sortedIndexBuffer : register(t1);
-Buffer<half> shBuffer : register(t2);
+StructuredBuffer<uint> sortedIndexBuffer : register(t0);
+StructuredBuffer<uint2> splatLookupBuffer : register(t1);
+StructuredBuffer<ShaderGaussianSplatModel> modelBuffer : register(t2);
+
+struct Push
+{
+	uint camera_count;
+};
+PUSHCONSTANT(push, Push);
 
 static const float3 BILLBOARD[] = {
 	float3(-1, -1, 0),	// 0
@@ -36,7 +42,7 @@ static const float3 BILLBOARD[] = {
 static const float splatScale = 1;
 static const float frustumDilation = 0.2;
 
-float3x3 fetchCovariance(in uint splatIndex)
+float3x3 fetchCovariance(in StructuredBuffer<GaussianSplat> splats, in uint splatIndex)
 {
 	const float3 cov3D_M11_M12_M13 = splats[splatIndex].cov3D_M11_M12_M13;
 	const float3 cov3D_M22_M23_M33 = splats[splatIndex].cov3D_M22_M23_M33;
@@ -147,7 +153,7 @@ static const float SH_C1    = 0.4886025119029199f;
 static const float SH_C2[5] = { 1.0925484, -1.0925484, 0.3153916, -1.0925484, 0.5462742 };
 static const float SH_C3[7] = { -0.5900435899266435f, 2.890611442640554f, -0.4570457994644658f, 0.3731763325901154f, -0.4570457994644658f, 1.445305721320277f, -0.5900435899266435f };
 
-half3 nextSHCoeff(inout uint shIndex)
+half3 nextSHCoeff(in Buffer<half> shBuffer, inout uint shIndex)
 {
 	const half r = shBuffer[shIndex++];
 	const half g = shBuffer[shIndex++];
@@ -155,24 +161,25 @@ half3 nextSHCoeff(inout uint shIndex)
 	return half3(r, g, b);
 }
 
-half3 fetchViewDependentRadiance(in uint splatIndex, in half3 worldViewDir)
+half3 fetchViewDependentRadiance(in ShaderGaussianSplatModel model, in uint splatIndex, in half3 worldViewDir)
 {
 	// contribution is null if MAX_SH_DEGREE < 1
 	half3 rgb = half3(0.0, 0.0, 0.0);
 
-	uint shIndex = splatIndex * cb.splatStride;
+	Buffer<half> shBuffer = bindless_buffers_half[NonUniformResourceIndex(descriptor_index(model.descriptor_shBuffer))];
+	uint shIndex = splatIndex * model.splatStride;
 
 	const half x = worldViewDir.x;
 	const half y = worldViewDir.y;
 	const half z = worldViewDir.z;
 
-	if (cb.sphericalHarmonicsDegree >= 1)
+	if (model.sphericalHarmonicsDegree >= 1)
 	{
 		// SH coefficients for degree 1 (1,2,3)
 		half3 shd1[3] = {
-			nextSHCoeff(shIndex),
-			nextSHCoeff(shIndex),
-			nextSHCoeff(shIndex),
+			nextSHCoeff(shBuffer, shIndex),
+			nextSHCoeff(shBuffer, shIndex),
+			nextSHCoeff(shBuffer, shIndex),
 		};
 		// Degree 1 contributions
 		rgb += SH_C1 * (-shd1[0] * y + shd1[1] * z - shd1[2] * x);
@@ -185,15 +192,15 @@ half3 fetchViewDependentRadiance(in uint splatIndex, in half3 worldViewDir)
 	const half yz = y * z;
 	const half xz = x * z;
 
-	if (cb.sphericalHarmonicsDegree >= 2)
+	if (model.sphericalHarmonicsDegree >= 2)
 	{
 		// SH coefficients for degree 2 (4 5 6 7 8)
 		half3 shd2[5] = {
-			nextSHCoeff(shIndex),
-			nextSHCoeff(shIndex),
-			nextSHCoeff(shIndex),
-			nextSHCoeff(shIndex),
-			nextSHCoeff(shIndex),
+			nextSHCoeff(shBuffer, shIndex),
+			nextSHCoeff(shBuffer, shIndex),
+			nextSHCoeff(shBuffer, shIndex),
+			nextSHCoeff(shBuffer, shIndex),
+			nextSHCoeff(shBuffer, shIndex),
 		};
 		// Degree 2 contributions
 		rgb += (SH_C2[0] * xy) * shd2[0] + (SH_C2[1] * yz) * shd2[1] + (SH_C2[2] * (2.0 * zz - xx - yy)) * shd2[2]
@@ -205,17 +212,17 @@ half3 fetchViewDependentRadiance(in uint splatIndex, in half3 worldViewDir)
 	const half zxx = z * xx;
 	const half xyz = x * y * z;
 
-	if (cb.sphericalHarmonicsDegree >= 3)
+	if (model.sphericalHarmonicsDegree >= 3)
 	{
 		// SH coefficients for degree 3 (9,10,11,12,13,14,15)
 		half3 shd3[7] = {
-			nextSHCoeff(shIndex),
-			nextSHCoeff(shIndex),
-			nextSHCoeff(shIndex),
-			nextSHCoeff(shIndex),
-			nextSHCoeff(shIndex),
-			nextSHCoeff(shIndex),
-			nextSHCoeff(shIndex),
+			nextSHCoeff(shBuffer, shIndex),
+			nextSHCoeff(shBuffer, shIndex),
+			nextSHCoeff(shBuffer, shIndex),
+			nextSHCoeff(shBuffer, shIndex),
+			nextSHCoeff(shBuffer, shIndex),
+			nextSHCoeff(shBuffer, shIndex),
+			nextSHCoeff(shBuffer, shIndex),
 		};
 		// Degree 3 contributions
 		rgb += SH_C3[0] * shd3[0] * (3.0 * x * x - y * y) * y + SH_C3[1] * shd3[1] * x * y * z
@@ -230,27 +237,35 @@ half3 fetchViewDependentRadiance(in uint splatIndex, in half3 worldViewDir)
 
 void main(in uint vertexID : SV_VertexID, in uint instanceID : SV_InstanceID, out float4 pos : SV_Position, out half4 color : COLOR, out half2 localPos : LOCALPOS, out uint RTIndex : SV_RenderTargetArrayIndex)
 {
-	const uint splatIndex = sortedIndexBuffer[instanceID / cb.cameraCount];
-	const uint cameraIndex = instanceID % cb.cameraCount;
+	const uint splatIndexGlobal = sortedIndexBuffer[instanceID / push.camera_count];
+	const uint cameraIndex = instanceID % push.camera_count;
+
 	ShaderCamera camera = GetCameraIndexed(cameraIndex);
 	RTIndex = camera.output_index;
-	//const float4x4 modelViewMatrix = mul(camera.view, cb.transform.GetMatrix());
-	const float4x4 modelViewMatrix = cb.modelViewMatrices[cameraIndex]; // optimization: precomputed above matrix on CPU
+
+	const uint2 lookup = splatLookupBuffer[splatIndexGlobal];
+	const uint modelIndex = lookup.x;
+	const uint splatIndex = lookup.y;
+	ShaderGaussianSplatModel model = modelBuffer[modelIndex];
+	StructuredBuffer<GaussianSplat> splats = bindless_structured_gaussian_splats[NonUniformResourceIndex(descriptor_index(model.descriptor_splatBuffer))];
+
+	//const float4x4 modelViewMatrix = mul(camera.view, model.transform.GetMatrix());
+	const float4x4 modelViewMatrix = model.modelViewMatrices[cameraIndex]; // optimization: precomputed above matrix on CPU
 
 	const float3 splatCenter = float4(splats[splatIndex].position, 1).xyz;
 	color = unpack_half4(splats[splatIndex].color);
-	half3 viewDir = normalize(splatCenter - mul(cb.transform_inverse.GetMatrix(), float4(camera.position, 1)).xyz);
-	color.rgb += fetchViewDependentRadiance(splatIndex, viewDir);
+	half3 viewDir = normalize(splatCenter - mul(model.transform_inverse.GetMatrix(), float4(camera.position, 1)).xyz);
+	color.rgb += fetchViewDependentRadiance(model, splatIndex, viewDir);
 	color.rgb = RemoveSRGBCurve_Fast(color.rgb); // Checked against SuperSplat Editor, result is more similar with gamma remove
 
 	const float4 viewCenter = mul(modelViewMatrix, float4(splatCenter, 1.0));
 	const float4 clipCenter = mul(camera.projection, viewCenter);
-	const float3x3 cov3Dm = fetchCovariance(splatIndex);
-	const float3 cov2Dv = threedgsCovarianceProjection(cov3Dm, viewCenter, camera.focal, modelViewMatrix);  // computes the basis vectors of the extent of the projected covariance
+	const float3x3 cov3Dm = fetchCovariance(splats, splatIndex);
+	const float3 cov2Dv = threedgsCovarianceProjection(cov3Dm, viewCenter, camera.focal, modelViewMatrix); // computes the basis vectors of the extent of the projected covariance
 	const float2 fragPos = BILLBOARD[vertexID].xy;
 	localPos = fragPos * sqrt8;
 
-	// Extra frustum cullig in vertex shader:
+	// Extra frustum culling in vertex shader:
 	//	This is additionally on top of compute shader culling, fixes issues for multicamera render
 	const float clip = (1.0 + frustumDilation) * clipCenter.w;
 	if(abs(clipCenter.x) > clip || abs(clipCenter.y) > clip || clipCenter.z < (0.0 - frustumDilation) * clipCenter.w || clipCenter.z > clipCenter.w)

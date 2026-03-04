@@ -11,17 +11,16 @@ struct GaussianSplat
 	float3 cov3D_M11_M12_M13;
 	float3 cov3D_M22_M23_M33;
 };
-struct GaussianSplatCB
+struct ShaderGaussianSplatModel
 {
 	ShaderTransform transform;
 	ShaderTransform transform_inverse;
 	float4x4 modelViewMatrices[6]; // 6 for cubemap rendering
 	int sphericalHarmonicsDegree;
 	int splatStride;
-	uint cameraCount;
-	int padding0;
+	int descriptor_splatBuffer;
+	int descriptor_shBuffer;
 };
-CONSTANTBUFFER(cb, GaussianSplatCB, CBSLOT_GAUSSIANSPLAT);
 
 static const uint GAUSSIAN_COMPUTE_THREADSIZE = 64;
 

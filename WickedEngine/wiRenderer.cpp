@@ -6080,23 +6080,22 @@ void UpdateGaussianSplatsForCamera(
 	CommandList cmd
 )
 {
-	BindCommonResources(cmd);
-	wi::profiler::range_id prof_splats = 0;
+	if (!scene.gaussian_scene.IsValid())
+		return;
+	thread_local wi::vector<const wi::GaussianSplatModel*> visible_gaussian_models;
+	visible_gaussian_models.clear();
 	for (size_t i = 0; i < scene.gaussian_splats.GetCount(); ++i)
 	{
 		const wi::GaussianSplatModel& splat = scene.gaussian_splats[i];
 		if (!camera.frustum.CheckBoxFast(splat.aabb))
 			continue;
-		if (prof_splats == 0)
-		{
-			prof_splats = wi::profiler::BeginRangeGPU("Gaussian Splat Culling and Sorting", cmd);
-		}
-		scene.gaussian_splats[i].UpdateGPU(cmd, &camera.View);
+		visible_gaussian_models.push_back(&splat);
 	}
-	if (prof_splats != 0)
-	{
-		wi::profiler::EndRange(prof_splats);
-	}
+	if (visible_gaussian_models.empty())
+		return;
+
+	BindCommonResources(cmd);
+	scene.gaussian_scene.UpdateGPU(visible_gaussian_models.data(), visible_gaussian_models.size(), cmd, &camera.View);
 }
 void DrawGaussianSplats(
 	const Scene& scene,
@@ -6104,17 +6103,9 @@ void DrawGaussianSplats(
 	CommandList cmd
 )
 {
-	if (scene.gaussian_splats.GetCount() == 0)
+	if (!scene.gaussian_scene.IsValid())
 		return;
-	auto range = wi::profiler::BeginRangeGPU("Draw Gaussian Splats", cmd);
-	for (size_t i = 0; i < scene.gaussian_splats.GetCount(); ++i)
-	{
-		const wi::GaussianSplatModel& splat = scene.gaussian_splats[i];
-		if (!camera.frustum.CheckBoxFast(splat.aabb))
-			continue;
-		scene.gaussian_splats[i].Draw(cmd);
-	}
-	wi::profiler::EndRange(range);
+	scene.gaussian_scene.Draw(cmd);
 }
 void DrawSpritesAndFonts(
 	const Scene& scene,
@@ -9191,19 +9182,27 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		}
 		device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 
-		if (probe_aabb.layerMask & vis.layerMask)
+		thread_local wi::vector<const wi::GaussianSplatModel*> visible_gaussian_models;
+		visible_gaussian_models.clear();
+
+		if (probe_aabb.layerMask & vis.layerMask && vis.scene->gaussian_scene.IsValid())
 		{
 			XMFLOAT4X4 viewmatrices[arraysize(cameras)];
 			for (uint32_t i = 0; i < arraysize(cameras); ++i)
 			{
 				viewmatrices[i] = cb.cameras[i].view;
 			}
+
 			for (size_t i = 0; i < vis.scene->gaussian_splats.GetCount(); ++i)
 			{
 				const wi::GaussianSplatModel& splat = vis.scene->gaussian_splats[i];
 				if (!culler.intersects(splat.aabb))
 					continue;
-				vis.scene->gaussian_splats[i].UpdateGPU(cmd, viewmatrices, arraysize(cameras));
+				visible_gaussian_models.push_back(&splat);
+			}
+			if (!visible_gaussian_models.empty())
+			{
+				vis.scene->gaussian_scene.UpdateGPU(visible_gaussian_models.data(), visible_gaussian_models.size(), cmd, viewmatrices, 6);
 			}
 		}
 
@@ -9493,12 +9492,9 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 		if (probe_aabb.layerMask & vis.layerMask) // only draw these if this is a hand placed probe
 		{
-			for (size_t i = 0; i < vis.scene->gaussian_splats.GetCount(); ++i)
+			if (!visible_gaussian_models.empty())
 			{
-				const wi::GaussianSplatModel& splat = vis.scene->gaussian_splats[i];
-				if (!culler.intersects(splat.aabb))
-					continue;
-				vis.scene->gaussian_splats[i].Draw(cmd);
+				vis.scene->gaussian_scene.Draw(cmd, 6); // 6 instances so it will be replicated for every cubemap face
 			}
 			DrawLightVisualizers(vis, cmd, 6); // 6 instances so it will be replicated for every cubemap face
 		}

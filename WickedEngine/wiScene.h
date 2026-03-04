@@ -239,6 +239,8 @@ namespace wi::scene
 			mutable bool pre_clear = true;
 		} vxgi;
 
+		wi::GaussianSplatScene gaussian_scene;
+
 		EnvironmentProbeComponent global_dynamic_probe; // when no envprobes are placed, this will be the fallback
 
 		// Impostor state:
