@@ -6081,7 +6081,6 @@ void UpdateGaussianSplatsForCamera(
 )
 {
 	BindCommonResources(cmd);
-	BindCameraCB(camera, camera, camera, cmd);
 	wi::profiler::range_id prof_splats = 0;
 	for (size_t i = 0; i < scene.gaussian_splats.GetCount(); ++i)
 	{
