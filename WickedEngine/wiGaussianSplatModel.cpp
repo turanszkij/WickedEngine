@@ -29,6 +29,17 @@ namespace wi
 
 		aabb_rest = AABB();
 
+		GPUBufferDesc desc;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE;
+		desc.misc_flags = ResourceMiscFlag::TYPED_FORMAT_CASTING | ResourceMiscFlag::NO_DEFAULT_DESCRIPTORS;
+
+		const uint64_t alignment = device->GetMinOffsetAlignment(&desc);
+		desc.size =
+			align(uint64_t(positions.size() * sizeof(GaussianSplat)), alignment) +
+			align(uint64_t(f_rest.size() * sizeof(uint16_t)), alignment);
+
+		const uint64_t sh_aligned_offset = align(uint64_t(positions.size() * sizeof(GaussianSplat)), alignment);
+
 		auto fill_gpu = [&](void* dest) {
 			const uint32_t totalSphericalHarmonicsComponentCount = uint32_t(f_rest.size() / positions.size());
 			const uint32_t sphericalHarmonicsCoefficientsPerChannel = totalSphericalHarmonicsComponentCount / 3;
@@ -50,7 +61,7 @@ namespace wi
 				splatStride += 7 * 3;
 			}
 			GaussianSplat* splat_dest = (GaussianSplat*)dest;
-			uint16_t* sh_dest = (uint16_t*)(splat_dest + positions.size());
+			uint16_t* sh_dest = (uint16_t*)((uint8_t*)dest + sh_aligned_offset);
 			for (size_t splatIdx = 0; splatIdx < positions.size(); ++splatIdx)
 			{
 				aabb_rest.AddPoint(positions[splatIdx]);
@@ -98,7 +109,7 @@ namespace wi
 
 
 				// View dependent SH data is deinterleaved, now I interleave it into 16x (rgb) vectors per splat:
-				uint16_t* dst = (uint16_t*)dest + splatStride * splatIdx;
+				uint16_t* dst = sh_dest + splatStride * splatIdx;
 				const auto srcBase = splatStride * splatIdx;
 				int dstOffset = 0;
 				// degree 1, three coefs per component
@@ -131,10 +142,6 @@ namespace wi
 			}
 		};
 
-		GPUBufferDesc desc;
-		desc.size = positions.size() * sizeof(GaussianSplat) + f_rest.size() * sizeof(uint16_t);
-		desc.bind_flags = BindFlag::SHADER_RESOURCE;
-		desc.misc_flags = ResourceMiscFlag::NO_DEFAULT_DESCRIPTORS;
 		bool success = device->CreateBuffer2(&desc, fill_gpu, &buffer);
 		assert(success);
 		device->SetName(&buffer, "GaussianSplatModel::buffer");
@@ -143,7 +150,7 @@ namespace wi
 		subresource_splatBuffer = device->CreateSubresource(&buffer, SubresourceType::SRV, 0, positions.size() * sizeof(GaussianSplat), nullptr, &structured_stride);
 
 		static constexpr Format sh_format = Format::R16_FLOAT;
-		subresource_shBuffer = device->CreateSubresource(&buffer, SubresourceType::SRV, positions.size() * sizeof(GaussianSplat), f_rest.size() * sizeof(uint16_t), &sh_format);
+		subresource_shBuffer = device->CreateSubresource(&buffer, SubresourceType::SRV, sh_aligned_offset, f_rest.size() * sizeof(uint16_t), &sh_format);
 	}
 
 	void GaussianSplatModel::Update(const XMFLOAT4X4& matrix)
