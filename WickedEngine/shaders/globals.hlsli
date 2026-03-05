@@ -70,10 +70,10 @@ inline half4 unpack_utangent(in uint value)
 inline uint pack_rgba(in half4 value)
 {
 	uint retVal = 0;
-	retVal |= (uint)(value.x * 255.0) << 0u;
-	retVal |= (uint)(value.y * 255.0) << 8u;
-	retVal |= (uint)(value.z * 255.0) << 16u;
-	retVal |= (uint)(value.w * 255.0) << 24u;
+	retVal |= (uint)(saturate(value.x) * 255.0) << 0u;
+	retVal |= (uint)(saturate(value.y) * 255.0) << 8u;
+	retVal |= (uint)(saturate(value.z) * 255.0) << 16u;
+	retVal |= (uint)(saturate(value.w) * 255.0) << 24u;
 	return retVal;
 }
 inline half4 unpack_rgba(in uint value)
@@ -83,6 +83,25 @@ inline half4 unpack_rgba(in uint value)
 	retVal.y = (half)((value >> 8u) & 0xFF) / 255.0;
 	retVal.z = (half)((value >> 16u) & 0xFF) / 255.0;
 	retVal.w = (half)((value >> 24u) & 0xFF) / 255.0;
+	return retVal;
+}
+
+inline uint pack_rgb10a2(in half4 value)
+{
+	uint retVal = 0;
+	retVal |= (uint)(saturate(value.x) * 1023.0) << 0u;
+	retVal |= (uint)(saturate(value.y) * 1023.0) << 10u;
+	retVal |= (uint)(saturate(value.z) * 1023.0) << 20u;
+	retVal |= (uint)(saturate(value.w) * 3.0) << 30u;
+	return retVal;
+}
+inline half4 unpack_rgb10a2(in uint value)
+{
+	half4 retVal;
+	retVal.x = (half)((value >> 0u) & 1023) / 1023.0;
+	retVal.y = (half)((value >> 10u) & 1023) / 1023.0;
+	retVal.z = (half)((value >> 20u) & 1023) / 1023.0;
+	retVal.w = (half)((value >> 30u) & 3) / 3.0;
 	return retVal;
 }
 

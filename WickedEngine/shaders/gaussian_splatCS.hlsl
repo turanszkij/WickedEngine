@@ -32,7 +32,7 @@ void main(uint DTid : SV_DispatchThreadID)
 
 	ShaderSphere sphere;
 	sphere.center = mul(model.transform.GetMatrix(), float4(splats[splatIndex].position, 1)).xyz;
-	sphere.radius = max3(mul(model.transform.GetMatrixAdjoint(), splats[splatIndex].radius.xxx));
+	sphere.radius = max3(mul(model.transform.GetMatrixAdjoint(), unpack_half4(splats[splatIndex].cov3D_M11_M12_M13_radius).www));
 
 	const float3 eyeVector = sphere.center - GetCamera().position;
 	const float distSq = dot(eyeVector, eyeVector);

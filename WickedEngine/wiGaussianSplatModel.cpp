@@ -6,6 +6,7 @@
 #include "wiEventHandler.h"
 #include "wiGPUSortLib.h"
 #include "wiScene_Components.h"
+#include "wiProfiler.h"
 
 using namespace wi::math;
 using namespace wi::graphics;
@@ -29,59 +30,6 @@ namespace wi
 		aabb_rest = AABB();
 
 		auto fill_gpu = [&](void* dest) {
-			GaussianSplat* splat_dest = (GaussianSplat*)dest;
-			for (size_t splatIdx = 0; splatIdx < positions.size(); ++splatIdx)
-			{
-				aabb_rest.AddPoint(positions[splatIdx]);
-
-				GaussianSplat splat = {};
-				splat.position = positions[splatIdx];
-
-				XMFLOAT3 scale = XMFLOAT3(std::exp(scales[splatIdx].x), std::exp(scales[splatIdx].y), std::exp(scales[splatIdx].z));
-				static const float sqrt8 = std::sqrt(8.0f);
-				splat.radius = std::max(scale.x, std::max(scale.y, scale.z)) * sqrt8; // culling
-
-				// f_dc is L0 spherical harmonics (not view dependent), so it's converted to rgb color here
-				// https://github.com/nvpro-samples/vk_gaussian_splatting/blob/main/src/splat_set_vk.cpp
-				static constexpr float SH_C0 = 0.28209479177387814f;
-				float4 color = {};
-				color.x = saturate(0.5f + SH_C0 * f_dc[splatIdx].x);
-				color.y = saturate(0.5f + SH_C0 * f_dc[splatIdx].y);
-				color.z = saturate(0.5f + SH_C0 * f_dc[splatIdx].z);
-				color.w = saturate(1.0f / (1.0f + std::exp(-opacities[splatIdx])));
-				splat.color = pack_half4(color);
-
-				// covariance from: https://github.com/nvpro-samples/vk_gaussian_splatting/blob/main/src/splat_set_vk.cpp
-				//	changed from glm to DirectXMath (column->row major, matrix mul order changed)
-				const XMMATRIX scaleMatrix = XMMatrixScaling(scale.x, scale.y, scale.z);
-				const XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(XMLoadFloat4(&rotations[splatIdx]));
-				const XMMATRIX covarianceMatrix = XMMatrixMultiply(scaleMatrix, rotationMatrix);
-				const XMMATRIX transformedCovarianceMatrix = XMMatrixMultiply(XMMatrixTranspose(covarianceMatrix), covarianceMatrix);
-				XMFLOAT3X3 transformedCovariance;
-				XMStoreFloat3x3(&transformedCovariance, transformedCovarianceMatrix);
-				splat.cov3D_M11_M12_M13.x = transformedCovariance._11;
-				splat.cov3D_M11_M12_M13.y = transformedCovariance._12;
-				splat.cov3D_M11_M12_M13.z = transformedCovariance._13;
-				splat.cov3D_M22_M23_M33.x = transformedCovariance._22;
-				splat.cov3D_M22_M23_M33.y = transformedCovariance._23;
-				splat.cov3D_M22_M23_M33.z = transformedCovariance._33;
-
-				std::memcpy(splat_dest + splatIdx, &splat, sizeof(splat)); // memcpy into uncached
-			}
-		};
-
-		GPUBufferDesc desc;
-		desc.stride = sizeof(GaussianSplat);
-		desc.size = positions.size() * desc.stride;
-		desc.bind_flags = BindFlag::SHADER_RESOURCE;
-		desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
-		desc.format = Format::UNKNOWN;
-		bool success = device->CreateBuffer2(&desc, fill_gpu, &splatBuffer);
-		assert(success);
-		device->SetName(&splatBuffer, "GaussianSplatModel::splatBuffer");
-
-		// I create separate float16 array for view dependent SH data, it will be tightly packed and supports variable order SH without predefining it into the splat structured buffer
-		auto fill_gpu_sh = [&](void* dest) {
 			const uint32_t totalSphericalHarmonicsComponentCount = uint32_t(f_rest.size() / positions.size());
 			const uint32_t sphericalHarmonicsCoefficientsPerChannel = totalSphericalHarmonicsComponentCount / 3;
 			int sphericalHarmonicsDegree = 0;
@@ -101,8 +49,54 @@ namespace wi
 				sphericalHarmonicsDegree = 3;
 				splatStride += 7 * 3;
 			}
+			GaussianSplat* splat_dest = (GaussianSplat*)dest;
+			uint16_t* sh_dest = (uint16_t*)(splat_dest + positions.size());
 			for (size_t splatIdx = 0; splatIdx < positions.size(); ++splatIdx)
 			{
+				aabb_rest.AddPoint(positions[splatIdx]);
+
+				GaussianSplat splat = {};
+				splat.position = positions[splatIdx];
+
+				XMFLOAT3 scale = XMFLOAT3(std::exp(scales[splatIdx].x), std::exp(scales[splatIdx].y), std::exp(scales[splatIdx].z));
+				static const float sqrt8 = std::sqrt(8.0f);
+				const float radius = std::max(scale.x, std::max(scale.y, scale.z)) * sqrt8; // culling
+
+				// f_dc is L0 spherical harmonics (not view dependent), so it's converted to rgb color here
+				// https://github.com/nvpro-samples/vk_gaussian_splatting/blob/main/src/splat_set_vk.cpp
+				static constexpr float SH_C0 = 0.28209479177387814f;
+				float4 color = {};
+				color.x = saturate(0.5f + SH_C0 * f_dc[splatIdx].x);
+				color.y = saturate(0.5f + SH_C0 * f_dc[splatIdx].y);
+				color.z = saturate(0.5f + SH_C0 * f_dc[splatIdx].z);
+				color.w = saturate(1.0f / (1.0f + std::exp(-opacities[splatIdx])));
+				splat.color = pack_half4(color);
+
+				const float opacity = saturate(1.0f / (1.0f + std::exp(-opacities[splatIdx])));
+
+				// covariance from: https://github.com/nvpro-samples/vk_gaussian_splatting/blob/main/src/splat_set_vk.cpp
+				//	changed from glm to DirectXMath (column->row major, matrix mul order changed)
+				const XMMATRIX scaleMatrix = XMMatrixScaling(scale.x, scale.y, scale.z);
+				const XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(XMLoadFloat4(&rotations[splatIdx]));
+				const XMMATRIX covarianceMatrix = XMMatrixMultiply(scaleMatrix, rotationMatrix);
+				const XMMATRIX transformedCovarianceMatrix = XMMatrixMultiply(XMMatrixTranspose(covarianceMatrix), covarianceMatrix);
+				XMFLOAT3X3 transformedCovariance;
+				XMStoreFloat3x3(&transformedCovariance, transformedCovarianceMatrix);
+				float4 cov3D_M11_M12_M13_radius;
+				float3 cov3D_M22_M23_M33;
+				cov3D_M11_M12_M13_radius.x = transformedCovariance._11;
+				cov3D_M11_M12_M13_radius.y = transformedCovariance._12;
+				cov3D_M11_M12_M13_radius.z = transformedCovariance._13;
+				cov3D_M11_M12_M13_radius.w = radius;
+				cov3D_M22_M23_M33.x = transformedCovariance._22;
+				cov3D_M22_M23_M33.y = transformedCovariance._23;
+				cov3D_M22_M23_M33.z = transformedCovariance._33;
+				splat.cov3D_M11_M12_M13_radius = pack_half4(cov3D_M11_M12_M13_radius);
+				splat.cov3D_M22_M23_M33 = pack_half3(cov3D_M22_M23_M33);
+
+				std::memcpy(splat_dest + splatIdx, &splat, sizeof(splat)); // memcpy into uncached
+
+
 				// View dependent SH data is deinterleaved, now I interleave it into 16x (rgb) vectors per splat:
 				uint16_t* dst = (uint16_t*)dest + splatStride * splatIdx;
 				const auto srcBase = splatStride * splatIdx;
@@ -136,14 +130,20 @@ namespace wi
 				}
 			}
 		};
-		desc.format = Format::R16_FLOAT;
-		desc.stride = sizeof(uint16_t);
-		desc.size = f_rest.size() * desc.stride;
+
+		GPUBufferDesc desc;
+		desc.size = positions.size() * sizeof(GaussianSplat) + f_rest.size() * sizeof(uint16_t);
 		desc.bind_flags = BindFlag::SHADER_RESOURCE;
-		desc.misc_flags = ResourceMiscFlag::NONE;
-		success = device->CreateBuffer2(&desc, fill_gpu_sh, &shBuffer);
+		desc.misc_flags = ResourceMiscFlag::NO_DEFAULT_DESCRIPTORS;
+		bool success = device->CreateBuffer2(&desc, fill_gpu, &buffer);
 		assert(success);
-		device->SetName(&shBuffer, "GaussianSplatModel::shBuffer");
+		device->SetName(&buffer, "GaussianSplatModel::buffer");
+
+		static constexpr uint32_t structured_stride = sizeof(GaussianSplat);
+		subresource_splatBuffer = device->CreateSubresource(&buffer, SubresourceType::SRV, 0, positions.size() * sizeof(GaussianSplat), nullptr, &structured_stride);
+
+		static constexpr Format sh_format = Format::R16_FLOAT;
+		subresource_shBuffer = device->CreateSubresource(&buffer, SubresourceType::SRV, positions.size() * sizeof(GaussianSplat), f_rest.size() * sizeof(uint16_t), &sh_format);
 	}
 
 	void GaussianSplatModel::Update(const XMFLOAT4X4& matrix)
@@ -257,10 +257,7 @@ namespace wi
 	}
 	size_t GaussianSplatModel::GetMemorySizeGPU() const
 	{
-		size_t ret = 0;
-		ret += splatBuffer.desc.size;
-		ret += shBuffer.desc.size;
-		return ret;
+		return buffer.desc.size;
 	}
 
 	void GaussianSplatScene::MakeReservations(const GaussianSplatModel* models, size_t model_count)
@@ -331,6 +328,7 @@ namespace wi
 
 	void GaussianSplatScene::UpdateGPU(const GaussianSplatModel** models, size_t model_count, CommandList cmd, const XMFLOAT4X4* viewmatrices, uint32_t camera_count) const
 	{
+		ScopedGPUProfiling("Gaussian splat culling and sorting", cmd);
 		GraphicsDevice* device = GetDevice();
 		device->EventBegin("Gaussian Splat Update", cmd);
 
@@ -342,8 +340,8 @@ namespace wi
 		{
 			const GaussianSplatModel& model = *models[model_index];
 			ShaderGaussianSplatModel shmodel = {};
-			shmodel.descriptor_splatBuffer = device->GetDescriptorIndex(&model.splatBuffer, SubresourceType::SRV);
-			shmodel.descriptor_shBuffer = device->GetDescriptorIndex(&model.shBuffer, SubresourceType::SRV);
+			shmodel.descriptor_splatBuffer = device->GetDescriptorIndex(&model.buffer, SubresourceType::SRV, model.subresource_splatBuffer);
+			shmodel.descriptor_shBuffer = device->GetDescriptorIndex(&model.buffer, SubresourceType::SRV, model.subresource_shBuffer);
 			shmodel.transform.Create(model.transform);
 			shmodel.transform_inverse.Create(model.transform_inverse);
 			const XMMATRIX modelMatrix = XMLoadFloat4x4(&model.transform);
@@ -462,6 +460,7 @@ namespace wi
 
 	void GaussianSplatScene::Draw(CommandList cmd, uint32_t camera_count) const
 	{
+		ScopedGPUProfiling("Gaussian splat drawing", cmd);
 		GraphicsDevice* device = GetDevice();
 		device->EventBegin("Gaussian Splat Render", cmd);
 		device->BindPipelineState(&pipelineState, cmd);

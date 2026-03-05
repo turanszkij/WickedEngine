@@ -6,10 +6,9 @@
 struct GaussianSplat
 {
 	float3 position;
-	float radius;
-	uint2 color;
-	float3 cov3D_M11_M12_M13;
-	float3 cov3D_M22_M23_M33;
+	uint2 color;						// half4
+	uint2 cov3D_M11_M12_M13_radius;		// half4
+	uint2 cov3D_M22_M23_M33;			// half3
 };
 struct ShaderGaussianSplatModel
 {

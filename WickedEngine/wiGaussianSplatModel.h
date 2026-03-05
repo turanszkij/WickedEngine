@@ -27,8 +27,9 @@ namespace wi
 		wi::primitive::AABB aabb; // aabb with transformation
 		XMFLOAT4X4 transform = wi::math::IDENTITY_MATRIX;
 		XMFLOAT4X4 transform_inverse = wi::math::IDENTITY_MATRIX;
-		wi::graphics::GPUBuffer splatBuffer;
-		wi::graphics::GPUBuffer shBuffer;
+		wi::graphics::GPUBuffer buffer;
+		int subresource_splatBuffer = -1;
+		int subresource_shBuffer = -1;
 
 		size_t GetSplatCount() const { return positions.size(); };
 		int GetSphericalHarmonicsDegree() const;

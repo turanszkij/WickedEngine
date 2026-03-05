@@ -44,8 +44,8 @@ static const float frustumDilation = 0.2;
 
 float3x3 fetchCovariance(in StructuredBuffer<GaussianSplat> splats, in uint splatIndex)
 {
-	const float3 cov3D_M11_M12_M13 = splats[splatIndex].cov3D_M11_M12_M13;
-	const float3 cov3D_M22_M23_M33 = splats[splatIndex].cov3D_M22_M23_M33;
+	const half3 cov3D_M11_M12_M13 = unpack_half4(splats[splatIndex].cov3D_M11_M12_M13_radius).xyz;
+	const half3 cov3D_M22_M23_M33 = unpack_half3(splats[splatIndex].cov3D_M22_M23_M33);
 	return float3x3(cov3D_M11_M12_M13.x, cov3D_M11_M12_M13.y, cov3D_M11_M12_M13.z, cov3D_M11_M12_M13.y, cov3D_M22_M23_M33.x, cov3D_M22_M23_M33.y, cov3D_M11_M12_M13.z, cov3D_M22_M23_M33.y, cov3D_M22_M23_M33.z);
 }
 
