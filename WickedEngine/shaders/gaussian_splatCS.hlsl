@@ -31,8 +31,8 @@ void main(uint DTid : SV_DispatchThreadID)
 		return;
 
 	ShaderSphere sphere;
-	sphere.center = mul(model.transform.GetMatrix(), float4(splats[splatIndex].position, 1)).xyz;
-	sphere.radius = max3(mul(model.transform.GetMatrixAdjoint(), unpack_half4(splats[splatIndex].cov3D_M11_M12_M13_radius).www));
+	sphere.center = mul(model.transform.GetMatrix(), float4(lerp(model.aabb_min, model.aabb_max, unpack_unorm16x4(splats[splatIndex].position_radius).xyz), 1)).xyz;
+	sphere.radius = unpack_half4(splats[splatIndex].position_radius).w * model.maxScale;
 
 	const float3 eyeVector = sphere.center - GetCamera().position;
 	const float distSq = dot(eyeVector, eyeVector);

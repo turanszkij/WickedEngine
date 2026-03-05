@@ -44,7 +44,7 @@ static const float frustumDilation = 0.2;
 
 float3x3 fetchCovariance(in StructuredBuffer<GaussianSplat> splats, in uint splatIndex)
 {
-	const half3 cov3D_M11_M12_M13 = unpack_half4(splats[splatIndex].cov3D_M11_M12_M13_radius).xyz;
+	const half3 cov3D_M11_M12_M13 = unpack_half3(splats[splatIndex].cov3D_M11_M12_M13);
 	const half3 cov3D_M22_M23_M33 = unpack_half3(splats[splatIndex].cov3D_M22_M23_M33);
 	return float3x3(cov3D_M11_M12_M13.x, cov3D_M11_M12_M13.y, cov3D_M11_M12_M13.z, cov3D_M11_M12_M13.y, cov3D_M22_M23_M33.x, cov3D_M22_M23_M33.y, cov3D_M11_M12_M13.z, cov3D_M22_M23_M33.y, cov3D_M22_M23_M33.z);
 }
@@ -252,11 +252,10 @@ void main(in uint vertexID : SV_VertexID, in uint instanceID : SV_InstanceID, ou
 	//const float4x4 modelViewMatrix = mul(camera.view, model.transform.GetMatrix());
 	const float4x4 modelViewMatrix = model.modelViewMatrices[cameraIndex]; // optimization: precomputed above matrix on CPU
 
-	const float3 splatCenter = float4(splats[splatIndex].position, 1).xyz;
+	const float3 splatCenter = float4(lerp(model.aabb_min, model.aabb_max, unpack_unorm16x4(splats[splatIndex].position_radius).xyz), 1).xyz;
 	color = unpack_half4(splats[splatIndex].color);
 	half3 viewDir = normalize(splatCenter - mul(model.transform_inverse.GetMatrix(), float4(camera.position, 1)).xyz);
 	color.rgb += fetchViewDependentRadiance(model, splatIndex, viewDir);
-	color.rgb = RemoveSRGBCurve_Fast(color.rgb); // Checked against SuperSplat Editor, result is more similar with gamma remove
 
 	const float4 viewCenter = mul(modelViewMatrix, float4(splatCenter, 1.0));
 	const float4 clipCenter = mul(camera.projection, viewCenter);

@@ -27,6 +27,7 @@ namespace wi
 		wi::primitive::AABB aabb; // aabb with transformation
 		XMFLOAT4X4 transform = wi::math::IDENTITY_MATRIX;
 		XMFLOAT4X4 transform_inverse = wi::math::IDENTITY_MATRIX;
+		float maxScale = 1;
 		wi::graphics::GPUBuffer buffer;
 		int subresource_splatBuffer = -1;
 		int subresource_shBuffer = -1;
