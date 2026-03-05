@@ -20,9 +20,9 @@ struct ShaderGaussianSplatModel
 	float padding0;
 	float4x4 modelViewMatrices[6];		// 6 for cubemap rendering
 	int sphericalHarmonicsDegree;		// 0, 1, 2 or 3
-	int splatStride;					// element count of shBuffer per splat
+	int sphericalHarmonicsCount;		// element count of shBuffer per splat
 	int descriptor_splatBuffer;			// pointer to StructuredBuffer<GaussianSplat> (one element per splat)
-	int descriptor_shBuffer;			// pointer to Buffer<half> (splatStride element count per splat)
+	int descriptor_shBuffer;			// pointer to StructuredBuffer<uint2> (sphericalHarmonicsCount element count per splat)
 };
 
 static const uint GAUSSIAN_COMPUTE_THREADSIZE = 64;

@@ -40,7 +40,7 @@ namespace wi
 		const uint64_t alignment = device->GetMinOffsetAlignment(&desc);
 		desc.size =
 			align(uint64_t(positions.size() * sizeof(GaussianSplat)), alignment) +
-			align(uint64_t(f_rest.size() * sizeof(uint16_t)), alignment);
+			align(uint64_t(f_rest.size() / 3 * sizeof(XMHALF4)), alignment);
 
 		const uint64_t sh_aligned_offset = align(uint64_t(positions.size() * sizeof(GaussianSplat)), alignment);
 
@@ -48,24 +48,24 @@ namespace wi
 			const uint32_t totalSphericalHarmonicsComponentCount = uint32_t(f_rest.size() / positions.size());
 			const uint32_t sphericalHarmonicsCoefficientsPerChannel = totalSphericalHarmonicsComponentCount / 3;
 			int sphericalHarmonicsDegree = 0;
-			int splatStride = 0;
+			int sphericalHarmonicsCount = 0;
 			if (sphericalHarmonicsCoefficientsPerChannel >= 3)
 			{
 				sphericalHarmonicsDegree = 1;
-				splatStride += 3 * 3;
+				sphericalHarmonicsCount += 3;
 			}
 			if (sphericalHarmonicsCoefficientsPerChannel >= 8)
 			{
 				sphericalHarmonicsDegree = 2;
-				splatStride += 5 * 3;
+				sphericalHarmonicsCount += 5;
 			}
 			if (sphericalHarmonicsCoefficientsPerChannel == 15)
 			{
 				sphericalHarmonicsDegree = 3;
-				splatStride += 7 * 3;
+				sphericalHarmonicsCount += 7;
 			}
 			GaussianSplat* splat_dest = (GaussianSplat*)dest;
-			uint16_t* sh_dest = (uint16_t*)((uint8_t*)dest + sh_aligned_offset);
+			XMHALF4* sh_dest = (XMHALF4*)((uint8_t*)dest + sh_aligned_offset);
 			for (size_t splatIdx = 0; splatIdx < positions.size(); ++splatIdx)
 			{
 				GaussianSplat splat = {};
@@ -114,8 +114,8 @@ namespace wi
 
 
 				// View dependent SH data is deinterleaved, now I interleave it into 16x (rgb) vectors per splat:
-				uint16_t* dst = sh_dest + splatStride * splatIdx;
-				const auto srcBase = splatStride * splatIdx;
+				HALF* dst = (HALF*)(sh_dest + sphericalHarmonicsCount * splatIdx);
+				const auto srcBase = sphericalHarmonicsCount * 3 * splatIdx;
 				int dstOffset = 0;
 				// degree 1, three coefs per component
 				for (auto i = 0; i < 3; i++)
@@ -125,6 +125,7 @@ namespace wi
 						const auto srcIndex = srcBase + (sphericalHarmonicsCoefficientsPerChannel * rgb + i);
 						dst[dstOffset++] = XMConvertFloatToHalf(f_rest[srcIndex]);
 					}
+					dstOffset++; // 4th component wasted
 				}
 				// degree 2, five coefs per component
 				for (auto i = 0; i < 5; i++)
@@ -134,6 +135,7 @@ namespace wi
 						const auto srcIndex = srcBase + (sphericalHarmonicsCoefficientsPerChannel * rgb + 3 + i);
 						dst[dstOffset++] = XMConvertFloatToHalf(f_rest[srcIndex]);
 					}
+					dstOffset++; // 4th component wasted
 				}
 				// degree 3, seven coefs per component
 				for (auto i = 0; i < 7; i++)
@@ -143,6 +145,7 @@ namespace wi
 						const auto srcIndex = srcBase + (sphericalHarmonicsCoefficientsPerChannel * rgb + 3 + 5 + i);
 						dst[dstOffset++] = XMConvertFloatToHalf(f_rest[srcIndex]);
 					}
+					dstOffset++; // 4th component wasted
 				}
 			}
 		};
@@ -151,11 +154,11 @@ namespace wi
 		assert(success);
 		device->SetName(&buffer, "GaussianSplatModel::buffer");
 
-		static constexpr uint32_t structured_stride = sizeof(GaussianSplat);
-		subresource_splatBuffer = device->CreateSubresource(&buffer, SubresourceType::SRV, 0, positions.size() * sizeof(GaussianSplat), nullptr, &structured_stride);
+		static constexpr uint32_t splat_stride = sizeof(GaussianSplat);
+		subresource_splatBuffer = device->CreateSubresource(&buffer, SubresourceType::SRV, 0, positions.size() * sizeof(GaussianSplat), nullptr, &splat_stride);
 
-		static constexpr Format sh_format = Format::R16_FLOAT;
-		subresource_shBuffer = device->CreateSubresource(&buffer, SubresourceType::SRV, sh_aligned_offset, f_rest.size() * sizeof(uint16_t), &sh_format);
+		static constexpr uint32_t sh_stride = sizeof(XMHALF4); // could be formatted buffer, but that has stricter size limitation on Mac OS
+		subresource_shBuffer = device->CreateSubresource(&buffer, SubresourceType::SRV, sh_aligned_offset, f_rest.size() / 3 * sizeof(XMHALF4), nullptr, &sh_stride);
 	}
 
 	void GaussianSplatModel::Update(const XMFLOAT4X4& matrix)
@@ -374,24 +377,24 @@ namespace wi
 			const uint32_t totalSphericalHarmonicsComponentCount = uint32_t(model.f_rest.size() / model.positions.size());
 			const uint32_t sphericalHarmonicsCoefficientsPerChannel = totalSphericalHarmonicsComponentCount / 3;
 			int sphericalHarmonicsDegree = 0;
-			int splatStride = 0;
+			int sphericalHarmonicsCount = 0;
 			if (sphericalHarmonicsCoefficientsPerChannel >= 3)
 			{
 				sphericalHarmonicsDegree = 1;
-				splatStride += 3 * 3;
+				sphericalHarmonicsCount += 3;
 			}
 			if (sphericalHarmonicsCoefficientsPerChannel >= 8)
 			{
 				sphericalHarmonicsDegree = 2;
-				splatStride += 5 * 3;
+				sphericalHarmonicsCount += 5;
 			}
 			if (sphericalHarmonicsCoefficientsPerChannel == 15)
 			{
 				sphericalHarmonicsDegree = 3;
-				splatStride += 7 * 3;
+				sphericalHarmonicsCount += 7;
 			}
 			shmodel.sphericalHarmonicsDegree = sphericalHarmonicsDegree;
-			shmodel.splatStride = splatStride;
+			shmodel.sphericalHarmonicsCount = sphericalHarmonicsCount;
 
 			std::memcpy(dest + model_index, &shmodel, sizeof(shmodel)); // memcpy into uncached
 

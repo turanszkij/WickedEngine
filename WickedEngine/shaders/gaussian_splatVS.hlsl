@@ -153,12 +153,9 @@ static const float SH_C1    = 0.4886025119029199f;
 static const float SH_C2[5] = { 1.0925484, -1.0925484, 0.3153916, -1.0925484, 0.5462742 };
 static const float SH_C3[7] = { -0.5900435899266435f, 2.890611442640554f, -0.4570457994644658f, 0.3731763325901154f, -0.4570457994644658f, 1.445305721320277f, -0.5900435899266435f };
 
-half3 nextSHCoeff(in Buffer<half> shBuffer, inout uint shIndex)
+half3 nextSHCoeff(in StructuredBuffer<uint2> shBuffer, inout uint shIndex)
 {
-	const half r = shBuffer[shIndex++];
-	const half g = shBuffer[shIndex++];
-	const half b = shBuffer[shIndex++];
-	return half3(r, g, b);
+	return unpack_half3(shBuffer[shIndex++]);
 }
 
 half3 fetchViewDependentRadiance(in ShaderGaussianSplatModel model, in uint splatIndex, in half3 worldViewDir)
@@ -166,8 +163,8 @@ half3 fetchViewDependentRadiance(in ShaderGaussianSplatModel model, in uint spla
 	// contribution is null if MAX_SH_DEGREE < 1
 	half3 rgb = half3(0.0, 0.0, 0.0);
 
-	Buffer<half> shBuffer = bindless_buffers_half[NonUniformResourceIndex(descriptor_index(model.descriptor_shBuffer))];
-	uint shIndex = splatIndex * model.splatStride;
+	StructuredBuffer<uint2> shBuffer = bindless_structured_uint2[NonUniformResourceIndex(descriptor_index(model.descriptor_shBuffer))];
+	uint shIndex = splatIndex * model.sphericalHarmonicsCount;
 
 	const half x = worldViewDir.x;
 	const half y = worldViewDir.y;

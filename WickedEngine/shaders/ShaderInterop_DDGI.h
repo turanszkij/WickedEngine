@@ -121,7 +121,7 @@ inline float3 ddgi_probe_position(min16uint3 probeCoord)
 {
 	float3 pos = ddgi_probe_position_rest(probeCoord);
 	uint probeIndex = ddgi_probe_index(probeCoord);
-	StructuredBuffer<DDGIProbe> probe_buffer = bindless_structured_ddi_probes[descriptor_index(GetScene().ddgi.probe_buffer)];
+	StructuredBuffer<DDGIProbe> probe_buffer = bindless_structured_ddgi_probes[descriptor_index(GetScene().ddgi.probe_buffer)];
 	DDGIProbe probe = probe_buffer[probeIndex];
 	float3 offset = unpack_half3(probe.offset);
 	offset = offset * ddgi_cellsize() * 0.5;
@@ -143,7 +143,7 @@ inline float2 ddgi_probe_depth_uv(min16uint3 probeCoord, half3 direction)
 // Based on: https://github.com/diharaw/hybrid-rendering/blob/master/src/shaders/gi/gi_common.glsl
 half3 ddgi_sample_irradiance(in float3 P, in half3 N, inout half3 out_dominant_lightdir, inout half3 out_dominant_lightcolor)
 {
-	StructuredBuffer<DDGIProbe> probe_buffer = bindless_structured_ddi_probes[descriptor_index(GetScene().ddgi.probe_buffer)];
+	StructuredBuffer<DDGIProbe> probe_buffer = bindless_structured_ddgi_probes[descriptor_index(GetScene().ddgi.probe_buffer)];
 	const min16uint3 base_grid_coord = ddgi_base_probe_coord(P);
 	const float3 reference_probe_pos = ddgi_probe_position_rest(base_grid_coord); // taking the rest pose!
 
