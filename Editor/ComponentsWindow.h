@@ -128,6 +128,7 @@ public:
 	wi::unordered_set<wi::ecs::Entity> entitytree_temp_items;
 	wi::unordered_set<wi::ecs::Entity> entitytree_added_items;
 	wi::unordered_set<wi::ecs::Entity> entitytree_opened_items;
+	wi::ecs::Entity entitytree_pending_focus = wi::ecs::INVALID_ENTITY;
 	void PushToEntityTree(wi::ecs::Entity entity, int level);
 	void RefreshEntityTree();
 	bool CheckEntityFilter(wi::ecs::Entity entity) const;

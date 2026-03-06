@@ -1418,6 +1418,12 @@ void ComponentsWindow::RefreshEntityTree()
 
 	entitytree_added_items.clear();
 	entitytree_opened_items.clear();
+
+	if (entitytree_pending_focus != INVALID_ENTITY)
+	{
+		entityTree.FocusOnItemByUserdata(entitytree_pending_focus);
+		entitytree_pending_focus = INVALID_ENTITY;
+	}
 }
 
 // Returns a priority value for an entity based on its component type.

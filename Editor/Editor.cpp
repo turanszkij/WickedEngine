@@ -4970,7 +4970,7 @@ void EditorComponent::AddSelected(const PickResult& picked, bool allow_refocus)
 		translator.selected.push_back(picked);
 		if (allow_refocus)
 		{
-			componentsWnd.entityTree.FocusOnItemByUserdata(picked.entity);
+			componentsWnd.entitytree_pending_focus = picked.entity;
 		}
 	}
 }
