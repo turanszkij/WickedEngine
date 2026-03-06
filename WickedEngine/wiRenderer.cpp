@@ -9130,6 +9130,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 	auto render_probe = [&](const EnvironmentProbeComponent& probe, const AABB& probe_aabb) {
 
+		const bool valid_probe = probe_aabb.layerMask & vis.layerMask; // if hand placed probe and passes layer check, objects and other things can be rendered into it, otherwise filled with sky only
 		const float zNearP = vis.camera->zNearP;
 		const float zFarP = probe.view_distance < 0 ? vis.camera->zFarP : probe.view_distance;
 		const float zNearPRcp = 1.0f / zNearP;
@@ -9185,7 +9186,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		thread_local wi::vector<const wi::GaussianSplatModel*> visible_gaussian_models;
 		visible_gaussian_models.clear();
 
-		if (probe_aabb.layerMask & vis.layerMask && vis.scene->gaussian_scene.IsValid())
+		if (valid_probe && vis.scene->gaussian_scene.IsValid())
 		{
 			XMFLOAT4X4 viewmatrices[arraysize(cameras)];
 			for (uint32_t i = 0; i < arraysize(cameras); ++i)
@@ -9431,7 +9432,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		}
 
 		// Scene will only be rendered if this is a real probe entity:
-		if (probe_aabb.layerMask & vis.layerMask)
+		if (valid_probe)
 		{
 			renderQueue.init();
 			for (size_t i = 0; i < vis.scene->aabb_objects.size(); ++i)
@@ -9482,16 +9483,15 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			device->DrawInstanced(240, 6, 0, 0, cmd); // 6 instances so it will be replicated for every cubemap face
 		}
 
-		if (vis.scene->ocean.IsValid() && vis.scene->weather.IsOceanEnabled())
+		if (valid_probe) // only draw these if this is a hand placed probe
 		{
-			ForwardEntityMaskCB cb = ForwardEntityCullingCPU(vis, vis.scene->ocean.GetAABB(probe.position));
-			device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
+			if (vis.scene->ocean.IsValid() && vis.scene->weather.IsOceanEnabled())
+			{
+				ForwardEntityMaskCB cb = ForwardEntityCullingCPU(vis, vis.scene->ocean.GetAABB(probe.position));
+				device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
 
-			vis.scene->ocean.RenderForCubemap(cmd);
-		}
-
-		if (probe_aabb.layerMask & vis.layerMask) // only draw these if this is a hand placed probe
-		{
+				vis.scene->ocean.RenderForCubemap(cmd);
+			}
 			if (!visible_gaussian_models.empty())
 			{
 				vis.scene->gaussian_scene.Draw(cmd, 6); // 6 instances so it will be replicated for every cubemap face
@@ -9540,7 +9540,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 				push.filterResolution_rcp.x = 1.0f / push.filterResolution.x;
 				push.filterResolution_rcp.y = 1.0f / push.filterResolution.y;
 				push.filterRoughness = (float)i / (float)(desc.mip_levels - 1);
-				if (probe_aabb.layerMask & vis.layerMask)
+				if (valid_probe)
 				{
 					// real probe:
 					if (probe.IsRealTime())
