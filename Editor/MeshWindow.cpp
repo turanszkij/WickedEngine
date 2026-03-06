@@ -258,14 +258,34 @@ void MeshWindow::Create(EditorComponent* _editor)
 		return [this, func] (auto args) {
 			wi::scene::Scene& scene = editor->GetCurrentScene();
 			wi::unordered_set<MeshComponent*> visited_meshes; // fix double visit (straight mesh + object->mesh)
-			for (auto& x : editor->translator.selected)
+			wi::vector<MeshComponent*> meshes_to_modify;
+			wi::vector<wi::ecs::Entity> mesh_entities;
+			for (auto& i : editor->translator.selected)
 			{
-				MeshComponent* mesh = get_mesh(scene, x);
+				MeshComponent* mesh = get_mesh(scene, i);
 				if (mesh == nullptr || visited_meshes.count(mesh) > 0)
 					continue;
-				func(mesh);
 				visited_meshes.insert(mesh);
-			};
+				meshes_to_modify.push_back(mesh);
+				if (scene.meshes.GetComponent(i.entity) == mesh)
+					mesh_entities.push_back(i.entity);
+				else
+				{
+					const ObjectComponent* object = scene.objects.GetComponent(i.entity);
+					if (object != nullptr)
+						mesh_entities.push_back(object->meshID);
+				}
+			}
+			if (mesh_entities.empty())
+				return;
+			wi::Archive& archive = editor->AdvanceHistory();
+			archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+			editor->RecordEntity(archive, mesh_entities);
+			for (auto* mesh : meshes_to_modify)
+			{
+				func(mesh);
+			}
+			editor->RecordEntity(archive, mesh_entities);
 			SetEntity(entity, subset);
 		};
 	};
