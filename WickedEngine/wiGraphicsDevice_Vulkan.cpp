@@ -890,6 +890,7 @@ namespace vulkan_internal
 		VkPipeline pipeline_cs = VK_NULL_HANDLE;
 		VkPipelineShaderStageCreateInfo stageInfo = {};
 		GraphicsDevice_Vulkan::PSOLayout layout;
+		std::string entrypoint;
 
 		~Shader_Vulkan()
 		{
@@ -4394,10 +4395,11 @@ using namespace vulkan_internal;
 
 		return res >= VK_SUCCESS;
 	}
-	bool GraphicsDevice_Vulkan::CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader) const
+	bool GraphicsDevice_Vulkan::CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader, const char* entrypoint) const
 	{
 		auto internal_state = wi::allocator::make_shared<Shader_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
+		internal_state->entrypoint = entrypoint;
 		shader->internal_state = internal_state;
 		shader->stage = stage;
 
@@ -4411,7 +4413,7 @@ using namespace vulkan_internal;
 
 		internal_state->stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 		internal_state->stageInfo.module = internal_state->shaderModule;
-		internal_state->stageInfo.pName = "main";
+		internal_state->stageInfo.pName = internal_state->entrypoint.c_str();
 		switch (stage)
 		{
 		case ShaderStage::MS:

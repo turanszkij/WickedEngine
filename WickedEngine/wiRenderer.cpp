@@ -742,7 +742,8 @@ bool LoadShader(
 	Shader& shader,
 	const std::string& filename,
 	ShaderModel minshadermodel,
-	const wi::vector<std::string>& permutation_defines
+	const wi::vector<std::string>& permutation_defines,
+	const std::string& entrypoint
 )
 {
 	std::string shaderbinaryfilename = SHADERPATH + filename;
@@ -785,6 +786,7 @@ bool LoadShader(
 	if (wi::shadercompiler::IsShaderOutdated(shaderbinaryfilename))
 	{
 		wi::shadercompiler::CompilerInput input;
+		input.entrypoint = entrypoint;
 		input.format = device->GetShaderFormat();
 		input.stage = stage;
 		input.minshadermodel = minshadermodel;
@@ -808,7 +810,7 @@ bool LoadShader(
 				wi::backlog::post(output.error_message, wi::backlog::LogLevel::Warning);
 			}
 			wi::backlog::post("shader compiled: " + shaderbinaryfilename);
-			return device->CreateShader(stage, output.shaderdata, output.shadersize, &shader);
+			return device->CreateShader(stage, output.shaderdata, output.shadersize, &shader, entrypoint.c_str());
 		}
 		else
 		{
@@ -822,7 +824,7 @@ bool LoadShader(
 		wi::vector<uint8_t> buffer;
 		if (wi::helper::FileRead(shaderbinaryfilename, buffer))
 		{
-			bool success = device->CreateShader(stage, buffer.data(), buffer.size(), &shader);
+			bool success = device->CreateShader(stage, buffer.data(), buffer.size(), &shader, entrypoint.c_str());
 			if (success)
 			{
 				device->SetName(&shader, shaderbinaryfilename.c_str());

@@ -113,7 +113,8 @@ namespace wi::renderer
 		wi::graphics::Shader& shader,
 		const std::string& filename,
 		wi::graphics::ShaderModel minshadermodel = wi::graphics::ShaderModel::SM_6_0,
-		const wi::vector<std::string>& permutation_defines = {}
+		const wi::vector<std::string>& permutation_defines = {},
+		const std::string& entrypoint = "main"
 	);
 
 	// Whether background pipeline compilations are active (returns number of active jobs)

@@ -2010,7 +2010,7 @@ using namespace metal_internal;
 		
 		return internal_state->texture.get() != nullptr || internal_state->buffer.get() != nullptr;
 	}
-	bool GraphicsDevice_Metal::CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader) const
+	bool GraphicsDevice_Metal::CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader, const char* entrypoint) const
 	{
 		auto internal_state = wi::allocator::make_shared<Shader_Metal>();
 		internal_state->allocationhandler = allocationhandler;
@@ -2040,7 +2040,7 @@ using namespace metal_internal;
 		}
 		assert(internal_state->library.get() != nullptr);
 		
-		NS::SharedPtr<NS::String> entry = NS::TransferPtr(NS::String::alloc()->init("main", NS::UTF8StringEncoding));
+		NS::SharedPtr<NS::String> entry = NS::TransferPtr(NS::String::alloc()->init(entrypoint, NS::UTF8StringEncoding));
 		NS::SharedPtr<MTL::FunctionConstantValues> constants = NS::TransferPtr(MTL::FunctionConstantValues::alloc()->init());
 		
 		if (stage == ShaderStage::HS || stage == ShaderStage::DS || stage == ShaderStage::GS)

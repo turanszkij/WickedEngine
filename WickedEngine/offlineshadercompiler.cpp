@@ -24,8 +24,17 @@ struct ShaderEntry
 	struct Permutation
 	{
 		wi::vector<std::string> defines;
+		Permutation() = default;
+		Permutation(std::initializer_list<std::string> init)
+		{
+			for (auto& x : init)
+			{
+				defines.push_back(x);
+			}
+		}
 	};
 	wi::vector<Permutation> permutations;
+	std::string entrypoint = "main";
 };
 wi::vector<ShaderEntry> shaders = {
 	{"hairparticle_simulateCS", wi::graphics::ShaderStage::CS},
@@ -664,6 +673,7 @@ int main(int argc, char* argv[])
 					}
 
 					wi::shadercompiler::CompilerInput input;
+					input.entrypoint = shader.entrypoint;
 					input.flags = compile_flags;
 					input.format = target.format;
 					input.stage = shader.stage;
