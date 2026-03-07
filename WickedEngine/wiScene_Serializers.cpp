@@ -1621,6 +1621,93 @@ namespace wi::scene
 			archive >> _flags;
 			archive >> sunDirection;
 			archive >> sunColor;
+			const bool supports_sun_eclipse = (seri.GetVersion() >= 13) || (archive.GetVersion() >= 100);
+			if (supports_sun_eclipse)
+			{
+				archive >> sunEclipseStrength;
+				archive >> sunEclipseAutomatic;
+			}
+			else
+			{
+				sunEclipseStrength = 0.0f;
+				sunEclipseAutomatic = false;
+			}
+			moonLight = wi::ecs::INVALID_ENTITY;
+			const bool supports_moon_params = (seri.GetVersion() >= 7) || (archive.GetVersion() >= 94);
+			const bool supports_moon_texture = (seri.GetVersion() >= 8) || (archive.GetVersion() >= 95);
+			const bool supports_moon_texture_bias = (seri.GetVersion() >= 9) || (archive.GetVersion() >= 96);
+			const bool supports_moon_light_intensity = (seri.GetVersion() >= 10) || (archive.GetVersion() >= 97);
+			const bool supports_moon_eclipse = (seri.GetVersion() >= 11) || (archive.GetVersion() >= 98);
+			const bool supports_moon_eclipse_auto = (seri.GetVersion() >= 12) || (archive.GetVersion() >= 99);
+			if (supports_moon_params)
+			{
+				archive >> moonDirection;
+				archive >> moonColor;
+				archive >> moonSize;
+				archive >> moonGlowSize;
+				archive >> moonGlowSharpness;
+				archive >> moonGlowIntensity;
+				if (supports_moon_light_intensity)
+				{
+					archive >> moonLightIntensity;
+					if (supports_moon_eclipse)
+					{
+						archive >> moonEclipseStrength;
+						if (supports_moon_eclipse_auto)
+						{
+							archive >> moonEclipseAutomatic;
+						}
+					}
+				}
+			}
+			else
+			{
+				moonDirection = XMFLOAT3(0.0f, 0.5f, 0.8660254f);
+				moonColor = XMFLOAT3(0.04f, 0.04f, 0.05f);
+				moonSize = 0.0095f;
+				moonGlowSize = 0.03f;
+				moonGlowSharpness = 2.0f;
+				moonGlowIntensity = 0.25f;
+				moonLightIntensity = 0.05f;
+			}
+			if (!supports_moon_light_intensity)
+			{
+				moonLightIntensity = 0.05f;
+			}
+			if (!supports_moon_eclipse)
+			{
+				moonEclipseStrength = 0.0f;
+			}
+			if (!supports_moon_eclipse_auto)
+			{
+				moonEclipseAutomatic = false;
+			}
+			if (supports_moon_texture)
+			{
+				archive >> moonTextureName;
+				if (!moonTextureName.empty())
+				{
+					moonTextureName = dir + moonTextureName;
+					moonTexture = wi::resourcemanager::Load(moonTextureName);
+				}
+				else
+				{
+					moonTexture = {};
+				}
+			}
+			else
+			{
+				moonTextureName.clear();
+				moonTexture = {};
+			}
+			if (supports_moon_texture_bias)
+			{
+				archive >> moonTextureMipBias;
+			}
+			else
+			{
+				moonTextureMipBias = 0;
+			}
 			archive >> horizon;
 			archive >> zenith;
 			archive >> ambient;
@@ -1902,14 +1989,55 @@ namespace wi::scene
 		}
 		else
 		{
+			const bool supports_sun_eclipse = (seri.GetVersion() >= 13) || (archive.GetVersion() >= 100);
+			const bool supports_moon_params = (seri.GetVersion() >= 7) || (archive.GetVersion() >= 94);
+			const bool supports_moon_texture = (seri.GetVersion() >= 8) || (archive.GetVersion() >= 95);
+			const bool supports_moon_texture_bias = (seri.GetVersion() >= 9) || (archive.GetVersion() >= 96);
+			const bool supports_moon_light_intensity = (seri.GetVersion() >= 10) || (archive.GetVersion() >= 97);
+			const bool supports_moon_eclipse = (seri.GetVersion() >= 11) || (archive.GetVersion() >= 98);
+			const bool supports_moon_eclipse_auto = (seri.GetVersion() >= 12) || (archive.GetVersion() >= 99);
+			seri.RegisterResource(moonTextureName);
 			seri.RegisterResource(skyMapName);
 			seri.RegisterResource(colorGradingMapName);
 			seri.RegisterResource(volumetricCloudsWeatherMapFirstName);
 			seri.RegisterResource(volumetricCloudsWeatherMapSecondName);
-
 			archive << _flags;
 			archive << sunDirection;
 			archive << sunColor;
+			if (supports_sun_eclipse)
+			{
+				archive << sunEclipseStrength;
+				archive << sunEclipseAutomatic;
+			}
+			if (supports_moon_params)
+			{
+				archive << moonDirection;
+				archive << moonColor;
+				archive << moonSize;
+				archive << moonGlowSize;
+				archive << moonGlowSharpness;
+				archive << moonGlowIntensity;
+				if (supports_moon_light_intensity)
+				{
+					archive << moonLightIntensity;
+					if (supports_moon_eclipse)
+					{
+						archive << moonEclipseStrength;
+						if (supports_moon_eclipse_auto)
+						{
+							archive << moonEclipseAutomatic;
+						}
+					}
+				}
+			}
+			if (supports_moon_texture)
+			{
+				archive << wi::helper::GetPathRelative(dir, moonTextureName);
+			}
+			if (supports_moon_texture_bias)
+			{
+				archive << moonTextureMipBias;
+			}
 			archive << horizon;
 			archive << zenith;
 			archive << ambient;
