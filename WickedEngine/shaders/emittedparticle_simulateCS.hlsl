@@ -17,7 +17,7 @@ RWStructuredBuffer<uint> aliveBuffer_CURRENT : register(u1);
 RWStructuredBuffer<uint> aliveBuffer_NEW : register(u2);
 RWStructuredBuffer<uint> deadBuffer : register(u3);
 RWStructuredBuffer<ParticleCounters> counterBuffer : register(u4);
-RWStructuredBuffer<float> distanceBuffer : register(u6);
+RWStructuredBuffer<uint> distanceBuffer : register(u6);
 RWBuffer<float4> vertexBuffer_POS : register(u7);
 RWBuffer<float4> vertexBuffer_NOR : register(u8);
 RWBuffer<float4> vertexBuffer_UVS : register(u9);
@@ -348,7 +348,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 			// store squared distance to main camera:
 			float3 eyeVector = particle.position - GetCamera().position;
 			float distSQ = dot(eyeVector, eyeVector);
-			distanceBuffer[prevCount] = -distSQ; // this can be negated to modify sorting order here instead of rewriting sorting shaders...
+			distanceBuffer[prevCount] = -asuint(distSQ); // this can be negated to modify sorting order here instead of rewriting sorting shaders...
 #endif // SORTING
 		}
 

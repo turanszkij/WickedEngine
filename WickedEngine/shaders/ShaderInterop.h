@@ -105,7 +105,6 @@ struct IndirectDispatchArgs
 #define CBSLOT_OTHER_FFTGENERATOR				2
 #define CBSLOT_OTHER_OCEAN						3
 #define CBSLOT_OTHER_CLOUDGENERATOR				2
-#define CBSLOT_OTHER_GPUSORTLIB					2
 #define CBSLOT_MSAO								2
 #define CBSLOT_FSR								2
 #define CBSLOT_TRAILRENDERER					2
@@ -133,7 +132,6 @@ struct IndirectDispatchArgs
 #define CBSLOT_OTHER_FFTGENERATOR				4
 #define CBSLOT_OTHER_OCEAN						4
 #define CBSLOT_OTHER_CLOUDGENERATOR				4
-#define CBSLOT_OTHER_GPUSORTLIB					4
 #define CBSLOT_MSAO								4
 #define CBSLOT_FSR								4
 #define CBSLOT_TRAILRENDERER					4

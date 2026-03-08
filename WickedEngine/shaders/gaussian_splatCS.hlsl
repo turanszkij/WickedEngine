@@ -5,7 +5,7 @@ StructuredBuffer<ShaderGaussianSplatModel> modelBuffer : register(t0);
 
 RWStructuredBuffer<IndirectDrawArgsInstanced> indirectBuffer : register(u0);
 RWStructuredBuffer<uint> sortedIndexBuffer : register(u1);
-RWStructuredBuffer<float> distanceBuffer : register(u2);
+RWStructuredBuffer<uint> distanceBuffer : register(u2);
 RWStructuredBuffer<uint2> splatLookupBuffer : register(u3);
 
 struct Push
@@ -60,7 +60,7 @@ void main(uint DTid : SV_DispatchThreadID)
 	{
 		uint prevCount = waveOffset + WavePrefixSum(1);
 		sortedIndexBuffer[prevCount] = prevCount;
-		distanceBuffer[prevCount] = -distSq; // negative to sort back to front
+		distanceBuffer[prevCount] = -asuint(distSq); // negative to sort back to front
 		splatLookupBuffer[prevCount] = uint2(push.model_index, splatIndex);
 	}
 

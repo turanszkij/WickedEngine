@@ -27,8 +27,8 @@
 #define FFX_HLSL
 #include "FFX-ParallelSort/FFX_ParallelSort.h"
 
-CONSTANTBUFFER(CBuffer, FFX_ParallelSortCB, CBSLOT_OTHER_GPUSORTLIB);
-CBUFFER(SetupIndirectCB, CBSLOT_OTHER_GPUSORTLIB)
+CONSTANTBUFFER(CBuffer, FFX_ParallelSortCB, CBSLOT_GPUSORTLIB);
+CBUFFER(SetupIndirectCB, CBSLOT_GPUSORTLIB)
 {
 	uint NumKeysIndex;
 	uint MaxThreadGroups;

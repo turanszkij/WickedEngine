@@ -4,18 +4,18 @@
 
 namespace wi::gpusortlib
 {
-	// Perform bitonic sort on a GPU dataset
+	// Perform radix sort on a GPU dataset
 	//	maxCount				-	Maximum size of the dataset. GPU count can be smaller (see: counterBuffer_read param)
-	//	comparisonBuffer_read	-	Buffer containing values to compare by (Read Only)
-	//	counterBuffer_read		-	Buffer containing count of values to sort (Read Only)
-	//	counterReadOffset		-	Byte offset into the counter buffer to read the count value (Read Only)
-	//	indexBuffer_write		-	The index list which to sort. Contains index values which can index the sortBase_read buffer. This will be modified (Read + Write)
+	//	keyBuffer_uint_RW		-	Buffer containing uint32_t values to sort by (ReadWrite UNORDERED_ACCESS state)
+	//	counterBuffer_RO		-	Buffer containing count of values to sort (Read Only SHADER_RESOURCE state)
+	//	counterReadOffset		-	Byte offset into the counter buffer to read the uint32_t count value
+	//	payloadBuffer_uint_RW	-	The payload buffer of uint32_t values which to sort [optional] (ReadWrite UNORDERED_ACCESS state)
 	void Sort(
 		uint32_t maxCount,
-		const wi::graphics::GPUBuffer& comparisonBuffer_read,
-		const wi::graphics::GPUBuffer& counterBuffer_read,
+		const wi::graphics::GPUBuffer& keyBuffer_uint_RW,
+		const wi::graphics::GPUBuffer& counterBuffer_RO,
 		uint32_t counterReadOffset,
-		const wi::graphics::GPUBuffer& indexBuffer_write,
+		const wi::graphics::GPUBuffer& payloadBuffer_uint_RW,
 		wi::graphics::CommandList cmd
 	);
 
