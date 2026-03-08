@@ -33,8 +33,8 @@ int GetLongestCommonPrefix(uint indexA, uint indexB, uint elementCount)
 	}
 	else
 	{
-		uint mortonCodeA = primitiveMortonBuffer[primitiveIDBuffer[indexA]];
-		uint mortonCodeB = primitiveMortonBuffer[primitiveIDBuffer[indexB]];
+		uint mortonCodeA = primitiveMortonBuffer[indexA];
+		uint mortonCodeB = primitiveMortonBuffer[indexB];
 		if (mortonCodeA != mortonCodeB)
 		{
 			return CountLeadingZeroes(mortonCodeA ^ mortonCodeB);
