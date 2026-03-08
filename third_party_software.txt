@@ -306,6 +306,7 @@ AMD FidelityFX
 Shadow Denoiser: https://github.com/GPUOpen-Effects/FidelityFX-Denoiser
 Super Resolution: https://github.com/GPUOpen-Effects/FidelityFX-FSR
 Super Resolution 2.1: https://github.com/GPUOpen-Effects/FidelityFX-FSR2
+ParallelSort: https://github.com/GPUOpen-Effects/FidelityFX-ParallelSort
 
 Copyright (c) 2021 Advanced Micro Devices, Inc. All rights reserved.
 

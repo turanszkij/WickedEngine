@@ -315,7 +315,7 @@ namespace wi
 			assert(success);
 			device->SetName(&sortedIndexBuffer, "GaussianSplatScene::sortedIndexBuffer");
 
-			desc.stride = sizeof(float);
+			desc.stride = sizeof(uint32_t);
 			desc.size = splat_capacity * desc.stride;
 			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 			desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
@@ -453,9 +453,9 @@ namespace wi
 
 		{
 			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(&sortedIndexBuffer),
+				GPUBarrier::Memory(&distanceBuffer),
 				GPUBarrier::Buffer(&indirectBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-				GPUBarrier::Buffer(&sortedIndexBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-				GPUBarrier::Buffer(&distanceBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 				GPUBarrier::Buffer(&splatLookupBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
@@ -463,6 +463,14 @@ namespace wi
 
 		// Sorting is done globally for buffer containing all models:
 		wi::gpusortlib::Sort((uint32_t)global_splat_count, distanceBuffer, indirectBuffer, offsetof(IndirectDrawArgsInstanced, InstanceCount), sortedIndexBuffer, cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Buffer(&sortedIndexBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+				GPUBarrier::Buffer(&distanceBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
 
 		if (camera_count > 1)
 		{

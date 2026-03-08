@@ -347,8 +347,6 @@
 		1ED576E12F0115B40032621C /* ffx_denoiser_shadows_tileclassification.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ffx_denoiser_shadows_tileclassification.h; sourceTree = "<group>"; };
 		1ED576E22F0115B40032621C /* ffx_denoiser_shadows_util.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ffx_denoiser_shadows_util.h; sourceTree = "<group>"; };
 		1ED576E42F0115B40032621C /* aerialPerspectiveCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = aerialPerspectiveCS.hlsl; sourceTree = "<group>"; };
-		1ED576E52F0115B40032621C /* aerialPerspectiveCS_capture.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = aerialPerspectiveCS_capture.hlsl; sourceTree = "<group>"; };
-		1ED576E62F0115B40032621C /* aerialPerspectiveCS_capture_MSAA.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = aerialPerspectiveCS_capture_MSAA.hlsl; sourceTree = "<group>"; };
 		1ED576E72F0115B40032621C /* bc6h.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = bc6h.hlsli; sourceTree = "<group>"; };
 		1ED576E82F0115B40032621C /* bitonicSortHF.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = bitonicSortHF.hlsli; sourceTree = "<group>"; };
 		1ED576E92F0115B40032621C /* BlockCompress.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = BlockCompress.hlsli; sourceTree = "<group>"; };
@@ -456,10 +454,6 @@
 		1ED5774F2F0115B40032621C /* generateMIPChainCubeArrayCS_float4.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = generateMIPChainCubeArrayCS_float4.hlsl; sourceTree = "<group>"; };
 		1ED577502F0115B40032621C /* generateMIPChainCubeCS_float4.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = generateMIPChainCubeCS_float4.hlsl; sourceTree = "<group>"; };
 		1ED577512F0115B40032621C /* globals.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = globals.hlsli; sourceTree = "<group>"; };
-		1ED577522F0115B40032621C /* gpusortlib_kickoffSortCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = gpusortlib_kickoffSortCS.hlsl; sourceTree = "<group>"; };
-		1ED577532F0115B40032621C /* gpusortlib_sortCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = gpusortlib_sortCS.hlsl; sourceTree = "<group>"; };
-		1ED577542F0115B40032621C /* gpusortlib_sortInnerCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = gpusortlib_sortInnerCS.hlsl; sourceTree = "<group>"; };
-		1ED577552F0115B40032621C /* gpusortlib_sortStepCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = gpusortlib_sortStepCS.hlsl; sourceTree = "<group>"; };
 		1ED577562F0115B40032621C /* hairparticle_simulateCS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = hairparticle_simulateCS.hlsl; sourceTree = "<group>"; };
 		1ED577572F0115B40032621C /* hairparticleHF.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = hairparticleHF.hlsli; sourceTree = "<group>"; };
 		1ED577582F0115B40032621C /* hairparticlePS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = hairparticlePS.hlsl; sourceTree = "<group>"; };
@@ -515,7 +509,6 @@
 		1ED5778A2F0115B40032621C /* objectAS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectAS.hlsl; sourceTree = "<group>"; };
 		1ED5778B2F0115B40032621C /* objectDS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectDS.hlsl; sourceTree = "<group>"; };
 		1ED5778C2F0115B40032621C /* objectDS_prepass.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectDS_prepass.hlsl; sourceTree = "<group>"; };
-		1ED5778D2F0115B40032621C /* objectDS_prepass_alphatest.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectDS_prepass_alphatest.hlsl; sourceTree = "<group>"; };
 		1ED5778E2F0115B40032621C /* objectDS_simple.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectDS_simple.hlsl; sourceTree = "<group>"; };
 		1ED5778F2F0115B40032621C /* objectGS_voxelizer.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectGS_voxelizer.hlsl; sourceTree = "<group>"; };
 		1ED577902F0115B40032621C /* objectHF.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectHF.hlsli; sourceTree = "<group>"; };
@@ -523,7 +516,6 @@
 		1ED577922F0115B40032621C /* objectHF_tessellation.hlsli */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectHF_tessellation.hlsli; sourceTree = "<group>"; };
 		1ED577932F0115B40032621C /* objectHS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectHS.hlsl; sourceTree = "<group>"; };
 		1ED577942F0115B40032621C /* objectHS_prepass.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectHS_prepass.hlsl; sourceTree = "<group>"; };
-		1ED577952F0115B40032621C /* objectHS_prepass_alphatest.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectHS_prepass_alphatest.hlsl; sourceTree = "<group>"; };
 		1ED577962F0115B40032621C /* objectHS_simple.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectHS_simple.hlsl; sourceTree = "<group>"; };
 		1ED577972F0115B40032621C /* objectMS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectMS.hlsl; sourceTree = "<group>"; };
 		1ED577982F0115B40032621C /* objectMS_prepass.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectMS_prepass.hlsl; sourceTree = "<group>"; };
@@ -535,7 +527,6 @@
 		1ED5779E2F0115B40032621C /* objectPS_paintradius.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectPS_paintradius.hlsl; sourceTree = "<group>"; };
 		1ED5779F2F0115B40032621C /* objectPS_prepass.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectPS_prepass.hlsl; sourceTree = "<group>"; };
 		1ED577A02F0115B40032621C /* objectPS_prepass_alphatest.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectPS_prepass_alphatest.hlsl; sourceTree = "<group>"; };
-		1ED577A12F0115B40032621C /* objectPS_prepass_depthonly.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectPS_prepass_depthonly.hlsl; sourceTree = "<group>"; };
 		1ED577A22F0115B40032621C /* objectPS_prepass_depthonly_alphatest.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectPS_prepass_depthonly_alphatest.hlsl; sourceTree = "<group>"; };
 		1ED577A32F0115B40032621C /* objectPS_simple.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectPS_simple.hlsl; sourceTree = "<group>"; };
 		1ED577A42F0115B40032621C /* objectPS_voxelizer.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectPS_voxelizer.hlsl; sourceTree = "<group>"; };
@@ -544,7 +535,6 @@
 		1ED577A72F0115B40032621C /* objectVS_debug.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectVS_debug.hlsl; sourceTree = "<group>"; };
 		1ED577A82F0115B40032621C /* objectVS_prepass.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectVS_prepass.hlsl; sourceTree = "<group>"; };
 		1ED577A92F0115B40032621C /* objectVS_prepass_alphatest.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectVS_prepass_alphatest.hlsl; sourceTree = "<group>"; };
-		1ED577AA2F0115B40032621C /* objectVS_prepass_alphatest_tessellation.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectVS_prepass_alphatest_tessellation.hlsl; sourceTree = "<group>"; };
 		1ED577AB2F0115B40032621C /* objectVS_prepass_tessellation.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectVS_prepass_tessellation.hlsl; sourceTree = "<group>"; };
 		1ED577AC2F0115B40032621C /* objectVS_simple.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectVS_simple.hlsl; sourceTree = "<group>"; };
 		1ED577AD2F0115B40032621C /* objectVS_simple_tessellation.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = objectVS_simple_tessellation.hlsl; sourceTree = "<group>"; };
@@ -598,7 +588,6 @@
 		1ED577DD2F0115B40032621C /* ShaderInterop_FFTGenerator.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderInterop_FFTGenerator.h; sourceTree = "<group>"; };
 		1ED577DE2F0115B40032621C /* ShaderInterop_Font.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderInterop_Font.h; sourceTree = "<group>"; };
 		1ED577DF2F0115B40032621C /* ShaderInterop_FSR2.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderInterop_FSR2.h; sourceTree = "<group>"; };
-		1ED577E02F0115B40032621C /* ShaderInterop_GPUSortLib.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderInterop_GPUSortLib.h; sourceTree = "<group>"; };
 		1ED577E12F0115B40032621C /* ShaderInterop_HairParticle.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderInterop_HairParticle.h; sourceTree = "<group>"; };
 		1ED577E22F0115B40032621C /* ShaderInterop_Image.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderInterop_Image.h; sourceTree = "<group>"; };
 		1ED577E32F0115B40032621C /* ShaderInterop_Ocean.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ShaderInterop_Ocean.h; sourceTree = "<group>"; };
@@ -1715,8 +1704,6 @@
 				1ED576DE2F0115B40032621C /* ffx-fsr2 */,
 				1ED576E32F0115B40032621C /* ffx-shadows-dnsr */,
 				1ED576E42F0115B40032621C /* aerialPerspectiveCS.hlsl */,
-				1ED576E52F0115B40032621C /* aerialPerspectiveCS_capture.hlsl */,
-				1ED576E62F0115B40032621C /* aerialPerspectiveCS_capture_MSAA.hlsl */,
 				1ED576E72F0115B40032621C /* bc6h.hlsli */,
 				1ED576E82F0115B40032621C /* bitonicSortHF.hlsli */,
 				1ED576E92F0115B40032621C /* BlockCompress.hlsli */,
@@ -1824,10 +1811,6 @@
 				1ED5774F2F0115B40032621C /* generateMIPChainCubeArrayCS_float4.hlsl */,
 				1ED577502F0115B40032621C /* generateMIPChainCubeCS_float4.hlsl */,
 				1ED577512F0115B40032621C /* globals.hlsli */,
-				1ED577522F0115B40032621C /* gpusortlib_kickoffSortCS.hlsl */,
-				1ED577532F0115B40032621C /* gpusortlib_sortCS.hlsl */,
-				1ED577542F0115B40032621C /* gpusortlib_sortInnerCS.hlsl */,
-				1ED577552F0115B40032621C /* gpusortlib_sortStepCS.hlsl */,
 				1ED577562F0115B40032621C /* hairparticle_simulateCS.hlsl */,
 				1ED577572F0115B40032621C /* hairparticleHF.hlsli */,
 				1ED577582F0115B40032621C /* hairparticlePS.hlsl */,
@@ -1883,7 +1866,6 @@
 				1ED5778A2F0115B40032621C /* objectAS.hlsl */,
 				1ED5778B2F0115B40032621C /* objectDS.hlsl */,
 				1ED5778C2F0115B40032621C /* objectDS_prepass.hlsl */,
-				1ED5778D2F0115B40032621C /* objectDS_prepass_alphatest.hlsl */,
 				1ED5778E2F0115B40032621C /* objectDS_simple.hlsl */,
 				1ED5778F2F0115B40032621C /* objectGS_voxelizer.hlsl */,
 				1ED577902F0115B40032621C /* objectHF.hlsli */,
@@ -1891,7 +1873,6 @@
 				1ED577922F0115B40032621C /* objectHF_tessellation.hlsli */,
 				1ED577932F0115B40032621C /* objectHS.hlsl */,
 				1ED577942F0115B40032621C /* objectHS_prepass.hlsl */,
-				1ED577952F0115B40032621C /* objectHS_prepass_alphatest.hlsl */,
 				1ED577962F0115B40032621C /* objectHS_simple.hlsl */,
 				1ED577972F0115B40032621C /* objectMS.hlsl */,
 				1ED577982F0115B40032621C /* objectMS_prepass.hlsl */,
@@ -1903,7 +1884,6 @@
 				1ED5779E2F0115B40032621C /* objectPS_paintradius.hlsl */,
 				1ED5779F2F0115B40032621C /* objectPS_prepass.hlsl */,
 				1ED577A02F0115B40032621C /* objectPS_prepass_alphatest.hlsl */,
-				1ED577A12F0115B40032621C /* objectPS_prepass_depthonly.hlsl */,
 				1ED577A22F0115B40032621C /* objectPS_prepass_depthonly_alphatest.hlsl */,
 				1ED577A32F0115B40032621C /* objectPS_simple.hlsl */,
 				1ED577A42F0115B40032621C /* objectPS_voxelizer.hlsl */,
@@ -1912,7 +1892,6 @@
 				1ED577A72F0115B40032621C /* objectVS_debug.hlsl */,
 				1ED577A82F0115B40032621C /* objectVS_prepass.hlsl */,
 				1ED577A92F0115B40032621C /* objectVS_prepass_alphatest.hlsl */,
-				1ED577AA2F0115B40032621C /* objectVS_prepass_alphatest_tessellation.hlsl */,
 				1ED577AB2F0115B40032621C /* objectVS_prepass_tessellation.hlsl */,
 				1ED577AC2F0115B40032621C /* objectVS_simple.hlsl */,
 				1ED577AD2F0115B40032621C /* objectVS_simple_tessellation.hlsl */,
@@ -1966,7 +1945,6 @@
 				1ED577DD2F0115B40032621C /* ShaderInterop_FFTGenerator.h */,
 				1ED577DE2F0115B40032621C /* ShaderInterop_Font.h */,
 				1ED577DF2F0115B40032621C /* ShaderInterop_FSR2.h */,
-				1ED577E02F0115B40032621C /* ShaderInterop_GPUSortLib.h */,
 				1ED577E12F0115B40032621C /* ShaderInterop_HairParticle.h */,
 				1ED577E22F0115B40032621C /* ShaderInterop_Image.h */,
 				1ED577E32F0115B40032621C /* ShaderInterop_Ocean.h */,
