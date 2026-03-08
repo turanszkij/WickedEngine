@@ -25,7 +25,7 @@
 // ParallelSort Shaders/Includes
 //--------------------------------------------------------------------------------------
 #define FFX_HLSL
-#include "FFX-ParallelSort/FFX_ParallelSort.h"
+#include "ffx-parallelsort/FFX_ParallelSort.h"
 
 CONSTANTBUFFER(CBuffer, FFX_ParallelSortCB, CBSLOT_GPUSORTLIB);
 CBUFFER(SetupIndirectCB, CBSLOT_GPUSORTLIB)
