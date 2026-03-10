@@ -870,6 +870,7 @@ namespace wi::scene
 		void FlipCulling();
 		void FlipNormals();
 		void Recenter();
+		void RecenterToTop();
 		void RecenterToBottom();
 		void RecenterTo(float x, float y, float z);
 		wi::primitive::Sphere GetBoundingSphere() const;
