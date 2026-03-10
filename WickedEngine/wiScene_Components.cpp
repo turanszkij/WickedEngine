@@ -1962,6 +1962,20 @@ namespace wi::scene
 
 		CreateRenderData();
 	}
+	void MeshComponent::RecenterToTop()
+	{
+		XMFLOAT3 center = aabb.getCenter();
+		center.y += aabb.getHalfWidth().y;
+
+		for (auto& pos : vertex_positions)
+		{
+			pos.x -= center.x;
+			pos.y -= center.y;
+			pos.z -= center.z;
+		}
+
+		CreateRenderData();
+	}
 	void MeshComponent::RecenterToBottom()
 	{
 		XMFLOAT3 center = aabb.getCenter();

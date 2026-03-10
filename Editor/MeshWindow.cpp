@@ -327,6 +327,14 @@ void MeshWindow::Create(EditorComponent* _editor)
 	}));
 	AddWidget(&recenterButton);
 
+	recenterToTopButton.Create("Recenter to Top");
+	recenterToTopButton.SetTooltip("Recenter mesh to AABB top.");
+	recenterToTopButton.OnClick(doRecenter([this] (auto mesh) {
+		mesh->RecenterToTop();
+		UpdateRecenterInputs(mesh->aabb.getCenter());
+	}));
+	AddWidget(&recenterToTopButton);
+
 	recenterToBottomButton.Create("Recenter to Bottom");
 	recenterToBottomButton.SetTooltip("Recenter mesh to AABB bottom.");
 	recenterToBottomButton.OnClick(changeSelectedMesh([this] (auto mesh) {
@@ -1196,6 +1204,7 @@ void MeshWindow::ResizeLayout()
 	layout.add_fullwidth(computeNormalsSmoothButton);
 	layout.add_fullwidth(computeNormalsHardButton);
 	layout.add_fullwidth(recenterButton);
+	layout.add_fullwidth(recenterToTopButton);
 	layout.add_fullwidth(recenterToBottomButton);
 
 	const float safe_width = layout.width - 100 - layout.padding;

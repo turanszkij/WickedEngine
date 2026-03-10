@@ -30,6 +30,7 @@ public:
 	wi::gui::Button computeNormalsSmoothButton;
 	wi::gui::Button computeNormalsHardButton;
 	wi::gui::Button recenterButton;
+	wi::gui::Button recenterToTopButton;
 	wi::gui::Button recenterToBottomButton;
 	wi::gui::TextInputField recenterToXInput;
 	wi::gui::TextInputField recenterToYInput;
