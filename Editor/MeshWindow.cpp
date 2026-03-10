@@ -329,7 +329,7 @@ void MeshWindow::Create(EditorComponent* _editor)
 
 	recenterToTopButton.Create("Recenter to Top");
 	recenterToTopButton.SetTooltip("Recenter mesh to AABB top.");
-	recenterToTopButton.OnClick(doRecenter([this] (auto mesh) {
+	recenterToTopButton.OnClick(changeSelectedMesh([this] (auto mesh) {
 		mesh->RecenterToTop();
 		UpdateRecenterInputs(mesh->aabb.getCenter());
 	}));
