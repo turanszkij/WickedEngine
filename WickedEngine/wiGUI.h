@@ -548,6 +548,8 @@ namespace wi::gui
 		void Activate() override;
 		void Deactivate() override;
 
+		void SetEnabled(bool val) override;
+		void SetVisible(bool val) override;
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 		void SetColor(wi::Color color, int id = -1) override;
