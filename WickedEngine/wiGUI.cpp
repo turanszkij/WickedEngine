@@ -2912,7 +2912,13 @@ namespace wi::gui
 					filter.translation_local.x = drop_x;
 					filter.translation_local.y = translation.y + scale.y + drop_offset - combo_height() + filter.GetShadowRadius();
 					filter.SetDirty();
-					filterText = wi::helper::toUpper(filter.GetText());
+					std::string newFilterText = wi::helper::toUpper(filter.GetText());
+					if (newFilterText != filterText)
+					{
+						firstItemVisible = 0;
+						scrollbar_delta = 0;
+					}
+					filterText = newFilterText;
 					filter.font.params.size = int(filter.scale_local.y - 4);
 				}
 				else
