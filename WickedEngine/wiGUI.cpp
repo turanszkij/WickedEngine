@@ -1596,6 +1596,37 @@ namespace wi::gui
 	bool input_updated = false;
 	bool doubleclick_select = false;
 	wi::Timer caret_timer;
+	wi::Timer key_repeat_timer;
+	wi::input::BUTTON key_repeat_button = {};
+	bool key_repeat_active = false;
+	static constexpr float KEY_REPEAT_DELAY = 0.5f;
+	static constexpr float KEY_REPEAT_RATE = 0.035f;
+	bool KeyRepeat(wi::input::BUTTON button)
+	{
+		if (wi::input::Press(button))
+		{
+			key_repeat_button = button;
+			key_repeat_timer.record();
+			key_repeat_active = false;
+			return true;
+		}
+		if (wi::input::Down(button) && key_repeat_button == button)
+		{
+			const float elapsed = (float)key_repeat_timer.elapsed_seconds();
+			if (!key_repeat_active && elapsed > KEY_REPEAT_DELAY)
+			{
+				key_repeat_active = true;
+				key_repeat_timer.record();
+				return true;
+			}
+			if (key_repeat_active && elapsed > KEY_REPEAT_RATE)
+			{
+				key_repeat_timer.record();
+				return true;
+			}
+		}
+		return false;
+	}
 	void TextInputField::Create(const std::string& name)
 	{
 		SetName(name);
@@ -1728,12 +1759,12 @@ namespace wi::gui
 				//	// delete input...
 				//	DeleteFromInput(-1);
 				//}
-				else if (wi::input::Press(wi::input::KEYBOARD_BUTTON_DELETE))
+				else if (KeyRepeat(wi::input::KEYBOARD_BUTTON_DELETE))
 				{
 					// delete input...
 					DeleteFromInput(1);
 				}
-				else if (wi::input::Press(wi::input::KEYBOARD_BUTTON_LEFT) && caret_pos > 0)
+				else if (KeyRepeat(wi::input::KEYBOARD_BUTTON_LEFT) && caret_pos > 0)
 				{
 					// caret repositioning left:
 					caret_pos--;
@@ -1743,7 +1774,7 @@ namespace wi::gui
 					}
 					caret_timer.record();
 				}
-				else if (wi::input::Press(wi::input::KEYBOARD_BUTTON_RIGHT))
+				else if (KeyRepeat(wi::input::KEYBOARD_BUTTON_RIGHT))
 				{
 					// caret repositioning right:
 					if (caret_pos < font_input.GetText().size())
