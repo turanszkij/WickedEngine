@@ -5692,10 +5692,6 @@ void EditorComponent::SaveAs()
 Texture EditorComponent::CreateThumbnail(Texture texture, uint32_t target_width, uint32_t target_height, bool mipmaps) const
 {
 	GraphicsDevice* device = GetDevice();
-	// Ensure GPU has finished rendering before creating thumbnail
-	device->SubmitCommandLists();
-	device->WaitForGPU();
-
 	CommandList cmd = device->BeginCommandList();
 	Texture thumbnail = texture;
 
@@ -5791,6 +5787,10 @@ Texture EditorComponent::CreateThumbnail(Texture texture, uint32_t target_width,
 		wi::renderer::GenerateMipChain(thumbnail, wi::renderer::MIPGENFILTER_LINEAR, cmd);
 	}
 
+	// Ensure GPU has finished rendering
+	device->SubmitCommandLists();
+	device->WaitForGPU();
+
 	return thumbnail;
 }
 
@@ -5824,7 +5824,7 @@ bool EditorComponent::SetupThumbnailCamera(wi::RenderPath3D& thumbnailRenderPath
 
 	auto add_entity_bounds = [&](const Entity entity) {
 		const ObjectComponent* object = scene.objects.GetComponent(entity);
-		if (object != nullptr && object->meshID != INVALID_ENTITY)
+		if (object != nullptr && object->IsRenderable() && object->meshID != INVALID_ENTITY)
 		{
 			const MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
 			const TransformComponent* transform = scene.transforms.GetComponent(entity);
