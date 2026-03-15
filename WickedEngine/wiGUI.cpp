@@ -199,6 +199,26 @@ namespace wi::gui
 		}
 		if (IsTyping())
 		{
+			// When typing is active but the user clicks outside all GUI widgets,
+			//	allow the click to pass through so it can deactivate typing and reach the viewport
+			if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT) || wi::input::Press(wi::input::MOUSE_BUTTON_RIGHT))
+			{
+				const XMFLOAT4 pointer = wi::input::GetPointer();
+				const auto pointerHitbox = Hitbox2D(XMFLOAT2(pointer.x, pointer.y), XMFLOAT2(1, 1));
+				bool pointer_on_widget = false;
+				for (const auto* widget : widgets)
+				{
+					if (widget->IsVisible() && pointerHitbox.intersects(widget->hitBox))
+					{
+						pointer_on_widget = true;
+						break;
+					}
+				}
+				if (!pointer_on_widget)
+				{
+					return false;
+				}
+			}
 			return true;
 		}
 
@@ -1686,12 +1706,29 @@ namespace wi::gui
 	}
 	void TextInputField::Update(const wi::Canvas& canvas, float dt)
 	{
+		const bool was_active = (state == ACTIVE);
+
 		if (!IsVisible())
 		{
+			// If this text input was active but became invisible, clear typing state
+			if (was_active)
+			{
+				font_input.text.clear();
+				typing_active = false;
+				state = IDLE;
+			}
 			return;
 		}
 
 		Widget::Update(canvas, dt);
+
+		// If this text input was active but state was externally reset,
+		//	properly clear the typing state so IsTyping() no longer blocks input
+		if (was_active && state != ACTIVE)
+		{
+			font_input.text.clear();
+			typing_active = false;
+		}
 
 		if (IsEnabled() && dt > 0)
 		{
@@ -1700,8 +1737,8 @@ namespace wi::gui
 			hitBox.siz.x = scale.x;
 			hitBox.siz.y = scale.y;
 
-			Hitbox2D pointerHitbox = GetPointerHitbox();
-			bool intersectsPointer = pointerHitbox.intersects(hitBox);
+			const Hitbox2D pointerHitbox = GetPointerHitbox();
+			const bool intersectsPointer = pointerHitbox.intersects(hitBox);
 
 			if (state == FOCUS)
 			{
@@ -2147,6 +2184,24 @@ namespace wi::gui
 		if(state == ACTIVE)
 			typing_active = false;
 		Widget::Deactivate();
+	}
+	void TextInputField::SetEnabled(bool val)
+	{
+		if (!val && state == ACTIVE)
+		{
+			font_input.text.clear();
+			typing_active = false;
+		}
+		Widget::SetEnabled(val);
+	}
+	void TextInputField::SetVisible(bool val)
+	{
+		if (!val && state == ACTIVE)
+		{
+			font_input.text.clear();
+			typing_active = false;
+		}
+		Widget::SetVisible(val);
 	}
 
 
