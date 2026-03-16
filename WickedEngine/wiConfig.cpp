@@ -483,7 +483,32 @@ namespace wi::config
 			}
 		}
 		std::scoped_lock lck(locker);
-		wi::helper::FileWrite(filename, (const uint8_t*)text.c_str(), text.length());
+		// Only write the file if content actually changed
+		bool should_write = true;
+		if (wi::helper::FileExists(filename))
+		{
+			wi::vector<uint8_t> filedata;
+			if (wi::helper::FileRead(filename, filedata))
+			{
+				std::string current_content(filedata.begin(), filedata.end());
+				// Normalize line endings for comparison (remove \r)
+				std::string normalized_content;
+				normalized_content.reserve(current_content.size());
+				for (char c : current_content)
+				{
+					if (c != '\r')
+						normalized_content += c;
+				}
+				if (normalized_content == text)
+				{
+					should_write = false;
+				}
+			}
+		}
+		if (should_write)
+		{
+			wi::helper::FileWrite(filename, (const uint8_t*)text.c_str(), text.length());
+		}
 	}
 	Section& File::GetSection(const char* name)
 	{
