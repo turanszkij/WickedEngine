@@ -3077,6 +3077,7 @@ void Import_Extension_VRMC(LoaderState& state)
 void VRM_ToonMaterialCustomize(const std::string& name, MaterialComponent& material)
 {
 	material.shaderType = MaterialComponent::SHADERTYPE_CARTOON;
+	material.SetUseVertexColors(false); // Mtoon material spec ignores vertex color: https://github.com/vrm-c/vrm-specification/blob/master/specification/VRMC_materials_mtoon-1.0/README.md#vertex-colors
 
 	// These customizations are just made for Wicked Engine, but not standardized:
 	if (name.find("SKIN") != std::string::npos)
