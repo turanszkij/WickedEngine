@@ -770,7 +770,7 @@ bool LoadShader(
 			bool success = wi::helper::Decompress(it->second.data, it->second.size, decompressed);
 			if (success)
 			{
-				return device->CreateShader(stage, decompressed.data(), decompressed.size(), &shader);
+				return device->CreateShader(stage, decompressed.data(), decompressed.size(), &shader, entrypoint.c_str());
 			}
 			wi::backlog::post("shader dump decompression failure: " + shaderbinaryfilename, wi::backlog::LogLevel::Error);
 		}
