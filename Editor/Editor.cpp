@@ -6755,7 +6755,7 @@ void EditorComponent::FocusCameraOnSelected()
 		centerV = XMLoadFloat3(&aabb_center);
 	}
 
-	XMVECTOR target_forward = XMVector3Normalize(XMVectorNegate(camera.GetAt()));
+	XMVECTOR target_forward = XMVector3Normalize(camera.GetAt());
 	XMVECTOR up = XMVectorSet(0, 1, 0, 0);
 	XMVECTOR right = XMVector3Normalize(XMVector3Cross(up, target_forward));
 	up = XMVector3Cross(target_forward, right);
