@@ -59,8 +59,45 @@ namespace wi::graphics
 		};
 		
 	private:
+		static constexpr uint32_t INDIRECT_COUNT_HELPER_PARAMS_BINDPOINT = 27;
+		static constexpr uint32_t INDIRECT_COUNT_HELPER_SOURCE_BINDPOINT = 28;
+		static constexpr uint32_t INDIRECT_COUNT_HELPER_DEST_BINDPOINT = 29;
+		static constexpr uint32_t INDIRECT_COUNT_HELPER_COUNT_BINDPOINT = 30;
+
+		struct IndirectCountHelperParams
+		{
+			uint32_t stride = 0;
+			uint32_t argument_size = 0;
+			uint32_t instance_count_offset = 0;
+			uint32_t max_count = 0;
+		};
+
+		struct RenderPassSnapshot
+		{
+			enum class Type
+			{
+				NONE,
+				SWAPCHAIN,
+				IMAGES,
+			} type = Type::NONE;
+			const SwapChain* swapchain = nullptr;
+			wi::vector<RenderPassImage> images;
+			const GPUQueryHeap* occlusionqueries = nullptr;
+
+			void reset()
+			{
+				type = Type::NONE;
+				swapchain = nullptr;
+				images.clear();
+				occlusionqueries = nullptr;
+			}
+		};
+
 		NS::SharedPtr<MTL::Device> device;
 		NS::SharedPtr<MTL4::CommandQueue> uploadqueue;
+		NS::SharedPtr<MTL::Library> indirect_count_helper_library;
+		NS::SharedPtr<MTL::Function> indirect_count_helper_function;
+		NS::SharedPtr<MTL::ComputePipelineState> indirect_count_helper_pipeline;
 		
 		struct Semaphore
 		{
@@ -181,6 +218,7 @@ namespace wi::graphics
 			bool dirty_vb = false;
 			
 			wi::vector<GPUBarrier> barriers;
+			RenderPassSnapshot renderpass_snapshot;
 
 			void reset(uint32_t bufferindex)
 			{
@@ -211,6 +249,7 @@ namespace wi::graphics
 					x = {};
 				}
 				dirty_vb = false;
+				renderpass_snapshot.reset();
 				render_width = 0;
 				render_height = 0;
 				dirty_viewport = false;
@@ -264,6 +303,21 @@ namespace wi::graphics
 		void predraw(CommandList cmd);
 		void predispatch(CommandList cmd);
 		void precopy(CommandList cmd);
+		bool create_indirect_count_helper_pipeline();
+		NS::SharedPtr<MTL4::RenderPassDescriptor> create_renderpass_descriptor_from_snapshot(CommandList_Metal& commandlist, bool resume, const GPUQueryHeap** occlusionqueries = nullptr);
+		void begin_render_encoder(CommandList_Metal& commandlist, MTL4::RenderPassDescriptor* descriptor, const GPUQueryHeap* occlusionqueries, const RenderPassInfo& renderpass_info, MTL4::RenderEncoderOptions options = MTL4::RenderEncoderOptionNone);
+		bool sanitize_indirect_count_args(
+			const GPUBuffer* args,
+			uint64_t args_offset,
+			const GPUBuffer* count,
+			uint64_t count_offset,
+			uint32_t max_count,
+			uint32_t stride,
+			uint32_t argument_size,
+			uint32_t instance_count_offset,
+			GPUAllocation& scratch_args,
+			CommandList cmd
+		);
 
 	public:
 		GraphicsDevice_Metal(ValidationMode validationMode = ValidationMode::Disabled, GPUPreference preference = GPUPreference::Discrete);
