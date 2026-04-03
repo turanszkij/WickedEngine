@@ -146,8 +146,14 @@ namespace wi::graphics
 			NS::SharedPtr<MTL4::ComputeCommandEncoder> compute_encoder;
 			MTL::PrimitiveType primitive_type = MTL::PrimitiveTypeTriangle;
 			IRRuntimePrimitiveType ir_primitive_type = IRRuntimePrimitiveTypeTriangle;
+			NS::SharedPtr<MTL::Buffer> index_buffer_resource;
+			uint64_t index_buffer_offset = 0;
 			MTL4::BufferRange index_buffer = {};
 			MTL::IndexType index_type = MTL::IndexTypeUInt32;
+			NS::SharedPtr<MTL::IndirectCommandBuffer> draw_indirect_count_icb;
+			NS::SharedPtr<MTL::IndirectCommandBuffer> draw_indexed_indirect_count_icb;
+			uint32_t draw_indirect_count_icb_capacity = 0;
+			uint32_t draw_indexed_indirect_count_icb_capacity = 0;
 			wi::vector<std::pair<PipelineHash, JustInTimePSO>> pipelines_worker;
 			PipelineHash pipeline_hash;
 			DescriptorBindingTable binding_table;
@@ -197,8 +203,14 @@ namespace wi::graphics
 				compute_encoder.reset();
 				primitive_type = MTL::PrimitiveTypeTriangle;
 				ir_primitive_type = IRRuntimePrimitiveTypeTriangle;
+				index_buffer_resource.reset();
+				index_buffer_offset = 0;
 				index_buffer = {};
 				index_type = MTL::IndexTypeUInt32;
+				draw_indirect_count_icb.reset();
+				draw_indexed_indirect_count_icb.reset();
+				draw_indirect_count_icb_capacity = 0;
+				draw_indexed_indirect_count_icb_capacity = 0;
 				pipelines_worker.clear();
 				pipeline_hash = {};
 				binding_table = {};
@@ -238,6 +250,14 @@ namespace wi::graphics
 		wi::vector<CommandList_Metal*> commandlists;
 		uint32_t cmd_count = 0;
 		wi::SpinLock cmd_locker;
+
+		enum class DrawIndirectCountMode : uint8_t
+		{
+			LoopOnly,
+			AutoICB,
+		} draw_indirect_count_mode = DrawIndirectCountMode::AutoICB;
+		NS::SharedPtr<MTL::IndirectCommandBufferDescriptor> draw_indirect_count_icb_descriptor;
+		NS::SharedPtr<MTL::IndirectCommandBufferDescriptor> draw_indexed_indirect_count_icb_descriptor;
 		
 		wi::unordered_map<PipelineHash, JustInTimePSO> pipelines_global;
 		
