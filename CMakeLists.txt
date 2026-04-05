@@ -27,16 +27,23 @@ option(USE_LIBCXX "Link WickedEngine to llvm libc++ library - only available wit
 option(WICKED_EDITOR "Build WickedEngine editor" ON)
 option(WICKED_TESTS "Build WickedEngine tests" ON)
 option(WICKED_IMGUI_EXAMPLE "Build WickedEngine imgui example" ON)
-option(WICKED_ENABLE_IPO "Enable IPO/LTO in non-debug builds" NO)
+option(WICKED_ENABLE_IPO "Enable IPO/LTO in non-debug builds" ON)
 option(WICKED_EMBED_SHADERS "Embed shaders into the library" NO)
 option(WICKED_ENABLE_RTTI "Enable RTTI" NO)
+if (APPLE)
+    set(WICKED_TESTS OFF) # no main for macos
+    set(WICKED_IMGUI_EXAMPLE OFF)
+    set(WICKED_ENABLE_IPO OFF)
+endif()
 if(UNIX)
     option(WICKED_ENABLE_ASAN "Enable AddressSanitizer in debug builds" OFF)
     option(WICKED_ENABLE_UBSAN "Enable UndefinedBehaviourSanitizer in debug builds" OFF)
     option(WICKED_ENABLE_TSAN "Enable ThreadSanitizer in debug builds" OFF)
     option(WICKED_ENABLE_SAN_ALWAYS "Enable the selected sanitizers in all builds, not just debug" OFF)
 endif()
-if(UNIX)
+if(APPLE)
+    option(WICKED_MACOS_TEMPLATE "Build WickedEngine MacOS template" ON)
+elseif(UNIX)
     option(WICKED_LINUX_TEMPLATE "Build WickedEngine Linux template" ON)
 elseif(WIN32)
     option(WICKED_WINDOWS_TEMPLATE "Build WickedEngine Windows template" ON)
@@ -113,6 +120,15 @@ if (WIN32)
     set(PLATFORM "Windows")
     add_compile_definitions(WIN32=1)
     add_compile_definitions(_HAS_EXCEPTIONS=0)
+elseif (APPLE)
+    # set(CMAKE_C_COMPILER /opt/homebrew/opt/llvm/bin/clang)
+    # set(CMAKE_CXX_COMPILER /opt/homebrew/opt/llvm/bin/clang++)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=lld")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fuse-ld=lld")
+    set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -fuse-ld=lld")
+    set(CMAKE_LINKER ld64.lld)
+	set(PLATFORM "MacOS")
+    add_compile_definitions(MACOS=1)
 elseif (UNIX)
     set(PLATFORM "SDL2")
     add_compile_definitions(SDL2=1)
@@ -147,7 +163,7 @@ else()
         # security checks disabled in Release:
         $<$<CONFIG:Release>:-fno-stack-protector>
         $<$<CONFIG:Release>:-fcf-protection=none>
-        $<$<AND:$<CONFIG:Release>,$<NOT:$<PLATFORM_ID:Windows>>>:-fno-stack-clash-protection> # not supported on Windows
+        $<$<AND:$<CONFIG:Release>,$<NOT:$<OR:$<PLATFORM_ID:Windows>,$<PLATFORM_ID:Darwin>>>>:-fno-stack-clash-protection> # not supported on Windows or macOS
         $<$<CONFIG:Release>:-fno-stack-check>
         $<$<AND:$<CONFIG:Release>,$<NOT:$<PLATFORM_ID:Windows>>>:-fno-asynchronous-unwind-tables>  # seems to crash LUA evaluation on Windows
     )
@@ -204,6 +220,10 @@ endif()
 
 if (WICKED_LINUX_TEMPLATE)
     add_subdirectory(Samples/Template_Linux)
+endif()
+
+if (WICKED_MACOS_TEMPLATE)
+    add_subdirectory(Samples/Template_MacOS)
 endif()
 
 if (WICKED_WINDOWS_TEMPLATE)

@@ -691,9 +691,11 @@ namespace wi::shadercompiler
 					
 					static const IRVersionedRootSignatureDescriptor desc = {
 						.version = IRRootSignatureVersion_1_1,
-						.desc_1_1.Flags = IRRootSignatureFlags(IRRootSignatureFlagAllowInputAssemblerInputLayout | IRRootSignatureFlagCBVSRVUAVHeapDirectlyIndexed | IRRootSignatureFlagSamplerHeapDirectlyIndexed),
-						.desc_1_1.NumParameters = arraysize(root_parameters),
-						.desc_1_1.pParameters = root_parameters,
+						.desc_1_1 = {
+							.Flags = IRRootSignatureFlags(IRRootSignatureFlagAllowInputAssemblerInputLayout | IRRootSignatureFlagCBVSRVUAVHeapDirectlyIndexed | IRRootSignatureFlagSamplerHeapDirectlyIndexed),
+							.NumParameters = arraysize(root_parameters),
+							.pParameters = root_parameters,
+						},
 						//.desc_1_1.NumStaticSamplers = arraysize(static_samplers),
 						//.desc_1_1.pStaticSamplers = static_samplers,
 					};

@@ -43,6 +43,9 @@ if (WIN32)
 		Example_ImGui_Lib
 	)
 	set(LIB_DXCOMPILER "dxcompiler.dll")
+elif(APPLE)
+	# TODO
+	set(LIB_DXCOMPILER "dxcompiler.dylib")
 else()
 	list(APPEND SOURCE_FILES
 		main_SDL2.cpp
@@ -76,10 +79,10 @@ else()
 endif ()
 
 if(WICKED_ENABLE_IPO)
-set_target_properties(Example_ImGui PROPERTIES
-    INTERPROCEDURAL_OPTIMIZATION ON
-    INTERPROCEDURAL_OPTIMIZATION_DEBUG OFF
-)
+	set_target_properties(Example_ImGui PROPERTIES
+		INTERPROCEDURAL_OPTIMIZATION ON
+		INTERPROCEDURAL_OPTIMIZATION_DEBUG OFF
+	)
 endif()
 
 if (MSVC)
