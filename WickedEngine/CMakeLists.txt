@@ -12,17 +12,42 @@ include(GNUInstallDirs)
 set(INSTALL_LOCAL_CONFIGDIR "${CMAKE_BINARY_DIR}/cmake")
 set(INSTALL_CONFIGDIR "${CMAKE_INSTALL_LIBDIR}/cmake/WickedEngine")
 
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+    if ("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x86" OR "${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
+        set(CPU_ARCH "x86")
+    else()
+        set(CPU_ARCH "${CMAKE_SYSTEM_PROCESSOR}")
+    endif()
+elseif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64" OR "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "AMD64" OR "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "amd64" OR "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86" OR "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "i386")
+    set(CPU_ARCH "x86")
+else()
+    set(CPU_ARCH "${CMAKE_SYSTEM_PROCESSOR}")
+endif()
+
 # Use same options as Jolt
 # Select X86 processor features to use (if everything is off it will be SSE2 compatible)
-option(USE_SSE4_1 "Enable SSE4.1" ON)
-option(USE_SSE4_2 "Enable SSE4.2" ON)
-option(USE_AVX "Enable AVX" ON)
-option(USE_AVX2 "Enable AVX2" OFF)
-option(USE_AVX512 "Enable AVX512" OFF)
-option(USE_LZCNT "Enable LZCNT" ON)
-option(USE_TZCNT "Enable TZCNT" ON)
-option(USE_F16C "Enable F16C" ON)
-option(USE_FMADD "Enable FMADD" ON)
+if (CPU_ARCH STREQUAL "x86")
+    option(USE_SSE4_1 "Enable SSE4.1" ON)
+    option(USE_SSE4_2 "Enable SSE4.2" ON)
+    option(USE_AVX "Enable AVX" ON)
+    option(USE_AVX2 "Enable AVX2" OFF)
+    option(USE_AVX512 "Enable AVX512" OFF)
+    option(USE_LZCNT "Enable LZCNT" ON)
+    option(USE_TZCNT "Enable TZCNT" ON)
+    option(USE_F16C "Enable F16C" ON)
+    option(USE_FMADD "Enable FMADD" ON)
+else()
+    # If it's not x86, then don't enable x86 features
+    option(USE_SSE4_1 "Enable SSE4.1" OFF)
+    option(USE_SSE4_2 "Enable SSE4.2" OFF)
+    option(USE_AVX "Enable AVX" OFF)
+    option(USE_AVX2 "Enable AVX2" OFF)
+    option(USE_AVX512 "Enable AVX512" OFF)
+    option(USE_LZCNT "Enable LZCNT" OFF)
+    option(USE_TZCNT "Enable TZCNT" OFF)
+    option(USE_F16C "Enable F16C" OFF)
+    option(USE_FMADD "Enable FMADD" OFF)
+endif()
 
 if (WICKED_DYNAMIC_LIBRARY)
     set(WICKED_LIBRARY_TYPE SHARED)
@@ -37,6 +62,15 @@ if (WIN32)
         add_compile_options(
             /bigobj
         )
+    endif()
+elseif (APPLE)
+	# find_package(Metal )
+    find_package(OpenImageDenoise "${MIN_OpenImageDenoise_VERSION}" QUIET)
+    find_package(Threads REQUIRED)
+    if(NOT ${OpenImageDenoise_FOUND})
+        message("OpenImageDenoise>=${MIN_OpenImageDenoise_VERSION} not found, it will be disabled.")
+    else()
+        message("OpenImageDenoise ${OpenImageDenoise_VERSION} Found.")
     endif()
 else ()
     find_package(SDL2 REQUIRED)
@@ -89,7 +123,16 @@ list(REMOVE_ITEM SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/offlineshadercompiler.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/wiRenderer.cpp
 )
-
+if (APPLE)
+    list(APPEND SOURCE_FILES
+        wiInput_Apple.mm
+        wiAppleHelper.mm
+    )
+    set_source_files_properties(
+        wiInput_Apple.mm
+        wiAppleHelper.mm
+        PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+endif()
 file(GLOB SHADER_FILES CONFIGURE_DEPENDS shaders/*.hlsl shaders/*.hlsli)
 
 # these are all Wicked files except wiRenderer.cpp, which can be compiled
@@ -104,6 +147,7 @@ add_library(WickedEngine_common OBJECT ${SOURCE_FILES} ${HEADER_FILES})
 add_library(WickedEngine_ext_shaders ${WICKED_LIBRARY_TYPE}
     wiRenderer.cpp
 )
+target_compile_options(WickedEngine_common PUBLIC -Wno-missing-braces -Wunused-private-field)
 
 # the version with embedded shaders. This target might not end up being
 # used if WICKED_EMBED_SHADERS is not set, though it could still be
@@ -132,6 +176,8 @@ add_library(WickedEngine ALIAS ${TARGET_NAME})
 # aliases for backwards compatibility
 if(WIN32)
     add_library(WickedEngine_Windows ALIAS ${TARGET_NAME})
+elif(APPLE)
+    add_library(WickedEngine_MacOS ALIAS ${TARGET_NAME})
 else()
     add_library(WickedEngine_Linux ALIAS ${TARGET_NAME})
 endif()
@@ -237,6 +283,30 @@ if (WIN32)
     )
 
     set(LIBDXCOMPILER "dxcompiler.dll")
+elseif (APPLE)
+    target_compile_definitions(WickedEngine_common PUBLIC WI_UNORDERED_MAP_TYPE=2)
+
+    find_library(COREFOUNDATION_FRAMEWORK CoreFoundation REQUIRED)
+    find_library(APPLICATIONSERVICES_FRAMEWORK ApplicationServices REQUIRED)
+    find_library(APPKIT_FRAMEWORK AppKit REQUIRED)
+    find_library(METAL_FRAMEWORK Metal REQUIRED)
+    find_library(QUARTZCORE_FRAMEWORK QuartzCore REQUIRED)
+    find_library(GAMECONTROLLER_FRAMEWORK GameController REQUIRED)
+
+    target_link_libraries(WickedEngine_common PUBLIC
+        Threads::Threads
+        $<$<BOOL:${OpenImageDenoise_FOUND}>:OpenImageDenoise> # links OpenImageDenoise only if it's found
+        ${COREFOUNDATION_FRAMEWORK}
+        ${APPLICATIONSERVICES_FRAMEWORK}
+        ${APPKIT_FRAMEWORK}
+        ${METAL_FRAMEWORK}
+        ${QUARTZCORE_FRAMEWORK}
+        ${GAMECONTROLLER_FRAMEWORK}
+    )
+
+    target_link_libraries(WickedEngine_common PUBLIC dl)
+
+    set(LIBDXCOMPILER "libdxcompiler.dylib")
 else ()
     # `ska::flat_hash_map` has issues on linux because of the hash function being identity
     # in same cases. Use `robin_hood::unordered_flat_map` instead
@@ -358,11 +428,11 @@ export(EXPORT Engine-Targets
         FILE "${CMAKE_BINARY_DIR}/cmake/WickedEngineTargets.cmake"
         NAMESPACE WickedEngine::
         )
-
-install(EXPORT Engine-Targets
-        FILE WickedEngineTargets.cmake
-        NAMESPACE WickedEngine::
-        DESTINATION ${INSTALL_CONFIGDIR})
+# I don't quite get why, but this conflicts with specifying the include dirs in Editor
+# install(EXPORT Engine-Targets
+#         FILE WickedEngineTargets.cmake
+#         NAMESPACE WickedEngine::
+#         DESTINATION ${INSTALL_CONFIGDIR})
 
 set(_CONFIG_INSTALL_DIR_INCLUDE "${WICKED_ROOT_DIR}")
 set(_CONFIG_INSTALL_DIR_LIB "${WICKED_ROOT_DIR}")
@@ -383,7 +453,7 @@ install(FILES ${CMAKE_BINARY_DIR}/cmake/install/WickedEngineConfig.cmake
         DESTINATION ${INSTALL_CONFIGDIR}
 )
 
-# Shaders
+# # Shaders
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/shaders
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine"
         PATTERN "spirv" EXCLUDE

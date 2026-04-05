@@ -59,3 +59,9 @@ set_target_properties("Utility" PROPERTIES
 	FOLDER "ThirdParty"
 	POSITION_INDEPENDENT_CODE ${WICKED_PIC}
 )
+
+target_include_directories(Utility PUBLIC
+	.
+	include
+    metal
+)
