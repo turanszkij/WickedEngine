@@ -216,6 +216,7 @@ wiShaderdump.h
 
 # vscode
 .vscode/settings.json
+/.vscode/
 
 # PlayStation
 *.tlog
