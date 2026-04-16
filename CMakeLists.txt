@@ -121,6 +121,7 @@ endif()
 
 if (MSVC)
     add_compile_options(
+		/utf-8
         /W3 # warning level 3
         /MP # multi-processor compilation
         /EHsc- # exceptions disabled
