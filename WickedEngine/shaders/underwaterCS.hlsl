@@ -44,7 +44,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 0);
 		float3 surface_position = reconstruct_position(uv, depth);
 
-		const float3 V = normalize(GetCamera().position.xyz - unproj.xyz);
+		float3 V = GetCamera().position.xyz - surface_position.xyz;
+		float surface_dist = length(V);
+		V /= surface_dist;
 
 		// The ocean is not rendered into the lineardepth unfortunately, so we also trace it:
 		//	Otherwise the ocean surface could be same as infinite depth and incorrectly fogged
@@ -63,9 +65,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			const float3 displacement = texture_displacementmap.SampleLevel(sampler_linear_wrap, ocean_uv, 0).xzy;
 			surface_position += displacement;
 		}
-		const float distance_from_surface = distance(GetCamera().position, surface_position) * 0.1;
-		float water_depth = ocean_pos.y - surface_position.y;
-		water_depth = max(min(distance_from_surface, ocean_dist), water_depth);
+
+		const float ray_dist = min(surface_dist, ocean_dist) * 0.1;
+		float water_depth = max(0, ocean_pos.y - surface_position.y);
+		water_depth = max(ray_dist, water_depth);
 
 		float waterfog = saturate(exp(-water_depth * ocean.water_color.a));
 		float3 transmittance = saturate(exp(-water_depth * ocean.extinction_color.rgb * ocean.water_color.a));
@@ -80,7 +83,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float intersection_distance = abs(intersection_direction);
 	float intersection_blend = saturate(exp(-intersection_distance * 100));
 	float3 intersection_color = ocean.water_color.rgb;
-	color.rgb = lerp(color.rgb, intersection_color, intersection_blend);
+	color.rgb = lerp(color.rgb, original_color, intersection_blend);
 	
 	output[DTid.xy] = color;
 }

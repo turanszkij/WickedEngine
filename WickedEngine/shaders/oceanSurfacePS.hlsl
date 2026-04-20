@@ -161,8 +161,10 @@ float4 main(PSIn input) : SV_TARGET
 	ApplyLighting(surface, lighting, color);
 	
 	// Blend out at distance:
-	color.a = saturate(1 - saturate(dist / camera.z_far - 0.8) * 5.0); // fade will be on edge and inwards 20%
-	
+	float far_fade = saturate(1 - saturate(dist / camera.z_far - 0.8) * 5.0); // fade will be on edge and inwards 20%
+	float near_fade = saturate(lineardepth * 5);
+	color.a = min(near_fade, far_fade);
+
 	ApplyAerialPerspective(ScreenCoord, surface.P, color);
 	
 	ApplyFog(dist, V, color);
