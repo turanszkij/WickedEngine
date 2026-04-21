@@ -94,7 +94,7 @@ float4 main(PSIn input) : SV_TARGET
 	if (camera.texture_refraction_index >= 0)
 	{
 		// Water refraction:
-		const float camera_above_water = dot(float4(camera.position, 1), water_plane) < 0; 
+		const float camera_below_water = dot(float4(camera.position, 1), water_plane) < 0; 
 		Texture2D texture_refraction = bindless_textures[descriptor_index(camera.texture_refraction_index)];
 		// First sample using full perturbation:
 		float2 refraction_uv = ScreenCoord.xy + surface.N.xz * bump_strength;
@@ -102,7 +102,7 @@ float4 main(PSIn input) : SV_TARGET
 		float3 refraction_position = reconstruct_position(refraction_uv, refraction_depth);
 		water_depth = -dot(float4(refraction_position, 1), water_plane);
 		water_depth += texture_ocean_displacementmap.SampleLevel(sampler_linear_wrap, refraction_position.xz * xOceanPatchSizeRecip, 0).z; // texture contains xzy!
-		if (camera_above_water && V.y < 0)
+		if (camera_below_water && V.y < 0)
 			water_depth = -water_depth;
 		if (water_depth <= 0)
 		{
@@ -120,7 +120,7 @@ float4 main(PSIn input) : SV_TARGET
 		refraction_position = reconstruct_position(refraction_uv, refraction_depth);
 		water_depth = max(water_depth, -dot(float4(refraction_position, 1), water_plane));
 		water_depth += texture_ocean_displacementmap.SampleLevel(sampler_linear_wrap, refraction_position.xz * xOceanPatchSizeRecip, 0).z; // texture contains xzy!
-		if (camera_above_water && V.y < 0)
+		if (camera_below_water && V.y < 0)
 			water_depth = -water_depth;
 		// Water fog computation:
 		float waterfog = saturate(exp(-water_depth * color.a));

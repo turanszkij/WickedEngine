@@ -2,12 +2,30 @@
 #include "ShaderInterop_Postprocess.h"
 #include "oceanSurfaceHF.hlsli"
 #include "lightingHF.hlsli"
+#include "fogHF.hlsli"
 
 PUSHCONSTANT(postprocess, PostProcess);
 
 Texture2D<float4> input : register(t0);
 
 RWTexture2D<float4> output : register(u0);
+
+// https://www.shadertoy.com/view/MlSXR3
+float2 brownConradyDistortion(float2 uv)
+{
+	// positive values of K1 give barrel distortion, negative give pincushion
+	//float barrelDistortion1 = 0.15; // K1 in text books
+	//float barrelDistortion2 = 0.0; // K2 in text books
+	float barrelDistortion1 = 0.25; // K1 in text books
+	float barrelDistortion2 = -0.34; // K2 in text books
+	float r2 = uv.x*uv.x + uv.y*uv.y;
+	uv *= 1.0 + barrelDistortion1 * r2 + barrelDistortion2 * r2 * r2;
+	
+	// tangential distortion (due to off center lens elements)
+	// is not modeled in this function, but if it was, the terms would go here
+	return uv;
+}
+
 
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
@@ -30,10 +48,15 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		ocean_pos += displacement;
 	}
 
-	const float4 original_color = input.SampleLevel(sampler_linear_mirror, uv, 0);
+	float4 original_color = input.SampleLevel(sampler_linear_clamp, uv, 0);
 	float4 color = original_color;
 	if (world_pos.y < ocean_pos.y) // if below water surface, apply effects
 	{
+
+		// Some lens distortion uv modulation:
+		uv = clipspace_to_uv(brownConradyDistortion(uv_to_clipspace(uv) * 0.9));
+		color = input.SampleLevel(sampler_linear_clamp, uv, 0);
+
 #if 0
 		// It's not realistic to apply much refraction underwater to camera, but looks cool:
 		uv += sin(uv * 10 + GetFrame().time * 5) * 0.005;
@@ -67,14 +90,44 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		}
 
 		const float ray_dist = min(surface_dist, ocean_dist) * 0.1;
-		float water_depth = max(0, ocean_pos.y - surface_position.y);
-		water_depth = max(ray_dist, water_depth);
+		const float water_depth = max(0, ocean_pos.y - surface_position.y);
+		const float camera_depth = max(0, ocean_pos.y - world_pos.y);
+		const float fog_distance = max(ray_dist, water_depth);
 
-		float waterfog = saturate(exp(-water_depth * ocean.water_color.a));
-		float3 transmittance = saturate(exp(-water_depth * ocean.extinction_color.rgb * ocean.water_color.a));
-		color.rgb *= transmittance;
-		color.rgb = lerp(ocean.water_color.rgb, color.rgb, waterfog);
+		float fogAmount = 1 - saturate(exp(-fog_distance * ocean.water_color.a));
+		float3 transmittance = saturate(exp(-fog_distance * ocean.extinction_color.rgb * ocean.water_color.a));
+		half3 fogColor = ocean.water_color.rgb;
+
+		// Sample inscattering color:
+		{
+			const half3 L = GetSunDirection();
 		
+			half3 inscatteringColor = GetSunColor();
+
+			// Apply atmosphere transmittance:
+			if (GetFrame().options & OPTION_BIT_REALISTIC_SKY)
+			{
+				// 0 for position since fog is centered around world center
+				inscatteringColor *= GetAtmosphericLightTransmittance(GetWeather().atmosphere, 0, L, texture_transmittancelut);
+			}
+		
+			// Apply phase function solely for directionality:
+			const half cosTheta = dot(V, L);
+			inscatteringColor *= HgPhase(FOG_INSCATTERING_PHASE_G, cosTheta);
+
+			// Apply uniform phase since this medium is constant:
+			inscatteringColor *= UniformPhase();
+
+			// My custom water fog scatter modulation:
+			inscatteringColor *= (1 - ocean.extinction_color.rgb) * saturate(exp(-camera_depth * 0.25 * ocean.water_color.a));
+		
+			fogColor += inscatteringColor;
+		}
+
+		color.rgb *= transmittance;
+		color.rgb = lerp(color.rgb, fogColor, fogAmount);
+
+		//color = fogAmount;
 		//color = float4(1, 0, 0, 1);
 	}
 
