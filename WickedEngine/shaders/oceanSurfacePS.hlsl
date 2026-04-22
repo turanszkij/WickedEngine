@@ -33,8 +33,13 @@ float4 main(PSIn input) : SV_TARGET
 	[branch]
 	if (camera.texture_waterriples_index >= 0)
 	{
-		gradient.rg += bindless_textures_half4[descriptor_index(camera.texture_waterriples_index)].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).rg * 0.025;
+		gradient.rg += bindless_textures_half4[descriptor_index(camera.texture_waterriples_index)].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).rg * 0.0125;
 	}
+
+	const float bump_strength = 0.1;
+	
+	float4 water_plane = camera.reflection_plane;
+	const bool camera_below_water = dot(float4(camera.position, 1), water_plane) < 0; 
 
 	Surface surface;
 	surface.init();
@@ -42,7 +47,7 @@ float4 main(PSIn input) : SV_TARGET
 	surface.pixel = pixel;
 	float depth = input.pos.z;
 	surface.albedo = color.rgb;
-	surface.f0 = 0.02;
+	surface.f0 = camera_below_water ? 0.2 : 0.02;
 	surface.roughness = 0.1;
 	surface.P = input.GetPos3D();
 	surface.N = normalize(float3(gradient.x, xOceanTexelLength * 2, gradient.y));
@@ -60,10 +65,6 @@ float4 main(PSIn input) : SV_TARGET
 #else
 	TiledLighting(surface, lighting, GetFlatTileIndex(pixel));
 #endif // FORWARD
-
-	const float bump_strength = 0.1;
-	
-	float4 water_plane = camera.reflection_plane;
 	
 	[branch]
 	if (camera.texture_reflection_index >= 0)
@@ -81,11 +82,18 @@ float4 main(PSIn input) : SV_TARGET
 			water_depth += texture_ocean_displacementmap.SampleLevel(sampler_linear_wrap, reflectivePosition.xz * xOceanPatchSizeRecip, 0).z; // texture contains xzy!
 			reflectiveColor.rgb = lerp(color.rgb, reflectiveColor.rgb, saturate(exp(-water_depth * color.a)));
 		}
-		lighting.indirect.specular = reflectiveColor.rgb * surface.F * saturate(dist * 0.1); // fade out very close to camera, doesn't look good
+
+		// remove planar reflection at high perturbation where it gets too inaccurate
+		const float3 planar_reflection_vector_flat = reflect(V, float3(0, 1, 0));
+		const float3 planar_reflection_vector = reflect(V, surface.N);
+		const float planar_factor = smoothstep(camera_below_water ? 0.9 : 0.95,1.0,abs(dot(planar_reflection_vector_flat, planar_reflection_vector)));
+		//return float4(planar_factor.xxx,1);
+
+		lighting.indirect.specular += reflectiveColor.rgb * surface.F * saturate(dist * 0.1) * planar_factor; // fade out very close to camera, doesn't look good
 	}
 	else
 	{
-		lighting.indirect.specular = EnvironmentReflection_Global(surface);
+		lighting.indirect.specular += EnvironmentReflection_Global(surface);
 	}
 
 	float water_depth = FLT_MAX;
@@ -94,7 +102,6 @@ float4 main(PSIn input) : SV_TARGET
 	if (camera.texture_refraction_index >= 0)
 	{
 		// Water refraction:
-		const float camera_below_water = dot(float4(camera.position, 1), water_plane) < 0; 
 		Texture2D texture_refraction = bindless_textures[descriptor_index(camera.texture_refraction_index)];
 		// First sample using full perturbation:
 		float2 refraction_uv = ScreenCoord.xy + surface.N.xz * bump_strength;
@@ -162,8 +169,7 @@ float4 main(PSIn input) : SV_TARGET
 	
 	// Blend out at distance:
 	float far_fade = saturate(1 - saturate(dist / camera.z_far - 0.8) * 5.0); // fade will be on edge and inwards 20%
-	float near_fade = saturate(lineardepth * 5);
-	color.a = min(near_fade, far_fade);
+	color.a = far_fade;
 
 	ApplyAerialPerspective(ScreenCoord, surface.P, color);
 	
