@@ -3,6 +3,8 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Ocean.h"
 
+static const float OCEAN_NEARPLANE_CUTOFF = 0.1;
+
 struct PSIn
 {
 	float4 pos : SV_POSITION;

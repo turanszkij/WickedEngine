@@ -18,6 +18,11 @@ float4 main(PSIn input) : SV_TARGET
 	float lineardepth = camera.IsOrtho() ? ((1 - input.pos.z) * camera.z_far) : input.pos.w;
 	half4 color = xOceanWaterColor;
 	float2 ScreenCoord = input.pos.xy * camera.internal_resolution_rcp;
+
+	float4 pos2D = mul(camera.view_projection, float4(input.GetPos3D(), 1));
+	pos2D.xyz /= pos2D.w;
+	if (pos2D.z > OCEAN_NEARPLANE_CUTOFF)
+		discard;
 	
 	float3 V = input.GetViewVector();
 	float dist = length(V);

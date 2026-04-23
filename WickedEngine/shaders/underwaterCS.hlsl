@@ -4,6 +4,7 @@
 #include "lightingHF.hlsli"
 #include "fogHF.hlsli"
 
+#define INTERSECTION_DISTORT
 #define LENS_DISTORT
 //#define ANIMATED_DISTORT
 
@@ -52,7 +53,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
 
 	// Unproject near plane and determine for every pixel if it's below water surface:
-	float4 clipspace = float4(uv_to_clipspace(uv), 0.1, 1); // push further away from near plane
+	float4 clipspace = float4(uv_to_clipspace(uv), OCEAN_NEARPLANE_CUTOFF, 1); // push further away from near plane
 	float4 unproj = mul(GetCamera().inverse_view_projection, clipspace);
 	unproj.xyz /= unproj.w;
 	float3 world_pos = unproj.xyz;
@@ -67,9 +68,34 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		ocean_pos += displacement;
 	}
 
+#ifdef INTERSECTION_DISTORT
+	// Distort at intersection:
+	float intersection_direction = world_pos.y - ocean_pos.y;
+	float intersection_distance = abs(intersection_direction);
+	float intersection_blend = saturate(exp(-intersection_distance * 50));
+	clipspace.xy *= lerp(1, 0.5, intersection_blend);
+	uv = clipspace_to_uv(clipspace.xy);
+	//color.rgb = lerp(color.rgb, ocean.water_color.rgb, intersection_blend);
+
+	// Recompute ray after distortion:
+	unproj = mul(GetCamera().inverse_view_projection, clipspace);
+	unproj.xyz /= unproj.w;
+	world_pos = unproj.xyz;
+	ocean_pos = float3(world_pos.x, ocean.water_height, world_pos.z);
+	[branch]
+	if (ocean.texture_displacementmap >= 0)
+	{
+		const float2 ocean_uv = ocean_pos.xz * ocean.patch_size_rcp;
+		Texture2D texture_displacementmap = bindless_textures[descriptor_index(ocean.texture_displacementmap)];
+		const float3 displacement = texture_displacementmap.SampleLevel(sampler_linear_wrap, ocean_uv, 0).xzy;
+		ocean_pos += displacement;
+	}
+#endif // INTERSECTION_DISTORT
+
 	float4 original_color = input.SampleLevel(sampler_linear_clamp, uv, 0);
 	float4 color = original_color;
-	if (world_pos.y < ocean_pos.y) // if below water surface, apply effects
+
+	// Apply effects on full screen:
 	{
 
 #ifdef LENS_DISTORT
@@ -85,7 +111,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 		color = input.SampleLevel(sampler_linear_mirror, uv, 0);
 
-		const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 0);
+		const float depth = texture_depth.SampleLevel(sampler_linear_clamp, uv, 0);
 		float3 surface_position = reconstruct_position(uv, depth);
 
 		float4 clipspace2 = float4(uv_to_clipspace(uv), 1, 1); // exact near plane
@@ -157,12 +183,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		//color = float4(1, 0, 0, 1);
 	}
 
-	// Transition at intersection:
-	float intersection_direction = world_pos.y - ocean_pos.y;
-	float intersection_distance = abs(intersection_direction);
-	float intersection_blend = saturate(exp(-intersection_distance * 100));
-	float3 intersection_color = ocean.water_color.rgb;
-	color.rgb = lerp(color.rgb, original_color, intersection_blend);
+	// Constrain the effect smoothly just below the water line:
+	color = lerp(color, original_color, smoothstep(0.0, 0.025, saturate(world_pos.y - ocean_pos.y - 0.01)));
+	//color = smoothstep(0.0, 0.05, saturate(intersection_direction));
 	
 	output[DTid.xy] = color;
 }
