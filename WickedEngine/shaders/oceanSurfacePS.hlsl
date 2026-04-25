@@ -52,7 +52,7 @@ float4 main(PSIn input) : SV_TARGET
 	surface.pixel = pixel;
 	float depth = input.pos.z;
 	surface.albedo = color.rgb;
-	surface.f0 = camera_below_water ? 0.2 : 0.02;
+	surface.f0 = 0.02;
 	surface.roughness = 0.1;
 	surface.P = input.GetPos3D();
 	surface.N = normalize(float3(gradient.x, xOceanTexelLength * 2, gradient.y));
@@ -70,6 +70,13 @@ float4 main(PSIn input) : SV_TARGET
 #else
 	TiledLighting(surface, lighting, GetFlatTileIndex(pixel));
 #endif // FORWARD
+
+	if (camera_below_water)
+	{
+		// Just eyeballing a nice modified transition for refraction-reflection from underwater view:
+		const float3 VdotN = abs(dot(surface.V, surface.N));
+		surface.F = smoothstep(0.4, 0.6, 1 - VdotN);
+	}
 	
 	[branch]
 	if (camera.texture_reflection_index >= 0)
