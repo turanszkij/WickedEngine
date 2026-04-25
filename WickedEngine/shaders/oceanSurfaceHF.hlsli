@@ -4,7 +4,7 @@
 #include "ShaderInterop_Ocean.h"
 
 //static const float OCEAN_NEARPLANE_CUTOFF = 0.1;
-#define OCEAN_NEARPLANE_CUTOFF compute_inverse_lineardepth(1.0)
+#define OCEAN_NEARPLANE_CUTOFF compute_inverse_lineardepth(max(GetCamera().z_near + 1, 1.0))
 
 struct PSIn
 {
