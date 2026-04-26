@@ -9,9 +9,91 @@
 #include "wiBacklog.h"
 
 #include <Metal/MTL4AccelerationStructure.hpp>
+#include <algorithm>
+#include <cstddef>
+#include <cstdlib>
+#include <mutex>
+#include <string>
+#include <unordered_set>
 
 namespace wi::graphics
 {
+
+namespace
+{
+	std::mutex GMetalIndirectCountWarningMutex;
+	std::unordered_set<std::string> GMetalIndirectCountWarningSources;
+
+	inline void MetalWarnIndirectCountSkippedOnce(const char* draw_function_name, const char* reason)
+	{
+		const char* function_name = draw_function_name != nullptr ? draw_function_name : "DrawIndirectCount";
+		const char* warning_reason = reason != nullptr ? reason : "unknown reason";
+		std::scoped_lock lock(GMetalIndirectCountWarningMutex);
+		const std::string warning_key = std::string(function_name) + "|" + warning_reason;
+		const bool inserted = GMetalIndirectCountWarningSources.emplace(warning_key).second;
+		if (inserted)
+		{
+			wilog_warning("Metal %s skipped: %s", function_name, warning_reason);
+		}
+	}
+
+	inline const char* MetalTryReadIndirectCount(const GPUBuffer* count, uint64_t count_offset, uint32_t max_count, uint32_t& draw_count)
+	{
+		draw_count = 0;
+		if (max_count == 0)
+		{
+			return nullptr;
+		}
+		if (count == nullptr)
+		{
+			return "count buffer is null";
+		}
+		if (count->mapped_data == nullptr)
+		{
+			return "count buffer is not host-readable at command recording time";
+		}
+		const GPUBufferDesc& count_desc = count->GetDesc();
+		if (count_offset > count_desc.size || (count_desc.size - count_offset) < sizeof(uint32_t))
+		{
+			return "count buffer offset is out of bounds";
+		}
+		uint32_t count_value = 0;
+		std::memcpy(&count_value, static_cast<const uint8_t*>(count->mapped_data) + count_offset, sizeof(count_value));
+		draw_count = std::min(max_count, count_value);
+		return nullptr;
+	}
+
+	template <typename T>
+	inline const T* MetalTryGetMappedIndirectArgs(const GPUBuffer* args, uint64_t args_offset, uint32_t draw_count)
+	{
+		if (draw_count == 0)
+		{
+			return nullptr;
+		}
+		if (args == nullptr)
+		{
+			return nullptr;
+		}
+		if (args->mapped_data == nullptr)
+		{
+			return nullptr;
+		}
+		const GPUBufferDesc& args_desc = args->GetDesc();
+		const uint64_t stride = sizeof(T);
+		if (args_offset > args_desc.size)
+		{
+			return nullptr;
+		}
+		const uint64_t remaining_size = args_desc.size - args_offset;
+		const uint64_t required_size = uint64_t(draw_count) * stride;
+		if (required_size > remaining_size)
+		{
+			return nullptr;
+		}
+		return reinterpret_cast<const T*>(static_cast<const uint8_t*>(args->mapped_data) + args_offset);
+	}
+
+}
 
 namespace metal_internal
 {
@@ -1298,11 +1380,14 @@ using namespace metal_internal;
 		commandlist.dirty_viewport = true;
 		commandlist.dirty_cs = true;
 		
-		if (commandlist.dirty_cs && commandlist.active_cs != nullptr)
+		if (commandlist.dirty_cs)
 		{
+			if (commandlist.active_cs != nullptr)
+			{
+				auto internal_state = to_internal(commandlist.active_cs);
+				commandlist.compute_encoder->setComputePipelineState(internal_state->compute_pipeline.get());
+			}
 			commandlist.dirty_cs = false;
-			auto internal_state = to_internal(commandlist.active_cs);
-			commandlist.compute_encoder->setComputePipelineState(internal_state->compute_pipeline.get());
 		}
 		
 		binder_flush(cmd);
@@ -1335,6 +1420,13 @@ using namespace metal_internal;
 		{
 			wilog_messagebox("Metal 4 graphics is not supported by your system, exiting!");
 			wi::platform::Exit();
+		}
+		if (const char* mode_env = std::getenv("DS_WICKED_METAL_DRAW_INDIRECT_COUNT_MODE"))
+		{
+			if (mode_env[0] == 'l' || mode_env[0] == 'L')
+			{
+				draw_indirect_count_mode = DrawIndirectCountMode::LoopOnly;
+			}
 		}
 		
 		adapterName = device->name()->cString(NS::UTF8StringEncoding);
@@ -1374,6 +1466,24 @@ using namespace metal_internal;
 		argument_table_desc->setMaxBufferBindCount(31);
 		argument_table_desc->setMaxTextureBindCount(0);
 		argument_table_desc->setMaxSamplerStateBindCount(0);
+
+		auto init_indirect_count_descriptor = [](MTL::IndirectCommandBufferDescriptor* descriptor)
+		{
+			descriptor->setInheritBuffers(true);
+			descriptor->setInheritPipelineState(true);
+			descriptor->setInheritDepthStencilState(true);
+			descriptor->setInheritCullMode(true);
+			descriptor->setInheritDepthBias(true);
+			descriptor->setInheritDepthClipMode(true);
+			descriptor->setInheritFrontFacingWinding(true);
+			descriptor->setInheritTriangleFillMode(true);
+		};
+		draw_indirect_count_icb_descriptor = NS::TransferPtr(MTL::IndirectCommandBufferDescriptor::alloc()->init());
+		draw_indirect_count_icb_descriptor->setCommandTypes(MTL::IndirectCommandTypeDraw);
+		init_indirect_count_descriptor(draw_indirect_count_icb_descriptor.get());
+		draw_indexed_indirect_count_icb_descriptor = NS::TransferPtr(MTL::IndirectCommandBufferDescriptor::alloc()->init());
+		draw_indexed_indirect_count_icb_descriptor->setCommandTypes(MTL::IndirectCommandTypeDrawIndexed);
+		init_indirect_count_descriptor(draw_indexed_indirect_count_icb_descriptor.get());
 		
 		descriptor_heap_res = NS::TransferPtr(device->newBuffer(BINDLESS_RESOURCE_CAPACITY * sizeof(IRDescriptorTableEntry), MTL::ResourceStorageModeShared));
 		descriptor_heap_res->setLabel(NS::TransferPtr(NS::String::alloc()->init("descriptor_heap_res", NS::UTF8StringEncoding)).get());
@@ -1513,7 +1623,7 @@ using namespace metal_internal;
 				frame_fence[i][q]->setSignaledValue(0);
 			}
 		}
-		
+
 		wilog("Created GraphicsDevice_Metal (%d ms)", (int)std::round(timer.elapsed()));
 	}
 	GraphicsDevice_Metal::~GraphicsDevice_Metal()
@@ -3492,7 +3602,7 @@ using namespace metal_internal;
 			commandlist.compute_encoder.reset();
 			commandlist.compute_encoder = nullptr;
 		}
-		
+
 		NS::SharedPtr<MTL4::RenderPassDescriptor> descriptor = NS::TransferPtr(MTL4::RenderPassDescriptor::alloc()->init());
 		NS::SharedPtr<MTL::RenderPassColorAttachmentDescriptor> color_attachment_descriptors[8];
 		NS::SharedPtr<MTL::RenderPassDepthAttachmentDescriptor> depth_attachment_descriptor;
@@ -3784,6 +3894,8 @@ using namespace metal_internal;
 			return;
 		auto internal_state = to_internal(indexBuffer);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
+		commandlist.index_buffer_resource = internal_state->buffer;
+		commandlist.index_buffer_offset = offset;
 		commandlist.index_buffer.bufferAddress = internal_state->gpu_address + offset;
 		commandlist.index_buffer.length = internal_state->buffer->length();
 		commandlist.index_type = format == IndexBufferFormat::UINT32 ? MTL::IndexTypeUInt32 : MTL::IndexTypeUInt16;
@@ -4162,11 +4274,167 @@ using namespace metal_internal;
 	}
 	void GraphicsDevice_Metal::DrawInstancedIndirectCount(const GPUBuffer* args, uint64_t args_offset, const GPUBuffer* count, uint64_t count_offset, uint32_t max_count, CommandList cmd)
 	{
-		// TODO
+		auto args_internal = to_internal(args);
+		CommandList_Metal& commandlist = GetCommandList(cmd);
+
+		assert(commandlist.gs_desc.basePipelineDescriptor == nullptr); // indirect geometry shader emulation not supported because instance count is not available to compute emulation info
+
+		uint32_t draw_count = 0;
+		const char* read_error = MetalTryReadIndirectCount(count, count_offset, max_count, draw_count);
+		if (read_error != nullptr)
+		{
+			MetalWarnIndirectCountSkippedOnce(__func__, read_error);
+			return;
+		}
+		if (draw_count == 0)
+		{
+			return;
+		}
+
+		const bool use_icb = draw_indirect_count_mode == DrawIndirectCountMode::AutoICB && !commandlist.drawargs_required;
+		if (use_icb)
+		{
+			// ICB encoding currently uses host-visible indirect args. GPU-only args fall back to the loop path below.
+			const MTL::DrawPrimitivesIndirectArguments* mapped_args = MetalTryGetMappedIndirectArgs<MTL::DrawPrimitivesIndirectArguments>(args, args_offset, draw_count);
+			if (mapped_args != nullptr && draw_indirect_count_icb_descriptor.get() != nullptr)
+			{
+				if (commandlist.draw_indirect_count_icb.get() == nullptr || commandlist.draw_indirect_count_icb_capacity < draw_count)
+				{
+					commandlist.draw_indirect_count_icb = NS::TransferPtr(device->newIndirectCommandBuffer(draw_indirect_count_icb_descriptor.get(), draw_count, MTL::ResourceStorageModePrivate));
+					if (commandlist.draw_indirect_count_icb.get() != nullptr)
+					{
+						commandlist.draw_indirect_count_icb_capacity = draw_count;
+					}
+				}
+				if (commandlist.draw_indirect_count_icb.get() != nullptr)
+				{
+					commandlist.draw_indirect_count_icb->reset(NS::Range::Make(0, draw_count));
+					for (uint32_t i = 0; i < draw_count; ++i)
+					{
+						const MTL::DrawPrimitivesIndirectArguments& draw = mapped_args[i];
+						MTL::IndirectRenderCommand* indirect_render_command = commandlist.draw_indirect_count_icb->indirectRenderCommand(i);
+						indirect_render_command->drawPrimitives(commandlist.primitive_type, draw.vertexStart, draw.vertexCount, draw.instanceCount, draw.baseInstance);
+					}
+
+					auto execution_range = AllocateGPU(sizeof(MTL::IndirectCommandBufferExecutionRange), cmd);
+					auto* execution_range_data = reinterpret_cast<MTL::IndirectCommandBufferExecutionRange*>(execution_range.data);
+					execution_range_data->location = 0;
+					execution_range_data->length = draw_count;
+					const MTL::GPUAddress execution_range_buffer = to_internal(&execution_range.buffer)->gpu_address + execution_range.offset;
+
+					predraw(cmd);
+					commandlist.render_encoder->executeCommandsInBuffer(commandlist.draw_indirect_count_icb.get(), execution_range_buffer);
+					return;
+				}
+			}
+		}
+
+		for (uint32_t i = 0; i < draw_count; ++i)
+		{
+			const uint64_t draw_args_offset = args_offset + uint64_t(i) * sizeof(MTL::DrawPrimitivesIndirectArguments);
+			if (commandlist.drawargs_required)
+			{
+				commandlist.dirty_drawargs = true;
+				commandlist.argument_table->setAddress(args_internal->gpu_address + draw_args_offset, kIRArgumentBufferDrawArgumentsBindPoint);
+				auto alloc = AllocateGPU(sizeof(uint16_t), cmd);
+				std::memcpy(alloc.data, &kIRNonIndexedDraw, sizeof(uint16_t));
+				commandlist.argument_table->setAddress(to_internal(&alloc.buffer)->gpu_address + alloc.offset, kIRArgumentBufferUniformsBindPoint);
+			}
+
+			predraw(cmd);
+			commandlist.render_encoder->drawPrimitives(commandlist.primitive_type, args_internal->gpu_address + draw_args_offset);
+		}
 	}
 	void GraphicsDevice_Metal::DrawIndexedInstancedIndirectCount(const GPUBuffer* args, uint64_t args_offset, const GPUBuffer* count, uint64_t count_offset, uint32_t max_count, CommandList cmd)
 	{
-		// TODO
+		auto args_internal = to_internal(args);
+		CommandList_Metal& commandlist = GetCommandList(cmd);
+
+		assert(commandlist.gs_desc.basePipelineDescriptor == nullptr); // indirect geometry shader emulation not supported because instance count is not available to compute emulation info
+
+		uint32_t draw_count = 0;
+		const char* read_error = MetalTryReadIndirectCount(count, count_offset, max_count, draw_count);
+		if (read_error != nullptr)
+		{
+			MetalWarnIndirectCountSkippedOnce(__func__, read_error);
+			return;
+		}
+		if (draw_count == 0)
+		{
+			return;
+		}
+
+		const uint64_t index_stride = commandlist.index_type == MTL::IndexTypeUInt32 ? sizeof(uint32_t) : sizeof(uint16_t);
+		const bool use_icb = draw_indirect_count_mode == DrawIndirectCountMode::AutoICB && !commandlist.drawargs_required && commandlist.index_buffer_resource.get() != nullptr;
+		if (use_icb)
+		{
+			// ICB encoding currently uses host-visible indirect args. GPU-only args fall back to the loop path below.
+			const MTL::DrawIndexedPrimitivesIndirectArguments* mapped_args = MetalTryGetMappedIndirectArgs<MTL::DrawIndexedPrimitivesIndirectArguments>(args, args_offset, draw_count);
+			if (mapped_args != nullptr && draw_indexed_indirect_count_icb_descriptor.get() != nullptr)
+			{
+				if (commandlist.draw_indexed_indirect_count_icb.get() == nullptr || commandlist.draw_indexed_indirect_count_icb_capacity < draw_count)
+				{
+					commandlist.draw_indexed_indirect_count_icb = NS::TransferPtr(device->newIndirectCommandBuffer(draw_indexed_indirect_count_icb_descriptor.get(), draw_count, MTL::ResourceStorageModePrivate));
+					if (commandlist.draw_indexed_indirect_count_icb.get() != nullptr)
+					{
+						commandlist.draw_indexed_indirect_count_icb_capacity = draw_count;
+					}
+				}
+				if (commandlist.draw_indexed_indirect_count_icb.get() != nullptr)
+				{
+					commandlist.draw_indexed_indirect_count_icb->reset(NS::Range::Make(0, draw_count));
+					for (uint32_t i = 0; i < draw_count; ++i)
+					{
+						const MTL::DrawIndexedPrimitivesIndirectArguments& draw = mapped_args[i];
+						const uint64_t index_buffer_offset = commandlist.index_buffer_offset + uint64_t(draw.indexStart) * index_stride;
+						MTL::IndirectRenderCommand* indirect_render_command = commandlist.draw_indexed_indirect_count_icb->indirectRenderCommand(i);
+						indirect_render_command->drawIndexedPrimitives(
+							commandlist.primitive_type,
+							draw.indexCount,
+							commandlist.index_type,
+							commandlist.index_buffer_resource.get(),
+							index_buffer_offset,
+							draw.instanceCount,
+							draw.baseVertex,
+							draw.baseInstance
+						);
+					}
+
+					auto execution_range = AllocateGPU(sizeof(MTL::IndirectCommandBufferExecutionRange), cmd);
+					auto* execution_range_data = reinterpret_cast<MTL::IndirectCommandBufferExecutionRange*>(execution_range.data);
+					execution_range_data->location = 0;
+					execution_range_data->length = draw_count;
+					const MTL::GPUAddress execution_range_buffer = to_internal(&execution_range.buffer)->gpu_address + execution_range.offset;
+
+					predraw(cmd);
+					commandlist.render_encoder->executeCommandsInBuffer(commandlist.draw_indexed_indirect_count_icb.get(), execution_range_buffer);
+					return;
+				}
+			}
+		}
+
+		for (uint32_t i = 0; i < draw_count; ++i)
+		{
+			const uint64_t draw_args_offset = args_offset + uint64_t(i) * sizeof(MTL::DrawIndexedPrimitivesIndirectArguments);
+			if (commandlist.drawargs_required)
+			{
+				commandlist.dirty_drawargs = true;
+				commandlist.argument_table->setAddress(args_internal->gpu_address + draw_args_offset, kIRArgumentBufferDrawArgumentsBindPoint);
+				auto alloc = AllocateGPU(sizeof(uint16_t), cmd);
+				uint16_t irindextype = IRMetalIndexToIRIndex(commandlist.index_type);
+				std::memcpy(alloc.data, &irindextype, sizeof(uint16_t));
+				commandlist.argument_table->setAddress(to_internal(&alloc.buffer)->gpu_address + alloc.offset, kIRArgumentBufferUniformsBindPoint);
+			}
+
+			predraw(cmd);
+			commandlist.render_encoder->drawIndexedPrimitives(
+				commandlist.primitive_type,
+				commandlist.index_type,
+				commandlist.index_buffer.bufferAddress,
+				commandlist.index_buffer.length,
+				args_internal->gpu_address + draw_args_offset
+			);
+		}
 	}
 	void GraphicsDevice_Metal::Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd)
 	{
