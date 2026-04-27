@@ -47,6 +47,8 @@ if (WIN32)
 		Example_ImGui_Docking_Lib
 	)
 	set(LIB_DXCOMPILER "dxcompiler.dll")
+elseif(APPLE)
+	set(LIB_DXCOMPILER "dxcompiler.dylib")
 else()
 	list(APPEND SOURCE_FILES
 		main_SDL2.cpp
