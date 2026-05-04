@@ -3992,7 +3992,6 @@ namespace wi::gui
 				widget->priority = ~0u;
 			}
 		}
-		force_disable = false;
 
 		if (priority > 0)
 		{
