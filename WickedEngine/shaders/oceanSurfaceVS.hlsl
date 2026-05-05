@@ -26,7 +26,7 @@ PSIn main(uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID, out uint
 	unprojNEAR.xyz /= unprojNEAR.w;
 	float4 unprojFAR = mul(camera.inverse_view_projection, float4(Out.pos.xy, 0, 1));
 	unprojFAR.xyz /= unprojFAR.w;
-	const float3 d = normalize(unprojNEAR.xyz - unprojFAR.xyz);
+	const float3 d = normalize(unprojFAR.xyz - unprojNEAR.xyz);
 	const float3 o = unprojNEAR.xyz;
 
 	float3 worldPos = intersectPlaneClampInfinite(o, d, float3(0, 1, 0), xOceanWaterHeight);

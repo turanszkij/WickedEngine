@@ -23,13 +23,17 @@ struct PSIn
 	}
 };
 
+float intersectPlaneClampInfiniteDist(in float3 rayOrigin, in float3 rayDirection, in float3 planeNormal, float planeHeight)
+{
+	return (planeHeight - dot(planeNormal, rayOrigin)) / dot(planeNormal, rayDirection);
+}
 float3 intersectPlaneClampInfinite(in float3 rayOrigin, in float3 rayDirection, in float3 planeNormal, float planeHeight)
 {
-	float dist = (planeHeight - dot(planeNormal, rayOrigin)) / dot(planeNormal, rayDirection);
-	if (dist < 0.0)
+	float dist = intersectPlaneClampInfiniteDist(rayOrigin, rayDirection, planeNormal, planeHeight);
+	if (dist > 0.0)
 		return rayOrigin + rayDirection * dist;
 	else
-		return float3(rayOrigin.x, planeHeight, rayOrigin.z) - normalize(float3(rayDirection.x, 0, rayDirection.z)) * GetCamera().z_far;
+		return float3(rayOrigin.x, planeHeight, rayOrigin.z) + normalize(float3(rayDirection.x, 0, rayDirection.z)) * GetCamera().z_far;
 }
 
 #endif // WI_OCEAN_SURFACE_HF

@@ -125,7 +125,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 		// The ocean is not rendered into the lineardepth unfortunately, so we also trace it:
 		//	Otherwise the ocean surface could be same as infinite depth and incorrectly fogged
-		float3 ocean_surface_pos = intersectPlaneClampInfinite(campos, V, float3(0, 1, 0), ocean.water_height);
+		float3 ocean_surface_pos = intersectPlaneClampInfinite(campos, -V, float3(0, 1, 0), ocean.water_height);
 		float2 ocean_surface_uv = ocean_surface_pos.xz * ocean.patch_size_rcp;
 		Texture2D texture_displacementmap = bindless_textures[descriptor_index(ocean.texture_displacementmap)];
 		const float3 displacement = texture_displacementmap.SampleLevel(sampler_linear_wrap, ocean_surface_uv, 0).xzy;
