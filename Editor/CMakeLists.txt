@@ -6,8 +6,14 @@ string(REGEX REPLACE "([.+?*])" "\\\\\\1" SDIR "${CMAKE_CURRENT_SOURCE_DIR}")
 file(GLOB SOURCE_FILES CONFIGURE_DEPENDS *.cpp)
 list(FILTER SOURCE_FILES EXCLUDE REGEX ${SDIR}/main_.*)
 list(FILTER SOURCE_FILES EXCLUDE REGEX ${SDIR}/stdafx.*)
-list(APPEND SOURCE_FILES main_${PLATFORM}.cpp)
 
+if (APPLE)
+    list(APPEND SOURCE_FILES main_MacOS.mm)
+    # The project PCH doesn't work with objective C, so disable it for the mm files.
+    set_source_files_properties(main_MacOS.mm PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+else()
+    list(APPEND SOURCE_FILES main_${PLATFORM}.cpp)
+endif()
 
 if (WIN32)
     list (APPEND SOURCE_FILES
@@ -30,6 +36,22 @@ if (WIN32)
 
     set_property(TARGET Editor PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
     set(LIB_DXCOMPILER "dxcompiler.dll")
+elseif (APPLE)
+    add_executable(Editor ${SOURCE_FILES})
+
+    find_library(APPKIT_FRAMEWORK AppKit REQUIRED)
+
+    target_link_libraries(Editor PUBLIC
+        WickedEngine
+        ${APPKIT_FRAMEWORK}
+    )
+    set(LIB_DXCOMPILER "libdxcompiler.dylib")
+
+    # needed for proper names in crash stacktrace
+    set_target_properties(Editor
+        PROPERTIES
+        ENABLE_EXPORTS ON
+    )
 else ()
     add_executable(Editor ${SOURCE_FILES})
 

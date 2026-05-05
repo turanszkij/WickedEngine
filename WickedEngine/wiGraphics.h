@@ -132,7 +132,7 @@ namespace wi::graphics
 		INV_SRC1_COLOR,
 		SRC1_ALPHA,
 		INV_SRC1_ALPHA,
-	}; 
+	};
 	enum class BlendOp : uint8_t
 	{
 		ADD,
@@ -257,7 +257,7 @@ namespace wi::graphics
 		D32_FLOAT,				// depth (32-bit) | SRV: R32_FLOAT
 		R32_FLOAT,
 		R32_UINT,
-		R32_SINT, 
+		R32_SINT,
 		D24_UNORM_S8_UINT,		// depth (24-bit) + stencil (8-bit) | SRV: R24_INTERNAL (default or depth aspect), R8_UINT (stencil aspect)
 		R9G9B9E5_SHAREDEXP,
 
@@ -457,7 +457,7 @@ namespace wi::graphics
 		VIDEO_DECODE_H265 = 1 << 21,
 		R9G9B9E5_SHAREDEXP_RENDERABLE = 1 << 22, // indicates supporting R9G9B9E5_SHAREDEXP format for rendering to
 		COPY_BETWEEN_DIFFERENT_IMAGE_ASPECTS_NOT_SUPPORTED = 1 << 23, // indicates that CopyTexture src and dst ImageAspect must match
-		
+
 		// Compat:
 		GENERIC_SPARSE_TILE_POOL = ALIASING_GENERIC,
 	};
@@ -1349,6 +1349,10 @@ namespace wi::graphics
 		constexpr bool operator==(const PipelineHash& other) const
 		{
 			return (pso == other.pso) && (renderpass_hash == other.renderpass_hash);
+		}
+		constexpr bool operator!=(const PipelineHash& other) const
+		{
+			return !(*this == other);
 		}
 		constexpr uint64_t get_hash() const
 		{

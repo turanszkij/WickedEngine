@@ -6,11 +6,11 @@
 #include "wiGraphicsDevice.h"
 #include "wiUnorderedMap.h"
 
-#include <Metal/Metal.hpp>
-#include <QuartzCore/QuartzCore.hpp>
+#include <Utility/metal/Metal/Metal.hpp>
+#include <Utility/metal/QuartzCore/QuartzCore.hpp>
 
 #define IR_RUNTIME_METALCPP
-#include <metal_irconverter_runtime/metal_irconverter_runtime.h>
+#include <Utility/metal/metal_irconverter_runtime/metal_irconverter_runtime.h>
 
 #include <mutex>
 #include <deque>
