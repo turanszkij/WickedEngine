@@ -41,6 +41,16 @@ float4 main(PSIn input) : SV_TARGET
 		gradient.rg += bindless_textures_half4[descriptor_index(camera.texture_waterriples_index)].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).rg * 0.0125;
 	}
 
+	// Add some small scale detail waves to make it look less uniform:
+	const uint detail_count = 3;
+	half4 gradient_detail = 0;
+	for (uint i = 0; i < detail_count; ++i)
+	{
+		gradient_detail += texture_gradientmap.Sample(sampler_aniso_wrap, input.uv * pow(2.0, half(i + 1)));
+	}
+	gradient_detail /= half(detail_count);
+	gradient.rg += gradient_detail.rg;
+
 	const float bump_strength = 0.1;
 	
 	float4 water_plane = camera.reflection_plane;
