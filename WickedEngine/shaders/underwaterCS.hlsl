@@ -8,6 +8,8 @@
 #define LENS_DISTORT
 //#define ANIMATED_DISTORT
 
+#define WATER_INSCATTERING_PHASE_G 0.25
+
 PUSHCONSTANT(postprocess, PostProcess);
 
 Texture2D<float4> input : register(t0);
@@ -30,19 +32,19 @@ float2 brownConradyDistortion(float2 uv)
 	return uv;
 }
 
-// https://www.shadertoy.com/view/XdyfR1
-#define GOD_RAY_LENGTH 0.4 // higher number = shorter rays
-#define GOD_RAY_FREQUENCY 22.0
-float GodRays(in float2 lightscreen, in float2 ndc, in float2 uv, in float iTime)
+// Modified version of: https://www.shadertoy.com/view/XdyfR1
+float GodRays(in float2 lightscreen, in float2 ndc, in float2 uv, in float iTime, in float GOD_RAY_LENGTH = 0.1, in float GOD_RAY_FREQUENCY = 48.0)
 {
 	float2 godRayOrigin = ndc - lightscreen;
-	float rayInputFunc = atan2(godRayOrigin.y, godRayOrigin.x) * 0.63661977236; // that's 2/pi
+	//float rayInputFunc = atan2(godRayOrigin.y, godRayOrigin.x) * 0.63661977236; // that's 2/pi
+	float rayInputFunc = atan2(godRayOrigin.y, godRayOrigin.x);
 	float light = (sin(rayInputFunc * GOD_RAY_FREQUENCY + iTime * -2.25) * 0.5 + 0.5);
 	light = 0.5 * (light + (sin(rayInputFunc * 13.0 + iTime) * 0.5 + 0.5));
 	//light *= (sin(rayUVFunc * 8.0 + -iTime * 0.25) * 0.5 + 0.5);
-	light *= pow(clamp(dot(normalize(-godRayOrigin), normalize(ndc - godRayOrigin)), 0.0, 1.0), 2.5);
+	//light *= pow(clamp(dot(normalize(-godRayOrigin), normalize(ndc - godRayOrigin)), 0.0, 1.0), 2.5);
 	light *= pow(uv.y, GOD_RAY_LENGTH);
 	light = pow(light, 1.75);
+	//light *= pow(length(godRayOrigin), 4);
 	return light;
 }
 
@@ -144,6 +146,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		// Sample inscattering color:
 		{
 			const half3 L = GetSunDirection();
+			const half3 refractedLightDir = refract(-L, float3(0, 1, 0), 1.0 / 1.333);
 		
 			half3 inscatteringColor = GetSunColor();
 
@@ -155,8 +158,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			}
 		
 			// Apply phase function solely for directionality:
-			const half cosTheta = dot(V, L);
-			inscatteringColor *= HgPhase(FOG_INSCATTERING_PHASE_G, cosTheta);
+			const half cosTheta = dot(V, -refractedLightDir);
+			inscatteringColor *= HgPhase(WATER_INSCATTERING_PHASE_G, cosTheta);
 
 			// Apply uniform phase since this medium is constant:
 			inscatteringColor *= UniformPhase();
@@ -165,11 +168,13 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			inscatteringColor *= (1 - ocean.extinction_color.rgb) * saturate(exp(-camera_depth * 0.25 * ocean.water_color.a));
 
 			// Add some fake godray modulation to scatter:
-			float4 lightScreen = mul(GetCamera().view_projection, float4(GetCamera().position - L * 10000, 1));
+			float4 lightScreen = mul(GetCamera().view_projection, float4(GetCamera().position + refractedLightDir * 10000, 1));
 			lightScreen.xy /= lightScreen.w;
-			if (lightScreen.z > 0)
+			//if (lightScreen.z > 0)
 			{
-				float godray = GodRays(lightScreen, clipspace2, uv, GetTime());
+				float godray = GodRays(lightScreen, clipspace2, uv, GetTime(), 0.1, 32.0) + GodRays(lightScreen, clipspace2, uv, -GetTime() * 0.5, 0.1, 20.0);
+				godray *= 1 - pow(abs(dot(refractedLightDir, V)), 2); // blend out at light center
+				godray *= pow(1 - saturate(-dot(refractedLightDir, V)), 1); // blend out at other side
 				inscatteringColor *= 1 - godray;
 			}
 		
