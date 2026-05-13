@@ -2,6 +2,7 @@
 #include "oceanSurfaceHF.hlsli"
 
 Texture2D<float4> texture_displacementmap : register(t0);
+Texture2D<float4> texture_perlin : register(t2);
 
 PSIn main(uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID, out uint RTIndex : SV_RenderTargetArrayIndex)
 {
@@ -36,8 +37,11 @@ PSIn main(uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID, out uint
 	{
 		// Displace surface:
 		float3 displacement = texture_displacementmap.SampleLevel(sampler_linear_wrap, uv, 0).xzy;
-		float dist = length(worldPos - camera.position);
-		displacement *= saturate(1 - saturate(dist / camera.z_far - 0.8) * 5.0); // fade will be on edge and inwards 20%
+
+		const float dist = length(worldPos - unprojNEAR.xyz);
+		const half gradient_fade = smoothstep(0.08, 0.8, saturate(dist * 0.005));
+		displacement = lerp(displacement, 0, gradient_fade);
+
 		worldPos += displacement;
 	}
 
