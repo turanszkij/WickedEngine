@@ -27,7 +27,7 @@ CBUFFER(OceanCB, CBSLOT_OTHER_OCEAN)
 
 	float xOceanChoppyScale;
 	float xOceanGridLen;
-	float xOcean_padding0;
+	float xOceanWaveAmplitude;
 	float xOcean_padding1;
 };
 

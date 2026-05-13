@@ -10,6 +10,7 @@
 
 Texture2D<float4> texture_ocean_displacementmap : register(t0);
 Texture2D<float4> texture_gradientmap : register(t1);
+Texture2D<float4> texture_perlin : register(t2);
 
 [earlydepthstencil]
 float4 main(PSIn input) : SV_TARGET
@@ -30,11 +31,35 @@ float4 main(PSIn input) : SV_TARGET
 	
 	uint2 pixel = input.pos.xy;
 
-	const half gradient_fade = saturate(dist * 0.001);
-	const half4 gradientNear = texture_gradientmap.Sample(sampler_aniso_wrap, input.uv);
-	const half4 gradientFar = texture_gradientmap.Sample(sampler_aniso_wrap, input.uv * 0.125);
-	half4 gradient = lerp(gradientNear, gradientFar, gradient_fade);
+	half4 gradient = texture_gradientmap.Sample(sampler_aniso_wrap, input.uv);
+
+
+	const float g_PerlinSize = 1;
+	const float2 g_UVBase = 0;
+	const float3 g_PerlinOctave = float3(1.12f, 0.59f, 0.23f);
+	const float g_PerlinMovement = -GetTime() * xOceanTimeScale * 0.06f;
+	const float3 g_PerlinGradient = float3(1.4f, 1.6f, 2.2f);
+
+	float2 perlin_tc = input.uv * g_PerlinSize + g_UVBase;
+	float2 perlin_tc0 = perlin_tc * g_PerlinOctave.x + g_PerlinMovement;
+	float2 perlin_tc1 = perlin_tc * g_PerlinOctave.y + g_PerlinMovement;
+	float2 perlin_tc2 = perlin_tc * g_PerlinOctave.z + g_PerlinMovement;
+
+	float2 perlin_0 = texture_perlin.Sample(sampler_linear_wrap, perlin_tc0).xy;
+	float2 perlin_1 = texture_perlin.Sample(sampler_linear_wrap, perlin_tc1).xy;
+	float2 perlin_2 = texture_perlin.Sample(sampler_linear_wrap, perlin_tc2).xy;
 	
+	float2 perlin = (perlin_0 * g_PerlinGradient.x + perlin_1 * g_PerlinGradient.y + perlin_2 * g_PerlinGradient.z);
+	//perlin = normalize(perlin);
+	perlin = perlin * 0.000005 * xOceanWaveAmplitude;
+
+	const half gradient_fade = smoothstep(0.08, 0.8, saturate(dist * 0.005));
+	gradient.rg = lerp(gradient.rg, perlin, gradient_fade);
+	//gradient.rg = perlin;
+	//return float4(gradient_fade.xxx,1);
+	//return float4(gradient.rg, 0, 1);
+
+
 	[branch]
 	if (camera.texture_waterriples_index >= 0)
 	{
@@ -43,13 +68,13 @@ float4 main(PSIn input) : SV_TARGET
 
 	// Add some small scale detail waves to make it look less uniform:
 	const uint detail_count = 3;
-	half4 gradient_detail = 0;
+	half2 gradient_detail = 0;
 	for (uint i = 0; i < detail_count; ++i)
 	{
-		gradient_detail += texture_gradientmap.Sample(sampler_aniso_wrap, input.uv * pow(2.0, half(i + 1)));
+		gradient_detail += texture_gradientmap.Sample(sampler_aniso_wrap, input.uv * pow(2.0, half(i + 1))).rg;
 	}
 	gradient_detail /= half(detail_count);
-	gradient.rg += gradient_detail.rg;
+	gradient.rg += gradient_detail;
 
 	const float bump_strength = 0.1;
 	

@@ -8,6 +8,8 @@
 #include "wiTimer.h"
 #include "wiVector.h"
 
+#include "perlin.h"
+
 #include <algorithm>
 #include <mutex>
 
@@ -32,7 +34,7 @@ namespace wi
 		BlendState			blendState, blendState_occlusionTest;
 
 		PipelineState PSO, PSO_envmap, PSO_wire, PSO_occlusionTest;
-
+		Texture perlinTex;
 
 		void LoadShaders()
 		{
@@ -331,6 +333,7 @@ namespace wi
 		cb.xOceanMapHalfTexel = 0.5f / params.dmap_dim;
 		cb.xOceanWaterHeight = params.waterHeight;
 		cb.xOceanSurfaceDisplacementTolerance = std::max(1.0f, params.surfaceDisplacementTolerance);
+		cb.xOceanWaveAmplitude = params.wave_amplitude;
 
 		return cb;
 	}
@@ -471,6 +474,7 @@ namespace wi
 		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(OceanCB), cmd);
 
 		device->BindResource(&displacementMap, 0, cmd);
+		device->BindResource(&perlinTex, 2, cmd);
 
 		device->BindIndexBuffer(&indexBuffer_occlusionTest, IndexBufferFormat::UINT16, 0, cmd);
 
@@ -528,6 +532,7 @@ namespace wi
 
 		device->BindResource(&displacementMap, 0, cmd);
 		device->BindResource(&gradientMap, 1, cmd);
+		device->BindResource(&perlinTex, 2, cmd);
 
 		device->BindIndexBuffer(&indexBuffer_cubemap, IndexBufferFormat::UINT16, 0, cmd);
 
@@ -593,6 +598,7 @@ namespace wi
 
 		device->BindResource(&displacementMap, 0, cmd);
 		device->BindResource(&gradientMap, 1, cmd);
+		device->BindResource(&perlinTex, 2, cmd);
 
 		device->BindIndexBuffer(&indexBuffer, IndexBufferFormat::UINT32, 0, cmd);
 
@@ -653,6 +659,28 @@ namespace wi
 
 		LoadShaders();
 		wi::fftgenerator::LoadShaders();
+
+		TextureDesc desc;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE;
+		desc.width = 64;
+		desc.height = 64;
+		desc.mip_levels = 7;
+		desc.format = Format::R16G16B16A16_FLOAT;
+		const uint32_t data_stride = GetFormatStride(desc.format);
+		const uint32_t block_size = GetFormatBlockSize(desc.format);
+		SubresourceData initdata[7] = {};
+		const uint8_t* src = perlin;
+		for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
+		{
+			const uint32_t num_blocks_x = std::max(1u, desc.width >> mip) / block_size;
+			const uint32_t num_blocks_y = std::max(1u, desc.height >> mip) / block_size;
+			initdata[mip].data_ptr = src;
+			initdata[mip].row_pitch = num_blocks_x * data_stride;
+			src += num_blocks_x * num_blocks_y * data_stride;
+		}
+		GraphicsDevice* device = GetDevice();
+		device->CreateTexture(&desc, initdata, &perlinTex);
+		device->SetName(&perlinTex, "ocean_internal::perlinTex");
 
 		wilog("wi::Ocean Initialized (%d ms)", (int)std::round(timer.elapsed()));
 	}
