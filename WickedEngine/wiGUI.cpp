@@ -1647,6 +1647,77 @@ namespace wi::gui
 		}
 		return false;
 	}
+
+	// Simple recursive-descent arithmetic expression evaluator.
+	// Supports: +, -, *, /, parentheses, unary +/-, floating-point literals.
+	// Returns true and sets 'result' if 'str' is a fully-consumed valid expression.
+	// Returns false for non-numeric input (e.g. plain text strings) so callers fall back.
+	namespace {
+		struct ArithExprParser
+		{
+			const char* pos;
+			bool valid = true;
+
+			void skipWS() { while (*pos == ' ' || *pos == '\t') pos++; }
+
+			double parsePrimary()
+			{
+				skipWS();
+				if (*pos == '(')
+				{
+					pos++;
+					double v = parseExpr();
+					skipWS();
+					if (*pos == ')') pos++;
+					return v;
+				}
+				if (*pos == '-') { pos++; return -parsePrimary(); }
+				if (*pos == '+') { pos++; return  parsePrimary(); }
+				char* end;
+				double v = strtod(pos, &end);
+				if (end == pos) { valid = false; return 0; }
+				pos = end;
+				return v;
+			}
+
+			double parseTerm()
+			{
+				double left = parsePrimary();
+				while (valid)
+				{
+					skipWS();
+					if (*pos == '*') { pos++; left *= parsePrimary(); }
+					else if (*pos == '/') { pos++; double r = parsePrimary(); if (r == 0.0) { valid = false; return 0; } left /= r; }
+					else break;
+				}
+				return left;
+			}
+
+			double parseExpr()
+			{
+				double left = parseTerm();
+				while (valid)
+				{
+					skipWS();
+					if (*pos == '+') { pos++; left += parseTerm(); }
+					else if (*pos == '-') { pos++; left -= parseTerm(); }
+					else break;
+				}
+				return left;
+			}
+		};
+
+		bool EvaluateArithmetic(const std::string& str, double& result)
+		{
+			if (str.empty()) return false;
+			ArithExprParser p;
+			p.pos = str.c_str();
+			result = p.parseExpr();
+			p.skipWS();
+			return p.valid && (*p.pos == '\0') && std::isfinite(result);
+		}
+	} // anonymous namespace
+
 	void TextInputField::Create(const std::string& name)
 	{
 		SetName(name);
@@ -1777,8 +1848,23 @@ namespace wi::gui
 				}
 				if (wi::input::Press(wi::input::KEYBOARD_BUTTON_ENTER))
 				{
-					// accept input...
-					font.SetText(font_input.GetText());
+					// accept input, evaluating arithmetic expressions (e.g. "10 * 2" -> "20")
+					std::string inputStr = font_input.GetTextA();
+					double arithmeticResult = 0;
+					if (EvaluateArithmetic(inputStr, arithmeticResult))
+					{
+						std::stringstream ssResult;
+						if (float_precision >= 0)
+						{
+							ssResult << std::fixed << std::setprecision(float_precision);
+						}
+						ssResult << arithmeticResult;
+						font.SetText(ssResult.str());
+					}
+					else
+					{
+						font.SetText(font_input.GetText());
+					}
 					font_input.text.clear();
 
 					if (onInputAccepted)
@@ -2222,7 +2308,7 @@ namespace wi::gui
 		valueInputField.Create(name + "_endInputField");
 		valueInputField.SetLocalizationEnabled(LocalizationEnabled::None);
 		valueInputField.SetShadowRadius(0);
-		valueInputField.SetTooltip("Enter number to modify value even outside slider limits. Other inputs:\n - reset : reset slider to initial state.\n - FLT_MAX : float max value\n - -FLT_MAX : negative float max value.");
+		valueInputField.SetTooltip("Enter number to modify value even outside slider limits. Arithmetic expressions are supported (e.g. 10 * 2, 1 + 0.5). Other inputs:\n - reset : reset slider to initial state.\n - FLT_MAX : float max value\n - -FLT_MAX : negative float max value.");
 		valueInputField.SetValue(end);
 		valueInputField.OnInputAccepted([this, start, end, defaultValue](EventArgs args) {
 			if (args.sValue.compare("reset") == 0)
