@@ -61,6 +61,7 @@ namespace wi::graphics
 	private:
 		NS::SharedPtr<MTL::Device> device;
 		NS::SharedPtr<MTL4::CommandQueue> uploadqueue;
+		bool textureUlongAtomics = true;
 		
 		struct Semaphore
 		{
