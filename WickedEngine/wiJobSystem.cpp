@@ -430,6 +430,8 @@ namespace wi::jobsystem
 		}
 
 		wilog("wi::jobsystem Initialized with %d cores in %.2f ms\n\tHigh priority threads: %d\n\tLow priority threads: %d\n\tStreaming threads: %d", internal_state.numCores, timer.elapsed(), GetThreadCount(Priority::High), GetThreadCount(Priority::Low), GetThreadCount(Priority::Streaming));
+
+		std::atexit(ShutDown);
 	}
 
 	void ShutDown()
