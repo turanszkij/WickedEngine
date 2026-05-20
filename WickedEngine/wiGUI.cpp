@@ -5772,6 +5772,28 @@ namespace wi::gui
 
 			Hitbox2D itemlist_box = GetHitbox_ListArea();
 
+			// Finalize drag-and-drop when mouse is released
+			if (onReorder && dragging && !click_down)
+			{
+				if (drag_source >= 0 && drag_target >= 0 &&
+					drag_target != drag_source && drag_target != drag_source + 1)
+				{
+					EventArgs args;
+					args.iValue = drag_source;
+					args.userdata = (uint64_t)drag_target;
+					onReorder(args);
+				}
+				dragging = false;
+				drag_source = -1;
+				drag_target = -1;
+			}
+			if (!click_down && !clicked)
+			{
+				// Reset potential drag if mouse was released without dragging
+				if (!dragging)
+					drag_source = -1;
+			}
+
 			tooltipFont.text.clear();
 
 			// control-list
@@ -5825,6 +5847,13 @@ namespace wi::gui
 							SetTooltip(item.name);
 							if (clicked)
 							{
+								// Start potential drag (activated on movement threshold)
+								if (onReorder)
+								{
+									drag_source = i;
+									drag_start_pos = pointerHitbox.pos;
+								}
+
 								if (wi::input::IsDoubleClicked() && onDoubleClick != nullptr)
 								{
 									EventArgs args;
@@ -5863,9 +5892,58 @@ namespace wi::gui
 					}
 				}
 			}
-		}
+// Activate drag mode after movement threshold
+if (onReorder && drag_source >= 0 && click_down && !dragging)
+{
+float dx = pointerHitbox.pos.x - drag_start_pos.x;
+float dy = pointerHitbox.pos.y - drag_start_pos.y;
+if (dx * dx + dy * dy > 16.0f) // 4 px threshold
+{
+dragging = true;
+}
+}
 
-		if (state == IDLE && resize_blink_timer > 0)
+// Compute drag_target and drag_indicator_y while dragging
+if (onReorder && dragging && click_down)
+{
+item_highlight = drag_source;
+drag_target = (int)items.size(); // default: after all items
+drag_indicator_y = 0;
+
+int dc = 0;
+int dp = 0;
+bool dpo = true;
+int di = -1;
+int last_visible = 0;
+for (const Item& item : items)
+{
+di++;
+if (!dpo && item.level > dp)
+continue;
+dc++;
+dpo = item.open;
+dp = item.level;
+last_visible = dc;
+
+float item_top_y = translation.y + GetItemOffset(dc);
+if (pointerHitbox.pos.y < item_top_y + item_height() * 0.5f)
+{
+drag_target = di;
+drag_indicator_y = item_top_y;
+break;
+}
+}
+if (drag_target == (int)items.size())
+{
+drag_indicator_y = translation.y + GetItemOffset(last_visible) + item_height();
+}
+// Clamp to list area
+drag_indicator_y = std::max(drag_indicator_y, itemlist_box.pos.y);
+drag_indicator_y = std::min(drag_indicator_y, itemlist_box.pos.y + itemlist_box.siz.y - 2.0f);
+}
+}
+
+if (state == IDLE && resize_blink_timer > 0)
 			state = FOCUS;
 
 		sprites[state].params.siz.y = item_height();
@@ -6066,6 +6144,15 @@ namespace wi::gui
 			fp.style = font.params.style;
 			wi::font::Draw(item.name, fp, cmd);
 		}
+
+		// Drop indicator line for drag-and-drop reorder
+		if (dragging && drag_source >= 0 && drag_target >= 0)
+		{
+			wi::image::Params indicator_fx = sprites[ACTIVE].params;
+			indicator_fx.pos = XMFLOAT3(itemlist_box.pos.x, drag_indicator_y - 1.0f, 0);
+			indicator_fx.siz = XMFLOAT2(itemlist_box.siz.x, 2.0f);
+			wi::image::Draw(nullptr, indicator_fx, cmd);
+		}
 	}
 	void TreeList::OnSelect(std::function<void(const EventArgs& args)> func)
 	{
@@ -6078,6 +6165,10 @@ namespace wi::gui
 	void TreeList::OnDoubleClick(std::function<void(const EventArgs& args)> func)
 	{
 		onDoubleClick = std::move(func);
+	}
+	void TreeList::OnReorder(std::function<void(const EventArgs& args)> func)
+	{
+		onReorder = std::move(func);
 	}
 	void TreeList::AddItem(const Item& item)
 	{

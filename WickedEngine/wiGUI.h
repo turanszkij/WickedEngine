@@ -1051,6 +1051,14 @@ namespace wi::gui
 		XMFLOAT2 resize_begin = XMFLOAT2(0, 0);
 		float resize_blink_timer = 0;
 
+		// Drag-and-drop reorder state
+		std::function<void(const EventArgs& args)> onReorder;
+		int drag_source = -1;       // items[] index being dragged (-1 = none)
+		int drag_target = -1;       // items[] index to insert before (items.size() = end)
+		bool dragging = false;
+		XMFLOAT2 drag_start_pos = {};
+		float drag_indicator_y = 0; // screen Y for drop indicator line (updated in Update)
+
 		void ComputeScrollbarLength();
 
 	public:
@@ -1078,6 +1086,7 @@ namespace wi::gui
 		void OnSelect(std::function<void(const EventArgs& args)> func);
 		void OnDelete(std::function<void(const EventArgs& args)> func);
 		void OnDoubleClick(std::function<void(const EventArgs& args)> func);
+		void OnReorder(std::function<void(const EventArgs& args)> func);
 
 		ScrollBar scrollbar;
 	};

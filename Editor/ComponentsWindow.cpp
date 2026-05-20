@@ -122,6 +122,100 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 	entityTree.OnDoubleClick([this](wi::gui::EventArgs args) {
 		editor->FocusCameraOnSelected();
 		});
+	entityTree.OnReorder([this](wi::gui::EventArgs args) {
+		int source_idx = args.iValue;
+		int target_idx = (int)args.userdata;
+		if (source_idx < 0 || source_idx >= entityTree.GetItemCount())
+			return;
+		if (target_idx < 0 || target_idx > entityTree.GetItemCount())
+			return;
+
+		const Scene& scene = editor->GetCurrentScene();
+		Entity source_entity = (Entity)entityTree.GetItem(source_idx).userdata;
+
+		// Determine parent entity of the source (INVALID_ENTITY = top-level)
+		Entity parent_entity = INVALID_ENTITY;
+		const HierarchyComponent* hier = scene.hierarchy.GetComponent(source_entity);
+		if (hier != nullptr && hier->parentID != INVALID_ENTITY && entitytree_temp_items.count(hier->parentID) != 0)
+		{
+			parent_entity = hier->parentID;
+		}
+
+		// Collect all current siblings of source_entity
+		wi::vector<Entity> siblings;
+		if (parent_entity == INVALID_ENTITY)
+		{
+			for (auto& e : entitytree_temp_items)
+			{
+				const HierarchyComponent* h = scene.hierarchy.GetComponent(e);
+				if (h == nullptr || h->parentID == INVALID_ENTITY || entitytree_temp_items.count(h->parentID) == 0)
+					siblings.push_back(e);
+			}
+		}
+		else
+		{
+			for (size_t i = 0; i < scene.hierarchy.GetCount(); ++i)
+			{
+				if (scene.hierarchy[i].parentID == parent_entity)
+					siblings.push_back(scene.hierarchy.GetEntity(i));
+			}
+		}
+
+		// Build (or refresh) the ordered list for this parent, preserving existing custom order
+		wi::vector<Entity>& order = entity_user_order[parent_entity];
+		wi::vector<Entity> new_order;
+		new_order.reserve(siblings.size());
+		for (Entity e : order)
+		{
+			for (Entity s : siblings)
+			{
+				if (s == e) { new_order.push_back(e); break; }
+			}
+		}
+		for (Entity s : siblings)
+		{
+			bool found = false;
+			for (Entity e : new_order) { if (e == s) { found = true; break; } }
+			if (!found) new_order.push_back(s);
+		}
+		order = new_order;
+
+		// Find which sibling is just above the drop point (same parent)
+		Entity entity_above = INVALID_ENTITY;
+		for (int i = target_idx - 1; i >= 0; --i)
+		{
+			Entity e = (Entity)entityTree.GetItem(i).userdata;
+			const HierarchyComponent* h = scene.hierarchy.GetComponent(e);
+			Entity p = (h != nullptr && h->parentID != INVALID_ENTITY && entitytree_temp_items.count(h->parentID) != 0)
+				? h->parentID : INVALID_ENTITY;
+			if (p == parent_entity)
+			{
+				entity_above = e;
+				break;
+			}
+		}
+
+		// Move source_entity in the order list
+		auto it_src = std::find(order.begin(), order.end(), source_entity);
+		if (it_src == order.end()) return;
+		order.erase(it_src);
+
+		if (entity_above == INVALID_ENTITY)
+		{
+			// Insert at beginning of sibling list
+			order.insert(order.begin(), source_entity);
+		}
+		else
+		{
+			auto it_above = std::find(order.begin(), order.end(), entity_above);
+			if (it_above != order.end())
+				order.insert(it_above + 1, source_entity);
+			else
+				order.push_back(source_entity);
+		}
+
+		RefreshEntityTree();
+		});
 	AddWidget(&entityTree);
 
 	if (editor->main->config.GetSection("layout").Has("entities.height"))
@@ -1365,13 +1459,49 @@ void ComponentsWindow::PushToEntityTree(wi::ecs::Entity entity, int level)
 
 	// Get sorting mode from config and sort children
 	const int sortingMode = editor->main->config.GetSection("options").GetInt("entity_tree_sorting");
-	SortEntitiesByMode(children, scene, sortingMode);
+	if (sortingMode == 0)
+	{
+		ApplyUserOrder(children, entity);
+	}
+	else
+	{
+		SortEntitiesByMode(children, scene, sortingMode);
+	}
 
 	// Add sorted children
 	for (Entity child : children)
 	{
 		PushToEntityTree(child, level + 1);
 	}
+}
+void ComponentsWindow::ApplyUserOrder(wi::vector<wi::ecs::Entity>& entities, wi::ecs::Entity parent_entity) const
+{
+	auto it = entity_user_order.find(parent_entity);
+	if (it == entity_user_order.end() || it->second.empty())
+		return;
+
+	const wi::vector<Entity>& order = it->second;
+	wi::vector<Entity> result;
+	result.reserve(entities.size());
+
+	// First, add entities that appear in the custom order (in that order)
+	for (Entity e : order)
+	{
+		for (Entity s : entities)
+		{
+			if (s == e) { result.push_back(e); break; }
+		}
+	}
+
+	// Then append any new entities not yet in the custom order
+	for (Entity s : entities)
+	{
+		bool found = false;
+		for (Entity e : result) { if (e == s) { found = true; break; } }
+		if (!found) result.push_back(s);
+	}
+
+	entities = result;
 }
 void ComponentsWindow::RefreshEntityTree()
 {
@@ -1408,7 +1538,14 @@ void ComponentsWindow::RefreshEntityTree()
 
 	// Get sorting mode from config and sort top-level entities
 	const int sortingMode = editor->main->config.GetSection("options").GetInt("entity_tree_sorting");
-	SortEntitiesByMode(topLevelEntities, scene, sortingMode);
+	if (sortingMode == 0)
+	{
+		ApplyUserOrder(topLevelEntities, INVALID_ENTITY);
+	}
+	else
+	{
+		SortEntitiesByMode(topLevelEntities, scene, sortingMode);
+	}
 
 	// Add sorted top-level entities
 	for (const auto& x : topLevelEntities)
