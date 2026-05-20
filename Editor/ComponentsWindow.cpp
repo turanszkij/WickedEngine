@@ -123,8 +123,14 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 		editor->FocusCameraOnSelected();
 		});
 	entityTree.OnReorder([this](wi::gui::EventArgs args) {
+		// Only apply custom ordering when sortingMode==0 and no text filter is active
+		if (editor->main->config.GetSection("options").GetInt("entity_tree_sorting") != 0)
+			return;
+		if (!filterInput.GetCurrentInputValue().empty())
+			return;
+
 		int source_idx = args.iValue;
-		int target_idx = (int)args.userdata;
+		int target_idx = args.iValue2;
 		if (source_idx < 0 || source_idx >= entityTree.GetItemCount())
 			return;
 		if (target_idx < 0 || target_idx > entityTree.GetItemCount())
@@ -161,24 +167,40 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 			}
 		}
 
-		// Build (or refresh) the ordered list for this parent, preserving existing custom order
-		wi::vector<Entity>& order = entity_user_order[parent_entity];
-		wi::vector<Entity> new_order;
-		new_order.reserve(siblings.size());
-		for (Entity e : order)
-		{
-			for (Entity s : siblings)
-			{
-				if (s == e) { new_order.push_back(e); break; }
-			}
-		}
+		// Validate that source_entity belongs to this sibling group before touching the map
+		bool source_in_siblings = false;
 		for (Entity s : siblings)
 		{
-			bool found = false;
-			for (Entity e : new_order) { if (e == s) { found = true; break; } }
-			if (!found) new_order.push_back(s);
+			if (s == source_entity) { source_in_siblings = true; break; }
 		}
-		order = new_order;
+		if (!source_in_siblings)
+			return;
+
+		// Build (or refresh) the ordered list for this parent, preserving existing custom order
+		wi::vector<Entity> new_order;
+		new_order.reserve(siblings.size());
+		{
+			// Build a lookup set so merging is O(n) not O(n²)
+			wi::unordered_set<Entity> sibling_set(siblings.begin(), siblings.end());
+			auto order_it = entity_user_order.find(parent_entity);
+			if (order_it != entity_user_order.end())
+			{
+				for (Entity e : order_it->second)
+				{
+					if (sibling_set.count(e)) { new_order.push_back(e); sibling_set.erase(e); }
+				}
+			}
+			for (Entity s : siblings)
+			{
+				if (sibling_set.count(s)) new_order.push_back(s);
+			}
+		}
+		if (siblings.empty())
+			entity_user_order.erase(parent_entity);
+		else
+			entity_user_order[parent_entity] = new_order;
+
+		wi::vector<Entity>& order = entity_user_order[parent_entity];
 
 		// Find which sibling is just above the drop point (same parent)
 		Entity entity_above = INVALID_ENTITY;
@@ -1484,21 +1506,26 @@ void ComponentsWindow::ApplyUserOrder(wi::vector<wi::ecs::Entity>& entities, wi:
 	wi::vector<Entity> result;
 	result.reserve(entities.size());
 
+	// Build lookup sets for O(1) membership checks
+	wi::unordered_set<Entity> entity_set(entities.begin(), entities.end());
+	wi::unordered_set<Entity> result_set;
+	result_set.reserve(entities.size());
+
 	// First, add entities that appear in the custom order (in that order)
 	for (Entity e : order)
 	{
-		for (Entity s : entities)
+		if (entity_set.count(e))
 		{
-			if (s == e) { result.push_back(e); break; }
+			result.push_back(e);
+			result_set.insert(e);
 		}
 	}
 
-	// Then append any new entities not yet in the custom order
+	// Then append any new entities not yet in the custom order, preserving original order
 	for (Entity s : entities)
 	{
-		bool found = false;
-		for (Entity e : result) { if (e == s) { found = true; break; } }
-		if (!found) result.push_back(s);
+		if (!result_set.count(s))
+			result.push_back(s);
 	}
 
 	entities = result;

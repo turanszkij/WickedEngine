@@ -25,6 +25,7 @@ namespace wi::gui
 		float fValue = 0;		// generic float value of operation
 		bool bValue = false;	// generic boolean value of operation
 		int iValue = 0;			// generic integer value of operation
+		int iValue2 = 0;		// secondary generic integer value of operation
 		wi::Color color;		// color value of color picker operation
 		std::string sValue;		// generic string value of operation
 		uint64_t userdata = 0;	// this will provide the userdata value that was set to a widget (or part of a widget)
