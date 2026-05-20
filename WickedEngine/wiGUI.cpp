@@ -5906,42 +5906,42 @@ dragging = true;
 // Compute drag_target and drag_indicator_y while dragging
 if (onReorder && dragging && click_down)
 {
-item_highlight = drag_source;
-drag_target = (int)items.size(); // default: after all items
-drag_indicator_y = 0;
+    item_highlight = drag_source;
+    drag_target = (int)items.size(); // default: after all items
+    drag_indicator_y = 0;
 
-int dc = 0;
-int dp = 0;
-bool dpo = true;
-int di = -1;
-int last_visible = 0;
-for (const Item& item : items)
-{
-di++;
-if (!dpo && item.level > dp)
-continue;
-dc++;
-dpo = item.open;
-dp = item.level;
-last_visible = dc;
+    int dc = 0;
+    int dp = 0;
+    bool dpo = true;
+    int di = -1;
+    int last_visible = 0;
+    for (const Item &item : items)
+    {
+        di++;
+        if (!dpo && item.level > dp)
+            continue;
+        dc++;
+        dpo = item.open;
+        dp = item.level;
+        last_visible = dc;
 
-float item_top_y = translation.y + GetItemOffset(dc);
-if (pointerHitbox.pos.y < item_top_y + item_height() * 0.5f)
-{
-drag_target = di;
-drag_indicator_y = item_top_y;
-break;
+        float item_top_y = translation.y + GetItemOffset(dc);
+        if (pointerHitbox.pos.y < item_top_y + item_height() * 0.5f)
+        {
+            drag_target = di;
+            drag_indicator_y = item_top_y;
+            break;
+        }
+    }
+    if (drag_target == (int)items.size())
+    {
+        drag_indicator_y = translation.y + GetItemOffset(last_visible) + item_height();
+    }
+    // Clamp to list area
+    drag_indicator_y = std::max(drag_indicator_y, itemlist_box.pos.y);
+    drag_indicator_y = std::min(drag_indicator_y, itemlist_box.pos.y + itemlist_box.siz.y - 2.0f);
 }
-}
-if (drag_target == (int)items.size())
-{
-drag_indicator_y = translation.y + GetItemOffset(last_visible) + item_height();
-}
-// Clamp to list area
-drag_indicator_y = std::max(drag_indicator_y, itemlist_box.pos.y);
-drag_indicator_y = std::min(drag_indicator_y, itemlist_box.pos.y + itemlist_box.siz.y - 2.0f);
-}
-}
+        }
 
 if (state == IDLE && resize_blink_timer > 0)
 			state = FOCUS;
