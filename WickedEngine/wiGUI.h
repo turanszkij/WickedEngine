@@ -1057,8 +1057,8 @@ namespace wi::gui
 		int drag_target = -1;       // items[] index to insert before (items.size() = end)
 		bool dragging = false;
 		XMFLOAT2 drag_start_pos = {};
-		float drag_indicator_y = 0; // screen Y for drop indicator line (updated in Update)
-
+                float drag_indicator_y = 0;    // screen Y for drop indicator line (updated in Update)
+                XMFLOAT2 drag_pointer_pos = {}; // current pointer pos while dragging (for ghost rendering)
 		void ComputeScrollbarLength();
 
 	public:

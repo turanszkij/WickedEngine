@@ -5940,6 +5940,7 @@ if (onReorder && dragging && click_down)
     // Clamp to list area
     drag_indicator_y = std::max(drag_indicator_y, itemlist_box.pos.y);
     drag_indicator_y = std::min(drag_indicator_y, itemlist_box.pos.y + itemlist_box.siz.y - 2.0f);
+    drag_pointer_pos = pointerHitbox.pos;
 }
         }
 
@@ -6143,6 +6144,26 @@ if (state == IDLE && resize_blink_timer > 0)
 			);
 			fp.style = font.params.style;
 			wi::font::Draw(item.name, fp, cmd);
+			// Drag handle dots on the right side of each item
+			if (onReorder)
+			{
+				float ds = std::max(2.0f, std::round(item_height() * 0.12f));
+				float dg = ds * 1.5f;
+				float hx = name_box.pos.x + name_box.siz.x - ds * 2 - dg - ds;
+				float hy = name_box.pos.y + (name_box.siz.y - (ds * 3 + dg * 2)) * 0.5f;
+				XMFLOAT4 dot_color = drag_source == i ? sprites[ACTIVE].params.color : sprites[FOCUS].params.color;
+				if (drag_source != i)
+					dot_color.w *= 0.45f;
+				for (int row = 0; row < 3; ++row)
+				{
+					for (int col = 0; col < 2; ++col)
+					{
+						wi::image::Draw(nullptr,
+						    wi::image::Params(hx + col * (ds + dg), hy + row * (ds + dg), ds, ds, dot_color),
+						    cmd);
+					}
+				}
+			}
 		}
 
 		// Drop indicator line for drag-and-drop reorder
@@ -6152,6 +6173,30 @@ if (state == IDLE && resize_blink_timer > 0)
 			indicator_fx.pos = XMFLOAT3(itemlist_box.pos.x, drag_indicator_y - 1.0f, 0);
 			indicator_fx.siz = XMFLOAT2(itemlist_box.siz.x, 2.0f);
 			wi::image::Draw(nullptr, indicator_fx, cmd);
+		}
+		// Floating ghost: semi-transparent label following the cursor while dragging
+		if (dragging && drag_source >= 0 && drag_source < (int)items.size())
+		{
+			const Item& src_item = items[drag_source];
+			float ghost_h = item_height();
+			float ghost_w = itemlist_box.siz.x * 0.65f;
+			float ghost_x = drag_pointer_pos.x + 18.0f;
+			float ghost_y = drag_pointer_pos.y - ghost_h * 0.5f;
+			wi::image::Params ghost_bg = sprites[ACTIVE].params;
+			ghost_bg.pos = XMFLOAT3(ghost_x, ghost_y, 0);
+			ghost_bg.siz = XMFLOAT2(ghost_w, ghost_h);
+			ghost_bg.color.w *= 0.75f;
+			wi::image::Draw(nullptr, ghost_bg, cmd);
+			wi::font::Params gfp(
+				ghost_x + 6.0f,
+				ghost_y + ghost_h * 0.5f,
+				wi::font::WIFONTSIZE_DEFAULT,
+				wi::font::WIFALIGN_LEFT,
+				wi::font::WIFALIGN_CENTER,
+				font.params.color,
+				font.params.shadowColor);
+			gfp.style = font.params.style;
+			wi::font::Draw(src_item.name, gfp, cmd);
 		}
 	}
 	void TreeList::OnSelect(std::function<void(const EventArgs& args)> func)
