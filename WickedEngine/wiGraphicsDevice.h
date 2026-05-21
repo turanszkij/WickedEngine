@@ -422,6 +422,7 @@ namespace wi::graphics
 		}
 
 		// Deprecated, kept for back-compat:
+		[[deprecated]]
 		bool CreateRenderPass(const RenderPassDesc* desc, RenderPass* renderpass) const
 		{
 			renderpass->valid = true;
@@ -429,6 +430,7 @@ namespace wi::graphics
 			return true;
 		}
 		// Deprecated, kept for back-compat:
+		[[deprecated]]
 		void RenderPassBegin(const RenderPass* renderpass, CommandList cmd)
 		{
 			RenderPassFlags flags = {};

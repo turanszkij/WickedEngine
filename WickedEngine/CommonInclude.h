@@ -21,6 +21,14 @@
 #define NO_SANITIZE(x)
 #endif // defined(__GNUC__) || defined(__clang__)
 
+#ifdef _MSC_VER
+#define WI_DISABLE_DEPRECATED_BEGIN __pragma(warning(push)) __pragma(warning(disable: 4996))
+#define WI_DISABLE_DEPRECATED_END __pragma(warning(pop))
+#else
+#define WI_DISABLE_DEPRECATED_BEGIN _Pragma("GCC diagnostic push") _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
+#define WI_DISABLE_DEPRECATED_END _Pragma("GCC diagnostic pop")
+#endif // _MSC_VER
+
 // Simple common math helpers:
 
 template<typename T>

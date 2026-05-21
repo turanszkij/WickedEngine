@@ -2049,7 +2049,7 @@ namespace wi::graphics
 
 
 	// Deprecated, kept for back-compat:
-	struct RenderPassAttachment
+	struct [[deprecated]] RenderPassAttachment
 	{
 		enum class Type
 		{
@@ -2240,7 +2240,7 @@ namespace wi::graphics
 		}
 	};
 	// Deprecated, kept for back-compat:
-	struct RenderPassDesc
+	struct [[deprecated]] RenderPassDesc
 	{
 		enum class Flags
 		{
@@ -2248,10 +2248,12 @@ namespace wi::graphics
 			ALLOW_UAV_WRITES = 1 << 0,
 		};
 		Flags flags = Flags::EMPTY;
+		WI_DISABLE_DEPRECATED_BEGIN
 		wi::vector<RenderPassAttachment> attachments;
+		WI_DISABLE_DEPRECATED_END
 	};
 	// Deprecated, kept for back-compat:
-	struct RenderPass
+	struct [[deprecated]] RenderPass
 	{
 		bool valid = false;
 		RenderPassDesc desc;
