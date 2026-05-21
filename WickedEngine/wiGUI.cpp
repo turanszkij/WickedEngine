@@ -5993,6 +5993,7 @@ namespace wi::gui
 						else
 						{
 							drag_target = drag_source;
+							drag_target_level = item.level;
 							drag_indicator_y = 0;
 						}
 						break;
