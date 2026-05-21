@@ -5787,9 +5787,9 @@ namespace wi::gui
 						args.bValue = true;
 						onReorder(args);
 					}
-					else if (!itemlist_box.intersects(pointerHitbox))
+					else if (!hitbox.intersects(GetPointerHitbox(false)))
 					{
-						// Detach: dropped outside the list area -> remove from parent
+						// Dropped outside the widget -> go one level up in hierarchy
 						EventArgs args;
 						args.iValue = drag_source;
 						args.iValue2 = -1;

@@ -134,16 +134,26 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 			Scene& scene = editor->GetCurrentScene();
 			Entity source_entity = (Entity)entityTree.GetItem(source_idx).userdata;
 
-			// Detach: dropped outside the list -> remove from parent
+			// Dropped outside the widget -> go one level up in hierarchy
 			if (target_idx == -1)
 			{
 				const HierarchyComponent* source_hier2 = scene.hierarchy.GetComponent(source_entity);
 				if (source_hier2 == nullptr)
-					return; // already a root entity, nothing to do
+					return; // already root, nothing to do
+
+				// Find grandparent: parent's parent (INVALID_ENTITY if parent is root)
+				Entity grandparent = INVALID_ENTITY;
+				const HierarchyComponent* parent_hier = scene.hierarchy.GetComponent(source_hier2->parentID);
+				if (parent_hier != nullptr)
+					grandparent = parent_hier->parentID;
+
 				wi::Archive& archive2 = editor->AdvanceHistory();
 				archive2 << EditorComponent::HISTORYOP_COMPONENT_DATA;
 				editor->RecordEntity(archive2, source_entity);
-				scene.Component_Detach(source_entity);
+				if (grandparent != INVALID_ENTITY)
+					scene.Component_Attach(source_entity, grandparent); // one level up
+				else
+					scene.Component_Detach(source_entity); // already at depth 1, become root
 				editor->RecordEntity(archive2, source_entity);
 				RefreshEntityTree();
 				return;
