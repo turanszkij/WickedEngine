@@ -6,21 +6,36 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.31)
 endif()
 
 set(MIN_OpenImageDenoise_VERSION "2.0")
+option(CPU_IS_X86_ARCH "Whether the CPU architecture is (a subset of) x86, implying potential instructions are supported" OFF)
 
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
 set(INSTALL_LOCAL_CONFIGDIR "${CMAKE_BINARY_DIR}/cmake")
 set(INSTALL_CONFIGDIR "${CMAKE_INSTALL_LIBDIR}/cmake/WickedEngine")
 
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+    if ("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x86" OR "${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
+        set(CPU_IS_X86_ARCH ON)
+    else()
+        set(CPU_IS_X86_ARCH OFF)
+    endif()
+elseif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64" OR "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "AMD64" OR "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "amd64" OR "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86" OR "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "i386")
+    set(CPU_IS_X86_ARCH ON)
+else()
+    set(CPU_IS_X86_ARCH OFF)
+endif()
+
 # Use same options as Jolt
 # Select X86 processor features to use (if everything is off it will be SSE2 compatible)
-option(USE_SSE4_1 "Enable SSE4.1" ON)
-option(USE_SSE4_2 "Enable SSE4.2" ON)
-option(USE_AVX "Enable AVX" ON)
-option(USE_AVX2 "Enable AVX2" OFF)
-option(USE_AVX512 "Enable AVX512" OFF)
-option(USE_LZCNT "Enable LZCNT" ON)
-option(USE_TZCNT "Enable TZCNT" ON)
+if (CPU_IS_X86_ARCH)
+    option(USE_SSE4_1 "Enable SSE4.1" ON)
+    option(USE_SSE4_2 "Enable SSE4.2" ON)
+    option(USE_AVX "Enable AVX" ON)
+    option(USE_AVX2 "Enable AVX2" OFF)
+    option(USE_AVX512 "Enable AVX512" OFF)
+    option(USE_LZCNT "Enable LZCNT" ON)
+    option(USE_TZCNT "Enable TZCNT" ON)
+endif()
 option(USE_F16C "Enable F16C" ON)
 option(USE_FMADD "Enable FMADD" ON)
 
@@ -37,6 +52,15 @@ if (WIN32)
         add_compile_options(
             /bigobj
         )
+    endif()
+elseif (APPLE)
+	# find_package(Metal )
+    find_package(OpenImageDenoise "${MIN_OpenImageDenoise_VERSION}" QUIET)
+    find_package(Threads REQUIRED)
+    if(NOT ${OpenImageDenoise_FOUND})
+        message("OpenImageDenoise>=${MIN_OpenImageDenoise_VERSION} not found, it will be disabled.")
+    else()
+        message("OpenImageDenoise ${OpenImageDenoise_VERSION} Found.")
     endif()
 else ()
     find_package(SDL2 REQUIRED)
@@ -89,7 +113,18 @@ list(REMOVE_ITEM SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/offlineshadercompiler.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/wiRenderer.cpp
 )
-
+if (APPLE)
+    list(APPEND SOURCE_FILES
+        wiInput_Apple.mm
+        wiAppleHelper.mm
+    )
+    set_source_files_properties(
+        wiInput_Apple.mm
+        wiAppleHelper.mm
+        PROPERTIES
+            SKIP_PRECOMPILE_HEADERS ON
+        )
+endif()
 file(GLOB SHADER_FILES CONFIGURE_DEPENDS shaders/*.hlsl shaders/*.hlsli)
 
 # these are all Wicked files except wiRenderer.cpp, which can be compiled
@@ -132,6 +167,8 @@ add_library(WickedEngine ALIAS ${TARGET_NAME})
 # aliases for backwards compatibility
 if(WIN32)
     add_library(WickedEngine_Windows ALIAS ${TARGET_NAME})
+elseif(APPLE)
+    # Not used
 else()
     add_library(WickedEngine_Linux ALIAS ${TARGET_NAME})
 endif()
@@ -172,60 +209,75 @@ set(WICKEDENGINE_STATIC_LIBRARIES
     Utility
 )
 
-if (USE_AVX512 OR USE_AVX2)
-    target_compile_definitions(WickedEngine_common PUBLIC _XM_AVX2_INTRINSICS_)
-endif()
-if (USE_AVX)
-    target_compile_definitions(WickedEngine_common PUBLIC _XM_AVX_INTRINSICS_)
-endif()
-if (USE_SSE4_1 OR USE_SSE4_2)
-    target_compile_definitions(WickedEngine_common PUBLIC _XM_SSE4_INTRINSICS_)
-endif()
-if (USE_F16C)
-    target_compile_definitions(WickedEngine_common PUBLIC _XM_F16C_INTRINSICS_)
-endif()
-if (USE_FMADD)
-    target_compile_definitions(WickedEngine_common PUBLIC _XM_FMA3_INTRINSICS_)
+
+if (CPU_IS_X86_ARCH)
+    # DirectXMath only supports these intrinsics for x86.
+    if (USE_AVX512 OR USE_AVX2)
+        target_compile_definitions(WickedEngine_common PUBLIC _XM_AVX2_INTRINSICS_)
+    endif()
+    if (USE_AVX)
+        target_compile_definitions(WickedEngine_common PUBLIC _XM_AVX_INTRINSICS_)
+    endif()
+    if (USE_SSE4_1 OR USE_SSE4_2)
+        target_compile_definitions(WickedEngine_common PUBLIC _XM_SSE4_INTRINSICS_)
+    endif()
+    if (USE_F16C)
+        target_compile_definitions(WickedEngine_common PUBLIC _XM_F16C_INTRINSICS_)
+    endif()
+    if (USE_FMADD)
+        target_compile_definitions(WickedEngine_common PUBLIC _XM_FMA3_INTRINSICS_)
+    endif()
 endif()
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-    if ("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x86" OR "${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
-        if (USE_AVX512)
-            target_compile_options(WickedEngine_common PUBLIC /arch:AVX512)
-        elseif (USE_AVX2)
-            target_compile_options(WickedEngine_common PUBLIC /arch:AVX2)
-        elseif (USE_AVX)
-            target_compile_options(WickedEngine_common PUBLIC /arch:AVX)
+    if (CPU_IS_X86_ARCH)
+        if ("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x86" OR "${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
+            if (USE_AVX512)
+                target_compile_options(WickedEngine_common PUBLIC /arch:AVX512)
+            elseif (USE_AVX2)
+                target_compile_options(WickedEngine_common PUBLIC /arch:AVX2)
+            elseif (USE_AVX)
+                target_compile_options(WickedEngine_common PUBLIC /arch:AVX)
+            endif()
         endif()
     endif()
-elseif ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64" OR "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "AMD64" OR "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "amd64" OR "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86" OR "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "i386")
-    if (USE_AVX512)
-        target_compile_options(WickedEngine_common PUBLIC -mavx512f -mavx512vl -mavx512dq -mavx2 -mbmi -mpopcnt -mlzcnt -mf16c)
-    elseif (USE_AVX2)
-        target_compile_options(WickedEngine_common PUBLIC -mavx2 -mbmi -mpopcnt -mlzcnt -mf16c)
-    elseif (USE_AVX)
-        target_compile_options(WickedEngine_common PUBLIC -mavx -mpopcnt)
-    elseif (USE_SSE4_2)
-        target_compile_options(WickedEngine_common PUBLIC -msse4.2 -mpopcnt)
-    elseif (USE_SSE4_1)
-        target_compile_options(WickedEngine_common PUBLIC -msse4.1)
-    else()
-        target_compile_options(WickedEngine_common PUBLIC -msse2)
+elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
+    if (CPU_IS_X86_ARCH)
+        if (USE_AVX512)
+            target_compile_options(WickedEngine_common PUBLIC -mavx512f -mavx512vl -mavx512dq -mavx2 -mbmi -mpopcnt -mlzcnt -mf16c)
+        elseif (USE_AVX2)
+            target_compile_options(WickedEngine_common PUBLIC -mavx2 -mbmi -mpopcnt -mlzcnt -mf16c)
+        elseif (USE_AVX)
+            target_compile_options(WickedEngine_common PUBLIC -mavx -mpopcnt)
+        elseif (USE_SSE4_2)
+            target_compile_options(WickedEngine_common PUBLIC -msse4.2 -mpopcnt)
+        elseif (USE_SSE4_1)
+            target_compile_options(WickedEngine_common PUBLIC -msse4.1)
+        else()
+            target_compile_options(WickedEngine_common PUBLIC -msse2)
+        endif()
+        if (USE_LZCNT)
+            target_compile_options(WickedEngine_common PUBLIC -mlzcnt)
+        endif()
+        if (USE_TZCNT)
+            target_compile_options(WickedEngine_common PUBLIC -mbmi)
+        endif()
+        target_compile_options(WickedEngine_common PUBLIC -mfpmath=sse)
+        if (USE_F16C)
+            target_compile_options(WickedEngine_common PUBLIC -mf16c)
+            message(STATUS "F16C enabled, half-precision floating point support will be available")
+        else()
+            message(STATUS "F16C disabled, half-precision floating point support will not be available")
+        endif()
+        if (USE_FMADD)
+            target_compile_options(WickedEngine_common PUBLIC -mfma)
+            message(STATUS "FMADD enabled, fused multiply-add support will be available")
+        else()
+            message(STATUS "FMADD disabled, fused multiply-add support will not be available")
+        endif()
     endif()
-    if (USE_LZCNT)
-        target_compile_options(WickedEngine_common PUBLIC -mlzcnt)
-    endif()
-    if (USE_TZCNT)
-        target_compile_options(WickedEngine_common PUBLIC -mbmi)
-    endif()
-    if (USE_F16C)
-        target_compile_options(WickedEngine_common PUBLIC -mf16c)
-    endif()
-    if (USE_FMADD)
-        target_compile_options(WickedEngine_common PUBLIC -mfma)
-    endif()
-
-    target_compile_options(WickedEngine_common PUBLIC -mfpmath=sse)
+else()
+    message(WARNING "Unknown compiler, no architecture-specific optimizations will be enabled '${CMAKE_CXX_COMPILER_ID}'")
 endif()
 
 target_compile_definitions(WickedEngine_common PUBLIC WICKED_CMAKE_BUILD)
@@ -237,6 +289,30 @@ if (WIN32)
     )
 
     set(LIBDXCOMPILER "dxcompiler.dll")
+elseif (APPLE)
+    target_compile_definitions(WickedEngine_common PUBLIC WI_UNORDERED_MAP_TYPE=2)
+
+    find_library(COREFOUNDATION_FRAMEWORK CoreFoundation REQUIRED)
+    find_library(APPLICATIONSERVICES_FRAMEWORK ApplicationServices REQUIRED)
+    find_library(APPKIT_FRAMEWORK AppKit REQUIRED)
+    find_library(METAL_FRAMEWORK Metal REQUIRED)
+    find_library(QUARTZCORE_FRAMEWORK QuartzCore REQUIRED)
+    find_library(GAMECONTROLLER_FRAMEWORK GameController REQUIRED)
+
+    target_link_libraries(WickedEngine_common PUBLIC
+        Threads::Threads
+        $<$<BOOL:${OpenImageDenoise_FOUND}>:OpenImageDenoise> # links OpenImageDenoise only if it's found
+        ${COREFOUNDATION_FRAMEWORK}
+        ${APPLICATIONSERVICES_FRAMEWORK}
+        ${APPKIT_FRAMEWORK}
+        ${METAL_FRAMEWORK}
+        ${QUARTZCORE_FRAMEWORK}
+        ${GAMECONTROLLER_FRAMEWORK}
+    )
+
+    target_link_libraries(WickedEngine_common PUBLIC dl)
+
+    set(LIBDXCOMPILER "libdxcompiler.dylib")
 else ()
     # `ska::flat_hash_map` has issues on linux because of the hash function being identity
     # in same cases. Use `robin_hood::unordered_flat_map` instead
@@ -358,11 +434,11 @@ export(EXPORT Engine-Targets
         FILE "${CMAKE_BINARY_DIR}/cmake/WickedEngineTargets.cmake"
         NAMESPACE WickedEngine::
         )
-
-install(EXPORT Engine-Targets
-        FILE WickedEngineTargets.cmake
-        NAMESPACE WickedEngine::
-        DESTINATION ${INSTALL_CONFIGDIR})
+# I don't quite get why, but this conflicts with specifying the include dirs in Editor
+# install(EXPORT Engine-Targets
+#         FILE WickedEngineTargets.cmake
+#         NAMESPACE WickedEngine::
+#         DESTINATION ${INSTALL_CONFIGDIR})
 
 set(_CONFIG_INSTALL_DIR_INCLUDE "${WICKED_ROOT_DIR}")
 set(_CONFIG_INSTALL_DIR_LIB "${WICKED_ROOT_DIR}")
@@ -383,7 +459,7 @@ install(FILES ${CMAKE_BINARY_DIR}/cmake/install/WickedEngineConfig.cmake
         DESTINATION ${INSTALL_CONFIGDIR}
 )
 
-# Shaders
+# # Shaders
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/shaders
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine"
         PATTERN "spirv" EXCLUDE

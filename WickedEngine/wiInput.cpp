@@ -116,7 +116,7 @@ namespace wi::input
 	const KeyboardState& GetKeyboardState() { return keyboard; }
 	const MouseState& GetMouseState() { return mouse; }
 
-	struct Input 
+	struct Input
 	{
 		BUTTON button = BUTTON_NONE;
 		int playerIndex = 0;
@@ -161,7 +161,7 @@ namespace wi::input
 #ifdef PLATFORM_PS5
 		wi::input::ps5::Initialize();
 #endif // PLATFORM_PS5
-		
+
 #ifdef __APPLE__
 		wi::input::apple::Initialize();
 		wi::apple::CursorInit(cursor_table_original);
@@ -197,7 +197,7 @@ namespace wi::input
 
 #if defined(_WIN32) && !defined(PLATFORM_XBOX)
 		wi::input::rawinput::GetMouseState(&mouse); // currently only the relative data can be used from this
-		wi::input::rawinput::GetKeyboardState(&keyboard); 
+		wi::input::rawinput::GetKeyboardState(&keyboard);
 
 		// apparently checking the mouse here instead of Down() avoids missing the button presses (review!)
 		mouse.left_button_press |= KEY_DOWN(VK_LBUTTON);
@@ -220,14 +220,14 @@ namespace wi::input
 		wi::input::sdlinput::GetMouseState(&mouse);
 		wi::input::sdlinput::GetKeyboardState(&keyboard);
 #endif
-		
+
 		for (auto& x : mouse_move_events)
 		{
 			mouse.delta_position.x += x.x;
 			mouse.delta_position.y += x.y;
 		}
 		mouse_move_events.clear();
-		
+
 		for (auto& x : mouse_scroll_events)
 		{
 			mouse.delta_wheel += x;
@@ -491,7 +491,7 @@ namespace wi::input
 				cursor_next = CURSOR_DEFAULT;
 			}
 			auto cursorhandle = cursor_table[cursor_next] ? cursor_table[cursor_next] : cursor_table[CURSOR_DEFAULT];
-			
+
 #ifdef PLATFORM_WINDOWS_DESKTOP
 			::SetCursor(cursorhandle);
 #elif defined(__APPLE__)
@@ -577,15 +577,15 @@ namespace wi::input
 			switch (button)
 			{
 			case wi::input::MOUSE_BUTTON_LEFT:
-				if (mouse.left_button_press) 
+				if (mouse.left_button_press)
 					return true;
 				return false;
 			case wi::input::MOUSE_BUTTON_RIGHT:
-				if (mouse.right_button_press) 
+				if (mouse.right_button_press)
 					return true;
 				return false;
 			case wi::input::MOUSE_BUTTON_MIDDLE:
-				if (mouse.middle_button_press) 
+				if (mouse.middle_button_press)
 					return true;
 				return false;
 #ifdef _WIN32
@@ -610,7 +610,7 @@ namespace wi::input
 			case wi::input::KEYBOARD_BUTTON_LSHIFT:
 				keycode = VK_LSHIFT;
 				break;
-			case wi::input::KEYBOARD_BUTTON_F1: 
+			case wi::input::KEYBOARD_BUTTON_F1:
 				keycode = VK_F1;
 				break;
 			case wi::input::KEYBOARD_BUTTON_F2:
@@ -737,8 +737,10 @@ namespace wi::input
 				keycode = VK_RMENU;
 				break;
 #endif // _WIN32
-					
+
 #ifdef __APPLE__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wswitch"
 			case wi::input::KEYBOARD_BUTTON_UP:
 				keycode = kVK_UpArrow;
 				break;
@@ -970,39 +972,40 @@ namespace wi::input
 			case (BUTTON)'Z':
 				 keycode = kVK_ANSI_Z;
 				 break;
-				case (BUTTON)'0':
-				  keycode = kVK_ANSI_0;
-				  break;
-				case (BUTTON)'1':
-				  keycode = kVK_ANSI_1;
-				  break;
-				case (BUTTON)'2':
-				  keycode = kVK_ANSI_2;
-				  break;
-				case (BUTTON)'3':
-				  keycode = kVK_ANSI_3;
-				  break;
-				case (BUTTON)'4':
-				  keycode = kVK_ANSI_4;
-				  break;
-				case (BUTTON)'5':
-				  keycode = kVK_ANSI_5;
-				  break;
-				case (BUTTON)'6':
-				  keycode = kVK_ANSI_6;
-				  break;
-				case (BUTTON)'7':
-				  keycode = kVK_ANSI_7;
-				  break;
-				case (BUTTON)'8':
-				  keycode = kVK_ANSI_8;
-				  break;
-				case (BUTTON)'9':
-				  keycode = kVK_ANSI_9;
-				  break;
+			case (BUTTON)'0':
+				keycode = kVK_ANSI_0;
+				break;
+			case (BUTTON)'1':
+				keycode = kVK_ANSI_1;
+				break;
+			case (BUTTON)'2':
+				keycode = kVK_ANSI_2;
+				break;
+			case (BUTTON)'3':
+				keycode = kVK_ANSI_3;
+				break;
+			case (BUTTON)'4':
+				keycode = kVK_ANSI_4;
+				break;
+			case (BUTTON)'5':
+				keycode = kVK_ANSI_5;
+				break;
+			case (BUTTON)'6':
+				keycode = kVK_ANSI_6;
+				break;
+			case (BUTTON)'7':
+				keycode = kVK_ANSI_7;
+				break;
+			case (BUTTON)'8':
+				keycode = kVK_ANSI_8;
+				break;
+			case (BUTTON)'9':
+				keycode = kVK_ANSI_9;
+				break;
+#pragma clang diagnostic pop
 #endif // __APPLE__
-					
-					
+
+
 				default: break;
 			}
 #if defined(_WIN32) && !defined(PLATFORM_XBOX)
@@ -1211,7 +1214,7 @@ namespace wi::input
 		wi::helper::StringConvert(filename, wfilename, arraysize(wfilename));
 		cursor_table[cursor] = LoadCursorFromFile(wfilename);
 #endif // PLATFORM_WINDOWS_DESKTOP
-		
+
 #if defined(SDL2) || defined(PLATFORM_MACOS)
 		// On other platforms, extract the raw color data from win32 .CUR file and create cursor from that:
 		wi::vector<uint8_t> data;
@@ -1219,15 +1222,15 @@ namespace wi::input
 		{
 			// Extract only the first image data:
 			ico::ICONDIRENTRY* icondirentry = (ico::ICONDIRENTRY*)(data.data() + sizeof(ico::ICONDIR));
-			
+
 			int hotspotX = icondirentry->wPlanes;
 			int hotspotY = icondirentry->wBitCount;
-			
+
 			uint8_t* pixeldata = (data.data() + icondirentry->dwImageOffset + sizeof(ico::BITMAPINFOHEADER));
-			
+
 			const uint32_t width = icondirentry->bWidth;
 			const uint32_t height = icondirentry->bHeight;
-			
+
 			// Convert BGRA to ARGB and flip vertically
 			wi::vector<wi::Color> colors;
 			colors.reserve(width * height);
@@ -1240,7 +1243,7 @@ namespace wi::input
 					src += 4;
 				}
 			}
-			
+
 #ifdef SDL2
 			SDL_Surface* surface = SDL_CreateRGBSurfaceFrom(
 															colors.data(),
@@ -1253,7 +1256,7 @@ namespace wi::input
 															0xff000000,
 															0x000000ff
 															);
-			
+
 			if (surface != nullptr)
 			{
 				cursor_table[cursor] = SDL_CreateColorCursor(surface, hotspotX, hotspotY);
@@ -1264,7 +1267,7 @@ namespace wi::input
 #endif // SDL2
 		}
 #endif // defined(SDL2) || defined(PLATFORM_MACOS)
-		
+
 		// refresh in case we set the current one:
 		cursor_next = cursor_current;
 		cursor_current = CURSOR_COUNT;

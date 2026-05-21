@@ -18,6 +18,9 @@ if (WIN32)
 	)
 
 	set(LIB_DXCOMPILER "dxcompiler.dll")
+elseif(APPLE)
+
+	set(LIB_DXCOMPILER "dxcompiler.dylib")
 else()
 	list (APPEND SOURCE_FILES
 		main_SDL2.cpp

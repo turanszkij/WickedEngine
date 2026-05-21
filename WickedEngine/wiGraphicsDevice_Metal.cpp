@@ -8,7 +8,7 @@
 #include "wiTimer.h"
 #include "wiBacklog.h"
 
-#include <Metal/MTL4AccelerationStructure.hpp>
+#include <Utility/metal/Metal/MTL4AccelerationStructure.hpp>
 
 namespace wi::graphics
 {
