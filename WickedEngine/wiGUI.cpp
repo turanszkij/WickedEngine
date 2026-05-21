@@ -5943,9 +5943,10 @@ namespace wi::gui
 				drag_indicator_y = std::min(drag_indicator_y, itemlist_box.pos.y + itemlist_box.siz.y - 2.0f);
 				drag_pointer_pos = pointerHitbox.pos;
 			}
+
+			if (state == IDLE && resize_blink_timer > 0)
+				state = FOCUS;
 		}
-if (state == IDLE && resize_blink_timer > 0)
-			state = FOCUS;
 
 		sprites[state].params.siz.y = item_height();
 		font.params.posX = translation.x + 2;
