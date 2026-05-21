@@ -1054,8 +1054,9 @@ namespace wi::gui
 
 		// Drag-and-drop reorder state
 		std::function<void(const EventArgs& args)> onReorder;
-		int drag_source = -1;       // items[] index being dragged (-1 = none)
-		int drag_target = -1;       // items[] index to insert before (items.size() = end)
+		int drag_source = -1;           // items[] index being dragged (-1 = none)
+		int drag_target = -1;           // items[] index to insert before (items.size() = end)
+		int drag_reparent_target = -1;  // items[] index to drop ON (re-parent), -1 = none
 		bool dragging = false;
 		XMFLOAT2 drag_start_pos = {};
                 float drag_indicator_y = 0;    // screen Y for drop indicator line (updated in Update)

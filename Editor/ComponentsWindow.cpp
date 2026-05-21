@@ -123,6 +123,58 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 		editor->FocusCameraOnSelected();
 		});
 	entityTree.OnReorder([this](wi::gui::EventArgs args) {
+		// Re-parent: drop ON another entity (bValue == true)
+		if (args.bValue)
+		{
+			int source_idx = args.iValue;
+			int target_idx = args.iValue2;
+			if (source_idx < 0 || source_idx >= entityTree.GetItemCount())
+				return;
+			if (target_idx < 0 || target_idx >= entityTree.GetItemCount())
+				return;
+
+			Scene& scene = editor->GetCurrentScene();
+			Entity source_entity = (Entity)entityTree.GetItem(source_idx).userdata;
+			Entity target_entity = (Entity)entityTree.GetItem(target_idx).userdata;
+
+			if (source_entity == target_entity)
+				return;
+
+			// Prevent circular hierarchy: target must not be a descendant of source
+			bool is_circular = false;
+			const HierarchyComponent* check = scene.hierarchy.GetComponent(target_entity);
+			while (check != nullptr)
+			{
+				if (check->parentID == source_entity)
+				{
+					is_circular = true;
+					break;
+				}
+				check = scene.hierarchy.GetComponent(check->parentID);
+			}
+			if (is_circular)
+				return;
+
+			// Skip if already a direct child of target
+			const HierarchyComponent* source_hier = scene.hierarchy.GetComponent(source_entity);
+			if (source_hier != nullptr && source_hier->parentID == target_entity)
+				return;
+
+			// Record undo history
+			wi::Archive& archive = editor->AdvanceHistory();
+			archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+			editor->RecordEntity(archive, source_entity);
+
+			scene.Component_Attach(source_entity, target_entity);
+
+			editor->RecordEntity(archive, source_entity);
+
+			// Expand the new parent so the dropped child is visible
+			entitytree_opened_items.insert(target_entity);
+			RefreshEntityTree();
+			return;
+		}
+
 		// Only apply custom ordering when sortingMode==0 and no text filter is active
 		if (editor->main->config.GetSection("options").GetInt("entity_tree_sorting") != 0)
 			return;
