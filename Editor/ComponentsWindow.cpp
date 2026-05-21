@@ -130,11 +130,28 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 			int target_idx = args.iValue2;
 			if (source_idx < 0 || source_idx >= entityTree.GetItemCount())
 				return;
-			if (target_idx < 0 || target_idx >= entityTree.GetItemCount())
-				return;
 
 			Scene& scene = editor->GetCurrentScene();
 			Entity source_entity = (Entity)entityTree.GetItem(source_idx).userdata;
+
+			// Detach: dropped outside the list -> remove from parent
+			if (target_idx == -1)
+			{
+				const HierarchyComponent* source_hier2 = scene.hierarchy.GetComponent(source_entity);
+				if (source_hier2 == nullptr)
+					return; // already a root entity, nothing to do
+				wi::Archive& archive2 = editor->AdvanceHistory();
+				archive2 << EditorComponent::HISTORYOP_COMPONENT_DATA;
+				editor->RecordEntity(archive2, source_entity);
+				scene.Component_Detach(source_entity);
+				editor->RecordEntity(archive2, source_entity);
+				RefreshEntityTree();
+				return;
+			}
+
+			if (target_idx < 0 || target_idx >= entityTree.GetItemCount())
+				return;
+
 			Entity target_entity = (Entity)entityTree.GetItem(target_idx).userdata;
 
 			if (source_entity == target_entity)

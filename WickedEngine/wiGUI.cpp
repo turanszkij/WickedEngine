@@ -5787,6 +5787,16 @@ namespace wi::gui
 						args.bValue = true;
 						onReorder(args);
 					}
+					else if (!itemlist_box.intersects(pointerHitbox))
+					{
+						// Detach: dropped outside the list area -> remove from parent
+						EventArgs args;
+						args.iValue = drag_source;
+						args.iValue2 = -1;
+						args.userdata = items[drag_source].userdata;
+						args.bValue = true;
+						onReorder(args);
+					}
 					else if (drag_reparent_target < 0 && drag_target >= 0 &&
 						drag_target != drag_source && drag_target != drag_source + 1)
 					{
