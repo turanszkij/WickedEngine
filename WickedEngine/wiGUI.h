@@ -1057,6 +1057,7 @@ namespace wi::gui
 		int drag_source = -1;           // items[] index being dragged (-1 = none)
 		int drag_target = -1;           // items[] index to insert before (items.size() = end)
 		int drag_reparent_target = -1;  // items[] index to drop ON (re-parent), -1 = none
+		int drag_target_level = 0;      // item level for BETWEEN drops (0 = root)
 		bool dragging = false;
 		XMFLOAT2 drag_start_pos = {};
                 float drag_indicator_y = 0;    // screen Y for drop indicator line (updated in Update)

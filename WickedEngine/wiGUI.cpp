@@ -5798,12 +5798,14 @@ namespace wi::gui
 						onReorder(args);
 					}
 					else if (drag_reparent_target < 0 && drag_target >= 0 &&
-						drag_target != drag_source && drag_target != drag_source + 1)
+						((drag_target != drag_source && drag_target != drag_source + 1) ||
+							(drag_source >= 0 && drag_source < (int)items.size() && drag_target_level != items[drag_source].level)))
 					{
 						// Reorder: drop BETWEEN items
 						EventArgs args;
 						args.iValue = drag_source;
 						args.iValue2 = drag_target;
+						args.fValue = (float)drag_target_level;
 						args.userdata = items[drag_source].userdata;
 						args.bValue = false;
 						onReorder(args);
@@ -5813,6 +5815,7 @@ namespace wi::gui
 				drag_source = -1;
 				drag_target = -1;
 				drag_reparent_target = -1;
+				drag_target_level = 0;
 			}
 			if (!click_down && !clicked)
 			{
@@ -5936,13 +5939,25 @@ namespace wi::gui
 				item_highlight = drag_source;
 				drag_target = (int)items.size(); // default: insert after all items
 				drag_reparent_target = -1;
+				drag_target_level = 0;
 				drag_indicator_y = 0;
+				auto compute_drag_target_level = [&](int max_level) {
+					int source_level = 0;
+					if (drag_source >= 0 && drag_source < (int)items.size())
+					{
+						source_level = items[drag_source].level;
+					}
+					const float level_delta = (pointerHitbox.pos.x - drag_start_pos.x) / item_height();
+					const int level = source_level + (int)std::round(level_delta);
+					return std::max(0, std::min(level, max_level));
+				};
 
 				int dc = 0;
 				int dp = 0;
 				bool dpo = true;
 				int di = -1;
 				int last_visible = 0;
+				int last_visible_level = 0;
 				for (const Item& item : items)
 				{
 					di++;
@@ -5952,6 +5967,7 @@ namespace wi::gui
 					dpo = item.open;
 					dp = item.level;
 					last_visible = dc;
+					last_visible_level = item.level;
 
 					float item_top_y = translation.y + GetItemOffset(dc);
 					float item_bot_y = item_top_y + item_height();
@@ -5960,6 +5976,7 @@ namespace wi::gui
 						// Top 25%: insert BEFORE this item
 						drag_target = di;
 						drag_reparent_target = -1;
+						drag_target_level = item.level;
 						drag_indicator_y = item_top_y;
 						break;
 					}
@@ -5970,6 +5987,12 @@ namespace wi::gui
 						{
 							drag_reparent_target = di;
 							drag_target = (int)items.size();
+							drag_target_level = item.level + 1;
+							drag_indicator_y = 0;
+						}
+						else
+						{
+							drag_target = drag_source;
 							drag_indicator_y = 0;
 						}
 						break;
@@ -5979,12 +6002,14 @@ namespace wi::gui
 						// Bottom 25%: insert AFTER this item
 						drag_target = di + 1;
 						drag_reparent_target = -1;
+						drag_target_level = item.level;
 						drag_indicator_y = item_bot_y;
 						break;
 					}
 				}
 				if (drag_reparent_target < 0 && drag_target == (int)items.size())
 				{
+					drag_target_level = compute_drag_target_level(last_visible_level);
 					drag_indicator_y = translation.y + GetItemOffset(last_visible) + item_height();
 				}
 				// Clamp indicator line to list area (only when not re-parenting)
@@ -6233,8 +6258,9 @@ namespace wi::gui
 		if (dragging && drag_source >= 0 && drag_target >= 0 && drag_reparent_target < 0)
 		{
 			wi::image::Params indicator_fx = sprites[ACTIVE].params;
-			indicator_fx.pos = XMFLOAT3(itemlist_box.pos.x, drag_indicator_y - 1.0f, 0);
-			indicator_fx.siz = XMFLOAT2(itemlist_box.siz.x, 2.0f);
+			const float indicator_indent = std::max(0, drag_target_level) * item_height();
+			indicator_fx.pos = XMFLOAT3(itemlist_box.pos.x + indicator_indent, drag_indicator_y - 1.0f, 0);
+			indicator_fx.siz = XMFLOAT2(std::max(2.0f, itemlist_box.siz.x - indicator_indent), 2.0f);
 			wi::image::Draw(nullptr, indicator_fx, cmd);
 		}
 		// Floating ghost: semi-transparent label following the cursor while dragging
