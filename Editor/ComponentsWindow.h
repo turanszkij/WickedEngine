@@ -129,9 +129,11 @@ public:
 	wi::unordered_set<wi::ecs::Entity> entitytree_added_items;
 	wi::unordered_set<wi::ecs::Entity> entitytree_opened_items;
 	wi::ecs::Entity entitytree_pending_focus = wi::ecs::INVALID_ENTITY;
+	wi::unordered_map<wi::ecs::Entity, wi::vector<wi::ecs::Entity>> entity_user_order; // custom display order per parent (INVALID_ENTITY = top-level)
 	void PushToEntityTree(wi::ecs::Entity entity, int level);
 	void RefreshEntityTree();
 	bool CheckEntityFilter(wi::ecs::Entity entity) const;
+	void ApplyUserOrder(wi::vector<wi::ecs::Entity>& entities, wi::ecs::Entity parent_entity) const;
 
 private:
 	static int GetEntityTypePriority(wi::ecs::Entity entity, const wi::scene::Scene& scene);
