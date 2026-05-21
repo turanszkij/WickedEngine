@@ -26,9 +26,6 @@ list(FILTER SOURCE_FILES
 	EXCLUDE REGEX "${SDIR}/FAudio/.*"
 )
 
-install(FILES ${HEADER_FILES}
-	DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine/Utility/")
-
 # some *.cpp and *.c files are included by other files,
 # so they are not source files that should be
 # compiled on their own; hence we mark them as header files
