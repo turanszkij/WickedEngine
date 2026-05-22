@@ -176,7 +176,7 @@ inline uint2 unpack_pixel(uint value)
 
 uint pack_unorm16x2(float2 value)
 {
-	return uint(saturate(value.x) * 65535.0) | (uint(saturate(value.x) * 65535.0) << 16u);
+	return uint(saturate(value.x) * 65535.0) | (uint(saturate(value.y) * 65535.0) << 16u);
 }
 uint2 pack_unorm16x4(float4 value)
 {
