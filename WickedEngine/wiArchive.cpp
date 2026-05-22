@@ -86,12 +86,22 @@ namespace wi
 			if (GetVersion() >= 92)
 			{
 				(*this) >> header.properties.raw;
+				if (header.properties.bits.thumbnail_data_size > data_ptr_size - pos)
+				{
+					Close();
+					return;
+				}
 				pos += header.properties.bits.thumbnail_data_size;
 			}
 			else if (GetVersion() >= 91)
 			{
 				size_t thumbnail_data_size = 0;
 				(*this) >> thumbnail_data_size;
+				if (thumbnail_data_size > data_ptr_size - pos)
+				{
+					Close();
+					return;
+				}
 				pos += thumbnail_data_size;
 				header.properties.bits.thumbnail_data_size = thumbnail_data_size;
 			}
@@ -191,6 +201,8 @@ namespace wi
 	wi::graphics::Texture Archive::CreateThumbnailTexture() const
 	{
 		if (header.properties.bits.thumbnail_data_size == 0)
+			return {};
+		if (sizeof(Header) + (size_t)header.properties.bits.thumbnail_data_size > data_ptr_size)
 			return {};
 		int width = 0;
 		int height = 0;
