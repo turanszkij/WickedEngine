@@ -123,6 +123,87 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 		editor->FocusCameraOnSelected();
 		});
 	entityTree.OnReorder([this](wi::gui::EventArgs args) {
+		// Re-parent: drop ON another entity (bValue == true)
+		if (args.bValue)
+		{
+			int source_idx = args.iValue;
+			int target_idx = args.iValue2;
+			if (source_idx < 0 || source_idx >= entityTree.GetItemCount())
+				return;
+
+			Scene& scene = editor->GetCurrentScene();
+			Entity source_entity = (Entity)entityTree.GetItem(source_idx).userdata;
+
+			// Dropped outside the widget -> go one level up in hierarchy
+			if (target_idx == -1)
+			{
+				const HierarchyComponent* source_hier2 = scene.hierarchy.GetComponent(source_entity);
+				if (source_hier2 == nullptr)
+					return; // already root, nothing to do
+
+				// Find grandparent: parent's parent (INVALID_ENTITY if parent is root)
+				Entity grandparent = INVALID_ENTITY;
+				const HierarchyComponent* parent_hier = scene.hierarchy.GetComponent(source_hier2->parentID);
+				if (parent_hier != nullptr)
+					grandparent = parent_hier->parentID;
+
+				wi::Archive& archive2 = editor->AdvanceHistory();
+				archive2 << EditorComponent::HISTORYOP_COMPONENT_DATA;
+				editor->RecordEntity(archive2, source_entity);
+				if (grandparent != INVALID_ENTITY)
+					scene.Component_Attach(source_entity, grandparent); // one level up
+				else
+					scene.Component_Detach(source_entity); // already at depth 1, become root
+				editor->RecordEntity(archive2, source_entity);
+				hierarchyWnd.SetEntity(source_entity);
+				RefreshEntityTree();
+				return;
+			}
+
+			if (target_idx < 0 || target_idx >= entityTree.GetItemCount())
+				return;
+
+			Entity target_entity = (Entity)entityTree.GetItem(target_idx).userdata;
+
+			if (source_entity == target_entity)
+				return;
+
+			// Prevent circular hierarchy: target must not be a descendant of source
+			bool is_circular = false;
+			const HierarchyComponent* check = scene.hierarchy.GetComponent(target_entity);
+			while (check != nullptr)
+			{
+				if (check->parentID == source_entity)
+				{
+					is_circular = true;
+					break;
+				}
+				check = scene.hierarchy.GetComponent(check->parentID);
+			}
+			if (is_circular)
+				return;
+
+			// Skip if already a direct child of target
+			const HierarchyComponent* source_hier = scene.hierarchy.GetComponent(source_entity);
+			if (source_hier != nullptr && source_hier->parentID == target_entity)
+				return;
+
+			// Record undo history
+			wi::Archive& archive = editor->AdvanceHistory();
+			archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+			editor->RecordEntity(archive, source_entity);
+
+			scene.Component_Attach(source_entity, target_entity);
+
+			editor->RecordEntity(archive, source_entity);
+			hierarchyWnd.SetEntity(source_entity);
+
+			// Expand the new parent so the dropped child is visible
+			entitytree_opened_items.insert(target_entity);
+			RefreshEntityTree();
+			return;
+		}
+
 		// Only apply custom ordering when sortingMode==0 and no text filter is active
 		if (editor->main->config.GetSection("options").GetInt("entity_tree_sorting") != 0)
 			return;
@@ -136,36 +217,82 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 		if (target_idx < 0 || target_idx > entityTree.GetItemCount())
 			return;
 
-		const Scene& scene = editor->GetCurrentScene();
+		Scene& scene = editor->GetCurrentScene();
 		Entity source_entity = (Entity)entityTree.GetItem(source_idx).userdata;
 
-		// Determine parent entity of the source (INVALID_ENTITY = top-level)
-		Entity parent_entity = INVALID_ENTITY;
-		const HierarchyComponent* hier = scene.hierarchy.GetComponent(source_entity);
-		if (hier != nullptr && hier->parentID != INVALID_ENTITY && entitytree_temp_items.count(hier->parentID) != 0)
+		auto get_visible_parent = [&](Entity entity) {
+			const HierarchyComponent* hier = scene.hierarchy.GetComponent(entity);
+			if (hier != nullptr && hier->parentID != INVALID_ENTITY && entitytree_temp_items.count(hier->parentID) != 0)
+			{
+				return hier->parentID;
+			}
+			return INVALID_ENTITY;
+		};
+
+		auto is_descendant_of = [&](Entity entity, Entity potential_ancestor) {
+			const HierarchyComponent* check = scene.hierarchy.GetComponent(entity);
+			while (check != nullptr)
+			{
+				if (check->parentID == potential_ancestor)
+				{
+					return true;
+				}
+				check = scene.hierarchy.GetComponent(check->parentID);
+			}
+			return false;
+		};
+
+		auto collect_siblings = [&](Entity parent_entity) {
+			wi::vector<Entity> siblings;
+			if (parent_entity == INVALID_ENTITY)
+			{
+				for (auto& e : entitytree_temp_items)
+				{
+					if (get_visible_parent(e) == INVALID_ENTITY)
+						siblings.push_back(e);
+				}
+			}
+			else
+			{
+				for (size_t i = 0; i < scene.hierarchy.GetCount(); ++i)
+				{
+					if (scene.hierarchy[i].parentID == parent_entity)
+						siblings.push_back(scene.hierarchy.GetEntity(i));
+				}
+			}
+			return siblings;
+		};
+
+		auto remove_from_order = [&](Entity parent_entity, Entity entity) {
+			auto order_it = entity_user_order.find(parent_entity);
+			if (order_it == entity_user_order.end())
+				return;
+			wi::vector<Entity>& order = order_it->second;
+			order.erase(std::remove(order.begin(), order.end(), entity), order.end());
+			if (order.empty())
+				entity_user_order.erase(order_it);
+		};
+
+		Entity parent_entity = get_visible_parent(source_entity);
+		const int target_level = std::max(0, (int)args.fValue);
+		Entity target_parent_entity = INVALID_ENTITY;
+		if (target_level > 0)
 		{
-			parent_entity = hier->parentID;
+			for (int i = target_idx - 1; i >= 0; --i)
+			{
+				const wi::gui::TreeList::Item& item = entityTree.GetItem(i);
+				if (item.level == target_level - 1)
+				{
+					target_parent_entity = (Entity)item.userdata;
+					break;
+				}
+			}
 		}
 
-		// Collect all current siblings of source_entity
-		wi::vector<Entity> siblings;
-		if (parent_entity == INVALID_ENTITY)
-		{
-			for (auto& e : entitytree_temp_items)
-			{
-				const HierarchyComponent* h = scene.hierarchy.GetComponent(e);
-				if (h == nullptr || h->parentID == INVALID_ENTITY || entitytree_temp_items.count(h->parentID) == 0)
-					siblings.push_back(e);
-			}
-		}
-		else
-		{
-			for (size_t i = 0; i < scene.hierarchy.GetCount(); ++i)
-			{
-				if (scene.hierarchy[i].parentID == parent_entity)
-					siblings.push_back(scene.hierarchy.GetEntity(i));
-			}
-		}
+		if (target_parent_entity == source_entity || is_descendant_of(target_parent_entity, source_entity))
+			return;
+
+		wi::vector<Entity> siblings = collect_siblings(parent_entity);
 
 		// Validate that source_entity belongs to this sibling group before touching the map
 		bool source_in_siblings = false;
@@ -175,6 +302,26 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 		}
 		if (!source_in_siblings)
 			return;
+
+		if (parent_entity != target_parent_entity)
+		{
+			wi::Archive& archive = editor->AdvanceHistory();
+			archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+			editor->RecordEntity(archive, source_entity);
+
+			remove_from_order(parent_entity, source_entity);
+			if (target_parent_entity == INVALID_ENTITY)
+				scene.Component_Detach(source_entity);
+			else
+				scene.Component_Attach(source_entity, target_parent_entity);
+
+			editor->RecordEntity(archive, source_entity);
+			hierarchyWnd.SetEntity(source_entity);
+			if (target_parent_entity != INVALID_ENTITY)
+				entitytree_opened_items.insert(target_parent_entity);
+			parent_entity = target_parent_entity;
+			siblings = collect_siblings(parent_entity);
+		}
 
 		// Build (or refresh) the ordered list for this parent, preserving existing custom order
 		wi::vector<Entity> new_order;
@@ -206,11 +353,13 @@ void ComponentsWindow::Create(EditorComponent* _editor)
 		Entity entity_above = INVALID_ENTITY;
 		for (int i = target_idx - 1; i >= 0; --i)
 		{
-			Entity e = (Entity)entityTree.GetItem(i).userdata;
-			const HierarchyComponent* h = scene.hierarchy.GetComponent(e);
-			Entity p = (h != nullptr && h->parentID != INVALID_ENTITY && entitytree_temp_items.count(h->parentID) != 0)
-				? h->parentID : INVALID_ENTITY;
-			if (p == parent_entity)
+			const wi::gui::TreeList::Item& item = entityTree.GetItem(i);
+			if (item.level != target_level)
+				continue;
+			Entity e = (Entity)item.userdata;
+			if (e == source_entity)
+				continue;
+			if (get_visible_parent(e) == parent_entity)
 			{
 				entity_above = e;
 				break;

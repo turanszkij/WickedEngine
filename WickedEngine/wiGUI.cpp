@@ -5775,18 +5775,47 @@ namespace wi::gui
 			// Finalize drag-and-drop when mouse is released
 			if (onReorder && dragging && !click_down)
 			{
-				if (drag_source >= 0 && drag_target >= 0 &&
-					drag_target != drag_source && drag_target != drag_source + 1)
+				if (drag_source >= 0)
 				{
-					EventArgs args;
-					args.iValue = drag_source;
-					args.iValue2 = drag_target;
-					args.userdata = items[drag_source].userdata;
-					onReorder(args);
+					if (drag_reparent_target >= 0 && drag_reparent_target != drag_source)
+					{
+						// Re-parent: drop ON another item
+						EventArgs args;
+						args.iValue = drag_source;
+						args.iValue2 = drag_reparent_target;
+						args.userdata = items[drag_source].userdata;
+						args.bValue = true;
+						onReorder(args);
+					}
+					else if (!hitbox.intersects(GetPointerHitbox(false)))
+					{
+						// Dropped outside the widget -> go one level up in hierarchy
+						EventArgs args;
+						args.iValue = drag_source;
+						args.iValue2 = -1;
+						args.userdata = items[drag_source].userdata;
+						args.bValue = true;
+						onReorder(args);
+					}
+					else if (drag_reparent_target < 0 && drag_target >= 0 &&
+						((drag_target != drag_source && drag_target != drag_source + 1) ||
+							(drag_source >= 0 && drag_source < (int)items.size() && drag_target_level != items[drag_source].level)))
+					{
+						// Reorder: drop BETWEEN items
+						EventArgs args;
+						args.iValue = drag_source;
+						args.iValue2 = drag_target;
+						args.fValue = (float)drag_target_level;
+						args.userdata = items[drag_source].userdata;
+						args.bValue = false;
+						onReorder(args);
+					}
 				}
 				dragging = false;
 				drag_source = -1;
 				drag_target = -1;
+				drag_reparent_target = -1;
+				drag_target_level = 0;
 			}
 			if (!click_down && !clicked)
 			{
@@ -5904,18 +5933,31 @@ namespace wi::gui
 				}
 			}
 
-			// Compute drag_target and drag_indicator_y while dragging
+			// Compute drag_target, drag_reparent_target, and drag_indicator_y while dragging
 			if (onReorder && dragging && click_down)
 			{
 				item_highlight = drag_source;
-				drag_target = (int)items.size(); // default: after all items
+				drag_target = (int)items.size(); // default: insert after all items
+				drag_reparent_target = -1;
+				drag_target_level = 0;
 				drag_indicator_y = 0;
+				auto compute_drag_target_level = [&](int max_level) {
+					int source_level = 0;
+					if (drag_source >= 0 && drag_source < (int)items.size())
+					{
+						source_level = items[drag_source].level;
+					}
+					const float level_delta = (pointerHitbox.pos.x - drag_start_pos.x) / item_height();
+					const int level = source_level + (int)std::round(level_delta);
+					return std::max(0, std::min(level, max_level));
+				};
 
 				int dc = 0;
 				int dp = 0;
 				bool dpo = true;
 				int di = -1;
 				int last_visible = 0;
+				int last_visible_level = 0;
 				for (const Item& item : items)
 				{
 					di++;
@@ -5925,22 +5967,58 @@ namespace wi::gui
 					dpo = item.open;
 					dp = item.level;
 					last_visible = dc;
+					last_visible_level = item.level;
 
 					float item_top_y = translation.y + GetItemOffset(dc);
-					if (pointerHitbox.pos.y < item_top_y + item_height() * 0.5f)
+					float item_bot_y = item_top_y + item_height();
+					if (pointerHitbox.pos.y < item_top_y + item_height() * 0.25f)
 					{
+						// Top 25%: insert BEFORE this item
 						drag_target = di;
+						drag_reparent_target = -1;
+						drag_target_level = item.level;
 						drag_indicator_y = item_top_y;
 						break;
 					}
+					else if (pointerHitbox.pos.y < item_bot_y - item_height() * 0.25f)
+					{
+						// Middle 50%: drop ON this item (re-parent)
+						if (di != drag_source)
+						{
+							drag_reparent_target = di;
+							drag_target = (int)items.size();
+							drag_target_level = item.level + 1;
+							drag_indicator_y = 0;
+						}
+						else
+						{
+							drag_target = drag_source;
+							drag_target_level = item.level;
+							drag_indicator_y = 0;
+						}
+						break;
+					}
+					else if (pointerHitbox.pos.y < item_bot_y)
+					{
+						// Bottom 25%: insert AFTER this item
+						drag_target = di + 1;
+						drag_reparent_target = -1;
+						drag_target_level = item.level;
+						drag_indicator_y = item_bot_y;
+						break;
+					}
 				}
-				if (drag_target == (int)items.size())
+				if (drag_reparent_target < 0 && drag_target == (int)items.size())
 				{
+					drag_target_level = compute_drag_target_level(last_visible_level);
 					drag_indicator_y = translation.y + GetItemOffset(last_visible) + item_height();
 				}
-				// Clamp to list area
-				drag_indicator_y = std::max(drag_indicator_y, itemlist_box.pos.y);
-				drag_indicator_y = std::min(drag_indicator_y, itemlist_box.pos.y + itemlist_box.siz.y - 2.0f);
+				// Clamp indicator line to list area (only when not re-parenting)
+				if (drag_reparent_target < 0)
+				{
+					drag_indicator_y = std::max(drag_indicator_y, itemlist_box.pos.y);
+					drag_indicator_y = std::min(drag_indicator_y, itemlist_box.pos.y + itemlist_box.siz.y - 2.0f);
+				}
 				drag_pointer_pos = pointerHitbox.pos;
 			}
 
@@ -6109,6 +6187,16 @@ namespace wi::gui
 						sprites[item.selected ? FOCUS : IDLE].params.color), cmd);
 			}
 
+			// Re-parent drop target highlight
+			if (drag_reparent_target == i)
+			{
+				wi::image::Params rp_fx = sprites[ACTIVE].params;
+				rp_fx.pos = XMFLOAT3(name_box.pos.x, name_box.pos.y, 0);
+				rp_fx.siz = XMFLOAT2(name_box.siz.x, name_box.siz.y);
+				rp_fx.color.w *= 0.5f;
+				wi::image::Draw(nullptr, rp_fx, cmd);
+			}
+
 			// opened flag triangle:
 			if(DoesItemHaveChildren(i))
 			{
@@ -6167,12 +6255,13 @@ namespace wi::gui
 			}
 		}
 
-		// Drop indicator line for drag-and-drop reorder
-		if (dragging && drag_source >= 0 && drag_target >= 0)
+		// Drop indicator line for drag-and-drop reorder (not shown when re-parenting)
+		if (dragging && drag_source >= 0 && drag_target >= 0 && drag_reparent_target < 0)
 		{
 			wi::image::Params indicator_fx = sprites[ACTIVE].params;
-			indicator_fx.pos = XMFLOAT3(itemlist_box.pos.x, drag_indicator_y - 1.0f, 0);
-			indicator_fx.siz = XMFLOAT2(itemlist_box.siz.x, 2.0f);
+			const float indicator_indent = std::max(0, drag_target_level) * item_height();
+			indicator_fx.pos = XMFLOAT3(itemlist_box.pos.x + indicator_indent, drag_indicator_y - 1.0f, 0);
+			indicator_fx.siz = XMFLOAT2(std::max(2.0f, itemlist_box.siz.x - indicator_indent), 2.0f);
 			wi::image::Draw(nullptr, indicator_fx, cmd);
 		}
 		// Floating ghost: semi-transparent label following the cursor while dragging

@@ -64,8 +64,6 @@ void HierarchyWindow::Create(EditorComponent* _editor)
 
 void HierarchyWindow::SetEntity(Entity entity)
 {
-	if (this->entity == entity)
-		return;
 	this->entity = entity;
 
 	const Scene& scene = editor->GetCurrentScene();
