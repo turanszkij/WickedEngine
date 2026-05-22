@@ -3,7 +3,6 @@
 # * cmake_minimum_required adjusted
 # * unused options removed
 # * windows related stuff removed
-# * install rule added
 
 # CMake Project for FAudio
 # Written by @NeroBurner
@@ -83,14 +82,10 @@ add_library(FAudio STATIC
 	src/XNA_Song.c
 )
 
-install(FILES ${PUBLIC_HEADERS}
-		DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine/FAudio/")
-
 # FAudio folders as includes, for other targets to consume
 target_include_directories(FAudio PUBLIC
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-	$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine/FAudio>
 )
 
 # Soname
@@ -108,61 +103,37 @@ elseif (BUILD_SDL3)
 			   message(STATUS "using pre-defined SDL3 variables SDL3_INCLUDE_DIRS and SDL3_LIBRARIES")
 		target_include_directories(FAudio PUBLIC "$<BUILD_INTERFACE:${SDL3_INCLUDE_DIRS}>")
 		target_link_libraries(FAudio PUBLIC ${SDL3_LIBRARIES})
-			   if(INSTALL_MINGW_DEPENDENCIES)
-					   install_shared_libs(${SDL3_LIBRARIES} DESTINATION bin NO_INSTALL_SYMLINKS)
-			   endif()
 	   else()
 			   # Only try to autodetect if both SDL3 variables aren't explicitly set
 			   find_package(SDL3 CONFIG)
 			   if (TARGET SDL3::SDL3)
 					   message(STATUS "using TARGET SDL3::SDL3")
 					   target_link_libraries(FAudio PUBLIC SDL3::SDL3)
-					   if(INSTALL_MINGW_DEPENDENCIES)
-							   install_shared_libs(TARGETS SDL3::SDL3 DESTINATION bin NO_INSTALL_SYMLINKS REQUIRED)
-					   endif()
 			   elseif (TARGET SDL3)
 					   message(STATUS "using TARGET SDL3")
 					   target_link_libraries(FAudio PUBLIC SDL3)
-					   if(INSTALL_MINGW_DEPENDENCIES)
-							   install_shared_libs(TARGETS SDL3 DESTINATION bin NO_INSTALL_SYMLINKS REQUIRED)
-					   endif()
 			   else()
 					   message(STATUS "no TARGET SDL3::SDL3, or SDL3, using variables")
 			target_include_directories(FAudio PUBLIC "$<BUILD_INTERFACE:${SDL3_INCLUDE_DIRS}>")
 			target_link_libraries(FAudio PUBLIC ${SDL3_LIBRARIES})
-					   if(INSTALL_MINGW_DEPENDENCIES)
-							   install_shared_libs(${SDL3_LIBRARIES} DESTINATION bin NO_INSTALL_SYMLINKS)
-					   endif()
 			   endif()
 	   endif()
 elseif (DEFINED SDL2_INCLUDE_DIRS AND DEFINED SDL2_LIBRARIES)
 	message(STATUS "using pre-defined SDL2 variables SDL2_INCLUDE_DIRS and SDL2_LIBRARIES")
 	target_include_directories(FAudio PUBLIC "$<BUILD_INTERFACE:${SDL2_INCLUDE_DIRS}>")
 	target_link_libraries(FAudio PUBLIC ${SDL2_LIBRARIES})
-	if(INSTALL_MINGW_DEPENDENCIES)
-		install_shared_libs(${SDL2_LIBRARIES} DESTINATION bin NO_INSTALL_SYMLINKS)
-	endif()
 else()
 	# Only try to autodetect if both SDL2 variables aren't explicitly set
 	find_package(SDL2 CONFIG)
 	if (TARGET SDL2::SDL2)
 		message(STATUS "using TARGET SDL2::SDL2")
 		target_link_libraries(FAudio PUBLIC SDL2::SDL2)
-		if(INSTALL_MINGW_DEPENDENCIES)
-			install_shared_libs(TARGETS SDL2::SDL2 DESTINATION bin NO_INSTALL_SYMLINKS REQUIRED)
-		endif()
 	elseif (TARGET SDL2)
 		message(STATUS "using TARGET SDL2")
 		target_link_libraries(FAudio PUBLIC SDL2)
-		if(INSTALL_MINGW_DEPENDENCIES)
-			install_shared_libs(TARGETS SDL2 DESTINATION bin NO_INSTALL_SYMLINKS REQUIRED)
-		endif()
 	else()
 		message(STATUS "no TARGET SDL2::SDL2, or SDL2, using variables")
 		target_include_directories(FAudio PUBLIC "$<BUILD_INTERFACE:${SDL2_INCLUDE_DIRS}>")
 		target_link_libraries(FAudio PUBLIC ${SDL2_LIBRARIES})
-		if(INSTALL_MINGW_DEPENDENCIES)
-			install_shared_libs(${SDL2_LIBRARIES} DESTINATION bin NO_INSTALL_SYMLINKS)
-		endif()
 	endif()
 endif()
