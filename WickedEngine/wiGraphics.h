@@ -860,6 +860,21 @@ namespace wi::graphics
 		ShaderStage stage = ShaderStage::Count;
 	};
 
+	// Mixin: dynamic allocation and destruction of this object is not allowed because virtual table is not used. Placement new is allowed.
+	struct NoHeapAlloc
+	{
+		static void* operator new (size_t) = delete;
+		static void* operator new[](size_t) = delete;
+		static void  operator delete (void*) = delete;
+		static void  operator delete[](void*) = delete;
+		static void* operator new(size_t, void* p) noexcept { return p; }
+		static void* operator new[](size_t, void* p) noexcept { return p; }
+
+	protected:
+		// mixin, don't instantiate directly
+		NoHeapAlloc() = default;
+	};
+
 	struct GPUResource
 	{
 		wi::allocator::shared_ptr<void> internal_state;
@@ -883,22 +898,14 @@ namespace wi::graphics
 		constexpr bool IsAccelerationStructure() const { return type == Type::RAYTRACING_ACCELERATION_STRUCTURE; }
 	};
 
-	struct GPUBuffer final : public GPUResource
+	struct GPUBuffer final : public GPUResource, public NoHeapAlloc
 	{
 		GPUBufferDesc desc;
 
 		constexpr const GPUBufferDesc& GetDesc() const { return desc; }
-
-		// Dynamic allocation and destruction of this object is not allowed because virtual table is not used. Placement new is allowed.
-		static void* operator new (size_t) = delete;
-		static void* operator new[](size_t) = delete;
-		static void  operator delete (void*) = delete;
-		static void  operator delete[](void*) = delete;
-		static void* operator new(size_t, void* p) noexcept { return p; }
-		static void* operator new[](size_t, void* p) noexcept { return p; }
 	};
 
-	struct Texture final : public GPUResource
+	struct Texture final : public GPUResource, public NoHeapAlloc
 	{
 		TextureDesc	desc;
 
@@ -916,14 +923,6 @@ namespace wi::graphics
 #endif
 
 		constexpr const TextureDesc& GetDesc() const { return desc; }
-
-		// Dynamic allocation and destruction of this object is not allowed because virtual table is not used. Placement new is allowed.
-		static void* operator new (size_t) = delete;
-		static void* operator new[](size_t) = delete;
-		static void  operator delete (void*) = delete;
-		static void  operator delete[](void*) = delete;
-		static void* operator new(size_t, void* p) noexcept { return p; }
-		static void* operator new[](size_t, void* p) noexcept { return p; }
 	};
 
 	struct VideoDecoder
@@ -1279,21 +1278,13 @@ namespace wi::graphics
 			uint32_t count = 0;
 		} top_level;
 	};
-	struct RaytracingAccelerationStructure final : public GPUResource
+	struct RaytracingAccelerationStructure final : public GPUResource, public NoHeapAlloc
 	{
 		RaytracingAccelerationStructureDesc desc;
 
 		size_t size = 0;
 
 		constexpr const RaytracingAccelerationStructureDesc& GetDesc() const { return desc; }
-
-		// Dynamic allocation and destruction of this object is not allowed because virtual table is not used. Placement new is allowed.
-		static void* operator new (size_t) = delete;
-		static void* operator new[](size_t) = delete;
-		static void  operator delete (void*) = delete;
-		static void  operator delete[](void*) = delete;
-		static void* operator new(size_t, void* p) noexcept { return p; }
-		static void* operator new[](size_t, void* p) noexcept { return p; }
 	};
 
 	struct ShaderLibrary
