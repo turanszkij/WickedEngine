@@ -2046,7 +2046,7 @@ using namespace vulkan_internal;
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
 		instanceExtensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #elif defined(SDL2)
-		{
+		if (window != nullptr) {
 			uint32_t extensionCount;
 			SDL_Vulkan_GetInstanceExtensions(window, &extensionCount, nullptr);
 			wi::vector<const char *> extensionNames_sdl(extensionCount);
