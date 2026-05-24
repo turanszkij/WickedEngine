@@ -881,14 +881,6 @@ namespace wi::graphics
 		constexpr bool IsTexture() const { return type == Type::TEXTURE; }
 		constexpr bool IsBuffer() const { return type == Type::BUFFER; }
 		constexpr bool IsAccelerationStructure() const { return type == Type::RAYTRACING_ACCELERATION_STRUCTURE; }
-
-		// Dynamic allocation and destruction of this object is not allowed because virtual table is not used. Placement new is allowed.
-		static void* operator new (size_t) = delete;
-		static void* operator new[](size_t) = delete;
-		static void  operator delete (void*) = delete;
-		static void  operator delete[](void*) = delete;
-		static void* operator new(size_t, void* p) noexcept { return p; }
-		static void* operator new[](size_t, void* p) noexcept { return p; }
 	};
 
 	struct GPUBuffer final : public GPUResource
