@@ -1669,23 +1669,23 @@ void EditorComponent::Update(float dt)
 	}
 
 	// screenshot is done next frame update to capture current frame render and the alpha modes also disable debug draw for just this frame
-	if (CheckInput(EditorActions::SCREENSHOT))
-	{
-		screenshot = true;
-	}
-	if (CheckInput(EditorActions::SCREENSHOT_NOGUI))
+	if (CheckInput(EditorActions::SCREENSHOT_NOGUI)) // shift priority
 	{
 		screenshot_nogui = true;
 		wi::renderer::SetDebugDrawEnabled(false);
 	}
-	if (CheckInput(EditorActions::SCREENSHOT_ALPHA))
-	{
-		screenshot_alpha = true;
-		wi::renderer::SetDebugDrawEnabled(false);
-	}
-	if (CheckInput(EditorActions::SCREENSHOT_ALPHA_SELECTION))
+	else if (CheckInput(EditorActions::SCREENSHOT_ALPHA_SELECTION)) // shift priority
 	{
 		screenshot_alpha_selection = true;
+		wi::renderer::SetDebugDrawEnabled(false);
+	}
+	else if (CheckInput(EditorActions::SCREENSHOT))
+	{
+		screenshot = true;
+	}
+	else if (CheckInput(EditorActions::SCREENSHOT_ALPHA))
+	{
+		screenshot_alpha = true;
 		wi::renderer::SetDebugDrawEnabled(false);
 	}
 
