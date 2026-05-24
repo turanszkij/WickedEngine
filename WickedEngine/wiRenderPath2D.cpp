@@ -300,7 +300,7 @@ namespace wi
 			// Convert the regular SRGB result of the render path to linear space for HDR compositing:
 			fx.enableLinearOutputMapping(hdr_scaling);
 		}
-		wi::image::Draw(&GetRenderResult(), fx, cmd);
+		wi::image::Draw(&GetRenderResult2D(), fx, cmd);
 
 		device->EventEnd(cmd);
 

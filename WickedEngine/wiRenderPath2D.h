@@ -52,7 +52,7 @@ namespace wi
 		virtual void setMSAASampleCount2D(uint32_t value) { msaaSampleCount2D = value; }
 		constexpr uint32_t getMSAASampleCount2D() const { return msaaSampleCount2D; }
 
-		const wi::graphics::Texture& GetRenderResult() const { return rtFinal; }
+		const wi::graphics::Texture& GetRenderResult2D() const { return rtFinal; }
 		virtual const wi::graphics::Texture* GetDepthStencil() const { return nullptr; }
 		virtual const wi::graphics::Texture* GetGUIBlurredBackground() const { return nullptr; }
 

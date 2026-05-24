@@ -881,13 +881,6 @@ namespace wi::graphics
 		constexpr bool IsTexture() const { return type == Type::TEXTURE; }
 		constexpr bool IsBuffer() const { return type == Type::BUFFER; }
 		constexpr bool IsAccelerationStructure() const { return type == Type::RAYTRACING_ACCELERATION_STRUCTURE; }
-	};
-
-	struct GPUBuffer final : public GPUResource
-	{
-		GPUBufferDesc desc;
-
-		constexpr const GPUBufferDesc& GetDesc() const { return desc; }
 
 		// Dynamic allocation and destruction of this object is not allowed because virtual table is not used. Placement new is allowed.
 		static void* operator new (size_t) = delete;
@@ -896,6 +889,13 @@ namespace wi::graphics
 		static void  operator delete[](void*) = delete;
 		static void* operator new(size_t, void* p) noexcept { return p; }
 		static void* operator new[](size_t, void* p) noexcept { return p; }
+	};
+
+	struct GPUBuffer final : public GPUResource
+	{
+		GPUBufferDesc desc;
+
+		constexpr const GPUBufferDesc& GetDesc() const { return desc; }
 	};
 
 	struct Texture final : public GPUResource
@@ -916,14 +916,6 @@ namespace wi::graphics
 #endif
 
 		constexpr const TextureDesc& GetDesc() const { return desc; }
-
-		// Dynamic allocation and destruction of this object is not allowed because virtual table is not used. Placement new is allowed.
-		static void* operator new (size_t) = delete;
-		static void* operator new[](size_t) = delete;
-		static void  operator delete (void*) = delete;
-		static void  operator delete[](void*) = delete;
-		static void* operator new(size_t, void* p) noexcept { return p; }
-		static void* operator new[](size_t, void* p) noexcept { return p; }
 	};
 
 	struct VideoDecoder
@@ -1286,14 +1278,6 @@ namespace wi::graphics
 		size_t size = 0;
 
 		constexpr const RaytracingAccelerationStructureDesc& GetDesc() const { return desc; }
-
-		// Dynamic allocation and destruction of this object is not allowed because virtual table is not used. Placement new is allowed.
-		static void* operator new (size_t) = delete;
-		static void* operator new[](size_t) = delete;
-		static void  operator delete (void*) = delete;
-		static void  operator delete[](void*) = delete;
-		static void* operator new(size_t, void* p) noexcept { return p; }
-		static void* operator new[](size_t, void* p) noexcept { return p; }
 	};
 
 	struct ShaderLibrary
@@ -2048,6 +2032,7 @@ namespace wi::graphics
 	}
 
 
+	WI_DISABLE_DEPRECATED_BEGIN
 	// Deprecated, kept for back-compat:
 	struct [[deprecated]] RenderPassAttachment
 	{
@@ -2248,9 +2233,7 @@ namespace wi::graphics
 			ALLOW_UAV_WRITES = 1 << 0,
 		};
 		Flags flags = Flags::EMPTY;
-		WI_DISABLE_DEPRECATED_BEGIN
 		wi::vector<RenderPassAttachment> attachments;
-		WI_DISABLE_DEPRECATED_END
 	};
 	// Deprecated, kept for back-compat:
 	struct [[deprecated]] RenderPass
@@ -2261,6 +2244,7 @@ namespace wi::graphics
 		constexpr const RenderPassDesc& GetDesc() const { return desc; }
 		constexpr bool IsValid() const { return valid; }
 	};
+	WI_DISABLE_DEPRECATED_END
 }
 
 template<>
@@ -2283,10 +2267,12 @@ template<>
 struct enable_bitmask_operators<wi::graphics::ResourceState> {
 	static const bool enable = true;
 };
+WI_DISABLE_DEPRECATED_BEGIN
 template<>
 struct enable_bitmask_operators<wi::graphics::RenderPassDesc::Flags> {
 	static const bool enable = true;
 };
+WI_DISABLE_DEPRECATED_END
 template<>
 struct enable_bitmask_operators<wi::graphics::RenderPassFlags> {
 	static const bool enable = true;

@@ -3771,7 +3771,7 @@ void EditorComponent::Render() const
 
 		// Full resolution:
 		{
-			const Texture& render_result = renderPath->GetRenderResult();
+			const Texture& render_result_2D = renderPath->GetRenderResult2D();
 			if (getMSAASampleCount() > 1)
 			{
 				RenderPassImage rp[] = {
@@ -3782,7 +3782,7 @@ void EditorComponent::Render() const
 						ResourceState::RENDERTARGET,
 						ResourceState::RENDERTARGET
 					),
-					RenderPassImage::Resolve(&render_result),
+					RenderPassImage::Resolve(&render_result_2D),
 					RenderPassImage::DepthStencil(
 						&editor_depthbuffer,
 						RenderPassImage::LoadOp::CLEAR,
@@ -3795,7 +3795,7 @@ void EditorComponent::Render() const
 			{
 				RenderPassImage rp[] = {
 					RenderPassImage::RenderTarget(
-						&render_result,
+						&render_result_2D,
 						RenderPassImage::LoadOp::CLEAR
 					),
 					RenderPassImage::DepthStencil(
@@ -4859,7 +4859,7 @@ void EditorComponent::ResizeViewport3D()
 			assert(success);
 		}
 
-		const TextureDesc& renderResultDesc = renderPath->GetRenderResult().GetDesc();
+		const TextureDesc& renderResultDesc = renderPath->GetRenderResult2D().GetDesc();
 		{
 			TextureDesc desc;
 			desc.width = renderResultDesc.width;

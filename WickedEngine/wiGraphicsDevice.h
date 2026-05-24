@@ -421,6 +421,7 @@ namespace wi::graphics
 			}
 		}
 
+		WI_DISABLE_DEPRECATED_BEGIN
 		// Deprecated, kept for back-compat:
 		[[deprecated]]
 		bool CreateRenderPass(const RenderPassDesc* desc, RenderPass* renderpass) const
@@ -445,6 +446,7 @@ namespace wi::graphics
 			}
 			RenderPassBegin(rp, (uint32_t)renderpass->desc.attachments.size(), cmd, flags);
 		}
+		WI_DISABLE_DEPRECATED_END
 	};
 
 
