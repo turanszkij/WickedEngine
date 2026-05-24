@@ -381,7 +381,7 @@ namespace wi
 
 		// Creates screenshot of the render result and replaces background (sky) pixels with transparency
 		//	The stencil parameters let you configure other stencil ops instead of making sky transparent which is default
-		wi::graphics::Texture CreateScreenshotWithAlphaBackground(uint8_t stencilref = 0, wi::image::STENCILMODE stencilmode = wi::image::STENCILMODE_NOT, wi::image::STENCILREFMODE stencilrefmode = wi::image::STENCILREFMODE_ALL);
+		wi::graphics::Texture CreateScreenshotWithAlphaBackground(uint8_t stencilref = wi::enums::STENCILREF_EMPTY, wi::image::STENCILMODE stencilmode = wi::image::STENCILMODE_NOT, wi::image::STENCILREFMODE stencilrefmode = wi::image::STENCILREFMODE_ALL);
 
 		// This is an identifier of RenderPath subtype that is used for lua binding.
 		static constexpr const auto script_check_identifier = relative_path_storage(__FILE__);

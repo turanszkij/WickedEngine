@@ -1606,8 +1606,63 @@ void EditorComponent::Update(float dt)
 
 	main->canvas.scaling = float(guiScalingCombo.GetSelectedUserdata()) / 100.0f;
 
-	if (CheckInput(EditorActions::SCREENSHOT_ALPHA) || CheckInput(EditorActions::SCREENSHOT_ALPHA_SELECTION))
+	wi::renderer::SetDebugDrawEnabled(true);
+	if (screenshot)
 	{
+		screenshot = false;
+		std::string filename = wi::helper::screenshot(main->swapChain);
+		PostSaveText(filename);
+		if (filename.empty())
+		{
+			PostSaveText("Error! Screenshot was not successful!");
+		}
+		else
+		{
+			PostSaveText("Screenshot saved: ", filename);
+		}
+	}
+	if (screenshot_alpha)
+	{
+		screenshot_alpha = false;
+		std::string filename = wi::helper::screenshot(renderPath->CreateScreenshotWithAlphaBackground());
+		PostSaveText(filename);
+		if (filename.empty())
+		{
+			PostSaveText("Error! Screenshot was not successful!");
+		}
+		else
+		{
+			PostSaveText("Screenshot saved: ", filename);
+		}
+	}
+	if (screenshot_alpha_selection)
+	{
+		screenshot_alpha_selection = false;
+		std::string filename = wi::helper::screenshot(renderPath->CreateScreenshotWithAlphaBackground(EDITORSTENCILREF_HIGHLIGHT_OBJECT, wi::image::STENCILMODE_EQUAL, wi::image::STENCILREFMODE_USER));
+		PostSaveText(filename);
+		if (filename.empty())
+		{
+			PostSaveText("Error! Screenshot was not successful!");
+		}
+		else
+		{
+			PostSaveText("Screenshot saved: ", filename);
+		}
+	}
+
+	// screenshot is done next frame update to capture current frame render and the alpha modes also disable debug draw for just this frame
+	if (CheckInput(EditorActions::SCREENSHOT))
+	{
+		screenshot = true;
+	}
+	if (CheckInput(EditorActions::SCREENSHOT_ALPHA))
+	{
+		screenshot_alpha = true;
+		wi::renderer::SetDebugDrawEnabled(false);
+	}
+	if (CheckInput(EditorActions::SCREENSHOT_ALPHA_SELECTION))
+	{
+		screenshot_alpha_selection = true;
 		wi::renderer::SetDebugDrawEnabled(false);
 	}
 
@@ -4700,46 +4755,6 @@ void EditorComponent::Render() const
 
 	RenderPath2D::Render();
 
-	// screenshot is done after render to capture most current state and the alpha modes also disable debug draw for just this frame
-	if (CheckInput(EditorActions::SCREENSHOT))
-	{
-		std::string filename = wi::helper::screenshot(main->swapChain);
-		PostSaveText(filename);
-		if (filename.empty())
-		{
-			PostSaveText("Error! Screenshot was not successful!");
-		}
-		else
-		{
-			PostSaveText("Screenshot saved: ", filename);
-		}
-	}
-	if (CheckInput(EditorActions::SCREENSHOT_ALPHA))
-	{
-		std::string filename = wi::helper::screenshot(renderPath->CreateScreenshotWithAlphaBackground());
-		PostSaveText(filename);
-		if (filename.empty())
-		{
-			PostSaveText("Error! Screenshot was not successful!");
-		}
-		else
-		{
-			PostSaveText("Screenshot saved: ", filename);
-		}
-	}
-	if (CheckInput(EditorActions::SCREENSHOT_ALPHA_SELECTION))
-	{
-		std::string filename = wi::helper::screenshot(renderPath->CreateScreenshotWithAlphaBackground(EDITORSTENCILREF_HIGHLIGHT_OBJECT, wi::image::STENCILMODE_EQUAL, wi::image::STENCILREFMODE_USER));
-		PostSaveText(filename);
-		if (filename.empty())
-		{
-			PostSaveText("Error! Screenshot was not successful!");
-		}
-		else
-		{
-			PostSaveText("Screenshot saved: ", filename);
-		}
-	}
 	wi::renderer::SetDebugDrawEnabled(true);
 }
 void EditorComponent::Compose(CommandList cmd) const
@@ -5912,7 +5927,7 @@ bool EditorComponent::SetupThumbnailCamera(wi::RenderPath3D& thumbnailRenderPath
 	return true;
 }
 
-void EditorComponent::PostSaveText(const std::string& message, const std::string& filename, float time_seconds) const
+void EditorComponent::PostSaveText(const std::string& message, const std::string& filename, float time_seconds)
 {
 	save_text_message = message;
 	save_text_filename = filename;
