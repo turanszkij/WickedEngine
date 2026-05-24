@@ -4232,7 +4232,7 @@ using namespace vulkan_internal;
 					{
 						VkBufferImageCopy copyRegion = {};
 						copyRegion.bufferOffset = copyOffset;
-						copyRegion.bufferRowLength = src_rowpitch / data_stride / block_size;
+						copyRegion.bufferRowLength = 0;
 						copyRegion.bufferImageHeight = 0;
 
 						copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
