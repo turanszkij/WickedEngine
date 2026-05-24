@@ -9,7 +9,7 @@ namespace wi::version
 	// minor features, major updates, breaking compatibility changes
 	const int minor = 72;
 	// minor bug fixes, alterations, refactors, updates
-	const int revision = 59;
+	const int revision = 60;
 
 	const std::string version_string = std::to_string(major) + "." + std::to_string(minor) + "." + std::to_string(revision);
 
@@ -40,7 +40,7 @@ namespace wi::version
 "MarsBEKET, Tim, Twisty, Zelf ieats kiezen, Romildo Franco, zNachoh, Dmitriy, Alex Minerva, Stefan Kent, Natty, Sunny Krishna, Vilmos Malárik, Ferrata, Rossakis, " \
 "Stefana Andrei, Taylor, Gunnar Kriik, 赟 杨, Rex, Lemon Brother, flxy, meta_leap, Edik, jusik5348, Agnares, Fred Naar, Saki Asui, DarkRaVen, Ray, Russell Searle, Alexandr Dem'yanenko, "\
 "Portaloffreedom, nxrighthere, わさび わさび, Durak, ipso, Frånken, Shryder, Patryk Bański, Marcus Nordenstam, Morty Karim, Jarrid Kamphenkel, Makario Gim, Filoteo Pasquini" \
-"Me, Xiu Shui"
+"Me, Xiu Shui, Antony K. Jones"
 
 	const char* GetCreditsString()
 	{

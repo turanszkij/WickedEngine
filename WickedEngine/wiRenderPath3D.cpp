@@ -1770,7 +1770,7 @@ namespace wi
 		fx.quality = wi::image::QUALITY_LINEAR;
 		fx.enableFullScreen();
 
-		wi::image::Draw(GetLastPostprocessRT(), fx, cmd);
+		wi::image::Draw(&GetRenderResult3D(), fx, cmd);
 
 		if (
 			wi::renderer::GetDebugLightCulling() ||

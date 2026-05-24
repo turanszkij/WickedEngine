@@ -2048,6 +2048,7 @@ namespace wi::graphics
 	}
 
 
+	WI_DISABLE_DEPRECATED_BEGIN
 	// Deprecated, kept for back-compat:
 	struct [[deprecated]] RenderPassAttachment
 	{
@@ -2248,9 +2249,7 @@ namespace wi::graphics
 			ALLOW_UAV_WRITES = 1 << 0,
 		};
 		Flags flags = Flags::EMPTY;
-		WI_DISABLE_DEPRECATED_BEGIN
 		wi::vector<RenderPassAttachment> attachments;
-		WI_DISABLE_DEPRECATED_END
 	};
 	// Deprecated, kept for back-compat:
 	struct [[deprecated]] RenderPass
@@ -2261,6 +2260,7 @@ namespace wi::graphics
 		constexpr const RenderPassDesc& GetDesc() const { return desc; }
 		constexpr bool IsValid() const { return valid; }
 	};
+	WI_DISABLE_DEPRECATED_END
 }
 
 template<>
@@ -2283,10 +2283,12 @@ template<>
 struct enable_bitmask_operators<wi::graphics::ResourceState> {
 	static const bool enable = true;
 };
+WI_DISABLE_DEPRECATED_BEGIN
 template<>
 struct enable_bitmask_operators<wi::graphics::RenderPassDesc::Flags> {
 	static const bool enable = true;
 };
+WI_DISABLE_DEPRECATED_END
 template<>
 struct enable_bitmask_operators<wi::graphics::RenderPassFlags> {
 	static const bool enable = true;

@@ -223,7 +223,13 @@ namespace wi
 			return scissor;
 		}
 
+		// The 3D scene rendering without 2D overlay that is used in Compose() to combine the final image
+		const wi::graphics::Texture& GetRenderResult3D() const { return *GetLastPostprocessRT(); }
+
+		// The depth stencil of the 3D rendering (not texture compatible, only depth-stencil)
 		const wi::graphics::Texture* GetDepthStencil() const override { return &depthBuffer_Main; }
+
+		// The 3D render result's blurred version that can be used for GUI background blur
 		const wi::graphics::Texture* GetGUIBlurredBackground() const override { return &rtGUIBlurredBackground[2]; }
 
 		constexpr float getExposure() const { return exposure; }
