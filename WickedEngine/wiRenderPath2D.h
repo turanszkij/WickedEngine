@@ -47,10 +47,12 @@ namespace wi
 		void Compose(wi::graphics::CommandList cmd) const override;
 
 		// MSAA sample count of main rendering
+		//	This is the minimum sample count that is used for 3D and 2D rendering
 		virtual void setMSAASampleCount(uint32_t value) { msaaSampleCount = value; }
 		constexpr uint32_t getMSAASampleCount() const { return msaaSampleCount; }
 
 		// MSAA sample count of overlay rendering
+		//	This can be larger than 3D rendering if required since MSAA for 2D overlay can be cheaper to render
 		virtual void setMSAASampleCount2D(uint32_t value) { msaaSampleCount2D = value; }
 		constexpr uint32_t getMSAASampleCount2D() const { return msaaSampleCount2D; }
 
