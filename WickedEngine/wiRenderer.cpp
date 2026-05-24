@@ -157,6 +157,7 @@ bool CAPSULE_SHADOW_ENABLED = false;
 float CAPSULE_SHADOW_ANGLE = XM_PIDIV4;
 float CAPSULE_SHADOW_FADE = 0.2f;
 bool SHADOW_LOD_OVERRIDE = true;
+bool DEBUG_DRAW_ENABLED = true;
 
 Texture shadowMapAtlas;
 Texture shadowMapAtlas_Transparent;
@@ -7455,6 +7456,32 @@ void DrawDebugWorld(
 	CommandList cmd
 )
 {
+	if (!IsDebugDrawEnabled())
+	{
+		renderableBoxes.clear();
+		renderableBoxes_depth.clear();
+		renderableSpheres.clear();
+		renderableSpheres_depth.clear();
+		renderableCapsules.clear();
+		renderableCapsules_depth.clear();
+		renderableLines.clear();
+		renderableLines_depth.clear();
+		renderableLines2D.clear();
+		renderablePoints.clear();
+		renderablePoints_depth.clear();
+		renderableTriangles_solid.clear();
+		renderableTriangles_wireframe.clear();
+		renderableTriangles_solid_depth.clear();
+		renderableTriangles_wireframe_depth.clear();
+		debugTextStorage.clear();
+		paintrads.clear();
+		painttextures.clear();
+		paintdecals.clear();
+		renderableVoxelgrids.clear();
+		renderablePathqueries.clear();
+		renderableTrails.clear();
+		return;
+	}
 	static GPUBuffer wirecubeVB;
 	static GPUBuffer wirecubeIB;
 	if (!wirecubeVB.IsValid())
@@ -19385,6 +19412,15 @@ void SetShadowLODOverrideEnabled(bool value)
 bool IsShadowLODOverrideEnabled()
 {
 	return SHADOW_LOD_OVERRIDE;
+}
+
+void SetDebugDrawEnabled(bool value)
+{
+	DEBUG_DRAW_ENABLED = value;
+}
+bool IsDebugDrawEnabled()
+{
+	return DEBUG_DRAW_ENABLED;
 }
 
 wi::Resource CreatePaintableTexture(uint32_t width, uint32_t height, uint32_t mips, wi::Color initialColor)

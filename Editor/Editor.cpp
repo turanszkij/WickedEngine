@@ -87,7 +87,9 @@ enum class EditorActions
 
 	// Engine actions
 	SCREENSHOT,
+	SCREENSHOT_NOGUI,
 	SCREENSHOT_ALPHA,
+	SCREENSHOT_ALPHA_SELECTION,
 	INSPECTOR_MODE,
 	PLACE_INSTANCES,
 
@@ -144,7 +146,9 @@ HotkeyInfo hotkeyActions[size_t(EditorActions::COUNT)] = {
 	{wi::input::BUTTON('3'),					/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//SCALE_TOGGLE_ACTION,
 	{wi::input::BUTTON('4'),					/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//LOCAL_GLOBAL_TOGGLE_ACTION,
 	{wi::input::BUTTON::KEYBOARD_BUTTON_F3,		/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//SCREENSHOT,
+	{wi::input::BUTTON::KEYBOARD_BUTTON_F3,		/*press=*/ true,		/*control=*/ false,		/*shift=*/ true},	//SCREENSHOT_NOGUI,
 	{wi::input::BUTTON::KEYBOARD_BUTTON_F4,		/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//SCREENSHOT_ALPHA,
+	{wi::input::BUTTON::KEYBOARD_BUTTON_F4,		/*press=*/ true,		/*control=*/ false,		/*shift=*/ true},	//SCREENSHOT_ALPHA_SELECTION,
 	{wi::input::BUTTON('I'),					/*press=*/ false,		/*control=*/ false,		/*shift=*/ false},	//INSPECTOR_MODE,
 	{wi::input::BUTTON::MOUSE_BUTTON_LEFT,		/*press=*/ true,		/*control=*/ true,		/*shift=*/ true},	//PLACE_INSTANCES,
 	{wi::input::BUTTON('S'),					/*press=*/ true,		/*control=*/ true,		/*shift=*/ true},	//SAVE_SCENE_AS,
@@ -221,7 +225,9 @@ void HotkeyRemap(Editor* main)
 		{"SCALE_TOGGLE_ACTION", EditorActions::SCALE_TOGGLE_ACTION},
 		{"LOCAL_GLOBAL_TOGGLE_ACTION", EditorActions::LOCAL_GLOBAL_TOGGLE_ACTION},
 		{"MAKE_NEW_SCREENSHOT", EditorActions::SCREENSHOT},
+		{"MAKE_NEW_SCREENSHOT_NOGUI", EditorActions::SCREENSHOT_NOGUI},
 		{"MAKE_NEW_SCREENSHOT_ALPHA", EditorActions::SCREENSHOT_ALPHA},
+		{"MAKE_NEW_SCREENSHOT_ALPHA_SELECTION", EditorActions::SCREENSHOT_ALPHA_SELECTION},
 		{"INSPECTOR_MODE", EditorActions::INSPECTOR_MODE},
 		{"PLACE_INSTANCES", EditorActions::PLACE_INSTANCES},
 		{"SAVE_SCENE_AS", EditorActions::SAVE_SCENE_AS},
@@ -1377,7 +1383,9 @@ void EditorComponent::Load()
 		ss += "Reload terrain props: " + GetInputString(EditorActions::RELOAD_TERRAIN_PROPS) + "\n";
 		ss += "Wireframe mode: " + GetInputString(EditorActions::WIREFRAME_MODE) + "\n";
 		ss += "Screenshot (saved into Editor's screenshots folder): " + GetInputString(EditorActions::SCREENSHOT) + "\n";
-		ss += "Screenshot with background as alpha (saved into Editor's screenshots folder): " + GetInputString(EditorActions::SCREENSHOT_ALPHA) + "\n";
+		ss += "Screenshot without GUI (saved into Editor's screenshots folder): " + GetInputString(EditorActions::SCREENSHOT_NOGUI) + "\n";
+		ss += "Screenshot with background as transparency (saved into Editor's screenshots folder): " + GetInputString(EditorActions::SCREENSHOT_ALPHA) + "\n";
+		ss += "Screenshot selection with everything else as transparency (saved into Editor's screenshots folder): " + GetInputString(EditorActions::SCREENSHOT_ALPHA_SELECTION) + "\n";
 		ss += "Depth of field refocus to point: " + GetInputString(EditorActions::DEPTH_OF_FIELD_REFOCUS_TO_POINT) + " + left mouse button" + "\n";
 		ss += "Color grading reference: " + GetInputString(EditorActions::COLOR_GRADING_REFERENCE) + " (color grading palette reference will be displayed in top left corner)\n";
 		ss += "Focus on selected: " + GetInputString(EditorActions::FOCUS_ON_SELECTION) + " button, this will make the camera jump to selection.\n";
@@ -1602,8 +1610,10 @@ void EditorComponent::Update(float dt)
 
 	main->canvas.scaling = float(guiScalingCombo.GetSelectedUserdata()) / 100.0f;
 
-	if (CheckInput(EditorActions::SCREENSHOT))
+	wi::renderer::SetDebugDrawEnabled(true);
+	if (screenshot)
 	{
+		screenshot = false;
 		std::string filename = wi::helper::screenshot(main->swapChain);
 		PostSaveText(filename);
 		if (filename.empty())
@@ -1615,8 +1625,23 @@ void EditorComponent::Update(float dt)
 			PostSaveText("Screenshot saved: ", filename);
 		}
 	}
-	if (CheckInput(EditorActions::SCREENSHOT_ALPHA))
+	if (screenshot_nogui)
 	{
+		screenshot_nogui = false;
+		std::string filename = wi::helper::screenshot(renderPath->GetRenderResult3D());
+		PostSaveText(filename);
+		if (filename.empty())
+		{
+			PostSaveText("Error! Screenshot was not successful!");
+		}
+		else
+		{
+			PostSaveText("Screenshot saved: ", filename);
+		}
+	}
+	if (screenshot_alpha)
+	{
+		screenshot_alpha = false;
 		std::string filename = wi::helper::screenshot(renderPath->CreateScreenshotWithAlphaBackground());
 		PostSaveText(filename);
 		if (filename.empty())
@@ -1627,6 +1652,41 @@ void EditorComponent::Update(float dt)
 		{
 			PostSaveText("Screenshot saved: ", filename);
 		}
+	}
+	if (screenshot_alpha_selection)
+	{
+		screenshot_alpha_selection = false;
+		std::string filename = wi::helper::screenshot(renderPath->CreateScreenshotWithAlphaBackground(EDITORSTENCILREF_HIGHLIGHT_OBJECT, wi::image::STENCILMODE_EQUAL, wi::image::STENCILREFMODE_USER));
+		PostSaveText(filename);
+		if (filename.empty())
+		{
+			PostSaveText("Error! Screenshot was not successful!");
+		}
+		else
+		{
+			PostSaveText("Screenshot saved: ", filename);
+		}
+	}
+
+	// screenshot is done next frame update to capture current frame render and the alpha modes also disable debug draw for just this frame
+	if (CheckInput(EditorActions::SCREENSHOT_NOGUI)) // shift priority
+	{
+		screenshot_nogui = true;
+		wi::renderer::SetDebugDrawEnabled(false);
+	}
+	else if (CheckInput(EditorActions::SCREENSHOT_ALPHA_SELECTION)) // shift priority
+	{
+		screenshot_alpha_selection = true;
+		wi::renderer::SetDebugDrawEnabled(false);
+	}
+	else if (CheckInput(EditorActions::SCREENSHOT))
+	{
+		screenshot = true;
+	}
+	else if (CheckInput(EditorActions::SCREENSHOT_ALPHA))
+	{
+		screenshot_alpha = true;
+		wi::renderer::SetDebugDrawEnabled(false);
 	}
 
 	loadmodel_font.SetHidden(!wi::jobsystem::IsBusy(loadmodel_workload));
@@ -4718,6 +4778,7 @@ void EditorComponent::Render() const
 
 	RenderPath2D::Render();
 
+	wi::renderer::SetDebugDrawEnabled(true);
 }
 void EditorComponent::Compose(CommandList cmd) const
 {

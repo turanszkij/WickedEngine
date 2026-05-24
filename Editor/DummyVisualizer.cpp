@@ -69,6 +69,8 @@ void DummyVisualizer::Draw(
 
 	device->BindPipelineState(&pso[depth], cmd);
 
+	device->BindStencilRef(wi::enums::STENCILREF_DEFAULT, cmd);
+
 	MiscCB sb;
 	XMStoreFloat4x4(&sb.g_xTransform, matrix);
 	sb.g_xColor = color;

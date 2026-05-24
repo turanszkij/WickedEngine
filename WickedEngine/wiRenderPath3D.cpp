@@ -3240,7 +3240,7 @@ namespace wi
 		}
 	}
 
-	Texture RenderPath3D::CreateScreenshotWithAlphaBackground()
+	Texture RenderPath3D::CreateScreenshotWithAlphaBackground(uint8_t stencilref, wi::image::STENCILMODE stencilmode, wi::image::STENCILREFMODE stencilrefmode)
 	{
 		TextureDesc desc = rtMain_render.GetDesc();
 		desc.format = Format::R8G8B8A8_UNORM;
@@ -3270,9 +3270,9 @@ namespace wi
 		vp.height = (float)desc.height;
 		device->BindViewports(1, &vp, cmd);
 		wi::image::Params fx;
-		fx.stencilComp = wi::image::STENCILMODE_NOT;
-		fx.stencilRef = 0;
-		fx.stencilRefMode = wi::image::STENCILREFMODE_ALL;
+		fx.stencilComp = stencilmode;
+		fx.stencilRef = stencilref;
+		fx.stencilRefMode = stencilrefmode;
 		fx.enableFullScreen();
 		wi::image::Draw(GetLastPostprocessRT(), fx, cmd);
 		device->RenderPassEnd(cmd);

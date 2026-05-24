@@ -4232,7 +4232,7 @@ using namespace vulkan_internal;
 					{
 						VkBufferImageCopy copyRegion = {};
 						copyRegion.bufferOffset = copyOffset;
-						copyRegion.bufferRowLength = 0;
+						copyRegion.bufferRowLength = src_rowpitch / data_stride * block_size;
 						copyRegion.bufferImageHeight = 0;
 
 						copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -7914,12 +7914,15 @@ using namespace vulkan_internal;
 					uint32_t mip_depth = dst_desc.depth;
 					for (uint32_t mip = 0; mip < dst_desc.mip_levels; ++mip)
 					{
+						const uint32_t src_subresource = ComputeSubresource(mip, slice, wi::graphics::ImageAspect::COLOR, src_desc.mip_levels, src_desc.array_size);
+						const SubresourceData& src_subresourcedata = internal_state_dst->mapped_subresources[src_subresource];
 						const uint32_t num_blocks_x = mip_width / block_size;
 						const uint32_t num_blocks_y = mip_height / block_size;
 						copy.imageExtent.width = mip_width;
 						copy.imageExtent.height = mip_height;
 						copy.imageExtent.depth = mip_depth;
 						copy.imageSubresource.mipLevel = mip;
+						copy.bufferRowLength = src_subresourcedata.row_pitch / data_stride * block_size;
 						vkCmdCopyBufferToImage(
 							commandlist.GetCommandBuffer(),
 							internal_state_src->staging_resource,
@@ -7952,12 +7955,15 @@ using namespace vulkan_internal;
 					uint32_t mip_depth = dst_desc.depth;
 					for (uint32_t mip = 0; mip < dst_desc.mip_levels; ++mip)
 					{
+						const uint32_t dst_subresource = ComputeSubresource(mip, slice, wi::graphics::ImageAspect::COLOR, dst_desc.mip_levels, dst_desc.array_size);
+						const SubresourceData& dst_subresourcedata = internal_state_dst->mapped_subresources[dst_subresource];
 						const uint32_t num_blocks_x = mip_width / block_size;
 						const uint32_t num_blocks_y = mip_height / block_size;
 						copy.imageExtent.width = mip_width;
 						copy.imageExtent.height = mip_height;
 						copy.imageExtent.depth = mip_depth;
 						copy.imageSubresource.mipLevel = mip;
+						copy.bufferRowLength = dst_subresourcedata.row_pitch / data_stride * block_size;
 						vkCmdCopyImageToBuffer(
 							commandlist.GetCommandBuffer(),
 							internal_state_src->resource,
@@ -8097,8 +8103,10 @@ using namespace vulkan_internal;
 			assert(src->mapped_subresource_count > subresource_index);
 			const SubresourceData& data0 = src->mapped_subresources[0];
 			const SubresourceData& data = src->mapped_subresources[subresource_index];
+			const uint32_t data_stride = GetFormatStride(src_desc.format);
+			const uint32_t block_size = GetFormatBlockSize(src_desc.format);
 			copy.bufferOffset = (uint64_t)data.data_ptr - (uint64_t)data0.data_ptr;
-			copy.bufferRowLength = std::max(1u, src_desc.width >> srcMip);
+			copy.bufferRowLength = data.row_pitch / data_stride * block_size;
 			copy.bufferImageHeight = std::max(1u, src_desc.height >> srcMip);
 			copy.imageSubresource.mipLevel = dstMip;
 			copy.imageSubresource.baseArrayLayer = dstSlice;
@@ -8130,8 +8138,10 @@ using namespace vulkan_internal;
 			assert(dst->mapped_subresource_count > subresource_index);
 			const SubresourceData& data0 = dst->mapped_subresources[0];
 			const SubresourceData& data = dst->mapped_subresources[subresource_index];
+			const uint32_t data_stride = GetFormatStride(dst_desc.format);
+			const uint32_t block_size = GetFormatBlockSize(dst_desc.format);
 			copy.bufferOffset = (uint64_t)data.data_ptr - (uint64_t)data0.data_ptr;
-			copy.bufferRowLength = std::max(1u, dst_desc.width >> dstMip);
+			copy.bufferRowLength = data.row_pitch / data_stride * block_size;
 			copy.bufferImageHeight = std::max(1u, dst_desc.height >> dstMip);
 			copy.imageSubresource.mipLevel = srcMip;
 			copy.imageSubresource.baseArrayLayer = srcSlice;

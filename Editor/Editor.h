@@ -213,6 +213,11 @@ public:
 	wi::Color save_text_color = wi::Color::White();
 	void PostSaveText(const std::string& message, const std::string& filename = "", float time_seconds = 4);
 
+	bool screenshot = false;
+	bool screenshot_nogui = false;
+	bool screenshot_alpha = false;
+	bool screenshot_alpha_selection = false;
+
 	std::string last_script_path;
 
 	struct EditorScene
