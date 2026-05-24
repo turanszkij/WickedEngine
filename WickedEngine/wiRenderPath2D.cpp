@@ -527,7 +527,7 @@ namespace wi
 			{
 				continue;
 			}
-			wi::vector<RenderItem2D> itemsToRetain(0);
+			wi::vector<RenderItem2D> itemsToRetain;
 			for (auto& y : x.items)
 			{
 				if (y.sprite != nullptr || y.font != nullptr || y.videoinstance != nullptr)
@@ -538,6 +538,11 @@ namespace wi
 			x.items.clear();
 			x.items = itemsToRetain;
 		}
+	}
+
+	void RenderPath2D::DeleteLayers()
+	{
+		layers.clear();
 	}
 
 }
