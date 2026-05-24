@@ -88,6 +88,7 @@ enum class EditorActions
 	// Engine actions
 	SCREENSHOT,
 	SCREENSHOT_ALPHA,
+	SCREENSHOT_ALPHA_SELECTION,
 	INSPECTOR_MODE,
 	PLACE_INSTANCES,
 
@@ -145,6 +146,7 @@ HotkeyInfo hotkeyActions[size_t(EditorActions::COUNT)] = {
 	{wi::input::BUTTON('4'),					/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//LOCAL_GLOBAL_TOGGLE_ACTION,
 	{wi::input::BUTTON::KEYBOARD_BUTTON_F3,		/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//SCREENSHOT,
 	{wi::input::BUTTON::KEYBOARD_BUTTON_F4,		/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//SCREENSHOT_ALPHA,
+	{wi::input::BUTTON::KEYBOARD_BUTTON_F5,		/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//SCREENSHOT_ALPHA_SELECTION,
 	{wi::input::BUTTON('I'),					/*press=*/ false,		/*control=*/ false,		/*shift=*/ false},	//INSPECTOR_MODE,
 	{wi::input::BUTTON::MOUSE_BUTTON_LEFT,		/*press=*/ true,		/*control=*/ true,		/*shift=*/ true},	//PLACE_INSTANCES,
 	{wi::input::BUTTON('S'),					/*press=*/ true,		/*control=*/ true,		/*shift=*/ true},	//SAVE_SCENE_AS,
@@ -222,6 +224,7 @@ void HotkeyRemap(Editor* main)
 		{"LOCAL_GLOBAL_TOGGLE_ACTION", EditorActions::LOCAL_GLOBAL_TOGGLE_ACTION},
 		{"MAKE_NEW_SCREENSHOT", EditorActions::SCREENSHOT},
 		{"MAKE_NEW_SCREENSHOT_ALPHA", EditorActions::SCREENSHOT_ALPHA},
+		{"MAKE_NEW_SCREENSHOT_ALPHA_SELECTION", EditorActions::SCREENSHOT_ALPHA_SELECTION},
 		{"INSPECTOR_MODE", EditorActions::INSPECTOR_MODE},
 		{"PLACE_INSTANCES", EditorActions::PLACE_INSTANCES},
 		{"SAVE_SCENE_AS", EditorActions::SAVE_SCENE_AS},
@@ -1377,7 +1380,8 @@ void EditorComponent::Load()
 		ss += "Reload terrain props: " + GetInputString(EditorActions::RELOAD_TERRAIN_PROPS) + "\n";
 		ss += "Wireframe mode: " + GetInputString(EditorActions::WIREFRAME_MODE) + "\n";
 		ss += "Screenshot (saved into Editor's screenshots folder): " + GetInputString(EditorActions::SCREENSHOT) + "\n";
-		ss += "Screenshot with background as alpha (saved into Editor's screenshots folder): " + GetInputString(EditorActions::SCREENSHOT_ALPHA) + "\n";
+		ss += "Screenshot with background as transparency (saved into Editor's screenshots folder): " + GetInputString(EditorActions::SCREENSHOT_ALPHA) + "\n";
+		ss += "Screenshot selection with everything else as transparency (saved into Editor's screenshots folder): " + GetInputString(EditorActions::SCREENSHOT_ALPHA) + "\n";
 		ss += "Depth of field refocus to point: " + GetInputString(EditorActions::DEPTH_OF_FIELD_REFOCUS_TO_POINT) + " + left mouse button" + "\n";
 		ss += "Color grading reference: " + GetInputString(EditorActions::COLOR_GRADING_REFERENCE) + " (color grading palette reference will be displayed in top left corner)\n";
 		ss += "Focus on selected: " + GetInputString(EditorActions::FOCUS_ON_SELECTION) + " button, this will make the camera jump to selection.\n";
@@ -1602,31 +1606,9 @@ void EditorComponent::Update(float dt)
 
 	main->canvas.scaling = float(guiScalingCombo.GetSelectedUserdata()) / 100.0f;
 
-	if (CheckInput(EditorActions::SCREENSHOT))
+	if (CheckInput(EditorActions::SCREENSHOT_ALPHA) || CheckInput(EditorActions::SCREENSHOT_ALPHA_SELECTION))
 	{
-		std::string filename = wi::helper::screenshot(main->swapChain);
-		PostSaveText(filename);
-		if (filename.empty())
-		{
-			PostSaveText("Error! Screenshot was not successful!");
-		}
-		else
-		{
-			PostSaveText("Screenshot saved: ", filename);
-		}
-	}
-	if (CheckInput(EditorActions::SCREENSHOT_ALPHA))
-	{
-		std::string filename = wi::helper::screenshot(renderPath->CreateScreenshotWithAlphaBackground());
-		PostSaveText(filename);
-		if (filename.empty())
-		{
-			PostSaveText("Error! Screenshot was not successful!");
-		}
-		else
-		{
-			PostSaveText("Screenshot saved: ", filename);
-		}
+		wi::renderer::SetDebugDrawEnabled(false);
 	}
 
 	loadmodel_font.SetHidden(!wi::jobsystem::IsBusy(loadmodel_workload));
@@ -4718,6 +4700,47 @@ void EditorComponent::Render() const
 
 	RenderPath2D::Render();
 
+	// screenshot is done after render to capture most current state and the alpha modes also disable debug draw for just this frame
+	if (CheckInput(EditorActions::SCREENSHOT))
+	{
+		std::string filename = wi::helper::screenshot(main->swapChain);
+		PostSaveText(filename);
+		if (filename.empty())
+		{
+			PostSaveText("Error! Screenshot was not successful!");
+		}
+		else
+		{
+			PostSaveText("Screenshot saved: ", filename);
+		}
+	}
+	if (CheckInput(EditorActions::SCREENSHOT_ALPHA))
+	{
+		std::string filename = wi::helper::screenshot(renderPath->CreateScreenshotWithAlphaBackground());
+		PostSaveText(filename);
+		if (filename.empty())
+		{
+			PostSaveText("Error! Screenshot was not successful!");
+		}
+		else
+		{
+			PostSaveText("Screenshot saved: ", filename);
+		}
+	}
+	if (CheckInput(EditorActions::SCREENSHOT_ALPHA_SELECTION))
+	{
+		std::string filename = wi::helper::screenshot(renderPath->CreateScreenshotWithAlphaBackground(EDITORSTENCILREF_HIGHLIGHT_OBJECT, wi::image::STENCILMODE_EQUAL, wi::image::STENCILREFMODE_USER));
+		PostSaveText(filename);
+		if (filename.empty())
+		{
+			PostSaveText("Error! Screenshot was not successful!");
+		}
+		else
+		{
+			PostSaveText("Screenshot saved: ", filename);
+		}
+	}
+	wi::renderer::SetDebugDrawEnabled(true);
 }
 void EditorComponent::Compose(CommandList cmd) const
 {
@@ -5889,7 +5912,7 @@ bool EditorComponent::SetupThumbnailCamera(wi::RenderPath3D& thumbnailRenderPath
 	return true;
 }
 
-void EditorComponent::PostSaveText(const std::string& message, const std::string& filename, float time_seconds)
+void EditorComponent::PostSaveText(const std::string& message, const std::string& filename, float time_seconds) const
 {
 	save_text_message = message;
 	save_text_filename = filename;

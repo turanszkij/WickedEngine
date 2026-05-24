@@ -146,6 +146,7 @@ The scripting API provides some functions which manipulate the BackLog. These fu
 This is the graphics renderer, which is also responsible for managing the scene graph which consists of keeping track of
 parent-child relationships between the scene hierarchy, updating the world, animating armatures.
 You can use the Renderer with the following functions, all of which are in the global scope:
+- SetDebugDrawEnabled(bool value)	-- Toggle debug draw by renderer on/off
 - GetGameSpeed() : float result
 - SetGameSpeed(float speed)
 - IsRaytracingSupported() : bool	-- check whether graphics device supports hardware accelerated ray tracing features

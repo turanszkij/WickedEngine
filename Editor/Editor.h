@@ -207,11 +207,11 @@ public:
 	bool SetupThumbnailCamera(wi::RenderPath3D& thumbnailRenderPath);
 	wi::scene::CameraComponent thumbnail_saved_camera;
 
-	std::string save_text_message = "";
-	std::string save_text_filename = "";
-	float save_text_alpha = 0; // seconds until save text disappears
+	mutable std::string save_text_message = "";
+	mutable std::string save_text_filename = "";
+	mutable float save_text_alpha = 0; // seconds until save text disappears
 	wi::Color save_text_color = wi::Color::White();
-	void PostSaveText(const std::string& message, const std::string& filename = "", float time_seconds = 4);
+	void PostSaveText(const std::string& message, const std::string& filename = "", float time_seconds = 4) const;
 
 	std::string last_script_path;
 
