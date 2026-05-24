@@ -1086,14 +1086,16 @@ namespace wi::helper
 	std::string getCurrentDateTimeAsString()
 	{
 		time_t t = std::time(nullptr);
-		struct tm time_info;
+		struct tm* tmptr;
 #ifdef _WIN32
+		struct tm time_info;
+		tmptr = &time_info;
 		localtime_s(&time_info, &t);
 #else
-		localtime(&t);
+		tmptr = localtime(&t);
 #endif
 		std::stringstream ss("");
-		ss << std::put_time(&time_info, "%d-%m-%Y %H-%M-%S");
+		ss << std::put_time(tmptr, "%d-%m-%Y %H-%M-%S");
 		return ss.str();
 	}
 
