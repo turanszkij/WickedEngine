@@ -7922,7 +7922,7 @@ using namespace vulkan_internal;
 						copy.imageExtent.height = mip_height;
 						copy.imageExtent.depth = mip_depth;
 						copy.imageSubresource.mipLevel = mip;
-						copy.bufferRowLength = src_subresourcedata.row_pitch / data_stride / block_size;
+						copy.bufferRowLength = src_subresourcedata.row_pitch / data_stride * block_size;
 						vkCmdCopyBufferToImage(
 							commandlist.GetCommandBuffer(),
 							internal_state_src->staging_resource,
@@ -7963,7 +7963,7 @@ using namespace vulkan_internal;
 						copy.imageExtent.height = mip_height;
 						copy.imageExtent.depth = mip_depth;
 						copy.imageSubresource.mipLevel = mip;
-						copy.bufferRowLength = dst_subresourcedata.row_pitch / data_stride / block_size;
+						copy.bufferRowLength = dst_subresourcedata.row_pitch / data_stride * block_size;
 						vkCmdCopyImageToBuffer(
 							commandlist.GetCommandBuffer(),
 							internal_state_src->resource,
@@ -8106,7 +8106,7 @@ using namespace vulkan_internal;
 			const uint32_t data_stride = GetFormatStride(src_desc.format);
 			const uint32_t block_size = GetFormatBlockSize(src_desc.format);
 			copy.bufferOffset = (uint64_t)data.data_ptr - (uint64_t)data0.data_ptr;
-			copy.bufferRowLength = data.row_pitch / data_stride / block_size;
+			copy.bufferRowLength = data.row_pitch / data_stride * block_size;
 			copy.bufferImageHeight = std::max(1u, src_desc.height >> srcMip);
 			copy.imageSubresource.mipLevel = dstMip;
 			copy.imageSubresource.baseArrayLayer = dstSlice;
@@ -8141,7 +8141,7 @@ using namespace vulkan_internal;
 			const uint32_t data_stride = GetFormatStride(dst_desc.format);
 			const uint32_t block_size = GetFormatBlockSize(dst_desc.format);
 			copy.bufferOffset = (uint64_t)data.data_ptr - (uint64_t)data0.data_ptr;
-			copy.bufferRowLength = data.row_pitch / data_stride / block_size;
+			copy.bufferRowLength = data.row_pitch / data_stride * block_size;
 			copy.bufferImageHeight = std::max(1u, dst_desc.height >> dstMip);
 			copy.imageSubresource.mipLevel = srcMip;
 			copy.imageSubresource.baseArrayLayer = srcSlice;
