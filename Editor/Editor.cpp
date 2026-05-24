@@ -87,6 +87,7 @@ enum class EditorActions
 
 	// Engine actions
 	SCREENSHOT,
+	SCREENSHOT_NOGUI,
 	SCREENSHOT_ALPHA,
 	SCREENSHOT_ALPHA_SELECTION,
 	INSPECTOR_MODE,
@@ -145,6 +146,7 @@ HotkeyInfo hotkeyActions[size_t(EditorActions::COUNT)] = {
 	{wi::input::BUTTON('3'),					/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//SCALE_TOGGLE_ACTION,
 	{wi::input::BUTTON('4'),					/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//LOCAL_GLOBAL_TOGGLE_ACTION,
 	{wi::input::BUTTON::KEYBOARD_BUTTON_F3,		/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//SCREENSHOT,
+	{wi::input::BUTTON::KEYBOARD_BUTTON_F3,		/*press=*/ true,		/*control=*/ false,		/*shift=*/ true},	//SCREENSHOT_NOGUI,
 	{wi::input::BUTTON::KEYBOARD_BUTTON_F4,		/*press=*/ true,		/*control=*/ false,		/*shift=*/ false},	//SCREENSHOT_ALPHA,
 	{wi::input::BUTTON::KEYBOARD_BUTTON_F4,		/*press=*/ true,		/*control=*/ false,		/*shift=*/ true},	//SCREENSHOT_ALPHA_SELECTION,
 	{wi::input::BUTTON('I'),					/*press=*/ false,		/*control=*/ false,		/*shift=*/ false},	//INSPECTOR_MODE,
@@ -223,6 +225,7 @@ void HotkeyRemap(Editor* main)
 		{"SCALE_TOGGLE_ACTION", EditorActions::SCALE_TOGGLE_ACTION},
 		{"LOCAL_GLOBAL_TOGGLE_ACTION", EditorActions::LOCAL_GLOBAL_TOGGLE_ACTION},
 		{"MAKE_NEW_SCREENSHOT", EditorActions::SCREENSHOT},
+		{"MAKE_NEW_SCREENSHOT_NOGUI", EditorActions::SCREENSHOT_NOGUI},
 		{"MAKE_NEW_SCREENSHOT_ALPHA", EditorActions::SCREENSHOT_ALPHA},
 		{"MAKE_NEW_SCREENSHOT_ALPHA_SELECTION", EditorActions::SCREENSHOT_ALPHA_SELECTION},
 		{"INSPECTOR_MODE", EditorActions::INSPECTOR_MODE},
@@ -1380,6 +1383,7 @@ void EditorComponent::Load()
 		ss += "Reload terrain props: " + GetInputString(EditorActions::RELOAD_TERRAIN_PROPS) + "\n";
 		ss += "Wireframe mode: " + GetInputString(EditorActions::WIREFRAME_MODE) + "\n";
 		ss += "Screenshot (saved into Editor's screenshots folder): " + GetInputString(EditorActions::SCREENSHOT) + "\n";
+		ss += "Screenshot without GUI (saved into Editor's screenshots folder): " + GetInputString(EditorActions::SCREENSHOT_NOGUI) + "\n";
 		ss += "Screenshot with background as transparency (saved into Editor's screenshots folder): " + GetInputString(EditorActions::SCREENSHOT_ALPHA) + "\n";
 		ss += "Screenshot selection with everything else as transparency (saved into Editor's screenshots folder): " + GetInputString(EditorActions::SCREENSHOT_ALPHA_SELECTION) + "\n";
 		ss += "Depth of field refocus to point: " + GetInputString(EditorActions::DEPTH_OF_FIELD_REFOCUS_TO_POINT) + " + left mouse button" + "\n";
@@ -1621,6 +1625,20 @@ void EditorComponent::Update(float dt)
 			PostSaveText("Screenshot saved: ", filename);
 		}
 	}
+	if (screenshot_nogui)
+	{
+		screenshot_nogui = false;
+		std::string filename = wi::helper::screenshot(renderPath->GetRenderResult3D());
+		PostSaveText(filename);
+		if (filename.empty())
+		{
+			PostSaveText("Error! Screenshot was not successful!");
+		}
+		else
+		{
+			PostSaveText("Screenshot saved: ", filename);
+		}
+	}
 	if (screenshot_alpha)
 	{
 		screenshot_alpha = false;
@@ -1654,6 +1672,11 @@ void EditorComponent::Update(float dt)
 	if (CheckInput(EditorActions::SCREENSHOT))
 	{
 		screenshot = true;
+	}
+	if (CheckInput(EditorActions::SCREENSHOT_NOGUI))
+	{
+		screenshot_nogui = true;
+		wi::renderer::SetDebugDrawEnabled(false);
 	}
 	if (CheckInput(EditorActions::SCREENSHOT_ALPHA))
 	{
