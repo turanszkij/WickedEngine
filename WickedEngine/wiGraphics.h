@@ -2025,6 +2025,7 @@ namespace wi::graphics
 
 	// Compute the approximate texture memory usage
 	//	Approximate because this doesn't reflect GPU specific texture memory requirements, like alignment and metadata
+	//	plane can be specified optionally, the value ~0u means all planes
 	constexpr size_t ComputeTextureMemorySizeInBytes(const TextureDesc& desc, uint32_t plane = ~0u)
 	{
 		size_t size = 0;

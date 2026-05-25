@@ -6899,28 +6899,36 @@ std::mutex queue_locker;
 			if (src_desc.usage == Usage::UPLOAD && dst_desc.usage == Usage::DEFAULT)
 			{
 				// CPU (buffer) -> GPU (texture)
-				for (uint32_t layer = 0; layer < dst_desc.array_size; ++layer)
+				const uint32_t planes = GetFormatPlaneCount(dst_desc.format); // dst plane count!
+				for (uint32_t plane = 0; plane < planes; ++plane)
 				{
-					for (uint32_t mip = 0; mip < dst_desc.mip_levels; ++mip)
+					for (uint32_t layer = 0; layer < dst_desc.array_size; ++layer)
 					{
-						UINT subresource = D3D12CalcSubresource(mip, layer, 0, dst_desc.mip_levels, dst_desc.array_size);
-						CD3DX12_TEXTURE_COPY_LOCATION Src(internal_state_src->resource.Get(), internal_state_src->footprints[layer * dst_desc.mip_levels + mip]);
-						CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state_dst->resource.Get(), subresource);
-						commandlist.GetGraphicsCommandList()->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
+						for (uint32_t mip = 0; mip < dst_desc.mip_levels; ++mip)
+						{
+							const UINT subresource = D3D12CalcSubresource(mip, layer, plane, dst_desc.mip_levels, dst_desc.array_size);
+							CD3DX12_TEXTURE_COPY_LOCATION Src(internal_state_src->resource.Get(), internal_state_src->footprints[layer * dst_desc.mip_levels + mip]);
+							CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state_dst->resource.Get(), subresource);
+							commandlist.GetGraphicsCommandList()->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
+						}
 					}
 				}
 			}
 			else if (src_desc.usage == Usage::DEFAULT && dst_desc.usage == Usage::READBACK)
 			{
 				// GPU (texture) -> CPU (buffer)
-				for (uint32_t layer = 0; layer < dst_desc.array_size; ++layer)
+				const uint32_t planes = GetFormatPlaneCount(src_desc.format); // src plane count!
+				for (uint32_t plane = 0; plane < planes; ++plane)
 				{
-					for (uint32_t mip = 0; mip < dst_desc.mip_levels; ++mip)
+					for (uint32_t layer = 0; layer < dst_desc.array_size; ++layer)
 					{
-						UINT subresource = D3D12CalcSubresource(mip, layer, 0, dst_desc.mip_levels, dst_desc.array_size);
-						CD3DX12_TEXTURE_COPY_LOCATION Src(internal_state_src->resource.Get(), subresource);
-						CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state_dst->resource.Get(), internal_state_dst->footprints[layer * dst_desc.mip_levels + mip]);
-						commandlist.GetGraphicsCommandList()->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
+						for (uint32_t mip = 0; mip < dst_desc.mip_levels; ++mip)
+						{
+							const UINT subresource = D3D12CalcSubresource(mip, layer, 0, dst_desc.mip_levels, dst_desc.array_size);
+							CD3DX12_TEXTURE_COPY_LOCATION Src(internal_state_src->resource.Get(), subresource);
+							CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state_dst->resource.Get(), internal_state_dst->footprints[layer * dst_desc.mip_levels + mip]);
+							commandlist.GetGraphicsCommandList()->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
+						}
 					}
 				}
 			}
