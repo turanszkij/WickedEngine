@@ -4230,17 +4230,21 @@ using namespace metal_internal;
 			{
 				// Texture->linear copy:
 				const uint64_t data_begin = (uint64_t)dsttex.mapped_subresources[0].data_ptr;
-				uint32_t subresource_index = 0;
-				for (uint32_t slice = 0; slice < srctex.desc.array_size; ++slice)
+				const uint32_t planes = GetFormatPlaneCount(srctex.desc.format); // src plane count!
+				for (uint32_t plane = 0; plane < planes; ++plane)
 				{
-					for (uint32_t mip = 0; mip < srctex.desc.mip_levels; ++mip)
+					for (uint32_t slice = 0; slice < srctex.desc.array_size; ++slice)
 					{
-						const uint32_t mip_width = std::max(1u, srctex.desc.width >> mip);
-						const uint32_t mip_height = std::max(1u, srctex.desc.height >> mip);
-						const uint32_t mip_depth = std::max(1u, srctex.desc.depth >> mip);
-						const SubresourceData& subresource_data = dsttex.mapped_subresources[subresource_index++];
-						uint64_t data_offset = uint64_t((uint64_t)subresource_data.data_ptr - data_begin);
-						commandlist.compute_encoder->copyFromTexture(src_internal->texture.get(), slice, mip, {0,0,0}, {mip_width, mip_height, mip_depth}, dst_internal->buffer.get(), data_offset, subresource_data.row_pitch, subresource_data.slice_pitch * mip_depth);
+						for (uint32_t mip = 0; mip < srctex.desc.mip_levels; ++mip)
+						{
+							const uint32_t mip_width = std::max(1u, srctex.desc.width >> mip);
+							const uint32_t mip_height = std::max(1u, srctex.desc.height >> mip);
+							const uint32_t mip_depth = std::max(1u, srctex.desc.depth >> mip);
+							const uint32_t subresource = ComputeSubresource(mip, slice, plane, srctex.desc.mip_levels, srctex.desc.array_size);
+							const SubresourceData& subresource_data = dsttex.mapped_subresources[subresource];
+							uint64_t data_offset = uint64_t((uint64_t)subresource_data.data_ptr - data_begin);
+							commandlist.compute_encoder->copyFromTexture(src_internal->texture.get(), slice, mip, { 0,0,0 }, { mip_width, mip_height, mip_depth }, dst_internal->buffer.get(), data_offset, subresource_data.row_pitch, subresource_data.slice_pitch * mip_depth);
+						}
 					}
 				}
 			}
@@ -4248,17 +4252,21 @@ using namespace metal_internal;
 			{
 				// Linear->texture copy:
 				const uint64_t data_begin = (uint64_t)srctex.mapped_subresources[0].data_ptr;
-				uint32_t subresource_index = 0;
-				for (uint32_t slice = 0; slice < dsttex.desc.array_size; ++slice)
+				const uint32_t planes = GetFormatPlaneCount(dsttex.desc.format); // dst plane count!
+				for (uint32_t plane = 0; plane < planes; ++plane)
 				{
-					for (uint32_t mip = 0; mip < dsttex.desc.mip_levels; ++mip)
+					for (uint32_t slice = 0; slice < dsttex.desc.array_size; ++slice)
 					{
-						const uint32_t mip_width = std::max(1u, dsttex.desc.width >> mip);
-						const uint32_t mip_height = std::max(1u, dsttex.desc.height >> mip);
-						const uint32_t mip_depth = std::max(1u, dsttex.desc.depth >> mip);
-						const SubresourceData& subresource_data = srctex.mapped_subresources[subresource_index++];
-						uint64_t data_offset = uint64_t((uint64_t)subresource_data.data_ptr - data_begin);
-						commandlist.compute_encoder->copyFromBuffer(src_internal->buffer.get(), data_offset, subresource_data.row_pitch, subresource_data.slice_pitch * mip_depth, {mip_width,mip_height,mip_depth}, dst_internal->texture.get(), slice, mip, {0,0,0});
+						for (uint32_t mip = 0; mip < dsttex.desc.mip_levels; ++mip)
+						{
+							const uint32_t mip_width = std::max(1u, dsttex.desc.width >> mip);
+							const uint32_t mip_height = std::max(1u, dsttex.desc.height >> mip);
+							const uint32_t mip_depth = std::max(1u, dsttex.desc.depth >> mip);
+							const uint32_t subresource = ComputeSubresource(mip, slice, plane, dsttex.desc.mip_levels, dsttex.desc.array_size);
+							const SubresourceData& subresource_data = srctex.mapped_subresources[subresource];
+							uint64_t data_offset = uint64_t((uint64_t)subresource_data.data_ptr - data_begin);
+							commandlist.compute_encoder->copyFromBuffer(src_internal->buffer.get(), data_offset, subresource_data.row_pitch, subresource_data.slice_pitch * mip_depth, { mip_width,mip_height,mip_depth }, dst_internal->texture.get(), slice, mip, { 0,0,0 });
+						}
 					}
 				}
 			}
