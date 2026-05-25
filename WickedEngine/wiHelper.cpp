@@ -272,36 +272,40 @@ namespace wi::helper
 		{
 			texturedata.resize(ComputeTextureMemorySizeInBytes(desc));
 
-			const uint32_t data_stride = GetFormatStride(desc.format);
 			const uint32_t block_size = GetFormatBlockSize(desc.format);
 			size_t cpy_offset = 0;
 			size_t subresourceIndex = 0;
-			for (uint32_t layer = 0; layer < desc.array_size; ++layer)
+			const uint32_t planes = GetFormatPlaneCount(desc.format);
+			for (uint32_t plane = 0; plane < planes; ++plane)
 			{
-				for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
+				const uint32_t data_stride = GetFormatStride(desc.format, plane);
+				for (uint32_t layer = 0; layer < desc.array_size; ++layer)
 				{
-					const uint32_t mip_width = std::max(1u, desc.width >> mip);
-					const uint32_t mip_height = std::max(1u, desc.height >> mip);
-					const uint32_t mip_depth = std::max(1u, desc.depth >> mip);
-					const uint32_t num_blocks_x = (mip_width + block_size - 1) / block_size;
-					const uint32_t num_blocks_y = (mip_height + block_size - 1) / block_size;
-
-					assert(subresourceIndex < stagingTex.mapped_subresource_count);
-					const SubresourceData& subresourcedata = stagingTex.mapped_subresources[subresourceIndex++];
-					const size_t dst_rowpitch = num_blocks_x * data_stride;
-					for (uint32_t z = 0; z < mip_depth; ++z)
+					for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
 					{
-						uint8_t* dst_slice = texturedata.data() + cpy_offset;
-						uint8_t* src_slice = (uint8_t*)subresourcedata.data_ptr + subresourcedata.slice_pitch * z;
-						for (uint32_t i = 0; i < num_blocks_y; ++i)
+						const uint32_t mip_width = std::max(1u, desc.width >> mip);
+						const uint32_t mip_height = std::max(1u, desc.height >> mip);
+						const uint32_t mip_depth = std::max(1u, desc.depth >> mip);
+						const uint32_t num_blocks_x = (mip_width + block_size - 1) / block_size;
+						const uint32_t num_blocks_y = (mip_height + block_size - 1) / block_size;
+
+						assert(subresourceIndex < stagingTex.mapped_subresource_count);
+						const SubresourceData& subresourcedata = stagingTex.mapped_subresources[subresourceIndex++];
+						const size_t dst_rowpitch = num_blocks_x * data_stride;
+						for (uint32_t z = 0; z < mip_depth; ++z)
 						{
-							std::memcpy(
-								dst_slice + i * dst_rowpitch,
-								src_slice + i * subresourcedata.row_pitch,
-								dst_rowpitch
-							);
+							uint8_t* dst_slice = texturedata.data() + cpy_offset;
+							uint8_t* src_slice = (uint8_t*)subresourcedata.data_ptr + subresourcedata.slice_pitch * z;
+							for (uint32_t i = 0; i < num_blocks_y; ++i)
+							{
+								std::memcpy(
+									dst_slice + i * dst_rowpitch,
+									src_slice + i * subresourcedata.row_pitch,
+									dst_rowpitch
+								);
+							}
+							cpy_offset += num_blocks_y * dst_rowpitch;
 						}
-						cpy_offset += num_blocks_y * dst_rowpitch;
 					}
 				}
 			}
@@ -543,7 +547,7 @@ namespace wi::helper
 
 		if (is_png)
 		{
-			if (desc.format == Format::R16_UNORM || desc.format == Format::R16_UINT)
+			if (desc.format == Format::R16_UNORM || desc.format == Format::R16_UINT || desc.format == Format::R16_SNORM || desc.format == Format::R16_SINT)
 			{
 				// Specialized handling for 16-bit single channel PNG:
 				wi::vector<uint8_t> src_bigendian = texturedata;
@@ -557,7 +561,7 @@ namespace wi::helper
 				unsigned error = lodepng::encode(filedata, src_bigendian, desc.width, desc.height, LCT_GREY, 16);
 				return error == 0;
 			}
-			if (desc.format == Format::R16G16_UNORM || desc.format == Format::R16G16_UINT)
+			else if (desc.format == Format::R16G16_UNORM || desc.format == Format::R16G16_UINT || desc.format == Format::R16G16_SNORM || desc.format == Format::R16G16_SINT)
 			{
 				// Specialized handling for 16-bit PNG:
 				//	Two channel RG data is expanded to RGBA (2-channel PNG is not good because that is interpreted as red and alpha)
@@ -577,7 +581,7 @@ namespace wi::helper
 				unsigned error = lodepng::encode(filedata, (const unsigned char*)dest_rgba.data(), desc.width, desc.height, LCT_RGBA, 16);
 				return error == 0;
 			}
-			if (desc.format == Format::R16G16B16A16_UNORM || desc.format == Format::R16G16B16A16_UINT)
+			else if (desc.format == Format::R16G16B16A16_UNORM || desc.format == Format::R16G16B16A16_UINT || desc.format == Format::R16G16B16A16_SNORM || desc.format == Format::R16G16B16A16_SINT)
 			{
 				// Specialized handling for 16-bit PNG:
 				wi::vector<uint8_t> src_bigendian = texturedata;
@@ -597,6 +601,22 @@ namespace wi::helper
 					dest[i] = rgba;
 				}
 				unsigned error = lodepng::encode(filedata, src_bigendian, desc.width, desc.height, LCT_RGBA, 16);
+				return error == 0;
+			}
+			else if (desc.format == Format::R32_FLOAT || desc.format == Format::D32_FLOAT || desc.format == Format::D32_FLOAT_S8X24_UINT)
+			{
+				// Specialized handling for 16-bit single channel PNG from a 32-bit float source:
+				wi::vector<uint8_t> dst_bigendian(desc.width * desc.height * sizeof(uint16_t));
+				const float* src = (const float*)texturedata.data();
+				uint16_t* dest = (uint16_t*)dst_bigendian.data();
+				for (uint32_t i = 0; i < desc.width * desc.height; ++i)
+				{
+					float f = src[i];
+					uint16_t r = uint16_t(saturate(f) * 65535.0f);
+					r = (r >> 8) | ((r & 0xFF) << 8); // little endian to big endian
+					dest[i] = r;
+				}
+				unsigned error = lodepng::encode(filedata, dst_bigendian, desc.width, desc.height, LCT_GREY, 16);
 				return error == 0;
 			}
 		}
@@ -791,9 +811,14 @@ namespace wi::helper
 			// This can be saved by reducing target channel count, no conversion needed
 			dst_channel_count = 2;
 		}
+		else if (desc.format == Format::R8G8B8A8_UNORM || desc.format == Format::R8G8B8A8_UNORM_SRGB || desc.format == Format::R8G8B8A8_SNORM || desc.format == Format::R8G8B8A8_SINT || desc.format == Format::R8G8B8A8_UINT || desc.format == Format::R32_SINT || desc.format == Format::R32_UINT)
+		{
+			// These are accepted as-is
+		}
 		else
 		{
-			assert(desc.format == Format::R8G8B8A8_UNORM || desc.format == Format::R8G8B8A8_UNORM_SRGB); // If you need to save other texture format, implement data conversion for it
+			assert(0); // If you need to save other texture format, implement data conversion for it
+			return false;
 		}
 
 		if (!extension.compare("ICO"))
@@ -989,7 +1014,7 @@ namespace wi::helper
 		}
 		else if (!extension.compare("RAW"))
 		{
-			filedata.resize(mip.width* mip.height * sizeof(wi::Color));
+			filedata.resize(mip.width * mip.height * sizeof(wi::Color));
 			std::memcpy(filedata.data(), mip.address, filedata.size());
 			return true;
 		}

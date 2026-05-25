@@ -1506,6 +1506,18 @@ namespace wi::graphics
 			return false;
 		}
 	}
+	constexpr uint32_t GetFormatPlaneCount(Format format)
+	{
+		switch (format)
+		{
+		case Format::D32_FLOAT_S8X24_UINT:
+		case Format::D24_UNORM_S8_UINT:
+		case Format::NV12:
+			return 2;
+		default:
+			return 1;
+		}
+	}
 	constexpr uint32_t GetFormatBlockSize(Format format)
 	{
 		if(IsFormatBlockCompressed(format))
@@ -1518,6 +1530,7 @@ namespace wi::graphics
 	// Returns the byte size of one element for a given texture format
 	//	For uncompressed formats, element = pixel
 	//	For block compressed formats, element = block
+	//	For planar formats it returns stride of all planes, an overload is available to specify just one plane slice
 	constexpr uint32_t GetFormatStride(Format format)
 	{
 		switch (format)
@@ -1550,7 +1563,6 @@ namespace wi::graphics
 		case Format::R32G32_FLOAT:
 		case Format::R32G32_UINT:
 		case Format::R32G32_SINT:
-		case Format::D32_FLOAT_S8X24_UINT:
 		case Format::BC1_UNORM:
 		case Format::BC1_UNORM_SRGB:
 		case Format::BC4_SNORM:
@@ -1576,7 +1588,6 @@ namespace wi::graphics
 		case Format::R32_FLOAT:
 		case Format::R32_UINT:
 		case Format::R32_SINT:
-		case Format::D24_UNORM_S8_UINT:
 		case Format::R9G9B9E5_SHAREDEXP:
 			return 4u;
 
@@ -1598,10 +1609,28 @@ namespace wi::graphics
 		case Format::R8_SINT:
 			return 1u;
 
+		case Format::D24_UNORM_S8_UINT:
+			return 3u + 1u; // 3 bytes for depth, 1 byte for stencil
+		case Format::D32_FLOAT_S8X24_UINT:
+			return 4u + 1u; // 4 bytes for depth, 1 byte for stencil
+		case Format::NV12:
+			return 1u + 1u; // warning: really it should be 1 byte for luminance, 2 bytes for 2x2 chrominance, so this is overestimated
 
 		default:
 			assert(0); // didn't catch format!
 			return 16u;
+		}
+	}
+	constexpr uint32_t GetFormatStride(Format format, uint32_t plane)
+	{
+		switch (format)
+		{
+		case Format::D24_UNORM_S8_UINT:
+			return plane == 0 ? 3u : 1u;
+		case Format::D32_FLOAT_S8X24_UINT:
+			return plane == 0 ? 4u : 1u;
+		default:
+			return GetFormatStride(format);
 		}
 	}
 	constexpr Format GetFormatNonSRGB(Format format)
@@ -1954,6 +1983,21 @@ namespace wi::graphics
 		return 0;
 	}
 
+	// Returns ImageAspect based on plane and format
+	constexpr ImageAspect GetImageAspect(Format format, uint32_t plane)
+	{
+		switch (format)
+		{
+		case Format::D24_UNORM_S8_UINT:
+		case Format::D32_FLOAT_S8X24_UINT:
+			return plane == 0 ? ImageAspect::DEPTH : ImageAspect::STENCIL;
+		case Format::NV12:
+			return plane == 0 ? ImageAspect::LUMINANCE : ImageAspect::CHROMINANCE;
+		default:
+			return IsFormatDepthSupport(format) ? ImageAspect::DEPTH : ImageAspect::COLOR;
+		}
+	}
+
 	// Computes the subresource index for indexing SubresourceData arrays
 	constexpr uint32_t ComputeSubresource(uint32_t mip, uint32_t slice, uint32_t plane, uint32_t mip_count, uint32_t array_size)
 	{
@@ -1967,9 +2011,10 @@ namespace wi::graphics
 	}
 
 	// Compute the texture memory usage for one row in a specific mip level
-	constexpr size_t ComputeTextureMipRowPitch(const TextureDesc& desc, uint32_t mip)
+	//	plane can be specified optionally, the value ~0u means all planes
+	constexpr size_t ComputeTextureMipRowPitch(const TextureDesc& desc, uint32_t mip, uint32_t plane = ~0u)
 	{
-		const uint32_t bytes_per_block = GetFormatStride(desc.format);
+		const uint32_t bytes_per_block = plane == ~0u ? GetFormatStride(desc.format) : GetFormatStride(desc.format, plane);
 		const uint32_t pixels_per_block = GetFormatBlockSize(desc.format);
 		const uint32_t mip_width = std::max(1u, desc.width >> mip);
 		const uint32_t num_blocks_x = (mip_width + pixels_per_block - 1) / pixels_per_block;
@@ -1977,9 +2022,10 @@ namespace wi::graphics
 	}
 
 	// Compute the texture memory usage for one mip level
-	constexpr size_t ComputeTextureMipMemorySizeInBytes(const TextureDesc& desc, uint32_t mip)
+	//	plane can be specified optionally, the value ~0u means all planes
+	constexpr size_t ComputeTextureMipMemorySizeInBytes(const TextureDesc& desc, uint32_t mip, uint32_t plane = ~0u)
 	{
-		const uint32_t bytes_per_block = GetFormatStride(desc.format);
+		const uint32_t bytes_per_block = plane == ~0u ? GetFormatStride(desc.format) : GetFormatStride(desc.format, plane);
 		const uint32_t pixels_per_block = GetFormatBlockSize(desc.format);
 		const uint32_t mip_width = std::max(1u, desc.width >> mip);
 		const uint32_t mip_height = std::max(1u, desc.height >> mip);
@@ -2015,34 +2061,39 @@ namespace wi::graphics
 
 	constexpr uint32_t GetTextureSubresourceCount(const TextureDesc& desc)
 	{
+		const uint32_t planes = GetFormatPlaneCount(desc.format);
 		const uint32_t mips = GetMipCount(desc);
-		return desc.array_size * mips;
+		return desc.array_size * mips * planes;
 	}
 
 	// Creates texture SubresourceData array
 	//	alignment	: it can be used to force GPU-specific rowpitch alignment for linear tile mode (in bytes)
 	inline void CreateTextureSubresourceDatas(const TextureDesc& desc, void* data_ptr, wi::vector<SubresourceData>& subresource_datas, uint32_t alignment = 1)
 	{
-		const uint32_t bytes_per_block = GetFormatStride(desc.format);
+		const uint32_t planes = GetFormatPlaneCount(desc.format);
 		const uint32_t pixels_per_block = GetFormatBlockSize(desc.format);
 		const uint32_t mips = GetMipCount(desc);
 		subresource_datas.resize(GetTextureSubresourceCount(desc));
-		size_t subresource_index = 0;
 		size_t subresource_data_offset = 0;
-		for (uint32_t layer = 0; layer < desc.array_size; ++layer)
+		for (uint32_t plane = 0; plane < planes; ++plane)
 		{
-			for (uint32_t mip = 0; mip < mips; ++mip)
+			const uint32_t bytes_per_block = GetFormatStride(desc.format, plane);
+			for (uint32_t layer = 0; layer < desc.array_size; ++layer)
 			{
-				const uint32_t mip_width = std::max(1u, desc.width >> mip);
-				const uint32_t mip_height = std::max(1u, desc.height >> mip);
-				const uint32_t mip_depth = std::max(1u, desc.depth >> mip);
-				const uint32_t num_blocks_x = (mip_width + pixels_per_block - 1) / pixels_per_block;
-				const uint32_t num_blocks_y = (mip_height + pixels_per_block - 1) / pixels_per_block;
-				SubresourceData& subresource_data = subresource_datas[subresource_index++];
-				subresource_data.data_ptr = (uint8_t*)data_ptr + subresource_data_offset;
-				subresource_data.row_pitch = align((uint32_t)num_blocks_x * bytes_per_block, alignment);
-				subresource_data.slice_pitch = (uint32_t)subresource_data.row_pitch * num_blocks_y;
-				subresource_data_offset += subresource_data.slice_pitch * mip_depth;
+				for (uint32_t mip = 0; mip < mips; ++mip)
+				{
+					const uint32_t mip_width = std::max(1u, desc.width >> mip);
+					const uint32_t mip_height = std::max(1u, desc.height >> mip);
+					const uint32_t mip_depth = std::max(1u, desc.depth >> mip);
+					const uint32_t num_blocks_x = (mip_width + pixels_per_block - 1) / pixels_per_block;
+					const uint32_t num_blocks_y = (mip_height + pixels_per_block - 1) / pixels_per_block;
+					const uint32_t subresource = ComputeSubresource(mip, layer, plane, mips, desc.array_size);
+					SubresourceData& subresource_data = subresource_datas[subresource];
+					subresource_data.data_ptr = (uint8_t*)data_ptr + subresource_data_offset;
+					subresource_data.row_pitch = align((uint32_t)num_blocks_x * bytes_per_block, alignment);
+					subresource_data.slice_pitch = (uint32_t)subresource_data.row_pitch * num_blocks_y;
+					subresource_data_offset += subresource_data.slice_pitch * mip_depth;
+				}
 			}
 		}
 	}
