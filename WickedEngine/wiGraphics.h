@@ -881,13 +881,6 @@ namespace wi::graphics
 		constexpr bool IsTexture() const { return type == Type::TEXTURE; }
 		constexpr bool IsBuffer() const { return type == Type::BUFFER; }
 		constexpr bool IsAccelerationStructure() const { return type == Type::RAYTRACING_ACCELERATION_STRUCTURE; }
-	};
-
-	struct GPUBuffer final : public GPUResource
-	{
-		GPUBufferDesc desc;
-
-		constexpr const GPUBufferDesc& GetDesc() const { return desc; }
 
 		// Dynamic allocation and destruction of this object is not allowed because virtual table is not used. Placement new is allowed.
 		static void* operator new (size_t) = delete;
@@ -896,6 +889,14 @@ namespace wi::graphics
 		static void  operator delete[](void*) = delete;
 		static void* operator new(size_t, void* p) noexcept { return p; }
 		static void* operator new[](size_t, void* p) noexcept { return p; }
+	};
+
+	struct GPUBuffer final : public GPUResource
+	{
+		GPUBufferDesc desc;
+
+		constexpr const GPUBufferDesc& GetDesc() const { return desc; }
+
 	};
 
 	struct Texture final : public GPUResource
@@ -916,14 +917,6 @@ namespace wi::graphics
 #endif
 
 		constexpr const TextureDesc& GetDesc() const { return desc; }
-
-		// Dynamic allocation and destruction of this object is not allowed because virtual table is not used. Placement new is allowed.
-		static void* operator new (size_t) = delete;
-		static void* operator new[](size_t) = delete;
-		static void  operator delete (void*) = delete;
-		static void  operator delete[](void*) = delete;
-		static void* operator new(size_t, void* p) noexcept { return p; }
-		static void* operator new[](size_t, void* p) noexcept { return p; }
 	};
 
 	struct VideoDecoder
@@ -1286,14 +1279,6 @@ namespace wi::graphics
 		size_t size = 0;
 
 		constexpr const RaytracingAccelerationStructureDesc& GetDesc() const { return desc; }
-
-		// Dynamic allocation and destruction of this object is not allowed because virtual table is not used. Placement new is allowed.
-		static void* operator new (size_t) = delete;
-		static void* operator new[](size_t) = delete;
-		static void  operator delete (void*) = delete;
-		static void  operator delete[](void*) = delete;
-		static void* operator new(size_t, void* p) noexcept { return p; }
-		static void* operator new[](size_t, void* p) noexcept { return p; }
 	};
 
 	struct ShaderLibrary
