@@ -1530,8 +1530,8 @@ namespace wi::graphics
 	// Returns the byte size of one element for a given texture format
 	//	For uncompressed formats, element = pixel
 	//	For block compressed formats, element = block
-	//	For planar formats it returns stride of all planes, an overload is available to specify just one plane slice
-	constexpr uint32_t GetFormatStride(Format format)
+	//	plane can be specified for planar formats to get stride of specific plane, or left as default ~0u to get stride as if planes were interleaved
+	constexpr uint32_t GetFormatStride(Format format, uint32_t plane = ~0u)
 	{
 		switch (format)
 		{
@@ -1610,27 +1610,15 @@ namespace wi::graphics
 			return 1u;
 
 		case Format::D24_UNORM_S8_UINT:
-			return 3u + 1u; // 3 bytes for depth, 1 byte for stencil
+			return plane == ~0u ? 4u : (plane == 0 ? 3u : 1u);
 		case Format::D32_FLOAT_S8X24_UINT:
-			return 4u + 1u; // 4 bytes for depth, 1 byte for stencil
+			return plane == ~0u ? 8u : (plane == 0 ? 4u : 1u); // 8 is chosen for interleaved instead of 5 for safe alignment
 		case Format::NV12:
-			return 1u + 1u; // warning: really it should be 1 byte for luminance, 2 bytes for 2x2 chrominance, so this is overestimated
+			return plane == ~0u ? 2u : 1u; // warning: really it should be 1 byte for luminance, 2 bytes for 2x2 chrominance, so this is overestimated as 1 for both
 
 		default:
 			assert(0); // didn't catch format!
 			return 16u;
-		}
-	}
-	constexpr uint32_t GetFormatStride(Format format, uint32_t plane)
-	{
-		switch (format)
-		{
-		case Format::D24_UNORM_S8_UINT:
-			return plane == 0 ? 3u : 1u;
-		case Format::D32_FLOAT_S8X24_UINT:
-			return plane == 0 ? 4u : 1u;
-		default:
-			return GetFormatStride(format);
 		}
 	}
 	constexpr Format GetFormatNonSRGB(Format format)
@@ -2014,7 +2002,7 @@ namespace wi::graphics
 	//	plane can be specified optionally, the value ~0u means all planes
 	constexpr size_t ComputeTextureMipRowPitch(const TextureDesc& desc, uint32_t mip, uint32_t plane = ~0u)
 	{
-		const uint32_t bytes_per_block = plane == ~0u ? GetFormatStride(desc.format) : GetFormatStride(desc.format, plane);
+		const uint32_t bytes_per_block = GetFormatStride(desc.format, plane);
 		const uint32_t pixels_per_block = GetFormatBlockSize(desc.format);
 		const uint32_t mip_width = std::max(1u, desc.width >> mip);
 		const uint32_t num_blocks_x = (mip_width + pixels_per_block - 1) / pixels_per_block;
@@ -2025,7 +2013,7 @@ namespace wi::graphics
 	//	plane can be specified optionally, the value ~0u means all planes
 	constexpr size_t ComputeTextureMipMemorySizeInBytes(const TextureDesc& desc, uint32_t mip, uint32_t plane = ~0u)
 	{
-		const uint32_t bytes_per_block = plane == ~0u ? GetFormatStride(desc.format) : GetFormatStride(desc.format, plane);
+		const uint32_t bytes_per_block = GetFormatStride(desc.format, plane);
 		const uint32_t pixels_per_block = GetFormatBlockSize(desc.format);
 		const uint32_t mip_width = std::max(1u, desc.width >> mip);
 		const uint32_t mip_height = std::max(1u, desc.height >> mip);
@@ -2037,10 +2025,10 @@ namespace wi::graphics
 
 	// Compute the approximate texture memory usage
 	//	Approximate because this doesn't reflect GPU specific texture memory requirements, like alignment and metadata
-	constexpr size_t ComputeTextureMemorySizeInBytes(const TextureDesc& desc)
+	constexpr size_t ComputeTextureMemorySizeInBytes(const TextureDesc& desc, uint32_t plane = ~0u)
 	{
 		size_t size = 0;
-		const uint32_t bytes_per_block = GetFormatStride(desc.format);
+		const uint32_t bytes_per_block = GetFormatStride(desc.format, plane);
 		const uint32_t pixels_per_block = GetFormatBlockSize(desc.format);
 		const uint32_t mips = GetMipCount(desc);
 		for (uint32_t layer = 0; layer < desc.array_size; ++layer)
