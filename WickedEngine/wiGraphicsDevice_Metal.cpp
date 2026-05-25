@@ -4241,7 +4241,7 @@ using namespace metal_internal;
 							const uint32_t mip_height = std::max(1u, srctex.desc.height >> mip);
 							const uint32_t mip_depth = std::max(1u, srctex.desc.depth >> mip);
 							const uint32_t subresource = ComputeSubresource(mip, slice, plane, srctex.desc.mip_levels, srctex.desc.array_size);
-							const SubresourceData& subresource_data = srctex.mapped_subresources[subresource];
+							const SubresourceData& subresource_data = dsttex.mapped_subresources[subresource];
 							uint64_t data_offset = uint64_t((uint64_t)subresource_data.data_ptr - data_begin);
 							commandlist.compute_encoder->copyFromTexture(src_internal->texture.get(), slice, mip, { 0,0,0 }, { mip_width, mip_height, mip_depth }, dst_internal->buffer.get(), data_offset, subresource_data.row_pitch, subresource_data.slice_pitch * mip_depth);
 						}
