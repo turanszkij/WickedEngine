@@ -29,6 +29,11 @@ void CameraWindow::ResetCam()
 	editorscene.camera_target.UpdateTransform();
 
 	orthoCheckBox.SetCheck(camera.IsOrtho());
+
+	if (editor->is_2D_mode)
+	{
+		camera.SetOrtho(true);
+	}
 }
 
 void CameraWindow::Create(EditorComponent* _editor)

@@ -121,6 +121,7 @@ bool debugColliders = false;
 bool debugSprings = false;
 bool gridHelper = false;
 XMFLOAT4 gridHelperColor = XMFLOAT4(1, 1, 1, 0.75f);
+bool gridHelper2D = false;
 bool advancedLightCulling = true;
 bool variableRateShadingClassification = false;
 bool variableRateShadingClassificationDebug = false;
@@ -8497,14 +8498,16 @@ void DrawDebugWorld(
 		const int a = 20;
 		XMFLOAT4 verts[((a + 1) * 2 + (a + 1) * 2) * 2];
 
+		const XMFLOAT4 blueOrGreen = gridHelper2D ? XMFLOAT4(channel_min, 1, channel_min, alpha) : XMFLOAT4(channel_min, channel_min, 1, alpha);
+
 		int count = 0;
 		for (int i = 0; i <= a; ++i)
 		{
 			verts[count++] = XMFLOAT4(i - a * 0.5f, h, -a * 0.5f, 1);
-			verts[count++] = (i == a / 2 ? XMFLOAT4(channel_min, channel_min, 1, alpha) : gridHelperColor);
+			verts[count++] = (i == a / 2 ? blueOrGreen : gridHelperColor);
 
 			verts[count++] = XMFLOAT4(i - a * 0.5f, h, +a * 0.5f, 1);
-			verts[count++] = (i == a / 2 ? XMFLOAT4(channel_min, channel_min, 1, alpha) : gridHelperColor);
+			verts[count++] = (i == a / 2 ? blueOrGreen : gridHelperColor);
 		}
 		for (int j = 0; j <= a; ++j)
 		{
@@ -8520,8 +8523,15 @@ void DrawDebugWorld(
 		auto mem = device->AllocateGPU(sizeof(verts), cmd);
 		std::memcpy(mem.data, verts, sizeof(verts));
 
+		XMMATRIX transform = camera.GetViewProjection();
+
+		if (gridHelper2D)
+		{
+			transform = XMMatrixRotationX(XM_PIDIV2) * transform;
+		}
+
 		MiscCB sb;
-		XMStoreFloat4x4(&sb.g_xTransform, camera.GetViewProjection());
+		XMStoreFloat4x4(&sb.g_xTransform, transform);
 		sb.g_xColor = float4(1, 1, 1, 1);
 
 		device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
@@ -19206,6 +19216,14 @@ void SetGridHelperColor(const XMFLOAT4& value)
 XMFLOAT4 GetGridHelperColor()
 {
 	return gridHelperColor;
+}
+void SetGridHelper2D(bool value)
+{
+	gridHelper2D = value;
+}
+bool IsGridHelper2D()
+{
+	return gridHelper2D;
 }
 bool GetToDrawVoxelHelper() { return VXGI_DEBUG; }
 void SetToDrawVoxelHelper(bool value, int clipmap_level) { VXGI_DEBUG = value; VXGI_DEBUG_CLIPMAP = clipmap_level; }

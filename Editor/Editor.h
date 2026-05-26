@@ -79,6 +79,9 @@ public:
 
 	wi::gui::ComboBox guiScalingCombo;
 
+	bool is_2D_mode = false;
+	wi::gui::Button is2DModeButton;
+
 	GeneralWindow generalWnd;
 	GraphicsWindow graphicsWnd;
 	CameraWindow cameraWnd;
