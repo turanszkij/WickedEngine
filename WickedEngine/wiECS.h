@@ -134,6 +134,13 @@ namespace wi::ecs
 		virtual const wi::vector<Entity>& GetEntityArray() const = 0;
 	};
 
+
+	template<typename Component, typename = void>
+	struct has_serialize : std::false_type {};
+
+	template<typename Component>
+	struct has_serialize<Component, std::void_t<decltype(std::declval<Component>().Serialize(std::declval<wi::Archive&>(), std::declval<EntitySerializer&>()))>> : std::true_type {};
+
 	// The ComponentManager is a container that stores components and matches them with entities
 	//	Note: final keyword is used to indicate this is a final implementation.
 	//	This allows function inlining and avoid calls, improves performance considerably
@@ -210,68 +217,82 @@ namespace wi::ecs
 		// Read/Write everything to an archive depending on the archive state
 		inline void Serialize(wi::Archive& archive, EntitySerializer& seri)
 		{
-			if (archive.IsReadMode())
+			if constexpr (has_serialize<Component>::value)
 			{
-				const size_t prev_count = components.size();
-
-				size_t count;
-				archive >> count;
-
-				components.resize(prev_count + count);
-				for (size_t i = 0; i < count; ++i)
+				if (archive.IsReadMode())
 				{
-					components[prev_count + i].Serialize(archive, seri);
+					const size_t prev_count = components.size();
+
+					size_t count;
+					archive >> count;
+
+					components.resize(prev_count + count);
+					for (size_t i = 0; i < count; ++i)
+					{
+						components[prev_count + i].Serialize(archive, seri);
+					}
+
+					entities.resize(prev_count + count);
+					for (size_t i = 0; i < count; ++i)
+					{
+						// assign value to make GCC happy
+						Entity entity = INVALID_ENTITY;
+						SerializeEntity(archive, entity, seri);
+						entities[prev_count + i] = entity;
+						lookup.insert(entity, prev_count + i);
+					}
 				}
-
-				entities.resize(prev_count + count);
-				for (size_t i = 0; i < count; ++i)
+				else
 				{
-					// assign value to make GCC happy
-					Entity entity = INVALID_ENTITY;
-					SerializeEntity(archive, entity, seri);
-					entities[prev_count + i] = entity;
-					lookup.insert(entity, prev_count + i);
+					archive << components.size();
+					for (Component& component : components)
+					{
+						component.Serialize(archive, seri);
+					}
+					for (Entity entity : entities)
+					{
+						SerializeEntity(archive, entity, seri);
+					}
 				}
 			}
 			else
 			{
-				archive << components.size();
-				for (Component& component : components)
-				{
-					component.Serialize(archive, seri);
-				}
-				for (Entity entity : entities)
-				{
-					SerializeEntity(archive, entity, seri);
-				}
+				assert(0);
 			}
 		}
 
 		//Read one single component onto an archive, make sure entity are serialized first
 		inline void Component_Serialize(Entity entity, wi::Archive& archive, EntitySerializer& seri)
 		{
-			if(archive.IsReadMode())
+			if constexpr (has_serialize<Component>::value)
 			{
-				bool component_exists;
-				archive >> component_exists;
-				if (component_exists)
+				if (archive.IsReadMode())
 				{
-					auto& component = this->Create(entity);
-					component.Serialize(archive, seri);
+					bool component_exists;
+					archive >> component_exists;
+					if (component_exists)
+					{
+						auto& component = this->Create(entity);
+						component.Serialize(archive, seri);
+					}
+				}
+				else
+				{
+					auto component = this->GetComponent(entity);
+					if (component != nullptr)
+					{
+						archive << true;
+						component->Serialize(archive, seri);
+					}
+					else
+					{
+						archive << false;
+					}
 				}
 			}
 			else
 			{
-				auto component = this->GetComponent(entity);
-				if (component != nullptr)
-				{
-					archive << true;
-					component->Serialize(archive, seri);
-				}
-				else
-				{
-					archive << false;
-				}
+				assert(0);
 			}
 		}
 
