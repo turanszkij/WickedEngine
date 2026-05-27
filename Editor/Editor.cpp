@@ -1503,10 +1503,11 @@ void EditorComponent::Load()
 		EditorScene& editorscene = GetCurrentEditorScene();
 		if (is_2D_mode)
 		{
+			editorscene.camera_transform.translation_local.z = -10;
 			editorscene.camera_transform.rotation_local = XMFLOAT4(0, 0, 0, 1);
 			editorscene.camera_transform.UpdateTransform();
 			editorscene.camera.SetOrtho(true);
-			editorscene.camera.ortho_vertical_size = editorscene.camera.ComputeOrthoVerticalSizeFromPerspective(wi::math::Length(editorscene.camera.Eye)); // camera distance from origin
+			editorscene.camera.ortho_vertical_size = editorscene.camera.ComputeOrthoVerticalSizeFromPerspective(editorscene.camera_transform.translation_local.z); // camera distance from origin
 		}
 		else
 		{
@@ -2125,6 +2126,7 @@ void EditorComponent::Update(float dt)
 			XMFLOAT2 grabdiff = XMFLOAT2(0, 0);
 			if (wi::input::Down(wi::input::MOUSE_BUTTON_RIGHT))
 			{
+				wi::input::SetCursor(wi::input::CURSOR_RESIZEALL);
 				const float units_per_pixel = camera.ortho_vertical_size / viewport3D.height * 0.5f;
 				grabdiff = XMFLOAT2(-mouse.delta_position.x * units_per_pixel, mouse.delta_position.y * units_per_pixel);
 				move = XMVectorZero();
@@ -2145,7 +2147,7 @@ void EditorComponent::Update(float dt)
 				camera.ortho_vertical_size -= currentMouse.z;
 			}
 
-			camera.ortho_vertical_size = std::max(0.001f, camera.ortho_vertical_size);
+			camera.ortho_vertical_size = std::max(0.01f, camera.ortho_vertical_size);
 		}
 		else if (cameraWnd.fpsCheckBox.GetCheck())
 		{
@@ -2264,7 +2266,14 @@ void EditorComponent::Update(float dt)
 		{
 			hovered = wi::scene::PickResult();
 
-			const float required_dist = camera.IsOrtho() ? (camera.ortho_vertical_size * GetDPIScaling() * 0.004f) : 0.05f;
+			const float required_dist = camera.IsOrtho() ? (camera.ortho_vertical_size * 0.025f) : 0.05f;
+			auto dist_check = [&](float dis, const XMFLOAT3& position) {
+				if (camera.IsOrtho())
+				{
+					return dis > 0.01f && dis < required_dist && dis < hovered.distance;
+				}
+				return dis > 0.01f && dis < wi::math::Distance(position, pickRay.origin) * required_dist && dis < hovered.distance;
+			};
 
 			if (has_flag(componentsWnd.filter, ComponentsWindow::Filter::Light))
 			{
@@ -2275,7 +2284,7 @@ void EditorComponent::Update(float dt)
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), XMLoadFloat3(&light.position));
 					float dis = XMVectorGetX(disV);
-					if (dis > 0.01f && dis < wi::math::Distance(light.position, pickRay.origin) * required_dist && dis < hovered.distance)
+					if (dist_check(dis, light.position))
 					{
 						hovered = wi::scene::PickResult();
 						hovered.entity = entity;
@@ -2327,7 +2336,7 @@ void EditorComponent::Update(float dt)
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
 					float dis = XMVectorGetX(disV);
-					if (dis > 0.01f && dis < wi::math::Distance(transform.GetPosition(), pickRay.origin) * required_dist && dis < hovered.distance)
+					if (dist_check(dis, transform.GetPosition()))
 					{
 						hovered = wi::scene::PickResult();
 						hovered.entity = entity;
@@ -2345,7 +2354,7 @@ void EditorComponent::Update(float dt)
 						const TransformComponent& transform = scene.splines[i].spline_node_transforms[j];
 						XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
 						float dis = XMVectorGetX(disV);
-						if (dis > 0.01f && dis < wi::math::Distance(transform.GetPosition(), pickRay.origin) * 0.025f && dis < hovered.distance)
+						if (dist_check(dis, transform.GetPosition()))
 						{
 							hovered = wi::scene::PickResult();
 							hovered.entity = scene.splines[i].spline_node_entities[j];
@@ -2360,7 +2369,7 @@ void EditorComponent::Update(float dt)
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
 					float dis = XMVectorGetX(disV);
-					if (dis > 0.01f && dis < wi::math::Distance(transform.GetPosition(), pickRay.origin) * required_dist && dis < hovered.distance)
+					if (dist_check(dis, transform.GetPosition()))
 					{
 						hovered = wi::scene::PickResult();
 						hovered.entity = entity;
@@ -2379,7 +2388,7 @@ void EditorComponent::Update(float dt)
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
 					float dis = XMVectorGetX(disV);
-					if (dis > 0.01f && dis < wi::math::Distance(transform.GetPosition(), pickRay.origin) * required_dist && dis < hovered.distance)
+					if (dist_check(dis, transform.GetPosition()))
 					{
 						hovered = wi::scene::PickResult();
 						hovered.entity = entity;
@@ -2398,7 +2407,7 @@ void EditorComponent::Update(float dt)
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
 					float dis = XMVectorGetX(disV);
-					if (dis > 0.01f && dis < wi::math::Distance(transform.GetPosition(), pickRay.origin) * required_dist && dis < hovered.distance)
+					if (dist_check(dis, transform.GetPosition()))
 					{
 						hovered = wi::scene::PickResult();
 						hovered.entity = entity;
@@ -2417,7 +2426,7 @@ void EditorComponent::Update(float dt)
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
 					float dis = XMVectorGetX(disV);
-					if (dis > 0.01f && dis < wi::math::Distance(transform.GetPosition(), pickRay.origin) * required_dist && dis < hovered.distance)
+					if (dist_check(dis, transform.GetPosition()))
 					{
 						hovered = wi::scene::PickResult();
 						hovered.entity = entity;
@@ -2436,7 +2445,7 @@ void EditorComponent::Update(float dt)
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
 					float dis = XMVectorGetX(disV);
-					if (dis > 0.01f && dis < wi::math::Distance(transform.GetPosition(), pickRay.origin) * required_dist && dis < hovered.distance)
+					if (dist_check(dis, transform.GetPosition()))
 					{
 						hovered = wi::scene::PickResult();
 						hovered.entity = entity;
@@ -2476,7 +2485,7 @@ void EditorComponent::Update(float dt)
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
 					float dis = XMVectorGetX(disV);
-					if (dis > 0.01f && dis < wi::math::Distance(transform.GetPosition(), pickRay.origin) * required_dist && dis < hovered.distance)
+					if (dist_check(dis, transform.GetPosition()))
 					{
 						hovered = wi::scene::PickResult();
 						hovered.entity = entity;
@@ -2495,7 +2504,7 @@ void EditorComponent::Update(float dt)
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
 					float dis = XMVectorGetX(disV);
-					if (dis > 0.01f && dis < wi::math::Distance(transform.GetPosition(), pickRay.origin) * required_dist && dis < hovered.distance)
+					if (dist_check(dis, transform.GetPosition()))
 					{
 						hovered = wi::scene::PickResult();
 						hovered.entity = entity;
@@ -2514,7 +2523,7 @@ void EditorComponent::Update(float dt)
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
 					float dis = XMVectorGetX(disV);
-					if (dis > 0.01f && dis < wi::math::Distance(transform.GetPosition(), pickRay.origin) * required_dist && dis < hovered.distance)
+					if (dist_check(dis, transform.GetPosition()))
 					{
 						hovered = wi::scene::PickResult();
 						hovered.entity = entity;
@@ -2533,7 +2542,7 @@ void EditorComponent::Update(float dt)
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
 					float dis = XMVectorGetX(disV);
-					if (dis > 0.01f && dis < wi::math::Distance(transform.GetPosition(), pickRay.origin) * required_dist && dis < hovered.distance)
+					if (dist_check(dis, transform.GetPosition()))
 					{
 						hovered = wi::scene::PickResult();
 						hovered.entity = entity;
@@ -2552,7 +2561,7 @@ void EditorComponent::Update(float dt)
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
 					float dis = XMVectorGetX(disV);
-					if (dis > 0.01f && dis < wi::math::Distance(transform.GetPosition(), pickRay.origin) * required_dist && dis < hovered.distance)
+					if (dist_check(dis, transform.GetPosition()))
 					{
 						hovered = wi::scene::PickResult();
 						hovered.entity = entity;
@@ -2571,7 +2580,7 @@ void EditorComponent::Update(float dt)
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
 					float dis = XMVectorGetX(disV);
-					if (dis > 0.01f && dis < wi::math::Distance(transform.GetPosition(), pickRay.origin) * required_dist && dis < hovered.distance)
+					if (dist_check(dis, transform.GetPosition()))
 					{
 						hovered = wi::scene::PickResult();
 						hovered.entity = entity;
@@ -3998,7 +4007,7 @@ void EditorComponent::Render() const
 
 			const XMMATRIX R = XMLoadFloat3x3(&cam.rotationMatrix);
 
-			const float ortho_dist = camera.ortho_vertical_size * GetDPIScaling() * 0.4f;
+			const float ortho_dist = camera.ortho_vertical_size * 0.5f;
 			auto camera_scaling = [&](const XMFLOAT3& position) {
 				return camera.IsOrtho() ? ortho_dist : wi::math::Distance(position, camera.Eye);;
 			};
