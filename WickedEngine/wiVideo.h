@@ -119,6 +119,4 @@ namespace wi::video
 }
 
 template<>
-struct enable_bitmask_operators<wi::video::VideoInstance::Flags> {
-	static const bool enable = true;
-};
+struct enable_bitmask_operators<wi::video::VideoInstance::Flags> : std::true_type {};

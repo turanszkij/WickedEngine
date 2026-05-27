@@ -2289,39 +2289,23 @@ namespace wi::graphics
 }
 
 template<>
-struct enable_bitmask_operators<wi::graphics::ColorWrite> {
-	static const bool enable = true;
-};
+struct enable_bitmask_operators<wi::graphics::ColorWrite> : std::true_type {};
 template<>
-struct enable_bitmask_operators<wi::graphics::BindFlag> {
-	static const bool enable = true;
-};
+struct enable_bitmask_operators<wi::graphics::BindFlag> : std::true_type {};
 template<>
-struct enable_bitmask_operators<wi::graphics::ResourceMiscFlag> {
-	static const bool enable = true;
-};
+struct enable_bitmask_operators<wi::graphics::ResourceMiscFlag> : std::true_type {};
 template<>
-struct enable_bitmask_operators<wi::graphics::GraphicsDeviceCapability> {
-	static const bool enable = true;
-};
+struct enable_bitmask_operators<wi::graphics::GraphicsDeviceCapability> : std::true_type {};
 template<>
-struct enable_bitmask_operators<wi::graphics::ResourceState> {
-	static const bool enable = true;
-};
+struct enable_bitmask_operators<wi::graphics::ResourceState> : std::true_type {};
 WI_DISABLE_DEPRECATED_BEGIN
 template<>
-struct enable_bitmask_operators<wi::graphics::RenderPassDesc::Flags> {
-	static const bool enable = true;
-};
+struct enable_bitmask_operators<wi::graphics::RenderPassDesc::Flags> : std::true_type {};
 WI_DISABLE_DEPRECATED_END
 template<>
-struct enable_bitmask_operators<wi::graphics::RenderPassFlags> {
-	static const bool enable = true;
-};
+struct enable_bitmask_operators<wi::graphics::RenderPassFlags> : std::true_type {};
 template<>
-struct enable_bitmask_operators<wi::graphics::VideoDecoderSupportFlags> {
-	static const bool enable = true;
-};
+struct enable_bitmask_operators<wi::graphics::VideoDecoderSupportFlags> : std::true_type {};
 
 namespace std
 {

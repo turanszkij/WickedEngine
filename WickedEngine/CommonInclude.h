@@ -350,45 +350,42 @@ inline long long AtomicLoad(const volatile long long* ptr)
 // Enable enum flags:
 //	https://www.justsoftwaresolutions.co.uk/cplusplus/using-enum-classes-as-bitfields.html
 template<typename E>
-struct enable_bitmask_operators {
-	static constexpr bool enable = false;
-};
+struct enable_bitmask_operators : std::false_type {};
+
 template<typename E>
-constexpr typename std::enable_if<enable_bitmask_operators<E>::enable, E>::type operator|(E lhs, E rhs)
+using EnableIfBitmaskOps = std::enable_if_t<enable_bitmask_operators<E>::value, int>;
+
+template<typename E, EnableIfBitmaskOps<E> = 0>
+constexpr E operator|(E lhs, E rhs)
 {
-	typedef typename std::underlying_type<E>::type underlying;
-	return static_cast<E>(
-		static_cast<underlying>(lhs) | static_cast<underlying>(rhs));
+	using U = std::underlying_type_t<E>;
+	return static_cast<E>(static_cast<U>(lhs) | static_cast<U>(rhs));
 }
-template<typename E>
-constexpr typename std::enable_if<enable_bitmask_operators<E>::enable, E&>::type operator|=(E& lhs, E rhs)
+template<typename E, EnableIfBitmaskOps<E> = 0>
+constexpr E operator|=(E& lhs, E rhs)
 {
-	typedef typename std::underlying_type<E>::type underlying;
-	lhs = static_cast<E>(
-		static_cast<underlying>(lhs) | static_cast<underlying>(rhs));
+	using U = std::underlying_type_t<E>;
+	lhs = static_cast<E>(static_cast<U>(lhs) | static_cast<U>(rhs));
 	return lhs;
 }
-template<typename E>
-constexpr typename std::enable_if<enable_bitmask_operators<E>::enable, E>::type operator&(E lhs, E rhs)
+template<typename E, EnableIfBitmaskOps<E> = 0>
+constexpr E operator&(E lhs, E rhs)
 {
-	typedef typename std::underlying_type<E>::type underlying;
-	return static_cast<E>(
-		static_cast<underlying>(lhs) & static_cast<underlying>(rhs));
+	using U = std::underlying_type_t<E>;
+	return static_cast<E>(static_cast<U>(lhs) & static_cast<U>(rhs));
 }
-template<typename E>
-constexpr typename std::enable_if<enable_bitmask_operators<E>::enable, E&>::type operator&=(E& lhs, E rhs)
+template<typename E, EnableIfBitmaskOps<E> = 0>
+constexpr E operator&=(E& lhs, E rhs)
 {
-	typedef typename std::underlying_type<E>::type underlying;
-	lhs = static_cast<E>(
-		static_cast<underlying>(lhs) & static_cast<underlying>(rhs));
+	using U = std::underlying_type_t<E>;
+	lhs = static_cast<E>(static_cast<U>(lhs) & static_cast<U>(rhs));
 	return lhs;
 }
-template<typename E>
-constexpr typename std::enable_if<enable_bitmask_operators<E>::enable, E>::type operator~(E rhs)
+template<typename E, EnableIfBitmaskOps<E> = 0>
+constexpr E operator~(E rhs)
 {
-	typedef typename std::underlying_type<E>::type underlying;
-	rhs = static_cast<E>(
-		~static_cast<underlying>(rhs));
+	using U = std::underlying_type_t<E>;
+	rhs = static_cast<E>(~static_cast<U>(rhs));
 	return rhs;
 }
 template<typename E>
