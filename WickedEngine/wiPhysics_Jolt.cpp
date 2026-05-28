@@ -630,6 +630,10 @@ namespace wi::physics
 				{
 					settings.mObjectLayer = Layers::NON_MOVING;
 				}
+				if (physicscomponent.IsLocked2D())
+				{
+					settings.mAllowedDOFs = EAllowedDOFs::Plane2D;
+				}
 
 				physicsobject.friction = settings.mFriction;
 				physicsobject.restitution = settings.mRestitution;

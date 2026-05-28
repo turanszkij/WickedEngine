@@ -412,6 +412,7 @@ namespace wi::scene
 			START_DEACTIVATED = 1 << 2,
 			REFRESH_PARAMETERS_REQUEST = 1 << 3,
 			CHARACTER_PHYSICS = 1 << 4,
+			LOCKED_2D = 1 << 5,
 		};
 		uint32_t _flags = EMPTY;
 
@@ -541,6 +542,9 @@ namespace wi::scene
 
 		constexpr void SetCharacterPhysics(bool value = true) { set_flag(_flags, CHARACTER_PHYSICS, value); }
 		constexpr bool IsCharacterPhysics() const { return _flags & CHARACTER_PHYSICS; }
+
+		constexpr void SetLocked2D(bool value) { set_flag(_flags, LOCKED_2D, value); }
+		constexpr bool IsLocked2D() const { return _flags & LOCKED_2D; }
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
