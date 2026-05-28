@@ -34,6 +34,8 @@ void CameraWindow::ResetCam()
 	{
 		camera.SetOrtho(true);
 	}
+
+	editor->Set2DMode(editor->is_2D_mode);
 }
 
 void CameraWindow::Create(EditorComponent* _editor)
