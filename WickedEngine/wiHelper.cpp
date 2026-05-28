@@ -1120,7 +1120,7 @@ namespace wi::helper
 		tmptr = localtime(&t);
 #endif
 		std::stringstream ss("");
-		ss << std::put_time(tmptr, "%d-%m-%Y %H-%M-%S");
+		ss << std::put_time(tmptr, "%Y-%m-%d %H-%M-%S");
 		return ss.str();
 	}
 
