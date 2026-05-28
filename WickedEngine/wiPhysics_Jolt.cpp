@@ -630,6 +630,10 @@ namespace wi::physics
 				{
 					settings.mObjectLayer = Layers::NON_MOVING;
 				}
+				if (physicscomponent.IsLocked2D())
+				{
+					settings.mAllowedDOFs = EAllowedDOFs::Plane2D;
+				}
 
 				physicsobject.friction = settings.mFriction;
 				physicsobject.restitution = settings.mRestitution;
@@ -1724,6 +1728,10 @@ namespace wi::physics
 					part.mObjectLayer = Layers::MOVING;
 					part.mOverrideMassProperties = EOverrideMassProperties::CalculateInertia;
 					part.mMassPropertiesOverride.mMass = masses[p];
+					if (humanoid.IsRagdoll2D())
+					{
+						part.mAllowedDOFs = EAllowedDOFs::Plane2D;
+					}
 
 					// First part is the root, doesn't have a parent and doesn't have a constraint
 					if (p == 0)

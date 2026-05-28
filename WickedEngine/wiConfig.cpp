@@ -16,7 +16,7 @@ namespace wi::config
 		const auto it = values.find(name);
 		if (it == values.end())
 		{
-			return 0;
+			return false;
 		}
 		if (!it->second.compare("true"))
 		{

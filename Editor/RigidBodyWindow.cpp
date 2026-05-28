@@ -188,6 +188,14 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 	}));
 	AddWidget(&kinematicCheckBox);
 
+	locked2DCheckBox.Create("2D lock: ");
+	locked2DCheckBox.SetTooltip("You can lock the physics to be 2D only (XY translation, Z rotation).");
+	locked2DCheckBox.SetCheck(false);
+	locked2DCheckBox.OnClick(forEachSelectedPhysicsComponentWithRefresh([](auto physicscomponent, auto args) {
+		physicscomponent->SetLocked2D(args.bValue);
+	}));
+	AddWidget(&locked2DCheckBox);
+
 	disabledeactivationCheckBox.Create("Disable Deactivation: ");
 	disabledeactivationCheckBox.SetTooltip("Toggle kinematic behaviour.");
 	disabledeactivationCheckBox.SetCheck(false);
@@ -565,6 +573,7 @@ void RigidBodyWindow::SetEntity(Entity entity)
 		offsetZSlider.SetValue(physicsComponent->local_offset.z);
 
 		kinematicCheckBox.SetCheck(physicsComponent->IsKinematic());
+		locked2DCheckBox.SetCheck(physicsComponent->IsLocked2D());
 		disabledeactivationCheckBox.SetCheck(physicsComponent->IsDisableDeactivation());
 		startDeactivatedCheckBox.SetCheck(physicsComponent->IsStartDeactivated());
 
@@ -666,6 +675,7 @@ void RigidBodyWindow::ResizeLayout()
 	layout.add_right(startDeactivatedCheckBox);
 	layout.add_right(disabledeactivationCheckBox);
 	layout.add_right(kinematicCheckBox);
+	layout.add_right(locked2DCheckBox);
 	layout.add_right(physicsDebugCheckBox);
 
 

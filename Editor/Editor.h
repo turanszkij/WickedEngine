@@ -79,6 +79,9 @@ public:
 
 	wi::gui::ComboBox guiScalingCombo;
 
+	bool is_2D_mode = false;
+	wi::gui::Button is2DModeButton;
+
 	GeneralWindow generalWnd;
 	GraphicsWindow graphicsWnd;
 	CameraWindow cameraWnd;
@@ -264,6 +267,8 @@ public:
 	void SetDefaultLocalization();
 	void SetLocalization(wi::Localization& loc);
 	void ReloadLanguage();
+
+	void Set2DMode(bool value);
 
 	struct FontData
 	{

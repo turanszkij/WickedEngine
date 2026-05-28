@@ -59,6 +59,7 @@ public:
 	bool isScalator = false;
 	bool isRotator = false;
 	bool isLocalSpace = false;
+	bool is2D = false;
 	bool IsEnabled() const { return isTranslator || isRotator || isScalator; }
 	XMMATRIX GetLocalRotation() const;
 	void SetEnabled(bool value)

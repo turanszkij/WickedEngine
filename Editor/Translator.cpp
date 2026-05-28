@@ -162,7 +162,7 @@ void Translator::Update(const CameraComponent& camera, const XMFLOAT4& currentMo
 			XMMATRIX W = XMMatrixIdentity();
 			XMFLOAT3 p = transform.GetPosition();
 
-			dist = std::max(wi::math::Distance(p, camera.Eye) * 0.05f, 0.0001f) * tool_scale;
+			dist = is2D ? (camera.ortho_vertical_size * 0.025f) : std::max(wi::math::Distance(p, camera.Eye) * 0.05f, 0.0001f) * tool_scale;
 
 			if (isRotator)
 			{
@@ -189,17 +189,21 @@ void Translator::Update(const CameraComponent& camera, const XMFLOAT4& currentMo
 				float range = std::max(circle_width * thick * 0.5f, pick_tolerance);
 				float perimeter = circle_radius - circle_width * thick * 0.5f;
 				float best_dist = std::numeric_limits<float>::max();
-				if (std::abs(perimeter - len_x) <= range && dist_x < best_dist)
+
+				if (!is2D)
 				{
-					state = TRANSLATOR_X;
-					XMStoreFloat3(&axis, localX);
-					best_dist = dist_x;
-				}
-				if (std::abs(perimeter - len_y) <= range && dist_y < best_dist)
-				{
-					state = TRANSLATOR_Y;
-					XMStoreFloat3(&axis, localY);
-					best_dist = dist_y;
+					if (std::abs(perimeter - len_x) <= range && dist_x < best_dist)
+					{
+						state = TRANSLATOR_X;
+						XMStoreFloat3(&axis, localX);
+						best_dist = dist_x;
+					}
+					if (std::abs(perimeter - len_y) <= range && dist_y < best_dist)
+					{
+						state = TRANSLATOR_Y;
+						XMStoreFloat3(&axis, localY);
+						best_dist = dist_y;
+					}
 				}
 				if (std::abs(perimeter - len_z) <= range && dist_z < best_dist)
 				{
@@ -262,7 +266,7 @@ void Translator::Update(const CameraComponent& camera, const XMFLOAT4& currentMo
 				{
 					state = TRANSLATOR_Y;
 				}
-				else if (aabb_z.intersects(ray))
+				else if (!is2D && aabb_z.intersects(ray))
 				{
 					state = TRANSLATOR_Z;
 				}
@@ -740,33 +744,39 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 
 		float darken = 1;
 
-		// x
-		XMStoreFloat4x4(&sb.g_xTransform, matX * GetMirrorMatrix(TRANSLATOR_X, camera) * mat);
-		darken = isLocalSpace ? 1 : (camera.Eye.x < transform.translation_local.x ? tool_darken_negative_axes : 1);
-		sb.g_xColor = state == TRANSLATOR_X ? highlight_color : XMFLOAT4(darken, channel_min * darken, channel_min * darken, 1);
-		sb.g_xColor.w *= tool_opacity;
-		device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
-		device->Draw(vertexCount, 0, cmd);
+		if (!isRotator || !is2D)
+		{
+			// x
+			XMStoreFloat4x4(&sb.g_xTransform, matX * GetMirrorMatrix(TRANSLATOR_X, camera) * mat);
+			darken = isLocalSpace ? 1 : (camera.Eye.x < transform.translation_local.x ? tool_darken_negative_axes : 1);
+			sb.g_xColor = state == TRANSLATOR_X ? highlight_color : XMFLOAT4(darken, channel_min * darken, channel_min * darken, 1);
+			sb.g_xColor.w *= tool_opacity;
+			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
+			device->Draw(vertexCount, 0, cmd);
 
-		// y
-		XMStoreFloat4x4(&sb.g_xTransform, matY * GetMirrorMatrix(TRANSLATOR_Y, camera)* mat);
-		darken = isLocalSpace ? 1 : (camera.Eye.y < transform.translation_local.y ? tool_darken_negative_axes : 1);
-		sb.g_xColor = state == TRANSLATOR_Y ? highlight_color : XMFLOAT4(channel_min * darken, darken, channel_min * darken, 1);
-		sb.g_xColor.w *= tool_opacity;
-		device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
-		device->Draw(vertexCount, 0, cmd);
+			// y
+			XMStoreFloat4x4(&sb.g_xTransform, matY * GetMirrorMatrix(TRANSLATOR_Y, camera) * mat);
+			darken = isLocalSpace ? 1 : (camera.Eye.y < transform.translation_local.y ? tool_darken_negative_axes : 1);
+			sb.g_xColor = state == TRANSLATOR_Y ? highlight_color : XMFLOAT4(channel_min * darken, darken, channel_min * darken, 1);
+			sb.g_xColor.w *= tool_opacity;
+			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
+			device->Draw(vertexCount, 0, cmd);
+		}
 
-		// z
-		XMStoreFloat4x4(&sb.g_xTransform, matZ * GetMirrorMatrix(TRANSLATOR_Z, camera)* mat);
-		darken = isLocalSpace ? 1 : (camera.Eye.z < transform.translation_local.z ? tool_darken_negative_axes : 1);
-		sb.g_xColor = state == TRANSLATOR_Z ? highlight_color : XMFLOAT4(channel_min * darken, channel_min * darken, darken, 1);
-		sb.g_xColor.w *= tool_opacity;
-		device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
-		device->Draw(vertexCount, 0, cmd);
+		if (!is2D || isRotator)
+		{
+			// z
+			XMStoreFloat4x4(&sb.g_xTransform, matZ * GetMirrorMatrix(TRANSLATOR_Z, camera) * mat);
+			darken = isLocalSpace ? 1 : (camera.Eye.z < transform.translation_local.z ? tool_darken_negative_axes : 1);
+			sb.g_xColor = state == TRANSLATOR_Z ? highlight_color : XMFLOAT4(channel_min * darken, channel_min * darken, darken, 1);
+			sb.g_xColor.w *= tool_opacity;
+			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
+			device->Draw(vertexCount, 0, cmd);
+		}
 
 	}
 
-	if (isRotator)
+	if (isRotator && !is2D)
 	{
 		// Another circle for rotator, a bit thinner and screen facing, so new geo:
 		constexpr uint32_t segmentCount = 90;
@@ -884,19 +894,22 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 			device->Draw(arraysize(verts), 0, cmd);
 
-			// xz
-			XMStoreFloat4x4(&sb.g_xTransform, matZ * GetMirrorMatrix(TRANSLATOR_XZ, camera) * mat);
-			sb.g_xColor = state == TRANSLATOR_XZ ? highlight_color : XMFLOAT4(channel_min, 1, channel_min, 1);
-			sb.g_xColor.w *= tool_opacity;
-			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
-			device->Draw(arraysize(verts), 0, cmd);
+			if (!is2D)
+			{
+				// xz
+				XMStoreFloat4x4(&sb.g_xTransform, matZ * GetMirrorMatrix(TRANSLATOR_XZ, camera) * mat);
+				sb.g_xColor = state == TRANSLATOR_XZ ? highlight_color : XMFLOAT4(channel_min, 1, channel_min, 1);
+				sb.g_xColor.w *= tool_opacity;
+				device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
+				device->Draw(arraysize(verts), 0, cmd);
 
-			// yz
-			XMStoreFloat4x4(&sb.g_xTransform, matY * GetMirrorMatrix(TRANSLATOR_YZ, camera) * mat);
-			sb.g_xColor = state == TRANSLATOR_YZ ? highlight_color : XMFLOAT4(1, channel_min, channel_min, 1);
-			sb.g_xColor.w *= tool_opacity;
-			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
-			device->Draw(arraysize(verts), 0, cmd);
+				// yz
+				XMStoreFloat4x4(&sb.g_xTransform, matY * GetMirrorMatrix(TRANSLATOR_YZ, camera) * mat);
+				sb.g_xColor = state == TRANSLATOR_YZ ? highlight_color : XMFLOAT4(1, channel_min, channel_min, 1);
+				sb.g_xColor.w *= tool_opacity;
+				device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
+				device->Draw(arraysize(verts), 0, cmd);
+			}
 		}
 
 		// Quad part:
@@ -932,19 +945,22 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 			device->Draw(arraysize(verts), 0, cmd);
 
-			// xz
-			XMStoreFloat4x4(&sb.g_xTransform, matZ * GetMirrorMatrix(TRANSLATOR_XZ, camera) * mat);
-			sb.g_xColor = state == TRANSLATOR_XZ ? highlight_color : XMFLOAT4(channel_min, 1, channel_min, 0.4f);
-			sb.g_xColor.w *= tool_opacity;
-			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
-			device->Draw(arraysize(verts), 0, cmd);
+			if (!is2D)
+			{
+				// xz
+				XMStoreFloat4x4(&sb.g_xTransform, matZ * GetMirrorMatrix(TRANSLATOR_XZ, camera) * mat);
+				sb.g_xColor = state == TRANSLATOR_XZ ? highlight_color : XMFLOAT4(channel_min, 1, channel_min, 0.4f);
+				sb.g_xColor.w *= tool_opacity;
+				device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
+				device->Draw(arraysize(verts), 0, cmd);
 
-			// yz
-			XMStoreFloat4x4(&sb.g_xTransform, matY * GetMirrorMatrix(TRANSLATOR_YZ, camera) * mat);
-			sb.g_xColor = state == TRANSLATOR_YZ ? highlight_color : XMFLOAT4(1, channel_min, channel_min, 0.4f);
-			sb.g_xColor.w *= tool_opacity;
-			device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
-			device->Draw(arraysize(verts), 0, cmd);
+				// yz
+				XMStoreFloat4x4(&sb.g_xTransform, matY * GetMirrorMatrix(TRANSLATOR_YZ, camera) * mat);
+				sb.g_xColor = state == TRANSLATOR_YZ ? highlight_color : XMFLOAT4(1, channel_min, channel_min, 0.4f);
+				sb.g_xColor.w *= tool_opacity;
+				device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
+				device->Draw(arraysize(verts), 0, cmd);
+			}
 		}
 	}
 
@@ -980,12 +996,15 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 		WriteAxisText(TRANSLATOR_Y, camera, TEXT);
 		wi::font::Draw(TEXT, strlen(TEXT), params, cmd);
 
-		darken = camera.Eye.z < transform.translation_local.z ? tool_darken_negative_axes : 1;
-		params.color = wi::Color::fromFloat4(XMFLOAT4(channel_min * darken, channel_min * darken, darken, tool_opacity));
-		XMStoreFloat3(&params.position, pos + XMVector3Transform(XMVectorSet(0, 0, axis_length + 0.5f, 0) * dist, GetMirrorMatrix(TRANSLATOR_Z, camera)));
-		std::memset(TEXT, 0, sizeof(TEXT));
-		WriteAxisText(TRANSLATOR_Z, camera, TEXT);
-		wi::font::Draw(TEXT, strlen(TEXT), params, cmd);
+		if (!is2D)
+		{
+			darken = camera.Eye.z < transform.translation_local.z ? tool_darken_negative_axes : 1;
+			params.color = wi::Color::fromFloat4(XMFLOAT4(channel_min * darken, channel_min * darken, darken, tool_opacity));
+			XMStoreFloat3(&params.position, pos + XMVector3Transform(XMVectorSet(0, 0, axis_length + 0.5f, 0) * dist, GetMirrorMatrix(TRANSLATOR_Z, camera)));
+			std::memset(TEXT, 0, sizeof(TEXT));
+			WriteAxisText(TRANSLATOR_Z, camera, TEXT);
+			wi::font::Draw(TEXT, strlen(TEXT), params, cmd);
+		}
 	}
 
 

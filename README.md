@@ -220,7 +220,7 @@ You can import models into the Editor, and save them as <b>WISCENE</b>, then any
 <img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/snowstorm.gif" width="320px"/>
 
 ### Graphics API:
-The default renderer is `DirectX 12` on Windows and `Vulkan` on Linux.
+The default renderer is `DirectX 12` on Windows, `Vulkan` on Linux and `Metal` on Apple systems.
 You can specify command line arguments (without any prefix) to switch between render devices or other settings. Currently the list of options:
 <table>
   <tr>

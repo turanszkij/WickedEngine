@@ -1269,6 +1269,23 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			}
 		}
 
+		editor->is2DModeButton.SetShadowRadius(1);
+		editor->is2DModeButton.SetShadowColor(wi::Color::Transparent());
+		editor->is2DModeButton.SetShadowHighlightSpread(0.2f);
+		for (auto& sprite : editor->is2DModeButton.sprites)
+		{
+			//sprite.params.enableHighlight();
+			if (gui_round_enabled) {
+				sprite.params.enableCornerRounding();
+				sprite.params.corners_rounding[0].radius = gui_round_radius_default;
+				sprite.params.corners_rounding[1].radius = gui_round_radius_default;
+				sprite.params.corners_rounding[2].radius = gui_round_radius_default;
+				sprite.params.corners_rounding[3].radius = gui_round_radius_default;
+			} else {
+				sprite.params.disableCornerRounding();
+			}
+		}
+
 		if (focusModeCheckBox.GetCheck())
 		{
 			editor->newEntityCombo.SetAngularHighlightWidth(0);
