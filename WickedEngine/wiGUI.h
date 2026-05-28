@@ -1097,16 +1097,10 @@ namespace wi::gui
 }
 
 template<>
-struct enable_bitmask_operators<wi::gui::Window::WindowControls> {
-	static const bool enable = true;
-};
+struct enable_bitmask_operators<wi::gui::Window::WindowControls> : std::true_type {};
 
 template<>
-struct enable_bitmask_operators<wi::gui::Window::AttachmentOptions> {
-	static const bool enable = true;
-};
+struct enable_bitmask_operators<wi::gui::Window::AttachmentOptions> : std::true_type {};
 
 template<>
-struct enable_bitmask_operators<wi::gui::LocalizationEnabled> {
-	static const bool enable = true;
-};
+struct enable_bitmask_operators<wi::gui::LocalizationEnabled> : std::true_type {};

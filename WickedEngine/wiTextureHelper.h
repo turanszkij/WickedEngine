@@ -87,6 +87,4 @@ namespace wi::texturehelper
 };
 
 template<>
-struct enable_bitmask_operators<wi::texturehelper::GradientFlags> {
-	static const bool enable = true;
-};
+struct enable_bitmask_operators<wi::texturehelper::GradientFlags> : std::true_type {};

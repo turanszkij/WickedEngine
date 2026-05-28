@@ -142,6 +142,4 @@ private:
 };
 
 template<>
-struct enable_bitmask_operators<ComponentsWindow::Filter> {
-	static constexpr bool enable = true;
-};
+struct enable_bitmask_operators<ComponentsWindow::Filter> : std::true_type {};
