@@ -4,7 +4,6 @@
 
 [![Github Build Status](https://github.com/turanszkij/WickedEngine/workflows/Build/badge.svg)](https://github.com/turanszkij/WickedEngine/actions)
 [![Discord chat](https://img.shields.io/discord/602811659224088577?logo=discord)](https://discord.gg/CFjRYmE)
-[![Forum](https://img.shields.io/badge/forum-join-blue)](https://wickedengine.net/forum/)
 <a href="https://twitter.com/intent/follow?screen_name=turanszkij"><img src="https://img.shields.io/twitter/follow/turanszkij.svg?style=social" alt="follow on Twitter"></a>
 <br/>
 [![Steam](https://img.shields.io/badge/Steam-%23000000.svg?logo=steam&logoColor=white)](https://store.steampowered.com/app/1967460/Wicked_Engine/)
@@ -290,7 +289,7 @@ If you are having trouble getting the applications to run, make sure that you sa
 - If you experience crashes, you can try these to find out the problem:
 	- make sure your environment is up to date, with latest graphics drivers and operating system updates.
 	- see if there is a log.txt in the working directory of the application (most likely near the application exe)
-	- request help on the [Forum](https://wickedengine.net/forum/), [Discord](https://discord.gg/CFjRYmE) or [Github issue](https://github.com/turanszkij/WickedEngine/issues)
+	- request help on [Discord](https://discord.gg/CFjRYmE) or via a [Github issue](https://github.com/turanszkij/WickedEngine/issues)
 	- build the engine in Debug mode and try to run it, see where it crashes
 	- run the engine with the `debugdevice` command argument and post the text from your console output window when the crash happens
 		- for very advanced users, using `gpuvalidation` with `debugdevice` will print additional graphics debug information
