@@ -79,6 +79,14 @@ void HumanoidWindow::Create(EditorComponent* _editor)
 	}));
 	AddWidget(&ragdollCheckBox);
 
+	ragdoll2DCheckBox.Create("Ragdoll Physics 2D: ");
+	ragdoll2DCheckBox.SetTooltip("You can lock ragdoll physics to the 2D (XY translation, Z rotation) plane here.");
+	ragdoll2DCheckBox.OnClick(forEachSelected([](auto humanoid, auto args) {
+		humanoid->SetRagdoll2D(args.bValue);
+		humanoid->ragdoll = {};
+	}));
+	AddWidget(&ragdoll2DCheckBox);
+
 	capsuleShadowCheckBox.Create("Capsule Shadow Disabled: ");
 	capsuleShadowCheckBox.SetTooltip("Disable capsule shadow for this specific humanoid.");
 	capsuleShadowCheckBox.OnClick(forEachSelected([] (auto humanoid, auto args) {
@@ -333,6 +341,7 @@ void HumanoidWindow::SetEntity(Entity entity)
 			ragdollDisabledCheckBox.SetCheck(humanoid->IsRagdollDisabled());
 			ragdollCheckBox.SetCheck(humanoid->IsRagdollPhysicsEnabled());
 			ragdollCheckBox.SetEnabled(!humanoid->IsRagdollDisabled());
+			ragdoll2DCheckBox.SetCheck(humanoid->IsRagdoll2D());
 			capsuleShadowCheckBox.SetCheck(humanoid->IsCapsuleShadowDisabled());
 			headRotMaxXSlider.SetValue(wi::math::RadiansToDegrees(humanoid->head_rotation_max.x));
 			headRotMaxYSlider.SetValue(wi::math::RadiansToDegrees(humanoid->head_rotation_max.y));
@@ -618,6 +627,7 @@ void HumanoidWindow::ResizeLayout()
 	layout.add(lookatEntityCombo);
 	layout.add_right(ragdollDisabledCheckBox);
 	layout.add_right(ragdollCheckBox);
+	layout.add_right(ragdoll2DCheckBox);
 	layout.add_right(capsuleShadowCheckBox);
 	layout.add(headRotMaxXSlider);
 	layout.add(headRotMaxYSlider);

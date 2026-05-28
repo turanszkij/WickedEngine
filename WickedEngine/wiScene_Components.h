@@ -2239,6 +2239,7 @@ namespace wi::scene
 			DISABLE_INTERSECTION = 1 << 2,
 			DISABLE_CAPSULE_SHADOW = 1 << 3,
 			RAGDOLL_DISABLED = 1 << 4,
+			RAGDOLL_2D = 1 << 5,
 		};
 		uint32_t _flags = LOOKAT;
 
@@ -2319,12 +2320,14 @@ namespace wi::scene
 		constexpr bool IsIntersectionDisabled() const { return _flags & DISABLE_INTERSECTION; }
 		constexpr bool IsCapsuleShadowDisabled() const { return _flags & DISABLE_CAPSULE_SHADOW; }
 		constexpr bool IsRagdollDisabled() const { return _flags & RAGDOLL_DISABLED; }
+		constexpr bool IsRagdoll2D() const { return _flags & RAGDOLL_2D; }
 
 		constexpr void SetLookAtEnabled(bool value = true) { set_flag(_flags, LOOKAT, value); }
 		constexpr void SetRagdollPhysicsEnabled(bool value = true) { set_flag(_flags, RAGDOLL_PHYSICS, value); }
 		constexpr void SetIntersectionDisabled(bool value = true) { set_flag(_flags, DISABLE_INTERSECTION, value); }
 		constexpr void SetCapsuleShadowDisabled(bool value = true) { set_flag(_flags, DISABLE_CAPSULE_SHADOW, value); }
 		constexpr void SetRagdollDisabled(bool value = true) { set_flag(_flags, RAGDOLL_DISABLED, value); }
+		constexpr void SetRagdoll2D(bool value = true) { set_flag(_flags, RAGDOLL_2D, value); }
 
 		XMFLOAT2 head_rotation_max = XMFLOAT2(XM_PI / 3.0f, XM_PI / 6.0f);
 		XMFLOAT2 eye_rotation_max = XMFLOAT2(XM_PI / 20.0f, XM_PI / 20.0f);

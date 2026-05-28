@@ -1565,6 +1565,10 @@ Describes a Collider object.
 - SetLookAt(Vector value)	-- Set a target lookAt position (for head an eyes movement)
 - SetRagdollPhysicsEnabled(bool value) -- Activate dynamic ragdoll physics. Note that kinematic ragdoll physics is always active (ragdoll is animation-driven/kinematic by default).
 - IsRagdollPhysicsEnabled() : bool
+- SetRagdollDisabled(bool value) -- completely disables ragdoll physics object creation for this humanoid
+- IsRagdollDisabled() : bool
+- SetRagdoll2D(bool value) -- lock ragdoll to the 2D plane (XY translation, Z rotation)
+- IsRagdoll2D() : bool
 - SetIntersectionDisabled(bool value) -- turn off intersection test for this ragdoll. This only affects direct intersection check with Scene::Intersects()
 - IsIntersectionDisabled() : bool
 - SetRagdollFatness(float value) -- Control the overall fatness of the ragdoll body parts except head (default: 1)
