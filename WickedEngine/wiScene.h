@@ -717,6 +717,4 @@ namespace wi::scene
 }
 
 template<>
-struct enable_bitmask_operators<wi::scene::Scene::EntitySerializeFlags> {
-	static constexpr bool enable = true;
-};
+struct enable_bitmask_operators<wi::scene::Scene::EntitySerializeFlags> : std::true_type {};

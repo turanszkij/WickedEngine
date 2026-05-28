@@ -144,10 +144,6 @@ namespace wi
 }
 
 template<>
-struct enable_bitmask_operators<wi::resourcemanager::Flags> {
-	static const bool enable = true;
-};
+struct enable_bitmask_operators<wi::resourcemanager::Flags> : std::true_type {};
 template<>
-struct enable_bitmask_operators<wi::resourcemanager::ResourceType> {
-	static const bool enable = true;
-};
+struct enable_bitmask_operators<wi::resourcemanager::ResourceType> : std::true_type {};
