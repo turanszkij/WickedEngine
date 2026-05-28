@@ -6433,10 +6433,12 @@ Luna<RigidBodyPhysicsComponent_BindLua>::FunctionType RigidBodyPhysicsComponent_
 	lunamethod(RigidBodyPhysicsComponent_BindLua, IsKinematic),
 	lunamethod(RigidBodyPhysicsComponent_BindLua, IsStartDeactivated),
 	lunamethod(RigidBodyPhysicsComponent_BindLua, IsCharacterPhysics),
+	lunamethod(RigidBodyPhysicsComponent_BindLua, IsLocked2D),
 	lunamethod(RigidBodyPhysicsComponent_BindLua, SetDisableDeactivation),
 	lunamethod(RigidBodyPhysicsComponent_BindLua, SetKinematic),
 	lunamethod(RigidBodyPhysicsComponent_BindLua, SetStartDeactivated),
 	lunamethod(RigidBodyPhysicsComponent_BindLua, SetCharacterPhysics),
+	lunamethod(RigidBodyPhysicsComponent_BindLua, SetLocked2D),
 	{ NULL, NULL }
 };
 Luna<RigidBodyPhysicsComponent_BindLua>::PropertyType RigidBodyPhysicsComponent_BindLua::properties[] = {
@@ -6546,6 +6548,25 @@ int RigidBodyPhysicsComponent_BindLua::SetCharacterPhysics(lua_State* L)
 int RigidBodyPhysicsComponent_BindLua::IsCharacterPhysics(lua_State* L)
 {
 	wi::lua::SSetBool(L, component->IsCharacterPhysics());
+	return 1;
+}
+int RigidBodyPhysicsComponent_BindLua::SetLocked2D(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		bool value = wi::lua::SGetBool(L, 1);
+		component->SetLocked2D(value);
+	}
+	else
+	{
+		wi::lua::SError(L, "SetLocked2D(bool value) not enough arguments!");
+	}
+	return 0;
+}
+int RigidBodyPhysicsComponent_BindLua::IsLocked2D(lua_State* L)
+{
+	wi::lua::SSetBool(L, component->IsLocked2D());
 	return 1;
 }
 
@@ -8263,6 +8284,8 @@ Luna<CharacterComponent_BindLua>::FunctionType CharacterComponent_BindLua::metho
 	lunamethod(CharacterComponent_BindLua, SetFootPlacementEnabled),
 	lunamethod(CharacterComponent_BindLua, SetCharacterToCharacterCollisionDisabled),
 	lunamethod(CharacterComponent_BindLua, SetDedicatedShadow),
+	lunamethod(CharacterComponent_BindLua, SetLocked2D),
+	lunamethod(CharacterComponent_BindLua, IsLocked2D),
 
 	lunamethod(CharacterComponent_BindLua, GetHealth),
 	lunamethod(CharacterComponent_BindLua, GetWidth),
@@ -8695,6 +8718,22 @@ int CharacterComponent_BindLua::SetDedicatedShadow(lua_State* L)
 	}
 	component->SetDedicatedShadow(wi::lua::SGetBool(L, 1));
 	return 0;
+}
+int CharacterComponent_BindLua::SetLocked2D(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 1)
+	{
+		wi::lua::SError(L, "SetLocked2D(bool value) not enough arguments!");
+		return 0;
+	}
+	component->SetLocked2D(wi::lua::SGetBool(L, 1));
+	return 0;
+}
+int CharacterComponent_BindLua::IsLocked2D(lua_State* L)
+{
+	wi::lua::SSetBool(L, component->IsLocked2D());
+	return 1;
 }
 
 int CharacterComponent_BindLua::GetHealth(lua_State* L)

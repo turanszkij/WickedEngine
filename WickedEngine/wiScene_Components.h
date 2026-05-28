@@ -2473,6 +2473,7 @@ namespace wi::scene
 			CHARACTER_TO_CHARACTER_COLLISION_DISABLED = 1 << 0,
 			DEDICATED_SHADOW = 1 << 1,
 			ACTIVE = 1 << 2,
+			LOCKED_2D = 1 << 3,
 		};
 		uint32_t _flags = ACTIVE;
 
@@ -2620,11 +2621,14 @@ namespace wi::scene
 		// Returns whether character processing is active or not
 		bool IsActive() const;
 
-		bool IsCharacterToCharacterCollisionDisabled() const { return _flags & CHARACTER_TO_CHARACTER_COLLISION_DISABLED; }
-		void SetCharacterToCharacterCollisionDisabled(bool value = true) { set_flag(_flags, CHARACTER_TO_CHARACTER_COLLISION_DISABLED, value); }
+		constexpr bool IsCharacterToCharacterCollisionDisabled() const { return _flags & CHARACTER_TO_CHARACTER_COLLISION_DISABLED; }
+		constexpr void SetCharacterToCharacterCollisionDisabled(bool value = true) { set_flag(_flags, CHARACTER_TO_CHARACTER_COLLISION_DISABLED, value); }
 
-		bool IsDedicatedShadow() const { return _flags & DEDICATED_SHADOW; }
-		void SetDedicatedShadow(bool value = true) { set_flag(_flags, DEDICATED_SHADOW, value); }
+		constexpr bool IsDedicatedShadow() const { return _flags & DEDICATED_SHADOW; }
+		constexpr void SetDedicatedShadow(bool value = true) { set_flag(_flags, DEDICATED_SHADOW, value); }
+
+		constexpr void SetLocked2D(bool value) { set_flag(_flags, LOCKED_2D, value); }
+		constexpr bool IsLocked2D() const { return _flags & LOCKED_2D; }
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};

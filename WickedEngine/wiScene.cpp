@@ -5687,6 +5687,7 @@ namespace wi::scene
 				const float leaning_limit = character.leaning_limit;
 				const XMVECTOR gravity = XMVectorSet(0, character.gravity * timestep, 0, 0);
 				const float delta_to_timestep = timestep / dt;
+				const bool locked_2D = character.IsLocked2D();
 
 				if (!character.humanoid_checked)
 				{
@@ -5782,6 +5783,11 @@ namespace wi::scene
 
 					position += velocity * timestep;
 					position += inertia * delta_to_timestep; // inertia is from moving platforms which are delta velocity from previous frame
+
+					if (locked_2D)
+					{
+						position = XMVectorSetZ(position, 0);
+					}
 
 					// Check ground:
 					Capsule capsule = Capsule(position, position + height, character.width);

@@ -1379,6 +1379,8 @@ Describes a Rigid Body Physics object.
 - SetStartDeactivated(bool value) -- If true, rigid body will be deactivated when added to the simulation (if it's dynamic, it won't fall)
 - SetCharacterPhysics(bool value)	-- enable character physics that is driven by the physics engine
 - IsCharacterPhysics() : bool	-- returns true if this rigid body has character physics enabled
+- SetLocked2D(bool value)	-- locks the physics to the 2D plane (XY translation, Z rotation)
+- IsLocked2D() : bool	-- returns true if the physics is locked to the 2D plane
 
 #### SoftBodyPhysicsComponent
 Describes a Soft Body Physics object.
@@ -1716,6 +1718,8 @@ Note that CharacterComponent is NOT using physics, but a custom character logic.
 - SetRelativeOffset(Vector value)	-- Apply a relative offset (relative to facing direction)
 - SetFootPlacementEnabled(bool value)	--Enable/disable foot placement with inverse kinematics
 - SetCharacterToCharacterCollisionDisabled(bool value)	-- Set whether character collision with other characters is disabled or not for this character (default: false)
+- SetLocked2D(bool value)	-- locks the character position to the 2D plane (XY translation, rotation is unlocked but it can only move sideways)
+- IsLocked2D() : bool	-- returns true if the position is locked to the 2D plane
 
 - GetHealth() : int	-- Get the current health
 - GetWidth() : float	-- Get the horizontal size of the character capsule (same as capsule radius)
