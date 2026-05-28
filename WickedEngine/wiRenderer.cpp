@@ -8494,10 +8494,8 @@ void DrawDebugWorld(
 		const float alpha = gridHelperColor.w;
 		const float smalleralpha = alpha * 0.25f;
 		const float channel_min = 0.2f;
-
-		const float h = 0.01f; // avoid z-fight with zero plane
-		const int a = gridHelper2D ? 200 : 20; // bigger grid in 2D
-		const uint32_t linecount = (a + 1) * 2;
+		const XMFLOAT4 red = XMFLOAT4(1, channel_min, channel_min, alpha);
+		const XMFLOAT4 blueOrGreen = gridHelper2D ? XMFLOAT4(channel_min, 1, channel_min, alpha) : XMFLOAT4(channel_min, channel_min, 1, alpha);
 
 		struct Line
 		{
@@ -8507,49 +8505,119 @@ void DrawDebugWorld(
 			XMFLOAT4 color1;
 		};
 
+		const float h = 0.01f; // avoid z-fight with zero plane
+		const int gridRes3D = 20;
+		uint32_t linecount = (gridRes3D + 1) * 2;
+
+		XMMATRIX viewProj = camera.GetViewProjection();
+		if (gridHelper2D)
+		{
+			viewProj = XMMatrixRotationX(XM_PIDIV2) * viewProj;
+		}
+		const XMMATRIX invVP = XMMatrixInverse(nullptr, viewProj);
+		const XMFLOAT4 corners[4] = {
+			{ -1, -1, 0, 1 },
+			{  1, -1, 0, 1 },
+			{ -1,  1, 0, 1 },
+			{  1,  1, 0, 1 }
+		};
+		float minX = FLT_MAX, maxX = -FLT_MAX;
+		float minZ = FLT_MAX, maxZ = -FLT_MAX;
+		for (int i = 0; i < 4; ++i)
+		{
+			XMVECTOR v = XMLoadFloat4(&corners[i]);
+			v = XMVector3TransformCoord(v, invVP);
+			XMFLOAT4 world;
+			XMStoreFloat4(&world, v);
+			minX = std::min(minX, world.x);
+			maxX = std::max(maxX, world.x);
+			minZ = std::min(minZ, world.z);
+			maxZ = std::max(maxZ, world.z);
+		}
+		const float xdif = maxX - minX;
+		const float gridStep = xdif > 200.0f ? 10.0f : 1.0f;
+		const float majorStep = gridStep * 10.0f;
+		if (gridHelper2D)
+		{
+			for (float x = std::floor(minX / gridStep) * gridStep; x <= maxX; x += gridStep)
+			{
+				linecount++;
+			}
+			for (float z = std::floor(minZ / gridStep) * gridStep; z <= maxZ; z += gridStep)
+			{
+				linecount++;
+			}
+		}
+
 		auto mem = device->AllocateGPU(sizeof(Line) * linecount, cmd);
 		Line* lines = (Line*)mem.data;
 		Line line = {};
 
-		const XMFLOAT4 blueOrGreen = gridHelper2D ? XMFLOAT4(channel_min, 1, channel_min, alpha) : XMFLOAT4(channel_min, channel_min, 1, alpha);
-
-		int count = 0;
-		for (int i = 0; i <= a; ++i)
-		{
-			line.position0 = XMFLOAT4(i - a * 0.5f, h, -a * 0.5f, 1);
-			line.color0	= (i == a / 2 ? blueOrGreen : gridHelperColor);
-			line.position1 = XMFLOAT4(i - a * 0.5f, h, +a * 0.5f, 1);
-			line.color1	= (i == a / 2 ? blueOrGreen : gridHelperColor);
-			if (gridHelper2D && ((i % 10) != 0))
-			{
-				line.color0.w = smalleralpha;
-				line.color1.w = smalleralpha;
-			}
-			std::memcpy(&lines[count++], &line, sizeof(line)); // writecombine
-		}
-		for (int i = 0; i <= a; ++i)
-		{
-			line.position0 = XMFLOAT4(-a * 0.5f, h, i - a * 0.5f, 1);
-			line.color0	= (i == a / 2 ? XMFLOAT4(1, channel_min, channel_min, alpha) : gridHelperColor);
-			line.position1 = XMFLOAT4(+a * 0.5f, h, i - a * 0.5f, 1);
-			line.color1	= (i == a / 2 ? XMFLOAT4(1, channel_min, channel_min, alpha) : gridHelperColor);
-			if (gridHelper2D && ((i % 10) != 0))
-			{
-				line.color0.w = smalleralpha;
-				line.color1.w = smalleralpha;
-			}
-			std::memcpy(&lines[count++], &line, sizeof(line)); // writecombine
-		}
-
-		XMMATRIX transform = camera.GetViewProjection();
-
+		uint32_t count = 0;
 		if (gridHelper2D)
 		{
-			transform = XMMatrixRotationX(XM_PIDIV2) * transform;
+			for (float i = std::floor(minX / gridStep) * gridStep; i <= maxX; i += gridStep)
+			{
+				const bool isMajor = std::abs(std::fmod(i, majorStep)) < 0.001f;
+				line.position0 = XMFLOAT4(i, h, minZ, 1.0f);
+				line.position1 = XMFLOAT4(i, h, maxZ, 1.0f);
+				line.color0 = i == 0 ? blueOrGreen : gridHelperColor;
+				line.color1 = line.color0;
+				if (!isMajor)
+				{
+					line.color0.w = smalleralpha;
+					line.color1.w = smalleralpha;
+				}
+				std::memcpy(&lines[count++], &line, sizeof(line)); // writecombine
+			}
+
+			for (float i = std::floor(minZ / gridStep) * gridStep; i <= maxZ; i += gridStep)
+			{
+				const bool isMajor = std::abs(std::fmod(i, majorStep)) < 0.001f;
+				line.position0 = XMFLOAT4(minX, h, i, 1.0f);
+				line.position1 = XMFLOAT4(maxX, h, i, 1.0f);
+				line.color0 = i == 0 ? red : gridHelperColor;
+				line.color1 = line.color0;
+				if (!isMajor)
+				{
+					line.color0.w = smalleralpha;
+					line.color1.w = smalleralpha;
+				}
+				std::memcpy(&lines[count++], &line, sizeof(line)); // writecombine
+			}
+		}
+		else
+		{
+			for (int i = 0; i <= gridRes3D; ++i)
+			{
+				line.position0 = XMFLOAT4(i - gridRes3D * 0.5f, h, -gridRes3D * 0.5f, 1);
+				line.color0 = (i == gridRes3D / 2 ? blueOrGreen : gridHelperColor);
+				line.position1 = XMFLOAT4(i - gridRes3D * 0.5f, h, +gridRes3D * 0.5f, 1);
+				line.color1 = line.color0;
+				//if (((i % 10) != 0))
+				//{
+				//	line.color0.w = smalleralpha;
+				//	line.color1.w = smalleralpha;
+				//}
+				std::memcpy(&lines[count++], &line, sizeof(line)); // writecombine
+			}
+			for (int i = 0; i <= gridRes3D; ++i)
+			{
+				line.position0 = XMFLOAT4(-gridRes3D * 0.5f, h, i - gridRes3D * 0.5f, 1);
+				line.color0 = (i == gridRes3D / 2 ? red : gridHelperColor);
+				line.position1 = XMFLOAT4(+gridRes3D * 0.5f, h, i - gridRes3D * 0.5f, 1);
+				line.color1 = line.color0;
+				//if (((i % 10) != 0))
+				//{
+				//	line.color0.w = smalleralpha;
+				//	line.color1.w = smalleralpha;
+				//}
+				std::memcpy(&lines[count++], &line, sizeof(line)); // writecombine
+			}
 		}
 
 		MiscCB sb;
-		XMStoreFloat4x4(&sb.g_xTransform, transform);
+		XMStoreFloat4x4(&sb.g_xTransform, viewProj);
 		sb.g_xColor = float4(1, 1, 1, 1);
 
 		device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
@@ -8564,7 +8632,7 @@ void DrawDebugWorld(
 			mem.offset
 		};
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
-		device->Draw(linecount * 2, 0, cmd);
+		device->Draw(count * 2, 0, cmd);
 
 		device->EventEnd(cmd);
 	}

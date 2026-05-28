@@ -2142,7 +2142,7 @@ void EditorComponent::Update(float dt)
 			editorscene.camera_transform.UpdateTransform();
 			XMStoreFloat3(&editorscene.cam_move, move);
 
-			if (!paintToolWnd.IsVisible() && std::abs(currentMouse.z) > 0.1f)
+			if (!paintToolWnd.IsVisible() && std::abs(currentMouse.z) > 0.25f)
 			{
 				camera.ortho_vertical_size -= currentMouse.z;
 			}
