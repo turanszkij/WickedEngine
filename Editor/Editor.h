@@ -268,6 +268,8 @@ public:
 	void SetLocalization(wi::Localization& loc);
 	void ReloadLanguage();
 
+	void Set2DMode(bool value);
+
 	struct FontData
 	{
 		std::string name;

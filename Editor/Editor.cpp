@@ -1498,22 +1498,8 @@ void EditorComponent::Load()
 	is2DModeButton.SetTooltip("Switch between 3D and 2D editor workflows. 2D mode will lock the camera and controls to the XY axes.");
 	is2DModeButton.SetShadowRadius(2);
 	is2DModeButton.OnClick([this](wi::gui::EventArgs args) {
-		is_2D_mode = !is_2D_mode;
-
-		EditorScene& editorscene = GetCurrentEditorScene();
-		if (is_2D_mode)
-		{
-			editorscene.camera_transform.translation_local.z = -10;
-			editorscene.camera_transform.rotation_local = XMFLOAT4(0, 0, 0, 1);
-			editorscene.camera_transform.UpdateTransform();
-			editorscene.camera.SetOrtho(true);
-			editorscene.camera.ortho_vertical_size = editorscene.camera.ComputeOrthoVerticalSizeFromPerspective(editorscene.camera_transform.translation_local.z); // camera distance from origin
-		}
-		else
-		{
-			editorscene.camera.SetOrtho(cameraWnd.orthoCheckBox.GetCheck());
-		}
-		});
+		Set2DMode(!is_2D_mode);
+	});
 	GetGUI().AddWidget(&is2DModeButton);
 
 	componentsWnd.Create(this);
@@ -1596,6 +1582,8 @@ void EditorComponent::Load()
 		SwizzleFromString("111r")
 	);
 	assert(success);
+
+	Set2DMode(main->config.GetBool("2D_mode"));
 
 	RenderPath2D::Load();
 }
@@ -7021,4 +7009,25 @@ void EditorComponent::SetLocalization(wi::Localization& loc)
 void EditorComponent::ReloadLanguage()
 {
 	generalWnd.languageCombo.SetSelected(generalWnd.languageCombo.GetSelected());
+}
+
+void EditorComponent::Set2DMode(bool value)
+{
+	is_2D_mode = value;
+
+	EditorScene& editorscene = GetCurrentEditorScene();
+	if (is_2D_mode)
+	{
+		editorscene.camera_transform.translation_local.z = -10;
+		editorscene.camera_transform.rotation_local = XMFLOAT4(0, 0, 0, 1);
+		editorscene.camera_transform.UpdateTransform();
+		editorscene.camera.SetOrtho(true);
+		editorscene.camera.ortho_vertical_size = editorscene.camera.ComputeOrthoVerticalSizeFromPerspective(editorscene.camera_transform.translation_local.z); // camera distance from origin
+	}
+	else
+	{
+		editorscene.camera.SetOrtho(cameraWnd.orthoCheckBox.GetCheck());
+	}
+
+	main->config.Set("2D_mode", is_2D_mode);
 }
