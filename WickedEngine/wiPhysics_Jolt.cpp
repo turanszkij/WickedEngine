@@ -1730,7 +1730,7 @@ namespace wi::physics
 					part.mMassPropertiesOverride.mMass = masses[p];
 					if (humanoid.IsRagdoll2D())
 					{
-						part.mAllowedDOFs = EAllowedDOFs::Plane2D;
+						part.mAllowedDOFs = EAllowedDOFs::Plane2D | EAllowedDOFs::RotationX | EAllowedDOFs::RotationY; // ragdoll parts are allowed to rotate in XY, this fixes ragdoll facing issue where it would be always forced to face +Z
 					}
 
 					// First part is the root, doesn't have a parent and doesn't have a constraint
