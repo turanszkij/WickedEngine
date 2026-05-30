@@ -539,6 +539,8 @@ void EditorComponent::ResizeLayout()
 }
 void EditorComponent::Load()
 {
+	wi::Timer timer;
+
 	//Load hotkeys here
 	HotkeyRemap(main);
 
@@ -1586,6 +1588,8 @@ void EditorComponent::Load()
 	Set2DMode(main->config.GetBool("2D_mode"));
 
 	RenderPath2D::Load();
+
+	wilog_success("Editor loaded in %d ms", (int)std::round(timer.elapsed()));
 }
 void EditorComponent::Start()
 {

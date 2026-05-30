@@ -107,6 +107,18 @@ This section describes the common tools for scripting which are not necessarily 
 - getprops(table object)  -- get reflection data from object
 - len(table object)  -- get the length of a table
 - backlog_post_list(table list)  -- post table contents to the backlog
+- backlog_setlevel(LogLevel level) -- modifies the logging level
+
+```
+LogLevel = {
+	None = 0,
+	Default = 1,
+	Warning = 2,
+	Error = 3,
+	Success = 4,
+}
+```
+
 - fixedupdate()  -- wait for a fixed update step to be called (to be used from inside a process)
 - update()  -- wait for variable update step to be called (to be used from inside a process)
 - render()  -- wait for a render step to be called (to be used from inside a process)
