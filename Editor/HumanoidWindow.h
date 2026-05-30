@@ -13,6 +13,7 @@ public:
 
 	wi::gui::Label infoLabel;
 	wi::gui::Button importAnimationsButton;
+	wi::gui::Button activateAllRagdollsButton;
 	wi::gui::ComboBox animationTesterCombo;
 	wi::gui::CheckBox lookatMouseCheckBox;
 	wi::gui::CheckBox lookatCheckBox;

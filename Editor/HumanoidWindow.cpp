@@ -220,6 +220,19 @@ void HumanoidWindow::Create(EditorComponent* _editor)
 
 
 
+	activateAllRagdollsButton.Create("Activate all ragdolls");
+	activateAllRagdollsButton.SetTooltip("Import animations from a scene or model file and retarget them to this humanoid.");
+	activateAllRagdollsButton.OnClick([=](wi::gui::EventArgs args) {
+		wi::scene::Scene& scene = editor->GetCurrentScene();
+		for (size_t i = 0; i < scene.humanoids.GetCount(); ++i)
+		{
+			scene.humanoids[i].SetRagdollPhysicsEnabled(true);
+		}
+	});
+	AddWidget(&activateAllRagdollsButton);
+
+
+
 	importAnimationsButton.Create(ICON_ANIMATION " Import animations");
 	importAnimationsButton.SetTooltip("Import animations from a scene or model file and retarget them to this humanoid.");
 	importAnimationsButton.OnClick([=](wi::gui::EventArgs args) {
@@ -622,6 +635,7 @@ void HumanoidWindow::ResizeLayout()
 	layout.margin_left = 110;
 
 	layout.add_fullwidth(infoLabel);
+	layout.add_fullwidth(activateAllRagdollsButton);
 	layout.add_right(lookatCheckBox);
 	lookatMouseCheckBox.SetPos(XMFLOAT2(lookatCheckBox.GetPos().x - 120, lookatCheckBox.GetPos().y));
 	layout.add(lookatEntityCombo);

@@ -2623,6 +2623,7 @@ void EditorComponent::Update(float dt)
 		}
 
 		// Interactions:
+		bool interact_pick_allowed = true;
 		{
 			// Interact:
 			if (CheckInput(EditorActions::RAGDOLL_AND_PHYSICS_IMPULSE_TESTER))
@@ -2654,6 +2655,7 @@ void EditorComponent::Update(float dt)
 								wi::physics::ApplyImpulseAt(*rigidbody, impulse, result.position_local);
 							}
 						}
+						interact_pick_allowed = false;
 					}
 				}
 			}
@@ -2663,6 +2665,7 @@ void EditorComponent::Update(float dt)
 				if (wi::input::Down(wi::input::MOUSE_BUTTON_MIDDLE))
 				{
 					wi::physics::PickDrag(scene, pickRay, physicsDragOp);
+					interact_pick_allowed = !physicsDragOp.IsValid();
 				}
 				else
 				{
@@ -2701,7 +2704,7 @@ void EditorComponent::Update(float dt)
 			}
 
 			// Other:
-			if (wi::input::Down(wi::input::MOUSE_BUTTON_MIDDLE))
+			if (interact_pick_allowed && wi::input::Down(wi::input::MOUSE_BUTTON_MIDDLE))
 			{
 				hovered = wi::scene::Pick(pickRay, wi::enums::FILTER_OBJECT_ALL, ~0u, scene);
 				if (hovered.entity != INVALID_ENTITY)

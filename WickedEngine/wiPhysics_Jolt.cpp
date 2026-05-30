@@ -1869,6 +1869,7 @@ namespace wi::physics
 				PhysicsSystem& physics_system = ((PhysicsScene*)physics_scene.get())->physics_system;
 				BodyInterface& body_interface = physics_system.GetBodyInterface(); // locking version because this is called from job system!
 
+				std::scoped_lock lck(scene.locker);
 				int c = 0;
 				for (auto& x : rigidbodies)
 				{
@@ -1914,6 +1915,7 @@ namespace wi::physics
 				PhysicsSystem& physics_system = ((PhysicsScene*)physics_scene.get())->physics_system;
 				BodyInterface& body_interface = physics_system.GetBodyInterface(); // locking version because this is called from job system!
 
+				std::scoped_lock lck(scene.locker);
 				int c = 0;
 				for (auto& x : rigidbodies)
 				{
