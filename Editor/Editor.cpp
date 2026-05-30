@@ -541,6 +541,8 @@ void EditorComponent::Load()
 {
 	wi::Timer timer;
 
+	is_2D_mode = main->config.GetBool("2D_mode");
+
 	//Load hotkeys here
 	HotkeyRemap(main);
 
@@ -1584,8 +1586,6 @@ void EditorComponent::Load()
 		SwizzleFromString("111r")
 	);
 	assert(success);
-
-	Set2DMode(main->config.GetBool("2D_mode"));
 
 	RenderPath2D::Load();
 
@@ -7030,7 +7030,8 @@ void EditorComponent::Set2DMode(bool value)
 	}
 	else
 	{
-		editorscene.camera.SetOrtho(cameraWnd.orthoCheckBox.GetCheck());
+		editorscene.camera.SetOrtho(false);
+		cameraWnd.orthoCheckBox.SetCheck(false);
 	}
 
 	main->config.Set("2D_mode", is_2D_mode);
