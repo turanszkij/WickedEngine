@@ -125,7 +125,9 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	float fMinDepth = asfloat(uMaxDepth);
 	float fMaxDepth = asfloat(uMinDepth);
 
-	fMaxDepth = max(0.000001, fMaxDepth); // fix for AMD!!!!!!!!!
+	// Disallow zero-thin depth box, can cause artifacts especially on AMD with ortho camera looking at flat plane sometimes:
+	fMinDepth += FLT_EPSILON;
+	fMaxDepth -= FLT_EPSILON;
 
 	Frustum GroupFrustum;
 	AABB GroupAABB;			// frustum AABB around min-max depth in View Space
