@@ -3913,6 +3913,12 @@ void EditorComponent::Render() const
 					wi::font::Draw("Vehicle", fp, cmd);
 					dummy::draw_vehicle(XMLoadFloat4x4(&transform.world) * VP, fp.color, true, cmd);
 					break;
+				case MetadataComponent::Preset::PointOfInterest:
+					fp.position.y += 1.0f;
+					fp.color = wi::Color(176, 91, 255, 255);
+					wi::font::Draw("Point of interest", fp, cmd);
+					dummy::draw_poi(XMMatrixScaling(sca, sca, sca) * XMLoadFloat4x4(&transform.world) * VP, fp.color, true, cmd);
+					break;
 				}
 			}
 

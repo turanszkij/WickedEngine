@@ -472,6 +472,7 @@ MetadataPreset = {
 	NPC = 4,
 	Pickup = 5,
 	Vehicle = 6,
+	PointOfInterest = 7,
 }
 )";
 

@@ -2384,6 +2384,7 @@ namespace wi::scene
 			NPC,
 			Pickup,
 			Vehicle,
+			PointOfInterest,
 		};
 		Preset preset = Preset::Custom;
 

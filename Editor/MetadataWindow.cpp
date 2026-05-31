@@ -46,6 +46,7 @@ void MetadataWindow::Create(EditorComponent* _editor)
 	presetCombo.AddItem("Npc", (uint64_t)MetadataComponent::Preset::NPC);
 	presetCombo.AddItem("Pickup", (uint64_t)MetadataComponent::Preset::Pickup);
 	presetCombo.AddItem("Vehicle", (uint64_t)MetadataComponent::Preset::Vehicle);
+	presetCombo.AddItem("Point of interest", (uint64_t)MetadataComponent::Preset::PointOfInterest);
 	presetCombo.OnSelect(forEachSelected([] (auto metadata, auto args) {
 		metadata->preset = (MetadataComponent::Preset)args.userdata;
 	}));

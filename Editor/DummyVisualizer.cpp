@@ -134,4 +134,10 @@ namespace dummy
 		static DummyVisualizer vis;
 		vis.Draw(vertices, arraysize(vertices), indices, arraysize(indices), matrix, color, depth, cmd);
 	}
+	void draw_poi(const XMMATRIX& matrix, const XMFLOAT4& color, bool depth, wi::graphics::CommandList cmd)
+	{
+#include "dummy_poi.h"
+		static DummyVisualizer vis;
+		vis.Draw(vertices, arraysize(vertices), indices, arraysize(indices), matrix, color, depth, cmd);
+	}
 }
