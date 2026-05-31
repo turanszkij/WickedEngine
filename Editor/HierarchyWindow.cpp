@@ -64,6 +64,9 @@ void HierarchyWindow::Create(EditorComponent* _editor)
 
 void HierarchyWindow::SetEntity(Entity entity)
 {
+	if (entity == this->entity)
+		return; // refreshing the things below every frame can get very expensive, so only refresh if selection changed
+
 	this->entity = entity;
 
 	const Scene& scene = editor->GetCurrentScene();
