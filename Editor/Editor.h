@@ -304,7 +304,10 @@ public:
 
 	~Editor() override
 	{
-		config.Commit();
+		if (!IsScriptReplacement()) // editor config is not saved by script replaced executable
+		{
+			config.Commit();
+		}
 	}
 };
 

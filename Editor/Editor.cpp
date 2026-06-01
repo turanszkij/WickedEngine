@@ -400,7 +400,6 @@ void Editor::SaveWindowSize()
 			{
 				config.Set("width", width);
 				config.Set("height", height);
-				config.Commit();
 			}
 		}
 #elif defined(SDL2)
@@ -413,14 +412,12 @@ void Editor::SaveWindowSize()
 			{
 				config.Set("width", width);
 				config.Set("height", height);
-				config.Commit();
 			}
 		}
 #elif defined(__APPLE__)
 		XMUINT2 size = wi::apple::GetWindowSizeNoScaling(window);
 		config.Set("width", size.x);
 		config.Set("height", size.y);
-		config.Commit();
 #endif
 	}
 }
@@ -1054,7 +1051,6 @@ void EditorComponent::Load()
 		{
 			wi::physics::SetSimulationEnabled(!wi::physics::IsSimulationEnabled());
 			main->config.GetSection("options").Set("physics", wi::physics::IsSimulationEnabled());
-			main->config.Commit();
 		}
 	});
 	GetGUI().AddWidget(&physicsButton);
@@ -1309,7 +1305,6 @@ void EditorComponent::Load()
 		bool fullscreen = main->config.GetBool("fullscreen");
 		fullscreen = !fullscreen;
 		main->config.Set("fullscreen", fullscreen);
-		main->config.Commit();
 
 		wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t) {
 
