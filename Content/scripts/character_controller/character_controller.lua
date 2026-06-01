@@ -69,6 +69,7 @@ Mood = {
 
 player = nil
 npcs = {}
+points_of_interest = {}
 
 local enable_footprints = true
 local footprint_texture = Texture(script_dir() .. "assets/footprint.dds")
@@ -104,7 +105,7 @@ local function Character(model_scene, start_transform, controllable, anim_scene,
 		scale = Vector(1, 1, 1),
 		rotation = Vector(0,math.pi,0),
 		position = Vector(),
-        ground_intersect = false,
+		ground_intersect = false,
 		controllable = true,
 		foot_placed_left = false,
 		foot_placed_right = false,
@@ -112,7 +113,7 @@ local function Character(model_scene, start_transform, controllable, anim_scene,
 		mood_amount = 1,
 		expression = INVALID_ENTITY,
 		object_entities = {},
-
+		
 		patrol_waypoints = {},
 		patrol_waypoints_original = {},
 		patrol_next = 0,
@@ -471,13 +472,13 @@ local function Character(model_scene, start_transform, controllable, anim_scene,
 			end
 		end,
 
-        SetPatrol = function(self, patrol)
-            self.patrol_waypoints_original = patrol
-            self.patrol_waypoints = patrol
-        end,
-        ReturnToPatrol = function(self) -- return to original patrol route
-            self.patrol_waypoints = self.patrol_waypoints_original
-        end,
+		SetPatrol = function(self, patrol)
+			self.patrol_waypoints_original = patrol
+			self.patrol_waypoints = patrol
+		end,
+		ReturnToPatrol = function(self) -- return to original patrol route
+			self.patrol_waypoints = self.patrol_waypoints_original
+		end,
 
 		Follow = function(self, leader)
 			self.hired = leader
@@ -649,6 +650,47 @@ local ResolveCharacters = function(characterA, characterB)
 
 end
 
+
+local function PointOfInterest(entity)
+	local self = {
+		entity = INVALID_ENTITY,
+		position = Vector(),
+		dialogs = {},
+		next_dialog = 1,
+	}
+	self.entity = entity
+	return self
+end
+
+local ResolvePointsOfInterest = function(player)
+	local humanoid = scene.Component_GetHumanoid(player.humanoid)
+	if humanoid == INVALID_ENTITY then
+		return
+	end
+
+	local head = scene.Component_GetTransform(player.head).GetPosition()
+	for i,poi in ipairs(points_of_interest) do
+		poi.position = scene.Component_GetTransform(poi.entity).GetPosition()
+		local distance = vector.Subtract(head, poi.position).Length()
+		if distance < 2.5 then
+			humanoid.SetLookAtEnabled(true)
+			humanoid.SetLookAt(poi.position)
+
+			local dir = vector.Subtract(poi.position, head)
+			dir.SetY(0)
+			dir = dir.Normalize()
+			local facing_amount = vector.Dot(player:GetFacing(), dir)
+			if poi.dialogs ~=nil and #poi.dialogs > 0 and conversation.state == ConversationState.Disabled and facing_amount > 0.5 then
+				if input.Press(KEYBOARD_BUTTON_ENTER) or input.Press(GAMEPAD_BUTTON_2) then
+					conversation:Enter(poi)
+				end
+				DrawDebugText("", vector.Add(poi.position, Vector(0,0.4)), Vector(1,1,1,1), 0.1, DEBUG_TEXT_CAMERA_FACING)
+			end
+		end
+	end
+
+end
+
 -- Third person camera controller class:
 local function ThirdPersonCamera(character)
 	local self = {
@@ -807,7 +849,7 @@ runProcess(function()
 	SetDebugCamerasEnabled(false)
 
 	-- Configure a simple loading progress bar:
-    local loadingbar = Sprite()
+	local loadingbar = Sprite()
 	loadingbar.SetMaskTexture(texturehelper.CreateGradientTexture(
 		GradientType.Linear,
 		2048, 1,
@@ -818,7 +860,7 @@ runProcess(function()
 	local loadingbarparams = loadingbar.GetParams()
 	loadingbarparams.SetColor(Vector(1,0.2,0.2,1))
 	loadingbarparams.SetBlendMode(BLENDMODE_ALPHA)
-    loadingscreen.AddSprite(loadingbar)
+	loadingscreen.AddSprite(loadingbar)
 	loadingscreen.SetBackgroundTexture(Texture(script_dir() .. "assets/loadingscreen.png"))
 
 	-- All LoadModel tasks are started by the LoadingScreen asynchronously, but we get back root Entity handles immediately:
@@ -829,37 +871,37 @@ runProcess(function()
 	loadingscreen.AddRenderPathActivationTask(path, application, 0.5, 0, 0, 0, FadeType.FadeToColor)
 	application.SetActivePath(loadingscreen, 0.5, 0, 0, 0, FadeType.CrossFade) -- activate and switch to loading screen
 
-    -- Because we are in a runProcess, we can block loading screen like this while application is still running normally:
+	-- Because we are in a runProcess, we can block loading screen like this while application is still running normally:
 	--	Meanwhile, we can update the progress bar sprite
-    while not loadingscreen.IsFinished() do
-        update() -- gives back control for application for one frame, script waits until next update() phase
+	while not loadingscreen.IsFinished() do
+		update() -- gives back control for application for one frame, script waits until next update() phase
 		local canvas = application.GetCanvas()
 		loadingbarparams.SetPos(Vector(50, canvas.GetLogicalHeight() * 0.8))
 		loadingbarparams.SetSize(Vector(canvas.GetLogicalWidth() - 100, 20))
 		local progress = 1 - loadingscreen.GetProgress() / 100.0
 		loadingbarparams.SetMaskAlphaRange(math.saturate(progress - 0.05), math.saturate(progress))
 		loadingbar.SetParams(loadingbarparams)
-    end
-    
-	-- After loading finished, we clear the main scene, and merge loaded scene into it:
-    scene.Clear()
-    scene.Merge(loading_scene)
-    scene.Update(0)
+	end
 	
-    if len(scene.Component_GetVoxelGridArray()) > 0 then
-        voxelgrid = scene.Component_GetVoxelGridArray()[1] -- take existing voxel grid from scene if available
-    else
-        scene.VoxelizeScene(voxelgrid, false, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, ~(Layers.Player | Layers.NPC)) -- generate a voxel grid in code, player and NPCs not included
-    end
+	-- After loading finished, we clear the main scene, and merge loaded scene into it:
+	scene.Clear()
+	scene.Merge(loading_scene)
+	scene.Update(0)
+	
+	if len(scene.Component_GetVoxelGridArray()) > 0 then
+		voxelgrid = scene.Component_GetVoxelGridArray()[1] -- take existing voxel grid from scene if available
+	else
+		scene.VoxelizeScene(voxelgrid, false, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, ~(Layers.Player | Layers.NPC)) -- generate a voxel grid in code, player and NPCs not included
+	end
 	
 	-- Create characters from scene metadata components:
-    local character_scenes = {}
+	local character_scenes = {}
 	for i,entity in ipairs(scene.Entity_GetMetadataArray()) do
 		local metadata = scene.Component_GetMetadata(entity)
 		local transform = scene.Component_GetTransform(entity)
 		if metadata ~= nil and transform ~= nil then
 
-            -- Determine name of the placed character:
+			-- Determine name of the placed character:
 			local name = "character" -- default name
 			if metadata.HasString("name") then
 				name = metadata.GetString("name")
@@ -867,7 +909,7 @@ runProcess(function()
 
 			-- Load character model if doesn't exist yet:
 			if character_scenes[name] == nil then
-                character_scenes[name] = Scene()
+				character_scenes[name] = Scene()
 				LoadModel(character_scenes[name], script_dir() .. "assets/" .. name .. ".wiscene")
 			end
 
@@ -886,25 +928,26 @@ runProcess(function()
 				--	It will be looking for "waypoint" named string values in metadata components, and they can be chained by their value
 				local patrol_waypoints = {}
 				local visited = {} -- avoid infinite loop
-				while metadata ~= nil and metadata.HasString("waypoint") do
-					local waypoint_name = metadata.GetString("waypoint")
+				local metadata_waypoint = scene.Component_GetMetadata(entity)
+				while metadata_waypoint ~= nil and metadata_waypoint.HasString("waypoint") do
+					local waypoint_name = metadata_waypoint.GetString("waypoint")
 					local waypoint_entity = scene.Entity_FindByName(waypoint_name)
 					if waypoint_entity ~= INVALID_ENTITY then
 						if visited[waypoint_entity] then
 							break
 						else
-							metadata = scene.Component_GetMetadata(waypoint_entity) -- chain waypoints
+							metadata_waypoint = scene.Component_GetMetadata(waypoint_entity) -- chain waypoints
 							visited[waypoint_entity] = true
 						end
-						if metadata == nil then
+						if metadata_waypoint == nil then
 							break
 						end
 						local waypoint = {
 							entity = waypoint_entity,
-							wait = metadata.GetFloat("wait")
+							wait = metadata_waypoint.GetFloat("wait")
 						}
-						if metadata.HasString("state") then
-							waypoint.state = metadata.GetString("state")
+						if metadata_waypoint.HasString("state") then
+							waypoint.state = metadata_waypoint.GetString("state")
 						end
 						table.insert(patrol_waypoints, waypoint) -- add waypoint to NPC
 					else
@@ -913,6 +956,16 @@ runProcess(function()
 				end
 				npc:SetPatrol(patrol_waypoints)
 				table.insert(npcs, npc) -- add NPC
+			end
+
+			-- Add points of interest:
+			if metadata.GetPreset() == MetadataPreset.PointOfInterest then
+				local poi = PointOfInterest(entity)
+				-- add dialog tree if found:
+				if metadata.HasString("dialog") then
+					poi.dialogs = dofile(script_dir() .. "assets/dialogs/" .. metadata.GetString("dialog") .. ".lua")
+				end
+				table.insert(points_of_interest, poi)
 			end
 		end
 	end
@@ -957,6 +1010,8 @@ runProcess(function()
 			npc:Update()
 			ResolveCharacters(npc, player)
 		end
+
+		ResolvePointsOfInterest(player)
 
 		if enable_footprints then
 			player:Update_Footprints()

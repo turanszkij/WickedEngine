@@ -35,12 +35,15 @@ function Conversation()
 			end
 			path.SetCropTop(self.percent * crop_top)
 			path.SetCropBottom(self.percent * crop_bottom)
-			local cam = GetCamera()
-			cam.SetApertureSize(self.percent)
+			local camera = GetCamera()
+			camera.SetApertureSize(self.percent)
 
 			if self.percent < 0.9 then
 				self.font.SetHidden(true)
 				self.font.ResetTypewriter()
+				if self.percent < 0.01 then
+					self.percent = 0
+				end
 			else
 				self.font.SetHidden(false)
 			end
@@ -51,11 +54,6 @@ function Conversation()
 			end
 			self.font_blink_timer = self.font_blink_timer + getDeltaTime()
 
-			-- Focus on character:
-			if self.character ~= nil then
-				cam.SetFocalLength(vector.Subtract(scene.Component_GetTransform(self.character.head).GetPosition(), cam.GetPosition()).Length())
-			end
-
 			-- State flow:
 			if self.state == ConversationState.Disabled then
 				self.font.SetHidden(true)
@@ -63,7 +61,7 @@ function Conversation()
 
 				self.choice = 1
 				self.override_input = true
-				self:CinematicCamera(self.character, player, scene, cam)
+				self:CinematicCamera(self.character, player, scene, camera)
 
 				-- End of talking:
 				if self.font.IsTypewriterFinished() then
@@ -77,7 +75,7 @@ function Conversation()
 				end
 
 				-- Turn on talking animation:
-				if self.character.expression ~= INVALID_ENTITY and self.percent >= 0.9 then
+				if self.character.expression ~= nil and self.character.expression ~= INVALID_ENTITY and self.percent >= 0.9 then
 					scene.Component_GetExpression(self.character.expression).SetForceTalkingEnabled(true)
 				end
 
@@ -88,7 +86,7 @@ function Conversation()
 				if self.dialog.choices ~= nil then
 					-- Dialog choices:
 					self.override_input = true
-					self:CinematicCamera(player, self.character, scene, cam)
+					self:CinematicCamera(player, self.character, scene, camera)
 
 					local pos = vector.Add(self.font.GetPos(), Vector(20, 10 + self.font.TextSize().GetY()))
 					for i,choice in ipairs(self.dialog.choices) do
@@ -133,7 +131,7 @@ function Conversation()
 				else
 					-- No dialog choices:
 					self.override_input = true
-					self:CinematicCamera(self.character, player, scene, cam)
+					self:CinematicCamera(self.character, player, scene, camera)
 
 					if input.Press(KEYBOARD_BUTTON_ENTER) or input.Press(KEYBOARD_BUTTON_SPACE) or input.Press(GAMEPAD_BUTTON_2) then
 						if self.dialog.action_after ~= nil then
@@ -147,7 +145,7 @@ function Conversation()
 				end
 
 				-- Turn off talking animation:
-				if self.character.expression ~= INVALID_ENTITY then
+				if self.character.expression ~= nil and  self.character.expression ~= INVALID_ENTITY then
 					scene.Component_GetExpression(self.character.expression).SetForceTalkingEnabled(false)
 				end
 			end
@@ -191,17 +189,24 @@ function Conversation()
 		end,
 
 		CinematicCamera = function(self, character_foreground, character_background, scene, camera)
-			local head_pos = scene.Component_GetTransform(character_foreground.head).GetPosition()
-			local forward_dir = vector.Subtract(character_background.position, character_foreground.position).Normalize()
+			local focus_entity = character_foreground.head
+			if focus_entity == nil then
+				focus_entity = character_foreground.entity
+				camera.SetApertureSize(0) -- If no head, then override depth of field to 0 (this is a point of interest, not a real character)
+			end
+			local focus_pos = scene.Component_GetTransform(focus_entity).GetPosition()
+			local forward_dir = vector.Subtract(character_background.position, character_foreground.position)
+			forward_dir.SetY(0)
+			forward_dir = forward_dir.Normalize()
 			forward_dir = vector.TransformNormal(forward_dir, matrix.RotationY(math.pi * 0.1))
 			local up_dir = Vector(0,1,0)
 			local right_dir = vector.Cross(up_dir, forward_dir).Normalize()
-			local cam_pos = vector.Add(head_pos, forward_dir)
-			local cam_target = vector.Add(vector.Add(head_pos, vector.Multiply(right_dir, -0.4)), Vector(0,-0.1))
+			local cam_pos = vector.Add(focus_pos, forward_dir)
+			local cam_target = vector.Add(vector.Add(focus_pos, vector.Multiply(right_dir, -0.4)), Vector(0,-0.1))
 			local lookat = matrix.Inverse(matrix.LookAt(cam_pos, cam_target))
 			camera.TransformCamera(lookat)
 			camera.UpdateCamera()
-			camera.SetFocalLength(vector.Subtract(head_pos, camera.GetPosition()).Length())
+			camera.SetFocalLength(vector.Subtract(focus_pos, camera.GetPosition()).Length())
 		end
 	}
 	self.font.SetSize(20)
