@@ -25,7 +25,7 @@
 #include "wiInput_PS5.h"
 #endif // PLATFORM_PS5
 
-#ifdef __APPLE__
+#if defined(PLATFORM_MACOS)
 #include "wiInput_Apple.h"
 #include <ApplicationServices/ApplicationServices.h>
 #include <Carbon/Carbon.h>
@@ -49,7 +49,29 @@ bool IsKeyDown(CGKeyCode keyCode)
 }
 }
 using namespace wi::input::apple;
-#endif // __APPLE__
+#elif defined(PLATFORM_IOS)
+#include "wiInput_Apple.h"
+namespace wi::input::apple
+{
+bool isLeftMouseButtonPressed()
+{
+	return false;
+}
+bool isRightMouseButtonPressed()
+{
+	return false;
+}
+bool isMiddleMouseButtonPressed()
+{
+	return false;
+}
+bool IsKeyDown(int keyCode)
+{
+	return false;
+}
+}
+using namespace wi::input::apple;
+#endif // PLATFORM_MACOS
 
 namespace wi::input
 {
@@ -738,7 +760,7 @@ namespace wi::input
 				break;
 #endif // _WIN32
 					
-#ifdef __APPLE__
+#ifdef PLATFORM_MACOS
 			case wi::input::KEYBOARD_BUTTON_UP:
 				keycode = kVK_UpArrow;
 				break;
@@ -1000,7 +1022,7 @@ namespace wi::input
 				case (BUTTON)'9':
 				  keycode = kVK_ANSI_9;
 				  break;
-#endif // __APPLE__
+#endif // PLATFORM_MACOS
 					
 					
 				default: break;

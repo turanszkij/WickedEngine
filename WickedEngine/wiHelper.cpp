@@ -2037,6 +2037,7 @@ namespace wi::helper
 		
 #ifdef __APPLE__
 		wi::apple::OpenUrl(url.c_str());
+		return;
 #endif // __APPLE__
 
 		wi::backlog::post("wi::helper::OpenUrl(" + url + "): not implemented for this operating system!", wi::backlog::LogLevel::Warning);

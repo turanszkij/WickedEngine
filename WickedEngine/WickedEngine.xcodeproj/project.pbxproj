@@ -8,6 +8,279 @@
 
 /* Begin PBXBuildFile section */
 		1E19DEF32F557EFB009F2E30 /* wiGaussianSplatModel.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E19DEF22F557EFB009F2E30 /* wiGaussianSplatModel.cpp */; };
+		1E50AD9D2FCEFF2E000EE545 /* wiPhysics_Jolt.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA80702EE236A900210D41 /* wiPhysics_Jolt.cpp */; };
+		1E50AD9E2FCEFF2E000EE545 /* wiArchive.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7A552EE1DF2100210D41 /* wiArchive.cpp */; };
+		1E50AD9F2FCEFF2E000EE545 /* wiNetwork_Linux.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7AA82EE1DFE300210D41 /* wiNetwork_Linux.cpp */; };
+		1E50ADA02FCEFF2E000EE545 /* wiScene_Components.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7AD92EE1DFE300210D41 /* wiScene_Components.cpp */; };
+		1E50ADA12FCEFF2E000EE545 /* wiTrailRenderer_BindLua.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7AF62EE1DFE300210D41 /* wiTrailRenderer_BindLua.cpp */; };
+		1E50ADA22FCEFF2E000EE545 /* wiPrimitive.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7AB72EE1DFE300210D41 /* wiPrimitive.cpp */; };
+		1E50ADA32FCEFF2E000EE545 /* wiEmittedParticle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7A742EE1DFE300210D41 /* wiEmittedParticle.cpp */; };
+		1E50ADA42FCEFF2E000EE545 /* wiProfiler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7ABB2EE1DFE300210D41 /* wiProfiler.cpp */; };
+		1E50ADA52FCEFF2E000EE545 /* wiVoxelGrid.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7B012EE1DFE300210D41 /* wiVoxelGrid.cpp */; };
+		1E50ADA62FCEFF2E000EE545 /* wiApplication.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7A5C2EE1DFE300210D41 /* wiApplication.cpp */; };
+		1E50ADA72FCEFF2E000EE545 /* wiRenderer_BindLua.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7AC42EE1DFE300210D41 /* wiRenderer_BindLua.cpp */; };
+		1E50ADA82FCEFF2E000EE545 /* wiMath.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7AA22EE1DFE300210D41 /* wiMath.cpp */; };
+		1E50ADA92FCEFF2E000EE545 /* wiHelper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7A8A2EE1DFE300210D41 /* wiHelper.cpp */; };
+		1E50ADAA2FCEFF2E000EE545 /* wiPrimitive_BindLua.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7AB92EE1DFE300210D41 /* wiPrimitive_BindLua.cpp */; };
+		1E50ADAB2FCEFF2E000EE545 /* wiPathQuery_BindLua.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7AB02EE1DFE300210D41 /* wiPathQuery_BindLua.cpp */; };
+		1E50ADAC2FCEFF2E000EE545 /* wiTextureHelper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7AF12EE1DFE300210D41 /* wiTextureHelper.cpp */; };
+		1E50ADAD2FCEFF2E000EE545 /* wiLua.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7A9E2EE1DFE300210D41 /* wiLua.cpp */; };
+		1E50ADAE2FCEFF2E000EE545 /* wiSpriteAnim_BindLua.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7AE72EE1DFE300210D41 /* wiSpriteAnim_BindLua.cpp */; };
+		1E50ADAF2FCEFF2E000EE545 /* wiGaussianSplatModel.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E19DEF22F557EFB009F2E30 /* wiGaussianSplatModel.cpp */; };
+		1E50ADB02FCEFF2E000EE545 /* wiTerrain.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7AED2EE1DFE300210D41 /* wiTerrain.cpp */; };
+		1E50ADB12FCEFF2E000EE545 /* wiSpriteFont_BindLua.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7AEB2EE1DFE300210D41 /* wiSpriteFont_BindLua.cpp */; };
+		1E50ADB22FCEFF2E000EE545 /* wiInitializer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7A902EE1DFE300210D41 /* wiInitializer.cpp */; };
+		1E50ADB32FCEFF2E000EE545 /* wiRenderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7AC22EE1DFE300210D41 /* wiRenderer.cpp */; };
+		1E50ADB42FCEFF2E000EE545 /* wiConfig.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7A712EE1DFE300210D41 /* wiConfig.cpp */; };
+		1E50ADB52FCEFF2E000EE545 /* wiHairParticle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7A882EE1DFE300210D41 /* wiHairParticle.cpp */; };
+		1E50ADB62FCEFF2E000EE545 /* wiInput_BindLua.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7A942EE1DFE300210D41 /* wiInput_BindLua.cpp */; };
+		1E50ADB72FCEFF2E000EE545 /* wiImage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7A8C2EE1DFE300210D41 /* wiImage.cpp */; };
+		1E50ADB82FCEFF2E000EE545 /* wiSprite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7AE32EE1DFE300210D41 /* wiSprite.cpp */; };
+		1E50ADB92FCEFF2E000EE545 /* wiSprite_BindLua.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7AE52EE1DFE300210D41 /* wiSprite_BindLua.cpp */; };
+		1E50ADBA2FCEFF2E000EE545 /* wiApplication_BindLua.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7A5E2EE1DFE300210D41 /* wiApplication_BindLua.cpp */; };
+		1E50ADBB2FCEFF2E000EE545 /* wiLoadingScreen.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7A982EE1DFE300210D41 /* wiLoadingScreen.cpp */; };
+		1E50ADBC2FCEFF2E000EE545 /* wiFadeManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7A792EE1DFE300210D41 /* wiFadeManager.cpp */; };
+		1E50ADBD2FCEFF2E000EE545 /* wiMath_BindLua.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7AA42EE1DFE300210D41 /* wiMath_BindLua.cpp */; };
+		1E50ADBE2FCEFF2E000EE545 /* CollideConvexVsTriangles.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7CC32EE1EC9500210D41 /* CollideConvexVsTriangles.cpp */; };
+		1E50ADBF2FCEFF2E000EE545 /* ConvexHullBuilder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C032EE1EC9500210D41 /* ConvexHullBuilder.cpp */; };
+		1E50ADC02FCEFF2E000EE545 /* CharacterBase.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C722EE1EC9500210D41 /* CharacterBase.cpp */; };
+		1E50ADC12FCEFF2E000EE545 /* FixedConstraint.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D082EE1EC9500210D41 /* FixedConstraint.cpp */; };
+		1E50ADC22FCEFF2E000EE545 /* BroadPhase.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C782EE1EC9500210D41 /* BroadPhase.cpp */; };
+		1E50ADC32FCEFF2E000EE545 /* ObjectStreamIn.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C442EE1EC9500210D41 /* ObjectStreamIn.cpp */; };
+		1E50ADC42FCEFF2E000EE545 /* Shape.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7CA92EE1EC9500210D41 /* Shape.cpp */; };
+		1E50ADC52FCEFF2E000EE545 /* StaticCompoundShape.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7CAD2EE1EC9500210D41 /* StaticCompoundShape.cpp */; };
+		1E50ADC62FCEFF2E000EE545 /* SkeletalAnimation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D6E2EE1EC9500210D41 /* SkeletalAnimation.cpp */; };
+		1E50ADC72FCEFF2E000EE545 /* VehicleController.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D412EE1EC9500210D41 /* VehicleController.cpp */; };
+		1E50ADC82FCEFF2E000EE545 /* ConvexHullShape.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C8E2EE1EC9500210D41 /* ConvexHullShape.cpp */; };
+		1E50ADC92FCEFF2E000EE545 /* RegisterTypes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D822EE1EC9500210D41 /* RegisterTypes.cpp */; };
+		1E50ADCA2FCEFF2E000EE545 /* JobSystemSingleThreaded.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7BD32EE1EC9500210D41 /* JobSystemSingleThreaded.cpp */; };
+		1E50ADCB2FCEFF2E000EE545 /* CollisionDispatch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7CCE2EE1EC9500210D41 /* CollisionDispatch.cpp */; };
+		1E50ADCC2FCEFF2E000EE545 /* CollisionGroup.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7CD02EE1EC9500210D41 /* CollisionGroup.cpp */; };
+		1E50ADCD2FCEFF2E000EE545 /* VehicleDifferential.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D432EE1EC9500210D41 /* VehicleDifferential.cpp */; };
+		1E50ADCE2FCEFF2E000EE545 /* GearConstraint.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D0A2EE1EC9500210D41 /* GearConstraint.cpp */; };
+		1E50ADCF2FCEFF2E000EE545 /* MotorSettings.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D0E2EE1EC9500210D41 /* MotorSettings.cpp */; };
+		1E50ADD02FCEFF2E000EE545 /* PulleyConstraint.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D182EE1EC9500210D41 /* PulleyConstraint.cpp */; };
+		1E50ADD12FCEFF2E000EE545 /* ObjectStreamBinaryIn.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C402EE1EC9500210D41 /* ObjectStreamBinaryIn.cpp */; };
+		1E50ADD22FCEFF2E000EE545 /* CastSphereVsTriangles.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7CC02EE1EC9500210D41 /* CastSphereVsTriangles.cpp */; };
+		1E50ADD32FCEFF2E000EE545 /* SoftBodySharedSettings.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D322EE1EC9500210D41 /* SoftBodySharedSettings.cpp */; };
+		1E50ADD42FCEFF2E000EE545 /* GroupFilterTable.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7CD72EE1EC9500210D41 /* GroupFilterTable.cpp */; };
+		1E50ADD52FCEFF2E000EE545 /* RackAndPinionConstraint.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D1A2EE1EC9500210D41 /* RackAndPinionConstraint.cpp */; };
+		1E50ADD62FCEFF2E000EE545 /* EstimateCollisionResponse.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7CD32EE1EC9500210D41 /* EstimateCollisionResponse.cpp */; };
+		1E50ADD72FCEFF2E000EE545 /* Body.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C562EE1EC9500210D41 /* Body.cpp */; };
+		1E50ADD82FCEFF2E000EE545 /* PhysicsUpdateContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D5F2EE1EC9500210D41 /* PhysicsUpdateContext.cpp */; };
+		1E50ADD92FCEFF2E000EE545 /* Skeleton.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D702EE1EC9500210D41 /* Skeleton.cpp */; };
+		1E50ADDA2FCEFF2E000EE545 /* VehicleTransmission.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D492EE1EC9500210D41 /* VehicleTransmission.cpp */; };
+		1E50ADDB2FCEFF2E000EE545 /* PhysicsMaterial.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7CE32EE1EC9500210D41 /* PhysicsMaterial.cpp */; };
+		1E50ADDC2FCEFF2E000EE545 /* HeightFieldShape.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C992EE1EC9500210D41 /* HeightFieldShape.cpp */; };
+		1E50ADDD2FCEFF2E000EE545 /* CharacterVirtual.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C752EE1EC9500210D41 /* CharacterVirtual.cpp */; };
+		1E50ADDE2FCEFF2E000EE545 /* TransformedShape.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7CED2EE1EC9500210D41 /* TransformedShape.cpp */; };
+		1E50ADDF2FCEFF2E000EE545 /* ConstraintManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D022EE1EC9500210D41 /* ConstraintManager.cpp */; };
+		1E50ADE02FCEFF2E000EE545 /* DeterminismLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D502EE1EC9500210D41 /* DeterminismLog.cpp */; };
+		1E50ADE12FCEFF2E000EE545 /* BroadPhaseBruteForce.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C7A2EE1EC9500210D41 /* BroadPhaseBruteForce.cpp */; };
+		1E50ADE22FCEFF2E000EE545 /* PathConstraintPathHermite.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D142EE1EC9500210D41 /* PathConstraintPathHermite.cpp */; };
+		1E50ADE32FCEFF2E000EE545 /* SoftBodyCreationSettings.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D2B2EE1EC9500210D41 /* SoftBodyCreationSettings.cpp */; };
+		1E50ADE42FCEFF2E000EE545 /* VehicleAntiRollBar.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D3B2EE1EC9500210D41 /* VehicleAntiRollBar.cpp */; };
+		1E50ADE52FCEFF2E000EE545 /* CompoundShape.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C8B2EE1EC9500210D41 /* CompoundShape.cpp */; };
+		1E50ADE62FCEFF2E000EE545 /* TriangleShape.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7CB62EE1EC9500210D41 /* TriangleShape.cpp */; };
+		1E50ADE72FCEFF2E000EE545 /* PathConstraint.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D102EE1EC9500210D41 /* PathConstraint.cpp */; };
+		1E50ADE82FCEFF2E000EE545 /* EmptyShape.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C962EE1EC9500210D41 /* EmptyShape.cpp */; };
+		1E50ADE92FCEFF2E000EE545 /* LinearCurve.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7BD92EE1EC9500210D41 /* LinearCurve.cpp */; };
+		1E50ADEA2FCEFF2E000EE545 /* BodyInterface.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C5F2EE1EC9500210D41 /* BodyInterface.cpp */; };
+		1E50ADEB2FCEFF2E000EE545 /* DebugRenderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D652EE1EC9500210D41 /* DebugRenderer.cpp */; };
+		1E50ADEC2FCEFF2E000EE545 /* MotorcycleController.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D372EE1EC9500210D41 /* MotorcycleController.cpp */; };
+		1E50ADED2FCEFF2E000EE545 /* TriangleSplitterBinning.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D792EE1EC9500210D41 /* TriangleSplitterBinning.cpp */; };
+		1E50ADEE2FCEFF2E000EE545 /* MassProperties.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C682EE1EC9500210D41 /* MassProperties.cpp */; };
+		1E50ADEF2FCEFF2E000EE545 /* Wheel.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D4B2EE1EC9500210D41 /* Wheel.cpp */; };
+		1E50ADF02FCEFF2E000EE545 /* SkeletonMapper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D722EE1EC9500210D41 /* SkeletonMapper.cpp */; };
+		1E50ADF12FCEFF2E000EE545 /* SkeletonPose.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D742EE1EC9500210D41 /* SkeletonPose.cpp */; };
+		1E50ADF22FCEFF2E000EE545 /* CylinderShape.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C922EE1EC9500210D41 /* CylinderShape.cpp */; };
+		1E50ADF32FCEFF2E000EE545 /* wiInput_Apple.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1EBD1C002F2514E700C29B34 /* wiInput_Apple.mm */; };
+		1E50ADF42FCEFF2E000EE545 /* PhysicsSystem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D5D2EE1EC9500210D41 /* PhysicsSystem.cpp */; };
+		1E50ADF52FCEFF2E000EE545 /* TriangleSplitter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D772EE1EC9500210D41 /* TriangleSplitter.cpp */; };
+		1E50ADF62FCEFF2E000EE545 /* DebugRendererPlayback.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D672EE1EC9500210D41 /* DebugRendererPlayback.cpp */; };
+		1E50ADF72FCEFF2E000EE545 /* OffsetCenterOfMassShape.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C9F2EE1EC9500210D41 /* OffsetCenterOfMassShape.cpp */; };
+		1E50ADF82FCEFF2E000EE545 /* ObjectStreamTextIn.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C482EE1EC9500210D41 /* ObjectStreamTextIn.cpp */; };
+		1E50ADF92FCEFF2E000EE545 /* PlaneShape.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7CA12EE1EC9500210D41 /* PlaneShape.cpp */; };
+		1E50ADFA2FCEFF2E000EE545 /* DecoratedShape.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C942EE1EC9500210D41 /* DecoratedShape.cpp */; };
+		1E50ADFB2FCEFF2E000EE545 /* ConeConstraint.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7CFE2EE1EC9500210D41 /* ConeConstraint.cpp */; };
+		1E50ADFC2FCEFF2E000EE545 /* ObjectStreamTextOut.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C4A2EE1EC9500210D41 /* ObjectStreamTextOut.cpp */; };
+		1E50ADFD2FCEFF2E000EE545 /* BoxShape.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C872EE1EC9500210D41 /* BoxShape.cpp */; };
+		1E50ADFE2FCEFF2E000EE545 /* ContactConstraintManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D042EE1EC9500210D41 /* ContactConstraintManager.cpp */; };
+		1E50ADFF2FCEFF2E000EE545 /* LargeIslandSplitter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D562EE1EC9500210D41 /* LargeIslandSplitter.cpp */; };
+		1E50AE002FCEFF2E000EE545 /* VehicleTrack.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D472EE1EC9500210D41 /* VehicleTrack.cpp */; };
+		1E50AE012FCEFF2E000EE545 /* MeshShape.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C9B2EE1EC9500210D41 /* MeshShape.cpp */; };
+		1E50AE022FCEFF2E000EE545 /* StateRecorderImpl.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D622EE1EC9500210D41 /* StateRecorderImpl.cpp */; };
+		1E50AE032FCEFF2E000EE545 /* TrackedVehicleController.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D392EE1EC9500210D41 /* TrackedVehicleController.cpp */; };
+		1E50AE042FCEFF2E000EE545 /* GroupFilter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7CD52EE1EC9500210D41 /* GroupFilter.cpp */; };
+		1E50AE052FCEFF2E000EE545 /* DebugRendererRecorder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D692EE1EC9500210D41 /* DebugRendererRecorder.cpp */; };
+		1E50AE062FCEFF2E000EE545 /* SerializableObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C502EE1EC9500210D41 /* SerializableObject.cpp */; };
+		1E50AE072FCEFF2E000EE545 /* PhysicsMaterialSimple.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7CE52EE1EC9500210D41 /* PhysicsMaterialSimple.cpp */; };
+		1E50AE082FCEFF2E000EE545 /* IslandBuilder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D542EE1EC9500210D41 /* IslandBuilder.cpp */; };
+		1E50AE092FCEFF2E000EE545 /* SoftBodyMotionProperties.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D2E2EE1EC9500210D41 /* SoftBodyMotionProperties.cpp */; };
+		1E50AE0A2FCEFF2E000EE545 /* Semaphore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7BEB2EE1EC9500210D41 /* Semaphore.cpp */; };
+		1E50AE0B2FCEFF2E000EE545 /* PointConstraint.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D162EE1EC9500210D41 /* PointConstraint.cpp */; };
+		1E50AE0C2FCEFF2E000EE545 /* Constraint.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D002EE1EC9500210D41 /* Constraint.cpp */; };
+		1E50AE0D2FCEFF2E000EE545 /* indexanalyzer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7FC42EE1F57900210D41 /* indexanalyzer.cpp */; };
+		1E50AE0E2FCEFF2E000EE545 /* lbaselib.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F322EE1F57900210D41 /* lbaselib.c */; };
+		1E50AE0F2FCEFF2E000EE545 /* quantization.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7FCA2EE1F57900210D41 /* quantization.cpp */; };
+		1E50AE102FCEFF2E000EE545 /* lparser.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F532EE1F57900210D41 /* lparser.c */; };
+		1E50AE112FCEFF2E000EE545 /* lmathlib.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F482EE1F57900210D41 /* lmathlib.c */; };
+		1E50AE122FCEFF2E000EE545 /* lfunc.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F3F2EE1F57900210D41 /* lfunc.c */; };
+		1E50AE132FCEFF2E000EE545 /* offsetAllocator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA80092EE1F57900210D41 /* offsetAllocator.cpp */; };
+		1E50AE142FCEFF2E000EE545 /* lua.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F612EE1F57900210D41 /* lua.c */; };
+		1E50AE152FCEFF2E000EE545 /* vcacheoptimizer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7FCF2EE1F57900210D41 /* vcacheoptimizer.cpp */; };
+		1E50AE162FCEFF2E000EE545 /* loslib.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F512EE1F57900210D41 /* loslib.c */; };
+		1E50AE172FCEFF2E000EE545 /* simplifier.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7FCC2EE1F57900210D41 /* simplifier.cpp */; };
+		1E50AE182FCEFF2E000EE545 /* utility_common.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA80172EE1F57900210D41 /* utility_common.cpp */; };
+		1E50AE192FCEFF2E000EE545 /* stb_vorbis.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA80162EE1F57900210D41 /* stb_vorbis.c */; };
+		1E50AE1A2FCEFF2E000EE545 /* linit.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F422EE1F57900210D41 /* linit.c */; };
+		1E50AE1B2FCEFF2E000EE545 /* lapi.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F2F2EE1F57900210D41 /* lapi.c */; };
+		1E50AE1C2FCEFF2E000EE545 /* stripifier.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7FCE2EE1F57900210D41 /* stripifier.cpp */; };
+		1E50AE1D2FCEFF2E000EE545 /* pugixml.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA800D2EE1F57900210D41 /* pugixml.cpp */; };
+		1E50AE1E2FCEFF2E000EE545 /* lobject.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F4D2EE1F57900210D41 /* lobject.c */; };
+		1E50AE1F2FCEFF2E000EE545 /* spatialorder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7FCD2EE1F57900210D41 /* spatialorder.cpp */; };
+		1E50AE202FCEFF2E000EE545 /* ldebug.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F3A2EE1F57900210D41 /* ldebug.c */; };
+		1E50AE212FCEFF2E000EE545 /* lauxlib.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F312EE1F57900210D41 /* lauxlib.c */; };
+		1E50AE222FCEFF2E000EE545 /* indexgenerator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7FC62EE1F57900210D41 /* indexgenerator.cpp */; };
+		1E50AE232FCEFF2E000EE545 /* samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA800F2EE1F57900210D41 /* samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp.cpp */; };
+		1E50AE242FCEFF2E000EE545 /* lstring.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F582EE1F57900210D41 /* lstring.c */; };
+		1E50AE252FCEFF2E000EE545 /* ldump.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F3D2EE1F57900210D41 /* ldump.c */; };
+		1E50AE262FCEFF2E000EE545 /* loadlib.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F4B2EE1F57900210D41 /* loadlib.c */; };
+		1E50AE272FCEFF2E000EE545 /* zstd.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7FF62EE1F57900210D41 /* zstd.c */; };
+		1E50AE282FCEFF2E000EE545 /* ldblib.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F382EE1F57900210D41 /* ldblib.c */; };
+		1E50AE292FCEFF2E000EE545 /* lutf8lib.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F662EE1F57900210D41 /* lutf8lib.c */; };
+		1E50AE2A2FCEFF2E000EE545 /* mikktspace.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA80052EE1F57900210D41 /* mikktspace.c */; };
+		1E50AE2B2FCEFF2E000EE545 /* clusterizer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7FC32EE1F57900210D41 /* clusterizer.cpp */; };
+		1E50AE2C2FCEFF2E000EE545 /* lmem.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F4A2EE1F57900210D41 /* lmem.c */; };
+		1E50AE2D2FCEFF2E000EE545 /* ltablib.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F5C2EE1F57900210D41 /* ltablib.c */; };
+		1E50AE2E2FCEFF2E000EE545 /* lstrlib.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F592EE1F57900210D41 /* lstrlib.c */; };
+		1E50AE2F2FCEFF2E000EE545 /* ldo.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F3C2EE1F57900210D41 /* ldo.c */; };
+		1E50AE302FCEFF2E000EE545 /* ltable.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F5B2EE1F57900210D41 /* ltable.c */; };
+		1E50AE312FCEFF2E000EE545 /* indexcodec.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7FC52EE1F57900210D41 /* indexcodec.cpp */; };
+		1E50AE322FCEFF2E000EE545 /* overdrawoptimizer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7FC82EE1F57900210D41 /* overdrawoptimizer.cpp */; };
+		1E50AE332FCEFF2E000EE545 /* vertexcodec.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7FD02EE1F57900210D41 /* vertexcodec.cpp */; };
+		1E50AE342FCEFF2E000EE545 /* liolib.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F432EE1F57900210D41 /* liolib.c */; };
+		1E50AE352FCEFF2E000EE545 /* lstate.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F562EE1F57900210D41 /* lstate.c */; };
+		1E50AE362FCEFF2E000EE545 /* lcorolib.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F352EE1F57900210D41 /* lcorolib.c */; };
+		1E50AE372FCEFF2E000EE545 /* vfetchoptimizer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7FD22EE1F57900210D41 /* vfetchoptimizer.cpp */; };
+		1E50AE382FCEFF2E000EE545 /* lvm.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F682EE1F57900210D41 /* lvm.c */; };
+		1E50AE392FCEFF2E000EE545 /* lzio.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F6A2EE1F57900210D41 /* lzio.c */; };
+		1E50AE3A2FCEFF2E000EE545 /* rasterizer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7FCB2EE1F57900210D41 /* rasterizer.cpp */; };
+		1E50AE3B2FCEFF2E000EE545 /* ltm.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F5E2EE1F57900210D41 /* ltm.c */; };
+		1E50AE3C2FCEFF2E000EE545 /* lctype.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F372EE1F57900210D41 /* lctype.c */; };
+		1E50AE3D2FCEFF2E000EE545 /* lodepng.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA80032EE1F57900210D41 /* lodepng.cpp */; };
+		1E50AE3E2FCEFF2E000EE545 /* allocator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7FC22EE1F57900210D41 /* allocator.cpp */; };
+		1E50AE3F2FCEFF2E000EE545 /* vertexfilter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7FD12EE1F57900210D41 /* vertexfilter.cpp */; };
+		1E50AE402FCEFF2E000EE545 /* lcode.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F342EE1F57900210D41 /* lcode.c */; };
+		1E50AE412FCEFF2E000EE545 /* llex.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F462EE1F57900210D41 /* llex.c */; };
+		1E50AE422FCEFF2E000EE545 /* lundump.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F652EE1F57900210D41 /* lundump.c */; };
+		1E50AE432FCEFF2E000EE545 /* lgc.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F412EE1F57900210D41 /* lgc.c */; };
+		1E50AE442FCEFF2E000EE545 /* partition.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7FC92EE1F57900210D41 /* partition.cpp */; };
+		1E50AE452FCEFF2E000EE545 /* lopcodes.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F4F2EE1F57900210D41 /* lopcodes.c */; };
+		1E50AE462FCEFF2E000EE545 /* SixDOFConstraint.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D1C2EE1EC9500210D41 /* SixDOFConstraint.cpp */; };
+		1E50AE472FCEFF2E000EE545 /* Profiler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7BE22EE1EC9500210D41 /* Profiler.cpp */; };
+		1E50AE482FCEFF2E000EE545 /* Character.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C702EE1EC9500210D41 /* Character.cpp */; };
+		1E50AE492FCEFF2E000EE545 /* Ragdoll.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D272EE1EC9500210D41 /* Ragdoll.cpp */; };
+		1E50AE4A2FCEFF2E000EE545 /* SliderConstraint.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D1E2EE1EC9500210D41 /* SliderConstraint.cpp */; };
+		1E50AE4B2FCEFF2E000EE545 /* DebugRendererSimple.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D6B2EE1EC9500210D41 /* DebugRendererSimple.cpp */; };
+		1E50AE4C2FCEFF2E000EE545 /* SoftBodyShape.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D302EE1EC9500210D41 /* SoftBodyShape.cpp */; };
+		1E50AE4D2FCEFF2E000EE545 /* DistanceConstraint.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D062EE1EC9500210D41 /* DistanceConstraint.cpp */; };
+		1E50AE4E2FCEFF2E000EE545 /* SwingTwistConstraint.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D222EE1EC9500210D41 /* SwingTwistConstraint.cpp */; };
+		1E50AE4F2FCEFF2E000EE545 /* RTTI.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7BE82EE1EC9500210D41 /* RTTI.cpp */; };
+		1E50AE502FCEFF2E000EE545 /* SpringSettings.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D202EE1EC9500210D41 /* SpringSettings.cpp */; };
+		1E50AE512FCEFF2E000EE545 /* CapsuleShape.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C892EE1EC9500210D41 /* CapsuleShape.cpp */; };
+		1E50AE522FCEFF2E000EE545 /* ObjectStream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C3E2EE1EC9500210D41 /* ObjectStream.cpp */; };
+		1E50AE532FCEFF2E000EE545 /* TwoBodyConstraint.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D242EE1EC9500210D41 /* TwoBodyConstraint.cpp */; };
+		1E50AE542FCEFF2E000EE545 /* Memory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7BDD2EE1EC9500210D41 /* Memory.cpp */; };
+		1E50AE552FCEFF2E000EE545 /* MutableCompoundShape.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C9D2EE1EC9500210D41 /* MutableCompoundShape.cpp */; };
+		1E50AE562FCEFF2E000EE545 /* OrientedBox.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C102EE1EC9500210D41 /* OrientedBox.cpp */; };
+		1E50AE572FCEFF2E000EE545 /* TriangleSplitterMean.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D7B2EE1EC9500210D41 /* TriangleSplitterMean.cpp */; };
+		1E50AE582FCEFF2E000EE545 /* HingeConstraint.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D0C2EE1EC9500210D41 /* HingeConstraint.cpp */; };
+		1E50AE592FCEFF2E000EE545 /* PhysicsScene.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D592EE1EC9500210D41 /* PhysicsScene.cpp */; };
+		1E50AE5A2FCEFF2E000EE545 /* VehicleCollisionTester.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D3D2EE1EC9500210D41 /* VehicleCollisionTester.cpp */; };
+		1E50AE5B2FCEFF2E000EE545 /* TypeDeclarations.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C522EE1EC9500210D41 /* TypeDeclarations.cpp */; };
+		1E50AE5C2FCEFF2E000EE545 /* BroadPhaseQuadTree.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C7F2EE1EC9500210D41 /* BroadPhaseQuadTree.cpp */; };
+		1E50AE5D2FCEFF2E000EE545 /* TickCounter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7BFA2EE1EC9500210D41 /* TickCounter.cpp */; };
+		1E50AE5E2FCEFF2E000EE545 /* Vec3.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C362EE1EC9500210D41 /* Vec3.cpp */; };
+		1E50AE5F2FCEFF2E000EE545 /* StringTools.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7BF72EE1EC9500210D41 /* StringTools.cpp */; };
+		1E50AE602FCEFF2E000EE545 /* Factory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7BC52EE1EC9500210D41 /* Factory.cpp */; };
+		1E50AE612FCEFF2E000EE545 /* WheeledVehicleController.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D4D2EE1EC9500210D41 /* WheeledVehicleController.cpp */; };
+		1E50AE622FCEFF2E000EE545 /* ObjectStreamOut.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C462EE1EC9500210D41 /* ObjectStreamOut.cpp */; };
+		1E50AE632FCEFF2E000EE545 /* Indexify.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C0D2EE1EC9500210D41 /* Indexify.cpp */; };
+		1E50AE642FCEFF2E000EE545 /* NarrowPhaseQuery.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7CDC2EE1EC9500210D41 /* NarrowPhaseQuery.cpp */; };
+		1E50AE652FCEFF2E000EE545 /* BodyManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C642EE1EC9500210D41 /* BodyManager.cpp */; };
+		1E50AE662FCEFF2E000EE545 /* QuadTree.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C842EE1EC9500210D41 /* QuadTree.cpp */; };
+		1E50AE672FCEFF2E000EE545 /* wiAppleHelper.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1E7929892EFE75BA00B9E35C /* wiAppleHelper.mm */; };
+		1E50AE682FCEFF2E000EE545 /* NarrowPhaseStats.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7CDE2EE1EC9500210D41 /* NarrowPhaseStats.cpp */; };
+		1E50AE692FCEFF2E000EE545 /* ConvexHullBuilder2D.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C052EE1EC9500210D41 /* ConvexHullBuilder2D.cpp */; };
+		1E50AE6A2FCEFF2E000EE545 /* ManifoldBetweenTwoFaces.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7CDA2EE1EC9500210D41 /* ManifoldBetweenTwoFaces.cpp */; };
+		1E50AE6B2FCEFF2E000EE545 /* RotatedTranslatedShape.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7CA42EE1EC9500210D41 /* RotatedTranslatedShape.cpp */; };
+		1E50AE6C2FCEFF2E000EE545 /* JobSystemWithBarrier.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7BD72EE1EC9500210D41 /* JobSystemWithBarrier.cpp */; };
+		1E50AE6D2FCEFF2E000EE545 /* ConvexShape.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C902EE1EC9500210D41 /* ConvexShape.cpp */; };
+		1E50AE6E2FCEFF2E000EE545 /* CastConvexVsTriangles.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7CBD2EE1EC9500210D41 /* CastConvexVsTriangles.cpp */; };
+		1E50AE6F2FCEFF2E000EE545 /* TaperedCapsuleShape.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7CB12EE1EC9500210D41 /* TaperedCapsuleShape.cpp */; };
+		1E50AE702FCEFF2E000EE545 /* IssueReporting.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7BCF2EE1EC9500210D41 /* IssueReporting.cpp */; };
+		1E50AE712FCEFF2E000EE545 /* AABBTreeBuilder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7BB92EE1EC9500210D41 /* AABBTreeBuilder.cpp */; };
+		1E50AE722FCEFF2E000EE545 /* TaperedCylinderShape.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7CB42EE1EC9500210D41 /* TaperedCylinderShape.cpp */; };
+		1E50AE732FCEFF2E000EE545 /* Color.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7BC22EE1EC9500210D41 /* Color.cpp */; };
+		1E50AE742FCEFF2E000EE545 /* wiSDLInput.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA80B92EE2CA6000210D41 /* wiSDLInput.cpp */; };
+		1E50AE752FCEFF2E000EE545 /* wiXInput.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA80BB2EE2CA6000210D41 /* wiXInput.cpp */; };
+		1E50AE762FCEFF2E000EE545 /* wiRawInput.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA80B72EE2CA6000210D41 /* wiRawInput.cpp */; };
+		1E50AE772FCEFF2E000EE545 /* ObjectStreamBinaryOut.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C422EE1EC9500210D41 /* ObjectStreamBinaryOut.cpp */; };
+		1E50AE782FCEFF2E000EE545 /* JobSystemThreadPool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7BD52EE1EC9500210D41 /* JobSystemThreadPool.cpp */; };
+		1E50AE792FCEFF2E000EE545 /* SphereShape.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7CAB2EE1EC9500210D41 /* SphereShape.cpp */; };
+		1E50AE7A2FCEFF2E000EE545 /* ScaledShape.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7CA62EE1EC9500210D41 /* ScaledShape.cpp */; };
+		1E50AE7B2FCEFF2E000EE545 /* BodyCreationSettings.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C5B2EE1EC9500210D41 /* BodyCreationSettings.cpp */; };
+		1E50AE7C2FCEFF2E000EE545 /* VehicleEngine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D452EE1EC9500210D41 /* VehicleEngine.cpp */; };
+		1E50AE7D2FCEFF2E000EE545 /* CollideSphereVsTriangles.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7CCA2EE1EC9500210D41 /* CollideSphereVsTriangles.cpp */; };
+		1E50AE7E2FCEFF2E000EE545 /* VehicleConstraint.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D3F2EE1EC9500210D41 /* VehicleConstraint.cpp */; };
+		1E50AE7F2FCEFF2E000EE545 /* PathConstraintPath.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7D122EE1EC9500210D41 /* PathConstraintPath.cpp */; };
+		1E50AE802FCEFF2E000EE545 /* MotionProperties.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7C6A2EE1EC9500210D41 /* MotionProperties.cpp */; };
+		1E50AE812FCEFF2E000EE545 /* wiRenderPath2D_BindLua.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7ACB2EE1DFE300210D41 /* wiRenderPath2D_BindLua.cpp */; };
+		1E50AE822FCEFF2E000EE545 /* wiEventHandler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7A772EE1DFE300210D41 /* wiEventHandler.cpp */; };
+		1E50AE832FCEFF2E000EE545 /* wiInput.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7A922EE1DFE300210D41 /* wiInput.cpp */; };
+		1E50AE842FCEFF2E000EE545 /* wiJobSystem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7A962EE1DFE300210D41 /* wiJobSystem.cpp */; };
+		1E50AE852FCEFF2E000EE545 /* wiBacklog_BindLua.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7A6B2EE1DFE300210D41 /* wiBacklog_BindLua.cpp */; };
+		1E50AE862FCEFF2E000EE545 /* wiRandom.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7ABD2EE1DFE300210D41 /* wiRandom.cpp */; };
+		1E50AE872FCEFF2E000EE545 /* wiScene_BindLua.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7AD72EE1DFE300210D41 /* wiScene_BindLua.cpp */; };
+		1E50AE882FCEFF2E000EE545 /* wiAudio.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7A652EE1DFE300210D41 /* wiAudio.cpp */; };
+		1E50AE892FCEFF2E000EE545 /* wiGPUSortLib.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7A822EE1DFE300210D41 /* wiGPUSortLib.cpp */; };
+		1E50AE8A2FCEFF2E000EE545 /* wiLoadingScreen_BindLua.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7A9A2EE1DFE300210D41 /* wiLoadingScreen_BindLua.cpp */; };
+		1E50AE8B2FCEFF2E000EE545 /* wiSpriteFont.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7AE92EE1DFE300210D41 /* wiSpriteFont.cpp */; };
+		1E50AE8C2FCEFF2E000EE545 /* wiGraphicsDevice_Metal.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA80C02EE30E5400210D41 /* wiGraphicsDevice_Metal.cpp */; };
+		1E50AE8D2FCEFF2E000EE545 /* wiTexture_BindLua.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7AEF2EE1DFE300210D41 /* wiTexture_BindLua.cpp */; };
+		1E50AE8E2FCEFF2E000EE545 /* wiOcean.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7AAC2EE1DFE300210D41 /* wiOcean.cpp */; };
+		1E50AE8F2FCEFF2E000EE545 /* wiLocalization.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7A9C2EE1DFE300210D41 /* wiLocalization.cpp */; };
+		1E50AE902FCEFF2E000EE545 /* wiVersion.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7AFB2EE1DFE300210D41 /* wiVersion.cpp */; };
+		1E50AE912FCEFF2E000EE545 /* wiRenderPath3D.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7ACD2EE1DFE300210D41 /* wiRenderPath3D.cpp */; };
+		1E50AE922FCEFF2E000EE545 /* wiFont.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7A7D2EE1DFE300210D41 /* wiFont.cpp */; };
+		1E50AE932FCEFF2E000EE545 /* wiGPUBVH.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7A802EE1DFE300210D41 /* wiGPUBVH.cpp */; };
+		1E50AE942FCEFF2E000EE545 /* wiAsync_BindLua.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7A632EE1DFE300210D41 /* wiAsync_BindLua.cpp */; };
+		1E50AE952FCEFF2E000EE545 /* wiBacklog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7A692EE1DFE300210D41 /* wiBacklog.cpp */; };
+		1E50AE962FCEFF2E000EE545 /* wiTrailRenderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7AF42EE1DFE300210D41 /* wiTrailRenderer.cpp */; };
+		1E50AE972FCEFF2E000EE545 /* wiScene_Serializers.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7ADB2EE1DFE300210D41 /* wiScene_Serializers.cpp */; };
+		1E50AE982FCEFF2E000EE545 /* wiArguments.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7A612EE1DFE300210D41 /* wiArguments.cpp */; };
+		1E50AE992FCEFF2E000EE545 /* wiShaderCompiler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7ADF2EE1DFE300210D41 /* wiShaderCompiler.cpp */; };
+		1E50AE9A2FCEFF2E000EE545 /* wiRenderPath3D_PathTracing.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7AD12EE1DFE300210D41 /* wiRenderPath3D_PathTracing.cpp */; };
+		1E50AE9B2FCEFF2E000EE545 /* wiVideo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7AFD2EE1DFE300210D41 /* wiVideo.cpp */; };
+		1E50AE9C2FCEFF2E000EE545 /* wiResourceManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7AD32EE1DFE300210D41 /* wiResourceManager.cpp */; };
+		1E50AE9D2FCEFF2E000EE545 /* wiImageParams_BindLua.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7A8E2EE1DFE300210D41 /* wiImageParams_BindLua.cpp */; };
+		1E50AE9E2FCEFF2E000EE545 /* wiPathQuery.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7AAE2EE1DFE300210D41 /* wiPathQuery.cpp */; };
+		1E50AE9F2FCEFF2E000EE545 /* wiRenderPath_BindLua.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7AC72EE1DFE300210D41 /* wiRenderPath_BindLua.cpp */; };
+		1E50AEA02FCEFF2E000EE545 /* wiVideo_BindLua.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7AFF2EE1DFE300210D41 /* wiVideo_BindLua.cpp */; };
+		1E50AEA12FCEFF2E000EE545 /* wiNetwork_BindLua.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7AA72EE1DFE300210D41 /* wiNetwork_BindLua.cpp */; };
+		1E50AEA22FCEFF2E000EE545 /* wiAudio_BindLua.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7A672EE1DFE300210D41 /* wiAudio_BindLua.cpp */; };
+		1E50AEA32FCEFF2E000EE545 /* wiRenderPath2D.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7AC92EE1DFE300210D41 /* wiRenderPath2D.cpp */; };
+		1E50AEA42FCEFF2E000EE545 /* wiRenderPath3D_BindLua.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7ACF2EE1DFE300210D41 /* wiRenderPath3D_BindLua.cpp */; };
+		1E50AEA52FCEFF2E000EE545 /* wiScene.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7AD52EE1DFE300210D41 /* wiScene.cpp */; };
+		1E50AEA62FCEFF2E000EE545 /* wiFFTGenerator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7A7B2EE1DFE300210D41 /* wiFFTGenerator.cpp */; };
+		1E50AEA72FCEFF2E000EE545 /* wiGUI.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7A862EE1DFE300210D41 /* wiGUI.cpp */; };
+		1E50AEA82FCEFF2E000EE545 /* wiPhysics_BindLua.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7AB32EE1DFE300210D41 /* wiPhysics_BindLua.cpp */; };
+		1E50AEA92FCEFF2E000EE545 /* wiVoxelGrid_BindLua.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7B032EE1DFE300210D41 /* wiVoxelGrid_BindLua.cpp */; };
+		1E50AEAB2FCEFF2E000EE545 /* libmetalirconverter.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E640FE12F0AEC0B003D9FC7 /* libmetalirconverter.dylib */; };
+		1E50AEAC2FCEFF2E000EE545 /* libdxcompiler.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 1EDA8A692EE5D68100210D41 /* libdxcompiler.dylib */; };
+		1E50AEAE2FCEFF2E000EE545 /* libmetalirconverter.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 1E640FE12F0AEC0B003D9FC7 /* libmetalirconverter.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		1E50AEAF2FCEFF2E000EE545 /* libdxcompiler.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 1EDA8A692EE5D68100210D41 /* libdxcompiler.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		1E640FE22F0AEC0B003D9FC7 /* libmetalirconverter.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E640FE12F0AEC0B003D9FC7 /* libmetalirconverter.dylib */; };
 		1E640FEA2F0B0565003D9FC7 /* libdxcompiler.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 1EDA8A692EE5D68100210D41 /* libdxcompiler.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		1E640FEC2F0B0567003D9FC7 /* libmetalirconverter.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 1E640FE12F0AEC0B003D9FC7 /* libmetalirconverter.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
@@ -283,6 +556,18 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		1E50AEAD2FCEFF2E000EE545 /* Embed Libraries */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				1E50AEAE2FCEFF2E000EE545 /* libmetalirconverter.dylib in Embed Libraries */,
+				1E50AEAF2FCEFF2E000EE545 /* libdxcompiler.dylib in Embed Libraries */,
+			);
+			name = "Embed Libraries";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		1E640FEB2F0B0565003D9FC7 /* Embed Libraries */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -300,6 +585,7 @@
 /* Begin PBXFileReference section */
 		1E19DEF12F557EFB009F2E30 /* wiGaussianSplatModel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = wiGaussianSplatModel.h; sourceTree = "<group>"; };
 		1E19DEF22F557EFB009F2E30 /* wiGaussianSplatModel.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = wiGaussianSplatModel.cpp; sourceTree = "<group>"; };
+		1E50AEB32FCEFF2E000EE545 /* libWickedEngine_iOS.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libWickedEngine_iOS.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E640FE12F0AEC0B003D9FC7 /* libmetalirconverter.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libmetalirconverter.dylib; sourceTree = "<group>"; };
 		1E7929892EFE75BA00B9E35C /* wiAppleHelper.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = wiAppleHelper.mm; sourceTree = "<group>"; };
 		1E79298B2EFE76C500B9E35C /* wiAppleHelper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = wiAppleHelper.h; sourceTree = "<group>"; };
@@ -882,7 +1168,7 @@
 		1EDA7B012EE1DFE300210D41 /* wiVoxelGrid.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = wiVoxelGrid.cpp; sourceTree = "<group>"; };
 		1EDA7B022EE1DFE300210D41 /* wiVoxelGrid_BindLua.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = wiVoxelGrid_BindLua.h; sourceTree = "<group>"; };
 		1EDA7B032EE1DFE300210D41 /* wiVoxelGrid_BindLua.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = wiVoxelGrid_BindLua.cpp; sourceTree = "<group>"; };
-		1EDA7BB12EE1E60500210D41 /* libWickedEngine.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libWickedEngine.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		1EDA7BB12EE1E60500210D41 /* libWickedEngine_MacOS.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libWickedEngine_MacOS.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EDA7BB42EE1EC9500210D41 /* NodeCodecQuadTreeHalfFloat.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NodeCodecQuadTreeHalfFloat.h; sourceTree = "<group>"; };
 		1EDA7BB62EE1EC9500210D41 /* TriangleCodecIndexed8BitPackSOA4Flags.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TriangleCodecIndexed8BitPackSOA4Flags.h; sourceTree = "<group>"; };
 		1EDA7BB82EE1EC9500210D41 /* AABBTreeBuilder.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AABBTreeBuilder.h; sourceTree = "<group>"; };
@@ -1608,6 +1894,15 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		1E50AEAA2FCEFF2E000EE545 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1E50AEAB2FCEFF2E000EE545 /* libmetalirconverter.dylib in Frameworks */,
+				1E50AEAC2FCEFF2E000EE545 /* libdxcompiler.dylib in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		1EDA716A2EE0978C00210D41 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -2267,8 +2562,9 @@
 				1EDA7B022EE1DFE300210D41 /* wiVoxelGrid_BindLua.h */,
 				1EDA7B032EE1DFE300210D41 /* wiVoxelGrid_BindLua.cpp */,
 				1EDA7A552EE1DF2100210D41 /* wiArchive.cpp */,
-				1EDA7BB12EE1E60500210D41 /* libWickedEngine.a */,
+				1EDA7BB12EE1E60500210D41 /* libWickedEngine_MacOS.a */,
 				1EBD1C022F25166100C29B34 /* Frameworks */,
+				1E50AEB32FCEFF2E000EE545 /* libWickedEngine_iOS.a */,
 			);
 			sourceTree = "<group>";
 		};
@@ -3256,9 +3552,28 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		1EDA716B2EE0978C00210D41 /* WickedEngine */ = {
+		1E50AD9B2FCEFF2E000EE545 /* WickedEngine_iOS */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 1EDA71702EE0978C00210D41 /* Build configuration list for PBXNativeTarget "WickedEngine" */;
+			buildConfigurationList = 1E50AEB02FCEFF2E000EE545 /* Build configuration list for PBXNativeTarget "WickedEngine_iOS" */;
+			buildPhases = (
+				1E50AD9C2FCEFF2E000EE545 /* Sources */,
+				1E50AEAA2FCEFF2E000EE545 /* Frameworks */,
+				1E50AEAD2FCEFF2E000EE545 /* Embed Libraries */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = WickedEngine_iOS;
+			packageProductDependencies = (
+			);
+			productName = WickedEngine;
+			productReference = 1E50AEB32FCEFF2E000EE545 /* libWickedEngine_iOS.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+		1EDA716B2EE0978C00210D41 /* WickedEngine_MacOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1EDA71702EE0978C00210D41 /* Build configuration list for PBXNativeTarget "WickedEngine_MacOS" */;
 			buildPhases = (
 				1EDA71692EE0978C00210D41 /* Sources */,
 				1EDA716A2EE0978C00210D41 /* Frameworks */,
@@ -3268,11 +3583,11 @@
 			);
 			dependencies = (
 			);
-			name = WickedEngine;
+			name = WickedEngine_MacOS;
 			packageProductDependencies = (
 			);
 			productName = WickedEngine;
-			productReference = 1EDA7BB12EE1E60500210D41 /* libWickedEngine.a */;
+			productReference = 1EDA7BB12EE1E60500210D41 /* libWickedEngine_MacOS.a */;
 			productType = "com.apple.product-type.library.static";
 		};
 /* End PBXNativeTarget section */
@@ -3303,12 +3618,289 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				1EDA716B2EE0978C00210D41 /* WickedEngine */,
+				1EDA716B2EE0978C00210D41 /* WickedEngine_MacOS */,
+				1E50AD9B2FCEFF2E000EE545 /* WickedEngine_iOS */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXSourcesBuildPhase section */
+		1E50AD9C2FCEFF2E000EE545 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1E50AD9D2FCEFF2E000EE545 /* wiPhysics_Jolt.cpp in Sources */,
+				1E50AD9E2FCEFF2E000EE545 /* wiArchive.cpp in Sources */,
+				1E50AD9F2FCEFF2E000EE545 /* wiNetwork_Linux.cpp in Sources */,
+				1E50ADA02FCEFF2E000EE545 /* wiScene_Components.cpp in Sources */,
+				1E50ADA12FCEFF2E000EE545 /* wiTrailRenderer_BindLua.cpp in Sources */,
+				1E50ADA22FCEFF2E000EE545 /* wiPrimitive.cpp in Sources */,
+				1E50ADA32FCEFF2E000EE545 /* wiEmittedParticle.cpp in Sources */,
+				1E50ADA42FCEFF2E000EE545 /* wiProfiler.cpp in Sources */,
+				1E50ADA52FCEFF2E000EE545 /* wiVoxelGrid.cpp in Sources */,
+				1E50ADA62FCEFF2E000EE545 /* wiApplication.cpp in Sources */,
+				1E50ADA72FCEFF2E000EE545 /* wiRenderer_BindLua.cpp in Sources */,
+				1E50ADA82FCEFF2E000EE545 /* wiMath.cpp in Sources */,
+				1E50ADA92FCEFF2E000EE545 /* wiHelper.cpp in Sources */,
+				1E50ADAA2FCEFF2E000EE545 /* wiPrimitive_BindLua.cpp in Sources */,
+				1E50ADAB2FCEFF2E000EE545 /* wiPathQuery_BindLua.cpp in Sources */,
+				1E50ADAC2FCEFF2E000EE545 /* wiTextureHelper.cpp in Sources */,
+				1E50ADAD2FCEFF2E000EE545 /* wiLua.cpp in Sources */,
+				1E50ADAE2FCEFF2E000EE545 /* wiSpriteAnim_BindLua.cpp in Sources */,
+				1E50ADAF2FCEFF2E000EE545 /* wiGaussianSplatModel.cpp in Sources */,
+				1E50ADB02FCEFF2E000EE545 /* wiTerrain.cpp in Sources */,
+				1E50ADB12FCEFF2E000EE545 /* wiSpriteFont_BindLua.cpp in Sources */,
+				1E50ADB22FCEFF2E000EE545 /* wiInitializer.cpp in Sources */,
+				1E50ADB32FCEFF2E000EE545 /* wiRenderer.cpp in Sources */,
+				1E50ADB42FCEFF2E000EE545 /* wiConfig.cpp in Sources */,
+				1E50ADB52FCEFF2E000EE545 /* wiHairParticle.cpp in Sources */,
+				1E50ADB62FCEFF2E000EE545 /* wiInput_BindLua.cpp in Sources */,
+				1E50ADB72FCEFF2E000EE545 /* wiImage.cpp in Sources */,
+				1E50ADB82FCEFF2E000EE545 /* wiSprite.cpp in Sources */,
+				1E50ADB92FCEFF2E000EE545 /* wiSprite_BindLua.cpp in Sources */,
+				1E50ADBA2FCEFF2E000EE545 /* wiApplication_BindLua.cpp in Sources */,
+				1E50ADBB2FCEFF2E000EE545 /* wiLoadingScreen.cpp in Sources */,
+				1E50ADBC2FCEFF2E000EE545 /* wiFadeManager.cpp in Sources */,
+				1E50ADBD2FCEFF2E000EE545 /* wiMath_BindLua.cpp in Sources */,
+				1E50ADBE2FCEFF2E000EE545 /* CollideConvexVsTriangles.cpp in Sources */,
+				1E50ADBF2FCEFF2E000EE545 /* ConvexHullBuilder.cpp in Sources */,
+				1E50ADC02FCEFF2E000EE545 /* CharacterBase.cpp in Sources */,
+				1E50ADC12FCEFF2E000EE545 /* FixedConstraint.cpp in Sources */,
+				1E50ADC22FCEFF2E000EE545 /* BroadPhase.cpp in Sources */,
+				1E50ADC32FCEFF2E000EE545 /* ObjectStreamIn.cpp in Sources */,
+				1E50ADC42FCEFF2E000EE545 /* Shape.cpp in Sources */,
+				1E50ADC52FCEFF2E000EE545 /* StaticCompoundShape.cpp in Sources */,
+				1E50ADC62FCEFF2E000EE545 /* SkeletalAnimation.cpp in Sources */,
+				1E50ADC72FCEFF2E000EE545 /* VehicleController.cpp in Sources */,
+				1E50ADC82FCEFF2E000EE545 /* ConvexHullShape.cpp in Sources */,
+				1E50ADC92FCEFF2E000EE545 /* RegisterTypes.cpp in Sources */,
+				1E50ADCA2FCEFF2E000EE545 /* JobSystemSingleThreaded.cpp in Sources */,
+				1E50ADCB2FCEFF2E000EE545 /* CollisionDispatch.cpp in Sources */,
+				1E50ADCC2FCEFF2E000EE545 /* CollisionGroup.cpp in Sources */,
+				1E50ADCD2FCEFF2E000EE545 /* VehicleDifferential.cpp in Sources */,
+				1E50ADCE2FCEFF2E000EE545 /* GearConstraint.cpp in Sources */,
+				1E50ADCF2FCEFF2E000EE545 /* MotorSettings.cpp in Sources */,
+				1E50ADD02FCEFF2E000EE545 /* PulleyConstraint.cpp in Sources */,
+				1E50ADD12FCEFF2E000EE545 /* ObjectStreamBinaryIn.cpp in Sources */,
+				1E50ADD22FCEFF2E000EE545 /* CastSphereVsTriangles.cpp in Sources */,
+				1E50ADD32FCEFF2E000EE545 /* SoftBodySharedSettings.cpp in Sources */,
+				1E50ADD42FCEFF2E000EE545 /* GroupFilterTable.cpp in Sources */,
+				1E50ADD52FCEFF2E000EE545 /* RackAndPinionConstraint.cpp in Sources */,
+				1E50ADD62FCEFF2E000EE545 /* EstimateCollisionResponse.cpp in Sources */,
+				1E50ADD72FCEFF2E000EE545 /* Body.cpp in Sources */,
+				1E50ADD82FCEFF2E000EE545 /* PhysicsUpdateContext.cpp in Sources */,
+				1E50ADD92FCEFF2E000EE545 /* Skeleton.cpp in Sources */,
+				1E50ADDA2FCEFF2E000EE545 /* VehicleTransmission.cpp in Sources */,
+				1E50ADDB2FCEFF2E000EE545 /* PhysicsMaterial.cpp in Sources */,
+				1E50ADDC2FCEFF2E000EE545 /* HeightFieldShape.cpp in Sources */,
+				1E50ADDD2FCEFF2E000EE545 /* CharacterVirtual.cpp in Sources */,
+				1E50ADDE2FCEFF2E000EE545 /* TransformedShape.cpp in Sources */,
+				1E50ADDF2FCEFF2E000EE545 /* ConstraintManager.cpp in Sources */,
+				1E50ADE02FCEFF2E000EE545 /* DeterminismLog.cpp in Sources */,
+				1E50ADE12FCEFF2E000EE545 /* BroadPhaseBruteForce.cpp in Sources */,
+				1E50ADE22FCEFF2E000EE545 /* PathConstraintPathHermite.cpp in Sources */,
+				1E50ADE32FCEFF2E000EE545 /* SoftBodyCreationSettings.cpp in Sources */,
+				1E50ADE42FCEFF2E000EE545 /* VehicleAntiRollBar.cpp in Sources */,
+				1E50ADE52FCEFF2E000EE545 /* CompoundShape.cpp in Sources */,
+				1E50ADE62FCEFF2E000EE545 /* TriangleShape.cpp in Sources */,
+				1E50ADE72FCEFF2E000EE545 /* PathConstraint.cpp in Sources */,
+				1E50ADE82FCEFF2E000EE545 /* EmptyShape.cpp in Sources */,
+				1E50ADE92FCEFF2E000EE545 /* LinearCurve.cpp in Sources */,
+				1E50ADEA2FCEFF2E000EE545 /* BodyInterface.cpp in Sources */,
+				1E50ADEB2FCEFF2E000EE545 /* DebugRenderer.cpp in Sources */,
+				1E50ADEC2FCEFF2E000EE545 /* MotorcycleController.cpp in Sources */,
+				1E50ADED2FCEFF2E000EE545 /* TriangleSplitterBinning.cpp in Sources */,
+				1E50ADEE2FCEFF2E000EE545 /* MassProperties.cpp in Sources */,
+				1E50ADEF2FCEFF2E000EE545 /* Wheel.cpp in Sources */,
+				1E50ADF02FCEFF2E000EE545 /* SkeletonMapper.cpp in Sources */,
+				1E50ADF12FCEFF2E000EE545 /* SkeletonPose.cpp in Sources */,
+				1E50ADF22FCEFF2E000EE545 /* CylinderShape.cpp in Sources */,
+				1E50ADF32FCEFF2E000EE545 /* wiInput_Apple.mm in Sources */,
+				1E50ADF42FCEFF2E000EE545 /* PhysicsSystem.cpp in Sources */,
+				1E50ADF52FCEFF2E000EE545 /* TriangleSplitter.cpp in Sources */,
+				1E50ADF62FCEFF2E000EE545 /* DebugRendererPlayback.cpp in Sources */,
+				1E50ADF72FCEFF2E000EE545 /* OffsetCenterOfMassShape.cpp in Sources */,
+				1E50ADF82FCEFF2E000EE545 /* ObjectStreamTextIn.cpp in Sources */,
+				1E50ADF92FCEFF2E000EE545 /* PlaneShape.cpp in Sources */,
+				1E50ADFA2FCEFF2E000EE545 /* DecoratedShape.cpp in Sources */,
+				1E50ADFB2FCEFF2E000EE545 /* ConeConstraint.cpp in Sources */,
+				1E50ADFC2FCEFF2E000EE545 /* ObjectStreamTextOut.cpp in Sources */,
+				1E50ADFD2FCEFF2E000EE545 /* BoxShape.cpp in Sources */,
+				1E50ADFE2FCEFF2E000EE545 /* ContactConstraintManager.cpp in Sources */,
+				1E50ADFF2FCEFF2E000EE545 /* LargeIslandSplitter.cpp in Sources */,
+				1E50AE002FCEFF2E000EE545 /* VehicleTrack.cpp in Sources */,
+				1E50AE012FCEFF2E000EE545 /* MeshShape.cpp in Sources */,
+				1E50AE022FCEFF2E000EE545 /* StateRecorderImpl.cpp in Sources */,
+				1E50AE032FCEFF2E000EE545 /* TrackedVehicleController.cpp in Sources */,
+				1E50AE042FCEFF2E000EE545 /* GroupFilter.cpp in Sources */,
+				1E50AE052FCEFF2E000EE545 /* DebugRendererRecorder.cpp in Sources */,
+				1E50AE062FCEFF2E000EE545 /* SerializableObject.cpp in Sources */,
+				1E50AE072FCEFF2E000EE545 /* PhysicsMaterialSimple.cpp in Sources */,
+				1E50AE082FCEFF2E000EE545 /* IslandBuilder.cpp in Sources */,
+				1E50AE092FCEFF2E000EE545 /* SoftBodyMotionProperties.cpp in Sources */,
+				1E50AE0A2FCEFF2E000EE545 /* Semaphore.cpp in Sources */,
+				1E50AE0B2FCEFF2E000EE545 /* PointConstraint.cpp in Sources */,
+				1E50AE0C2FCEFF2E000EE545 /* Constraint.cpp in Sources */,
+				1E50AE0D2FCEFF2E000EE545 /* indexanalyzer.cpp in Sources */,
+				1E50AE0E2FCEFF2E000EE545 /* lbaselib.c in Sources */,
+				1E50AE0F2FCEFF2E000EE545 /* quantization.cpp in Sources */,
+				1E50AE102FCEFF2E000EE545 /* lparser.c in Sources */,
+				1E50AE112FCEFF2E000EE545 /* lmathlib.c in Sources */,
+				1E50AE122FCEFF2E000EE545 /* lfunc.c in Sources */,
+				1E50AE132FCEFF2E000EE545 /* offsetAllocator.cpp in Sources */,
+				1E50AE142FCEFF2E000EE545 /* lua.c in Sources */,
+				1E50AE152FCEFF2E000EE545 /* vcacheoptimizer.cpp in Sources */,
+				1E50AE162FCEFF2E000EE545 /* loslib.c in Sources */,
+				1E50AE172FCEFF2E000EE545 /* simplifier.cpp in Sources */,
+				1E50AE182FCEFF2E000EE545 /* utility_common.cpp in Sources */,
+				1E50AE192FCEFF2E000EE545 /* stb_vorbis.c in Sources */,
+				1E50AE1A2FCEFF2E000EE545 /* linit.c in Sources */,
+				1E50AE1B2FCEFF2E000EE545 /* lapi.c in Sources */,
+				1E50AE1C2FCEFF2E000EE545 /* stripifier.cpp in Sources */,
+				1E50AE1D2FCEFF2E000EE545 /* pugixml.cpp in Sources */,
+				1E50AE1E2FCEFF2E000EE545 /* lobject.c in Sources */,
+				1E50AE1F2FCEFF2E000EE545 /* spatialorder.cpp in Sources */,
+				1E50AE202FCEFF2E000EE545 /* ldebug.c in Sources */,
+				1E50AE212FCEFF2E000EE545 /* lauxlib.c in Sources */,
+				1E50AE222FCEFF2E000EE545 /* indexgenerator.cpp in Sources */,
+				1E50AE232FCEFF2E000EE545 /* samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp.cpp in Sources */,
+				1E50AE242FCEFF2E000EE545 /* lstring.c in Sources */,
+				1E50AE252FCEFF2E000EE545 /* ldump.c in Sources */,
+				1E50AE262FCEFF2E000EE545 /* loadlib.c in Sources */,
+				1E50AE272FCEFF2E000EE545 /* zstd.c in Sources */,
+				1E50AE282FCEFF2E000EE545 /* ldblib.c in Sources */,
+				1E50AE292FCEFF2E000EE545 /* lutf8lib.c in Sources */,
+				1E50AE2A2FCEFF2E000EE545 /* mikktspace.c in Sources */,
+				1E50AE2B2FCEFF2E000EE545 /* clusterizer.cpp in Sources */,
+				1E50AE2C2FCEFF2E000EE545 /* lmem.c in Sources */,
+				1E50AE2D2FCEFF2E000EE545 /* ltablib.c in Sources */,
+				1E50AE2E2FCEFF2E000EE545 /* lstrlib.c in Sources */,
+				1E50AE2F2FCEFF2E000EE545 /* ldo.c in Sources */,
+				1E50AE302FCEFF2E000EE545 /* ltable.c in Sources */,
+				1E50AE312FCEFF2E000EE545 /* indexcodec.cpp in Sources */,
+				1E50AE322FCEFF2E000EE545 /* overdrawoptimizer.cpp in Sources */,
+				1E50AE332FCEFF2E000EE545 /* vertexcodec.cpp in Sources */,
+				1E50AE342FCEFF2E000EE545 /* liolib.c in Sources */,
+				1E50AE352FCEFF2E000EE545 /* lstate.c in Sources */,
+				1E50AE362FCEFF2E000EE545 /* lcorolib.c in Sources */,
+				1E50AE372FCEFF2E000EE545 /* vfetchoptimizer.cpp in Sources */,
+				1E50AE382FCEFF2E000EE545 /* lvm.c in Sources */,
+				1E50AE392FCEFF2E000EE545 /* lzio.c in Sources */,
+				1E50AE3A2FCEFF2E000EE545 /* rasterizer.cpp in Sources */,
+				1E50AE3B2FCEFF2E000EE545 /* ltm.c in Sources */,
+				1E50AE3C2FCEFF2E000EE545 /* lctype.c in Sources */,
+				1E50AE3D2FCEFF2E000EE545 /* lodepng.cpp in Sources */,
+				1E50AE3E2FCEFF2E000EE545 /* allocator.cpp in Sources */,
+				1E50AE3F2FCEFF2E000EE545 /* vertexfilter.cpp in Sources */,
+				1E50AE402FCEFF2E000EE545 /* lcode.c in Sources */,
+				1E50AE412FCEFF2E000EE545 /* llex.c in Sources */,
+				1E50AE422FCEFF2E000EE545 /* lundump.c in Sources */,
+				1E50AE432FCEFF2E000EE545 /* lgc.c in Sources */,
+				1E50AE442FCEFF2E000EE545 /* partition.cpp in Sources */,
+				1E50AE452FCEFF2E000EE545 /* lopcodes.c in Sources */,
+				1E50AE462FCEFF2E000EE545 /* SixDOFConstraint.cpp in Sources */,
+				1E50AE472FCEFF2E000EE545 /* Profiler.cpp in Sources */,
+				1E50AE482FCEFF2E000EE545 /* Character.cpp in Sources */,
+				1E50AE492FCEFF2E000EE545 /* Ragdoll.cpp in Sources */,
+				1E50AE4A2FCEFF2E000EE545 /* SliderConstraint.cpp in Sources */,
+				1E50AE4B2FCEFF2E000EE545 /* DebugRendererSimple.cpp in Sources */,
+				1E50AE4C2FCEFF2E000EE545 /* SoftBodyShape.cpp in Sources */,
+				1E50AE4D2FCEFF2E000EE545 /* DistanceConstraint.cpp in Sources */,
+				1E50AE4E2FCEFF2E000EE545 /* SwingTwistConstraint.cpp in Sources */,
+				1E50AE4F2FCEFF2E000EE545 /* RTTI.cpp in Sources */,
+				1E50AE502FCEFF2E000EE545 /* SpringSettings.cpp in Sources */,
+				1E50AE512FCEFF2E000EE545 /* CapsuleShape.cpp in Sources */,
+				1E50AE522FCEFF2E000EE545 /* ObjectStream.cpp in Sources */,
+				1E50AE532FCEFF2E000EE545 /* TwoBodyConstraint.cpp in Sources */,
+				1E50AE542FCEFF2E000EE545 /* Memory.cpp in Sources */,
+				1E50AE552FCEFF2E000EE545 /* MutableCompoundShape.cpp in Sources */,
+				1E50AE562FCEFF2E000EE545 /* OrientedBox.cpp in Sources */,
+				1E50AE572FCEFF2E000EE545 /* TriangleSplitterMean.cpp in Sources */,
+				1E50AE582FCEFF2E000EE545 /* HingeConstraint.cpp in Sources */,
+				1E50AE592FCEFF2E000EE545 /* PhysicsScene.cpp in Sources */,
+				1E50AE5A2FCEFF2E000EE545 /* VehicleCollisionTester.cpp in Sources */,
+				1E50AE5B2FCEFF2E000EE545 /* TypeDeclarations.cpp in Sources */,
+				1E50AE5C2FCEFF2E000EE545 /* BroadPhaseQuadTree.cpp in Sources */,
+				1E50AE5D2FCEFF2E000EE545 /* TickCounter.cpp in Sources */,
+				1E50AE5E2FCEFF2E000EE545 /* Vec3.cpp in Sources */,
+				1E50AE5F2FCEFF2E000EE545 /* StringTools.cpp in Sources */,
+				1E50AE602FCEFF2E000EE545 /* Factory.cpp in Sources */,
+				1E50AE612FCEFF2E000EE545 /* WheeledVehicleController.cpp in Sources */,
+				1E50AE622FCEFF2E000EE545 /* ObjectStreamOut.cpp in Sources */,
+				1E50AE632FCEFF2E000EE545 /* Indexify.cpp in Sources */,
+				1E50AE642FCEFF2E000EE545 /* NarrowPhaseQuery.cpp in Sources */,
+				1E50AE652FCEFF2E000EE545 /* BodyManager.cpp in Sources */,
+				1E50AE662FCEFF2E000EE545 /* QuadTree.cpp in Sources */,
+				1E50AE672FCEFF2E000EE545 /* wiAppleHelper.mm in Sources */,
+				1E50AE682FCEFF2E000EE545 /* NarrowPhaseStats.cpp in Sources */,
+				1E50AE692FCEFF2E000EE545 /* ConvexHullBuilder2D.cpp in Sources */,
+				1E50AE6A2FCEFF2E000EE545 /* ManifoldBetweenTwoFaces.cpp in Sources */,
+				1E50AE6B2FCEFF2E000EE545 /* RotatedTranslatedShape.cpp in Sources */,
+				1E50AE6C2FCEFF2E000EE545 /* JobSystemWithBarrier.cpp in Sources */,
+				1E50AE6D2FCEFF2E000EE545 /* ConvexShape.cpp in Sources */,
+				1E50AE6E2FCEFF2E000EE545 /* CastConvexVsTriangles.cpp in Sources */,
+				1E50AE6F2FCEFF2E000EE545 /* TaperedCapsuleShape.cpp in Sources */,
+				1E50AE702FCEFF2E000EE545 /* IssueReporting.cpp in Sources */,
+				1E50AE712FCEFF2E000EE545 /* AABBTreeBuilder.cpp in Sources */,
+				1E50AE722FCEFF2E000EE545 /* TaperedCylinderShape.cpp in Sources */,
+				1E50AE732FCEFF2E000EE545 /* Color.cpp in Sources */,
+				1E50AE742FCEFF2E000EE545 /* wiSDLInput.cpp in Sources */,
+				1E50AE752FCEFF2E000EE545 /* wiXInput.cpp in Sources */,
+				1E50AE762FCEFF2E000EE545 /* wiRawInput.cpp in Sources */,
+				1E50AE772FCEFF2E000EE545 /* ObjectStreamBinaryOut.cpp in Sources */,
+				1E50AE782FCEFF2E000EE545 /* JobSystemThreadPool.cpp in Sources */,
+				1E50AE792FCEFF2E000EE545 /* SphereShape.cpp in Sources */,
+				1E50AE7A2FCEFF2E000EE545 /* ScaledShape.cpp in Sources */,
+				1E50AE7B2FCEFF2E000EE545 /* BodyCreationSettings.cpp in Sources */,
+				1E50AE7C2FCEFF2E000EE545 /* VehicleEngine.cpp in Sources */,
+				1E50AE7D2FCEFF2E000EE545 /* CollideSphereVsTriangles.cpp in Sources */,
+				1E50AE7E2FCEFF2E000EE545 /* VehicleConstraint.cpp in Sources */,
+				1E50AE7F2FCEFF2E000EE545 /* PathConstraintPath.cpp in Sources */,
+				1E50AE802FCEFF2E000EE545 /* MotionProperties.cpp in Sources */,
+				1E50AE812FCEFF2E000EE545 /* wiRenderPath2D_BindLua.cpp in Sources */,
+				1E50AE822FCEFF2E000EE545 /* wiEventHandler.cpp in Sources */,
+				1E50AE832FCEFF2E000EE545 /* wiInput.cpp in Sources */,
+				1E50AE842FCEFF2E000EE545 /* wiJobSystem.cpp in Sources */,
+				1E50AE852FCEFF2E000EE545 /* wiBacklog_BindLua.cpp in Sources */,
+				1E50AE862FCEFF2E000EE545 /* wiRandom.cpp in Sources */,
+				1E50AE872FCEFF2E000EE545 /* wiScene_BindLua.cpp in Sources */,
+				1E50AE882FCEFF2E000EE545 /* wiAudio.cpp in Sources */,
+				1E50AE892FCEFF2E000EE545 /* wiGPUSortLib.cpp in Sources */,
+				1E50AE8A2FCEFF2E000EE545 /* wiLoadingScreen_BindLua.cpp in Sources */,
+				1E50AE8B2FCEFF2E000EE545 /* wiSpriteFont.cpp in Sources */,
+				1E50AE8C2FCEFF2E000EE545 /* wiGraphicsDevice_Metal.cpp in Sources */,
+				1E50AE8D2FCEFF2E000EE545 /* wiTexture_BindLua.cpp in Sources */,
+				1E50AE8E2FCEFF2E000EE545 /* wiOcean.cpp in Sources */,
+				1E50AE8F2FCEFF2E000EE545 /* wiLocalization.cpp in Sources */,
+				1E50AE902FCEFF2E000EE545 /* wiVersion.cpp in Sources */,
+				1E50AE912FCEFF2E000EE545 /* wiRenderPath3D.cpp in Sources */,
+				1E50AE922FCEFF2E000EE545 /* wiFont.cpp in Sources */,
+				1E50AE932FCEFF2E000EE545 /* wiGPUBVH.cpp in Sources */,
+				1E50AE942FCEFF2E000EE545 /* wiAsync_BindLua.cpp in Sources */,
+				1E50AE952FCEFF2E000EE545 /* wiBacklog.cpp in Sources */,
+				1E50AE962FCEFF2E000EE545 /* wiTrailRenderer.cpp in Sources */,
+				1E50AE972FCEFF2E000EE545 /* wiScene_Serializers.cpp in Sources */,
+				1E50AE982FCEFF2E000EE545 /* wiArguments.cpp in Sources */,
+				1E50AE992FCEFF2E000EE545 /* wiShaderCompiler.cpp in Sources */,
+				1E50AE9A2FCEFF2E000EE545 /* wiRenderPath3D_PathTracing.cpp in Sources */,
+				1E50AE9B2FCEFF2E000EE545 /* wiVideo.cpp in Sources */,
+				1E50AE9C2FCEFF2E000EE545 /* wiResourceManager.cpp in Sources */,
+				1E50AE9D2FCEFF2E000EE545 /* wiImageParams_BindLua.cpp in Sources */,
+				1E50AE9E2FCEFF2E000EE545 /* wiPathQuery.cpp in Sources */,
+				1E50AE9F2FCEFF2E000EE545 /* wiRenderPath_BindLua.cpp in Sources */,
+				1E50AEA02FCEFF2E000EE545 /* wiVideo_BindLua.cpp in Sources */,
+				1E50AEA12FCEFF2E000EE545 /* wiNetwork_BindLua.cpp in Sources */,
+				1E50AEA22FCEFF2E000EE545 /* wiAudio_BindLua.cpp in Sources */,
+				1E50AEA32FCEFF2E000EE545 /* wiRenderPath2D.cpp in Sources */,
+				1E50AEA42FCEFF2E000EE545 /* wiRenderPath3D_BindLua.cpp in Sources */,
+				1E50AEA52FCEFF2E000EE545 /* wiScene.cpp in Sources */,
+				1E50AEA62FCEFF2E000EE545 /* wiFFTGenerator.cpp in Sources */,
+				1E50AEA72FCEFF2E000EE545 /* wiGUI.cpp in Sources */,
+				1E50AEA82FCEFF2E000EE545 /* wiPhysics_BindLua.cpp in Sources */,
+				1E50AEA92FCEFF2E000EE545 /* wiVoxelGrid_BindLua.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		1EDA71692EE0978C00210D41 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -3588,6 +4180,71 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
+		1E50AEB12FCEFF2E000EE545 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CODE_SIGN_STYLE = Automatic;
+				EXECUTABLE_PREFIX = lib;
+				GCC_ENABLE_CPP_EXCEPTIONS = NO;
+				GCC_ENABLE_CPP_RTTI = NO;
+				GCC_PREPROCESSOR_DEFINITIONS = "";
+				"GCC_PREPROCESSOR_DEFINITIONS[arch=*]" = (
+					_DEBUG,
+					JPH_DEBUG_RENDERER,
+					LUA_USE_IOS,
+				);
+				GCC_USE_STANDARD_INCLUDE_SEARCHING = YES;
+				HEADER_SEARCH_PATHS = "";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)",
+				);
+				OTHER_CPLUSPLUSFLAGS = "$(OTHER_CFLAGS)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SYSTEM_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)",
+					"$(SRCROOT)/Utility/metal",
+				);
+				TARGETED_DEVICE_FAMILY = 1;
+				USER_HEADER_SEARCH_PATHS = "";
+			};
+			name = Debug;
+		};
+		1E50AEB22FCEFF2E000EE545 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CODE_SIGN_STYLE = Automatic;
+				EXECUTABLE_PREFIX = lib;
+				GCC_ENABLE_CPP_EXCEPTIONS = NO;
+				GCC_ENABLE_CPP_RTTI = NO;
+				GCC_PREPROCESSOR_DEFINITIONS = "";
+				GCC_USE_STANDARD_INCLUDE_SEARCHING = YES;
+				HEADER_SEARCH_PATHS = "";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)",
+				);
+				OTHER_CPLUSPLUSFLAGS = "$(OTHER_CFLAGS)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SYSTEM_HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)",
+					"$(SRCROOT)/Utility/metal",
+				);
+				TARGETED_DEVICE_FAMILY = 1;
+				USER_HEADER_SEARCH_PATHS = "";
+			};
+			name = Release;
+		};
 		1EDA716E2EE0978C00210D41 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -3772,6 +4429,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		1E50AEB02FCEFF2E000EE545 /* Build configuration list for PBXNativeTarget "WickedEngine_iOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1E50AEB12FCEFF2E000EE545 /* Debug */,
+				1E50AEB22FCEFF2E000EE545 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		1EDA71672EE0978C00210D41 /* Build configuration list for PBXProject "WickedEngine" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -3781,7 +4447,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		1EDA71702EE0978C00210D41 /* Build configuration list for PBXNativeTarget "WickedEngine" */ = {
+		1EDA71702EE0978C00210D41 /* Build configuration list for PBXNativeTarget "WickedEngine_MacOS" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1EDA71712EE0978C00210D41 /* Debug */,

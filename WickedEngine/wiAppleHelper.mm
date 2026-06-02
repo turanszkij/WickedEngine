@@ -2,6 +2,7 @@
 #include "wiHelper.h"
 #include "wiInput.h"
 
+#ifdef PLATFORM_MACOS
 #include <AppKit/AppKit.h>
 #include <CoreGraphics/CoreGraphics.h>
 
@@ -331,3 +332,260 @@ void* CreateCursorFromARGB8ImageData(const void* data, uint32_t width, uint32_t 
 }
 
 }
+
+#elif defined(PLATFORM_IOS)
+
+#include <UIKit/UIKit.h>
+#include <QuartzCore/QuartzCore.h>
+
+@interface MetalView : UIView
+@end
+@implementation MetalView
+
++ (Class)layerClass {
+	return [CAMetalLayer class];
+}
+@end
+
+namespace wi::apple
+{
+
+void SetMetalLayerToWindow(void* _window, void* _layer)
+{
+	UIWindow* window = (__bridge UIWindow*)_window;
+	if (!window || !window.rootViewController)
+		return;
+	
+	CAMetalLayer* metalLayer = (__bridge CAMetalLayer*)_layer;
+	if (!metalLayer)
+		return;
+	
+	UIView* mainView = window.rootViewController.view;
+	
+	// Replace the root view with our MetalView if needed
+	if (![mainView isKindOfClass:[MetalView class]])
+	{
+		MetalView* metalView = [[MetalView alloc] initWithFrame:mainView.bounds];
+		metalView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+		
+		// Transfer subviews if any
+		for (UIView* subview in mainView.subviews) {
+			[metalView addSubview:subview];
+		}
+		
+		window.rootViewController.view = metalView;
+		mainView = metalView;
+	}
+	
+	CAMetalLayer* viewLayer = (CAMetalLayer*)mainView.layer;
+	
+	// Configure the layer
+	viewLayer.frame = mainView.bounds;
+	viewLayer.contentsScale = window.screen.scale;
+	viewLayer.opaque = YES;
+	viewLayer.pixelFormat = MTLPixelFormatBGRA8Unorm;     // or BGRA8Unorm_sRGB
+	viewLayer.framebufferOnly = YES;
+	
+	// If you passed an already created layer, copy important properties
+	if (metalLayer != viewLayer) {
+		metalLayer.frame = viewLayer.frame;
+		metalLayer.contentsScale = viewLayer.contentsScale;
+		// You can add more property sync if needed
+	}
+}
+
+void* GetViewFromWindow(void* handle)
+{
+	UIWindow* window = (__bridge UIWindow*)handle;
+	if (!window || !window.rootViewController)
+		return nullptr;
+	
+	UIView* view = window.rootViewController.view;
+	return (__bridge void*)view;
+}
+
+XMUINT2 GetWindowSizeNoScaling(void* handle)
+{
+	if (!handle)
+		return XMUINT2(0, 0);
+	
+	UIWindow* window = (__bridge UIWindow*)handle;
+	UIView* view = window.rootViewController ? window.rootViewController.view : nil;
+	if (!view)
+		return XMUINT2(0, 0);
+	
+	CGRect bounds = view.bounds;
+	uint32_t pixelWidth  = (uint32_t)round(bounds.size.width);
+	uint32_t pixelHeight = (uint32_t)round(bounds.size.height);
+	
+	return XMUINT2(pixelWidth, pixelHeight);
+}
+
+XMUINT2 GetWindowSize(void* handle)
+{
+	if (!handle)
+		return XMUINT2(0, 0);
+	
+	UIWindow* window = (__bridge UIWindow*)handle;
+	UIView* view = window.rootViewController ? window.rootViewController.view : nil;
+	if (!view)
+		return XMUINT2(0, 0);
+	
+	CGRect bounds = view.bounds;
+	CGFloat scale = window.screen.scale;   // iOS uses screen.scale (usually 2.0 or 3.0)
+	
+	uint32_t pixelWidth  = (uint32_t)round(bounds.size.width * scale);
+	uint32_t pixelHeight = (uint32_t)round(bounds.size.height * scale);
+	
+	return XMUINT2(pixelWidth, pixelHeight);
+}
+
+float GetDPIForWindow(void* handle)
+{
+	UIWindow* window = (__bridge UIWindow*)handle;
+	if (!window || !window.screen)
+		return 96.0f;
+	
+	CGFloat scale = window.screen.scale;
+	return scale * 96.0f;
+}
+
+// Mouse functions - stubbed for iOS (no mouse support)
+XMFLOAT2 GetMousePositionInWindow(void* handle)
+{
+	return XMFLOAT2(-1.f, -1.f); // Not supported on iOS
+}
+
+void SetMousePositionInWindow(void* handle, XMFLOAT2 value)
+{
+	// No-op on iOS
+}
+
+int MessageBox(const char* title, const char* message, const char* buttons)
+{
+	@autoreleasepool
+	{
+		UIAlertController* alert = [UIAlertController
+			alertControllerWithTitle:@(title)
+			message:@(message)
+			preferredStyle:UIAlertControllerStyleAlert];
+		
+		if (buttons == nullptr || strcmp(buttons, "OK") == 0)
+		{
+			UIAlertAction* ok = [UIAlertAction actionWithTitle:@"OK"
+				style:UIAlertActionStyleDefault
+				handler:nil];
+			[alert addAction:ok];
+			
+			[UIApplication.sharedApplication.keyWindow.rootViewController presentViewController:alert animated:YES completion:nil];
+			return (int)wi::helper::MessageBoxResult::OK;
+		}
+		else if (strcmp(buttons, "YesNo") == 0)
+		{
+			__block int result = (int)wi::helper::MessageBoxResult::Cancel;
+			
+			[alert addAction:[UIAlertAction actionWithTitle:@"Yes" style:UIAlertActionStyleDefault handler:^(UIAlertAction* action) {
+				result = (int)wi::helper::MessageBoxResult::Yes;
+			}]];
+			
+			[alert addAction:[UIAlertAction actionWithTitle:@"No" style:UIAlertActionStyleDefault handler:^(UIAlertAction* action) {
+				result = (int)wi::helper::MessageBoxResult::No;
+			}]];
+			
+			[UIApplication.sharedApplication.keyWindow.rootViewController presentViewController:alert animated:YES completion:nil];
+			return result; // Note: This is synchronous in macOS but async on iOS — consider redesigning for proper callbacks
+		}
+		else if (strcmp(buttons, "OKCancel") == 0)
+		{
+			__block int result = (int)wi::helper::MessageBoxResult::Cancel;
+			
+			[alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:^(UIAlertAction* action) {
+				result = (int)wi::helper::MessageBoxResult::OK;
+			}]];
+			
+			[alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
+			
+			[UIApplication.sharedApplication.keyWindow.rootViewController presentViewController:alert animated:YES completion:nil];
+			return result;
+		}
+		// Add more button combinations as needed...
+	}
+	return (int)wi::helper::MessageBoxResult::OK;
+}
+
+std::string GetExecutablePath()
+{
+	// On iOS, main bundle path is usually the app root
+	NSString* bundlePath = [[NSBundle mainBundle] bundlePath];
+	return std::string([bundlePath UTF8String]);
+}
+
+void CursorInit(void** cursor_table)
+{
+	// Cursors don't exist on iOS (touch only)
+	for (int i = 0; i < wi::input::CURSOR_COUNT; ++i)
+		cursor_table[i] = nullptr;
+}
+
+void CursorSet(void* cursor)
+{
+	// No-op on iOS
+}
+
+void CursorHide(bool hide)
+{
+	// No cursor to hide on iOS
+}
+
+// Fullscreen is usually always true on iOS apps
+void SetWindowFullScreen(void* handle, bool fullscreen)
+{
+	// Usually ignored on iOS — apps are full screen by design
+}
+
+bool IsWindowFullScreen(void* handle)
+{
+	return true; // iOS apps are almost always fullscreen
+}
+
+void OpenUrl(const char* url)
+{
+	@autoreleasepool
+	{
+		NSString* nsurl = [NSString stringWithUTF8String:url];
+		NSURL* nsURL = [NSURL URLWithString:nsurl];
+		
+		if (nsURL)
+		{
+			[UIApplication.sharedApplication openURL:nsURL options:@{} completionHandler:nil];
+		}
+	}
+}
+
+std::string GetClipboardText()
+{
+	std::string ret;
+	UIPasteboard* pasteboard = [UIPasteboard generalPasteboard];
+	NSString* string = pasteboard.string;
+	
+	if (string)
+	{
+		const char* cstr = [string UTF8String];
+		ret = cstr;
+	}
+	return ret;
+}
+
+void SetClipboardText(const char* str)
+{
+	UIPasteboard* pasteboard = [UIPasteboard generalPasteboard];
+	pasteboard.string = [NSString stringWithUTF8String:str];
+}
+
+void* CreateCursorFromARGB8ImageData(const void* data, uint32_t width, uint32_t height, int hotspotX, int hotspotY)
+{
+	return nullptr; // Not supported on iOS
+}
+
+} // namespace wi::apple
+#endif
