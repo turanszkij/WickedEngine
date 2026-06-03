@@ -233,15 +233,16 @@ namespace wi::input
 
 	struct Touch
 	{
+		XMFLOAT2 pos = XMFLOAT2(0, 0); // current position of touch
+		float scale = 0; // scale of pinch
 		enum TOUCHSTATE
 		{
 			TOUCHSTATE_PRESSED,
 			TOUCHSTATE_RELEASED,
 			TOUCHSTATE_MOVED,
+			TOUCHSTATE_PINCHED,
 			TOUCHSTATE_COUNT,
-		} state;
-		// current position of touch
-		XMFLOAT2 pos;
+		} state = TOUCHSTATE_PRESSED;
 	};
 	const wi::vector<Touch>& GetTouches();
 	void AddTouchEvent(const Touch& touch);

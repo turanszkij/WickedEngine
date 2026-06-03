@@ -43,6 +43,12 @@ Editor editor;
 					action:@selector(OnPan:)];
 	[self.window addGestureRecognizer:pan];
 	
+	UIPinchGestureRecognizer* pinch =
+		[[UIPinchGestureRecognizer alloc]
+			initWithTarget:self
+					action:@selector(OnPinch:)];
+	[self.window addGestureRecognizer:pinch];
+	
 	return YES;
 }
 - (void)gameLoop {
@@ -82,6 +88,15 @@ Editor editor;
 		default:
 			break;
 	}
+	wi::input::AddTouchEvent(touch);
+}
+- (void)OnPinch:(UIPinchGestureRecognizer*)gesture
+{
+	CGPoint p = [gesture locationInView:self.window];
+	wi::input::Touch touch;
+	touch.pos = XMFLOAT2(p.x, p.y);
+	touch.scale = gesture.scale;
+	touch.state = wi::input::Touch::TOUCHSTATE_PINCHED;
 	wi::input::AddTouchEvent(touch);
 }
 

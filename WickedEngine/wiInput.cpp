@@ -243,6 +243,8 @@ namespace wi::input
 		mouse.left_button_press = false;
 		mouse.right_button_press = false;
 		mouse.middle_button_press = false;
+		mouse.delta_position = XMFLOAT2(0, 0);
+		mouse.delta_wheel = 0;
 #elif defined(SDL2)
 		wi::input::sdlinput::GetMouseState(&mouse);
 		wi::input::sdlinput::GetKeyboardState(&keyboard);
@@ -279,8 +281,17 @@ namespace wi::input
 		if (!touches.empty())
 		{
 			const Touch& primary_touch = touches.front();
+			if (primary_touch.state == Touch::TOUCHSTATE_PINCHED)
+			{
+				mouse.right_button_press = true;
+				mouse.delta_position.x = mouse.position.x - primary_touch.pos.x;
+				mouse.delta_position.y = mouse.position.y - primary_touch.pos.y;
+			}
+			else
+			{
+				mouse.left_button_press = primary_touch.state != Touch::TOUCHSTATE_RELEASED;
+			}
 			mouse.position = primary_touch.pos;
-			mouse.left_button_press = primary_touch.state != Touch::TOUCHSTATE_RELEASED;
 		}
 
 		// Check if low-level XINPUT controller is not registered for playerindex slot and register:
