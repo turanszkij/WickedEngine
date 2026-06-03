@@ -1301,7 +1301,7 @@ namespace wi::audio
 	}
 }
 
-#elif defined(PLATFORM_MACOS)
+#elif defined(__APPLE__)
 #define MA_IMPLEMENTATION
 #define MA_NO_ENCODING
 #define MA_DR_FLAC_NO_NEON

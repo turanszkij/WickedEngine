@@ -1015,7 +1015,7 @@
 		1EDA7A622EE1DFE300210D41 /* wiAsync_BindLua.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = wiAsync_BindLua.h; sourceTree = "<group>"; };
 		1EDA7A632EE1DFE300210D41 /* wiAsync_BindLua.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = wiAsync_BindLua.cpp; sourceTree = "<group>"; };
 		1EDA7A642EE1DFE300210D41 /* wiAudio.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = wiAudio.h; sourceTree = "<group>"; };
-		1EDA7A652EE1DFE300210D41 /* wiAudio.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = wiAudio.cpp; sourceTree = "<group>"; };
+		1EDA7A652EE1DFE300210D41 /* wiAudio.cpp */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.objcpp; path = wiAudio.cpp; sourceTree = "<group>"; };
 		1EDA7A662EE1DFE300210D41 /* wiAudio_BindLua.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = wiAudio_BindLua.h; sourceTree = "<group>"; };
 		1EDA7A672EE1DFE300210D41 /* wiAudio_BindLua.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = wiAudio_BindLua.cpp; sourceTree = "<group>"; };
 		1EDA7A682EE1DFE300210D41 /* wiBacklog.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = wiBacklog.h; sourceTree = "<group>"; };

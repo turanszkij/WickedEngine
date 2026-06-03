@@ -16,6 +16,9 @@
 		1E50AF412FCF3C5D000EE545 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E50AF402FCF3C5D000EE545 /* QuartzCore.framework */; };
 		1E50AF432FCF3C64000EE545 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E50AF422FCF3C64000EE545 /* UIKit.framework */; platformFilter = ios; };
 		1E50B00B2FD06211000EE545 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 1E50B00A2FD06211000EE545 /* AppIcon.icon */; };
+		1E50B2822FD07B8D000EE545 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E50B27D2FD07B8D000EE545 /* AVFoundation.framework */; };
+		1E50B2842FD07B94000EE545 /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E50B2832FD07B94000EE545 /* CoreAudio.framework */; };
+		1E50B2862FD07B9E000EE545 /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E50B2852FD07B9E000EE545 /* AudioToolbox.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -39,6 +42,9 @@
 		1E50AF402FCF3C5D000EE545 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
 		1E50AF422FCF3C64000EE545 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		1E50B00A2FD06211000EE545 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
+		1E50B27D2FD07B8D000EE545 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
+		1E50B2832FD07B94000EE545 /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
+		1E50B2852FD07B9E000EE545 /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -46,8 +52,11 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1E50B2842FD07B94000EE545 /* CoreAudio.framework in Frameworks */,
 				1E50AF412FCF3C5D000EE545 /* QuartzCore.framework in Frameworks */,
 				1E50AF3D2FCF3C53000EE545 /* Metal.framework in Frameworks */,
+				1E50B2862FD07B9E000EE545 /* AudioToolbox.framework in Frameworks */,
+				1E50B2822FD07B8D000EE545 /* AVFoundation.framework in Frameworks */,
 				1E50AF3B2FCF3C4E000EE545 /* libWickedEngine_iOS.a in Frameworks */,
 				1E50AF3F2FCF3C57000EE545 /* GameController.framework in Frameworks */,
 				1E50AF432FCF3C64000EE545 /* UIKit.framework in Frameworks */,
@@ -89,6 +98,9 @@
 		1E50AF3A2FCF3C4E000EE545 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				1E50B2852FD07B9E000EE545 /* AudioToolbox.framework */,
+				1E50B2832FD07B94000EE545 /* CoreAudio.framework */,
+				1E50B27D2FD07B8D000EE545 /* AVFoundation.framework */,
 				1E50AF422FCF3C64000EE545 /* UIKit.framework */,
 				1E50AF402FCF3C5D000EE545 /* QuartzCore.framework */,
 				1E50AF3E2FCF3C57000EE545 /* GameController.framework */,
