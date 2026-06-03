@@ -312,22 +312,9 @@
 		1EBD1C052F251B7E00C29B34 /* GameController.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GameController.framework; path = System/Library/Frameworks/GameController.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		1E50AFBE2FD04430000EE545 /* Exceptions for "Editor_iOS" folder in "Editor_iOS" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = 1E50AFA72FD0442F000EE545 /* Editor_iOS */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		1E50AFA92FD0442F000EE545 /* Editor_iOS */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				1E50AFBE2FD04430000EE545 /* Exceptions for "Editor_iOS" folder in "Editor_iOS" target */,
-			);
 			path = Editor_iOS;
 			sourceTree = "<group>";
 		};

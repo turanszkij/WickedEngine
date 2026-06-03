@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		1E50AF292FCF3BE3000EE545 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1E50AF1A2FCF3BE3000EE545 /* Assets.xcassets */; };
 		1E50AF2B2FCF3BE3000EE545 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 1E50AF1C2FCF3BE3000EE545 /* LaunchScreen.storyboard */; };
 		1E50AF2C2FCF3BE3000EE545 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 1E50AF1E2FCF3BE3000EE545 /* Main.storyboard */; };
 		1E50AF2E2FCF3C12000EE545 /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1E50AF2D2FCF3C12000EE545 /* main.mm */; };
@@ -16,6 +15,7 @@
 		1E50AF3F2FCF3C57000EE545 /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E50AF3E2FCF3C57000EE545 /* GameController.framework */; };
 		1E50AF412FCF3C5D000EE545 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E50AF402FCF3C5D000EE545 /* QuartzCore.framework */; };
 		1E50AF432FCF3C64000EE545 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E50AF422FCF3C64000EE545 /* UIKit.framework */; platformFilter = ios; };
+		1E50B00B2FD06211000EE545 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 1E50B00A2FD06211000EE545 /* AppIcon.icon */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -30,8 +30,6 @@
 
 /* Begin PBXFileReference section */
 		1E50AEFB2FCF3BBF000EE545 /* Template_iOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Template_iOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		1E50AF1A2FCF3BE3000EE545 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		1E50AF1B2FCF3BE3000EE545 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1E50AF232FCF3BE3000EE545 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		1E50AF242FCF3BE3000EE545 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		1E50AF2D2FCF3C12000EE545 /* main.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = "<group>"; };
@@ -40,6 +38,7 @@
 		1E50AF3E2FCF3C57000EE545 /* GameController.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GameController.framework; path = System/Library/Frameworks/GameController.framework; sourceTree = SDKROOT; };
 		1E50AF402FCF3C5D000EE545 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
 		1E50AF422FCF3C64000EE545 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		1E50B00A2FD06211000EE545 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -61,10 +60,9 @@
 		1E50AEF22FCF3BBF000EE545 = {
 			isa = PBXGroup;
 			children = (
+				1E50B00A2FD06211000EE545 /* AppIcon.icon */,
 				1E50AF2D2FCF3C12000EE545 /* main.mm */,
 				1E50AEFC2FCF3BBF000EE545 /* Products */,
-				1E50AF1A2FCF3BE3000EE545 /* Assets.xcassets */,
-				1E50AF1B2FCF3BE3000EE545 /* Info.plist */,
 				1E50AF1C2FCF3BE3000EE545 /* LaunchScreen.storyboard */,
 				1E50AF1E2FCF3BE3000EE545 /* Main.storyboard */,
 				1E50AF2F2FCF3C44000EE545 /* WickedEngine.xcodeproj */,
@@ -175,7 +173,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1E50AF292FCF3BE3000EE545 /* Assets.xcassets in Resources */,
+				1E50B00B2FD06211000EE545 /* AppIcon.icon in Resources */,
 				1E50AF2B2FCF3BE3000EE545 /* LaunchScreen.storyboard in Resources */,
 				1E50AF2C2FCF3BE3000EE545 /* Main.storyboard in Resources */,
 			);
