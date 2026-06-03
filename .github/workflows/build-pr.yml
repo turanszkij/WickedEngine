@@ -287,8 +287,8 @@ jobs:
           Editor_MacOS
 
   ios:
-  runs-on: macos-latest
-  steps:
+    runs-on: macos-latest
+    steps:
     - uses: actions/checkout@v4
 
     - name: Compile Offlineshadercompiler
