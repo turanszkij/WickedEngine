@@ -1073,7 +1073,7 @@ using namespace metal_internal;
 		if (commandlist.render_encoder.get() != nullptr)
 		{
 			commandlist.render_encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, visibility_options);
-			commandlist.render_encoder->barrierAfterEncoderStages(MTL::StageVertex | MTL::StageObject | MTL::StageMesh | MTL::StageFragment, MTL::StageVertex | MTL::StageObject | MTL::StageMesh | MTL::StageFragment, visibility_options);
+			commandlist.render_encoder->barrierAfterEncoderStages(MTL::StageVertex | MTL::StageObject | MTL::StageMesh, MTL::StageVertex | MTL::StageObject | MTL::StageMesh | MTL::StageFragment, visibility_options);
 		}
 		else if (commandlist.compute_encoder.get() != nullptr)
 		{
