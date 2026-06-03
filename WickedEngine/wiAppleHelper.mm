@@ -182,6 +182,20 @@ int MessageBox(const char* title, const char* message, const char* buttons)
 	return (int)wi::helper::MessageBoxResult::OK;
 }
 
+std::string GetResourcePath()
+{
+	NSBundle* bundle = [NSBundle mainBundle];
+	if (bundle.bundlePath.length > 0 &&
+		[bundle.bundlePath.pathExtension isEqualToString:@"app"])
+	{
+		// running inside .app bundle
+		NSString* resourcePath = [[NSBundle mainBundle] resourcePath];
+		return std::string([resourcePath UTF8String]);
+	}
+	// console app:
+	return std::filesystem::current_path();
+}
+
 std::string GetExecutablePath()
 {
 	char rawPath[PATH_MAX];
@@ -476,6 +490,12 @@ int MessageBox(const char* title, const char* message, const char* buttons)
 		}
 	}
 	return (int)wi::helper::MessageBoxResult::OK;
+}
+
+std::string GetResourcePath()
+{
+	NSString* resourcePath = [[NSBundle mainBundle] resourcePath];
+	return std::string([resourcePath UTF8String]);
 }
 
 std::string GetExecutablePath()

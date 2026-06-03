@@ -193,7 +193,7 @@ void ContentBrowserWindow::RefreshContent()
 {
 	content_folder = wi::helper::GetCurrentPath() + "/Content/";
 	wi::helper::MakePathAbsolute(content_folder);
-	if (!wi::helper::FileExists(content_folder))
+	if (!wi::helper::DirectoryExists(content_folder))
 	{
 		content_folder = wi::helper::GetCurrentPath() + "/../Content/";
 		wi::helper::MakePathAbsolute(content_folder);
