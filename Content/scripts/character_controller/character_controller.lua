@@ -76,9 +76,7 @@ local footprint_texture = Texture(script_dir() .. "assets/footprint.dds")
 local footprints = {}
 
 local character_capsules = {}
-local voxelgrid = VoxelGrid(128,32,128)
-voxelgrid.SetVoxelSize(0.25)
-voxelgrid.SetCenter(Vector(0,0.1,0))
+local voxelgrid = VoxelGrid()
 
 local function Character(model_scene, start_transform, controllable, anim_scene, animset)
 	local self = {
@@ -891,6 +889,9 @@ runProcess(function()
 	if len(scene.Component_GetVoxelGridArray()) > 0 then
 		voxelgrid = scene.Component_GetVoxelGridArray()[1] -- take existing voxel grid from scene if available
 	else
+		voxelgrid = VoxelGrid(128,32,128)
+		voxelgrid.SetVoxelSize(0.25)
+		voxelgrid.SetCenter(Vector(0,0.1,0))
 		scene.VoxelizeScene(voxelgrid, false, FILTER_NAVIGATION_MESH | FILTER_COLLIDER, ~(Layers.Player | Layers.NPC)) -- generate a voxel grid in code, player and NPCs not included
 	end
 	
