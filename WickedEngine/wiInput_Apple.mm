@@ -1,6 +1,5 @@
 #include "wiInput_Apple.h"
 
-#import <Cocoa/Cocoa.h>
 #import <GameController/GameController.h>
 
 #include <mutex>

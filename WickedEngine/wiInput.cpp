@@ -25,7 +25,7 @@
 #include "wiInput_PS5.h"
 #endif // PLATFORM_PS5
 
-#ifdef __APPLE__
+#if defined(PLATFORM_MACOS)
 #include "wiInput_Apple.h"
 #include <ApplicationServices/ApplicationServices.h>
 #include <Carbon/Carbon.h>
@@ -49,7 +49,29 @@ bool IsKeyDown(CGKeyCode keyCode)
 }
 }
 using namespace wi::input::apple;
-#endif // __APPLE__
+#elif defined(PLATFORM_IOS)
+#include "wiInput_Apple.h"
+namespace wi::input::apple
+{
+bool isLeftMouseButtonPressed()
+{
+	return false;
+}
+bool isRightMouseButtonPressed()
+{
+	return false;
+}
+bool isMiddleMouseButtonPressed()
+{
+	return false;
+}
+bool IsKeyDown(int keyCode)
+{
+	return false;
+}
+}
+using namespace wi::input::apple;
+#endif // PLATFORM_MACOS
 
 namespace wi::input
 {
@@ -210,12 +232,19 @@ namespace wi::input
 		ScreenToClient(window, &p);
 		mouse.position.x = (float)p.x;
 		mouse.position.y = (float)p.y;
-#elif defined(__APPLE__)
+#elif defined(PLATFORM_MACOS)
 		mouse = {};
 		mouse.position = wi::apple::GetMousePositionInWindow(window);
 		mouse.left_button_press = isLeftMouseButtonPressed();
 		mouse.right_button_press = isRightMouseButtonPressed();
 		mouse.middle_button_press = isMiddleMouseButtonPressed();
+#elif defined(PLATFORM_IOS)
+		// keep prev mousepos for touch consistency
+		mouse.left_button_press = false;
+		mouse.right_button_press = false;
+		mouse.middle_button_press = false;
+		mouse.delta_position = XMFLOAT2(0, 0);
+		mouse.delta_wheel = 0;
 #elif defined(SDL2)
 		wi::input::sdlinput::GetMouseState(&mouse);
 		wi::input::sdlinput::GetKeyboardState(&keyboard);
@@ -242,9 +271,28 @@ namespace wi::input
 			pen_override = false;
 		}
 
+#ifndef PLATFORM_IOS // on IOS I keep the previous coodinates instead from touches
 		// The application always works with logical mouse coordinates:
 		mouse.position.x = canvas.PhysicalToLogical(mouse.position.x);
 		mouse.position.y = canvas.PhysicalToLogical(mouse.position.y);
+#endif // PLATFORM_IOS
+		
+		// Primary touch can act as mouse pointer override:
+		if (!touches.empty())
+		{
+			const Touch& primary_touch = touches.front();
+			if (primary_touch.state == Touch::TOUCHSTATE_PINCHED)
+			{
+				mouse.right_button_press = true;
+				mouse.delta_position.x = mouse.position.x - primary_touch.pos.x;
+				mouse.delta_position.y = mouse.position.y - primary_touch.pos.y;
+			}
+			else
+			{
+				mouse.left_button_press = primary_touch.state != Touch::TOUCHSTATE_RELEASED;
+			}
+			mouse.position = primary_touch.pos;
+		}
 
 		// Check if low-level XINPUT controller is not registered for playerindex slot and register:
 		for (int i = 0; i < wi::input::xinput::GetMaxControllerCount(); ++i)
@@ -738,7 +786,7 @@ namespace wi::input
 				break;
 #endif // _WIN32
 					
-#ifdef __APPLE__
+#ifdef PLATFORM_MACOS
 			case wi::input::KEYBOARD_BUTTON_UP:
 				keycode = kVK_UpArrow;
 				break;
@@ -1000,7 +1048,7 @@ namespace wi::input
 				case (BUTTON)'9':
 				  keycode = kVK_ANSI_9;
 				  break;
-#endif // __APPLE__
+#endif // PLATFORM_MACOS
 					
 					
 				default: break;
@@ -1691,4 +1739,10 @@ namespace wi::input
 	{
 		mouse_move_events.push_back(value);
 	}
+
+	void AddTouchEvent(const Touch& touch)
+	{
+		touches.push_back(touch);
+	}
+
 }

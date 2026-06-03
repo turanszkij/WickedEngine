@@ -1410,6 +1410,8 @@ namespace wi::helper
 	{
 #ifdef PLATFORM_PS5
 		return "/app0";
+#elif defined(__APPLE__)
+		return wi::apple::GetResourcePath();
 #else
 		auto path = std::filesystem::current_path();
 		return FromWString(path.generic_wstring());
@@ -1434,7 +1436,7 @@ namespace wi::helper
 			return std::string();
 		}
 		return std::string(str, length);
-#elif defined(__APPLE__)  // Add __APPLE__ for macOS
+#elif defined(__APPLE__)
 		return wi::apple::GetExecutablePath();
 #else
 		return std::filesystem::canonical("/proc/self/exe").string();
@@ -2037,6 +2039,7 @@ namespace wi::helper
 		
 #ifdef __APPLE__
 		wi::apple::OpenUrl(url.c_str());
+		return;
 #endif // __APPLE__
 
 		wi::backlog::post("wi::helper::OpenUrl(" + url + "): not implemented for this operating system!", wi::backlog::LogLevel::Warning);
