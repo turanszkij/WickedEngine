@@ -443,52 +443,6 @@ void SetMousePositionInWindow(void* handle, XMFLOAT2 value)
 
 int MessageBox(const char* title, const char* message, const char* buttons)
 {
-	@autoreleasepool
-	{
-		UIAlertController* alert = [UIAlertController
-			alertControllerWithTitle:@(title)
-			message:@(message)
-			preferredStyle:UIAlertControllerStyleAlert];
-		
-		if (buttons == nullptr || strcmp(buttons, "OK") == 0)
-		{
-			UIAlertAction* ok = [UIAlertAction actionWithTitle:@"OK"
-				style:UIAlertActionStyleDefault
-				handler:nil];
-			[alert addAction:ok];
-			
-			[UIApplication.sharedApplication.keyWindow.rootViewController presentViewController:alert animated:YES completion:nil];
-			return (int)wi::helper::MessageBoxResult::OK;
-		}
-		else if (strcmp(buttons, "YesNo") == 0)
-		{
-			__block int result = (int)wi::helper::MessageBoxResult::Cancel;
-			
-			[alert addAction:[UIAlertAction actionWithTitle:@"Yes" style:UIAlertActionStyleDefault handler:^(UIAlertAction* action) {
-				result = (int)wi::helper::MessageBoxResult::Yes;
-			}]];
-			
-			[alert addAction:[UIAlertAction actionWithTitle:@"No" style:UIAlertActionStyleDefault handler:^(UIAlertAction* action) {
-				result = (int)wi::helper::MessageBoxResult::No;
-			}]];
-			
-			[UIApplication.sharedApplication.keyWindow.rootViewController presentViewController:alert animated:YES completion:nil];
-			return result;
-		}
-		else if (strcmp(buttons, "OKCancel") == 0)
-		{
-			__block int result = (int)wi::helper::MessageBoxResult::Cancel;
-			
-			[alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:^(UIAlertAction* action) {
-				result = (int)wi::helper::MessageBoxResult::OK;
-			}]];
-			
-			[alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
-			
-			[UIApplication.sharedApplication.keyWindow.rootViewController presentViewController:alert animated:YES completion:nil];
-			return result;
-		}
-	}
 	return (int)wi::helper::MessageBoxResult::OK;
 }
 

@@ -6856,6 +6856,11 @@ bool EditorComponent::CheckUnsavedChanges(int scene_index)
 		// User doesn't want to save, proceed
 		return true;
 	}
+	else if (result == wi::helper::MessageBoxResult::OK)
+	{
+		// IOS default OK return since we don't have messagebox yet
+		return true;
+	}
 	else // Cancel or closed dialog
 	{
 		// User cancelled, don't proceed
