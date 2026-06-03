@@ -5,29 +5,9 @@
 wi::Application app;
 bool running = true;
 
-@interface SimpleViewController : UIViewController
-@end
-
-@implementation SimpleViewController
-
-- (void)loadView {
-	UIView *view = [[UIView alloc] init];
-	view.backgroundColor = [UIColor colorWithRed:1 green:0 blue:0 alpha:1.0];
-	self.view = view;
-}
-
-- (void)viewDidLoad {
-	[super viewDidLoad];
-}
-
-- (UIStatusBarStyle)preferredStatusBarStyle {
-	return UIStatusBarStyleLightContent;
-}
-
-@end
-
 @interface AppDelegate : UIResponder <UIApplicationDelegate>
 @property (nonatomic, strong) UIWindow *window;
+@property (nonatomic, strong) CADisplayLink *displayLink;
 @end
 
 @implementation AppDelegate
@@ -35,9 +15,7 @@ bool running = true;
 - (BOOL)application:(UIApplication *)application
 	didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
-	self.window = [[UIWindow alloc] initWithFrame:UIScreen.mainScreen.bounds];
-	
-	SimpleViewController *vc = [[SimpleViewController alloc] init];
+	UIViewController *vc = [[UIViewController alloc] init];
 	self.window.rootViewController = vc;
 	
 	[self.window makeKeyAndVisible];
@@ -50,12 +28,23 @@ bool running = true;
 	
 	app.SetWindow((__bridge void*)self.window);
 	
-	while (running)
-	{
-		app.Run();
-	}
+	self.displayLink = [CADisplayLink displayLinkWithTarget:self
+													   selector:@selector(gameLoop)];
+	[self.displayLink addToRunLoop:[NSRunLoop currentRunLoop]
+						   forMode:NSRunLoopCommonModes];
 	
 	return YES;
+}
+- (void)gameLoop {
+	if (running) {
+		app.Run();
+	}
+}
+
+- (void)dealloc {
+	[self.displayLink invalidate];
+	self.displayLink = nil;
+	wi::jobsystem::ShutDown();
 }
 
 @end

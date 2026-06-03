@@ -367,6 +367,7 @@ void SetMetalLayerToWindow(void* _window, void* _layer)
 	if (metalLayer != viewLayer) {
 		metalLayer.frame = viewLayer.frame;
 		metalLayer.contentsScale = viewLayer.contentsScale;
+		[mainView.layer addSublayer:metalLayer];
 	}
 }
 
