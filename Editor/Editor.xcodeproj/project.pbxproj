@@ -183,7 +183,6 @@
 		1E73E6512F0510A90090D1DA /* CameraComponentWindow.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CameraComponentWindow.cpp; sourceTree = "<group>"; };
 		1E73E6522F0510A90090D1DA /* CameraWindow.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CameraWindow.h; sourceTree = "<group>"; };
 		1E73E6532F0510A90090D1DA /* CameraWindow.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CameraWindow.cpp; sourceTree = "<group>"; };
-		1E73E6542F0510A90090D1DA /* CMakeLists.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
 		1E73E6552F0510A90090D1DA /* ColliderWindow.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ColliderWindow.h; sourceTree = "<group>"; };
 		1E73E6562F0510A90090D1DA /* ColliderWindow.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ColliderWindow.cpp; sourceTree = "<group>"; };
 		1E73E6572F0510A90090D1DA /* ComponentsWindow.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ComponentsWindow.h; sourceTree = "<group>"; };
@@ -364,7 +363,6 @@
 				1E73E6512F0510A90090D1DA /* CameraComponentWindow.cpp */,
 				1E73E6522F0510A90090D1DA /* CameraWindow.h */,
 				1E73E6532F0510A90090D1DA /* CameraWindow.cpp */,
-				1E73E6542F0510A90090D1DA /* CMakeLists.txt */,
 				1E73E6552F0510A90090D1DA /* ColliderWindow.h */,
 				1E73E6562F0510A90090D1DA /* ColliderWindow.cpp */,
 				1E73E6572F0510A90090D1DA /* ComponentsWindow.h */,
