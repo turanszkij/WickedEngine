@@ -338,15 +338,6 @@ void* CreateCursorFromARGB8ImageData(const void* data, uint32_t width, uint32_t 
 #include <UIKit/UIKit.h>
 #include <QuartzCore/QuartzCore.h>
 
-@interface MetalView : UIView
-@end
-@implementation MetalView
-
-+ (Class)layerClass {
-	return [CAMetalLayer class];
-}
-@end
-
 namespace wi::apple
 {
 

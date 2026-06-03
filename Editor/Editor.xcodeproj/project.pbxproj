@@ -10,6 +10,69 @@
 		1E19DEEF2F557EE7009F2E30 /* ModelImporter_PLY.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E19DEEE2F557EE7009F2E30 /* ModelImporter_PLY.cpp */; };
 		1E19DEF52F559AFC009F2E30 /* miniply.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E19DEF42F559AFC009F2E30 /* miniply.cpp */; };
 		1E19DEF82F55DB3A009F2E30 /* GaussianSplatWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E19DEF72F55DB3A009F2E30 /* GaussianSplatWindow.cpp */; };
+		1E50AFC22FD04441000EE545 /* libWickedEngine_iOS.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E50AF502FD03691000EE545 /* libWickedEngine_iOS.a */; };
+		1E50AFC42FD04448000EE545 /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E50AFC32FD04448000EE545 /* GameController.framework */; };
+		1E50AFC52FD0444F000EE545 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E50AF9B2FD03BAA000EE545 /* UIKit.framework */; platformFilter = ios; };
+		1E50AFC72FD04454000EE545 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E50AFC62FD04454000EE545 /* Metal.framework */; };
+		1E50AFC82FD044D5000EE545 /* GaussianSplatWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E19DEF72F55DB3A009F2E30 /* GaussianSplatWindow.cpp */; };
+		1E50AFC92FD044D5000EE545 /* miniply.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E19DEF42F559AFC009F2E30 /* miniply.cpp */; };
+		1E50AFCA2FD044D5000EE545 /* ModelImporter_PLY.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E19DEEE2F557EE7009F2E30 /* ModelImporter_PLY.cpp */; };
+		1E50AFCB2FD044D5000EE545 /* AnimationWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E64D2F0510A90090D1DA /* AnimationWindow.cpp */; };
+		1E50AFCC2FD044D5000EE545 /* ArmatureWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E64F2F0510A90090D1DA /* ArmatureWindow.cpp */; };
+		1E50AFCD2FD044D5000EE545 /* CameraComponentWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6512F0510A90090D1DA /* CameraComponentWindow.cpp */; };
+		1E50AFCE2FD044D5000EE545 /* CameraWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6532F0510A90090D1DA /* CameraWindow.cpp */; };
+		1E50AFCF2FD044D5000EE545 /* ColliderWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6562F0510A90090D1DA /* ColliderWindow.cpp */; };
+		1E50AFD02FD044D5000EE545 /* ComponentsWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6582F0510A90090D1DA /* ComponentsWindow.cpp */; };
+		1E50AFD12FD044D5000EE545 /* ConstraintWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E65B2F0510A90090D1DA /* ConstraintWindow.cpp */; };
+		1E50AFD22FD044D5000EE545 /* ContentBrowserWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E65D2F0510A90090D1DA /* ContentBrowserWindow.cpp */; };
+		1E50AFD32FD044D5000EE545 /* DecalWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E65F2F0510A90090D1DA /* DecalWindow.cpp */; };
+		1E50AFD42FD044D5000EE545 /* DummyVisualizer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6682F0510A90090D1DA /* DummyVisualizer.cpp */; };
+		1E50AFD52FD044D5000EE545 /* Editor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E66A2F0510A90090D1DA /* Editor.cpp */; };
+		1E50AFD62FD044D5000EE545 /* EmbeddedResources.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6712F0510A90090D1DA /* EmbeddedResources.cpp */; };
+		1E50AFD72FD044D5000EE545 /* EmitterWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6732F0510A90090D1DA /* EmitterWindow.cpp */; };
+		1E50AFD82FD044D5000EE545 /* EnvProbeWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6752F0510A90090D1DA /* EnvProbeWindow.cpp */; };
+		1E50AFD92FD044D5000EE545 /* ExpressionWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6772F0510A90090D1DA /* ExpressionWindow.cpp */; };
+		1E50AFDA2FD044D5000EE545 /* FontWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E67D2F0510A90090D1DA /* FontWindow.cpp */; };
+		1E50AFDB2FD044D5000EE545 /* ForceFieldWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E67F2F0510A90090D1DA /* ForceFieldWindow.cpp */; };
+		1E50AFDC2FD044D5000EE545 /* GeneralWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6812F0510A90090D1DA /* GeneralWindow.cpp */; };
+		1E50AFDD2FD044D5000EE545 /* GraphicsWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6832F0510A90090D1DA /* GraphicsWindow.cpp */; };
+		1E50AFDE2FD044D5000EE545 /* HairParticleWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6852F0510A90090D1DA /* HairParticleWindow.cpp */; };
+		1E50AFDF2FD044D5000EE545 /* HierarchyWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6872F0510A90090D1DA /* HierarchyWindow.cpp */; };
+		1E50AFE02FD044D5000EE545 /* HumanoidWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6892F0510A90090D1DA /* HumanoidWindow.cpp */; };
+		1E50AFE12FD044D5000EE545 /* IKWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E68E2F0510A90090D1DA /* IKWindow.cpp */; };
+		1E50AFE22FD044D5000EE545 /* LayerWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6952F0510A90090D1DA /* LayerWindow.cpp */; };
+		1E50AFE32FD044D5000EE545 /* LightWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6972F0510A90090D1DA /* LightWindow.cpp */; };
+		1E50AFE42FD044D5000EE545 /* MaterialPickerWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E69B2F0510A90090D1DA /* MaterialPickerWindow.cpp */; };
+		1E50AFE52FD044D5000EE545 /* MaterialWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E69D2F0510A90090D1DA /* MaterialWindow.cpp */; };
+		1E50AFE62FD044D5000EE545 /* MeshWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E69F2F0510A90090D1DA /* MeshWindow.cpp */; };
+		1E50AFE72FD044D5000EE545 /* MetadataWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6A12F0510A90090D1DA /* MetadataWindow.cpp */; };
+		1E50AFE82FD044D5000EE545 /* ModelImporter_FBX.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6A32F0510A90090D1DA /* ModelImporter_FBX.cpp */; };
+		1E50AFE92FD044D5000EE545 /* ModelImporter_GLTF.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6A42F0510A90090D1DA /* ModelImporter_GLTF.cpp */; };
+		1E50AFEA2FD044D5000EE545 /* ModelImporter_OBJ.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6A52F0510A90090D1DA /* ModelImporter_OBJ.cpp */; };
+		1E50AFEB2FD044D5000EE545 /* NameWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6A72F0510A90090D1DA /* NameWindow.cpp */; };
+		1E50AFEC2FD044D5000EE545 /* ObjectWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6A92F0510A90090D1DA /* ObjectWindow.cpp */; };
+		1E50AFED2FD044D5000EE545 /* PaintToolWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6AB2F0510A90090D1DA /* PaintToolWindow.cpp */; };
+		1E50AFEE2FD044D5000EE545 /* ProfilerWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6AD2F0510A90090D1DA /* ProfilerWindow.cpp */; };
+		1E50AFEF2FD044D5000EE545 /* ProjectCreatorWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6AF2F0510A90090D1DA /* ProjectCreatorWindow.cpp */; };
+		1E50AFF02FD044D5000EE545 /* RigidBodyWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6B12F0510A90090D1DA /* RigidBodyWindow.cpp */; };
+		1E50AFF12FD044D5000EE545 /* ScriptWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6B32F0510A90090D1DA /* ScriptWindow.cpp */; };
+		1E50AFF22FD044D5000EE545 /* SoftBodyWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6B52F0510A90090D1DA /* SoftBodyWindow.cpp */; };
+		1E50AFF32FD044D5000EE545 /* SoundWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6B72F0510A90090D1DA /* SoundWindow.cpp */; };
+		1E50AFF42FD044D5000EE545 /* SplineWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6B92F0510A90090D1DA /* SplineWindow.cpp */; };
+		1E50AFF52FD044D5000EE545 /* SpringWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6BB2F0510A90090D1DA /* SpringWindow.cpp */; };
+		1E50AFF62FD044D5000EE545 /* SpriteRectWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6BD2F0510A90090D1DA /* SpriteRectWindow.cpp */; };
+		1E50AFF72FD044D5000EE545 /* SpriteWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6BF2F0510A90090D1DA /* SpriteWindow.cpp */; };
+		1E50AFF82FD044D5000EE545 /* stdafx.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6C22F0510A90090D1DA /* stdafx.cpp */; };
+		1E50AFF92FD044D5000EE545 /* TerrainWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6C42F0510A90090D1DA /* TerrainWindow.cpp */; };
+		1E50AFFA2FD044D5000EE545 /* ThemeEditorWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6C62F0510A90090D1DA /* ThemeEditorWindow.cpp */; };
+		1E50AFFB2FD044D5000EE545 /* TransformWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6CA2F0510A90090D1DA /* TransformWindow.cpp */; };
+		1E50AFFC2FD044D5000EE545 /* Translator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6CC2F0510A90090D1DA /* Translator.cpp */; };
+		1E50AFFD2FD044D5000EE545 /* VideoWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6D02F0510A90090D1DA /* VideoWindow.cpp */; };
+		1E50AFFE2FD044D5000EE545 /* VoxelGridWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6D22F0510A90090D1DA /* VoxelGridWindow.cpp */; };
+		1E50AFFF2FD044D5000EE545 /* WeatherWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6D42F0510A90090D1DA /* WeatherWindow.cpp */; };
+		1E50B0002FD044D5000EE545 /* xatlas.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6D72F0510A90090D1DA /* xatlas.cpp */; };
+		1E50B0012FD044DB000EE545 /* main_iOS.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1E50AF9F2FD04273000EE545 /* main_iOS.mm */; };
+		1E50B0022FD0453E000EE545 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E50AF992FD03BA3000EE545 /* QuartzCore.framework */; };
 		1E640FDB2F0AE648003D9FC7 /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E73E74D2F053DAB0090D1DA /* AppKit.framework */; };
 		1E73E6DA2F0510A90090D1DA /* Translator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6CC2F0510A90090D1DA /* Translator.cpp */; };
 		1E73E6DB2F0510A90090D1DA /* DummyVisualizer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6682F0510A90090D1DA /* DummyVisualizer.cpp */; };
@@ -66,12 +129,19 @@
 		1E73E7112F0510A90090D1DA /* ObjectWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6A92F0510A90090D1DA /* ObjectWindow.cpp */; };
 		1E73E7122F0510A90090D1DA /* HumanoidWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6892F0510A90090D1DA /* HumanoidWindow.cpp */; };
 		1E73E7142F0510C10090D1DA /* main_MacOS.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E7132F0510B40090D1DA /* main_MacOS.mm */; };
-		1E73E7392F0513710090D1DA /* libWickedEngine.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E73E7382F0513620090D1DA /* libWickedEngine.a */; };
+		1E73E7392F0513710090D1DA /* libWickedEngine_MacOS.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E73E7382F0513620090D1DA /* libWickedEngine_MacOS.a */; };
 		1E73E7552F053DBE0090D1DA /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E73E7532F053DBE0090D1DA /* Metal.framework */; };
 		1EBD1C072F251B7E00C29B34 /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1EBD1C052F251B7E00C29B34 /* GameController.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		1E50AF4F2FD03691000EE545 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1E73E7312F0513620090D1DA /* WickedEngine.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 1E50AEB32FCEFF2E000EE545;
+			remoteInfo = WickedEngine_iOS;
+		};
 		1E73E7372F0513620090D1DA /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 1E73E7312F0513620090D1DA /* WickedEngine.xcodeproj */;
@@ -98,6 +168,12 @@
 		1E19DEF42F559AFC009F2E30 /* miniply.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = miniply.cpp; sourceTree = "<group>"; };
 		1E19DEF62F55DB3A009F2E30 /* GaussianSplatWindow.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GaussianSplatWindow.h; sourceTree = "<group>"; };
 		1E19DEF72F55DB3A009F2E30 /* GaussianSplatWindow.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = GaussianSplatWindow.cpp; sourceTree = "<group>"; };
+		1E50AF992FD03BA3000EE545 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/System/Library/Frameworks/QuartzCore.framework; sourceTree = DEVELOPER_DIR; };
+		1E50AF9B2FD03BAA000EE545 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/System/Library/Frameworks/UIKit.framework; sourceTree = DEVELOPER_DIR; };
+		1E50AF9F2FD04273000EE545 /* main_iOS.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main_iOS.mm; sourceTree = "<group>"; };
+		1E50AFA82FD0442F000EE545 /* Editor_iOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Editor_iOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1E50AFC32FD04448000EE545 /* GameController.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GameController.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/System/Library/Frameworks/GameController.framework; sourceTree = DEVELOPER_DIR; };
+		1E50AFC62FD04454000EE545 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/System/Library/Frameworks/Metal.framework; sourceTree = DEVELOPER_DIR; };
 		1E73E6422F05105A0090D1DA /* Editor */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Editor; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E73E64C2F0510A90090D1DA /* AnimationWindow.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AnimationWindow.h; sourceTree = "<group>"; };
 		1E73E64D2F0510A90090D1DA /* AnimationWindow.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AnimationWindow.cpp; sourceTree = "<group>"; };
@@ -236,14 +312,47 @@
 		1EBD1C052F251B7E00C29B34 /* GameController.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GameController.framework; path = System/Library/Frameworks/GameController.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		1E50AFBE2FD04430000EE545 /* Exceptions for "Editor_iOS" folder in "Editor_iOS" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 1E50AFA72FD0442F000EE545 /* Editor_iOS */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		1E50AFA92FD0442F000EE545 /* Editor_iOS */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				1E50AFBE2FD04430000EE545 /* Exceptions for "Editor_iOS" folder in "Editor_iOS" target */,
+			);
+			path = Editor_iOS;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
 /* Begin PBXFrameworksBuildPhase section */
+		1E50AFA52FD0442F000EE545 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1E50B0022FD0453E000EE545 /* QuartzCore.framework in Frameworks */,
+				1E50AFC42FD04448000EE545 /* GameController.framework in Frameworks */,
+				1E50AFC52FD0444F000EE545 /* UIKit.framework in Frameworks */,
+				1E50AFC72FD04454000EE545 /* Metal.framework in Frameworks */,
+				1E50AFC22FD04441000EE545 /* libWickedEngine_iOS.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		1E73E63F2F05105A0090D1DA /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				1EBD1C072F251B7E00C29B34 /* GameController.framework in Frameworks */,
 				1E640FDB2F0AE648003D9FC7 /* AppKit.framework in Frameworks */,
-				1E73E7392F0513710090D1DA /* libWickedEngine.a in Frameworks */,
+				1E73E7392F0513710090D1DA /* libWickedEngine_MacOS.a in Frameworks */,
 				1E73E7552F053DBE0090D1DA /* Metal.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -254,11 +363,12 @@
 		1E73E6392F05105A0090D1DA = {
 			isa = PBXGroup;
 			children = (
+				1E50AF9F2FD04273000EE545 /* main_iOS.mm */,
+				1E73E7132F0510B40090D1DA /* main_MacOS.mm */,
 				1E19DEF62F55DB3A009F2E30 /* GaussianSplatWindow.h */,
 				1E19DEF72F55DB3A009F2E30 /* GaussianSplatWindow.cpp */,
 				1E19DEF42F559AFC009F2E30 /* miniply.cpp */,
 				1E19DEEE2F557EE7009F2E30 /* ModelImporter_PLY.cpp */,
-				1E73E7132F0510B40090D1DA /* main_MacOS.mm */,
 				1E73E64C2F0510A90090D1DA /* AnimationWindow.h */,
 				1E73E64D2F0510A90090D1DA /* AnimationWindow.cpp */,
 				1E73E64E2F0510A90090D1DA /* ArmatureWindow.h */,
@@ -385,6 +495,7 @@
 				1E73E6D52F0510A90090D1DA /* wicked.ico */,
 				1E73E6D62F0510A90090D1DA /* xatlas.h */,
 				1E73E6D72F0510A90090D1DA /* xatlas.cpp */,
+				1E50AFA92FD0442F000EE545 /* Editor_iOS */,
 				1E73E7162F0511130090D1DA /* Frameworks */,
 				1E73E6432F05105A0090D1DA /* Products */,
 			);
@@ -394,6 +505,7 @@
 			isa = PBXGroup;
 			children = (
 				1E73E6422F05105A0090D1DA /* Editor */,
+				1E50AFA82FD0442F000EE545 /* Editor_iOS.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -420,6 +532,10 @@
 		1E73E7162F0511130090D1DA /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				1E50AFC62FD04454000EE545 /* Metal.framework */,
+				1E50AFC32FD04448000EE545 /* GameController.framework */,
+				1E50AF9B2FD03BAA000EE545 /* UIKit.framework */,
+				1E50AF992FD03BA3000EE545 /* QuartzCore.framework */,
 				1EBD1C052F251B7E00C29B34 /* GameController.framework */,
 				1E73E7532F053DBE0090D1DA /* Metal.framework */,
 				1E73E7512F053DB80090D1DA /* Foundation.framework */,
@@ -432,7 +548,8 @@
 		1E73E7342F0513620090D1DA /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				1E73E7382F0513620090D1DA /* libWickedEngine.a */,
+				1E73E7382F0513620090D1DA /* libWickedEngine_MacOS.a */,
+				1E50AF502FD03691000EE545 /* libWickedEngine_iOS.a */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -440,6 +557,28 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		1E50AFA72FD0442F000EE545 /* Editor_iOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1E50AFBF2FD04430000EE545 /* Build configuration list for PBXNativeTarget "Editor_iOS" */;
+			buildPhases = (
+				1E50AFA42FD0442F000EE545 /* Sources */,
+				1E50AFA52FD0442F000EE545 /* Frameworks */,
+				1E50AFA62FD0442F000EE545 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				1E50AFA92FD0442F000EE545 /* Editor_iOS */,
+			);
+			name = Editor_iOS;
+			packageProductDependencies = (
+			);
+			productName = Editor_iOS;
+			productReference = 1E50AFA82FD0442F000EE545 /* Editor_iOS.app */;
+			productType = "com.apple.product-type.application";
+		};
 		1E73E6412F05105A0090D1DA /* Editor */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 1E73E6492F05105A0090D1DA /* Build configuration list for PBXNativeTarget "Editor" */;
@@ -468,6 +607,9 @@
 				BuildIndependentTargetsInParallel = 1;
 				LastUpgradeCheck = 2610;
 				TargetAttributes = {
+					1E50AFA72FD0442F000EE545 = {
+						CreatedOnToolsVersion = 26.2;
+					};
 					1E73E6412F05105A0090D1DA = {
 						CreatedOnToolsVersion = 26.1.1;
 					};
@@ -494,21 +636,104 @@
 			projectRoot = "";
 			targets = (
 				1E73E6412F05105A0090D1DA /* Editor */,
+				1E50AFA72FD0442F000EE545 /* Editor_iOS */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXReferenceProxy section */
-		1E73E7382F0513620090D1DA /* libWickedEngine.a */ = {
+		1E50AF502FD03691000EE545 /* libWickedEngine_iOS.a */ = {
 			isa = PBXReferenceProxy;
 			fileType = archive.ar;
-			path = libWickedEngine.a;
+			path = libWickedEngine_iOS.a;
+			remoteRef = 1E50AF4F2FD03691000EE545 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		1E73E7382F0513620090D1DA /* libWickedEngine_MacOS.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = libWickedEngine_MacOS.a;
 			remoteRef = 1E73E7372F0513620090D1DA /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
 /* End PBXReferenceProxy section */
 
+/* Begin PBXResourcesBuildPhase section */
+		1E50AFA62FD0442F000EE545 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
+		1E50AFA42FD0442F000EE545 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1E50B0012FD044DB000EE545 /* main_iOS.mm in Sources */,
+				1E50AFC82FD044D5000EE545 /* GaussianSplatWindow.cpp in Sources */,
+				1E50AFC92FD044D5000EE545 /* miniply.cpp in Sources */,
+				1E50AFCA2FD044D5000EE545 /* ModelImporter_PLY.cpp in Sources */,
+				1E50AFCB2FD044D5000EE545 /* AnimationWindow.cpp in Sources */,
+				1E50AFCC2FD044D5000EE545 /* ArmatureWindow.cpp in Sources */,
+				1E50AFCD2FD044D5000EE545 /* CameraComponentWindow.cpp in Sources */,
+				1E50AFCE2FD044D5000EE545 /* CameraWindow.cpp in Sources */,
+				1E50AFCF2FD044D5000EE545 /* ColliderWindow.cpp in Sources */,
+				1E50AFD02FD044D5000EE545 /* ComponentsWindow.cpp in Sources */,
+				1E50AFD12FD044D5000EE545 /* ConstraintWindow.cpp in Sources */,
+				1E50AFD22FD044D5000EE545 /* ContentBrowserWindow.cpp in Sources */,
+				1E50AFD32FD044D5000EE545 /* DecalWindow.cpp in Sources */,
+				1E50AFD42FD044D5000EE545 /* DummyVisualizer.cpp in Sources */,
+				1E50AFD52FD044D5000EE545 /* Editor.cpp in Sources */,
+				1E50AFD62FD044D5000EE545 /* EmbeddedResources.cpp in Sources */,
+				1E50AFD72FD044D5000EE545 /* EmitterWindow.cpp in Sources */,
+				1E50AFD82FD044D5000EE545 /* EnvProbeWindow.cpp in Sources */,
+				1E50AFD92FD044D5000EE545 /* ExpressionWindow.cpp in Sources */,
+				1E50AFDA2FD044D5000EE545 /* FontWindow.cpp in Sources */,
+				1E50AFDB2FD044D5000EE545 /* ForceFieldWindow.cpp in Sources */,
+				1E50AFDC2FD044D5000EE545 /* GeneralWindow.cpp in Sources */,
+				1E50AFDD2FD044D5000EE545 /* GraphicsWindow.cpp in Sources */,
+				1E50AFDE2FD044D5000EE545 /* HairParticleWindow.cpp in Sources */,
+				1E50AFDF2FD044D5000EE545 /* HierarchyWindow.cpp in Sources */,
+				1E50AFE02FD044D5000EE545 /* HumanoidWindow.cpp in Sources */,
+				1E50AFE12FD044D5000EE545 /* IKWindow.cpp in Sources */,
+				1E50AFE22FD044D5000EE545 /* LayerWindow.cpp in Sources */,
+				1E50AFE32FD044D5000EE545 /* LightWindow.cpp in Sources */,
+				1E50AFE42FD044D5000EE545 /* MaterialPickerWindow.cpp in Sources */,
+				1E50AFE52FD044D5000EE545 /* MaterialWindow.cpp in Sources */,
+				1E50AFE62FD044D5000EE545 /* MeshWindow.cpp in Sources */,
+				1E50AFE72FD044D5000EE545 /* MetadataWindow.cpp in Sources */,
+				1E50AFE82FD044D5000EE545 /* ModelImporter_FBX.cpp in Sources */,
+				1E50AFE92FD044D5000EE545 /* ModelImporter_GLTF.cpp in Sources */,
+				1E50AFEA2FD044D5000EE545 /* ModelImporter_OBJ.cpp in Sources */,
+				1E50AFEB2FD044D5000EE545 /* NameWindow.cpp in Sources */,
+				1E50AFEC2FD044D5000EE545 /* ObjectWindow.cpp in Sources */,
+				1E50AFED2FD044D5000EE545 /* PaintToolWindow.cpp in Sources */,
+				1E50AFEE2FD044D5000EE545 /* ProfilerWindow.cpp in Sources */,
+				1E50AFEF2FD044D5000EE545 /* ProjectCreatorWindow.cpp in Sources */,
+				1E50AFF02FD044D5000EE545 /* RigidBodyWindow.cpp in Sources */,
+				1E50AFF12FD044D5000EE545 /* ScriptWindow.cpp in Sources */,
+				1E50AFF22FD044D5000EE545 /* SoftBodyWindow.cpp in Sources */,
+				1E50AFF32FD044D5000EE545 /* SoundWindow.cpp in Sources */,
+				1E50AFF42FD044D5000EE545 /* SplineWindow.cpp in Sources */,
+				1E50AFF52FD044D5000EE545 /* SpringWindow.cpp in Sources */,
+				1E50AFF62FD044D5000EE545 /* SpriteRectWindow.cpp in Sources */,
+				1E50AFF72FD044D5000EE545 /* SpriteWindow.cpp in Sources */,
+				1E50AFF82FD044D5000EE545 /* stdafx.cpp in Sources */,
+				1E50AFF92FD044D5000EE545 /* TerrainWindow.cpp in Sources */,
+				1E50AFFA2FD044D5000EE545 /* ThemeEditorWindow.cpp in Sources */,
+				1E50AFFB2FD044D5000EE545 /* TransformWindow.cpp in Sources */,
+				1E50AFFC2FD044D5000EE545 /* Translator.cpp in Sources */,
+				1E50AFFD2FD044D5000EE545 /* VideoWindow.cpp in Sources */,
+				1E50AFFE2FD044D5000EE545 /* VoxelGridWindow.cpp in Sources */,
+				1E50AFFF2FD044D5000EE545 /* WeatherWindow.cpp in Sources */,
+				1E50B0002FD044D5000EE545 /* xatlas.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		1E73E63E2F05105A0090D1DA /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -577,6 +802,71 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
+		1E50AFC02FD04430000EE545 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 92HRSW64GQ;
+				GCC_ENABLE_CPP_RTTI = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/../WickedEngine";
+				INFOPLIST_FILE = "";
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UIMainStoryboardFile = Main;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "turanszkij.Editor-iOS";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		1E50AFC12FD04430000EE545 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 92HRSW64GQ;
+				GCC_ENABLE_CPP_RTTI = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/../WickedEngine";
+				INFOPLIST_FILE = "";
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UIMainStoryboardFile = Main;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "turanszkij.Editor-iOS";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 		1E73E6472F05105A0090D1DA /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -731,6 +1021,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		1E50AFBF2FD04430000EE545 /* Build configuration list for PBXNativeTarget "Editor_iOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1E50AFC02FD04430000EE545 /* Debug */,
+				1E50AFC12FD04430000EE545 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		1E73E63D2F05105A0090D1DA /* Build configuration list for PBXProject "Editor" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
