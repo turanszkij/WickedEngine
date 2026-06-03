@@ -81,6 +81,8 @@ namespace wi
 		fsr2Resources = {};
 		vxgiResources = {};
 		meshblendResources = {};
+		
+		GetDevice()->SubmitCommandLists(); // I added this here to control memory usage of rapid resizing, as GPU resources can be final-freed here
 	}
 
 	void RenderPath3D::ResizeBuffers()

@@ -244,6 +244,7 @@ namespace wi::input
 		XMFLOAT2 pos;
 	};
 	const wi::vector<Touch>& GetTouches();
+	void AddTouchEvent(const Touch& touch);
 
 	enum CURSOR
 	{

@@ -232,12 +232,17 @@ namespace wi::input
 		ScreenToClient(window, &p);
 		mouse.position.x = (float)p.x;
 		mouse.position.y = (float)p.y;
-#elif defined(__APPLE__)
+#elif defined(PLATFORM_MACOS)
 		mouse = {};
 		mouse.position = wi::apple::GetMousePositionInWindow(window);
 		mouse.left_button_press = isLeftMouseButtonPressed();
 		mouse.right_button_press = isRightMouseButtonPressed();
 		mouse.middle_button_press = isMiddleMouseButtonPressed();
+#elif defined(PLATFORM_IOS)
+		// keep prev mousepos for touch consistency
+		mouse.left_button_press = false;
+		mouse.right_button_press = false;
+		mouse.middle_button_press = false;
 #elif defined(SDL2)
 		wi::input::sdlinput::GetMouseState(&mouse);
 		wi::input::sdlinput::GetKeyboardState(&keyboard);
@@ -264,9 +269,19 @@ namespace wi::input
 			pen_override = false;
 		}
 
+#ifndef PLATFORM_IOS // on IOS I keep the previous coodinates instead from touches
 		// The application always works with logical mouse coordinates:
 		mouse.position.x = canvas.PhysicalToLogical(mouse.position.x);
 		mouse.position.y = canvas.PhysicalToLogical(mouse.position.y);
+#endif // PLATFORM_IOS
+		
+		// Primary touch can act as mouse pointer override:
+		if (!touches.empty())
+		{
+			const Touch& primary_touch = touches.front();
+			mouse.position = primary_touch.pos;
+			mouse.left_button_press = primary_touch.state != Touch::TOUCHSTATE_RELEASED;
+		}
 
 		// Check if low-level XINPUT controller is not registered for playerindex slot and register:
 		for (int i = 0; i < wi::input::xinput::GetMaxControllerCount(); ++i)
@@ -1713,4 +1728,10 @@ namespace wi::input
 	{
 		mouse_move_events.push_back(value);
 	}
+
+	void AddTouchEvent(const Touch& touch)
+	{
+		touches.push_back(touch);
+	}
+
 }
