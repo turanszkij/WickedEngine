@@ -311,7 +311,9 @@ jobs:
           -project Editor/Editor.xcodeproj \
           -scheme Editor_iOS \
           -configuration Release \
-          -sdk iphoneos
+          -sdk iphoneos \
+          CODE_SIGNING_ALLOWED=NO \
+          CODE_SIGNING_REQUIRED=NO
 
     - name: Move files
       run: |
