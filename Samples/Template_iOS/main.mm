@@ -3,7 +3,9 @@
 #import <UIKit/UIKit.h>
 
 wi::Application app;
-bool running = true;
+
+@interface MyViewController : UIViewController
+@end
 
 @interface AppDelegate : UIResponder <UIApplicationDelegate>
 @property (nonatomic, strong) UIWindow *window;
@@ -15,7 +17,7 @@ bool running = true;
 - (BOOL)application:(UIApplication *)application
 	didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
-	UIViewController *vc = [[UIViewController alloc] init];
+	MyViewController *vc = [[MyViewController alloc] init];
 	self.window.rootViewController = vc;
 	
 	[self.window makeKeyAndVisible];
@@ -36,9 +38,7 @@ bool running = true;
 	return YES;
 }
 - (void)gameLoop {
-	if (running) {
-		app.Run();
-	}
+	app.Run();
 }
 
 - (void)dealloc {
@@ -47,6 +47,12 @@ bool running = true;
 	wi::jobsystem::ShutDown();
 }
 
+@end
+
+@implementation MyViewController
+- (UIInterfaceOrientationMask)supportedInterfaceOrientations {
+	return UIInterfaceOrientationMaskLandscape;
+}
 @end
 
 int main(int argc, char *argv[])
