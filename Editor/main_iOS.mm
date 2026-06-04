@@ -23,12 +23,28 @@ Editor editor;
 	
 	[self.window makeKeyAndVisible];
 	
+	wi::Timer timer;
+	if (editor.config.Open((wi::apple::GetApplicationSupportPath() + "/config.ini").c_str()))
+	{
+		wilog("config.ini loaded in %.2f milliseconds\n", (float)timer.elapsed_milliseconds());
+	}
+	
 	editor.SetWindow((__bridge void*)self.window);
 	
 	self.displayLink = [CADisplayLink displayLinkWithTarget:self
 													   selector:@selector(gameLoop)];
 	[self.displayLink addToRunLoop:[NSRunLoop currentRunLoop]
 						   forMode:NSRunLoopCommonModes];
+	
+	[[NSNotificationCenter defaultCenter] addObserver:self
+											 selector:@selector(appDidEnterBackground:)
+												 name:UIApplicationDidEnterBackgroundNotification
+											   object:nil];
+
+	[[NSNotificationCenter defaultCenter] addObserver:self
+											 selector:@selector(appWillEnterForeground:)
+												 name:UIApplicationWillEnterForegroundNotification
+											   object:nil];
 	
 	// Touch callbacks:
 	UITapGestureRecognizer* tap =
@@ -53,14 +69,24 @@ Editor editor;
 }
 - (void)gameLoop {
 	@autoreleasepool{
-		editor.Run();
+		if (editor.is_window_active) // normally the Run handles inactive window and still present, but on iOS I completely disable Run instead
+		{
+			editor.Run();
+		}
 	}
 }
 
-- (void)dealloc {
-	[self.displayLink invalidate];
-	self.displayLink = nil;
-	wi::jobsystem::ShutDown();
+- (void)appDidEnterBackground:(NSNotification *)notification
+{
+	editor.is_window_active = false;
+	if (!editor.IsScriptReplacement()) // editor config is not saved by script replaced executable
+	{
+		editor.config.Commit();
+	}
+}
+- (void)appWillEnterForeground:(NSNotification *)notification
+{
+	editor.is_window_active = true;
 }
 
 - (void)OnTap:(UITapGestureRecognizer*)gesture
@@ -96,7 +122,18 @@ Editor editor;
 	wi::input::Touch touch;
 	touch.pos = XMFLOAT2(p.x, p.y);
 	touch.scale = gesture.scale;
-	touch.state = wi::input::Touch::TOUCHSTATE_PINCHED;
+	switch (gesture.state)
+	{
+		case UIGestureRecognizerStateBegan:
+			touch.state = wi::input::Touch::TOUCHSTATE_MOVED;
+			break;
+		case UIGestureRecognizerStateEnded:
+			touch.state = wi::input::Touch::TOUCHSTATE_RELEASED;
+			break;
+		default:
+			touch.state = wi::input::Touch::TOUCHSTATE_PINCHED;
+			break;
+	}
 	wi::input::AddTouchEvent(touch);
 }
 

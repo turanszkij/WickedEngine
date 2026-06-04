@@ -2,6 +2,35 @@
 #include "wiHelper.h"
 #include "wiInput.h"
 
+#import <Foundation/Foundation.h>
+
+namespace wi::apple
+{
+
+std::string GetApplicationSupportPath()
+{
+	NSFileManager* fileManager = [NSFileManager defaultManager];
+		
+		NSURL* supportURL = [[fileManager URLsForDirectory:NSApplicationSupportDirectory
+												  inDomains:NSUserDomainMask] firstObject];
+		
+		if (supportURL) {
+			// Create the directory if it doesn't exist
+			if (![fileManager fileExistsAtPath:supportURL.path]) {
+				[fileManager createDirectoryAtURL:supportURL
+					  withIntermediateDirectories:YES
+									   attributes:nil
+											error:nil];
+			}
+			
+			return std::string([supportURL.path UTF8String]);
+		}
+		
+		return "";
+}
+
+}
+
 #ifdef PLATFORM_MACOS
 #include <AppKit/AppKit.h>
 #include <CoreGraphics/CoreGraphics.h>

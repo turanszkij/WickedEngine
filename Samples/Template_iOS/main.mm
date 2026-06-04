@@ -35,6 +35,16 @@ wi::Application app;
 	[self.displayLink addToRunLoop:[NSRunLoop currentRunLoop]
 						   forMode:NSRunLoopCommonModes];
 	
+	[[NSNotificationCenter defaultCenter] addObserver:self
+					  selector:@selector(appDidEnterBackground:)
+						  name:UIApplicationDidEnterBackgroundNotification
+						object:nil];
+
+	[[NSNotificationCenter defaultCenter] addObserver:self
+					  selector:@selector(appWillEnterForeground:)
+						  name:UIApplicationWillEnterForegroundNotification
+						object:nil];
+	
 	// Touch callbacks:
 	UITapGestureRecognizer* tap =
 		[[UITapGestureRecognizer alloc]
@@ -57,13 +67,19 @@ wi::Application app;
 	return YES;
 }
 - (void)gameLoop {
-	app.Run();
+	if (app.is_window_active) // normally the Run handles inactive window and still present, but on iOS I completely disable Run instead
+	{
+		app.Run();
+	}
 }
 
-- (void)dealloc {
-	[self.displayLink invalidate];
-	self.displayLink = nil;
-	wi::jobsystem::ShutDown();
+- (void)appDidEnterBackground:(NSNotification *)notification
+{
+	app.is_window_active = false;
+}
+- (void)appWillEnterForeground:(NSNotification *)notification
+{
+	app.is_window_active = true;
 }
 
 - (void)OnTap:(UITapGestureRecognizer*)gesture
@@ -99,7 +115,18 @@ wi::Application app;
 	wi::input::Touch touch;
 	touch.pos = XMFLOAT2(p.x, p.y);
 	touch.scale = gesture.scale;
-	touch.state = wi::input::Touch::TOUCHSTATE_PINCHED;
+	switch (gesture.state)
+	{
+		case UIGestureRecognizerStateBegan:
+			touch.state = wi::input::Touch::TOUCHSTATE_MOVED;
+			break;
+		case UIGestureRecognizerStateEnded:
+			touch.state = wi::input::Touch::TOUCHSTATE_RELEASED;
+			break;
+		default:
+			touch.state = wi::input::Touch::TOUCHSTATE_PINCHED;
+			break;
+	}
 	wi::input::AddTouchEvent(touch);
 }
 
