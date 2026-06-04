@@ -803,11 +803,6 @@ namespace wi::gui
 	{
 		XMFLOAT4 pointer = wi::input::GetPointer();
 		Hitbox2D hb = Hitbox2D(XMFLOAT2(pointer.x, pointer.y), XMFLOAT2(1, 1));
-#ifdef PLATFORM_IOS
-		// extend hitbox for easier touch:
-		hb.siz.x = 10;
-		hb.siz.y = hb.siz.x;
-#endif //PLATFORM_IOS
 		if (constrained)
 		{
 			HitboxConstrain(hb); // this is used to filter out pointer outside of active_area (outside of scissor basically)

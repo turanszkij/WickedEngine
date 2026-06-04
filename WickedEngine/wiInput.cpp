@@ -289,7 +289,7 @@ namespace wi::input
 			}
 			else
 			{
-				mouse.left_button_press = primary_touch.state != Touch::TOUCHSTATE_RELEASED;
+				mouse.left_button_press = true;
 			}
 			mouse.position = primary_touch.pos;
 		}
@@ -1742,7 +1742,11 @@ namespace wi::input
 
 	void AddTouchEvent(const Touch& touch)
 	{
-		touches.push_back(touch);
+		// Note: touches are received in logical coords based on system DPI but without user canvas scaling so I apply that here:
+		Touch scaledTouch = touch;
+		scaledTouch.pos.x /= canvas.scaling;
+		scaledTouch.pos.y /= canvas.scaling;
+		touches.push_back(scaledTouch);
 	}
 
 }

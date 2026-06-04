@@ -5,7 +5,7 @@ using namespace wi::graphics;
 using namespace wi::ecs;
 using namespace wi::scene;
 
-static const std::string languages_directory = "languages/";
+static const std::string languages_directory = wi::helper::GetCurrentPath() + "/languages/";
 
 enum class Theme : uint64_t
 {

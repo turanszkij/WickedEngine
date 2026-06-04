@@ -10,6 +10,8 @@
 		1E19DEEF2F557EE7009F2E30 /* ModelImporter_PLY.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E19DEEE2F557EE7009F2E30 /* ModelImporter_PLY.cpp */; };
 		1E19DEF52F559AFC009F2E30 /* miniply.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E19DEF42F559AFC009F2E30 /* miniply.cpp */; };
 		1E19DEF82F55DB3A009F2E30 /* GaussianSplatWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E19DEF72F55DB3A009F2E30 /* GaussianSplatWindow.cpp */; };
+		1E36F6842FD211490042E04D /* fonts in Resources */ = {isa = PBXBuildFile; fileRef = 1E36F6822FD211490042E04D /* fonts */; };
+		1E36F6852FD211490042E04D /* languages in Resources */ = {isa = PBXBuildFile; fileRef = 1E36F6832FD211490042E04D /* languages */; };
 		1E50AFC22FD04441000EE545 /* libWickedEngine_iOS.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E50AF502FD03691000EE545 /* libWickedEngine_iOS.a */; };
 		1E50AFC42FD04448000EE545 /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E50AFC32FD04448000EE545 /* GameController.framework */; };
 		1E50AFC52FD0444F000EE545 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E50AF9B2FD03BAA000EE545 /* UIKit.framework */; platformFilter = ios; };
@@ -172,6 +174,8 @@
 		1E19DEF42F559AFC009F2E30 /* miniply.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = miniply.cpp; sourceTree = "<group>"; };
 		1E19DEF62F55DB3A009F2E30 /* GaussianSplatWindow.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GaussianSplatWindow.h; sourceTree = "<group>"; };
 		1E19DEF72F55DB3A009F2E30 /* GaussianSplatWindow.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = GaussianSplatWindow.cpp; sourceTree = "<group>"; };
+		1E36F6822FD211490042E04D /* fonts */ = {isa = PBXFileReference; lastKnownFileType = folder; path = fonts; sourceTree = "<group>"; };
+		1E36F6832FD211490042E04D /* languages */ = {isa = PBXFileReference; lastKnownFileType = folder; path = languages; sourceTree = "<group>"; };
 		1E50AF992FD03BA3000EE545 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/System/Library/Frameworks/QuartzCore.framework; sourceTree = DEVELOPER_DIR; };
 		1E50AF9B2FD03BAA000EE545 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/System/Library/Frameworks/UIKit.framework; sourceTree = DEVELOPER_DIR; };
 		1E50AF9F2FD04273000EE545 /* main_iOS.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = main_iOS.mm; sourceTree = "<group>"; };
@@ -360,6 +364,8 @@
 		1E73E6392F05105A0090D1DA = {
 			isa = PBXGroup;
 			children = (
+				1E36F6822FD211490042E04D /* fonts */,
+				1E36F6832FD211490042E04D /* languages */,
 				1E50B2742FD0657E000EE545 /* Content */,
 				1E50AF9F2FD04273000EE545 /* main_iOS.mm */,
 				1E73E7132F0510B40090D1DA /* main_MacOS.mm */,
@@ -663,6 +669,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1E36F6842FD211490042E04D /* fonts in Resources */,
+				1E36F6852FD211490042E04D /* languages in Resources */,
 				1E50B2752FD0657E000EE545 /* Content in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

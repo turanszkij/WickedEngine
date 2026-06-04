@@ -157,9 +157,6 @@ void Translator::Update(const CameraComponent& camera, const XMFLOAT4& currentMo
 			state = TRANSLATOR_IDLE;
 
 			// Decide which state to enter for dragging:
-			XMMATRIX P = camera.GetProjection();
-			XMMATRIX V = camera.GetView();
-			XMMATRIX W = XMMatrixIdentity();
 			XMFLOAT3 p = transform.GetPosition();
 
 			dist = is2D ? (camera.ortho_vertical_size * 0.025f) : std::max(wi::math::Distance(p, camera.Eye) * 0.05f, 0.0001f) * tool_scale;
@@ -602,8 +599,6 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 		Translator_Internal::LoadShaders();
 	}
 
-	Scene& scene = *this->scene;
-
 	GraphicsDevice* device = wi::graphics::GetDevice();
 
 	device->EventBegin("Translator", cmd);
@@ -792,7 +787,6 @@ void Translator::Draw(const CameraComponent& camera, const XMFLOAT4& currentMous
 			// circle:
 			const float c2w = circle2_width * tool_thickness;
 			const float circle2_radius_inner = circle2_radius - c2w;
-			const float circle2_halfway = circle2_radius - c2w * 0.5f;
 			const Vertex verts[] = {
 				{XMFLOAT4(0, std::sin(angle0) * circle2_radius_inner, std::cos(angle0) * circle2_radius_inner, 1), XMFLOAT4(1,1,1,1)},
 				{XMFLOAT4(0, std::sin(angle1) * circle2_radius_inner, std::cos(angle1) * circle2_radius_inner, 1), XMFLOAT4(1,1,1,1)},

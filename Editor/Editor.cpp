@@ -1525,7 +1525,7 @@ void EditorComponent::Load()
 		font_datas.emplace_back().name = filename;
 		wi::helper::FileRead(filename, font_datas.back().filedata);
 	};
-	wi::helper::GetFileNamesInDirectory("fonts/", load_font, "TTF");
+	wi::helper::GetFileNamesInDirectory(wi::helper::GetCurrentPath() + "/fonts/", load_font, "TTF");
 
 	{
 		size_t current_recent = 0;
