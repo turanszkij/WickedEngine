@@ -1744,8 +1744,9 @@ namespace wi::input
 	{
 		// Note: touches are received in logical coords based on system DPI but without user canvas scaling so I apply that here:
 		Touch scaledTouch = touch;
-		scaledTouch.pos.x /= canvas.scaling;
-		scaledTouch.pos.y /= canvas.scaling;
+		const float scaling_rcp = canvas.scaling > 0 ? (1.0f / canvas.scaling) : 1.0f;
+		scaledTouch.pos.x *= scaling_rcp;
+		scaledTouch.pos.y *= scaling_rcp;
 		touches.push_back(scaledTouch);
 	}
 
