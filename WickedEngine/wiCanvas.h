@@ -15,7 +15,7 @@ namespace wi
 		float dpi = 96;
 		float scaling = 1; // custom DPI scaling factor (optional)
 		
-		// Safe area insets in logical coordinates:
+		// Safe area insets in logical coordinates without user scaling:
 		//	the safe area can indicate an offset from the borders of the canvas from where it is safe to put important visual elements that will be always well-visible
 		float window_inset_left = 0;
 		float window_inset_right = 0;
