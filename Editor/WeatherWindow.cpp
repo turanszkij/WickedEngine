@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "WeatherWindow.h"
+#include <cmath>
 
 using namespace wi::ecs;
 using namespace wi::scene;
@@ -9,7 +10,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_WEATHER " Weather", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE | wi::gui::Window::WindowControls::FIT_ALL_WIDGETS_VERTICAL);
-	SetSize(XMFLOAT2(660, 2140));
+	SetSize(XMFLOAT2(660, 2260));
 
 	closeButton.SetTooltip("Delete WeatherComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -63,6 +64,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	colorComboBox.AddItem("Cloud extinction 1");
 	colorComboBox.AddItem("Cloud extinction 2");
 	colorComboBox.AddItem("Rain color");
+	colorComboBox.AddItem("Moon color");
 	colorComboBox.SetTooltip("Choose the destination data of the color picker.");
 	colorComboBox.SetMaxVisibleItemCount(100);
 	AddWidget(&colorComboBox);
@@ -105,6 +107,11 @@ void WeatherWindow::Create(EditorComponent* _editor)
 			break;
 		case 9:
 			weather.rain_color = args.color.toFloat4();
+			break;
+		case 10:
+			weather.moonColor = args.color.toFloat3();
+			editor->GetCurrentScene().EnsureMoonLight(weather);
+			InvalidateProbes();
 			break;
 		}
 		});
@@ -232,6 +239,161 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		GetWeather().stars = args.fValue;
 		});
 	AddWidget(&starsSlider);
+
+	sunEclipseAutoCheckBox.Create("Auto Solar Eclipse");
+	sunEclipseAutoCheckBox.SetTooltip("Automatically attenuate the sun when the moon passes in front of it.");
+	sunEclipseAutoCheckBox.SetSize(XMFLOAT2(hei, hei));
+	sunEclipseAutoCheckBox.SetPos(XMFLOAT2(x, y += step));
+	sunEclipseAutoCheckBox.OnClick([this](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.sunEclipseAutomatic = args.bValue;
+		sunEclipseSlider.SetEnabled(!args.bValue);
+		InvalidateProbes();
+		});
+	AddWidget(&sunEclipseAutoCheckBox);
+
+	sunEclipseSlider.Create(0.0f, 1.0f, 0.0f, 1000, "Solar Eclipse: ");
+	sunEclipseSlider.SetTooltip("Fraction of the sun obscured by the moon (0 = none, 1 = total eclipse). Disabled when automation is enabled.");
+	sunEclipseSlider.SetSize(XMFLOAT2(wid, hei));
+	sunEclipseSlider.SetPos(XMFLOAT2(x, y += step));
+	sunEclipseSlider.OnSlide([this](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.sunEclipseStrength = args.fValue;
+		InvalidateProbes();
+		});
+	AddWidget(&sunEclipseSlider);
+
+	moonAzimuthSlider.Create(0, 360, 0, 10000, "Moon Azimuth: ");
+	moonAzimuthSlider.SetTooltip("Horizontal moon orientation in degrees (0° faces +Z).");
+	moonAzimuthSlider.SetSize(XMFLOAT2(wid, hei));
+	moonAzimuthSlider.SetPos(XMFLOAT2(x, y += step));
+	moonAzimuthSlider.OnSlide([this](wi::gui::EventArgs args) {
+		UpdateMoonDirection();
+		});
+	AddWidget(&moonAzimuthSlider);
+
+	moonElevationSlider.Create(-90, 90, -10, 10000, "Moon Elevation: ");
+	moonElevationSlider.SetTooltip("Vertical moon orientation in degrees (0° on horizon).");
+	moonElevationSlider.SetSize(XMFLOAT2(wid, hei));
+	moonElevationSlider.SetPos(XMFLOAT2(x, y += step));
+	moonElevationSlider.OnSlide([this](wi::gui::EventArgs args) {
+		UpdateMoonDirection();
+		});
+	AddWidget(&moonElevationSlider);
+
+	moonSizeSlider.Create(0.05f, 5.0f, 0.5f, 10000, "Moon Size (deg): ");
+	moonSizeSlider.SetTooltip("Apparent angular size of the moon.");
+	moonSizeSlider.SetSize(XMFLOAT2(wid, hei));
+	moonSizeSlider.SetPos(XMFLOAT2(x, y += step));
+	moonSizeSlider.OnSlide([this](wi::gui::EventArgs args) {
+		GetWeather().moonSize = wi::math::DegreesToRadians(args.fValue);
+		});
+	AddWidget(&moonSizeSlider);
+
+	moonGlowSizeSlider.Create(0.0f, 20.0f, 2.0f, 10000, "Moon Glow (deg): ");
+	moonGlowSizeSlider.SetTooltip("Additional halo radius around the moon.");
+	moonGlowSizeSlider.SetSize(XMFLOAT2(wid, hei));
+	moonGlowSizeSlider.SetPos(XMFLOAT2(x, y += step));
+	moonGlowSizeSlider.OnSlide([this](wi::gui::EventArgs args) {
+		GetWeather().moonGlowSize = wi::math::DegreesToRadians(args.fValue);
+		});
+	AddWidget(&moonGlowSizeSlider);
+
+	moonGlowSharpnessSlider.Create(0.2f, 8.0f, 2.0f, 10000, "Moon Glow Sharpness: ");
+	moonGlowSharpnessSlider.SetTooltip("Controls how quickly the halo fades.");
+	moonGlowSharpnessSlider.SetSize(XMFLOAT2(wid, hei));
+	moonGlowSharpnessSlider.SetPos(XMFLOAT2(x, y += step));
+	moonGlowSharpnessSlider.OnSlide([this](wi::gui::EventArgs args) {
+		GetWeather().moonGlowSharpness = args.fValue;
+		});
+	AddWidget(&moonGlowSharpnessSlider);
+
+	moonGlowIntensitySlider.Create(0.0f, 2.0f, 0.25f, 10000, "Moon Glow Intensity: ");
+	moonGlowIntensitySlider.SetTooltip("Halo brightness multiplier.");
+	moonGlowIntensitySlider.SetSize(XMFLOAT2(wid, hei));
+	moonGlowIntensitySlider.SetPos(XMFLOAT2(x, y += step));
+	moonGlowIntensitySlider.OnSlide([this](wi::gui::EventArgs args) {
+		GetWeather().moonGlowIntensity = args.fValue;
+		});
+	AddWidget(&moonGlowIntensitySlider);
+
+	moonLightIntensitySlider.Create(0.0f, 5.0f, 0.05f, 1000, "Moon Light Intensity: ");
+	moonLightIntensitySlider.SetTooltip("Illuminance emitted by the moon directional light (in lux). Set to 0 to disable moon lighting.");
+	moonLightIntensitySlider.SetSize(XMFLOAT2(wid, hei));
+	moonLightIntensitySlider.SetPos(XMFLOAT2(x, y += step));
+	moonLightIntensitySlider.OnSlide([this](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.moonLightIntensity = args.fValue;
+		editor->GetCurrentScene().EnsureMoonLight(weather);
+		InvalidateProbes();
+		});
+	AddWidget(&moonLightIntensitySlider);
+
+	moonEclipseAutoCheckBox.Create("Auto Moon Eclipse");
+	moonEclipseAutoCheckBox.SetTooltip("Automatically darken the moon when it enters Earth's shadow.");
+	moonEclipseAutoCheckBox.SetSize(XMFLOAT2(hei, hei));
+	moonEclipseAutoCheckBox.SetPos(XMFLOAT2(x, y += step));
+	moonEclipseAutoCheckBox.OnClick([this](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.moonEclipseAutomatic = args.bValue;
+		moonEclipseSlider.SetEnabled(!args.bValue);
+		editor->GetCurrentScene().EnsureMoonLight(weather);
+		InvalidateProbes();
+		});
+	AddWidget(&moonEclipseAutoCheckBox);
+
+	moonEclipseSlider.Create(0.0f, 1.0f, 0.0f, 1000, "Moon Eclipse: ");
+	moonEclipseSlider.SetTooltip("Fraction of the moon darkened by Earth's shadow (0 = none, 1 = total eclipse). Disabled when automation is enabled.");
+	moonEclipseSlider.SetSize(XMFLOAT2(wid, hei));
+	moonEclipseSlider.SetPos(XMFLOAT2(x, y += step));
+	moonEclipseSlider.OnSlide([this](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		weather.moonEclipseStrength = args.fValue;
+		editor->GetCurrentScene().EnsureMoonLight(weather);
+		InvalidateProbes();
+		});
+	AddWidget(&moonEclipseSlider);
+
+	moonTextureButton.Create("Load Moon Texture");
+	moonTextureButton.SetTooltip("Load a dedicated texture for the moon disk. Click again to clear.");
+	moonTextureButton.SetSize(XMFLOAT2(mod_wid, hei));
+	moonTextureButton.SetPos(XMFLOAT2(mod_x, y += step));
+	moonTextureButton.OnClick([=](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		if (!weather.moonTexture.IsValid())
+		{
+			wi::helper::FileDialogParams params;
+			params.type = wi::helper::FileDialogParams::OPEN;
+			params.description = "Texture";
+			params.extensions = wi::resourcemanager::GetSupportedImageExtensions();
+			wi::helper::FileDialog(params, [=](std::string fileName) {
+				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					auto& weather = GetWeather();
+					weather.moonTextureName = fileName;
+					weather.moonTexture = wi::resourcemanager::Load(fileName);
+					moonTextureButton.SetText(wi::helper::GetFileNameFromPath(fileName));
+					InvalidateProbes();
+				});
+			});
+		}
+		else
+		{
+			weather.moonTexture = {};
+			weather.moonTextureName.clear();
+			moonTextureButton.SetText("Load Moon Texture");
+			InvalidateProbes();
+		}
+	});
+	AddWidget(&moonTextureButton);
+
+	moonTextureMipBiasSlider.Create(-4.0f, 4.0f, 0.0f, 1000, "Moon Texture Mip Bias: ");
+	moonTextureMipBiasSlider.SetTooltip("Adjust mip bias when sampling the moon texture for sharper or softer results.");
+	moonTextureMipBiasSlider.SetSize(XMFLOAT2(wid, hei));
+	moonTextureMipBiasSlider.SetPos(XMFLOAT2(x, y += step));
+	moonTextureMipBiasSlider.OnSlide([this](wi::gui::EventArgs args) {
+		GetWeather().moonTextureMipBias = args.fValue;
+		});
+	AddWidget(&moonTextureMipBiasSlider);
 
 	skyRotationSlider.Create(0, 360, 0, 10000, "Sky Texture Rotation: ");
 	skyRotationSlider.SetTooltip("Rotate the sky texture horizontally. (If using a sky texture)");
@@ -1053,6 +1215,15 @@ void WeatherWindow::UpdateData()
 			colorgradingButton.SetText(wi::helper::GetFileNameFromPath(weather.colorGradingMapName));
 		}
 
+		if (!weather.moonTextureName.empty())
+		{
+			moonTextureButton.SetText(wi::helper::GetFileNameFromPath(weather.moonTextureName));
+		}
+		else
+		{
+			moonTextureButton.SetText("Load Moon Texture");
+		}
+
 		if (!weather.volumetricCloudsWeatherMapFirstName.empty())
 		{
 			volumetricCloudsWeatherMapFirstButton.SetText(wi::helper::GetFileNameFromPath(weather.volumetricCloudsWeatherMapFirstName));
@@ -1075,6 +1246,37 @@ void WeatherWindow::UpdateData()
 		windRandomnessSlider.SetValue(weather.windRandomness);
 		skyExposureSlider.SetValue(weather.skyExposure);
 		starsSlider.SetValue(weather.stars);
+		sunEclipseSlider.SetValue(weather.sunEclipseStrength);
+		sunEclipseAutoCheckBox.SetCheck(weather.sunEclipseAutomatic);
+		sunEclipseSlider.SetEnabled(!weather.sunEclipseAutomatic);
+
+		{
+			XMFLOAT3 moonDir = weather.moonDirection;
+			if (wi::math::LengthSquared(moonDir) < 1e-6f)
+			{
+				moonDir = XMFLOAT3(0.0f, 0.5f, 0.8660254f);
+			}
+			XMVECTOR moonDirVec = XMVector3Normalize(XMLoadFloat3(&moonDir));
+			XMFLOAT3 moonDirNorm;
+			XMStoreFloat3(&moonDirNorm, moonDirVec);
+			float azimuth = wi::math::RadiansToDegrees(std::atan2(moonDirNorm.x, moonDirNorm.z));
+			if (azimuth < 0)
+			{
+				azimuth += 360.0f;
+			}
+			moonAzimuthSlider.SetValue(azimuth);
+			float elevation = wi::math::RadiansToDegrees(std::asin(wi::math::Clamp(moonDirNorm.y, -1.0f, 1.0f)));
+			moonElevationSlider.SetValue(elevation);
+		}
+		moonSizeSlider.SetValue(wi::math::RadiansToDegrees(weather.moonSize));
+		moonGlowSizeSlider.SetValue(wi::math::RadiansToDegrees(weather.moonGlowSize));
+		moonGlowSharpnessSlider.SetValue(weather.moonGlowSharpness);
+		moonGlowIntensitySlider.SetValue(weather.moonGlowIntensity);
+		moonLightIntensitySlider.SetValue(weather.moonLightIntensity);
+		moonEclipseSlider.SetValue(weather.moonEclipseStrength);
+		moonEclipseAutoCheckBox.SetCheck(weather.moonEclipseAutomatic);
+		moonEclipseSlider.SetEnabled(!weather.moonEclipseAutomatic);
+		moonTextureMipBiasSlider.SetValue(weather.moonTextureMipBias);
 		skyRotationSlider.SetValue(wi::math::RadiansToDegrees(weather.sky_rotation));
 		rainAmountSlider.SetValue(weather.rain_amount);
 		rainLengthSlider.SetValue(weather.rain_length);
@@ -1115,6 +1317,9 @@ void WeatherWindow::UpdateData()
 			break;
 		case 9:
 			colorPicker.SetPickColor(wi::Color::fromFloat4(weather.rain_color));
+			break;
+		case 10:
+			colorPicker.SetPickColor(wi::Color::fromFloat3(weather.moonColor));
 			break;
 		}
 
@@ -1204,6 +1409,15 @@ void WeatherWindow::UpdateData()
 			colorgradingButton.SetText("Load Color Grading LUT");
 		}
 
+		if (weather.moonTexture.IsValid())
+		{
+			moonTextureButton.SetText(wi::helper::GetFileNameFromPath(weather.moonTextureName));
+		}
+		else
+		{
+			moonTextureButton.SetText("Load Moon Texture");
+		}
+
 		if (weather.volumetricCloudsWeatherMapFirst.IsValid())
 		{
 			volumetricCloudsWeatherMapFirstButton.SetText(wi::helper::GetFileNameFromPath(weather.volumetricCloudsWeatherMapFirstName));
@@ -1230,6 +1444,16 @@ void WeatherWindow::UpdateData()
 		scene.weather.horizon = default_sky_horizon;
 		scene.weather.fogStart = std::numeric_limits<float>::max();
 		scene.weather.fogDensity = 0;
+		scene.weather.sunEclipseStrength = 0.0f;
+		scene.weather.sunEclipseAutomatic = false;
+		scene.weather.moonColor = XMFLOAT3(0.04f, 0.04f, 0.05f);
+		scene.weather.moonDirection = XMFLOAT3(0.0f, 0.5f, 0.8660254f);
+		scene.weather.moonSize = 0.0095f;
+		scene.weather.moonGlowSize = 0.03f;
+		scene.weather.moonGlowSharpness = 2.0f;
+		scene.weather.moonGlowIntensity = 0.25f;
+		scene.weather.moonLightIntensity = 0.05f;
+		scene.weather.moonTextureMipBias = 0;
 	}
 }
 
@@ -1263,6 +1487,24 @@ void WeatherWindow::UpdateWind()
 	XMStoreFloat3(&GetWeather().windDirection, dir);
 }
 
+void WeatherWindow::UpdateMoonDirection()
+{
+	float azimuth = wi::math::DegreesToRadians(moonAzimuthSlider.GetValue());
+	float elevation = wi::math::DegreesToRadians(moonElevationSlider.GetValue());
+	float cosElev = std::cos(elevation);
+	XMFLOAT3 dir = {
+		std::sin(azimuth) * cosElev,
+		std::sin(elevation),
+		std::cos(azimuth) * cosElev
+	};
+	XMVECTOR dirVec = XMVector3Normalize(XMLoadFloat3(&dir));
+	XMFLOAT3 normalized;
+	XMStoreFloat3(&normalized, dirVec);
+	GetWeather().moonDirection = normalized;
+	editor->GetCurrentScene().EnsureMoonLight(GetWeather());
+	InvalidateProbes();
+}
+
 void WeatherWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
@@ -1291,6 +1533,19 @@ void WeatherWindow::ResizeLayout()
 	layout.add(windRandomnessSlider);
 	layout.add(skyExposureSlider);
 	layout.add(starsSlider);
+	layout.add(sunEclipseAutoCheckBox);
+	layout.add(sunEclipseSlider);
+	layout.add(moonAzimuthSlider);
+	layout.add(moonElevationSlider);
+	layout.add(moonSizeSlider);
+	layout.add(moonGlowSizeSlider);
+	layout.add(moonGlowSharpnessSlider);
+	layout.add(moonGlowIntensitySlider);
+	layout.add(moonLightIntensitySlider);
+	layout.add(moonEclipseAutoCheckBox);
+	layout.add(moonEclipseSlider);
+	layout.add_fullwidth(moonTextureButton);
+	layout.add(moonTextureMipBiasSlider);
 	layout.add(skyRotationSlider);
 	layout.add(rainAmountSlider);
 	layout.add(rainLengthSlider);
