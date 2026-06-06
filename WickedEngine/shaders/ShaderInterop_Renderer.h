@@ -1312,7 +1312,11 @@ struct alignas(16) FrameCB
 
 	ShaderEntity entityArray[SHADER_ENTITY_COUNT];
 	float4x4 matrixArray[SHADER_ENTITY_COUNT];
+	ShaderSphere entityCullingArray[SHADER_ENTITY_COUNT];
 };
+#ifdef __cplusplus
+static_assert(sizeof(FrameCB) <= 64 * 1024); // constant buffer can be max 64k sized
+#endif // __cplusplus
 
 enum SHADERCAMERA_OPTIONS
 {
@@ -1546,6 +1550,9 @@ struct alignas(16) CameraCB
 	}
 #endif // __cplusplus
 };
+#ifdef __cplusplus
+static_assert(sizeof(CameraCB) <= 64 * 1024); // constant buffer can be max 64k sized
+#endif // __cplusplus
 
 CONSTANTBUFFER(g_xFrame, FrameCB, CBSLOT_RENDERER_FRAME);
 CONSTANTBUFFER(g_xCamera, CameraCB, CBSLOT_RENDERER_CAMERA);

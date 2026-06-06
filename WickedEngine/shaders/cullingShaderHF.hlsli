@@ -1,6 +1,6 @@
 #ifndef WI_CULLING_SHADER_HF
 #define WI_CULLING_SHADER_HF
-#include "ShaderInterop.h"
+#include "ShaderInterop_Renderer.h"
 
 struct Plane
 {
@@ -57,23 +57,18 @@ float4 ScreenToView(float4 screen, float2 dim_rcp)
 
 	return ClipToView(clip);
 }
-struct Sphere
-{
-	float3 c;	 // Center point.
-	float r;	// Radius.
-};
 // Check to see if a sphere is fully behind (inside the negative halfspace of) a plane.
 // Source: Real-time collision detection, Christer Ericson (2005)
-bool SphereInsidePlane(Sphere sphere, Plane plane)
+bool SphereInsidePlane(ShaderSphere sphere, Plane plane)
 {
-	return dot(plane.N, sphere.c) - plane.d < -sphere.r;
+	return dot(plane.N, sphere.center) - plane.d < -sphere.radius;
 }
 // Check to see of a light is partially contained within the frustum.
-bool SphereInsideFrustum(Sphere sphere, Frustum frustum, float zNear, float zFar) // this can only be used in view space
+bool SphereInsideFrustum(ShaderSphere sphere, Frustum frustum, float zNear, float zFar) // this can only be used in view space
 {
 	bool result = true;
 
-	//if (sphere.c.z + sphere.r < zNear || sphere.c.z - sphere.r > zFar)
+	//if (sphere.center.z + sphere.radius < zNear || sphere.center.z - sphere.radius > zFar)
 	//{
 	//	result = false;
 	//}
@@ -88,7 +83,7 @@ bool SphereInsideFrustum(Sphere sphere, Frustum frustum, float zNear, float zFar
 	//}
 
 	// Better to just unroll:
-	result = ((sphere.c.z + sphere.r < zNear || sphere.c.z - sphere.r > zFar) ? false : result);
+	result = ((sphere.center.z + sphere.radius < zNear || sphere.center.z - sphere.radius > zFar) ? false : result);
 	result = ((SphereInsidePlane(sphere, frustum.planes[0])) ? false : result);
 	result = ((SphereInsidePlane(sphere, frustum.planes[1])) ? false : result);
 	result = ((SphereInsidePlane(sphere, frustum.planes[2])) ? false : result);
@@ -96,7 +91,7 @@ bool SphereInsideFrustum(Sphere sphere, Frustum frustum, float zNear, float zFar
 
 	return result;
 }
-bool SphereInsideFrustum(Sphere sphere, Plane planes[6]) // this can be used in world space
+bool SphereInsideFrustum(ShaderSphere sphere, Plane planes[6]) // this can be used in world space
 {
 	bool result = true;
 
@@ -177,11 +172,11 @@ struct AABB
 	float3 getMin() { return c - e; }
 	float3 getMax() { return c + e; }
 };
-bool SphereIntersectsAABB(in Sphere sphere, in AABB aabb)
+bool SphereIntersectsAABB(in ShaderSphere sphere, in AABB aabb)
 {
-	float3 vDelta = max(0, abs(aabb.c - sphere.c) - aabb.e);
+	float3 vDelta = max(0, abs(aabb.c - sphere.center) - aabb.e);
 	float fDistSq = dot(vDelta, vDelta);
-	return fDistSq <= sphere.r * sphere.r;
+	return fDistSq <= sphere.radius * sphere.radius;
 }
 bool IntersectAABB(AABB a, AABB b)
 {

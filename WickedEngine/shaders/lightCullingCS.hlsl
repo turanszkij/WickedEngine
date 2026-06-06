@@ -33,14 +33,14 @@ void AppendEntity_Transparent(uint entityIndex)
 	InterlockedOr(tile_transparent[bucket_index], 1u << bucket_place);
 }
 
-inline uint ConstructEntityMask(in float depthRangeMin, in float depthRangeRecip, in Sphere bounds)
+inline uint ConstructEntityMask(in float depthRangeMin, in float depthRangeRecip, in ShaderSphere bounds)
 {
 	// We create a entity mask to decide if the entity is really touching something
 	// If we do an OR operation with the depth slices mask, we instantly get if the entity is contributing or not
 	// we do this in view space
 
-	const float fMin = bounds.c.z - bounds.r;
-	const float fMax = bounds.c.z + bounds.r;
+	const float fMin = bounds.center.z - bounds.radius;
+	const float fMax = bounds.center.z + bounds.radius;
 	const uint __entitymaskcellindexSTART = clamp(floor((fMin - depthRangeMin) * depthRangeRecip), 0, 31);
 	const uint __entitymaskcellindexEND = clamp(floor((fMax - depthRangeMin) * depthRangeRecip), 0, 31);
 
@@ -210,15 +210,14 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 
 	const uint depth_mask = uDepthMask; // take out from groupshared into register
 	
-	// Point lights:
-	for (uint i = pointlights().first_item() + groupIndex; i < pointlights().end_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
+	// lights:
+	for (uint i = lights().first_item() + groupIndex; i < lights().end_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
 		ShaderEntity entity = load_entity(i);
 		
 		if (entity.IsStaticLight())
 			continue; // static lights will be skipped here (they are used at lightmap baking)
-		float3 positionVS = mul(GetCamera().view, float4(entity.position, 1)).xyz;
-		Sphere sphere = { positionVS.xyz, entity.GetRange() + entity.GetLength() };
+		ShaderSphere sphere = load_entityculling(i);
 		if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
 		{
 			AppendEntity_Transparent(i);
@@ -233,79 +232,13 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 				}
 			}
 		}
-	}
-
-	// Spot lights:
-	for (uint i = spotlights().first_item() + groupIndex; i < spotlights().end_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
-	{
-		ShaderEntity entity = load_entity(i);
-		
-		if (entity.IsStaticLight())
-			continue; // static lights will be skipped here (they are used at lightmap baking)
-		float3 positionVS = mul(GetCamera().view, float4(entity.position, 1)).xyz;
-		float3 directionVS = mul((float3x3)GetCamera().view, entity.GetDirection());
-		// Construct a tight fitting sphere around the spotlight cone:
-		const float r = entity.GetRange() * 0.5f / (entity.GetConeAngleCos() * entity.GetConeAngleCos());
-		Sphere sphere = { positionVS - directionVS * r, r };
-		if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
-		{
-			AppendEntity_Transparent(i);
-
-			if (SphereIntersectsAABB(sphere, GroupAABB)) // tighter fit than sphere-frustum culling
-			{
-#ifdef ADVANCED_CULLING
-				if (depth_mask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
-#endif
-				{
-					AppendEntity_Opaque(i);
-				}
-			}
-
-		}
-	}
-	
-	// Rectangle lights:
-	for (uint i = rectlights().first_item() + groupIndex; i < rectlights().end_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
-	{
-		ShaderEntity entity = load_entity(i);
-		
-		if (entity.IsStaticLight())
-			continue; // static lights will be skipped here (they are used at lightmap baking)
-		float3 positionVS = mul(GetCamera().view, float4(entity.position, 1)).xyz;
-		Sphere sphere = { positionVS.xyz, max(entity.GetLength(), entity.GetHeight()) + entity.GetRange() };
-		if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
-		{
-			AppendEntity_Transparent(i);
-
-			if (SphereIntersectsAABB(sphere, GroupAABB)) // tighter fit than sphere-frustum culling
-			{
-#ifdef ADVANCED_CULLING
-				if (depth_mask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
-#endif
-				{
-					AppendEntity_Opaque(i);
-				}
-			}
-		}
-	}
-
-	// Directional lights:
-	for (uint i = directional_lights().first_item() + groupIndex; i < directional_lights().end_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
-	{
-		ShaderEntity entity = load_entity(i);
-		
-		if (entity.IsStaticLight())
-			continue; // static lights will be skipped here (they are used at lightmap baking)
-		AppendEntity_Transparent(i);
-		AppendEntity_Opaque(i);
 	}
 
 	// Decals:
 	for (uint i = decals().first_item() + groupIndex; i < decals().end_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
 		ShaderEntity entity = load_entity(i);
-		float3 positionVS = mul(GetCamera().view, float4(entity.position, 1)).xyz;
-		Sphere sphere = { positionVS.xyz, entity.GetRange() };
+		ShaderSphere sphere = load_entityculling(i);
 		if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
 		{
 			AppendEntity_Transparent(i);
@@ -335,8 +268,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	for (uint i = probes().first_item() + groupIndex; i < probes().end_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
 		ShaderEntity entity = load_entity(i);
-		float3 positionVS = mul(GetCamera().view, float4(entity.position, 1)).xyz;
-		Sphere sphere = { positionVS.xyz, entity.GetRange() };
+		ShaderSphere sphere = load_entityculling(i);
 		if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
 		{
 			AppendEntity_Transparent(i);
@@ -369,16 +301,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		if ((entity.GetFlags() & ENTITY_FLAG_CAPSULE_SHADOW_COLLIDER) == 0)
 			continue;
 			
-		float3 A = entity.position;
-		float3 B = entity.GetColliderTip();
-		half radius = entity.GetRange() * CAPSULE_SHADOW_BOLDEN;
-
-		// culling based on capsule-sphere:
-		float3 center = lerp(A, B, 0.5);
-		half range = distance(center, A) + radius + CAPSULE_SHADOW_AFFECTION_RANGE;
-		
-		float3 positionVS = mul(GetCamera().view, float4(center, 1)).xyz;
-		Sphere sphere = { positionVS.xyz, range };
+		ShaderSphere sphere = load_entityculling(i);
 		if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
 		{
 			AppendEntity_Transparent(i);
