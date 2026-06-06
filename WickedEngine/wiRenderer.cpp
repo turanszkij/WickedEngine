@@ -4522,6 +4522,8 @@ void UpdatePerFrameData(
 	{
 		ShaderEntity* entityArray = frameCB.entityArray;
 		float4x4* matrixArray = frameCB.matrixArray;
+		ShaderSphere* entityCullingArray = frameCB.entityCullingArray;
+		const XMMATRIX viewMatrix = vis.camera->GetView();
 
 		uint32_t entityCounter = 0;
 		uint32_t matrixCounter = 0;
@@ -4600,10 +4602,15 @@ void UpdatePerFrameData(
 			shadermatrix.r[2] = XMVectorSetW(shadermatrix.r[2], *(float*)&surfacemap);
 			shadermatrix.r[3] = XMVectorSetW(shadermatrix.r[3], *(float*)&displacementmap);
 
+			ShaderSphere cullsphere = {};
+			XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
+			cullsphere.radius = decal.range;
+
 			XMStoreFloat4x4(matrixArray + matrixCounter, shadermatrix);
 			matrixCounter++;
 
 			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
+			std::memcpy(entityCullingArray + entityCounter, &cullsphere, sizeof(ShaderSphere));
 			entityCounter++;
 			decalarray_count++;
 		}
@@ -4657,10 +4664,15 @@ void UpdatePerFrameData(
 			shadermatrix.r[2] = XMVectorSetW(shadermatrix.r[2], 0);
 			shadermatrix.r[3] = XMVectorSetW(shadermatrix.r[3], 0);
 
+			ShaderSphere cullsphere = {};
+			XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
+			cullsphere.radius = probe.range;
+
 			XMStoreFloat4x4(matrixArray + matrixCounter, shadermatrix);
 			matrixCounter++;
 
 			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
+			std::memcpy(entityCullingArray + entityCounter, &cullsphere, sizeof(ShaderSphere));
 			entityCounter++;
 			envprobearray_count++;
 		}
@@ -4741,7 +4753,12 @@ void UpdatePerFrameData(
 				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_VOLUMETRICCLOUDS);
 			}
 
+			ShaderSphere cullsphere = {};
+			XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
+			cullsphere.radius = FLT_MAX;
+
 			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
+			std::memcpy(entityCullingArray + entityCounter, &cullsphere, sizeof(ShaderSphere));
 			entityCounter++;
 			lightarray_count_directional++;
 		}
@@ -4827,7 +4844,16 @@ void UpdatePerFrameData(
 				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_VOLUMETRICCLOUDS);
 			}
 
+			// Construct a tight fitting sphere around the spotlight cone:
+			const float radius = light.GetRange() * 0.5f / (outerConeAngleCos * outerConeAngleCos);
+			const XMVECTOR positionVS = XMVector3Transform(XMLoadFloat3(&shaderentity.position) - XMVector3Normalize(XMLoadFloat3(&light.direction)) * radius, viewMatrix);
+
+			ShaderSphere cullsphere = {};
+			XMStoreFloat3(&cullsphere.center, positionVS);
+			cullsphere.radius = radius;
+
 			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
+			std::memcpy(entityCullingArray + entityCounter, &cullsphere, sizeof(ShaderSphere));
 			entityCounter++;
 			lightarray_count_spot++;
 		}
@@ -4904,7 +4930,12 @@ void UpdatePerFrameData(
 				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_VOLUMETRICCLOUDS);
 			}
 
+			ShaderSphere cullsphere = {};
+			XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
+			cullsphere.radius = light.GetRange() + light.length;
+
 			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
+			std::memcpy(entityCullingArray + entityCounter, &cullsphere, sizeof(ShaderSphere));
 			entityCounter++;
 			lightarray_count_point++;
 		}
@@ -4977,7 +5008,12 @@ void UpdatePerFrameData(
 				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_VOLUMETRICCLOUDS);
 			}
 
+			ShaderSphere cullsphere = {};
+			XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
+			cullsphere.radius = std::max(light.length, light.height) + light.GetRange();
+
 			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
+			std::memcpy(entityCullingArray + entityCounter, &cullsphere, sizeof(ShaderSphere));
 			entityCounter++;
 			lightarray_count_rect++;
 		}
@@ -5004,24 +5040,35 @@ void UpdatePerFrameData(
 				shaderentity.SetFlags(ENTITY_FLAG_CAPSULE_SHADOW_COLLIDER);
 			}
 
+			ShaderSphere cullsphere = {};
+
 			switch (collider.shape)
 			{
 			case ColliderComponent::Shape::Sphere:
 				shaderentity.SetType(ENTITY_TYPE_COLLIDER_SPHERE);
 				shaderentity.position = collider.sphere.center;
 				shaderentity.SetRange(collider.sphere.radius);
+				XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
+				cullsphere.radius = collider.sphere.radius;
 				break;
 			case ColliderComponent::Shape::Capsule:
 				shaderentity.SetType(ENTITY_TYPE_COLLIDER_CAPSULE);
 				shaderentity.position = collider.capsule.base;
 				shaderentity.SetColliderTip(collider.capsule.tip);
 				shaderentity.SetRange(collider.capsule.radius);
+				{
+					Sphere sphere = collider.capsule.getSphere();
+					XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&sphere.center), viewMatrix));
+					cullsphere.radius = sphere.radius * CAPSULE_SHADOW_BOLDEN + CAPSULE_SHADOW_AFFECTION_RANGE;
+				}
 				break;
 			case ColliderComponent::Shape::Plane:
 				shaderentity.SetType(ENTITY_TYPE_COLLIDER_PLANE);
 				shaderentity.position = collider.plane.origin;
 				shaderentity.SetDirection(collider.plane.normal);
 				shaderentity.SetIndices(matrixCounter, 0);
+				XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
+				cullsphere.radius = FLT_MAX;
 				matrixArray[matrixCounter++] = collider.plane.projection;
 				break;
 			default:
@@ -5030,6 +5077,7 @@ void UpdatePerFrameData(
 			}
 
 			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
+			std::memcpy(entityCullingArray + entityCounter, &cullsphere, sizeof(ShaderSphere));
 			entityCounter++;
 			forcefieldarray_count++;
 		}
@@ -5071,7 +5119,12 @@ void UpdatePerFrameData(
 			// The default planar force field is facing upwards, and thus the pull direction is downwards:
 			shaderentity.SetDirection(force.direction);
 
+			ShaderSphere cullsphere = {};
+			XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
+			cullsphere.radius = FLT_MAX;
+
 			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
+			std::memcpy(entityCullingArray + entityCounter, &cullsphere, sizeof(ShaderSphere));
 			entityCounter++;
 			forcefieldarray_count++;
 		}

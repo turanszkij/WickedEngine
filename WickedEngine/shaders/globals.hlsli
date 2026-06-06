@@ -581,6 +581,7 @@ StructuredBuffer<GaussianSplat> bindless_structured_gaussian_splats[] : register
 #define load_material(materialIndex) (bindless_structured_material[descriptor_index(GetScene().materialbuffer)][materialIndex])
 #define load_entity(entityIndex) (GetFrame().entityArray[entityIndex])
 #define load_entitymatrix(matrixIndex) (GetFrame().matrixArray[matrixIndex])
+#define load_entityculling(entityIndex) (GetFrame().entityCullingArray[entityIndex])
 #ifdef TRANSPARENT
 #define load_entitytile(tileIndex) (bindless_structured_uint[GetCamera().buffer_entitytiles_index][GetCamera().entity_culling_tile_bucket_count_flat + tileIndex])
 #else
