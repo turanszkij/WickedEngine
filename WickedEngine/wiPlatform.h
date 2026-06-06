@@ -84,6 +84,10 @@ namespace wi::platform
 		int width = 0;
 		int height = 0;
 		float dpi = 96;
+		float inset_left = 0;
+		float inset_right = 0;
+		float inset_top = 0;
+		float inset_bottom = 0;
 	};
 	inline void GetWindowProperties(window_type window, WindowProperties* dest)
 	{
@@ -114,6 +118,7 @@ namespace wi::platform
 		dest->width = size.x;
 		dest->height = size.y;
 		dest->dpi = wi::apple::GetDPIForWindow(window);
+		wi::apple::GetSafeArea(window, dest->inset_left, dest->inset_right, dest->inset_top, dest->inset_bottom);
 #endif // PLATFORM_APPLE
 	}
 

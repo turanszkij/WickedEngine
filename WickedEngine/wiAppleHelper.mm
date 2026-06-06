@@ -373,6 +373,10 @@ void* CreateCursorFromARGB8ImageData(const void* data, uint32_t width, uint32_t 
 	
 	return (__bridge void*)cursor;
 }
+void GetSafeArea(void* _window, float& left, float& right, float& top, float& bottom)
+{
+	
+}
 
 }
 
@@ -547,6 +551,25 @@ void SetClipboardText(const char* str)
 void* CreateCursorFromARGB8ImageData(const void* data, uint32_t width, uint32_t height, int hotspotX, int hotspotY)
 {
 	return nullptr;
+}
+void GetSafeArea(void* _window, float& left, float& right, float& top, float& bottom)
+{
+	UIWindow* window = (__bridge UIWindow*)_window;
+	if (!window || !window.rootViewController)
+		return;
+	
+	UIView* mainView = window.rootViewController.view;
+	UIEdgeInsets insets = mainView.safeAreaInsets;
+
+	CGFloat leftInset   = insets.left;
+	CGFloat rightInset  = insets.right;
+	CGFloat topInset    = insets.top;
+	CGFloat bottomInset = insets.bottom;
+	
+	left = leftInset;
+	right = rightInset;
+	top = topInset;
+	bottom = bottomInset;
 }
 
 } // namespace wi::apple

@@ -6559,7 +6559,8 @@ void EditorComponent::UpdateDynamicWidgets()
 
 
 
-	ofs = padding;
+	ofs = std::max(padding, GetSafeInsetLeftLogical());
+	
 	if (generalWnd.IsVisible())
 	{
 		generalWnd.SetPos(XMFLOAT2(0, topmenuWnd.scale_local.y + topmenuWnd.GetShadowRadius()));
