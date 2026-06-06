@@ -210,8 +210,8 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 
 	const uint depth_mask = uDepthMask; // take out from groupshared into register
 	
-	// Point lights:
-	for (uint i = pointlights().first_item() + groupIndex; i < pointlights().end_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
+	// lights:
+	for (uint i = lights().first_item() + groupIndex; i < lights().end_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
 		ShaderEntity entity = load_entity(i);
 		
@@ -232,66 +232,6 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 				}
 			}
 		}
-	}
-
-	// Spot lights:
-	for (uint i = spotlights().first_item() + groupIndex; i < spotlights().end_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
-	{
-		ShaderEntity entity = load_entity(i);
-		
-		if (entity.IsStaticLight())
-			continue; // static lights will be skipped here (they are used at lightmap baking)
-		ShaderSphere sphere = load_entityculling(i);
-		if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
-		{
-			AppendEntity_Transparent(i);
-
-			if (SphereIntersectsAABB(sphere, GroupAABB)) // tighter fit than sphere-frustum culling
-			{
-#ifdef ADVANCED_CULLING
-				if (depth_mask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
-#endif
-				{
-					AppendEntity_Opaque(i);
-				}
-			}
-
-		}
-	}
-	
-	// Rectangle lights:
-	for (uint i = rectlights().first_item() + groupIndex; i < rectlights().end_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
-	{
-		ShaderEntity entity = load_entity(i);
-		
-		if (entity.IsStaticLight())
-			continue; // static lights will be skipped here (they are used at lightmap baking)
-		ShaderSphere sphere = load_entityculling(i);
-		if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
-		{
-			AppendEntity_Transparent(i);
-
-			if (SphereIntersectsAABB(sphere, GroupAABB)) // tighter fit than sphere-frustum culling
-			{
-#ifdef ADVANCED_CULLING
-				if (depth_mask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
-#endif
-				{
-					AppendEntity_Opaque(i);
-				}
-			}
-		}
-	}
-
-	// Directional lights:
-	for (uint i = directional_lights().first_item() + groupIndex; i < directional_lights().end_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
-	{
-		ShaderEntity entity = load_entity(i);
-		
-		if (entity.IsStaticLight())
-			continue; // static lights will be skipped here (they are used at lightmap baking)
-		AppendEntity_Transparent(i);
-		AppendEntity_Opaque(i);
 	}
 
 	// Decals:
