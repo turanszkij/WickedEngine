@@ -47,7 +47,7 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 		bool perPixelNoise = GetFrame().options & OPTION_BIT_TEMPORALAA_ENABLED;
 
 		// Shadows disabled due to parallel computation along shadowmap rendering
-		envColor = GetDynamicSkyColor(pixel, ray.Direction, true, false, false, highQuality, perPixelNoise, false);
+		envColor = GetDynamicSkyColor(pixel, ray.Direction, true, false, false, highQuality, perPixelNoise, false, false);
 	}
 
 	output[pixel] = float4(envColor, 1);
