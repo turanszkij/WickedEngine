@@ -7,8 +7,7 @@
 //	It also does material binning when requested
 //	It can run in uniform and divergent manner based on previous primitiveID classification
 
-Texture2D<uint> input_primitiveID : register(t0);
-StructuredBuffer<PrimitiveVisibilityTile> primitive_binned_tiles : register(t1);
+StructuredBuffer<PrimitiveVisibilityTile> primitive_binned_tiles : register(t0);
 
 groupshared uint local_bin_mask;
 groupshared uint local_bin_execution_mask_0[SHADERTYPE_BIN_COUNT + 1];
@@ -61,7 +60,7 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 #ifdef PRIMITIVEID_UNIFORM
 	const uint primitiveID = primitive_tile.primitiveID;
 #else
-	const uint primitiveID = input_primitiveID[pixel];
+	const uint primitiveID = texture_primitiveID[pixel];
 #endif // PRIMITIVEID_UNIFORM
 	
 	RayDesc ray = CreateCameraRay(pixel);

@@ -11920,8 +11920,7 @@ void Visibility_Prepare(
 		const bool binning = res.bins.IsValid();
 		device->EventBegin(binning ? "Resolve primitiveID and classify materials" : "Resolve primitiveID", cmd);
 
-		device->BindResource(&input_primitiveID, 0, cmd);
-		device->BindResource(&res.primitive_binned_tiles, 1, cmd);
+		device->BindResource(&res.primitive_binned_tiles, 0, cmd);
 
 		if (res.IsValid())
 		{
