@@ -1084,7 +1084,7 @@ using namespace metal_internal;
 	}
 
 	void GraphicsDevice_Metal::clear_flush(CommandList cmd)
-	{
+{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		if (commandlist.texture_clears.empty())
 			return;
@@ -1095,29 +1095,31 @@ using namespace metal_internal;
 			commandlist.compute_encoder.reset();
 		}
 		NS::SharedPtr<NS::AutoreleasePool> autorelease_pool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init());
-		constexpr size_t batching = 8; // batch up to 8 clears into one pass (probably more will not be supported by renderpass)
-		size_t offset = 0;
-		while (offset < commandlist.texture_clears.size())
+		for (auto& x : commandlist.texture_clears)
 		{
-			NS::SharedPtr<MTL4::RenderPassDescriptor> descriptor = NS::TransferPtr(MTL4::RenderPassDescriptor::alloc()->init());
-			NS::SharedPtr<MTL::RenderPassColorAttachmentDescriptor> color_attachment_descriptors[8];
-			for (size_t i = 0; (i < batching) && ((offset + i) < commandlist.texture_clears.size()); ++i)
+			const uint64_t slices = x.first->arrayLength();
+			const uint64_t mips = x.first->mipmapLevelCount();
+			for (uint64_t slice = 0; slice < slices; ++slice)
 			{
-				const size_t index = offset + i;
-				NS::SharedPtr<MTL::RenderPassColorAttachmentDescriptor>& color_attachment_descriptor = color_attachment_descriptors[i];
-				color_attachment_descriptor = NS::TransferPtr(MTL::RenderPassColorAttachmentDescriptor::alloc()->init());
-				const uint32_t value = commandlist.texture_clears[index].second;
-				color_attachment_descriptor->setTexture(commandlist.texture_clears[index].first.get());
-				color_attachment_descriptor->setClearColor(MTL::ClearColor::Make((value & 0xFF) / 255.0f, ((value >> 8u) & 0xFF) / 255.0f, ((value >> 16u) & 0xFF) / 255.0f, ((value >> 24u) & 0xFF) / 255.0f));
-				color_attachment_descriptor->setLoadAction(MTL::LoadActionClear);
-				color_attachment_descriptor->setStoreAction(MTL::StoreActionStore);
-				descriptor->colorAttachments()->setObject(color_attachment_descriptor.get(), i);
+				for (uint64_t mip = 0; mip < mips; ++mip)
+				{
+					NS::SharedPtr<MTL4::RenderPassDescriptor> descriptor = NS::TransferPtr(MTL4::RenderPassDescriptor::alloc()->init());
+					NS::SharedPtr<MTL::RenderPassColorAttachmentDescriptor> color_attachment_descriptor = NS::TransferPtr(MTL::RenderPassColorAttachmentDescriptor::alloc()->init());
+					color_attachment_descriptor = NS::TransferPtr(MTL::RenderPassColorAttachmentDescriptor::alloc()->init());
+					const uint32_t value = x.second;
+					color_attachment_descriptor->setTexture(x.first.get());
+					color_attachment_descriptor->setClearColor(MTL::ClearColor::Make((value & 0xFF) / 255.0f, ((value >> 8u) & 0xFF) / 255.0f, ((value >> 16u) & 0xFF) / 255.0f, ((value >> 24u) & 0xFF) / 255.0f));
+					color_attachment_descriptor->setLoadAction(MTL::LoadActionClear);
+					color_attachment_descriptor->setStoreAction(MTL::StoreActionStore);
+					color_attachment_descriptor->setLevel(mip);
+					color_attachment_descriptor->setSlice(slice);
+					descriptor->colorAttachments()->setObject(color_attachment_descriptor.get(), 0);
+					MTL4::RenderCommandEncoder* encoder = commandlist.commandbuffer->renderCommandEncoder(descriptor.get());
+					encoder->setLabel(NS::String::string("ClearUAV", NS::UTF8StringEncoding));
+					encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, MTL4::VisibilityOptionNone); // TODO: flickering issues in several places without this
+					encoder->endEncoding();
+				}
 			}
-			MTL4::RenderCommandEncoder* encoder = commandlist.commandbuffer->renderCommandEncoder(descriptor.get());
-			encoder->setLabel(NS::String::string("ClearUAV", NS::UTF8StringEncoding));
-			encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, MTL4::VisibilityOptionNone); // TODO: flickering issues in several places without this
-			encoder->endEncoding();
-			offset += batching;
 		}
 		commandlist.texture_clears.clear();
 	}
