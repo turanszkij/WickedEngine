@@ -2,6 +2,13 @@
 #define WI_SURFACE_HF
 #include "globals.hlsli"
 
+// MakeUniformResourceIndex can omit the NonUniformResourceIndex call if the primitiveID is guaranteed to be uniform, as an optimization
+#ifdef PRIMITIVEID_UNIFORM
+#define MakeUniformResourceIndex(x) (descriptor_index(x))
+#else
+#define MakeUniformResourceIndex(x) NonUniformResourceIndex(descriptor_index(x))
+#endif // PRIMITIVEID_UNIFORM
+
 // hard coded value for surfaces with simplified lighting:
 //	occlusion = 1
 //	roughness = 1
@@ -365,7 +372,7 @@ struct Surface
 		i1 = prim.i1();
 		i2 = prim.i2();
 
-		Buffer<float4> buf = bindless_buffers_float4[NonUniformResourceIndex(descriptor_index(geometry.vb_pos_wind))];
+		Buffer<float4> buf = bindless_buffers_float4[MakeUniformResourceIndex(geometry.vb_pos_wind)];
 		data0 = buf[i0];
 		data1 = buf[i1];
 		data2 = buf[i2];
@@ -374,8 +381,8 @@ struct Surface
 	}
 	void load_internal(uint flatTileIndex = 0)
 	{
-		SamplerState sam = bindless_samplers[NonUniformResourceIndex(descriptor_index(material.sampler_descriptor))];
-		SamplerState sam_clamp = bindless_samplers[NonUniformResourceIndex(descriptor_index(material.sampler_clamp_descriptor))];
+		SamplerState sam = bindless_samplers[MakeUniformResourceIndex(material.sampler_descriptor)];
+		SamplerState sam_clamp = bindless_samplers[MakeUniformResourceIndex(material.sampler_clamp_descriptor)];
 
 		const bool is_hairparticle = geometry.flags & SHADERMESH_FLAG_HAIRPARTICLE;
 		const bool is_emittedparticle = geometry.flags & SHADERMESH_FLAG_EMITTEDPARTICLE;
@@ -386,7 +393,7 @@ struct Surface
 		[branch]
 		if (geometry.vb_nor >= 0)
 		{
-			Buffer<float4> buf = bindless_buffers_float4[NonUniformResourceIndex(descriptor_index(geometry.vb_nor))];
+			Buffer<float4> buf = bindless_buffers_float4[MakeUniformResourceIndex(geometry.vb_nor)];
 			float3 n0 = mul(inst.transformRaw.GetMatrixAdjoint(), buf[i0].xyz);
 			float3 n1 = mul(inst.transformRaw.GetMatrixAdjoint(), buf[i1].xyz);
 			float3 n2 = mul(inst.transformRaw.GetMatrixAdjoint(), buf[i2].xyz);
@@ -426,7 +433,7 @@ struct Surface
 		[branch]
 		if (geometry.vb_uvs >= 0)
 		{
-			Buffer<float4> buf = bindless_buffers_float4[NonUniformResourceIndex(descriptor_index(geometry.vb_uvs))];
+			Buffer<float4> buf = bindless_buffers_float4[MakeUniformResourceIndex(geometry.vb_uvs)];
 			float4 uv0 = lerp(geometry.uv_range_min.xyxy, geometry.uv_range_max.xyxy, buf[i0]);
 			float4 uv1 = lerp(geometry.uv_range_min.xyxy, geometry.uv_range_max.xyxy, buf[i1]);
 			float4 uv2 = lerp(geometry.uv_range_min.xyxy, geometry.uv_range_max.xyxy, buf[i2]);
@@ -459,7 +466,7 @@ struct Surface
 		[branch]
 		if (geometry.vb_tan >= 0)
 		{
-			Buffer<float4> buf = bindless_buffers_float4[NonUniformResourceIndex(descriptor_index(geometry.vb_tan))];
+			Buffer<float4> buf = bindless_buffers_float4[MakeUniformResourceIndex(geometry.vb_tan)];
 			float4 t0 = buf[i0];
 			float4 t1 = buf[i1];
 			float4 t2 = buf[i2];
@@ -483,7 +490,7 @@ struct Surface
 				const float2 uv = material.textures[DISPLACEMENTMAP].GetUVSet() == 0 ? uvsets.xy : uvsets.zw;
 				const float2 uv_dx = material.textures[DISPLACEMENTMAP].GetUVSet() == 0 ? uvsets_dx.xy : uvsets_dx.zw;
 				const float2 uv_dy = material.textures[DISPLACEMENTMAP].GetUVSet() == 0 ? uvsets_dy.xy : uvsets_dy.zw;
-				Texture2D<half4> tex = bindless_textures_half4[NonUniformResourceIndex(descriptor_index(material.textures[DISPLACEMENTMAP].texture_descriptor))];
+				Texture2D<half4> tex = bindless_textures_half4[MakeUniformResourceIndex(material.textures[DISPLACEMENTMAP].texture_descriptor)];
 				ParallaxOcclusionMapping_Impl(
 					uvsets,
 					V,
@@ -614,7 +621,7 @@ struct Surface
 		[branch]
 		if (geometry.vb_col >= 0 && material.IsUsingVertexColors())
 		{
-			Buffer<half4> buf = bindless_buffers_half4[NonUniformResourceIndex(descriptor_index(geometry.vb_col))];
+			Buffer<half4> buf = bindless_buffers_half4[MakeUniformResourceIndex(geometry.vb_col)];
 			const half4 c0 = buf[i0];
 			const half4 c1 = buf[i1];
 			const half4 c2 = buf[i2];
@@ -625,7 +632,7 @@ struct Surface
 		[branch]
 		if (inst.vb_ao >= 0 && material.IsUsingVertexAO())
 		{
-			Buffer<half> buf = bindless_buffers_half[NonUniformResourceIndex(descriptor_index(inst.vb_ao))];
+			Buffer<half> buf = bindless_buffers_half[MakeUniformResourceIndex(inst.vb_ao)];
 			const half ao0 = buf[i0];
 			const half ao1 = buf[i1];
 			const half ao2 = buf[i2];
@@ -636,13 +643,13 @@ struct Surface
 		[branch]
 		if (inst.lightmap >= 0 && geometry.vb_atl >= 0)
 		{
-			Buffer<float2> buf = bindless_buffers_float2[NonUniformResourceIndex(descriptor_index(geometry.vb_atl))];
+			Buffer<float2> buf = bindless_buffers_float2[MakeUniformResourceIndex(geometry.vb_atl)];
 			const float2 a0 = buf[i0];
 			const float2 a1 = buf[i1];
 			const float2 a2 = buf[i2];
 			float2 atlas = attribute_at_bary(a0, a1, a2, bary);
 
-			Texture2D<half4> tex = bindless_textures_half4[NonUniformResourceIndex(descriptor_index(inst.lightmap))];
+			Texture2D<half4> tex = bindless_textures_half4[MakeUniformResourceIndex(inst.lightmap)];
 			gi = tex.SampleLevel(sampler_linear_clamp, atlas, 0).rgb;
 			SetGIApplied(true);
 		}
@@ -718,12 +725,12 @@ struct Surface
 				if(chunk_coord.x >= -terrain.chunk_buffer_range && chunk_coord.x <= terrain.chunk_buffer_range && chunk_coord.y >= -terrain.chunk_buffer_range && chunk_coord.y <= terrain.chunk_buffer_range)
 				{
 					uint chunk_idx = flatten2D(chunk_coord + terrain.chunk_buffer_range, terrain.chunk_buffer_range * 2 + 1);
-					ShaderTerrainChunk chunk = bindless_structured_terrain_chunks[NonUniformResourceIndex(descriptor_index(terrain.chunk_buffer))][chunk_idx];
+					ShaderTerrainChunk chunk = bindless_structured_terrain_chunks[MakeUniformResourceIndex(terrain.chunk_buffer)][chunk_idx];
 				
 					[branch]
 					if(chunk.heightmap >= 0)
 					{
-						Texture2D terrain_heightmap = bindless_textures[NonUniformResourceIndex(descriptor_index(chunk.heightmap))];
+						Texture2D terrain_heightmap = bindless_textures[MakeUniformResourceIndex(chunk.heightmap)];
 						float2 chunk_min = terrain.center_chunk_pos.xz + chunk_coord * terrain.chunk_size;
 						float2 chunk_max = terrain.center_chunk_pos.xz + terrain.chunk_size + chunk_coord * terrain.chunk_size;
 						float2 terrain_uv = saturate(inverse_lerp(chunk_min, chunk_max, P.xz));
@@ -904,7 +911,7 @@ struct Surface
 		[branch]
 		if (inst.vb_wetmap >= 0)
 		{
-			Buffer<half> buf = bindless_buffers_half[NonUniformResourceIndex(descriptor_index(inst.vb_wetmap))];
+			Buffer<half> buf = bindless_buffers_half[MakeUniformResourceIndex(inst.vb_wetmap)];
 			const half wet0 = buf[i0];
 			const half wet1 = buf[i1];
 			const half wet2 = buf[i2];
@@ -1043,7 +1050,7 @@ struct Surface
 		[branch]
 		if (geometry.vb_pre >= 0)
 		{
-			Buffer<float4> buf = bindless_buffers_float4[NonUniformResourceIndex(descriptor_index(geometry.vb_pre))];
+			Buffer<float4> buf = bindless_buffers_float4[MakeUniformResourceIndex(geometry.vb_pre)];
 			pre0 = buf[i0].xyz;
 			pre1 = buf[i1].xyz;
 			pre2 = buf[i2].xyz;

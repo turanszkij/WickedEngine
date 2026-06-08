@@ -3,17 +3,18 @@
 #include "surfaceHF.hlsli"
 #include "raytracingHF.hlsli"
 
-#ifdef VISIBILITY_MSAA
-Texture2DMS<uint> input_primitiveID : register(t0);
-#else
+// This shader reads primitiveID and writes depth and linear depth and a simple mipchain for them
+//	It also does material binning when requested
+//	It can run in uniform and divergent manner based on previous primitiveID classification
+
 Texture2D<uint> input_primitiveID : register(t0);
-#endif // VISIBILITY_MSAA
+StructuredBuffer<PrimitiveVisibilityTile> primitive_binned_tiles : register(t1);
 
 groupshared uint local_bin_mask;
 groupshared uint local_bin_execution_mask_0[SHADERTYPE_BIN_COUNT + 1];
 groupshared uint local_bin_execution_mask_1[SHADERTYPE_BIN_COUNT + 1];
 
-RWStructuredBuffer<ShaderTypeBin> output_bins : register(u0);
+RWStructuredBuffer<IndirectDispatchArgs> output_bins : register(u0);
 RWStructuredBuffer<VisibilityTile> output_binned_tiles : register(u1);
 
 RWTexture2D<float> output_depth_mip0 : register(u3);
@@ -28,13 +29,10 @@ RWTexture2D<float> output_lineardepth_mip2 : register(u10);
 RWTexture2D<float> output_lineardepth_mip3 : register(u11);
 RWTexture2D<float> output_lineardepth_mip4 : register(u12);
 
-#ifdef VISIBILITY_MSAA
-RWTexture2D<uint> output_primitiveID : register(u13);
-#endif // VISIBILITY_MSAA
-
 [numthreads(VISIBILITY_BLOCKSIZE, VISIBILITY_BLOCKSIZE, 1)]
-void main(uint2 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
+void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
+#ifdef MATERIAL_BINNING
 	if (groupIndex <= SHADERTYPE_BIN_COUNT)
 	{
 		if (groupIndex == 0)
@@ -45,61 +43,63 @@ void main(uint2 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 		local_bin_execution_mask_1[groupIndex] = 0;
 	}
 	GroupMemoryBarrierWithGroupSync();
+#endif // MATERIAL_BINNING
 
 	const uint2 GTid = remap_lane_8x8(groupIndex);
-	const uint2 pixel = Gid.xy * VISIBILITY_BLOCKSIZE + GTid.xy;
-	const bool pixel_valid = (pixel.x < GetCamera().internal_resolution.x) && (pixel.y < GetCamera().internal_resolution.y);
+
+#ifdef PRIMITIVEID_UNIFORM
+	const uint tile_offset = 0;
+#else
+	const uint tile_offset = GetCamera().visibility_tilecount_flat;
+#endif // PRIMITIVEID_UNIFORM
+
+	PrimitiveVisibilityTile primitive_tile = primitive_binned_tiles[tile_offset + Gid];
+
+	const uint2 tileID = unpack_pixel(primitive_tile.visibility_tile_id);
+	const uint2 pixel = tileID * VISIBILITY_BLOCKSIZE + GTid;
+
+#ifdef PRIMITIVEID_UNIFORM
+	const uint primitiveID = primitive_tile.primitiveID;
+#else
+	const uint primitiveID = input_primitiveID[pixel];
+#endif // PRIMITIVEID_UNIFORM
 	
 	RayDesc ray = CreateCameraRay(pixel);
-	
-#ifdef VISIBILITY_MSAA
-	uint primitiveID = input_primitiveID.Load(pixel, 0);
-#else
-	uint primitiveID = input_primitiveID[pixel];
-#endif // VISIBILITY_MSAA
 
-#ifdef VISIBILITY_MSAA
-	output_primitiveID[pixel] = primitiveID;
-#endif // VISIBILITY_MSAA
+	float depth = 0; // sky default
+	uint bin = SHADERTYPE_BIN_COUNT; // sky default
 
-	float depth = 1; // invalid
-	uint bin = ~0u; // invalid
-	if (pixel_valid)
+	[branch]
+	if (primitiveID != 0)
 	{
+		PrimitiveID prim;
+		prim.init();
+		prim.unpack(primitiveID);
+
+		Surface surface;
+		surface.init();
+
 		[branch]
-		if (any(primitiveID))
+		if (surface.load(prim, ray.Origin, ray.Direction))
 		{
-			PrimitiveID prim;
-			prim.init();
-			prim.unpack(primitiveID);
+			float4 tmp = mul(GetCamera().view_projection, float4(surface.P, 1));
+			tmp.xyz /= max(0.0001, tmp.w); // max: avoid nan
+			depth = saturate(tmp.z); // saturate: avoid blown up values
 
-			Surface surface;
-			surface.init();
+#ifdef MATERIAL_BINNING
+			bin = surface.material.GetShaderType();
+#endif // MATERIAL_BINNING
+		}
+	}
 
-			[branch]
-			if (surface.load(prim, ray.Origin, ray.Direction))
-			{
-				float4 tmp = mul(GetCamera().view_projection, float4(surface.P, 1));
-				tmp.xyz /= max(0.0001, tmp.w); // max: avoid nan
-				depth = saturate(tmp.z); // saturate: avoid blown up values
-
-				bin = surface.material.GetShaderType();
-			}
-		}
-		else
-		{
-			// sky:
-			depth = 0;
-			bin = SHADERTYPE_BIN_COUNT;
-		}
-		if (groupIndex < 32)
-		{
-			InterlockedOr(local_bin_execution_mask_0[bin], 1u << groupIndex);
-		}
-		else
-		{
-			InterlockedOr(local_bin_execution_mask_1[bin], 1u << (groupIndex - 32u));
-		}
+#ifdef MATERIAL_BINNING
+	if (groupIndex < 32)
+	{
+		InterlockedOr(local_bin_execution_mask_0[bin], 1u << groupIndex);
+	}
+	else
+	{
+		InterlockedOr(local_bin_execution_mask_1[bin], 1u << (groupIndex - 32u));
 	}
 
 	uint wave_local_bin_mask = WaveActiveBitOr(1u << bin);
@@ -114,16 +114,27 @@ void main(uint2 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 		if (local_bin_mask & (1u << groupIndex))
 		{
 			uint bin_tile_list_offset = groupIndex * GetCamera().visibility_tilecount_flat;
+			uint bucket_index = groupIndex;
+
+#ifndef PRIMITIVEID_UNIFORM
+			bin_tile_list_offset += GetCamera().visibility_tilecount_flat * (SHADERTYPE_BIN_COUNT + 1);
+			bucket_index += SHADERTYPE_BIN_COUNT + 1;
+#endif // PRIMITIVEID_UNIFORM
+
 			uint tile_offset = 0;
-			InterlockedAdd(output_bins[groupIndex].dispatchX, 1, tile_offset);
+			InterlockedAdd(output_bins[bucket_index].ThreadGroupCountX, 1, tile_offset);
 
 			VisibilityTile tile;
-			tile.visibility_tile_id = pack_pixel(Gid.xy);
-			tile.entity_flat_tile_index = flatten2D(Gid.xy / VISIBILITY_TILED_CULLING_GRANULARITY, GetCamera().entity_culling_tilecount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
+			tile.visibility_tile_id = primitive_tile.visibility_tile_id;
+			tile.primitiveID = primitive_tile.primitiveID;
 			tile.execution_mask = uint64_t(local_bin_execution_mask_0[groupIndex]) | (uint64_t(local_bin_execution_mask_1[groupIndex]) << uint64_t(32));
 			output_binned_tiles[bin_tile_list_offset + tile_offset] = tile;
 		}
 	}
+#endif // MATERIAL_BINNING
+
+	if (primitiveID == 0)
+		return; // depths are pre-cleared for sky in whole, no need to continue here
 
 	// Downsample depths:
 	output_depth_mip0[pixel] = depth;

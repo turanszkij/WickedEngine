@@ -656,7 +656,11 @@ namespace wi
 		}
 		else
 		{
-			visibilityResources = {};
+			visibilityResources.DeleteOptionalResources();
+			if (!visibilityResources.IsValidSimple())
+			{
+				wi::renderer::CreateVisibilityResourcesSimple(visibilityResources, internalResolution);
+			}
 		}
 
 		// Check for depth of field allocation:
@@ -1080,6 +1084,7 @@ namespace wi
 			if (rtVelocity.IsValid())
 			{
 				wi::renderer::Visibility_Velocity(
+					visibilityResources,
 					rtVelocity,
 					cmd
 				);

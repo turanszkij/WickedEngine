@@ -10,6 +10,8 @@
 #include "surfaceHF.hlsli"
 #include "shadingHF.hlsli"
 
+// This shader extracts per-pixel surface attributes (basecolor, normal, etc.) based on primitiveID
+
 struct VisibilityPushConstants
 {
 	uint global_tile_offset;
@@ -30,7 +32,9 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	const uint tile_offset = push.global_tile_offset + Gid.x;
 	VisibilityTile tile = binned_tiles[tile_offset];
 	const uint2 GTid = remap_lane_8x8(groupIndex);
-	const uint2 pixel = unpack_pixel(tile.visibility_tile_id) * VISIBILITY_BLOCKSIZE + GTid;
+	const uint2 tileID = unpack_pixel(tile.visibility_tile_id);
+	const uint2 pixel = tileID * VISIBILITY_BLOCKSIZE + GTid;
+	const uint entity_flat_tile_index = flatten2D(tileID / VISIBILITY_TILED_CULLING_GRANULARITY, GetCamera().entity_culling_tilecount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
 
 	const float2 uv = ((float2)pixel + 0.5) * GetCamera().internal_resolution_rcp;
 	RayDesc ray = CreateCameraRay(pixel);
@@ -39,7 +43,12 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
 	[branch] if (!tile.check_thread_valid(groupIndex)) return; // only return after QuadRead operations!
 
-	uint primitiveID = texture_primitiveID[pixel];
+#ifdef PRIMITIVEID_UNIFORM
+	const uint primitiveID = tile.primitiveID;
+#else
+	const uint primitiveID = texture_primitiveID[pixel];
+#endif // PRIMITIVEID_UNIFORM
+
 	PrimitiveID prim;
 	prim.init();
 	prim.unpack(primitiveID);
@@ -50,7 +59,7 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	surface.screenUV = uv;
 
 	[branch]
-	if (!surface.load(prim, ray.Origin, ray.Direction, rayDirection_quad_x, rayDirection_quad_y, tile.entity_flat_tile_index))
+	if (!surface.load(prim, ray.Origin, ray.Direction, rayDirection_quad_x, rayDirection_quad_y, entity_flat_tile_index))
 	{
 		return;
 	}
