@@ -554,7 +554,7 @@ int main(int argc, char* argv[])
 
 	// permutations for visibility_analyzeCS:
 	shaders.push_back({ "visibility_analyzeCS", wi::graphics::ShaderStage::CS });
-	shaders.back().permutations.emplace_back().defines = { "" };
+	shaders.back().permutations.emplace_back();
 	shaders.back().permutations.emplace_back().defines = { "PRIMITIVEID_MSAA" };
 
 	// permutations for visibility_resolveCS:
@@ -579,31 +579,27 @@ int main(int argc, char* argv[])
 	for (auto& x : wi::scene::MaterialComponent::shaderTypeDefines)
 	{
 		shaders.back().permutations.emplace_back().defines = x;
-		shaders.back().permutations.emplace_back().defines.push_back("PRIMITIVEID_UNIFORM");
+		shaders.back().permutations.back().defines.push_back("PRIMITIVEID_UNIFORM");
 	}
-	shaders.push_back({ "visibility_surfaceCS", wi::graphics::ShaderStage::CS });
 	for (auto& x : wi::scene::MaterialComponent::shaderTypeDefines)
 	{
 		shaders.back().permutations.emplace_back().defines = x;
-		shaders.back().permutations.emplace_back().defines.push_back("PRIMITIVEID_DIVERGENT");
+		shaders.back().permutations.back().defines.push_back("PRIMITIVEID_DIVERGENT");
 	}
 
 	// permutations for visibility_surfaceCS REDUCED:
 	shaders.push_back({ "visibility_surfaceCS", wi::graphics::ShaderStage::CS });
 	for (auto& x : wi::scene::MaterialComponent::shaderTypeDefines)
 	{
-		auto defines = x;
 		shaders.back().permutations.emplace_back().defines = x;
-		shaders.back().permutations.emplace_back().defines.push_back("REDUCED");
-		shaders.back().permutations.emplace_back().defines.push_back("PRIMITIVEID_UNIFORM");
+		shaders.back().permutations.back().defines.push_back("REDUCED");
+		shaders.back().permutations.back().defines.push_back("PRIMITIVEID_UNIFORM");
 	}
-	shaders.push_back({ "visibility_surfaceCS", wi::graphics::ShaderStage::CS });
 	for (auto& x : wi::scene::MaterialComponent::shaderTypeDefines)
 	{
-		auto defines = x;
 		shaders.back().permutations.emplace_back().defines = x;
-		shaders.back().permutations.emplace_back().defines.push_back("REDUCED");
-		shaders.back().permutations.emplace_back().defines.push_back("PRIMITIVEID_DIVERGENT");
+		shaders.back().permutations.back().defines.push_back("REDUCED");
+		shaders.back().permutations.back().defines.push_back("PRIMITIVEID_DIVERGENT");
 	}
 
 	// permutations for visibility_shadeCS:
@@ -611,13 +607,12 @@ int main(int argc, char* argv[])
 	for (auto& x : wi::scene::MaterialComponent::shaderTypeDefines)
 	{
 		shaders.back().permutations.emplace_back().defines = x;
-		shaders.back().permutations.emplace_back().defines.push_back("PRIMITIVEID_UNIFORM");
+		shaders.back().permutations.back().defines.push_back("PRIMITIVEID_UNIFORM");
 	}
-	shaders.push_back({ "visibility_shadeCS", wi::graphics::ShaderStage::CS });
 	for (auto& x : wi::scene::MaterialComponent::shaderTypeDefines)
 	{
 		shaders.back().permutations.emplace_back().defines = x;
-		shaders.back().permutations.emplace_back().defines.push_back("PRIMITIVEID_DIVERGENT");
+		shaders.back().permutations.back().defines.push_back("PRIMITIVEID_DIVERGENT");
 	}
 
 	// permutations for ssgiCS:
