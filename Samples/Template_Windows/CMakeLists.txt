@@ -33,8 +33,8 @@ add_compile_definitions(WIN32 _WINDOWS)
 
 set(LIBDXCOMPILER_PATH "${WICKED_ROOT_DIR}/WickedEngine/${LIB_DXCOMPILER}")
 set(STARTUP_LUA "${WICKED_ROOT_DIR}/Editor/startup.lua")
-message("libdxcompiler found at ${LIBDXCOMPILER_PATH}")
-message("startup lua found at ${STARTUP_LUA}")
+message(STATUS "libdxcompiler found at ${LIBDXCOMPILER_PATH}")
+message(STATUS "startup lua found at ${STARTUP_LUA}")
 
 # NOTE: this wont work because client never has prvileges to copy files
 add_custom_command(

@@ -21,7 +21,7 @@ set_target_properties(Template_Linux PROPERTIES
 endif()
 
 set(LIBDXCOMPILER_PATH "${WICKED_ROOT_DIR}/WickedEngine/${LIB_DXCOMPILER}")
-message("libdxcompiler found at ${LIBDXCOMPILER_PATH}")
+message(STATUS "libdxcompiler found at ${LIBDXCOMPILER_PATH}")
 
 add_custom_command(
     TARGET Template_Linux POST_BUILD
