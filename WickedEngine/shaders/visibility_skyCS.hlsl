@@ -18,11 +18,10 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
 	const uint tile_offset = push.global_tile_offset + Gid.x;
 	VisibilityTile tile = binned_tiles[tile_offset];
-	[branch]
-	if (!tile.check_thread_valid(groupIndex))
-		return;
+	[branch] if (!tile.check_thread_valid(groupIndex)) return;
 	const uint2 GTid = remap_lane_8x8(groupIndex);
-	const uint2 pixel = unpack_pixel(tile.visibility_tile_id) * VISIBILITY_BLOCKSIZE + GTid;
+	const uint2 tileID = unpack_pixel(tile.visibility_tile_id);
+	const uint2 pixel = tileID * VISIBILITY_BLOCKSIZE + GTid;
 	const float2 uv = ((float2) pixel + 0.5) * GetCamera().internal_resolution_rcp;
 
 	[branch]

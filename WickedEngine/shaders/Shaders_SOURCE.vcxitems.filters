@@ -803,9 +803,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)visibility_resolveCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)visibility_resolveCS_MSAA.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)surfel_gridoffsetsCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
@@ -867,9 +864,6 @@
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)visibility_shadeCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)visibility_indirect_prepareCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)visibility_skyCS.hlsl">
@@ -1143,6 +1137,9 @@
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)radix_sortCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)visibility_analyzeCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>

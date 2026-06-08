@@ -497,24 +497,19 @@ static_assert(sizeof(ShaderMaterial) == 384);
 inline static const ShaderMaterial shader_material_null = ShaderMaterial::get_null();
 #endif // __cplusplus
 
-// For binning shading based on shader types:
-struct alignas(16) ShaderTypeBin
-{
-	uint dispatchX;
-	uint dispatchY;
-	uint dispatchZ;
-	uint shaderType;
-#if defined(__SCE__) || defined(__PSSL_)
-	uint4 padding; // 32-byte alignment
-#endif // __SCE__ || __PSSL__
-};
 static const uint SHADERTYPE_BIN_COUNT = 12;
+
+struct PrimitiveVisibilityTile
+{
+	uint visibility_tile_id;
+	uint primitiveID; // only valid on uniform classified tiles
+};
 
 struct alignas(16) VisibilityTile
 {
 	uint64_t execution_mask;
 	uint visibility_tile_id;
-	uint entity_flat_tile_index;
+	uint primitiveID; // only valid on uniform classified tiles
 
 	inline bool check_thread_valid(uint groupIndex)
 	{
