@@ -52,11 +52,11 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
 	const uint2 tileID = unpack_pixel(primitive_tile.visibility_tile_id);
 	const uint2 pixel = tileID * VISIBILITY_BLOCKSIZE + GTid;
-	const bool pixel_valid = (pixel.x < GetCamera().internal_resolution.x) && (pixel.y < GetCamera().internal_resolution.y);
 
 #ifdef PRIMITIVEID_UNIFORM
 	const uint primitiveID = primitive_tile.primitiveID;
 #else
+	const bool pixel_valid = (pixel.x < GetCamera().internal_resolution.x) && (pixel.y < GetCamera().internal_resolution.y);
 	const uint primitiveID = pixel_valid ? texture_primitiveID[pixel] : 0;
 #endif // PRIMITIVEID_UNIFORM
 	
@@ -135,26 +135,20 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 #endif // PRIMITIVEID_UNIFORM
 
 	// mip0
-	if (pixel_valid)
-	{
-		output_depth_mip0[pixel] = depth;
-	}
+	output_depth_mip0[pixel] = depth;
 
 	// mip1
 	float x_depth = QuadReadAcrossX(depth);
-	float max_d_quad   = max(depth, x_depth);
-	float y_depth = QuadReadAcrossY(max_d_quad);
-	float max_d_mip1   = max(max_d_quad, y_depth);
+	float min_d_quad = min(depth, x_depth);
+	float y_depth = QuadReadAcrossY(min_d_quad);
+	float min_d_mip1 = min(min_d_quad, y_depth);
 
 	// LDS for mip2 an onward:
 	if ((GTid.x & 1) == 0 && (GTid.y & 1) == 0)
 	{
-		if (pixel_valid)
-		{
-			output_depth_mip1[pixel / 2] = max_d_mip1;
-		}
+		output_depth_mip1[pixel / 2] = min_d_mip1;
 		uint2 lds_coord = GTid / 2; 
-		shared_depth[lds_coord.y][lds_coord.x] = max_d_mip1;
+		shared_depth[lds_coord.y][lds_coord.x] = min_d_mip1;
 	}
 	GroupMemoryBarrierWithGroupSync();
 
@@ -168,14 +162,11 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 		float d2 = shared_depth[lds_coord.y + 1][lds_coord.x + 0];
 		float d3 = shared_depth[lds_coord.y + 1][lds_coord.x + 1];
 
-		float max_d = max(max(d0, d1), max(d2, d3));
+		float min_d = min(min(d0, d1), min(d2, d3));
 
-		shared_depth[lds_coord.y][lds_coord.x] = max_d;
+		shared_depth[lds_coord.y][lds_coord.x] = min_d;
 
-		if (pixel_valid)
-		{
-			output_depth_mip2[pixel / 4] = max_d;
-		}
+		output_depth_mip2[pixel / 4] = min_d;
 	}
 	GroupMemoryBarrierWithGroupSync();
 
@@ -187,18 +178,15 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 		float d2 = shared_depth[2][0];
 		float d3 = shared_depth[2][2];
 
-		float max_d = max(max(d0, d1), max(d2, d3));
+		float min_d = min(min(d0, d1), min(d2, d3));
 
-		shared_depth[0][0] = max_d;
+		shared_depth[0][0] = min_d;
 
-		if (pixel_valid)
-		{
-			output_depth_mip3[pixel / 8] = max_d;
-		}
+		output_depth_mip3[pixel / 8] = min_d;
 	}
 
 	// mip4
-	if (GTid.x == 0 && GTid.y == 0 && pixel_valid)
+	if (GTid.x == 0 && GTid.y == 0)
 	{
 		output_depth_mip4[pixel / 16] = shared_depth[0][0];
 	}
