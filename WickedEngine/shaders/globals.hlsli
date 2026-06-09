@@ -1402,7 +1402,7 @@ inline T compute_lineardepth_normalized(in T z)
 	return compute_lineardepth(z) * GetCamera().z_far_rcp;
 }
 
-// This is a helper to allow using texture_lineardepth as if there was an existing texture with lineardepth information
+// This is a helper to allow using texture_lineardepth as if there was an existing texture with normalized lineardepth information in [0,1] range
 //	However now it's emulated with the regular depth buffer texture to save memory
 struct LinearDepthTextureEmulator
 {
