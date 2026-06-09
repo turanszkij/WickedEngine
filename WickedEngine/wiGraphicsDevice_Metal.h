@@ -16,7 +16,7 @@
 #include <deque>
 
 // There are crashes with this in graphics debugger, so this can be disabled:
-//#define USE_TEXTURE_VIEW_POOL
+#define USE_TEXTURE_VIEW_POOL
 
 namespace wi::graphics
 {
@@ -172,6 +172,21 @@ namespace wi::graphics
 			MTL::Size numthreads_ms = {};
 			IRGeometryEmulationPipelineDescriptor gs_desc = {};
 			wi::vector<std::pair<NS::SharedPtr<MTL::Texture>, uint32_t>> texture_clears;
+			
+			struct TextureClearBatchItem
+			{
+				uint32_t resolutionPacked;
+				NS::SharedPtr<MTL::RenderPassColorAttachmentDescriptor> attachment;
+				constexpr bool operator<(const TextureClearBatchItem& other) const
+				{
+					return resolutionPacked < other.resolutionPacked;
+				}
+				constexpr bool operator>(const TextureClearBatchItem& other) const
+				{
+					return resolutionPacked > other.resolutionPacked;
+				}
+			};
+			wi::vector<TextureClearBatchItem> texture_clear_batching;
 			
 			struct VertexBufferBinding
 			{

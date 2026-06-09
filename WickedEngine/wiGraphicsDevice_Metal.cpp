@@ -1097,15 +1097,15 @@ using namespace metal_internal;
 		NS::SharedPtr<NS::AutoreleasePool> autorelease_pool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init());
 		for (auto& x : commandlist.texture_clears)
 		{
+			const uint64_t width0 = x.first->width();
+			const uint64_t height0 = x.first->height();
 			const uint64_t slices = x.first->arrayLength();
 			const uint64_t mips = x.first->mipmapLevelCount();
 			for (uint64_t slice = 0; slice < slices; ++slice)
 			{
 				for (uint64_t mip = 0; mip < mips; ++mip)
 				{
-					NS::SharedPtr<MTL4::RenderPassDescriptor> descriptor = NS::TransferPtr(MTL4::RenderPassDescriptor::alloc()->init());
 					NS::SharedPtr<MTL::RenderPassColorAttachmentDescriptor> color_attachment_descriptor = NS::TransferPtr(MTL::RenderPassColorAttachmentDescriptor::alloc()->init());
-					color_attachment_descriptor = NS::TransferPtr(MTL::RenderPassColorAttachmentDescriptor::alloc()->init());
 					const uint32_t value = x.second;
 					color_attachment_descriptor->setTexture(x.first.get());
 					color_attachment_descriptor->setClearColor(MTL::ClearColor::Make((value & 0xFF) / 255.0f, ((value >> 8u) & 0xFF) / 255.0f, ((value >> 16u) & 0xFF) / 255.0f, ((value >> 24u) & 0xFF) / 255.0f));
@@ -1113,15 +1113,44 @@ using namespace metal_internal;
 					color_attachment_descriptor->setStoreAction(MTL::StoreActionStore);
 					color_attachment_descriptor->setLevel(mip);
 					color_attachment_descriptor->setSlice(slice);
-					descriptor->colorAttachments()->setObject(color_attachment_descriptor.get(), 0);
-					MTL4::RenderCommandEncoder* encoder = commandlist.commandbuffer->renderCommandEncoder(descriptor.get());
-					encoder->setLabel(NS::String::string("ClearUAV", NS::UTF8StringEncoding));
-					encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, MTL4::VisibilityOptionNone); // TODO: flickering issues in several places without this
-					encoder->endEncoding();
+					
+					CommandList_Metal::TextureClearBatchItem& batchitem = commandlist.texture_clear_batching.emplace_back();
+					batchitem.attachment = std::move(color_attachment_descriptor);
+					const uint64_t width = std::max(uint64_t(1), width0 >> mip);
+					const uint64_t height = std::max(uint64_t(1), height0 >> mip);
+					batchitem.resolutionPacked = uint32_t(width & 0xFFFF) | (uint32_t(height & 0xFFFF) << 16u);
 				}
 			}
 		}
 		commandlist.texture_clears.clear();
+		
+		if (commandlist.texture_clear_batching.empty())
+			return;
+		
+		std::sort(commandlist.texture_clear_batching.begin(), commandlist.texture_clear_batching.end(), std::less<CommandList_Metal::TextureClearBatchItem>()); // sort them based on resolutuion so that more can be batched
+		
+		while (!commandlist.texture_clear_batching.empty())
+		{
+			uint32_t currentResolutionPacked = commandlist.texture_clear_batching.back().resolutionPacked;
+			uint32_t slot = 0;
+			
+			NS::SharedPtr<MTL4::RenderPassDescriptor> descriptor = NS::TransferPtr(MTL4::RenderPassDescriptor::alloc()->init());
+			
+			while (!commandlist.texture_clear_batching.empty() && (slot < 8)) // batch up to 8 slots with renderpass clears
+			{
+				if (commandlist.texture_clear_batching.back().resolutionPacked != currentResolutionPacked)
+				{
+					break; // batching must be broken when an attachment arrives that doesn't match the resolution of the current batch
+				}
+				descriptor->colorAttachments()->setObject(commandlist.texture_clear_batching.back().attachment.get(), slot++);
+				commandlist.texture_clear_batching.pop_back();
+			}
+			
+			MTL4::RenderCommandEncoder* encoder = commandlist.commandbuffer->renderCommandEncoder(descriptor.get());
+			encoder->setLabel(NS::String::string("ClearUAV", NS::UTF8StringEncoding));
+			encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, MTL4::VisibilityOptionNone); // TODO: flickering issues in several places without this
+			encoder->endEncoding();
+		}
 	}
 
 	void GraphicsDevice_Metal::pso_validate(CommandList cmd)
