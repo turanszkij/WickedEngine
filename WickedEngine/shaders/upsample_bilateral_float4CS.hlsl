@@ -8,8 +8,8 @@
 PUSHCONSTANT(postprocess, PostProcess);
 
 Texture2D<UPSAMPLE_FORMAT> input : register(t0);
-Texture2D<float> input_lineardepth_high : register(t1);
-Texture2D<float> input_lineardepth_low : register(t2);
+Texture2D<float> input_depth_high : register(t1);
+Texture2D<float> input_depth_low : register(t2);
 
 static const float2 offsets[] = {
 	float2(-0.5, -0.5),
@@ -40,7 +40,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float2 lowres_size = postprocess.params1.xy;
 	const float2 lowres_texel_size = postprocess.params1.zw;
 	
-	const float lineardepth_highres = input_lineardepth_high[pixel] * GetCamera().z_far;
+	const float lineardepth_highres = compute_lineardepth(input_depth_high[pixel]);
 	
 	UPSAMPLE_FORMAT color = 0;
 	half sum = 0;
@@ -50,7 +50,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	for(uint i = 0; i < 4; ++i)
 	{
 		const float2 sample_uv = uv + offsets[i] * lowres_texel_size;
-		const float4 zzzz = input_lineardepth_low.GatherRed(sampler_linear_clamp, sample_uv) * GetCamera().z_far;
+		const float4 zzzz = compute_lineardepth(input_depth_low.GatherRed(sampler_linear_clamp, sample_uv));
 		const half4 wwww = max(0.001, 1 - saturate(abs(zzzz - lineardepth_highres) * threshold));
 		const half4 rrrr = input.GatherRed(sampler_linear_clamp, sample_uv);
 		const half4 gggg = input.GatherGreen(sampler_linear_clamp, sample_uv);

@@ -54,7 +54,6 @@ namespace wi
 		depthBuffer_Copy = {};
 		depthBuffer_Copy1 = {};
 		depthBuffer_Reflection = {};
-		rtLinearDepth = {};
 		reprojectedDepth = {};
 
 		debugUAV = {};
@@ -268,26 +267,6 @@ namespace wi
 				assert(subresource == i);
 				subresource = device->CreateSubresource(&depthBuffer_Copy1, SubresourceType::UAV, 0, 1, i, 1);
 				assert(subresource == i);
-			}
-		}
-		{
-			TextureDesc desc;
-			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-			desc.format = Format::R32_FLOAT;
-			desc.width = internalResolution.x;
-			desc.height = internalResolution.y;
-			desc.mip_levels = 5;
-			desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
-			device->CreateTexture(&desc, nullptr, &rtLinearDepth);
-			device->SetName(&rtLinearDepth, "rtLinearDepth");
-
-			for (uint32_t i = 0; i < desc.mip_levels; ++i)
-			{
-				int subresource_index;
-				subresource_index = device->CreateSubresource(&rtLinearDepth, SubresourceType::SRV, 0, 1, i, 1);
-				assert(subresource_index == i);
-				subresource_index = device->CreateSubresource(&rtLinearDepth, SubresourceType::UAV, 0, 1, i, 1);
-				assert(subresource_index == i);
 			}
 		}
 
@@ -706,7 +685,6 @@ namespace wi
 		std::swap(depthBuffer_Copy, depthBuffer_Copy1);
 
 		visibilityResources.depthbuffer = &depthBuffer_Copy;
-		visibilityResources.lineardepth = &rtLinearDepth;
 		if (getMSAASampleCount() > 1)
 		{
 			visibilityResources.primitiveID_resolved = &rtPrimitiveID;
@@ -724,7 +702,6 @@ namespace wi
 		camera->shadercamera_options = SHADERCAMERA_OPTION_NONE;
 		camera->texture_primitiveID_index = device->GetDescriptorIndex(&rtPrimitiveID, SubresourceType::SRV);
 		camera->texture_depth_index = device->GetDescriptorIndex(&depthBuffer_Copy, SubresourceType::SRV);
-		camera->texture_lineardepth_index = device->GetDescriptorIndex(&rtLinearDepth, SubresourceType::SRV);
 		camera->texture_velocity_index = device->GetDescriptorIndex(&rtVelocity, SubresourceType::SRV);
 		camera->texture_normal_index = device->GetDescriptorIndex(&visibilityResources.texture_normals, SubresourceType::SRV);
 		camera->texture_roughness_index = device->GetDescriptorIndex(&visibilityResources.texture_roughness, SubresourceType::SRV);
@@ -769,7 +746,6 @@ namespace wi
 		camera_reflection.shadercamera_options = SHADERCAMERA_OPTION_NONE;
 		camera_reflection.texture_primitiveID_index = -1;
 		camera_reflection.texture_depth_index = device->GetDescriptorIndex(&depthBuffer_Reflection_resolved, SubresourceType::SRV);
-		camera_reflection.texture_lineardepth_index = -1;
 		camera_reflection.texture_velocity_index = -1;
 		camera_reflection.texture_normal_index = -1;
 		camera_reflection.texture_roughness_index = -1;
@@ -1095,7 +1071,7 @@ namespace wi
 				wi::renderer::SurfelGI_Coverage(
 					surfelGIResources,
 					*scene,
-					rtLinearDepth,
+					depthBuffer_Copy,
 					debugUAV,
 					cmd
 				);
@@ -1121,7 +1097,6 @@ namespace wi
 				wi::renderer::Postprocess_ScreenSpaceShadow(
 					screenspaceshadowResources,
 					tiledLightResources.entityTiles,
-					rtLinearDepth,
 					rtShadow,
 					cmd,
 					getScreenSpaceShadowRange(),
@@ -1135,7 +1110,6 @@ namespace wi
 					rtshadowResources,
 					*scene,
 					tiledLightResources.entityTiles,
-					rtLinearDepth,
 					rtShadow,
 					cmd
 				);
@@ -1452,7 +1426,6 @@ namespace wi
 				wi::renderer::VXGI_Resolve(
 					vxgiResources,
 					*scene,
-					rtLinearDepth,
 					cmd
 				);
 			}
@@ -1482,7 +1455,7 @@ namespace wi
 
 			if (getOutlineEnabled())
 			{
-				// Cut off outline source from linear depth:
+				// Cut off outline source from depth:
 				device->EventBegin("Outline Source", cmd);
 
 				if (getMSAASampleCount() > 1)
@@ -1507,9 +1480,9 @@ namespace wi
 				params.stencilRefMode = wi::image::STENCILREFMODE_ENGINE;
 				params.stencilComp = wi::image::STENCILMODE_EQUAL;
 				params.stencilRef = wi::enums::STENCILREF_OUTLINE;
-				wi::image::Draw(&rtLinearDepth, params, cmd);
+				wi::image::Draw(&depthBuffer_Copy, params, cmd);
 				params.stencilRef = wi::enums::STENCILREF_CUSTOMSHADER_OUTLINE;
-				wi::image::Draw(&rtLinearDepth, params, cmd);
+				wi::image::Draw(&depthBuffer_Copy, params, cmd);
 				device->RenderPassEnd(cmd);
 				device->EventEnd(cmd);
 			}
@@ -1819,7 +1792,6 @@ namespace wi
 			case AO_SSAO:
 				wi::renderer::Postprocess_SSAO(
 					ssaoResources,
-					rtLinearDepth,
 					rtAO,
 					cmd,
 					getAORange(),
@@ -1831,7 +1803,6 @@ namespace wi
 				wi::renderer::Postprocess_HBAO(
 					ssaoResources,
 					*camera,
-					rtLinearDepth,
 					rtAO,
 					cmd,
 					getAOPower()
@@ -1841,7 +1812,6 @@ namespace wi
 				wi::renderer::Postprocess_MSAO(
 					msaoResources,
 					*camera,
-					rtLinearDepth,
 					rtAO,
 					cmd,
 					getAOPower()
@@ -1851,7 +1821,7 @@ namespace wi
 				wi::renderer::Postprocess_RTAO(
 					rtaoResources,
 					*scene,
-					rtLinearDepth,
+					depthBuffer_Copy,
 					rtAO,
 					cmd,
 					getAORange(),
@@ -2184,7 +2154,7 @@ namespace wi
 			device->EventBegin("Contribute Volumetric Lights", cmd);
 			wi::renderer::Postprocess_Upsample_Bilateral(
 				rtVolumetricLights,
-				rtLinearDepth,
+				depthBuffer_Copy,
 				rtMain,
 				cmd,
 				true,

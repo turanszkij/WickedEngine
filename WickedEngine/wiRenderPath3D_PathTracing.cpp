@@ -110,26 +110,6 @@ namespace wi
 		{
 			TextureDesc desc;
 			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-			desc.format = Format::R32_FLOAT;
-			desc.width = internalResolution.x;
-			desc.height = internalResolution.y;
-			desc.mip_levels = 5;
-			desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
-			device->CreateTexture(&desc, nullptr, &rtLinearDepth);
-			device->SetName(&rtLinearDepth, "rtLinearDepth");
-
-			for (uint32_t i = 0; i < desc.mip_levels; ++i)
-			{
-				int subresource_index;
-				subresource_index = device->CreateSubresource(&rtLinearDepth, SubresourceType::SRV, 0, 1, i, 1);
-				assert(subresource_index == i);
-				subresource_index = device->CreateSubresource(&rtLinearDepth, SubresourceType::UAV, 0, 1, i, 1);
-				assert(subresource_index == i);
-			}
-		}
-		{
-			TextureDesc desc;
-			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 			desc.format = Format::R11G11B10_FLOAT;
 			desc.width = internalResolution.x;
 			desc.height = internalResolution.y;
@@ -485,8 +465,6 @@ namespace wi
 			);
 			wi::renderer::BindCommonResources(cmd);
 
-			wi::renderer::Postprocess_Lineardepth(traceDepth, rtLinearDepth, cmd);
-
 			if (scene->weather.IsRealisticSky())
 			{
 				wi::renderer::ComputeSkyAtmosphereSkyViewLut(cmd);
@@ -564,7 +542,7 @@ namespace wi
 					device->EventBegin("Contribute Volumetric Lights", cmd);
 					wi::renderer::Postprocess_Upsample_Bilateral(
 						rtVolumetricLights,
-						rtLinearDepth,
+						depthBuffer_Copy,
 						rtMain,
 						cmd,
 						true,

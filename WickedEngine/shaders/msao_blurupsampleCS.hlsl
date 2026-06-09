@@ -193,7 +193,7 @@ void main(uint3 Gid : SV_GroupID, uint GI : SV_GroupIndex, uint3 GTid : SV_Group
     float4 HiSSAOs = 1.0;
 #endif
     float4 LoDepths = LoResDB.Gather(sampler_linear_clamp, UV0);
-    float4 HiDepths = HiResDB.Gather(sampler_linear_clamp, UV1);
+    float4 HiDepths = msao_upsample.is_main_depth ? texture_lineardepth.GatherRed(sampler_linear_clamp, UV1) : HiResDB.Gather(sampler_linear_clamp, UV1);
 
     int2 OutST = DTid.xy << 1;
     AoResult[OutST + int2(-1, 0)] = BilateralUpsample(HiDepths.x, HiSSAOs.x, LoDepths.xyzw, LoSSAOs.xyzw);

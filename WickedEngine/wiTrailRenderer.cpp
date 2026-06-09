@@ -102,7 +102,7 @@ namespace wi
 		sb.g_xTrailDepthSoften = 1.0f / (width * depth_soften);
 		sb.g_xTrailTextureIndex1 = device->GetDescriptorIndex(texture.IsValid() ? &texture : wi::texturehelper::getWhite(), SubresourceType::SRV);
 		sb.g_xTrailTextureIndex2 = device->GetDescriptorIndex(texture2.IsValid() ? &texture2 : wi::texturehelper::getWhite(), SubresourceType::SRV);
-		sb.g_xTrailLinearDepthTextureIndex = camera.texture_lineardepth_index;
+		sb.g_xTrailDepthTextureIndex = camera.texture_depth_index;
 		sb.g_xTrailCameraFar = camera.zFarP;
 		device->BindDynamicConstantBuffer(sb, CBSLOT_TRAILRENDERER, cmd);
 

@@ -442,7 +442,6 @@ namespace wi::renderer
 
 		// You can request any of these extra outputs to be written by VisibilityResolve:
 		const wi::graphics::Texture* depthbuffer = nullptr; // depth buffer that matches with post projection
-		const wi::graphics::Texture* lineardepth = nullptr; // depth buffer in linear space in [0,1] range
 		const wi::graphics::Texture* primitiveID_resolved = nullptr; // resolved from MSAA texture_visibility input
 
 		inline bool IsValidSimple() const { return primitive_bins.IsValid(); }
@@ -515,7 +514,7 @@ namespace wi::renderer
 	void SurfelGI_Coverage(
 		const SurfelGIResources& res,
 		const wi::scene::Scene& scene,
-		const wi::graphics::Texture& lineardepth,
+		const wi::graphics::Texture& depth,
 		const wi::graphics::Texture& debugUAV,
 		wi::graphics::CommandList cmd
 	);
@@ -549,7 +548,6 @@ namespace wi::renderer
 	void VXGI_Resolve(
 		const VXGIResources& res,
 		const wi::scene::Scene& scene,
-		const wi::graphics::Texture& texture_lineardepth,
 		wi::graphics::CommandList cmd
 	);
 
@@ -564,7 +562,6 @@ namespace wi::renderer
 	);
 	void Postprocess_Blur_Bilateral(
 		const wi::graphics::Texture& input,
-		const wi::graphics::Texture& lineardepth,
 		const wi::graphics::Texture& temp,
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd,
@@ -581,7 +578,6 @@ namespace wi::renderer
 	void Postprocess_SSAO(
 		const SSAOResources& res,
 		const wi::graphics::Texture& output,
-		const wi::graphics::Texture& lineardepth,
 		wi::graphics::CommandList cmd,
 		float range = 1.0f,
 		uint32_t samplecount = 16,
@@ -590,7 +586,6 @@ namespace wi::renderer
 	void Postprocess_HBAO(
 		const SSAOResources& res,
 		const wi::scene::CameraComponent& camera,
-		const wi::graphics::Texture& lineardepth,
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd,
 		float power = 1.0f
@@ -622,7 +617,6 @@ namespace wi::renderer
 	void Postprocess_MSAO(
 		const MSAOResources& res,
 		const wi::scene::CameraComponent& camera,
-		const wi::graphics::Texture& lineardepth,
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd,
 		float power = 1.0f
@@ -642,7 +636,7 @@ namespace wi::renderer
 	void Postprocess_RTAO(
 		const RTAOResources& res,
 		const wi::scene::Scene& scene,
-		const wi::graphics::Texture& lineardepth,
+		const wi::graphics::Texture& depth,
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd,
 		float range = 1.0f,
@@ -753,7 +747,6 @@ namespace wi::renderer
 		const RTShadowResources& res,
 		const wi::scene::Scene& scene,
 		const wi::graphics::GPUBuffer& entityTiles_Opaque,
-		const wi::graphics::Texture& lineardepth,
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd
 	);
@@ -765,7 +758,6 @@ namespace wi::renderer
 	void Postprocess_ScreenSpaceShadow(
 		const ScreenSpaceShadowResources& res,
 		const wi::graphics::GPUBuffer& entityTiles_Opaque,
-		const wi::graphics::Texture& lineardepth,
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd,
 		float range = 1,
@@ -1014,7 +1006,7 @@ namespace wi::renderer
 	);
 	void Postprocess_Upsample_Bilateral(
 		const wi::graphics::Texture& input,
-		const wi::graphics::Texture& lineardepth,
+		const wi::graphics::Texture& depth,
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd,
 		bool is_pixelshader = false,

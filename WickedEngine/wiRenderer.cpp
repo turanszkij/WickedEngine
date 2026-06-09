@@ -10279,7 +10279,6 @@ void VXGI_Voxelize(
 void VXGI_Resolve(
 	const VXGIResources& res,
 	const Scene& scene,
-	const Texture& texture_lineardepth,
 	CommandList cmd
 )
 {
@@ -11523,7 +11522,6 @@ void BindCameraCB(
 
 	shadercam.texture_primitiveID_index = camera.texture_primitiveID_index;
 	shadercam.texture_depth_index = camera.texture_depth_index;
-	shadercam.texture_lineardepth_index = camera.texture_lineardepth_index;
 	shadercam.texture_velocity_index = camera.texture_velocity_index;
 	shadercam.texture_normal_index = camera.texture_normal_index;
 	shadercam.texture_roughness_index = camera.texture_roughness_index;
@@ -11940,7 +11938,7 @@ void Visibility_Prepare(
 			device->BindUAV(res.depthbuffer, 5, cmd, 2);
 			device->BindUAV(res.depthbuffer, 6, cmd, 3);
 			device->BindUAV(res.depthbuffer, 7, cmd, 4);
-			PushBarrier(GPUBarrier::Image(res.depthbuffer, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
+			PushBarrier(GPUBarrier::Image(res.depthbuffer, res.depthbuffer->desc.layout, ResourceState::UNORDERED_ACCESS));
 		}
 		else
 		{
@@ -11950,47 +11948,26 @@ void Visibility_Prepare(
 			device->BindUAV(&unbind, 6, cmd);
 			device->BindUAV(&unbind, 7, cmd);
 		}
-		if (res.lineardepth)
-		{
-			device->BindUAV(res.lineardepth, 8, cmd, 0);
-			device->BindUAV(res.lineardepth, 9, cmd, 1);
-			device->BindUAV(res.lineardepth, 10, cmd, 2);
-			device->BindUAV(res.lineardepth, 11, cmd, 3);
-			device->BindUAV(res.lineardepth, 12, cmd, 4);
-			PushBarrier(GPUBarrier::Image(res.lineardepth, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
-		}
-		else
-		{
-			device->BindUAV(&unbind, 8, cmd);
-			device->BindUAV(&unbind, 9, cmd);
-			device->BindUAV(&unbind, 10, cmd);
-			device->BindUAV(&unbind, 11, cmd);
-			device->BindUAV(&unbind, 12, cmd);
-		}
 		FlushBarriers(cmd);
 
 		if (res.depthbuffer)
 		{
 			device->ClearUAV(res.depthbuffer, 0, cmd);
 		}
-		if (res.lineardepth)
-		{
-			device->ClearUAV(res.lineardepth, 0, cmd);
-		}
 		device->Barrier(cmd);
 
+		device->EventBegin("UNIFORM", cmd);
 		device->BindComputeShader(&shaders[binning ? CSTYPE_VISIBILITY_RESOLVE_UNIFORM_BINNING : CSTYPE_VISIBILITY_RESOLVE_UNIFORM], cmd);
 		device->DispatchIndirect(&res.primitive_bins, 0, cmd);
+		device->EventEnd(cmd);
+		device->EventBegin("DIVERGENT", cmd);
 		device->BindComputeShader(&shaders[binning ? CSTYPE_VISIBILITY_RESOLVE_DIVERGENT_BINNING : CSTYPE_VISIBILITY_RESOLVE_DIVERGENT], cmd);
 		device->DispatchIndirect(&res.primitive_bins, sizeof(IndirectDispatchArgs), cmd);
+		device->EventEnd(cmd);
 
 		if (res.depthbuffer)
 		{
 			PushBarrier(GPUBarrier::Image(res.depthbuffer, ResourceState::UNORDERED_ACCESS, res.depthbuffer->desc.layout));
-		}
-		if (res.lineardepth)
-		{
-			PushBarrier(GPUBarrier::Image(res.lineardepth, ResourceState::UNORDERED_ACCESS, res.lineardepth->desc.layout));
 		}
 		if (res.primitiveID_resolved)
 		{
@@ -12283,7 +12260,7 @@ void CreateSurfelGIResources(SurfelGIResources& res, XMUINT2 resolution)
 void SurfelGI_Coverage(
 	const SurfelGIResources& res,
 	const Scene& scene,
-	const Texture& lineardepth,
+	const wi::graphics::Texture& depth,
 	const Texture& debugUAV,
 	CommandList cmd
 )
@@ -12363,7 +12340,7 @@ void SurfelGI_Coverage(
 
 	Postprocess_Upsample_Bilateral(
 		res.result_halfres,
-		lineardepth,
+		depth,
 		res.result,
 		cmd,
 		false,
@@ -12923,7 +12900,6 @@ void Postprocess_Blur_Gaussian(
 }
 void Postprocess_Blur_Bilateral(
 	const Texture& input,
-	const Texture& lineardepth,
 	const Texture& temp,
 	const Texture& output,
 	CommandList cmd,
@@ -13056,7 +13032,6 @@ void CreateSSAOResources(SSAOResources& res, XMUINT2 resolution)
 }
 void Postprocess_SSAO(
 	const SSAOResources& res,
-	const Texture& lineardepth,
 	const Texture& output,
 	CommandList cmd,
 	float range,
@@ -13114,7 +13089,7 @@ void Postprocess_SSAO(
 	}
 
 
-	Postprocess_Blur_Bilateral(output, lineardepth, res.temp, output, cmd, 1.2f, -1, -1, true);
+	Postprocess_Blur_Bilateral(output, res.temp, output, cmd, 1.2f, -1, -1, true);
 
 	wi::profiler::EndRange(prof_range);
 	device->EventEnd(cmd);
@@ -13122,7 +13097,6 @@ void Postprocess_SSAO(
 void Postprocess_HBAO(
 	const SSAOResources& res,
 	const CameraComponent& camera,
-	const Texture& lineardepth,
 	const Texture& output,
 	CommandList cmd,
 	float power
@@ -13322,7 +13296,6 @@ void CreateMSAOResources(MSAOResources& res, XMUINT2 resolution)
 void Postprocess_MSAO(
 	const MSAOResources& res,
 	const CameraComponent& camera,
-	const Texture& lineardepth,
 	const Texture& output,
 	CommandList cmd,
 	float power
@@ -13641,10 +13614,11 @@ void Postprocess_MSAO(
 	auto blur_and_upsample = [&](const Texture& Destination, const Texture& HiResDepth, const Texture& LoResDepth,
 		const Texture* InterleavedAO, const Texture* HighQualityAO, const Texture* HiResAO)
 	{
+		const bool is_main_depth = !HiResDepth.IsValid();
 		const uint32_t LoWidth = LoResDepth.GetDesc().width;
 		const uint32_t LoHeight = LoResDepth.GetDesc().height;
-		const uint32_t HiWidth = HiResDepth.GetDesc().width;
-		const uint32_t HiHeight = HiResDepth.GetDesc().height;
+		const uint32_t HiWidth = is_main_depth ? (uint32_t)camera.width : HiResDepth.GetDesc().width;
+		const uint32_t HiHeight = is_main_depth ? (uint32_t)camera.height : HiResDepth.GetDesc().height;
 
 		if (HiResAO == nullptr)
 		{
@@ -13680,12 +13654,20 @@ void Postprocess_MSAO(
 		msao_upsample.kBlurTolerance *= msao_upsample.kBlurTolerance;
 		msao_upsample.kUpsampleTolerance = powf(10.0f, g_UpsampleTolerance);
 		msao_upsample.NoiseFilterStrength = 1.0f / (powf(10.0f, g_NoiseFilterTolerance) + msao_upsample.kUpsampleTolerance);
-		msao_upsample.StepSize = (float)lineardepth.GetDesc().width / (float)LoWidth;
+		msao_upsample.StepSize = (float)camera.width / (float)LoWidth;
+		msao_upsample.is_main_depth = is_main_depth ? 1 : 0;
 		device->PushConstants(&msao_upsample, sizeof(msao_upsample), cmd);
 
 		device->BindUAV(&Destination, 0, cmd);
 		device->BindResource(&LoResDepth, 0, cmd);
-		device->BindResource(&HiResDepth, 1, cmd);
+		if (HiResDepth.IsValid())
+		{
+			device->BindResource(&HiResDepth, 1, cmd);
+		}
+		else
+		{
+			// using main depth
+		}
 		if (InterleavedAO != nullptr)
 		{
 			device->BindResource(InterleavedAO, 2, cmd);
@@ -13745,7 +13727,7 @@ void Postprocess_MSAO(
 
 	blur_and_upsample(
 		output,
-		lineardepth,
+		{},
 		res.texture_lineardepth_downsize1,
 		&res.texture_ao_smooth1,
 		&res.texture_ao_hq1,
@@ -13800,7 +13782,7 @@ void CreateRTAOResources(RTAOResources& res, XMUINT2 resolution)
 void Postprocess_RTAO(
 	const RTAOResources& res,
 	const Scene& scene,
-	const Texture& lineardepth,
+	const Texture& depth,
 	const Texture& output,
 	CommandList cmd,
 	float range,
@@ -14051,7 +14033,7 @@ void Postprocess_RTAO(
 
 	Postprocess_Upsample_Bilateral(
 		res.denoised,
-		lineardepth,
+		depth,
 		output,
 		cmd,
 		false,
@@ -15627,7 +15609,6 @@ void Postprocess_RTShadow(
 	const RTShadowResources& res,
 	const Scene& scene,
 	const GPUBuffer& entityTiles_Opaque,
-	const Texture& lineardepth,
 	const Texture& output,
 	CommandList cmd
 )
@@ -16016,7 +15997,6 @@ void Postprocess_RTShadow(
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 		device->BindResource(&res.temporal[temporal_output], 0, cmd);
-		device->BindResource(&lineardepth, 1, cmd, 1);
 
 		const GPUResource* uavs[] = {
 			&output,
@@ -16057,7 +16037,6 @@ void CreateScreenSpaceShadowResources(ScreenSpaceShadowResources& res, XMUINT2 r
 void Postprocess_ScreenSpaceShadow(
 	const ScreenSpaceShadowResources& res,
 	const GPUBuffer& entityTiles_Opaque,
-	const Texture& lineardepth,
 	const Texture& output,
 	CommandList cmd,
 	float range,
@@ -16124,7 +16103,6 @@ void Postprocess_ScreenSpaceShadow(
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 		device->BindResource(&res.lowres, 0, cmd);
-		device->BindResource(&lineardepth, 1, cmd, 1);
 
 		const GPUResource* uavs[] = {
 			&output,
@@ -18395,7 +18373,7 @@ void Postprocess_Chromatic_Aberration(
 }
 void Postprocess_Upsample_Bilateral(
 	const Texture& input,
-	const Texture& lineardepth,
+	const Texture& depth,
 	const Texture& output,
 	CommandList cmd,
 	bool pixelshader,
@@ -18421,8 +18399,9 @@ void Postprocess_Upsample_Bilateral(
 	const int mip = (int)std::floor(std::max(1.0f, log2f(std::max((float)desc.width / (float)input.GetDesc().width, (float)desc.height / (float)input.GetDesc().height))));
 
 	device->BindResource(&input, 0, cmd);
-	device->BindResource(&lineardepth, 1, cmd);
-	device->BindResource(&lineardepth, 2, cmd, std::min((int)lineardepth.desc.mip_levels - 1, mip));
+	device->BindResource(&depth, 1, cmd);
+	device->BindResource(&depth, 2, cmd, std::min((int)depth.desc.mip_levels - 1, mip));
+
 
 	if (pixelshader)
 	{
