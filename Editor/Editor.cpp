@@ -6557,9 +6557,7 @@ void EditorComponent::UpdateDynamicWidgets()
 		logButton.sprites[wi::gui::FOCUS].params.gradient = wi::image::Params::Gradient::None;
 	}
 
-
-
-	ofs = std::max(padding, GetSafeInsetLeftLogical());
+	ofs = padding;
 	
 	if (generalWnd.IsVisible())
 	{
@@ -6618,6 +6616,8 @@ void EditorComponent::UpdateDynamicWidgets()
 	}
 	y = padding + topmenuWnd.GetSize().y + topmenuWnd.GetShadowRadius();
 	hei = 40;
+	
+	ofs = std::max(ofs, GetSafeInsetLeftLogical());
 
 	generalButton.SetPos(XMFLOAT2(ofs, y));
 	generalButton.SetSize(XMFLOAT2(hei, hei));
