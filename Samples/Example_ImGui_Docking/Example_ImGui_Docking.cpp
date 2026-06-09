@@ -1283,7 +1283,6 @@ void Example_ImGuiRenderer::Update(float dt)
 		//debug_textures.push_back(active_render->rtSun[1]); debug_texture_name.push_back("rtSun[1]"); //not visible
 		debug_textures.push_back(active_render->rtPostprocess); debug_texture_name.push_back("rtPostprocess");
 		debug_textures.push_back(active_render->rtShadingRate); debug_texture_name.push_back("rtShadingRate");
-		debug_textures.push_back(active_render->rtLinearDepth); debug_texture_name.push_back("rtLinearDepth");
 		//debug_textures.push_back(active_render->depthBuffer_Main); debug_texture_name.push_back("depthBuffer_Main");
 		//debug_textures.push_back(active_render->depthBuffer_Copy); debug_texture_name.push_back("depthBuffer_Copy");
 		//debug_textures.push_back(active_render->depthBuffer_Reflection); debug_texture_name.push_back("depthBuffer_Reflection"); //not visible

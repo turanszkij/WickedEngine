@@ -13,6 +13,8 @@ groupshared uint local_bin_mask;
 groupshared uint local_bin_execution_mask_0[SHADERTYPE_BIN_COUNT + 1];
 groupshared uint local_bin_execution_mask_1[SHADERTYPE_BIN_COUNT + 1];
 
+groupshared float shared_depth[VISIBILITY_BLOCKSIZE / 2][VISIBILITY_BLOCKSIZE / 2];
+
 RWStructuredBuffer<IndirectDispatchArgs> output_bins : register(u0);
 RWStructuredBuffer<VisibilityTile> output_binned_tiles : register(u1);
 
@@ -22,13 +24,7 @@ RWTexture2D<float> output_depth_mip2 : register(u5);
 RWTexture2D<float> output_depth_mip3 : register(u6);
 RWTexture2D<float> output_depth_mip4 : register(u7);
 
-RWTexture2D<float> output_lineardepth_mip0 : register(u8);
-RWTexture2D<float> output_lineardepth_mip1 : register(u9);
-RWTexture2D<float> output_lineardepth_mip2 : register(u10);
-RWTexture2D<float> output_lineardepth_mip3 : register(u11);
-RWTexture2D<float> output_lineardepth_mip4 : register(u12);
-
-[numthreads(VISIBILITY_BLOCKSIZE, VISIBILITY_BLOCKSIZE, 1)]
+[numthreads(VISIBILITY_BLOCKSIZE * VISIBILITY_BLOCKSIZE, 1, 1)]
 void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
 #ifdef MATERIAL_BINNING
@@ -60,7 +56,8 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 #ifdef PRIMITIVEID_UNIFORM
 	const uint primitiveID = primitive_tile.primitiveID;
 #else
-	const uint primitiveID = texture_primitiveID[pixel];
+	const bool pixel_valid = (pixel.x < GetCamera().internal_resolution.x) && (pixel.y < GetCamera().internal_resolution.y);
+	const uint primitiveID = pixel_valid ? texture_primitiveID[pixel] : 0;
 #endif // PRIMITIVEID_UNIFORM
 	
 	RayDesc ray = CreateCameraRay(pixel);
@@ -132,45 +129,66 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	}
 #endif // MATERIAL_BINNING
 
+#ifdef PRIMITIVEID_UNIFORM
 	if (primitiveID == 0)
-		return; // depths are pre-cleared for sky in whole, no need to continue here
+		return; // depths are pre-cleared for sky in whole, no need to continue here if the whole tile is uniform
+#endif // PRIMITIVEID_UNIFORM
 
-	// Downsample depths:
+	// mip0
 	output_depth_mip0[pixel] = depth;
-	if (GTid.x % 2 == 0 && GTid.y % 2 == 0)
+
+	// mip1
+	float x_depth = QuadReadAcrossX(depth);
+	float min_d_quad = min(depth, x_depth);
+	float y_depth = QuadReadAcrossY(min_d_quad);
+	float min_d_mip1 = min(min_d_quad, y_depth);
+
+	// LDS for mip2 an onward:
+	if ((GTid.x & 1) == 0 && (GTid.y & 1) == 0)
 	{
-		output_depth_mip1[pixel / 2] = depth;
+		output_depth_mip1[pixel / 2] = min_d_mip1;
+		uint2 lds_coord = GTid / 2; 
+		shared_depth[lds_coord.y][lds_coord.x] = min_d_mip1;
 	}
-	if (GTid.x % 4 == 0 && GTid.y % 4 == 0)
+	GroupMemoryBarrierWithGroupSync();
+
+	// mip2
+	if ((GTid.x & 3) == 0 && (GTid.y & 3) == 0)
 	{
-		output_depth_mip2[pixel / 4] = depth;
+		uint2 lds_coord = GTid / 2;
+
+		float d0 = shared_depth[lds_coord.y + 0][lds_coord.x + 0];
+		float d1 = shared_depth[lds_coord.y + 0][lds_coord.x + 1];
+		float d2 = shared_depth[lds_coord.y + 1][lds_coord.x + 0];
+		float d3 = shared_depth[lds_coord.y + 1][lds_coord.x + 1];
+
+		float min_d = min(min(d0, d1), min(d2, d3));
+
+		shared_depth[lds_coord.y][lds_coord.x] = min_d;
+
+		output_depth_mip2[pixel / 4] = min_d;
 	}
-	if (GTid.x % 8 == 0 && GTid.y % 8 == 0)
+	GroupMemoryBarrierWithGroupSync();
+
+	// mip3
+	if (GTid.x == 0 && GTid.y == 0)
 	{
-		output_depth_mip3[pixel / 8] = depth;
-	}
-	if (GTid.x % 16 == 0 && GTid.y % 16 == 0)
-	{
-		output_depth_mip4[pixel / 16] = depth;
+		float d0 = shared_depth[0][0];
+		float d1 = shared_depth[0][2];
+		float d2 = shared_depth[2][0];
+		float d3 = shared_depth[2][2];
+
+		float min_d = min(min(d0, d1), min(d2, d3));
+
+		shared_depth[0][0] = min_d;
+
+		output_depth_mip3[pixel / 8] = min_d;
 	}
 
-	float lineardepth = compute_lineardepth(depth) * GetCamera().z_far_rcp;
-	output_lineardepth_mip0[pixel] = lineardepth;
-	if (GTid.x % 2 == 0 && GTid.y % 2 == 0)
+	// mip4
+	if (GTid.x == 0 && GTid.y == 0)
 	{
-		output_lineardepth_mip1[pixel / 2] = lineardepth;
-	}
-	if (GTid.x % 4 == 0 && GTid.y % 4 == 0)
-	{
-		output_lineardepth_mip2[pixel / 4] = lineardepth;
-	}
-	if (GTid.x % 8 == 0 && GTid.y % 8 == 0)
-	{
-		output_lineardepth_mip3[pixel / 8] = lineardepth;
-	}
-	if (GTid.x % 16 == 0 && GTid.y % 16 == 0)
-	{
-		output_lineardepth_mip4[pixel / 16] = lineardepth;
+		output_depth_mip4[pixel / 16] = shared_depth[0][0];
 	}
 
 }

@@ -12,7 +12,7 @@ StructuredBuffer<PrimitiveVisibilityTile> primitive_binned_tiles : register(t0);
 
 RWTexture2D<float2> output_velocity : register(u0);
 
-[numthreads(VISIBILITY_BLOCKSIZE, VISIBILITY_BLOCKSIZE, 1)]
+[numthreads(VISIBILITY_BLOCKSIZE * VISIBILITY_BLOCKSIZE, 1, 1)]
 void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
 	const uint2 GTid = remap_lane_8x8(groupIndex);

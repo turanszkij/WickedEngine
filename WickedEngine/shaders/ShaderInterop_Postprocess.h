@@ -94,6 +94,7 @@ struct MSAO_UPSAMPLE
 	float StepSize;
 	float kBlurTolerance;
 	float kUpsampleTolerance;
+	int is_main_depth;
 };
 
 struct ShadingRateClassification

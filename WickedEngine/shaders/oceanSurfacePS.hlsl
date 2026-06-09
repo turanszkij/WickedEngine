@@ -186,10 +186,10 @@ float4 main(PSIn input) : SV_TARGET
 	
 #if 1
 	[branch]
-	if (camera.texture_lineardepth_index >= 0)
+	if (camera.texture_depth_index >= 0)
 	{
 		// FOAM:
-		float water_depth_diff = abs(texture_lineardepth[pixel] * camera.z_far - lineardepth); // Note: for the shore foam, this is more accurate than water plane distance
+		float water_depth_diff = abs(compute_lineardepth(texture_depth[pixel]) - lineardepth); // Note: for the shore foam, this is more accurate than water plane distance
 		float foam_shore = saturate(exp(-water_depth_diff * 2));
 		float foam_wave = pow(saturate(gradient.a), 4) * saturate(exp(-water_depth * 0.1));
 		float foam_combined = saturate(foam_shore + foam_wave);

@@ -75,9 +75,9 @@ float4 main(VertextoPixel input) : SV_TARGET
 #endif // EMITTEDPARTICLE_DISTORTION
 	
 	[branch]
-	if (GetCamera().texture_lineardepth_index >= 0)
+	if (GetCamera().texture_depth_index >= 0)
 	{
-		float4 depthScene = texture_lineardepth.GatherRed(sampler_linear_clamp, ScreenCoord) * GetCamera().z_far;
+		float4 depthScene = compute_lineardepth(texture_depth.GatherRed(sampler_linear_clamp, ScreenCoord));
 		float depthFragment = input.pos.w;
 		opacity *= saturate(1.0 / input.size * (max(max(depthScene.x, depthScene.y), max(depthScene.z, depthScene.w)) - depthFragment));
 	}

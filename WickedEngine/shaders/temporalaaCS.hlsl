@@ -79,7 +79,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 
 #if 1
 	// Disocclusion fallback:
-	float depth_current = texture_lineardepth[DTid.xy] * GetCamera().z_far;
+	float depth_current = compute_lineardepth(texture_depth[DTid.xy]);
 	float depth_history = compute_lineardepth(texture_depth_history.SampleLevel(sampler_point_clamp, prevUV, 0));
 	if (length(velocity) > 0.01 && abs(depth_current - depth_history) > 1)
 	{

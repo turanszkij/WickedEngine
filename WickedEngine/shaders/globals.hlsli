@@ -766,7 +766,6 @@ struct PrimitiveID
 
 #define texture_depth bindless_textures_float[descriptor_index(GetCamera().texture_depth_index)]
 #define texture_depth_history bindless_textures_float[descriptor_index(GetCamera().texture_depth_index_prev)]
-#define texture_lineardepth bindless_textures_float[descriptor_index(GetCamera().texture_lineardepth_index)]
 #define texture_primitiveID bindless_textures_uint[descriptor_index(GetCamera().texture_primitiveID_index)]
 #define texture_velocity bindless_textures_float2[descriptor_index(GetCamera().texture_velocity_index)]
 #define texture_normal bindless_textures_float2[descriptor_index(GetCamera().texture_normal_index)]
@@ -1381,20 +1380,40 @@ inline float3x3 compute_tangent_frame(float3 N, float3 P, float2 UV)
 }
 
 // Computes linear depth from post-projection depth
-inline float compute_lineardepth(in float z, in float near, in float far, in bool ortho = false)
+template<typename T>
+inline T compute_lineardepth(in T z, in float near, in float far, in bool ortho = false)
 {
 	if (ortho)
 		return near + (1 - z) * (far - near); // ortho
 
 	// Perspective:
-	float z_n = 2 * z - 1;
-	float lin = 2 * far * near / (near + far - z_n * (near - far));
+	T z_n = 2 * z - 1;
+	T lin = 2 * far * near / (near + far - z_n * (near - far));
 	return lin;
 }
-inline float compute_lineardepth(in float z)
+template<typename T>
+inline T compute_lineardepth(in T z)
 {
 	return compute_lineardepth(z, GetCamera().z_near, GetCamera().z_far, GetCamera().IsOrtho());
 }
+template<typename T>
+inline T compute_lineardepth_normalized(in T z)
+{
+	return compute_lineardepth(z) * GetCamera().z_far_rcp;
+}
+
+// This is a helper to allow using texture_lineardepth as if there was an existing texture with normalized lineardepth information in [0,1] range
+//	However now it's emulated with the regular depth buffer texture to save memory
+struct LinearDepthTextureEmulator
+{
+	float operator[](uint2 pixel) { return compute_lineardepth_normalized(texture_depth[pixel]); }
+	float Load(uint3 pixel_lod) { return compute_lineardepth_normalized(texture_depth.Load(pixel_lod)); }
+	float Sample(SamplerState sam, float2 uv) { return compute_lineardepth_normalized(texture_depth.Sample(sam, uv)); }
+	float SampleLevel(SamplerState sam, float2 uv, float lod) { return compute_lineardepth_normalized(texture_depth.SampleLevel(sam, uv, lod)); }
+	float4 GatherRed(SamplerState sam, float2 uv) { return compute_lineardepth_normalized(texture_depth.GatherRed(sam, uv)); }
+	void GetDimensions(out uint x, out uint y) { return texture_depth.GetDimensions(x, y); }
+};
+static const LinearDepthTextureEmulator texture_lineardepth;
 
 // Computes post-projection depth from linear depth
 inline float compute_inverse_lineardepth(in float lin, in float near, in float far, in bool ortho = false)

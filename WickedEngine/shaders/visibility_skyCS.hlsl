@@ -13,7 +13,7 @@ StructuredBuffer<VisibilityTile> binned_tiles : register(t0);
 
 RWTexture2D<float4> output : register(u0);
 
-[numthreads(VISIBILITY_BLOCKSIZE, VISIBILITY_BLOCKSIZE, 1)]
+[numthreads(VISIBILITY_BLOCKSIZE * VISIBILITY_BLOCKSIZE, 1, 1)]
 void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
 	const uint tile_offset = push.global_tile_offset + Gid.x;
@@ -22,7 +22,7 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	const uint2 GTid = remap_lane_8x8(groupIndex);
 	const uint2 tileID = unpack_pixel(tile.visibility_tile_id);
 	const uint2 pixel = tileID * VISIBILITY_BLOCKSIZE + GTid;
-	const float2 uv = ((float2) pixel + 0.5) * GetCamera().internal_resolution_rcp;
+	const float2 uv = ((float2)pixel + 0.5) * GetCamera().internal_resolution_rcp;
 
 	[branch]
 	if (!GetCamera().is_uv_inside_scissor(uv))

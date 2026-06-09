@@ -20,7 +20,7 @@ struct ShaderEntry
 {
 	std::string name;
 	wi::graphics::ShaderStage stage = wi::graphics::ShaderStage::Count;
-	wi::graphics::ShaderModel minshadermodel = wi::graphics::ShaderModel::SM_5_0;
+	wi::graphics::ShaderModel minshadermodel = wi::graphics::ShaderModel::SM_6_0;
 	struct Permutation
 	{
 		wi::vector<std::string> defines;

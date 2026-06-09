@@ -1386,7 +1386,7 @@ struct alignas(16) ShaderCamera
 	int texture_rtdiffuse_index;
 	int texture_primitiveID_index;
 	int texture_depth_index;
-	int texture_lineardepth_index;
+	int padding0;
 
 	int texture_velocity_index;
 	int texture_normal_index;
@@ -1461,7 +1461,6 @@ struct alignas(16) ShaderCamera
 		texture_rtdiffuse_index = -1;
 		texture_primitiveID_index = -1;
 		texture_depth_index = -1;
-		texture_lineardepth_index = -1;
 		texture_velocity_index = -1;
 		texture_normal_index = -1;
 		texture_roughness_index = -1;
@@ -1801,7 +1800,7 @@ CBUFFER(TrailRendererCB, CBSLOT_TRAILRENDERER)
 	float4		g_xTrailTexMulAdd2;
 	int			g_xTrailTextureIndex1;
 	int			g_xTrailTextureIndex2;
-	int			g_xTrailLinearDepthTextureIndex;
+	int			g_xTrailDepthTextureIndex;
 	float		g_xTrailDepthSoften;
 	float3		g_xTrailPadding;
 	float		g_xTrailCameraFar;
