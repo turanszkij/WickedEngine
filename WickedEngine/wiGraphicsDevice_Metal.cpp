@@ -1127,7 +1127,7 @@ using namespace metal_internal;
 		if (commandlist.texture_clear_batching.empty())
 			return;
 		
-		std::sort(commandlist.texture_clear_batching.begin(), commandlist.texture_clear_batching.end(), std::less<CommandList_Metal::TextureClearBatchItem>()); // sort them based on resolutuion so that more can be batched
+		std::sort(commandlist.texture_clear_batching.begin(), commandlist.texture_clear_batching.end(), std::less<CommandList_Metal::TextureClearBatchItem>()); // sort them based on resolution so that more can be batched
 		
 		while (!commandlist.texture_clear_batching.empty())
 		{
@@ -1148,7 +1148,11 @@ using namespace metal_internal;
 			
 			MTL4::RenderCommandEncoder* encoder = commandlist.commandbuffer->renderCommandEncoder(descriptor.get());
 			encoder->setLabel(NS::String::string("ClearUAV", NS::UTF8StringEncoding));
-			encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, MTL4::VisibilityOptionNone); // TODO: flickering issues in several places without this
+			if (commandlist.texture_clear_batching.empty())
+			{
+				// Last clear batch will issue sync for all clears
+				encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, MTL4::VisibilityOptionNone);
+			}
 			encoder->endEncoding();
 		}
 	}
