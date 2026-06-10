@@ -23,6 +23,19 @@
 #define NOSPARSE
 #endif // __APPLE__
 
+// Logical texture resolution limits:
+const uint32_t min_virtual_resolution = SVT_TILE_SIZE;
+const uint32_t max_virtual_resolution = 65536u;
+
+#ifdef NOSPARSE
+// Try to account for memory increase in no-sparse mode, reduce atlas size:
+const uint32_t atlas_physical_width = 16384u;
+const uint32_t atlas_physical_height = 8192u;
+#else
+const uint32_t atlas_physical_width = 16384u;
+const uint32_t atlas_physical_height = 16384u;
+#endif // NOSPARSE
+
 using namespace wi::ecs;
 using namespace wi::scene;
 using namespace wi::graphics;
@@ -1570,21 +1583,13 @@ namespace wi::terrain
 
 			if (!atlas.IsValid())
 			{
-#ifdef NOSPARSE
-				// Try to account for memory increase in no-sparse mode, reduce atlas size:
-				const uint32_t physical_width = 16384u;
-				const uint32_t physical_height = 8192u;
-#else
-				const uint32_t physical_width = 16384u;
-				const uint32_t physical_height = 16384u;
-#endif // NOSPARSE
 				GPUBufferDesc tile_pool_desc;
 
 				for (uint32_t map_type = 0; map_type < arraysize(atlas.maps); ++map_type)
 				{
 					TextureDesc desc;
-					desc.width = physical_width;
-					desc.height = physical_height;
+					desc.width = atlas_physical_width;
+					desc.height = atlas_physical_height;
 #ifndef NOSPARSE
 					desc.misc_flags = ResourceMiscFlag::SPARSE;
 #endif // NOSPARSE
@@ -1649,8 +1654,8 @@ namespace wi::terrain
 				assert(success);
 #endif // NOSPARSE
 
-				atlas.physical_tile_count_x = uint8_t(physical_width / SVT_TILE_SIZE_PADDED);
-				atlas.physical_tile_count_y = uint8_t(physical_height / SVT_TILE_SIZE_PADDED);
+				atlas.physical_tile_count_x = uint8_t(atlas_physical_width / SVT_TILE_SIZE_PADDED);
+				atlas.physical_tile_count_y = uint8_t(atlas_physical_height / SVT_TILE_SIZE_PADDED);
 				atlas.physical_tiles.resize(size_t(atlas.physical_tile_count_x) * size_t(atlas.physical_tile_count_y));
 
 				uint64_t init_frames = 0;
@@ -1703,9 +1708,7 @@ namespace wi::terrain
 			}
 			VirtualTexture& vt = *chunk_data.vt;
 
-			const uint32_t min_resolution = SVT_TILE_SIZE;
-			const uint32_t max_resolution = 65536u;
-			const uint32_t required_resolution = dist < 2 ? max_resolution : min_resolution;
+			const uint32_t required_resolution = dist < 2 ? max_virtual_resolution : min_virtual_resolution;
 			//const uint32_t required_resolution = std::max(min_resolution, max_resolution >> std::min(7, std::max(0, dist - 1)));
 
 			if (vt.resolution != required_resolution)

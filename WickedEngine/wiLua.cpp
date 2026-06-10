@@ -29,6 +29,7 @@
 #include "wiTimer.h"
 #include "wiVector.h"
 #include "wiVersion.h"
+#include "wiPlatform.h"
 
 #include <memory>
 
@@ -70,6 +71,61 @@ namespace wi::lua
 			wi::input::ResetCursors();
 		}
 		return 0;
+	}
+
+	int IsPlatformWindows(lua_State* L)
+	{
+#ifdef PLATFORM_WINDOWS_DESKTOP
+		wi::lua::SSetBool(L, true);
+#else
+		wi::lua::SSetBool(L, false);
+#endif // PLATFORM_WINDOWS_DESKTOP
+		return 1;
+	}
+	int IsPlatformLinux(lua_State* L)
+	{
+#ifdef PLATFORM_LINUX
+		wi::lua::SSetBool(L, true);
+#else
+		wi::lua::SSetBool(L, false);
+#endif // PLATFORM_LINUX
+		return 1;
+	}
+	int IsPlatformMACOS(lua_State* L)
+	{
+#ifdef PLATFORM_MACOS
+		wi::lua::SSetBool(L, true);
+#else
+		wi::lua::SSetBool(L, false);
+#endif // PLATFORM_MACOS
+		return 1;
+	}
+	int IsPlatformIOS(lua_State* L)
+	{
+#ifdef PLATFORM_IOS
+		wi::lua::SSetBool(L, true);
+#else
+		wi::lua::SSetBool(L, false);
+#endif // PLATFORM_IOS
+		return 1;
+	}
+	int IsPlatformPS5(lua_State* L)
+	{
+#ifdef PLATFORM_PS5
+		wi::lua::SSetBool(L, true);
+#else
+		wi::lua::SSetBool(L, false);
+#endif // PLATFORM_PS5
+		return 1;
+	}
+	int IsPlatformXBOX(lua_State* L)
+	{
+#ifdef PLATFORM_XBOX
+		wi::lua::SSetBool(L, true);
+#else
+		wi::lua::SSetBool(L, false);
+#endif // PLATFORM_XBOX
+		return 1;
 	}
 
 	void PostErrorMsg(lua_State* L)
@@ -288,6 +344,13 @@ namespace wi::lua
 		RegisterFunc("GetVersionString", GetVersionString);
 		RegisterFunc("GetCreditsString", GetCreditsString);
 		RegisterFunc("GetSupportersString", GetSupportersString);
+
+		RegisterFunc("IsPlatformWindows", IsPlatformWindows);
+		RegisterFunc("IsPlatformLinux", IsPlatformLinux);
+		RegisterFunc("IsPlatformMACOS", IsPlatformMACOS);
+		RegisterFunc("IsPlatformIOS", IsPlatformIOS);
+		RegisterFunc("IsPlatformPS5", IsPlatformPS5);
+		RegisterFunc("IsPlatformXBOX", IsPlatformXBOX);
 
 		Vector_BindLua::Bind();
 		Matrix_BindLua::Bind();

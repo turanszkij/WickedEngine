@@ -137,6 +137,14 @@ These are some helpers to aid in debugging:
 - ReturnToEditor()	-- returns control to the editor and kills running scripts
 - IsThisDebugBuild() : bool	-- returns true if this is a debug build, false otherwise
 
+Helpers to determine the current platform, if need to implement specific functionality:
+- IsPlatformWindows() : bool
+- IsPlatformLinux() : bool
+- IsPlatformMACOS() : bool
+- IsPlatformIOS() : bool
+- IsPlatformPS5() : bool
+- IsPlatformXBOX() : bool
+
 ## Engine Bindings
 The scripting API provides functions for the developer to manipulate engine behaviour or query it for information.
 
@@ -517,6 +525,11 @@ A texture image data.
 	float blend = 1,
 	float edge_smoothness = 0.04) -- creates a lens distortion normal map (16-bit precision)
 - Save(string filename) -- saves texture into a file. Provide the extension in the filename, it should be one of the following: .JPG, .PNG, .TGA, .BMP, .DDS
+
+- SetTextureResolutionLimit(int resolution) -- Set the highest allowed texture asset resolution (only for DDS textures that contain mipmaps)
+- GetTextureResolutionLimit() : int
+- SetTextureResolutionLimit(float threshold) -- Set threshold relative to memory budget for streaming. If memory usage is below threshold, streaming will work regularly.If memory usage is above threshold, streaming will try to reduce usage
+- GetTextureResolutionLimit() : float
 
 ```lua
 GradientType = {

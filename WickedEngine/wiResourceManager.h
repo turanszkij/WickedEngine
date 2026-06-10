@@ -101,6 +101,10 @@ namespace wi
 		// Invalidate all resources
 		void Clear();
 
+		// Set the highest allowed texture asset resolution (only for DDS textures that contain mipmaps)
+		void SetTextureResolutionLimit(uint32_t resolution);
+		uint32_t GetTextureResolutionLimit();
+
 		// Set threshold relative to memory budget for streaming
 		//	If memory usage is below threshold, streaming will work regularly
 		//	If memory usage is above threshold, streaming will try to reduce usage
