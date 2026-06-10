@@ -57,8 +57,7 @@ PUSHCONSTANT(push, ObjectPushConstants);
 #define GetMaterial() (load_material(push.materialIndex))
 
 //#define sampler_objectshader bindless_samplers[descriptor_index(GetMaterial().sampler_descriptor)]
-#define sampler_objectshader bindless_samplers[descriptor_index(push.wrapSamplerIndex)] // This one loads it faster from push constant than the above that loads from material struct but it must be fed per draw call
-#define sampler_objectshader_clamp bindless_samplers[descriptor_index(push.clampSamplerIndex)]
+#define sampler_objectshader bindless_samplers[descriptor_index(push.samplerIndex)] // This one loads it faster from push constant than the above that loads from material struct but it must be fed per draw call
 
 // Use these to compile this file as shader prototype:
 //#define OBJECTSHADER_COMPILE_VS				- compile vertex shader prototype
@@ -777,11 +776,11 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 #ifndef PREPASS
 #ifndef WATER
 #ifdef FORWARD
-	ForwardDecals(surface, surfaceMap, sampler_objectshader_clamp);
+	ForwardDecals(surface, surfaceMap, sampler_objectshader);
 #endif // FORWARD
 
 #ifdef TILEDFORWARD
-	TiledDecals(surface, flat_tile_index, surfaceMap, sampler_objectshader_clamp);
+	TiledDecals(surface, flat_tile_index, surfaceMap, sampler_objectshader);
 #endif // TILEDFORWARD
 #endif // WATER
 #endif // PREPASS

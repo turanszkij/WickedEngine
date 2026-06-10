@@ -382,7 +382,6 @@ struct Surface
 	void load_internal(uint flatTileIndex = 0)
 	{
 		SamplerState sam = bindless_samplers[MakeUniformResourceIndex(material.sampler_descriptor)];
-		SamplerState sam_clamp = bindless_samplers[MakeUniformResourceIndex(material.sampler_clamp_descriptor)];
 
 		const bool is_hairparticle = geometry.flags & SHADERMESH_FLAG_HAIRPARTICLE;
 		const bool is_emittedparticle = geometry.flags & SHADERMESH_FLAG_EMITTEDPARTICLE;
@@ -849,7 +848,7 @@ struct Surface
 						[branch]
 						if (decalTexture >= 0)
 						{
-							decalColor *= bindless_textures_half4[descriptor_index(decalTexture)].SampleGrad(sam_clamp, uvw.xy, decalDX, decalDY);
+							decalColor *= bindless_textures_half4[descriptor_index(decalTexture)].SampleGrad(sam, uvw.xy, decalDX, decalDY);
 							if ((decal.GetFlags() & ENTITY_FLAG_DECAL_BASECOLOR_ONLY_ALPHA) == 0)
 							{
 								// perform manual blending of decals:
@@ -861,7 +860,7 @@ struct Surface
 						[branch]
 						if (decalNormal >= 0)
 						{
-							half3 decalBumpColor = half3(bindless_textures_half4[descriptor_index(decalNormal)].SampleGrad(sam_clamp, uvw.xy, decalDX, decalDY).rg, 1);
+							half3 decalBumpColor = half3(bindless_textures_half4[descriptor_index(decalNormal)].SampleGrad(sam, uvw.xy, decalDX, decalDY).rg, 1);
 							decalBumpColor = decalBumpColor * 2 - 1;
 							decalBumpColor.rg *= decal.GetAngleScale();
 							decalBumpAccumulation.rgb = mad(1 - decalBumpAccumulation.a, decalColor.a * decalBumpColor.rgb, decalBumpAccumulation.rgb);
@@ -870,7 +869,7 @@ struct Surface
 						[branch]
 						if (decalSurfacemap >= 0)
 						{
-							half4 decalSurfaceColor = bindless_textures_half4[descriptor_index(decalSurfacemap)].SampleGrad(sam_clamp, uvw.xy, decalDX, decalDY);
+							half4 decalSurfaceColor = bindless_textures_half4[descriptor_index(decalSurfacemap)].SampleGrad(sam, uvw.xy, decalDX, decalDY);
 							decalSurfaceAccumulation = mad(1 - decalSurfaceAccumulationAlpha, decalColor.a * decalSurfaceColor, decalSurfaceAccumulation);
 							decalSurfaceAccumulationAlpha = mad(1 - decalColor.a, decalSurfaceAccumulationAlpha, decalColor.a);
 						}
