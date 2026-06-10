@@ -1933,8 +1933,8 @@ It inherits functions from RenderPath2D.
 - AddLoadModelTask(string fileName, opt Matrix matrix) : Entity -- Adds a scene loading task into the global scene and returns the root entity handle immediately. The loading task will be started asynchronously when the LoadingScreen is activated by the Application.
 - AddLoadModelTask(Scene scene, string fileName, opt Matrix matrix) : Entity -- Adds a scene loading task into the specified scene and returns the root entity handle immediately. The loading task will be started asynchronously when the LoadingScreen is activated by the Application.
 - AddRenderPathActivationTask(RenderPath path, opt float fadeSeconds = 0, opt int fadeR = 0,fadeG = 0,fadeB = 0, opt FadeType fadetype = FadeType.FadeToColor) -- loads resources of a RenderPath and activates it after all loading tasks have finished
-- IsFinished() : bool -- returns true when all loading tasks have finished
-- GetProgress() : int -- returns percentage of loading complete (0% - 100%)
+- IsFinished() : bool -- returns true when all loading tasks have finished and loading screen is stopped (eg. application swapped it out)
+- GetProgress() : int -- returns percentage of loading complete (0% - 100%). When all loading tasks are finished or there are no tasks, it returns 100.
 - SetBackgroundTexture(Texture tex) -- set a full screen background texture that wil be displayed when loading screen is active
 - GetBackgroundTexture() : Texture
 - SetBackgroundMode(BackgroundMode mode) -- sets the alignment of the background image

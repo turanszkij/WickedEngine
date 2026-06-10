@@ -20,6 +20,7 @@ namespace wi
 		wi::vector<std::function<void(wi::jobsystem::JobArgs)>> tasks;
 		std::function<void()> finish;
 		uint32_t launchedTasks = 0;
+		bool finished = false;
 	public:
 		wi::Resource backgroundTexture;
 
@@ -45,6 +46,9 @@ namespace wi
 
 		//Start Executing the tasks and mark the loading as active
 		void Start() override;
+
+		// Stop called when swapped out usually at end of loading
+		void Stop() override;
 
 		void Compose(wi::graphics::CommandList cmd) const override;
 

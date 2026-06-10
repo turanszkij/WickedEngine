@@ -710,13 +710,13 @@ local function ThirdPersonCamera(character)
 			local camera_transform = scene.Component_CreateTransform(self.camera)
 		end,
 		
-		Update = function(self)
+		Update = function(self, smoothing)
 			if self.character == nil then
 				return
 			end
 
 			local dt = getDeltaTime()
-			local dt_smoothing = dt * 5
+			local dt_smoothing = smoothing or dt * 5
 
 			-- Mouse scroll or gamepad triggers will move the camera distance:
 			local scroll = input.GetPointer().GetZ() -- pointer.z is the mouse wheel delta this frame
@@ -812,6 +812,7 @@ local function ThirdPersonCamera(character)
 	}
 
 	self:Create(character)
+	self:Update(1) -- 1: immediate jump instead of smoothing at initialization
 	return self
 end
 
@@ -852,7 +853,7 @@ runProcess(function()
 		GradientType.Linear,
 		2048, 1,
 		Vector(0, 0), Vector(1, 0),
-		GradientFlags.Inverse,
+		GradientFlags.Inverse | GradientFlags.R16Unorm,
 		"111r"
 	))
 	local loadingbarparams = loadingbar.GetParams()
@@ -880,6 +881,8 @@ runProcess(function()
 		loadingbarparams.SetMaskAlphaRange(math.saturate(progress - 0.05), math.saturate(progress))
 		loadingbar.SetParams(loadingbarparams)
 	end
+
+	loadingscreen = nil -- no longer need it, deleted
 	
 	-- After loading finished, we clear the main scene, and merge loaded scene into it:
 	scene.Clear()
