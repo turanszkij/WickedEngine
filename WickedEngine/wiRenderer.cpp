@@ -3427,6 +3427,8 @@ void RenderMeshes(
 			push.materialIndex = subset.materialIndex;
 			push.instances = instanceBufferDescriptorIndex;
 			push.instance_offset = (uint)instancedBatch.dataOffset;
+			static_assert(BINDLESS_SAMPLER_CAPACITY <= 256); // It is assumed for this structure that samplers can be indexed with 8 bits
+			assert(material.cached_wrapSampler >= 0 && material.cached_wrapSampler < 256);
 			push.samplerIndex = material.cached_wrapSampler;
 
 			const MeshComponent::BufferView& ibv = provokingIBRequired ? mesh.ib_provoke : mesh.ib;
