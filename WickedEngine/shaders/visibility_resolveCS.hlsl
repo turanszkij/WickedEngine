@@ -3,9 +3,10 @@
 #include "surfaceHF.hlsli"
 #include "raytracingHF.hlsli"
 
-// This shader reads primitiveID and writes depth and linear depth and a simple mipchain for them
+// This shader reads primitiveID and resolves depth mipchain from it
+//	resolved depth can mismatch from hardware depth where viewport squishing was applied. Resolved depth can be unprojected to true positions
 //	It also does material binning when requested
-//	It can run in uniform and divergent manner based on previous primitiveID classification
+//	It can run in uniform and divergent manner based on previous primitiveID classification of visibility_analyzeCS
 
 StructuredBuffer<PrimitiveVisibilityTile> primitive_binned_tiles : register(t0);
 
