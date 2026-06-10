@@ -811,7 +811,7 @@ struct Surface
 					if ((decal.layerMask & layerMask) == 0)
 						continue;
 					const float3 clipSpacePos = mul(decalProjection, float4(P, 1)).xyz;
-					float3 uvw = clipspace_to_uv(clipSpacePos.xyz);
+					float3 uvw = box_to_uv(clipSpacePos.xyz);
 					[branch]
 					if (is_saturated(uvw))
 					{
