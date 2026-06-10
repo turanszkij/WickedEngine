@@ -4204,7 +4204,6 @@ namespace wi::scene
 			{
 				material.cached_wrapSampler = material.sampler_descriptor;
 			}
-			material.cached_clampSampler = device->GetDescriptorIndex(wi::renderer::GetSampler(wi::enums::SAMPLER_OBJECTSHADER_CLAMP));
 
 			material.WriteShaderMaterial(materialArrayMapped + args.jobIndex);
 
