@@ -505,15 +505,14 @@ struct PrimitiveVisibilityTile
 	uint primitiveID; // only valid on uniform classified tiles
 };
 
-struct alignas(16) VisibilityTile
+struct VisibilityTile
 {
-	uint64_t execution_mask;
+	uint64_t execution_mask_or_primitiveID; // divergent tiles: execution mask | uniform tiles primitiveID
 	uint visibility_tile_id;
-	uint primitiveID; // only valid on uniform classified tiles
 
 	inline bool check_thread_valid(uint groupIndex)
 	{
-		return (execution_mask & (uint64_t(1) << uint64_t(groupIndex))) != 0;
+		return (execution_mask_or_primitiveID & (uint64_t(1) << uint64_t(groupIndex))) != 0;
 	}
 };
 

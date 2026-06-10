@@ -41,10 +41,12 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	float3 rayDirection_quad_x = QuadReadAcrossX(ray.Direction);
 	float3 rayDirection_quad_y = QuadReadAcrossY(ray.Direction);
 
+#ifndef PRIMITIVEID_UNIFORM
 	[branch] if (!tile.check_thread_valid(groupIndex)) return; // only return after QuadRead operations!
+#endif // PRIMITIVEID_UNIFORM
 
 #ifdef PRIMITIVEID_UNIFORM
-	const uint primitiveID = tile.primitiveID;
+	const uint primitiveID = tile.execution_mask_or_primitiveID;
 #else
 	const uint primitiveID = texture_primitiveID[pixel];
 #endif // PRIMITIVEID_UNIFORM

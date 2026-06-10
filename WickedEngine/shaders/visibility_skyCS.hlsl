@@ -18,7 +18,9 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
 	const uint tile_offset = push.global_tile_offset + Gid.x;
 	VisibilityTile tile = binned_tiles[tile_offset];
+#ifndef PRIMITIVEID_UNIFORM
 	[branch] if (!tile.check_thread_valid(groupIndex)) return;
+#endif // PRIMITIVEID_UNIFORM
 	const uint2 GTid = remap_lane_8x8(groupIndex);
 	const uint2 tileID = unpack_pixel(tile.visibility_tile_id);
 	const uint2 pixel = tileID * VISIBILITY_BLOCKSIZE + GTid;
