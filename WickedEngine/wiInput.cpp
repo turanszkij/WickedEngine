@@ -784,6 +784,9 @@ namespace wi::input
 			case KEYBOARD_BUTTON_ALTGR:
 				keycode = VK_RMENU;
 				break;
+			case KEYBOARD_BUTTON_END:
+				keycode = VK_END;
+				break;
 #endif // _WIN32
 					
 #ifdef PLATFORM_MACOS
@@ -939,6 +942,9 @@ namespace wi::input
 				break;
 			case KEYBOARD_BUTTON_ALTGR:
 				keycode = kVK_RightOption;
+				break;
+			case KEYBOARD_BUTTON_END:
+				keycode = kVK_End;
 				break;
 			case (BUTTON)'A':
 				keycode = kVK_ANSI_A;
@@ -1515,6 +1521,8 @@ namespace wi::input
 			return KEYBOARD_BUTTON_ALT;
 		if (strcmp(str, "Alt Gr") == 0)
 			return KEYBOARD_BUTTON_ALTGR;
+		if (strcmp(str, "End") == 0)
+			return KEYBOARD_BUTTON_END;
 
 		if (strcmp(str, "Left Shift") == 0)
 			return KEYBOARD_BUTTON_LSHIFT;
@@ -1570,6 +1578,11 @@ namespace wi::input
 			return KEYBOARD_BUTTON_NUMPAD8;
 		if (strcmp(str, "Numpad 9") == 0)
 			return KEYBOARD_BUTTON_NUMPAD9;
+
+		if (strcmp(str, "Left Command") == 0)
+			return KEYBOARD_BUTTON_LCOMMAND;
+		if (strcmp(str, "Right Command") == 0)
+			return KEYBOARD_BUTTON_RCOMMAND;
 
 		if (str[0] >= DIGIT_RANGE_START /*&& str[0] < GAMEPAD_RANGE_START*/)
 		{
@@ -1715,6 +1728,9 @@ namespace wi::input
 		case wi::input::KEYBOARD_BUTTON_INSERT: return "Insert";
 		case wi::input::KEYBOARD_BUTTON_ALT: return "Alt";
 		case wi::input::KEYBOARD_BUTTON_ALTGR: return "Alt Gr";
+		case wi::input::KEYBOARD_BUTTON_LCOMMAND: return "Left Command";
+		case wi::input::KEYBOARD_BUTTON_RCOMMAND: return "Right Command";
+		case wi::input::KEYBOARD_BUTTON_END: return "End";
 		default:
 			break;
 		}

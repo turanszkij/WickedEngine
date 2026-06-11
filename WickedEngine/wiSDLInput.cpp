@@ -317,6 +317,8 @@ namespace wi::input::sdlinput
                 return wi::input::KEYBOARD_BUTTON_ALT;
             case SDL_SCANCODE_RALT:
                 return wi::input::KEYBOARD_BUTTON_ALTGR;
+			case SDL_SCANCODE_END:
+				return wi::input::KEYBOARD_BUTTON_END;
             default:
                 break;
         }
