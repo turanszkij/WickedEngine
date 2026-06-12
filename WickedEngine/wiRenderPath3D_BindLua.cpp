@@ -35,6 +35,7 @@ namespace wi::lua
 		lunamethod(RenderPath3D_BindLua, SetRaytracedReflectionsEnabled),
 		lunamethod(RenderPath3D_BindLua, SetShadowsEnabled),
 		lunamethod(RenderPath3D_BindLua, SetReflectionsEnabled),
+		lunamethod(RenderPath3D_BindLua, SetPlanarReflectionQuality),
 		lunamethod(RenderPath3D_BindLua, SetFXAAEnabled),
 		lunamethod(RenderPath3D_BindLua, SetBloomEnabled),
 		lunamethod(RenderPath3D_BindLua, SetBloomThreshold),
@@ -229,13 +230,26 @@ namespace wi::lua
 	{
 		if (component == nullptr)
 		{
-			wi::lua::SError(L, "SetShadowsEnabled(bool value) component is null!");
+			wi::lua::SError(L, "SetReflectionsEnabled(bool value) component is null!");
 			return 0;
 		}
 		if (wi::lua::SGetArgCount(L) > 0)
 			((RenderPath3D*)component)->setReflectionsEnabled(wi::lua::SGetBool(L, 1));
 		else
-			wi::lua::SError(L, "SetShadowsEnabled(bool value) not enough arguments!");
+			wi::lua::SError(L, "SetReflectionsEnabled(bool value) not enough arguments!");
+		return 0;
+	}
+	int RenderPath3D_BindLua::SetPlanarReflectionQuality(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetPlanarReflectionQuality(float resolutionScale, int msaaSampleCount) component is null!");
+			return 0;
+		}
+		if (wi::lua::SGetArgCount(L) > 1)
+			((RenderPath3D*)component)->setPlanarReflectionQuality(wi::lua::SGetFloat(L, 1), wi::lua::SGetInt(L, 2));
+		else
+			wi::lua::SError(L, "SetPlanarReflectionQuality(float resolutionScale, int msaaSampleCount) not enough arguments!");
 		return 0;
 	}
 	int RenderPath3D_BindLua::SetFXAAEnabled(lua_State* L)
