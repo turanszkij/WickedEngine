@@ -575,7 +575,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
 
 			[loop]
-			while ((bucket_bits != 0) && (capsuleshadow > 0 || capsulereflection > 0))
+			while (bucket_bits != 0)
 			{
 				// Retrieve global entity index from local bucket, then remove bit from local bucket:
 				const uint bucket_bit_index = firstbitlow(bucket_bits);
