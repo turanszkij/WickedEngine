@@ -706,8 +706,8 @@ namespace wi
 		camera->texture_normal_index = device->GetDescriptorIndex(&visibilityResources.texture_normals, SubresourceType::SRV);
 		camera->texture_roughness_index = device->GetDescriptorIndex(&visibilityResources.texture_roughness, SubresourceType::SRV);
 		camera->buffer_entitytiles_index = device->GetDescriptorIndex(&tiledLightResources.entityTiles, SubresourceType::SRV);
-		camera->texture_reflection_index = device->GetDescriptorIndex(&rtReflection_resolved, SubresourceType::SRV);
-		camera->texture_reflection_depth_index = device->GetDescriptorIndex(&depthBuffer_Reflection_resolved, SubresourceType::SRV);
+		camera->texture_reflection_index = device->GetDescriptorIndex(&rtReflection, SubresourceType::SRV);
+		camera->texture_reflection_depth_index = device->GetDescriptorIndex(&depthBuffer_Reflection, SubresourceType::SRV);
 		camera->texture_refraction_index = device->GetDescriptorIndex(&rtSceneCopy, SubresourceType::SRV);
 		camera->texture_waterriples_index = device->GetDescriptorIndex(&rtWaterRipple, SubresourceType::SRV);
 		camera->texture_ao_index = device->GetDescriptorIndex(&rtAO, SubresourceType::SRV);
@@ -736,16 +736,16 @@ namespace wi
 		camera->texture_reprojected_depth_index = device->GetDescriptorIndex(&reprojectedDepth, SubresourceType::SRV);
 
 		camera_reflection.canvas.init(*this);
-		camera_reflection.width = (float)depthBuffer_Reflection.desc.width;
-		camera_reflection.height = (float)depthBuffer_Reflection.desc.height;
+		camera_reflection.width = (float)depthBuffer_Reflection_render.desc.width;
+		camera_reflection.height = (float)depthBuffer_Reflection_render.desc.height;
 		camera_reflection.scissor.left = 0;
 		camera_reflection.scissor.top = 0;
-		camera_reflection.scissor.right = (int)depthBuffer_Reflection.desc.width;
-		camera_reflection.scissor.bottom = (int)depthBuffer_Reflection.desc.height;
-		camera_reflection.sample_count = depthBuffer_Reflection.desc.sample_count;
+		camera_reflection.scissor.right = (int)depthBuffer_Reflection_render.desc.width;
+		camera_reflection.scissor.bottom = (int)depthBuffer_Reflection_render.desc.height;
+		camera_reflection.sample_count = depthBuffer_Reflection_render.desc.sample_count;
 		camera_reflection.shadercamera_options = SHADERCAMERA_OPTION_NONE;
 		camera_reflection.texture_primitiveID_index = -1;
-		camera_reflection.texture_depth_index = device->GetDescriptorIndex(&depthBuffer_Reflection_resolved, SubresourceType::SRV);
+		camera_reflection.texture_depth_index = device->GetDescriptorIndex(&depthBuffer_Reflection, SubresourceType::SRV);
 		camera_reflection.texture_velocity_index = -1;
 		camera_reflection.texture_normal_index = -1;
 		camera_reflection.texture_roughness_index = -1;
@@ -1186,7 +1186,7 @@ namespace wi
 
 				RenderPassImage rp[] = {
 					RenderPassImage::DepthStencil(
-						&depthBuffer_Reflection,
+						&depthBuffer_Reflection_render,
 						RenderPassImage::LoadOp::CLEAR,
 						RenderPassImage::StoreOp::STORE,
 						ResourceState::SHADER_RESOURCE,
@@ -1215,7 +1215,10 @@ namespace wi
 
 				device->RenderPassEnd(cmd);
 
-				wi::renderer::ResolveMSAADepthBuffer(depthBuffer_Reflection_resolved, depthBuffer_Reflection, cmd);
+				if (depthBuffer_Reflection_render.desc.sample_count > 1)
+				{
+					wi::renderer::ResolveMSAADepthBuffer(depthBuffer_Reflection, depthBuffer_Reflection_render, cmd);
+				}
 
 				if (scene->weather.IsRealisticSky() && scene->weather.IsRealisticSkyAerialPerspective())
 				{
@@ -1319,29 +1322,53 @@ namespace wi
 				device->EventBegin("Planar reflections", cmd);
 				auto range = wi::profiler::BeginRangeGPU("Planar Reflections", cmd);
 
-				RenderPassImage rp[] = {
-					RenderPassImage::RenderTarget(
-						&rtReflection,
-						RenderPassImage::LoadOp::CLEAR,
-						RenderPassImage::StoreOp::DONTCARE,
-						ResourceState::RENDERTARGET,
-						ResourceState::RENDERTARGET
-					),
-					RenderPassImage::Resolve(&rtReflection_resolved),
-					RenderPassImage::DepthStencil(
-						&depthBuffer_Reflection,
-						RenderPassImage::LoadOp::LOAD,
-						RenderPassImage::StoreOp::STORE,
-						ResourceState::SHADER_RESOURCE,
-						ResourceState::DEPTHSTENCIL,
-						ResourceState::SHADER_RESOURCE
-					),
-				};
-				device->RenderPassBegin(rp, arraysize(rp), cmd);
+				if (depthBuffer_Reflection_render.desc.sample_count > 1)
+				{
+					RenderPassImage rp[] = {
+						RenderPassImage::RenderTarget(
+							&rtReflection_render,
+							RenderPassImage::LoadOp::CLEAR,
+							RenderPassImage::StoreOp::DONTCARE,
+							ResourceState::RENDERTARGET,
+							ResourceState::RENDERTARGET
+						),
+						RenderPassImage::Resolve(&rtReflection),
+						RenderPassImage::DepthStencil(
+							&depthBuffer_Reflection_render,
+							RenderPassImage::LoadOp::LOAD,
+							RenderPassImage::StoreOp::STORE,
+							ResourceState::SHADER_RESOURCE,
+							ResourceState::DEPTHSTENCIL,
+							ResourceState::SHADER_RESOURCE
+						),
+					};
+					device->RenderPassBegin(rp, arraysize(rp), cmd);
+				}
+				else
+				{
+					RenderPassImage rp[] = {
+						RenderPassImage::RenderTarget(
+							&rtReflection_render,
+							RenderPassImage::LoadOp::CLEAR,
+							RenderPassImage::StoreOp::STORE,
+							ResourceState::SHADER_RESOURCE,
+							ResourceState::SHADER_RESOURCE
+						),
+						RenderPassImage::DepthStencil(
+							&depthBuffer_Reflection_render,
+							RenderPassImage::LoadOp::LOAD,
+							RenderPassImage::StoreOp::STORE,
+							ResourceState::SHADER_RESOURCE,
+							ResourceState::DEPTHSTENCIL,
+							ResourceState::SHADER_RESOURCE
+						),
+					};
+					device->RenderPassBegin(rp, arraysize(rp), cmd);
+				}
 
 				Viewport vp;
-				vp.width = (float)depthBuffer_Reflection.GetDesc().width;
-				vp.height = (float)depthBuffer_Reflection.GetDesc().height;
+				vp.width = (float)depthBuffer_Reflection_render.GetDesc().width;
+				vp.height = (float)depthBuffer_Reflection_render.GetDesc().height;
 				vp.min_depth = 0;
 				vp.max_depth = 1;
 				device->BindViewports(1, &vp, cmd);
@@ -3054,45 +3081,65 @@ namespace wi
 				return;
 
 			TextureDesc desc;
-			desc.sample_count = 4;
-			desc.bind_flags = BindFlag::RENDER_TARGET;
 			desc.format = wi::renderer::format_rendertarget_main;
-			desc.width = internalResolution.x / 4;
-			desc.height = internalResolution.y / 4;
-			desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
-			desc.layout = ResourceState::RENDERTARGET;
-			device->CreateTexture(&desc, nullptr, &rtReflection);
-			device->SetName(&rtReflection, "rtReflection");
+			desc.width = uint32_t((float)internalResolution.x * planarReflectionResolutionScale);
+			desc.height = uint32_t((float)internalResolution.y * planarReflectionResolutionScale);
+			desc.sample_count = planarReflectionMSAASampleCount;
+			if (desc.sample_count > 1)
+			{
+				desc.bind_flags = BindFlag::RENDER_TARGET;
+				desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
+				desc.layout = ResourceState::RENDERTARGET;
+			}
+			else
+			{
+				desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+			}
+			device->CreateTexture(&desc, nullptr, &rtReflection_render);
+			device->SetName(&rtReflection_render, "rtReflection_render");
 
 			desc.misc_flags = ResourceMiscFlag::NONE;
 			desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
 			desc.format = wi::renderer::format_depthbuffer_main;
 			desc.layout = ResourceState::SHADER_RESOURCE;
-			device->CreateTexture(&desc, nullptr, &depthBuffer_Reflection);
-			device->SetName(&depthBuffer_Reflection, "depthBuffer_Reflection");
+			device->CreateTexture(&desc, nullptr, &depthBuffer_Reflection_render);
+			device->SetName(&depthBuffer_Reflection_render, "depthBuffer_Reflection_render");
 
+			if (desc.sample_count > 1)
+			{
+				desc.sample_count = 1;
+				desc.format = wi::renderer::format_rendertarget_main;
+				desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+				device->CreateTexture(&desc, nullptr, &rtReflection);
+				device->SetName(&rtReflection, "rtReflection");
 
-			desc.sample_count = 1;
-			desc.format = wi::renderer::format_rendertarget_main;
-			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
-			device->CreateTexture(&desc, nullptr, &rtReflection_resolved);
-			device->SetName(&rtReflection_resolved, "rtReflection_resolved");
-
-			desc.format = Format::R16_UNORM;
-			desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
-			device->CreateTexture(&desc, nullptr, &depthBuffer_Reflection_resolved);
-			device->SetName(&depthBuffer_Reflection_resolved, "depthBuffer_Reflection_resolved");
+				desc.format = Format::R16_UNORM;
+				desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+				device->CreateTexture(&desc, nullptr, &depthBuffer_Reflection);
+				device->SetName(&depthBuffer_Reflection, "depthBuffer_Reflection");
+			}
+			else
+			{
+				rtReflection = rtReflection_render;
+				depthBuffer_Reflection = depthBuffer_Reflection_render;
+			}
 
 			wi::renderer::CreateTiledLightResources(tiledLightResources_planarReflection, XMUINT2(depthBuffer_Reflection.desc.width, depthBuffer_Reflection.desc.height));
 		}
 		else
 		{
+			rtReflection_render = {};
 			rtReflection = {};
-			rtReflection_resolved = {};
+			depthBuffer_Reflection_render = {};
 			depthBuffer_Reflection = {};
-			depthBuffer_Reflection_resolved = {};
 			tiledLightResources_planarReflection = {};
 		}
+	}
+	void RenderPath3D::setPlanarReflectionQuality(float resolutionScale, uint32_t msaaSampleCount)
+	{
+		planarReflectionResolutionScale = resolutionScale;
+		planarReflectionMSAASampleCount = msaaSampleCount;
+		setReflectionsEnabled(getReflectionsEnabled());
 	}
 	void RenderPath3D::setBloomEnabled(bool value)
 	{

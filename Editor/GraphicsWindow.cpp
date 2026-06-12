@@ -1001,8 +1001,8 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&aoSampleCountSlider);
 
-	reflectionsCheckBox.Create("Reflections: ");
-	reflectionsCheckBox.SetTooltip("Enable reflections for materials such as Water and Planar Reflection.");
+	reflectionsCheckBox.Create("Planar reflections: ");
+	reflectionsCheckBox.SetTooltip("Enable planar reflections for materials such as Water and Planar Reflection.");
 	reflectionsCheckBox.SetScriptTip("RenderPath3D::SetReflectionsEnabled(bool value)");
 	reflectionsCheckBox.SetSize(XMFLOAT2(hei, hei));
 	reflectionsCheckBox.SetPos(XMFLOAT2(x, y += step));
@@ -1013,9 +1013,30 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	reflectionsCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->renderPath->setReflectionsEnabled(args.bValue);
 		editor->main->config.GetSection("graphics").Set("reflections", args.bValue);
-		editor->main->config.Commit();
 		});
 	AddWidget(&reflectionsCheckBox);
+
+	planarReflectionResolutionScaleSlider.Create(0.25f, 2.0f, 1.0f, 7.0f, "Planar reflection scale: ");
+	planarReflectionResolutionScaleSlider.SetTooltip("Set resolution scale of planar reflections.");
+	planarReflectionResolutionScaleSlider.SetSize(XMFLOAT2(mod_wid, hei));
+	planarReflectionResolutionScaleSlider.SetPos(XMFLOAT2(x + 100, y += step));
+	planarReflectionResolutionScaleSlider.OnSlide([=](wi::gui::EventArgs args) {
+		editor->renderPath->setPlanarReflectionQuality(args.fValue, editor->renderPath->getPlanarReflectionMSAASampleCount());
+	});
+	AddWidget(&planarReflectionResolutionScaleSlider);
+
+	planarReflectionSampleCountCombo.Create("Planar reflection MSAA: ");
+	planarReflectionSampleCountCombo.SetTooltip("Set MSAA sample count for planar reflections.");
+	planarReflectionSampleCountCombo.SetPos(XMFLOAT2(x + wid + 1, y));
+	planarReflectionSampleCountCombo.SetSize(XMFLOAT2(mod_wid, hei));
+	planarReflectionSampleCountCombo.AddItem("1", 1);
+	planarReflectionSampleCountCombo.AddItem("2", 2);
+	planarReflectionSampleCountCombo.AddItem("4", 4);
+	planarReflectionSampleCountCombo.AddItem("8", 8);
+	planarReflectionSampleCountCombo.OnSelect([=](wi::gui::EventArgs args) {
+		editor->renderPath->setPlanarReflectionQuality(editor->renderPath->getPlanarReflectionResolutionScale(), (uint32_t)args.userdata);
+	});
+	AddWidget(&planarReflectionSampleCountCombo);
 
 	ssrCheckBox.Create("SSR: ");
 	ssrCheckBox.SetTooltip("Enable Screen Space Reflections. This can not reflect anything that is outside of the screen.");
@@ -1788,6 +1809,8 @@ void GraphicsWindow::UpdateData()
 	aoRangeSlider.SetValue((float)editor->renderPath->getAORange());
 	aoSampleCountSlider.SetValue((float)editor->renderPath->getAOSampleCount());
 	reflectionsCheckBox.SetCheck(editor->renderPath->getReflectionsEnabled());
+	planarReflectionResolutionScaleSlider.SetValue(editor->renderPath->getPlanarReflectionResolutionScale());
+	planarReflectionSampleCountCombo.SetSelectedByUserdataWithoutCallback(editor->renderPath->getPlanarReflectionMSAASampleCount());
 	ssrCheckBox.SetCheck(editor->renderPath->getSSREnabled());
 	ssrQualitySlider.SetValue((int)editor->renderPath->getSSRQuality());
 	reflectionsRoughnessCutoffSlider.SetValue(editor->renderPath->getReflectionRoughnessCutoff());
@@ -1902,6 +1925,9 @@ void GraphicsWindow::ResizeLayout()
 		shadowLODCheckBox.SetVisible(false);
 		tessellationCheckBox.SetVisible(false);
 		meshblendCheckBox.SetVisible(false);
+		reflectionsCheckBox.SetVisible(false);
+		planarReflectionResolutionScaleSlider.SetVisible(false);
+		planarReflectionSampleCountCombo.SetVisible(false);
 	}
 	else
 	{
@@ -1922,6 +1948,9 @@ void GraphicsWindow::ResizeLayout()
 		shadowLODCheckBox.SetVisible(true);
 		tessellationCheckBox.SetVisible(true);
 		meshblendCheckBox.SetVisible(true);
+		reflectionsCheckBox.SetVisible(true);
+		planarReflectionResolutionScaleSlider.SetVisible(true);
+		planarReflectionSampleCountCombo.SetVisible(true);
 
 		layout.add(shadowTypeComboBox);
 		layout.add(shadowProps2DComboBox);
@@ -1937,6 +1966,12 @@ void GraphicsWindow::ResizeLayout()
 		layout.add_right(shadowLODCheckBox);
 		layout.add_right(tessellationCheckBox);
 		layout.add_right(meshblendCheckBox);
+
+		layout.jump();
+
+		layout.add_right(reflectionsCheckBox);
+		layout.add_right(planarReflectionResolutionScaleSlider);
+		layout.add_right(planarReflectionSampleCountCombo);
 	}
 
 	layout.jump();
@@ -2037,7 +2072,6 @@ void GraphicsWindow::ResizeLayout()
 	layout.add(aoPowerSlider);
 	layout.add(aoRangeSlider);
 	layout.add(aoSampleCountSlider);
-	layout.add_right(reflectionsCheckBox);
 	layout.add_right(reflectionsRoughnessCutoffSlider);
 	ssrCheckBox.SetPos(XMFLOAT2(reflectionsRoughnessCutoffSlider.GetPos().x - ssrCheckBox.GetSize().x - 80, reflectionsRoughnessCutoffSlider.GetPos().y));
 	layout.add_right(ssrQualitySlider);

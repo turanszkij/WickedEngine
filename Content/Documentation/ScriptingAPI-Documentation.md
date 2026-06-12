@@ -1874,6 +1874,7 @@ It inherits functions from RenderPath2D, so it can render a 2D overlay.
 - SetRaytracedReflectionsEnabled(bool value)
 - SetShadowsEnabled(bool value)
 - SetReflectionsEnabled(bool value)
+- SetPlanarReflectionQuality(float resolutionScale, int msaaSampleCount) -- control the planar reflection render resolution and multisampling antia aliasing. msaaSampleCount must be a value from these: 1,2,4,8
 - SetFXAAEnabled(bool value)
 - SetBloomEnabled(bool value)
 - SetBloomThreshold(bool value)
