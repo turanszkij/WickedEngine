@@ -328,6 +328,10 @@ Specify Sprite properties, like position, size, etc.
 - EnableAngularSoftnessInverse()
 - DisableAngularSoftnessDoubleSided()
 - DisableAngularSoftnessInverse()
+- EnableCornerRounding()
+- DisableCornerRounding()
+- SetCornerRounding(int corner, float rounding, opt int segments = 18)
+- SetGradient(GradientType type, Vector uv_start, Vector uv_end, Vector color)
 
 - [outer]STENCILMODE_DISABLED : int
 - [outer]STENCILMODE_EQUAL : int
@@ -354,6 +358,15 @@ Specify Sprite properties, like position, size, etc.
 - [outer]BLENDMODE_ALPHA : int
 - [outer]BLENDMODE_PREMULTIPLIED : int
 - [outer]BLENDMODE_ADDITIVE : int
+
+```lua
+ImageGradientType = {
+	None = 0,
+	Linear = 1,
+	LinearReflected = 2,
+	Circular = 3,
+}
+```
 
 #### SpriteAnim
 Animate Sprites easily with this helper.
