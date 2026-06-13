@@ -23,6 +23,7 @@ namespace wi::lua
 
 		XMFLOAT2 GetFloat2() { return XMFLOAT2(data.x, data.y); }
 		XMFLOAT3 GetFloat3() { return XMFLOAT3(data.x, data.y, data.z); }
+		XMFLOAT4 GetFloat4() { return data; }
 
 		int GetX(lua_State* L);
 		int GetY(lua_State* L);

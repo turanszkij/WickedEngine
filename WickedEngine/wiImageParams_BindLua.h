@@ -76,6 +76,12 @@ namespace wi::lua
 		int DisableAngularSoftnessDoubleSided(lua_State* L);
 		int DisableAngularSoftnessInverse(lua_State* L);
 
+		int EnableCornerRounding(lua_State* L);
+		int DisableCornerRounding(lua_State* L);
+		int SetCornerRounding(lua_State* L);
+
+		int SetGradient(lua_State* L);
+
 		static void Bind();
 	};
 }

@@ -63,6 +63,12 @@ namespace wi::lua
 		lunamethod(ImageParams_BindLua, DisableAngularSoftnessDoubleSided),
 		lunamethod(ImageParams_BindLua, DisableAngularSoftnessInverse),
 
+		lunamethod(ImageParams_BindLua, EnableCornerRounding),
+		lunamethod(ImageParams_BindLua, DisableCornerRounding),
+		lunamethod(ImageParams_BindLua, SetCornerRounding),
+
+		lunamethod(ImageParams_BindLua, SetGradient),
+
 		{ nullptr, nullptr }
 	};
 	Luna<ImageParams_BindLua>::PropertyType ImageParams_BindLua::properties[] = {
@@ -560,7 +566,7 @@ namespace wi::lua
 	}
 	int ImageParams_BindLua::EnableAngularSoftnessDoubleSided(lua_State* L)
 	{
-		params.disableAngularSoftnessDoubleSided();
+		params.enableAngularSoftnessDoubleSided();
 		return 0;
 	}
 	int ImageParams_BindLua::EnableAngularSoftnessInverse(lua_State* L)
@@ -576,6 +582,67 @@ namespace wi::lua
 	int ImageParams_BindLua::DisableAngularSoftnessInverse(lua_State* L)
 	{
 		params.disableAngularSoftnessInverse();
+		return 0;
+	}
+
+	int ImageParams_BindLua::EnableCornerRounding(lua_State* L)
+	{
+		params.enableCornerRounding();
+		return 0;
+	}
+	int ImageParams_BindLua::DisableCornerRounding(lua_State* L)
+	{
+		params.disableCornerRounding();
+		return 0;
+	}
+	int ImageParams_BindLua::SetCornerRounding(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc < 2)
+		{
+			wi::lua::SError(L, "SetCornerRounding(int corner, float rounding, opt int segments = 18): not enough arguments!");
+			return 0;
+		}
+		int corner = clamp(wi::lua::SGetInt(L, 1), 0, (int)arraysize(params.corners_rounding) - 1);
+		params.corners_rounding[corner].radius = wi::lua::SGetFloat(L, 2);
+		if (argc > 2)
+		{
+			params.corners_rounding[corner].segments = wi::lua::SGetInt(L, 3);
+		}
+		return 0;
+	}
+
+	int ImageParams_BindLua::SetGradient(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc < 4)
+		{
+			wi::lua::SError(L, "SetGradient(ImageGradientType type, Vector uv_start, Vector uv_end, Vector color): not enough arguments!");
+			return 0;
+		}
+		int type = wi::lua::SGetInt(L, 1);
+		Vector_BindLua* s = Luna<Vector_BindLua>::lightcheck(L, 2);
+		if (s == nullptr)
+		{
+			wi::lua::SError(L, "SetGradient(ImageGradientType type, Vector uv_start, Vector uv_end, Vector color): second argument is not a Vector!");
+			return 0;
+		}
+		Vector_BindLua* e = Luna<Vector_BindLua>::lightcheck(L, 3);
+		if (s == nullptr)
+		{
+			wi::lua::SError(L, "SetGradient(ImageGradientType type, Vector uv_start, Vector uv_end, Vector color): third argument is not a Vector!");
+			return 0;
+		}
+		Vector_BindLua* c = Luna<Vector_BindLua>::lightcheck(L, 4);
+		if (s == nullptr)
+		{
+			wi::lua::SError(L, "SetGradient(ImageGradientType type, Vector uv_start, Vector uv_end, Vector color): fourth argument is not a Vector!");
+			return 0;
+		}
+		params.gradient = (wi::image::Params::Gradient)type;
+		params.gradient_uv_start = s->GetFloat2();
+		params.gradient_uv_end = e->GetFloat2();
+		params.gradient_color = c->GetFloat4();
 		return 0;
 	}
 
@@ -642,6 +709,13 @@ BLENDMODE_OPAQUE			= 0
 BLENDMODE_ALPHA				= 1
 BLENDMODE_PREMULTIPLIED		= 2
 BLENDMODE_ADDITIVE			= 3
+
+ImageGradientType = {
+	None = 0,
+	Linear = 1,
+	LinearReflected = 2,
+	Circular = 3,
+}
 )");
 
 		}
