@@ -1253,6 +1253,7 @@ TextureSlot = {
 - SetMotionBlurAmount(float value)  -- set the motion elongation factor
 - SetCollidersDisabled(bool value) -- disable GPU colliders
 - IsCollidersDisabled()
+- GetCurrentParticleCount() : int -- returns last known alive particle count (not that particles are tracked on GPU so this value might be out of date)
 
 #### HairParticleSystem
 - _flags : int

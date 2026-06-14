@@ -5210,6 +5210,7 @@ Luna<EmitterComponent_BindLua>::FunctionType EmitterComponent_BindLua::methods[]
 	lunamethod(EmitterComponent_BindLua, SetMotionBlurAmount),
 	lunamethod(EmitterComponent_BindLua, IsCollidersDisabled),
 	lunamethod(EmitterComponent_BindLua, SetCollidersDisabled),
+	lunamethod(EmitterComponent_BindLua, GetCurrentParticleCount),
 	{ NULL, NULL }
 };
 Luna<EmitterComponent_BindLua>::PropertyType EmitterComponent_BindLua::properties[] = {
@@ -5520,6 +5521,11 @@ int EmitterComponent_BindLua::SetCollidersDisabled(lua_State* L)
 	}
 
 	return 0;
+}
+int EmitterComponent_BindLua::GetCurrentParticleCount(lua_State* L)
+{
+	wi::lua::SSetInt(L, (int)component->statistics.aliveCount);
+	return 1;
 }
 
 

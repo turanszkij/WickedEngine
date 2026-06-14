@@ -347,6 +347,12 @@ namespace wi
 
 		emit += (float)count * dt;
 
+		if (!bursted_on_create && burst_on_create > 0)
+		{
+			bursted_on_create = true;
+			Burst(burst_on_create);
+		}
+
 		emit += burst;
 		burst = 0;
 
@@ -1272,6 +1278,11 @@ namespace wi
 				opacityCurveControlPeakEnd = opacityCurveControlPeakStart;
 			}
 
+			if (seri.GetVersion() >= 3)
+			{
+				archive >> burst_on_create;
+			}
+
 		}
 		else
 		{
@@ -1326,6 +1337,11 @@ namespace wi
 			if (seri.GetVersion() >= 2)
 			{
 				archive << opacityCurveControlPeakEnd;
+			}
+
+			if (seri.GetVersion() >= 3)
+			{
+				archive << burst_on_create;
 			}
 		}
 	}

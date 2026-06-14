@@ -738,6 +738,7 @@ namespace wi::lua::scene
 		int GetMotionBlurAmount(lua_State* L);
 		int IsCollidersDisabled(lua_State* L);
 		int SetCollidersDisabled(lua_State* L);
+		int GetCurrentParticleCount(lua_State* L);
 	};
 
 	class HairParticleSystem_BindLua
