@@ -1,104 +1,132 @@
 <img src="../logo_small.png" width="128px"/>
 
 # Wicked Engine Scripting API Documentation
+
 This is a reference and explanation of Lua scripting features in Wicked Engine.
-- [Editor Manual](WickedEditor-Manual.pdf)<br/>
-- [C++ Documentation](WickedEngine-Documentation.md)<br/>
+
+- [Editor Manual](WickedEditor-Manual.pdf)
+- [C++ Documentation](WickedEngine-Documentation.md)
 
 ## Contents
+
 1. [Introduction and usage](#introduction-and-usage)
 2. [Utility Tools](#utility-tools)
-4. [Engine Bindings](#engine-bindings)
-	1. [BackLog (Console)](#backlog)
-	2. [Renderer](#renderer)
-	3. [Sprite](#sprite)
-		1. [ImageParams](#imageparams)
-		2. [SpriteAnim](#spriteanim)
-		3. [MovingTexAnim](#movingtexanim)
-		4. [DrawRecAnim](#drawrecanim)
-	4. [SpriteFont](#spritefont)
-	5. [Texture](#texture)
-	6. [Audio](#audio)
-		1. [Sound](#sound)
-		2. [SoundInstance](#soundinstance)
-		3. [SoundInstance3D](#soundinstance3d)
-	6. [Video](#video)
-		1. [Video](#video)
-		2. [VideoInstance](#videoinstance)
-	7. [Vector](#vector)
-	8. [Matrix](#matrix)
-	8. [Async](#async)
-	9. [Scene](#scene)
-		1. [Entity](#entity)
-		2. [Scene](#scene)
-		2. [RayIntersectionResult](#rayintersectionresult)
-		2. [SphereIntersectionResult](#sphereintersectionresult)
-		3. [NameComponent](#namecomponent)
-		4. [LayerComponent](#layercomponent)
-		5. [TransformComponent](#transformcomponent)
-		6. [CameraComponent](#cameracomponent)
-		7. [AnimationComponent](#animationcomponent)
-		8. [MaterialComponent](#materialcomponent)
-		9. [EmitterComponent](#emittercomponent)
-		9. [HairParticleSystem](#hairparticlesystem)
-		10. [LightComponent](#lightcomponent)
-		11. [ObjectComponent](#objectcomponent)
-		12. [InverseKinematicsComponent](#inversekinematicscomponent)
-		13. [SpringComponent](#springcomponent)
-		14. [RigidBodyPhsyicsComponent](#rigidbodyphysicscomponent)
-		15. [SoftBodyPhsyicsComponent](#softbodyphysicscomponent)
-		16. [ForceFieldComponent](#forcefieldcomponent)
-		17. [WeatherComponent](#weathercomponent)
-		18. [SoundComponent](#soundcomponent)
-		18. [VideoComponent](#videocomponent)
-		19. [ColliderComponent](#collidercomponent)
-		19. [ExpressionComponent](#expressioncomponent)
-		19. [HumanoidComponent](#humanoidcomponent)
-		19. [DecalComponent](#decalcomponent)
-		19. [MetadataComponent](#metadatacomponent)
-		19. [CharacterComponent](#charactercomponent)
-	10. [Canvas](#canvas)
-	11. [High Level Interface](#high-level-interface)
-		1. [Application](#application)
-		2. [RenderPath](#renderpath)
-			1. [RenderPath2D](#renderpath2d)
-			2. [RenderPath3D](#renderpath3d)
-			3. [LoadingScreen](#loadingscreen)
-	12. [Primitives](#primitives)
-		1. [Ray](#ray)
-		2. [AABB](#aabb)
-		3. [Sphere](#sphere)
-		4. [Capsule](#capsule)
-	12. [Input](#input)
-	13. [Physics](#physics)
-	14. [Path finding](#path-finding)
-		1. [VoxelGrid](#voxelgrid)
-		2. [PathQuery](#pathquery)
-	15. [TrailRenderer](#trailrenderer)
-		
+3. [Engine Bindings](#engine-bindings)
+   1. [BackLog (Console)](#backlog)
+   2. [Renderer](#renderer)
+   3. [Sprite](#sprite)
+      1. [ImageParams](#imageparams)
+      2. [SpriteAnim](#spriteanim)
+      3. [MovingTexAnim](#movingtexanim)
+      4. [DrawRecAnim](#drawrecanim)
+   4. [SpriteFont](#spritefont)
+   5. [Texture](#texture)
+      1. [TextureHelper](#texturehelper)
+   6. [Audio](#audio)
+      1. [Sound](#sound)
+      2. [SoundInstance](#soundinstance)
+      3. [SoundInstance3D](#soundinstance3d)
+      4. [Submix Types](#submix-types)
+      5. [Reverb Types](#reverb-types)
+   7. [Video](#video)
+      1. [Video](#video)
+      2. [VideoInstance](#videoinstance)
+   8. [Vector](#vector)
+   9. [Matrix](#matrix)
+   10. [Async](#async)
+   11. [Scene](#scene)
+       1. [Entity](#entity)
+       2. [Scene](#scene)
+       3. [RayIntersectionResult](#rayintersectionresult)
+       4. [SphereIntersectionResult](#sphereintersectionresult)
+       5. [NameComponent](#namecomponent)
+       6. [LayerComponent](#layercomponent)
+       7. [TransformComponent](#transformcomponent)
+       8. [CameraComponent](#cameracomponent)
+       9. [AnimationComponent](#animationcomponent)
+       10. [MaterialComponent](#materialcomponent)
+       11. [MeshComponent](#meshcomponent)
+       12. [EmitterComponent](#emittercomponent)
+       13. [HairParticleSystem](#hairparticlesystem)
+       14. [LightComponent](#lightcomponent)
+       15. [ObjectComponent](#objectcomponent)
+       16. [InverseKinematicsComponent](#inversekinematicscomponent)
+       17. [SpringComponent](#springcomponent)
+       18. [ScriptComponent](#scriptcomponent)
+       19. [RigidBodyPhsyicsComponent](#rigidbodyphysicscomponent)
+       20. [SoftBodyPhsyicsComponent](#softbodyphysicscomponent)
+       21. [ForceFieldComponent](#forcefieldcomponent)
+       22. [WeatherComponent](#weathercomponent)
+       23. [SoundComponent](#soundcomponent)
+       24. [VideoComponent](#videocomponent)
+       25. [ColliderComponent](#collidercomponent)
+       26. [ExpressionComponent](#expressioncomponent)
+       27. [HumanoidComponent](#humanoidcomponent)
+       28. [DecalComponent](#decalcomponent)
+       29. [MetadataComponent](#metadatacomponent)
+       30. [CharacterComponent](#charactercomponent)
+   12. [Canvas](#canvas)
+   13. [High Level Interface](#high-level-interface)
+       1. [Application](#application)
+       2. [RenderPath](#renderpath)
+          1. [RenderPath2D](#renderpath2d--renderpath)
+          2. [RenderPath3D](#renderpath3d--renderpath2d)
+          3. [LoadingScreen](#loadingscreen--renderpath2d)
+   14. [Primitives](#primitives)
+       1. [Ray](#ray)
+       2. [AABB](#aabb)
+       3. [Sphere](#sphere)
+       4. [Capsule](#capsule)
+   15. [Input](#input)
+       1. [ControllerFeedback](#controllerfeedback)
+       2. [Touch](#touch)
+   16. [TOUCHSTATE](#touchstate)
+       1. [Keyboard Key codes](#keyboard-key-codes)
+       2. [Mouse Key Codes](#mouse-key-codes)
+       3. [Gamepad Key Codes](#gamepad-key-codes)
+       4. [Gamepad Analog Codes](#gamepad-analog-codes)
+       5. [Controller preference](#controller-preference)
+       6. [Cursor codes](#cursor-codes)
+   17. [Physics](#physics)
+       1.  [PickDragOperation](#pickdragoperation)
+   18. [Path finding](#path-finding)
+       1. [VoxelGrid](#voxelgrid)
+       2. [PathQuery](#pathquery)
+   19. [TrailRenderer](#trailrenderer)
+
 ## Introduction and usage
-Scripting in Wicked Engine is powered by Lua, meaning that the user can make use of the 
-syntax and features of the flexible and powerful Lua language.
-Apart from the common features, certain engine features are also available to use.
-You can load lua script files and execute them, or the engine scripting console (also known as the BackLog)
-can also be used to execute single line scripts (or you can execute file scripts by the dofile command here).
-Upon startup, the engine will try to load a startup script file named startup.lua in the root directory of 
-the application. If not found, an error message will be thrown followed by the normal execution by the program.
-In the startup file, you can specify any startup logic, for example loading content or anything.
 
-The Backlog is mapped to the HOME button on the keyboard. This will bring down an interface where lua commands can be entered with the keyboard. The ENTER button will execute the command that was entered. Pressing the HOME button again will exit the Backlog.
+Scripting in Wicked Engine is powered by Lua, meaning that the user can make use
+of the syntax and features of the flexible and powerful Lua language. Apart from
+the common features, certain engine features are also available to use. You can
+load lua script files and execute them, or the engine scripting console (also
+known as the BackLog) can also be used to execute single line scripts (or you
+can execute file scripts by the dofile command here). Upon startup, the engine
+will try to load a startup script file named startup.lua in the root directory
+of the application. If not found, an error message will be thrown followed by
+the normal execution by the program. In the startup file, you can specify any
+startup logic, for example loading content or anything.
 
-- Tip: You can inspect any object's functionality by calling 
-getprops(YourObject) on them (where YourObject is the object which is to be inspected). The result will be displayed on the BackLog.
+The Backlog is mapped to the HOME button on the keyboard. This will bring down
+an interface where lua commands can be entered with the keyboard. The ENTER
+button will execute the command that was entered. Pressing the HOME button again
+will exit the Backlog.
+
+- Tip: You can inspect any object's functionality by calling
+  getprops(YourObject) on them (where YourObject is the object which is to be
+  inspected). The result will be displayed on the BackLog.
 
 - Tags used in this documentation:
-	- [constructor]				: The method is a constructor for the same type of object.
-	- [void-constructor]		: The method is a constructor for the same type of object, but the object it creates is empty, so cannot be used.
-	- [outer]					: The method or value is in the global scope, so not a method of any objects.
-
+  - [constructor]: The method is a constructor for the same type of object.
+  - [void-constructor]: The method is a constructor for the same type of object,
+        but the object it creates is empty, so cannot be used.
+  - [outer]: The method or value is in the global scope, so not a method of any
+        objects.
 
 ## Utility Tools
+
 This section describes the common tools for scripting which are not necessarily engine features.
+
 - signal(string name)  -- send a signal globally. This can wake up processes if there are any waiting on the same signal name
 - waitSignal(string name)  -- wait until a specified signal arrives
 - runProcess(function func)  -- start a new process
@@ -107,15 +135,15 @@ This section describes the common tools for scripting which are not necessarily 
 - getprops(table object)  -- get reflection data from object
 - len(table object)  -- get the length of a table
 - backlog_post_list(table list)  -- post table contents to the backlog
-- backlog_setlevel(LogLevel level) -- modifies the logging level
+- backlog_setlevel(LogLevel level)  -- modifies the logging level
 
-```
-LogLevel = {
-	None = 0,
-	Default = 1,
-	Warning = 2,
-	Error = 3,
-	Success = 4,
+```lua
+[outer] LogLevel = {
+    None = 0,
+    Default = 1,
+    Warning = 2,
+    Error = 3,
+    Success = 4,
 }
 ```
 
@@ -133,11 +161,14 @@ LogLevel = {
 - compilebinaryfile(string filename_src, dilename_dst) -- compiles a text LUA file (filename_src) into a binary LUA file (filename_dst)
 
 These are some helpers to aid in debugging:
-- IsThisEditor() : bool	-- returns true if current application is the editor, false otherwise
-- ReturnToEditor()	-- returns control to the editor and kills running scripts
-- IsThisDebugBuild() : bool	-- returns true if this is a debug build, false otherwise
 
-Helpers to determine the current platform, if need to implement specific functionality:
+- IsThisEditor() : bool -- returns true if current application is the editor, false otherwise
+- ReturnToEditor() -- returns control to the editor and kills running scripts
+- IsThisDebugBuild() : bool -- returns true if this is a debug build, false otherwise
+
+Helpers to determine the current platform, if need to implement specific
+functionality:
+
 - IsPlatformWindows() : bool
 - IsPlatformLinux() : bool
 - IsPlatformMACOS() : bool
@@ -146,12 +177,17 @@ Helpers to determine the current platform, if need to implement specific functio
 - IsPlatformXBOX() : bool
 
 ## Engine Bindings
-The scripting API provides functions for the developer to manipulate engine behaviour or query it for information.
+
+The scripting API provides functions for the developer to manipulate engine
+behaviour or query it for information.
 
 ### BackLog
-The scripting console of the engine. Input text with the keyboard, run the input with the RETURN key. The script errors
-are also displayed here.
-The scripting API provides some functions which manipulate the BackLog. These functions are in he global scope:
+
+The scripting console of the engine. Input text with the keyboard, run the input
+with the RETURN key. The script errors are also displayed here. The scripting
+API provides some functions which manipulate the BackLog. These functions are in
+he global scope:
+
 - backlog_clear()  -- remove all entries from the backlog
 - backlog_post(string params,,,)  -- post a string to the backlog
 - backlog_fontsize(int size)  -- modify the fint size of the backlog
@@ -163,13 +199,16 @@ The scripting API provides some functions which manipulate the BackLog. These fu
 - backlog_unblocklua() -- undisable LUA code execution in the backlog
 
 ### Renderer
-This is the graphics renderer, which is also responsible for managing the scene graph which consists of keeping track of
-parent-child relationships between the scene hierarchy, updating the world, animating armatures.
-You can use the Renderer with the following functions, all of which are in the global scope:
-- SetDebugDrawEnabled(bool value)	-- Toggle debug draw by renderer on/off
+
+This is the graphics renderer, which is also responsible for managing the scene
+graph which consists of keeping track of parent-child relationships between the
+scene hierarchy, updating the world, animating armatures. You can use the
+Renderer with the following functions, all of which are in the global scope:
+
+- SetDebugDrawEnabled(bool value)  -- Toggle debug draw by renderer on/off
 - GetGameSpeed() : float result
 - SetGameSpeed(float speed)
-- IsRaytracingSupported() : bool	-- check whether graphics device supports hardware accelerated ray tracing features
+- IsRaytracingSupported() : bool  -- check whether graphics device supports hardware accelerated ray tracing features
 - GetScreenWidth() : float result  -- (deprecated, use application.GetCanvas().GetLogicalWidth() instead)
 - GetScreenHeight() : float result  -- (deprecated, use application.GetCanvas().GetLogicalHeight() instead)
 - SetShadowProps2D(int resolution)
@@ -201,10 +240,10 @@ You can use the Renderer with the following functions, all of which are in the g
 - DrawSphere(Sphere sphere, opt Vector color, opt bool depth = true)
 - DrawCapsule(Capsule capsule, opt Vector color, opt bool depth = true)
 - DrawDebugText(string text, opt Vector position, opt Vector color, opt float scaling, opt int flags)
-	DrawDebugText flags, these can be combined with binary OR operator:
-	[outer]DEBUG_TEXT_DEPTH_TEST		-- text can be occluded by geometry
-	[outer]DEBUG_TEXT_CAMERA_FACING		-- text will be rotated to face the camera
-	[outer]DEBUG_TEXT_CAMERA_SCALING	-- text will be always the same size, independent of distance to camera
+    DrawDebugText flags, these can be combined with binary OR operator:
+  - [outer]DEBUG_TEXT_DEPTH_TEST : int  -- text can be occluded by geometry
+  - [outer]DEBUG_TEXT_CAMERA_FACING : int  -- text will be rotated to face the camera
+  - [outer]DEBUG_TEXT_CAMERA_SCALING : int  -- text will be always the same size, independent of distance to camera
 - DrawVoxelGrid(VoxelGrid voxelgrid) -- draws the voxel grid in the debug rendering phase. VoxelGrid object must not be destroyed until then!
 - DrawPathQuery(PathQuery pathquery) -- draws the path query in the debug rendering phase. PathQuery object must not be destroyed until then!
 - DrawTrail(TrailRenderer trail) -- draws the trail in the debug rendering phase. TrailRenderer object must not be destroyed until then!
@@ -217,6 +256,7 @@ You can use the Renderer with the following functions, all of which are in the g
 - ReloadShaders()
 
 #### PaintTextureParams
+
 - [constructor]PaintTextureParams
 - SetEditTexture(Texture tex)
 - SetBrushTexture(Texture tex)
@@ -230,6 +270,7 @@ You can use the Renderer with the following functions, all of which are in the g
 - SetBrushShape(int value) -- 0 = circle, 1 = rectangle
 
 #### PaintDecalParams
+
 - [constructor]PaintDecalParams
 - SetInTexture(Texture tex) -- set source texture (decal tex)
 - SetOutTexture(Texture tex) -- set destination texture (object tex)
@@ -238,7 +279,9 @@ You can use the Renderer with the following functions, all of which are in the g
 - SetSlopeBlendPower(float power) -- adjust fading of the decal based on slope of surface compared to decal projection (default: 0, no slope blend)
 
 ### Sprite
+
 Render images on the screen.
+
 - Params : ImageParams
 - Anim : SpriteAnim
 
@@ -259,7 +302,9 @@ Render images on the screen.
 - IsHidden() : bool
 
 #### ImageParams
+
 Specify Sprite properties, like position, size, etc.
+
 - Pos : Vector
 - Size : Vector
 - Pivot : Vector
@@ -360,16 +405,18 @@ Specify Sprite properties, like position, size, etc.
 - [outer]BLENDMODE_ADDITIVE : int
 
 ```lua
-ImageGradientType = {
-	None = 0,
-	Linear = 1,
-	LinearReflected = 2,
-	Circular = 3,
+[outer] ImageGradientType = {
+    None = 0,
+    Linear = 1,
+    LinearReflected = 2,
+    Circular = 3,
 }
 ```
 
 #### SpriteAnim
+
 Animate Sprites easily with this helper.
+
 - Rot : float
 - Rotation : float
 - Opacity : float
@@ -408,7 +455,9 @@ Animate Sprites easily with this helper.
 - GetDrawRectAnim() : GetDrawRectAnim result
 
 #### MovingTexAnim
+
 Move texture continuously along the sprite.
+
 - SpeedX : float
 - SpeedY : float
 
@@ -421,7 +470,9 @@ Move texture continuously along the sprite.
 - GetSpeedY() : float result
 
 #### DrawRecAnim
+
 Animate sprite frame by frame.
+
 - FrameRate : float
 - FrameCount : int
 - HorizontalFrameCount : int
@@ -437,7 +488,9 @@ Animate sprite frame by frame.
 - GetHorizontalFrameCount() : int result
 
 ### SpriteFont
+
 Gives you the ability to render text with a custom font.
+
 - Text : string
 - Size : int
 - Pos : Vector
@@ -461,12 +514,12 @@ Gives you the ability to render text with a custom font.
 - SetPos(Vector pos)
 - SetSpacing(Vector spacing)
 - SetAlign(WIFALIGN Halign, opt WIFALIGN Valign)
-	- [outer]WIFALIGN_LEFT : int
-	- [outer]WIFALIGN_CENTER : int
-	- [outer]WIFALIGN_MID : int
-	- [outer]WIFALIGN_RIGHT : int
-	- [outer]WIFALIGN_TOP : int
-	- [outer]WIFALIGN_BOTTOM : int
+  - [outer]WIFALIGN_LEFT : int
+  - [outer]WIFALIGN_CENTER : int
+  - [outer]WIFALIGN_MID : int
+  - [outer]WIFALIGN_RIGHT : int
+  - [outer]WIFALIGN_TOP : int
+  - [outer]WIFALIGN_BOTTOM : int
 - SetColor(Vector color)
 - SetColor(int colorHexCode)
 - SetShadowColor(Vector shadowcolor)
@@ -506,72 +559,79 @@ Gives you the ability to render text with a custom font.
 - TypewriterFinish() -- finished typewriter animation immediately
 - IsTypewriterFinished() : bool -- returns tru if typewrites animation is finished, false otherwise
 
-
 ### Texture
+
 A texture image data.
+
 - [constructor]Texture(opt string filename)	-- creates a texture from file
-- [outer]texturehelper -- a global helper texture creation utility
 - IsValid() : bool	-- whether the texture contains valid data, if it has been created successfully
 - GetWidth() : int
 - GetHeight() : int
 - GetDepth() : int
 - GetArraySize() : int
-- GetLogo() : Texture -- returns the Wicked Engine logo texture
-- CreateGradientTexture(
-	GradientType type = GradientType.Linear, 
-	int width = 256,
-	int height = 256, 
-	Vector uv_start = Vector(0,0),
-	Vector uv_end = Vector(0,0), 
-	GradientFlags flags = GradientFlags.None, 
-	string swizzle = "rgba", 
-	float perlin_scale = 1,
-	int perlin_seed = 1234, 
-	int perlin_octaves = 8, 
-	float perlin_persistence = 0.5) -- creates a gradient texture from parameters
-- CreateLensDistortionNormalMap(
-	int width = 256,
-	int height = 256,
-	Vector uv_start = Vecctor(0.5, 0.5),
-	float radius = 0.5,
-	float squish = 1,
-	float blend = 1,
-	float edge_smoothness = 0.04) -- creates a lens distortion normal map (16-bit precision)
 - Save(string filename) -- saves texture into a file. Provide the extension in the filename, it should be one of the following: .JPG, .PNG, .TGA, .BMP, .DDS
 
-- SetTextureResolutionLimit(int resolution) -- Set the highest allowed texture asset resolution (only for DDS textures that contain mipmaps)
-- GetTextureResolutionLimit() : int
-- SetTextureResolutionLimit(float threshold) -- Set threshold relative to memory budget for streaming. If memory usage is below threshold, streaming will work regularly.If memory usage is above threshold, streaming will try to reduce usage
-- GetTextureResolutionLimit() : float
+- [outer]SetTextureResolutionLimit(int resolution) -- Set the highest allowed texture asset resolution (only for DDS textures that contain mipmaps)
+- [outer]GetTextureResolutionLimit() : int
+- [outer]SetTextureResolutionLimit(float threshold) -- Set threshold relative to memory budget for streaming. If memory usage is below threshold, streaming will work regularly. If memory usage is above threshold, streaming will try to reduce usage
+- [outer]GetTextureResolutionLimit() : float
+
+#### texturehelper
+
+A global utility object for creating textures programmatically.
+
+- [outer]texturehelper : texturehelper
+- GetLogo() : Texture -- returns the Wicked Engine logo texture
+- CreateGradientTexture(
+    GradientType type,
+    opt int width = 256,
+    opt int height = 256,
+    opt Vector uv_start = Vector(0,0),
+    opt Vector uv_end = Vector(0,0),
+    opt GradientFlags flags = GradientFlags.None,
+    opt string swizzle = "rgba",
+    opt float perlin_scale = 1,
+    opt int perlin_seed = 1234,
+    opt int perlin_octaves = 8,
+    opt float perlin_persistence = 0.5) : Texture -- creates a gradient texture from parameters
+- CreateLensDistortionNormalMap(
+    opt int width = 256,
+    opt int height = 256,
+    opt Vector uv_start = Vector(0.5, 0.5),
+    opt float radius = 0.5,
+    opt float squish = 1,
+    opt float blend = 1,
+    opt float edge_smoothness = 0.04) : Texture -- creates a lens distortion normal map (16-bit precision)
 
 ```lua
-GradientType = {
-	Linear = 0,
-	Circular = 1,
-	Angular = 2,
+[outer] GradientType = {
+    Linear = 0,
+    Circular = 1,
+    Angular = 2,
 }
 
-GradientFlags = {
-	None = 0,
-	Inverse = 1 << 0,	
-	Smoothstep = 1 << 1,
-	PerlinNoise = 1 << 2,
-	R16Unorm = 1 << 3,
+[outer] GradientFlags = {
+    None = 0,
+    Inverse = 1 << 0,
+    Smoothstep = 1 << 1,
+    PerlinNoise = 1 << 2,
+    R16Unorm = 1 << 3,
 }
 ```
 
 Example texture creation:
+
 ```lua
 texture = texturehelper.CreateGradientTexture(
-	GradientType.Circular, -- gradient type
-	256, 256, -- resolution of the texture
-	Vector(0.5, 0.5), Vector(0.5, 0), -- start and end uv coordinates will specify the gradient direction and extents
-	GradientFlags.Inverse | GradientFlags.Smoothstep | GradientFlags.PerlinNoise, -- modifier flags bitwise combination
-	"rrr1", -- for each channel, you can specify one of the following characters: 0, 1, r, g, b, a, x, y, z, w (lower or upper case)
-	2, -- perlin noise scale
-	123, -- perlin noise seed
-	6, -- perlin noise octaves
-	0.8 -- perlin noise persistence
+    GradientType.Circular, -- gradient type
+    256, 256, -- resolution of the texture
+    Vector(0.5, 0.5), Vector(0.5, 0), -- start and end uv coordinates will specify the gradient direction and extents
+    GradientFlags.Inverse | GradientFlags.Smoothstep | GradientFlags.PerlinNoise, -- modifier flags bitwise combination
+    "rrr1", -- for each channel, you can specify one of the following characters: 0, 1, r, g, b, a, x, y, z, w (lower or upper case)
+    2, -- perlin noise scale
+    123, -- perlin noise seed
+    6, -- perlin noise octaves
+    0.8 -- perlin noise persistence
 )
 texture.Save("gradient.png") -- you can save it to file
 sprite.SetTexture(texture) -- you can set it to a sprite
@@ -579,7 +639,9 @@ material.SetTexture(TextureSlot.BASECOLORMAP, texture) -- you can set it to a ma
 ```
 
 ### Audio
+
 Loads and plays an audio files.
+
 - [outer]audio : Audio  -- the audio device
 - CreateSound(string filename, Sound sound) : bool  -- Creates a sound file, returns true if successful, false otherwise
 - CreateSoundInstance(Sound sound, SoundInstance soundinstance) : bool  -- Creates a sound instance that can be replayed, returns true if successful, false otherwise
@@ -595,13 +657,19 @@ Loads and plays an audio files.
 - SetReverb(int reverbtype)  -- sets an environment effect for reverb globally. Refer to Reverb Types section for acceptable input values
 
 #### Sound
+
 An audio file. Can be instanced several times via SoundInstance.
+
 - [constructor]Sound()  -- creates an empty sound. Use the audio device to load sounds from files
 - [constructor]Sound(string name)  -- loads a sound from a file
 - IsValid() : bool -- returns whether the sound was created successfully
 
 #### SoundInstance
-An audio file instance that can be played. Note: after modifying parameters of the SoundInstance, the SoundInstance will need to be recreated from a specified sound
+
+An audio file instance that can be played. Note: after modifying parameters of
+the SoundInstance, the SoundInstance will need to be recreated from a specified
+sound
+
 - [constructor]SoundInstance()  -- creates an empty soundinstance. Use the audio device to clone sounds
 - [constructor]SoundInstance(Sound sound, opt float begin,length)  -- creates a soundinstance from a sound
 - SetSubmixType(int submixtype)  -- set a submix type group (default is SUBMIX_TYPE_SOUNDEFFECT)
@@ -621,7 +689,9 @@ An audio file instance that can be played. Note: after modifying parameters of t
 - IsValid() : bool -- returns whether the sound instance was created successfully
 
 #### SoundInstance3D
+
 Describes the relation between a sound instance and a listener in a 3D world
+
 - [constructor]SoundInstance3D()  -- creates the 3D relation object. By default, the listener and emitter are on the same position, and that disables the 3D effect
 - SetListenerPos(Vector value)
 - SetListenerUp(Vector value)
@@ -633,36 +703,20 @@ Describes the relation between a sound instance and a listener in a 3D world
 - SetEmitterVelocity(Vector value)
 - SetEmitterRadius(float radius)
 
-### Video
-The video interface consists of two types of objects: Video and VideoInstance. Note: these are the underlying objects that VideoComponents use in the scene, to easily set videos to materials or lights, look at the [VideoComponent](#videocomponent) object that you can use with the scene's entity component system.
-
-#### Video
-The Video object stores the compressed video data in a GPU buffer
-- [constructor]Video(string filename)	-- loads an MP4 video file (currently only the H264 internal compression format is supported)
-- IsValid() : bool	-- returns true if the video was successfully created
-- GetDurationSeconds() : float
-
-#### VideoInstance
-The VideoInstance object is responsible to decode the video frames and output them to textures. One Video can be decoded with multiple VideoInstances to display frames of the video at different timings. Normally yout would use one VideoInstance for a video, unless you want to show the video multiple times at once at different locations.
-- [constructor]VideoInstance(Video video)	-- creates a decoder instance for the video data
-- IsValid() : bool	-- returns true if the video instance was successfully created
-- Play()
-- Pause()
-- Stop()
-- SetLooped(opt bool looped = true)
-- Seek(float timerSeconds)
-- GetCurrentTimer() : float 	-- returns current video playback timer for this decoder instance in seconds
-- IsEnded() : bool		-- returns true if the video playback has ended
-
 #### Submix Types
+
 The submix types group sound instances together to be controlled together
+
 - [outer]SUBMIX_TYPE_SOUNDEFFECT : int  -- sound effect group
 - [outer]SUBMIX_TYPE_MUSIC : int  -- music group
 - [outer]SUBMIX_TYPE_USER0 : int  -- user submix group
 - [outer]SUBMIX_TYPE_USER1 : int  -- user submix group
 
 #### Reverb Types
-The reverb types are built in presets that can mimic a specific kind of environment
+
+The reverb types are built in presets that can mimic a specific kind of
+environment
+
 - [outer]REVERB_PRESET_DEFAULT : int
 - [outer]REVERB_PRESET_GENERIC : int
 - [outer]REVERB_PRESET_FOREST : int
@@ -694,8 +748,45 @@ The reverb types are built in presets that can mimic a specific kind of environm
 - [outer]REVERB_PRESET_LARGEHALL : int
 - [outer]REVERB_PRESET_PLATE : int
 
+### Video
+
+The video interface consists of two types of objects: Video and VideoInstance.
+Note: these are the underlying objects that VideoComponents use in the scene, to
+easily set videos to materials or lights, look at the
+[VideoComponent](#videocomponent) object that you can use with the scene's
+entity component system.
+
+#### Video
+
+The Video object stores the compressed video data in a GPU buffer
+
+- [constructor]Video(string filename)	-- loads an MP4 video file (currently only the H264 internal compression format is supported)
+- IsValid() : bool	-- returns true if the video was successfully created
+- GetDurationSeconds() : float
+
+#### VideoInstance
+
+The VideoInstance object is responsible to decode the video frames and output
+them to textures. One Video can be decoded with multiple VideoInstances to
+display frames of the video at different timings. Normally yout would use one
+VideoInstance for a video, unless you want to show the video multiple times at
+once at different locations.
+
+- [constructor]VideoInstance(Video video)	-- creates a decoder instance for the video data
+- IsValid() : bool	-- returns true if the video instance was successfully created
+- Play()
+- Pause()
+- Stop()
+- SetLooped(opt bool looped = true)
+- Seek(float timerSeconds)
+- GetCurrentTimer() : float 	-- returns current video playback timer for this decoder instance in seconds
+- IsEnded() : bool		-- returns true if the video playback has ended
+
 ### Vector
-A four component floating point vector. Provides efficient calculations with SIMD support.
+
+A four component floating point vector. Provides efficient calculations with
+SIMD support.
+
 - X : float
 - Y : float
 - Z : float
@@ -713,19 +804,19 @@ A four component floating point vector. Provides efficient calculations with SIM
 - SetY(float value)
 - SetZ(float value)
 - SetW(float value)
-- Length() : float result	-- old syntax with operation on current object
+- Length() : float result  -- old syntax with operation on current object
 - Length(Vector v) : float result
-- LengthSquared() : float result	-- old syntax with operation on current object
+- LengthSquared() : float result  -- old syntax with operation on current object
 - LengthSquared(Vector v) : float result
 - Distance(Vector v1, v2)
 - DistanceSquared(Vector v1, v2)
-- Normalize() : Vector result	-- old syntax with operation on current object
+- Normalize() : Vector result  -- old syntax with operation on current object
 - Normalize(Vector v) : Vector result
-- QuaternionNormalize() : Vector result	-- old syntax with operation on current object
+- QuaternionNormalize() : Vector result  -- old syntax with operation on current object
 - QuaternionNormalize(Vector v) : Vector result
-- Clamp(float min,max) : Vector result	-- old syntax with operation on current object
+- Clamp(float min,max) : Vector result  -- old syntax with operation on current object
 - Clamp(Vector v, float min,max) : Vector result
-- Saturate() : Vector result	-- old syntax with operation on current object
+- Saturate() : Vector result  -- old syntax with operation on current object
 - Saturate(Vector v) : Vector result
 - Transform(Vector vec, Matrix matrix)
 - TransformNormal(Vector vec, Matrix matrix)
@@ -745,14 +836,16 @@ A four component floating point vector. Provides efficient calculations with SIM
 - QuaternionFromRollPitchYaw(Vector rotXYZ) : Vector resultQuaternion
 - QuaternionToRollPitchYaw(Vector quaternion) : Vector resultQuaternion
 - QuaternionSlerp(Vector quaternion1,quaternion2, float t) : Vector resultQuaternion
-- Slerp(Vector quaternion1,quaternion2, float t) : Vector resultQuaternion -- same as QuaternionSlerp
+- Slerp(Vector quaternion1,quaternion2, float t) : Vector resultQuaternion  -- same as QuaternionSlerp
 - PlaneFromPointNormal(Vector point, normal) : constructs a plane from a point and a normal
 - PlaneFromPoints(Vector a,b,c) : constructs a plane from three points
-- GetAngle(Vector a,b,axis, opt float max_angle = math.pi * 2) : float result	-- computes the angle between two 3D vectors around specified axis in range: [0, max_angle]
-- GetAngleSigned(Vector a,b,axis) : float result	-- computes the signed angle between two 3D vectors around specified axis
+- GetAngle(Vector a,b,axis, opt float max_angle = math.pi * 2) : float result  -- computes the angle between two 3D vectors around specified axis in range: [0, max_angle]
+- GetAngleSigned(Vector a,b,axis) : float result  -- computes the signed angle between two 3D vectors around specified axis
 
 ### Matrix
+
 A four by four matrix, efficient calculations with SIMD support.
+
 - [outer]matrix
 - [constructor]Matrix(opt float m00,m01,m02,m03,m10,m11,m12,m13,m20,m21,m22,m23,m30,m31,m32,m33)
 - Translation(opt Vector vector) : Matrix result
@@ -776,46 +869,53 @@ A four by four matrix, efficient calculations with SIMD support.
 - GetUp(Matrix mat) : Vector -- returns upwards direction of parameter matrix
 - GetRight(Matrix mat) : Vector -- returns right direction of parameter matrix
 
-
 ### Async
-The Async object can be used for tracking or Wait for completion of functions that are running on background threads. 
+
+The Async object can be used for tracking or Wait for completion of functions
+that are running on background threads.
 
 - [constructor]Async() -- constructs a new Async tracker object
 - Wait() -- wait for completion of async tasks on this tracker
 - IsCompleted() : bool -- checks if all async tasks on this tracker have been completed
 
 ### Scene System (using entity-component system)
+
 Manipulate the 3D scene with these components.
 
 #### Entity
-An entity is just an int value (int in LUA and uint32 in C++) and works as a handle to retrieve associated components
+
+An entity is just an int value (int in LUA and uint32 in C++) and works as a
+handle to retrieve associated components
 
 #### Scene
-The scene holds components. Entity handles can be used to retrieve associated components through the scene.
+
+The scene holds components. Entity handles can be used to retrieve associated
+components through the scene.
+
 - [constructor]Scene() : Scene result  -- creates a custom scene
 - [outer]GetScene() : Scene result  -- returns the global scene
 - [outer]GetCamera() : Camera result  -- returns the global camera
-- [outer]LoadModel(string fileName, opt Matrix transform) : int rootEntity	-- Load Model from file. returns a root entity that everything in this model is attached to
-- [outer]LoadModel(Scene scene, string fileName, opt Matrix transform) : int rootEntity	-- Load Model from file into specified scene. returns a root entity that everything in this model is attached to
+- [outer]LoadModel(string fileName, opt Matrix transform) : int rootEntity  -- Load Model from file. returns a root entity that everything in this model is attached to
+- [outer]LoadModel(Scene scene, string fileName, opt Matrix transform) : int rootEntity  -- Load Model from file into specified scene. returns a root entity that everything in this model is attached to
 
-- [deprecated][outer]PICK_OPAQUE : uint	-- deprecated, you can use FILTER_ enums instead
-- [deprecated][outer]PICK_TRANSPARENT : uint	-- deprecated, you can use FILTER_ enums instead
-- [deprecated][outer]PICK_WATER : uint	-- deprecated, you can use FILTER_ enums instead
-- [deprecated][outer]Pick(Ray ray, opt uint filterMask = ~0, opt uint layerMask = ~0, opt Scene scene = GetScene(), uint lod = 0) : int entity, Vector position,normal, float distance		-- Perform ray-picking in the scene. pickType is a bitmask specifying object types to check against. layerMask is a bitmask specifying which layers to check against. Scene parameter is optional and will use the global scene if not specified. (deprecated, you can use the scene's Intersects() function instead)
-- [deprecated][outer]SceneIntersectSphere(Sphere sphere, opt uint filterMask = ~0, opt uint layerMask = ~0, opt Scene scene = GetScene(), opt uint lod = 0) : int entity, Vector position,normal, float distance		-- Perform ray-picking in the scene. pickType is a bitmask specifying object types to check against. layerMask is a bitmask specifying which layers to check against. Scene parameter is optional and will use the global scene if not specified. (deprecated, you can use the scene's Intersects() function instead)
-- [deprecated][outer]SceneIntersectCapsule(Capsule capsule, opt uint filterMask = ~0, opt uint layerMask = ~0, opt Scene scene = GetScene(), opt uint lod = 0) : int entity, Vector position,normal, float distance		-- Perform ray-picking in the scene. pickType is a bitmask specifying object types to check against. layerMask is a bitmask specifying which layers to check against. Scene parameter is optional and will use the global scene if not specified. (deprecated, you can use the scene's Intersects() function instead)
+- [deprecated][outer]PICK_OPAQUE : uint  -- deprecated, you can use FILTER_ enums instead
+- [deprecated][outer]PICK_TRANSPARENT : uint  -- deprecated, you can use FILTER_ enums instead
+- [deprecated][outer]PICK_WATER : uint  -- deprecated, you can use FILTER_ enums instead
+- [deprecated][outer]Pick(Ray ray, opt uint filterMask = ~0, opt uint layerMask = ~0, opt Scene scene = GetScene(), uint lod = 0) : int entity, Vector position,normal, float distance  -- Perform ray-picking in the scene. pickType is a bitmask specifying object types to check against. layerMask is a bitmask specifying which layers to check against. Scene parameter is optional and will use the global scene if not specified. (deprecated, you can use the scene's Intersects() function instead)
+- [deprecated][outer]SceneIntersectSphere(Sphere sphere, opt uint filterMask = ~0, opt uint layerMask = ~0, opt Scene scene = GetScene(), opt uint lod = 0) : int entity, Vector position,normal, float distance  -- Perform ray-picking in the scene. pickType is a bitmask specifying object types to check against. layerMask is a bitmask specifying which layers to check against. Scene parameter is optional and will use the global scene if not specified. (deprecated, you can use the scene's Intersects() function instead)
+- [deprecated][outer]SceneIntersectCapsule(Capsule capsule, opt uint filterMask = ~0, opt uint layerMask = ~0, opt Scene scene = GetScene(), opt uint lod = 0) : int entity, Vector position,normal, float distance  -- Perform ray-picking in the scene. pickType is a bitmask specifying object types to check against. layerMask is a bitmask specifying which layers to check against. Scene parameter is optional and will use the global scene if not specified. (deprecated, you can use the scene's Intersects() function instead)
 
-- [outer]FILTER_NONE : uint	-- include nothing
-- [outer]FILTER_OPAQUE : uint	-- include opaque meshes
-- [outer]FILTER_TRANSPARENT : uint	-- include transparent meshes
-- [outer]FILTER_WATER : uint	-- include water meshes
-- [outer]FILTER_NAVIGATION_MESH : uint	-- include navigation meshes
-- [outer]FILTER_OBJECT_ALL : uint	-- include all objects, meshes
-- [outer]FILTER_COLLIDER : uint	-- include colliders
-- [outer]FILTER_RAGDOLL : uint	-- include ragdoll body parts
-- [outer]FILTER_ALL : uint	-- include everything
+- [outer]FILTER_NONE : uint  -- include nothing
+- [outer]FILTER_OPAQUE : uint  -- include opaque meshes
+- [outer]FILTER_TRANSPARENT : uint  -- include transparent meshes
+- [outer]FILTER_WATER : uint  -- include water meshes
+- [outer]FILTER_NAVIGATION_MESH : uint  -- include navigation meshes
+- [outer]FILTER_OBJECT_ALL : uint  -- include all objects, meshes
+- [outer]FILTER_COLLIDER : uint  -- include colliders
+- [outer]FILTER_RAGDOLL : uint  -- include ragdoll body parts
+- [outer]FILTER_ALL : uint  -- include everything
 - Intersects(Ray|Sphere|Capsule primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) : int entity, Vector position,normal, float distance, Vector velocity, int subsetIndex, Matrix orientation, Vector uv, HumanoidBone humanoid_bone	-- intersects a primitive with the scene and returns collision parameters. If humanoid_bone is not `HumanoidBone.Count` then the intersection is a ragdoll, and entity refers to the humanoid entity
-- IntersectsFirst(Ray primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) : bool	-- intersects a primitive with the scene and returns true immediately on intersection, false if there was no intersection. This can be faster for occlusion check than regular `Intersects` that searches for closest intersection.
+- IntersectsFirst(Ray primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) : bool  -- intersects a primitive with the scene and returns true immediately on intersection, false if there was no intersection. This can be faster for occlusion check than regular `Intersects` that searches for closest intersection.
 - IntersectsAll(Ray|Sphere|Capsule primitive, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) results[] -- intersects the scene with a primitive and returns array of results. In case of Ray, [RayIntersectionResult](#rayintersectionresult) will be returned, for Sphere and Capsule [SphereIntersectionResult](#sphereintersectionresult) will be returned
 - Update()  -- updates the scene and every entity and component inside the scene
 - Clear()  -- deletes every entity and component inside the scene
@@ -974,19 +1074,21 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - GetWeather() : WeatherComponent
 - SetWeather(WeatherComponent weather)
 
-- RetargetAnimation(Entity dst, src, bool bake_data) : Entity entity	-- Retargets an animation from a Humanoid to an other Humanoid such that the new animation will play back on the destination humanoid. dst : destination humanoid that the animation will be fit onto src : the animation to copy, it should already target humanoid bones. bake_data : if true, the retargeted data will be baked into a new animation data. If false, it will reuse the source animation data without creating a new one and retargeting will be applied at runtime on every Update. Returns entity ID of the new animation or INVALID_ENTITY if retargeting was not successful
+- RetargetAnimation(Entity dst, src, bool bake_data) : Entity entity  -- Retargets an animation from a Humanoid to an other Humanoid such that the new animation will play back on the destination humanoid. dst : destination humanoid that the animation will be fit onto src : the animation to copy, it should already target humanoid bones. bake_data : if true, the retargeted data will be baked into a new animation data. If false, it will reuse the source animation data without creating a new one and retargeting will be applied at runtime on every Update. Returns entity ID of the new animation or INVALID_ENTITY if retargeting was not successful
 
-- ResetPose(Entity entity)	-- resets the pose of the specified entity to bind pose. The bind pose is taken from the bind matrices of bones of an ArmatureComponent. If the entity does not have an armature, then it will find the child armatures of the entity.
+- ResetPose(Entity entity)  -- resets the pose of the specified entity to bind pose. The bind pose is taken from the bind matrices of bones of an ArmatureComponent. If the entity does not have an armature, then it will find the child armatures of the entity.
 
-- GetOceanPosAt(Vector worldPosition)	-- returns the approximate position on the ocean surface seen from a position in world space. If current weather doesn't have ocean enabled, returns the world position itself. The result position is approximate because it involves reading back from GPU to the CPU, so the result can be delayed compared to the current GPU simulation. Note that the input position to this function will be taken on the XZ plane and modified by the displacement map's XZ value, and the Y (vertical) position will be taken from the ocean water height and displacement map only.
+- GetOceanPosAt(Vector worldPosition)  -- returns the approximate position on the ocean surface seen from a position in world space. If current weather doesn't have ocean enabled, returns the world position itself. The result position is approximate because it involves reading back from GPU to the CPU, so the result can be delayed compared to the current GPU simulation. Note that the input position to this function will be taken on the XZ plane and modified by the displacement map's XZ value, and the Y (vertical) position will be taken from the ocean water height and displacement map only.
 
 - VoxelizeObject(int objectIndex, VoxelGrid voxelgrid, opt bool subtract = false, opt int lod = 0) -- voxelizes a single object into the voxel grid. Subtract parameter controls whether the voxels are added (true) or removed (false). Lod argument selects object's level of detail
 - VoxelizeScene(VoxelGrid voxelgrid, opt bool subtract = false, opt uint filterMask = ~0u, opt uint layerMask = ~0u, opt uint lod = 0) -- voxelizes all entities in the scene which intersect the voxel grid volume and match the filterMask and layerMask. Subtract parameter controls whether the voxels are added (true) or removed (false). Lod argument selects object's level of detail
 
-- FixupNans()	-- maintenance utility to help fix Nan issues in TransformComponents. Transforms containing nans will be cleared and renamed with _nanfix postfix
+- FixupNans()  -- maintenance utility to help fix Nan issues in TransformComponents. Transforms containing nans will be cleared and renamed with _nanfix postfix
 
 #### RayIntersectionResult
+
 Result of one hit in scene.IntersectsAll
+
 - GetEntity() : Entity
 - GetPosition() : Vector
 - GetNormal() : Vector
@@ -1002,7 +1104,9 @@ Result of one hit in scene.IntersectsAll
 - GetHumanoidBone() : int
 
 #### SphereIntersectionResult
+
 Result of one hit in scene.IntersectsAll
+
 - GetEntity() : Entity
 - GetPosition() : Vector
 - GetNormal() : Vector
@@ -1013,19 +1117,27 @@ Result of one hit in scene.IntersectsAll
 - GetHumanoidBone() : int
 
 #### NameComponent
-Holds a string that can more easily identify an entity to humans than an entity ID. 
+
+Holds a string that can more easily identify an entity to humans than an entity
+ID.
+
 - Name : string
 - SetName(string value)  -- set the name
 - GetName() : string result  -- query the name string
 
 #### LayerComponent
-An integer mask that can be used to group entities together for certain operations such as: picking, rendering, etc.
+
+An integer mask that can be used to group entities together for certain
+operations such as: picking, rendering, etc.
+
 - LayerMask : float
 - SetLayerMask(int value)  -- set layer mask
 - GetLayerMask() : int result  -- query layer mask
 
 #### TransformComponent
+
 Describes an orientation in 3D space.
+
 - Translation_local : Vector XYZ  -- query the position in world space
 - Rotation_local : Vector Quaternion  -- query the rotation as a quaternion in world space
 - Scale_local : Vector XYZ  -- query the scaling in world space
@@ -1056,6 +1168,7 @@ Describes an orientation in 3D space.
 - GetRight() : Vector -- returns right direction
 
 #### CameraComponent
+
 - FOV : float
 - NearPlane : float
 - FarPlane : float
@@ -1069,17 +1182,17 @@ Describes an orientation in 3D space.
 - TransformCamera(TransformComponent transform)  -- copies the transform's orientation to the camera, and sets the camera position, look direction and up direction. Camera matrices are not updated immediately. They will be updated by the Scene::Update() (if the camera is part of the scene), or by manually calling UpdateCamera()
 - TransformCamera(Matrix matrix)
 - GetFOV() : float result
-- SetFOV(float value)	-- Sets the vertical field of view for the camera (value is an angle in radians)
+- SetFOV(float value)  -- Sets the vertical field of view for the camera (value is an angle in radians)
 - GetNearPlane() : float result
-- SetNearPlane(float value)	-- Sets the near plane of the camera, which specifies the rendering cut off near the viewer. Must be a value greater than zero 
+- SetNearPlane(float value)  -- Sets the near plane of the camera, which specifies the rendering cut off near the viewer. Must be a value greater than zero 
 - GetFarPlane() : float result
-- SetFarPlane(float value)	-- Sets the far plane (view distance) of the camera
+- SetFarPlane(float value)  -- Sets the far plane (view distance) of the camera
 - GetFocalLength() : float result
-- SetFocalLength(float value)	-- Sets the focal distance (focus distance) of the camera. This is used by depth of field.
+- SetFocalLength(float value)  -- Sets the focal distance (focus distance) of the camera. This is used by depth of field.
 - GetApertureSize() : float result
-- SetApertureSize(float value)	-- Sets the aperture size of the camera. Larger values will make the depth of field effect stronger.
+- SetApertureSize(float value)  -- Sets the aperture size of the camera. Larger values will make the depth of field effect stronger.
 - GetApertureShape() : float result
-- SetApertureShape(Vector value)	-- Sets the aperture shape of camera, used for depth of field effect. The value's `.X` element specifies the horizontal, the `.Y` element specifies the vertical shape.
+- SetApertureShape(Vector value)  -- Sets the aperture shape of camera, used for depth of field effect. The value's `.X` element specifies the horizontal, the `.Y` element specifies the vertical shape.
 - GetView() : Matrix result
 - GetProjection() : Matrix result
 - GetViewProjection() : Matrix result
@@ -1090,16 +1203,17 @@ Describes an orientation in 3D space.
 - GetLookDirection() : Vector result
 - GetUpDirection() : Vector result
 - GetRightDirection() : Vector result
-- SetPosition(Vector value)	-- Sets the position of the camera. `UpdateCamera()` should be used after this to apply the value. 
-- SetLookDirection(Vector value)		-- Sets the look direction of the camera. The value must be a normalized direction `Vector`, relative to the camera position, and also perpendicular to the up direction. `UpdateCamera()` should be used after this to apply the value. This value will also be set if using the `TransformCamera()` function, from the transform's rotation.
-- SetUpDirection(Vector value)		-- Sets the up direction of the camera. This must be a normalized direction `Vector`, relative to the camera position, and also perpendicular to the look direction. `UpdateCamera()` should be used after this to apply the value. This value will also be set if using the `TransformCamera()` function, from the transform's rotation.
-- SetOrtho(bool value)	-- enable orthographic projection for the camera.
-- IsOrtho() : bool	-- returns true if the camera is using orthographic projection, false otherwise
+- SetPosition(Vector value)  -- Sets the position of the camera. `UpdateCamera()` should be used after this to apply the value. 
+- SetLookDirection(Vector value)  -- Sets the look direction of the camera. The value must be a normalized direction `Vector`, relative to the camera position, and also perpendicular to the up direction. `UpdateCamera()` should be used after this to apply the value. This value will also be set if using the `TransformCamera()` function, from the transform's rotation.
+- SetUpDirection(Vector value)  -- Sets the up direction of the camera. This must be a normalized direction `Vector`, relative to the camera position, and also perpendicular to the look direction. `UpdateCamera()` should be used after this to apply the value. This value will also be set if using the `TransformCamera()` function, from the transform's rotation.
+- SetOrtho(bool value)  -- enable orthographic projection for the camera.
+- IsOrtho() : bool  -- returns true if the camera is using orthographic projection, false otherwise
 - GetOrthoVerticalSize() : float result
-- SetOrthoVerticalSize(float value)	-- Sets the vertical size of the camera in world space, used only in orthographic projection mode
-- ProjectToScreen(Vector point, Canvas canvas)	-- projects the world-space point to screen space within the canvas logical width and height units (sceen width and height). If the Z coordinate is positive that means that it is in front of the camera, otherwise it is behind (can be considered to be clipped)
+- SetOrthoVerticalSize(float value)  -- Sets the vertical size of the camera in world space, used only in orthographic projection mode
+- ProjectToScreen(Vector point, Canvas canvas)  -- projects the world-space point to screen space within the canvas logical width and height units (sceen width and height). If the Z coordinate is positive that means that it is in front of the camera, otherwise it is behind (can be considered to be clipped)
 
 #### AnimationComponent
+
 - Timer : float
 - Amount : float
 
@@ -1127,6 +1241,7 @@ Describes an orientation in 3D space.
 
 
 #### MaterialComponent
+
 - _flags : int
 - BaseColor : Vector
 - EmissiveColor : Vector
@@ -1179,24 +1294,25 @@ Describes an orientation in 3D space.
 - IsCoplanarBlending() : bool
 
 ```lua
-TextureSlot = {
-	BASECOLORMAP = 0,
-	NORMALMAP = 1,
-	SURFACEMAP = 2,
-	EMISSIVEMAP = 3,
-	DISPLACEMENTMAP = 4,
-	OCCLUSIONMAP = 5,
-	TRANSMISSIONMAP = 6,
-	SHEENCOLORMAP = 7,
-	SHEENROUGHNESSMAP = 8,
-	CLEARCOATMAP = 9,
-	CLEARCOATROUGHNESSMAP = 10,
-	CLEARCOATNORMALMAP = 11,
-	SPECULARMAP = 12,
+[outer] TextureSlot = {
+    BASECOLORMAP = 0,
+    NORMALMAP = 1,
+    SURFACEMAP = 2,
+    EMISSIVEMAP = 3,
+    DISPLACEMENTMAP = 4,
+    OCCLUSIONMAP = 5,
+    TRANSMISSIONMAP = 6,
+    SHEENCOLORMAP = 7,
+    SHEENROUGHNESSMAP = 8,
+    CLEARCOATMAP = 9,
+    CLEARCOATROUGHNESSMAP = 10,
+    CLEARCOATNORMALMAP = 11,
+    SPECULARMAP = 12,
 }
 ```
 
 #### MeshComponent
+
 - _flags : int
 - TessellationFactor : float
 - ArmatureID : int
@@ -1209,6 +1325,7 @@ TextureSlot = {
 - CreateSubset() : int -- creates subset containing all faces, returns subset index
 
 #### EmitterComponent
+
 - _flags : int
 - ShaderType : int
 - Mass : float
@@ -1256,6 +1373,7 @@ TextureSlot = {
 - GetCurrentParticleCount() : int -- returns last known alive particle count (not that particles are tracked on GPU so this value might be out of date)
 
 #### HairParticleSystem
+
 - _flags : int
 - StrandCount : int
 - SegmentCount : int
@@ -1270,6 +1388,7 @@ TextureSlot = {
 - SpriteSheet_Frame_Start : int
 
 #### LightComponent
+
 - Type : int  -- light type, see accepted values below (by default it is a point light)
 - [outer]DIRECTIONAL : int
 - [outer]POINT : int
@@ -1303,6 +1422,7 @@ TextureSlot = {
 - SetFOV(float value) -- kept for backwards compatibility with FOV angle (before v0.70.0)
 
 #### ObjectComponent
+
 - MeshID : Entity
 - CascadeMask : int
 - RendertypeMask : int
@@ -1345,7 +1465,9 @@ TextureSlot = {
 - IsRenderable() : bool
 
 #### InverseKinematicsComponent
+
 Describes an Inverse Kinematics effector.
+
 - Target : Entity
 - ChainLength : int
 - IterationCount : int
@@ -1362,7 +1484,9 @@ Describes an Inverse Kinematics effector.
 - IsDisabled() : bool result
 
 #### SpringComponent
+
 Enables jiggle effect on transforms such as bones for example.
+
 - Stiffness : float
 - Damping : float
 - WindAffection : float
@@ -1381,7 +1505,9 @@ Enables jiggle effect on transforms such as bones for example.
 - GetWindAffection() : float result
 
 #### ScriptComponent
+
 A lua script bound to an entity
+
 - CreateFromFile(string filename)
 - Play()
 - IsPlaying() : bool result
@@ -1389,7 +1515,9 @@ A lua script bound to an entity
 - Stop()
 
 #### RigidBodyPhysicsComponent
+
 Describes a Rigid Body Physics object.
+
 - Shape : int
 - Mass : float	-- Set mass to 0 to have completely static rigid body (if you want to move it, it's better to use `SetKinematic(true)` as it will be moved continuously with the physics update rate)
 - Friction : float
@@ -1402,27 +1530,29 @@ Describes a Rigid Body Physics object.
 - CapsuleParams_Radius : float
 - CapsuleParams_Height : float
 - TargetMeshLOD : int
-- MaxSlopeAngle : float		-- character physics max slope angle in radians
-- GravityFactor : float		- character physics gravity factor
+- MaxSlopeAngle : float  -- character physics max slope angle in radians
+- GravityFactor : float  -- character physics gravity factor
 
 </br>
 
-- IsVehicle() : bool	-- returns true if this is a vehicle, false otherwise
-- IsCar() : bool	-- returns true if this is a car vehicle, false otherwise
-- IsMotorcycle() : bool	-- returns true if this is a motorcycle vehicle, false otherwise
+- IsVehicle() : bool  -- returns true if this is a vehicle, false otherwise
+- IsCar() : bool  -- returns true if this is a car vehicle, false otherwise
+- IsMotorcycle() : bool  -- returns true if this is a motorcycle vehicle, false otherwise
 - IsDisableDeactivation() : bool return -- Check if the rigidbody is able to deactivate after inactivity
 - IsKinematic() : bool return -- Check if the rigidbody is movable or just static
 - IsStartDeactivated() : bool return -- Checks whether rigid body is set to be deactivated when added to simulation
 - SetDisableDeactivation(bool value) -- Sets if the rigidbody is able to deactivate after inactivity
 - SetKinematic(bool value) -- Set the rigid body to be kinematic (which means it is optimized for being moved by the system or user logic, not the physics engine)
 - SetStartDeactivated(bool value) -- If true, rigid body will be deactivated when added to the simulation (if it's dynamic, it won't fall)
-- SetCharacterPhysics(bool value)	-- enable character physics that is driven by the physics engine
-- IsCharacterPhysics() : bool	-- returns true if this rigid body has character physics enabled
-- SetLocked2D(bool value)	-- locks the physics to the 2D plane (XY translation, Z rotation)
-- IsLocked2D() : bool	-- returns true if the physics is locked to the 2D plane
+- SetCharacterPhysics(bool value)  -- enable character physics that is driven by the physics engine
+- IsCharacterPhysics() : bool  -- returns true if this rigid body has character physics enabled
+- SetLocked2D(bool value)  -- locks the physics to the 2D plane (XY translation, Z rotation)
+- IsLocked2D() : bool  -- returns true if the physics is locked to the 2D plane
 
 #### SoftBodyPhysicsComponent
+
 Describes a Soft Body Physics object.
+
 - Mass : float
 - Friction : float
 - Restitution : float
@@ -1437,13 +1567,17 @@ Describes a Soft Body Physics object.
 - CreateFromMesh(MeshComponent mesh)
 
 #### ForceFieldComponent
+
 Describes a Force Field effector.
+
 - Type : int
 - Gravity : float
 - Range : float
 
 #### WeatherComponent
+
 Describes a Weather
+
 - OceanParameters : OceanParameters -- Returns a table to modify ocean parameters (if ocean is enabled)
 - AtmosphereParameters : AtmosphereParameters -- Returns a table to modify atmosphere parameters
 - VolumetricCloudParameters : VolumetricCloudParameters -- Returns a table to modify volumetric cloud parameters
@@ -1485,6 +1619,7 @@ Describes a Weather
 - SetHeightFog(bool value) -- Sets if weather is rendering height fog visual effect or not
 
 ##### OceanParameters
+
 - dmap_dim : int
 - patch_length : float
 - time_scale : float
@@ -1498,7 +1633,9 @@ Describes a Weather
 - surfaceDisplacementTolerance : float
 
 #### SoundComponent
+
 Describes a Sound object.
+
 - Filename : string
 - Volume : float
 
@@ -1517,7 +1654,9 @@ Describes a Sound object.
 - GetSoundInstance() : SoundInstance
 
 #### VideoComponent
+
 Describes a video object
+
 - Filename : string
 
 </br>
@@ -1527,16 +1666,18 @@ Describes a video object
 - SetLooped(bool value)
 - IsPlaying() : bool
 - IsLooped() : bool
-- GetLength() : float	-- returns video length in seconds
-- GetCurrentTimer() : float	-- returns the current timer in seconds
-- Seek(float timerSeconds) -- sets the decoder state to be decoding from specific time in seconds (approximately)
+- GetLength() : float  -- returns video length in seconds
+- GetCurrentTimer() : float  -- returns the current timer in seconds
+- Seek(float timerSeconds)  -- sets the decoder state to be decoding from specific time in seconds (approximately)
 - SetVideo(Video video)
 - SetVideoInstance(VideoInstance instance)
 - GetVideo() : Video
 - GetVideoInstance() : VideoInstance
 
 #### ColliderComponent
+
 Describes a Collider object.
+
 - Shape : int -- Shape of the collider
 - Radius : float
 - Offset : Vector
@@ -1547,18 +1688,21 @@ Describes a Collider object.
 - GetCapsule() : Capsule
 - GetSphere() : Sphere
 
+```lua
 [outer] ColliderShape = {
-	Sphere = 0,
-	Capsule = 1,
-	Plane = 2,
+    Sphere = 0,
+    Capsule = 1,
+    Plane = 2,
 }
+```
 
 #### ExpressionComponent
-- FindExpressionID(string name) : int	-- Find an expression within the ExpressionComponent by name
-- SetWeight(int id, float weight)	-- Set expression weight by ID. The ID can be a non-preset expression. Use FindExpressionID() to retrieve non-preset expression IDs
-- GetWeight(int id) : float	-- returns current weight of expression
-- SetPresetWeight(ExpressionPreset preset, float weight)	-- Set a preset expression's weight. You can get access to preset values from ExpressionPreset table
-- GetPresetWeight(ExpressionPreset preset) : float	-- returns current weight of preset expression
+
+- FindExpressionID(string name) : int  -- Find an expression within the ExpressionComponent by name
+- SetWeight(int id, float weight)  -- Set expression weight by ID. The ID can be a non-preset expression. Use FindExpressionID() to retrieve non-preset expression IDs
+- GetWeight(int id) : float  -- returns current weight of expression
+- SetPresetWeight(ExpressionPreset preset, float weight)  -- Set a preset expression's weight. You can get access to preset values from ExpressionPreset table
+- GetPresetWeight(ExpressionPreset preset) : float  -- returns current weight of preset expression
 - SetForceTalkingEnabled(bool value) -- Force continuous talking animation, even if no voice is playing
 - IsForceTalkingEnabled() : bool
 - SetPresetOverrideMouth(ExpressionPreset preset, ExpressionOverride override)
@@ -1570,38 +1714,38 @@ Describes a Collider object.
 
 ```lua
 [outer] ExpressionPreset = {
-	Happy = 0,
-	Angry = 1,
-	Sad = 2,
-	Relaxed = 3,
-	Surprised = 4,
-	Aa = 5,
-	Ih = 6,
-	Ou = 7,
-	Ee = 8,
-	Oh = 9,
-	Blink = 10,
-	BlinkLeft = 11,
-	BlinkRight = 12,
-	LookUp = 13,
-	LookDown = 14,
-	LookLeft = 15,
-	LookRight = 16,
-	Neutral = 17,
+    Happy = 0,
+    Angry = 1,
+    Sad = 2,
+    Relaxed = 3,
+    Surprised = 4,
+    Aa = 5,
+    Ih = 6,
+    Ou = 7,
+    Ee = 8,
+    Oh = 9,
+    Blink = 10,
+    BlinkLeft = 11,
+    BlinkRight = 12,
+    LookUp = 13,
+    LookDown = 14,
+    LookLeft = 15,
+    LookRight = 16,
+    Neutral = 17,
 }
 
 [outer] ExpressionOverride = {
-	None = 0,
-	Block = 1,
-	Blend = 2,
+    None = 0,
+    Block = 1,
+    Blend = 2,
 }
 ```
 
-
 #### HumanoidComponent
-- GetBoneEntity(HumanoidBone bone) : int	-- Get the entity that is mapped to the specified humanoid bone. Use HumanoidBone table to get access to humanoid bone values
-- SetLookAtEnabled(bool value)	-- Enable/disable automatic lookAt (for head and eyes movement)
-- SetLookAt(Vector value)	-- Set a target lookAt position (for head an eyes movement)
+
+- GetBoneEntity(HumanoidBone bone) : int  -- Get the entity that is mapped to the specified humanoid bone. Use HumanoidBone table to get access to humanoid bone values
+- SetLookAtEnabled(bool value)  -- Enable/disable automatic lookAt (for head and eyes movement)
+- SetLookAt(Vector value)  -- Set a target lookAt position (for head an eyes movement)
 - SetRagdollPhysicsEnabled(bool value) -- Activate dynamic ragdoll physics. Note that kinematic ragdoll physics is always active (ragdoll is animation-driven/kinematic by default).
 - IsRagdollPhysicsEnabled() : bool
 - SetRagdollDisabled(bool value) -- completely disables ragdoll physics object creation for this humanoid
@@ -1621,77 +1765,84 @@ Describes a Collider object.
 
 ```lua
 [outer] HumanoidBone = {
-	Hips = 0,	-- included in ragdoll
-	Spine = 1,	-- included in ragdoll
-	Chest = 2,
-	UpperChest = 3,
-	Neck = 4,	-- included in ragdoll
-	Head = 5,	-- included in ragdoll if Neck is not available
-	LeftEye = 6,
-	RightEye = 7,
-	Jaw = 8,
-	LeftUpperLeg = 9,	-- included in ragdoll
-	LeftLowerLeg = 10,	-- included in ragdoll
-	LeftFoot = 11,		-- included in ragdoll
-	LeftToes = 12,
-	RightUpperLeg = 13,	-- included in ragdoll
-	RightLowerLeg = 14,	-- included in ragdoll
-	RightFoot = 15,		-- included in ragdoll
-	RightToes = 16,
-	LeftShoulder = 17,
-	LeftUpperArm = 18,	-- included in ragdoll
-	LeftLowerArm = 19,	-- included in ragdoll
-	LeftHand = 20,
-	RightShoulder = 21,
-	RightUpperArm = 22,	-- included in ragdoll
-	RightLowerArm = 23,	-- included in ragdoll
-	RightHand = 24,
-	LeftThumbMetacarpal = 25,
-	LeftThumbProximal = 26,
-	LeftThumbDistal = 27,
-	LeftIndexProximal = 28,
-	LeftIndexIntermediate = 29,
-	LeftIndexDistal = 30,
-	LeftMiddleProximal = 31,
-	LeftMiddleIntermediate = 32,
-	LeftMiddleDistal = 33,
-	LeftRingProximal = 34,
-	LeftRingIntermediate = 35,
-	LeftRingDistal = 36,
-	LeftLittleProximal = 37,
-	LeftLittleIntermediate = 38,
-	LeftLittleDistal = 39,
-	RightThumbMetacarpal = 40,
-	RightThumbProximal = 41,
-	RightThumbDistal = 42,
-	RightIndexIntermediate = 43,
-	RightIndexDistal = 44,
-	RightIndexProximal = 45,
-	RightMiddleProximal = 46,
-	RightMiddleIntermediate = 47,
-	RightMiddleDistal = 48,
-	RightRingProximal = 49,
-	RightRingIntermediate = 50,
-	RightRingDistal = 51,
-	RightLittleProximal = 52,
-	RightLittleIntermediate = 53,
-	RightLittleDistal = 54,
+    Hips = 0,  -- included in ragdoll
+    Spine = 1,  -- included in ragdoll
+    Chest = 2,
+    UpperChest = 3,
+    Neck = 4,  -- included in ragdoll
+    Head = 5,  -- included in ragdoll if Neck is not available
+    LeftEye = 6,
+    RightEye = 7,
+    Jaw = 8,
+    LeftUpperLeg = 9,  -- included in ragdoll
+    LeftLowerLeg = 10,  -- included in ragdoll
+    LeftFoot = 11,  -- included in ragdoll
+    LeftToes = 12,
+    RightUpperLeg = 13,  -- included in ragdoll
+    RightLowerLeg = 14,  -- included in ragdoll
+    RightFoot = 15,  -- included in ragdoll
+    RightToes = 16,
+    LeftShoulder = 17,
+    LeftUpperArm = 18,  -- included in ragdoll
+    LeftLowerArm = 19,  -- included in ragdoll
+    LeftHand = 20,
+    RightShoulder = 21,
+    RightUpperArm = 22,  -- included in ragdoll
+    RightLowerArm = 23,  -- included in ragdoll
+    RightHand = 24,
+    LeftThumbMetacarpal = 25,
+    LeftThumbProximal = 26,
+    LeftThumbDistal = 27,
+    LeftIndexProximal = 28,
+    LeftIndexIntermediate = 29,
+    LeftIndexDistal = 30,
+    LeftMiddleProximal = 31,
+    LeftMiddleIntermediate = 32,
+    LeftMiddleDistal = 33,
+    LeftRingProximal = 34,
+    LeftRingIntermediate = 35,
+    LeftRingDistal = 36,
+    LeftLittleProximal = 37,
+    LeftLittleIntermediate = 38,
+    LeftLittleDistal = 39,
+    RightThumbMetacarpal = 40,
+    RightThumbProximal = 41,
+    RightThumbDistal = 42,
+    RightIndexIntermediate = 43,
+    RightIndexDistal = 44,
+    RightIndexProximal = 45,
+    RightMiddleProximal = 46,
+    RightMiddleIntermediate = 47,
+    RightMiddleDistal = 48,
+    RightRingProximal = 49,
+    RightRingIntermediate = 50,
+    RightRingDistal = 51,
+    RightLittleProximal = 52,
+    RightLittleIntermediate = 53,
+    RightLittleDistal = 54,
 
-	Count = 55
+    Count = 55
 }
 ```
 
 
 #### DecalComponent
-The decal component is a textured sticker that can be put down onto meshes. Most of the properties can be controlled through an attached TransformComponent and MaterialComponent. 
 
-- SetBaseColorOnlyAlpha(bool value)	-- Set decal to only use alpha from base color texture. Useful for blending normalmap-only decals
+The decal component is a textured sticker that can be put down onto meshes. Most
+of the properties can be controlled through an attached TransformComponent and
+MaterialComponent.
+
+- SetBaseColorOnlyAlpha(bool value)  -- Set decal to only use alpha from base color texture. Useful for blending normalmap-only decals
 - IsBaseColorOnlyAlpha() : bool
 - SetSlopeBlendPower(float value)
 - GetSlopeBlendPower() : float
 
 #### MetadataComponent
-The metadata component can store and retrieve an arbitrary amount of named user values for an entity. It is possible to use the same name for multiple of different value types, but one value can not have multiple entries with the same name. 
+
+The metadata component can store and retrieve an arbitrary amount of named user
+values for an entity. It is possible to use the same name for multiple of
+different value types, but one value can not have multiple entries with the same
+name.
 
 - HasBool(string name) : bool
 - HasInt(string name) : bool
@@ -1710,88 +1861,96 @@ The metadata component can store and retrieve an arbitrary amount of named user 
 - SetFloat(string name, float value)
 - SetString(string name, string value)
 
+```lua
 [outer] MetadataPreset = {
-	Custom = 0,
-	Waypoint = 1,
-	Player = 2,
-	Enemy = 3,
-	NPC = 4,
-	Pickup = 5,
-	Vehicle = 6,
-	PointOfInterest = 7,
+    Custom = 0,
+    Waypoint = 1,
+    Player = 2,
+    Enemy = 3,
+    NPC = 4,
+    Pickup = 5,
+    Vehicle = 6,
+    PointOfInterest = 7,
 }
+```
 
 #### CharacterComponent
-Implementation of basic character controller features such as movement in the scene, inverse kinematics for legs, swimming, water ripples, etc.
-Note that CharacterComponent is NOT using physics, but a custom character logic. The character will collide with other characters, objects that are tagged as Navmesh, and colliders that are tagged with CPU enabled.
 
-- SetActive(bool value)	-- Enable/disable character processing (enabled by default)
-- IsActive() : bool	-- Returns whether the character processing is active or not
+Implementation of basic character controller features such as movement in the
+scene, inverse kinematics for legs, swimming, water ripples, etc. Note that
+CharacterComponent is NOT using physics, but a custom character logic. The
+character will collide with other characters, objects that are tagged as
+Navmesh, and colliders that are tagged with CPU enabled.
 
-- Move(Vector value)	-- Move the character in a direction continuously. The given vector doesn't need to be normalized, the length of it corresponds to the movement amount. The character will be moved the next time the scene is updated. The movement will be blocked by objects tagged as navigation mesh and CPU colliders. If this entity has a layer component, the layer will be used to ensure that the character doesn't collide with that layer.
-- Strafe(Vector value)	-- Similar to Move, but relative to the facing direction.
-- Jump(float amount)	-- Jump upwards by an amount. The jump will be executed in the next scene update, with collisions.
-- Turn(Vector value)	-- Turn towards a direction continuously.
-- Lean(float value)	-- Lean sideways, negative values mean left, positive values mean right
+- SetActive(bool value)  -- Enable/disable character processing (enabled by default)
+- IsActive() : bool  -- Returns whether the character processing is active or not
+
+- Move(Vector value)  -- Move the character in a direction continuously. The given vector doesn't need to be normalized, the length of it corresponds to the movement amount. The character will be moved the next time the scene is updated. The movement will be blocked by objects tagged as navigation mesh and CPU colliders. If this entity has a layer component, the layer will be used to ensure that the character doesn't collide with that layer.
+- Strafe(Vector value)  -- Similar to Move, but relative to the facing direction.
+- Jump(float amount)  -- Jump upwards by an amount. The jump will be executed in the next scene update, with collisions.
+- Turn(Vector value)  -- Turn towards a direction continuously.
+- Lean(float value)  -- Lean sideways, negative values mean left, positive values mean right
 - Shake(float horizontal, opt float vertical = 0, opt float frequency = 100, opt float decay = 10)	-- Apply shaking to the character. horizontal, vertical: movement amount in directions; frequency: speed of movement; decay: speed of slowing down
 
-- AddAnimation(Entity entity)	-- Adds animation for tracking blending state. The simple animation blending will perform blend-out for each animation except the currenttly active one
-- PlayAnimation(Entity entity)	-- Play the animation. This will be blended in as primary animation, others will be belnded out.
-- StopAnimation()	-- stops current animation
-- SetAnimationAmount(float value)	-- Set target blend amount of current animation
-- GetAnimationAmount() : float	-- returns target blend amount of current animation
-- GetAnimationTimer() : float	-- returns the timer of current animation
-- IsAnimationEnded() : bool	--returns true if the current animation is ended, false otherwise
+- AddAnimation(Entity entity)  -- Adds animation for tracking blending state. The simple animation blending will perform blend-out for each animation except the currenttly active one
+- PlayAnimation(Entity entity)  -- Play the animation. This will be blended in as primary animation, others will be belnded out.
+- StopAnimation()  -- stops current animation
+- SetAnimationAmount(float value)  -- Set target blend amount of current animation
+- GetAnimationAmount() : float  -- returns target blend amount of current animation
+- GetAnimationTimer() : float  -- returns the timer of current animation
+- IsAnimationEnded() : bool  --returns true if the current animation is ended, false otherwise
 
-- SetGroundFriction(float value)	-- velocity multiplier when moving on ground, default: 0.92
-- SetWaterFriction(float value)		-- velocity multiplier when swimming in water, default: 0.9
-- SetSlopeThreshold(float value)	-- Slope detection threshold, default: 0.2
-- SetLeaningLimit(float value)		-- Leaning min/max clamping, default: 0.12
-- SetTurningSpeed(float value)		-- Turning smoothing speed when using Turn(), default: 10.0
-- SetFixedUpdateFPS(float value)	-- Frame rate of simulation, default: 120
-- SetGravity(float value)			-- Gravity value, default: -30
-- SetWaterVerticalOffset(float value)	-- vertical offset to keep from water. Useful if character is too submerged in the swimming state
+- SetGroundFriction(float value)  -- velocity multiplier when moving on ground, default: 0.92
+- SetWaterFriction(float value)  -- velocity multiplier when swimming in water, default: 0.9
+- SetSlopeThreshold(float value)  -- Slope detection threshold, default: 0.2
+- SetLeaningLimit(float value)  -- Leaning min/max clamping, default: 0.12
+- SetTurningSpeed(float value)  -- Turning smoothing speed when using Turn(), default: 10.0
+- SetFixedUpdateFPS(float value)  -- Frame rate of simulation, default: 120
+- SetGravity(float value)  -- Gravity value, default: -30
+- SetWaterVerticalOffset(float value)  -- vertical offset to keep from water. Useful if character is too submerged in the swimming state
 
-- SetHealth(int value)	-- Set health of the character
-- SetWidth(float value)	-- Set the horizontal size of the character capsule (same as capsule radius)
-- SetHeight(float value)	-- Set the vertical size of the character capsule (same as capsule height)
-- SetScale(float value)	-- Apply an overall scale on the character
-- SetPosition(Vector value)	-- Set current position immediately (teleport)
-- SetVelocity(Vector value)	-- Set current velocity immediately
-- SetFacing(Vector value)	-- Set the facing direction of the character
-- SetRelativeOffset(Vector value)	-- Apply a relative offset (relative to facing direction)
-- SetFootPlacementEnabled(bool value)	--Enable/disable foot placement with inverse kinematics
-- SetCharacterToCharacterCollisionDisabled(bool value)	-- Set whether character collision with other characters is disabled or not for this character (default: false)
-- SetLocked2D(bool value)	-- locks the character position to the 2D plane (XY translation, rotation is unlocked but it can only move sideways)
-- IsLocked2D() : bool	-- returns true if the position is locked to the 2D plane
+- SetHealth(int value)  -- Set health of the character
+- SetWidth(float value)  -- Set the horizontal size of the character capsule (same as capsule radius)
+- SetHeight(float value)  -- Set the vertical size of the character capsule (same as capsule height)
+- SetScale(float value)  -- Apply an overall scale on the character
+- SetPosition(Vector value)  -- Set current position immediately (teleport)
+- SetVelocity(Vector value)  -- Set current velocity immediately
+- SetFacing(Vector value)  -- Set the facing direction of the character
+- SetRelativeOffset(Vector value)  -- Apply a relative offset (relative to facing direction)
+- SetFootPlacementEnabled(bool value)  --Enable/disable foot placement with inverse kinematics
+- SetCharacterToCharacterCollisionDisabled(bool value)  -- Set whether character collision with other characters is disabled or not for this character (default: false)
+- SetLocked2D(bool value)  -- locks the character position to the 2D plane (XY translation, rotation is unlocked but it can only move sideways)
+- IsLocked2D() : bool  -- returns true if the position is locked to the 2D plane
 
-- GetHealth() : int	-- Get the current health
-- GetWidth() : float	-- Get the horizontal size of the character capsule (same as capsule radius)
-- GetHeight() : float	-- Get the vertical size of the character capsule (same as capsule height)
-- GetScale() : float	-- Get the overall scale of the character
-- GetPosition() : Vector	-- Retrieve the current position without interpolation (this is the raw value from fixed timestep update)
-- GetPositionInterpolated() : Vector	-- Retrieve the current position with interpolation (this is the position that is rendered)
-- GetVelocity() : Vector	-- Get current velocity
-- GetMovement() : Vector	-- Get current movement direction
-- IsGrounded() : bool	-- returns whether the character is currently standing on ground or not
-- IsWallIntersect() : bool	-- returns whether the character is currently intersecting a wall or not
-- IsSwimming() : bool	-- returns whether the character is currently swimming or not
-- IsFootPlacementEnabled() : bool	-- Returns whether foot placement with inverse kinematics is currently enabled or not
-- IsCharacterToCharacterCollisionDisabled()	-- returns whether character collision with other characters is disabled or not for this character (default: false)
-- GetCapsule() : Capsule	-- returns the capsule representing the character
-- GetFacing() : Vector	-- returns the immediate facing of the character
-- GetFacingSmoothed() : Vector	-- returns the smoothed facing of the character
-- GetRelativeOffset() : Vector	-- returns the relative offset (relative to facing direction)
-- GetLeaning() : float	-- returns immediate leaning amount
+- GetHealth() : int  -- Get the current health
+- GetWidth() : float  -- Get the horizontal size of the character capsule (same as capsule radius)
+- GetHeight() : float  -- Get the vertical size of the character capsule (same as capsule height)
+- GetScale() : float  -- Get the overall scale of the character
+- GetPosition() : Vector  -- Retrieve the current position without interpolation (this is the raw value from fixed timestep update)
+- GetPositionInterpolated() : Vector  -- Retrieve the current position with interpolation (this is the position that is rendered)
+- GetVelocity() : Vector  -- Get current velocity
+- GetMovement() : Vector  -- Get current movement direction
+- IsGrounded() : bool  -- returns whether the character is currently standing on ground or not
+- IsWallIntersect() : bool  -- returns whether the character is currently intersecting a wall or not
+- IsSwimming() : bool  -- returns whether the character is currently swimming or not
+- IsFootPlacementEnabled() : bool  -- Returns whether foot placement with inverse kinematics is currently enabled or not
+- IsCharacterToCharacterCollisionDisabled()  -- returns whether character collision with other characters is disabled or not for this character (default: false)
+- GetCapsule() : Capsule  -- returns the capsule representing the character
+- GetFacing() : Vecto  -- returns the immediate facing of the character
+- GetFacingSmoothed() : Vector  -- returns the smoothed facing of the character
+- GetRelativeOffset() : Vector  -- returns the relative offset (relative to facing direction)
+- GetLeaning() : float  -- returns immediate leaning amount
 - GetLeaningSmoothed() : float -- returns smoothed leaning amount
 - GetFootOffset() : float -- returns vertical offset that accounts for character's position after foot placements
 
-- SetPathGoal(Vector goal, VoxelGrid voxelgrid)	-- Set the goal for path finding, it will be processed the next time the scene is updated. You can get the results by accessing the pathquery object of the character with GetPathQuery().
-- GetPathQuery() : PathQuery	-- returns the PathQuery object of this character
+- SetPathGoal(Vector goal, VoxelGrid voxelgrid)  -- Set the goal for path finding, it will be processed the next time the scene is updated. You can get the results by accessing the pathquery object of the character with GetPathQuery().
+- GetPathQuery() : PathQuery  -- returns the PathQuery object of this character
 
 
-## Canvas
+### Canvas
+
 This is used to describe a drawable area
+
 - GetDPI() : float -- pixels per inch
 - GetDPIScaling() : float -- scaling factor between physical and logical size
 - GetCustomScaling() : float -- a custom scaling factor on top of the DPI scaling
@@ -1801,35 +1960,40 @@ This is used to describe a drawable area
 - GetLogicalWidth() : float -- width in dpi scaled units
 - GetLogicalHeight() : float -- height in dpi scaled units
 
-## High Level Interface
-<b>This section must only be used from standalone lua scripts, and must not be used from a ScriptComponent.</b>
-This is because ScriptComponent is always running inside scene.Update(), and paths can not be switched at that time safely.
-On the other hand, a standalone lua script can define its own update logic and render path and cahnge application behaviour.
+### High Level Interface
 
-### Application
+**This section must only be used from standalone lua scripts, and must not be
+used from a ScriptComponent.** This is because ScriptComponent is always running
+inside scene.Update(), and paths can not be switched at that time safely. On the
+other hand, a standalone lua script can define its own update logic and render
+path and cahnge application behaviour.
+
+#### Application
+
 This is the main entry point and manages the lifetime of the application.
+
 - [outer]application : Application
 - [deprecated][outer]main : Application
 - [void-constructor]Application()
 - GetContent() : Resource? result
 - GetActivePath() : RenderPath? result
-- SetActivePath(RenderPath path, opt float fadeSeconds = 0, opt int fadeColorR = 0, fadeColorG = 0, fadeColorB = 0, FadeType fadetype = FadeType.FadeToColor)
-- SetFrameSkip(bool enabled)	-- enable/disable frame skipping in fixed update 
-- SetFullScreen(bool value)		-- switch to fullscreen/windowed
-- SetTargetFrameRate(float fps)	-- set target frame rate for fixed update and variable rate update when frame rate is locked
-- SetFrameRateLock(bool enabled)	-- if enabled, variable rate update will use a fixed delta time
-- SetInfoDisplay(bool active)	-- if enabled, information display will be visible in the top left corner of the application
-- SetWatermarkDisplay(bool active)	-- toggle display of engine watermark, version number, etc. if info display is enabled
-- SetFPSDisplay(bool active)	-- toggle display of frame rate if info display is enabled
-- SetResolutionDisplay(bool active)	-- toggle display of resolution if info display is enabled
-- SetLogicalSizeDisplay(bool active)	-- toggle display of logical size of canvas if info display is enabled
-- SetColorSpaceDisplay(bool active)	-- toggle display of output color space if info display is enabled
-- SetPipelineCountDisplay(bool active)	-- toggle display of active graphics pipeline count if info display is enabled
-- SetHeapAllocationCountDisplay(bool active)	-- toggle display of heap allocation statistics if info display is enabled
-- SetVRAMUsageDisplay(bool active)	-- toggle display of video memory usage if info display is enabled
-- SetColorGradingHelper(bool value)	-- toggale color grading helper display in the top left corner
-- IsHDRSupported() : bool	-- returns whther HDR display output is supported on the current monitor
-- SetHDR(bool)	-- sets HDR display mode (if monitor supports it)
+- SetActivePath(RenderPath path, opt float fadeSeconds = 0, opt int fadeColorR = 0, opt int fadeColorG = 0, opt int fadeColorB = 0, opt FadeType fadetype = FadeType.FadeToColor)
+- SetFrameSkip(bool enabled)  -- enable/disable frame skipping in fixed update
+- SetFullScreen(bool value)  -- switch to fullscreen/windowed
+- SetTargetFrameRate(float fps)  -- set target frame rate for fixed update and variable rate update when frame rate is locked
+- SetFrameRateLock(bool enabled)  -- if enabled, variable rate update will use a fixed delta time
+- SetInfoDisplay(bool active)  -- if enabled, information display will be visible in the top left corner of the application
+- SetWatermarkDisplay(bool active)  -- toggle display of engine watermark, version number, etc. if info display is enabled
+- SetFPSDisplay(bool active)  -- toggle display of frame rate if info display is enabled
+- SetResolutionDisplay(bool active)  -- toggle display of resolution if info display is enabled
+- SetLogicalSizeDisplay(bool active)  -- toggle display of logical size of canvas if info display is enabled
+- SetColorSpaceDisplay(bool active)  -- toggle display of output color space if info display is enabled
+- SetPipelineCountDisplay(bool active)  -- toggle display of active graphics pipeline count if info display is enabled
+- SetHeapAllocationCountDisplay(bool active)  -- toggle display of heap allocation statistics if info display is enabled
+- SetVRAMUsageDisplay(bool active)  -- toggle display of video memory usage if info display is enabled
+- SetColorGradingHelper(bool value)  -- toggale color grading helper display in the top left corner
+- IsHDRSupported() : bool  -- returns whther HDR display output is supported on the current monitor
+- SetHDR(bool)  -- sets HDR display mode (if monitor supports it)
 - GetCanvas() : Canvas canvas  -- returns a copy of the application's current canvas
 - SetCanvas(Canvas canvas)  -- applies the specified canvas to the application
 - Exit() -- Closes the program
@@ -1840,18 +2004,26 @@ This is the main entry point and manages the lifetime of the application.
 - [outer]prof() -- toggle the on-screen profiler (this function is made for convenience to write faster)
 
 FadeType = {
-	FadeToColor,
-	CrossFade,
+    FadeToColor,
+    CrossFade,
 }
 
-### RenderPath
-A RenderPath is a high level system that represents a part of the whole application. It is responsible to handle high level rendering and logic flow. A render path can be for example a loading screen, a menu screen, or primary game screen, etc.
+#### RenderPath
+
+A RenderPath is a high level system that represents a part of the whole
+application. It is responsible to handle high level rendering and logic flow. A
+render path can be for example a loading screen, a menu screen, or primary game
+screen, etc.
+
 - [constructor]RenderPath()
 - GetLayerMask() : uint result
 - SetLayerMask(uint mask)
 
-#### RenderPath2D
-It can hold Sprites and SpriteFonts and can sort them by layers, update and render them.
+##### RenderPath2D : RenderPath
+
+It can hold Sprites and SpriteFonts and can sort them by layers, update and
+render them.
+
 - [constructor]RenderPath2D()
 - AddSprite(Sprite sprite, opt string layer)
 - AddVideoSprite(VideoInstance videoinstance, Sprite sprite, opt string layer)
@@ -1866,22 +2038,24 @@ It can hold Sprites and SpriteFonts and can sort them by layers, update and rend
 - SetLayerOrder(string name, int order)
 - SetSpriteOrder(Sprite sprite, int order)
 - SetFontOrder(SpriteFont font, int order)
-- GetHDRScaling() : float	-- returns HDR scaling value used for SDR to HDR linear output mapping conversion (default: 9.0)
-- SetHDRScaling(float value)	-- sets HDR scaling value used for SDR to HDR linear output mapping conversion (default: 9.0)
-- CopyFrom(RenderPath other) -- copies everything from other renderpath into this
+- GetHDRScaling() : float  -- returns HDR scaling value used for SDR to HDR linear output mapping conversion (default: 9.0)
+- SetHDRScaling(float value)  -- sets HDR scaling value used for SDR to HDR linear output mapping conversion (default: 9.0)
+- CopyFrom(RenderPath other)  -- copies everything from other renderpath into this
 
-#### RenderPath3D
-This is the default scene render path. 
+##### RenderPath3D : RenderPath2D
+
+This is the default scene render path.
 It inherits functions from RenderPath2D, so it can render a 2D overlay.
+
 - [constructor]RenderPath3D()
-- SetResolutionScale(float value)	-- scale internal rendering resolution. This can provide major performance improvement when GPU rendering speed is the bottleneck
+- SetResolutionScale(float value)  -- scale internal rendering resolution. This can provide major performance improvement when GPU rendering speed is the bottleneck
 - SetAO(int value)  -- Sets up the ambient occlusion effect (possible values below)
-- AO_DISABLED : int  -- turn off AO computation (use in SetAO() function)
-	- AO_SSAO : int  -- enable simple brute force screen space ambient occlusion (use in SetAO() function)
-	- AO_HBAO : int  -- enable horizon based screen space ambient occlusion (use in SetAO() function)
-	- AO_MSAO : int  -- enable multi scale screen space ambient occlusion (use in SetAO() function)
+- [outer]AO_DISABLED : int  -- turn off AO computation (use in SetAO() function)
+- [outer]AO_SSAO : int  -- enable simple brute force screen space ambient occlusion (use in SetAO() function)
+- [outer]AO_HBAO : int  -- enable horizon based screen space ambient occlusion (use in SetAO() function)
+- [outer]AO_MSAO : int  -- enable multi scale screen space ambient occlusion (use in SetAO() function)
 - SetAOPower(float value)  -- applies AO power value if any AO is enabled
-- SetAORange(float value)	-- sets max range for ray traced AO
+- SetAORange(float value)  -- sets max range for ray traced AO
 - SetSSREnabled(bool value)
 - SetSSGIEnabled(bool value)
 - SetRaytracedDiffuseEnabled(bool value)
@@ -1891,7 +2065,7 @@ It inherits functions from RenderPath2D, so it can render a 2D overlay.
 - SetPlanarReflectionQuality(float resolutionScale, int msaaSampleCount) -- control the planar reflection render resolution and multisampling antia aliasing. msaaSampleCount must be a value from these: 1,2,4,8
 - SetFXAAEnabled(bool value)
 - SetBloomEnabled(bool value)
-- SetBloomThreshold(bool value)
+- SetBloomThreshold(float value)
 - SetColorGradingEnabled(bool value)
 - SetVolumeLightsEnabled(bool value)
 - SetLightShaftsEnabled(bool value)
@@ -1914,19 +2088,19 @@ It inherits functions from RenderPath2D, so it can render a 2D overlay.
 - SetOutlineThreshold(float value)
 - SetOutlineThickness(float value)
 - SetOutlineColor(float r,g,b,a)
-- SetFSREnabled(bool value)	-- FSR 1.0 on/off
-- SetFSRSharpness(float value)	-- FSR 1.0 sharpness 0: sharpest, 2: least sharp
-- SetFSR2Enabled(bool value) -- FSR 2.1 on/off
-- SetFSR2Sharpness(float value) -- FSR 2.1 sharpness 0: least sharp, 1: sharpest (this is different to FSR 1.0)
-- SetFSR2Preset(FSR2_Preset value) -- FSR 2.1 preset will modify resolution scaling and sampler LOD bias
-- SetTonemap(Tonemap value) -- Set a tonemap type
+- SetFSREnabled(bool value)  -- FSR 1.0 on/off
+- SetFSRSharpness(float value)  -- FSR 1.0 sharpness 0: sharpest, 2: least sharp
+- SetFSR2Enabled(bool value)  -- FSR 2.1 on/off
+- SetFSR2Sharpness(float value)  -- FSR 2.1 sharpness 0: least sharp, 1: sharpest (this is different to FSR 1.0)
+- SetFSR2Preset(FSR2_Preset value)  -- FSR 2.1 preset will modify resolution scaling and sampler LOD bias
+- SetTonemap(Tonemap value)  -- Set a tonemap type
 - SetVisibilityComputeShadingEnabled(bool value) -- enable visibility rendering mode, this renders the scene in compute shader instead of forward rendering. This can have performance improvement when triangle density on screen is very high
-- SetCropLeft(float value) -- Sets cropping from left of the screen in logical units
-- SetCropTop(float value) -- Sets cropping from top of the screen in logical units
-- SetCropRight(float value) -- Sets cropping from right of the screen in logical units
-- SetCropBottom(float value) -- Sets cropping from bottom of the screen in logical units
+- SetCropLeft(float value)  -- Sets cropping from left of the screen in logical units
+- SetCropTop(float value)  -- Sets cropping from top of the screen in logical units
+- SetCropRight(float value)  -- Sets cropping from right of the screen in logical units
+- SetCropBottom(float value)  -- Sets cropping from bottom of the screen in logical units
 - GetLastPostProcessRT() : Texture -- returns the last post process render texture
-- SetDistortionOverlay(Texture texture) -- Set a normal map texture as full screen distortion mask
+- SetDistortionOverlay(Texture texture)  -- Set a normal map texture as full screen distortion mask
 - SetChromaticAberrationEnabled(bool value)
 - SetChromaticAberrationAmount(float value)
 - SetEyeAdaptionRate(float value)
@@ -1941,26 +2115,28 @@ It inherits functions from RenderPath2D, so it can render a 2D overlay.
 
 
 ```lua
-FSR2_Preset = {
-	Quality = 0,			-- 1.5x scaling, -1.58 sampler LOD bias
-	Balanced = 1,			-- 1.7x scaling, -1.76 sampler LOD bias
-	Performance = 2,		-- 2.0x scaling, -2.0 sampler LOD bias
-	Ultra_Performance = 3,	-- 3.0x scaling, -2.58 sampler LOD bias
+[outer] FSR2_Preset = {
+    Quality = 0,            -- 1.5x scaling, -1.58 sampler LOD bias
+    Balanced = 1,           -- 1.7x scaling, -1.76 sampler LOD bias
+    Performance = 2,        -- 2.0x scaling, -2.0 sampler LOD bias
+    Ultra_Performance = 3,  -- 3.0x scaling, -2.58 sampler LOD bias
 }
 
-Tonemap = {
-	Reinhard = 0,
-	ACES = 1,
+[outer] Tonemap = {
+    Reinhard = 0,
+    ACES = 1,
 }
 ```
 
-#### LoadingScreen
-It is a RenderPath2D but one that internally manages resource loading and can display information about the process.
-It inherits functions from RenderPath2D.
+##### LoadingScreen : RenderPath2D
+
+It is a RenderPath2D but one that internally manages resource loading and can
+display information about the process. It inherits functions from RenderPath2D.
+
 - [constructor]LoadingScreen()
 - AddLoadModelTask(string fileName, opt Matrix matrix) : Entity -- Adds a scene loading task into the global scene and returns the root entity handle immediately. The loading task will be started asynchronously when the LoadingScreen is activated by the Application.
 - AddLoadModelTask(Scene scene, string fileName, opt Matrix matrix) : Entity -- Adds a scene loading task into the specified scene and returns the root entity handle immediately. The loading task will be started asynchronously when the LoadingScreen is activated by the Application.
-- AddRenderPathActivationTask(RenderPath path, opt float fadeSeconds = 0, opt int fadeR = 0,fadeG = 0,fadeB = 0, opt FadeType fadetype = FadeType.FadeToColor) -- loads resources of a RenderPath and activates it after all loading tasks have finished
+- AddRenderPathActivationTask(RenderPath path, Application app, opt float fadeSeconds = 0, opt int fadeR = 0, opt int fadeG = 0, opt int fadeB = 0, opt FadeType fadetype = FadeType.FadeToColor) -- loads resources of a RenderPath and activates it after all loading tasks have finished
 - IsFinished() : bool -- returns true when all loading tasks have finished and loading screen is stopped (eg. application swapped it out)
 - GetProgress() : int -- returns percentage of loading complete (0% - 100%). When all loading tasks are finished or there are no tasks, it returns 100.
 - SetBackgroundTexture(Texture tex) -- set a full screen background texture that wil be displayed when loading screen is active
@@ -1969,17 +2145,20 @@ It inherits functions from RenderPath2D.
 - GetBackgroundMode() : int
 
 ```lua
-BackgroundMode = {
-	Fill,	-- fill the whole screen, will cut off parts of the image if aspects don't match
-	Fit,	-- fit the image completely inside the screen, will result in black bars on screen if aspects don't match
-	Stretch	-- fill the whole screen, and stretch the image if needed
+[outer] BackgroundMode = {
+    Fill = 0,     -- fill the whole screen, will cut off parts of the image if aspects don't match
+    Fit = 1,      -- fit the image completely inside the screen, will result in black bars on screen if aspects don't match
+    Stretch = 2,  -- fill the whole screen, and stretch the image if needed
 }
 ```
 
 ### Primitives
 
 #### Ray
-A ray is defined by an origin Vector and a normalized direction Vector. It can be used to intersect with other primitives or the scene
+
+A ray is defined by an origin Vector and a normalized direction Vector. It can
+be used to intersect with other primitives or the scene
+
 - Origin : Vector
 - Direction : Vector
 
@@ -1994,18 +2173,20 @@ A ray is defined by an origin Vector and a normalized direction Vector. It can b
 - GetDirection() : Vector result
 - SetOrigin(Vector vector)
 - SetDirection(Vector vector)
-- CreateFromPoints(Vector a,b)	-- creates a ray from two points. Point a will be the ray origin, pointing towards point b
+- CreateFromPoints(Vector a,b)  -- creates a ray from two points. Point a will be the ray origin, pointing towards point b
 - GetSurfaceOrientation(Vector position, normal) : Matrix -- compute placement orientation matrix at intersection result. This matrix can be used to place entities in the scene oriented on the surface.
 
 #### AABB
+
 Axis Aligned Bounding Box. Can be intersected with other primitives.
+
 - Min : Vector
 - Max : Vector
 
 </br>
 
-- [constructor]AABB(opt Vector min,max)	-- if no argument is given, it will be infinitely inverse that can't intersect
-- Intersects2D(AABB aabb) : bool result	-- omit the z component for intersection check for more precise 2D intersection
+- [constructor]AABB(opt Vector min,max)  -- if no argument is given, it will be infinitely inverse that can't intersect
+- Intersects2D(AABB aabb) : bool result  -- omit the z component for intersection check for more precise 2D intersection
 - Intersects(AABB aabb) : bool result
 - Intersects(Sphere sphere) : bool result
 - Intersects(Ray ray) : bool result
@@ -2017,11 +2198,14 @@ Axis Aligned Bounding Box. Can be intersected with other primitives.
 - GetCenter() : Vector result
 - GetHalfExtents() : Vector result
 - Transform(Matrix matrix) : AABB result  -- transforms the AABB with a matrix and returns the resulting conservative AABB
-- GetAsBoxMatrix() : Matrix result	-- get a matrix that represents the AABB as OBB (oriented bounding box)
-- ProjectToScreen(Matrix ViewProjection) : Vector result	-- projects the AABB to the screen, returns a 2D rectangle in UV-space as Vector(topleftX, topleftY, bottomrightX, bottomrightY), each value is in range [0, 1]
+- GetAsBoxMatrix() : Matrix result  -- get a matrix that represents the AABB as OBB (oriented bounding box)
+- ProjectToScreen(Matrix ViewProjection) : Vector result  -- projects the AABB to the screen, returns a 2D rectangle in UV-space as Vector(topleftX, topleftY, bottomrightX, bottomrightY), each value is in range [0, 1]
 
 #### Sphere
-Sphere defined by center Vector and radius. Can be intersected with other primitives.
+
+Sphere defined by center Vector and radius. Can be intersected with other
+primitives.
+
 - Center : Vector
 - Radius : float
 
@@ -2040,7 +2224,10 @@ Sphere defined by center Vector and radius. Can be intersected with other primit
 - GetSurfaceOrientation(Vector position, normal) : Matrix -- compute placement orientation matrix at intersection result. This matrix can be used to place entities in the scene oriented on the surface.
 
 #### Capsule
-It's like two spheres connected by a cylinder. Base and Tip are the two endpoints, radius is the cylinder's radius.
+
+It's like two spheres connected by a cylinder. Base and Tip are the two
+endpoints, radius is the cylinder's radius.
+
 - Base : Vector
 - Tip : Vector
 - Radius : float
@@ -2061,7 +2248,9 @@ It's like two spheres connected by a cylinder. Base and Tip are the two endpoint
 - GetSurfaceOrientation(Vector position, normal) : Matrix -- compute placement orientation matrix at intersection result. This matrix can be used to place entities in the scene oriented on the surface.
 
 ### Input
+
 Query input devices
+
 - [outer]input : Input -- use this global object to access input functions
 - [void-constructor]Input()
 - Down(int code, opt int playerindex = 0) : bool result  -- Check whether a button is currently being held down
@@ -2075,17 +2264,20 @@ Query input devices
 - GetAnalog(int type, opt int playerindex = 0) : Vector result  -- read analog data from gamepad. type parameter must be from GAMEPAD_ANALOG values
 - GetTouches() : Touch result[]
 - SetControllerFeedback(ControllerFeedback feedback, opt int playerindex = 0) -- sets controller feedback such as vibration or LED color
-- WhatIsPressed(opt int playerindex = 0) : int	-- returns 0 (`BUTTON_NONE`) if nothing is pressed, or the first appropriate button code otherwise
-- IsGamepadButton(int button) : bool 	-- returns whether that button code is a gamepad button or not
-- StringToButton(string str) : int	-- returns button code for a given string name
-- ButtonToString(int button, opt int preference = CONTROLLER_PREFERENCE_GENERIC) : string	-- returns string name for the given button code. You can set a preference for controller type which can modify the string returned
-- SetCursor(int cursor)	-- sets the current cursor type. Values can be of the cursor values, see below
-- SetCursorFromFile(int cursor, string filename)	-- sets the specified cursor type to an image from a cursor file
-- ResetCursor(int cursor)	-- resets the specified cursor to the default one
-- ResetCursors()	-- resets all cursors to the defaults
+- WhatIsPressed(opt int playerindex = 0) : int  -- returns 0 (`BUTTON_NONE`) if nothing is pressed, or the first appropriate button code otherwise
+- IsGamepadButton(int button) : bool  -- returns whether that button code is a gamepad button or not
+- StringToButton(string str) : int  -- returns button code for a given string name
+- ButtonToString(int button, opt int preference = CONTROLLER_PREFERENCE_GENERIC) : string  -- returns string name for the given button code. You can set a preference for controller type which can modify the string returned
+- SetCursor(int cursor)  -- sets the current cursor type. Values can be of the cursor values, see below
+- SetCursorFromFile(int cursor, string filename)  -- sets the specified cursor type to an image from a cursor file
+- ResetCursor(int cursor)  -- resets the specified cursor to the default one
+- ResetCursors()  -- resets all cursors to the defaults
 
 #### ControllerFeedback
-Describes controller feedback such as touch and LED color which can be replayed on a controller
+
+Describes controller feedback such as touch and LED color which can be replayed
+on a controller
+
 - [constructor]ControllerFeedback()
 - SetVibrationLeft(float value)  -- vibration amount of left motor (0: no vibration, 1: max vibration)
 - SetVibrationRight(float value)  -- vibration amount of right motor (0: no vibration, 1: max vibration)
@@ -2093,232 +2285,256 @@ Describes controller feedback such as touch and LED color which can be replayed 
 - SetLEDColor(int hexcolor)  -- sets the colored LED color if controller has one (ABGR hex color code)
 
 #### Touch
+
 Describes a touch contact point
+
 - [constructor]Touch()
 - GetState() : TOUCHSTATE result
 - GetPos() : Vector result
 
 #### TOUCHSTATE
+
 - [outer]TOUCHSTATE_PRESSED : int
 - [outer]TOUCHSTATE_RELEASED : int
 - [outer]TOUCHSTATE_MOVED : int
 
 #### Keyboard Key codes
-- [outer]KEYBOARD_BUTTON_UP				 : int
-- [outer]KEYBOARD_BUTTON_DOWN			 : int
-- [outer]KEYBOARD_BUTTON_LEFT			 : int
-- [outer]KEYBOARD_BUTTON_RIGHT			 : int
-- [outer]KEYBOARD_BUTTON_SPACE			 : int
-- [outer]KEYBOARD_BUTTON_RSHIFT			 : int
-- [outer]KEYBOARD_BUTTON_LSHIFT			 : int
-- [outer]KEYBOARD_BUTTON_F1				 : int
-- [outer]KEYBOARD_BUTTON_F2				 : int
-- [outer]KEYBOARD_BUTTON_F3				 : int
-- [outer]KEYBOARD_BUTTON_F4				 : int
-- [outer]KEYBOARD_BUTTON_F5				 : int
-- [outer]KEYBOARD_BUTTON_F6				 : int
-- [outer]KEYBOARD_BUTTON_F7				 : int
-- [outer]KEYBOARD_BUTTON_F8				 : int
-- [outer]KEYBOARD_BUTTON_F9				 : int
-- [outer]KEYBOARD_BUTTON_F10			 : int
-- [outer]KEYBOARD_BUTTON_F11			 : int
-- [outer]KEYBOARD_BUTTON_F12			 : int
-- [outer]KEYBOARD_BUTTON_ENTER			 : int
-- [outer]KEYBOARD_BUTTON_ESCAPE			 : int
-- [outer]KEYBOARD_BUTTON_HOME			 : int
-- [outer]KEYBOARD_BUTTON_RCONTROL		 : int
-- [outer]KEYBOARD_BUTTON_LCONTROL		 : int
-- [outer]KEYBOARD_BUTTON_DELETE			 : int
-- [outer]KEYBOARD_BUTTON_BACKSPACE		 : int
-- [outer]KEYBOARD_BUTTON_PAGEDOWN		 : int
-- [outer]KEYBOARD_BUTTON_PAGEUP			 : int
-- [outer]KEYBOARD_BUTTON_NUMPAD0		 : int
-- [outer]KEYBOARD_BUTTON_NUMPAD1		 : int
-- [outer]KEYBOARD_BUTTON_NUMPAD2		 : int
-- [outer]KEYBOARD_BUTTON_NUMPAD3		 : int
-- [outer]KEYBOARD_BUTTON_NUMPAD4		 : int
-- [outer]KEYBOARD_BUTTON_NUMPAD5		 : int
-- [outer]KEYBOARD_BUTTON_NUMPAD6		 : int
-- [outer]KEYBOARD_BUTTON_NUMPAD7		 : int
-- [outer]KEYBOARD_BUTTON_NUMPAD8		 : int
-- [outer]KEYBOARD_BUTTON_NUMPAD9		 : int
-- [outer]KEYBOARD_BUTTON_MULTIPLY		 : int
-- [outer]KEYBOARD_BUTTON_ADD			 : int
-- [outer]KEYBOARD_BUTTON_SEPARATOR		 : int
-- [outer]KEYBOARD_BUTTON_SUBTRACT		 : int
-- [outer]KEYBOARD_BUTTON_DECIMAL		 : int
-- [outer]KEYBOARD_BUTTON_DIVIDE			 : int
-- [outer]KEYBOARD_BUTTON_TAB			 : int
-- [outer]KEYBOARD_BUTTON_TILDE			 : int
-- [outer]KEYBOARD_BUTTON_INSERT			 : int
-- [outer]KEYBOARD_BUTTON_ALT			 : int
-- [outer]KEYBOARD_BUTTON_ALTGR			 : int
-- You can also generate a key code by calling string.byte(char uppercaseLetter) where the parameter represents the desired key of the keyboard
+
+- [outer]KEYBOARD_BUTTON_UP         : int
+- [outer]KEYBOARD_BUTTON_DOWN       : int
+- [outer]KEYBOARD_BUTTON_LEFT       : int
+- [outer]KEYBOARD_BUTTON_RIGHT      : int
+- [outer]KEYBOARD_BUTTON_SPACE      : int
+- [outer]KEYBOARD_BUTTON_RSHIFT     : int
+- [outer]KEYBOARD_BUTTON_LSHIFT     : int
+- [outer]KEYBOARD_BUTTON_F1         : int
+- [outer]KEYBOARD_BUTTON_F2         : int
+- [outer]KEYBOARD_BUTTON_F3         : int
+- [outer]KEYBOARD_BUTTON_F4         : int
+- [outer]KEYBOARD_BUTTON_F5         : int
+- [outer]KEYBOARD_BUTTON_F6         : int
+- [outer]KEYBOARD_BUTTON_F7         : int
+- [outer]KEYBOARD_BUTTON_F8         : int
+- [outer]KEYBOARD_BUTTON_F9         : int
+- [outer]KEYBOARD_BUTTON_F10        : int
+- [outer]KEYBOARD_BUTTON_F11        : int
+- [outer]KEYBOARD_BUTTON_F12        : int
+- [outer]KEYBOARD_BUTTON_ENTER      : int
+- [outer]KEYBOARD_BUTTON_ESCAPE     : int
+- [outer]KEYBOARD_BUTTON_HOME       : int
+- [outer]KEYBOARD_BUTTON_RCONTROL   : int
+- [outer]KEYBOARD_BUTTON_LCONTROL   : int
+- [outer]KEYBOARD_BUTTON_DELETE     : int
+- [outer]KEYBOARD_BUTTON_BACKSPACE  : int
+- [outer]KEYBOARD_BUTTON_PAGEDOWN   : int
+- [outer]KEYBOARD_BUTTON_PAGEUP     : int
+- [outer]KEYBOARD_BUTTON_NUMPAD0    : int
+- [outer]KEYBOARD_BUTTON_NUMPAD1    : int
+- [outer]KEYBOARD_BUTTON_NUMPAD2    : int
+- [outer]KEYBOARD_BUTTON_NUMPAD3    : int
+- [outer]KEYBOARD_BUTTON_NUMPAD4    : int
+- [outer]KEYBOARD_BUTTON_NUMPAD5    : int
+- [outer]KEYBOARD_BUTTON_NUMPAD6    : int
+- [outer]KEYBOARD_BUTTON_NUMPAD7    : int
+- [outer]KEYBOARD_BUTTON_NUMPAD8    : int
+- [outer]KEYBOARD_BUTTON_NUMPAD9    : int
+- [outer]KEYBOARD_BUTTON_MULTIPLY   : int
+- [outer]KEYBOARD_BUTTON_ADD        : int
+- [outer]KEYBOARD_BUTTON_SEPARATOR  : int
+- [outer]KEYBOARD_BUTTON_SUBTRACT   : int
+- [outer]KEYBOARD_BUTTON_DECIMAL    : int
+- [outer]KEYBOARD_BUTTON_DIVIDE     : int
+- [outer]KEYBOARD_BUTTON_TAB        : int
+- [outer]KEYBOARD_BUTTON_TILDE      : int
+- [outer]KEYBOARD_BUTTON_INSERT     : int
+- [outer]KEYBOARD_BUTTON_ALT        : int
+- [outer]KEYBOARD_BUTTON_ALTGR      : int
+
+You can also generate a key code by calling string.byte(char uppercaseLetter)
+where the parameter represents the desired key of the keyboard
 
 #### Mouse Key Codes
-- [outer]MOUSE_BUTTON_LEFT	 : int
-- [outer]MOUSE_BUTTON_RIGHT	 : int
+
+- [outer]MOUSE_BUTTON_LEFT   : int
+- [outer]MOUSE_BUTTON_RIGHT  : int
 - [outer]MOUSE_BUTTON_MIDDLE : int
 
 Helpers to check mouse wheel scrolling like buttons:
-- [outer]MOUSE_SCROLL_AS_BUTTON_UP 		: int
-- [outer]MOUSE_SCROLL_AS_BUTTON_DOWN 	: int
+
+- [outer]MOUSE_SCROLL_AS_BUTTON_UP    : int
+- [outer]MOUSE_SCROLL_AS_BUTTON_DOWN  : int
 
 #### Gamepad Key Codes
-- [outer]GAMEPAD_BUTTON_UP : int
-- [outer]GAMEPAD_BUTTON_LEFT : int
-- [outer]GAMEPAD_BUTTON_DOWN : int
-- [outer]GAMEPAD_BUTTON_RIGHT : int
+
+- [outer]GAMEPAD_BUTTON_UP     : int
+- [outer]GAMEPAD_BUTTON_LEFT   : int
+- [outer]GAMEPAD_BUTTON_DOWN   : int
+- [outer]GAMEPAD_BUTTON_RIGHT  : int
 
 Generic button codes:
-- [outer]GAMEPAD_BUTTON_1 : int
-- [outer]GAMEPAD_BUTTON_2 : int
-- [outer]GAMEPAD_BUTTON_3 : int
-- [outer]GAMEPAD_BUTTON_4 : int
+
+- [outer]GAMEPAD_BUTTON_1   : int
+- [outer]GAMEPAD_BUTTON_2   : int
+- [outer]GAMEPAD_BUTTON_3   : int
+- [outer]GAMEPAD_BUTTON_4   : int
 ...
-- [outer]GAMEPAD_BUTTON_14 : int
+- [outer]GAMEPAD_BUTTON_14  : int
 
 Helpers to check analog sticks and triggers like buttons:
-- [outer]GAMEPAD_ANALOG_THUMBSTICK_L_AS_BUTTON_UP : int
-- [outer]GAMEPAD_ANALOG_THUMBSTICK_L_AS_BUTTON_LEFT	: int
-- [outer]GAMEPAD_ANALOG_THUMBSTICK_L_AS_BUTTON_DOWN	: int
-- [outer]GAMEPAD_ANALOG_THUMBSTICK_L_AS_BUTTON_RIGHT : int
-- [outer]GAMEPAD_ANALOG_THUMBSTICK_R_AS_BUTTON_UP : int
-- [outer]GAMEPAD_ANALOG_THUMBSTICK_R_AS_BUTTON_LEFT : int
-- [outer]GAMEPAD_ANALOG_THUMBSTICK_R_AS_BUTTON_DOWN : int
-- [outer]GAMEPAD_ANALOG_THUMBSTICK_R_AS_BUTTON_RIGHT : int
-- [outer]GAMEPAD_ANALOG_TRIGGER_L_AS_BUTTON : int
-- [outer]GAMEPAD_ANALOG_TRIGGER_R_AS_BUTTON : int
+
+- [outer]GAMEPAD_ANALOG_THUMBSTICK_L_AS_BUTTON_UP     : int
+- [outer]GAMEPAD_ANALOG_THUMBSTICK_L_AS_BUTTON_LEFT   : int
+- [outer]GAMEPAD_ANALOG_THUMBSTICK_L_AS_BUTTON_DOWN   : int
+- [outer]GAMEPAD_ANALOG_THUMBSTICK_L_AS_BUTTON_RIGHT  : int
+- [outer]GAMEPAD_ANALOG_THUMBSTICK_R_AS_BUTTON_UP     : int
+- [outer]GAMEPAD_ANALOG_THUMBSTICK_R_AS_BUTTON_LEFT   : int
+- [outer]GAMEPAD_ANALOG_THUMBSTICK_R_AS_BUTTON_DOWN   : int
+- [outer]GAMEPAD_ANALOG_THUMBSTICK_R_AS_BUTTON_RIGHT  : int
+- [outer]GAMEPAD_ANALOG_TRIGGER_L_AS_BUTTON           : int
+- [outer]GAMEPAD_ANALOG_TRIGGER_R_AS_BUTTON           : int
 
 Xbox button codes:
-- [outer]GAMEPAD_BUTTON_XBOX_X  : GAMEPAD_BUTTON_1
-- [outer]GAMEPAD_BUTTON_XBOX_A  : GAMEPAD_BUTTON_2
-- [outer]GAMEPAD_BUTTON_XBOX_B  : GAMEPAD_BUTTON_3
-- [outer]GAMEPAD_BUTTON_XBOX_Y  : GAMEPAD_BUTTON_4
-- [outer]GAMEPAD_BUTTON_XBOX_L1 : GAMEPAD_BUTTON_5
-- [outer]GAMEPAD_BUTTON_XBOX_LT : GAMEPAD_ANALOG_TRIGGER_L_AS_BUTTON
-- [outer]GAMEPAD_BUTTON_XBOX_R1 : GAMEPAD_BUTTON_6
-- [outer]GAMEPAD_BUTTON_XBOX_RT : GAMEPAD_ANALOG_TRIGGER_R_AS_BUTTON
-- [outer]GAMEPAD_BUTTON_XBOX_L3 : GAMEPAD_BUTTON_7
-- [outer]GAMEPAD_BUTTON_XBOX_R3 : GAMEPAD_BUTTON_8
-- [outer]GAMEPAD_BUTTON_XBOX_BACK : GAMEPAD_BUTTON_9
-- [outer]GAMEPAD_BUTTON_XBOX_START : GAMEPAD_BUTTON_10
+
+- [outer]GAMEPAD_BUTTON_XBOX_X      : GAMEPAD_BUTTON_1
+- [outer]GAMEPAD_BUTTON_XBOX_A      : GAMEPAD_BUTTON_2
+- [outer]GAMEPAD_BUTTON_XBOX_B      : GAMEPAD_BUTTON_3
+- [outer]GAMEPAD_BUTTON_XBOX_Y      : GAMEPAD_BUTTON_4
+- [outer]GAMEPAD_BUTTON_XBOX_L1     : GAMEPAD_BUTTON_5
+- [outer]GAMEPAD_BUTTON_XBOX_LT     : GAMEPAD_ANALOG_TRIGGER_L_AS_BUTTON
+- [outer]GAMEPAD_BUTTON_XBOX_R1     : GAMEPAD_BUTTON_6
+- [outer]GAMEPAD_BUTTON_XBOX_RT     : GAMEPAD_ANALOG_TRIGGER_R_AS_BUTTON
+- [outer]GAMEPAD_BUTTON_XBOX_L3     : GAMEPAD_BUTTON_7
+- [outer]GAMEPAD_BUTTON_XBOX_R3     : GAMEPAD_BUTTON_8
+- [outer]GAMEPAD_BUTTON_XBOX_BACK   : GAMEPAD_BUTTON_9
+- [outer]GAMEPAD_BUTTON_XBOX_START  : GAMEPAD_BUTTON_10
 
 Playstation button codes:
-- [outer]GAMEPAD_BUTTON_PLAYSTATION_SQUARE : GAMEPAD_BUTTON_1
-- [outer]GAMEPAD_BUTTON_PLAYSTATION_CROSS : GAMEPAD_BUTTON_2
-- [outer]GAMEPAD_BUTTON_PLAYSTATION_CIRCLE : GAMEPAD_BUTTON_3
-- [outer]GAMEPAD_BUTTON_PLAYSTATION_TRIANGLE : GAMEPAD_BUTTON_4
-- [outer]GAMEPAD_BUTTON_PLAYSTATION_L1 : GAMEPAD_BUTTON_5
-- [outer]GAMEPAD_BUTTON_PLAYSTATION_L2 : GAMEPAD_ANALOG_TRIGGER_L_AS_BUTTON
-- [outer]GAMEPAD_BUTTON_PLAYSTATION_R1 : GAMEPAD_BUTTON_6
-- [outer]GAMEPAD_BUTTON_PLAYSTATION_R2 : GAMEPAD_ANALOG_TRIGGER_R_AS_BUTTON
-- [outer]GAMEPAD_BUTTON_PLAYSTATION_L3 : GAMEPAD_BUTTON_7
-- [outer]GAMEPAD_BUTTON_PLAYSTATION_R3 : GAMEPAD_BUTTON_8
-- [outer]GAMEPAD_BUTTON_PLAYSTATION_SHARE : GAMEPAD_BUTTON_9
-- [outer]GAMEPAD_BUTTON_PLAYSTATION_OPTION : GAMEPAD_BUTTON_10
+
+- [outer]GAMEPAD_BUTTON_PLAYSTATION_SQUARE    : GAMEPAD_BUTTON_1
+- [outer]GAMEPAD_BUTTON_PLAYSTATION_CROSS     : GAMEPAD_BUTTON_2
+- [outer]GAMEPAD_BUTTON_PLAYSTATION_CIRCLE    : GAMEPAD_BUTTON_3
+- [outer]GAMEPAD_BUTTON_PLAYSTATION_TRIANGLE  : GAMEPAD_BUTTON_4
+- [outer]GAMEPAD_BUTTON_PLAYSTATION_L1        : GAMEPAD_BUTTON_5
+- [outer]GAMEPAD_BUTTON_PLAYSTATION_L2        : GAMEPAD_ANALOG_TRIGGER_L_AS_BUTTON
+- [outer]GAMEPAD_BUTTON_PLAYSTATION_R1        : GAMEPAD_BUTTON_6
+- [outer]GAMEPAD_BUTTON_PLAYSTATION_R2        : GAMEPAD_ANALOG_TRIGGER_R_AS_BUTTON
+- [outer]GAMEPAD_BUTTON_PLAYSTATION_L3        : GAMEPAD_BUTTON_7
+- [outer]GAMEPAD_BUTTON_PLAYSTATION_R3        : GAMEPAD_BUTTON_8
+- [outer]GAMEPAD_BUTTON_PLAYSTATION_SHARE     : GAMEPAD_BUTTON_9
+- [outer]GAMEPAD_BUTTON_PLAYSTATION_OPTION    : GAMEPAD_BUTTON_10
 
 #### Gamepad Analog Codes
-- [outer]GAMEPAD_ANALOG_THUMBSTICK_L : int
-- [outer]GAMEPAD_ANALOG_THUMBSTICK_R : int
-- [outer]GAMEPAD_ANALOG_TRIGGER_L : int
-- [outer]GAMEPAD_ANALOG_TRIGGER_R : int
+
+- [outer]GAMEPAD_ANALOG_THUMBSTICK_L  : int
+- [outer]GAMEPAD_ANALOG_THUMBSTICK_R  : int
+- [outer]GAMEPAD_ANALOG_TRIGGER_L     : int
+- [outer]GAMEPAD_ANALOG_TRIGGER_R     : int
 
 #### Controller preference
-- [outer]CONTROLLER_PREFERENCE_GENERIC : int
-- [outer]CONTROLLER_PREFERENCE_PLAYSTATION : int
-- [outer]CONTROLLER_PREFERENCE_XBOX : int
 
-#### Cursor codes:
-- [outer]CURSOR_DEFAULT : int
-- [outer]CURSOR_TEXTINPUT : int
-- [outer]CURSOR_RESIZEALL : int
-- [outer]CURSOR_RESIZE_NS : int
-- [outer]CURSOR_RESIZE_EW : int
-- [outer]CURSOR_RESIZE_NESW : int
-- [outer]CURSOR_RESIZE_NWSE : int
-- [outer]CURSOR_HAND : int
-- [outer]CURSOR_NOTALLOWED : int
-- [outer]CURSOR_CROSS : int
+- [outer]CONTROLLER_PREFERENCE_GENERIC      : int
+- [outer]CONTROLLER_PREFERENCE_PLAYSTATION  : int
+- [outer]CONTROLLER_PREFERENCE_XBOX         : int
 
+#### Cursor codes
+
+- [outer]CURSOR_DEFAULT      : int
+- [outer]CURSOR_TEXTINPUT    : int
+- [outer]CURSOR_RESIZEALL    : int
+- [outer]CURSOR_RESIZE_NS    : int
+- [outer]CURSOR_RESIZE_EW    : int
+- [outer]CURSOR_RESIZE_NESW  : int
+- [outer]CURSOR_RESIZE_NWSE  : int
+- [outer]CURSOR_HAND         : int
+- [outer]CURSOR_NOTALLOWED   : int
+- [outer]CURSOR_CROSS        : int
 
 ### Physics
-- [outer]physics : Physics	-- use this global object to access physics functions
-- SetEnabled(bool value)	-- Enable/disable the physics engine all together
+
+- [outer]physics : Physics  -- use this global object to access physics functions
+- SetEnabled(bool value)  -- Enable/disable the physics engine all together
 - IsEnabled() : bool
-- SetSimulationEnabled(bool value)	-- Enable/disable the physics simulation. Physics engine state will be updated but not simulated
+- SetSimulationEnabled(bool value)  -- Enable/disable the physics simulation. Physics engine state will be updated but not simulated
 - IsSimulationEnabled() : bool
-- SetInterpolationEnabled(bool value)	-- Enable/disable the physics interpolation. When enabled, simulation's fixed frame rate will be interpolated to match the variable frame rate of rendering
+- SetInterpolationEnabled(bool value)  -- Enable/disable the physics interpolation. When enabled, simulation's fixed frame rate will be interpolated to match the variable frame rate of rendering
 - IsInterpolationEnabled() : bool
-- SetDebugDrawEnabled(bool value)	-- Enable/disable debug drawing of physics objects
+- SetDebugDrawEnabled(bool value)  -- Enable/disable debug drawing of physics objects
 - IsDebugDrawEnabled() : bool
-- SetAccuracy(int value)	-- Set the accuracy of the simulation. This value corresponds to maximum simulation step count. Higher values will be slower but more accurate.
+- SetAccuracy(int value)  -- Set the accuracy of the simulation. This value corresponds to maximum simulation step count. Higher values will be slower but more accurate.
 - GetAccuracy() : int
-- SetFrameRate(float value)	-- Set the frames per second resolution of physics simulation (default = 120 FPS)
+- SetFrameRate(float value)  -- Set the frames per second resolution of physics simulation (default = 120 FPS)
 - GetFrameRate() : float
-- GetVelocity(RigidBodyPhysicsComponent component) : Vector	-- returns linear velocity of the body in the latest simulation step
-- GetPosition(RigidBodyPhysicsComponent component) : Vector	-- returns current position of the body in the latest simulation step
-- GetRotation(RigidBodyPhysicsComponent component) : Vector	-- returns current rotation of the body in the latest simulation step
-- GetCharacterGroundPosition(RigidBodyPhysicsComponent component) : Vector		-- returns the ground position of the rigidbody if it has character physics enabled
-- GetCharacterGroundNormal(RigidBodyPhysicsComponent component) : Vector		-- returns the ground normal of the rigidbody if it has character physics enabled
-- GetCharacterGroundVelocity(RigidBodyPhysicsComponent component) : Vector		-- returns the ground velocity of the rigidbody if it has character physics enabled
-- IsCharacterGroundSupported(RigidBodyPhysicsComponent component) : bool		-- returns true if the character physics is supported by normal or steep ground
-- GetCharacterGroundState(RigidBodyPhysicsComponent component) : CharacterGroundStates			-- returns the `CharacterGroundStates` of the character physics
-- ChangeCharacterShape(RigidBodyPhysicsComponent component, float height, float radius) : bool		-- changes the physics character's shape into a capsule with specified height and radius. Returns true if successful, false otherwise. Failure means that something is blocking the character.
+- GetVelocity(RigidBodyPhysicsComponent component) : Vector  -- returns linear velocity of the body in the latest simulation step
+- GetPosition(RigidBodyPhysicsComponent component) : Vector  -- returns current position of the body in the latest simulation step
+- GetRotation(RigidBodyPhysicsComponent component) : Vector  -- returns current rotation of the body in the latest simulation step
+- GetCharacterGroundPosition(RigidBodyPhysicsComponent component) : Vector  -- returns the ground position of the rigidbody if it has character physics enabled
+- GetCharacterGroundNormal(RigidBodyPhysicsComponent component) : Vector  -- returns the ground normal of the rigidbody if it has character physics enabled
+- GetCharacterGroundVelocity(RigidBodyPhysicsComponent component) : Vector  -- returns the ground velocity of the rigidbody if it has character physics enabled
+- IsCharacterGroundSupported(RigidBodyPhysicsComponent component) : bool  -- returns true if the character physics is supported by normal or steep ground
+- GetCharacterGroundState(RigidBodyPhysicsComponent component) : CharacterGroundStates  -- returns the `CharacterGroundStates` of the character physics
+- ChangeCharacterShape(RigidBodyPhysicsComponent component, float height, float radius) : bool  -- changes the physics character's shape into a capsule with specified height and radius. Returns true if successful, false otherwise. Failure means that something is blocking the character.
 - MoveCharacter(RigidBodyPhysicsComponent component, Vector movement_direction, opt float movement_speed = 6, opt float jump = 0, opt bool controlMovementDuringJump = false)	-- applies movement logic to physics character
-- SetGhostMode(RigidBodyPhysicsComponent|HumanoidComponent component, bool value)	-- enable/disable ghost mode for rigid body or ragdoll (all collision disabled)
-- SetRagdollGhostMode(HumanoidComponent humanoid, bool value)	-- enable/disable ghost mode for a ragdoll. In ghost mode, the ragdoll will not collide with anything. Enable this if the humanoid sits inside a vehicle for example.
-- SetPosition(RigidBodyPhysicsComponent component, Vector position)	-- teleport a dynamic body
-- SetPositionAndRotation(RigidBodyPhysicsComponent component, Vector position, Vector rotationQuaternion)	-- teleport a dynamic body
-- SetLinearVelocity(RigidBodyPhysicsComponent component, Vector velocity)	-- Set the linear velocity manually
-- SetAngularVelocity(RigidBodyPhysicsComponent component, Vector velocity)	-- Set the angular velocity manually
-- ApplyForce(RigidBodyPhysicsComponent component, Vector force)	-- Apply force at body center
-- ApplyForceAt(RigidBodyPhysicsComponent component, Vector force, Vector at, bool at_local = true)	-- Apply force at body local position (at_local controls whether the at is in body's local space or not)
-- ApplyImpulse(RigidBodyPhysicsComponent component, Vector impulse)	-- Apply impulse at body center
-- ApplyImpulse(HumanoidComponent humanoid, HumanoidBone bone, Vector impulse)	-- Apply impulse at body center of ragdoll bone
-- ApplyImpulseAt(RigidBodyPhysicsComponent component, Vector impulse, Vector at, bool at_local = true)	-- Apply impulse at body local position (at_local controls whether the at is in body's local space or not)
-- ApplyImpulseAt(HumanoidComponent humanoid, HumanoidBone bone, Vector impulse, Vector at, bool at_local = true)	-- Apply impulse at body local position of ragdoll bone (at_local controls whether the at is in body's local space or not)
-- ApplyTorque(RigidBodyPhysicsComponent component, Vector torque)	-- Apply torque at body center
-- ActivateAllRigidBodies(Scene scene)	-- Activate all rigid bodies in the scene
-- ResetPhysicsObjects(Scene scene)	-- Reset all rigid bodies to their initial orientations
-- SetActivationState(RigidBodyPhysicsComponent component, int state)	-- Force set activation state to rigid body. Use a value ACTIVATION_STATE_ACTIVE or ACTIVATION_STATE_INACTIVE
-- SetActivationState(SoftBodyPhysicsComponent component, int state)	-- Force set activation state to soft body. Use a value ACTIVATION_STATE_ACTIVE or ACTIVATION_STATE_INACTIVE
+- SetGhostMode(RigidBodyPhysicsComponent|HumanoidComponent component, bool value)  -- enable/disable ghost mode for rigid body or ragdoll (all collision disabled)
+- SetRagdollGhostMode(HumanoidComponent humanoid, bool value)  -- enable/disable ghost mode for a ragdoll. In ghost mode, the ragdoll will not collide with anything. Enable this if the humanoid sits inside a vehicle for example.
+- SetPosition(RigidBodyPhysicsComponent component, Vector position)  -- teleport a dynamic body
+- SetPositionAndRotation(RigidBodyPhysicsComponent component, Vector position, Vector rotationQuaternion)  -- teleport a dynamic body
+- SetLinearVelocity(RigidBodyPhysicsComponent component, Vector velocity)  -- Set the linear velocity manually
+- SetAngularVelocity(RigidBodyPhysicsComponent component, Vector velocity)  -- Set the angular velocity manually
+- ApplyForce(RigidBodyPhysicsComponent component, Vector force)  -- Apply force at body center
+- ApplyForceAt(RigidBodyPhysicsComponent component, Vector force, Vector at, bool at_local = true)  -- Apply force at body local position (at_local controls whether the at is in body's local space or not)
+- ApplyImpulse(RigidBodyPhysicsComponent component, Vector impulse)  -- Apply impulse at body center
+- ApplyImpulse(HumanoidComponent humanoid, HumanoidBone bone, Vector impulse)  -- Apply impulse at body center of ragdoll bone
+- ApplyImpulseAt(RigidBodyPhysicsComponent component, Vector impulse, Vector at, bool at_local = true)  -- Apply impulse at body local position (at_local controls whether the at is in body's local space or not)
+- ApplyImpulseAt(HumanoidComponent humanoid, HumanoidBone bone, Vector impulse, Vector at, bool at_local = true)  -- Apply impulse at body local position of ragdoll bone (at_local controls whether the at is in body's local space or not)
+- ApplyTorque(RigidBodyPhysicsComponent component, Vector torque)  -- Apply torque at body center
+- ActivateAllRigidBodies(Scene scene)  -- Activate all rigid bodies in the scene
+- ResetPhysicsObjects(Scene scene)  -- Reset all rigid bodies to their initial orientations
+- SetActivationState(RigidBodyPhysicsComponent component, int state)  -- Force set activation state to rigid body. Use a value ACTIVATION_STATE_ACTIVE or ACTIVATION_STATE_INACTIVE
+- SetActivationState(SoftBodyPhysicsComponent component, int state)  -- Force set activation state to soft body. Use a value ACTIVATION_STATE_ACTIVE or ACTIVATION_STATE_INACTIVE
 - [outer]ACTIVATION_STATE_ACTIVE : int
 - [outer]ACTIVATION_STATE_INACTIVE : int
 
 ```lua
-CharacterGroundStates = {
-	OnGround = 0,		-- Character is on the ground and can move freely.
-	OnSteepGround = 1,	-- Character is on a slope that is too steep and can't climb up any further. The caller should start applying downward velocity if sliding from the slope is desired.
-	NotSupported = 2,	-- Character is touching an object, but is not supported by it and should fall. The GetGroundXXX functions will return information about the touched object.
-	InAir = 3,			-- Character is in the air and is not touching anything.
+[outer] CharacterGroundStates = {
+    OnGround = 0,       -- Character is on the ground and can move freely.
+    OnSteepGround = 1,  -- Character is on a slope that is too steep and can't climb up any further. The caller should start applying downward velocity if sliding  from the slope is desired.
+    NotSupported = 2,   -- Character is touching an object, but is not supported by it and should fall. The GetGroundXXX functions will return information about the    touched object.
+    InAir = 3,          -- Character is in the air and is not touching anything.
 }
 ```
 
-- Intersects(Scene scene, Ray ray) : Entity entity, Vector position,normal, Entity humanoid_ragdoll_entity, HumanoidBone humanoid_bone, Vector position_local	-- Performns physics scene intersection for closest hit with a ray
+- Intersects(Scene scene, Ray ray) : Entity entity, Vector position,normal, Entity humanoid_ragdoll_entity, HumanoidBone humanoid_bone, Vector position_local  -- Performns physics scene intersection for closest hit with a ray
 
-- DriveVehicle(RigidBodyPhysicsComponent rigidbody, opt float forward = 0, opt float right = 0, opt float brake = 0, opt float handbrake = 0)	-- set input from driver: forward and right values are values between -1 and 1 to indicate reverse/forward or left/right. brake and handbrake (handbrake = back brake for motorcycles) are values between 0 and 1.
-- GetVehicleForwardVelocity(RigidBodyPhysicsComponent rigidbody) : float	-- Signed velocity amount in forward direction
+- DriveVehicle(RigidBodyPhysicsComponent rigidbody, opt float forward = 0, opt float right = 0, opt float brake = 0, opt float handbrake = 0)  -- set input from driver: forward and right values are values between -1 and 1 to indicate reverse/forward or left/right. brake and handbrake (handbrake = back brake for motorcycles) are values between 0 and 1.
+- GetVehicleForwardVelocity(RigidBodyPhysicsComponent rigidbody) : float  -- Signed velocity amount in forward direction
 
-- PickDrag(Scene scene, Ray, ray, PickDragOperation op, opt ConstraintType constraint, opt float break_distance = FLT_MAX) -- pick and drag physics objects such as ragdolls and rigid bodies.
+- PickDrag(Scene scene, Ray, ray, PickDragOperation op, opt ConstraintType constraint, opt float break_distance = FLT_MAX)  -- pick and drag physics objects such as ragdolls and rigid bodies.
 
 ```lua
-ConstraintType = {
-	Fixed = 0,
-	Point = 1
+[outer] ConstraintType = {
+    Fixed = 0,
+    Point = 1,
 }
 ```
 
 #### PickDragOperation
-Tracks a physics pick drag operation. Use it with `phyiscs.PickDrag()` function. When using this object first time to PickDrag, the operation will be started and the operation will end when you call Finish() or when the object is destroyed
+
+Tracks a physics pick drag operation. Use it with `phyiscs.PickDrag()` function.
+When using this object first time to PickDrag, the operation will be started and
+the operation will end when you call Finish() or when the object is destroyed
+
 - [constructor]PickDragOperation() -- creates the object
 - Finish() -- finish the operation, puts down the physics object
 
-
 ### Path finding
-Path finding operations can be made by using a voxel grid and path queries. The voxel grid can store spatial information about a scene, or a part of the scene, while the path query manages the path finding result from a point to a different point within the voxel grid.
+
+Path finding operations can be made by using a voxel grid and path queries. The
+voxel grid can store spatial information about a scene, or a part of the scene,
+while the path query manages the path finding result from a point to a different
+point within the voxel grid.
 
 #### VoxelGrid
+
 - [constructor] VoxelGrid(opt int dimX,dimY,dimZ) -- if you give parameters, it will work like the Init() function
 - Init(int dimX,dimY,dimZ) -- Allocates memory for dimX * dimY * dimZ number of voxels and initializes them to empty
 - ClearData() -- initializes all voxels to empty
@@ -2346,9 +2562,10 @@ Path finding operations can be made by using a voxel grid and path queries. The 
 - IsVisible(int observer_x,observer_y,observer_z, subject_x,subject_y,subject_z) : bool -- performs line of sight occlusion test from observer to subject voxel coordinates. Returns false if occlusion was found, true otherwise.
 - IsVisible(AABB observer, subject) : bool -- performs line of sight occlusion test from observer to subject world space points. Returns false if occlusion was found, true otherwise.
 - IsVisible(AABB observer, AABB subject) : bool -- performs line of sight occlusion test from observer world space point to subject AABB. Returns true if any of the AABB's touched voxels is visible, false otherwise.
-- FloodFill()	-- Sets every empty voxel which is enclosed to solid.
+- FloodFill()  -- Sets every empty voxel which is enclosed to solid.
 
 #### PathQuery
+
 - [constructor] PathQuery()
 - Process(Vector start,goal, VoxelGrid voxelgrid) -- computes the path from start to goal on a voxel grid and stores the result
 - SearchCover(Vector observer,subject,direction, float max_distance, VoxelGrid voxelgrid) -- searches for a cover for subject position to hide from observer. The search will be in a specific direction, within the specified distance (approximately, within voxel precision)
@@ -2366,28 +2583,29 @@ Path finding operations can be made by using a voxel grid and path queries. The 
 - GetGoal() : Vector -- returns goal position
 
 ### TrailRenderer
+
 - [constructor] TrailRenderer()
-- AddPoint(Vector pos, opt float width = 1, opt Vector color = Vector(1,1,1,1), opt Vector rotationQuaternion = Vector()) -- adds a new point to the trail. Note: if rotation is not specified, then point will be camera facing, otherwise UP direction will be rotated
-- Cut(opt bool loop = false) -- cuts the trail at last point and starts a new trail. You can specify that this cut will create a loop of the previously added points.
-- Fade(float amount)	-- Applies fade for the whole trail continuously, and removes segments that can be removed due to faded
+- AddPoint(Vector pos, opt float width = 1, opt Vector color = Vector(1,1,1,1), opt Vector rotationQuaternion = Vector())  -- adds a new point to the trail. Note: if rotation is not specified, then point will be camera facing, otherwise UP direction will be rotated
+- Cut(opt bool loop = false)  -- cuts the trail at last point and starts a new trail. You can specify that this cut will create a loop of the previously added points.
+- Fade(float amount)  -- Applies fade for the whole trail continuously, and removes segments that can be removed due to faded
 - Clear() -- removes all points and cuts from the trail
-- GetPointCount() : int -- returns the number of points in the trail
-- GetPoint() : Vector pos, float width -- returns the point of the trail on the specified index
-- SetPoint(Vector pos, opt float width = 1, opt Vector color = Vector(1,1,1,1)) -- sets the point parameters on the specified index
-- SetBlendMode(int blendmode) -- set blend mode of the whole trail
+- GetPointCount() : int  -- returns the number of points in the trail
+- GetPoint() : Vector pos, float width  -- returns the point of the trail on the specified index
+- SetPoint(Vector pos, opt float width = 1, opt Vector color = Vector(1,1,1,1))  -- sets the point parameters on the specified index
+- SetBlendMode(int blendmode)  -- set blend mode of the whole trail
 - GetBlendMode() : int
-- SetSubdivision(int subdiv) -- set the subdivision amount of the whole trail
+- SetSubdivision(int subdiv)  -- set the subdivision amount of the whole trail
 - GetSubdivision() : int
-- SetWidth(float width) -- set the width of the whole trail
+- SetWidth(float width)  -- set the width of the whole trail
 - GetWidth() : float
-- SetColor(Vector color) -- set the color of the whole trail
+- SetColor(Vector color)  -- set the color of the whole trail
 - GetColor() : Vector
-- SetTexture(Texture tex) -- set the texture of the whole trail
+- SetTexture(Texture tex)  -- set the texture of the whole trail
 - GetTexture() : Texture
-- SetTexture2(Texture tex) -- set the texture2 of the whole trail
+- SetTexture2(Texture tex)  -- set the texture2 of the whole trail
 - GetTexture2() : Texture
-- SetTexMulAdd(Texture tex) -- set the texture UV tiling multiply-add value of the whole trail
+- SetTexMulAdd(Texture tex)  -- set the texture UV tiling multiply-add value of the whole trail
 - GetTexMulAdd() : Texture
-- SetTexMulAdd2(Texture tex) -- set the texture2 UV tiling multiply-add value of the whole trail
+- SetTexMulAdd2(Texture tex)  -- set the texture2 UV tiling multiply-add value of the whole trail
 - GetTexMulAdd2() : Texture
-- SetDepthSoften(float value)	-- sets the depth soften amount (default = 10)
+- SetDepthSoften(float value)  -- sets the depth soften amount (default = 10)
