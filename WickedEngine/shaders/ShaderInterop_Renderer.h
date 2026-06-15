@@ -1179,11 +1179,6 @@ struct ShaderEntityIterator
 	{
 		return ~0u >> (31u - (last_item() % 32u));
 	}
-	// This masks out inactive buckets of the current type based on a whole tile bucket mask
-	inline uint mask_type(uint tile_mask)
-	{
-		return tile_mask & bucket_mask();
-	}
 	// This masks out inactive entities for the current bucket type when processing either the first or the last bucket in the list
 	inline uint mask_entity(uint bucket, uint bucket_bits)
 	{
@@ -1558,7 +1553,7 @@ CBUFFER(MiscCB, CBSLOT_RENDERER_MISC)
 
 CBUFFER(ForwardEntityMaskCB, CBSLOT_RENDERER_FORWARD_LIGHTMASK)
 {
-	uint2 xForwardLightMask;	// supports indexing 64 lights
+	uint64_t xForwardLightMask;	// supports indexing 64 lights
 	uint xForwardDecalMask;		// supports indexing 32 decals
 	uint xForwardEnvProbeMask;	// supports indexing 32 environment probes
 };

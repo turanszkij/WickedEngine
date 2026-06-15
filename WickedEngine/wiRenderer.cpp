@@ -3113,26 +3113,19 @@ ForwardEntityMaskCB ForwardEntityCullingCPU(const Visibility& vis, const AABB& b
 	// Performs CPU light culling for a renderable batch:
 	//	Similar to GPU-based tiled light culling, but this is only for simple forward passes (drawcall-granularity)
 
-	ForwardEntityMaskCB cb;
-	cb.xForwardLightMask.x = 0;
-	cb.xForwardLightMask.y = 0;
-	cb.xForwardDecalMask = 0;
-	cb.xForwardEnvProbeMask = 0;
+	ForwardEntityMaskCB cb = {};
 
-	uint32_t buckets[2] = { 0,0 };
-	for (size_t i = 0; i < std::min(size_t(64), vis.visibleLights.size()); ++i) // only support indexing 64 lights at max for now
+	for (size_t i = 0; i < std::min(size_t(64), vis.visibleLights.size()); ++i) // only support indexing 64 lights at max in this mode
 	{
 		const uint32_t lightIndex = vis.visibleLights[i];
 		const AABB& light_aabb = vis.scene->aabb_lights[lightIndex];
 		if (light_aabb.intersects(batch_aabb))
 		{
-			const uint8_t bucket_index = uint8_t(i / 32);
-			const uint8_t bucket_place = uint8_t(i % 32);
-			buckets[bucket_index] |= 1 << bucket_place;
+			const uint64_t bucket_index = uint64_t(i / 64);
+			const uint64_t bucket_place = uint64_t(i % 64);
+			cb.xForwardLightMask |= uint64_t(1) << bucket_place;
 		}
 	}
-	cb.xForwardLightMask.x = buckets[0];
-	cb.xForwardLightMask.y = buckets[1];
 
 	for (size_t i = 0; i < std::min(size_t(32), vis.visibleDecals.size()); ++i)
 	{
@@ -3140,8 +3133,8 @@ ForwardEntityMaskCB ForwardEntityCullingCPU(const Visibility& vis, const AABB& b
 		const AABB& decal_aabb = vis.scene->aabb_decals[decalIndex];
 		if (decal_aabb.intersects(batch_aabb))
 		{
-			const uint8_t bucket_place = uint8_t(i % 32);
-			cb.xForwardDecalMask |= 1 << bucket_place;
+			const uint32_t bucket_place = uint32_t(i % 32);
+			cb.xForwardDecalMask |= uint32_t(1) << bucket_place;
 		}
 	}
 
@@ -3151,8 +3144,8 @@ ForwardEntityMaskCB ForwardEntityCullingCPU(const Visibility& vis, const AABB& b
 		const AABB& probe_aabb = vis.scene->aabb_probes[probeIndex];
 		if (probe_aabb.intersects(batch_aabb))
 		{
-			const uint8_t bucket_place = uint8_t(i % 32);
-			cb.xForwardEnvProbeMask |= 1 << bucket_place;
+			const uint32_t bucket_place = uint32_t(i % 32);
+			cb.xForwardEnvProbeMask |= uint32_t(1) << bucket_place;
 		}
 	}
 

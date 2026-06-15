@@ -782,7 +782,7 @@ struct Surface
 			
 			// Loop through decal buckets in the tile:
 			ShaderEntityIterator iterator = decals();
-			for(uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
+			for (uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 			{
 				uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 				bucket_bits = iterator.mask_entity(bucket, bucket_bits);

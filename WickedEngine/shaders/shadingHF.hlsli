@@ -112,56 +112,47 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 	}
 
 	[branch]
-	if (any(xForwardLightMask))
+	if (xForwardLightMask != 0)
 	{
 		// Loop through light buckets for the draw call:
-		const uint first_item = 0;
-		const uint last_item = first_item + lights().item_count() - 1;
-		const uint first_bucket = first_item / 32;
-		const uint last_bucket = min(last_item / 32, 1); // only 2 buckets max (uint2) for forward pass!
+		uint bucket_bits = xForwardLightMask;
+
 		[loop]
-		for (uint bucket = first_bucket; bucket <= last_bucket; ++bucket)
+		while (bucket_bits != 0)
 		{
-			uint bucket_bits = xForwardLightMask[bucket];
+			// Retrieve global entity index from local bucket, then remove bit from local bucket:
+			const uint entity_index = firstbitlow(bucket_bits);
+			bucket_bits ^= 1u << entity_index;
 
-			[loop]
-			while (bucket_bits != 0)
-			{
-				// Retrieve global entity index from local bucket, then remove bit from local bucket:
-				const uint bucket_bit_index = firstbitlow(bucket_bits);
-				const uint entity_index = bucket * 32 + bucket_bit_index;
-				bucket_bits ^= 1u << bucket_bit_index;
-
-				ShaderEntity light = load_entity(lights().first_item() + entity_index);
+			ShaderEntity light = load_entity(lights().first_item() + entity_index);
 				
 #ifndef INCLUDE_STATIC_LIGHTS
-				if (light.IsStaticLight())
-					continue; // static lights will be skipped here (they are used at lightmap baking)
+			if (light.IsStaticLight())
+				continue; // static lights will be skipped here (they are used at lightmap baking)
 #endif // INCLUDE_STATIC_LIGHTS
 					
-				switch (light.GetType())
-				{
-				case ENTITY_TYPE_DIRECTIONALLIGHT:
-				{
-					light_directional(light, surface, lighting);
-				}
-				break;
-				case ENTITY_TYPE_POINTLIGHT:
-				{
-					light_point(light, surface, lighting);
-				}
-				break;
-				case ENTITY_TYPE_SPOTLIGHT:
-				{
-					light_spot(light, surface, lighting);
-				}
-				break;
-				case ENTITY_TYPE_RECTLIGHT:
-				{
-					light_rect(light, surface, lighting);
-				}
-				break;
-				}
+			switch (light.GetType())
+			{
+			case ENTITY_TYPE_DIRECTIONALLIGHT:
+			{
+				light_directional(light, surface, lighting);
+			}
+			break;
+			case ENTITY_TYPE_POINTLIGHT:
+			{
+				light_point(light, surface, lighting);
+			}
+			break;
+			case ENTITY_TYPE_SPOTLIGHT:
+			{
+				light_spot(light, surface, lighting);
+			}
+			break;
+			case ENTITY_TYPE_RECTLIGHT:
+			{
+				light_rect(light, surface, lighting);
+			}
+			break;
 			}
 		}
 	}
@@ -298,7 +289,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	{
 		// Loop through envmap buckets in the tile:
 		ShaderEntityIterator iterator = probes();
-		for(uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
+		for (uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 		{
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
@@ -403,7 +394,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	{
 		// Directional lights are not culled, so simply iterate through each one:
 		ShaderEntityIterator iterator = directional_lights();
-		for(uint entity_index = iterator.first_item(); entity_index < iterator.end_item(); ++entity_index)
+		for (uint entity_index = iterator.first_item(); entity_index < iterator.end_item(); ++entity_index)
 		{
 			ShaderEntity light = load_entity(entity_index);
 
@@ -434,7 +425,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	{
 		// Loop through light buckets in the tile:
 		ShaderEntityIterator iterator = spotlights();
-		for(uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
+		for (uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 		{
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
@@ -476,7 +467,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	{
 		// Loop through light buckets in the tile:
 		ShaderEntityIterator iterator = pointlights();
-		for(uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
+		for (uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 		{
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
@@ -518,7 +509,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	{
 		// Loop through light buckets in the tile:
 		ShaderEntityIterator iterator = rectlights();
-		for(uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
+		for (uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 		{
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
@@ -564,9 +555,9 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 		half capsuleshadow = 1;
 		half capsulereflection = 1;
 		
-		// Loop through light buckets in the tile:
+		// Loop through entity buckets in the tile:
 		ShaderEntityIterator iterator = forces();
-		for (uint bucket = iterator.first_bucket(); (bucket <= iterator.last_bucket()) && (capsuleshadow > 0 || capsulereflection > 0); ++bucket)
+		for (uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 		{
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
@@ -641,7 +632,7 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex, inout half4 s
 
 	// Loop through decal buckets in the tile:
 	ShaderEntityIterator iterator = decals();
-	for(uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
+	for (uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 	{
 		uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 		bucket_bits = iterator.mask_entity(bucket, bucket_bits);
