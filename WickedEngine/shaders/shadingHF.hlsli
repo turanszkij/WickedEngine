@@ -115,13 +115,12 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 	if (xForwardLightMask != 0)
 	{
 		// Loop through light buckets for the draw call:
-		uint bucket_bits = xForwardLightMask;
+		uint64_t bucket_bits = xForwardLightMask;
 
-		[loop]
 		while (bucket_bits != 0)
 		{
 			// Retrieve global entity index from local bucket, then remove bit from local bucket:
-			const uint entity_index = firstbitlow(bucket_bits);
+			const uint entity_index = firstbitlow64(bucket_bits);
 			bucket_bits ^= 1u << entity_index;
 
 			ShaderEntity light = load_entity(lights().first_item() + entity_index);

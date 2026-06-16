@@ -51,6 +51,7 @@ inline void ApplyLighting(in Surface surface, in Lighting lighting, inout half4 
 	color.rgb = lerp(surface.albedo * diffuse, surface.refraction.rgb * (1 - surface.F), surface.refraction.a);
 	color.rgb += specular;
 	color.rgb += surface.emissiveColor;
+	color.rgb = saturateMediump(color.rgb);
 }
 
 //#define CASCADE_DITHERING

@@ -10,10 +10,10 @@ groupshared uint uMaxDepth;
 groupshared uint uDepthMask;		// Harada Siggraph 2012 2.5D culling
 groupshared uint tile_opaque[SHADER_ENTITY_TILE_BUCKET_COUNT];
 groupshared uint tile_transparent[SHADER_ENTITY_TILE_BUCKET_COUNT];
-#ifdef DEBUG_TILEDLIGHTCULLING
+#ifdef DEBUG
 groupshared uint entityCountDebug;
 RWTexture2D<unorm float4> DebugTexture : register(u3);
-#endif // DEBUG_TILEDLIGHTCULLING
+#endif // DEBUG
 
 void AppendEntity_Opaque(uint entityIndex)
 {
@@ -21,9 +21,9 @@ void AppendEntity_Opaque(uint entityIndex)
 	const uint bucket_place = entityIndex % 32;
 	InterlockedOr(tile_opaque[bucket_index], 1u << bucket_place);
 
-#ifdef DEBUG_TILEDLIGHTCULLING
+#ifdef DEBUG
 	InterlockedAdd(entityCountDebug, 1);
-#endif // DEBUG_TILEDLIGHTCULLING
+#endif // DEBUG
 }
 
 void AppendEntity_Transparent(uint entityIndex)
@@ -89,9 +89,9 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		uMaxDepth = 0;
 		uDepthMask = 0;
 
-#ifdef DEBUG_TILEDLIGHTCULLING
+#ifdef DEBUG
 		entityCountDebug = 0;
-#endif //  DEBUG_TILEDLIGHTCULLING
+#endif //  DEBUG
 	}
 
 	// Calculate min & max depth in threadgroup / tile.
@@ -184,7 +184,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	float maxDepthVS = ScreenToView(float4(0, 0, fMaxDepth, 1), dim_rcp).z;
 	float nearClipVS = ScreenToView(float4(0, 0, 1, 1), dim_rcp).z;
 
-#ifdef ADVANCED_CULLING
+#ifdef ADVANCED
 	// We divide the minmax depth bounds to 32 equal slices
 	// then we mark the occupied depth slices with atomic or from each thread
 	// we do all this in linear (view) space
@@ -204,7 +204,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	{
 		InterlockedOr(uDepthMask, wave_depth_mask);
 	}
-#endif
+#endif // ADVANCED
 
 	GroupMemoryBarrierWithGroupSync();
 
@@ -224,9 +224,9 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 
 			if (SphereIntersectsAABB(sphere, GroupAABB)) // tighter fit than sphere-frustum culling
 			{
-#ifdef ADVANCED_CULLING
+#ifdef ADVANCED
 				if (depth_mask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
-#endif
+#endif // ADVANCED
 				{
 					AppendEntity_Opaque(i);
 				}
@@ -254,9 +254,9 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 
 			if (IntersectAABB(a, b))
 			{
-#ifdef ADVANCED_CULLING
+#ifdef ADVANCED
 				if (depth_mask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
-#endif
+#endif // ADVANCED
 				{
 					AppendEntity_Opaque(i);
 				}
@@ -284,9 +284,9 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 
 			if (IntersectAABB(a, b))
 			{
-#ifdef ADVANCED_CULLING
+#ifdef ADVANCED
 				if (depth_mask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
-#endif
+#endif // ADVANCED
 				{
 					AppendEntity_Opaque(i);
 				}
@@ -308,9 +308,9 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 
 			if (SphereIntersectsAABB(sphere, GroupAABB)) // tighter fit than sphere-frustum culling
 			{
-#ifdef ADVANCED_CULLING
+#ifdef ADVANCED
 				if (depth_mask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
-#endif
+#endif // ADVANCED
 				{
 					AppendEntity_Opaque(i);
 				}
@@ -330,7 +330,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		entityTiles[GetCamera().entity_culling_tile_bucket_count_flat + tileBucketsAddress + i] = tile_transparent[i];
 	}
 
-#ifdef DEBUG_TILEDLIGHTCULLING
+#ifdef DEBUG
 	for (uint granularity = 0; granularity < TILED_CULLING_GRANULARITY * TILED_CULLING_GRANULARITY; ++granularity)
 	{
 		uint2 pixel = DTid.xy * uint2(TILED_CULLING_GRANULARITY, TILED_CULLING_GRANULARITY) + unflatten2D(granularity, TILED_CULLING_GRANULARITY);
@@ -351,6 +351,6 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		float4 heatmap = float4(lerp(a, b, l - floor(l)), 0.8);
 		DebugTexture[pixel] = heatmap;
 	}
-#endif // DEBUG_TILEDLIGHTCULLING
+#endif // DEBUG
 
 }

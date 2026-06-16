@@ -125,10 +125,6 @@ wi::vector<ShaderEntry> shaders = {
 	{"motionblurCS_earlyexit", wi::graphics::ShaderStage::CS},
 	{"luminancePass1CS", wi::graphics::ShaderStage::CS},
 	{"lightShaftsCS", wi::graphics::ShaderStage::CS},
-	{"lightCullingCS_ADVANCED_DEBUG", wi::graphics::ShaderStage::CS},
-	{"lightCullingCS_DEBUG", wi::graphics::ShaderStage::CS},
-	{"lightCullingCS", wi::graphics::ShaderStage::CS},
-	{"lightCullingCS_ADVANCED", wi::graphics::ShaderStage::CS},
 	{"hbaoCS", wi::graphics::ShaderStage::CS},
 	{"radix_sortCS", wi::graphics::ShaderStage::CS, wi::graphics::ShaderModel::SM_6_0, {{"FPS_COUNT"}}, "FPS_Count"},
 	{"radix_sortCS", wi::graphics::ShaderStage::CS, wi::graphics::ShaderModel::SM_6_0, {{"FPS_COUNT_REDUCE"}}, "FPS_CountReduce"},
@@ -629,6 +625,13 @@ int main(int argc, char* argv[])
 	// permutations for yuv_to_rgbCS:
 	shaders.push_back({ "yuv_to_rgbCS", wi::graphics::ShaderStage::CS });
 	shaders.back().permutations.emplace_back().defines = { "ARRAY" };
+
+	// permutations for lightCullingCS:
+	shaders.push_back({ "lightCullingCS", wi::graphics::ShaderStage::CS });
+	shaders.back().permutations.emplace_back().defines = {};
+	shaders.back().permutations.emplace_back().defines = { "DEBUG" };
+	shaders.back().permutations.emplace_back().defines = { "ADVANCED" };
+	shaders.back().permutations.emplace_back().defines = { "ADVANCED", "DEBUG" };
 
 	// Simplify permutation iteration:
 	for (auto& shader : shaders)
