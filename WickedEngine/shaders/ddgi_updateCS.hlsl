@@ -25,7 +25,9 @@ groupshared uint shared_depths[DDGI_DEPTH_RESOLUTION * DDGI_DEPTH_RESOLUTION];
 static const uint THREADCOUNT = DDGI_COLOR_RESOLUTION;
 static const uint RESOLUTION = DDGI_COLOR_RESOLUTION;
 RWStructuredBuffer<DDGIVarianceDataPacked> varianceBuffer : register(u0);
-groupshared uint shared_texels[DDGI_COLOR_TEXELS * DDGI_COLOR_TEXELS];
+groupshared half shared_r[DDGI_COLOR_RESOLUTION][DDGI_COLOR_RESOLUTION];
+groupshared half shared_g[DDGI_COLOR_RESOLUTION][DDGI_COLOR_RESOLUTION];
+groupshared half shared_b[DDGI_COLOR_RESOLUTION][DDGI_COLOR_RESOLUTION];
 #endif // DDGI_UPDATE_DEPTH
 
 RWStructuredBuffer<DDGIProbe> ddgiProbeBuffer : register(u1);
@@ -85,15 +87,15 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 #endif // DDGI_UPDATE_DEPTH
 
 #ifdef DDGI_UPDATE_DEPTH
-	float2 result = 0;
+	float2 result = 0; // this must be full precision, otherwise popping will occur!
 	const uint2 pixel_topleft = ddgi_probe_depth_pixel(probeCoord);
 	const uint2 pixel_current = pixel_topleft + GTid.xy;
 	const uint2 copy_coord = pixel_topleft - 1;
 #else
-	float3 result = 0;
+	half3 result = 0;
 #endif // DDGI_UPDATE_DEPTH
 
-	const float3 texel_direction = decode_oct((((GTid.xy % RESOLUTION) + 0.5) / (float2)RESOLUTION) * 2 - 1);
+	const half3 texel_direction = decode_oct((((GTid.xy % RESOLUTION) + 0.5) / RESOLUTION) * 2 - 1);
 
 	float total_weight = 0;
 
@@ -116,7 +118,7 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 			DDGIRayData ray = ray_cache[r];
 
 #ifdef DDGI_UPDATE_DEPTH
-			float depth;
+			half depth;
 			if (ray.depth > 0)
 			{
 				depth = clamp(ray.depth - 0.01, 0, maxDistance);
@@ -131,10 +133,10 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 				probeOffsetNew -= ray.direction * (probeOffsetDistance - depth);
 			}
 #else
-			const float3 radiance = ray.radiance.rgb;
+			const half3 radiance = ray.radiance.rgb;
 #endif // DDGI_UPDATE_DEPTH
 
-			float weight = saturate(dot(texel_direction, ray.direction));
+			half weight = saturate(dot(texel_direction, ray.direction));
 #ifdef DDGI_UPDATE_DEPTH
 			weight = pow(weight, 64);
 #endif // DDGI_UPDATE_DEPTH
@@ -142,7 +144,7 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 			if (weight > WEIGHT_EPSILON)
 			{
 #ifdef DDGI_UPDATE_DEPTH
-				result += float2(depth, sqr(depth)) * weight;
+				result += half2(depth, sqr(depth)) * weight;
 #else
 				result += ray.radiance.rgb * weight;
 #endif // DDGI_UPDATE_DEPTH
@@ -163,7 +165,7 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 	}
 
 #ifdef DDGI_UPDATE_DEPTH
-	const float2 prev_result = output[pixel_current].xy;
+	const half2 prev_result = output[pixel_current].xy;
 	if (push.frameIndex > 0)
 	{
 		result = lerp(prev_result, result, 0.02);
@@ -196,7 +198,7 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 			}
 		}
 		
-		float3 probeOffset = unpack_half3(ddgiProbeBuffer[probeIndex].offset);
+		half3 probeOffset = unpack_half3(ddgiProbeBuffer[probeIndex].offset);
 		probeOffset *= probe_limit;
 		probeOffset = lerp(probeOffset, probeOffsetNew, 0.01);
 		probeOffset = clamp(probeOffset, -probe_limit, probe_limit);
@@ -221,7 +223,9 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 		varianceBuffer[variance_data_index].store(varianceData);
 		result = varianceData.mean;
 
-		shared_texels[flatten2D(GTid, DDGI_COLOR_TEXELS)] = PackRGBE(result);
+		shared_r[GTid.x][GTid.y] = result.r;
+		shared_g[GTid.x][GTid.y] = result.g;
+		shared_b[GTid.x][GTid.y] = result.b;
 	}
 
 	GroupMemoryBarrierWithGroupSync();
@@ -233,8 +237,8 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 		{
 			for (int y = 0; y < RESOLUTION; ++y)
 			{
-				const float3 direction = decode_oct(((float2(x, y) + 0.5) / (float2) RESOLUTION) * 2 - 1);
-				float3 value = UnpackRGBE(shared_texels[flatten2D(int2(x, y), DDGI_COLOR_TEXELS)]);
+				const half3 direction = decode_oct(((half2(x, y) + 0.5) / RESOLUTION) * 2 - 1);
+				half3 value = half3(shared_r[x][y], shared_g[x][y], shared_b[x][y]);
 				radiance = SH::Add(radiance, SH::ProjectOntoL1_RGB(direction, value));
 			}
 		}

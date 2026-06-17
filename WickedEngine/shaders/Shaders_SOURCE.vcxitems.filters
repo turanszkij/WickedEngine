@@ -323,16 +323,7 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)lightShaftsCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)lightCullingCS_ADVANCED_DEBUG.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)lightCullingCS_DEBUG.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)lightCullingCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)lightCullingCS_ADVANCED.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)hbaoCS.hlsl">
