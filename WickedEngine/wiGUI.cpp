@@ -86,6 +86,7 @@ namespace wi::gui
 
 			if (widget->priority_change)
 			{
+				force_disable = true;
 				widget->priority_change = false;
 				widget->priority = priority++;
 			}
@@ -104,9 +105,6 @@ namespace wi::gui
 			if (visible && state > IDLE)
 			{
 				focus = true;
-			}
-			if (visible && state > FOCUS)
-			{
 				force_disable = true;
 			}
 		}
@@ -573,7 +571,6 @@ namespace wi::gui
 	{
 		if (enabled != val)
 		{
-			priority_change = val;
 			enabled = val;
 			if (!enabled)
 				state = IDLE;
@@ -587,7 +584,6 @@ namespace wi::gui
 	{
 		if (visible != val)
 		{
-			priority_change |= val;
 			visible = val;
 			if (!visible)
 				state = IDLE;
@@ -4057,19 +4053,23 @@ namespace wi::gui
 
 		scrollable_area.AttachTo(this);
 
+		bool local_force_disable = this->force_disable;
+
 		for (size_t i = 0; i < widgets.size(); ++i)
 		{
 			Widget* widget = widgets[i]; // re index in loop, because widgets can be realloced while updating!
-			widget->force_disable = force_disable;
+			widget->force_disable = local_force_disable;
 			widget->Update(canvas, dt);
 			widget->force_disable = false;
-			if (widget->GetState() > FOCUS)
+
+			if (widget->GetState() > IDLE)
 			{
-				force_disable = true;
+				local_force_disable = true;
 			}
 
 			if (widget->priority_change)
 			{
+				this->priority_change = true;
 				widget->priority_change = false;
 				widget->priority = priority++;
 			}
@@ -4077,6 +4077,11 @@ namespace wi::gui
 			{
 				widget->priority = ~0u;
 			}
+		}
+
+		if (local_force_disable && state == IDLE)
+		{
+			state = FOCUS;
 		}
 
 		if (priority > 0)
