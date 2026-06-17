@@ -2173,35 +2173,6 @@ namespace wi
 
 		device->RenderPassBegin(rp, rp_count, cmd);
 
-		// Note: volumetrics and light shafts are blended before transparent scene, because they used depth of the opaques
-		//	But the ocean is special, because it does have depth for them implicitly computed from ocean plane
-
-		if (getVolumeLightsEnabled() && visibility_main.IsRequestedVolumetricLights())
-		{
-			device->EventBegin("Contribute Volumetric Lights", cmd);
-			wi::renderer::Postprocess_Upsample_Bilateral(
-				rtVolumetricLights,
-				depthBuffer_Copy,
-				rtMain,
-				cmd,
-				true,
-				1.5f
-			);
-			device->EventEnd(cmd);
-		}
-
-		XMVECTOR sunDirection = XMLoadFloat3(&scene->weather.sunDirection);
-		if (getLightShaftsEnabled() && XMVectorGetX(XMVector3Dot(sunDirection, camera->GetAt())) > 0)
-		{
-			device->EventBegin("Contribute LightShafts", cmd);
-			wi::image::Params fx;
-			fx.enableFullScreen();
-			fx.blendFlag = BLENDMODE_ADDITIVE;
-			fx.opacity = lightShaftsFadeFactor;
-			wi::image::Draw(&rtSun[1], fx, cmd);
-			device->EventEnd(cmd);
-		}
-
 		// Transparent scene
 		if (visibility_main.IsTransparentsVisible())
 		{
@@ -2253,6 +2224,32 @@ namespace wi
 		wi::renderer::DrawSoftParticles(visibility_main, false, cmd);
 		wi::renderer::DrawGaussianSplats(*scene, *camera, cmd);
 		wi::renderer::DrawSpritesAndFonts(*scene, *camera, false, cmd);
+
+		if (getVolumeLightsEnabled() && visibility_main.IsRequestedVolumetricLights())
+		{
+			device->EventBegin("Contribute Volumetric Lights", cmd);
+			wi::renderer::Postprocess_Upsample_Bilateral(
+				rtVolumetricLights,
+				depthBuffer_Copy,
+				rtMain,
+				cmd,
+				true,
+				1.5f
+			);
+			device->EventEnd(cmd);
+		}
+
+		XMVECTOR sunDirection = XMLoadFloat3(&scene->weather.sunDirection);
+		if (getLightShaftsEnabled() && XMVectorGetX(XMVector3Dot(sunDirection, camera->GetAt())) > 0)
+		{
+			device->EventBegin("Contribute LightShafts", cmd);
+			wi::image::Params fx;
+			fx.enableFullScreen();
+			fx.blendFlag = BLENDMODE_ADDITIVE;
+			fx.opacity = lightShaftsFadeFactor;
+			wi::image::Draw(&rtSun[1], fx, cmd);
+			device->EventEnd(cmd);
+		}
 
 		if (getLensFlareEnabled())
 		{
