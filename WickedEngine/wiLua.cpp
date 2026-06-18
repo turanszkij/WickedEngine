@@ -128,6 +128,39 @@ namespace wi::lua
 		return 1;
 	}
 
+	int FileExists(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc < 1)
+		{
+			wi::lua::SError(L, "FileExists(string name): not enough arguments!");
+			return 0;
+		}
+		wi::lua::SSetBool(L, wi::helper::FileExists(wi::lua::SGetString(L, 1)));
+		return 1;
+	}
+	int DirectoryExists(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc < 1)
+		{
+			wi::lua::SError(L, "DirectoryExists(string name): not enough arguments!");
+			return 0;
+		}
+		wi::lua::SSetBool(L, wi::helper::DirectoryExists(wi::lua::SGetString(L, 1)));
+		return 1;
+	}
+	int DirectoryCreate(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc < 1)
+		{
+			wi::lua::SError(L, "DirectoryCreate(string name): not enough arguments!");
+			return 0;
+		}
+		wi::helper::DirectoryCreate(wi::lua::SGetString(L, 1));
+		return 0;
+	}
 	int GetSaveDataPath(lua_State* L)
 	{
 		wi::lua::SSetString(L, wi::helper::GetSaveDataPath());
@@ -358,6 +391,9 @@ namespace wi::lua
 		RegisterFunc("IsPlatformPS5", IsPlatformPS5);
 		RegisterFunc("IsPlatformXBOX", IsPlatformXBOX);
 
+		RegisterFunc("FileExists", FileExists);
+		RegisterFunc("DirectoryExists", DirectoryExists);
+		RegisterFunc("DirectoryCreate", DirectoryCreate);
 		RegisterFunc("GetSaveDataPath", GetSaveDataPath);
 
 		Vector_BindLua::Bind();

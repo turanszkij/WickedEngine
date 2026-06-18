@@ -145,6 +145,13 @@ Helpers to determine the current platform, if need to implement specific functio
 - IsPlatformPS5() : bool
 - IsPlatformXBOX() : bool
 
+- FileExists(string name) : bool
+- DirectoryExists(string name) : bool
+- DirectoryCreate(string name)
+
+Returns a path that files can be safely saved to on every platform. This is the base directory for such a path, and files should be saved to an application specific named folder within it
+- GetSaveDataPath() : string
+
 ## Engine Bindings
 The scripting API provides functions for the developer to manipulate engine behaviour or query it for information.
 
