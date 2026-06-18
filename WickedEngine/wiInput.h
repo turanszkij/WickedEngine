@@ -286,25 +286,20 @@ namespace wi::input
 		CONTROLLER_PREFERENCE_PLAYSTATION,
 		CONTROLLER_PREFERENCE_XBOX,
 	};
-	struct ShortReturnString
-	{
-		char text[32] = {};
-		constexpr ShortReturnString() = default;
-		constexpr ShortReturnString(const char* str)
-		{
-			int i = 0;
-			while (str[i] && i < arraysize(text))
-			{
-				text[i] = str[i];
-				i++;
-			}
-		}
-		constexpr operator const char*() const { return text; }
-	};
-	ShortReturnString ButtonToString(BUTTON button, CONTROLLER_PREFERENCE preference = CONTROLLER_PREFERENCE_GENERIC);
+	StackString<32> ButtonToString(BUTTON button, CONTROLLER_PREFERENCE preference = CONTROLLER_PREFERENCE_GENERIC);
 
 
 	void AddMouseScrollEvent(float value);
 	void AddMouseMoveDeltaEvent(XMFLOAT2 value);
+
+	struct Pinch
+	{
+		XMFLOAT2 position = XMFLOAT2(0, 0);
+		float scale = 1;
+		float delta_scale = 0;
+	};
+	const Pinch& GetTouchPinch();
+
+	const XMFLOAT2& GetTouchPan();
 };
 
