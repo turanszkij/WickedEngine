@@ -1443,6 +1443,30 @@ namespace wi::helper
 #endif // _WIN32
 	}
 
+	std::string GetSaveDataPath()
+	{
+#if defined(__APPLE__)
+		return wi::apple::GetApplicationSupportPath();
+#elif defined(__SCE__)
+		return "/savedata0";
+#elif _WIN32
+		PWSTR pathTmp = NULL;
+		HRESULT hr = SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, NULL, &pathTmp);
+		if (SUCCEEDED(hr))
+		{
+			int size_needed = WideCharToMultiByte(CP_UTF8, 0, pathTmp, -1, NULL, 0, NULL, NULL);
+			std::string safePath(size_needed - 1, 0);
+			WideCharToMultiByte(CP_UTF8, 0, pathTmp, -1, &safePath[0], size_needed, NULL, NULL);
+			CoTaskMemFree(pathTmp);
+			return safePath;
+		}
+		CoTaskMemFree(pathTmp);
+		return "";
+#else
+		return GetCurrentPath();
+#endif
+	}
+
 	void FileDialog(const FileDialogParams& params, const std::function<void(std::string fileName)>& onSuccess, const std::function<void()>& onFailure)
 	{
 #ifdef PLATFORM_WINDOWS_DESKTOP

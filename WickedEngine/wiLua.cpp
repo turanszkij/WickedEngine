@@ -128,6 +128,12 @@ namespace wi::lua
 		return 1;
 	}
 
+	int GetSaveDataPath(lua_State* L)
+	{
+		wi::lua::SSetString(L, wi::helper::GetSaveDataPath());
+		return 1;
+	}
+
 	void PostErrorMsg(lua_State* L)
 	{
 		const char* str = lua_tostring(L, -1);
@@ -351,6 +357,8 @@ namespace wi::lua
 		RegisterFunc("IsPlatformIOS", IsPlatformIOS);
 		RegisterFunc("IsPlatformPS5", IsPlatformPS5);
 		RegisterFunc("IsPlatformXBOX", IsPlatformXBOX);
+
+		RegisterFunc("GetSaveDataPath", GetSaveDataPath);
 
 		Vector_BindLua::Bind();
 		Matrix_BindLua::Bind();
