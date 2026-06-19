@@ -1102,6 +1102,7 @@ namespace wi::scene
 		const float moon_phase_visibility = ComputeMoonPhaseVisibility(weather.sunDirection, moonDir);
 		const float resolved_moon_eclipse = ResolveMoonEclipseStrength(weather);
 		const float moon_eclipse_scale = wi::math::Clamp(1.0f - resolved_moon_eclipse, 0.0f, 1.0f);
+		weather.resolvedMoonIntensityScale = moon_phase_visibility * moon_eclipse_scale;
 		shaderscene.weather.moon.light_intensity = weather.moonLightIntensity * moon_phase_visibility * moon_eclipse_scale;
 		shaderscene.weather.moon.eclipse_strength = resolved_moon_eclipse;
 		shaderscene.weather.moon.light_index = weather.moon_light_index;
@@ -1631,28 +1632,26 @@ namespace wi::scene
 			}
 		}
 
-		const float moon_phase_visibility = ComputeMoonPhaseVisibility(weather_component.sunDirection, weather_component.moonDirection);
-		const float resolved_moon_eclipse = ResolveMoonEclipseStrength(weather_component);
-		// weather_component.resolvedSunEclipseStrength = ResolveSunEclipseStrength(weather_component);
-		const float moon_eclipse_scale = wi::math::Clamp(1.0f - resolved_moon_eclipse, 0.0f, 1.0f);
-		const float moon_effective_intensity = weather_component.moonLightIntensity * moon_phase_visibility * moon_eclipse_scale;
-		const bool moon_active = moon_effective_intensity > 0.0f;
-
 		if (weather_component.moonLight == INVALID_ENTITY)
 		{
 			weather_component.moonLight = Entity_CreateLight("moon");
 			LightComponent& light = *lights.GetComponent(weather_component.moonLight);
 			light.SetType(LightComponent::DIRECTIONAL);
 			light.SetMoonLight(true);
-			light.SetCastShadow(moon_active);
-			light.SetVolumetricsEnabled(moon_active);
-			light.intensity = moon_effective_intensity;
-			light.color = weather_component.moonColor;
+			light.SetCastShadow(true);
+			light.SetVolumetricsEnabled(true);
+			light.SetVolumetricCloudsEnabled(true);
+			light.color = XMFLOAT3(0.04f, 0.04f, 0.05f);
+			light.intensity = 0.05f;
 			TransformComponent& transform = *transforms.GetComponent(weather_component.moonLight);
 			transform.Translate(XMFLOAT3(0, 4, 0));
 			transform.UpdateTransform();
 		}
 
+		// The moon light is the source of truth for direction, colour and
+		// intensity (edited like any directional light). Only ensure it stays a
+		// flagged directional light here; Scene::Update mirrors its values into
+		// the weather GPU data and applies phase/eclipse dimming at render time.
 		LightComponent* light = lights.GetComponent(weather_component.moonLight);
 		if (light == nullptr)
 		{
@@ -1661,61 +1660,6 @@ namespace wi::scene
 		}
 		light->SetType(LightComponent::DIRECTIONAL);
 		light->SetMoonLight(true);
-		light->SetCastShadow(moon_active);
-		light->SetVolumetricsEnabled(moon_active);
-		light->color = weather_component.moonColor;
-		light->intensity = moon_effective_intensity;
-		light->SetVolumetricCloudsEnabled(moon_active);
-
-		TransformComponent* transform = transforms.GetComponent(weather_component.moonLight);
-		if (transform == nullptr)
-		{
-			return;
-		}
-
-		XMVECTOR target_dir = XMLoadFloat3(&weather_component.moonDirection);
-		XMFLOAT3 target_dir_f;
-		XMStoreFloat3(&target_dir_f, target_dir);
-		float dir_length_sq = wi::math::LengthSquared(target_dir_f);
-		if (!std::isfinite(dir_length_sq) || dir_length_sq < 1e-6f)
-		{
-			target_dir = XMVectorSet(0.0f, 0.5f, 0.8660254f, 0);
-		}
-		else
-		{
-			target_dir = XMVector3Normalize(target_dir);
-		}
-		target_dir = XMVector3Normalize(target_dir);
-		XMVECTOR default_dir = XMVectorSet(0, 1, 0, 0);
-		float dot = XMVectorGetX(XMVector3Dot(default_dir, target_dir));
-		dot = wi::math::Clamp(dot, -1.0f, 1.0f);
-		XMVECTOR rotationQuat;
-		if (dot > 0.9999f)
-		{
-			rotationQuat = XMQuaternionIdentity();
-		}
-		else if (dot < -0.9999f)
-		{
-			XMVECTOR axis = XMVector3Cross(default_dir, XMVectorSet(1, 0, 0, 0));
-			if (XMVectorGetX(XMVector3LengthSq(axis)) < 1e-6f)
-			{
-				axis = XMVectorSet(0, 0, 1, 0);
-			}
-			axis = XMVector3Normalize(axis);
-			rotationQuat = XMQuaternionRotationAxis(axis, XM_PI);
-		}
-		else
-		{
-			XMVECTOR axis = XMVector3Normalize(XMVector3Cross(default_dir, target_dir));
-			float angle = std::acos(dot);
-			rotationQuat = XMQuaternionRotationAxis(axis, angle);
-		}
-
-		XMFLOAT4 rotation;
-		XMStoreFloat4(&rotation, rotationQuat);
-		transform->rotation_local = rotation;
-		transform->SetDirty();
-		transform->UpdateTransform();
 	}
 	Entity Scene::Entity_CreateForce(
 		const std::string& name,
@@ -5317,6 +5261,9 @@ namespace wi::scene
 					if (args.jobIndex < weather.moon_light_index)
 					{
 						weather.moon_light_index = args.jobIndex;
+						weather.moonColor = light.color;
+						weather.moonDirection = light.direction;
+						weather.moonLightIntensity = light.intensity;
 					}
 					locker.unlock();
 				}

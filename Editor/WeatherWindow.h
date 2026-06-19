@@ -4,7 +4,6 @@ class EditorComponent;
 class WeatherWindow : public wi::gui::Window
 {
 	void UpdateWind();
-	void UpdateMoonDirection();
 public:
 	void Create(EditorComponent* editor);
 
@@ -36,13 +35,10 @@ public:
 	wi::gui::Slider skyExposureSlider;
 	wi::gui::Slider starsSlider;
 	wi::gui::Slider skyRotationSlider;
-	wi::gui::Slider moonAzimuthSlider;
-	wi::gui::Slider moonElevationSlider;
 	wi::gui::Slider moonSizeSlider;
 	wi::gui::Slider moonGlowSizeSlider;
 	wi::gui::Slider moonGlowSharpnessSlider;
 	wi::gui::Slider moonGlowIntensitySlider;
-	wi::gui::Slider moonLightIntensitySlider;
 	wi::gui::Slider moonTextureMipBiasSlider;
 	wi::gui::Slider rainAmountSlider;
 	wi::gui::Slider rainLengthSlider;

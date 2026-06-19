@@ -1905,6 +1905,7 @@ namespace wi::scene
 		wi::Resource volumetricCloudsWeatherMapFirst;
 		wi::Resource volumetricCloudsWeatherMapSecond;
 		float resolvedSunEclipseStrength = 0.0f;
+		float resolvedMoonIntensityScale = 1.0f;
 		XMFLOAT4 stars_rotation_quaternion = XMFLOAT4(0, 0, 0, 1);
 		uint32_t most_important_light_index = ~0u;
 		uint32_t moon_light_index = ~0u;

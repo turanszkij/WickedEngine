@@ -4704,6 +4704,10 @@ void UpdatePerFrameData(
 			{
 				light_intensity_scale = wi::math::Clamp(1.0f - vis.scene->weather.resolvedSunEclipseStrength, 0.0f, 1.0f);
 			}
+			else if (light.IsMoonLight())
+			{
+				light_intensity_scale = wi::math::Clamp(vis.scene->weather.resolvedMoonIntensityScale, 0.0f, 1.0f);
+			}
 			directional_color.x *= light.intensity * light_intensity_scale;
 			directional_color.y *= light.intensity * light_intensity_scale;
 			directional_color.z *= light.intensity * light_intensity_scale;

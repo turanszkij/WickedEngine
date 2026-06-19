@@ -64,7 +64,6 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	colorComboBox.AddItem("Cloud extinction 1");
 	colorComboBox.AddItem("Cloud extinction 2");
 	colorComboBox.AddItem("Rain color");
-	colorComboBox.AddItem("Moon color");
 	colorComboBox.SetTooltip("Choose the destination data of the color picker.");
 	colorComboBox.SetMaxVisibleItemCount(100);
 	AddWidget(&colorComboBox);
@@ -107,11 +106,6 @@ void WeatherWindow::Create(EditorComponent* _editor)
 			break;
 		case 9:
 			weather.rain_color = args.color.toFloat4();
-			break;
-		case 10:
-			weather.moonColor = args.color.toFloat3();
-			editor->GetCurrentScene().EnsureMoonLight(weather);
-			InvalidateProbes();
 			break;
 		}
 		});
@@ -240,24 +234,6 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&starsSlider);
 
-	moonAzimuthSlider.Create(0, 360, 0, 10000, "Moon Azimuth: ");
-	moonAzimuthSlider.SetTooltip("Horizontal moon orientation in degrees (0° faces +Z).");
-	moonAzimuthSlider.SetSize(XMFLOAT2(wid, hei));
-	moonAzimuthSlider.SetPos(XMFLOAT2(x, y += step));
-	moonAzimuthSlider.OnSlide([this](wi::gui::EventArgs args) {
-		UpdateMoonDirection();
-		});
-	AddWidget(&moonAzimuthSlider);
-
-	moonElevationSlider.Create(-90, 90, -10, 10000, "Moon Elevation: ");
-	moonElevationSlider.SetTooltip("Vertical moon orientation in degrees (0° on horizon).");
-	moonElevationSlider.SetSize(XMFLOAT2(wid, hei));
-	moonElevationSlider.SetPos(XMFLOAT2(x, y += step));
-	moonElevationSlider.OnSlide([this](wi::gui::EventArgs args) {
-		UpdateMoonDirection();
-		});
-	AddWidget(&moonElevationSlider);
-
 	moonSizeSlider.Create(0.1f, 10.0f, 1.0f, 10000, "Moon Size Multiplier: ");
 	moonSizeSlider.SetTooltip("Multiplier on the moon's real angular size (1.0 = physically accurate).");
 	moonSizeSlider.SetSize(XMFLOAT2(wid, hei));
@@ -293,18 +269,6 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		GetWeather().moon.halo_intensity = args.fValue;
 		});
 	AddWidget(&moonGlowIntensitySlider);
-
-	moonLightIntensitySlider.Create(0.0f, 5.0f, 0.05f, 1000, "Moon Light Intensity: ");
-	moonLightIntensitySlider.SetTooltip("Illuminance emitted by the moon directional light (in lux). Set to 0 to disable moon lighting.");
-	moonLightIntensitySlider.SetSize(XMFLOAT2(wid, hei));
-	moonLightIntensitySlider.SetPos(XMFLOAT2(x, y += step));
-	moonLightIntensitySlider.OnSlide([this](wi::gui::EventArgs args) {
-		auto& weather = GetWeather();
-		weather.moonLightIntensity = args.fValue;
-		editor->GetCurrentScene().EnsureMoonLight(weather);
-		InvalidateProbes();
-		});
-	AddWidget(&moonLightIntensitySlider);
 
 	moonTextureButton.Create("Load Moon Texture");
 	moonTextureButton.SetTooltip("Load a dedicated texture for the moon disk. Click again to clear.");
@@ -1199,29 +1163,10 @@ void WeatherWindow::UpdateData()
 		skyExposureSlider.SetValue(weather.skyExposure);
 		starsSlider.SetValue(weather.stars);
 
-		{
-			XMFLOAT3 moonDir = weather.moonDirection;
-			if (wi::math::LengthSquared(moonDir) < 1e-6f)
-			{
-				moonDir = XMFLOAT3(0.0f, 0.5f, 0.8660254f);
-			}
-			XMVECTOR moonDirVec = XMVector3Normalize(XMLoadFloat3(&moonDir));
-			XMFLOAT3 moonDirNorm;
-			XMStoreFloat3(&moonDirNorm, moonDirVec);
-			float azimuth = wi::math::RadiansToDegrees(std::atan2(moonDirNorm.x, moonDirNorm.z));
-			if (azimuth < 0)
-			{
-				azimuth += 360.0f;
-			}
-			moonAzimuthSlider.SetValue(azimuth);
-			float elevation = wi::math::RadiansToDegrees(std::asin(wi::math::Clamp(moonDirNorm.y, -1.0f, 1.0f)));
-			moonElevationSlider.SetValue(elevation);
-		}
 		moonSizeSlider.SetValue(weather.moon.size_multiplier);
 		moonGlowSizeSlider.SetValue(wi::math::RadiansToDegrees(weather.moon.halo_size));
 		moonGlowSharpnessSlider.SetValue(weather.moon.halo_sharpness);
 		moonGlowIntensitySlider.SetValue(weather.moon.halo_intensity);
-		moonLightIntensitySlider.SetValue(weather.moonLightIntensity);
 		moonTextureMipBiasSlider.SetValue(weather.moon.texture_mip_bias);
 		skyRotationSlider.SetValue(wi::math::RadiansToDegrees(weather.sky_rotation));
 		rainAmountSlider.SetValue(weather.rain_amount);
@@ -1263,9 +1208,6 @@ void WeatherWindow::UpdateData()
 			break;
 		case 9:
 			colorPicker.SetPickColor(wi::Color::fromFloat4(weather.rain_color));
-			break;
-		case 10:
-			colorPicker.SetPickColor(wi::Color::fromFloat3(weather.moonColor));
 			break;
 		}
 
@@ -1390,13 +1332,10 @@ void WeatherWindow::UpdateData()
 		scene.weather.horizon = default_sky_horizon;
 		scene.weather.fogStart = std::numeric_limits<float>::max();
 		scene.weather.fogDensity = 0;
-		scene.weather.moonColor = XMFLOAT3(0.04f, 0.04f, 0.05f);
-		scene.weather.moonDirection = XMFLOAT3(0.0f, 0.5f, 0.8660254f);
 		scene.weather.moon.size_multiplier = 1.0f;
 		scene.weather.moon.halo_size = 0.03f;
 		scene.weather.moon.halo_sharpness = 2.0f;
 		scene.weather.moon.halo_intensity = 0.25f;
-		scene.weather.moonLightIntensity = 0.05f;
 		scene.weather.moon.texture_mip_bias = 0;
 	}
 }
@@ -1431,24 +1370,6 @@ void WeatherWindow::UpdateWind()
 	XMStoreFloat3(&GetWeather().windDirection, dir);
 }
 
-void WeatherWindow::UpdateMoonDirection()
-{
-	float azimuth = wi::math::DegreesToRadians(moonAzimuthSlider.GetValue());
-	float elevation = wi::math::DegreesToRadians(moonElevationSlider.GetValue());
-	float cosElev = std::cos(elevation);
-	XMFLOAT3 dir = {
-		std::sin(azimuth) * cosElev,
-		std::sin(elevation),
-		std::cos(azimuth) * cosElev
-	};
-	XMVECTOR dirVec = XMVector3Normalize(XMLoadFloat3(&dir));
-	XMFLOAT3 normalized;
-	XMStoreFloat3(&normalized, dirVec);
-	GetWeather().moonDirection = normalized;
-	editor->GetCurrentScene().EnsureMoonLight(GetWeather());
-	InvalidateProbes();
-}
-
 void WeatherWindow::ResizeLayout()
 {
 	wi::gui::Window::ResizeLayout();
@@ -1477,13 +1398,10 @@ void WeatherWindow::ResizeLayout()
 	layout.add(windRandomnessSlider);
 	layout.add(skyExposureSlider);
 	layout.add(starsSlider);
-	layout.add(moonAzimuthSlider);
-	layout.add(moonElevationSlider);
 	layout.add(moonSizeSlider);
 	layout.add(moonGlowSizeSlider);
 	layout.add(moonGlowSharpnessSlider);
 	layout.add(moonGlowIntensitySlider);
-	layout.add(moonLightIntensitySlider);
 	layout.add_fullwidth(moonTextureButton);
 	layout.add(moonTextureMipBiasSlider);
 	layout.add(skyRotationSlider);
