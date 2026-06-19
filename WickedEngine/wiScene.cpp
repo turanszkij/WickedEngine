@@ -16,6 +16,7 @@
 #include "shaders/ShaderInterop_SurfelGI.h"
 #include "shaders/ShaderInterop_DDGI.h"
 
+#include "Utility/DirectXMath/DirectXMath.h"
 #include <cmath>
 
 #if __has_include(<sanitizer/asan_interface.h>)
@@ -49,69 +50,81 @@ namespace wi::scene
 		return wi::math::Clamp(0.5f * (1.0f - dot_sm), 0.0f, 1.0f);
 	}
 
+	/**
+	 * @brief Computes the solar eclipse strength.
+	 *
+	 * The eclipse strength is defined as the fraction of the sun’s angular disk
+	 * that is occluded by the moon:
+	 *
+	 * \[
+	 * \frac{|S \cap M|}{|S|}
+	 * \]
+	 *
+	 * where `S` is the sun disk and `M` is the moon disk.
+	 *
+	 * If the sun and moon angular radii are approximately equal, a fast
+	 * approximate path is used to compute the overlap ratio.
+	 *
+	 * @param weather - Weather component containing sun and moon directions
+	 *                  and moon angular radius.
+	 *
+	 * @return Eclipse strength in the range [0.0, 1.0]:
+	 *         - 0.0 - no eclipse
+	 *         - 1.0 - total eclipse
+	 *         - (0, 1) - partial eclipse
+	 */
 	static float ResolveSunEclipseStrength(const WeatherComponent& weather)
 	{
-		const float manual = wi::math::Clamp(weather.sunEclipseStrength, 0.0f, 1.0f);
-		if (!weather.sunEclipseAutomatic)
-		{
-			return manual;
+		const XMVECTOR sun =
+			wi::math::NormalizeDirection(weather.sunDirection);
+		const XMVECTOR moon =
+			wi::math::NormalizeDirection(weather.moonDirection);
+
+		const float sunAngularRadius = XMConvertToRadians(2.4F);
+		const float moonAngularRadius = weather.moon.GetAngularRadius();
+
+		// Fast path if angular radii are approximately equal
+		if (wi::math::FP_Equal(sunAngularRadius, moonAngularRadius)) {
+			return wi::math::ComputeDiskOverlapRatioEst(
+				sun, sunAngularRadius, moon
+			);
 		}
 
-		XMVECTOR sun = XMLoadFloat3(&weather.sunDirection);
-		XMVECTOR moon = XMLoadFloat3(&weather.moonDirection);
-		const float sun_len_sq = XMVectorGetX(XMVector3LengthSq(sun));
-		const float moon_len_sq = XMVectorGetX(XMVector3LengthSq(moon));
-		if (!std::isfinite(sun_len_sq) || sun_len_sq < 1e-6f)
-		{
-			return manual;
-		}
-		XMFLOAT3 default_moon_dir = XMFLOAT3(0.0f, 0.5f, 0.8660254f);
-		if (!std::isfinite(moon_len_sq) || moon_len_sq < 1e-6f)
-		{
-			moon = XMLoadFloat3(&default_moon_dir);
-		}
-
-		sun = XMVector3Normalize(sun);
-		moon = XMVector3Normalize(moon);
-		const float alignment = wi::math::Clamp(XMVectorGetX(XMVector3Dot(sun, moon)), -1.0f, 1.0f);
-		if (alignment <= 0.0f)
-		{
-			return manual;
-		}
-
-		constexpr float sun_apparent_radius = wi::math::DegreesToRadians(0.27f);
-		constexpr float penumbra_padding = wi::math::DegreesToRadians(0.35f);
-		const float moon_radius = std::max(weather.moonSize, 0.0f);
-		const float totality_angle = std::max(moon_radius + sun_apparent_radius, 0.0f);
-		const float penumbra_angle = totality_angle + penumbra_padding;
-		const float cos_totality = std::cos(totality_angle);
-		const float cos_penumbra = std::cos(penumbra_angle);
-		if (cos_totality <= cos_penumbra)
-		{
-			return manual;
-		}
-
-		const float eclipse = wi::math::Clamp((alignment - cos_penumbra) / (cos_totality - cos_penumbra), 0.0f, 1.0f);
-		return eclipse;
+		return wi::math::ComputeDiskOverlapRatio(
+			sun, sunAngularRadius, moon, moonAngularRadius
+		);
 	}
 
+	/**
+	 * The lunar eclipse strength determines how much the moon is being occluded
+	 * by the earth shadow cast by the sunlight into the moon.
+	 * 
+	 * @param WeatherComponent - The weather component.
+	 *
+	 * @return The eclipse strength from 0.0 to 1.0.
+	 */
 	static float ResolveMoonEclipseStrength(const WeatherComponent& weather)
 	{
+		// Manual override
 		const float manual = wi::math::Clamp(weather.moonEclipseStrength, 0.0f, 1.0f);
 		if (!weather.moonEclipseAutomatic)
 		{
 			return manual;
 		}
 
+		// Load directions
 		XMFLOAT3 sun_dir = weather.sunDirection;
 		XMFLOAT3 moon_dir = weather.moonDirection;
 		XMVECTOR sun = XMLoadFloat3(&sun_dir);
 		XMVECTOR moon = XMLoadFloat3(&moon_dir);
+
+		// Sanity check lengths
 		const float sun_len_sq = XMVectorGetX(XMVector3LengthSq(sun));
 		if (!std::isfinite(sun_len_sq) || sun_len_sq < 1e-6f)
 		{
 			return manual;
 		}
+
 		float moon_len_sq = XMVectorGetX(XMVector3LengthSq(moon));
 		if (!std::isfinite(moon_len_sq) || moon_len_sq < 1e-6f)
 		{
@@ -120,21 +133,49 @@ namespace wi::scene
 			moon_len_sq = XMVectorGetX(XMVector3LengthSq(moon));
 		}
 
+		// Normalize directions
 		sun = XMVector3Normalize(sun);
 		moon = XMVector3Normalize(moon);
-		const float opposition = wi::math::Clamp(-XMVectorGetX(XMVector3Dot(sun, moon)), -1.0f, 1.0f);
-		constexpr float sun_apparent_radius = wi::math::DegreesToRadians(0.27f);
-		constexpr float penumbra_padding = wi::math::DegreesToRadians(0.35f);
-		const float totality_angle = std::max(weather.moonSize + sun_apparent_radius, 0.0f);
-		const float penumbra_angle = totality_angle + penumbra_padding;
-		const float cos_totality = std::cos(totality_angle);
-		const float cos_penumbra = std::cos(penumbra_angle);
-		if (cos_totality <= cos_penumbra)
+
+		// Angular separation between sun and moon (radians)
+		const float cos_theta = wi::math::Clamp(XMVectorGetX(XMVector3Dot(sun, moon)), -1.0f, 1.0f);
+		const float theta = std::acos(cos_theta);
+
+		// Apparent angular radii
+		constexpr float sun_radius = wi::math::DegreesToRadians(2.4f); // ~2.4° apparent radius (same as skyAtmosphere.hlsli)
+		const float moon_radius = weather.moon.GetAngularRadius(); // in radians
+
+		float eclipse = 0.0f;
+
+		if (theta >= sun_radius + moon_radius)
 		{
-			return manual;
+			// No overlap
+			eclipse = 0.0f;
+		}
+		else if (theta <= std::abs(moon_radius - sun_radius))
+		{
+			// One disk completely inside the other
+			eclipse = 1.0f;
+		}
+		else
+		{
+			// Partial overlap: compute circle intersection area fraction
+			float r1 = sun_radius;
+			float r2 = moon_radius;
+			float d = theta;
+
+			float part1 = r1 * r1 * std::acos((d*d + r1*r1 - r2*r2) / (2*d*r1));
+			float part2 = r2 * r2 * std::acos((d*d + r2*r2 - r1*r1) / (2*d*r2));
+			float part3 = 0.5f * std::sqrt(
+				std::max(0.0f, (-d + r1 + r2) * (d + r1 - r2) * (d - r1 + r2) * (d + r1 + r2))
+			);
+
+			float overlap_area = part1 + part2 - part3;
+			float sun_area = 3.14159265f * r1 * r1;
+
+			eclipse = wi::math::Clamp(overlap_area / sun_area, 0.0f, 1.0f);
 		}
 
-		const float eclipse = wi::math::Clamp((opposition - cos_penumbra) / (cos_totality - cos_penumbra), 0.0f, 1.0f);
 		return eclipse;
 	}
 
@@ -1055,17 +1096,20 @@ namespace wi::scene
 			XMVECTOR moonDirVec = XMVector3Normalize(XMLoadFloat3(&moonDir));
 			XMStoreFloat3(&moonDir, moonDirVec);
 		}
-		shaderscene.weather.moon_color = wi::math::pack_half3(weather.moonColor);
-		shaderscene.weather.moon_direction = wi::math::pack_half3(moonDir);
-		shaderscene.weather.moon_params = XMFLOAT4(weather.moonSize, weather.moonGlowSize, weather.moonGlowSharpness, weather.moonGlowIntensity);
-		shaderscene.weather.moon_texture = weather.moonTexture.IsValid() ? device->GetDescriptorIndex(&weather.moonTexture.GetTexture(), SubresourceType::SRV, weather.moonTexture.GetTextureSRGBSubresource()) : -1;
-		shaderscene.weather.moon_texture_mip_bias = weather.moonTextureMipBias;
+		shaderscene.weather.moon.color = wi::math::pack_half3(weather.moonColor);
+		shaderscene.weather.moon.direction = wi::math::pack_half3(moonDir);
+		shaderscene.weather.moon.size = weather.moon.GetAngularRadius();
+		shaderscene.weather.moon.halo_size = weather.moon.halo_size;
+		shaderscene.weather.moon.halo_sharpness = weather.moon.halo_sharpness;
+		shaderscene.weather.moon.halo_intensity = weather.moon.halo_intensity;
+		shaderscene.weather.moon.texture = weather.moon.texture.IsValid() ? device->GetDescriptorIndex(&weather.moon.texture.GetTexture(), SubresourceType::SRV, weather.moon.texture.GetTextureSRGBSubresource()) : -1;
+		shaderscene.weather.moon.texture_mip_bias = weather.moon.texture_mip_bias;
 		const float moon_phase_visibility = ComputeMoonPhaseVisibility(weather.sunDirection, moonDir);
 		const float resolved_moon_eclipse = ResolveMoonEclipseStrength(weather);
 		const float moon_eclipse_scale = wi::math::Clamp(1.0f - resolved_moon_eclipse, 0.0f, 1.0f);
-		shaderscene.weather.moon_light_intensity = weather.moonLightIntensity * moon_phase_visibility * moon_eclipse_scale;
-		shaderscene.weather.moon_eclipse_strength = resolved_moon_eclipse;
-		shaderscene.weather.moon_light_index = weather.moon_light_index;
+		shaderscene.weather.moon.light_intensity = weather.moonLightIntensity * moon_phase_visibility * moon_eclipse_scale;
+		shaderscene.weather.moon.eclipse_strength = resolved_moon_eclipse;
+		shaderscene.weather.moon.light_index = weather.moon_light_index;
 		shaderscene.weather.most_important_light_index = weather.most_important_light_index;
 		shaderscene.weather.ambient = wi::math::pack_half3(weather.ambient);
 		shaderscene.weather.sky_rotation_sin = std::sin(weather.sky_rotation);
@@ -1594,7 +1638,7 @@ namespace wi::scene
 
 		const float moon_phase_visibility = ComputeMoonPhaseVisibility(weather_component.sunDirection, weather_component.moonDirection);
 		const float resolved_moon_eclipse = ResolveMoonEclipseStrength(weather_component);
-		weather_component.resolvedSunEclipseStrength = ResolveSunEclipseStrength(weather_component);
+		// weather_component.resolvedSunEclipseStrength = ResolveSunEclipseStrength(weather_component);
 		const float moon_eclipse_scale = wi::math::Clamp(1.0f - resolved_moon_eclipse, 0.0f, 1.0f);
 		const float moon_effective_intensity = weather_component.moonLightIntensity * moon_phase_visibility * moon_eclipse_scale;
 		const bool moon_active = moon_effective_intensity > 0.0f;

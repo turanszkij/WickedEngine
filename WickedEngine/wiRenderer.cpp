@@ -4664,7 +4664,7 @@ void UpdatePerFrameData(
 		const XMFLOAT2 atlas_dim_rcp = XMFLOAT2(1.0f / float(shadowMapAtlas.desc.width), 1.0f / float(shadowMapAtlas.desc.height));
 		const uint32_t most_important_light_component_index = vis.scene->weather.most_important_light_index;
 		frameCB.scene.weather.most_important_light_index = ~0u;
-		frameCB.scene.weather.moon_light_index = ~0u;
+		frameCB.scene.weather.moon.light_index = ~0u;
 		uint32_t moon_directional_entity_index = ~0u;
 
 		// Write directional lights into entity array:
@@ -4765,7 +4765,7 @@ void UpdatePerFrameData(
 			lightarray_count_directional++;
 		}
 
-		frameCB.scene.weather.moon_light_index = moon_directional_entity_index;
+		frameCB.scene.weather.moon.light_index = moon_directional_entity_index;
 
 		// Write spot lights into entity array:
 		lightarray_offset_spot = entityCounter;

@@ -15,6 +15,7 @@
 #include "wiBVH.h"
 #include "wiPathQuery.h"
 #include "wiAllocator.h"
+#include "wiScene/environment/Moon/Moon.h"
 
 namespace wi::scene
 {
@@ -1864,14 +1865,14 @@ namespace wi::scene
 		uint8_t padding_sun0[3] = {};
 		XMFLOAT3 moonColor = XMFLOAT3(0.04f, 0.04f, 0.05f);
 		XMFLOAT3 moonDirection = XMFLOAT3(0.0f, 0.5f, 0.8660254f);
-		float moonSize = 0.0095f; // radians
-		float moonGlowSize = 0.03f; // additional radius in radians for halo falloff
-		float moonGlowSharpness = 2.0f;
-		float moonGlowIntensity = 0.25f;
 		float moonLightIntensity = 0.05f;
-		float moonTextureMipBias = 0;
 		float moonEclipseStrength = 0.0f;
 		bool moonEclipseAutomatic = false;
+
+		// Moon disk appearance (size, halo, texture). Direction, color and light
+		// intensity live on the moon's directional light, not here.
+		environment::Moon moon;
+
 		float skyExposure = 1;
 		XMFLOAT3 horizon = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		XMFLOAT3 zenith = XMFLOAT3(0.0f, 0.0f, 0.0f);
@@ -1898,14 +1899,12 @@ namespace wi::scene
 		AtmosphereParameters atmosphereParameters;
 		VolumetricCloudParameters volumetricCloudParameters;
 
-		std::string moonTextureName;
 		std::string skyMapName;
 		std::string colorGradingMapName;
 		std::string volumetricCloudsWeatherMapFirstName;
 		std::string volumetricCloudsWeatherMapSecondName;
 
 		// Non-serialized attributes:
-		wi::Resource moonTexture;
 		wi::Resource skyMap;
 		wi::Resource colorGradingMap;
 		wi::Resource volumetricCloudsWeatherMapFirst;

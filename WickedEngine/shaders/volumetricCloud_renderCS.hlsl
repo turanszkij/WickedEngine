@@ -470,7 +470,7 @@ void VolumetricCloudLighting(AtmosphereParameters atmosphere, float3 startPositi
 	
 
 	const bool sunEnabled = GetWeather().most_important_light_index != ~0u && dot(sunIlluminance, sunIlluminance) > 0.0;
-	const bool moonEnabled = GetWeather().moon_light_index != ~0u && dot(moonIlluminance, moonIlluminance) > 0.0;
+	const bool moonEnabled = GetWeather().moon.light_index != ~0u && dot(moonIlluminance, moonIlluminance) > 0.0;
 
 	// Sample environment lighting
 	float3 environmentLuminance = SampleAmbientLight(heightFraction);
@@ -488,7 +488,7 @@ void VolumetricCloudLighting(AtmosphereParameters atmosphere, float3 startPositi
 			}
 			if (moonEnabled)
 			{
-				OpaqueShadow(participatingMediaMoon, worldPosition, GetWeather().moon_light_index);
+				OpaqueShadow(participatingMediaMoon, worldPosition, GetWeather().moon.light_index);
 			}
 		}
 		

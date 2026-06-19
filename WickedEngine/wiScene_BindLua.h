@@ -1591,10 +1591,10 @@ namespace wi::lua::scene
 			sunDirection = VectorProperty(&component->sunDirection);
 			moonColor = VectorProperty(&component->moonColor);
 			moonDirection = VectorProperty(&component->moonDirection);
-			moonSize = FloatProperty(&component->moonSize);
-			moonGlowSize = FloatProperty(&component->moonGlowSize);
-			moonGlowSharpness = FloatProperty(&component->moonGlowSharpness);
-			moonGlowIntensity = FloatProperty(&component->moonGlowIntensity);
+			moonSize = FloatProperty(&component->moon.size_multiplier);
+			moonGlowSize = FloatProperty(&component->moon.halo_size);
+			moonGlowSharpness = FloatProperty(&component->moon.halo_sharpness);
+			moonGlowIntensity = FloatProperty(&component->moon.halo_intensity);
 			moonLightIntensity = FloatProperty(&component->moonLightIntensity);
 			moonEclipseStrength = FloatProperty(&component->moonEclipseStrength);
 			moonEclipseAutomatic = BoolProperty(&component->moonEclipseAutomatic);

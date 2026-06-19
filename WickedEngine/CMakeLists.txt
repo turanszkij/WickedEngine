@@ -90,6 +90,16 @@ list(REMOVE_ITEM SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/wiRenderer.cpp
 )
 
+# Per-component module subdirectories (wiCore/, wiMath/<X>/, wiScene/<area>/...).
+# The SOURCE_FILES glob above is non-recursive (top-level only), so gather these
+# nested .cpp files explicitly and append them to the build.
+file(GLOB_RECURSE MODULE_SOURCE_FILES CONFIGURE_DEPENDS
+    wiCore/*.cpp
+    wiMath/*.cpp
+    wiScene/*.cpp
+)
+list(APPEND SOURCE_FILES ${MODULE_SOURCE_FILES})
+
 file(GLOB SHADER_FILES CONFIGURE_DEPENDS shaders/*.hlsl shaders/*.hlsli)
 
 # these are all Wicked files except wiRenderer.cpp, which can be compiled
@@ -165,6 +175,16 @@ target_include_directories(WickedEngine_common SYSTEM PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine>
 )
+
+# On non-Windows platforms we ship our own copy of DirectXMath; ensure the
+# include path is visible so that `#include <DirectXMath.h>` works uniformly
+# throughout the codebase. The system headers are already in the default search
+# path on Windows, so no extra action is required there.
+if(NOT WIN32)
+    target_include_directories(WickedEngine_common PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Utility/DirectXMath>
+    )
+endif()
 
 set(WICKEDENGINE_STATIC_LIBRARIES
     Jolt

@@ -1,25 +1,25 @@
 #pragma once
-
+#include "wiCore/Constants.h"
 #include "wiMath.h"
+
 #include <cassert>
 #include <ostream>
 #if __has_include(<DirectXMath.h>)
-	// In this case, DirectXMath is coming from Windows SDK.
-	// It is better to use this on Windows as some Windows libraries could
-	// depend on the same DirectXMath headers
+    // In this case, DirectXMath is coming from Windows SDK.
+    // It is better to use this on Windows as some Windows libraries could
+    // depend on the same DirectXMath headers
 	#include <DirectXMath.h>
 #else
-	// In this case, DirectXMath is coming from supplied source code
-	// On platforms that don't have Windows SDK, the source code for DirectXMath
-	// is provided as part of the engine utilities
+    // In this case, DirectXMath is coming from supplied source code
+    // On platforms that don't have Windows SDK, the source code for DirectXMath
+    // is provided as part of the engine utilities
 	#include "Utility/DirectXMath/DirectXMath.h"
 #endif
 
+using namespace wi::core;
 using namespace DirectX;
 
-namespace wi::math {
-	class AngularDisk;
-} // namespace wi::math
+namespace wi::math { class AngularDisk; } // namespace wi::math
 
 /**
  * @brief Represents an angular disk and its operations.
@@ -50,7 +50,7 @@ namespace wi::math {
  * float ratio = diskA.ComputeDiskOverlapRatio(diskB);
  * @endcode
  */
-class wi::math::AngularDisk {
+class wi::math::AngularDisk final {
 	/*
 	############################################################################
 	Private
@@ -64,9 +64,9 @@ class wi::math::AngularDisk {
 	/**
 	 * @brief Stores the internal representation of an angular disk.
 	 *
-	 * This can be passed to shaders.
+	 * Can be safely passed to shaders or serialized.
 	 */
-	struct alignas(16) AngularDiskProps {
+	struct alignas(GPU_STRUCT_ALIGNMENT) AngularDiskProps {
 		/**
 		 * @brief The normalized direction vector of the disk center.
 		 *
@@ -109,7 +109,7 @@ class wi::math::AngularDisk {
 	 * @note The disk is effectively invalid until a proper radius and direction
 	 * are set.
 	 */
-	explicit AngularDisk() noexcept = default;
+	AngularDisk() noexcept = default;
 
 	/**
 	 * @brief Constructs an AngularDisk from a non-normalized direction vector.

@@ -1,21 +1,12 @@
 #include "AngularDisk.h"
+
 #include "wiMath.h"
+
+#include <DirectXMath.h>
 #include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <ostream>
-
-#if __has_include(<DirectXMath.h>)
-	// In this case, DirectXMath is coming from Windows SDK.
-	// It is better to use this on Windows as some Windows libraries could
-	// depend on the same DirectXMath headers
-	#include <DirectXMath.h>
-#else
-	// In this case, DirectXMath is coming from supplied source code
-	// On platforms that don't have Windows SDK, the source code for DirectXMath
-	// is provided as part of the engine utilities
-	#include "Utility/DirectXMath/DirectXMath.h"
-#endif
 
 using namespace wi::math;
 

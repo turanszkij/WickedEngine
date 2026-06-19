@@ -972,27 +972,49 @@ float acosFastPositive(float x)
     return p * sqrt(1.0 - x);
 }
 
-inline float GetSunEclipseStrength() { return saturate(GetWeather().sun_eclipse_strength); }
+inline float GetSunEclipseStrength() { 
+    return saturate(GetWeather().sun_eclipse_strength); 
+}
+
 inline half3 GetSunColor()
 {
-	const half3 rawColor = unpack_half3(GetWeather().sun_color);
-	const half eclipseScale = (half)(1.0f - GetSunEclipseStrength());
-	return rawColor * eclipseScale; // sun color with eclipse dimming applied
+    half3 rawColor = unpack_half3(GetWeather().sun_color);
+
+    // Compute physical fraction of visible solar disk
+    half eclipseObscuration = GetSunEclipseStrength(); 
+    // Non-linear area model
+    half visibleArea = 1 - eclipseObscuration;
+
+    // Optional limb darkening factors (simple approximation)
+    half3 limbDark = half3(1.0, 1.0, 1.0) 
+                    - visibleArea * half3(0.3, 0.2, 0.1);
+
+    // Non-linear brightness falloff
+    half intensityScale = pow(visibleArea, 0.8);
+
+    // Add a residual floor so it never goes fully dark
+    const half minIllum = 0.05;
+    intensityScale = max(minIllum, intensityScale);
+
+    // Color temperature shift as a function of dimming
+    half3 tintedColor = lerp(rawColor, half3(0.9,0.8,0.7), pow(1 - intensityScale, 1.5));
+
+    return tintedColor * intensityScale * limbDark;
 }
 inline float3 GetMoonDirection()
 {
-	float3 dir = unpack_half3(GetWeather().moon_direction);
+	float3 dir = unpack_half3(GetWeather().moon.direction);
 	float len_sq = dot(dir, dir);
 	return len_sq > 0 ? dir * rsqrt(len_sq) : float3(0.0f, 0.5f, 0.8660254f);
 }
-inline half3 GetMoonColor() { return unpack_half3(GetWeather().moon_color); }
-inline float GetMoonSize() { return GetWeather().moon_params.x; }
-inline float GetMoonHaloSize() { return GetWeather().moon_params.y; }
-inline float GetMoonHaloSharpness() { return GetWeather().moon_params.z; }
-inline float GetMoonHaloIntensity() { return GetWeather().moon_params.w; }
-inline bool HasMoonTexture() { return GetWeather().moon_texture >= 0; }
-inline float GetMoonTextureMipBias() { return GetWeather().moon_texture_mip_bias; }
-inline float GetMoonLightIntensity() { return GetWeather().moon_light_intensity; }
+inline half3 GetMoonColor() { return unpack_half3(GetWeather().moon.color); }
+inline float GetMoonSize() { return GetWeather().moon.size; }
+inline float GetMoonHaloSize() { return GetWeather().moon.halo_size; }
+inline float GetMoonHaloSharpness() { return GetWeather().moon.halo_sharpness; }
+inline float GetMoonHaloIntensity() { return GetWeather().moon.halo_intensity; }
+inline bool HasMoonTexture() { return GetWeather().moon.texture >= 0; }
+inline float GetMoonTextureMipBias() { return GetWeather().moon.texture_mip_bias; }
+inline float GetMoonLightIntensity() { return GetWeather().moon.light_intensity; }
 inline half3 GetSunDirection() { return normalize(unpack_half3(GetWeather().sun_direction)); }
 inline float GetMoonPhaseVisibility()
 {
@@ -1008,7 +1030,7 @@ inline float GetMoonPhaseVisibility()
 	moonDir *= rsqrt(moonLenSq);
 	return saturate(0.5f * (1.0f - dot(sunDir, moonDir)));
 }
-inline float GetMoonEclipseStrength() { return saturate(GetWeather().moon_eclipse_strength); }
+inline float GetMoonEclipseStrength() { return saturate(GetWeather().moon.eclipse_strength); }
 inline float3 GetMoonIlluminance() { return GetMoonColor() * GetMoonLightIntensity(); }
 inline half3 GetHorizonColor() { return unpack_half3(GetWeather().horizon); }
 inline half3 GetZenithColor() { return unpack_half3(GetWeather().zenith); }

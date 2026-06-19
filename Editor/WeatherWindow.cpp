@@ -281,12 +281,12 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&moonElevationSlider);
 
-	moonSizeSlider.Create(0.05f, 5.0f, 0.5f, 10000, "Moon Size (deg): ");
-	moonSizeSlider.SetTooltip("Apparent angular size of the moon.");
+	moonSizeSlider.Create(0.1f, 10.0f, 1.0f, 10000, "Moon Size Multiplier: ");
+	moonSizeSlider.SetTooltip("Multiplier on the moon's real angular size (1.0 = physically accurate).");
 	moonSizeSlider.SetSize(XMFLOAT2(wid, hei));
 	moonSizeSlider.SetPos(XMFLOAT2(x, y += step));
 	moonSizeSlider.OnSlide([this](wi::gui::EventArgs args) {
-		GetWeather().moonSize = wi::math::DegreesToRadians(args.fValue);
+		GetWeather().moon.size_multiplier = args.fValue;
 		});
 	AddWidget(&moonSizeSlider);
 
@@ -295,7 +295,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	moonGlowSizeSlider.SetSize(XMFLOAT2(wid, hei));
 	moonGlowSizeSlider.SetPos(XMFLOAT2(x, y += step));
 	moonGlowSizeSlider.OnSlide([this](wi::gui::EventArgs args) {
-		GetWeather().moonGlowSize = wi::math::DegreesToRadians(args.fValue);
+		GetWeather().moon.halo_size = wi::math::DegreesToRadians(args.fValue);
 		});
 	AddWidget(&moonGlowSizeSlider);
 
@@ -304,7 +304,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	moonGlowSharpnessSlider.SetSize(XMFLOAT2(wid, hei));
 	moonGlowSharpnessSlider.SetPos(XMFLOAT2(x, y += step));
 	moonGlowSharpnessSlider.OnSlide([this](wi::gui::EventArgs args) {
-		GetWeather().moonGlowSharpness = args.fValue;
+		GetWeather().moon.halo_sharpness = args.fValue;
 		});
 	AddWidget(&moonGlowSharpnessSlider);
 
@@ -313,7 +313,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	moonGlowIntensitySlider.SetSize(XMFLOAT2(wid, hei));
 	moonGlowIntensitySlider.SetPos(XMFLOAT2(x, y += step));
 	moonGlowIntensitySlider.OnSlide([this](wi::gui::EventArgs args) {
-		GetWeather().moonGlowIntensity = args.fValue;
+		GetWeather().moon.halo_intensity = args.fValue;
 		});
 	AddWidget(&moonGlowIntensitySlider);
 
@@ -360,7 +360,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	moonTextureButton.SetPos(XMFLOAT2(mod_x, y += step));
 	moonTextureButton.OnClick([=](wi::gui::EventArgs args) {
 		auto& weather = GetWeather();
-		if (!weather.moonTexture.IsValid())
+		if (!weather.moon.texture.IsValid())
 		{
 			wi::helper::FileDialogParams params;
 			params.type = wi::helper::FileDialogParams::OPEN;
@@ -369,8 +369,8 @@ void WeatherWindow::Create(EditorComponent* _editor)
 			wi::helper::FileDialog(params, [=](std::string fileName) {
 				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					auto& weather = GetWeather();
-					weather.moonTextureName = fileName;
-					weather.moonTexture = wi::resourcemanager::Load(fileName);
+					weather.moon.texture_name = fileName;
+					weather.moon.texture = wi::resourcemanager::Load(fileName);
 					moonTextureButton.SetText(wi::helper::GetFileNameFromPath(fileName));
 					InvalidateProbes();
 				});
@@ -378,8 +378,8 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		}
 		else
 		{
-			weather.moonTexture = {};
-			weather.moonTextureName.clear();
+			weather.moon.texture = {};
+			weather.moon.texture_name.clear();
 			moonTextureButton.SetText("Load Moon Texture");
 			InvalidateProbes();
 		}
@@ -391,7 +391,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 	moonTextureMipBiasSlider.SetSize(XMFLOAT2(wid, hei));
 	moonTextureMipBiasSlider.SetPos(XMFLOAT2(x, y += step));
 	moonTextureMipBiasSlider.OnSlide([this](wi::gui::EventArgs args) {
-		GetWeather().moonTextureMipBias = args.fValue;
+		GetWeather().moon.texture_mip_bias = args.fValue;
 		});
 	AddWidget(&moonTextureMipBiasSlider);
 
@@ -1215,9 +1215,9 @@ void WeatherWindow::UpdateData()
 			colorgradingButton.SetText(wi::helper::GetFileNameFromPath(weather.colorGradingMapName));
 		}
 
-		if (!weather.moonTextureName.empty())
+		if (!weather.moon.texture_name.empty())
 		{
-			moonTextureButton.SetText(wi::helper::GetFileNameFromPath(weather.moonTextureName));
+			moonTextureButton.SetText(wi::helper::GetFileNameFromPath(weather.moon.texture_name));
 		}
 		else
 		{
@@ -1268,15 +1268,15 @@ void WeatherWindow::UpdateData()
 			float elevation = wi::math::RadiansToDegrees(std::asin(wi::math::Clamp(moonDirNorm.y, -1.0f, 1.0f)));
 			moonElevationSlider.SetValue(elevation);
 		}
-		moonSizeSlider.SetValue(wi::math::RadiansToDegrees(weather.moonSize));
-		moonGlowSizeSlider.SetValue(wi::math::RadiansToDegrees(weather.moonGlowSize));
-		moonGlowSharpnessSlider.SetValue(weather.moonGlowSharpness);
-		moonGlowIntensitySlider.SetValue(weather.moonGlowIntensity);
+		moonSizeSlider.SetValue(weather.moon.size_multiplier);
+		moonGlowSizeSlider.SetValue(wi::math::RadiansToDegrees(weather.moon.halo_size));
+		moonGlowSharpnessSlider.SetValue(weather.moon.halo_sharpness);
+		moonGlowIntensitySlider.SetValue(weather.moon.halo_intensity);
 		moonLightIntensitySlider.SetValue(weather.moonLightIntensity);
 		moonEclipseSlider.SetValue(weather.moonEclipseStrength);
 		moonEclipseAutoCheckBox.SetCheck(weather.moonEclipseAutomatic);
 		moonEclipseSlider.SetEnabled(!weather.moonEclipseAutomatic);
-		moonTextureMipBiasSlider.SetValue(weather.moonTextureMipBias);
+		moonTextureMipBiasSlider.SetValue(weather.moon.texture_mip_bias);
 		skyRotationSlider.SetValue(wi::math::RadiansToDegrees(weather.sky_rotation));
 		rainAmountSlider.SetValue(weather.rain_amount);
 		rainLengthSlider.SetValue(weather.rain_length);
@@ -1409,9 +1409,9 @@ void WeatherWindow::UpdateData()
 			colorgradingButton.SetText("Load Color Grading LUT");
 		}
 
-		if (weather.moonTexture.IsValid())
+		if (weather.moon.texture.IsValid())
 		{
-			moonTextureButton.SetText(wi::helper::GetFileNameFromPath(weather.moonTextureName));
+			moonTextureButton.SetText(wi::helper::GetFileNameFromPath(weather.moon.texture_name));
 		}
 		else
 		{
@@ -1448,12 +1448,12 @@ void WeatherWindow::UpdateData()
 		scene.weather.sunEclipseAutomatic = false;
 		scene.weather.moonColor = XMFLOAT3(0.04f, 0.04f, 0.05f);
 		scene.weather.moonDirection = XMFLOAT3(0.0f, 0.5f, 0.8660254f);
-		scene.weather.moonSize = 0.0095f;
-		scene.weather.moonGlowSize = 0.03f;
-		scene.weather.moonGlowSharpness = 2.0f;
-		scene.weather.moonGlowIntensity = 0.25f;
+		scene.weather.moon.size_multiplier = 1.0f;
+		scene.weather.moon.halo_size = 0.03f;
+		scene.weather.moon.halo_sharpness = 2.0f;
+		scene.weather.moon.halo_intensity = 0.25f;
 		scene.weather.moonLightIntensity = 0.05f;
-		scene.weather.moonTextureMipBias = 0;
+		scene.weather.moon.texture_mip_bias = 0;
 	}
 }
 

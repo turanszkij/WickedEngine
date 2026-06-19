@@ -187,7 +187,7 @@ float3 GetDynamicSkyColor(in float2 pixel, in float3 V, bool sun_enabled = true,
 						diskMask = core * lit;
 						if (HasMoonTexture())
 						{
-							float4 tex = bindless_textures[NonUniformResourceIndex(descriptor_index(GetWeather().moon_texture))].SampleLevel(sampler_linear_clamp, moonUV, GetMoonTextureMipBias());
+							float4 tex = bindless_textures[NonUniformResourceIndex(descriptor_index(GetWeather().moon.texture))].SampleLevel(sampler_linear_clamp, moonUV, GetMoonTextureMipBias());
 							diskMask *= tex.a;
 							diskColor *= tex.rgb;
 						}
