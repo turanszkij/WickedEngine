@@ -301,5 +301,7 @@ namespace wi::input
 	const Pinch& GetTouchPinch();
 
 	const XMFLOAT2& GetTouchPan();
+
+	bool IsTouchPanning();
 };
 

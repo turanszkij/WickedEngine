@@ -2045,8 +2045,11 @@ void EditorComponent::Update(float dt)
 		xDif += rightStick.x * joystickrotspeed;
 		yDif += rightStick.y * joystickrotspeed;
 		
-		xDif += pan.x * tweak60;
-		yDif += pan.y * tweak60;
+		if (translator.state == Translator::TRANSLATOR_IDLE)
+		{
+			xDif += pan.x * tweak60;
+			yDif += pan.y * tweak60;
+		}
 
 		xDif *= cameraWnd.rotationspeedSlider.GetValue();
 		yDif *= cameraWnd.rotationspeedSlider.GetValue();

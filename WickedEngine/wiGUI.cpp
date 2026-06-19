@@ -1212,13 +1212,13 @@ namespace wi::gui
 			}
 
 			bool clicked = false;
-			if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
+			if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanning())
 			{
 				clicked = true;
 			}
 
 			bool click_down = false;
-			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanning())
 			{
 				click_down = true;
 				if (state == FOCUS || state == DEACTIVATING)
@@ -2411,7 +2411,7 @@ namespace wi::gui
 			}
 			if (state == ACTIVE)
 			{
-				if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+				if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanning())
 				{
 					if (state == ACTIVE)
 					{
@@ -2436,7 +2436,7 @@ namespace wi::gui
 				}
 			}
 
-			if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
+			if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanning())
 			{
 				if (state == FOCUS)
 				{
@@ -2940,7 +2940,7 @@ namespace wi::gui
 				}
 
 				bool click_down = false;
-				if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+				if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanning())
 				{
 					click_down = true;
 					if (state == DEACTIVATING)
@@ -3017,7 +3017,7 @@ namespace wi::gui
 
 						if (HasScrollbar())
 						{
-							int scroll = (int)wi::input::GetPointer().z;
+							int scroll = int(wi::input::GetPointer().z - wi::input::GetTouchPan().y * 0.1f);
 							firstItemVisible -= scroll;
 							firstItemVisible = std::max(0, std::min(filteredItemCount - maxVisibleItemCount, firstItemVisible));
 							if (scroll)
@@ -3749,7 +3749,7 @@ namespace wi::gui
 				}
 			}
 
-			if (resize_state == RESIZE_STATE_NONE && wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
+			if (resize_state == RESIZE_STATE_NONE && (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanning()))
 			{
 				if (pointerHitbox.intersects(toplefthitbox))
 				{
@@ -3793,7 +3793,7 @@ namespace wi::gui
 				}
 				resize_begin = pointerHitbox.pos;
 			}
-			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanning())
 			{
 				if (resize_state != RESIZE_STATE_NONE)
 				{
@@ -4095,7 +4095,7 @@ namespace wi::gui
 
 		if (!IsMinimized() && IsVisible())
 		{
-			const float wheel_delta = wi::input::GetPointer().z;
+			const float wheel_delta = wi::input::GetPointer().z * 60.0f - wi::input::GetTouchPan().y;
 			if (wheel_delta != 0.0f && scroll_allowed && scrollbar_vertical.IsScrollbarRequired() && pointerHitbox.intersects(hitBox)) // when window is in focus, but other widgets aren't
 			{
 				const bool at_begin = (wheel_delta > 0 && scrollbar_vertical.IsScrolledToBegin());
@@ -4103,7 +4103,7 @@ namespace wi::gui
 				{
 					scroll_allowed = false;
 					// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
-					scrollbar_vertical.Scroll(wheel_delta * 60.0f);
+					scrollbar_vertical.Scroll(wheel_delta);
 				}
 			}
 		}
@@ -5002,7 +5002,7 @@ namespace wi::gui
 
 			bool dragged = false;
 
-			if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
+			if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanning())
 			{
 				if (hover_hue)
 				{
@@ -5016,7 +5016,7 @@ namespace wi::gui
 				}
 			}
 
-			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanning())
 			{
 				if (colorpickerstate > CPS_IDLE)
 				{
@@ -5637,7 +5637,7 @@ namespace wi::gui
 			float vscale = scale.y;
 			Hitbox2D bottomhitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y + vscale), XMFLOAT2(scale.x, resizehitboxwidth));
 
-			if (resize_state == RESIZE_STATE_NONE && wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
+			if (resize_state == RESIZE_STATE_NONE && (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanning()))
 			{
 				if (pointerHitbox.intersects(bottomhitbox))
 				{
@@ -5647,7 +5647,7 @@ namespace wi::gui
 				}
 				resize_begin = pointerHitbox.pos;
 			}
-			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanning())
 			{
 				if (resize_state != RESIZE_STATE_NONE)
 				{
@@ -5730,7 +5730,7 @@ namespace wi::gui
 			}
 
 			bool clicked = false;
-			if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
+			if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanning())
 			{
 				clicked = true;
 			}
@@ -5753,7 +5753,7 @@ namespace wi::gui
 			}
 
 			bool click_down = false;
-			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanning())
 			{
 				click_down = true;
 				if (state == FOCUS || state == DEACTIVATING)
