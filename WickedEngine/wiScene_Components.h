@@ -1860,14 +1860,9 @@ namespace wi::scene
 
 		XMFLOAT3 sunColor = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 sunDirection = XMFLOAT3(0, 1, 0);
-		float sunEclipseStrength = 0.0f;
-		bool sunEclipseAutomatic = false;
-		uint8_t padding_sun0[3] = {};
 		XMFLOAT3 moonColor = XMFLOAT3(0.04f, 0.04f, 0.05f);
 		XMFLOAT3 moonDirection = XMFLOAT3(0.0f, 0.5f, 0.8660254f);
 		float moonLightIntensity = 0.05f;
-		float moonEclipseStrength = 0.0f;
-		bool moonEclipseAutomatic = false;
 
 		// Moon disk appearance (size, halo, texture). Direction, color and light
 		// intensity live on the moon's directional light, not here.

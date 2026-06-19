@@ -105,12 +105,7 @@ namespace wi::scene
 	 */
 	static float ResolveMoonEclipseStrength(const WeatherComponent& weather)
 	{
-		// Manual override
-		const float manual = wi::math::Clamp(weather.moonEclipseStrength, 0.0f, 1.0f);
-		if (!weather.moonEclipseAutomatic)
-		{
-			return manual;
-		}
+		// Always computed automatically from sun/moon geometry.
 
 		// Load directions
 		XMFLOAT3 sun_dir = weather.sunDirection;
@@ -122,7 +117,7 @@ namespace wi::scene
 		const float sun_len_sq = XMVectorGetX(XMVector3LengthSq(sun));
 		if (!std::isfinite(sun_len_sq) || sun_len_sq < 1e-6f)
 		{
-			return manual;
+			return 0.0f;
 		}
 
 		float moon_len_sq = XMVectorGetX(XMVector3LengthSq(moon));

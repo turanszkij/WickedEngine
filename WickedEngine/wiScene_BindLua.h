@@ -1596,8 +1596,6 @@ namespace wi::lua::scene
 			moonGlowSharpness = FloatProperty(&component->moon.halo_sharpness);
 			moonGlowIntensity = FloatProperty(&component->moon.halo_intensity);
 			moonLightIntensity = FloatProperty(&component->moonLightIntensity);
-			moonEclipseStrength = FloatProperty(&component->moonEclipseStrength);
-			moonEclipseAutomatic = BoolProperty(&component->moonEclipseAutomatic);
 			skyExposure = FloatProperty(&component->skyExposure);
 			horizon = VectorProperty(&component->horizon);
 			zenith = VectorProperty(&component->zenith);
@@ -1611,8 +1609,6 @@ namespace wi::lua::scene
 			windWaveSize = FloatProperty(&component->windWaveSize);
 			windSpeed = FloatProperty(&component->windSpeed);
 			stars = FloatProperty(&component->stars);
-			sunEclipseStrength = FloatProperty(&component->sunEclipseStrength);
-			sunEclipseAutomatic = BoolProperty(&component->sunEclipseAutomatic);
 			rainAmount = FloatProperty(&component->rain_amount);
 			rainLength = FloatProperty(&component->rain_length);
 			rainSpeed = FloatProperty(&component->rain_speed);
@@ -1664,15 +1660,11 @@ namespace wi::lua::scene
 		FloatProperty windWaveSize;
 		FloatProperty windSpeed;
 		FloatProperty stars;
-		FloatProperty sunEclipseStrength;
-		BoolProperty sunEclipseAutomatic;
 		FloatProperty moonSize;
 		FloatProperty moonGlowSize;
 		FloatProperty moonGlowSharpness;
 		FloatProperty moonGlowIntensity;
 		FloatProperty moonLightIntensity;
-		FloatProperty moonEclipseStrength;
-		BoolProperty moonEclipseAutomatic;
 		FloatProperty rainAmount;
 		FloatProperty rainLength;
 		FloatProperty rainSpeed;
@@ -1704,15 +1696,11 @@ namespace wi::lua::scene
 		PropertyFunction(windWaveSize)
 		PropertyFunction(windSpeed)
 		PropertyFunction(stars)
-		PropertyFunction(sunEclipseStrength)
-		PropertyFunction(sunEclipseAutomatic)
 		PropertyFunction(moonSize)
 		PropertyFunction(moonGlowSize)
 		PropertyFunction(moonGlowSharpness)
 		PropertyFunction(moonGlowIntensity)
 		PropertyFunction(moonLightIntensity)
-		PropertyFunction(moonEclipseStrength)
-		PropertyFunction(moonEclipseAutomatic)
 		PropertyFunction(rainAmount)
 		PropertyFunction(rainLength)
 		PropertyFunction(rainSpeed)
