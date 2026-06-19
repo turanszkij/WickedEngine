@@ -1614,11 +1614,8 @@ namespace wi::scene
 			archive >> sunDirection;
 			archive >> sunColor;
 			moonLight = wi::ecs::INVALID_ENTITY;
-			const bool supports_moon_params = (seri.GetVersion() >= 7) || (archive.GetVersion() >= 94);
-			const bool supports_moon_texture = (seri.GetVersion() >= 8) || (archive.GetVersion() >= 95);
-			const bool supports_moon_texture_bias = (seri.GetVersion() >= 9) || (archive.GetVersion() >= 96);
-			const bool supports_moon_light_intensity = (seri.GetVersion() >= 10) || (archive.GetVersion() >= 97);
-			if (supports_moon_params)
+			const bool supports_moon = (seri.GetVersion() >= 7) || (archive.GetVersion() >= 94);
+			if (supports_moon)
 			{
 				archive >> moonDirection;
 				archive >> moonColor;
@@ -1626,28 +1623,9 @@ namespace wi::scene
 				archive >> moon.halo_size;
 				archive >> moon.halo_sharpness;
 				archive >> moon.halo_intensity;
-				if (supports_moon_light_intensity)
-				{
-					archive >> moonLightIntensity;
-				}
-			}
-			else
-			{
-				moonDirection = XMFLOAT3(0.0f, 0.5f, 0.8660254f);
-				moonColor = XMFLOAT3(0.04f, 0.04f, 0.05f);
-				moon.size_multiplier = 1.0f;
-				moon.halo_size = 0.03f;
-				moon.halo_sharpness = 2.0f;
-				moon.halo_intensity = 0.25f;
-				moonLightIntensity = 0.05f;
-			}
-			if (!supports_moon_light_intensity)
-			{
-				moonLightIntensity = 0.05f;
-			}
-			if (supports_moon_texture)
-			{
+				archive >> moonLightIntensity;
 				archive >> moon.texture_name;
+				archive >> moon.texture_mip_bias;
 				if (!moon.texture_name.empty())
 				{
 					moon.texture_name = dir + moon.texture_name;
@@ -1660,16 +1638,16 @@ namespace wi::scene
 			}
 			else
 			{
+				moonDirection = XMFLOAT3(0.0f, 0.5f, 0.8660254f);
+				moonColor = XMFLOAT3(0.04f, 0.04f, 0.05f);
+				moon.size_multiplier = 1.0f;
+				moon.halo_size = 0.03f;
+				moon.halo_sharpness = 2.0f;
+				moon.halo_intensity = 0.25f;
+				moonLightIntensity = 0.05f;
 				moon.texture_name.clear();
 				moon.texture = {};
-			}
-			if (supports_moon_texture_bias)
-			{
-				archive >> moon.texture_mip_bias;
-			}
-			else
-			{
-				moon.texture_mip_bias = 0;
+				moon.texture_mip_bias = 0.0f;
 			}
 			archive >> horizon;
 			archive >> zenith;
@@ -1952,10 +1930,7 @@ namespace wi::scene
 		}
 		else
 		{
-			const bool supports_moon_params = (seri.GetVersion() >= 7) || (archive.GetVersion() >= 94);
-			const bool supports_moon_texture = (seri.GetVersion() >= 8) || (archive.GetVersion() >= 95);
-			const bool supports_moon_texture_bias = (seri.GetVersion() >= 9) || (archive.GetVersion() >= 96);
-			const bool supports_moon_light_intensity = (seri.GetVersion() >= 10) || (archive.GetVersion() >= 97);
+			const bool supports_moon = (seri.GetVersion() >= 7) || (archive.GetVersion() >= 94);
 			seri.RegisterResource(moon.texture_name);
 			seri.RegisterResource(skyMapName);
 			seri.RegisterResource(colorGradingMapName);
@@ -1964,7 +1939,7 @@ namespace wi::scene
 			archive << _flags;
 			archive << sunDirection;
 			archive << sunColor;
-			if (supports_moon_params)
+			if (supports_moon)
 			{
 				archive << moonDirection;
 				archive << moonColor;
@@ -1972,17 +1947,8 @@ namespace wi::scene
 				archive << moon.halo_size;
 				archive << moon.halo_sharpness;
 				archive << moon.halo_intensity;
-				if (supports_moon_light_intensity)
-				{
-					archive << moonLightIntensity;
-				}
-			}
-			if (supports_moon_texture)
-			{
+				archive << moonLightIntensity;
 				archive << wi::helper::GetPathRelative(dir, moon.texture_name);
-			}
-			if (supports_moon_texture_bias)
-			{
 				archive << moon.texture_mip_bias;
 			}
 			archive << horizon;
