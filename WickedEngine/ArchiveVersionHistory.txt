@@ -1,6 +1,6 @@
 This file contains changelog of wi::Archive versions
 
-94: serialized WeatherComponent moon (direction, color, light intensity, size multiplier, halo, texture)
+94: serialized WeatherComponent moon (direction, color, light intensity, size multiplier, texture)
 93: DDGI changed to store irradiance in spherical harmonics instead of octahedral atlas
 92: added support for compressed archive
 91: thumbnail image support for Archive

@@ -1620,9 +1620,6 @@ namespace wi::scene
 				archive >> moonDirection;
 				archive >> moonColor;
 				archive >> moon.size_multiplier;
-				archive >> moon.halo_size;
-				archive >> moon.halo_sharpness;
-				archive >> moon.halo_intensity;
 				archive >> moonLightIntensity;
 				archive >> moon.texture_name;
 				archive >> moon.texture_mip_bias;
@@ -1641,9 +1638,6 @@ namespace wi::scene
 				moonDirection = XMFLOAT3(0.0f, 0.5f, 0.8660254f);
 				moonColor = XMFLOAT3(0.04f, 0.04f, 0.05f);
 				moon.size_multiplier = 1.0f;
-				moon.halo_size = 0.03f;
-				moon.halo_sharpness = 2.0f;
-				moon.halo_intensity = 0.25f;
 				moonLightIntensity = 0.05f;
 				moon.texture_name.clear();
 				moon.texture = {};
@@ -1944,9 +1938,6 @@ namespace wi::scene
 				archive << moonDirection;
 				archive << moonColor;
 				archive << moon.size_multiplier;
-				archive << moon.halo_size;
-				archive << moon.halo_sharpness;
-				archive << moon.halo_intensity;
 				archive << moonLightIntensity;
 				archive << wi::helper::GetPathRelative(dir, moon.texture_name);
 				archive << moon.texture_mip_bias;

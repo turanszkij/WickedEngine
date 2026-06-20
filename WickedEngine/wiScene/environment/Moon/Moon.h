@@ -28,10 +28,35 @@ constexpr float MOON_ANGULAR_DIAMETER =
 	XMConvertToRadians(32.0F / 60.0F); // 32 arcminutes
 
 /**
+ * @brief Calibration gain mapping the Moon light's intensity to the HDR
+ * brightness of its rendered disk.
+ *
+ * The Moon's directional light uses small, physically-scaled illuminance
+ * values (the default is `0.05`), which would render the disk far below the
+ * bloom threshold (`1.0`). This gain lifts the lit disk into HDR so the
+ * engine's bloom post-process produces the glow:
+ * \[
+ * L_{disk} = c_{light}\, s_{shading}\, (I_{light}\, G)
+ * \]
+ * where \(c_{light}\) is the Moon light color, \(s_{shading}\) the per-pixel
+ * surface shading, \(I_{light}\) the Moon light intensity, and \(G\) this gain.
+ *
+ * The value is tuned empirically so a default Moon blooms gently rather than
+ * blowing out; the disk additionally passes through `sky_exposure` and the auto
+ * eye-adaptation exposure, so it is a pleasant default rather than an exact
+ * threshold.
+ *
+ * @note Brightness and tint are authored on the Moon's directional
+ * `LightComponent` (intensity and color); this gain only rescales them for the
+ * disk.
+ */
+constexpr float MOON_DISK_EMISSIVE_GAIN = 100.0F;
+
+/**
  * @brief The renderable appearance of the Moon's disk.
  *
  * A plain data holder for the Moon's **disk-appearance** properties: its
- * apparent size, halo and surface texture. The Moon's **direction, color and
+ * apparent size and surface texture. The Moon's **direction, color and
  * light intensity are NOT stored here** — they belong to the Moon's directional
  * `LightComponent` (the single source of truth), exactly like the Sun's. The
  * scene update reads those from the light when packing GPU data and computing
@@ -68,28 +93,6 @@ class wi::scene::environment::Moon final {
 	 * preserves the physically-based size. Should be positive.
 	 */
 	float size_multiplier = 1.0F;
-
-	/**
-	 * @brief Extra angular radius (in radians) added for the halo falloff.
-	 *
-	 * @note Temporary: the halo is slated for removal in favour of letting the
-	 * bloom post-process pick up the bright Moon.
-	 */
-	float halo_size = 0.03F;
-
-	/**
-	 * @brief Exponent controlling how sharply the halo falls off.
-	 *
-	 * @note Temporary, see @ref halo_size.
-	 */
-	float halo_sharpness = 2.0F;
-
-	/**
-	 * @brief Brightness multiplier applied to the halo.
-	 *
-	 * @note Temporary, see @ref halo_size.
-	 */
-	float halo_intensity = 0.25F;
 
 	/**
 	 * @brief Name or identifier of the Moon surface texture resource.

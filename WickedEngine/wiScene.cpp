@@ -1094,9 +1094,10 @@ namespace wi::scene
 		shaderscene.weather.moon.color = wi::math::pack_half3(weather.moonColor);
 		shaderscene.weather.moon.direction = wi::math::pack_half3(moonDir);
 		shaderscene.weather.moon.size = weather.moon.GetAngularRadius();
-		shaderscene.weather.moon.halo_size = weather.moon.halo_size;
-		shaderscene.weather.moon.halo_sharpness = weather.moon.halo_sharpness;
-		shaderscene.weather.moon.halo_intensity = weather.moon.halo_intensity;
+		// HDR brightness for the lit disk so bloom produces the glow. Use the
+		// raw light intensity (not the phase/eclipse-dimmed light_intensity
+		// below): the disk shader applies its own per-pixel phase and eclipse.
+		shaderscene.weather.moon.disk_emissive = weather.moonLightIntensity * MOON_DISK_EMISSIVE_GAIN;
 		shaderscene.weather.moon.texture = weather.moon.texture.IsValid() ? device->GetDescriptorIndex(&weather.moon.texture.GetTexture(), SubresourceType::SRV, weather.moon.texture.GetTextureSRGBSubresource()) : -1;
 		shaderscene.weather.moon.texture_mip_bias = weather.moon.texture_mip_bias;
 		const float moon_phase_visibility = ComputeMoonPhaseVisibility(weather.sunDirection, moonDir);

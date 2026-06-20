@@ -14,22 +14,17 @@ struct alignas(16) ShaderMoon
 	uint2 color;            // Packed half3 linear RGB
 
 	float size;             // Angular radius (radians)
-	float halo_size;        // Extra halo radius (radians)
-	float halo_sharpness;   // Halo falloff exponent
-	float halo_intensity;   // Halo brightness multiplier
-
+	float disk_emissive;    // HDR brightness scale for the lit disk (bloom)
 	int texture;            // Bindless SRV index, -1 if unused
 	float texture_mip_bias; // Mip bias for moon texture sampling
+
 	float light_intensity;  // Moon directional light illuminance
 	float eclipse_strength; // 0-1 earth shadow on moon (eclipse)
-
 	uint light_index;       // Moon directional light entity index
 	uint padding0;
-	uint padding1;
-	uint padding2;
 };
 #ifdef __cplusplus
-static_assert(sizeof(ShaderMoon) == 64);
+static_assert(sizeof(ShaderMoon) == 48);
 #endif // __cplusplus
 
 #endif // WI_SHADERINTEROP_MOON_H

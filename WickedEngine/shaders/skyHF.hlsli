@@ -207,22 +207,10 @@ float3 GetDynamicSkyColor(in float2 pixel, in float3 V, bool sun_enabled = true,
 					}
 				}
 			}
-			float haloContribution = 0;
-			float haloIntensity = GetMoonHaloIntensity();
-			if (haloIntensity > 0)
-			{
-				float haloSize = max(GetMoonHaloSize(), 0.0001f);
-				float haloRadius = moonSize + haloSize;
-				float halo = smoothstep(cos(haloRadius), innerEdge, cosAngle);
-				halo = pow(saturate(halo), max(GetMoonHaloSharpness(), 0.0001f));
-
-				// Mask halo to the lit hemisphere so crescents don't get a full circular glow.
-				// Use the view direction V and sunToMoonDir (direction toward lit side).
-				float litHaloMask = saturate(dot(V, sunToMoonDir));
-				haloContribution = halo * haloIntensity * phaseVisibility * litHaloMask;
-			}
-			sky += moonColor * haloContribution;
-			sky += diskColor * diskMask * saturate(1.0f - eclipseStrength * 0.9f);
+			// Write the lit disk in HDR so the bloom post-process picks it up
+			// and produces the glow. Only lit pixels are bright, so the glow
+			// naturally falls on the illuminated part (correct crescents).
+			sky += diskColor * diskMask * saturate(1.0f - eclipseStrength * 0.9f) * GetMoonDiskEmissive();
 		}
 	}
 

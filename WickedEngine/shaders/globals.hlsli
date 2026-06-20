@@ -1009,9 +1009,7 @@ inline float3 GetMoonDirection()
 }
 inline half3 GetMoonColor() { return unpack_half3(GetWeather().moon.color); }
 inline float GetMoonSize() { return GetWeather().moon.size; }
-inline float GetMoonHaloSize() { return GetWeather().moon.halo_size; }
-inline float GetMoonHaloSharpness() { return GetWeather().moon.halo_sharpness; }
-inline float GetMoonHaloIntensity() { return GetWeather().moon.halo_intensity; }
+inline float GetMoonDiskEmissive() { return GetWeather().moon.disk_emissive; }
 inline bool HasMoonTexture() { return GetWeather().moon.texture >= 0; }
 inline float GetMoonTextureMipBias() { return GetWeather().moon.texture_mip_bias; }
 inline float GetMoonLightIntensity() { return GetWeather().moon.light_intensity; }
