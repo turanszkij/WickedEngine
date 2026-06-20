@@ -19235,6 +19235,18 @@ void ComputeReprojectedDepthPyramid(
 		{
 			device->BindUAV(&output_depth_pyramid, 1, cmd, bottom + 1);
 			PushBarrier(GPUBarrier::Image(&output_depth_pyramid, ResourceState::UNORDERED_ACCESS, output_depth_pyramid.desc.layout, bottom + 1));
+
+			if (output_desc.mip_levels > (bottom + 2))
+			{
+				device->BindUAV(&output_depth_pyramid, 2, cmd, bottom + 2);
+				PushBarrier(GPUBarrier::Image(&output_depth_pyramid, ResourceState::UNORDERED_ACCESS, output_depth_pyramid.desc.layout, bottom + 2));
+
+				if (output_desc.mip_levels > (bottom + 3))
+				{
+					device->BindUAV(&output_depth_pyramid, 3, cmd, bottom + 3);
+					PushBarrier(GPUBarrier::Image(&output_depth_pyramid, ResourceState::UNORDERED_ACCESS, output_depth_pyramid.desc.layout, bottom + 3));
+				}
+			}
 		}
 
 		device->Dispatch(
@@ -19246,7 +19258,7 @@ void ComputeReprojectedDepthPyramid(
 
 		FlushBarriers(cmd);
 
-		bottom += 2;
+		bottom += 4;
 	}
 
 	device->EventEnd(cmd);
