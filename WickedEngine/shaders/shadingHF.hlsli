@@ -304,7 +304,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 				const uint entity_index = bucket * 32 + bucket_bit_index;
 				ShaderEntity probe = load_entity(entity_index);
 
-				TextureCube<half4> cubemap = bindless_cubemaps_half4[probe.packed_indices]; // CPU guaranteed nonzero index!
+				TextureCube<half4> cubemap = bindless_cubemaps_half4[descriptor_index(probe.GetTextureIndex())];
 
 				float3x4 probeProjection = load_entitymatrix(entity_index);
 					

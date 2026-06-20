@@ -4688,10 +4688,10 @@ void UpdatePerFrameData(
 
 		// Light processing starts from here:
 		lightarray_offset = entityCounter;
+		uint32_t matrixCounter = entityCounter; // Note: so far entity and matrix indices had 1-1 mapping, from here it won't be true
 		const XMFLOAT2 atlas_dim_rcp = XMFLOAT2(1.0f / float(shadowMapAtlas.desc.width), 1.0f / float(shadowMapAtlas.desc.height));
 
 		// Write directional lights into entity array:
-		uint32_t matrixCounter = entityCounter; // Note: so far entity and matrix indices had 1-1 mapping, for lights this won't be true
 		lightarray_offset_directional = entityCounter;
 		for (uint32_t lightIndex : vis.visibleLights)
 		{
@@ -4747,6 +4747,7 @@ void UpdatePerFrameData(
 				for (size_t cascade = 0; cascade < cascade_count; ++cascade)
 				{
 					XMStoreFloat4x4(&matrixArray[matrixCounter++], shcams[cascade].view_projection);
+					matrixCounter = std::min(matrixCounter, (uint32_t)arraysize(frameCB.matrixArray) - 1);
 				}
 			}
 
