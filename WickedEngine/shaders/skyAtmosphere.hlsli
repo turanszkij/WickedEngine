@@ -479,8 +479,11 @@ half3 GetSunLuminance(float3 worldPosition, float3 worldDirection, float3 sunDir
 			if (moonSize > 0.0)
 			{
 				float3 moonDir = GetMoonDirection();
-				// soft-edge mask for nicer transition (1.0 inside disk, 0.0 outside)
-				float edgeSoftness = 0.0025; // radians (very small)
+				// Soft-edge mask for nicer transition (1.0 inside disk, 0.0
+				// outside). The limb scales with the moon's angular radius so
+				// it stays crisp at the physically-based size, matching the sun
+				// silhouette above.
+				float edgeSoftness = max(moonSize * 0.05f, 1e-4f);
 				float cosInner = cos(moonSize - edgeSoftness);
 				float cosOuter = cos(moonSize + edgeSoftness);
 				float moonDot = dot(worldDirection, moonDir);
