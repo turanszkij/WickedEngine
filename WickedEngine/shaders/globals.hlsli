@@ -2346,6 +2346,19 @@ inline float3 get_right(float3x3 m)
 	return float3(m[0][0], m[0][1], m[0][2]);
 }
 
+inline float3 get_forward(float4x4 m)
+{
+	return float3(m[2][0], m[2][1], m[2][2]);
+}
+inline float3 get_up(float4x4 m)
+{
+	return float3(m[1][0], m[1][1], m[1][2]);
+}
+inline float3 get_right(float4x4 m)
+{
+	return float3(m[0][0], m[0][1], m[0][2]);
+}
+
 half3x3 saturationMatrix(half saturation)
 {
 	half3 luminance = half3(0.3086, 0.6094, 0.0820);
