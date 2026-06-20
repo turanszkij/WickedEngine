@@ -161,7 +161,6 @@ float3 GetDynamicSkyColor(in float2 pixel, in float3 V, bool sun_enabled = true,
 				phaseVisibility = saturate(0.5f * (1.0f - dot(dirToSun, moonDir)));
 			}
 			float eclipseStrength = GetMoonEclipseStrength();
-			phaseVisibility *= saturate(1.0f - eclipseStrength);
 			float cosAngle = dot(V, moonDir);
 			float innerEdge = cos(moonSize);
 			float core = smoothstep(innerEdge, cos(moonSize * 0.8f), cosAngle);
@@ -207,10 +206,18 @@ float3 GetDynamicSkyColor(in float2 pixel, in float3 V, bool sun_enabled = true,
 					}
 				}
 			}
+			// Lunar eclipse: shift the disk toward blood-red and dim it toward a
+			// small floor (never fully black), strongest at totality.
+			const float3 MOON_BLOOD_TINT = float3(1.0f, 0.3f, 0.1f); // deep red-orange
+			const float MOON_ECLIPSE_MIN_LUMINANCE = 0.5f;          // Minimum brightness of the disk at totality (never fully black)
+			float diskLuma = dot(diskColor, float3(0.2126f, 0.7152f, 0.0722f));
+			float3 eclipsedColor =
+				lerp(diskColor, diskLuma * MOON_BLOOD_TINT, eclipseStrength);
+			float eclipseDim = lerp(1.0f, MOON_ECLIPSE_MIN_LUMINANCE, eclipseStrength);
 			// Write the lit disk in HDR so the bloom post-process picks it up
 			// and produces the glow. Only lit pixels are bright, so the glow
 			// naturally falls on the illuminated part (correct crescents).
-			sky += diskColor * diskMask * saturate(1.0f - eclipseStrength * 0.9f) * GetMoonDiskEmissive();
+			sky += eclipsedColor * eclipseDim * diskMask * GetMoonDiskEmissive();
 		}
 	}
 
