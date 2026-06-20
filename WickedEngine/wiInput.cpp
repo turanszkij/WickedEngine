@@ -92,6 +92,7 @@ namespace wi::input
 	Pinch pinch;
 	XMFLOAT2 pan = XMFLOAT2(0, 0);
 	bool is_panning = false;
+	bool is_pan_starting = false;
 	bool pen_override = false;
 	bool double_click = false;
 	wi::Timer doubleclick_timer;
@@ -314,7 +315,9 @@ namespace wi::input
 		float prev_pinch_scale = pinch.scale;
 		pinch = {};
 		pan = XMFLOAT2(0, 0);
+		const bool was_panning = is_panning;
 		is_panning = false;
+		is_pan_starting = false;
 		for (auto& touch : touches)
 		{
 			if (touch.state == Touch::TOUCHSTATE_PINCHED)
@@ -326,6 +329,10 @@ namespace wi::input
 			else if (touch.state == Touch::TOUCHSTATE_MOVED)
 			{
 				pan = mouse.delta_position;
+				if (!was_panning)
+				{
+					is_pan_starting = true;
+				}
 				is_panning = true;
 			}
 		}
@@ -1815,6 +1822,11 @@ namespace wi::input
 	bool IsTouchPanning()
 	{
 		return is_panning;
+	}
+
+	bool IsTouchPanStarting()
+	{
+		return is_pan_starting;
 	}
 
 }

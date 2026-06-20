@@ -303,5 +303,6 @@ namespace wi::input
 	const XMFLOAT2& GetTouchPan();
 
 	bool IsTouchPanning();
+	bool IsTouchPanStarting();
 };
 

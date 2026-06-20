@@ -910,7 +910,7 @@ namespace wi::gui
 				}
 			}
 
-			if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
+			if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanStarting())
 			{
 				if (state == FOCUS)
 				{
@@ -928,7 +928,7 @@ namespace wi::gui
 				}
 			}
 
-			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanning())
 			{
 				if (state == DEACTIVATING)
 				{
@@ -3749,7 +3749,7 @@ namespace wi::gui
 				}
 			}
 
-			if (resize_state == RESIZE_STATE_NONE && (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanning()))
+			if (resize_state == RESIZE_STATE_NONE && (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanStarting()))
 			{
 				if (pointerHitbox.intersects(toplefthitbox))
 				{
@@ -4093,7 +4093,7 @@ namespace wi::gui
 			});
 		}
 
-		if (!IsMinimized() && IsVisible())
+		if (!IsMinimized() && IsVisible() && !local_force_disable)
 		{
 			const float wheel_delta = wi::input::GetPointer().z * 60.0f - wi::input::GetTouchPan().y;
 			if (wheel_delta != 0.0f && scroll_allowed && scrollbar_vertical.IsScrollbarRequired() && pointerHitbox.intersects(hitBox)) // when window is in focus, but other widgets aren't
@@ -5637,7 +5637,7 @@ namespace wi::gui
 			float vscale = scale.y;
 			Hitbox2D bottomhitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y + vscale), XMFLOAT2(scale.x, resizehitboxwidth));
 
-			if (resize_state == RESIZE_STATE_NONE && (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanning()))
+			if (resize_state == RESIZE_STATE_NONE && (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanStarting()))
 			{
 				if (pointerHitbox.intersects(bottomhitbox))
 				{
