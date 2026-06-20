@@ -4683,7 +4683,7 @@ void UpdatePerFrameData(
 			envprobearray_count++;
 		}
 
-		uint32_t matrixCounter = 0; // so far entities and matrices had 1-1 mapping, this is not true below this part:
+		uint32_t matrixCounter = entityCounter; // so far entities and matrices had 1-1 mapping, this is not true below this part:
 		const XMFLOAT2 atlas_dim_rcp = XMFLOAT2(1.0f / float(shadowMapAtlas.desc.width), 1.0f / float(shadowMapAtlas.desc.height));
 
 		// Write directional lights into entity array:
