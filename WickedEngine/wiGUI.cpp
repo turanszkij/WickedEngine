@@ -4093,9 +4093,13 @@ namespace wi::gui
 			});
 		}
 
-		if (!IsMinimized() && IsVisible() && !local_force_disable)
+		if (!IsMinimized() && IsVisible())
 		{
-			const float wheel_delta = wi::input::GetPointer().z * 60.0f - wi::input::GetTouchPan().y;
+			float wheel_delta = wi::input::GetPointer().z * 60.0f;
+			if (!local_force_disable)
+			{
+				wheel_delta -= wi::input::GetTouchPan().y;
+			}
 			if (wheel_delta != 0.0f && scroll_allowed && scrollbar_vertical.IsScrollbarRequired() && pointerHitbox.intersects(hitBox)) // when window is in focus, but other widgets aren't
 			{
 				const bool at_begin = (wheel_delta > 0 && scrollbar_vertical.IsScrolledToBegin());
