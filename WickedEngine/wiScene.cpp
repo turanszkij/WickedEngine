@@ -105,73 +105,34 @@ namespace wi::scene
 	 */
 	static float ResolveMoonEclipseStrength(const WeatherComponent& weather)
 	{
-		// Always computed automatically from sun/moon geometry.
+		// A lunar eclipse occurs when the Moon enters Earth's shadow, which is
+		// cast in the antisolar direction (opposite the Sun). The strength is
+		// the fraction of the Moon's disk covered by that shadow disk.
 
-		// Load directions
-		XMFLOAT3 sun_dir = weather.sunDirection;
-		XMFLOAT3 moon_dir = weather.moonDirection;
-		XMVECTOR sun = XMLoadFloat3(&sun_dir);
-		XMVECTOR moon = XMLoadFloat3(&moon_dir);
+		XMVECTOR sun = XMLoadFloat3(&weather.sunDirection);
+		XMVECTOR moon = XMLoadFloat3(&weather.moonDirection);
 
 		// Sanity check lengths
 		const float sun_len_sq = XMVectorGetX(XMVector3LengthSq(sun));
-		if (!std::isfinite(sun_len_sq) || sun_len_sq < 1e-6f)
+		const float moon_len_sq = XMVectorGetX(XMVector3LengthSq(moon));
+		if (!std::isfinite(sun_len_sq) || sun_len_sq < 1e-6f ||
+			!std::isfinite(moon_len_sq) || moon_len_sq < 1e-6f)
 		{
 			return 0.0f;
 		}
 
-		float moon_len_sq = XMVectorGetX(XMVector3LengthSq(moon));
-		if (!std::isfinite(moon_len_sq) || moon_len_sq < 1e-6f)
-		{
-			moon_dir = XMFLOAT3(0.0f, 0.5f, 0.8660254f);
-			moon = XMLoadFloat3(&moon_dir);
-			moon_len_sq = XMVectorGetX(XMVector3LengthSq(moon));
-		}
-
-		// Normalize directions
-		sun = XMVector3Normalize(sun);
+		// Earth's shadow sits at the antisolar point (opposite the Sun).
+		const XMVECTOR antisolar = XMVectorNegate(XMVector3Normalize(sun));
 		moon = XMVector3Normalize(moon);
 
-		// Angular separation between sun and moon (radians)
-		const float cos_theta = wi::math::Clamp(XMVectorGetX(XMVector3Dot(sun, moon)), -1.0f, 1.0f);
-		const float theta = std::acos(cos_theta);
+		const float moon_radius = weather.moon.GetAngularRadius();
+		const float shadow_radius =
+			moon_radius * EARTH_UMBRA_TO_MOON_RADIUS_RATIO;
 
-		// Apparent angular radii
-		constexpr float sun_radius = wi::math::DegreesToRadians(2.4f); // ~2.4° apparent radius (same as skyAtmosphere.hlsli)
-		const float moon_radius = weather.moon.GetAngularRadius(); // in radians
-
-		float eclipse = 0.0f;
-
-		if (theta >= sun_radius + moon_radius)
-		{
-			// No overlap
-			eclipse = 0.0f;
-		}
-		else if (theta <= std::abs(moon_radius - sun_radius))
-		{
-			// One disk completely inside the other
-			eclipse = 1.0f;
-		}
-		else
-		{
-			// Partial overlap: compute circle intersection area fraction
-			float r1 = sun_radius;
-			float r2 = moon_radius;
-			float d = theta;
-
-			float part1 = r1 * r1 * std::acos((d*d + r1*r1 - r2*r2) / (2*d*r1));
-			float part2 = r2 * r2 * std::acos((d*d + r2*r2 - r1*r1) / (2*d*r2));
-			float part3 = 0.5f * std::sqrt(
-				std::max(0.0f, (-d + r1 + r2) * (d + r1 - r2) * (d - r1 + r2) * (d + r1 + r2))
-			);
-
-			float overlap_area = part1 + part2 - part3;
-			float sun_area = 3.14159265f * r1 * r1;
-
-			eclipse = wi::math::Clamp(overlap_area / sun_area, 0.0f, 1.0f);
-		}
-
-		return eclipse;
+		// Fraction of the Moon covered by the shadow: |moon n shadow| / |moon|.
+		return wi::math::ComputeDiskOverlapRatio(
+			moon, moon_radius, antisolar, shadow_radius
+		);
 	}
 
 	void Scene::Update(float dt)

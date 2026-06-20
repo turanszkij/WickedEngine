@@ -28,6 +28,23 @@ constexpr float MOON_ANGULAR_DIAMETER =
 	XMConvertToRadians(32.0F / 60.0F); // 32 arcminutes
 
 /**
+ * @brief Ratio of Earth's umbral shadow radius to the Moon's radius, at the
+ * Moon's distance — used to size the shadow for lunar-eclipse computations.
+ *
+ * During a lunar eclipse the Moon passes through Earth's shadow (umbra), cast
+ * away from the Sun (the antisolar direction). At the Moon's distance the umbra
+ * has an angular radius of roughly `0.7°`, against the Moon's own angular radius
+ * of roughly `0.26°` (@ref MOON_ANGULAR_DIAMETER), giving a ratio of about
+ * `2.6`. Expressing the shadow as a multiple of the Moon's radius (rather than a
+ * fixed angle) keeps eclipses proportional under an artistic `size_multiplier`
+ * and lets a centered Moon reach total coverage.
+ *
+ * References:
+ * https://en.wikipedia.org/wiki/Lunar_eclipse
+ */
+constexpr float EARTH_UMBRA_TO_MOON_RADIUS_RATIO = 2.6F;
+
+/**
  * @brief Calibration gain mapping the Moon light's intensity to the HDR
  * brightness of its rendered disk.
  *

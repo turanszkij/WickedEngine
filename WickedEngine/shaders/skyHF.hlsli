@@ -152,13 +152,13 @@ float3 GetDynamicSkyColor(in float2 pixel, in float3 V, bool sun_enabled = true,
 			float3 moonDir = GetMoonDirection();
 			float3 sunDir = (float3)GetSunDirection();
 			float sunLenSq = dot(sunDir, sunDir);
-			float3 sunToMoonDir = moonDir;
+			float3 dirToSun = -moonDir; // Fallback (no sun): light the near face
 			float phaseVisibility = 1.0f;
 			if (sunLenSq > 1e-6f)
 			{
 				float invSunLen = rsqrt(sunLenSq);
-				sunToMoonDir = -sunDir * invSunLen;
-				phaseVisibility = saturate(0.5f * (1.0f + dot(sunToMoonDir, moonDir)));
+				dirToSun = sunDir * invSunLen;
+				phaseVisibility = saturate(0.5f * (1.0f - dot(dirToSun, moonDir)));
 			}
 			float eclipseStrength = GetMoonEclipseStrength();
 			phaseVisibility *= saturate(1.0f - eclipseStrength);
@@ -180,8 +180,8 @@ float3 GetDynamicSkyColor(in float2 pixel, in float3 V, bool sun_enabled = true,
 					float2 diskCoord = (moonUV - 0.5f) * 2.0f;
 					float radialSq = dot(diskCoord, diskCoord);
 					float localZ = sqrt(saturate(1.0f - radialSq));
-					float3 localNormal = normalize(moonRight * diskCoord.x + moonUp * diskCoord.y + moonDir * localZ);
-					float lit = saturate(dot(localNormal, sunToMoonDir));
+					float3 surfaceNormal = normalize(moonRight * diskCoord.x + moonUp * diskCoord.y - moonDir * localZ);
+					float lit = saturate(dot(surfaceNormal, dirToSun));
 					if (lit > 0.0f)
 					{
 						diskMask = core * lit;
@@ -192,9 +192,9 @@ float3 GetDynamicSkyColor(in float2 pixel, in float3 V, bool sun_enabled = true,
 							diskColor *= tex.rgb;
 						}
 						float phaseBlend = saturate(phaseVisibility);
-						float3 shadingNormal = normalize(lerp(moonDir, localNormal, phaseBlend));
-						float diffuse = saturate(dot(shadingNormal, sunToMoonDir));
-						float rim = pow(saturate(1.0f - dot(localNormal, V)), 4.0f);
+						float3 shadingNormal = normalize(lerp(-moonDir, surfaceNormal, phaseBlend));
+						float diffuse = saturate(dot(shadingNormal, dirToSun));
+						float rim = pow(saturate(1.0f - localZ), 4.0f);
 						float wave = dot(diskCoord, float2(21.7f, -14.9f));
 						float time = GetTime();
 						float anim0 = sin(wave + time * 0.35f);
