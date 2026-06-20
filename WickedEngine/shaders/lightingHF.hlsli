@@ -55,7 +55,7 @@ inline void ApplyLighting(in Surface surface, in Lighting lighting, inout half4 
 }
 
 //#define CASCADE_DITHERING
-inline void light_directional(in ShaderEntity light, in uint entity_index, in Surface surface, inout Lighting lighting, in half shadow_mask = 1)
+inline void light_directional(in ShaderEntity light, in Surface surface, inout Lighting lighting, in half shadow_mask = 1)
 {
 	if (shadow_mask <= 0.001)
 		return; // shadow mask zero
@@ -186,7 +186,7 @@ inline half attenuation_pointlight(in half dist2, in half range, in half range2)
 	dist_per_range *= dist_per_range; // pow4
 	return saturate(1 - dist_per_range) / max(0.0001, dist2);
 }
-inline void light_point(in ShaderEntity light, in uint entity_index, in Surface surface, inout Lighting lighting, in half shadow_mask = 1)
+inline void light_point(in ShaderEntity light, in Surface surface, inout Lighting lighting, in half shadow_mask = 1)
 {
 	if (shadow_mask <= 0.001)
 		return; // shadow mask zero
@@ -303,7 +303,7 @@ inline half attenuation_spotlight(in half dist2, in half range, in half range2, 
 	attenuation *= angularAttenuation;
 	return attenuation;
 }
-inline void light_spot(in ShaderEntity light, in uint entity_index, in Surface surface, inout Lighting lighting, in half shadow_mask = 1)
+inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting lighting, in half shadow_mask = 1)
 {
 	if (shadow_mask <= 0.001)
 		return; // shadow mask zero
@@ -343,7 +343,7 @@ inline void light_spot(in ShaderEntity light, in uint entity_index, in Surface s
 		if ((GetFrame().options & OPTION_BIT_RAYTRACED_SHADOWS) == 0 || GetCamera().texture_rtshadow_index < 0 || (GetCamera().options & SHADERCAMERA_OPTION_USE_SHADOW_MASK) == 0)
 #endif // SHADOW_MASK_ENABLED
 		{
-			float4 shadow_pos = mul(load_entitymatrix(entity_index), float4(surface.P, 1));
+			float4 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex()), float4(surface.P, 1));
 			shadow_pos.xyz /= shadow_pos.w;
 			float2 shadow_uv = clipspace_to_uv(shadow_pos.xy);
 			[branch]
@@ -361,7 +361,7 @@ inline void light_spot(in ShaderEntity light, in uint entity_index, in Surface s
 	[branch]
 	if (maskTex > 0)
 	{
-		float4 shadow_pos = mul(load_entitymatrix(entity_index), float4(surface.P, 1));
+		float4 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex()), float4(surface.P, 1));
 		shadow_pos.xyz /= shadow_pos.w;
 		float2 shadow_uv = clipspace_to_uv(shadow_pos.xy);
 		half4 mask = bindless_textures_half4[descriptor_index(maskTex)].SampleLevel(sampler_linear_clamp, shadow_uv, 0);
@@ -394,7 +394,7 @@ inline void light_spot(in ShaderEntity light, in uint entity_index, in Surface s
 #endif // LIGHTING_SCATTER
 }
 
-inline void light_rect(in ShaderEntity light, in uint entity_index, in Surface surface, inout Lighting lighting, in half shadow_mask = 1)
+inline void light_rect(in ShaderEntity light, in Surface surface, inout Lighting lighting, in half shadow_mask = 1)
 {
 #ifndef DISABLE_AREA_LIGHTS
 	if (shadow_mask <= 0.001)
@@ -477,7 +477,7 @@ inline void light_rect(in ShaderEntity light, in uint entity_index, in Surface s
 		if ((GetFrame().options & OPTION_BIT_RAYTRACED_SHADOWS) == 0 || GetCamera().texture_rtshadow_index < 0 || (GetCamera().options & SHADERCAMERA_OPTION_USE_SHADOW_MASK) == 0)
 #endif // SHADOW_MASK_ENABLED
 		{
-			float4 shadow_pos = mul(load_entitymatrix(entity_index), float4(surface.P, 1));
+			float4 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex()), float4(surface.P, 1));
 			shadow_pos.xyz /= shadow_pos.w;
 			float2 shadow_uv = clipspace_to_uv(shadow_pos.xy);
 			[branch]
@@ -513,7 +513,7 @@ inline void light_rect(in ShaderEntity light, in uint entity_index, in Surface s
 		uint mipcount;
 		tex.GetDimensions(0, dim.x, dim.y, mipcount);
 		
-		float4 shadow_pos = mul(load_entitymatrix(entity_index), float4(surface.P, 1));
+		float4 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex()), float4(surface.P, 1));
 		shadow_pos.xyz /= shadow_pos.w;
 		float2 diffuse_uv = clipspace_to_uv(shadow_pos.xy);
 		half4 diffuse_mask = tex.SampleLevel(sampler_linear_clamp, diffuse_uv, mipcount - 2);

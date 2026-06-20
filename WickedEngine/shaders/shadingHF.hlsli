@@ -133,22 +133,22 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 			{
 			case ENTITY_TYPE_DIRECTIONALLIGHT:
 			{
-				light_directional(light, entity_index, surface, lighting);
+				light_directional(light, surface, lighting);
 			}
 			break;
 			case ENTITY_TYPE_POINTLIGHT:
 			{
-				light_point(light, entity_index, surface, lighting);
+				light_point(light, surface, lighting);
 			}
 			break;
 			case ENTITY_TYPE_SPOTLIGHT:
 			{
-				light_spot(light, entity_index, surface, lighting);
+				light_spot(light, surface, lighting);
 			}
 			break;
 			case ENTITY_TYPE_RECTLIGHT:
 			{
-				light_rect(light, entity_index, surface, lighting);
+				light_rect(light, surface, lighting);
 			}
 			break;
 			}
@@ -412,7 +412,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 			}
 #endif // SHADOW_MASK_ENABLED && !TRANSPARENT
 
-			light_directional(light, entity_index, surface, lighting, shadow_mask);
+			light_directional(light, surface, lighting, shadow_mask);
 		}
 	}
 
@@ -452,7 +452,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 				}
 #endif // SHADOW_MASK_ENABLED && !TRANSPARENT
 
-				light_spot(light, entity_index, surface, lighting, shadow_mask);
+				light_spot(light, surface, lighting, shadow_mask);
 
 			}
 		}
@@ -494,7 +494,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 				}
 #endif // SHADOW_MASK_ENABLED && !TRANSPARENT
 
-				light_point(light, entity_index, surface, lighting, shadow_mask);
+				light_point(light, surface, lighting, shadow_mask);
 
 			}
 		}
@@ -536,7 +536,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 				}
 #endif // SHADOW_MASK_ENABLED && !TRANSPARENT
 
-				light_rect(light, entity_index, surface, lighting, shadow_mask);
+				light_rect(light, surface, lighting, shadow_mask);
 
 			}
 		}

@@ -113,7 +113,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 			[branch]
 			if (light.IsCastingShadow())
 			{
-				float4 shadow_pos = mul(load_entitymatrix(entity_index), float4(P, 1));
+				float4 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex()), float4(P, 1));
 				shadow_pos.xyz /= shadow_pos.w;
 				float2 shadow_uv = shadow_pos.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 				[branch]
@@ -126,7 +126,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 			[branch]
 			if (maskTex > 0)
 			{
-				float4 shadow_pos = mul(load_entitymatrix(entity_index), float4(P, 1));
+				float4 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex()), float4(P, 1));
 				shadow_pos.xyz /= shadow_pos.w;
 				float2 shadow_uv = shadow_pos.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 				half4 mask = bindless_textures_half4[descriptor_index(maskTex)].Sample(sampler_linear_clamp, shadow_uv);

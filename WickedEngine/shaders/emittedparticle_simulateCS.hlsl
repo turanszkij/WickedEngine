@@ -163,7 +163,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 						dist = dist - particleSize;
 						if (dist < 0)
 						{
-							float4x4 planeProjection = load_entitymatrix(entity_index);
+							float4x4 planeProjection = load_entitymatrix(entity.GetMatrixIndex());
 							const float3 clipSpacePos = mul(planeProjection, float4(particle.position, 1)).xyz;
 							const float3 uvw = clipspace_to_uvw(clipSpacePos.xyz);
 							[branch]
