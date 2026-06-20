@@ -445,26 +445,18 @@ half3 GetSunLuminance(float3 worldPosition, float3 worldDirection, float3 sunDir
 				if (moonLenSq > 1e-6f)
 				{
 					float3 moonDirNorm = moonDir * rsqrt(moonLenSq);
-					if (dot(moonDirNorm, sunDirNorm) > 0.0f)
-					{
-						float3 referenceUp = abs(sunDirNorm.y) > 0.95f ? float3(1, 0, 0) : float3(0, 1, 0);
-						float3 sunRight = normalize(cross(referenceUp, sunDirNorm));
-						float3 sunUp = normalize(cross(sunDirNorm, sunRight));
-
-						float2 sunPlane = float2(dot(worldDirection, sunRight), dot(worldDirection, sunUp));
-						float2 moonPlane = float2(dot(moonDirNorm, sunRight), dot(moonDirNorm, sunUp));
-						float sunRadius = sin(sunHalfApexAngleRadian);
-						float moonRadius = sin(GetMoonSize());
-						float2 delta = sunPlane - moonPlane;
-						float distSq = dot(delta, delta);
-						float moonRadiusSq = moonRadius * moonRadius;
-						if (moonRadiusSq > 1e-8f)
-						{
-							float coverage = saturate(1.0f - distSq / moonRadiusSq);
-							coverage = pow(coverage, 1.5f);
-							weight *= saturate(1.0f - sunEclipseStrength * coverage);
-						}
-					}
+					// Opaque moon silhouette: fully occlude the sun wherever the
+					// view ray lies within the moon's angular radius, with a thin
+					// soft limb. This mirrors the star-occlusion mask below and is
+					// independent of the eclipse area ratio, so the covered region
+					// goes fully dark across the whole moon disk (not just its
+					// center).
+					float moonSize = GetMoonSize();					// Moon angular radius (rad)
+					float edgeSoftness = max(moonSize * 0.05f, 1e-4f);	// Thin limb, scales with size
+					float cosInner = cos(moonSize - edgeSoftness);
+					float cosOuter = cos(moonSize + edgeSoftness);
+					float moonMask = smoothstep(cosOuter, cosInner, dot(worldDirection, moonDirNorm));
+					weight *= 1.0f - moonMask;
 				}
 			}
 
