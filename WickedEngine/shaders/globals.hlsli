@@ -997,10 +997,23 @@ inline half3 GetSunColor()
     const half minIllum = 0.05;
     intensityScale = max(minIllum, intensityScale);
 
-    // Color temperature shift as a function of dimming
-    half3 tintedColor = lerp(rawColor, half3(0.9,0.8,0.7), pow(1 - intensityScale, 1.5));
+    // Color temperature shift as a function of dimming, toward a cool steely
+    // twilight. Keep this in sync with SUN_ECLIPSE_LIGHT_TINT (Sun.h), which
+    // applies the same cool tint to the sun's directional light, so the sky and
+    // sun-lit surfaces shift the same direction during an eclipse.
+    half3 tintedColor = lerp(rawColor, half3(0.5,0.6,0.85), pow(1 - intensityScale, 1.5));
 
     return tintedColor * intensityScale * limbDark;
+}
+
+// Full sun color without the eclipse dimming/tint, so the drawn disk's visible
+// (uneclipsed) crescent stays full brightness; the moon silhouette geometry
+// handles occlusion. Equals GetSunColor() when no eclipse is active.
+inline half3 GetSunColorRaw()
+{
+    half3 rawColor = unpack_half3(GetWeather().sun_color);
+    const half3 limbDark = half3(1.0, 1.0, 1.0) - half3(0.3, 0.2, 0.1); // (0.7,0.8,0.9), the no-eclipse limb factor
+    return rawColor * limbDark;
 }
 inline half3 GetSunDirection() { return normalize(unpack_half3(GetWeather().sun_direction)); }
 inline half3 GetHorizonColor() { return unpack_half3(GetWeather().horizon); }

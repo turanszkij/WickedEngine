@@ -448,7 +448,12 @@ half3 GetSunLuminance(float3 worldPosition, float3 worldDirection, float3 sunDir
 				weight *= 1.0f - MoonDiskMask(worldDirection);
 			}
 
-			retval = weight * sunIlluminance;
+			// Draw the disk from the raw (un-eclipsed) sun color so the visible
+			// crescent keeps full brightness during a partial eclipse; the moon
+			// silhouette already removed the covered part via `weight`. The
+			// eclipse-dimmed `sunIlluminance` still drives the sky scattering and
+			// the corona below.
+			retval = weight * GetSunColorRaw();
 		}
 
 		// Solar corona: at totality the photosphere is fully blocked and the
