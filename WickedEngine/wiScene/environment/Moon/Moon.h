@@ -136,7 +136,7 @@ class wi::scene::environment::Moon final {
 	 * `0.5 * MOON_ANGULAR_DIAMETER * size_multiplier`. A value of `1.0`
 	 * preserves the physically-based size. Should be positive.
 	 */
-	float size_multiplier = 1.0F;
+	float size_multiplier = 4.0F;
 
 	/**
 	 * @brief Name or identifier of the Moon surface texture resource.

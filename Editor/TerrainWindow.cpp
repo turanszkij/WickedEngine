@@ -1798,8 +1798,9 @@ void TerrainWindow::SetupAssets()
 		light.SetCastShadow(true);
 		light.SetVolumetricsEnabled(true);
 		light.SetVolumetricCloudsEnabled(true);
-		light.color = XMFLOAT3(0.04f, 0.04f, 0.05f);
-		light.intensity = 0.05f;
+		light.color = XMFLOAT3(3.0f / 255.0f, 3.0f / 255.0f, 3.0f / 255.0f); // #030303
+		light.intensity = 1.0f;
+		light.volumetric_boost = 0.05f;
 		TransformComponent& transform = *currentScene.transforms.GetComponent(moonEntity);
 		transform.Translate(XMFLOAT3(0, 4, 0));
 		transform.UpdateTransform();

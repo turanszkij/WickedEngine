@@ -234,7 +234,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&starsSlider);
 
-	moonSizeSlider.Create(0.1f, 10.0f, 1.0f, 10000, "Moon Size Multiplier: ");
+	moonSizeSlider.Create(0.1f, 10.0f, 4.0f, 10000, "Moon Size Multiplier: ");
 	moonSizeSlider.SetTooltip("Multiplier on the moon's real angular size (1.0 = physically accurate).");
 	moonSizeSlider.SetSize(XMFLOAT2(wid, hei));
 	moonSizeSlider.SetPos(XMFLOAT2(x, y += step));
@@ -243,7 +243,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&moonSizeSlider);
 
-	sunSizeSlider.Create(0.1f, 10.0f, 1.0f, 10000, "Sun Size Multiplier: ");
+	sunSizeSlider.Create(0.1f, 10.0f, 4.0f, 10000, "Sun Size Multiplier: ");
 	sunSizeSlider.SetTooltip("Multiplier on the sun's real angular size (1.0 = physically accurate).");
 	sunSizeSlider.SetSize(XMFLOAT2(wid, hei));
 	sunSizeSlider.SetPos(XMFLOAT2(x, y += step));
@@ -1312,8 +1312,6 @@ void WeatherWindow::UpdateData()
 		scene.weather.horizon = default_sky_horizon;
 		scene.weather.fogStart = std::numeric_limits<float>::max();
 		scene.weather.fogDensity = 0;
-		scene.weather.moon.size_multiplier = 1.0f;
-		scene.weather.moon.texture_mip_bias = 0;
 	}
 }
 

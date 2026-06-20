@@ -87,7 +87,7 @@ class wi::scene::environment::Sun final {
 	 * size_multiplier`. A value of `1.0` preserves the physically-based size.
 	 * Should be positive.
 	 */
-	float size_multiplier = 1.0F;
+	float size_multiplier = 4.0F;
 
 	// Methods
 	//==========================================================================

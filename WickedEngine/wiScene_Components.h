@@ -1861,9 +1861,9 @@ namespace wi::scene
 
 		XMFLOAT3 sunColor = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 sunDirection = XMFLOAT3(0, 1, 0);
-		XMFLOAT3 moonColor = XMFLOAT3(0.04f, 0.04f, 0.05f);
+		XMFLOAT3 moonColor = XMFLOAT3(3.0f / 255.0f, 3.0f / 255.0f, 3.0f / 255.0f); // #030303
 		XMFLOAT3 moonDirection = XMFLOAT3(0.0f, 0.5f, 0.8660254f);
-		float moonLightIntensity = 0.05f;
+		float moonLightIntensity = 1.0f;
 
 		// Moon disk appearance (size, texture). Direction, color and light
 		// intensity live on the moon's directional light, not here.

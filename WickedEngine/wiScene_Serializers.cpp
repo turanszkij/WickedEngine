@@ -1637,13 +1637,13 @@ namespace wi::scene
 			else
 			{
 				moonDirection = XMFLOAT3(0.0f, 0.5f, 0.8660254f);
-				moonColor = XMFLOAT3(0.04f, 0.04f, 0.05f);
-				moon.size_multiplier = 1.0f;
-				moonLightIntensity = 0.05f;
+				moonColor = XMFLOAT3(3.0f / 255.0f, 3.0f / 255.0f, 3.0f / 255.0f); // #030303
+				moon.size_multiplier = 4.0f;
+				moonLightIntensity = 1.0f;
 				moon.texture_name.clear();
 				moon.texture = {};
 				moon.texture_mip_bias = 0.0f;
-				sun.size_multiplier = 1.0f;
+				sun.size_multiplier = 4.0f;
 			}
 			archive >> horizon;
 			archive >> zenith;
