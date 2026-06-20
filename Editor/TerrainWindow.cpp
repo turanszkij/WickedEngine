@@ -1802,6 +1802,10 @@ void TerrainWindow::SetupAssets()
 		light.intensity = 1.0f;
 		light.volumetric_boost = 0.05f;
 		TransformComponent& transform = *currentScene.transforms.GetComponent(moonEntity);
+		// Place the moon roughly opposite the sun in azimuth (the sun leans
+		// left, the moon leans right) but at the same elevation, so it stays
+		// visible above the horizon rather than being directly opposite (below).
+		transform.RotateRollPitchYaw(XMFLOAT3(-XM_PIDIV4, 0, -XM_PIDIV4));
 		transform.Translate(XMFLOAT3(0, 4, 0));
 		transform.UpdateTransform();
 	}
