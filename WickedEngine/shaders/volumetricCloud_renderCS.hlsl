@@ -3,6 +3,7 @@
 #include "globals.hlsli"
 #include "volumetricCloudsHF.hlsli"
 #include "skyAtmosphere.hlsli"
+#include "moonHF.hlsli"
 #include "lightingHF.hlsli"
 #include "fogHF.hlsli"
 #include "ShaderInterop_Postprocess.h"

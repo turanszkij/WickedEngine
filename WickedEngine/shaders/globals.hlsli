@@ -1002,21 +1002,7 @@ inline half3 GetSunColor()
 
     return tintedColor * intensityScale * limbDark;
 }
-inline float3 GetMoonDirection()
-{
-	float3 dir = unpack_half3(GetWeather().moon.direction);
-	float len_sq = dot(dir, dir);
-	return len_sq > 0 ? dir * rsqrt(len_sq) : float3(0.0f, 0.5f, 0.8660254f);
-}
-inline half3 GetMoonColor() { return unpack_half3(GetWeather().moon.color); }
-inline float GetMoonSize() { return GetWeather().moon.size; }
-inline float GetMoonDiskEmissive() { return GetWeather().moon.disk_emissive; }
-inline bool HasMoonTexture() { return GetWeather().moon.texture >= 0; }
-inline float GetMoonTextureMipBias() { return GetWeather().moon.texture_mip_bias; }
-inline float GetMoonLightIntensity() { return GetWeather().moon.light_intensity; }
 inline half3 GetSunDirection() { return normalize(unpack_half3(GetWeather().sun_direction)); }
-inline float GetMoonEclipseStrength() { return saturate(GetWeather().moon.eclipse_strength); }
-inline float3 GetMoonIlluminance() { return GetMoonColor() * GetMoonLightIntensity(); }
 inline half3 GetHorizonColor() { return unpack_half3(GetWeather().horizon); }
 inline half3 GetZenithColor() { return unpack_half3(GetWeather().zenith); }
 inline half3 GetAmbientColor() { return unpack_half3(GetWeather().ambient); }

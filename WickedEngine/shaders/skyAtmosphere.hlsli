@@ -2,6 +2,7 @@
 #define WI_SKYATMOSPHERE_HF
 #include "globals.hlsli"
 #include "shadowHF.hlsli"
+#include "moonHF.hlsli"
 
 /*
  *
@@ -440,24 +441,11 @@ half3 GetSunLuminance(float3 worldPosition, float3 worldDirection, float3 sunDir
 
 			if (sunEclipseStrength > 0.0f)
 			{
-				float3 moonDir = GetMoonDirection();
-				float moonLenSq = dot(moonDir, moonDir);
-				if (moonLenSq > 1e-6f)
-				{
-					float3 moonDirNorm = moonDir * rsqrt(moonLenSq);
-					// Opaque moon silhouette: fully occlude the sun wherever the
-					// view ray lies within the moon's angular radius, with a thin
-					// soft limb. This mirrors the star-occlusion mask below and is
-					// independent of the eclipse area ratio, so the covered region
-					// goes fully dark across the whole moon disk (not just its
-					// center).
-					float moonSize = GetMoonSize();					// Moon angular radius (rad)
-					float edgeSoftness = max(moonSize * 0.05f, 1e-4f);	// Thin limb, scales with size
-					float cosInner = cos(moonSize - edgeSoftness);
-					float cosOuter = cos(moonSize + edgeSoftness);
-					float moonMask = smoothstep(cosOuter, cosInner, dot(worldDirection, moonDirNorm));
-					weight *= 1.0f - moonMask;
-				}
+				// Opaque moon silhouette: fully occlude the sun wherever the view
+				// ray lies within the moon's angular radius. Independent of the
+				// eclipse area ratio, so the covered region goes fully dark across
+				// the whole moon disk (not just its center).
+				weight *= 1.0f - MoonDiskMask(worldDirection);
 			}
 
 			retval = weight * sunIlluminance;
@@ -533,20 +521,9 @@ half3 GetSunLuminance(float3 worldPosition, float3 worldDirection, float3 sunDir
 
 			// Ensure the moon disk always occludes stars (moon silhouette in
 			// front of starfield).
-			float moonSize = GetMoonSize();
-			if (moonSize > 0.0)
+			if (GetMoonSize() > 0.0)
 			{
-				float3 moonDir = GetMoonDirection();
-				// Soft-edge mask for nicer transition (1.0 inside disk, 0.0
-				// outside). The limb scales with the moon's angular radius so
-				// it stays crisp at the physically-based size, matching the sun
-				// silhouette above.
-				float edgeSoftness = max(moonSize * 0.05f, 1e-4f);
-				float cosInner = cos(moonSize - edgeSoftness);
-				float cosOuter = cos(moonSize + edgeSoftness);
-				float moonDot = dot(worldDirection, moonDir);
-				float moonMask = smoothstep(cosOuter, cosInner, moonDot);
-				stars *= (1.0 - moonMask);
+				stars *= 1.0 - MoonDiskMask(worldDirection);
 			}
 
 			retval += stars;

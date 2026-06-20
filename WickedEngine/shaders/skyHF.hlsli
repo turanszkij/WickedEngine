@@ -2,6 +2,7 @@
 #define WI_SKY_HF
 #include "globals.hlsli"
 #include "skyAtmosphere.hlsli"
+#include "moonHF.hlsli"
 #include "fogHF.hlsli"
 
 // Custom Atmosphere based on: https://www.shadertoy.com/view/Ml2cWG
@@ -145,72 +146,7 @@ float3 GetDynamicSkyColor(in float2 pixel, in float3 V, bool sun_enabled = true,
 
 	if (!dark_enabled)
 	{
-		float moonSize = GetMoonSize();
-		float3 moonColor = GetMoonColor();
-		if (moonSize > 0 && dot(moonColor, moonColor) > 0)
-		{
-			float3 moonDir = GetMoonDirection();
-			float3 sunDir = (float3)GetSunDirection();
-			float sunLenSq = dot(sunDir, sunDir);
-			float3 dirToSun = -moonDir; // Fallback (no sun): light the near face
-			float phaseVisibility = 1.0f;
-			if (sunLenSq > 1e-6f)
-			{
-				float invSunLen = rsqrt(sunLenSq);
-				dirToSun = sunDir * invSunLen;
-				phaseVisibility = saturate(0.5f * (1.0f - dot(dirToSun, moonDir)));
-			}
-			float eclipseStrength = GetMoonEclipseStrength();
-			float cosAngle = dot(V, moonDir);
-			float innerEdge = cos(moonSize);
-			float core = smoothstep(innerEdge, cos(moonSize * 0.8f), cosAngle);
-			float3 diskColor = moonColor;
-			float diskMask = 0.0f;
-			if (phaseVisibility > 0.0f)
-			{
-				float3 referenceUp = abs(moonDir.y) > 0.95f ? float3(1, 0, 0) : float3(0, 1, 0);
-				float3 moonRight = normalize(cross(referenceUp, moonDir));
-				float3 moonUp = normalize(cross(moonDir, moonRight));
-				float2 local = float2(dot(V, moonRight), dot(V, moonUp));
-				float invRadius = 0.5f / max(sin(moonSize), 0.0001f);
-				float2 moonUV = local * invRadius + 0.5f;
-				if (all(moonUV >= 0.0f) && all(moonUV <= 1.0f))
-				{
-					float2 diskCoord = (moonUV - 0.5f) * 2.0f;
-					float radialSq = dot(diskCoord, diskCoord);
-					float localZ = sqrt(saturate(1.0f - radialSq));
-					float3 surfaceNormal = normalize(moonRight * diskCoord.x + moonUp * diskCoord.y - moonDir * localZ);
-					float lit = saturate(dot(surfaceNormal, dirToSun));
-					if (lit > 0.0f)
-					{
-						diskMask = core * lit;
-						if (HasMoonTexture())
-						{
-							float4 tex = bindless_textures[NonUniformResourceIndex(descriptor_index(GetWeather().moon.texture))].SampleLevel(sampler_linear_clamp, moonUV, GetMoonTextureMipBias());
-							diskMask *= tex.a;
-							diskColor *= tex.rgb;
-						}
-						float phaseBlend = phaseVisibility;
-						float3 shadingNormal = normalize(lerp(-moonDir, surfaceNormal, phaseBlend));
-						float diffuse = saturate(dot(shadingNormal, dirToSun));
-						float shading = lerp(0.35f, 1.0f, diffuse);
-						diskColor *= shading;
-					}
-				}
-			}
-			// Lunar eclipse: shift the disk toward blood-red and dim it toward a
-			// small floor (never fully black), strongest at totality.
-			const float3 MOON_BLOOD_TINT = float3(1.0f, 0.3f, 0.1f); // deep red-orange
-			const float MOON_ECLIPSE_MIN_LUMINANCE = 0.5f;          // Minimum brightness of the disk at totality (never fully black)
-			float diskLuma = dot(diskColor, float3(0.2126f, 0.7152f, 0.0722f));
-			float3 eclipsedColor =
-				lerp(diskColor, diskLuma * MOON_BLOOD_TINT, eclipseStrength);
-			float eclipseDim = lerp(1.0f, MOON_ECLIPSE_MIN_LUMINANCE, eclipseStrength);
-			// Write the lit disk in HDR so the bloom post-process picks it up
-			// and produces the glow. Only lit pixels are bright, so the glow
-			// naturally falls on the illuminated part (correct crescents).
-			sky += eclipsedColor * eclipseDim * diskMask * GetMoonDiskEmissive();
-		}
+		sky += GetMoonDiskRadiance(V);
 	}
 
 	sky *= GetWeather().sky_exposure;
