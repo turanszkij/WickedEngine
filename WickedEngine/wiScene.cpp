@@ -1600,22 +1600,6 @@ namespace wi::scene
 			}
 		}
 
-		if (weather_component.moonLight == INVALID_ENTITY)
-		{
-			weather_component.moonLight = Entity_CreateLight("moon");
-			LightComponent& light = *lights.GetComponent(weather_component.moonLight);
-			light.SetType(LightComponent::DIRECTIONAL);
-			light.SetMoonLight(true);
-			light.SetCastShadow(true);
-			light.SetVolumetricsEnabled(true);
-			light.SetVolumetricCloudsEnabled(true);
-			light.color = XMFLOAT3(0.04f, 0.04f, 0.05f);
-			light.intensity = 0.05f;
-			TransformComponent& transform = *transforms.GetComponent(weather_component.moonLight);
-			transform.Translate(XMFLOAT3(0, 4, 0));
-			transform.UpdateTransform();
-		}
-
 		// The moon light is the source of truth for direction, colour and
 		// intensity (edited like any directional light). Only ensure it stays a
 		// flagged directional light here; Scene::Update mirrors its values into

@@ -1790,7 +1790,20 @@ void TerrainWindow::SetupAssets()
 		transform.Translate(XMFLOAT3(0, 4, 0));
 	}
 
-	// currentScene.EnsureMoonLight(currentScene.weather);
+	{
+		Entity moonEntity = currentScene.Entity_CreateLight("moon");
+		LightComponent& light = *currentScene.lights.GetComponent(moonEntity);
+		light.SetType(LightComponent::LightType::DIRECTIONAL);
+		light.SetMoonLight(true);
+		light.SetCastShadow(true);
+		light.SetVolumetricsEnabled(true);
+		light.SetVolumetricCloudsEnabled(true);
+		light.color = XMFLOAT3(0.04f, 0.04f, 0.05f);
+		light.intensity = 0.05f;
+		TransformComponent& transform = *currentScene.transforms.GetComponent(moonEntity);
+		transform.Translate(XMFLOAT3(0, 4, 0));
+		transform.UpdateTransform();
+	}
 
 	presetCombo.SetSelected(0);
 
