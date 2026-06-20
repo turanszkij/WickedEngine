@@ -2333,15 +2333,15 @@ inline void ParallaxOcclusionMapping_Impl(
 	uvsets += difference.xyxy;
 }
 
-inline float3 get_forward(float4x4 m)
+inline float3 get_forward(float3x3 m)
 {
 	return float3(m[2][0], m[2][1], m[2][2]);
 }
-inline float3 get_up(float4x4 m)
+inline float3 get_up(float3x3 m)
 {
 	return float3(m[1][0], m[1][1], m[1][2]);
 }
-inline float3 get_right(float4x4 m)
+inline float3 get_right(float3x3 m)
 {
 	return float3(m[0][0], m[0][1], m[0][2]);
 }

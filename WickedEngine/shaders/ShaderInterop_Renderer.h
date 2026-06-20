@@ -866,7 +866,7 @@ struct alignas(16) ShaderEntity
 	uint2 color; // half4 packed
 
 	uint layerMask;
-	uint indices;
+	uint packed_indices;
 	uint remap;
 	uint radius16_length16;
 
@@ -950,11 +950,11 @@ struct alignas(16) ShaderEntity
 	}
 	inline min16uint GetMatrixIndex()
 	{
-		return indices & 0xFFF;
+		return packed_indices & 0xFFF;
 	}
-	inline min16uint GetTextureIndex()
+	inline uint GetTextureIndex()
 	{
-		return indices >> 12u;
+		return packed_indices >> 12u;
 	}
 	inline bool IsCastingShadow()
 	{
@@ -1045,8 +1045,8 @@ struct alignas(16) ShaderEntity
 	}
 	inline void SetIndices(uint matrixIndex, uint textureIndex)
 	{
-		indices = matrixIndex & 0xFFF;
-		indices |= (textureIndex & 0xFFFFF) << 12u;
+		packed_indices = matrixIndex & 0xFFF;
+		packed_indices |= (textureIndex & 0xFFFFF) << 12u;
 	}
 	inline void SetGravity(float value)
 	{

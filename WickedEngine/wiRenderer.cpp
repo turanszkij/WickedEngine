@@ -4566,6 +4566,7 @@ void UpdatePerFrameData(
 				matrixCounter--;
 				break;
 			}
+			assert(entityCounter == matrixCounter); // this allows removal of one indirection of buffer addressing for probes and decals. This relies on probes and decals being first in entity array and each only having one matrix
 			ShaderEntity shaderentity = {};
 			XMMATRIX shadermatrix;
 
@@ -4653,6 +4654,7 @@ void UpdatePerFrameData(
 				matrixCounter--;
 				break;
 			}
+			assert(entityCounter == matrixCounter); // this allows removal of one indirection of buffer addressing for probes and decals. This relies on probes and decals being first in entity array and each only having one matrix
 			ShaderEntity shaderentity = {};
 			XMMATRIX shadermatrix;
 
@@ -4673,19 +4675,19 @@ void UpdatePerFrameData(
 			shaderentity.position = probe.position;
 			shaderentity.SetRange(probe.range);
 
-			shaderentity.SetIndices(matrixCounter, 0);
-			shadermatrix = XMLoadFloat4x4(&probe.inverseMatrix);
-
 			int texture = -1;
 			if (probe.texture.IsValid())
 			{
 				texture = device->GetDescriptorIndex(&probe.texture, SubresourceType::SRV, probe.subresource);
 			}
+			else
+			{
+				texture = device->GetDescriptorIndex(wi::texturehelper::getBlackCubeMap(), SubresourceType::SRV);
+			}
+			texture = std::max(0, texture);
 
-			shadermatrix.r[0] = XMVectorSetW(shadermatrix.r[0], *(float*)&texture);
-			shadermatrix.r[1] = XMVectorSetW(shadermatrix.r[1], 0);
-			shadermatrix.r[2] = XMVectorSetW(shadermatrix.r[2], 0);
-			shadermatrix.r[3] = XMVectorSetW(shadermatrix.r[3], 0);
+			shaderentity.packed_indices = (uint)texture;
+			shadermatrix = XMLoadFloat4x4(&probe.inverseMatrix);
 
 			ShaderSphere cullsphere = {};
 			XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
