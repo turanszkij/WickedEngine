@@ -1074,6 +1074,17 @@ namespace wi::scene
 		shaderscene.weather.moon.light_intensity = weather.moonLightIntensity * moon_phase_visibility * moon_eclipse_scale;
 		shaderscene.weather.moon.eclipse_strength = resolved_moon_eclipse;
 		shaderscene.weather.moon.light_index = weather.moon_light_index;
+		// The moon is optional: when no moon light exists the mirror fields
+		// (moonColor/moonLightIntensity) keep stale values, so disable the GPU
+		// disk explicitly. Zeroing the angular radius makes the sky disk shader
+		// guard fail; the directional light is already gone with the entity and
+		// the clouds gate on moon.light_index.
+		if (weather.moon_light_index == ~0u)
+		{
+			shaderscene.weather.moon.size = 0.0f;
+			shaderscene.weather.moon.disk_emissive = 0.0f;
+			shaderscene.weather.moon.light_intensity = 0.0f;
+		}
 		shaderscene.weather.most_important_light_index = weather.most_important_light_index;
 		shaderscene.weather.ambient = wi::math::pack_half3(weather.ambient);
 		shaderscene.weather.sky_rotation_sin = std::sin(weather.sky_rotation);
