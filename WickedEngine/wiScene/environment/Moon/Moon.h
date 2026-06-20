@@ -33,11 +33,11 @@ constexpr float MOON_ANGULAR_DIAMETER =
  *
  * During a lunar eclipse the Moon passes through Earth's shadow (umbra), cast
  * away from the Sun (the antisolar direction). At the Moon's distance the umbra
- * has an angular radius of roughly `0.7°`, against the Moon's own angular radius
- * of roughly `0.26°` (@ref MOON_ANGULAR_DIAMETER), giving a ratio of about
- * `2.6`. Expressing the shadow as a multiple of the Moon's radius (rather than a
- * fixed angle) keeps eclipses proportional under an artistic `size_multiplier`
- * and lets a centered Moon reach total coverage.
+ * has an angular radius of roughly `0.7°`, against the Moon's own angular
+ * radius of roughly `0.26°` (@ref MOON_ANGULAR_DIAMETER), giving a ratio of
+ * about `2.6`. Expressing the shadow as a multiple of the Moon's radius (rather
+ * than a fixed angle) keeps eclipses proportional under an artistic
+ * `size_multiplier` and lets a centered Moon reach total coverage.
  *
  * References:
  * https://en.wikipedia.org/wiki/Lunar_eclipse
@@ -68,6 +68,33 @@ constexpr float EARTH_UMBRA_TO_MOON_RADIUS_RATIO = 2.6F;
  * disk.
  */
 constexpr float MOON_DISK_EMISSIVE_GAIN = 100.0F;
+
+/**
+ * @brief Fraction of normal moonlight the Moon's directional light retains at
+ * lunar-eclipse totality.
+ *
+ * During a total lunar eclipse the Moon still receives faint, reddened sunlight
+ * refracted through Earth's atmosphere, so it casts a little light rather than
+ * none. The eclipse scale applied to the Moon light is floored at this value
+ * (`1.0` = no eclipse → this floor at totality) so the scene never goes fully
+ * dark from the eclipse alone. This is the **scene-lighting** counterpart of
+ * the shader-side disk floor (`MOON_ECLIPSE_MIN_LUMINANCE` in `skyHF.hlsli`);
+ * keep the two visually consistent.
+ *
+ * @note Only the eclipse term is floored — the lunar **phase** still
+ * legitimately takes moonlight to zero at new moon.
+ */
+constexpr float MOON_ECLIPSE_MIN_LIGHT_SCALE = 0.2F;
+
+/**
+ * @brief Blood-red tint applied to the Moon's directional light at
+ * lunar-eclipse totality.
+ *
+ * The remaining eclipse moonlight is shifted from white toward this deep
+ * red-orange as the eclipse deepens (interpolated by eclipse strength),
+ * matching the disk's blood-moon tint (`MOON_BLOOD_TINT` in `skyHF.hlsli`).
+ */
+constexpr XMFLOAT3 MOON_ECLIPSE_LIGHT_TINT = XMFLOAT3(1.0F, 0.3F, 0.1F);
 
 /**
  * @brief The renderable appearance of the Moon's disk.

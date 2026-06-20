@@ -1063,7 +1063,13 @@ namespace wi::scene
 		shaderscene.weather.moon.texture_mip_bias = weather.moon.texture_mip_bias;
 		const float moon_phase_visibility = ComputeMoonPhaseVisibility(weather.sunDirection, moonDir);
 		const float resolved_moon_eclipse = ResolveMoonEclipseStrength(weather);
-		const float moon_eclipse_scale = wi::math::Clamp(1.0f - resolved_moon_eclipse, 0.0f, 1.0f);
+		// Floor the eclipse dimming so a total eclipse still leaves faint
+		// (reddened) moonlight rather than going fully dark. Only the eclipse
+		// term is floored; the lunar phase can still legitimately reach zero.
+		const float moon_eclipse_scale = wi::math::Clamp(
+			1.0f - resolved_moon_eclipse * (1.0f - MOON_ECLIPSE_MIN_LIGHT_SCALE),
+			0.0f, 1.0f);
+		weather.resolvedMoonEclipseStrength = resolved_moon_eclipse;
 		weather.resolvedMoonIntensityScale = moon_phase_visibility * moon_eclipse_scale;
 		shaderscene.weather.moon.light_intensity = weather.moonLightIntensity * moon_phase_visibility * moon_eclipse_scale;
 		shaderscene.weather.moon.eclipse_strength = resolved_moon_eclipse;

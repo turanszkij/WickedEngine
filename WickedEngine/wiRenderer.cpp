@@ -4700,6 +4700,7 @@ void UpdatePerFrameData(
 			shaderentity.SetDirection(light.direction);
 			XMFLOAT3 directional_color = light.color;
 			float light_intensity_scale = 1.0f;
+			XMFLOAT3 eclipse_tint = XMFLOAT3(1.0f, 1.0f, 1.0f);
 			if (lightIndex == most_important_light_component_index)
 			{
 				light_intensity_scale = wi::math::Clamp(1.0f - vis.scene->weather.resolvedSunEclipseStrength, 0.0f, 1.0f);
@@ -4707,10 +4708,15 @@ void UpdatePerFrameData(
 			else if (light.IsMoonLight())
 			{
 				light_intensity_scale = wi::math::Clamp(vis.scene->weather.resolvedMoonIntensityScale, 0.0f, 1.0f);
+				// Blood-moon: shift the faint remaining light toward red at totality.
+				const float e = wi::math::Clamp(vis.scene->weather.resolvedMoonEclipseStrength, 0.0f, 1.0f);
+				eclipse_tint.x = 1.0f + (MOON_ECLIPSE_LIGHT_TINT.x - 1.0f) * e;
+				eclipse_tint.y = 1.0f + (MOON_ECLIPSE_LIGHT_TINT.y - 1.0f) * e;
+				eclipse_tint.z = 1.0f + (MOON_ECLIPSE_LIGHT_TINT.z - 1.0f) * e;
 			}
-			directional_color.x *= light.intensity * light_intensity_scale;
-			directional_color.y *= light.intensity * light_intensity_scale;
-			directional_color.z *= light.intensity * light_intensity_scale;
+			directional_color.x *= light.intensity * light_intensity_scale * eclipse_tint.x;
+			directional_color.y *= light.intensity * light_intensity_scale * eclipse_tint.y;
+			directional_color.z *= light.intensity * light_intensity_scale * eclipse_tint.z;
 			shaderentity.SetColor(float4(directional_color.x, directional_color.y, directional_color.z, 1));
 
 			const uint32_t directional_entity_index = lightarray_count_directional;
