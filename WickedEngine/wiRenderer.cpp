@@ -4541,7 +4541,6 @@ void UpdatePerFrameData(
 	uint decalarray_count = 0;
 	uint forcefieldarray_offset = 0;
 	uint forcefieldarray_count = 0;
-	frameCB.entity_culling_count = 0;
 	{
 		ShaderEntity* entityArray = frameCB.entityArray;
 		float4x4* matrixArray = frameCB.matrixArray;
@@ -4549,7 +4548,6 @@ void UpdatePerFrameData(
 		const XMMATRIX viewMatrix = vis.camera->GetView();
 
 		uint32_t entityCounter = 0;
-		uint32_t matrixCounter = 0;
 
 		// Write decals into entity array:
 		decalarray_offset = entityCounter;
@@ -4561,12 +4559,6 @@ void UpdatePerFrameData(
 				entityCounter--;
 				break;
 			}
-			if (matrixCounter >= MATRIXARRAY_COUNT)
-			{
-				matrixCounter--;
-				break;
-			}
-			assert(entityCounter == matrixCounter); // this allows removal of one indirection of buffer addressing for probes and decals. This relies on probes and decals being first in entity array and each only having one matrix
 			ShaderEntity shaderentity = {};
 			XMMATRIX shadermatrix;
 
@@ -4597,7 +4589,6 @@ void UpdatePerFrameData(
 			shaderentity.SetAngleScale(decal.normal_strength);
 			shaderentity.SetLength(decal.displacement_strength);
 
-			shaderentity.SetIndices(matrixCounter, 0);
 			shadermatrix = XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal.world));
 
 			int texture = -1;
@@ -4630,8 +4621,7 @@ void UpdatePerFrameData(
 			XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
 			cullsphere.radius = decal.range;
 
-			XMStoreFloat4x4(matrixArray + matrixCounter, shadermatrix);
-			matrixCounter++;
+			XMStoreFloat4x4(matrixArray + entityCounter, shadermatrix);
 
 			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
 			std::memcpy(entityCullingArray + entityCounter, &cullsphere, sizeof(ShaderSphere));
@@ -4649,12 +4639,6 @@ void UpdatePerFrameData(
 				entityCounter--;
 				break;
 			}
-			if (matrixCounter >= MATRIXARRAY_COUNT)
-			{
-				matrixCounter--;
-				break;
-			}
-			assert(entityCounter == matrixCounter); // this allows removal of one indirection of buffer addressing for probes and decals. This relies on probes and decals being first in entity array and each only having one matrix
 			ShaderEntity shaderentity = {};
 			XMMATRIX shadermatrix;
 
@@ -4693,8 +4677,7 @@ void UpdatePerFrameData(
 			XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
 			cullsphere.radius = probe.range;
 
-			XMStoreFloat4x4(matrixArray + matrixCounter, shadermatrix);
-			matrixCounter++;
+			XMStoreFloat4x4(matrixArray + entityCounter, shadermatrix);
 
 			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
 			std::memcpy(entityCullingArray + entityCounter, &cullsphere, sizeof(ShaderSphere));
@@ -4702,10 +4685,374 @@ void UpdatePerFrameData(
 			envprobearray_count++;
 		}
 
+		// Write colliders into entity array:
+		forcefieldarray_offset = entityCounter;
+		for (size_t i = 0; i < vis.visibleColliders.size(); ++i)
+		{
+			if (entityCounter == SHADER_ENTITY_COUNT)
+			{
+				entityCounter--;
+				break;
+			}
+			ShaderEntity shaderentity = {};
+
+			const ColliderComponent& collider = vis.visibleColliders[i];
+			shaderentity.layerMask = collider.layerMask;
+
+			if (collider.IsCapsuleShadowEnabled())
+			{
+				shaderentity.SetFlags(ENTITY_FLAG_CAPSULE_SHADOW_COLLIDER);
+			}
+
+			ShaderSphere cullsphere = {};
+
+			switch (collider.shape)
+			{
+			case ColliderComponent::Shape::Sphere:
+				shaderentity.SetType(ENTITY_TYPE_COLLIDER_SPHERE);
+				shaderentity.position = collider.sphere.center;
+				shaderentity.SetRange(collider.sphere.radius);
+				XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
+				cullsphere.radius = collider.sphere.radius;
+				break;
+			case ColliderComponent::Shape::Capsule:
+				shaderentity.SetType(ENTITY_TYPE_COLLIDER_CAPSULE);
+				shaderentity.position = collider.capsule.base;
+				shaderentity.SetColliderTip(collider.capsule.tip);
+				shaderentity.SetRange(collider.capsule.radius);
+				{
+					Sphere sphere = collider.capsule.getSphere();
+					XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&sphere.center), viewMatrix));
+					cullsphere.radius = sphere.radius * CAPSULE_SHADOW_BOLDEN + CAPSULE_SHADOW_AFFECTION_RANGE;
+				}
+				break;
+			case ColliderComponent::Shape::Plane:
+				shaderentity.SetType(ENTITY_TYPE_COLLIDER_PLANE);
+				shaderentity.position = collider.plane.origin;
+				shaderentity.SetDirection(collider.plane.normal);
+				XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
+				cullsphere.radius = FLT_MAX;
+				matrixArray[entityCounter] = collider.plane.projection;
+				break;
+			default:
+				assert(0);
+				break;
+			}
+
+			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
+			std::memcpy(entityCullingArray + entityCounter, &cullsphere, sizeof(ShaderSphere));
+			entityCounter++;
+			forcefieldarray_count++;
+		}
+
+		// Write force fields into entity array:
+		for (size_t i = 0; i < vis.scene->forces.GetCount(); ++i)
+		{
+			if (entityCounter == SHADER_ENTITY_COUNT)
+			{
+				entityCounter--;
+				break;
+			}
+			ShaderEntity shaderentity = {};
+
+			const ForceFieldComponent& force = vis.scene->forces[i];
+
+			shaderentity.layerMask = ~0u;
+
+			Entity entity = vis.scene->forces.GetEntity(i);
+			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
+			if (layer != nullptr)
+			{
+				shaderentity.layerMask = layer->layerMask;
+			}
+
+			switch (force.type)
+			{
+			default:
+			case ForceFieldComponent::Type::Point:
+				shaderentity.SetType(ENTITY_TYPE_FORCEFIELD_POINT);
+				break;
+			case ForceFieldComponent::Type::Plane:
+				shaderentity.SetType(ENTITY_TYPE_FORCEFIELD_PLANE);
+				break;
+			}
+			shaderentity.position = force.position;
+			shaderentity.SetGravity(force.gravity);
+			shaderentity.SetRange(std::max(0.001f, force.GetRange()));
+			// The default planar force field is facing upwards, and thus the pull direction is downwards:
+			shaderentity.SetDirection(force.direction);
+
+			ShaderSphere cullsphere = {};
+			XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
+			cullsphere.radius = FLT_MAX;
+
+			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
+			std::memcpy(entityCullingArray + entityCounter, &cullsphere, sizeof(ShaderSphere));
+			entityCounter++;
+			forcefieldarray_count++;
+		}
+
+		// Light processing starts from here:
+		lightarray_offset = entityCounter;
 		const XMFLOAT2 atlas_dim_rcp = XMFLOAT2(1.0f / float(shadowMapAtlas.desc.width), 1.0f / float(shadowMapAtlas.desc.height));
 
+		// Write spot lights into entity array:
+		lightarray_offset_spot = entityCounter;
+		for (uint32_t lightIndex : vis.visibleLights)
+		{
+			if (entityCounter == SHADER_ENTITY_COUNT)
+			{
+				entityCounter--;
+				break;
+			}
+
+			const LightComponent& light = vis.scene->lights[lightIndex];
+			if (light.GetType() != LightComponent::SPOT || light.IsInactive())
+				continue;
+
+			ShaderEntity shaderentity = {};
+			shaderentity.layerMask = ~0u;
+
+			Entity entity = vis.scene->lights.GetEntity(lightIndex);
+			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
+			if (layer != nullptr)
+			{
+				shaderentity.layerMask = layer->layerMask;
+			}
+
+			shaderentity.SetType(ENTITY_TYPE_SPOTLIGHT);
+			shaderentity.position = light.position;
+			shaderentity.SetRange(light.GetRange());
+			shaderentity.SetRadius(light.radius);
+			shaderentity.SetLength(light.length);
+			shaderentity.SetDirection(light.direction);
+			shaderentity.SetColor(float4(light.color.x * light.intensity, light.color.y * light.intensity, light.color.z * light.intensity, 1));
+
+			const bool shadowmap = IsShadowsEnabled() && light.IsCastingShadow() && !light.IsStatic();
+			const wi::rectpacker::Rect& shadow_rect = vis.visibleLightShadowRects[lightIndex];
+
+			const uint maskTex = light.maskTexDescriptor < 0 ? 0 : light.maskTexDescriptor;
+
+			if (shadowmap)
+			{
+				shaderentity.shadowAtlasMulAdd.x = shadow_rect.w * atlas_dim_rcp.x;
+				shaderentity.shadowAtlasMulAdd.y = shadow_rect.h * atlas_dim_rcp.y;
+				shaderentity.shadowAtlasMulAdd.z = shadow_rect.x * atlas_dim_rcp.x;
+				shaderentity.shadowAtlasMulAdd.w = shadow_rect.y * atlas_dim_rcp.y;
+			}
+
+			shaderentity.packed_indices = maskTex;
+
+			const float outerConeAngle = light.outerConeAngle;
+			const float innerConeAngle = std::min(light.innerConeAngle, outerConeAngle);
+			const float outerConeAngleCos = std::cos(outerConeAngle);
+			const float innerConeAngleCos = std::cos(innerConeAngle);
+
+			// https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_lights_punctual#inner-and-outer-cone-angles
+			const float lightAngleScale = 1.0f / std::max(0.001f, innerConeAngleCos - outerConeAngleCos);
+			const float lightAngleOffset = -outerConeAngleCos * lightAngleScale;
+
+			shaderentity.SetConeAngleCos(outerConeAngleCos);
+			shaderentity.SetAngleScale(lightAngleScale);
+			shaderentity.SetAngleOffset(lightAngleOffset);
+
+			if (shadowmap || (maskTex > 0))
+			{
+				SHCAM shcam;
+				CreateSpotLightShadowCam(light, shcam);
+				XMStoreFloat4x4(&matrixArray[entityCounter], shcam.view_projection);
+			}
+
+			if (light.IsCastingShadow())
+			{
+				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_CASTING_SHADOW);
+			}
+			if (light.IsStatic())
+			{
+				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_STATIC);
+			}
+
+			if (light.IsVolumetricCloudsEnabled())
+			{
+				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_VOLUMETRICCLOUDS);
+			}
+
+			// Construct a tight fitting sphere around the spotlight cone:
+			const float radius = light.GetRange() * 0.5f / (outerConeAngleCos * outerConeAngleCos);
+			const XMVECTOR positionVS = XMVector3Transform(XMLoadFloat3(&shaderentity.position) - XMVector3Normalize(XMLoadFloat3(&light.direction)) * radius, viewMatrix);
+
+			ShaderSphere cullsphere = {};
+			XMStoreFloat3(&cullsphere.center, positionVS);
+			cullsphere.radius = radius;
+
+			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
+			std::memcpy(entityCullingArray + entityCounter, &cullsphere, sizeof(ShaderSphere));
+			entityCounter++;
+			lightarray_count_spot++;
+		}
+
+		// Write point lights into entity array:
+		lightarray_offset_point = entityCounter;
+		for (uint32_t lightIndex : vis.visibleLights)
+		{
+			if (entityCounter == SHADER_ENTITY_COUNT)
+			{
+				entityCounter--;
+				break;
+			}
+
+			const LightComponent& light = vis.scene->lights[lightIndex];
+			if (light.GetType() != LightComponent::POINT || light.IsInactive())
+				continue;
+
+			ShaderEntity shaderentity = {};
+			shaderentity.layerMask = ~0u;
+
+			Entity entity = vis.scene->lights.GetEntity(lightIndex);
+			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
+			if (layer != nullptr)
+			{
+				shaderentity.layerMask = layer->layerMask;
+			}
+
+			shaderentity.SetType(ENTITY_TYPE_POINTLIGHT);
+			shaderentity.position = light.position;
+			shaderentity.SetRange(light.GetRange());
+			shaderentity.SetRadius(light.radius);
+			shaderentity.SetLength(light.length);
+			shaderentity.SetDirection(light.direction);
+			shaderentity.SetColor(float4(light.color.x * light.intensity, light.color.y * light.intensity, light.color.z * light.intensity, 1));
+
+			const bool shadowmap = IsShadowsEnabled() && light.IsCastingShadow() && !light.IsStatic();
+			const wi::rectpacker::Rect& shadow_rect = vis.visibleLightShadowRects[lightIndex];
+
+			const uint maskTex = light.maskTexDescriptor < 0 ? 0 : light.maskTexDescriptor;
+
+			if (shadowmap)
+			{
+				shaderentity.shadowAtlasMulAdd.x = shadow_rect.w * atlas_dim_rcp.x;
+				shaderentity.shadowAtlasMulAdd.y = shadow_rect.h * atlas_dim_rcp.y;
+				shaderentity.shadowAtlasMulAdd.z = shadow_rect.x * atlas_dim_rcp.x;
+				shaderentity.shadowAtlasMulAdd.w = shadow_rect.y * atlas_dim_rcp.y;
+			}
+
+			shaderentity.packed_indices = maskTex;
+
+			if (shadowmap)
+			{
+				const float FarZ = 0.1f;	// watch out: reversed depth buffer! Also, light near plane is constant for simplicity, this should match on cpu side!
+				const float NearZ = std::max(1.0f, light.GetRange()); // watch out: reversed depth buffer!
+				const float fRange = FarZ / (FarZ - NearZ);
+				const float cubemapDepthRemapNear = fRange;
+				const float cubemapDepthRemapFar = -fRange * NearZ;
+				shaderentity.SetCubeRemapNear(cubemapDepthRemapNear);
+				shaderentity.SetCubeRemapFar(cubemapDepthRemapFar);
+			}
+
+			if (light.IsCastingShadow())
+			{
+				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_CASTING_SHADOW);
+			}
+			if (light.IsStatic())
+			{
+				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_STATIC);
+			}
+
+			if (light.IsVolumetricCloudsEnabled())
+			{
+				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_VOLUMETRICCLOUDS);
+			}
+
+			ShaderSphere cullsphere = {};
+			XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
+			cullsphere.radius = light.GetRange() + light.length;
+
+			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
+			std::memcpy(entityCullingArray + entityCounter, &cullsphere, sizeof(ShaderSphere));
+			entityCounter++;
+			lightarray_count_point++;
+		}
+
+		// Write rect lights into entity array:
+		lightarray_offset_rect = entityCounter;
+		for (uint32_t lightIndex : vis.visibleLights)
+		{
+			if (entityCounter == SHADER_ENTITY_COUNT)
+			{
+				entityCounter--;
+				break;
+			}
+
+			const LightComponent& light = vis.scene->lights[lightIndex];
+			if (light.GetType() != LightComponent::RECTANGLE || light.IsInactive())
+				continue;
+
+			ShaderEntity shaderentity = {};
+			shaderentity.layerMask = ~0u;
+
+			Entity entity = vis.scene->lights.GetEntity(lightIndex);
+			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
+			if (layer != nullptr)
+			{
+				shaderentity.layerMask = layer->layerMask;
+			}
+
+			shaderentity.SetType(ENTITY_TYPE_RECTLIGHT);
+			shaderentity.position = light.position;
+			shaderentity.SetRange(light.GetRange());
+			shaderentity.SetLength(light.length);
+			shaderentity.SetHeight(light.height);
+			shaderentity.SetQuaternion(light.rotation);
+			shaderentity.SetColor(float4(light.color.x * light.intensity, light.color.y * light.intensity, light.color.z * light.intensity, 1));
+
+			const bool shadowmap = IsShadowsEnabled() && light.IsCastingShadow() && !light.IsStatic();
+			const wi::rectpacker::Rect& shadow_rect = vis.visibleLightShadowRects[lightIndex];
+
+			const uint maskTex = light.maskTexDescriptor < 0 ? 0 : light.maskTexDescriptor;
+
+			if (shadowmap)
+			{
+				shaderentity.shadowAtlasMulAdd.x = shadow_rect.w * atlas_dim_rcp.x;
+				shaderentity.shadowAtlasMulAdd.y = shadow_rect.h * atlas_dim_rcp.y;
+				shaderentity.shadowAtlasMulAdd.z = shadow_rect.x * atlas_dim_rcp.x;
+				shaderentity.shadowAtlasMulAdd.w = shadow_rect.y * atlas_dim_rcp.y;
+			}
+
+			shaderentity.packed_indices = maskTex;
+
+			if (shadowmap || (maskTex > 0))
+			{
+				SHCAM shcam;
+				CreateSpotLightShadowCam(light, shcam);
+				XMStoreFloat4x4(&matrixArray[entityCounter], shcam.view_projection);
+			}
+
+			if (light.IsCastingShadow())
+			{
+				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_CASTING_SHADOW);
+			}
+			if (light.IsStatic())
+			{
+				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_STATIC);
+			}
+
+			if (light.IsVolumetricCloudsEnabled())
+			{
+				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_VOLUMETRICCLOUDS);
+			}
+
+			ShaderSphere cullsphere = {};
+			XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
+			cullsphere.radius = std::max(light.length, light.height) + light.GetRange();
+
+			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
+			std::memcpy(entityCullingArray + entityCounter, &cullsphere, sizeof(ShaderSphere));
+			entityCounter++;
+			lightarray_count_rect++;
+		}
+
 		// Write directional lights into entity array:
-		lightarray_offset = entityCounter;
+		uint32_t matrixCounter = entityCounter; // Note: so far entity and matrix indices had 1-1 mapping, for directional lights this won't be true
 		lightarray_offset_directional = entityCounter;
 		for (uint32_t lightIndex : vis.visibleLights)
 		{
@@ -4788,371 +5135,7 @@ void UpdatePerFrameData(
 			lightarray_count_directional++;
 		}
 
-		// Write spot lights into entity array:
-		lightarray_offset_spot = entityCounter;
-		for (uint32_t lightIndex : vis.visibleLights)
-		{
-			if (entityCounter == SHADER_ENTITY_COUNT)
-			{
-				entityCounter--;
-				break;
-			}
-
-			const LightComponent& light = vis.scene->lights[lightIndex];
-			if (light.GetType() != LightComponent::SPOT || light.IsInactive())
-				continue;
-
-			ShaderEntity shaderentity = {};
-			shaderentity.layerMask = ~0u;
-
-			Entity entity = vis.scene->lights.GetEntity(lightIndex);
-			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
-			if (layer != nullptr)
-			{
-				shaderentity.layerMask = layer->layerMask;
-			}
-
-			shaderentity.SetType(ENTITY_TYPE_SPOTLIGHT);
-			shaderentity.position = light.position;
-			shaderentity.SetRange(light.GetRange());
-			shaderentity.SetRadius(light.radius);
-			shaderentity.SetLength(light.length);
-			shaderentity.SetDirection(light.direction);
-			shaderentity.SetColor(float4(light.color.x * light.intensity, light.color.y * light.intensity, light.color.z * light.intensity, 1));
-
-			const bool shadowmap = IsShadowsEnabled() && light.IsCastingShadow() && !light.IsStatic();
-			const wi::rectpacker::Rect& shadow_rect = vis.visibleLightShadowRects[lightIndex];
-
-			const uint maskTex = light.maskTexDescriptor < 0 ? 0 : light.maskTexDescriptor;
-
-			if (shadowmap)
-			{
-				shaderentity.shadowAtlasMulAdd.x = shadow_rect.w * atlas_dim_rcp.x;
-				shaderentity.shadowAtlasMulAdd.y = shadow_rect.h * atlas_dim_rcp.y;
-				shaderentity.shadowAtlasMulAdd.z = shadow_rect.x * atlas_dim_rcp.x;
-				shaderentity.shadowAtlasMulAdd.w = shadow_rect.y * atlas_dim_rcp.y;
-			}
-
-			shaderentity.SetIndices(matrixCounter, maskTex);
-
-			const float outerConeAngle = light.outerConeAngle;
-			const float innerConeAngle = std::min(light.innerConeAngle, outerConeAngle);
-			const float outerConeAngleCos = std::cos(outerConeAngle);
-			const float innerConeAngleCos = std::cos(innerConeAngle);
-
-			// https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_lights_punctual#inner-and-outer-cone-angles
-			const float lightAngleScale = 1.0f / std::max(0.001f, innerConeAngleCos - outerConeAngleCos);
-			const float lightAngleOffset = -outerConeAngleCos * lightAngleScale;
-
-			shaderentity.SetConeAngleCos(outerConeAngleCos);
-			shaderentity.SetAngleScale(lightAngleScale);
-			shaderentity.SetAngleOffset(lightAngleOffset);
-
-			if (shadowmap || (maskTex > 0))
-			{
-				SHCAM shcam;
-				CreateSpotLightShadowCam(light, shcam);
-				XMStoreFloat4x4(&matrixArray[matrixCounter++], shcam.view_projection);
-			}
-
-			if (light.IsCastingShadow())
-			{
-				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_CASTING_SHADOW);
-			}
-			if (light.IsStatic())
-			{
-				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_STATIC);
-			}
-
-			if (light.IsVolumetricCloudsEnabled())
-			{
-				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_VOLUMETRICCLOUDS);
-			}
-
-			// Construct a tight fitting sphere around the spotlight cone:
-			const float radius = light.GetRange() * 0.5f / (outerConeAngleCos * outerConeAngleCos);
-			const XMVECTOR positionVS = XMVector3Transform(XMLoadFloat3(&shaderentity.position) - XMVector3Normalize(XMLoadFloat3(&light.direction)) * radius, viewMatrix);
-
-			ShaderSphere cullsphere = {};
-			XMStoreFloat3(&cullsphere.center, positionVS);
-			cullsphere.radius = radius;
-
-			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
-			std::memcpy(entityCullingArray + entityCounter, &cullsphere, sizeof(ShaderSphere));
-			entityCounter++;
-			lightarray_count_spot++;
-		}
-
-		// Write point lights into entity array:
-		lightarray_offset_point = entityCounter;
-		for (uint32_t lightIndex : vis.visibleLights)
-		{
-			if (entityCounter == SHADER_ENTITY_COUNT)
-			{
-				entityCounter--;
-				break;
-			}
-
-			const LightComponent& light = vis.scene->lights[lightIndex];
-			if (light.GetType() != LightComponent::POINT || light.IsInactive())
-				continue;
-
-			ShaderEntity shaderentity = {};
-			shaderentity.layerMask = ~0u;
-
-			Entity entity = vis.scene->lights.GetEntity(lightIndex);
-			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
-			if (layer != nullptr)
-			{
-				shaderentity.layerMask = layer->layerMask;
-			}
-
-			shaderentity.SetType(ENTITY_TYPE_POINTLIGHT);
-			shaderentity.position = light.position;
-			shaderentity.SetRange(light.GetRange());
-			shaderentity.SetRadius(light.radius);
-			shaderentity.SetLength(light.length);
-			shaderentity.SetDirection(light.direction);
-			shaderentity.SetColor(float4(light.color.x * light.intensity, light.color.y * light.intensity, light.color.z * light.intensity, 1));
-
-			const bool shadowmap = IsShadowsEnabled() && light.IsCastingShadow() && !light.IsStatic();
-			const wi::rectpacker::Rect& shadow_rect = vis.visibleLightShadowRects[lightIndex];
-
-			const uint maskTex = light.maskTexDescriptor < 0 ? 0 : light.maskTexDescriptor;
-
-			if (shadowmap)
-			{
-				shaderentity.shadowAtlasMulAdd.x = shadow_rect.w * atlas_dim_rcp.x;
-				shaderentity.shadowAtlasMulAdd.y = shadow_rect.h * atlas_dim_rcp.y;
-				shaderentity.shadowAtlasMulAdd.z = shadow_rect.x * atlas_dim_rcp.x;
-				shaderentity.shadowAtlasMulAdd.w = shadow_rect.y * atlas_dim_rcp.y;
-			}
-
-			shaderentity.SetIndices(matrixCounter, maskTex);
-
-			if (shadowmap)
-			{
-				const float FarZ = 0.1f;	// watch out: reversed depth buffer! Also, light near plane is constant for simplicity, this should match on cpu side!
-				const float NearZ = std::max(1.0f, light.GetRange()); // watch out: reversed depth buffer!
-				const float fRange = FarZ / (FarZ - NearZ);
-				const float cubemapDepthRemapNear = fRange;
-				const float cubemapDepthRemapFar = -fRange * NearZ;
-				shaderentity.SetCubeRemapNear(cubemapDepthRemapNear);
-				shaderentity.SetCubeRemapFar(cubemapDepthRemapFar);
-			}
-
-			if (light.IsCastingShadow())
-			{
-				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_CASTING_SHADOW);
-			}
-			if (light.IsStatic())
-			{
-				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_STATIC);
-			}
-
-			if (light.IsVolumetricCloudsEnabled())
-			{
-				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_VOLUMETRICCLOUDS);
-			}
-
-			ShaderSphere cullsphere = {};
-			XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
-			cullsphere.radius = light.GetRange() + light.length;
-
-			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
-			std::memcpy(entityCullingArray + entityCounter, &cullsphere, sizeof(ShaderSphere));
-			entityCounter++;
-			lightarray_count_point++;
-		}
-
-		// Write rect lights into entity array:
-		lightarray_offset_rect = entityCounter;
-		for (uint32_t lightIndex : vis.visibleLights)
-		{
-			if (entityCounter == SHADER_ENTITY_COUNT)
-			{
-				entityCounter--;
-				break;
-			}
-
-			const LightComponent& light = vis.scene->lights[lightIndex];
-			if (light.GetType() != LightComponent::RECTANGLE || light.IsInactive())
-				continue;
-
-			ShaderEntity shaderentity = {};
-			shaderentity.layerMask = ~0u;
-
-			Entity entity = vis.scene->lights.GetEntity(lightIndex);
-			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
-			if (layer != nullptr)
-			{
-				shaderentity.layerMask = layer->layerMask;
-			}
-
-			shaderentity.SetType(ENTITY_TYPE_RECTLIGHT);
-			shaderentity.position = light.position;
-			shaderentity.SetRange(light.GetRange());
-			shaderentity.SetLength(light.length);
-			shaderentity.SetHeight(light.height);
-			shaderentity.SetQuaternion(light.rotation);
-			shaderentity.SetColor(float4(light.color.x * light.intensity, light.color.y * light.intensity, light.color.z * light.intensity, 1));
-
-			const bool shadowmap = IsShadowsEnabled() && light.IsCastingShadow() && !light.IsStatic();
-			const wi::rectpacker::Rect& shadow_rect = vis.visibleLightShadowRects[lightIndex];
-
-			const uint maskTex = light.maskTexDescriptor < 0 ? 0 : light.maskTexDescriptor;
-
-			if (shadowmap)
-			{
-				shaderentity.shadowAtlasMulAdd.x = shadow_rect.w * atlas_dim_rcp.x;
-				shaderentity.shadowAtlasMulAdd.y = shadow_rect.h * atlas_dim_rcp.y;
-				shaderentity.shadowAtlasMulAdd.z = shadow_rect.x * atlas_dim_rcp.x;
-				shaderentity.shadowAtlasMulAdd.w = shadow_rect.y * atlas_dim_rcp.y;
-			}
-
-			shaderentity.SetIndices(matrixCounter, maskTex);
-
-			if (shadowmap || (maskTex > 0))
-			{
-				SHCAM shcam;
-				CreateSpotLightShadowCam(light, shcam);
-				XMStoreFloat4x4(&matrixArray[matrixCounter++], shcam.view_projection);
-			}
-
-			if (light.IsCastingShadow())
-			{
-				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_CASTING_SHADOW);
-			}
-			if (light.IsStatic())
-			{
-				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_STATIC);
-			}
-
-			if (light.IsVolumetricCloudsEnabled())
-			{
-				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_VOLUMETRICCLOUDS);
-			}
-
-			ShaderSphere cullsphere = {};
-			XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
-			cullsphere.radius = std::max(light.length, light.height) + light.GetRange();
-
-			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
-			std::memcpy(entityCullingArray + entityCounter, &cullsphere, sizeof(ShaderSphere));
-			entityCounter++;
-			lightarray_count_rect++;
-		}
-
 		lightarray_count = lightarray_count_directional + lightarray_count_spot + lightarray_count_point + lightarray_count_rect;
-		frameCB.entity_culling_count = lightarray_count + decalarray_count + envprobearray_count;
-
-		// Write colliders into entity array:
-		forcefieldarray_offset = entityCounter;
-		for (size_t i = 0; i < vis.visibleColliders.size(); ++i)
-		{
-			if (entityCounter == SHADER_ENTITY_COUNT)
-			{
-				entityCounter--;
-				break;
-			}
-			ShaderEntity shaderentity = {};
-
-			const ColliderComponent& collider = vis.visibleColliders[i];
-			shaderentity.layerMask = collider.layerMask;
-
-			if (collider.IsCapsuleShadowEnabled())
-			{
-				shaderentity.SetFlags(ENTITY_FLAG_CAPSULE_SHADOW_COLLIDER);
-			}
-
-			ShaderSphere cullsphere = {};
-
-			switch (collider.shape)
-			{
-			case ColliderComponent::Shape::Sphere:
-				shaderentity.SetType(ENTITY_TYPE_COLLIDER_SPHERE);
-				shaderentity.position = collider.sphere.center;
-				shaderentity.SetRange(collider.sphere.radius);
-				XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
-				cullsphere.radius = collider.sphere.radius;
-				break;
-			case ColliderComponent::Shape::Capsule:
-				shaderentity.SetType(ENTITY_TYPE_COLLIDER_CAPSULE);
-				shaderentity.position = collider.capsule.base;
-				shaderentity.SetColliderTip(collider.capsule.tip);
-				shaderentity.SetRange(collider.capsule.radius);
-				{
-					Sphere sphere = collider.capsule.getSphere();
-					XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&sphere.center), viewMatrix));
-					cullsphere.radius = sphere.radius * CAPSULE_SHADOW_BOLDEN + CAPSULE_SHADOW_AFFECTION_RANGE;
-				}
-				break;
-			case ColliderComponent::Shape::Plane:
-				shaderentity.SetType(ENTITY_TYPE_COLLIDER_PLANE);
-				shaderentity.position = collider.plane.origin;
-				shaderentity.SetDirection(collider.plane.normal);
-				shaderentity.SetIndices(matrixCounter, 0);
-				XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
-				cullsphere.radius = FLT_MAX;
-				matrixArray[matrixCounter++] = collider.plane.projection;
-				break;
-			default:
-				assert(0);
-				break;
-			}
-
-			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
-			std::memcpy(entityCullingArray + entityCounter, &cullsphere, sizeof(ShaderSphere));
-			entityCounter++;
-			forcefieldarray_count++;
-		}
-
-		// Write force fields into entity array:
-		for (size_t i = 0; i < vis.scene->forces.GetCount(); ++i)
-		{
-			if (entityCounter == SHADER_ENTITY_COUNT)
-			{
-				entityCounter--;
-				break;
-			}
-			ShaderEntity shaderentity = {};
-
-			const ForceFieldComponent& force = vis.scene->forces[i];
-
-			shaderentity.layerMask = ~0u;
-
-			Entity entity = vis.scene->forces.GetEntity(i);
-			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
-			if (layer != nullptr)
-			{
-				shaderentity.layerMask = layer->layerMask;
-			}
-
-			switch (force.type)
-			{
-			default:
-			case ForceFieldComponent::Type::Point:
-				shaderentity.SetType(ENTITY_TYPE_FORCEFIELD_POINT);
-				break;
-			case ForceFieldComponent::Type::Plane:
-				shaderentity.SetType(ENTITY_TYPE_FORCEFIELD_PLANE);
-				break;
-			}
-			shaderentity.position = force.position;
-			shaderentity.SetGravity(force.gravity);
-			shaderentity.SetRange(std::max(0.001f, force.GetRange()));
-			// The default planar force field is facing upwards, and thus the pull direction is downwards:
-			shaderentity.SetDirection(force.direction);
-
-			ShaderSphere cullsphere = {};
-			XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
-			cullsphere.radius = FLT_MAX;
-
-			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
-			std::memcpy(entityCullingArray + entityCounter, &cullsphere, sizeof(ShaderSphere));
-			entityCounter++;
-			forcefieldarray_count++;
-		}
 	}
 
 	frameCB.probes = ShaderEntityIterator(envprobearray_offset, envprobearray_count);

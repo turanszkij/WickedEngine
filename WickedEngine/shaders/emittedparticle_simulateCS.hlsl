@@ -93,7 +93,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 		// process forces and colliders:
 		for (uint i = 0; i < forces().item_count(); ++i)
 		{
-			ShaderEntity entity = load_entity(forces().first_item() + i);
+			const uint entity_index = forces().first_item() + i;
+			ShaderEntity entity = load_entity(entity_index);
 
 			[branch]
 			if (entity.layerMask & xEmitterLayerMask)
@@ -162,7 +163,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 						dist = dist - particleSize;
 						if (dist < 0)
 						{
-							float4x4 planeProjection = load_entitymatrix(entity.GetMatrixIndex());
+							float4x4 planeProjection = load_entitymatrix(entity_index);
 							const float3 clipSpacePos = mul(planeProjection, float4(particle.position, 1)).xyz;
 							const float3 uvw = clipspace_to_uvw(clipSpacePos.xyz);
 							[branch]

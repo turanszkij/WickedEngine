@@ -1252,12 +1252,12 @@ struct alignas(16) FrameCB
 	float		cloudShadowFarPlaneKm;
 	int			texture_volumetricclouds_shadow_index;
 	uint		giboost_packed; // force fp16 load
-	uint		entity_culling_count;
-
 	uint		capsuleshadow_fade_angle;
+
 	int			indirect_debugbufferindex;
 	int			padding0;
 	int			padding1;
+	int			padding2;
 
 	float		blue_noise_phase;
 	int			texture_random64x64_index;

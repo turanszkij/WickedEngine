@@ -39,7 +39,8 @@ bool intersectInfiniteCone(float3 p, float3 v, float3 pa, float3 va, float sina2
 
 float4 main(VertexToPixel input) : SV_TARGET
 {
-	ShaderEntity light = load_entity(spotlights().first_item() + (uint)g_xColor.x);
+	const uint entity_index = spotlights().first_item() + (uint)g_xColor.x;
+	ShaderEntity light = load_entity(entity_index);
 
 	float2 ScreenCoord = input.pos2D.xy / input.pos2D.w * float2(0.5, -0.5) + 0.5;
 	float4 depths = texture_depth.GatherRed(sampler_point_clamp, ScreenCoord);
@@ -112,7 +113,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 			[branch]
 			if (light.IsCastingShadow())
 			{
-				float4 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + 0), float4(P, 1));
+				float4 shadow_pos = mul(load_entitymatrix(entity_index), float4(P, 1));
 				shadow_pos.xyz /= shadow_pos.w;
 				float2 shadow_uv = shadow_pos.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 				[branch]
@@ -125,7 +126,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 			[branch]
 			if (maskTex > 0)
 			{
-				float4 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + 0), float4(P, 1));
+				float4 shadow_pos = mul(load_entitymatrix(entity_index), float4(P, 1));
 				shadow_pos.xyz /= shadow_pos.w;
 				float2 shadow_uv = shadow_pos.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 				half4 mask = bindless_textures_half4[descriptor_index(maskTex)].Sample(sampler_linear_clamp, shadow_uv);

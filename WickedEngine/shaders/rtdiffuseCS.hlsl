@@ -164,7 +164,8 @@ void main(uint2 DTid : SV_DispatchThreadID)
 				[loop]
 				for (uint iterator = 0; iterator < lights().item_count(); iterator++)
 				{
-					ShaderEntity light = load_entity(lights().first_item() + iterator);
+					const uint entity_index = lights().first_item() + iterator;
+					ShaderEntity light = load_entity(entity_index);
 					if ((light.layerMask & surface.material.layerMask) == 0)
 						continue;
 
@@ -177,22 +178,22 @@ void main(uint2 DTid : SV_DispatchThreadID)
 					{
 					case ENTITY_TYPE_DIRECTIONALLIGHT:
 					{
-						light_directional(light, surface, lighting);
+						light_directional(light, entity_index, surface, lighting);
 					}
 					break;
 					case ENTITY_TYPE_POINTLIGHT:
 					{
-						light_point(light, surface, lighting);
+						light_point(light, entity_index, surface, lighting);
 					}
 					break;
 					case ENTITY_TYPE_RECTLIGHT:
 					{
-						light_rect(light, surface, lighting);
+						light_rect(light, entity_index, surface, lighting);
 					}
 					break;
 					case ENTITY_TYPE_SPOTLIGHT:
 					{
-						light_spot(light, surface, lighting);
+						light_spot(light, entity_index, surface, lighting);
 					}
 					break;
 					}

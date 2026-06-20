@@ -311,7 +311,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 							dist = dist - segment_radius;
 							if (dist < 0)
 							{
-								float4x4 planeProjection = load_entitymatrix(entity.GetMatrixIndex());
+								float4x4 planeProjection = load_entitymatrix(i);
 								const float3 clipSpacePos = mul(planeProjection, float4(closest_point, 1)).xyz;
 								const float3 uvw = clipspace_to_uvw(clipSpacePos.xyz);
 								[branch]
