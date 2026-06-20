@@ -243,6 +243,15 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&moonSizeSlider);
 
+	sunSizeSlider.Create(0.1f, 10.0f, 1.0f, 10000, "Sun Size Multiplier: ");
+	sunSizeSlider.SetTooltip("Multiplier on the sun's real angular size (1.0 = physically accurate).");
+	sunSizeSlider.SetSize(XMFLOAT2(wid, hei));
+	sunSizeSlider.SetPos(XMFLOAT2(x, y += step));
+	sunSizeSlider.OnSlide([this](wi::gui::EventArgs args) {
+		GetWeather().sun.size_multiplier = args.fValue;
+		});
+	AddWidget(&sunSizeSlider);
+
 	moonTextureButton.Create("Load Moon Texture");
 	moonTextureButton.SetTooltip("Load a dedicated texture for the moon disk. Click again to clear.");
 	moonTextureButton.SetSize(XMFLOAT2(mod_wid, hei));
@@ -1137,6 +1146,7 @@ void WeatherWindow::UpdateData()
 		starsSlider.SetValue(weather.stars);
 
 		moonSizeSlider.SetValue(weather.moon.size_multiplier);
+		sunSizeSlider.SetValue(weather.sun.size_multiplier);
 		moonTextureMipBiasSlider.SetValue(weather.moon.texture_mip_bias);
 		skyRotationSlider.SetValue(wi::math::RadiansToDegrees(weather.sky_rotation));
 		rainAmountSlider.SetValue(weather.rain_amount);
@@ -1366,6 +1376,7 @@ void WeatherWindow::ResizeLayout()
 	layout.add(skyExposureSlider);
 	layout.add(starsSlider);
 	layout.add(moonSizeSlider);
+	layout.add(sunSizeSlider);
 	layout.add_fullwidth(moonTextureButton);
 	layout.add(moonTextureMipBiasSlider);
 	layout.add(skyRotationSlider);

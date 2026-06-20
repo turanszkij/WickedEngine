@@ -4703,7 +4703,13 @@ void UpdatePerFrameData(
 			XMFLOAT3 eclipse_tint = XMFLOAT3(1.0f, 1.0f, 1.0f);
 			if (lightIndex == most_important_light_component_index)
 			{
-				light_intensity_scale = wi::math::Clamp(1.0f - vis.scene->weather.resolvedSunEclipseStrength, 0.0f, 1.0f);
+				// Solar eclipse: floor the sunlight (never fully dark) and shift
+				// the faint remaining light toward a cool twilight at totality.
+				const float e = wi::math::Clamp(vis.scene->weather.resolvedSunEclipseStrength, 0.0f, 1.0f);
+				light_intensity_scale = 1.0f - e * (1.0f - SUN_ECLIPSE_MIN_LIGHT_SCALE);
+				eclipse_tint.x = 1.0f + (SUN_ECLIPSE_LIGHT_TINT.x - 1.0f) * e;
+				eclipse_tint.y = 1.0f + (SUN_ECLIPSE_LIGHT_TINT.y - 1.0f) * e;
+				eclipse_tint.z = 1.0f + (SUN_ECLIPSE_LIGHT_TINT.z - 1.0f) * e;
 			}
 			else if (light.IsMoonLight())
 			{

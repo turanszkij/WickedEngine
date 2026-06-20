@@ -419,9 +419,9 @@ float3 GetCameraPlanetPos(AtmosphereParameters atmosphere, float3 cameraPosition
 
 half3 GetSunLuminance(float3 worldPosition, float3 worldDirection, float3 sunDirection, half3 sunIlluminance, AtmosphereParameters atmosphere, Texture2D<half4> transmittanceLutTexture)
 {
-	//float sunApexAngleDegree = 0.545; // Angular diameter of sun to earth from sea level, see https://en.wikipedia.org/wiki/Solid_angle
-	float sunApexAngleDegree = 2.4; // Modified sun size
-	float sunHalfApexAngleRadian = 0.5 * sunApexAngleDegree * PI / 180.0;
+	// Sun angular radius (half apex angle) from the weather data, so the drawn
+	// sun disk and the eclipse math share one physically-based size.
+	float sunHalfApexAngleRadian = GetSunSize();
 	float sunCosHalfApexAngle = cos(sunHalfApexAngleRadian);
 
 	float3 sunDirNorm = normalize(sunDirection);

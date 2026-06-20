@@ -80,7 +80,7 @@ namespace wi::scene
 		const XMVECTOR moon =
 			wi::math::NormalizeDirection(weather.moonDirection);
 
-		const float sunAngularRadius = XMConvertToRadians(2.4F);
+		const float sunAngularRadius = weather.sun.GetAngularRadius();
 		const float moonAngularRadius = weather.moon.GetAngularRadius();
 
 		// Fast path if angular radii are approximately equal
@@ -1041,7 +1041,7 @@ namespace wi::scene
 		shaderscene.weather.sun_color = wi::math::pack_half3(weather.sunColor);
 		shaderscene.weather.sun_direction = wi::math::pack_half3(weather.sunDirection);
 		shaderscene.weather.sun_eclipse_strength = resolved_sun_eclipse;
-		shaderscene.weather.padding_sun0 = 0.0f;
+		shaderscene.weather.sun_size = weather.sun.GetAngularRadius();
 		auto moonDir = weather.moonDirection;
 		if (wi::math::LengthSquared(moonDir) < 1e-6f)
 		{

@@ -1592,6 +1592,7 @@ namespace wi::lua::scene
 			moonColor = VectorProperty(&component->moonColor);
 			moonDirection = VectorProperty(&component->moonDirection);
 			moonSize = FloatProperty(&component->moon.size_multiplier);
+			sunSize = FloatProperty(&component->sun.size_multiplier);
 			moonLightIntensity = FloatProperty(&component->moonLightIntensity);
 			skyExposure = FloatProperty(&component->skyExposure);
 			horizon = VectorProperty(&component->horizon);
@@ -1658,6 +1659,7 @@ namespace wi::lua::scene
 		FloatProperty windSpeed;
 		FloatProperty stars;
 		FloatProperty moonSize;
+		FloatProperty sunSize;
 		FloatProperty moonLightIntensity;
 		FloatProperty rainAmount;
 		FloatProperty rainLength;
@@ -1691,6 +1693,7 @@ namespace wi::lua::scene
 		PropertyFunction(windSpeed)
 		PropertyFunction(stars)
 		PropertyFunction(moonSize)
+		PropertyFunction(sunSize)
 		PropertyFunction(moonLightIntensity)
 		PropertyFunction(rainAmount)
 		PropertyFunction(rainLength)

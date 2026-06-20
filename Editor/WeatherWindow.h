@@ -36,6 +36,7 @@ public:
 	wi::gui::Slider starsSlider;
 	wi::gui::Slider skyRotationSlider;
 	wi::gui::Slider moonSizeSlider;
+	wi::gui::Slider sunSizeSlider;
 	wi::gui::Slider moonTextureMipBiasSlider;
 	wi::gui::Slider rainAmountSlider;
 	wi::gui::Slider rainLengthSlider;

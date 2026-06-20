@@ -371,7 +371,7 @@ struct alignas(16) ShaderWeather
 	ShaderMoon moon;
 
 	float sun_eclipse_strength; // 0-1 multiplier describing moon shadow on sun
-	float padding_sun0;
+	float sun_size; // Sun angular radius (radians)
 
 	float sky_rotation_sin;
 	float sky_rotation_cos;

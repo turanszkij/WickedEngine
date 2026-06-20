@@ -16,6 +16,7 @@
 #include "wiPathQuery.h"
 #include "wiAllocator.h"
 #include "wiScene/environment/Moon/Moon.h"
+#include "wiScene/environment/Sun/Sun.h"
 
 namespace wi::scene
 {
@@ -1867,6 +1868,10 @@ namespace wi::scene
 		// Moon disk appearance (size, texture). Direction, color and light
 		// intensity live on the moon's directional light, not here.
 		environment::Moon moon;
+
+		// Sun disk appearance (size). Direction, color and intensity live on the
+		// sun's directional light, not here.
+		environment::Sun sun;
 
 		float skyExposure = 1;
 		XMFLOAT3 horizon = XMFLOAT3(0.0f, 0.0f, 0.0f);

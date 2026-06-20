@@ -1623,6 +1623,7 @@ namespace wi::scene
 				archive >> moonLightIntensity;
 				archive >> moon.texture_name;
 				archive >> moon.texture_mip_bias;
+				archive >> sun.size_multiplier;
 				if (!moon.texture_name.empty())
 				{
 					moon.texture_name = dir + moon.texture_name;
@@ -1642,6 +1643,7 @@ namespace wi::scene
 				moon.texture_name.clear();
 				moon.texture = {};
 				moon.texture_mip_bias = 0.0f;
+				sun.size_multiplier = 1.0f;
 			}
 			archive >> horizon;
 			archive >> zenith;
@@ -1941,6 +1943,7 @@ namespace wi::scene
 				archive << moonLightIntensity;
 				archive << wi::helper::GetPathRelative(dir, moon.texture_name);
 				archive << moon.texture_mip_bias;
+				archive << sun.size_multiplier;
 			}
 			archive << horizon;
 			archive << zenith;

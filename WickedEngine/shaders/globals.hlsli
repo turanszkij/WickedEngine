@@ -972,9 +972,10 @@ float acosFastPositive(float x)
     return p * sqrt(1.0 - x);
 }
 
-inline float GetSunEclipseStrength() { 
-    return saturate(GetWeather().sun_eclipse_strength); 
+inline float GetSunEclipseStrength() {
+    return saturate(GetWeather().sun_eclipse_strength);
 }
+inline float GetSunSize() { return GetWeather().sun_size; }
 
 inline half3 GetSunColor()
 {
