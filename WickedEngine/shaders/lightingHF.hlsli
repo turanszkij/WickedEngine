@@ -242,7 +242,7 @@ inline void light_point(in ShaderEntity light, in uint entity_index, in Surface 
 			return; // light color lost after shadow
 	}
 
-	const uint maskTex = light.GetTextureIndex();
+	const uint maskTex = light.packed_indices;
 	[branch]
 	if (maskTex > 0)
 	{
@@ -272,7 +272,7 @@ inline void light_point(in ShaderEntity light, in uint entity_index, in Surface 
 	{
 		Lunnormalized = light.position - surface.P;
 	}
-	if(light.GetRadius() > 0)
+	if (light.GetRadius() > 0)
 	{
 		// Specular representative point on sphere:
 		float3 centerToRay = mad(dot(Lunnormalized, surface.R), surface.R, -Lunnormalized);
@@ -357,7 +357,7 @@ inline void light_spot(in ShaderEntity light, in uint entity_index, in Surface s
 			return; // light color lost after shadow
 	}
 
-	const uint maskTex = light.GetTextureIndex();
+	const uint maskTex = light.packed_indices;
 	[branch]
 	if (maskTex > 0)
 	{
@@ -504,7 +504,7 @@ inline void light_rect(in ShaderEntity light, in uint entity_index, in Surface s
 	const float2 nearest2DPoint = float2(clamp(intersectPlanePoint.x, -light_length * 0.5, light_length * 0.5), clamp(intersectPlanePoint.y, -light_height * 0.5, light_height * 0.5));
 	const float3 specular_rect = light.position + nearest2DPoint.x * right + nearest2DPoint.y * up;
 
-	const uint maskTex = light.GetTextureIndex();
+	const uint maskTex = light.packed_indices;
 	[branch]
 	if (maskTex > 0)
 	{
