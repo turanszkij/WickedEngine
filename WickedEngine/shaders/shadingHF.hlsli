@@ -59,15 +59,13 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 		{
 			// Retrieve global entity index from local bucket, then remove bit from local bucket:
 			const uint bucket_bit_index = firstbitlow(bucket_bits);
-			const uint entity_index = bucket_bit_index;
 			bucket_bits ^= 1u << bucket_bit_index;
 
+			const uint entity_index = probes().first_item() + bucket_bit_index;
 			ShaderEntity probe = load_entity(probes().first_item() + entity_index);
 				
-			float4x4 probeProjection = load_entitymatrix(probe.GetMatrixIndex());
-			const int probeTexture = asint(probeProjection[3][0]);
-			probeProjection[3] = float4(0, 0, 0, 1);
-			TextureCube<half4> cubemap = bindless_cubemaps_half4[descriptor_index(probeTexture)];
+			float3x4 probeProjection = load_entitymatrix(entity_index); // note: straight entity-matrix mapping ok
+			TextureCube<half4> cubemap = bindless_cubemaps_half4[descriptor_index(probe.GetTextureIndex())];
 			
 			const half3 clipSpacePos = mul(probeProjection, float4(surface.P, 1)).xyz;
 			const half3 uvw = box_to_uv(clipSpacePos.xyz);
@@ -180,22 +178,21 @@ inline void ForwardDecals(inout Surface surface, inout half4 surfaceMap, Sampler
 	{
 		// Retrieve global entity index from local bucket, then remove bit from local bucket:
 		const uint bucket_bit_index = firstbitlow(bucket_bits);
-		const uint entity_index = bucket_bit_index;
 		bucket_bits ^= 1u << bucket_bit_index;
 
-		ShaderEntity decal = load_entity(decals().first_item() + entity_index);
+		const uint entity_index = decals().first_item() + bucket_bit_index;
+		ShaderEntity decal = load_entity(entity_index);
 
-		float4x4 decalProjection = load_entitymatrix(decal.GetMatrixIndex());
+		float4x4 decalProjection = load_entitymatrix(entity_index); // note: straight entity-matrix mapping ok
 		const int decalTexture = asint(decalProjection[3][0]);
 		const int decalNormal = asint(decalProjection[3][1]);
 		const int decalSurfacemap = asint(decalProjection[3][2]);
 		const int decalDisplacementmap = asint(decalProjection[3][3]);
-		decalProjection[3] = float4(0, 0, 0, 1);
 
 		// under here will be VGPR!
 		if ((decal.layerMask & surface.layerMask) == 0)
 			continue;
-		const float3 clipSpacePos = mul(decalProjection, float4(surface.P, 1)).xyz;
+		const float3 clipSpacePos = mul((float3x4)decalProjection, float4(surface.P, 1)).xyz;
 		float3 uvw = box_to_uv(clipSpacePos.xyz);
 		[branch]
 		if (is_saturated(uvw))
@@ -306,10 +303,8 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 				
 				ShaderEntity probe = load_entity(entity_index);
 
-				float4x4 probeProjection = load_entitymatrix(probe.GetMatrixIndex());
-				const int probeTexture = asint(probeProjection[3][0]);
-				probeProjection[3] = float4(0, 0, 0, 1);
-				TextureCube<half4> cubemap = bindless_cubemaps_half4[descriptor_index(probeTexture)];
+				float3x4 probeProjection = load_entitymatrix(entity_index); // note: straight entity-matrix mapping ok
+				TextureCube<half4> cubemap = bindless_cubemaps_half4[descriptor_index(probe.GetTextureIndex())];
 					
 				const half3 clipSpacePos = mul(probeProjection, float4(surface.P, 1)).xyz;
 				const half3 uvw = box_to_uv(clipSpacePos.xyz);
@@ -644,22 +639,21 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex, inout half4 s
 		{
 			// Retrieve global entity index from local bucket, then remove bit from local bucket:
 			const uint bucket_bit_index = firstbitlow(bucket_bits);
-			const uint entity_index = bucket * 32 + bucket_bit_index;
 			bucket_bits ^= 1u << bucket_bit_index;
 			
+			const uint entity_index = bucket * 32 + bucket_bit_index;
 			ShaderEntity decal = load_entity(entity_index);
 
-			float4x4 decalProjection = load_entitymatrix(decal.GetMatrixIndex());
+			float4x4 decalProjection = load_entitymatrix(entity_index); // note: straight entity-matrix mapping ok
 			const int decalTexture = asint(decalProjection[3][0]);
 			const int decalNormal = asint(decalProjection[3][1]);
 			const int decalSurfacemap = asint(decalProjection[3][2]);
 			const int decalDisplacementmap = asint(decalProjection[3][3]);
-			decalProjection[3] = float4(0, 0, 0, 1);
 				
 			// under here will be VGPR!
 			if ((decal.layerMask & surface.layerMask) == 0)
 				continue;
-			const float3 clipSpacePos = mul(decalProjection, float4(surface.P, 1)).xyz;
+			const float3 clipSpacePos = mul((float3x4)decalProjection, float4(surface.P, 1)).xyz;
 			float3 uvw = box_to_uv(clipSpacePos.xyz);
 			[branch]
 			if (is_saturated(uvw))

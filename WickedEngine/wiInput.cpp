@@ -89,6 +89,10 @@ namespace wi::input
 	KeyboardState keyboard;
 	MouseState mouse;
 	Pen pen;
+	Pinch pinch;
+	XMFLOAT2 pan = XMFLOAT2(0, 0);
+	bool is_panning = false;
+	bool is_pan_starting = false;
 	bool pen_override = false;
 	bool double_click = false;
 	wi::Timer doubleclick_timer;
@@ -278,20 +282,59 @@ namespace wi::input
 #endif // PLATFORM_IOS
 		
 		// Primary touch can act as mouse pointer override:
+		static bool pan_continue = false; // helps avoid non-continuous delta jump on pan begin
 		if (!touches.empty())
 		{
 			const Touch& primary_touch = touches.front();
-			if (primary_touch.state == Touch::TOUCHSTATE_PINCHED)
+			if (primary_touch.state == Touch::TOUCHSTATE_PRESSED)
 			{
-				mouse.right_button_press = true;
-				mouse.delta_position.x = mouse.position.x - primary_touch.pos.x;
-				mouse.delta_position.y = mouse.position.y - primary_touch.pos.y;
+				mouse.left_button_press = true;
+				pan_continue = false;
+			}
+			else if (primary_touch.state == Touch::TOUCHSTATE_MOVED)
+			{
+				if (pan_continue)
+				{
+					mouse.delta_position.x = mouse.position.x - primary_touch.pos.x;
+					mouse.delta_position.y = mouse.position.y - primary_touch.pos.y;
+				}
+				pan_continue = true;
 			}
 			else
 			{
-				mouse.left_button_press = true;
+				pan_continue = false;
 			}
 			mouse.position = primary_touch.pos;
+		}
+		else
+		{
+			pan_continue = false;
+		}
+		
+		// Find pinch and pan gesture:
+		float prev_pinch_scale = pinch.scale;
+		pinch = {};
+		pan = XMFLOAT2(0, 0);
+		const bool was_panning = is_panning;
+		is_panning = false;
+		is_pan_starting = false;
+		for (auto& touch : touches)
+		{
+			if (touch.state == Touch::TOUCHSTATE_PINCHED)
+			{
+				pinch.position = touch.pos;
+				pinch.scale = touch.scale;
+				pinch.delta_scale = prev_pinch_scale - pinch.scale;
+			}
+			else if (touch.state == Touch::TOUCHSTATE_MOVED)
+			{
+				pan = mouse.delta_position;
+				if (!was_panning)
+				{
+					is_pan_starting = true;
+				}
+				is_panning = true;
+			}
 		}
 
 		// Check if low-level XINPUT controller is not registered for playerindex slot and register:
@@ -1592,7 +1635,7 @@ namespace wi::input
 		return BUTTON_NONE;
 	}
 
-	ShortReturnString ButtonToString(BUTTON button, CONTROLLER_PREFERENCE preference)
+	StackString<32> ButtonToString(BUTTON button, CONTROLLER_PREFERENCE preference)
 	{
 #ifdef PLATFORM_PS5
 		preference = CONTROLLER_PREFERENCE_PLAYSTATION;
@@ -1737,8 +1780,8 @@ namespace wi::input
 
 		if (button >= DIGIT_RANGE_START && button < GAMEPAD_RANGE_START)
 		{
-			ShortReturnString str;
-			str.text[0] = (char)button;
+			StackString<32> str;
+			str.chars[0] = (char)button;
 			return str;
 		}
 
@@ -1764,6 +1807,26 @@ namespace wi::input
 		scaledTouch.pos.x *= scaling_rcp;
 		scaledTouch.pos.y *= scaling_rcp;
 		touches.push_back(scaledTouch);
+	}
+
+	const Pinch& GetTouchPinch()
+	{
+		return pinch;
+	}
+
+	const XMFLOAT2& GetTouchPan()
+	{
+		return pan;
+	}
+
+	bool IsTouchPanning()
+	{
+		return is_panning;
+	}
+
+	bool IsTouchPanStarting()
+	{
+		return is_pan_starting;
 	}
 
 }

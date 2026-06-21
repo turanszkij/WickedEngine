@@ -607,7 +607,7 @@ inline half3 EnvironmentReflection_Global(in Surface surface)
 // clipSpacePos:		world space pixel position transformed into OBB space by probeProjection matrix
 // MIP:					mip level to sample
 // return:				color of the environment map (rgb), blend factor of the environment map (a)
-inline half4 EnvironmentReflection_Local(in TextureCube<half4> cubemap, in Surface surface, in ShaderEntity probe, in float4x4 probeProjection, in half3 clipSpacePos)
+inline half4 EnvironmentReflection_Local(in TextureCube<half4> cubemap, in Surface surface, in ShaderEntity probe, in float3x4 probeProjection, in half3 clipSpacePos)
 {
 	if ((probe.layerMask & surface.layerMask) == 0)
 		return 0; // early exit: layer mismatch
