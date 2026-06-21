@@ -1,5 +1,4 @@
 #pragma once
-#include "wiCore/Constants.h"
 #include "wiMath.h"
 
 #include <cassert>
@@ -16,7 +15,6 @@
 	#include "Utility/DirectXMath/DirectXMath.h"
 #endif
 
-using namespace wi::core;
 using namespace DirectX;
 
 namespace wi::math { class AngularDisk; } // namespace wi::math
@@ -66,7 +64,7 @@ class wi::math::AngularDisk final {
 	 *
 	 * Can be safely passed to shaders or serialized.
 	 */
-	struct alignas(GPU_STRUCT_ALIGNMENT) AngularDiskProps {
+	struct alignas(16) AngularDiskProps { // 16-byte GPU struct alignment
 		/**
 		 * @brief The normalized direction vector of the disk center.
 		 *
