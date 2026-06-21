@@ -24,6 +24,10 @@ namespace wi::lua
 		lunamethod(Input_BindLua, SetCursorFromFile),
 		lunamethod(Input_BindLua, ResetCursor),
 		lunamethod(Input_BindLua, ResetCursors),
+		lunamethod(Input_BindLua, GetTouchPinch),
+		lunamethod(Input_BindLua, GetTouchPan),
+		lunamethod(Input_BindLua, IsTouchPanning),
+		lunamethod(Input_BindLua, IsTouchPanStarting),
 		{ NULL, NULL }
 	};
 	Luna<Input_BindLua>::PropertyType Input_BindLua::properties[] = {
@@ -298,6 +302,29 @@ namespace wi::lua
 	{
 		wi::input::ResetCursors();
 		return 0;
+	}
+	int Input_BindLua::GetTouchPinch(lua_State* L)
+	{
+		wi::input::Pinch pinch = wi::input::GetTouchPinch();
+		Luna<Vector_BindLua>::push(L, pinch.position);
+		wi::lua::SSetFloat(L, pinch.scale);
+		wi::lua::SSetFloat(L, pinch.delta_scale);
+		return 3;
+	}
+	int Input_BindLua::GetTouchPan(lua_State* L)
+	{
+		Luna<Vector_BindLua>::push(L, wi::input::GetTouchPan());
+		return 1;
+	}
+	int Input_BindLua::IsTouchPanning(lua_State* L)
+	{
+		wi::lua::SSetBool(L, wi::input::IsTouchPanning());
+		return 1;
+	}
+	int Input_BindLua::IsTouchPanStarting(lua_State* L)
+	{
+		wi::lua::SSetBool(L, wi::input::IsTouchPanStarting());
+		return 1;
 	}
 
 	void Input_BindLua::Bind()

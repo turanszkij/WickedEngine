@@ -194,7 +194,8 @@ void AABBfromMinMax(inout AABB aabb, float3 _min, float3 _max)
 	aabb.c = (_min + _max) * 0.5f;
 	aabb.e = abs(_max - aabb.c);
 }
-void AABBtransform(inout AABB aabb, float4x4 mat)
+template<typename T>
+void AABBtransform(inout AABB aabb, T mat)
 {
 	float3 _min = aabb.getMin();
 	float3 _max = aabb.getMax();

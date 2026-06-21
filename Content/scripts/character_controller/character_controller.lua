@@ -194,6 +194,8 @@ local function Character(model_scene, start_transform, controllable, anim_scene,
 					self.savedPointerPos = input.GetPointer()
 					input.HidePointer(false)
 				end
+
+				diff = vector.Add(diff, vector.Multiply(input.GetTouchPan(), -dt))
 				
 				self.target_rot_horizontal = self.target_rot_horizontal + diff.GetX()
 				self.target_rot_vertical = math.clamp(self.target_rot_vertical + diff.GetY(), -math.pi * 0.3, math.pi * 0.4) -- vertical camera limits
@@ -720,6 +722,8 @@ local function ThirdPersonCamera(character)
 
 			-- Mouse scroll or gamepad triggers will move the camera distance:
 			local scroll = input.GetPointer().GetZ() -- pointer.z is the mouse wheel delta this frame
+			local pinch_pos, pinch_scale, pinch_delta_scale = input.GetTouchPinch() -- also handle touch control pinch gesture
+			scroll = scroll + pinch_delta_scale * 4
 			scroll = scroll + input.GetAnalog(GAMEPAD_ANALOG_TRIGGER_R).GetX()
 			scroll = scroll - input.GetAnalog(GAMEPAD_ANALOG_TRIGGER_L).GetX()
 			scroll = scroll * self.zoom_speed

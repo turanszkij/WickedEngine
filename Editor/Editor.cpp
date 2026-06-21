@@ -189,7 +189,7 @@ bool CheckInput(EditorActions action)
 std::string GetInputString(EditorActions action)
 {
 	const HotkeyInfo& hotkey = hotkeyActions[size_t(action)];
-	std::string ret = wi::input::ButtonToString(hotkey.button).text;
+	std::string ret = wi::input::ButtonToString(hotkey.button).chars;
 	if (hotkey.shift)
 	{
 		ret = "Shift + " + ret;
@@ -1994,16 +1994,19 @@ void EditorComponent::Update(float dt)
 		currentMouse.x -= renderPath->PhysicalToLogical((uint32_t)viewport3D.top_left_x);
 		currentMouse.y -= renderPath->PhysicalToLogical((uint32_t)viewport3D.top_left_y);
 
+		static constexpr float tweak60 = 0.1f / 60.0f;
 		float xDif = 0, yDif = 0;
 		const wi::input::MouseState& mouse = wi::input::GetMouseState();
+		const wi::input::Pinch pinch = wi::input::GetTouchPinch();
+		const XMFLOAT2& pan = wi::input::GetTouchPan();
 
 		if (wi::input::Down(wi::input::MOUSE_BUTTON_RIGHT))
 		{
 			camControlStart = false;
 			xDif = mouse.delta_position.x;
 			yDif = mouse.delta_position.y;
-			xDif = 0.1f * xDif * (1.0f / 60.0f);
-			yDif = 0.1f * yDif * (1.0f / 60.0f);
+			xDif *= tweak60;
+			yDif *= tweak60;
 			if (!is_2D_mode)
 			{
 				wi::input::SetPointer(originalMouse);
@@ -2041,6 +2044,12 @@ void EditorComponent::Update(float dt)
 		const float joystickrotspeed = 0.05f;
 		xDif += rightStick.x * joystickrotspeed;
 		yDif += rightStick.y * joystickrotspeed;
+		
+		if (translator.state == Translator::TRANSLATOR_IDLE)
+		{
+			xDif += pan.x * tweak60;
+			yDif += pan.y * tweak60;
+		}
 
 		xDif *= cameraWnd.rotationspeedSlider.GetValue();
 		yDif *= cameraWnd.rotationspeedSlider.GetValue();
@@ -2111,11 +2120,16 @@ void EditorComponent::Update(float dt)
 
 			// Mouse pan works completely differently in 2D mode, it "grabs canvas"
 			XMFLOAT2 grabdiff = XMFLOAT2(0, 0);
+			const float units_per_pixel = camera.ortho_vertical_size / viewport3D.height * 0.5f;
 			if (wi::input::Down(wi::input::MOUSE_BUTTON_RIGHT))
 			{
 				wi::input::SetCursor(wi::input::CURSOR_RESIZEALL);
-				const float units_per_pixel = camera.ortho_vertical_size / viewport3D.height * 0.5f;
 				grabdiff = XMFLOAT2(-mouse.delta_position.x * units_per_pixel, mouse.delta_position.y * units_per_pixel);
+				move = XMVectorZero();
+			}
+			else if(std::abs(pan.x) > 0.0001f || std::abs(pan.y) > 0.0001f)
+			{
+				grabdiff = XMFLOAT2(pan.x * units_per_pixel, -pan.y * units_per_pixel);
 				move = XMVectorZero();
 			}
 
@@ -2133,6 +2147,7 @@ void EditorComponent::Update(float dt)
 			{
 				camera.ortho_vertical_size -= currentMouse.z;
 			}
+			camera.ortho_vertical_size *= 1.0f + pinch.delta_scale;
 
 			camera.ortho_vertical_size = std::max(0.01f, camera.ortho_vertical_size);
 		}
@@ -2154,6 +2169,7 @@ void EditorComponent::Update(float dt)
 				if (CheckInput(EditorActions::MOVE_CAMERA_BACKWARD) || wi::input::Down(wi::input::GAMEPAD_BUTTON_DOWN)) { moveNew += XMVectorSet(0, 0, -1, 0); camera.ortho_vertical_size += 0.1f; }
 				if (CheckInput(EditorActions::MOVE_CAMERA_UP) || wi::input::Down(wi::input::GAMEPAD_BUTTON_2)) { moveNew += XMVectorSet(0, 1, 0, 0); }
 				if (CheckInput(EditorActions::MOVE_CAMERA_DOWN) || wi::input::Down(wi::input::GAMEPAD_BUTTON_1)) { moveNew += XMVectorSet(0, -1, 0, 0); }
+				moveNew += XMVectorSet(0, 0, pinch.delta_scale, 0);
 				moveNew = XMVector3Normalize(moveNew);
 			}
 			moveNew += XMVectorSet(leftStick.x, 0, leftStick.y, 0);

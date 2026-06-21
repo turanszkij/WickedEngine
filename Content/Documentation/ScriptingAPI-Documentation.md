@@ -2090,6 +2090,10 @@ Query input devices
 - SetCursorFromFile(int cursor, string filename)	-- sets the specified cursor type to an image from a cursor file
 - ResetCursor(int cursor)	-- resets the specified cursor to the default one
 - ResetCursors()	-- resets all cursors to the defaults
+- GetTouchPinch() : Vector pos, float scale, float delta_scale -- returns touch pinch gesture params
+- GetTouchPan() : Vector -- returns touch pan delta movement
+- IsTouchPanning() : bool -- true if there is a pan touch gesture active
+- IsTouchPanStarting() : bool -- true if there is a new pan touch gesture starting this frame
 
 #### ControllerFeedback
 Describes controller feedback such as touch and LED color which can be replayed on a controller

@@ -298,7 +298,7 @@ void Translator::Update(const CameraComponent& camera, const XMFLOAT4& currentMo
 			}
 		}
 
-		if (dragging || (state != TRANSLATOR_IDLE && wi::input::Press(wi::input::MOUSE_BUTTON_LEFT)))
+		if (dragging || (state != TRANSLATOR_IDLE && (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanning())))
 		{
 			// Dragging operation:
 			if (isRotator)
@@ -565,7 +565,7 @@ void Translator::Update(const CameraComponent& camera, const XMFLOAT4& currentMo
 			}
 		}
 
-		if (!wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+		if (!wi::input::Down(wi::input::MOUSE_BUTTON_LEFT) && !wi::input::IsTouchPanning())
 		{
 			if (dragging)
 			{
