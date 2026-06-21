@@ -17,7 +17,6 @@
 #include "shaders/ShaderInterop_DDGI.h"
 
 #include "Utility/DirectXMath/DirectXMath.h"
-#include <cmath>
 
 #if __has_include(<sanitizer/asan_interface.h>)
 #include <sanitizer/asan_interface.h>
@@ -40,7 +39,7 @@ namespace wi::scene
 		XMVECTOR moon = XMLoadFloat3(&moon_dir);
 		const float sun_len_sq = XMVectorGetX(XMVector3LengthSq(sun));
 		const float moon_len_sq = XMVectorGetX(XMVector3LengthSq(moon));
-		if (!std::isfinite(sun_len_sq) || !std::isfinite(moon_len_sq) || sun_len_sq < 1e-6f || moon_len_sq < 1e-6f)
+		if (sun_len_sq < 1e-6f || moon_len_sq < 1e-6f)
 		{
 			return 1.0f;
 		}
@@ -115,8 +114,7 @@ namespace wi::scene
 		// Sanity check lengths
 		const float sun_len_sq = XMVectorGetX(XMVector3LengthSq(sun));
 		const float moon_len_sq = XMVectorGetX(XMVector3LengthSq(moon));
-		if (!std::isfinite(sun_len_sq) || sun_len_sq < 1e-6f ||
-			!std::isfinite(moon_len_sq) || moon_len_sq < 1e-6f)
+		if (sun_len_sq < 1e-6f || moon_len_sq < 1e-6f)
 		{
 			return 0.0f;
 		}
