@@ -54,6 +54,7 @@ namespace dx12_internal
 #endif
 	static PFN_D3D12_CREATE_DEVICE D3D12CreateDevice = nullptr;
 	static PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER D3D12CreateVersionedRootSignatureDeserializer = nullptr;
+	static PFN_D3D12_SERIALIZE_ROOT_SIGNATURE D3D12SerializeRootSignature = nullptr;
 #endif // PLATFORM_WINDOWS_DESKTOP
 
 	// Engine -> Native converters
@@ -1431,6 +1432,10 @@ namespace dx12_internal
 		wi::allocator::shared_ptr<void> rootsig_desc_lifetime_extender;
 		RootSignatureOptimizer rootsig_optimizer;
 
+		Microsoft::WRL::ComPtr<ID3D12CommandSignature> drawInstancedIndirectCountCommandSignature;
+		Microsoft::WRL::ComPtr<ID3D12CommandSignature> drawIndexedInstancedIndirectCountCommandSignature;
+		Microsoft::WRL::ComPtr<ID3D12CommandSignature> dispatchMeshIndirectCountCommandSignature;
+
 		struct PSO_STREAM
 		{
 			struct PSO_STREAM1
@@ -1673,7 +1678,7 @@ std::mutex queue_locker;
 			cmd.commandList.Get()
 		};
 
-		dx12_check(cmd.fence->Signal(0));
+		cmd.fenceValue++;
 
 		{
 #ifdef PLATFORM_XBOX
@@ -1681,10 +1686,10 @@ std::mutex queue_locker;
 #endif // PLATFORM_XBOX
 
 			queue->ExecuteCommandLists(1, commandlists);
-			dx12_check(queue->Signal(cmd.fence.Get(), 1));
+			dx12_check(queue->Signal(cmd.fence.Get(), cmd.fenceValue));
 		}
 
-		dx12_check(cmd.fence->SetEventOnCompletion(1, nullptr));
+		dx12_check(cmd.fence->SetEventOnCompletion(cmd.fenceValue, nullptr));
 
 		std::scoped_lock lock(locker);
 		freelist.push_back(cmd);
@@ -2186,6 +2191,16 @@ std::mutex queue_locker;
 		{
 			std::stringstream ss("");
 			ss << "Failed to load D3D12CreateVersionedRootSignatureDeserializer! ERROR: " << std::hex << GetLastError();
+			wi::helper::messageBox(ss.str(), "Error!");
+			wi::platform::Exit();
+		}
+
+		D3D12SerializeRootSignature = (PFN_D3D12_SERIALIZE_ROOT_SIGNATURE)wiGetProcAddress(dx12, "D3D12SerializeRootSignature");
+		assert(D3D12SerializeRootSignature != nullptr);
+		if (D3D12SerializeRootSignature == nullptr)
+		{
+			std::stringstream ss("");
+			ss << "Failed to load D3D12SerializeRootSignature! ERROR: " << std::hex << GetLastError();
 			wi::helper::messageBox(ss.str(), "Error!");
 			wi::platform::Exit();
 		}
@@ -2866,12 +2881,7 @@ std::mutex queue_locker;
 #endif // PLATFORM_XBOX
 			cmd_desc.NumArgumentDescs = 1;
 			cmd_desc.pArgumentDescs = dispatchMeshArgs;
-			hr = dx12_check(device->CreateCommandSignature(&cmd_desc, nullptr, PPV_ARGS(dispatchMeshIndirectCommandSignature)));
-			if (FAILED(hr))
-			{
-				wilog_messagebox("ID3D12Device::CreateCommandSignature[dispatchMeshIndirect] failed! ERROR: %s", wi::helper::GetPlatformErrorString(hr).c_str());
-				wi::platform::Exit();
-			}
+			dx12_check(device->CreateCommandSignature(&cmd_desc, nullptr, PPV_ARGS(dispatchMeshIndirectCommandSignature)));
 		}
 
 		allocationhandler->descriptors_res.init(this, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 4096);
@@ -3848,7 +3858,7 @@ std::mutex queue_locker;
 
 		return SUCCEEDED(hr);
 	}
-	bool GraphicsDevice_DX12::CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader) const
+	bool GraphicsDevice_DX12::CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader, const char* entrypoint) const
 	{
 		auto internal_state = wi::allocator::make_shared<PipelineState_DX12>();
 		internal_state->allocationhandler = allocationhandler;
@@ -3904,6 +3914,76 @@ std::mutex queue_locker;
 			streamDesc.SizeInBytes = sizeof(stream);
 
 			hr = dx12_check(device->CreatePipelineState(&streamDesc, PPV_ARGS(internal_state->resource)));
+		}
+
+		if (stage == ShaderStage::VS)
+		{
+			std::scoped_lock lck(multidraw_signature_locker);
+			MultiDrawSignature& cached = multidraw_signatures[internal_state->rootSignature.Get()];
+
+			if (cached.drawInstancedIndirectCountCommandSignature)
+			{
+				internal_state->drawInstancedIndirectCountCommandSignature = cached.drawInstancedIndirectCountCommandSignature;
+			}
+			else
+			{
+				D3D12_COMMAND_SIGNATURE_DESC cmd_desc = {};
+				D3D12_INDIRECT_ARGUMENT_DESC drawInstancedCountArgs[2] = {};
+				drawInstancedCountArgs[0].Type = D3D12_INDIRECT_ARGUMENT_TYPE_CONSTANT;
+				drawInstancedCountArgs[0].Constant.RootParameterIndex = internal_state->rootsig_optimizer.PUSH;
+				drawInstancedCountArgs[0].Constant.Num32BitValuesToSet = 1;
+				drawInstancedCountArgs[1].Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW;
+				cmd_desc.ByteStride = sizeof(uint32_t) + sizeof(D3D12_DRAW_ARGUMENTS);
+				cmd_desc.NumArgumentDescs = arraysize(drawInstancedCountArgs);
+				cmd_desc.pArgumentDescs = drawInstancedCountArgs;
+				dx12_check(device->CreateCommandSignature(&cmd_desc, internal_state->rootSignature.Get(), PPV_ARGS(internal_state->drawInstancedIndirectCountCommandSignature)));
+			}
+
+			if (cached.drawIndexedInstancedIndirectCountCommandSignature)
+			{
+				internal_state->drawIndexedInstancedIndirectCountCommandSignature = cached.drawIndexedInstancedIndirectCountCommandSignature;
+			}
+			else
+			{
+				D3D12_COMMAND_SIGNATURE_DESC cmd_desc = {};
+				D3D12_INDIRECT_ARGUMENT_DESC drawIndexedInstancedCountArgs[2] = {};
+				drawIndexedInstancedCountArgs[0].Type = D3D12_INDIRECT_ARGUMENT_TYPE_CONSTANT;
+				drawIndexedInstancedCountArgs[0].Constant.RootParameterIndex = internal_state->rootsig_optimizer.PUSH;
+				drawIndexedInstancedCountArgs[0].Constant.Num32BitValuesToSet = 1;
+				drawIndexedInstancedCountArgs[1].Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
+				cmd_desc.ByteStride = sizeof(uint32_t) + sizeof(D3D12_DRAW_INDEXED_ARGUMENTS);
+				cmd_desc.NumArgumentDescs = arraysize(drawIndexedInstancedCountArgs);
+				cmd_desc.pArgumentDescs = drawIndexedInstancedCountArgs;
+				dx12_check(device->CreateCommandSignature(&cmd_desc, internal_state->rootSignature.Get(), PPV_ARGS(internal_state->drawIndexedInstancedIndirectCountCommandSignature)));
+			}
+		}
+		else if (stage == ShaderStage::MS)
+		{
+			std::scoped_lock lck(multidraw_signature_locker);
+			MultiDrawSignature& cached = multidraw_signatures[internal_state->rootSignature.Get()];
+
+			if (cached.dispatchMeshIndirectCountCommandSignature)
+			{
+				internal_state->dispatchMeshIndirectCountCommandSignature = cached.dispatchMeshIndirectCountCommandSignature;
+			}
+			else
+			{
+				D3D12_COMMAND_SIGNATURE_DESC cmd_desc = {};
+				D3D12_INDIRECT_ARGUMENT_DESC dispatchMeshCountArgs[2] = {};
+				dispatchMeshCountArgs[0].Type = D3D12_INDIRECT_ARGUMENT_TYPE_CONSTANT;
+				dispatchMeshCountArgs[0].Constant.RootParameterIndex = internal_state->rootsig_optimizer.PUSH;
+				dispatchMeshCountArgs[0].Constant.Num32BitValuesToSet = 1;
+#ifdef PLATFORM_XBOX
+				wi::graphics::xbox::FillDispatchMeshIndirectArgumentDesc(dispatchMeshCountArgs[1], cmd_desc);
+#else
+				dispatchMeshCountArgs[1].Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_MESH;
+				cmd_desc.ByteStride = sizeof(D3D12_DISPATCH_MESH_ARGUMENTS);
+#endif // PLATFORM_XBOX
+				cmd_desc.ByteStride += sizeof(uint32_t);
+				cmd_desc.NumArgumentDescs = arraysize(dispatchMeshCountArgs);
+				cmd_desc.pArgumentDescs = dispatchMeshCountArgs;
+				dx12_check(device->CreateCommandSignature(&cmd_desc, internal_state->rootSignature.Get(), PPV_ARGS(internal_state->dispatchMeshIndirectCountCommandSignature)));
+			}
 		}
 
 		return SUCCEEDED(hr);
@@ -4002,6 +4082,8 @@ std::mutex queue_locker;
 				internal_state->rootSignature = shader_internal->rootSignature;
 				internal_state->rootsig_desc = shader_internal->rootsig_desc;
 				internal_state->rootsig_desc_lifetime_extender = pso->desc.vs->internal_state;
+				internal_state->drawInstancedIndirectCountCommandSignature = shader_internal->drawInstancedIndirectCountCommandSignature;
+				internal_state->drawIndexedInstancedIndirectCountCommandSignature = shader_internal->drawIndexedInstancedIndirectCountCommandSignature;
 				stream.stream1.ROOTSIG = internal_state->rootSignature.Get();
 			}
 		}
@@ -4063,6 +4145,7 @@ std::mutex queue_locker;
 				internal_state->rootSignature = shader_internal->rootSignature;
 				internal_state->rootsig_desc = shader_internal->rootsig_desc;
 				internal_state->rootsig_desc_lifetime_extender = pso->desc.ms->internal_state;
+				internal_state->dispatchMeshIndirectCountCommandSignature = shader_internal->dispatchMeshIndirectCountCommandSignature;
 				stream.stream1.ROOTSIG = internal_state->rootSignature.Get();
 			}
 		}
@@ -5701,6 +5784,7 @@ std::mutex queue_locker;
 
 	void GraphicsDevice_DX12::ClearPipelineStateCache()
 	{
+		multidraw_signatures.clear();
 		pipelines_global.clear();
 
 		for (auto& x : commandlists)
@@ -6024,7 +6108,7 @@ std::mutex queue_locker;
 
 			case RenderPassImage::Type::RESOLVE:
 			{
-				descriptor = subresource < 0 ? internal_state->srv : internal_state->subresources_srv[subresource];
+				descriptor = subresource < 0 ? internal_state->rtv : internal_state->subresources_rtv[subresource];
 				ResolveSourceInfo& resolve_src_info = RT_resolve_src_infos[rt_resolve_count];
 				D3D12_RENDER_PASS_RENDER_TARGET_DESC& RTV = RTVs[rt_resolve_count];
 				RTV.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE;
@@ -6751,18 +6835,20 @@ std::mutex queue_locker;
 	void GraphicsDevice_DX12::DrawInstancedIndirectCount(const GPUBuffer* args, uint64_t args_offset, const GPUBuffer* count, uint64_t count_offset, uint32_t max_count, CommandList cmd)
 	{
 		predraw(cmd);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
+		auto pso_internal = to_internal(commandlist.active_pso);
 		auto args_internal = to_internal(args);
 		auto count_internal = to_internal(count);
-		CommandList_DX12& commandlist = GetCommandList(cmd);
-		commandlist.GetGraphicsCommandList()->ExecuteIndirect(drawInstancedIndirectCommandSignature.Get(), max_count, args_internal->resource.Get(), args_offset, count_internal->resource.Get(), count_offset);
+		commandlist.GetGraphicsCommandList()->ExecuteIndirect(pso_internal->drawInstancedIndirectCountCommandSignature.Get(), max_count, args_internal->resource.Get(), args_offset, count_internal->resource.Get(), count_offset);
 	}
 	void GraphicsDevice_DX12::DrawIndexedInstancedIndirectCount(const GPUBuffer* args, uint64_t args_offset, const GPUBuffer* count, uint64_t count_offset, uint32_t max_count, CommandList cmd)
 	{
 		predraw(cmd);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
+		auto pso_internal = to_internal(commandlist.active_pso);
 		auto args_internal = to_internal(args);
 		auto count_internal = to_internal(count);
-		CommandList_DX12& commandlist = GetCommandList(cmd);
-		commandlist.GetGraphicsCommandList()->ExecuteIndirect(drawIndexedInstancedIndirectCommandSignature.Get(), max_count, args_internal->resource.Get(), args_offset, count_internal->resource.Get(), count_offset);
+		commandlist.GetGraphicsCommandList()->ExecuteIndirect(pso_internal->drawIndexedInstancedIndirectCountCommandSignature.Get(), max_count, args_internal->resource.Get(), args_offset, count_internal->resource.Get(), count_offset);
 	}
 	void GraphicsDevice_DX12::Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd)
 	{
@@ -6793,10 +6879,11 @@ std::mutex queue_locker;
 	void GraphicsDevice_DX12::DispatchMeshIndirectCount(const GPUBuffer* args, uint64_t args_offset, const GPUBuffer* count, uint64_t count_offset, uint32_t max_count, CommandList cmd)
 	{
 		predraw(cmd);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
+		auto pso_internal = to_internal(commandlist.active_pso);
 		auto args_internal = to_internal(args);
 		auto count_internal = to_internal(count);
-		CommandList_DX12& commandlist = GetCommandList(cmd);
-		commandlist.GetGraphicsCommandList()->ExecuteIndirect(dispatchMeshIndirectCommandSignature.Get(), max_count, args_internal->resource.Get(), args_offset, count_internal->resource.Get(), count_offset);
+		commandlist.GetGraphicsCommandList()->ExecuteIndirect(pso_internal->dispatchMeshIndirectCountCommandSignature.Get(), max_count, args_internal->resource.Get(), args_offset, count_internal->resource.Get(), count_offset);
 	}
 	void GraphicsDevice_DX12::CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd)
 	{
@@ -6812,28 +6899,36 @@ std::mutex queue_locker;
 			if (src_desc.usage == Usage::UPLOAD && dst_desc.usage == Usage::DEFAULT)
 			{
 				// CPU (buffer) -> GPU (texture)
-				for (uint32_t layer = 0; layer < dst_desc.array_size; ++layer)
+				const uint32_t planes = GetFormatPlaneCount(dst_desc.format); // dst plane count!
+				for (uint32_t plane = 0; plane < planes; ++plane)
 				{
-					for (uint32_t mip = 0; mip < dst_desc.mip_levels; ++mip)
+					for (uint32_t layer = 0; layer < dst_desc.array_size; ++layer)
 					{
-						UINT subresource = D3D12CalcSubresource(mip, layer, 0, dst_desc.mip_levels, dst_desc.array_size);
-						CD3DX12_TEXTURE_COPY_LOCATION Src(internal_state_src->resource.Get(), internal_state_src->footprints[layer * dst_desc.mip_levels + mip]);
-						CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state_dst->resource.Get(), subresource);
-						commandlist.GetGraphicsCommandList()->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
+						for (uint32_t mip = 0; mip < dst_desc.mip_levels; ++mip)
+						{
+							const UINT subresource = D3D12CalcSubresource(mip, layer, plane, dst_desc.mip_levels, dst_desc.array_size);
+							CD3DX12_TEXTURE_COPY_LOCATION Src(internal_state_src->resource.Get(), internal_state_src->footprints[layer * dst_desc.mip_levels + mip]);
+							CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state_dst->resource.Get(), subresource);
+							commandlist.GetGraphicsCommandList()->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
+						}
 					}
 				}
 			}
 			else if (src_desc.usage == Usage::DEFAULT && dst_desc.usage == Usage::READBACK)
 			{
 				// GPU (texture) -> CPU (buffer)
-				for (uint32_t layer = 0; layer < dst_desc.array_size; ++layer)
+				const uint32_t planes = GetFormatPlaneCount(src_desc.format); // src plane count!
+				for (uint32_t plane = 0; plane < planes; ++plane)
 				{
-					for (uint32_t mip = 0; mip < dst_desc.mip_levels; ++mip)
+					for (uint32_t layer = 0; layer < dst_desc.array_size; ++layer)
 					{
-						UINT subresource = D3D12CalcSubresource(mip, layer, 0, dst_desc.mip_levels, dst_desc.array_size);
-						CD3DX12_TEXTURE_COPY_LOCATION Src(internal_state_src->resource.Get(), subresource);
-						CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state_dst->resource.Get(), internal_state_dst->footprints[layer * dst_desc.mip_levels + mip]);
-						commandlist.GetGraphicsCommandList()->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
+						for (uint32_t mip = 0; mip < dst_desc.mip_levels; ++mip)
+						{
+							const UINT subresource = D3D12CalcSubresource(mip, layer, 0, dst_desc.mip_levels, dst_desc.array_size);
+							CD3DX12_TEXTURE_COPY_LOCATION Src(internal_state_src->resource.Get(), subresource);
+							CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state_dst->resource.Get(), internal_state_dst->footprints[layer * dst_desc.mip_levels + mip]);
+							commandlist.GetGraphicsCommandList()->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
+						}
 					}
 				}
 			}
@@ -7128,11 +7223,43 @@ std::mutex queue_locker;
 			break;
 			}
 
-			if (barrierdesc.Type == D3D12_RESOURCE_BARRIER_TYPE_TRANSITION && commandlist.queue > QUEUE_GRAPHICS)
+			if (commandlist.queue == QUEUE_COMPUTE && barrierdesc.Type == D3D12_RESOURCE_BARRIER_TYPE_TRANSITION)
 			{
-				// Only graphics queue can do pixel shader state:
+				// Compute queue can't transition pixel shader state:
 				barrierdesc.Transition.StateBefore &= ~D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 				barrierdesc.Transition.StateAfter &= ~D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+			}
+			else if (commandlist.queue == QUEUE_COPY && barrierdesc.Type == D3D12_RESOURCE_BARRIER_TYPE_TRANSITION)
+			{
+				// Copy queue can only transition from/to COPY_ and COMMON states, so we will overwrite anything else to COMMON,
+				//	but the video textures will be using D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS so that implicit transition can happen from COMMON in a different queue
+				if (barrierdesc.Transition.StateBefore != D3D12_RESOURCE_STATE_COPY_SOURCE && barrierdesc.Transition.StateBefore != D3D12_RESOURCE_STATE_COPY_DEST)
+				{
+					barrierdesc.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
+				}
+				if (barrierdesc.Transition.StateAfter != D3D12_RESOURCE_STATE_COPY_SOURCE && barrierdesc.Transition.StateAfter != D3D12_RESOURCE_STATE_COPY_DEST)
+				{
+					barrierdesc.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
+				}
+			}
+			else if (commandlist.queue == QUEUE_VIDEO_DECODE && barrierdesc.Type == D3D12_RESOURCE_BARRIER_TYPE_TRANSITION)
+			{
+				// Video queue can only transition from/to VIDEO_ and COMMON states, so we will overwrite anything else to COMMON,
+				//	but the video textures will be using D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS so that implicit transition can happen from COMMON in a different queue
+				if (barrierdesc.Transition.StateBefore != D3D12_RESOURCE_STATE_VIDEO_DECODE_READ && barrierdesc.Transition.StateBefore != D3D12_RESOURCE_STATE_VIDEO_DECODE_WRITE)
+				{
+					barrierdesc.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
+				}
+				if (barrierdesc.Transition.StateAfter != D3D12_RESOURCE_STATE_VIDEO_DECODE_READ && barrierdesc.Transition.StateAfter != D3D12_RESOURCE_STATE_VIDEO_DECODE_WRITE)
+				{
+					barrierdesc.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
+				}
+			}
+
+			if (barrierdesc.Type == D3D12_RESOURCE_BARRIER_TYPE_TRANSITION && barrierdesc.Transition.StateBefore == barrierdesc.Transition.StateAfter)
+			{
+				// skip nop barrier
+				continue;
 			}
 
 			barrierdescs.push_back(barrierdesc);
@@ -7142,22 +7269,6 @@ std::mutex queue_locker;
 		{
 			if (commandlist.queue == QUEUE_VIDEO_DECODE)
 			{
-				// Video queue can only transition from/to VIDEO_ and COMMON states, so we will overwrite anything else to COMMON,
-				//	but the video textures will be using D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS so that implicit transition can happen from COMMON in a different queue
-				for (auto& barrier : barrierdescs)
-				{
-					if (barrier.Type == D3D12_RESOURCE_BARRIER_TYPE_TRANSITION)
-					{
-						if (barrier.Transition.StateBefore != D3D12_RESOURCE_STATE_VIDEO_DECODE_READ && barrier.Transition.StateBefore != D3D12_RESOURCE_STATE_VIDEO_DECODE_WRITE)
-						{
-							barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
-						}
-						if (barrier.Transition.StateAfter != D3D12_RESOURCE_STATE_VIDEO_DECODE_READ && barrier.Transition.StateAfter != D3D12_RESOURCE_STATE_VIDEO_DECODE_WRITE)
-						{
-							barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
-						}
-					}
-				}
 				commandlist.GetVideoDecodeCommandList()->ResourceBarrier(
 					(UINT)barrierdescs.size(),
 					barrierdescs.data()

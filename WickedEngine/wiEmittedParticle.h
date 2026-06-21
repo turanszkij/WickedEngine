@@ -77,6 +77,7 @@ namespace wi
 		// Must have a transform and material component, but mesh is optional
 		void UpdateGPU(uint32_t instanceIndex, const wi::scene::MeshComponent* mesh, wi::graphics::CommandList cmd) const;
 		void Draw(const wi::scene::MaterialComponent& material, wi::graphics::CommandList cmd, const PARTICLESHADERTYPE* shadertype_override = nullptr) const;
+		void DrawForShadowmap(const wi::scene::MaterialComponent& material, wi::graphics::CommandList cmd) const;
 
 		void CreateRaytracingRenderData();
 
@@ -117,7 +118,8 @@ namespace wi
 		float mass = 1.0f;
 		float random_color = 0;
 		float opacityCurveControlPeakStart = 0.1f; // peak start of the opacity relative to the particle lifeteime 
-		float opacityCurveControlPeakEnd = 0.5f; // peak end of the opacity relative to the particle lifeteime 
+		float opacityCurveControlPeakEnd = 0.5f; // peak end of the opacity relative to the particle lifeteime
+		int burst_on_create = 0; // burst count once when emitter gets created
 
 		XMFLOAT3 velocity = {}; // starting velocity of all new particles
 		XMFLOAT3 gravity = {}; // constant gravity force
@@ -146,6 +148,7 @@ namespace wi
 		XMFLOAT3 center;
 		uint32_t layerMask = ~0u;
 		XMFLOAT4X4 worldMatrix = wi::math::IDENTITY_MATRIX;
+		bool bursted_on_create = false;
 
 		inline bool IsDebug() const { return _flags & FLAG_DEBUG; }
 		inline bool IsPaused() const { return _flags & FLAG_PAUSED; }

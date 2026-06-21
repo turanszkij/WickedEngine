@@ -62,6 +62,8 @@ namespace wi
 		wi::renderer::PostProcessQuality raytracedDiffuseQuality = wi::renderer::PostProcessQuality::Medium;
 		wi::renderer::PostProcessQuality raytracedReflectionsQuality = wi::renderer::PostProcessQuality::Medium;
 		wi::renderer::PostProcessQuality ssrQuality = wi::renderer::PostProcessQuality::Medium;
+		uint32_t planarReflectionMSAASampleCount = 4;
+		float planarReflectionResolutionScale = 0.25f;
 
 		AO ao = AO_DISABLED;
 		bool fxaaEnabled = false;
@@ -101,8 +103,8 @@ namespace wi
 		wi::graphics::Texture rtPrimitiveID;
 		wi::graphics::Texture rtPrimitiveID_render; // can be MSAA
 		wi::graphics::Texture rtVelocity; // optional R16G16_FLOAT
-		wi::graphics::Texture rtReflection; // contains the scene rendered for planar reflections, MSAA
-		wi::graphics::Texture rtReflection_resolved; // contains the scene rendered for planar reflections, single sample
+		wi::graphics::Texture rtReflection; // contains the scene rendered for planar reflections
+		wi::graphics::Texture rtReflection_render; // contains the scene rendered for planar reflections, can be MSAA
 		wi::graphics::Texture rtRaytracedDiffuse; // raytraced diffuse screen space texture
 		wi::graphics::Texture rtSSR; // standard screen-space reflection results
 		wi::graphics::Texture rtSSGI; // standard screen-space GI results
@@ -122,15 +124,15 @@ namespace wi
 		wi::graphics::Texture rtShadingRate; // UINT8 shading rate per tile
 		wi::graphics::Texture rtFSR[2]; // FSR upscaling result (full resolution LDR)
 		wi::graphics::Texture rtOutlineSource; // linear depth but only the regions which have outline stencil
+		wi::graphics::Texture rtOutlineSource_MSAA; // linear depth but only the regions which have outline stencil
 
 		wi::graphics::Texture rtPostprocess; // ping-pong with main scene RT in post-process chain
 
 		wi::graphics::Texture depthBuffer_Main; // used for depth-testing, can be MSAA
 		wi::graphics::Texture depthBuffer_Copy; // used for shader resource, single sample
 		wi::graphics::Texture depthBuffer_Copy1; // used for disocclusion check
-		wi::graphics::Texture depthBuffer_Reflection; // used for reflection, MSAA
-		wi::graphics::Texture depthBuffer_Reflection_resolved; // used for reflection, single sample
-		wi::graphics::Texture rtLinearDepth; // linear depth result + mipchain (max filter)
+		wi::graphics::Texture depthBuffer_Reflection; // used for reflection
+		wi::graphics::Texture depthBuffer_Reflection_render; // used for reflection, can be MSAA
 		wi::graphics::Texture reprojectedDepth; // prev frame depth reprojected into current, and downsampled for meshlet occlusion culling
 
 		wi::graphics::Texture debugUAV; // debug UAV can be used by some shaders...
@@ -222,7 +224,13 @@ namespace wi
 			return scissor;
 		}
 
+		// The 3D scene rendering without 2D overlay that is used in Compose() to combine the final image
+		const wi::graphics::Texture& GetRenderResult3D() const { return *GetLastPostprocessRT(); }
+
+		// The depth stencil of the 3D rendering (not texture compatible, only depth-stencil)
 		const wi::graphics::Texture* GetDepthStencil() const override { return &depthBuffer_Main; }
+
+		// The 3D render result's blurred version that can be used for GUI background blur
 		const wi::graphics::Texture* GetGUIBlurredBackground() const override { return &rtGUIBlurredBackground[2]; }
 
 		constexpr float getExposure() const { return exposure; }
@@ -257,6 +265,8 @@ namespace wi
 		constexpr wi::renderer::PostProcessQuality getRaytracedDiffuseQuality() const { return raytracedDiffuseQuality; }
 		constexpr wi::renderer::PostProcessQuality getRaytracedReflectionsQuality() const { return raytracedReflectionsQuality; }
 		constexpr wi::renderer::PostProcessQuality getSSRQuality() const { return ssrQuality; }
+		constexpr uint32_t getPlanarReflectionMSAASampleCount() const { return planarReflectionMSAASampleCount; }
+		constexpr float getPlanarReflectionResolutionScale() const { return planarReflectionResolutionScale; }
 
 		constexpr bool getAOEnabled() const { return ao != AO_DISABLED; }
 		constexpr AO getAO() const { return ao; }
@@ -329,7 +339,8 @@ namespace wi
 		void setMotionBlurEnabled(bool value);
 		void setDepthOfFieldEnabled(bool value);
 		void setEyeAdaptionEnabled(bool value);
-		void setReflectionsEnabled(bool value);
+		void setReflectionsEnabled(bool value); // planar reflections
+		void setPlanarReflectionQuality(float resolutionScale, uint32_t msaaSampleCount);
 		void setBloomEnabled(bool value);
 		void setVolumeLightsEnabled(bool value);
 		void setLightShaftsEnabled(bool value);
@@ -373,7 +384,8 @@ namespace wi
 		void Start() override;
 
 		// Creates screenshot of the render result and replaces background (sky) pixels with transparency
-		wi::graphics::Texture CreateScreenshotWithAlphaBackground();
+		//	The stencil parameters let you configure other stencil ops instead of making sky transparent which is default
+		wi::graphics::Texture CreateScreenshotWithAlphaBackground(uint8_t stencilref = wi::enums::STENCILREF_EMPTY, wi::image::STENCILMODE stencilmode = wi::image::STENCILMODE_NOT, wi::image::STENCILREFMODE stencilrefmode = wi::image::STENCILREFMODE_ALL);
 
 		// This is an identifier of RenderPath subtype that is used for lua binding.
 		static constexpr const auto script_check_identifier = relative_path_storage(__FILE__);

@@ -22,7 +22,7 @@ public:
 	// Attach selection to translator temporarily
 	void PreTranslate();
 	// Apply translator to selection
-	void PostTranslate();
+	void PostTranslate() const;
 
 	wi::scene::Scene* scene = nullptr;
 	wi::scene::TransformComponent transform;
@@ -33,8 +33,10 @@ public:
 	float scale_snap = 1;
 	float rotate_snap = XM_PIDIV4;
 	float translate_snap = 1;
-	float opacity = 1;
-	float darken_negative_axes = 1;
+	float tool_opacity = 1;
+	float tool_darken_negative_axes = 1;
+	float tool_scale = 1.0f;
+	float tool_thickness = 1.0f;
 
 	enum TRANSLATOR_STATE
 	{
@@ -57,6 +59,7 @@ public:
 	bool isScalator = false;
 	bool isRotator = false;
 	bool isLocalSpace = false;
+	bool is2D = false;
 	bool IsEnabled() const { return isTranslator || isRotator || isScalator; }
 	XMMATRIX GetLocalRotation() const;
 	void SetEnabled(bool value)

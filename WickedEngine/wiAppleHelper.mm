@@ -2,6 +2,36 @@
 #include "wiHelper.h"
 #include "wiInput.h"
 
+#import <Foundation/Foundation.h>
+
+namespace wi::apple
+{
+
+std::string GetApplicationSupportPath()
+{
+	NSFileManager* fileManager = [NSFileManager defaultManager];
+		
+		NSURL* supportURL = [[fileManager URLsForDirectory:NSApplicationSupportDirectory
+												  inDomains:NSUserDomainMask] firstObject];
+		
+		if (supportURL) {
+			// Create the directory if it doesn't exist
+			if (![fileManager fileExistsAtPath:supportURL.path]) {
+				[fileManager createDirectoryAtURL:supportURL
+					  withIntermediateDirectories:YES
+									   attributes:nil
+											error:nil];
+			}
+			
+			return std::string([supportURL.path UTF8String]);
+		}
+		
+		return "";
+}
+
+}
+
+#ifdef PLATFORM_MACOS
 #include <AppKit/AppKit.h>
 #include <CoreGraphics/CoreGraphics.h>
 
@@ -181,6 +211,20 @@ int MessageBox(const char* title, const char* message, const char* buttons)
 	return (int)wi::helper::MessageBoxResult::OK;
 }
 
+std::string GetResourcePath()
+{
+	NSBundle* bundle = [NSBundle mainBundle];
+	if (bundle.bundlePath.length > 0 &&
+		[bundle.bundlePath.pathExtension isEqualToString:@"app"])
+	{
+		// running inside .app bundle
+		NSString* resourcePath = [[NSBundle mainBundle] resourcePath];
+		return std::string([resourcePath UTF8String]);
+	}
+	// console app:
+	return std::filesystem::current_path();
+}
+
 std::string GetExecutablePath()
 {
 	char rawPath[PATH_MAX];
@@ -252,6 +296,14 @@ void SetWindowFullScreen(void* handle, bool fullscreen)
 	[window toggleFullScreen:nil];
 }
 
+bool IsWindowFullScreen(void* handle)
+{
+	NSWindow* window = (__bridge NSWindow*)handle;
+	if (window == nil)
+		return false;
+	return (window.styleMask & NSWindowStyleMaskFullScreen) != 0;
+}
+
 void OpenUrl(const char* url)
 {
 	@autoreleasepool
@@ -321,5 +373,204 @@ void* CreateCursorFromARGB8ImageData(const void* data, uint32_t width, uint32_t 
 	
 	return (__bridge void*)cursor;
 }
+void GetSafeArea(void* _window, float& left, float& right, float& top, float& bottom)
+{
+	
+}
 
 }
+
+#elif defined(PLATFORM_IOS)
+
+#include <UIKit/UIKit.h>
+#include <QuartzCore/QuartzCore.h>
+
+namespace wi::apple
+{
+
+void SetMetalLayerToWindow(void* _window, void* _layer)
+{
+	UIWindow* window = (__bridge UIWindow*)_window;
+	if (!window || !window.rootViewController)
+		return;
+	
+	CAMetalLayer* metalLayer = (__bridge CAMetalLayer*)_layer;
+	if (!metalLayer)
+		return;
+	
+	UIView* mainView = window.rootViewController.view;
+	
+	CAMetalLayer* viewLayer = (CAMetalLayer*)mainView.layer;
+	
+	if (metalLayer != viewLayer) {
+		metalLayer.frame = viewLayer.frame;
+		metalLayer.contentsScale = viewLayer.contentsScale;
+		[mainView.layer addSublayer:metalLayer];
+	}
+}
+
+void* GetViewFromWindow(void* handle)
+{
+	UIWindow* window = (__bridge UIWindow*)handle;
+	if (!window || !window.rootViewController)
+		return nullptr;
+	
+	UIView* view = window.rootViewController.view;
+	return (__bridge void*)view;
+}
+
+XMUINT2 GetWindowSizeNoScaling(void* handle)
+{
+	if (!handle)
+		return XMUINT2(0, 0);
+	
+	UIWindow* window = (__bridge UIWindow*)handle;
+	UIView* view = window.rootViewController ? window.rootViewController.view : nil;
+	if (!view)
+		return XMUINT2(0, 0);
+	
+	CGRect bounds = view.bounds;
+	uint32_t pixelWidth  = (uint32_t)round(bounds.size.width);
+	uint32_t pixelHeight = (uint32_t)round(bounds.size.height);
+	
+	return XMUINT2(pixelWidth, pixelHeight);
+}
+
+XMUINT2 GetWindowSize(void* handle)
+{
+	if (!handle)
+		return XMUINT2(0, 0);
+	
+	UIWindow* window = (__bridge UIWindow*)handle;
+	UIView* view = window.rootViewController ? window.rootViewController.view : nil;
+	if (!view)
+		return XMUINT2(0, 0);
+	
+	CGRect bounds = view.bounds;
+	CGFloat scale = window.screen.scale;
+	
+	uint32_t pixelWidth  = (uint32_t)round(bounds.size.width * scale);
+	uint32_t pixelHeight = (uint32_t)round(bounds.size.height * scale);
+	
+	return XMUINT2(pixelWidth, pixelHeight);
+}
+
+float GetDPIForWindow(void* handle)
+{
+	UIWindow* window = (__bridge UIWindow*)handle;
+	if (!window || !window.screen)
+		return 96.0f;
+	
+	CGFloat scale = window.screen.scale;
+	return scale * 96.0f;
+}
+
+XMFLOAT2 GetMousePositionInWindow(void* handle)
+{
+	return XMFLOAT2(-1.f, -1.f); // TODO primary touch should act as mouse
+}
+
+void SetMousePositionInWindow(void* handle, XMFLOAT2 value)
+{
+}
+
+int MessageBox(const char* title, const char* message, const char* buttons)
+{
+	return (int)wi::helper::MessageBoxResult::OK;
+}
+
+std::string GetResourcePath()
+{
+	NSString* resourcePath = [[NSBundle mainBundle] resourcePath];
+	return std::string([resourcePath UTF8String]);
+}
+
+std::string GetExecutablePath()
+{
+	NSString* bundlePath = [[NSBundle mainBundle] bundlePath];
+	return std::string([bundlePath UTF8String]);
+}
+
+void CursorInit(void** cursor_table)
+{
+	for (int i = 0; i < wi::input::CURSOR_COUNT; ++i)
+		cursor_table[i] = nullptr;
+}
+
+void CursorSet(void* cursor)
+{
+}
+
+void CursorHide(bool hide)
+{
+}
+
+void SetWindowFullScreen(void* handle, bool fullscreen)
+{
+}
+
+bool IsWindowFullScreen(void* handle)
+{
+	return true;
+}
+
+void OpenUrl(const char* url)
+{
+	@autoreleasepool
+	{
+		NSString* nsurl = [NSString stringWithUTF8String:url];
+		NSURL* nsURL = [NSURL URLWithString:nsurl];
+		
+		if (nsURL)
+		{
+			[UIApplication.sharedApplication openURL:nsURL options:@{} completionHandler:nil];
+		}
+	}
+}
+
+std::string GetClipboardText()
+{
+	std::string ret;
+	UIPasteboard* pasteboard = [UIPasteboard generalPasteboard];
+	NSString* string = pasteboard.string;
+	
+	if (string)
+	{
+		const char* cstr = [string UTF8String];
+		ret = cstr;
+	}
+	return ret;
+}
+
+void SetClipboardText(const char* str)
+{
+	UIPasteboard* pasteboard = [UIPasteboard generalPasteboard];
+	pasteboard.string = [NSString stringWithUTF8String:str];
+}
+
+void* CreateCursorFromARGB8ImageData(const void* data, uint32_t width, uint32_t height, int hotspotX, int hotspotY)
+{
+	return nullptr;
+}
+void GetSafeArea(void* _window, float& left, float& right, float& top, float& bottom)
+{
+	UIWindow* window = (__bridge UIWindow*)_window;
+	if (!window || !window.rootViewController)
+		return;
+	
+	UIView* mainView = window.rootViewController.view;
+	UIEdgeInsets insets = mainView.safeAreaInsets;
+
+	CGFloat leftInset   = insets.left;
+	CGFloat rightInset  = insets.right;
+	CGFloat topInset    = insets.top;
+	CGFloat bottomInset = insets.bottom;
+	
+	left = leftInset;
+	right = rightInset;
+	top = topInset;
+	bottom = bottomInset;
+}
+
+} // namespace wi::apple
+#endif

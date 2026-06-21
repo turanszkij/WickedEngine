@@ -25,6 +25,7 @@ namespace wi::gui
 		float fValue = 0;		// generic float value of operation
 		bool bValue = false;	// generic boolean value of operation
 		int iValue = 0;			// generic integer value of operation
+		int iValue2 = 0;		// secondary generic integer value of operation
 		wi::Color color;		// color value of color picker operation
 		std::string sValue;		// generic string value of operation
 		uint64_t userdata = 0;	// this will provide the userdata value that was set to a widget (or part of a widget)
@@ -462,6 +463,8 @@ namespace wi::gui
 		void SetOverScroll(float amount) { overscroll = amount; }
 		// Check whether the scrollbar is required (when the items don't fit and scrolling could be used)
 		bool IsScrollbarRequired() const { return scrollbar_granularity < 1; }
+		// Check whether the scrollbar is at the beginning
+		bool IsScrolledToBegin() const { return scrollbar_delta <= 0; }
 		void SetSafeArea(float value) { safe_area = value; }
 
 		enum SCROLLBAR_STATE
@@ -546,6 +549,8 @@ namespace wi::gui
 		void Activate() override;
 		void Deactivate() override;
 
+		void SetEnabled(bool val) override;
+		void SetVisible(bool val) override;
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 		void SetColor(wi::Color color, int id = -1) override;
@@ -831,7 +836,15 @@ namespace wi::gui
 				if (res.IsValid())
 				{
 					const wi::graphics::Texture& tex = res.GetTexture();
-					h_aspect = (float)tex.desc.height / (float)tex.desc.width;
+					if (has_flag(tex.desc.misc_flags, wi::graphics::ResourceMiscFlag::TEXTURECUBE))
+					{
+						// fixed aspect for cubemap cross:
+						h_aspect = 3.0f / 4.0f;
+					}
+					else
+					{
+						h_aspect = (float)tex.desc.height / (float)tex.desc.width;
+					}
 				}
 				const float w = width - x - padding - widget.GetShadowRadius();
 				widget.SetSize(XMFLOAT2(w, w * h_aspect));
@@ -1039,6 +1052,16 @@ namespace wi::gui
 		XMFLOAT2 resize_begin = XMFLOAT2(0, 0);
 		float resize_blink_timer = 0;
 
+		// Drag-and-drop reorder state
+		std::function<void(const EventArgs& args)> onReorder;
+		int drag_source = -1;           // items[] index being dragged (-1 = none)
+		int drag_target = -1;           // items[] index to insert before (items.size() = end)
+		int drag_reparent_target = -1;  // items[] index to drop ON (re-parent), -1 = none
+		int drag_target_level = 0;      // item level for BETWEEN drops (0 = root)
+		bool dragging = false;
+		XMFLOAT2 drag_start_pos = {};
+				float drag_indicator_y = 0;    // screen Y for drop indicator line (updated in Update)
+				XMFLOAT2 drag_pointer_pos = {}; // current pointer pos while dragging (for ghost rendering)
 		void ComputeScrollbarLength();
 
 	public:
@@ -1066,6 +1089,7 @@ namespace wi::gui
 		void OnSelect(std::function<void(const EventArgs& args)> func);
 		void OnDelete(std::function<void(const EventArgs& args)> func);
 		void OnDoubleClick(std::function<void(const EventArgs& args)> func);
+		void OnReorder(std::function<void(const EventArgs& args)> func);
 
 		ScrollBar scrollbar;
 	};
@@ -1073,16 +1097,10 @@ namespace wi::gui
 }
 
 template<>
-struct enable_bitmask_operators<wi::gui::Window::WindowControls> {
-	static const bool enable = true;
-};
+struct enable_bitmask_operators<wi::gui::Window::WindowControls> : std::true_type {};
 
 template<>
-struct enable_bitmask_operators<wi::gui::Window::AttachmentOptions> {
-	static const bool enable = true;
-};
+struct enable_bitmask_operators<wi::gui::Window::AttachmentOptions> : std::true_type {};
 
 template<>
-struct enable_bitmask_operators<wi::gui::LocalizationEnabled> {
-	static const bool enable = true;
-};
+struct enable_bitmask_operators<wi::gui::LocalizationEnabled> : std::true_type {};

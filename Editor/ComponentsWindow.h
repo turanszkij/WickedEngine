@@ -33,6 +33,7 @@
 #include "MetadataWindow.h"
 #include "ConstraintWindow.h"
 #include "SplineWindow.h"
+#include "GaussianSplatWindow.h"
 
 class EditorComponent;
 
@@ -80,6 +81,7 @@ public:
 	MetadataWindow metadataWnd;
 	ConstraintWindow constraintWnd;
 	SplineWindow splineWnd;
+	GaussianSplatWindow gaussiansplatWnd;
 
 	enum class Filter : uint64_t
 	{
@@ -115,6 +117,7 @@ public:
 		Vehicle = 1ull << 29ull,
 		Constraint = 1ull << 30ull,
 		Spline = 1ull << 31ull,
+		GaussianSplat = 1ull << 32ull,
 
 		All = ~0ull,
 	} filter = Filter::All;
@@ -125,9 +128,12 @@ public:
 	wi::unordered_set<wi::ecs::Entity> entitytree_temp_items;
 	wi::unordered_set<wi::ecs::Entity> entitytree_added_items;
 	wi::unordered_set<wi::ecs::Entity> entitytree_opened_items;
+	wi::ecs::Entity entitytree_pending_focus = wi::ecs::INVALID_ENTITY;
+	wi::unordered_map<wi::ecs::Entity, wi::vector<wi::ecs::Entity>> entity_user_order; // custom display order per parent (INVALID_ENTITY = top-level)
 	void PushToEntityTree(wi::ecs::Entity entity, int level);
 	void RefreshEntityTree();
 	bool CheckEntityFilter(wi::ecs::Entity entity) const;
+	void ApplyUserOrder(wi::vector<wi::ecs::Entity>& entities, wi::ecs::Entity parent_entity) const;
 
 private:
 	static int GetEntityTypePriority(wi::ecs::Entity entity, const wi::scene::Scene& scene);
@@ -136,6 +142,4 @@ private:
 };
 
 template<>
-struct enable_bitmask_operators<ComponentsWindow::Filter> {
-	static constexpr bool enable = true;
-};
+struct enable_bitmask_operators<ComponentsWindow::Filter> : std::true_type {};

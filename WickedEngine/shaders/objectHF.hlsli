@@ -57,8 +57,7 @@ PUSHCONSTANT(push, ObjectPushConstants);
 #define GetMaterial() (load_material(push.materialIndex))
 
 //#define sampler_objectshader bindless_samplers[descriptor_index(GetMaterial().sampler_descriptor)]
-#define sampler_objectshader bindless_samplers[descriptor_index(push.wrapSamplerIndex)] // This one loads it faster from push constant than the above that loads from material struct but it must be fed per draw call
-#define sampler_objectshader_clamp bindless_samplers[descriptor_index(push.clampSamplerIndex)]
+#define sampler_objectshader bindless_samplers[descriptor_index(push.samplerIndex)] // This one loads it faster from push constant than the above that loads from material struct but it must be fed per draw call
 
 // Use these to compile this file as shader prototype:
 //#define OBJECTSHADER_COMPILE_VS				- compile vertex shader prototype
@@ -263,13 +262,20 @@ struct VertexSurface
 		position = float4(pos_wind.xyz, 1);
 		normal = input.GetNormal();
 		color = half4(material.GetBaseColor() * inst.GetColor());
-		color.a *= half(1 - input.GetInstancePointer().GetDither());
 
 		[branch]
 		if (material.IsUsingVertexColors())
 		{
 			color *= input.GetVertexColor();
 		}
+
+		[branch]
+		if (!material.IsTransparent())
+		{
+			color.a = 1;
+		}
+
+		color.a *= half(1 - input.GetInstancePointer().GetDither());
 
 		[branch]
 		if (material.IsUsingVertexAO())
@@ -770,11 +776,11 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 #ifndef PREPASS
 #ifndef WATER
 #ifdef FORWARD
-	ForwardDecals(surface, surfaceMap, sampler_objectshader_clamp);
+	ForwardDecals(surface, surfaceMap, sampler_objectshader);
 #endif // FORWARD
 
 #ifdef TILEDFORWARD
-	TiledDecals(surface, flat_tile_index, surfaceMap, sampler_objectshader_clamp);
+	TiledDecals(surface, flat_tile_index, surfaceMap, sampler_objectshader);
 #endif // TILEDFORWARD
 #endif // WATER
 #endif // PREPASS
@@ -808,11 +814,11 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 
 #ifdef OBJECTSHADER_USE_COMMON
 	half wet = input.ao_wet.y;
-	if(wet > 0)
+	if (wet > 0)
 	{
-		surface.albedo = lerp(surface.albedo, 0, wet);
-		surface.roughness = clamp(surface.roughness * sqr(1 - wet), 0.01, 1);
-		surface.N = normalize(lerp(surface.N, input.nor, wet));
+		surface.albedo = lerp(surface.albedo, 0, wet); // darken color when wet
+		surface.roughness = clamp(surface.roughness * saturate(sqr((1 - wet) * 2 - 1)), 0.01, 1); // decrease eoughness when wet, but only at shoreline, not deeper underwater (sand underwater shouldn't be shiny)
+		surface.N = normalize(lerp(surface.N, input.nor, wet)); // blend to vertex normal when wet
 	}
 #endif // OBJECTSHADER_USE_COMMON
 
@@ -1116,9 +1122,9 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 
 // Transparent objects has been rendered separately from opaque, so let's apply it now.
 // Must also be applied before fog since fog is layered over.
-#ifdef TRANSPARENT
+#if defined(TRANSPARENT) || defined(ENVMAPRENDERING)
 	ApplyAerialPerspective(ScreenCoord, surface.P, color);
-#endif // TRANSPARENT
+#endif // defined(TRANSPARENT) || defined(ENVMAPRENDERING)
 
 
 	ApplyFog(dist, surface.V, color);
@@ -1143,6 +1149,10 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 #ifndef DISABLE_ALPHATEST
 	coverage = AlphaToCoverage(color.a, alphatest, dithering, input.pos); // opaque soft alpha test (MSAA, temporal AA support)
 #endif // DISABLE_ALPHATEST
+
+#ifdef ENVMAPRENDERING
+	color = clamp(color, 0, 1000); // don't allow very large values in envmap, because it could cause filtering to blow up
+#endif // ENVMAPRENDERING
 	
 	// end point:
 #ifdef PREPASS

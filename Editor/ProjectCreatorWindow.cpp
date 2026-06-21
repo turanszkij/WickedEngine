@@ -423,6 +423,14 @@ end)
 		if (!wi::helper::FileExists(scriptfilepath))
 		{
 			wi::helper::FileWrite(scriptfilepath, (const uint8_t*)script.data(), script.size());
+
+			// Create a sample cube model for the project:
+			wi::scene::Scene samplescene;
+			samplescene.Entity_CreateCube("cube");
+			wi::Archive samplescene_archive;
+			samplescene.Serialize(samplescene_archive);
+			samplescene_archive.SaveFile(directory + "cube.wiscene");
+			wilog("Project creator: sample script data was created as it didn't exist yet.");
 		}
 		else
 		{
@@ -449,20 +457,13 @@ end)
 			wi::helper::FileWrite(directory + "cursor.cur", cursordata.data(), cursordata.size());
 		}
 
-		// Create a sample cube model for the project:
-		{
-			wi::scene::Scene samplescene;
-			samplescene.Entity_CreateCube("cube");
-			wi::Archive samplescene_archive;
-			samplescene.Serialize(samplescene_archive);
-			samplescene_archive.SaveFile(directory + "cube.wiscene");
-		}
-
 		if (wi::renderer::GetShaderDumpCount() == 0)
 		{
 			// If not using shader dump, try to copy shader compiler dlls into the project:
 			std::string dxcompiler_dll_path = wi::helper::GetDirectoryFromPath(wi::helper::GetExecutablePath()) + "dxcompiler.dll";
 			std::string dxcompiler_so_path = wi::helper::GetDirectoryFromPath(wi::helper::GetExecutablePath()) + "libdxcompiler.so";
+			std::string dxcompiler_dylib_path = wi::helper::GetDirectoryFromPath(wi::helper::GetExecutablePath()) + "libdxcompiler.dylib";
+			std::string metalconverter_dylib_path = wi::helper::GetDirectoryFromPath(wi::helper::GetExecutablePath()) + "libmetalirconverter.dylib";
 			if (wi::helper::FileExists(dxcompiler_dll_path))
 			{
 				wi::helper::FileCopy(dxcompiler_dll_path, directory + "dxcompiler.dll");
@@ -471,26 +472,31 @@ end)
 			{
 				wi::helper::FileCopy(dxcompiler_so_path, directory + "libdxcompiler.so");
 			}
+			if (wi::helper::FileExists(dxcompiler_dylib_path))
+			{
+				wi::helper::FileCopy(dxcompiler_dylib_path, directory + "libdxcompiler.dylib");
+			}
+			if (wi::helper::FileExists(metalconverter_dylib_path))
+			{
+				wi::helper::FileCopy(metalconverter_dylib_path, directory + "libmetalirconverter.dylib");
+			}
 		}
 
 		wi::unordered_set<std::string> exes;
 		exes.insert(wi::helper::BackslashToForwardSlash(wi::helper::GetExecutablePath()));
 		exes.insert(wi::helper::BackslashToForwardSlash(wi::helper::GetCurrentPath() + "/Editor_Windows.exe"));
 		exes.insert(wi::helper::BackslashToForwardSlash(wi::helper::GetCurrentPath() + "/Editor_Linux"));
+		exes.insert(wi::helper::BackslashToForwardSlash(wi::helper::GetCurrentPath() + "/Editor_MacOS"));
 
 		for (auto& exepath_src : exes)
 		{
 			if (!wi::helper::FileExists(exepath_src))
 				continue;
 			std::string exepath_dst = directory + name;
-			std::string extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(exepath_src));
-			if (extension.find("EXE") != std::string::npos)
+			size_t typeext_idx = exepath_src.rfind('_');
+			if (typeext_idx != std::string::npos)
 			{
-				exepath_dst += "_Windows.exe";
-			}
-			else
-			{
-				exepath_dst += "_Linux";
+				exepath_dst += exepath_src.substr(typeext_idx);
 			}
 			if (wi::helper::FileCopy(exepath_src, exepath_dst))
 			{

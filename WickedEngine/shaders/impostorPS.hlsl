@@ -11,7 +11,7 @@ float4 main(VSOut input) : SV_Target
 
 	half4 baseColor = impostorTex.Sample(sampler_linear_clamp, uv_col);
 	baseColor *= unpack_rgba(input.instanceColor);
-	half3 N = impostorTex.Sample(sampler_linear_clamp, uv_nor).rgb * 2 - 1;
+	half3 N = normalize(impostorTex.Sample(sampler_linear_clamp, uv_nor).rgb * 2 - 1);
 	half4 surfaceparams = impostorTex.Sample(sampler_linear_clamp, uv_sur);
 
 	half occlusion = surfaceparams.r;

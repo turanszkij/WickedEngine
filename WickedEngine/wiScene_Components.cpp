@@ -435,7 +435,6 @@ namespace wi::scene
 		{
 			material.sampler_descriptor = sampler_descriptor;
 		}
-		material.sampler_clamp_descriptor = device->GetDescriptorIndex(wi::renderer::GetSampler(wi::enums::SAMPLER_OBJECTSHADER_CLAMP));
 
 		if (shaderType == SHADERTYPE_INTERIORMAPPING && textures[BASECOLORMAP].resource.IsValid() && !has_flag(textures[BASECOLORMAP].resource.GetTexture().GetDesc().misc_flags, ResourceMiscFlag::TEXTURECUBE))
 		{
@@ -1962,6 +1961,20 @@ namespace wi::scene
 
 		CreateRenderData();
 	}
+	void MeshComponent::RecenterToTop()
+	{
+		XMFLOAT3 center = aabb.getCenter();
+		center.y += aabb.getHalfWidth().y;
+
+		for (auto& pos : vertex_positions)
+		{
+			pos.x -= center.x;
+			pos.y -= center.y;
+			pos.z -= center.z;
+		}
+
+		CreateRenderData();
+	}
 	void MeshComponent::RecenterToBottom()
 	{
 		XMFLOAT3 center = aabb.getCenter();
@@ -2291,6 +2304,7 @@ namespace wi::scene
 		if (resource.IsValid())
 		{
 			texture = resource.GetTexture();
+			subresource = resource.GetTextureSRGBSubresource();
 			SetDirty(false);
 			return;
 		}
@@ -2312,8 +2326,9 @@ namespace wi::scene
 		desc.mip_levels = GetMipCount(resolution, resolution, 1, 16);
 		desc.misc_flags = ResourceMiscFlag::TEXTURECUBE;
 		desc.layout = ResourceState::SHADER_RESOURCE;
-		device->CreateTexture(&desc, nullptr, &texture);
+		device->CreateTextureZeroed(&desc, &texture);
 		device->SetName(&texture, "EnvironmentProbeComponent::texture");
+		subresource = -1;
 	}
 	void EnvironmentProbeComponent::DeleteResource()
 	{

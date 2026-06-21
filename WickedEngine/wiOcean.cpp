@@ -8,6 +8,8 @@
 #include "wiTimer.h"
 #include "wiVector.h"
 
+#include "perlin.h"
+
 #include <algorithm>
 #include <mutex>
 
@@ -24,14 +26,15 @@ namespace wi
 		Shader		oceanSurfVS;
 		Shader		wireframePS;
 		Shader		oceanSurfPS;
+		Shader		oceanSurfPS_envmap;
 
 		RasterizerState		rasterizerState;
 		RasterizerState		wireRS;
 		DepthStencilState	depthStencilState, depthStencilState_occlusionTest;
 		BlendState			blendState, blendState_occlusionTest;
 
-		PipelineState PSO, PSO_wire, PSO_occlusionTest;
-
+		PipelineState PSO, PSO_envmap, PSO_wire, PSO_occlusionTest;
+		Texture perlinTex;
 
 		void LoadShaders()
 		{
@@ -42,6 +45,7 @@ namespace wi
 			wi::renderer::LoadShader(ShaderStage::VS, oceanSurfVS, "oceanSurfaceVS.cso");
 
 			wi::renderer::LoadShader(ShaderStage::PS, oceanSurfPS, "oceanSurfacePS.cso");
+			wi::renderer::LoadShader(ShaderStage::PS, oceanSurfPS_envmap, "oceanSurfacePS_envmap.cso");
 			wi::renderer::LoadShader(ShaderStage::PS, wireframePS, "oceanSurfaceSimplePS.cso");
 
 
@@ -55,6 +59,9 @@ namespace wi
 				desc.rs = &rasterizerState;
 				desc.dss = &depthStencilState;
 				device->CreatePipelineState(&desc, &PSO);
+
+				desc.ps = &oceanSurfPS_envmap;
+				device->CreatePipelineState(&desc, &PSO_envmap);
 
 				desc.ps = &wireframePS;
 				desc.rs = &wireRS;
@@ -326,6 +333,7 @@ namespace wi
 		cb.xOceanMapHalfTexel = 0.5f / params.dmap_dim;
 		cb.xOceanWaterHeight = params.waterHeight;
 		cb.xOceanSurfaceDisplacementTolerance = std::max(1.0f, params.surfaceDisplacementTolerance);
+		cb.xOceanWaveAmplitude = params.wave_amplitude;
 
 		return cb;
 	}
@@ -466,10 +474,69 @@ namespace wi
 		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(OceanCB), cmd);
 
 		device->BindResource(&displacementMap, 0, cmd);
+		device->BindResource(&perlinTex, 2, cmd);
 
 		device->BindIndexBuffer(&indexBuffer_occlusionTest, IndexBufferFormat::UINT16, 0, cmd);
 
 		device->DrawIndexed(index_count, 0, 0, cmd);
+
+		device->EventEnd(cmd);
+	}
+
+	void Ocean::RenderForCubemap(CommandList cmd) const
+	{
+		GraphicsDevice* device = wi::graphics::GetDevice();
+
+		device->EventBegin("Ocean Rendering into Cubemap", cmd);
+
+		const uint2 dim = uint2(64, 64);
+		const uint index_count = dim.x * dim.y * 6;
+		const uint64_t indexbuffer_required_size = index_count * sizeof(uint16_t);
+		static std::mutex locker;
+		locker.lock(); // in case two threads draw the ocean the same time, index buffer creation must be locked
+		if (indexBuffer_cubemap.GetDesc().size != indexbuffer_required_size)
+		{
+			wi::vector<uint16_t> index_data(index_count);
+			size_t counter = 0;
+			for (uint16_t x = 0; x < dim.x - 1; x++)
+			{
+				for (uint16_t y = 0; y < dim.y - 1; y++)
+				{
+					uint16_t lowerLeft = x + y * dim.x;
+					uint16_t lowerRight = (x + 1) + y * dim.x;
+					uint16_t topLeft = x + (y + 1) * dim.x;
+					uint16_t topRight = (x + 1) + (y + 1) * dim.x;
+
+					index_data[counter++] = topLeft;
+					index_data[counter++] = lowerLeft;
+					index_data[counter++] = lowerRight;
+
+					index_data[counter++] = topLeft;
+					index_data[counter++] = lowerRight;
+					index_data[counter++] = topRight;
+				}
+			}
+
+			GPUBufferDesc desc;
+			desc.bind_flags = BindFlag::INDEX_BUFFER;
+			desc.size = indexbuffer_required_size;
+			device->CreateBuffer(&desc, index_data.data(), &indexBuffer_cubemap);
+			device->SetName(&indexBuffer_cubemap, "Ocean::indexBuffer_cubemap");
+		}
+		locker.unlock();
+
+		device->BindPipelineState(&PSO_envmap, cmd);
+
+		OceanCB cb = GetOceanCBAtDim(params, dim);
+		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(OceanCB), cmd);
+
+		device->BindResource(&displacementMap, 0, cmd);
+		device->BindResource(&gradientMap, 1, cmd);
+		device->BindResource(&perlinTex, 2, cmd);
+
+		device->BindIndexBuffer(&indexBuffer_cubemap, IndexBufferFormat::UINT16, 0, cmd);
+
+		device->DrawIndexedInstanced(index_count, 6, 0, 0, 0, cmd); // 6 instance for each cube side
 
 		device->EventEnd(cmd);
 	}
@@ -531,6 +598,7 @@ namespace wi
 
 		device->BindResource(&displacementMap, 0, cmd);
 		device->BindResource(&gradientMap, 1, cmd);
+		device->BindResource(&perlinTex, 2, cmd);
 
 		device->BindIndexBuffer(&indexBuffer, IndexBufferFormat::UINT32, 0, cmd);
 
@@ -592,6 +660,28 @@ namespace wi
 		LoadShaders();
 		wi::fftgenerator::LoadShaders();
 
+		TextureDesc desc;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE;
+		desc.width = 64;
+		desc.height = 64;
+		desc.mip_levels = 7;
+		desc.format = Format::R16G16B16A16_FLOAT;
+		const uint32_t data_stride = GetFormatStride(desc.format);
+		const uint32_t block_size = GetFormatBlockSize(desc.format);
+		SubresourceData initdata[7] = {};
+		const uint8_t* src = perlin;
+		for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
+		{
+			const uint32_t num_blocks_x = std::max(1u, desc.width >> mip) / block_size;
+			const uint32_t num_blocks_y = std::max(1u, desc.height >> mip) / block_size;
+			initdata[mip].data_ptr = src;
+			initdata[mip].row_pitch = num_blocks_x * data_stride;
+			src += num_blocks_x * num_blocks_y * data_stride;
+		}
+		GraphicsDevice* device = GetDevice();
+		device->CreateTexture(&desc, initdata, &perlinTex);
+		device->SetName(&perlinTex, "ocean_internal::perlinTex");
+
 		wilog("wi::Ocean Initialized (%d ms)", (int)std::round(timer.elapsed()));
 	}
 
@@ -603,6 +693,13 @@ namespace wi
 	const Texture* Ocean::getGradientMap() const
 	{
 		return &gradientMap;
+	}
+
+	const wi::primitive::AABB Ocean::GetAABB(const XMFLOAT3& camera_pos) const
+	{
+		wi::primitive::AABB aabb;
+		aabb.createFromHalfWidth(XMFLOAT3(camera_pos.x, params.waterHeight, camera_pos.z), XMFLOAT3(1000, 10, 1000));
+		return aabb;
 	}
 
 }

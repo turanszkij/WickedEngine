@@ -41,10 +41,8 @@ void main(uint2 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
 	output_mip0[pixel] = depth;
 
-	float depth_x = QuadReadAcrossX(depth);
-	float depth_y = QuadReadAcrossY(depth);
-	float depth_d = QuadReadAcrossDiagonal(depth);
-	depth = min(depth, min(depth_d, min(depth_x, depth_y)));
+	float min_x = min(depth, QuadReadAcrossX(depth));
+	depth = min(min_x, QuadReadAcrossY(min_x));
 	if (all((GTid % 2) == 0))
 	{
 		output_mip1[pixel >> 1] = depth;

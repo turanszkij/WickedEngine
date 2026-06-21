@@ -13,12 +13,14 @@ public:
 
 	wi::gui::Label infoLabel;
 	wi::gui::Button importAnimationsButton;
+	wi::gui::Button activateAllRagdollsButton;
 	wi::gui::ComboBox animationTesterCombo;
 	wi::gui::CheckBox lookatMouseCheckBox;
 	wi::gui::CheckBox lookatCheckBox;
 	wi::gui::ComboBox lookatEntityCombo;
 	wi::gui::CheckBox ragdollDisabledCheckBox;
 	wi::gui::CheckBox ragdollCheckBox;
+	wi::gui::CheckBox ragdoll2DCheckBox;
 	wi::gui::CheckBox capsuleShadowCheckBox;
 	wi::gui::Slider headRotMaxXSlider;
 	wi::gui::Slider headRotMaxYSlider;

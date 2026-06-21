@@ -529,6 +529,9 @@ namespace wi::backlog
 			case LogLevel::Error:
 				params.color = wi::Color::Error();
 				break;
+			case LogLevel::Success:
+				params.color = wi::Color::Success();
+				break;
 			default:
 				params.color = font_params.color;
 				break;

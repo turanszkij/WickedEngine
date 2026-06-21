@@ -10,7 +10,7 @@ PUSHCONSTANT(push, BVHPushConstants);
 
 RWStructuredBuffer<uint> primitiveIDBuffer : register(u0);
 RWByteAddressBuffer primitiveBuffer : register(u1);
-RWStructuredBuffer<float> primitiveMortonBuffer : register(u2); // morton buffer is float because sorting is written for floats!
+RWStructuredBuffer<uint> primitiveMortonBuffer : register(u2);
 
 [numthreads(BVH_BUILDER_GROUPSIZE, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
@@ -75,6 +75,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	float3 maxAABB = max(P0, max(P1, P2));
 	float3 centerAABB = (minAABB + maxAABB) * 0.5f;
 	const uint mortoncode = morton3D((centerAABB - GetScene().aabb_min) * GetScene().aabb_extents_rcp);
-	primitiveMortonBuffer[primitiveID] = (float)mortoncode; // convert to float before sorting
+	primitiveMortonBuffer[primitiveID] = mortoncode;
 
 }

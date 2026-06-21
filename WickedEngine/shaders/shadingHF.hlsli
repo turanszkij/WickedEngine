@@ -48,7 +48,6 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 	// Apply environment maps:
 	half4 envmapAccumulation = 0;
 
-#ifndef ENVMAPRENDERING
 #ifndef DISABLE_LOCALENVPMAPS
 	[branch]
 	if (xForwardEnvProbeMask != 0)
@@ -60,15 +59,13 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 		{
 			// Retrieve global entity index from local bucket, then remove bit from local bucket:
 			const uint bucket_bit_index = firstbitlow(bucket_bits);
-			const uint entity_index = bucket_bit_index;
 			bucket_bits ^= 1u << bucket_bit_index;
 
+			const uint entity_index = probes().first_item() + bucket_bit_index;
 			ShaderEntity probe = load_entity(probes().first_item() + entity_index);
 				
-			float4x4 probeProjection = load_entitymatrix(probe.GetMatrixIndex());
-			const int probeTexture = asint(probeProjection[3][0]);
-			probeProjection[3] = float4(0, 0, 0, 1);
-			TextureCube<half4> cubemap = bindless_cubemaps_half4[descriptor_index(probeTexture)];
+			float3x4 probeProjection = load_entitymatrix(entity_index); // note: straight entity-matrix mapping ok
+			TextureCube<half4> cubemap = bindless_cubemaps_half4[descriptor_index(probe.GetTextureIndex())];
 			
 			const half3 clipSpacePos = mul(probeProjection, float4(surface.P, 1)).xyz;
 			const half3 uvw = box_to_uv(clipSpacePos.xyz);
@@ -91,7 +88,6 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 		}
 	}
 #endif // DISABLE_LOCALENVPMAPS
-#endif //ENVMAPRENDERING
 
 	// Apply global envmap where there is no local envmap information:
 	[branch]
@@ -114,56 +110,46 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 	}
 
 	[branch]
-	if (any(xForwardLightMask))
+	if (xForwardLightMask != 0)
 	{
 		// Loop through light buckets for the draw call:
-		const uint first_item = 0;
-		const uint last_item = first_item + lights().item_count() - 1;
-		const uint first_bucket = first_item / 32;
-		const uint last_bucket = min(last_item / 32, 1); // only 2 buckets max (uint2) for forward pass!
-		[loop]
-		for (uint bucket = first_bucket; bucket <= last_bucket; ++bucket)
+		uint64_t bucket_bits = xForwardLightMask;
+
+		while (bucket_bits != 0)
 		{
-			uint bucket_bits = xForwardLightMask[bucket];
+			// Retrieve global entity index from local bucket, then remove bit from local bucket:
+			const uint entity_index = firstbitlow64(bucket_bits);
+			bucket_bits ^= 1u << entity_index;
 
-			[loop]
-			while (bucket_bits != 0)
-			{
-				// Retrieve global entity index from local bucket, then remove bit from local bucket:
-				const uint bucket_bit_index = firstbitlow(bucket_bits);
-				const uint entity_index = bucket * 32 + bucket_bit_index;
-				bucket_bits ^= 1u << bucket_bit_index;
-
-				ShaderEntity light = load_entity(lights().first_item() + entity_index);
+			ShaderEntity light = load_entity(lights().first_item() + entity_index);
 				
 #ifndef INCLUDE_STATIC_LIGHTS
-				if (light.IsStaticLight())
-					continue; // static lights will be skipped here (they are used at lightmap baking)
+			if (light.IsStaticLight())
+				continue; // static lights will be skipped here (they are used at lightmap baking)
 #endif // INCLUDE_STATIC_LIGHTS
 					
-				switch (light.GetType())
-				{
-				case ENTITY_TYPE_DIRECTIONALLIGHT:
-				{
-					light_directional(light, surface, lighting);
-				}
-				break;
-				case ENTITY_TYPE_POINTLIGHT:
-				{
-					light_point(light, surface, lighting);
-				}
-				break;
-				case ENTITY_TYPE_SPOTLIGHT:
-				{
-					light_spot(light, surface, lighting);
-				}
-				break;
-				case ENTITY_TYPE_RECTLIGHT:
-				{
-					light_rect(light, surface, lighting);
-				}
-				break;
-				}
+			switch (light.GetType())
+			{
+			case ENTITY_TYPE_DIRECTIONALLIGHT:
+			{
+				light_directional(light, surface, lighting);
+			}
+			break;
+			case ENTITY_TYPE_POINTLIGHT:
+			{
+				light_point(light, surface, lighting);
+			}
+			break;
+			case ENTITY_TYPE_SPOTLIGHT:
+			{
+				light_spot(light, surface, lighting);
+			}
+			break;
+			case ENTITY_TYPE_RECTLIGHT:
+			{
+				light_rect(light, surface, lighting);
+			}
+			break;
 			}
 		}
 	}
@@ -192,22 +178,21 @@ inline void ForwardDecals(inout Surface surface, inout half4 surfaceMap, Sampler
 	{
 		// Retrieve global entity index from local bucket, then remove bit from local bucket:
 		const uint bucket_bit_index = firstbitlow(bucket_bits);
-		const uint entity_index = bucket_bit_index;
 		bucket_bits ^= 1u << bucket_bit_index;
 
-		ShaderEntity decal = load_entity(decals().first_item() + entity_index);
+		const uint entity_index = decals().first_item() + bucket_bit_index;
+		ShaderEntity decal = load_entity(entity_index);
 
-		float4x4 decalProjection = load_entitymatrix(decal.GetMatrixIndex());
+		float4x4 decalProjection = load_entitymatrix(entity_index); // note: straight entity-matrix mapping ok
 		const int decalTexture = asint(decalProjection[3][0]);
 		const int decalNormal = asint(decalProjection[3][1]);
 		const int decalSurfacemap = asint(decalProjection[3][2]);
 		const int decalDisplacementmap = asint(decalProjection[3][3]);
-		decalProjection[3] = float4(0, 0, 0, 1);
 
 		// under here will be VGPR!
 		if ((decal.layerMask & surface.layerMask) == 0)
 			continue;
-		const float3 clipSpacePos = mul(decalProjection, float4(surface.P, 1)).xyz;
+		const float3 clipSpacePos = mul((float3x4)decalProjection, float4(surface.P, 1)).xyz;
 		float3 uvw = box_to_uv(clipSpacePos.xyz);
 		[branch]
 		if (is_saturated(uvw))
@@ -288,9 +273,7 @@ inline uint GetFlatTileIndex(min16uint2 pixel)
 inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint flatTileIndex)
 {
 	if (GetFrame().options & OPTION_BIT_FORCE_UNLIT)
-	{
 		return;
-	}
 
 #ifndef DISABLE_ENVMAPS
 	// Apply environment maps:
@@ -302,7 +285,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	{
 		// Loop through envmap buckets in the tile:
 		ShaderEntityIterator iterator = probes();
-		for(uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
+		for (uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 		{
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
@@ -320,10 +303,8 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 				
 				ShaderEntity probe = load_entity(entity_index);
 
-				float4x4 probeProjection = load_entitymatrix(probe.GetMatrixIndex());
-				const int probeTexture = asint(probeProjection[3][0]);
-				probeProjection[3] = float4(0, 0, 0, 1);
-				TextureCube<half4> cubemap = bindless_cubemaps_half4[descriptor_index(probeTexture)];
+				float3x4 probeProjection = load_entitymatrix(entity_index); // note: straight entity-matrix mapping ok
+				TextureCube<half4> cubemap = bindless_cubemaps_half4[descriptor_index(probe.GetTextureIndex())];
 					
 				const half3 clipSpacePos = mul(probeProjection, float4(surface.P, 1)).xyz;
 				const half3 uvw = box_to_uv(clipSpacePos.xyz);
@@ -407,7 +388,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	{
 		// Directional lights are not culled, so simply iterate through each one:
 		ShaderEntityIterator iterator = directional_lights();
-		for(uint entity_index = iterator.first_item(); entity_index < iterator.end_item(); ++entity_index)
+		for (uint entity_index = iterator.first_item(); entity_index < iterator.end_item(); ++entity_index)
 		{
 			ShaderEntity light = load_entity(entity_index);
 
@@ -438,7 +419,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	{
 		// Loop through light buckets in the tile:
 		ShaderEntityIterator iterator = spotlights();
-		for(uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
+		for (uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 		{
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
@@ -480,7 +461,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	{
 		// Loop through light buckets in the tile:
 		ShaderEntityIterator iterator = pointlights();
-		for(uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
+		for (uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 		{
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
@@ -522,7 +503,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	{
 		// Loop through light buckets in the tile:
 		ShaderEntityIterator iterator = rectlights();
-		for(uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
+		for (uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 		{
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
@@ -568,9 +549,9 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 		half capsuleshadow = 1;
 		half capsulereflection = 1;
 		
-		// Loop through light buckets in the tile:
+		// Loop through entity buckets in the tile:
 		ShaderEntityIterator iterator = forces();
-		for (uint bucket = iterator.first_bucket(); (bucket <= iterator.last_bucket()) && (capsuleshadow > 0 || capsulereflection > 0); ++bucket)
+		for (uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 		{
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
@@ -579,7 +560,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
 
 			[loop]
-			while ((bucket_bits != 0) && (capsuleshadow > 0 || capsulereflection > 0))
+			while (bucket_bits != 0)
 			{
 				// Retrieve global entity index from local bucket, then remove bit from local bucket:
 				const uint bucket_bit_index = firstbitlow(bucket_bits);
@@ -645,7 +626,7 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex, inout half4 s
 
 	// Loop through decal buckets in the tile:
 	ShaderEntityIterator iterator = decals();
-	for(uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
+	for (uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 	{
 		uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 		bucket_bits = iterator.mask_entity(bucket, bucket_bits);
@@ -658,22 +639,21 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex, inout half4 s
 		{
 			// Retrieve global entity index from local bucket, then remove bit from local bucket:
 			const uint bucket_bit_index = firstbitlow(bucket_bits);
-			const uint entity_index = bucket * 32 + bucket_bit_index;
 			bucket_bits ^= 1u << bucket_bit_index;
 			
+			const uint entity_index = bucket * 32 + bucket_bit_index;
 			ShaderEntity decal = load_entity(entity_index);
 
-			float4x4 decalProjection = load_entitymatrix(decal.GetMatrixIndex());
+			float4x4 decalProjection = load_entitymatrix(entity_index); // note: straight entity-matrix mapping ok
 			const int decalTexture = asint(decalProjection[3][0]);
 			const int decalNormal = asint(decalProjection[3][1]);
 			const int decalSurfacemap = asint(decalProjection[3][2]);
 			const int decalDisplacementmap = asint(decalProjection[3][3]);
-			decalProjection[3] = float4(0, 0, 0, 1);
 				
 			// under here will be VGPR!
 			if ((decal.layerMask & surface.layerMask) == 0)
 				continue;
-			const float3 clipSpacePos = mul(decalProjection, float4(surface.P, 1)).xyz;
+			const float3 clipSpacePos = mul((float3x4)decalProjection, float4(surface.P, 1)).xyz;
 			float3 uvw = box_to_uv(clipSpacePos.xyz);
 			[branch]
 			if (is_saturated(uvw))

@@ -16,7 +16,7 @@ namespace wi
 
 	bool LoadingScreen::isFinished() const
 	{
-		return tasks.empty();
+		return tasks.empty() && finish == nullptr && finished;
 	}
 
 	int LoadingScreen::getProgress() const
@@ -54,6 +54,7 @@ namespace wi
 
 	void LoadingScreen::Start()
 	{
+		finished = false;
 		launchedTasks = (uint32_t)tasks.size();
 		for (auto& x : tasks)
 		{
@@ -71,6 +72,12 @@ namespace wi
 		}).detach();
 
 		RenderPath2D::Start();
+	}
+
+	void LoadingScreen::Stop()
+	{
+		RenderPath2D::Stop();
+		finished = true;
 	}
 
 	void LoadingScreen::Compose(wi::graphics::CommandList cmd) const

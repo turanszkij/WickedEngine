@@ -4,6 +4,7 @@
 #include "wiFFTGenerator.h"
 #include "wiScene_Decl.h"
 #include "wiMath.h"
+#include "wiPrimitive.h"
 
 namespace wi
 {
@@ -42,12 +43,15 @@ namespace wi
 
 		void UpdateDisplacementMap(wi::graphics::CommandList cmd) const;
 		void RenderForOcclusionTest(const wi::scene::CameraComponent& camera, wi::graphics::CommandList cmd) const;
+		void RenderForCubemap(wi::graphics::CommandList cmd) const;
 		void Render(const wi::scene::CameraComponent& camera, wi::graphics::CommandList cmd) const;
 
 		void CopyDisplacementMapReadback(wi::graphics::CommandList cmd) const;
 
 		const wi::graphics::Texture* getDisplacementMap() const;
 		const wi::graphics::Texture* getGradientMap() const;
+
+		const wi::primitive::AABB GetAABB(const XMFLOAT3& camera_pos) const;
 
 		static void Initialize();
 
@@ -97,5 +101,6 @@ namespace wi
 		wi::graphics::GPUBuffer constantBuffer;
 		mutable wi::graphics::GPUBuffer indexBuffer;
 		mutable wi::graphics::GPUBuffer indexBuffer_occlusionTest;
+		mutable wi::graphics::GPUBuffer indexBuffer_cubemap;
 	};
 }

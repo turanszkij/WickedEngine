@@ -108,7 +108,7 @@ namespace wi::lua::backlog
 			wi::backlog::SetLogLevel((wi::backlog::LogLevel)wi::lua::SGetInt(L, 1));
 		}
 		else
-			wi::lua::SError(L, "backlog_setlevel(int val) not enough arguments!");
+			wi::lua::SError(L, "backlog_setlevel(LogLevel val) not enough arguments!");
 		return 0;
 	}
 	int backlog_lock(lua_State* L)
@@ -197,6 +197,16 @@ namespace wi::lua::backlog
 			wi::lua::RegisterFunc("backlog_open", backlog_open);
 			wi::lua::RegisterFunc("backlog_flush", backlog_flush);
 			wi::lua::RegisterFunc("backlog_setautoflushinterval", backlog_setautoflushinterval);
+
+			wi::lua::RunText(R"(
+LogLevel = {
+	None = 0,
+	Default = 1,
+	Warning = 2,
+	Error = 3,
+	Success = 4,
+}
+)");
 		}
 	}
 }

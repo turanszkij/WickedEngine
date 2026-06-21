@@ -42,9 +42,13 @@ public:
 	wi::gui::CheckBox disableRoundCornersCheckBox;
 	wi::gui::CheckBox disableGradientCheckBox;
 
-	wi::gui::Slider outlineOpacitySlider;
+	wi::gui::Label transformToolLabel;
 	wi::gui::Slider transformToolOpacitySlider;
 	wi::gui::Slider transformToolDarkenSlider;
+	wi::gui::Slider transformToolScaleSlider;
+	wi::gui::Slider transformToolThicknessSlider;
+
+	wi::gui::Slider outlineOpacitySlider;
 	wi::gui::Slider bonePickerOpacitySlider;
 	wi::gui::CheckBox skeletonsVisibleCheckBox;
 

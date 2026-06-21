@@ -29,6 +29,7 @@
 #include "wiTimer.h"
 #include "wiVector.h"
 #include "wiVersion.h"
+#include "wiPlatform.h"
 
 #include <memory>
 
@@ -70,6 +71,100 @@ namespace wi::lua
 			wi::input::ResetCursors();
 		}
 		return 0;
+	}
+
+	int IsPlatformWindows(lua_State* L)
+	{
+#ifdef PLATFORM_WINDOWS_DESKTOP
+		wi::lua::SSetBool(L, true);
+#else
+		wi::lua::SSetBool(L, false);
+#endif // PLATFORM_WINDOWS_DESKTOP
+		return 1;
+	}
+	int IsPlatformLinux(lua_State* L)
+	{
+#ifdef PLATFORM_LINUX
+		wi::lua::SSetBool(L, true);
+#else
+		wi::lua::SSetBool(L, false);
+#endif // PLATFORM_LINUX
+		return 1;
+	}
+	int IsPlatformMACOS(lua_State* L)
+	{
+#ifdef PLATFORM_MACOS
+		wi::lua::SSetBool(L, true);
+#else
+		wi::lua::SSetBool(L, false);
+#endif // PLATFORM_MACOS
+		return 1;
+	}
+	int IsPlatformIOS(lua_State* L)
+	{
+#ifdef PLATFORM_IOS
+		wi::lua::SSetBool(L, true);
+#else
+		wi::lua::SSetBool(L, false);
+#endif // PLATFORM_IOS
+		return 1;
+	}
+	int IsPlatformPS5(lua_State* L)
+	{
+#ifdef PLATFORM_PS5
+		wi::lua::SSetBool(L, true);
+#else
+		wi::lua::SSetBool(L, false);
+#endif // PLATFORM_PS5
+		return 1;
+	}
+	int IsPlatformXBOX(lua_State* L)
+	{
+#ifdef PLATFORM_XBOX
+		wi::lua::SSetBool(L, true);
+#else
+		wi::lua::SSetBool(L, false);
+#endif // PLATFORM_XBOX
+		return 1;
+	}
+
+	int FileExists(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc < 1)
+		{
+			wi::lua::SError(L, "FileExists(string name): not enough arguments!");
+			return 0;
+		}
+		wi::lua::SSetBool(L, wi::helper::FileExists(wi::lua::SGetString(L, 1)));
+		return 1;
+	}
+	int DirectoryExists(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc < 1)
+		{
+			wi::lua::SError(L, "DirectoryExists(string name): not enough arguments!");
+			return 0;
+		}
+		wi::lua::SSetBool(L, wi::helper::DirectoryExists(wi::lua::SGetString(L, 1)));
+		return 1;
+	}
+	int DirectoryCreate(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc < 1)
+		{
+			wi::lua::SError(L, "DirectoryCreate(string name): not enough arguments!");
+			return 0;
+		}
+		wi::helper::DirectoryCreate(wi::lua::SGetString(L, 1));
+		return 0;
+	}
+	int GetSaveDataPath(lua_State* L)
+	{
+		wi::lua::SSetString(L, wi::helper::GetSaveDataPath());
+		return 1;
 	}
 
 	void PostErrorMsg(lua_State* L)
@@ -288,6 +383,18 @@ namespace wi::lua
 		RegisterFunc("GetVersionString", GetVersionString);
 		RegisterFunc("GetCreditsString", GetCreditsString);
 		RegisterFunc("GetSupportersString", GetSupportersString);
+
+		RegisterFunc("IsPlatformWindows", IsPlatformWindows);
+		RegisterFunc("IsPlatformLinux", IsPlatformLinux);
+		RegisterFunc("IsPlatformMACOS", IsPlatformMACOS);
+		RegisterFunc("IsPlatformIOS", IsPlatformIOS);
+		RegisterFunc("IsPlatformPS5", IsPlatformPS5);
+		RegisterFunc("IsPlatformXBOX", IsPlatformXBOX);
+
+		RegisterFunc("FileExists", FileExists);
+		RegisterFunc("DirectoryExists", DirectoryExists);
+		RegisterFunc("DirectoryCreate", DirectoryCreate);
+		RegisterFunc("GetSaveDataPath", GetSaveDataPath);
 
 		Vector_BindLua::Bind();
 		Matrix_BindLua::Bind();

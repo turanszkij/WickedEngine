@@ -2,10 +2,15 @@
 #include "oceanSurfaceHF.hlsli"
 
 Texture2D<float4> texture_displacementmap : register(t0);
+Texture2D<float4> texture_perlin : register(t2);
 
-PSIn main(uint vertexID : SV_VertexID)
+PSIn main(uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID, out uint RTIndex : SV_RenderTargetArrayIndex)
 {
 	PSIn Out;
+	Out.cameraIndex = instanceID;
+
+	ShaderCamera camera = GetCameraIndexed(Out.cameraIndex);
+	RTIndex = camera.output_index;
 	
 	float2 dim = xOceanScreenSpaceParams.xy;
 	float2 invdim = xOceanScreenSpaceParams.zw;
@@ -18,11 +23,11 @@ PSIn main(uint vertexID : SV_VertexID)
 	Out.pos.xy *= max(1, xOceanSurfaceDisplacementTolerance); // extrude screen space grid to tolerate displacement
 
 	// Perform ray tracing of screen grid and plane surface to unproject to world space:
-	float4 unprojNEAR = mul(GetCamera().inverse_view_projection, float4(Out.pos.xy, 1, 1));
+	float4 unprojNEAR = mul(camera.inverse_view_projection, float4(Out.pos.xy, 1, 1));
 	unprojNEAR.xyz /= unprojNEAR.w;
-	float4 unprojFAR = mul(GetCamera().inverse_view_projection, float4(Out.pos.xy, 0, 1));
+	float4 unprojFAR = mul(camera.inverse_view_projection, float4(Out.pos.xy, 0, 1));
 	unprojFAR.xyz /= unprojFAR.w;
-	const float3 d = normalize(unprojNEAR.xyz - unprojFAR.xyz);
+	const float3 d = normalize(unprojFAR.xyz - unprojNEAR.xyz);
 	const float3 o = unprojNEAR.xyz;
 
 	float3 worldPos = intersectPlaneClampInfinite(o, d, float3(0, 1, 0), xOceanWaterHeight);
@@ -32,13 +37,16 @@ PSIn main(uint vertexID : SV_VertexID)
 	{
 		// Displace surface:
 		float3 displacement = texture_displacementmap.SampleLevel(sampler_linear_wrap, uv, 0).xzy;
-		float dist = length(worldPos - GetCamera().position);
-		displacement *= saturate(1 - saturate(dist / GetCamera().z_far - 0.8) * 5.0); // fade will be on edge and inwards 20%
+
+		const float dist = length(worldPos - unprojNEAR.xyz);
+		const half gradient_fade = smoothstep(0.08, 0.8, saturate(dist * 0.005));
+		displacement = lerp(displacement, 0, gradient_fade);
+
 		worldPos += displacement;
 	}
 
 	// Reproject displaced surface and output:
-	Out.pos = mul(GetCamera().view_projection, float4(worldPos, 1));
+	Out.pos = mul(camera.view_projection, float4(worldPos, 1));
 	Out.uv = uv;
 
 	return Out;

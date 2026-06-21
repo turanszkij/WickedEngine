@@ -887,47 +887,12 @@ namespace wi
 
 	void Application::SetFullScreen(bool fullscreen)
 	{
-#if defined(PLATFORM_WINDOWS_DESKTOP)
+		wi::platform::SetWindowFullScreen(window, fullscreen);
+	}
 
-		// Based on: https://devblogs.microsoft.com/oldnewthing/20100412-00/?p=14353
-		static WINDOWPLACEMENT wp = {};
-		DWORD dwStyle = GetWindowLong(window, GWL_STYLE);
-		bool has_overlapped_style = dwStyle & WS_OVERLAPPEDWINDOW;
-
-		if (fullscreen && !isFullScreen) {
-			MONITORINFO mi = { sizeof(mi) };
-			if (GetWindowPlacement(window, &wp) &&
-				GetMonitorInfo(MonitorFromWindow(window,
-					MONITOR_DEFAULTTOPRIMARY), &mi)) {
-				SetWindowLong(window, GWL_STYLE,
-					dwStyle & ~WS_OVERLAPPEDWINDOW);
-				SetWindowPos(window, HWND_TOP,
-					mi.rcMonitor.left, mi.rcMonitor.top,
-					mi.rcMonitor.right - mi.rcMonitor.left,
-					mi.rcMonitor.bottom - mi.rcMonitor.top,
-					SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
-				isFullScreen = true;
-			}
-		}
-		else if (!fullscreen && isFullScreen) {
-			if (!has_overlapped_style) {
-				SetWindowLong(window, GWL_STYLE,
-					dwStyle | WS_OVERLAPPEDWINDOW);
-			}
-			SetWindowPlacement(window, &wp);
-			SetWindowPos(window, NULL, 0, 0, 0, 0,
-				SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
-				SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
-			isFullScreen = false;
-		}
-
-#elif defined(PLATFORM_LINUX)
-		SDL_SetWindowFullscreen(window, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
-		isFullScreen = fullscreen;
-#elif defined(__APPLE__)
-		wi::apple::SetWindowFullScreen(window, fullscreen);
-		isFullScreen = fullscreen;
-#endif // PLATFORM_WINDOWS_DESKTOP
+	bool Application::IsFullScreen() const
+	{
+		return wi::platform::IsWindowFullScreen(window);
 	}
 
 	bool Application::IsScriptReplacement() const

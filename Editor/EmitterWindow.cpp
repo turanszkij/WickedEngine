@@ -347,6 +347,16 @@ void EmitterWindow::Create(EditorComponent* _editor)
 	emitCountSlider.SetTooltip("Set the number of particles to emit per second.");
 	AddWidget(&emitCountSlider);
 
+	burstOnCreateSlider.Create(0.0f, 10000.0f, 1.0f, 100000, "Burst on create: ");
+	burstOnCreateSlider.SetSize(XMFLOAT2(wid, itemheight));
+	burstOnCreateSlider.SetPos(XMFLOAT2(x, y += step));
+	burstOnCreateSlider.OnSlide(forEachSelected([](auto emitter, auto args) {
+		emitter->burst_on_create = args.iValue;
+	}));
+	burstOnCreateSlider.SetEnabled(false);
+	burstOnCreateSlider.SetTooltip("Set the number of particles to burst first time the emitter gets created.");
+	AddWidget(&burstOnCreateSlider);
+
 	emitSizeSlider.Create(0.01f, 10.0f, 1.0f, 100000, "Size: ");
 	emitSizeSlider.SetSize(XMFLOAT2(wid, itemheight));
 	emitSizeSlider.SetPos(XMFLOAT2(x, y += step));
@@ -578,6 +588,7 @@ void EmitterWindow::SetEntity(Entity entity)
 		frameStartInput.SetValue((int)emitter->frameStart);
 
 		emitCountSlider.SetValue(emitter->count);
+		burstOnCreateSlider.SetValue(emitter->burst_on_create);
 		emitSizeSlider.SetValue(emitter->size);
 		emitRotationSlider.SetValue(emitter->rotation);
 		emitNormalSlider.SetValue(emitter->normal_factor);
@@ -724,6 +735,7 @@ void EmitterWindow::ResizeLayout()
 	layout.add_right(takeColorCheckBox);
 	layout.add(maxParticlesSlider);
 	layout.add(emitCountSlider);
+	layout.add(burstOnCreateSlider);
 	layout.add(emitSizeSlider);
 	layout.add(emitRotationSlider);
 	layout.add(emitNormalSlider);

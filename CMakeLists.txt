@@ -18,7 +18,6 @@ endif()
 project(WickedEngine)
 
 include(CheckIPOSupported)
-check_ipo_supported(RESULT ipo_supported)
 
 set(WICKED_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -28,8 +27,9 @@ option(USE_LIBCXX "Link WickedEngine to llvm libc++ library - only available wit
 option(WICKED_EDITOR "Build WickedEngine editor" ON)
 option(WICKED_TESTS "Build WickedEngine tests" ON)
 option(WICKED_IMGUI_EXAMPLE "Build WickedEngine imgui example" ON)
-option(WICKED_ENABLE_IPO "Enable IPO/LTO in non-debug builds" ${ipo_supported})
+option(WICKED_ENABLE_IPO "Enable IPO/LTO in non-debug builds" NO)
 option(WICKED_EMBED_SHADERS "Embed shaders into the library" NO)
+option(WICKED_ENABLE_RTTI "Enable RTTI" NO)
 if(UNIX)
     option(WICKED_ENABLE_ASAN "Enable AddressSanitizer in debug builds" OFF)
     option(WICKED_ENABLE_UBSAN "Enable UndefinedBehaviourSanitizer in debug builds" OFF)
@@ -80,7 +80,7 @@ endif()
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_POSITION_INDEPENDENT_CODE WICKED_PIC)
+set(CMAKE_POSITION_INDEPENDENT_CODE ${WICKED_PIC})
 
 # Use solution folders to organize projects
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -121,10 +121,11 @@ endif()
 
 if (MSVC)
     add_compile_options(
+		/utf-8
         /W3 # warning level 3
         /MP # multi-processor compilation
         /EHsc- # exceptions disabled
-        /GR- # runtime type information disabled
+        $<$<AND:$<NOT:$<BOOL:${ubsan_active}>>,$<NOT:$<BOOL:${WICKED_ENABLE_RTTI}>>>:/GR-> # runtime type information disabled
         $<$<CONFIG:Release>:/GS-> # security check disabled in Release
     )
 else()
@@ -142,7 +143,7 @@ else()
         -Wno-sign-compare
 
         $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions> # exceptions disabled
-        $<$<AND:$<COMPILE_LANGUAGE:CXX>,$<NOT:${ubsan_active}>>:-fno-rtti> # runtime type information disabled
+        $<$<AND:$<COMPILE_LANGUAGE:CXX>,$<NOT:$<BOOL:${ubsan_active}>>,$<NOT:$<BOOL:${WICKED_ENABLE_RTTI}>>>:-fno-rtti> # runtime type information disabled
 
         # security checks disabled in Release:
         $<$<CONFIG:Release>:-fno-stack-protector>

@@ -27,6 +27,7 @@ public:
 	wi::gui::CheckBox startDeactivatedCheckBox;
 	wi::gui::CheckBox disabledeactivationCheckBox;
 	wi::gui::CheckBox kinematicCheckBox;
+	wi::gui::CheckBox locked2DCheckBox;
 	wi::gui::Slider offsetXSlider;
 	wi::gui::Slider offsetYSlider;
 	wi::gui::Slider offsetZSlider;

@@ -66,21 +66,3 @@ add_custom_command(
     #COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/languages ${CMAKE_CURRENT_BINARY_DIR}/languages
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/fonts ${CMAKE_CURRENT_BINARY_DIR}/fonts
 )
-
-include(GNUInstallDirs)
-set(EDITOR_INSTALL_FOLDER "${CMAKE_INSTALL_LIBDIR}/WickedEngine/Editor")
-
-# Editor executable
-install(TARGETS Editor RUNTIME DESTINATION ${EDITOR_INSTALL_FOLDER})
-
-# install editor assets
-install(DIRECTORY
-        #"${CMAKE_CURRENT_SOURCE_DIR}/languages"
-        "${CMAKE_CURRENT_SOURCE_DIR}/fonts"
-        DESTINATION ${EDITOR_INSTALL_FOLDER})
-# optional .ini .ico .lua
-install(FILES
-        ${CMAKE_CURRENT_SOURCE_DIR}/config.ini
-        ${CMAKE_CURRENT_SOURCE_DIR}/wicked.ico
-        ${CMAKE_CURRENT_SOURCE_DIR}/startup.lua
-        DESTINATION ${EDITOR_INSTALL_FOLDER})

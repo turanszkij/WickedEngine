@@ -67,6 +67,8 @@ public:
 	wi::gui::Slider aoRangeSlider;
 	wi::gui::Slider aoSampleCountSlider;
 	wi::gui::CheckBox reflectionsCheckBox;
+	wi::gui::Slider planarReflectionResolutionScaleSlider;
+	wi::gui::ComboBox planarReflectionSampleCountCombo;
 	wi::gui::CheckBox ssrCheckBox;
 	wi::gui::Slider ssrQualitySlider;
 	wi::gui::CheckBox raytracedReflectionsCheckBox;

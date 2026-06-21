@@ -64,8 +64,9 @@ void HierarchyWindow::Create(EditorComponent* _editor)
 
 void HierarchyWindow::SetEntity(Entity entity)
 {
-	if (this->entity == entity)
-		return;
+	if (entity == this->entity)
+		return; // refreshing the things below every frame can get very expensive, so only refresh if selection changed
+
 	this->entity = entity;
 
 	const Scene& scene = editor->GetCurrentScene();
@@ -73,11 +74,36 @@ void HierarchyWindow::SetEntity(Entity entity)
 	entities.clear();
 	scene.FindAllEntities(entities);
 
+	// Sort entities by hierarchy depth
+	wi::vector<wi::ecs::Entity> sorted_entities(entities.begin(), entities.end());
+	std::sort(sorted_entities.begin(), sorted_entities.end(), [&scene](wi::ecs::Entity a, wi::ecs::Entity b) {
+		auto get_depth = [&scene](const wi::ecs::Entity e) -> int {
+			int depth = 0;
+			const HierarchyComponent* h = scene.hierarchy.GetComponent(e);
+			while (h != nullptr && h->parentID != INVALID_ENTITY)
+			{
+				depth++;
+				h = scene.hierarchy.GetComponent(h->parentID);
+			}
+			return depth;
+		};
+		const int da = get_depth(a);
+		const int db = get_depth(b);
+		if (da != db)
+			return da < db;
+		// Secondary sort: by name for stable ordering within same depth
+		const NameComponent* na = scene.names.GetComponent(a);
+		const NameComponent* nb = scene.names.GetComponent(b);
+		const std::string sa = na ? na->name : std::to_string(a);
+		const std::string sb = nb ? nb->name : std::to_string(b);
+		return sa < sb;
+	});
+
 	parentCombo.ClearItems();
 	parentCombo.AddItem("NO PARENT " ICON_DISABLED);
 
 	const HierarchyComponent* hierarchy_component = scene.hierarchy.GetComponent(entity);
-	for (const auto candidate_parent_entity : entities)
+	for (const auto candidate_parent_entity : sorted_entities)
 	{
 		if (candidate_parent_entity == entity)
 		{

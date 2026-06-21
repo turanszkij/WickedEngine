@@ -24,6 +24,7 @@ namespace wi
 
 		const wi::vector<uint8_t>& GetFileData() const;
 		const wi::graphics::Texture& GetTexture() const;
+		uint32_t GetTextureFullMipCount() const;
 		const wi::audio::Sound& GetSound() const;
 		const std::string& GetScript() const;
 		size_t GetScriptHash() const;
@@ -100,6 +101,10 @@ namespace wi
 		// Invalidate all resources
 		void Clear();
 
+		// Set the highest allowed texture asset resolution (only for DDS textures that contain mipmaps)
+		void SetTextureResolutionLimit(uint32_t resolution);
+		uint32_t GetTextureResolutionLimit();
+
 		// Set threshold relative to memory budget for streaming
 		//	If memory usage is below threshold, streaming will work regularly
 		//	If memory usage is above threshold, streaming will try to reduce usage
@@ -143,10 +148,6 @@ namespace wi
 }
 
 template<>
-struct enable_bitmask_operators<wi::resourcemanager::Flags> {
-	static const bool enable = true;
-};
+struct enable_bitmask_operators<wi::resourcemanager::Flags> : std::true_type {};
 template<>
-struct enable_bitmask_operators<wi::resourcemanager::ResourceType> {
-	static const bool enable = true;
-};
+struct enable_bitmask_operators<wi::resourcemanager::ResourceType> : std::true_type {};

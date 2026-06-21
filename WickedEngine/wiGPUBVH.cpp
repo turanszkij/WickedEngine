@@ -124,10 +124,10 @@ namespace wi
 			device->SetName(&primitiveBuffer, "GPUBVH::primitiveBuffer");
 
 			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+			desc.stride = sizeof(uint);
 			desc.size = desc.stride * primitiveCapacity;
 			desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 			desc.usage = Usage::DEFAULT;
-			desc.stride = sizeof(float); // morton buffer is float because sorting must be done and gpu sort operates on floats for now!
 			device->CreateBuffer(&desc, nullptr, &primitiveMortonBuffer);
 			device->SetName(&primitiveMortonBuffer, "GPUBVH::primitiveMortonBuffer");
 		}
@@ -237,8 +237,8 @@ namespace wi
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Buffer(&primitiveBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-				GPUBarrier::Buffer(&primitiveIDBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-				GPUBarrier::Buffer(&primitiveMortonBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+				GPUBarrier::Memory(&primitiveIDBuffer),
+				GPUBarrier::Memory(&primitiveMortonBuffer),
 				GPUBarrier::Buffer(&primitiveCounterBuffer, ResourceState::SHADER_RESOURCE, ResourceState::COPY_DST),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
@@ -256,6 +256,14 @@ namespace wi
 		device->EventBegin("BVH - Sort Primitive Mortons", cmd);
 		wi::gpusortlib::Sort(primitiveCount, primitiveMortonBuffer, primitiveCounterBuffer, 0, primitiveIDBuffer, cmd);
 		device->EventEnd(cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Buffer(&primitiveIDBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+				GPUBarrier::Buffer(&primitiveMortonBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
 
 		device->EventBegin("BVH - Build Hierarchy", cmd);
 		{

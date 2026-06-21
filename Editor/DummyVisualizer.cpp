@@ -69,6 +69,8 @@ void DummyVisualizer::Draw(
 
 	device->BindPipelineState(&pso[depth], cmd);
 
+	device->BindStencilRef(wi::enums::STENCILREF_DEFAULT, cmd);
+
 	MiscCB sb;
 	XMStoreFloat4x4(&sb.g_xTransform, matrix);
 	sb.g_xColor = color;
@@ -129,6 +131,12 @@ namespace dummy
 	void draw_vehicle(const XMMATRIX& matrix, const XMFLOAT4& color, bool depth, wi::graphics::CommandList cmd)
 	{
 #include "dummy_vehicle.h"
+		static DummyVisualizer vis;
+		vis.Draw(vertices, arraysize(vertices), indices, arraysize(indices), matrix, color, depth, cmd);
+	}
+	void draw_poi(const XMMATRIX& matrix, const XMFLOAT4& color, bool depth, wi::graphics::CommandList cmd)
+	{
+#include "dummy_poi.h"
 		static DummyVisualizer vis;
 		vis.Draw(vertices, arraysize(vertices), indices, arraysize(indices), matrix, color, depth, cmd);
 	}

@@ -60,6 +60,16 @@ namespace wi::graphics
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> drawIndexedInstancedIndirectCommandSignature;
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> dispatchMeshIndirectCommandSignature;
 
+		// Multi count draw command signatures (when drawID is used) need to be created with valid root signature, so they are delayed until shader creation:
+		struct MultiDrawSignature
+		{
+			Microsoft::WRL::ComPtr<ID3D12CommandSignature> drawInstancedIndirectCountCommandSignature;
+			Microsoft::WRL::ComPtr<ID3D12CommandSignature> drawIndexedInstancedIndirectCountCommandSignature;
+			Microsoft::WRL::ComPtr<ID3D12CommandSignature> dispatchMeshIndirectCountCommandSignature;
+		};
+		mutable std::mutex multidraw_signature_locker;
+		mutable wi::unordered_map<ID3D12RootSignature*, MultiDrawSignature> multidraw_signatures;
+
 		wi::vector<GUID> video_decode_profile_list;
 
 		bool deviceRemoved = false;
@@ -108,6 +118,7 @@ namespace wi::graphics
 				Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocator;
 				Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList;
 				Microsoft::WRL::ComPtr<ID3D12Fence> fence;
+				uint64_t fenceValue = 0;
 				GPUBuffer uploadbuffer;
 				inline bool IsValid() const { return commandList != nullptr; }
 			};
@@ -292,7 +303,7 @@ namespace wi::graphics
 		bool CreateSwapChain(const SwapChainDesc* desc, wi::platform::window_type window, SwapChain* swapchain) const override;
 		bool CreateBuffer2(const GPUBufferDesc * desc, const std::function<void(void*)>& init_callback, GPUBuffer* buffer, const GPUResource* alias = nullptr, uint64_t alias_offset = 0ull) const override;
 		bool CreateTexture(const TextureDesc* desc, const SubresourceData* initial_data, Texture* texture, const GPUResource* alias = nullptr, uint64_t alias_offset = 0ull) const override;
-		bool CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader) const override;
+		bool CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader, const char* entrypoint = "main") const override;
 		bool CreateSampler(const SamplerDesc* desc, Sampler* sampler) const override;
 		bool CreateQueryHeap(const GPUQueryHeapDesc* desc, GPUQueryHeap* queryheap) const override;
 		bool CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso, const RenderPassInfo* renderpass_info = nullptr) const override;

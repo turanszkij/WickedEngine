@@ -107,6 +107,18 @@ This section describes the common tools for scripting which are not necessarily 
 - getprops(table object)  -- get reflection data from object
 - len(table object)  -- get the length of a table
 - backlog_post_list(table list)  -- post table contents to the backlog
+- backlog_setlevel(LogLevel level) -- modifies the logging level
+
+```
+LogLevel = {
+	None = 0,
+	Default = 1,
+	Warning = 2,
+	Error = 3,
+	Success = 4,
+}
+```
+
 - fixedupdate()  -- wait for a fixed update step to be called (to be used from inside a process)
 - update()  -- wait for variable update step to be called (to be used from inside a process)
 - render()  -- wait for a render step to be called (to be used from inside a process)
@@ -124,6 +136,21 @@ These are some helpers to aid in debugging:
 - IsThisEditor() : bool	-- returns true if current application is the editor, false otherwise
 - ReturnToEditor()	-- returns control to the editor and kills running scripts
 - IsThisDebugBuild() : bool	-- returns true if this is a debug build, false otherwise
+
+Helpers to determine the current platform, if need to implement specific functionality:
+- IsPlatformWindows() : bool
+- IsPlatformLinux() : bool
+- IsPlatformMACOS() : bool
+- IsPlatformIOS() : bool
+- IsPlatformPS5() : bool
+- IsPlatformXBOX() : bool
+
+- FileExists(string name) : bool
+- DirectoryExists(string name) : bool
+- DirectoryCreate(string name)
+
+Returns a path that files can be safely saved to on every platform. This is the base directory for such a path, and files should be saved to an application specific named folder within it
+- GetSaveDataPath() : string
 
 ## Engine Bindings
 The scripting API provides functions for the developer to manipulate engine behaviour or query it for information.
@@ -146,6 +173,7 @@ The scripting API provides some functions which manipulate the BackLog. These fu
 This is the graphics renderer, which is also responsible for managing the scene graph which consists of keeping track of
 parent-child relationships between the scene hierarchy, updating the world, animating armatures.
 You can use the Renderer with the following functions, all of which are in the global scope:
+- SetDebugDrawEnabled(bool value)	-- Toggle debug draw by renderer on/off
 - GetGameSpeed() : float result
 - SetGameSpeed(float speed)
 - IsRaytracingSupported() : bool	-- check whether graphics device supports hardware accelerated ray tracing features
@@ -307,6 +335,10 @@ Specify Sprite properties, like position, size, etc.
 - EnableAngularSoftnessInverse()
 - DisableAngularSoftnessDoubleSided()
 - DisableAngularSoftnessInverse()
+- EnableCornerRounding()
+- DisableCornerRounding()
+- SetCornerRounding(int corner, float rounding, opt int segments = 18)
+- SetGradient(GradientType type, Vector uv_start, Vector uv_end, Vector color)
 
 - [outer]STENCILMODE_DISABLED : int
 - [outer]STENCILMODE_EQUAL : int
@@ -333,6 +365,15 @@ Specify Sprite properties, like position, size, etc.
 - [outer]BLENDMODE_ALPHA : int
 - [outer]BLENDMODE_PREMULTIPLIED : int
 - [outer]BLENDMODE_ADDITIVE : int
+
+```lua
+ImageGradientType = {
+	None = 0,
+	Linear = 1,
+	LinearReflected = 2,
+	Circular = 3,
+}
+```
 
 #### SpriteAnim
 Animate Sprites easily with this helper.
@@ -504,6 +545,11 @@ A texture image data.
 	float blend = 1,
 	float edge_smoothness = 0.04) -- creates a lens distortion normal map (16-bit precision)
 - Save(string filename) -- saves texture into a file. Provide the extension in the filename, it should be one of the following: .JPG, .PNG, .TGA, .BMP, .DDS
+
+- SetTextureResolutionLimit(int resolution) -- Set the highest allowed texture asset resolution (only for DDS textures that contain mipmaps)
+- GetTextureResolutionLimit() : int
+- SetTextureResolutionLimit(float threshold) -- Set threshold relative to memory budget for streaming. If memory usage is below threshold, streaming will work regularly.If memory usage is above threshold, streaming will try to reduce usage
+- GetTextureResolutionLimit() : float
 
 ```lua
 GradientType = {
@@ -1214,6 +1260,7 @@ TextureSlot = {
 - SetMotionBlurAmount(float value)  -- set the motion elongation factor
 - SetCollidersDisabled(bool value) -- disable GPU colliders
 - IsCollidersDisabled()
+- GetCurrentParticleCount() : int -- returns last known alive particle count (not that particles are tracked on GPU so this value might be out of date)
 
 #### HairParticleSystem
 - _flags : int
@@ -1378,6 +1425,8 @@ Describes a Rigid Body Physics object.
 - SetStartDeactivated(bool value) -- If true, rigid body will be deactivated when added to the simulation (if it's dynamic, it won't fall)
 - SetCharacterPhysics(bool value)	-- enable character physics that is driven by the physics engine
 - IsCharacterPhysics() : bool	-- returns true if this rigid body has character physics enabled
+- SetLocked2D(bool value)	-- locks the physics to the 2D plane (XY translation, Z rotation)
+- IsLocked2D() : bool	-- returns true if the physics is locked to the 2D plane
 
 #### SoftBodyPhysicsComponent
 Describes a Soft Body Physics object.
@@ -1562,6 +1611,10 @@ Describes a Collider object.
 - SetLookAt(Vector value)	-- Set a target lookAt position (for head an eyes movement)
 - SetRagdollPhysicsEnabled(bool value) -- Activate dynamic ragdoll physics. Note that kinematic ragdoll physics is always active (ragdoll is animation-driven/kinematic by default).
 - IsRagdollPhysicsEnabled() : bool
+- SetRagdollDisabled(bool value) -- completely disables ragdoll physics object creation for this humanoid
+- IsRagdollDisabled() : bool
+- SetRagdoll2D(bool value) -- lock ragdoll to the 2D plane (XY translation, Z rotation)
+- IsRagdoll2D() : bool
 - SetIntersectionDisabled(bool value) -- turn off intersection test for this ragdoll. This only affects direct intersection check with Scene::Intersects()
 - IsIntersectionDisabled() : bool
 - SetRagdollFatness(float value) -- Control the overall fatness of the ragdoll body parts except head (default: 1)
@@ -1672,6 +1725,7 @@ The metadata component can store and retrieve an arbitrary amount of named user 
 	NPC = 4,
 	Pickup = 5,
 	Vehicle = 6,
+	PointOfInterest = 7,
 }
 
 #### CharacterComponent
@@ -1715,6 +1769,8 @@ Note that CharacterComponent is NOT using physics, but a custom character logic.
 - SetRelativeOffset(Vector value)	-- Apply a relative offset (relative to facing direction)
 - SetFootPlacementEnabled(bool value)	--Enable/disable foot placement with inverse kinematics
 - SetCharacterToCharacterCollisionDisabled(bool value)	-- Set whether character collision with other characters is disabled or not for this character (default: false)
+- SetLocked2D(bool value)	-- locks the character position to the 2D plane (XY translation, rotation is unlocked but it can only move sideways)
+- IsLocked2D() : bool	-- returns true if the position is locked to the 2D plane
 
 - GetHealth() : int	-- Get the current health
 - GetWidth() : float	-- Get the horizontal size of the character capsule (same as capsule radius)
@@ -1839,6 +1895,7 @@ It inherits functions from RenderPath2D, so it can render a 2D overlay.
 - SetRaytracedReflectionsEnabled(bool value)
 - SetShadowsEnabled(bool value)
 - SetReflectionsEnabled(bool value)
+- SetPlanarReflectionQuality(float resolutionScale, int msaaSampleCount) -- control the planar reflection render resolution and multisampling antia aliasing. msaaSampleCount must be a value from these: 1,2,4,8
 - SetFXAAEnabled(bool value)
 - SetBloomEnabled(bool value)
 - SetBloomThreshold(bool value)
@@ -1911,8 +1968,8 @@ It inherits functions from RenderPath2D.
 - AddLoadModelTask(string fileName, opt Matrix matrix) : Entity -- Adds a scene loading task into the global scene and returns the root entity handle immediately. The loading task will be started asynchronously when the LoadingScreen is activated by the Application.
 - AddLoadModelTask(Scene scene, string fileName, opt Matrix matrix) : Entity -- Adds a scene loading task into the specified scene and returns the root entity handle immediately. The loading task will be started asynchronously when the LoadingScreen is activated by the Application.
 - AddRenderPathActivationTask(RenderPath path, opt float fadeSeconds = 0, opt int fadeR = 0,fadeG = 0,fadeB = 0, opt FadeType fadetype = FadeType.FadeToColor) -- loads resources of a RenderPath and activates it after all loading tasks have finished
-- IsFinished() : bool -- returns true when all loading tasks have finished
-- GetProgress() : int -- returns percentage of loading complete (0% - 100%)
+- IsFinished() : bool -- returns true when all loading tasks have finished and loading screen is stopped (eg. application swapped it out)
+- GetProgress() : int -- returns percentage of loading complete (0% - 100%). When all loading tasks are finished or there are no tasks, it returns 100.
 - SetBackgroundTexture(Texture tex) -- set a full screen background texture that wil be displayed when loading screen is active
 - GetBackgroundTexture() : Texture
 - SetBackgroundMode(BackgroundMode mode) -- sets the alignment of the background image
@@ -2033,6 +2090,10 @@ Query input devices
 - SetCursorFromFile(int cursor, string filename)	-- sets the specified cursor type to an image from a cursor file
 - ResetCursor(int cursor)	-- resets the specified cursor to the default one
 - ResetCursors()	-- resets all cursors to the defaults
+- GetTouchPinch() : Vector pos, float scale, float delta_scale -- returns touch pinch gesture params
+- GetTouchPan() : Vector -- returns touch pan delta movement
+- IsTouchPanning() : bool -- true if there is a pan touch gesture active
+- IsTouchPanStarting() : bool -- true if there is a new pan touch gesture starting this frame
 
 #### ControllerFeedback
 Describes controller feedback such as touch and LED color which can be replayed on a controller

@@ -199,6 +199,9 @@ namespace wi::physics
 	);
 	void ActivateAllRigidBodies(wi::scene::Scene& scene);
 
+	// Request broadphase optimization to reclaim nodes from previously removed bodies
+	void OptimizeBroadPhase(wi::scene::Scene& scene);
+
 	void ResetPhysicsObjects(wi::scene::Scene& scene);
 
 	XMFLOAT3 GetSoftBodyNodePosition(

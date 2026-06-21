@@ -250,6 +250,40 @@ namespace wi::lua
 		return 1;
 	}
 
+
+	int SetTextureResolutionLimit(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc < 1)
+		{
+			wi::lua::SError(L, "SetTextureResolutionLimit(int resolution) missing argument!");
+			return 0;
+		}
+		wi::resourcemanager::SetTextureResolutionLimit(wi::lua::SGetInt(L, 1));
+		return 0;
+	}
+	int GetTextureResolutionLimit(lua_State* L)
+	{
+		wi::lua::SSetInt(L, wi::resourcemanager::GetTextureResolutionLimit());
+		return 1;
+	}
+	int SetStreamingMemoryThreshold(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc < 1)
+		{
+			wi::lua::SError(L, "SetStreamingMemoryThreshold(float threshold) missing argument!");
+			return 0;
+		}
+		wi::resourcemanager::SetStreamingMemoryThreshold(wi::lua::SGetFloat(L, 1));
+		return 0;
+	}
+	int GetStreamingMemoryThreshold(lua_State* L)
+	{
+		wi::lua::SSetFloat(L, wi::resourcemanager::GetStreamingMemoryThreshold());
+		return 1;
+	}
+
 	void Texture_BindLua::Bind()
 	{
 		static bool initialized = false;
@@ -258,6 +292,10 @@ namespace wi::lua
 			initialized = true;
 			Luna<Texture_BindLua>::Register(wi::lua::GetLuaState());
 			Luna<Texture_BindLua>::push_global(wi::lua::GetLuaState(), "texturehelper");
+			wi::lua::RegisterFunc("SetTextureResolutionLimit", SetTextureResolutionLimit);
+			wi::lua::RegisterFunc("GetTextureResolutionLimit", GetTextureResolutionLimit);
+			wi::lua::RegisterFunc("SetTextureResolutionLimit", SetTextureResolutionLimit);
+			wi::lua::RegisterFunc("GetTextureResolutionLimit", GetTextureResolutionLimit);
 			wi::lua::RunText(R"(
 GradientType = {
 	Linear = 0,

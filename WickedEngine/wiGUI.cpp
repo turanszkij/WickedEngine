@@ -86,6 +86,7 @@ namespace wi::gui
 
 			if (widget->priority_change)
 			{
+				force_disable = true;
 				widget->priority_change = false;
 				widget->priority = priority++;
 			}
@@ -104,9 +105,6 @@ namespace wi::gui
 			if (visible && state > IDLE)
 			{
 				focus = true;
-			}
-			if (visible && state > FOCUS)
-			{
 				force_disable = true;
 			}
 		}
@@ -199,6 +197,26 @@ namespace wi::gui
 		}
 		if (IsTyping())
 		{
+			// When typing is active but the user clicks outside all GUI widgets,
+			//	allow the click to pass through so it can deactivate typing and reach the viewport
+			if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT) || wi::input::Press(wi::input::MOUSE_BUTTON_RIGHT))
+			{
+				const XMFLOAT4 pointer = wi::input::GetPointer();
+				const auto pointerHitbox = Hitbox2D(XMFLOAT2(pointer.x, pointer.y), XMFLOAT2(1, 1));
+				bool pointer_on_widget = false;
+				for (const auto* widget : widgets)
+				{
+					if (widget->IsVisible() && pointerHitbox.intersects(widget->hitBox))
+					{
+						pointer_on_widget = true;
+						break;
+					}
+				}
+				if (!pointer_on_widget)
+				{
+					return false;
+				}
+			}
 			return true;
 		}
 
@@ -553,7 +571,6 @@ namespace wi::gui
 	{
 		if (enabled != val)
 		{
-			priority_change = val;
 			enabled = val;
 			if (!enabled)
 				state = IDLE;
@@ -567,7 +584,6 @@ namespace wi::gui
 	{
 		if (visible != val)
 		{
-			priority_change |= val;
 			visible = val;
 			if (!visible)
 				state = IDLE;
@@ -894,7 +910,7 @@ namespace wi::gui
 				}
 			}
 
-			if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
+			if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanStarting())
 			{
 				if (state == FOCUS)
 				{
@@ -912,7 +928,7 @@ namespace wi::gui
 				}
 			}
 
-			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanning())
 			{
 				if (state == DEACTIVATING)
 				{
@@ -1196,13 +1212,13 @@ namespace wi::gui
 			}
 
 			bool clicked = false;
-			if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
+			if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanning())
 			{
 				clicked = true;
 			}
 
 			bool click_down = false;
-			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanning())
 			{
 				click_down = true;
 				if (state == FOCUS || state == DEACTIVATING)
@@ -1490,14 +1506,18 @@ namespace wi::gui
 				Deactivate();
 			}
 
-			Hitbox2D pointerHitbox = GetPointerHitbox();
+			const Hitbox2D pointerHitbox = GetPointerHitbox();
 			if (scroll_allowed && scrollbar.IsEnabled() && scrollbar.IsScrollbarRequired() && pointerHitbox.intersects(hitBox))
 			{
-				scroll_allowed = false;
-				state = FOCUS;
-				// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
 				const float wheel_delta = wi::input::GetPointer().z;
-				scrollbar.Scroll(wheel_delta * 60.0f);
+				const bool at_begin = (wheel_delta > 0 && scrollbar.IsScrolledToBegin());
+				if (wheel_delta != 0.0f && !at_begin)
+				{
+					scroll_allowed = false;
+					// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
+					scrollbar.Scroll(wheel_delta * 60.0f);
+				}
+				state = FOCUS;
 			}
 			else
 			{
@@ -1592,6 +1612,108 @@ namespace wi::gui
 	bool input_updated = false;
 	bool doubleclick_select = false;
 	wi::Timer caret_timer;
+	wi::Timer key_repeat_timer;
+	wi::input::BUTTON key_repeat_button = {};
+	bool key_repeat_active = false;
+	static constexpr float KEY_REPEAT_DELAY = 0.5f;
+	static constexpr float KEY_REPEAT_RATE = 0.035f;
+	bool KeyRepeat(wi::input::BUTTON button)
+	{
+		if (wi::input::Press(button))
+		{
+			key_repeat_button = button;
+			key_repeat_timer.record();
+			key_repeat_active = false;
+			return true;
+		}
+		if (wi::input::Down(button) && key_repeat_button == button)
+		{
+			const float elapsed = (float)key_repeat_timer.elapsed_seconds();
+			if (!key_repeat_active && elapsed > KEY_REPEAT_DELAY)
+			{
+				key_repeat_active = true;
+				key_repeat_timer.record();
+				return true;
+			}
+			if (key_repeat_active && elapsed > KEY_REPEAT_RATE)
+			{
+				key_repeat_timer.record();
+				return true;
+			}
+		}
+		return false;
+	}
+
+	// Simple recursive-descent arithmetic expression evaluator.
+	// Supports: +, -, *, /, parentheses, unary +/-, floating-point literals.
+	// Returns true and sets 'result' if 'str' is a fully-consumed valid expression.
+	// Returns false for non-numeric input (e.g. plain text strings) so callers fall back.
+	namespace {
+		struct ArithExprParser
+		{
+			const char* pos;
+			bool valid = true;
+
+			void skipWS() { while (*pos == ' ' || *pos == '\t') pos++; }
+
+			double parsePrimary()
+			{
+				skipWS();
+				if (*pos == '(')
+				{
+					pos++;
+					double v = parseExpr();
+					skipWS();
+					if (*pos == ')') pos++;
+					return v;
+				}
+				if (*pos == '-') { pos++; return -parsePrimary(); }
+				if (*pos == '+') { pos++; return  parsePrimary(); }
+				char* end;
+				double v = strtod(pos, &end);
+				if (end == pos) { valid = false; return 0; }
+				pos = end;
+				return v;
+			}
+
+			double parseTerm()
+			{
+				double left = parsePrimary();
+				while (valid)
+				{
+					skipWS();
+					if (*pos == '*') { pos++; left *= parsePrimary(); }
+					else if (*pos == '/') { pos++; double r = parsePrimary(); if (r == 0.0) { valid = false; return 0; } left /= r; }
+					else break;
+				}
+				return left;
+			}
+
+			double parseExpr()
+			{
+				double left = parseTerm();
+				while (valid)
+				{
+					skipWS();
+					if (*pos == '+') { pos++; left += parseTerm(); }
+					else if (*pos == '-') { pos++; left -= parseTerm(); }
+					else break;
+				}
+				return left;
+			}
+		};
+
+		bool EvaluateArithmetic(const std::string& str, double& result)
+		{
+			if (str.empty()) return false;
+			ArithExprParser p;
+			p.pos = str.c_str();
+			result = p.parseExpr();
+			p.skipWS();
+			return p.valid && (*p.pos == '\0') && std::isfinite(result);
+		}
+	} // anonymous namespace
+
 	void TextInputField::Create(const std::string& name)
 	{
 		SetName(name);
@@ -1651,12 +1773,29 @@ namespace wi::gui
 	}
 	void TextInputField::Update(const wi::Canvas& canvas, float dt)
 	{
+		const bool was_active = (state == ACTIVE);
+
 		if (!IsVisible())
 		{
+			// If this text input was active but became invisible, clear typing state
+			if (was_active)
+			{
+				font_input.text.clear();
+				typing_active = false;
+				state = IDLE;
+			}
 			return;
 		}
 
 		Widget::Update(canvas, dt);
+
+		// If this text input was active but state was externally reset,
+		//	properly clear the typing state so IsTyping() no longer blocks input
+		if (was_active && state != ACTIVE)
+		{
+			font_input.text.clear();
+			typing_active = false;
+		}
 
 		if (IsEnabled() && dt > 0)
 		{
@@ -1665,8 +1804,8 @@ namespace wi::gui
 			hitBox.siz.x = scale.x;
 			hitBox.siz.y = scale.y;
 
-			Hitbox2D pointerHitbox = GetPointerHitbox();
-			bool intersectsPointer = pointerHitbox.intersects(hitBox);
+			const Hitbox2D pointerHitbox = GetPointerHitbox();
+			const bool intersectsPointer = pointerHitbox.intersects(hitBox);
 
 			if (state == FOCUS)
 			{
@@ -1705,8 +1844,23 @@ namespace wi::gui
 				}
 				if (wi::input::Press(wi::input::KEYBOARD_BUTTON_ENTER))
 				{
-					// accept input...
-					font.SetText(font_input.GetText());
+					// accept input, evaluating arithmetic expressions (e.g. "10 * 2" -> "20")
+					std::string inputStr = font_input.GetTextA();
+					double arithmeticResult = 0;
+					if (EvaluateArithmetic(inputStr, arithmeticResult))
+					{
+						std::stringstream ssResult;
+						if (float_precision >= 0)
+						{
+							ssResult << std::fixed << std::setprecision(float_precision);
+						}
+						ssResult << arithmeticResult;
+						font.SetText(ssResult.str());
+					}
+					else
+					{
+						font.SetText(font_input.GetText());
+					}
 					font_input.text.clear();
 
 					if (onInputAccepted)
@@ -1724,12 +1878,12 @@ namespace wi::gui
 				//	// delete input...
 				//	DeleteFromInput(-1);
 				//}
-				else if (wi::input::Press(wi::input::KEYBOARD_BUTTON_DELETE))
+				else if (KeyRepeat(wi::input::KEYBOARD_BUTTON_DELETE))
 				{
 					// delete input...
 					DeleteFromInput(1);
 				}
-				else if (wi::input::Press(wi::input::KEYBOARD_BUTTON_LEFT) && caret_pos > 0)
+				else if (KeyRepeat(wi::input::KEYBOARD_BUTTON_LEFT) && caret_pos > 0)
 				{
 					// caret repositioning left:
 					caret_pos--;
@@ -1739,7 +1893,7 @@ namespace wi::gui
 					}
 					caret_timer.record();
 				}
-				else if (wi::input::Press(wi::input::KEYBOARD_BUTTON_RIGHT))
+				else if (KeyRepeat(wi::input::KEYBOARD_BUTTON_RIGHT))
 				{
 					// caret repositioning right:
 					if (caret_pos < font_input.GetText().size())
@@ -2113,6 +2267,24 @@ namespace wi::gui
 			typing_active = false;
 		Widget::Deactivate();
 	}
+	void TextInputField::SetEnabled(bool val)
+	{
+		if (!val && state == ACTIVE)
+		{
+			font_input.text.clear();
+			typing_active = false;
+		}
+		Widget::SetEnabled(val);
+	}
+	void TextInputField::SetVisible(bool val)
+	{
+		if (!val && state == ACTIVE)
+		{
+			font_input.text.clear();
+			typing_active = false;
+		}
+		Widget::SetVisible(val);
+	}
 
 
 
@@ -2132,7 +2304,7 @@ namespace wi::gui
 		valueInputField.Create(name + "_endInputField");
 		valueInputField.SetLocalizationEnabled(LocalizationEnabled::None);
 		valueInputField.SetShadowRadius(0);
-		valueInputField.SetTooltip("Enter number to modify value even outside slider limits. Other inputs:\n - reset : reset slider to initial state.\n - FLT_MAX : float max value\n - -FLT_MAX : negative float max value.");
+		valueInputField.SetTooltip("Enter number to modify value even outside slider limits. Arithmetic expressions are supported (e.g. 10 * 2, 1 + 0.5). Other inputs:\n - reset : reset slider to initial state.\n - FLT_MAX : float max value\n - -FLT_MAX : negative float max value.");
 		valueInputField.SetValue(end);
 		valueInputField.OnInputAccepted([this, start, end, defaultValue](EventArgs args) {
 			if (args.sValue.compare("reset") == 0)
@@ -2239,7 +2411,7 @@ namespace wi::gui
 			}
 			if (state == ACTIVE)
 			{
-				if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+				if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanning())
 				{
 					if (state == ACTIVE)
 					{
@@ -2264,7 +2436,7 @@ namespace wi::gui
 				}
 			}
 
-			if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
+			if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanning())
 			{
 				if (state == FOCUS)
 				{
@@ -2768,7 +2940,7 @@ namespace wi::gui
 				}
 
 				bool click_down = false;
-				if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+				if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanning())
 				{
 					click_down = true;
 					if (state == DEACTIVATING)
@@ -2845,7 +3017,7 @@ namespace wi::gui
 
 						if (HasScrollbar())
 						{
-							int scroll = (int)wi::input::GetPointer().z;
+							int scroll = int(wi::input::GetPointer().z - wi::input::GetTouchPan().y * 0.1f);
 							firstItemVisible -= scroll;
 							firstItemVisible = std::max(0, std::min(filteredItemCount - maxVisibleItemCount, firstItemVisible));
 							if (scroll)
@@ -2908,7 +3080,13 @@ namespace wi::gui
 					filter.translation_local.x = drop_x;
 					filter.translation_local.y = translation.y + scale.y + drop_offset - combo_height() + filter.GetShadowRadius();
 					filter.SetDirty();
-					filterText = wi::helper::toUpper(filter.GetText());
+					std::string newFilterText = wi::helper::toUpper(filter.GetText());
+					if (newFilterText != filterText)
+					{
+						firstItemVisible = 0;
+						scrollbar_delta = 0;
+					}
+					filterText = newFilterText;
 					filter.font.params.size = int(filter.scale_local.y - 4);
 				}
 				else
@@ -3571,7 +3749,7 @@ namespace wi::gui
 				}
 			}
 
-			if (resize_state == RESIZE_STATE_NONE && wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
+			if (resize_state == RESIZE_STATE_NONE && (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanStarting()))
 			{
 				if (pointerHitbox.intersects(toplefthitbox))
 				{
@@ -3615,7 +3793,7 @@ namespace wi::gui
 				}
 				resize_begin = pointerHitbox.pos;
 			}
-			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanning())
 			{
 				if (resize_state != RESIZE_STATE_NONE)
 				{
@@ -3875,19 +4053,23 @@ namespace wi::gui
 
 		scrollable_area.AttachTo(this);
 
+		bool local_force_disable = this->force_disable;
+
 		for (size_t i = 0; i < widgets.size(); ++i)
 		{
 			Widget* widget = widgets[i]; // re index in loop, because widgets can be realloced while updating!
-			widget->force_disable = force_disable;
+			widget->force_disable = local_force_disable;
 			widget->Update(canvas, dt);
 			widget->force_disable = false;
-			if (widget->GetState() > FOCUS)
+
+			if (widget->GetState() > IDLE)
 			{
-				force_disable = true;
+				local_force_disable = true;
 			}
 
 			if (widget->priority_change)
 			{
+				this->priority_change = true;
 				widget->priority_change = false;
 				widget->priority = priority++;
 			}
@@ -3896,7 +4078,11 @@ namespace wi::gui
 				widget->priority = ~0u;
 			}
 		}
-		force_disable = false;
+
+		if (local_force_disable && state == IDLE)
+		{
+			state = FOCUS;
+		}
 
 		if (priority > 0)
 		{
@@ -3909,12 +4095,20 @@ namespace wi::gui
 
 		if (!IsMinimized() && IsVisible())
 		{
-			const float wheel_delta = wi::input::GetPointer().z;
+			float wheel_delta = wi::input::GetPointer().z * 60.0f;
+			if (!local_force_disable)
+			{
+				wheel_delta -= wi::input::GetTouchPan().y;
+			}
 			if (wheel_delta != 0.0f && scroll_allowed && scrollbar_vertical.IsScrollbarRequired() && pointerHitbox.intersects(hitBox)) // when window is in focus, but other widgets aren't
 			{
-				scroll_allowed = false;
-				// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
-				scrollbar_vertical.Scroll(wheel_delta * 60.0f);
+				const bool at_begin = (wheel_delta > 0 && scrollbar_vertical.IsScrolledToBegin());
+				if (!at_begin)
+				{
+					scroll_allowed = false;
+					// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
+					scrollbar_vertical.Scroll(wheel_delta);
+				}
 			}
 		}
 
@@ -4812,7 +5006,7 @@ namespace wi::gui
 
 			bool dragged = false;
 
-			if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
+			if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanning())
 			{
 				if (hover_hue)
 				{
@@ -4826,7 +5020,7 @@ namespace wi::gui
 				}
 			}
 
-			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanning())
 			{
 				if (colorpickerstate > CPS_IDLE)
 				{
@@ -5447,7 +5641,7 @@ namespace wi::gui
 			float vscale = scale.y;
 			Hitbox2D bottomhitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y + vscale), XMFLOAT2(scale.x, resizehitboxwidth));
 
-			if (resize_state == RESIZE_STATE_NONE && wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
+			if (resize_state == RESIZE_STATE_NONE && (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanStarting()))
 			{
 				if (pointerHitbox.intersects(bottomhitbox))
 				{
@@ -5457,7 +5651,7 @@ namespace wi::gui
 				}
 				resize_begin = pointerHitbox.pos;
 			}
-			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanning())
 			{
 				if (resize_state != RESIZE_STATE_NONE)
 				{
@@ -5540,7 +5734,7 @@ namespace wi::gui
 			}
 
 			bool clicked = false;
-			if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
+			if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanning())
 			{
 				clicked = true;
 			}
@@ -5563,7 +5757,7 @@ namespace wi::gui
 			}
 
 			bool click_down = false;
-			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanning())
 			{
 				click_down = true;
 				if (state == FOCUS || state == DEACTIVATING)
@@ -5576,12 +5770,68 @@ namespace wi::gui
 			const float wheel_delta = wi::input::GetPointer().z;
 			if (wheel_delta != 0.0f && scroll_allowed && scrollbar.IsScrollbarRequired() && pointerHitbox.intersects(hitBox))
 			{
-				scroll_allowed = false;
-				// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
-				scrollbar.Scroll(wheel_delta * 40.0f);
+				const bool at_begin = (wheel_delta > 0 && scrollbar.IsScrolledToBegin());
+				if (!at_begin)
+				{
+					scroll_allowed = false;
+					// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
+					scrollbar.Scroll(wheel_delta * 40.0f);
+				}
 			}
 
 			Hitbox2D itemlist_box = GetHitbox_ListArea();
+
+			// Finalize drag-and-drop when mouse is released
+			if (onReorder && dragging && !click_down)
+			{
+				if (drag_source >= 0)
+				{
+					if (drag_reparent_target >= 0 && drag_reparent_target != drag_source)
+					{
+						// Re-parent: drop ON another item
+						EventArgs args;
+						args.iValue = drag_source;
+						args.iValue2 = drag_reparent_target;
+						args.userdata = items[drag_source].userdata;
+						args.bValue = true;
+						onReorder(args);
+					}
+					else if (!hitbox.intersects(GetPointerHitbox(false)))
+					{
+						// Dropped outside the widget -> go one level up in hierarchy
+						EventArgs args;
+						args.iValue = drag_source;
+						args.iValue2 = -1;
+						args.userdata = items[drag_source].userdata;
+						args.bValue = true;
+						onReorder(args);
+					}
+					else if (drag_reparent_target < 0 && drag_target >= 0 &&
+						((drag_target != drag_source && drag_target != drag_source + 1) ||
+							(drag_source >= 0 && drag_source < (int)items.size() && drag_target_level != items[drag_source].level)))
+					{
+						// Reorder: drop BETWEEN items
+						EventArgs args;
+						args.iValue = drag_source;
+						args.iValue2 = drag_target;
+						args.fValue = (float)drag_target_level;
+						args.userdata = items[drag_source].userdata;
+						args.bValue = false;
+						onReorder(args);
+					}
+				}
+				dragging = false;
+				drag_source = -1;
+				drag_target = -1;
+				drag_reparent_target = -1;
+				drag_target_level = 0;
+			}
+			if (!click_down && !clicked)
+			{
+				// Reset potential drag if mouse was released without dragging
+				if (!dragging)
+					drag_source = -1;
+			}
 
 			tooltipFont.text.clear();
 
@@ -5636,6 +5886,13 @@ namespace wi::gui
 							SetTooltip(item.name);
 							if (clicked)
 							{
+								// Start potential drag (activated on movement threshold)
+								if (onReorder)
+								{
+									drag_source = i;
+									drag_start_pos = pointerHitbox.pos;
+								}
+
 								if (wi::input::IsDoubleClicked() && onDoubleClick != nullptr)
 								{
 									EventArgs args;
@@ -5674,10 +5931,109 @@ namespace wi::gui
 					}
 				}
 			}
-		}
+			// Activate drag mode after movement threshold
+			if (onReorder && drag_source >= 0 && click_down && !dragging)
+			{
+				float dx = pointerHitbox.pos.x - drag_start_pos.x;
+				float dy = pointerHitbox.pos.y - drag_start_pos.y;
+				if (dx * dx + dy * dy > 16.0f) // 4 px threshold
+				{
+					dragging = true;
+				}
+			}
 
-		if (state == IDLE && resize_blink_timer > 0)
-			state = FOCUS;
+			// Compute drag_target, drag_reparent_target, and drag_indicator_y while dragging
+			if (onReorder && dragging && click_down)
+			{
+				item_highlight = drag_source;
+				drag_target = (int)items.size(); // default: insert after all items
+				drag_reparent_target = -1;
+				drag_target_level = 0;
+				drag_indicator_y = 0;
+				auto compute_drag_target_level = [&](int max_level) {
+					int source_level = 0;
+					if (drag_source >= 0 && drag_source < (int)items.size())
+					{
+						source_level = items[drag_source].level;
+					}
+					const float level_delta = (pointerHitbox.pos.x - drag_start_pos.x) / item_height();
+					const int level = source_level + (int)std::round(level_delta);
+					return std::max(0, std::min(level, max_level));
+				};
+
+				int dc = 0;
+				int dp = 0;
+				bool dpo = true;
+				int di = -1;
+				int last_visible = 0;
+				int last_visible_level = 0;
+				for (const Item& item : items)
+				{
+					di++;
+					if (!dpo && item.level > dp)
+						continue;
+					dc++;
+					dpo = item.open;
+					dp = item.level;
+					last_visible = dc;
+					last_visible_level = item.level;
+
+					float item_top_y = translation.y + GetItemOffset(dc);
+					float item_bot_y = item_top_y + item_height();
+					if (pointerHitbox.pos.y < item_top_y + item_height() * 0.25f)
+					{
+						// Top 25%: insert BEFORE this item
+						drag_target = di;
+						drag_reparent_target = -1;
+						drag_target_level = item.level;
+						drag_indicator_y = item_top_y;
+						break;
+					}
+					else if (pointerHitbox.pos.y < item_bot_y - item_height() * 0.25f)
+					{
+						// Middle 50%: drop ON this item (re-parent)
+						if (di != drag_source)
+						{
+							drag_reparent_target = di;
+							drag_target = (int)items.size();
+							drag_target_level = item.level + 1;
+							drag_indicator_y = 0;
+						}
+						else
+						{
+							drag_target = drag_source;
+							drag_target_level = item.level;
+							drag_indicator_y = 0;
+						}
+						break;
+					}
+					else if (pointerHitbox.pos.y < item_bot_y)
+					{
+						// Bottom 25%: insert AFTER this item
+						drag_target = di + 1;
+						drag_reparent_target = -1;
+						drag_target_level = item.level;
+						drag_indicator_y = item_bot_y;
+						break;
+					}
+				}
+				if (drag_reparent_target < 0 && drag_target == (int)items.size())
+				{
+					drag_target_level = compute_drag_target_level(last_visible_level);
+					drag_indicator_y = translation.y + GetItemOffset(last_visible) + item_height();
+				}
+				// Clamp indicator line to list area (only when not re-parenting)
+				if (drag_reparent_target < 0)
+				{
+					drag_indicator_y = std::max(drag_indicator_y, itemlist_box.pos.y);
+					drag_indicator_y = std::min(drag_indicator_y, itemlist_box.pos.y + itemlist_box.siz.y - 2.0f);
+				}
+				drag_pointer_pos = pointerHitbox.pos;
+			}
+
+			if (state == IDLE && resize_blink_timer > 0)
+				state = FOCUS;
+		}
 
 		sprites[state].params.siz.y = item_height();
 		font.params.posX = translation.x + 2;
@@ -5840,6 +6196,16 @@ namespace wi::gui
 						sprites[item.selected ? FOCUS : IDLE].params.color), cmd);
 			}
 
+			// Re-parent drop target highlight
+			if (drag_reparent_target == i)
+			{
+				wi::image::Params rp_fx = sprites[ACTIVE].params;
+				rp_fx.pos = XMFLOAT3(name_box.pos.x, name_box.pos.y, 0);
+				rp_fx.siz = XMFLOAT2(name_box.siz.x, name_box.siz.y);
+				rp_fx.color.w *= 0.5f;
+				wi::image::Draw(nullptr, rp_fx, cmd);
+			}
+
 			// opened flag triangle:
 			if(DoesItemHaveChildren(i))
 			{
@@ -5876,6 +6242,60 @@ namespace wi::gui
 			);
 			fp.style = font.params.style;
 			wi::font::Draw(item.name, fp, cmd);
+			// Drag handle dots on the right side of each item
+			if (onReorder)
+			{
+				float ds = std::max(2.0f, std::round(item_height() * 0.12f));
+				float dg = ds * 1.5f;
+				float hx = name_box.pos.x + name_box.siz.x - ds * 2 - dg - ds;
+				float hy = name_box.pos.y + (name_box.siz.y - (ds * 3 + dg * 2)) * 0.5f;
+				XMFLOAT4 dot_color = drag_source == i ? sprites[ACTIVE].params.color : sprites[FOCUS].params.color;
+				if (drag_source != i)
+					dot_color.w *= 0.45f;
+				for (int row = 0; row < 3; ++row)
+				{
+					for (int col = 0; col < 2; ++col)
+					{
+						wi::image::Draw(nullptr,
+						    wi::image::Params(hx + col * (ds + dg), hy + row * (ds + dg), ds, ds, dot_color),
+						    cmd);
+					}
+				}
+			}
+		}
+
+		// Drop indicator line for drag-and-drop reorder (not shown when re-parenting)
+		if (dragging && drag_source >= 0 && drag_target >= 0 && drag_reparent_target < 0)
+		{
+			wi::image::Params indicator_fx = sprites[ACTIVE].params;
+			const float indicator_indent = std::max(0, drag_target_level) * item_height();
+			indicator_fx.pos = XMFLOAT3(itemlist_box.pos.x + indicator_indent, drag_indicator_y - 1.0f, 0);
+			indicator_fx.siz = XMFLOAT2(std::max(2.0f, itemlist_box.siz.x - indicator_indent), 2.0f);
+			wi::image::Draw(nullptr, indicator_fx, cmd);
+		}
+		// Floating ghost: semi-transparent label following the cursor while dragging
+		if (dragging && drag_source >= 0 && drag_source < (int)items.size())
+		{
+			const Item& src_item = items[drag_source];
+			float ghost_h = item_height();
+			float ghost_w = itemlist_box.siz.x * 0.65f;
+			float ghost_x = drag_pointer_pos.x + 18.0f;
+			float ghost_y = drag_pointer_pos.y - ghost_h * 0.5f;
+			wi::image::Params ghost_bg = sprites[ACTIVE].params;
+			ghost_bg.pos = XMFLOAT3(ghost_x, ghost_y, 0);
+			ghost_bg.siz = XMFLOAT2(ghost_w, ghost_h);
+			ghost_bg.color.w *= 0.75f;
+			wi::image::Draw(nullptr, ghost_bg, cmd);
+			wi::font::Params gfp(
+				ghost_x + 6.0f,
+				ghost_y + ghost_h * 0.5f,
+				wi::font::WIFONTSIZE_DEFAULT,
+				wi::font::WIFALIGN_LEFT,
+				wi::font::WIFALIGN_CENTER,
+				font.params.color,
+				font.params.shadowColor);
+			gfp.style = font.params.style;
+			wi::font::Draw(src_item.name, gfp, cmd);
 		}
 	}
 	void TreeList::OnSelect(std::function<void(const EventArgs& args)> func)
@@ -5889,6 +6309,10 @@ namespace wi::gui
 	void TreeList::OnDoubleClick(std::function<void(const EventArgs& args)> func)
 	{
 		onDoubleClick = std::move(func);
+	}
+	void TreeList::OnReorder(std::function<void(const EventArgs& args)> func)
+	{
+		onReorder = std::move(func);
 	}
 	void TreeList::AddItem(const Item& item)
 	{

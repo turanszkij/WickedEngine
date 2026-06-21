@@ -25,7 +25,7 @@
 #include "wiInput_PS5.h"
 #endif // PLATFORM_PS5
 
-#ifdef __APPLE__
+#if defined(PLATFORM_MACOS)
 #include "wiInput_Apple.h"
 #include <ApplicationServices/ApplicationServices.h>
 #include <Carbon/Carbon.h>
@@ -49,7 +49,29 @@ bool IsKeyDown(CGKeyCode keyCode)
 }
 }
 using namespace wi::input::apple;
-#endif // __APPLE__
+#elif defined(PLATFORM_IOS)
+#include "wiInput_Apple.h"
+namespace wi::input::apple
+{
+bool isLeftMouseButtonPressed()
+{
+	return false;
+}
+bool isRightMouseButtonPressed()
+{
+	return false;
+}
+bool isMiddleMouseButtonPressed()
+{
+	return false;
+}
+bool IsKeyDown(int keyCode)
+{
+	return false;
+}
+}
+using namespace wi::input::apple;
+#endif // PLATFORM_MACOS
 
 namespace wi::input
 {
@@ -67,6 +89,10 @@ namespace wi::input
 	KeyboardState keyboard;
 	MouseState mouse;
 	Pen pen;
+	Pinch pinch;
+	XMFLOAT2 pan = XMFLOAT2(0, 0);
+	bool is_panning = false;
+	bool is_pan_starting = false;
 	bool pen_override = false;
 	bool double_click = false;
 	wi::Timer doubleclick_timer;
@@ -210,12 +236,19 @@ namespace wi::input
 		ScreenToClient(window, &p);
 		mouse.position.x = (float)p.x;
 		mouse.position.y = (float)p.y;
-#elif defined(__APPLE__)
+#elif defined(PLATFORM_MACOS)
 		mouse = {};
 		mouse.position = wi::apple::GetMousePositionInWindow(window);
 		mouse.left_button_press = isLeftMouseButtonPressed();
 		mouse.right_button_press = isRightMouseButtonPressed();
 		mouse.middle_button_press = isMiddleMouseButtonPressed();
+#elif defined(PLATFORM_IOS)
+		// keep prev mousepos for touch consistency
+		mouse.left_button_press = false;
+		mouse.right_button_press = false;
+		mouse.middle_button_press = false;
+		mouse.delta_position = XMFLOAT2(0, 0);
+		mouse.delta_wheel = 0;
 #elif defined(SDL2)
 		wi::input::sdlinput::GetMouseState(&mouse);
 		wi::input::sdlinput::GetKeyboardState(&keyboard);
@@ -242,9 +275,67 @@ namespace wi::input
 			pen_override = false;
 		}
 
+#ifndef PLATFORM_IOS // on IOS I keep the previous coodinates instead from touches
 		// The application always works with logical mouse coordinates:
 		mouse.position.x = canvas.PhysicalToLogical(mouse.position.x);
 		mouse.position.y = canvas.PhysicalToLogical(mouse.position.y);
+#endif // PLATFORM_IOS
+		
+		// Primary touch can act as mouse pointer override:
+		static bool pan_continue = false; // helps avoid non-continuous delta jump on pan begin
+		if (!touches.empty())
+		{
+			const Touch& primary_touch = touches.front();
+			if (primary_touch.state == Touch::TOUCHSTATE_PRESSED)
+			{
+				mouse.left_button_press = true;
+				pan_continue = false;
+			}
+			else if (primary_touch.state == Touch::TOUCHSTATE_MOVED)
+			{
+				if (pan_continue)
+				{
+					mouse.delta_position.x = mouse.position.x - primary_touch.pos.x;
+					mouse.delta_position.y = mouse.position.y - primary_touch.pos.y;
+				}
+				pan_continue = true;
+			}
+			else
+			{
+				pan_continue = false;
+			}
+			mouse.position = primary_touch.pos;
+		}
+		else
+		{
+			pan_continue = false;
+		}
+		
+		// Find pinch and pan gesture:
+		float prev_pinch_scale = pinch.scale;
+		pinch = {};
+		pan = XMFLOAT2(0, 0);
+		const bool was_panning = is_panning;
+		is_panning = false;
+		is_pan_starting = false;
+		for (auto& touch : touches)
+		{
+			if (touch.state == Touch::TOUCHSTATE_PINCHED)
+			{
+				pinch.position = touch.pos;
+				pinch.scale = touch.scale;
+				pinch.delta_scale = prev_pinch_scale - pinch.scale;
+			}
+			else if (touch.state == Touch::TOUCHSTATE_MOVED)
+			{
+				pan = mouse.delta_position;
+				if (!was_panning)
+				{
+					is_pan_starting = true;
+				}
+				is_panning = true;
+			}
+		}
 
 		// Check if low-level XINPUT controller is not registered for playerindex slot and register:
 		for (int i = 0; i < wi::input::xinput::GetMaxControllerCount(); ++i)
@@ -736,9 +827,12 @@ namespace wi::input
 			case KEYBOARD_BUTTON_ALTGR:
 				keycode = VK_RMENU;
 				break;
+			case KEYBOARD_BUTTON_END:
+				keycode = VK_END;
+				break;
 #endif // _WIN32
 					
-#ifdef __APPLE__
+#ifdef PLATFORM_MACOS
 			case wi::input::KEYBOARD_BUTTON_UP:
 				keycode = kVK_UpArrow;
 				break;
@@ -892,6 +986,9 @@ namespace wi::input
 			case KEYBOARD_BUTTON_ALTGR:
 				keycode = kVK_RightOption;
 				break;
+			case KEYBOARD_BUTTON_END:
+				keycode = kVK_End;
+				break;
 			case (BUTTON)'A':
 				keycode = kVK_ANSI_A;
 				break;
@@ -1000,7 +1097,7 @@ namespace wi::input
 				case (BUTTON)'9':
 				  keycode = kVK_ANSI_9;
 				  break;
-#endif // __APPLE__
+#endif // PLATFORM_MACOS
 					
 					
 				default: break;
@@ -1467,6 +1564,8 @@ namespace wi::input
 			return KEYBOARD_BUTTON_ALT;
 		if (strcmp(str, "Alt Gr") == 0)
 			return KEYBOARD_BUTTON_ALTGR;
+		if (strcmp(str, "End") == 0)
+			return KEYBOARD_BUTTON_END;
 
 		if (strcmp(str, "Left Shift") == 0)
 			return KEYBOARD_BUTTON_LSHIFT;
@@ -1523,6 +1622,11 @@ namespace wi::input
 		if (strcmp(str, "Numpad 9") == 0)
 			return KEYBOARD_BUTTON_NUMPAD9;
 
+		if (strcmp(str, "Left Command") == 0)
+			return KEYBOARD_BUTTON_LCOMMAND;
+		if (strcmp(str, "Right Command") == 0)
+			return KEYBOARD_BUTTON_RCOMMAND;
+
 		if (str[0] >= DIGIT_RANGE_START /*&& str[0] < GAMEPAD_RANGE_START*/)
 		{
 			return (BUTTON)str[0];
@@ -1531,7 +1635,7 @@ namespace wi::input
 		return BUTTON_NONE;
 	}
 
-	ShortReturnString ButtonToString(BUTTON button, CONTROLLER_PREFERENCE preference)
+	StackString<32> ButtonToString(BUTTON button, CONTROLLER_PREFERENCE preference)
 	{
 #ifdef PLATFORM_PS5
 		preference = CONTROLLER_PREFERENCE_PLAYSTATION;
@@ -1667,14 +1771,17 @@ namespace wi::input
 		case wi::input::KEYBOARD_BUTTON_INSERT: return "Insert";
 		case wi::input::KEYBOARD_BUTTON_ALT: return "Alt";
 		case wi::input::KEYBOARD_BUTTON_ALTGR: return "Alt Gr";
+		case wi::input::KEYBOARD_BUTTON_LCOMMAND: return "Left Command";
+		case wi::input::KEYBOARD_BUTTON_RCOMMAND: return "Right Command";
+		case wi::input::KEYBOARD_BUTTON_END: return "End";
 		default:
 			break;
 		}
 
 		if (button >= DIGIT_RANGE_START && button < GAMEPAD_RANGE_START)
 		{
-			ShortReturnString str;
-			str.text[0] = (char)button;
+			StackString<32> str;
+			str.chars[0] = (char)button;
 			return str;
 		}
 
@@ -1691,4 +1798,35 @@ namespace wi::input
 	{
 		mouse_move_events.push_back(value);
 	}
+
+	void AddTouchEvent(const Touch& touch)
+	{
+		// Note: touches are received in logical coords based on system DPI but without user canvas scaling so I apply that here:
+		Touch scaledTouch = touch;
+		const float scaling_rcp = canvas.scaling > 0 ? (1.0f / canvas.scaling) : 1.0f;
+		scaledTouch.pos.x *= scaling_rcp;
+		scaledTouch.pos.y *= scaling_rcp;
+		touches.push_back(scaledTouch);
+	}
+
+	const Pinch& GetTouchPinch()
+	{
+		return pinch;
+	}
+
+	const XMFLOAT2& GetTouchPan()
+	{
+		return pan;
+	}
+
+	bool IsTouchPanning()
+	{
+		return is_panning;
+	}
+
+	bool IsTouchPanStarting()
+	{
+		return is_pan_starting;
+	}
+
 }

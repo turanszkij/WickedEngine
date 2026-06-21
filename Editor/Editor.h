@@ -79,6 +79,9 @@ public:
 
 	wi::gui::ComboBox guiScalingCombo;
 
+	bool is_2D_mode = false;
+	wi::gui::Button is2DModeButton;
+
 	GeneralWindow generalWnd;
 	GraphicsWindow graphicsWnd;
 	CameraWindow cameraWnd;
@@ -213,6 +216,11 @@ public:
 	wi::Color save_text_color = wi::Color::White();
 	void PostSaveText(const std::string& message, const std::string& filename = "", float time_seconds = 4);
 
+	bool screenshot = false;
+	bool screenshot_nogui = false;
+	bool screenshot_alpha = false;
+	bool screenshot_alpha_selection = false;
+
 	std::string last_script_path;
 
 	struct EditorScene
@@ -260,6 +268,8 @@ public:
 	void SetLocalization(wi::Localization& loc);
 	void ReloadLanguage();
 
+	void Set2DMode(bool value);
+
 	struct FontData
 	{
 		std::string name;
@@ -294,7 +304,10 @@ public:
 
 	~Editor() override
 	{
-		config.Commit();
+		if (!IsScriptReplacement()) // editor config is not saved by script replaced executable
+		{
+			config.Commit();
+		}
 	}
 };
 

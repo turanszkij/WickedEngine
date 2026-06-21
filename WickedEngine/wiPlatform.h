@@ -18,6 +18,7 @@
 #define PLATFORM_WINDOWS_DESKTOP
 #endif // WINAPI_FAMILY_GAMES
 #define wiLoadLibrary(name) LoadLibraryA(name)
+#define wiFreeLibrary(handle) FreeLibrary(handle)
 #define wiGetProcAddress(handle,name) GetProcAddress(handle, name)
 #elif defined(__SCE__)
 #define PLATFORM_PS5
@@ -43,6 +44,7 @@
 #if defined(PLATFORM_LINUX) || defined(PLATFORM_APPLE)
 #include <dlfcn.h>
 #define wiLoadLibrary(name) dlopen(name, RTLD_LAZY)
+#define wiFreeLibrary(handle) dlclose(handle)
 #define wiGetProcAddress(handle,name) dlsym(handle, name)
 typedef void* HMODULE;
 #endif // defined(PLATFORM_LINUX) || defined(PLATFORM_APPLE)
@@ -82,6 +84,10 @@ namespace wi::platform
 		int width = 0;
 		int height = 0;
 		float dpi = 96;
+		float inset_left = 0;
+		float inset_right = 0;
+		float inset_top = 0;
+		float inset_bottom = 0;
 	};
 	inline void GetWindowProperties(window_type window, WindowProperties* dest)
 	{
@@ -112,6 +118,67 @@ namespace wi::platform
 		dest->width = size.x;
 		dest->height = size.y;
 		dest->dpi = wi::apple::GetDPIForWindow(window);
+		wi::apple::GetSafeArea(window, dest->inset_left, dest->inset_right, dest->inset_top, dest->inset_bottom);
 #endif // PLATFORM_APPLE
+	}
+
+	inline void SetWindowFullScreen(window_type window, bool fullscreen)
+	{
+#if defined(PLATFORM_WINDOWS_DESKTOP)
+		// Based on: https://devblogs.microsoft.com/oldnewthing/20100412-00/?p=14353
+		static WINDOWPLACEMENT wp = {};
+		const DWORD dwStyle = GetWindowLong(window, GWL_STYLE);
+		const bool has_overlapped_style = dwStyle & WS_OVERLAPPEDWINDOW;
+		const bool isFullScreen = !has_overlapped_style;
+
+		if (fullscreen && !isFullScreen) {
+			MONITORINFO mi = { sizeof(mi) };
+			if (GetWindowPlacement(window, &wp) &&
+				GetMonitorInfo(MonitorFromWindow(window,
+					MONITOR_DEFAULTTOPRIMARY), &mi)) {
+				SetWindowLong(window, GWL_STYLE,
+					dwStyle & ~WS_OVERLAPPEDWINDOW);
+				SetWindowPos(window, HWND_TOP,
+					mi.rcMonitor.left, mi.rcMonitor.top,
+					mi.rcMonitor.right - mi.rcMonitor.left,
+					mi.rcMonitor.bottom - mi.rcMonitor.top,
+					SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+			}
+		}
+		else if (!fullscreen && isFullScreen) {
+			if (!has_overlapped_style) {
+				SetWindowLong(window, GWL_STYLE,
+					dwStyle | WS_OVERLAPPEDWINDOW);
+			}
+			SetWindowPlacement(window, &wp);
+			SetWindowPos(window, NULL, 0, 0, 0, 0,
+				SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
+				SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+		}
+
+#elif defined(PLATFORM_LINUX)
+		SDL_SetWindowFullscreen(window, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+#elif defined(__APPLE__)
+		wi::apple::SetWindowFullScreen(window, fullscreen);
+#endif // PLATFORM_WINDOWS_DESKTOP
+	}
+
+	inline bool IsWindowFullScreen(window_type window)
+	{
+#if defined(PLATFORM_WINDOWS_DESKTOP)
+		return (GetWindowLong(window, GWL_STYLE) & WS_OVERLAPPEDWINDOW) == 0;
+#elif defined(PLATFORM_LINUX)
+		auto flags = SDL_GetWindowFlags(window);
+		if (flags & SDL_WINDOW_FULLSCREEN_DESKTOP)
+			return true;
+		else if (flags & SDL_WINDOW_FULLSCREEN)
+			return true;
+		else
+			return false;
+#elif defined(__APPLE__)
+		return wi::apple::IsWindowFullScreen(window);
+#else
+		return true;
+#endif
 	}
 }

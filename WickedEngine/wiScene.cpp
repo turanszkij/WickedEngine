@@ -1042,6 +1042,7 @@ namespace wi::scene
 		collider_count_gpu = 0;
 
 		topdown_hierarchy.clear();
+		gaussian_scene.Clear();
 	}
 	void Scene::MergeFastInternal(Scene& other)
 	{
@@ -4205,7 +4206,6 @@ namespace wi::scene
 			{
 				material.cached_wrapSampler = material.sampler_descriptor;
 			}
-			material.cached_clampSampler = device->GetDescriptorIndex(wi::renderer::GetSampler(wi::enums::SAMPLER_OBJECTSHADER_CLAMP));
 
 			material.WriteShaderMaterial(materialArrayMapped + args.jobIndex);
 
@@ -5280,6 +5280,27 @@ namespace wi::scene
 			}
 
 		});
+
+		if (gaussian_splats.GetCount() > 0)
+		{
+			for (size_t i = 0; i < gaussian_splats.GetCount(); ++i)
+			{
+				const wi::GaussianSplatModel& splat = gaussian_splats[i];
+				XMFLOAT4X4 matrix = wi::math::IDENTITY_MATRIX;
+				Entity entity = gaussian_splats.GetEntity(i);
+				const TransformComponent* transform = transforms.GetComponent(entity);
+				if (transform != nullptr)
+				{
+					matrix = transform->world;
+				}
+				gaussian_splats[i].Update(matrix);
+			}
+			gaussian_scene.MakeReservations(gaussian_splats.GetData(), gaussian_splats.GetCount());
+		}
+		else
+		{
+			gaussian_scene.Clear();
+		}
 	}
 	void Scene::RunWeatherUpdateSystem(wi::jobsystem::context& ctx)
 	{
@@ -5690,6 +5711,7 @@ namespace wi::scene
 				const float leaning_limit = character.leaning_limit;
 				const XMVECTOR gravity = XMVectorSet(0, character.gravity * timestep, 0, 0);
 				const float delta_to_timestep = timestep / dt;
+				const bool locked_2D = character.IsLocked2D();
 
 				if (!character.humanoid_checked)
 				{
@@ -5785,6 +5807,11 @@ namespace wi::scene
 
 					position += velocity * timestep;
 					position += inertia * delta_to_timestep; // inertia is from moving platforms which are delta velocity from previous frame
+
+					if (locked_2D)
+					{
+						position = XMVectorSetZ(position, 0);
+					}
 
 					// Check ground:
 					Capsule capsule = Capsule(position, position + height, character.width);

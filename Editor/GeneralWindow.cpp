@@ -5,7 +5,7 @@ using namespace wi::graphics;
 using namespace wi::ecs;
 using namespace wi::scene;
 
-static const std::string languages_directory = "languages/";
+static const std::string languages_directory = wi::helper::GetCurrentPath() + "/languages/";
 
 enum class Theme : uint64_t
 {
@@ -336,38 +336,69 @@ void GeneralWindow::Create(EditorComponent* _editor)
 	});
 	AddWidget(&entityTreeSortingComboBox);
 
-	outlineOpacitySlider.Create(0, 1, 1, 100, "Outline Opacity: ");
-	outlineOpacitySlider.SetTooltip("You can control the transparency of the selection outline");
-	outlineOpacitySlider.SetSize(XMFLOAT2(100, 18));
-	AddWidget(&outlineOpacitySlider);
-
-	transformToolOpacitySlider.Create(0, 1, 1, 100, "Transform Tool Opacity: ");
-	transformToolOpacitySlider.SetTooltip("You can control the transparency of the object placement tool");
+	transformToolOpacitySlider.Create(0, 1, 1, 100, "Opacity: ");
+	transformToolOpacitySlider.SetTooltip("You can control the transparency of the transform tool");
 	transformToolOpacitySlider.SetSize(XMFLOAT2(100, 18));
 	if (editor->main->config.GetSection("options").Has("transform_tool_opacity"))
 	{
 		transformToolOpacitySlider.SetValue(editor->main->config.GetSection("options").GetFloat("transform_tool_opacity"));
-		editor->translator.opacity = transformToolOpacitySlider.GetValue();
+		editor->translator.tool_opacity = transformToolOpacitySlider.GetValue();
 	}
 	transformToolOpacitySlider.OnSlide([=](wi::gui::EventArgs args) {
-		editor->translator.opacity = args.fValue;
+		editor->translator.tool_opacity = args.fValue;
 		editor->main->config.GetSection("options").Set("transform_tool_opacity", args.fValue);
 	});
 	AddWidget(&transformToolOpacitySlider);
 
 	transformToolDarkenSlider.Create(0, 1, 1, 100, "Darken Negative Axes: ");
-	transformToolDarkenSlider.SetTooltip("You can control the darkening of the object placement tool's negative axes");
+	transformToolDarkenSlider.SetTooltip("You can control the darkening of the transform tool's negative axes");
 	transformToolDarkenSlider.SetSize(XMFLOAT2(100, 18));
 	if (editor->main->config.GetSection("options").Has("transform_tool_darken_negative_axes"))
 	{
 		transformToolDarkenSlider.SetValue(editor->main->config.GetSection("options").GetFloat("transform_tool_darken_negative_axes"));
-		editor->translator.darken_negative_axes = transformToolDarkenSlider.GetValue();
+		editor->translator.tool_darken_negative_axes = transformToolDarkenSlider.GetValue();
 	}
 	transformToolDarkenSlider.OnSlide([=](wi::gui::EventArgs args) {
-		editor->translator.darken_negative_axes = args.fValue;
+		editor->translator.tool_darken_negative_axes = args.fValue;
 		editor->main->config.GetSection("options").Set("transform_tool_darken_negative_axes", args.fValue);
 	});
 	AddWidget(&transformToolDarkenSlider);
+
+	transformToolScaleSlider.Create(0.5, 2, 1, 100, "Scale: ");
+	transformToolScaleSlider.SetTooltip("Adjust the overall size of the transform tool");
+	transformToolScaleSlider.SetSize(XMFLOAT2(100, 18));
+	if (editor->main->config.GetSection("options").Has("transform_tool_scale"))
+	{
+		transformToolScaleSlider.SetValue(editor->main->config.GetSection("options").GetFloat("transform_tool_scale"));
+		editor->translator.tool_scale = transformToolScaleSlider.GetValue();
+	}
+	transformToolScaleSlider.OnSlide([=](wi::gui::EventArgs args) {
+		editor->translator.tool_scale = args.fValue;
+		editor->main->config.GetSection("options").Set("transform_tool_scale", args.fValue);
+	});
+	AddWidget(&transformToolScaleSlider);
+
+	transformToolThicknessSlider.Create(0.5, 2, 1, 100, "Thickness: ");
+	transformToolThicknessSlider.SetTooltip("Adjust the line and shape thickness of the transform tool");
+	transformToolThicknessSlider.SetSize(XMFLOAT2(100, 18));
+	if (editor->main->config.GetSection("options").Has("transform_tool_thickness"))
+	{
+		transformToolThicknessSlider.SetValue(editor->main->config.GetSection("options").GetFloat("transform_tool_thickness"));
+		editor->translator.tool_thickness = transformToolThicknessSlider.GetValue();
+	}
+	transformToolThicknessSlider.OnSlide([=](wi::gui::EventArgs args) {
+		editor->translator.tool_thickness = args.fValue;
+		editor->main->config.GetSection("options").Set("transform_tool_thickness", args.fValue);
+	});
+	AddWidget(&transformToolThicknessSlider);
+
+	outlineOpacitySlider.Create(0, 1, 1, 100, "Outline Opacity: ");
+	outlineOpacitySlider.SetTooltip("You can control the transparency of the selection outline");
+	outlineOpacitySlider.SetSize(XMFLOAT2(100, 18));
+	AddWidget(&outlineOpacitySlider);
+
+	transformToolLabel.Create("Transform Tool");
+	AddWidget(&transformToolLabel);
 
 	bonePickerOpacitySlider.Create(0, 1, 1, 100, "Bone Picker Opacity: ");
 	bonePickerOpacitySlider.SetTooltip("You can control the transparency of the bone selector tool");
@@ -624,6 +655,8 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		editor->themeEditorWnd.gradientColor = wi::Color::fromFloat4(theme_color_gradient);
 		editor->themeEditorWnd.waveColor = wi::Color::fromFloat4(theme_color_wave);
 		editor->themeEditorWnd.UpdateColorPickerMode();
+
+		wi::renderer::SetGridHelperColor(theme.shadow_color);
 
 		theme.shadow_highlight = !focusModeCheckBox.GetCheck();
 		theme.shadow_highlight_spread = 0.4f;
@@ -1236,6 +1269,23 @@ void GeneralWindow::Create(EditorComponent* _editor)
 			}
 		}
 
+		editor->is2DModeButton.SetShadowRadius(1);
+		editor->is2DModeButton.SetShadowColor(wi::Color::Transparent());
+		editor->is2DModeButton.SetShadowHighlightSpread(0.2f);
+		for (auto& sprite : editor->is2DModeButton.sprites)
+		{
+			//sprite.params.enableHighlight();
+			if (gui_round_enabled) {
+				sprite.params.enableCornerRounding();
+				sprite.params.corners_rounding[0].radius = gui_round_radius_default;
+				sprite.params.corners_rounding[1].radius = gui_round_radius_default;
+				sprite.params.corners_rounding[2].radius = gui_round_radius_default;
+				sprite.params.corners_rounding[3].radius = gui_round_radius_default;
+			} else {
+				sprite.params.disableCornerRounding();
+			}
+		}
+
 		if (focusModeCheckBox.GetCheck())
 		{
 			editor->newEntityCombo.SetAngularHighlightWidth(0);
@@ -1564,9 +1614,15 @@ void GeneralWindow::ResizeLayout()
 
 	layout.jump();
 
-	layout.add(outlineOpacitySlider);
+	layout.add_fullwidth(transformToolLabel);
 	layout.add(transformToolOpacitySlider);
 	layout.add(transformToolDarkenSlider);
+	layout.add(transformToolScaleSlider);
+	layout.add(transformToolThicknessSlider);
+
+	layout.jump();
+
+	layout.add(outlineOpacitySlider);
 	layout.add(bonePickerOpacitySlider);
 	layout.add_right(skeletonsVisibleCheckBox);
 

@@ -21,12 +21,23 @@ struct DDGIPushConstants
 	float blendSpeed;
 };
 
+#ifndef __cplusplus
 struct DDGIRayData
 {
-	float3 direction;
-	float depth;
-	float4 radiance;
+	half3 direction;
+	half depth;
+	half3 radiance;
 };
+struct DDGIVarianceData
+{
+	half3 mean;
+	half3 shortMean;
+	half vbbr;
+	half3 variance;
+	half inconsistency;
+};
+#endif // __cplusplus
+
 struct DDGIRayDataPacked
 {
 	uint4 data;
@@ -34,29 +45,21 @@ struct DDGIRayDataPacked
 #ifndef __cplusplus
 	inline void store(DDGIRayData rayData)
 	{
-		data.xy = pack_half4(float4(rayData.direction, rayData.depth));
-		data.zw = pack_half4(rayData.radiance);
+		data.xy = pack_half4(half4(rayData.direction, rayData.depth));
+		data.zw = pack_half3(rayData.radiance);
 	}
 	inline DDGIRayData load()
 	{
 		DDGIRayData rayData;
-		float4 unpk = unpack_half4(data.xy);
+		half4 unpk = unpack_half4(data.xy);
 		rayData.direction = unpk.xyz;
 		rayData.depth = unpk.w;
-		rayData.radiance = unpack_half4(data.zw);
+		rayData.radiance = unpack_half3(data.zw);
 		return rayData;
 	}
 #endif // __cplusplus
 };
 
-struct DDGIVarianceData
-{
-	float3 mean;
-	float3 shortMean;
-	float vbbr;
-	float3 variance;
-	float inconsistency;
-};
 struct DDGIVarianceDataPacked
 {
 	uint4 data;
@@ -64,18 +67,18 @@ struct DDGIVarianceDataPacked
 #ifndef __cplusplus
 	inline void store(DDGIVarianceData varianceData)
 	{
-		data.x = PackRGBE(varianceData.mean);
-		data.y = PackRGBE(varianceData.shortMean);
-		data.z = PackRGBE(varianceData.variance);
+		data.x = Pack_R11G11B10_FLOAT(varianceData.mean);
+		data.y = Pack_R11G11B10_FLOAT(varianceData.shortMean);
+		data.z = Pack_R11G11B10_FLOAT(varianceData.variance);
 		data.w = pack_half2(float2(varianceData.vbbr, varianceData.inconsistency));
 	}
 	inline DDGIVarianceData load()
 	{
 		DDGIVarianceData varianceData;
-		varianceData.mean = UnpackRGBE(data.x);
-		varianceData.shortMean = UnpackRGBE(data.y);
-		varianceData.variance = UnpackRGBE(data.z);
-		float2 other = unpack_half2(data.w);
+		varianceData.mean = Unpack_R11G11B10_FLOAT(data.x);
+		varianceData.shortMean = Unpack_R11G11B10_FLOAT(data.y);
+		varianceData.variance = Unpack_R11G11B10_FLOAT(data.z);
+		half2 other = unpack_half2(data.w);
 		varianceData.vbbr = other.x;
 		varianceData.inconsistency = other.y;
 		return varianceData;
@@ -121,7 +124,7 @@ inline float3 ddgi_probe_position(min16uint3 probeCoord)
 {
 	float3 pos = ddgi_probe_position_rest(probeCoord);
 	uint probeIndex = ddgi_probe_index(probeCoord);
-	StructuredBuffer<DDGIProbe> probe_buffer = bindless_structured_ddi_probes[descriptor_index(GetScene().ddgi.probe_buffer)];
+	StructuredBuffer<DDGIProbe> probe_buffer = bindless_structured_ddgi_probes[descriptor_index(GetScene().ddgi.probe_buffer)];
 	DDGIProbe probe = probe_buffer[probeIndex];
 	float3 offset = unpack_half3(probe.offset);
 	offset = offset * ddgi_cellsize() * 0.5;
@@ -143,7 +146,7 @@ inline float2 ddgi_probe_depth_uv(min16uint3 probeCoord, half3 direction)
 // Based on: https://github.com/diharaw/hybrid-rendering/blob/master/src/shaders/gi/gi_common.glsl
 half3 ddgi_sample_irradiance(in float3 P, in half3 N, inout half3 out_dominant_lightdir, inout half3 out_dominant_lightcolor)
 {
-	StructuredBuffer<DDGIProbe> probe_buffer = bindless_structured_ddi_probes[descriptor_index(GetScene().ddgi.probe_buffer)];
+	StructuredBuffer<DDGIProbe> probe_buffer = bindless_structured_ddgi_probes[descriptor_index(GetScene().ddgi.probe_buffer)];
 	const min16uint3 base_grid_coord = ddgi_base_probe_coord(P);
 	const float3 reference_probe_pos = ddgi_probe_position_rest(base_grid_coord); // taking the rest pose!
 
@@ -276,40 +279,6 @@ half3 ddgi_sample_irradiance(in float3 P, in half3 N, inout half3 out_dominant_l
 	return 0;
 }
 
-static const uint4 DDGI_COLOR_BORDER_OFFSETS[] = {
-	uint4(6, 1, 1, 0),
-	uint4(5, 1, 2, 0),
-	uint4(4, 1, 3, 0),
-	uint4(3, 1, 4, 0),
-	uint4(2, 1, 5, 0),
-	uint4(1, 1, 6, 0),
-
-	uint4(6, 6, 1, 7),
-	uint4(5, 6, 2, 7),
-	uint4(4, 6, 3, 7),
-	uint4(3, 6, 4, 7),
-	uint4(2, 6, 5, 7),
-	uint4(1, 6, 6, 7),
-
-	uint4(1, 1, 0, 6),
-	uint4(1, 2, 0, 5),
-	uint4(1, 3, 0, 4),
-	uint4(1, 4, 0, 3),
-	uint4(1, 5, 0, 2),
-	uint4(1, 6, 0, 1),
-
-	uint4(6, 1, 7, 6),
-	uint4(6, 2, 7, 5),
-	uint4(6, 3, 7, 4),
-	uint4(6, 4, 7, 3),
-	uint4(6, 5, 7, 2),
-	uint4(6, 6, 7, 1),
-
-	uint4(1, 1, 7, 7),
-	uint4(6, 1, 0, 7),
-	uint4(1, 6, 7, 0),
-	uint4(6, 6, 0, 0),
-};
 static const uint4 DDGI_DEPTH_BORDER_OFFSETS[68] = {
 	uint4(16, 1, 1, 0),
 	uint4(15, 1, 2, 0),
@@ -382,46 +351,46 @@ static const uint4 DDGI_DEPTH_BORDER_OFFSETS[68] = {
 };
 
 void MultiscaleMeanEstimator(
-	float3 y,
+	half3 y,
 	inout DDGIVarianceData data,
-	float shortWindowBlend = 0.08f
+	half shortWindowBlend = 0.08f
 )
 {
-	float3 mean = data.mean;
-	float3 shortMean = data.shortMean;
-	float vbbr = data.vbbr;
-	float3 variance = data.variance;
-	float inconsistency = data.inconsistency;
+	half3 mean = data.mean;
+	half3 shortMean = data.shortMean;
+	half vbbr = data.vbbr;
+	half3 variance = data.variance;
+	half inconsistency = data.inconsistency;
 
 	// Suppress fireflies.
 	{
-		float3 dev = sqrt(max(1e-5, variance));
-		float3 highThreshold = 0.1 + shortMean + dev * 8;
-		float3 overflow = max(0, y - highThreshold);
+		half3 dev = sqrt(max(1e-5, variance));
+		half3 highThreshold = 0.1 + shortMean + dev * 8;
+		half3 overflow = max(0, y - highThreshold);
 		y -= overflow;
 	}
 
-	float3 delta = y - shortMean;
+	half3 delta = y - shortMean;
 	shortMean = lerp(shortMean, y, shortWindowBlend);
-	float3 delta2 = y - shortMean;
+	half3 delta2 = y - shortMean;
 
 	// This should be a longer window than shortWindowBlend to avoid bias
 	// from the variance getting smaller when the short-term mean does.
-	float varianceBlend = shortWindowBlend * 0.5;
+	half varianceBlend = shortWindowBlend * 0.5;
 	variance = lerp(variance, delta * delta2, varianceBlend);
-	float3 dev = sqrt(max(1e-5, variance));
+	half3 dev = sqrt(max(1e-5, variance));
 
-	float3 shortDiff = mean - shortMean;
+	half3 shortDiff = mean - shortMean;
 
-	float relativeDiff = dot(float3(0.299, 0.587, 0.114),
+	half relativeDiff = dot(half3(0.299, 0.587, 0.114),
 		abs(shortDiff) / max(1e-5, dev));
 	inconsistency = lerp(inconsistency, relativeDiff, 0.08);
 
-	float varianceBasedBlendReduction =
-		clamp(dot(float3(0.299, 0.587, 0.114),
+	half varianceBasedBlendReduction =
+		clamp(dot(half3(0.299, 0.587, 0.114),
 			0.5 * shortMean / max(1e-5, dev)), 1.0 / 32, 1);
 
-	float3 catchUpBlend = clamp(smoothstep(0, 1,
+	half3 catchUpBlend = clamp(smoothstep(0, 1,
 		relativeDiff * max(0.02, inconsistency - 0.2)), 1.0 / 256, 1);
 	catchUpBlend *= vbbr;
 

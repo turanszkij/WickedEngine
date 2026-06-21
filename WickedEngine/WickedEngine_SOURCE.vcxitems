@@ -329,6 +329,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFunction.h">
       <FileType>Document</FileType>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiGaussianSplatModel.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLocalization.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiNoise.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiPathQuery.h" />
@@ -622,6 +623,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\spirv_reflect.c" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiAsync_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiConfig.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiGaussianSplatModel.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiLocalization.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiPathQuery.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiPathQuery_BindLua.cpp" />

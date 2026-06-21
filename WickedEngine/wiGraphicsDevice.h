@@ -92,7 +92,7 @@ namespace wi::graphics
 		// Create a buffer with a callback to initialize its data. Note: don't read from callback's dest pointer, reads will be very slow! Use memcpy to write to it to make sure only writes happen!
 		virtual bool CreateBuffer2(const GPUBufferDesc* desc, const std::function<void(void* dest)>& init_callback, GPUBuffer* buffer, const GPUResource* alias = nullptr, uint64_t alias_offset = 0ull) const = 0;
 		virtual bool CreateTexture(const TextureDesc* desc, const SubresourceData* initial_data, Texture* texture, const GPUResource* alias = nullptr, uint64_t alias_offset = 0ull) const = 0;
-		virtual bool CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader) const = 0;
+		virtual bool CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader, const char* entrypoint = "main") const = 0;
 		virtual bool CreateSampler(const SamplerDesc* desc, Sampler* sampler) const = 0;
 		virtual bool CreateQueryHeap(const GPUQueryHeapDesc* desc, GPUQueryHeap* queryheap) const = 0;
 		// Creates a graphics pipeline state. If renderpass_info is specified, then it will be only compatible with that renderpass info, but it will be created immediately (it can also take longer to be created)
@@ -285,10 +285,32 @@ namespace wi::graphics
 			return CreateBufferCleared(desc, 0, buffer, alias, alias_offset);
 		}
 
+		// This can be used to create a texture filled with a single value
+		bool CreateTextureCleared(const TextureDesc* desc, uint8_t value, Texture* texture, const GPUResource* alias = nullptr, uint64_t alias_offset = 0ull) const
+		{
+			wi::vector<uint8_t> texturedata(ComputeTextureMemorySizeInBytes(*desc));
+			std::fill(texturedata.begin(), texturedata.end(), value);
+			wi::vector<SubresourceData> initdata;
+			CreateTextureSubresourceDatas(*desc, texturedata.data(), initdata);
+			return CreateTexture(desc, initdata.data(), texture, alias, alias_offset);
+		}
+
+		// This can be used to create a texture filled with zeroes
+		bool CreateTextureZeroed(const TextureDesc* desc, Texture* texture, const GPUResource* alias = nullptr, uint64_t alias_offset = 0ull) const
+		{
+			return CreateTextureCleared(desc, 0, texture, alias, alias_offset);
+		}
+
 		// Execute a single GPU barrier
 		void Barrier(const GPUBarrier& barrier, CommandList cmd)
 		{
 			Barrier(&barrier, 1, cmd);
+		}
+
+		// Execute a global GPU memory barrier
+		void Barrier(CommandList cmd)
+		{
+			Barrier(GPUBarrier::Memory(), cmd);
 		}
 
 		struct GPULinearAllocator
@@ -399,7 +421,9 @@ namespace wi::graphics
 			}
 		}
 
+		WI_DISABLE_DEPRECATED_BEGIN
 		// Deprecated, kept for back-compat:
+		[[deprecated]]
 		bool CreateRenderPass(const RenderPassDesc* desc, RenderPass* renderpass) const
 		{
 			renderpass->valid = true;
@@ -407,6 +431,7 @@ namespace wi::graphics
 			return true;
 		}
 		// Deprecated, kept for back-compat:
+		[[deprecated]]
 		void RenderPassBegin(const RenderPass* renderpass, CommandList cmd)
 		{
 			RenderPassFlags flags = {};
@@ -421,6 +446,7 @@ namespace wi::graphics
 			}
 			RenderPassBegin(rp, (uint32_t)renderpass->desc.attachments.size(), cmd, flags);
 		}
+		WI_DISABLE_DEPRECATED_END
 	};
 
 

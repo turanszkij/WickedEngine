@@ -665,7 +665,7 @@ namespace metal_internal
 			uint32_t firstSlice = 0;
 			uint32_t sliceCount = 0;
 			
-			bool IsValid() const { return entry.textureViewID != 0; }
+			bool IsValid() const { return entry.textureViewID != 0 || mipCount > 0 || sliceCount > 0; }
 		};
 		Subresource srv;
 		Subresource uav;
@@ -1073,7 +1073,7 @@ using namespace metal_internal;
 		if (commandlist.render_encoder.get() != nullptr)
 		{
 			commandlist.render_encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, visibility_options);
-			commandlist.render_encoder->barrierAfterEncoderStages(MTL::StageVertex | MTL::StageObject | MTL::StageMesh | MTL::StageFragment, MTL::StageVertex | MTL::StageObject | MTL::StageMesh | MTL::StageFragment, visibility_options);
+			commandlist.render_encoder->barrierAfterEncoderStages(MTL::StageVertex | MTL::StageObject | MTL::StageMesh, MTL::StageVertex | MTL::StageObject | MTL::StageMesh | MTL::StageFragment, visibility_options);
 		}
 		else if (commandlist.compute_encoder.get() != nullptr)
 		{
@@ -1084,7 +1084,7 @@ using namespace metal_internal;
 	}
 
 	void GraphicsDevice_Metal::clear_flush(CommandList cmd)
-	{
+{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		if (commandlist.texture_clears.empty())
 			return;
@@ -1095,31 +1095,66 @@ using namespace metal_internal;
 			commandlist.compute_encoder.reset();
 		}
 		NS::SharedPtr<NS::AutoreleasePool> autorelease_pool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init());
-		constexpr size_t batching = 8; // batch up to 8 clears into one pass (probably more will not be supported by renderpass)
-		size_t offset = 0;
-		while (offset < commandlist.texture_clears.size())
+		for (auto& x : commandlist.texture_clears)
 		{
-			NS::SharedPtr<MTL4::RenderPassDescriptor> descriptor = NS::TransferPtr(MTL4::RenderPassDescriptor::alloc()->init());
-			NS::SharedPtr<MTL::RenderPassColorAttachmentDescriptor> color_attachment_descriptors[8];
-			for (size_t i = 0; (i < batching) && ((offset + i) < commandlist.texture_clears.size()); ++i)
+			const uint64_t width0 = x.first->width();
+			const uint64_t height0 = x.first->height();
+			const uint64_t slices = x.first->arrayLength();
+			const uint64_t mips = x.first->mipmapLevelCount();
+			for (uint64_t slice = 0; slice < slices; ++slice)
 			{
-				const size_t index = offset + i;
-				NS::SharedPtr<MTL::RenderPassColorAttachmentDescriptor>& color_attachment_descriptor = color_attachment_descriptors[i];
-				color_attachment_descriptor = NS::TransferPtr(MTL::RenderPassColorAttachmentDescriptor::alloc()->init());
-				const uint32_t value = commandlist.texture_clears[index].second;
-				color_attachment_descriptor->setTexture(commandlist.texture_clears[index].first.get());
-				color_attachment_descriptor->setClearColor(MTL::ClearColor::Make((value & 0xFF) / 255.0f, ((value >> 8u) & 0xFF) / 255.0f, ((value >> 16u) & 0xFF) / 255.0f, ((value >> 24u) & 0xFF) / 255.0f));
-				color_attachment_descriptor->setLoadAction(MTL::LoadActionClear);
-				color_attachment_descriptor->setStoreAction(MTL::StoreActionStore);
-				descriptor->colorAttachments()->setObject(color_attachment_descriptor.get(), i);
+				for (uint64_t mip = 0; mip < mips; ++mip)
+				{
+					NS::SharedPtr<MTL::RenderPassColorAttachmentDescriptor> color_attachment_descriptor = NS::TransferPtr(MTL::RenderPassColorAttachmentDescriptor::alloc()->init());
+					const uint32_t value = x.second;
+					color_attachment_descriptor->setTexture(x.first.get());
+					color_attachment_descriptor->setClearColor(MTL::ClearColor::Make((value & 0xFF) / 255.0f, ((value >> 8u) & 0xFF) / 255.0f, ((value >> 16u) & 0xFF) / 255.0f, ((value >> 24u) & 0xFF) / 255.0f));
+					color_attachment_descriptor->setLoadAction(MTL::LoadActionClear);
+					color_attachment_descriptor->setStoreAction(MTL::StoreActionStore);
+					color_attachment_descriptor->setLevel(mip);
+					color_attachment_descriptor->setSlice(slice);
+					
+					CommandList_Metal::TextureClearBatchItem& batchitem = commandlist.texture_clear_batching.emplace_back();
+					batchitem.attachment = std::move(color_attachment_descriptor);
+					const uint64_t width = std::max(uint64_t(1), width0 >> mip);
+					const uint64_t height = std::max(uint64_t(1), height0 >> mip);
+					batchitem.resolutionPacked = uint32_t(width & 0xFFFF) | (uint32_t(height & 0xFFFF) << 16u);
+				}
 			}
-			MTL4::RenderCommandEncoder* encoder = commandlist.commandbuffer->renderCommandEncoder(descriptor.get());
-			encoder->setLabel(NS::String::string("ClearUAV", NS::UTF8StringEncoding));
-			encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, MTL4::VisibilityOptionNone); // TODO: flickering issues in several places without this
-			encoder->endEncoding();
-			offset += batching;
 		}
 		commandlist.texture_clears.clear();
+		
+		if (commandlist.texture_clear_batching.empty())
+			return;
+		
+		std::sort(commandlist.texture_clear_batching.begin(), commandlist.texture_clear_batching.end(), std::less<CommandList_Metal::TextureClearBatchItem>()); // sort them based on resolution so that more can be batched
+		
+		while (!commandlist.texture_clear_batching.empty())
+		{
+			uint32_t currentResolutionPacked = commandlist.texture_clear_batching.back().resolutionPacked;
+			uint32_t slot = 0;
+			
+			NS::SharedPtr<MTL4::RenderPassDescriptor> descriptor = NS::TransferPtr(MTL4::RenderPassDescriptor::alloc()->init());
+			
+			while (!commandlist.texture_clear_batching.empty() && (slot < 8)) // batch up to 8 slots with renderpass clears
+			{
+				if (commandlist.texture_clear_batching.back().resolutionPacked != currentResolutionPacked)
+				{
+					break; // batching must be broken when an attachment arrives that doesn't match the resolution of the current batch
+				}
+				descriptor->colorAttachments()->setObject(commandlist.texture_clear_batching.back().attachment.get(), slot++);
+				commandlist.texture_clear_batching.pop_back();
+			}
+			
+			MTL4::RenderCommandEncoder* encoder = commandlist.commandbuffer->renderCommandEncoder(descriptor.get());
+			encoder->setLabel(NS::String::string("ClearUAV", NS::UTF8StringEncoding));
+			if (commandlist.texture_clear_batching.empty())
+			{
+				// Last clear batch will issue sync for all clears
+				encoder->barrierAfterStages(MTL::StageAll, MTL::StageAll, MTL4::VisibilityOptionNone);
+			}
+			encoder->endEncoding();
+		}
 	}
 
 	void GraphicsDevice_Metal::pso_validate(CommandList cmd)
@@ -1339,6 +1374,12 @@ using namespace metal_internal;
 		
 		adapterName = device->name()->cString(NS::UTF8StringEncoding);
 		
+		textureUlongAtomics =
+			device->supportsFamily(MTL::GPUFamilyApple8) |
+			device->supportsFamily(MTL::GPUFamilyApple9) |
+			device->supportsFamily(MTL::GPUFamilyMac2)
+		;
+		
 		capabilities |= GraphicsDeviceCapability::SAMPLER_MINMAX;
 		capabilities |= GraphicsDeviceCapability::ALIASING_GENERIC;
 		capabilities |= GraphicsDeviceCapability::DEPTH_BOUNDS_TEST;
@@ -1375,7 +1416,13 @@ using namespace metal_internal;
 		argument_table_desc->setMaxTextureBindCount(0);
 		argument_table_desc->setMaxSamplerStateBindCount(0);
 		
-		descriptor_heap_res = NS::TransferPtr(device->newBuffer(BINDLESS_RESOURCE_CAPACITY * sizeof(IRDescriptorTableEntry), MTL::ResourceStorageModeShared));
+#ifdef PLATFORM_IOS
+		const uint64_t real_bindless_resource_capacity = 100000; // ios residency set creation limit
+#else
+		const uint64_t real_bindless_resource_capacity = BINDLESS_RESOURCE_CAPACITY;
+#endif // PLATFORM_IOS
+		
+		descriptor_heap_res = NS::TransferPtr(device->newBuffer(real_bindless_resource_capacity * sizeof(IRDescriptorTableEntry), MTL::ResourceStorageModeShared));
 		descriptor_heap_res->setLabel(NS::TransferPtr(NS::String::alloc()->init("descriptor_heap_res", NS::UTF8StringEncoding)).get());
 		
 		const uint64_t real_bindless_sampler_capacity = std::min((uint64_t)BINDLESS_SAMPLER_CAPACITY, (uint64_t)device->maxArgumentBufferSamplerCount());
@@ -1385,19 +1432,19 @@ using namespace metal_internal;
 		descriptor_heap_res_data = (IRDescriptorTableEntry*)descriptor_heap_res->contents();
 		descriptor_heap_sam_data = (IRDescriptorTableEntry*)descriptor_heap_sam->contents();
 		
-		allocationhandler->free_bindless_res.reserve(BINDLESS_RESOURCE_CAPACITY);
+		allocationhandler->free_bindless_res.reserve(real_bindless_resource_capacity);
 		allocationhandler->free_bindless_sam.reserve(real_bindless_sampler_capacity);
 		for (int i = 0; i < real_bindless_sampler_capacity; ++i)
 		{
 			allocationhandler->free_bindless_sam.push_back((int)real_bindless_sampler_capacity - i - 1);
 		}
-		for (int i = 0; i < BINDLESS_RESOURCE_CAPACITY; ++i)
+		for (int i = 0; i < real_bindless_resource_capacity; ++i)
 		{
-			allocationhandler->free_bindless_res.push_back((int)BINDLESS_RESOURCE_CAPACITY - i - 1);
+			allocationhandler->free_bindless_res.push_back((int)real_bindless_resource_capacity - i - 1);
 		}
 		
 		NS::SharedPtr<MTL::ResidencySetDescriptor> residency_set_descriptor = NS::TransferPtr(MTL::ResidencySetDescriptor::alloc()->init());
-		residency_set_descriptor->setInitialCapacity(BINDLESS_RESOURCE_CAPACITY + real_bindless_sampler_capacity);
+		residency_set_descriptor->setInitialCapacity(real_bindless_resource_capacity + real_bindless_sampler_capacity);
 		NS::Error* error = nullptr;
 		allocationhandler->residency_set = NS::TransferPtr(device->newResidencySet(residency_set_descriptor.get(), &error));
 		if (error != nullptr)
@@ -1406,13 +1453,14 @@ using namespace metal_internal;
 			wilog_assert(0, "%s", errDesc->utf8String());
 			error->release();
 		}
+		assert(allocationhandler->residency_set.get() != nullptr);
 		uploadqueue->addResidencySet(allocationhandler->residency_set.get());
 		allocationhandler->make_resident(descriptor_heap_res.get());
 		allocationhandler->make_resident(descriptor_heap_sam.get());
 		
 #ifdef USE_TEXTURE_VIEW_POOL
 		NS::SharedPtr<MTL::ResourceViewPoolDescriptor> view_pool_desc = NS::TransferPtr(MTL::ResourceViewPoolDescriptor::alloc()->init());
-		view_pool_desc->setResourceViewCount(BINDLESS_RESOURCE_CAPACITY);
+		view_pool_desc->setResourceViewCount(real_bindless_resource_capacity);
 		texture_view_pool = NS::TransferPtr(device->newTextureViewPool(view_pool_desc.get(), &error));
 		if (error != nullptr)
 		{
@@ -1801,8 +1849,13 @@ using namespace metal_internal;
 			{
 				case MTL::PixelFormatR32Uint:
 				case MTL::PixelFormatR32Sint:
-				case MTL::PixelFormatRG32Uint:
 					usage |= MTL::TextureUsageShaderAtomic;
+					break;
+				case MTL::PixelFormatRG32Uint:
+					if (textureUlongAtomics) // workaround for: https://github.com/turanszkij/WickedEngine/issues/1597
+					{
+						usage |= MTL::TextureUsageShaderAtomic;
+					}
 					break;
 				default:
 					break;
@@ -2010,7 +2063,7 @@ using namespace metal_internal;
 		
 		return internal_state->texture.get() != nullptr || internal_state->buffer.get() != nullptr;
 	}
-	bool GraphicsDevice_Metal::CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader) const
+	bool GraphicsDevice_Metal::CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader, const char* entrypoint) const
 	{
 		auto internal_state = wi::allocator::make_shared<Shader_Metal>();
 		internal_state->allocationhandler = allocationhandler;
@@ -2040,7 +2093,7 @@ using namespace metal_internal;
 		}
 		assert(internal_state->library.get() != nullptr);
 		
-		NS::SharedPtr<NS::String> entry = NS::TransferPtr(NS::String::alloc()->init("main", NS::UTF8StringEncoding));
+		NS::SharedPtr<NS::String> entry = NS::TransferPtr(NS::String::alloc()->init(entrypoint, NS::UTF8StringEncoding));
 		NS::SharedPtr<MTL::FunctionConstantValues> constants = NS::TransferPtr(MTL::FunctionConstantValues::alloc()->init());
 		
 		if (stage == ShaderStage::HS || stage == ShaderStage::DS || stage == ShaderStage::GS)
@@ -3592,7 +3645,7 @@ using namespace metal_internal;
 				}
 				case RenderPassImage::Type::RESOLVE:
 				{
-					Texture_Metal::Subresource& subresource = image.subresource < 0 ? internal_state->srv : internal_state->subresources_srv[image.subresource];
+					Texture_Metal::Subresource& subresource = image.subresource < 0 ? internal_state->rtv : internal_state->subresources_rtv[image.subresource];
 					auto& color_attachment_descriptor = color_attachment_descriptors[resolve_index];
 					color_attachment_descriptor->setResolveTexture(internal_state->texture.get());
 					color_attachment_descriptor->setResolveLevel(subresource.firstMip);
@@ -4219,17 +4272,21 @@ using namespace metal_internal;
 			{
 				// Texture->linear copy:
 				const uint64_t data_begin = (uint64_t)dsttex.mapped_subresources[0].data_ptr;
-				uint32_t subresource_index = 0;
-				for (uint32_t slice = 0; slice < srctex.desc.array_size; ++slice)
+				const uint32_t planes = GetFormatPlaneCount(srctex.desc.format); // src plane count!
+				for (uint32_t plane = 0; plane < planes; ++plane)
 				{
-					for (uint32_t mip = 0; mip < srctex.desc.mip_levels; ++mip)
+					for (uint32_t slice = 0; slice < srctex.desc.array_size; ++slice)
 					{
-						const uint32_t mip_width = std::max(1u, srctex.desc.width >> mip);
-						const uint32_t mip_height = std::max(1u, srctex.desc.height >> mip);
-						const uint32_t mip_depth = std::max(1u, srctex.desc.depth >> mip);
-						const SubresourceData& subresource_data = dsttex.mapped_subresources[subresource_index++];
-						uint64_t data_offset = uint64_t((uint64_t)subresource_data.data_ptr - data_begin);
-						commandlist.compute_encoder->copyFromTexture(src_internal->texture.get(), slice, mip, {0,0,0}, {mip_width, mip_height, mip_depth}, dst_internal->buffer.get(), data_offset, subresource_data.row_pitch, subresource_data.slice_pitch * mip_depth);
+						for (uint32_t mip = 0; mip < srctex.desc.mip_levels; ++mip)
+						{
+							const uint32_t mip_width = std::max(1u, srctex.desc.width >> mip);
+							const uint32_t mip_height = std::max(1u, srctex.desc.height >> mip);
+							const uint32_t mip_depth = std::max(1u, srctex.desc.depth >> mip);
+							const uint32_t subresource = ComputeSubresource(mip, slice, plane, srctex.desc.mip_levels, srctex.desc.array_size);
+							const SubresourceData& subresource_data = dsttex.mapped_subresources[subresource];
+							uint64_t data_offset = uint64_t((uint64_t)subresource_data.data_ptr - data_begin);
+							commandlist.compute_encoder->copyFromTexture(src_internal->texture.get(), slice, mip, { 0,0,0 }, { mip_width, mip_height, mip_depth }, dst_internal->buffer.get(), data_offset, subresource_data.row_pitch, subresource_data.slice_pitch * mip_depth);
+						}
 					}
 				}
 			}
@@ -4237,17 +4294,21 @@ using namespace metal_internal;
 			{
 				// Linear->texture copy:
 				const uint64_t data_begin = (uint64_t)srctex.mapped_subresources[0].data_ptr;
-				uint32_t subresource_index = 0;
-				for (uint32_t slice = 0; slice < dsttex.desc.array_size; ++slice)
+				const uint32_t planes = GetFormatPlaneCount(dsttex.desc.format); // dst plane count!
+				for (uint32_t plane = 0; plane < planes; ++plane)
 				{
-					for (uint32_t mip = 0; mip < dsttex.desc.mip_levels; ++mip)
+					for (uint32_t slice = 0; slice < dsttex.desc.array_size; ++slice)
 					{
-						const uint32_t mip_width = std::max(1u, dsttex.desc.width >> mip);
-						const uint32_t mip_height = std::max(1u, dsttex.desc.height >> mip);
-						const uint32_t mip_depth = std::max(1u, dsttex.desc.depth >> mip);
-						const SubresourceData& subresource_data = srctex.mapped_subresources[subresource_index++];
-						uint64_t data_offset = uint64_t((uint64_t)subresource_data.data_ptr - data_begin);
-						commandlist.compute_encoder->copyFromBuffer(src_internal->buffer.get(), data_offset, subresource_data.row_pitch, subresource_data.slice_pitch * mip_depth, {mip_width,mip_height,mip_depth}, dst_internal->texture.get(), slice, mip, {0,0,0});
+						for (uint32_t mip = 0; mip < dsttex.desc.mip_levels; ++mip)
+						{
+							const uint32_t mip_width = std::max(1u, dsttex.desc.width >> mip);
+							const uint32_t mip_height = std::max(1u, dsttex.desc.height >> mip);
+							const uint32_t mip_depth = std::max(1u, dsttex.desc.depth >> mip);
+							const uint32_t subresource = ComputeSubresource(mip, slice, plane, dsttex.desc.mip_levels, dsttex.desc.array_size);
+							const SubresourceData& subresource_data = srctex.mapped_subresources[subresource];
+							uint64_t data_offset = uint64_t((uint64_t)subresource_data.data_ptr - data_begin);
+							commandlist.compute_encoder->copyFromBuffer(src_internal->buffer.get(), data_offset, subresource_data.row_pitch, subresource_data.slice_pitch * mip_depth, { mip_width,mip_height,mip_depth }, dst_internal->texture.get(), slice, mip, { 0,0,0 });
+						}
 					}
 				}
 			}

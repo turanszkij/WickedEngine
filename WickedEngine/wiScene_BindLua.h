@@ -738,6 +738,7 @@ namespace wi::lua::scene
 		int GetMotionBlurAmount(lua_State* L);
 		int IsCollidersDisabled(lua_State* L);
 		int SetCollidersDisabled(lua_State* L);
+		int GetCurrentParticleCount(lua_State* L);
 	};
 
 	class HairParticleSystem_BindLua
@@ -1059,6 +1060,7 @@ namespace wi::lua::scene
 		int SetKinematic(lua_State* L);
 		int SetStartDeactivated(lua_State* L);
 		int SetCharacterPhysics(lua_State* L);
+		int SetLocked2D(lua_State* L);
 
 		int IsVehicle(lua_State* L);
 		int IsCar(lua_State* L);
@@ -1067,6 +1069,7 @@ namespace wi::lua::scene
 		int IsKinematic(lua_State* L);
 		int IsStartDeactivated(lua_State* L);
 		int IsCharacterPhysics(lua_State* L);
+		int IsLocked2D(lua_State* L);
 	};
 
 	class SoftBodyPhysicsComponent_BindLua
@@ -1936,6 +1939,8 @@ namespace wi::lua::scene
 		int IsRagdollPhysicsEnabled(lua_State* L);
 		int SetRagdollDisabled(lua_State* L);
 		int IsRagdollDisabled(lua_State* L);
+		int SetRagdoll2D(lua_State* L);
+		int IsRagdoll2D(lua_State* L);
 		int SetIntersectionDisabled(lua_State* L);
 		int IsIntersectionDisabled(lua_State* L);
 		int SetRagdollFatness(lua_State* L);
@@ -2050,6 +2055,8 @@ namespace wi::lua::scene
 		int SetFootPlacementEnabled(lua_State* L);
 		int SetCharacterToCharacterCollisionDisabled(lua_State* L);
 		int SetDedicatedShadow(lua_State* L);
+		int SetLocked2D(lua_State* L);
+		int IsLocked2D(lua_State* L);
 
 		int GetHealth(lua_State* L);
 		int GetWidth(lua_State* L);

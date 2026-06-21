@@ -890,6 +890,7 @@ namespace vulkan_internal
 		VkPipeline pipeline_cs = VK_NULL_HANDLE;
 		VkPipelineShaderStageCreateInfo stageInfo = {};
 		GraphicsDevice_Vulkan::PSOLayout layout;
+		std::string entrypoint;
 
 		~Shader_Vulkan()
 		{
@@ -2045,7 +2046,7 @@ using namespace vulkan_internal;
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
 		instanceExtensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #elif defined(SDL2)
-		{
+		if (window != nullptr) {
 			uint32_t extensionCount;
 			SDL_Vulkan_GetInstanceExtensions(window, &extensionCount, nullptr);
 			wi::vector<const char *> extensionNames_sdl(extensionCount);
@@ -4231,7 +4232,7 @@ using namespace vulkan_internal;
 					{
 						VkBufferImageCopy copyRegion = {};
 						copyRegion.bufferOffset = copyOffset;
-						copyRegion.bufferRowLength = 0;
+						copyRegion.bufferRowLength = src_rowpitch / data_stride * block_size;
 						copyRegion.bufferImageHeight = 0;
 
 						copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -4394,10 +4395,11 @@ using namespace vulkan_internal;
 
 		return res >= VK_SUCCESS;
 	}
-	bool GraphicsDevice_Vulkan::CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader) const
+	bool GraphicsDevice_Vulkan::CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader, const char* entrypoint) const
 	{
 		auto internal_state = wi::allocator::make_shared<Shader_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
+		internal_state->entrypoint = entrypoint;
 		shader->internal_state = internal_state;
 		shader->stage = stage;
 
@@ -4411,7 +4413,7 @@ using namespace vulkan_internal;
 
 		internal_state->stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 		internal_state->stageInfo.module = internal_state->shaderModule;
-		internal_state->stageInfo.pName = "main";
+		internal_state->stageInfo.pName = internal_state->entrypoint.c_str();
 		switch (stage)
 		{
 		case ShaderStage::MS:
@@ -7280,7 +7282,7 @@ using namespace vulkan_internal;
 
 			case RenderPassImage::Type::RESOLVE:
 			{
-				descriptor = subresource < 0 ? internal_state->srv : internal_state->subresources_srv[subresource];
+				descriptor = subresource < 0 ? internal_state->rtv : internal_state->subresources_rtv[subresource];
 				VkRenderingAttachmentInfo& color_attachment = color_attachments[color_resolve_count++];
 				color_attachment.resolveImageView = descriptor.image_view;
 				color_attachment.resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
@@ -7900,37 +7902,45 @@ using namespace vulkan_internal;
 			{
 				// CPU (buffer) -> GPU (texture)
 				VkBufferImageCopy copy = {};
-				copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-				const uint32_t data_stride = GetFormatStride(dst_desc.format);
 				const uint32_t block_size = GetFormatBlockSize(dst_desc.format);
-				for (uint32_t slice = 0; slice < dst_desc.array_size; ++slice)
+				const uint32_t planes = GetFormatPlaneCount(dst_desc.format);
+				for (uint32_t plane = 0; plane < planes; ++plane)
 				{
-					copy.imageSubresource.baseArrayLayer = slice;
-					copy.imageSubresource.layerCount = 1;
-					uint32_t mip_width = dst_desc.width;
-					uint32_t mip_height = dst_desc.height;
-					uint32_t mip_depth = dst_desc.depth;
-					for (uint32_t mip = 0; mip < dst_desc.mip_levels; ++mip)
+					const uint32_t data_stride = GetFormatStride(dst_desc.format, plane);
+					const ImageAspect aspect = GetImageAspect(dst_desc.format, plane); // dst aspect!
+					copy.imageSubresource.aspectMask = _ConvertImageAspect(aspect);
+					for (uint32_t slice = 0; slice < dst_desc.array_size; ++slice)
 					{
-						const uint32_t num_blocks_x = mip_width / block_size;
-						const uint32_t num_blocks_y = mip_height / block_size;
-						copy.imageExtent.width = mip_width;
-						copy.imageExtent.height = mip_height;
-						copy.imageExtent.depth = mip_depth;
-						copy.imageSubresource.mipLevel = mip;
-						vkCmdCopyBufferToImage(
-							commandlist.GetCommandBuffer(),
-							internal_state_src->staging_resource,
-							internal_state_dst->resource,
-							_ConvertImageLayout(ResourceState::COPY_DST),
-							1,
-							&copy
-						);
+						copy.imageSubresource.baseArrayLayer = slice;
+						copy.imageSubresource.layerCount = 1;
+						uint32_t mip_width = dst_desc.width;
+						uint32_t mip_height = dst_desc.height;
+						uint32_t mip_depth = dst_desc.depth;
+						for (uint32_t mip = 0; mip < dst_desc.mip_levels; ++mip)
+						{
+							const uint32_t src_subresource = ComputeSubresource(mip, slice, aspect, src_desc.mip_levels, src_desc.array_size);
+							const SubresourceData& src_subresourcedata = internal_state_dst->mapped_subresources[src_subresource];
+							const uint32_t num_blocks_x = mip_width / block_size;
+							const uint32_t num_blocks_y = mip_height / block_size;
+							copy.imageExtent.width = mip_width;
+							copy.imageExtent.height = mip_height;
+							copy.imageExtent.depth = mip_depth;
+							copy.imageSubresource.mipLevel = mip;
+							copy.bufferRowLength = src_subresourcedata.row_pitch / data_stride * block_size;
+							vkCmdCopyBufferToImage(
+								commandlist.GetCommandBuffer(),
+								internal_state_src->staging_resource,
+								internal_state_dst->resource,
+								_ConvertImageLayout(ResourceState::COPY_DST),
+								1,
+								&copy
+							);
 
-						copy.bufferOffset += num_blocks_x * num_blocks_y * mip_depth * data_stride;
-						mip_width = std::max(1u, mip_width / 2);
-						mip_height = std::max(1u, mip_height / 2);
-						mip_depth = std::max(1u, mip_depth / 2);
+							copy.bufferOffset += num_blocks_x * num_blocks_y * mip_depth * data_stride;
+							mip_width = std::max(1u, mip_width / 2);
+							mip_height = std::max(1u, mip_height / 2);
+							mip_depth = std::max(1u, mip_depth / 2);
+						}
 					}
 				}
 			}
@@ -7938,37 +7948,45 @@ using namespace vulkan_internal;
 			{
 				// GPU (texture) -> CPU (buffer)
 				VkBufferImageCopy copy = {};
-				copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-				const uint32_t data_stride = GetFormatStride(dst_desc.format);
 				const uint32_t block_size = GetFormatBlockSize(dst_desc.format);
-				for (uint32_t slice = 0; slice < dst_desc.array_size; ++slice)
+				const uint32_t planes = GetFormatPlaneCount(dst_desc.format);
+				for (uint32_t plane = 0; plane < planes; ++plane)
 				{
-					copy.imageSubresource.baseArrayLayer = slice;
-					copy.imageSubresource.layerCount = 1;
-					uint32_t mip_width = dst_desc.width;
-					uint32_t mip_height = dst_desc.height;
-					uint32_t mip_depth = dst_desc.depth;
-					for (uint32_t mip = 0; mip < dst_desc.mip_levels; ++mip)
+					const uint32_t data_stride = GetFormatStride(dst_desc.format, plane);
+					const ImageAspect aspect = GetImageAspect(src_desc.format, plane); // src aspect!
+					copy.imageSubresource.aspectMask = _ConvertImageAspect(aspect);
+					for (uint32_t slice = 0; slice < dst_desc.array_size; ++slice)
 					{
-						const uint32_t num_blocks_x = mip_width / block_size;
-						const uint32_t num_blocks_y = mip_height / block_size;
-						copy.imageExtent.width = mip_width;
-						copy.imageExtent.height = mip_height;
-						copy.imageExtent.depth = mip_depth;
-						copy.imageSubresource.mipLevel = mip;
-						vkCmdCopyImageToBuffer(
-							commandlist.GetCommandBuffer(),
-							internal_state_src->resource,
-							_ConvertImageLayout(ResourceState::COPY_SRC),
-							internal_state_dst->staging_resource,
-							1,
-							&copy
-						);
+						copy.imageSubresource.baseArrayLayer = slice;
+						copy.imageSubresource.layerCount = 1;
+						uint32_t mip_width = dst_desc.width;
+						uint32_t mip_height = dst_desc.height;
+						uint32_t mip_depth = dst_desc.depth;
+						for (uint32_t mip = 0; mip < dst_desc.mip_levels; ++mip)
+						{
+							const uint32_t dst_subresource = ComputeSubresource(mip, slice, aspect, dst_desc.mip_levels, dst_desc.array_size);
+							const SubresourceData& dst_subresourcedata = internal_state_dst->mapped_subresources[dst_subresource];
+							const uint32_t num_blocks_x = mip_width / block_size;
+							const uint32_t num_blocks_y = mip_height / block_size;
+							copy.imageExtent.width = mip_width;
+							copy.imageExtent.height = mip_height;
+							copy.imageExtent.depth = mip_depth;
+							copy.imageSubresource.mipLevel = mip;
+							copy.bufferRowLength = dst_subresourcedata.row_pitch / data_stride * block_size;
+							vkCmdCopyImageToBuffer(
+								commandlist.GetCommandBuffer(),
+								internal_state_src->resource,
+								_ConvertImageLayout(ResourceState::COPY_SRC),
+								internal_state_dst->staging_resource,
+								1,
+								&copy
+							);
 
-						copy.bufferOffset += num_blocks_x * num_blocks_y * mip_depth * data_stride;
-						mip_width = std::max(1u, mip_width / 2);
-						mip_height = std::max(1u, mip_height / 2);
-						mip_depth = std::max(1u, mip_depth / 2);
+							copy.bufferOffset += num_blocks_x * num_blocks_y * mip_depth * data_stride;
+							mip_width = std::max(1u, mip_width / 2);
+							mip_height = std::max(1u, mip_height / 2);
+							mip_depth = std::max(1u, mip_depth / 2);
+						}
 					}
 				}
 			}
@@ -8095,8 +8113,10 @@ using namespace vulkan_internal;
 			assert(src->mapped_subresource_count > subresource_index);
 			const SubresourceData& data0 = src->mapped_subresources[0];
 			const SubresourceData& data = src->mapped_subresources[subresource_index];
+			const uint32_t data_stride = GetFormatStride(src_desc.format);
+			const uint32_t block_size = GetFormatBlockSize(src_desc.format);
 			copy.bufferOffset = (uint64_t)data.data_ptr - (uint64_t)data0.data_ptr;
-			copy.bufferRowLength = std::max(1u, src_desc.width >> srcMip);
+			copy.bufferRowLength = data.row_pitch / data_stride * block_size;
 			copy.bufferImageHeight = std::max(1u, src_desc.height >> srcMip);
 			copy.imageSubresource.mipLevel = dstMip;
 			copy.imageSubresource.baseArrayLayer = dstSlice;
@@ -8128,8 +8148,10 @@ using namespace vulkan_internal;
 			assert(dst->mapped_subresource_count > subresource_index);
 			const SubresourceData& data0 = dst->mapped_subresources[0];
 			const SubresourceData& data = dst->mapped_subresources[subresource_index];
+			const uint32_t data_stride = GetFormatStride(dst_desc.format);
+			const uint32_t block_size = GetFormatBlockSize(dst_desc.format);
 			copy.bufferOffset = (uint64_t)data.data_ptr - (uint64_t)data0.data_ptr;
-			copy.bufferRowLength = std::max(1u, dst_desc.width >> dstMip);
+			copy.bufferRowLength = data.row_pitch / data_stride * block_size;
 			copy.bufferImageHeight = std::max(1u, dst_desc.height >> dstMip);
 			copy.imageSubresource.mipLevel = srcMip;
 			copy.imageSubresource.baseArrayLayer = srcSlice;
@@ -8391,6 +8413,23 @@ using namespace vulkan_internal;
 				barrierdesc.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 				barrierdesc.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
+				if (commandlist.queue == QUEUE_COPY)
+				{
+					// Simplified barrier on copy queue:
+					barrierdesc.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+					barrierdesc.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+					barrierdesc.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT | VK_ACCESS_2_TRANSFER_WRITE_BIT;
+					barrierdesc.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT | VK_ACCESS_2_TRANSFER_WRITE_BIT;
+				}
+				else if (commandlist.queue == QUEUE_VIDEO_DECODE)
+				{
+					// Simplified barrier on video queue:
+					barrierdesc.srcStageMask = VK_PIPELINE_STAGE_2_VIDEO_DECODE_BIT_KHR;
+					barrierdesc.dstStageMask = VK_PIPELINE_STAGE_2_VIDEO_DECODE_BIT_KHR;
+					barrierdesc.srcAccessMask = VK_ACCESS_2_VIDEO_DECODE_READ_BIT_KHR | VK_ACCESS_2_VIDEO_DECODE_WRITE_BIT_KHR;
+					barrierdesc.dstAccessMask = VK_ACCESS_2_VIDEO_DECODE_READ_BIT_KHR | VK_ACCESS_2_VIDEO_DECODE_WRITE_BIT_KHR;
+				}
+
 				imageBarriers.push_back(barrierdesc);
 			}
 			break;
@@ -8424,6 +8463,23 @@ using namespace vulkan_internal;
 					assert(CheckCapability(GraphicsDeviceCapability::PREDICATION));
 					barrierdesc.srcStageMask |= _ConvertPipelineStage(ResourceState::PREDICATION);
 					barrierdesc.dstStageMask |= _ConvertPipelineStage(ResourceState::PREDICATION);
+				}
+
+				if (commandlist.queue == QUEUE_COPY)
+				{
+					// Simplified barrier on copy queue:
+					barrierdesc.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+					barrierdesc.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+					barrierdesc.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT | VK_ACCESS_2_TRANSFER_WRITE_BIT;
+					barrierdesc.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT | VK_ACCESS_2_TRANSFER_WRITE_BIT;
+				}
+				else if (commandlist.queue == QUEUE_VIDEO_DECODE)
+				{
+					// Simplified barrier on video queue:
+					barrierdesc.srcStageMask = VK_PIPELINE_STAGE_2_VIDEO_DECODE_BIT_KHR;
+					barrierdesc.dstStageMask = VK_PIPELINE_STAGE_2_VIDEO_DECODE_BIT_KHR;
+					barrierdesc.srcAccessMask = VK_ACCESS_2_VIDEO_DECODE_READ_BIT_KHR | VK_ACCESS_2_VIDEO_DECODE_WRITE_BIT_KHR;
+					barrierdesc.dstAccessMask = VK_ACCESS_2_VIDEO_DECODE_READ_BIT_KHR | VK_ACCESS_2_VIDEO_DECODE_WRITE_BIT_KHR;
 				}
 
 				bufferBarriers.push_back(barrierdesc);

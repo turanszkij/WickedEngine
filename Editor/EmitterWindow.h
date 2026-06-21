@@ -33,6 +33,7 @@ public:
 	wi::gui::CheckBox collidersDisabledCheckBox;
 	wi::gui::CheckBox takeColorCheckBox;
 	wi::gui::Slider emitCountSlider;
+	wi::gui::Slider burstOnCreateSlider;
 	wi::gui::Slider emitSizeSlider;
 	wi::gui::Slider emitRotationSlider;
 	wi::gui::Slider emitNormalSlider;

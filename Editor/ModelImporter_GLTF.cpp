@@ -3077,6 +3077,7 @@ void Import_Extension_VRMC(LoaderState& state)
 void VRM_ToonMaterialCustomize(const std::string& name, MaterialComponent& material)
 {
 	material.shaderType = MaterialComponent::SHADERTYPE_CARTOON;
+	material.SetUseVertexColors(false); // Mtoon material spec ignores vertex color: https://github.com/vrm-c/vrm-specification/blob/master/specification/VRMC_materials_mtoon-1.0/README.md#vertex-colors
 
 	// These customizations are just made for Wicked Engine, but not standardized:
 	if (name.find("SKIN") != std::string::npos)
@@ -4442,7 +4443,10 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		auto nameComponent = wiscene.names.GetComponent(meshEntity);
 
 		tinygltf::Mesh mesh_builder;
-		mesh_builder.name = nameComponent->name;
+		if (nameComponent != nullptr)
+		{
+			mesh_builder.name = nameComponent->name;
+		}
 
 		tinygltf::Buffer buffer_builder;
 		int buffer_index = (int)state.gltfModel.buffers.size();
@@ -5037,7 +5041,6 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 		
 		state.nodeMap[transformEntity] = node_index;
 		state.gltfModel.nodes.push_back(node_builder);
-		scene_builder.nodes.push_back(node_index);
 	}
 
 	// Write Armature
@@ -5237,6 +5240,7 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 	}
 
 	// Compose hierarchy
+	wi::unordered_set<int> child_node_indices;
 	for(size_t h_id = 0; h_id < wiscene.hierarchy.GetCount(); ++h_id)
 	{
 		auto& hierarchyComponent = wiscene.hierarchy[h_id];
@@ -5246,6 +5250,17 @@ void ExportModel_GLTF(const std::string& filename, Scene& scene)
 			int node_index = (int)wiscene.transforms.GetIndex(hierarchyEntity);
 			size_t parent_node_index = wiscene.transforms.GetIndex(hierarchyComponent.parentID);
 			state.gltfModel.nodes[parent_node_index].children.push_back(node_index);
+			child_node_indices.insert(node_index);
+		}
+	}
+
+	// Scene root must only contain top-level nodes
+	for (size_t t_id = 0; t_id < wiscene.transforms.GetCount(); ++t_id)
+	{
+		int node_index = (int)t_id;
+		if (child_node_indices.find(node_index) == child_node_indices.end())
+		{
+			scene_builder.nodes.push_back(node_index);
 		}
 	}
 

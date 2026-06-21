@@ -258,14 +258,34 @@ void MeshWindow::Create(EditorComponent* _editor)
 		return [this, func] (auto args) {
 			wi::scene::Scene& scene = editor->GetCurrentScene();
 			wi::unordered_set<MeshComponent*> visited_meshes; // fix double visit (straight mesh + object->mesh)
-			for (auto& x : editor->translator.selected)
+			wi::vector<MeshComponent*> meshes_to_modify;
+			wi::vector<wi::ecs::Entity> mesh_entities;
+			for (auto& i : editor->translator.selected)
 			{
-				MeshComponent* mesh = get_mesh(scene, x);
+				MeshComponent* mesh = get_mesh(scene, i);
 				if (mesh == nullptr || visited_meshes.count(mesh) > 0)
 					continue;
-				func(mesh);
 				visited_meshes.insert(mesh);
-			};
+				meshes_to_modify.push_back(mesh);
+				if (scene.meshes.GetComponent(i.entity) == mesh)
+					mesh_entities.push_back(i.entity);
+				else
+				{
+					const ObjectComponent* object = scene.objects.GetComponent(i.entity);
+					if (object != nullptr)
+						mesh_entities.push_back(object->meshID);
+				}
+			}
+			if (mesh_entities.empty())
+				return;
+			wi::Archive& archive = editor->AdvanceHistory();
+			archive << EditorComponent::HISTORYOP_COMPONENT_DATA;
+			editor->RecordEntity(archive, mesh_entities);
+			for (auto* mesh : meshes_to_modify)
+			{
+				func(mesh);
+			}
+			editor->RecordEntity(archive, mesh_entities);
 			SetEntity(entity, subset);
 		};
 	};
@@ -306,6 +326,14 @@ void MeshWindow::Create(EditorComponent* _editor)
 		UpdateRecenterInputs(mesh->aabb.getCenter());
 	}));
 	AddWidget(&recenterButton);
+
+	recenterToTopButton.Create("Recenter to Top");
+	recenterToTopButton.SetTooltip("Recenter mesh to AABB top.");
+	recenterToTopButton.OnClick(changeSelectedMesh([this] (auto mesh) {
+		mesh->RecenterToTop();
+		UpdateRecenterInputs(mesh->aabb.getCenter());
+	}));
+	AddWidget(&recenterToTopButton);
 
 	recenterToBottomButton.Create("Recenter to Bottom");
 	recenterToBottomButton.SetTooltip("Recenter mesh to AABB bottom.");
@@ -814,8 +842,8 @@ void MeshWindow::Create(EditorComponent* _editor)
 	}));
 	AddWidget(&morphTargetSlider);
 
-	lodgenButton.Create("LOD Gen");
-	lodgenButton.SetTooltip("Generate LODs (levels of detail).");
+	lodgenButton.Create("Generate LODs");
+	lodgenButton.SetTooltip("Generate level of detail meshes.");
 	lodgenButton.OnClick([this, forEachSelected] (auto args) {
 		forEachSelected([this] (auto mesh, auto args) {
 			if (mesh->subsets_per_lod == 0)
@@ -926,6 +954,31 @@ void MeshWindow::Create(EditorComponent* _editor)
 		SetEntity(entity, subset);
 	});
 	AddWidget(&lodgenButton);
+
+	lodDeleteButton.Create("Delete LODs");
+	lodDeleteButton.SetTooltip("Remove all level of detail meshes.");
+	lodDeleteButton.OnClick([this, forEachSelected](auto args) {
+		forEachSelected([](auto mesh, auto args) {
+			if (mesh->subsets_per_lod == 0)
+				return;
+			uint32_t subsets_per_lod = mesh->subsets_per_lod;
+			mesh->subsets.resize(subsets_per_lod);
+			uint32_t index_count = 0;
+			for (uint32_t i = 0; i < subsets_per_lod; ++i)
+			{
+				index_count = std::max(index_count, mesh->subsets[i].indexOffset + mesh->subsets[i].indexCount);
+			}
+			mesh->indices.resize(index_count);
+			mesh->subsets_per_lod = 0;
+			mesh->CreateRenderData();
+			if (mesh->IsBVHEnabled())
+			{
+				mesh->BuildBVH();
+			}
+		})(args);
+		SetEntity(entity, subset);
+	});
+	AddWidget(&lodDeleteButton);
 
 	lodCountSlider.Create(2, 10, 6, 8, "LOD Count: ");
 	lodCountSlider.SetTooltip("This is how many levels of detail will be created.");
@@ -1151,6 +1204,7 @@ void MeshWindow::ResizeLayout()
 	layout.add_fullwidth(computeNormalsSmoothButton);
 	layout.add_fullwidth(computeNormalsHardButton);
 	layout.add_fullwidth(recenterButton);
+	layout.add_fullwidth(recenterToTopButton);
 	layout.add_fullwidth(recenterToBottomButton);
 
 	const float safe_width = layout.width - 100 - layout.padding;
@@ -1172,6 +1226,7 @@ void MeshWindow::ResizeLayout()
 	layout.add(morphTargetSlider);
 
 	layout.add_fullwidth(lodgenButton);
+	layout.add_fullwidth(lodDeleteButton);
 	layout.add(lodCountSlider);
 	layout.add(lodQualitySlider);
 	layout.add(lodErrorSlider);

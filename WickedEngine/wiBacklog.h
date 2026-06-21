@@ -12,6 +12,7 @@
 #define wilog_messagebox(str,...) {char text[1024]; snprintf(text, sizeof(text), str, ## __VA_ARGS__); wi::backlog::post(text, wi::backlog::LogLevel::Error); wi::helper::messageBox(text, "Error!");}
 #define wilog_warning(str,...) {wilog_level(str, wi::backlog::LogLevel::Warning, ## __VA_ARGS__);}
 #define wilog_error(str,...) {wilog_level(str, wi::backlog::LogLevel::Error, ## __VA_ARGS__);}
+#define wilog_success(str,...) {wilog_level(str, wi::backlog::LogLevel::Success, ## __VA_ARGS__);}
 #define wilog(str,...) {wilog_level(str, wi::backlog::LogLevel::Default, ## __VA_ARGS__);}
 #define wilog_assert(cond,str,...) {if(!(cond)){wilog_error(str, ## __VA_ARGS__); assert(cond);}}
 
@@ -23,11 +24,12 @@
 
 namespace wi::backlog
 {
-	// Do not modify the order, as this is exposed to LUA scripts as int!
+	// Keep it in sync with LogLevel LUA binding
 	enum class LogLevel
 	{
 		None,
 		Default,
+		Success,
 		Warning,
 		Error,
 	};

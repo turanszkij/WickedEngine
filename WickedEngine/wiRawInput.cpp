@@ -408,11 +408,11 @@ namespace wi::input::rawinput
 		}
 
 		// Enumerate devices to detect lost devices:
-		UINT numDevices;
+		UINT numDevices = 0;
 		UINT listResult = GetRawInputDeviceList(NULL, &numDevices, sizeof(RAWINPUTDEVICELIST));
 		assert(listResult == 0);
 
-		static RAWINPUTDEVICELIST devicelist[64];
+		static RAWINPUTDEVICELIST devicelist[512];
 		listResult = GetRawInputDeviceList(devicelist, &numDevices, sizeof(RAWINPUTDEVICELIST));
 		assert(listResult >= 0);
 		assert(numDevices <= arraysize(devicelist));

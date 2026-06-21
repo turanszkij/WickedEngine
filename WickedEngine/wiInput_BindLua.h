@@ -34,6 +34,11 @@ namespace wi::lua
 		int SetCursorFromFile(lua_State* L);
 		int ResetCursor(lua_State* L);
 		int ResetCursors(lua_State* L);
+		
+		int GetTouchPinch(lua_State* L);
+		int GetTouchPan(lua_State* L);
+		int IsTouchPanning(lua_State* L);
+		int IsTouchPanStarting(lua_State* L);
 
 		static void Bind();
 	};

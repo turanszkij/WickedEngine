@@ -268,7 +268,6 @@ namespace wi::scene
 		uint32_t layerMask = ~0u;
 		int sampler_descriptor = -1; // optional, you can modify this to overwrite global sampler for this material
 		int cached_wrapSampler = -1; // do not modify, system will write this
-		int cached_clampSampler = -1; // do not modify, system will write this
 
 		// User stencil value can be in range [0, 15]
 		constexpr void SetUserStencilRef(uint8_t value) { userStencilRef = value & 0x0F; }
@@ -414,6 +413,7 @@ namespace wi::scene
 			START_DEACTIVATED = 1 << 2,
 			REFRESH_PARAMETERS_REQUEST = 1 << 3,
 			CHARACTER_PHYSICS = 1 << 4,
+			LOCKED_2D = 1 << 5,
 		};
 		uint32_t _flags = EMPTY;
 
@@ -543,6 +543,9 @@ namespace wi::scene
 
 		constexpr void SetCharacterPhysics(bool value = true) { set_flag(_flags, CHARACTER_PHYSICS, value); }
 		constexpr bool IsCharacterPhysics() const { return _flags & CHARACTER_PHYSICS; }
+
+		constexpr void SetLocked2D(bool value) { set_flag(_flags, LOCKED_2D, value); }
+		constexpr bool IsLocked2D() const { return _flags & LOCKED_2D; }
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
@@ -872,6 +875,7 @@ namespace wi::scene
 		void FlipCulling();
 		void FlipNormals();
 		void Recenter();
+		void RecenterToTop();
 		void RecenterToBottom();
 		void RecenterTo(float x, float y, float z);
 		wi::primitive::Sphere GetBoundingSphere() const;
@@ -1455,7 +1459,6 @@ namespace wi::scene
 		uint32_t sample_count = 1;
 		int texture_primitiveID_index = -1;
 		int texture_depth_index = -1;
-		int texture_lineardepth_index = -1;
 		int texture_velocity_index = -1;
 		int texture_normal_index = -1;
 		int texture_roughness_index = -1;
@@ -1540,9 +1543,11 @@ namespace wi::scene
 		uint32_t resolution = 128; // power of two
 		float realtime_update_interval = 0.0f; // how often to render when realtime (in seconds, 0 = every frame)
 		std::string textureName; // if texture is coming from an asset
+		float view_distance = -1; // -1: use main camera's view distance, > 0: custom view distance
 
 		// Non-serialized attributes:
 		wi::graphics::Texture texture;
+		int subresource = -1;
 		wi::Resource resource; // if texture is coming from an asset
 		XMFLOAT3 position;
 		float range;
@@ -2254,6 +2259,7 @@ namespace wi::scene
 			DISABLE_INTERSECTION = 1 << 2,
 			DISABLE_CAPSULE_SHADOW = 1 << 3,
 			RAGDOLL_DISABLED = 1 << 4,
+			RAGDOLL_2D = 1 << 5,
 		};
 		uint32_t _flags = LOOKAT;
 
@@ -2334,12 +2340,14 @@ namespace wi::scene
 		constexpr bool IsIntersectionDisabled() const { return _flags & DISABLE_INTERSECTION; }
 		constexpr bool IsCapsuleShadowDisabled() const { return _flags & DISABLE_CAPSULE_SHADOW; }
 		constexpr bool IsRagdollDisabled() const { return _flags & RAGDOLL_DISABLED; }
+		constexpr bool IsRagdoll2D() const { return _flags & RAGDOLL_2D; }
 
 		constexpr void SetLookAtEnabled(bool value = true) { set_flag(_flags, LOOKAT, value); }
 		constexpr void SetRagdollPhysicsEnabled(bool value = true) { set_flag(_flags, RAGDOLL_PHYSICS, value); }
 		constexpr void SetIntersectionDisabled(bool value = true) { set_flag(_flags, DISABLE_INTERSECTION, value); }
 		constexpr void SetCapsuleShadowDisabled(bool value = true) { set_flag(_flags, DISABLE_CAPSULE_SHADOW, value); }
 		constexpr void SetRagdollDisabled(bool value = true) { set_flag(_flags, RAGDOLL_DISABLED, value); }
+		constexpr void SetRagdoll2D(bool value = true) { set_flag(_flags, RAGDOLL_2D, value); }
 
 		XMFLOAT2 head_rotation_max = XMFLOAT2(XM_PI / 3.0f, XM_PI / 6.0f);
 		XMFLOAT2 eye_rotation_max = XMFLOAT2(XM_PI / 20.0f, XM_PI / 20.0f);
@@ -2396,6 +2404,7 @@ namespace wi::scene
 			NPC,
 			Pickup,
 			Vehicle,
+			PointOfInterest,
 		};
 		Preset preset = Preset::Custom;
 
@@ -2488,6 +2497,7 @@ namespace wi::scene
 			CHARACTER_TO_CHARACTER_COLLISION_DISABLED = 1 << 0,
 			DEDICATED_SHADOW = 1 << 1,
 			ACTIVE = 1 << 2,
+			LOCKED_2D = 1 << 3,
 		};
 		uint32_t _flags = ACTIVE;
 
@@ -2635,11 +2645,14 @@ namespace wi::scene
 		// Returns whether character processing is active or not
 		bool IsActive() const;
 
-		bool IsCharacterToCharacterCollisionDisabled() const { return _flags & CHARACTER_TO_CHARACTER_COLLISION_DISABLED; }
-		void SetCharacterToCharacterCollisionDisabled(bool value = true) { set_flag(_flags, CHARACTER_TO_CHARACTER_COLLISION_DISABLED, value); }
+		constexpr bool IsCharacterToCharacterCollisionDisabled() const { return _flags & CHARACTER_TO_CHARACTER_COLLISION_DISABLED; }
+		constexpr void SetCharacterToCharacterCollisionDisabled(bool value = true) { set_flag(_flags, CHARACTER_TO_CHARACTER_COLLISION_DISABLED, value); }
 
-		bool IsDedicatedShadow() const { return _flags & DEDICATED_SHADOW; }
-		void SetDedicatedShadow(bool value = true) { set_flag(_flags, DEDICATED_SHADOW, value); }
+		constexpr bool IsDedicatedShadow() const { return _flags & DEDICATED_SHADOW; }
+		constexpr void SetDedicatedShadow(bool value = true) { set_flag(_flags, DEDICATED_SHADOW, value); }
+
+		constexpr void SetLocked2D(bool value) { set_flag(_flags, LOCKED_2D, value); }
+		constexpr bool IsLocked2D() const { return _flags & LOCKED_2D; }
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};

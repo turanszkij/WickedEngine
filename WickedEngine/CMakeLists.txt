@@ -43,9 +43,9 @@ else ()
     find_package(OpenImageDenoise "${MIN_OpenImageDenoise_VERSION}" QUIET)
     find_package(Threads REQUIRED)
     if(NOT ${OpenImageDenoise_FOUND})
-        message("OpenImageDenoise>=${MIN_OpenImageDenoise_VERSION} not found, it will be disabled.")
+        message(STATUS "OpenImageDenoise>=${MIN_OpenImageDenoise_VERSION} not found, it will be disabled.")
     else()
-        message("OpenImageDenoise ${OpenImageDenoise_VERSION} Found.")
+        message(STATUS "OpenImageDenoise ${OpenImageDenoise_VERSION} Found.")
     endif()
 
     if(NOT TARGET SDL2::SDL2)
@@ -352,61 +352,3 @@ target_link_libraries(offlineshadercompiler
 
 # only this target will see the wiShaderDump.h file, so the _ext_shaders target will not have embedded shaders.
 target_include_directories(WickedEngine_emb_shaders PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
-
-install(TARGETS offlineshadercompiler
-        RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/WickedEngine")
-
-install(DIRECTORY "${WICKED_ROOT_DIR}/Content"
-        DESTINATION "${CMAKE_INSTALL_LIBDIR}/WickedEngine")
-
-#### LOCAL FOLDER INSTALLATION
-# Create importable target here
-
-#set_target_properties(${TARGET_NAME} PROPERTIES PUBLIC_HEADER "${HEADERS}")
-set_target_properties(${TARGET_NAME} PROPERTIES EXPORT_NAME WickedEngine)
-
-install(TARGETS ${TARGET_NAME} ${WICKEDENGINE_STATIC_LIBRARIES} WickedEngine_common
-        EXPORT Engine-Targets
-        LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-        ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}/WickedEngine"
-        PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine")
-
-install(FILES ${LIBDXCOMPILER}
-        DESTINATION "${CMAKE_INSTALL_LIBDIR}/WickedEngine")
-
-export(EXPORT Engine-Targets
-        FILE "${CMAKE_BINARY_DIR}/cmake/WickedEngineTargets.cmake"
-        NAMESPACE WickedEngine::
-        )
-
-install(EXPORT Engine-Targets
-        FILE WickedEngineTargets.cmake
-        NAMESPACE WickedEngine::
-        DESTINATION ${INSTALL_CONFIGDIR})
-
-set(_CONFIG_INSTALL_DIR_INCLUDE "${WICKED_ROOT_DIR}")
-set(_CONFIG_INSTALL_DIR_LIB "${WICKED_ROOT_DIR}")
-configure_package_config_file(
-        ${CMAKE_CURRENT_SOURCE_DIR}/WickedEngineConfig.cmake.in
-        ${CMAKE_BINARY_DIR}/cmake/WickedEngineConfig.cmake
-        INSTALL_DESTINATION ${INSTALL_LOCAL_CONFIGDIR}
-)
-set(_CONFIG_INSTALL_DIR_INCLUDE "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}")
-set(_CONFIG_INSTALL_DIR_LIB "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
-configure_package_config_file(
-        ${CMAKE_CURRENT_SOURCE_DIR}/WickedEngineConfig.cmake.in
-        ${CMAKE_BINARY_DIR}/cmake/install/WickedEngineConfig.cmake
-        INSTALL_DESTINATION ${INSTALL_CONFIGDIR}
-)
-
-install(FILES ${CMAKE_BINARY_DIR}/cmake/install/WickedEngineConfig.cmake
-        DESTINATION ${INSTALL_CONFIGDIR}
-)
-
-# Shaders
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/shaders
-        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine"
-        PATTERN "spirv" EXCLUDE
-        PATTERN "hlsl6" EXCLUDE
-        PATTERN "*.vcxitems*" EXCLUDE
-        )

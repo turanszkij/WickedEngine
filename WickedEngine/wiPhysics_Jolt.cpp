@@ -272,6 +272,7 @@ namespace wi::physics
 			float accumulator = 0;
 			float alpha = 0;
 			bool activate_all_rigid_bodies = false;
+			bool optimize_broadphase = false;
 			float GetKinematicDT(float dt) const
 			{
 				return clamp(accumulator + dt, 0.0f, TIMESTEP * ACCURACY);
@@ -628,6 +629,10 @@ namespace wi::physics
 				if (motionType == EMotionType::Static)
 				{
 					settings.mObjectLayer = Layers::NON_MOVING;
+				}
+				if (physicscomponent.IsLocked2D())
+				{
+					settings.mAllowedDOFs = EAllowedDOFs::Plane2D;
 				}
 
 				physicsobject.friction = settings.mFriction;
@@ -1723,6 +1728,10 @@ namespace wi::physics
 					part.mObjectLayer = Layers::MOVING;
 					part.mOverrideMassProperties = EOverrideMassProperties::CalculateInertia;
 					part.mMassPropertiesOverride.mMass = masses[p];
+					if (humanoid.IsRagdoll2D())
+					{
+						part.mAllowedDOFs = EAllowedDOFs::Plane2D | EAllowedDOFs::RotationX | EAllowedDOFs::RotationY; // ragdoll parts are allowed to rotate in XY, this fixes ragdoll facing issue where it would be always forced to face +Z
+					}
 
 					// First part is the root, doesn't have a parent and doesn't have a constraint
 					if (p == 0)
@@ -1860,6 +1869,7 @@ namespace wi::physics
 				PhysicsSystem& physics_system = ((PhysicsScene*)physics_scene.get())->physics_system;
 				BodyInterface& body_interface = physics_system.GetBodyInterface(); // locking version because this is called from job system!
 
+				std::scoped_lock lck(scene.locker);
 				int c = 0;
 				for (auto& x : rigidbodies)
 				{
@@ -1905,6 +1915,7 @@ namespace wi::physics
 				PhysicsSystem& physics_system = ((PhysicsScene*)physics_scene.get())->physics_system;
 				BodyInterface& body_interface = physics_system.GetBodyInterface(); // locking version because this is called from job system!
 
+				std::scoped_lock lck(scene.locker);
 				int c = 0;
 				for (auto& x : rigidbodies)
 				{
@@ -2133,6 +2144,12 @@ namespace wi::physics
 
 		PhysicsScene& physics_scene = GetPhysicsScene(scene);
 		physics_scene.physics_system.SetGravity(cast(scene.weather.gravity));
+
+		if (physics_scene.optimize_broadphase)
+		{
+			physics_scene.optimize_broadphase = false;
+			physics_scene.physics_system.OptimizeBroadPhase();
+		}
 
 		// First, do the creations when needed (AddRigidBody, AddSoftBody, etc):
 		//	These will be locking updates, but doesn't need to be performed frequently
@@ -3817,6 +3834,14 @@ namespace wi::physics
 	{
 		PhysicsScene& physics_scene = *(PhysicsScene*)scene.physics_scene.get();
 		physics_scene.activate_all_rigid_bodies = true;
+	}
+
+	void OptimizeBroadPhase(Scene& scene)
+	{
+		if (scene.physics_scene == nullptr)
+			return;
+		PhysicsScene& physics_scene = *(PhysicsScene*)scene.physics_scene.get();
+		physics_scene.optimize_broadphase = true;
 	}
 
 	void ResetPhysicsObjects(Scene& scene)

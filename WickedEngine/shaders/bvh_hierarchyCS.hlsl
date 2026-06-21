@@ -14,7 +14,7 @@
 
 StructuredBuffer<uint> primitiveCounterBuffer : register(t0);
 StructuredBuffer<uint> primitiveIDBuffer : register(t1);
-StructuredBuffer<float> primitiveMortonBuffer : register(t2); // float because it was sorted
+StructuredBuffer<uint> primitiveMortonBuffer : register(t2);
 
 RWByteAddressBuffer bvhNodeBuffer : register(u0);
 RWStructuredBuffer<uint> bvhParentBuffer : register(u1);
@@ -33,8 +33,8 @@ int GetLongestCommonPrefix(uint indexA, uint indexB, uint elementCount)
 	}
 	else
 	{
-		uint mortonCodeA = (float)primitiveMortonBuffer[primitiveIDBuffer[indexA]];
-		uint mortonCodeB = (float)primitiveMortonBuffer[primitiveIDBuffer[indexB]];
+		uint mortonCodeA = primitiveMortonBuffer[indexA];
+		uint mortonCodeB = primitiveMortonBuffer[indexB];
 		if (mortonCodeA != mortonCodeB)
 		{
 			return CountLeadingZeroes(mortonCodeA ^ mortonCodeB);

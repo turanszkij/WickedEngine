@@ -1,5 +1,6 @@
 #define TRANSPARENT // uses transparent light lists
 #define LIGHTING_SCATTER
+#define DISABLE_TRANSPARENT_SHADOWMAP // particle casts transparent shadow layer, but particle self-shadow doesn't look good, there is mismatch due to camera-facingness
 #include "globals.hlsli"
 #include "emittedparticleHF.hlsli"
 #include "ShaderInterop_EmittedParticle.h"
@@ -74,9 +75,9 @@ float4 main(VertextoPixel input) : SV_TARGET
 #endif // EMITTEDPARTICLE_DISTORTION
 	
 	[branch]
-	if (GetCamera().texture_lineardepth_index >= 0)
+	if (GetCamera().texture_depth_index >= 0)
 	{
-		float4 depthScene = texture_lineardepth.GatherRed(sampler_linear_clamp, ScreenCoord) * GetCamera().z_far;
+		float4 depthScene = compute_lineardepth(texture_depth.GatherRed(sampler_linear_clamp, ScreenCoord));
 		float depthFragment = input.pos.w;
 		opacity *= saturate(1.0 / input.size * (max(max(depthScene.x, depthScene.y), max(depthScene.z, depthScene.w)) - depthFragment));
 	}

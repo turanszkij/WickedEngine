@@ -23,6 +23,19 @@
 #define NOSPARSE
 #endif // __APPLE__
 
+// Logical texture resolution limits:
+const uint32_t min_virtual_resolution = SVT_TILE_SIZE;
+const uint32_t max_virtual_resolution = 65536u;
+
+#ifdef NOSPARSE
+// Try to account for memory increase in no-sparse mode, reduce atlas size:
+const uint32_t atlas_physical_width = 16384u;
+const uint32_t atlas_physical_height = 8192u;
+#else
+const uint32_t atlas_physical_width = 16384u;
+const uint32_t atlas_physical_height = 16384u;
+#endif // NOSPARSE
+
 using namespace wi::ecs;
 using namespace wi::scene;
 using namespace wi::graphics;
@@ -674,6 +687,8 @@ namespace wi::terrain
 			weather = *weather_component; // feedback default weather
 		}
 
+		bool props_regenerated = false;
+
 		// Invalidated chunks replacements, originals are removed before merging updated ones:
 		for (Chunk chunk : generator->removable_chunks)
 		{
@@ -692,6 +707,7 @@ namespace wi::terrain
 		generator->removable_chunks.clear();
 
 		// What was generated, will be merged in to the main scene
+		props_regenerated |= generator->scene.rigidbodies.GetCount() >= 1000;
 		scene->MergeFastInternal(generator->scene);
 
 		chunk_scale_rcp = 1.0f / chunk_scale;
@@ -833,6 +849,7 @@ namespace wi::terrain
 					{
 						scene->Entity_Remove(chunk_data.props_entity);
 						chunk_data.props_entity = INVALID_ENTITY; // prop can be generated here by generation thread...
+						props_regenerated = true;
 					}
 				}
 			}
@@ -900,6 +917,11 @@ namespace wi::terrain
 			}
 
 			it++;
+		}
+
+		if (props_regenerated)
+		{
+			wi::physics::OptimizeBroadPhase(*scene);
 		}
 
 		if (virtual_texture_any)
@@ -1561,21 +1583,13 @@ namespace wi::terrain
 
 			if (!atlas.IsValid())
 			{
-#ifdef NOSPARSE
-				// Try to account for memory increase in no-sparse mode, reduce atlas size:
-				const uint32_t physical_width = 16384u;
-				const uint32_t physical_height = 8192u;
-#else
-				const uint32_t physical_width = 16384u;
-				const uint32_t physical_height = 16384u;
-#endif // NOSPARSE
 				GPUBufferDesc tile_pool_desc;
 
 				for (uint32_t map_type = 0; map_type < arraysize(atlas.maps); ++map_type)
 				{
 					TextureDesc desc;
-					desc.width = physical_width;
-					desc.height = physical_height;
+					desc.width = atlas_physical_width;
+					desc.height = atlas_physical_height;
 #ifndef NOSPARSE
 					desc.misc_flags = ResourceMiscFlag::SPARSE;
 #endif // NOSPARSE
@@ -1626,7 +1640,7 @@ namespace wi::terrain
 					tile_pool_desc.size += atlas.maps[map_type].texture.sparse_properties->total_tile_count * atlas.maps[map_type].texture.sparse_page_size;
 					tile_pool_desc.alignment = std::max(tile_pool_desc.alignment, atlas.maps[map_type].texture.sparse_page_size);
 #endif // NOSPARSE
-					
+
 					for (uint32_t i = 0; i < atlas.maps[map_type].texture_raw_block.desc.mip_levels; ++i)
 					{
 						int subresource_index = device->CreateSubresource(&atlas.maps[map_type].texture_raw_block, SubresourceType::UAV, 0, 1, i, 1);
@@ -1640,8 +1654,8 @@ namespace wi::terrain
 				assert(success);
 #endif // NOSPARSE
 
-				atlas.physical_tile_count_x = uint8_t(physical_width / SVT_TILE_SIZE_PADDED);
-				atlas.physical_tile_count_y = uint8_t(physical_height / SVT_TILE_SIZE_PADDED);
+				atlas.physical_tile_count_x = uint8_t(atlas_physical_width / SVT_TILE_SIZE_PADDED);
+				atlas.physical_tile_count_y = uint8_t(atlas_physical_height / SVT_TILE_SIZE_PADDED);
 				atlas.physical_tiles.resize(size_t(atlas.physical_tile_count_x) * size_t(atlas.physical_tile_count_y));
 
 				uint64_t init_frames = 0;
@@ -1694,9 +1708,7 @@ namespace wi::terrain
 			}
 			VirtualTexture& vt = *chunk_data.vt;
 
-			const uint32_t min_resolution = SVT_TILE_SIZE;
-			const uint32_t max_resolution = 65536u;
-			const uint32_t required_resolution = dist < 2 ? max_resolution : min_resolution;
+			const uint32_t required_resolution = dist < 2 ? max_virtual_resolution : min_virtual_resolution;
 			//const uint32_t required_resolution = std::max(min_resolution, max_resolution >> std::min(7, std::max(0, dist - 1)));
 
 			if (vt.resolution != required_resolution)
@@ -1898,7 +1910,7 @@ namespace wi::terrain
 		GraphicsDevice* device = GetDevice();
 		device->EventBegin("Terrain - UpdateVirtualTexturesGPU", cmd);
 		auto range = wi::profiler::BeginRangeGPU("Terrain - UpdateVirtualTexturesGPU", cmd);
-		
+
 		device->Barrier(GPUBarrier::Memory(), cmd); // on Apple this fixes corruption so better be safe on all platforms, do not remove
 
 		device->EventBegin("Update Residency Maps", cmd);
@@ -2046,7 +2058,7 @@ namespace wi::terrain
 							cmd
 						);
 					}
-					
+
 #ifdef NOSPARSE
 					push.write_offset = write_offset_original;
 					push.write_size = SVT_TILE_SIZE_PADDED / 4u;

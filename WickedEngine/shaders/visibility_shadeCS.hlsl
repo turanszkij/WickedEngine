@@ -16,6 +16,8 @@
 #include "brdf.hlsli"
 #include "shadingHF.hlsli"
 
+// This shader computes per-pixel lighting based on primitiveID and surface attributes
+
 struct VisibilityPushConstants
 {
 	uint global_tile_offset;
@@ -33,14 +35,23 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
 	const uint tile_offset = push.global_tile_offset + Gid.x;
 	VisibilityTile tile = binned_tiles[tile_offset];
+#ifndef PRIMITIVEID_UNIFORM
 	[branch] if (!tile.check_thread_valid(groupIndex)) return;
+#endif // PRIMITIVEID_UNIFORM
 	const uint2 GTid = remap_lane_8x8(groupIndex);
-	const uint2 pixel = unpack_pixel(tile.visibility_tile_id) * VISIBILITY_BLOCKSIZE + GTid;
+	const uint2 tileID = unpack_pixel(tile.visibility_tile_id);
+	const uint2 pixel = tileID * VISIBILITY_BLOCKSIZE + GTid;
+	const uint entity_flat_tile_index = flatten2D(tileID / VISIBILITY_TILED_CULLING_GRANULARITY, GetCamera().entity_culling_tilecount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
 
 	const float2 uv = ((float2)pixel + 0.5) * GetCamera().internal_resolution_rcp;
 	RayDesc ray = CreateCameraRay(pixel);
 
-	uint primitiveID = texture_primitiveID[pixel];
+#ifdef PRIMITIVEID_UNIFORM
+	const uint primitiveID = tile.execution_mask_or_primitiveID;
+#else
+	const uint primitiveID = texture_primitiveID[pixel];
+#endif // PRIMITIVEID_UNIFORM
+
 	PrimitiveID prim;
 	prim.init();
 	prim.unpack(primitiveID);
@@ -102,7 +113,7 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	lighting.indirect.specular += PlanarReflection(surface, bumpColor) * surface.F;
 #endif // PLANARREFLECTION
 
-	TiledLighting(surface, lighting, tile.entity_flat_tile_index);
+	TiledLighting(surface, lighting, entity_flat_tile_index);
 
 #ifndef CARTOON
 	[branch]

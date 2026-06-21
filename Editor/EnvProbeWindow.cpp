@@ -31,6 +31,9 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 	infoLabel.SetFitTextEnabled(true);
 	AddWidget(&infoLabel);
 
+	preview.Create("EnvmapPreview");
+	AddWidget(&preview);
+
 	auto forEachSelected = [this] (auto func) {
 		return [this, func] (auto args) {
 			wi::scene::Scene& scene = editor->GetCurrentScene();
@@ -71,6 +74,15 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 	}));
 	AddWidget(&realtimeFrameIntervalSlider);
 
+	viewdistanceSlider.Create(0.0f, 1000.0f, -1.0f, 100, "View distance: ");
+	viewdistanceSlider.SetTooltip("Control the culling distance for this probe. -1: use main camera's view distance, > 0: custom view distance");
+	viewdistanceSlider.SetEnabled(false);
+	viewdistanceSlider.OnSlide(forEachSelected([] (auto probe, auto args) {
+		probe->view_distance = args.fValue;
+		probe->SetDirty();
+	}));
+	AddWidget(&viewdistanceSlider);
+
 	refreshButton.Create("Refresh");
 	refreshButton.SetTooltip("Re-renders the selected probe.");
 	refreshButton.SetEnabled(false);
@@ -100,8 +112,8 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 			wi::helper::FileDialog(params, [=](std::string fileName) {
 				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 
-					wi::Resource resource = wi::resourcemanager::Load(fileName);
-					if (has_flag(resource.GetTexture().GetDesc().misc_flags, wi::graphics::ResourceMiscFlag::TEXTURECUBE))
+					probe->resource = wi::resourcemanager::Load(fileName);
+					if (has_flag(probe->resource.GetTexture().GetDesc().misc_flags, wi::graphics::ResourceMiscFlag::TEXTURECUBE))
 					{
 						probe->textureName = fileName;
 						probe->CreateRenderData();
@@ -193,16 +205,23 @@ void EnvProbeWindow::SetEntity(Entity entity)
 		realTimeCheckBox.SetEnabled(false);
 		msaaCheckBox.SetEnabled(false);
 		realtimeFrameIntervalSlider.SetEnabled(false);
+		viewdistanceSlider.SetEnabled(false);
 		refreshButton.SetEnabled(false);
+		preview.SetImage({});
 	}
 	else
 	{
+		wi::Resource res;
+		res.SetTexture(probe->texture);
+		preview.SetImage(res);
 		realTimeCheckBox.SetCheck(probe->IsRealTime());
 		realTimeCheckBox.SetEnabled(true);
 		msaaCheckBox.SetCheck(probe->IsMSAA());
 		msaaCheckBox.SetEnabled(true);
 		realtimeFrameIntervalSlider.SetValue(probe->realtime_update_interval);
 		realtimeFrameIntervalSlider.SetEnabled(true);
+		viewdistanceSlider.SetValue(probe->view_distance);
+		viewdistanceSlider.SetEnabled(true);
 		refreshButton.SetEnabled(true);
 		resolutionCombo.SetSelectedByUserdata(probe->resolution);
 
@@ -249,7 +268,15 @@ void EnvProbeWindow::ResizeLayout()
 
 	layout.add(resolutionCombo);
 
-	layout.add_right(realTimeCheckBox);
-	layout.add_right(msaaCheckBox);
-	layout.add_right(realtimeFrameIntervalSlider);
+	layout.add_right(msaaCheckBox, realTimeCheckBox);
+	layout.add_fullwidth(realtimeFrameIntervalSlider);
+	layout.add_fullwidth(viewdistanceSlider);
+
+	layout.add_fullwidth_aspect(preview);
+	preview.SetColor(wi::Color::White());
+	for (auto& x : preview.sprites)
+	{
+		x.params.blendFlag = wi::enums::BLENDMODE_OPAQUE;
+		x.params.setBackgroundMap(wi::texturehelper::getBlack());
+	}
 }

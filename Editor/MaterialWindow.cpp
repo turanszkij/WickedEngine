@@ -5,9 +5,19 @@ using namespace wi::graphics;
 using namespace wi::ecs;
 using namespace wi::scene;
 
-void AddTexturePropertiesString(const wi::graphics::TextureDesc& desc, std::string& str)
+void AddTexturePropertiesString(const wi::graphics::TextureDesc& desc, std::string& str, uint32_t full_mip_count = 0)
 {
-	str += "\nResolution: " + std::to_string(desc.width) + " * " + std::to_string(desc.height);
+	uint32_t full_width = desc.width;
+	uint32_t full_height = desc.height;
+	uint32_t display_mip_levels = desc.mip_levels;
+	if (full_mip_count > desc.mip_levels)
+	{
+		const uint32_t mip_offset = full_mip_count - desc.mip_levels;
+		full_width <<= mip_offset;
+		full_height <<= mip_offset;
+		display_mip_levels = full_mip_count;
+	}
+	str += "\nResolution: " + std::to_string(full_width) + " * " + std::to_string(full_height);
 	if (desc.array_size > 1)
 	{
 		str += " * " + std::to_string(desc.array_size);
@@ -20,7 +30,7 @@ void AddTexturePropertiesString(const wi::graphics::TextureDesc& desc, std::stri
 	{
 		str += " (cubemap)";
 	}
-	str += "\nMip levels: " + std::to_string(desc.mip_levels);
+	str += "\nMip levels: " + std::to_string(display_mip_levels);
 	str += "\nFormat: ";
 	str += GetFormatString(desc.format);
 	str += "\nSwizzle: ";
@@ -1016,7 +1026,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 			if (material->textures[args.iValue].resource.IsValid())
 			{
 				const Texture& texture = material->textures[args.iValue].resource.GetTexture();
-				AddTexturePropertiesString(texture.GetDesc(), tooltiptext);
+				AddTexturePropertiesString(texture.GetDesc(), tooltiptext, material->textures[args.iValue].resource.GetTextureFullMipCount());
 			}
 		}
 
@@ -1359,7 +1369,7 @@ void MaterialWindow::RecreateTexturePickerButtons()
 		button.Create("");
 		button.SetImage(textureResource);
 		std::string tooltipText = wi::helper::GetFileNameFromPath(textureName) + "\nFull path: " + textureName;
-		AddTexturePropertiesString(textureResource.GetTexture().GetDesc(), tooltipText);
+		AddTexturePropertiesString(textureResource.GetTexture().GetDesc(), tooltipText, textureResource.GetTextureFullMipCount());
 		button.SetTooltip(tooltipText);
 		texturePickerWindow.AddWidget(&button);
 		button.SetVisible(false);

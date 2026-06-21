@@ -16,7 +16,7 @@
 #include <deque>
 
 // There are crashes with this in graphics debugger, so this can be disabled:
-//#define USE_TEXTURE_VIEW_POOL
+#define USE_TEXTURE_VIEW_POOL
 
 namespace wi::graphics
 {
@@ -61,6 +61,7 @@ namespace wi::graphics
 	private:
 		NS::SharedPtr<MTL::Device> device;
 		NS::SharedPtr<MTL4::CommandQueue> uploadqueue;
+		bool textureUlongAtomics = true;
 		
 		struct Semaphore
 		{
@@ -172,6 +173,21 @@ namespace wi::graphics
 			IRGeometryEmulationPipelineDescriptor gs_desc = {};
 			wi::vector<std::pair<NS::SharedPtr<MTL::Texture>, uint32_t>> texture_clears;
 			
+			struct TextureClearBatchItem
+			{
+				uint32_t resolutionPacked;
+				NS::SharedPtr<MTL::RenderPassColorAttachmentDescriptor> attachment;
+				constexpr bool operator<(const TextureClearBatchItem& other) const
+				{
+					return resolutionPacked < other.resolutionPacked;
+				}
+				constexpr bool operator>(const TextureClearBatchItem& other) const
+				{
+					return resolutionPacked > other.resolutionPacked;
+				}
+			};
+			wi::vector<TextureClearBatchItem> texture_clear_batching;
+			
 			struct VertexBufferBinding
 			{
 				MTL::GPUAddress gpu_address = 0;
@@ -272,7 +288,7 @@ namespace wi::graphics
 		bool CreateSwapChain(const SwapChainDesc* desc, wi::platform::window_type window, SwapChain* swapchain) const override;
 		bool CreateBuffer2(const GPUBufferDesc* desc, const std::function<void(void*)>& init_callback, GPUBuffer* buffer, const GPUResource* alias = nullptr, uint64_t alias_offset = 0ull) const override;
 		bool CreateTexture(const TextureDesc* desc, const SubresourceData* initial_data, Texture* texture, const GPUResource* alias = nullptr, uint64_t alias_offset = 0ull) const override;
-		bool CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader) const override;
+		bool CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader, const char* entrypoint = "main") const override;
 		bool CreateSampler(const SamplerDesc* desc, Sampler* sampler) const override;
 		bool CreateQueryHeap(const GPUQueryHeapDesc* desc, GPUQueryHeap* queryheap) const override;
 		bool CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso, const RenderPassInfo* renderpass_info = nullptr) const override;

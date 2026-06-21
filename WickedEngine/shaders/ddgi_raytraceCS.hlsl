@@ -495,10 +495,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			hit_result += surface.emissiveColor;
 			radiance += hit_result;
 
+			radiance = saturateMediump(radiance);
+
 			DDGIRayData rayData;
 			rayData.direction = ray.Direction;
 			rayData.depth = hit_depth;
-			rayData.radiance = float4(radiance, 1);
+			rayData.radiance = radiance;
 			rayBuffer[probeIndex * DDGI_MAX_RAYCOUNT + rayIndex].store(rayData);
 		}
 

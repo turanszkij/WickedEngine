@@ -139,8 +139,9 @@ namespace wi::input
 		KEYBOARD_BUTTON_INSERT,
 		KEYBOARD_BUTTON_ALT,
 		KEYBOARD_BUTTON_ALTGR,
-		KEYBOARD_BUTTON_LCOMMAND,
-		KEYBOARD_BUTTON_RCOMMAND,
+		KEYBOARD_BUTTON_LCOMMAND, // MacOS specific
+		KEYBOARD_BUTTON_RCOMMAND, // MacOS specific
+		KEYBOARD_BUTTON_END,
 
 		// must be the last entry
 		BUTTON_ENUM_SIZE
@@ -233,17 +234,19 @@ namespace wi::input
 
 	struct Touch
 	{
+		XMFLOAT2 pos = XMFLOAT2(0, 0); // current position of touch
+		float scale = 0; // scale of pinch
 		enum TOUCHSTATE
 		{
 			TOUCHSTATE_PRESSED,
 			TOUCHSTATE_RELEASED,
 			TOUCHSTATE_MOVED,
+			TOUCHSTATE_PINCHED,
 			TOUCHSTATE_COUNT,
-		} state;
-		// current position of touch
-		XMFLOAT2 pos;
+		} state = TOUCHSTATE_PRESSED;
 	};
 	const wi::vector<Touch>& GetTouches();
+	void AddTouchEvent(const Touch& touch);
 
 	enum CURSOR
 	{
@@ -283,25 +286,23 @@ namespace wi::input
 		CONTROLLER_PREFERENCE_PLAYSTATION,
 		CONTROLLER_PREFERENCE_XBOX,
 	};
-	struct ShortReturnString
-	{
-		char text[32] = {};
-		constexpr ShortReturnString() = default;
-		constexpr ShortReturnString(const char* str)
-		{
-			int i = 0;
-			while (str[i] && i < arraysize(text))
-			{
-				text[i] = str[i];
-				i++;
-			}
-		}
-		constexpr operator const char*() const { return text; }
-	};
-	ShortReturnString ButtonToString(BUTTON button, CONTROLLER_PREFERENCE preference = CONTROLLER_PREFERENCE_GENERIC);
+	StackString<32> ButtonToString(BUTTON button, CONTROLLER_PREFERENCE preference = CONTROLLER_PREFERENCE_GENERIC);
 
 
 	void AddMouseScrollEvent(float value);
 	void AddMouseMoveDeltaEvent(XMFLOAT2 value);
+
+	struct Pinch
+	{
+		XMFLOAT2 position = XMFLOAT2(0, 0);
+		float scale = 1;
+		float delta_scale = 0;
+	};
+	const Pinch& GetTouchPinch();
+
+	const XMFLOAT2& GetTouchPan();
+
+	bool IsTouchPanning();
+	bool IsTouchPanStarting();
 };
 

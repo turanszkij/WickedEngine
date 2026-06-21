@@ -30,6 +30,7 @@ public:
 	wi::gui::Button computeNormalsSmoothButton;
 	wi::gui::Button computeNormalsHardButton;
 	wi::gui::Button recenterButton;
+	wi::gui::Button recenterToTopButton;
 	wi::gui::Button recenterToBottomButton;
 	wi::gui::TextInputField recenterToXInput;
 	wi::gui::TextInputField recenterToYInput;
@@ -42,6 +43,7 @@ public:
 	wi::gui::Slider morphTargetSlider;
 
 	wi::gui::Button lodgenButton;
+	wi::gui::Button lodDeleteButton;
 	wi::gui::Slider lodCountSlider;
 	wi::gui::Slider lodQualitySlider;
 	wi::gui::Slider lodErrorSlider;

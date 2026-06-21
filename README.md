@@ -4,7 +4,6 @@
 
 [![Github Build Status](https://github.com/turanszkij/WickedEngine/workflows/Build/badge.svg)](https://github.com/turanszkij/WickedEngine/actions)
 [![Discord chat](https://img.shields.io/discord/602811659224088577?logo=discord)](https://discord.gg/CFjRYmE)
-[![Forum](https://img.shields.io/badge/forum-join-blue)](https://wickedengine.net/forum/)
 <a href="https://twitter.com/intent/follow?screen_name=turanszkij"><img src="https://img.shields.io/twitter/follow/turanszkij.svg?style=social" alt="follow on Twitter"></a>
 <br/>
 [![Steam](https://img.shields.io/badge/Steam-%23000000.svg?logo=steam&logoColor=white)](https://store.steampowered.com/app/1967460/Wicked_Engine/)
@@ -28,9 +27,10 @@ You can get the full source code by using Git version control and cloning https:
 <img align="left" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/guy_pose.png" width="240px"/>
 
 ### Platforms:
-- Windows 10+
+- Windows
 - Linux
 - Mac OS
+- iOS
 - Xbox Series X|S
 - PlayStation 5
 
@@ -39,7 +39,7 @@ You can get the full source code by using Git version control and cloning https:
 <img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/videoprojectors.gif" width="320px"/>
 
 #### Windows
-To build Wicked Engine for Windows 10 or newer, open the `WickedEngine.sln` solution file with the latest Visual Studio. When it's opened, press F5, then Wicked Engine and the Editor application will be built and then start. You can check out other sample projects in the solution too.
+To build Wicked Engine for Windows, open the `WickedEngine.sln` solution file with the latest Visual Studio. When it's opened, press F5, then Wicked Engine and the Editor application will be built and then start. You can check out other sample projects in the solution too.
 
 If you want to develop a C++ application that uses Wicked Engine, you can build the WickedEngine_Windows static library project and link against it. Including the `"WickedEngine.h"` header will attempt to link the binaries for the appropriate platform, but search directories should be set up beforehand. For example, you can set additional library directories to `$(SolutionDir)BUILD\$(Platform)\$(Configuration)` by default. For examples, see the `Samples/Template_Windows`, `Samples/Tests`, and `Editor_Windows` projects. 
 
@@ -54,7 +54,7 @@ cmake --build build --config Release
 #### Linux
 To build the engine for Linux, use Cmake. You can find a sample build script for Ubuntu [here](.github/workflows/build.yml) (in the linux section). 
 
-On Linux you will need to ensure some additional dependencies are installed, such as Cmake (3.7 or newer), g++ compiler (C++ 17 compliant version) and SDL2. For Ubuntu 20.04, you can use the following commands to install dependencies:
+On Linux you will need to ensure some additional dependencies are installed, such as Cmake (3.7 or newer), g++ compiler (C++ 17 compliant version) and SDL2. You can use the following commands to install dependencies:
 
 <img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/fighting_game.gif" width="320px"/>
 
@@ -64,7 +64,7 @@ sudo apt install libsdl2-dev
 sudo apt install build-essential
 ```
 
-To build the engine, editor and tests, use `cmake` and then `make`:
+Example commands to build the engine with cmake in Release mode:
 ```bash
 mkdir build
 cd build
@@ -74,21 +74,15 @@ make
 
 <img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/character_grass.gif" width="320px"/>
 
-If you want to develop an application that uses Wicked Engine, you will have to link to libWickedEngine.a and `#include "WickedEngine.h"` into the source code. For examples, look at the Cmake files, or the Tests and the Editor applications.
-
-#### Mac OS
-To build  the engine for Mac OS, use the provided .xcodeproj files with the Xcode development environment, for example:
+#### Mac OS and iOS
+To build  the engine for Mac OS and iOS, use the provided .xcodeproj files with the Xcode development environment, for example:
 - WickedEngine/WickedEngine.xcodeproj to build static library
 - Editor/Editor.xcodeproj to build the Wicked Editor
-- Samples/Template_MacOS/Template_MacOS.xcodeproj to build a minimal template application for MacOS
+- Samples/Template_MacOS/Template_MacOS.xcodeproj to build a minimal template application for MacOS that you can use as a base for your application
+- Samples/Template_iOS/Template_iOS.xcodeproj to build a minimal template application for iOS that you can use as a base for your application
 
-If you want to develop an application that uses Wicked Engine, you will have to link to libWickedEngine.a and `#include "WickedEngine.h"` into the source code. You also need to add references to the following Apple SDKs: `Metal`, `AppKit`, `GameController`. I also recommend to set up a custom working directory in the Product->Scheme->Edit Scheme->Options->custom working directory = `$(PROJECT_DIR)`, this will better match the development experience in Visual Studio. For examples, look at the Template_MacOS and Editor projects.
-
-#### Xbox Series X|S
-Xbox Series specific extension files required for building are currently private.
-
-#### PlayStation 5
-PlayStation 5 specific extension files required for building are currently private.
+#### Xbox Series X|S and PlayStation 5
+Console specific extension files required for building are currently private.
 
 
 ### Examples:
@@ -214,13 +208,14 @@ In addition, the Editor supports importing some common model formats:
 - <b>FBX</b>
 - <b>GLTF, GLB</b>
 - <b>VRM, VRMA</b>
+- <b>PLY</b>
 
 You can import models into the Editor, and save them as <b>WISCENE</b>, then any Wicked Engine application can open them.<br/>
 
 <img align="right" src="https://github.com/turanszkij/wickedengine-gifs/raw/main/snowstorm.gif" width="320px"/>
 
 ### Graphics API:
-The default renderer is `DirectX 12` on Windows and `Vulkan` on Linux.
+The default renderer is `DirectX 12` on Windows, `Vulkan` on Linux and `Metal` on Apple systems.
 You can specify command line arguments (without any prefix) to switch between render devices or other settings. Currently the list of options:
 <table>
   <tr>
@@ -270,11 +265,12 @@ You can specify command line arguments (without any prefix) to switch between re
 <br/>
 
 ### Other software using Wicked Engine
+- <a href="https://turanszkij.itch.io/wicked-shooter">Wicked Shooter</a>: FPS sample game in Wicked Engine
+- <a href="https://turanszkij.itch.io/wicked-adventure">Wicked Adventure</a>: Adventure RPG sample game in Wicked Engine
+- <a href="https://turanszkij.itch.io/grass-zen">Grass Zen</a>: A relaxing game made with Wicked Engine where you control the wind
 - <a href="https://www.game-guru.com/max">Game Guru MAX</a>: Easy to use game creator
 - <a href="https://www.youtube.com/watch?v=0SxXmnSQ6Q4">Flytrap</a>: Demoscene production by qop
 - <a href="https://youtu.be/mbmNU5QVM8A?si=9sDMS1LrMsz03f5r">doddering</a>: Demoscene production by qop
-- <a href="https://turanszkij.itch.io/wicked-shooter">Wicked Shooter</a>: FPS sample game in Wicked Engine
-- <a href="https://turanszkij.itch.io/grass-zen">Grass Zen</a>: A relaxing game made with Wicked Engine where you control the wind
 - Your project: add your project to this readme and open a pull request
 
 <br/>
@@ -289,7 +285,7 @@ If you are having trouble getting the applications to run, make sure that you sa
 - If you experience crashes, you can try these to find out the problem:
 	- make sure your environment is up to date, with latest graphics drivers and operating system updates.
 	- see if there is a log.txt in the working directory of the application (most likely near the application exe)
-	- request help on the [Forum](https://wickedengine.net/forum/), [Discord](https://discord.gg/CFjRYmE) or [Github issue](https://github.com/turanszkij/WickedEngine/issues)
+	- request help on [Discord](https://discord.gg/CFjRYmE) or via a [Github issue](https://github.com/turanszkij/WickedEngine/issues)
 	- build the engine in Debug mode and try to run it, see where it crashes
 	- run the engine with the `debugdevice` command argument and post the text from your console output window when the crash happens
 		- for very advanced users, using `gpuvalidation` with `debugdevice` will print additional graphics debug information

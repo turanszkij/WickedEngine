@@ -347,6 +347,19 @@ namespace wi::lua::renderer
 		}
 		return 0;
 	}
+	int SetDebugDrawEnabled(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			wi::renderer::SetDebugDrawEnabled(wi::lua::SGetBool(L, 1));
+		}
+		else
+		{
+			wi::lua::SError(L, "SetDebugDrawEnabled(bool value) not enough arguments!");
+		}
+		return 0;
+	}
 
 	int DrawLine(lua_State* L)
 	{
@@ -1062,6 +1075,7 @@ namespace wi::lua::renderer
 			wi::lua::RegisterFunc("SetCapsuleShadowFade", SetCapsuleShadowFade);
 			wi::lua::RegisterFunc("SetCapsuleShadowAngle", SetCapsuleShadowAngle);
 			wi::lua::RegisterFunc("SetShadowLODOverrideEnabled", SetShadowLODOverrideEnabled);
+			wi::lua::RegisterFunc("SetDebugDrawEnabled", SetDebugDrawEnabled);
 
 			wi::lua::RegisterFunc("DrawLine", DrawLine);
 			wi::lua::RegisterFunc("DrawPoint", DrawPoint);

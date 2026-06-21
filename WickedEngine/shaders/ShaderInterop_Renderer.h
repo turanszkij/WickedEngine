@@ -390,8 +390,7 @@ struct alignas(32) ShaderMaterial
 	uint2 transmission_sheenroughness_clearcoat_clearcoatroughness;
 	uint2 aniso_anisosin_anisocos_terrainblend;
 
-	int sampler_descriptor : 16;
-	int sampler_clamp_descriptor : 16;
+	int sampler_descriptor;
 	uint options_stencilref;
 	uint layerMask;
 	uint shaderType_meshblend;
@@ -422,7 +421,6 @@ struct alignas(32) ShaderMaterial
 		aniso_anisosin_anisocos_terrainblend = uint2(0, 0);
 
 		sampler_descriptor = -1;
-		sampler_clamp_descriptor = -1;
 		options_stencilref = 0;
 		layerMask = ~0u;
 		shaderType_meshblend = 0;
@@ -497,28 +495,22 @@ static_assert(sizeof(ShaderMaterial) == 384);
 inline static const ShaderMaterial shader_material_null = ShaderMaterial::get_null();
 #endif // __cplusplus
 
-// For binning shading based on shader types:
-struct alignas(16) ShaderTypeBin
-{
-	uint dispatchX;
-	uint dispatchY;
-	uint dispatchZ;
-	uint shaderType;
-#if defined(__SCE__) || defined(__PSSL_)
-	uint4 padding; // 32-byte alignment
-#endif // __SCE__ || __PSSL__
-};
 static const uint SHADERTYPE_BIN_COUNT = 12;
 
-struct alignas(16) VisibilityTile
+struct PrimitiveVisibilityTile
 {
-	uint64_t execution_mask;
 	uint visibility_tile_id;
-	uint entity_flat_tile_index;
+	uint primitiveID; // only valid on uniform classified tiles
+};
+
+struct VisibilityTile
+{
+	uint64_t execution_mask_or_primitiveID; // divergent tiles: execution mask | uniform tiles: primitiveID
+	uint visibility_tile_id;
 
 	inline bool check_thread_valid(uint groupIndex)
 	{
-		return (execution_mask & (uint64_t(1) << uint64_t(groupIndex))) != 0;
+		return (execution_mask_or_primitiveID & (uint64_t(1) << uint64_t(groupIndex))) != 0;
 	}
 };
 
@@ -828,10 +820,9 @@ struct ShaderMeshInstancePointer
 
 struct ObjectPushConstants
 {
-	uint geometryIndex : 24;
-	uint wrapSamplerIndex : 8;
+	uint geometryIndex;
 	uint materialIndex : 24;
-	uint clampSamplerIndex : 8;
+	uint samplerIndex : 8;
 	int instances;
 	uint instance_offset;
 };
@@ -1188,11 +1179,6 @@ struct ShaderEntityIterator
 	{
 		return ~0u >> (31u - (last_item() % 32u));
 	}
-	// This masks out inactive buckets of the current type based on a whole tile bucket mask
-	inline uint mask_type(uint tile_mask)
-	{
-		return tile_mask & bucket_mask();
-	}
 	// This masks out inactive entities for the current bucket type when processing either the first or the last bucket in the list
 	inline uint mask_entity(uint bucket, uint bucket_bits)
 	{
@@ -1312,7 +1298,11 @@ struct alignas(16) FrameCB
 
 	ShaderEntity entityArray[SHADER_ENTITY_COUNT];
 	float4x4 matrixArray[SHADER_ENTITY_COUNT];
+	ShaderSphere entityCullingArray[SHADER_ENTITY_COUNT];
 };
+#ifdef __cplusplus
+static_assert(sizeof(FrameCB) <= 64 * 1024); // constant buffer can be max 64k sized
+#endif // __cplusplus
 
 enum SHADERCAMERA_OPTIONS
 {
@@ -1369,7 +1359,7 @@ struct alignas(16) ShaderCamera
 
 	float2 canvas_size;
 	float2 canvas_size_rcp;
-		   
+
 	uint2 internal_resolution;
 	float2 internal_resolution_rcp;
 
@@ -1387,7 +1377,7 @@ struct alignas(16) ShaderCamera
 	int texture_rtdiffuse_index;
 	int texture_primitiveID_index;
 	int texture_depth_index;
-	int texture_lineardepth_index;
+	int padding0;
 
 	int texture_velocity_index;
 	int texture_normal_index;
@@ -1409,10 +1399,9 @@ struct alignas(16) ShaderCamera
 	int texture_vxgi_diffuse_index;
 	int texture_vxgi_specular_index;
 
+	float2 focal;
 	int texture_reprojected_depth_index;
 	uint options;
-	uint padding0;
-	uint padding1;
 
 #ifdef __cplusplus
 	inline void init()
@@ -1421,6 +1410,7 @@ struct alignas(16) ShaderCamera
 		position = {};
 		output_index = 0;
 		clip_plane = {};
+		reflection_plane = float4(0, 1, 0, 0);
 		forward = {};
 		z_near = {};
 		up = {};
@@ -1462,7 +1452,6 @@ struct alignas(16) ShaderCamera
 		texture_rtdiffuse_index = -1;
 		texture_primitiveID_index = -1;
 		texture_depth_index = -1;
-		texture_lineardepth_index = -1;
 		texture_velocity_index = -1;
 		texture_normal_index = -1;
 		texture_roughness_index = -1;
@@ -1546,6 +1535,9 @@ struct alignas(16) CameraCB
 	}
 #endif // __cplusplus
 };
+#ifdef __cplusplus
+static_assert(sizeof(CameraCB) <= 64 * 1024); // constant buffer can be max 64k sized
+#endif // __cplusplus
 
 CONSTANTBUFFER(g_xFrame, FrameCB, CBSLOT_RENDERER_FRAME);
 CONSTANTBUFFER(g_xCamera, CameraCB, CBSLOT_RENDERER_CAMERA);
@@ -1561,7 +1553,7 @@ CBUFFER(MiscCB, CBSLOT_RENDERER_MISC)
 
 CBUFFER(ForwardEntityMaskCB, CBSLOT_RENDERER_FORWARD_LIGHTMASK)
 {
-	uint2 xForwardLightMask;	// supports indexing 64 lights
+	uint64_t xForwardLightMask;	// supports indexing 64 lights
 	uint xForwardDecalMask;		// supports indexing 32 decals
 	uint xForwardEnvProbeMask;	// supports indexing 32 environment probes
 };
@@ -1799,7 +1791,7 @@ CBUFFER(TrailRendererCB, CBSLOT_TRAILRENDERER)
 	float4		g_xTrailTexMulAdd2;
 	int			g_xTrailTextureIndex1;
 	int			g_xTrailTextureIndex2;
-	int			g_xTrailLinearDepthTextureIndex;
+	int			g_xTrailDepthTextureIndex;
 	float		g_xTrailDepthSoften;
 	float3		g_xTrailPadding;
 	float		g_xTrailCameraFar;

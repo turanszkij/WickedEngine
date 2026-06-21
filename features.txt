@@ -93,6 +93,7 @@ Video decoding: H264
 Screen Space Global Illumination (SSGI)
 Texture streaming
 Splines
+Gaussian Splat rendering
 
 GLTF 2.0 - KHR extensions supported:
 KHR_materials_unlit

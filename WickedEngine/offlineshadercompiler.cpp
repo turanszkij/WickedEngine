@@ -10,7 +10,7 @@ class nullbuf_t : public std::streambuf
 {
 protected:
 	virtual int_type overflow(int_type ch) override
-    {
+	{
 		return traits_type::not_eof(ch);
 	}
 } nullbuf;
@@ -20,12 +20,21 @@ struct ShaderEntry
 {
 	std::string name;
 	wi::graphics::ShaderStage stage = wi::graphics::ShaderStage::Count;
-	wi::graphics::ShaderModel minshadermodel = wi::graphics::ShaderModel::SM_5_0;
+	wi::graphics::ShaderModel minshadermodel = wi::graphics::ShaderModel::SM_6_0;
 	struct Permutation
 	{
 		wi::vector<std::string> defines;
+		Permutation() = default;
+		Permutation(std::initializer_list<std::string> init)
+		{
+			for (auto& x : init)
+			{
+				defines.push_back(x);
+			}
+		}
 	};
 	wi::vector<Permutation> permutations;
+	std::string entrypoint = "main";
 };
 wi::vector<ShaderEntry> shaders = {
 	{"hairparticle_simulateCS", wi::graphics::ShaderStage::CS},
@@ -116,15 +125,14 @@ wi::vector<ShaderEntry> shaders = {
 	{"motionblurCS_earlyexit", wi::graphics::ShaderStage::CS},
 	{"luminancePass1CS", wi::graphics::ShaderStage::CS},
 	{"lightShaftsCS", wi::graphics::ShaderStage::CS},
-	{"lightCullingCS_ADVANCED_DEBUG", wi::graphics::ShaderStage::CS},
-	{"lightCullingCS_DEBUG", wi::graphics::ShaderStage::CS},
-	{"lightCullingCS", wi::graphics::ShaderStage::CS},
-	{"lightCullingCS_ADVANCED", wi::graphics::ShaderStage::CS},
 	{"hbaoCS", wi::graphics::ShaderStage::CS},
-	{"gpusortlib_sortInnerCS", wi::graphics::ShaderStage::CS},
-	{"gpusortlib_sortStepCS", wi::graphics::ShaderStage::CS},
-	{"gpusortlib_kickoffSortCS", wi::graphics::ShaderStage::CS},
-	{"gpusortlib_sortCS", wi::graphics::ShaderStage::CS},
+	{"radix_sortCS", wi::graphics::ShaderStage::CS, wi::graphics::ShaderModel::SM_6_0, {{"FPS_COUNT"}}, "FPS_Count"},
+	{"radix_sortCS", wi::graphics::ShaderStage::CS, wi::graphics::ShaderModel::SM_6_0, {{"FPS_COUNT_REDUCE"}}, "FPS_CountReduce"},
+	{"radix_sortCS", wi::graphics::ShaderStage::CS, wi::graphics::ShaderModel::SM_6_0, {{"FPS_SCAN"}}, "FPS_Scan"},
+	{"radix_sortCS", wi::graphics::ShaderStage::CS, wi::graphics::ShaderModel::SM_6_0, {{"FPS_SCAN_ADD"}}, "FPS_ScanAdd"},
+	{"radix_sortCS", wi::graphics::ShaderStage::CS, wi::graphics::ShaderModel::SM_6_0, {{"FPS_SCATTER"}}, "FPS_Scatter"},
+	{"radix_sortCS", wi::graphics::ShaderStage::CS, wi::graphics::ShaderModel::SM_6_0, {{"FPS_SCATTER", "kRS_ValueCopy"}}, "FPS_Scatter"},
+	{"radix_sortCS", wi::graphics::ShaderStage::CS, wi::graphics::ShaderModel::SM_6_0, {{"FPS_INDIRECT"}}, "FPS_SetupIndirectParameters"},
 	{"fxaaCS", wi::graphics::ShaderStage::CS},
 	{"filterEnvMapCS", wi::graphics::ShaderStage::CS},
 	{"fft_512x512_c2c_CS", wi::graphics::ShaderStage::CS},
@@ -174,8 +182,6 @@ wi::vector<ShaderEntry> shaders = {
 	{"shadingRateClassificationCS", wi::graphics::ShaderStage::CS },
 	{"shadingRateClassificationCS_DEBUG", wi::graphics::ShaderStage::CS },
 	{"aerialPerspectiveCS", wi::graphics::ShaderStage::CS },
-	{"aerialPerspectiveCS_capture", wi::graphics::ShaderStage::CS },
-	{"aerialPerspectiveCS_capture_MSAA", wi::graphics::ShaderStage::CS },
 	{"skyAtmosphere_cameraVolumeLutCS", wi::graphics::ShaderStage::CS },
 	{"skyAtmosphere_transmittanceLutCS", wi::graphics::ShaderStage::CS },
 	{"skyAtmosphere_skyViewLutCS", wi::graphics::ShaderStage::CS },
@@ -190,10 +196,6 @@ wi::vector<ShaderEntry> shaders = {
 	{"rtaoCS", wi::graphics::ShaderStage::CS, wi::graphics::ShaderModel::SM_6_5 },
 	{"rtao_denoise_tileclassificationCS", wi::graphics::ShaderStage::CS },
 	{"rtao_denoise_filterCS", wi::graphics::ShaderStage::CS },
-	{"visibility_resolveCS", wi::graphics::ShaderStage::CS },
-	{"visibility_resolveCS_MSAA", wi::graphics::ShaderStage::CS },
-	{"visibility_velocityCS", wi::graphics::ShaderStage::CS },
-	{"visibility_skyCS", wi::graphics::ShaderStage::CS },
 	{"surfel_coverageCS", wi::graphics::ShaderStage::CS },
 	{"surfel_indirectprepareCS", wi::graphics::ShaderStage::CS },
 	{"surfel_updateCS", wi::graphics::ShaderStage::CS },
@@ -224,12 +226,16 @@ wi::vector<ShaderEntry> shaders = {
 	{"depth_reprojectCS", wi::graphics::ShaderStage::CS },
 	{"depth_pyramidCS", wi::graphics::ShaderStage::CS },
 	{"lightmap_expandCS", wi::graphics::ShaderStage::CS },
+	{"gaussian_splatCS", wi::graphics::ShaderStage::CS },
+	{"gaussian_splat_indirectCS", wi::graphics::ShaderStage::CS },
 
 
-	{"emittedparticlePS_soft", wi::graphics::ShaderStage::PS },
 	{"imagePS", wi::graphics::ShaderStage::PS },
+	{"emittedparticlePS_soft", wi::graphics::ShaderStage::PS },
+	{"emittedparticlePS_shadow", wi::graphics::ShaderStage::PS },
 	{"emittedparticlePS_soft_lighting", wi::graphics::ShaderStage::PS },
 	{"oceanSurfacePS", wi::graphics::ShaderStage::PS },
+	{"oceanSurfacePS_envmap", wi::graphics::ShaderStage::PS },
 	{"hairparticlePS", wi::graphics::ShaderStage::PS },
 	{"hairparticlePS_simple", wi::graphics::ShaderStage::PS },
 	{"hairparticlePS_prepass", wi::graphics::ShaderStage::PS },
@@ -286,10 +292,12 @@ wi::vector<ShaderEntry> shaders = {
 	{"extractStencilBitPS", wi::graphics::ShaderStage::PS },
 	{"trailPS", wi::graphics::ShaderStage::PS },
 	{"waveeffectPS", wi::graphics::ShaderStage::PS },
+	{"gaussian_splatPS", wi::graphics::ShaderStage::PS },
 
 
 	{"hairparticleVS", wi::graphics::ShaderStage::VS },
 	{"emittedparticleVS", wi::graphics::ShaderStage::VS },
+	{"emittedparticleVS_shadow", wi::graphics::ShaderStage::VS },
 	{"imageVS", wi::graphics::ShaderStage::VS },
 	{"fontVS", wi::graphics::ShaderStage::VS },
 	{"voxelVS", wi::graphics::ShaderStage::VS },
@@ -333,6 +341,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"screenVS", wi::graphics::ShaderStage::VS },
 	{"voxelgridVS", wi::graphics::ShaderStage::VS },
 	{"trailVS", wi::graphics::ShaderStage::VS },
+	{"gaussian_splatVS", wi::graphics::ShaderStage::VS },
 
 
 
@@ -539,20 +548,54 @@ int main(int argc, char* argv[])
 		shaders.back().permutations.back().defines.push_back("TRANSPARENT");
 	}
 
+	// permutations for visibility_analyzeCS:
+	shaders.push_back({ "visibility_analyzeCS", wi::graphics::ShaderStage::CS });
+	shaders.back().permutations.emplace_back();
+	shaders.back().permutations.emplace_back().defines = { "PRIMITIVEID_MSAA" };
+
+	// permutations for visibility_resolveCS:
+	shaders.push_back({ "visibility_resolveCS", wi::graphics::ShaderStage::CS });
+	shaders.back().permutations.emplace_back().defines = { "PRIMITIVEID_UNIFORM" };
+	shaders.back().permutations.emplace_back().defines = { "PRIMITIVEID_DIVERGENT" };
+	shaders.back().permutations.emplace_back().defines = { "PRIMITIVEID_UNIFORM", "MATERIAL_BINNING" };
+	shaders.back().permutations.emplace_back().defines = { "PRIMITIVEID_DIVERGENT", "MATERIAL_BINNING" };
+
+	// permutations for visibility_velocityCS:
+	shaders.push_back({ "visibility_velocityCS", wi::graphics::ShaderStage::CS });
+	shaders.back().permutations.emplace_back().defines = { "PRIMITIVEID_UNIFORM" };
+	shaders.back().permutations.emplace_back().defines = { "PRIMITIVEID_DIVERGENT" };
+
+	// permutations for visibility_skyCS:
+	shaders.push_back({ "visibility_skyCS", wi::graphics::ShaderStage::CS });
+	shaders.back().permutations.emplace_back().defines = { "PRIMITIVEID_UNIFORM" };
+	shaders.back().permutations.emplace_back().defines = { "PRIMITIVEID_DIVERGENT" };
+
 	// permutations for visibility_surfaceCS:
 	shaders.push_back({ "visibility_surfaceCS", wi::graphics::ShaderStage::CS });
 	for (auto& x : wi::scene::MaterialComponent::shaderTypeDefines)
 	{
 		shaders.back().permutations.emplace_back().defines = x;
+		shaders.back().permutations.back().defines.push_back("PRIMITIVEID_UNIFORM");
+	}
+	for (auto& x : wi::scene::MaterialComponent::shaderTypeDefines)
+	{
+		shaders.back().permutations.emplace_back().defines = x;
+		shaders.back().permutations.back().defines.push_back("PRIMITIVEID_DIVERGENT");
 	}
 
 	// permutations for visibility_surfaceCS REDUCED:
 	shaders.push_back({ "visibility_surfaceCS", wi::graphics::ShaderStage::CS });
 	for (auto& x : wi::scene::MaterialComponent::shaderTypeDefines)
 	{
-		auto defines = x;
-		defines.push_back("REDUCED");
-		shaders.back().permutations.emplace_back().defines = defines;
+		shaders.back().permutations.emplace_back().defines = x;
+		shaders.back().permutations.back().defines.push_back("REDUCED");
+		shaders.back().permutations.back().defines.push_back("PRIMITIVEID_UNIFORM");
+	}
+	for (auto& x : wi::scene::MaterialComponent::shaderTypeDefines)
+	{
+		shaders.back().permutations.emplace_back().defines = x;
+		shaders.back().permutations.back().defines.push_back("REDUCED");
+		shaders.back().permutations.back().defines.push_back("PRIMITIVEID_DIVERGENT");
 	}
 
 	// permutations for visibility_shadeCS:
@@ -560,6 +603,12 @@ int main(int argc, char* argv[])
 	for (auto& x : wi::scene::MaterialComponent::shaderTypeDefines)
 	{
 		shaders.back().permutations.emplace_back().defines = x;
+		shaders.back().permutations.back().defines.push_back("PRIMITIVEID_UNIFORM");
+	}
+	for (auto& x : wi::scene::MaterialComponent::shaderTypeDefines)
+	{
+		shaders.back().permutations.emplace_back().defines = x;
+		shaders.back().permutations.back().defines.push_back("PRIMITIVEID_DIVERGENT");
 	}
 
 	// permutations for ssgiCS:
@@ -576,6 +625,13 @@ int main(int argc, char* argv[])
 	// permutations for yuv_to_rgbCS:
 	shaders.push_back({ "yuv_to_rgbCS", wi::graphics::ShaderStage::CS });
 	shaders.back().permutations.emplace_back().defines = { "ARRAY" };
+
+	// permutations for lightCullingCS:
+	shaders.push_back({ "lightCullingCS", wi::graphics::ShaderStage::CS });
+	shaders.back().permutations.emplace_back().defines = {};
+	shaders.back().permutations.emplace_back().defines = { "DEBUG" };
+	shaders.back().permutations.emplace_back().defines = { "ADVANCED" };
+	shaders.back().permutations.emplace_back().defines = { "ADVANCED", "DEBUG" };
 
 	// Simplify permutation iteration:
 	for (auto& shader : shaders)
@@ -659,6 +715,7 @@ int main(int argc, char* argv[])
 					}
 
 					wi::shadercompiler::CompilerInput input;
+					input.entrypoint = shader.entrypoint;
 					input.flags = compile_flags;
 					input.format = target.format;
 					input.stage = shader.stage;
