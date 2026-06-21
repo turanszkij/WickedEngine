@@ -4549,7 +4549,6 @@ void UpdatePerFrameData(
 		const XMMATRIX viewMatrix = vis.camera->GetView();
 
 		uint32_t entityCounter = 0;
-		uint32_t matrixCounter = 0;
 
 		// Write decals into entity array:
 		decalarray_offset = entityCounter;
@@ -4559,11 +4558,6 @@ void UpdatePerFrameData(
 			if (entityCounter == SHADER_ENTITY_COUNT)
 			{
 				entityCounter--;
-				break;
-			}
-			if (matrixCounter >= MATRIXARRAY_COUNT)
-			{
-				matrixCounter--;
 				break;
 			}
 			ShaderEntity shaderentity = {};
@@ -4596,7 +4590,7 @@ void UpdatePerFrameData(
 			shaderentity.SetAngleScale(decal.normal_strength);
 			shaderentity.SetLength(decal.displacement_strength);
 
-			shaderentity.SetIndices(matrixCounter, 0);
+			shaderentity.SetIndices(entityCounter, 0);
 			shadermatrix = XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal.world));
 
 			int texture = -1;
@@ -4629,8 +4623,7 @@ void UpdatePerFrameData(
 			XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
 			cullsphere.radius = decal.range;
 
-			XMStoreFloat4x4(matrixArray + matrixCounter, shadermatrix);
-			matrixCounter++;
+			XMStoreFloat4x4(matrixArray + entityCounter, shadermatrix); // note: straight entity-matrix mapping ok
 
 			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
 			std::memcpy(entityCullingArray + entityCounter, &cullsphere, sizeof(ShaderSphere));
@@ -4646,11 +4639,6 @@ void UpdatePerFrameData(
 			if (entityCounter == SHADER_ENTITY_COUNT)
 			{
 				entityCounter--;
-				break;
-			}
-			if (matrixCounter >= MATRIXARRAY_COUNT)
-			{
-				matrixCounter--;
 				break;
 			}
 			ShaderEntity shaderentity = {};
@@ -4673,26 +4661,21 @@ void UpdatePerFrameData(
 			shaderentity.position = probe.position;
 			shaderentity.SetRange(probe.range);
 
-			shaderentity.SetIndices(matrixCounter, 0);
-			shadermatrix = XMLoadFloat4x4(&probe.inverseMatrix);
-
-			int texture = -1;
+			int texture_index = -1;
 			if (probe.texture.IsValid())
 			{
-				texture = device->GetDescriptorIndex(&probe.texture, SubresourceType::SRV, probe.subresource);
+				texture_index = device->GetDescriptorIndex(&probe.texture, SubresourceType::SRV, probe.subresource);
 			}
+			texture_index = std::max(0, texture_index);
 
-			shadermatrix.r[0] = XMVectorSetW(shadermatrix.r[0], *(float*)&texture);
-			shadermatrix.r[1] = XMVectorSetW(shadermatrix.r[1], 0);
-			shadermatrix.r[2] = XMVectorSetW(shadermatrix.r[2], 0);
-			shadermatrix.r[3] = XMVectorSetW(shadermatrix.r[3], 0);
+			shaderentity.SetIndices(entityCounter, (uint)texture_index);
+			shadermatrix = XMLoadFloat4x4(&probe.inverseMatrix);
 
 			ShaderSphere cullsphere = {};
 			XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
 			cullsphere.radius = probe.range;
 
-			XMStoreFloat4x4(matrixArray + matrixCounter, shadermatrix);
-			matrixCounter++;
+			XMStoreFloat4x4(matrixArray + entityCounter, shadermatrix); // note: straight entity-matrix mapping ok
 
 			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
 			std::memcpy(entityCullingArray + entityCounter, &cullsphere, sizeof(ShaderSphere));
@@ -4700,6 +4683,7 @@ void UpdatePerFrameData(
 			envprobearray_count++;
 		}
 
+		uint32_t matrixCounter = entityCounter; // so far entities and matrices had 1-1 mapping, this is not true below this part:
 		const XMFLOAT2 atlas_dim_rcp = XMFLOAT2(1.0f / float(shadowMapAtlas.desc.width), 1.0f / float(shadowMapAtlas.desc.height));
 
 		// Write directional lights into entity array:
@@ -4759,6 +4743,7 @@ void UpdatePerFrameData(
 				for (size_t cascade = 0; cascade < cascade_count; ++cascade)
 				{
 					XMStoreFloat4x4(&matrixArray[matrixCounter++], shcams[cascade].view_projection);
+					matrixCounter = std::min(matrixCounter, MATRIXARRAY_COUNT - 1);
 				}
 			}
 
@@ -4851,6 +4836,7 @@ void UpdatePerFrameData(
 				SHCAM shcam;
 				CreateSpotLightShadowCam(light, shcam);
 				XMStoreFloat4x4(&matrixArray[matrixCounter++], shcam.view_projection);
+				matrixCounter = std::min(matrixCounter, MATRIXARRAY_COUNT - 1);
 			}
 
 			if (light.IsCastingShadow())
@@ -5015,6 +5001,7 @@ void UpdatePerFrameData(
 				SHCAM shcam;
 				CreateSpotLightShadowCam(light, shcam);
 				XMStoreFloat4x4(&matrixArray[matrixCounter++], shcam.view_projection);
+				matrixCounter = std::min(matrixCounter, MATRIXARRAY_COUNT - 1);
 			}
 
 			if (light.IsCastingShadow())
@@ -5093,6 +5080,7 @@ void UpdatePerFrameData(
 				XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
 				cullsphere.radius = FLT_MAX;
 				matrixArray[matrixCounter++] = collider.plane.projection;
+				matrixCounter = std::min(matrixCounter, MATRIXARRAY_COUNT - 1);
 				break;
 			default:
 				assert(0);
