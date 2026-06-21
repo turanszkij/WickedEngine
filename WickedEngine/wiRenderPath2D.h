@@ -1,6 +1,6 @@
 #pragma once
 #include "wiRenderPath.h"
-#include "wiGUI.h"
+#include "wiGUI/wiGUI.h"
 #include "wiVector.h"
 #include "wiVideo.h"
 

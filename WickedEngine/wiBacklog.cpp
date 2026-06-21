@@ -9,7 +9,7 @@
 #include "wiInput.h"
 #include "wiPlatform.h"
 #include "wiHelper.h"
-#include "wiGUI.h"
+#include "wiGUI/wiGUI.h"
 #include "wiTimer.h"
 
 #include <mutex>

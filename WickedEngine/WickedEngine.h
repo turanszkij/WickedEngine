@@ -49,7 +49,7 @@
 #include "wiLua.h"
 #include "wiGraphics.h"
 #include "wiGraphicsDevice.h"
-#include "wiGUI.h"
+#include "wiGUI/wiGUI.h"
 #include "wiArchive.h"
 #include "wiSpinLock.h"
 #include "wiRectPacker.h"
