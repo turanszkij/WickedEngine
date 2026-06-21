@@ -170,6 +170,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		1E08BB5B2FE7C574001E4548 /* offlineshadercompiler.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = offlineshadercompiler.xcodeproj; path = ../WickedEngine/offlineshadercompiler.xcodeproj; sourceTree = SOURCE_ROOT; };
 		1E19DEEE2F557EE7009F2E30 /* ModelImporter_PLY.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ModelImporter_PLY.cpp; sourceTree = "<group>"; };
 		1E19DEF42F559AFC009F2E30 /* miniply.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = miniply.cpp; sourceTree = "<group>"; };
 		1E19DEF62F55DB3A009F2E30 /* GaussianSplatWindow.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GaussianSplatWindow.h; sourceTree = "<group>"; };
@@ -361,9 +362,17 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		1E08BB612FE7C574001E4548 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
 		1E73E6392F05105A0090D1DA = {
 			isa = PBXGroup;
 			children = (
+				1E08BB5B2FE7C574001E4548 /* offlineshadercompiler.xcodeproj */,
 				1E36F6822FD211490042E04D /* fonts */,
 				1E36F6832FD211490042E04D /* languages */,
 				1E50B2742FD0657E000EE545 /* Content */,
@@ -634,6 +643,10 @@
 			productRefGroup = 1E73E6432F05105A0090D1DA /* Products */;
 			projectDirPath = "";
 			projectReferences = (
+				{
+					ProductGroup = 1E08BB612FE7C574001E4548 /* Products */;
+					ProjectRef = 1E08BB5B2FE7C574001E4548 /* offlineshadercompiler.xcodeproj */;
+				},
 				{
 					ProductGroup = 1E73E7342F0513620090D1DA /* Products */;
 					ProjectRef = 1E73E7312F0513620090D1DA /* WickedEngine.xcodeproj */;
