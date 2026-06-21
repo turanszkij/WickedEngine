@@ -1636,7 +1636,7 @@ namespace wi::scene
 			}
 			else
 			{
-				moonDirection = XMFLOAT3(0.0f, 0.5f, 0.8660254f);
+				moonDirection = DEFAULT_MOON_DIRECTION;
 				moonColor = XMFLOAT3(3.0f / 255.0f, 3.0f / 255.0f, 3.0f / 255.0f); // #030303
 				moon.size_multiplier = 4.0f;
 				moonLightIntensity = 1.0f;

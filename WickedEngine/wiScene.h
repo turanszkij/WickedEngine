@@ -397,6 +397,9 @@ namespace wi::scene
 			float innerConeAngle = 0
 		);
 		void EnsureMoonLight(WeatherComponent& weather_component);
+		void UpdateSunMoonShaderData();
+		void PackSunShaderData();
+		void PackMoonShaderData();
 		wi::ecs::Entity Entity_CreateForce(
 			const std::string& name,
 			const XMFLOAT3& position = XMFLOAT3(0, 0, 0)

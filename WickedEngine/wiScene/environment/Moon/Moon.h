@@ -97,6 +97,16 @@ constexpr float MOON_ECLIPSE_MIN_LIGHT_SCALE = 0.2F;
 constexpr XMFLOAT3 MOON_ECLIPSE_LIGHT_TINT = XMFLOAT3(1.0F, 0.3F, 0.1F);
 
 /**
+ * @brief Fallback moon direction used when the authored direction is degenerate
+ * (near-zero length).
+ *
+ * Points up and toward the southern sky at roughly `60°` elevation
+ * (`0.8660254 = sin 60°`), so a moonless/zeroed weather still renders a
+ * sensible moon rather than collapsing to the origin.
+ */
+constexpr XMFLOAT3 DEFAULT_MOON_DIRECTION = XMFLOAT3(0.0F, 0.5F, 0.8660254F);
+
+/**
  * @brief The renderable appearance of the Moon's disk.
  *
  * A plain data holder for the Moon's **disk-appearance** properties: its
