@@ -211,9 +211,7 @@ inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, half2 radiu
 #ifndef DISABLE_TRANSPARENT_SHADOWMAP
 		// !Reminder: there is no dependency between sampling shadowatlas and shadowatlas_transparent, this has best performance!
 		half4 transparent_shadow = texture_shadowatlas_transparent.SampleLevel(sampler_linear_clamp, sample_uv, 0);
-#ifdef TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
 		if (transparent_shadow.a > cmp)
-#endif // TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
 		{
 			pcf *= transparent_shadow.rgb;
 		}
@@ -278,9 +276,7 @@ inline half3 sample_shadow(float2 uv, float cmp, min16uint2 pixel)
 #ifndef DISABLE_TRANSPARENT_SHADOWMAP
 	Texture2D<half4> texture_shadowatlas_transparent = bindless_textures_half4[descriptor_index(GetFrame().texture_shadowatlas_transparent_index)];
 	half4 transparent_shadow = texture_shadowatlas_transparent.SampleLevel(sampler_linear_clamp, uv, 0);
-#ifdef TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
 	if (transparent_shadow.a > cmp)
-#endif // TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
 	{
 		shadow *= transparent_shadow.rgb;
 	}

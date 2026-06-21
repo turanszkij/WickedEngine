@@ -44,6 +44,7 @@ namespace wi
 		void UpdateDisplacementMap(wi::graphics::CommandList cmd) const;
 		void RenderForOcclusionTest(const wi::scene::CameraComponent& camera, wi::graphics::CommandList cmd) const;
 		void RenderForCubemap(wi::graphics::CommandList cmd) const;
+		void RenderForShadowmap(wi::graphics::CommandList cmd) const;
 		void Render(const wi::scene::CameraComponent& camera, wi::graphics::CommandList cmd) const;
 
 		void CopyDisplacementMapReadback(wi::graphics::CommandList cmd) const;
@@ -102,5 +103,6 @@ namespace wi
 		mutable wi::graphics::GPUBuffer indexBuffer;
 		mutable wi::graphics::GPUBuffer indexBuffer_occlusionTest;
 		mutable wi::graphics::GPUBuffer indexBuffer_cubemap;
+		mutable wi::graphics::GPUBuffer indexBuffer_shadowmap;
 	};
 }
