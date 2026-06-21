@@ -1093,25 +1093,30 @@ namespace wi::shadercompiler
 
 		const uint64_t tim = wi::helper::FileTimestamp(filepath);
 
-		wi::Archive dependencyLibrary(dependencylibrarypath);
-		if (dependencyLibrary.IsOpen())
+		// Open the metadata silently: an incompatible (e.g. newer) cache must
+		// not pop an error box from this worker thread - it just means the
+		// cached shader is stale and should be rebuilt.
+		wi::Archive dependencyLibrary(dependencylibrarypath, true, false);
+		if (!dependencyLibrary.IsOpen())
 		{
-			std::string rootdir = dependencyLibrary.GetSourceDirectory();
-			wi::vector<std::string> dependencies;
-			dependencyLibrary >> dependencies;
+			return true; // unreadable/incompatible metadata = outdated, rebuild it
+		}
 
-			for (auto& x : dependencies)
+		std::string rootdir = dependencyLibrary.GetSourceDirectory();
+		wi::vector<std::string> dependencies;
+		dependencyLibrary >> dependencies;
+
+		for (auto& x : dependencies)
+		{
+			std::string dependencypath = rootdir + x;
+			wi::helper::MakePathAbsolute(dependencypath);
+			if (wi::helper::FileExists(dependencypath))
 			{
-				std::string dependencypath = rootdir + x;
-				wi::helper::MakePathAbsolute(dependencypath);
-				if (wi::helper::FileExists(dependencypath))
-				{
-					const uint64_t dep_tim = wi::helper::FileTimestamp(dependencypath);
+				const uint64_t dep_tim = wi::helper::FileTimestamp(dependencypath);
 
-					if (tim < dep_tim)
-					{
-						return true;
-					}
+				if (tim < dep_tim)
+				{
+					return true;
 				}
 			}
 		}
