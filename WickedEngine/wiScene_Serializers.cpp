@@ -1614,7 +1614,7 @@ namespace wi::scene
 			archive >> sunDirection;
 			archive >> sunColor;
 			moonLight = wi::ecs::INVALID_ENTITY;
-			const bool supports_moon = (seri.GetVersion() >= 7) || (archive.GetVersion() >= 94);
+			const bool supports_moon = seri.GetVersion() >= 7;
 			if (supports_moon)
 			{
 				archive >> moonDirection;
@@ -1926,7 +1926,7 @@ namespace wi::scene
 		}
 		else
 		{
-			const bool supports_moon = (seri.GetVersion() >= 7) || (archive.GetVersion() >= 94);
+			const bool supports_moon = seri.GetVersion() >= 7;
 			seri.RegisterResource(moon.texture_name);
 			seri.RegisterResource(skyMapName);
 			seri.RegisterResource(colorGradingMapName);
