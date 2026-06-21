@@ -649,7 +649,6 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex, inout half4 s
 			const int decalNormal = asint(decalProjection[3][1]);
 			const int decalSurfacemap = asint(decalProjection[3][2]);
 			const int decalDisplacementmap = asint(decalProjection[3][3]);
-			decalProjection[3] = float4(0, 0, 0, 1);
 				
 			// under here will be VGPR!
 			if ((decal.layerMask & surface.layerMask) == 0)

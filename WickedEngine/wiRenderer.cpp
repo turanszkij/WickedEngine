@@ -4743,6 +4743,7 @@ void UpdatePerFrameData(
 				for (size_t cascade = 0; cascade < cascade_count; ++cascade)
 				{
 					XMStoreFloat4x4(&matrixArray[matrixCounter++], shcams[cascade].view_projection);
+					matrixCounter = std::min(matrixCounter, MATRIXARRAY_COUNT - 1);
 				}
 			}
 
@@ -4835,6 +4836,7 @@ void UpdatePerFrameData(
 				SHCAM shcam;
 				CreateSpotLightShadowCam(light, shcam);
 				XMStoreFloat4x4(&matrixArray[matrixCounter++], shcam.view_projection);
+				matrixCounter = std::min(matrixCounter, MATRIXARRAY_COUNT - 1);
 			}
 
 			if (light.IsCastingShadow())
@@ -4999,6 +5001,7 @@ void UpdatePerFrameData(
 				SHCAM shcam;
 				CreateSpotLightShadowCam(light, shcam);
 				XMStoreFloat4x4(&matrixArray[matrixCounter++], shcam.view_projection);
+				matrixCounter = std::min(matrixCounter, MATRIXARRAY_COUNT - 1);
 			}
 
 			if (light.IsCastingShadow())
@@ -5077,6 +5080,7 @@ void UpdatePerFrameData(
 				XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
 				cullsphere.radius = FLT_MAX;
 				matrixArray[matrixCounter++] = collider.plane.projection;
+				matrixCounter = std::min(matrixCounter, MATRIXARRAY_COUNT - 1);
 				break;
 			default:
 				assert(0);
