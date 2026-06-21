@@ -4623,7 +4623,7 @@ void UpdatePerFrameData(
 			XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
 			cullsphere.radius = decal.range;
 
-			XMStoreFloat4x4(matrixArray + entityCounter, shadermatrix);
+			XMStoreFloat4x4(matrixArray + entityCounter, shadermatrix); // note: straight entity-matrix mapping ok
 
 			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
 			std::memcpy(entityCullingArray + entityCounter, &cullsphere, sizeof(ShaderSphere));
@@ -4675,7 +4675,7 @@ void UpdatePerFrameData(
 			XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
 			cullsphere.radius = probe.range;
 
-			XMStoreFloat4x4(matrixArray + entityCounter, shadermatrix);
+			XMStoreFloat4x4(matrixArray + entityCounter, shadermatrix); // note: straight entity-matrix mapping ok
 
 			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
 			std::memcpy(entityCullingArray + entityCounter, &cullsphere, sizeof(ShaderSphere));
