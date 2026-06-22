@@ -1180,7 +1180,6 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_YUV_TO_RGB], "yuv_to_rgbCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_YUV_TO_RGB_ARRAY], "yuv_to_rgbCS.cso", ShaderModel::SM_6_0, {"ARRAY"}); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_WETMAP_UPDATE], "wetmap_updateCS.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_CAUSTICS], "causticsCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_DEPTH_REPROJECT], "depth_reprojectCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_DEPTH_PYRAMID], "depth_pyramidCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_LIGHTMAP_EXPAND], "lightmap_expandCS.cso"); });
@@ -2276,16 +2275,6 @@ void LoadBuffers()
 		device->SetName(&textures[TEXTYPE_3D_WIND], "textures[TEXTYPE_3D_WIND]");
 		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_3D_WIND_PREV]);
 		device->SetName(&textures[TEXTYPE_3D_WIND_PREV], "textures[TEXTYPE_3D_WIND_PREV]");
-	}
-	{
-		TextureDesc desc;
-		desc.type = TextureDesc::Type::TEXTURE_2D;
-		desc.format = Format::R8G8B8A8_UNORM;
-		desc.width = 256;
-		desc.height = 256;
-		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_2D_CAUSTICS]);
-		device->SetName(&textures[TEXTYPE_2D_CAUSTICS], "textures[TEXTYPE_2D_CAUSTICS]");
 	}
 }
 void SetUpStates()
@@ -4426,7 +4415,6 @@ void UpdatePerFrameData(
 	frameCB.texture_cameravolumelut_index = device->GetDescriptorIndex(&textures[TEXTYPE_3D_SKYATMOSPHERE_CAMERAVOLUMELUT], SubresourceType::SRV);
 	frameCB.texture_wind_index = device->GetDescriptorIndex(&textures[TEXTYPE_3D_WIND], SubresourceType::SRV);
 	frameCB.texture_wind_prev_index = device->GetDescriptorIndex(&textures[TEXTYPE_3D_WIND_PREV], SubresourceType::SRV);
-	frameCB.texture_caustics_index = device->GetDescriptorIndex(&textures[TEXTYPE_2D_CAUSTICS], SubresourceType::SRV);
 
 	// See if indirect debug buffer needs to be resized:
 	if (indirectDebugStatsReadback_available[device->GetBufferIndex()] && indirectDebugStatsReadback[device->GetBufferIndex()].mapped_data != nullptr)
@@ -4541,7 +4529,6 @@ void UpdatePerFrameData(
 	uint decalarray_count = 0;
 	uint forcefieldarray_offset = 0;
 	uint forcefieldarray_count = 0;
-	frameCB.entity_culling_count = 0;
 	{
 		ShaderEntity* entityArray = frameCB.entityArray;
 		float4x4* matrixArray = frameCB.matrixArray;
@@ -5029,7 +5016,6 @@ void UpdatePerFrameData(
 		}
 
 		lightarray_count = lightarray_count_directional + lightarray_count_spot + lightarray_count_point + lightarray_count_rect;
-		frameCB.entity_culling_count = lightarray_count + decalarray_count + envprobearray_count;
 
 		// Write colliders into entity array:
 		forcefieldarray_offset = entityCounter;
@@ -5500,22 +5486,6 @@ void UpdateRenderDataAsync(
 	for (size_t i = 0; i < vis.scene->terrains.GetCount(); ++i)
 	{
 		vis.scene->terrains[i].UpdateVirtualTexturesGPU(cmd);
-	}
-
-	// Caustic effect:
-	{
-		auto range = wi::profiler::BeginRangeGPU("Caustics", cmd);
-		device->EventBegin("Caustics", cmd);
-		device->Barrier(GPUBarrier::Image(&textures[TEXTYPE_2D_CAUSTICS], textures[TEXTYPE_2D_CAUSTICS].desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
-		device->ClearUAV(&textures[TEXTYPE_2D_CAUSTICS], 0, cmd);
-		device->Barrier(GPUBarrier::Memory(&textures[TEXTYPE_2D_CAUSTICS]), cmd);
-		device->BindComputeShader(&shaders[CSTYPE_CAUSTICS], cmd);
-		device->BindUAV(&textures[TEXTYPE_2D_CAUSTICS], 0, cmd);
-		const TextureDesc& desc = textures[TEXTYPE_2D_CAUSTICS].GetDesc();
-		device->Dispatch(desc.width / 8, desc.height / 8, 1, cmd);
-		PushBarrier(GPUBarrier::Image(&textures[TEXTYPE_2D_CAUSTICS], ResourceState::UNORDERED_ACCESS, textures[TEXTYPE_2D_CAUSTICS].desc.layout));
-		device->EventEnd(cmd);
-		wi::profiler::EndRange(range);
 	}
 
 	// Wetmaps will be initialized:
@@ -6904,6 +6874,8 @@ void DrawShadowmaps(
 			{
 				for (uint32_t cascade = 0; cascade < cascade_count; ++cascade)
 				{
+					cb.cameras[cascade].internal_resolution = uint2(shadow_rect.w, shadow_rect.h);
+					cb.cameras[cascade].internal_resolution_rcp = float2(1.0f / shadow_rect.w, 1.0f / shadow_rect.h);
 					XMStoreFloat4x4(&cb.cameras[cascade].view, shcams[cascade].view);
 					XMStoreFloat4x4(&cb.cameras[cascade].view_projection, shcams[cascade].view_projection);
 					cb.cameras[cascade].output_index = cascade;
@@ -7098,6 +7070,8 @@ void DrawShadowmaps(
 
 			if (!renderQueue.empty() || !renderQueue_transparent.empty())
 			{
+				cb.cameras[0].internal_resolution = uint2(shadow_rect.w, shadow_rect.h);
+				cb.cameras[0].internal_resolution_rcp = float2(1.0f / shadow_rect.w, 1.0f / shadow_rect.h);
 				XMStoreFloat4x4(&cb.cameras[0].view, shcam.view);
 				XMStoreFloat4x4(&cb.cameras[0].view_projection, shcam.view_projection);
 				cb.cameras[0].output_index = 0;
@@ -7249,6 +7223,8 @@ void DrawShadowmaps(
 				// Check if cubemap face frustum is visible from main camera, otherwise, it will be skipped:
 				if (cam_frustum.Intersects(cameras[shcam].boundingfrustum))
 				{
+					cb.cameras[camera_count].internal_resolution = uint2(shadow_rect.w, shadow_rect.h);
+					cb.cameras[camera_count].internal_resolution_rcp = float2(1.0f / shadow_rect.w, 1.0f / shadow_rect.h);
 					XMStoreFloat4x4(&cb.cameras[camera_count].view, cameras[shcam].view);
 					XMStoreFloat4x4(&cb.cameras[camera_count].view_projection, cameras[shcam].view_projection);
 					// We no longer have a straight mapping from camera to viewport:

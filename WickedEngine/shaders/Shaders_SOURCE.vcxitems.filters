@@ -1031,9 +1031,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)wetmap_updateCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)causticsCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)objectAS.hlsl">
       <Filter>AS</Filter>
     </FxCompile>

@@ -1252,27 +1252,22 @@ struct alignas(16) FrameCB
 	float		cloudShadowFarPlaneKm;
 	int			texture_volumetricclouds_shadow_index;
 	uint		giboost_packed; // force fp16 load
-	uint		entity_culling_count;
-
 	uint		capsuleshadow_fade_angle;
-	int			indirect_debugbufferindex;
-	int			padding0;
-	int			padding1;
 
+	int			indirect_debugbufferindex;
 	float		blue_noise_phase;
 	int			texture_random64x64_index;
 	int			texture_bluenoise_index;
-	int			texture_sheenlut_index;
 
+	int			texture_sheenlut_index;
 	int			texture_skyviewlut_index;
 	int			texture_transmittancelut_index;
 	int			texture_multiscatteringlut_index;
-	int			texture_skyluminancelut_index;
 
+	int			texture_skyluminancelut_index;
 	int			texture_cameravolumelut_index;
 	int			texture_wind_index;
 	int			texture_wind_prev_index;
-	int			texture_caustics_index;
 
 	float4		rain_blocker_mad;
 	float4x4	rain_blocker_matrix;

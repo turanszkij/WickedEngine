@@ -222,7 +222,6 @@ wi::vector<ShaderEntry> shaders = {
 	{"windCS", wi::graphics::ShaderStage::CS },
 	{"yuv_to_rgbCS", wi::graphics::ShaderStage::CS },
 	{"wetmap_updateCS", wi::graphics::ShaderStage::CS },
-	{"causticsCS", wi::graphics::ShaderStage::CS },
 	{"depth_reprojectCS", wi::graphics::ShaderStage::CS },
 	{"depth_pyramidCS", wi::graphics::ShaderStage::CS },
 	{"lightmap_expandCS", wi::graphics::ShaderStage::CS },

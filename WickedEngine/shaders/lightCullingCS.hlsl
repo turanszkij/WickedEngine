@@ -234,40 +234,12 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		}
 	}
 
-	// Decals:
-	for (uint i = decals().first_item() + groupIndex; i < decals().end_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
+	// Environment probes and decals:
+	//  Note: processing both in the same loop relies on them packed near each other in entity array by CPU!
+	const uint begin = min(probes().first_item(), decals().first_item());
+	const uint end = max(probes().end_item(), decals().end_item());
+	for (uint i = begin + groupIndex; i < end; i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
-		ShaderEntity entity = load_entity(i);
-		ShaderSphere sphere = load_entityculling(i);
-		if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
-		{
-			AppendEntity_Transparent(i);
-
-			// unit AABB: 
-			AABB a;
-			a.c = 0;
-			a.e = 1.0;
-
-			// frustum AABB in world space transformed into the space of the probe/decal OBB:
-			AABB b = GroupAABB_WS;
-			AABBtransform(b, (float3x4)load_entitymatrix(i)); // note: straight entity-matrix mapping ok
-
-			if (IntersectAABB(a, b))
-			{
-#ifdef ADVANCED
-				if (depth_mask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
-#endif // ADVANCED
-				{
-					AppendEntity_Opaque(i);
-				}
-			}
-		}
-	}
-
-	// Environment probes:
-	for (uint i = probes().first_item() + groupIndex; i < probes().end_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
-	{
-		ShaderEntity entity = load_entity(i);
 		ShaderSphere sphere = load_entityculling(i);
 		if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
 		{
