@@ -27,7 +27,14 @@ using namespace wi::primitive;
 
 namespace wi::gui
 {
+	/**
+	 * Global fallback check glyph shared by all check boxes.
+	 *
+	 * Set via @ref CheckBox::SetCheckTextGlobal and used when a check box has
+	 * no own check glyph (see @ref CheckBox::SetCheckText).
+	 */
 	std::wstring check_text_global;
+
 	void CheckBox::Create(const std::string& name)
 	{
 		SetName(name);
