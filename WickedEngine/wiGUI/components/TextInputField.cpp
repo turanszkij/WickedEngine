@@ -28,17 +28,55 @@ using namespace wi::primitive;
 namespace wi::gui
 {
 	wi::SpriteFont TextInputField::font_input;
+
+	// Shared editing state of the single active text input field. There is only
+	// ever one active field, so this caret/selection/key-repeat state is
+	// global.
+
+	/** Caret position, as a character index into the input. */
 	int caret_pos = 0;
+
+	/** Selection anchor; equals @ref caret_pos when there is no selection. */
 	int caret_begin = 0;
+
+	/** Frames to delay before honoring mouse-driven caret repositioning. */
 	int caret_delay = 0;
+
+	/** Set when the input changed this frame (drives the OnInput callback). */
 	bool input_updated = false;
+
+	/** Whether a double-click select-all is in progress. */
 	bool doubleclick_select = false;
+
+	/** Timer driving the caret blink. */
 	wi::Timer caret_timer;
+
+	/** Timer driving held-key auto-repeat. */
 	wi::Timer key_repeat_timer;
+
+	/** The key currently being auto-repeated. */
 	wi::input::BUTTON key_repeat_button = {};
+
+	/** Whether auto-repeat has passed its initial delay. */
 	bool key_repeat_active = false;
+
+	/** Delay before a held key starts auto-repeating, in seconds. */
 	static constexpr float KEY_REPEAT_DELAY = 0.5f;
+
+	/** Interval between auto-repeats once active, in seconds. */
 	static constexpr float KEY_REPEAT_RATE = 0.035f;
+
+	/**
+	 * Returns true on initial press and on each auto-repeat tick of a key.
+	 *
+	 * Implements a press-then-delay-then-repeat cadence (see
+	 * @ref KEY_REPEAT_DELAY / @ref KEY_REPEAT_RATE) so held navigation/edit
+	 * keys fire repeatedly.
+	 *
+	 * @param[in] button - The key to test.
+	 *
+	 * @return true if the key's action should fire this frame.
+	 */
 	bool KeyRepeat(wi::input::BUTTON button)
 	{
 		if (wi::input::Press(button))
@@ -66,18 +104,33 @@ namespace wi::gui
 		return false;
 	}
 
-	// Simple recursive-descent arithmetic expression evaluator.
-	// Supports: +, -, *, /, parentheses, unary +/-, floating-point literals.
-	// Returns true and sets 'result' if 'str' is a fully-consumed valid expression.
-	// Returns false for non-numeric input (e.g. plain text strings) so callers fall back.
 	namespace {
+		/**
+		 * Recursive-descent parser for simple arithmetic expressions.
+		 *
+		 * Supports `+`, `-`, `*`, `/`, parentheses, unary `+`/`-` and
+		 * floating-point literals. Parsing walks @ref pos through the input and
+		 * clears @ref valid on malformed input or division by zero.
+		 */
 		struct ArithExprParser
 		{
+			/** Current parse cursor into the input string. */
 			const char* pos;
+
+			/** Cleared when the input is malformed or divides by zero. */
 			bool valid = true;
 
+			/**
+			 * Advances @ref pos past spaces and tabs.
+			 */
 			void skipWS() { while (*pos == ' ' || *pos == '\t') pos++; }
 
+			/**
+			 * Parses a primary: a parenthesized expression, a unary
+			 * `+`/`-` term, or a numeric literal.
+			 *
+			 * @return The parsed value (0 if invalid).
+			 */
 			double parsePrimary()
 			{
 				skipWS();
@@ -98,6 +151,11 @@ namespace wi::gui
 				return v;
 			}
 
+			/**
+			 * Parses a term: primaries joined by `*` / `/`.
+			 *
+			 * @return The parsed value (0 if invalid).
+			 */
 			double parseTerm()
 			{
 				double left = parsePrimary();
@@ -111,6 +169,11 @@ namespace wi::gui
 				return left;
 			}
 
+			/**
+			 * Parses a full expression: terms joined by `+` / `-`.
+			 *
+			 * @return The parsed value (0 if invalid).
+			 */
 			double parseExpr()
 			{
 				double left = parseTerm();
@@ -125,6 +188,18 @@ namespace wi::gui
 			}
 		};
 
+		/**
+		 * Evaluates a string as an arithmetic expression.
+		 *
+		 * Returns false for input that is not a fully-consumed valid numeric
+		 * expression (e.g. plain text), so callers can fall back to using the
+		 * raw text.
+		 *
+		 * @param[in] str - The input string to evaluate.
+		 * @param[out] result - Receives the evaluated value on success.
+		 *
+		 * @return true if `str` is a valid, finite expression.
+		 */
 		bool EvaluateArithmetic(const std::string& str, double& result)
 		{
 			if (str.empty()) return false;
