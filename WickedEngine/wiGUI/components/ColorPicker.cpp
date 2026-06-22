@@ -27,16 +27,41 @@ using namespace wi::primitive;
 
 namespace wi::gui
 {
+	/**
+	 * RGB color with normalized channels.
+	 */
 	struct rgb {
-		float r;       // a fraction between 0 and 1
-		float g;       // a fraction between 0 and 1
-		float b;       // a fraction between 0 and 1
+		/** Red, a fraction in `[0, 1]`. */
+		float r;
+
+		/** Green, a fraction in `[0, 1]`. */
+		float g;
+
+		/** Blue, a fraction in `[0, 1]`. */
+		float b;
 	};
+
+	/**
+	 * HSV color.
+	 */
 	struct hsv {
-		float h;       // angle in degrees
-		float s;       // a fraction between 0 and 1
-		float v;       // a fraction between 0 and 1
+		/** Hue, an angle in degrees. */
+		float h;
+
+		/** Saturation, a fraction in `[0, 1]`. */
+		float s;
+
+		/** Value/luminance, a fraction in `[0, 1]`. */
+		float v;
 	};
+
+	/**
+	 * Converts an RGB color to HSV.
+	 *
+	 * @param[in] in - RGB color with normalized channels.
+	 *
+	 * @return The equivalent HSV color (hue in degrees).
+	 */
 	hsv rgb2hsv(rgb in)
 	{
 		hsv         out;
@@ -81,6 +106,13 @@ namespace wi::gui
 
 		return out;
 	}
+	/**
+	 * Converts an HSV color to RGB.
+	 *
+	 * @param[in] in - HSV color (hue in degrees).
+	 *
+	 * @return The equivalent RGB color with normalized channels.
+	 */
 	rgb hsv2rgb(hsv in)
 	{
 		float		hh, p, q, t, ff;
@@ -139,8 +171,12 @@ namespace wi::gui
 		return out;
 	}
 
+	/** Default color-picker window width, in pixels. */
 	static const float cp_width = 300;
+
+	/** Default color-picker window height, in pixels. */
 	static const float cp_height = 260;
+
 	void ColorPicker::Create(const std::string& name, WindowControls window_controls)
 	{
 		Window::Create(name, window_controls);
@@ -263,9 +299,15 @@ namespace wi::gui
 			});
 		AddWidget(&alphaSlider);
 	}
+	/** Radius of the inner saturation/luminance triangle, in pixels. */
 	static const float colorpicker_radius_triangle = 68;
+
+	/** Outer radius of the hue ring, in pixels. */
 	static const float colorpicker_radius = 75;
+
+	/** Thickness of the hue ring, in pixels. */
 	static const float colorpicker_width = 22;
+
 	void ColorPicker::Update(const wi::Canvas& canvas, float dt)
 	{
 		if (!IsVisible())
