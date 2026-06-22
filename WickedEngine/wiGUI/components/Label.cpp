@@ -41,7 +41,7 @@ namespace wi::gui
 		scrollbar.SetOverScroll(0.25f);
 		scrollbar.knob_inset_border = XMFLOAT2(4, 2);
 	}
-	void Label::Update(const wi::Canvas& canvas, float dt)
+	void Label::Update(const wi::Canvas& canvas, const float dt)
 	{
 		if (!IsVisible())
 		{
@@ -141,7 +141,7 @@ namespace wi::gui
 			font.params.posY += scrollbar.GetOffset();
 		}
 	}
-	void Label::Render(const wi::Canvas& canvas, CommandList cmd) const
+	void Label::Render(const wi::Canvas& canvas, const CommandList cmd) const
 	{
 		Widget::Render(canvas, cmd);
 		if (!IsVisible())
@@ -193,12 +193,12 @@ namespace wi::gui
 			scrollbar.Render(canvas, cmd);
 		}
 	}
-	void Label::SetColor(wi::Color color, int id)
+	void Label::SetColor(const wi::Color color, const int id)
 	{
 		Widget::SetColor(color, id);
 		scrollbar.SetColor(color, id);
 	}
-	void Label::SetTheme(const Theme& theme, int id)
+	void Label::SetTheme(const Theme& theme, const int id)
 	{
 		Widget::SetTheme(theme, id);
 		scrollbar.SetTheme(theme, id);
