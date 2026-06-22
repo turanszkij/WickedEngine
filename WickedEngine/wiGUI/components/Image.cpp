@@ -1,3 +1,8 @@
+/**
+ * @file
+ * Implementation of the @ref wi::gui::Image widget.
+ */
+
 #include "wiGUI/components/Image.h"
 #include "wiGUI/GUIInternal.h"
 
