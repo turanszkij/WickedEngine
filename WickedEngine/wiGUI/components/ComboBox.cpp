@@ -103,11 +103,11 @@ namespace wi::gui
 		index = std::max(firstItemVisible, index) - firstItemVisible;
 		return scale.y + combo_height() * index + GetDropOffset(canvas);
 	}
-	bool ComboBox::HasScrollbar() const
+	bool ComboBox::HasScrollbar() const noexcept
 	{
 		return maxVisibleItemCount < filteredItemCount;
 	}
-	void ComboBox::Update(const wi::Canvas& canvas, float dt)
+	void ComboBox::Update(const wi::Canvas& canvas, const float dt)
 	{
 		if (!IsVisible())
 		{
@@ -123,7 +123,7 @@ namespace wi::gui
 		{
 			if (IsEnabled())
 			{
-				float drop_offset = GetDropOffset(canvas);
+				const float drop_offset = GetDropOffset(canvas);
 
 				if (state == FOCUS)
 				{
@@ -248,7 +248,7 @@ namespace wi::gui
 
 						if (HasScrollbar())
 						{
-							int scroll = int(wi::input::GetPointer().z - wi::input::GetTouchPan().y * 0.1f);
+							const int scroll = int(wi::input::GetPointer().z - wi::input::GetTouchPan().y * 0.1f);
 							firstItemVisible -= scroll;
 							firstItemVisible = std::max(0, std::min(filteredItemCount - maxVisibleItemCount, firstItemVisible));
 							if (scroll)
@@ -311,7 +311,7 @@ namespace wi::gui
 					filter.translation_local.x = drop_x;
 					filter.translation_local.y = translation.y + scale.y + drop_offset - combo_height() + filter.GetShadowRadius();
 					filter.SetDirty();
-					std::string newFilterText = wi::helper::toUpper(filter.GetText());
+					const std::string newFilterText = wi::helper::toUpper(filter.GetText());
 					if (newFilterText != filterText)
 					{
 						firstItemVisible = 0;
@@ -366,14 +366,14 @@ namespace wi::gui
 
 		left_text_width = font.TextWidth();
 	}
-	void ComboBox::Render(const wi::Canvas& canvas, CommandList cmd) const
+	void ComboBox::Render(const wi::Canvas& canvas, const CommandList cmd) const
 	{
 		Widget::Render(canvas, cmd);
 		if (!IsVisible())
 		{
 			return;
 		}
-		GraphicsDevice* device = wi::graphics::GetDevice();
+		GraphicsDevice* const device = wi::graphics::GetDevice();
 
 		const float drop_width = fixed_drop_width > 0 ? fixed_drop_width : (scale.x - 1 - scale.y);
 		const float drop_x = GetDropX(canvas);
@@ -591,7 +591,7 @@ namespace wi::gui
 	{
 		onSelect = std::move(func);
 	}
-	void ComboBox::AddItem(const std::string& name, uint64_t userdata)
+	void ComboBox::AddItem(const std::string& name, const uint64_t userdata)
 	{
 		items.emplace_back();
 		items.back().name = name;
@@ -602,7 +602,7 @@ namespace wi::gui
 			selected = 0;
 		}
 	}
-	void ComboBox::RemoveItem(int index)
+	void ComboBox::RemoveItem(const int index)
 	{
 		if (index < 0 || (size_t)index >= items.size()) {
 			return;
@@ -626,11 +626,11 @@ namespace wi::gui
 		selected = -1;
 		//firstItemVisible = 0;
 	}
-	void ComboBox::SetMaxVisibleItemCount(int value)
+	void ComboBox::SetMaxVisibleItemCount(const int value)
 	{
 		maxVisibleItemCount = value;
 	}
-	void ComboBox::SetSelected(int index)
+	void ComboBox::SetSelected(const int index)
 	{
 		SetSelectedWithoutCallback(index);
 
@@ -643,11 +643,11 @@ namespace wi::gui
 			onSelect(args);
 		}
 	}
-	void ComboBox::SetSelectedWithoutCallback(int index)
+	void ComboBox::SetSelectedWithoutCallback(const int index)
 	{
 		selected = index;
 	}
-	void ComboBox::SetSelectedByUserdata(uint64_t userdata)
+	void ComboBox::SetSelectedByUserdata(const uint64_t userdata)
 	{
 		for (int i = 0; i < GetItemCount(); ++i)
 		{
@@ -658,7 +658,7 @@ namespace wi::gui
 			}
 		}
 	}
-	void ComboBox::SetSelectedByUserdataWithoutCallback(uint64_t userdata)
+	void ComboBox::SetSelectedByUserdataWithoutCallback(const uint64_t userdata)
 	{
 		for (int i = 0; i < GetItemCount(); ++i)
 		{
@@ -669,14 +669,14 @@ namespace wi::gui
 			}
 		}
 	}
-	void ComboBox::SetItemText(int index, const std::string& text)
+	void ComboBox::SetItemText(const int index, const std::string& text)
 	{
 		if (index >= 0 && index < items.size())
 		{
 			items[index].name = text;
 		}
 	}
-	void ComboBox::SetItemUserdata(int index, uint64_t userdata)
+	void ComboBox::SetItemUserdata(const int index, const uint64_t userdata)
 	{
 		if (index >= 0 && index < items.size())
 		{
@@ -687,7 +687,7 @@ namespace wi::gui
 	{
 		wi::helper::StringConvert(text, invalid_selection_text);
 	}
-	std::string ComboBox::GetItemText(int index) const
+	std::string ComboBox::GetItemText(const int index) const
 	{
 		if (index >= 0 && index < items.size())
 		{
@@ -695,7 +695,7 @@ namespace wi::gui
 		}
 		return "";
 	}
-	uint64_t ComboBox::GetItemUserData(int index) const
+	uint64_t ComboBox::GetItemUserData(const int index) const noexcept
 	{
 		if (index >= 0 && index < items.size())
 		{
@@ -703,15 +703,15 @@ namespace wi::gui
 		}
 		return 0;
 	}
-	int ComboBox::GetSelected() const
+	int ComboBox::GetSelected() const noexcept
 	{
 		return selected;
 	}
-	uint64_t ComboBox::GetSelectedUserdata() const
+	uint64_t ComboBox::GetSelectedUserdata() const noexcept
 	{
 		return GetItemUserData(GetSelected());
 	}
-	void ComboBox::SetColor(wi::Color color, int id)
+	void ComboBox::SetColor(const wi::Color color, const int id)
 	{
 		Widget::SetColor(color, id);
 		filter.SetColor(color, id);
@@ -721,7 +721,7 @@ namespace wi::gui
 			drop_color = color;
 		}
 	}
-	void ComboBox::SetTheme(const Theme& theme, int id)
+	void ComboBox::SetTheme(const Theme& theme, const int id)
 	{
 		Widget::SetTheme(theme, id);
 		filter.SetTheme(theme, id);
@@ -757,7 +757,7 @@ namespace wi::gui
 				return;
 			for (size_t i = 0; i < items.size(); ++i)
 			{
-				const char* localized_item_name = section->Get(i);
+				const char* const localized_item_name = section->Get(i);
 				if (localized_item_name != nullptr)
 				{
 					items[i].name = localized_item_name;

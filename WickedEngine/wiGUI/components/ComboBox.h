@@ -120,7 +120,7 @@ namespace wi::gui
 		 *
 		 * @return Vertical offset in pixels.
 		 */
-		float GetDropOffset(const wi::Canvas& canvas) const;
+		[[nodiscard]] float GetDropOffset(const wi::Canvas& canvas) const;
 
 		/**
 		 * Returns the horizontal position of the dropped-down list.
@@ -129,7 +129,7 @@ namespace wi::gui
 		 *
 		 * @return X position in pixels.
 		 */
-		float GetDropX(const wi::Canvas& canvas) const;
+		[[nodiscard]] float GetDropX(const wi::Canvas& canvas) const;
 
 		/**
 		 * Returns the vertical offset of a given item in the list.
@@ -141,7 +141,10 @@ namespace wi::gui
 		 *
 		 * @return Vertical offset in pixels.
 		 */
-		float GetItemOffset(const wi::Canvas& canvas, int index) const;
+		[[nodiscard]] float GetItemOffset(
+			const wi::Canvas& canvas,
+			int index
+		) const;
 	public:
 		/**
 		 * Initializes the combo box with default size, text and filter.
@@ -180,7 +183,7 @@ namespace wi::gui
 		/**
 		 * Returns whether the dropped-down list needs a scrollbar.
 		 */
-		bool HasScrollbar() const;
+		[[nodiscard]] bool HasScrollbar() const noexcept;
 
 		/**
 		 * Selects an item by index and raises @ref OnSelect.
@@ -213,12 +216,12 @@ namespace wi::gui
 		/**
 		 * Returns the selected item index, or -1 if none.
 		 */
-		int GetSelected() const;
+		[[nodiscard]] int GetSelected() const noexcept;
 
 		/**
 		 * Returns the userdata of the selected item.
 		 */
-		uint64_t GetSelectedUserdata() const;
+		[[nodiscard]] uint64_t GetSelectedUserdata() const noexcept;
 
 		/**
 		 * Sets the display name of an item.
@@ -243,7 +246,7 @@ namespace wi::gui
 		 *
 		 * @return The item's display name.
 		 */
-		std::string GetItemText(int index) const;
+		[[nodiscard]] std::string GetItemText(int index) const;
 
 		/**
 		 * Returns the userdata of an item.
@@ -252,12 +255,14 @@ namespace wi::gui
 		 *
 		 * @return The item's user payload.
 		 */
-		uint64_t GetItemUserData(int index) const;
+		[[nodiscard]] uint64_t GetItemUserData(int index) const noexcept;
 
 		/**
 		 * Returns the number of items.
 		 */
-		size_t GetItemCount() const { return items.size(); }
+		[[nodiscard]] size_t GetItemCount() const noexcept {
+			return items.size();
+		}
 
 		/**
 		 * Sets the text shown when no valid item is selected.
@@ -302,7 +307,9 @@ namespace wi::gui
 		/**
 		 * Returns the widget's type name ("ComboBox").
 		 */
-		const char* GetWidgetTypeName() const override { return "ComboBox"; }
+		[[nodiscard]] const char* GetWidgetTypeName() const override {
+			return "ComboBox";
+		}
 
 		/**
 		 * Sets the selection callback.
@@ -333,23 +340,27 @@ namespace wi::gui
 		 *
 		 * @param[in] value - true to draw the arrow.
 		 */
-		void SetDropArrowEnabled(bool value) { drop_arrow = value; }
+		void SetDropArrowEnabled(bool value) noexcept { drop_arrow = value; }
 
 		/**
 		 * Returns whether the drop-down arrow indicator is drawn.
 		 */
-		bool IsDropArrowEnabled() const { return drop_arrow; }
+		[[nodiscard]] bool IsDropArrowEnabled() const noexcept {
+			return drop_arrow;
+		}
 
 		/**
 		 * Sets a fixed width for the dropped-down list.
 		 *
 		 * @param[in] value - Width in pixels; 0 uses the base scale width.
 		 */
-		void SetFixedDropWidth(float value) { fixed_drop_width = value; }
+		void SetFixedDropWidth(float value) noexcept { fixed_drop_width = value; }
 
 		/**
 		 * Returns the fixed drop-down width (0 if not fixed).
 		 */
-		float GetFixedDropWidth() const { return fixed_drop_width; }
+		[[nodiscard]] float GetFixedDropWidth() const noexcept {
+			return fixed_drop_width;
+		}
 	};
 }
