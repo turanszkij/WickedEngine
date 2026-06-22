@@ -45,7 +45,7 @@ namespace wi::gui
 		font.params.h_align = wi::font::WIFALIGN_RIGHT;
 		font.params.v_align = wi::font::WIFALIGN_CENTER;
 	}
-	void CheckBox::Update(const wi::Canvas& canvas, float dt)
+	void CheckBox::Update(const wi::Canvas& canvas, const float dt)
 	{
 		if (!IsVisible())
 		{
@@ -75,7 +75,7 @@ namespace wi::gui
 			hitBox.siz.x = scale.x;
 			hitBox.siz.y = scale.y;
 
-			Hitbox2D pointerHitbox = GetPointerHitbox();
+			const Hitbox2D pointerHitbox = GetPointerHitbox();
 
 			// hover the button
 			if (pointerHitbox.intersects(hitBox))
@@ -117,7 +117,7 @@ namespace wi::gui
 
 		left_text_width = font.TextWidth();
 	}
-	void CheckBox::Render(const wi::Canvas& canvas, CommandList cmd) const
+	void CheckBox::Render(const wi::Canvas& canvas, const CommandList cmd) const
 	{
 		Widget::Render(canvas, cmd);
 		if (!IsVisible())
@@ -226,11 +226,11 @@ namespace wi::gui
 	{
 		onClick = std::move(func);
 	}
-	void CheckBox::SetCheck(bool value)
+	void CheckBox::SetCheck(const bool value)
 	{
 		checked = value;
 	}
-	bool CheckBox::GetCheck() const
+	bool CheckBox::GetCheck() const noexcept
 	{
 		return checked;
 	}

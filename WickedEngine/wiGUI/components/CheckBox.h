@@ -55,7 +55,7 @@ namespace wi::gui
 		/**
 		 * Returns the current checked state.
 		 */
-		bool GetCheck() const;
+		[[nodiscard]] bool GetCheck() const noexcept;
 
 		/**
 		 * Updates interaction state and toggles on click.
@@ -77,7 +77,9 @@ namespace wi::gui
 		/**
 		 * Returns the widget's type name ("CheckBox").
 		 */
-		const char* GetWidgetTypeName() const override { return "CheckBox"; }
+		[[nodiscard]] const char* GetWidgetTypeName() const override {
+			return "CheckBox";
+		}
 
 		/**
 		 * Sets the toggle callback.
