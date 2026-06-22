@@ -77,7 +77,7 @@ namespace wi::gui
 		 *
 		 * @return The first matching widget, or nullptr if none matches.
 		 */
-		Widget* GetWidget(const std::string& name);
+		[[nodiscard]] Widget* GetWidget(const std::string& name) const;
 
 		/**
 		 * Returns whether any GUI element currently has focus.
@@ -86,24 +86,24 @@ namespace wi::gui
 		 * lands outside every widget (so the click can pass through to
 		 * deactivate typing and reach the viewport).
 		 */
-		bool HasFocus() const;
+		[[nodiscard]] bool HasFocus() const;
 
 		/**
 		 * Returns whether text input is currently happening.
 		 */
-		bool IsTyping() const;
+		[[nodiscard]] bool IsTyping() const noexcept;
 
 		/**
 		 * Shows or hides the whole GUI.
 		 *
 		 * @param[in] value - true to update and draw the GUI, false to skip it.
 		 */
-		void SetVisible(bool value) { visible = value; }
+		void SetVisible(bool value) noexcept { visible = value; }
 
 		/**
 		 * Returns whether the GUI is visible.
 		 */
-		bool IsVisible() const { return visible; }
+		[[nodiscard]] bool IsVisible() const noexcept { return visible; }
 
 		/**
 		 * Sets a sprite color on every managed widget.

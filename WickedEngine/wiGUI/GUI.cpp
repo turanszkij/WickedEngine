@@ -31,7 +31,7 @@ namespace wi::gui
 	{
 		wi::Timer timer;
 
-		static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [this](uint64_t userdata) { LoadShaders(); });
+		static const wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [this](uint64_t userdata) { LoadShaders(); });
 		LoadShaders();
 
 		wilog("wi::gui Initialized (%d ms)", (int)std::round(timer.elapsed()));
@@ -54,19 +54,19 @@ namespace wi::gui
 		return internal_state;
 	}
 
-	void GUI::Update(const wi::Canvas& canvas, float dt)
+	void GUI::Update(const wi::Canvas& canvas, const float dt)
 	{
 		if (!visible || wi::backlog::isActive())
 		{
 			return;
 		}
 
-		auto range = wi::profiler::BeginRangeCPU("GUI Update");
+		const auto range = wi::profiler::BeginRangeCPU("GUI Update");
 
 		scroll_allowed = true;
 
-		XMFLOAT4 pointer = wi::input::GetPointer();
-		Hitbox2D pointerHitbox = Hitbox2D(XMFLOAT2(pointer.x, pointer.y), XMFLOAT2(1, 1));
+		const XMFLOAT4 pointer = wi::input::GetPointer();
+		const Hitbox2D pointerHitbox = Hitbox2D(XMFLOAT2(pointer.x, pointer.y), XMFLOAT2(1, 1));
 
 		uint32_t priority = 0;
 
@@ -115,15 +115,15 @@ namespace wi::gui
 
 		wi::profiler::EndRange(range);
 	}
-	void GUI::Render(const wi::Canvas& canvas, CommandList cmd) const
+	void GUI::Render(const wi::Canvas& canvas, const CommandList cmd) const
 	{
 		if (!visible || widgets.empty())
 		{
 			return;
 		}
 
-		auto range_cpu = wi::profiler::BeginRangeCPU("GUI Render");
-		auto range_gpu = wi::profiler::BeginRangeGPU("GUI Render", cmd);
+		const auto range_cpu = wi::profiler::BeginRangeCPU("GUI Render");
+		const auto range_gpu = wi::profiler::BeginRangeGPU("GUI Render", cmd);
 
 		wi::graphics::Rect scissorRect;
 		scissorRect.bottom = (int32_t)(canvas.GetPhysicalHeight());
@@ -131,7 +131,7 @@ namespace wi::gui
 		scissorRect.right = (int32_t)(canvas.GetPhysicalWidth());
 		scissorRect.top = (int32_t)(0);
 
-		GraphicsDevice* device = wi::graphics::GetDevice();
+		GraphicsDevice* const device = wi::graphics::GetDevice();
 
 		device->EventBegin("GUI", cmd);
 		// Rendering is back to front:
@@ -153,7 +153,7 @@ namespace wi::gui
 		wi::profiler::EndRange(range_cpu);
 		wi::profiler::EndRange(range_gpu);
 	}
-	void GUI::AddWidget(Widget* widget)
+	void GUI::AddWidget(Widget* const widget)
 	{
 		if (widget != nullptr)
 		{
@@ -161,7 +161,7 @@ namespace wi::gui
 			widgets.push_back(widget);
 		}
 	}
-	void GUI::RemoveWidget(Widget* widget)
+	void GUI::RemoveWidget(Widget* const widget)
 	{
 		for (auto& x : widgets)
 		{
@@ -173,7 +173,7 @@ namespace wi::gui
 			}
 		}
 	}
-	Widget* GUI::GetWidget(const std::string& name)
+	Widget* GUI::GetWidget(const std::string& name) const
 	{
 		for (auto& x : widgets)
 		{
@@ -217,7 +217,7 @@ namespace wi::gui
 
 		return focus;
 	}
-	bool GUI::IsTyping() const
+	bool GUI::IsTyping() const noexcept
 	{
 		if (!visible)
 		{
@@ -226,28 +226,28 @@ namespace wi::gui
 
 		return typing_active;
 	}
-	void GUI::SetColor(wi::Color color, int id)
+	void GUI::SetColor(const wi::Color color, const int id)
 	{
 		for (auto& widget : widgets)
 		{
 			widget->SetColor(color, id);
 		}
 	}
-	void GUI::SetImage(const wi::Resource& resource, int id)
+	void GUI::SetImage(const wi::Resource& resource, const int id)
 	{
 		for (auto& widget : widgets)
 		{
 			widget->SetImage(resource, id);
 		}
 	}
-	void GUI::SetShadowColor(wi::Color color)
+	void GUI::SetShadowColor(const wi::Color color)
 	{
 		for (auto& widget : widgets)
 		{
 			widget->SetShadowColor(color);
 		}
 	}
-	void GUI::SetTheme(const Theme& theme, int id)
+	void GUI::SetTheme(const Theme& theme, const int id)
 	{
 		for (auto& widget : widgets)
 		{
