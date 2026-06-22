@@ -193,6 +193,7 @@ inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, half2 radiu
 #ifdef SHADOW_SAMPLING_DITHERING
 	const half2x2 rot = dither_rot2x2(pixel + GetTemporalAASampleRotation()); // per pixel rotation for every sample
 #endif // SHADOW_SAMPLING_DITHERING
+	[loop] // decent perf win with loop on the "island" level on AMD
 	for (min16uint i = 0; i < soft_shadow_sample_count; ++i)
 	{
 #ifdef SHADOW_SAMPLING_DITHERING
