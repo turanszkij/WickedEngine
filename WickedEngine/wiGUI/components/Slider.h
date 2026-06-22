@@ -78,7 +78,7 @@ namespace wi::gui
 		/**
 		 * Returns the current value.
 		 */
-		float GetValue() const;
+		[[nodiscard]] float GetValue() const noexcept;
 
 		/**
 		 * Sets the range and clamps the current value into it.
@@ -137,14 +137,16 @@ namespace wi::gui
 		/**
 		 * Returns the widget's type name ("Slider").
 		 */
-		const char* GetWidgetTypeName() const override { return "Slider"; }
+		[[nodiscard]] const char* GetWidgetTypeName() const override {
+			return "Slider";
+		}
 
 		/**
 		 * Returns the most-active state of the slider and its input field.
 		 */
-		WIDGETSTATE GetState() const override {
+		[[nodiscard]] WIDGETSTATE GetState() const override {
 			return std::max(state, valueInputField.GetState());
-		};
+		}
 
 		/**
 		 * Sets the slide callback.

@@ -27,7 +27,7 @@ using namespace wi::primitive;
 
 namespace wi::gui
 {
-	void Slider::Create(float start, float end, float defaultValue, float step, const std::string& name)
+	void Slider::Create(const float start, const float end, const float defaultValue, const float step, const std::string& name)
 	{
 		this->start = start;
 		this->end = end;
@@ -84,25 +84,25 @@ namespace wi::gui
 		font.params.h_align = wi::font::WIFALIGN_RIGHT;
 		font.params.v_align = wi::font::WIFALIGN_CENTER;
 	}
-	void Slider::SetValue(float value)
+	void Slider::SetValue(const float value)
 	{
 		this->value = value;
 	}
-	void Slider::SetValue(int value)
+	void Slider::SetValue(const int value)
 	{
 		this->value = float(value);
 	}
-	float Slider::GetValue() const
+	float Slider::GetValue() const noexcept
 	{
 		return value;
 	}
-	void Slider::SetRange(float start, float end)
+	void Slider::SetRange(const float start, const float end)
 	{
 		this->start = start;
 		this->end = end;
 		this->value = wi::math::Clamp(this->value, start, end);
 	}
-	void Slider::Update(const wi::Canvas& canvas, float dt)
+	void Slider::Update(const wi::Canvas& canvas, const float dt)
 	{
 		if (!IsVisible())
 		{
@@ -163,7 +163,7 @@ namespace wi::gui
 				}
 			}
 
-			Hitbox2D pointerHitbox = GetPointerHitbox();
+			const Hitbox2D pointerHitbox = GetPointerHitbox();
 
 			if (pointerHitbox.intersects(hitBox))
 			{
@@ -217,7 +217,7 @@ namespace wi::gui
 
 		left_text_width = font.TextWidth();
 	}
-	void Slider::Render(const wi::Canvas& canvas, CommandList cmd) const
+	void Slider::Render(const wi::Canvas& canvas, const CommandList cmd) const
 	{
 		Widget::Render(canvas, cmd);
 		if (!IsVisible())
@@ -273,7 +273,7 @@ namespace wi::gui
 		// input field
 		valueInputField.Render(canvas, cmd);
 	}
-	void Slider::RenderTooltip(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const
+	void Slider::RenderTooltip(const wi::Canvas& canvas, const wi::graphics::CommandList cmd) const
 	{
 		Widget::RenderTooltip(canvas, cmd);
 		valueInputField.RenderTooltip(canvas, cmd);
@@ -282,7 +282,7 @@ namespace wi::gui
 	{
 		onSlide = std::move(func);
 	}
-	void Slider::SetColor(wi::Color color, int id)
+	void Slider::SetColor(const wi::Color color, const int id)
 	{
 		Widget::SetColor(color, id);
 		valueInputField.SetColor(color, id);
@@ -299,7 +299,7 @@ namespace wi::gui
 			}
 		}
 	}
-	void Slider::SetTheme(const Theme& theme, int id)
+	void Slider::SetTheme(const Theme& theme, const int id)
 	{
 		Widget::SetTheme(theme, id);
 		valueInputField.SetTheme(theme, id);
