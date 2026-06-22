@@ -141,7 +141,7 @@ namespace wi::gui
 		/**
 		 * Returns the widget's name.
 		 */
-		const std::string& GetName() const;
+		[[nodiscard]] const std::string& GetName() const noexcept;
 
 		/**
 		 * Sets the widget's name.
@@ -153,12 +153,12 @@ namespace wi::gui
 		/**
 		 * Returns the main text as an ASCII string.
 		 */
-		std::string GetText() const;
+		[[nodiscard]] std::string GetText() const;
 
 		/**
 		 * Returns the tooltip text as an ASCII string.
 		 */
-		std::string GetTooltip() const;
+		[[nodiscard]] std::string GetTooltip() const;
 
 		/**
 		 * Sets the main text.
@@ -226,17 +226,17 @@ namespace wi::gui
 		/**
 		 * Returns the current (x, y) position.
 		 */
-		XMFLOAT2 GetPos() const;
+		[[nodiscard]] XMFLOAT2 GetPos() const noexcept;
 
 		/**
 		 * Returns the current (width, height).
 		 */
-		virtual XMFLOAT2 GetSize() const;
+		[[nodiscard]] virtual XMFLOAT2 GetSize() const;
 
 		/**
 		 * Returns the current interaction state.
 		 */
-		virtual WIDGETSTATE GetState() const;
+		[[nodiscard]] virtual WIDGETSTATE GetState() const;
 
 		/**
 		 * Enables or disables interaction.
@@ -248,7 +248,7 @@ namespace wi::gui
 		/**
 		 * Returns whether the widget is currently interactive.
 		 */
-		bool IsEnabled() const;
+		[[nodiscard]] bool IsEnabled() const noexcept;
 
 		/**
 		 * Shows or hides the widget.
@@ -260,43 +260,45 @@ namespace wi::gui
 		/**
 		 * Returns whether the widget is visible (false if a parent is hidden).
 		 */
-		bool IsVisible() const;
+		[[nodiscard]] bool IsVisible() const noexcept;
 
 		/**
 		 * Returns the color of the current state's sprite.
 		 */
-		wi::Color GetColor() const;
+		[[nodiscard]] wi::Color GetColor() const noexcept;
 
 		/**
 		 * Returns the shadow radius.
 		 */
-		float GetShadowRadius() const { return shadow; }
+		[[nodiscard]] float GetShadowRadius() const noexcept { return shadow; }
 
 		/**
 		 * Sets the shadow radius.
 		 *
 		 * @param[in] value - New radius.
 		 */
-		void SetShadowRadius(float value) { shadow = value; }
+		void SetShadowRadius(float value) noexcept { shadow = value; }
 
 		/**
 		 * Returns whether the shadow highlight effect is enabled.
 		 */
-		bool IsShadowHighlightEnabled() { return shadow_highlight; }
+		[[nodiscard]] bool IsShadowHighlightEnabled() const noexcept {
+			return shadow_highlight;
+		}
 
 		/**
 		 * Enables or disables the shadow highlight effect.
 		 *
 		 * @param[in] value - true to enable the effect.
 		 */
-		void SetShadowHighlightEnabled(bool value) {
+		void SetShadowHighlightEnabled(bool value) noexcept {
 			shadow_highlight = value;
 		}
 
 		/**
 		 * Returns the shadow highlight color (RGB).
 		 */
-		XMFLOAT3 GetShadowHighlightColor() const {
+		[[nodiscard]] XMFLOAT3 GetShadowHighlightColor() const noexcept {
 			return shadow_highlight_color;
 		}
 
@@ -305,14 +307,14 @@ namespace wi::gui
 		 *
 		 * @param[in] value - New highlight color.
 		 */
-		void SetShadowHighlightColor(const XMFLOAT3& value) {
+		void SetShadowHighlightColor(const XMFLOAT3& value) noexcept {
 			shadow_highlight_color = value;
 		}
 
 		/**
 		 * Returns the shadow highlight spread/falloff.
 		 */
-		float GetShadowHighlightSpread() const {
+		[[nodiscard]] float GetShadowHighlightSpread() const noexcept {
 			return shadow_highlight_spread;
 		}
 
@@ -321,14 +323,14 @@ namespace wi::gui
 		 *
 		 * @param[in] value - New spread value.
 		 */
-		void SetShadowHighlightSpread(float value) {
+		void SetShadowHighlightSpread(float value) noexcept {
 			shadow_highlight_spread = value;
 		}
 
 		/**
 		 * Recomputes child layout; no-op for the base widget.
 		 */
-		virtual void ResizeLayout() {};
+		virtual void ResizeLayout() {}
 
 		/**
 		 * Per-frame update: transform, hitbox, sprite/font placement, tooltip
@@ -396,7 +398,9 @@ namespace wi::gui
 		/**
 		 * Returns the widget's type name (for debugging / localization).
 		 */
-		virtual const char* GetWidgetTypeName() const { return "Widget"; }
+		[[nodiscard]] virtual const char* GetWidgetTypeName() const {
+			return "Widget";
+		}
 
 		/** Background sprite for each @ref WIDGETSTATE. */
 		wi::Sprite sprites[WIDGETSTATE_COUNT];
@@ -471,7 +475,9 @@ namespace wi::gui
 		 *
 		 * @return A 1x1 hitbox at the pointer position (possibly clipped).
 		 */
-		wi::primitive::Hitbox2D GetPointerHitbox(bool constrained = true) const;
+		[[nodiscard]] wi::primitive::Hitbox2D GetPointerHitbox(
+			bool constrained = true
+		) const noexcept;
 
 		/**
 		 * Returns the pointer position normalized to [0, 1] over the canvas.
@@ -480,7 +486,9 @@ namespace wi::gui
 		 *
 		 * @return Normalized (x, y) used to drive highlight shaders.
 		 */
-		XMFLOAT2 GetPointerHighlightPos(const wi::Canvas& canvas) const;
+		[[nodiscard]] XMFLOAT2 GetPointerHighlightPos(
+			const wi::Canvas& canvas
+		) const noexcept;
 
 		/**
 		 * Area the pointer hitbox is constrained to (scissor-like clip
@@ -507,14 +515,15 @@ namespace wi::gui
 		/**
 		 * Returns whether any localization is enabled for this widget.
 		 */
-		bool IsLocalizationEnabled() const {
+		[[nodiscard]] bool IsLocalizationEnabled() const noexcept {
 			return localization_enabled != LocalizationEnabled::None;
 		}
 
 		/**
 		 * Returns the localization flags.
 		 */
-		LocalizationEnabled GetLocalizationEnabled() const {
+		[[nodiscard]] LocalizationEnabled GetLocalizationEnabled() const
+			noexcept {
 			return localization_enabled;
 		}
 
@@ -523,7 +532,7 @@ namespace wi::gui
 		 *
 		 * @param[in] value - New localization flags.
 		 */
-		void SetLocalizationEnabled(LocalizationEnabled value) {
+		void SetLocalizationEnabled(LocalizationEnabled value) noexcept {
 			localization_enabled = value;
 		}
 
@@ -532,7 +541,7 @@ namespace wi::gui
 		 *
 		 * @param[in] value - true selects All, false selects None.
 		 */
-		void SetLocalizationEnabled(bool value) {
+		void SetLocalizationEnabled(bool value) noexcept {
 			localization_enabled =
 				value ? LocalizationEnabled::All : LocalizationEnabled::None;
 		}
@@ -556,41 +565,45 @@ namespace wi::gui
 		 *
 		 * @param[in] value - New border width.
 		 */
-		void SetAngularHighlightWidth(float value) {
+		void SetAngularHighlightWidth(float value) noexcept {
 			angular_highlight_width = value;
-		};
+		}
 
 		/**
 		 * Returns the angular highlight border width.
 		 */
-		float GetAngularHighlightWidth() const {
+		[[nodiscard]] float GetAngularHighlightWidth() const noexcept {
 			return angular_highlight_width;
-		};
+		}
 
 		/**
 		 * Sets the angular highlight color (RGBA).
 		 *
 		 * @param[in] value - New highlight color.
 		 */
-		void SetAngularHighlightColor(const XMFLOAT4& value) {
+		void SetAngularHighlightColor(const XMFLOAT4& value) noexcept {
 			angular_highlight_color = value;
-		};
+		}
 
 		/**
 		 * Returns the angular highlight color (RGBA).
 		 */
-		XMFLOAT4 GetAngularHighlightColor() const {
+		[[nodiscard]] XMFLOAT4 GetAngularHighlightColor() const noexcept {
 			return angular_highlight_color;
-		};
+		}
 
 		/**
 		 * Returns the measured width of text rendered to the widget's left.
 		 */
-		constexpr float GetLeftTextWidth() const { return left_text_width; }
+		[[nodiscard]] constexpr float GetLeftTextWidth() const noexcept {
+			return left_text_width;
+		}
 
 		/**
 		 * Returns the measured width of text rendered to the widget's right.
 		 */
-		constexpr float GetRightTextWidth() const { return right_text_width; }
+		[[nodiscard]] constexpr float GetRightTextWidth() const noexcept {
+			return right_text_width;
+		}
 	};
 }

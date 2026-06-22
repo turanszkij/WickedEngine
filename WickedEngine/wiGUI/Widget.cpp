@@ -1,6 +1,6 @@
 /**
  * @file
- * @brief Implementation of @ref wi::gui::Widget, the GUI widget base class.
+ * Implementation of @ref wi::gui::Widget, the GUI widget base class.
  */
 
 #include "wiGUI/Widget.h"
@@ -231,7 +231,7 @@ namespace wi::gui
 			}
 		}
 	}
-	const std::string& Widget::GetName() const
+	const std::string& Widget::GetName() const noexcept
 	{
 		return name;
 	}
@@ -302,13 +302,13 @@ namespace wi::gui
 
 		scale = scale_local;
 	}
-	XMFLOAT2 Widget::GetPos() const
+	XMFLOAT2 Widget::GetPos() const noexcept
 	{
-		return *(XMFLOAT2*)&translation;
+		return XMFLOAT2(translation.x, translation.y);
 	}
 	XMFLOAT2 Widget::GetSize() const
 	{
-		return *(XMFLOAT2*)&scale;
+		return XMFLOAT2(scale.x, scale.y);
 	}
 	WIDGETSTATE Widget::GetState() const
 	{
@@ -323,7 +323,7 @@ namespace wi::gui
 				state = IDLE;
 		}
 	}
-	bool Widget::IsEnabled() const
+	bool Widget::IsEnabled() const noexcept
 	{
 		return enabled && visible && !force_disable;
 	}
@@ -336,7 +336,7 @@ namespace wi::gui
 				state = IDLE;
 		}
 	}
-	bool Widget::IsVisible() const
+	bool Widget::IsVisible() const noexcept
 	{
 		if (parent != nullptr && !parent->IsVisible())
 		{
@@ -355,7 +355,7 @@ namespace wi::gui
 		state = DEACTIVATING;
 		tooltipTimer = 0;
 	}
-	wi::Color Widget::GetColor() const
+	wi::Color Widget::GetColor() const noexcept
 	{
 		return wi::Color::fromFloat4(sprites[GetState()].params.color);
 	}
@@ -552,7 +552,7 @@ namespace wi::gui
 		scissor.right = int32_t((float)scissor.right * scale);
 		device->BindScissorRects(1, &scissor, cmd);
 	}
-	Hitbox2D Widget::GetPointerHitbox(bool constrained) const
+	Hitbox2D Widget::GetPointerHitbox(bool constrained) const noexcept
 	{
 		XMFLOAT4 pointer = wi::input::GetPointer();
 		Hitbox2D hb = Hitbox2D(XMFLOAT2(pointer.x, pointer.y), XMFLOAT2(1, 1));
@@ -589,7 +589,9 @@ namespace wi::gui
 			parent->HitboxConstrain(hb);
 		}
 	}
-	XMFLOAT2 Widget::GetPointerHighlightPos(const wi::Canvas& canvas) const
+	XMFLOAT2 Widget::GetPointerHighlightPos(
+		const wi::Canvas& canvas
+	) const noexcept
 	{
 		XMFLOAT4 pointer = wi::input::GetPointer();
 		return XMFLOAT2(pointer.x / canvas.GetLogicalWidth(), pointer.y / canvas.GetLogicalHeight());
