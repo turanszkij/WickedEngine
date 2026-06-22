@@ -1,3 +1,8 @@
+/**
+ * @file
+ * Implementation of the @ref wi::gui::ColorPicker widget.
+ */
+
 #include "wiGUI/components/ColorPicker.h"
 #include "wiGUI/GUIInternal.h"
 
