@@ -818,6 +818,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 	{
 		surface.albedo = lerp(surface.albedo, 0, wet); // darken color when wet
 		surface.roughness = clamp(surface.roughness * saturate(sqr((1 - wet) * 2 - 1)), 0.01, 1); // decrease eoughness when wet, but only at shoreline, not deeper underwater (sand underwater shouldn't be shiny)
+		surface.f0 = lerp(surface.f0, 0, wet); // decrease reflectance when wet (not shiny when fully underwater)
 		surface.N = normalize(lerp(surface.N, input.nor, wet)); // blend to vertex normal when wet
 	}
 #endif // OBJECTSHADER_USE_COMMON

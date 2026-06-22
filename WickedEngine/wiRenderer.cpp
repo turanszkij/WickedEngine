@@ -7008,6 +7008,36 @@ void DrawShadowmaps(
 					}
 				}
 			}
+
+			if (vis.scene->ocean.IsValid())
+			{
+				cb.cameras[0].position = vis.camera->Eye;
+				for (uint32_t cascade = 0; cascade < std::min(2u + (uint32_t)vis.scene->character_dedicated_shadows.size(), cascade_count); ++cascade)
+				{
+					XMStoreFloat4x4(&cb.cameras[0].view, shcams[cascade].view);
+					XMStoreFloat4x4(&cb.cameras[0].view_projection, shcams[cascade].view_projection);
+					XMStoreFloat4x4(&cb.cameras[0].inverse_view_projection, XMMatrixInverse(nullptr, shcams[cascade].view_projection));
+					cb.cameras[0].options = SHADERCAMERA_OPTION_ORTHO;
+					cb.cameras[0].output_index = 0;
+					device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
+
+					Viewport vp;
+					vp.top_left_x = float(shadow_rect.x + cascade * shadow_rect.w);
+					vp.top_left_y = float(shadow_rect.y);
+					vp.width = float(shadow_rect.w);
+					vp.height = float(shadow_rect.h);
+					device->BindViewports(1, &vp, cmd);
+
+					wi::graphics::Rect scissor;
+					scissor.from_viewport(vp);
+					device->BindScissorRects(1, &scissor, cmd);
+
+					if (shcams[cascade].frustum.CheckBoxFast(vis.scene->ocean.GetAABB(cb.cameras[0].position)))
+					{
+						vis.scene->ocean.RenderForShadowmap(cmd);
+					}
+				}
+			}
 		}
 		break;
 		case LightComponent::SPOT:
@@ -7155,6 +7185,33 @@ void DrawShadowmaps(
 					{
 						emitter.DrawForShadowmap(*material, cmd);
 					}
+				}
+			}
+
+			if (vis.scene->ocean.IsValid())
+			{
+				cb.cameras[0].position = vis.camera->Eye;
+				cb.cameras[0].options = SHADERCAMERA_OPTION_NONE;
+				cb.cameras[0].output_index = 0;
+				XMStoreFloat4x4(&cb.cameras[0].view, shcam.view);
+				XMStoreFloat4x4(&cb.cameras[0].view_projection, shcam.view_projection);
+				XMStoreFloat4x4(&cb.cameras[0].inverse_view_projection, XMMatrixInverse(nullptr, shcam.view_projection));
+				device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
+
+				Viewport vp;
+				vp.top_left_x = float(shadow_rect.x);
+				vp.top_left_y = float(shadow_rect.y);
+				vp.width = float(shadow_rect.w);
+				vp.height = float(shadow_rect.h);
+				device->BindViewports(1, &vp, cmd);
+
+				wi::graphics::Rect scissor;
+				scissor.from_viewport(vp);
+				device->BindScissorRects(1, &scissor, cmd);
+
+				if (shcam.frustum.CheckBoxFast(vis.scene->ocean.GetAABB(cb.cameras[0].position)))
+				{
+					vis.scene->ocean.RenderForShadowmap(cmd);
 				}
 			}
 
@@ -7327,6 +7384,29 @@ void DrawShadowmaps(
 						{
 							emitter.DrawForShadowmap(*material, cmd);
 						}
+					}
+				}
+			}
+
+			if (vis.scene->ocean.IsValid())
+			{
+				cb.cameras[0].position = vis.camera->Eye;
+				cb.cameras[0].options = SHADERCAMERA_OPTION_NONE;
+				cb.cameras[0].output_index = 0;
+				for (uint32_t cami = 0; cami < camera_count; ++cami)
+				{
+					const uint32_t shcam = cb.cameras[cami].output_index;
+					XMStoreFloat4x4(&cb.cameras[0].view, cameras[shcam].view);
+					XMStoreFloat4x4(&cb.cameras[0].view_projection, cameras[shcam].view_projection);
+					XMStoreFloat4x4(&cb.cameras[0].inverse_view_projection, XMMatrixInverse(nullptr, cameras[shcam].view_projection));
+					device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
+
+					device->BindViewports(1, &vp[shcam], cmd);
+					device->BindScissorRects(1, &scissors[shcam], cmd);
+
+					if (cameras[shcam].frustum.CheckBoxFast(vis.scene->ocean.GetAABB(cb.cameras[0].position)))
+					{
+						vis.scene->ocean.RenderForShadowmap(cmd);
 					}
 				}
 			}

@@ -15,6 +15,13 @@ Texture2D<float4> texture_perlin : register(t2);
 [earlydepthstencil]
 float4 main(PSIn input) : SV_TARGET
 {
+#ifdef SHADOWMAPRENDERING
+	float4 color = 1;
+	color.rgb += texture_caustics.SampleLevel(sampler_linear_mirror, input.uv, 0).rgb;
+	color.a = input.pos.z; // secondary depth
+	return color;
+#else
+
 	ShaderCamera camera = GetCameraIndexed(input.cameraIndex);
 	float lineardepth = camera.IsOrtho() ? ((1 - input.pos.z) * camera.z_far) : input.pos.w;
 	half4 color = xOceanWaterColor;
@@ -223,5 +230,7 @@ float4 main(PSIn input) : SV_TARGET
 	ApplyFog(dist, V, color);
 
 	return saturateMediump(color);
+
+#endif // SHADOWMAPRENDERING
 }
 

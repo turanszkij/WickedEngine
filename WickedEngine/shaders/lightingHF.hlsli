@@ -151,29 +151,7 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 	const half scattering = ComputeScattering(saturate(dot(L, -surface.V)));
 	lighting.indirect.specular += scattering * light_color * (1 - surface.extinction) * (1 - sqr(1 - saturate(1 - surface.N.y)));
 #endif // LIGHTING_SCATTER
-			
-#ifndef WATER
-	// On non-water surfaces there can be procedural caustic if it's under ocean:
-	const ShaderOcean ocean = GetWeather().ocean;
-	if (ocean.texture_displacementmap >= 0)
-	{
-		Texture2D displacementmap = bindless_textures[descriptor_index(ocean.texture_displacementmap)];
-		float2 ocean_uv = surface.P.xz * ocean.patch_size_rcp;
-		float3 displacement = displacementmap.SampleLevel(sampler_linear_wrap, ocean_uv, 0).xzy;
-		float water_height = ocean.water_height + displacement.y;
-		if (surface.P.y < water_height)
-		{
-			half3 caustic = texture_caustics.SampleLevel(sampler_linear_mirror, ocean_uv, 0).rgb;
-			caustic *= sqr(saturate((water_height - surface.P.y) * 0.5)); // fade out at shoreline
-			caustic *= light_color;
-			lighting.indirect.diffuse += caustic;
-
-			// fade out specular at depth, it looks weird when specular appears under ocean from wetmap
-			half water_depth = water_height - surface.P.y;
-			lighting.direct.specular *= saturate(exp(-water_depth * 10));
-		}
-	}
-#endif // WATER
+		
 }
 
 inline half attenuation_pointlight(in half dist2, in half range, in half range2)
