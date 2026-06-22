@@ -1,3 +1,8 @@
+/**
+ * @file
+ * Implementation of the @ref wi::gui::Label widget.
+ */
+
 #include "wiGUI/components/Label.h"
 #include "wiGUI/GUIInternal.h"
 
