@@ -1,3 +1,8 @@
+/**
+ * @file
+ * Implementation of the @ref wi::gui::CheckBox widget.
+ */
+
 #include "wiGUI/components/CheckBox.h"
 #include "wiGUI/GUIInternal.h"
 
