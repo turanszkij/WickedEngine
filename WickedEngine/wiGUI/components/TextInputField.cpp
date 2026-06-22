@@ -1,3 +1,8 @@
+/**
+ * @file
+ * Implementation of the @ref wi::gui::TextInputField widget.
+ */
+
 #include "wiGUI/components/TextInputField.h"
 #include "wiGUI/GUIInternal.h"
 
