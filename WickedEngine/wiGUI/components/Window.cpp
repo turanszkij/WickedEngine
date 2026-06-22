@@ -1,3 +1,8 @@
+/**
+ * @file
+ * Implementation of the @ref wi::gui::Window widget.
+ */
+
 #include "wiGUI/components/Window.h"
 #include "wiGUI/GUIInternal.h"
 
