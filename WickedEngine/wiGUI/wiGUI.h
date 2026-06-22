@@ -1,8 +1,14 @@
 #pragma once
 
-// Umbrella header for the wi::gui module. Aggregates the framework pieces and
-// all widget components. Code that previously did #include "wiGUI.h" should now
-// include "wiGUI/wiGUI.h".
+/**
+ * @file
+ * Umbrella header for the `wi::gui` module.
+ *
+ * Aggregates the framework pieces (@ref wi::gui::Widget, @ref wi::gui::GUI and
+ * the shared types in `GUICommon.h`) together with every widget component, so
+ * that a single include pulls in the whole module. Code that previously did
+ * `#include "wiGUI.h"` should now include `"wiGUI/wiGUI.h"`.
+ */
 
 #include "wiGUI/GUICommon.h"
 #include "wiGUI/Widget.h"
