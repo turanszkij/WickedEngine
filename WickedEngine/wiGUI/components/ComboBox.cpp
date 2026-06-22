@@ -27,7 +27,11 @@ using namespace wi::primitive;
 
 namespace wi::gui
 {
+	/**
+	 * Returns the height of one dropped-down item row, in pixels.
+	 */
 	static constexpr float combo_height() { return 20; };
+
 	void ComboBox::Create(const std::string& name)
 	{
 		SetName(name);
