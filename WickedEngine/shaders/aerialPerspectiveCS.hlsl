@@ -1,5 +1,4 @@
 #define DISABLE_SOFT_SHADOWMAP
-#define TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
 #include "globals.hlsli"
 #include "skyAtmosphere.hlsli"
 #include "fogHF.hlsli"

@@ -211,10 +211,8 @@ inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, half2 radiu
 #ifndef DISABLE_TRANSPARENT_SHADOWMAP
 		// !Reminder: there is no dependency between sampling shadowatlas and shadowatlas_transparent, this has best performance!
 		half4 transparent_shadow = texture_shadowatlas_transparent.SampleLevel(sampler_linear_clamp, sample_uv, 0);
-		if (transparent_shadow.a > cmp)
-		{
-			pcf *= transparent_shadow.rgb;
-		}
+		const half mask = step(cmp, transparent_shadow.a); // IMPORTANT: keep this before lerp as single channel for best perf!
+		pcf *= lerp(1.0, transparent_shadow.rgb, mask);
 #endif // DISABLE_TRANSPARENT_SHADOWMAP
 
 		shadow += pcf;

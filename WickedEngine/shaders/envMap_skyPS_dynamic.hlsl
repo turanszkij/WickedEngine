@@ -1,6 +1,5 @@
 #define OBJECTSHADER_USE_NORMAL
 #define DISABLE_SOFT_SHADOWMAP
-#define TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
 #include "objectHF.hlsli"
 #include "lightingHF.hlsli"
 #include "skyHF.hlsli"
