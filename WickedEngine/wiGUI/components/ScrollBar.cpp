@@ -1,3 +1,8 @@
+/**
+ * @file
+ * Implementation of the @ref wi::gui::ScrollBar widget.
+ */
+
 #include "wiGUI/components/ScrollBar.h"
 #include "wiGUI/GUIInternal.h"
 
