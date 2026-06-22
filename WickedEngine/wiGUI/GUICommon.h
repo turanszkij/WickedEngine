@@ -1,7 +1,8 @@
 #pragma once
+
 /**
  * @file
- * @brief Shared, dependency-light types for the `wi::gui` module.
+   * Shared, dependency-light types for the `wi::gui` module.
  *
  * These are the small building blocks used across every GUI widget:
  * - @ref wi::gui::EventArgs — the generic payload passed to event callbacks.
@@ -10,6 +11,7 @@
  * - @ref wi::gui::LocalizationEnabled — per-widget localization opt-in flags.
  * - @ref wi::gui::Theme — a reusable styling descriptor for widgets.
  */
+
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
 #include "wiPrimitive.h"
@@ -250,7 +252,7 @@ namespace wi::gui
 			float border_soften = 0;
 
 			/**
-			 * @brief Writes this theme's image style into render parameters.
+			 * Writes this theme's image style into render parameters.
 			 *
 			 * @param[in,out] params - Image parameters to update in place;
 			 *                          layout fields are left untouched.
@@ -297,7 +299,7 @@ namespace wi::gui
 			}
 
 			/**
-			 * @brief Captures image style from existing render parameters.
+			 * Captures image style from existing render parameters.
 			 *
 			 * @param[in] params - Image parameters to copy the style from.
 			 */
@@ -359,7 +361,7 @@ namespace wi::gui
 			float shadow_offset_y = params.shadow_offset_y;
 
 			/**
-			 * @brief Writes this theme's font style into render parameters.
+			 * Writes this theme's font style into render parameters.
 			 *
 			 * @param[in,out] params - Font parameters to update in place;
 			 *                          layout fields are left untouched.
@@ -378,7 +380,7 @@ namespace wi::gui
 			}
 
 			/**
-			 * @brief Captures font style from existing render parameters.
+			 * Captures font style from existing render parameters.
 			 *
 			 * @param[in] params - Font parameters to copy the style from.
 			 */
@@ -428,6 +430,8 @@ namespace wi::gui
 	};
 }
 
-/** @brief Enables bitwise operators for @ref wi::gui::LocalizationEnabled. */
+/**
+ * Enables bitwise operators for @ref wi::gui::LocalizationEnabled.
+ */
 template<>
 struct enable_bitmask_operators<wi::gui::LocalizationEnabled> : std::true_type {};
