@@ -157,12 +157,13 @@ inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, half2 radiu
 	Texture2D<half4> texture_shadowatlas_transparent = bindless_textures_half4[descriptor_index(GetFrame().texture_shadowatlas_transparent_index)];
 	
 	half3 shadow = 0;
+	const half cmpf16 = (half)cmp;
 	
 #ifndef DISABLE_SOFT_SHADOWMAP
 	float2 spread = GetFrame().shadow_atlas_resolution_rcp.xy * mad(radius, 8, 2); // remap radius to try to match ray traced shadow result
 
 #ifdef SHADOW_SAMPLING_PCSS
-	half z_receiver = cmp;
+	half z_receiver = cmpf16;
 	half blocker_count = 0;
 	half blocker_sum = 0;
 	const float search = 2;
@@ -206,13 +207,13 @@ inline half3 sample_shadow(float2 uv, float cmp, float4 uv_clamping, half2 radiu
 #endif // DISABLE_SOFT_SHADOWMAP
 
 		sample_uv = clamp(sample_uv, uv_clamping.xy, uv_clamping.zw);
-		half3 pcf = texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, sample_uv, cmp).rrr;
+		half3 pcf = texture_shadowatlas.SampleCmpLevelZero(sampler_cmp_depth, sample_uv, cmp).rrr; // note: cmpf16 not good enough here!
 		
 #ifndef DISABLE_TRANSPARENT_SHADOWMAP
 		// !Reminder: there is no dependency between sampling shadowatlas and shadowatlas_transparent, this has best performance!
 		half4 transparent_shadow = texture_shadowatlas_transparent.SampleLevel(sampler_linear_clamp, sample_uv, 0);
-		const half mask = step(cmp, transparent_shadow.a); // IMPORTANT: keep this before lerp as single channel for best perf!
-		pcf *= lerp(1.0, transparent_shadow.rgb, mask);
+		const half mask = step(cmpf16, transparent_shadow.a); // IMPORTANT: keep this before lerp as single channel for best perf!
+		pcf *= lerp(1.0, transparent_shadow.rgb, mask); // forced no-branch is a decent win on AMD here
 #endif // DISABLE_TRANSPARENT_SHADOWMAP
 
 		shadow += pcf;
