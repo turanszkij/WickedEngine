@@ -1,3 +1,8 @@
+/**
+ * @file
+ * @brief Implementation of @ref wi::gui::Widget, the GUI widget base class.
+ */
+
 #include "wiGUI/Widget.h"
 #include "wiGUI/GUIInternal.h"
 
