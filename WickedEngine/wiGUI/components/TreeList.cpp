@@ -27,7 +27,11 @@ using namespace wi::primitive;
 
 namespace wi::gui
 {
+	/**
+	 * Returns the height of one item row, in pixels.
+	 */
 	constexpr float item_height() { return 20.0f; }
+
 	void TreeList::Create(const std::string& name)
 	{
 		SetName(name);
