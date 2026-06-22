@@ -31,7 +31,7 @@
 namespace wi::gui
 {
 	/**
-	 * @brief Generic payload passed to widget event callbacks.
+	 * Generic payload passed to widget event callbacks.
 	 *
 	 * One structure is reused for every widget event (click, drag, slide,
 	 * selection, color pick, ...). Only the fields meaningful to a given event
@@ -75,7 +75,7 @@ namespace wi::gui
 	};
 
 	/**
-	 * @brief Interaction state of a widget.
+	 * Interaction state of a widget.
 	 *
 	 * Selects which sprite is drawn and how input is interpreted. A typical
 	 * press/release cycle moves the widget IDLE -> FOCUS -> ACTIVE ->
@@ -100,7 +100,7 @@ namespace wi::gui
 	};
 
 	/**
-	 * @brief Identifies a specific widget control and state to style.
+	 * Identifies a specific widget control and state to style.
 	 *
 	 * Passed to the various `SetColor()` / `SetImage()` / `SetTheme()`
 	 * overloads to target one sub-element of a compound widget (e.g. a slider's
@@ -168,7 +168,7 @@ namespace wi::gui
 	};
 
 	/**
-	 * @brief Bit flags selecting which parts of a widget are localized.
+	 * Bit flags selecting which parts of a widget are localized.
 	 *
 	 * Controls what `ExportLocalization()` / `ImportLocalization()` touch.
 	 * Combine with bitwise operators (see the `enable_bitmask_operators`
@@ -196,7 +196,7 @@ namespace wi::gui
 	};
 
 	/**
-	 * @brief Reusable styling descriptor applied to widgets.
+	 * Reusable styling descriptor applied to widgets.
 	 *
 	 * Bundles the image and font styling plus shadow/tooltip settings that a
 	 * widget's `SetTheme()` reads. The nested @ref Image and @ref Font are
@@ -206,7 +206,7 @@ namespace wi::gui
 	struct Theme
 	{
 		/**
-		 * @brief Themeable subset of `wi::image::Params`.
+		 * Themeable subset of `wi::image::Params`.
 		 *
 		 * Excludes position, alignment, size and other per-instance layout;
 		 * holds only the visual style fields a theme should drive.
@@ -257,7 +257,7 @@ namespace wi::gui
 			 * @param[in,out] params - Image parameters to update in place;
 			 *                          layout fields are left untouched.
 			 */
-			void Apply(wi::image::Params& params) const
+			void Apply(wi::image::Params& params) const noexcept
 			{
 				params.color = color;
 				params.blendFlag = blendFlag;
@@ -303,7 +303,7 @@ namespace wi::gui
 			 *
 			 * @param[in] params - Image parameters to copy the style from.
 			 */
-			void CopyFrom(const wi::image::Params& params)
+			void CopyFrom(const wi::image::Params& params) noexcept
 			{
 				color = params.color;
 				blendFlag = params.blendFlag;
@@ -323,7 +323,7 @@ namespace wi::gui
 		} image;
 
 		/**
-		 * @brief Themeable subset of `wi::font::Params`.
+		 * Themeable subset of `wi::font::Params`.
 		 *
 		 * Excludes position, alignment and other per-instance layout; holds
 		 * only the visual style fields a theme should drive.
@@ -366,7 +366,7 @@ namespace wi::gui
 			 * @param[in,out] params - Font parameters to update in place;
 			 *                          layout fields are left untouched.
 			 */
-			void Apply(wi::font::Params& params) const
+			void Apply(wi::font::Params& params) const noexcept
 			{
 				params.color = color;
 				params.shadowColor = shadow_color;
@@ -384,7 +384,7 @@ namespace wi::gui
 			 *
 			 * @param[in] params - Font parameters to copy the style from.
 			 */
-			void CopyFrom(const wi::font::Params& params)
+			void CopyFrom(const wi::font::Params& params) noexcept
 			{
 				color = params.color;
 				shadow_color = params.shadowColor;
