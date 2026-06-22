@@ -1,3 +1,8 @@
+/**
+ * @file
+ * Implementation of the @ref wi::gui::Slider widget.
+ */
+
 #include "wiGUI/components/Slider.h"
 #include "wiGUI/GUIInternal.h"
 
