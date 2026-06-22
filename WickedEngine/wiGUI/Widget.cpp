@@ -360,11 +360,21 @@ namespace wi::gui
 		return wi::Color::fromFloat4(sprites[GetState()].params.color);
 	}
 
+	/**
+	 * Identifies a widget's localizable strings within a localization.
+	 *
+	 * Used as the entry index by @ref Widget::ExportLocalization /
+	 * @ref Widget::ImportLocalization.
+	 */
 	enum LOCALIZATION_ID
 	{
+		/** The widget's main text. */
 		LOCALIZATION_ID_TEXT,
+
+		/** The widget's tooltip text. */
 		LOCALIZATION_ID_TOOLTIP,
 	};
+
 	void Widget::ExportLocalization(wi::Localization& localization) const
 	{
 		if (!IsLocalizationEnabled())
