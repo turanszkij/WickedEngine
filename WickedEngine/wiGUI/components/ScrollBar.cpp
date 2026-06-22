@@ -27,7 +27,7 @@ using namespace wi::primitive;
 
 namespace wi::gui
 {
-	void ScrollBar::Update(const wi::Canvas& canvas, float dt)
+	void ScrollBar::Update(const wi::Canvas& canvas, const float dt)
 	{
 		if (!IsVisible())
 		{
@@ -75,7 +75,7 @@ namespace wi::gui
 				Deactivate();
 			}
 
-			Hitbox2D pointerHitbox = GetPointerHitbox();
+			const Hitbox2D pointerHitbox = GetPointerHitbox();
 
 			if (state == IDLE && hitBox.intersects(pointerHitbox))
 			{
@@ -174,7 +174,7 @@ namespace wi::gui
 			list_offset = 0;
 		}
 	}
-	void ScrollBar::Render(const wi::Canvas& canvas, CommandList cmd) const
+	void ScrollBar::Render(const wi::Canvas& canvas, const CommandList cmd) const
 	{
 		Widget::Render(canvas, cmd);
 		if (!IsVisible())
@@ -239,7 +239,7 @@ namespace wi::gui
 		//wi::image::Draw(nullptr, wi::image::Params(hitBox.pos.x, hitBox.pos.y, hitBox.siz.x, hitBox.siz.y, wi::Color(255,0,0,100)), cmd);
 
 	}
-	void ScrollBar::SetColor(wi::Color color, int id)
+	void ScrollBar::SetColor(const wi::Color color, const int id)
 	{
 		Widget::SetColor(color, id);
 
@@ -255,7 +255,7 @@ namespace wi::gui
 			}
 		}
 	}
-	void ScrollBar::SetTheme(const Theme& theme, int id)
+	void ScrollBar::SetTheme(const Theme& theme, const int id)
 	{
 		Widget::SetTheme(theme, id);
 
@@ -271,7 +271,7 @@ namespace wi::gui
 			}
 		}
 	}
-	void ScrollBar::SetOffset(float value)
+	void ScrollBar::SetOffset(const float value)
 	{
 		float scrollbar_begin;
 		float scrollbar_end;
