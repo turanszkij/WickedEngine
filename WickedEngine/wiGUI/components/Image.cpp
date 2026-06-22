@@ -33,7 +33,7 @@ namespace wi::gui
 		SetSize(XMFLOAT2(100, 100));
 		SetEnabled(false);
 	}
-	void Image::Render(const wi::Canvas& canvas, CommandList cmd) const
+	void Image::Render(const wi::Canvas& canvas, const CommandList cmd) const
 	{
 		if (!IsVisible())
 		{

@@ -43,6 +43,8 @@ namespace wi::gui
 		/**
 		 * Returns the widget's type name ("Image").
 		 */
-		const char* GetWidgetTypeName() const override { return "Image"; }
+		[[nodiscard]] const char* GetWidgetTypeName() const override {
+			return "Image";
+		}
 	};
 }
