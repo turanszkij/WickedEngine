@@ -1,3 +1,8 @@
+/**
+ * @file
+ * Implementation of the @ref wi::gui::TreeList widget.
+ */
+
 #include "wiGUI/components/TreeList.h"
 #include "wiGUI/GUIInternal.h"
 
