@@ -44,7 +44,7 @@ namespace wi::gui
 		font_description.params = font.params;
 		font_description.params.h_align = wi::font::WIFALIGN_RIGHT;
 	}
-	void Button::Update(const wi::Canvas& canvas, float dt)
+	void Button::Update(const wi::Canvas& canvas, const float dt)
 	{
 		if (!IsVisible())
 		{
@@ -60,7 +60,7 @@ namespace wi::gui
 			hitBox.siz.x = scale.x;
 			hitBox.siz.y = scale.y;
 
-			Hitbox2D pointerHitbox = GetPointerHitbox();
+			const Hitbox2D pointerHitbox = GetPointerHitbox();
 
 			if (state == FOCUS)
 			{
@@ -220,7 +220,7 @@ namespace wi::gui
 			disableClicking = false;
 		}
 	}
-	void Button::Render(const wi::Canvas& canvas, CommandList cmd) const
+	void Button::Render(const wi::Canvas& canvas, const CommandList cmd) const
 	{
 		Widget::Render(canvas, cmd);
 		if (!IsVisible())
@@ -289,7 +289,7 @@ namespace wi::gui
 	{
 		onDragEnd = std::move(func);
 	}
-	void Button::SetTheme(const Theme& theme, int id)
+	void Button::SetTheme(const Theme& theme, const int id)
 	{
 		Widget::SetTheme(theme, id);
 		theme.font.Apply(font_description.params);
