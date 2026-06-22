@@ -80,26 +80,30 @@ namespace wi::gui
 		/**
 		 * Returns the field's committed text as an ASCII string.
 		 */
-		const std::string GetValue();
+		[[nodiscard]] std::string GetValue() const;
 
 		/**
 		 * Returns the text currently being edited, or the committed value.
 		 *
 		 * @return The live edit buffer while active, otherwise @ref GetValue.
 		 */
-		const std::string GetCurrentInputValue();
+		[[nodiscard]] std::string GetCurrentInputValue() const;
 
 		/**
 		 * Sets whether incomplete input is removed on losing active state.
 		 *
 		 * @param[in] value - true (default) discards uncommitted input.
 		 */
-		void SetCancelInputEnabled(bool value) { cancel_input_enabled = value; }
+		void SetCancelInputEnabled(bool value) noexcept {
+			cancel_input_enabled = value;
+		}
 
 		/**
 		 * Returns whether incomplete input is discarded on losing focus.
 		 */
-		bool IsCancelInputEnabled() const { return cancel_input_enabled; }
+		[[nodiscard]] bool IsCancelInputEnabled() const noexcept {
+			return cancel_input_enabled;
+		}
 
 		/**
 		 * Inserts a wide character into the active field's input.
@@ -196,7 +200,7 @@ namespace wi::gui
 		/**
 		 * Returns the widget's type name ("TextInputField").
 		 */
-		const char* GetWidgetTypeName() const override {
+		[[nodiscard]] const char* GetWidgetTypeName() const override {
 			return "TextInputField";
 		}
 
@@ -229,7 +233,7 @@ namespace wi::gui
 		/**
 		 * Returns the description label text as an ASCII string.
 		 */
-		const std::string GetDescription() const {
+		[[nodiscard]] std::string GetDescription() const {
 			return font_description.GetTextA();
 		}
 
@@ -238,6 +242,8 @@ namespace wi::gui
 		 *
 		 * @param[in] value - Digit count, or -1 for the default formatting.
 		 */
-		constexpr void SetFloatPrecision(int value) { float_precision = value; }
+		constexpr void SetFloatPrecision(int value) noexcept {
+			float_precision = value;
+		}
 	};
 }

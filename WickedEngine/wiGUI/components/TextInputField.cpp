@@ -229,13 +229,13 @@ namespace wi::gui
 	{
 		font.SetText(newValue);
 	}
-	void TextInputField::SetValue(int newValue)
+	void TextInputField::SetValue(const int newValue)
 	{
 		std::stringstream ss("");
 		ss << newValue;
 		font.SetText(ss.str());
 	}
-	void TextInputField::SetValue(float newValue)
+	void TextInputField::SetValue(const float newValue)
 	{
 		if (newValue == FLT_MAX)
 		{
@@ -256,11 +256,11 @@ namespace wi::gui
 			font.SetText(ss.str());
 		}
 	}
-	const std::string TextInputField::GetValue()
+	std::string TextInputField::GetValue() const
 	{
 		return font.GetTextA();
 	}
-	const std::string TextInputField::GetCurrentInputValue()
+	std::string TextInputField::GetCurrentInputValue() const
 	{
 		if (state == ACTIVE)
 		{
@@ -268,7 +268,7 @@ namespace wi::gui
 		}
 		return GetValue();
 	}
-	void TextInputField::Update(const wi::Canvas& canvas, float dt)
+	void TextInputField::Update(const wi::Canvas& canvas, const float dt)
 	{
 		const bool was_active = (state == ACTIVE);
 
@@ -342,7 +342,7 @@ namespace wi::gui
 				if (wi::input::Press(wi::input::KEYBOARD_BUTTON_ENTER))
 				{
 					// accept input, evaluating arithmetic expressions (e.g. "10 * 2" -> "20")
-					std::string inputStr = font_input.GetTextA();
+					const std::string inputStr = font_input.GetTextA();
 					double arithmeticResult = 0;
 					if (EvaluateArithmetic(inputStr, arithmeticResult))
 					{
@@ -426,7 +426,7 @@ namespace wi::gui
 					float pos = font_input.params.position.x;
 					for (size_t i = 0; i < str.size(); ++i)
 					{
-						XMFLOAT2 size = wi::font::TextSize(str.c_str() + i, 1, font_input.params);
+						const XMFLOAT2 size = wi::font::TextSize(str.c_str() + i, 1, font_input.params);
 						pos += size.x;
 						if (pos > pointerHitbox.pos.x)
 						{
@@ -517,7 +517,10 @@ namespace wi::gui
 		}
 
 	}
-	void TextInputField::Render(const wi::Canvas& canvas, CommandList cmd) const
+	void TextInputField::Render(
+		const wi::Canvas& canvas,
+		const CommandList cmd
+	) const
 	{
 		Widget::Render(canvas, cmd);
 		if (!IsVisible())
@@ -573,7 +576,7 @@ namespace wi::gui
 			if(std::fmod(caret_timer.elapsed_seconds(), 1) < 0.5f)
 			{
 				wi::font::Params params = font_input.params;
-				XMFLOAT2 size = wi::font::TextSize(font_input.GetText().c_str(), caret_pos, font_input.params);
+				const XMFLOAT2 size = wi::font::TextSize(font_input.GetText().c_str(), caret_pos, font_input.params);
 				params.posX += size.x;
 				params.color = wi::Color::lerp(params.color, wi::Color::Transparent(), 0.1f);
 				params.size += 4;
@@ -585,12 +588,12 @@ namespace wi::gui
 			// selection:
 			if(caret_pos != caret_begin)
 			{
-				int start = std::min(caret_begin, caret_pos);
-				int end = std::max(caret_begin, caret_pos);
+				const int start = std::min(caret_begin, caret_pos);
+				const int end = std::max(caret_begin, caret_pos);
 				const std::wstring& str = font_input.GetText();
-				float pos_start = font_input.params.position.x + wi::font::TextSize(str.c_str(), start, font_input.params).x;
-				float pos_end = font_input.params.position.x + wi::font::TextSize(str.c_str(), end, font_input.params).x;
-				float width = pos_end - pos_start;
+				const float pos_start = font_input.params.position.x + wi::font::TextSize(str.c_str(), start, font_input.params).x;
+				const float pos_end = font_input.params.position.x + wi::font::TextSize(str.c_str(), end, font_input.params).x;
+				const float width = pos_end - pos_start;
 				wi::image::Params params;
 				params.pos.x = pos_start;
 				params.pos.y = translation.y + 1;
@@ -639,10 +642,10 @@ namespace wi::gui
 		std::wstring value_new = font_input.GetText();
 		if (value_new.size() >= caret_pos)
 		{
-			int caret_pos_prev = caret_pos;
+			const int caret_pos_prev = caret_pos;
 			if (caret_begin != caret_pos)
 			{
-				int offset = std::min(caret_pos, caret_begin);
+				const int offset = std::min(caret_pos, caret_begin);
 				value_new.erase(offset, std::abs(caret_pos - caret_begin));
 				caret_pos = offset;
 			}
@@ -656,7 +659,7 @@ namespace wi::gui
 				if (wi::input::Down((wi::input::BUTTON)'V'))
 				{
 					// Paste:
-					std::wstring clipboard = wi::helper::GetClipboardText();
+					const std::wstring clipboard = wi::helper::GetClipboardText();
 					value_new.insert(value_new.begin() + caret_pos, clipboard.begin(), clipboard.end());
 					num = (int)clipboard.length();
 				}
@@ -665,9 +668,9 @@ namespace wi::gui
 					// Copy:
 					caret_pos = caret_pos_prev;
 					const std::wstring& text = font_input.GetText();
-					int start = std::min(caret_begin, caret_pos);
-					int end = std::max(caret_begin, caret_pos);
-					std::wstring clipboard = std::wstring(text.c_str() + start, text.c_str() + end);
+					const int start = std::min(caret_begin, caret_pos);
+					const int end = std::max(caret_begin, caret_pos);
+					const std::wstring clipboard = std::wstring(text.c_str() + start, text.c_str() + end);
 					wi::helper::SetClipboardText(clipboard);
 					return;
 				}
@@ -676,9 +679,9 @@ namespace wi::gui
 					// Cut:
 					caret_pos = caret_pos_prev;
 					const std::wstring& text = font_input.GetText();
-					int start = std::min(caret_begin, caret_pos);
-					int end = std::max(caret_begin, caret_pos);
-					std::wstring clipboard = std::wstring(text.c_str() + start, text.c_str() + end);
+					const int start = std::min(caret_begin, caret_pos);
+					const int end = std::max(caret_begin, caret_pos);
+					const std::wstring clipboard = std::wstring(text.c_str() + start, text.c_str() + end);
 					wi::helper::SetClipboardText(clipboard);
 				}
 				else
@@ -698,7 +701,7 @@ namespace wi::gui
 	{
 		AddInput((wchar_t)inputChar);
 	}
-	void TextInputField::DeleteFromInput(int direction)
+	void TextInputField::DeleteFromInput(const int direction)
 	{
 		input_updated = true;
 		std::wstring value_new = font_input.GetText();
@@ -730,7 +733,7 @@ namespace wi::gui
 		caret_begin = caret_pos;
 		font_input.SetText(value_new);
 	}
-	void TextInputField::SetColor(wi::Color color, int id)
+	void TextInputField::SetColor(const wi::Color color, const int id)
 	{
 		Widget::SetColor(color, id);
 
@@ -739,12 +742,12 @@ namespace wi::gui
 			sprites[id - WIDGET_ID_TEXTINPUTFIELD_IDLE].params.color = color;
 		}
 	}
-	void TextInputField::SetTheme(const Theme& theme, int id)
+	void TextInputField::SetTheme(const Theme& theme, const int id)
 	{
 		Widget::SetTheme(theme, id);
 		theme.font.Apply(font_description.params);
 	}
-	void TextInputField::SetAsActive(bool selectall)
+	void TextInputField::SetAsActive(const bool selectall)
 	{
 		Activate();
 		font_input.SetText(font.GetText());
@@ -764,7 +767,7 @@ namespace wi::gui
 			typing_active = false;
 		Widget::Deactivate();
 	}
-	void TextInputField::SetEnabled(bool val)
+	void TextInputField::SetEnabled(const bool val)
 	{
 		if (!val && state == ACTIVE)
 		{
@@ -773,7 +776,7 @@ namespace wi::gui
 		}
 		Widget::SetEnabled(val);
 	}
-	void TextInputField::SetVisible(bool val)
+	void TextInputField::SetVisible(const bool val)
 	{
 		if (!val && state == ACTIVE)
 		{
