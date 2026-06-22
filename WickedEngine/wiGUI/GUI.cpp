@@ -1,3 +1,8 @@
+/**
+ * @file
+ * Implementation of @ref wi::gui::GUI and the module's shared
+ * @ref wi::gui::InternalState (render state + cross-widget flags).
+ */
 #include "wiGUI/GUI.h"
 #include "wiGUI/GUIInternal.h"
 
