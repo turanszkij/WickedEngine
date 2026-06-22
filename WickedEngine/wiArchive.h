@@ -35,6 +35,7 @@ namespace wi
 	private:
 		Header header;
 		bool readMode = false; // archive can be either read or write mode, but not both
+		bool report_errors = true; // if false, version-incompatibility is silent (IsOpen() stays false) instead of popping a message box; used for internal/automatic reads (e.g. shader cache) that should regenerate rather than alert the user
 		size_t pos = 0; // position of the next memory operation, relative to the data's beginning
 		wi::vector<uint8_t> DATA; // data suitable for read/write operations
 		const uint8_t* data_ptr = nullptr; // this can either be a memory mapped pointer (read only), or the DATA's pointer
@@ -59,7 +60,8 @@ namespace wi
 		// Create archive from a file.
 		//	If readMode == true, the whole file will be loaded into the archive in read mode
 		//	If readMode == false, the file will be written when the archive is destroyed or Close() is called
-		Archive(const std::string& fileName, bool readMode = true);
+		//	If report_errors == false, an incompatible archive version fails silently (IsOpen() == false) instead of popping a message box
+		Archive(const std::string& fileName, bool readMode = true, bool report_errors = true);
 		// Creates a memory mapped archive in read mode
 		Archive(const uint8_t* data, size_t size);
 		~Archive() { Close(); }
