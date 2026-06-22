@@ -1,3 +1,8 @@
+/**
+ * @file
+ * Implementation of the @ref wi::gui::Button widget.
+ */
+
 #include "wiGUI/components/Button.h"
 #include "wiGUI/GUIInternal.h"
 
