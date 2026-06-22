@@ -462,7 +462,7 @@ namespace wi::gui
 		 */
 		void ApplyScissor(
 			const wi::Canvas& canvas,
-			const wi::graphics::Rect rect,
+			wi::graphics::Rect rect,
 			wi::graphics::CommandList cmd,
 			bool constrain_to_parent = true
 		) const;

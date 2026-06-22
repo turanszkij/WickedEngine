@@ -51,7 +51,7 @@ namespace wi::gui
 		active_area.siz.x = std::numeric_limits<float>::max();
 		active_area.siz.y = std::numeric_limits<float>::max();
 	}
-	void Widget::Update(const wi::Canvas& canvas, float dt)
+	void Widget::Update(const wi::Canvas& canvas, const float dt)
 	{
 		if (!IsVisible())
 		{
@@ -118,7 +118,10 @@ namespace wi::gui
 		font.Update(dt);
 		angular_highlight_timer += dt;
 	}
-	void Widget::Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const
+	void Widget::Render(
+		const wi::Canvas& canvas,
+		const wi::graphics::CommandList cmd
+	) const
 	{
 		if (!IsVisible())
 		{
@@ -149,7 +152,10 @@ namespace wi::gui
 			wi::image::Draw(nullptr, fx, cmd);
 		}
 	}
-	void Widget::RenderTooltip(const wi::Canvas& canvas, CommandList cmd) const
+	void Widget::RenderTooltip(
+		const wi::Canvas& canvas,
+		const CommandList cmd
+	) const
 	{
 		if (!IsVisible())
 		{
@@ -255,7 +261,7 @@ namespace wi::gui
 	{
 		return tooltipFont.GetTextA();
 	}
-	void Widget::SetText(const char* value)
+	void Widget::SetText(const char* const value)
 	{
 		font.SetText(value);
 	}
@@ -314,7 +320,7 @@ namespace wi::gui
 	{
 		return state;
 	}
-	void Widget::SetEnabled(bool val)
+	void Widget::SetEnabled(const bool val)
 	{
 		if (enabled != val)
 		{
@@ -327,7 +333,7 @@ namespace wi::gui
 	{
 		return enabled && visible && !force_disable;
 	}
-	void Widget::SetVisible(bool val)
+	void Widget::SetVisible(const bool val)
 	{
 		if (visible != val)
 		{
@@ -419,7 +425,7 @@ namespace wi::gui
 		}
 	}
 
-	void Widget::SetColor(wi::Color color, int id)
+	void Widget::SetColor(const wi::Color color, const int id)
 	{
 		if (id < 0)
 		{
@@ -433,11 +439,11 @@ namespace wi::gui
 			sprites[id].params.color = color;
 		}
 	}
-	void Widget::SetShadowColor(wi::Color color)
+	void Widget::SetShadowColor(const wi::Color color)
 	{
 		shadow_color = color;
 	}
-	void Widget::SetImage(wi::Resource textureResource, int id)
+	void Widget::SetImage(wi::Resource textureResource, const int id)
 	{
 		if (id < 0)
 		{
@@ -451,7 +457,7 @@ namespace wi::gui
 			sprites[id].textureResource = textureResource;
 		}
 	}
-	void Widget::SetTheme(const Theme& theme, int id)
+	void Widget::SetTheme(const Theme& theme, const int id)
 	{
 		if (id < 0)
 		{
@@ -486,7 +492,7 @@ namespace wi::gui
 		}
 	}
 
-	void Widget::AttachTo(Widget* parent)
+	void Widget::AttachTo(Widget* const parent)
 	{
 		this->parent = parent;
 
@@ -517,7 +523,12 @@ namespace wi::gui
 			ApplyTransform();
 		}
 	}
-	void Widget::ApplyScissor(const wi::Canvas& canvas, const wi::graphics::Rect rect, CommandList cmd, bool constrain_to_parent) const
+	void Widget::ApplyScissor(
+		const wi::Canvas& canvas,
+		const wi::graphics::Rect rect,
+		const CommandList cmd,
+		const bool constrain_to_parent
+	) const
 	{
 		wi::graphics::Rect scissor = rect;
 
@@ -552,7 +563,7 @@ namespace wi::gui
 		scissor.right = int32_t((float)scissor.right * scale);
 		device->BindScissorRects(1, &scissor, cmd);
 	}
-	Hitbox2D Widget::GetPointerHitbox(bool constrained) const noexcept
+	Hitbox2D Widget::GetPointerHitbox(const bool constrained) const noexcept
 	{
 		XMFLOAT4 pointer = wi::input::GetPointer();
 		Hitbox2D hb = Hitbox2D(XMFLOAT2(pointer.x, pointer.y), XMFLOAT2(1, 1));
