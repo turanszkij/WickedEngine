@@ -1,3 +1,8 @@
+/**
+ * @file
+ * Implementation of the @ref wi::gui::ComboBox widget.
+ */
+
 #include "wiGUI/components/ComboBox.h"
 #include "wiGUI/GUIInternal.h"
 
