@@ -9,6 +9,16 @@
  * label drawn beside it.
  */
 
+#include <functional>
+#include <string>
+
+#include <Utility/DirectXMath/DirectXMath.h>
+
+#include <wiCanvas.h>
+#include <wiGUI/GUICommon.h>
+#include <wiGraphicsDevice.h>
+#include <wiSpriteFont.h>
+
 #include "wiGUI/Widget.h"
 
 namespace wi::gui
