@@ -122,11 +122,6 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 			bucket_bits ^= 1u << entity_index;
 
 			ShaderEntity light = load_entity(lights().first_item() + entity_index);
-				
-#ifndef INCLUDE_STATIC_LIGHTS
-			if (light.IsStaticLight())
-				continue; // static lights will be skipped here (they are used at lightmap baking)
-#endif // INCLUDE_STATIC_LIGHTS
 					
 			switch (light.GetType())
 			{
@@ -391,11 +386,6 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 		for (uint entity_index = iterator.first_item(); entity_index < iterator.end_item(); ++entity_index)
 		{
 			ShaderEntity light = load_entity(entity_index);
-
-#ifndef INCLUDE_STATIC_LIGHTS
-			if (light.IsStaticLight())
-				continue; // static lights will be skipped here (they are used at lightmap baking)
-#endif // INCLUDE_STATIC_LIGHTS
 
 			half shadow_mask = 1;
 #if defined(SHADOW_MASK_ENABLED) && !defined(TRANSPARENT)

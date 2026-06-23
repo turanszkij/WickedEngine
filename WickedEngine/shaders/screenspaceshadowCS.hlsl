@@ -90,11 +90,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 					continue;
 				}
 
-				if (light.IsStaticLight())
-				{
-					continue; // static lights will be skipped (they are used in lightmap baking)
-				}
-
 				float3 L;
 				ray.TMax = 0;
 

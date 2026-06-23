@@ -90,16 +90,13 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 			float3 shadow_pos = 0;
 
 			// Loop through cascades from closest (smallest) to furthest (largest)
-			[loop]
 			for (min16uint cascade = 0; cascade < cascade_count; ++cascade)
 			{
 				// Project into shadow map space (no need to divide by .w because ortho projection!):
-				const float4x4 cascade_projection = load_entitymatrix(light.GetMatrixIndex() + cascade);
-				shadow_pos = mul(cascade_projection, float4(surface.P, 1)).xyz;
+				shadow_pos = mul((float3x4)load_entitymatrix(light.GetMatrixIndex() + cascade), float4(surface.P, 1)).xyz; // float3x4 because perspective is not used
 				shadow_uv = clipspace_to_uv(shadow_pos);
 
 				// Determine if pixel is inside current cascade bounds and compute shadow if it is:
-				[branch]
 				if (is_saturated(shadow_uv))
 				{
 					best_cascade = cascade;
@@ -119,7 +116,7 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 					if (cascade_blend > 0)
 					{
 						const min16uint fallback_cascade = best_cascade + 1;
-						shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + fallback_cascade), float4(surface.P, 1)).xyz;
+						shadow_pos = mul((float3x4)load_entitymatrix(light.GetMatrixIndex() + fallback_cascade), float4(surface.P, 1)).xyz; // float3x4 because perspective is not used
 						shadow_uv = clipspace_to_uv(shadow_pos);
 						const half3 shadow_fallback = shadow_2D(light, shadow_pos.z, shadow_uv.xy, fallback_cascade, surface.pixel);
 						shadow = lerp(shadow, shadow_fallback, cascade_blend);
