@@ -3893,6 +3893,7 @@ inline tinygltf::TextureInfo _ExportHelper_StoreMaterialTexture(LoaderState& sta
 				Texture tex_decompressed;
 				GraphicsDevice* device = GetDevice();
 				device->CreateTexture(&desc, nullptr, &tex_decompressed);
+				device->SetName(&tex_decompressed, "gltf.tex_decompressed");
 				CommandList cmd = device->BeginCommandList();
 				device->CreateSubresource(&tex_decompressed, SubresourceType::UAV, 0, 1, 0, 1);
 				wi::renderer::CopyTexture2D(

@@ -1194,7 +1194,7 @@ static const uint MATRIXARRAY_COUNT = SHADER_ENTITY_COUNT;
 static const uint MAX_SHADER_DECAL_COUNT = 128;
 static const uint MAX_SHADER_PROBE_COUNT = 32;
 
-static const uint TILED_CULLING_BLOCKSIZE = 16;
+static const uint TILED_CULLING_BLOCKSIZE = 32;
 static const uint TILED_CULLING_THREADSIZE = 8;
 static const uint TILED_CULLING_GRANULARITY = TILED_CULLING_BLOCKSIZE / TILED_CULLING_THREADSIZE;
 
@@ -1548,9 +1548,10 @@ CBUFFER(MiscCB, CBSLOT_RENDERER_MISC)
 
 CBUFFER(ForwardEntityMaskCB, CBSLOT_RENDERER_FORWARD_LIGHTMASK)
 {
-	uint64_t xForwardLightMask;	// supports indexing 64 lights
+	uint xForwardLightMask;		// supports indexing 32 lights
 	uint xForwardDecalMask;		// supports indexing 32 decals
 	uint xForwardEnvProbeMask;	// supports indexing 32 environment probes
+	uint xForwardEntityMaskPadding;
 };
 
 CBUFFER(VolumeLightCB, CBSLOT_RENDERER_VOLUMELIGHT)

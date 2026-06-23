@@ -1507,6 +1507,7 @@ void PaintToolWindow::WriteHistoryData(Entity entity, wi::Archive& archive, Comm
 			desc.bind_flags |= BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 			desc.misc_flags = ResourceMiscFlag::TYPED_FORMAT_CASTING;
 			device->CreateTexture(&desc, nullptr, &newslot.texture);
+			device->SetName(&newslot.texture, "editor.painttool.newslot.texture");
 			for (uint32_t i = 0; i < newslot.texture.GetDesc().mip_levels; ++i)
 			{
 				int subresource_index;

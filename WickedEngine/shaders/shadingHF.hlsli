@@ -113,16 +113,19 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 	if (xForwardLightMask != 0)
 	{
 		// Loop through light buckets for the draw call:
-		uint64_t bucket_bits = xForwardLightMask;
+		uint32_t bucket_bits = xForwardLightMask;
 
 		while (bucket_bits != 0)
 		{
 			// Retrieve global entity index from local bucket, then remove bit from local bucket:
-			const uint bucket_bit_index = firstbitlow64(bucket_bits);
+			const uint bucket_bit_index = firstbitlow(bucket_bits);
 			bucket_bits ^= 1u << bucket_bit_index;
 
 			const uint entity_index = lights().first_item() + bucket_bit_index;
 			ShaderEntity light = load_entity(entity_index);
+
+			if (light.IsStaticLight())
+				continue;
 					
 			switch (light.GetType())
 			{

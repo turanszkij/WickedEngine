@@ -4,7 +4,9 @@
 
 // With help from: https://github.com/compix/VoxelConeTracingGI/blob/master/assets/shaders/voxelConeTracing/finalLightingPass.frag
 
-inline float4 SampleVoxelClipMap(in Texture3D<half4> voxels, in float3 P, in uint clipmap_index, float step_dist, in float3 face_offsets, in float3 direction_weights, uint precomputed_direction = 0)
+static const float VXGI_CLIPMAP_COUNT_RCP = rcp((float)VXGI_CLIPMAP_COUNT);
+
+inline half4 SampleVoxelClipMap(in Texture3D<half4> voxels, in float3 P, in uint clipmap_index, float step_dist, in float3 face_offsets, in float3 direction_weights, uint precomputed_direction = 0)
 {
 	VoxelClipMap clipmap = GetFrame().vxgi.clipmaps[clipmap_index];
 	float3 tc = GetFrame().vxgi.world_to_clipmap(P, clipmap);
@@ -14,9 +16,9 @@ inline float4 SampleVoxelClipMap(in Texture3D<half4> voxels, in float3 P, in uin
 	tc = clamp(tc, half_texel, 1 - half_texel);
 
 	tc.x = (tc.x + precomputed_direction) / (6.0 + DIFFUSE_CONE_COUNT); // remap into anisotropic
-	tc.y = (tc.y + clipmap_index) / VXGI_CLIPMAP_COUNT; // remap into clipmap
+	tc.y = (tc.y + clipmap_index) * VXGI_CLIPMAP_COUNT_RCP; // remap into clipmap
 
-	float4 sam;
+	half4 sam;
 	if (precomputed_direction == 0)
 	{
 		// sample anisotropically 3 times, weighted by cone direction:
@@ -44,10 +46,10 @@ inline float4 SampleVoxelClipMap(in Texture3D<half4> voxels, in float3 P, in uin
 // coneDirection:	world-space cone direction in the direction to perform the trace
 // coneAperture:	cone width
 // precomputed_direction : avoid 3x anisotropic weight sampling, and instead directly use a slice that has precomputed cone direction weighted data
-inline float4 ConeTrace(in Texture3D<half4> voxels, in float3 P, in float3 N, in float3 coneDirection, in float coneAperture, in float stepSize, bool use_sdf = false, uint precomputed_direction = 0)
+inline half4 ConeTrace(in Texture3D<half4> voxels, in float3 P, in float3 N, in float3 coneDirection, in float coneAperture, in float stepSize, bool use_sdf = false, uint precomputed_direction = 0)
 {
-	float3 color = 0;
-	float alpha = 0;
+	half3 color = 0;
+	half alpha = 0;
 
 	uint clipmap_index0 = 0;
 	VoxelClipMap clipmap0 = GetFrame().vxgi.clipmaps[clipmap_index0];
@@ -90,27 +92,28 @@ inline float4 ConeTrace(in Texture3D<half4> voxels, in float3 P, in float3 N, in
 		}
 
 		// sample first clipmap level:
-		float4 sam = SampleVoxelClipMap(voxels, p0, clipmap_index, step_dist, face_offsets, direction_weights, precomputed_direction);
+		half4 sam = SampleVoxelClipMap(voxels, p0, clipmap_index, step_dist, face_offsets, direction_weights, precomputed_direction);
 
 		// sample second clipmap if needed and perform trilinear blend:
-		if(clipmap_blend > 0 && clipmap_index < VXGI_CLIPMAP_COUNT - 1)
+		if (clipmap_blend > 0 && clipmap_index < VXGI_CLIPMAP_COUNT - 1)
 		{
 			sam = lerp(sam, SampleVoxelClipMap(voxels, p0, clipmap_index + 1, step_dist, face_offsets, direction_weights, precomputed_direction), clipmap_blend);
 		}
 
 		// front-to back blending:
-		float a = 1 - alpha;
+		half a = 1 - alpha;
 		color += a * sam.rgb;
 		alpha += a * sam.a;
 
 		float stepSizeCurrent = stepSize;
+		[branch]
 		if (use_sdf)
 		{
 			// half texel correction is applied to avoid sampling over current clipmap:
 			const float half_texel = 0.5 * GetFrame().vxgi.resolution_rcp;
 			float3 tc0 = clamp(tc, half_texel, 1 - half_texel);
-			tc0.y = (tc0.y + clipmap_index) / VXGI_CLIPMAP_COUNT; // remap into clipmap
-			float sdf = bindless_textures3D[descriptor_index(GetFrame().vxgi.texture_sdf)].SampleLevel(sampler_linear_clamp, tc0, 0).r;
+			tc0.y = (tc0.y + clipmap_index) * VXGI_CLIPMAP_COUNT_RCP; // remap into clipmap
+			half sdf = bindless_textures3D_half4[descriptor_index(GetFrame().vxgi.texture_sdf)].SampleLevel(sampler_linear_clamp, tc0, 0).r;
 			stepSizeCurrent = max(stepSize, sdf - diameter);
 		}
 		step_dist = diameter * stepSizeCurrent;
@@ -119,17 +122,17 @@ inline float4 ConeTrace(in Texture3D<half4> voxels, in float3 P, in float3 N, in
 		dist += step_dist;
 	}
 
-	return float4(color, alpha);
+	return half4(color, alpha);
 }
 
 // voxels:			3D Texture containing voxel scene with direct diffuse lighting (or direct + secondary indirect bounce)
 // P:				world-space position of receiving surface
 // N:				world-space normal vector of receiving surface
-inline float4 ConeTraceDiffuse(in Texture3D<half4> voxels, in float3 P, in float3 N)
+inline half4 ConeTraceDiffuse(in Texture3D<half4> voxels, in float3 P, in float3 N)
 {
-	float4 amount = 0;
+	half4 amount = 0;
 
-	float sum = 0;
+	half sum = 0;
 	for (uint i = 0; i < DIFFUSE_CONE_COUNT; ++i)
 	{
 		const float3 coneDirection = DIFFUSE_CONE_DIRECTIONS[i];
@@ -152,15 +155,15 @@ inline float4 ConeTraceDiffuse(in Texture3D<half4> voxels, in float3 P, in float
 // P:				world-space position of receiving surface
 // N:				world-space normal vector of receiving surface
 // V:				world-space view-vector (cameraPosition - P)
-inline float4 ConeTraceSpecular(in Texture3D<half4> voxels, in float3 P, in float3 N, in float3 V, in float roughness, in uint2 pixel)
+inline half4 ConeTraceSpecular(in Texture3D<half4> voxels, in float3 P, in float3 N, in float3 V, in half roughness, in uint2 pixel)
 {
-	float aperture = roughness;
+	half aperture = roughness;
 	float3 coneDirection = reflect(-V, N);
 
 	// some dithering to help with banding at large step size
 	P += coneDirection * (dither(pixel + GetTemporalAASampleRotation()) - 0.5) * GetFrame().vxgi.stepsize;
 
-	float4 amount = ConeTrace(voxels, P, N, coneDirection, aperture, GetFrame().vxgi.stepsize, true);
+	half4 amount = ConeTrace(voxels, P, N, coneDirection, aperture, GetFrame().vxgi.stepsize, true);
 	amount.rgb = max(0, amount.rgb);
 	amount.a = saturate(amount.a);
 
