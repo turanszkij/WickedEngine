@@ -1,4 +1,5 @@
 #pragma once
+
 /**
  * @file
  * Base class for all `wi::gui` widgets.
@@ -9,6 +10,22 @@
  * styling, parent/child attachment, and the Update / Render lifecycle. Concrete
  * widgets (Button, Slider, Window, ...) override the virtual hooks.
  */
+
+#include <cstdint>
+#include <string>
+
+#include <Utility/DirectXMath/DirectXMath.h>
+
+#include <wiCanvas.h>
+#include <wiColor.h>
+#include <wiGraphics.h>
+#include <wiGraphicsDevice.h>
+#include <wiLocalization.h>
+#include <wiPrimitive.h>
+#include <wiResourceManager.h>
+#include <wiScene_Components.h>
+#include <wiSprite.h>
+#include <wiSpriteFont.h>
 
 #include "wiGUI/GUICommon.h"
 
