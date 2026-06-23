@@ -10,9 +10,7 @@
  * files that need this shared state include it directly.
  */
 
-#include "wiGraphicsDevice.h"
-
-#include <cstdint>
+#include <wiGraphics.h>
 
 namespace wi::gui
 {
