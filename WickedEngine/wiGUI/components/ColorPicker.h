@@ -112,12 +112,14 @@ namespace wi::gui
 		/**
 		 * Returns the widget's type name ("ColorPicker").
 		 */
-		const char* GetWidgetTypeName() const override { return "ColorPicker"; }
+		[[nodiscard]] const char* GetWidgetTypeName() const override {
+			return "ColorPicker";
+		}
 
 		/**
 		 * Returns the currently picked color (including alpha).
 		 */
-		wi::Color GetPickColor() const;
+		[[nodiscard]] wi::Color GetPickColor() const noexcept;
 
 		/**
 		 * Sets the picked color (including alpha).
