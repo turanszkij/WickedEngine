@@ -387,9 +387,7 @@ namespace wi::graphics
 			D3D12MA::Budget budget;
 			allocationhandler->allocator->GetBudget(&budget, nullptr);
 			retval.budget = budget.BudgetBytes;
-			D3D12MA::TotalStatistics stats;
-			allocationhandler->allocator->CalculateStatistics(&stats);
-			retval.usage = stats.HeapType[0].Stats.BlockBytes; // default heap
+			retval.usage = budget.Stats.BlockBytes;
 			return retval;
 		}
 
