@@ -54,7 +54,7 @@ namespace wi::gui
 
 		SetSize(XMFLOAT2(100, 200));
 	}
-	bool TreeList::DoesItemHaveChildren(int index) const
+	bool TreeList::DoesItemHaveChildren(const int index) const noexcept
 	{
 		if (items.size() <= size_t(index + 1)) // if item doesn't exist or last then no children
 			return false;
@@ -62,11 +62,11 @@ namespace wi::gui
 			return true;
 		return false;
 	}
-	float TreeList::GetItemOffset(int index) const
+	float TreeList::GetItemOffset(const int index) const noexcept
 	{
 		return 2 + scrollbar.GetOffset() + index * item_height();
 	}
-	Hitbox2D TreeList::GetHitbox_ListArea() const
+	Hitbox2D TreeList::GetHitbox_ListArea() const noexcept
 	{
 		Hitbox2D retval = Hitbox2D(XMFLOAT2(translation.x, translation.y + item_height() + 1), XMFLOAT2(scale.x, scale.y - item_height() - 1));
 		if (scrollbar.IsScrollbarRequired())
@@ -75,9 +75,9 @@ namespace wi::gui
 		}
 		return retval;
 	}
-	Hitbox2D TreeList::GetHitbox_Item(int visible_count, int level) const
+	Hitbox2D TreeList::GetHitbox_Item(const int visible_count, const int level) const noexcept
 	{
-		XMFLOAT2 pos = XMFLOAT2(translation.x + 2 + level * item_height(), translation.y + GetItemOffset(visible_count) + item_height() * 0.5f);
+		const XMFLOAT2 pos = XMFLOAT2(translation.x + 2 + level * item_height(), translation.y + GetItemOffset(visible_count) + item_height() * 0.5f);
 		Hitbox2D hitbox;
 		hitbox.pos = XMFLOAT2(pos.x + item_height() * 0.5f + 2, pos.y - item_height() * 0.5f);
 		hitbox.siz = XMFLOAT2(scale.x - 2 - item_height() * 0.5f - 2 - level * item_height() - 2, item_height());
@@ -87,18 +87,18 @@ namespace wi::gui
 		}
 		return hitbox;
 	}
-	Hitbox2D TreeList::GetHitbox_ItemOpener(int visible_count, int level) const
+	Hitbox2D TreeList::GetHitbox_ItemOpener(const int visible_count, const int level) const noexcept
 	{
-		XMFLOAT2 pos = XMFLOAT2(translation.x + 2 + level * item_height(), translation.y + GetItemOffset(visible_count) + item_height() * 0.5f);
+		const XMFLOAT2 pos = XMFLOAT2(translation.x + 2 + level * item_height(), translation.y + GetItemOffset(visible_count) + item_height() * 0.5f);
 		Hitbox2D hb = Hitbox2D(XMFLOAT2(pos.x, pos.y - item_height() * 0.25f), XMFLOAT2(item_height() * 0.5f, item_height() * 0.5f));
 		HitboxConstrain(hb);
 		return hb;
 	}
-	bool TreeList::HasScrollbar() const
+	bool TreeList::HasScrollbar() const noexcept
 	{
 		return scale.y < (int)items.size() * item_height();
 	}
-	void TreeList::Update(const wi::Canvas& canvas, float dt)
+	void TreeList::Update(const wi::Canvas& canvas, const float dt)
 	{
 		if (!IsVisible())
 		{
@@ -110,10 +110,10 @@ namespace wi::gui
 		// Resizer updates:
 		if (IsEnabled())
 		{
-			Hitbox2D pointerHitbox = GetPointerHitbox(false);
+			const Hitbox2D pointerHitbox = GetPointerHitbox(false);
 
-			float vscale = scale.y;
-			Hitbox2D bottomhitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y + vscale), XMFLOAT2(scale.x, resizehitboxwidth));
+			const float vscale = scale.y;
+			const Hitbox2D bottomhitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y + vscale), XMFLOAT2(scale.x, resizehitboxwidth));
 
 			if (resize_state == RESIZE_STATE_NONE && (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanStarting()))
 			{
@@ -131,8 +131,8 @@ namespace wi::gui
 				{
 					auto saved_parent = this->parent;
 					this->Detach();
-					float deltaX = pointerHitbox.pos.x - resize_begin.x;
-					float deltaY = pointerHitbox.pos.y - resize_begin.y;
+					const float deltaX = pointerHitbox.pos.x - resize_begin.x;
+					const float deltaY = pointerHitbox.pos.y - resize_begin.y;
 
 					switch (resize_state)
 					{
@@ -200,7 +200,7 @@ namespace wi::gui
 				Deactivate();
 			}
 
-			Hitbox2D hitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y), XMFLOAT2(scale.x, scale.y));
+			const Hitbox2D hitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y), XMFLOAT2(scale.x, scale.y));
 
 			if (state == IDLE && hitbox.intersects(pointerHitbox))
 			{
@@ -253,7 +253,7 @@ namespace wi::gui
 				}
 			}
 
-			Hitbox2D itemlist_box = GetHitbox_ListArea();
+			const Hitbox2D itemlist_box = GetHitbox_ListArea();
 
 			// Finalize drag-and-drop when mouse is released
 			if (onReorder && dragging && !click_down)
@@ -334,7 +334,7 @@ namespace wi::gui
 					parent_open = item.open;
 					parent_level = item.level;
 
-					Hitbox2D open_box = GetHitbox_ItemOpener(visible_count, item.level);
+					const Hitbox2D open_box = GetHitbox_ItemOpener(visible_count, item.level);
 					if (!open_box.intersects(itemlist_box))
 					{
 						continue;
@@ -353,7 +353,7 @@ namespace wi::gui
 					else
 					{
 						// Item name box:
-						Hitbox2D name_box = GetHitbox_Item(visible_count, item.level);
+						const Hitbox2D name_box = GetHitbox_Item(visible_count, item.level);
 						if (name_box.intersects(pointerHitbox))
 						{
 							item_highlight = i;
@@ -408,8 +408,8 @@ namespace wi::gui
 			// Activate drag mode after movement threshold
 			if (onReorder && drag_source >= 0 && click_down && !dragging)
 			{
-				float dx = pointerHitbox.pos.x - drag_start_pos.x;
-				float dy = pointerHitbox.pos.y - drag_start_pos.y;
+				const float dx = pointerHitbox.pos.x - drag_start_pos.x;
+				const float dy = pointerHitbox.pos.y - drag_start_pos.y;
 				if (dx * dx + dy * dy > 16.0f) // 4 px threshold
 				{
 					dragging = true;
@@ -452,8 +452,8 @@ namespace wi::gui
 					last_visible = dc;
 					last_visible_level = item.level;
 
-					float item_top_y = translation.y + GetItemOffset(dc);
-					float item_bot_y = item_top_y + item_height();
+					const float item_top_y = translation.y + GetItemOffset(dc);
+					const float item_bot_y = item_top_y + item_height();
 					if (pointerHitbox.pos.y < item_top_y + item_height() * 0.25f)
 					{
 						// Top 25%: insert BEFORE this item
@@ -513,14 +513,14 @@ namespace wi::gui
 		font.params.posX = translation.x + 2;
 		font.params.posY = translation.y + sprites[state].params.siz.y * 0.5f;
 	}
-	void TreeList::Render(const wi::Canvas& canvas, CommandList cmd) const
+	void TreeList::Render(const wi::Canvas& canvas, const CommandList cmd) const
 	{
 		Widget::Render(canvas, cmd);
 		if (!IsVisible())
 		{
 			return;
 		}
-		GraphicsDevice* device = wi::graphics::GetDevice();
+		GraphicsDevice* const device = wi::graphics::GetDevice();
 
 		// shadow:
 		if (shadow > 0)
@@ -559,8 +559,8 @@ namespace wi::gui
 		// resize indicator:
 		{
 			// hitboxes are recomputed because window transform might have changed since update!!
-			float vscale = scale.y;
-			Hitbox2D bottomhitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y + vscale), XMFLOAT2(scale.x, resizehitboxwidth));
+			const float vscale = scale.y;
+			const Hitbox2D bottomhitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y + vscale), XMFLOAT2(scale.x, resizehitboxwidth));
 
 			const Hitbox2D pointerHitbox = GetPointerHitbox(false);
 
@@ -603,7 +603,7 @@ namespace wi::gui
 		scrollbar.Render(canvas, cmd);
 
 		// list background
-		Hitbox2D itemlist_box = GetHitbox_ListArea();
+		const Hitbox2D itemlist_box = GetHitbox_ListArea();
 		wi::image::Params fx = sprites[state].params;
 		fx.color = sprites[IDLE].params.color;
 		fx.pos = XMFLOAT3(itemlist_box.pos.x, itemlist_box.pos.y, 0);
@@ -654,13 +654,13 @@ namespace wi::gui
 			parent_open = item.open;
 			parent_level = item.level;
 
-			Hitbox2D open_box = GetHitbox_ItemOpener(visible_count, item.level);
+			const Hitbox2D open_box = GetHitbox_ItemOpener(visible_count, item.level);
 			if (!open_box.intersects(itemlist_box))
 			{
 				continue;
 			}
 
-			Hitbox2D name_box = GetHitbox_Item(visible_count, item.level);
+			const Hitbox2D name_box = GetHitbox_Item(visible_count, item.level);
 
 			// selected box:
 			if (item.selected || item_highlight == i)
@@ -693,7 +693,7 @@ namespace wi::gui
 					Projection
 				);
 				device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
-				const GPUBuffer* vbs[] = {
+				const GPUBuffer* const vbs[] = {
 					&vb_triangle,
 				};
 				const uint32_t strides[] = {
@@ -719,10 +719,10 @@ namespace wi::gui
 			// Drag handle dots on the right side of each item
 			if (onReorder)
 			{
-				float ds = std::max(2.0f, std::round(item_height() * 0.12f));
-				float dg = ds * 1.5f;
-				float hx = name_box.pos.x + name_box.siz.x - ds * 2 - dg - ds;
-				float hy = name_box.pos.y + (name_box.siz.y - (ds * 3 + dg * 2)) * 0.5f;
+				const float ds = std::max(2.0f, std::round(item_height() * 0.12f));
+				const float dg = ds * 1.5f;
+				const float hx = name_box.pos.x + name_box.siz.x - ds * 2 - dg - ds;
+				const float hy = name_box.pos.y + (name_box.siz.y - (ds * 3 + dg * 2)) * 0.5f;
 				XMFLOAT4 dot_color = drag_source == i ? sprites[ACTIVE].params.color : sprites[FOCUS].params.color;
 				if (drag_source != i)
 					dot_color.w *= 0.45f;
@@ -751,10 +751,10 @@ namespace wi::gui
 		if (dragging && drag_source >= 0 && drag_source < (int)items.size())
 		{
 			const Item& src_item = items[drag_source];
-			float ghost_h = item_height();
-			float ghost_w = itemlist_box.siz.x * 0.65f;
-			float ghost_x = drag_pointer_pos.x + 18.0f;
-			float ghost_y = drag_pointer_pos.y - ghost_h * 0.5f;
+			const float ghost_h = item_height();
+			const float ghost_w = itemlist_box.siz.x * 0.65f;
+			const float ghost_x = drag_pointer_pos.x + 18.0f;
+			const float ghost_y = drag_pointer_pos.y - ghost_h * 0.5f;
 			wi::image::Params ghost_bg = sprites[ACTIVE].params;
 			ghost_bg.pos = XMFLOAT3(ghost_x, ghost_y, 0);
 			ghost_bg.siz = XMFLOAT2(ghost_w, ghost_h);
@@ -813,7 +813,7 @@ namespace wi::gui
 		args.iValue = -1;
 		onSelect(args);
 	}
-	void TreeList::Select(int index, bool allow_deselect)
+	void TreeList::Select(const int index, const bool allow_deselect)
 	{
 		int selected_count = 0;
 		if (allow_deselect)
@@ -861,7 +861,7 @@ namespace wi::gui
 		scrollbar.SetListLength(scroll_length);
 		scrollbar.Update({}, 0);
 	}
-	void TreeList::FocusOnItem(int index)
+	void TreeList::FocusOnItem(const int index)
 	{
 		if (index < 0 || index >= items.size())
 			return;
@@ -899,10 +899,10 @@ namespace wi::gui
 		}
 
 		// Set scrollbar offset:
-		float offset = visible_count * item_height();
+		const float offset = visible_count * item_height();
 		scrollbar.SetOffset(offset);
 	}
-	void TreeList::FocusOnItemByUserdata(uint64_t userdata)
+	void TreeList::FocusOnItemByUserdata(const uint64_t userdata)
 	{
 		for (size_t i = 0; i < items.size(); ++i)
 		{
@@ -913,16 +913,16 @@ namespace wi::gui
 			}
 		}
 	}
-	const TreeList::Item& TreeList::GetItem(int index) const
+	const TreeList::Item& TreeList::GetItem(const int index) const noexcept
 	{
 		return items[index];
 	}
-	void TreeList::SetColor(wi::Color color, int id)
+	void TreeList::SetColor(const wi::Color color, const int id)
 	{
 		Widget::SetColor(color, id);
 		scrollbar.SetColor(color, id);
 	}
-	void TreeList::SetTheme(const Theme& theme, int id)
+	void TreeList::SetTheme(const Theme& theme, const int id)
 	{
 		Widget::SetTheme(theme, id);
 		scrollbar.SetTheme(theme, id);

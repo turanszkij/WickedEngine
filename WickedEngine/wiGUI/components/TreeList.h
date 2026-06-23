@@ -68,7 +68,7 @@ namespace wi::gui
 		 *
 		 * @return Hitbox covering the list region (excluding the header).
 		 */
-		wi::primitive::Hitbox2D GetHitbox_ListArea() const;
+		[[nodiscard]] wi::primitive::Hitbox2D GetHitbox_ListArea() const noexcept;
 
 		/**
 		 * Returns the hitbox of a visible item row.
@@ -78,10 +78,10 @@ namespace wi::gui
 		 *
 		 * @return Hitbox of the item row.
 		 */
-		wi::primitive::Hitbox2D GetHitbox_Item(
+		[[nodiscard]] wi::primitive::Hitbox2D GetHitbox_Item(
 			int visible_count,
 			int level
-		) const;
+		) const noexcept;
 
 		/**
 		 * Returns the hitbox of a visible item's collapse/expand opener.
@@ -91,10 +91,10 @@ namespace wi::gui
 		 *
 		 * @return Hitbox of the item's opener control.
 		 */
-		wi::primitive::Hitbox2D GetHitbox_ItemOpener(
+		[[nodiscard]] wi::primitive::Hitbox2D GetHitbox_ItemOpener(
 			int visible_count,
 			int level
-		) const;
+		) const noexcept;
 
 		/** The flat list of items (nested by @ref Item::level). */
 		wi::vector<Item> items;
@@ -106,7 +106,7 @@ namespace wi::gui
 		 *
 		 * @return Vertical offset in pixels.
 		 */
-		float GetItemOffset(int index) const;
+		[[nodiscard]] float GetItemOffset(int index) const noexcept;
 
 		/**
 		 * Returns whether the item at the given index has children.
@@ -115,7 +115,7 @@ namespace wi::gui
 		 *
 		 * @return true if a following item has a deeper level.
 		 */
-		bool DoesItemHaveChildren(int index) const;
+		[[nodiscard]] bool DoesItemHaveChildren(int index) const noexcept;
 
 		/** Width of the bottom-edge resize grab area, in pixels. */
 		float resizehitboxwidth = 6;
@@ -202,7 +202,7 @@ namespace wi::gui
 		/**
 		 * Returns whether the list needs a scrollbar.
 		 */
-		bool HasScrollbar() const;
+		[[nodiscard]] bool HasScrollbar() const noexcept;
 
 		/**
 		 * Clears the selection of all items.
@@ -235,7 +235,9 @@ namespace wi::gui
 		/**
 		 * Returns the number of items.
 		 */
-		int GetItemCount() const { return (int)items.size(); }
+		[[nodiscard]] int GetItemCount() const noexcept {
+			return (int)items.size();
+		}
 
 		/**
 		 * Returns the item at the given index.
@@ -244,7 +246,7 @@ namespace wi::gui
 		 *
 		 * @return Reference to the item.
 		 */
-		const Item& GetItem(int index) const;
+		[[nodiscard]] const Item& GetItem(int index) const noexcept;
 
 		/**
 		 * Updates interaction: selection, scrolling, resizing and dragging.
@@ -282,7 +284,9 @@ namespace wi::gui
 		/**
 		 * Returns the widget's type name ("TreeList").
 		 */
-		const char* GetWidgetTypeName() const override { return "TreeList"; }
+		[[nodiscard]] const char* GetWidgetTypeName() const override {
+			return "TreeList";
+		}
 
 		/**
 		 * Sets the selection callback.
