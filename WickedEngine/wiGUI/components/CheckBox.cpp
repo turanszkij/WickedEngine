@@ -3,24 +3,24 @@
  * Implementation of the @ref wi::gui::CheckBox widget.
  */
 
-#include "wiGUI/components/CheckBox.h"
-#include "wiGUI/GUIInternal.h"
+#include <functional>
+#include <string>
+#include <utility>
 
+#include <Utility/DirectXMath/DirectXMath.h>
+
+#include <wiCanvas.h>
+#include <wiGraphicsDevice.h>
+#include <wiGUI/GUICommon.h>
+#include <wiGUI/Widget.h>
+
+#include "wiFont.h"
+#include "wiHelper.h"
+#include "wiImage.h"
 #include "wiInput.h"
 #include "wiPrimitive.h"
-#include "wiProfiler.h"
-#include "wiRenderer.h"
-#include "wiTimer.h"
-#include "wiEventHandler.h"
-#include "wiFont.h"
-#include "wiImage.h"
-#include "wiTextureHelper.h"
-#include "wiBacklog.h"
-#include "wiHelper.h"
 
-#include <sstream>
-#include <iomanip> // setprecision
-#include <utility>
+#include "wiGUI/components/CheckBox.h"
 
 using namespace wi::graphics;
 using namespace wi::primitive;
@@ -33,7 +33,7 @@ namespace wi::gui
 	 * Set via @ref CheckBox::SetCheckTextGlobal and used when a check box has
 	 * no own check glyph (see @ref CheckBox::SetCheckText).
 	 */
-	std::wstring check_text_global;
+	static std::wstring check_text_global;
 
 	void CheckBox::Create(const std::string& name)
 	{
@@ -45,6 +45,7 @@ namespace wi::gui
 		font.params.h_align = wi::font::WIFALIGN_RIGHT;
 		font.params.v_align = wi::font::WIFALIGN_CENTER;
 	}
+
 	void CheckBox::Update(const wi::Canvas& canvas, const float dt)
 	{
 		if (!IsVisible())
@@ -61,10 +62,12 @@ namespace wi::gui
 			{
 				state = IDLE;
 			}
+
 			if (state == DEACTIVATING)
 			{
 				state = IDLE;
 			}
+
 			if (state == ACTIVE)
 			{
 				Deactivate();
@@ -117,9 +120,11 @@ namespace wi::gui
 
 		left_text_width = font.TextWidth();
 	}
+
 	void CheckBox::Render(const wi::Canvas& canvas, const CommandList cmd) const
 	{
 		Widget::Render(canvas, cmd);
+
 		if (!IsVisible())
 		{
 			return;
@@ -129,12 +134,14 @@ namespace wi::gui
 		if (shadow > 0)
 		{
 			wi::image::Params fx = sprites[state].params;
+
 			fx.gradient = wi::image::Params::Gradient::None;
-			fx.pos.x -= shadow;
-			fx.pos.y -= shadow;
-			fx.siz.x += shadow * 2;
-			fx.siz.y += shadow * 2;
-			fx.color = shadow_color;
+			fx.pos.x   -= shadow;
+			fx.pos.y   -= shadow;
+			fx.siz.x   += shadow * 2;
+			fx.siz.y   += shadow * 2;
+			fx.color    = shadow_color;
+
 			if (fx.isCornerRoundingEnabled())
 			{
 				for (auto& corner_rounding : fx.corners_rounding)
@@ -145,17 +152,20 @@ namespace wi::gui
 					}
 				}
 			}
+
 			if (shadow_highlight)
 			{
 				fx.enableHighlight();
-				fx.highlight_pos = GetPointerHighlightPos(canvas);
-				fx.highlight_color = shadow_highlight_color;
+
+				fx.highlight_pos    = GetPointerHighlightPos(canvas);
+				fx.highlight_color  = shadow_highlight_color;
 				fx.highlight_spread = shadow_highlight_spread;
 			}
 			else
 			{
 				fx.disableHighlight();
 			}
+
 			wi::image::Draw(nullptr, fx, cmd);
 		}
 
@@ -173,26 +183,30 @@ namespace wi::gui
 			{
 				// render text symbol:
 				wi::font::Params params;
-				params.posX = translation.x + scale.x * 0.5f;
-				params.posY = translation.y + scale.y * 0.5f;
+
+				params.posX    = translation.x + scale.x * 0.5f;
+				params.posY    = translation.y + scale.y * 0.5f;
 				params.h_align = wi::font::WIFALIGN_CENTER;
 				params.v_align = wi::font::WIFALIGN_CENTER;
-				params.size = int(scale.y);
+				params.size    = static_cast<int>(scale.y);
 				params.scaling = 0.75f;
-				params.color = font.params.color;
+				params.color   = font.params.color;
+
 				wi::font::Draw(check_text, params, cmd);
 			}
 			else if (!check_text_global.empty())
 			{
 				// render text symbol:
 				wi::font::Params params;
-				params.posX = translation.x + scale.x * 0.5f;
-				params.posY = translation.y + scale.y * 0.5f;
+
+				params.posX    = translation.x + scale.x * 0.5f;
+				params.posY    = translation.y + scale.y * 0.5f;
 				params.h_align = wi::font::WIFALIGN_CENTER;
 				params.v_align = wi::font::WIFALIGN_CENTER;
-				params.size = int(scale.y);
+				params.size    = static_cast<int>(scale.y);
 				params.scaling = 0.75f;
-				params.color = font.params.color;
+				params.color   = font.params.color;
+
 				wi::font::Draw(check_text_global, params, cmd);
 			}
 			else
@@ -204,6 +218,7 @@ namespace wi::gui
 					scale.x * 0.5f,
 					scale.y * 0.5f
 				);
+
 				params.color = font.params.color;
 				wi::image::Draw(nullptr, params, cmd);
 			}
@@ -211,25 +226,30 @@ namespace wi::gui
 		else if (!uncheck_text.empty())
 		{
 			wi::font::Params params;
-			params.posX = translation.x + scale.x * 0.5f;
-			params.posY = translation.y + scale.y * 0.5f;
+
+			params.posX    = translation.x + scale.x * 0.5f;
+			params.posY    = translation.y + scale.y * 0.5f;
 			params.h_align = wi::font::WIFALIGN_CENTER;
 			params.v_align = wi::font::WIFALIGN_CENTER;
-			params.size = int(scale.y);
+			params.size    = static_cast<int>(scale.y);
 			params.scaling = 0.75f;
-			params.color = font.params.color;
+			params.color   = font.params.color;
+
 			wi::font::Draw(uncheck_text, params, cmd);
 		}
 
 	}
+
 	void CheckBox::OnClick(std::function<void(const EventArgs& args)> func)
 	{
 		onClick = std::move(func);
 	}
+
 	void CheckBox::SetCheck(const bool value)
 	{
 		checked = value;
 	}
+
 	bool CheckBox::GetCheck() const noexcept
 	{
 		return checked;
@@ -239,10 +259,12 @@ namespace wi::gui
 	{
 		wi::helper::StringConvert(text, check_text_global);
 	}
+
 	void CheckBox::SetCheckText(const std::string& text)
 	{
 		wi::helper::StringConvert(text, check_text);
 	}
+
 	void CheckBox::SetUnCheckText(const std::string& text)
 	{
 		wi::helper::StringConvert(text, uncheck_text);

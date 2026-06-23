@@ -9,6 +9,13 @@
  * checked state.
  */
 
+#include <functional>
+#include <string>
+
+#include <wiCanvas.h>
+#include <wiGraphicsDevice.h>
+#include <wiGUI/GUICommon.h>
+
 #include "wiGUI/Widget.h"
 
 namespace wi::gui
