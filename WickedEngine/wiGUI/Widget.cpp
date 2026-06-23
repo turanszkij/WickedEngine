@@ -105,7 +105,7 @@ namespace wi::gui
 			tooltipTimer = 0;
 		}
 
-		XMFLOAT2 highlight_pos = GetPointerHighlightPos(canvas);
+		const XMFLOAT2 highlight_pos = GetPointerHighlightPos(canvas);
 		for (auto& x : sprites)
 		{
 			if (x.params.isHighlightEnabled())
@@ -164,27 +164,27 @@ namespace wi::gui
 
 		if (tooltipTimer > 25)
 		{
-			float screenwidth = canvas.GetLogicalWidth();
-			float screenheight = canvas.GetLogicalHeight();
+			const float screenwidth = canvas.GetLogicalWidth();
+			const float screenheight = canvas.GetLogicalHeight();
 
 			tooltipFont.params.position = {};
 			tooltipFont.params.h_align = wi::font::WIFALIGN_LEFT;
 			tooltipFont.params.v_align = wi::font::WIFALIGN_TOP;
 
 			static const float _border = 2;
-			XMFLOAT2 textSize = tooltipFont.TextSize();
+			const XMFLOAT2 textSize = tooltipFont.TextSize();
 			float textWidth = textSize.x;
 			float textHeight = textSize.y;
 			const float textHeightWithoutScriptTip = textHeight;
 
 			if (!scripttipFont.text.empty())
 			{
-				XMFLOAT2 scriptTipSize = scripttipFont.TextSize();
+				const XMFLOAT2 scriptTipSize = scripttipFont.TextSize();
 				textWidth = std::max(textWidth, scriptTipSize.x);
 				textHeight += scriptTipSize.y;
 			}
 
-			XMFLOAT2 pointer = GetPointerHitbox().pos;
+			const XMFLOAT2 pointer = GetPointerHitbox().pos;
 			tooltipFont.params.posX = pointer.x;
 			tooltipFont.params.posY = pointer.y;
 
@@ -213,7 +213,7 @@ namespace wi::gui
 
 			if (tooltip_shadow > 0)
 			{
-				wi::image::Params fx(
+				const wi::image::Params fx(
 					tooltipSprite.params.pos.x - tooltip_shadow,
 					tooltipSprite.params.pos.y - tooltip_shadow,
 					tooltipSprite.params.siz.x + tooltip_shadow * 2,
@@ -499,7 +499,7 @@ namespace wi::gui
 		if (parent != nullptr)
 		{
 			parent->UpdateTransform();
-			XMMATRIX B = XMMatrixInverse(nullptr, XMLoadFloat4x4(&parent->world));
+			const XMMATRIX B = XMMatrixInverse(nullptr, XMLoadFloat4x4(&parent->world));
 			MatrixTransform(B);
 		}
 
@@ -534,7 +534,7 @@ namespace wi::gui
 
 		if (constrain_to_parent && parent != nullptr)
 		{
-			Widget* recurse_parent = parent;
+			const Widget* recurse_parent = parent;
 			while (recurse_parent != nullptr)
 			{
 				scissor.bottom = std::min(scissor.bottom, recurse_parent->scissorRect.bottom);
@@ -556,7 +556,7 @@ namespace wi::gui
 		}
 
 		GraphicsDevice* device = wi::graphics::GetDevice();
-		float scale = canvas.GetDPIScaling();
+		const float scale = canvas.GetDPIScaling();
 		scissor.bottom = int32_t((float)scissor.bottom * scale);
 		scissor.top = int32_t((float)scissor.top * scale);
 		scissor.left = int32_t((float)scissor.left * scale);
@@ -565,7 +565,7 @@ namespace wi::gui
 	}
 	Hitbox2D Widget::GetPointerHitbox(const bool constrained) const noexcept
 	{
-		XMFLOAT4 pointer = wi::input::GetPointer();
+		const XMFLOAT4 pointer = wi::input::GetPointer();
 		Hitbox2D hb = Hitbox2D(XMFLOAT2(pointer.x, pointer.y), XMFLOAT2(1, 1));
 		if (constrained)
 		{
@@ -580,10 +580,10 @@ namespace wi::gui
 		float top = hb.pos.y;
 		float bottom = hb.pos.y + hb.siz.y;
 
-		float area_left = active_area.pos.x;
-		float area_right = active_area.pos.x + active_area.siz.x;
-		float area_top = active_area.pos.y;
-		float area_bottom = active_area.pos.y + active_area.siz.y;
+		const float area_left = active_area.pos.x;
+		const float area_right = active_area.pos.x + active_area.siz.x;
+		const float area_top = active_area.pos.y;
+		const float area_bottom = active_area.pos.y + active_area.siz.y;
 
 		bottom = std::min(bottom, area_bottom);
 		top = std::max(top, area_top);
@@ -604,7 +604,7 @@ namespace wi::gui
 		const wi::Canvas& canvas
 	) const noexcept
 	{
-		XMFLOAT4 pointer = wi::input::GetPointer();
+		const XMFLOAT4 pointer = wi::input::GetPointer();
 		return XMFLOAT2(pointer.x / canvas.GetLogicalWidth(), pointer.y / canvas.GetLogicalHeight());
 	}
 }

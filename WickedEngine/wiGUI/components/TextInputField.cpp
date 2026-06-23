@@ -137,7 +137,7 @@ namespace wi::gui
 				if (*pos == '(')
 				{
 					pos++;
-					double v = parseExpr();
+					const double v = parseExpr();
 					skipWS();
 					if (*pos == ')') pos++;
 					return v;
@@ -145,7 +145,7 @@ namespace wi::gui
 				if (*pos == '-') { pos++; return -parsePrimary(); }
 				if (*pos == '+') { pos++; return  parsePrimary(); }
 				char* end;
-				double v = strtod(pos, &end);
+				const double v = strtod(pos, &end);
 				if (end == pos) { valid = false; return 0; }
 				pos = end;
 				return v;
@@ -163,7 +163,7 @@ namespace wi::gui
 				{
 					skipWS();
 					if (*pos == '*') { pos++; left *= parsePrimary(); }
-					else if (*pos == '/') { pos++; double r = parsePrimary(); if (r == 0.0) { valid = false; return 0; } left /= r; }
+					else if (*pos == '/') { pos++; const double r = parsePrimary(); if (r == 0.0) { valid = false; return 0; } left /= r; }
 					else break;
 				}
 				return left;
@@ -707,7 +707,7 @@ namespace wi::gui
 		std::wstring value_new = font_input.GetText();
 		if (caret_begin != caret_pos)
 		{
-			int offset = std::min(caret_pos, caret_begin);
+			const int offset = std::min(caret_pos, caret_begin);
 			value_new.erase(offset, std::abs(caret_pos - caret_begin));
 			caret_pos = offset;
 		}

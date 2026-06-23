@@ -51,7 +51,7 @@ namespace wi::gui
 	}
 	float ComboBox::GetDropOffset(const wi::Canvas& canvas) const
 	{
-		float screenheight = canvas.GetLogicalHeight();
+		const float screenheight = canvas.GetLogicalHeight();
 		int visible_items = std::min(maxVisibleItemCount, filteredItemCount - firstItemVisible);
 		if (!filterText.empty())
 		{
@@ -64,7 +64,7 @@ namespace wi::gui
 				}
 			}
 		}
-		float total_height = scale.y + visible_items * combo_height();
+		const float total_height = scale.y + visible_items * combo_height();
 		if (translation.y + total_height > screenheight)
 		{
 			return -total_height - 1;
@@ -465,7 +465,7 @@ namespace wi::gui
 					Projection
 				);
 				device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
-				const GPUBuffer* vbs[] = {
+				const GPUBuffer* const vbs[] = {
 					&vb_triangle,
 				};
 				const uint32_t strides[] = {
