@@ -27,7 +27,7 @@ using namespace wi::primitive;
 
 namespace wi::gui
 {
-	void Window::Create(const std::string& name, WindowControls window_controls)
+	void Window::Create(const std::string& name, const WindowControls window_controls)
 	{
 		SetColor(wi::Color::Ghost());
 
@@ -141,7 +141,7 @@ namespace wi::gui
 		SetVisible(true);
 		SetMinimized(false);
 	}
-	void Window::AddWidget(Widget* widget, AttachmentOptions options)
+	void Window::AddWidget(Widget* const widget, const AttachmentOptions options)
 	{
 		widget->SetEnabled(this->IsEnabled());
 		if (IsVisible() && !IsMinimized())
@@ -163,7 +163,7 @@ namespace wi::gui
 
 		widgets.push_back(widget);
 	}
-	void Window::RemoveWidget(Widget* widget)
+	void Window::RemoveWidget(Widget* const widget)
 	{
 		for (auto& x : widgets)
 		{
@@ -179,19 +179,19 @@ namespace wi::gui
 	{
 		widgets.clear();
 	}
-	void Window::Update(const wi::Canvas& canvas, float dt)
+	void Window::Update(const wi::Canvas& canvas, const float dt)
 	{
 		if (!IsVisible())
 		{
 			return;
 		}
 
-		Hitbox2D pointerHitbox = GetPointerHitbox();
+		const Hitbox2D pointerHitbox = GetPointerHitbox();
 
 		// Resizer updates:
 		if (IsEnabled())
 		{
-			float vscale = IsCollapsed() ? control_size : scale.y;
+			const float vscale = IsCollapsed() ? control_size : scale.y;
 			Hitbox2D lefthitbox;
 			Hitbox2D righthitbox;
 			Hitbox2D tophitbox;
@@ -286,8 +286,8 @@ namespace wi::gui
 				{
 					auto saved_parent = this->parent;
 					this->Detach();
-					float deltaX = pointerHitbox.pos.x - resize_begin.x;
-					float deltaY = pointerHitbox.pos.y - resize_begin.y;
+					const float deltaX = pointerHitbox.pos.x - resize_begin.x;
+					const float deltaY = pointerHitbox.pos.y - resize_begin.y;
 
 					switch (resize_state)
 					{
@@ -489,7 +489,7 @@ namespace wi::gui
 				continue;
 			if (widget->parent == &scrollable_area)
 			{
-				XMFLOAT2 size = widget->GetSize();
+				const XMFLOAT2 size = widget->GetSize();
 				scroll_length_horizontal = std::max(scroll_length_horizontal, widget->translation_local.x + size.x);
 				scroll_length_vertical = std::max(scroll_length_vertical, widget->translation_local.y + size.y);
 			}
@@ -660,7 +660,7 @@ namespace wi::gui
 		if (state == IDLE && resize_blink_timer > 0)
 			state = FOCUS;
 	}
-	void Window::Render(const wi::Canvas& canvas, CommandList cmd) const
+	void Window::Render(const wi::Canvas& canvas, const CommandList cmd) const
 	{
 		Widget::Render(canvas, cmd);
 		if (!IsVisible())
@@ -670,7 +670,7 @@ namespace wi::gui
 
 		GetDevice()->EventBegin(name.c_str(), cmd);
 
-		wi::Color color = GetColor();
+		const wi::Color color = GetColor();
 
 		// shadow:
 		if (shadow > 0)
@@ -713,7 +713,7 @@ namespace wi::gui
 		// resize indicator:
 		{
 			// hitboxes are recomputed because window transform might have changed since update!!
-			float vscale = IsCollapsed() ? control_size : scale.y;
+			const float vscale = IsCollapsed() ? control_size : scale.y;
 			Hitbox2D lefthitbox;
 			Hitbox2D righthitbox;
 			Hitbox2D tophitbox;
@@ -917,7 +917,7 @@ namespace wi::gui
 
 		GetDevice()->EventEnd(cmd);
 	}
-	void Window::RenderTooltip(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const
+	void Window::RenderTooltip(const wi::Canvas& canvas, const wi::graphics::CommandList cmd) const
 	{
 		// Window base tooltip is not rendered
 		for (auto& x : widgets)
@@ -925,10 +925,10 @@ namespace wi::gui
 			x->RenderTooltip(canvas, cmd);
 		}
 	}
-	void Window::SetVisible(bool value)
+	void Window::SetVisible(const bool value)
 	{
 		Widget::SetVisible(value);
-		bool minimized = IsMinimized();
+		const bool minimized = IsMinimized();
 		for (auto& x : widgets)
 		{
 			if (
@@ -946,7 +946,7 @@ namespace wi::gui
 			}
 		}
 	}
-	void Window::SetEnabled(bool value)
+	void Window::SetEnabled(const bool value)
 	{
 		Widget::SetEnabled(value);
 		for (auto& x : widgets)
@@ -964,15 +964,15 @@ namespace wi::gui
 			x->SetEnabled(value);
 		}
 	}
-	void Window::SetCollapsed(bool value)
+	void Window::SetCollapsed(const bool value)
 	{
 		SetMinimized(value);
 	}
-	bool Window::IsCollapsed() const
+	bool Window::IsCollapsed() const noexcept
 	{
 		return IsMinimized();
 	}
-	void Window::SetMinimized(bool value)
+	void Window::SetMinimized(const bool value)
 	{
 		minimized = value;
 
@@ -1003,28 +1003,28 @@ namespace wi::gui
 			collapseButton.font.params.rotation = 0;
 		}
 	}
-	bool Window::IsMinimized() const
+	bool Window::IsMinimized() const noexcept
 	{
 		return minimized;
 	}
-	void Window::SetControlSize(float value)
+	void Window::SetControlSize(const float value)
 	{
 		control_size = value;
 	}
-	float Window::GetControlSize() const
+	float Window::GetControlSize() const noexcept
 	{
 		return control_size;
 	}
 	XMFLOAT2 Window::GetSize() const
 	{
-		XMFLOAT2 size = Widget::GetSize();
+		const XMFLOAT2 size = Widget::GetSize();
 		if (IsCollapsed())
 		{
 			return XMFLOAT2(size.x, control_size);
 		}
 		return size;
 	}
-	XMFLOAT2 Window::GetWidgetAreaSize() const
+	XMFLOAT2 Window::GetWidgetAreaSize() const noexcept
 	{
 		XMFLOAT2 size = GetSize();
 		if (scrollbar_horizontal.IsScrollbarRequired())
@@ -1049,7 +1049,7 @@ namespace wi::gui
 	{
 		onResize = std::move(func);
 	}
-	void Window::SetColor(wi::Color color, int id)
+	void Window::SetColor(const wi::Color color, const int id)
 	{
 		Widget::SetColor(color, id);
 		for (auto& widget : widgets)
@@ -1062,7 +1062,7 @@ namespace wi::gui
 			sprites[IDLE].params.color = color;
 		}
 	}
-	void Window::SetImage(wi::Resource resource, int id)
+	void Window::SetImage(wi::Resource resource, const int id)
 	{
 		Widget::SetImage(resource, id);
 		for (auto& widget : widgets)
@@ -1075,7 +1075,7 @@ namespace wi::gui
 			sprites[IDLE].textureResource = resource;
 		}
 	}
-	void Window::SetShadowColor(wi::Color color)
+	void Window::SetShadowColor(const wi::Color color)
 	{
 		Widget::SetShadowColor(color);
 		for (auto& widget : widgets)
@@ -1083,7 +1083,7 @@ namespace wi::gui
 			widget->SetShadowColor(color);
 		}
 	}
-	void Window::SetTheme(const Theme& theme, int id)
+	void Window::SetTheme(const Theme& theme, const int id)
 	{
 		Widget::SetTheme(theme, id);
 		for (auto& widget : widgets)

@@ -519,7 +519,9 @@ namespace wi::gui
 		/**
 		 * Returns the widget's type name ("Window").
 		 */
-		const char* GetWidgetTypeName() const override { return "Window"; }
+		[[nodiscard]] const char* GetWidgetTypeName() const override {
+			return "Window";
+		}
 
 		/**
 		 * Shows or hides the window and its children.
@@ -545,7 +547,7 @@ namespace wi::gui
 		/**
 		 * Returns whether the window is collapsed.
 		 */
-		bool IsCollapsed() const;
+		[[nodiscard]] bool IsCollapsed() const noexcept;
 
 		/**
 		 * Collapses or expands the window (alias of @ref SetCollapsed).
@@ -557,7 +559,7 @@ namespace wi::gui
 		/**
 		 * Returns whether the window is collapsed (alias of @ref IsCollapsed).
 		 */
-		bool IsMinimized() const;
+		[[nodiscard]] bool IsMinimized() const noexcept;
 
 		/**
 		 * Sets the title bar / control row height.
@@ -569,17 +571,17 @@ namespace wi::gui
 		/**
 		 * Returns the title bar / control row height.
 		 */
-		float GetControlSize() const;
+		[[nodiscard]] float GetControlSize() const noexcept;
 
 		/**
 		 * Returns the window size (reflects the collapsed state).
 		 */
-		XMFLOAT2 GetSize() const override;
+		[[nodiscard]] XMFLOAT2 GetSize() const override;
 
 		/**
 		 * Returns the size of the area available to child widgets.
 		 */
-		XMFLOAT2 GetWidgetAreaSize() const;
+		[[nodiscard]] XMFLOAT2 GetWidgetAreaSize() const noexcept;
 
 		/**
 		 * Sets the close callback.
@@ -628,7 +630,9 @@ namespace wi::gui
 		 *
 		 * @param[in] value - true to right-align the background image.
 		 */
-		void SetRightAlignedImage(bool value) { right_aligned_image = value; }
+		void SetRightAlignedImage(bool value) noexcept {
+			right_aligned_image = value;
+		}
 
 		/**
 		 * Exports the window's and children's localizable strings.
