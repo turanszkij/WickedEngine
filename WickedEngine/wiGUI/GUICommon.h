@@ -17,13 +17,14 @@
 #include <string>
 #include <type_traits>
 
-#include <Utility/DirectXMath/DirectXMath.h>
 #include "CommonInclude.h"
+#include <Utility/DirectXMath/DirectXMath.h>
 
-#include "wiColor.h"
 #include <wiEnums.h>
 #include <wiFont.h>
 #include <wiImage.h>
+
+#include "wiColor.h"
 
 namespace wi::gui
 {

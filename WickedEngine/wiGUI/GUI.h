@@ -13,13 +13,14 @@
 #include <string>
 
 #include <wiGUI/GUICommon.h>
-#include "wiGUI/Widget.h"
 #include <wiCanvas.h>
 #include <wiColor.h>
 #include <wiGraphicsDevice.h>
 #include <wiLocalization.h>
 #include <wiResourceManager.h>
 #include <wiVector.h>
+
+#include "wiGUI/Widget.h"
 
 namespace wi::gui
 {

@@ -13,24 +13,26 @@
 
 #include <Utility/DirectXMath/DirectXMath.h>
 
-#include "wiGUI/GUI.h"
-#include "wiGUI/GUIInternal.h"
+#include <wiCanvas.h>
+#include <wiColor.h>
+#include <wiEnums.h>
+#include <wiGraphics.h>
+#include <wiGraphicsDevice.h>
+#include <wiGUI/GUICommon.h>
+#include <wiGUI/Widget.h>
+#include <wiLocalization.h>
+#include <wiResourceManager.h>
+
+#include "wiBacklog.h"
+#include "wiEventHandler.h"
 #include "wiInput.h"
 #include "wiPrimitive.h"
 #include "wiProfiler.h"
 #include "wiRenderer.h"
 #include "wiTimer.h"
-#include "wiEventHandler.h"
-#include "wiBacklog.h"
-#include <wiCanvas.h>
-#include <wiColor.h>
-#include <wiEnums.h>
-#include <wiGUI/GUICommon.h>
-#include <wiGUI/Widget.h>
-#include <wiGraphics.h>
-#include <wiGraphicsDevice.h>
-#include <wiLocalization.h>
-#include <wiResourceManager.h>
+
+#include "wiGUI/GUI.h"
+#include "wiGUI/GUIInternal.h"
 
 using namespace wi::graphics;
 using namespace wi::primitive;

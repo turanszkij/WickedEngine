@@ -14,19 +14,20 @@
 #include <CommonInclude.h>
 #include <Utility/DirectXMath/DirectXMath.h>
 
-#include "wiGUI/Widget.h"
-
-#include "wiInput.h"
-#include "wiPrimitive.h"
-#include "wiFont.h"
-#include "wiImage.h"
 #include <wiCanvas.h>
 #include <wiColor.h>
-#include <wiGUI/GUICommon.h>
 #include <wiGraphicsDevice.h>
+#include <wiGUI/GUICommon.h>
 #include <wiLocalization.h>
 #include <wiMath.h>
 #include <wiResourceManager.h>
+
+#include "wiFont.h"
+#include "wiImage.h"
+#include "wiInput.h"
+#include "wiPrimitive.h"
+
+#include "wiGUI/Widget.h"
 
 using namespace wi::graphics;
 using namespace wi::primitive;
