@@ -504,7 +504,7 @@ void EditorComponent::ResizeBuffers()
 	desc.format = Format::R10G10B10A2_UNORM;
 	desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
 	GetDevice()->CreateTexture(&desc, nullptr, &gui_background_effect);
-	GetDevice()->SetName(&gui_background_effect, "gui_background_effect");
+	GetDevice()->SetName(&gui_background_effect, "editor.gui_background_effect");
 }
 void EditorComponent::ResizeLayout()
 {
@@ -1546,6 +1546,8 @@ void EditorComponent::Load()
 		}
 	}
 
+	GraphicsDevice* device = GetDevice();
+
 	// Set up gradients for the spline visualizer:
 	uint8_t spline_gradient[4096];
 	for (int i = 0; i < arraysize(spline_gradient); ++i)
@@ -1564,6 +1566,7 @@ void EditorComponent::Load()
 		SwizzleFromString("111r")
 	);
 	assert(success);
+	device->SetName(&spline_renderer.texture, "editor.spline_renderer.texture");
 
 	for (int i = 0; i < arraysize(spline_gradient); ++i)
 	{
@@ -1581,6 +1584,7 @@ void EditorComponent::Load()
 		SwizzleFromString("111r")
 	);
 	assert(success);
+	device->SetName(&spline_renderer.texture2, "editor.spline_renderer.texture2");
 
 	RenderPath2D::Load();
 
@@ -5021,6 +5025,7 @@ void EditorComponent::ResizeViewport3D()
 				desc.sample_count = renderPath->getMSAASampleCount();
 				success = device->CreateTexture(&desc, nullptr, &rt_selectionOutline_MSAA);
 				assert(success);
+				device->SetName(&rt_selectionOutline_MSAA, "editor.rt_selectionOutline_MSAA");
 				desc.sample_count = 1;
 			}
 			else
@@ -5029,8 +5034,10 @@ void EditorComponent::ResizeViewport3D()
 			}
 			success = device->CreateTexture(&desc, nullptr, &rt_selectionOutline[0]);
 			assert(success);
+			device->SetName(&rt_selectionOutline[0], "editor.rt_selectionOutline[0]");
 			success = device->CreateTexture(&desc, nullptr, &rt_selectionOutline[1]);
 			assert(success);
+			device->SetName(&rt_selectionOutline[1], "editor.rt_selectionOutline[1]");
 		}
 
 		const TextureDesc& renderResultDesc = renderPath->GetRenderResult2D().GetDesc();
@@ -5045,7 +5052,7 @@ void EditorComponent::ResizeViewport3D()
 			desc.swizzle.b = ComponentSwizzle::R;
 			desc.swizzle.a = ComponentSwizzle::R;
 			device->CreateTexture(&desc, nullptr, &rt_dummyOutline);
-			device->SetName(&rt_dummyOutline, "rt_dummyOutline");
+			device->SetName(&rt_dummyOutline, "editor.rt_dummyOutline");
 		}
 
 		{
@@ -5059,7 +5066,7 @@ void EditorComponent::ResizeViewport3D()
 			desc.bind_flags = BindFlag::DEPTH_STENCIL;
 			desc.layout = ResourceState::DEPTHSTENCIL;
 			device->CreateTexture(&desc, nullptr, &editor_depthbuffer);
-			device->SetName(&editor_depthbuffer, "editor_depthbuffer");
+			device->SetName(&editor_depthbuffer, "editor.editor_depthbuffer");
 
 			if (getMSAASampleCount() > 1)
 			{
@@ -5067,7 +5074,7 @@ void EditorComponent::ResizeViewport3D()
 				desc.bind_flags = BindFlag::RENDER_TARGET;
 				desc.layout = ResourceState::RENDERTARGET;
 				device->CreateTexture(&desc, nullptr, &editor_rendertarget);
-				device->SetName(&editor_rendertarget, "editor_rendertarget");
+				device->SetName(&editor_rendertarget, "editor.editor_rendertarget");
 			}
 		}
 
@@ -5078,7 +5085,7 @@ void EditorComponent::ResizeViewport3D()
 			desc.format = renderResultDesc.format;
 			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
 			device->CreateTexture(&desc, nullptr, &rt_metadataDummies);
-			device->SetName(&rt_metadataDummies, "rt_metadataDummies");
+			device->SetName(&rt_metadataDummies, "editor.rt_metadataDummies");
 
 			if (renderPath->getMSAASampleCount() > 1)
 			{
@@ -5087,7 +5094,7 @@ void EditorComponent::ResizeViewport3D()
 				desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
 				desc.layout = ResourceState::RENDERTARGET;
 				device->CreateTexture(&desc, nullptr, &rt_metadataDummies_MSAA);
-				device->SetName(&rt_metadataDummies_MSAA, "rt_metadataDummies_MSAA");
+				device->SetName(&rt_metadataDummies_MSAA, "editor.rt_metadataDummies_MSAA");
 			}
 		}
 	}
@@ -5895,6 +5902,7 @@ Texture EditorComponent::CreateThumbnail(Texture texture, uint32_t target_width,
 		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::RENDER_TARGET | BindFlag::UNORDERED_ACCESS;
 		Texture upsized;
 		device->CreateTexture(&desc, nullptr, &upsized);
+		device->SetName(&upsized, "editor.crop.upsized");
 
 		Viewport vp;
 		vp.width = (float)desc.width;
@@ -5951,6 +5959,7 @@ Texture EditorComponent::CreateThumbnail(Texture texture, uint32_t target_width,
 		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::RENDER_TARGET | BindFlag::UNORDERED_ACCESS;
 		Texture downsized;
 		device->CreateTexture(&desc, nullptr, &downsized);
+		device->SetName(&downsized, "editor.crop.downsized");
 		wi::renderer::Postprocess_Downsample4x(thumbnail, downsized, cmd);
 		thumbnail = downsized;
 	}

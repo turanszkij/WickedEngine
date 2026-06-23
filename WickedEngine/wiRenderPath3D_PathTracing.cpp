@@ -62,7 +62,7 @@ namespace wi
 			desc.width = internalResolution.x;
 			desc.height = internalResolution.y;
 			device->CreateTexture(&desc, nullptr, &rtMain);
-			device->SetName(&rtMain, "rtMain");
+			device->SetName(&rtMain, "pathtracing.rtMain");
 
 			desc.format = wi::renderer::format_idbuffer;
 			desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
@@ -70,32 +70,32 @@ namespace wi
 			desc.height = internalResolution.y;
 			desc.sample_count = 1;
 			device->CreateTexture(&desc, nullptr, &rtPrimitiveID);
-			device->SetName(&rtPrimitiveID, "rtPrimitiveID");
+			device->SetName(&rtPrimitiveID, "pathtracing.rtPrimitiveID");
 
 			desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE | BindFlag::RENDER_TARGET;
 			desc.format = Format::R32G32B32A32_FLOAT;
 			desc.width = internalResolution.x;
 			desc.height = internalResolution.y;
 			device->CreateTexture(&desc, nullptr, &traceResult);
-			device->SetName(&traceResult, "traceResult");
+			device->SetName(&traceResult, "pathtracing.traceResult");
 
 #ifdef OPEN_IMAGE_DENOISE
 			desc.bind_flags = BindFlag::UNORDERED_ACCESS;
 			desc.layout = ResourceState::UNORDERED_ACCESS;
 			device->CreateTexture(&desc, nullptr, &denoiserAlbedo);
-			device->SetName(&denoiserAlbedo, "denoiserAlbedo");
+			device->SetName(&denoiserAlbedo, "pathtracing.denoiserAlbedo");
 			device->CreateTexture(&desc, nullptr, &denoiserNormal);
-			device->SetName(&denoiserNormal, "denoiserNormal");
+			device->SetName(&denoiserNormal, "pathtracing.denoiserNormal");
 #endif // OPEN_IMAGE_DENOISE
 
 			{
 				desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
 				desc.format = Format::R32_FLOAT;
 				device->CreateTexture(&desc, nullptr, &traceDepth);
-				device->SetName(&traceDepth, "traceDepth");
+				device->SetName(&traceDepth, "pathtracing.traceDepth");
 				desc.format = Format::R8_UINT;
 				device->CreateTexture(&desc, nullptr, &traceStencil);
-				device->SetName(&traceStencil, "traceStencil");
+				device->SetName(&traceStencil, "pathtracing.traceStencil");
 
 				depthBuffer_Copy = traceDepth;
 				depthBuffer_Copy1 = traceDepth;
@@ -104,7 +104,7 @@ namespace wi
 				desc.bind_flags = BindFlag::DEPTH_STENCIL;
 				desc.format = wi::renderer::format_depthbuffer_main;
 				device->CreateTexture(&desc, nullptr, &depthBuffer_Main);
-				device->SetName(&depthBuffer_Main, "depthBuffer_Main");
+				device->SetName(&depthBuffer_Main, "pathtracing.depthBuffer_Main");
 			}
 		}
 		{
@@ -114,21 +114,21 @@ namespace wi
 			desc.width = internalResolution.x;
 			desc.height = internalResolution.y;
 			device->CreateTexture(&desc, nullptr, &rtPostprocess);
-			device->SetName(&rtPostprocess, "rtPostprocess");
+			device->SetName(&rtPostprocess, "pathtracing.rtPostprocess");
 
 
 			desc.width /= 4;
 			desc.height /= 4;
 			desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
 			device->CreateTexture(&desc, nullptr, &rtGUIBlurredBackground[0]);
-			device->SetName(&rtGUIBlurredBackground[0], "rtGUIBlurredBackground[0]");
+			device->SetName(&rtGUIBlurredBackground[0], "pathtracing.rtGUIBlurredBackground[0]");
 
 			desc.width /= 4;
 			desc.height /= 4;
 			device->CreateTexture(&desc, nullptr, &rtGUIBlurredBackground[1]);
-			device->SetName(&rtGUIBlurredBackground[1], "rtGUIBlurredBackground[1]");
+			device->SetName(&rtGUIBlurredBackground[1], "pathtracing.rtGUIBlurredBackground[1]");
 			device->CreateTexture(&desc, nullptr, &rtGUIBlurredBackground[2]);
-			device->SetName(&rtGUIBlurredBackground[2], "rtGUIBlurredBackground[2]");
+			device->SetName(&rtGUIBlurredBackground[2], "pathtracing.rtGUIBlurredBackground[2]");
 		}
 
 		wi::renderer::CreateLuminanceResources(luminanceResources, internalResolution);
@@ -284,6 +284,7 @@ namespace wi
 						initdata.data_ptr = texturedata_dst.data();
 						initdata.row_pitch = uint32_t(sizeof(XMFLOAT4) * width);
 						device->CreateTexture(&desc, &initdata, &denoiserResult);
+						device->SetName(&denoiserResult, "pathtracing.denoiserResult");
 
 						});
 				}

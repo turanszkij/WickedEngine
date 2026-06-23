@@ -746,7 +746,6 @@ namespace wi::renderer
 	void Postprocess_RTShadow(
 		const RTShadowResources& res,
 		const wi::scene::Scene& scene,
-		const wi::graphics::GPUBuffer& entityTiles_Opaque,
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd
 	);
@@ -757,7 +756,6 @@ namespace wi::renderer
 	void CreateScreenSpaceShadowResources(ScreenSpaceShadowResources& res, XMUINT2 resolution);
 	void Postprocess_ScreenSpaceShadow(
 		const ScreenSpaceShadowResources& res,
-		const wi::graphics::GPUBuffer& entityTiles_Opaque,
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd,
 		float range = 1,

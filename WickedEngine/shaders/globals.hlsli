@@ -588,25 +588,6 @@ StructuredBuffer<GaussianSplat> bindless_structured_gaussian_splats[] : register
 #define load_entitytile(tileIndex) (bindless_structured_uint[GetCamera().buffer_entitytiles_index][tileIndex])
 #endif // TRANSPARENT
 
-#if defined(__spirv__) || defined(__metal__)
-// Spirv 64 bit functions not supported: https://github.com/microsoft/DirectXShaderCompiler/issues/8536
-// Metal pipeline create also crashes with firstbitlow on 64 bit
-inline uint firstbitlow64(uint64_t value)
-{
-	uint low  = (uint)(value & 0xFFFFFFFFu);
-	uint high = (uint)(value >> 32);
-
-	if (low != 0)
-		return firstbitlow(low);
-	else if (high != 0)
-		return firstbitlow(high) + 32u;
-
-	return 0xFFFFFFFFu; 
-}
-#else
-#define firstbitlow64 firstbitlow
-#endif // defined(__spirv__) || defined(__metal__)
-
 inline void write_mipmap_feedback(uint materialIndex, float4 uvsets_dx, float4 uvsets_dy)
 {
 	[branch]
