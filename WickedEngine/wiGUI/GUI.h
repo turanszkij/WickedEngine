@@ -1,4 +1,5 @@
 #pragma once
+
 /**
  * @file
  * The `wi::gui::GUI` widget manager.
@@ -9,7 +10,16 @@
  * and localization calls to every widget.
  */
 
+#include <string>
+
+#include <wiGUI/GUICommon.h>
 #include "wiGUI/Widget.h"
+#include <wiCanvas.h>
+#include <wiColor.h>
+#include <wiGraphicsDevice.h>
+#include <wiLocalization.h>
+#include <wiResourceManager.h>
+#include <wiVector.h>
 
 namespace wi::gui
 {
