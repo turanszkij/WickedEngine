@@ -3,24 +3,41 @@
  * Implementation of the @ref wi::gui::ColorPicker widget.
  */
 
-#include "wiGUI/components/ColorPicker.h"
-#include "wiGUI/GUIInternal.h"
 
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <functional>
+#include <math.h>
+#include <string>
+#include <utility>
+
+#include <CommonInclude.h>
+#include <Utility/DirectXMath/DirectXCollision.h>
+#include <Utility/DirectXMath/DirectXMath.h>
+
+#include <shaders/ShaderInterop.h>
+#include <shaders/ShaderInterop_Renderer.h>
+
+#include <wiCanvas.h>
+#include <wiColor.h>
+#include <wiGraphics.h>
+#include <wiGraphicsDevice.h>
+#include <wiGUI/components/Window.h>
+#include <wiGUI/GUICommon.h>
+#include <wiGUI/Widget.h>
+#include <wiMath.h>
+#include <wiResourceManager.h>
+#include <wiVector.h>
+
+#include "wiFont.h"
+#include "wiGUI/GUIInternal.h"
+#include "wiImage.h"
 #include "wiInput.h"
 #include "wiPrimitive.h"
-#include "wiProfiler.h"
-#include "wiRenderer.h"
-#include "wiTimer.h"
-#include "wiEventHandler.h"
-#include "wiFont.h"
-#include "wiImage.h"
-#include "wiTextureHelper.h"
-#include "wiBacklog.h"
-#include "wiHelper.h"
 
-#include <sstream>
-#include <iomanip> // setprecision
-#include <utility>
+#include "wiGUI/components/ColorPicker.h"
 
 using namespace wi::graphics;
 using namespace wi::primitive;
@@ -62,50 +79,61 @@ namespace wi::gui
 	 *
 	 * @return The equivalent HSV color (hue in degrees).
 	 */
-	hsv rgb2hsv(const rgb in)
+	static hsv rgb2hsv(const rgb in)
 	{
-		hsv         out;
-		float		min, max, delta;
+		hsv out{};
 
-		min = in.r < in.g ? in.r : in.g;
-		min = min < in.b ? min : in.b;
+		const float min = [&in]() {
+			const float min = in.r < in.g ? in.r : in.g;
 
-		max = in.r > in.g ? in.r : in.g;
-		max = max > in.b ? max : in.b;
+			return min < in.b ? min : in.b;
+		}();
+		const float max = [&in]() {
+			const float max = in.r > in.g ? in.r : in.g;
+
+			return max > in.b ? max : in.b;
+		}();
 
 		out.v = max;                                // v
-		delta = max - min;
-		if (delta < 0.00001f)
-		{
+		const float delta = max - min;
+
+		if (delta < 0.00001f) {
 			out.s = 0;
 			out.h = 0; // undefined, maybe nan?
+
 			return out;
 		}
-		if (max > 0.0f) { // NOTE: if Max is == 0, this divide would cause a crash
+
+		if (max > 0.0f) {  // NOTE: if Max is == 0, this divide would cause a crash
 			out.s = (delta / max);                  // s
-		}
-		else {
+		} else {
 			// if max is 0, then r = g = b = 0
 			// s = 0, h is undefined
 			out.s = 0.0f;
 			out.h = NAN;                            // its now undefined
+
 			return out;
 		}
-		if (in.r >= max)                           // > is bogus, just keeps compilor happy
-			out.h = (in.g - in.b) / delta;        // between yellow & magenta
-		else
-			if (in.g >= max)
+
+		if (in.r >= max) {                         // > is bogus, just keeps compiler happy
+			out.h = (in.g - in.b) / delta;         // between yellow & magenta
+		} else {
+			if (in.g >= max) {
 				out.h = 2.0f + (in.b - in.r) / delta;  // between cyan & yellow
-			else
+			} else {
 				out.h = 4.0f + (in.r - in.g) / delta;  // between magenta & cyan
+			}
+		}
 
-		out.h *= 60.0f;                              // degrees
+		out.h *= 60.0f;                                // degrees
 
-		if (out.h < 0.0f)
+		if (out.h < 0.0f) {
 			out.h += 360.0f;
+		}
 
 		return out;
 	}
+
 	/**
 	 * Converts an HSV color to RGB.
 	 *
@@ -115,60 +143,60 @@ namespace wi::gui
 	 */
 	rgb hsv2rgb(const hsv in)
 	{
-		float		hh, p, q, t, ff;
-		long        i;
-		rgb         out;
-
-		if (in.s <= 0.0f) {       // < is bogus, just shuts up warnings
-			out.r = in.v;
-			out.g = in.v;
-			out.b = in.v;
-			return out;
+		if (in.s <= 0.0f) {  // < is bogus, just shuts up warnings
+			return {
+				in.v, // r
+				in.v, // g
+				in.v  // b
+			};
 		}
-		hh = in.h;
-		if (hh >= 360.0f) hh = 0.0f;
-		hh /= 60.0f;
-		i = (long)hh;
-		ff = hh - i;
-		p = in.v * (1.0f - in.s);
-		q = in.v * (1.0f - (in.s * ff));
-		t = in.v * (1.0f - (in.s * (1.0f - ff)));
+
+		const float hh = in.h >= 360.0f ? 0.0f : in.h / 60.0f;
+		const long  i  = static_cast<long>(hh);
+		const float ff = hh - i;
+		const float p  = in.v * (1.0f - in.s);
+		const float q  = in.v * (1.0f - (in.s * ff));
+		const float t  = in.v * (1.0f - (in.s * (1.0f - ff)));
 
 		switch (i) {
-		case 0:
-			out.r = in.v;
-			out.g = t;
-			out.b = p;
-			break;
-		case 1:
-			out.r = q;
-			out.g = in.v;
-			out.b = p;
-			break;
-		case 2:
-			out.r = p;
-			out.g = in.v;
-			out.b = t;
-			break;
-
-		case 3:
-			out.r = p;
-			out.g = q;
-			out.b = in.v;
-			break;
-		case 4:
-			out.r = t;
-			out.g = p;
-			out.b = in.v;
-			break;
-		case 5:
-		default:
-			out.r = in.v;
-			out.g = p;
-			out.b = q;
-			break;
+			case 0:
+				return {
+					in.v, // r
+					t,    // g
+					p     // b
+				};
+			case 1:
+				return {
+					q,    // r
+					in.v, // g
+					p     // b
+				};
+			case 2:
+				return {
+					p,    // r
+					in.v, // g
+					t     // b
+				};
+			case 3:
+				return {
+					p,   // r
+					q,   // g
+					in.v // b
+				};
+			case 4:
+				return {
+					t,   // r
+					p,   // g
+					in.v // b
+				};
+			case 5:
+			default:
+				return {
+					in.v, // r
+					p,    // g
+					q     // b
+				};
 		}
-		return out;
 	}
 
 	/** Default color-picker window width, in pixels. */
@@ -177,8 +205,10 @@ namespace wi::gui
 	/** Default color-picker window height, in pixels. */
 	static const float cp_height = 260;
 
-	void ColorPicker::Create(const std::string& name, const WindowControls window_controls)
-	{
+	void ColorPicker::Create(
+		const std::string& name,
+		const WindowControls window_controls
+	) {
 		Window::Create(name, window_controls);
 
 		SetSize(XMFLOAT2(cp_width, cp_height));
@@ -197,10 +227,11 @@ namespace wi::gui
 		text_R.SetDescription("R: ");
 		text_R.OnInputAccepted([this](const EventArgs& args) {
 			wi::Color color = GetPickColor();
-			color.setR((uint8_t)args.iValue);
+			color.setR(static_cast<uint8_t>(args.iValue));
 			SetPickColor(color);
 			FireEvents();
-			});
+		});
+
 		AddWidget(&text_R);
 
 		text_G.Create("G");
@@ -212,10 +243,11 @@ namespace wi::gui
 		text_G.SetDescription("G: ");
 		text_G.OnInputAccepted([this](const EventArgs& args) {
 			wi::Color color = GetPickColor();
-			color.setG((uint8_t)args.iValue);
+			color.setG(static_cast<uint8_t>(args.iValue));
 			SetPickColor(color);
 			FireEvents();
-			});
+		});
+
 		AddWidget(&text_G);
 
 		text_B.Create("B");
@@ -227,12 +259,12 @@ namespace wi::gui
 		text_B.SetDescription("B: ");
 		text_B.OnInputAccepted([this](const EventArgs& args) {
 			wi::Color color = GetPickColor();
-			color.setB((uint8_t)args.iValue);
+			color.setB(static_cast<uint8_t>(args.iValue));
 			SetPickColor(color);
 			FireEvents();
-			});
-		AddWidget(&text_B);
+		});
 
+		AddWidget(&text_B);
 
 		text_H.Create("H");
 		text_H.SetLocalizationEnabled(LocalizationEnabled::Tooltip);
@@ -244,7 +276,8 @@ namespace wi::gui
 		text_H.OnInputAccepted([this](const EventArgs& args) {
 			hue = wi::math::Clamp(args.fValue, 0, 360.0f);
 			FireEvents();
-			});
+		});
+
 		AddWidget(&text_H);
 
 		text_S.Create("S");
@@ -257,7 +290,8 @@ namespace wi::gui
 		text_S.OnInputAccepted([this](const EventArgs& args) {
 			saturation = wi::math::Clamp(args.fValue / 100.0f, 0, 1);
 			FireEvents();
-			});
+		});
+
 		AddWidget(&text_S);
 
 		text_V.Create("V");
@@ -270,7 +304,8 @@ namespace wi::gui
 		text_V.OnInputAccepted([this](const EventArgs& args) {
 			luminance = wi::math::Clamp(args.fValue / 100.0f, 0, 1);
 			FireEvents();
-			});
+		});
+
 		AddWidget(&text_V);
 
 		text_hex.Create("Hex");
@@ -283,9 +318,11 @@ namespace wi::gui
 		text_hex.font_description.params.scaling = 1.2f;
 		text_hex.OnInputAccepted([this](const EventArgs& args) {
 			const wi::Color color(args.sValue.c_str());
+
 			SetPickColor(color);
 			FireEvents();
-			});
+		});
+
 		AddWidget(&text_hex);
 
 		alphaSlider.Create(0, 255, 255, 255, "");
@@ -296,9 +333,11 @@ namespace wi::gui
 		alphaSlider.SetTooltip("Value for ALPHA - TRANSPARENCY channel (0-255)");
 		alphaSlider.OnSlide([this](const EventArgs& args) {
 			FireEvents();
-			});
+		});
+
 		AddWidget(&alphaSlider);
 	}
+
 	/** Radius of the inner saturation/luminance triangle, in pixels. */
 	static const float colorpicker_radius_triangle = 68;
 
@@ -325,36 +364,57 @@ namespace wi::gui
 				state = IDLE;
 			}
 
-			const float sca = std::min(scale.x / cp_width, scale.y / cp_height);
+			const float sca = std::min(
+				scale.x / cp_width,
+				scale.y / cp_height
+			);
 
 			const XMMATRIX W =
 				XMMatrixScaling(sca, sca, 1) *
-				XMMatrixTranslation(translation.x + scale.x * 0.4f, translation.y + scale.y * 0.5f, 0)
-				;
+				XMMatrixTranslation(
+					translation.x + scale.x * 0.4f,
+					translation.y + scale.y * 0.5f, 0
+				);
 
-			const XMFLOAT2 center = XMFLOAT2(translation.x + scale.x * 0.4f, translation.y + scale.y * 0.5f);
+			const XMFLOAT2 center = XMFLOAT2(
+				translation.x + scale.x * 0.4f,
+				translation.y + scale.y * 0.5f
+			);
 			const XMFLOAT2 pointer = GetPointerHitbox().pos;
 			const float distance = wi::math::Distance(center, pointer);
-			const bool hover_hue = (distance > colorpicker_radius * sca) && (distance < (colorpicker_radius + colorpicker_width)* sca);
+			const bool hover_hue = (distance > colorpicker_radius * sca)
+				&& (distance < (colorpicker_radius + colorpicker_width)* sca);
 
 			float distTri = 0;
-			XMFLOAT4 A, B, C;
-			wi::math::ConstructTriangleEquilateral(colorpicker_radius_triangle, A, B, C);
+			XMFLOAT4 A{};
+			XMFLOAT4 B{};
+			XMFLOAT4 C{};
+
+			wi::math::ConstructTriangleEquilateral(
+				colorpicker_radius_triangle, A, B, C
+			);
 			XMVECTOR _A = XMLoadFloat4(&A);
 			XMVECTOR _B = XMLoadFloat4(&B);
 			XMVECTOR _C = XMLoadFloat4(&C);
-			const XMMATRIX _triTransform = XMMatrixRotationZ(-hue / 360.0f * XM_2PI) * W;
+
+			const XMMATRIX _triTransform
+				= XMMatrixRotationZ(-hue / 360.0f * XM_2PI) * W;
+
 			_A = XMVector4Transform(_A, _triTransform);
 			_B = XMVector4Transform(_B, _triTransform);
 			_C = XMVector4Transform(_C, _triTransform);
+
 			const XMVECTOR O = XMVectorSet(pointer.x, pointer.y, 0, 0);
 			const XMVECTOR D = XMVectorSet(0, 0, 1, 0);
-			const bool hover_saturation = TriangleTests::Intersects(O, D, _A, _B, _C, distTri);
+			const bool hover_saturation = TriangleTests::Intersects(
+				O, D, _A, _B, _C, distTri
+			);
 
 			bool dragged = false;
 
-			if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanning())
-			{
+			if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT)
+				|| wi::input::IsTouchPanning()
+			) {
 				if (hover_hue)
 				{
 					colorpickerstate = CPS_HUE;
@@ -367,8 +427,9 @@ namespace wi::gui
 				}
 			}
 
-			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanning())
-			{
+			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT)
+			 || wi::input::IsTouchPanning()
+			) {
 				if (colorpickerstate > CPS_IDLE)
 				{
 					// continue drag if already grabbed whether it is intersecting or not
@@ -383,20 +444,27 @@ namespace wi::gui
 			if (colorpickerstate == CPS_HUE && dragged)
 			{
 				//hue pick
-				const float angle = wi::math::GetAngle(XMFLOAT2(pointer.x - center.x, pointer.y - center.y), XMFLOAT2(colorpicker_radius, 0));
+				const float angle = wi::math::GetAngle(
+					XMFLOAT2(pointer.x - center.x, pointer.y - center.y),
+					XMFLOAT2(colorpicker_radius, 0)
+				);
+
 				hue = angle / XM_2PI * 360.0f;
 				Activate();
 			}
 			else if (colorpickerstate == CPS_SATURATION && dragged)
 			{
 				// saturation pick
-				float u, v, w;
+				float u = NAN;
+				float v = NAN;
+				float w = NAN;
+
 				wi::math::GetBarycentric(O, _A, _B, _C, u, v, w, true);
 				// u = saturated corner (color)
 				// v = desaturated corner (white)
 				// w = no luminosity corner (black)
 
-				hsv source;
+				hsv source{};
 				source.h = hue;
 				source.s = 1;
 				source.v = 1;
@@ -405,15 +473,18 @@ namespace wi::gui
 				const XMVECTOR color_corner = XMVectorSet(result.r, result.g, result.b, 1);
 				const XMVECTOR white_corner = XMVectorSet(1, 1, 1, 1);
 				const XMVECTOR black_corner = XMVectorSet(0, 0, 0, 1);
-				const XMVECTOR inner_point = u * color_corner + v * white_corner + w * black_corner;
+				const XMVECTOR inner_point  = u * color_corner
+				                            + v * white_corner
+				                            + w * black_corner;
 
 				result.r = XMVectorGetX(inner_point);
 				result.g = XMVectorGetY(inner_point);
 				result.b = XMVectorGetZ(inner_point);
+
 				source = rgb2hsv(result);
 
 				saturation = source.s;
-				luminance = source.v;
+				luminance  = source.v;
 
 				Activate();
 			}
@@ -423,12 +494,12 @@ namespace wi::gui
 			}
 
 			const wi::Color color = GetPickColor();
-			text_R.SetValue((int)color.getR());
-			text_G.SetValue((int)color.getG());
-			text_B.SetValue((int)color.getB());
-			text_H.SetValue(int(hue));
-			text_S.SetValue(int(saturation * 100));
-			text_V.SetValue(int(luminance * 100));
+			text_R.SetValue(static_cast<int>(color.getR()));
+			text_G.SetValue(static_cast<int>(color.getG()));
+			text_B.SetValue(static_cast<int>(color.getB()));
+			text_H.SetValue(static_cast<int>(hue));
+			text_S.SetValue(static_cast<int>(saturation * 100));
+			text_V.SetValue(static_cast<int>(luminance  * 100));
 			text_hex.SetText(color.to_hex());
 
 			if (dragged)
@@ -437,7 +508,11 @@ namespace wi::gui
 			}
 		}
 	}
-	void ColorPicker::Render(const wi::Canvas& canvas, const CommandList cmd) const
+
+	void ColorPicker::Render(
+		const wi::Canvas& canvas,
+		const CommandList cmd
+	) const
 	{
 		Window::Render(canvas, cmd);
 
@@ -453,6 +528,7 @@ namespace wi::gui
 			XMFLOAT4 pos;
 			XMFLOAT4 col;
 		};
+
 		static wi::graphics::GPUBuffer vb_hue;
 		static wi::graphics::GPUBuffer vb_picker_saturation;
 		static wi::graphics::GPUBuffer vb_picker_hue;
@@ -461,16 +537,23 @@ namespace wi::gui
 		static wi::vector<Vertex> vertices_saturation;
 
 		static bool buffersComplete = false;
+
 		if (!buffersComplete)
 		{
 			buffersComplete = true;
 
 			// saturation
 			{
-				vertices_saturation.push_back({ XMFLOAT4(0,0,0,0),XMFLOAT4(1,0,0,1) });	// hue
-				vertices_saturation.push_back({ XMFLOAT4(0,0,0,0),XMFLOAT4(1,1,1,1) });	// white
-				vertices_saturation.push_back({ XMFLOAT4(0,0,0,0),XMFLOAT4(0,0,0,1) });	// black
-				wi::math::ConstructTriangleEquilateral(colorpicker_radius_triangle, vertices_saturation[0].pos, vertices_saturation[1].pos, vertices_saturation[2].pos);
+				vertices_saturation.push_back({ XMFLOAT4(0,0,0,0),XMFLOAT4(1,0,0,1) });  // hue
+				vertices_saturation.push_back({ XMFLOAT4(0,0,0,0),XMFLOAT4(1,1,1,1) });  // white
+				vertices_saturation.push_back({ XMFLOAT4(0,0,0,0),XMFLOAT4(0,0,0,1) });  // black
+
+				wi::math::ConstructTriangleEquilateral(
+					colorpicker_radius_triangle,
+					vertices_saturation[0].pos,
+					vertices_saturation[1].pos,
+					vertices_saturation[2].pos
+				);
 
 				// create alpha blended edge:
 				vertices_saturation.push_back(vertices_saturation[0]); // outer
@@ -481,7 +564,14 @@ namespace wi::gui
 				vertices_saturation.push_back(vertices_saturation[2]); // inner
 				vertices_saturation.push_back(vertices_saturation[0]); // outer
 				vertices_saturation.push_back(vertices_saturation[0]); // inner
-				wi::math::ConstructTriangleEquilateral(colorpicker_radius_triangle + 4, vertices_saturation[3].pos, vertices_saturation[5].pos, vertices_saturation[7].pos); // extrude outer
+
+				wi::math::ConstructTriangleEquilateral(
+					colorpicker_radius_triangle + 4,
+					vertices_saturation[3].pos,
+					vertices_saturation[5].pos,
+					vertices_saturation[7].pos
+				); // extrude outer
+
 				vertices_saturation[9].pos = vertices_saturation[3].pos; // last outer
 			}
 			// hue
@@ -489,39 +579,74 @@ namespace wi::gui
 				const float edge = 2.0f;
 				wi::vector<Vertex> vertices;
 				const uint32_t segment_count = 100;
+
 				// inner alpha blended edge
 				for (uint32_t i = 0; i <= segment_count; ++i)
 				{
-					const float p = float(i) / segment_count;
+					const float p = static_cast<float>(i) / segment_count;
 					const float t = p * XM_2PI;
 					const float x = cos(t);
 					const float y = -sin(t);
-					hsv source;
-					source.h = p * 360.0f;
-					source.s = 1;
-					source.v = 1;
+					const hsv source{
+						p * 360.0f, // h
+						1           // s
+						,1          // v
+					};
 					const rgb result = hsv2rgb(source);
-					const XMFLOAT4 color = XMFLOAT4(result.r, result.g, result.b, 1);
-					const XMFLOAT4 coloralpha = XMFLOAT4(result.r, result.g, result.b, 0);
-					vertices.push_back({ XMFLOAT4((colorpicker_radius - edge) * x, (colorpicker_radius - edge) * y, 0, 1), coloralpha });
-					vertices.push_back({ XMFLOAT4(colorpicker_radius * x, colorpicker_radius * y, 0, 1), color });
+					const XMFLOAT4 color = XMFLOAT4(
+						result.r,
+						result.g,
+						result.b, 1
+					);
+					const XMFLOAT4 coloralpha = XMFLOAT4(
+						result.r,
+						result.g,
+						result.b, 0
+					);
+
+					vertices.push_back({
+						XMFLOAT4((colorpicker_radius - edge) * x,
+						(colorpicker_radius - edge) * y, 0, 1),
+						coloralpha 
+					});
+					vertices.push_back({
+						XMFLOAT4(colorpicker_radius * x,
+						colorpicker_radius * y, 0, 1),
+						color
+					});
 				}
+
 				// middle hue
 				for (uint32_t i = 0; i <= segment_count; ++i)
 				{
-					const float p = float(i) / segment_count;
+					const float p = static_cast<float>(i) / segment_count;
 					const float t = p * XM_2PI;
 					const float x = cos(t);
 					const float y = -sin(t);
-					hsv source;
-					source.h = p * 360.0f;
-					source.s = 1;
-					source.v = 1;
+					hsv const source{
+						p * 360.0f, // h
+						1,          // s
+						1           // v
+					};
 					const rgb result = hsv2rgb(source);
-					const XMFLOAT4 color = XMFLOAT4(result.r, result.g, result.b, 1);
-					vertices.push_back({ XMFLOAT4(colorpicker_radius * x, colorpicker_radius * y, 0, 1), color });
-					vertices.push_back({ XMFLOAT4((colorpicker_radius + colorpicker_width) * x, (colorpicker_radius + colorpicker_width) * y, 0, 1), color });
+					const XMFLOAT4 color = XMFLOAT4(
+						result.r,
+						result.g,
+						result.b, 1
+					);
+
+					vertices.push_back({
+						XMFLOAT4(colorpicker_radius * x,
+							colorpicker_radius * y, 0, 1),
+							color
+					});
+					vertices.push_back({
+						XMFLOAT4((colorpicker_radius + colorpicker_width) * x,
+						(colorpicker_radius + colorpicker_width) * y, 0, 1),
+						color
+					});
 				}
+
 				// outer alpha blended edge
 				for (uint32_t i = 0; i <= segment_count; ++i)
 				{
@@ -529,94 +654,132 @@ namespace wi::gui
 					const float t = p * XM_2PI;
 					const float x = cos(t);
 					const float y = -sin(t);
-					hsv source;
-					source.h = p * 360.0f;
-					source.s = 1;
-					source.v = 1;
+					hsv source{
+						p * 360.0f, // h
+						1,          // s
+						1           // v
+					};
 					const rgb result = hsv2rgb(source);
-					const XMFLOAT4 color = XMFLOAT4(result.r, result.g, result.b, 1);
-					const XMFLOAT4 coloralpha = XMFLOAT4(result.r, result.g, result.b, 0);
-					vertices.push_back({ XMFLOAT4((colorpicker_radius + colorpicker_width) * x, (colorpicker_radius + colorpicker_width) * y, 0, 1), color });
-					vertices.push_back({ XMFLOAT4((colorpicker_radius + colorpicker_width + edge) * x, (colorpicker_radius + colorpicker_width + edge) * y, 0, 1), coloralpha });
+					const XMFLOAT4 color = XMFLOAT4(
+						result.r,
+						result.g,
+						result.b, 1
+					);
+					const XMFLOAT4 coloralpha = XMFLOAT4(
+						result.r,
+						result.g,
+						result.b, 0
+					);
+
+					vertices.push_back({
+						XMFLOAT4((colorpicker_radius + colorpicker_width) * x,
+						(colorpicker_radius + colorpicker_width) * y, 0, 1),
+						color
+					});
+					vertices.push_back({
+						XMFLOAT4((colorpicker_radius + colorpicker_width + edge) * x,
+						(colorpicker_radius + colorpicker_width + edge) * y, 0, 1),
+						coloralpha
+					});
 				}
 
 				GPUBufferDesc desc;
 				desc.bind_flags = BindFlag::VERTEX_BUFFER;
 				desc.size = vertices.size() * sizeof(Vertex);
 				desc.stride = 0;
+
 				device->CreateBuffer(&desc, vertices.data(), &vb_hue);
 			}
+
 			// saturation picker (small circle)
 			{
 				const float _radius = 3;
 				const float _width = 3;
 				wi::vector<Vertex> vertices;
 				const uint32_t segment_count = 100;
+
 				for (uint32_t i = 0; i <= segment_count; ++i)
 				{
-					const float p = float(i) / 100;
+					const float p = static_cast<float>(i) / 100;
 					const float t = p * XM_2PI;
 					const float x = cos(t);
 					const float y = -sin(t);
-					vertices.push_back({ XMFLOAT4(_radius * x, _radius * y, 0, 1), XMFLOAT4(1,1,1,1) });
-					vertices.push_back({ XMFLOAT4((_radius + _width) * x, (_radius + _width) * y, 0, 1), XMFLOAT4(1,1,1,1) });
+
+					vertices.push_back({
+						XMFLOAT4(_radius * x, _radius * y, 0, 1),
+						XMFLOAT4(1,1,1,1)
+					});
+					vertices.push_back({
+						XMFLOAT4((_radius + _width) * x, (_radius + _width) * y, 0, 1),
+						XMFLOAT4(1,1,1,1)
+					});
 				}
 
 				GPUBufferDesc desc;
 				desc.bind_flags = BindFlag::VERTEX_BUFFER;
 				desc.size = vertices.size() * sizeof(Vertex);
 				desc.stride = 0;
-				device->CreateBuffer(&desc, vertices.data(), &vb_picker_saturation);
+
+				device->CreateBuffer(
+					&desc,
+					vertices.data(),
+					&vb_picker_saturation
+				);
 			}
+
 			// hue picker (rectangle)
 			{
-				const float boldness = 4.0f;
+				const float boldness   = 4.0f;
 				const float halfheight = 8.0f;
+
 				Vertex vertices[] = {
 					// left side:
 					{ XMFLOAT4(colorpicker_radius - boldness, -halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
-					{ XMFLOAT4(colorpicker_radius, -halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
-					{ XMFLOAT4(colorpicker_radius - boldness, halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
-					{ XMFLOAT4(colorpicker_radius, halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
+					{ XMFLOAT4(colorpicker_radius,            -halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
+					{ XMFLOAT4(colorpicker_radius - boldness,  halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
+					{ XMFLOAT4(colorpicker_radius,             halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
 
 					// bottom side:
-					{ XMFLOAT4(colorpicker_radius - boldness, halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
-					{ XMFLOAT4(colorpicker_radius - boldness, halfheight - boldness, 0, 1),XMFLOAT4(1,1,1,1) },
-					{ XMFLOAT4(colorpicker_radius + colorpicker_width + boldness, halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
-					{ XMFLOAT4(colorpicker_radius + colorpicker_width + boldness, halfheight - boldness, 0, 1),XMFLOAT4(1,1,1,1) },
+					{ XMFLOAT4(colorpicker_radius - boldness,                     halfheight,            0, 1), XMFLOAT4(1,1,1,1) },
+					{ XMFLOAT4(colorpicker_radius - boldness,                     halfheight - boldness, 0, 1), XMFLOAT4(1,1,1,1) },
+					{ XMFLOAT4(colorpicker_radius + colorpicker_width + boldness, halfheight,            0, 1), XMFLOAT4(1,1,1,1) },
+					{ XMFLOAT4(colorpicker_radius + colorpicker_width + boldness, halfheight - boldness, 0, 1), XMFLOAT4(1,1,1,1) },
 
 					// right side:
-					{ XMFLOAT4(colorpicker_radius + colorpicker_width + boldness, halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
-					{ XMFLOAT4(colorpicker_radius + colorpicker_width, halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
-					{ XMFLOAT4(colorpicker_radius + colorpicker_width + boldness, -halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
-					{ XMFLOAT4(colorpicker_radius + colorpicker_width, -halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
+					{ XMFLOAT4(colorpicker_radius + colorpicker_width + boldness,   halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
+					{ XMFLOAT4(colorpicker_radius + colorpicker_width,              halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
+					{ XMFLOAT4(colorpicker_radius + colorpicker_width + boldness,  -halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
+					{ XMFLOAT4(colorpicker_radius + colorpicker_width,             -halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
 
 					// top side:
-					{ XMFLOAT4(colorpicker_radius + colorpicker_width + boldness, -halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
+					{ XMFLOAT4(colorpicker_radius + colorpicker_width + boldness, -halfheight,            0, 1),XMFLOAT4(1,1,1,1) },
 					{ XMFLOAT4(colorpicker_radius + colorpicker_width + boldness, -halfheight + boldness, 0, 1),XMFLOAT4(1,1,1,1) },
-					{ XMFLOAT4(colorpicker_radius - boldness, -halfheight, 0, 1),XMFLOAT4(1,1,1,1) },
-					{ XMFLOAT4(colorpicker_radius - boldness, -halfheight + boldness, 0, 1),XMFLOAT4(1,1,1,1) },
+					{ XMFLOAT4(colorpicker_radius - boldness,                     -halfheight,            0, 1),XMFLOAT4(1,1,1,1) },
+					{ XMFLOAT4(colorpicker_radius - boldness,                     -halfheight + boldness, 0, 1),XMFLOAT4(1,1,1,1) },
 				};
 
 				GPUBufferDesc desc;
 				desc.bind_flags = BindFlag::VERTEX_BUFFER;
 				desc.size = sizeof(vertices);
 				desc.stride = 0;
+
 				device->CreateBuffer(&desc, vertices, &vb_picker_hue);
 			}
 			// preview
 			{
 				const float _width = 50;
+
 				Vertex vertices[] = {
 					{ XMFLOAT4(-_width, _width, 0, 1),XMFLOAT4(1,1,1,1) },
-					{ XMFLOAT4(0, _width, 0, 1),XMFLOAT4(1,1,1,1) },
-					{ XMFLOAT4(-_width, 0, 0, 1),XMFLOAT4(1,1,1,1) },
-					{ XMFLOAT4(0, 0, 0, 1),XMFLOAT4(1,1,1,1) },
+					{ XMFLOAT4(0,       _width, 0, 1),XMFLOAT4(1,1,1,1) },
+					{ XMFLOAT4(-_width, 0,      0, 1),XMFLOAT4(1,1,1,1) },
+					{ XMFLOAT4(0,       0,      0, 1),XMFLOAT4(1,1,1,1) },
 				};
 
 				GPUBufferDesc desc;
 				desc.bind_flags = BindFlag::VERTEX_BUFFER;
 				desc.size = sizeof(vertices);
+
 				device->CreateBuffer(&desc, vertices, &vb_preview);
 			}
 
@@ -624,7 +787,6 @@ namespace wi::gui
 
 		const wi::Color final_color = GetPickColor();
 		const float angle = hue / 360.0f * XM_2PI;
-
 		const XMMATRIX Projection = canvas.GetProjection();
 
 		device->BindPipelineState(&gui_internal().PSO_colored, cmd);
@@ -635,27 +797,30 @@ namespace wi::gui
 
 		XMMATRIX const W =
 			XMMatrixScaling(sca, sca, 1) *
-			XMMatrixTranslation(translation.x + scale.x * 0.4f, translation.y + scale.y * 0.5f, 0)
-			;
+			XMMatrixTranslation(
+				translation.x + scale.x * 0.4f, 
+				translation.y + scale.y * 0.5f, 0
+			);
 
 		MiscCB cb;
 
 		// render saturation triangle
 		{
-			hsv source;
-			source.h = hue;
-			source.s = 1;
-			source.v = 1;
+			const hsv source{
+				hue, // h
+				1,   // s
+				1    // v
+			};
 			const rgb result = hsv2rgb(source);
-			vertices_saturation[0].col = XMFLOAT4(result.r, result.g, result.b, 1);
 
-			vertices_saturation[3].col = vertices_saturation[0].col; vertices_saturation[3].col.w = 0;
-			vertices_saturation[4].col = vertices_saturation[0].col;
-			vertices_saturation[5].col = vertices_saturation[1].col; vertices_saturation[5].col.w = 0;
-			vertices_saturation[6].col = vertices_saturation[1].col;
-			vertices_saturation[7].col = vertices_saturation[2].col; vertices_saturation[7].col.w = 0;
-			vertices_saturation[8].col = vertices_saturation[2].col;
-			vertices_saturation[9].col = vertices_saturation[0].col; vertices_saturation[9].col.w = 0;
+			vertices_saturation[0].col = XMFLOAT4(result.r, result.g, result.b, 1);
+			vertices_saturation[3].col  = vertices_saturation[0].col; vertices_saturation[3].col.w = 0;
+			vertices_saturation[4].col  = vertices_saturation[0].col;
+			vertices_saturation[5].col  = vertices_saturation[1].col; vertices_saturation[5].col.w = 0;
+			vertices_saturation[6].col  = vertices_saturation[1].col;
+			vertices_saturation[7].col  = vertices_saturation[2].col; vertices_saturation[7].col.w = 0;
+			vertices_saturation[8].col  = vertices_saturation[2].col;
+			vertices_saturation[9].col  = vertices_saturation[0].col; vertices_saturation[9].col.w = 0;
 			vertices_saturation[10].col = vertices_saturation[0].col;
 
 			const size_t alloc_size = sizeof(Vertex) * vertices_saturation.size();
@@ -669,6 +834,7 @@ namespace wi::gui
 			);
 			cb.g_xColor = IsEnabled() ? float4(1, 1, 1, 1) : float4(0.5f, 0.5f, 0.5f, 1);
 			device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
+
 			const GPUBuffer* const vbs[] = {
 				&vb_saturation.buffer,
 			};
@@ -678,8 +844,9 @@ namespace wi::gui
 			const uint64_t offsets[] = {
 				vb_saturation.offset,
 			};
+
 			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
-			device->Draw((uint32_t)vertices_saturation.size(), 0, cmd);
+			device->Draw(static_cast<uint32_t>(vertices_saturation.size()), 0, cmd);
 		}
 
 		// render hue circle
@@ -690,14 +857,16 @@ namespace wi::gui
 			);
 			cb.g_xColor = IsEnabled() ? float4(1, 1, 1, 1) : float4(0.5f, 0.5f, 0.5f, 1);
 			device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
+
 			const GPUBuffer* const vbs[] = {
 				&vb_hue,
 			};
 			const uint32_t strides[] = {
 				sizeof(Vertex),
 			};
+
 			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
-			device->Draw((uint32_t)(vb_hue.GetDesc().size / sizeof(Vertex)), 0, cmd);
+			device->Draw(static_cast<uint32_t>(vb_hue.GetDesc().size / sizeof(Vertex)), 0, cmd);
 		}
 
 		// render hue picker
@@ -709,41 +878,52 @@ namespace wi::gui
 				Projection
 			);
 
-			hsv source;
-			source.h = hue;
-			source.s = 1;
-			source.v = 1;
+			const hsv source{
+				hue, // h
+				1,   // s
+				1    // v
+			};
 			const rgb result = hsv2rgb(source);
+
 			cb.g_xColor = float4(1 - result.r, 1 - result.g, 1 - result.b, 1);
 
 			device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
+
 			const GPUBuffer* const vbs[] = {
 				&vb_picker_hue,
 			};
 			const uint32_t strides[] = {
 				sizeof(Vertex),
 			};
+
 			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
-			device->Draw((uint32_t)(vb_picker_hue.GetDesc().size / sizeof(Vertex)), 0, cmd);
+			device->Draw(static_cast<uint32_t>(vb_picker_hue.GetDesc().size / sizeof(Vertex)), 0, cmd);
 		}
 
 		// render saturation picker
 		if (IsEnabled())
 		{
-			XMFLOAT4 A, B, C;
+			XMFLOAT4 A{};
+			XMFLOAT4 B{};
+			XMFLOAT4 C{};
+
 			wi::math::ConstructTriangleEquilateral(colorpicker_radius_triangle, A, B, C);
 			XMVECTOR _A = XMLoadFloat4(&A);
 			XMVECTOR _B = XMLoadFloat4(&B);
 			XMVECTOR _C = XMLoadFloat4(&C);
-			const XMMATRIX _triTransform = XMMatrixRotationZ(-hue / 360.0f * XM_2PI);
+
+			const XMMATRIX _triTransform
+				= XMMatrixRotationZ(-hue / 360.0f * XM_2PI);
+
 			_A = XMVector4Transform(_A, _triTransform);
 			_B = XMVector4Transform(_B, _triTransform);
 			_C = XMVector4Transform(_C, _triTransform);
 
-			hsv source;
-			source.h = hue;
-			source.s = 1;
-			source.v = 1;
+			hsv source{
+				hue, // h
+				1,   // s
+				1    // v
+			};
 			rgb result = hsv2rgb(source);
 
 			const XMVECTOR color_corner = XMVectorSet(result.r, result.g, result.b, 1);
@@ -754,10 +934,22 @@ namespace wi::gui
 			source.s = saturation;
 			source.v = luminance;
 			result = hsv2rgb(source);
+
 			const XMVECTOR inner_point = XMVectorSet(result.r, result.g, result.b, 1);
 
-			float u, v, w;
-			wi::math::GetBarycentric(inner_point, color_corner, white_corner, black_corner, u, v, w, true);
+			float u;
+			float v;
+			float w;
+			wi::math::GetBarycentric(
+				inner_point,
+				color_corner,
+				white_corner,
+				black_corner,
+				u,
+				v,
+				w,
+				true
+			);
 
 			const XMVECTOR picker_center = u * _A + v * _B + w * _C;
 
@@ -766,16 +958,29 @@ namespace wi::gui
 				W *
 				Projection
 			);
-			cb.g_xColor = float4(1 - final_color.toFloat3().x, 1 - final_color.toFloat3().y, 1 - final_color.toFloat3().z, 1);
+	
+			cb.g_xColor = float4(
+				1 - final_color.toFloat3().x,
+				1 - final_color.toFloat3().y,
+				1 - final_color.toFloat3().z,
+				1
+			);
+
 			device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
+
 			const GPUBuffer* const vbs[] = {
 				&vb_picker_saturation,
 			};
 			const uint32_t strides[] = {
 				sizeof(Vertex),
 			};
+
 			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
-			device->Draw((uint32_t)(vb_picker_saturation.GetDesc().size / sizeof(Vertex)), 0, cmd);
+			device->Draw(
+				static_cast<uint32_t>(vb_picker_saturation.GetDesc().size / sizeof(Vertex)),
+				0,
+				cmd
+			);
 		}
 
 		// render preview
@@ -786,42 +991,65 @@ namespace wi::gui
 			);
 			cb.g_xColor = final_color.toFloat4();
 			device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
+
 			const GPUBuffer* const vbs[] = {
 				&vb_preview,
 			};
 			const uint32_t strides[] = {
 				sizeof(Vertex),
 			};
+
 			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
-			device->Draw((uint32_t)(vb_preview.GetDesc().size / sizeof(Vertex)), 0, cmd);
+			device->Draw(
+				static_cast<uint32_t>(vb_preview.GetDesc().size / sizeof(Vertex)),
+				0,
+				cmd
+			);
 		}
 	}
+
 	void ColorPicker::ResizeLayout()
 	{
 		wi::gui::Window::ResizeLayout();
+
 		const float padding = 4;
 		const float width = GetWidgetAreaSize().x;
 		float y = GetWidgetAreaSize().y - control_size;
 		const float jump = 20;
 
 		auto add = [&](wi::gui::Widget& widget) {
-			if (!widget.IsVisible())
+			if (!widget.IsVisible()) {
 				return;
-			const float margin_left = 20;
+			}
+
+			const float margin_left  = 20;
 			const float margin_right = 80;
+
 			y -= widget.GetSize().y;
 			y -= padding;
+
 			widget.SetPos(XMFLOAT2(margin_left, y));
-			widget.SetSize(XMFLOAT2(width - margin_left - margin_right, widget.GetSize().y));
-			};
+			widget.SetSize(XMFLOAT2(
+				width - margin_left - margin_right,
+				widget.GetSize().y)
+			);
+		};
+
 		auto add_right = [&](wi::gui::Widget& widget) {
-			if (!widget.IsVisible())
+			if (!widget.IsVisible()){
 				return;
+			}
+
 			const float margin_right = padding;
+
 			y -= widget.GetSize().y;
 			y -= padding;
-			widget.SetPos(XMFLOAT2(width - margin_right - widget.GetSize().x, y));
-			};
+
+			widget.SetPos(XMFLOAT2(
+				width - margin_right - widget.GetSize().x,
+				y)
+			);
+		};
 
 		add(alphaSlider);
 		y += alphaSlider.GetSize().y;
@@ -840,6 +1068,7 @@ namespace wi::gui
 		y = control_size + 4;
 		add_right(text_hex);
 	}
+
 	void ColorPicker::SetColor(const wi::Color color, const int id)
 	{
 		Window::SetColor(color, id);
@@ -849,6 +1078,7 @@ namespace wi::gui
 			sprites[IDLE].params.color = color;
 		}
 	}
+
 	void ColorPicker::SetImage(wi::Resource resource, const int id)
 	{
 		Window::SetImage(resource, id);
@@ -858,46 +1088,69 @@ namespace wi::gui
 			sprites[IDLE].textureResource = resource;
 		}
 	}
+
 	wi::Color ColorPicker::GetPickColor() const noexcept
 	{
-		hsv source;
-		source.h = hue;
-		source.s = saturation;
-		source.v = luminance;
+		const hsv source{
+			hue,        // h
+			saturation, // s
+			luminance   // v
+		};
 		const rgb result = hsv2rgb(source);
-		return wi::Color::fromFloat4(XMFLOAT4(result.r, result.g, result.b, alphaSlider.GetValue() / 255.0f));
+
+		return wi::Color::fromFloat4(XMFLOAT4(
+			result.r,
+			result.g,
+			result.b,
+			alphaSlider.GetValue() / 255.0f)
+		);
 	}
+
 	void ColorPicker::SetPickColor(const wi::Color value)
 	{
 		if (colorpickerstate != CPS_IDLE)
 		{
-			// Only allow setting the pick color when picking is not active, the RGB and HSV precision combat each other
+			// Only allow setting the pick color when picking is not active, the
+			// RGB and HSV precision combat each other.
 			return;
 		}
 
-		rgb source;
-		source.r = value.toFloat3().x;
-		source.g = value.toFloat3().y;
-		source.b = value.toFloat3().z;
+		const rgb source{
+			value.toFloat3().x, // r
+			value.toFloat3().y, // g
+			value.toFloat3().z  // b
+		};
 		const hsv result = rgb2hsv(source);
-		if (value.getR() != value.getG() || value.getG() != value.getB() || value.getR() != value.getB())
-		{
-			hue = result.h; // only change the hue when not pure greyscale because those don't retain the saturation value
+
+		if (value.getR() != value.getG()
+		 || value.getG() != value.getB()
+		 || value.getR() != value.getB()
+		) {
+			// Only change the hue when not pure grayscale because those don't
+			// retain the saturation value.
+			hue = result.h;
 		}
+
 		saturation = result.s;
-		luminance = result.v;
-		alphaSlider.SetValue((float)value.getA());
+		luminance  = result.v;
+
+		alphaSlider.SetValue(static_cast<float>(value.getA()));
 	}
+
 	void ColorPicker::FireEvents()
 	{
-		if (onColorChanged == nullptr)
+		if (onColorChanged == nullptr) {
 			return;
+		}
+
 		EventArgs args = {};
 		args.color = GetPickColor();
 		onColorChanged(args);
 	}
-	void ColorPicker::OnColorChanged(std::function<void(const EventArgs& args)> func)
-	{
+
+	void ColorPicker::OnColorChanged(
+		std::function<void(const EventArgs& args)> func
+	) {
 		onColorChanged = std::move(func);
 	}
 }

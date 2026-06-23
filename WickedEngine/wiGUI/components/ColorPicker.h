@@ -9,9 +9,18 @@
  * slider.
  */
 
-#include "wiGUI/components/Window.h"
-#include "wiGUI/components/TextInputField.h"
+#include <functional>
+#include <string>
+
+#include <wiCanvas.h>
+#include <wiColor.h>
+#include <wiGraphicsDevice.h>
+#include <wiGUI/GUICommon.h>
+#include <wiResourceManager.h>
+
 #include "wiGUI/components/Slider.h"
+#include "wiGUI/components/TextInputField.h"
+#include "wiGUI/components/Window.h"
 
 namespace wi::gui
 {
