@@ -12,21 +12,18 @@
  * - @ref wi::gui::Theme — a reusable styling descriptor for widgets.
  */
 
-#include "CommonInclude.h"
-#include "wiGraphicsDevice.h"
-#include "wiPrimitive.h"
-#include "wiCanvas.h"
-#include "wiVector.h"
-#include "wiColor.h"
-#include "wiScene.h"
-#include "wiSprite.h"
-#include "wiSpriteFont.h"
-#include "wiLocalization.h"
-
 #include <cstdint>
 #include <cstring>
 #include <string>
-#include <functional>
+#include <type_traits>
+
+#include <Utility/DirectXMath/DirectXMath.h>
+#include "CommonInclude.h"
+
+#include "wiColor.h"
+#include <wiEnums.h>
+#include <wiFont.h>
+#include <wiImage.h>
 
 namespace wi::gui
 {
@@ -114,9 +111,9 @@ namespace wi::gui
 	enum WIDGET_ID
 	{
 		// IDs for normal widget states:
-		WIDGET_ID_IDLE = IDLE,
-		WIDGET_ID_FOCUS = FOCUS,
-		WIDGET_ID_ACTIVE = ACTIVE,
+		WIDGET_ID_IDLE         = IDLE,
+		WIDGET_ID_FOCUS        = FOCUS,
+		WIDGET_ID_ACTIVE       = ACTIVE,
 		WIDGET_ID_DEACTIVATING = DEACTIVATING,
 
 		// IDs for special widget states:
@@ -259,10 +256,10 @@ namespace wi::gui
 			 */
 			void Apply(wi::image::Params& params) const noexcept
 			{
-				params.color = color;
-				params.blendFlag = blendFlag;
+				params.color      = color;
+				params.blendFlag  = blendFlag;
 				params.sampleFlag = sampleFlag;
-				params.quality = quality;
+				params.quality    = quality;
 
 				if (background)
 				{
@@ -272,6 +269,7 @@ namespace wi::gui
 				{
 					params.disableBackground();
 				}
+
 				if (corner_rounding)
 				{
 					params.enableCornerRounding();
@@ -280,6 +278,7 @@ namespace wi::gui
 				{
 					params.disableCornerRounding();
 				}
+
 				if (highlight)
 				{
 					params.enableHighlight();
@@ -289,8 +288,9 @@ namespace wi::gui
 					params.disableHighlight();
 				}
 
-				params.highlight_color = highlight_color;
+				params.highlight_color  = highlight_color;
 				params.highlight_spread = highlight_spread;
+
 				std::memcpy(
 					params.corners_rounding,
 					corners_rounding,
@@ -305,15 +305,16 @@ namespace wi::gui
 			 */
 			void CopyFrom(const wi::image::Params& params) noexcept
 			{
-				color = params.color;
-				blendFlag = params.blendFlag;
-				sampleFlag = params.sampleFlag;
-				quality = params.quality;
-				background = params.isBackgroundEnabled();
-				corner_rounding = params.isCornerRoundingEnabled();
-				highlight = params.isHighlightEnabled();
-				highlight_color = params.highlight_color;
+				color            = params.color;
+				blendFlag        = params.blendFlag;
+				sampleFlag       = params.sampleFlag;
+				quality          = params.quality;
+				background       = params.isBackgroundEnabled();
+				corner_rounding  = params.isCornerRoundingEnabled();
+				highlight        = params.isHighlightEnabled();
+				highlight_color  = params.highlight_color;
 				highlight_spread = params.highlight_spread;
+
 				std::memcpy(
 					corners_rounding,
 					params.corners_rounding,
@@ -368,13 +369,13 @@ namespace wi::gui
 			 */
 			void Apply(wi::font::Params& params) const noexcept
 			{
-				params.color = color;
-				params.shadowColor = shadow_color;
-				params.style = style;
-				params.softness = softness;
-				params.bolden = bolden;
+				params.color           = color;
+				params.shadowColor     = shadow_color;
+				params.style           = style;
+				params.softness        = softness;
+				params.bolden          = bolden;
 				params.shadow_softness = shadow_softness;
-				params.shadow_bolden = shadow_bolden;
+				params.shadow_bolden   = shadow_bolden;
 				params.shadow_offset_x = shadow_offset_x;
 				params.shadow_offset_y = shadow_offset_y;
 			}
@@ -386,13 +387,13 @@ namespace wi::gui
 			 */
 			void CopyFrom(const wi::font::Params& params) noexcept
 			{
-				color = params.color;
-				shadow_color = params.shadowColor;
-				style = params.style;
-				softness = params.softness;
-				bolden = params.bolden;
+				color           = params.color;
+				shadow_color    = params.shadowColor;
+				style           = params.style;
+				softness        = params.softness;
+				bolden          = params.bolden;
 				shadow_softness = params.shadow_softness;
-				shadow_bolden = params.shadow_bolden;
+				shadow_bolden   = params.shadow_bolden;
 				shadow_offset_x = params.shadow_offset_x;
 				shadow_offset_y = params.shadow_offset_y;
 			}
