@@ -17,7 +17,7 @@ float4 main(PSIn input) : SV_TARGET
 {
 #ifdef SHADOWMAPRENDERING
 	float4 color = 1;
-	color.rgb += texture_caustics.SampleLevel(sampler_linear_mirror, input.uv, 0).rgb;
+	color.rgb += caustics(input.uv * 10);
 	color.a = input.pos.z; // secondary depth
 	return color;
 #else

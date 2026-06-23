@@ -779,7 +779,6 @@ struct PrimitiveID
 #define texture_cameravolumelut bindless_textures3D_half4[descriptor_index(GetFrame().texture_cameravolumelut_index)]
 #define texture_wind bindless_textures3D[descriptor_index(GetFrame().texture_wind_index)]
 #define texture_wind_prev bindless_textures3D[descriptor_index(GetFrame().texture_wind_prev_index)]
-#define texture_caustics bindless_textures_half4[descriptor_index(GetFrame().texture_caustics_index)]
 #define scene_acceleration_structure bindless_accelerationstructures[descriptor_index(GetScene().TLAS)]
 
 #define texture_depth bindless_textures_float[descriptor_index(GetCamera().texture_depth_index)]
@@ -1529,6 +1528,16 @@ inline float caustic_pattern(float2 uv, float time)
 	float3 b = mul(a, m) * 0.4;
 	float3 c = mul(b, m) * 0.3;
 	return pow(min(min(length(0.5 - frac(a)), length(0.5 - frac(b))), length(0.5 - frac(c))), 7) * 25.;
+}
+inline float3 caustics(float2 uv)
+{
+	const float time = GetTime();
+	const float2 chromatic_offset = 1.0 / 256.0 * 8; // tweaked to old caustic shader that ran at 256x256 res
+	return float3(
+		caustic_pattern(uv + float2(0, 0), time),
+		caustic_pattern(uv + float2(chromatic_offset.x, 0), time),
+		caustic_pattern(uv + float2(0, chromatic_offset.y), time)
+	);
 }
 
 // Convert texture coordinates on a cubemap face to cubemap sampling coordinates:

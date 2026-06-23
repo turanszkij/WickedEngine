@@ -2,7 +2,6 @@
 #define WI_OBJECTSHADER_HF
 
 #ifdef TRANSPARENT
-#define TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
 #else
 #define SHADOW_MASK_ENABLED
 #endif // TRANSPARENT
@@ -834,21 +833,6 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 #endif // OBJECTSHADER_USE_UVSETS
 
 
-#ifndef PREPASS
-#ifndef ENVMAPRENDERING
-#ifndef TRANSPARENT
-#ifndef CARTOON
-	[branch]
-	if (camera.texture_ao_index >= 0)
-	{
-		surface.occlusion *= bindless_textures_half4[descriptor_index(camera.texture_ao_index)].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).r;
-	}
-#endif // CARTOON
-#endif // TRANSPARENT
-#endif // ENVMAPRENDERING
-#endif // PREPASS
-
-
 #ifdef ANISOTROPIC
 	surface.aniso.strength = material.GetAnisotropy();
 	surface.aniso.direction = half2(material.GetAnisotropyCos(), material.GetAnisotropySin());
@@ -1055,6 +1039,11 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 	if (camera.texture_ssgi_index >= 0)
 	{
 		surface.ssgi = bindless_textures_half4[descriptor_index(camera.texture_ssgi_index)].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).rgb;
+	}
+	[branch]
+	if (camera.texture_ao_index >= 0)
+	{
+		surface.occlusion *= bindless_textures_half4[descriptor_index(camera.texture_ao_index)].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).r;
 	}
 #endif // CARTOON
 #endif // TRANSPARENT

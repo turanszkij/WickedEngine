@@ -62,7 +62,7 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 			bucket_bits ^= 1u << bucket_bit_index;
 
 			const uint entity_index = probes().first_item() + bucket_bit_index;
-			ShaderEntity probe = load_entity(probes().first_item() + entity_index);
+			ShaderEntity probe = load_entity(entity_index);
 				
 			float3x4 probeProjection = load_entitymatrix(entity_index); // note: straight entity-matrix mapping ok
 			TextureCube<half4> cubemap = bindless_cubemaps_half4[descriptor_index(probe.GetTextureIndex())];
@@ -118,15 +118,11 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 		while (bucket_bits != 0)
 		{
 			// Retrieve global entity index from local bucket, then remove bit from local bucket:
-			const uint entity_index = firstbitlow64(bucket_bits);
-			bucket_bits ^= 1u << entity_index;
+			const uint bucket_bit_index = firstbitlow64(bucket_bits);
+			bucket_bits ^= 1u << bucket_bit_index;
 
-			ShaderEntity light = load_entity(lights().first_item() + entity_index);
-				
-#ifndef INCLUDE_STATIC_LIGHTS
-			if (light.IsStaticLight())
-				continue; // static lights will be skipped here (they are used at lightmap baking)
-#endif // INCLUDE_STATIC_LIGHTS
+			const uint entity_index = lights().first_item() + bucket_bit_index;
+			ShaderEntity light = load_entity(entity_index);
 					
 			switch (light.GetType())
 			{
@@ -298,9 +294,9 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 			{
 				// Retrieve global entity index from local bucket, then remove bit from local bucket:
 				const uint bucket_bit_index = firstbitlow(bucket_bits);
-				const uint entity_index = bucket * 32 + bucket_bit_index;
 				bucket_bits ^= 1u << bucket_bit_index;
 				
+				const uint entity_index = bucket * 32 + bucket_bit_index;
 				ShaderEntity probe = load_entity(entity_index);
 
 				float3x4 probeProjection = load_entitymatrix(entity_index); // note: straight entity-matrix mapping ok
@@ -392,11 +388,6 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 		{
 			ShaderEntity light = load_entity(entity_index);
 
-#ifndef INCLUDE_STATIC_LIGHTS
-			if (light.IsStaticLight())
-				continue; // static lights will be skipped here (they are used at lightmap baking)
-#endif // INCLUDE_STATIC_LIGHTS
-
 			half shadow_mask = 1;
 #if defined(SHADOW_MASK_ENABLED) && !defined(TRANSPARENT)
 			[branch]
@@ -432,9 +423,9 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 			{
 				// Retrieve global entity index from local bucket, then remove bit from local bucket:
 				const uint bucket_bit_index = firstbitlow(bucket_bits);
-				const uint entity_index = bucket * 32 + bucket_bit_index;
 				bucket_bits ^= 1u << bucket_bit_index;
 				
+				const uint entity_index = bucket * 32 + bucket_bit_index;
 				ShaderEntity light = load_entity(entity_index);
 
 				half shadow_mask = 1;
@@ -474,9 +465,9 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 			{
 				// Retrieve global entity index from local bucket, then remove bit from local bucket:
 				const uint bucket_bit_index = firstbitlow(bucket_bits);
-				const uint entity_index = bucket * 32 + bucket_bit_index;
 				bucket_bits ^= 1u << bucket_bit_index;
 				
+				const uint entity_index = bucket * 32 + bucket_bit_index;
 				ShaderEntity light = load_entity(entity_index);
 
 				half shadow_mask = 1;
@@ -516,9 +507,9 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 			{
 				// Retrieve global entity index from local bucket, then remove bit from local bucket:
 				const uint bucket_bit_index = firstbitlow(bucket_bits);
-				const uint entity_index = bucket * 32 + bucket_bit_index;
 				bucket_bits ^= 1u << bucket_bit_index;
 				
+				const uint entity_index = bucket * 32 + bucket_bit_index;
 				ShaderEntity light = load_entity(entity_index);
 
 				half shadow_mask = 1;
@@ -564,9 +555,9 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 			{
 				// Retrieve global entity index from local bucket, then remove bit from local bucket:
 				const uint bucket_bit_index = firstbitlow(bucket_bits);
-				const uint entity_index = bucket * 32 + bucket_bit_index;
 				bucket_bits ^= 1u << bucket_bit_index;
 				
+				const uint entity_index = bucket * 32 + bucket_bit_index;
 				ShaderEntity entity = load_entity(entity_index);
 				if ((entity.GetFlags() & ENTITY_FLAG_CAPSULE_SHADOW_COLLIDER) == 0)
 					continue;
