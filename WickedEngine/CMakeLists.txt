@@ -83,8 +83,8 @@ set_target_properties(Jolt PROPERTIES
 )
 add_compile_definitions(Jolt JPH_DEBUG_RENDERER)
 
-file(GLOB HEADER_FILES CONFIGURE_DEPENDS *.h)
-file(GLOB SOURCE_FILES CONFIGURE_DEPENDS *.cpp)
+file(GLOB HEADER_FILES CONFIGURE_DEPENDS *.h wiGUI/*.h wiGUI/components/*.h)
+file(GLOB SOURCE_FILES CONFIGURE_DEPENDS *.cpp wiGUI/*.cpp wiGUI/components/*.cpp)
 list(REMOVE_ITEM SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/offlineshadercompiler.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/wiRenderer.cpp
