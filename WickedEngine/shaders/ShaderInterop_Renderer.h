@@ -1548,10 +1548,10 @@ CBUFFER(MiscCB, CBSLOT_RENDERER_MISC)
 
 CBUFFER(ForwardEntityMaskCB, CBSLOT_RENDERER_FORWARD_LIGHTMASK)
 {
-	uint xForwardLightMask;		// supports indexing 32 lights
-	uint xForwardDecalMask;		// supports indexing 32 decals
-	uint xForwardEnvProbeMask;	// supports indexing 32 environment probes
-	uint xForwardEntityMaskPadding;
+	uint xForwardDecalAndProbeMask;	// 24 decals, 8 probes
+	uint xForwardSpotLightMask;		// 32 lights
+	uint xForwardPointLightMask;	// 32 lights
+	uint xForwardRectLightMask;		// 32 lights
 };
 
 CBUFFER(VolumeLightCB, CBSLOT_RENDERER_VOLUMELIGHT)

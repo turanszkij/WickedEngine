@@ -3104,37 +3104,46 @@ ForwardEntityMaskCB ForwardEntityCullingCPU(const Visibility& vis, const AABB& b
 
 	ForwardEntityMaskCB cb = {};
 
-	for (size_t i = 0; i < std::min(size_t(32), vis.visibleLights.size()); ++i) // only support indexing 32 lights at max in this mode
-	{
-		const uint32_t lightIndex = vis.visibleLights[i];
-		const AABB& light_aabb = vis.scene->aabb_lights[lightIndex];
-		if (light_aabb.intersects(batch_aabb))
-		{
-			const uint32_t bucket_index = uint32_t(i / 32);
-			const uint32_t bucket_place = uint32_t(i % 32);
-			cb.xForwardLightMask |= uint32_t(1) << bucket_place;
-		}
-	}
-
-	for (size_t i = 0; i < std::min(size_t(32), vis.visibleDecals.size()); ++i)
+	for (size_t i = 0; i < std::min(size_t(24), vis.visibleDecals.size()); ++i)
 	{
 		const uint32_t decalIndex = vis.visibleDecals[vis.visibleDecals.size() - 1 - i]; // note: reverse order, for correct blending!
 		const AABB& decal_aabb = vis.scene->aabb_decals[decalIndex];
 		if (decal_aabb.intersects(batch_aabb))
 		{
-			const uint32_t bucket_place = uint32_t(i % 32);
-			cb.xForwardDecalMask |= uint32_t(1) << bucket_place;
+			cb.xForwardDecalAndProbeMask |= uint32_t(1) << i;
 		}
 	}
 
-	for (size_t i = 0; i < std::min(size_t(32), vis.visibleEnvProbes.size()); ++i)
+	for (size_t i = 0; i < std::min(size_t(8), vis.visibleEnvProbes.size()); ++i)
 	{
 		const uint32_t probeIndex = vis.visibleEnvProbes[vis.visibleEnvProbes.size() - 1 - i]; // note: reverse order, for correct blending!
 		const AABB& probe_aabb = vis.scene->aabb_probes[probeIndex];
 		if (probe_aabb.intersects(batch_aabb))
 		{
-			const uint32_t bucket_place = uint32_t(i % 32);
-			cb.xForwardEnvProbeMask |= uint32_t(1) << bucket_place;
+			cb.xForwardDecalAndProbeMask |= uint32_t(1) << (i + 24u);
+		}
+	}
+
+	for (size_t i = 0; i < std::min(size_t(32), vis.visibleLights.size()); ++i) // only support indexing 32 lights at max in this mode
+	{
+		const uint32_t lightIndex = vis.visibleLights[i];
+		const AABB& light_aabb = vis.scene->aabb_lights[lightIndex];
+		if (light_aabb.intersects(batch_aabb) && !vis.scene->lights[lightIndex].IsStatic())
+		{
+			switch (vis.scene->lights[lightIndex].GetType())
+			{
+			case LightComponent::SPOT:
+				cb.xForwardSpotLightMask |= uint32_t(1) << i;
+				break;
+			case LightComponent::POINT:
+				cb.xForwardPointLightMask |= uint32_t(1) << i;
+				break;
+			case LightComponent::RECTANGLE:
+				cb.xForwardRectLightMask |= uint32_t(1) << i;
+				break;
+			default:
+				break;
+			}
 		}
 	}
 

@@ -50,9 +50,9 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 
 #ifndef DISABLE_LOCALENVPMAPS
 	[branch]
-	if (xForwardEnvProbeMask != 0)
+	if (xForwardDecalAndProbeMask != 0)
 	{
-		uint bucket_bits = xForwardEnvProbeMask;
+		uint bucket_bits = xForwardDecalAndProbeMask >> 24u;
 
 		[loop]
 		while (WaveActiveAnyTrue(bucket_bits != 0 && envmapAccumulation.a < 0.99))
@@ -110,46 +110,62 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 	}
 
 	[branch]
-	if (xForwardLightMask != 0)
+	if (!directional_lights().empty())
 	{
-		// Loop through light buckets for the draw call:
-		uint32_t bucket_bits = xForwardLightMask;
-
-		while (bucket_bits != 0)
+		ShaderEntityIterator iterator = directional_lights();
+		for (uint entity_index = iterator.first_item(); entity_index < iterator.end_item(); ++entity_index)
 		{
-			// Retrieve global entity index from local bucket, then remove bit from local bucket:
+			ShaderEntity light = load_entity(entity_index);
+			if (light.IsStaticLight())
+				continue;
+			light_directional(light, surface, lighting);
+		}
+	}
+
+	const uint lights_begin = lights().first_item();
+
+	[branch]
+	if (!spotlights().empty())
+	{
+		uint bucket_bits = xForwardSpotLightMask;
+		while (bucket_bits)
+		{
 			const uint bucket_bit_index = firstbitlow(bucket_bits);
 			bucket_bits ^= 1u << bucket_bit_index;
 
-			const uint entity_index = lights().first_item() + bucket_bit_index;
+			const uint entity_index = lights_begin + bucket_bit_index;
 			ShaderEntity light = load_entity(entity_index);
+			light_spot(light, surface, lighting);
+		}
+	}
 
-			if (light.IsStaticLight())
-				continue;
-					
-			switch (light.GetType())
-			{
-			case ENTITY_TYPE_DIRECTIONALLIGHT:
-			{
-				light_directional(light, surface, lighting);
-			}
-			break;
-			case ENTITY_TYPE_POINTLIGHT:
-			{
-				light_point(light, surface, lighting);
-			}
-			break;
-			case ENTITY_TYPE_SPOTLIGHT:
-			{
-				light_spot(light, surface, lighting);
-			}
-			break;
-			case ENTITY_TYPE_RECTLIGHT:
-			{
-				light_rect(light, surface, lighting);
-			}
-			break;
-			}
+	[branch]
+	if (!pointlights().empty())
+	{
+		uint bucket_bits = xForwardPointLightMask;
+		while (bucket_bits)
+		{
+			const uint bucket_bit_index = firstbitlow(bucket_bits);
+			bucket_bits ^= 1u << bucket_bit_index;
+
+			const uint entity_index = lights_begin + bucket_bit_index;
+			ShaderEntity light = load_entity(entity_index);
+			light_point(light, surface, lighting);
+		}
+	}
+
+	[branch]
+	if (!rectlights().empty())
+	{
+		uint bucket_bits = xForwardRectLightMask;
+		while (bucket_bits)
+		{
+			const uint bucket_bit_index = firstbitlow(bucket_bits);
+			bucket_bits ^= 1u << bucket_bit_index;
+
+			const uint entity_index = lights_begin + bucket_bit_index;
+			ShaderEntity light = load_entity(entity_index);
+			light_rect(light, surface, lighting);
 		}
 	}
 
@@ -158,8 +174,10 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 inline void ForwardDecals(inout Surface surface, inout half4 surfaceMap, SamplerState sam)
 {
 #ifndef DISABLE_DECALS
+	uint bucket_bits = xForwardDecalAndProbeMask & 0xFFFFFF;
+
 	[branch]
-	if (xForwardDecalMask == 0)
+	if (bucket_bits == 0)
 		return;
 
 	// decals are enabled, loop through them first:
@@ -170,7 +188,6 @@ inline void ForwardDecals(inout Surface surface, inout half4 surfaceMap, Sampler
 	const float3 P_dx = ddx_coarse(surface.P);
 	const float3 P_dy = ddy_coarse(surface.P);
 
-	uint bucket_bits = xForwardDecalMask;
 
 	[loop]
 	while (WaveActiveAnyTrue(bucket_bits != 0 && decalAccumulation.a < 1 && decalBumpAccumulation.a < 1 && decalSurfaceAccumulationAlpha < 1))
