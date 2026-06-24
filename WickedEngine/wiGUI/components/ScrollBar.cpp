@@ -3,24 +3,23 @@
  * Implementation of the @ref wi::gui::ScrollBar widget.
  */
 
-#include "wiGUI/components/ScrollBar.h"
-#include "wiGUI/GUIInternal.h"
+#include <algorithm>
 
+#include <CommonInclude.h>
+#include <Utility/DirectXMath/DirectXMath.h>
+
+#include <wiCanvas.h>
+#include <wiColor.h>
+#include <wiGraphicsDevice.h>
+#include <wiGUI/GUICommon.h>
+#include <wiGUI/Widget.h>
+#include <wiMath.h>
+
+#include "wiImage.h"
 #include "wiInput.h"
 #include "wiPrimitive.h"
-#include "wiProfiler.h"
-#include "wiRenderer.h"
-#include "wiTimer.h"
-#include "wiEventHandler.h"
-#include "wiFont.h"
-#include "wiImage.h"
-#include "wiTextureHelper.h"
-#include "wiBacklog.h"
-#include "wiHelper.h"
 
-#include <sstream>
-#include <iomanip> // setprecision
-#include <utility>
+#include "wiGUI/components/ScrollBar.h"
 
 using namespace wi::graphics;
 using namespace wi::primitive;
@@ -86,14 +85,16 @@ namespace wi::gui
 			}
 
 			bool clicked = false;
-			if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanning())
-			{
+			if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT)
+			  || wi::input::IsTouchPanning()
+			) {
 				clicked = true;
 			}
 
 			bool click_down = false;
-			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanning())
-			{
+			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT)
+			  || wi::input::IsTouchPanning()
+			) {
 				click_down = true;
 
 				if (state == FOCUS || state == DEACTIVATING)
@@ -128,6 +129,7 @@ namespace wi::gui
 			if (scrollbar_state == SCROLLBAR_GRABBED)
 			{
 				Activate();
+
 				if (vertical)
 				{
 					scrollbar_delta = grab_delta + pointerHitbox.pos.y - grab_pos.y;
@@ -158,22 +160,22 @@ namespace wi::gui
 
 		if (vertical)
 		{
-			for (int i = 0; i < arraysize(sprites_knob); ++i)
+			for (auto & sprite_knob : sprites_knob)
 			{
-				sprites_knob[i].params.pos.x = translation.x + knob_inset_border.x;
-				sprites_knob[i].params.pos.y = translation.y + knob_inset_border.y + scrollbar_delta;
-				sprites_knob[i].params.siz.x = std::max(0.0f, scale.x - knob_inset_border.x * 2);
-				sprites_knob[i].params.siz.y = std::max(0.0f, scrollbar_length - knob_inset_border.y * 2);
+				sprite_knob.params.pos.x = translation.x + knob_inset_border.x;
+				sprite_knob.params.pos.y = translation.y + knob_inset_border.y + scrollbar_delta;
+				sprite_knob.params.siz.x = std::max(0.0f, scale.x - knob_inset_border.x * 2);
+				sprite_knob.params.siz.y = std::max(0.0f, scrollbar_length - knob_inset_border.y * 2);
 			}
 		}
 		else
 		{
-			for (int i = 0; i < arraysize(sprites_knob); ++i)
+			for (auto & sprite_knob : sprites_knob)
 			{
-				sprites_knob[i].params.pos.x = translation.x + knob_inset_border.x + scrollbar_delta;
-				sprites_knob[i].params.pos.y = translation.y + knob_inset_border.y;
-				sprites_knob[i].params.siz.x = std::max(0.0f, scrollbar_length - knob_inset_border.x * 2);
-				sprites_knob[i].params.siz.y = std::max(0.0f, scale.y - knob_inset_border.y * 2);
+				sprite_knob.params.pos.x = translation.x + knob_inset_border.x + scrollbar_delta;
+				sprite_knob.params.pos.y = translation.y + knob_inset_border.y;
+				sprite_knob.params.siz.x = std::max(0.0f, scrollbar_length - knob_inset_border.x * 2);
+				sprite_knob.params.siz.y = std::max(0.0f, scale.y - knob_inset_border.y * 2);
 			}
 		}
 
@@ -184,7 +186,10 @@ namespace wi::gui
 		}
 	}
 
-	void ScrollBar::Render(const wi::Canvas& canvas, const CommandList cmd) const
+	void ScrollBar::Render(
+		const wi::Canvas& canvas,
+		const CommandList cmd
+	) const
 	{
 		Widget::Render(canvas, cmd);
 

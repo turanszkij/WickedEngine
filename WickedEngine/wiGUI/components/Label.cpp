@@ -3,22 +3,22 @@
  * Implementation of the @ref wi::gui::Label widget.
  */
 
-#include <iomanip> // setprecision
-#include <sstream>
-#include <utility>
+#include <string>
 
-#include "wiBacklog.h"
-#include "wiEventHandler.h"
+#include <Utility/DirectXMath/DirectXMath.h>
+
+#include <wiCanvas.h>
+#include <wiColor.h>
+#include <wiGraphicsDevice.h>
+#include <wiGUI/components/ScrollBar.h>
+#include <wiGUI/GUICommon.h>
+#include <wiGUI/Widget.h>
+
 #include "wiFont.h"
 #include "wiGUI/GUIInternal.h"
-#include "wiHelper.h"
 #include "wiImage.h"
 #include "wiInput.h"
 #include "wiPrimitive.h"
-#include "wiProfiler.h"
-#include "wiRenderer.h"
-#include "wiTextureHelper.h"
-#include "wiTimer.h"
 
 #include "wiGUI/components/Label.h"
 

@@ -8,8 +8,8 @@
 #include <Utility/DirectXMath/DirectXMath.h>
 
 #include <wiCanvas.h>
-#include <wiGUI/GUICommon.h>
 #include <wiGraphicsDevice.h>
+#include <wiGUI/GUICommon.h>
 
 #include "wiImage.h"
 

@@ -105,7 +105,7 @@ namespace wi::gui
 
 	float ComboBox::GetDropX(const wi::Canvas& canvas) const
 	{
-		if (fixed_drop_width && translation.x > canvas.GetLogicalWidth() * 0.5f)
+		if ((fixed_drop_width != 0.0f) && translation.x > canvas.GetLogicalWidth() * 0.5f)
 		{
 			// in this case, left-align the drop down:
 			float x = translation.x + scale.x - fixed_drop_width;
@@ -128,7 +128,7 @@ namespace wi::gui
 		{
 			int invisible_items = 0;
 
-			for (int i = firstItemVisible; (i < (int)items.size()) && (i < index); ++i)
+			for (int i = firstItemVisible; (i < static_cast<int>(items.size())) && (i < index); ++i)
 			{
 				const auto pos = wi::helper::toUpper(items[i].name)
 					.find(filterText);
@@ -564,7 +564,8 @@ namespace wi::gui
 			{
 				device->BindPipelineState(&gui_internal().PSO_colored, cmd);
 
-				MiscCB cb;
+				MiscCB cb{};
+
 				cb.g_xColor = font.params.color;
 				XMStoreFloat4x4(&cb.g_xTransform, XMMatrixScaling(scale.y * 0.25f, scale.y * 0.25f, 1) *
 					XMMatrixRotationZ(drop_offset < 0 ? -XM_PIDIV2 : XM_PIDIV2) *
@@ -677,7 +678,7 @@ namespace wi::gui
 
 			// control-list
 			int visible_items = 0;
-			for (int i = firstItemVisible; (i < (int)items.size()) && (visible_items < maxVisibleItemCount); ++i)
+			for (int i = firstItemVisible; (i < static_cast<int>(items.size())) && (visible_items < maxVisibleItemCount); ++i)
 			{
 				const auto pos = wi::helper::toUpper(items[i].name)
 					.find(filterText);

@@ -580,9 +580,9 @@ namespace wi::gui
 		shadow_highlight_color  = theme.shadow_highlight_color;
 		shadow_highlight_spread = theme.shadow_highlight_spread;
 
-		for (auto& x : sprites)
+		for (auto& sprite : sprites)
 		{
-			x.params.border_soften = theme.image.border_soften;
+			sprite.params.border_soften = theme.image.border_soften;
 		}
 	}
 
