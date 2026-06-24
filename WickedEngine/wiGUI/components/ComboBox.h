@@ -9,6 +9,20 @@
  * and a scrollbar when the items exceed the visible count.
  */
 
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <string>
+
+#include <wiCanvas.h>
+#include <wiColor.h>
+#include <wiGraphicsDevice.h>
+#include <wiGUI/GUICommon.h>
+#include <wiGUI/Widget.h>
+#include <wiLocalization.h>
+#include <wiSpriteFont.h>
+#include <wiVector.h>
+
 #include "wiGUI/components/TextInputField.h"
 
 namespace wi::gui
