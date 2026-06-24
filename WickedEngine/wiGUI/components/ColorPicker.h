@@ -121,7 +121,8 @@ namespace wi::gui
 		/**
 		 * Returns the widget's type name ("ColorPicker").
 		 */
-		[[nodiscard]] const char* GetWidgetTypeName() const override {
+		[[nodiscard]] const char* GetWidgetTypeName() const override
+		{
 			return "ColorPicker";
 		}
 

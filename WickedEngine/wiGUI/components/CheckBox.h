@@ -84,7 +84,8 @@ namespace wi::gui
 		/**
 		 * Returns the widget's type name ("CheckBox").
 		 */
-		[[nodiscard]] const char* GetWidgetTypeName() const override {
+		[[nodiscard]] const char* GetWidgetTypeName() const override
+		{
 			return "CheckBox";
 		}
 

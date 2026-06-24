@@ -109,12 +109,18 @@ namespace wi::gui
 		 *
 		 * @param[in] value - true to update and draw the GUI, false to skip it.
 		 */
-		void SetVisible(bool value) noexcept { visible = value; }
+		void SetVisible(bool value) noexcept
+		{
+			visible = value;
+		}
 
 		/**
 		 * Returns whether the GUI is visible.
 		 */
-		[[nodiscard]] bool IsVisible() const noexcept { return visible; }
+		[[nodiscard]] bool IsVisible() const noexcept
+		{
+			return visible;
+		}
 
 		/**
 		 * Sets a sprite color on every managed widget.

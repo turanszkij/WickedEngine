@@ -96,7 +96,8 @@ namespace wi::gui
 		/**
 		 * Returns the widget's type name ("Button").
 		 */
-		[[nodiscard]] const char* GetWidgetTypeName() const override {
+		[[nodiscard]] const char* GetWidgetTypeName() const override
+		{
 			return "Button";
 		}
 
@@ -143,14 +144,16 @@ namespace wi::gui
 		 *
 		 * @param[in] desc - Description text.
 		 */
-		void SetDescription(const std::string& desc) {
+		void SetDescription(const std::string& desc)
+		{
 			font_description.SetText(desc);
 		}
 
 		/**
 		 * Returns the description label text as an ASCII string.
 		 */
-		[[nodiscard]] std::string GetDescription() const {
+		[[nodiscard]] std::string GetDescription() const
+		{
 			return font_description.GetTextA();
 		}
 
@@ -160,7 +163,8 @@ namespace wi::gui
 		 * Useful when a drag handler has already consumed the interaction and
 		 * the trailing release should not also fire @ref OnClick.
 		 */
-		void DisableClickForCurrentDragOperation() noexcept {
+		void DisableClickForCurrentDragOperation() noexcept
+		{
 			disableClicking = true;
 		}
 	};

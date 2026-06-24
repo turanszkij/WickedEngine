@@ -74,7 +74,8 @@ namespace wi::gui
 		/**
 		 * Returns the widget's type name ("Label").
 		 */
-		[[nodiscard]] const char* GetWidgetTypeName() const override {
+		[[nodiscard]] const char* GetWidgetTypeName() const override
+		{
 			return "Label";
 		}
 
@@ -89,14 +90,20 @@ namespace wi::gui
 		 *
 		 * @param[in] value - true to wrap text to the widget width.
 		 */
-		void SetWrapEnabled(bool value) noexcept { wrap_enabled = value; }
+		void SetWrapEnabled(bool value) noexcept
+		{
+			wrap_enabled = value;
+		}
 
 		/**
 		 * Enables or disables auto-fitting the height to the text.
 		 *
 		 * @param[in] value - true to resize the widget height to the text.
 		 */
-		void SetFitTextEnabled(bool value) noexcept { fittext_enabled = value; }
+		void SetFitTextEnabled(bool value) noexcept
+		{
+			fittext_enabled = value;
+		}
 
 		/** Left inset between the box edge and the text (pixels). */
 		float margin_left = 0;

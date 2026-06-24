@@ -287,19 +287,26 @@ namespace wi::gui
 		/**
 		 * Returns the shadow radius.
 		 */
-		[[nodiscard]] float GetShadowRadius() const noexcept { return shadow; }
+		[[nodiscard]] float GetShadowRadius() const noexcept
+		{
+			return shadow;
+		}
 
 		/**
 		 * Sets the shadow radius.
 		 *
 		 * @param[in] value - New radius.
 		 */
-		void SetShadowRadius(float value) noexcept { shadow = value; }
+		void SetShadowRadius(float value) noexcept
+		{
+			shadow = value;
+		}
 
 		/**
 		 * Returns whether the shadow highlight effect is enabled.
 		 */
-		[[nodiscard]] bool IsShadowHighlightEnabled() const noexcept {
+		[[nodiscard]] bool IsShadowHighlightEnabled() const noexcept
+		{
 			return shadow_highlight;
 		}
 
@@ -308,14 +315,16 @@ namespace wi::gui
 		 *
 		 * @param[in] value - true to enable the effect.
 		 */
-		void SetShadowHighlightEnabled(bool value) noexcept {
+		void SetShadowHighlightEnabled(bool value) noexcept
+		{
 			shadow_highlight = value;
 		}
 
 		/**
 		 * Returns the shadow highlight color (RGB).
 		 */
-		[[nodiscard]] XMFLOAT3 GetShadowHighlightColor() const noexcept {
+		[[nodiscard]] XMFLOAT3 GetShadowHighlightColor() const noexcept
+		{
 			return shadow_highlight_color;
 		}
 
@@ -324,14 +333,16 @@ namespace wi::gui
 		 *
 		 * @param[in] value - New highlight color.
 		 */
-		void SetShadowHighlightColor(const XMFLOAT3& value) noexcept {
+		void SetShadowHighlightColor(const XMFLOAT3& value) noexcept
+		{
 			shadow_highlight_color = value;
 		}
 
 		/**
 		 * Returns the shadow highlight spread/falloff.
 		 */
-		[[nodiscard]] float GetShadowHighlightSpread() const noexcept {
+		[[nodiscard]] float GetShadowHighlightSpread() const noexcept
+		{
 			return shadow_highlight_spread;
 		}
 
@@ -340,7 +351,8 @@ namespace wi::gui
 		 *
 		 * @param[in] value - New spread value.
 		 */
-		void SetShadowHighlightSpread(float value) noexcept {
+		void SetShadowHighlightSpread(float value) noexcept
+		{
 			shadow_highlight_spread = value;
 		}
 
@@ -415,7 +427,8 @@ namespace wi::gui
 		/**
 		 * Returns the widget's type name (for debugging / localization).
 		 */
-		[[nodiscard]] virtual const char* GetWidgetTypeName() const {
+		[[nodiscard]] virtual const char* GetWidgetTypeName() const
+		{
 			return "Widget";
 		}
 
@@ -532,7 +545,8 @@ namespace wi::gui
 		/**
 		 * Returns whether any localization is enabled for this widget.
 		 */
-		[[nodiscard]] bool IsLocalizationEnabled() const noexcept {
+		[[nodiscard]] bool IsLocalizationEnabled() const noexcept
+		{
 			return localization_enabled != LocalizationEnabled::None;
 		}
 
@@ -540,7 +554,8 @@ namespace wi::gui
 		 * Returns the localization flags.
 		 */
 		[[nodiscard]] LocalizationEnabled GetLocalizationEnabled() const
-			noexcept {
+			noexcept
+		{
 			return localization_enabled;
 		}
 
@@ -549,7 +564,8 @@ namespace wi::gui
 		 *
 		 * @param[in] value - New localization flags.
 		 */
-		void SetLocalizationEnabled(LocalizationEnabled value) noexcept {
+		void SetLocalizationEnabled(LocalizationEnabled value) noexcept
+		{
 			localization_enabled = value;
 		}
 
@@ -558,7 +574,8 @@ namespace wi::gui
 		 *
 		 * @param[in] value - true selects All, false selects None.
 		 */
-		void SetLocalizationEnabled(bool value) noexcept {
+		void SetLocalizationEnabled(bool value) noexcept
+		{
 			localization_enabled =
 				value ? LocalizationEnabled::All : LocalizationEnabled::None;
 		}
@@ -582,14 +599,16 @@ namespace wi::gui
 		 *
 		 * @param[in] value - New border width.
 		 */
-		void SetAngularHighlightWidth(float value) noexcept {
+		void SetAngularHighlightWidth(float value) noexcept
+		{
 			angular_highlight_width = value;
 		}
 
 		/**
 		 * Returns the angular highlight border width.
 		 */
-		[[nodiscard]] float GetAngularHighlightWidth() const noexcept {
+		[[nodiscard]] float GetAngularHighlightWidth() const noexcept
+		{
 			return angular_highlight_width;
 		}
 
@@ -598,28 +617,32 @@ namespace wi::gui
 		 *
 		 * @param[in] value - New highlight color.
 		 */
-		void SetAngularHighlightColor(const XMFLOAT4& value) noexcept {
+		void SetAngularHighlightColor(const XMFLOAT4& value) noexcept
+		{
 			angular_highlight_color = value;
 		}
 
 		/**
 		 * Returns the angular highlight color (RGBA).
 		 */
-		[[nodiscard]] XMFLOAT4 GetAngularHighlightColor() const noexcept {
+		[[nodiscard]] XMFLOAT4 GetAngularHighlightColor() const noexcept
+		{
 			return angular_highlight_color;
 		}
 
 		/**
 		 * Returns the measured width of text rendered to the widget's left.
 		 */
-		[[nodiscard]] constexpr float GetLeftTextWidth() const noexcept {
+		[[nodiscard]] constexpr float GetLeftTextWidth() const noexcept
+		{
 			return left_text_width;
 		}
 
 		/**
 		 * Returns the measured width of text rendered to the widget's right.
 		 */
-		[[nodiscard]] constexpr float GetRightTextWidth() const noexcept {
+		[[nodiscard]] constexpr float GetRightTextWidth() const noexcept
+		{
 			return right_text_width;
 		}
 	};

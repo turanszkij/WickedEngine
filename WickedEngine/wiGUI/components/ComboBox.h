@@ -274,7 +274,8 @@ namespace wi::gui
 		/**
 		 * Returns the number of items.
 		 */
-		[[nodiscard]] size_t GetItemCount() const noexcept {
+		[[nodiscard]] size_t GetItemCount() const noexcept
+		{
 			return items.size();
 		}
 
@@ -321,7 +322,8 @@ namespace wi::gui
 		/**
 		 * Returns the widget's type name ("ComboBox").
 		 */
-		[[nodiscard]] const char* GetWidgetTypeName() const override {
+		[[nodiscard]] const char* GetWidgetTypeName() const override
+		{
 			return "ComboBox";
 		}
 
@@ -354,12 +356,16 @@ namespace wi::gui
 		 *
 		 * @param[in] value - true to draw the arrow.
 		 */
-		void SetDropArrowEnabled(bool value) noexcept { drop_arrow = value; }
+		void SetDropArrowEnabled(bool value) noexcept
+		{
+			drop_arrow = value;
+		}
 
 		/**
 		 * Returns whether the drop-down arrow indicator is drawn.
 		 */
-		[[nodiscard]] bool IsDropArrowEnabled() const noexcept {
+		[[nodiscard]] bool IsDropArrowEnabled() const noexcept
+		{
 			return drop_arrow;
 		}
 
@@ -368,12 +374,16 @@ namespace wi::gui
 		 *
 		 * @param[in] value - Width in pixels; 0 uses the base scale width.
 		 */
-		void SetFixedDropWidth(float value) noexcept { fixed_drop_width = value; }
+		void SetFixedDropWidth(float value) noexcept
+		{
+			fixed_drop_width = value;
+		}
 
 		/**
 		 * Returns the fixed drop-down width (0 if not fixed).
 		 */
-		[[nodiscard]] float GetFixedDropWidth() const noexcept {
+		[[nodiscard]] float GetFixedDropWidth() const noexcept
+		{
 			return fixed_drop_width;
 		}
 	};
