@@ -2,7 +2,7 @@
 
 /**
  * @file
-   * Shared, dependency-light types for the `wi::gui` module.
+ * Shared, dependency-light types for the `wi::gui` module.
  *
  * These are the small building blocks used across every GUI widget:
  * - @ref wi::gui::EventArgs — the generic payload passed to event callbacks.
@@ -436,4 +436,5 @@ namespace wi::gui
  * Enables bitwise operators for @ref wi::gui::LocalizationEnabled.
  */
 template<>
-struct enable_bitmask_operators<wi::gui::LocalizationEnabled> : std::true_type {};
+struct enable_bitmask_operators<wi::gui::LocalizationEnabled>
+	: std::true_type {};
