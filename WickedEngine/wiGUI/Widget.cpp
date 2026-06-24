@@ -34,6 +34,56 @@ using namespace wi::primitive;
 
 namespace wi::gui
 {
+	/** Frames the pointer must hover before a tooltip is shown. */
+	static constexpr int TOOLTIP_HOVER_FRAMES = 25;
+
+	/** Minimum widget scale, clamped to avoid degenerate transforms. */
+	static constexpr float MIN_WIDGET_SCALE = 0.001F;
+
+	/**
+	 * Screen-height fraction past which the tooltip flips above the pointer.
+	 */
+	static constexpr float TOOLTIP_FLIP_SCREEN_FRACTION = 0.8F;
+
+	/** Tooltip vertical offset when placed above the pointer, in pixels. */
+	static constexpr float TOOLTIP_OFFSET_ABOVE = -30.0F;
+
+	/** Tooltip vertical offset when placed below the pointer, in pixels. */
+	static constexpr float TOOLTIP_OFFSET_BELOW = 40.0F;
+
+	/** Script-tip alpha as a fraction of the tooltip's alpha. */
+	static constexpr float SCRIPTTIP_ALPHA = 0.6F;
+
+	/**
+	 * Applies an operation to one or all per-state sprites.
+	 *
+	 * Centralizes the `WIDGET_ID` dispatch shared by @ref Widget::SetColor,
+	 * @ref Widget::SetImage and @ref Widget::SetTheme: a negative `id` targets
+	 * every state, otherwise only the sprite at `id` (when in range).
+	 *
+	 * @param[in,out] sprites - The widget's per-state sprite array.
+	 * @param[in] id - Target @ref WIDGETSTATE index, or negative for all.
+	 * @param[in] fn - Operation invoked on each targeted sprite.
+	 */
+	template <typename Fn>
+	static void ApplyToSprites(
+		wi::Sprite (&sprites)[WIDGETSTATE_COUNT],
+		const int id,
+		const Fn& fn
+	) {
+		if (id < 0)
+		{
+			for (auto& sprite : sprites)
+			{
+				fn(sprite);
+			}
+		}
+		else if (id < WIDGETSTATE_COUNT)
+		{
+			fn(sprites[id]);
+		}
+	}
+
 	Widget::Widget()
 	{
 		sprites[IDLE].params.color 		   = wi::Color::Booger();
@@ -48,10 +98,8 @@ namespace wi::gui
 		tooltipSprite.params.color = wi::Color(255, 234, 165);
 		tooltipFont.params.color   = wi::Color( 25,  25,  25, 255);
 
-		for (int i = IDLE; i < WIDGETSTATE_COUNT; ++i)
+		for (auto& sprite : sprites)
 		{
-			auto& sprite = sprites[i];
-
 			sprite.params.blendFlag = wi::enums::BLENDMODE_OPAQUE;
 			sprite.params.enableBackground();
 		}
@@ -60,6 +108,16 @@ namespace wi::gui
 		active_area.pos.y = 0;
 		active_area.siz.x = std::numeric_limits<float>::max();
 		active_area.siz.y = std::numeric_limits<float>::max();
+	}
+
+	void Widget::DecomposeWorldTransform() noexcept
+	{
+		XMVECTOR S;
+		XMVECTOR R;
+		XMVECTOR T;
+		XMMatrixDecompose(&S, &R, &T, XMLoadFloat4x4(&world));
+		XMStoreFloat3(&translation, T);
+		XMStoreFloat3(&scale, S);
 	}
 
 	void Widget::Update(const wi::Canvas& canvas, const float dt)
@@ -81,25 +139,21 @@ namespace wi::gui
 			this->UpdateTransform_Parented(*parent);
 		}
 
-		XMVECTOR S;
-		XMVECTOR R;
-		XMVECTOR T;
-		XMMatrixDecompose(&S, &R, &T, XMLoadFloat4x4(&world));
-		XMStoreFloat3(&translation, T);
-		XMStoreFloat3(&scale, S);
+		DecomposeWorldTransform();
 
-		scale = wi::math::Max(scale, XMFLOAT3(0.001f, 0.001f, 0.001f));
+		scale = wi::math::Max(
+			scale,
+			XMFLOAT3(MIN_WIDGET_SCALE, MIN_WIDGET_SCALE, MIN_WIDGET_SCALE)
+		);
 
 		scissorRect.bottom = static_cast<int32_t>(std::ceil(translation.y + scale.y));
 		scissorRect.left   = static_cast<int32_t>(std::floor(translation.x));
 		scissorRect.right  = static_cast<int32_t>(std::ceil(translation.x + scale.x));
 		scissorRect.top    = static_cast<int32_t>(std::floor(translation.y));
 
-		// default sprite and font placement:
-		for (int i = IDLE; i < WIDGETSTATE_COUNT; ++i)
+		// Default sprite and font placement:
+		for (auto& sprite : sprites)
 		{
-			auto& sprite = sprites[i];
-
 			sprite.params.pos.x = translation.x;
 			sprite.params.pos.y = translation.y;
 			sprite.params.siz.x = scale.x;
@@ -151,46 +205,48 @@ namespace wi::gui
 			return;
 		}
 
-		if (angular_highlight_width > 0)
+		if (angular_highlight_width <= 0)
 		{
-			wi::image::Params fx;
-
-			fx.color = angular_highlight_color;
-			fx.pos.x = translation.x - angular_highlight_width;
-			fx.pos.y = translation.y - angular_highlight_width;
-			fx.siz.x = scale.x + angular_highlight_width * 2;
-			fx.siz.y = scale.y + angular_highlight_width * 2;
-
-			if (sprites[state].params.isCornerRoundingEnabled())
-			{
-				fx.enableCornerRounding();
-				
-				for (int i = 0; i < 4; ++i)
-				{
-					fx.corners_rounding[i]
-						= sprites[state].params.corners_rounding[i];
-				}
-			}
-
-			fx.angular_softness_outer_angle = XM_PI * 0.6f;
-			fx.angular_softness_inner_angle = 0;
-
-			XMStoreFloat2(
-				&fx.angular_softness_direction,
-				XMVector2Normalize(
-					XMVectorSet(
-						std::sin(angular_highlight_timer),
-						std::cos(angular_highlight_timer),
-						0,
-						0
-					)
-				)
-			);
-
-			fx.enableAngularSoftnessDoubleSided();
-			fx.border_soften = 0.1f;
-			wi::image::Draw(nullptr, fx, cmd);
+			return;
 		}
+
+		wi::image::Params fx;
+
+		fx.color = angular_highlight_color;
+		fx.pos.x = translation.x - angular_highlight_width;
+		fx.pos.y = translation.y - angular_highlight_width;
+		fx.siz.x = scale.x       + angular_highlight_width * 2;
+		fx.siz.y = scale.y       + angular_highlight_width * 2;
+
+		if (sprites[state].params.isCornerRoundingEnabled())
+		{
+			fx.enableCornerRounding();
+
+			for (int i = 0; i < 4; ++i)
+			{
+				fx.corners_rounding[i]
+					= sprites[state].params.corners_rounding[i];
+			}
+		}
+
+		fx.angular_softness_outer_angle = XM_PI * 0.6f;
+		fx.angular_softness_inner_angle = 0;
+
+		XMStoreFloat2(
+			&fx.angular_softness_direction,
+			XMVector2Normalize(
+				XMVectorSet(
+					std::sin(angular_highlight_timer),
+					std::cos(angular_highlight_timer),
+					0,
+					0
+				)
+			)
+		);
+
+		fx.enableAngularSoftnessDoubleSided();
+		fx.border_soften = 0.1f;
+		wi::image::Draw(nullptr, fx, cmd);
 	}
 
 	void Widget::RenderTooltip(
@@ -203,78 +259,80 @@ namespace wi::gui
 			return;
 		}
 
-		if (tooltipTimer > 25)
+		if (tooltipTimer <= TOOLTIP_HOVER_FRAMES)
 		{
-			const float screenWidth  = canvas.GetLogicalWidth();
-			const float screenHeight = canvas.GetLogicalHeight();
+			return;
+		}
 
-			tooltipFont.params.position = {};
-			tooltipFont.params.h_align  = wi::font::WIFALIGN_LEFT;
-			tooltipFont.params.v_align  = wi::font::WIFALIGN_TOP;
+		const float screenWidth  = canvas.GetLogicalWidth();
+		const float screenHeight = canvas.GetLogicalHeight();
 
-			static const float _border = 2;
-			const XMFLOAT2 textSize = tooltipFont.TextSize();
+		tooltipFont.params.position = {};
+		tooltipFont.params.h_align  = wi::font::WIFALIGN_LEFT;
+		tooltipFont.params.v_align  = wi::font::WIFALIGN_TOP;
 
-			float textWidth  = textSize.x;
-			float textHeight = textSize.y;
+		static const float _border = 2;
+		const XMFLOAT2 textSize = tooltipFont.TextSize();
 
-			const float textHeightWithoutScriptTip = textHeight;
+		float textWidth  = textSize.x;
+		float textHeight = textSize.y;
 
-			if (!scripttipFont.text.empty())
-			{
-				const XMFLOAT2 scriptTipSize = scripttipFont.TextSize();
+		const float textHeightWithoutScriptTip = textHeight;
 
-				textWidth = std::max(textWidth, scriptTipSize.x);
-				textHeight += scriptTipSize.y;
-			}
+		if (!scripttipFont.text.empty())
+		{
+			const XMFLOAT2 scriptTipSize = scripttipFont.TextSize();
 
-			const XMFLOAT2 pointer = GetPointerHitbox().pos;
+			textWidth = std::max(textWidth, scriptTipSize.x);
+			textHeight += scriptTipSize.y;
+		}
 
-			tooltipFont.params.posX = pointer.x;
-			tooltipFont.params.posY = pointer.y;
+		const XMFLOAT2 pointer = GetPointerHitbox().pos;
 
-			if (tooltipFont.params.posX + textWidth > screenWidth)
-			{
-				tooltipFont.params.posX -= tooltipFont.params.posX
-										+ textWidth - screenWidth;
-			}
+		tooltipFont.params.posX = pointer.x;
+		tooltipFont.params.posY = pointer.y;
 
-			tooltipFont.params.posX = std::max<float>(tooltipFont.params.posX, 0);
+		tooltipFont.params.posX =
+			std::min(tooltipFont.params.posX, screenWidth - textWidth);
+		tooltipFont.params.posX = std::max(tooltipFont.params.posX, 0.0f);
 
-			tooltipFont.params.posY +=
-    			(tooltipFont.params.posY > screenHeight * 0.8f) ? -30 : 40;
+		tooltipFont.params.posY +=
+			(tooltipFont.params.posY
+				> screenHeight * TOOLTIP_FLIP_SCREEN_FRACTION)
+			? TOOLTIP_OFFSET_ABOVE
+			: TOOLTIP_OFFSET_BELOW;
 
-			tooltipSprite.params.pos.x = tooltipFont.params.posX - _border;
-			tooltipSprite.params.pos.y = tooltipFont.params.posY - _border;
-			tooltipSprite.params.siz.x = textWidth  + _border * 2;
-			tooltipSprite.params.siz.y = textHeight + _border * 2;
+		tooltipSprite.params.pos.x = tooltipFont.params.posX - _border;
+		tooltipSprite.params.pos.y = tooltipFont.params.posY - _border;
+		tooltipSprite.params.siz.x = textWidth  + _border * 2;
+		tooltipSprite.params.siz.y = textHeight + _border * 2;
 
-			if (tooltip_shadow > 0)
-			{
-				const wi::image::Params fx(
-					tooltipSprite.params.pos.x - tooltip_shadow,
-					tooltipSprite.params.pos.y - tooltip_shadow,
-					tooltipSprite.params.siz.x  + tooltip_shadow * 2,
-					tooltipSprite.params.siz.y + tooltip_shadow * 2,
-					tooltip_shadow_color
-				);
-				wi::image::Draw(nullptr, fx, cmd);
-			}
+		if (tooltip_shadow > 0)
+		{
+			const wi::image::Params fx(
+				tooltipSprite.params.pos.x - tooltip_shadow,
+				tooltipSprite.params.pos.y - tooltip_shadow,
+				tooltipSprite.params.siz.x  + tooltip_shadow * 2,
+				tooltipSprite.params.siz.y + tooltip_shadow * 2,
+				tooltip_shadow_color
+			);
+			wi::image::Draw(nullptr, fx, cmd);
+		}
 
-			tooltipSprite.Draw(cmd);
+		tooltipSprite.Draw(cmd);
 
-			tooltipFont.Draw(cmd);
+		tooltipFont.Draw(cmd);
 
-			if (!scripttipFont.text.empty())
-			{
-				scripttipFont.params = tooltipFont.params;
-				scripttipFont.params.posY += textHeightWithoutScriptTip;
-				scripttipFont.params.color = tooltipFont.params.color;
-				scripttipFont.params.color.setA(static_cast<uint8_t>(static_cast<float>(
-					scripttipFont.params.color.getA()) / 255.0f * 0.6f * 255
-				));
-				scripttipFont.Draw(cmd);
-			}
+		if (!scripttipFont.text.empty())
+		{
+			scripttipFont.params = tooltipFont.params;
+			scripttipFont.params.posY += textHeightWithoutScriptTip;
+			scripttipFont.params.color = tooltipFont.params.color;
+			scripttipFont.params.color.setA(static_cast<uint8_t>(
+				static_cast<float>(scripttipFont.params.color.getA())
+				* SCRIPTTIP_ALPHA
+			));
+			scripttipFont.Draw(cmd);
 		}
 	}
 
@@ -359,7 +417,7 @@ namespace wi::gui
 		scale_local.y = value.y;
 		scale_local = wi::math::Max(
 			scale_local,
-			XMFLOAT3(0.001f, 0.001f, 0.001f)
+			XMFLOAT3(MIN_WIDGET_SCALE, MIN_WIDGET_SCALE, MIN_WIDGET_SCALE)
 		);
 		UpdateTransform();
 
@@ -512,17 +570,9 @@ namespace wi::gui
 
 	void Widget::SetColor(const wi::Color color, const int id)
 	{
-		if (id < 0)
-		{
-			for (auto & sprite : sprites)
-			{
-				sprite.params.color = color;
-			}
-		}
-		else if (id < arraysize(sprites))
-		{
-			sprites[id].params.color = color;
-		}
+		ApplyToSprites(sprites, id, [&](wi::Sprite& sprite) {
+			sprite.params.color = color;
+		});
 	}
 
 	void Widget::SetShadowColor(const wi::Color color)
@@ -532,33 +582,17 @@ namespace wi::gui
 
 	void Widget::SetImage(wi::Resource textureResource, const int id)
 	{
-		if (id < 0)
-		{
-			for (auto & sprite : sprites)
-			{
-				sprite.textureResource = textureResource;
-			}
-		}
-		else if (id < arraysize(sprites))
-		{
-			sprites[id].textureResource = textureResource;
-		}
+		ApplyToSprites(sprites, id, [&](wi::Sprite& sprite) {
+			sprite.textureResource = textureResource;
+		});
 	}
 
 	void Widget::SetTheme(const Theme& theme, const int id)
 	{
-		if (id < 0)
-		{
-			for (auto & sprite : sprites)
-			{
-				theme.image.Apply(sprite.params);
-			}
-		}
-		else if (id < arraysize(sprites))
-		{
-			theme.image.Apply(sprites[id].params);
-		}
-	
+		ApplyToSprites(sprites, id, [&](wi::Sprite& sprite) {
+			theme.image.Apply(sprite.params);
+		});
+
 		theme.font.Apply(font.params);
 
 		if (theme.shadow >= 0)
@@ -593,7 +627,12 @@ namespace wi::gui
 		if (parent != nullptr)
 		{
 			parent->UpdateTransform();
-			const XMMATRIX B = XMMatrixInverse(nullptr, XMLoadFloat4x4(&parent->world));
+
+			const XMMATRIX B = XMMatrixInverse(
+				nullptr,
+				XMLoadFloat4x4(&parent->world)
+			);
+			
 			MatrixTransform(B);
 		}
 
@@ -604,12 +643,7 @@ namespace wi::gui
 			UpdateTransform_Parented(*parent);
 		}
 
-		XMVECTOR S;
-		XMVECTOR R;
-		XMVECTOR T;
-		XMMatrixDecompose(&S, &R, &T, XMLoadFloat4x4(&world));
-		XMStoreFloat3(&translation, T);
-		XMStoreFloat3(&scale, S);
+		DecomposeWorldTransform();
 	}
 
 	void Widget::Detach()

@@ -645,5 +645,14 @@ namespace wi::gui
 		{
 			return right_text_width;
 		}
+
+	private:
+		/**
+		 * Refreshes @ref translation and @ref scale from the world matrix.
+		 *
+		 * Decomposes the current `world` transform and stores its translation
+		 * and scale components; the rotation component is discarded.
+		 */
+		void DecomposeWorldTransform() noexcept;
 	};
 }
