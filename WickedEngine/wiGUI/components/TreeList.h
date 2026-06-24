@@ -9,6 +9,20 @@
  * drag-and-drop reordering / re-parenting.
  */
 
+#include <cstdint>
+#include <functional>
+#include <string>
+
+#include <Utility/DirectXMath/DirectXMath.h>
+
+#include <wiCanvas.h>
+#include <wiColor.h>
+#include <wiGraphicsDevice.h>
+#include <wiGUI/GUICommon.h>
+#include <wiGUI/Widget.h>
+#include <wiPrimitive.h>
+#include <wiVector.h>
+
 #include "wiGUI/components/ScrollBar.h"
 
 namespace wi::gui
@@ -68,7 +82,8 @@ namespace wi::gui
 		 *
 		 * @return Hitbox covering the list region (excluding the header).
 		 */
-		[[nodiscard]] wi::primitive::Hitbox2D GetHitbox_ListArea() const noexcept;
+		[[nodiscard]] wi::primitive::Hitbox2D GetHitbox_ListArea() const
+			noexcept;
 
 		/**
 		 * Returns the hitbox of a visible item row.
@@ -236,7 +251,7 @@ namespace wi::gui
 		 * Returns the number of items.
 		 */
 		[[nodiscard]] int GetItemCount() const noexcept {
-			return (int)items.size();
+			return static_cast<int>(items.size());
 		}
 
 		/**
@@ -284,7 +299,8 @@ namespace wi::gui
 		/**
 		 * Returns the widget's type name ("TreeList").
 		 */
-		[[nodiscard]] const char* GetWidgetTypeName() const override {
+		[[nodiscard]] const char* GetWidgetTypeName() const override
+		{
 			return "TreeList";
 		}
 
