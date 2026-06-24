@@ -9,6 +9,15 @@
  * of the entered text when accepted with ENTER.
  */
 
+#include <functional>
+#include <string>
+
+#include <wiCanvas.h>
+#include <wiColor.h>
+#include <wiGraphicsDevice.h>
+#include <wiGUI/GUICommon.h>
+#include <wiSpriteFont.h>
+
 #include "wiGUI/Widget.h"
 
 namespace wi::gui
@@ -94,14 +103,16 @@ namespace wi::gui
 		 *
 		 * @param[in] value - true (default) discards uncommitted input.
 		 */
-		void SetCancelInputEnabled(bool value) noexcept {
+		void SetCancelInputEnabled(bool value) noexcept
+		{
 			cancel_input_enabled = value;
 		}
 
 		/**
 		 * Returns whether incomplete input is discarded on losing focus.
 		 */
-		[[nodiscard]] bool IsCancelInputEnabled() const noexcept {
+		[[nodiscard]] bool IsCancelInputEnabled() const noexcept
+		{
 			return cancel_input_enabled;
 		}
 
@@ -200,7 +211,8 @@ namespace wi::gui
 		/**
 		 * Returns the widget's type name ("TextInputField").
 		 */
-		[[nodiscard]] const char* GetWidgetTypeName() const override {
+		[[nodiscard]] const char* GetWidgetTypeName() const override
+		{
 			return "TextInputField";
 		}
 
@@ -226,14 +238,16 @@ namespace wi::gui
 		 *
 		 * @param[in] desc - Description text.
 		 */
-		void SetDescription(const std::string& desc) {
+		void SetDescription(const std::string& desc)
+		{
 			font_description.SetText(desc);
 		}
 
 		/**
 		 * Returns the description label text as an ASCII string.
 		 */
-		[[nodiscard]] std::string GetDescription() const {
+		[[nodiscard]] std::string GetDescription() const
+		{
 			return font_description.GetTextA();
 		}
 
@@ -242,7 +256,8 @@ namespace wi::gui
 		 *
 		 * @param[in] value - Digit count, or -1 for the default formatting.
 		 */
-		constexpr void SetFloatPrecision(int value) noexcept {
+		constexpr void SetFloatPrecision(int value) noexcept
+		{
 			float_precision = value;
 		}
 	};

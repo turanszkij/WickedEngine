@@ -3,24 +3,37 @@
  * Implementation of the @ref wi::gui::TextInputField widget.
  */
 
-#include "wiGUI/components/TextInputField.h"
-#include "wiGUI/GUIInternal.h"
+#include <algorithm>
+#include <cfloat>
+#include <cmath>
+#include <cstddef>
+#include <cstdlib>
+#include <functional>
+#include <iomanip> // setprecision
+#include <ios>
+#include <sstream>
+#include <string>
+#include <utility>
 
+#include <Utility/DirectXMath/DirectXMath.h>
+
+#include <wiCanvas.h>
+#include <wiColor.h>
+#include <wiEnums.h>
+#include <wiGraphicsDevice.h>
+#include <wiGUI/GUICommon.h>
+#include <wiGUI/Widget.h>
+#include <wiSpriteFont.h>
+
+#include "wiFont.h"
+#include "wiGUI/GUIInternal.h"
+#include "wiHelper.h"
+#include "wiImage.h"
 #include "wiInput.h"
 #include "wiPrimitive.h"
-#include "wiProfiler.h"
-#include "wiRenderer.h"
 #include "wiTimer.h"
-#include "wiEventHandler.h"
-#include "wiFont.h"
-#include "wiImage.h"
-#include "wiTextureHelper.h"
-#include "wiBacklog.h"
-#include "wiHelper.h"
 
-#include <sstream>
-#include <iomanip> // setprecision
-#include <utility>
+#include "wiGUI/components/TextInputField.h"
 
 using namespace wi::graphics;
 using namespace wi::primitive;
@@ -84,20 +97,28 @@ namespace wi::gui
 			key_repeat_button = button;
 			key_repeat_timer.record();
 			key_repeat_active = false;
+
 			return true;
 		}
+
 		if (wi::input::Down(button) && key_repeat_button == button)
 		{
-			const float elapsed = (float)key_repeat_timer.elapsed_seconds();
+			const auto elapsed = static_cast<float>(
+				key_repeat_timer.elapsed_seconds()
+			);
+
 			if (!key_repeat_active && elapsed > KEY_REPEAT_DELAY)
 			{
 				key_repeat_active = true;
 				key_repeat_timer.record();
+
 				return true;
 			}
+
 			if (key_repeat_active && elapsed > KEY_REPEAT_RATE)
 			{
 				key_repeat_timer.record();
+
 				return true;
 			}
 		}
@@ -134,20 +155,47 @@ namespace wi::gui
 			double parsePrimary()
 			{
 				skipWS();
+
 				if (*pos == '(')
 				{
 					pos++;
+
 					const double v = parseExpr();
+
 					skipWS();
-					if (*pos == ')') pos++;
+
+					if (*pos == ')')
+					{
+						pos++;
+					}
+
 					return v;
 				}
-				if (*pos == '-') { pos++; return -parsePrimary(); }
-				if (*pos == '+') { pos++; return  parsePrimary(); }
-				char* end;
+
+				if (*pos == '-')
+				{
+					pos++;
+
+					return -parsePrimary();
+				}
+
+				if (*pos == '+')
+				{
+					pos++;
+
+					return  parsePrimary();
+				}
+
+				char* end = nullptr;
 				const double v = strtod(pos, &end);
-				if (end == pos) { valid = false; return 0; }
+
+				if (end == pos)
+				{
+					valid = false; return 0;
+				}
+
 				pos = end;
+
 				return v;
 			}
 
@@ -159,13 +207,35 @@ namespace wi::gui
 			double parseTerm()
 			{
 				double left = parsePrimary();
+
 				while (valid)
 				{
 					skipWS();
-					if (*pos == '*') { pos++; left *= parsePrimary(); }
-					else if (*pos == '/') { pos++; const double r = parsePrimary(); if (r == 0.0) { valid = false; return 0; } left /= r; }
-					else break;
+
+					if (*pos == '*')
+					{
+						pos++;
+						left *= parsePrimary();
+					}
+					else if (*pos == '/')
+					{
+						pos++;
+
+						const double r = parsePrimary();
+
+						if (r == 0.0)
+						{
+							valid = false; return 0;
+						}
+
+						left /= r;
+					}
+					else
+					{
+						break;
+					}
 				}
+
 				return left;
 			}
 
@@ -177,13 +247,25 @@ namespace wi::gui
 			double parseExpr()
 			{
 				double left = parseTerm();
+
 				while (valid)
 				{
 					skipWS();
-					if (*pos == '+') { pos++; left += parseTerm(); }
-					else if (*pos == '-') { pos++; left -= parseTerm(); }
-					else break;
+
+					if (*pos == '+')
+					{
+						pos++; left += parseTerm();
+					}
+					else if (*pos == '-')
+					{
+						pos++; left -= parseTerm();
+					}
+					else
+					{
+						break;
+					}
 				}
+
 				return left;
 			}
 		};
@@ -202,11 +284,17 @@ namespace wi::gui
 		 */
 		bool EvaluateArithmetic(const std::string& str, double& result)
 		{
-			if (str.empty()) return false;
+			if (str.empty())
+			{
+				return false;
+			}
+
 			ArithExprParser p;
+
 			p.pos = str.c_str();
 			result = p.parseExpr();
 			p.skipWS();
+
 			return p.valid && (*p.pos == '\0') && std::isfinite(result);
 		}
 	} // anonymous namespace
@@ -220,21 +308,26 @@ namespace wi::gui
 
 		font.params.v_align = wi::font::WIFALIGN_CENTER;
 
-		font_description.params = font.params;
+		font_description.params         = font.params;
 		font_description.params.h_align = wi::font::WIFALIGN_RIGHT;
 
-		SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip); // disable localization of text because that can come from user input and musn't be overwritten!
+		// Disable localization of text because that can come from user input
+		// and mustn't be overwritten!
+		SetLocalizationEnabled(wi::gui::LocalizationEnabled::Tooltip);
 	}
+
 	void TextInputField::SetValue(const std::string& newValue)
 	{
 		font.SetText(newValue);
 	}
+
 	void TextInputField::SetValue(const int newValue)
 	{
 		std::stringstream ss("");
 		ss << newValue;
 		font.SetText(ss.str());
 	}
+
 	void TextInputField::SetValue(const float newValue)
 	{
 		if (newValue == FLT_MAX)
@@ -248,33 +341,40 @@ namespace wi::gui
 		else
 		{
 			std::stringstream ss("");
+
 			if (float_precision >= 0)
 			{
 				ss << std::fixed << std::setprecision(float_precision);
 			}
+
 			ss << newValue;
 			font.SetText(ss.str());
 		}
 	}
+
 	std::string TextInputField::GetValue() const
 	{
 		return font.GetTextA();
 	}
+
 	std::string TextInputField::GetCurrentInputValue() const
 	{
 		if (state == ACTIVE)
 		{
 			return font_input.GetTextA();
 		}
+
 		return GetValue();
 	}
+
 	void TextInputField::Update(const wi::Canvas& canvas, const float dt)
 	{
 		const bool was_active = (state == ACTIVE);
 
 		if (!IsVisible())
 		{
-			// If this text input was active but became invisible, clear typing state
+			// If this text input was active but became invisible, clear typing
+			// state.
 			if (was_active)
 			{
 				font_input.text.clear();
@@ -308,6 +408,7 @@ namespace wi::gui
 			{
 				state = IDLE;
 			}
+
 			if (state == DEACTIVATING)
 			{
 				state = IDLE;
@@ -322,16 +423,37 @@ namespace wi::gui
 				}
 			}
 
-			bool leftButtonClicked = false;
-			if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
-			{
-				leftButtonClicked = true;
-			}
-			bool rightButtonClicked = false;
-			if (wi::input::Press(wi::input::MOUSE_BUTTON_RIGHT))
-			{
-				rightButtonClicked = true;
-			}
+			const bool leftButtonClicked = wi::input::Press(
+				wi::input::MOUSE_BUTTON_LEFT
+			);
+
+			const bool rightButtonClicked = wi::input::Press(
+				wi::input::MOUSE_BUTTON_RIGHT
+			);
+
+			const bool isMouseButtonLeftDown = wi::input::Down(
+				wi::input::MOUSE_BUTTON_LEFT
+			);
+
+			const bool isEscapePressed = wi::input::Press(
+				wi::input::KEYBOARD_BUTTON_ESCAPE
+			);
+
+			const bool isLeftShiftPressed = wi::input::Down(
+				wi::input::BUTTON::KEYBOARD_BUTTON_LSHIFT
+			);
+
+			const bool isRightShiftPressed = wi::input::Down(
+				wi::input::BUTTON::KEYBOARD_BUTTON_LSHIFT
+			);
+
+			const bool isLeftControlDown = wi::input::Down(
+				wi::input::KEYBOARD_BUTTON_LCONTROL
+			);
+
+			const bool isAKeyDown = wi::input::Down(
+				static_cast<wi::input::BUTTON>('A')
+			);
 
 			if (state == ACTIVE)
 			{
@@ -339,18 +461,23 @@ namespace wi::gui
 				{
 					doubleclick_select = false;
 				}
+
 				if (wi::input::Press(wi::input::KEYBOARD_BUTTON_ENTER))
 				{
-					// accept input, evaluating arithmetic expressions (e.g. "10 * 2" -> "20")
+					// Accept input, evaluating arithmetic expressions (e.g. "10
+					// * 2" -> "20").
 					const std::string inputStr = font_input.GetTextA();
 					double arithmeticResult = 0;
+
 					if (EvaluateArithmetic(inputStr, arithmeticResult))
 					{
 						std::stringstream ssResult;
+
 						if (float_precision >= 0)
 						{
 							ssResult << std::fixed << std::setprecision(float_precision);
 						}
+
 						ssResult << arithmeticResult;
 						font.SetText(ssResult.str());
 					}
@@ -358,6 +485,7 @@ namespace wi::gui
 					{
 						font.SetText(font_input.GetText());
 					}
+
 					font_input.text.clear();
 
 					if (onInputAccepted)
@@ -365,9 +493,10 @@ namespace wi::gui
 						EventArgs args;
 						args.sValue = font.GetTextA();
 						args.iValue = atoi(args.sValue.c_str());
-						args.fValue = (float)atof(args.sValue.c_str());
+						args.fValue = static_cast<float>(atof(args.sValue.c_str()));
 						onInputAccepted(args);
 					}
+
 					Deactivate();
 				}
 				//else if (wi::input::Press(wi::input::KEYBOARD_BUTTON_BACKSPACE))
@@ -382,75 +511,93 @@ namespace wi::gui
 				}
 				else if (KeyRepeat(wi::input::KEYBOARD_BUTTON_LEFT) && caret_pos > 0)
 				{
-					// caret repositioning left:
+					// Caret repositioning left:
 					caret_pos--;
-					if (!wi::input::Down(wi::input::BUTTON::KEYBOARD_BUTTON_LSHIFT) && !wi::input::Down(wi::input::BUTTON::KEYBOARD_BUTTON_RSHIFT))
+
+					if (!isLeftShiftPressed && !isRightShiftPressed)
 					{
 						caret_begin = caret_pos;
 					}
+
 					caret_timer.record();
 				}
 				else if (KeyRepeat(wi::input::KEYBOARD_BUTTON_RIGHT))
 				{
-					// caret repositioning right:
+					// Caret repositioning right:
 					if (caret_pos < font_input.GetText().size())
 					{
 						caret_pos++;
 					}
-					if (!wi::input::Down(wi::input::BUTTON::KEYBOARD_BUTTON_LSHIFT) && !wi::input::Down(wi::input::BUTTON::KEYBOARD_BUTTON_RSHIFT))
+
+					if (!isLeftShiftPressed && !isRightShiftPressed)
 					{
 						caret_begin = caret_pos;
 					}
+
 					caret_timer.record();
 				}
-				else if ((leftButtonClicked && !intersectsPointer) || (rightButtonClicked && !intersectsPointer) || wi::input::Press(wi::input::KEYBOARD_BUTTON_ESCAPE))
-				{
+				else if ((leftButtonClicked && !intersectsPointer)
+				  ||    (rightButtonClicked && !intersectsPointer)
+				  || isEscapePressed
+				) {
 					// cancel input
 					font_input.text.clear();
 					typing_active = false;
 					state = IDLE;
 				}
-				else if (leftButtonClicked && intersectsPointer && wi::input::IsDoubleClicked())
-				{
+				else if (leftButtonClicked
+					&& intersectsPointer
+					&& wi::input::IsDoubleClicked()
+				) {
 					caret_begin = 0;
-					caret_pos = (int)font_input.GetText().size();
+					caret_pos = static_cast<int>(font_input.GetText().size());
 					caret_timer.record();
 					doubleclick_select = true;
 				}
-				else if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT) && !doubleclick_select)
+				else if (isMouseButtonLeftDown && !doubleclick_select)
 				{
 					// caret repositioning by mouse click:
 					caret_timer.record();
-					caret_pos = (int)font_input.GetText().size();
+					caret_pos = static_cast<int>(font_input.GetText().size());
+
 					const std::wstring& str = font_input.GetText();
 					float pos = font_input.params.position.x;
+
 					for (size_t i = 0; i < str.size(); ++i)
 					{
-						const XMFLOAT2 size = wi::font::TextSize(str.c_str() + i, 1, font_input.params);
+						const XMFLOAT2 size = wi::font::TextSize(
+							str.c_str() + i, 1, font_input.params
+						);
+
 						pos += size.x;
+
 						if (pos > pointerHitbox.pos.x)
 						{
-							caret_pos = int(i);
+							caret_pos = static_cast<int>(i);
+
 							break;
 						}
 					}
+
 					if (leftButtonClicked && intersectsPointer)
 					{
 						caret_begin = caret_pos;
 					}
-					if (caret_delay < 1) // fix for bug: first click creates incorrect highlight state
+
+					 // Fix for bug: first click creates incorrect highlight
+					 // state.
+					if (caret_delay < 1)
 					{
 						caret_delay++;
 						caret_begin = caret_pos;
 					}
 				}
 
-				if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) && wi::input::Down((wi::input::BUTTON)'A'))
+				if (isLeftControlDown && isAKeyDown)
 				{
 					caret_begin = 0;
-					caret_pos = (int)font_input.GetText().size();
+					caret_pos = static_cast<int>(font_input.GetText().size());
 				}
-
 			}
 
 			if (leftButtonClicked && state == FOCUS)
@@ -469,33 +616,41 @@ namespace wi::gui
 		font.params.posY = translation.y + scale.y * 0.5f;
 		font_description.params.posX = translation.x;
 		font_description.params.posY = translation.y + scale.y * 0.5f;
+
 		switch (font_description.params.h_align)
 		{
-		case wi::font::WIFALIGN_LEFT:
-			font_description.params.posX = translation.x + scale.x + shadow;
-			right_text_width = font_description.TextWidth();
-			break;
-		case wi::font::WIFALIGN_RIGHT:
-			font_description.params.posX = translation.x - shadow;
-			left_text_width = font_description.TextWidth();
-			break;
-		case wi::font::WIFALIGN_CENTER:
-		default:
-			font_description.params.posX = translation.x + scale.x * 0.5f;
-			break;
+			case wi::font::WIFALIGN_LEFT:
+				font_description.params.posX = translation.x + scale.x + shadow;
+				right_text_width = font_description.TextWidth();
+
+				break;
+			case wi::font::WIFALIGN_RIGHT:
+				font_description.params.posX = translation.x - shadow;
+				left_text_width = font_description.TextWidth();
+
+				break;
+			case wi::font::WIFALIGN_CENTER:
+			default:
+				font_description.params.posX = translation.x + scale.x * 0.5f;
+
+				break;
 		}
+
 		switch (font_description.params.v_align)
-		{
-		case wi::font::WIFALIGN_TOP:
-			font_description.params.posY = translation.y + scale.y + shadow;
-			break;
-		case wi::font::WIFALIGN_BOTTOM:
-			font_description.params.posY = translation.y - shadow;
-			break;
-		case wi::font::WIFALIGN_CENTER:
-		default:
-			font_description.params.posY = translation.y + scale.y * 0.5f;
-			break;
+			{
+			case wi::font::WIFALIGN_TOP:
+				font_description.params.posY = translation.y + scale.y + shadow;
+
+				break;
+			case wi::font::WIFALIGN_BOTTOM:
+				font_description.params.posY = translation.y - shadow;
+
+				break;
+			case wi::font::WIFALIGN_CENTER:
+			default:
+				font_description.params.posY = translation.y + scale.y * 0.5f;
+
+				break;
 		}
 
 		if (state == ACTIVE)
@@ -510,9 +665,11 @@ namespace wi::gui
 			if (input_updated && onInput)
 			{
 				wi::gui::EventArgs args;
+
 				args.sValue = GetCurrentInputValue();
 				onInput(args);
 			}
+
 			input_updated = false;
 		}
 
@@ -523,6 +680,7 @@ namespace wi::gui
 	) const
 	{
 		Widget::Render(canvas, cmd);
+
 		if (!IsVisible())
 		{
 			return;
@@ -532,12 +690,14 @@ namespace wi::gui
 		if (shadow > 0)
 		{
 			wi::image::Params fx = sprites[state].params;
+
 			fx.gradient = wi::image::Params::Gradient::None;
 			fx.pos.x -= shadow;
 			fx.pos.y -= shadow;
 			fx.siz.x += shadow * 2;
 			fx.siz.y += shadow * 2;
 			fx.color = shadow_color;
+
 			if (fx.isCornerRoundingEnabled())
 			{
 				for (auto& corner_rounding : fx.corners_rounding)
@@ -548,17 +708,20 @@ namespace wi::gui
 					}
 				}
 			}
+
 			if (shadow_highlight)
 			{
 				fx.enableHighlight();
-				fx.highlight_pos = GetPointerHighlightPos(canvas);
-				fx.highlight_color = shadow_highlight_color;
+
+				fx.highlight_pos    = GetPointerHighlightPos(canvas);
+				fx.highlight_color  = shadow_highlight_color;
 				fx.highlight_spread = shadow_highlight_spread;
 			}
 			else
 			{
 				fx.disableHighlight();
 			}
+
 			wi::image::Draw(nullptr, fx, cmd);
 		}
 
@@ -573,27 +736,36 @@ namespace wi::gui
 			font_input.Draw(cmd);
 
 			// caret:
-			if(std::fmod(caret_timer.elapsed_seconds(), 1) < 0.5f)
+			if (std::fmod(caret_timer.elapsed_seconds(), 1) < 0.5f)
 			{
 				wi::font::Params params = font_input.params;
-				const XMFLOAT2 size = wi::font::TextSize(font_input.GetText().c_str(), caret_pos, font_input.params);
-				params.posX += size.x;
-				params.color = wi::Color::lerp(params.color, wi::Color::Transparent(), 0.1f);
-				params.size += 4;
-				params.posY -= 2;
+				const XMFLOAT2 size = wi::font::TextSize(
+					font_input.GetText().c_str(),
+					caret_pos,
+					font_input.params
+				);
+
+				params.posX   += size.x;
+				params.color   = wi::Color::lerp(params.color, wi::Color::Transparent(), 0.1f);
+				params.size   += 4;
+				params.posY   -= 2;
 				params.h_align = wi::font::WIFALIGN_CENTER;
+
 				wi::font::Draw(L"|", params, cmd);
 			}
 
 			// selection:
-			if(caret_pos != caret_begin)
+			if (caret_pos != caret_begin)
 			{
 				const int start = std::min(caret_begin, caret_pos);
-				const int end = std::max(caret_begin, caret_pos);
+				const int end   = std::max(caret_begin, caret_pos);
+
 				const std::wstring& str = font_input.GetText();
+
 				const float pos_start = font_input.params.position.x + wi::font::TextSize(str.c_str(), start, font_input.params).x;
-				const float pos_end = font_input.params.position.x + wi::font::TextSize(str.c_str(), end, font_input.params).x;
+				const float pos_end   = font_input.params.position.x + wi::font::TextSize(str.c_str(), end, font_input.params).x;
 				const float width = pos_end - pos_start;
+
 				wi::image::Params params;
 				params.pos.x = pos_start;
 				params.pos.y = translation.y + 1;
@@ -601,6 +773,7 @@ namespace wi::gui
 				params.siz.y = scale.y - 2;
 				params.blendFlag = wi::enums::BLENDMODE_ALPHA;
 				params.color = wi::Color::lerp(font_input.params.color, wi::Color::Transparent(), 0.5f);
+
 				wi::image::Draw(nullptr, params, cmd);
 			}
 
@@ -618,96 +791,131 @@ namespace wi::gui
 			font.Draw(cmd);
 		}
 	}
-	void TextInputField::OnInputAccepted(std::function<void(const EventArgs& args)> func)
-	{
+
+	void TextInputField::OnInputAccepted(
+		std::function<void(const EventArgs& args)> func
+	) {
 		onInputAccepted = std::move(func);
 	}
-	void TextInputField::OnInput(std::function<void(const EventArgs& args)> func)
-	{
+
+	void TextInputField::OnInput(
+		std::function<void(const EventArgs& args)> func
+	) {
 		onInput = std::move(func);
 	}
+
 	void TextInputField::AddInput(const wchar_t inputChar)
 	{
 		input_updated = true;
+
 		switch (inputChar)
 		{
-		case '\b':	// BACKSPACE
-		case '\n':	// ENTER
-		case '\r':	// ENTER
-		case 127:	// DEL
-			return;
-		default:
-			break;
+			case '\b':	// BACKSPACE
+			case '\n':	// ENTER
+			case '\r':	// ENTER
+			case 127:	// DEL
+				return;
+			default:
+				break;
 		}
+
 		std::wstring value_new = font_input.GetText();
+
 		if (value_new.size() >= caret_pos)
 		{
 			const int caret_pos_prev = caret_pos;
+
 			if (caret_begin != caret_pos)
 			{
 				const int offset = std::min(caret_pos, caret_begin);
+
 				value_new.erase(offset, std::abs(caret_pos - caret_begin));
 				caret_pos = offset;
 			}
+
 			int num = 0;
 #ifdef __APPLE__
-			if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LCOMMAND) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RCOMMAND))
+			const auto leftCtrlKey  = wi::input::KEYBOARD_BUTTON_LCOMMAND;
+			const auto rightCtrlKey = wi::input::KEYBOARD_BUTTON_RCOMMAND;
 #else
-			if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RCONTROL))
+			const auto leftCtrlKey  = wi::input::KEYBOARD_BUTTON_LCONTROL;
+			const auto rightCtrlKey = wi::input::KEYBOARD_BUTTON_RCONTROL;
 #endif // __APPLE__
+			const bool isLeftCtrlDown  = wi::input::Down(leftCtrlKey);
+			const bool isRightCtrlDown = wi::input::Down(rightCtrlKey);
+
+			if (isLeftCtrlDown || isRightCtrlDown)
 			{
-				if (wi::input::Down((wi::input::BUTTON)'V'))
+				if (wi::input::Down(static_cast<wi::input::BUTTON>('V')))
 				{
 					// Paste:
-					const std::wstring clipboard = wi::helper::GetClipboardText();
-					value_new.insert(value_new.begin() + caret_pos, clipboard.begin(), clipboard.end());
-					num = (int)clipboard.length();
+					const std::wstring clipboard
+						= wi::helper::GetClipboardText();
+
+					value_new.insert(
+						value_new.begin() + caret_pos,
+						clipboard.begin(),
+						clipboard.end()
+					);
+					num = static_cast<int>(clipboard.length());
 				}
-				else if (wi::input::Down((wi::input::BUTTON)'C'))
+				else if (wi::input::Down(static_cast<wi::input::BUTTON>('C')))
 				{
 					// Copy:
 					caret_pos = caret_pos_prev;
+
 					const std::wstring& text = font_input.GetText();
 					const int start = std::min(caret_begin, caret_pos);
 					const int end = std::max(caret_begin, caret_pos);
 					const std::wstring clipboard = std::wstring(text.c_str() + start, text.c_str() + end);
+
 					wi::helper::SetClipboardText(clipboard);
+
 					return;
 				}
-				else if (wi::input::Down((wi::input::BUTTON)'X'))
+				else if (wi::input::Down(static_cast<wi::input::BUTTON>('X')))
 				{
 					// Cut:
 					caret_pos = caret_pos_prev;
+
 					const std::wstring& text = font_input.GetText();
 					const int start = std::min(caret_begin, caret_pos);
 					const int end = std::max(caret_begin, caret_pos);
 					const std::wstring clipboard = std::wstring(text.c_str() + start, text.c_str() + end);
+
 					wi::helper::SetClipboardText(clipboard);
 				}
-				else
+				else {
 					return;
+				}
 			}
 			else
 			{
 				value_new.insert(value_new.begin() + caret_pos, inputChar);
 				num = 1;
 			}
+
 			font_input.SetText(value_new);
-			caret_pos = std::min((int)font_input.GetText().size(), caret_pos + num);
+			caret_pos = std::min(static_cast<int>(font_input.GetText().size()), caret_pos + num);
 		}
+
 		caret_begin = caret_pos;
 	}
+
 	void TextInputField::AddInput(const char inputChar)
 	{
-		AddInput((wchar_t)inputChar);
+		AddInput(static_cast<wchar_t>(inputChar));
 	}
+
 	void TextInputField::DeleteFromInput(const int direction)
 	{
 		input_updated = true;
 		std::wstring value_new = font_input.GetText();
+
 		if (caret_begin != caret_pos)
 		{
 			const int offset = std::min(caret_pos, caret_begin);
+
 			value_new.erase(offset, std::abs(caret_pos - caret_begin));
 			caret_pos = offset;
 		}
@@ -726,47 +934,61 @@ namespace wi::gui
 				if (value_new.size() > caret_pos)
 				{
 					value_new.erase(value_new.begin() + caret_pos);
-					caret_pos = std::min((int)value_new.size(), caret_pos);
+					caret_pos = std::min(static_cast<int>(value_new.size()), caret_pos);
 				}
 			}
 		}
+
 		caret_begin = caret_pos;
 		font_input.SetText(value_new);
 	}
+
 	void TextInputField::SetColor(const wi::Color color, const int id)
 	{
 		Widget::SetColor(color, id);
 
-		if (id > WIDGET_ID_TEXTINPUTFIELD_BEGIN && id < WIDGET_ID_TEXTINPUTFIELD_END)
-		{
+		if (id > WIDGET_ID_TEXTINPUTFIELD_BEGIN
+		 && id < WIDGET_ID_TEXTINPUTFIELD_END
+		) {
 			sprites[id - WIDGET_ID_TEXTINPUTFIELD_IDLE].params.color = color;
 		}
 	}
+
 	void TextInputField::SetTheme(const Theme& theme, const int id)
 	{
 		Widget::SetTheme(theme, id);
 		theme.font.Apply(font_description.params);
 	}
+
 	void TextInputField::SetAsActive(const bool selectall)
 	{
 		Activate();
 		font_input.SetText(font.GetText());
-		caret_pos = (int)font_input.GetText().size();
+		caret_pos = static_cast<int>(font_input.GetText().size());
 		caret_begin = selectall ? 0 : caret_pos;
 		caret_delay = 0;
 	}
+
 	void TextInputField::Activate()
 	{
 		if (state != ACTIVE)
+		{
 			typing_active = true;
+		}
+
 		Widget::Activate();
 	}
+
 	void TextInputField::Deactivate()
 	{
 		if(state == ACTIVE)
+		{
 			typing_active = false;
+		}
+
 		Widget::Deactivate();
 	}
+
 	void TextInputField::SetEnabled(const bool val)
 	{
 		if (!val && state == ACTIVE)
@@ -774,8 +996,10 @@ namespace wi::gui
 			font_input.text.clear();
 			typing_active = false;
 		}
+
 		Widget::SetEnabled(val);
 	}
+
 	void TextInputField::SetVisible(const bool val)
 	{
 		if (!val && state == ACTIVE)
@@ -783,6 +1007,7 @@ namespace wi::gui
 			font_input.text.clear();
 			typing_active = false;
 		}
+
 		Widget::SetVisible(val);
 	}
 }
