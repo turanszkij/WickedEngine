@@ -1,6 +1,6 @@
 # Network
 
-[← Back to Scripting API index](../index.md)
+[← Back to Scripting API documentation](../../ScriptingAPI-Documentation.md)
 
 Scripting handle for the engine's networking system. It is registered as the
 `Network` class and exposed through the global `network` object.

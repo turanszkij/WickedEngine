@@ -1,6 +1,6 @@
 # High Level Interface
 
-[← Back to Scripting API index](../index.md)
+[← Back to Scripting API documentation](../../ScriptingAPI-Documentation.md)
 
 **This section must only be used from standalone lua scripts, and must not be
 used from a ScriptComponent.** This is because ScriptComponent is always running

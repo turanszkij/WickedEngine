@@ -1,6 +1,6 @@
 # Primitives
 
-[← Back to Scripting API index](../index.md)
+[← Back to Scripting API documentation](../../ScriptingAPI-Documentation.md)
 
 ## Ray
 

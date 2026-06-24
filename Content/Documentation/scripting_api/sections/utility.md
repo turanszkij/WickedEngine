@@ -1,6 +1,6 @@
 # Utility Tools
 
-[← Back to Scripting API index](../index.md)
+[← Back to Scripting API documentation](../../ScriptingAPI-Documentation.md)
 
 This section describes the common tools for scripting which are not necessarily engine features.
 

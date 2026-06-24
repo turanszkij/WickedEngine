@@ -1,6 +1,6 @@
 # Scene System (using entity-component system)
 
-[← Back to Scripting API index](../index.md)
+[← Back to Scripting API documentation](../../ScriptingAPI-Documentation.md)
 
 Manipulate the 3D scene with these components.
 

@@ -1,6 +1,6 @@
 # Renderer
 
-[← Back to Scripting API index](../index.md)
+[← Back to Scripting API documentation](../../ScriptingAPI-Documentation.md)
 
 The renderer manages rendering, the scene graph and debug drawing. All of the
 functions below are in the global scope (there is no `Renderer` object).

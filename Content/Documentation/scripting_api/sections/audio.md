@@ -1,6 +1,6 @@
 # Audio
 
-[← Back to Scripting API index](../index.md)
+[← Back to Scripting API documentation](../../ScriptingAPI-Documentation.md)
 
 ```lua
     --- Creates an Audio object. Use the global `audio` instead of constructing

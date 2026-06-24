@@ -1,6 +1,6 @@
 # Async
 
-[← Back to Scripting API index](../index.md)
+[← Back to Scripting API documentation](../../ScriptingAPI-Documentation.md)
 
 ```lua
     --- Constructs a new Async tracker object.

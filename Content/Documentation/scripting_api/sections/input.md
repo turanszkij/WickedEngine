@@ -1,6 +1,6 @@
 # Input
 
-[← Back to Scripting API index](../index.md)
+[← Back to Scripting API documentation](../../ScriptingAPI-Documentation.md)
 
 ```lua
     --- Creates an Input object. Use the global `input` instead of constructing

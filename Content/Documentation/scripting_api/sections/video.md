@@ -1,6 +1,6 @@
 # Video
 
-[← Back to Scripting API index](../index.md)
+[← Back to Scripting API documentation](../../ScriptingAPI-Documentation.md)
 
 The video interface consists of two types of objects: Video and VideoInstance.
 Note: these are the underlying objects that VideoComponents use in the scene, to

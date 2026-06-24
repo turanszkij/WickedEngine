@@ -1,6 +1,6 @@
 # BackLog
 
-[← Back to Scripting API index](../index.md)
+[← Back to Scripting API documentation](../../ScriptingAPI-Documentation.md)
 
 The BackLog is the engine's scripting console: type text with the keyboard and
 run it with the RETURN key; script errors are also displayed here. These

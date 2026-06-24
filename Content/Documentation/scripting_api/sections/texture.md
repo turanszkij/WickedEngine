@@ -1,6 +1,6 @@
 # Texture
 
-[← Back to Scripting API index](../index.md)
+[← Back to Scripting API documentation](../../ScriptingAPI-Documentation.md)
 
 ```lua
     --- Creates a texture. With a filename, loads the image from file; with no

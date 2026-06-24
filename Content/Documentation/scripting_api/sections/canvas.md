@@ -1,6 +1,6 @@
 # Canvas
 
-[← Back to Scripting API index](../index.md)
+[← Back to Scripting API documentation](../../ScriptingAPI-Documentation.md)
 
 ```lua
     --- Creates a Canvas object. In practice you obtain the active canvas from

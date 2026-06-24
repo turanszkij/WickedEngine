@@ -1,6 +1,6 @@
 # Physics
 
-[← Back to Scripting API index](../index.md)
+[← Back to Scripting API documentation](../../ScriptingAPI-Documentation.md)
 
 ```lua
     --- Creates a Physics object. Use the global `physics` instead of
