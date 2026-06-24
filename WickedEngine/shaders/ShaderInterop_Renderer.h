@@ -1194,7 +1194,7 @@ static const uint MATRIXARRAY_COUNT = SHADER_ENTITY_COUNT;
 static const uint MAX_SHADER_DECAL_COUNT = 128;
 static const uint MAX_SHADER_PROBE_COUNT = 32;
 
-static const uint TILED_CULLING_BLOCKSIZE = 16;
+static const uint TILED_CULLING_BLOCKSIZE = 32;
 static const uint TILED_CULLING_THREADSIZE = 8;
 static const uint TILED_CULLING_GRANULARITY = TILED_CULLING_BLOCKSIZE / TILED_CULLING_THREADSIZE;
 
@@ -1252,27 +1252,22 @@ struct alignas(16) FrameCB
 	float		cloudShadowFarPlaneKm;
 	int			texture_volumetricclouds_shadow_index;
 	uint		giboost_packed; // force fp16 load
-	uint		entity_culling_count;
-
 	uint		capsuleshadow_fade_angle;
-	int			indirect_debugbufferindex;
-	int			padding0;
-	int			padding1;
 
+	int			indirect_debugbufferindex;
 	float		blue_noise_phase;
 	int			texture_random64x64_index;
 	int			texture_bluenoise_index;
-	int			texture_sheenlut_index;
 
+	int			texture_sheenlut_index;
 	int			texture_skyviewlut_index;
 	int			texture_transmittancelut_index;
 	int			texture_multiscatteringlut_index;
-	int			texture_skyluminancelut_index;
 
+	int			texture_skyluminancelut_index;
 	int			texture_cameravolumelut_index;
 	int			texture_wind_index;
 	int			texture_wind_prev_index;
-	int			texture_caustics_index;
 
 	float4		rain_blocker_mad;
 	float4x4	rain_blocker_matrix;
@@ -1553,9 +1548,10 @@ CBUFFER(MiscCB, CBSLOT_RENDERER_MISC)
 
 CBUFFER(ForwardEntityMaskCB, CBSLOT_RENDERER_FORWARD_LIGHTMASK)
 {
-	uint64_t xForwardLightMask;	// supports indexing 64 lights
-	uint xForwardDecalMask;		// supports indexing 32 decals
-	uint xForwardEnvProbeMask;	// supports indexing 32 environment probes
+	uint xForwardDecalAndProbeMask;	// 24 decals, 8 probes
+	uint xForwardSpotLightMask;		// 32 lights
+	uint xForwardPointLightMask;	// 32 lights
+	uint xForwardRectLightMask;		// 32 lights
 };
 
 CBUFFER(VolumeLightCB, CBSLOT_RENDERER_VOLUMELIGHT)

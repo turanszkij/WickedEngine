@@ -4,7 +4,6 @@
 PUSHCONSTANT(postprocess, PostProcess);
 
 Texture2D<uint4> input : register(t0);
-Texture2D<float> lineardepth_lowres : register(t1);
 
 RWTexture2DArray<unorm float> output : register(u0);
 
@@ -44,11 +43,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 	uint4 shadow_mask1 = input[pixel1];
 	uint4 shadow_mask2 = input[pixel2];
 	uint4 shadow_mask3 = input[pixel3];
-	float lineardepth0 = lineardepth_lowres[pixel0] * GetCamera().z_far;
-	float lineardepth1 = lineardepth_lowres[pixel1] * GetCamera().z_far;
-	float lineardepth2 = lineardepth_lowres[pixel2] * GetCamera().z_far;
-	float lineardepth3 = lineardepth_lowres[pixel3] * GetCamera().z_far;
-	float lineardepth_highres = texture_lineardepth[pixel] * GetCamera().z_far;
+	float lineardepth0 = compute_lineardepth(texture_depth.Load(uint3(pixel0, 1)));
+	float lineardepth1 = compute_lineardepth(texture_depth.Load(uint3(pixel1, 1)));
+	float lineardepth2 = compute_lineardepth(texture_depth.Load(uint3(pixel2, 1)));
+	float lineardepth3 = compute_lineardepth(texture_depth.Load(uint3(pixel3, 1)));
+	float lineardepth_highres = compute_lineardepth(texture_depth[pixel]);
 
 	float threshold = 2;
 	float4 weights = max(0.001, 1 - saturate(abs(float4(lineardepth0, lineardepth1, lineardepth2, lineardepth3) - lineardepth_highres) * threshold));
@@ -74,9 +73,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 			{
 				// Retrieve global entity index from local bucket, then remove bit from local bucket:
 				const uint bucket_bit_index = firstbitlow(bucket_bits);
-				const uint entity_index = bucket * 32 + bucket_bit_index;
 				bucket_bits ^= 1u << bucket_bit_index;
 
+				const uint entity_index = bucket * 32 + bucket_bit_index;
 				shadow_index = entity_index - lights().first_item();
 				if (shadow_index >= MAX_RTSHADOWS)
 					break;

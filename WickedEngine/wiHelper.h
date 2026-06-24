@@ -143,6 +143,9 @@ namespace wi::helper
 	std::string GetCurrentPath();
 	std::string GetExecutablePath();
 
+	// Returns a path that files can be safely saved to on every platform. This is the base directory for such a path, and files should be saved to an application specific named folder within it
+	std::string GetSaveDataPath();
+
 	struct FileDialogParams
 	{
 		enum TYPE

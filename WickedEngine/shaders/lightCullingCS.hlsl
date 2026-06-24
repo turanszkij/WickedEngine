@@ -209,35 +209,13 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	GroupMemoryBarrierWithGroupSync();
 
 	const uint depth_mask = uDepthMask; // take out from groupshared into register
-	
-	// lights:
-	for (uint i = lights().first_item() + groupIndex; i < lights().end_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
-	{
-		ShaderEntity entity = load_entity(i);
-		
-		if (entity.IsStaticLight())
-			continue; // static lights will be skipped here (they are used at lightmap baking)
-		ShaderSphere sphere = load_entityculling(i);
-		if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
-		{
-			AppendEntity_Transparent(i);
 
-			if (SphereIntersectsAABB(sphere, GroupAABB)) // tighter fit than sphere-frustum culling
-			{
-#ifdef ADVANCED
-				if (depth_mask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
-#endif // ADVANCED
-				{
-					AppendEntity_Opaque(i);
-				}
-			}
-		}
-	}
-
-	// Decals:
-	for (uint i = decals().first_item() + groupIndex; i < decals().end_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
+	// Environment probes and decals:
+	//  Note: processing both in the same loop relies on them placed near each other in entity array by CPU!
+	uint begin = min(probes().first_item(), decals().first_item());
+	uint end = max(probes().end_item(), decals().end_item());
+	for (uint i = begin + groupIndex; i < end; i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
-		ShaderEntity entity = load_entity(i);
 		ShaderSphere sphere = load_entityculling(i);
 		if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
 		{
@@ -250,37 +228,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 
 			// frustum AABB in world space transformed into the space of the probe/decal OBB:
 			AABB b = GroupAABB_WS;
-			AABBtransform(b, load_entitymatrix(entity.GetMatrixIndex()));
-
-			if (IntersectAABB(a, b))
-			{
-#ifdef ADVANCED
-				if (depth_mask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
-#endif // ADVANCED
-				{
-					AppendEntity_Opaque(i);
-				}
-			}
-		}
-	}
-
-	// Environment probes:
-	for (uint i = probes().first_item() + groupIndex; i < probes().end_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
-	{
-		ShaderEntity entity = load_entity(i);
-		ShaderSphere sphere = load_entityculling(i);
-		if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
-		{
-			AppendEntity_Transparent(i);
-
-			// unit AABB: 
-			AABB a;
-			a.c = 0;
-			a.e = 1.0;
-
-			// frustum AABB in world space transformed into the space of the probe/decal OBB:
-			AABB b = GroupAABB_WS;
-			AABBtransform(b, load_entitymatrix(entity.GetMatrixIndex()));
+			AABBtransform(b, (float3x4)load_entitymatrix(i)); // note: straight entity-matrix mapping ok
 
 			if (IntersectAABB(a, b))
 			{
@@ -294,13 +242,14 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		}
 	}
 	
-	// Capsule shadows:
-	for (uint i = forces().first_item() + groupIndex; i < forces().end_item(); i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
+	// lights and capsule shadow colliders:
+	//	Note that lights and force ranges are placed near each other placed near each other in entity array by CPU!
+	//	Note that static lights are not included here by their culling spheres are zeroed
+	//	Note that regular colliders/forces are not included here, only capsule shadows, by zeroing the other culling spheres
+	begin = min(lights().first_item(), forces().first_item());
+	end = max(lights().end_item(), forces().end_item());
+	for (uint i = begin + groupIndex; i < end; i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
-		ShaderEntity entity = load_entity(i);
-		if ((entity.GetFlags() & ENTITY_FLAG_CAPSULE_SHADOW_COLLIDER) == 0)
-			continue;
-			
 		ShaderSphere sphere = load_entityculling(i);
 		if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
 		{

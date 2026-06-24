@@ -17,6 +17,8 @@ namespace wi
 		rtFinal_MSAA = {};
 		rtStencilExtracted = {};
 		stencilScaled = {};
+
+		GetDevice()->FlushDeallocations();
 	}
 
 	void RenderPath2D::ResizeBuffers()
@@ -37,7 +39,7 @@ namespace wi
 			desc.format = Format::R8_UINT;
 			desc.layout = ResourceState::SHADER_RESOURCE;
 			device->CreateTexture(&desc, nullptr, &rtStencilExtracted);
-			device->SetName(&rtStencilExtracted, "rtStencilExtracted");
+			device->SetName(&rtStencilExtracted, "renderpath2D.rtStencilExtracted");
 
 			desc.width = GetPhysicalWidth();
 			desc.height = GetPhysicalHeight();
@@ -46,7 +48,7 @@ namespace wi
 			desc.format = Format::D32_FLOAT_S8X24_UINT; // D24 was erroring on Vulkan AMD though here it would be enough
 			desc.layout = ResourceState::DEPTHSTENCIL;
 			device->CreateTexture(&desc, nullptr, &stencilScaled);
-			device->SetName(&stencilScaled, "stencilScaled");
+			device->SetName(&stencilScaled, "renderpath2D.stencilScaled");
 		}
 		else
 		{
@@ -61,7 +63,7 @@ namespace wi
 			desc.width = GetPhysicalWidth();
 			desc.height = GetPhysicalHeight();
 			device->CreateTexture(&desc, nullptr, &rtFinal);
-			device->SetName(&rtFinal, "rtFinal");
+			device->SetName(&rtFinal, "renderpath2D.rtFinal");
 
 			if (sampleCount > 1)
 			{
@@ -70,7 +72,7 @@ namespace wi
 				desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
 				desc.layout = ResourceState::RENDERTARGET;
 				device->CreateTexture(&desc, nullptr, &rtFinal_MSAA);
-				device->SetName(&rtFinal_MSAA, "rtFinal_MSAA");
+				device->SetName(&rtFinal_MSAA, "renderpath2D.rtFinal_MSAA");
 				
 				// Note: graphics API can downgrade sample count for last supported value, this will be reflected in the renderpath setting too
 				msaaSampleCount = std::min(msaaSampleCount, rtFinal_MSAA.desc.sample_count);

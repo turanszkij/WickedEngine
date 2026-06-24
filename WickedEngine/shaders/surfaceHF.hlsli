@@ -795,22 +795,21 @@ struct Surface
 				{
 					// Retrieve global entity index from local bucket, then remove bit from local bucket:
 					const uint bucket_bit_index = firstbitlow(bucket_bits);
-					const uint entity_index = bucket * 32 + bucket_bit_index;
 					bucket_bits ^= 1u << bucket_bit_index;
 					
+					const uint entity_index = bucket * 32 + bucket_bit_index;
 					ShaderEntity decal = load_entity(entity_index);
 
-					float4x4 decalProjection = load_entitymatrix(decal.GetMatrixIndex());
+					float4x4 decalProjection = load_entitymatrix(entity_index); // note: straight entity-matrix mapping ok
 					const int decalTexture = asint(decalProjection[3][0]);
 					const int decalNormal = asint(decalProjection[3][1]);
 					const int decalSurfacemap = asint(decalProjection[3][2]);
 					const int decalDisplacementmap = asint(decalProjection[3][3]);
-					decalProjection[3] = float4(0, 0, 0, 1);
 						
 					// under here will be VGPR!
 					if ((decal.layerMask & layerMask) == 0)
 						continue;
-					const float3 clipSpacePos = mul(decalProjection, float4(P, 1)).xyz;
+					const float3 clipSpacePos = mul((float3x4)decalProjection, float4(P, 1)).xyz;
 					float3 uvw = box_to_uv(clipSpacePos.xyz);
 					[branch]
 					if (is_saturated(uvw))

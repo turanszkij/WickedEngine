@@ -16,14 +16,13 @@ namespace wi
 
 	void RenderPath3D::DeleteGPUResources()
 	{
-		RenderPath2D::DeleteGPUResources();
-
 		rtMain = {};
 		rtMain_render = {};
 		rtPrimitiveID = {};
 		rtPrimitiveID_render = {};
 		rtVelocity = {};
 		rtReflection = {};
+		rtReflection_render = {};
 		rtRaytracedDiffuse = {};
 		rtSSR = {};
 		rtSceneCopy = {};
@@ -54,6 +53,7 @@ namespace wi
 		depthBuffer_Copy = {};
 		depthBuffer_Copy1 = {};
 		depthBuffer_Reflection = {};
+		depthBuffer_Reflection_render = {};
 		reprojectedDepth = {};
 
 		debugUAV = {};
@@ -80,8 +80,8 @@ namespace wi
 		fsr2Resources = {};
 		vxgiResources = {};
 		meshblendResources = {};
-		
-		GetDevice()->SubmitCommandLists(); // I added this here to control memory usage of rapid resizing, as GPU resources can be final-freed here
+
+		RenderPath2D::DeleteGPUResources();
 	}
 
 	void RenderPath3D::ResizeBuffers()
@@ -105,7 +105,7 @@ namespace wi
 			desc.height = internalResolution.y;
 			desc.sample_count = 1;
 			device->CreateTexture(&desc, nullptr, &rtMain);
-			device->SetName(&rtMain, "rtMain");
+			device->SetName(&rtMain, "renderpath3D.rtMain");
 
 			if (getMSAASampleCount() > 1)
 			{
@@ -113,7 +113,7 @@ namespace wi
 				desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
 
 				device->CreateTexture(&desc, nullptr, &rtMain_render);
-				device->SetName(&rtMain_render, "rtMain_render");
+				device->SetName(&rtMain_render, "renderpath3D.rtMain_render");
 				
 				// Note: graphics API can downgrade sample count for last supported value, this will be reflected in the renderpath setting too
 				msaaSampleCount = std::min(msaaSampleCount, rtMain_render.desc.sample_count);
@@ -137,7 +137,7 @@ namespace wi
 			desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 			desc.misc_flags = ResourceMiscFlag::ALIASING_TEXTURE_RT_DS;
 			device->CreateTexture(&desc, nullptr, &rtPrimitiveID);
-			device->SetName(&rtPrimitiveID, "rtPrimitiveID");
+			device->SetName(&rtPrimitiveID, "renderpath3D.rtPrimitiveID");
 
 			if (getMSAASampleCount() > 1)
 			{
@@ -145,7 +145,7 @@ namespace wi
 				desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
 				desc.misc_flags = ResourceMiscFlag::NONE;
 				device->CreateTexture(&desc, nullptr, &rtPrimitiveID_render);
-				device->SetName(&rtPrimitiveID_render, "rtPrimitiveID_render");
+				device->SetName(&rtPrimitiveID_render, "renderpath3D.rtPrimitiveID_render");
 			}
 			else
 			{
@@ -161,13 +161,13 @@ namespace wi
 			desc.sample_count = 1;
 			desc.misc_flags = ResourceMiscFlag::ALIASING_TEXTURE_RT_DS;
 			device->CreateTexture(&desc, nullptr, &rtParticleDistortion);
-			device->SetName(&rtParticleDistortion, "rtParticleDistortion");
+			device->SetName(&rtParticleDistortion, "renderpath3D.rtParticleDistortion");
 			if (getMSAASampleCount() > 1)
 			{
 				desc.sample_count = getMSAASampleCount();
 				desc.misc_flags = ResourceMiscFlag::NONE;
 				device->CreateTexture(&desc, nullptr, &rtParticleDistortion_render);
-				device->SetName(&rtParticleDistortion_render, "rtParticleDistortion_render");
+				device->SetName(&rtParticleDistortion_render, "renderpath3D.rtParticleDistortion_render");
 			}
 			else
 			{
@@ -182,10 +182,10 @@ namespace wi
 			desc.height = internalResolution.y / 4;
 			desc.mip_levels = std::min(8u, (uint32_t)std::log2(std::max(desc.width, desc.height)));
 			device->CreateTextureZeroed(&desc, &rtSceneCopy);
-			device->SetName(&rtSceneCopy, "rtSceneCopy");
+			device->SetName(&rtSceneCopy, "renderpath3D.rtSceneCopy");
 			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS | BindFlag::RENDER_TARGET; // render target for aliasing
 			device->CreateTexture(&desc, nullptr, &rtSceneCopy_tmp, &rtPrimitiveID);
-			device->SetName(&rtSceneCopy_tmp, "rtSceneCopy_tmp");
+			device->SetName(&rtSceneCopy_tmp, "renderpath3D.rtSceneCopy_tmp");
 
 			device->CreateMipgenSubresources(rtSceneCopy);
 			device->CreateMipgenSubresources(rtSceneCopy_tmp);
@@ -198,7 +198,7 @@ namespace wi
 			desc.height = internalResolution.y;
 			assert(ComputeTextureMemorySizeInBytes(desc) <= ComputeTextureMemorySizeInBytes(rtPrimitiveID.desc)); // Aliased check
 			device->CreateTexture(&desc, nullptr, &rtPostprocess, &rtPrimitiveID); // Aliased!
-			device->SetName(&rtPostprocess, "rtPostprocess");
+			device->SetName(&rtPostprocess, "renderpath3D.rtPostprocess");
 		}
 		{
 			TextureDesc desc;
@@ -208,14 +208,14 @@ namespace wi
 			desc.height = internalResolution.y / 4;
 			desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
 			device->CreateTexture(&desc, nullptr, &rtGUIBlurredBackground[0]);
-			device->SetName(&rtGUIBlurredBackground[0], "rtGUIBlurredBackground[0]");
+			device->SetName(&rtGUIBlurredBackground[0], "renderpath3D.rtGUIBlurredBackground[0]");
 
 			desc.width /= 4;
 			desc.height /= 4;
 			device->CreateTexture(&desc, nullptr, &rtGUIBlurredBackground[1]);
-			device->SetName(&rtGUIBlurredBackground[1], "rtGUIBlurredBackground[1]");
+			device->SetName(&rtGUIBlurredBackground[1], "renderpath3D.rtGUIBlurredBackground[1]");
 			device->CreateTexture(&desc, nullptr, &rtGUIBlurredBackground[2]);
-			device->SetName(&rtGUIBlurredBackground[2], "rtGUIBlurredBackground[2]");
+			device->SetName(&rtGUIBlurredBackground[2], "renderpath3D.rtGUIBlurredBackground[2]");
 		}
 		if (device->CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING_TIER2) &&
 			wi::renderer::GetVariableRateShadingClassification())
@@ -230,7 +230,7 @@ namespace wi
 			desc.height = (internalResolution.y + tileSize - 1) / tileSize;
 
 			device->CreateTexture(&desc, nullptr, &rtShadingRate);
-			device->SetName(&rtShadingRate, "rtShadingRate");
+			device->SetName(&rtShadingRate, "renderpath3D.rtShadingRate");
 		}
 
 		// Depth buffers:
@@ -244,7 +244,7 @@ namespace wi
 			desc.format = wi::renderer::format_depthbuffer_main;
 			desc.bind_flags = BindFlag::DEPTH_STENCIL;
 			device->CreateTexture(&desc, nullptr, &depthBuffer_Main);
-			device->SetName(&depthBuffer_Main, "depthBuffer_Main");
+			device->SetName(&depthBuffer_Main, "renderpath3D.depthBuffer_Main");
 
 			desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 			desc.format = Format::R32_FLOAT;
@@ -252,9 +252,9 @@ namespace wi
 			desc.sample_count = 1;
 			desc.mip_levels = 5;
 			device->CreateTexture(&desc, nullptr, &depthBuffer_Copy);
-			device->SetName(&depthBuffer_Copy, "depthBuffer_Copy");
+			device->SetName(&depthBuffer_Copy, "renderpath3D.depthBuffer_Copy");
 			device->CreateTexture(&desc, nullptr, &depthBuffer_Copy1);
-			device->SetName(&depthBuffer_Copy1, "depthBuffer_Copy1");
+			device->SetName(&depthBuffer_Copy1, "renderpath3D.depthBuffer_Copy1");
 
 			for (uint32_t i = 0; i < depthBuffer_Copy.desc.mip_levels; ++i)
 			{
@@ -284,7 +284,7 @@ namespace wi
 			desc.layout = ResourceState::SHADER_RESOURCE;
 
 			device->CreateTexture(&desc, nullptr, &debugUAV);
-			device->SetName(&debugUAV, "debugUAV");
+			device->SetName(&debugUAV, "renderpath3D.debugUAV");
 		}
 		wi::renderer::CreateTiledLightResources(tiledLightResources, internalResolution);
 		wi::renderer::CreateScreenSpaceShadowResources(screenspaceshadowResources, internalResolution);
@@ -498,7 +498,7 @@ namespace wi
 				desc.height = internalResolution.y / 8;
 				assert(ComputeTextureMemorySizeInBytes(desc) <= ComputeTextureMemorySizeInBytes(rtParticleDistortion.desc)); // aliasing check
 				device->CreateTexture(&desc, nullptr, &rtWaterRipple, &rtParticleDistortion); // aliased!
-				device->SetName(&rtWaterRipple, "rtWaterRipple");
+				device->SetName(&rtWaterRipple, "renderpath3D.rtWaterRipple");
 			}
 		}
 		else
@@ -537,7 +537,7 @@ namespace wi
 			desc.mip_levels = GetMipCount(desc.width, desc.height, 1, 4);
 			desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 			device->CreateTexture(&desc, nullptr, &reprojectedDepth);
-			device->SetName(&reprojectedDepth, "reprojectedDepth");
+			device->SetName(&reprojectedDepth, "renderpath3D.reprojectedDepth");
 
 			for (uint32_t i = 0; i < reprojectedDepth.desc.mip_levels; ++i)
 			{
@@ -577,7 +577,7 @@ namespace wi
 				desc.height = internalResolution.y;
 				desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 				device->CreateTexture(&desc, nullptr, &rtVelocity);
-				device->SetName(&rtVelocity, "rtVelocity");
+				device->SetName(&rtVelocity, "renderpath3D.rtVelocity");
 			}
 		}
 		else
@@ -598,7 +598,7 @@ namespace wi
 				desc.height = internalResolution.y;
 				desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 				device->CreateTexture(&desc, nullptr, &rtShadow);
-				device->SetName(&rtShadow, "rtShadow");
+				device->SetName(&rtShadow, "renderpath3D.rtShadow");
 			}
 		}
 		else
@@ -1092,28 +1092,29 @@ namespace wi
 
 			RenderSSGI(cmd);
 
-			if (wi::renderer::GetScreenSpaceShadowsEnabled())
+			if (wi::renderer::GetWireframeMode() == wi::renderer::WIREFRAME_DISABLED)
 			{
-				wi::renderer::Postprocess_ScreenSpaceShadow(
-					screenspaceshadowResources,
-					tiledLightResources.entityTiles,
-					rtShadow,
-					cmd,
-					getScreenSpaceShadowRange(),
-					getScreenSpaceShadowSampleCount()
-				);
+				if (wi::renderer::GetRaytracedShadowsEnabled())
+				{
+					wi::renderer::Postprocess_RTShadow(
+						rtshadowResources,
+						*scene,
+						rtShadow,
+						cmd
+					);
+				}
+				else if (wi::renderer::GetScreenSpaceShadowsEnabled()) // rtshadow or screenspace shadow, not both
+				{
+					wi::renderer::Postprocess_ScreenSpaceShadow(
+						screenspaceshadowResources,
+						rtShadow,
+						cmd,
+						getScreenSpaceShadowRange(),
+						getScreenSpaceShadowSampleCount()
+					);
+				}
 			}
 
-			if (wi::renderer::GetRaytracedShadowsEnabled() && wi::renderer::GetWireframeMode() == wi::renderer::WIREFRAME_DISABLED)
-			{
-				wi::renderer::Postprocess_RTShadow(
-					rtshadowResources,
-					*scene,
-					tiledLightResources.entityTiles,
-					rtShadow,
-					cmd
-				);
-			}
 			if (getMeshBlendEnabled() && visibility_main.IsMeshBlendVisible())
 			{
 				wi::renderer::PostProcess_MeshBlend_EdgeProcess(meshblendResources, cmd);
@@ -1455,12 +1456,6 @@ namespace wi
 					*scene,
 					cmd
 				);
-			}
-
-			if (wi::renderer::GetRaytracedShadowsEnabled() || wi::renderer::GetScreenSpaceShadowsEnabled())
-			{
-				GPUBarrier barrier = GPUBarrier::Image(&rtShadow, rtShadow.desc.layout, ResourceState::SHADER_RESOURCE);
-				device->Barrier(&barrier, 1, cmd);
 			}
 
 			if (visibility_shading_in_compute)
@@ -2583,10 +2578,10 @@ namespace wi
 				desc.mip_levels = GetMipCount(desc.width, desc.height);
 				bool success = device->CreateTexture(&desc, nullptr, &camera.render_to_texture.rendertarget_render);
 				assert(success);
-				device->SetName(&camera.render_to_texture.rendertarget_render, "CameraComponent::RenderToTexture::rendertarget_render");
+				device->SetName(&camera.render_to_texture.rendertarget_render, "CameraComponent::rendertarget_render");
 				success = device->CreateTexture(&desc, nullptr, &camera.render_to_texture.rendertarget_display);
 				assert(success);
-				device->SetName(&camera.render_to_texture.rendertarget_display, "CameraComponent::RenderToTexture::rendertarget_display");
+				device->SetName(&camera.render_to_texture.rendertarget_display, "CameraComponent::rendertarget_display");
 
 				for (uint32_t i = 0; i < camera.render_to_texture.rendertarget_render.desc.mip_levels; ++i)
 				{
@@ -2609,7 +2604,7 @@ namespace wi
 					desc.bind_flags = BindFlag::RENDER_TARGET;
 					success = device->CreateTexture(&desc, nullptr, &camera.render_to_texture.rendertarget_MSAA);
 					assert(success);
-					device->SetName(&camera.render_to_texture.rendertarget_MSAA, "CameraComponent::RenderToTexture::rendertarget_MSAA");
+					device->SetName(&camera.render_to_texture.rendertarget_MSAA, "CameraComponent::rendertarget_MSAA");
 				}
 				else
 				{
@@ -2621,7 +2616,7 @@ namespace wi
 				desc.layout = ResourceState::SHADER_RESOURCE;
 				success = device->CreateTexture(&desc, nullptr, &camera.render_to_texture.depthstencil);
 				assert(success);
-				device->SetName(&camera.render_to_texture.depthstencil, "CameraComponent::RenderToTexture::depthstencil");
+				device->SetName(&camera.render_to_texture.depthstencil, "CameraComponent::depthstencil");
 
 				if (camera.render_to_texture.sample_count > 1)
 				{
@@ -2631,7 +2626,7 @@ namespace wi
 					desc.format = Format::R32_FLOAT;
 					success = device->CreateTexture(&desc, nullptr, &camera.render_to_texture.depthstencil_resolved);
 					assert(success);
-					device->SetName(&camera.render_to_texture.depthstencil_resolved, "CameraComponent::RenderToTexture::depthstencil_resolved");
+					device->SetName(&camera.render_to_texture.depthstencil_resolved, "CameraComponent::depthstencil_resolved");
 				}
 				else
 				{
@@ -2839,7 +2834,7 @@ namespace wi
 		GraphicsDevice* device = wi::graphics::GetDevice();
 		assert(ComputeTextureMemorySizeInBytes(desc) <= ComputeTextureMemorySizeInBytes(rtParticleDistortion.desc)); // aliasing check
 		device->CreateTexture(&desc, nullptr, &rtAO, &rtParticleDistortion); // aliasing!
-		device->SetName(&rtAO, "rtAO");
+		device->SetName(&rtAO, "renderpath3D.rtAO");
 	}
 	void RenderPath3D::setSSREnabled(bool value)
 	{
@@ -2859,7 +2854,7 @@ namespace wi
 			desc.height = internalResolution.y;
 			desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 			device->CreateTexture(&desc, nullptr, &rtSSR);
-			device->SetName(&rtSSR, "rtSSR");
+			device->SetName(&rtSSR, "renderpath3D.rtSSR");
 
 			wi::renderer::CreateSSRResources(ssrResources, internalResolution, ssrQuality);
 		}
@@ -2886,7 +2881,7 @@ namespace wi
 			desc.height = internalResolution.y;
 			desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 			device->CreateTexture(&desc, nullptr, &rtSSGI);
-			device->SetName(&rtSSGI, "rtSSGI");
+			device->SetName(&rtSSGI, "renderpath3D.rtSSGI");
 
 			wi::renderer::CreateSSGIResources(ssgiResources, internalResolution);
 		}
@@ -2912,7 +2907,7 @@ namespace wi
 			desc.width = internalResolution.x;
 			desc.height = internalResolution.y;
 			device->CreateTexture(&desc, nullptr, &rtSSR);
-			device->SetName(&rtSSR, "rtSSR");
+			device->SetName(&rtSSR, "renderpath3D.rtSSR");
 
 			wi::renderer::CreateRTReflectionResources(rtreflectionResources, internalResolution, raytracedReflectionsQuality);
 		}
@@ -2938,7 +2933,7 @@ namespace wi
 			desc.width = internalResolution.x;
 			desc.height = internalResolution.y;
 			device->CreateTexture(&desc, nullptr, &rtRaytracedDiffuse);
-			device->SetName(&rtRaytracedDiffuse, "rtRaytracedDiffuse");
+			device->SetName(&rtRaytracedDiffuse, "renderpath3D.rtRaytracedDiffuse");
 
 			wi::renderer::CreateRTDiffuseResources(rtdiffuseResources, internalResolution, raytracedDiffuseQuality);
 		}
@@ -2964,9 +2959,9 @@ namespace wi
 			desc.width = GetPhysicalWidth();
 			desc.height = GetPhysicalHeight();
 			device->CreateTexture(&desc, nullptr, &rtFSR[0]);
-			device->SetName(&rtFSR[0], "rtFSR[0]");
+			device->SetName(&rtFSR[0], "renderpath3D.rtFSR[0]");
 			device->CreateTexture(&desc, nullptr, &rtFSR[1]);
-			device->SetName(&rtFSR[1], "rtFSR[1]");
+			device->SetName(&rtFSR[1], "renderpath3D.rtFSR[1]");
 		}
 		else
 		{
@@ -3001,9 +2996,9 @@ namespace wi
 			desc.width = displayResolution.x;
 			desc.height = displayResolution.y;
 			device->CreateTexture(&desc, nullptr, &rtFSR[0]);
-			device->SetName(&rtFSR[0], "rtFSR[0]");
+			device->SetName(&rtFSR[0], "renderpath3D.rtFSR[0]");
 			device->CreateTexture(&desc, nullptr, &rtFSR[1]);
-			device->SetName(&rtFSR[1], "rtFSR[1]");
+			device->SetName(&rtFSR[1], "renderpath3D.rtFSR[1]");
 		}
 		else
 		{
@@ -3093,14 +3088,14 @@ namespace wi
 				desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
 			}
 			device->CreateTexture(&desc, nullptr, &rtReflection_render);
-			device->SetName(&rtReflection_render, "rtReflection_render");
+			device->SetName(&rtReflection_render, "renderpath3D.rtReflection_render");
 
 			desc.misc_flags = ResourceMiscFlag::NONE;
 			desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
 			desc.format = wi::renderer::format_depthbuffer_main;
 			desc.layout = ResourceState::SHADER_RESOURCE;
 			device->CreateTexture(&desc, nullptr, &depthBuffer_Reflection_render);
-			device->SetName(&depthBuffer_Reflection_render, "depthBuffer_Reflection_render");
+			device->SetName(&depthBuffer_Reflection_render, "renderpath3D.depthBuffer_Reflection_render");
 
 			if (desc.sample_count > 1)
 			{
@@ -3108,12 +3103,12 @@ namespace wi
 				desc.format = wi::renderer::format_rendertarget_main;
 				desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
 				device->CreateTexture(&desc, nullptr, &rtReflection);
-				device->SetName(&rtReflection, "rtReflection");
+				device->SetName(&rtReflection, "renderpath3D.rtReflection");
 
 				desc.format = Format::R16_UNORM;
 				desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
 				device->CreateTexture(&desc, nullptr, &depthBuffer_Reflection);
-				device->SetName(&depthBuffer_Reflection, "depthBuffer_Reflection");
+				device->SetName(&depthBuffer_Reflection, "renderpath3D.depthBuffer_Reflection");
 			}
 			else
 			{
@@ -3171,7 +3166,7 @@ namespace wi
 			desc.width = internalResolution.x / 2;
 			desc.height = internalResolution.y / 2;
 			device->CreateTexture(&desc, nullptr, &rtVolumetricLights);
-			device->SetName(&rtVolumetricLights, "rtVolumetricLights");
+			device->SetName(&rtVolumetricLights, "renderpath3D.rtVolumetricLights");
 		}
 		else
 		{
@@ -3196,16 +3191,16 @@ namespace wi
 			desc.height = internalResolution.y;
 			desc.sample_count = getMSAASampleCount();
 			device->CreateTexture(&desc, nullptr, &rtSun[0]);
-			device->SetName(&rtSun[0], "rtSun[0]");
+			device->SetName(&rtSun[0], "renderpath3D.rtSun[0]");
 
 			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 			desc.sample_count = 1;
 			desc.width = internalResolution.x / 4;
 			desc.height = internalResolution.y / 4;
 			device->CreateTexture(&desc, nullptr, &rtSun[1]);
-			device->SetName(&rtSun[1], "rtSun[1]");
+			device->SetName(&rtSun[1], "renderpath3D.rtSun[1]");
 			device->CreateTexture(&desc, nullptr, &rtSun[2]);
-			device->SetName(&rtSun[2], "rtSun[2]");
+			device->SetName(&rtSun[2], "renderpath3D.rtSun[2]");
 
 			if (getMSAASampleCount() > 1)
 			{
@@ -3214,7 +3209,7 @@ namespace wi
 				desc.height = internalResolution.y;
 				desc.sample_count = 1;
 				device->CreateTexture(&desc, nullptr, &rtSun_resolved);
-				device->SetName(&rtSun_resolved, "rtSun_resolved");
+				device->SetName(&rtSun_resolved, "renderpath3D.rtSun_resolved");
 			}
 		}
 		else
@@ -3242,7 +3237,7 @@ namespace wi
 			desc.width = internalResolution.x;
 			desc.height = internalResolution.y;
 			device->CreateTexture(&desc, nullptr, &rtOutlineSource);
-			device->SetName(&rtOutlineSource, "rtOutlineSource");
+			device->SetName(&rtOutlineSource, "renderpath3D.rtOutlineSource");
 
 			if (getMSAASampleCount() > 1)
 			{
@@ -3251,7 +3246,7 @@ namespace wi
 				desc.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
 				desc.layout = ResourceState::RENDERTARGET;
 				device->CreateTexture(&desc, nullptr, &rtOutlineSource_MSAA);
-				device->SetName(&rtOutlineSource_MSAA, "rtOutlineSource_MSAA");
+				device->SetName(&rtOutlineSource_MSAA, "renderpath3D.rtOutlineSource_MSAA");
 			}
 		}
 		else

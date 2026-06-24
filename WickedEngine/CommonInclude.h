@@ -109,6 +109,10 @@ struct StackString
 	constexpr unsigned size() const { return capacity; }
 	constexpr unsigned length() const { return cnt; }
 	constexpr bool empty() const { return cnt == 0; }
+	constexpr StackString() = default;
+	constexpr StackString(const StackString&) = default;
+	constexpr StackString(StackString&&) = default;
+	constexpr StackString(const char* str) { push_back(str); }
 };
 
 // Stack allocated simplified vector container:

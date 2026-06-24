@@ -2,7 +2,6 @@
 #define WI_OBJECTSHADER_HF
 
 #ifdef TRANSPARENT
-#define TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
 #else
 #define SHADOW_MASK_ENABLED
 #endif // TRANSPARENT
@@ -818,6 +817,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 	{
 		surface.albedo = lerp(surface.albedo, 0, wet); // darken color when wet
 		surface.roughness = clamp(surface.roughness * saturate(sqr((1 - wet) * 2 - 1)), 0.01, 1); // decrease eoughness when wet, but only at shoreline, not deeper underwater (sand underwater shouldn't be shiny)
+		surface.f0 = lerp(surface.f0, 0, wet); // decrease reflectance when wet (not shiny when fully underwater)
 		surface.N = normalize(lerp(surface.N, input.nor, wet)); // blend to vertex normal when wet
 	}
 #endif // OBJECTSHADER_USE_COMMON
@@ -831,21 +831,6 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 		surface.occlusion *= material.textures[OCCLUSIONMAP].Sample(sampler_objectshader, uvsets).r;
 	}
 #endif // OBJECTSHADER_USE_UVSETS
-
-
-#ifndef PREPASS
-#ifndef ENVMAPRENDERING
-#ifndef TRANSPARENT
-#ifndef CARTOON
-	[branch]
-	if (camera.texture_ao_index >= 0)
-	{
-		surface.occlusion *= bindless_textures_half4[descriptor_index(camera.texture_ao_index)].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).r;
-	}
-#endif // CARTOON
-#endif // TRANSPARENT
-#endif // ENVMAPRENDERING
-#endif // PREPASS
 
 
 #ifdef ANISOTROPIC
@@ -1054,6 +1039,11 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 	if (camera.texture_ssgi_index >= 0)
 	{
 		surface.ssgi = bindless_textures_half4[descriptor_index(camera.texture_ssgi_index)].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).rgb;
+	}
+	[branch]
+	if (camera.texture_ao_index >= 0)
+	{
+		surface.occlusion *= bindless_textures_half4[descriptor_index(camera.texture_ao_index)].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).r;
 	}
 #endif // CARTOON
 #endif // TRANSPARENT

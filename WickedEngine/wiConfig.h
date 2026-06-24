@@ -59,6 +59,7 @@ namespace wi::config
 	{
 		// Open a config file (.ini format)
 		bool Open(const char* filename);
+		bool Open(const std::string& filename) { return Open(filename.c_str()); }
 		// Write back the config file with the current keys and values
 		void Commit();
 		// Check whether a section exists
