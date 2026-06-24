@@ -9,6 +9,17 @@
  * (including arithmetic expressions and out-of-range values).
  */
 
+#include <algorithm>
+#include <functional>
+#include <string>
+
+#include <wiCanvas.h>
+#include <wiColor.h>
+#include <wiGraphicsDevice.h>
+#include <wiGUI/GUICommon.h>
+#include <wiGUI/Widget.h>
+#include <wiSprite.h>
+
 #include "wiGUI/components/TextInputField.h"
 
 namespace wi::gui
@@ -137,14 +148,16 @@ namespace wi::gui
 		/**
 		 * Returns the widget's type name ("Slider").
 		 */
-		[[nodiscard]] const char* GetWidgetTypeName() const override {
+		[[nodiscard]] const char* GetWidgetTypeName() const override
+		{
 			return "Slider";
 		}
 
 		/**
 		 * Returns the most-active state of the slider and its input field.
 		 */
-		[[nodiscard]] WIDGETSTATE GetState() const override {
+		[[nodiscard]] WIDGETSTATE GetState() const override
+		{
 			return std::max(state, valueInputField.GetState());
 		}
 
