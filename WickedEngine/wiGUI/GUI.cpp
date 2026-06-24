@@ -43,10 +43,11 @@ namespace wi::gui
 	{
 		wi::Timer timer;
 
-		static const wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(
-			wi::eventhandler::EVENT_RELOAD_SHADERS, 
-			[this](uint64_t userdata) { LoadShaders(); }
-		);
+		static const wi::eventhandler::Handle handle =
+			wi::eventhandler::Subscribe(
+				wi::eventhandler::EVENT_RELOAD_SHADERS,
+				[this](uint64_t userdata) { LoadShaders(); }
+			);
 		LoadShaders();
 
 		wilog("wi::gui Initialized (%d ms)", (int)std::round(timer.elapsed()));
@@ -95,10 +96,14 @@ namespace wi::gui
 		focus = false;
 		bool force_disable = false;
 
-		for (auto *widget : widgets)
+		for (size_t i = 0; i < widgets.size(); ++i)
 		{
-			 // Re index in loop, because widgets can be realloced while
-			 // updating!
+			// Re-fetch by index every iteration: a widget's Update (or an
+			// event callback it triggers) may AddWidget and reallocate the
+			// vector. widgets holds non-owning pointers, so the Widget itself
+			// stays valid, but a cached iterator (range-for) would dangle.
+			Widget* widget = widgets[i];
+
 			widget->force_disable = force_disable;
 			widget->Update(canvas, dt);
 			widget->force_disable = false;
@@ -114,15 +119,15 @@ namespace wi::gui
 				widget->priority = ~0u;
 			}
 
-			const bool visible      = widget->IsVisible();
-			const WIDGETSTATE state = widget->GetState();
+			const bool widget_visible = widget->IsVisible();
+			const WIDGETSTATE state   = widget->GetState();
 
-			if (visible && widget->hitBox.intersects(pointerHitbox))
+			if (widget_visible && widget->hitBox.intersects(pointerHitbox))
 			{
 				focus = true;
 			}
 
-			if (visible && state > IDLE)
+			if (widget_visible && state > IDLE)
 			{
 				focus         = true;
 				force_disable = true;
@@ -131,8 +136,9 @@ namespace wi::gui
 
 		if (priority > 0)
 		{
-			// Sort only if there are priority changes
-			//	Use std::stable_sort instead of std::sort to preserve UI element order with equal priorities
+			// Sort only if there are priority changes. Use std::stable_sort
+			// (not std::sort) to preserve the relative order of UI elements
+			// that have equal priority.
 			std::stable_sort(
 				widgets.begin(),
 				widgets.end(),
@@ -244,12 +250,16 @@ namespace wi::gui
 			 || wi::input::Press(wi::input::MOUSE_BUTTON_RIGHT)
 			) {
 				const XMFLOAT4 pointer = wi::input::GetPointer();
-				const auto pointerHitbox = Hitbox2D(XMFLOAT2(pointer.x, pointer.y), XMFLOAT2(1, 1));
+				const auto pointerHitbox = Hitbox2D(
+					XMFLOAT2(pointer.x, pointer.y),
+					XMFLOAT2(1, 1)
+				);
 
 				bool pointer_on_widget = false;
 				for (const auto* widget : widgets)
 				{
-					if (widget->IsVisible() && pointerHitbox.intersects(widget->hitBox))
+					if (widget->IsVisible()
+					 && pointerHitbox.intersects(widget->hitBox))
 					{
 						pointer_on_widget = true;
 
