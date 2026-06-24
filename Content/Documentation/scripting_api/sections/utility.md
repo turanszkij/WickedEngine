@@ -206,6 +206,32 @@ functionality:
     ---@return boolean
     function IsPlatformXBOX() end
 
+    --- Returns whether a file exists at the given path.
+    ---
+    ---@param name string
+    ---
+    ---@return boolean
+    function FileExists(name) end
+
+    --- Returns whether a directory exists at the given path.
+    ---
+    ---@param name string
+    ---
+    ---@return boolean
+    function DirectoryExists(name) end
+
+    --- Creates a directory at the given path (including parent directories).
+    ---
+    ---@param name string
+    function DirectoryCreate(name) end
+
+    --- Returns a path that files can be safely saved to on every platform. This
+    --- is the base directory for such a path; files should be saved into an
+    --- application-specific named folder within it.
+    ---
+    ---@return string
+    function GetSaveDataPath() end
+
     --- Returns the engine major version number.
     ---
     ---@return integer

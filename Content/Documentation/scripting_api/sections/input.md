@@ -147,6 +147,29 @@
 
     --- Resets all cursors to the defaults.
     function Input.ResetCursors() end
+
+    --- Returns the parameters of the current touch pinch gesture: the pinch
+    --- center position, the cumulative scale, and the scale change this frame.
+    ---
+    ---@return Vector position
+    ---@return number scale
+    ---@return number delta_scale
+    function Input.GetTouchPinch() end
+
+    --- Returns the touch pan gesture delta movement.
+    ---
+    ---@return Vector
+    function Input.GetTouchPan() end
+
+    --- Returns true if a pan touch gesture is currently active.
+    ---
+    ---@return boolean
+    function Input.IsTouchPanning() end
+
+    --- Returns true if a new pan touch gesture is starting this frame.
+    ---
+    ---@return boolean
+    function Input.IsTouchPanStarting() end
 ```
 
 ## ControllerFeedback
