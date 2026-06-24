@@ -9,6 +9,25 @@
  * area, and a layout helper for arranging children in rows.
  */
 
+#include <cstddef>
+#include <functional>
+#include <string>
+#include <type_traits>
+
+#include <CommonInclude.h>
+#include <Utility/DirectXMath/DirectXMath.h>
+
+#include <wiCanvas.h>
+#include <wiColor.h>
+#include <wiGraphics.h>
+#include <wiGraphicsDevice.h>
+#include <wiGUI/components/ScrollBar.h>
+#include <wiGUI/GUICommon.h>
+#include <wiGUI/Widget.h>
+#include <wiLocalization.h>
+#include <wiResourceManager.h>
+#include <wiVector.h>
+
 #include "wiGUI/components/Button.h"
 #include "wiGUI/components/Label.h"
 
@@ -132,6 +151,7 @@ namespace wi::gui
 			void reset(Window& window)
 			{
 				const XMFLOAT2 widgetareasize = window.GetWidgetAreaSize();
+
 				width = widgetareasize.x;
 				height = widgetareasize.y - window.GetControlSize();
 				y = padding;
@@ -155,14 +175,20 @@ namespace wi::gui
 			void add(wi::gui::Widget& widget)
 			{
 				if (!widget.IsVisible())
+				{
 					return;
+				}
+
 				const XMFLOAT2 size = widget.GetSize();
+
 				x = margin_left;
 				y += widget.GetShadowRadius();
+
 				widget.SetPos(XMFLOAT2(x, y));
 				widget.SetSize(XMFLOAT2(
 					width - x - padding - widget.GetShadowRadius(), size.y
 				));
+
 				y += size.y;
 				y += widget.GetShadowRadius();
 				y += padding;
@@ -176,17 +202,24 @@ namespace wi::gui
 			void add_right(wi::gui::Widget& widget)
 			{
 				if (!widget.IsVisible())
+				{
 					return;
+				}
+
 				const XMFLOAT2 size = widget.GetSize();
+
 				x = width - padding - size.x;
 				x -= widget.GetRightTextWidth();
 				x -= widget.GetShadowRadius();
 				y += widget.GetShadowRadius();
+
 				widget.SetPos(XMFLOAT2(x, y));
+
 				if (widget.GetLeftTextWidth() > 0)
 				{
 					x -= widget.GetLeftTextWidth() + padding * 4;
 				}
+
 				x -= padding;
 				x -= widget.GetShadowRadius();
 				y += size.y;
@@ -202,16 +235,22 @@ namespace wi::gui
 			void add_fullwidth(wi::gui::Widget& widget)
 			{
 				if (!widget.IsVisible())
+				{
 					return;
+				}
+
 				const XMFLOAT2 size = widget.GetSize();
+
 				x = padding;
 				x += widget.GetLeftTextWidth();
 				x += widget.GetShadowRadius();
 				y += widget.GetShadowRadius();
+
 				widget.SetPos(XMFLOAT2(x, y));
 				widget.SetSize(XMFLOAT2(
 					width - x - padding - widget.GetShadowRadius(), size.y
 				));
+
 				y += size.y;
 				y += widget.GetShadowRadius();
 				y += padding;
@@ -228,18 +267,25 @@ namespace wi::gui
 			void add_fullwidth_aspect(wi::gui::Widget& widget)
 			{
 				if (!widget.IsVisible())
+				{
 					return;
+				}
+
 				x = padding;
 				x += widget.GetLeftTextWidth();
 				x += widget.GetShadowRadius();
 				y += widget.GetShadowRadius();
+
 				widget.SetPos(XMFLOAT2(margin_left, y));
+
 				float h_aspect = widget.GetSize().y / widget.GetSize().x;
 				const wi::Resource& res =
 					widget.sprites[widget.GetState()].textureResource;
+
 				if (res.IsValid())
 				{
 					const wi::graphics::Texture& tex = res.GetTexture();
+
 					if (has_flag(
 						tex.desc.misc_flags,
 						wi::graphics::ResourceMiscFlag::TEXTURECUBE
@@ -254,9 +300,12 @@ namespace wi::gui
 							(float)tex.desc.height / (float)tex.desc.width;
 					}
 				}
+
 				const float w = width - x - padding - widget.GetShadowRadius();
+
 				widget.SetSize(XMFLOAT2(w, w * h_aspect));
 				widget.SetPos(XMFLOAT2(x, y));
+
 				y += widget.GetSize().y;
 				y += widget.GetShadowRadius();
 				y += padding;
@@ -272,19 +321,27 @@ namespace wi::gui
 			void add_right(wi::gui::Widget& widget, Args&&... args)
 			{
 				add_right(std::forward<Args>(args)...);
+
 				if (!widget.IsVisible())
+				{
 					return;
+				}
+
 				const XMFLOAT2 size = widget.GetSize();
+
 				x -= size.x;
 				x -= widget.GetRightTextWidth();
 				x -= widget.GetShadowRadius();
+
 				widget.SetPos(XMFLOAT2(
 					x, y - size.y - padding - widget.GetShadowRadius()
 				));
+
 				if (widget.GetLeftTextWidth() > 0)
 				{
 					x -= widget.GetLeftTextWidth() + padding * 4;
 				}
+
 				x -= padding;
 				x -= widget.GetShadowRadius();
 			}
@@ -298,8 +355,12 @@ namespace wi::gui
 			void helper_fitx(float sizx, wi::gui::Widget& widget)
 			{
 				float left = widget.GetLeftTextWidth();
+
 				if (left > 0)
+				{
 					left += padding;
+				}
+
 				widget.SetSize(XMFLOAT2(sizx - left, widget.GetSize().y));
 			}
 
@@ -334,6 +395,7 @@ namespace wi::gui
 				const float onewidth =
 					(width - padding) / total_count
 					- (padding * (total_count - 1));
+
 				helper_fitx(onewidth, widget, std::forward<Args>(args)...);
 				add_right(widget, std::forward<Args>(args)...);
 			}
@@ -519,7 +581,8 @@ namespace wi::gui
 		/**
 		 * Returns the widget's type name ("Window").
 		 */
-		[[nodiscard]] const char* GetWidgetTypeName() const override {
+		[[nodiscard]] const char* GetWidgetTypeName() const override
+		{
 			return "Window";
 		}
 
@@ -630,7 +693,8 @@ namespace wi::gui
 		 *
 		 * @param[in] value - true to right-align the background image.
 		 */
-		void SetRightAlignedImage(bool value) noexcept {
+		void SetRightAlignedImage(bool value) noexcept
+		{
 			right_aligned_image = value;
 		}
 

@@ -3,32 +3,47 @@
  * Implementation of the @ref wi::gui::Window widget.
  */
 
-#include "wiGUI/components/Window.h"
-#include "wiGUI/GUIInternal.h"
+#include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <cstdlib>
+#include <functional>
+#include <string>
+#include <utility>
 
+#include <CommonInclude.h>
+#include <Utility/DirectXMath/DirectXMath.h>
+
+#include <wiCanvas.h>
+#include <wiColor.h>
+#include <wiEnums.h>
+#include <wiGraphics.h>
+#include <wiGraphicsDevice.h>
+#include <wiGUI/components/ScrollBar.h>
+#include <wiGUI/GUICommon.h>
+#include <wiGUI/Widget.h>
+#include <wiLocalization.h>
+#include <wiMath.h>
+#include <wiResourceManager.h>
+
+#include "wiFont.h"
+#include "wiGUI/GUIInternal.h"
+#include "wiImage.h"
 #include "wiInput.h"
 #include "wiPrimitive.h"
-#include "wiProfiler.h"
-#include "wiRenderer.h"
-#include "wiTimer.h"
-#include "wiEventHandler.h"
-#include "wiFont.h"
-#include "wiImage.h"
-#include "wiTextureHelper.h"
-#include "wiBacklog.h"
-#include "wiHelper.h"
 
-#include <sstream>
-#include <iomanip> // setprecision
-#include <utility>
+#include "wiGUI/components/Window.h"
 
 using namespace wi::graphics;
 using namespace wi::primitive;
 
 namespace wi::gui
 {
-	void Window::Create(const std::string& name, const WindowControls window_controls)
-	{
+	void Window::Create(
+		const std::string& name,
+		const WindowControls window_controls
+	) {
 		SetColor(wi::Color::Ghost());
 
 		SetName(name);
@@ -58,7 +73,7 @@ namespace wi::gui
 					this->Detach();
 					this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
 					this->AttachTo(saved_parent);
-					});
+				});
 				AddWidget(&moveDragger, AttachmentOptions::NONE);
 				has_titlebar = true;
 			}
@@ -72,11 +87,12 @@ namespace wi::gui
 				closeButton.SetText("x");
 				closeButton.OnClick([this](const EventArgs& args) {
 					this->SetVisible(false);
+
 					if (onClose)
 					{
 						onClose(std::move(args));
 					}
-					});
+				});
 				closeButton.SetTooltip("Close window");
 				AddWidget(&closeButton, AttachmentOptions::NONE);
 				has_titlebar = true;
@@ -91,11 +107,12 @@ namespace wi::gui
 				collapseButton.SetText("-");
 				collapseButton.OnClick([this](const EventArgs& args) {
 					this->SetMinimized(!this->IsMinimized());
+
 					if (onCollapse)
 					{
 						onCollapse({});
 					}
-					});
+				});
 				collapseButton.SetTooltip("Collapse/Expand window");
 				AddWidget(&collapseButton, AttachmentOptions::NONE);
 				has_titlebar = true;
@@ -141,9 +158,11 @@ namespace wi::gui
 		SetVisible(true);
 		SetMinimized(false);
 	}
+
 	void Window::AddWidget(Widget* const widget, const AttachmentOptions options)
 	{
 		widget->SetEnabled(this->IsEnabled());
+
 		if (IsVisible() && !IsMinimized())
 		{
 			widget->SetVisible(true);
@@ -152,6 +171,7 @@ namespace wi::gui
 		{
 			widget->SetVisible(false);
 		}
+
 		if (has_flag(options, AttachmentOptions::SCROLLABLE))
 		{
 			widget->AttachTo(&scrollable_area);
@@ -163,22 +183,26 @@ namespace wi::gui
 
 		widgets.push_back(widget);
 	}
+
 	void Window::RemoveWidget(Widget* const widget)
 	{
-		for (auto& x : widgets)
+		for (auto& widget_x : widgets)
 		{
-			if (x == widget)
+			if (widget_x == widget)
 			{
-				x = widgets.back();
+				widget_x = widgets.back();
 				widgets.pop_back();
+
 				break;
 			}
 		}
 	}
+
 	void Window::RemoveWidgets()
 	{
 		widgets.clear();
 	}
+
 	void Window::Update(const wi::Canvas& canvas, const float dt)
 	{
 		if (!IsVisible())
@@ -200,39 +224,66 @@ namespace wi::gui
 			Hitbox2D toprighthitbox;
 			Hitbox2D bottomrighthitbox;
 			Hitbox2D bottomlefthitbox;
+
 			if (has_flag(controls, WindowControls::RESIZE_LEFT))
 			{
-				lefthitbox = Hitbox2D(XMFLOAT2(translation.x - resizehitboxwidth, translation.y), XMFLOAT2(resizehitboxwidth, vscale));
+				lefthitbox = Hitbox2D(
+					XMFLOAT2(translation.x - resizehitboxwidth, translation.y),
+					XMFLOAT2(resizehitboxwidth, vscale)
+				);
 			}
+	
 			if (has_flag(controls, WindowControls::RESIZE_RIGHT))
 			{
-				righthitbox = Hitbox2D(XMFLOAT2(translation.x + scale.x, translation.y), XMFLOAT2(resizehitboxwidth, vscale));
+				righthitbox = Hitbox2D(
+					XMFLOAT2(translation.x + scale.x, translation.y),
+					XMFLOAT2(resizehitboxwidth, vscale)
+				);
 			}
+
 			if (!IsCollapsed())
 			{
 				if (has_flag(controls, WindowControls::RESIZE_TOP))
 				{
-					tophitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y - resizehitboxwidth), XMFLOAT2(scale.x, resizehitboxwidth));
+					tophitbox = Hitbox2D(
+						XMFLOAT2(translation.x, translation.y - resizehitboxwidth),
+						XMFLOAT2(scale.x, resizehitboxwidth)
+					);
 				}
 				if (has_flag(controls, WindowControls::RESIZE_BOTTOM))
 				{
-					bottomhitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y + vscale), XMFLOAT2(scale.x, resizehitboxwidth));
+					bottomhitbox = Hitbox2D(
+						XMFLOAT2(translation.x, translation.y + vscale),
+						XMFLOAT2(scale.x, resizehitboxwidth)
+					);
 				}
 				if (has_flag(controls, WindowControls::RESIZE_TOPLEFT))
 				{
-					toplefthitbox = Hitbox2D(XMFLOAT2(translation.x - resizehitboxwidth, translation.y - resizehitboxwidth), XMFLOAT2(resizehitboxwidth * 2, resizehitboxwidth * 2));
+					toplefthitbox = Hitbox2D(
+						XMFLOAT2(translation.x - resizehitboxwidth, translation.y - resizehitboxwidth),
+						XMFLOAT2(resizehitboxwidth * 2, resizehitboxwidth * 2)
+					);
 				}
 				if (has_flag(controls, WindowControls::RESIZE_TOPRIGHT))
 				{
-					toprighthitbox = Hitbox2D(XMFLOAT2(translation.x + scale.x - resizehitboxwidth, translation.y - resizehitboxwidth), XMFLOAT2(resizehitboxwidth * 2, resizehitboxwidth * 2));
+					toprighthitbox = Hitbox2D(
+						XMFLOAT2(translation.x + scale.x - resizehitboxwidth, translation.y - resizehitboxwidth),
+						XMFLOAT2(resizehitboxwidth * 2, resizehitboxwidth * 2)
+					);
 				}
 				if (has_flag(controls, WindowControls::RESIZE_BOTTOMRIGHT))
 				{
-					bottomrighthitbox = Hitbox2D(XMFLOAT2(translation.x + scale.x - resizehitboxwidth, translation.y + vscale - resizehitboxwidth), XMFLOAT2(resizehitboxwidth * 2, resizehitboxwidth * 2));
+					bottomrighthitbox = Hitbox2D(
+						XMFLOAT2(translation.x + scale.x - resizehitboxwidth, translation.y + vscale - resizehitboxwidth),
+						XMFLOAT2(resizehitboxwidth * 2, resizehitboxwidth * 2)
+					);
 				}
 				if (has_flag(controls, WindowControls::RESIZE_BOTTOMLEFT))
 				{
-					bottomlefthitbox = Hitbox2D(XMFLOAT2(translation.x - resizehitboxwidth, translation.y + vscale - resizehitboxwidth), XMFLOAT2(resizehitboxwidth * 2, resizehitboxwidth * 2));
+					bottomlefthitbox = Hitbox2D(
+						XMFLOAT2(translation.x - resizehitboxwidth, translation.y + vscale - resizehitboxwidth),
+						XMFLOAT2(resizehitboxwidth * 2, resizehitboxwidth * 2)
+					);
 				}
 			}
 
@@ -280,51 +331,64 @@ namespace wi::gui
 				}
 				resize_begin = pointerHitbox.pos;
 			}
+
 			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanning())
 			{
 				if (resize_state != RESIZE_STATE_NONE)
 				{
-					auto saved_parent = this->parent;
+					auto *saved_parent = this->parent;
 					this->Detach();
 					const float deltaX = pointerHitbox.pos.x - resize_begin.x;
 					const float deltaY = pointerHitbox.pos.y - resize_begin.y;
 
 					switch (resize_state)
 					{
-					case wi::gui::Window::RESIZE_STATE_LEFT:
-						this->Translate(XMFLOAT3(deltaX, 0, 0));
-						this->Scale(XMFLOAT3((scale.x - deltaX) / scale.x, 1, 1));
-						break;
-					case wi::gui::Window::RESIZE_STATE_TOP:
-						this->Translate(XMFLOAT3(0, deltaY, 0));
-						this->Scale(XMFLOAT3(1, (scale.y - deltaY) / scale.y, 1));
-						break;
-					case wi::gui::Window::RESIZE_STATE_RIGHT:
-						this->Scale(XMFLOAT3((scale.x + deltaX) / scale.x, 1, 1));
-						break;
-					case wi::gui::Window::RESIZE_STATE_BOTTOM:
-						this->Scale(XMFLOAT3(1, (scale.y + deltaY) / scale.y, 1));
-						break;
-					case wi::gui::Window::RESIZE_STATE_TOPLEFT:
-						this->Translate(XMFLOAT3(deltaX, deltaY, 0));
-						this->Scale(XMFLOAT3((scale.x - deltaX) / scale.x, (scale.y - deltaY) / scale.y, 1));
-						break;
-					case wi::gui::Window::RESIZE_STATE_TOPRIGHT:
-						this->Translate(XMFLOAT3(0, deltaY, 0));
-						this->Scale(XMFLOAT3((scale.x + deltaX) / scale.x, (scale.y - deltaY) / scale.y, 1));
-						break;
-					case wi::gui::Window::RESIZE_STATE_BOTTOMRIGHT:
-						this->Scale(XMFLOAT3((scale.x + deltaX) / scale.x, (scale.y + deltaY) / scale.y, 1));
-						break;
-					case wi::gui::Window::RESIZE_STATE_BOTTOMLEFT:
-						this->Translate(XMFLOAT3(deltaX, 0, 0));
-						this->Scale(XMFLOAT3((scale.x - deltaX) / scale.x, (scale.y + deltaY) / scale.y, 1));
-						break;
-					default:
-						break;
+						case wi::gui::Window::RESIZE_STATE_LEFT:
+							this->Translate(XMFLOAT3(deltaX, 0, 0));
+							this->Scale(XMFLOAT3((scale.x - deltaX) / scale.x, 1, 1));
+
+							break;
+						case wi::gui::Window::RESIZE_STATE_TOP:
+							this->Translate(XMFLOAT3(0, deltaY, 0));
+							this->Scale(XMFLOAT3(1, (scale.y - deltaY) / scale.y, 1));
+
+							break;
+						case wi::gui::Window::RESIZE_STATE_RIGHT:
+							this->Scale(XMFLOAT3((scale.x + deltaX) / scale.x, 1, 1));
+
+							break;
+						case wi::gui::Window::RESIZE_STATE_BOTTOM:
+							this->Scale(XMFLOAT3(1, (scale.y + deltaY) / scale.y, 1));
+
+							break;
+						case wi::gui::Window::RESIZE_STATE_TOPLEFT:
+							this->Translate(XMFLOAT3(deltaX, deltaY, 0));
+							this->Scale(XMFLOAT3((scale.x - deltaX) / scale.x, (scale.y - deltaY) / scale.y, 1));
+
+							break;
+						case wi::gui::Window::RESIZE_STATE_TOPRIGHT:
+							this->Translate(XMFLOAT3(0, deltaY, 0));
+							this->Scale(XMFLOAT3((scale.x + deltaX) / scale.x, (scale.y - deltaY) / scale.y, 1));
+
+							break;
+						case wi::gui::Window::RESIZE_STATE_BOTTOMRIGHT:
+							this->Scale(XMFLOAT3((scale.x + deltaX) / scale.x, (scale.y + deltaY) / scale.y, 1));
+
+							break;
+						case wi::gui::Window::RESIZE_STATE_BOTTOMLEFT:
+							this->Translate(XMFLOAT3(deltaX, 0, 0));
+							this->Scale(XMFLOAT3((scale.x - deltaX) / scale.x, (scale.y + deltaY) / scale.y, 1));
+
+							break;
+						default:
+							break;
 					}
 
-					this->scale_local = wi::math::Max(this->scale_local, XMFLOAT3(control_size * 3, control_size * 2, 1)); // don't allow resize to negative or too small
+					this->scale_local = wi::math::Max(
+						this->scale_local,
+						XMFLOAT3(control_size * 3, control_size * 2, 1)
+					); // don't allow resize to negative or too small
+
 					this->AttachTo(saved_parent);
 					resize_begin = pointerHitbox.pos;
 				}
@@ -370,10 +434,13 @@ namespace wi::gui
 				if (collapseButton.parent)
 				{
 					collapseButton.sprites[i].params.enableCornerRounding();
-					collapseButton.sprites[i].params.corners_rounding[0].radius = sprites[state].params.corners_rounding[0].radius;
+					collapseButton.sprites[i].params.corners_rounding[0].radius
+						= sprites[state].params.corners_rounding[0].radius;
+
 					if (IsCollapsed())
 					{
-						collapseButton.sprites[i].params.corners_rounding[2].radius = sprites[state].params.corners_rounding[2].radius;
+						collapseButton.sprites[i].params.corners_rounding[2].radius
+							= sprites[state].params.corners_rounding[2].radius;
 					}
 					else
 					{
@@ -383,10 +450,13 @@ namespace wi::gui
 				else if (moveDragger.parent)
 				{
 					moveDragger.sprites[i].params.enableCornerRounding();
-					moveDragger.sprites[i].params.corners_rounding[0].radius = sprites[state].params.corners_rounding[0].radius;
+					moveDragger.sprites[i].params.corners_rounding[0].radius
+						= sprites[state].params.corners_rounding[0].radius;
+
 					if (IsCollapsed())
 					{
-						moveDragger.sprites[i].params.corners_rounding[2].radius = sprites[state].params.corners_rounding[2].radius;
+						moveDragger.sprites[i].params.corners_rounding[2].radius
+							= sprites[state].params.corners_rounding[2].radius;
 					}
 					else
 					{
@@ -396,10 +466,13 @@ namespace wi::gui
 				else if (label.parent)
 				{
 					label.sprites[i].params.enableCornerRounding();
-					label.sprites[i].params.corners_rounding[0].radius = sprites[state].params.corners_rounding[0].radius;
+					label.sprites[i].params.corners_rounding[0].radius
+						= sprites[state].params.corners_rounding[0].radius;
+
 					if (IsCollapsed())
 					{
-						label.sprites[i].params.corners_rounding[2].radius = sprites[state].params.corners_rounding[2].radius;
+						label.sprites[i].params.corners_rounding[2].radius
+							= sprites[state].params.corners_rounding[2].radius;
 					}
 					else
 					{
@@ -411,10 +484,13 @@ namespace wi::gui
 				if (closeButton.parent)
 				{
 					closeButton.sprites[i].params.enableCornerRounding();
-					closeButton.sprites[i].params.corners_rounding[1].radius = sprites[state].params.corners_rounding[1].radius;
+					closeButton.sprites[i].params.corners_rounding[1].radius
+						= sprites[state].params.corners_rounding[1].radius;
+
 					if (IsCollapsed())
 					{
-						closeButton.sprites[i].params.corners_rounding[3].radius = sprites[state].params.corners_rounding[3].radius;
+						closeButton.sprites[i].params.corners_rounding[3].radius
+							= sprites[state].params.corners_rounding[3].radius;
 					}
 					else
 					{
@@ -424,10 +500,13 @@ namespace wi::gui
 				else if (moveDragger.parent)
 				{
 					moveDragger.sprites[i].params.enableCornerRounding();
-					moveDragger.sprites[i].params.corners_rounding[1].radius = sprites[state].params.corners_rounding[1].radius;
+					moveDragger.sprites[i].params.corners_rounding[1].radius
+						= sprites[state].params.corners_rounding[1].radius;
+
 					if (IsCollapsed())
 					{
-						moveDragger.sprites[i].params.corners_rounding[3].radius = sprites[state].params.corners_rounding[3].radius;
+						moveDragger.sprites[i].params.corners_rounding[3].radius
+							= sprites[state].params.corners_rounding[3].radius;
 					}
 					else
 					{
@@ -437,10 +516,13 @@ namespace wi::gui
 				else if (label.parent)
 				{
 					label.sprites[i].params.enableCornerRounding();
-					label.sprites[i].params.corners_rounding[1].radius = sprites[state].params.corners_rounding[1].radius;
+					label.sprites[i].params.corners_rounding[1].radius
+						= sprites[state].params.corners_rounding[1].radius;
+
 					if (IsCollapsed())
 					{
-						label.sprites[i].params.corners_rounding[3].radius = sprites[state].params.corners_rounding[3].radius;
+						label.sprites[i].params.corners_rounding[3].radius
+							= sprites[state].params.corners_rounding[3].radius;
 					}
 					else
 					{
@@ -449,9 +531,11 @@ namespace wi::gui
 				}
 
 				scrollbar_horizontal.sprites[i].params.enableCornerRounding();
-				scrollbar_horizontal.sprites[i].params.corners_rounding[3].radius = sprites[state].params.corners_rounding[3].radius;
+				scrollbar_horizontal.sprites[i].params.corners_rounding[3].radius
+					= sprites[state].params.corners_rounding[3].radius;
 				scrollbar_vertical.sprites[i].params.enableCornerRounding();
-				scrollbar_vertical.sprites[i].params.corners_rounding[3].radius = sprites[state].params.corners_rounding[3].radius;
+				scrollbar_vertical.sprites[i].params.corners_rounding[3].radius
+					= sprites[state].params.corners_rounding[3].radius;
 			}
 		}
 
@@ -482,16 +566,21 @@ namespace wi::gui
 		scrollable_area.Translate(translation);
 
 		float scroll_length_horizontal = 0;
-		float scroll_length_vertical = 0;
+		float scroll_length_vertical   = 0;
+
 		for (auto& widget : widgets)
 		{
 			if (!widget->IsVisible())
+			{
 				continue;
+			}
+
 			if (widget->parent == &scrollable_area)
 			{
 				const XMFLOAT2 size = widget->GetSize();
+
 				scroll_length_horizontal = std::max(scroll_length_horizontal, widget->translation_local.x + size.x);
-				scroll_length_vertical = std::max(scroll_length_vertical, widget->translation_local.y + size.y);
+				scroll_length_vertical   = std::max(scroll_length_vertical, widget->translation_local.y + size.y);
 			}
 		}
 
@@ -517,18 +606,21 @@ namespace wi::gui
 				scrollbar_vertical.Update(canvas, 0);
 				scrollable_area.Translate(XMFLOAT3(scrollbar_horizontal.GetOffset(), 1 + scrollbar_vertical.GetOffset(), 0));
 				scrollable_area.scissorRect.left += 1;
+
 				if (scrollbar_horizontal.parent != nullptr && scrollbar_horizontal.IsScrollbarRequired())
 				{
 					scrollable_area.scissorRect.bottom -= (int32_t)control_size + 1;
 				}
+
 				if (scrollbar_vertical.parent != nullptr && scrollbar_vertical.IsScrollbarRequired())
 				{
 					scrollable_area.scissorRect.right -= (int32_t)control_size + 1;
 				}
+
 				scrollable_area.active_area.pos.x = float(scrollable_area.scissorRect.left);
 				scrollable_area.active_area.pos.y = float(scrollable_area.scissorRect.top);
-				scrollable_area.active_area.siz.x = float(scrollable_area.scissorRect.right) - float(scrollable_area.scissorRect.left);
-				scrollable_area.active_area.siz.y = float(scrollable_area.scissorRect.bottom) - float(scrollable_area.scissorRect.top);
+				scrollable_area.active_area.siz.x = float(scrollable_area.scissorRect.right) - static_cast<float>(scrollable_area.scissorRect.left);
+				scrollable_area.active_area.siz.y = float(scrollable_area.scissorRect.bottom) - static_cast<float>(scrollable_area.scissorRect.top);
 			}
 		}
 
@@ -542,9 +634,10 @@ namespace wi::gui
 
 		bool local_force_disable = this->force_disable;
 
-		for (size_t i = 0; i < widgets.size(); ++i)
+		for (auto *widget : widgets)
 		{
-			Widget* widget = widgets[i]; // re index in loop, because widgets can be realloced while updating!
+			 // re index in loop, because widgets can be reallocked while
+			 // updating!
 			widget->force_disable = local_force_disable;
 			widget->Update(canvas, dt);
 			widget->force_disable = false;
@@ -575,7 +668,11 @@ namespace wi::gui
 		{
 			// Sort only if there are priority changes
 			//	Use std::stable_sort instead of std::sort to preserve UI element order with equal priorities
-			std::stable_sort(widgets.begin(), widgets.end(), [](const Widget* a, const Widget* b) {
+			std::stable_sort(
+				widgets.begin(),
+				widgets.end(),
+				[](const Widget* a, const Widget* b)
+			{
 				return a->priority < b->priority;
 			});
 		}
@@ -583,17 +680,27 @@ namespace wi::gui
 		if (!IsMinimized() && IsVisible())
 		{
 			float wheel_delta = wi::input::GetPointer().z * 60.0f;
+
 			if (!local_force_disable)
 			{
 				wheel_delta -= wi::input::GetTouchPan().y;
 			}
-			if (wheel_delta != 0.0f && scroll_allowed && scrollbar_vertical.IsScrollbarRequired() && pointerHitbox.intersects(hitBox)) // when window is in focus, but other widgets aren't
-			{
-				const bool at_begin = (wheel_delta > 0 && scrollbar_vertical.IsScrolledToBegin());
+
+			// When window is in focus, but other widgets aren't
+			if (wheel_delta != 0.0f
+				&& scroll_allowed
+				&& scrollbar_vertical.IsScrollbarRequired()
+				&& pointerHitbox.intersects(hitBox)
+			) {
+				const bool at_begin = (
+					wheel_delta > 0 && scrollbar_vertical.IsScrolledToBegin()
+				);
+
 				if (!at_begin)
 				{
 					scroll_allowed = false;
-					// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
+					// This is outside scrollbar code, because it can also be
+					// scrolled if parent widget is only in focus.
 					scrollbar_vertical.Scroll(wheel_delta);
 				}
 			}
@@ -610,10 +717,12 @@ namespace wi::gui
 			{
 				state = IDLE;
 			}
+
 			if (state == DEACTIVATING)
 			{
 				state = IDLE;
 			}
+
 			if (state == ACTIVE)
 			{
 				Deactivate();
@@ -658,11 +767,15 @@ namespace wi::gui
 		}
 
 		if (state == IDLE && resize_blink_timer > 0)
+		{
 			state = FOCUS;
+		}
 	}
+
 	void Window::Render(const wi::Canvas& canvas, const CommandList cmd) const
 	{
 		Widget::Render(canvas, cmd);
+
 		if (!IsVisible())
 		{
 			return;
@@ -676,16 +789,19 @@ namespace wi::gui
 		if (shadow > 0)
 		{
 			wi::image::Params fx = sprites[state].params;
+
 			fx.gradient = wi::image::Params::Gradient::None;
 			fx.pos.x -= shadow;
 			fx.pos.y -= shadow;
 			fx.siz.x += shadow * 2;
 			fx.siz.y += shadow * 2;
-			fx.color = shadow_color;
+			fx.color  = shadow_color;
+
 			if (IsMinimized())
 			{
 				fx.siz.y = control_size + shadow * 2;
 			}
+
 			if (fx.isCornerRoundingEnabled())
 			{
 				for (auto& corner_rounding : fx.corners_rounding)
@@ -696,6 +812,7 @@ namespace wi::gui
 					}
 				}
 			}
+
 			if (shadow_highlight)
 			{
 				fx.enableHighlight();
@@ -712,8 +829,10 @@ namespace wi::gui
 
 		// resize indicator:
 		{
-			// hitboxes are recomputed because window transform might have changed since update!!
+			// hitboxes are recomputed because window transform might have
+			// changed since update!!
 			const float vscale = IsCollapsed() ? control_size : scale.y;
+
 			Hitbox2D lefthitbox;
 			Hitbox2D righthitbox;
 			Hitbox2D tophitbox;
@@ -722,55 +841,89 @@ namespace wi::gui
 			Hitbox2D toprighthitbox;
 			Hitbox2D bottomrighthitbox;
 			Hitbox2D bottomlefthitbox;
+
 			if (has_flag(controls, WindowControls::RESIZE_LEFT))
 			{
-				lefthitbox = Hitbox2D(XMFLOAT2(translation.x - resizehitboxwidth, translation.y), XMFLOAT2(resizehitboxwidth, vscale));
+				lefthitbox = Hitbox2D(
+					XMFLOAT2(translation.x - resizehitboxwidth, translation.y),
+					XMFLOAT2(resizehitboxwidth, vscale)
+				);
 			}
+
 			if (has_flag(controls, WindowControls::RESIZE_RIGHT))
 			{
-				righthitbox = Hitbox2D(XMFLOAT2(translation.x + scale.x, translation.y), XMFLOAT2(resizehitboxwidth, vscale));
+				righthitbox = Hitbox2D(
+					XMFLOAT2(translation.x + scale.x, translation.y),
+					XMFLOAT2(resizehitboxwidth, vscale)
+				);
 			}
+
 			if (!IsCollapsed())
 			{
 				if (has_flag(controls, WindowControls::RESIZE_TOP))
 				{
-					tophitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y - resizehitboxwidth), XMFLOAT2(scale.x, resizehitboxwidth));
+					tophitbox = Hitbox2D(
+						XMFLOAT2(translation.x, translation.y - resizehitboxwidth),
+						XMFLOAT2(scale.x, resizehitboxwidth)
+					);
 				}
+
 				if (has_flag(controls, WindowControls::RESIZE_BOTTOM))
 				{
-					bottomhitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y + vscale), XMFLOAT2(scale.x, resizehitboxwidth));
+					bottomhitbox = Hitbox2D(
+						XMFLOAT2(translation.x, translation.y + vscale),
+						XMFLOAT2(scale.x, resizehitboxwidth)
+					);
 				}
+
 				if (has_flag(controls, WindowControls::RESIZE_TOPLEFT))
 				{
-					toplefthitbox = Hitbox2D(XMFLOAT2(translation.x - resizehitboxwidth, translation.y - resizehitboxwidth), XMFLOAT2(resizehitboxwidth * 2, resizehitboxwidth * 2));
+					toplefthitbox = Hitbox2D(
+						XMFLOAT2(translation.x - resizehitboxwidth, translation.y - resizehitboxwidth),
+						XMFLOAT2(resizehitboxwidth * 2, resizehitboxwidth * 2)
+					);
 				}
+
 				if (has_flag(controls, WindowControls::RESIZE_TOPRIGHT))
 				{
-					toprighthitbox = Hitbox2D(XMFLOAT2(translation.x + scale.x - resizehitboxwidth, translation.y - resizehitboxwidth), XMFLOAT2(resizehitboxwidth * 2, resizehitboxwidth * 2));
+					toprighthitbox = Hitbox2D(
+						XMFLOAT2(translation.x + scale.x - resizehitboxwidth, translation.y - resizehitboxwidth),
+						XMFLOAT2(resizehitboxwidth * 2, resizehitboxwidth * 2)
+					);
 				}
+
 				if (has_flag(controls, WindowControls::RESIZE_BOTTOMRIGHT))
 				{
-					bottomrighthitbox = Hitbox2D(XMFLOAT2(translation.x + scale.x - resizehitboxwidth, translation.y + vscale - resizehitboxwidth), XMFLOAT2(resizehitboxwidth * 2, resizehitboxwidth * 2));
+					bottomrighthitbox = Hitbox2D(
+						XMFLOAT2(translation.x + scale.x - resizehitboxwidth, translation.y + vscale - resizehitboxwidth),
+						XMFLOAT2(resizehitboxwidth * 2, resizehitboxwidth * 2)
+					);
 				}
+
 				if (has_flag(controls, WindowControls::RESIZE_BOTTOMLEFT))
 				{
-					bottomlefthitbox = Hitbox2D(XMFLOAT2(translation.x - resizehitboxwidth, translation.y + vscale - resizehitboxwidth), XMFLOAT2(resizehitboxwidth * 2, resizehitboxwidth * 2));
+					bottomlefthitbox = Hitbox2D(
+						XMFLOAT2(translation.x - resizehitboxwidth, translation.y + vscale - resizehitboxwidth),
+						XMFLOAT2(resizehitboxwidth * 2, resizehitboxwidth * 2)
+					);
 				}
 			}
 
 			const Hitbox2D pointerHitbox = GetPointerHitbox();
-
 			wi::image::Params fx = sprites[state].params;
+			
 			fx.blendFlag = wi::enums::BLENDMODE_ALPHA;
 			fx.pos.x -= resizehitboxwidth;
 			fx.pos.y -= resizehitboxwidth;
 			fx.siz.x += resizehitboxwidth * 2;
 			fx.siz.y += resizehitboxwidth * 2;
 			fx.color = resize_state == RESIZE_STATE_NONE ? sprites[FOCUS].params.color : sprites[ACTIVE].params.color;
+
 			if (IsMinimized())
 			{
 				fx.siz.y = control_size + resizehitboxwidth * 2;
 			}
+
 			if (fx.isCornerRoundingEnabled())
 			{
 				for (auto& corner_rounding : fx.corners_rounding)
@@ -786,39 +939,71 @@ namespace wi::gui
 			if (resize_state == RESIZE_STATE_TOPLEFT || pointerHitbox.intersects(toplefthitbox))
 			{
 				fx.angular_softness_outer_angle = XM_PI * 0.03f;
-				fx.angular_softness_inner_angle = XM_PI * wi::math::Lerp(0.0f, 0.025f, std::abs(std::sin(resize_blink_timer * 4)));
-				XMStoreFloat2(&fx.angular_softness_direction, XMVector2Normalize(XMVectorSet(-1, -1, 0, 0)));
+				fx.angular_softness_inner_angle = XM_PI * wi::math::Lerp(
+					0.0f,
+					0.025f,
+					std::abs(std::sin(resize_blink_timer * 4))
+				);
+				XMStoreFloat2(
+					&fx.angular_softness_direction,
+					XMVector2Normalize(XMVectorSet(-1, -1, 0, 0))
+				);
 				wi::image::Draw(nullptr, fx, cmd);
 				wi::input::SetCursor(wi::input::CURSOR_RESIZE_NWSE);
 			}
 			else if (resize_state == RESIZE_STATE_TOPRIGHT || pointerHitbox.intersects(toprighthitbox))
 			{
 				fx.angular_softness_outer_angle = XM_PI * 0.03f;
-				fx.angular_softness_inner_angle = XM_PI * wi::math::Lerp(0.0f, 0.025f, std::abs(std::sin(resize_blink_timer * 4)));
-				XMStoreFloat2(&fx.angular_softness_direction, XMVector2Normalize(XMVectorSet(1, -1, 0, 0)));
+				fx.angular_softness_inner_angle = XM_PI * wi::math::Lerp(
+					0.0f,
+					0.025f,
+					std::abs(std::sin(resize_blink_timer * 4))
+				);
+				XMStoreFloat2(
+					&fx.angular_softness_direction,
+					XMVector2Normalize(XMVectorSet(1, -1, 0, 0))
+				);
 				wi::image::Draw(nullptr, fx, cmd);
 				wi::input::SetCursor(wi::input::CURSOR_RESIZE_NESW);
 			}
 			else if (resize_state == RESIZE_STATE_BOTTOMRIGHT || pointerHitbox.intersects(bottomrighthitbox))
 			{
 				fx.angular_softness_outer_angle = XM_PI * 0.03f;
-				fx.angular_softness_inner_angle = XM_PI * wi::math::Lerp(0.0f, 0.025f, std::abs(std::sin(resize_blink_timer * 4)));
-				XMStoreFloat2(&fx.angular_softness_direction, XMVector2Normalize(XMVectorSet(1, 1, 0, 0)));
+				fx.angular_softness_inner_angle = XM_PI * wi::math::Lerp(
+					0.0f,
+					0.025f,
+					std::abs(std::sin(resize_blink_timer * 4))
+				);
+				XMStoreFloat2(
+					&fx.angular_softness_direction,
+					XMVector2Normalize(XMVectorSet(1, 1, 0, 0))
+				);
 				wi::image::Draw(nullptr, fx, cmd);
 				wi::input::SetCursor(wi::input::CURSOR_RESIZE_NWSE);
 			}
 			else if (resize_state == RESIZE_STATE_BOTTOMLEFT || pointerHitbox.intersects(bottomlefthitbox))
 			{
 				fx.angular_softness_outer_angle = XM_PI * 0.03f;
-				fx.angular_softness_inner_angle = XM_PI * wi::math::Lerp(0.0f, 0.025f, std::abs(std::sin(resize_blink_timer * 4)));
-				XMStoreFloat2(&fx.angular_softness_direction, XMVector2Normalize(XMVectorSet(-1, 1, 0, 0)));
+				fx.angular_softness_inner_angle = XM_PI * wi::math::Lerp(
+					0.0f,
+					0.025f,
+					std::abs(std::sin(resize_blink_timer * 4))
+				);
+				XMStoreFloat2(
+					&fx.angular_softness_direction,
+					XMVector2Normalize(XMVectorSet(-1, 1, 0, 0))
+				);
 				wi::image::Draw(nullptr, fx, cmd);
 				wi::input::SetCursor(wi::input::CURSOR_RESIZE_NESW);
 			}
 			else if (resize_state == RESIZE_STATE_LEFT || pointerHitbox.intersects(lefthitbox))
 			{
 				fx.angular_softness_outer_angle = XM_PI * 0.25f;
-				fx.angular_softness_inner_angle = XM_PI * wi::math::Lerp(0.0f, 0.24f, std::abs(std::sin(resize_blink_timer * 4)));
+				fx.angular_softness_inner_angle = XM_PI * wi::math::Lerp(
+					0.0f,
+					0.24f,
+					std::abs(std::sin(resize_blink_timer * 4))
+				);
 				fx.angular_softness_direction = XMFLOAT2(-1, 0);
 				wi::image::Draw(nullptr, fx, cmd);
 				wi::input::SetCursor(wi::input::CURSOR_RESIZE_EW);
@@ -826,7 +1011,11 @@ namespace wi::gui
 			else if (resize_state == RESIZE_STATE_RIGHT || pointerHitbox.intersects(righthitbox))
 			{
 				fx.angular_softness_outer_angle = XM_PI * 0.25f;
-				fx.angular_softness_inner_angle = XM_PI * wi::math::Lerp(0.0f, 0.24f, std::abs(std::sin(resize_blink_timer * 4)));
+				fx.angular_softness_inner_angle = XM_PI * wi::math::Lerp(
+					0.0f,
+					0.24f,
+					std::abs(std::sin(resize_blink_timer * 4))
+				);
 				fx.angular_softness_direction = XMFLOAT2(1, 0);
 				wi::image::Draw(nullptr, fx, cmd);
 				wi::input::SetCursor(wi::input::CURSOR_RESIZE_EW);
@@ -834,7 +1023,11 @@ namespace wi::gui
 			else if (resize_state == RESIZE_STATE_TOP || pointerHitbox.intersects(tophitbox))
 			{
 				fx.angular_softness_outer_angle = XM_PI * 0.25f;
-				fx.angular_softness_inner_angle = XM_PI * wi::math::Lerp(0.0f, 0.24f, std::abs(std::sin(resize_blink_timer * 4)));
+				fx.angular_softness_inner_angle = XM_PI * wi::math::Lerp(
+					0.0f,
+					0.24f,
+					std::abs(std::sin(resize_blink_timer * 4))
+				);
 				fx.angular_softness_direction = XMFLOAT2(0, -1);
 				wi::image::Draw(nullptr, fx, cmd);
 				wi::input::SetCursor(wi::input::CURSOR_RESIZE_NS);
@@ -842,7 +1035,11 @@ namespace wi::gui
 			else if (resize_state == RESIZE_STATE_BOTTOM || pointerHitbox.intersects(bottomhitbox))
 			{
 				fx.angular_softness_outer_angle = XM_PI * 0.25f;
-				fx.angular_softness_inner_angle = XM_PI * wi::math::Lerp(0.0f, 0.24f, std::abs(std::sin(resize_blink_timer * 4)));
+				fx.angular_softness_inner_angle = XM_PI * wi::math::Lerp(
+					0.0f,
+					0.24f,
+					std::abs(std::sin(resize_blink_timer * 4))
+				);
 				fx.angular_softness_direction = XMFLOAT2(0, 1);
 				wi::image::Draw(nullptr, fx, cmd);
 				wi::input::SetCursor(wi::input::CURSOR_RESIZE_NS);
@@ -854,21 +1051,24 @@ namespace wi::gui
 		{
 			wi::image::Params params = sprites[IDLE].params;
 			const wi::Resource& res = sprites[IDLE].textureResource;
+
 			if (res.IsValid())
 			{
 				params.sampleFlag = wi::image::SAMPLEMODE_WRAP;
 				const Texture& tex = res.GetTexture();
 				const float widget_aspect = scale_local.x / scale_local.y;
-				const float image_aspect = float(tex.desc.width) / float(tex.desc.height);
+				const float image_aspect = static_cast<float>(tex.desc.width) / static_cast<float>(tex.desc.height);
+
 				if (widget_aspect > image_aspect)
 				{
-					// display aspect is wider than image:
+					// Display aspect is wider than image:
 					params.texMulAdd.y *= image_aspect / widget_aspect;
 				}
 				else
 				{
-					// image aspect is wider or equal to display
+					// Omage aspect is wider or equal to display
 					params.texMulAdd.x *= widget_aspect / image_aspect;
+
 					if (right_aligned_image)
 					{
 						params.texMulAdd.z = 1.0f - params.texMulAdd.x;
@@ -889,6 +1089,7 @@ namespace wi::gui
 		for (size_t i = 0; i < widgets.size(); ++i)
 		{
 			const Widget* widget = widgets[widgets.size() - i - 1];
+
 			if (widget->parent == nullptr)
 			{
 				ApplyScissor(canvas, scissorRect, cmd);
@@ -897,6 +1098,7 @@ namespace wi::gui
 			{
 				ApplyScissor(canvas, widget->parent->scissorRect, cmd);
 			}
+
 			widget->Render(canvas, cmd);
 		}
 
@@ -917,18 +1119,23 @@ namespace wi::gui
 
 		GetDevice()->EventEnd(cmd);
 	}
-	void Window::RenderTooltip(const wi::Canvas& canvas, const wi::graphics::CommandList cmd) const
-	{
+
+	void Window::RenderTooltip(
+		const wi::Canvas& canvas,
+		const wi::graphics::CommandList cmd
+	) const {
 		// Window base tooltip is not rendered
 		for (auto& x : widgets)
 		{
 			x->RenderTooltip(canvas, cmd);
 		}
 	}
+
 	void Window::SetVisible(const bool value)
 	{
 		Widget::SetVisible(value);
 		const bool minimized = IsMinimized();
+
 		for (auto& x : widgets)
 		{
 			if (
@@ -946,9 +1153,11 @@ namespace wi::gui
 			}
 		}
 	}
+
 	void Window::SetEnabled(const bool value)
 	{
 		Widget::SetEnabled(value);
+
 		for (auto& x : widgets)
 		{
 			if (x == &moveDragger)
@@ -961,17 +1170,21 @@ namespace wi::gui
 				continue;
 			if (x == &scrollbar_vertical)
 				continue;
+
 			x->SetEnabled(value);
 		}
 	}
+
 	void Window::SetCollapsed(const bool value)
 	{
 		SetMinimized(value);
 	}
+
 	bool Window::IsCollapsed() const noexcept
 	{
 		return IsMinimized();
 	}
+
 	void Window::SetMinimized(const bool value)
 	{
 		minimized = value;
@@ -987,6 +1200,7 @@ namespace wi::gui
 			{
 				continue;
 			}
+
 			x->SetVisible(!value);
 		}
 
@@ -1003,55 +1217,70 @@ namespace wi::gui
 			collapseButton.font.params.rotation = 0;
 		}
 	}
+
 	bool Window::IsMinimized() const noexcept
 	{
 		return minimized;
 	}
+
 	void Window::SetControlSize(const float value)
 	{
 		control_size = value;
 	}
+
 	float Window::GetControlSize() const noexcept
 	{
 		return control_size;
 	}
+
 	XMFLOAT2 Window::GetSize() const
 	{
 		const XMFLOAT2 size = Widget::GetSize();
+
 		if (IsCollapsed())
 		{
-			return XMFLOAT2(size.x, control_size);
+			return {size.x, control_size};
 		}
+
 		return size;
 	}
+
 	XMFLOAT2 Window::GetWidgetAreaSize() const noexcept
 	{
 		XMFLOAT2 size = GetSize();
+
 		if (scrollbar_horizontal.IsScrollbarRequired())
 		{
 			size.y -= control_size;
 		}
+
 		if (scrollbar_vertical.IsScrollbarRequired())
 		{
 			size.x -= control_size;
 		}
+
 		return size;
 	}
+
 	void Window::OnClose(std::function<void(const EventArgs& args)> func)
 	{
 		onClose = std::move(func);
 	}
+
 	void Window::OnCollapse(std::function<void(const EventArgs& args)> func)
 	{
 		onCollapse = std::move(func);
 	}
+
 	void Window::OnResize(std::function<void()> func)
 	{
 		onResize = std::move(func);
 	}
+
 	void Window::SetColor(const wi::Color color, const int id)
 	{
 		Widget::SetColor(color, id);
+
 		for (auto& widget : widgets)
 		{
 			widget->SetColor(color, id);
@@ -1062,9 +1291,11 @@ namespace wi::gui
 			sprites[IDLE].params.color = color;
 		}
 	}
+
 	void Window::SetImage(wi::Resource resource, const int id)
 	{
 		Widget::SetImage(resource, id);
+
 		for (auto& widget : widgets)
 		{
 			widget->SetImage(resource, id);
@@ -1075,14 +1306,17 @@ namespace wi::gui
 			sprites[IDLE].textureResource = resource;
 		}
 	}
+
 	void Window::SetShadowColor(const wi::Color color)
 	{
 		Widget::SetShadowColor(color);
+
 		for (auto& widget : widgets)
 		{
 			widget->SetShadowColor(color);
 		}
 	}
+
 	void Window::SetTheme(const Theme& theme, const int id)
 	{
 		Widget::SetTheme(theme, id);
@@ -1091,10 +1325,12 @@ namespace wi::gui
 			widget->SetTheme(theme, id);
 		}
 	}
+
 	void Window::ResizeLayout()
 	{
 		Widget::ResizeLayout();
 		layout.reset(*this);
+
 		for (auto& widget : widgets)
 		{
 			widget->ResizeLayout();
@@ -1104,23 +1340,35 @@ namespace wi::gui
 		{
 			moveDragger.Detach();
 			float rem = 0;
+
 			if (closeButton.parent != nullptr)
 			{
 				rem++;
 			}
+
 			if (collapseButton.parent != nullptr)
 			{
 				rem++;
 			}
-			moveDragger.SetSize(XMFLOAT2(scale.x - control_size * rem, control_size));
+
+			moveDragger.SetSize(XMFLOAT2(
+				scale.x - control_size * rem,
+				control_size)
+			);
 			float offset = 0;
+
 			if (collapseButton.parent != nullptr)
 			{
 				offset++;
 			}
-			moveDragger.SetPos(XMFLOAT2(translation.x + control_size * offset, translation.y));
+
+			moveDragger.SetPos(XMFLOAT2(
+				translation.x + control_size * offset,
+				translation.y)
+			);
 			moveDragger.AttachTo(this);
 		}
+
 		if (closeButton.parent != nullptr)
 		{
 			closeButton.Detach();
@@ -1128,6 +1376,7 @@ namespace wi::gui
 			closeButton.SetPos(XMFLOAT2(translation.x + scale.x - control_size, translation.y));
 			closeButton.AttachTo(this);
 		}
+
 		if (collapseButton.parent != nullptr)
 		{
 			collapseButton.Detach();
@@ -1135,38 +1384,57 @@ namespace wi::gui
 			collapseButton.SetPos(XMFLOAT2(translation.x, translation.y));
 			collapseButton.AttachTo(this);
 		}
+
 		if (label.parent != nullptr)
 		{
 			label.font.params = font.params;
 			label.Detach();
+
 			XMFLOAT2 label_size = XMFLOAT2(scale.x, control_size);
-			XMFLOAT2 label_pos = XMFLOAT2(translation.x, translation.y);
+			XMFLOAT2 label_pos  = XMFLOAT2(translation.x, translation.y);
+
 			if (closeButton.parent != nullptr)
 			{
 				label_size.x -= control_size;
 			}
+
 			if (collapseButton.parent != nullptr)
 			{
 				label_size.x -= control_size;
 				label_pos.x += control_size;
 			}
+
 			label.SetSize(label_size);
 			label.SetPos(label_pos);
 			label.AttachTo(this);
 		}
+
 		if (scrollbar_horizontal.parent != nullptr)
 		{
 			scrollbar_horizontal.Detach();
-			scrollbar_horizontal.SetSize(XMFLOAT2(GetWidgetAreaSize().x - control_size, control_size));
-			scrollbar_horizontal.SetPos(XMFLOAT2(translation.x + control_size, translation.y + scale.y - control_size));
+			scrollbar_horizontal.SetSize(XMFLOAT2(
+				GetWidgetAreaSize().x - control_size,
+				control_size)
+			);
+			scrollbar_horizontal.SetPos(XMFLOAT2(
+				translation.x + control_size,
+				translation.y + scale.y - control_size)
+			);
 			scrollbar_horizontal.AttachTo(this);
 			scrollbar_horizontal.SetSafeArea(control_size * 2);
 		}
+
 		if (scrollbar_vertical.parent != nullptr)
 		{
 			scrollbar_vertical.Detach();
-			scrollbar_vertical.SetSize(XMFLOAT2(control_size, GetWidgetAreaSize().y - control_size));
-			scrollbar_vertical.SetPos(XMFLOAT2(translation.x + scale.x - control_size, translation.y + control_size));
+			scrollbar_vertical.SetSize(XMFLOAT2(
+				control_size,
+				GetWidgetAreaSize().y - control_size)
+			);
+			scrollbar_vertical.SetPos(XMFLOAT2(
+				translation.x + scale.x - control_size,
+				translation.y + control_size)
+			);
 			scrollbar_vertical.AttachTo(this);
 		}
 
@@ -1175,31 +1443,42 @@ namespace wi::gui
 			onResize();
 		}
 	}
+
 	void Window::ExportLocalization(wi::Localization& localization) const
 	{
 		Widget::ExportLocalization(localization);
+
 		if (has_flag(localization_enabled, LocalizationEnabled::Children))
 		{
 			wi::Localization& section = localization.GetSection(GetName());
+
 			for (auto& widget : widgets)
 			{
 				widget->ExportLocalization(section);
 			}
 		}
 	}
+
 	void Window::ImportLocalization(const wi::Localization& localization)
 	{
 		Widget::ImportLocalization(localization);
+
 		if (has_flag(localization_enabled, LocalizationEnabled::Children))
 		{
-			const wi::Localization* section = localization.CheckSection(GetName());
+			const wi::Localization* section
+				= localization.CheckSection(GetName());
+
 			if (section == nullptr)
+			{
 				return;
+			}
+
 			for (auto& widget : widgets)
 			{
 				widget->ImportLocalization(*section);
 			}
 		}
+
 		label.SetText(GetText());
 		moveDragger.SetText(GetText());
 	}
