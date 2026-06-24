@@ -65,14 +65,20 @@ namespace wi::gui
 		 *
 		 * @param[in] size - Length of the scrollable list, in pixels.
 		 */
-		void SetListLength(float size) noexcept { list_length = size; }
+		void SetListLength(float size) noexcept
+		{
+			list_length = size;
+		}
 
 		/**
 		 * Returns the scroll offset to apply to the list items.
 		 *
 		 * @return Offset in pixels (negative scrolls content up/left).
 		 */
-		[[nodiscard]] float GetOffset() const noexcept { return list_offset; }
+		[[nodiscard]] float GetOffset() const noexcept
+		{
+			return list_offset;
+		}
 
 		/**
 		 * Sets the scroll position from a list offset value.
@@ -108,19 +114,24 @@ namespace wi::gui
 		 *
 		 * @param[in] amount - Over-scroll fraction in `[0, 1]`.
 		 */
-		void SetOverScroll(float amount) noexcept { overscroll = amount; }
+		void SetOverScroll(float amount) noexcept
+		{
+			overscroll = amount;
+		}
 
 		/**
 		 * Returns whether a scrollbar is needed (content does not fit).
 		 */
-		[[nodiscard]] bool IsScrollbarRequired() const noexcept {
+		[[nodiscard]] bool IsScrollbarRequired() const noexcept
+		{
 			return scrollbar_granularity < 1;
 		}
 
 		/**
 		 * Returns whether the bar is scrolled to the beginning.
 		 */
-		[[nodiscard]] bool IsScrolledToBegin() const noexcept {
+		[[nodiscard]] bool IsScrolledToBegin() const noexcept
+		{
 			return scrollbar_delta <= 0;
 		}
 
@@ -129,7 +140,10 @@ namespace wi::gui
 		 *
 		 * @param[in] value - Length to reserve, in pixels.
 		 */
-		void SetSafeArea(float value) noexcept { safe_area = value; }
+		void SetSafeArea(float value) noexcept
+		{
+			safe_area = value;
+		}
 
 		/**
 		 * Visual/interaction state of the scrollbar knob.
@@ -192,7 +206,8 @@ namespace wi::gui
 		/**
 		 * Returns the widget's type name ("ScrollBar").
 		 */
-		[[nodiscard]] const char* GetWidgetTypeName() const override {
+		[[nodiscard]] const char* GetWidgetTypeName() const override
+		{
 			return "ScrollBar";
 		}
 
@@ -201,11 +216,17 @@ namespace wi::gui
 		 *
 		 * @param[in] value - true for vertical, false for horizontal.
 		 */
-		void SetVertical(bool value) noexcept { vertical = value; }
+		void SetVertical(bool value) noexcept
+		{
+			vertical = value;
+		}
 
 		/**
 		 * Returns whether the bar is oriented vertically.
 		 */
-		[[nodiscard]] bool IsVertical() const noexcept { return vertical; }
+		[[nodiscard]] bool IsVertical() const noexcept
+		{
+			return vertical;
+		}
 	};
 }

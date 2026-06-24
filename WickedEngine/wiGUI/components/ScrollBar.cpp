@@ -43,21 +43,22 @@ namespace wi::gui
 		if (vertical)
 		{
 			scrollbar_begin = translation.y;
-			scrollbar_end = scrollbar_begin + scale.y;
-			scrollbar_size = scrollbar_end - scrollbar_begin;
+			scrollbar_end   = scrollbar_begin + scale.y;
+			scrollbar_size  = scrollbar_end - scrollbar_begin;
 			scrollbar_granularity = std::min(1.0f, scrollbar_size / std::max(1.0f, list_length - safe_area));
-			scrollbar_length = std::max(scale.x * 2, scrollbar_size * scrollbar_granularity);
-			scrollbar_length = std::min(scrollbar_length, scale.y);
+			scrollbar_length      = std::max(scale.x * 2, scrollbar_size * scrollbar_granularity);
+			scrollbar_length      = std::min(scrollbar_length, scale.y);
 		}
 		else
 		{
 			scrollbar_begin = translation.x;
-			scrollbar_end = scrollbar_begin + scale.x;
-			scrollbar_size = scrollbar_end - scrollbar_begin;
+			scrollbar_end   = scrollbar_begin + scale.x;
+			scrollbar_size  = scrollbar_end - scrollbar_begin;
 			scrollbar_granularity = std::min(1.0f, scrollbar_size / std::max(1.0f, list_length - safe_area));
-			scrollbar_length = std::max(scale.y * 2, scrollbar_size * scrollbar_granularity);
-			scrollbar_length = std::min(scrollbar_length, scale.x);
+			scrollbar_length      = std::max(scale.y * 2, scrollbar_size * scrollbar_granularity);
+			scrollbar_length      = std::min(scrollbar_length, scale.x);
 		}
+
 		scrollbar_length = std::max(0.0f, scrollbar_length);
 
 		if (IsEnabled() && dt > 0)
@@ -66,10 +67,12 @@ namespace wi::gui
 			{
 				state = IDLE;
 			}
+
 			if (state == DEACTIVATING)
 			{
 				state = IDLE;
 			}
+
 			if (state == ACTIVE)
 			{
 				Deactivate();
@@ -92,6 +95,7 @@ namespace wi::gui
 			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT) || wi::input::IsTouchPanning())
 			{
 				click_down = true;
+
 				if (state == FOCUS || state == DEACTIVATING)
 				{
 					// Keep pressed until mouse is released
@@ -138,14 +142,19 @@ namespace wi::gui
 		scrollbar_delta = wi::math::Clamp(scrollbar_delta, 0, scrollbar_size - scrollbar_length);
 		if (scrollbar_begin < scrollbar_end - scrollbar_length)
 		{
-			scrollbar_value = wi::math::InverseLerp(scrollbar_begin, scrollbar_end - scrollbar_length, scrollbar_begin + scrollbar_delta);
+			scrollbar_value = wi::math::InverseLerp(
+				scrollbar_begin,
+				scrollbar_end - scrollbar_length,
+				scrollbar_begin + scrollbar_delta
+			);
 		}
 		else
 		{
 			scrollbar_value = 0;
 		}
 
-		list_offset = -scrollbar_value * (list_length - scrollbar_size * (1.0f - overscroll));
+		list_offset = -scrollbar_value
+		            * (list_length - scrollbar_size * (1.0f - overscroll));
 
 		if (vertical)
 		{
@@ -174,15 +183,20 @@ namespace wi::gui
 			list_offset = 0;
 		}
 	}
+
 	void ScrollBar::Render(const wi::Canvas& canvas, const CommandList cmd) const
 	{
 		Widget::Render(canvas, cmd);
+
 		if (!IsVisible())
 		{
 			return;
 		}
+
 		if (!IsScrollbarRequired())
+		{
 			return;
+		}
 
 		// scrollbar background
 		wi::image::Params fx = sprites[state].params;
@@ -191,8 +205,7 @@ namespace wi::gui
 		fx.color = sprites[IDLE].params.color;
 		wi::image::Draw(nullptr, fx, cmd);
 
-
-		// shadow:
+		// Shadow:
 		if (shadow > 0)
 		{
 			wi::image::Params fx = sprites_knob[scrollbar_state].params;
@@ -202,6 +215,7 @@ namespace wi::gui
 			fx.siz.x += shadow * 2;
 			fx.siz.y += shadow * 2;
 			fx.color = shadow_color;
+
 			if (fx.isCornerRoundingEnabled())
 			{
 				for (auto& corner_rounding : fx.corners_rounding)
@@ -212,6 +226,7 @@ namespace wi::gui
 					}
 				}
 			}
+
 			if (shadow_highlight)
 			{
 				fx.enableHighlight();
@@ -223,6 +238,7 @@ namespace wi::gui
 			{
 				fx.disableHighlight();
 			}
+
 			wi::image::Draw(nullptr, fx, cmd);
 		}
 
@@ -239,6 +255,7 @@ namespace wi::gui
 		//wi::image::Draw(nullptr, wi::image::Params(hitBox.pos.x, hitBox.pos.y, hitBox.siz.x, hitBox.siz.y, wi::Color(255,0,0,100)), cmd);
 
 	}
+
 	void ScrollBar::SetColor(const wi::Color color, const int id)
 	{
 		Widget::SetColor(color, id);
@@ -247,14 +264,17 @@ namespace wi::gui
 		{
 			if (id >= WIDGET_ID_SCROLLBAR_KNOB_INACTIVE)
 			{
-				sprites_knob[id - WIDGET_ID_SCROLLBAR_KNOB_INACTIVE].params.color = color;
+				sprites_knob[id - WIDGET_ID_SCROLLBAR_KNOB_INACTIVE]
+					.params.color = color;
 			}
 			else if (id >= WIDGET_ID_SCROLLBAR_BASE_IDLE)
 			{
-				sprites[id - WIDGET_ID_SCROLLBAR_BASE_IDLE].params.color = color;
+				sprites[id - WIDGET_ID_SCROLLBAR_BASE_IDLE]
+					.params.color = color;
 			}
 		}
 	}
+
 	void ScrollBar::SetTheme(const Theme& theme, const int id)
 	{
 		Widget::SetTheme(theme, id);
@@ -263,33 +283,27 @@ namespace wi::gui
 		{
 			if (id >= WIDGET_ID_SCROLLBAR_KNOB_INACTIVE)
 			{
-				theme.image.Apply(sprites_knob[id - WIDGET_ID_SCROLLBAR_KNOB_INACTIVE].params);
+				theme.image.Apply(
+					sprites_knob[id - WIDGET_ID_SCROLLBAR_KNOB_INACTIVE].params
+				);
 			}
 			else if (id >= WIDGET_ID_SCROLLBAR_BASE_IDLE)
 			{
-				theme.image.Apply(sprites[id - WIDGET_ID_SCROLLBAR_BASE_IDLE].params);
+				theme.image.Apply(
+					sprites[id - WIDGET_ID_SCROLLBAR_BASE_IDLE].params
+				);
 			}
 		}
 	}
-	void ScrollBar::SetOffset(const float value)
+
+	void ScrollBar::SetOffset(float value)
 	{
-		float scrollbar_begin;
-		float scrollbar_end;
-		float scrollbar_size;
+		const float scrollbar_size = vertical ? scale.y : scale.x;
 
-		if (vertical)
-		{
-			scrollbar_begin = translation.y;
-			scrollbar_end = scrollbar_begin + scale.y;
-			scrollbar_size = scrollbar_end - scrollbar_begin;
-		}
-		else
-		{
-			scrollbar_begin = translation.x;
-			scrollbar_end = scrollbar_begin + scale.x;
-			scrollbar_size = scrollbar_end - scrollbar_begin;
-		}
-
-		scrollbar_delta = lerp(0.0f, scrollbar_size - scrollbar_length, value / list_length);
+		scrollbar_delta = lerp(
+			0.0f,
+			scrollbar_size - scrollbar_length,
+			value / list_length
+		);
 	}
 }
