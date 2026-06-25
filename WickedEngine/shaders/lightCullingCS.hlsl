@@ -341,8 +341,8 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		{
 			InterlockedOr(uDepthMask, wave_depth_mask);
 		}
+		GroupMemoryBarrierWithGroupSync();
 	}
-	GroupMemoryBarrierWithGroupSync();
 #endif // ADVANCED
 
 	const uint depth_mask = has_depthbuffer ? uDepthMask : ~0u; // take out from groupshared into register
