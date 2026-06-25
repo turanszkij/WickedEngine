@@ -64,7 +64,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 		ShaderEntityIterator iterator = lights();
 		for (uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 		{
-			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
+			uint bucket_bits = load_entitytile(flatTileIndex + bucket, 0);
 
 			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
 			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));

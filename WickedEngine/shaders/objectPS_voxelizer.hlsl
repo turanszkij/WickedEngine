@@ -1,5 +1,3 @@
-#define DISABLE_SOFT_SHADOWMAP
-#define DISABLE_VOXELGI
 #include "objectHF.hlsli"
 #include "voxelHF.hlsli"
 #include "volumetricCloudsHF.hlsli"
@@ -124,7 +122,57 @@ void main(PSInput input)
 	surface.layerMask = material.layerMask;
 	surface.update();
 
-	ForwardLighting(surface, lighting);
+	[branch]
+	if (!directional_lights().empty())
+	{
+		ShaderEntityIterator iterator = directional_lights();
+		for (uint entity_index = iterator.first_item(); entity_index < iterator.end_item(); ++entity_index)
+		{
+			ShaderEntity light = load_entity(entity_index);
+			if (light.IsStaticLight())
+				continue;
+			light_directional(light, surface, lighting);
+		}
+	}
+
+	[branch]
+	if (!spotlights().empty())
+	{
+		ShaderEntityIterator iterator = spotlights();
+		for (uint entity_index = iterator.first_item(); entity_index < iterator.end_item(); ++entity_index)
+		{
+			ShaderEntity light = load_entity(entity_index);
+			if (light.IsStaticLight())
+				continue;
+			light_spot(light, surface, lighting);
+		}
+	}
+
+	[branch]
+	if (!pointlights().empty())
+	{
+		ShaderEntityIterator iterator = pointlights();
+		for (uint entity_index = iterator.first_item(); entity_index < iterator.end_item(); ++entity_index)
+		{
+			ShaderEntity light = load_entity(entity_index);
+			if (light.IsStaticLight())
+				continue;
+			light_point(light, surface, lighting);
+		}
+	}
+
+	[branch]
+	if (!rectlights().empty())
+	{
+		ShaderEntityIterator iterator = rectlights();
+		for (uint entity_index = iterator.first_item(); entity_index < iterator.end_item(); ++entity_index)
+		{
+			ShaderEntity light = load_entity(entity_index);
+			if (light.IsStaticLight())
+				continue;
+			light_rect(light, surface, lighting);
+		}
+	}
 
 	// output:
 	uint3 writecoord = floor(uvw * GetFrame().vxgi.resolution);

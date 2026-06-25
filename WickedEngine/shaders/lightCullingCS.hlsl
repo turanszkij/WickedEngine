@@ -71,9 +71,10 @@ inline uint ConstructEntityMask(in float depthRangeMin, in float depthRangeRecip
 [numthreads(TILED_CULLING_THREADSIZE, TILED_CULLING_THREADSIZE, 1)]
 void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint groupIndex : SV_GroupIndex)
 {
-	uint2 dim;
-	texture_depth.GetDimensions(dim.x, dim.y);
-	float2 dim_rcp = rcp(dim);
+	ShaderCamera camera = GetCamera();
+	const uint2 dim = camera.internal_resolution;
+	const float2 dim_rcp = camera.internal_resolution_rcp;
+	const bool has_depthbuffer = camera.texture_depth_index >= 0;
 
 	// Each thread will zero out one bucket in the LDS:
 	for (uint i = groupIndex; i < SHADER_ENTITY_TILE_BUCKET_COUNT; i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
@@ -96,93 +97,93 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 
 	// Calculate min & max depth in threadgroup / tile.
 	float depth[TILED_CULLING_GRANULARITY * TILED_CULLING_GRANULARITY];
-	float depthMinUnrolled = 10000000;
-	float depthMaxUnrolled = -10000000;
+	float depthMinUnrolled = 1;
+	float depthMaxUnrolled = 0;
 
-	[unroll]
-	for (uint granularity = 0; granularity < TILED_CULLING_GRANULARITY * TILED_CULLING_GRANULARITY; ++granularity)
+	[branch]
+	if (has_depthbuffer)
 	{
-		uint2 pixel = DTid.xy * uint2(TILED_CULLING_GRANULARITY, TILED_CULLING_GRANULARITY) + unflatten2D(granularity, TILED_CULLING_GRANULARITY);
-		pixel = min(pixel, dim - 1); // avoid loading from outside the texture, it messes up the min-max depth!
-		depth[granularity] = texture_depth[pixel];
-		depthMinUnrolled = min(depthMinUnrolled, depth[granularity]);
-		depthMaxUnrolled = max(depthMaxUnrolled, depth[granularity]);
-	}
+		[unroll]
+		for (uint granularity = 0; granularity < TILED_CULLING_GRANULARITY * TILED_CULLING_GRANULARITY; ++granularity)
+		{
+			uint2 pixel = DTid.xy * uint2(TILED_CULLING_GRANULARITY, TILED_CULLING_GRANULARITY) + unflatten2D(granularity, TILED_CULLING_GRANULARITY);
+			pixel = min(pixel, dim - 1); // avoid loading from outside the texture, it messes up the min-max depth!
+			depth[granularity] = texture_depth[pixel];
+			depthMinUnrolled = min(depthMinUnrolled, depth[granularity]);
+			depthMaxUnrolled = max(depthMaxUnrolled, depth[granularity]);
+		}
 
-	GroupMemoryBarrierWithGroupSync();
+		GroupMemoryBarrierWithGroupSync();
 
-	float wave_local_min = WaveActiveMin(depthMinUnrolled);
-	float wave_local_max = WaveActiveMax(depthMaxUnrolled);
-	if (WaveIsFirstLane())
-	{
-		InterlockedMin(uMinDepth, asuint(wave_local_min));
-		InterlockedMax(uMaxDepth, asuint(wave_local_max));
+		float wave_local_min = WaveActiveMin(depthMinUnrolled);
+		float wave_local_max = WaveActiveMax(depthMaxUnrolled);
+		if (WaveIsFirstLane())
+		{
+			InterlockedMin(uMinDepth, asuint(wave_local_min));
+			InterlockedMax(uMaxDepth, asuint(wave_local_max));
+		}
 	}
 
 	GroupMemoryBarrierWithGroupSync();
 
 	// reversed depth buffer!
-	float fMinDepth = asfloat(uMaxDepth);
-	float fMaxDepth = asfloat(uMinDepth);
+	float fMinDepth = has_depthbuffer ? asfloat(uMaxDepth) : 1;
+	float fMaxDepth = has_depthbuffer ? asfloat(uMinDepth) : 0;
 
 	// Disallow zero-thin depth box, can cause artifacts especially on AMD with ortho camera looking at flat plane sometimes:
 	fMinDepth += FLT_EPSILON;
 	fMaxDepth -= FLT_EPSILON;
 
-	Frustum GroupFrustum;
-	AABB GroupAABB;			// frustum AABB around min-max depth in View Space
-	AABB GroupAABB_WS;		// frustum AABB in world space
-	{
-		// View space frustum corners:
-		float3 viewSpace[8];
-		// Top left point, near
-		viewSpace[0] = ScreenToView(float4(Gid.xy * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f), dim_rcp).xyz;
-		// Top right point, near
-		viewSpace[1] = ScreenToView(float4(float2(Gid.x + 1, Gid.y) * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f), dim_rcp).xyz;
-		// Bottom left point, near
-		viewSpace[2] = ScreenToView(float4(float2(Gid.x, Gid.y + 1) * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f), dim_rcp).xyz;
-		// Bottom right point, near
-		viewSpace[3] = ScreenToView(float4(float2(Gid.x + 1, Gid.y + 1) * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f), dim_rcp).xyz;
-		// Top left point, far
-		viewSpace[4] = ScreenToView(float4(Gid.xy * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f), dim_rcp).xyz;
-		// Top right point, far
-		viewSpace[5] = ScreenToView(float4(float2(Gid.x + 1, Gid.y) * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f), dim_rcp).xyz;
-		// Bottom left point, far
-		viewSpace[6] = ScreenToView(float4(float2(Gid.x, Gid.y + 1) * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f), dim_rcp).xyz;
-		// Bottom right point, far
-		viewSpace[7] = ScreenToView(float4(float2(Gid.x + 1, Gid.y + 1) * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f), dim_rcp).xyz;
+	// View space frustum corners:
+	float3 viewSpace[8];
+	// Top left point, near
+	viewSpace[0] = ScreenToView(float4(Gid.xy * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f), dim_rcp).xyz;
+	// Top right point, near
+	viewSpace[1] = ScreenToView(float4(float2(Gid.x + 1, Gid.y) * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f), dim_rcp).xyz;
+	// Bottom left point, near
+	viewSpace[2] = ScreenToView(float4(float2(Gid.x, Gid.y + 1) * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f), dim_rcp).xyz;
+	// Bottom right point, near
+	viewSpace[3] = ScreenToView(float4(float2(Gid.x + 1, Gid.y + 1) * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f), dim_rcp).xyz;
+	// Top left point, far
+	viewSpace[4] = ScreenToView(float4(Gid.xy * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f), dim_rcp).xyz;
+	// Top right point, far
+	viewSpace[5] = ScreenToView(float4(float2(Gid.x + 1, Gid.y) * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f), dim_rcp).xyz;
+	// Bottom left point, far
+	viewSpace[6] = ScreenToView(float4(float2(Gid.x, Gid.y + 1) * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f), dim_rcp).xyz;
+	// Bottom right point, far
+	viewSpace[7] = ScreenToView(float4(float2(Gid.x + 1, Gid.y + 1) * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f), dim_rcp).xyz;
 	
-		// Left plane
-		GroupFrustum.planes[0] = ComputePlane(viewSpace[2], viewSpace[0], viewSpace[4]);
-		// Right plane
-		GroupFrustum.planes[1] = ComputePlane(viewSpace[1], viewSpace[3], viewSpace[5]);
-		// Top plane
-		GroupFrustum.planes[2] = ComputePlane(viewSpace[0], viewSpace[1], viewSpace[4]);
-		// Bottom plane
-		GroupFrustum.planes[3] = ComputePlane(viewSpace[3], viewSpace[2], viewSpace[6]);
+	Frustum GroupFrustum;
+	// Left plane
+	GroupFrustum.planes[0] = ComputePlane(viewSpace[2], viewSpace[0], viewSpace[4]);
+	// Right plane
+	GroupFrustum.planes[1] = ComputePlane(viewSpace[1], viewSpace[3], viewSpace[5]);
+	// Top plane
+	GroupFrustum.planes[2] = ComputePlane(viewSpace[0], viewSpace[1], viewSpace[4]);
+	// Bottom plane
+	GroupFrustum.planes[3] = ComputePlane(viewSpace[3], viewSpace[2], viewSpace[6]);
 		
-		// I construct an AABB around the minmax depth bounds to perform tighter culling:
-		// The frustum is asymmetric so we must consider all corners!
-		float3 minAABB = 10000000;
-		float3 maxAABB = -10000000;
-		[unroll]
-		for (uint i = 0; i < 8; ++i)
-		{
-			minAABB = min(minAABB, viewSpace[i]);
-			maxAABB = max(maxAABB, viewSpace[i]);
-		}
-
-		AABBfromMinMax(GroupAABB, minAABB, maxAABB);
-
-		// We can perform coarse AABB intersection tests with this:
-		GroupAABB_WS = GroupAABB;
-		AABBtransform(GroupAABB_WS, GetCamera().inverse_view);
+	// I construct an AABB around the minmax depth bounds to perform tighter culling:
+	// The frustum is asymmetric so we must consider all corners!
+	float3 minAABB = 10000000;
+	float3 maxAABB = -10000000;
+	[unroll]
+	for (uint i = 0; i < 8; ++i)
+	{
+		minAABB = min(minAABB, viewSpace[i]);
+		maxAABB = max(maxAABB, viewSpace[i]);
 	}
 
-	// Convert depth values to view space.
-	float minDepthVS = ScreenToView(float4(0, 0, fMinDepth, 1), dim_rcp).z;
-	float maxDepthVS = ScreenToView(float4(0, 0, fMaxDepth, 1), dim_rcp).z;
-	float nearClipVS = ScreenToView(float4(0, 0, 1, 1), dim_rcp).z;
+	AABB GroupAABB; // frustum AABB around min-max depth in View Space
+	AABBfromMinMax(GroupAABB, minAABB, maxAABB);
+
+	// We can perform coarse AABB intersection tests with this:
+	AABB GroupAABB_WS = GroupAABB;
+	AABBtransform(GroupAABB_WS, camera.inverse_view); // frustum AABB in world space
+
+	float minDepthVS = viewSpace[0].z;
+	float maxDepthVS = viewSpace[4].z;
+	float nearClipVS = camera.z_near;
 
 #ifdef ADVANCED
 	// We divide the minmax depth bounds to 32 equal slices
@@ -269,14 +270,14 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 
 	GroupMemoryBarrierWithGroupSync();
 	
-	const uint flatTileIndex = flatten2D(Gid.xy, GetCamera().entity_culling_tilecount.xy);
+	const uint flatTileIndex = flatten2D(Gid.xy, camera.entity_culling_tilecount.xy);
 	const uint tileBucketsAddress = flatTileIndex * SHADER_ENTITY_TILE_BUCKET_COUNT;
 
 	// Each thread will export one bucket from LDS to global memory:
 	for (uint i = groupIndex; i < SHADER_ENTITY_TILE_BUCKET_COUNT; i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
 		entityTiles[tileBucketsAddress + i] = tile_opaque[i];
-		entityTiles[GetCamera().entity_culling_tile_bucket_count_flat + tileBucketsAddress + i] = tile_transparent[i];
+		entityTiles[camera.entity_culling_tile_bucket_count_flat + tileBucketsAddress + i] = tile_transparent[i];
 	}
 
 #ifdef DEBUG

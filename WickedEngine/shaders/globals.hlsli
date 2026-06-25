@@ -583,9 +583,9 @@ StructuredBuffer<GaussianSplat> bindless_structured_gaussian_splats[] : register
 #define load_entitymatrix(matrixIndex) (GetFrame().matrixArray[matrixIndex])
 #define load_entityculling(entityIndex) (GetFrame().entityCullingArray[entityIndex])
 #ifdef TRANSPARENT
-#define load_entitytile(tileIndex) (bindless_structured_uint[GetCamera().buffer_entitytiles_index][GetCamera().entity_culling_tile_bucket_count_flat + tileIndex])
+#define load_entitytile(tileIndex, cameraIndex) (bindless_structured_uint[descriptor_index(GetCameraIndexed(cameraIndex).buffer_entitytiles_index)][GetCamera().entity_culling_tile_bucket_count_flat + tileIndex])
 #else
-#define load_entitytile(tileIndex) (bindless_structured_uint[GetCamera().buffer_entitytiles_index][tileIndex])
+#define load_entitytile(tileIndex, cameraIndex) (bindless_structured_uint[descriptor_index(GetCameraIndexed(cameraIndex).buffer_entitytiles_index)][tileIndex])
 #endif // TRANSPARENT
 
 inline void write_mipmap_feedback(uint materialIndex, float4 uvsets_dx, float4 uvsets_dy)

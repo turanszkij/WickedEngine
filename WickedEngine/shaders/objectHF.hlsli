@@ -555,10 +555,12 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 // Pixel shader base:
 {
 #ifdef OBJECTSHADER_USE_CAMERAINDEX
-	ShaderCamera camera = GetCameraIndexed(input.GetCameraIndex());
+	const uint cameraIndex = input.GetCameraIndex();
 #else
-	ShaderCamera camera = GetCamera();
+	const uint cameraIndex = 0;
 #endif // OBJECTSHADER_USE_CAMERAINDEX
+
+	ShaderCamera camera = GetCameraIndexed(cameraIndex);
 
 	const min16uint2 pixel = input.pos.xy; // no longer pixel center!
 	const float2 ScreenCoord = input.pos.xy * camera.internal_resolution_rcp; // use pixel center!
@@ -774,12 +776,8 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 
 #ifndef PREPASS
 #ifndef WATER
-#ifdef FORWARD
-	ForwardDecals(surface, surfaceMap, sampler_objectshader);
-#endif // FORWARD
-
 #ifdef TILEDFORWARD
-	TiledDecals(surface, flat_tile_index, surfaceMap, sampler_objectshader);
+	TiledDecals(surface, flat_tile_index, surfaceMap, sampler_objectshader, cameraIndex);
 #endif // TILEDFORWARD
 #endif // WATER
 #endif // PREPASS
@@ -1009,19 +1007,12 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 	LightMapping(meshinstance.lightmap, input.atl, lighting, surface);
 #endif // OBJECTSHADER_USE_COMMON
 
-
 #ifdef PLANARREFLECTION
 	lighting.indirect.specular += PlanarReflection(surface, surface.bumpColor.rg) * surface.F;
 #endif
 
-
-#ifdef FORWARD
-	ForwardLighting(surface, lighting);
-#endif // FORWARD
-
-
 #ifdef TILEDFORWARD
-	TiledLighting(surface, lighting, flat_tile_index);
+	TiledLighting(surface, lighting, flat_tile_index, cameraIndex);
 #endif // TILEDFORWARD
 
 

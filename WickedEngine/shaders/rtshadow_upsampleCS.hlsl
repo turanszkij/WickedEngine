@@ -62,7 +62,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 		ShaderEntityIterator iterator = lights();
 		for (uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 		{
-			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
+			uint bucket_bits = load_entitytile(flatTileIndex + bucket, 0);
 			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
 
 			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:

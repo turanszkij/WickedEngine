@@ -3097,59 +3097,6 @@ inline void CreateCubemapCameras(const XMFLOAT3& position, float zNearP, float z
 	shcams[5].init(position, XMFLOAT4(0, 0.707f, 0.707f, 0), zNearP, zFarP, XM_PIDIV2); //-z
 }
 
-ForwardEntityMaskCB ForwardEntityCullingCPU(const Visibility& vis, const AABB& batch_aabb)
-{
-	// Performs CPU light culling for a renderable batch:
-	//	Similar to GPU-based tiled light culling, but this is only for simple forward passes (drawcall-granularity)
-
-	ForwardEntityMaskCB cb = {};
-
-	for (size_t i = 0; i < std::min(size_t(24), vis.visibleDecals.size()); ++i)
-	{
-		const uint32_t decalIndex = vis.visibleDecals[vis.visibleDecals.size() - 1 - i]; // note: reverse order, for correct blending!
-		const AABB& decal_aabb = vis.scene->aabb_decals[decalIndex];
-		if (decal_aabb.intersects(batch_aabb))
-		{
-			cb.xForwardDecalAndProbeMask |= uint32_t(1) << i;
-		}
-	}
-
-	for (size_t i = 0; i < std::min(size_t(8), vis.visibleEnvProbes.size()); ++i)
-	{
-		const uint32_t probeIndex = vis.visibleEnvProbes[vis.visibleEnvProbes.size() - 1 - i]; // note: reverse order, for correct blending!
-		const AABB& probe_aabb = vis.scene->aabb_probes[probeIndex];
-		if (probe_aabb.intersects(batch_aabb))
-		{
-			cb.xForwardDecalAndProbeMask |= uint32_t(1) << (i + 24u);
-		}
-	}
-
-	for (size_t i = 0; i < std::min(size_t(32), vis.visibleLights.size()); ++i) // only support indexing 32 lights at max in this mode
-	{
-		const uint32_t lightIndex = vis.visibleLights[i];
-		const AABB& light_aabb = vis.scene->aabb_lights[lightIndex];
-		if (light_aabb.intersects(batch_aabb) && !vis.scene->lights[lightIndex].IsStatic())
-		{
-			switch (vis.scene->lights[lightIndex].GetType())
-			{
-			case LightComponent::SPOT:
-				cb.xForwardSpotLightMask |= uint32_t(1) << i;
-				break;
-			case LightComponent::POINT:
-				cb.xForwardPointLightMask |= uint32_t(1) << i;
-				break;
-			case LightComponent::RECTANGLE:
-				cb.xForwardRectLightMask |= uint32_t(1) << i;
-				break;
-			default:
-				break;
-			}
-		}
-	}
-
-	return cb;
-}
-
 void Workaround(const int bug , CommandList cmd)
 {
 	if (bug == 1)
@@ -3267,12 +3214,6 @@ void RenderMeshes(
 				renderPass == RENDERPASS_VOXELIZE ||
 				tessellatorRequested
 			);
-
-		if (forwardLightmaskRequest)
-		{
-			ForwardEntityMaskCB cb = ForwardEntityCullingCPU(vis, instancedBatch.aabb);
-			device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
-		}
 
 		uint32_t first_subset = 0;
 		uint32_t last_subset = 0;
@@ -9416,8 +9357,13 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		SHCAM cameras[6];
 		CreateCubemapCameras(probe.position, zNearP, zFarP, cameras, arraysize(cameras));
 
+		static TiledLightResources tiledlights[6];
+		const XMUINT2 required_tilecount = GetEntityCullingTileCount(XMUINT2(probe.texture.desc.width, probe.texture.desc.width));
+
 		CameraCB cb;
+		CameraCB cullcb;
 		cb.init();
+		cullcb.init();
 		for (uint32_t i = 0; i < arraysize(cameras); ++i)
 		{
 			ShaderCamera& shadercam = cb.cameras[i];
@@ -9426,6 +9372,8 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			XMStoreFloat4x4(&shadercam.view_projection, cameras[i].view_projection);
 			XMMATRIX invVP = XMMatrixInverse(nullptr, cameras[i].view_projection);
 			XMStoreFloat4x4(&shadercam.inverse_view_projection, invVP);
+			XMStoreFloat4x4(&shadercam.inverse_projection, XMMatrixInverse(nullptr, cameras[i].projection));
+			XMStoreFloat4x4(&shadercam.inverse_view, XMMatrixInverse(nullptr, cameras[i].view));
 			shadercam.position = probe.position;
 			shadercam.output_index = i;
 			shadercam.z_near = zNearP;
@@ -9452,6 +9400,20 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			XMStoreFloat4(&shadercam.frustum_corners.cornersFAR[1], XMVector3TransformCoord(XMVectorSet(1, 1, 0, 1), invVP));
 			XMStoreFloat4(&shadercam.frustum_corners.cornersFAR[2], XMVector3TransformCoord(XMVectorSet(-1, -1, 0, 1), invVP));
 			XMStoreFloat4(&shadercam.frustum_corners.cornersFAR[3], XMVector3TransformCoord(XMVectorSet(1, -1, 0, 1), invVP));
+
+
+			// Light culling resources for every cubemap face:
+			if (tiledlights[i].tileCount.x < required_tilecount.x || tiledlights[i].tileCount.y < required_tilecount.y)
+			{
+				CreateTiledLightResources(tiledlights[i], XMUINT2(probe.texture.desc.width, probe.texture.desc.width));
+			}
+			shadercam.buffer_entitytiles_index = device->GetDescriptorIndex(&tiledlights[i].entityTiles, SubresourceType::SRV);
+			shadercam.entity_culling_tilecount = required_tilecount;
+			shadercam.entity_culling_tile_bucket_count_flat = shadercam.entity_culling_tilecount.x * shadercam.entity_culling_tilecount.y * SHADER_ENTITY_TILE_BUCKET_COUNT;
+
+			cullcb.cameras[0] = shadercam;
+			device->BindDynamicConstantBuffer(cullcb, CBSLOT_RENDERER_CAMERA, cmd);
+			ComputeTiledLightCulling(tiledlights[i], vis, Texture(), cmd);
 		}
 		device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 
@@ -9759,9 +9721,6 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		{
 			if (vis.scene->ocean.IsValid() && vis.scene->weather.IsOceanEnabled())
 			{
-				ForwardEntityMaskCB cb = ForwardEntityCullingCPU(vis, vis.scene->ocean.GetAABB(probe.position));
-				device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
-
 				vis.scene->ocean.RenderForCubemap(cmd);
 			}
 			if (!visible_gaussian_models.empty())
