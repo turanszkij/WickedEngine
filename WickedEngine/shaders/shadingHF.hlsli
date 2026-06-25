@@ -379,6 +379,8 @@ inline void TiledDecals(inout Surface surface, inout half4 surfaceMap, SamplerSt
 	[branch]
 	if (decals().empty())
 		return;
+	if (camera.buffer_entitytiles_index < 0)
+		return;
 		
 	// decals are enabled, loop through them first:
 	half4 decalAccumulation = 0;
