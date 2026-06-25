@@ -1194,7 +1194,7 @@ static const uint MATRIXARRAY_COUNT = SHADER_ENTITY_COUNT;
 static const uint MAX_SHADER_DECAL_COUNT = 128;
 static const uint MAX_SHADER_PROBE_COUNT = 32;
 
-static const uint TILED_CULLING_BLOCKSIZE = 16;
+static const uint TILED_CULLING_BLOCKSIZE = 32;
 static const uint TILED_CULLING_THREADSIZE = 8;
 static const uint TILED_CULLING_GRANULARITY = TILED_CULLING_BLOCKSIZE / TILED_CULLING_THREADSIZE;
 
@@ -1252,27 +1252,22 @@ struct alignas(16) FrameCB
 	float		cloudShadowFarPlaneKm;
 	int			texture_volumetricclouds_shadow_index;
 	uint		giboost_packed; // force fp16 load
-	uint		entity_culling_count;
-
 	uint		capsuleshadow_fade_angle;
-	int			indirect_debugbufferindex;
-	int			padding0;
-	int			padding1;
 
+	int			indirect_debugbufferindex;
 	float		blue_noise_phase;
 	int			texture_random64x64_index;
 	int			texture_bluenoise_index;
-	int			texture_sheenlut_index;
 
+	int			texture_sheenlut_index;
 	int			texture_skyviewlut_index;
 	int			texture_transmittancelut_index;
 	int			texture_multiscatteringlut_index;
-	int			texture_skyluminancelut_index;
 
+	int			texture_skyluminancelut_index;
 	int			texture_cameravolumelut_index;
 	int			texture_wind_index;
 	int			texture_wind_prev_index;
-	int			texture_caustics_index;
 
 	float4		rain_blocker_mad;
 	float4x4	rain_blocker_matrix;
@@ -1366,23 +1361,23 @@ struct alignas(16) ShaderCamera
 	uint4 scissor; // scissor in physical coordinates (left,top,right,bottom) range: [0, internal_resolution]
 	float4 scissor_uv; // scissor in screen UV coordinates (left,top,right,bottom) range: [0, 1]
 
-	uint2 entity_culling_tilecount;
-	uint entity_culling_tile_bucket_count_flat; // tilecount.x * tilecount.y * SHADER_ENTITY_TILE_BUCKET_COUNT (the total number of uint buckets for the whole screen)
-	uint sample_count;
-
 	uint2 visibility_tilecount;
-	uint visibility_tilecount_flat;
-	float distance_from_origin;
+	uint2 entity_culling_tilecount;
 
+	int buffer_entitytiles_index;
+	uint entity_culling_tile_bucket_count_flat; // tilecount.x * tilecount.y * SHADER_ENTITY_TILE_BUCKET_COUNT (the total number of uint buckets for the whole screen)
+	uint entity_culling_tile_offset; // offset for indexing the tile buffer with multiple cameras
+	uint entity_culling_tile_offset_transparent; // offset for indexing the tile buffer with multiple cameras + offset for transparent list
+
+	uint sample_count;
+	uint visibility_tilecount_flat;
 	int texture_rtdiffuse_index;
 	int texture_primitiveID_index;
-	int texture_depth_index;
-	int padding0;
 
+	int texture_depth_index;
 	int texture_velocity_index;
 	int texture_normal_index;
 	int texture_roughness_index;
-	int buffer_entitytiles_index;
 
 	int texture_reflection_index;
 	int texture_reflection_depth_index;
@@ -1444,10 +1439,11 @@ struct alignas(16) ShaderCamera
 		scissor_uv = {};
 		entity_culling_tilecount = {};
 		entity_culling_tile_bucket_count_flat = 0;
+		entity_culling_tile_offset = 0;
+		entity_culling_tile_offset_transparent = 0;
 		sample_count = {};
 		visibility_tilecount = {};
 		visibility_tilecount_flat = {};
-		distance_from_origin = {};
 
 		texture_rtdiffuse_index = -1;
 		texture_primitiveID_index = -1;
@@ -1549,13 +1545,6 @@ CBUFFER(MiscCB, CBSLOT_RENDERER_MISC)
 {
 	float4x4	g_xTransform;
 	float4		g_xColor;
-};
-
-CBUFFER(ForwardEntityMaskCB, CBSLOT_RENDERER_FORWARD_LIGHTMASK)
-{
-	uint64_t xForwardLightMask;	// supports indexing 64 lights
-	uint xForwardDecalMask;		// supports indexing 32 decals
-	uint xForwardEnvProbeMask;	// supports indexing 32 environment probes
 };
 
 CBUFFER(VolumeLightCB, CBSLOT_RENDERER_VOLUMELIGHT)

@@ -2,7 +2,6 @@
 #define WI_OBJECTSHADER_HF
 
 #ifdef TRANSPARENT
-#define TRANSPARENT_SHADOWMAP_SECONDARY_DEPTH_CHECK
 #else
 #define SHADOW_MASK_ENABLED
 #endif // TRANSPARENT
@@ -385,14 +384,16 @@ struct PixelInput
 	}
 #endif // OBJECTSHADER_USE_DITHERING
 
-#ifdef OBJECTSHADER_USE_CAMERAINDEX
 	inline uint GetCameraIndex()
 	{
+#ifdef OBJECTSHADER_USE_CAMERAINDEX
 		ShaderMeshInstancePointer pointer;
 		pointer.data = poi;
 		return pointer.GetCameraIndex();
-	}
+#else
+		return 0;
 #endif // OBJECTSHADER_USE_CAMERAINDEX
+	}
 	
 #ifdef OBJECTSHADER_USE_UVSETS
 	inline float4 GetUVSets()
@@ -403,23 +404,13 @@ struct PixelInput
 
 	inline float3 GetPos3D()
 	{
-#ifdef OBJECTSHADER_USE_CAMERAINDEX
 		ShaderCamera camera = GetCameraIndexed(GetCameraIndex());
-#else
-		ShaderCamera camera = GetCamera();
-#endif // OBJECTSHADER_USE_CAMERAINDEX
-
 		return camera.screen_to_world(pos);
 	}
 
 	inline float3 GetViewVector()
 	{
-#ifdef OBJECTSHADER_USE_CAMERAINDEX
 		ShaderCamera camera = GetCameraIndexed(GetCameraIndex());
-#else
-		ShaderCamera camera = GetCamera();
-#endif // OBJECTSHADER_USE_CAMERAINDEX
-
 		return camera.screen_to_nearplane(pos) - GetPos3D(); // ortho support, cannot use cameraPos!
 	}
 
@@ -556,10 +547,12 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 // Pixel shader base:
 {
 #ifdef OBJECTSHADER_USE_CAMERAINDEX
-	ShaderCamera camera = GetCameraIndexed(input.GetCameraIndex());
+	const uint cameraIndex = WaveReadLaneFirst(input.GetCameraIndex()); // scalarized camera index assumes that wave from two cameras will not be packed together, this simplifies camera resource indexing significantly
 #else
-	ShaderCamera camera = GetCamera();
+	const uint cameraIndex = 0;
 #endif // OBJECTSHADER_USE_CAMERAINDEX
+
+	ShaderCamera camera = GetCameraIndexed(cameraIndex);
 
 	const min16uint2 pixel = input.pos.xy; // no longer pixel center!
 	const float2 ScreenCoord = input.pos.xy * camera.internal_resolution_rcp; // use pixel center!
@@ -770,17 +763,13 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 	}
 
 #ifdef TILEDFORWARD
-	const uint flat_tile_index = GetFlatTileIndex(pixel);
+	const uint flat_tile_index = GetFlatTileIndex(pixel, camera);
 #endif // TILEDFORWARD
 
 #ifndef PREPASS
 #ifndef WATER
-#ifdef FORWARD
-	ForwardDecals(surface, surfaceMap, sampler_objectshader);
-#endif // FORWARD
-
 #ifdef TILEDFORWARD
-	TiledDecals(surface, flat_tile_index, surfaceMap, sampler_objectshader);
+	TiledDecals(surface, surfaceMap, sampler_objectshader, flat_tile_index, camera);
 #endif // TILEDFORWARD
 #endif // WATER
 #endif // PREPASS
@@ -818,6 +807,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 	{
 		surface.albedo = lerp(surface.albedo, 0, wet); // darken color when wet
 		surface.roughness = clamp(surface.roughness * saturate(sqr((1 - wet) * 2 - 1)), 0.01, 1); // decrease eoughness when wet, but only at shoreline, not deeper underwater (sand underwater shouldn't be shiny)
+		surface.f0 = lerp(surface.f0, 0, wet); // decrease reflectance when wet (not shiny when fully underwater)
 		surface.N = normalize(lerp(surface.N, input.nor, wet)); // blend to vertex normal when wet
 	}
 #endif // OBJECTSHADER_USE_COMMON
@@ -831,21 +821,6 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 		surface.occlusion *= material.textures[OCCLUSIONMAP].Sample(sampler_objectshader, uvsets).r;
 	}
 #endif // OBJECTSHADER_USE_UVSETS
-
-
-#ifndef PREPASS
-#ifndef ENVMAPRENDERING
-#ifndef TRANSPARENT
-#ifndef CARTOON
-	[branch]
-	if (camera.texture_ao_index >= 0)
-	{
-		surface.occlusion *= bindless_textures_half4[descriptor_index(camera.texture_ao_index)].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).r;
-	}
-#endif // CARTOON
-#endif // TRANSPARENT
-#endif // ENVMAPRENDERING
-#endif // PREPASS
 
 
 #ifdef ANISOTROPIC
@@ -1024,19 +999,12 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 	LightMapping(meshinstance.lightmap, input.atl, lighting, surface);
 #endif // OBJECTSHADER_USE_COMMON
 
-
 #ifdef PLANARREFLECTION
 	lighting.indirect.specular += PlanarReflection(surface, surface.bumpColor.rg) * surface.F;
 #endif
 
-
-#ifdef FORWARD
-	ForwardLighting(surface, lighting);
-#endif // FORWARD
-
-
 #ifdef TILEDFORWARD
-	TiledLighting(surface, lighting, flat_tile_index);
+	TiledLighting(surface, lighting, flat_tile_index, camera);
 #endif // TILEDFORWARD
 
 
@@ -1054,6 +1022,11 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 	if (camera.texture_ssgi_index >= 0)
 	{
 		surface.ssgi = bindless_textures_half4[descriptor_index(camera.texture_ssgi_index)].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).rgb;
+	}
+	[branch]
+	if (camera.texture_ao_index >= 0)
+	{
+		surface.occlusion *= bindless_textures_half4[descriptor_index(camera.texture_ao_index)].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).r;
 	}
 #endif // CARTOON
 #endif // TRANSPARENT

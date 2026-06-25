@@ -8,6 +8,7 @@
 [earlydepthstencil]
 float4 main(VertexToPixel input) : SV_Target
 {
+	ShaderCamera camera = GetCamera();
 	ShaderMaterial material = HairGetMaterial();
 	ShaderMeshInstance meshinstance = HairGetInstance();
 	
@@ -28,7 +29,7 @@ float4 main(VertexToPixel input) : SV_Target
 	half emissive = 0;
 
 	const min16uint2 pixel = input.pos.xy; // no longer pixel center!
-	const float2 ScreenCoord = input.pos.xy * GetCamera().internal_resolution_rcp; // use pixel center!
+	const float2 ScreenCoord = input.pos.xy * camera.internal_resolution_rcp; // use pixel center!
 
 	Surface surface;
 	surface.init();
@@ -43,14 +44,14 @@ float4 main(VertexToPixel input) : SV_Target
 #ifndef TRANSPARENT
 #ifndef CARTOON
 	[branch]
-	if (GetCamera().texture_ao_index >= 0)
+	if (camera.texture_ao_index >= 0)
 	{
-		surface.occlusion *= bindless_textures_half4[descriptor_index(GetCamera().texture_ao_index)].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).r;
+		surface.occlusion *= bindless_textures_half4[descriptor_index(camera.texture_ao_index)].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).r;
 	}
 	[branch]
-	if (GetCamera().texture_ssgi_index >= 0)
+	if (camera.texture_ssgi_index >= 0)
 	{
-		surface.ssgi = bindless_textures[descriptor_index(GetCamera().texture_ssgi_index)].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).rgb;
+		surface.ssgi = bindless_textures[descriptor_index(camera.texture_ssgi_index)].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).rgb;
 	}
 #endif // CARTOON
 #endif // TRANSPARENT
@@ -68,7 +69,7 @@ float4 main(VertexToPixel input) : SV_Target
 	Lighting lighting;
 	lighting.create(0, 0, GetAmbient(surface.N), 0);
 
-	TiledLighting(surface, lighting, GetFlatTileIndex(pixel));
+	TiledLighting(surface, lighting, GetFlatTileIndex(pixel, camera), camera);
 	
 	ApplyLighting(surface, lighting, color);
 

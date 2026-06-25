@@ -84,53 +84,46 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 		if ((GetFrame().options & OPTION_BIT_RAYTRACED_SHADOWS) == 0 || GetCamera().texture_rtshadow_index < 0 || (GetCamera().options & SHADERCAMERA_OPTION_USE_SHADOW_MASK) == 0)
 #endif // SHADOW_MASK_ENABLED
 		{
+			const min16uint cascade_count = light.GetShadowCascadeCount();
+			min16uint best_cascade = cascade_count;
+			float3 shadow_uv = 0;
+			float3 shadow_pos = 0;
+
 			// Loop through cascades from closest (smallest) to furthest (largest)
-			[loop]
-			for (min16uint cascade = 0; cascade < light.GetShadowCascadeCount(); ++cascade)
+			for (min16uint cascade = 0; cascade < cascade_count; ++cascade)
 			{
 				// Project into shadow map space (no need to divide by .w because ortho projection!):
-				const float4x4 cascade_projection = load_entitymatrix(light.GetMatrixIndex() + cascade);
-				float3 shadow_pos = mul(cascade_projection, float4(surface.P, 1)).xyz;
-				float3 shadow_uv = clipspace_to_uv(shadow_pos);
+				shadow_pos = mul((float3x4)load_entitymatrix(light.GetMatrixIndex() + cascade), float4(surface.P, 1)).xyz; // float3x4 because perspective is not used
+				shadow_uv = clipspace_to_uv(shadow_pos);
 
 				// Determine if pixel is inside current cascade bounds and compute shadow if it is:
-				[branch]
 				if (is_saturated(shadow_uv))
+				{
+					best_cascade = cascade;
+					break;
+				}
+			}
+
+			if (best_cascade < cascade_count)
+			{
+				half3 shadow = shadow_2D(light, shadow_pos.z, shadow_uv.xy, best_cascade, surface.pixel);
+
+				if (best_cascade < cascade_count - 1)
 				{
 					const half3 shadow_box = half3(shadow_pos.xy, shadow_pos.z * 2 - 1);
 					const half3 cascade_edgefactor = saturate(saturate(abs(shadow_box)) - 0.8) * 5.0; // fade will be on edge and inwards 10%
-					const half cascade_fade = max3(cascade_edgefactor);
-						
-#ifdef CASCADE_DITHERING
-					// If we are on cascade edge threshold and not the last cascade, then fallback to a larger cascade:
-					[branch]
-					if (cascade_fade > 0 && dither(surface.pixel + GetTemporalAASampleRotation()) < cascade_fade)
-						continue;
-						
-					light_color *= shadow_2D(light, shadow_pos.z, shadow_uv.xy, cascade);
-					break;
-#else
-					const half3 shadow_main = shadow_2D(light, shadow_pos.z, shadow_uv.xy, cascade, surface.pixel);
-					
-					// If we are on cascade edge threshold and not the last cascade, then fallback to a larger cascade:
-					[branch]
-					if (cascade_fade > 0 && cascade < light.GetShadowCascadeCount() - 1)
+					const half cascade_blend = max3(cascade_edgefactor);
+					if (cascade_blend > 0)
 					{
-						// Project into next shadow cascade (no need to divide by .w because ortho projection!):
-						cascade += 1;
-						shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + cascade), float4(surface.P, 1)).xyz;
+						const min16uint fallback_cascade = best_cascade + 1;
+						shadow_pos = mul((float3x4)load_entitymatrix(light.GetMatrixIndex() + fallback_cascade), float4(surface.P, 1)).xyz; // float3x4 because perspective is not used
 						shadow_uv = clipspace_to_uv(shadow_pos);
-						const half3 shadow_fallback = shadow_2D(light, shadow_pos.z, shadow_uv.xy, cascade, surface.pixel);
-
-						light_color *= lerp(shadow_main, shadow_fallback, cascade_fade);
+						const half3 shadow_fallback = shadow_2D(light, shadow_pos.z, shadow_uv.xy, fallback_cascade, surface.pixel);
+						shadow = lerp(shadow, shadow_fallback, cascade_blend);
 					}
-					else
-					{
-						light_color *= shadow_main;
-					}
-					break;
-#endif // CASCADE_DITHERING
 				}
+
+				light_color *= shadow;
 			}
 		}
 		
@@ -151,29 +144,7 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 	const half scattering = ComputeScattering(saturate(dot(L, -surface.V)));
 	lighting.indirect.specular += scattering * light_color * (1 - surface.extinction) * (1 - sqr(1 - saturate(1 - surface.N.y)));
 #endif // LIGHTING_SCATTER
-			
-#ifndef WATER
-	// On non-water surfaces there can be procedural caustic if it's under ocean:
-	const ShaderOcean ocean = GetWeather().ocean;
-	if (ocean.texture_displacementmap >= 0)
-	{
-		Texture2D displacementmap = bindless_textures[descriptor_index(ocean.texture_displacementmap)];
-		float2 ocean_uv = surface.P.xz * ocean.patch_size_rcp;
-		float3 displacement = displacementmap.SampleLevel(sampler_linear_wrap, ocean_uv, 0).xzy;
-		float water_height = ocean.water_height + displacement.y;
-		if (surface.P.y < water_height)
-		{
-			half3 caustic = texture_caustics.SampleLevel(sampler_linear_mirror, ocean_uv, 0).rgb;
-			caustic *= sqr(saturate((water_height - surface.P.y) * 0.5)); // fade out at shoreline
-			caustic *= light_color;
-			lighting.indirect.diffuse += caustic;
-
-			// fade out specular at depth, it looks weird when specular appears under ocean from wetmap
-			half water_depth = water_height - surface.P.y;
-			lighting.direct.specular *= saturate(exp(-water_depth * 10));
-		}
-	}
-#endif // WATER
+		
 }
 
 inline half attenuation_pointlight(in half dist2, in half range, in half range2)

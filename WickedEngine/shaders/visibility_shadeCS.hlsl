@@ -41,9 +41,11 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	const uint2 GTid = remap_lane_8x8(groupIndex);
 	const uint2 tileID = unpack_pixel(tile.visibility_tile_id);
 	const uint2 pixel = tileID * VISIBILITY_BLOCKSIZE + GTid;
-	const uint entity_flat_tile_index = flatten2D(tileID / VISIBILITY_TILED_CULLING_GRANULARITY, GetCamera().entity_culling_tilecount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
 
-	const float2 uv = ((float2)pixel + 0.5) * GetCamera().internal_resolution_rcp;
+	ShaderCamera camera = GetCamera();
+	const uint entity_flat_tile_index = flatten2D(tileID / VISIBILITY_TILED_CULLING_GRANULARITY, camera.entity_culling_tilecount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
+
+	const float2 uv = ((float2)pixel + 0.5) * camera.internal_resolution_rcp;
 	RayDesc ray = CreateCameraRay(pixel);
 
 #ifdef PRIMITIVEID_UNIFORM
@@ -113,24 +115,24 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	lighting.indirect.specular += PlanarReflection(surface, bumpColor) * surface.F;
 #endif // PLANARREFLECTION
 
-	TiledLighting(surface, lighting, entity_flat_tile_index);
+	TiledLighting(surface, lighting, entity_flat_tile_index, camera);
 
 #ifndef CARTOON
 	[branch]
-	if (GetCamera().texture_ssr_index >= 0)
+	if (camera.texture_ssr_index >= 0)
 	{
-		half4 ssr = bindless_textures_half4[descriptor_index(GetCamera().texture_ssr_index)].SampleLevel(sampler_linear_clamp, surface.screenUV, 0);
+		half4 ssr = bindless_textures_half4[descriptor_index(camera.texture_ssr_index)].SampleLevel(sampler_linear_clamp, surface.screenUV, 0);
 		lighting.indirect.specular = lerp(lighting.indirect.specular, ssr.rgb * surface.F, ssr.a);
 	}
 	[branch]
-	if (GetCamera().texture_ssgi_index >= 0)
+	if (camera.texture_ssgi_index >= 0)
 	{
-		surface.ssgi = bindless_textures_half4[descriptor_index(GetCamera().texture_ssgi_index)].SampleLevel(sampler_linear_clamp, surface.screenUV, 0).rgb;
+		surface.ssgi = bindless_textures_half4[descriptor_index(camera.texture_ssgi_index)].SampleLevel(sampler_linear_clamp, surface.screenUV, 0).rgb;
 	}
 	[branch]
-	if (GetCamera().texture_ao_index >= 0)
+	if (camera.texture_ao_index >= 0)
 	{
-		surface.occlusion *= bindless_textures_half4[descriptor_index(GetCamera().texture_ao_index)].SampleLevel(sampler_linear_clamp, surface.screenUV, 0).r;
+		surface.occlusion *= bindless_textures_half4[descriptor_index(camera.texture_ao_index)].SampleLevel(sampler_linear_clamp, surface.screenUV, 0).r;
 	}
 #endif // CARTOON
 

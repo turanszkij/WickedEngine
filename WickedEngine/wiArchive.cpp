@@ -25,8 +25,8 @@ namespace wi
 	{
 		CreateEmpty();
 	}
-	Archive::Archive(const std::string& fileName, bool readMode)
-		: readMode(readMode), fileName(fileName)
+	Archive::Archive(const std::string& fileName, bool readMode, bool report_errors)
+		: readMode(readMode), report_errors(report_errors), fileName(fileName)
 	{
 		if (!fileName.empty())
 		{
@@ -73,13 +73,19 @@ namespace wi
 			(*this) >> header.version;
 			if (header.version < __archiveVersionBarrier)
 			{
-				wi::helper::messageBox("File is not supported!\nReason: The archive version (" + std::to_string(header.version) + ") is no longer supported! This is likely because trying to open a file that was created by a version of Wicked Engine that is too old.", "Error!");
+				if (report_errors)
+				{
+					wi::helper::messageBox("File is not supported!\nReason: The archive version (" + std::to_string(header.version) + ") is no longer supported! This is likely because trying to open a file that was created by a version of Wicked Engine that is too old.", "Error!");
+				}
 				Close();
 				return;
 			}
 			if (header.version > __archiveVersion)
 			{
-				wi::helper::messageBox("File is not supported!\nReason: The archive version (" + std::to_string(header.version) + ") is higher than the program's (" + std::to_string(__archiveVersion) + ")!\nThis is likely due to trying to open an Archive file that was not created by Wicked Engine.", "Error!");
+				if (report_errors)
+				{
+					wi::helper::messageBox("File is not supported!\nReason: The archive version (" + std::to_string(header.version) + ") is higher than the program's (" + std::to_string(__archiveVersion) + ")!\nThis is likely due to trying to open an Archive file that was not created by Wicked Engine.", "Error!");
+				}
 				Close();
 				return;
 			}

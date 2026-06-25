@@ -383,9 +383,10 @@ namespace wi::renderer
 	struct TiledLightResources
 	{
 		XMUINT2 tileCount = {};
+		uint32_t camera_count = 1;
 		wi::graphics::GPUBuffer entityTiles; // culled entity indices
 	};
-	void CreateTiledLightResources(TiledLightResources& res, XMUINT2 resolution);
+	void CreateTiledLightResources(TiledLightResources& res, XMUINT2 resolution, uint32_t camera_count = 1);
 	// Compute light grid tiles
 	void ComputeTiledLightCulling(
 		const TiledLightResources& res,
@@ -746,7 +747,6 @@ namespace wi::renderer
 	void Postprocess_RTShadow(
 		const RTShadowResources& res,
 		const wi::scene::Scene& scene,
-		const wi::graphics::GPUBuffer& entityTiles_Opaque,
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd
 	);
@@ -757,7 +757,6 @@ namespace wi::renderer
 	void CreateScreenSpaceShadowResources(ScreenSpaceShadowResources& res, XMUINT2 resolution);
 	void Postprocess_ScreenSpaceShadow(
 		const ScreenSpaceShadowResources& res,
-		const wi::graphics::GPUBuffer& entityTiles_Opaque,
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd,
 		float range = 1,

@@ -421,6 +421,15 @@ namespace wi::graphics
 			}
 		}
 
+		// Submits every queued GPU work so far and waits for GPU to finish to free up resources
+		void FlushDeallocations()
+		{
+			for (uint32_t i = 0; i < BUFFERCOUNT; ++i)
+			{
+				SubmitCommandLists();
+			}
+		}
+
 		WI_DISABLE_DEPRECATED_BEGIN
 		// Deprecated, kept for back-compat:
 		[[deprecated]]
