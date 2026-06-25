@@ -370,7 +370,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 			if (IntersectAABB(a, b))
 			{
 #ifdef ADVANCED
-				if (depth_mask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
+				if (!has_depthbuffer || (depth_mask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere)))
 #endif // ADVANCED
 				{
 					AppendEntity_Opaque(i);
@@ -395,7 +395,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 			if (SphereIntersectsAABB(sphere, GroupAABB)) // tighter fit than sphere-frustum culling
 			{
 #ifdef ADVANCED
-				if (depth_mask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
+				if (!has_depthbuffer || (depth_mask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere)))
 #endif // ADVANCED
 				{
 					AppendEntity_Opaque(i);
