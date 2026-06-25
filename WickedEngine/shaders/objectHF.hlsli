@@ -555,7 +555,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 // Pixel shader base:
 {
 #ifdef OBJECTSHADER_USE_CAMERAINDEX
-	const uint cameraIndex = input.GetCameraIndex();
+	const uint cameraIndex = WaveReadLaneFirst(input.GetCameraIndex());
 #else
 	const uint cameraIndex = 0;
 #endif // OBJECTSHADER_USE_CAMERAINDEX

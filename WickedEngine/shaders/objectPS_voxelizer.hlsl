@@ -1,7 +1,6 @@
 #include "objectHF.hlsli"
 #include "voxelHF.hlsli"
 #include "volumetricCloudsHF.hlsli"
-#include "cullingShaderHF.hlsli"
 
 // Note: the voxelizer uses an overall simplified material and lighting model (no normal maps, only diffuse light and emissive)
 

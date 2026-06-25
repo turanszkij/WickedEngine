@@ -9357,13 +9357,15 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		SHCAM cameras[6];
 		CreateCubemapCameras(probe.position, zNearP, zFarP, cameras, arraysize(cameras));
 
-		static TiledLightResources tiledlights[6];
 		const XMUINT2 required_tilecount = GetEntityCullingTileCount(XMUINT2(probe.texture.desc.width, probe.texture.desc.width));
+		static TiledLightResources tiledlights;
+		if (tiledlights.tileCount.x < required_tilecount.x || tiledlights.tileCount.y < required_tilecount.y)
+		{
+			CreateTiledLightResources(tiledlights, XMUINT2(probe.texture.desc.width, probe.texture.desc.width), 6); // tile buffer created for 6 cubemap faces
+		}
 
 		CameraCB cb;
-		CameraCB cullcb;
 		cb.init();
-		cullcb.init();
 		for (uint32_t i = 0; i < arraysize(cameras); ++i)
 		{
 			ShaderCamera& shadercam = cb.cameras[i];
@@ -9401,21 +9403,15 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			XMStoreFloat4(&shadercam.frustum_corners.cornersFAR[2], XMVector3TransformCoord(XMVectorSet(-1, -1, 0, 1), invVP));
 			XMStoreFloat4(&shadercam.frustum_corners.cornersFAR[3], XMVector3TransformCoord(XMVectorSet(1, -1, 0, 1), invVP));
 
-
 			// Light culling resources for every cubemap face:
-			if (tiledlights[i].tileCount.x < required_tilecount.x || tiledlights[i].tileCount.y < required_tilecount.y)
-			{
-				CreateTiledLightResources(tiledlights[i], XMUINT2(probe.texture.desc.width, probe.texture.desc.width));
-			}
-			shadercam.buffer_entitytiles_index = device->GetDescriptorIndex(&tiledlights[i].entityTiles, SubresourceType::SRV);
+			shadercam.buffer_entitytiles_index = device->GetDescriptorIndex(&tiledlights.entityTiles, SubresourceType::SRV);
 			shadercam.entity_culling_tilecount = required_tilecount;
 			shadercam.entity_culling_tile_bucket_count_flat = shadercam.entity_culling_tilecount.x * shadercam.entity_culling_tilecount.y * SHADER_ENTITY_TILE_BUCKET_COUNT;
-
-			cullcb.cameras[0] = shadercam;
-			device->BindDynamicConstantBuffer(cullcb, CBSLOT_RENDERER_CAMERA, cmd);
-			ComputeTiledLightCulling(tiledlights[i], vis, Texture(), cmd);
+			shadercam.entity_culling_tile_offset = shadercam.entity_culling_tile_bucket_count_flat * 2 * i;
 		}
 		device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
+
+		ComputeTiledLightCulling(tiledlights, vis, Texture(), cmd);
 
 		thread_local wi::vector<const wi::GaussianSplatModel*> visible_gaussian_models;
 		visible_gaussian_models.clear();
@@ -10383,13 +10379,15 @@ void VXGI_Resolve(
 	device->EventEnd(cmd);
 }
 
-void CreateTiledLightResources(TiledLightResources& res, XMUINT2 resolution)
+void CreateTiledLightResources(TiledLightResources& res, XMUINT2 resolution, uint32_t camera_count)
 {
 	res.tileCount = GetEntityCullingTileCount(resolution);
+	res.camera_count = camera_count;
 
 	GPUBufferDesc bd;
 	bd.stride = sizeof(uint);
 	bd.size = res.tileCount.x * res.tileCount.y * bd.stride * SHADER_ENTITY_TILE_BUCKET_COUNT * 2; // *2: opaque and transparent arrays
+	bd.size *= camera_count;
 	bd.usage = Usage::DEFAULT;
 	bd.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
 	bd.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
@@ -10437,7 +10435,7 @@ void ComputeTiledLightCulling(
 
 	device->BindUAV(&res.entityTiles, 0, cmd);
 
-	device->Dispatch(res.tileCount.x, res.tileCount.y, 1, cmd);
+	device->Dispatch(res.tileCount.x, res.tileCount.y, res.camera_count, cmd);
 
 	device->Barrier(GPUBarrier::Buffer(&res.entityTiles, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE), cmd);
 

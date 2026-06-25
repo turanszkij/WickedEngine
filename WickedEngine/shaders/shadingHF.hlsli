@@ -45,6 +45,8 @@ inline uint GetFlatTileIndex(min16uint2 pixel)
 
 inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint flatTileIndex, uint cameraIndex = 0)
 {
+	if (GetCamera().buffer_entitytiles_index < 0)
+		return;
 	if (GetFrame().options & OPTION_BIT_FORCE_UNLIT)
 		return;
 

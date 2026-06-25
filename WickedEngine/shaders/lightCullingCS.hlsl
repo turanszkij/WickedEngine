@@ -1,5 +1,4 @@
 #include "globals.hlsli"
-#include "cullingShaderHF.hlsli"
 #include "lightingHF.hlsli"
 
 RWStructuredBuffer<uint> entityTiles : register(u0);
@@ -68,10 +67,135 @@ inline uint ConstructEntityMask(in float depthRangeMin, in float depthRangeRecip
 	return uLightMask;
 }
 
+struct Plane
+{
+	float3	N;		// Plane normal.
+	float	d;		// Distance to origin.
+};
+// Compute a plane from 3 noncollinear points that form a triangle.
+// This equation assumes a right-handed (counter-clockwise winding order) 
+// coordinate system to determine the direction of the plane normal.
+Plane ComputePlane(float3 p0, float3 p1, float3 p2)
+{
+	Plane plane;
+
+	float3 v0 = p1 - p0;
+	float3 v2 = p2 - p0;
+
+	plane.N = normalize(cross(v0, v2));
+
+	// Compute the distance to the origin using p0.
+	plane.d = dot(plane.N, p0);
+
+	return plane;
+}
+// Four planes of a view frustum (in view space).
+// The planes are:
+// * Left,
+// * Right,
+// * Top,
+// * Bottom.
+// The back and/or front planes can be computed from depth values in the 
+// light culling compute shader.
+struct Frustum
+{
+	Plane planes[4];	// left, right, top, bottom frustum planes.
+};
+// Convert screen space coordinates to view space.
+float4 ScreenToView(float4 screen, float2 dim_rcp, float4x4 inverse_projection)
+{
+	float2 texCoord = screen.xy * dim_rcp;
+	float4 clip = float4(float2(texCoord.x, 1.0f - texCoord.y) * 2.0f - 1.0f, screen.z, screen.w);
+	float4 view = mul(inverse_projection, clip);
+	view.xyz = view.xyz / view.w;
+	return view;
+}
+// Check to see if a sphere is fully behind (inside the negative halfspace of) a plane.
+// Source: Real-time collision detection, Christer Ericson (2005)
+bool SphereInsidePlane(ShaderSphere sphere, Plane plane)
+{
+	return dot(plane.N, sphere.center) - plane.d < -sphere.radius;
+}
+// Check to see of a light is partially contained within the frustum.
+bool SphereInsideFrustum(ShaderSphere sphere, Frustum frustum, float zNear, float zFar) // this can only be used in view space
+{
+	bool result = true;
+	result = ((sphere.center.z + sphere.radius < zNear || sphere.center.z - sphere.radius > zFar) ? false : result);
+	result = ((SphereInsidePlane(sphere, frustum.planes[0])) ? false : result);
+	result = ((SphereInsidePlane(sphere, frustum.planes[1])) ? false : result);
+	result = ((SphereInsidePlane(sphere, frustum.planes[2])) ? false : result);
+	result = ((SphereInsidePlane(sphere, frustum.planes[3])) ? false : result);
+	return result;
+}
+// Check to see if a point is fully behind (inside the negative halfspace of) a plane.
+bool PointInsidePlane(float3 p, Plane plane)
+{
+	return dot(plane.N, p) - plane.d < 0;
+}
+
+struct AABB
+{
+	float3 c; // center
+	float3 e; // half extents
+
+	float3 getMin() { return c - e; }
+	float3 getMax() { return c + e; }
+};
+bool SphereIntersectsAABB(in ShaderSphere sphere, in AABB aabb)
+{
+	float3 vDelta = max(0, abs(aabb.c - sphere.center) - aabb.e);
+	float fDistSq = dot(vDelta, vDelta);
+	return fDistSq <= sphere.radius * sphere.radius;
+}
+bool IntersectAABB(AABB a, AABB b)
+{
+	if (abs(a.c[0] - b.c[0]) > (a.e[0] + b.e[0]))
+		return false;
+	if (abs(a.c[1] - b.c[1]) > (a.e[1] + b.e[1]))
+		return false;
+	if (abs(a.c[2] - b.c[2]) > (a.e[2] + b.e[2]))
+		return false;
+
+	return true;
+}
+void AABBfromMinMax(inout AABB aabb, float3 _min, float3 _max)
+{
+	aabb.c = (_min + _max) * 0.5f;
+	aabb.e = abs(_max - aabb.c);
+}
+template<typename T>
+void AABBtransform(inout AABB aabb, T mat)
+{
+	float3 _min = aabb.getMin();
+	float3 _max = aabb.getMax();
+	float3 corners[8];
+	corners[0] = _min;
+	corners[1] = float3(_min.x, _max.y, _min.z);
+	corners[2] = float3(_min.x, _max.y, _max.z);
+	corners[3] = float3(_min.x, _min.y, _max.z);
+	corners[4] = float3(_max.x, _min.y, _min.z);
+	corners[5] = float3(_max.x, _max.y, _min.z);
+	corners[6] = _max;
+	corners[7] = float3(_max.x, _min.y, _max.z);
+	_min = 1000000;
+	_max = -1000000;
+
+	[unroll]
+	for (uint i = 0; i < 8; ++i)
+	{
+		corners[i] = mul(mat, float4(corners[i], 1)).xyz;
+		_min = min(_min, corners[i]);
+		_max = max(_max, corners[i]);
+	}
+
+	AABBfromMinMax(aabb, _min, _max);
+}
+
 [numthreads(TILED_CULLING_THREADSIZE, TILED_CULLING_THREADSIZE, 1)]
 void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint groupIndex : SV_GroupIndex)
 {
-	ShaderCamera camera = GetCamera();
+	const uint cameraIndex = Gid.z;
+	ShaderCamera camera = GetCameraIndexed(cameraIndex);
 	const uint2 dim = camera.internal_resolution;
 	const float2 dim_rcp = camera.internal_resolution_rcp;
 	const bool has_depthbuffer = camera.texture_depth_index >= 0;
@@ -138,26 +262,29 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		// Disallow zero-thin depth box, can cause artifacts especially on AMD with ortho camera looking at flat plane sometimes:
 		fMinDepth += FLT_EPSILON;
 		fMaxDepth -= FLT_EPSILON;
+
+		fMinDepth = saturate(fMinDepth);
+		fMaxDepth = saturate(fMaxDepth);
 	}
 
 	// View space frustum corners:
 	float3 viewSpace[8];
 	// Top left point, near
-	viewSpace[0] = ScreenToView(float4(Gid.xy * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f), dim_rcp).xyz;
+	viewSpace[0] = ScreenToView(float4(Gid.xy * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f), dim_rcp, camera.inverse_projection).xyz;
 	// Top right point, near
-	viewSpace[1] = ScreenToView(float4(float2(Gid.x + 1, Gid.y) * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f), dim_rcp).xyz;
+	viewSpace[1] = ScreenToView(float4(float2(Gid.x + 1, Gid.y) * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f), dim_rcp, camera.inverse_projection).xyz;
 	// Bottom left point, near
-	viewSpace[2] = ScreenToView(float4(float2(Gid.x, Gid.y + 1) * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f), dim_rcp).xyz;
+	viewSpace[2] = ScreenToView(float4(float2(Gid.x, Gid.y + 1) * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f), dim_rcp, camera.inverse_projection).xyz;
 	// Bottom right point, near
-	viewSpace[3] = ScreenToView(float4(float2(Gid.x + 1, Gid.y + 1) * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f), dim_rcp).xyz;
+	viewSpace[3] = ScreenToView(float4(float2(Gid.x + 1, Gid.y + 1) * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f), dim_rcp, camera.inverse_projection).xyz;
 	// Top left point, far
-	viewSpace[4] = ScreenToView(float4(Gid.xy * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f), dim_rcp).xyz;
+	viewSpace[4] = ScreenToView(float4(Gid.xy * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f), dim_rcp, camera.inverse_projection).xyz;
 	// Top right point, far
-	viewSpace[5] = ScreenToView(float4(float2(Gid.x + 1, Gid.y) * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f), dim_rcp).xyz;
+	viewSpace[5] = ScreenToView(float4(float2(Gid.x + 1, Gid.y) * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f), dim_rcp, camera.inverse_projection).xyz;
 	// Bottom left point, far
-	viewSpace[6] = ScreenToView(float4(float2(Gid.x, Gid.y + 1) * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f), dim_rcp).xyz;
+	viewSpace[6] = ScreenToView(float4(float2(Gid.x, Gid.y + 1) * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f), dim_rcp, camera.inverse_projection).xyz;
 	// Bottom right point, far
-	viewSpace[7] = ScreenToView(float4(float2(Gid.x + 1, Gid.y + 1) * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f), dim_rcp).xyz;
+	viewSpace[7] = ScreenToView(float4(float2(Gid.x + 1, Gid.y + 1) * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f), dim_rcp, camera.inverse_projection).xyz;
 	
 	Frustum GroupFrustum;
 	// Left plane
@@ -192,30 +319,33 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	float nearClipVS = camera.z_near;
 
 #ifdef ADVANCED
-	// We divide the minmax depth bounds to 32 equal slices
-	// then we mark the occupied depth slices with atomic or from each thread
-	// we do all this in linear (view) space
 	const float __depthRangeRecip = 31.0f / (maxDepthVS - minDepthVS);
-	uint __depthmaskUnrolled = 0;
-
-	[unroll]
-	for (uint granularity = 0; granularity < TILED_CULLING_GRANULARITY * TILED_CULLING_GRANULARITY; ++granularity)
+	[branch]
+	if (has_depthbuffer)
 	{
-		float realDepthVS = ScreenToView(float4(0, 0, depth[granularity], 1), dim_rcp).z;
-		const uint __depthmaskcellindex = max(0, min(31, floor((realDepthVS - minDepthVS) * __depthRangeRecip)));
-		__depthmaskUnrolled |= 1u << __depthmaskcellindex;
-	}
+		// We divide the minmax depth bounds to 32 equal slices
+		// then we mark the occupied depth slices with atomic or from each thread
+		// we do all this in linear (view) space
+		uint __depthmaskUnrolled = 0;
 
-	uint wave_depth_mask = WaveActiveBitOr(__depthmaskUnrolled);
-	if (WaveIsFirstLane())
-	{
-		InterlockedOr(uDepthMask, wave_depth_mask);
+		[unroll]
+		for (uint granularity = 0; granularity < TILED_CULLING_GRANULARITY * TILED_CULLING_GRANULARITY; ++granularity)
+		{
+			float realDepthVS = ScreenToView(float4(0, 0, depth[granularity], 1), dim_rcp, camera.inverse_projection).z;
+			const uint __depthmaskcellindex = max(0, min(31, floor((realDepthVS - minDepthVS) * __depthRangeRecip)));
+			__depthmaskUnrolled |= 1u << __depthmaskcellindex;
+		}
+
+		uint wave_depth_mask = WaveActiveBitOr(__depthmaskUnrolled);
+		if (WaveIsFirstLane())
+		{
+			InterlockedOr(uDepthMask, wave_depth_mask);
+		}
 	}
+	GroupMemoryBarrierWithGroupSync();
 #endif // ADVANCED
 
-	GroupMemoryBarrierWithGroupSync();
-
-	const uint depth_mask = uDepthMask; // take out from groupshared into register
+	const uint depth_mask = has_depthbuffer ? uDepthMask : ~0u; // take out from groupshared into register
 
 	// Environment probes and decals:
 	//  Note: processing both in the same loop relies on them placed near each other in entity array by CPU!
@@ -277,7 +407,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	GroupMemoryBarrierWithGroupSync();
 	
 	const uint flatTileIndex = flatten2D(Gid.xy, camera.entity_culling_tilecount.xy);
-	const uint tileBucketsAddress = flatTileIndex * SHADER_ENTITY_TILE_BUCKET_COUNT;
+	const uint tileBucketsAddress = camera.entity_culling_tile_offset + flatTileIndex * SHADER_ENTITY_TILE_BUCKET_COUNT;
 
 	// Each thread will export one bucket from LDS to global memory:
 	for (uint i = groupIndex; i < SHADER_ENTITY_TILE_BUCKET_COUNT; i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
@@ -299,7 +429,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 			float3(1,1,0),
 			float3(1,0,0),
 		};
-		const uint mapTexLen = 5;
+		const uint mapTexLen = arraysize(mapTex) - 1;
 		const uint maxHeat = 50;
 		float l = saturate((float)entityCountDebug / maxHeat) * mapTexLen;
 		float3 a = mapTex[floor(l)];
