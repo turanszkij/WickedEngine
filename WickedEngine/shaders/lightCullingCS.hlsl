@@ -102,11 +102,11 @@ struct Frustum
 	Plane planes[4];	// left, right, top, bottom frustum planes.
 };
 // Convert screen space coordinates to view space.
-float4 ScreenToView(float4 screen, float2 dim_rcp, float4x4 inverse_projection)
+float4 ScreenToView(float4 screen, float2 dim_rcp, ShaderCamera camera)
 {
 	float2 texCoord = screen.xy * dim_rcp;
 	float4 clip = float4(float2(texCoord.x, 1.0f - texCoord.y) * 2.0f - 1.0f, screen.z, screen.w);
-	float4 view = mul(inverse_projection, clip);
+	float4 view = mul(camera.inverse_projection, clip);
 	view.xyz = view.xyz / view.w;
 	return view;
 }
@@ -270,21 +270,21 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	// View space frustum corners:
 	float3 viewSpace[8];
 	// Top left point, near
-	viewSpace[0] = ScreenToView(float4(Gid.xy * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f), dim_rcp, camera.inverse_projection).xyz;
+	viewSpace[0] = ScreenToView(float4(Gid.xy * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f), dim_rcp, camera).xyz;
 	// Top right point, near
-	viewSpace[1] = ScreenToView(float4(float2(Gid.x + 1, Gid.y) * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f), dim_rcp, camera.inverse_projection).xyz;
+	viewSpace[1] = ScreenToView(float4(float2(Gid.x + 1, Gid.y) * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f), dim_rcp, camera).xyz;
 	// Bottom left point, near
-	viewSpace[2] = ScreenToView(float4(float2(Gid.x, Gid.y + 1) * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f), dim_rcp, camera.inverse_projection).xyz;
+	viewSpace[2] = ScreenToView(float4(float2(Gid.x, Gid.y + 1) * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f), dim_rcp, camera).xyz;
 	// Bottom right point, near
-	viewSpace[3] = ScreenToView(float4(float2(Gid.x + 1, Gid.y + 1) * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f), dim_rcp, camera.inverse_projection).xyz;
+	viewSpace[3] = ScreenToView(float4(float2(Gid.x + 1, Gid.y + 1) * TILED_CULLING_BLOCKSIZE, fMinDepth, 1.0f), dim_rcp, camera).xyz;
 	// Top left point, far
-	viewSpace[4] = ScreenToView(float4(Gid.xy * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f), dim_rcp, camera.inverse_projection).xyz;
+	viewSpace[4] = ScreenToView(float4(Gid.xy * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f), dim_rcp, camera).xyz;
 	// Top right point, far
-	viewSpace[5] = ScreenToView(float4(float2(Gid.x + 1, Gid.y) * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f), dim_rcp, camera.inverse_projection).xyz;
+	viewSpace[5] = ScreenToView(float4(float2(Gid.x + 1, Gid.y) * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f), dim_rcp, camera).xyz;
 	// Bottom left point, far
-	viewSpace[6] = ScreenToView(float4(float2(Gid.x, Gid.y + 1) * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f), dim_rcp, camera.inverse_projection).xyz;
+	viewSpace[6] = ScreenToView(float4(float2(Gid.x, Gid.y + 1) * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f), dim_rcp, camera).xyz;
 	// Bottom right point, far
-	viewSpace[7] = ScreenToView(float4(float2(Gid.x + 1, Gid.y + 1) * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f), dim_rcp, camera.inverse_projection).xyz;
+	viewSpace[7] = ScreenToView(float4(float2(Gid.x + 1, Gid.y + 1) * TILED_CULLING_BLOCKSIZE, fMaxDepth, 1.0f), dim_rcp, camera).xyz;
 	
 	Frustum GroupFrustum;
 	// Left plane
@@ -310,7 +310,6 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	AABB GroupAABB; // frustum AABB around min-max depth in View Space
 	AABBfromMinMax(GroupAABB, minAABB, maxAABB);
 
-	// We can perform coarse AABB intersection tests with this:
 	AABB GroupAABB_WS = GroupAABB;
 	AABBtransform(GroupAABB_WS, camera.inverse_view); // frustum AABB in world space
 
@@ -331,7 +330,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		[unroll]
 		for (uint granularity = 0; granularity < TILED_CULLING_GRANULARITY * TILED_CULLING_GRANULARITY; ++granularity)
 		{
-			float realDepthVS = ScreenToView(float4(0, 0, depth[granularity], 1), dim_rcp, camera.inverse_projection).z;
+			float realDepthVS = ScreenToView(float4(0, 0, depth[granularity], 1), dim_rcp, camera).z;
 			const uint __depthmaskcellindex = max(0, min(31, floor((realDepthVS - minDepthVS) * __depthRangeRecip)));
 			__depthmaskUnrolled |= 1u << __depthmaskcellindex;
 		}
@@ -354,6 +353,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	for (uint i = begin + groupIndex; i < end; i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
 		ShaderSphere sphere = load_entityculling(i);
+		sphere.center = mul(camera.view, float4(sphere.center, 1)).xyz; // we can't store view space cullspheres because the array must work with any camera
 		if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
 		{
 			AppendEntity_Transparent(i);
@@ -388,6 +388,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	for (uint i = begin + groupIndex; i < end; i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
 		ShaderSphere sphere = load_entityculling(i);
+		sphere.center = mul(camera.view, float4(sphere.center, 1)).xyz; // we can't store view space cullspheres because the array must work with any camera
 		if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
 		{
 			AppendEntity_Transparent(i);

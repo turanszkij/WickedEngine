@@ -4483,7 +4483,6 @@ void UpdatePerFrameData(
 		ShaderEntity* entityArray = frameCB.entityArray;
 		float4x4* matrixArray = frameCB.matrixArray;
 		ShaderSphere* entityCullingArray = frameCB.entityCullingArray;
-		const XMMATRIX viewMatrix = vis.camera->GetView();
 
 		uint32_t entityCounter = 0;
 
@@ -4557,7 +4556,7 @@ void UpdatePerFrameData(
 			shadermatrix.r[3] = XMVectorSetW(shadermatrix.r[3], *(float*)&displacementmap);
 
 			ShaderSphere cullsphere = {};
-			XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
+			cullsphere.center = shaderentity.position;
 			cullsphere.radius = decal.range;
 
 			XMStoreFloat4x4(matrixArray + entityCounter, shadermatrix); // note: straight entity-matrix mapping ok
@@ -4609,7 +4608,7 @@ void UpdatePerFrameData(
 			shadermatrix = XMLoadFloat4x4(&probe.inverseMatrix);
 
 			ShaderSphere cullsphere = {};
-			XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
+			cullsphere.center = shaderentity.position;
 			cullsphere.radius = probe.range;
 
 			XMStoreFloat4x4(matrixArray + entityCounter, shadermatrix); // note: straight entity-matrix mapping ok
@@ -4701,7 +4700,7 @@ void UpdatePerFrameData(
 			ShaderSphere cullsphere = {};
 			if (!light.IsStatic())
 			{
-				XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
+				cullsphere.center = shaderentity.position;
 				cullsphere.radius = FLT_MAX;
 			}
 
@@ -4795,12 +4794,12 @@ void UpdatePerFrameData(
 
 			// Construct a tight fitting sphere around the spotlight cone:
 			const float radius = light.GetRange() * 0.5f / (outerConeAngleCos * outerConeAngleCos);
-			const XMVECTOR positionVS = XMVector3Transform(XMLoadFloat3(&shaderentity.position) - XMVector3Normalize(XMLoadFloat3(&light.direction)) * radius, viewMatrix);
+			const XMVECTOR positionWS = XMLoadFloat3(&shaderentity.position) - XMVector3Normalize(XMLoadFloat3(&light.direction)) * radius;
 
 			ShaderSphere cullsphere = {};
 			if (!light.IsStatic())
 			{
-				XMStoreFloat3(&cullsphere.center, positionVS);
+				XMStoreFloat3(&cullsphere.center, positionWS);
 				cullsphere.radius = radius;
 			}
 
@@ -4885,7 +4884,7 @@ void UpdatePerFrameData(
 			ShaderSphere cullsphere = {};
 			if (!light.IsStatic())
 			{
-				XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
+				cullsphere.center = shaderentity.position;
 				cullsphere.radius = light.GetRange() + light.length;
 			}
 
@@ -4967,7 +4966,7 @@ void UpdatePerFrameData(
 			ShaderSphere cullsphere = {};
 			if (!light.IsStatic())
 			{
-				XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
+				cullsphere.center = shaderentity.position;
 				cullsphere.radius = std::max(light.length, light.height) + light.GetRange();
 			}
 
@@ -5010,7 +5009,7 @@ void UpdatePerFrameData(
 				shaderentity.SetRange(collider.sphere.radius);
 				if (cullsphere_required)
 				{
-					XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
+					cullsphere.center = shaderentity.position;
 					cullsphere.radius = collider.sphere.radius;
 				}
 				break;
@@ -5022,7 +5021,6 @@ void UpdatePerFrameData(
 				if (cullsphere_required)
 				{
 					Sphere sphere = collider.capsule.getSphere();
-					XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&sphere.center), viewMatrix));
 					cullsphere.radius = sphere.radius * CAPSULE_SHADOW_BOLDEN + CAPSULE_SHADOW_AFFECTION_RANGE;
 				}
 				break;
@@ -5033,7 +5031,7 @@ void UpdatePerFrameData(
 				shaderentity.SetIndices(matrixCounter, 0);
 				if (cullsphere_required)
 				{
-					XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
+					cullsphere.center = shaderentity.position;
 					cullsphere.radius = FLT_MAX;
 				}
 				matrixArray[matrixCounter++] = collider.plane.projection;
