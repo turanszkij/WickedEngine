@@ -1,3 +1,3 @@
 #define ENVMAPRENDERING
-#define FORWARD
+#define TILEDFORWARD
 #include "oceanSurfacePS.hlsl"

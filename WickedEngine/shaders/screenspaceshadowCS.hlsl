@@ -38,8 +38,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 
 	const float4 bluenoise = blue_noise(DTid.xy);
 
+	ShaderCamera camera = GetCamera();
 	const uint2 tileIndex = uint2(floor(DTid.xy * DOWNSAMPLE / TILED_CULLING_BLOCKSIZE));
-	const uint flatTileIndex = flatten2D(tileIndex, GetCamera().entity_culling_tilecount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
+	const uint flatTileIndex = flatten2D(tileIndex, camera.entity_culling_tilecount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
 
 	uint4 shadow_mask = 0;
 	uint shadow_index = 0;
@@ -64,7 +65,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 		ShaderEntityIterator iterator = lights();
 		for (uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 		{
-			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
+			uint bucket_bits = load_entitytile(camera, flatTileIndex + bucket);
 
 			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
 			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
@@ -260,14 +261,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 
 #else
 					// screen space raymarch shadow:
-					ray.Direction = normalize(mul((float3x3)GetCamera().view, L));
+					ray.Direction = normalize(mul((float3x3)camera.view, L));
 					float3 rayPos = ray.Origin + ray.Direction * stepsize * offset;
 
 					float occlusion = 0;
 					[loop]
 					for (uint i = 0; i < samplecount; ++i)
 					{
-						float4 proj = mul(GetCamera().projection, float4(rayPos, 1));
+						float4 proj = mul(camera.projection, float4(rayPos, 1));
 						proj.xyz /= proj.w;
 						proj.xy = proj.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 							
@@ -275,7 +276,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 						if (is_saturated(proj.xy))
 						{
 							const float ray_depth_real = proj.w;
-							const float ray_depth_sample = texture_lineardepth.SampleLevel(sampler_point_clamp, proj.xy, 1) * GetCamera().z_far;
+							const float ray_depth_sample = texture_lineardepth.SampleLevel(sampler_point_clamp, proj.xy, 1) * camera.z_far;
 							const float ray_depth_delta = ray_depth_real - ray_depth_sample;
 							if (ray_depth_delta > 0.02 && ray_depth_delta < thickness)
 							{

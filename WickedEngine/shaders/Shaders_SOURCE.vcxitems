@@ -23,7 +23,6 @@
     <None Include="$(MSBuildThisFileDirectory)ColorSpaceUtility.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)cone.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)cube.hlsli" />
-    <None Include="$(MSBuildThisFileDirectory)cullingShaderHF.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)cylinder.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)depthoffieldHF.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)emittedparticleHF.hlsli" />

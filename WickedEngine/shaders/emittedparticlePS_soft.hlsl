@@ -24,7 +24,8 @@ float4 main(VertextoPixel input) : SV_TARGET
 		return 0;
 	}
 
-	float2 ScreenCoord = input.pos.xy * GetCamera().internal_resolution_rcp; // use pixel center!
+	ShaderCamera camera = GetCamera();
+	float2 ScreenCoord = input.pos.xy * camera.internal_resolution_rcp; // use pixel center!
 	min16uint2 pixel = input.pos.xy; // no longer pixel center!
 	
 	write_mipmap_feedback(EmitterGetGeometry().materialIndex, ddx_coarse(input.tex.xyxy), ddy_coarse(input.tex.xyxy));
@@ -75,7 +76,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 #endif // EMITTEDPARTICLE_DISTORTION
 	
 	[branch]
-	if (GetCamera().texture_depth_index >= 0)
+	if (camera.texture_depth_index >= 0)
 	{
 		float4 depthScene = compute_lineardepth(texture_depth.GatherRed(sampler_linear_clamp, ScreenCoord));
 		float depthFragment = input.pos.w;
@@ -102,7 +103,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 		N.y = cos(PI * input.unrotated_uv.y);
 		N.z = -sin(PI * length(input.unrotated_uv));
 		N.xz += normal.rg;
-		N = mul((float3x3)GetCamera().inverse_view, N);
+		N = mul((float3x3)camera.inverse_view, N);
 		N = normalize(N);
 		
 		float3 V = input.GetViewVector();
@@ -124,7 +125,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 		surface.extinction = 0;
 		surface.update();
 
-		TiledLighting(surface, lighting, GetFlatTileIndex(pixel));
+		TiledLighting(surface, lighting, GetFlatTileIndex(pixel, camera), camera);
 
 		color.rgb *= lighting.direct.diffuse + lighting.indirect.diffuse;
 		color.rgb += lighting.indirect.specular;

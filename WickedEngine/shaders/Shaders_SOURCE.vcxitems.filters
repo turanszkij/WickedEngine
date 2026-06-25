@@ -105,9 +105,6 @@
     <None Include="$(MSBuildThisFileDirectory)cylinder.hlsli">
       <Filter>HF</Filter>
     </None>
-    <None Include="$(MSBuildThisFileDirectory)cullingShaderHF.hlsli">
-      <Filter>HF</Filter>
-    </None>
     <None Include="$(MSBuildThisFileDirectory)cube.hlsli">
       <Filter>HF</Filter>
     </None>
