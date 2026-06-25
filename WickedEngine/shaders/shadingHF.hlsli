@@ -37,13 +37,13 @@ inline half3 PlanarReflection(in Surface surface, in half2 bumpColor)
 	return 0;
 }
 
-inline uint GetFlatTileIndex(min16uint2 pixel, ShaderCamera camera)
+inline uint GetFlatTileIndex(min16uint2 pixel, ShaderCamera camera = GetCamera())
 {
 	const min16uint2 tileIndex = min16uint2(floor(pixel / TILED_CULLING_BLOCKSIZE));
 	return flatten2D(tileIndex, camera.entity_culling_tilecount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
 }
 
-inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint flatTileIndex, ShaderCamera camera)
+inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint flatTileIndex, ShaderCamera camera = GetCamera())
 {
 	if (camera.buffer_entitytiles_index < 0)
 		return;
