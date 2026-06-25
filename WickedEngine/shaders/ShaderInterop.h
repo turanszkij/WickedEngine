@@ -94,7 +94,6 @@ struct IndirectDispatchArgs
 
 // On demand buffers:
 // These are bound on demand and alive until another is bound at the same slot
-#define CBSLOT_RENDERER_FORWARD_LIGHTMASK		2
 #define CBSLOT_RENDERER_VOLUMELIGHT				3
 #define CBSLOT_RENDERER_VOXELIZER				3
 #define CBSLOT_RENDERER_TRACED					2
@@ -121,11 +120,10 @@ struct IndirectDispatchArgs
 #define CBSLOT_RENDERER_FRAME					2
 #define CBSLOT_RENDERER_CAMERA					3
 
-#define CBSLOT_RENDERER_FORWARD_LIGHTMASK		4
-#define CBSLOT_RENDERER_VOLUMELIGHT				5
-#define CBSLOT_RENDERER_VOXELIZER				6
-#define CBSLOT_RENDERER_TRACED					7
-#define CBSLOT_RENDERER_MISC					8
+#define CBSLOT_RENDERER_VOLUMELIGHT				4
+#define CBSLOT_RENDERER_VOXELIZER				5
+#define CBSLOT_RENDERER_TRACED					6
+#define CBSLOT_RENDERER_MISC					7
 
 #define CBSLOT_OTHER_EMITTEDPARTICLE			4
 #define CBSLOT_OTHER_HAIRPARTICLE				4

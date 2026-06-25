@@ -3097,59 +3097,6 @@ inline void CreateCubemapCameras(const XMFLOAT3& position, float zNearP, float z
 	shcams[5].init(position, XMFLOAT4(0, 0.707f, 0.707f, 0), zNearP, zFarP, XM_PIDIV2); //-z
 }
 
-ForwardEntityMaskCB ForwardEntityCullingCPU(const Visibility& vis, const AABB& batch_aabb)
-{
-	// Performs CPU light culling for a renderable batch:
-	//	Similar to GPU-based tiled light culling, but this is only for simple forward passes (drawcall-granularity)
-
-	ForwardEntityMaskCB cb = {};
-
-	for (size_t i = 0; i < std::min(size_t(24), vis.visibleDecals.size()); ++i)
-	{
-		const uint32_t decalIndex = vis.visibleDecals[vis.visibleDecals.size() - 1 - i]; // note: reverse order, for correct blending!
-		const AABB& decal_aabb = vis.scene->aabb_decals[decalIndex];
-		if (decal_aabb.intersects(batch_aabb))
-		{
-			cb.xForwardDecalAndProbeMask |= uint32_t(1) << i;
-		}
-	}
-
-	for (size_t i = 0; i < std::min(size_t(8), vis.visibleEnvProbes.size()); ++i)
-	{
-		const uint32_t probeIndex = vis.visibleEnvProbes[vis.visibleEnvProbes.size() - 1 - i]; // note: reverse order, for correct blending!
-		const AABB& probe_aabb = vis.scene->aabb_probes[probeIndex];
-		if (probe_aabb.intersects(batch_aabb))
-		{
-			cb.xForwardDecalAndProbeMask |= uint32_t(1) << (i + 24u);
-		}
-	}
-
-	for (size_t i = 0; i < std::min(size_t(32), vis.visibleLights.size()); ++i) // only support indexing 32 lights at max in this mode
-	{
-		const uint32_t lightIndex = vis.visibleLights[i];
-		const AABB& light_aabb = vis.scene->aabb_lights[lightIndex];
-		if (light_aabb.intersects(batch_aabb) && !vis.scene->lights[lightIndex].IsStatic())
-		{
-			switch (vis.scene->lights[lightIndex].GetType())
-			{
-			case LightComponent::SPOT:
-				cb.xForwardSpotLightMask |= uint32_t(1) << i;
-				break;
-			case LightComponent::POINT:
-				cb.xForwardPointLightMask |= uint32_t(1) << i;
-				break;
-			case LightComponent::RECTANGLE:
-				cb.xForwardRectLightMask |= uint32_t(1) << i;
-				break;
-			default:
-				break;
-			}
-		}
-	}
-
-	return cb;
-}
-
 void Workaround(const int bug , CommandList cmd)
 {
 	if (bug == 1)
@@ -3267,12 +3214,6 @@ void RenderMeshes(
 				renderPass == RENDERPASS_VOXELIZE ||
 				tessellatorRequested
 			);
-
-		if (forwardLightmaskRequest)
-		{
-			ForwardEntityMaskCB cb = ForwardEntityCullingCPU(vis, instancedBatch.aabb);
-			device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
-		}
 
 		uint32_t first_subset = 0;
 		uint32_t last_subset = 0;
@@ -4542,7 +4483,6 @@ void UpdatePerFrameData(
 		ShaderEntity* entityArray = frameCB.entityArray;
 		float4x4* matrixArray = frameCB.matrixArray;
 		ShaderSphere* entityCullingArray = frameCB.entityCullingArray;
-		const XMMATRIX viewMatrix = vis.camera->GetView();
 
 		uint32_t entityCounter = 0;
 
@@ -4616,7 +4556,7 @@ void UpdatePerFrameData(
 			shadermatrix.r[3] = XMVectorSetW(shadermatrix.r[3], *(float*)&displacementmap);
 
 			ShaderSphere cullsphere = {};
-			XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
+			cullsphere.center = shaderentity.position;
 			cullsphere.radius = decal.range;
 
 			XMStoreFloat4x4(matrixArray + entityCounter, shadermatrix); // note: straight entity-matrix mapping ok
@@ -4668,7 +4608,7 @@ void UpdatePerFrameData(
 			shadermatrix = XMLoadFloat4x4(&probe.inverseMatrix);
 
 			ShaderSphere cullsphere = {};
-			XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
+			cullsphere.center = shaderentity.position;
 			cullsphere.radius = probe.range;
 
 			XMStoreFloat4x4(matrixArray + entityCounter, shadermatrix); // note: straight entity-matrix mapping ok
@@ -4760,7 +4700,7 @@ void UpdatePerFrameData(
 			ShaderSphere cullsphere = {};
 			if (!light.IsStatic())
 			{
-				XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
+				cullsphere.center = shaderentity.position;
 				cullsphere.radius = FLT_MAX;
 			}
 
@@ -4854,12 +4794,12 @@ void UpdatePerFrameData(
 
 			// Construct a tight fitting sphere around the spotlight cone:
 			const float radius = light.GetRange() * 0.5f / (outerConeAngleCos * outerConeAngleCos);
-			const XMVECTOR positionVS = XMVector3Transform(XMLoadFloat3(&shaderentity.position) - XMVector3Normalize(XMLoadFloat3(&light.direction)) * radius, viewMatrix);
+			const XMVECTOR positionWS = XMLoadFloat3(&shaderentity.position) - XMVector3Normalize(XMLoadFloat3(&light.direction)) * radius;
 
 			ShaderSphere cullsphere = {};
 			if (!light.IsStatic())
 			{
-				XMStoreFloat3(&cullsphere.center, positionVS);
+				XMStoreFloat3(&cullsphere.center, positionWS);
 				cullsphere.radius = radius;
 			}
 
@@ -4944,7 +4884,7 @@ void UpdatePerFrameData(
 			ShaderSphere cullsphere = {};
 			if (!light.IsStatic())
 			{
-				XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
+				cullsphere.center = shaderentity.position;
 				cullsphere.radius = light.GetRange() + light.length;
 			}
 
@@ -5026,7 +4966,7 @@ void UpdatePerFrameData(
 			ShaderSphere cullsphere = {};
 			if (!light.IsStatic())
 			{
-				XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
+				cullsphere.center = shaderentity.position;
 				cullsphere.radius = std::max(light.length, light.height) + light.GetRange();
 			}
 
@@ -5069,7 +5009,7 @@ void UpdatePerFrameData(
 				shaderentity.SetRange(collider.sphere.radius);
 				if (cullsphere_required)
 				{
-					XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
+					cullsphere.center = shaderentity.position;
 					cullsphere.radius = collider.sphere.radius;
 				}
 				break;
@@ -5081,7 +5021,6 @@ void UpdatePerFrameData(
 				if (cullsphere_required)
 				{
 					Sphere sphere = collider.capsule.getSphere();
-					XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&sphere.center), viewMatrix));
 					cullsphere.radius = sphere.radius * CAPSULE_SHADOW_BOLDEN + CAPSULE_SHADOW_AFFECTION_RANGE;
 				}
 				break;
@@ -5092,7 +5031,7 @@ void UpdatePerFrameData(
 				shaderentity.SetIndices(matrixCounter, 0);
 				if (cullsphere_required)
 				{
-					XMStoreFloat3(&cullsphere.center, XMVector3Transform(XMLoadFloat3(&shaderentity.position), viewMatrix));
+					cullsphere.center = shaderentity.position;
 					cullsphere.radius = FLT_MAX;
 				}
 				matrixArray[matrixCounter++] = collider.plane.projection;
@@ -9416,6 +9355,14 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		SHCAM cameras[6];
 		CreateCubemapCameras(probe.position, zNearP, zFarP, cameras, arraysize(cameras));
 
+		const XMUINT2 required_tilecount = GetEntityCullingTileCount(XMUINT2(probe.texture.desc.width, probe.texture.desc.width));
+		static TiledLightResources tiledlights;
+		if (tiledlights.tileCount.x < required_tilecount.x || tiledlights.tileCount.y < required_tilecount.y)
+		{
+			CreateTiledLightResources(tiledlights, XMUINT2(probe.texture.desc.width, probe.texture.desc.width), 6); // tile buffer created for 6 cubemap faces
+		}
+		const int tilebuffer_descripotor = device->GetDescriptorIndex(&tiledlights.entityTiles, SubresourceType::SRV);
+
 		CameraCB cb;
 		cb.init();
 		for (uint32_t i = 0; i < arraysize(cameras); ++i)
@@ -9426,6 +9373,8 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			XMStoreFloat4x4(&shadercam.view_projection, cameras[i].view_projection);
 			XMMATRIX invVP = XMMatrixInverse(nullptr, cameras[i].view_projection);
 			XMStoreFloat4x4(&shadercam.inverse_view_projection, invVP);
+			XMStoreFloat4x4(&shadercam.inverse_projection, XMMatrixInverse(nullptr, cameras[i].projection));
+			XMStoreFloat4x4(&shadercam.inverse_view, XMMatrixInverse(nullptr, cameras[i].view));
 			shadercam.position = probe.position;
 			shadercam.output_index = i;
 			shadercam.z_near = zNearP;
@@ -9452,8 +9401,18 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			XMStoreFloat4(&shadercam.frustum_corners.cornersFAR[1], XMVector3TransformCoord(XMVectorSet(1, 1, 0, 1), invVP));
 			XMStoreFloat4(&shadercam.frustum_corners.cornersFAR[2], XMVector3TransformCoord(XMVectorSet(-1, -1, 0, 1), invVP));
 			XMStoreFloat4(&shadercam.frustum_corners.cornersFAR[3], XMVector3TransformCoord(XMVectorSet(1, -1, 0, 1), invVP));
+
+			// Light culling resources for every cubemap face:
+			//	Note: same tile buffer will be reused for each face, but with different offsets
+			shadercam.buffer_entitytiles_index = tilebuffer_descripotor;
+			shadercam.entity_culling_tilecount = required_tilecount;
+			shadercam.entity_culling_tile_bucket_count_flat = shadercam.entity_culling_tilecount.x * shadercam.entity_culling_tilecount.y * SHADER_ENTITY_TILE_BUCKET_COUNT;
+			shadercam.entity_culling_tile_offset = shadercam.entity_culling_tile_bucket_count_flat * 2 * i; // per-face offset (*2 because opaque and transparent)
+			shadercam.entity_culling_tile_offset_transparent = shadercam.entity_culling_tile_offset + shadercam.entity_culling_tile_bucket_count_flat;
 		}
 		device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
+
+		ComputeTiledLightCulling(tiledlights, vis, Texture(), cmd);
 
 		thread_local wi::vector<const wi::GaussianSplatModel*> visible_gaussian_models;
 		visible_gaussian_models.clear();
@@ -9759,9 +9718,6 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		{
 			if (vis.scene->ocean.IsValid() && vis.scene->weather.IsOceanEnabled())
 			{
-				ForwardEntityMaskCB cb = ForwardEntityCullingCPU(vis, vis.scene->ocean.GetAABB(probe.position));
-				device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
-
 				vis.scene->ocean.RenderForCubemap(cmd);
 			}
 			if (!visible_gaussian_models.empty())
@@ -10424,13 +10380,15 @@ void VXGI_Resolve(
 	device->EventEnd(cmd);
 }
 
-void CreateTiledLightResources(TiledLightResources& res, XMUINT2 resolution)
+void CreateTiledLightResources(TiledLightResources& res, XMUINT2 resolution, uint32_t camera_count)
 {
 	res.tileCount = GetEntityCullingTileCount(resolution);
+	res.camera_count = camera_count;
 
 	GPUBufferDesc bd;
 	bd.stride = sizeof(uint);
 	bd.size = res.tileCount.x * res.tileCount.y * bd.stride * SHADER_ENTITY_TILE_BUCKET_COUNT * 2; // *2: opaque and transparent arrays
+	bd.size *= camera_count;
 	bd.usage = Usage::DEFAULT;
 	bd.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
 	bd.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
@@ -10478,7 +10436,7 @@ void ComputeTiledLightCulling(
 
 	device->BindUAV(&res.entityTiles, 0, cmd);
 
-	device->Dispatch(res.tileCount.x, res.tileCount.y, 1, cmd);
+	device->Dispatch(res.tileCount.x, res.tileCount.y, res.camera_count, cmd);
 
 	device->Barrier(GPUBarrier::Buffer(&res.entityTiles, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE), cmd);
 
@@ -11495,7 +11453,6 @@ void BindCameraCB(
 	XMStoreFloat4x4(&shadercam.view, camera.GetView());
 	XMStoreFloat4x4(&shadercam.projection, camera.GetProjection());
 	shadercam.position = camera.Eye;
-	shadercam.distance_from_origin = XMVectorGetX(XMVector3Length(XMLoadFloat3(&shadercam.position)));
 	XMStoreFloat4x4(&shadercam.inverse_view, camera.GetInvView());
 	XMStoreFloat4x4(&shadercam.inverse_projection, camera.GetInvProjection());
 	XMStoreFloat4x4(&shadercam.inverse_view_projection, invVP);
@@ -11564,6 +11521,8 @@ void BindCameraCB(
 
 	shadercam.entity_culling_tilecount = GetEntityCullingTileCount(shadercam.internal_resolution);
 	shadercam.entity_culling_tile_bucket_count_flat = shadercam.entity_culling_tilecount.x * shadercam.entity_culling_tilecount.y * SHADER_ENTITY_TILE_BUCKET_COUNT;
+	shadercam.entity_culling_tile_offset = 0; // per-camera offset can be put here
+	shadercam.entity_culling_tile_offset_transparent = shadercam.entity_culling_tile_offset + shadercam.entity_culling_tile_bucket_count_flat;
 	shadercam.sample_count = camera.sample_count;
 	shadercam.visibility_tilecount = GetVisibilityTileCount(shadercam.internal_resolution);
 	shadercam.visibility_tilecount_flat = shadercam.visibility_tilecount.x * shadercam.visibility_tilecount.y;

@@ -383,9 +383,10 @@ namespace wi::renderer
 	struct TiledLightResources
 	{
 		XMUINT2 tileCount = {};
+		uint32_t camera_count = 1;
 		wi::graphics::GPUBuffer entityTiles; // culled entity indices
 	};
-	void CreateTiledLightResources(TiledLightResources& res, XMUINT2 resolution);
+	void CreateTiledLightResources(TiledLightResources& res, XMUINT2 resolution, uint32_t camera_count = 1);
 	// Compute light grid tiles
 	void ComputeTiledLightCulling(
 		const TiledLightResources& res,
