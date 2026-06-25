@@ -124,15 +124,21 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		}
 	}
 
-	GroupMemoryBarrierWithGroupSync();
+	GroupMemoryBarrierWithGroupSync(); // still needed if no depth buffer, sync lds clears
 
 	// reversed depth buffer!
-	float fMinDepth = has_depthbuffer ? asfloat(uMaxDepth) : 1;
-	float fMaxDepth = has_depthbuffer ? asfloat(uMinDepth) : 0;
+	float fMinDepth = 1;
+	float fMaxDepth = 0;
 
-	// Disallow zero-thin depth box, can cause artifacts especially on AMD with ortho camera looking at flat plane sometimes:
-	fMinDepth += FLT_EPSILON;
-	fMaxDepth -= FLT_EPSILON;
+	if (has_depthbuffer)
+	{
+		fMinDepth = asfloat(uMaxDepth);
+		fMaxDepth = asfloat(uMinDepth);
+
+		// Disallow zero-thin depth box, can cause artifacts especially on AMD with ortho camera looking at flat plane sometimes:
+		fMinDepth += FLT_EPSILON;
+		fMaxDepth -= FLT_EPSILON;
+	}
 
 	// View space frustum corners:
 	float3 viewSpace[8];
