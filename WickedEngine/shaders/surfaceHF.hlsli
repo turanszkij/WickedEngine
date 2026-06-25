@@ -784,7 +784,7 @@ struct Surface
 			ShaderEntityIterator iterator = decals();
 			for (uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 			{
-				uint bucket_bits = load_entitytile(flatTileIndex + bucket, 0);
+				uint bucket_bits = load_entitytile(GetCamera(), flatTileIndex + bucket);
 				bucket_bits = iterator.mask_entity(bucket, bucket_bits);
 				
 				// This is the wave scalarizer from Improved Culling - Siggraph 2017 [Drobot]:

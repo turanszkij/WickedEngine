@@ -18,6 +18,7 @@ float load_shadow(in uint shadow_index, in uint4 shadow_mask)
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
+	ShaderCamera camera = GetCamera();
 	uint2 pixel = DTid.xy;
 	const float2 uv = (pixel + 0.5f) * postprocess.resolution_rcp;
 
@@ -26,7 +27,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 	output.GetDimensions(dim.x, dim.y, MAX_RTSHADOWS);
 	
 	const uint2 tileIndex = uint2(floor(pixel / TILED_CULLING_BLOCKSIZE));
-	const uint flatTileIndex = flatten2D(tileIndex, GetCamera().entity_culling_tilecount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
+	const uint flatTileIndex = flatten2D(tileIndex, camera.entity_culling_tilecount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
 	
 	const float2 lowres_size = postprocess.params1.xy;
 	const float2 lowres_texel_size = postprocess.params1.zw;
@@ -62,7 +63,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 		ShaderEntityIterator iterator = lights();
 		for (uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 		{
-			uint bucket_bits = load_entitytile(flatTileIndex + bucket, 0);
+			uint bucket_bits = load_entitytile(camera, flatTileIndex + bucket);
 			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
 
 			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:

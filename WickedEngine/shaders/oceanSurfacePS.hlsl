@@ -107,7 +107,7 @@ float4 main(PSIn input) : SV_TARGET
 	Lighting lighting;
 	lighting.create(0, 0, GetAmbient(surface.N), 0);
 
-	TiledLighting(surface, lighting, GetFlatTileIndex(pixel), input.cameraIndex);
+	TiledLighting(surface, lighting, GetFlatTileIndex(pixel, camera), camera);
 
 	if (camera_below_water)
 	{

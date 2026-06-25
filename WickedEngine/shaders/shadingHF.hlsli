@@ -37,17 +37,17 @@ inline half3 PlanarReflection(in Surface surface, in half2 bumpColor)
 	return 0;
 }
 
-inline uint GetFlatTileIndex(min16uint2 pixel)
+inline uint GetFlatTileIndex(min16uint2 pixel, ShaderCamera camera)
 {
 	const min16uint2 tileIndex = min16uint2(floor(pixel / TILED_CULLING_BLOCKSIZE));
-	return flatten2D(tileIndex, GetCamera().entity_culling_tilecount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
+	return flatten2D(tileIndex, camera.entity_culling_tilecount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
 }
 
-inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint flatTileIndex, uint cameraIndex = 0)
+inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint flatTileIndex, ShaderCamera camera)
 {
-	if (GetCamera().buffer_entitytiles_index < 0)
+	if (camera.buffer_entitytiles_index < 0)
 		return;
-	if (GetFrame().options & OPTION_BIT_FORCE_UNLIT)
+	if (camera.options & OPTION_BIT_FORCE_UNLIT)
 		return;
 
 #ifndef DISABLE_ENVMAPS
@@ -62,7 +62,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 		ShaderEntityIterator iterator = probes();
 		for (uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 		{
-			uint bucket_bits = load_entitytile(flatTileIndex + bucket, cameraIndex);
+			uint bucket_bits = load_entitytile(camera, flatTileIndex + bucket);
 			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
 			
 			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
@@ -115,29 +115,29 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 
 #ifndef TRANSPARENT
 	[branch]
-	if (!surface.IsGIApplied() && GetCamera().texture_rtdiffuse_index >= 0)
+	if (!surface.IsGIApplied() && camera.texture_rtdiffuse_index >= 0)
 	{
-		lighting.indirect.diffuse = bindless_textures_half4[descriptor_index(GetCamera().texture_rtdiffuse_index)][surface.pixel].rgb;
+		lighting.indirect.diffuse = bindless_textures_half4[descriptor_index(camera.texture_rtdiffuse_index)][surface.pixel].rgb;
 		surface.SetGIApplied(true);
 	}
 
 	[branch]
-	if (!surface.IsGIApplied() && GetFrame().options & OPTION_BIT_SURFELGI_ENABLED && GetCamera().texture_surfelgi_index >= 0 && surfel_cellvalid(surfel_cell(surface.P)))
+	if (!surface.IsGIApplied() && GetFrame().options & OPTION_BIT_SURFELGI_ENABLED && camera.texture_surfelgi_index >= 0 && surfel_cellvalid(surfel_cell(surface.P)))
 	{
-		lighting.indirect.diffuse = bindless_textures_half4[descriptor_index(GetCamera().texture_surfelgi_index)][surface.pixel].rgb;
+		lighting.indirect.diffuse = bindless_textures_half4[descriptor_index(camera.texture_surfelgi_index)][surface.pixel].rgb;
 		surface.SetGIApplied(true);
 	}
 
 	[branch]
-	if (!surface.IsGIApplied() && GetCamera().texture_vxgi_diffuse_index >= 0)
+	if (!surface.IsGIApplied() && camera.texture_vxgi_diffuse_index >= 0)
 	{
-		lighting.indirect.diffuse = bindless_textures_half4[descriptor_index(GetCamera().texture_vxgi_diffuse_index)][surface.pixel].rgb;
+		lighting.indirect.diffuse = bindless_textures_half4[descriptor_index(camera.texture_vxgi_diffuse_index)][surface.pixel].rgb;
 		surface.SetGIApplied(true);
 	}
 	[branch]
-	if (GetCamera().texture_vxgi_specular_index >= 0)
+	if (camera.texture_vxgi_specular_index >= 0)
 	{
-		half4 vxgi_specular = bindless_textures_half4[descriptor_index(GetCamera().texture_vxgi_specular_index)][surface.pixel];
+		half4 vxgi_specular = bindless_textures_half4[descriptor_index(camera.texture_vxgi_specular_index)][surface.pixel];
 		lighting.indirect.specular = vxgi_specular.rgb * surface.F + lighting.indirect.specular * (1 - vxgi_specular.a);
 	}
 #endif // TRANSPARENT
@@ -170,12 +170,12 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 			half shadow_mask = 1;
 #if defined(SHADOW_MASK_ENABLED) && !defined(TRANSPARENT)
 			[branch]
-			if (surface.IsReceiveShadow() && light.IsCastingShadow() && (GetFrame().options & OPTION_BIT_SHADOW_MASK) && (GetCamera().options & SHADERCAMERA_OPTION_USE_SHADOW_MASK) && GetCamera().texture_rtshadow_index >= 0)
+			if (surface.IsReceiveShadow() && light.IsCastingShadow() && (GetFrame().options & OPTION_BIT_SHADOW_MASK) && (camera.options & SHADERCAMERA_OPTION_USE_SHADOW_MASK) && camera.texture_rtshadow_index >= 0)
 			{
 				uint shadow_index = entity_index - lights().first_item();
 				if (shadow_index < 16)
 				{
-					shadow_mask = bindless_textures2DArray_half4[descriptor_index(GetCamera().texture_rtshadow_index)][uint3(surface.pixel, shadow_index)].r;
+					shadow_mask = bindless_textures2DArray_half4[descriptor_index(camera.texture_rtshadow_index)][uint3(surface.pixel, shadow_index)].r;
 				}
 			}
 #endif // SHADOW_MASK_ENABLED && !TRANSPARENT
@@ -191,7 +191,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 		ShaderEntityIterator iterator = spotlights();
 		for (uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 		{
-			uint bucket_bits = load_entitytile(flatTileIndex + bucket, cameraIndex);
+			uint bucket_bits = load_entitytile(camera, flatTileIndex + bucket);
 			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
 			
 			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
@@ -210,12 +210,12 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 				half shadow_mask = 1;
 #if defined(SHADOW_MASK_ENABLED) && !defined(TRANSPARENT)
 				[branch]
-				if (light.IsCastingShadow() && (GetFrame().options & OPTION_BIT_SHADOW_MASK) && (GetCamera().options & SHADERCAMERA_OPTION_USE_SHADOW_MASK) && GetCamera().texture_rtshadow_index >= 0)
+				if (light.IsCastingShadow() && (GetFrame().options & OPTION_BIT_SHADOW_MASK) && (camera.options & SHADERCAMERA_OPTION_USE_SHADOW_MASK) && camera.texture_rtshadow_index >= 0)
 				{
 					uint shadow_index = entity_index - lights().first_item();
 					if (shadow_index < 16)
 					{
-						shadow_mask = bindless_textures2DArray_half4[descriptor_index(GetCamera().texture_rtshadow_index)][uint3(surface.pixel, shadow_index)].r;
+						shadow_mask = bindless_textures2DArray_half4[descriptor_index(camera.texture_rtshadow_index)][uint3(surface.pixel, shadow_index)].r;
 					}
 				}
 #endif // SHADOW_MASK_ENABLED && !TRANSPARENT
@@ -233,7 +233,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 		ShaderEntityIterator iterator = pointlights();
 		for (uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 		{
-			uint bucket_bits = load_entitytile(flatTileIndex + bucket, cameraIndex);
+			uint bucket_bits = load_entitytile(camera, flatTileIndex + bucket);
 			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
 			
 			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
@@ -252,12 +252,12 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 				half shadow_mask = 1;
 #if defined(SHADOW_MASK_ENABLED) && !defined(TRANSPARENT)
 				[branch]
-				if (light.IsCastingShadow() && (GetFrame().options & OPTION_BIT_SHADOW_MASK) && (GetCamera().options & SHADERCAMERA_OPTION_USE_SHADOW_MASK) && GetCamera().texture_rtshadow_index >= 0)
+				if (light.IsCastingShadow() && (GetFrame().options & OPTION_BIT_SHADOW_MASK) && (camera.options & SHADERCAMERA_OPTION_USE_SHADOW_MASK) && camera.texture_rtshadow_index >= 0)
 				{
 					uint shadow_index = entity_index - lights().first_item();
 					if (shadow_index < 16)
 					{
-						shadow_mask = bindless_textures2DArray_half4[descriptor_index(GetCamera().texture_rtshadow_index)][uint3(surface.pixel, shadow_index)].r;
+						shadow_mask = bindless_textures2DArray_half4[descriptor_index(camera.texture_rtshadow_index)][uint3(surface.pixel, shadow_index)].r;
 					}
 				}
 #endif // SHADOW_MASK_ENABLED && !TRANSPARENT
@@ -275,7 +275,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 		ShaderEntityIterator iterator = rectlights();
 		for (uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 		{
-			uint bucket_bits = load_entitytile(flatTileIndex + bucket, cameraIndex);
+			uint bucket_bits = load_entitytile(camera, flatTileIndex + bucket);
 			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
 			
 			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
@@ -294,12 +294,12 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 				half shadow_mask = 1;
 #if defined(SHADOW_MASK_ENABLED) && !defined(TRANSPARENT)
 				[branch]
-				if (light.IsCastingShadow() && (GetFrame().options & OPTION_BIT_SHADOW_MASK) && (GetCamera().options & SHADERCAMERA_OPTION_USE_SHADOW_MASK) && GetCamera().texture_rtshadow_index >= 0)
+				if (light.IsCastingShadow() && (GetFrame().options & OPTION_BIT_SHADOW_MASK) && (camera.options & SHADERCAMERA_OPTION_USE_SHADOW_MASK) && camera.texture_rtshadow_index >= 0)
 				{
 					uint shadow_index = entity_index - lights().first_item();
 					if (shadow_index < 16)
 					{
-						shadow_mask = bindless_textures2DArray_half4[descriptor_index(GetCamera().texture_rtshadow_index)][uint3(surface.pixel, shadow_index)].r;
+						shadow_mask = bindless_textures2DArray_half4[descriptor_index(camera.texture_rtshadow_index)][uint3(surface.pixel, shadow_index)].r;
 					}
 				}
 #endif // SHADOW_MASK_ENABLED && !TRANSPARENT
@@ -323,7 +323,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 		ShaderEntityIterator iterator = forces();
 		for (uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 		{
-			uint bucket_bits = load_entitytile(flatTileIndex + bucket, cameraIndex);
+			uint bucket_bits = load_entitytile(camera, flatTileIndex + bucket);
 			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
 			
 			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
@@ -373,7 +373,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 
 }
 
-inline void TiledDecals(inout Surface surface, uint flatTileIndex, inout half4 surfaceMap, SamplerState sam, uint cameraIndex = 0)
+inline void TiledDecals(inout Surface surface, inout half4 surfaceMap, SamplerState sam, uint flatTileIndex, ShaderCamera camera)
 {
 #ifndef DISABLE_DECALS
 	[branch]
@@ -398,7 +398,7 @@ inline void TiledDecals(inout Surface surface, uint flatTileIndex, inout half4 s
 	ShaderEntityIterator iterator = decals();
 	for (uint bucket = iterator.first_bucket(); bucket <= iterator.last_bucket(); ++bucket)
 	{
-		uint bucket_bits = load_entitytile(flatTileIndex + bucket, cameraIndex);
+		uint bucket_bits = load_entitytile(camera, flatTileIndex + bucket);
 		bucket_bits = iterator.mask_entity(bucket, bucket_bits);
 		
 		// This is the wave scalarizer from Improved Culling - Siggraph 2017 [Drobot]:

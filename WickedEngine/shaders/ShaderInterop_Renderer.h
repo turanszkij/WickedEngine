@@ -1367,10 +1367,10 @@ struct alignas(16) ShaderCamera
 	int buffer_entitytiles_index;
 	uint entity_culling_tile_bucket_count_flat; // tilecount.x * tilecount.y * SHADER_ENTITY_TILE_BUCKET_COUNT (the total number of uint buckets for the whole screen)
 	uint entity_culling_tile_offset; // offset for indexing the tile buffer with multiple cameras
-	uint visibility_tilecount_flat;
+	uint entity_culling_tile_offset_transparent; // offset for indexing the tile buffer with multiple cameras + offset for transparent list
 
-	float distance_from_origin;
 	uint sample_count;
+	uint visibility_tilecount_flat;
 	int texture_rtdiffuse_index;
 	int texture_primitiveID_index;
 
@@ -1440,10 +1440,10 @@ struct alignas(16) ShaderCamera
 		entity_culling_tilecount = {};
 		entity_culling_tile_bucket_count_flat = 0;
 		entity_culling_tile_offset = 0;
+		entity_culling_tile_offset_transparent = 0;
 		sample_count = {};
 		visibility_tilecount = {};
 		visibility_tilecount_flat = {};
-		distance_from_origin = {};
 
 		texture_rtdiffuse_index = -1;
 		texture_primitiveID_index = -1;

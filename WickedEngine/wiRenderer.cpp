@@ -9363,6 +9363,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		{
 			CreateTiledLightResources(tiledlights, XMUINT2(probe.texture.desc.width, probe.texture.desc.width), 6); // tile buffer created for 6 cubemap faces
 		}
+		const int tilebuffer_descripotor = device->GetDescriptorIndex(&tiledlights.entityTiles, SubresourceType::SRV);
 
 		CameraCB cb;
 		cb.init();
@@ -9404,10 +9405,12 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			XMStoreFloat4(&shadercam.frustum_corners.cornersFAR[3], XMVector3TransformCoord(XMVectorSet(1, -1, 0, 1), invVP));
 
 			// Light culling resources for every cubemap face:
-			shadercam.buffer_entitytiles_index = device->GetDescriptorIndex(&tiledlights.entityTiles, SubresourceType::SRV);
+			//	Note: same tile buffer will be reused for each face, but with different offsets
+			shadercam.buffer_entitytiles_index = tilebuffer_descripotor;
 			shadercam.entity_culling_tilecount = required_tilecount;
 			shadercam.entity_culling_tile_bucket_count_flat = shadercam.entity_culling_tilecount.x * shadercam.entity_culling_tilecount.y * SHADER_ENTITY_TILE_BUCKET_COUNT;
-			shadercam.entity_culling_tile_offset = shadercam.entity_culling_tile_bucket_count_flat * 2 * i;
+			shadercam.entity_culling_tile_offset = shadercam.entity_culling_tile_bucket_count_flat * 2 * i; // per-face offset (*2 because opaque and transparent)
+			shadercam.entity_culling_tile_offset_transparent = shadercam.entity_culling_tile_offset + shadercam.entity_culling_tile_bucket_count_flat;
 		}
 		device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 
@@ -11452,7 +11455,6 @@ void BindCameraCB(
 	XMStoreFloat4x4(&shadercam.view, camera.GetView());
 	XMStoreFloat4x4(&shadercam.projection, camera.GetProjection());
 	shadercam.position = camera.Eye;
-	shadercam.distance_from_origin = XMVectorGetX(XMVector3Length(XMLoadFloat3(&shadercam.position)));
 	XMStoreFloat4x4(&shadercam.inverse_view, camera.GetInvView());
 	XMStoreFloat4x4(&shadercam.inverse_projection, camera.GetInvProjection());
 	XMStoreFloat4x4(&shadercam.inverse_view_projection, invVP);
@@ -11521,6 +11523,8 @@ void BindCameraCB(
 
 	shadercam.entity_culling_tilecount = GetEntityCullingTileCount(shadercam.internal_resolution);
 	shadercam.entity_culling_tile_bucket_count_flat = shadercam.entity_culling_tilecount.x * shadercam.entity_culling_tilecount.y * SHADER_ENTITY_TILE_BUCKET_COUNT;
+	shadercam.entity_culling_tile_offset = 0; // per-camera offset can be put here
+	shadercam.entity_culling_tile_offset_transparent = shadercam.entity_culling_tile_offset + shadercam.entity_culling_tile_bucket_count_flat;
 	shadercam.sample_count = camera.sample_count;
 	shadercam.visibility_tilecount = GetVisibilityTileCount(shadercam.internal_resolution);
 	shadercam.visibility_tilecount_flat = shadercam.visibility_tilecount.x * shadercam.visibility_tilecount.y;

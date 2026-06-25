@@ -384,14 +384,16 @@ struct PixelInput
 	}
 #endif // OBJECTSHADER_USE_DITHERING
 
-#ifdef OBJECTSHADER_USE_CAMERAINDEX
 	inline uint GetCameraIndex()
 	{
+#ifdef OBJECTSHADER_USE_CAMERAINDEX
 		ShaderMeshInstancePointer pointer;
 		pointer.data = poi;
 		return pointer.GetCameraIndex();
-	}
+#else
+		return 0;
 #endif // OBJECTSHADER_USE_CAMERAINDEX
+	}
 	
 #ifdef OBJECTSHADER_USE_UVSETS
 	inline float4 GetUVSets()
@@ -402,23 +404,13 @@ struct PixelInput
 
 	inline float3 GetPos3D()
 	{
-#ifdef OBJECTSHADER_USE_CAMERAINDEX
 		ShaderCamera camera = GetCameraIndexed(GetCameraIndex());
-#else
-		ShaderCamera camera = GetCamera();
-#endif // OBJECTSHADER_USE_CAMERAINDEX
-
 		return camera.screen_to_world(pos);
 	}
 
 	inline float3 GetViewVector()
 	{
-#ifdef OBJECTSHADER_USE_CAMERAINDEX
 		ShaderCamera camera = GetCameraIndexed(GetCameraIndex());
-#else
-		ShaderCamera camera = GetCamera();
-#endif // OBJECTSHADER_USE_CAMERAINDEX
-
 		return camera.screen_to_nearplane(pos) - GetPos3D(); // ortho support, cannot use cameraPos!
 	}
 
@@ -555,7 +547,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 // Pixel shader base:
 {
 #ifdef OBJECTSHADER_USE_CAMERAINDEX
-	const uint cameraIndex = WaveReadLaneFirst(input.GetCameraIndex());
+	const uint cameraIndex = WaveReadLaneFirst(input.GetCameraIndex()); // scalarized camera index assumes that wave from two cameras will not be packed together, this simplifies camera resource indexing significantly
 #else
 	const uint cameraIndex = 0;
 #endif // OBJECTSHADER_USE_CAMERAINDEX
@@ -771,13 +763,13 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 	}
 
 #ifdef TILEDFORWARD
-	const uint flat_tile_index = GetFlatTileIndex(pixel);
+	const uint flat_tile_index = GetFlatTileIndex(pixel, camera);
 #endif // TILEDFORWARD
 
 #ifndef PREPASS
 #ifndef WATER
 #ifdef TILEDFORWARD
-	TiledDecals(surface, flat_tile_index, surfaceMap, sampler_objectshader, cameraIndex);
+	TiledDecals(surface, surfaceMap, sampler_objectshader, flat_tile_index, camera);
 #endif // TILEDFORWARD
 #endif // WATER
 #endif // PREPASS
@@ -1012,7 +1004,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 #endif
 
 #ifdef TILEDFORWARD
-	TiledLighting(surface, lighting, flat_tile_index, cameraIndex);
+	TiledLighting(surface, lighting, flat_tile_index, camera);
 #endif // TILEDFORWARD
 
 
