@@ -4,8 +4,9 @@
 Generate LuaLS (lua-language-server / EmmyLua) definition stubs for the Wicked
 Engine scripting API from this documentation.
 
-The reference under `sections/` is written as annotated Lua inside ```lua fenced
-code blocks, so generating the stubs is just a matter of extracting those blocks.
+The reference in `../ScriptingAPI-Documentation.md` is written as annotated Lua
+inside ```lua fenced code blocks, so generating the stubs is just a matter of
+extracting those blocks.
 
 Usage
 -----
@@ -16,41 +17,78 @@ Usage
         Write the combined file to <output.lua>.
 
     python3 generate_stubs.py --split
-        Write one stub per section into ./library/wicked_engine/
+        Write one stub per topic into ./library/wicked_engine/
 
     python3 generate_stubs.py --split <outdir>
-        Write one stub per section into <outdir>/
+        Write one stub per topic into <outdir>/
 
 Point your `.luarc.json` `workspace.library` at the generated file (or folder)
 to get autocomplete and type checking. Requires only Python 3 (no dependencies).
 
 Notes
 -----
+* Only the API reference body is scanned: extraction starts at the first
+  "## Utility Tools" heading, so illustrative snippets in the introductory
+  sections are never mistaken for bindings.
 * Fenced blocks that contain a `---@diagnostic disable` line are treated as
   illustrative usage examples and are skipped (they are not API definitions).
-* The generated files are derived artifacts; the Markdown under `sections/` is
-  the source of truth. They are intentionally not committed (see .gitignore).
+* The generated files are derived artifacts; the Markdown documentation is the
+  source of truth. They are intentionally not committed (see .gitignore).
 """
 import argparse
-import glob
 import os
+import re
 import sys
 import textwrap
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-SECTIONS_DIR = os.path.join(HERE, "sections")
+DOC_FILE = os.path.join(os.path.dirname(HERE), "ScriptingAPI-Documentation.md")
+
+# Extraction begins at this heading; everything before it is introductory prose.
+API_START_HEADING = "## Utility Tools"
 
 
-def extract_blocks(md_path):
-    """Return the list of API ```lua blocks in a Markdown file (dedented).
+def _topic_filename(heading_text):
+    """A filesystem-safe stub filename derived from a heading."""
+    name = heading_text.strip().lower()
+    name = re.sub(r"[^a-z0-9]+", "_", name).strip("_")
+    return name + ".lua"
 
-    Blocks marked with `---@diagnostic disable` are usage examples and skipped.
+
+def extract_sections():
+    """Return [(topic, [blocks])] from the API body, in document order.
+
+    A "topic" is the nearest enclosing `##` or `###` heading. Blocks marked with
+    `---@diagnostic disable` are usage examples and are skipped. Headings and
+    fenced blocks before `API_START_HEADING` are ignored.
     """
-    lines = open(md_path, encoding="utf-8").read().split("\n")
-    blocks = []
+    if not os.path.exists(DOC_FILE):
+        print(f"error: documentation not found: {DOC_FILE}", file=sys.stderr)
+        sys.exit(1)
+
+    lines = open(DOC_FILE, encoding="utf-8").read().split("\n")
+    sections = []          # ordered [(topic, [blocks])]
+    index = {}             # topic -> position in `sections`
+    topic = None
+    started = False
     i = 0
     while i < len(lines):
-        if lines[i].strip() == "```lua":
+        line = lines[i]
+        stripped = line.strip()
+
+        if not started:
+            if stripped == API_START_HEADING:
+                started = True
+                topic = "Utility Tools"
+            else:
+                i += 1
+                continue
+
+        m = re.match(r"^(#{2,3})\s+(.*)$", line)
+        if m:
+            topic = m.group(2).strip()
+
+        if stripped == "```lua":
             j = i + 1
             buf = []
             while j < len(lines) and lines[j].strip() != "```":
@@ -58,31 +96,27 @@ def extract_blocks(md_path):
                 j += 1
             block = textwrap.dedent("\n".join(buf)).rstrip()
             if "---@diagnostic disable" not in block:
-                blocks.append(block)
+                if topic not in index:
+                    index[topic] = len(sections)
+                    sections.append((topic, []))
+                sections[index[topic]][1].append(block)
             i = j
         i += 1
-    return blocks
 
-
-def section_files():
-    """Return the sorted list of section Markdown files (or exit if none)."""
-    files = sorted(glob.glob(os.path.join(SECTIONS_DIR, "*.md")))
-    if not files:
-        print(f"error: no section files found in {SECTIONS_DIR}", file=sys.stderr)
+    if not sections:
+        print(f"error: no API blocks found after '{API_START_HEADING}'",
+              file=sys.stderr)
         sys.exit(1)
-    return files
+    return sections
 
 
 def generate_single(out_path):
-    """Combine every section's blocks into one `---@meta` definition file."""
+    """Combine every topic's blocks into one `---@meta` definition file."""
     parts = []
-    for md in section_files():
-        name = os.path.splitext(os.path.basename(md))[0]
-        blocks = extract_blocks(md)
-        if not blocks:
-            continue
+    for topic, blocks in extract_sections():
         # A searchable banner so Ctrl+F can jump between topics in the one file.
-        parts.append(f"-- ===== sections/{name}.md " + "=" * max(0, 50 - len(name)))
+        banner = f"-- ===== {topic} "
+        parts.append(banner + "=" * max(0, 78 - len(banner)))
         parts.append("\n\n".join(blocks))
     content = "---@meta\n\n" + "\n\n".join(parts) + "\n"
     out_dir = os.path.dirname(os.path.abspath(out_path))
@@ -93,19 +127,16 @@ def generate_single(out_path):
 
 
 def generate_split(out_dir):
-    """Write one `<section>.lua` definition file per section into out_dir."""
+    """Write one `<topic>.lua` definition file per topic into out_dir."""
     os.makedirs(out_dir, exist_ok=True)
     count = 0
-    for md in section_files():
-        name = os.path.splitext(os.path.basename(md))[0]
-        blocks = extract_blocks(md)
-        if not blocks:
-            continue
+    for topic, blocks in extract_sections():
+        fname = _topic_filename(topic)
         content = "---@meta\n\n" + "\n\n".join(blocks) + "\n"
-        with open(os.path.join(out_dir, name + ".lua"), "w", encoding="utf-8") as f:
+        with open(os.path.join(out_dir, fname), "w", encoding="utf-8") as f:
             f.write(content)
         count += 1
-        print(f"  wrote {name}.lua")
+        print(f"  wrote {fname}")
     print(f"Done. Generated {count} stub files in {out_dir}")
 
 
@@ -117,7 +148,7 @@ def main():
         help="output file (default mode) or output directory (with --split)")
     parser.add_argument(
         "--split", action="store_true",
-        help="generate one stub file per section into a directory instead of "
+        help="generate one stub file per topic into a directory instead of "
              "a single combined file")
     args = parser.parse_args()
 
