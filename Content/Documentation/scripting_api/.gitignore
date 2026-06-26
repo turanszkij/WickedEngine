@@ -1,0 +1,4 @@
+# Generated LuaLS stubs. The source of truth is
+# ../ScriptingAPI-Documentation.md; run generate_stubs.py to (re)produce these.
+# Not committed (they would just duplicate the Markdown).
+wicked_engine_bindings.lua
