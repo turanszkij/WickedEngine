@@ -264,12 +264,10 @@ jobs:
 
     - name: Build Editor (Mac OS)
       run: |
-        rm -rf ./DerivedData_Mac
         xcodebuild clean build -project Editor/Editor.xcodeproj -scheme Editor -configuration Release
 
     - name: Build Editor (iOS)
       run: |
-        rm -rf ./DerivedData_iOS
         xcodebuild clean build -project Editor/Editor.xcodeproj -scheme Editor_iOS -configuration Release -sdk iphoneos CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
         
     - name: Move files
