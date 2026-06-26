@@ -161,15 +161,26 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	{
 		// Strand is beyond the view distance, so it is never rendered: no
 		// indices are appended for it and its render vertex buffers are never
-		// read. Only the raytracing positions must stay valid (zeroed here), so
-		// skip all the billboard/patch math and the render-buffer writes. When
-		// no acceleration structure consumes them, even those writes are dead.
+		// read. Only the raytracing positions need to stay valid, and only when
+		// an acceleration structure consumes them. Collapse the strand to its
+		// own emitter position (not a shared point): the triangles stay
+		// zero-area (so far grass still does not contribute to ray traced
+		// lighting), but spreading them across the terrain keeps the raytracing
+		// BVH well distributed. Crucially it also means a strand crossing the
+		// cull boundary moves only within its own small neighbourhood instead of
+		// teleporting to/from a far shared point, so per-frame refits barely
+		// disturb the BVH and it does not degrade between rebuilds.
 		const uint root_vertexcount = 2 * xHairBillboardCount;
 		if (xHairFlags & HAIR_FLAG_RAYTRACED)
 		{
+			float3 rt_pos = base;
+			if (xHairFlags & HAIR_FLAG_UNORM_POS)
+			{
+				rt_pos = inverse_lerp(geometry.aabb_min, geometry.aabb_max, base); // remap to UNORM
+			}
 			for (uint i = 0; i < root_vertexcount; ++i)
 			{
-				vertexBuffer_POS_RT[v0 + i] = float4(0, 0, 0, 0);
+				vertexBuffer_POS_RT[v0 + i] = float4(rt_pos, 0);
 			}
 		}
 		v0 += root_vertexcount;
@@ -411,15 +422,21 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	
 		if (distance_culled)
 		{
-			// See the root vertices above: the strand is not rendered, so only
-			// the zeroed raytracing positions are needed for these cap vertices,
-			// and only when an acceleration structure consumes them.
+			// See the root vertices above: collapse these cap vertices to this
+			// segment's rest position (spread along the strand), not a shared
+			// point, so the raytracing BVH stays well distributed and stable
+			// across cull-boundary crossings.
 			const uint cap_vertexcount = 2 * xHairBillboardCount;
 			if (xHairFlags & HAIR_FLAG_RAYTRACED)
 			{
+				float3 rt_pos = base;
+				if (xHairFlags & HAIR_FLAG_UNORM_POS)
+				{
+					rt_pos = inverse_lerp(geometry.aabb_min, geometry.aabb_max, base); // remap to UNORM
+				}
 				for (uint i = 0; i < cap_vertexcount; ++i)
 				{
-					vertexBuffer_POS_RT[v0 + i] = float4(0, 0, 0, 0);
+					vertexBuffer_POS_RT[v0 + i] = float4(rt_pos, 0);
 				}
 			}
 			v0 += cap_vertexcount;

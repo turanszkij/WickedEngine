@@ -5758,7 +5758,15 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 
 				if (hair.meshID != INVALID_ENTITY && hair.BLAS.IsValid())
 				{
-					if (hair.must_rebuild_blas)
+					// The grass BLAS is built for fast traversal, but refitting it
+					// every frame as strands animate and cull progressively
+					// degrades that quality. Do a full rebuild periodically
+					// (staggered per system so the cost is spread across frames)
+					// and refit on the frames in between.
+					constexpr uint64_t blas_rebuild_interval = 60;
+					const bool periodic_rebuild =
+						((device->GetFrameCount() + i) % blas_rebuild_interval) == 0;
+					if (hair.must_rebuild_blas || periodic_rebuild)
 					{
 						device->BuildRaytracingAccelerationStructure(&hair.BLAS, cmd, nullptr);
 						hair.must_rebuild_blas = false;
@@ -14169,7 +14177,10 @@ void Postprocess_RTDiffuse(
 	rtdiffuse_range = range;
 	rtdiffuse_frame = (float)res.frame;
 	rtdiffuse_downscalefactor = (float)quality_downscalefactor(res.quality);
-	uint8_t instanceInclusionMask = 0xFF;
+	// Diffuse GI rays skip instances that opt out via this bit (e.g. hair/grass,
+	// whose dense alpha-tested geometry is very expensive to traverse and
+	// contributes little to low-frequency diffuse GI):
+	uint8_t instanceInclusionMask = raytracing_inclusion_mask_diffuse;
 	std::memcpy(&postprocess.params1.x, &instanceInclusionMask, sizeof(instanceInclusionMask));
 
 	{

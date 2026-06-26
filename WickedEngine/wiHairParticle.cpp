@@ -320,7 +320,11 @@ namespace wi
 		{
 			RaytracingAccelerationStructureDesc desc;
 			desc.type = RaytracingAccelerationStructureDesc::Type::BOTTOMLEVEL;
-			desc.flags |= RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD;
+			// Grass is heavily traced by GI rays, so prefer a traversal-optimized
+			// BVH (FAST_TRACE) over a cheap-to-build one. Animation is handled by
+			// per-frame refits (ALLOW_UPDATE) plus a periodic full rebuild on the
+			// renderer side to keep the structure's quality from decaying.
+			desc.flags |= RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_TRACE;
 			desc.flags |= RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE;
 
 			desc.bottom_level.geometries.emplace_back();
