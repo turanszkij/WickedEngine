@@ -84,7 +84,13 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	half3 binormal = cross(target, tangent);
 	half strand_length = attribute_at_bary(length0, length1, length2, bary);
 	
-	const uint currentFrame = uint(noise_gradient_3D(position * xHairUniformity) * 1000) % xHairAtlasRectCount;
+	// Pick an atlas frame from gradient noise so neighbouring strands vary.
+	// With a single rect the modulo is always 0, so skip the noise entirely.
+	uint currentFrame = 0;
+	if (xHairAtlasRectCount > 1)
+	{
+		currentFrame = uint(noise_gradient_3D(position * xHairUniformity) * 1000) % xHairAtlasRectCount;
+	}
 	const HairParticleAtlasRect atlas_rect = xHairAtlasRects[currentFrame];
 	
 	// Transform particle by the emitter object matrix:
