@@ -181,14 +181,23 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		{
 			half siz = billboardID == 0 ? 1 : lerp(0.2, 1, rng.next_float());
 			half rot = billboardID == 0 ? 0 : (rng.next_float() * PI);
-			half2 rot_sincos;
-			sincos(rot, rot_sincos.x, rot_sincos.y);
-			half3x3 variationMatrix = half3x3(
-				rot_sincos.y * siz, 0, -rot_sincos.x,
-				0, siz, 0,
-				rot_sincos.x, 0, rot_sincos.y * siz
-			);
-			variationMatrix = mul(variationMatrix, TBN);
+			half3x3 variationMatrix;
+			if (billboardID == 0)
+			{
+				// No size/rotation variation: the variation matrix is the
+				// identity, so mul(variation, TBN) reduces to TBN.
+				variationMatrix = TBN;
+			}
+			else
+			{
+				half2 rot_sincos;
+				sincos(rot, rot_sincos.x, rot_sincos.y);
+				variationMatrix = mul(half3x3(
+					rot_sincos.y * siz, 0, -rot_sincos.x,
+					0, siz, 0,
+					rot_sincos.x, 0, rot_sincos.y * siz
+				), TBN);
+			}
 
 			for (uint vertexID = 0; vertexID < 2; ++vertexID)
 			{
@@ -403,14 +412,23 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			{
 				half siz = billboardID == 0 ? 1 : lerp(0.2, 1, rng.next_float());
 				half rot = billboardID == 0 ? 0 : (rng.next_float() * PI);
-				half2 rot_sincos;
-				sincos(rot, rot_sincos.x, rot_sincos.y);
-				half3x3 variationMatrix = half3x3(
-					rot_sincos.y * siz, 0, -rot_sincos.x,
-					0, siz, 0,
-					rot_sincos.x, 0, rot_sincos.y * siz
-				);
-				variationMatrix = mul(variationMatrix, TBN);
+				half3x3 variationMatrix;
+				if (billboardID == 0)
+				{
+					// No size/rotation variation: the variation matrix is the
+					// identity, so mul(variation, TBN) reduces to TBN.
+					variationMatrix = TBN;
+				}
+				else
+				{
+					half2 rot_sincos;
+					sincos(rot, rot_sincos.x, rot_sincos.y);
+					variationMatrix = mul(half3x3(
+						rot_sincos.y * siz, 0, -rot_sincos.x,
+						0, siz, 0,
+						rot_sincos.x, 0, rot_sincos.y * siz
+					), TBN);
+				}
 
 				for (uint vertexID = 2; vertexID < 4; ++vertexID)
 				{
