@@ -249,24 +249,43 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		// Identifies the hair strand segment particle:
 		const uint particleID = DTid.x * xHairSegmentCount + segmentID;
 
-		if (regenerate_frame)
+		// Resolve this segment's tail. Visible strands run the full dynamics;
+		// strands beyond the view distance are held at rest pose so the wind
+		// sample, integration and collider loop below are skipped. The rest pose
+		// is still stored, so the tails stay valid and the strand resumes
+		// without a pop when it re-enters the view distance (it is fully
+		// dither-faded out before reaching the cull distance, so the transition
+		// between simulated and rest pose is never visible).
+		float3 tail_current;
+		float3 tail_next;
+		half3 to_tail;
+		if (distance_culled)
 		{
-			float3 tail = base + boneAxis * boneLength;
-			simulationBuffer[particleID].prevTail = tail;
-			simulationBuffer[particleID].currentTail = tail;
+			tail_current = base + boneAxis * boneLength;
+			tail_next = tail_current;
+			to_tail = boneAxis;
 		}
-		
-		float3 tail_current = simulationBuffer[particleID].currentTail;
-		float3 tail_prev = simulationBuffer[particleID].prevTail;
-		half3 inertia = (tail_current - tail_prev) * (1 - dragForce);
-		half3 stiffness = boneAxis * stiffnessForce;
-		half3 external = gravityPower * float3(0, -1, 0);
-		half3 wind = sample_wind(tail_current, ((float)segmentID + 1) / (float)xHairSegmentCount);
-		external += wind;
-		
-		float3 tail_next = tail_current + inertia + dt * (stiffness + external);
-		half3 to_tail = normalize(tail_next - base);
-		tail_next = base + to_tail * boneLength;
+		else
+		{
+			if (regenerate_frame)
+			{
+				float3 tail = base + boneAxis * boneLength;
+				simulationBuffer[particleID].prevTail = tail;
+				simulationBuffer[particleID].currentTail = tail;
+			}
+
+			tail_current = simulationBuffer[particleID].currentTail;
+			float3 tail_prev = simulationBuffer[particleID].prevTail;
+			half3 inertia = (tail_current - tail_prev) * (1 - dragForce);
+			half3 stiffness = boneAxis * stiffnessForce;
+			half3 external = gravityPower * float3(0, -1, 0);
+			half3 wind = sample_wind(tail_current, ((float)segmentID + 1) / (float)xHairSegmentCount);
+			external += wind;
+
+			tail_next = tail_current + inertia + dt * (stiffness + external);
+			to_tail = normalize(tail_next - base);
+			tail_next = base + to_tail * boneLength;
+		}
 
 		//draw_sphere(tail_next, len);
 
