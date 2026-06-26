@@ -198,13 +198,16 @@ namespace wi
 			assert(subresource_index == i);
 		}
 
-		tex_desc.format = Format::R32G32B32A32_FLOAT;
+		// Half-float displacement: the values are zero-mean wave offsets, so 16-bit
+		// float's ~0.05% relative precision is ample for both rendering and the CPU
+		// buoyancy readback, while halving the texture's bandwidth and memory.
+		tex_desc.format = Format::R16G16B16A16_FLOAT;
 		tex_desc.mip_levels = 1;
-		wi::vector<XMFLOAT4> displacementdata(tex_desc.width * tex_desc.height); // zero init the heightmap to be valid before first simulation
-		std::fill(displacementdata.begin(), displacementdata.end(), XMFLOAT4(0, 0, 0, 0));
+		wi::vector<XMHALF4> displacementdata(tex_desc.width * tex_desc.height); // zero init the heightmap to be valid before first simulation
+		std::fill(displacementdata.begin(), displacementdata.end(), XMHALF4(0.0f, 0.0f, 0.0f, 0.0f));
 		SubresourceData initdata;
 		initdata.data_ptr = displacementdata.data();
-		initdata.row_pitch = tex_desc.width * sizeof(XMFLOAT4);
+		initdata.row_pitch = tex_desc.width * sizeof(XMHALF4);
 		tex_desc.layout = ResourceState::COPY_SRC | ResourceState::SHADER_RESOURCE_COMPUTE;
 		device->CreateTexture(&tex_desc, &initdata, &displacementMap);
 		device->SetName(&displacementMap, "displacementMap");
@@ -246,10 +249,18 @@ namespace wi
 				const XMUINT2 pixel_tr = XMUINT2((uint32_t)std::ceil(fpixel.x), (uint32_t)std::floor(fpixel.y));
 				const XMUINT2 pixel_bl = XMUINT2((uint32_t)std::floor(fpixel.x), (uint32_t)std::ceil(fpixel.y));
 				const XMUINT2 pixel_br = XMUINT2((uint32_t)std::ceil(fpixel.x), (uint32_t)std::ceil(fpixel.y));
-				const XMFLOAT4& displacement_tl = ((const XMFLOAT4*)(bytedata + pixel_tl.y * tex.mapped_subresources[0].row_pitch))[pixel_tl.x];
-				const XMFLOAT4& displacement_tr = ((const XMFLOAT4*)(bytedata + pixel_tr.y * tex.mapped_subresources[0].row_pitch))[pixel_tr.x];
-				const XMFLOAT4& displacement_bl = ((const XMFLOAT4*)(bytedata + pixel_bl.y * tex.mapped_subresources[0].row_pitch))[pixel_bl.x];
-				const XMFLOAT4& displacement_br = ((const XMFLOAT4*)(bytedata + pixel_br.y * tex.mapped_subresources[0].row_pitch))[pixel_br.x];
+				// displacementMap is R16G16B16A16_FLOAT, so decode the half-float
+				// texels to full float before interpolating.
+				const auto load_displacement = [&](const XMUINT2& pixel) {
+					const XMHALF4& packed = ((const XMHALF4*)(bytedata + pixel.y * tex.mapped_subresources[0].row_pitch))[pixel.x];
+					XMFLOAT4 result;
+					XMStoreFloat4(&result, XMLoadHalf4(&packed));
+					return result;
+				};
+				const XMFLOAT4 displacement_tl = load_displacement(pixel_tl);
+				const XMFLOAT4 displacement_tr = load_displacement(pixel_tr);
+				const XMFLOAT4 displacement_bl = load_displacement(pixel_bl);
+				const XMFLOAT4 displacement_br = load_displacement(pixel_br);
 				const XMFLOAT4 xxxx = XMFLOAT4(displacement_bl.x, displacement_br.x, displacement_tr.x, displacement_tl.x);
 				const XMFLOAT4 yyyy = XMFLOAT4(displacement_bl.y, displacement_br.y, displacement_tr.y, displacement_tl.y);
 				const XMFLOAT4 zzzz = XMFLOAT4(displacement_bl.z, displacement_br.z, displacement_tr.z, displacement_tl.z);
