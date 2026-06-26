@@ -218,16 +218,20 @@ namespace wi
 			device->CreateTexture(&tex_desc, nullptr, &displacementMap_readback[i]);
 			device->SetName(&displacementMap_readback[i], "displacementMap_readback[i]");
 		}
-
-		GPUBufferDesc cb_desc;
-		cb_desc.usage = Usage::DEFAULT;
-		cb_desc.bind_flags = BindFlag::CONSTANT_BUFFER;
-		cb_desc.size = sizeof(OceanCB);
-		device->CreateBuffer(&cb_desc, nullptr, &constantBuffer);
 	}
+
+	// Keep the displacement map readback alive for this many frames after the last
+	// GetDisplacedPosition() query. Must comfortably exceed the GPU->CPU readback
+	// latency (GetBufferCount() frames) so that continuous but irregular queries
+	// don't repeatedly drop and re-warm the readback chain.
+	static constexpr uint32_t DISPLACEMENT_READBACK_KEEPALIVE_FRAMES = 8;
 
 	XMFLOAT3 Ocean::GetDisplacedPosition(const XMFLOAT3& worldPosition) const
 	{
+		// Signal that ocean height is being queried on the CPU, so the readback copy
+		// in CopyDisplacementMapReadback() stays enabled.
+		displacement_readback_request = DISPLACEMENT_READBACK_KEEPALIVE_FRAMES;
+
 		XMFLOAT3 ocean_pos = XMFLOAT3(worldPosition.x, params.waterHeight, worldPosition.z);
 		if (displacement_readback_valid[displacement_readback_index])
 		{
@@ -354,13 +358,9 @@ namespace wi
 		device->EventBegin("Ocean Simulation", cmd);
 
 		const uint2 dim = uint2(160 * params.surfaceDetail, 90 * params.surfaceDetail);
-		OceanCB cb = GetOceanCBAtDim(params, dim);
+		const OceanCB cb = GetOceanCBAtDim(params, dim);
 
-		device->Barrier(GPUBarrier::Buffer(&constantBuffer, ResourceState::CONSTANT_BUFFER, ResourceState::COPY_DST), cmd);
-		device->UpdateBuffer(&constantBuffer, &cb, cmd);
-		device->Barrier(GPUBarrier::Buffer(&constantBuffer, ResourceState::COPY_DST, ResourceState::CONSTANT_BUFFER), cmd);
-
-		device->BindConstantBuffer(&constantBuffer, CB_GETBINDSLOT(OceanCB), cmd);
+		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(OceanCB), cmd);
 
 		// ---------------------------- H(0) -> H(t), D(x, t), D(y, t) --------------------------------
 
@@ -388,7 +388,9 @@ namespace wi
 
 
 
-		device->BindConstantBuffer(&constantBuffer, CB_GETBINDSLOT(OceanCB), cmd);
+		// The FFT binds its own constant buffer to the same slot on some backends,
+		// so rebind the ocean constants before the displacement/gradient passes.
+		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(OceanCB), cmd);
 
 		GPUBarrier barriers[] = {
 			GPUBarrier::Image(&displacementMap, displacementMap.desc.layout, ResourceState::UNORDERED_ACCESS),
@@ -427,6 +429,14 @@ namespace wi
 
 	void Ocean::CopyDisplacementMapReadback(wi::graphics::CommandList cmd) const
 	{
+		// Skip the full-texture GPU->CPU copy unless ocean height was queried on the
+		// CPU recently (see GetDisplacedPosition). The readback is only needed for
+		// CPU-side queries like buoyancy, so when nothing reads it this saves a
+		// per-frame copy of the whole RGBA32F displacement map.
+		if (displacement_readback_request == 0)
+			return;
+		displacement_readback_request--;
+
 		GraphicsDevice* device = wi::graphics::GetDevice();
 		device->EventBegin("Ocean Readback Copy", cmd);
 		device->CopyResource(&displacementMap_readback[displacement_readback_index], &displacementMap, cmd);
@@ -661,7 +671,8 @@ namespace wi
 		}
 		locker.unlock();
 
-		device->BindConstantBuffer(&constantBuffer, CB_GETBINDSLOT(OceanCB), cmd);
+		const OceanCB cb = GetOceanCBAtDim(params, dim);
+		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(OceanCB), cmd);
 
 		device->BindResource(&displacementMap, 0, cmd);
 		device->BindResource(&gradientMap, 1, cmd);
