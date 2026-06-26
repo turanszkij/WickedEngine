@@ -265,20 +265,21 @@ jobs:
     - name: Build Editor (Mac OS)
       run: |
         xcodebuild clean build -project Editor/Editor.xcodeproj -scheme Editor -configuration Release
-
-    - name: Build Editor (iOS)
-      run: |
-        xcodebuild clean build -project Editor/Editor.xcodeproj -scheme Editor_iOS -configuration Release -sdk iphoneos CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
-
-    - name: Package Editor (Mac OS)
-      uses: actions/upload-artifact@v4
-      run: |
         BUILD_PATH="$(xcodebuild -project Editor/Editor.xcodeproj -scheme Editor -configuration Release -showBuildSettings | grep -m 1 "BUILT_PRODUCTS_DIR" | awk -F' = ' '{print $2}')"
         mv "${BUILD_PATH}/Editor" ./Editor_MacOS
         mv Editor/config.ini ./
         mv Editor/startup.lua ./
         mv Editor/languages ./
         mv Editor/fonts ./
+
+    - name: Build Editor (iOS)
+      run: |
+        xcodebuild clean build -project Editor/Editor.xcodeproj -scheme Editor_iOS -configuration Release -sdk iphoneos CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+        BUILD_PATH="$(xcodebuild -project Editor/Editor.xcodeproj -scheme Editor_iOS -configuration Release -sdk iphoneos -showBuildSettings | grep -m 1 "BUILT_PRODUCTS_DIR" | awk -F' = ' '{print $2}')"
+        mv "${BUILD_PATH}/Editor_iOS.app" ./Editor_iOS.app
+
+    - name: Package Editor (Mac OS)
+      uses: actions/upload-artifact@v4
       with:
         name: Editor (Mac OS)
         path: |
@@ -290,9 +291,6 @@ jobs:
 
     - name: Package Editor (iOS)
       uses: actions/upload-artifact@v4
-      run: |
-        BUILD_PATH="$(xcodebuild -project Editor/Editor.xcodeproj -scheme Editor_iOS -configuration Release -sdk iphoneos -showBuildSettings | grep -m 1 "BUILT_PRODUCTS_DIR" | awk -F' = ' '{print $2}')"
-        mv "${BUILD_PATH}/Editor_iOS.app" ./Editor_iOS.app
       with:
         name: Editor (iOS)
         path: |
