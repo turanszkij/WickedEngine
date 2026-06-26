@@ -5752,6 +5752,24 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 				mesh.BLAS_state = MeshComponent::BLAS_STATE_COMPLETE;
 			}
 
+			// Rebuild (rather than refit) the grass BLAS while the camera
+			// moves: fast movement sweeps many strands across the cull boundary
+			// each frame, faster than refits can absorb, which would otherwise
+			// degrade the structure until the next periodic rebuild. Rebuilding
+			// once the camera has moved past a threshold keeps the BVH fresh
+			// during motion (every few frames when moving fast) while staying
+			// cheap when the view is settled.
+			static XMFLOAT3 blas_last_rebuild_eye = XMFLOAT3(0, 0, 0);
+			constexpr float blas_rebuild_move_threshold = 1.0f;
+			const bool motion_rebuild =
+				wi::math::Distance(scene.camera.Eye, blas_last_rebuild_eye) >
+				blas_rebuild_move_threshold;
+
+			if (motion_rebuild)
+			{
+				blas_last_rebuild_eye = scene.camera.Eye;
+			}
+
 			for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
 			{
 				const wi::HairParticleSystem& hair = scene.hairs[i];
@@ -5766,7 +5784,7 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 					constexpr uint64_t blas_rebuild_interval = 60;
 					const bool periodic_rebuild =
 						((device->GetFrameCount() + i) % blas_rebuild_interval) == 0;
-					if (hair.must_rebuild_blas || periodic_rebuild)
+					if (hair.must_rebuild_blas || periodic_rebuild || motion_rebuild)
 					{
 						device->BuildRaytracingAccelerationStructure(&hair.BLAS, cmd, nullptr);
 						hair.must_rebuild_blas = false;
