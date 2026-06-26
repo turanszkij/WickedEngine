@@ -264,7 +264,16 @@ jobs:
 
     - name: Build Editor (Mac OS)
       run: |
+        rm -rf ./DerivedData_Mac
         xcodebuild clean build -project Editor/Editor.xcodeproj -scheme Editor -configuration Release
+
+    - name: Build Editor (iOS)
+      run: |
+        rm -rf ./DerivedData_iOS
+        xcodebuild clean build -project Editor/Editor.xcodeproj -scheme Editor_iOS -configuration Release -sdk iphoneos CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+        
+    - name: Move files
+      run: |
         BUILD_PATH="$(xcodebuild -project Editor/Editor.xcodeproj -scheme Editor -configuration Release -showBuildSettings | grep -m 1 "BUILT_PRODUCTS_DIR" | awk -F' = ' '{print $2}')"
         mv "${BUILD_PATH}/Editor" ./Editor_MacOS
         mv Editor/config.ini ./
@@ -272,9 +281,6 @@ jobs:
         mv Editor/languages ./
         mv Editor/fonts ./
 
-    - name: Build Editor (iOS)
-      run: |
-        xcodebuild clean build -project Editor/Editor.xcodeproj -scheme Editor_iOS -configuration Release -sdk iphoneos CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
         BUILD_PATH="$(xcodebuild -project Editor/Editor.xcodeproj -scheme Editor_iOS -configuration Release -sdk iphoneos -showBuildSettings | grep -m 1 "BUILT_PRODUCTS_DIR" | awk -F' = ' '{print $2}')"
         mv "${BUILD_PATH}/Editor_iOS.app" ./Editor_iOS.app
 
