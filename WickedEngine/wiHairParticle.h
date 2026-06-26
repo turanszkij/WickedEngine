@@ -117,6 +117,9 @@ namespace wi
 		wi::graphics::Format position_format = wi::graphics::Format::R16G16B16A16_UNORM;
 		mutable bool must_rebuild_blas = true;
 		mutable bool gpu_initialized = false;
+		// Cached bytes of the constant buffer last uploaded to the GPU, used to
+		// skip redundant per-frame uploads while the contents are unchanged.
+		mutable wi::vector<uint8_t> constantBufferData;
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 

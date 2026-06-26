@@ -12,6 +12,8 @@
 #include "wiEventHandler.h"
 #include "wiTimer.h"
 
+#include <cstring>
+
 using namespace wi::primitive;
 using namespace wi::graphics;
 using namespace wi::scene;
@@ -92,6 +94,7 @@ namespace wi
 	void HairParticleSystem::DeleteRenderData()
 	{
 		constantBuffer = {};
+		constantBufferData.clear(); // force a re-upload into the recreated buffer
 		generalBuffer = {};
 		generalBufferOffsetAllocation = {};
 		generalBufferOffsetAllocationAlias = {};
@@ -437,7 +440,8 @@ namespace wi
 			{
 				desc = material.textures[MaterialComponent::BASECOLORMAP].resource.GetTexture().GetDesc();
 			}
-			HairParticleCB hcb = {};
+			HairParticleCB hcb;
+			std::memset(&hcb, 0, sizeof(hcb)); // zero padding too, so memcmp below is reliable
 			hcb.xHairTransform.Create(hair.world);
 			if (!IsFormatUnorm(mesh.position_format) || mesh.so_pos.IsValid())
 			{
@@ -502,8 +506,19 @@ namespace wi
 				}
 			}
 			hcb.xHairUniformity = hair.uniformity;
-			device->UpdateBuffer(&hair.constantBuffer, &hcb, cmd);
-			wi::renderer::PushBarrier(GPUBarrier::Buffer(&hair.constantBuffer, ResourceState::COPY_DST, ResourceState::CONSTANT_BUFFER));
+
+			// Only upload the constant buffer when its contents changed since the
+			// last frame. For static grass this is almost never, which avoids a
+			// per-hair GPU copy and barrier every frame. The buffer is
+			// Usage::DEFAULT, so its previous contents persist when skipped.
+			if (hair.constantBufferData.size() != sizeof(hcb) ||
+				std::memcmp(hair.constantBufferData.data(), &hcb, sizeof(hcb)) != 0)
+			{
+				hair.constantBufferData.resize(sizeof(hcb));
+				std::memcpy(hair.constantBufferData.data(), &hcb, sizeof(hcb));
+				device->UpdateBuffer(&hair.constantBuffer, &hcb, cmd);
+				wi::renderer::PushBarrier(GPUBarrier::Buffer(&hair.constantBuffer, ResourceState::COPY_DST, ResourceState::CONSTANT_BUFFER));
+			}
 
 			IndirectDrawArgsIndexedInstanced args = {};
 			args.BaseVertexLocation = 0;
