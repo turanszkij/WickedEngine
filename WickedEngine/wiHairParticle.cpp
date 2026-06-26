@@ -461,6 +461,12 @@ namespace wi
 			{
 				hcb.xHairFlags |= HAIR_FLAG_CAMERA_BEND;
 			}
+			if (hair.BLAS.IsValid())
+			{
+				// Only write the raytracing position buffer when an acceleration
+				// structure exists to consume it (raytracing active for the scene).
+				hcb.xHairFlags |= HAIR_FLAG_RAYTRACED;
+			}
 			hcb.xHairAspect = hair.width * (float)std::max(1u, desc.width) / (float)std::max(1u, desc.height);
 			hcb.xHairLength = hair.length;
 			hcb.xHairStiffness = hair.stiffness;

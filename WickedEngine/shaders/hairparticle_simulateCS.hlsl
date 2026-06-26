@@ -156,12 +156,17 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		// Strand is beyond the view distance, so it is never rendered: no
 		// indices are appended for it and its render vertex buffers are never
 		// read. Only the raytracing positions must stay valid (zeroed here), so
-		// skip all the billboard/patch math and the render-buffer writes.
+		// skip all the billboard/patch math and the render-buffer writes. When
+		// no acceleration structure consumes them, even those writes are dead.
 		const uint root_vertexcount = 2 * xHairBillboardCount;
-		for (uint i = 0; i < root_vertexcount; ++i)
+		if (xHairFlags & HAIR_FLAG_RAYTRACED)
 		{
-			vertexBuffer_POS_RT[v0++] = float4(0, 0, 0, 0);
+			for (uint i = 0; i < root_vertexcount; ++i)
+			{
+				vertexBuffer_POS_RT[v0 + i] = float4(0, 0, 0, 0);
+			}
 		}
+		v0 += root_vertexcount;
 	}
 	else
 	{
@@ -206,7 +211,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 				vertexBuffer_POS[v0] = float4(position, 0);
 				vertexBuffer_NOR[v0] = half4(target, 0);
 				vertexBuffer_UVS[v0] = uv.xyxy; // a second uv set could be used here
-				vertexBuffer_POS_RT[v0] = float4(position, 0);
+				if (xHairFlags & HAIR_FLAG_RAYTRACED)
+				{
+					vertexBuffer_POS_RT[v0] = float4(position, 0);
+				}
 
 				v0++;
 			}
@@ -370,12 +378,17 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		if (distance_culled)
 		{
 			// See the root vertices above: the strand is not rendered, so only
-			// the zeroed raytracing positions are needed for these cap vertices.
+			// the zeroed raytracing positions are needed for these cap vertices,
+			// and only when an acceleration structure consumes them.
 			const uint cap_vertexcount = 2 * xHairBillboardCount;
-			for (uint i = 0; i < cap_vertexcount; ++i)
+			if (xHairFlags & HAIR_FLAG_RAYTRACED)
 			{
-				vertexBuffer_POS_RT[v0++] = float4(0, 0, 0, 0);
+				for (uint i = 0; i < cap_vertexcount; ++i)
+				{
+					vertexBuffer_POS_RT[v0 + i] = float4(0, 0, 0, 0);
+				}
 			}
+			v0 += cap_vertexcount;
 		}
 		else
 		{
@@ -421,7 +434,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 					vertexBuffer_POS[v0] = float4(position, 0);
 					vertexBuffer_NOR[v0] = half4(normal, 0);
 					vertexBuffer_UVS[v0] = uv.xyxy; // a second uv set could be used here
-					vertexBuffer_POS_RT[v0] = float4(position, 0);
+					if (xHairFlags & HAIR_FLAG_RAYTRACED)
+					{
+						vertexBuffer_POS_RT[v0] = float4(position, 0);
+					}
 
 					v0++;
 				}
