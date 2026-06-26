@@ -268,7 +268,7 @@ jobs:
 
     - name: Build Editor (iOS)
       run: |
-        xcodebuild clean build -project Editor/Editor.xcodeproj -scheme Editor_iOS -configuration Release -sdk iphoneos CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+        xcodebuild build -project Editor/Editor.xcodeproj -scheme Editor_iOS -configuration Release -sdk iphoneos CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
         
     - name: Move files
       run: |
