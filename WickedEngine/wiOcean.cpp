@@ -156,12 +156,11 @@ namespace wi
 		buf_desc.size = buf_desc.stride * input_full_size;
 		device->CreateBuffer(&buf_desc, h0_data.data(), &buffer_Float2_H0);
 
-		// Notice: The following 3 buffers should be half sized buffer because of conjugate symmetric input. But
-		// we use full sized buffers due to the CS4.0 restriction.
-
-		// Put H(t), Dx(t) and Dy(t) into one buffer because CS4.0 allows only 1 UAV at a time
+		// Two packed FFT fields instead of three: the two-for-one real FFT packs
+		// H(t) and Dx(t) into the real/imaginary parts of one complex field, and
+		// Dy(t) into a second. See oceanSimulatorCS / oceanUpdateDisplacementMapCS.
 		buf_desc.stride = sizeof(float2);
-		buf_desc.size = buf_desc.stride * 3 * input_half_size;
+		buf_desc.size = buf_desc.stride * 2 * input_half_size;
 		device->CreateBufferZeroed(&buf_desc, &buffer_Float2_Ht);
 
 		// omega
@@ -169,11 +168,11 @@ namespace wi
 		buf_desc.size = buf_desc.stride * input_full_size;
 		device->CreateBuffer(&buf_desc, omega_data.data(), &buffer_Float_Omega);
 
-		// Notice: The following 3 should be real number data. But here we use the complex numbers and C2C FFT
-		// due to the CS4.0 restriction.
-		// Put Dz, Dx and Dy into one buffer because CS4.0 allows only 1 UAV at a time
+		// Two packed output fields (see above): field 0 holds Dz (real) + Dx
+		// (imaginary), field 1 holds Dy. The C2C FFT output is complex, so the
+		// stride stays sizeof(float2).
 		buf_desc.stride = sizeof(float2);
-		buf_desc.size = buf_desc.stride * 3 * output_size;
+		buf_desc.size = buf_desc.stride * 2 * output_size;
 		device->CreateBufferZeroed(&buf_desc, &buffer_Float_Dxyz);
 
 		TextureDesc tex_desc;
@@ -322,14 +321,15 @@ namespace wi
 		uint32_t input_width = actual_dim + 4;
 		uint32_t output_width = actual_dim;
 		uint32_t output_height = actual_dim;
-		uint32_t dtx_offset = actual_dim * actual_dim;
-		uint32_t dty_offset = actual_dim * actual_dim * 2;
+		// Offset to the second packed FFT field. Must equal one FFT slice stride
+		// (actual_dim * actual_dim), which coincides with the hardcoded 512*512
+		// stride of fft_512x512_c2c only at actual_dim == 512.
+		uint32_t second_field_offset = actual_dim * actual_dim;
 		cb.xOceanActualDim = actual_dim;
 		cb.xOceanInWidth = input_width;
 		cb.xOceanOutWidth = output_width;
 		cb.xOceanOutHeight = output_height;
-		cb.xOceanDtxAddressOffset = dtx_offset;
-		cb.xOceanDtyAddressOffset = dty_offset;
+		cb.xOceanSecondFieldOffset = second_field_offset;
 
 		cb.xOceanTimeScale = params.time_scale;
 		cb.xOceanChoppyScale = params.choppy_scale;
