@@ -208,6 +208,7 @@ namespace wi::terrain
 		wi::vector<wi::ecs::Entity> spline_entities;
 		wi::vector<Chunk> removable_chunks; // chunks that were invalidated are regenerated on the generator thread. Before merging them with the scene, the previous version of them will need to be removed from the destination scene
 		std::deque<Chunk> priority_invalidation; // to not let invalidation stuck at same chunks every frame while editing splines, for more appealing visual feedback
+		wi::vector<Chunk> build_batch; // Reused each generation run (cleared, capacity kept) to avoid per-frame allocation
 	};
 
 	wi::jobsystem::context virtual_texture_ctx;
@@ -1471,16 +1472,14 @@ namespace wi::terrain
 			//  stay stable while the build jobs run; the batch is then placed
 			//  (grass/props) before moving on, so props stream in progressively
 			//  alongside the terrain.
-			//  Stack-allocated so the generator never heap-allocates the batch
-			//  each run. max_batch_capacity is a generous upper bound on the
-			//  worker count; the actual capacity is clamped to it (smaller
-			//  batches than cores are harmless).
-			constexpr uint32_t max_batch_capacity = 128;
-			StackVector<Chunk, max_batch_capacity> build_batch;
-			const uint32_t batch_capacity = std::min(
-				max_batch_capacity,
-				std::max(1u, wi::jobsystem::GetThreadCount(wi::jobsystem::Priority::Low))
+			//  generator->build_batch is reused across runs: clear() keeps its
+			//  capacity, so after the first run it never reallocates.
+			const uint32_t batch_capacity = std::max(
+				1u,
+				wi::jobsystem::GetThreadCount(wi::jobsystem::Priority::Low)
 			);
+			generator->build_batch.clear();
+			generator->build_batch.reserve(batch_capacity);
 
 			wi::jobsystem::context build_ctx;
 			build_ctx.priority = wi::jobsystem::Priority::Low;
@@ -1490,23 +1489,23 @@ namespace wi::terrain
 			// caller should stop).
 			auto flush_build_batch = [&]() -> bool
 			{
-				if (build_batch.empty())
+				if (generator->build_batch.empty())
 				{
 					return true;
 				}
 
-				for (const Chunk& chunk : build_batch)
+				for (const Chunk& chunk : generator->build_batch)
 				{
 					setup_chunk(chunk);
 				}
 
 				wi::jobsystem::Dispatch(
 					build_ctx,
-					uint32_t(build_batch.size()),
+					uint32_t(generator->build_batch.size()),
 					1,
 					[&](wi::jobsystem::JobArgs args)
 				{
-					build_chunk(build_batch[args.jobIndex]);
+					build_chunk(generator->build_batch[args.jobIndex]);
 				});
 
 				wi::jobsystem::Wait(build_ctx);
@@ -1515,12 +1514,12 @@ namespace wi::terrain
 				// Place grass/props on the chunks we just built, so props
 				// appear progressively alongside terrain instead of only once
 				// it is all generated:
-				for (const Chunk& chunk : build_batch)
+				for (const Chunk& chunk : generator->build_batch)
 				{
 					place_chunk(chunk);
 				}
 
-				build_batch.clear();
+				generator->build_batch.clear();
 
 				if (timer.elapsed_milliseconds() > generation_time_budget_milliseconds)
 				{
@@ -1548,9 +1547,9 @@ namespace wi::terrain
 					|| it->second.entity == INVALID_ENTITY
 					|| it->second.invalidated
 				) {
-					build_batch.push_back(chunk);
+					generator->build_batch.push_back(chunk);
 
-					if (build_batch.size() >= batch_capacity)
+					if (generator->build_batch.size() >= batch_capacity)
 					{
 						return flush_build_batch();
 					}
