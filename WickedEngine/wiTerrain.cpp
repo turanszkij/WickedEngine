@@ -208,6 +208,7 @@ namespace wi::terrain
 		wi::vector<wi::ecs::Entity> spline_entities;
 		wi::vector<Chunk> removable_chunks; // chunks that were invalidated are regenerated on the generator thread. Before merging them with the scene, the previous version of them will need to be removed from the destination scene
 		std::deque<Chunk> priority_invalidation; // to not let invalidation stuck at same chunks every frame while editing splines, for more appealing visual feedback
+		wi::vector<Chunk> build_batch; // Reused each generation run (cleared, capacity kept) to avoid per-frame allocation
 	};
 
 	wi::jobsystem::context virtual_texture_ctx;
@@ -1003,15 +1004,12 @@ namespace wi::terrain
 			wi::Timer timer;
 			bool generated_something = false;
 
-			auto request_chunk = [&](int offset_x, int offset_z)
+			// Allocate the chunk's entity + components in the generator scene and size its
+			// CPU buffers. This mutates the scene component managers, so it must run
+			// serially (before the build_chunk() jobs, which only read those components).
+			auto setup_chunk = [&](const Chunk& chunk)
 			{
-				Chunk chunk = center_chunk;
-				chunk.x += offset_x;
-				chunk.z += offset_z;
-				auto it = chunks.find(chunk);
-				if (it == chunks.end() || it->second.entity == INVALID_ENTITY || it->second.invalidated)
 				{
-					// Generate a new chunk:
 					ChunkData& chunk_data = chunks[chunk];
 
 					std::string chunk_name = "chunk_" + std::to_string(chunk.x) + "_" + std::to_string(chunk.z);
@@ -1082,6 +1080,27 @@ namespace wi::terrain
 
 					chunk_data.heightmap_data.resize(vertexCount);
 
+					// Mark clean now that it is being (re)generated, so a
+					// budget-limited placement pass can't leave a freshly built
+					// chunk flagged for rebuild:
+					chunk_data.invalidated = false;
+				}
+			};
+
+			// Build the mesh, textures, grass and physics shape for a chunk
+			// that setup_chunk() has already created. Heavy and
+			// parallelism-friendly: it only reads shared generation parameters
+			// and writes this chunk's own data, so many chunks can build
+			// concurrently. No scene component is created here, so the
+			// component managers stay stable while these jobs run.
+			auto build_chunk = [&](const Chunk& chunk)
+			{
+				{
+					ChunkData& chunk_data = chunks.find(chunk)->second;
+					ObjectComponent& object = *generator->scene.objects.GetComponent(chunk_data.entity);
+					TransformComponent& transform = *generator->scene.transforms.GetComponent(chunk_data.entity);
+					MeshComponent& mesh = *generator->scene.meshes.GetComponent(chunk_data.entity);
+
 					wi::HairParticleSystem grass = grass_properties;
 					grass.vertex_lengths.resize(vertexCount);
 					std::atomic<uint32_t> grass_valid_vertex_count{ 0 };
@@ -1144,7 +1163,6 @@ namespace wi::terrain
 					wi::jobsystem::Wait(ctx);
 
 					wi::jobsystem::Dispatch(ctx, vertexCount, chunk_width * 4, [&](wi::jobsystem::JobArgs args) {
-						ChunkData& chunk_data = chunks[chunk];
 						const uint32_t index = args.jobIndex;
 						const XMUINT2 coord = XMUINT2(index % chunk_width, index / chunk_width);
 						const float x = (float(coord.x) - chunk_half_width) * chunk_scale;
@@ -1231,38 +1249,69 @@ namespace wi::terrain
 						mesh.SetBVHEnabled(true);
 					});
 
-					// If there were any vertices in this chunk that could be valid for grass, store the grass particle system:
+					// If there were any vertices in this chunk that could be
+					// valid for grass, store the grass particle system: Run on
+					// the job pool concurrently with mesh.CreateRenderData()
+					// above: it only reads the finished mesh and writes
+					// chunk_data.grass, so it doesn't conflict with the other
+					// tail tasks.
 					if (grass_valid_vertex_count.load() > 0)
 					{
-						chunk_data.grass = std::move(grass); // the grass will be added to the scene later, only when the chunk is close to the camera (center chunk's neighbors)
-						chunk_data.grass.meshID = chunk_data.entity;
-						chunk_data.grass.strandCount = uint32_t(grass_valid_vertex_count.load() * 3 * chunk_scale * chunk_scale); // chunk_scale * chunk_scale : grass density increases with squared amount with chunk scale (x*z)
-						chunk_data.grass.CreateFromMesh(mesh);
+						wi::jobsystem::Execute(
+							ctx,
+							[&](wi::jobsystem::JobArgs args)
+						{
+							chunk_data.grass = std::move(grass); // the grass will be added to the scene later, only when the chunk is close to the camera (center chunk's neighbors)
+							chunk_data.grass.meshID = chunk_data.entity;
+							chunk_data.grass.strandCount = uint32_t(grass_valid_vertex_count.load() * 3 * chunk_scale * chunk_scale); // chunk_scale * chunk_scale : grass density increases with squared amount with chunk scale (x*z)
+							chunk_data.grass.CreateFromMesh(mesh);
+						});
 					}
-
-					// Create the textures for virtual texture update:
-					chunk_data.heightmap = {};
-					chunk_data.blendmap = {};
-					CreateChunkRegionTexture(chunk_data);
 
 					if (IsPhysicsEnabled())
 					{
-						// Precompute the physics shape here on separate thread, because computing shape for triangle mesh would be slow on main thread:
-						//	Note that this is mesh.precomputed_rigidbody_physics_shape and not a component in scene.rigidbodies, so this only contains the shape, not the simulated rigid bodies
-						RigidBodyPhysicsComponent& newrigidbody = mesh.precomputed_rigidbody_physics_shape;
-						newrigidbody.shape = RigidBodyPhysicsComponent::HEIGHTFIELD;
-						newrigidbody.mass = 0; // terrain chunks are static
-						newrigidbody.friction = 0.8f;
-						//newrigidbody.mesh_lod = 2;
-						wi::physics::CreateRigidBodyShape(newrigidbody, transform.scale_local, &mesh);
+						// Precompute the physics shape on the job pool, because
+						// computing shape for triangle mesh would be slow on
+						// main thread: Note that this is
+						// mesh.precomputed_rigidbody_physics_shape and not a
+						// component in scene.rigidbodies, so this only
+						// contains the shape, not the simulated rigid bodies.
+						// It only reads the mesh and writes its own shape, so
+						// it runs concurrently with the render data and grass
+						// tasks.
+						wi::jobsystem::Execute(
+							ctx,
+							[&](wi::jobsystem::JobArgs args)
+						{
+							RigidBodyPhysicsComponent& newrigidbody = mesh.precomputed_rigidbody_physics_shape;
+							newrigidbody.shape = RigidBodyPhysicsComponent::HEIGHTFIELD;
+							newrigidbody.mass = 0; // terrain chunks are static
+							newrigidbody.friction = 0.8f;
+							//newrigidbody.mesh_lod = 2;
+							wi::physics::CreateRigidBodyShape(newrigidbody, transform.scale_local, &mesh);
+						});
 					}
 
-					wi::jobsystem::Wait(ctx); // wait until mesh.CreateRenderData() async task finishes
+					// Create the textures for virtual texture update (runs on
+					// this worker, concurrently with the jobs above):
+					chunk_data.heightmap = {};
+					chunk_data.blendmap  = {};
+					CreateChunkRegionTexture(chunk_data);
 
-					generated_something = true;
+					// Wait until the async render data / grass / physics tasks
+					// finish.
+					wi::jobsystem::Wait(ctx);
 				}
+			};
 
+			// Place grass patches and props on a finished chunk and clear its
+			// invalidated flag. Mutates the generator scene (creates
+			// prop/grass entities), so it runs serially after the chunk's
+			// build_chunk() job has completed.
+			auto place_chunk = [&](const Chunk& chunk)
+			{
 				const int dist = std::max(std::abs(center_chunk.x - chunk.x), std::abs(center_chunk.z - chunk.z));
+				auto it = chunks.find(chunk);
 
 				// Grass patch placement:
 				if (dist <= grass_chunk_dist && IsGrassEnabled())
@@ -1415,62 +1464,192 @@ namespace wi::terrain
 					ChunkData& chunk_data = it->second;
 					chunk_data.invalidated = false;
 				}
+			};
 
+			// Generate chunks in batches so several build concurrently across
+			//  the job pool. setup_chunk() (which mutates the scene) runs
+			//  serially up front for the whole batch, so the component managers
+			//  stay stable while the build jobs run; the batch is then placed
+			//  (grass/props) before moving on, so props stream in progressively
+			//  alongside the terrain.
+			//  generator->build_batch is reused across runs: clear() keeps its
+			//  capacity, so after the first run it never reallocates.
+			const uint32_t batch_capacity = std::max(
+				1u,
+				wi::jobsystem::GetThreadCount(wi::jobsystem::Priority::Low)
+			);
+			generator->build_batch.clear();
+			generator->build_batch.reserve(batch_capacity);
+
+			wi::jobsystem::context build_ctx;
+			build_ctx.priority = wi::jobsystem::Priority::Low;
+
+			// Set up and build every chunk queued in the batch, then clear it.
+			// Returns false if the per-frame time budget was exceeded (the
+			// caller should stop).
+			auto flush_build_batch = [&]() -> bool
+			{
+				if (generator->build_batch.empty())
+				{
+					return true;
+				}
+
+				for (const Chunk& chunk : generator->build_batch)
+				{
+					setup_chunk(chunk);
+				}
+
+				wi::jobsystem::Dispatch(
+					build_ctx,
+					uint32_t(generator->build_batch.size()),
+					1,
+					[&](wi::jobsystem::JobArgs args)
+				{
+					build_chunk(generator->build_batch[args.jobIndex]);
+				});
+
+				wi::jobsystem::Wait(build_ctx);
+				generated_something = true;
+
+				// Place grass/props on the chunks we just built, so props
+				// appear progressively alongside terrain instead of only once
+				// it is all generated:
+				for (const Chunk& chunk : generator->build_batch)
+				{
+					place_chunk(chunk);
+				}
+
+				generator->build_batch.clear();
+
+				if (timer.elapsed_milliseconds() > generation_time_budget_milliseconds)
+				{
+					generator->cancelled.store(true);
+
+					return false;
+				}
+
+				return true;
+			};
+
+			// Visit one chunk position. If it still needs (re)generation, add
+			// it to the build batch (flushed, and then placed, when the batch
+			// is full). Otherwise it is already built, so place its
+			// grass/props now. Returns false if the per-frame time budget was
+			// exceeded (the caller should stop).
+			auto request_chunk = [&](int offset_x, int offset_z) -> bool
+			{
+				Chunk chunk = center_chunk;
+				chunk.x += offset_x;
+				chunk.z += offset_z;
+				auto it = chunks.find(chunk);
+
+				if (it == chunks.end()
+					|| it->second.entity == INVALID_ENTITY
+					|| it->second.invalidated
+				) {
+					generator->build_batch.push_back(chunk);
+
+					if (generator->build_batch.size() >= batch_capacity)
+					{
+						return flush_build_batch();
+					}
+
+					return true;
+				}
+
+				// Already generated: place grass/props now, within the time
+				// budget.
+				place_chunk(chunk);
 				if (generated_something && timer.elapsed_milliseconds() > generation_time_budget_milliseconds)
 				{
 					generator->cancelled.store(true);
+
+					return false;
 				}
 
+				return true;
 			};
 
-			// priority invalidation queue:
-			//	This doesn't necessarily finish every frame, that's why it's a queue, next frame will pick up earlier requests before newer ones
-			while (!generator->priority_invalidation.empty())
+			// Walk chunk positions (priority invalidations first, then center,
+			// then outward spiral) queueing generation. Stops early when the
+			// time budget is hit.
+			auto request_all_chunks = [&]()
 			{
-				Chunk chunk = generator->priority_invalidation.front();
-				generator->priority_invalidation.pop_front();
-				auto it = chunks.find(chunk);
-				if (it != chunks.end() && it->second.invalidated) // Check here too in this special case, because multiple of the same entries can easily exist on the queue. Already refreshes chunks will not be refreshed again
+				// priority invalidation queue:
+				//	This doesn't necessarily finish every frame, that's why it's a queue, next frame will pick up earlier requests before newer ones
+				while (!generator->priority_invalidation.empty())
 				{
-					request_chunk(chunk.x, chunk.z);
-					if (generator->cancelled.load()) return;
+					Chunk chunk = generator->priority_invalidation.front();
+					generator->priority_invalidation.pop_front();
+					auto it = chunks.find(chunk);
+					if (it != chunks.end() && it->second.invalidated) // Check here too in this special case, because multiple of the same entries can easily exist on the queue. Already refreshes chunks will not be refreshed again
+					{
+						if (!request_chunk(chunk.x, chunk.z))
+						{
+							return;
+						}
+					}
 				}
-			}
 
-			// generate center chunk first:
-			request_chunk(0, 0);
-			if (generator->cancelled.load()) return;
+				// generate center chunk first:
+				if (!request_chunk(0, 0))
+				{
+					return;
+				}
 
-			// then generate neighbor chunks in outward spiral:
-			for (int growth = 0; growth < generation; ++growth)
+				// then generate neighbor chunks in outward spiral:
+				for (int growth = 0; growth < generation; ++growth)
+				{
+					const int side = 2 * (growth + 1);
+					int x = -growth - 1;
+					int z = -growth - 1;
+					for (int i = 0; i < side; ++i)
+					{
+						if (!request_chunk(x, z))
+						{
+							return;
+						}
+
+						x++;
+					}
+					for (int i = 0; i < side; ++i)
+					{
+						if (!request_chunk(x, z))
+						{
+							return;
+						}
+
+						z++;
+					}
+					for (int i = 0; i < side; ++i)
+					{
+						if (!request_chunk(x, z))
+						{
+							return;
+						}
+
+						x--;
+					}
+					for (int i = 0; i < side; ++i)
+					{
+						if (!request_chunk(x, z))
+						{
+							return;
+						}
+
+						z--;
+					}
+				}
+			};
+
+			request_all_chunks();
+
+			// Build (and place) any chunks left in a partial batch, unless we
+			//  already stopped for the time budget — those are picked up on a
+			//  later frame:
+			if (!generator->cancelled.load())
 			{
-				const int side = 2 * (growth + 1);
-				int x = -growth - 1;
-				int z = -growth - 1;
-				for (int i = 0; i < side; ++i)
-				{
-					request_chunk(x, z);
-					if (generator->cancelled.load()) return;
-					x++;
-				}
-				for (int i = 0; i < side; ++i)
-				{
-					request_chunk(x, z);
-					if (generator->cancelled.load()) return;
-					z++;
-				}
-				for (int i = 0; i < side; ++i)
-				{
-					request_chunk(x, z);
-					if (generator->cancelled.load()) return;
-					x--;
-				}
-				for (int i = 0; i < side; ++i)
-				{
-					request_chunk(x, z);
-					if (generator->cancelled.load()) return;
-					z--;
-				}
+				flush_build_batch();
 			}
 
 			});
