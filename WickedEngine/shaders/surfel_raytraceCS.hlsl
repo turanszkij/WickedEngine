@@ -494,12 +494,14 @@ void main(uint3 DTid : SV_DispatchThreadID)
 						if (dotN > 0)
 						{
 							float dist = sqrt(dist2);
-							float contribution = 1;
 
-							contribution *= saturate(dotN);
-							contribution *= saturate(1 - dist / surfel.GetRadius());
-							contribution = smoothstep(0, 1, contribution);
-							
+							// Smooth radial falloff, matching surfel_coverageCS
+							// so the multi-bounce lookup weights surfels
+							// identically.
+							float falloff = saturate(1 - dist2 / sqr(surfel.GetRadius()));
+							falloff *= falloff;
+							float contribution = saturate(dotN) * falloff;
+
 							float2 moments = surfelMomentsTexturePrev.SampleLevel(sampler_linear_clamp, surfel_moment_uv(surfel_index, normal, L / dist), 0);
 							contribution *= surfel_moment_weight(moments, dist);
 

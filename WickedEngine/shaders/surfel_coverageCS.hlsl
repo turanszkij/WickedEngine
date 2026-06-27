@@ -113,11 +113,13 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 			if (dotN > 0)
 			{
 				float dist = sqrt(dist2);
-				float contribution = 1;
 
-				contribution *= saturate(dotN);
-				contribution *= saturate(1 - dist / surfel.GetRadius());
-				contribution = smoothstep(0, 1, contribution);
+				// Smooth radial falloff: (1 - d^2/r^2)^2 reaches zero with zero
+				// slope at the surfel edge, so surfels fade in/out gently as
+				// the camera moves instead of popping at a hard boundary.
+				float falloff = saturate(1 - dist2 / sqr(surfel.GetRadius()));
+				falloff *= falloff;
+				float contribution = saturate(dotN) * falloff;
 				coverage += contribution;
 				
 				float2 moments = surfelMomentsTexture.SampleLevel(sampler_linear_clamp, surfel_moment_uv(surfel_index, normal, L / dist), 0);
@@ -227,6 +229,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 
 	GroupMemoryBarrierWithGroupSync();
 
+	// Write the GI result up front, before the spawn logic. The spawn block
+	// below returns early on the elected candidate pixels; if the writes lived
+	// after it, those pixels would keep their cleared (zero) value, and since
+	// the candidate is re-chosen randomly every frame a different pixel would
+	// flash to black each frame, producing visible flicker.
+	write_result(DTid.xy, color);
+	write_debug(DTid.xy, debug);
+
 	if (cell.count < SURFEL_CELL_LIMIT)
 	{
 		uint surfel_coverage = GroupMinSurfelCount[subtile];
@@ -272,7 +282,4 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 			}
 		}
 	}
-
-	write_result(DTid.xy, color);
-	write_debug(DTid.xy, debug);
 }
