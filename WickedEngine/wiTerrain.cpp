@@ -1471,12 +1471,16 @@ namespace wi::terrain
 			//  stay stable while the build jobs run; the batch is then placed
 			//  (grass/props) before moving on, so props stream in progressively
 			//  alongside the terrain.
-			wi::vector<Chunk> build_batch;
-			const uint32_t batch_capacity = std::max(
-				1u,
-				wi::jobsystem::GetThreadCount(wi::jobsystem::Priority::Low)
+			//  Stack-allocated so the generator never heap-allocates the batch
+			//  each run. max_batch_capacity is a generous upper bound on the
+			//  worker count; the actual capacity is clamped to it (smaller
+			//  batches than cores are harmless).
+			constexpr uint32_t max_batch_capacity = 128;
+			StackVector<Chunk, max_batch_capacity> build_batch;
+			const uint32_t batch_capacity = std::min(
+				max_batch_capacity,
+				std::max(1u, wi::jobsystem::GetThreadCount(wi::jobsystem::Priority::Low))
 			);
-			build_batch.reserve(batch_capacity);
 
 			wi::jobsystem::context build_ctx;
 			build_ctx.priority = wi::jobsystem::Priority::Low;
