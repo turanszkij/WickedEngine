@@ -111,13 +111,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	if (GTid.x < SURFEL_MOMENT_RESOLUTION && GTid.y < SURFEL_MOMENT_RESOLUTION)
 	{
 		uint2 moments_pixel = moments_topleft + GTid.xy;
-		if (life > 0)
-		{
-			const float2 prev_moment = surfelMomentsTexture[moments_pixel];
-			result_depth = lerp(prev_moment, result_depth, 0.02);
-		}
-	
-		surfelMomentsTexture[moments_pixel] = result_depth;
 
 		const uint idx = flatten2D(GTid.xy, SURFEL_MOMENT_RESOLUTION);
 		const uint variance_data_index = surfel_index * SURFEL_MOMENT_RESOLUTION * SURFEL_MOMENT_RESOLUTION + idx;
@@ -129,8 +122,31 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 			varianceData.shortMean = result;
 			varianceData.inconsistency = 1;
 		}
-		MultiscaleMeanEstimator(result, varianceData, 0.1);
-		surfelVarianceBuffer[variance_data_index].store(varianceData);
+
+		// Only fold a new sample into the estimator when this texel actually
+		// received rays this frame. Under ray-budget pressure a surfel can get
+		// few or no rays; feeding the resulting zero into the estimator would
+		// drag its mean toward black, and because the starved set rotates frame
+		// to frame that shows up as flicker. When unsampled we keep the
+		// previous estimate. A freshly recycled surfel (life == 0) still writes
+		// once to reset any stale data left at its reused index.
+		if (total_weight > WEIGHT_EPSILON || life == 0)
+		{
+			MultiscaleMeanEstimator(result, varianceData, 0.1);
+			surfelVarianceBuffer[variance_data_index].store(varianceData);
+		}
+
+		// Likewise only update the depth moments when this texel was sampled.
+		if (total_depth_weight > WEIGHT_EPSILON || life == 0)
+		{
+			if (life > 0)
+			{
+				const float2 prev_moment = surfelMomentsTexture[moments_pixel];
+				result_depth = lerp(prev_moment, result_depth, 0.02);
+			}
+			surfelMomentsTexture[moments_pixel] = result_depth;
+		}
+
 		result = varianceData.mean;
 		inconsistency = varianceData.inconsistency;
 
