@@ -14,7 +14,7 @@ static const float SURFEL_RECYCLE_DISTANCE = 0; // if surfel is behind camera an
 static const uint SURFEL_RECYCLE_TIME = 60; // if surfel is preparing for recycling, this is how many frames it takes to recycle it.
 static const uint SURFEL_INDIRECT_NUMTHREADS = 32;
 static const float SURFEL_TARGET_COVERAGE = 0.8f; // how many surfels should affect a pixel fully, higher values will increase quality and cost
-static const uint SURFEL_CELL_LIMIT = ~0; // limit the amount of allocated surfels in a cell
+static const uint SURFEL_CELL_LIMIT = 32; // limit the amount of allocated surfels in a cell (bounds density and avoids clumping)
 static const uint SURFEL_RAY_BUDGET = 500000; // max number of rays per frame
 static const uint SURFEL_RAY_BOOST_MAX = 64; // max amount of rays per surfel
 #define SURFEL_GRID_CULLING // if defined, surfels will not be added to grid cells that they do not intersect
@@ -70,11 +70,11 @@ struct SurfelData
 
 	uint GetLife() { return properties & 0xFF; }
 	uint GetRecycle() { return (properties >> 8u) & 0xFF; }
-	bool IsBackfaceNormal() { return (properties >> 9u) & 0x1; }
+	bool IsBackfaceNormal() { return (properties >> 16u) & 0x1; }
 
 	void SetLife(uint value) { properties |= value & 0xFF; }
 	void SetRecycle(uint value) { properties |= (value & 0xFF) << 8u; }
-	void SetBackfaceNormal(bool value) { if (value) properties |= 1u << 9u; else properties &= ~(1u << 9u); }
+	void SetBackfaceNormal(bool value) { if (value) properties |= 1u << 16u; else properties &= ~(1u << 16u); }
 };
 struct SurfelVarianceData
 {

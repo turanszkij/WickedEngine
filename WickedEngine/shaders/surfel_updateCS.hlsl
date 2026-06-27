@@ -59,9 +59,14 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		radius = 0;
 	}
 
-	bool shortage = true;
-	shortage = surfelStatsBuffer[0].shortage > 0;
-	if (surfel_data.GetRecycle() > SURFEL_RECYCLE_TIME && shortage)
+	// Recycle surfels that have been outside the view for long enough,
+	// regardless of whether the surfel pool is under pressure. Previously
+	// recycling was gated on "shortage" (the pool being exhausted), so with a
+	// large capacity off-screen surfels effectively never died. Under shortage
+	// we additionally shorten the window to free up capacity faster.
+	const bool shortage = surfelStatsBuffer[0].shortage > 0;
+	const uint recycle_time = shortage ? (SURFEL_RECYCLE_TIME / 4) : SURFEL_RECYCLE_TIME;
+	if (surfel_data.GetRecycle() > recycle_time)
 	{
 		radius = 0;
 	}
