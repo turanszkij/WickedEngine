@@ -20,6 +20,7 @@ static const uint SURFEL_CELL_LIMIT = 32; // limit the amount of allocated surfe
 static const uint SURFEL_SPAWN_BUDGET = 8192; // max number of new surfels spawned per frame (bounds placement cost)
 static const uint SURFEL_RAY_BUDGET = 500000; // max number of rays per frame
 static const uint SURFEL_RAY_BOOST_MAX = 64; // max amount of rays per surfel
+static const float SURFEL_RAY_GUIDE_FRACTION = 0.5f; // max fraction of bounce rays steered toward the surfel's brightest cached direction (scaled by how directional it is)
 #define SURFEL_GRID_CULLING // if defined, surfels will not be added to grid cells that they do not intersect
 #define SURFEL_USE_HASHING // if defined, hashing will be used to retrieve surfels, hashing is good because it supports infinite world trivially, but slower due to hash collisions
 #define SURFEL_ENABLE_INFINITE_BOUNCES // if defined, previous frame's surfel data will be sampled at ray tracing hit points

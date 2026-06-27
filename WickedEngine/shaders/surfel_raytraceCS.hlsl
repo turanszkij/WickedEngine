@@ -214,11 +214,35 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #endif
 
 	{
+		// Ray guiding: bias the indirect bounce toward where this surfel
+		// already sees bright incoming light (the dominant direction of its
+		// cached L1 SH radiance). The integrate pass reconstructs each
+		// direction bin as a weighted average of nearby rays, so steering the
+		// ray distribution needs no PDF reweighting. A cosine fallback keeps
+		// exploration (so dark bins stay sampled and unbiased) and guarantees
+		// the ray stays in the surface hemisphere. Guiding strength scales with
+		// how directional the cached radiance is, so flat/unconverged surfels
+		// fall back to pure cosine.
+		float3 bounce_dir = normalize(sample_hemisphere_cos(N, rng));
+		{
+			SH::L1_RGB sh = surfel.radiance.Unpack();
+			const float3 luma = float3(0.299, 0.587, 0.114);
+			const float3 dom = float3(dot(sh.C[3], luma), dot(sh.C[1], luma), dot(sh.C[2], luma));
+			const float dc = max(dot(sh.C[0], luma), 1e-4);
+			const float strength = saturate(length(dom) / dc);
+			if (strength > 0.05 && rng.next_float() < SURFEL_RAY_GUIDE_FRACTION * strength)
+			{
+				const float3 guided = normalize(sample_hemisphere_cos(normalize(dom), rng));
+				if (dot(guided, N) > 0)
+					bounce_dir = guided;
+			}
+		}
+
 		RayDesc ray;
 		ray.Origin = surfel.position;
 		ray.TMin = 0.0001;
 		ray.TMax = FLT_MAX;
-		ray.Direction = normalize(sample_hemisphere_cos(N, rng));
+		ray.Direction = bounce_dir;
 
 		rayData.direction = ray.Direction;
 
