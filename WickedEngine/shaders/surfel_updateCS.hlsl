@@ -64,14 +64,18 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		radius = 0;
 	}
 
-	// Recycle surfels that have been outside the view for long enough,
-	// regardless of whether the surfel pool is under pressure. Previously
-	// recycling was gated on "shortage" (the pool being exhausted), so with a
-	// large capacity off-screen surfels effectively never died. Under shortage
-	// we additionally shorten the window to free up capacity faster.
+	// Recycle off-screen surfels only when the pool is under pressure
+	// (shortage), and only after they have been unseen long enough (recycle
+	// counter advanced in surfel_integrateCS). While there is spare capacity,
+	// surfels persist in the world hash grid so they keep providing GI when the
+	// camera looks back - moving or rotating then reveals existing surfels
+	// instead of re-spawning into voids. Under shortage this evicts the
+	// longest-unseen surfels first (LRU). (This requires the recycle counter to
+	// actually work, which the backface-bit fix restored; the previous
+	// unconditional recycling killed surfels ~1s after they left view, causing
+	// re-spawn voids on camera motion.)
 	const bool shortage = surfelStatsBuffer[0].shortage > 0;
-	const uint recycle_time = shortage ? (SURFEL_RECYCLE_TIME / 4) : SURFEL_RECYCLE_TIME;
-	if (surfel_data.GetRecycle() > recycle_time)
+	if (shortage && surfel_data.GetRecycle() > SURFEL_RECYCLE_TIME)
 	{
 		radius = 0;
 	}
