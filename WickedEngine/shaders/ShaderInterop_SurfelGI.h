@@ -10,6 +10,8 @@ static const uint SURFEL_MOMENT_ATLAS_TEXELS = SQRT_SURFEL_CAPACITY * SURFEL_MOM
 static const uint3 SURFEL_GRID_DIMENSIONS = uint3(128, 64, 128);
 static const uint SURFEL_TABLE_SIZE = SURFEL_GRID_DIMENSIONS.x * SURFEL_GRID_DIMENSIONS.y * SURFEL_GRID_DIMENSIONS.z;
 static const float SURFEL_MAX_RADIUS = 2;
+static const float SURFEL_MIN_RADIUS = 0.5; // smallest surfel radius (near camera); keep cells coverable within SURFEL_CELL_LIMIT
+static const float SURFEL_RADIUS_PIXELS = 32; // target screen-space radius in pixels that drives distance-based sizing
 static const float SURFEL_RECYCLE_DISTANCE = 0; // if surfel is behind camera and farther than this distance, it starts preparing for recycling
 static const uint SURFEL_RECYCLE_TIME = 60; // if surfel is preparing for recycling, this is how many frames it takes to recycle it.
 static const uint SURFEL_INDIRECT_NUMTHREADS = 32;
@@ -52,9 +54,12 @@ struct alignas(16) Surfel
 	SH::L1_RGB::Packed radiance;
 	uint2 normal;
 	float3 position;
-	uint padding1;
+	uint radius_packed; // 16-bit half: per-surfel world radius (distance scaled)
 
-	inline float GetRadius() { return SURFEL_MAX_RADIUS; }
+#ifndef __cplusplus
+	inline float GetRadius() { return f16tof32(radius_packed); }
+	inline void SetRadius(float value) { radius_packed = f32tof16(value); }
+#endif // __cplusplus
 };
 // This per-surfel structure will store all additional persistent data per surfel that isn't needed at GI lookup
 struct SurfelData
@@ -175,6 +180,23 @@ inline int3 surfel_cell(float3 position)
 #else
 	return floor((position - floor(GetCamera().position)) / SURFEL_MAX_RADIUS) + SURFEL_GRID_DIMENSIONS / 2;
 #endif // SURFEL_USE_HASHING
+}
+// Distance-scaled surfel radius: keeps a roughly constant screen-space
+// footprint so distant surfels are larger (fewer, smoother) and near ones
+// smaller (more detail). projection[1][1] = 1/tan(fovY/2), so
+// 2*dist/(projection[1][1]*height) is the world size of one screen pixel at
+// this distance. Capped to SURFEL_MAX_RADIUS so a surfel never exceeds a grid
+// cell (which would break the single-level hash grid).
+inline float surfel_radius(float3 position)
+{
+	float dist = distance(position, GetCamera().position);
+	float world_per_pixel =
+		2.0 * dist /
+		(GetCamera().projection[1][1] * (float)GetCamera().internal_resolution.y);
+	return clamp(
+		SURFEL_RADIUS_PIXELS * world_per_pixel,
+		SURFEL_MIN_RADIUS,
+		SURFEL_MAX_RADIUS);
 }
 float3 surfel_griduv(float3 position)
 {

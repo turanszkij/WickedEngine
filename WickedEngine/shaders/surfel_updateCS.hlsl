@@ -42,6 +42,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		surfel.normal = pack_half3(surface.facenormal);
 		surfel.position = surface.P;
 
+		// Recompute the distance-scaled radius each frame so the surfel keeps a
+		// stable screen-space size as the camera moves. Set before grid
+		// insertion since surfel_cellintersects() reads GetRadius().
+		surfel.SetRadius(surfel_radius(surfel.position));
+
 		int3 center_cell = surfel_cell(surfel.position);
 		for (uint i = 0; i < 27; ++i)
 		{
