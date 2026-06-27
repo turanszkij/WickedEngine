@@ -34,9 +34,11 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	const uint2 GTid = remap_lane_8x8(groupIndex);
 	const uint2 tileID = unpack_pixel(tile.visibility_tile_id);
 	const uint2 pixel = tileID * VISIBILITY_BLOCKSIZE + GTid;
-	const uint entity_flat_tile_index = flatten2D(tileID / VISIBILITY_TILED_CULLING_GRANULARITY, GetCamera().entity_culling_tilecount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
 
-	const float2 uv = ((float2)pixel + 0.5) * GetCamera().internal_resolution_rcp;
+	ShaderCamera camera = GetCamera();
+	const uint entity_flat_tile_index = flatten2D(tileID / VISIBILITY_TILED_CULLING_GRANULARITY, camera.entity_culling_tilecount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
+
+	const float2 uv = ((float2)pixel + 0.5) * camera.internal_resolution_rcp;
 	RayDesc ray = CreateCameraRay(pixel);
 	float3 rayDirection_quad_x = QuadReadAcrossX(ray.Direction);
 	float3 rayDirection_quad_y = QuadReadAcrossY(ray.Direction);
@@ -94,8 +96,8 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	uint4 payload_0;
 	payload_0.x = pack_rgba(float4(ApplySRGBCurve_Fast(surface.albedo), surface.occlusion));
 	payload_0.y = pack_rgba(float4(ApplySRGBCurve_Fast(surface.f0), surface.roughness));
-	payload_0.z = pack_half2(encode_oct(surface.N));
-	payload_0.w = Pack_R11G11B10_FLOAT(surface.emissiveColor);
+	payload_0.z = Pack_R11G11B10_FLOAT(surface.emissiveColor);
+	payload_0.w = surface.geometry.materialIndex;
 	output_payload_0[pixel] = payload_0;
 
 

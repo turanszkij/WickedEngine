@@ -507,6 +507,7 @@ struct VisibilityTile
 {
 	uint64_t execution_mask_or_primitiveID; // divergent tiles: execution mask | uniform tiles: primitiveID
 	uint visibility_tile_id;
+	uint materialIndex; // only valid for uniform primitiveID path
 
 	inline bool check_thread_valid(uint groupIndex)
 	{
