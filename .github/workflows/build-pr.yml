@@ -251,20 +251,13 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Xcode Clean
-      run: |
-        rm -rf ~/Library/Developer/Xcode/DerivedData
-        rm -rf ~/Library/Caches/com.apple.dt.Xcode
-        rm -rf /Users/runner/Library/Developer/Xcode/DerivedData
-        xcodebuild -allTargets clean || true
-
     - name: Compile Offlineshadercompiler
       run: |
-        xcodebuild clean build -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -configuration Release
+        xcodebuild clean build -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler
 
     - name: Generate shader dump
       run: |
-        BUILD_PATH="$(xcodebuild -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -configuration Release -showBuildSettings | grep -m 1 "BUILT_PRODUCTS_DIR" | awk -F' = ' '{print $2}')"
+        BUILD_PATH="$(xcodebuild -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -showBuildSettings | grep -m 1 "BUILT_PRODUCTS_DIR" | awk -F' = ' '{print $2}')"
         cd WickedEngine
         "${BUILD_PATH}/offlineshadercompiler" metal rebuild shaderdump
         cd ..
@@ -297,21 +290,14 @@ jobs:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v4
-    
-    - name: Xcode Clean
-      run: |
-        rm -rf ~/Library/Developer/Xcode/DerivedData
-        rm -rf ~/Library/Caches/com.apple.dt.Xcode
-        rm -rf /Users/runner/Library/Developer/Xcode/DerivedData
-        xcodebuild -allTargets clean || true
 
     - name: Compile Offlineshadercompiler
       run: |
-        xcodebuild clean build -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -configuration Release
+        xcodebuild clean build -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler
 
     - name: Generate shader dump
       run: |
-        BUILD_PATH="$(xcodebuild -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -configuration Release -showBuildSettings | grep -m 1 "BUILT_PRODUCTS_DIR" | awk -F' = ' '{print $2}')"
+        BUILD_PATH="$(xcodebuild -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -showBuildSettings | grep -m 1 "BUILT_PRODUCTS_DIR" | awk -F' = ' '{print $2}')"
         cd WickedEngine
         "${BUILD_PATH}/offlineshadercompiler" metal rebuild shaderdump
         cd ..
