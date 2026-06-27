@@ -15,6 +15,7 @@ static const uint SURFEL_RECYCLE_TIME = 60; // if surfel is preparing for recycl
 static const uint SURFEL_INDIRECT_NUMTHREADS = 32;
 static const float SURFEL_TARGET_COVERAGE = 0.8f; // how many surfels should affect a pixel fully, higher values will increase quality and cost
 static const uint SURFEL_CELL_LIMIT = 32; // limit the amount of allocated surfels in a cell (bounds density and avoids clumping)
+static const uint SURFEL_SPAWN_BUDGET = 8192; // max number of new surfels spawned per frame (bounds placement cost)
 static const uint SURFEL_RAY_BUDGET = 500000; // max number of rays per frame
 static const uint SURFEL_RAY_BOOST_MAX = 64; // max amount of rays per surfel
 #define SURFEL_GRID_CULLING // if defined, surfels will not be added to grid cells that they do not intersect
@@ -29,6 +30,7 @@ struct SurfelStats
 	uint cellAllocator;
 	uint rayCount;
 	int shortage;
+	uint spawnCount; // number of surfels spawned this frame (reset each frame)
 };
 
 struct SurfelIndirectArgs

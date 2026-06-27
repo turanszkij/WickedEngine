@@ -30,16 +30,28 @@ void write_debug(uint2 DTid, float4 debug)
 	debugUAV[DTid * 2 + uint2(1, 1)] = debug;
 }
 
-groupshared uint GroupMinSurfelCount;
+// The 16x16 thread group is split into sub-tiles; each sub-tile independently
+// elects one spawn candidate per frame, so a group can place several surfels
+// where coverage is low instead of just one. This makes surfaces populate much
+// faster while still spreading spawns out spatially.
+static const uint COVERAGE_GROUP_SIZE = 16;
+static const uint COVERAGE_SUBTILE_SIZE = 8; // group_size / subtile_size per axis = spawns per group axis
+static const uint COVERAGE_SUBTILES_1D = COVERAGE_GROUP_SIZE / COVERAGE_SUBTILE_SIZE;
+static const uint COVERAGE_SUBTILE_COUNT = COVERAGE_SUBTILES_1D * COVERAGE_SUBTILES_1D;
+groupshared uint GroupMinSurfelCount[COVERAGE_SUBTILE_COUNT];
 
 [numthreads(16, 16, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 {
-	if (groupIndex == 0)
+	if (groupIndex < COVERAGE_SUBTILE_COUNT)
 	{
-		GroupMinSurfelCount = ~0;
+		GroupMinSurfelCount[groupIndex] = ~0;
 	}
 	GroupMemoryBarrierWithGroupSync();
+
+	const uint subtile =
+		(GTid.y / COVERAGE_SUBTILE_SIZE) * COVERAGE_SUBTILES_1D +
+		(GTid.x / COVERAGE_SUBTILE_SIZE);
 	
 	uint2 pixel = DTid.xy * 2;
 
@@ -150,7 +162,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		surfel_count_at_pixel |= (uint(rng.next_float() * 65535) & 0xFFFF) << 8; // shuffle pixels randomly
 		surfel_count_at_pixel |= (GTid.x & 0xF) << 4;
 		surfel_count_at_pixel |= (GTid.y & 0xF) << 0;
-		InterlockedMin(GroupMinSurfelCount, surfel_count_at_pixel);
+		InterlockedMin(GroupMinSurfelCount[subtile], surfel_count_at_pixel);
 	}
 
 	if (color.a > 0)
@@ -217,22 +229,23 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 
 	if (cell.count < SURFEL_CELL_LIMIT)
 	{
-		uint surfel_coverage = GroupMinSurfelCount;
+		uint surfel_coverage = GroupMinSurfelCount[subtile];
 		uint2 minGTid;
 		minGTid.x = (surfel_coverage >> 4) & 0xF;
 		minGTid.y = (surfel_coverage >> 0) & 0xF;
-		uint coverage_amount = surfel_coverage >> 24;
 		if (GTid.x == minGTid.x && GTid.y == minGTid.y && coverage < SURFEL_TARGET_COVERAGE)
 		{
-			// Slow down the propagation by chance
-			//	Closer surfaces have less chance to avoid excessive clumping of surfels
-			const float lineardepth = compute_lineardepth(depth) * GetCamera().z_far_rcp;
-			const float chance = pow(1 - lineardepth, 8);
+			// Spawn probability grows with the coverage deficit: empty areas fill
+			// quickly while areas near the target slow down to converge. Per-cell
+			// density is bounded by SURFEL_CELL_LIMIT.
+			const float deficit = saturate((SURFEL_TARGET_COVERAGE - coverage) / SURFEL_TARGET_COVERAGE);
+			if (rng.next_float() > deficit)
+				return;
 
-			//if (blue_noise(Gid.xy).x < chance)
-			//	return;
-
-			if (rng.next_float() < chance)
+			// Respect the per-frame spawn budget to bound placement cost:
+			uint spawn_index;
+			InterlockedAdd(surfelStatsBuffer[0].spawnCount, 1, spawn_index);
+			if (spawn_index >= SURFEL_SPAWN_BUDGET)
 				return;
 
 			// new particle index retrieved from dead list (pop):
