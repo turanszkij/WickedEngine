@@ -196,17 +196,24 @@ float4 main(PSIn input) : SV_TARGET
 		float foam_shore = saturate(exp(-water_depth_diff * 2));
 		float foam_wave = pow(saturate(gradient.a), 4) * saturate(exp(-water_depth * 0.1));
 		float foam_combined = saturate(foam_shore + foam_wave);
-		float foam_simplex = 0;
-		foam_simplex += smoothstep(0, 0.8, noise_simplex_2D(surface.P.xz * 1 + GetTime()));
-		foam_simplex += smoothstep(0, 0.8, noise_simplex_2D(surface.P.xz * 2 + GetTime()));
-		foam_simplex += smoothstep(0, 0.8, noise_simplex_2D(surface.P.zx * 4 - GetTime() * 2));
-		float foam_voronoi = 0;
-		foam_voronoi += smoothstep(0.5, 0.8, noise_voronoi(surface.P.xz * 1, GetTime()).x);
-		foam_voronoi += smoothstep(0.5, 0.8, noise_voronoi(surface.P.xz * 2, GetTime()).x);
-		foam_voronoi += smoothstep(0.5, 0.8, noise_voronoi(surface.P.xz * 4, GetTime()).x);
-		float foam = 0;
-		foam += foam_voronoi * foam_simplex * foam_combined;
-		foam += smoothstep(0.5, 0.6, saturate(foam_combined + 0.1));
+		float foam = smoothstep(0.5, 0.6, saturate(foam_combined + 0.1));
+		// The procedural noise below is multiplied by foam_combined, so it only
+		// contributes where there is actually foam (shorelines and wave crests).
+		// Skip the 6 noise evaluations for the open-water majority where
+		// foam_combined is ~0; the branch is spatially coherent so warps converge.
+		[branch]
+		if (foam_combined > 0.002)
+		{
+			float foam_simplex = 0;
+			foam_simplex += smoothstep(0, 0.8, noise_simplex_2D(surface.P.xz * 1 + GetTime()));
+			foam_simplex += smoothstep(0, 0.8, noise_simplex_2D(surface.P.xz * 2 + GetTime()));
+			foam_simplex += smoothstep(0, 0.8, noise_simplex_2D(surface.P.zx * 4 - GetTime() * 2));
+			float foam_voronoi = 0;
+			foam_voronoi += smoothstep(0.5, 0.8, noise_voronoi(surface.P.xz * 1, GetTime()).x);
+			foam_voronoi += smoothstep(0.5, 0.8, noise_voronoi(surface.P.xz * 2, GetTime()).x);
+			foam_voronoi += smoothstep(0.5, 0.8, noise_voronoi(surface.P.xz * 4, GetTime()).x);
+			foam += foam_voronoi * foam_simplex * foam_combined;
+		}
 		foam *= 2;
 		foam = saturate(foam);
 		surface.albedo = lerp(surface.albedo, 0.6, foam);

@@ -21,8 +21,10 @@ CBUFFER(OceanCB, CBSLOT_OTHER_OCEAN)
 	uint xOceanOutWidth;
 
 	uint xOceanOutHeight;
-	uint xOceanDtxAddressOffset;
-	uint xOceanDtyAddressOffset;
+	// Element offset to the second packed FFT field (Dy). The first field packs
+	// height (real output) + Dx (imaginary output) via the two-for-one real FFT.
+	uint xOceanSecondFieldOffset;
+	uint xOcean_padding2;
 	float xOceanTimeScale;
 
 	float xOceanChoppyScale;

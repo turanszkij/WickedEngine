@@ -86,7 +86,9 @@ namespace wi::fftgenerator
 
 		if (!fft_plan.IsValid())
 		{
-			fft_plan.slices = 3;
+			// Ocean packs its three real fields into two complex slices via the
+			// two-for-one real FFT (height+Dx share one slice, Dy the other).
+			fft_plan.slices = 2;
 
 			// Create 6 cbuffers for 512x512 transform.
 
