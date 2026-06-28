@@ -26,6 +26,7 @@ groupshared float shared_inconsistency[CACHE_SIZE];
 // once per group and read by every texel thread to seed a newborn surfel.
 groupshared SH::L1_RGB shared_seed_sh;
 groupshared float shared_seed_weight;
+groupshared float shared_seed_max_lum; // brightest neighbor luminance; clamps the seed so a newborn can never exceed its surroundings (keeps birth seeding strictly non-amplifying)
 
 [numthreads(THREADCOUNT, THREADCOUNT, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint groupIndex : SV_GroupIndex)
@@ -61,6 +62,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 		{
 			SH::L1_RGB seed_sh = SH::L1_RGB::Zero();
 			float seed_weight = 0;
+			float seed_max_lum = 0;
 
 			const uint seed_level = surfel_level_from_radius(surfel.GetRadius());
 			const int3 seed_cell = surfel_cell(P, seed_level);
@@ -83,8 +85,15 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 					if (dot(to_self, to_self) >= sqr(nbr.GetRadius()))
 						continue;
 
-					seed_sh = SH::Add(seed_sh, SH::Multiply(nbr.radiance.Unpack(), dotN));
+					const SH::L1_RGB nbr_sh = nbr.radiance.Unpack();
+					seed_sh = SH::Add(seed_sh, SH::Multiply(nbr_sh, dotN));
 					seed_weight += dotN;
+
+					// Track the brightest neighbor (radiance toward this
+					// surfel's normal) so the seed can be clamped below it.
+					const float3 nbr_rad = max(0, SH::Evaluate(nbr_sh, N));
+					seed_max_lum = max(seed_max_lum,
+						dot(float3(0.299, 0.587, 0.114), nbr_rad));
 				}
 			}
 
@@ -93,6 +102,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 
 			shared_seed_sh = seed_sh;
 			shared_seed_weight = seed_weight;
+			shared_seed_max_lum = seed_max_lum;
 		}
 		GroupMemoryBarrierWithGroupSync();
 	}
@@ -179,7 +189,17 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 			// rays.
 			float3 seed = result;
 			if (shared_seed_weight > 0)
+			{
 				seed = max(0, SH::Evaluate(shared_seed_sh, texel_direction));
+
+				// Clamp to the brightest neighbor so a newborn can never be
+				// brighter than its surroundings. This makes birth seeding
+				// strictly non-amplifying. Clamped, the regional max can only
+				// decrease.
+				const float seed_lum = dot(float3(0.299, 0.587, 0.114), seed);
+				if (seed_lum > shared_seed_max_lum)
+					seed *= shared_seed_max_lum / max(seed_lum, 1e-5);
+			}
 			varianceData.mean = seed;
 			varianceData.shortMean = seed;
 			varianceData.inconsistency = 1;
