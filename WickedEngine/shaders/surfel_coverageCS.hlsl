@@ -90,10 +90,16 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 
 	float coverage = 0;
 
-	// Accumulate coverage and GI from surfels across all cascaded grid levels
-	// (near surfaces are covered by fine level-0 surfels, distant ones by a few
-	// large coarse-level surfels).
-	for (uint level = 0; level < SURFEL_GRID_LEVELS; ++level)
+	// Gather coverage and GI only from the cascade levels around this point's
+	// own level. surfel_update keeps every surfel at surfel_level(its
+	// position), so a surface point and the surfels sitting on it share a
+	// level; +/-1 covers level-boundary pixels. This bounds the gather to <=3
+	// levels regardless of SURFEL_GRID_LEVELS (a perf win as the cascade gains
+	// finer near levels).
+	const uint base_level = surfel_level(surface.P);
+	const uint level_lo = (base_level > 0) ? (base_level - 1) : 0;
+	const uint level_hi = min(base_level + 1, SURFEL_GRID_LEVELS - 1);
+	for (uint level = level_lo; level <= level_hi; ++level)
 	{
 	int3 gridpos = surfel_cell(surface.P, level);
 	if (!surfel_cellvalid(gridpos))
@@ -183,7 +189,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	// The level and cell a newly spawned surfel here would occupy - used to
 	// gate spawning and for the heatmap debug (a new surfel is placed at
 	// surfel_level).
-	const uint spawn_level = surfel_level(surface.P);
+	const uint spawn_level = base_level;
 	const int3 spawn_gridpos = surfel_cell(surface.P, spawn_level);
 	const uint spawn_cell_count = surfel_cellvalid(spawn_gridpos)
 		? surfelGridBuffer[surfel_cellindex(spawn_gridpos, spawn_level)].count

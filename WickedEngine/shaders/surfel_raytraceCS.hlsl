@@ -502,9 +502,13 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			// Evaluate surfel cache at hit point for multi bounce:
 			{
 				float4 surfel_gi = 0;
-				// Gather from all cascaded grid levels, matching
-				// surfel_coverageCS.
-				for (uint level = 0; level < SURFEL_GRID_LEVELS; ++level)
+				// Gather only the levels around the hit point's own level (same
+				// as surfel_coverageCS): surfels here share surfel_level(P), so
+				// +/-1 suffices and keeps this to <=3 levels.
+				const uint base_level = surfel_level(surface.P);
+				const uint level_lo = (base_level > 0) ? (base_level - 1) : 0;
+				const uint level_hi = min(base_level + 1, SURFEL_GRID_LEVELS - 1);
+				for (uint level = level_lo; level <= level_hi; ++level)
 				{
 				int3 gridpos = surfel_cell(surface.P, level);
 				if (!surfel_cellvalid(gridpos))

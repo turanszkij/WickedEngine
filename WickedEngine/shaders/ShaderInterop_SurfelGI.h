@@ -9,9 +9,10 @@ static const uint SURFEL_MOMENT_RESOLUTION = 4;
 static const uint SURFEL_MOMENT_ATLAS_TEXELS = SQRT_SURFEL_CAPACITY * SURFEL_MOMENT_RESOLUTION;
 static const uint3 SURFEL_GRID_DIMENSIONS = uint3(128, 64, 128);
 static const uint SURFEL_TABLE_SIZE = SURFEL_GRID_DIMENSIONS.x * SURFEL_GRID_DIMENSIONS.y * SURFEL_GRID_DIMENSIONS.z;
-static const uint SURFEL_GRID_LEVELS = 4; // cascaded grid levels; level L has cell/radius SURFEL_MAX_RADIUS << L (2, 4, 8, 16)
+static const uint SURFEL_GRID_LEVELS = 6; // cascaded grid levels; level L has cell/radius SURFEL_MIN_RADIUS << L (0.5, 1, 2, 4, 8, 16)
 static const uint SURFEL_TOTAL_TABLE_SIZE = SURFEL_TABLE_SIZE * SURFEL_GRID_LEVELS; // grid cells across all levels
-static const float SURFEL_MAX_RADIUS = 2; // level-0 (finest) cell size and radius; the actual max radius is SURFEL_MAX_RADIUS << (SURFEL_GRID_LEVELS-1)
+static const float SURFEL_MIN_RADIUS = 0.5; // level-0 (finest) cell size and radius; near surfaces reach this, so surfel density keeps rising as the camera approaches (no hard floor at 2 like before)
+static const float SURFEL_MAX_RADIUS = SURFEL_MIN_RADIUS * (float)(1u << (SURFEL_GRID_LEVELS - 1)); // derived coarsest radius (level LEVELS-1 == 16); used as a default/liveness radius value
 static const float SURFEL_RADIUS_PIXELS = 32; // target screen-space radius in pixels that drives which level a surfel lands on
 // Relevance-based recycler (see surfel_updateCS): the live working set is bounded
 // by recycling the least-relevant surfels probabilistically. Relevance falls with
@@ -190,13 +191,13 @@ struct SurfelDebugPushConstants
 
 #ifndef __cplusplus
 // World-space cell size (and surfel radius) of cascaded grid level L. Level 0
-// is the finest (SURFEL_MAX_RADIUS); each coarser level doubles. A surfel is
+// is the finest (SURFEL_MIN_RADIUS); each coarser level doubles. A surfel is
 // placed at the level whose cell matches its radius, so near surfaces use fine
 // surfels and distant ones use a few large surfels without any surfel exceeding
 // one cell.
 inline float surfel_cellsize(uint level)
 {
-	return SURFEL_MAX_RADIUS * (float)(1u << level);
+	return SURFEL_MIN_RADIUS * (float)(1u << level);
 }
 inline int3 surfel_cell(float3 position, uint level)
 {
@@ -208,10 +209,12 @@ inline int3 surfel_cell(float3 position, uint level)
 #endif // SURFEL_USE_HASHING
 }
 // Cascaded grid level a surfel at this position should live at, chosen so it
-// has a roughly constant screen-space footprint (SURFEL_RADIUS_PIXELS) but is
-// never finer than level 0 (so near surfaces keep a solid base radius and do
-// not break into sub-cell dust). projection[1][1] = 1/tan(fovY/2), so
-// 2*dist/(projection[1][1]*height) is the world size of one screen pixel here.
+// has a roughly constant screen-space footprint (SURFEL_RADIUS_PIXELS). The
+// finest level is 0 (SURFEL_MIN_RADIUS, sub-unit), so near surfaces keep
+// shrinking and getting denser as the camera approaches; each level's cell
+// matches its radius so finer levels stay solid (no sub-cell voids).
+// projection[1][1] = 1/tan(fovY/2), so 2*dist/(projection[1][1]*height) is the
+// world size of one screen pixel here.
 inline uint surfel_level(float3 position)
 {
 	const float dist = distance(position, GetCamera().position);
@@ -219,20 +222,20 @@ inline uint surfel_level(float3 position)
 		2.0 * dist /
 		(GetCamera().projection[1][1] * (float)GetCamera().internal_resolution.y);
 	const float desired_radius = SURFEL_RADIUS_PIXELS * world_per_pixel;
-	const float level = floor(log2(max(desired_radius / SURFEL_MAX_RADIUS, 1.0)));
+	const float level = floor(log2(max(desired_radius / SURFEL_MIN_RADIUS, 1.0)));
 	return (uint)clamp(level, 0, SURFEL_GRID_LEVELS - 1);
 }
 // Recover a surfel's level from its stored radius (== its level's cell size).
 inline uint surfel_level_from_radius(float radius)
 {
-	return firstbithigh(max(1u, (uint)(radius / SURFEL_MAX_RADIUS + 0.5)));
+	return firstbithigh(max(1u, (uint)(radius / SURFEL_MIN_RADIUS + 0.5)));
 }
 float3 surfel_griduv(float3 position)
 {
 #ifdef SURFEL_USE_HASHING
 	return 0; // hashed grid can't be sampled for colors, it doesn't make sense
 #else
-	return (((position - floor(GetCamera().position)) / SURFEL_MAX_RADIUS) + SURFEL_GRID_DIMENSIONS / 2) / SURFEL_GRID_DIMENSIONS;
+	return (((position - floor(GetCamera().position)) / SURFEL_MIN_RADIUS) + SURFEL_GRID_DIMENSIONS / 2) / SURFEL_GRID_DIMENSIONS;
 #endif // SURFEL_USE_HASHING
 }
 // Flat index into the combined (all-levels) grid table. Each level owns a
