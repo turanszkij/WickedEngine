@@ -16,8 +16,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	if (depth == 0)
 		return;
 
-	const float roughness = texture_normal_roughness.SampleLevel(sampler_point_clamp, uv, 0).b;
-	const float3 N = decode_normal(texture_normal_roughness.SampleLevel(sampler_point_clamp, uv, 0));
+	const half3 normal_roughness = texture_normal_roughness.SampleLevel(sampler_point_clamp, uv, 0).rgb;
+	const float roughness = normal_roughness.b;
+	const float3 N = decode_normal(normal_roughness.rg);
 	const float3 P = reconstruct_position(uv, depth);
 	const float3 V = normalize(GetCamera().frustum_corners.screen_to_nearplane(uv) - P); // ortho support
 

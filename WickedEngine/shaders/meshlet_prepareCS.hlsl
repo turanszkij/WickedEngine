@@ -20,6 +20,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			ShaderMeshlet meshlet = (ShaderMeshlet)0;
 			meshlet.instanceIndex = instanceIndex;
 			meshlet.geometryIndex = geometryIndex;
+			meshlet.materialIndex = geometry.materialIndex;
 
 			if (mesh.vb_clu < 0 || mesh.tessellation_factor > 0)
 			{

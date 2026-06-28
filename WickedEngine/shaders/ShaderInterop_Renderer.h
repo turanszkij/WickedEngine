@@ -614,7 +614,7 @@ struct alignas(16) ShaderMeshlet
 	uint instanceIndex;
 	uint geometryIndex;
 	uint primitiveOffset; // either direct triangle offset within index buffer, or masked cluster index for clustered geo
-	uint padding;
+	uint materialIndex;
 };
 
 struct ShaderClusterTriangle

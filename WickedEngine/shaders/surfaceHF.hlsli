@@ -331,6 +331,7 @@ struct Surface
 	ShaderMeshInstance inst;
 	ShaderGeometry geometry;
 	ShaderMaterial material;
+	uint materialIndex;
 	float2 bary;
 #ifdef SURFACE_LOAD_QUAD_DERIVATIVES
 	float2 bary_quad_x;
@@ -361,9 +362,10 @@ struct Surface
 		if (geometry.vb_pos_wind < 0)
 			return false;
 
-		if (geometry.materialIndex >= GetScene().materialCount)
+		materialIndex = prim.has_directMaterialIndex ? prim.materialIndex : geometry.materialIndex;
+		if (materialIndex >= GetScene().materialCount)
 			return false;
-		material = load_material(geometry.materialIndex);
+		material = load_material(materialIndex);
 		create(material);
 
 		layerMask = material.layerMask & inst.layerMask;
@@ -450,13 +452,13 @@ struct Surface
 			const float lod_uvset1 = compute_texture_lod(65536, 65536, lod_constant1, ray_direction, surf_normal, cone_width);
 			const uint resolution0 = 65536u >> clamp(uint(lod_uvset0), 1u, 16u);
 			const uint resolution1 = 65536u >> clamp(uint(lod_uvset1), 1u, 16u);
-			write_mipmap_feedback(geometry.materialIndex, resolution0, resolution1);
+			write_mipmap_feedback(materialIndex, resolution0, resolution1);
 #endif // SURFACE_LOAD_MIPCONE
 
 #ifdef SURFACE_LOAD_QUAD_DERIVATIVES
 			uvsets_dx = uvsets - attribute_at_bary(uv0, uv1, uv2, bary_quad_x);
 			uvsets_dy = uvsets - attribute_at_bary(uv0, uv1, uv2, bary_quad_y);
-			write_mipmap_feedback(geometry.materialIndex, uvsets_dx, uvsets_dy);
+			write_mipmap_feedback(materialIndex, uvsets_dx, uvsets_dy);
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
 		}
 

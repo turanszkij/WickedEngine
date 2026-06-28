@@ -670,6 +670,9 @@ struct PrimitiveID
 	uint instanceIndex;
 	uint subsetIndex;
 	bool maybe_clustered;
+	bool has_directMaterialIndex;
+
+	uint materialIndex; // only available when unpacking from meshlet data
 
 	inline void init()
 	{
@@ -677,6 +680,8 @@ struct PrimitiveID
 		instanceIndex = 0;
 		subsetIndex = 0;
 		maybe_clustered = false;
+		has_directMaterialIndex = false;
+		materialIndex = 0;
 	}
 
 	// These packing methods require meshlet data, and pack into 32 bits:
@@ -704,7 +709,9 @@ struct PrimitiveID
 		primitiveIndex = meshlet.primitiveOffset + meshletPrimitiveIndex;
 		instanceIndex = meshlet.instanceIndex;
 		subsetIndex = meshlet.geometryIndex - inst.geometryOffset;
+		materialIndex = meshlet.materialIndex;
 		maybe_clustered = true;
+		has_directMaterialIndex = true;
 	}
 
 	// These packing methods don't need meshlets, but they are packed into 64 bits:
@@ -721,6 +728,8 @@ struct PrimitiveID
 		instanceIndex = value.y & 0xFFFFFF;
 		subsetIndex = (value.y >> 24u) & 0xFF;
 		maybe_clustered = false;
+		has_directMaterialIndex = false;
+		materialIndex = 0;
 	}
 
 	uint3 tri()
