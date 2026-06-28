@@ -21,7 +21,7 @@ static const uint2 bilateralMinMaxRadius = uint2(0, 2); // Chosen by variance
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	const float depth = texture_depth[DTid.xy];
-	const float roughness = texture_roughness[DTid.xy];
+	const float roughness = texture_normal_roughness[DTid.xy].b;
 
 	if (!NeedReflection(roughness, depth, ssr_roughness_cutoff))
 	{
@@ -30,7 +30,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	}
 
 	const float linearDepth = texture_lineardepth[DTid.xy];
-	const float3 N = decode_oct(texture_normal[DTid.xy]);
+	const float3 N = decode_normal(texture_normal_roughness[DTid.xy]);
 	
 	const float2 uv = (DTid.xy + 0.5) * postprocess.resolution_rcp;
 	float4 outputColor = texture_temporal.SampleLevel(sampler_linear_clamp, uv, 0);
@@ -65,8 +65,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 					float2 sampleUV = (sampleCoord + 0.5) * postprocess.resolution_rcp;
 					const float4 sampleColor = texture_temporal.SampleLevel(sampler_linear_clamp, sampleUV, 0);
 					
-					const float3 sampleN = decode_oct(texture_normal[sampleCoord]);
-					const float sampleRoughness = texture_roughness[sampleCoord];
+					const float3 sampleN = decode_normal(texture_normal_roughness[sampleCoord]);
+					const float sampleRoughness = texture_normal_roughness[sampleCoord].b;
 
 					float3 sampleP = reconstruct_position(sampleUV, sampleDepth);
 

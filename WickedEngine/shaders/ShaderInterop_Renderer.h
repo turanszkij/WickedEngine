@@ -507,7 +507,6 @@ struct VisibilityTile
 {
 	uint64_t execution_mask_or_primitiveID; // divergent tiles: execution mask | uniform tiles: primitiveID
 	uint visibility_tile_id;
-	uint materialIndex; // only valid for uniform primitiveID path
 
 	inline bool check_thread_valid(uint groupIndex)
 	{
@@ -1377,8 +1376,8 @@ struct alignas(16) ShaderCamera
 
 	int texture_depth_index;
 	int texture_velocity_index;
-	int texture_normal_index;
-	int texture_roughness_index;
+	int texture_normal_roughness_index;
+	int padding0;
 
 	int texture_reflection_index;
 	int texture_reflection_depth_index;
@@ -1450,8 +1449,7 @@ struct alignas(16) ShaderCamera
 		texture_primitiveID_index = -1;
 		texture_depth_index = -1;
 		texture_velocity_index = -1;
-		texture_normal_index = -1;
-		texture_roughness_index = -1;
+		texture_normal_roughness_index = -1;
 		buffer_entitytiles_index = -1;
 		texture_reflection_index = -1;
 		texture_refraction_index = -1;

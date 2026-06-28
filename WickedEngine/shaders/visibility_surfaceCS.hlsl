@@ -1,7 +1,5 @@
 #define SURFACE_LOAD_QUAD_DERIVATIVES
-#ifndef REDUCED
 #define SURFACE_LOAD_ENABLE_WIND
-#endif // REDUCED
 #define SVT_FEEDBACK
 #define TEXTURE_SLOT_NONUNIFORM
 #include "globals.hlsli"
@@ -10,7 +8,7 @@
 #include "surfaceHF.hlsli"
 #include "shadingHF.hlsli"
 
-// This shader extracts per-pixel surface attributes (basecolor, normal, etc.) based on primitiveID
+// This shader extracts per-pixel surface attributes normal and roughness based on primitiveID
 
 struct VisibilityPushConstants
 {
@@ -20,11 +18,7 @@ PUSHCONSTANT(push, VisibilityPushConstants);
 
 StructuredBuffer<VisibilityTile> binned_tiles : register(t0);
 
-RWTexture2D<float4> output : register(u0);
-RWTexture2D<float2> output_normal : register(u1);
-RWTexture2D<float> output_roughness : register(u2);
-RWTexture2D<uint4> output_payload_0 : register(u3);
-RWTexture2D<uint4> output_payload_1 : register(u4);
+RWTexture2D<half3> output_normals_roughness : register(u0);
 
 [numthreads(VISIBILITY_BLOCKSIZE * VISIBILITY_BLOCKSIZE, 1, 1)]
 void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
@@ -68,57 +62,12 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 		return;
 	}
 
-#ifdef INTERIORMAPPING
-	surface.baseColor.rgb += surface.emissiveColor;
-	surface.baseColor *= InteriorMapping(surface.P, surface.N, surface.V, surface.material, surface.inst);
-#endif // INTERIORMAPPING
-
-#if defined(UNLIT) || defined(INTERIORMAPPING)
-	half4 color = surface.baseColor;
-	ApplyFog(surface.hit_depth, surface.V, color);
-	output[pixel] = color;
-	return;
-#endif // UNLIT || INTERIORMAPPING
-
 	// Write out sampleable attributes for post processing into textures:
 #ifdef CLEARCOAT
 	// Clearcoat must write out the top layer's normal and roughness to match the specs:
-	output_normal[pixel] = encode_oct(surface.clearcoat.N);
-	output_roughness[pixel] = surface.clearcoat.roughness;
+	output_normals_roughness[pixel] = half3(encode_normal(surface.clearcoat.N), surface.clearcoat.roughness);
 #else
-	output_normal[pixel] = encode_oct(surface.N);
-	output_roughness[pixel] = surface.roughness;
+	output_normals_roughness[pixel] = half3(encode_normal(surface.N), surface.roughness);
 #endif // CLEARCOAT
 
-
-#ifndef REDUCED
-	// Pack primary payload for shading:
-	uint4 payload_0;
-	payload_0.x = pack_rgba(float4(ApplySRGBCurve_Fast(surface.albedo), surface.occlusion));
-	payload_0.y = pack_rgba(float4(ApplySRGBCurve_Fast(surface.f0), surface.roughness));
-	payload_0.z = Pack_R11G11B10_FLOAT(surface.emissiveColor);
-	payload_0.w = surface.geometry.materialIndex;
-	output_payload_0[pixel] = payload_0;
-
-
-	// Pack secondary payload (surface parameters that are varying per shader type):
-
-#ifdef ANISOTROPIC
-	output_payload_1[pixel].xy = pack_half4(surface.T);
-#endif // ANISOTROPIC
-
-#ifdef PLANARREFLECTION
-	output_payload_1[pixel].x = pack_half2(surface.bumpColor.rg);
-#endif
-
-#ifdef SHEEN
-	output_payload_1[pixel].x = pack_rgba(float4(surface.sheen.color, surface.sheen.roughness));
-#endif // SHEEN
-
-#ifdef CLEARCOAT
-	output_payload_1[pixel].y = pack_half2(encode_oct(surface.clearcoat.N));
-	output_payload_1[pixel].z = pack_rgba(float4(surface.clearcoat.roughness, 0, 0, 0));
-#endif // CLEARCOAT
-
-#endif // REDUCED
 }

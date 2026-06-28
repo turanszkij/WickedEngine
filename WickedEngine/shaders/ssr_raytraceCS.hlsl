@@ -245,7 +245,7 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 
 	// Due to HiZ tracing, the tracing and the pass components must match depth.
 	float depth = texture_depth_hierarchy[screenJitter + pixel].r;
-	float roughness = texture_roughness[jitterPixel];
+	float roughness = texture_normal_roughness[jitterPixel].b;
 
 	if (!NeedReflection(roughness, depth, ssr_roughness_cutoff))
 	{
@@ -255,7 +255,7 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 		return;
 	}
 
-	float3 N = decode_oct(texture_normal[jitterPixel]);
+	float3 N = decode_normal(texture_normal_roughness[jitterPixel]);
 	float3 P = reconstruct_position(jitterUV, depth);
 	float3 V = normalize(GetCamera().frustum_corners.screen_to_nearplane(uv) - P);
 

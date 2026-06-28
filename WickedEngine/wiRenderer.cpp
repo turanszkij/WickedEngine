@@ -1282,33 +1282,6 @@ void LoadShaders()
 	wi::jobsystem::Dispatch(ctx, MaterialComponent::SHADERTYPE_COUNT, 1, [](wi::jobsystem::JobArgs args) {
 		{
 			auto defines = MaterialComponent::shaderTypeDefines[args.jobIndex];
-			defines.push_back("REDUCED");
-			defines.push_back("PRIMITIVEID_UNIFORM");
-			LoadShader(
-				ShaderStage::CS,
-				shaders[CSTYPE_VISIBILITY_SURFACE_REDUCED_UNIFORM_PERMUTATION_BEGIN + args.jobIndex],
-				"visibility_surfaceCS.cso",
-				ShaderModel::SM_6_0,
-				defines // permutation defines
-			);
-		}
-		{
-			auto defines = MaterialComponent::shaderTypeDefines[args.jobIndex];
-			defines.push_back("REDUCED");
-			defines.push_back("PRIMITIVEID_DIVERGENT");
-			LoadShader(
-				ShaderStage::CS,
-				shaders[CSTYPE_VISIBILITY_SURFACE_REDUCED_DIVERGENT_PERMUTATION_BEGIN + args.jobIndex],
-				"visibility_surfaceCS.cso",
-				ShaderModel::SM_6_0,
-				defines // permutation defines
-			);
-		}
-	});
-
-	wi::jobsystem::Dispatch(ctx, MaterialComponent::SHADERTYPE_COUNT, 1, [](wi::jobsystem::JobArgs args) {
-		{
-			auto defines = MaterialComponent::shaderTypeDefines[args.jobIndex];
 			defines.push_back("PRIMITIVEID_UNIFORM");
 			LoadShader(
 				ShaderStage::CS,
@@ -11530,8 +11503,7 @@ void BindCameraCB(
 	shadercam.texture_primitiveID_index = camera.texture_primitiveID_index;
 	shadercam.texture_depth_index = camera.texture_depth_index;
 	shadercam.texture_velocity_index = camera.texture_velocity_index;
-	shadercam.texture_normal_index = camera.texture_normal_index;
-	shadercam.texture_roughness_index = camera.texture_roughness_index;
+	shadercam.texture_normal_roughness_index = camera.texture_normal_roughness_index;
 	shadercam.buffer_entitytiles_index = camera.buffer_entitytiles_index;
 	shadercam.texture_reflection_index = camera.texture_reflection_index;
 	shadercam.texture_reflection_depth_index = camera.texture_reflection_depth_index;
@@ -11833,19 +11805,9 @@ void CreateVisibilityResources(VisibilityResources& res, XMUINT2 resolution)
 		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 		desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 
-		desc.format = Format::R16G16_FLOAT;
-		device->CreateTexture(&desc, nullptr, &res.texture_normals);
-		device->SetName(&res.texture_normals, "visibility.texture_normals");
-
-		desc.format = Format::R8_UNORM;
-		device->CreateTexture(&desc, nullptr, &res.texture_roughness);
-		device->SetName(&res.texture_roughness, "visibility.texture_roughness");
-
-		desc.format = Format::R32G32B32A32_UINT;
-		device->CreateTexture(&desc, nullptr, &res.texture_payload_0);
-		device->SetName(&res.texture_payload_0, "visibility.texture_payload_0");
-		device->CreateTexture(&desc, nullptr, &res.texture_payload_1);
-		device->SetName(&res.texture_payload_1, "visibility.texture_payload_1");
+		desc.format = Format::R11G11B10_FLOAT;
+		device->CreateTexture(&desc, nullptr, &res.texture_normal_roughness);
+		device->SetName(&res.texture_normal_roughness, "visibility.texture_normal_roughness");
 	}
 }
 void Visibility_Prepare(
@@ -11995,7 +11957,6 @@ void Visibility_Prepare(
 }
 void Visibility_Surface(
 	const VisibilityResources& res,
-	const Texture& output,
 	CommandList cmd
 )
 {
@@ -12004,25 +11965,12 @@ void Visibility_Surface(
 
 	BindCommonResources(cmd);
 
-	// First, do a bunch of resource discards to initialize texture metadata:
-	PushBarrier(GPUBarrier::Image(&output, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
-	PushBarrier(GPUBarrier::Image(&res.texture_normals, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
-	PushBarrier(GPUBarrier::Image(&res.texture_roughness, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
-	PushBarrier(GPUBarrier::Image(&res.texture_payload_0, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
-	PushBarrier(GPUBarrier::Image(&res.texture_payload_1, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
-	FlushBarriers(cmd);
-
-	// normals and roughness need to be cleared, because sky doesn't write them and they can be sampled and no invalid data can remain when sampling:
-	device->ClearUAV(&res.texture_normals, 0, cmd);
-	device->ClearUAV(&res.texture_roughness, 0, cmd);
-	device->Barrier(cmd);
+	device->Barrier(GPUBarrier::Image(&res.texture_normal_roughness, res.texture_normal_roughness.desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
+	device->ClearUAV(&res.texture_normal_roughness, 0, cmd);
+	device->Barrier(GPUBarrier::Memory(&res.texture_normal_roughness), cmd);
 
 	device->BindResource(&res.binned_tiles, 0, cmd);
-	device->BindUAV(&output, 0, cmd);
-	device->BindUAV(&res.texture_normals, 1, cmd);
-	device->BindUAV(&res.texture_roughness, 2, cmd);
-	device->BindUAV(&res.texture_payload_0, 3, cmd);
-	device->BindUAV(&res.texture_payload_1, 4, cmd);
+	device->BindUAV(&res.texture_normal_roughness, 0, cmd);
 
 	const uint visibility_tilecount_flat = res.tile_count.x * res.tile_count.y;
 	uint visibility_tile_offset = 0;
@@ -12032,7 +11980,71 @@ void Visibility_Surface(
 	device->EventBegin("Surface parameters UNIFORM", cmd);
 	for (uint i = 0; i < MaterialComponent::SHADERTYPE_COUNT; ++i)
 	{
-		device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SURFACE_UNIFORM_PERMUTATION_BEGIN + i], cmd);
+		if (i != MaterialComponent::SHADERTYPE_UNLIT && i != MaterialComponent::SHADERTYPE_INTERIORMAPPING) // these shaders are special, they don't use normals or roughness based post processing
+		{
+			device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SURFACE_UNIFORM_PERMUTATION_BEGIN + i], cmd);
+			device->PushConstants(&visibility_tile_offset, sizeof(visibility_tile_offset), cmd);
+			device->DispatchIndirect(&res.bins, bins_offset, cmd);
+		}
+		visibility_tile_offset += visibility_tilecount_flat;
+		bins_offset += sizeof(IndirectDispatchArgs);
+	}
+	device->EventEnd(cmd);
+
+	visibility_tile_offset += visibility_tilecount_flat; // sky
+	bins_offset += sizeof(IndirectDispatchArgs); // sky
+
+	device->EventBegin("Surface parameters DIVERGENT", cmd);
+	for (uint i = 0; i < MaterialComponent::SHADERTYPE_COUNT; ++i)
+	{
+		if (i != MaterialComponent::SHADERTYPE_UNLIT && i != MaterialComponent::SHADERTYPE_INTERIORMAPPING) // these shaders are special, they don't use normals or roughness based post processing
+		{
+			device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SURFACE_DIVERGENT_PERMUTATION_BEGIN + i], cmd);
+			device->PushConstants(&visibility_tile_offset, sizeof(visibility_tile_offset), cmd);
+			device->DispatchIndirect(&res.bins, bins_offset, cmd);
+		}
+		visibility_tile_offset += visibility_tilecount_flat;
+		bins_offset += sizeof(IndirectDispatchArgs);
+	}
+	device->EventEnd(cmd);
+
+	visibility_tile_offset += visibility_tilecount_flat; // sky
+	bins_offset += sizeof(IndirectDispatchArgs); // sky
+
+	// Ending barriers:
+	//	These resources will be used by other post processing effects
+	device->Barrier(GPUBarrier::Image(&res.texture_normal_roughness, ResourceState::UNORDERED_ACCESS, res.texture_normal_roughness.desc.layout), cmd);
+
+	wi::profiler::EndRange(range);
+	device->EventEnd(cmd);
+}
+void Visibility_Shade(
+	const VisibilityResources& res,
+	const Texture& output,
+	CommandList cmd
+)
+{
+	device->EventBegin("Visibility_Shade", cmd);
+	auto range = wi::profiler::BeginRangeGPU("Visibility_Shade", cmd);
+
+	PushBarrier(GPUBarrier::Image(&output, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
+	FlushBarriers(cmd);
+
+	BindCommonResources(cmd);
+
+	device->BindResource(&res.binned_tiles, 0, cmd);
+	device->BindResource(&res.texture_normal_roughness, 1, cmd);
+	device->BindUAV(&output, 0, cmd);
+
+	const uint visibility_tilecount_flat = res.tile_count.x * res.tile_count.y;
+	uint visibility_tile_offset = 0;
+	uint64_t bins_offset = 0;
+
+	// shading dispatches per material type:
+	device->EventBegin("Shading UNIFORM", cmd);
+	for (uint i = 0; i < MaterialComponent::SHADERTYPE_COUNT; ++i)
+	{
+		device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SHADE_UNIFORM_PERMUTATION_BEGIN + i], cmd);
 		device->PushConstants(&visibility_tile_offset, sizeof(visibility_tile_offset), cmd);
 		device->DispatchIndirect(&res.bins, bins_offset, cmd);
 		visibility_tile_offset += visibility_tilecount_flat;
@@ -12051,10 +12063,10 @@ void Visibility_Surface(
 		device->EventEnd(cmd);
 	}
 
-	device->EventBegin("Surface parameters DIVERGENT", cmd);
+	device->EventBegin("Shading DIVERGENT", cmd);
 	for (uint i = 0; i < MaterialComponent::SHADERTYPE_COUNT; ++i)
 	{
-		device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SURFACE_DIVERGENT_PERMUTATION_BEGIN + i], cmd);
+		device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SHADE_DIVERGENT_PERMUTATION_BEGIN + i], cmd);
 		device->PushConstants(&visibility_tile_offset, sizeof(visibility_tile_offset), cmd);
 		device->DispatchIndirect(&res.bins, bins_offset, cmd);
 		visibility_tile_offset += visibility_tilecount_flat;
@@ -12072,146 +12084,6 @@ void Visibility_Surface(
 		bins_offset += sizeof(IndirectDispatchArgs);
 		device->EventEnd(cmd);
 	}
-
-	// Ending barriers:
-	//	These resources will be used by other post processing effects
-	PushBarrier(GPUBarrier::Image(&res.texture_normals, ResourceState::UNORDERED_ACCESS, res.texture_normals.desc.layout));
-	PushBarrier(GPUBarrier::Image(&res.texture_roughness, ResourceState::UNORDERED_ACCESS, res.texture_roughness.desc.layout));
-	FlushBarriers(cmd);
-
-	wi::profiler::EndRange(range);
-	device->EventEnd(cmd);
-}
-void Visibility_Surface_Reduced(
-	const VisibilityResources& res,
-	CommandList cmd
-)
-{
-	device->EventBegin("Visibility_Surface_Reduced", cmd);
-	auto range = wi::profiler::BeginRangeGPU("Visibility_Surface_Reduced", cmd);
-
-	BindCommonResources(cmd);
-
-	// normals and roughness need to be cleared, because sky doesn't write them and they can be sampled and no invalid data can remain when sampling:
-	PushBarrier(GPUBarrier::Image(&res.texture_normals, res.texture_normals.desc.layout, ResourceState::UNORDERED_ACCESS));
-	PushBarrier(GPUBarrier::Image(&res.texture_roughness, res.texture_roughness.desc.layout, ResourceState::UNORDERED_ACCESS));
-	FlushBarriers(cmd);
-
-	device->ClearUAV(&res.texture_normals, 0, cmd);
-	device->ClearUAV(&res.texture_roughness, 0, cmd);
-	device->Barrier(cmd);
-
-	device->BindResource(&res.binned_tiles, 0, cmd);
-	device->BindUAV(&res.texture_normals, 1, cmd);
-	device->BindUAV(&res.texture_roughness, 2, cmd);
-
-	const uint visibility_tilecount_flat = res.tile_count.x * res.tile_count.y;
-	uint visibility_tile_offset = 0;
-	uint64_t bins_offset = 0;
-
-	// surface dispatches per material type:
-	device->EventBegin("Surface parameters UNIFORM", cmd);
-	for (uint i = 0; i < MaterialComponent::SHADERTYPE_COUNT; ++i)
-	{
-		if (i != MaterialComponent::SHADERTYPE_UNLIT) // this won't need surface parameter write out
-		{
-			device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SURFACE_REDUCED_UNIFORM_PERMUTATION_BEGIN + i], cmd);
-			device->PushConstants(&visibility_tile_offset, sizeof(visibility_tile_offset), cmd);
-			device->DispatchIndirect(&res.bins, bins_offset, cmd);
-		}
-		visibility_tile_offset += visibility_tilecount_flat;
-		bins_offset += sizeof(IndirectDispatchArgs);
-	}
-	device->EventEnd(cmd);
-
-	visibility_tile_offset += visibility_tilecount_flat; // sky
-	bins_offset += sizeof(IndirectDispatchArgs); // sky
-
-	device->EventBegin("Surface parameters DIVERGENT", cmd);
-	for (uint i = 0; i < MaterialComponent::SHADERTYPE_COUNT; ++i)
-	{
-		if (i != MaterialComponent::SHADERTYPE_UNLIT) // this won't need surface parameter write out
-		{
-			device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SURFACE_REDUCED_DIVERGENT_PERMUTATION_BEGIN + i], cmd);
-			device->PushConstants(&visibility_tile_offset, sizeof(visibility_tile_offset), cmd);
-			device->DispatchIndirect(&res.bins, bins_offset, cmd);
-		}
-		visibility_tile_offset += visibility_tilecount_flat;
-		bins_offset += sizeof(IndirectDispatchArgs);
-	}
-	device->EventEnd(cmd);
-
-	visibility_tile_offset += visibility_tilecount_flat; // sky
-	bins_offset += sizeof(IndirectDispatchArgs); // sky
-
-	// Ending barriers:
-	//	These resources will be used by other post processing effects
-	PushBarrier(GPUBarrier::Image(&res.texture_normals, ResourceState::UNORDERED_ACCESS, res.texture_normals.desc.layout));
-	PushBarrier(GPUBarrier::Image(&res.texture_roughness, ResourceState::UNORDERED_ACCESS, res.texture_roughness.desc.layout));
-	FlushBarriers(cmd);
-
-	wi::profiler::EndRange(range);
-	device->EventEnd(cmd);
-}
-void Visibility_Shade(
-	const VisibilityResources& res,
-	const Texture& output,
-	CommandList cmd
-)
-{
-	device->EventBegin("Visibility_Shade", cmd);
-	auto range = wi::profiler::BeginRangeGPU("Visibility_Shade", cmd);
-
-	BindCommonResources(cmd);
-
-	PushBarrier(GPUBarrier::Image(&res.texture_payload_0, ResourceState::UNORDERED_ACCESS, res.texture_payload_0.desc.layout));
-	PushBarrier(GPUBarrier::Image(&res.texture_payload_1, ResourceState::UNORDERED_ACCESS, res.texture_payload_1.desc.layout));
-	FlushBarriers(cmd);
-
-	device->BindResource(&res.binned_tiles, 0, cmd);
-	device->BindResource(&res.texture_normals, 1, cmd);
-	device->BindResource(&res.texture_payload_0, 2, cmd);
-	device->BindResource(&res.texture_payload_1, 3, cmd);
-	device->BindUAV(&output, 0, cmd);
-
-	const uint visibility_tilecount_flat = res.tile_count.x * res.tile_count.y;
-	uint visibility_tile_offset = 0;
-	uint64_t bins_offset = 0;
-
-	// shading dispatches per material type:
-	device->EventBegin("Shading UNIFORM", cmd);
-	for (uint i = 0; i < MaterialComponent::SHADERTYPE_COUNT; ++i)
-	{
-		if (i != MaterialComponent::SHADERTYPE_UNLIT && i != MaterialComponent::SHADERTYPE_INTERIORMAPPING) // these shaders are special, already written out their final color in the surface shader
-		{
-			device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SHADE_UNIFORM_PERMUTATION_BEGIN + i], cmd);
-			device->PushConstants(&visibility_tile_offset, sizeof(visibility_tile_offset), cmd);
-			device->DispatchIndirect(&res.bins, bins_offset, cmd);
-		}
-		visibility_tile_offset += visibility_tilecount_flat;
-		bins_offset += sizeof(IndirectDispatchArgs);
-	}
-	device->EventEnd(cmd);
-
-	visibility_tile_offset += visibility_tilecount_flat; // sky
-	bins_offset += sizeof(IndirectDispatchArgs); // sky
-
-	device->EventBegin("Shading DIVERGENT", cmd);
-	for (uint i = 0; i < MaterialComponent::SHADERTYPE_COUNT; ++i)
-	{
-		if (i != MaterialComponent::SHADERTYPE_UNLIT && i != MaterialComponent::SHADERTYPE_INTERIORMAPPING) // these shaders are special, already written out their final color in the surface shader
-		{
-			device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SHADE_DIVERGENT_PERMUTATION_BEGIN + i], cmd);
-			device->PushConstants(&visibility_tile_offset, sizeof(visibility_tile_offset), cmd);
-			device->DispatchIndirect(&res.bins, bins_offset, cmd);
-		}
-		visibility_tile_offset += visibility_tilecount_flat;
-		bins_offset += sizeof(IndirectDispatchArgs);
-	}
-	device->EventEnd(cmd);
-
-	visibility_tile_offset += visibility_tilecount_flat; // sky
-	bins_offset += sizeof(IndirectDispatchArgs); // sky
 
 	PushBarrier(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout));
 	FlushBarriers(cmd);

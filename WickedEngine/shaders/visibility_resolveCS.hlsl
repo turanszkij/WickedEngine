@@ -70,8 +70,6 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	float depth = 0; // sky default
 	uint bin = SHADERTYPE_BIN_COUNT; // sky default
 
-	uint materialIndex = 0;
-
 	[branch]
 	if (primitiveID != 0)
 	{
@@ -88,8 +86,6 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 			float4 tmp = mul(camera.view_projection, float4(surface.P, 1));
 			tmp.xyz /= max(0.0001, tmp.w); // max: avoid nan
 			depth = saturate(tmp.z); // saturate: avoid blown up values
-
-			materialIndex = surface.geometry.materialIndex;
 
 #ifdef MATERIAL_BINNING
 			bin = surface.material.GetShaderType();
@@ -140,7 +136,6 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 #else
 			tile.execution_mask_or_primitiveID = uint64_t(local_bin_execution_mask_0[groupIndex]) | (uint64_t(local_bin_execution_mask_1[groupIndex]) << uint64_t(32));
 #endif // PRIMITIVEID_UNIFORM
-			tile.materialIndex = materialIndex;
 			output_binned_tiles[bin_tile_list_offset + tile_offset] = tile;
 		}
 	}

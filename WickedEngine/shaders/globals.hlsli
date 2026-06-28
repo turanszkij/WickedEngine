@@ -766,8 +766,7 @@ struct PrimitiveID
 #define texture_depth_history bindless_textures_float[descriptor_index(GetCamera().texture_depth_index_prev)]
 #define texture_primitiveID bindless_textures_uint[descriptor_index(GetCamera().texture_primitiveID_index)]
 #define texture_velocity bindless_textures_float2[descriptor_index(GetCamera().texture_velocity_index)]
-#define texture_normal bindless_textures_float2[descriptor_index(GetCamera().texture_normal_index)]
-#define texture_roughness bindless_textures_float[descriptor_index(GetCamera().texture_roughness_index)]
+#define texture_normal_roughness bindless_textures_half4[descriptor_index(GetCamera().texture_normal_roughness_index)]
 
 // Note: defines can be better for choosing between half/float by compiler than "static const float"
 #define PI 3.14159265358979323846
@@ -1732,6 +1731,19 @@ half3 decode_oct(half2 e)
 	half3 v = half3(e.xy, 1.0 - abs(e.x) - abs(e.y));
 	if (v.z < 0) v.xy = (1.0 - abs(v.yx)) * signNotZero(v.xy);
 	return normalize(v);
+}
+
+half2 encode_normal(in half3 v)
+{
+	return encode_oct(v) * 0.5 + 0.5;
+}
+half3 decode_normal(in half2 e)
+{
+	return decode_oct(e * 2 - 1);
+}
+half3 decode_normal(in half4 e)
+{
+	return decode_oct(e.xy * 2 - 1);
 }
 
 // Assume normalized input on +Z hemisphere.
