@@ -90,15 +90,16 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 
 	float coverage = 0;
 
-	int3 gridpos = surfel_cell(surface.P);
-	if (!surfel_cellvalid(gridpos))
+	// Accumulate coverage and GI from surfels across all cascaded grid levels
+	// (near surfaces are covered by fine level-0 surfels, distant ones by a few
+	// large coarse-level surfels).
+	for (uint level = 0; level < SURFEL_GRID_LEVELS; ++level)
 	{
-		write_debug(DTid.xy, 0);
-		return;
-	}
+	int3 gridpos = surfel_cell(surface.P, level);
+	if (!surfel_cellvalid(gridpos))
+		continue;
 
-	uint cellindex = surfel_cellindex(gridpos);
-	SurfelGridCell cell = surfelGridBuffer[cellindex];
+	SurfelGridCell cell = surfelGridBuffer[surfel_cellindex(gridpos, level)];
 	for (uint i = 0; i < cell.count; ++i)
 	{
 		uint surfel_index = surfelCellBuffer[cell.offset + i];
@@ -156,8 +157,18 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		}
 
 	}
+	}
 
-	if (cell.count < SURFEL_CELL_LIMIT)
+	// The level and cell a newly spawned surfel here would occupy - used to
+	// gate spawning and for the heatmap debug (a new surfel is placed at
+	// surfel_level).
+	const uint spawn_level = surfel_level(surface.P);
+	const int3 spawn_gridpos = surfel_cell(surface.P, spawn_level);
+	const uint spawn_cell_count = surfel_cellvalid(spawn_gridpos)
+		? surfelGridBuffer[surfel_cellindex(spawn_gridpos, spawn_level)].count
+		: SURFEL_CELL_LIMIT;
+
+	if (spawn_cell_count < SURFEL_CELL_LIMIT)
 	{
 		uint surfel_count_at_pixel = 0;
 		surfel_count_at_pixel |= (uint(coverage) & 0xFF) << 24; // the upper bits matter most for min selection
@@ -206,7 +217,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 			};
 			const uint mapTexLen = 5;
 			const uint maxHeat = 100;
-			float l = saturate((float)cell.count / maxHeat) * mapTexLen;
+			float l = saturate((float)spawn_cell_count / maxHeat) * mapTexLen;
 			float3 a = mapTex[floor(l)];
 			float3 b = mapTex[ceil(l)];
 			float4 heatmap = float4(lerp(a, b, l - floor(l)), 0.8);
@@ -237,7 +248,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	write_result(DTid.xy, color);
 	write_debug(DTid.xy, debug);
 
-	if (cell.count < SURFEL_CELL_LIMIT)
+	if (spawn_cell_count < SURFEL_CELL_LIMIT)
 	{
 		uint surfel_coverage = GroupMinSurfelCount[subtile];
 		uint2 minGTid;

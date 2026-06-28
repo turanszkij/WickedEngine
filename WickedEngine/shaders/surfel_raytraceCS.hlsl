@@ -502,8 +502,14 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			// Evaluate surfel cache at hit point for multi bounce:
 			{
 				float4 surfel_gi = 0;
-				uint cellindex = surfel_cellindex(surfel_cell(surface.P));
-				SurfelGridCell cell = surfelGridBuffer[cellindex];
+				// Gather from all cascaded grid levels, matching
+				// surfel_coverageCS.
+				for (uint level = 0; level < SURFEL_GRID_LEVELS; ++level)
+				{
+				int3 gridpos = surfel_cell(surface.P, level);
+				if (!surfel_cellvalid(gridpos))
+					continue;
+				SurfelGridCell cell = surfelGridBuffer[surfel_cellindex(gridpos, level)];
 				for (uint i = 0; i < cell.count; ++i)
 				{
 					uint surfel_index = surfelCellBuffer[cell.offset + i];
@@ -533,6 +539,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 						}
 					}
+				}
 				}
 				if (surfel_gi.a > 0)
 				{

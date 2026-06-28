@@ -549,7 +549,7 @@ namespace wi::scene
 				device->SetName(&surfelgi.indirectBuffer, "surfelgi.indirectBuffer");
 
 				buf.stride = sizeof(SurfelGridCell);
-				buf.size = buf.stride * SURFEL_TABLE_SIZE;
+				buf.size = buf.stride * SURFEL_TOTAL_TABLE_SIZE; // one hash table per cascaded grid level
 				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 				device->CreateBufferZeroed(&buf, &surfelgi.gridBuffer);
 				device->SetName(&surfelgi.gridBuffer, "surfelgi.gridBuffer");

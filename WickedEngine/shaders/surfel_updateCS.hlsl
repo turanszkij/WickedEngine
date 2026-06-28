@@ -42,22 +42,32 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		surfel.normal = pack_half3(surface.facenormal);
 		surfel.position = surface.P;
 
-		// Recompute the distance-scaled radius each frame so the surfel keeps a
-		// stable screen-space size as the camera moves. Set before grid
-		// insertion since surfel_cellintersects() reads GetRadius().
-		surfel.SetRadius(surfel_radius(surfel.position));
+		// Pick the cascaded grid level from the surfel's distance and set its
+		// radius to that level's cell size. Near surfaces stay at level 0
+		// (solid base radius, so they never break into sub-cell dust); distant
+		// ones get larger surfels at coarser levels. Set before grid insertion
+		// since surfel_cellintersects() reads GetRadius().
+		const uint level = surfel_level(surfel.position);
+		surfel.SetRadius(surfel_cellsize(level));
 
-		int3 center_cell = surfel_cell(surfel.position);
+		int3 center_cell = surfel_cell(surfel.position, level);
 		for (uint i = 0; i < 27; ++i)
 		{
 			int3 gridpos = center_cell + surfel_neighbor_offsets[i];
 
-			if(surfel_cellintersects(surfel, gridpos))
+			if(surfel_cellintersects(surfel, gridpos, level))
 			{
-				uint cellindex = surfel_cellindex(gridpos);
+				uint cellindex = surfel_cellindex(gridpos, level);
 				InterlockedAdd(surfelGridBuffer[cellindex].count, 1);
 			}
 		}
+
+		// Write the surfel (with this frame's position/normal/level radius)
+		// now, so surfel_binningCS bins it into exactly the cells counted
+		// above. A surfel that loads but is then recycled below still gets
+		// binned this frame, so its stored radius must already match the
+		// counted level.
+		surfelBuffer[surfel_index] = surfel;
 	}
 	else
 	{
@@ -110,7 +120,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		surfel_data.raydata |= rayOffset & 0xFFFFFF;
 		surfel_data.raydata |= rayCount << 24u;
 
-		surfelBuffer[surfel_index] = surfel;
+		// surfel (Surfel) was already written in the load block above; only the
+		// per-surfel SurfelData (ray allocation) needs writing here.
 		surfelDataBuffer[surfel_index] = surfel_data;
 
 		SurfelRayData initialRayData = (SurfelRayData)0;

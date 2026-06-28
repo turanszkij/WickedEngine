@@ -9,9 +9,10 @@ static const uint SURFEL_MOMENT_RESOLUTION = 4;
 static const uint SURFEL_MOMENT_ATLAS_TEXELS = SQRT_SURFEL_CAPACITY * SURFEL_MOMENT_RESOLUTION;
 static const uint3 SURFEL_GRID_DIMENSIONS = uint3(128, 64, 128);
 static const uint SURFEL_TABLE_SIZE = SURFEL_GRID_DIMENSIONS.x * SURFEL_GRID_DIMENSIONS.y * SURFEL_GRID_DIMENSIONS.z;
-static const float SURFEL_MAX_RADIUS = 2;
-static const float SURFEL_MIN_RADIUS = 0.5; // smallest surfel radius (near camera); keep cells coverable within SURFEL_CELL_LIMIT
-static const float SURFEL_RADIUS_PIXELS = 32; // target screen-space radius in pixels that drives distance-based sizing
+static const uint SURFEL_GRID_LEVELS = 4; // cascaded grid levels; level L has cell/radius SURFEL_MAX_RADIUS << L (2, 4, 8, 16)
+static const uint SURFEL_TOTAL_TABLE_SIZE = SURFEL_TABLE_SIZE * SURFEL_GRID_LEVELS; // grid cells across all levels
+static const float SURFEL_MAX_RADIUS = 2; // level-0 (finest) cell size and radius; the actual max radius is SURFEL_MAX_RADIUS << (SURFEL_GRID_LEVELS-1)
+static const float SURFEL_RADIUS_PIXELS = 32; // target screen-space radius in pixels that drives which level a surfel lands on
 static const float SURFEL_RECYCLE_DISTANCE = 0; // if surfel is behind camera and farther than this distance, it starts preparing for recycling
 static const uint SURFEL_RECYCLE_TIME = 60; // if surfel is preparing for recycling, this is how many frames it takes to recycle it.
 static const uint SURFEL_INDIRECT_NUMTHREADS = 32;
@@ -174,30 +175,43 @@ struct SurfelDebugPushConstants
 };
 
 #ifndef __cplusplus
-inline int3 surfel_cell(float3 position)
+// World-space cell size (and surfel radius) of cascaded grid level L. Level 0
+// is the finest (SURFEL_MAX_RADIUS); each coarser level doubles. A surfel is
+// placed at the level whose cell matches its radius, so near surfaces use fine
+// surfels and distant ones use a few large surfels without any surfel exceeding
+// one cell.
+inline float surfel_cellsize(uint level)
 {
+	return SURFEL_MAX_RADIUS * (float)(1u << level);
+}
+inline int3 surfel_cell(float3 position, uint level)
+{
+	const float cell_size = surfel_cellsize(level);
 #ifdef SURFEL_USE_HASHING
-	return floor(position / SURFEL_MAX_RADIUS);
+	return floor(position / cell_size);
 #else
-	return floor((position - floor(GetCamera().position)) / SURFEL_MAX_RADIUS) + SURFEL_GRID_DIMENSIONS / 2;
+	return floor((position - floor(GetCamera().position)) / cell_size) + SURFEL_GRID_DIMENSIONS / 2;
 #endif // SURFEL_USE_HASHING
 }
-// Distance-scaled surfel radius: keeps a roughly constant screen-space
-// footprint so distant surfels are larger (fewer, smoother) and near ones
-// smaller (more detail). projection[1][1] = 1/tan(fovY/2), so
-// 2*dist/(projection[1][1]*height) is the world size of one screen pixel at
-// this distance. Capped to SURFEL_MAX_RADIUS so a surfel never exceeds a grid
-// cell (which would break the single-level hash grid).
-inline float surfel_radius(float3 position)
+// Cascaded grid level a surfel at this position should live at, chosen so it
+// has a roughly constant screen-space footprint (SURFEL_RADIUS_PIXELS) but is
+// never finer than level 0 (so near surfaces keep a solid base radius and do
+// not break into sub-cell dust). projection[1][1] = 1/tan(fovY/2), so
+// 2*dist/(projection[1][1]*height) is the world size of one screen pixel here.
+inline uint surfel_level(float3 position)
 {
-	float dist = distance(position, GetCamera().position);
-	float world_per_pixel =
+	const float dist = distance(position, GetCamera().position);
+	const float world_per_pixel =
 		2.0 * dist /
 		(GetCamera().projection[1][1] * (float)GetCamera().internal_resolution.y);
-	return clamp(
-		SURFEL_RADIUS_PIXELS * world_per_pixel,
-		SURFEL_MIN_RADIUS,
-		SURFEL_MAX_RADIUS);
+	const float desired_radius = SURFEL_RADIUS_PIXELS * world_per_pixel;
+	const float level = floor(log2(max(desired_radius / SURFEL_MAX_RADIUS, 1.0)));
+	return (uint)clamp(level, 0, SURFEL_GRID_LEVELS - 1);
+}
+// Recover a surfel's level from its stored radius (== its level's cell size).
+inline uint surfel_level_from_radius(float radius)
+{
+	return firstbithigh(max(1u, (uint)(radius / SURFEL_MAX_RADIUS + 0.5)));
 }
 float3 surfel_griduv(float3 position)
 {
@@ -207,17 +221,20 @@ float3 surfel_griduv(float3 position)
 	return (((position - floor(GetCamera().position)) / SURFEL_MAX_RADIUS) + SURFEL_GRID_DIMENSIONS / 2) / SURFEL_GRID_DIMENSIONS;
 #endif // SURFEL_USE_HASHING
 }
-inline uint surfel_cellindex(int3 cell)
+// Flat index into the combined (all-levels) grid table. Each level owns a
+// SURFEL_TABLE_SIZE-sized block, so a cell never collides across levels.
+inline uint surfel_cellindex(int3 cell, uint level)
 {
+	const uint level_base = level * SURFEL_TABLE_SIZE;
 #ifdef SURFEL_USE_HASHING
-	const uint p1 = 73856093;   // some large primes 
+	const uint p1 = 73856093;   // some large primes
 	const uint p2 = 19349663;
 	const uint p3 = 83492791;
 	int n = p1 * cell.x ^ p2 * cell.y ^ p3 * cell.z;
 	n %= SURFEL_TABLE_SIZE;
-	return n;
+	return level_base + (uint)n;
 #else
-	return flatten3D(cell, SURFEL_GRID_DIMENSIONS);
+	return level_base + flatten3D(cell, SURFEL_GRID_DIMENSIONS);
 #endif // SURFEL_USE_HASHING
 }
 inline bool surfel_cellvalid(int3 cell)
@@ -234,18 +251,19 @@ inline bool surfel_cellvalid(int3 cell)
 	return true;
 #endif // SURFEL_USE_HASHING
 }
-inline bool surfel_cellintersects(Surfel surfel, int3 cell)
+inline bool surfel_cellintersects(Surfel surfel, int3 cell, uint level)
 {
 	if (!surfel_cellvalid(cell))
 		return false;
 
 #ifdef SURFEL_GRID_CULLING
+	const float cell_size = surfel_cellsize(level);
 #ifdef SURFEL_USE_HASHING
-	float3 gridmin = cell * SURFEL_MAX_RADIUS;
-	float3 gridmax = (cell + 1) * SURFEL_MAX_RADIUS;
+	float3 gridmin = cell * cell_size;
+	float3 gridmax = (cell + 1) * cell_size;
 #else
-	float3 gridmin = cell - SURFEL_GRID_DIMENSIONS / 2 * SURFEL_MAX_RADIUS + floor(GetCamera().position);
-	float3 gridmax = (cell + 1) - SURFEL_GRID_DIMENSIONS / 2 * SURFEL_MAX_RADIUS + floor(GetCamera().position);
+	float3 gridmin = cell - SURFEL_GRID_DIMENSIONS / 2 * cell_size + floor(GetCamera().position);
+	float3 gridmax = (cell + 1) - SURFEL_GRID_DIMENSIONS / 2 * cell_size + floor(GetCamera().position);
 #endif // SURFEL_USE_HASHING
 
 	float3 closestPointInAabb = min(max(surfel.position, gridmin), gridmax);

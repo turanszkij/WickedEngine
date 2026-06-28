@@ -122,7 +122,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	}
 
 	[branch]
-	if (!surface.IsGIApplied() && GetFrame().options & OPTION_BIT_SURFELGI_ENABLED && camera.texture_surfelgi_index >= 0 && surfel_cellvalid(surfel_cell(surface.P)))
+	if (!surface.IsGIApplied() && GetFrame().options & OPTION_BIT_SURFELGI_ENABLED && camera.texture_surfelgi_index >= 0 && surfel_cellvalid(surfel_cell(surface.P, 0)))
 	{
 		lighting.indirect.diffuse = bindless_textures_half4[descriptor_index(camera.texture_surfelgi_index)][surface.pixel].rgb;
 		surface.SetGIApplied(true);

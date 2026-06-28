@@ -12312,7 +12312,7 @@ void SurfelGI(
 		}
 
 		device->Dispatch(
-			(SURFEL_TABLE_SIZE + 63) / 64,
+			(SURFEL_TOTAL_TABLE_SIZE + 63) / 64,
 			1,
 			1,
 			cmd
