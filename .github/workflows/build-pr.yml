@@ -251,13 +251,6 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Xcode Clean
-      run: |
-        rm -rf ~/Library/Developer/Xcode/DerivedData
-        rm -rf ~/Library/Caches/com.apple.dt.Xcode
-        rm -rf /Users/runner/Library/Developer/Xcode/DerivedData
-        xcodebuild -allTargets clean || true
-
     - name: Compile Offlineshadercompiler
       run: |
         xcodebuild clean build -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -configuration Release
@@ -297,13 +290,6 @@ jobs:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v4
-    
-    - name: Xcode Clean
-      run: |
-        rm -rf ~/Library/Developer/Xcode/DerivedData
-        rm -rf ~/Library/Caches/com.apple.dt.Xcode
-        rm -rf /Users/runner/Library/Developer/Xcode/DerivedData
-        xcodebuild -allTargets clean || true
 
     - name: Compile Offlineshadercompiler
       run: |
