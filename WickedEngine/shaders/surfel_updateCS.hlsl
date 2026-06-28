@@ -74,20 +74,46 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		radius = 0;
 	}
 
-	// Recycle off-screen surfels only when the pool is under pressure
-	// (shortage), and only after they have been unseen long enough (recycle
-	// counter advanced in surfel_integrateCS). While there is spare capacity,
-	// surfels persist in the world hash grid so they keep providing GI when the
-	// camera looks back - moving or rotating then reveals existing surfels
-	// instead of re-spawning into voids. Under shortage this evicts the
-	// longest-unseen surfels first (LRU). (This requires the recycle counter to
-	// actually work, which the backface-bit fix restored; the previous
-	// unconditional recycling killed surfels ~1s after they left view, causing
-	// re-spawn voids on camera motion.)
-	const bool shortage = surfelStatsBuffer[0].shortage > 0;
-	if (shortage && surfel_data.GetRecycle() > SURFEL_RECYCLE_TIME)
+	// Relevance-based recycling bounds the live working set, and with it the
+	// cost of every later pass plus the per-pixel gather. Each surfel is
+	// evicted with a probability that rises as it becomes less relevant: how
+	// long since it last contributed to a visible pixel (recency, from the seen
+	// bit), distance from the camera, and the pool filling past a soft target
+	// (pressure). Eviction is probabilistic and spread across frames so it
+	// never mass-evicts a cluster at once. Surfels still contributing keep
+	// recycle==0 (recency 0) and are effectively immortal.
+	if (radius > 0)
 	{
-		radius = 0;
+		const uint recycle = surfel_data.GetRecycle();
+		const float recency = smoothstep(
+			(float)SURFEL_RECYCLE_RECENCY_MIN,
+			(float)SURFEL_RECYCLE_RECENCY_MAX,
+			(float)recycle);
+		const float dist = distance(surfel.position, GetCamera().position);
+		const float distance_term = saturate(dist / SURFEL_RECYCLE_DISTANCE_FAR);
+
+		// How disposable this surfel is in [0,1]: distant and/or long-unseen.
+		const float disposability = saturate(0.5 * distance_term + 0.5 * recency);
+
+		// Pool pressure relative to the soft target (1.0 == at target).
+		const float pressure_ratio = (float)surfel_count / (float)SURFEL_LIVE_TARGET;
+		const float over_frac = saturate(pressure_ratio - 1.0);
+
+		// Under target: only a trickle (scaled by disposability) keeps the cache
+		// fresh without discarding useful surfels. Over target: shed a real
+		// fraction every frame - a baseline even for near/recent surfels, more
+		// for disposable ones - so an all-visible view cannot grow the set
+		// without bound.
+		float p_recycle = disposability * SURFEL_RECYCLE_PRESSURE_FLOOR;
+		p_recycle = max(p_recycle,
+			over_frac * lerp(SURFEL_RECYCLE_OVERFLOW_MIN, 1.0, disposability));
+
+		RNG rng;
+		rng.init(uint2(surfel_index, 0), GetFrame().frame_count);
+		if (rng.next_float() < p_recycle)
+		{
+			radius = 0;
+		}
 	}
 
 	if (radius > 0)

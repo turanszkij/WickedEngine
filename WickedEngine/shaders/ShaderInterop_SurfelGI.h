@@ -13,8 +13,17 @@ static const uint SURFEL_GRID_LEVELS = 4; // cascaded grid levels; level L has c
 static const uint SURFEL_TOTAL_TABLE_SIZE = SURFEL_TABLE_SIZE * SURFEL_GRID_LEVELS; // grid cells across all levels
 static const float SURFEL_MAX_RADIUS = 2; // level-0 (finest) cell size and radius; the actual max radius is SURFEL_MAX_RADIUS << (SURFEL_GRID_LEVELS-1)
 static const float SURFEL_RADIUS_PIXELS = 32; // target screen-space radius in pixels that drives which level a surfel lands on
-static const float SURFEL_RECYCLE_DISTANCE = 0; // if surfel is behind camera and farther than this distance, it starts preparing for recycling
-static const uint SURFEL_RECYCLE_TIME = 60; // if surfel is preparing for recycling, this is how many frames it takes to recycle it.
+// Relevance-based recycler (see surfel_updateCS): the live working set is bounded
+// by recycling the least-relevant surfels probabilistically. Relevance falls with
+// recency (frames since a surfel last contributed to a visible pixel), distance
+// from the camera, and pool pressure (live count vs. the soft target below).
+static const uint SURFEL_LIVE_TARGET = 40000; // soft cap on live surfels; eviction ramps as the live count approaches/exceeds this (kept well below SURFEL_CAPACITY so recycling actually engages)
+static const uint SURFEL_RECYCLE_RECENCY_MIN = 32; // frames a surfel must go unseen before it becomes eligible for recency-based eviction
+static const uint SURFEL_RECYCLE_RECENCY_MAX = 200; // frames unseen at which recency eviction saturates (must stay < 256: recycle is packed at 8 bits)
+static const float SURFEL_RECYCLE_DISTANCE_FAR = 200; // distance from camera (world units) at which the distance eviction bias saturates
+static const float SURFEL_RECYCLE_PRESSURE_FLOOR = 0.02f; // under-target trickle: small eviction scale so stale/distant surfels still recycle while the pool has headroom
+static const float SURFEL_RECYCLE_OVERFLOW_MIN = 0.25f; // over-target: minimum per-frame shed rate even for near/recent surfels, so an all-visible view (e.g. sky looking down) can't grow the set without bound
+static const uint SURFEL_PROPERTY_SEEN_BIT = 1u << 17u; // SurfelData.properties bit set by surfel_coverageCS when a surfel contributes to a visible pixel
 static const uint SURFEL_INDIRECT_NUMTHREADS = 32;
 static const float SURFEL_TARGET_COVERAGE = 0.8f; // how many surfels should affect a pixel fully, higher values will increase quality and cost
 static const uint SURFEL_CELL_LIMIT = 32; // limit the amount of allocated surfels in a cell (bounds density and avoids clumping)
@@ -45,7 +54,7 @@ struct SurfelIndirectArgs
 };
 
 #ifdef __cplusplus
-static_assert(SURFEL_RECYCLE_TIME < 256, "Must be < 256 because it is packed at 8 bits!");
+static_assert(SURFEL_RECYCLE_RECENCY_MAX < 256, "Must be < 256 because it is packed at 8 bits!");
 static_assert(SURFEL_RAY_BOOST_MAX < 256, "Must be < 256 because it is packed at 8 bits!");
 #endif // __cplusplus
 
@@ -71,7 +80,7 @@ struct SurfelData
 
 	uint bary;
 	uint raydata; // 24bit rayOffset, 8bit rayCount
-	uint properties; // 8bit life frames, 8bit recycle frames, 1bit backface normal
+	uint properties; // 8bit life frames, 8bit recycle frames, 1bit backface normal (bit16), 1bit seen-this-frame (bit17)
 	float max_inconsistency;
 
 	inline uint GetRayOffset() { return raydata & 0xFFFFFF; }
@@ -80,10 +89,12 @@ struct SurfelData
 	uint GetLife() { return properties & 0xFF; }
 	uint GetRecycle() { return (properties >> 8u) & 0xFF; }
 	bool IsBackfaceNormal() { return (properties >> 16u) & 0x1; }
+	bool IsSeen() { return (properties >> 17u) & 0x1; }
 
 	void SetLife(uint value) { properties |= value & 0xFF; }
 	void SetRecycle(uint value) { properties |= (value & 0xFF) << 8u; }
 	void SetBackfaceNormal(bool value) { if (value) properties |= 1u << 16u; else properties &= ~(1u << 16u); }
+	void SetSeen(bool value) { if (value) properties |= 1u << 17u; else properties &= ~(1u << 17u); }
 };
 struct SurfelVarianceData
 {

@@ -184,25 +184,19 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	{
 		life++;
 
-		float3 cam_to_surfel = surfel.position - GetCamera().position;
-		if (length(cam_to_surfel) > SURFEL_RECYCLE_DISTANCE)
+		// Recency for the recycler: frames since this surfel last contributed
+		// to a visible pixel. surfel_coverageCS sets the "seen" bit when it
+		// gathers this surfel for a visible surface - a truer "still useful"
+		// signal than a frustum test, since it accounts for occlusion.
+		// properties is rebuilt from 0 below, clearing the bit for next frame;
+		// coverage re-sets it if the surfel contributes again.
+		if (surfel_data.IsSeen())
 		{
-			ShaderSphere sphere;
-			sphere.center = surfel.position;
-			sphere.radius = surfel.GetRadius();
-
-			if (GetCamera().frustum.intersects(sphere))
-			{
-				recycle = 0;
-			}
-			else
-			{
-				recycle++;
-			}
+			recycle = 0;
 		}
 		else
 		{
-			recycle = 0;
+			recycle++;
 		}
 
 		life = clamp(life, 0, 255);
