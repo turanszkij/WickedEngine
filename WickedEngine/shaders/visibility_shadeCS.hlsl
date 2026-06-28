@@ -1,5 +1,4 @@
 #define SHADOW_MASK_ENABLED
-#define DISABLE_DECALS // decals were applied in surface shader
 //#define DISABLE_VOXELGI
 //#define DISABLE_ENVMAPS
 //#define DISABLE_SOFT_SHADOWMAP
@@ -17,6 +16,7 @@
 #include "shadingHF.hlsli"
 
 // This shader computes per-pixel lighting based on primitiveID and surface attributes
+//	This shader reads surface attributes from payload that was prepared by the surface pass instead of loading surface from triangle data
 
 struct VisibilityPushConstants
 {
@@ -25,6 +25,7 @@ struct VisibilityPushConstants
 PUSHCONSTANT(push, VisibilityPushConstants);
 
 StructuredBuffer<VisibilityTile> binned_tiles : register(t0);
+Texture2D<half2> input_normals : register(t1);
 Texture2D<uint4> input_payload_0 : register(t2);
 Texture2D<uint4> input_payload_1 : register(t3);
 
@@ -48,11 +49,19 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	const float2 uv = ((float2)pixel + 0.5) * camera.internal_resolution_rcp;
 	RayDesc ray = CreateCameraRay(pixel);
 
+	const float depth = texture_depth[pixel];
+
+	uint4 payload_0 = input_payload_0[pixel];
+
 #ifdef PRIMITIVEID_UNIFORM
 	const uint primitiveID = tile.execution_mask_or_primitiveID;
+	const uint materialIndex = tile.materialIndex;
 #else
 	const uint primitiveID = texture_primitiveID[pixel];
+	const uint materialIndex = payload_0.w;
 #endif // PRIMITIVEID_UNIFORM
+
+	ShaderMaterial material = load_material(materialIndex);
 
 	PrimitiveID prim;
 	prim.init();
@@ -60,25 +69,22 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
 	Surface surface;
 	surface.init();
+	surface.create(material);
 
-	[branch]
-	if (!surface.load(prim, ray.Origin, ray.Direction))
-	{
-		return;
-	}
 	surface.pixel = pixel.xy;
 	surface.screenUV = uv;
+	surface.P = reconstruct_position(uv, depth, camera.inverse_view_projection);
+	surface.V = normalize(ray.Origin - surface.P);
 
 	// Unpack primary payload:
-	uint4 payload_0 = input_payload_0[pixel];
 	half4 data0 = unpack_rgba(payload_0.x);
 	surface.albedo = RemoveSRGBCurve_Fast(data0.rgb);
 	surface.occlusion = data0.a;
 	half4 data1 = unpack_rgba(payload_0.y);
 	surface.f0 = RemoveSRGBCurve_Fast(data1.rgb);
 	surface.roughness = data1.a;
-	surface.N = decode_oct(unpack_half2(payload_0.z));
-	surface.emissiveColor = Unpack_R11G11B10_FLOAT(payload_0.w);
+	surface.N = decode_oct(input_normals[pixel]);
+	surface.emissiveColor = Unpack_R11G11B10_FLOAT(payload_0.z);
 
 	surface.opacity = 1;
 	surface.baseColor = half4(surface.albedo, surface.opacity);
@@ -143,7 +149,8 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	half4 rimHighlight = surface.inst.GetRimHighlight();
 	color.rgb += rimHighlight.rgb * pow(1 - surface.NdotV, rimHighlight.w);
 
-	ApplyFog(surface.hit_depth, surface.V, color);
+	const float lineardepth = compute_lineardepth(depth, camera.z_near, camera.z_far, camera.IsOrtho());
+	ApplyFog(lineardepth, surface.V, color);
 
 	color = saturateMediump(color);
 

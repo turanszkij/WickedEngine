@@ -82,6 +82,11 @@ namespace wi
 		wi::graphics::Texture displacementMap_readback[wi::graphics::GraphicsDevice::GetBufferCount()];		// (RGBA32F)
 		mutable bool displacement_readback_valid[arraysize(displacementMap_readback)] = {};
 		mutable uint32_t displacement_readback_index = 0;
+		// Number of frames the displacement map readback is still kept alive for.
+		// Each GetDisplacedPosition() query refreshes this; CopyDisplacementMapReadback()
+		// decrements it and skips the (expensive) GPU->CPU copy once it reaches zero, so
+		// the full-texture readback is only paid for while something queries ocean height.
+		mutable uint32_t displacement_readback_request = 0;
 
 		void initHeightMap(XMFLOAT2* out_h0, float* out_omega);
 
@@ -99,7 +104,6 @@ namespace wi
 		wi::graphics::GPUBuffer buffer_Float_Dxyz;
 
 
-		wi::graphics::GPUBuffer constantBuffer;
 		mutable wi::graphics::GPUBuffer indexBuffer;
 		mutable wi::graphics::GPUBuffer indexBuffer_occlusionTest;
 		mutable wi::graphics::GPUBuffer indexBuffer_cubemap;
