@@ -12012,10 +12012,9 @@ void Visibility_Surface(
 	PushBarrier(GPUBarrier::Image(&res.texture_payload_1, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
 	FlushBarriers(cmd);
 
+	// normals and roughness need to be cleared, because sky doesn't write them and they can be sampled and no invalid data can remain when sampling:
 	device->ClearUAV(&res.texture_normals, 0, cmd);
 	device->ClearUAV(&res.texture_roughness, 0, cmd);
-	device->ClearUAV(&res.texture_payload_0, 0, cmd);
-	device->ClearUAV(&res.texture_payload_1, 0, cmd);
 	device->Barrier(cmd);
 
 	device->BindResource(&res.binned_tiles, 0, cmd);
@@ -12093,6 +12092,7 @@ void Visibility_Surface_Reduced(
 
 	BindCommonResources(cmd);
 
+	// normals and roughness need to be cleared, because sky doesn't write them and they can be sampled and no invalid data can remain when sampling:
 	PushBarrier(GPUBarrier::Image(&res.texture_normals, res.texture_normals.desc.layout, ResourceState::UNORDERED_ACCESS));
 	PushBarrier(GPUBarrier::Image(&res.texture_roughness, res.texture_roughness.desc.layout, ResourceState::UNORDERED_ACCESS));
 	FlushBarriers(cmd);
@@ -12169,6 +12169,7 @@ void Visibility_Shade(
 	FlushBarriers(cmd);
 
 	device->BindResource(&res.binned_tiles, 0, cmd);
+	device->BindResource(&res.texture_normals, 1, cmd);
 	device->BindResource(&res.texture_payload_0, 2, cmd);
 	device->BindResource(&res.texture_payload_1, 3, cmd);
 	device->BindUAV(&output, 0, cmd);
@@ -12229,10 +12230,7 @@ void Visibility_Velocity(
 
 	BindCommonResources(cmd);
 
-	device->Barrier(GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
-
-	device->ClearUAV(&output, 0, cmd);
-	device->Barrier(GPUBarrier::Memory(&output), cmd);
+	device->Barrier(GPUBarrier::Image(&output, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS), cmd); // discard
 
 	device->BindUAV(&output, 0, cmd);
 
