@@ -85,28 +85,39 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	if (radius > 0)
 	{
 		const uint recycle = surfel_data.GetRecycle();
+
+		// Recency in [0,1]: 0 while the surfel keeps contributing to visible
+		// pixels (seen this frame => recycle 0), ramping to 1 only after it has
+		// gone unseen for RECENCY_MIN..MAX frames. This MUST gate eviction: a
+		// surfel that is still seen has to be immortal, otherwise an in-view
+		// cube/Cornell scene churns (points popping in and out).
 		const float recency = smoothstep(
 			(float)SURFEL_RECYCLE_RECENCY_MIN,
 			(float)SURFEL_RECYCLE_RECENCY_MAX,
 			(float)recycle);
+
+		// Distance only biases which already-evictable surfels go first (1x
+		// near .. BOOST far); it never by itself recycles a surfel that is
+		// still seen.
 		const float dist = distance(surfel.position, GetCamera().position);
 		const float distance_term = saturate(dist / SURFEL_RECYCLE_DISTANCE_FAR);
-
-		// How disposable this surfel is in [0,1]: distant and/or long-unseen.
-		const float disposability = saturate(0.5 * distance_term + 0.5 * recency);
+		const float distance_bias = lerp(1.0, SURFEL_RECYCLE_DISTANCE_BOOST, distance_term);
 
 		// Pool pressure relative to the soft target (1.0 == at target).
 		const float pressure_ratio = (float)surfel_count / (float)SURFEL_LIVE_TARGET;
 		const float over_frac = saturate(pressure_ratio - 1.0);
 
-		// Under target: only a trickle (scaled by disposability) keeps the cache
-		// fresh without discarding useful surfels. Over target: shed a real
-		// fraction every frame - a baseline even for near/recent surfels, more
-		// for disposable ones - so an all-visible view cannot grow the set
-		// without bound.
-		float p_recycle = disposability * SURFEL_RECYCLE_PRESSURE_FLOOR;
+		// (a) Staleness trickle, recency-gated: a surfel seen this frame
+		//     (recency 0) is never recycled while under target. Only surfels
+		//     gone unseen long enough age out, distant ones first.
+		float p_recycle = recency * distance_bias * SURFEL_RECYCLE_PRESSURE_FLOOR;
+
+		// (b) Overflow shed, only past the soft target and there regardless of
+		//     recency (an all-visible view has recency 0 everywhere), still
+		//     biased toward distant surfels - bounds the set when the whole
+		//     scene is visible at once (sky looking down, dense foliage).
 		p_recycle = max(p_recycle,
-			over_frac * lerp(SURFEL_RECYCLE_OVERFLOW_MIN, 1.0, disposability));
+			over_frac * distance_bias * SURFEL_RECYCLE_OVERFLOW_GAIN);
 
 		RNG rng;
 		rng.init(uint2(surfel_index, 0), GetFrame().frame_count);
