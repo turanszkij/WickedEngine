@@ -122,13 +122,21 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 				// no other field of properties is written during coverage.
 				surfelDataBuffer[surfel_index].properties |= SURFEL_PROPERTY_SEEN_BIT;
 
-				// Smooth radial falloff: (1 - d^2/r^2)^2 reaches zero with zero
-				// slope at the surfel edge, so surfels fade in/out gently as
-				// the camera moves instead of popping at a hard boundary.
-				float falloff = saturate(1 - dist2 / sqr(surfel.GetRadius()));
-				falloff *= falloff;
-				float contribution = saturate(dotN) * falloff;
-				coverage += contribution;
+				// Coverage (the spawn metric) uses a loose radial * dotN
+				// weight, deliberately NOT the sharpened anti-leak weight.
+				// Sharpening the coverage metric collapses it on curved /
+				// foliage / normal-mapped surfaces (dotN < 1), which massively
+				// over-spawns and churns the pool; spawn density must stay
+				// independent of the GI weighting.
+				float radial = saturate(1 - dist2 / sqr(surfel.GetRadius()));
+				radial *= radial;
+				coverage += saturate(dotN) * radial;
+
+				// GI weight: full anti-leak (sharp normal + tangent-plane),
+				// shared with the raytrace multi-bounce and birth-seed gathers
+				// so they agree. Only affects the (normalized) GI value below,
+				// never the spawn decision above.
+				float contribution = surfel_geometry_weight(L, normal, surfel.GetRadius(), dist2, dotN);
 				
 				float2 moments = surfelMomentsTexture.SampleLevel(sampler_linear_clamp, surfel_moment_uv(surfel_index, normal, L / dist), 0);
 				contribution *= surfel_moment_weight(moments, dist);

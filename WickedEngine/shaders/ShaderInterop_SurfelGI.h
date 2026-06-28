@@ -27,6 +27,8 @@ static const float SURFEL_RECYCLE_OVERFLOW_GAIN = 0.25f; // over-target shed: pe
 static const uint SURFEL_PROPERTY_SEEN_BIT = 1u << 17u; // SurfelData.properties bit set by surfel_coverageCS when a surfel contributes to a visible pixel
 static const uint SURFEL_INDIRECT_NUMTHREADS = 32;
 static const float SURFEL_TARGET_COVERAGE = 0.8f; // how many surfels should affect a pixel fully, higher values will increase quality and cost
+static const float SURFEL_NORMAL_WEIGHT_POWER = 2; // exponent sharpening the normal-similarity term in the GI lookup; keep mild (the tangent-plane term is the real anti-leak) - too high collapses the contributor count on curved/foliage surfaces, which under-averages and lets GI fireflies show through
+static const float SURFEL_PLANE_WEIGHT_SCALE = 0.7f; // tangent-plane tolerance as a fraction of radius; smaller = stricter anti-leak (a surfel only affects a thin slab around its own plane, so it can't leak onto a perpendicular surface across an edge)
 static const uint SURFEL_CELL_LIMIT = 32; // limit the amount of allocated surfels in a cell (bounds density and avoids clumping)
 static const uint SURFEL_SPAWN_BUDGET = 8192; // max number of new surfels spawned per frame (bounds placement cost)
 static const uint SURFEL_RAY_BUDGET = 500000; // max number of rays per frame
@@ -330,6 +332,32 @@ float2 surfel_moment_pixel(uint surfel_index, float3 normal, float3 direction)
 float2 surfel_moment_uv(uint surfel_index, float3 normal, float3 direction)
 {
 	return surfel_moment_pixel(surfel_index, normal, direction) / SURFEL_MOMENT_ATLAS_TEXELS;
+}
+// Geometric contribution weight of a surfel at a shading point, in [0,1].
+// Used by the coverage GI apply ONLY (the visible result), never the feedback
+// paths: the raytrace multi-bounce and birth-seed gathers write the surfel
+// cache, so they must average over many surfels with a loose weight; sharpening
+// them collapses the contributor count and lets bright outliers propagate and
+// run away. The apply is output-only, so the sharp edge-aware weight is safe
+// there and is what cleans hard seams. Combines three terms:
+//   - radial falloff (1 - d^2/r^2)^2: smooth, zero-slope at the surfel edge.
+//   - normal sharpness pow(dotN, k): suppresses grazing-angle contributions.
+//   - tangent-plane distance: the key anti-leak. A point on a surface that
+//     meets the surfel's surface at a hard edge is offset along the surfel's
+//     normal, so it is far from the surfel's plane and gets ~0 weight even
+//     though it is within the surfel's radius and the normals are not exactly
+//     opposed. Coplanar points (same flat surface) are unaffected, so flat
+//     walls keep full coverage while 90-degree seams stop bleeding.
+// Callers pass to_surface = shading_pos - surfel.position and the precomputed
+// dist2/dotN (and have already gated on dist2 < radius^2 and dotN > 0).
+inline float surfel_geometry_weight(float3 to_surface, float3 surfel_normal, float radius, float dist2, float dotN)
+{
+	float weight = saturate(1 - dist2 / sqr(radius));
+	weight *= weight;
+	weight *= pow(saturate(dotN), SURFEL_NORMAL_WEIGHT_POWER);
+	const float plane_dist = abs(dot(to_surface, surfel_normal));
+	weight *= saturate(1 - plane_dist / (radius * SURFEL_PLANE_WEIGHT_SCALE));
+	return weight;
 }
 float surfel_moment_weight(float2 moments, float dist)
 {
