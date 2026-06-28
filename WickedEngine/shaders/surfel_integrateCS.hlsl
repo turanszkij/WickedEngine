@@ -22,6 +22,10 @@ static const uint CACHE_SIZE = THREADCOUNT * THREADCOUNT;
 groupshared SurfelRayData ray_cache[CACHE_SIZE];
 groupshared float3 shared_texels[SURFEL_MOMENT_RESOLUTION * SURFEL_MOMENT_RESOLUTION];
 groupshared float shared_inconsistency[CACHE_SIZE];
+// Birth seeding (life == 0): neighbor-cache radiance + total weight, gathered
+// once per group and read by every texel thread to seed a newborn surfel.
+groupshared SH::L1_RGB shared_seed_sh;
+groupshared float shared_seed_weight;
 
 [numthreads(THREADCOUNT, THREADCOUNT, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint groupIndex : SV_GroupIndex)
@@ -40,6 +44,58 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	float3 texel_direction = decode_hemioct(((GTid.xy + 0.5) / (float2)SURFEL_MOMENT_RESOLUTION) * 2 - 1);
 	texel_direction = mul(texel_direction, get_tangentspace(N));
 	texel_direction = normalize(texel_direction);
+
+	// Birth seeding: a newborn surfel (life == 0) seeds its radiance from the
+	// surrounding surfel cache so it never starts black - a ray-starved newborn
+	// would otherwise fold a zero sample and pop black until it converges.
+	// Gather once per group (life is uniform across the group) into shared
+	// memory; the texel threads below evaluate it in their own direction. Reads
+	// last-frame neighbor radiance (this frame's writes happen later in this
+	// pass) from the surfel's own grid cell, normal-gated so we only seed from
+	// similarly oriented surfaces. If there are no neighbors yet (genuinely
+	// fresh area) the weight stays 0 and the texels fall back to this frame's
+	// rays.
+	if (life == 0)
+	{
+		if (groupIndex == 0)
+		{
+			SH::L1_RGB seed_sh = SH::L1_RGB::Zero();
+			float seed_weight = 0;
+
+			const uint seed_level = surfel_level_from_radius(surfel.GetRadius());
+			const int3 seed_cell = surfel_cell(P, seed_level);
+			if (surfel_cellvalid(seed_cell))
+			{
+				SurfelGridCell cell = surfelGridBuffer[surfel_cellindex(seed_cell, seed_level)];
+				for (uint i = 0; i < cell.count; ++i)
+				{
+					const uint nbr_index = surfelCellBuffer[cell.offset + i];
+					if (nbr_index == surfel_index)
+						continue;
+
+					Surfel nbr = surfelBuffer[nbr_index];
+					const float3 nbr_normal = normalize(unpack_half3(nbr.normal));
+					const float dotN = dot(N, nbr_normal);
+					if (dotN <= 0)
+						continue;
+
+					const float3 to_self = P - nbr.position;
+					if (dot(to_self, to_self) >= sqr(nbr.GetRadius()))
+						continue;
+
+					seed_sh = SH::Add(seed_sh, SH::Multiply(nbr.radiance.Unpack(), dotN));
+					seed_weight += dotN;
+				}
+			}
+
+			if (seed_weight > 0)
+				seed_sh = SH::Multiply(seed_sh, rcp(seed_weight));
+
+			shared_seed_sh = seed_sh;
+			shared_seed_weight = seed_weight;
+		}
+		GroupMemoryBarrierWithGroupSync();
+	}
 
 	float3 result = 0;
 	float2 result_depth = 0;
@@ -118,21 +174,29 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 		if (life == 0)
 		{
 			varianceData = (SurfelVarianceData)0;
-			varianceData.mean = result;
-			varianceData.shortMean = result;
+			// Seed from the neighbor cache (evaluated in this texel's
+			// direction) when we have neighbors, else fall back to this frame's
+			// rays.
+			float3 seed = result;
+			if (shared_seed_weight > 0)
+				seed = max(0, SH::Evaluate(shared_seed_sh, texel_direction));
+			varianceData.mean = seed;
+			varianceData.shortMean = seed;
 			varianceData.inconsistency = 1;
 		}
 
-		// Only fold a new sample into the estimator when this texel actually
-		// received rays this frame. Under ray-budget pressure a surfel can get
-		// few or no rays; feeding the resulting zero into the estimator would
-		// drag its mean toward black, and because the starved set rotates frame
-		// to frame that shows up as flicker. When unsampled we keep the
-		// previous estimate. A freshly recycled surfel (life == 0) still writes
-		// once to reset any stale data left at its reused index.
-		if (total_weight > WEIGHT_EPSILON || life == 0)
+		// Fold this frame's sample into the estimator only when this texel
+		// actually received rays. Under ray-budget pressure a surfel can get
+		// few or no rays; folding the resulting zero would drag its mean toward
+		// black, and because the starved set rotates frame to frame that shows
+		// up as flicker. A newborn (life == 0) still stores once to commit its
+		// seed above, but only folds a real sample when it has rays - so a
+		// ray-starved newborn keeps its seed instead of going black.
+		const bool has_rays = total_weight > WEIGHT_EPSILON;
+		if (has_rays || life == 0)
 		{
-			MultiscaleMeanEstimator(result, varianceData, 0.1);
+			if (has_rays)
+				MultiscaleMeanEstimator(result, varianceData, 0.1);
 			surfelVarianceBuffer[variance_data_index].store(varianceData);
 		}
 

@@ -133,8 +133,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 				float2 moments = surfelMomentsTexture.SampleLevel(sampler_linear_clamp, surfel_moment_uv(surfel_index, normal, L / dist), 0);
 				contribution *= surfel_moment_weight(moments, dist);
 
-				// contribution based on life can eliminate black popping surfels, but the surfel_data must be accessed...
-				contribution = lerp(0, contribution, saturate(surfelDataBuffer[surfel_index].GetLife() / 2.0f));
+				// Defensive 1-frame fade: a surfel reaches full weight as soon
+				// as it has been integrated once (life >= 1). Birth seeding
+				// (surfel_integrateCS) already gives newborns a plausible
+				// non-black radiance, so the old half-weighting at life 1 only
+				// slowed perceived placement and left under-covered pixels
+				// dark; ramping to full at life 1 fills surfaces faster without
+				// reintroducing black pops.
+				contribution = lerp(0, contribution, saturate((float)surfelDataBuffer[surfel_index].GetLife()));
 
 				color += float4(SH::CalculateIrradiance(surfel.radiance.Unpack(), N), 1) * contribution;
 
