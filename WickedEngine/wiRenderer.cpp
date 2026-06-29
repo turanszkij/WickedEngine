@@ -9328,11 +9328,15 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 		const XMUINT2 required_tilecount = GetEntityCullingTileCount(XMUINT2(probe.texture.desc.width, probe.texture.desc.width));
 		static TiledLightResources tiledlights;
-		if (tiledlights.tileCount.x < required_tilecount.x || tiledlights.tileCount.y < required_tilecount.y)
+		int tilebuffer_descriptor = -1;
+		if (valid_probe)
 		{
-			CreateTiledLightResources(tiledlights, XMUINT2(probe.texture.desc.width, probe.texture.desc.width), 6); // tile buffer created for 6 cubemap faces
+			if (tiledlights.tileCount.x < required_tilecount.x || tiledlights.tileCount.y < required_tilecount.y)
+			{
+				CreateTiledLightResources(tiledlights, XMUINT2(probe.texture.desc.width, probe.texture.desc.width), 6); // tile buffer created for 6 cubemap faces
+			}
+			tilebuffer_descriptor = device->GetDescriptorIndex(&tiledlights.entityTiles, SubresourceType::SRV);
 		}
-		const int tilebuffer_descripotor = device->GetDescriptorIndex(&tiledlights.entityTiles, SubresourceType::SRV);
 
 		CameraCB cb;
 		cb.init();
@@ -9373,17 +9377,23 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			XMStoreFloat4(&shadercam.frustum_corners.cornersFAR[2], XMVector3TransformCoord(XMVectorSet(-1, -1, 0, 1), invVP));
 			XMStoreFloat4(&shadercam.frustum_corners.cornersFAR[3], XMVector3TransformCoord(XMVectorSet(1, -1, 0, 1), invVP));
 
-			// Light culling resources for every cubemap face:
-			//	Note: same tile buffer will be reused for each face, but with different offsets
-			shadercam.buffer_entitytiles_index = tilebuffer_descripotor;
-			shadercam.entity_culling_tilecount = required_tilecount;
-			shadercam.entity_culling_tile_bucket_count_flat = shadercam.entity_culling_tilecount.x * shadercam.entity_culling_tilecount.y * SHADER_ENTITY_TILE_BUCKET_COUNT;
-			shadercam.entity_culling_tile_offset = shadercam.entity_culling_tile_bucket_count_flat * 2 * i; // per-face offset (*2 because opaque and transparent)
-			shadercam.entity_culling_tile_offset_transparent = shadercam.entity_culling_tile_offset + shadercam.entity_culling_tile_bucket_count_flat;
+			if (valid_probe)
+			{
+				// Light culling resources for every cubemap face:
+				//	Note: same tile buffer will be reused for each face, but with different offsets
+				shadercam.buffer_entitytiles_index = tilebuffer_descriptor;
+				shadercam.entity_culling_tilecount = required_tilecount;
+				shadercam.entity_culling_tile_bucket_count_flat = shadercam.entity_culling_tilecount.x * shadercam.entity_culling_tilecount.y * SHADER_ENTITY_TILE_BUCKET_COUNT;
+				shadercam.entity_culling_tile_offset = shadercam.entity_culling_tile_bucket_count_flat * 2 * i; // per-face offset (*2 because opaque and transparent)
+				shadercam.entity_culling_tile_offset_transparent = shadercam.entity_culling_tile_offset + shadercam.entity_culling_tile_bucket_count_flat;
+			}
 		}
 		device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 
-		ComputeTiledLightCulling(tiledlights, vis, Texture(), cmd);
+		if (valid_probe)
+		{
+			ComputeTiledLightCulling(tiledlights, vis, Texture(), cmd);
+		}
 
 		thread_local wi::vector<const wi::GaussianSplatModel*> visible_gaussian_models;
 		visible_gaussian_models.clear();
