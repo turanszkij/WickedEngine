@@ -12033,7 +12033,6 @@ void Visibility_Shade(
 	BindCommonResources(cmd);
 
 	device->BindResource(&res.binned_tiles, 0, cmd);
-	device->BindResource(&res.texture_normal_roughness, 1, cmd);
 	device->BindUAV(&output, 0, cmd);
 
 	const uint visibility_tilecount_flat = res.tile_count.x * res.tile_count.y;

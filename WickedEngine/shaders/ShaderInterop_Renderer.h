@@ -512,6 +512,10 @@ struct VisibilityTile
 	{
 		return (execution_mask_or_primitiveID & (uint64_t(1) << uint64_t(groupIndex))) != 0;
 	}
+	inline uint get_primitiveID()
+	{
+		return (uint)execution_mask_or_primitiveID;
+	}
 };
 
 enum SHADERMESH_FLAGS

@@ -28,7 +28,7 @@ struct VisibilityPushConstants
 PUSHCONSTANT(push, VisibilityPushConstants);
 
 StructuredBuffer<VisibilityTile> binned_tiles : register(t0);
-Texture2D<half3> input_normals_roughness : register(t1);
+StructuredBuffer<PrimitiveVisibilityTile> primitive_binned_tiles : register(t1);
 
 RWTexture2D<float4> output : register(u0);
 
@@ -49,13 +49,10 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	float3 rayDirection_quad_x = QuadReadAcrossX(ray.Direction);
 	float3 rayDirection_quad_y = QuadReadAcrossY(ray.Direction);
 
-#ifndef PRIMITIVEID_UNIFORM
-	[branch] if (!tile.check_thread_valid(groupIndex)) return; // only return after QuadRead operations!
-#endif // PRIMITIVEID_UNIFORM
-
 #ifdef PRIMITIVEID_UNIFORM
-	const uint primitiveID = tile.execution_mask_or_primitiveID;
+	const uint primitiveID = tile.get_primitiveID();
 #else
+	[branch] if (!tile.check_thread_valid(groupIndex)) return; // only return after QuadRead operations!
 	const uint primitiveID = texture_primitiveID[pixel];
 #endif // PRIMITIVEID_UNIFORM
 
