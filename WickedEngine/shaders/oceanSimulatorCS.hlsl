@@ -39,8 +39,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	if ((DTid.x < xOceanOutWidth) && (DTid.y < xOceanOutHeight))
 	{
-		g_OutputHt[out_index] = ht;
-		g_OutputHt[out_index + xOceanDtxAddressOffset] = dt_x;
-		g_OutputHt[out_index + xOceanDtyAddressOffset] = dt_y;
+		// Two-for-one real FFT packing: the inverse transform of each field is
+		// real (Hermitian input), so pack two fields into one complex slice.
+		// Field 0 = ht + i*dt_x, so after the (linear) FFT the real output is
+		// the height and the imaginary output is Dx. i*dt_x = (-dt_x.y, dt_x.x).
+		g_OutputHt[out_index] = float2(ht.x - dt_x.y, ht.y + dt_x.x);
+		// Field 1 carries Dy alone (recovered from its real output).
+		g_OutputHt[out_index + xOceanSecondFieldOffset] = dt_y;
 	}
 }

@@ -156,12 +156,11 @@ namespace wi
 		buf_desc.size = buf_desc.stride * input_full_size;
 		device->CreateBuffer(&buf_desc, h0_data.data(), &buffer_Float2_H0);
 
-		// Notice: The following 3 buffers should be half sized buffer because of conjugate symmetric input. But
-		// we use full sized buffers due to the CS4.0 restriction.
-
-		// Put H(t), Dx(t) and Dy(t) into one buffer because CS4.0 allows only 1 UAV at a time
+		// Two packed FFT fields instead of three: the two-for-one real FFT packs
+		// H(t) and Dx(t) into the real/imaginary parts of one complex field, and
+		// Dy(t) into a second. See oceanSimulatorCS / oceanUpdateDisplacementMapCS.
 		buf_desc.stride = sizeof(float2);
-		buf_desc.size = buf_desc.stride * 3 * input_half_size;
+		buf_desc.size = buf_desc.stride * 2 * input_half_size;
 		device->CreateBufferZeroed(&buf_desc, &buffer_Float2_Ht);
 
 		// omega
@@ -169,11 +168,11 @@ namespace wi
 		buf_desc.size = buf_desc.stride * input_full_size;
 		device->CreateBuffer(&buf_desc, omega_data.data(), &buffer_Float_Omega);
 
-		// Notice: The following 3 should be real number data. But here we use the complex numbers and C2C FFT
-		// due to the CS4.0 restriction.
-		// Put Dz, Dx and Dy into one buffer because CS4.0 allows only 1 UAV at a time
+		// Two packed output fields (see above): field 0 holds Dz (real) + Dx
+		// (imaginary), field 1 holds Dy. The C2C FFT output is complex, so the
+		// stride stays sizeof(float2).
 		buf_desc.stride = sizeof(float2);
-		buf_desc.size = buf_desc.stride * 3 * output_size;
+		buf_desc.size = buf_desc.stride * 2 * output_size;
 		device->CreateBufferZeroed(&buf_desc, &buffer_Float_Dxyz);
 
 		TextureDesc tex_desc;
@@ -199,13 +198,16 @@ namespace wi
 			assert(subresource_index == i);
 		}
 
-		tex_desc.format = Format::R32G32B32A32_FLOAT;
+		// Half-float displacement: the values are zero-mean wave offsets, so 16-bit
+		// float's ~0.05% relative precision is ample for both rendering and the CPU
+		// buoyancy readback, while halving the texture's bandwidth and memory.
+		tex_desc.format = Format::R16G16B16A16_FLOAT;
 		tex_desc.mip_levels = 1;
-		wi::vector<XMFLOAT4> displacementdata(tex_desc.width * tex_desc.height); // zero init the heightmap to be valid before first simulation
-		std::fill(displacementdata.begin(), displacementdata.end(), XMFLOAT4(0, 0, 0, 0));
+		wi::vector<XMHALF4> displacementdata(tex_desc.width * tex_desc.height); // zero init the heightmap to be valid before first simulation
+		std::fill(displacementdata.begin(), displacementdata.end(), XMHALF4(0.0f, 0.0f, 0.0f, 0.0f));
 		SubresourceData initdata;
 		initdata.data_ptr = displacementdata.data();
-		initdata.row_pitch = tex_desc.width * sizeof(XMFLOAT4);
+		initdata.row_pitch = tex_desc.width * sizeof(XMHALF4);
 		tex_desc.layout = ResourceState::COPY_SRC | ResourceState::SHADER_RESOURCE_COMPUTE;
 		device->CreateTexture(&tex_desc, &initdata, &displacementMap);
 		device->SetName(&displacementMap, "displacementMap");
@@ -218,16 +220,20 @@ namespace wi
 			device->CreateTexture(&tex_desc, nullptr, &displacementMap_readback[i]);
 			device->SetName(&displacementMap_readback[i], "displacementMap_readback[i]");
 		}
-
-		GPUBufferDesc cb_desc;
-		cb_desc.usage = Usage::DEFAULT;
-		cb_desc.bind_flags = BindFlag::CONSTANT_BUFFER;
-		cb_desc.size = sizeof(OceanCB);
-		device->CreateBuffer(&cb_desc, nullptr, &constantBuffer);
 	}
+
+	// Keep the displacement map readback alive for this many frames after the last
+	// GetDisplacedPosition() query. Must comfortably exceed the GPU->CPU readback
+	// latency (GetBufferCount() frames) so that continuous but irregular queries
+	// don't repeatedly drop and re-warm the readback chain.
+	static constexpr uint32_t DISPLACEMENT_READBACK_KEEPALIVE_FRAMES = 8;
 
 	XMFLOAT3 Ocean::GetDisplacedPosition(const XMFLOAT3& worldPosition) const
 	{
+		// Signal that ocean height is being queried on the CPU, so the readback copy
+		// in CopyDisplacementMapReadback() stays enabled.
+		displacement_readback_request = DISPLACEMENT_READBACK_KEEPALIVE_FRAMES;
+
 		XMFLOAT3 ocean_pos = XMFLOAT3(worldPosition.x, params.waterHeight, worldPosition.z);
 		if (displacement_readback_valid[displacement_readback_index])
 		{
@@ -243,10 +249,18 @@ namespace wi
 				const XMUINT2 pixel_tr = XMUINT2((uint32_t)std::ceil(fpixel.x), (uint32_t)std::floor(fpixel.y));
 				const XMUINT2 pixel_bl = XMUINT2((uint32_t)std::floor(fpixel.x), (uint32_t)std::ceil(fpixel.y));
 				const XMUINT2 pixel_br = XMUINT2((uint32_t)std::ceil(fpixel.x), (uint32_t)std::ceil(fpixel.y));
-				const XMFLOAT4& displacement_tl = ((const XMFLOAT4*)(bytedata + pixel_tl.y * tex.mapped_subresources[0].row_pitch))[pixel_tl.x];
-				const XMFLOAT4& displacement_tr = ((const XMFLOAT4*)(bytedata + pixel_tr.y * tex.mapped_subresources[0].row_pitch))[pixel_tr.x];
-				const XMFLOAT4& displacement_bl = ((const XMFLOAT4*)(bytedata + pixel_bl.y * tex.mapped_subresources[0].row_pitch))[pixel_bl.x];
-				const XMFLOAT4& displacement_br = ((const XMFLOAT4*)(bytedata + pixel_br.y * tex.mapped_subresources[0].row_pitch))[pixel_br.x];
+				// displacementMap is R16G16B16A16_FLOAT, so decode the half-float
+				// texels to full float before interpolating.
+				const auto load_displacement = [&](const XMUINT2& pixel) {
+					const XMHALF4& packed = ((const XMHALF4*)(bytedata + pixel.y * tex.mapped_subresources[0].row_pitch))[pixel.x];
+					XMFLOAT4 result;
+					XMStoreFloat4(&result, XMLoadHalf4(&packed));
+					return result;
+				};
+				const XMFLOAT4 displacement_tl = load_displacement(pixel_tl);
+				const XMFLOAT4 displacement_tr = load_displacement(pixel_tr);
+				const XMFLOAT4 displacement_bl = load_displacement(pixel_bl);
+				const XMFLOAT4 displacement_br = load_displacement(pixel_br);
 				const XMFLOAT4 xxxx = XMFLOAT4(displacement_bl.x, displacement_br.x, displacement_tr.x, displacement_tl.x);
 				const XMFLOAT4 yyyy = XMFLOAT4(displacement_bl.y, displacement_br.y, displacement_tr.y, displacement_tl.y);
 				const XMFLOAT4 zzzz = XMFLOAT4(displacement_bl.z, displacement_br.z, displacement_tr.z, displacement_tl.z);
@@ -318,14 +332,15 @@ namespace wi
 		uint32_t input_width = actual_dim + 4;
 		uint32_t output_width = actual_dim;
 		uint32_t output_height = actual_dim;
-		uint32_t dtx_offset = actual_dim * actual_dim;
-		uint32_t dty_offset = actual_dim * actual_dim * 2;
+		// Offset to the second packed FFT field. Must equal one FFT slice stride
+		// (actual_dim * actual_dim), which coincides with the hardcoded 512*512
+		// stride of fft_512x512_c2c only at actual_dim == 512.
+		uint32_t second_field_offset = actual_dim * actual_dim;
 		cb.xOceanActualDim = actual_dim;
 		cb.xOceanInWidth = input_width;
 		cb.xOceanOutWidth = output_width;
 		cb.xOceanOutHeight = output_height;
-		cb.xOceanDtxAddressOffset = dtx_offset;
-		cb.xOceanDtyAddressOffset = dty_offset;
+		cb.xOceanSecondFieldOffset = second_field_offset;
 
 		cb.xOceanTimeScale = params.time_scale;
 		cb.xOceanChoppyScale = params.choppy_scale;
@@ -354,13 +369,9 @@ namespace wi
 		device->EventBegin("Ocean Simulation", cmd);
 
 		const uint2 dim = uint2(160 * params.surfaceDetail, 90 * params.surfaceDetail);
-		OceanCB cb = GetOceanCBAtDim(params, dim);
+		const OceanCB cb = GetOceanCBAtDim(params, dim);
 
-		device->Barrier(GPUBarrier::Buffer(&constantBuffer, ResourceState::CONSTANT_BUFFER, ResourceState::COPY_DST), cmd);
-		device->UpdateBuffer(&constantBuffer, &cb, cmd);
-		device->Barrier(GPUBarrier::Buffer(&constantBuffer, ResourceState::COPY_DST, ResourceState::CONSTANT_BUFFER), cmd);
-
-		device->BindConstantBuffer(&constantBuffer, CB_GETBINDSLOT(OceanCB), cmd);
+		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(OceanCB), cmd);
 
 		// ---------------------------- H(0) -> H(t), D(x, t), D(y, t) --------------------------------
 
@@ -388,7 +399,9 @@ namespace wi
 
 
 
-		device->BindConstantBuffer(&constantBuffer, CB_GETBINDSLOT(OceanCB), cmd);
+		// The FFT binds its own constant buffer to the same slot on some backends,
+		// so rebind the ocean constants before the displacement/gradient passes.
+		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(OceanCB), cmd);
 
 		GPUBarrier barriers[] = {
 			GPUBarrier::Image(&displacementMap, displacementMap.desc.layout, ResourceState::UNORDERED_ACCESS),
@@ -427,6 +440,14 @@ namespace wi
 
 	void Ocean::CopyDisplacementMapReadback(wi::graphics::CommandList cmd) const
 	{
+		// Skip the full-texture GPU->CPU copy unless ocean height was queried on the
+		// CPU recently (see GetDisplacedPosition). The readback is only needed for
+		// CPU-side queries like buoyancy, so when nothing reads it this saves a
+		// per-frame copy of the whole RGBA32F displacement map.
+		if (displacement_readback_request == 0)
+			return;
+		displacement_readback_request--;
+
 		GraphicsDevice* device = wi::graphics::GetDevice();
 		device->EventBegin("Ocean Readback Copy", cmd);
 		device->CopyResource(&displacementMap_readback[displacement_readback_index], &displacementMap, cmd);
@@ -661,7 +682,8 @@ namespace wi
 		}
 		locker.unlock();
 
-		device->BindConstantBuffer(&constantBuffer, CB_GETBINDSLOT(OceanCB), cmd);
+		const OceanCB cb = GetOceanCBAtDim(params, dim);
+		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(OceanCB), cmd);
 
 		device->BindResource(&displacementMap, 0, cmd);
 		device->BindResource(&gradientMap, 1, cmd);

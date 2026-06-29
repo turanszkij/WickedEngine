@@ -437,10 +437,7 @@ namespace wi::renderer
 		wi::graphics::GPUBuffer primitive_binned_tiles;	 // primitiveID uniformity binning
 		wi::graphics::GPUBuffer bins;					 // material type binning
 		wi::graphics::GPUBuffer binned_tiles;			 // material type binning
-		wi::graphics::Texture texture_payload_0;
-		wi::graphics::Texture texture_payload_1;
-		wi::graphics::Texture texture_normals;
-		wi::graphics::Texture texture_roughness;
+		wi::graphics::Texture texture_normal_roughness;
 
 		// You can request any of these extra outputs to be written by VisibilityResolve:
 		const wi::graphics::Texture* depthbuffer = nullptr; // depth buffer that matches with post projection
@@ -452,10 +449,7 @@ namespace wi::renderer
 		{
 			bins = {};
 			binned_tiles = {};
-			texture_payload_0 = {};
-			texture_payload_1 = {};
-			texture_normals = {};
-			texture_roughness = {};
+			texture_normal_roughness = {};
 		}
 	};
 	void CreateVisibilityResourcesSimple(VisibilityResources& res, XMUINT2 resolution);
@@ -466,11 +460,6 @@ namespace wi::renderer
 		wi::graphics::CommandList cmd
 	);
 	void Visibility_Surface(
-		const VisibilityResources& res,
-		const wi::graphics::Texture& output,
-		wi::graphics::CommandList cmd
-	);
-	void Visibility_Surface_Reduced(
 		const VisibilityResources& res,
 		wi::graphics::CommandList cmd
 	);

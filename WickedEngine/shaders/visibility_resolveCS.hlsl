@@ -1,3 +1,4 @@
+#define PRIMITIVEID_FROM_MESHLET_OPTIMIZED
 #include "globals.hlsli"
 #include "ShaderInterop_Renderer.h"
 #include "surfaceHF.hlsli"
@@ -11,8 +12,6 @@
 StructuredBuffer<PrimitiveVisibilityTile> primitive_binned_tiles : register(t0);
 
 groupshared uint local_bin_mask;
-groupshared uint local_bin_execution_mask_0[SHADERTYPE_BIN_COUNT + 1];
-groupshared uint local_bin_execution_mask_1[SHADERTYPE_BIN_COUNT + 1];
 
 groupshared float shared_depth[VISIBILITY_BLOCKSIZE / 2][VISIBILITY_BLOCKSIZE / 2];
 
@@ -29,27 +28,20 @@ RWTexture2D<float> output_depth_mip4 : register(u7);
 void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
 #ifdef MATERIAL_BINNING
-	if (groupIndex <= SHADERTYPE_BIN_COUNT)
+	if (groupIndex == 0)
 	{
-		if (groupIndex == 0)
-		{
-			local_bin_mask = 0;
-		}
-#ifndef PRIMITIVEID_UNIFORM
-		// Note: no need to track execution mask for uniform tiles
-		local_bin_execution_mask_0[groupIndex] = 0;
-		local_bin_execution_mask_1[groupIndex] = 0;
-#endif // PRIMITIVEID_UNIFORM
+		local_bin_mask = 0;
 	}
 	GroupMemoryBarrierWithGroupSync();
 #endif // MATERIAL_BINNING
 
-	const uint2 GTid = remap_lane_8x8(groupIndex);
+	const uint2 GTid = remap_lane_quads(groupIndex);
+	ShaderCamera camera = GetCamera();
 
 #ifdef PRIMITIVEID_UNIFORM
 	const uint tile_offset = 0;
 #else
-	const uint tile_offset = GetCamera().visibility_tilecount_flat;
+	const uint tile_offset = camera.visibility_tilecount_flat;
 #endif // PRIMITIVEID_UNIFORM
 
 	PrimitiveVisibilityTile primitive_tile = primitive_binned_tiles[tile_offset + Gid];
@@ -60,7 +52,7 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 #ifdef PRIMITIVEID_UNIFORM
 	const uint primitiveID = primitive_tile.primitiveID;
 #else
-	const bool pixel_valid = (pixel.x < GetCamera().internal_resolution.x) && (pixel.y < GetCamera().internal_resolution.y);
+	const bool pixel_valid = (pixel.x < camera.internal_resolution.x) && (pixel.y < camera.internal_resolution.y);
 	const uint primitiveID = pixel_valid ? texture_primitiveID[pixel] : 0;
 #endif // PRIMITIVEID_UNIFORM
 	
@@ -76,36 +68,23 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 		prim.init();
 		prim.unpack(primitiveID);
 
+#ifdef MATERIAL_BINNING
+		bin = prim.shaderType;
+#endif // MATERIAL_BINNING
+
 		Surface surface;
 		surface.init();
 
 		[branch]
 		if (surface.load(prim, ray.Origin, ray.Direction))
 		{
-			float4 tmp = mul(GetCamera().view_projection, float4(surface.P, 1));
+			float4 tmp = mul(camera.view_projection, float4(surface.P, 1));
 			tmp.xyz /= max(0.0001, tmp.w); // max: avoid nan
 			depth = saturate(tmp.z); // saturate: avoid blown up values
-
-#ifdef MATERIAL_BINNING
-			bin = surface.material.GetShaderType();
-#endif // MATERIAL_BINNING
 		}
 	}
 
 #ifdef MATERIAL_BINNING
-
-#ifndef PRIMITIVEID_UNIFORM
-	// Note: no need to track execution mask for uniform tiles
-	if (groupIndex < 32)
-	{
-		InterlockedOr(local_bin_execution_mask_0[bin], 1u << groupIndex);
-	}
-	else
-	{
-		InterlockedOr(local_bin_execution_mask_1[bin], 1u << (groupIndex - 32u));
-	}
-#endif // PRIMITIVEID_UNIFORM
-
 	uint wave_local_bin_mask = WaveActiveBitOr(1u << bin);
 	if (WaveIsFirstLane())
 	{
@@ -113,16 +92,16 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	}
 
 	GroupMemoryBarrierWithGroupSync();
-	if (groupIndex < SHADERTYPE_BIN_COUNT + 1)
+	if (groupIndex < SHADERTYPE_BIN_COUNT)
 	{
 		if (local_bin_mask & (1u << groupIndex))
 		{
-			uint bin_tile_list_offset = groupIndex * GetCamera().visibility_tilecount_flat;
+			uint bin_tile_list_offset = groupIndex * camera.visibility_tilecount_flat;
 			uint bucket_index = groupIndex;
 
 #ifndef PRIMITIVEID_UNIFORM
-			bin_tile_list_offset += GetCamera().visibility_tilecount_flat * (SHADERTYPE_BIN_COUNT + 1);
-			bucket_index += SHADERTYPE_BIN_COUNT + 1;
+			bin_tile_list_offset += camera.visibility_tilecount_flat * SHADERTYPE_BIN_COUNT;
+			bucket_index += SHADERTYPE_BIN_COUNT;
 #endif // PRIMITIVEID_UNIFORM
 
 			uint tile_offset = 0;
@@ -131,9 +110,9 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 			VisibilityTile tile;
 			tile.visibility_tile_id = primitive_tile.visibility_tile_id;
 #ifdef PRIMITIVEID_UNIFORM
-			tile.execution_mask_or_primitiveID = primitive_tile.primitiveID;
+			tile.shaderType_or_primitiveID = primitive_tile.primitiveID;
 #else
-			tile.execution_mask_or_primitiveID = uint64_t(local_bin_execution_mask_0[groupIndex]) | (uint64_t(local_bin_execution_mask_1[groupIndex]) << uint64_t(32));
+			tile.shaderType_or_primitiveID = groupIndex;
 #endif // PRIMITIVEID_UNIFORM
 			output_binned_tiles[bin_tile_list_offset + tile_offset] = tile;
 		}

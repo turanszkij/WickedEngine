@@ -38,10 +38,10 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex, uint3 GTid : 
     shared_depths[destIdx + 128] = texture_depth[min(startST | uint2(0, 8), dim - 1)];
     shared_depths[destIdx + 136] = texture_depth[min(startST | uint2(8, 8), dim - 1)];
 
-    shared_normals[destIdx + 0] = pack_half2(texture_normal[min(startST | uint2(0, 0), dim - 1)]);
-    shared_normals[destIdx + 8] = pack_half2(texture_normal[min(startST | uint2(8, 0), dim - 1)]);
-    shared_normals[destIdx + 128] = pack_half2(texture_normal[min(startST | uint2(0, 8), dim - 1)]);
-    shared_normals[destIdx + 136] = pack_half2(texture_normal[min(startST | uint2(8, 8), dim - 1)]);
+    shared_normals[destIdx + 0] = pack_half2(texture_normal_roughness[min(startST | uint2(0, 0), dim - 1)].rg * 2 - 1);
+    shared_normals[destIdx + 8] = pack_half2(texture_normal_roughness[min(startST | uint2(8, 0), dim - 1)].rg * 2 - 1);
+    shared_normals[destIdx + 128] = pack_half2(texture_normal_roughness[min(startST | uint2(0, 8), dim - 1)].rg * 2 - 1);
+    shared_normals[destIdx + 136] = pack_half2(texture_normal_roughness[min(startST | uint2(8, 8), dim - 1)].rg * 2 - 1);
 	
 	const float2 uv0 = float2(startST | uint2(0, 0)) * dim_rcp;
 	const float2 uv1 = float2(startST | uint2(8, 0)) * dim_rcp;

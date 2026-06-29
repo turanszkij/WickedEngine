@@ -142,7 +142,7 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint3 DTid : SV
 	}
 
 	const float depth = texture_depth[DTid.xy * ssr_downscalefactor];
-	const float roughness = texture_roughness[DTid.xy * ssr_downscalefactor];
+	const half roughness = texture_normal_roughness[DTid.xy * ssr_downscalefactor].b;
 
 	if (!NeedReflection(roughness, depth, ssr_roughness_cutoff))
 	{

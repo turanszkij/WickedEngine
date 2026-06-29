@@ -482,6 +482,32 @@ namespace wi::math
 	// Returns an element of a precomputed halton sequence. Specify which iteration to get with idx >= 0
 	const XMFLOAT4& GetHaltonSequence(int idx);
 
+	inline float f16tof32(uint32_t u)
+	{
+		return XMConvertHalfToFloat(uint16_t(u));
+	}
+	inline uint32_t f32tof16(float f)
+	{
+		return XMConvertFloatToHalf(f);
+	}
+
+	inline float asfloat(uint32_t u)
+	{
+		return *(float*)&u;
+	}
+	inline uint32_t asuint(float f)
+	{
+		return *(uint32_t*)&f;
+	}
+
+	inline XMFLOAT3 min(XMFLOAT3 a, float b)
+	{
+		a.x = std::min(a.x, b);
+		a.y = std::min(a.y, b);
+		a.z = std::min(a.z, b);
+		return a;
+	}
+
 	inline uint32_t CompressNormal(const XMFLOAT3& normal)
 	{
 		uint32_t retval = 0;
@@ -513,20 +539,22 @@ namespace wi::math
 
 		return retval;
 	}
-	inline XMFLOAT3 Unpack_R11G11B10_FLOAT(uint32_t value)
+	inline XMFLOAT3 Unpack_R11G11B10_FLOAT(uint32_t rgb) // compared to DirectXMath version this is optimized with f16tof32
 	{
-		XMFLOAT3PK pk;
-		pk.v = value;
-		XMVECTOR V = XMLoadFloat3PK(&pk);
-		XMFLOAT3 result;
-		XMStoreFloat3(&result, V);
-		return result;
+		float r = f16tof32((rgb << 4) & 0x7FF0);
+		float g = f16tof32((rgb >> 7) & 0x7FF0);
+		float b = f16tof32((rgb >> 17) & 0x7FE0);
+		return XMFLOAT3(r, g, b);
 	}
-	inline uint32_t Pack_R11G11B10_FLOAT(const XMFLOAT3& color)
+	inline uint32_t Pack_R11G11B10_FLOAT(XMFLOAT3 rgb) // compared to DirectXMath version this is optimized with f32tof16
 	{
-		XMFLOAT3PK pk;
-		XMStoreFloat3PK(&pk, XMLoadFloat3(&color));
-		return pk.v;
+		// Clamp upper bound so that it doesn't accidentally round up to INF 
+		// Exponent=15, Mantissa=1.11111
+		rgb = min(rgb, asfloat(0x477C0000));
+		uint32_t r = ((f32tof16(rgb.x) + 8) >> 4) & 0x000007FF;
+		uint32_t g = ((f32tof16(rgb.y) + 8) << 7) & 0x003FF800;
+		uint32_t b = ((f32tof16(rgb.z) + 16) << 17) & 0xFFC00000;
+		return r | g | b;
 	}
 	inline XMFLOAT3 Unpack_R9G9B9E5_SHAREDEXP(uint32_t value)
 	{

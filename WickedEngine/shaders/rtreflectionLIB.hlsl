@@ -39,7 +39,9 @@ void RTReflection_Raygen()
 	float2 jitterUV = (screenJitter + DTid.xy + 0.5f) / (float2)DispatchRaysDimensions();
 
 	const float depth = texture_depth.SampleLevel(sampler_linear_clamp, jitterUV, 0);
-	const float roughness = texture_roughness[jitterPixel];
+
+	const half3 normal_roughness = texture_normal_roughness[jitterPixel].rgb;
+	const half roughness = normal_roughness.b;
 
 	if (!NeedReflection(roughness, depth, rtreflection_roughness_cutoff))
 	{
@@ -49,7 +51,7 @@ void RTReflection_Raygen()
 		return;
 	}
 
-	const float3 N = decode_oct(texture_normal[jitterPixel]);
+	const float3 N = decode_normal(normal_roughness.rg);
 	const float3 P = reconstruct_position(jitterUV, depth);
 	const float3 V = normalize(GetCamera().frustum_corners.screen_to_nearplane(uv) - P); // ortho support
 

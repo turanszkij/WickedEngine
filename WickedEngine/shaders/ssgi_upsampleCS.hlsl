@@ -86,7 +86,7 @@ void main(uint2 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	
 	const float depth = input_depth_high[pixel];
 	const float linearDepth = compute_lineardepth(depth);
-	const float3 N = decode_oct(input_normal_high[pixel].rg);
+	const float3 N = decode_normal(input_normal_high[pixel].rg);
 	
 #if 1
 	const int range = int(postprocess.params0.x);
