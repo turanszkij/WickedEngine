@@ -2,6 +2,7 @@
 #define SURFACE_LOAD_ENABLE_WIND
 #define SVT_FEEDBACK
 #define TEXTURE_SLOT_NONUNIFORM
+#define PRIMITIVEID_FROM_MESHLET_OPTIMIZED
 #include "globals.hlsli"
 #include "ShaderInterop_Renderer.h"
 #include "raytracingHF.hlsli"
@@ -38,15 +39,18 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	float3 rayDirection_quad_y = QuadReadAcrossY(ray.Direction);
 
 #ifdef PRIMITIVEID_UNIFORM
-	const uint primitiveID = tile.get_primitiveID();
+	const uint primitiveID = tile.shaderType_or_primitiveID;
 #else
-	[branch] if (!tile.check_thread_valid(groupIndex)) return; // only return after QuadRead operations!
 	const uint primitiveID = texture_primitiveID[pixel];
 #endif // PRIMITIVEID_UNIFORM
 
 	PrimitiveID prim;
 	prim.init();
 	prim.unpack(primitiveID);
+
+#ifndef PRIMITIVEID_UNIFORM
+	[branch] if (prim.shaderType != tile.shaderType_or_primitiveID) return;
+#endif // PRIMITIVEID_UNIFORM
 
 	Surface surface;
 	surface.init();

@@ -669,19 +669,18 @@ struct PrimitiveID
 	uint primitiveIndex;
 	uint instanceIndex;
 	uint subsetIndex;
-	bool maybe_clustered;
-	bool has_directMaterialIndex;
+	uint3 tri;
 
-	uint materialIndex; // only available when unpacking from meshlet data
+	uint materialIndex; // only available when unpacking from meshlet data, in this case the PRIMITIVEID_FROM_MESHLET_OPTIMIZED define can be used
+	uint shaderType; // only available when unpacking from meshlet data, in this case the PRIMITIVEID_FROM_MESHLET_OPTIMIZED define can be used
 
 	inline void init()
 	{
 		primitiveIndex = 0;
 		instanceIndex = 0;
 		subsetIndex = 0;
-		maybe_clustered = false;
-		has_directMaterialIndex = false;
 		materialIndex = 0;
+		shaderType = 0;
 	}
 
 	// These packing methods require meshlet data, and pack into 32 bits:
@@ -709,30 +708,30 @@ struct PrimitiveID
 		primitiveIndex = meshlet.primitiveOffset + meshletPrimitiveIndex;
 		instanceIndex = meshlet.instanceIndex;
 		subsetIndex = meshlet.geometryIndex - inst.geometryOffset;
-		materialIndex = meshlet.materialIndex;
-		maybe_clustered = true;
-		has_directMaterialIndex = true;
+		materialIndex = meshlet.materialIndex_shaderType & 0xFFFFFF;
+		shaderType = meshlet.materialIndex_shaderType >> 24u;
+		tri = compute_tri(true);
 	}
 
 	// These packing methods don't need meshlets, but they are packed into 64 bits:
-	uint2 pack2()
+	inline uint2 pack2()
 	{
 		// 32 bit primitiveIndex + 1 valid check
 		// 24 bit instanceIndex
 		// 8  bit subsetIndex
 		return uint2(primitiveIndex + 1, (instanceIndex & 0xFFFFFF) | ((subsetIndex & 0xFF) << 24u));
 	}
-	void unpack2(uint2 value)
+	inline void unpack2(uint2 value)
 	{
 		primitiveIndex = value.x - 1; // remove valid check
 		instanceIndex = value.y & 0xFFFFFF;
 		subsetIndex = (value.y >> 24u) & 0xFF;
-		maybe_clustered = false;
-		has_directMaterialIndex = false;
 		materialIndex = 0;
+		shaderType = 0;
+		tri = compute_tri(false);
 	}
 
-	uint3 tri()
+	inline uint3 compute_tri(bool maybe_clustered)
 	{
 		ShaderMeshInstance inst = load_instance(instanceIndex);
 		ShaderGeometry geometry = load_geometry(inst.geometryOffset + subsetIndex);
@@ -754,9 +753,9 @@ struct PrimitiveID
 		uint i2 = indexBuffer[startIndex + 2];
 		return uint3(i0, i1, i2);
 	}
-	uint i0() { return tri().x; }
-	uint i1() { return tri().y; }
-	uint i2() { return tri().z; }
+	inline uint i0() { return tri.x; }
+	inline uint i1() { return tri.y; }
+	inline uint i2() { return tri.z; }
 };
 
 #define texture_random64x64 bindless_textures[descriptor_index(GetFrame().texture_random64x64_index)]

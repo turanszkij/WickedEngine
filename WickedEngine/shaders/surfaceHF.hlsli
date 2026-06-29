@@ -362,7 +362,13 @@ struct Surface
 		if (geometry.vb_pos_wind < 0)
 			return false;
 
-		materialIndex = prim.has_directMaterialIndex ? prim.materialIndex : geometry.materialIndex;
+#ifdef PRIMITIVEID_FROM_MESHLET_OPTIMIZED
+		// Here the materialIndex is loaded with less indirection, directly available from unpacked meshlet data in primitiveID
+		materialIndex = prim.materialIndex;
+#else
+		materialIndex = geometry.materialIndex;
+#endif // PRIMITIVEID_FROM_MESHLET_OPTIMIZED
+
 		if (materialIndex >= GetScene().materialCount)
 			return false;
 		material = load_material(materialIndex);

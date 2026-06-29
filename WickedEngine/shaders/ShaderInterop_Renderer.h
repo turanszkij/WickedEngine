@@ -505,17 +505,8 @@ struct PrimitiveVisibilityTile
 
 struct VisibilityTile
 {
-	uint64_t execution_mask_or_primitiveID; // divergent tiles: execution mask | uniform tiles: primitiveID
+	uint64_t shaderType_or_primitiveID; // divergent tiles: shaderType | uniform tiles: primitiveID
 	uint visibility_tile_id;
-
-	inline bool check_thread_valid(uint groupIndex)
-	{
-		return (execution_mask_or_primitiveID & (uint64_t(1) << uint64_t(groupIndex))) != 0;
-	}
-	inline uint get_primitiveID()
-	{
-		return (uint)execution_mask_or_primitiveID;
-	}
 };
 
 enum SHADERMESH_FLAGS
@@ -618,7 +609,7 @@ struct alignas(16) ShaderMeshlet
 	uint instanceIndex;
 	uint geometryIndex;
 	uint primitiveOffset; // either direct triangle offset within index buffer, or masked cluster index for clustered geo
-	uint materialIndex;
+	uint materialIndex_shaderType; // 24bit materialIndex | 8bit shaderType
 };
 
 struct ShaderClusterTriangle
