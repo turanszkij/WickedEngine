@@ -91,22 +91,22 @@ jobs:
 
     - name: Compile Offlineshadercompiler
       run: |
-        xcodebuild clean build -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -configuration Release
+        xcodebuild clean build -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -configuration Release -jobs 2
 
     - name: Generate shader dump
       run: |
-        BUILD_PATH="$(xcodebuild -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -configuration Release -showBuildSettings | grep -m 1 "BUILT_PRODUCTS_DIR" | awk -F' = ' '{print $2}')"
+        BUILD_PATH="$(xcodebuild -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -configuration Release -jobs 2 -showBuildSettings | grep -m 1 "BUILT_PRODUCTS_DIR" | awk -F' = ' '{print $2}')"
         cd WickedEngine
         "${BUILD_PATH}/offlineshadercompiler" metal rebuild shaderdump
         cd ..
 
     - name: Build Editor
       run: |
-        xcodebuild clean build -project Editor/Editor.xcodeproj -scheme Editor -configuration Release
+        xcodebuild clean build -project Editor/Editor.xcodeproj -scheme Editor -configuration Release -jobs 2
 
     - name: Move files
       run: |
-        BUILD_PATH="$(xcodebuild -project Editor/Editor.xcodeproj -scheme Editor -configuration Release -showBuildSettings | grep -m 1 "BUILT_PRODUCTS_DIR" | awk -F' = ' '{print $2}')"
+        BUILD_PATH="$(xcodebuild -project Editor/Editor.xcodeproj -scheme Editor -configuration Release -jobs 2 -showBuildSettings | grep -m 1 "BUILT_PRODUCTS_DIR" | awk -F' = ' '{print $2}')"
         mv "${BUILD_PATH}/Editor" ./Editor_MacOS
         mv Editor/config.ini ./
         mv Editor/startup.lua ./
@@ -131,22 +131,22 @@ jobs:
 
     - name: Compile Offlineshadercompiler
       run: |
-        xcodebuild clean build -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -configuration Release
+        xcodebuild clean build -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -configuration Release -jobs 2
 
     - name: Generate shader dump
       run: |
-        BUILD_PATH="$(xcodebuild -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -configuration Release -showBuildSettings | grep -m 1 "BUILT_PRODUCTS_DIR" | awk -F' = ' '{print $2}')"
+        BUILD_PATH="$(xcodebuild -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -configuration Release -jobs 2 -showBuildSettings | grep -m 1 "BUILT_PRODUCTS_DIR" | awk -F' = ' '{print $2}')"
         cd WickedEngine
         "${BUILD_PATH}/offlineshadercompiler" metal rebuild shaderdump
         cd ..
 
     - name: Build Editor_iOS
       run: |
-        xcodebuild clean build -project Editor/Editor.xcodeproj -scheme Editor_iOS -configuration Release -sdk iphoneos CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+        xcodebuild clean build -project Editor/Editor.xcodeproj -scheme Editor_iOS -configuration Release -jobs 2 -sdk iphoneos CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
 
     - name: Move files
       run: |
-        BUILD_PATH="$(xcodebuild -project Editor/Editor.xcodeproj -scheme Editor_iOS -configuration Release -sdk iphoneos -showBuildSettings | grep -m 1 "BUILT_PRODUCTS_DIR" | awk -F' = ' '{print $2}')"
+        BUILD_PATH="$(xcodebuild -project Editor/Editor.xcodeproj -scheme Editor_iOS -configuration Release -jobs 2 -sdk iphoneos -showBuildSettings | grep -m 1 "BUILT_PRODUCTS_DIR" | awk -F' = ' '{print $2}')"
         mv "${BUILD_PATH}/Editor_iOS.app" ./Editor_iOS.app
 
     - name: Package Editor
