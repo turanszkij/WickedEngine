@@ -1792,6 +1792,21 @@ uint2 remap_lane_8x8(uint lane) {
 			, bitfield_extract(lane, 1u, 2u), 2u));
 }
 
+// Similar to remap_lane_8x8 which remaps SV_GroupIndex to a 2D grid for QuadRead access, but this works with larger block sizes but it's laid out differently
+uint2 remap_lane_quads(uint groupIndex)
+{
+	uint idx = groupIndex | (groupIndex << 15);  // Pack for parallel x/y extraction
+	uint2 coord;
+	coord.x  = idx & 0x10001;
+	coord.x |= (idx >> 1) & 0x20002;
+	coord.x |= (idx >> 2) & 0x40004;
+	coord.x |= (idx >> 3) & 0x80008;   // extra bits for 32x32 support
+	coord.x |= (idx >> 4) & 0x100010;  // extra for larger groups
+	coord.y = coord.x >> 16;
+	coord.x &= 0x1F;  // Mask to 5 bits (covers up to 32)
+	return coord;
+}
+
 
 static const half2x2 BayerMatrix2 =
 {

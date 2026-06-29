@@ -35,7 +35,7 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	GroupMemoryBarrierWithGroupSync();
 #endif // MATERIAL_BINNING
 
-	const uint2 GTid = remap_lane_8x8(groupIndex);
+	const uint2 GTid = remap_lane_quads(groupIndex);
 	ShaderCamera camera = GetCamera();
 
 #ifdef PRIMITIVEID_UNIFORM
