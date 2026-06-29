@@ -1150,8 +1150,6 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_RESOLVE_DIVERGENT], "visibility_resolveCS.cso", ShaderModel::SM_6_0, { "PRIMITIVEID_DIVERGENT" }); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_RESOLVE_UNIFORM_BINNING], "visibility_resolveCS.cso", ShaderModel::SM_6_0, { "PRIMITIVEID_UNIFORM", "MATERIAL_BINNING"}); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_RESOLVE_DIVERGENT_BINNING], "visibility_resolveCS.cso", ShaderModel::SM_6_0, { "PRIMITIVEID_DIVERGENT", "MATERIAL_BINNING" }); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_SKY_UNIFORM], "visibility_skyCS.cso", ShaderModel::SM_6_0, { "PRIMITIVEID_UNIFORM" }); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_SKY_DIVERGENT], "visibility_skyCS.cso", ShaderModel::SM_6_0, { "PRIMITIVEID_DIVERGENT" }); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_VELOCITY_UNIFORM], "visibility_velocityCS.cso", ShaderModel::SM_6_0, { "PRIMITIVEID_UNIFORM" }); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_VELOCITY_DIVERGENT], "visibility_velocityCS.cso", ShaderModel::SM_6_0, { "PRIMITIVEID_DIVERGENT" }); });
 
@@ -11781,7 +11779,7 @@ void CreateVisibilityResources(VisibilityResources& res, XMUINT2 resolution)
 	{
 		GPUBufferDesc desc;
 		desc.stride = sizeof(IndirectDispatchArgs);
-		desc.size = desc.stride * (MaterialComponent::SHADERTYPE_COUNT + 1); // +1 for sky
+		desc.size = desc.stride * MaterialComponent::SHADERTYPE_COUNT;
 		desc.size *= 2; // uniform, divergent
 		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 		desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED | ResourceMiscFlag::INDIRECT_ARGS;
@@ -11790,7 +11788,7 @@ void CreateVisibilityResources(VisibilityResources& res, XMUINT2 resolution)
 		device->SetName(&res.bins, "visibility.bins");
 
 		desc.stride = sizeof(VisibilityTile);
-		desc.size = desc.stride * res.tile_count.x * res.tile_count.y * (MaterialComponent::SHADERTYPE_COUNT + 1); // +1 for sky
+		desc.size = desc.stride * res.tile_count.x * res.tile_count.y * MaterialComponent::SHADERTYPE_COUNT;
 		desc.size *= 2; // uniform, divergent
 		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 		desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
@@ -11991,9 +11989,6 @@ void Visibility_Surface(
 	}
 	device->EventEnd(cmd);
 
-	visibility_tile_offset += visibility_tilecount_flat; // sky
-	bins_offset += sizeof(IndirectDispatchArgs); // sky
-
 	device->EventBegin("Surface parameters DIVERGENT", cmd);
 	for (uint i = 0; i < MaterialComponent::SHADERTYPE_COUNT; ++i)
 	{
@@ -12007,9 +12002,6 @@ void Visibility_Surface(
 		bins_offset += sizeof(IndirectDispatchArgs);
 	}
 	device->EventEnd(cmd);
-
-	visibility_tile_offset += visibility_tilecount_flat; // sky
-	bins_offset += sizeof(IndirectDispatchArgs); // sky
 
 	// Ending barriers:
 	//	These resources will be used by other post processing effects
@@ -12051,17 +12043,6 @@ void Visibility_Shade(
 	}
 	device->EventEnd(cmd);
 
-	// sky dispatch:
-	{
-		device->EventBegin("Sky UNIFORM", cmd);
-		device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SKY_UNIFORM], cmd);
-		device->PushConstants(&visibility_tile_offset, sizeof(visibility_tile_offset), cmd);
-		device->DispatchIndirect(&res.bins, bins_offset, cmd);
-		visibility_tile_offset += visibility_tilecount_flat;
-		bins_offset += sizeof(IndirectDispatchArgs);
-		device->EventEnd(cmd);
-	}
-
 	device->EventBegin("Shading DIVERGENT", cmd);
 	for (uint i = 0; i < MaterialComponent::SHADERTYPE_COUNT; ++i)
 	{
@@ -12072,17 +12053,6 @@ void Visibility_Shade(
 		bins_offset += sizeof(IndirectDispatchArgs);
 	}
 	device->EventEnd(cmd);
-
-	// sky dispatch:
-	{
-		device->EventBegin("Sky DIVERGENT", cmd);
-		device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SKY_DIVERGENT], cmd);
-		device->PushConstants(&visibility_tile_offset, sizeof(visibility_tile_offset), cmd);
-		device->DispatchIndirect(&res.bins, bins_offset, cmd);
-		visibility_tile_offset += visibility_tilecount_flat;
-		bins_offset += sizeof(IndirectDispatchArgs);
-		device->EventEnd(cmd);
-	}
 
 	PushBarrier(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout));
 	FlushBarriers(cmd);

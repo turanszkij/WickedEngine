@@ -565,11 +565,6 @@ int main(int argc, char* argv[])
 	shaders.back().permutations.emplace_back().defines = { "PRIMITIVEID_UNIFORM" };
 	shaders.back().permutations.emplace_back().defines = { "PRIMITIVEID_DIVERGENT" };
 
-	// permutations for visibility_skyCS:
-	shaders.push_back({ "visibility_skyCS", wi::graphics::ShaderStage::CS });
-	shaders.back().permutations.emplace_back().defines = { "PRIMITIVEID_UNIFORM" };
-	shaders.back().permutations.emplace_back().defines = { "PRIMITIVEID_DIVERGENT" };
-
 	// permutations for visibility_surfaceCS:
 	shaders.push_back({ "visibility_surfaceCS", wi::graphics::ShaderStage::CS });
 	for (auto& x : wi::scene::MaterialComponent::shaderTypeDefines)

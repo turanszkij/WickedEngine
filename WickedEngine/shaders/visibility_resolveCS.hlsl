@@ -92,7 +92,7 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	}
 
 	GroupMemoryBarrierWithGroupSync();
-	if (groupIndex < SHADERTYPE_BIN_COUNT + 1)
+	if (groupIndex < SHADERTYPE_BIN_COUNT)
 	{
 		if (local_bin_mask & (1u << groupIndex))
 		{
@@ -100,8 +100,8 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 			uint bucket_index = groupIndex;
 
 #ifndef PRIMITIVEID_UNIFORM
-			bin_tile_list_offset += camera.visibility_tilecount_flat * (SHADERTYPE_BIN_COUNT + 1);
-			bucket_index += SHADERTYPE_BIN_COUNT + 1;
+			bin_tile_list_offset += camera.visibility_tilecount_flat * SHADERTYPE_BIN_COUNT;
+			bucket_index += SHADERTYPE_BIN_COUNT;
 #endif // PRIMITIVEID_UNIFORM
 
 			uint tile_offset = 0;
