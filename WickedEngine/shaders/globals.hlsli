@@ -669,9 +669,7 @@ struct PrimitiveID
 	uint primitiveIndex;
 	uint instanceIndex;
 	uint subsetIndex;
-	uint i0;
-	uint i1;
-	uint i2;
+	bool maybe_clustered;
 
 	uint materialIndex; // only available when unpacking from meshlet data, in this case the PRIMITIVEID_FROM_MESHLET_OPTIMIZED define can be used
 	uint shaderType; // only available when unpacking from meshlet data, in this case the PRIMITIVEID_FROM_MESHLET_OPTIMIZED define can be used
@@ -681,9 +679,7 @@ struct PrimitiveID
 		primitiveIndex = 0;
 		instanceIndex = 0;
 		subsetIndex = 0;
-		i0 = 0;
-		i1 = 0;
-		i2 = 0;
+		maybe_clustered = false;
 		materialIndex = 0;
 		shaderType = 0;
 	}
@@ -715,7 +711,7 @@ struct PrimitiveID
 		subsetIndex = meshlet.geometryIndex - inst.geometryOffset;
 		materialIndex = meshlet.materialIndex_shaderType & 0xFFFFFF;
 		shaderType = meshlet.materialIndex_shaderType >> 24u;
-		compute_tri(true);
+		maybe_clustered = true;
 	}
 
 	// These packing methods don't need meshlets, but they are packed into 64 bits:
@@ -733,10 +729,10 @@ struct PrimitiveID
 		subsetIndex = (value.y >> 24u) & 0xFF;
 		materialIndex = 0;
 		shaderType = 0;
-		compute_tri(false);
+		maybe_clustered = false;
 	}
 
-	inline void compute_tri(bool maybe_clustered)
+	inline uint3 tri()
 	{
 		ShaderMeshInstance inst = load_instance(instanceIndex);
 		ShaderGeometry geometry = load_geometry(inst.geometryOffset + subsetIndex);
@@ -746,16 +742,17 @@ struct PrimitiveID
 			const uint clusterID = primitiveIndex >> 7u;
 			const uint triangleID = primitiveIndex & 0x7F;
 			ShaderCluster cluster = bindless_structured_cluster[NonUniformResourceIndex(descriptor_index(geometry.vb_clu))][clusterID];
-			i0 = cluster.vertices[cluster.triangles[triangleID].i0()];
-			i1 = cluster.vertices[cluster.triangles[triangleID].i1()];
-			i2 = cluster.vertices[cluster.triangles[triangleID].i2()];
-			return;
+			const uint i0 = cluster.vertices[cluster.triangles[triangleID].i0()];
+			const uint i1 = cluster.vertices[cluster.triangles[triangleID].i1()];
+			const uint i2 = cluster.vertices[cluster.triangles[triangleID].i2()];
+			return uint3(i0, i1, i2);
 		}
 		const uint startIndex = primitiveIndex * 3 + geometry.indexOffset;
 		Buffer<uint> indexBuffer = bindless_buffers_uint[NonUniformResourceIndex(descriptor_index(geometry.ib))];
-		i0 = indexBuffer[startIndex + 0];
-		i1 = indexBuffer[startIndex + 1];
-		i2 = indexBuffer[startIndex + 2];
+		const uint i0 = indexBuffer[startIndex + 0];
+		const uint i1 = indexBuffer[startIndex + 1];
+		const uint i2 = indexBuffer[startIndex + 2];
+		return uint3(i0, i1, i2);
 	}
 };
 

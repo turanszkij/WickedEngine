@@ -376,9 +376,10 @@ struct Surface
 
 		layerMask = material.layerMask & inst.layerMask;
 
-		i0 = prim.i0;
-		i1 = prim.i1;
-		i2 = prim.i2;
+		const uint3 tri = prim.tri();
+		i0 = tri[0];
+		i1 = tri[1];
+		i2 = tri[2];
 
 		Buffer<float4> buf = bindless_buffers_float4[MakeUniformResourceIndex(geometry.vb_pos_wind)];
 		data0 = buf[i0];
