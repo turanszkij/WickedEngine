@@ -3,7 +3,7 @@
 // This file is used to allow replacement of std::unordered_map
 
 #ifdef __APPLE__
-#define WI_UNORDERED_MAP_TYPE 2
+#define WI_UNORDERED_MAP_TYPE 0
 #endif // __APPLE__
 
 #ifndef WI_UNORDERED_MAP_TYPE
