@@ -42,6 +42,7 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	const uint primitiveID = tile.shaderType_or_primitiveID;
 #else
 	const uint primitiveID = texture_primitiveID[pixel];
+	[branch] if (primitiveID == 0) return;
 #endif // PRIMITIVEID_UNIFORM
 
 	PrimitiveID prim;
