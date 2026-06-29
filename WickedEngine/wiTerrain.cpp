@@ -211,7 +211,9 @@ namespace wi::terrain
 		wi::vector<Chunk> build_batch; // Reused each generation run (cleared, capacity kept) to avoid per-frame allocation
 	};
 
-	static wi::jobsystem::context virtual_texture_ctx;
+	wi::jobsystem::context virtual_texture_ctx;
+
+	static std::mutex locker;
 
 	constexpr void weight_norm(XMFLOAT4& weights)
 	{
@@ -357,7 +359,6 @@ namespace wi::terrain
 			lod_count++;
 		}
 
-		static std::mutex locker;
 		std::scoped_lock lck(locker);
 		free(atlas);
 		if (tile_count > 1)
