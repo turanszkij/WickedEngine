@@ -253,11 +253,11 @@ jobs:
 
     - name: Compile Offlineshadercompiler
       run: |
-        xcodebuild clean build -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -derivedDataPath ./DerivedData_ShaderCompiler
+        xcodebuild clean build -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -configuration Release -derivedDataPath ./DerivedData_ShaderCompiler
 
     - name: Generate shader dump
       run: |
-        BUILD_PATH="$(xcodebuild -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -derivedDataPath ./DerivedData_ShaderCompiler -showBuildSettings | grep -m 1 "BUILT_PRODUCTS_DIR" | awk -F' = ' '{print $2}')"
+        BUILD_PATH="$(xcodebuild -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -configuration Release -derivedDataPath ./DerivedData_ShaderCompiler -showBuildSettings | grep -m 1 "BUILT_PRODUCTS_DIR" | awk -F' = ' '{print $2}')"
         cd WickedEngine
         "${BUILD_PATH}/offlineshadercompiler" metal rebuild shaderdump
         cd ..
@@ -293,11 +293,11 @@ jobs:
 
     - name: Compile Offlineshadercompiler
       run: |
-        xcodebuild clean build -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -derivedDataPath ./DerivedData_ShaderCompiler_iOS
+        xcodebuild clean build -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -configuration Release -derivedDataPath ./DerivedData_ShaderCompiler_iOS
 
     - name: Generate shader dump
       run: |
-        BUILD_PATH="$(xcodebuild -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -derivedDataPath ./DerivedData_ShaderCompiler_iOS -showBuildSettings | grep -m 1 "BUILT_PRODUCTS_DIR" | awk -F' = ' '{print $2}')"
+        BUILD_PATH="$(xcodebuild -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -configuration Release -derivedDataPath ./DerivedData_ShaderCompiler_iOS -showBuildSettings | grep -m 1 "BUILT_PRODUCTS_DIR" | awk -F' = ' '{print $2}')"
         cd WickedEngine
         "${BUILD_PATH}/offlineshadercompiler" metal rebuild shaderdump
         cd ..
