@@ -2,10 +2,6 @@
 #define WI_UNORDERED_MAP_REPLACEMENT
 // This file is used to allow replacement of std::unordered_map
 
-#ifdef __APPLE__
-#define WI_UNORDERED_MAP_TYPE 0
-#endif // __APPLE__
-
 #ifndef WI_UNORDERED_MAP_TYPE
 #define WI_UNORDERED_MAP_TYPE 1
 #endif // WI_UNORDERED_MAP_TYPE
