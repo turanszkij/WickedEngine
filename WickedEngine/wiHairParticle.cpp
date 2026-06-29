@@ -12,8 +12,6 @@
 #include "wiEventHandler.h"
 #include "wiTimer.h"
 
-#include <cstring>
-
 using namespace wi::primitive;
 using namespace wi::graphics;
 using namespace wi::scene;
@@ -444,8 +442,7 @@ namespace wi
 			{
 				desc = material.textures[MaterialComponent::BASECOLORMAP].resource.GetTexture().GetDesc();
 			}
-			HairParticleCB hcb;
-			std::memset(&hcb, 0, sizeof(hcb)); // zero padding too, so memcmp below is reliable
+			HairParticleCB hcb = {};
 			hcb.xHairTransform.Create(hair.world);
 			if (!IsFormatUnorm(mesh.position_format) || mesh.so_pos.IsValid())
 			{
