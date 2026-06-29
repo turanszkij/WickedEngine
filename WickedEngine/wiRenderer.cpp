@@ -5776,23 +5776,8 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 
 				if (hair.meshID != INVALID_ENTITY && hair.BLAS.IsValid())
 				{
-					// The grass BLAS is built for fast traversal, but refitting it
-					// every frame as strands animate and cull progressively
-					// degrades that quality. Do a full rebuild periodically
-					// (staggered per system so the cost is spread across frames)
-					// and refit on the frames in between.
-					constexpr uint64_t blas_rebuild_interval = 60;
-					const bool periodic_rebuild =
-						((device->GetFrameCount() + i) % blas_rebuild_interval) == 0;
-					if (hair.must_rebuild_blas || periodic_rebuild || motion_rebuild)
-					{
-						device->BuildRaytracingAccelerationStructure(&hair.BLAS, cmd, nullptr);
-						hair.must_rebuild_blas = false;
-					}
-					else
-					{
-						device->BuildRaytracingAccelerationStructure(&hair.BLAS, cmd, &hair.BLAS);
-					}
+					device->BuildRaytracingAccelerationStructure(&hair.BLAS, cmd, nullptr);
+					hair.must_rebuild_blas = false;
 				}
 			}
 
