@@ -148,43 +148,36 @@ jobs:
           startup.lua
           Editor_Linux
 
-  macos-ios:
+  macos:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v4
 
     - name: Compile Offlineshadercompiler
       run: |
-        xcodebuild clean build -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -configuration Release
+        xcodebuild clean build -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -configuration Release -disable-parallelization
 
     - name: Generate shader dump
       run: |
-        BUILD_PATH="$(xcodebuild -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -configuration Release -showBuildSettings | grep -m 1 "BUILT_PRODUCTS_DIR" | awk -F' = ' '{print $2}')"
+        BUILD_PATH="$(xcodebuild -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -configuration Release -disable-parallelization -showBuildSettings | grep -m 1 "BUILT_PRODUCTS_DIR" | awk -F' = ' '{print $2}')"
         cd WickedEngine
         "${BUILD_PATH}/offlineshadercompiler" metal rebuild shaderdump
         cd ..
 
-    - name: Build Editor (Mac OS)
+    - name: Build Editor
       run: |
-        xcodebuild clean build -project Editor/Editor.xcodeproj -scheme Editor -configuration Release
+        xcodebuild clean build -project Editor/Editor.xcodeproj -scheme Editor -configuration Release -disable-parallelization
 
-    - name: Build Editor (iOS)
-      run: |
-        xcodebuild build -project Editor/Editor.xcodeproj -scheme Editor_iOS -configuration Release -sdk iphoneos CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
-        
     - name: Move files
       run: |
-        BUILD_PATH="$(xcodebuild -project Editor/Editor.xcodeproj -scheme Editor -configuration Release -showBuildSettings | grep -m 1 "BUILT_PRODUCTS_DIR" | awk -F' = ' '{print $2}')"
+        BUILD_PATH="$(xcodebuild -project Editor/Editor.xcodeproj -scheme Editor -configuration Release -disable-parallelization -showBuildSettings | grep -m 1 "BUILT_PRODUCTS_DIR" | awk -F' = ' '{print $2}')"
         mv "${BUILD_PATH}/Editor" ./Editor_MacOS
         mv Editor/config.ini ./
         mv Editor/startup.lua ./
         mv Editor/languages ./
         mv Editor/fonts ./
 
-        BUILD_PATH="$(xcodebuild -project Editor/Editor.xcodeproj -scheme Editor_iOS -configuration Release -sdk iphoneos -showBuildSettings | grep -m 1 "BUILT_PRODUCTS_DIR" | awk -F' = ' '{print $2}')"
-        mv "${BUILD_PATH}/Editor_iOS.app" ./Editor_iOS.app
-
-    - name: Package Editor (Mac OS)
+    - name: Package Editor
       uses: actions/upload-artifact@v4
       with:
         name: Editor (Mac OS)
@@ -195,7 +188,32 @@ jobs:
           startup.lua
           Editor_MacOS
 
-    - name: Package Editor (iOS)
+  ios:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Compile Offlineshadercompiler
+      run: |
+        xcodebuild clean build -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -configuration Release -disable-parallelization
+
+    - name: Generate shader dump
+      run: |
+        BUILD_PATH="$(xcodebuild -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -configuration Release -disable-parallelization -showBuildSettings | grep -m 1 "BUILT_PRODUCTS_DIR" | awk -F' = ' '{print $2}')"
+        cd WickedEngine
+        "${BUILD_PATH}/offlineshadercompiler" metal rebuild shaderdump
+        cd ..
+
+    - name: Build Editor_iOS
+      run: |
+        xcodebuild clean build -project Editor/Editor.xcodeproj -scheme Editor_iOS -configuration Release -disable-parallelization -sdk iphoneos CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+
+    - name: Move files
+      run: |
+        BUILD_PATH="$(xcodebuild -project Editor/Editor.xcodeproj -scheme Editor_iOS -configuration Release -disable-parallelization -sdk iphoneos -showBuildSettings | grep -m 1 "BUILT_PRODUCTS_DIR" | awk -F' = ' '{print $2}')"
+        mv "${BUILD_PATH}/Editor_iOS.app" ./Editor_iOS.app
+
+    - name: Package Editor
       uses: actions/upload-artifact@v4
       with:
         name: Editor (iOS)
