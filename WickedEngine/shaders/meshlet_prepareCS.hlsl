@@ -15,11 +15,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	{
 		uint geometryIndex = inst.baseGeometryOffset + i;
 		ShaderGeometry geometry = load_geometry(geometryIndex);
+		ShaderMaterial material = load_material(geometry.materialIndex);
+		const uint materialIndex_shaderType = (geometry.materialIndex & 0xFFFFFF) | (material.GetShaderType() << 24u);
 		for (uint j = groupIndex; j < geometry.meshletCount; j += THREADCOUNT)
 		{
 			ShaderMeshlet meshlet = (ShaderMeshlet)0;
 			meshlet.instanceIndex = instanceIndex;
 			meshlet.geometryIndex = geometryIndex;
+			meshlet.materialIndex_shaderType = materialIndex_shaderType;
 
 			if (mesh.vb_clu < 0 || mesh.tessellation_factor > 0)
 			{

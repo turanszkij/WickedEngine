@@ -1455,8 +1455,7 @@ namespace wi::scene
 		int texture_primitiveID_index = -1;
 		int texture_depth_index = -1;
 		int texture_velocity_index = -1;
-		int texture_normal_index = -1;
-		int texture_roughness_index = -1;
+		int texture_normal_roughness_index = -1;
 		int texture_reflection_index = -1;
 		int texture_reflection_depth_index = -1;
 		int texture_refraction_index = -1;

@@ -67,7 +67,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float lineardepth = texture_lineardepth[DTid.xy * rtdiffuse_downscalefactor] * farplane;
 
 	// Everthing in world space:
-	const float3 N = decode_oct(texture_normal[DTid.xy * rtdiffuse_downscalefactor]);
+	const float3 N = decode_normal(texture_normal_roughness[DTid.xy * rtdiffuse_downscalefactor]);
 
 	float4 result = 0.0f;
 	float weightSum = 0.0f;

@@ -854,9 +854,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)visibility_shadeCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)visibility_skyCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)visibility_surfaceCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
