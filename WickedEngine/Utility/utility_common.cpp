@@ -24,8 +24,6 @@ extern "C" {
 #include "minimp4.h"
 #undef RETURN_ERROR
 
-#include "mikktspace.c"
-
 #include "zstd/zstd.c"
 
 #ifndef __SCE__

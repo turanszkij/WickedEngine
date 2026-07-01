@@ -2213,6 +2213,18 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGaussianSplatModel.cpp">
       <Filter>ENGINE\Graphics</Filter>
     </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\meshletcodec.cpp">
+      <Filter>UTILITY\meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\meshletutils.cpp">
+      <Filter>UTILITY\meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\opacitymap.cpp">
+      <Filter>UTILITY\meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\tangentspace.cpp">
+      <Filter>UTILITY\meshoptimizer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)Utility\DirectXCollision.inl">

@@ -31,7 +31,6 @@ list(FILTER SOURCE_FILES
 # compiled on their own; hence we mark them as header files
 file(GLOB_RECURSE DIRECTLY_INCLUDED_FILES CONFIGURE_DEPENDS
 	# included by utility_common.cpp
-	mikktspace.c
 	zstd.c
 
 	# included by volk.h
