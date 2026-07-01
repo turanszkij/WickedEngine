@@ -40,7 +40,7 @@ namespace wi::backlog
 	wi::gui::Button toggleButton;
 	wi::gui::GUI GUI;
 	wi::gui::ScrollBar scrollbar;
-	float textheight = 0;
+	float autoscroll = 0; // automatic scroll behaviour while backlog is not really updated with a proper scrollbar (init screen, shader compile, etc) the text should still scroll
 
 	bool locked = false;
 	bool blockLuaExec = false;
@@ -292,6 +292,7 @@ namespace wi::backlog
 	void Scroll(float direction)
 	{
 		scrollbar.Scroll(direction);
+		autoscroll += direction;
 	}
 	void Update(const wi::Canvas& canvas, float dt)
 	{
@@ -304,7 +305,6 @@ namespace wi::backlog
 
 			if (isActive())
 			{
-				textheight = wi::font::TextHeight(getText(), font_params);
 
 				if (wi::input::Press(wi::input::KEYBOARD_BUTTON_UP))
 				{
@@ -419,6 +419,9 @@ namespace wi::backlog
 					inputField.SetAsActive();
 				}
 
+				const float textheight = wi::font::TextHeight(getText(), font_params); // only call when it's active, this allocates
+				scrollbar.SetListLength(std::max(textheight, canvas.GetLogicalHeight()));
+				autoscroll = 0; // when scrollbar active then no autoscroll
 			}
 			else
 			{
@@ -447,7 +450,6 @@ namespace wi::backlog
 		scrollbar.SetSize(XMFLOAT2(20, canvas.GetLogicalHeight() - 20 - toggleButton.GetSize().y - toggleButton.GetShadowRadius() * 2 - 70));
 		scrollbar.SetPos(XMFLOAT2(canvas.GetLogicalWidth() - scrollbar.GetSize().x - 20, toggleButton.GetSize().y + toggleButton.GetShadowRadius() * 2 + 30 + pos));
 		scrollbar.Update(canvas, dt);
-		scrollbar.SetListLength(std::max(textheight, canvas.GetLogicalHeight()));
 	}
 	void Draw(
 		const wi::Canvas& canvas,
@@ -537,15 +539,20 @@ namespace wi::backlog
 		params.cursor = {};
 		if (refitscroll)
 		{
+			const float textheight = wi::font::TextHeight(getText(), font_params);
 			const float limit = canvas.GetLogicalHeight() - 50;
 			if (scrollbar.GetOffset() + textheight > limit)
 			{
 				scrollbar.Scroll(limit - textheight);
 			}
+			if (autoscroll + textheight > limit)
+			{
+				autoscroll = limit - textheight;
+			}
 			refitscroll = false;
 		}
 		params.posX = 5;
-		params.posY = pos + scrollbar.GetOffset();
+		params.posY = pos + scrollbar.GetOffset() + autoscroll;
 		params.h_wrap = canvas.GetLogicalWidth() - params.posX;
 		if (colorspace != ColorSpace::SRGB)
 		{
