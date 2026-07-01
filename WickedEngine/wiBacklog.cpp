@@ -31,7 +31,6 @@ namespace wi::backlog
 	const float speed = 4000.0f;
 	const size_t deleteFromLine = 500; // Only limits in-memory display buffer, not file
 	float pos = 5;
-	float scroll = 0;
 	int historyPos = 0;
 	wi::font::Params font_params;
 	wi::Color backgroundColor = wi::Color(17, 30, 43, 255);
@@ -40,6 +39,8 @@ namespace wi::backlog
 	wi::gui::TextInputField inputField;
 	wi::gui::Button toggleButton;
 	wi::gui::GUI GUI;
+	wi::gui::ScrollBar scrollbar;
+	float textheight = 0;
 
 	bool locked = false;
 	bool blockLuaExec = false;
@@ -290,7 +291,7 @@ namespace wi::backlog
 	}
 	void Scroll(float direction)
 	{
-		scroll += direction;
+		scrollbar.Scroll(direction);
 	}
 	void Update(const wi::Canvas& canvas, float dt)
 	{
@@ -303,6 +304,8 @@ namespace wi::backlog
 
 			if (isActive())
 			{
+				textheight = wi::font::TextHeight(getText(), font_params);
+
 				if (wi::input::Press(wi::input::KEYBOARD_BUTTON_UP))
 				{
 					historyPrev();
@@ -352,10 +355,12 @@ namespace wi::backlog
 						}
 						inputField.SetText("");
 					});
-					wi::Color theme_color_idle = wi::Color(30, 40, 60, 200);
-					wi::Color theme_color_focus = wi::Color(70, 150, 170, 220);
-					wi::Color theme_color_active = wi::Color::White();
-					wi::Color theme_color_deactivating = wi::Color::lerp(theme_color_focus, wi::Color::White(), 0.5f);
+					const wi::Color theme_color_idle = wi::Color(30, 40, 60, 200);
+					const wi::Color theme_color_focus = wi::Color(70, 150, 170, 220);
+					const wi::Color theme_color_active = wi::Color::White();
+					const wi::Color theme_color_deactivating = wi::Color::lerp(theme_color_focus, wi::Color::White(), 0.5f);
+					const wi::Color shadow_color = wi::Color(80, 140, 180, 100);
+					const wi::Color font_color = wi::Color(160, 240, 250, 255);
 					inputField.SetColor(theme_color_idle); // all states the same, it's gonna be always active anyway
 					inputField.font.params.color = wi::Color(160, 240, 250, 255);
 					inputField.font.params.shadowColor = wi::Color::Transparent();
@@ -369,8 +374,8 @@ namespace wi::backlog
 					toggleButton.SetColor(theme_color_active, wi::gui::ACTIVE);
 					toggleButton.SetColor(theme_color_deactivating, wi::gui::DEACTIVATING);
 					toggleButton.SetShadowRadius(5);
-					toggleButton.SetShadowColor(wi::Color(80, 140, 180, 100));
-					toggleButton.font.params.color = wi::Color(160, 240, 250, 255);
+					toggleButton.SetShadowColor(shadow_color);
+					toggleButton.font.params.color = font_color;
 					toggleButton.font.params.rotation = XM_PI;
 					toggleButton.font.params.size = 24;
 					toggleButton.font.params.scaling = 3;
@@ -379,6 +384,34 @@ namespace wi::backlog
 					{
 						toggleButton.sprites[i].params.enableCornerRounding();
 						toggleButton.sprites[i].params.corners_rounding[2].radius = 50;
+					}
+
+					scrollbar.SetVertical(true);
+					scrollbar.SetColor(theme_color_idle, wi::gui::IDLE);
+					scrollbar.SetColor(theme_color_focus, wi::gui::FOCUS);
+					scrollbar.SetColor(theme_color_active, wi::gui::ACTIVE);
+					scrollbar.SetColor(theme_color_deactivating, wi::gui::DEACTIVATING);
+					scrollbar.SetColor(theme_color_focus, wi::gui::WIDGET_ID_SCROLLBAR_KNOB_INACTIVE);
+					scrollbar.SetColor(font_color, wi::gui::WIDGET_ID_SCROLLBAR_KNOB_HOVER);
+					scrollbar.SetColor(theme_color_active, wi::gui::WIDGET_ID_SCROLLBAR_KNOB_GRABBED);
+					scrollbar.SetColor(theme_color_active, wi::gui::WIDGET_ID_SCROLLBAR_KNOB_GRABBED);
+					scrollbar.SetShadowRadius(5);
+					scrollbar.SetShadowColor(shadow_color);
+					for (int i = 0; i < arraysize(scrollbar.sprites); ++i)
+					{
+						scrollbar.sprites[i].params.enableCornerRounding();
+						scrollbar.sprites[i].params.corners_rounding[0].radius = 8;
+						scrollbar.sprites[i].params.corners_rounding[1].radius = 8;
+						scrollbar.sprites[i].params.corners_rounding[2].radius = 8;
+						scrollbar.sprites[i].params.corners_rounding[3].radius = 8;
+					}
+					for (int i = 0; i < arraysize(scrollbar.sprites_knob); ++i)
+					{
+						scrollbar.sprites_knob[i].params.enableCornerRounding();
+						scrollbar.sprites_knob[i].params.corners_rounding[0].radius = 8;
+						scrollbar.sprites_knob[i].params.corners_rounding[1].radius = 8;
+						scrollbar.sprites_knob[i].params.corners_rounding[2].radius = 8;
+						scrollbar.sprites_knob[i].params.corners_rounding[3].radius = 8;
 					}
 				}
 				if (inputField.GetState() != wi::gui::ACTIVE)
@@ -410,6 +443,11 @@ namespace wi::backlog
 		toggleButton.SetSize(XMFLOAT2(100, 100));
 		toggleButton.SetPos(XMFLOAT2(canvas.GetLogicalWidth() - toggleButton.GetSize().x - 20, 20 + pos));
 		toggleButton.Update(canvas, dt);
+
+		scrollbar.SetSize(XMFLOAT2(20, canvas.GetLogicalHeight() - 20 - toggleButton.GetSize().y - toggleButton.GetShadowRadius() * 2 - 70));
+		scrollbar.SetPos(XMFLOAT2(canvas.GetLogicalWidth() - scrollbar.GetSize().x - 20, toggleButton.GetSize().y + toggleButton.GetShadowRadius() * 2 + 30 + pos));
+		scrollbar.Update(canvas, dt);
+		scrollbar.SetListLength(std::max(textheight, canvas.GetLogicalHeight()));
 	}
 	void Draw(
 		const wi::Canvas& canvas,
@@ -458,8 +496,9 @@ namespace wi::backlog
 		{
 			inputField.sprites[inputField.GetState()].params.enableLinearOutputMapping(9);
 			inputField.font.params.enableLinearOutputMapping(9);
-			toggleButton.sprites[inputField.GetState()].params.enableLinearOutputMapping(9);
+			toggleButton.sprites[toggleButton.GetState()].params.enableLinearOutputMapping(9);
 			toggleButton.font.params.enableLinearOutputMapping(9);
+			scrollbar.sprites[scrollbar.GetState()].params.enableLinearOutputMapping(9);
 		}
 		inputField.Render(canvas, cmd);
 
@@ -469,6 +508,8 @@ namespace wi::backlog
 		rect.top = 0;
 		rect.bottom = (int32_t)canvas.GetPhysicalHeight();
 		device->BindScissorRects(1, &rect, cmd);
+
+		scrollbar.Render(canvas, cmd);
 
 		toggleButton.Render(canvas, cmd);
 
@@ -496,16 +537,15 @@ namespace wi::backlog
 		params.cursor = {};
 		if (refitscroll)
 		{
-			const float textheight = wi::font::TextHeight(getText(), params);
 			const float limit = canvas.GetLogicalHeight() - 50;
-			if (scroll + textheight > limit)
+			if (scrollbar.GetOffset() + textheight > limit)
 			{
-				scroll = limit - textheight;
+				scrollbar.Scroll(limit - textheight);
 			}
 			refitscroll = false;
 		}
 		params.posX = 5;
-		params.posY = pos + scroll;
+		params.posY = pos + scrollbar.GetOffset();
 		params.h_wrap = canvas.GetLogicalWidth() - params.posX;
 		if (colorspace != ColorSpace::SRGB)
 		{
@@ -555,7 +595,7 @@ namespace wi::backlog
 	{
 		std::scoped_lock lck(internal_state.entriesLock);
 		internal_state.entries.clear();
-		scroll = 0;
+		scrollbar.SetOffset(0);
 	}
 	void post(const char* input, LogLevel level)
 	{
