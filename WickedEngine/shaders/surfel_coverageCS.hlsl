@@ -96,6 +96,18 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	const bool skip_emissive_spawn =
 		max3(surface.emissiveColor) >= SURFEL_EMISSIVE_SPAWN_SKIP;
 
+	// Skip spawning on fully-metallic (or fully-black) surfaces: metals have no
+	// diffuse response, so cached diffuse GI is invisible on them. Surface
+	// stores no metalness, but full metalness zeroes albedo, so ~zero albedo is
+	// exactly the metalness>=1 case. They still reflect via specular
+	// (RT/screen-space reflections), not surfels, so skipping placement costs
+	// nothing here.
+	const bool skip_metallic_spawn =
+		max3(surface.albedo) <= SURFEL_METALLIC_ALBEDO_SKIP;
+
+	// Combined spawn skip for surfaces where cached diffuse GI is wasted.
+	const bool skip_spawn = skip_emissive_spawn || skip_metallic_spawn;
+
 	float coverage = 0; // spawn metric (loose radial * dotN)
 	// Distance (squared) to the nearest same-orientation surfel, for the
 	// Poisson- disk minimum-spacing spawn reject below. Found for free during
@@ -212,7 +224,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		? surfelGridBuffer[surfel_cellindex(spawn_gridpos, spawn_level)].count
 		: SURFEL_CELL_LIMIT;
 
-	if (push.frozen == 0 && !skip_emissive_spawn && spawn_cell_count < SURFEL_CELL_LIMIT)
+	if (push.frozen == 0 && !skip_spawn && spawn_cell_count < SURFEL_CELL_LIMIT)
 	{
 		uint surfel_count_at_pixel = 0;
 		surfel_count_at_pixel |= (uint(coverage) & 0xFF) << 24; // the upper bits matter most for min selection
@@ -292,7 +304,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	write_result(DTid.xy, color);
 	write_debug(DTid.xy, debug);
 
-	if (push.frozen == 0 && !skip_emissive_spawn && spawn_cell_count < SURFEL_CELL_LIMIT)
+	if (push.frozen == 0 && !skip_spawn && spawn_cell_count < SURFEL_CELL_LIMIT)
 	{
 		uint surfel_coverage = GroupMinSurfelCount[subtile];
 		uint2 minGTid;
