@@ -40,12 +40,121 @@ static const uint COVERAGE_SUBTILES_1D = COVERAGE_GROUP_SIZE / COVERAGE_SUBTILE_
 static const uint COVERAGE_SUBTILE_COUNT = COVERAGE_SUBTILES_1D * COVERAGE_SUBTILES_1D;
 groupshared uint GroupMinSurfelCount[COVERAGE_SUBTILE_COUNT];
 
+// Cooperative LDS cache of the group's shared base-level grid cell.
+//
+// The cascaded grid cell size tracks screen size (see surfel_level), so a flat
+// tile maps to ~one base-level cell at ANY distance. When every active pixel in
+// the 16x16 group agrees on its base-level cell, the group loads that cell's
+// surfels into groupshared ONCE and every pixel gathers the base level from LDS
+// instead of re-fetching each surfel from global memory 256 times. Cells larger
+// than the cache spill their tail to the global path; non-uniform tiles (edges
+// / steep angles) and the +/-1 neighbour levels use the global path. This is a
+// pure load-sharing optimisation - each pixel still tests exactly its own
+// cell's surfel list once through gather_surfel(), so GI results are identical.
+static const uint COVERAGE_LDS_SURFELS = 128; // per-group base-cell cache capacity
+groupshared Surfel GroupSurfels[COVERAGE_LDS_SURFELS];
+groupshared uint GroupSurfelIndices[COVERAGE_LDS_SURFELS];
+groupshared uint GroupBaseCellMin;    // min base-cell index over active pixels
+groupshared uint GroupBaseCellMax;    // max (== min => the group shares one cell)
+groupshared uint GroupBaseCellOffset; // cellBuffer offset of the shared base cell
+groupshared uint GroupLdsCount;       // surfels actually cached = min(count, CAP)
+groupshared uint GroupLoadNext;       // atomic cursor for the cooperative fill
+
+// Accumulates one surfel's GI/coverage contribution at a shading point. Shared
+// by the LDS and global gather paths so both apply identical weighting; only
+// the moment sample and the seen-bit write still touch global memory (both are
+// inherently per-pixel). Matches the original inlined gather exactly.
+void gather_surfel(
+	float3 P,
+	float3 N,
+	Surfel surfel,
+	uint surfel_index,
+	SURFEL_DEBUG debug_mode,
+	inout float coverage,
+	inout float nearest_dist2,
+	inout float4 color,
+	inout float4 debug)
+{
+	float3 L = P - surfel.position;
+	float dist2 = dot(L, L);
+	if (dist2 >= sqr(surfel.GetRadius()))
+		return;
+
+	// Point debug marks any surfel centre near the shading point, independent of
+	// orientation, so it runs before the dotN gate.
+	if (debug_mode == SURFEL_DEBUG_POINT && dist2 <= sqr(0.05))
+		debug = float4(1, 0, 1, 1);
+
+	float3 normal = normalize(unpack_half3(surfel.normal));
+	float dotN = dot(N, normal);
+	if (dotN <= 0)
+		return;
+
+	float dist = sqrt(dist2);
+
+	// This surfel contributes GI to a visible pixel this frame, so mark it
+	// "seen": the recycler (surfel_updateCS) treats recently seen surfels as
+	// relevant and ages out the rest. A plain OR is safe under the race here -
+	// every writer sets the same bit and no other field of properties is
+	// written during coverage.
+	surfelDataBuffer[surfel_index].properties |= SURFEL_PROPERTY_SEEN_BIT;
+
+	// Coverage (the spawn metric) uses a loose radial * dotN weight,
+	// deliberately NOT the sharpened anti-leak weight (sharpening collapses it
+	// on curved / foliage / normal-mapped surfaces, which over-spawns and
+	// churns the pool).
+	float radial = saturate(1 - dist2 / sqr(surfel.GetRadius()));
+	radial *= radial;
+	coverage += saturate(dotN) * radial;
+
+	// Track the nearest same-orientation neighbour (dotN > 0.5 so a
+	// perpendicular surface in the same cell doesn't count as "too close") for
+	// the spacing reject.
+	if (dotN > 0.5)
+		nearest_dist2 = min(nearest_dist2, dist2);
+
+	// GI weight: full anti-leak (sharp normal + tangent-plane). Only affects
+	// the (normalized) GI value, never the spawn decision above.
+	float contribution = surfel_geometry_weight(L, normal, surfel.GetRadius(), dist2, dotN);
+	float2 moments = surfelMomentsTexture.SampleLevel(sampler_linear_clamp, surfel_moment_uv(surfel_index, normal, L / dist), 0);
+	contribution *= surfel_moment_weight(moments, dist);
+
+	// Defensive 1-frame fade: full weight once integrated at least once (life
+	// >= 1).
+	contribution = lerp(0, contribution, saturate((float)surfelDataBuffer[surfel_index].GetLife()));
+
+	color += float4(SH::CalculateIrradiance(surfel.radiance.Unpack(), N), 1) * contribution;
+
+	switch (debug_mode)
+	{
+	case SURFEL_DEBUG_NORMAL:
+		debug.rgb += normal * contribution;
+		debug.a = 1;
+		break;
+	case SURFEL_DEBUG_RANDOM:
+		debug += float4(random_color(surfel_index), 1) * contribution;
+		break;
+	case SURFEL_DEBUG_INCONSISTENCY:
+		debug += float4(surfelDataBuffer[surfel_index].max_inconsistency.xxx, 1) * contribution;
+		break;
+	default:
+		break;
+	}
+}
+
 [numthreads(16, 16, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 {
 	if (groupIndex < COVERAGE_SUBTILE_COUNT)
 	{
 		GroupMinSurfelCount[groupIndex] = ~0;
+	}
+	if (groupIndex == 0)
+	{
+		GroupBaseCellMin = ~0u; // sentinel: no active pixel has voted yet
+		GroupBaseCellMax = 0;
+		GroupLdsCount = 0;
+		GroupLoadNext = 0;
 	}
 	GroupMemoryBarrierWithGroupSync();
 
@@ -120,110 +229,97 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 
 	float coverage = 0; // spawn metric (loose radial * dotN)
 	// Distance (squared) to the nearest same-orientation surfel, for the
-	// Poisson- disk minimum-spacing spawn reject below. Found for free during
+	// Poisson-disk minimum-spacing spawn reject below. Found for free during
 	// the gather since it already visits every nearby surfel.
 	float nearest_dist2 = 1e30;
 
-	// Gather coverage and GI only from the cascade levels around this point's
-	// own level. surfel_update keeps every surfel at surfel_level(its
-	// position), so a surface point and the surfels sitting on it share a
-	// level; +/-1 covers level-boundary pixels. Bounds the gather to <=3
+	// Cascade levels around this point's own level. surfel_update keeps every
+	// surfel at surfel_level(its position), so a surface point and the surfels
+	// on it share a level; +/-1 covers level-boundary pixels. Bounds it to <=3
 	// levels.
 	const uint base_level = surfel_level(surface.P);
 	const uint level_lo = (base_level > 0) ? (base_level - 1) : 0;
 	const uint level_hi = min(base_level + 1, SURFEL_GRID_LEVELS - 1);
+
+	// Vote the group's base-level cell: every active pixel offers its base-cell
+	// index; if they all agree (min == max) the group shares one cell and
+	// caches it in LDS (see the note above the groupshared declarations).
+	const int3 base_gridpos = surfel_cell(surface.P, base_level);
+	const uint base_cellindex = surfel_cellvalid(base_gridpos)
+		? surfel_cellindex(base_gridpos, base_level) : ~0u;
+	InterlockedMin(GroupBaseCellMin, base_cellindex);
+	InterlockedMax(GroupBaseCellMax, base_cellindex);
+	GroupMemoryBarrierWithGroupSync();
+
+	// use_lds is group-uniform (both operands are groupshared, read after the
+	// barrier), so the cooperative blocks below never diverge within the group.
+	const bool use_lds =
+		(GroupBaseCellMin == GroupBaseCellMax) && (GroupBaseCellMin != ~0u);
+	if (use_lds)
+	{
+		// Every active thread reads the identical shared-cell header (a benign
+		// same-value race on the groupshared scalars).
+		SurfelGridCell shared_cell = surfelGridBuffer[GroupBaseCellMin];
+		GroupBaseCellOffset = shared_cell.offset;
+		GroupLdsCount = min(shared_cell.count, COVERAGE_LDS_SURFELS);
+	}
+	GroupMemoryBarrierWithGroupSync();
+
+	// Cooperative fill: active threads pull cache slots via an atomic cursor,
+	// so the cache is fully populated regardless of which lanes are active this
+	// group.
+	if (use_lds)
+	{
+		uint slot = 0;
+		InterlockedAdd(GroupLoadNext, 1, slot);
+		[loop] while (slot < GroupLdsCount)
+		{
+			uint idx = surfelCellBuffer[GroupBaseCellOffset + slot];
+			GroupSurfels[slot] = surfelBuffer[idx];
+			GroupSurfelIndices[slot] = idx;
+			InterlockedAdd(GroupLoadNext, 1, slot);
+		}
+	}
+	GroupMemoryBarrierWithGroupSync();
+
+	// Gather. The base level reads the shared cell from LDS when the group
+	// agrees on it (with any >CAP tail from global); the +/-1 levels and
+	// non-shared tiles use the global path. Both paths route through
+	// gather_surfel(), so identical.
 	for (uint level = level_lo; level <= level_hi; ++level)
 	{
-	int3 gridpos = surfel_cell(surface.P, level);
-	if (!surfel_cellvalid(gridpos))
-		continue;
+		int3 gridpos = surfel_cell(surface.P, level);
+		if (!surfel_cellvalid(gridpos))
+			continue;
 
-	SurfelGridCell cell = surfelGridBuffer[surfel_cellindex(gridpos, level)];
-	for (uint i = 0; i < cell.count; ++i)
-	{
-		uint surfel_index = surfelCellBuffer[cell.offset + i];
-		Surfel surfel = surfelBuffer[surfel_index];
+		const uint cellindex = surfel_cellindex(gridpos, level);
+		SurfelGridCell cell = surfelGridBuffer[cellindex];
 
-		float3 L = surface.P - surfel.position;
-		float dist2 = dot(L, L);
-		if (dist2 < sqr(surfel.GetRadius()))
+		if (use_lds && level == base_level && cellindex == GroupBaseCellMin)
 		{
-			float3 normal = normalize(unpack_half3(surfel.normal));
-			float dotN = dot(N, normal);
-			if (dotN > 0)
+			// Cached prefix from LDS.
+			for (uint i = 0; i < GroupLdsCount; ++i)
+				gather_surfel(surface.P, N, GroupSurfels[i], GroupSurfelIndices[i],
+					push.debug, coverage, nearest_dist2, color, debug);
+
+			// Tail beyond the cache (cell larger than COVERAGE_LDS_SURFELS)
+			// from global memory.
+			for (uint i = GroupLdsCount; i < cell.count; ++i)
 			{
-				float dist = sqrt(dist2);
-
-				// This surfel contributes GI to a visible pixel this frame, so
-				// mark it "seen": the recycler (surfel_updateCS) treats recently
-				// seen surfels as relevant and ages out the rest. A plain OR is
-				// safe under the race here - every writer sets the same bit and
-				// no other field of properties is written during coverage.
-				surfelDataBuffer[surfel_index].properties |= SURFEL_PROPERTY_SEEN_BIT;
-
-				// Coverage (the spawn metric) uses a loose radial * dotN
-				// weight, deliberately NOT the sharpened anti-leak weight.
-				// Sharpening the coverage metric collapses it on curved /
-				// foliage / normal-mapped surfaces (dotN < 1), which massively
-				// over-spawns and churns the pool; spawn density must stay
-				// independent of the GI weighting.
-				float radial = saturate(1 - dist2 / sqr(surfel.GetRadius()));
-				radial *= radial;
-				coverage += saturate(dotN) * radial;
-
-				// Track the nearest same-orientation neighbour (dotN > 0.5 so a
-				// perpendicular surface in the same cell - e.g. floor vs wall
-				// at a corner - doesn't count as "too close") for the spacing
-				// reject.
-				if (dotN > 0.5)
-					nearest_dist2 = min(nearest_dist2, dist2);
-
-				// GI weight: full anti-leak (sharp normal + tangent-plane),
-				// shared with the raytrace multi-bounce and birth-seed gathers
-				// so they agree. Only affects the (normalized) GI value below,
-				// never the spawn decision above.
-				float contribution = surfel_geometry_weight(L, normal, surfel.GetRadius(), dist2, dotN);
-				
-				float2 moments = surfelMomentsTexture.SampleLevel(sampler_linear_clamp, surfel_moment_uv(surfel_index, normal, L / dist), 0);
-				contribution *= surfel_moment_weight(moments, dist);
-
-				// Defensive 1-frame fade: a surfel reaches full weight as soon
-				// as it has been integrated once (life >= 1). Birth seeding
-				// (surfel_integrateCS) already gives newborns a plausible
-				// non-black radiance, so the old half-weighting at life 1 only
-				// slowed perceived placement and left under-covered pixels
-				// dark; ramping to full at life 1 fills surfaces faster without
-				// reintroducing black pops.
-				contribution = lerp(0, contribution, saturate((float)surfelDataBuffer[surfel_index].GetLife()));
-
-				color += float4(SH::CalculateIrradiance(surfel.radiance.Unpack(), N), 1) * contribution;
-
-				switch (push.debug)
-				{
-				case SURFEL_DEBUG_NORMAL:
-					debug.rgb += normal * contribution;
-					debug.a = 1;
-					break;
-				case SURFEL_DEBUG_RANDOM:
-					debug += float4(random_color(surfel_index), 1) * contribution;
-					break;
-				case SURFEL_DEBUG_INCONSISTENCY:
-					debug += float4(surfelDataBuffer[surfel_index].max_inconsistency.xxx, 1) * contribution;
-					break;
-				default:
-					break;
-				}
-
-			}
-
-			if (push.debug == SURFEL_DEBUG_POINT)
-			{
-				if (dist2 <= sqr(0.05))
-					debug = float4(1, 0, 1, 1);
+				uint surfel_index = surfelCellBuffer[cell.offset + i];
+				gather_surfel(surface.P, N, surfelBuffer[surfel_index], surfel_index,
+					push.debug, coverage, nearest_dist2, color, debug);
 			}
 		}
-
-	}
+		else
+		{
+			for (uint i = 0; i < cell.count; ++i)
+			{
+				uint surfel_index = surfelCellBuffer[cell.offset + i];
+				gather_surfel(surface.P, N, surfelBuffer[surfel_index], surfel_index,
+					push.debug, coverage, nearest_dist2, color, debug);
+			}
+		}
 	}
 
 	// The level and cell a newly spawned surfel here would occupy (placed at
