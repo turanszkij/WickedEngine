@@ -105,8 +105,18 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	const bool skip_metallic_spawn =
 		max3(surface.albedo) <= SURFEL_METALLIC_ALBEDO_SKIP;
 
+	// Skip spawning on transparent surfaces: glass/transmissive materials
+	// transmit and refract light along ray paths rather than reflecting it
+	// diffusely, so cached diffuse GI on them is meaningless.
+	// surface.transmission already folds in cloak (transmission =
+	// lerp(GetTransmission(), 1, GetCloak())), so this one test covers both
+	// transmissive and cloaked materials.
+	const bool skip_transparent_spawn =
+		surface.transmission > SURFEL_TRANSMISSION_SPAWN_SKIP;
+
 	// Combined spawn skip for surfaces where cached diffuse GI is wasted.
-	const bool skip_spawn = skip_emissive_spawn || skip_metallic_spawn;
+	const bool skip_spawn =
+		skip_emissive_spawn || skip_metallic_spawn || skip_transparent_spawn;
 
 	float coverage = 0; // spawn metric (loose radial * dotN)
 	// Distance (squared) to the nearest same-orientation surfel, for the
