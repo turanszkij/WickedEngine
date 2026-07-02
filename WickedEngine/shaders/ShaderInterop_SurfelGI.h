@@ -9,11 +9,12 @@ static const uint SURFEL_MOMENT_RESOLUTION = 4;
 static const uint SURFEL_MOMENT_ATLAS_TEXELS = SQRT_SURFEL_CAPACITY * SURFEL_MOMENT_RESOLUTION;
 static const uint3 SURFEL_GRID_DIMENSIONS = uint3(128, 64, 128);
 static const uint SURFEL_TABLE_SIZE = SURFEL_GRID_DIMENSIONS.x * SURFEL_GRID_DIMENSIONS.y * SURFEL_GRID_DIMENSIONS.z;
-static const uint SURFEL_GRID_LEVELS = 6; // cascaded grid levels; level L has cell/radius SURFEL_MIN_RADIUS << L (0.5, 1, 2, 4, 8, 16)
+static const uint SURFEL_GRID_LEVELS = 8; // cascaded grid levels; level L has cell/radius SURFEL_MIN_RADIUS << L (3, 6, 12, 24, 48, 96, 192, 384). More levels than the near field needs so distant surfels can grow large (few, coarse) via SURFEL_RADIUS_GROWTH_DISTANCE instead of saturating at a small size
 static const uint SURFEL_TOTAL_TABLE_SIZE = SURFEL_TABLE_SIZE * SURFEL_GRID_LEVELS; // grid cells across all levels
 static const float SURFEL_MIN_RADIUS = 3.0; // level-0 (finest) cell size and radius; near surfaces reach this, so surfel density keeps rising as the camera approaches (no hard floor at 2 like before)
-static const float SURFEL_MAX_RADIUS = SURFEL_MIN_RADIUS * (float)(1u << (SURFEL_GRID_LEVELS - 1)); // derived coarsest radius (level LEVELS-1 == 16); used as a default/liveness radius value
+static const float SURFEL_MAX_RADIUS = SURFEL_MIN_RADIUS * (float)(1u << (SURFEL_GRID_LEVELS - 1)); // derived coarsest radius (level LEVELS-1); used as a default/liveness radius value
 static const float SURFEL_RADIUS_PIXELS = 32; // target screen-space radius in pixels that drives which level a surfel lands on
+static const float SURFEL_RADIUS_GROWTH_DISTANCE = 50; // distance (world units) over which the surfel size grows SUPER-linearly with distance in surfel_level: the screen-footprint target is scaled by (1 + dist / this), so the nearest surfels keep their current fine size (scale ~1) while far ones coarsen far faster than a constant footprint would - a distant surface then needs far fewer, bigger surfels, slashing the far working set (gather + re-trace + live count) that tanks FPS when a large area comes into view (flying up). Smaller = more aggressive far growth (fewer/coarser far surfels); very large = disables the growth (back to a constant screen footprint)
 // Relevance-based recycler (see surfel_updateCS): the live working set is bounded
 // by recycling the least-relevant surfels probabilistically. Relevance falls with
 // recency (frames since a surfel last contributed to a visible pixel), distance
@@ -31,7 +32,8 @@ static const uint SURFEL_INDIRECT_NUMTHREADS = 32;
 static const float SURFEL_TARGET_COVERAGE = 0.8f; // how many surfels should affect a pixel fully, higher values will increase quality and cost
 static const float SURFEL_NORMAL_WEIGHT_POWER = 2; // exponent sharpening the normal-similarity term in the GI lookup; keep mild (the tangent-plane term is the real anti-leak) - too high collapses the contributor count on curved/foliage surfaces, which under-averages and lets GI fireflies show through
 static const float SURFEL_PLANE_WEIGHT_SCALE = 0.7f; // tangent-plane tolerance as a fraction of radius; smaller = stricter anti-leak (a surfel only affects a thin slab around its own plane, so it can't leak onto a perpendicular surface across an edge)
-static const float SURFEL_SPAWN_MIN_SPACING = 0.2f; // THE DENSITY KNOB. Target Poisson-disk spacing as a fraction of the surfel's radius: the spawner fills until every point has a same-layer, same-orientation neighbour within radius*this, then stops (nearest neighbour comes from the coverage gather). Smaller = denser / more overlap (0.5 => centres at half-radius, heavy overlap; 1.0 => ~50% disk overlap). Placement is driven by THIS, not by coverage (big surfels saturate coverage while still sparse, which stalled the fill). Applies at every cascade level
+static const float SURFEL_SPAWN_MIN_SPACING = 0.2f; // THE NEAR DENSITY KNOB. Poisson-disk spacing as a fraction of radius at the FINEST level (level 0, closest surfaces): the spawner fills until every point has a same-layer, same-orientation neighbour within radius*this, then stops (nearest neighbour comes from the coverage gather). Smaller = denser / more overlap near the camera. Coarser (more distant) levels interpolate toward SURFEL_SPAWN_MAX_SPACING via surfel_spawn_spacing(), so far surfels are sparser WITHOUT changing this near density. Placement is driven by THIS, not by coverage (big surfels saturate coverage while still sparse, which stalled the fill)
+static const float SURFEL_SPAWN_MAX_SPACING = 0.5f; // THE FAR DENSITY KNOB. Poisson-disk spacing fraction at the COARSEST level (SURFEL_GRID_LEVELS-1, most distant surfaces). surfel_spawn_spacing() lerps by level from SURFEL_SPAWN_MIN_SPACING (near, dense) to this (far, sparse), so distant surfels spread out further than the near-field spacing while the closest level keeps its density. Must be >= MIN; set equal to MIN to disable the distance falloff (uniform spacing at every level). This spacing is a fraction of the (already distance-grown) radius, so far surfels get sparser both from their larger radius AND this larger fraction
 static const float SURFEL_SPAWN_PER_CELL = 3.0f; // target EXPECTED new surfels per world cell per frame. The spawner is screen-space (one candidate per tile), so up close many tiles overlap one world cell and would all spawn into it at once (the burst/clump). Each tile's spawn probability is scaled by (tile_world_size/cell_size)^2 (i.e. by distance^2) so the expected spawns per cell per frame stays ~this regardless of camera distance - close surfaces no longer over-spawn. Higher = faster fill but burstier; lower = gentler/more uniform
 static const float SURFEL_THIN_HYSTERESIS = 0.75f; // thinning distance as a fraction of the spawn spacing. surfel_integrate marks a surfel redundant when a same-orientation, LOWER-INDEX neighbour sits within radius * SURFEL_SPAWN_MIN_SPACING * this; kept < 1 so a just-spawned surfel (which needed an empty spawn-spacing radius) is not instantly re-thinned - the gap prevents spawn/thin oscillation. This is the "discard on recede" half of EA's scheme: as surfels grow when the camera backs away they become over-dense, and the excess is recycled
 static const float SURFEL_THIN_RATE = 0.1f; // per-frame probability that surfel_update recycles a surfel flagged redundant. Gradual (not instant) so an over-dense region relaxes to the spacing target smoothly instead of collapsing in one frame
@@ -232,7 +234,16 @@ inline uint surfel_level(float3 position)
 	const float world_per_pixel =
 		2.0 * dist /
 		(GetCamera().projection[1][1] * (float)GetCamera().internal_resolution.y);
-	const float desired_radius = SURFEL_RADIUS_PIXELS * world_per_pixel;
+	// Base target: a constant SURFEL_RADIUS_PIXELS screen footprint. The growth
+	// term then makes the footprint (and so the world radius/level) increase
+	// SUPER-linearly with distance: near surfaces (dist << GROWTH_DISTANCE) keep
+	// scale ~1 and their current fine size, while distant ones grow much larger
+	// than a constant footprint would give - so a far surface is covered by far
+	// fewer, bigger surfels. This shrinks the far working set (fewer to gather,
+	// re-trace, and keep live), which is what tanks FPS when a large area comes
+	// into view (e.g. flying up over terrain).
+	const float growth = 1.0 + dist / SURFEL_RADIUS_GROWTH_DISTANCE;
+	const float desired_radius = SURFEL_RADIUS_PIXELS * world_per_pixel * growth;
 	const float level = floor(log2(max(desired_radius / SURFEL_MIN_RADIUS, 1.0)));
 	return (uint)clamp(level, 0, SURFEL_GRID_LEVELS - 1);
 }
@@ -240,6 +251,18 @@ inline uint surfel_level(float3 position)
 inline uint surfel_level_from_radius(float radius)
 {
 	return firstbithigh(max(1u, (uint)(radius / SURFEL_MIN_RADIUS + 0.5)));
+}
+// Poisson-disk spawn/thinning spacing (as a fraction of radius) for a cascade
+// level. Interpolates from the dense near spacing (SURFEL_SPAWN_MIN_SPACING at
+// level 0, the closest surfaces) to the sparse far spacing
+// (SURFEL_SPAWN_MAX_SPACING at the coarsest level, the most distant surfaces),
+// so distant surfels spread out further while the closest level keeps its
+// density. Both the spawn spacing gate (surfel_coverage) and the thinning
+// threshold (surfel_integrate) use this, so they stay consistent per level.
+inline float surfel_spawn_spacing(uint level)
+{
+	const float t = (float)level / (float)(SURFEL_GRID_LEVELS - 1);
+	return lerp(SURFEL_SPAWN_MIN_SPACING, SURFEL_SPAWN_MAX_SPACING, saturate(t));
 }
 float3 surfel_griduv(float3 position)
 {

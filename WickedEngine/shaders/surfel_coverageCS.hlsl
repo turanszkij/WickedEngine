@@ -429,7 +429,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 			// deficit probability went to 0 as coverage approached target,
 			// stalling it asymptotically).
 			const float spawn_radius = surfel_cellsize(spawn_level);
-			const float desired_spacing = spawn_radius * SURFEL_SPAWN_MIN_SPACING;
+			const float desired_spacing =
+				spawn_radius * surfel_spawn_spacing(spawn_level);
 
 			if (nearest_dist2 < sqr(desired_spacing))
 				return;

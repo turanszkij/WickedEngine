@@ -301,7 +301,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 		{
 			const uint self_level = surfel_level_from_radius(surfel.GetRadius());
 			const float thin_dist2 = sqr(surfel.GetRadius()
-				* SURFEL_SPAWN_MIN_SPACING * SURFEL_THIN_HYSTERESIS);
+				* surfel_spawn_spacing(self_level) * SURFEL_THIN_HYSTERESIS);
 			const int3 self_cell = surfel_cell(P, self_level);
 			if (surfel_cellvalid(self_cell))
 			{
