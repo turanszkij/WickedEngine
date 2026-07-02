@@ -11,14 +11,14 @@ static const uint3 SURFEL_GRID_DIMENSIONS = uint3(128, 64, 128);
 static const uint SURFEL_TABLE_SIZE = SURFEL_GRID_DIMENSIONS.x * SURFEL_GRID_DIMENSIONS.y * SURFEL_GRID_DIMENSIONS.z;
 static const uint SURFEL_GRID_LEVELS = 6; // cascaded grid levels; level L has cell/radius SURFEL_MIN_RADIUS << L (0.5, 1, 2, 4, 8, 16)
 static const uint SURFEL_TOTAL_TABLE_SIZE = SURFEL_TABLE_SIZE * SURFEL_GRID_LEVELS; // grid cells across all levels
-static const float SURFEL_MIN_RADIUS = 0.5; // level-0 (finest) cell size and radius; near surfaces reach this, so surfel density keeps rising as the camera approaches (no hard floor at 2 like before)
+static const float SURFEL_MIN_RADIUS = 3.0; // level-0 (finest) cell size and radius; near surfaces reach this, so surfel density keeps rising as the camera approaches (no hard floor at 2 like before)
 static const float SURFEL_MAX_RADIUS = SURFEL_MIN_RADIUS * (float)(1u << (SURFEL_GRID_LEVELS - 1)); // derived coarsest radius (level LEVELS-1 == 16); used as a default/liveness radius value
 static const float SURFEL_RADIUS_PIXELS = 32; // target screen-space radius in pixels that drives which level a surfel lands on
 // Relevance-based recycler (see surfel_updateCS): the live working set is bounded
 // by recycling the least-relevant surfels probabilistically. Relevance falls with
 // recency (frames since a surfel last contributed to a visible pixel), distance
 // from the camera, and pool pressure (live count vs. the soft target below).
-static const uint SURFEL_LIVE_TARGET = 40000; // soft cap on live surfels; eviction ramps as the live count approaches/exceeds this (kept well below SURFEL_CAPACITY so recycling actually engages)
+static const uint SURFEL_LIVE_TARGET = 80000; // soft cap on live surfels; eviction ramps as the live count approaches/exceeds this (kept well below SURFEL_CAPACITY so recycling actually engages)
 static const uint SURFEL_RECYCLE_RECENCY_MIN = 32; // frames a surfel must go unseen before it becomes eligible for recency-based eviction
 static const uint SURFEL_RECYCLE_RECENCY_MAX = 200; // frames unseen at which recency eviction saturates (must stay < 256: recycle is packed at 8 bits)
 static const float SURFEL_RECYCLE_DISTANCE_FAR = 200; // distance from camera (world units) at which the distance eviction bias saturates
@@ -30,8 +30,12 @@ static const uint SURFEL_INDIRECT_NUMTHREADS = 32;
 static const float SURFEL_TARGET_COVERAGE = 0.8f; // how many surfels should affect a pixel fully, higher values will increase quality and cost
 static const float SURFEL_NORMAL_WEIGHT_POWER = 2; // exponent sharpening the normal-similarity term in the GI lookup; keep mild (the tangent-plane term is the real anti-leak) - too high collapses the contributor count on curved/foliage surfaces, which under-averages and lets GI fireflies show through
 static const float SURFEL_PLANE_WEIGHT_SCALE = 0.7f; // tangent-plane tolerance as a fraction of radius; smaller = stricter anti-leak (a surfel only affects a thin slab around its own plane, so it can't leak onto a perpendicular surface across an edge)
-static const uint SURFEL_CELL_LIMIT = 32; // limit the amount of allocated surfels in a cell (bounds density and avoids clumping)
-static const uint SURFEL_SPAWN_BUDGET = 8192; // max number of new surfels spawned per frame (bounds placement cost)
+static const float SURFEL_SPAWN_MIN_SPACING = 0.2f; // THE DENSITY KNOB. Target Poisson-disk spacing as a fraction of the surfel's radius: the spawner fills until every point has a same-layer, same-orientation neighbour within radius*this, then stops (nearest neighbour comes from the coverage gather). Smaller = denser / more overlap (0.5 => centres at half-radius, heavy overlap; 1.0 => ~50% disk overlap). Placement is driven by THIS, not by coverage (big surfels saturate coverage while still sparse, which stalled the fill). Applies at every cascade level
+static const float SURFEL_SPAWN_PER_CELL = 3.0f; // target EXPECTED new surfels per world cell per frame. The spawner is screen-space (one candidate per tile), so up close many tiles overlap one world cell and would all spawn into it at once (the burst/clump). Each tile's spawn probability is scaled by (tile_world_size/cell_size)^2 (i.e. by distance^2) so the expected spawns per cell per frame stays ~this regardless of camera distance - close surfaces no longer over-spawn. Higher = faster fill but burstier; lower = gentler/more uniform
+static const float SURFEL_THIN_HYSTERESIS = 0.75f; // thinning distance as a fraction of the spawn spacing. surfel_integrate marks a surfel redundant when a same-orientation, LOWER-INDEX neighbour sits within radius * SURFEL_SPAWN_MIN_SPACING * this; kept < 1 so a just-spawned surfel (which needed an empty spawn-spacing radius) is not instantly re-thinned - the gap prevents spawn/thin oscillation. This is the "discard on recede" half of EA's scheme: as surfels grow when the camera backs away they become over-dense, and the excess is recycled
+static const float SURFEL_THIN_RATE = 0.1f; // per-frame probability that surfel_update recycles a surfel flagged redundant. Gradual (not instant) so an over-dense region relaxes to the spacing target smoothly instead of collapsing in one frame
+static const uint SURFEL_CELL_LIMIT = 512; // hard per-cell ceiling: surfel_coverage stops spawning into a (fine-level) grid cell once it already holds this many surfels, and the per-pixel GI gather loops a cell's surfels, so this bounds both worst-case density and gather cost. SURFEL_SPAWN_MIN_SPACING is the PRIMARY density control (the Poisson spacing gate); this is the safety ceiling above it. Note the count includes surfels OVERLAPPING the cell from neighbours (each surfel bins into up to 27 cells), so setting it too low starves cells via neighbour-bleed - an empty cell reads a high count purely from its full neighbours and never spawns, leaving grid-aligned empty squares. Keep it comfortably above the surfels-per-cell that SURFEL_SPAWN_MIN_SPACING implies
+static const uint SURFEL_SPAWN_BUDGET = 8192; // safety cap on new surfels per frame (spawnCount atomically counted, reset each frame). With the distance-compensated per-cell rate above doing the real density control, this is just a ceiling for pathological views; lower it if you also want a deliberately slower reveal
 static const uint SURFEL_RAY_BUDGET = 500000; // max number of rays per frame
 static const uint SURFEL_RAY_BOOST_MAX = 64; // max amount of rays per surfel
 static const float SURFEL_RAY_GUIDE_FRACTION = 0.5f; // max fraction of bounce rays steered toward the surfel's brightest cached direction (scaled by how directional it is)
@@ -84,7 +88,7 @@ struct SurfelData
 
 	uint bary;
 	uint raydata; // 24bit rayOffset, 8bit rayCount
-	uint properties; // 8bit life frames, 8bit recycle frames, 1bit backface normal (bit16), 1bit seen-this-frame (bit17)
+	uint properties; // 8bit life frames, 8bit recycle frames, 1bit backface normal (bit16), 1bit seen-this-frame (bit17), 1bit redundant/thin (bit19)
 	float max_inconsistency;
 
 	inline uint GetRayOffset() { return raydata & 0xFFFFFF; }
@@ -94,11 +98,13 @@ struct SurfelData
 	uint GetRecycle() { return (properties >> 8u) & 0xFF; }
 	bool IsBackfaceNormal() { return (properties >> 16u) & 0x1; }
 	bool IsSeen() { return (properties >> 17u) & 0x1; }
+	bool IsRedundant() { return (properties >> 19u) & 0x1; }
 
 	void SetLife(uint value) { properties |= value & 0xFF; }
 	void SetRecycle(uint value) { properties |= (value & 0xFF) << 8u; }
 	void SetBackfaceNormal(bool value) { if (value) properties |= 1u << 16u; else properties &= ~(1u << 16u); }
 	void SetSeen(bool value) { if (value) properties |= 1u << 17u; else properties &= ~(1u << 17u); }
+	void SetRedundant(bool value) { if (value) properties |= 1u << 19u; else properties &= ~(1u << 19u); }
 };
 struct SurfelVarianceData
 {
@@ -187,6 +193,7 @@ enum SURFEL_DEBUG
 struct SurfelDebugPushConstants
 {
 	SURFEL_DEBUG debug;
+	uint frozen; // 1 = freeze: surfel_coverage skips spawning (the update passes are skipped on the C++ side); the frozen field still gathers/renders
 };
 
 #ifndef __cplusplus

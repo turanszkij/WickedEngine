@@ -286,10 +286,50 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 		life = clamp(life, 0, 255);
 		recycle = clamp(recycle, 0, 255);
 
+		// Thinning ("discard on recede"): mark this surfel redundant when a
+		// same- orientation, LOWER-INDEX neighbour already sits within its
+		// CURRENT spacing. As surfels grow while the camera backs away, a
+		// region packed dense up close becomes over-dense; surfel_update
+		// recycles the flagged ones so far-away density relaxes back to the
+		// spacing target. Lower-index- wins is a stable tiebreak (the lowest
+		// index of an over-close cluster survives). Threshold is below the
+		// spawn spacing (SURFEL_THIN_HYSTERESIS) so a freshly placed surfel is
+		// not instantly re-thinned. Skipped for newborns (life <= 1), which
+		// just passed the spawn spacing test anyway.
+		bool is_redundant = false;
+		if (life > 1)
+		{
+			const uint self_level = surfel_level_from_radius(surfel.GetRadius());
+			const float thin_dist2 = sqr(surfel.GetRadius()
+				* SURFEL_SPAWN_MIN_SPACING * SURFEL_THIN_HYSTERESIS);
+			const int3 self_cell = surfel_cell(P, self_level);
+			if (surfel_cellvalid(self_cell))
+			{
+				SurfelGridCell gc =
+					surfelGridBuffer[surfel_cellindex(self_cell, self_level)];
+				for (uint i = 0; i < gc.count && !is_redundant; ++i)
+				{
+					const uint nbr = surfelCellBuffer[gc.offset + i];
+					if (nbr >= surfel_index)
+						continue; // only lower indices - tiebreak so one survives
+					Surfel nbr_surfel = surfelBuffer[nbr];
+					const float3 to_nbr = P - nbr_surfel.position;
+					if (dot(to_nbr, to_nbr) >= thin_dist2)
+						continue;
+					const float3 nbr_normal =
+						normalize(unpack_half3(nbr_surfel.normal));
+					if (dot(N, nbr_normal) <= 0.5)
+						continue; // different orientation: not a duplicate
+					is_redundant = true;
+				}
+			}
+		}
+
 		surfel_data.properties = 0;
 		surfel_data.SetLife(life);
 		surfel_data.SetRecycle(recycle);
 		surfel_data.SetBackfaceNormal(backface);
+		surfel_data.SetRedundant(is_redundant);
 		
 		const uint wave_count_per_group = THREADCOUNT * THREADCOUNT / lane_count_per_wave;
 		surfel_data.max_inconsistency = inconsistency;

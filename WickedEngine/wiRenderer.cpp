@@ -140,6 +140,7 @@ bool forceUnlit = false;
 bool SHADOWS_ENABLED = true;
 bool SCREENSPACESHADOWS = false;
 bool SURFELGI = false;
+bool SURFELGI_FROZEN = false;
 SURFEL_DEBUG SURFELGI_DEBUG = SURFEL_DEBUG_NONE;
 bool DDGI_ENABLED = false;
 bool DDGI_DEBUG_ENABLED = false;
@@ -12155,6 +12156,7 @@ void SurfelGI_Coverage(
 
 		SurfelDebugPushConstants push;
 		push.debug = GetSurfelGIDebugEnabled();
+		push.frozen = GetSurfelGIFrozen() ? 1u : 0u;
 		device->PushConstants(&push, sizeof(push), cmd);
 
 		device->BindResource(&scene.surfelgi.surfelBuffer, 0, cmd);
@@ -19561,6 +19563,14 @@ void SetSurfelGIEnabled(bool value)
 bool GetSurfelGIEnabled()
 {
 	return SURFELGI;
+}
+void SetSurfelGIFrozen(bool value)
+{
+	SURFELGI_FROZEN = value;
+}
+bool GetSurfelGIFrozen()
+{
+	return SURFELGI_FROZEN;
 }
 void SetSurfelGIDebugEnabled(SURFEL_DEBUG value)
 {

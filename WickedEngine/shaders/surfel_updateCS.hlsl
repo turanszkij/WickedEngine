@@ -119,6 +119,15 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		p_recycle = max(p_recycle,
 			over_frac * distance_bias * SURFEL_RECYCLE_OVERFLOW_GAIN);
 
+		// (c) Thinning ("discard on recede"): surfel_integrate flagged this
+		//     surfel redundant because a same-orientation neighbour already
+		//     covers its spot at the current (grown) spacing. Recycle it at
+		//     SURFEL_THIN_RATE regardless of recency - this is what makes
+		//     over-dense far-away regions relax back to the spacing target as
+		//     surfels grow.
+		if (surfel_data.IsRedundant())
+			p_recycle = max(p_recycle, SURFEL_THIN_RATE);
+
 		RNG rng;
 		rng.init(uint2(surfel_index, 0), GetFrame().frame_count);
 		if (rng.next_float() < p_recycle)

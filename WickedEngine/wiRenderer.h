@@ -1250,6 +1250,12 @@ namespace wi::renderer
 	bool GetScreenSpaceShadowsEnabled();
 	void SetSurfelGIEnabled(bool value);
 	bool GetSurfelGIEnabled();
+	// Freeze surfel PLACEMENT for testing: pauses spawning of new surfels only.
+	// The update passes (recycle, resize, radiance, THINNING) keep running, so
+	// the existing surfels still thin out / recycle - you just don't get new
+	// ones.
+	void SetSurfelGIFrozen(bool value);
+	bool GetSurfelGIFrozen();
 	void SetSurfelGIDebugEnabled(SURFEL_DEBUG value);
 	SURFEL_DEBUG GetSurfelGIDebugEnabled();
 	void SetDDGIEnabled(bool value);

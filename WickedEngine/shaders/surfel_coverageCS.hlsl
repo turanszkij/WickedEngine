@@ -88,14 +88,17 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 
 	const float3 N = surface.N;
 
-	float coverage = 0;
+	float coverage = 0; // spawn metric (loose radial * dotN)
+	// Distance (squared) to the nearest same-orientation surfel, for the
+	// Poisson- disk minimum-spacing spawn reject below. Found for free during
+	// the gather since it already visits every nearby surfel.
+	float nearest_dist2 = 1e30;
 
 	// Gather coverage and GI only from the cascade levels around this point's
 	// own level. surfel_update keeps every surfel at surfel_level(its
 	// position), so a surface point and the surfels sitting on it share a
-	// level; +/-1 covers level-boundary pixels. This bounds the gather to <=3
-	// levels regardless of SURFEL_GRID_LEVELS (a perf win as the cascade gains
-	// finer near levels).
+	// level; +/-1 covers level-boundary pixels. Bounds the gather to <=3
+	// levels.
 	const uint base_level = surfel_level(surface.P);
 	const uint level_lo = (base_level > 0) ? (base_level - 1) : 0;
 	const uint level_hi = min(base_level + 1, SURFEL_GRID_LEVELS - 1);
@@ -137,6 +140,13 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 				float radial = saturate(1 - dist2 / sqr(surfel.GetRadius()));
 				radial *= radial;
 				coverage += saturate(dotN) * radial;
+
+				// Track the nearest same-orientation neighbour (dotN > 0.5 so a
+				// perpendicular surface in the same cell - e.g. floor vs wall
+				// at a corner - doesn't count as "too close") for the spacing
+				// reject.
+				if (dotN > 0.5)
+					nearest_dist2 = min(nearest_dist2, dist2);
 
 				// GI weight: full anti-leak (sharp normal + tangent-plane),
 				// shared with the raytrace multi-bounce and birth-seed gathers
@@ -186,16 +196,15 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	}
 	}
 
-	// The level and cell a newly spawned surfel here would occupy - used to
-	// gate spawning and for the heatmap debug (a new surfel is placed at
-	// surfel_level).
+	// The level and cell a newly spawned surfel here would occupy (placed at
+	// surfel_level); gates spawning and drives the heatmap debug.
 	const uint spawn_level = base_level;
 	const int3 spawn_gridpos = surfel_cell(surface.P, spawn_level);
 	const uint spawn_cell_count = surfel_cellvalid(spawn_gridpos)
 		? surfelGridBuffer[surfel_cellindex(spawn_gridpos, spawn_level)].count
 		: SURFEL_CELL_LIMIT;
 
-	if (spawn_cell_count < SURFEL_CELL_LIMIT)
+	if (push.frozen == 0 && spawn_cell_count < SURFEL_CELL_LIMIT)
 	{
 		uint surfel_count_at_pixel = 0;
 		surfel_count_at_pixel |= (uint(coverage) & 0xFF) << 24; // the upper bits matter most for min selection
@@ -275,19 +284,53 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	write_result(DTid.xy, color);
 	write_debug(DTid.xy, debug);
 
-	if (spawn_cell_count < SURFEL_CELL_LIMIT)
+	if (push.frozen == 0 && spawn_cell_count < SURFEL_CELL_LIMIT)
 	{
 		uint surfel_coverage = GroupMinSurfelCount[subtile];
 		uint2 minGTid;
 		minGTid.x = (surfel_coverage >> 4) & 0xF;
 		minGTid.y = (surfel_coverage >> 0) & 0xF;
-		if (GTid.x == minGTid.x && GTid.y == minGTid.y && coverage < SURFEL_TARGET_COVERAGE)
+		if (GTid.x == minGTid.x && GTid.y == minGTid.y)
 		{
-			// Spawn probability grows with the coverage deficit: empty areas fill
-			// quickly while areas near the target slow down to converge. Per-cell
-			// density is bounded by SURFEL_CELL_LIMIT.
-			const float deficit = saturate((SURFEL_TARGET_COVERAGE - coverage) / SURFEL_TARGET_COVERAGE);
-			if (rng.next_float() > deficit)
+			// Poisson-disk fill - the DENSITY DRIVER. Spawn only where the
+			// nearest same-orientation surfel is FARTHER than radius*SPACING,
+			// i.e. wherever there is still a gap; reject (return) when one is
+			// already within spacing. This fills the surface to a uniform
+			// spacing of radius*SPACING and stops, so SURFEL_SPAWN_MIN_SPACING
+			// sets the density directly: smaller = denser/more overlap.
+			// Deliberately NOT gated on coverage - big surfels make coverage
+			// saturate while still sparse, which stalled the fill (and the old
+			// deficit probability went to 0 as coverage approached target,
+			// stalling it asymptotically).
+			const float spawn_radius = surfel_cellsize(spawn_level);
+			const float desired_spacing = spawn_radius * SURFEL_SPAWN_MIN_SPACING;
+
+			if (nearest_dist2 < sqr(desired_spacing))
+				return;
+
+			// Distance-compensated per-cell spawn rate. The spawner is
+			// screen-space (one candidate per COVERAGE_SUBTILE_SIZE tile), so
+			// up close MANY tiles overlap one world cell and, seeing coverage 0
+			// on a fresh frame, would all spawn into it at once (the
+			// burst/clump). Scale the per-tile spawn probability by
+			// (tile_world_size / cell_size)^2 so the EXPECTED new surfels per
+			// cell per frame stays ~SURFEL_SPAWN_PER_CELL at any distance:
+			// close => tiny per-tile prob (many tiles share the cell), far =>
+			// ~1. tile_world_size = subtile size in full-res px *
+			// world-per-pixel.
+			const float dist_to_cam = distance(surface.P, GetCamera().position);
+			const float world_per_pixel = 2.0 * dist_to_cam /
+				(GetCamera().projection[1][1] * (float)GetCamera().internal_resolution.y);
+			const float subtile_world =
+				(float)COVERAGE_SUBTILE_SIZE * 2.0 * world_per_pixel;
+			const float distance_prob =
+				saturate(SURFEL_SPAWN_PER_CELL * sqr(subtile_world / spawn_radius));
+
+			// Rate-limit only (anti-burst); density is set by the spacing gap
+			// above, not by coverage. The fill stops on its own once every gap
+			// is closed (no neighbour farther than the spacing), so no coverage
+			// gate is needed here.
+			if (rng.next_float() > distance_prob)
 				return;
 
 			// Respect the per-frame spawn budget to bound placement cost:
