@@ -88,6 +88,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 
 	const float3 N = surface.N;
 
+	// Skip spawning on strongly emissive surfaces: their appearance is
+	// dominated by emission, so cached diffuse GI on them is wasted. They still
+	// light other surfels (emission is gathered at ray-trace hit points, not
+	// from surfels on them), so this only saves placement/gather cost. Gates
+	// the spawn paths below; the GI gather/render still runs on these pixels.
+	const bool skip_emissive_spawn =
+		max3(surface.emissiveColor) >= SURFEL_EMISSIVE_SPAWN_SKIP;
+
 	float coverage = 0; // spawn metric (loose radial * dotN)
 	// Distance (squared) to the nearest same-orientation surfel, for the
 	// Poisson- disk minimum-spacing spawn reject below. Found for free during
@@ -204,7 +212,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		? surfelGridBuffer[surfel_cellindex(spawn_gridpos, spawn_level)].count
 		: SURFEL_CELL_LIMIT;
 
-	if (push.frozen == 0 && spawn_cell_count < SURFEL_CELL_LIMIT)
+	if (push.frozen == 0 && !skip_emissive_spawn && spawn_cell_count < SURFEL_CELL_LIMIT)
 	{
 		uint surfel_count_at_pixel = 0;
 		surfel_count_at_pixel |= (uint(coverage) & 0xFF) << 24; // the upper bits matter most for min selection
@@ -284,7 +292,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	write_result(DTid.xy, color);
 	write_debug(DTid.xy, debug);
 
-	if (push.frozen == 0 && spawn_cell_count < SURFEL_CELL_LIMIT)
+	if (push.frozen == 0 && !skip_emissive_spawn && spawn_cell_count < SURFEL_CELL_LIMIT)
 	{
 		uint surfel_coverage = GroupMinSurfelCount[subtile];
 		uint2 minGTid;
