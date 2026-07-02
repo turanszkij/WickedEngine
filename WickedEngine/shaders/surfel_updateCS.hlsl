@@ -107,10 +107,20 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		const float pressure_ratio = (float)surfel_count / (float)SURFEL_LIVE_TARGET;
 		const float over_frac = saturate(pressure_ratio - 1.0);
 
-		// (a) Staleness trickle, recency-gated: a surfel seen this frame
-		//     (recency 0) is never recycled while under target. Only surfels
-		//     gone unseen long enough age out, distant ones first.
-		float p_recycle = recency * distance_bias * SURFEL_RECYCLE_PRESSURE_FLOOR;
+		// (a) Staleness trickle, recency- AND fill-gated: long-unseen surfels
+		//     are reclaimed only as the pool fills toward the target (from
+		//     SURFEL_RECYCLE_TRICKLE_START of it upward), distant ones first.
+		//     Below that fill the pool has headroom, so off-screen surfels are
+		//     KEPT - pan a full surface off screen and back and its cached GI
+		//     is still there, instead of the whole cache draining just because
+		//     it left the view. recency still gates it (a surfel seen this
+		//     frame is never touched); this only decides WHEN the unseen ones
+		//     age out.
+		const float trickle_pressure = saturate(
+			(pressure_ratio - SURFEL_RECYCLE_TRICKLE_START) /
+			max(1e-3, 1.0 - SURFEL_RECYCLE_TRICKLE_START));
+		float p_recycle = recency * distance_bias
+			* SURFEL_RECYCLE_PRESSURE_FLOOR * trickle_pressure;
 
 		// (b) Overflow shed, only past the soft target and there regardless of
 		//     recency (an all-visible view has recency 0 everywhere), still
