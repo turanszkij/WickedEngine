@@ -449,9 +449,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)volumetricLight_DirectionalPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)voxelPS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)vertexcolorPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
@@ -501,9 +498,6 @@
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)objectPS_debug.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)lightVisualizerPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)lensFlarePS.hlsl">
@@ -805,9 +799,6 @@
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)ddgi_debugVS.hlsl">
       <Filter>VS</Filter>
-    </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)ddgi_debugPS.hlsl">
-      <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)ddgi_raytraceCS.hlsl">
       <Filter>CS</Filter>
