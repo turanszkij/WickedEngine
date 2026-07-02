@@ -35,6 +35,9 @@ public:
 	wi::gui::Slider skyExposureSlider;
 	wi::gui::Slider starsSlider;
 	wi::gui::Slider skyRotationSlider;
+	wi::gui::Slider moonSizeSlider;
+	wi::gui::Slider sunSizeSlider;
+	wi::gui::Slider moonTextureMipBiasSlider;
 	wi::gui::Slider rainAmountSlider;
 	wi::gui::Slider rainLengthSlider;
 	wi::gui::Slider rainSpeedSlider;
@@ -45,6 +48,7 @@ public:
 	wi::gui::CheckBox realisticskyHighQualityCheckBox;
 	wi::gui::CheckBox realisticskyReceiveShadowCheckBox;
 	wi::gui::Button skyButton;
+	wi::gui::Button moonTextureButton;
 	wi::gui::Button colorgradingButton;
 
 	// ocean params:

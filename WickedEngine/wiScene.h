@@ -48,7 +48,7 @@ namespace wi::scene
 		wi::ecs::ComponentManager<AnimationDataComponent>& animation_datas = componentLibrary.Register<AnimationDataComponent>("wi::scene::Scene::animation_datas");
 		wi::ecs::ComponentManager<EmittedParticleSystem>& emitters = componentLibrary.Register<EmittedParticleSystem>("wi::scene::Scene::emitters", 3); // version = 3
 		wi::ecs::ComponentManager<HairParticleSystem>& hairs = componentLibrary.Register<HairParticleSystem>("wi::scene::Scene::hairs", 3); // version = 3
-		wi::ecs::ComponentManager<WeatherComponent>& weathers = componentLibrary.Register<WeatherComponent>("wi::scene::Scene::weathers", 6); // version = 6
+		wi::ecs::ComponentManager<WeatherComponent>& weathers = componentLibrary.Register<WeatherComponent>("wi::scene::Scene::weathers", 7); // version = 7
 		wi::ecs::ComponentManager<SoundComponent>& sounds = componentLibrary.Register<SoundComponent>("wi::scene::Scene::sounds", 1); // version = 1
 		wi::ecs::ComponentManager<VideoComponent>& videos = componentLibrary.Register<VideoComponent>("wi::scene::Scene::videos", 1); // version = 1
 		wi::ecs::ComponentManager<InverseKinematicsComponent>& inverse_kinematics = componentLibrary.Register<InverseKinematicsComponent>("wi::scene::Scene::inverse_kinematics");
@@ -400,6 +400,10 @@ namespace wi::scene
 			float outerConeAngle = XM_PIDIV4,
 			float innerConeAngle = 0
 		);
+		void EnsureMoonLight(WeatherComponent& weather_component);
+		void UpdateSunMoonShaderData();
+		void PackSunShaderData();
+		void PackMoonShaderData();
 		wi::ecs::Entity Entity_CreateForce(
 			const std::string& name,
 			const XMFLOAT3& position = XMFLOAT3(0, 0, 0)

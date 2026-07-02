@@ -1621,6 +1621,38 @@ namespace wi::scene
 			archive >> _flags;
 			archive >> sunDirection;
 			archive >> sunColor;
+			moonLight = wi::ecs::INVALID_ENTITY;
+			const bool supports_moon = seri.GetVersion() >= 7;
+			if (supports_moon)
+			{
+				archive >> moonDirection;
+				archive >> moonColor;
+				archive >> moon.size_multiplier;
+				archive >> moonLightIntensity;
+				archive >> moon.texture_name;
+				archive >> moon.texture_mip_bias;
+				archive >> sun.size_multiplier;
+				if (!moon.texture_name.empty())
+				{
+					moon.texture_name = dir + moon.texture_name;
+					moon.texture = wi::resourcemanager::Load(moon.texture_name);
+				}
+				else
+				{
+					moon.texture = {};
+				}
+			}
+			else
+			{
+				moonDirection = DEFAULT_MOON_DIRECTION;
+				moonColor = XMFLOAT3(3.0f / 255.0f, 3.0f / 255.0f, 3.0f / 255.0f); // #030303
+				moon.size_multiplier = 4.0f;
+				moonLightIntensity = 1.0f;
+				moon.texture_name.clear();
+				moon.texture = {};
+				moon.texture_mip_bias = 0.0f;
+				sun.size_multiplier = 4.0f;
+			}
 			archive >> horizon;
 			archive >> zenith;
 			archive >> ambient;
@@ -1902,14 +1934,25 @@ namespace wi::scene
 		}
 		else
 		{
+			const bool supports_moon = seri.GetVersion() >= 7;
+			seri.RegisterResource(moon.texture_name);
 			seri.RegisterResource(skyMapName);
 			seri.RegisterResource(colorGradingMapName);
 			seri.RegisterResource(volumetricCloudsWeatherMapFirstName);
 			seri.RegisterResource(volumetricCloudsWeatherMapSecondName);
-
 			archive << _flags;
 			archive << sunDirection;
 			archive << sunColor;
+			if (supports_moon)
+			{
+				archive << moonDirection;
+				archive << moonColor;
+				archive << moon.size_multiplier;
+				archive << moonLightIntensity;
+				archive << wi::helper::GetPathRelative(dir, moon.texture_name);
+				archive << moon.texture_mip_bias;
+				archive << sun.size_multiplier;
+			}
 			archive << horizon;
 			archive << zenith;
 			archive << ambient;

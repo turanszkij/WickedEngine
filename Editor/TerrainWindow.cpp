@@ -1791,6 +1791,26 @@ void TerrainWindow::SetupAssets()
 		transform.Translate(XMFLOAT3(0, 4, 0));
 	}
 
+	{
+		Entity moonEntity = currentScene.Entity_CreateLight("moon");
+		LightComponent& light = *currentScene.lights.GetComponent(moonEntity);
+		light.SetType(LightComponent::LightType::DIRECTIONAL);
+		light.SetMoonLight(true);
+		light.SetCastShadow(true);
+		light.SetVolumetricsEnabled(true);
+		light.SetVolumetricCloudsEnabled(true);
+		light.color = XMFLOAT3(3.0f / 255.0f, 3.0f / 255.0f, 3.0f / 255.0f); // #030303
+		light.intensity = 1.0f;
+		light.volumetric_boost = 0.05f;
+		TransformComponent& transform = *currentScene.transforms.GetComponent(moonEntity);
+		// Place the moon roughly opposite the sun in azimuth (the sun leans
+		// left, the moon leans right) but at the same elevation, so it stays
+		// visible above the horizon rather than being directly opposite (below).
+		transform.RotateRollPitchYaw(XMFLOAT3(-XM_PIDIV4, 0, -XM_PIDIV4));
+		transform.Translate(XMFLOAT3(0, 4, 0));
+		transform.UpdateTransform();
+	}
+
 	presetCombo.SetSelected(0);
 
 	editor->paintToolWnd.RecreateTerrainMaterialButtons();

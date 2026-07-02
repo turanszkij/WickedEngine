@@ -15,6 +15,8 @@
 #include "wiBVH.h"
 #include "wiPathQuery.h"
 #include "wiAllocator.h"
+#include "wiScene/environment/Moon/Moon.h"
+#include "wiScene/environment/Sun/Sun.h"
 
 namespace wi::scene
 {
@@ -1332,6 +1334,7 @@ namespace wi::scene
 			VISUALIZER = 1 << 2,
 			LIGHTMAPONLY_STATIC = 1 << 3,
 			VOLUMETRICCLOUDS = 1 << 4,
+			MOON_LIGHT = 1 << 5,
 		};
 		uint32_t _flags = EMPTY;
 
@@ -1377,12 +1380,14 @@ namespace wi::scene
 		constexpr void SetVisualizerEnabled(bool value) { set_flag(_flags, VISUALIZER, value); }
 		constexpr void SetStatic(bool value) { set_flag(_flags, LIGHTMAPONLY_STATIC, value); }
 		constexpr void SetVolumetricCloudsEnabled(bool value) { set_flag(_flags, VOLUMETRICCLOUDS, value); }
+		constexpr void SetMoonLight(bool value) { set_flag(_flags, MOON_LIGHT, value); }
 
 		constexpr bool IsCastingShadow() const { return _flags & CAST_SHADOW; }
 		constexpr bool IsVolumetricsEnabled() const { return _flags & VOLUMETRICS; }
 		constexpr bool IsVisualizerEnabled() const { return _flags & VISUALIZER; }
 		constexpr bool IsStatic() const { return _flags & LIGHTMAPONLY_STATIC; }
 		constexpr bool IsVolumetricCloudsEnabled() const { return _flags & VOLUMETRICCLOUDS; }
+		constexpr bool IsMoonLight() const { return _flags & MOON_LIGHT; }
 		constexpr bool IsInactive() const { return intensity < 0.0001f || range < 0.0001f; }
 
 		constexpr float GetRange() const
@@ -1860,6 +1865,18 @@ namespace wi::scene
 
 		XMFLOAT3 sunColor = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 sunDirection = XMFLOAT3(0, 1, 0);
+		XMFLOAT3 moonColor = XMFLOAT3(3.0f / 255.0f, 3.0f / 255.0f, 3.0f / 255.0f); // #030303
+		XMFLOAT3 moonDirection = XMFLOAT3(0.0f, 0.5f, 0.8660254f);
+		float moonLightIntensity = 1.0f;
+
+		// Moon disk appearance (size, texture). Direction, color and light
+		// intensity live on the moon's directional light, not here.
+		environment::Moon moon;
+
+		// Sun disk appearance (size). Direction, color and intensity live on the
+		// sun's directional light, not here.
+		environment::Sun sun;
+
 		float skyExposure = 1;
 		XMFLOAT3 horizon = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		XMFLOAT3 zenith = XMFLOAT3(0.0f, 0.0f, 0.0f);
@@ -1896,8 +1913,13 @@ namespace wi::scene
 		wi::Resource colorGradingMap;
 		wi::Resource volumetricCloudsWeatherMapFirst;
 		wi::Resource volumetricCloudsWeatherMapSecond;
+		float resolvedSunEclipseStrength = 0.0f;
+		float resolvedMoonIntensityScale = 1.0f;
+		float resolvedMoonEclipseStrength = 0.0f;
 		XMFLOAT4 stars_rotation_quaternion = XMFLOAT4(0, 0, 0, 1);
 		uint32_t most_important_light_index = ~0u;
+		uint32_t moon_light_index = ~0u;
+		wi::ecs::Entity moonLight = wi::ecs::INVALID_ENTITY;
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};

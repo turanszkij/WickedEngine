@@ -16,6 +16,8 @@
 #include "shaders/ShaderInterop_SurfelGI.h"
 #include "shaders/ShaderInterop_DDGI.h"
 
+#include "Utility/DirectXMath/DirectXMath.h"
+
 #if __has_include(<sanitizer/asan_interface.h>)
 #include <sanitizer/asan_interface.h>
 #else
@@ -928,8 +930,7 @@ namespace wi::scene
 		shaderscene.aabb_extents_rcp.y = 1.0f / shaderscene.aabb_extents.y;
 		shaderscene.aabb_extents_rcp.z = 1.0f / shaderscene.aabb_extents.z;
 
-		shaderscene.weather.sun_color = wi::math::pack_half3(weather.sunColor);
-		shaderscene.weather.sun_direction = wi::math::pack_half3(weather.sunDirection);
+		UpdateSunMoonShaderData();
 		shaderscene.weather.most_important_light_index = weather.most_important_light_index;
 		shaderscene.weather.ambient = wi::math::pack_half3(weather.ambient);
 		shaderscene.weather.sky_rotation_sin = std::sin(weather.sky_rotation);
@@ -1394,6 +1395,7 @@ namespace wi::scene
 
 		return entity;
 	}
+
 	Entity Scene::Entity_CreateForce(
 		const std::string& name,
 		const XMFLOAT3& position
@@ -4972,18 +4974,33 @@ namespace wi::scene
 			case LightComponent::DIRECTIONAL:
 				XMStoreFloat3(&light.direction, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), W)));
 				aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX));
-				locker.lock();
-				if (args.jobIndex < weather.most_important_light_index)
+				if (!light.IsMoonLight())
 				{
-					weather.most_important_light_index = args.jobIndex;
-					weather.sunColor = light.color;
-					weather.sunColor.x *= light.intensity;
-					weather.sunColor.y *= light.intensity;
-					weather.sunColor.z *= light.intensity;
-					weather.sunDirection = light.direction;
-					weather.stars_rotation_quaternion = light.rotation;
+					locker.lock();
+					if (args.jobIndex < weather.most_important_light_index)
+					{
+						weather.most_important_light_index = args.jobIndex;
+						weather.sunColor = light.color;
+						weather.sunColor.x *= light.intensity;
+						weather.sunColor.y *= light.intensity;
+						weather.sunColor.z *= light.intensity;
+						weather.sunDirection = light.direction;
+						weather.stars_rotation_quaternion = light.rotation;
+					}
+					locker.unlock();
 				}
-				locker.unlock();
+				else
+				{
+					locker.lock();
+					if (args.jobIndex < weather.moon_light_index)
+					{
+						weather.moon_light_index = args.jobIndex;
+						weather.moonColor = light.color;
+						weather.moonDirection = light.direction;
+						weather.moonLightIntensity = light.intensity;
+					}
+					locker.unlock();
+				}
 				break;
 			case LightComponent::SPOT:
 				XMStoreFloat3(&light.direction, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), W)));
@@ -5293,8 +5310,11 @@ namespace wi::scene
 	{
 		if (weathers.GetCount() > 0)
 		{
-			weather = weathers[0];
+			WeatherComponent& primary_weather = weathers[0];
+			EnsureMoonLight(primary_weather);
+			weather = primary_weather;
 			weather.most_important_light_index = ~0;
+			weather.moon_light_index = ~0;
 
 			if (weather.IsOceanEnabled() && !ocean.IsValid())
 			{
@@ -5325,6 +5345,11 @@ namespace wi::scene
 			}
 			ocean.occlusionQueries[queryheap_idx] = -1; // invalidate query
 		}
+		// else
+		// {
+		// 	EnsureMoonLight(weather);
+		// 	weather.most_important_light_index = ~0;
+		// }
 
 		if (ocean.IsValid())
 		{

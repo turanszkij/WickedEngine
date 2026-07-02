@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "WeatherWindow.h"
+#include <cmath>
 
 using namespace wi::ecs;
 using namespace wi::scene;
@@ -9,7 +10,7 @@ void WeatherWindow::Create(EditorComponent* _editor)
 {
 	editor = _editor;
 	wi::gui::Window::Create(ICON_WEATHER " Weather", wi::gui::Window::WindowControls::COLLAPSE | wi::gui::Window::WindowControls::CLOSE | wi::gui::Window::WindowControls::FIT_ALL_WIDGETS_VERTICAL);
-	SetSize(XMFLOAT2(660, 2140));
+	SetSize(XMFLOAT2(660, 2260));
 
 	closeButton.SetTooltip("Delete WeatherComponent");
 	OnClose([=](wi::gui::EventArgs args) {
@@ -232,6 +233,65 @@ void WeatherWindow::Create(EditorComponent* _editor)
 		GetWeather().stars = args.fValue;
 		});
 	AddWidget(&starsSlider);
+
+	moonSizeSlider.Create(0.1f, 10.0f, 4.0f, 10000, "Moon Size Multiplier: ");
+	moonSizeSlider.SetTooltip("Multiplier on the moon's real angular size (1.0 = physically accurate).");
+	moonSizeSlider.SetSize(XMFLOAT2(wid, hei));
+	moonSizeSlider.SetPos(XMFLOAT2(x, y += step));
+	moonSizeSlider.OnSlide([this](wi::gui::EventArgs args) {
+		GetWeather().moon.size_multiplier = args.fValue;
+		});
+	AddWidget(&moonSizeSlider);
+
+	sunSizeSlider.Create(0.1f, 10.0f, 4.0f, 10000, "Sun Size Multiplier: ");
+	sunSizeSlider.SetTooltip("Multiplier on the sun's real angular size (1.0 = physically accurate).");
+	sunSizeSlider.SetSize(XMFLOAT2(wid, hei));
+	sunSizeSlider.SetPos(XMFLOAT2(x, y += step));
+	sunSizeSlider.OnSlide([this](wi::gui::EventArgs args) {
+		GetWeather().sun.size_multiplier = args.fValue;
+		});
+	AddWidget(&sunSizeSlider);
+
+	moonTextureButton.Create("Load Moon Texture");
+	moonTextureButton.SetTooltip("Load a dedicated texture for the moon disk. Click again to clear.");
+	moonTextureButton.SetSize(XMFLOAT2(mod_wid, hei));
+	moonTextureButton.SetPos(XMFLOAT2(mod_x, y += step));
+	moonTextureButton.OnClick([=](wi::gui::EventArgs args) {
+		auto& weather = GetWeather();
+		if (!weather.moon.texture.IsValid())
+		{
+			wi::helper::FileDialogParams params;
+			params.type = wi::helper::FileDialogParams::OPEN;
+			params.description = "Texture";
+			params.extensions = wi::resourcemanager::GetSupportedImageExtensions();
+			wi::helper::FileDialog(params, [=](std::string fileName) {
+				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					auto& weather = GetWeather();
+					weather.moon.texture_name = fileName;
+					weather.moon.texture = wi::resourcemanager::Load(fileName);
+					moonTextureButton.SetText(wi::helper::GetFileNameFromPath(fileName));
+					InvalidateProbes();
+				});
+			});
+		}
+		else
+		{
+			weather.moon.texture = {};
+			weather.moon.texture_name.clear();
+			moonTextureButton.SetText("Load Moon Texture");
+			InvalidateProbes();
+		}
+	});
+	AddWidget(&moonTextureButton);
+
+	moonTextureMipBiasSlider.Create(-4.0f, 4.0f, 0.0f, 1000, "Moon Texture Mip Bias: ");
+	moonTextureMipBiasSlider.SetTooltip("Adjust mip bias when sampling the moon texture for sharper or softer results.");
+	moonTextureMipBiasSlider.SetSize(XMFLOAT2(wid, hei));
+	moonTextureMipBiasSlider.SetPos(XMFLOAT2(x, y += step));
+	moonTextureMipBiasSlider.OnSlide([this](wi::gui::EventArgs args) {
+		GetWeather().moon.texture_mip_bias = args.fValue;
+		});
+	AddWidget(&moonTextureMipBiasSlider);
 
 	skyRotationSlider.Create(0, 360, 0, 10000, "Sky Texture Rotation: ");
 	skyRotationSlider.SetTooltip("Rotate the sky texture horizontally. (If using a sky texture)");
@@ -1053,6 +1113,15 @@ void WeatherWindow::UpdateData()
 			colorgradingButton.SetText(wi::helper::GetFileNameFromPath(weather.colorGradingMapName));
 		}
 
+		if (!weather.moon.texture_name.empty())
+		{
+			moonTextureButton.SetText(wi::helper::GetFileNameFromPath(weather.moon.texture_name));
+		}
+		else
+		{
+			moonTextureButton.SetText("Load Moon Texture");
+		}
+
 		if (!weather.volumetricCloudsWeatherMapFirstName.empty())
 		{
 			volumetricCloudsWeatherMapFirstButton.SetText(wi::helper::GetFileNameFromPath(weather.volumetricCloudsWeatherMapFirstName));
@@ -1075,6 +1144,10 @@ void WeatherWindow::UpdateData()
 		windRandomnessSlider.SetValue(weather.windRandomness);
 		skyExposureSlider.SetValue(weather.skyExposure);
 		starsSlider.SetValue(weather.stars);
+
+		moonSizeSlider.SetValue(weather.moon.size_multiplier);
+		sunSizeSlider.SetValue(weather.sun.size_multiplier);
+		moonTextureMipBiasSlider.SetValue(weather.moon.texture_mip_bias);
 		skyRotationSlider.SetValue(wi::math::RadiansToDegrees(weather.sky_rotation));
 		rainAmountSlider.SetValue(weather.rain_amount);
 		rainLengthSlider.SetValue(weather.rain_length);
@@ -1204,6 +1277,15 @@ void WeatherWindow::UpdateData()
 			colorgradingButton.SetText("Load Color Grading LUT");
 		}
 
+		if (weather.moon.texture.IsValid())
+		{
+			moonTextureButton.SetText(wi::helper::GetFileNameFromPath(weather.moon.texture_name));
+		}
+		else
+		{
+			moonTextureButton.SetText("Load Moon Texture");
+		}
+
 		if (weather.volumetricCloudsWeatherMapFirst.IsValid())
 		{
 			volumetricCloudsWeatherMapFirstButton.SetText(wi::helper::GetFileNameFromPath(weather.volumetricCloudsWeatherMapFirstName));
@@ -1291,6 +1373,10 @@ void WeatherWindow::ResizeLayout()
 	layout.add(windRandomnessSlider);
 	layout.add(skyExposureSlider);
 	layout.add(starsSlider);
+	layout.add(moonSizeSlider);
+	layout.add(sunSizeSlider);
+	layout.add_fullwidth(moonTextureButton);
+	layout.add(moonTextureMipBiasSlider);
 	layout.add(skyRotationSlider);
 	layout.add(rainAmountSlider);
 	layout.add(rainLengthSlider);

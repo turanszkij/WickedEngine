@@ -4592,6 +4592,10 @@ void UpdatePerFrameData(
 
 		uint32_t matrixCounter = entityCounter; // so far entities and matrices had 1-1 mapping, this is not true below this part:
 		const XMFLOAT2 atlas_dim_rcp = XMFLOAT2(1.0f / float(shadowMapAtlas.desc.width), 1.0f / float(shadowMapAtlas.desc.height));
+		const uint32_t most_important_light_component_index = vis.scene->weather.most_important_light_index;
+		frameCB.scene.weather.most_important_light_index = ~0u;
+		frameCB.scene.weather.moon.light_index = ~0u;
+		uint32_t moon_directional_entity_index = ~0u;
 
 		// Write directional lights into entity array:
 		lightarray_offset = entityCounter;
@@ -4624,7 +4628,34 @@ void UpdatePerFrameData(
 			shaderentity.SetRadius(light.radius);
 			shaderentity.SetLength(light.length);
 			shaderentity.SetDirection(light.direction);
-			shaderentity.SetColor(float4(light.color.x * light.intensity, light.color.y * light.intensity, light.color.z * light.intensity, 1));
+			XMFLOAT3 directional_color = light.color;
+			float light_intensity_scale = 1.0f;
+			XMFLOAT3 eclipse_tint = XMFLOAT3(1.0f, 1.0f, 1.0f);
+			if (lightIndex == most_important_light_component_index)
+			{
+				// Solar eclipse: floor the sunlight (never fully dark) and shift
+				// the faint remaining light toward a cool twilight at totality.
+				const float e = wi::math::Clamp(vis.scene->weather.resolvedSunEclipseStrength, 0.0f, 1.0f);
+				light_intensity_scale = 1.0f - e * (1.0f - SUN_ECLIPSE_MIN_LIGHT_SCALE);
+				eclipse_tint.x = 1.0f + (SUN_ECLIPSE_LIGHT_TINT.x - 1.0f) * e;
+				eclipse_tint.y = 1.0f + (SUN_ECLIPSE_LIGHT_TINT.y - 1.0f) * e;
+				eclipse_tint.z = 1.0f + (SUN_ECLIPSE_LIGHT_TINT.z - 1.0f) * e;
+			}
+			else if (light.IsMoonLight())
+			{
+				light_intensity_scale = wi::math::Clamp(vis.scene->weather.resolvedMoonIntensityScale, 0.0f, 1.0f);
+				// Blood-moon: shift the faint remaining light toward red at totality.
+				const float e = wi::math::Clamp(vis.scene->weather.resolvedMoonEclipseStrength, 0.0f, 1.0f);
+				eclipse_tint.x = 1.0f + (MOON_ECLIPSE_LIGHT_TINT.x - 1.0f) * e;
+				eclipse_tint.y = 1.0f + (MOON_ECLIPSE_LIGHT_TINT.y - 1.0f) * e;
+				eclipse_tint.z = 1.0f + (MOON_ECLIPSE_LIGHT_TINT.z - 1.0f) * e;
+			}
+			directional_color.x *= light.intensity * light_intensity_scale * eclipse_tint.x;
+			directional_color.y *= light.intensity * light_intensity_scale * eclipse_tint.y;
+			directional_color.z *= light.intensity * light_intensity_scale * eclipse_tint.z;
+			shaderentity.SetColor(float4(directional_color.x, directional_color.y, directional_color.z, 1));
+
+			const uint32_t directional_entity_index = lightarray_count_directional;
 
 			const bool shadowmap = IsShadowsEnabled() && light.IsCastingShadow() && !light.IsStatic();
 			const wi::rectpacker::Rect& shadow_rect = vis.visibleLightShadowRects[lightIndex];
@@ -4668,6 +4699,15 @@ void UpdatePerFrameData(
 				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_VOLUMETRICCLOUDS);
 			}
 
+			if (lightIndex == most_important_light_component_index)
+			{
+				frameCB.scene.weather.most_important_light_index = directional_entity_index;
+			}
+			if (light.IsMoonLight())
+			{
+				moon_directional_entity_index = directional_entity_index;
+			}
+
 			ShaderSphere cullsphere = {};
 			if (!light.IsStatic())
 			{
@@ -4680,6 +4720,8 @@ void UpdatePerFrameData(
 			entityCounter++;
 			lightarray_count_directional++;
 		}
+
+		frameCB.scene.weather.moon.light_index = moon_directional_entity_index;
 
 		// Write spot lights into entity array:
 		lightarray_offset_spot = entityCounter;
