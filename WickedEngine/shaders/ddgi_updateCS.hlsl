@@ -92,7 +92,11 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 	const uint2 pixel_current = pixel_topleft + GTid.xy;
 	const uint2 copy_coord = pixel_topleft - 1;
 #else
-	half3 result = 0;
+	// Full precision: this accumulates the radiance of up to DDGI_MAX_RAYCOUNT
+	// (512) rays before dividing by total_weight. In half precision that
+	// running sum overflows to +Inf for bright probes, which then poisons the
+	// probe and spreads. (The averaged result is cast back to half afterwards.)
+	float3 result = 0;
 #endif // DDGI_UPDATE_DEPTH
 
 	const half3 texel_direction = decode_oct((((GTid.xy % RESOLUTION) + 0.5) / RESOLUTION) * 2 - 1);

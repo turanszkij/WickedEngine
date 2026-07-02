@@ -56,6 +56,8 @@ namespace wi
 	{
 		if (IsHidden())
 			return;
+		if (params.color.getA() == 0)
+			return;
 
 		wi::font::Draw(text.c_str(), GetCurrentTextLength(), params, cmd);
 	}

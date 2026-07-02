@@ -574,7 +574,7 @@ namespace wi::math
 
 	inline uint32_t pack_half2(float x, float y)
 	{
-		return (uint32_t)XMConvertFloatToHalf(x) | ((uint32_t)XMConvertFloatToHalf(y) << 16u);
+		return f32tof16(x) | (f32tof16(y) << 16u);
 	}
 	inline uint32_t pack_half2(const XMFLOAT2& value)
 	{
@@ -583,8 +583,8 @@ namespace wi::math
 	inline XMUINT2 pack_half3(float x, float y, float z)
 	{
 		return XMUINT2(
-			(uint32_t)XMConvertFloatToHalf(x) | ((uint32_t)XMConvertFloatToHalf(y) << 16u),
-			(uint32_t)XMConvertFloatToHalf(z)
+			f32tof16(x) | (f32tof16(y) << 16u),
+			f32tof16(z)
 		);
 	}
 	inline XMUINT2 pack_half3(const XMFLOAT3& value)
@@ -594,13 +594,38 @@ namespace wi::math
 	inline XMUINT2 pack_half4(float x, float y, float z, float w)
 	{
 		return XMUINT2(
-			(uint32_t)XMConvertFloatToHalf(x) | ((uint32_t)XMConvertFloatToHalf(y) << 16u),
-			(uint32_t)XMConvertFloatToHalf(z) | ((uint32_t)XMConvertFloatToHalf(w) << 16u)
+			f32tof16(x) | (f32tof16(y) << 16u),
+			f32tof16(z) | (f32tof16(w) << 16u)
 		);
 	}
 	inline XMUINT2 pack_half4(const XMFLOAT4& value)
 	{
 		return pack_half4(value.x, value.y, value.z, value.w);
+	}
+
+	inline XMFLOAT2 unpack_half2(uint32_t value)
+	{
+		XMFLOAT2 retVal;
+		retVal.x = f16tof32(value);
+		retVal.y = f16tof32(value >> 16u);
+		return retVal;
+	}
+	inline XMFLOAT3 unpack_half3(XMUINT2 value)
+	{
+		XMFLOAT3 retVal;
+		retVal.x = f16tof32(value.x);
+		retVal.y = f16tof32(value.x >> 16u);
+		retVal.z = f16tof32(value.y);
+		return retVal;
+	}
+	inline XMFLOAT4 unpack_half4(XMUINT2 value)
+	{
+		XMFLOAT4 retVal;
+		retVal.x = f16tof32(value.x);
+		retVal.y = f16tof32(value.x >> 16u);
+		retVal.z = f16tof32(value.y);
+		retVal.w = f16tof32(value.y >> 16u);
+		return retVal;
 	}
 
 

@@ -604,10 +604,18 @@ L2_RGB ConvolveWithCosineLobe(L2_RGB sh)
     return ConvolveWithZH(sh, half3(CosineA0, CosineA1, CosineA2));
 }
 
-// Computes the "optimal linear direction" for a set of SH coefficients, AKA the "dominant" direction. See [0].
+// Computes the "optimal linear direction" for a set of SH coefficients, AKA the
+// "dominant" direction. See [0]. Note: the L1 (directional) band can be exactly
+// zero for dark or perfectly uniform radiance. A plain normalize() would then
+// divide by zero and yield NaN, which propagates into the dominant light
+// color/dir and blows up indirect specular to white (max(0, NaN) does not clamp
+// on all backends, e.g. Vulkan). The length guard below keeps the result
+// finite, returning a zero (i.e. "no dominant direction") vector instead.
 half3 OptimalLinearDirection(L1 sh)
 {
-    return normalize(half3(sh.C[3], sh.C[1], sh.C[2]));
+    half3 direction = half3(sh.C[3], sh.C[1], sh.C[2]);
+    half len = length(direction);
+    return len > 0 ? direction / len : half3(0, 0, 0);
 }
 
 half3 OptimalLinearDirection(L1_RGB sh)
@@ -619,7 +627,8 @@ half3 OptimalLinearDirection(L1_RGB sh)
         direction.y += sh.C[1][i];
         direction.z += sh.C[2][i];
     }
-    return normalize(direction);
+    half len = length(direction);
+    return len > 0 ? direction / len : half3(0, 0, 0);
 }
 
 // Computes the direction and color of a directional light that approximates a set of L1 SH coefficients. See [0].
