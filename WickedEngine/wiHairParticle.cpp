@@ -12,6 +12,8 @@
 #include "wiEventHandler.h"
 #include "wiTimer.h"
 
+#include <cstring>
+
 using namespace wi::primitive;
 using namespace wi::graphics;
 using namespace wi::scene;
@@ -92,7 +94,7 @@ namespace wi
 	void HairParticleSystem::DeleteRenderData()
 	{
 		constantBuffer = {};
-		constantBufferData.clear(); // force a re-upload into the recreated buffer
+		constantBufferData = {}; // force a re-upload into the recreated buffer
 		generalBuffer = {};
 		generalBufferOffsetAllocation = {};
 		generalBufferOffsetAllocationAlias = {};
@@ -508,15 +510,19 @@ namespace wi
 			}
 			hcb.xHairUniformity = hair.uniformity;
 
-			// Only upload the constant buffer when its contents changed since the
-			// last frame. For static grass this is almost never, which avoids a
-			// per-hair GPU copy and barrier every frame. The buffer is
-			// Usage::DEFAULT, so its previous contents persist when skipped.
-			if (hair.constantBufferData.size() != sizeof(hcb) ||
-				std::memcmp(hair.constantBufferData.data(), &hcb, sizeof(hcb)) != 0)
+			// Only upload the constant buffer when its contents changed since
+			// the last frame. For static grass this is almost never, which
+			// avoids a per-hair GPU copy and barrier every frame. The buffer is
+			// Usage::DEFAULT, so its previous contents persist when skipped. A
+			// raw byte compare is safe here: HairParticleCB is explicitly
+			// padded (no indeterminate bytes) and both operands are value-
+			// initialized, so equal bytes mean the GPU already holds this exact
+			// data. The only imprecision (e.g. +0.0 vs -0.0 comparing unequal
+			// by bytes) can trigger a harmless redundant upload, never a false
+			// skip.
+			if (std::memcmp(&hair.constantBufferData, &hcb, sizeof(hcb)) != 0)
 			{
-				hair.constantBufferData.resize(sizeof(hcb));
-				std::memcpy(hair.constantBufferData.data(), &hcb, sizeof(hcb));
+				hair.constantBufferData = hcb;
 				device->UpdateBuffer(&hair.constantBuffer, &hcb, cmd);
 				wi::renderer::PushBarrier(GPUBarrier::Buffer(&hair.constantBuffer, ResourceState::COPY_DST, ResourceState::CONSTANT_BUFFER));
 			}
