@@ -5156,6 +5156,10 @@ namespace wi::scene
 					{
 						instance.instance_mask &= ~wi::renderer::raytracing_inclusion_mask_shadow;
 					}
+					// Grass participates in diffuse GI rays. If its raytracing
+					// cost is still too high on a given target, it can be excluded
+					// from the diffuse pass by clearing the diffuse mask bit:
+					//instance.instance_mask &= ~wi::renderer::raytracing_inclusion_mask_diffuse;
 					instance.bottom_level = &hair.BLAS;
 					instance.instance_contribution_to_hit_group_index = 0;
 					instance.flags = RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_CULL_DISABLE;

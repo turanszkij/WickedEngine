@@ -5723,21 +5723,32 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 				mesh.BLAS_state = MeshComponent::BLAS_STATE_COMPLETE;
 			}
 
+			// Rebuild (rather than refit) the grass BLAS while the camera
+			// moves: fast movement sweeps many strands across the cull boundary
+			// each frame, faster than refits can absorb, which would otherwise
+			// degrade the structure until the next periodic rebuild. Rebuilding
+			// once the camera has moved past a threshold keeps the BVH fresh
+			// during motion (every few frames when moving fast) while staying
+			// cheap when the view is settled.
+			static XMFLOAT3 blas_last_rebuild_eye = XMFLOAT3(0, 0, 0);
+			constexpr float blas_rebuild_move_threshold = 1.0f;
+			const bool motion_rebuild =
+				wi::math::Distance(scene.camera.Eye, blas_last_rebuild_eye) >
+				blas_rebuild_move_threshold;
+
+			if (motion_rebuild)
+			{
+				blas_last_rebuild_eye = scene.camera.Eye;
+			}
+
 			for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
 			{
 				const wi::HairParticleSystem& hair = scene.hairs[i];
 
 				if (hair.meshID != INVALID_ENTITY && hair.BLAS.IsValid())
 				{
-					if (hair.must_rebuild_blas)
-					{
-						device->BuildRaytracingAccelerationStructure(&hair.BLAS, cmd, nullptr);
-						hair.must_rebuild_blas = false;
-					}
-					else
-					{
-						device->BuildRaytracingAccelerationStructure(&hair.BLAS, cmd, &hair.BLAS);
-					}
+					device->BuildRaytracingAccelerationStructure(&hair.BLAS, cmd, nullptr);
+					hair.must_rebuild_blas = false;
 				}
 			}
 
@@ -14018,7 +14029,10 @@ void Postprocess_RTDiffuse(
 	rtdiffuse_range = range;
 	rtdiffuse_frame = (float)res.frame;
 	rtdiffuse_downscalefactor = (float)quality_downscalefactor(res.quality);
-	uint8_t instanceInclusionMask = 0xFF;
+	// Diffuse GI rays skip instances that opt out via this bit (e.g. hair/grass,
+	// whose dense alpha-tested geometry is very expensive to traverse and
+	// contributes little to low-frequency diffuse GI):
+	uint8_t instanceInclusionMask = raytracing_inclusion_mask_diffuse;
 	std::memcpy(&postprocess.params1.x, &instanceInclusionMask, sizeof(instanceInclusionMask));
 
 	{

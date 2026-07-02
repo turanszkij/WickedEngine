@@ -84,7 +84,13 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	half3 binormal = cross(target, tangent);
 	half strand_length = attribute_at_bary(length0, length1, length2, bary);
 	
-	const uint currentFrame = uint(noise_gradient_3D(position * xHairUniformity) * 1000) % xHairAtlasRectCount;
+	// Pick an atlas frame from gradient noise so neighbouring strands vary.
+	// With a single rect the modulo is always 0, so skip the noise entirely.
+	uint currentFrame = 0;
+	if (xHairAtlasRectCount > 1)
+	{
+		currentFrame = uint(noise_gradient_3D(position * xHairUniformity) * 1000) % xHairAtlasRectCount;
+	}
 	const HairParticleAtlasRect atlas_rect = xHairAtlasRects[currentFrame];
 	
 	// Transform particle by the emitter object matrix:
@@ -151,55 +157,93 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 	// Bottom vertices:
 	half3x3 TBN = half3x3(tangent, normalize(target + bend), binormal);
-	rng.init(uint2(xHairRandomSeed, DTid.x), 1); // reinit random for consistent billboard variation!
-	for (uint billboardID = 0; billboardID < xHairBillboardCount; ++billboardID)
+	if (distance_culled)
 	{
-		half siz = billboardID == 0 ? 1 : lerp(0.2, 1, rng.next_float());
-		half rot = billboardID == 0 ? 0 : (rng.next_float() * PI);
-		half2 rot_sincos;
-		sincos(rot, rot_sincos.x, rot_sincos.y);
-		half3x3 variationMatrix = half3x3(
-			rot_sincos.y * siz, 0, -rot_sincos.x,
-			0, siz, 0,
-			rot_sincos.x, 0, rot_sincos.y * siz
-		);
-		variationMatrix = mul(variationMatrix, TBN);
-		
-		for (uint vertexID = 0; vertexID < 2; ++vertexID)
+		// Strand is beyond the view distance, so it is never rendered: no
+		// indices are appended for it and its render vertex buffers are never
+		// read. Only the raytracing positions need to stay valid, and only when
+		// an acceleration structure consumes them. Collapse the strand to its
+		// own emitter position (not a shared point): the triangles stay
+		// zero-area (so far grass still does not contribute to ray traced
+		// lighting), but spreading them across the terrain keeps the raytracing
+		// BVH well distributed. Crucially it also means a strand crossing the
+		// cull boundary moves only within its own small neighbourhood instead of
+		// teleporting to/from a far shared point, so per-frame refits barely
+		// disturb the BVH and it does not degrade between rebuilds.
+		const uint root_vertexcount = 2 * xHairBillboardCount;
+		if (xHairFlags & HAIR_FLAG_RAYTRACED)
 		{
-			half3 patchPos = HAIRPATCH[vertexID];
-			float2 uv = patchPos.xy;
-			uv = uv * float2(0.5, 0.5) + 0.5;
-			uv.y = 1 - uv.y;
-			patchPos.y += 1;
-
-			// Sprite sheet UV transform:
-			uv.xy = mad(uv.xy, atlas_rect.texMulAdd.xy, atlas_rect.texMulAdd.zw);
-
-			// scale the billboard by the texture aspect:
-			patchPos.xyz *= frame.xyx;
-
-			// variation based on billboardID:
-			patchPos = mul(patchPos, variationMatrix);
-
-			float3 position = base + patchPos;
-
+			float3 rt_pos = base;
 			if (xHairFlags & HAIR_FLAG_UNORM_POS)
 			{
-				position = inverse_lerp(geometry.aabb_min, geometry.aabb_max, position); // remap to UNORM
+				rt_pos = inverse_lerp(geometry.aabb_min, geometry.aabb_max, base); // remap to UNORM
 			}
-			
-			vertexBuffer_POS[v0] = float4(position, 0);
-			vertexBuffer_NOR[v0] = half4(target, 0);
-			vertexBuffer_UVS[v0] = uv.xyxy; // a second uv set could be used here
-			
-			if (distance_culled)
+			for (uint i = 0; i < root_vertexcount; ++i)
 			{
-				position = 0; // We can only zero out for raytracing geometry to keep correct prevpos swapping motion vectors!
+				vertexBuffer_POS_RT[v0 + i] = float4(rt_pos, 0);
 			}
-			vertexBuffer_POS_RT[v0] = float4(position, 0);
+		}
+		v0 += root_vertexcount;
+	}
+	else
+	{
+		rng.init(uint2(xHairRandomSeed, DTid.x), 1); // reinit random for consistent billboard variation!
+		for (uint billboardID = 0; billboardID < xHairBillboardCount; ++billboardID)
+		{
+			half siz = billboardID == 0 ? 1 : lerp(0.2, 1, rng.next_float());
+			half rot = billboardID == 0 ? 0 : (rng.next_float() * PI);
+			half3x3 variationMatrix;
+			if (billboardID == 0)
+			{
+				// No size/rotation variation: the variation matrix is the
+				// identity, so mul(variation, TBN) reduces to TBN.
+				variationMatrix = TBN;
+			}
+			else
+			{
+				half2 rot_sincos;
+				sincos(rot, rot_sincos.x, rot_sincos.y);
+				variationMatrix = mul(half3x3(
+					rot_sincos.y * siz, 0, -rot_sincos.x,
+					0, siz, 0,
+					rot_sincos.x, 0, rot_sincos.y * siz
+				), TBN);
+			}
 
-			v0++;
+			for (uint vertexID = 0; vertexID < 2; ++vertexID)
+			{
+				half3 patchPos = HAIRPATCH[vertexID];
+				float2 uv = patchPos.xy;
+				uv = uv * float2(0.5, 0.5) + 0.5;
+				uv.y = 1 - uv.y;
+				patchPos.y += 1;
+
+				// Sprite sheet UV transform:
+				uv.xy = mad(uv.xy, atlas_rect.texMulAdd.xy, atlas_rect.texMulAdd.zw);
+
+				// scale the billboard by the texture aspect:
+				patchPos.xyz *= frame.xyx;
+
+				// variation based on billboardID:
+				patchPos = mul(patchPos, variationMatrix);
+
+				float3 position = base + patchPos;
+
+				if (xHairFlags & HAIR_FLAG_UNORM_POS)
+				{
+					position = inverse_lerp(geometry.aabb_min, geometry.aabb_max, position); // remap to UNORM
+				}
+
+				vertexBuffer_POS[v0] = float4(position, 0);
+				vertexBuffer_NOR[v0] = half4(target, 0);
+				vertexBuffer_UVS[v0] = uv.xyxy; // a second uv set could be used here
+				if (xHairFlags & HAIR_FLAG_RAYTRACED)
+				{
+					vertexBuffer_POS_RT[v0] = float4(position, 0);
+				}
+
+				v0++;
+			}
 		}
 	}
 	
@@ -216,24 +260,43 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		// Identifies the hair strand segment particle:
 		const uint particleID = DTid.x * xHairSegmentCount + segmentID;
 
-		if (regenerate_frame)
+		// Resolve this segment's tail. Visible strands run the full dynamics;
+		// strands beyond the view distance are held at rest pose so the wind
+		// sample, integration and collider loop below are skipped. The rest pose
+		// is still stored, so the tails stay valid and the strand resumes
+		// without a pop when it re-enters the view distance (it is fully
+		// dither-faded out before reaching the cull distance, so the transition
+		// between simulated and rest pose is never visible).
+		float3 tail_current;
+		float3 tail_next;
+		half3 to_tail;
+		if (distance_culled)
 		{
-			float3 tail = base + boneAxis * boneLength;
-			simulationBuffer[particleID].prevTail = tail;
-			simulationBuffer[particleID].currentTail = tail;
+			tail_current = base + boneAxis * boneLength;
+			tail_next = tail_current;
+			to_tail = boneAxis;
 		}
-		
-		float3 tail_current = simulationBuffer[particleID].currentTail;
-		float3 tail_prev = simulationBuffer[particleID].prevTail;
-		half3 inertia = (tail_current - tail_prev) * (1 - dragForce);
-		half3 stiffness = boneAxis * stiffnessForce;
-		half3 external = gravityPower * float3(0, -1, 0);
-		half3 wind = sample_wind(tail_current, ((float)segmentID + 1) / (float)xHairSegmentCount);
-		external += wind;
-		
-		float3 tail_next = tail_current + inertia + dt * (stiffness + external);
-		half3 to_tail = normalize(tail_next - base);
-		tail_next = base + to_tail * boneLength;
+		else
+		{
+			if (regenerate_frame)
+			{
+				float3 tail = base + boneAxis * boneLength;
+				simulationBuffer[particleID].prevTail = tail;
+				simulationBuffer[particleID].currentTail = tail;
+			}
+
+			tail_current = simulationBuffer[particleID].currentTail;
+			float3 tail_prev = simulationBuffer[particleID].prevTail;
+			half3 inertia = (tail_current - tail_prev) * (1 - dragForce);
+			half3 stiffness = boneAxis * stiffnessForce;
+			half3 external = gravityPower * float3(0, -1, 0);
+			half3 wind = sample_wind(tail_current, ((float)segmentID + 1) / (float)xHairSegmentCount);
+			external += wind;
+
+			tail_next = tail_current + inertia + dt * (stiffness + external);
+			to_tail = normalize(tail_next - base);
+			tail_next = base + to_tail * boneLength;
+		}
 
 		//draw_sphere(tail_next, len);
 
@@ -357,56 +420,87 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		//draw_line(base, base + normal, float4(0, 1, 0, 1));
 		//draw_line(base, base + binormal, float4(0, 0, 1, 1));
 	
-		rng.init(uint2(xHairRandomSeed, DTid.x), 1); // reinit random for consistent billboard variation!
-		for(uint billboardID = 0; billboardID < xHairBillboardCount; ++billboardID)
+		if (distance_culled)
 		{
-			half siz = billboardID == 0 ? 1 : lerp(0.2, 1, rng.next_float());
-			half rot = billboardID == 0 ? 0 : (rng.next_float() * PI);
-			half2 rot_sincos;
-			sincos(rot, rot_sincos.x, rot_sincos.y);
-			half3x3 variationMatrix = half3x3(
-				rot_sincos.y * siz, 0, -rot_sincos.x,
-				0, siz, 0,
-				rot_sincos.x, 0, rot_sincos.y * siz
-			);
-			variationMatrix = mul(variationMatrix, TBN);
-			
-			for (uint vertexID = 2; vertexID < 4; ++vertexID)
+			// See the root vertices above: collapse these cap vertices to this
+			// segment's rest position (spread along the strand), not a shared
+			// point, so the raytracing BVH stays well distributed and stable
+			// across cull-boundary crossings.
+			const uint cap_vertexcount = 2 * xHairBillboardCount;
+			if (xHairFlags & HAIR_FLAG_RAYTRACED)
 			{
-				half3 patchPos = HAIRPATCH[vertexID];
-				float2 uv = patchPos.xy;
-				uv = uv * float2(0.5, 0.5) + 0.5;
-				uv.y = lerp((float)segmentID / (float)xHairSegmentCount, ((float)segmentID + 1) / (float)xHairSegmentCount, uv.y);
-				uv.y = 1 - uv.y;
-				patchPos.y += 1;
-		
-				// Sprite sheet UV transform:
-				uv.xy = mad(uv.xy, atlas_rect.texMulAdd.xy, atlas_rect.texMulAdd.zw);
-		
-				// scale the billboard by the texture aspect:
-				patchPos.xyz *= frame.xyx;
-
-				// variation based on billboardID:
-				patchPos = mul(patchPos, variationMatrix);
-		
-				float3 position = base + patchPos;
-		
+				float3 rt_pos = base;
 				if (xHairFlags & HAIR_FLAG_UNORM_POS)
 				{
-					position = inverse_lerp(geometry.aabb_min, geometry.aabb_max, position); // remap to UNORM
+					rt_pos = inverse_lerp(geometry.aabb_min, geometry.aabb_max, base); // remap to UNORM
 				}
-			
-				vertexBuffer_POS[v0] = float4(position, 0);
-				vertexBuffer_NOR[v0] = half4(normal, 0);
-				vertexBuffer_UVS[v0] = uv.xyxy; // a second uv set could be used here
-			
-				if (distance_culled)
+				for (uint i = 0; i < cap_vertexcount; ++i)
 				{
-					position = 0; // We can only zero out for raytracing geometry to keep correct prevpos swapping motion vectors!
+					vertexBuffer_POS_RT[v0 + i] = float4(rt_pos, 0);
 				}
-				vertexBuffer_POS_RT[v0] = float4(position, 0);
-		
-				v0++;
+			}
+			v0 += cap_vertexcount;
+		}
+		else
+		{
+			rng.init(uint2(xHairRandomSeed, DTid.x), 1); // reinit random for consistent billboard variation!
+			for(uint billboardID = 0; billboardID < xHairBillboardCount; ++billboardID)
+			{
+				half siz = billboardID == 0 ? 1 : lerp(0.2, 1, rng.next_float());
+				half rot = billboardID == 0 ? 0 : (rng.next_float() * PI);
+				half3x3 variationMatrix;
+				if (billboardID == 0)
+				{
+					// No size/rotation variation: the variation matrix is the
+					// identity, so mul(variation, TBN) reduces to TBN.
+					variationMatrix = TBN;
+				}
+				else
+				{
+					half2 rot_sincos;
+					sincos(rot, rot_sincos.x, rot_sincos.y);
+					variationMatrix = mul(half3x3(
+						rot_sincos.y * siz, 0, -rot_sincos.x,
+						0, siz, 0,
+						rot_sincos.x, 0, rot_sincos.y * siz
+					), TBN);
+				}
+
+				for (uint vertexID = 2; vertexID < 4; ++vertexID)
+				{
+					half3 patchPos = HAIRPATCH[vertexID];
+					float2 uv = patchPos.xy;
+					uv = uv * float2(0.5, 0.5) + 0.5;
+					uv.y = lerp((float)segmentID / (float)xHairSegmentCount, ((float)segmentID + 1) / (float)xHairSegmentCount, uv.y);
+					uv.y = 1 - uv.y;
+					patchPos.y += 1;
+
+					// Sprite sheet UV transform:
+					uv.xy = mad(uv.xy, atlas_rect.texMulAdd.xy, atlas_rect.texMulAdd.zw);
+
+					// scale the billboard by the texture aspect:
+					patchPos.xyz *= frame.xyx;
+
+					// variation based on billboardID:
+					patchPos = mul(patchPos, variationMatrix);
+
+					float3 position = base + patchPos;
+
+					if (xHairFlags & HAIR_FLAG_UNORM_POS)
+					{
+						position = inverse_lerp(geometry.aabb_min, geometry.aabb_max, position); // remap to UNORM
+					}
+
+					vertexBuffer_POS[v0] = float4(position, 0);
+					vertexBuffer_NOR[v0] = half4(normal, 0);
+					vertexBuffer_UVS[v0] = uv.xyxy; // a second uv set could be used here
+					if (xHairFlags & HAIR_FLAG_RAYTRACED)
+					{
+						vertexBuffer_POS_RT[v0] = float4(position, 0);
+					}
+
+					v0++;
+				}
 			}
 		}
 
