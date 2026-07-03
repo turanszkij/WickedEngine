@@ -174,6 +174,24 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			(float)ray_level / (float)(SURFEL_GRID_LEVELS - 1);
 		const uint ray_boost = (uint)lerp(
 			SURFEL_RAY_BOOST_MAX, SURFEL_RAY_BOOST_MIN, level_frac);
+
+		// Temporal ray amortization: a surfel doesn't need fresh rays every
+		// frame. Give it a re-trace PERIOD that grows with cascade level (1 =
+		// every frame near, up to SURFEL_RAY_UPDATE_PERIOD_MAX at the coarsest)
+		// and only allocate rays on its turn; the temporal estimator holds the
+		// cached radiance in between. A per-surfel phase (stable hash) staggers
+		// the turns so a region's surfels don't all re-trace on the same frame
+		// (which pulses). This is what cuts the per-frame ray count when a big
+		// far area is in view - only ~1/period of the far field traces each
+		// frame - while the far surfels' long life + fade-in hide the slower
+		// convergence.
+		const uint ray_period = max(1u, (uint)lerp(
+			1.0, (float)SURFEL_RAY_UPDATE_PERIOD_MAX, level_frac));
+		const uint ray_phase =
+			(uint)(surfel_hash01(surfel_index) * (float)ray_period);
+		const bool ray_update =
+			((GetFrame().frame_count + ray_phase) % ray_period) == 0;
+
 		uint rayCountRequest = saturate(surfel_data.max_inconsistency) * ray_boost;
 		const uint recycle = surfel_data.GetRecycle();
 		if (recycle > 10)
@@ -181,6 +199,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			rayCountRequest = 1;
 		}
 		if (recycle > 60)
+		{
+			rayCountRequest = 0;
+		}
+		// Amortization gate LAST, so it can only skip a frame's rays (drop to 0
+		// off-turn), never add rays on top of the recycle maintenance above.
+		if (!ray_update)
 		{
 			rayCountRequest = 0;
 		}
