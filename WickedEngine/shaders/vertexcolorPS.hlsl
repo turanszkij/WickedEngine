@@ -1,12 +1,6 @@
 #include "globals.hlsli"
 
-struct VertexToPixel
+float4 main(float4 pos : SV_Position, half4 col : COLOR) : SV_Target
 {
-	float4 pos	: SV_POSITION;
-	float4 col	: COLOR;
-};
-
-float4 main(VertexToPixel PSIn) : SV_TARGET
-{
-	return PSIn.col;
+	return col;
 }

@@ -4,7 +4,7 @@
 struct GSOutput
 {
 	float4 pos : SV_Position;
-	float4 col : COLOR;
+	half4 col : COLOR;
 };
 
 [maxvertexcount(36)]

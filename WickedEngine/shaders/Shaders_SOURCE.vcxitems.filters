@@ -494,12 +494,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)objectPS_paintradius.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)objectPS_simple.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)objectPS_debug.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)lensFlarePS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>

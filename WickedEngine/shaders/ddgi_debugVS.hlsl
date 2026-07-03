@@ -2,7 +2,7 @@
 #include "uvsphere.hlsli"
 #include "ShaderInterop_DDGI.h"
 
-void main(uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID, out float4 pos : SV_Position, out float4 col : COLOR)
+void main(uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID, out float4 pos : SV_Position, out half4 col : COLOR)
 {
 	pos = UVSPHERE[vertexID];
 
