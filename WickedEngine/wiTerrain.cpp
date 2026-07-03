@@ -1116,7 +1116,7 @@ namespace wi::terrain
 					// Preload height grid with padding, because neighbors will need to be accessed to determine slopes:
 					constexpr int chunk_width_padded = chunk_width + 1;
 					constexpr uint32_t vertexCount_padded = chunk_width_padded * chunk_width_padded;
-					float heights_padded[chunk_width_padded * chunk_width_padded];
+					wi::vector<float> heights_padded(chunk_width_padded * chunk_width_padded);
 					const XMVECTOR UP = XMVectorSet(0, 1, 0, 0);
 					wi::jobsystem::Dispatch(ctx, vertexCount_padded, chunk_width_padded * 4, [&](wi::jobsystem::JobArgs args) {
 						const uint32_t index = args.jobIndex;
