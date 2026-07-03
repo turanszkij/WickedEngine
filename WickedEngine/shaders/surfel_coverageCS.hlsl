@@ -10,6 +10,7 @@ StructuredBuffer<Surfel> surfelBuffer : register(t0);
 StructuredBuffer<SurfelGridCell> surfelGridBuffer : register(t1);
 StructuredBuffer<uint> surfelCellBuffer : register(t2);
 Texture2D<float2> surfelMomentsTexture : register(t3);
+Texture2D<float3> surfelHistoryTexture : register(t4); // previous frame's half-res GI (temporal history)
 
 RWStructuredBuffer<SurfelData> surfelDataBuffer : register(u0);
 RWStructuredBuffer<uint> surfelDeadBuffer : register(u1);
@@ -20,7 +21,16 @@ RWTexture2D<unorm float4> debugUAV : register(u5);
 
 void write_result(uint2 DTid, float4 color)
 {
-	result[DTid] = color.rgb;
+	// Temporal accumulation (stage 1: SAME screen pixel, no reprojection yet).
+	// Blend this frame's freshly gathered GI into the history so a static view
+	// denoises and history is reused; camera motion will ghost until
+	// reprojection is added in stage 2. The isnan/isinf guard covers the
+	// uninitialised history texture on the very first frames (and any stray
+	// non-finite value).
+	float3 history = surfelHistoryTexture[DTid];
+	if (any(isnan(history)) || any(isinf(history)))
+		history = color.rgb;
+	result[DTid] = lerp(history, color.rgb, SURFEL_COVERAGE_TEMPORAL_BLEND);
 }
 void write_debug(uint2 DTid, float4 debug)
 {

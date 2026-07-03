@@ -498,7 +498,9 @@ namespace wi::renderer
 	// Surfel GI: diffuse GI with ray tracing from surfels
 	struct SurfelGIResources
 	{
-		wi::graphics::Texture result_halfres;
+		// Ping-ponged half-res GI: one frame's coverage reads the other as
+		// temporal history and writes this frame's, picked by frame parity.
+		wi::graphics::Texture result_halfres[2];
 		wi::graphics::Texture result;
 	};
 	void CreateSurfelGIResources(SurfelGIResources& res, XMUINT2 resolution);
