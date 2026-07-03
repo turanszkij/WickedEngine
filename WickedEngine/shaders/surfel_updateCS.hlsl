@@ -176,17 +176,31 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			SURFEL_RAY_BOOST_MAX, SURFEL_RAY_BOOST_MIN, level_frac);
 
 		// Temporal ray amortization: a surfel doesn't need fresh rays every
-		// frame. Give it a re-trace PERIOD that grows with cascade level (1 =
-		// every frame near, up to SURFEL_RAY_UPDATE_PERIOD_MAX at the coarsest)
-		// and only allocate rays on its turn; the temporal estimator holds the
-		// cached radiance in between. A per-surfel phase (stable hash) staggers
-		// the turns so a region's surfels don't all re-trace on the same frame
+		// frame. Give it a re-trace PERIOD that grows with distance and only
+		// allocate rays on its turn; the temporal estimator holds the cached
+		// radiance in between. A per-surfel phase (stable hash) staggers the
+		// turns so a region's surfels don't all re-trace on the same frame
 		// (which pulses). This is what cuts the per-frame ray count when a big
 		// far area is in view - only ~1/period of the far field traces each
 		// frame - while the far surfels' long life + fade-in hide the slower
 		// convergence.
-		const uint ray_period = max(1u, (uint)lerp(
-			1.0, (float)SURFEL_RAY_UPDATE_PERIOD_MAX, level_frac));
+		//
+		// The period is driven by the CONTINUOUS (unclamped) distance level,
+		// not the clamped cascade level, so it keeps growing for surfels far
+		// beyond the coarsest level: 1 (every frame) near, ramping to
+		// SURFEL_RAY_UPDATE_PERIOD_MAX at the coarsest cascade level, then
+		// doubling per extra level of distance past it up to
+		// SURFEL_RAY_UPDATE_PERIOD_CAP. A bird's-eye view saturates every
+		// surfel at the top cascade level by radius but not by distance, and
+		// the truly distant ones there need refreshing least - this extends the
+		// amortization into exactly that worst case (flying very high).
+		const float cont_level = surfel_level_continuous(surfel.position);
+		const float top_level = (float)(SURFEL_GRID_LEVELS - 1);
+		float ray_period_f = lerp(1.0,
+			(float)SURFEL_RAY_UPDATE_PERIOD_MAX, saturate(cont_level / top_level));
+		ray_period_f *= exp2(max(0.0, cont_level - top_level)); // extend past top
+		const uint ray_period = (uint)clamp(round(ray_period_f),
+			1.0, (float)SURFEL_RAY_UPDATE_PERIOD_CAP);
 		const uint ray_phase =
 			(uint)(surfel_hash01(surfel_index) * (float)ray_period);
 		const bool ray_update =
