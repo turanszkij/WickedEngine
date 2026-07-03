@@ -4987,6 +4987,7 @@ void UpdatePerFrameData(
 				if (cullsphere_required)
 				{
 					Sphere sphere = collider.capsule.getSphere();
+					cullsphere.center = sphere.center;
 					cullsphere.radius = sphere.radius * CAPSULE_SHADOW_BOLDEN + CAPSULE_SHADOW_AFFECTION_RANGE;
 				}
 				break;
