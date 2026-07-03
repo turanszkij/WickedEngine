@@ -18,7 +18,11 @@ RWStructuredBuffer<SurfelRayDataPacked> surfelRayBuffer : register(u0);
 [numthreads(SURFEL_INDIRECT_NUMTHREADS, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	uint global_ray_count = surfelStatsBuffer[0].rayCount;
+	// Bound to the budget: rayCount is the uncapped sum of all ray requests,
+	// but only the first SURFEL_RAY_BUDGET ray slots are actually written.
+	// Tracing past that processes stale slots (wasted work) and makes the
+	// budget inert.
+	uint global_ray_count = min(surfelStatsBuffer[0].rayCount, SURFEL_RAY_BUDGET);
 	if (DTid.x >= global_ray_count)
 		return;
 
