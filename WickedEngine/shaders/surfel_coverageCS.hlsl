@@ -119,9 +119,15 @@ void gather_surfel(
 	float2 moments = surfelMomentsTexture.SampleLevel(sampler_linear_clamp, surfel_moment_uv(surfel_index, normal, L / dist), 0);
 	contribution *= surfel_moment_weight(moments, dist);
 
-	// Defensive 1-frame fade: full weight once integrated at least once (life
-	// >= 1).
-	contribution = lerp(0, contribution, saturate((float)surfelDataBuffer[surfel_index].GetLife()));
+	// Temporal fade-in: ramp a newborn's contribution WEIGHT from 0 to full
+	// over SURFEL_SPAWN_FADE_FRAMES frames (by its life counter) instead of
+	// snapping to full weight at life 1. A just-spawned surfel can start
+	// off-colour (dark from ray-starved first rays, or bright from a stray ray)
+	// before the estimator converges; snapping it to full weight makes that
+	// error pop. Ramping lets it blend in and converge to its neighbours first,
+	// so spawns aren't visible.
+	contribution *= saturate(
+		(float)surfelDataBuffer[surfel_index].GetLife() / SURFEL_SPAWN_FADE_FRAMES);
 
 	color += float4(SH::CalculateIrradiance(surfel.radiance.Unpack(), N), 1) * contribution;
 
