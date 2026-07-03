@@ -12249,6 +12249,7 @@ void SurfelGI(
 	// Grid reset:
 	{
 		device->EventBegin("Grid Reset", cmd);
+		auto prof = wi::profiler::ScopedRangeGPU("Surfel - Grid Reset", cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -12266,6 +12267,7 @@ void SurfelGI(
 	// Update:
 	{
 		device->EventBegin("Update", cmd);
+		auto prof = wi::profiler::ScopedRangeGPU("Surfel - Update", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_SURFEL_UPDATE], cmd);
 
 		device->BindResource(&scene.surfelgi.aliveBuffer[0], 1, cmd);
@@ -12297,6 +12299,7 @@ void SurfelGI(
 	// Grid offsets:
 	{
 		device->EventBegin("Grid Offsets", cmd);
+		auto prof = wi::profiler::ScopedRangeGPU("Surfel - Grid Offsets", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_SURFEL_GRIDOFFSETS], cmd);
 
 		const GPUResource* uavs[] = {
@@ -12333,6 +12336,7 @@ void SurfelGI(
 	// Binning:
 	{
 		device->EventBegin("Binning", cmd);
+		auto prof = wi::profiler::ScopedRangeGPU("Surfel - Binning", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_SURFEL_BINNING], cmd);
 
 		device->BindResource(&scene.surfelgi.surfelBuffer, 0, cmd);
@@ -12361,6 +12365,7 @@ void SurfelGI(
 	// Raytracing:
 	{
 		device->EventBegin("Raytrace", cmd);
+		auto prof = wi::profiler::ScopedRangeGPU("Surfel - Raytrace", cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_SURFEL_RAYTRACE], cmd);
 
@@ -12396,6 +12401,7 @@ void SurfelGI(
 	// Integrate rays:
 	{
 		device->EventBegin("Integrate", cmd);
+		auto prof = wi::profiler::ScopedRangeGPU("Surfel - Integrate", cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_SURFEL_INTEGRATE], cmd);
 
