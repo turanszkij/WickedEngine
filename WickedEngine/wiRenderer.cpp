@@ -1127,6 +1127,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SURFEL_GRIDOFFSETS], "surfel_gridoffsetsCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SURFEL_BINNING], "surfel_binningCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SURFEL_INTEGRATE], "surfel_integrateCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SURFEL_DENOISE], "surfel_denoiseCS.cso"); });
 	if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 	{
 		wi::jobsystem::Execute(raytracing_ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SURFEL_RAYTRACE], "surfel_raytraceCS_rtapi.cso", ShaderModel::SM_6_5); });
@@ -12122,6 +12123,10 @@ void CreateSurfelGIResources(SurfelGIResources& res, XMUINT2 resolution)
 	device->SetName(&res.result_halfres[0], "surfelgi.result_halfres[0]");
 	device->CreateTexture(&desc, nullptr, &res.result_halfres[1]);
 	device->SetName(&res.result_halfres[1], "surfelgi.result_halfres[1]");
+	device->CreateTexture(&desc, nullptr, &res.result_halfres_denoise[0]);
+	device->SetName(&res.result_halfres_denoise[0], "surfelgi.result_halfres_denoise[0]");
+	device->CreateTexture(&desc, nullptr, &res.result_halfres_denoise[1]);
+	device->SetName(&res.result_halfres_denoise[1], "surfelgi.result_halfres_denoise[1]");
 	desc.width = resolution.x;
 	desc.height = resolution.y;
 	device->CreateTexture(&desc, nullptr, &res.result);
@@ -12215,8 +12220,69 @@ void SurfelGI_Coverage(
 		device->EventEnd(cmd);
 	}
 
+	// Edge-aware a-trous denoise of the half-res GI (output-side; see
+	// surfel_denoiseCS). Ping-pong through result_halfres_denoise[] seeded from
+	// this frame's coverage output in result_halfres[hist_write]; that texture
+	// is left untouched so it still serves as next frame's UN-denoised temporal
+	// history (the spatial blur must not compound through the temporal loop).
+	// The upsample then consumes the filtered copy in final_gi.
+	const Texture* final_gi = &res.result_halfres[hist_write];
+	if (SURFEL_DENOISE_PASSES > 0)
+	{
+		device->EventBegin("Denoise", cmd);
+		auto prof_denoise = wi::profiler::BeginRangeGPU("SurfelGI - Denoise", cmd);
+		device->BindComputeShader(&shaders[CSTYPE_SURFEL_DENOISE], cmd);
+
+		PostProcess postprocess = {};
+		postprocess.resolution.x = res.result_halfres[hist_write].desc.width;
+		postprocess.resolution.y = res.result_halfres[hist_write].desc.height;
+		postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+		postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+
+		for (uint32_t pass = 0; pass < SURFEL_DENOISE_PASSES; ++pass)
+		{
+			const Texture* src = (pass == 0)
+				? &res.result_halfres[hist_write]
+				: &res.result_halfres_denoise[(pass - 1) & 1];
+			const Texture* dst = &res.result_halfres_denoise[pass & 1];
+
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Image(dst, dst->desc.layout, ResourceState::UNORDERED_ACCESS),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+
+			postprocess.params1.x = (float)pass;
+			postprocess.params1.y = (float)(1u << pass); // a-trous step 1,2,4,...
+			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
+			device->BindResource(src, 0, cmd);
+			device->BindUAV(dst, 0, cmd);
+
+			device->Dispatch(
+				(postprocess.resolution.x + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+				(postprocess.resolution.y + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+				1,
+				cmd
+			);
+
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Image(dst, ResourceState::UNORDERED_ACCESS, dst->desc.layout),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+
+			final_gi = dst;
+		}
+
+		wi::profiler::EndRange(prof_denoise);
+		device->EventEnd(cmd);
+	}
+
 	Postprocess_Upsample_Bilateral(
-		res.result_halfres[hist_write],
+		*final_gi,
 		depth,
 		res.result,
 		cmd,

@@ -501,6 +501,12 @@ namespace wi::renderer
 		// Ping-ponged half-res GI: one frame's coverage reads the other as
 		// temporal history and writes this frame's, picked by frame parity.
 		wi::graphics::Texture result_halfres[2];
+		// Scratch pair the edge-aware a-trous denoiser ping-pongs through. Kept
+		// separate from result_halfres[] so the temporal history
+		// (result_halfres) stays un-denoised - the spatial blur never compounds
+		// through the temporal loop; only the copy sent to the upsample is
+		// filtered.
+		wi::graphics::Texture result_halfres_denoise[2];
 		wi::graphics::Texture result;
 	};
 	void CreateSurfelGIResources(SurfelGIResources& res, XMUINT2 resolution);
