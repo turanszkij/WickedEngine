@@ -12,6 +12,10 @@ RWStructuredBuffer<uint> surfelDeadBuffer : register(u3);
 RWStructuredBuffer<SurfelStats> surfelStatsBuffer : register(u4);
 RWStructuredBuffer<SurfelRayDataPacked> surfelRayBuffer : register(u5);
 RWStructuredBuffer<SurfelData> surfelDataBuffer : register(u6);
+#ifdef SURFEL_RAY_SORTING
+RWStructuredBuffer<uint> surfelRaySortKeyBuffer : register(u7);     // Morton key per ray slot
+RWStructuredBuffer<uint> surfelRaySortPayloadBuffer : register(u8); // ray slot index (identity, sorted by key)
+#endif // SURFEL_RAY_SORTING
 
 [numthreads(SURFEL_INDIRECT_NUMTHREADS, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
@@ -201,9 +205,25 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		initialRayData.surfelIndex = surfel_index;
 		SurfelRayDataPacked initialRayDataPacked;
 		initialRayDataPacked.store(initialRayData);
+#ifdef SURFEL_RAY_SORTING
+		// All of this surfel's rays share its origin, so they share a sort key
+		// - the Morton code of the surfel position quantised to
+		// SURFEL_RAY_SORT_CELL. Payload is the ray's own slot (identity); the
+		// sort permutes it so the raytrace can remap thread -> original slot
+		// and write results back there.
+		const uint ray_key = morton3D(frac(
+			surfel.position / (SURFEL_RAY_SORT_CELL * 1024.0)));
+		if (rayCount > 0)
+			InterlockedAdd(surfelStatsBuffer[0].raySortCount, rayCount);
+#endif // SURFEL_RAY_SORTING
 		for (uint rayIndex = 0; rayIndex < rayCount; ++rayIndex)
 		{
-			surfelRayBuffer[rayOffset + rayIndex] = initialRayDataPacked;
+			const uint ray_slot = rayOffset + rayIndex;
+			surfelRayBuffer[ray_slot] = initialRayDataPacked;
+#ifdef SURFEL_RAY_SORTING
+			surfelRaySortKeyBuffer[ray_slot] = ray_key;
+			surfelRaySortPayloadBuffer[ray_slot] = ray_slot;
+#endif // SURFEL_RAY_SORTING
 		}
 	}
 	else

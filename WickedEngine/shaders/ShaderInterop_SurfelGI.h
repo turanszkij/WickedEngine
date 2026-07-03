@@ -49,13 +49,15 @@ static const float SURFEL_SPAWN_FADE_FRAMES = 64; // frames over which a newborn
 static const float SURFEL_EMISSIVE_SPAWN_SKIP = 2.0f; // do not spawn surfels on strongly emissive surfaces (max emissive channel >= this). Their own look is dominated by emission, so cached diffuse GI on them is wasted; they still act as GI light sources for other surfels via ray hits (emission is picked up at ray-trace hit points, not from surfels sitting on them), so skipping placement here costs nothing in light transport. 0 disables the skip
 static const float SURFEL_METALLIC_ALBEDO_SKIP = 0.001f; // do not spawn surfels on fully-metallic surfaces (max albedo channel <= this). Surface stores no metalness, but full metalness zeroes albedo (albedo = baseColor * (1 - max(reflectance, metalness)) => 0 at metalness 1), so a ~zero albedo is exactly the "metalness >= 1" case. Metals have no diffuse response, so cached diffuse GI is invisible on them (they reflect via specular/RT reflections, not surfels); this also skips fully-black diffuse, which likewise shows no GI. Raise slightly to also skip near-metals; set < 0 to disable
 static const float SURFEL_TRANSMISSION_SPAWN_SKIP = 0.0f; // do not spawn surfels on transparent surfaces (surface.transmission > this). transmission already folds in cloak (transmission = lerp(GetTransmission(), 1, GetCloak())), so this covers both transmissive and cloaked materials. Glass/transparent surfaces transmit and refract light along ray paths rather than reflecting it diffusely, so cached diffuse GI on them is meaningless. Default 0 skips any transparent surface; raise to require more transmission before skipping; set >= 1 to disable (transmission maxes at 1)
-static const uint SURFEL_RAY_BUDGET = 500000; // max number of rays per frame
+static const uint SURFEL_RAY_BUDGET = 100000; // max number of rays per frame
 static const uint SURFEL_RAY_BOOST_MAX = 64; // max rays per surfel, at the FINEST level (level 0, near). surfel_update scales the per-surfel ray boost down with cascade level (toward SURFEL_RAY_BOOST_MIN at the coarsest level), so near/detailed surfels get the full ray count while coarse far ones - which are low-frequency and long-lived, so they converge fine on fewer rays per frame via temporal accumulation - don't saturate the ray budget when a huge far area is visible at once (looking down from altitude). Packed at 8 bits, so must stay < 256
 static const uint SURFEL_RAY_BOOST_MIN = 8; // rays per surfel at the COARSEST level (most distant surfaces). The boost lerps SURFEL_RAY_BOOST_MAX -> this by level, so the far field is refreshed with far fewer rays; its per-frame estimate is noisier but the temporal estimator averages it out over the surfel's (long) life, so steady-state quality is unchanged while the worst-case ray count (bird's-eye view) drops sharply. Set equal to MAX to disable the per-level ray falloff (uniform ray count)
 static const float SURFEL_RAY_GUIDE_FRACTION = 0.5f; // max fraction of bounce rays steered toward the surfel's brightest cached direction (scaled by how directional it is)
+static const float SURFEL_RAY_SORT_CELL = 4.0f; // world-space cell size (units) for the ray-sort Morton key: the surfel position is quantised to this before Morton coding, so rays from surfels within ~this distance share a key prefix and trace coherently. Smaller = finer spatial buckets (more precise coherence, but the 30-bit Morton wraps over a smaller world extent); larger = coarser buckets. Only used when SURFEL_RAY_SORTING is defined
 #define SURFEL_GRID_CULLING // if defined, surfels will not be added to grid cells that they do not intersect
 #define SURFEL_USE_HASHING // if defined, hashing will be used to retrieve surfels, hashing is good because it supports infinite world trivially, but slower due to hash collisions
 #define SURFEL_ENABLE_INFINITE_BOUNCES // if defined, previous frame's surfel data will be sampled at ray tracing hit points
+#define SURFEL_RAY_SORTING // if defined, the per-frame rays are radix-sorted by their origin surfel's position (Morton order) before tracing, so threads that trace together start from nearby points - far better BVH cache coherence for the otherwise incoherent GI rays. Quality-neutral (identical rays/results, just reordered); adds a sort pass + two uint buffers (key/payload). Comment out to A/B
 
 struct SurfelStats
 {
@@ -66,6 +68,7 @@ struct SurfelStats
 	uint rayCount;
 	int shortage;
 	uint spawnCount; // number of surfels spawned this frame (reset each frame)
+	uint raySortCount; // count of rays actually allocated this frame (<= SURFEL_RAY_BUDGET); the number of used, contiguous ray slots to radix-sort. Reset each frame like rayCount
 };
 
 struct SurfelIndirectArgs

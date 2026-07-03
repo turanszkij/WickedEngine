@@ -566,6 +566,19 @@ namespace wi::scene
 				device->CreateBufferZeroed(&buf, &surfelgi.rayBuffer);
 				device->SetName(&surfelgi.rayBuffer, "surfelgi.rayBuffer");
 
+#ifdef SURFEL_RAY_SORTING
+				// Ray-sort key + payload: one uint per ray slot (gpusortlib
+				// sorts uint32 structured buffers). Payload (SHADER_RESOURCE)
+				// is read by the raytrace to remap thread -> original ray slot.
+				buf.stride = sizeof(uint32_t);
+				buf.size = buf.stride * SURFEL_RAY_BUDGET;
+				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
+				device->CreateBufferZeroed(&buf, &surfelgi.raySortKeyBuffer);
+				device->SetName(&surfelgi.raySortKeyBuffer, "surfelgi.raySortKeyBuffer");
+				device->CreateBufferZeroed(&buf, &surfelgi.raySortPayloadBuffer);
+				device->SetName(&surfelgi.raySortPayloadBuffer, "surfelgi.raySortPayloadBuffer");
+#endif // SURFEL_RAY_SORTING
+
 				TextureDesc tex;
 				tex.width = SURFEL_MOMENT_ATLAS_TEXELS;
 				tex.height = SURFEL_MOMENT_ATLAS_TEXELS;

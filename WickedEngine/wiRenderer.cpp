@@ -12288,6 +12288,10 @@ void SurfelGI(
 			&scene.surfelgi.statsBuffer,
 			&scene.surfelgi.rayBuffer,
 			&scene.surfelgi.dataBuffer,
+#ifdef SURFEL_RAY_SORTING
+			&scene.surfelgi.raySortKeyBuffer,     // u7
+			&scene.surfelgi.raySortPayloadBuffer, // u8
+#endif // SURFEL_RAY_SORTING
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
@@ -12370,6 +12374,50 @@ void SurfelGI(
 		device->EventEnd(cmd);
 	}
 
+#ifdef SURFEL_RAY_SORTING
+	// Ray sort: radix-sort the ray payload by each ray's origin-surfel Morton key
+	// (written in Update), so the raytrace below traces spatially-nearby rays
+	// together for BVH coherence. Sorts raySortCount rays (<= budget).
+	{
+		device->EventBegin("Ray sort", cmd);
+		auto prof = wi::profiler::ScopedRangeGPU("Surfel - Ray sort", cmd);
+
+		// Make Update's key/payload writes visible (they stay UNORDERED_ACCESS),
+		// and move the stats buffer to SHADER_RESOURCE, the state gpusortlib reads
+		// its counter in (the surfel passes otherwise keep it in the _COMPUTE
+		// variant).
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(&scene.surfelgi.raySortKeyBuffer),
+				GPUBarrier::Memory(&scene.surfelgi.raySortPayloadBuffer),
+				GPUBarrier::Buffer(&scene.surfelgi.statsBuffer, ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::SHADER_RESOURCE),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		wi::gpusortlib::Sort(
+			SURFEL_RAY_BUDGET,
+			scene.surfelgi.raySortKeyBuffer,
+			scene.surfelgi.statsBuffer, // counter (SHADER_RESOURCE) - raySortCount
+			offsetof(SurfelStats, raySortCount),
+			scene.surfelgi.raySortPayloadBuffer,
+			cmd
+		);
+
+		// Sorted payload -> SRV for the raytrace remap; restore the stats buffer to
+		// the _COMPUTE state the rest of the frame's barriers expect.
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Buffer(&scene.surfelgi.raySortPayloadBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
+				GPUBarrier::Buffer(&scene.surfelgi.statsBuffer, ResourceState::SHADER_RESOURCE, ResourceState::SHADER_RESOURCE_COMPUTE),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->EventEnd(cmd);
+	}
+#endif // SURFEL_RAY_SORTING
+
 	// Raytracing:
 	{
 		device->EventBegin("Raytrace", cmd);
@@ -12388,6 +12436,9 @@ void SurfelGI(
 		device->BindResource(&scene.surfelgi.cellBuffer, 3, cmd);
 		device->BindResource(&scene.surfelgi.aliveBuffer[0], 4, cmd);
 		device->BindResource(&scene.surfelgi.momentsTexture, 5, cmd);
+#ifdef SURFEL_RAY_SORTING
+		device->BindResource(&scene.surfelgi.raySortPayloadBuffer, 6, cmd); // sorted -> original ray slot
+#endif // SURFEL_RAY_SORTING
 
 		const GPUResource* uavs[] = {
 			&scene.surfelgi.rayBuffer,
@@ -12399,6 +12450,10 @@ void SurfelGI(
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Buffer(&scene.surfelgi.rayBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
+#ifdef SURFEL_RAY_SORTING
+				// Restore the payload to UNORDERED_ACCESS for next frame's Update.
+				GPUBarrier::Buffer(&scene.surfelgi.raySortPayloadBuffer, ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS),
+#endif // SURFEL_RAY_SORTING
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}

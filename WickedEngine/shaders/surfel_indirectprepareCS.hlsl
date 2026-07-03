@@ -28,6 +28,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	surfelStatsBuffer[0].rayCount = 0;
 	surfelStatsBuffer[0].shortage = shortage;
 	surfelStatsBuffer[0].spawnCount = 0;
+	surfelStatsBuffer[0].raySortCount = 0;
 
 	SurfelIndirectArgs args;
 	

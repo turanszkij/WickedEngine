@@ -12,6 +12,9 @@ StructuredBuffer<SurfelGridCell> surfelGridBuffer : register(t2);
 StructuredBuffer<uint> surfelCellBuffer : register(t3);
 StructuredBuffer<uint> surfelAliveBuffer : register(t4);
 Texture2D<float2> surfelMomentsTexturePrev : register(t5);
+#ifdef SURFEL_RAY_SORTING
+StructuredBuffer<uint> surfelRaySortPayloadBuffer : register(t6); // sorted -> original ray slot
+#endif // SURFEL_RAY_SORTING
 
 RWStructuredBuffer<SurfelRayDataPacked> surfelRayBuffer : register(u0);
 
@@ -26,7 +29,18 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	if (DTid.x >= global_ray_count)
 		return;
 
-	SurfelRayData rayData = surfelRayBuffer[DTid.x].load();
+	// With ray sorting, thread DTid.x processes the ray at the sorted position:
+	// remap to its ORIGINAL slot so results still land where integrate reads
+	// them (by each surfel's rayOffset). Consecutive threads now trace rays
+	// from nearby surfels (Morton order) -> coherent BVH traversal. Without
+	// sorting, identity.
+#ifdef SURFEL_RAY_SORTING
+	const uint ray_slot = surfelRaySortPayloadBuffer[DTid.x];
+#else
+	const uint ray_slot = DTid.x;
+#endif // SURFEL_RAY_SORTING
+
+	SurfelRayData rayData = surfelRayBuffer[ray_slot].load();
 
 	uint surfel_index = rayData.surfelIndex;
 	Surfel surfel = surfelBuffer[surfel_index];
@@ -34,7 +48,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float3 N = normalize(unpack_half3(surfel.normal));
 
 	RNG rng;
-	rng.init(DTid.xx, GetFrame().frame_count);
+	rng.init(ray_slot.xx, GetFrame().frame_count);
 	
 	float3 radiance = 0;
 	
@@ -571,5 +585,5 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	}
 
-	surfelRayBuffer[DTid.x].store(rayData);
+	surfelRayBuffer[ray_slot].store(rayData);
 }
