@@ -163,9 +163,21 @@ void gather_surfel(
 	inout float4 color,
 	inout float4 debug)
 {
+	// Robustness / anti-NaN gate. A corrupted or uninitialised surfel (e.g. an
+	// index read from a grid cell whose list was overflowed, pointing at a
+	// never-written pool slot) can have a zero/NaN normal, a non-finite
+	// position, or an out-of-range radius. normalize(0) is NaN and the dotN <=
+	// 0 reject below does NOT catch it (NaN <= 0 is false), so that NaN would
+	// flow into the accumulated colour and flash the whole cell's screen quad
+	// black or white for the frame. Reject obviously-invalid surfels up front.
+	const float surfel_radius = surfel.GetRadius();
+	if (!(surfel_radius > 0) || surfel_radius > SURFEL_MAX_RADIUS ||
+		any(isnan(surfel.position)) || any(isinf(surfel.position)))
+		return;
+
 	float3 L = P - surfel.position;
 	float dist2 = dot(L, L);
-	if (dist2 >= sqr(surfel.GetRadius()))
+	if (dist2 >= sqr(surfel_radius))
 		return;
 
 	// Point debug marks any surfel centre near the shading point, independent of
@@ -175,7 +187,7 @@ void gather_surfel(
 
 	float3 normal = normalize(unpack_half3(surfel.normal));
 	float dotN = dot(N, normal);
-	if (dotN <= 0)
+	if (!(dotN > 0)) // NaN-safe: also rejects a zero/NaN normal (normalize(0)=NaN)
 		return;
 
 	float dist = sqrt(dist2);
@@ -217,7 +229,14 @@ void gather_surfel(
 	contribution *= saturate(
 		(float)surfelDataBuffer[surfel_index].GetLife() / SURFEL_SPAWN_FADE_FRAMES);
 
-	color += float4(SH::CalculateIrradiance(surfel.radiance.Unpack(), N), 1) * contribution;
+	// Final anti-NaN guard: a bad surfel radiance (or a NaN weight) must never
+	// enter the accumulator - one NaN poisons the whole pixel (and the temporal
+	// history) black/white. Skip the contribution if it is not finite.
+	const float3 irradiance = SH::CalculateIrradiance(surfel.radiance.Unpack(), N);
+	const float3 contribution_rgb = irradiance * contribution;
+	if (any(isnan(contribution_rgb)) || any(isinf(contribution_rgb)))
+		return;
+	color += float4(contribution_rgb, contribution);
 
 	switch (debug_mode)
 	{
