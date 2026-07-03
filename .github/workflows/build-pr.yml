@@ -259,7 +259,7 @@ jobs:
 
     - name: Compile Offlineshadercompiler
       run: |
-        xcodebuild clean build -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -configuration Release
+        xcodebuild clean build -jobs 2 -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -configuration Release
 
     - name: Generate shader dump
       run: |
