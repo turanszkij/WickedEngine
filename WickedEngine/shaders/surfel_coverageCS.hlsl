@@ -19,42 +19,77 @@ RWStructuredBuffer<SurfelStats> surfelStatsBuffer : register(u3);
 RWTexture2D<float3> result : register(u4);
 RWTexture2D<unorm float4> debugUAV : register(u5);
 
+// Reproject last frame's half-res GI to this pixel via the motion vector.
+// Returns the history sample and whether it landed on-screen with a finite
+// value (valid). Recomputes the full-res pixel/uv from DTid (half-res
+// dispatch).
+float3 reproject_history(uint2 DTid, out bool valid)
+{
+	const uint2 pixel = DTid * 2;
+	const float2 uv = ((float2)pixel + 0.5) * GetCamera().internal_resolution_rcp;
+	const float2 prev_uv = uv + texture_velocity[pixel];
+	valid = is_saturated(prev_uv);
+	if (!valid)
+		return 0;
+	// Disocclusion reject (camera-motion aware). Reproject THIS pixel's world
+	// position into the PREVIOUS camera and compare its expected depth there to
+	// the depth actually stored at prev_uv last frame. If they differ, this
+	// pixel was occluded last frame (a behind-object reveal), so the
+	// reprojected history is a DIFFERENT surface - reject it (forces a group
+	// refresh for skipped groups). Doing the compare in the previous camera
+	// (rather than a raw this-vs-last linear-depth diff) removes the
+	// camera-motion component, so a dolly/pan no longer false-triggers and the
+	// threshold can be strict enough to kill reveal ghosting without forcing
+	// needless refreshes.
+	const float3 P = reconstruct_position(uv, texture_depth[pixel]);
+	const float4 prev_clip = mul(GetCamera().previous_view_projection, float4(P, 1.0));
+	if (prev_clip.w <= 0.0)
+	{
+		valid = false; // behind the previous camera
+		return 0;
+	}
+	const float expected_prev_z = compute_lineardepth(prev_clip.z / prev_clip.w);
+	const float stored_prev_z = compute_lineardepth(
+		texture_depth_history.SampleLevel(sampler_point_clamp, prev_uv, 0));
+	if (abs(expected_prev_z - stored_prev_z) >
+		expected_prev_z * SURFEL_COVERAGE_DISOCCLUSION)
+	{
+		valid = false;
+		return 0;
+	}
+	const float3 h = surfelHistoryTexture.SampleLevel(
+		sampler_linear_clamp, prev_uv, 0);
+	// Guard the uninitialised history texture on the first frames (and any
+	// stray non-finite value).
+	if (any(isnan(h)) || any(isinf(h)))
+	{
+		valid = false;
+		return 0;
+	}
+	return h;
+}
 void write_result(uint2 DTid, float4 color)
 {
 	const float3 fresh = color.rgb;
 
-	// Temporal reprojection + accumulation (stage 2). Reproject last frame's GI
-	// by the motion vector and blend it in where it still agrees with this
-	// frame's freshly gathered value; fall back to the fresh value when the
-	// reprojection lands off-screen or the history disagrees (disocclusion,
-	// lighting change, reprojection error). So a stable view denoises without
-	// ghosting under camera motion. Recompute the full-res pixel/uv from DTid
-	// (the coverage dispatch is half-res: pixel = DTid * 2).
-	const uint2 pixel = DTid * 2;
-	const float2 uv = ((float2)pixel + 0.5) * GetCamera().internal_resolution_rcp;
-	const float2 velocity = texture_velocity[pixel];
-	const float2 prev_uv = uv + velocity;
-
-	float3 history = fresh;
+	// Temporal reprojection + accumulation. Blend the reprojected history in
+	// where it still agrees with this frame's freshly gathered value; fall back
+	// to fresh when the reprojection lands off-screen or the history disagrees
+	// (disocclusion, lighting change, reprojection error), so a stable view
+	// denoises without ghosting under camera motion.
+	bool valid;
+	const float3 history = reproject_history(DTid, valid);
 	float alpha = 1.0; // 1 == take the fresh value (no history reuse)
-	if (is_saturated(prev_uv))
+	if (valid)
 	{
-		const float3 h = surfelHistoryTexture.SampleLevel(
-			sampler_linear_clamp, prev_uv, 0);
-		// Guard the uninitialised history texture on the first frames (and any
-		// stray non-finite value).
-		if (!any(isnan(h)) && !any(isinf(h)))
-		{
-			history = h;
-			const float3 luma = float3(0.299, 0.587, 0.114);
-			const float fresh_luma = dot(fresh, luma);
-			const float rel = abs(dot(h, luma) - fresh_luma) /
-				(fresh_luma + 0.01);
-			alpha = lerp(SURFEL_COVERAGE_TEMPORAL_BLEND, 1.0,
-				saturate(rel * SURFEL_COVERAGE_TEMPORAL_REJECT));
-		}
+		const float3 luma = float3(0.299, 0.587, 0.114);
+		const float fresh_luma = dot(fresh, luma);
+		const float rel = abs(dot(history, luma) - fresh_luma) /
+			(fresh_luma + 0.01);
+		alpha = lerp(SURFEL_COVERAGE_TEMPORAL_BLEND, 1.0,
+			saturate(rel * SURFEL_COVERAGE_TEMPORAL_REJECT));
 	}
-	result[DTid] = lerp(history, fresh, alpha);
+	result[DTid] = lerp(valid ? history : fresh, fresh, alpha);
 }
 void write_debug(uint2 DTid, float4 debug)
 {
@@ -93,6 +128,16 @@ groupshared uint GroupBaseCellMax;    // max (== min => the group shares one cel
 groupshared uint GroupBaseCellOffset; // cellBuffer offset of the shared base cell
 groupshared uint GroupLdsCount;       // surfels actually cached = min(count, CAP)
 groupshared uint GroupLoadNext;       // atomic cursor for the cooperative fill
+groupshared uint GroupNeedsRefresh;   // any pixel with off-screen reprojection forces a full-gather refresh of the whole group
+
+// True if this group does a full gather this frame. A rotating 1/PERIOD of the
+// groups refresh each frame, scheduled by a per-group hash so the refresh set
+// sweeps the whole screen over SURFEL_COVERAGE_REFRESH_PERIOD frames.
+bool surfel_coverage_group_refresh(uint2 gid, uint frame)
+{
+	const uint h = (gid.x * 73856093u) ^ (gid.y * 19349663u);
+	return ((h + frame) % SURFEL_COVERAGE_REFRESH_PERIOD) == 0u;
+}
 
 // Accumulates one surfel's GI/coverage contribution at a shading point. Shared
 // by the LDS and global gather paths so both apply identical weighting; only
@@ -195,6 +240,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		GroupBaseCellMax = 0;
 		GroupLdsCount = 0;
 		GroupLoadNext = 0;
+		GroupNeedsRefresh = 0;
 	}
 	GroupMemoryBarrierWithGroupSync();
 
@@ -207,6 +253,37 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	const float depth = texture_depth[pixel];
 	if (depth == 0)
 	{
+		write_debug(DTid.xy, 0);
+		return;
+	}
+
+	// Temporal gather skip (the coverage speedup). Reproject last frame's GI; a
+	// group whose reprojection is fully on-screen AND isn't in this frame's
+	// rotating refresh set reuses that history and skips the expensive gather +
+	// spawn entirely. The decision is group-UNIFORM (all threads read the same
+	// schedule + groupshared vote), so the cooperative gather and its barriers
+	// below never diverge. Any pixel reprojecting off-screen forces the whole
+	// group to refresh (screen-edge disocclusion); debug views always refresh
+	// so they stay correct. Skipped groups don't mark their surfels seen, but
+	// the refresh period is under the recycler's unseen window, so a surfel is
+	// re-seen on its group's cadence frames before it could be evicted.
+	bool reproj_valid;
+	const float3 reproj = reproject_history(DTid.xy, reproj_valid);
+	// Adaptive skip: near geometry (high screen parallax) always refreshes -
+	// the reuse smears visibly there and it's the cheap case anyway; only far
+	// geometry (low parallax, the expensive case) is allowed to skip.
+	const bool near_pixel =
+		compute_lineardepth(depth) < SURFEL_COVERAGE_SKIP_MIN_DEPTH;
+	if (!reproj_valid || near_pixel)
+		InterlockedOr(GroupNeedsRefresh, 1u);
+	GroupMemoryBarrierWithGroupSync();
+	const bool refresh =
+		push.debug != SURFEL_DEBUG_NONE ||
+		surfel_coverage_group_refresh(Gid.xy, GetFrame().frame_count) ||
+		GroupNeedsRefresh != 0u;
+	if (!refresh)
+	{
+		result[DTid.xy] = reproj; // reuse reprojected history, no gather this frame
 		write_debug(DTid.xy, 0);
 		return;
 	}
