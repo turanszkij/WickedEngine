@@ -15,6 +15,7 @@ static const float SURFEL_MIN_RADIUS = 3.0; // level-0 (finest) cell size and ra
 static const float SURFEL_MAX_RADIUS = SURFEL_MIN_RADIUS * (float)(1u << (SURFEL_GRID_LEVELS - 1)); // derived coarsest radius (level LEVELS-1); used as a default/liveness radius value
 static const float SURFEL_RADIUS_PIXELS = 32; // target screen-space radius in pixels that drives which level a surfel lands on
 static const float SURFEL_RADIUS_GROWTH_DISTANCE = 50; // distance (world units) over which the surfel size grows SUPER-linearly with distance in surfel_level: the screen-footprint target is scaled by (1 + dist / this), so the nearest surfels keep their current fine size (scale ~1) while far ones coarsen far faster than a constant footprint would - a distant surface then needs far fewer, bigger surfels, slashing the far working set (gather + re-trace + live count) that tanks FPS when a large area comes into view (flying up). Smaller = more aggressive far growth (fewer/coarser far surfels); very large = disables the growth (back to a constant screen footprint)
+static const float SURFEL_LEVEL_DITHER = 1.0f; // per-surfel spread (in cascade levels) of the level-change threshold in surfel_stable_level (surfel_update). A moving camera puts a flat region all at ~one distance, so WITHOUT this every surfel there crosses a cascade-level boundary on the SAME frame - re-binning, growing, going redundant and mass thin+respawning together, which POPS. Dithering each surfel's threshold by a stable per-surfel amount spreads those transitions across a band of distance so they trickle a few at a time instead of storming. 0 = no spread (all cross together, the old behaviour); 1 = spread over a full level width. A fixed hysteresis dead-band (see surfel_stable_level) additionally stops a surfel hovering at a boundary from flip-flopping its level frame to frame
 // Relevance-based recycler (see surfel_updateCS): the live working set is bounded
 // by recycling the least-relevant surfels probabilistically. Relevance falls with
 // recency (frames since a surfel last contributed to a visible pixel), distance
@@ -229,7 +230,10 @@ inline int3 surfel_cell(float3 position, uint level)
 // matches its radius so finer levels stay solid (no sub-cell voids).
 // projection[1][1] = 1/tan(fovY/2), so 2*dist/(projection[1][1]*height) is the
 // world size of one screen pixel here.
-inline uint surfel_level(float3 position)
+// Continuous (unfloored, unclamped) cascade level for a position: log2 of the
+// desired radius over the finest radius. surfel_level() floors+clamps this;
+// surfel_stable_level() uses the fractional value for hysteresis/dithering.
+inline float surfel_level_continuous(float3 position)
 {
 	const float dist = distance(position, GetCamera().position);
 	const float world_per_pixel =
@@ -245,13 +249,64 @@ inline uint surfel_level(float3 position)
 	// into view (e.g. flying up over terrain).
 	const float growth = 1.0 + dist / SURFEL_RADIUS_GROWTH_DISTANCE;
 	const float desired_radius = SURFEL_RADIUS_PIXELS * world_per_pixel * growth;
-	const float level = floor(log2(max(desired_radius / SURFEL_MIN_RADIUS, 1.0)));
+	return log2(max(desired_radius / SURFEL_MIN_RADIUS, 1.0));
+}
+inline uint surfel_level(float3 position)
+{
+	const float level = floor(surfel_level_continuous(position));
 	return (uint)clamp(level, 0, SURFEL_GRID_LEVELS - 1);
 }
 // Recover a surfel's level from its stored radius (== its level's cell size).
 inline uint surfel_level_from_radius(float radius)
 {
 	return firstbithigh(max(1u, (uint)(radius / SURFEL_MIN_RADIUS + 0.5)));
+}
+// Stable hash of a surfel index to [0,1). Used to give each surfel its own
+// level -change threshold so a region doesn't transition all at once.
+inline float surfel_hash01(uint x)
+{
+	x ^= x >> 16; x *= 0x7feb352du;
+	x ^= x >> 15; x *= 0x846ca68bu;
+	x ^= x >> 16;
+	return (float)(x & 0xffffffu) / (float)0x1000000u;
+}
+// The cascade level a live surfel should hold this frame, with hysteresis and a
+// per-surfel dithered threshold. surfel_level() alone snaps purely to camera
+// distance, so when the camera moves a flat region (all at ~one distance)
+// crosses a level boundary on the SAME frame: every surfel there re-bins,
+// grows, goes redundant and mass thin+respawns together, which POPS. Here each
+// surfel only steps its level past a threshold offset by its own stable dither,
+// so the region's transitions spread across a band of distance and trickle a
+// few at a time; a hysteresis dead-band keeps a surfel hovering at a boundary
+// from flip-flopping. A newborn (snap) takes the exact distance level
+// immediately, as it has no valid current level yet.
+//
+// @param[in] position - the surfel's world position.
+// @param[in] current_radius - the surfel's stored radius (its current level's
+//   cell size); ignored when snap is true.
+// @param[in] surfel_index - identifies the surfel; seeds its dither.
+// @param[in] snap - true for a newborn: take the distance level with no
+//   hysteresis (there is no meaningful current level to hold).
+inline uint surfel_stable_level(
+	float3 position, float current_radius, uint surfel_index, bool snap)
+{
+	const float lvl_f = surfel_level_continuous(position);
+	const uint max_level = SURFEL_GRID_LEVELS - 1u;
+	if (snap)
+		return (uint)clamp(floor(lvl_f), 0.0, (float)max_level);
+
+	const uint current = min(surfel_level_from_radius(current_radius), max_level);
+	// Per-surfel threshold offset in [-0.5, 0.5] * dither, plus a fixed
+	// hysteresis half-band: step up/down only well past the boundary, else
+	// hold.
+	const float dither =
+		(surfel_hash01(surfel_index) - 0.5) * SURFEL_LEVEL_DITHER;
+	const float hysteresis = 0.25;
+	if (lvl_f >= (float)current + 1.0 + hysteresis + dither)
+		return min(current + 1u, max_level);
+	if (lvl_f < (float)current - hysteresis + dither)
+		return (current > 0u) ? (current - 1u) : 0u;
+	return current;
 }
 // Poisson-disk spawn/thinning spacing (as a fraction of radius) for a cascade
 // level. Interpolates from the dense near spacing (SURFEL_SPAWN_MIN_SPACING at

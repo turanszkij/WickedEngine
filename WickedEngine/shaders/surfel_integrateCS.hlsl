@@ -52,10 +52,16 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	// Gather once per group (life is uniform across the group) into shared
 	// memory; the texel threads below evaluate it in their own direction. Reads
 	// last-frame neighbor radiance (this frame's writes happen later in this
-	// pass) from the surfel's own grid cell, normal-gated so we only seed from
-	// similarly oriented surfaces. If there are no neighbors yet (genuinely
-	// fresh area) the weight stays 0 and the texels fall back to this frame's
-	// rays.
+	// pass), normal-gated so we only seed from similarly oriented surfaces.
+	//
+	// Searches the surfel's own level AND the +/-1 neighbour levels - the same
+	// span the coverage gather uses. A newborn placed at a level boundary
+	// (common while the camera moves, or on a large plane crossing near->far)
+	// is surrounded by differently-SIZED surfels binned into adjacent levels;
+	// reading only its own level would find nothing and it would fall back to
+	// its raw rays and pop. Each neighbour is gated by ITS OWN radius, so
+	// seeding across sizes is correct. If there are genuinely no neighbours the
+	// weight stays 0 and the texels fall back to this frame's rays.
 	if (life == 0)
 	{
 		if (groupIndex == 0)
@@ -64,11 +70,17 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 			float seed_weight = 0;
 			float seed_max_lum = 0;
 
-			const uint seed_level = surfel_level_from_radius(surfel.GetRadius());
-			const int3 seed_cell = surfel_cell(P, seed_level);
-			if (surfel_cellvalid(seed_cell))
+			const uint base_level = surfel_level_from_radius(surfel.GetRadius());
+			const uint level_lo = (base_level > 0) ? (base_level - 1) : 0;
+			const uint level_hi = min(base_level + 1, SURFEL_GRID_LEVELS - 1);
+			for (uint lvl = level_lo; lvl <= level_hi; ++lvl)
 			{
-				SurfelGridCell cell = surfelGridBuffer[surfel_cellindex(seed_cell, seed_level)];
+				const int3 seed_cell = surfel_cell(P, lvl);
+				if (!surfel_cellvalid(seed_cell))
+					continue;
+
+				SurfelGridCell cell =
+					surfelGridBuffer[surfel_cellindex(seed_cell, lvl)];
 				for (uint i = 0; i < cell.count; ++i)
 				{
 					const uint nbr_index = surfelCellBuffer[cell.offset + i];
@@ -82,12 +94,25 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 						continue;
 
 					const float3 to_self = P - nbr.position;
-					if (dot(to_self, to_self) >= sqr(nbr.GetRadius()))
+					const float dist2 = dot(to_self, to_self);
+					if (dist2 >= sqr(nbr.GetRadius()))
+						continue;
+
+					// Weight the seed by the SAME geometry weight the coverage
+					// gather uses (radial^2 * normal^k * tangent-plane), not a
+					// flat dotN. Irradiance is linear in the SH, so a
+					// gather-weighted average of neighbour SH makes the
+					// newborn's irradiance equal what the surface already shows
+					// at this point - the spawn adds (nearly) nothing new to
+					// the pixel, so it can't pop.
+					const float w = surfel_geometry_weight(
+						to_self, nbr_normal, nbr.GetRadius(), dist2, dotN);
+					if (w <= 0)
 						continue;
 
 					const SH::L1_RGB nbr_sh = nbr.radiance.Unpack();
-					seed_sh = SH::Add(seed_sh, SH::Multiply(nbr_sh, dotN));
-					seed_weight += dotN;
+					seed_sh = SH::Add(seed_sh, SH::Multiply(nbr_sh, w));
+					seed_weight += w;
 
 					// Track the brightest neighbor (radiance toward this
 					// surfel's normal) so the seed can be clamped below it.
@@ -220,10 +245,28 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 			surfelVarianceBuffer[variance_data_index].store(varianceData);
 		}
 
-		// Likewise only update the depth moments when this texel was sampled.
+		// Depth (occlusion) moments. Only updated when this texel was sampled -
+		// except a newborn (life == 0) always commits once, to seed them.
+		//
+		// A newborn texel that got no depth sample would otherwise store 0, and
+		// surfel_moment_weight() reads 0 moments as "fully occluded" -> weight
+		// 0, which CANCELS the radiance seed above (the surfel contributes
+		// nothing until its own rays fill every direction's moments, and that
+		// fill-in is what pops in - very visible on a large flat face where the
+		// radiance seed is otherwise perfect). Seed those unsampled newborn
+		// texels to a fully-OPEN distance (maxDistance) instead: any shading
+		// point is within the surfel radius (the gather gates dist < radius ==
+		// maxDistance), so dist <= mean and the moment weight is 1, letting the
+		// seeded radiance show at once. Texels that DID get a depth sample keep
+		// their real moments (accurate occlusion from birth); real samples then
+		// blend in over frames.
 		if (total_depth_weight > WEIGHT_EPSILON || life == 0)
 		{
-			if (life > 0)
+			if (life == 0 && total_depth_weight <= WEIGHT_EPSILON)
+			{
+				result_depth = float2(maxDistance, sqr(maxDistance));
+			}
+			else if (life > 0)
 			{
 				const float2 prev_moment = surfelMomentsTexture[moments_pixel];
 				result_depth = lerp(prev_moment, result_depth, 0.02);

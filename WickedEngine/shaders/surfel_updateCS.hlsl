@@ -46,8 +46,14 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		// radius to that level's cell size. Near surfaces stay at level 0
 		// (solid base radius, so they never break into sub-cell dust); distant
 		// ones get larger surfels at coarser levels. Set before grid insertion
-		// since surfel_cellintersects() reads GetRadius().
-		const uint level = surfel_level(surfel.position);
+		// since surfel_cellintersects() reads GetRadius(). surfel_stable_level
+		// adds hysteresis + a per-surfel dithered threshold so a moving camera
+		// doesn't flip a whole region's level on one frame (which pops); a
+		// newborn (life 0) snaps straight to its distance level as it has no
+		// current one.
+		const uint level = surfel_stable_level(
+			surfel.position, surfel.GetRadius(), surfel_index,
+			surfel_data.GetLife() == 0);
 		surfel.SetRadius(surfel_cellsize(level));
 
 		int3 center_cell = surfel_cell(surfel.position, level);
