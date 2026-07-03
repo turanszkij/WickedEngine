@@ -238,6 +238,7 @@ namespace wi
 		if (displacement_readback_valid[displacement_readback_index])
 		{
 			const Texture& tex = displacementMap_readback[displacement_readback_index];
+			const uint32_t row_pitch = tex.mapped_subresources[0].row_pitch;
 			const uint8_t* bytedata = (const uint8_t*)tex.mapped_data;
 			if (bytedata != nullptr)
 			{
@@ -249,18 +250,10 @@ namespace wi
 				const XMUINT2 pixel_tr = XMUINT2((uint32_t)std::ceil(fpixel.x), (uint32_t)std::floor(fpixel.y));
 				const XMUINT2 pixel_bl = XMUINT2((uint32_t)std::floor(fpixel.x), (uint32_t)std::ceil(fpixel.y));
 				const XMUINT2 pixel_br = XMUINT2((uint32_t)std::ceil(fpixel.x), (uint32_t)std::ceil(fpixel.y));
-				// displacementMap is R16G16B16A16_FLOAT, so decode the half-float
-				// texels to full float before interpolating.
-				const auto load_displacement = [&](const XMUINT2& pixel) {
-					const XMHALF4& packed = ((const XMHALF4*)(bytedata + pixel.y * tex.mapped_subresources[0].row_pitch))[pixel.x];
-					XMFLOAT4 result;
-					XMStoreFloat4(&result, XMLoadHalf4(&packed));
-					return result;
-				};
-				const XMFLOAT4 displacement_tl = load_displacement(pixel_tl);
-				const XMFLOAT4 displacement_tr = load_displacement(pixel_tr);
-				const XMFLOAT4 displacement_bl = load_displacement(pixel_bl);
-				const XMFLOAT4 displacement_br = load_displacement(pixel_br);
+				const XMFLOAT4 displacement_tl = wi::math::unpack_half4(((const XMUINT2*)(bytedata + pixel_tl.y * row_pitch))[pixel_tl.x]);
+				const XMFLOAT4 displacement_tr = wi::math::unpack_half4(((const XMUINT2*)(bytedata + pixel_tr.y * row_pitch))[pixel_tr.x]);
+				const XMFLOAT4 displacement_bl = wi::math::unpack_half4(((const XMUINT2*)(bytedata + pixel_bl.y * row_pitch))[pixel_bl.x]);
+				const XMFLOAT4 displacement_br = wi::math::unpack_half4(((const XMUINT2*)(bytedata + pixel_br.y * row_pitch))[pixel_br.x]);
 				const XMFLOAT4 xxxx = XMFLOAT4(displacement_bl.x, displacement_br.x, displacement_tr.x, displacement_tl.x);
 				const XMFLOAT4 yyyy = XMFLOAT4(displacement_bl.y, displacement_br.y, displacement_tr.y, displacement_tl.y);
 				const XMFLOAT4 zzzz = XMFLOAT4(displacement_bl.z, displacement_br.z, displacement_tr.z, displacement_tl.z);

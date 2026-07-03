@@ -15,7 +15,7 @@ RWTexture2D<float2> output_velocity : register(u0);
 [numthreads(VISIBILITY_BLOCKSIZE * VISIBILITY_BLOCKSIZE, 1, 1)]
 void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
-	const uint2 GTid = remap_lane_8x8(groupIndex);
+	const uint2 GTid = remap_lane_quads(groupIndex);
 
 #ifdef PRIMITIVEID_UNIFORM
 	const uint tile_offset = 0;

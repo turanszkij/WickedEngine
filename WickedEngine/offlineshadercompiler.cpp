@@ -245,7 +245,6 @@ wi::vector<ShaderEntry> shaders = {
 	{"volumetricLight_PointPS", wi::graphics::ShaderStage::PS },
 	{"volumetricLight_DirectionalPS", wi::graphics::ShaderStage::PS },
 	{"volumetriclight_rectanglePS", wi::graphics::ShaderStage::PS },
-	{"voxelPS", wi::graphics::ShaderStage::PS },
 	{"vertexcolorPS", wi::graphics::ShaderStage::PS },
 	{"upsample_bilateralPS", wi::graphics::ShaderStage::PS },
 	{"sunPS", wi::graphics::ShaderStage::PS },
@@ -263,12 +262,9 @@ wi::vector<ShaderEntry> shaders = {
 	{"objectPS_voxelizer", wi::graphics::ShaderStage::PS },
 	{"objectPS_hologram", wi::graphics::ShaderStage::PS },
 	{"objectPS_paintradius", wi::graphics::ShaderStage::PS },
-	{"objectPS_simple", wi::graphics::ShaderStage::PS },
-	{"objectPS_debug", wi::graphics::ShaderStage::PS },
 	{"objectPS_prepass", wi::graphics::ShaderStage::PS },
 	{"objectPS_prepass_alphatest", wi::graphics::ShaderStage::PS },
 	{"objectPS_prepass_depthonly_alphatest", wi::graphics::ShaderStage::PS },
-	{"lightVisualizerPS", wi::graphics::ShaderStage::PS },
 	{"vRectLightPS", wi::graphics::ShaderStage::PS },
 	{"lensFlarePS", wi::graphics::ShaderStage::PS },
 	{"impostorPS", wi::graphics::ShaderStage::PS },
@@ -286,7 +282,6 @@ wi::vector<ShaderEntry> shaders = {
 	{"cubeMapPS", wi::graphics::ShaderStage::PS },
 	{"circlePS", wi::graphics::ShaderStage::PS },
 	{"captureImpostorPS", wi::graphics::ShaderStage::PS },
-	{"ddgi_debugPS", wi::graphics::ShaderStage::PS },
 	{"copyDepthPS", wi::graphics::ShaderStage::PS },
 	{"copyStencilBitPS", wi::graphics::ShaderStage::PS },
 	{"extractStencilBitPS", wi::graphics::ShaderStage::PS },
@@ -565,11 +560,6 @@ int main(int argc, char* argv[])
 	shaders.back().permutations.emplace_back().defines = { "PRIMITIVEID_UNIFORM" };
 	shaders.back().permutations.emplace_back().defines = { "PRIMITIVEID_DIVERGENT" };
 
-	// permutations for visibility_skyCS:
-	shaders.push_back({ "visibility_skyCS", wi::graphics::ShaderStage::CS });
-	shaders.back().permutations.emplace_back().defines = { "PRIMITIVEID_UNIFORM" };
-	shaders.back().permutations.emplace_back().defines = { "PRIMITIVEID_DIVERGENT" };
-
 	// permutations for visibility_surfaceCS:
 	shaders.push_back({ "visibility_surfaceCS", wi::graphics::ShaderStage::CS });
 	for (auto& x : wi::scene::MaterialComponent::shaderTypeDefines)
@@ -580,21 +570,6 @@ int main(int argc, char* argv[])
 	for (auto& x : wi::scene::MaterialComponent::shaderTypeDefines)
 	{
 		shaders.back().permutations.emplace_back().defines = x;
-		shaders.back().permutations.back().defines.push_back("PRIMITIVEID_DIVERGENT");
-	}
-
-	// permutations for visibility_surfaceCS REDUCED:
-	shaders.push_back({ "visibility_surfaceCS", wi::graphics::ShaderStage::CS });
-	for (auto& x : wi::scene::MaterialComponent::shaderTypeDefines)
-	{
-		shaders.back().permutations.emplace_back().defines = x;
-		shaders.back().permutations.back().defines.push_back("REDUCED");
-		shaders.back().permutations.back().defines.push_back("PRIMITIVEID_UNIFORM");
-	}
-	for (auto& x : wi::scene::MaterialComponent::shaderTypeDefines)
-	{
-		shaders.back().permutations.emplace_back().defines = x;
-		shaders.back().permutations.back().defines.push_back("REDUCED");
 		shaders.back().permutations.back().defines.push_back("PRIMITIVEID_DIVERGENT");
 	}
 

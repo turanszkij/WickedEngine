@@ -163,7 +163,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint2 GTid :
 
 	P.xy = unpack_half2(cache_xy[t]);
 	
-	const float3 N = mul((float3x3)GetCamera().view, decode_oct(input_normal[interleaved_pixel].rg));
+	const float3 N = mul((float3x3)GetCamera().view, decode_normal(input_normal[interleaved_pixel].rg));
 	
 	float3 diffuse = 0;
 	float sum = 0;

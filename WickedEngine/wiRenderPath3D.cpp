@@ -703,8 +703,7 @@ namespace wi
 		camera->texture_primitiveID_index = device->GetDescriptorIndex(&rtPrimitiveID, SubresourceType::SRV);
 		camera->texture_depth_index = device->GetDescriptorIndex(&depthBuffer_Copy, SubresourceType::SRV);
 		camera->texture_velocity_index = device->GetDescriptorIndex(&rtVelocity, SubresourceType::SRV);
-		camera->texture_normal_index = device->GetDescriptorIndex(&visibilityResources.texture_normals, SubresourceType::SRV);
-		camera->texture_roughness_index = device->GetDescriptorIndex(&visibilityResources.texture_roughness, SubresourceType::SRV);
+		camera->texture_normal_roughness_index = device->GetDescriptorIndex(&visibilityResources.texture_normal_roughness, SubresourceType::SRV);
 		camera->buffer_entitytiles_index = device->GetDescriptorIndex(&tiledLightResources.entityTiles, SubresourceType::SRV);
 		camera->texture_reflection_index = device->GetDescriptorIndex(&rtReflection, SubresourceType::SRV);
 		camera->texture_reflection_depth_index = device->GetDescriptorIndex(&depthBuffer_Reflection, SubresourceType::SRV);
@@ -747,8 +746,7 @@ namespace wi
 		camera_reflection.texture_primitiveID_index = -1;
 		camera_reflection.texture_depth_index = device->GetDescriptorIndex(&depthBuffer_Reflection, SubresourceType::SRV);
 		camera_reflection.texture_velocity_index = -1;
-		camera_reflection.texture_normal_index = -1;
-		camera_reflection.texture_roughness_index = -1;
+		camera_reflection.texture_normal_roughness_index = -1;
 		camera_reflection.buffer_entitytiles_index = device->GetDescriptorIndex(&tiledLightResources_planarReflection.entityTiles, SubresourceType::SRV);
 		camera_reflection.texture_reflection_index = -1;
 		camera_reflection.texture_reflection_depth_index = -1;
@@ -1032,15 +1030,7 @@ namespace wi
 				cmd
 			);
 
-			if (visibility_shading_in_compute)
-			{
-				wi::renderer::Visibility_Surface(
-					visibilityResources,
-					rtMain,
-					cmd
-				);
-			}
-			else if (
+			if (
 				getSSREnabled() ||
 				getSSGIEnabled() ||
 				getRaytracedReflectionEnabled() ||
@@ -1051,7 +1041,7 @@ namespace wi
 				)
 			{
 				// These post effects require surface normals and/or roughness
-				wi::renderer::Visibility_Surface_Reduced(
+				wi::renderer::Visibility_Surface(
 					visibilityResources,
 					cmd
 				);
@@ -1566,9 +1556,10 @@ namespace wi
 					cmd,
 					drawscene_flags
 				);
-				wi::renderer::DrawSky(*scene, cmd, false); // Note: volumetric cloud sampling disabled in sky shader, instead the postprocess will be used for a high quality effect
 				wi::profiler::EndRange(range); // Opaque Scene
 			}
+
+			wi::renderer::DrawSky(*scene, cmd, false); // Note: volumetric cloud sampling disabled in sky shader, instead the postprocess will be used for a high quality effect
 
 			RenderOutline(cmd);
 
@@ -1876,7 +1867,7 @@ namespace wi
 				ssgiResources,
 				rtSceneCopy,
 				depthBuffer_Copy,
-				visibilityResources.texture_normals,
+				visibilityResources.texture_normal_roughness,
 				rtSSGI,
 				cmd,
 				getSSGIDepthRejection()

@@ -2,25 +2,18 @@
 #include "uvsphere.hlsli"
 #include "ShaderInterop_DDGI.h"
 
-struct VSOut
+void main(uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID, out float4 pos : SV_Position, out half4 col : COLOR)
 {
-	float4 pos : SV_Position;
-	float3 normal : NORMAL;
-	uint probeIndex : PROBEINDEX;
-};
+	pos = UVSPHERE[vertexID];
 
-VSOut main(uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID)
-{
-	VSOut o;
-	o.pos = UVSPHERE[vertexID];
-	o.normal = o.pos.xyz;
-	o.pos.xyz *= ddgi_max_distance() * 0.05;
-	o.probeIndex = instanceID;
+	StructuredBuffer<DDGIProbe> probe_buffer = bindless_structured_ddgi_probes[descriptor_index(GetScene().ddgi.probe_buffer)];
+	DDGIProbe probe = probe_buffer[instanceID];
+	col = float4(SH::Evaluate(probe.radiance.Unpack(), pos.xyz), 1);
 
-	const float3 probeCoord = ddgi_probe_coord(o.probeIndex);
+	const float3 probeCoord = ddgi_probe_coord(instanceID);
 	const float3 probePosition = ddgi_probe_position(probeCoord);
 
-	o.pos.xyz += probePosition;
-	o.pos = mul(GetCamera().view_projection, o.pos);
-	return o;
+	pos.xyz *= ddgi_max_distance() * 0.05;
+	pos.xyz += probePosition;
+	pos = mul(GetCamera().view_projection, pos);
 }

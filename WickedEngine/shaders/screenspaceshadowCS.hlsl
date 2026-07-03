@@ -29,7 +29,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 		return;
 
 	float3 P = reconstruct_position(uv, depth);
-	float3 N = decode_oct(texture_normal[DTid.xy * DOWNSAMPLE]);
+	float3 N = decode_normal(texture_normal_roughness[DTid.xy * DOWNSAMPLE].rg);
 
 	Surface surface;
 	surface.init();

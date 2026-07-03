@@ -928,16 +928,13 @@ void LoadShaders()
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_HOLOGRAM], "objectPS_hologram.cso"); });
 
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_DEBUG], "objectPS_debug.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_PAINTRADIUS], "objectPS_paintradius.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_SIMPLE], "objectPS_simple.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_PREPASS], "objectPS_prepass.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_PREPASS_ALPHATEST], "objectPS_prepass_alphatest.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_PREPASS_DEPTHONLY_ALPHATEST], "objectPS_prepass_depthonly_alphatest.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_IMPOSTOR_PREPASS], "impostorPS_prepass.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_IMPOSTOR_PREPASS_DEPTHONLY], "impostorPS_prepass_depthonly.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_IMPOSTOR_SIMPLE], "impostorPS_simple.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_LIGHTVISUALIZER], "lightVisualizerPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_LIGHTVISUALIZER_RECTLIGHT], "vRectLightPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_VOLUMETRICLIGHT_DIRECTIONAL], "volumetricLight_DirectionalPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_VOLUMETRICLIGHT_POINT], "volumetricLight_PointPS.cso"); });
@@ -956,7 +953,6 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_SHADOW_TRANSPARENT], "shadowPS_transparent.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_SHADOW_WATER], "shadowPS_water.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_VOXELIZER], "objectPS_voxelizer.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_VOXEL], "voxelPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_FORCEFIELDVISUALIZER], "forceFieldVisualizerPS.cso"); });
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_RAYTRACE_DEBUGBVH], "raytrace_debugbvhPS.cso"); });
@@ -964,7 +960,6 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL], "upsample_bilateralPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_POSTPROCESS_OUTLINE], "outlinePS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_LENSFLARE], "lensFlarePS.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_DDGI_DEBUG], "ddgi_debugPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_UPSAMPLE], "volumetricCloud_upsamplePS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_COPY_DEPTH], "copyDepthPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_COPY_STENCIL_BIT], "copyStencilBitPS.cso"); });
@@ -1150,8 +1145,6 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_RESOLVE_DIVERGENT], "visibility_resolveCS.cso", ShaderModel::SM_6_0, { "PRIMITIVEID_DIVERGENT" }); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_RESOLVE_UNIFORM_BINNING], "visibility_resolveCS.cso", ShaderModel::SM_6_0, { "PRIMITIVEID_UNIFORM", "MATERIAL_BINNING"}); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_RESOLVE_DIVERGENT_BINNING], "visibility_resolveCS.cso", ShaderModel::SM_6_0, { "PRIMITIVEID_DIVERGENT", "MATERIAL_BINNING" }); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_SKY_UNIFORM], "visibility_skyCS.cso", ShaderModel::SM_6_0, { "PRIMITIVEID_UNIFORM" }); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_SKY_DIVERGENT], "visibility_skyCS.cso", ShaderModel::SM_6_0, { "PRIMITIVEID_DIVERGENT" }); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_VELOCITY_UNIFORM], "visibility_velocityCS.cso", ShaderModel::SM_6_0, { "PRIMITIVEID_UNIFORM" }); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_VELOCITY_DIVERGENT], "visibility_velocityCS.cso", ShaderModel::SM_6_0, { "PRIMITIVEID_DIVERGENT" }); });
 
@@ -1234,7 +1227,7 @@ void LoadShaders()
 			PipelineStateDesc desc;
 			desc.as = &shaders[ASTYPE_OBJECT];
 			desc.ms = &shaders[MSTYPE_OBJECT_SIMPLE];
-			desc.ps = &shaders[PSTYPE_OBJECT_SIMPLE]; // this is created in a different thread, so wait for the ctx before getting here
+			desc.ps = &shaders[PSTYPE_VERTEXCOLOR]; // this is created in a different thread, so wait for the ctx before getting here
 			desc.rs = &rasterizers[RSTYPE_WIRE];
 			desc.bs = &blendStates[BSTYPE_OPAQUE];
 			desc.dss = &depthStencils[DSSTYPE_DEFAULT];
@@ -1282,33 +1275,6 @@ void LoadShaders()
 	wi::jobsystem::Dispatch(ctx, MaterialComponent::SHADERTYPE_COUNT, 1, [](wi::jobsystem::JobArgs args) {
 		{
 			auto defines = MaterialComponent::shaderTypeDefines[args.jobIndex];
-			defines.push_back("REDUCED");
-			defines.push_back("PRIMITIVEID_UNIFORM");
-			LoadShader(
-				ShaderStage::CS,
-				shaders[CSTYPE_VISIBILITY_SURFACE_REDUCED_UNIFORM_PERMUTATION_BEGIN + args.jobIndex],
-				"visibility_surfaceCS.cso",
-				ShaderModel::SM_6_0,
-				defines // permutation defines
-			);
-		}
-		{
-			auto defines = MaterialComponent::shaderTypeDefines[args.jobIndex];
-			defines.push_back("REDUCED");
-			defines.push_back("PRIMITIVEID_DIVERGENT");
-			LoadShader(
-				ShaderStage::CS,
-				shaders[CSTYPE_VISIBILITY_SURFACE_REDUCED_DIVERGENT_PERMUTATION_BEGIN + args.jobIndex],
-				"visibility_surfaceCS.cso",
-				ShaderModel::SM_6_0,
-				defines // permutation defines
-			);
-		}
-	});
-
-	wi::jobsystem::Dispatch(ctx, MaterialComponent::SHADERTYPE_COUNT, 1, [](wi::jobsystem::JobArgs args) {
-		{
-			auto defines = MaterialComponent::shaderTypeDefines[args.jobIndex];
 			defines.push_back("PRIMITIVEID_UNIFORM");
 			LoadShader(
 				ShaderStage::CS,
@@ -1334,7 +1300,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
 		PipelineStateDesc desc;
 		desc.vs = &shaders[VSTYPE_OBJECT_SIMPLE];
-		desc.ps = &shaders[PSTYPE_OBJECT_SIMPLE];
+		desc.ps = &shaders[PSTYPE_VERTEXCOLOR];
 		desc.rs = &rasterizers[RSTYPE_WIRE];
 		desc.bs = &blendStates[BSTYPE_OPAQUE];
 		desc.dss = &depthStencils[DSSTYPE_DEFAULT];
@@ -1438,7 +1404,7 @@ void LoadShaders()
 		{
 
 			desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
-			desc.ps = &shaders[PSTYPE_LIGHTVISUALIZER];
+			desc.ps = &shaders[PSTYPE_VERTEXCOLOR];
 			desc.pt = PrimitiveTopology::TRIANGLELIST;
 			desc.il = nullptr;
 
@@ -1690,7 +1656,7 @@ void LoadShaders()
 			break;
 		case DEBUGRENDERING_DDGI:
 			desc.vs = &shaders[VSTYPE_DDGI_DEBUG];
-			desc.ps = &shaders[PSTYPE_DDGI_DEBUG];
+			desc.ps = &shaders[PSTYPE_VERTEXCOLOR];
 			desc.dss = &depthStencils[DSSTYPE_DEFAULT];
 			desc.rs = &rasterizers[RSTYPE_FRONT];
 			desc.bs = &blendStates[BSTYPE_OPAQUE];
@@ -1779,7 +1745,7 @@ void LoadShaders()
 			break;
 		case DEBUGRENDERING_EMITTER:
 			desc.vs = &shaders[VSTYPE_OBJECT_DEBUG];
-			desc.ps = &shaders[PSTYPE_OBJECT_DEBUG];
+			desc.ps = &shaders[PSTYPE_VERTEXCOLOR];
 			desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
 			desc.rs = &rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
 			desc.bs = &blendStates[BSTYPE_OPAQUE];
@@ -1795,7 +1761,7 @@ void LoadShaders()
 			break;
 		case DEBUGRENDERING_VOXEL:
 			desc.vs = &shaders[VSTYPE_VOXEL];
-			desc.ps = &shaders[PSTYPE_VOXEL];
+			desc.ps = &shaders[PSTYPE_VERTEXCOLOR];
 			desc.gs = &shaders[GSTYPE_VOXEL];
 			desc.dss = &depthStencils[DSSTYPE_DEFAULT];
 			desc.rs = &rasterizers[RSTYPE_BACK];
@@ -5021,6 +4987,7 @@ void UpdatePerFrameData(
 				if (cullsphere_required)
 				{
 					Sphere sphere = collider.capsule.getSphere();
+					cullsphere.center = sphere.center;
 					cullsphere.radius = sphere.radius * CAPSULE_SHADOW_BOLDEN + CAPSULE_SHADOW_AFFECTION_RANGE;
 				}
 				break;
@@ -5752,21 +5719,32 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 				mesh.BLAS_state = MeshComponent::BLAS_STATE_COMPLETE;
 			}
 
+			// Rebuild (rather than refit) the grass BLAS while the camera
+			// moves: fast movement sweeps many strands across the cull boundary
+			// each frame, faster than refits can absorb, which would otherwise
+			// degrade the structure until the next periodic rebuild. Rebuilding
+			// once the camera has moved past a threshold keeps the BVH fresh
+			// during motion (every few frames when moving fast) while staying
+			// cheap when the view is settled.
+			static XMFLOAT3 blas_last_rebuild_eye = XMFLOAT3(0, 0, 0);
+			constexpr float blas_rebuild_move_threshold = 1.0f;
+			const bool motion_rebuild =
+				wi::math::Distance(scene.camera.Eye, blas_last_rebuild_eye) >
+				blas_rebuild_move_threshold;
+
+			if (motion_rebuild)
+			{
+				blas_last_rebuild_eye = scene.camera.Eye;
+			}
+
 			for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
 			{
 				const wi::HairParticleSystem& hair = scene.hairs[i];
 
 				if (hair.meshID != INVALID_ENTITY && hair.BLAS.IsValid())
 				{
-					if (hair.must_rebuild_blas)
-					{
-						device->BuildRaytracingAccelerationStructure(&hair.BLAS, cmd, nullptr);
-						hair.must_rebuild_blas = false;
-					}
-					else
-					{
-						device->BuildRaytracingAccelerationStructure(&hair.BLAS, cmd, &hair.BLAS);
-					}
+					device->BuildRaytracingAccelerationStructure(&hair.BLAS, cmd, nullptr);
+					hair.must_rebuild_blas = false;
 				}
 			}
 
@@ -9357,11 +9335,15 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 		const XMUINT2 required_tilecount = GetEntityCullingTileCount(XMUINT2(probe.texture.desc.width, probe.texture.desc.width));
 		static TiledLightResources tiledlights;
-		if (tiledlights.tileCount.x < required_tilecount.x || tiledlights.tileCount.y < required_tilecount.y)
+		int tilebuffer_descriptor = -1;
+		if (valid_probe)
 		{
-			CreateTiledLightResources(tiledlights, XMUINT2(probe.texture.desc.width, probe.texture.desc.width), 6); // tile buffer created for 6 cubemap faces
+			if (tiledlights.tileCount.x < required_tilecount.x || tiledlights.tileCount.y < required_tilecount.y)
+			{
+				CreateTiledLightResources(tiledlights, XMUINT2(probe.texture.desc.width, probe.texture.desc.width), 6); // tile buffer created for 6 cubemap faces
+			}
+			tilebuffer_descriptor = device->GetDescriptorIndex(&tiledlights.entityTiles, SubresourceType::SRV);
 		}
-		const int tilebuffer_descripotor = device->GetDescriptorIndex(&tiledlights.entityTiles, SubresourceType::SRV);
 
 		CameraCB cb;
 		cb.init();
@@ -9402,17 +9384,23 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			XMStoreFloat4(&shadercam.frustum_corners.cornersFAR[2], XMVector3TransformCoord(XMVectorSet(-1, -1, 0, 1), invVP));
 			XMStoreFloat4(&shadercam.frustum_corners.cornersFAR[3], XMVector3TransformCoord(XMVectorSet(1, -1, 0, 1), invVP));
 
-			// Light culling resources for every cubemap face:
-			//	Note: same tile buffer will be reused for each face, but with different offsets
-			shadercam.buffer_entitytiles_index = tilebuffer_descripotor;
-			shadercam.entity_culling_tilecount = required_tilecount;
-			shadercam.entity_culling_tile_bucket_count_flat = shadercam.entity_culling_tilecount.x * shadercam.entity_culling_tilecount.y * SHADER_ENTITY_TILE_BUCKET_COUNT;
-			shadercam.entity_culling_tile_offset = shadercam.entity_culling_tile_bucket_count_flat * 2 * i; // per-face offset (*2 because opaque and transparent)
-			shadercam.entity_culling_tile_offset_transparent = shadercam.entity_culling_tile_offset + shadercam.entity_culling_tile_bucket_count_flat;
+			if (valid_probe)
+			{
+				// Light culling resources for every cubemap face:
+				//	Note: same tile buffer will be reused for each face, but with different offsets
+				shadercam.buffer_entitytiles_index = tilebuffer_descriptor;
+				shadercam.entity_culling_tilecount = required_tilecount;
+				shadercam.entity_culling_tile_bucket_count_flat = shadercam.entity_culling_tilecount.x * shadercam.entity_culling_tilecount.y * SHADER_ENTITY_TILE_BUCKET_COUNT;
+				shadercam.entity_culling_tile_offset = shadercam.entity_culling_tile_bucket_count_flat * 2 * i; // per-face offset (*2 because opaque and transparent)
+				shadercam.entity_culling_tile_offset_transparent = shadercam.entity_culling_tile_offset + shadercam.entity_culling_tile_bucket_count_flat;
+			}
 		}
 		device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 
-		ComputeTiledLightCulling(tiledlights, vis, Texture(), cmd);
+		if (valid_probe)
+		{
+			ComputeTiledLightCulling(tiledlights, vis, Texture(), cmd);
+		}
 
 		thread_local wi::vector<const wi::GaussianSplatModel*> visible_gaussian_models;
 		visible_gaussian_models.clear();
@@ -11530,8 +11518,7 @@ void BindCameraCB(
 	shadercam.texture_primitiveID_index = camera.texture_primitiveID_index;
 	shadercam.texture_depth_index = camera.texture_depth_index;
 	shadercam.texture_velocity_index = camera.texture_velocity_index;
-	shadercam.texture_normal_index = camera.texture_normal_index;
-	shadercam.texture_roughness_index = camera.texture_roughness_index;
+	shadercam.texture_normal_roughness_index = camera.texture_normal_roughness_index;
 	shadercam.buffer_entitytiles_index = camera.buffer_entitytiles_index;
 	shadercam.texture_reflection_index = camera.texture_reflection_index;
 	shadercam.texture_reflection_depth_index = camera.texture_reflection_depth_index;
@@ -11809,7 +11796,7 @@ void CreateVisibilityResources(VisibilityResources& res, XMUINT2 resolution)
 	{
 		GPUBufferDesc desc;
 		desc.stride = sizeof(IndirectDispatchArgs);
-		desc.size = desc.stride * (MaterialComponent::SHADERTYPE_COUNT + 1); // +1 for sky
+		desc.size = desc.stride * MaterialComponent::SHADERTYPE_COUNT;
 		desc.size *= 2; // uniform, divergent
 		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 		desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED | ResourceMiscFlag::INDIRECT_ARGS;
@@ -11818,7 +11805,7 @@ void CreateVisibilityResources(VisibilityResources& res, XMUINT2 resolution)
 		device->SetName(&res.bins, "visibility.bins");
 
 		desc.stride = sizeof(VisibilityTile);
-		desc.size = desc.stride * res.tile_count.x * res.tile_count.y * (MaterialComponent::SHADERTYPE_COUNT + 1); // +1 for sky
+		desc.size = desc.stride * res.tile_count.x * res.tile_count.y * MaterialComponent::SHADERTYPE_COUNT;
 		desc.size *= 2; // uniform, divergent
 		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 		desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
@@ -11833,19 +11820,9 @@ void CreateVisibilityResources(VisibilityResources& res, XMUINT2 resolution)
 		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 		desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 
-		desc.format = Format::R16G16_FLOAT;
-		device->CreateTexture(&desc, nullptr, &res.texture_normals);
-		device->SetName(&res.texture_normals, "visibility.texture_normals");
-
-		desc.format = Format::R8_UNORM;
-		device->CreateTexture(&desc, nullptr, &res.texture_roughness);
-		device->SetName(&res.texture_roughness, "visibility.texture_roughness");
-
-		desc.format = Format::R32G32B32A32_UINT;
-		device->CreateTexture(&desc, nullptr, &res.texture_payload_0);
-		device->SetName(&res.texture_payload_0, "visibility.texture_payload_0");
-		device->CreateTexture(&desc, nullptr, &res.texture_payload_1);
-		device->SetName(&res.texture_payload_1, "visibility.texture_payload_1");
+		desc.format = Format::R11G11B10_FLOAT;
+		device->CreateTexture(&desc, nullptr, &res.texture_normal_roughness);
+		device->SetName(&res.texture_normal_roughness, "visibility.texture_normal_roughness");
 	}
 }
 void Visibility_Prepare(
@@ -11995,7 +11972,6 @@ void Visibility_Prepare(
 }
 void Visibility_Surface(
 	const VisibilityResources& res,
-	const Texture& output,
 	CommandList cmd
 )
 {
@@ -12004,25 +11980,12 @@ void Visibility_Surface(
 
 	BindCommonResources(cmd);
 
-	// First, do a bunch of resource discards to initialize texture metadata:
-	PushBarrier(GPUBarrier::Image(&output, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
-	PushBarrier(GPUBarrier::Image(&res.texture_normals, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
-	PushBarrier(GPUBarrier::Image(&res.texture_roughness, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
-	PushBarrier(GPUBarrier::Image(&res.texture_payload_0, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
-	PushBarrier(GPUBarrier::Image(&res.texture_payload_1, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
-	FlushBarriers(cmd);
-
-	// normals and roughness need to be cleared, because sky doesn't write them and they can be sampled and no invalid data can remain when sampling:
-	device->ClearUAV(&res.texture_normals, 0, cmd);
-	device->ClearUAV(&res.texture_roughness, 0, cmd);
-	device->Barrier(cmd);
+	device->Barrier(GPUBarrier::Image(&res.texture_normal_roughness, res.texture_normal_roughness.desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
+	device->ClearUAV(&res.texture_normal_roughness, 0, cmd);
+	device->Barrier(GPUBarrier::Memory(&res.texture_normal_roughness), cmd);
 
 	device->BindResource(&res.binned_tiles, 0, cmd);
-	device->BindUAV(&output, 0, cmd);
-	device->BindUAV(&res.texture_normals, 1, cmd);
-	device->BindUAV(&res.texture_roughness, 2, cmd);
-	device->BindUAV(&res.texture_payload_0, 3, cmd);
-	device->BindUAV(&res.texture_payload_1, 4, cmd);
+	device->BindUAV(&res.texture_normal_roughness, 0, cmd);
 
 	const uint visibility_tilecount_flat = res.tile_count.x * res.tile_count.y;
 	uint visibility_tile_offset = 0;
@@ -12032,90 +11995,9 @@ void Visibility_Surface(
 	device->EventBegin("Surface parameters UNIFORM", cmd);
 	for (uint i = 0; i < MaterialComponent::SHADERTYPE_COUNT; ++i)
 	{
-		device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SURFACE_UNIFORM_PERMUTATION_BEGIN + i], cmd);
-		device->PushConstants(&visibility_tile_offset, sizeof(visibility_tile_offset), cmd);
-		device->DispatchIndirect(&res.bins, bins_offset, cmd);
-		visibility_tile_offset += visibility_tilecount_flat;
-		bins_offset += sizeof(IndirectDispatchArgs);
-	}
-	device->EventEnd(cmd);
-
-	// sky dispatch:
-	{
-		device->EventBegin("Sky UNIFORM", cmd);
-		device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SKY_UNIFORM], cmd);
-		device->PushConstants(&visibility_tile_offset, sizeof(visibility_tile_offset), cmd);
-		device->DispatchIndirect(&res.bins, bins_offset, cmd);
-		visibility_tile_offset += visibility_tilecount_flat;
-		bins_offset += sizeof(IndirectDispatchArgs);
-		device->EventEnd(cmd);
-	}
-
-	device->EventBegin("Surface parameters DIVERGENT", cmd);
-	for (uint i = 0; i < MaterialComponent::SHADERTYPE_COUNT; ++i)
-	{
-		device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SURFACE_DIVERGENT_PERMUTATION_BEGIN + i], cmd);
-		device->PushConstants(&visibility_tile_offset, sizeof(visibility_tile_offset), cmd);
-		device->DispatchIndirect(&res.bins, bins_offset, cmd);
-		visibility_tile_offset += visibility_tilecount_flat;
-		bins_offset += sizeof(IndirectDispatchArgs);
-	}
-	device->EventEnd(cmd);
-
-	// sky dispatch:
-	{
-		device->EventBegin("Sky DIVERGENT", cmd);
-		device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SKY_DIVERGENT], cmd);
-		device->PushConstants(&visibility_tile_offset, sizeof(visibility_tile_offset), cmd);
-		device->DispatchIndirect(&res.bins, bins_offset, cmd);
-		visibility_tile_offset += visibility_tilecount_flat;
-		bins_offset += sizeof(IndirectDispatchArgs);
-		device->EventEnd(cmd);
-	}
-
-	// Ending barriers:
-	//	These resources will be used by other post processing effects
-	PushBarrier(GPUBarrier::Image(&res.texture_normals, ResourceState::UNORDERED_ACCESS, res.texture_normals.desc.layout));
-	PushBarrier(GPUBarrier::Image(&res.texture_roughness, ResourceState::UNORDERED_ACCESS, res.texture_roughness.desc.layout));
-	FlushBarriers(cmd);
-
-	wi::profiler::EndRange(range);
-	device->EventEnd(cmd);
-}
-void Visibility_Surface_Reduced(
-	const VisibilityResources& res,
-	CommandList cmd
-)
-{
-	device->EventBegin("Visibility_Surface_Reduced", cmd);
-	auto range = wi::profiler::BeginRangeGPU("Visibility_Surface_Reduced", cmd);
-
-	BindCommonResources(cmd);
-
-	// normals and roughness need to be cleared, because sky doesn't write them and they can be sampled and no invalid data can remain when sampling:
-	PushBarrier(GPUBarrier::Image(&res.texture_normals, res.texture_normals.desc.layout, ResourceState::UNORDERED_ACCESS));
-	PushBarrier(GPUBarrier::Image(&res.texture_roughness, res.texture_roughness.desc.layout, ResourceState::UNORDERED_ACCESS));
-	FlushBarriers(cmd);
-
-	device->ClearUAV(&res.texture_normals, 0, cmd);
-	device->ClearUAV(&res.texture_roughness, 0, cmd);
-	device->Barrier(cmd);
-
-	device->BindResource(&res.binned_tiles, 0, cmd);
-	device->BindUAV(&res.texture_normals, 1, cmd);
-	device->BindUAV(&res.texture_roughness, 2, cmd);
-
-	const uint visibility_tilecount_flat = res.tile_count.x * res.tile_count.y;
-	uint visibility_tile_offset = 0;
-	uint64_t bins_offset = 0;
-
-	// surface dispatches per material type:
-	device->EventBegin("Surface parameters UNIFORM", cmd);
-	for (uint i = 0; i < MaterialComponent::SHADERTYPE_COUNT; ++i)
-	{
-		if (i != MaterialComponent::SHADERTYPE_UNLIT) // this won't need surface parameter write out
+		if (i != MaterialComponent::SHADERTYPE_UNLIT && i != MaterialComponent::SHADERTYPE_INTERIORMAPPING) // these shaders are special, they don't use normals or roughness based post processing
 		{
-			device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SURFACE_REDUCED_UNIFORM_PERMUTATION_BEGIN + i], cmd);
+			device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SURFACE_UNIFORM_PERMUTATION_BEGIN + i], cmd);
 			device->PushConstants(&visibility_tile_offset, sizeof(visibility_tile_offset), cmd);
 			device->DispatchIndirect(&res.bins, bins_offset, cmd);
 		}
@@ -12124,15 +12006,12 @@ void Visibility_Surface_Reduced(
 	}
 	device->EventEnd(cmd);
 
-	visibility_tile_offset += visibility_tilecount_flat; // sky
-	bins_offset += sizeof(IndirectDispatchArgs); // sky
-
 	device->EventBegin("Surface parameters DIVERGENT", cmd);
 	for (uint i = 0; i < MaterialComponent::SHADERTYPE_COUNT; ++i)
 	{
-		if (i != MaterialComponent::SHADERTYPE_UNLIT) // this won't need surface parameter write out
+		if (i != MaterialComponent::SHADERTYPE_UNLIT && i != MaterialComponent::SHADERTYPE_INTERIORMAPPING) // these shaders are special, they don't use normals or roughness based post processing
 		{
-			device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SURFACE_REDUCED_DIVERGENT_PERMUTATION_BEGIN + i], cmd);
+			device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SURFACE_DIVERGENT_PERMUTATION_BEGIN + i], cmd);
 			device->PushConstants(&visibility_tile_offset, sizeof(visibility_tile_offset), cmd);
 			device->DispatchIndirect(&res.bins, bins_offset, cmd);
 		}
@@ -12141,14 +12020,9 @@ void Visibility_Surface_Reduced(
 	}
 	device->EventEnd(cmd);
 
-	visibility_tile_offset += visibility_tilecount_flat; // sky
-	bins_offset += sizeof(IndirectDispatchArgs); // sky
-
 	// Ending barriers:
 	//	These resources will be used by other post processing effects
-	PushBarrier(GPUBarrier::Image(&res.texture_normals, ResourceState::UNORDERED_ACCESS, res.texture_normals.desc.layout));
-	PushBarrier(GPUBarrier::Image(&res.texture_roughness, ResourceState::UNORDERED_ACCESS, res.texture_roughness.desc.layout));
-	FlushBarriers(cmd);
+	device->Barrier(GPUBarrier::Image(&res.texture_normal_roughness, ResourceState::UNORDERED_ACCESS, res.texture_normal_roughness.desc.layout), cmd);
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);
@@ -12162,16 +12036,12 @@ void Visibility_Shade(
 	device->EventBegin("Visibility_Shade", cmd);
 	auto range = wi::profiler::BeginRangeGPU("Visibility_Shade", cmd);
 
-	BindCommonResources(cmd);
-
-	PushBarrier(GPUBarrier::Image(&res.texture_payload_0, ResourceState::UNORDERED_ACCESS, res.texture_payload_0.desc.layout));
-	PushBarrier(GPUBarrier::Image(&res.texture_payload_1, ResourceState::UNORDERED_ACCESS, res.texture_payload_1.desc.layout));
+	PushBarrier(GPUBarrier::Image(&output, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
 	FlushBarriers(cmd);
 
+	BindCommonResources(cmd);
+
 	device->BindResource(&res.binned_tiles, 0, cmd);
-	device->BindResource(&res.texture_normals, 1, cmd);
-	device->BindResource(&res.texture_payload_0, 2, cmd);
-	device->BindResource(&res.texture_payload_1, 3, cmd);
 	device->BindUAV(&output, 0, cmd);
 
 	const uint visibility_tilecount_flat = res.tile_count.x * res.tile_count.y;
@@ -12182,36 +12052,24 @@ void Visibility_Shade(
 	device->EventBegin("Shading UNIFORM", cmd);
 	for (uint i = 0; i < MaterialComponent::SHADERTYPE_COUNT; ++i)
 	{
-		if (i != MaterialComponent::SHADERTYPE_UNLIT && i != MaterialComponent::SHADERTYPE_INTERIORMAPPING) // these shaders are special, already written out their final color in the surface shader
-		{
-			device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SHADE_UNIFORM_PERMUTATION_BEGIN + i], cmd);
-			device->PushConstants(&visibility_tile_offset, sizeof(visibility_tile_offset), cmd);
-			device->DispatchIndirect(&res.bins, bins_offset, cmd);
-		}
+		device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SHADE_UNIFORM_PERMUTATION_BEGIN + i], cmd);
+		device->PushConstants(&visibility_tile_offset, sizeof(visibility_tile_offset), cmd);
+		device->DispatchIndirect(&res.bins, bins_offset, cmd);
 		visibility_tile_offset += visibility_tilecount_flat;
 		bins_offset += sizeof(IndirectDispatchArgs);
 	}
 	device->EventEnd(cmd);
-
-	visibility_tile_offset += visibility_tilecount_flat; // sky
-	bins_offset += sizeof(IndirectDispatchArgs); // sky
 
 	device->EventBegin("Shading DIVERGENT", cmd);
 	for (uint i = 0; i < MaterialComponent::SHADERTYPE_COUNT; ++i)
 	{
-		if (i != MaterialComponent::SHADERTYPE_UNLIT && i != MaterialComponent::SHADERTYPE_INTERIORMAPPING) // these shaders are special, already written out their final color in the surface shader
-		{
-			device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SHADE_DIVERGENT_PERMUTATION_BEGIN + i], cmd);
-			device->PushConstants(&visibility_tile_offset, sizeof(visibility_tile_offset), cmd);
-			device->DispatchIndirect(&res.bins, bins_offset, cmd);
-		}
+		device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SHADE_DIVERGENT_PERMUTATION_BEGIN + i], cmd);
+		device->PushConstants(&visibility_tile_offset, sizeof(visibility_tile_offset), cmd);
+		device->DispatchIndirect(&res.bins, bins_offset, cmd);
 		visibility_tile_offset += visibility_tilecount_flat;
 		bins_offset += sizeof(IndirectDispatchArgs);
 	}
 	device->EventEnd(cmd);
-
-	visibility_tile_offset += visibility_tilecount_flat; // sky
-	bins_offset += sizeof(IndirectDispatchArgs); // sky
 
 	PushBarrier(GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout));
 	FlushBarriers(cmd);
@@ -14167,7 +14025,10 @@ void Postprocess_RTDiffuse(
 	rtdiffuse_range = range;
 	rtdiffuse_frame = (float)res.frame;
 	rtdiffuse_downscalefactor = (float)quality_downscalefactor(res.quality);
-	uint8_t instanceInclusionMask = 0xFF;
+	// Diffuse GI rays skip instances that opt out via this bit (e.g. hair/grass,
+	// whose dense alpha-tested geometry is very expensive to traverse and
+	// contributes little to low-frequency diffuse GI):
+	uint8_t instanceInclusionMask = raytracing_inclusion_mask_diffuse;
 	std::memcpy(&postprocess.params1.x, &instanceInclusionMask, sizeof(instanceInclusionMask));
 
 	{

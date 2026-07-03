@@ -266,7 +266,44 @@ half3 ddgi_sample_irradiance(in float3 P, in half3 N, inout half3 out_dominant_l
 	{
 		sum_sh = SH::Multiply(sum_sh, rcp(sum_weight));
 
-		half3 net_irradiance = SH::CalculateIrradiance(sum_sh, N) / PI;
+		// Evaluate the diffuse irradiance in full (float) precision.
+		//
+		// The SH helpers run in half precision, and CalculateIrradiance()
+		// convolves the radiance with a cosine lobe - a multiply by PI on the
+		// L0 band. For a bright probe near a light source the L0 coefficient is
+		// already large, so that multiply overflows half to +Inf. That Inf is
+		// then fed back into the probes by the raytrace pass, where the mean
+		// estimator cannot recover from it, and it spreads across the whole
+		// probe field, blowing the scene out to white. Doing the
+		// convolve+evaluate in float keeps the full dynamic range without
+		// overflowing (so the GI brightness does not have to be clamped, which
+		// would flatten it).
+		//
+		// This is exactly SH::CalculateIrradiance(sum_sh, N) / PI, inlined in
+		// float: convolve with the cosine lobe (CosineA0/CosineA1) then
+		// evaluate in direction N (BasisL0/BasisL1).
+		half3 net_irradiance;
+		{
+			const float cosine_a0 = PI;               // CosineA0
+			const float cosine_a1 = (2.0 * PI) / 3.0; // CosineA1
+			const float basis_l0 = 1.0 / (2.0 * sqrt(PI));
+			const float basis_l1 = sqrt(3.0) / (2.0 * sqrt(PI));
+			const float3 nrm = (float3)N;
+			const float3 irradiance =
+				basis_l0 * cosine_a0 * (float3)sum_sh.C[0] +
+				basis_l1 * cosine_a1 * nrm.y * (float3)sum_sh.C[1] +
+				basis_l1 * cosine_a1 * nrm.z * (float3)sum_sh.C[2] +
+				basis_l1 * cosine_a1 * nrm.x * (float3)sum_sh.C[3];
+			net_irradiance = (half3)clamp(irradiance / PI, 0.0, MEDIUMP_FLT_MAX);
+		}
+
+		// The dominant-light extraction still uses the half-precision SH path.
+		// Clamp the averaged SH so its dot products stay finite for very bright
+		// probes; this only affects the directional specular approximation, not
+		// the diffuse irradiance computed above. 40000 keeps DotProduct finite.
+		[unroll]
+		for (uint sh_coeff = 0; sh_coeff < SH::L1_RGB::NumCoefficients; ++sh_coeff)
+			sum_sh.C[sh_coeff] = clamp(sum_sh.C[sh_coeff], -40000.0, 40000.0);
 
 		SH::ApproximateDirectionalLight(sum_sh, out_dominant_lightdir, out_dominant_lightcolor);
 

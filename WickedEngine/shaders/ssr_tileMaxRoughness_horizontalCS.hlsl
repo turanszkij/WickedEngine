@@ -30,7 +30,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			}
 			else
 			{
-				float roughness = texture_roughness[pixel];
+				float roughness = texture_normal_roughness[pixel].b;
 				maxRoughness = max(maxRoughness, roughness);
 				minRoughness = min(minRoughness, roughness);
 			}

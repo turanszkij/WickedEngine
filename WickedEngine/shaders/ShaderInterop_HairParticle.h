@@ -19,6 +19,7 @@ enum HAIR_FLAGS
 	HAIR_FLAG_REGENERATE_FRAME = 1 << 0,
 	HAIR_FLAG_UNORM_POS = 1 << 1,
 	HAIR_FLAG_CAMERA_BEND = 1 << 2,
+	HAIR_FLAG_RAYTRACED = 1 << 3, // Set when the system has a valid BLAS, so the raytracing position buffer is consumed
 };
 
 struct HairParticleAtlasRect
