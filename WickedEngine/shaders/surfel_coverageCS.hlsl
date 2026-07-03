@@ -128,14 +128,23 @@ groupshared uint GroupBaseCellMax;    // max (== min => the group shares one cel
 groupshared uint GroupBaseCellOffset; // cellBuffer offset of the shared base cell
 groupshared uint GroupLdsCount;       // surfels actually cached = min(count, CAP)
 groupshared uint GroupLoadNext;       // atomic cursor for the cooperative fill
-groupshared uint GroupNeedsRefresh;   // any pixel with off-screen reprojection forces a full-gather refresh of the whole group
+// Per-subtile refresh vote. The gather-skip decision is made per 8x8 SUBTILE
+// (COVERAGE_SUBTILE_COUNT of them per group), not per whole 16x16 group, so a
+// stable region can skip while only the subtiles that need it (disocclusion,
+// near geometry, this frame's rotating set) pay for a full gather. Any pixel in
+// a subtile that reprojects off-screen / near forces that subtile (only) to
+// refresh.
+groupshared uint GroupSubtileRefresh[COVERAGE_SUBTILE_COUNT];
 
-// True if this group does a full gather this frame. A rotating 1/PERIOD of the
-// groups refresh each frame, scheduled by a per-group hash so the refresh set
-// sweeps the whole screen over SURFEL_COVERAGE_REFRESH_PERIOD frames.
-bool surfel_coverage_group_refresh(uint2 gid, uint frame)
+// True if this SUBTILE does a full gather this frame. A rotating 1/PERIOD of
+// the subtiles refresh each frame, scheduled by a per-subtile hash so the
+// refresh set sweeps the whole screen over SURFEL_COVERAGE_REFRESH_PERIOD
+// frames. Keyed on the subtile's global id (group id * subtiles-per-axis +
+// local subtile), so neighbouring subtiles refresh on different frames rather
+// than in lockstep.
+bool surfel_coverage_subtile_refresh(uint2 subtile_gid, uint frame)
 {
-	const uint h = (gid.x * 73856093u) ^ (gid.y * 19349663u);
+	const uint h = (subtile_gid.x * 73856093u) ^ (subtile_gid.y * 19349663u);
 	return ((h + frame) % SURFEL_COVERAGE_REFRESH_PERIOD) == 0u;
 }
 
@@ -233,6 +242,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	if (groupIndex < COVERAGE_SUBTILE_COUNT)
 	{
 		GroupMinSurfelCount[groupIndex] = ~0;
+		GroupSubtileRefresh[groupIndex] = 0;
 	}
 	if (groupIndex == 0)
 	{
@@ -240,7 +250,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		GroupBaseCellMax = 0;
 		GroupLdsCount = 0;
 		GroupLoadNext = 0;
-		GroupNeedsRefresh = 0;
 	}
 	GroupMemoryBarrierWithGroupSync();
 
@@ -258,15 +267,20 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	}
 
 	// Temporal gather skip (the coverage speedup). Reproject last frame's GI; a
-	// group whose reprojection is fully on-screen AND isn't in this frame's
+	// SUBTILE whose reprojection is fully on-screen AND isn't in this frame's
 	// rotating refresh set reuses that history and skips the expensive gather +
-	// spawn entirely. The decision is group-UNIFORM (all threads read the same
-	// schedule + groupshared vote), so the cooperative gather and its barriers
-	// below never diverge. Any pixel reprojecting off-screen forces the whole
-	// group to refresh (screen-edge disocclusion); debug views always refresh
-	// so they stay correct. Skipped groups don't mark their surfels seen, but
+	// spawn entirely. The decision is per 8x8 subtile and subtile-UNIFORM
+	// (every thread in a subtile reads the same schedule + the same groupshared
+	// vote slot), so a skipped subtile's threads all terminate here TOGETHER -
+	// the same early-return the sky/depth==0 case above already does, so the
+	// cooperative base-cell vote and its barriers below (reached only by the
+	// surviving, refreshing threads) don't gain any new divergence. Skipped
+	// subtiles return BEFORE the base-cell vote, so only refreshing pixels vote
+	// and gather. Any pixel reprojecting off-screen forces its OWN subtile
+	// (only) to refresh (screen-edge disocclusion); debug views always refresh
+	// so they stay correct. Skipped subtiles don't mark their surfels seen, but
 	// the refresh period is under the recycler's unseen window, so a surfel is
-	// re-seen on its group's cadence frames before it could be evicted.
+	// re-seen on its subtile's cadence frames before it could be evicted.
 	bool reproj_valid;
 	const float3 reproj = reproject_history(DTid.xy, reproj_valid);
 	// Adaptive skip: near geometry (high screen parallax) always refreshes -
@@ -275,12 +289,16 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	const bool near_pixel =
 		compute_lineardepth(depth) < SURFEL_COVERAGE_SKIP_MIN_DEPTH;
 	if (!reproj_valid || near_pixel)
-		InterlockedOr(GroupNeedsRefresh, 1u);
+		InterlockedOr(GroupSubtileRefresh[subtile], 1u);
 	GroupMemoryBarrierWithGroupSync();
+	// Subtile's global id (group id * subtiles-per-axis + local subtile coord),
+	// so the rotating schedule staggers neighbouring subtiles across frames.
+	const uint2 subtile_gid = Gid.xy * COVERAGE_SUBTILES_1D +
+		uint2(GTid.x / COVERAGE_SUBTILE_SIZE, GTid.y / COVERAGE_SUBTILE_SIZE);
 	const bool refresh =
 		push.debug != SURFEL_DEBUG_NONE ||
-		surfel_coverage_group_refresh(Gid.xy, GetFrame().frame_count) ||
-		GroupNeedsRefresh != 0u;
+		surfel_coverage_subtile_refresh(subtile_gid, GetFrame().frame_count) ||
+		GroupSubtileRefresh[subtile] != 0u;
 	if (!refresh)
 	{
 		result[DTid.xy] = reproj; // reuse reprojected history, no gather this frame
