@@ -158,8 +158,19 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		InterlockedAdd(surfelStatsBuffer[0].nextCount, 1, aliveCount);
 		surfelAliveBuffer_NEXT[aliveCount] = surfel_index;
 
-		// Determine ray count for surfel:
-		uint rayCountRequest = saturate(surfel_data.max_inconsistency) * SURFEL_RAY_BOOST_MAX;
+		// Determine ray count for surfel. Scale the per-surfel ray boost down
+		// with cascade level: near/fine surfels get the full
+		// SURFEL_RAY_BOOST_MAX for detail, coarse far ones ramp toward
+		// SURFEL_RAY_BOOST_MIN. Far surfels are low-frequency and long-lived,
+		// so fewer rays per frame still converge via the temporal estimator,
+		// but a huge far view (looking down from altitude) no longer saturates
+		// the ray budget on rays the far field doesn't need.
+		const uint ray_level = surfel_level_from_radius(surfel.GetRadius());
+		const float level_frac =
+			(float)ray_level / (float)(SURFEL_GRID_LEVELS - 1);
+		const uint ray_boost = (uint)lerp(
+			SURFEL_RAY_BOOST_MAX, SURFEL_RAY_BOOST_MIN, level_frac);
+		uint rayCountRequest = saturate(surfel_data.max_inconsistency) * ray_boost;
 		const uint recycle = surfel_data.GetRecycle();
 		if (recycle > 10)
 		{
