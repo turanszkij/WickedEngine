@@ -82,6 +82,22 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	else
 	{
 		radius = 0;
+
+		// surface.load failed (stale / streamed-out / LOD-swapped geometry).
+		// The grid counting above is INSIDE the load-success block, so this
+		// surfel was NOT counted into any cell this frame. But surfelBuffer
+		// still holds last frame's positive radius, and surfel_binningCS bins
+		// every surfel with GetRadius() > 0 - so it would bin this surfel into
+		// cells that were never counted, overflowing their allocation into the
+		// neighbouring cell's list. A gather on that corrupted cell then reads
+		// a garbage/uninitialised surfel index; an uninitialised surfel has a
+		// zero normal, and normalize(0) = NaN, which the dotN <= 0 reject does
+		// not catch (NaN <= 0 is false) - so the whole cell's screen quad
+		// flashes black/white for the frame. Zero the stored radius so binning
+		// skips this surfel too, keeping the "counted" and "binned" sets
+		// identical.
+		surfel.SetRadius(0);
+		surfelBuffer[surfel_index] = surfel;
 	}
 
 	// Relevance-based recycling bounds the live working set, and with it the
