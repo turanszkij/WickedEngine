@@ -21,16 +21,40 @@ RWTexture2D<unorm float4> debugUAV : register(u5);
 
 void write_result(uint2 DTid, float4 color)
 {
-	// Temporal accumulation (stage 1: SAME screen pixel, no reprojection yet).
-	// Blend this frame's freshly gathered GI into the history so a static view
-	// denoises and history is reused; camera motion will ghost until
-	// reprojection is added in stage 2. The isnan/isinf guard covers the
-	// uninitialised history texture on the very first frames (and any stray
-	// non-finite value).
-	float3 history = surfelHistoryTexture[DTid];
-	if (any(isnan(history)) || any(isinf(history)))
-		history = color.rgb;
-	result[DTid] = lerp(history, color.rgb, SURFEL_COVERAGE_TEMPORAL_BLEND);
+	const float3 fresh = color.rgb;
+
+	// Temporal reprojection + accumulation (stage 2). Reproject last frame's GI
+	// by the motion vector and blend it in where it still agrees with this
+	// frame's freshly gathered value; fall back to the fresh value when the
+	// reprojection lands off-screen or the history disagrees (disocclusion,
+	// lighting change, reprojection error). So a stable view denoises without
+	// ghosting under camera motion. Recompute the full-res pixel/uv from DTid
+	// (the coverage dispatch is half-res: pixel = DTid * 2).
+	const uint2 pixel = DTid * 2;
+	const float2 uv = ((float2)pixel + 0.5) * GetCamera().internal_resolution_rcp;
+	const float2 velocity = texture_velocity[pixel];
+	const float2 prev_uv = uv + velocity;
+
+	float3 history = fresh;
+	float alpha = 1.0; // 1 == take the fresh value (no history reuse)
+	if (is_saturated(prev_uv))
+	{
+		const float3 h = surfelHistoryTexture.SampleLevel(
+			sampler_linear_clamp, prev_uv, 0);
+		// Guard the uninitialised history texture on the first frames (and any
+		// stray non-finite value).
+		if (!any(isnan(h)) && !any(isinf(h)))
+		{
+			history = h;
+			const float3 luma = float3(0.299, 0.587, 0.114);
+			const float fresh_luma = dot(fresh, luma);
+			const float rel = abs(dot(h, luma) - fresh_luma) /
+				(fresh_luma + 0.01);
+			alpha = lerp(SURFEL_COVERAGE_TEMPORAL_BLEND, 1.0,
+				saturate(rel * SURFEL_COVERAGE_TEMPORAL_REJECT));
+		}
+	}
+	result[DTid] = lerp(history, fresh, alpha);
 }
 void write_debug(uint2 DTid, float4 debug)
 {
