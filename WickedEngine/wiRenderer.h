@@ -37,6 +37,7 @@ namespace wi::renderer
 
 	constexpr uint8_t raytracing_inclusion_mask_shadow = 1 << 0;
 	constexpr uint8_t raytracing_inclusion_mask_reflection = 1 << 1;
+	constexpr uint8_t raytracing_inclusion_mask_diffuse = 1 << 2;
 
 	constexpr uint32_t CombineStencilrefs(wi::enums::STENCILREF engineStencilRef, uint8_t userStencilRef)
 	{
