@@ -427,19 +427,23 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			// point, so the raytracing BVH stays well distributed and stable
 			// across cull-boundary crossings.
 			const uint cap_vertexcount = 2 * xHairBillboardCount;
-			if (xHairFlags & HAIR_FLAG_RAYTRACED)
+			float3 pos = base;
+			if (xHairFlags & HAIR_FLAG_UNORM_POS)
 			{
-				float3 rt_pos = base;
-				if (xHairFlags & HAIR_FLAG_UNORM_POS)
-				{
-					rt_pos = inverse_lerp(geometry.aabb_min, geometry.aabb_max, base); // remap to UNORM
-				}
-				for (uint i = 0; i < cap_vertexcount; ++i)
-				{
-					vertexBuffer_POS_RT[v0 + i] = float4(rt_pos, 0);
-				}
+				pos = inverse_lerp(geometry.aabb_min, geometry.aabb_max, base); // remap to UNORM
 			}
-			v0 += cap_vertexcount;
+
+			for (uint i = 0; i < cap_vertexcount; ++i)
+			{
+				vertexBuffer_POS[v0] = float4(pos, 0); // pos must be written always for wetmap
+				vertexBuffer_NOR[v0] = half4(normal, 0); // nor must be written always for wetmap
+
+				if (xHairFlags & HAIR_FLAG_RAYTRACED)
+				{
+					vertexBuffer_POS_RT[v0] = float4(pos, 0);
+				}
+				v0++;
+			}
 		}
 		else
 		{
