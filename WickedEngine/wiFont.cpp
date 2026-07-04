@@ -152,7 +152,7 @@ namespace wi::font
 					status.cursor.size.x = std::max(status.cursor.size.x, status.cursor.position.x);
 					status.cursor.size.y = std::max(status.cursor.size.y, status.cursor.position.y + linebreak_size);
 				}
-			};
+				};
 
 			status.cursor.size.y = status.cursor.position.y + linebreak_size;
 			for (size_t i = 0; i < text_length; ++i)
@@ -570,122 +570,134 @@ namespace wi::font
 		}
 		ParseStatus status = ParseText(text, text_length, params);
 
-		if (status.quadCount > 0)
+		if (status.quadCount == 0)
+			return status.cursor;
+
+		XMFLOAT3 offset = XMFLOAT3(0, 0, 0);
+		float vertical_flip = params.customProjection == nullptr ? 1.0f : -1.0f;
+		if (params.h_align == WIFALIGN_CENTER)
+			offset.x -= status.cursor.size.x / 2;
+		else if (params.h_align == WIFALIGN_RIGHT)
+			offset.x -= status.cursor.size.x;
+		if (params.v_align == WIFALIGN_CENTER)
+			offset.y -= status.cursor.size.y / 2 * vertical_flip;
+		else if (params.v_align == WIFALIGN_BOTTOM)
+			offset.y -= status.cursor.size.y * vertical_flip;
+
+		XMMATRIX M = XMMatrixTranslation(offset.x, offset.y, offset.z);
+		M = M * XMMatrixScaling(params.scaling, params.scaling, params.scaling);
+		M = M * XMMatrixRotationZ(params.rotation);
+
+		if (params.customRotation != nullptr)
 		{
-			GraphicsDevice* device = wi::graphics::GetDevice();
-			GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(FontVertex) * status.quadCount * 4, cmd);
-			if (!mem.IsValid())
-			{
-				return status.cursor;
-			}
-			CommitText(mem.data);
+			M = M * (*params.customRotation);
+		}
 
-			FontConstants font = {};
-			font.buffer_index = device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV);
-			font.buffer_offset = (uint32_t)mem.offset;
-			font.texture_index = device->GetDescriptorIndex(&texture, SubresourceType::SRV);
-			if (font.buffer_index < 0 || font.texture_index < 0)
-			{
-				return status.cursor;
-			}
+		M = M * XMMatrixTranslation(params.position.x, params.position.y, params.position.z);
 
-			device->EventBegin("Font", cmd);
+		XMMATRIX Projection;
+		if (params.customProjection != nullptr)
+		{
+			M = XMMatrixScaling(1, -1, 1) * M; // reason: screen projection is Y down (like UV-space) and that is the common case for image rendering. But custom projections will use the "world space"
+			Projection = (*params.customProjection);
+		}
+		else
+		{
+			// Asserts will check that a proper canvas was set for this cmd with wi::image::SetCanvas()
+			//	The canvas must be set to have dpi aware rendering
+			assert(canvas.width > 0);
+			assert(canvas.height > 0);
+			assert(canvas.dpi > 0);
+			Projection = canvas.GetProjection();
+		}
 
-			device->BindPipelineState(&PSO[params.isDepthTestEnabled()], cmd);
+		// frustum culling for the text:
+		wi::primitive::AABB aabb;
+		aabb._min.x = params.cursor.position.x;
+		aabb._min.y = params.cursor.position.y;
+		aabb._min.z = 0;
+		aabb._max.x = aabb._min.x + status.cursor.size.x;
+		aabb._max.y = aabb._min.y + status.cursor.size.y;
+		aabb._max.z = 0.001f;
+		aabb = aabb.transform(M);
+		wi::primitive::Frustum frustum;
+		frustum.Create(Projection);
+		if (!frustum.CheckBoxFast(aabb))
+			return status.cursor;
 
-			using namespace wi::math;
-			XMFLOAT4 color = XMFLOAT4(1, 1, 1, 1);
-			float softness = 0;
-			float bolden = 0;
-			float hdr_scaling = 1;
-			uint32_t flags = 0;
+		M = M * Projection;
 
-			if (params.isSDFRenderingEnabled())
-			{
-				flags |= FONT_FLAG_SDF_RENDERING;
-			}
-			if (params.isHDR10OutputMappingEnabled())
-			{
-				flags |= FONT_FLAG_OUTPUT_COLOR_SPACE_HDR10_ST2084;
-			}
-			if (params.isLinearOutputMappingEnabled())
-			{
-				flags |= FONT_FLAG_OUTPUT_COLOR_SPACE_LINEAR;
-				hdr_scaling = params.hdr_scaling;
-			}
+		GraphicsDevice* device = wi::graphics::GetDevice();
+		GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(FontVertex) * status.quadCount * 4, cmd);
+		if (!mem.IsValid())
+			return status.cursor;
+		CommitText(mem.data);
 
-			XMFLOAT3 offset = XMFLOAT3(0, 0, 0);
-			float vertical_flip = params.customProjection == nullptr ? 1.0f : -1.0f;
-			if (params.h_align == WIFALIGN_CENTER)
-				offset.x -= status.cursor.size.x / 2;
-			else if (params.h_align == WIFALIGN_RIGHT)
-				offset.x -= status.cursor.size.x;
-			if (params.v_align == WIFALIGN_CENTER)
-				offset.y -= status.cursor.size.y / 2 * vertical_flip;
-			else if (params.v_align == WIFALIGN_BOTTOM)
-				offset.y -= status.cursor.size.y * vertical_flip;
+		FontConstants font = {};
+		font.buffer_index = device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV);
+		font.buffer_offset = (uint)mem.offset;
+		font.texture_index = device->GetDescriptorIndex(&texture, SubresourceType::SRV);
+		if (font.buffer_index < 0 || font.texture_index < 0)
+			return status.cursor;
 
-			XMMATRIX M = XMMatrixTranslation(offset.x, offset.y, offset.z);
-			M = M * XMMatrixScaling(params.scaling, params.scaling, params.scaling);
-			M = M * XMMatrixRotationZ(params.rotation);
+		using namespace wi::math;
+		XMFLOAT4 color = XMFLOAT4(1, 1, 1, 1);
+		float softness = 0;
+		float bolden = 0;
+		float hdr_scaling = 1;
+		uint32_t flags = 0;
+		if (params.isSDFRenderingEnabled())
+		{
+			flags |= FONT_FLAG_SDF_RENDERING;
+		}
+		if (params.isHDR10OutputMappingEnabled())
+		{
+			flags |= FONT_FLAG_OUTPUT_COLOR_SPACE_HDR10_ST2084;
+		}
+		if (params.isLinearOutputMappingEnabled())
+		{
+			flags |= FONT_FLAG_OUTPUT_COLOR_SPACE_LINEAR;
+			hdr_scaling = params.hdr_scaling;
+		}
 
-			if (params.customRotation != nullptr)
-			{
-				M = M * (*params.customRotation);
-			}
+		device->EventBegin("Font", cmd);
 
-			M = M * XMMatrixTranslation(params.position.x, params.position.y, params.position.z);
+		device->BindPipelineState(&PSO[params.isDepthTestEnabled()], cmd);
 
-			if (params.customProjection != nullptr)
-			{
-				M = XMMatrixScaling(1, -1, 1) * M; // reason: screen projection is Y down (like UV-space) and that is the common case for image rendering. But custom projections will use the "world space"
-				M = M * (*params.customProjection);
-			}
-			else
-			{
-				// Asserts will check that a proper canvas was set for this cmd with wi::image::SetCanvas()
-				//	The canvas must be set to have dpi aware rendering
-				assert(canvas.width > 0);
-				assert(canvas.height > 0);
-				assert(canvas.dpi > 0);
-				M = M * canvas.GetProjection();
-			}
-
-			if (params.shadowColor.getA() > 0)
-			{
-				// font shadow render:
-				XMStoreFloat4x4(&font.transform, XMMatrixTranslation(params.shadow_offset_x, params.shadow_offset_y, 0) * M);
-				color = params.shadowColor;
-				color.x *= params.shadow_intensity;
-				color.y *= params.shadow_intensity;
-				color.z *= params.shadow_intensity;
-				font.color = pack_half4(color);
-				bolden = params.shadow_bolden;
-				softness = params.shadow_softness * 0.5f;
-				font.softness_bolden_hdrscaling = pack_half3(softness, bolden, hdr_scaling);
-				font.softness_bolden_hdrscaling.y |= flags << 16u;
-				device->BindDynamicConstantBuffer(font, CBSLOT_FONT, cmd);
-
-				device->DrawInstanced(4, status.quadCount, 0, 0, cmd);
-			}
-
-			// font base render:
-			XMStoreFloat4x4(&font.transform, M);
-			color = params.color;
-			color.x *= params.intensity;
-			color.y *= params.intensity;
-			color.z *= params.intensity;
+		if (params.shadowColor.getA() > 0)
+		{
+			// font shadow render:
+			XMStoreFloat4x4(&font.transform, XMMatrixTranslation(params.shadow_offset_x, params.shadow_offset_y, 0) * M);
+			color = params.shadowColor;
+			color.x *= params.shadow_intensity;
+			color.y *= params.shadow_intensity;
+			color.z *= params.shadow_intensity;
 			font.color = pack_half4(color);
-			bolden = params.bolden;
-			softness = params.softness * 0.5f;
+			bolden = params.shadow_bolden;
+			softness = params.shadow_softness * 0.5f;
 			font.softness_bolden_hdrscaling = pack_half3(softness, bolden, hdr_scaling);
 			font.softness_bolden_hdrscaling.y |= flags << 16u;
 			device->BindDynamicConstantBuffer(font, CBSLOT_FONT, cmd);
 
 			device->DrawInstanced(4, status.quadCount, 0, 0, cmd);
-
-			device->EventEnd(cmd);
 		}
+
+		// font base render:
+		XMStoreFloat4x4(&font.transform, M);
+		color = params.color;
+		color.x *= params.intensity;
+		color.y *= params.intensity;
+		color.z *= params.intensity;
+		font.color = pack_half4(color);
+		bolden = params.bolden;
+		softness = params.softness * 0.5f;
+		font.softness_bolden_hdrscaling = pack_half3(softness, bolden, hdr_scaling);
+		font.softness_bolden_hdrscaling.y |= flags << 16u;
+		device->BindDynamicConstantBuffer(font, CBSLOT_FONT, cmd);
+
+		device->DrawInstanced(4, status.quadCount, 0, 0, cmd);
+
+		device->EventEnd(cmd);
 
 		return status.cursor;
 	}

@@ -55,6 +55,11 @@ namespace wi::primitive
 		XMFLOAT3 center = getCenter();
 		return XMFLOAT3(abs(_max.x - center.x), abs(_max.y - center.y), abs(_max.z - center.z));
 	}
+	XMFLOAT3 AABB::getExtents() const
+	{
+		XMFLOAT3 center = getCenter();
+		return XMFLOAT3(abs(_max.x - _min.x), abs(_max.y - _min.y), abs(_max.z - _min.z));
+	}
 	XMMATRIX AABB::AABB::getAsBoxMatrix() const
 	{
 		XMFLOAT3 ext = getHalfWidth();

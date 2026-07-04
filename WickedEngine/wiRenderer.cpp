@@ -603,7 +603,7 @@ SHADERTYPE GetPSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, b
 	case RENDERPASS_SHADOW:
 		if (transparent)
 		{
-			realPS = shaderType == MaterialComponent::SHADERTYPE_WATER ? PSTYPE_SHADOW_WATER : PSTYPE_SHADOW_TRANSPARENT;
+			realPS = PSTYPE_SHADOW_TRANSPARENT;
 		}
 		else
 		{
@@ -928,16 +928,13 @@ void LoadShaders()
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_HOLOGRAM], "objectPS_hologram.cso"); });
 
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_DEBUG], "objectPS_debug.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_PAINTRADIUS], "objectPS_paintradius.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_SIMPLE], "objectPS_simple.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_PREPASS], "objectPS_prepass.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_PREPASS_ALPHATEST], "objectPS_prepass_alphatest.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_PREPASS_DEPTHONLY_ALPHATEST], "objectPS_prepass_depthonly_alphatest.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_IMPOSTOR_PREPASS], "impostorPS_prepass.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_IMPOSTOR_PREPASS_DEPTHONLY], "impostorPS_prepass_depthonly.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_IMPOSTOR_SIMPLE], "impostorPS_simple.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_LIGHTVISUALIZER], "lightVisualizerPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_LIGHTVISUALIZER_RECTLIGHT], "vRectLightPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_VOLUMETRICLIGHT_DIRECTIONAL], "volumetricLight_DirectionalPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_VOLUMETRICLIGHT_POINT], "volumetricLight_PointPS.cso"); });
@@ -954,9 +951,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_SUN], "sunPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_SHADOW_ALPHATEST], "shadowPS_alphatest.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_SHADOW_TRANSPARENT], "shadowPS_transparent.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_SHADOW_WATER], "shadowPS_water.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_VOXELIZER], "objectPS_voxelizer.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_VOXEL], "voxelPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_FORCEFIELDVISUALIZER], "forceFieldVisualizerPS.cso"); });
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_RAYTRACE_DEBUGBVH], "raytrace_debugbvhPS.cso"); });
@@ -964,7 +959,6 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL], "upsample_bilateralPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_POSTPROCESS_OUTLINE], "outlinePS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_LENSFLARE], "lensFlarePS.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_DDGI_DEBUG], "ddgi_debugPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_UPSAMPLE], "volumetricCloud_upsamplePS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_COPY_DEPTH], "copyDepthPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_COPY_STENCIL_BIT], "copyStencilBitPS.cso"); });
@@ -1232,7 +1226,7 @@ void LoadShaders()
 			PipelineStateDesc desc;
 			desc.as = &shaders[ASTYPE_OBJECT];
 			desc.ms = &shaders[MSTYPE_OBJECT_SIMPLE];
-			desc.ps = &shaders[PSTYPE_OBJECT_SIMPLE]; // this is created in a different thread, so wait for the ctx before getting here
+			desc.ps = &shaders[PSTYPE_VERTEXCOLOR]; // this is created in a different thread, so wait for the ctx before getting here
 			desc.rs = &rasterizers[RSTYPE_WIRE];
 			desc.bs = &blendStates[BSTYPE_OPAQUE];
 			desc.dss = &depthStencils[DSSTYPE_DEFAULT];
@@ -1305,7 +1299,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
 		PipelineStateDesc desc;
 		desc.vs = &shaders[VSTYPE_OBJECT_SIMPLE];
-		desc.ps = &shaders[PSTYPE_OBJECT_SIMPLE];
+		desc.ps = &shaders[PSTYPE_VERTEXCOLOR];
 		desc.rs = &rasterizers[RSTYPE_WIRE];
 		desc.bs = &blendStates[BSTYPE_OPAQUE];
 		desc.dss = &depthStencils[DSSTYPE_DEFAULT];
@@ -1409,7 +1403,7 @@ void LoadShaders()
 		{
 
 			desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
-			desc.ps = &shaders[PSTYPE_LIGHTVISUALIZER];
+			desc.ps = &shaders[PSTYPE_VERTEXCOLOR];
 			desc.pt = PrimitiveTopology::TRIANGLELIST;
 			desc.il = nullptr;
 
@@ -1661,7 +1655,7 @@ void LoadShaders()
 			break;
 		case DEBUGRENDERING_DDGI:
 			desc.vs = &shaders[VSTYPE_DDGI_DEBUG];
-			desc.ps = &shaders[PSTYPE_DDGI_DEBUG];
+			desc.ps = &shaders[PSTYPE_VERTEXCOLOR];
 			desc.dss = &depthStencils[DSSTYPE_DEFAULT];
 			desc.rs = &rasterizers[RSTYPE_FRONT];
 			desc.bs = &blendStates[BSTYPE_OPAQUE];
@@ -1750,7 +1744,7 @@ void LoadShaders()
 			break;
 		case DEBUGRENDERING_EMITTER:
 			desc.vs = &shaders[VSTYPE_OBJECT_DEBUG];
-			desc.ps = &shaders[PSTYPE_OBJECT_DEBUG];
+			desc.ps = &shaders[PSTYPE_VERTEXCOLOR];
 			desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
 			desc.rs = &rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
 			desc.bs = &blendStates[BSTYPE_OPAQUE];
@@ -1766,7 +1760,7 @@ void LoadShaders()
 			break;
 		case DEBUGRENDERING_VOXEL:
 			desc.vs = &shaders[VSTYPE_VOXEL];
-			desc.ps = &shaders[PSTYPE_VOXEL];
+			desc.ps = &shaders[PSTYPE_VERTEXCOLOR];
 			desc.gs = &shaders[GSTYPE_VOXEL];
 			desc.dss = &depthStencils[DSSTYPE_DEFAULT];
 			desc.rs = &rasterizers[RSTYPE_BACK];
@@ -1898,7 +1892,8 @@ void LoadShaders()
 	object_pso_job_ctx.priority = wi::jobsystem::Priority::Low;
 	for (uint32_t renderPass = 0; renderPass < RENDERPASS_COUNT; ++renderPass)
 	{
-		for (uint32_t shaderType = 0; shaderType < MaterialComponent::SHADERTYPE_COUNT; ++shaderType)
+		const uint32_t materialtype_differentiation = renderPass == RENDERPASS_MAIN ? MaterialComponent::SHADERTYPE_COUNT : 1; // only RENDERPASS_MAIN needs to handle different material shader types
+		for (uint32_t shaderType = 0; shaderType < materialtype_differentiation; ++shaderType)
 		{
 			for (uint32_t mesh_shader = 0; mesh_shader <= (device->CheckCapability(GraphicsDeviceCapability::MESH_SHADER) ? 1u : 0u); ++mesh_shader)
 			{
@@ -1951,7 +1946,7 @@ void LoadShaders()
 									if (mesh_shader && realPS == SHADERTYPE_COUNT)
 									{
 										// Apple Metal workaround: mesh shader must have pixel shader
-										realPS = PSTYPE_OBJECT_DEBUG;
+										realPS = PSTYPE_VERTEXCOLOR;
 									}
 #endif // __APPLE__
 									desc.ps = realPS < SHADERTYPE_COUNT ? &shaders[realPS] : nullptr;
@@ -3272,7 +3267,10 @@ void RenderMeshes(
 				{
 					ObjectRenderingVariant variant = {};
 					variant.bits.renderpass = renderPass;
-					variant.bits.shadertype = material.shaderType;
+					if (renderPass == RENDERPASS_MAIN)
+					{
+						variant.bits.shadertype = material.shaderType;
+					}
 					variant.bits.blendmode = material.GetBlendMode();
 					variant.bits.cullmode = (mesh.IsDoubleSided() || material.IsDoubleSided() || (shadowRendering && mesh.IsDoubleSidedShadow())) ? (uint32_t)CullMode::NONE : (uint32_t)CullMode::BACK;
 					variant.bits.tessellation = tessellatorRequested;
@@ -4992,6 +4990,7 @@ void UpdatePerFrameData(
 				if (cullsphere_required)
 				{
 					Sphere sphere = collider.capsule.getSphere();
+					cullsphere.center = sphere.center;
 					cullsphere.radius = sphere.radius * CAPSULE_SHADOW_BOLDEN + CAPSULE_SHADOW_AFFECTION_RANGE;
 				}
 				break;
@@ -5723,21 +5722,32 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 				mesh.BLAS_state = MeshComponent::BLAS_STATE_COMPLETE;
 			}
 
+			// Rebuild (rather than refit) the grass BLAS while the camera
+			// moves: fast movement sweeps many strands across the cull boundary
+			// each frame, faster than refits can absorb, which would otherwise
+			// degrade the structure until the next periodic rebuild. Rebuilding
+			// once the camera has moved past a threshold keeps the BVH fresh
+			// during motion (every few frames when moving fast) while staying
+			// cheap when the view is settled.
+			static XMFLOAT3 blas_last_rebuild_eye = XMFLOAT3(0, 0, 0);
+			constexpr float blas_rebuild_move_threshold = 1.0f;
+			const bool motion_rebuild =
+				wi::math::Distance(scene.camera.Eye, blas_last_rebuild_eye) >
+				blas_rebuild_move_threshold;
+
+			if (motion_rebuild)
+			{
+				blas_last_rebuild_eye = scene.camera.Eye;
+			}
+
 			for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
 			{
 				const wi::HairParticleSystem& hair = scene.hairs[i];
 
 				if (hair.meshID != INVALID_ENTITY && hair.BLAS.IsValid())
 				{
-					if (hair.must_rebuild_blas)
-					{
-						device->BuildRaytracingAccelerationStructure(&hair.BLAS, cmd, nullptr);
-						hair.must_rebuild_blas = false;
-					}
-					else
-					{
-						device->BuildRaytracingAccelerationStructure(&hair.BLAS, cmd, &hair.BLAS);
-					}
+					device->BuildRaytracingAccelerationStructure(&hair.BLAS, cmd, nullptr);
+					hair.must_rebuild_blas = false;
 				}
 			}
 
@@ -9358,6 +9368,10 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			shadercam.z_far_rcp = zFarPRcp;
 			shadercam.z_range = abs(zFarP - zNearP);
 			shadercam.z_range_rcp = 1.0f / std::max(0.0001f, shadercam.z_range);
+			shadercam.far_mul_near_mul_2 = shadercam.z_far * shadercam.z_near * 2;
+			shadercam.near_sub_far = shadercam.z_near - shadercam.z_far;
+			shadercam.far_sub_near = shadercam.z_far - shadercam.z_near;
+			shadercam.near_plus_far = shadercam.z_near + shadercam.z_far;
 			shadercam.internal_resolution = uint2(probe.texture.desc.width, probe.texture.desc.height);
 			shadercam.internal_resolution_rcp.x = 1.0f / shadercam.internal_resolution.x;
 			shadercam.internal_resolution_rcp.y = 1.0f / shadercam.internal_resolution.y;
@@ -11445,6 +11459,10 @@ void BindCameraCB(
 	shadercam.z_far_rcp = 1.0f / std::max(0.0001f, shadercam.z_far);
 	shadercam.z_range = abs(shadercam.z_far - shadercam.z_near);
 	shadercam.z_range_rcp = 1.0f / std::max(0.0001f, shadercam.z_range);
+	shadercam.far_mul_near_mul_2 = shadercam.z_far * shadercam.z_near * 2;
+	shadercam.near_sub_far = shadercam.z_near - shadercam.z_far;
+	shadercam.far_sub_near = shadercam.z_far - shadercam.z_near;
+	shadercam.near_plus_far = shadercam.z_near + shadercam.z_far;
 	shadercam.clip_plane = camera.clipPlane;
 	shadercam.reflection_plane = camera_reflection.clipPlaneOriginal;
 
@@ -14018,7 +14036,10 @@ void Postprocess_RTDiffuse(
 	rtdiffuse_range = range;
 	rtdiffuse_frame = (float)res.frame;
 	rtdiffuse_downscalefactor = (float)quality_downscalefactor(res.quality);
-	uint8_t instanceInclusionMask = 0xFF;
+	// Diffuse GI rays skip instances that opt out via this bit (e.g. hair/grass,
+	// whose dense alpha-tested geometry is very expensive to traverse and
+	// contributes little to low-frequency diffuse GI):
+	uint8_t instanceInclusionMask = raytracing_inclusion_mask_diffuse;
 	std::memcpy(&postprocess.params1.x, &instanceInclusionMask, sizeof(instanceInclusionMask));
 
 	{

@@ -2,7 +2,8 @@
 
 PUSHCONSTANT(push, DebugObjectPushConstants);
 
-float4 main(uint vertexID : SV_VertexID) : SV_POSITION
+void main(uint vertexID : SV_VertexID, out float4 pos : SV_Position, out half4 col : COLOR)
 {
-	return mul(g_xTransform, float4(bindless_buffers_float4[descriptor_index(push.vb_pos_wind)][vertexID].xyz, 1));
+	pos = mul(g_xTransform, float4(bindless_buffers_float4[descriptor_index(push.vb_pos_wind)][vertexID].xyz, 1));
+	col = g_xColor;
 }

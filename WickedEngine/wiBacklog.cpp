@@ -543,7 +543,7 @@ namespace wi::backlog
 			const float limit = canvas.GetLogicalHeight() - 50;
 			if (scrollbar.GetOffset() + textheight > limit)
 			{
-				scrollbar.Scroll(limit - textheight);
+				scrollbar.SetOffset(limit - scrollbar.GetOffset() + textheight);
 			}
 			if (autoscroll + textheight > limit)
 			{

@@ -50,7 +50,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 	const float3x3 random_orientation = (float3x3)g_xTransform;
 	const float3 raydir = normalize(mul(random_orientation, spherical_fibonacci(rayIndex, rayCount)));
-	
+
 #if 1
 	// Light sampling - direct static:
 	{
@@ -264,10 +264,17 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			}
 			radiance += envColor;
 
+			// Clamp to the half-float range before storing: rayData.radiance is
+			// half3, and an unclamped bright sky (e.g. the sun disk) overflows
+			// to +Inf, which the firefly suppression later turns into NaN (Inf
+			// - Inf), poisoning the probe and blowing the whole frame to white.
+			// The surface-hit path below already does this.
+			radiance = saturateMediump(radiance);
+
 			DDGIRayData rayData;
 			rayData.direction = ray.Direction;
 			rayData.depth = -1;
-			rayData.radiance = float4(radiance, 1);
+			rayData.radiance = radiance;
 			rayBuffer[probeIndex * DDGI_MAX_RAYCOUNT + rayIndex].store(rayData);
 		}
 		else

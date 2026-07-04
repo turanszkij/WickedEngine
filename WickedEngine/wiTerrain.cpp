@@ -999,7 +999,7 @@ namespace wi::terrain
 				generator->spline_entities.push_back(scene->splines.GetEntity(i));
 			}
 		}
-		wi::jobsystem::Execute(generator->workload, [=](wi::jobsystem::JobArgs a) {
+		wi::jobsystem::Execute(generator->workload, [this](wi::jobsystem::JobArgs a) {
 
 			wi::Timer timer;
 			bool generated_something = false;
@@ -1116,7 +1116,7 @@ namespace wi::terrain
 					// Preload height grid with padding, because neighbors will need to be accessed to determine slopes:
 					constexpr int chunk_width_padded = chunk_width + 1;
 					constexpr uint32_t vertexCount_padded = chunk_width_padded * chunk_width_padded;
-					float heights_padded[chunk_width_padded][chunk_width_padded];
+					float heights_padded[chunk_width_padded * chunk_width_padded];
 					const XMVECTOR UP = XMVectorSet(0, 1, 0, 0);
 					wi::jobsystem::Dispatch(ctx, vertexCount_padded, chunk_width_padded * 4, [&](wi::jobsystem::JobArgs args) {
 						const uint32_t index = args.jobIndex;
@@ -1158,7 +1158,7 @@ namespace wi::terrain
 							height = lerp(height, splineheight - spline.terrain_pushdown, splinefactor);
 						}
 
-						heights_padded[coord.x][coord.y] = height;
+						heights_padded[coord.x + coord.y * chunk_width_padded] = height;
 					});
 					wi::jobsystem::Wait(ctx);
 
@@ -1167,11 +1167,11 @@ namespace wi::terrain
 						const XMUINT2 coord = XMUINT2(index % chunk_width, index / chunk_width);
 						const float x = (float(coord.x) - chunk_half_width) * chunk_scale;
 						const float z = (float(coord.y) - chunk_half_width) * chunk_scale;
-						const float height = heights_padded[coord.x][coord.y];
+						const float height = heights_padded[coord.x + coord.y * chunk_width_padded];
 						const XMVECTOR corners[3] = {
 							XMVectorSet(chunk_data.position.x + x, height, chunk_data.position.z + z, 0),
-							XMVectorSet(chunk_data.position.x + x + 1, heights_padded[coord.x + 1][coord.y], chunk_data.position.z + z, 0),
-							XMVectorSet(chunk_data.position.x + x, heights_padded[coord.x][coord.y + 1], chunk_data.position.z + z + 1, 0),
+							XMVectorSet(chunk_data.position.x + x + 1, heights_padded[coord.x + 1 + coord.y * chunk_width_padded], chunk_data.position.z + z, 0),
+							XMVectorSet(chunk_data.position.x + x, heights_padded[coord.x + (coord.y + 1) * chunk_width_padded], chunk_data.position.z + z + 1, 0),
 						};
 						const XMVECTOR T = XMVectorSubtract(corners[1], corners[2]);
 						const XMVECTOR B = XMVectorSubtract(corners[0], corners[1]);

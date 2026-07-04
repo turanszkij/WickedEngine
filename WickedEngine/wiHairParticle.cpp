@@ -12,6 +12,8 @@
 #include "wiEventHandler.h"
 #include "wiTimer.h"
 
+#include <cstring>
+
 using namespace wi::primitive;
 using namespace wi::graphics;
 using namespace wi::scene;
@@ -92,6 +94,7 @@ namespace wi
 	void HairParticleSystem::DeleteRenderData()
 	{
 		constantBuffer = {};
+		constantBufferData = {}; // force a re-upload into the recreated buffer
 		generalBuffer = {};
 		generalBufferOffsetAllocation = {};
 		generalBufferOffsetAllocationAlias = {};
@@ -317,7 +320,11 @@ namespace wi
 		{
 			RaytracingAccelerationStructureDesc desc;
 			desc.type = RaytracingAccelerationStructureDesc::Type::BOTTOMLEVEL;
-			desc.flags |= RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD;
+			// Grass is heavily traced by GI rays, so prefer a traversal-optimized
+			// BVH (FAST_TRACE) over a cheap-to-build one. Animation is handled by
+			// per-frame refits (ALLOW_UPDATE) plus a periodic full rebuild on the
+			// renderer side to keep the structure's quality from decaying.
+			desc.flags |= RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_TRACE;
 			desc.flags |= RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE;
 
 			desc.bottom_level.geometries.emplace_back();
@@ -461,6 +468,12 @@ namespace wi
 			{
 				hcb.xHairFlags |= HAIR_FLAG_CAMERA_BEND;
 			}
+			if (hair.BLAS.IsValid())
+			{
+				// Only write the raytracing position buffer when an acceleration
+				// structure exists to consume it (raytracing active for the scene).
+				hcb.xHairFlags |= HAIR_FLAG_RAYTRACED;
+			}
 			hcb.xHairAspect = hair.width * (float)std::max(1u, desc.width) / (float)std::max(1u, desc.height);
 			hcb.xHairLength = hair.length;
 			hcb.xHairStiffness = hair.stiffness;
@@ -496,8 +509,23 @@ namespace wi
 				}
 			}
 			hcb.xHairUniformity = hair.uniformity;
-			device->UpdateBuffer(&hair.constantBuffer, &hcb, cmd);
-			wi::renderer::PushBarrier(GPUBarrier::Buffer(&hair.constantBuffer, ResourceState::COPY_DST, ResourceState::CONSTANT_BUFFER));
+
+			// Only upload the constant buffer when its contents changed since
+			// the last frame. For static grass this is almost never, which
+			// avoids a per-hair GPU copy and barrier every frame. The buffer is
+			// Usage::DEFAULT, so its previous contents persist when skipped. A
+			// raw byte compare is safe here: HairParticleCB is explicitly
+			// padded (no indeterminate bytes) and both operands are value-
+			// initialized, so equal bytes mean the GPU already holds this exact
+			// data. The only imprecision (e.g. +0.0 vs -0.0 comparing unequal
+			// by bytes) can trigger a harmless redundant upload, never a false
+			// skip.
+			if (std::memcmp(&hair.constantBufferData, &hcb, sizeof(hcb)) != 0)
+			{
+				hair.constantBufferData = hcb;
+				device->UpdateBuffer(&hair.constantBuffer, &hcb, cmd);
+				wi::renderer::PushBarrier(GPUBarrier::Buffer(&hair.constantBuffer, ResourceState::COPY_DST, ResourceState::CONSTANT_BUFFER));
+			}
 
 			IndirectDrawArgsIndexedInstanced args = {};
 			args.BaseVertexLocation = 0;
