@@ -99,10 +99,50 @@ inline float ddgi_max_distance()
 {
 	return GetScene().ddgi.max_distance;
 }
+// Toroidal coordinate helpers.
+//
+// A "world coord" is the logical lattice position in [0, grid_dimensions-1]
+// measured from grid_min; it maps directly to a world-space position and is
+// what neighbour arithmetic must be done in. A "buffer coord" is where that
+// probe's data physically lives in the probe/variance buffers and depth atlas.
+// They differ by scroll_offset. Convert world->buffer exactly once, at the
+// point of storage access.
+//
+// Signed modular arithmetic keeps this correct for any grid dimensions (not
+// just powers of two) and any scroll sign.
+//
+// Convention (standard clipmap toroidal addressing): scroll_offset is the
+// grid's world-origin in cell units (grid_min / cell_size). A world cell's
+// absolute lattice index is (world_local + scroll_offset); its physical buffer
+// slot is that index modulo the grid dimensions. Because the slot depends only
+// on the absolute index, a fixed world cell keeps the same slot as the grid
+// scrolls (only the recycled slab changes) - which is what preserves each
+// probe's accumulated light in place. Hence world->buffer ADDS scroll_offset
+// and buffer->world SUBTRACTS it (they must be inverses, and this particular
+// sign is what makes a slot's world position invariant across scrolls; swapping
+// them makes probes drift at twice the camera speed).
+inline uint3 ddgi_wrap_coord(int3 coord)
+{
+	const int3 dims = int3(GetScene().ddgi.grid_dimensions);
+	int3 wrapped = coord % dims;
+	wrapped = (wrapped + dims) % dims; // bring negative remainders into [0, dims)
+	return uint3(wrapped);
+}
+inline uint3 ddgi_buffer_to_world_coord(uint3 buffer_coord)
+{
+	return ddgi_wrap_coord(int3(buffer_coord) - GetScene().ddgi.scroll_offset);
+}
+inline uint3 ddgi_world_to_buffer_coord(uint3 world_coord)
+{
+	return ddgi_wrap_coord(int3(world_coord) + GetScene().ddgi.scroll_offset);
+}
+// Returns the WORLD coord of the probe cell containing point P (not a buffer coord).
 inline uint3 ddgi_base_probe_coord(float3 P)
 {
 	float3 normalized_pos = (P - GetScene().ddgi.grid_min) * GetScene().ddgi.grid_extents_rcp;
-	return floor(normalized_pos * (GetScene().ddgi.grid_dimensions - 1));
+	return uint3(clamp(
+		floor(normalized_pos * float3(GetScene().ddgi.grid_dimensions - 1)),
+		0.0, float3(GetScene().ddgi.grid_dimensions - 1)));
 }
 inline uint3 ddgi_probe_coord(uint probeIndex)
 {
@@ -116,9 +156,11 @@ inline uint3 ddgi_probe_offset_pixel(min16uint3 probeCoord)
 {
 	return probeCoord.xzy;
 }
+// Rest (unrelocated) world position of a probe, given its BUFFER coord.
 inline float3 ddgi_probe_position_rest(min16uint3 probeCoord)
 {
-	return GetScene().ddgi.grid_min + probeCoord * ddgi_cellsize();
+	uint3 world_coord = ddgi_buffer_to_world_coord(uint3(probeCoord));
+	return GetScene().ddgi.grid_min + float3(world_coord) * ddgi_cellsize();
 }
 inline float3 ddgi_probe_position(min16uint3 probeCoord)
 {
@@ -147,8 +189,11 @@ inline float2 ddgi_probe_depth_uv(min16uint3 probeCoord, half3 direction)
 half3 ddgi_sample_irradiance(in float3 P, in half3 N, inout half3 out_dominant_lightdir, inout half3 out_dominant_lightcolor)
 {
 	StructuredBuffer<DDGIProbe> probe_buffer = bindless_structured_ddgi_probes[descriptor_index(GetScene().ddgi.probe_buffer)];
-	const min16uint3 base_grid_coord = ddgi_base_probe_coord(P);
-	const float3 reference_probe_pos = ddgi_probe_position_rest(base_grid_coord); // taking the rest pose!
+	// base_world_coord is a WORLD coord: neighbour arithmetic below stays in
+	// world space and only converts to buffer coords at the point of
+	// buffer/atlas access.
+	const min16uint3 base_world_coord = ddgi_base_probe_coord(P);
+	const float3 reference_probe_pos = GetScene().ddgi.grid_min + float3(base_world_coord) * ddgi_cellsize(); // rest pose of the base world probe
 
 	half sum_weight = 0;
 
@@ -162,17 +207,22 @@ half3 ddgi_sample_irradiance(in float3 P, in half3 N, inout half3 out_dominant_l
 	// Iterate over adjacent probe cage
 	for (min16uint i = 0; i < 8; ++i)
 	{
-		// Compute the offset grid coord and clamp to the probe grid boundary
-		// Offset = 0 or 1 along each axis
+		// Compute the neighbour in WORLD space and clamp to the real grid
+		// boundary. Offset = 0 or 1 along each axis. Clamping here (in world
+		// space) keeps the cage from wrapping across the toroidal seam or the
+		// grid edge.
 		min16uint3 offset = uint3(i, i >> 1, i >> 2) & 1;
-		min16uint3 probe_grid_coord = clamp(base_grid_coord + offset, 0u.xxx, GetScene().ddgi.grid_dimensions - 1);
-		uint probe_index = ddgi_probe_index(probe_grid_coord);
+		min16uint3 probe_world_coord = clamp(base_world_coord + offset, 0u.xxx, GetScene().ddgi.grid_dimensions - 1);
+		// Convert to a buffer coord only now, to index the probe buffer and
+		// depth atlas.
+		min16uint3 probe_buffer_coord = ddgi_world_to_buffer_coord(probe_world_coord);
+		uint probe_index = ddgi_probe_index(probe_buffer_coord);
 		DDGIProbe probe = probe_buffer[probe_index];
 
 		// Make cosine falloff in tangent plane with respect to the angle from the surface to the probe so that we never
 		// test a probe that is *behind* the surface.
 		// It doesn't have to be cosine, but that is efficient to compute and we must clip to the tangent plane.
-		float3 probe_pos = ddgi_probe_position(probe_grid_coord);
+		float3 probe_pos = ddgi_probe_position(probe_buffer_coord);
 
 		// Bias the position at which visibility is computed; this
 		// avoids performing a shadow test *at* a surface, which is a
@@ -192,9 +242,13 @@ half3 ddgi_sample_irradiance(in float3 P, in half3 N, inout half3 out_dominant_l
 		half3 trilinear = lerp(1.0 - alpha, alpha, half3(offset));
 		half weight = 1.0;
 
-		// Clamp all of the multiplies. We can't let the weight go to zero because then it would be 
+		// Apply probe validity: reduce weight for buried/invalid probes
+		bool probe_valid = (probe.flags & DDGIPROBE_FLAG_VALID) != 0;
+		weight *= probe_valid ? 1.0 : 0.02;
+
+		// Clamp all of the multiplies. We can't let the weight go to zero because then it would be
 		// possible for *all* weights to be equally low and get normalized
-		// up to 1/n. We want to distinguish between weights that are 
+		// up to 1/n. We want to distinguish between weights that are
 		// low because of different factors.
 
 		// Smooth backface test
@@ -222,7 +276,7 @@ half3 ddgi_sample_irradiance(in float3 P, in half3 N, inout half3 out_dominant_l
 		if(GetScene().ddgi.depth_texture >= 0)
 		{
 			//float2 tex_coord = texture_coord_from_direction(-dir, p, ddgi.depth_texture_width, ddgi.depth_texture_height, ddgi.depth_probe_side_length);
-			float2 tex_coord = ddgi_probe_depth_uv(probe_grid_coord, -dir);
+			float2 tex_coord = ddgi_probe_depth_uv(probe_buffer_coord, -dir);
 
 			half dist_to_probe = length(probe_to_point);
 

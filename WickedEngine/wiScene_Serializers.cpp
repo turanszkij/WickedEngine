@@ -2849,14 +2849,26 @@ namespace wi::scene
 			{
 				const uint32_t probe_count = grid_dimensions.x * grid_dimensions.y * grid_dimensions.z;
 
-				GPUBufferDesc buf;
-				buf.stride = sizeof(DDGIProbe);
-				buf.size = buf.stride * probe_count;
-				buf.bind_flags = BindFlag::SHADER_RESOURCE;
-				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
-				buf.format = Format::UNKNOWN;
-				device->CreateBuffer(&buf, data.data(), &probe_buffer);
-				device->SetName(&probe_buffer, "ddgi.probe_buffer[serialized]");
+				// The serialized probe blob is a raw dump of DDGIProbe[]. If
+				// its size does not match the current DDGIProbe layout (the
+				// struct gained a flags field), it is from an incompatible
+				// engine version - discard it and let the runtime recompute
+				// rather than feeding a mismatched buffer to the GPU.
+				if (data.size() == (size_t)sizeof(DDGIProbe) * probe_count)
+				{
+					GPUBufferDesc buf;
+					buf.stride = sizeof(DDGIProbe);
+					buf.size = buf.stride * probe_count;
+					buf.bind_flags = BindFlag::SHADER_RESOURCE;
+					buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
+					buf.format = Format::UNKNOWN;
+					device->CreateBuffer(&buf, data.data(), &probe_buffer);
+					device->SetName(&probe_buffer, "ddgi.probe_buffer[serialized]");
+				}
+				else
+				{
+					wi::backlog::post("DDGI probe data layout changed; discarding serialized probes (they will be recomputed at runtime).", wi::backlog::LogLevel::Warning);
+				}
 			}
 
 			// depth texture:

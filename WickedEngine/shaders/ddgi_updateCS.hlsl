@@ -75,15 +75,25 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 	const uint3 probeCoord = ddgi_probe_coord(probeIndex);
 	const float maxDistance = ddgi_max_distance();
 
+	// A probe is treated like frame 0 (full reset, no temporal blend) either on
+	// the global first frame or when it was just (re)placed by a grid scroll
+	// this frame.
+	const bool probe_fresh = (push.frameIndex == 0)
+		|| (ddgiProbeBuffer[probeIndex].flags & DDGIPROBE_FLAG_FRESH) != 0;
+
 #ifdef DDGI_UPDATE_DEPTH
 	[branch]
-	if (groupIndex == 0 && push.frameIndex == 0)
+	if (groupIndex == 0 && probe_fresh)
 	{
 		ddgiProbeBuffer[probeIndex].offset = 0;
 	}
 	const float3 probe_limit = ddgi_cellsize() * 0.5;
 	float3 probeOffsetNew = 0;
 	const float probeOffsetDistance = maxDistance * DDGI_KEEP_DISTANCE;
+	// Only thread 0 tallies these; it visits every ray exactly once across all
+	// cache chunks, so the counts are exact without a groupshared atomic.
+	uint close_hit_count = 0;
+	uint counted_ray_count = 0;
 #endif // DDGI_UPDATE_DEPTH
 
 #ifdef DDGI_UPDATE_DEPTH
@@ -136,6 +146,12 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 			{
 				probeOffsetNew -= ray.direction * (probeOffsetDistance - depth);
 			}
+			if (groupIndex == 0)
+			{
+				counted_ray_count++;
+				if (depth < probeOffsetDistance)
+					close_hit_count++;
+			}
 #else
 			const half3 radiance = ray.radiance.rgb;
 #endif // DDGI_UPDATE_DEPTH
@@ -170,7 +186,10 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 
 #ifdef DDGI_UPDATE_DEPTH
 	const half2 prev_result = output[pixel_current].xy;
-	if (push.frameIndex > 0)
+	// Fresh probes take the new depth directly; the previous atlas value
+	// belongs to the probe's old world position (before the scroll) and would
+	// leak visibility if blended.
+	if (!probe_fresh)
 	{
 		result = lerp(prev_result, result, 0.02);
 	}
@@ -204,10 +223,24 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 		
 		half3 probeOffset = unpack_half3(ddgiProbeBuffer[probeIndex].offset);
 		probeOffset *= probe_limit;
-		probeOffset = lerp(probeOffset, probeOffsetNew, 0.01);
+		probeOffset = lerp(probeOffset, probeOffsetNew, 0.05); // Increased from 0.01 for faster escape
 		probeOffset = clamp(probeOffset, -probe_limit, probe_limit);
 		probeOffset /= probe_limit;
 		ddgiProbeBuffer[probeIndex].offset = pack_half3(probeOffset);
+
+		// Probe validity: if nearly all rays hit close surfaces from every
+		// direction, the probe is buried in solid geometry.
+		// counted_ray_count/close_hit_count were tallied by thread 0 over every
+		// ray, so this is an exact fraction (no 1/threadcount error).
+		uint flags = ddgiProbeBuffer[probeIndex].flags;
+		bool probe_buried = (counted_ray_count > 0) && (close_hit_count * 100 > counted_ray_count * 85);
+		if (probe_buried)
+			flags &= ~DDGIPROBE_FLAG_VALID;
+		else
+			flags |= DDGIPROBE_FLAG_VALID;
+		// This pass runs last (after the colour update), so consume the fresh flag here.
+		flags &= ~DDGIPROBE_FLAG_FRESH;
+		ddgiProbeBuffer[probeIndex].flags = flags;
 	}
 #else
 
@@ -216,8 +249,10 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 		const uint idx = flatten2D(GTid.xy, DDGI_COLOR_RESOLUTION);
 		const uint variance_data_index = probeIndex * DDGI_COLOR_RESOLUTION * DDGI_COLOR_RESOLUTION + idx;
 		DDGIVarianceData varianceData = varianceBuffer[variance_data_index].load();
-		if (push.frameIndex == 0)
+		if (probe_fresh)
 		{
+			// Frame 0, or a probe just (re)placed by a scroll: discard stale
+			// history.
 			varianceData = (DDGIVarianceData)0;
 			varianceData.mean = result;
 			varianceData.shortMean = result;

@@ -52,10 +52,16 @@ struct alignas(16) ShaderScene
 		float max_distance;
 
 		float3 grid_extents_rcp;
-		float padding;
+		float smooth_backface;
 
 		float3 cell_size_rcp;
-		float smooth_backface;
+		float padding1;
+
+		int3 scroll_offset;
+		int padding2;
+
+		int3 scroll_delta;
+		int padding3;
 	};
 	DDGI ddgi;
 
@@ -1830,10 +1836,16 @@ namespace SH
 }
 #endif // __cplusplus
 
+// DDGIProbe.flags bits:
+static const uint DDGIPROBE_FLAG_VALID = 1 << 0; // probe is not buried in solid geometry
+static const uint DDGIPROBE_FLAG_FRESH = 1 << 1; // probe was just (re)placed by a grid scroll; reset it this frame like frame 0
+
 struct alignas(16) DDGIProbe
 {
 	SH::L1_RGB::Packed radiance;
 	uint2 offset;
+	uint flags;
+	uint padding;
 };
 
 #endif // WI_SHADERINTEROP_RENDERER_H

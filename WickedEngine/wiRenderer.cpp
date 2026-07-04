@@ -1160,6 +1160,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_DDGI_INDIRECTPREPARE], "ddgi_indirectprepareCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_DDGI_UPDATE], "ddgi_updateCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_DDGI_UPDATE_DEPTH], "ddgi_updateCS_depth.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_DDGI_SCROLL], "ddgi_scrollCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE_BASECOLORMAP], "terrainVirtualTextureUpdateCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE_NORMALMAP], "terrainVirtualTextureUpdateCS_normalmap.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE_SURFACEMAP], "terrainVirtualTextureUpdateCS_surfacemap.cso"); });
@@ -12491,6 +12492,34 @@ void DDGI(
 	push.frameIndex = scene.ddgi.frame_index;
 	push.rayCount = std::min(GetDDGIRayCount(), DDGI_MAX_RAYCOUNT);
 	push.blendSpeed = GetDDGIBlendSpeed();
+
+	// Grid scroll pass: flag freshly (re)placed probes when the grid scrolled
+	// this frame. Skipped on frame 0, which already does a full reset for every
+	// probe.
+	if (scene.ddgi.frame_index != 0 &&
+		(scene.shaderscene.ddgi.scroll_delta.x != 0 ||
+		 scene.shaderscene.ddgi.scroll_delta.y != 0 ||
+		 scene.shaderscene.ddgi.scroll_delta.z != 0))
+	{
+		device->EventBegin("Grid scroll", cmd);
+
+		device->BindComputeShader(&shaders[CSTYPE_DDGI_SCROLL], cmd);
+
+		const GPUResource* uavs[] = {
+			&scene.ddgi.probe_buffer,
+		};
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+
+		// probe_buffer is read as a bindless SRV by ray allocation/raytrace, so move it
+		// to UAV for the scroll write and back to compute-SRV afterwards.
+		device->Barrier(GPUBarrier::Buffer(&scene.ddgi.probe_buffer, ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS), cmd);
+
+		device->Dispatch((scene.shaderscene.ddgi.probe_count + 63) / 64, 1, 1, cmd);
+
+		device->Barrier(GPUBarrier::Buffer(&scene.ddgi.probe_buffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE), cmd);
+
+		device->EventEnd(cmd);
+	}
 
 	// Ray allocation:
 	{

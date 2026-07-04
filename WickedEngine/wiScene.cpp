@@ -644,22 +644,78 @@ namespace wi::scene
 				device->CreateTexture(&tex, &initdata, &ddgi.depth_texture);
 				device->SetName(&ddgi.depth_texture, "ddgi.depth_texture");
 			}
-			float3 grid_min = bounds.getMin();
-			grid_min.x -= 1;
-			grid_min.y -= 1;
-			grid_min.z -= 1;
-			float3 grid_max = bounds.getMax();
-			grid_max.x += 1;
-			grid_max.y += 1;
-			grid_max.z += 1;
-			float bounds_blend = 0.01f;
-			const float area = AABB(ddgi.grid_min, ddgi.grid_max).getArea();
-			if (ddgi.frame_index == 0 || area < 0.001f)
+			// Camera-centered grid with toroidal scrolling.
+			//
+			// The probe grid follows the main camera (scene.camera, the same
+			// eye used for LOD and VXGI) rather than growing to fit the whole
+			// scene. This keeps a fixed, user-controlled probe density around
+			// the viewer regardless of map size. When the camera crosses a cell
+			// boundary the grid snaps by whole cells and the probe buffers are
+			// addressed toroidally (via ddgi.scroll_offset), so only the newly
+			// entered slab of probes is reset while the rest keep their
+			// history.
+			//
+			// Multi-camera note: DDGI serves one grid, centered on scene.camera
+			// (set from the primary RenderPath3D). Secondary cameras (e.g.
+			// render-to-texture) sample whatever probes are near them; the grid
+			// does not split between views. Because scene.camera is set once
+			// per Scene::Update, the grid does not thrash.
+			const XMFLOAT3 camera_eye = camera.Eye;
+
+			// Cell size per axis. Y is asymmetric: less coverage below the
+			// camera than above, since probes buried under terrain are wasted.
+			const XMUINT3 dims = ddgi.grid_dimensions;
+			const float cell_size_x = dims.x > 1 ? (ddgi.grid_half_extents.x * 2.0f) / (dims.x - 1) : 1.0f;
+			const float cell_size_y = dims.y > 1 ? (ddgi.grid_half_extents.y + ddgi.grid_half_extents_down) / (dims.y - 1) : 1.0f;
+			const float cell_size_z = dims.z > 1 ? (ddgi.grid_half_extents.z * 2.0f) / (dims.z - 1) : 1.0f;
+
+			// Desired grid min, snapped to the cell lattice so scrolls are
+			// whole cells.
+			XMFLOAT3 desired_grid_min;
+			desired_grid_min.x = std::floor((camera_eye.x - ddgi.grid_half_extents.x) / cell_size_x) * cell_size_x;
+			desired_grid_min.y = std::floor((camera_eye.y - ddgi.grid_half_extents_down) / cell_size_y) * cell_size_y;
+			desired_grid_min.z = std::floor((camera_eye.z - ddgi.grid_half_extents.z) / cell_size_z) * cell_size_z;
+
+			const XMFLOAT3 desired_grid_max = XMFLOAT3(
+				desired_grid_min.x + cell_size_x * (dims.x - 1),
+				desired_grid_min.y + cell_size_y * (dims.y - 1),
+				desired_grid_min.z + cell_size_z * (dims.z - 1)
+			);
+
+			ddgi.scroll_delta = int3(0, 0, 0);
+			if (ddgi.frame_index != 0)
 			{
-				bounds_blend = 1;
+				// Whole-cell scroll delta since last frame.
+				ddgi.scroll_delta.x = (int)std::lround((desired_grid_min.x - ddgi.grid_min.x) / cell_size_x);
+				ddgi.scroll_delta.y = (int)std::lround((desired_grid_min.y - ddgi.grid_min.y) / cell_size_y);
+				ddgi.scroll_delta.z = (int)std::lround((desired_grid_min.z - ddgi.grid_min.z) / cell_size_z);
 			}
-			ddgi.grid_min = wi::math::Lerp(ddgi.grid_min, grid_min, bounds_blend);
-			ddgi.grid_max = wi::math::Lerp(ddgi.grid_max, grid_max, bounds_blend);
+
+			// A jump of a whole grid or more (teleport, big extent change)
+			// can't be handled as an incremental scroll - the scroll shader
+			// assumes |delta| < dimensions. Treat it as a fresh start: snap and
+			// let every probe reset like frame 0.
+			const bool teleport =
+				std::abs(ddgi.scroll_delta.x) >= (int)dims.x ||
+				std::abs(ddgi.scroll_delta.y) >= (int)dims.y ||
+				std::abs(ddgi.scroll_delta.z) >= (int)dims.z;
+
+			if (ddgi.frame_index == 0 || teleport)
+			{
+				ddgi.frame_index = 0; // force the per-probe full-reset path in the shaders
+				ddgi.scroll_offset = int3(0, 0, 0);
+				ddgi.scroll_delta = int3(0, 0, 0);
+				ddgi.grid_min = desired_grid_min;
+				ddgi.grid_max = desired_grid_max;
+			}
+			else if (ddgi.scroll_delta.x != 0 || ddgi.scroll_delta.y != 0 || ddgi.scroll_delta.z != 0)
+			{
+				ddgi.scroll_offset.x += ddgi.scroll_delta.x;
+				ddgi.scroll_offset.y += ddgi.scroll_delta.y;
+				ddgi.scroll_offset.z += ddgi.scroll_delta.z;
+				ddgi.grid_min = desired_grid_min;
+				ddgi.grid_max = desired_grid_max;
+			}
 		}
 		else if (ddgi.ray_buffer.IsValid()) // if ray_buffer is valid, it means DDGI was not from serialization, so it will be deleted when DDGI is disabled
 		{
@@ -983,6 +1039,13 @@ namespace wi::scene
 		shaderscene.ddgi.cell_size_rcp.y = 1.0f / shaderscene.ddgi.cell_size.y;
 		shaderscene.ddgi.cell_size_rcp.z = 1.0f / shaderscene.ddgi.cell_size.z;
 		shaderscene.ddgi.max_distance = std::max(shaderscene.ddgi.cell_size.x, std::max(shaderscene.ddgi.cell_size.y, shaderscene.ddgi.cell_size.z)) * 1.5f;
+		shaderscene.ddgi.scroll_offset.x = ddgi.scroll_offset.x;
+		shaderscene.ddgi.scroll_offset.y = ddgi.scroll_offset.y;
+		shaderscene.ddgi.scroll_offset.z = ddgi.scroll_offset.z;
+		shaderscene.ddgi.scroll_delta.x = ddgi.scroll_delta.x;
+		shaderscene.ddgi.scroll_delta.y = ddgi.scroll_delta.y;
+		shaderscene.ddgi.scroll_delta.z = ddgi.scroll_delta.z;
+		ddgi.scroll_delta = int3(0, 0, 0); // Clear for next frame
 
 		shaderscene.terrain.init();
 		if (terrains.GetCount() > 0)

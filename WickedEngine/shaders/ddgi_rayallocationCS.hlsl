@@ -57,7 +57,13 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		rayCount = align(rayCount, DDGI_RAY_BUCKET_COUNT);
 		rayCount = clamp(rayCount, DDGI_RAY_BUCKET_COUNT, DDGI_MAX_RAYCOUNT);
 
-		if(push.frameIndex == 0)
+		// Full ray budget on frame 0 and for probes just (re)placed by a grid
+		// scroll, so their reset state converges in one frame instead of
+		// trickling in.
+		StructuredBuffer<DDGIProbe> probe_buffer = bindless_structured_ddgi_probes[descriptor_index(GetScene().ddgi.probe_buffer)];
+		const bool probe_fresh = (push.frameIndex == 0)
+			|| (probe_buffer[probeIndex].flags & DDGIPROBE_FLAG_FRESH) != 0;
+		if(probe_fresh)
 			rayCount = DDGI_MAX_RAYCOUNT;
 		
 		raycountBuffer[probeIndex] = rayCount / DDGI_RAY_BUCKET_COUNT;

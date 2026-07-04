@@ -206,6 +206,10 @@ namespace wi::scene
 			float3 grid_min = float3(-1, -1, -1);
 			float3 grid_max = float3(1, 1, 1);
 			float smooth_backface = 0.01f; // smoothness of backface test
+			int3 scroll_offset = int3(0, 0, 0); // Cumulative grid scroll offset in cell steps
+			int3 scroll_delta = int3(0, 0, 0); // This frame's scroll delta; nonzero only on scroll frames
+			float3 grid_half_extents = float3(64, 16, 64); // World-space coverage radius per axis (X, Y, Z)
+			float grid_half_extents_down = 8.0F; // Downward Y coverage (less than up to avoid terrain waste)
 			wi::graphics::GPUBuffer ray_buffer;
 			wi::graphics::GPUBuffer variance_buffer;
 			wi::graphics::GPUBuffer raycount_buffer;

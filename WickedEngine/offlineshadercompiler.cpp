@@ -210,6 +210,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"ddgi_raytraceCS_rtapi", wi::graphics::ShaderStage::CS, wi::graphics::ShaderModel::SM_6_5 },
 	{"ddgi_updateCS", wi::graphics::ShaderStage::CS },
 	{"ddgi_updateCS_depth", wi::graphics::ShaderStage::CS },
+	{"ddgi_scrollCS", wi::graphics::ShaderStage::CS },
 	{"terrainVirtualTextureUpdateCS", wi::graphics::ShaderStage::CS },
 	{"terrainVirtualTextureUpdateCS_normalmap", wi::graphics::ShaderStage::CS },
 	{"terrainVirtualTextureUpdateCS_surfacemap", wi::graphics::ShaderStage::CS },
