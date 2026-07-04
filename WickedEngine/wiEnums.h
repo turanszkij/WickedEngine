@@ -199,6 +199,7 @@ namespace wi::enums
 		PSTYPE_EXTRACT_STENCIL_BIT,
 		PSTYPE_WAVE_EFFECT,
 		PSTYPE_POSTPROCESS_MESH_BLEND,
+		PSTYPE_VOID,
 
 
 		// geometry shaders
