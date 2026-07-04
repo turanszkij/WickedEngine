@@ -163,21 +163,9 @@ void gather_surfel(
 	inout float4 color,
 	inout float4 debug)
 {
-	// Robustness / anti-NaN gate. A corrupted or uninitialised surfel (e.g. an
-	// index read from a grid cell whose list was overflowed, pointing at a
-	// never-written pool slot) can have a zero/NaN normal, a non-finite
-	// position, or an out-of-range radius. normalize(0) is NaN and the dotN <=
-	// 0 reject below does NOT catch it (NaN <= 0 is false), so that NaN would
-	// flow into the accumulated colour and flash the whole cell's screen quad
-	// black or white for the frame. Reject obviously-invalid surfels up front.
-	const float surfel_radius = surfel.GetRadius();
-	if (!(surfel_radius > 0) || surfel_radius > SURFEL_MAX_RADIUS ||
-		any(isnan(surfel.position)) || any(isinf(surfel.position)))
-		return;
-
 	float3 L = P - surfel.position;
 	float dist2 = dot(L, L);
-	if (dist2 >= sqr(surfel_radius))
+	if (dist2 >= sqr(surfel.GetRadius()))
 		return;
 
 	// Point debug marks any surfel centre near the shading point, independent of
@@ -187,7 +175,7 @@ void gather_surfel(
 
 	float3 normal = normalize(unpack_half3(surfel.normal));
 	float dotN = dot(N, normal);
-	if (!(dotN > 0)) // NaN-safe: also rejects a zero/NaN normal (normalize(0)=NaN)
+	if (dotN <= 0)
 		return;
 
 	float dist = sqrt(dist2);
@@ -229,14 +217,14 @@ void gather_surfel(
 	contribution *= saturate(
 		(float)surfelDataBuffer[surfel_index].GetLife() / SURFEL_SPAWN_FADE_FRAMES);
 
-	// Final anti-NaN guard: a bad surfel radiance (or a NaN weight) must never
-	// enter the accumulator - one NaN poisons the whole pixel (and the temporal
-	// history) black/white. Skip the contribution if it is not finite.
-	const float3 irradiance = SH::CalculateIrradiance(surfel.radiance.Unpack(), N);
-	const float3 contribution_rgb = irradiance * contribution;
-	if (any(isnan(contribution_rgb)) || any(isinf(contribution_rgb)))
-		return;
-	color += float4(contribution_rgb, contribution);
+	// Clamp irradiance to non-negative. An L1 SH radiance evaluated toward a
+	// direction away from its dominant lobe can ring NEGATIVE (per channel),
+	// and negative irradiance is unphysical: added here it SUBTRACTS light,
+	// painting a dark (often dark-red, where only some channels go negative)
+	// semi-transparent blob the size of the surfel's footprint - visible for a
+	// frame as N and the surfel SH shift while the camera moves. max(0) removes
+	// the overshoot.
+	color += float4(max(0, SH::CalculateIrradiance(surfel.radiance.Unpack(), N)), 1) * contribution;
 
 	switch (debug_mode)
 	{
@@ -349,7 +337,19 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		return;
 	}
 
-	const float3 N = surface.N;
+	// Guard the SHADED pixel's surface normal. surface.load does N =
+	// normalize(N) with no zero-guard (surfaceHF.hlsli), so foliage cards /
+	// billboards / impostors with missing or cancelling vertex normals give a
+	// NaN surface.N. Every SH::CalculateIrradiance(surfel.radiance, N) in the
+	// gather below would then be NaN - per-pixel NaN GI on exactly the foliage
+	// pixels, which is why a coverage tile straddling a leaf edge goes NaN
+	// (black/white) on the leaf and stays clean on the background behind it.
+	// Fall back to a camera-facing normal so the gather stays finite
+	// (approximate ambient GI) instead of poisoning the pixel and its temporal
+	// history.
+	float3 N = surface.N;
+	if (any(isnan(N)) || any(isinf(N)) || dot(N, N) < 0.5)
+		N = normalize(-ray.Direction);
 
 	// Skip spawning on strongly emissive surfaces: their appearance is
 	// dominated by emission, so cached diffuse GI on them is wasted. They still
