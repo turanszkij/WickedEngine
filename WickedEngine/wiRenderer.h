@@ -508,6 +508,11 @@ namespace wi::renderer
 		// filtered.
 		wi::graphics::Texture result_halfres_denoise[2];
 		wi::graphics::Texture result;
+
+		// Frames since (re)creation. Used to clear the ping-pong temporal
+		// history once on the first frame (the textures are allocated
+		// uninitialised); mutable so the const coverage pass can advance it.
+		mutable int frame = 0;
 	};
 	void CreateSurfelGIResources(SurfelGIResources& res, XMUINT2 resolution);
 	void SurfelGI_Coverage(

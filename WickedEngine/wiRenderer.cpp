@@ -12131,6 +12131,10 @@ void CreateSurfelGIResources(SurfelGIResources& res, XMUINT2 resolution)
 	desc.height = resolution.y;
 	device->CreateTexture(&desc, nullptr, &res.result);
 	device->SetName(&res.result, "surfelgi.result");
+
+	// Freshly allocated textures are uninitialised; frame 0 clears the temporal
+	// history before it is first read (see SurfelGI_Coverage).
+	res.frame = 0;
 }
 void SurfelGI_Coverage(
 	const SurfelGIResources& res,
@@ -12147,6 +12151,21 @@ void SurfelGI_Coverage(
 	// texture as temporal history and writes this one; upsample reads this one.
 	const uint32_t hist_read = (uint32_t)(device->GetFrameCount() & 1);
 	const uint32_t hist_write = 1u - hist_read;
+
+	// On the first frame after (re)creation the ping-pong history texture is
+	// uninitialised. Coverage reads result_halfres[hist_read] as temporal
+	// history, and reproject_history's guard rejects NaN/Inf but NOT finite
+	// garbage - so an uninitialised read shows up as bright coloured blobs that
+	// only fade as the temporal loop washes them out (seen on a viewport
+	// resize, which reallocates these textures). Clear the history side once so
+	// the reprojection starts from black. The write side is cleared every frame
+	// below, so only the read/history texture needs this.
+	if (res.frame == 0)
+	{
+		device->Barrier(GPUBarrier::Image(&res.result_halfres[hist_read], res.result_halfres[hist_read].desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
+		device->ClearUAV(&res.result_halfres[hist_read], 0, cmd);
+		device->Barrier(GPUBarrier::Image(&res.result_halfres[hist_read], ResourceState::UNORDERED_ACCESS, res.result_halfres[hist_read].desc.layout), cmd);
+	}
 
 	{
 		GPUBarrier barriers[] = {
@@ -12289,6 +12308,8 @@ void SurfelGI_Coverage(
 		false,
 		2
 	);
+
+	res.frame++;
 
 	wi::profiler::EndRange(prof_range);
 	device->EventEnd(cmd);
