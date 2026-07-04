@@ -1323,6 +1323,11 @@ struct alignas(16) ShaderCamera
 	float		z_range;
 	float		z_range_rcp;
 
+	float		far_mul_near_mul_2;
+	float		near_sub_far;
+	float		far_sub_near;
+	float		near_plus_far;
+
 	float4x4	view;
 	float4x4	projection;
 	float4x4	inverse_view;
@@ -1409,6 +1414,10 @@ struct alignas(16) ShaderCamera
 		z_far_rcp = {};
 		z_range = {};
 		z_range_rcp = {};
+		far_mul_near_mul_2 = {};
+		near_sub_far = {};
+		far_sub_near = {};
+		near_plus_far = {};
 		view = {};
 		projection = {};
 		inverse_view = {};
