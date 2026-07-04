@@ -37,12 +37,32 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	Surface surface;
 	surface.init();
 	surface.uid_validate = surfel_data.uid;
-	if (surface.load(prim, unpack_half2(surfel_data.bary)))
+	bool valid_surface = surface.load(prim, unpack_half2(surfel_data.bary));
+	if (valid_surface && surfel_data.IsBackfaceNormal())
 	{
-		if(surfel_data.IsBackfaceNormal())
-		{
-			surface.facenormal = -surface.facenormal;
-		}
+		surface.facenormal = -surface.facenormal;
+	}
+	// Reject a degenerate / non-finite face normal. surface.load
+	// (load_internal) does N = normalize(N) with NO zero-guard
+	// (surfaceHF.hlsli), so geometry with missing / degenerate / cancelling
+	// vertex normals - common on foliage cards, billboards and impostors -
+	// yields a NaN facenormal. Stored here and normalize()-d again in the
+	// coverage gather, that NaN becomes NaN GI that flashes the whole grid
+	// cell's screen quad black/white (the surfel cache broadcasts one bad
+	// normal over the cell's entire footprint). Such a surfel is useless
+	// anyway, so treat it exactly like a load failure below (radius 0, not
+	// counted, not binned, retired to the dead list) - keeping NaN out of the
+	// cache at the source. A valid normalized normal has length^2 ~ 1; NaN/zero
+	// fail this test.
+	if (valid_surface)
+	{
+		valid_surface =
+			!any(isnan(surface.facenormal)) &&
+			!any(isinf(surface.facenormal)) &&
+			dot(surface.facenormal, surface.facenormal) > 0.5;
+	}
+	if (valid_surface)
+	{
 		surfel.normal = pack_half3(surface.facenormal);
 		surfel.position = surface.P;
 
