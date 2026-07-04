@@ -590,5 +590,18 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	}
 
+	// Sanitize the ray radiance before it is stored/packed. A sky/sun hit (or a
+	// stray firefly) can exceed the R11G11B10 pack range and unpack as +Inf;
+	// the integrate pass's MultiscaleMeanEstimator firefly clamp then does Inf
+	// - Inf = NaN, which permanently poisons the surfel's cached radiance and
+	// spreads via the multi-bounce feedback (line ~560), and the coverage
+	// gather reads it as NaN and flashes the whole grid cell black/white.
+	// Replace any non-finite component with 0 and clamp to a finite max the
+	// pack format represents, so Inf/NaN can never enter the surfel cache from
+	// here.
+	rayData.radiance = (any(isnan(rayData.radiance)) || any(isinf(rayData.radiance)))
+		? (float3)0
+		: min(rayData.radiance, SURFEL_RAY_RADIANCE_MAX);
+
 	surfelRayBuffer[ray_slot].store(rayData);
 }
