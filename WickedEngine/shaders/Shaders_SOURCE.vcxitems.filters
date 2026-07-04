@@ -467,9 +467,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)shadowPS_transparent.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)shadowPS_water.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)shadowPS_alphatest.hlsl">
       <Filter>PS</Filter>
     </FxCompile>

@@ -1383,6 +1383,7 @@ inline float3x3 compute_tangent_frame(float3 N, float3 P, float2 UV)
 }
 
 // Computes linear depth from post-projection depth
+//	This version can be used without camera struct with raw values
 template<typename T>
 inline T compute_lineardepth(in T z, in float near, in float far, in bool ortho = false)
 {
@@ -1390,19 +1391,42 @@ inline T compute_lineardepth(in T z, in float near, in float far, in bool ortho 
 		return near + (1 - z) * (far - near); // ortho
 
 	// Perspective:
-	T z_n = 2 * z - 1;
-	T lin = 2 * far * near / (near + far - z_n * (near - far));
-	return lin;
+	return 2 * far * near / (near + far - (z * 2 - 1) * (near - far));
+}
+// Computes linear depth from post-projection depth
+//	This version uses camera constant buffer with some precomputed values for optimization:
+template<typename T>
+inline T compute_lineardepth(in T z, in ShaderCamera camera)
+{
+	if (camera.IsOrtho())
+		return camera.z_near + (1 - z) * camera.far_sub_near; // ortho
+
+	// Perspective:
+	return camera.far_mul_near_mul_2 / (camera.near_plus_far - (z * 2 - 1) * camera.near_sub_far);
 }
 template<typename T>
 inline T compute_lineardepth(in T z)
 {
-	return compute_lineardepth(z, GetCamera().z_near, GetCamera().z_far, GetCamera().IsOrtho());
+	return compute_lineardepth(z, GetCamera());
 }
 template<typename T>
 inline T compute_lineardepth_normalized(in T z)
 {
 	return compute_lineardepth(z) * GetCamera().z_far_rcp;
+}
+
+// Computes post-projection depth from linear depth
+inline float compute_inverse_lineardepth(in float lin, in float near, in float far, in bool ortho = false)
+{
+	if (ortho)
+		return 1 - (lin - near) / (far - near);
+
+	// Perspective:
+	return (((lin - 2 * far) * near + far * lin) / (lin * near - far * lin) + 1) * 0.5;
+}
+inline float compute_inverse_lineardepth(in float lin)
+{
+	return compute_inverse_lineardepth(lin, GetCamera().z_near, GetCamera().z_far, GetCamera().IsOrtho());
 }
 
 // This is a helper to allow using texture_lineardepth as if there was an existing texture with normalized lineardepth information in [0,1] range
@@ -1417,22 +1441,6 @@ struct LinearDepthTextureEmulator
 	void GetDimensions(out uint x, out uint y) { return texture_depth.GetDimensions(x, y); }
 };
 static const LinearDepthTextureEmulator texture_lineardepth;
-
-// Computes post-projection depth from linear depth
-inline float compute_inverse_lineardepth(in float lin, in float near, in float far, in bool ortho = false)
-{
-	if (ortho)
-		return 1 - (lin - near) / (far - near);
-
-	// Perspective:
-	float z_n = ((lin - 2 * far) * near + far * lin) / (lin * near - far * lin);
-	float z = (z_n + 1) / 2;
-	return z;
-}
-inline float compute_inverse_lineardepth(in float lin)
-{
-	return compute_inverse_lineardepth(lin, GetCamera().z_near, GetCamera().z_far, GetCamera().IsOrtho());
-}
 
 inline float3x3 get_tangentspace(in float3 normal)
 {

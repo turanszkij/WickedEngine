@@ -251,7 +251,6 @@ wi::vector<ShaderEntry> shaders = {
 	{"skyPS_dynamic", wi::graphics::ShaderStage::PS },
 	{"skyPS_static", wi::graphics::ShaderStage::PS },
 	{"shadowPS_transparent", wi::graphics::ShaderStage::PS },
-	{"shadowPS_water", wi::graphics::ShaderStage::PS },
 	{"shadowPS_alphatest", wi::graphics::ShaderStage::PS },
 	{"paintdecalPS", wi::graphics::ShaderStage::PS },
 	{"renderlightmapPS", wi::graphics::ShaderStage::PS },

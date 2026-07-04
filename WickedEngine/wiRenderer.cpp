@@ -603,7 +603,7 @@ SHADERTYPE GetPSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, b
 	case RENDERPASS_SHADOW:
 		if (transparent)
 		{
-			realPS = shaderType == MaterialComponent::SHADERTYPE_WATER ? PSTYPE_SHADOW_WATER : PSTYPE_SHADOW_TRANSPARENT;
+			realPS = PSTYPE_SHADOW_TRANSPARENT;
 		}
 		else
 		{
@@ -951,7 +951,6 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_SUN], "sunPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_SHADOW_ALPHATEST], "shadowPS_alphatest.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_SHADOW_TRANSPARENT], "shadowPS_transparent.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_SHADOW_WATER], "shadowPS_water.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_VOXELIZER], "objectPS_voxelizer.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_FORCEFIELDVISUALIZER], "forceFieldVisualizerPS.cso"); });
 
@@ -1893,7 +1892,8 @@ void LoadShaders()
 	object_pso_job_ctx.priority = wi::jobsystem::Priority::Low;
 	for (uint32_t renderPass = 0; renderPass < RENDERPASS_COUNT; ++renderPass)
 	{
-		for (uint32_t shaderType = 0; shaderType < MaterialComponent::SHADERTYPE_COUNT; ++shaderType)
+		const uint32_t materialtype_differentiation = renderPass == RENDERPASS_MAIN ? MaterialComponent::SHADERTYPE_COUNT : 1; // only RENDERPASS_MAIN needs to handle different material shader types
+		for (uint32_t shaderType = 0; shaderType < materialtype_differentiation; ++shaderType)
 		{
 			for (uint32_t mesh_shader = 0; mesh_shader <= (device->CheckCapability(GraphicsDeviceCapability::MESH_SHADER) ? 1u : 0u); ++mesh_shader)
 			{
@@ -1946,7 +1946,7 @@ void LoadShaders()
 									if (mesh_shader && realPS == SHADERTYPE_COUNT)
 									{
 										// Apple Metal workaround: mesh shader must have pixel shader
-										realPS = PSTYPE_OBJECT_DEBUG;
+										realPS = PSTYPE_VERTEXCOLOR;
 									}
 #endif // __APPLE__
 									desc.ps = realPS < SHADERTYPE_COUNT ? &shaders[realPS] : nullptr;
@@ -3267,7 +3267,10 @@ void RenderMeshes(
 				{
 					ObjectRenderingVariant variant = {};
 					variant.bits.renderpass = renderPass;
-					variant.bits.shadertype = material.shaderType;
+					if (renderPass == RENDERPASS_MAIN)
+					{
+						variant.bits.shadertype = material.shaderType;
+					}
 					variant.bits.blendmode = material.GetBlendMode();
 					variant.bits.cullmode = (mesh.IsDoubleSided() || material.IsDoubleSided() || (shadowRendering && mesh.IsDoubleSidedShadow())) ? (uint32_t)CullMode::NONE : (uint32_t)CullMode::BACK;
 					variant.bits.tessellation = tessellatorRequested;
@@ -9365,6 +9368,10 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			shadercam.z_far_rcp = zFarPRcp;
 			shadercam.z_range = abs(zFarP - zNearP);
 			shadercam.z_range_rcp = 1.0f / std::max(0.0001f, shadercam.z_range);
+			shadercam.far_mul_near_mul_2 = shadercam.z_far * shadercam.z_near * 2;
+			shadercam.near_sub_far = shadercam.z_near - shadercam.z_far;
+			shadercam.far_sub_near = shadercam.z_far - shadercam.z_near;
+			shadercam.near_plus_far = shadercam.z_near + shadercam.z_far;
 			shadercam.internal_resolution = uint2(probe.texture.desc.width, probe.texture.desc.height);
 			shadercam.internal_resolution_rcp.x = 1.0f / shadercam.internal_resolution.x;
 			shadercam.internal_resolution_rcp.y = 1.0f / shadercam.internal_resolution.y;
@@ -11452,6 +11459,10 @@ void BindCameraCB(
 	shadercam.z_far_rcp = 1.0f / std::max(0.0001f, shadercam.z_far);
 	shadercam.z_range = abs(shadercam.z_far - shadercam.z_near);
 	shadercam.z_range_rcp = 1.0f / std::max(0.0001f, shadercam.z_range);
+	shadercam.far_mul_near_mul_2 = shadercam.z_far * shadercam.z_near * 2;
+	shadercam.near_sub_far = shadercam.z_near - shadercam.z_far;
+	shadercam.far_sub_near = shadercam.z_far - shadercam.z_near;
+	shadercam.near_plus_far = shadercam.z_near + shadercam.z_far;
 	shadercam.clip_plane = camera.clipPlane;
 	shadercam.reflection_plane = camera_reflection.clipPlaneOriginal;
 
