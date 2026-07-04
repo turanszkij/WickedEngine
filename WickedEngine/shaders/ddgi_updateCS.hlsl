@@ -88,12 +88,17 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 		ddgiProbeBuffer[probeIndex].offset = 0;
 	}
 	const float3 probe_limit = ddgi_cellsize() * 0.5;
-	float3 probeOffsetNew = 0;
 	const float probeOffsetDistance = maxDistance * DDGI_KEEP_DISTANCE;
-	// Only thread 0 tallies these; it visits every ray exactly once across all
-	// cache chunks, so the counts are exact without a groupshared atomic.
-	uint close_hit_count = 0;
+	// Relocation + inside-geometry detection are tallied by thread 0 only; it
+	// visits every ray exactly once across all cache chunks, so the results are
+	// exact without a groupshared atomic. frontface_push nudges the probe away
+	// from nearby front surfaces (keeps it off walls); the closest backface is
+	// the nearest exit if the probe is stuck inside a mesh.
+	float3 frontface_push = 0;
 	uint counted_ray_count = 0;
+	uint backface_count = 0;
+	float closest_backface_dist = maxDistance;
+	float3 closest_backface_dir = 0;
 #endif // DDGI_UPDATE_DEPTH
 
 #ifdef DDGI_UPDATE_DEPTH
@@ -132,25 +137,30 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 			DDGIRayData ray = ray_cache[r];
 
 #ifdef DDGI_UPDATE_DEPTH
-			half depth;
-			if (ray.depth > 0)
-			{
-				depth = clamp(ray.depth - 0.01, 0, maxDistance);
-			}
-			else
-			{
-				depth = maxDistance;
-			}
+			// The sign of ray.depth encodes front (+) vs back (-) face; its
+			// magnitude is the hit distance (a miss stores +maxDistance). The
+			// depth/visibility moment uses the magnitude, unchanged from
+			// before.
+			const bool is_backface = ray.depth < 0;
+			const half hit_dist = min((half)maxDistance, (half)abs(ray.depth));
+			const half depth = clamp(hit_dist - 0.01, 0, maxDistance);
 
-			if (depth < probeOffsetDistance)
-			{
-				probeOffsetNew -= ray.direction * (probeOffsetDistance - depth);
-			}
 			if (groupIndex == 0)
 			{
 				counted_ray_count++;
-				if (depth < probeOffsetDistance)
-					close_hit_count++;
+				if (is_backface)
+				{
+					backface_count++;
+					if (hit_dist < closest_backface_dist)
+					{
+						closest_backface_dist = hit_dist;
+						closest_backface_dir = ray.direction;
+					}
+				}
+				else if (depth < probeOffsetDistance)
+				{
+					frontface_push -= ray.direction * (probeOffsetDistance - depth);
+				}
 			}
 #else
 			const half3 radiance = ray.radiance.rgb;
@@ -209,6 +219,21 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 	[branch]
 	if (groupIndex == 0)
 	{
+		// A probe is inside geometry when a large fraction of its rays hit
+		// backfaces (a ray only sees a backface from behind the surface). RTXGI
+		// uses ~25%.
+		const bool probe_inside = (counted_ray_count > 0) && (backface_count * 4 > counted_ray_count);
+
+		// Default relocation keeps the probe off nearby front surfaces. If the
+		// probe is inside a mesh, steer it toward the nearest backface instead
+		// - that is the closest exit. If that exit is farther than the offset
+		// clamp allows, the probe stays buried and is marked invalid below.
+		float3 probeOffsetNew = frontface_push;
+		if (probe_inside && closest_backface_dist < maxDistance)
+		{
+			probeOffsetNew = closest_backface_dir * (closest_backface_dist + probeOffsetDistance);
+		}
+
 		[branch]
 		if(GetScene().voxelgrid.IsValid())
 		{
@@ -220,7 +245,7 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 				probeOffsetNew += get_nearby_empty_voxel(voxelgrid, coord) * voxelgrid.voxelSize * 2;
 			}
 		}
-		
+
 		half3 probeOffset = unpack_half3(ddgiProbeBuffer[probeIndex].offset);
 		probeOffset *= probe_limit;
 		probeOffset = lerp(probeOffset, probeOffsetNew, 0.05); // Increased from 0.01 for faster escape
@@ -228,13 +253,12 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 		probeOffset /= probe_limit;
 		ddgiProbeBuffer[probeIndex].offset = pack_half3(probeOffset);
 
-		// Probe validity: if nearly all rays hit close surfaces from every
-		// direction, the probe is buried in solid geometry.
-		// counted_ray_count/close_hit_count were tallied by thread 0 over every
-		// ray, so this is an exact fraction (no 1/threadcount error).
+		// Validity: a probe still inside geometry this frame is marked invalid
+		// so ddgi_sample_irradiance down-weights it. It becomes valid again
+		// automatically once relocation moves it into open space and the
+		// backface ratio drops.
 		uint flags = ddgiProbeBuffer[probeIndex].flags;
-		bool probe_buried = (counted_ray_count > 0) && (close_hit_count * 100 > counted_ray_count * 85);
-		if (probe_buried)
+		if (probe_inside)
 			flags &= ~DDGIPROBE_FLAG_VALID;
 		else
 			flags |= DDGIPROBE_FLAG_VALID;

@@ -273,7 +273,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 			DDGIRayData rayData;
 			rayData.direction = ray.Direction;
-			rayData.depth = -1;
+			// Miss (sky): store a far, positive depth. The sign of depth
+			// encodes front (+) vs back (-) face hits for the update pass, so a
+			// miss must be positive and is treated as "no near occluder" for
+			// visibility.
+			rayData.depth = (half)ddgi_max_distance();
 			rayData.radiance = radiance;
 			rayBuffer[probeIndex * DDGI_MAX_RAYCOUNT + rayIndex].store(rayData);
 		}
@@ -506,7 +510,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 			DDGIRayData rayData;
 			rayData.direction = ray.Direction;
-			rayData.depth = hit_depth;
+			// Encode a backface hit as a negative depth so the update pass can
+			// detect probes that are stuck inside geometry (a ray only hits a
+			// backface when the probe is behind that surface). Magnitude stays
+			// the hit distance.
+			rayData.depth = surface.IsBackface() ? -(half)hit_depth : (half)hit_depth;
 			rayData.radiance = radiance;
 			rayBuffer[probeIndex * DDGI_MAX_RAYCOUNT + rayIndex].store(rayData);
 		}
