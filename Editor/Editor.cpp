@@ -1622,17 +1622,6 @@ void EditorComponent::Update(float dt)
 
 	main->canvas.scaling = float(guiScalingCombo.GetSelectedUserdata()) / 100.0f;
 
-	// F6: pause/resume surfel spawning (debug/testing) - stops NEW surfels
-	// being placed while the update passes (recycle, resize, thinning) keep
-	// running, so you can watch the existing surfels thin out without new ones
-	// being added.
-	if (wi::input::Press(wi::input::KEYBOARD_BUTTON_F6))
-	{
-		const bool frozen = !wi::renderer::GetSurfelGIFrozen();
-		wi::renderer::SetSurfelGIFrozen(frozen);
-		wi::backlog::post(frozen ? "Surfel GI spawning paused" : "Surfel GI spawning resumed");
-	}
-
 	wi::renderer::SetDebugDrawEnabled(true);
 	if (screenshot)
 	{

@@ -226,7 +226,6 @@ enum SURFEL_DEBUG
 struct SurfelDebugPushConstants
 {
 	SURFEL_DEBUG debug;
-	uint frozen; // 1 = freeze: surfel_coverage skips spawning (the update passes are skipped on the C++ side); the frozen field still gathers/renders
 };
 
 #ifndef __cplusplus

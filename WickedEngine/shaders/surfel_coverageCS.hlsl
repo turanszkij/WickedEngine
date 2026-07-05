@@ -484,7 +484,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		? surfelGridBuffer[surfel_cellindex(spawn_gridpos, spawn_level)].count
 		: SURFEL_CELL_LIMIT;
 
-	if (push.frozen == 0 && !skip_spawn && spawn_cell_count < SURFEL_CELL_LIMIT)
+	if (!skip_spawn && spawn_cell_count < SURFEL_CELL_LIMIT)
 	{
 		uint surfel_count_at_pixel = 0;
 		surfel_count_at_pixel |= (uint(coverage) & 0xFF) << 24; // the upper bits matter most for min selection
@@ -564,7 +564,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	write_result(DTid.xy, color);
 	write_debug(DTid.xy, debug);
 
-	if (push.frozen == 0 && !skip_spawn && spawn_cell_count < SURFEL_CELL_LIMIT)
+	if (!skip_spawn && spawn_cell_count < SURFEL_CELL_LIMIT)
 	{
 		uint surfel_coverage = GroupMinSurfelCount[subtile];
 		uint2 minGTid;
