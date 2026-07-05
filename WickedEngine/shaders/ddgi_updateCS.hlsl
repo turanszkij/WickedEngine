@@ -89,16 +89,15 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 	}
 	const float3 probe_limit = ddgi_cellsize() * 0.5;
 	const float probeOffsetDistance = maxDistance * DDGI_KEEP_DISTANCE;
-	// Relocation + inside-geometry detection are tallied by thread 0 only; it
-	// visits every ray exactly once across all cache chunks, so the results are
-	// exact without a groupshared atomic. frontface_push nudges the probe away
-	// from nearby front surfaces (keeps it off walls); the closest backface is
-	// the nearest exit if the probe is stuck inside a mesh.
-	float3 frontface_push = 0;
+	// Relocation + enclosure detection are tallied by thread 0 only; it visits
+	// every ray exactly once across all cache chunks, so the results are exact
+	// without a groupshared atomic. surface_push nudges the probe away from any
+	// nearby surface, front or back (keeps it off walls and off the underside
+	// of planes); backface_count drives the enclosure (validity) test.
+	float3 surface_push = 0;
 	uint counted_ray_count = 0;
 	uint backface_count = 0;
-	float closest_backface_dist = maxDistance;
-	float3 closest_backface_dir = 0;
+	uint escape_count = 0; // rays that reach open space (a miss, or a hit only far away)
 #endif // DDGI_UPDATE_DEPTH
 
 #ifdef DDGI_UPDATE_DEPTH
@@ -149,17 +148,25 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 			{
 				counted_ray_count++;
 				if (is_backface)
-				{
 					backface_count++;
-					if (hit_dist < closest_backface_dist)
-					{
-						closest_backface_dist = hit_dist;
-						closest_backface_dir = ray.direction;
-					}
-				}
-				else if (depth < probeOffsetDistance)
+				// A ray "escapes" when it reaches open space in that direction:
+				// a true miss, or a *front* face only far away (a distant wall
+				// the probe faces). A far *back* face does NOT escape - the
+				// probe is still behind that surface, i.e. enclosed on that
+				// side. This is what separates a large solid box (far walls are
+				// backfaces -> few escapes -> buried) from a large open room
+				// (far walls are frontfaces -> many escapes -> valid), even
+				// though both give ~50% backfaces when a plane clips through.
+				// Few escapes => boxed in.
+				if (!is_backface && hit_dist >= (half)maxDistance)
+					escape_count++;
+				// Push away from any near surface, front or back. Including
+				// backfaces keeps a probe that legitimately sits behind a
+				// single-sided face (e.g. under a water plane) at keep-distance
+				// on its own side instead of drifting into the surface.
+				if (depth < probeOffsetDistance)
 				{
-					frontface_push -= ray.direction * (probeOffsetDistance - depth);
+					surface_push -= ray.direction * (probeOffsetDistance - depth);
 				}
 			}
 #else
@@ -219,20 +226,59 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 	[branch]
 	if (groupIndex == 0)
 	{
-		// A probe is inside geometry when a large fraction of its rays hit
-		// backfaces (a ray only sees a backface from behind the surface). RTXGI
-		// uses ~25%.
-		const bool probe_inside = (counted_ray_count > 0) && (backface_count * 4 > counted_ray_count);
+		uint flags = ddgiProbeBuffer[probeIndex].flags;
 
-		// Default relocation keeps the probe off nearby front surfaces. If the
-		// probe is inside a mesh, steer it toward the nearest backface instead
-		// - that is the closest exit. If that exit is farther than the offset
-		// clamp allows, the probe stays buried and is marked invalid below.
-		float3 probeOffsetNew = frontface_push;
-		if (probe_inside && closest_backface_dist < maxDistance)
-		{
-			probeOffsetNew = closest_backface_dir * (closest_backface_dist + probeOffsetDistance);
-		}
+		// A probe is buried when it is enclosed by solid geometry. Two
+		// independent signatures qualify:
+		//   1. Nearly every ray hits a backface (>= 87.5%) - deep inside a
+		//      solid, even one whose far walls read as "open" by distance.
+		//   2. It is boxed in (almost no rays escape to open space) AND at
+		//      least half its rays hit backfaces. This catches a probe just
+		//      inside the bottom of a box resting on a plane: the box walls
+		//      give ~50% backfaces while the plane's frontface fills the rest,
+		//      so rule 1 misses it, but nothing escapes so rule 2 flags it. A
+		//      probe merely behind a single-sided face in the open (under a
+		//      water plane, an overhang) fails both: ~50% backfaces but plenty
+		//      of rays escape.
+		//
+		// NOTE: a probe just inside a box bottom and one just under an open
+		// water surface with a *nearby* floor/walls are genuinely
+		// indistinguishable from ray hits alone (both are ~50% backface, boxed
+		// in). Separating those needs a solid/voxel oracle; the voxel-grid push
+		// below already helps when present.
+		//
+		// The decision is hysteretic (enter buried on the rules above, leave
+		// only when clearly open) so a probe whose counts hover near a boundary
+		// does not flicker as the re-randomized rays jitter the tallies frame
+		// to frame.
+		const bool was_valid = (flags & DDGIPROBE_FLAG_VALID) != 0;
+		const bool mostly_backfaces = backface_count * 8 >= counted_ray_count * 7; // >= 87.5%
+		const bool backface_heavy = backface_count * 2 >= counted_ray_count;        // >= 50%
+		const bool few_escapes = escape_count * 8 < counted_ray_count;              // < 12.5%
+		const bool enter_buried = mostly_backfaces || (backface_heavy && few_escapes);
+		const bool clearly_open =
+			(backface_count * 4 < counted_ray_count)   // < 25% backfaces
+			|| (escape_count * 4 >= counted_ray_count); // >= 25% rays escape
+		bool probe_enclosed;
+		if (counted_ray_count == 0)
+			probe_enclosed = false;
+		else if (enter_buried)
+			probe_enclosed = true;
+		else if (clearly_open)
+			probe_enclosed = false;
+		else
+			probe_enclosed = !was_valid; // in-between: hold previous state
+
+		// Relocation only ever pushes the probe *away* from nearby surfaces (a
+		// smooth field with stable equilibria), never toward/through a backface
+		// to "extract" it. Steering buried probes toward their nearest exit
+		// oscillated badly where the exit is a dead end - e.g. a box resting on
+		// the ground: the probe is pushed down out of the box, immediately
+		// sandwiched against the floor, flips valid, gets pushed back up into
+		// the box, and repeats. Buried probes instead settle inward
+		// (surface_push is ~symmetric inside a solid), stay enclosed, and are
+		// simply hidden/down-weighted.
+		float3 probeOffsetNew = surface_push;
 
 		[branch]
 		if(GetScene().voxelgrid.IsValid())
@@ -253,12 +299,11 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 		probeOffset /= probe_limit;
 		ddgiProbeBuffer[probeIndex].offset = pack_half3(probeOffset);
 
-		// Validity: a probe still inside geometry this frame is marked invalid
-		// so ddgi_sample_irradiance down-weights it. It becomes valid again
-		// automatically once relocation moves it into open space and the
-		// backface ratio drops.
-		uint flags = ddgiProbeBuffer[probeIndex].flags;
-		if (probe_inside)
+		// Validity: only a probe enclosed in solid geometry this frame is
+		// marked invalid so ddgi_sample_irradiance down-weights it. It becomes
+		// valid again automatically once relocation moves it into open space
+		// and the backface ratio drops below the low threshold.
+		if (probe_enclosed)
 			flags &= ~DDGIPROBE_FLAG_VALID;
 		else
 			flags |= DDGIPROBE_FLAG_VALID;
