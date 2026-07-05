@@ -57,15 +57,33 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		rayCount = align(rayCount, DDGI_RAY_BUCKET_COUNT);
 		rayCount = clamp(rayCount, DDGI_RAY_BUCKET_COUNT, DDGI_MAX_RAYCOUNT);
 
-		// Full ray budget on frame 0 and for probes just (re)placed by a grid
-		// scroll, so their reset state converges in one frame instead of
-		// trickling in.
 		StructuredBuffer<DDGIProbe> probe_buffer = bindless_structured_ddgi_probes[descriptor_index(GetScene().ddgi.probe_buffer)];
+		const uint probe_flags = probe_buffer[probeIndex].flags;
 		const bool probe_fresh = (push.frameIndex == 0)
-			|| (probe_buffer[probeIndex].flags & DDGIPROBE_FLAG_FRESH) != 0;
+			|| (probe_flags & DDGIPROBE_FLAG_FRESH) != 0;
+		const bool probe_valid = (probe_flags & DDGIPROBE_FLAG_VALID) != 0;
+
 		if(probe_fresh)
+		{
+			// Full ray budget on frame 0 and for probes just (re)placed by a
+			// grid scroll, so their reset state converges in one frame instead
+			// of trickling in.
 			rayCount = DDGI_MAX_RAYCOUNT;
-		
+		}
+		else if(!probe_valid)
+		{
+			// Buried probes are down-weighted to almost nothing when sampled,
+			// so spending the variance-driven budget on them (their backface
+			// shading is noisy, which otherwise inflates that budget) is wasted
+			// work. Cap them at a small fixed count - just enough for the depth
+			// pass to keep re-measuring the backface ratio and relocating, so a
+			// probe that becomes exposed recovers and is handed the full budget
+			// again. Too few rays here (e.g. a single 4-ray bucket) would make
+			// the 25% test flicker frame to frame since the ray directions are
+			// re-randomized each frame.
+			rayCount = DDGI_RAY_BUCKET_COUNT * 8; // 32 rays (of up to 512)
+		}
+
 		raycountBuffer[probeIndex] = rayCount / DDGI_RAY_BUCKET_COUNT;
 		shared_rayCount = rayCount;
 
