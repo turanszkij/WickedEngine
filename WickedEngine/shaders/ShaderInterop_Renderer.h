@@ -1845,7 +1845,11 @@ struct alignas(16) DDGIProbe
 	SH::L1_RGB::Packed radiance;
 	uint2 offset;
 	uint flags;
-	uint padding;
+	// Temporally smoothed "buried in solid" confidence in [0,1]. The per-frame
+	// enclosure test is noisy (a probe near the boundary only traces ~32 rays,
+	// re-randomized each frame), so the raw decision blinks. This is an EMA of
+	// that decision; the VALID flag is derived from it, which keeps it stable.
+	float enclosure_confidence;
 };
 
 #endif // WI_SHADERINTEROP_RENDERER_H

@@ -229,45 +229,56 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 		uint flags = ddgiProbeBuffer[probeIndex].flags;
 
 		// A probe is buried when it is enclosed by solid geometry. Two
-		// independent signatures qualify:
+		// independent per-frame signatures qualify:
 		//   1. Nearly every ray hits a backface (>= 87.5%) - deep inside a
-		//      solid, even one whose far walls read as "open" by distance.
-		//   2. It is boxed in (almost no rays escape to open space) AND at
-		//      least half its rays hit backfaces. This catches a probe just
-		//      inside the bottom of a box resting on a plane: the box walls
-		//      give ~50% backfaces while the plane's frontface fills the rest,
-		//      so rule 1 misses it, but nothing escapes so rule 2 flags it. A
-		//      probe merely behind a single-sided face in the open (under a
-		//      water plane, an overhang) fails both: ~50% backfaces but plenty
-		//      of rays escape.
+		//      solid.
+		//   2. It is boxed in (few rays escape to open space) AND at least half
+		//      its rays hit backfaces. Catches a probe inside a box on /
+		//      clipped by a plane: the box walls give the backfaces, the
+		//      plane's near frontface fills the rest, and (unlike an open water
+		//      plane) little escapes. An escape is a miss or a far *front*
+		//      face; a far backface does not escape.
 		//
-		// NOTE: a probe just inside a box bottom and one just under an open
-		// water surface with a *nearby* floor/walls are genuinely
-		// indistinguishable from ray hits alone (both are ~50% backface, boxed
-		// in). Separating those needs a solid/voxel oracle; the voxel-grid push
-		// below already helps when present.
+		// This per-frame decision is noisy: a boundary probe only traces ~32
+		// rays, re-randomized every frame, so the raw verdict blinks. So we
+		// accumulate it into a temporally smoothed confidence (EMA) and derive
+		// VALID from that. A fresh probe (full ray budget) takes the verdict
+		// immediately; others ease toward it, which removes the blink. A
+		// dead-band around the midpoint keeps a genuinely borderline probe from
+		// crossing back and forth.
 		//
-		// The decision is hysteretic (enter buried on the rules above, leave
-		// only when clearly open) so a probe whose counts hover near a boundary
-		// does not flicker as the re-randomized rays jitter the tallies frame
-		// to frame.
-		const bool was_valid = (flags & DDGIPROBE_FLAG_VALID) != 0;
+		// NOTE: a probe just inside a box and one under an open water surface
+		// with a *nearby* floor/walls are genuinely indistinguishable from ray
+		// hits alone (both ~50% backface, boxed in). Separating those needs a
+		// solid/voxel oracle; the voxel-grid push below already helps when
+		// present.
 		const bool mostly_backfaces = backface_count * 8 >= counted_ray_count * 7; // >= 87.5%
 		const bool backface_heavy = backface_count * 2 >= counted_ray_count;        // >= 50%
-		const bool few_escapes = escape_count * 8 < counted_ray_count;              // < 12.5%
+		const bool few_escapes = escape_count * 4 < counted_ray_count;              // < 25%
 		const bool enter_buried = mostly_backfaces || (backface_heavy && few_escapes);
 		const bool clearly_open =
-			(backface_count * 4 < counted_ray_count)   // < 25% backfaces
-			|| (escape_count * 4 >= counted_ray_count); // >= 25% rays escape
+			(backface_count * 4 < counted_ray_count)       // < 25% backfaces
+			|| (escape_count * 5 >= counted_ray_count * 2); // >= 40% rays escape
+
+		// Smooth the verdict. An ambiguous frame (neither) holds the current
+		// value.
+		float confidence = probe_fresh ? 0.0 : ddgiProbeBuffer[probeIndex].enclosure_confidence;
+		[branch]
+		if (counted_ray_count > 0)
+		{
+			const float target = enter_buried ? 1.0 : (clearly_open ? 0.0 : confidence);
+			confidence = probe_fresh ? target : lerp(confidence, target, 0.1);
+		}
+		ddgiProbeBuffer[probeIndex].enclosure_confidence = confidence;
+
+		const bool was_valid = (flags & DDGIPROBE_FLAG_VALID) != 0;
 		bool probe_enclosed;
-		if (counted_ray_count == 0)
-			probe_enclosed = false;
-		else if (enter_buried)
+		if (confidence > 0.6)
 			probe_enclosed = true;
-		else if (clearly_open)
+		else if (confidence < 0.4)
 			probe_enclosed = false;
 		else
-			probe_enclosed = !was_valid; // in-between: hold previous state
+			probe_enclosed = !was_valid; // dead-band: hold previous state
 
 		// Relocation only ever pushes the probe *away* from nearby surfaces (a
 		// smooth field with stable equilibria), never toward/through a backface
