@@ -19,14 +19,17 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	Surfel surfel = surfelBuffer[surfel_index];
 	if (surfel.GetRadius() > 0)
 	{
-		int3 center_cell = surfel_cell(surfel.position);
+		// Bin into the surfel's own cascaded grid level (recovered from its
+		// radius); must match the level chosen in surfel_updateCS.
+		const uint level = surfel_level_from_radius(surfel.GetRadius());
+		int3 center_cell = surfel_cell(surfel.position, level);
 		for (uint i = 0; i < 27; ++i)
 		{
 			int3 gridpos = center_cell + surfel_neighbor_offsets[i];
 
-			if (surfel_cellintersects(surfel, gridpos))
+			if (surfel_cellintersects(surfel, gridpos, level))
 			{
-				uint cellindex = surfel_cellindex(gridpos);
+				uint cellindex = surfel_cellindex(gridpos, level);
 				uint prevCount;
 				InterlockedAdd(surfelGridBuffer[cellindex].count, 1, prevCount);
 				surfelCellBuffer[surfelGridBuffer[cellindex].offset + prevCount] = surfel_index;

@@ -549,7 +549,7 @@ namespace wi::scene
 				device->SetName(&surfelgi.indirectBuffer, "surfelgi.indirectBuffer");
 
 				buf.stride = sizeof(SurfelGridCell);
-				buf.size = buf.stride * SURFEL_TABLE_SIZE;
+				buf.size = buf.stride * SURFEL_TOTAL_TABLE_SIZE; // one hash table per cascaded grid level
 				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 				device->CreateBufferZeroed(&buf, &surfelgi.gridBuffer);
 				device->SetName(&surfelgi.gridBuffer, "surfelgi.gridBuffer");
@@ -565,6 +565,19 @@ namespace wi::scene
 				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 				device->CreateBufferZeroed(&buf, &surfelgi.rayBuffer);
 				device->SetName(&surfelgi.rayBuffer, "surfelgi.rayBuffer");
+
+#ifdef SURFEL_RAY_SORTING
+				// Ray-sort key + payload: one uint per ray slot (gpusortlib
+				// sorts uint32 structured buffers). Payload (SHADER_RESOURCE)
+				// is read by the raytrace to remap thread -> original ray slot.
+				buf.stride = sizeof(uint32_t);
+				buf.size = buf.stride * SURFEL_RAY_BUDGET;
+				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
+				device->CreateBufferZeroed(&buf, &surfelgi.raySortKeyBuffer);
+				device->SetName(&surfelgi.raySortKeyBuffer, "surfelgi.raySortKeyBuffer");
+				device->CreateBufferZeroed(&buf, &surfelgi.raySortPayloadBuffer);
+				device->SetName(&surfelgi.raySortPayloadBuffer, "surfelgi.raySortPayloadBuffer");
+#endif // SURFEL_RAY_SORTING
 
 				TextureDesc tex;
 				tex.width = SURFEL_MOMENT_ATLAS_TEXELS;

@@ -54,5 +54,11 @@ float4 main(PixelInput input) : SV_TARGET
 
 	color.a = input.pos.z; // secondary depth
 
+	if (material.GetShaderType() == SHADERTYPE_WATER)
+	{
+		color.rgb = 1; // disable water shadow because it has already fog
+		color.rgb += caustics(uvsets.xy * 10);
+	}
+
 	return color;
 }
