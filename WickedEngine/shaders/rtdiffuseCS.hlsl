@@ -117,7 +117,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
 				half3 dominant_lightcolor = 0;
 				payload.data += ddgi_sample_irradiance(P, N, dominant_lightdir, dominant_lightcolor);
 			}
-			else if (GetFrame().options & OPTION_BIT_SURFELGI_ENABLED && GetCamera().texture_surfelgi_index >= 0 && surfel_cellvalid(surfel_cell(P)))
+			else if (GetFrame().options & OPTION_BIT_SURFELGI_ENABLED && GetCamera().texture_surfelgi_index >= 0 && surfel_cellvalid(surfel_cell(P, 0)))
 			{
 				payload.data += bindless_textures[descriptor_index(GetCamera().texture_surfelgi_index)][DTid.xy * 2].rgb * GetGIBoost();
 			}
