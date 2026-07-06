@@ -6,6 +6,9 @@
 #include "ShaderInterop_Terrain.h"
 #include "ShaderInterop_VoxelGrid.h"
 
+// Number of DDGI probe-grid cascades (fine inner grid + coarser outer grids).
+static const uint DDGI_CASCADE_COUNT = 2;
+
 struct alignas(16) ShaderScene
 {
 	int instancebuffer;
@@ -36,32 +39,54 @@ struct alignas(16) ShaderScene
 
 	struct alignas(16) DDGI
 	{
-		uint3 grid_dimensions;
-		uint probe_count;
+		// A single cascade: one camera-centered, toroidally-scrolling probe
+		// grid. Cascade 0 is the fine inner grid; higher cascades are coarser
+		// and cover a larger area. All cascades share the probe/variance/ray
+		// buffers (probes concatenated by probe_offset) and one depth atlas
+		// (each cascade occupies a distinct region at depth_atlas_offset).
+		struct alignas(16) Cascade
+		{
+			uint3 grid_dimensions;
+			uint probe_count;
+
+			float3 grid_min;
+			uint probe_offset; // start index of this cascade in the shared buffers
+
+			float3 grid_extents;
+			float max_distance;
+
+			float3 grid_extents_rcp;
+			int reset; // nonzero: reset every probe in this cascade this frame
+
+			float3 cell_size;
+			float pad_cs;
+
+			float3 cell_size_rcp;
+			float pad_csr;
+
+			int3 scroll_offset;
+			int pad_so;
+
+			int3 scroll_delta;
+			int pad_sd;
+
+			uint2 depth_atlas_offset; // pixel offset of this cascade in the depth atlas
+			uint2 pad_da;
+		};
+
+		// Shared across cascades:
+		int probe_buffer;
+		int depth_texture;
+		float smooth_backface;
+		uint total_probe_count;
 
 		uint2 depth_texture_resolution;
 		float2 depth_texture_resolution_rcp;
 
-		float3 grid_min;
-		int probe_buffer;
+		uint cascade_count;
+		uint3 pad;
 
-		float3 grid_extents;
-		int depth_texture;
-
-		float3 cell_size;
-		float max_distance;
-
-		float3 grid_extents_rcp;
-		float smooth_backface;
-
-		float3 cell_size_rcp;
-		float padding1;
-
-		int3 scroll_offset;
-		int padding2;
-
-		int3 scroll_delta;
-		int padding3;
+		Cascade cascades[DDGI_CASCADE_COUNT];
 	};
 	DDGI ddgi;
 

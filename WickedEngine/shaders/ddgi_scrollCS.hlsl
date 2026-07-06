@@ -23,30 +23,40 @@ RWStructuredBuffer<DDGIProbe> ddgiProbeBuffer : register(u0);
 void main(uint DTid : SV_DispatchThreadID)
 {
 	const uint probeIndex = DTid;
-	if (probeIndex >= GetScene().ddgi.probe_count)
+	if (probeIndex >= GetScene().ddgi.total_probe_count)
 		return;
 
-	const uint3 dims = GetScene().ddgi.grid_dimensions;
-	const int3 scroll_delta = GetScene().ddgi.scroll_delta;
+	// Which cascade this probe belongs to, and its buffer coord within it.
+	uint cascade;
+	uint3 buffer_coord;
+	ddgi_decode_probe(probeIndex, cascade, buffer_coord);
 
-	// This probe's buffer coord, and the world coord it now represents (post-scroll).
-	const uint3 buffer_coord = ddgi_probe_coord(probeIndex);
-	const uint3 world_coord = ddgi_buffer_to_world_coord(buffer_coord);
+	const uint3 dims = GetScene().ddgi.cascades[cascade].grid_dimensions;
+	const int3 scroll_delta = GetScene().ddgi.cascades[cascade].scroll_delta;
 
-	// A positive scroll on an axis brings in new world cells at the high edge;
-	// a negative scroll brings them in at the low edge. |scroll_delta| < dims
-	// is guaranteed by the CPU (a larger jump is handled as a full reset via
-	// frameIndex == 0 instead).
-	bool needs_reset = false;
-	[unroll]
-	for (uint axis = 0; axis < 3; ++axis)
+	// A whole-cascade reset (teleport / big extent change) marks every probe in
+	// the cascade fresh; otherwise reset only the freshly scrolled-in slab.
+	bool needs_reset = GetScene().ddgi.cascades[cascade].reset != 0;
+
+	if (!needs_reset)
 	{
-		int delta = scroll_delta[axis];
-		uint w = world_coord[axis];
-		if (delta > 0 && w >= dims[axis] - (uint)delta)
-			needs_reset = true;
-		if (delta < 0 && w < (uint)(-delta))
-			needs_reset = true;
+		// The world coord this buffer slot now represents (post-scroll).
+		const uint3 world_coord = ddgi_buffer_to_world_coord(cascade, buffer_coord);
+
+		// A positive scroll on an axis brings in new world cells at the high
+		// edge; a negative scroll brings them in at the low edge.
+		// |scroll_delta| < dims is guaranteed by the CPU (a larger jump is
+		// handled as a full reset via the cascade reset flag instead).
+		[unroll]
+		for (uint axis = 0; axis < 3; ++axis)
+		{
+			int delta = scroll_delta[axis];
+			uint w = world_coord[axis];
+			if (delta > 0 && w >= dims[axis] - (uint)delta)
+				needs_reset = true;
+			if (delta < 0 && w < (uint)(-delta))
+				needs_reset = true;
+		}
 	}
 
 	if (needs_reset)

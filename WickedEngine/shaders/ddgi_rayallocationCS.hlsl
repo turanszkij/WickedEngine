@@ -18,8 +18,10 @@ static const uint THREADCOUNT = 32;
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
 	const uint probeIndex = Gid.x;
-	const uint3 probeCoord = ddgi_probe_coord(probeIndex);
-	const float3 probePos = ddgi_probe_position(probeCoord);
+	uint cascade;
+	uint3 probeCoord;
+	ddgi_decode_probe(probeIndex, cascade, probeCoord);
+	const float3 probePos = ddgi_probe_position(cascade, probeCoord);
 
 	float inconsistency = 0;
 	for(uint i = groupIndex; i < DDGI_COLOR_RESOLUTION * DDGI_COLOR_RESOLUTION; i += THREADCOUNT)
@@ -48,7 +50,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		
 		ShaderSphere sphere;
 		sphere.center = probePos;
-		sphere.radius = max3(ddgi_cellsize()) * 2;
+		sphere.radius = max3(ddgi_cellsize(cascade)) * 2;
 		if (!GetCamera().frustum.intersects(sphere))
 		{
 			rayCount *= 0.1;

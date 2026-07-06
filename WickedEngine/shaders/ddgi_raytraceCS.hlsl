@@ -40,8 +40,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	const uint probeIndex = rayAlloc & 0xFFFFF;
 	const uint rayIndex = rayAlloc >> 20u;
 	const uint rayCount = raycountBuffer[probeIndex] * DDGI_RAY_BUCKET_COUNT;
-	const uint3 probeCoord = ddgi_probe_coord(probeIndex);
-	const float3 probePos = ddgi_probe_position(probeCoord);
+	uint cascade;
+	uint3 probeCoord;
+	ddgi_decode_probe(probeIndex, cascade, probeCoord);
+	const float3 probePos = ddgi_probe_position(cascade, probeCoord);
 
 	RNG rng;
 	rng.init(DTid.xx, GetFrame().frame_count);
@@ -277,7 +279,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			// encodes front (+) vs back (-) face hits for the update pass, so a
 			// miss must be positive and is treated as "no near occluder" for
 			// visibility.
-			rayData.depth = (half)ddgi_max_distance();
+			rayData.depth = (half)ddgi_max_distance(cascade);
 			rayData.radiance = radiance;
 			rayBuffer[probeIndex * DDGI_MAX_RAYCOUNT + rayIndex].store(rayData);
 		}

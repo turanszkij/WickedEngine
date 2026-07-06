@@ -72,8 +72,10 @@ int3 get_nearby_empty_voxel(ShaderVoxelGrid voxelgrid, uint3 coord)
 void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
 	const uint probeIndex = Gid.x;
-	const uint3 probeCoord = ddgi_probe_coord(probeIndex);
-	const float maxDistance = ddgi_max_distance();
+	uint cascade;
+	uint3 probeCoord;
+	ddgi_decode_probe(probeIndex, cascade, probeCoord);
+	const float maxDistance = ddgi_max_distance(cascade);
 
 	// A probe is treated like frame 0 (full reset, no temporal blend) either on
 	// the global first frame or when it was just (re)placed by a grid scroll
@@ -87,7 +89,7 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 	{
 		ddgiProbeBuffer[probeIndex].offset = 0;
 	}
-	const float3 probe_limit = ddgi_cellsize() * 0.5;
+	const float3 probe_limit = ddgi_cellsize(cascade) * 0.5;
 	const float probeOffsetDistance = maxDistance * DDGI_KEEP_DISTANCE;
 	// Relocation + enclosure detection are tallied by thread 0 only; it visits
 	// every ray exactly once across all cache chunks, so the results are exact
@@ -102,7 +104,7 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 
 #ifdef DDGI_UPDATE_DEPTH
 	float2 result = 0; // this must be full precision, otherwise popping will occur!
-	const uint2 pixel_topleft = ddgi_probe_depth_pixel(probeCoord);
+	const uint2 pixel_topleft = ddgi_probe_depth_pixel(cascade, probeCoord);
 	const uint2 pixel_current = pixel_topleft + GTid.xy;
 	const uint2 copy_coord = pixel_topleft - 1;
 #else
@@ -296,7 +298,7 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 		{
 			// If there is a voxel grid, that can help offset the probes when they are stuck in closed spaces:
 			ShaderVoxelGrid voxelgrid = GetScene().voxelgrid;
-			uint3 coord = voxelgrid.world_to_coord(ddgi_probe_position_rest(probeCoord));
+			uint3 coord = voxelgrid.world_to_coord(ddgi_probe_position_rest(cascade, probeCoord));
 			if(voxelgrid.check_voxel(coord))
 			{
 				probeOffsetNew += get_nearby_empty_voxel(voxelgrid, coord) * voxelgrid.voxelSize * 2;

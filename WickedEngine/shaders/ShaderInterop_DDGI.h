@@ -87,17 +87,22 @@ struct DDGIVarianceDataPacked
 };
 
 #ifndef __cplusplus
-inline float3 ddgi_cellsize()
+// All probe access is parameterized by a cascade index. Cascade 0 is the fine
+// inner grid; higher cascades are coarser and cover more area. The cascades
+// share the probe/variance/ray buffers - a cascade's probes occupy the range
+// [probe_offset, probe_offset + probe_count) - and one depth atlas, where each
+// cascade occupies a distinct region starting at depth_atlas_offset.
+inline float3 ddgi_cellsize(uint cascade)
 {
-	return GetScene().ddgi.cell_size;
+	return GetScene().ddgi.cascades[cascade].cell_size;
 }
-inline float3 ddgi_cellsize_rcp()
+inline float3 ddgi_cellsize_rcp(uint cascade)
 {
-	return GetScene().ddgi.cell_size_rcp;
+	return GetScene().ddgi.cascades[cascade].cell_size_rcp;
 }
-inline float ddgi_max_distance()
+inline float ddgi_max_distance(uint cascade)
 {
-	return GetScene().ddgi.max_distance;
+	return GetScene().ddgi.cascades[cascade].max_distance;
 }
 // Toroidal coordinate helpers.
 //
@@ -121,79 +126,100 @@ inline float ddgi_max_distance()
 // and buffer->world SUBTRACTS it (they must be inverses, and this particular
 // sign is what makes a slot's world position invariant across scrolls; swapping
 // them makes probes drift at twice the camera speed).
-inline uint3 ddgi_wrap_coord(int3 coord)
+inline uint3 ddgi_wrap_coord(uint cascade, int3 coord)
 {
-	const int3 dims = int3(GetScene().ddgi.grid_dimensions);
+	const int3 dims = int3(GetScene().ddgi.cascades[cascade].grid_dimensions);
 	int3 wrapped = coord % dims;
 	wrapped = (wrapped + dims) % dims; // bring negative remainders into [0, dims)
 	return uint3(wrapped);
 }
-inline uint3 ddgi_buffer_to_world_coord(uint3 buffer_coord)
+inline uint3 ddgi_buffer_to_world_coord(uint cascade, uint3 buffer_coord)
 {
-	return ddgi_wrap_coord(int3(buffer_coord) - GetScene().ddgi.scroll_offset);
+	return ddgi_wrap_coord(cascade, int3(buffer_coord) - GetScene().ddgi.cascades[cascade].scroll_offset);
 }
-inline uint3 ddgi_world_to_buffer_coord(uint3 world_coord)
+inline uint3 ddgi_world_to_buffer_coord(uint cascade, uint3 world_coord)
 {
-	return ddgi_wrap_coord(int3(world_coord) + GetScene().ddgi.scroll_offset);
+	return ddgi_wrap_coord(cascade, int3(world_coord) + GetScene().ddgi.cascades[cascade].scroll_offset);
 }
 // Returns the WORLD coord of the probe cell containing point P (not a buffer coord).
-inline uint3 ddgi_base_probe_coord(float3 P)
+inline uint3 ddgi_base_probe_coord(uint cascade, float3 P)
 {
-	float3 normalized_pos = (P - GetScene().ddgi.grid_min) * GetScene().ddgi.grid_extents_rcp;
+	float3 normalized_pos = (P - GetScene().ddgi.cascades[cascade].grid_min) * GetScene().ddgi.cascades[cascade].grid_extents_rcp;
 	return uint3(clamp(
-		floor(normalized_pos * float3(GetScene().ddgi.grid_dimensions - 1)),
-		0.0, float3(GetScene().ddgi.grid_dimensions - 1)));
+		floor(normalized_pos * float3(GetScene().ddgi.cascades[cascade].grid_dimensions - 1)),
+		0.0, float3(GetScene().ddgi.cascades[cascade].grid_dimensions - 1)));
 }
-inline uint3 ddgi_probe_coord(uint probeIndex)
+// Local coord (within a cascade) from a local probe index (0..probe_count-1).
+inline uint3 ddgi_probe_coord(uint cascade, uint localIndex)
 {
-	return unflatten3D(probeIndex, GetScene().ddgi.grid_dimensions);
+	return unflatten3D(localIndex, GetScene().ddgi.cascades[cascade].grid_dimensions);
 }
-inline uint ddgi_probe_index(min16uint3 probeCoord)
+// Global buffer index of a probe from its cascade + local buffer coord.
+inline uint ddgi_probe_index(uint cascade, min16uint3 probeCoord)
 {
-	return flatten3D(probeCoord, GetScene().ddgi.grid_dimensions);
+	return GetScene().ddgi.cascades[cascade].probe_offset + flatten3D(probeCoord, GetScene().ddgi.cascades[cascade].grid_dimensions);
 }
-inline uint3 ddgi_probe_offset_pixel(min16uint3 probeCoord)
+// Decodes a global probe index into its cascade and local buffer coord.
+inline void ddgi_decode_probe(uint globalIndex, out uint cascade, out uint3 probeCoord)
 {
-	return probeCoord.xzy;
+	cascade = 0;
+	[unroll]
+	for (uint c = 1; c < DDGI_CASCADE_COUNT; ++c)
+	{
+		if (globalIndex >= GetScene().ddgi.cascades[c].probe_offset)
+			cascade = c;
+	}
+	const uint localIndex = globalIndex - GetScene().ddgi.cascades[cascade].probe_offset;
+	probeCoord = ddgi_probe_coord(cascade, localIndex);
 }
-// Rest (unrelocated) world position of a probe, given its BUFFER coord.
-inline float3 ddgi_probe_position_rest(min16uint3 probeCoord)
+// Rest (unrelocated) world position of a probe, given its cascade + BUFFER coord.
+inline float3 ddgi_probe_position_rest(uint cascade, min16uint3 probeCoord)
 {
-	uint3 world_coord = ddgi_buffer_to_world_coord(uint3(probeCoord));
-	return GetScene().ddgi.grid_min + float3(world_coord) * ddgi_cellsize();
+	uint3 world_coord = ddgi_buffer_to_world_coord(cascade, uint3(probeCoord));
+	return GetScene().ddgi.cascades[cascade].grid_min + float3(world_coord) * ddgi_cellsize(cascade);
 }
-inline float3 ddgi_probe_position(min16uint3 probeCoord)
+inline float3 ddgi_probe_position(uint cascade, min16uint3 probeCoord)
 {
-	float3 pos = ddgi_probe_position_rest(probeCoord);
-	uint probeIndex = ddgi_probe_index(probeCoord);
+	float3 pos = ddgi_probe_position_rest(cascade, probeCoord);
+	uint probeIndex = ddgi_probe_index(cascade, probeCoord);
 	StructuredBuffer<DDGIProbe> probe_buffer = bindless_structured_ddgi_probes[descriptor_index(GetScene().ddgi.probe_buffer)];
 	DDGIProbe probe = probe_buffer[probeIndex];
 	float3 offset = unpack_half3(probe.offset);
-	offset = offset * ddgi_cellsize() * 0.5;
+	offset = offset * ddgi_cellsize(cascade) * 0.5;
 	pos += offset;
 	return pos;
 }
-inline uint2 ddgi_probe_depth_pixel(min16uint3 probeCoord)
+inline uint2 ddgi_probe_depth_pixel(uint cascade, min16uint3 probeCoord)
 {
-	return probeCoord.xz * DDGI_DEPTH_TEXELS + uint2(probeCoord.y * GetScene().ddgi.grid_dimensions.x * DDGI_DEPTH_TEXELS, 0) + 1;
+	return GetScene().ddgi.cascades[cascade].depth_atlas_offset
+		+ probeCoord.xz * DDGI_DEPTH_TEXELS
+		+ uint2(probeCoord.y * GetScene().ddgi.cascades[cascade].grid_dimensions.x * DDGI_DEPTH_TEXELS, 0) + 1;
 }
-inline float2 ddgi_probe_depth_uv(min16uint3 probeCoord, half3 direction)
+inline float2 ddgi_probe_depth_uv(uint cascade, min16uint3 probeCoord, half3 direction)
 {
-	float2 pixel = ddgi_probe_depth_pixel(probeCoord);
+	float2 pixel = ddgi_probe_depth_pixel(cascade, probeCoord);
 	pixel += (encode_oct(normalize(direction)) * 0.5 + 0.5) * DDGI_DEPTH_RESOLUTION;
 	return pixel * GetScene().ddgi.depth_texture_resolution_rcp;
 }
 
 
+// Gathers the 8-probe interpolated radiance SH for one cascade at point P.
+//
+// Writes the normalized (weight-averaged) SH for that cascade to out_sh and the
+// total gather weight to out_weight (0 if the cascade contributed nothing).
+// Neighbour arithmetic stays in world space; conversion to a buffer coord
+// happens only at the point of buffer/atlas access.
+//
+// The result is returned through an out parameter rather than by value: the SH
+// type holds a small array, and returning it by value from a function called
+// more than once crashes the shader compiler (DXC) during optimization.
+//
 // Based on: https://github.com/diharaw/hybrid-rendering/blob/master/src/shaders/gi/gi_common.glsl
-half3 ddgi_sample_irradiance(in float3 P, in half3 N, inout half3 out_dominant_lightdir, inout half3 out_dominant_lightcolor)
+void ddgi_gather_sh(uint cascade, in float3 P, in half3 N, out SH::L1_RGB out_sh, out half out_weight)
 {
 	StructuredBuffer<DDGIProbe> probe_buffer = bindless_structured_ddgi_probes[descriptor_index(GetScene().ddgi.probe_buffer)];
-	// base_world_coord is a WORLD coord: neighbour arithmetic below stays in
-	// world space and only converts to buffer coords at the point of
-	// buffer/atlas access.
-	const min16uint3 base_world_coord = ddgi_base_probe_coord(P);
-	const float3 reference_probe_pos = GetScene().ddgi.grid_min + float3(base_world_coord) * ddgi_cellsize(); // rest pose of the base world probe
+	const min16uint3 base_world_coord = ddgi_base_probe_coord(cascade, P);
+	const float3 reference_probe_pos = GetScene().ddgi.cascades[cascade].grid_min + float3(base_world_coord) * ddgi_cellsize(cascade); // rest pose of the base world probe
 
 	half sum_weight = 0;
 
@@ -202,7 +228,7 @@ half3 ddgi_sample_irradiance(in float3 P, in half3 N, inout half3 out_dominant_l
 	SH::L1_RGB sum_sh = SH::L1_RGB::Zero();
 
 	// alpha is how far from the floor(currentVertex) position. on [0, 1] for each axis.
-	half3 alpha = saturate((P - reference_probe_pos) * ddgi_cellsize_rcp());
+	half3 alpha = saturate((P - reference_probe_pos) * ddgi_cellsize_rcp(cascade));
 
 	// Iterate over adjacent probe cage
 	for (min16uint i = 0; i < 8; ++i)
@@ -212,17 +238,17 @@ half3 ddgi_sample_irradiance(in float3 P, in half3 N, inout half3 out_dominant_l
 		// space) keeps the cage from wrapping across the toroidal seam or the
 		// grid edge.
 		min16uint3 offset = uint3(i, i >> 1, i >> 2) & 1;
-		min16uint3 probe_world_coord = clamp(base_world_coord + offset, 0u.xxx, GetScene().ddgi.grid_dimensions - 1);
+		min16uint3 probe_world_coord = clamp(base_world_coord + offset, 0u.xxx, GetScene().ddgi.cascades[cascade].grid_dimensions - 1);
 		// Convert to a buffer coord only now, to index the probe buffer and
 		// depth atlas.
-		min16uint3 probe_buffer_coord = ddgi_world_to_buffer_coord(probe_world_coord);
-		uint probe_index = ddgi_probe_index(probe_buffer_coord);
+		min16uint3 probe_buffer_coord = ddgi_world_to_buffer_coord(cascade, probe_world_coord);
+		uint probe_index = ddgi_probe_index(cascade, probe_buffer_coord);
 		DDGIProbe probe = probe_buffer[probe_index];
 
 		// Make cosine falloff in tangent plane with respect to the angle from the surface to the probe so that we never
 		// test a probe that is *behind* the surface.
 		// It doesn't have to be cosine, but that is efficient to compute and we must clip to the tangent plane.
-		float3 probe_pos = ddgi_probe_position(probe_buffer_coord);
+		float3 probe_pos = ddgi_probe_position(cascade, probe_buffer_coord);
 
 		// Bias the position at which visibility is computed; this
 		// avoids performing a shadow test *at* a surface, which is a
@@ -235,10 +261,10 @@ half3 ddgi_sample_irradiance(in float3 P, in half3 N, inout half3 out_dominant_l
 		half3 probe_to_point = P - probe_pos + N * 0.001;
 		half3 dir = normalize(-probe_to_point);
 
-		// Compute the trilinear weights based on the grid cell vertex to smoothly
-		// transition between probes. Avoid ever going entirely to zero because that
-		// will cause problems at the border probes. This isn't really a lerp. 
-		// We're using 1-a when offset = 0 and a when offset = 1.
+		// Compute the trilinear weights based on the grid cell vertex to
+		// smoothly transition between probes. Avoid ever going entirely to zero
+		// because that will cause problems at the border probes. This isn't
+		// really a lerp. We're using 1-a when offset = 0 and a when offset = 1.
 		half3 trilinear = lerp(1.0 - alpha, alpha, half3(offset));
 		half weight = 1.0;
 
@@ -253,9 +279,9 @@ half3 ddgi_sample_irradiance(in float3 P, in half3 N, inout half3 out_dominant_l
 
 		// Smooth backface test
 		{
-			// Computed without the biasing applied to the "dir" variable. 
-			// This test can cause reflection-map looking errors in the image
-			// (stuff looks shiny) if the transition is poor.
+			// Computed without the biasing applied to the "dir" variable. This
+			// test can cause reflection-map looking errors in the image (stuff
+			// looks shiny) if the transition is poor.
 			half3 true_direction_to_probe = normalize(probe_pos - P);
 
 			// The naive soft backface weight would ignore a probe when
@@ -276,7 +302,7 @@ half3 ddgi_sample_irradiance(in float3 P, in half3 N, inout half3 out_dominant_l
 		if(GetScene().ddgi.depth_texture >= 0)
 		{
 			//float2 tex_coord = texture_coord_from_direction(-dir, p, ddgi.depth_texture_width, ddgi.depth_texture_height, ddgi.depth_probe_side_length);
-			float2 tex_coord = ddgi_probe_depth_uv(probe_buffer_coord, -dir);
+			float2 tex_coord = ddgi_probe_depth_uv(cascade, probe_buffer_coord, -dir);
 
 			half dist_to_probe = length(probe_to_point);
 
@@ -289,7 +315,7 @@ half3 ddgi_sample_irradiance(in float3 P, in half3 N, inout half3 out_dominant_l
 			// Need the max in the denominator because biasing can cause a negative displacement
 			half chebyshev_weight = variance / (variance + sqr(max(dist_to_probe - mean, 0.0)));
 
-			// Increase contrast in the weight 
+			// Increase contrast in the weight
 			chebyshev_weight = max(pow(chebyshev_weight, 3), 0.0);
 
 			weight *= (dist_to_probe <= mean) ? 1.0 : chebyshev_weight;
@@ -298,8 +324,6 @@ half3 ddgi_sample_irradiance(in float3 P, in half3 N, inout half3 out_dominant_l
 
 		// Avoid zero weight
 		weight = max(0.01, weight);
-
-		half3 irradiance_dir = N;
 
 		// A tiny bit of light is really visible due to log perception, so
 		// crush tiny weights but keep the curve continuous. This must be done
@@ -316,9 +340,76 @@ half3 ddgi_sample_irradiance(in float3 P, in half3 N, inout half3 out_dominant_l
 		sum_weight += weight;
 	}
 
+	out_weight = sum_weight;
 	if (sum_weight > 0)
-	{
 		sum_sh = SH::Multiply(sum_sh, rcp(sum_weight));
+	out_sh = sum_sh;
+}
+
+// Returns true and the [0,1] per-axis fractional position of P within a cascade
+// grid when P lies inside that cascade's bounds; false otherwise.
+inline bool ddgi_cascade_fraction(uint cascade, float3 P, out float3 frac)
+{
+	frac = (P - GetScene().ddgi.cascades[cascade].grid_min) * GetScene().ddgi.cascades[cascade].grid_extents_rcp;
+	return all(frac > 0.0) && all(frac < 1.0);
+}
+
+// Samples DDGI irradiance at P, blending across cascades: the finest cascade
+// that contains P is used, fading into the next coarser cascade near its outer
+// edge so the density transition is seamless.
+half3 ddgi_sample_irradiance(in float3 P, in half3 N, inout half3 out_dominant_lightdir, inout half3 out_dominant_lightcolor)
+{
+	// Pick the finest cascade containing P and a blend factor toward the next
+	// coarser cascade near its boundary. A fragment outside every fine cascade
+	// falls through to the coarsest one. Written as an ascending loop that
+	// stops at the first (finest) containing cascade - a descending unrolled
+	// loop crashes the shader compiler.
+	uint fine_cascade = DDGI_CASCADE_COUNT - 1; // default: coarsest
+	half blend_to_coarser = 0;
+	bool found = false;
+	[unroll]
+	for (uint c = 0; c < DDGI_CASCADE_COUNT; ++c)
+	{
+		float3 frac;
+		if (!found && c < DDGI_CASCADE_COUNT - 1 && ddgi_cascade_fraction(c, P, frac))
+		{
+			found = true;
+			fine_cascade = c;
+			// distance from cascade center in [0,1] (0 center, 1 at the edge)
+			const half3 d = abs((half3)frac - 0.5) * 2.0;
+			const half t = max(d.x, max(d.y, d.z));
+			// fade into the coarser cascade over the outer 15% of the volume
+			blend_to_coarser = smoothstep(0.85, 1.0, t);
+		}
+	}
+
+	const uint coarse_cascade = min(fine_cascade + 1, DDGI_CASCADE_COUNT - 1);
+
+	half w_fine = 0;
+	SH::L1_RGB sh_fine;
+	ddgi_gather_sh(fine_cascade, P, N, sh_fine, w_fine);
+
+	// The coarse cascade is gathered unconditionally: guarding this second call
+	// behind a [branch] (to skip it when blend_to_coarser == 0) crashes the
+	// shader compiler (DXC) on the conditional out-parameter call. When the
+	// coarse cascade is not needed, a_coarse below is 0, so it costs an extra
+	// gather but does not change the result.
+	half w_coarse = 0;
+	SH::L1_RGB sh_coarse;
+	ddgi_gather_sh(coarse_cascade, P, N, sh_coarse, w_coarse);
+
+	// Combine the two normalized cascade SHs by the blend factor, ignoring a
+	// cascade that contributed no weight (e.g. P outside its bounds) or the
+	// coarse cascade when it is the same as the fine one (coarsest level).
+	const half same_cascade = (coarse_cascade == fine_cascade) ? 1.0 : 0.0;
+	const half a_fine = (w_fine > 0) ? (1.0 - blend_to_coarser) : 0.0;
+	const half a_coarse = (w_coarse > 0) ? (blend_to_coarser * (1.0 - same_cascade)) : 0.0;
+	const half a_sum = a_fine + a_coarse;
+
+	if (a_sum > 0)
+	{
+		SH::L1_RGB sum_sh = SH::Add(SH::Multiply(sh_fine, a_fine), SH::Multiply(sh_coarse, a_coarse));
+		sum_sh = SH::Multiply(sum_sh, rcp(a_sum));
 
 		// Evaluate the diffuse irradiance in full (float) precision.
 		//

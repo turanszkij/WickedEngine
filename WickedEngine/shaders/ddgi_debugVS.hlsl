@@ -28,8 +28,12 @@ void main(uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID, out floa
 	SH::L1_RGB radiance = probe.radiance.Unpack();
 	col = float4(SH::Evaluate(radiance, pos.xyz), 1);
 
-	const float3 probeCoord = ddgi_probe_coord(instanceID);
-	const float3 probePosition = ddgi_probe_position(probeCoord);
+	// instanceID is a global probe index spanning all cascades; decode it into
+	// a cascade + local buffer coord to place the debug sphere.
+	uint cascade;
+	uint3 probeCoord;
+	ddgi_decode_probe(instanceID, cascade, probeCoord);
+	const float3 probePosition = ddgi_probe_position(cascade, probeCoord);
 
 	// Hide probes that don't contribute: either flagged invalid (buried) by the
 	// depth pass, or receiving essentially no light. C[0] is the SH DC term -
@@ -40,7 +44,7 @@ void main(uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID, out floa
 	const half received_light = dot(max(0, radiance.C[0]), half3(0.2126, 0.7152, 0.0722));
 	const bool contributes = probe_valid && received_light >= DDGI_DEBUG_MIN_LUMINANCE;
 	const float radius = (DDGI_DEBUG_SHOW_INVALID || contributes)
-		? ddgi_max_distance() * 0.05
+		? ddgi_max_distance(cascade) * 0.05
 		: 0.0;
 
 	pos.xyz *= radius;

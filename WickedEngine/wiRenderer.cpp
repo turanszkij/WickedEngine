@@ -8549,7 +8549,7 @@ void DrawDebugWorld(
 		device->EventBegin("Debug DDGI", cmd);
 
 		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_DDGI], cmd);
-		device->DrawInstanced(2880, scene.shaderscene.ddgi.probe_count, 0, 0, cmd); // uv-sphere
+		device->DrawInstanced(2880, scene.shaderscene.ddgi.total_probe_count, 0, 0, cmd); // uv-sphere (all cascades)
 
 		device->EventEnd(cmd);
 	}
@@ -12493,13 +12493,22 @@ void DDGI(
 	push.rayCount = std::min(GetDDGIRayCount(), DDGI_MAX_RAYCOUNT);
 	push.blendSpeed = GetDDGIBlendSpeed();
 
-	// Grid scroll pass: flag freshly (re)placed probes when the grid scrolled
-	// this frame. Skipped on frame 0, which already does a full reset for every
-	// probe.
-	if (scene.ddgi.frame_index != 0 &&
-		(scene.shaderscene.ddgi.scroll_delta.x != 0 ||
-		 scene.shaderscene.ddgi.scroll_delta.y != 0 ||
-		 scene.shaderscene.ddgi.scroll_delta.z != 0))
+	// Grid scroll pass: flag freshly (re)placed probes when any cascade
+	// scrolled or was reset this frame. Skipped on frame 0, which already does
+	// a full reset for every probe.
+	bool ddgi_needs_scroll = false;
+	for (uint32_t c = 0; c < DDGI_CASCADE_COUNT; ++c)
+	{
+		const auto& cascade = scene.shaderscene.ddgi.cascades[c];
+		if (cascade.reset != 0 ||
+			cascade.scroll_delta.x != 0 ||
+			cascade.scroll_delta.y != 0 ||
+			cascade.scroll_delta.z != 0)
+		{
+			ddgi_needs_scroll = true;
+		}
+	}
+	if (scene.ddgi.frame_index != 0 && ddgi_needs_scroll)
 	{
 		device->EventBegin("Grid scroll", cmd);
 
@@ -12514,7 +12523,7 @@ void DDGI(
 		// to UAV for the scroll write and back to compute-SRV afterwards.
 		device->Barrier(GPUBarrier::Buffer(&scene.ddgi.probe_buffer, ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS), cmd);
 
-		device->Dispatch((scene.shaderscene.ddgi.probe_count + 63) / 64, 1, 1, cmd);
+		device->Dispatch((scene.shaderscene.ddgi.total_probe_count + 63) / 64, 1, 1, cmd);
 
 		device->Barrier(GPUBarrier::Buffer(&scene.ddgi.probe_buffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE), cmd);
 
@@ -12542,7 +12551,7 @@ void DDGI(
 		device->ClearUAV(&scene.ddgi.rayallocation_buffer, 0, cmd);
 		device->Barrier(GPUBarrier::Memory(&scene.ddgi.rayallocation_buffer), cmd);
 
-		device->Dispatch(scene.shaderscene.ddgi.probe_count, 1, 1, cmd);
+		device->Dispatch(scene.shaderscene.ddgi.total_probe_count, 1, 1, cmd);
 
 		device->EventEnd(cmd);
 	}
@@ -12642,7 +12651,7 @@ void DDGI(
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-		device->Dispatch(scene.shaderscene.ddgi.probe_count, 1, 1, cmd);
+		device->Dispatch(scene.shaderscene.ddgi.total_probe_count, 1, 1, cmd);
 
 		device->EventEnd(cmd);
 	}
@@ -12666,7 +12675,7 @@ void DDGI(
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-		device->Dispatch(scene.shaderscene.ddgi.probe_count, 1, 1, cmd);
+		device->Dispatch(scene.shaderscene.ddgi.total_probe_count, 1, 1, cmd);
 
 		device->EventEnd(cmd);
 	}

@@ -2836,10 +2836,14 @@ namespace wi::scene
 
 			if (archive.GetVersion() >= 87)
 			{
-				archive >> grid_min;
-				archive >> grid_max;
+				archive >> cascades[0].grid_min;
+				archive >> cascades[0].grid_max;
 				archive >> smooth_backface;
 			}
+
+			// Derive per-cascade probe counts/offsets so the size guards below
+			// use the current (multi-cascade) layout.
+			Compute_Cascade_Parameters();
 
 			wi::vector<uint8_t> data;
 
@@ -2847,13 +2851,14 @@ namespace wi::scene
 			archive >> data;
 			if (!data.empty() && archive.GetVersion() >= 93)
 			{
-				const uint32_t probe_count = grid_dimensions.x * grid_dimensions.y * grid_dimensions.z;
+				const uint32_t probe_count = Get_Total_Probe_Count();
 
 				// The serialized probe blob is a raw dump of DDGIProbe[]. If
-				// its size does not match the current DDGIProbe layout (the
-				// struct gained a flags field), it is from an incompatible
-				// engine version - discard it and let the runtime recompute
-				// rather than feeding a mismatched buffer to the GPU.
+				// its size does not match the current layout (DDGIProbe stride,
+				// or the probe count now spans multiple cascades), it is from
+				// an incompatible engine version - discard it and let the
+				// runtime recompute rather than feeding a mismatched buffer to
+				// the GPU.
 				if (data.size() == (size_t)sizeof(DDGIProbe) * probe_count)
 				{
 					GPUBufferDesc buf;
@@ -2871,22 +2876,30 @@ namespace wi::scene
 				}
 			}
 
-			// depth texture:
+			// depth texture (shared atlas, cascades stacked vertically):
 			archive >> data;
 			if(!data.empty())
 			{
 				TextureDesc desc;
 				desc.width = DDGI_DEPTH_TEXELS * grid_dimensions.x * grid_dimensions.y;
-				desc.height = DDGI_DEPTH_TEXELS * grid_dimensions.z;
+				desc.height = DDGI_DEPTH_TEXELS * grid_dimensions.z * DDGI::CASCADE_COUNT;
 				desc.format = Format::R16G16_FLOAT;
 				desc.bind_flags = BindFlag::SHADER_RESOURCE;
 
-				SubresourceData initdata;
-				initdata.data_ptr = data.data();
-				initdata.row_pitch = desc.width * GetFormatStride(desc.format);
+				const size_t expected_size = (size_t)desc.width * desc.height * GetFormatStride(desc.format);
+				if (data.size() == expected_size)
+				{
+					SubresourceData initdata;
+					initdata.data_ptr = data.data();
+					initdata.row_pitch = desc.width * GetFormatStride(desc.format);
 
-				device->CreateTexture(&desc, &initdata, &depth_texture);
-				device->SetName(&depth_texture, "ddgi.depth_texture[serialized]");
+					device->CreateTexture(&desc, &initdata, &depth_texture);
+					device->SetName(&depth_texture, "ddgi.depth_texture[serialized]");
+				}
+				else
+				{
+					wi::backlog::post("DDGI depth atlas layout changed; discarding serialized depth (it will be recomputed at runtime).", wi::backlog::LogLevel::Warning);
+				}
 			}
 
 			if (archive.GetVersion() < 93)
@@ -2909,8 +2922,8 @@ namespace wi::scene
 
 			if (archive.GetVersion() >= 87)
 			{
-				archive << grid_min;
-				archive << grid_max;
+				archive << cascades[0].grid_min;
+				archive << cascades[0].grid_max;
 				archive << smooth_backface;
 			}
 
