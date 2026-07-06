@@ -8549,7 +8549,7 @@ void DrawDebugWorld(
 		device->EventBegin("Debug DDGI", cmd);
 
 		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_DDGI], cmd);
-		device->DrawInstanced(2880, scene.shaderscene.ddgi.total_probe_count, 0, 0, cmd); // uv-sphere (all cascades)
+		device->DrawInstanced(60, scene.shaderscene.ddgi.total_probe_count, 0, 0, cmd); // low-poly icosphere (all cascades)
 
 		device->EventEnd(cmd);
 	}

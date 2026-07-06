@@ -1,5 +1,5 @@
 #include "globals.hlsli"
-#include "uvsphere.hlsli"
+#include "ddgi_debug_icosphere.hlsli"
 #include "ddgiHF.hlsli"
 
 // Set to true to also draw probes that don't contribute to the lighting (buried
@@ -33,7 +33,7 @@ static const float DDGI_DEBUG_MAX_DISTANCE = 0;
 
 void main(uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID, out float4 pos : SV_Position, out half4 col : COLOR)
 {
-	pos = UVSPHERE[vertexID];
+	pos = DDGI_DEBUG_ICOSPHERE[vertexID];
 
 	StructuredBuffer<DDGIProbe> probe_buffer = bindless_structured_ddgi_probes[descriptor_index(GetScene().ddgi.probe_buffer)];
 	DDGIProbe probe = probe_buffer[instanceID];
