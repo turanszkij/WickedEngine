@@ -21,6 +21,18 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	uint cascade;
 	uint3 probeCoord;
 	ddgi_decode_probe(probeIndex, cascade, probeCoord);
+
+	// Staggered updates: a cascade that is not refreshed this frame allocates
+	// no rays (so nothing is traced and its probes keep their last result). The
+	// active flag is uniform across the group (one probe per group), so this
+	// early-out is uniform control flow. Zero the ray count defensively.
+	if (GetScene().ddgi.cascades[cascade].active == 0)
+	{
+		if (groupIndex == 0)
+			raycountBuffer[probeIndex] = 0;
+		return;
+	}
+
 	const float3 probePos = ddgi_probe_position(cascade, probeCoord);
 
 	float inconsistency = 0;

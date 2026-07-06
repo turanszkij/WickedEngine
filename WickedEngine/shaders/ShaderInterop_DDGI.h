@@ -17,7 +17,7 @@ static const float DDGI_KEEP_DISTANCE = 0.1f; // how much distance should probes
 static const uint DDGI_RAY_BUCKET_COUNT = 4; // ray count per bucket
 
 // Number of DDGI probe-grid cascades (fine inner grid + coarser outer grids).
-static const uint DDGI_CASCADE_COUNT = 2;
+static const uint DDGI_CASCADE_COUNT = 6;
 
 #define DDGI_LINEAR_BLENDING
 
@@ -125,7 +125,7 @@ struct alignas(16) ShaderDDGI
 		float pad_csr;
 
 		int3 scroll_offset;
-		int pad_so;
+		int active; // nonzero: this cascade is refreshed (traced/updated) this frame
 
 		int3 scroll_delta;
 		int pad_sd;

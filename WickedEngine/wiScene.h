@@ -202,8 +202,8 @@ namespace wi::scene
 		struct DDGI
 		{
 			// Number of probe-grid cascades. Must match DDGI_CASCADE_COUNT in
-			// ShaderInterop_Renderer.h.
-			static constexpr uint32_t CASCADE_COUNT = 2;
+			// ShaderInterop_DDGI.h.
+			static constexpr uint32_t CASCADE_COUNT = 6;
 
 			uint frame_index = 0;
 
@@ -229,6 +229,7 @@ namespace wi::scene
 				int3 scroll_offset = int3(0, 0, 0); // Cumulative grid scroll in cell steps
 				int3 scroll_delta = int3(0, 0, 0);   // This frame's scroll delta
 				bool reset = false;                  // Force full reset of this cascade this frame
+				bool active = true;                  // Refreshed (snapped/traced/updated) this frame
 				uint probe_offset = 0;               // Start index in the shared buffers
 				uint probe_count = 0;                // Probes in this cascade
 			};

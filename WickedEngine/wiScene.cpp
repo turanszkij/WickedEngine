@@ -676,8 +676,34 @@ namespace wi::scene
 			// its own coverage (grid_half_extents, doubled per cascade) and the
 			// shared grid dimensions. Y is asymmetric: less coverage below the
 			// camera than above, since probes buried under terrain are wasted.
-			for (auto& cascade : ddgi.cascades)
+			for (uint32_t c = 0; c < DDGI::CASCADE_COUNT; ++c)
 			{
+				auto& cascade = ddgi.cascades[c];
+
+				// Staggered update schedule. Cascade 0 (the fine near-camera
+				// grid the viewer sees most) refreshes every frame; the coarser
+				// cascades round-robin one per frame, so the per-frame
+				// trace/update cost stays ~constant (cascade 0 + one coarse)
+				// regardless of how many cascades exist - this is what makes 6
+				// cascades affordable. On frame 0 (initial creation /
+				// recreation) every cascade refreshes so the whole probe field
+				// converges at once. An inactive cascade is frozen: its grid
+				// does not scroll and its probes are neither traced nor
+				// integrated, so they simply hold their last result.
+				const bool active =
+					(c == 0) ||
+					(ddgi.frame_index == 0) ||
+					(DDGI::CASCADE_COUNT > 1 &&
+						c == 1u + (ddgi.frame_index % (DDGI::CASCADE_COUNT - 1)));
+				cascade.active = active;
+
+				if (!active)
+				{
+					cascade.scroll_delta = int3(0, 0, 0);
+					cascade.reset = false;
+					continue;
+				}
+
 				const XMUINT3 dims = cascade.grid_dimensions;
 				const float cell_size_x = dims.x > 1 ? (cascade.grid_half_extents.x * 2.0f) / (dims.x - 1) : 1.0f;
 				const float cell_size_y = dims.y > 1 ? (cascade.grid_half_extents.y + cascade.grid_half_extents_down) / (dims.y - 1) : 1.0f;
@@ -1085,6 +1111,7 @@ namespace wi::scene
 
 			dst.scroll_offset = int3(cascade.scroll_offset.x, cascade.scroll_offset.y, cascade.scroll_offset.z);
 			dst.scroll_delta = int3(cascade.scroll_delta.x, cascade.scroll_delta.y, cascade.scroll_delta.z);
+			dst.active = cascade.active ? 1 : 0;
 			dst.depth_atlas_offset = uint2(0, DDGI_DEPTH_TEXELS * cascade.grid_dimensions.z * c);
 
 			// Clear this frame's scroll delta / reset now that they are

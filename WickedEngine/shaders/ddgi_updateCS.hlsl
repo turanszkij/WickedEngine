@@ -75,6 +75,14 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 	uint cascade;
 	uint3 probeCoord;
 	ddgi_decode_probe(probeIndex, cascade, probeCoord);
+
+	// Staggered updates: skip cascades not refreshed this frame so their probes
+	// keep their last integrated result. The active flag is uniform across the
+	// group (one probe per group), so returning here is uniform control flow
+	// and precedes any groupshared use / barrier.
+	if (GetScene().ddgi.cascades[cascade].active == 0)
+		return;
+
 	const float maxDistance = ddgi_max_distance(cascade);
 
 	// A probe is treated like frame 0 (full reset, no temporal blend) either on
