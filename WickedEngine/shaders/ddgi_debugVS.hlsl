@@ -1,6 +1,6 @@
 #include "globals.hlsli"
 #include "uvsphere.hlsli"
-#include "ShaderInterop_DDGI.h"
+#include "ddgiHF.hlsli"
 
 // Set to true to also draw probes that don't contribute to the lighting (buried
 // in geometry / receiving no light). Off by default so the debug view is not

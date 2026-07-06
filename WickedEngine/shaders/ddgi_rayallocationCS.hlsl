@@ -1,5 +1,5 @@
 #include "globals.hlsli"
-#include "ShaderInterop_DDGI.h"
+#include "ddgiHF.hlsli"
 
 PUSHCONSTANT(push, DDGIPushConstants);
 

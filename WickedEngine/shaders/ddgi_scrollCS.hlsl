@@ -1,5 +1,5 @@
 #include "globals.hlsli"
-#include "ShaderInterop_DDGI.h"
+#include "ddgiHF.hlsli"
 
 // Runs once per frame that the DDGI grid scrolls (camera crossed a cell
 // boundary), before ray allocation. One thread per probe.

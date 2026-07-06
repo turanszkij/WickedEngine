@@ -2,7 +2,7 @@
 #include "globals.hlsli"
 #include "raytracingHF.hlsli"
 #include "lightingHF.hlsli"
-#include "ShaderInterop_DDGI.h"
+#include "ddgiHF.hlsli"
 
 // This shader runs one probe per thread group and each thread will trace rays and write the trace result to a ray data buffer
 //	ray data buffer will be later integrated by ddgi_updateCS shader which updates the DDGI irradiance and depth textures

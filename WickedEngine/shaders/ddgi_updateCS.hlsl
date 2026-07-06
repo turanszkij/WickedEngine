@@ -1,5 +1,5 @@
 #include "globals.hlsli"
-#include "ShaderInterop_DDGI.h"
+#include "ddgiHF.hlsli"
 #include "bc6h.hlsli"
 
 // This shader collects all traced rays (one probe per thread group) and integrates them
