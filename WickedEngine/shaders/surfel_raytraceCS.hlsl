@@ -121,7 +121,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 						const float3 lightColor = light.GetColor().rgb;
 
 						lighting.direct.diffuse = lightColor;
-						lighting.direct.diffuse *= attenuation_pointlight(dist2, range, range2);
+						lighting.direct.diffuse *= attenuation_pointlight(dist2, range, light.GetRange2Rcp());
 					}
 				}
 			}
@@ -154,7 +154,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 						const float3 lightColor = light.GetColor().rgb;
 
 						lighting.direct.diffuse = lightColor;
-						lighting.direct.diffuse *= attenuation_pointlight(dist2, range, range2);
+						lighting.direct.diffuse *= attenuation_pointlight(dist2, range, light.GetRange2Rcp());
 					}
 				}
 			}
@@ -187,7 +187,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 							const float3 lightColor = light.GetColor().rgb;
 
 							lighting.direct.diffuse = lightColor;
-							lighting.direct.diffuse *= attenuation_spotlight(dist2, range, range2, spot_factor, light.GetAngleScale(), light.GetAngleOffset());
+							lighting.direct.diffuse *= attenuation_spotlight(dist2, range, light.GetRange2Rcp(), spot_factor, light.GetAngleScale(), light.GetAngleOffset());
 						}
 					}
 				}
@@ -407,7 +407,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 							const float3 lightColor = light.GetColor().rgb;
 
 							lighting.direct.diffuse = lightColor;
-							lighting.direct.diffuse *= attenuation_pointlight(dist2, range, range2);
+							lighting.direct.diffuse *= attenuation_pointlight(dist2, range, light.GetRange2Rcp());
 						}
 					}
 				}
@@ -440,7 +440,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 							const float3 lightColor = light.GetColor().rgb;
 
 							lighting.direct.diffuse = lightColor;
-							lighting.direct.diffuse *= attenuation_pointlight(dist2, range, range2);
+							lighting.direct.diffuse *= attenuation_pointlight(dist2, range, light.GetRange2Rcp());
 						}
 					}
 				}
@@ -473,7 +473,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 								const float3 lightColor = light.GetColor().rgb;
 
 								lighting.direct.diffuse = lightColor;
-								lighting.direct.diffuse *= attenuation_spotlight(dist2, range, range2, spot_factor, light.GetAngleScale(), light.GetAngleOffset());
+								lighting.direct.diffuse *= attenuation_spotlight(dist2, range, light.GetRange2Rcp(), spot_factor, light.GetAngleScale(), light.GetAngleOffset());
 							}
 						}
 					}

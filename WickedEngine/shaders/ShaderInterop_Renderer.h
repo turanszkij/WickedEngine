@@ -943,6 +943,10 @@ struct alignas(16) ShaderEntity
 		retVal.w = (half)f16tof32(color.y >> 16u);
 		return retVal;
 	}
+	inline half GetRange2Rcp()
+	{
+		return GetColor().a;
+	}
 	inline min16uint GetMatrixIndex()
 	{
 		return indices & 0xFFF;

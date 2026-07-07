@@ -67,7 +67,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 
 		const half range = light.GetRange();
 		const half range2 = range * range;
-		half3 attenuation = attenuation_pointlight(dist2, range, range2);
+		half3 attenuation = attenuation_pointlight(dist2, range, light.GetRange2Rcp());
 	
 		if (dot(P - light.position, forward) <= 0)
 			continue; // behind light
