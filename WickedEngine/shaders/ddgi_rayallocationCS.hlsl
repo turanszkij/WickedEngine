@@ -18,24 +18,16 @@ static const uint THREADCOUNT = 32;
 [numthreads(THREADCOUNT, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
-	const uint probeIndex = Gid.x;
+	// Only the active cascades are dispatched (cascade 0 + one round-robin
+	// coarse cascade), each as its own dispatch starting at
+	// push.probeIndexOffset, so a group's global probe index is SV_GroupID.x +
+	// that offset. Inactive cascades launch no groups at all; their
+	// raycount/raybase entries are cleared to 0 on the host each frame, so
+	// nothing traces or integrates them.
+	const uint probeIndex = Gid.x + push.probeIndexOffset;
 	uint cascade;
 	uint3 probeCoord;
 	ddgi_decode_probe(probeIndex, cascade, probeCoord);
-
-	// Staggered updates: a cascade that is not refreshed this frame allocates
-	// no rays (so nothing is traced and its probes keep their last result). The
-	// active flag is uniform across the group (one probe per group), so this
-	// early-out is uniform control flow. Zero the ray count defensively.
-	if (GetScene().ddgi.cascades[cascade].active == 0)
-	{
-		if (groupIndex == 0)
-		{
-			raycountBuffer[probeIndex] = 0;
-			rayBaseBuffer[probeIndex] = 0;
-		}
-		return;
-	}
 
 	const float3 probePos = ddgi_probe_position(cascade, probeCoord);
 

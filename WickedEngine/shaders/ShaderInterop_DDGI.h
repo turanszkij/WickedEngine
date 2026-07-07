@@ -27,6 +27,13 @@ struct DDGIPushConstants
 	uint frameIndex;
 	uint rayCount;
 	float blendSpeed;
+	// Global probe index of the first probe in the dispatched cascade. The ray
+	// allocation / update / update-depth passes are dispatched per active
+	// cascade (only cascade 0 + one round-robin coarse cascade run each frame),
+	// so a group's probe index is SV_GroupID.x + probeIndexOffset. Zero for
+	// passes / dispatches that cover cascade 0 or address probes by other means
+	// (raytrace reads the probe index from the ray allocation records).
+	uint probeIndexOffset;
 };
 
 #ifndef __cplusplus

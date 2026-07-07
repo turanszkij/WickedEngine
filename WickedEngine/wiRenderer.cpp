@@ -12493,6 +12493,7 @@ void DDGI(
 	push.frameIndex = scene.ddgi.frame_index;
 	push.rayCount = std::min(GetDDGIRayCount(), DDGI_MAX_RAYCOUNT);
 	push.blendSpeed = GetDDGIBlendSpeed();
+	push.probeIndexOffset = 0; // set per active-cascade dispatch below
 
 	// Grid scroll pass: flag freshly (re)placed probes when any cascade
 	// scrolled or was reset this frame. Skipped on frame 0, which already does
@@ -12536,7 +12537,6 @@ void DDGI(
 		device->EventBegin("Ray allocation", cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_DDGI_RAYALLOCATION], cmd);
-		device->PushConstants(&push, sizeof(push), cmd);
 
 		const GPUResource* res[] = {
 			&scene.ddgi.variance_buffer,
@@ -12550,10 +12550,28 @@ void DDGI(
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
+		// Clear the compacted-ray counter, plus the per-probe ray count/base,
+		// so inactive cascades (no longer dispatched below) read as zero rays
+		// downstream instead of retaining a previous frame's values.
 		device->ClearUAV(&scene.ddgi.rayallocation_buffer, 0, cmd);
-		device->Barrier(GPUBarrier::Memory(&scene.ddgi.rayallocation_buffer), cmd);
+		device->ClearUAV(&scene.ddgi.raycount_buffer, 0, cmd);
+		device->ClearUAV(&scene.ddgi.raybase_buffer, 0, cmd);
+		device->Barrier(GPUBarrier::Memory(), cmd);
 
-		device->Dispatch(scene.shaderscene.ddgi.total_probe_count, 1, 1, cmd);
+		// Dispatch only the active cascades (cascade 0 + one round-robin coarse
+		// cascade), each starting at its probe_offset. The compacted-ray
+		// counter accumulates across the dispatches (InterlockedAdd on a
+		// persistent buffer slot writes disjoint, capacity-clamped ranges), so
+		// no barrier between them is needed.
+		for (uint32_t c = 0; c < DDGI_CASCADE_COUNT; ++c)
+		{
+			const auto& cascade = scene.shaderscene.ddgi.cascades[c];
+			if (cascade.active == 0)
+				continue;
+			push.probeIndexOffset = cascade.probe_offset;
+			device->PushConstants(&push, sizeof(push), cmd);
+			device->Dispatch(cascade.probe_count, 1, 1, cmd);
+		}
 
 		device->EventEnd(cmd);
 	}
@@ -12640,7 +12658,6 @@ void DDGI(
 		device->EventBegin("Update", cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_DDGI_UPDATE], cmd);
-		device->PushConstants(&push, sizeof(push), cmd);
 
 		const GPUResource* res[] = {
 			&scene.ddgi.ray_buffer,
@@ -12655,7 +12672,17 @@ void DDGI(
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-		device->Dispatch(scene.shaderscene.ddgi.total_probe_count, 1, 1, cmd);
+		// Only the active cascades are integrated; each dispatch covers one
+		// cascade's probes starting at its probe_offset.
+		for (uint32_t c = 0; c < DDGI_CASCADE_COUNT; ++c)
+		{
+			const auto& cascade = scene.shaderscene.ddgi.cascades[c];
+			if (cascade.active == 0)
+				continue;
+			push.probeIndexOffset = cascade.probe_offset;
+			device->PushConstants(&push, sizeof(push), cmd);
+			device->Dispatch(cascade.probe_count, 1, 1, cmd);
+		}
 
 		device->EventEnd(cmd);
 	}
@@ -12665,7 +12692,6 @@ void DDGI(
 		device->EventBegin("Update Depth", cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_DDGI_UPDATE_DEPTH], cmd);
-		device->PushConstants(&push, sizeof(push), cmd);
 
 		const GPUResource* res[] = {
 			&scene.ddgi.ray_buffer,
@@ -12680,7 +12706,17 @@ void DDGI(
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-		device->Dispatch(scene.shaderscene.ddgi.total_probe_count, 1, 1, cmd);
+		// Only the active cascades are integrated; each dispatch covers one
+		// cascade's probes starting at its probe_offset.
+		for (uint32_t c = 0; c < DDGI_CASCADE_COUNT; ++c)
+		{
+			const auto& cascade = scene.shaderscene.ddgi.cascades[c];
+			if (cascade.active == 0)
+				continue;
+			push.probeIndexOffset = cascade.probe_offset;
+			device->PushConstants(&push, sizeof(push), cmd);
+			device->Dispatch(cascade.probe_count, 1, 1, cmd);
+		}
 
 		device->EventEnd(cmd);
 	}

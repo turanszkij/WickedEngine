@@ -91,17 +91,15 @@ int3 get_nearby_empty_voxel(ShaderVoxelGrid voxelgrid, uint3 coord)
 [numthreads(THREADCOUNT, THREADCOUNT, 1)]
 void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
-	const uint probeIndex = Gid.x;
+	// Only the active cascades are dispatched (cascade 0 + one round-robin
+	// coarse cascade), each as its own dispatch starting at
+	// push.probeIndexOffset, so a group's global probe index is SV_GroupID.x +
+	// that offset. Inactive cascades launch no groups, so their probes are
+	// neither traced nor integrated and simply hold their last result.
+	const uint probeIndex = Gid.x + push.probeIndexOffset;
 	uint cascade;
 	uint3 probeCoord;
 	ddgi_decode_probe(probeIndex, cascade, probeCoord);
-
-	// Staggered updates: skip cascades not refreshed this frame so their probes
-	// keep their last integrated result. The active flag is uniform across the
-	// group (one probe per group), so returning here is uniform control flow
-	// and precedes any groupshared use / barrier.
-	if (GetScene().ddgi.cascades[cascade].active == 0)
-		return;
 
 	const float maxDistance = ddgi_max_distance(cascade);
 

@@ -1818,6 +1818,14 @@ static const uint DDGIPROBE_FLAG_FRESH = 1 << 1; // probe was just (re)placed by
 // frame 0 (the transient ray buffers only fit two cascades per frame) and still
 // converge cleanly the first time the staggered schedule activates them.
 static const uint DDGIPROBE_FLAG_INITIALIZED = 1 << 2;
+// Set for one frame when a probe transitions from invalid (buried) to valid -
+// i.e. relocation just ejected it out of solid geometry into open space. It has
+// no useful colour history (a probe that spawned inside an object was never
+// lit), so on its next update it takes the full ray budget and the fresh
+// colour-reset path to converge cleanly from its new position in one step,
+// instead of trickling up from black. Unlike FRESH this does NOT reset the
+// probe offset, which would undo the ejection and send it straight back inside.
+static const uint DDGIPROBE_FLAG_COLOR_RESET = 1 << 3;
 
 struct alignas(16) DDGIProbe
 {
