@@ -82,8 +82,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		// (INITIALIZED not yet set - the zeroed creation state; coarse cascades
 		// skip frame 0 because the transient ray buffers only fit two cascades,
 		// so their first round-robin activation converges through this path).
+		// COLOR_RESET (a probe just ejected from solid geometry) also needs the
+		// full budget so it converges from its new open position in one step
+		// rather than trickling up from the black it had while buried.
 		const bool probe_fresh = (push.frameIndex == 0)
 			|| (probe_flags & DDGIPROBE_FLAG_FRESH) != 0
+			|| (probe_flags & DDGIPROBE_FLAG_COLOR_RESET) != 0
 			|| (probe_flags & DDGIPROBE_FLAG_INITIALIZED) == 0;
 		const bool probe_valid = (probe_flags & DDGIPROBE_FLAG_VALID) != 0;
 

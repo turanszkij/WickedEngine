@@ -135,6 +135,7 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 	// nearby surface, front or back (keeps it off walls and off the underside
 	// of planes); backface_count drives the enclosure (validity) test.
 	float3 surface_push = 0;
+	float push_magnitude_sum = 0; // sum of |per-ray push|, for squeeze damping
 	uint counted_ray_count = 0;
 	uint backface_count = 0;
 	uint escape_count = 0; // rays that reach open space (a miss, or a hit only far away)
@@ -151,6 +152,53 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 	// running sum overflows to +Inf for bright probes, which then poisons the
 	// probe and spreads. (The averaged result is cast back to half afterwards.)
 	float3 result = 0;
+
+	// Buried (invalid) probes do not integrate their own backface-only rays -
+	// that would drive them to black, and a probe that spawned inside geometry
+	// was never lit so it has no colour history to keep either. Seed the
+	// probe's radiance from its nearest valid neighbour, so the region occupied
+	// by a solid shows plausible surrounding GI rather than black, both while
+	// buried and the moment relocation ejects it into the open (invalid probes
+	// are down-weighted when sampled, but when a whole probe cage is invalid
+	// their radiance is what the surface gets - so it must not be black). Once
+	// ejected, the depth pass flags DDGIPROBE_FLAG_COLOR_RESET and the probe
+	// converges from its own rays via the fresh path below. Fresh and
+	// currently-valid probes integrate normally. The VALID flag read here is
+	// last frame's verdict (the depth pass decides this frame's after the
+	// colour pass). Uniform across the group (one probe per group), so this
+	// early-out is uniform control flow and precedes any groupshared barrier.
+	if (!probe_fresh && (ddgiProbeBuffer[probeIndex].flags & DDGIPROBE_FLAG_VALID) == 0)
+	{
+		if (groupIndex == 0)
+		{
+			const int3 world = int3(ddgi_buffer_to_world_coord(cascade, probeCoord));
+			const int3 dims = int3(GetScene().ddgi.cascades[cascade].grid_dimensions);
+			// Search straight then diagonal neighbours (voxel_neighbors is
+			// ordered that way) for the first valid probe and copy its
+			// radiance. Deep inside a large solid no neighbour is valid; leave
+			// the radiance as-is (it is not meaningfully sampled there anyway).
+			for (uint n = 0; n < arraysize(voxel_neighbors); ++n)
+			{
+				const int3 nw = world + voxel_neighbors[n];
+				if (any(nw < 0) || any(nw >= dims))
+					continue;
+				const uint3 nb = ddgi_world_to_buffer_coord(cascade, uint3(nw));
+				const DDGIProbe neighbour = ddgiProbeBuffer[ddgi_probe_index(cascade, nb)];
+				if ((neighbour.flags & DDGIPROBE_FLAG_VALID) != 0)
+				{
+					ddgiProbeBuffer[probeIndex].radiance = neighbour.radiance;
+					break;
+				}
+			}
+		}
+		return;
+	}
+
+	// A just-ejected probe (invalid last frame, now open) has no colour
+	// history, so reset it like a fresh probe: full ray budget (the allocation
+	// pass reads this same flag) and take this frame's result directly instead
+	// of blending up from black.
+	const bool color_reset = (ddgiProbeBuffer[probeIndex].flags & DDGIPROBE_FLAG_COLOR_RESET) != 0;
 #endif // DDGI_UPDATE_DEPTH
 
 	const half3 texel_direction = decode_oct((((GTid.xy % RESOLUTION) + 0.5) / RESOLUTION) * 2 - 1);
@@ -236,6 +284,7 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 				{
 					const float push = probeOffsetDistance - depth;
 					surface_push += ray.direction * (is_backface ? push : -push);
+					push_magnitude_sum += push;
 				}
 			}
 #else
@@ -358,6 +407,23 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 		// the box, and repeats. Buried probes instead settle inward
 		// (surface_push is ~symmetric inside a solid), stay enclosed, and are
 		// simply hidden/down-weighted.
+		// Squeeze damping: when the probe is pinched between opposing surfaces
+		// - e.g. two nearby FRONT faces of a thin gap - their pushes point in
+		// opposite directions and largely cancel, but the per-ray magnitudes
+		// stay large. Tiny frame-to-frame changes in which face the
+		// (re-randomized) rays sample then make the small net push swing sign,
+		// and the probe flickers back and forth between the two faces. The
+		// coherence (net push length / summed push magnitude) is ~1 when a
+		// single surface dominates and ~0 when they oppose; scaling by it
+		// leaves a lone push nearly intact but collapses an opposed one, so a
+		// pinched probe settles at the balance point instead of chasing an
+		// unreachable keep-distance from both.
+		if (push_magnitude_sum > 1e-5)
+		{
+			const float coherence = length(surface_push) / push_magnitude_sum;
+			surface_push *= coherence;
+		}
+
 		float3 probeOffsetNew = surface_push;
 
 		[branch]
@@ -387,6 +453,15 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 			flags &= ~DDGIPROBE_FLAG_VALID;
 		else
 			flags |= DDGIPROBE_FLAG_VALID;
+		// Ejection: the probe was buried last frame and is now open (relocation
+		// pushed it out of the solid). Flag it so its next update takes the
+		// full ray budget and the fresh colour-reset path, converging in one
+		// step from its new open position instead of trickling up from black -
+		// a probe that spawned inside geometry has no colour history to fall
+		// back on. Consumed by the colour pass next frame; does NOT reset the
+		// offset (that would send it back inside).
+		if (!was_valid && !probe_enclosed)
+			flags |= DDGIPROBE_FLAG_COLOR_RESET;
 		// This pass runs last (after the colour update), so consume the fresh
 		// flag here. INITIALIZED marks that this probe has been through a full
 		// update at least once; a probe without it (zeroed creation state)
@@ -402,10 +477,11 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 		const uint idx = flatten2D(GTid.xy, DDGI_COLOR_RESOLUTION);
 		const uint variance_data_index = probeIndex * DDGI_COLOR_RESOLUTION * DDGI_COLOR_RESOLUTION + idx;
 		DDGIVarianceData varianceData = varianceBuffer[variance_data_index].load();
-		if (probe_fresh)
+		if (probe_fresh || color_reset)
 		{
-			// Frame 0, or a probe just (re)placed by a scroll: discard stale
-			// history.
+			// Frame 0, a probe just (re)placed by a scroll, or a probe just
+			// ejected from solid geometry: discard stale/absent history and
+			// take this frame's full-budget result directly.
 			varianceData = (DDGIVarianceData)0;
 			varianceData.mean = result;
 			varianceData.shortMean = result;
@@ -436,7 +512,14 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 		}
 		radiance = SH::Multiply(radiance, rcp(RESOLUTION * RESOLUTION * SPHERE_SAMPLING_PDF));
 		ddgiProbeBuffer[probeIndex].radiance = radiance.Pack();
-		
+
+		// Consume the one-shot colour-reset flag now that the probe has
+		// converged from its own rays. Safe to clear here: the depth pass
+		// writes flags later this frame from a fresh read, so it sees the
+		// cleared bit.
+		if (color_reset)
+			ddgiProbeBuffer[probeIndex].flags &= ~DDGIPROBE_FLAG_COLOR_RESET;
+
 		//draw_line(ddgi_probe_position(probeCoord), ddgi_probe_position(probeCoord) + OptimalLinearDirection(radiance));
 	}
 	
