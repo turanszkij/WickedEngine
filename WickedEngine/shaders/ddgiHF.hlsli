@@ -134,13 +134,21 @@ inline float2 ddgi_probe_depth_uv(uint cascade, min16uint3 probeCoord, half3 dir
 // Neighbour arithmetic stays in world space; conversion to a buffer coord
 // happens only at the point of buffer/atlas access.
 //
-// The result is returned through an out parameter rather than by value: the SH
-// type holds a small array, and returning it by value from a function called
-// more than once crashes the shader compiler (DXC) during optimization.
+// `enabled` gates the (expensive) 8-probe gather: when false the per-probe loop
+// runs zero iterations, so no probe-buffer reads or depth-atlas samples happen
+// and the result is Zero. This must be expressed as a data-dependent loop
+// bound, NOT as a branch/early-return: the shader compiler (DXC) crashes during
+// optimization on ANY conditional control flow tied to an `out` parameter of
+// the SH type (a conditional call, or an early return). Here the out params are
+// written unconditionally once at the end, and only the loop trip count depends
+// on `enabled`, which compiles. (For the same reason the SH is returned via an
+// out parameter, not by value - returning it by value from a function called
+// more than once also crashes DXC.) A wave sitting entirely inside one cascade,
+// where the coarse gather is disabled, still pays nothing.
 //
 // Based on:
 // https://github.com/diharaw/hybrid-rendering/blob/master/src/shaders/gi/gi_common.glsl
-void ddgi_gather_sh(uint cascade, in float3 P, in half3 N, out SH::L1_RGB out_sh, out half out_weight)
+void ddgi_gather_sh(uint cascade, in float3 P, in half3 N, bool enabled, out SH::L1_RGB out_sh, out half out_weight)
 {
 	StructuredBuffer<DDGIProbe> probe_buffer = bindless_structured_ddgi_probes[descriptor_index(GetScene().ddgi.probe_buffer)];
 	const min16uint3 base_world_coord = ddgi_base_probe_coord(cascade, P);
@@ -156,8 +164,11 @@ void ddgi_gather_sh(uint cascade, in float3 P, in half3 N, out SH::L1_RGB out_sh
 	// each axis.
 	half3 alpha = saturate((P - reference_probe_pos) * ddgi_cellsize_rcp(cascade));
 
-	// Iterate over adjacent probe cage
-	for (min16uint i = 0; i < 8; ++i)
+	// Iterate over adjacent probe cage (zero iterations when this gather is
+	// disabled - see the note above on why this is a loop bound, not a branch).
+	const uint cage_count = enabled ? 8u : 0u;
+	[loop]
+	for (min16uint i = 0; i < cage_count; ++i)
 	{
 		// Compute the neighbour in WORLD space and clamp to the real grid
 		// boundary. Offset = 0 or 1 along each axis. Clamping here (in world
@@ -313,25 +324,25 @@ half3 ddgi_sample_irradiance(in float3 P, in half3 N, inout half3 out_dominant_l
 
 	const uint coarse_cascade = min(fine_cascade + 1, DDGI_CASCADE_COUNT - 1);
 
+	// The fine cascade is always gathered. The coarse cascade is only gathered
+	// when it will actually contribute (near the fine cascade's outer edge, and
+	// only if it is a distinct cascade). Both calls are unconditional - the
+	// `enabled` flag gates the work inside ddgi_gather_sh - so a wave sitting
+	// deep inside a cascade (the common case) pays for a single gather.
 	half w_fine = 0;
 	SH::L1_RGB sh_fine;
-	ddgi_gather_sh(fine_cascade, P, N, sh_fine, w_fine);
+	ddgi_gather_sh(fine_cascade, P, N, true, sh_fine, w_fine);
 
-	// The coarse cascade is gathered unconditionally: guarding this second call
-	// behind a [branch] (to skip it when blend_to_coarser == 0) crashes the
-	// shader compiler (DXC) on the conditional out-parameter call. When the
-	// coarse cascade is not needed, a_coarse below is 0, so it costs an extra
-	// gather but does not change the result.
+	const bool need_coarse = (blend_to_coarser > 0) && (coarse_cascade != fine_cascade);
 	half w_coarse = 0;
 	SH::L1_RGB sh_coarse;
-	ddgi_gather_sh(coarse_cascade, P, N, sh_coarse, w_coarse);
+	ddgi_gather_sh(coarse_cascade, P, N, need_coarse, sh_coarse, w_coarse);
 
 	// Combine the two normalized cascade SHs by the blend factor, ignoring a
-	// cascade that contributed no weight (e.g. P outside its bounds) or the
-	// coarse cascade when it is the same as the fine one (coarsest level).
-	const half same_cascade = (coarse_cascade == fine_cascade) ? 1.0 : 0.0;
+	// cascade that contributed no weight (P outside its bounds, or the coarse
+	// gather was disabled).
 	const half a_fine = (w_fine > 0) ? (1.0 - blend_to_coarser) : 0.0;
-	const half a_coarse = (w_coarse > 0) ? (blend_to_coarser * (1.0 - same_cascade)) : 0.0;
+	const half a_coarse = (w_coarse > 0) ? blend_to_coarser : 0.0;
 	const half a_sum = a_fine + a_coarse;
 
 	if (a_sum > 0)
