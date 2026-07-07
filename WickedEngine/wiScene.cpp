@@ -601,9 +601,19 @@ namespace wi::scene
 
 				const uint32_t probe_count = ddgi.Get_Total_Probe_Count();
 
+				// The ray and ray-allocation buffers are transient (rays are
+				// traced and integrated within one frame), so they are sized
+				// for the probes refreshed per frame (cascade 0 + one
+				// round-robin coarse cascade), NOT for every probe of every
+				// cascade. The ray allocation shader compacts rays contiguously
+				// and clamps to this capacity; each probe finds its rays via
+				// raybase_buffer. This keeps ray memory independent of
+				// CASCADE_COUNT.
+				const uint32_t ray_capacity = ddgi.Get_Ray_Buffer_Capacity();
+
 				GPUBufferDesc buf;
 				buf.stride = sizeof(DDGIRayDataPacked);
-				buf.size = buf.stride * probe_count * DDGI_MAX_RAYCOUNT;
+				buf.size = buf.stride * ray_capacity;
 				buf.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
 				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 				device->CreateBufferZeroed(&buf, &ddgi.ray_buffer);
@@ -622,8 +632,17 @@ namespace wi::scene
 				device->CreateBufferZeroed(&buf, &ddgi.raycount_buffer);
 				device->SetName(&ddgi.raycount_buffer, "ddgi.raycount_buffer");
 
+				// Per-probe base offset of its rays within the compacted
+				// ray_buffer, written by the ray allocation pass each frame.
 				buf.stride = sizeof(uint32_t);
-				buf.size = buf.stride * (probe_count * DDGI_MAX_RAYCOUNT + 4); // +4: counter/indirect dispatch args
+				buf.size = buf.stride * probe_count;
+				buf.misc_flags = ResourceMiscFlag::NONE;
+				buf.format = Format::R32_UINT;
+				device->CreateBufferZeroed(&buf, &ddgi.raybase_buffer);
+				device->SetName(&ddgi.raybase_buffer, "ddgi.raybase_buffer");
+
+				buf.stride = sizeof(uint32_t);
+				buf.size = buf.stride * (ray_capacity + 4); // +4: counter/indirect dispatch args
 				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED | ResourceMiscFlag::INDIRECT_ARGS;
 				buf.format = Format::UNKNOWN;
 				device->CreateBufferZeroed(&buf, &ddgi.rayallocation_buffer);
@@ -685,23 +704,35 @@ namespace wi::scene
 				// cascades round-robin one per frame, so the per-frame
 				// trace/update cost stays ~constant (cascade 0 + one coarse)
 				// regardless of how many cascades exist - this is what makes 6
-				// cascades affordable. On frame 0 (initial creation /
-				// recreation) every cascade refreshes so the whole probe field
-				// converges at once. An inactive cascade is frozen: its grid
+				// cascades affordable. An inactive cascade is frozen: its grid
 				// does not scroll and its probes are neither traced nor
 				// integrated, so they simply hold their last result.
-				const bool active =
+				//
+				// At most TWO cascades refresh per frame - even on frame 0 - so
+				// the transient ray buffers can be sized for two cascades (see
+				// Get_Ray_Buffer_Capacity). A never-yet-refreshed probe is
+				// recognized on the GPU by its missing INITIALIZED flag and
+				// takes the full "fresh" path (max ray budget, no temporal
+				// blend) the first time its cascade activates, so each coarse
+				// cascade converges in one round-robin cycle after
+				// (re)creation. On frame 0 the grid of every cascade is still
+				// snapped (below) so cascade bounds are valid for sampling from
+				// the start.
+				const bool refresh =
 					(c == 0) ||
-					(ddgi.frame_index == 0) ||
 					(DDGI::CASCADE_COUNT > 1 &&
 						c == 1u + (ddgi.frame_index % (DDGI::CASCADE_COUNT - 1)));
-				cascade.active = active;
+				cascade.active = refresh;
 
-				if (!active)
+				if (!refresh)
 				{
 					cascade.scroll_delta = int3(0, 0, 0);
 					cascade.reset = false;
-					continue;
+					// On frame 0 fall through to snap this cascade's grid
+					// anyway (no GPU work happens for it; probes stay
+					// uninitialized).
+					if (ddgi.frame_index != 0)
+						continue;
 				}
 
 				const XMUINT3 dims = cascade.grid_dimensions;
@@ -1077,6 +1108,7 @@ namespace wi::scene
 		shaderscene.ddgi.smooth_backface = ddgi.smooth_backface;
 		shaderscene.ddgi.total_probe_count = ddgi.Get_Total_Probe_Count();
 		shaderscene.ddgi.cascade_count = DDGI::CASCADE_COUNT;
+		shaderscene.ddgi.ray_buffer_capacity = ddgi.Get_Ray_Buffer_Capacity();
 		shaderscene.ddgi.depth_texture_resolution = uint2(ddgi.depth_texture.desc.width, ddgi.depth_texture.desc.height);
 		shaderscene.ddgi.depth_texture_resolution_rcp = float2(1.0f / shaderscene.ddgi.depth_texture_resolution.x, 1.0f / shaderscene.ddgi.depth_texture_resolution.y);
 
@@ -9926,5 +9958,16 @@ namespace wi::scene
 		for (uint32_t c = 0; c < CASCADE_COUNT; ++c)
 			total += cascades[c].probe_count;
 		return total;
+	}
+
+	uint32_t Scene::DDGI::Get_Ray_Buffer_Capacity() const
+	{
+		// At most two cascades refresh in one frame (cascade 0 + one
+		// round-robin coarse cascade), and in the worst case (e.g. a teleport
+		// reset) both demand DDGI_MAX_RAYCOUNT for every probe, so this
+		// capacity is exactly that worst case. All cascades share the same
+		// probe count. Requires Compute_Cascade_Parameters() to have run.
+		const uint32_t refreshed_cascades = std::min(2u, CASCADE_COUNT);
+		return refreshed_cascades * cascades[0].probe_count * DDGI_MAX_RAYCOUNT;
 	}
 }

@@ -144,7 +144,14 @@ struct alignas(16) ShaderDDGI
 	float2 depth_texture_resolution_rcp;
 
 	uint cascade_count;
-	uint3 pad;
+	// Capacity of the transient ray / ray-allocation buffers, in rays. Sized
+	// for the probes refreshed in a single frame (cascade 0 + one round-robin
+	// coarse cascade at DDGI_MAX_RAYCOUNT each), NOT for every probe of every
+	// cascade - that is what keeps ray memory independent of
+	// DDGI_CASCADE_COUNT. The ray allocation pass clamps to this so the buffers
+	// can never overflow.
+	uint ray_buffer_capacity;
+	uint2 pad;
 
 	Cascade cascades[DDGI_CASCADE_COUNT];
 };

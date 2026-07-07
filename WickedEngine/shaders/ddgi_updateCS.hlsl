@@ -13,6 +13,7 @@ PUSHCONSTANT(push, DDGIPushConstants);
 
 StructuredBuffer<DDGIRayDataPacked> ddgiRayBuffer : register(t0);
 Buffer<uint> ddgiRayCountBuffer : register(t1);
+Buffer<uint> ddgiRayBaseBuffer : register(t2);
 
 static const float WEIGHT_EPSILON = 0.0001;
 
@@ -85,11 +86,14 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 
 	const float maxDistance = ddgi_max_distance(cascade);
 
-	// A probe is treated like frame 0 (full reset, no temporal blend) either on
-	// the global first frame or when it was just (re)placed by a grid scroll
-	// this frame.
+	// A probe is treated like frame 0 (full reset, no temporal blend) on the
+	// global first frame, when it was just (re)placed by a grid scroll this
+	// frame (FRESH), or when it has never been refreshed at all (INITIALIZED
+	// not yet set - the zeroed creation state; coarse cascades skip frame 0 and
+	// converge through this path on their first round-robin activation).
 	const bool probe_fresh = (push.frameIndex == 0)
-		|| (ddgiProbeBuffer[probeIndex].flags & DDGIPROBE_FLAG_FRESH) != 0;
+		|| (ddgiProbeBuffer[probeIndex].flags & DDGIPROBE_FLAG_FRESH) != 0
+		|| (ddgiProbeBuffer[probeIndex].flags & DDGIPROBE_FLAG_INITIALIZED) == 0;
 
 #ifdef DDGI_UPDATE_DEPTH
 	[branch]
@@ -130,13 +134,18 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 	uint remaining_rays = min(ddgiRayCountBuffer[probeIndex] * DDGI_RAY_BUCKET_COUNT, DDGI_MAX_RAYCOUNT);
 	uint offset = 0;
 
+	// This probe's rays live at a compacted per-frame offset in the shared ray
+	// buffer (written by the ray allocation pass), not at probeIndex * MAX: the
+	// transient ray buffers are only sized for the probes refreshed per frame.
+	const uint ray_base = ddgiRayBaseBuffer[probeIndex];
+
 	while (remaining_rays > 0)
 	{
 		uint num_rays = min(CACHE_SIZE, remaining_rays);
 
 		if (groupIndex < num_rays)
 		{
-			ray_cache[groupIndex] = ddgiRayBuffer[probeIndex * DDGI_MAX_RAYCOUNT + groupIndex + offset].load();
+			ray_cache[groupIndex] = ddgiRayBuffer[ray_base + groupIndex + offset].load();
 		}
 
 		GroupMemoryBarrierWithGroupSync();
@@ -328,8 +337,12 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 			flags &= ~DDGIPROBE_FLAG_VALID;
 		else
 			flags |= DDGIPROBE_FLAG_VALID;
-		// This pass runs last (after the colour update), so consume the fresh flag here.
+		// This pass runs last (after the colour update), so consume the fresh
+		// flag here. INITIALIZED marks that this probe has been through a full
+		// update at least once; a probe without it (zeroed creation state)
+		// takes the fresh path on its first refresh.
 		flags &= ~DDGIPROBE_FLAG_FRESH;
+		flags |= DDGIPROBE_FLAG_INITIALIZED;
 		ddgiProbeBuffer[probeIndex].flags = flags;
 	}
 #else

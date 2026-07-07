@@ -239,8 +239,15 @@ namespace wi::scene
 			wi::graphics::GPUBuffer variance_buffer;
 			wi::graphics::GPUBuffer raycount_buffer;
 			wi::graphics::GPUBuffer rayallocation_buffer;
+			wi::graphics::GPUBuffer raybase_buffer; // Per-probe base offset of its rays in the compacted ray_buffer
 			wi::graphics::GPUBuffer probe_buffer;
 			wi::graphics::Texture depth_texture;
+
+			// Capacity of the transient ray buffers in rays: probes refreshed
+			// per frame (cascade 0 + one coarse) x DDGI_MAX_RAYCOUNT,
+			// independent of CASCADE_COUNT. Must match what the buffers were
+			// created with.
+			[[nodiscard]] uint32_t Get_Ray_Buffer_Capacity() const;
 
 			// Derives every cascade from the cascade 0 user configuration
 			// (grid_dimensions / grid_half_extents), preserving per-cascade

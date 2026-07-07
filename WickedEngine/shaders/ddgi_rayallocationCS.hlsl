@@ -7,6 +7,7 @@ StructuredBuffer<DDGIVarianceDataPacked> varianceBuffer : register(t0);
 
 RWStructuredBuffer<uint> rayallocationBuffer : register(u0);
 RWBuffer<uint> raycountBuffer : register(u1);
+RWBuffer<uint> rayBaseBuffer : register(u2);
 
 groupshared float shared_inconsistency[DDGI_COLOR_RESOLUTION * DDGI_COLOR_RESOLUTION];
 groupshared uint shared_rayCount;
@@ -29,7 +30,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	if (GetScene().ddgi.cascades[cascade].active == 0)
 	{
 		if (groupIndex == 0)
+		{
 			raycountBuffer[probeIndex] = 0;
+			rayBaseBuffer[probeIndex] = 0;
+		}
 		return;
 	}
 
@@ -73,8 +77,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 		StructuredBuffer<DDGIProbe> probe_buffer = bindless_structured_ddgi_probes[descriptor_index(GetScene().ddgi.probe_buffer)];
 		const uint probe_flags = probe_buffer[probeIndex].flags;
+		// Fresh = needs a full reset-and-converge: global frame 0, just
+		// (re)placed by a grid scroll (FRESH), or never refreshed at all
+		// (INITIALIZED not yet set - the zeroed creation state; coarse cascades
+		// skip frame 0 because the transient ray buffers only fit two cascades,
+		// so their first round-robin activation converges through this path).
 		const bool probe_fresh = (push.frameIndex == 0)
-			|| (probe_flags & DDGIPROBE_FLAG_FRESH) != 0;
+			|| (probe_flags & DDGIPROBE_FLAG_FRESH) != 0
+			|| (probe_flags & DDGIPROBE_FLAG_INITIALIZED) == 0;
 		const bool probe_valid = (probe_flags & DDGIPROBE_FLAG_VALID) != 0;
 
 		if(probe_fresh)
@@ -98,10 +108,21 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			rayCount = DDGI_RAY_BUCKET_COUNT * 8; // 32 rays (of up to 512)
 		}
 
-		raycountBuffer[probeIndex] = rayCount / DDGI_RAY_BUCKET_COUNT;
-		shared_rayCount = rayCount;
-
+		// Reserve this probe's ray range in the compacted ray buffer, then
+		// clamp to its capacity. The transient ray buffers are sized for the
+		// probes refreshed in one frame (see ShaderDDGI::ray_buffer_capacity),
+		// so the clamp guarantees no out-of-bounds writes even in a worst-case
+		// frame. Everything stays DDGI_RAY_BUCKET_COUNT-aligned: rayCount is
+		// aligned, so every base (a sum of aligned counts) and the capacity (a
+		// multiple of DDGI_MAX_RAYCOUNT) are too.
 		InterlockedAdd(rayallocationBuffer[0], rayCount, shared_rayAllocation);
+		const uint capacity = GetScene().ddgi.ray_buffer_capacity;
+		const uint base = shared_rayAllocation;
+		rayCount = base >= capacity ? 0u : min(rayCount, capacity - base);
+
+		raycountBuffer[probeIndex] = rayCount / DDGI_RAY_BUCKET_COUNT;
+		rayBaseBuffer[probeIndex] = base;
+		shared_rayCount = rayCount;
 	}
 
 	GroupMemoryBarrierWithGroupSync();

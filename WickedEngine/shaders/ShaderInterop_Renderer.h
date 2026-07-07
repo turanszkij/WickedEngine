@@ -1811,6 +1811,13 @@ namespace SH
 // DDGIProbe.flags bits:
 static const uint DDGIPROBE_FLAG_VALID = 1 << 0; // probe is not buried in solid geometry
 static const uint DDGIPROBE_FLAG_FRESH = 1 << 1; // probe was just (re)placed by a grid scroll; reset it this frame like frame 0
+// Set once the probe has been through a full update (depth pass). A cleared bit
+// means the probe has never been refreshed - flags == 0 is the buffer's zeroed
+// creation/reset state - so it must take the "fresh" path (max ray budget, no
+// temporal blend) on its first update. This is what lets coarse cascades skip
+// frame 0 (the transient ray buffers only fit two cascades per frame) and still
+// converge cleanly the first time the staggered schedule activates them.
+static const uint DDGIPROBE_FLAG_INITIALIZED = 1 << 2;
 
 struct alignas(16) DDGIProbe
 {

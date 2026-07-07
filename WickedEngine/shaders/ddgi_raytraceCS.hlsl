@@ -40,6 +40,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	const uint probeIndex = rayAlloc & 0xFFFFF;
 	const uint rayIndex = rayAlloc >> 20u;
 	const uint rayCount = raycountBuffer[probeIndex] * DDGI_RAY_BUCKET_COUNT;
+	if (rayCount == 0)
+		return; // stale/cleared allocation record (nothing was allocated for this probe this frame)
 	uint cascade;
 	uint3 probeCoord;
 	ddgi_decode_probe(probeIndex, cascade, probeCoord);
@@ -281,7 +283,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			// visibility.
 			rayData.depth = (half)ddgi_max_distance(cascade);
 			rayData.radiance = radiance;
-			rayBuffer[probeIndex * DDGI_MAX_RAYCOUNT + rayIndex].store(rayData);
+			// DTid.x is this ray's slot in the compacted ray buffer: the
+			// allocation pass wrote this thread's record at (probe base +
+			// rayIndex), so record index == ray slot. The update pass reads a
+			// probe's rays at rayBaseBuffer[probeIndex] + i.
+			rayBuffer[DTid.x].store(rayData);
 		}
 		else
 		{
@@ -518,7 +524,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			// the hit distance.
 			rayData.depth = surface.IsBackface() ? -(half)hit_depth : (half)hit_depth;
 			rayData.radiance = radiance;
-			rayBuffer[probeIndex * DDGI_MAX_RAYCOUNT + rayIndex].store(rayData);
+			// Compacted slot; see the miss-path store above.
+			rayBuffer[DTid.x].store(rayData);
 		}
 
 	}

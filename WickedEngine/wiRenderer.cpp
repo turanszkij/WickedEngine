@@ -12477,6 +12477,7 @@ void DDGI(
 		device->ClearUAV(&scene.ddgi.variance_buffer, 0, cmd);
 		device->ClearUAV(&scene.ddgi.rayallocation_buffer, 0, cmd);
 		device->ClearUAV(&scene.ddgi.raycount_buffer, 0, cmd);
+		device->ClearUAV(&scene.ddgi.raybase_buffer, 0, cmd);
 		device->ClearUAV(&scene.ddgi.ray_buffer, 0, cmd);
 		device->Barrier(GPUBarrier::Memory(), cmd);
 		device->Barrier(GPUBarrier::Image(&scene.ddgi.depth_texture, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE), cmd);
@@ -12545,6 +12546,7 @@ void DDGI(
 		const GPUResource* uavs[] = {
 			&scene.ddgi.rayallocation_buffer,
 			&scene.ddgi.raycount_buffer,
+			&scene.ddgi.raybase_buffer,
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
@@ -12560,6 +12562,7 @@ void DDGI(
 		GPUBarrier barriers[] = {
 			GPUBarrier::Memory(&scene.ddgi.rayallocation_buffer),
 			GPUBarrier::Buffer(&scene.ddgi.raycount_buffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
+			GPUBarrier::Buffer(&scene.ddgi.raybase_buffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
@@ -12642,6 +12645,7 @@ void DDGI(
 		const GPUResource* res[] = {
 			&scene.ddgi.ray_buffer,
 			&scene.ddgi.raycount_buffer,
+			&scene.ddgi.raybase_buffer,
 		};
 		device->BindResources(res, 0, arraysize(res), cmd);
 
@@ -12666,6 +12670,7 @@ void DDGI(
 		const GPUResource* res[] = {
 			&scene.ddgi.ray_buffer,
 			&scene.ddgi.raycount_buffer,
+			&scene.ddgi.raybase_buffer,
 		};
 		device->BindResources(res, 0, arraysize(res), cmd);
 
