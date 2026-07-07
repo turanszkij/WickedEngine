@@ -205,13 +205,37 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 				// Few escapes => boxed in.
 				if (!is_backface && hit_dist >= (half)maxDistance)
 					escape_count++;
-				// Push away from any near surface, front or back. Including
-				// backfaces keeps a probe that legitimately sits behind a
-				// single-sided face (e.g. under a water plane) at keep-distance
-				// on its own side instead of drifting into the surface.
+				// Keep the probe at DDGI_KEEP_DISTANCE from nearby surfaces,
+				// but the push direction depends on which SIDE of the surface
+				// we are on:
+				//   - FRONT face: we are on its outward (correct) side and
+				//     merely too close, so push AWAY (-ray.direction) to hold
+				//     distance.
+				//   - BACK face: we are behind the surface, i.e. INSIDE the
+				//     solid on the wrong side, so push TOWARD it
+				//     (+ray.direction) to exit through the nearest face instead
+				//     of being shoved deeper in.
+				//
+				// This is what rescues the probe a moving box leaves just
+				// inside its TRAILING face. The old "push away from any
+				// surface" rule pushed that probe away from the near (back)
+				// face = further into the box, so it stayed enclosed - invalid,
+				// contributing no light - and the trailing face went black.
+				// (The leading face never showed this because an EXTERNAL probe
+				// ahead of it is pinned by the same away-push.) Now the near
+				// backface pushes the probe out through itself; once it pokes
+				// through it reads as a front face and the away-push stabilizes
+				// it at keep-distance outside.
+				//
+				// Deep inside a solid the opposite backfaces are far apart and
+				// their pushes cancel, so a genuinely buried probe is not
+				// yanked toward an arbitrary face; only one within reach of a
+				// single near face is extracted (the offset is clamped to half
+				// a cell anyway).
 				if (depth < probeOffsetDistance)
 				{
-					surface_push -= ray.direction * (probeOffsetDistance - depth);
+					const float push = probeOffsetDistance - depth;
+					surface_push += ray.direction * (is_backface ? push : -push);
 				}
 			}
 #else
