@@ -4692,7 +4692,7 @@ void UpdatePerFrameData(
 			}
 
 			const LightComponent& light = vis.scene->lights[lightIndex];
-			if (light.GetType() != LightComponent::SPOT || light.IsInactive())
+			if (light.GetType() != LightComponent::SPOT || light.IsInactive() || light.GetRange() < FLT_EPSILON)
 				continue;
 
 			ShaderEntity shaderentity = {};
@@ -4791,7 +4791,7 @@ void UpdatePerFrameData(
 			}
 
 			const LightComponent& light = vis.scene->lights[lightIndex];
-			if (light.GetType() != LightComponent::POINT || light.IsInactive())
+			if (light.GetType() != LightComponent::POINT || light.IsInactive() || light.GetRange() < FLT_EPSILON)
 				continue;
 
 			ShaderEntity shaderentity = {};
@@ -4876,7 +4876,7 @@ void UpdatePerFrameData(
 			}
 
 			const LightComponent& light = vis.scene->lights[lightIndex];
-			if (light.GetType() != LightComponent::RECTANGLE || light.IsInactive())
+			if (light.GetType() != LightComponent::RECTANGLE || light.IsInactive() || light.GetRange() < FLT_EPSILON)
 				continue;
 
 			ShaderEntity shaderentity = {};
@@ -4995,7 +4995,7 @@ void UpdatePerFrameData(
 					cullsphere.center = sphere.center;
 					cullsphere.radius = sphere.radius * CAPSULE_SHADOW_BOLDEN + CAPSULE_SHADOW_AFFECTION_RANGE;
 
-					const float atten_range = collider.capsule.getLength() * 0.5 + cullsphere.radius;
+					const float atten_range = std::max(0.001f, collider.capsule.getLength() * 0.5f + cullsphere.radius);
 					shaderentity.SetColor(XMFLOAT4(0, 0, 0, 1.0f / sqr(atten_range))); // for GetRange2Rcp() attenuation
 				}
 				break;

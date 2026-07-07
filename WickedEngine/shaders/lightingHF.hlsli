@@ -153,7 +153,7 @@ inline half attenuation_pointlight(in half dist2, in half range, in half range2_
 	//return saturate(1 - pow(dist / range, 4)) / dist2;
 
 	// Removed pow(x, 4):
-	half dist_per_range = dist2 * range2_rcp; // pow2 (note: range cannot be 0, in that case light is not uploaded to GPU, so here will not be zero-division)
+	half dist_per_range = dist2 * range2_rcp; // pow2
 	dist_per_range *= dist_per_range; // pow4
 	return saturate(1 - dist_per_range) / max(0.0001, dist2);
 }
