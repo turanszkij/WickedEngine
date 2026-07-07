@@ -119,7 +119,14 @@ struct alignas(16) ShaderDDGI
 		int reset; // nonzero: reset every probe in this cascade this frame
 
 		float3 cell_size;
-		float pad_cs;
+		// Temporal-blend rate multiplier for this cascade = how many frames
+		// apart its updates are (1 for cascade 0, CASCADE_COUNT-1 for the
+		// round-robin cascades). The update pass multiplies the colour/depth
+		// blend factors by this so a cascade refreshed 1/K as often still
+		// converges at the same WALL-CLOCK rate as cascade 0, instead of K
+		// times slower (which showed as lagging/darkening and cascade-boundary
+		// popping while moving).
+		float blend_scale;
 
 		float3 cell_size_rcp;
 		float pad_csr;

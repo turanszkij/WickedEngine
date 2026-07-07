@@ -17,6 +17,25 @@ Buffer<uint> ddgiRayBaseBuffer : register(t2);
 
 static const float WEIGHT_EPSILON = 0.0001;
 
+// Strength of the staggered-cascade blend-rate compensation, as an exponent on
+// a cascade's update period K (cascades[c].blend_scale): the temporal blend
+// factor is multiplied by pow(K, strength). 1.0 = full (coarse cascades
+// converge at the same WALL-CLOCK rate as cascade 0), 0.0 = none (they converge
+// K times slower = lag/darkening while moving, and cascade-boundary popping),
+// 0.5 = sqrt(K).
+//
+// Colour and depth are tuned separately because they fail differently:
+//   - COLOUR (radiance): pushing this hard lets K times more per-update
+//     radiance noise through on the coarse cascades => shimmer/flicker. Keep it
+//     gentle.
+//   - DEPTH (visibility moments): these are smooth, so faster convergence does
+//     NOT shimmer, and it makes the Chebyshev visibility test recover quickly
+//     when a surface moves - which is the main cause of the transient darkening
+//     on moving objects. So this can be pushed to full. Tune either and
+//     recompile just the shaders (fast) to trade speed vs shimmer.
+static const float DDGI_BLEND_COMPENSATION_COLOR = 0.5;
+static const float DDGI_BLEND_COMPENSATION_DEPTH = 1.0;
+
 #ifdef DDGI_UPDATE_DEPTH
 static const uint THREADCOUNT = DDGI_DEPTH_RESOLUTION;
 static const uint RESOLUTION = DDGI_DEPTH_RESOLUTION;
@@ -85,6 +104,13 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 		return;
 
 	const float maxDistance = ddgi_max_distance(cascade);
+
+	// Blend-rate compensation: this cascade refreshes once every update_period
+	// frames (= cascades[cascade].blend_scale). The colour and depth blend
+	// factors are scaled by pow(update_period, strength) with separate
+	// strengths (see the constants above), each clamped to <= 1 at its use
+	// site.
+	const float update_period = GetScene().ddgi.cascades[cascade].blend_scale;
 
 	// A probe is treated like frame 0 (full reset, no temporal blend) on the
 	// global first frame, when it was just (re)placed by a grid scroll this
@@ -227,7 +253,7 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 	// leak visibility if blended.
 	if (!probe_fresh)
 	{
-		result = lerp(prev_result, result, 0.02);
+		result = lerp(prev_result, result, min(0.02 * pow(update_period, DDGI_BLEND_COMPENSATION_DEPTH), 1.0));
 	}
 	shared_depths[flatten2D(GTid, DDGI_DEPTH_RESOLUTION)] = pack_half2(result);
 	output[pixel_current] = result;
@@ -361,7 +387,7 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 			varianceData.shortMean = result;
 			varianceData.inconsistency = 1;
 		}
-		MultiscaleMeanEstimator(result, varianceData, push.blendSpeed);
+		MultiscaleMeanEstimator(result, varianceData, min(push.blendSpeed * pow(update_period, DDGI_BLEND_COMPENSATION_COLOR), 1.0));
 		varianceBuffer[variance_data_index].store(varianceData);
 		result = varianceData.mean;
 

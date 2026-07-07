@@ -1141,6 +1141,16 @@ namespace wi::scene
 			dst.cell_size_rcp.z = 1.0f / dst.cell_size.z;
 			dst.max_distance = std::max(dst.cell_size.x, std::max(dst.cell_size.y, dst.cell_size.z)) * 1.5f;
 
+			// Blend-rate compensation: this cascade refreshes once every
+			// `update_period` frames (cascade 0 every frame; the coarser
+			// cascades round-robin, so once every CASCADE_COUNT-1 frames).
+			// Scaling the temporal blend by the period keeps its wall-clock
+			// convergence in step with cascade 0. Must match the schedule in
+			// the grid-snapping loop above.
+			const uint32_t update_period =
+				(c == 0 || DDGI::CASCADE_COUNT <= 1) ? 1u : (DDGI::CASCADE_COUNT - 1);
+			dst.blend_scale = float(update_period);
+
 			dst.scroll_offset = int3(cascade.scroll_offset.x, cascade.scroll_offset.y, cascade.scroll_offset.z);
 			dst.scroll_delta = int3(cascade.scroll_delta.x, cascade.scroll_delta.y, cascade.scroll_delta.z);
 			dst.active = cascade.active ? 1 : 0;
