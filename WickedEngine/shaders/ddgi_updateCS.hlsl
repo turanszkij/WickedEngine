@@ -460,6 +460,15 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 		// offset (that would send it back inside).
 		if (!was_valid && !probe_enclosed)
 			flags |= DDGIPROBE_FLAG_COLOR_RESET;
+		// Open-sky probe: every ray reached open space (a miss or a far front
+		// face), so there is no geometry within max_distance in any direction.
+		// The ray allocation pass caps such a probe's budget - it sees only the
+		// smooth sky and lights no nearby surface. Exact (all rays) so only a
+		// genuinely empty probe qualifies.
+		if (counted_ray_count > 0 && escape_count == counted_ray_count)
+			flags |= DDGIPROBE_FLAG_OPEN;
+		else
+			flags &= ~DDGIPROBE_FLAG_OPEN;
 		// This pass runs last (after the colour update), so consume the fresh
 		// flag here. INITIALIZED marks that this probe has been through a full
 		// update at least once; a probe without it (zeroed creation state)

@@ -82,6 +82,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			|| (probe_flags & DDGIPROBE_FLAG_COLOR_RESET) != 0
 			|| (probe_flags & DDGIPROBE_FLAG_INITIALIZED) == 0;
 		const bool probe_valid = (probe_flags & DDGIPROBE_FLAG_VALID) != 0;
+		const bool probe_open = (probe_flags & DDGIPROBE_FLAG_OPEN) != 0;
 
 		if(probe_fresh)
 		{
@@ -102,6 +103,17 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			// the 25% test flicker frame to frame since the ray directions are
 			// re-randomized each frame.
 			rayCount = DDGI_RAY_BUCKET_COUNT * 8; // 32 rays (of up to 512)
+		}
+		else if(probe_open)
+		{
+			// Open-sky probe (every ray reached open space last frame): it sees
+			// only the smooth, low-frequency sky and lights no surface within
+			// range, so its L1 SH needs few rays. Per-frame sky/sun sampling
+			// noise would otherwise inflate the variance-driven budget above,
+			// as a buried probe's backface noise does. Cap it to the same small
+			// count - min, not a hard set, so a quiet sky still gets the low
+			// variance-driven value rather than being raised to the cap.
+			rayCount = min(rayCount, DDGI_RAY_BUCKET_COUNT * 8); // <= 32 rays
 		}
 
 		// Reserve this probe's ray range in the compacted ray buffer, then

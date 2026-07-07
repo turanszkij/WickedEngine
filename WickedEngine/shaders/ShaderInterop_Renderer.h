@@ -1826,6 +1826,14 @@ static const uint DDGIPROBE_FLAG_INITIALIZED = 1 << 2;
 // instead of trickling up from black. Unlike FRESH this does NOT reset the
 // probe offset, which would undo the ejection and send it straight back inside.
 static const uint DDGIPROBE_FLAG_COLOR_RESET = 1 << 3;
+// Set when every traced ray reached open space (no geometry within max_distance
+// in any direction) - the probe sees only sky. Such a probe has no surface
+// within range, so it is never in a shaded point's interpolation cage and
+// lighting it precisely does not matter; and per-frame sky/sun sampling noise
+// would otherwise inflate its variance-driven ray budget (like a buried probe's
+// noisy backfaces). The ray allocation pass caps its budget to a small fixed
+// count.
+static const uint DDGIPROBE_FLAG_OPEN = 1 << 4;
 
 struct alignas(16) DDGIProbe
 {
