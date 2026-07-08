@@ -6,6 +6,21 @@
 
 static const float VXGI_CLIPMAP_COUNT_RCP = rcp((float)VXGI_CLIPMAP_COUNT);
 
+// Brightness correction for the diffuse cone trace.
+//
+// The step-size scaling in SampleVoxelClipMap (sam *= step_dist / voxelSize)
+// multiplies the sampled radiance by a factor that is >= 2 for the diffuse
+// trace (stepSize == 1 and the cone diameter starts at 2 * voxelSize). That
+// made VXGI diffuse GI roughly 2x brighter than DDGI / Surfel.
+//
+// This is applied to the FINAL ConeTraceDiffuse result rather than inside the
+// per-sample compositing on purpose: ConeTraceDiffuse also drives the recursive
+// voxel radiance feedback (vxgi_temporalCS), and altering the compositing there
+// destabilises that loop (runaway accumulation to white). Scaling the final
+// result can only reduce the feedback-loop gain, so it cannot destabilise a
+// loop that was already stable at full strength.
+static const half VXGI_DIFFUSE_INTENSITY = 0.5;
+
 inline half4 SampleVoxelClipMap(in Texture3D<half4> voxels, in float3 P, in uint clipmap_index, float step_dist, in float3 face_offsets, in float3 direction_weights, uint precomputed_direction = 0)
 {
 	VoxelClipMap clipmap = GetFrame().vxgi.clipmaps[clipmap_index];
@@ -145,7 +160,7 @@ inline half4 ConeTraceDiffuse(in Texture3D<half4> voxels, in float3 P, in float3
 	}
 	amount /= sum;
 
-	amount.rgb = max(0, amount.rgb);
+	amount.rgb = max(0, amount.rgb) * VXGI_DIFFUSE_INTENSITY;
 	amount.a = saturate(amount.a);
 
 	return amount;
