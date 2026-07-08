@@ -1444,6 +1444,7 @@ namespace wi
 				wi::renderer::VXGI_Resolve(
 					vxgiResources,
 					*scene,
+					depthBuffer_Copy,
 					cmd
 				);
 			}

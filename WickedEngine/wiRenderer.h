@@ -537,8 +537,14 @@ namespace wi::renderer
 	// VXGI: Voxel-based Global Illumination (voxel cone tracing-based)
 	struct VXGIResources
 	{
+		// Full-resolution outputs, bilateral-upsampled from the half-res
+		// traces. These are what gets sampled during shading.
 		wi::graphics::Texture diffuse;
 		wi::graphics::Texture specular;
+		// Half-resolution cone-trace targets. The expensive cone tracing runs
+		// at half resolution here and is then upsampled into diffuse/specular.
+		wi::graphics::Texture diffuse_half;
+		wi::graphics::Texture specular_half;
 		mutable bool pre_clear = true;
 
 		bool IsValid() const { return diffuse.IsValid(); }
@@ -552,6 +558,7 @@ namespace wi::renderer
 	void VXGI_Resolve(
 		const VXGIResources& res,
 		const wi::scene::Scene& scene,
+		const wi::graphics::Texture& depth,
 		wi::graphics::CommandList cmd
 	);
 

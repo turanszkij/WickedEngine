@@ -10068,17 +10068,27 @@ void CreateVXGIResources(VXGIResources& res, XMUINT2 resolution)
 	TextureDesc desc;
 	desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 
+	// Full-resolution outputs (bilateral-upsampled, sampled during shading):
 	desc.width = resolution.x;
 	desc.height = resolution.y;
 	desc.format = Format::R11G11B10_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.diffuse);
 	device->SetName(&res.diffuse, "vxgi.diffuse");
 
-	desc.width = resolution.x;
-	desc.height = resolution.y;
 	desc.format = Format::R16G16B16A16_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.specular);
 	device->SetName(&res.specular, "vxgi.specular");
+
+	// Half-resolution cone-trace targets (the expensive tracing happens here):
+	desc.width = std::max(1u, (resolution.x + 1u) / 2u);
+	desc.height = std::max(1u, (resolution.y + 1u) / 2u);
+	desc.format = Format::R11G11B10_FLOAT;
+	device->CreateTexture(&desc, nullptr, &res.diffuse_half);
+	device->SetName(&res.diffuse_half, "vxgi.diffuse_half");
+
+	desc.format = Format::R16G16B16A16_FLOAT;
+	device->CreateTexture(&desc, nullptr, &res.specular_half);
+	device->SetName(&res.specular_half, "vxgi.specular_half");
 
 	res.pre_clear = true;
 }
@@ -10284,6 +10294,7 @@ void VXGI_Voxelize(
 void VXGI_Resolve(
 	const VXGIResources& res,
 	const Scene& scene,
+	const Texture& depth,
 	CommandList cmd
 )
 {
@@ -10297,22 +10308,27 @@ void VXGI_Resolve(
 
 	BindCommonResources(cmd);
 
+	// Cone tracing runs at half resolution into diffuse_half / specular_half,
+	// then gets bilateral-upsampled into the full-res diffuse / specular outputs
+	// that shading samples. This keeps the (expensive) per-pixel cone marching to
+	// a quarter of the pixels.
+
 	if (res.pre_clear)
 	{
 		res.pre_clear = false;
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&res.diffuse, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
-				GPUBarrier::Image(&res.specular, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
+				GPUBarrier::Image(&res.diffuse_half, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
+				GPUBarrier::Image(&res.specular_half, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
-		device->ClearUAV(&res.diffuse, 0, cmd);
-		device->ClearUAV(&res.specular, 0, cmd);
+		device->ClearUAV(&res.diffuse_half, 0, cmd);
+		device->ClearUAV(&res.specular_half, 0, cmd);
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&res.diffuse, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-				GPUBarrier::Image(&res.specular, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+				GPUBarrier::Image(&res.diffuse_half, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+				GPUBarrier::Image(&res.specular_half, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -10320,8 +10336,8 @@ void VXGI_Resolve(
 
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&res.diffuse, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
-			GPUBarrier::Image(&res.specular, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.diffuse_half, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.specular_half, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
@@ -10331,18 +10347,14 @@ void VXGI_Resolve(
 		device->BindComputeShader(&shaders[CSTYPE_VXGI_RESOLVE_DIFFUSE], cmd);
 
 		PostProcess postprocess;
-		device->BindUAV(&res.diffuse, 0, cmd);
-		postprocess.resolution.x = res.diffuse.desc.width;
-		postprocess.resolution.y = res.diffuse.desc.height;
+		device->BindUAV(&res.diffuse_half, 0, cmd);
+		postprocess.resolution.x = res.diffuse_half.desc.width;
+		postprocess.resolution.y = res.diffuse_half.desc.height;
 		postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 		postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
-		uint2 dispatch_dim;
-		dispatch_dim.x = postprocess.resolution.x;
-		dispatch_dim.y = postprocess.resolution.y;
-
-		device->Dispatch((dispatch_dim.x + 7u) / 8u, (dispatch_dim.y + 7u) / 8u, 1, cmd);
+		device->Dispatch((postprocess.resolution.x + 7u) / 8u, (postprocess.resolution.y + 7u) / 8u, 1, cmd);
 
 		device->EventEnd(cmd);
 	}
@@ -10353,28 +10365,36 @@ void VXGI_Resolve(
 		device->BindComputeShader(&shaders[CSTYPE_VXGI_RESOLVE_SPECULAR], cmd);
 
 		PostProcess postprocess;
-		device->BindUAV(&res.specular, 0, cmd);
-		postprocess.resolution.x = res.specular.desc.width;
-		postprocess.resolution.y = res.specular.desc.height;
+		device->BindUAV(&res.specular_half, 0, cmd);
+		postprocess.resolution.x = res.specular_half.desc.width;
+		postprocess.resolution.y = res.specular_half.desc.height;
 		postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 		postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
-		uint2 dispatch_dim;
-		dispatch_dim.x = postprocess.resolution.x;
-		dispatch_dim.y = postprocess.resolution.y;
-
-		device->Dispatch((dispatch_dim.x + 7u) / 8u, (dispatch_dim.y + 7u) / 8u, 1, cmd);
+		device->Dispatch((postprocess.resolution.x + 7u) / 8u, (postprocess.resolution.y + 7u) / 8u, 1, cmd);
 
 		device->EventEnd(cmd);
 	}
 
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&res.diffuse, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-			GPUBarrier::Image(&res.specular, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+			GPUBarrier::Image(&res.diffuse_half, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+			GPUBarrier::Image(&res.specular_half, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+	// Bilateral upsample the half-res traces to full resolution (depth-guided,
+	// so it does not bleed indirect light across depth discontinuities):
+	{
+		device->EventBegin("Upsample", cmd);
+		Postprocess_Upsample_Bilateral(res.diffuse_half, depth, res.diffuse, cmd);
+		if (VXGI_REFLECTIONS_ENABLED)
+		{
+			Postprocess_Upsample_Bilateral(res.specular_half, depth, res.specular, cmd);
+		}
+		device->EventEnd(cmd);
 	}
 
 	wi::profiler::EndRange(range);
