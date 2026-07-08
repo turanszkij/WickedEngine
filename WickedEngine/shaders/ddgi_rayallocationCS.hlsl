@@ -64,8 +64,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			rayCount *= 0.1;
 		}
 
+		// Per-cascade budget cap: coarser cascades (distant, low-frequency,
+		// updated less often) get fewer rays per probe. Caps both the trace
+		// cost and the ray-buffer capacity (see Get_Ray_Buffer_Capacity).
+		const uint cascade_budget = ddgi_cascade_ray_budget(cascade);
 		rayCount = align(rayCount, DDGI_RAY_BUCKET_COUNT);
-		rayCount = clamp(rayCount, DDGI_RAY_BUCKET_COUNT, DDGI_MAX_RAYCOUNT);
+		rayCount = clamp(rayCount, DDGI_RAY_BUCKET_COUNT, cascade_budget);
 
 		StructuredBuffer<DDGIProbe> probe_buffer = bindless_structured_ddgi_probes[descriptor_index(GetScene().ddgi.probe_buffer)];
 		const uint probe_flags = probe_buffer[probeIndex].flags;
@@ -86,10 +90,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 		if(probe_fresh)
 		{
-			// Full ray budget on frame 0 and for probes just (re)placed by a
-			// grid scroll, so their reset state converges in one frame instead
-			// of trickling in.
-			rayCount = DDGI_MAX_RAYCOUNT;
+			// Full (per-cascade) ray budget on frame 0 and for probes just
+			// (re)placed by a grid scroll, so their reset state converges in
+			// one frame instead of trickling in.
+			rayCount = cascade_budget;
 		}
 		else if(!probe_valid)
 		{
@@ -122,7 +126,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		// so the clamp guarantees no out-of-bounds writes even in a worst-case
 		// frame. Everything stays DDGI_RAY_BUCKET_COUNT-aligned: rayCount is
 		// aligned, so every base (a sum of aligned counts) and the capacity (a
-		// multiple of DDGI_MAX_RAYCOUNT) are too.
+		// probe count times a sum of per-cascade budgets, each a power of two
+		// >= DDGI_MIN_RAYCOUNT) are too.
 		InterlockedAdd(rayallocationBuffer[0], rayCount, shared_rayAllocation);
 		const uint capacity = GetScene().ddgi.ray_buffer_capacity;
 		const uint base = shared_rayAllocation;

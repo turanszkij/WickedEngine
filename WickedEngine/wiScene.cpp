@@ -9973,11 +9973,16 @@ namespace wi::scene
 	uint32_t Scene::DDGI::Get_Ray_Buffer_Capacity() const
 	{
 		// At most two cascades refresh in one frame (cascade 0 + one
-		// round-robin coarse cascade), and in the worst case (e.g. a teleport
-		// reset) both demand DDGI_MAX_RAYCOUNT for every probe, so this
-		// capacity is exactly that worst case. All cascades share the same
-		// probe count. Requires Compute_Cascade_Parameters() to have run.
-		const uint32_t refreshed_cascades = std::min(2u, CASCADE_COUNT);
-		return refreshed_cascades * cascades[0].probe_count * DDGI_MAX_RAYCOUNT;
+		// round-robin coarse cascade). Each cascade's per-probe budget is
+		// capped by ddgi_cascade_ray_budget (cascade 0 full, coarser cascades
+		// progressively fewer), so in the worst frame both demand their cap for
+		// every probe. The cap decreases with cascade index, so the heaviest
+		// pairing is cascade 0 plus cascade 1; size the buffer for exactly
+		// that. All cascades share the same probe count. Requires
+		// Compute_Cascade_Parameters() to have run.
+		uint32_t per_probe = ddgi_cascade_ray_budget(0);
+		if (CASCADE_COUNT > 1)
+			per_probe += ddgi_cascade_ray_budget(1);
+		return cascades[0].probe_count * per_probe;
 	}
 }

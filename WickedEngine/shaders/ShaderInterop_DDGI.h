@@ -9,6 +9,7 @@
 #include "ShaderInterop.h"
 
 static const uint DDGI_MAX_RAYCOUNT = 512; // affects global ray buffer size
+static const uint DDGI_MIN_RAYCOUNT = 64; // per-cascade budget floor (bucket-aligned)
 static const uint DDGI_COLOR_RESOLUTION = 8; // this should not be modified, border update code is fixed
 static const uint DDGI_COLOR_TEXELS = DDGI_COLOR_RESOLUTION; // no border, color is stored in SH
 static const uint DDGI_DEPTH_RESOLUTION = 16; // this should not be modified, border update code is fixed
@@ -18,6 +19,20 @@ static const uint DDGI_RAY_BUCKET_COUNT = 4; // ray count per bucket
 
 // Number of DDGI probe-grid cascades (fine inner grid + coarser outer grids).
 static const uint DDGI_CASCADE_COUNT = 6;
+
+// Per-cascade ray budget cap (rays per probe). Cascade 0 gets the full budget;
+// each coarser cascade - which covers a larger, more distant, lower-frequency
+// area and refreshes less often - halves it, down to DDGI_MIN_RAYCOUNT. This
+// bounds both the per-frame trace cost and the transient ray-buffer capacity
+// (which is sized for the two cascades that can be active in one frame). Every
+// cap is a power of two >= DDGI_MIN_RAYCOUNT, hence
+// DDGI_RAY_BUCKET_COUNT-aligned, so ray compaction stays aligned. Shared by the
+// ray allocation pass (per-probe cap) and the host (Get_Ray_Buffer_Capacity).
+inline uint ddgi_cascade_ray_budget(uint cascade)
+{
+	const uint budget = DDGI_MAX_RAYCOUNT >> cascade;
+	return budget > DDGI_MIN_RAYCOUNT ? budget : DDGI_MIN_RAYCOUNT;
+}
 
 #define DDGI_LINEAR_BLENDING
 
