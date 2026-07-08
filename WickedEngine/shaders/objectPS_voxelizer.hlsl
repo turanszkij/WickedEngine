@@ -4,6 +4,34 @@
 
 // Note: the voxelizer uses an overall simplified material and lighting model (no normal maps, only diffuse light and emissive)
 
+#ifdef VOXELIZATION_CONSERVATIVE_RASTERIZATION_ENABLED
+// Minimal axis-aligned bounding box used for the conservative-rasterization
+// voxel/triangle overlap test in main(). The geometry shader fattens the
+// triangle so the rasterizer covers every touched voxel; this test then rejects
+// covered voxels that the (unexpanded) triangle does not actually overlap.
+// These are local copies of the same helpers in lightCullingCS.hlsl.
+struct AABB
+{
+	float3 c; // center
+	float3 e; // half extents
+};
+bool IntersectAABB(AABB a, AABB b)
+{
+	if (abs(a.c[0] - b.c[0]) > (a.e[0] + b.e[0]))
+		return false;
+	if (abs(a.c[1] - b.c[1]) > (a.e[1] + b.e[1]))
+		return false;
+	if (abs(a.c[2] - b.c[2]) > (a.e[2] + b.e[2]))
+		return false;
+	return true;
+}
+void AABBfromMinMax(inout AABB aabb, float3 _min, float3 _max)
+{
+	aabb.c = (_min + _max) * 0.5f;
+	aabb.e = abs(_max - aabb.c);
+}
+#endif // VOXELIZATION_CONSERVATIVE_RASTERIZATION_ENABLED
+
 Texture3D<float4> input_previous_radiance : register(t0);
 
 RWTexture3D<uint> output_atomic : register(u0);
