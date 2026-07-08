@@ -54,12 +54,25 @@ inline half4 SampleVoxelClipMap(in Texture3D<half4> voxels, in float3 P, in uint
 	half4 sam;
 	if (precomputed_direction == 0)
 	{
-		// sample anisotropically 3 times, weighted by cone direction:
-		sam =
+		// Sample anisotropically 3 times, weighted by cone direction, then
+		// normalize by the weight sum. direction_weights = abs(coneDirection),
+		// so the weights sum to between 1 (axis-aligned) and sqrt(3) ~ 1.73
+		// (diagonal). Dividing by that sum turns this into a proper directional
+		// average, instead of letting diagonal cone directions pick up ~1.73x
+		// more radiance than axis-aligned ones. The sum is always >= 1 for a
+		// normalized direction, so the division is safe.
+		//
+		// Note: only the non-precomputed path (specular reflections) reaches
+		// this. The diffuse path reads precomputed, already-weighted slices,
+		// and it also feeds the recursive voxel radiance loop, so it is
+		// intentionally left as is here.
+		const float weight_sum =
+			direction_weights.x + direction_weights.y + direction_weights.z;
+		sam = (
 			voxels.SampleLevel(sampler_linear_clamp, float3(tc.x + face_offsets.x, tc.y, tc.z), 0) * direction_weights.x +
 			voxels.SampleLevel(sampler_linear_clamp, float3(tc.x + face_offsets.y, tc.y, tc.z), 0) * direction_weights.y +
 			voxels.SampleLevel(sampler_linear_clamp, float3(tc.x + face_offsets.z, tc.y, tc.z), 0) * direction_weights.z
-			;
+			) / weight_sum;
 	}
 	else
 	{
