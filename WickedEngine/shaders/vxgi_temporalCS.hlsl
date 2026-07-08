@@ -37,22 +37,17 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			if (count > 0)
 			{
 				half4 baseColor = 0;
-				half3 emissive = 0;
-				half3 directLight = 0;
+				half3 selfRadiance = 0;
 				half3 N = 0;
 				baseColor.r = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, VOXELIZATION_CHANNEL_BASECOLOR_R)]);
 				baseColor.g = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, VOXELIZATION_CHANNEL_BASECOLOR_G)]);
 				baseColor.b = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, VOXELIZATION_CHANNEL_BASECOLOR_B)]);
 				baseColor.a = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, VOXELIZATION_CHANNEL_BASECOLOR_A)]);
 				baseColor /= count;
-				emissive.r = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, VOXELIZATION_CHANNEL_EMISSIVE_R)]);
-				emissive.g = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, VOXELIZATION_CHANNEL_EMISSIVE_G)]);
-				emissive.b = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, VOXELIZATION_CHANNEL_EMISSIVE_B)]);
-				emissive /= count;
-				directLight.r = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, VOXELIZATION_CHANNEL_DIRECTLIGHT_R)]);
-				directLight.g = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, VOXELIZATION_CHANNEL_DIRECTLIGHT_G)]);
-				directLight.b = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, VOXELIZATION_CHANNEL_DIRECTLIGHT_B)]);
-				directLight /= count;
+				selfRadiance.r = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, VOXELIZATION_CHANNEL_SELFRADIANCE_R)]);
+				selfRadiance.g = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, VOXELIZATION_CHANNEL_SELFRADIANCE_G)]);
+				selfRadiance.b = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, VOXELIZATION_CHANNEL_SELFRADIANCE_B)]);
+				selfRadiance /= count;
 				N.r = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, VOXELIZATION_CHANNEL_NORMAL_R)]);
 				N.g = UnpackVoxelChannel(input_render_atomic[src + uint3(0, 0, VOXELIZATION_CHANNEL_NORMAL_G)]);
 				N /= count;
@@ -60,16 +55,14 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 				radiance = baseColor;
 
-				// Voxel indirect lighting:
+				// Voxel indirect lighting. The self-emitted radiance (direct
+				// light
+				// + emissive) was precomputed at voxelization time, so here we
+				//   only add the indirect bounce (albedo * indirect).
 				float3 P = GetFrame().vxgi.clipmap_to_world((DTid + 0.5) * GetFrame().vxgi.resolution_rcp, clipmap);
-				Lighting lighting;
-				lighting.create(0, 0, 0, 0);
-				lighting.direct.diffuse = directLight;
 				half4 trace = ConeTraceDiffuse(input_previous_radiance, P, N);
-				lighting.indirect.diffuse = trace.rgb;
-				lighting.indirect.diffuse += GetAmbient(N) * (1 - trace.a);
-				radiance.rgb *= lighting.direct.diffuse / PI + lighting.indirect.diffuse;
-				radiance.rgb += emissive;
+				half3 indirect = trace.rgb + GetAmbient(N) * (1 - trace.a);
+				radiance.rgb = baseColor.rgb * indirect + selfRadiance;
 			}
 
 			if (radiance.a > 0)
