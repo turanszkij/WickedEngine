@@ -21,6 +21,16 @@ static const float VXGI_CLIPMAP_COUNT_RCP = rcp((float)VXGI_CLIPMAP_COUNT);
 // loop that was already stable at full strength.
 static const half VXGI_DIFFUSE_INTENSITY = 0.5;
 
+// Brightness correction for the specular cone trace.
+//
+// ConeTraceSpecular traces with stepSize == vxgi.stepsize (default 1), so it is
+// subject to the same >= 2x step-size over-brightness as the diffuse trace (see
+// VXGI_DIFFUSE_INTENSITY). It is applied to the final ConeTraceSpecular result
+// for the same reason and keeps reflections consistent with the diffuse GI.
+// Unlike the diffuse trace, the specular trace does not feed the voxel radiance
+// back into itself, so this is display-only.
+static const half VXGI_SPECULAR_INTENSITY = 0.5;
+
 inline half4 SampleVoxelClipMap(in Texture3D<half4> voxels, in float3 P, in uint clipmap_index, float step_dist, in float3 face_offsets, in float3 direction_weights, uint precomputed_direction = 0)
 {
 	VoxelClipMap clipmap = GetFrame().vxgi.clipmaps[clipmap_index];
@@ -179,7 +189,7 @@ inline half4 ConeTraceSpecular(in Texture3D<half4> voxels, in float3 P, in float
 	P += coneDirection * (dither(pixel + GetTemporalAASampleRotation()) - 0.5) * GetFrame().vxgi.stepsize;
 
 	half4 amount = ConeTrace(voxels, P, N, coneDirection, aperture, GetFrame().vxgi.stepsize, true);
-	amount.rgb = max(0, amount.rgb);
+	amount.rgb = max(0, amount.rgb) * VXGI_SPECULAR_INTENSITY;
 	amount.a = saturate(amount.a);
 
 	return amount;
