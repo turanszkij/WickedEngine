@@ -31,6 +31,14 @@ static const half VXGI_DIFFUSE_INTENSITY = 0.5;
 // back into itself, so this is display-only.
 static const half VXGI_SPECULAR_INTENSITY = 0.5;
 
+// Roughness above which the specular cone trace is skipped entirely.
+//
+// At high roughness the reflection cone is very wide, so its contribution is
+// low frequency and small in magnitude - it is already well approximated by the
+// diffuse GI and by environment probe reflections. Skipping the per-pixel cone
+// march there avoids wasted work for a negligible visual difference.
+static const half VXGI_SPECULAR_MAX_ROUGHNESS = 0.8;
+
 inline half4 SampleVoxelClipMap(in Texture3D<half4> voxels, in float3 P, in uint clipmap_index, float step_dist, in float3 face_offsets, in float3 direction_weights, uint precomputed_direction = 0)
 {
 	VoxelClipMap clipmap = GetFrame().vxgi.clipmaps[clipmap_index];

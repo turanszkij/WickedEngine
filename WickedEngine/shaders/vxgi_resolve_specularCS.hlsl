@@ -18,6 +18,18 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	const half3 normal_roughness = texture_normal_roughness.SampleLevel(sampler_point_clamp, uv, 0).rgb;
 	const float roughness = normal_roughness.b;
+
+	// Early-out for rough surfaces: the reflection is negligible and already
+	// covered by the diffuse GI / environment probes. Writing zero (including
+	// alpha) leaves the existing indirect specular untouched in the shading
+	// blend (vxgi_specular.rgb * F + indirect.specular * (1 -
+	// vxgi_specular.a)).
+	if (roughness > VXGI_SPECULAR_MAX_ROUGHNESS)
+	{
+		output[pixel] = 0;
+		return;
+	}
+
 	const float3 N = decode_normal(normal_roughness.rg);
 	const float3 P = reconstruct_position(uv, depth);
 	const float3 V = normalize(GetCamera().frustum_corners.screen_to_nearplane(uv) - P); // ortho support
