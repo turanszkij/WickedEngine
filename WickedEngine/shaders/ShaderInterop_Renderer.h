@@ -1834,6 +1834,15 @@ static const uint DDGIPROBE_FLAG_COLOR_RESET = 1 << 3;
 // noisy backfaces). The ray allocation pass caps its budget to a small fixed
 // count.
 static const uint DDGIPROBE_FLAG_OPEN = 1 << 4;
+// One-frame marker: set on the frame a probe transitions from invalid (buried)
+// to valid, i.e. relocation just ejected it out of a moving solid. Read by that
+// probe's neighbours in the next update so the still-valid probes just outside
+// the solid's newly-covered faces also take the fast colour-reset path - they
+// light those faces and would otherwise lag through the noise-damped estimator,
+// leaving the freshly-covered surface lit by stale (pre-occlusion, bright)
+// values for many frames. Because only a MOVING solid produces ejections, this
+// never fires for static geometry, so static objects do not shimmer.
+static const uint DDGIPROBE_FLAG_EJECTED = 1 << 5;
 
 struct alignas(16) DDGIProbe
 {

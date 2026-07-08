@@ -206,9 +206,20 @@ void ddgi_gather_sh(uint cascade, in float3 P, in half3 N, bool enabled, out SH:
 		half3 trilinear = lerp(1.0 - alpha, alpha, half3(offset));
 		half weight = 1.0;
 
-		// Apply probe validity: reduce weight for buried/invalid probes
-		bool probe_valid = (probe.flags & DDGIPROBE_FLAG_VALID) != 0;
-		weight *= probe_valid ? 1.0 : 0.02;
+		// Trust a probe at full weight only when it is valid AND has its own
+		// converged radiance. A buried/invalid probe is down-weighted as
+		// before. A probe that was just ejected from geometry (COLOR_RESET
+		// still pending) is valid, but its radiance is only the provisional
+		// colour borrowed from a neighbour - systematically too bright, because
+		// that neighbour sits in more open space than the freshly-revealed
+		// (often shadowed) spot the probe now occupies. Showing it at full
+		// weight over-brightens the revealed surface while an object moves (and
+		// multi-bounce feedback compounds it). Keep it down-weighted until its
+		// own rays land next update, so the surrounding converged probes light
+		// the surface; then it joins at full weight already correct.
+		bool probe_trusted = (probe.flags & DDGIPROBE_FLAG_VALID) != 0
+			&& (probe.flags & DDGIPROBE_FLAG_COLOR_RESET) == 0;
+		weight *= probe_trusted ? 1.0 : 0.02;
 
 		// Clamp all of the multiplies. We can't let the weight go to zero
 		// because then it would be possible for *all* weights to be equally low

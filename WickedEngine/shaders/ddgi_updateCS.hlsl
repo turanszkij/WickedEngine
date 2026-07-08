@@ -171,13 +171,34 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 		{
 			const int3 world = int3(ddgi_buffer_to_world_coord(cascade, probeCoord));
 			const int3 dims = int3(GetScene().ddgi.cascades[cascade].grid_dimensions);
-			// Search straight then diagonal neighbours (voxel_neighbors is
-			// ordered that way) for the first valid probe and copy its
-			// radiance. Deep inside a large solid no neighbour is valid; leave
-			// the radiance as-is (it is not meaningfully sampled there anyway).
-			for (uint n = 0; n < arraysize(voxel_neighbors); ++n)
+			// Prefer the neighbour the probe is being ejected TOWARD - the axis
+			// of its relocation offset - because that probe sits directly out
+			// from the face this probe is escaping and shares its (partly
+			// occluded) exposure. Just taking the first valid neighbour instead
+			// tends to grab a probe just past the object's EDGE, which sees far
+			// more open sky and seeds the freshly-revealed face too bright (the
+			// over-bright border artifact). So the exit-direction neighbour is
+			// tried first, then the remaining straight neighbours; diagonal
+			// (edge/corner) probes - the brightest of all - are skipped. Deep
+			// inside a solid no neighbour is valid; the radiance is left as-is
+			// (not meaningfully sampled there).
+			const float3 off = unpack_half3(ddgiProbeBuffer[probeIndex].offset);
+			const float3 aoff = abs(off);
+			int3 exit_dir;
+			if (aoff.x >= aoff.y && aoff.x >= aoff.z)
+				exit_dir = int3(off.x < 0 ? -1 : 1, 0, 0);
+			else if (aoff.y >= aoff.z)
+				exit_dir = int3(0, off.y < 0 ? -1 : 1, 0);
+			else
+				exit_dir = int3(0, 0, off.z < 0 ? -1 : 1);
+
+			// Candidate order: exit-direction neighbour first, then the six
+			// straight neighbours (voxel_neighbors[0..5]); first valid one
+			// seeds.
+			for (uint n = 0; n < 7; ++n)
 			{
-				const int3 nw = world + voxel_neighbors[n];
+				const int3 dir = (n == 0) ? exit_dir : voxel_neighbors[n - 1];
+				const int3 nw = world + dir;
 				if (any(nw < 0) || any(nw >= dims))
 					continue;
 				const uint3 nb = ddgi_world_to_buffer_coord(cascade, uint3(nw));
@@ -458,8 +479,49 @@ void main(uint2 GTid : SV_GroupThreadID, uint2 Gid : SV_GroupID, uint groupIndex
 		// a probe that spawned inside geometry has no colour history to fall
 		// back on. Consumed by the colour pass next frame; does NOT reset the
 		// offset (that would send it back inside).
-		if (!was_valid && !probe_enclosed)
+		const bool ejected_now = !was_valid && !probe_enclosed;
+		if (ejected_now)
 			flags |= DDGIPROBE_FLAG_COLOR_RESET;
+		// One-frame marker so this probe's neighbours can see it was just ejected
+		// (used just below). Cleared on any non-ejection frame.
+		if (ejected_now)
+			flags |= DDGIPROBE_FLAG_EJECTED;
+		else
+			flags &= ~DDGIPROBE_FLAG_EJECTED;
+
+		// Propagate the fast reconverge one ring outward. When a solid moves
+		// into the grid it ejects the probes it now encloses, but the
+		// still-VALID probes just outside its newly-covered faces are the ones
+		// lighting those faces - and they otherwise catch up only through the
+		// slow, noise-damped estimator, so the freshly-covered surface stays
+		// lit by their stale (bright, pre-occlusion) values for many frames. If
+		// a probe is valid and borders a just-ejected probe, give it the
+		// colour-reset fast path too. This only fires where ejections happen
+		// (i.e. where a solid is MOVING), so static geometry - which produces
+		// no ejections - never triggers it and never shimmers. Reads
+		// neighbours' EJECTED marker from the previous frame; the cross-group
+		// read races with those neighbours updating their own marker this
+		// frame, but flags is an aligned uint (no torn read) and each probe
+		// writes only its own flags, so the worst case is missing a marker by
+		// one frame - harmless while a solid is continuously moving.
+		if (!ejected_now && !probe_enclosed)
+		{
+			const int3 world = int3(ddgi_buffer_to_world_coord(cascade, probeCoord));
+			const int3 dims = int3(GetScene().ddgi.cascades[cascade].grid_dimensions);
+			[unroll]
+			for (uint n = 0; n < 6; ++n)
+			{
+				const int3 nw = world + voxel_neighbors[n];
+				if (any(nw < 0) || any(nw >= dims))
+					continue;
+				const uint3 nb = ddgi_world_to_buffer_coord(cascade, uint3(nw));
+				if ((ddgiProbeBuffer[ddgi_probe_index(cascade, nb)].flags & DDGIPROBE_FLAG_EJECTED) != 0)
+				{
+					flags |= DDGIPROBE_FLAG_COLOR_RESET;
+					break;
+				}
+			}
+		}
 		// Open-sky probe: every ray reached open space (a miss or a far front
 		// face), so there is no geometry within max_distance in any direction.
 		// The ray allocation pass caps such a probe's budget - it sees only the
