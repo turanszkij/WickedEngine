@@ -59,6 +59,20 @@ struct alignas(16) ShaderScene
 	};
 	DDGI ddgi;
 
+	// World-space handles to the surfel GI cache, so shaders OUTSIDE the surfel
+	// passes (which bind the cache explicitly) can gather it too - specifically
+	// the forward TRANSPARENT path (water), which cannot read the screen-space
+	// surfel GI texture (that texture is keyed to opaque pixels). All -1 when
+	// surfel GI is inactive. See SampleSurfelGI in ShaderInterop_SurfelGI.h.
+	struct alignas(16) SurfelGI
+	{
+		int buffer;      // StructuredBuffer<Surfel> bindless SRV index
+		int gridbuffer;  // StructuredBuffer<SurfelGridCell> bindless SRV index
+		int cellbuffer;  // StructuredBuffer<uint> bindless SRV index
+		int padding;
+	};
+	SurfelGI surfelgi;
+
 	ShaderTerrain terrain;
 
 	ShaderVoxelGrid voxelgrid;

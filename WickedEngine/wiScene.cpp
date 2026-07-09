@@ -997,6 +997,23 @@ namespace wi::scene
 		shaderscene.ddgi.cell_size_rcp.z = 1.0f / shaderscene.ddgi.cell_size.z;
 		shaderscene.ddgi.max_distance = std::max(shaderscene.ddgi.cell_size.x, std::max(shaderscene.ddgi.cell_size.y, shaderscene.ddgi.cell_size.z)) * 1.5f;
 
+		// Expose the surfel GI cache to shaders that gather it outside the
+		// surfel passes (the forward transparent/water path via
+		// SampleSurfelGI). Only the read side of the cache is needed here; -1
+		// when surfel GI is inactive so the sampler's guard skips it.
+		if (surfelgi.surfelBuffer.IsValid())
+		{
+			shaderscene.surfelgi.buffer = device->GetDescriptorIndex(&surfelgi.surfelBuffer, SubresourceType::SRV);
+			shaderscene.surfelgi.gridbuffer = device->GetDescriptorIndex(&surfelgi.gridBuffer, SubresourceType::SRV);
+			shaderscene.surfelgi.cellbuffer = device->GetDescriptorIndex(&surfelgi.cellBuffer, SubresourceType::SRV);
+		}
+		else
+		{
+			shaderscene.surfelgi.buffer = -1;
+			shaderscene.surfelgi.gridbuffer = -1;
+			shaderscene.surfelgi.cellbuffer = -1;
+		}
+
 		shaderscene.terrain.init();
 		if (terrains.GetCount() > 0)
 		{

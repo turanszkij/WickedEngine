@@ -122,10 +122,27 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	}
 
 	[branch]
-	if (!surface.IsGIApplied() && GetFrame().options & OPTION_BIT_SURFELGI_ENABLED && camera.texture_surfelgi_index >= 0 && surfel_cellvalid(surfel_cell(surface.P, 0)))
+	if (!surface.IsGIApplied() && (GetFrame().options & OPTION_BIT_SURFELGI_ENABLED))
 	{
-		lighting.indirect.diffuse = bindless_textures_half4[descriptor_index(camera.texture_surfelgi_index)][surface.pixel].rgb;
-		surface.SetGIApplied(true);
+		if (camera.texture_surfelgi_index >= 0 && surfel_cellvalid(surfel_cell(surface.P, 0)))
+		{
+			// Primary camera: the screen-space surfel GI texture was rendered
+			// for this view - the fast path.
+			lighting.indirect.diffuse = bindless_textures_half4[descriptor_index(camera.texture_surfelgi_index)][surface.pixel].rgb;
+			surface.SetGIApplied(true);
+		}
+		else if (camera.texture_surfelgi_index < 0 && GetScene().surfelgi.buffer >= 0)
+		{
+			// Secondary camera (planar reflection / refraction): surfel
+			// coverage only runs for the main view, so no screen-space GI
+			// texture exists here. Gather the world-space surfel cache instead
+			// (like DDGI, which is world-space and applies in every camera) -
+			// otherwise the reflected/refracted opaque scene falls back to flat
+			// ambient and stays lit while the main view is dark, which shows up
+			// as a visible water reflection with no light in the scene.
+			lighting.indirect.diffuse = SampleSurfelGI(surface.P, surface.N);
+			surface.SetGIApplied(true);
+		}
 	}
 
 	[branch]
@@ -139,6 +156,23 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	{
 		half4 vxgi_specular = bindless_textures_half4[descriptor_index(camera.texture_vxgi_specular_index)][surface.pixel];
 		lighting.indirect.specular = vxgi_specular.rgb * surface.F + lighting.indirect.specular * (1 - vxgi_specular.a);
+	}
+#endif // TRANSPARENT
+
+#ifdef TRANSPARENT
+	// Surfel GI for TRANSPARENT surfaces (water). The screen-space surfel GI
+	// texture above is keyed to opaque pixels, so transparents cannot read it;
+	// instead gather the world-space surfel cache directly at the shading point
+	// (SampleSurfelGI), the same way DDGI samples its probe volume. Runs before
+	// the DDGI block and sets GI-applied, so when both are enabled transparents
+	// use surfel GI (matching opaque), and without it they fall back to the
+	// flat ambient - not surfel GI silently leaving the water lit by ambient
+	// while opaque surfaces are dark.
+	[branch]
+	if (!surface.IsGIApplied() && (GetFrame().options & OPTION_BIT_SURFELGI_ENABLED) && GetScene().surfelgi.buffer >= 0)
+	{
+		lighting.indirect.diffuse = SampleSurfelGI(surface.P, surface.N);
+		surface.SetGIApplied(true);
 	}
 #endif // TRANSPARENT
 
