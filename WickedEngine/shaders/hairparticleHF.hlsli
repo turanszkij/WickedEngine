@@ -23,7 +23,7 @@ struct VertexToPixel
 
 	inline float3 GetViewVector()
 	{
-		return GetCamera().screen_to_nearplane(pos) - GetPos3D(); // ortho support, cannot use cameraPos!
+		return GetCamera().screen_to_view(pos);
 	}
 
 	inline half GetDither()

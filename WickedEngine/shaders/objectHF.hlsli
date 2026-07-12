@@ -411,7 +411,7 @@ struct PixelInput
 	inline float3 GetViewVector()
 	{
 		ShaderCamera camera = GetCameraIndexed(GetCameraIndex());
-		return camera.screen_to_nearplane(pos) - GetPos3D(); // ortho support, cannot use cameraPos!
+		return camera.screen_to_view(pos);
 	}
 
 #endif // OBJECTSHADER_COMPILE_MS

@@ -10,7 +10,7 @@ PUSHCONSTANT(push, PushData);
 
 float4 main(float4 pos : SV_Position) : SV_Target
 {
-	const float3 V = normalize(GetCamera().screen_to_farplane(pos) - GetCamera().position);
+	const float3 V = normalize(-GetCamera().screen_to_view(pos));
 	
 	bool highQuality = GetFrame().options & OPTION_BIT_REALISTIC_SKY_HIGH_QUALITY;
 	bool perPixelNoise = GetFrame().options & OPTION_BIT_TEMPORALAA_ENABLED;

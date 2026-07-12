@@ -1152,8 +1152,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 				wi::vector<uint8_t> data;
 				int width = int(aabb.getHalfWidth().x * 2 + 1);
 				int height = int(aabb.getHalfWidth().z * 2 + 1);
-				data.resize(width * height * sizeof(uint16_t));
-				std::fill(data.begin(), data.end(), 0u);
+				data.resize(width * height * sizeof(uint16_t), 0);
 				uint16_t* dest = (uint16_t*)data.data();
 
 				for (auto& chunk : terrain->chunks)
@@ -1227,8 +1226,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 				wi::vector<uint8_t> data;
 				int width = int(aabb.getHalfWidth().x * 2 + 1);
 				int height = int(aabb.getHalfWidth().z * 2 + 1);
-				data.resize(width * height * sizeof(wi::Color));
-				std::fill(data.begin(), data.end(), 0u);
+				data.resize(width * height * sizeof(wi::Color), 0);
 				wi::Color* dest = (wi::Color*)data.data();
 
 				for (auto& chunk : terrain->chunks)

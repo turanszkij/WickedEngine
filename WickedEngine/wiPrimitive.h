@@ -158,6 +158,12 @@ namespace wi::primitive
 			assert(result.IsValid());
 			return result;
 		}
+		inline float getLength() const
+		{
+			XMVECTOR B = XMLoadFloat3(&base);
+			XMVECTOR T = XMLoadFloat3(&tip);
+			return XMVectorGetX(XMVector3Length(B - T));
+		}
 		bool intersects(const Capsule& b, XMFLOAT3& position, XMFLOAT3& incident_normal, float& penetration_depth) const;
 		bool intersects(const Sphere& b) const;
 		bool intersects(const Sphere& b, float& dist) const;

@@ -254,7 +254,7 @@ namespace wi::terrain
 			td.usage = Usage::DEFAULT;
 			td.layout = ResourceState::UNORDERED_ACCESS;
 			td.mip_levels = lod_count;
-			wi::vector<uint32_t> default_data(td.width * td.height);
+			wi::vector<uint32_t> default_data(td.width * td.height, 0xff);
 			wi::vector<SubresourceData> initdata(lod_count);
 			for (uint32_t lod = 0; lod < lod_count; ++lod)
 			{
@@ -276,7 +276,6 @@ namespace wi::terrain
 			td.usage = Usage::DEFAULT;
 			td.layout = ResourceState::UNORDERED_ACCESS;
 			td.mip_levels = 1;
-			std::fill(default_data.begin(), default_data.end(), 0xFF);
 			success = device->CreateTexture(&td, initdata.data(), &feedbackMap);
 			assert(success);
 			device->SetName(&feedbackMap, "VirtualTexture::feedbackMap");

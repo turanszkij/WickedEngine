@@ -470,8 +470,7 @@ namespace wi::font
 				const float inv_height = 1.0f / atlasHeight;
 
 				// Create the CPU-side texture atlas and fill with transparency (0):
-				wi::vector<uint8_t> atlas(size_t(atlasWidth) * size_t(atlasHeight));
-				std::fill(atlas.begin(), atlas.end(), 0);
+				wi::vector<uint8_t> atlas(size_t(atlasWidth) * size_t(atlasHeight), 0);
 
 				// Iterate all packed glyph rectangles:
 				for (auto& rect : packer.rects)

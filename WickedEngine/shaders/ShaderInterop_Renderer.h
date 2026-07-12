@@ -943,6 +943,10 @@ struct alignas(16) ShaderEntity
 		retVal.w = (half)f16tof32(color.y >> 16u);
 		return retVal;
 	}
+	inline half GetRange2Rcp()
+	{
+		return GetColor().a;
+	}
 	inline min16uint GetMatrixIndex()
 	{
 		return indices & 0xFFF;
@@ -1508,14 +1512,41 @@ struct alignas(16) ShaderCamera
 		return frustum_corners.screen_to_farplane(ScreenCoord);
 	}
 
+	// Convert UV coordinate from rasterizer to world position
+	inline float3 screen_to_world(float2 uv, float depth, float lineardepth)
+	{
+		const float3 far_pos = frustum_corners.screen_to_farplane(uv);
+		if (IsOrtho())
+			return lerp(frustum_corners.screen_to_nearplane(uv), far_pos, 1 - depth);
+		return lerp(position, far_pos, lineardepth * z_far_rcp);
+	}
 	// Convert raw screen coordinate from rasterizer to world position
 	//	Note: svposition is the SV_Position system value, the .w component can be different in different compilers
 	//	You need to ensure that the .w component is used for linear depth (Vulkan: -fvk-use-dx-position-w, Xbox: in case VRS, there is complication with this, read documentation)
 	inline float3 screen_to_world(float4 svposition)
 	{
-		const float2 ScreenCoord = svposition.xy * internal_resolution_rcp;
-		const float z = IsOrtho() ? (1 - svposition.z) : ((svposition.w - z_near) * z_range_rcp);
-		return frustum_corners.screen_to_world(ScreenCoord, z);
+		const float2 uv = svposition.xy * internal_resolution_rcp;
+		return screen_to_world(uv, svposition.z, svposition.w);
+	}
+
+	// Convert UV coordinate from rasterizer to view vector (unnormalized)
+	inline float3 screen_to_view(float2 uv, float depth, float lineardepth)
+	{
+		const float3 far_pos = frustum_corners.screen_to_farplane(uv);
+		if (IsOrtho())
+		{
+			const float3 near_pos = frustum_corners.screen_to_nearplane(uv);
+			return near_pos - lerp(near_pos, far_pos, 1 - depth);
+		}
+		return position - lerp(position, far_pos, lineardepth * z_far_rcp);
+	}
+	// Convert raw screen coordinate from rasterizer to view vector (unnormalized)
+	//	Note: svposition is the SV_Position system value, the .w component can be different in different compilers
+	//	You need to ensure that the .w component is used for linear depth (Vulkan: -fvk-use-dx-position-w, Xbox: in case VRS, there is complication with this, read documentation)
+	inline float3 screen_to_view(float4 svposition)
+	{
+		const float2 uv = svposition.xy * internal_resolution_rcp;
+		return screen_to_view(uv, svposition.z, svposition.w);
 	}
 #endif // __cplusplus
 };

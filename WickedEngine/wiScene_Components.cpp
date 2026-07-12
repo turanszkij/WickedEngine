@@ -2406,8 +2406,7 @@ namespace wi::scene
 	{
 		if (weights.size() != mesh.vertex_positions.size())
 		{
-			weights.resize(mesh.vertex_positions.size());
-			std::fill(weights.begin(), weights.end(), 1.0f);
+			weights.resize(mesh.vertex_positions.size(), 1.0f);
 		}
 		if (physicsIndices.empty())
 		{

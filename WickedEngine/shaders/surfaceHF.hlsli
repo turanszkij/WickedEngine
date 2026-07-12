@@ -311,7 +311,7 @@ struct Surface
 		F = smoothstep(0.1, 0.5, F);
 #endif // CARTOON
 		
-		if (GetFrame().options & OPTION_BIT_FORCE_DIFFUSE_LIGHTING || GetFrame().options & OPTION_BIT_FORCE_UNLIT)
+		if ((GetFrame().options & OPTION_BIT_FORCE_DIFFUSE_LIGHTING) || (GetFrame().options & OPTION_BIT_FORCE_UNLIT))
 		{
 			F = 0;
 		}
@@ -928,8 +928,9 @@ struct Surface
 				albedo = lerp(albedo, 0, wet);
 				if(!is_hairparticle) // hair particle roughness modify doesn't look good because of copying surface normals
 				{
-					roughness = clamp(roughness * sqr(1 - wet), 0.01, 1);
-					N = normalize(lerp(N, facenormal, wet));
+					roughness = clamp(roughness * saturate(sqr((1 - wet) * 2 - 1)), 0.01, 1); // decrease eoughness when wet, but only at shoreline, not deeper underwater (sand underwater shouldn't be shiny)
+					f0 = lerp(f0, 0, wet); // decrease reflectance when wet (not shiny when fully underwater)
+					N = normalize(lerp(N, facenormal, wet)); // blend to vertex normal when wet
 				}
 			}
 		}

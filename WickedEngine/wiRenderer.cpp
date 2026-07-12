@@ -4692,7 +4692,7 @@ void UpdatePerFrameData(
 			}
 
 			const LightComponent& light = vis.scene->lights[lightIndex];
-			if (light.GetType() != LightComponent::SPOT || light.IsInactive())
+			if (light.GetType() != LightComponent::SPOT || light.IsInactive() || light.GetRange() < FLT_EPSILON)
 				continue;
 
 			ShaderEntity shaderentity = {};
@@ -4711,7 +4711,7 @@ void UpdatePerFrameData(
 			shaderentity.SetRadius(light.radius);
 			shaderentity.SetLength(light.length);
 			shaderentity.SetDirection(light.direction);
-			shaderentity.SetColor(float4(light.color.x * light.intensity, light.color.y * light.intensity, light.color.z * light.intensity, 1));
+			shaderentity.SetColor(float4(light.color.x * light.intensity, light.color.y * light.intensity, light.color.z * light.intensity, 1.0f / sqr(light.GetRange())));
 
 			const bool shadowmap = IsShadowsEnabled() && light.IsCastingShadow() && !light.IsStatic();
 			const wi::rectpacker::Rect& shadow_rect = vis.visibleLightShadowRects[lightIndex];
@@ -4791,7 +4791,7 @@ void UpdatePerFrameData(
 			}
 
 			const LightComponent& light = vis.scene->lights[lightIndex];
-			if (light.GetType() != LightComponent::POINT || light.IsInactive())
+			if (light.GetType() != LightComponent::POINT || light.IsInactive() || light.GetRange() < FLT_EPSILON)
 				continue;
 
 			ShaderEntity shaderentity = {};
@@ -4810,7 +4810,7 @@ void UpdatePerFrameData(
 			shaderentity.SetRadius(light.radius);
 			shaderentity.SetLength(light.length);
 			shaderentity.SetDirection(light.direction);
-			shaderentity.SetColor(float4(light.color.x * light.intensity, light.color.y * light.intensity, light.color.z * light.intensity, 1));
+			shaderentity.SetColor(float4(light.color.x * light.intensity, light.color.y * light.intensity, light.color.z * light.intensity, 1.0f / sqr(light.GetRange())));
 
 			const bool shadowmap = IsShadowsEnabled() && light.IsCastingShadow() && !light.IsStatic();
 			const wi::rectpacker::Rect& shadow_rect = vis.visibleLightShadowRects[lightIndex];
@@ -4876,7 +4876,7 @@ void UpdatePerFrameData(
 			}
 
 			const LightComponent& light = vis.scene->lights[lightIndex];
-			if (light.GetType() != LightComponent::RECTANGLE || light.IsInactive())
+			if (light.GetType() != LightComponent::RECTANGLE || light.IsInactive() || light.GetRange() < FLT_EPSILON)
 				continue;
 
 			ShaderEntity shaderentity = {};
@@ -4895,7 +4895,7 @@ void UpdatePerFrameData(
 			shaderentity.SetLength(light.length);
 			shaderentity.SetHeight(light.height);
 			shaderentity.SetQuaternion(light.rotation);
-			shaderentity.SetColor(float4(light.color.x * light.intensity, light.color.y * light.intensity, light.color.z * light.intensity, 1));
+			shaderentity.SetColor(float4(light.color.x * light.intensity, light.color.y * light.intensity, light.color.z * light.intensity, 1.0f / sqr(light.GetRange())));
 
 			const bool shadowmap = IsShadowsEnabled() && light.IsCastingShadow() && !light.IsStatic();
 			const wi::rectpacker::Rect& shadow_rect = vis.visibleLightShadowRects[lightIndex];
@@ -4994,6 +4994,9 @@ void UpdatePerFrameData(
 					Sphere sphere = collider.capsule.getSphere();
 					cullsphere.center = sphere.center;
 					cullsphere.radius = sphere.radius * CAPSULE_SHADOW_BOLDEN + CAPSULE_SHADOW_AFFECTION_RANGE;
+
+					const float atten_range = std::max(0.001f, collider.capsule.getLength() * 0.5f + cullsphere.radius);
+					shaderentity.SetColor(XMFLOAT4(0, 0, 0, 1.0f / sqr(atten_range))); // for GetRange2Rcp() attenuation
 				}
 				break;
 			case ColliderComponent::Shape::Plane:
@@ -5056,6 +5059,7 @@ void UpdatePerFrameData(
 			shaderentity.SetRange(std::max(0.001f, force.GetRange()));
 			// The default planar force field is facing upwards, and thus the pull direction is downwards:
 			shaderentity.SetDirection(force.direction);
+			shaderentity.SetColor(XMFLOAT4(0, 0, 0, 1.0f / sqr(force.GetRange())));
 
 			ShaderSphere cullsphere = {};
 
@@ -19845,8 +19849,7 @@ wi::Resource CreatePaintableTexture(uint32_t width, uint32_t height, uint32_t mi
 	desc.format = Format::R8G8B8A8_UNORM;
 	desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS | BindFlag::RENDER_TARGET;
 	desc.misc_flags = ResourceMiscFlag::TYPED_FORMAT_CASTING;
-	wi::vector<wi::Color> data(desc.width * desc.height);
-	std::fill(data.begin(), data.end(), initialColor);
+	wi::vector<wi::Color> data(desc.width * desc.height, initialColor);
 	SubresourceData initdata[32] = {};
 	for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
 	{

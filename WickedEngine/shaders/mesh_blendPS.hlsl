@@ -17,7 +17,7 @@ float4 main(float4 pos : SV_Position) : SV_Target
 		return 0;
 
 	ShaderCamera camera = GetCamera();
-	const float3 P = reconstruct_position(pos.xy * postprocess.resolution_rcp, texture_depth[pixel], camera.inverse_view_projection);
+	const float3 P = reconstruct_position(pos.xy * postprocess.resolution_rcp, texture_depth[pixel], camera);
 	
 	const half current_id = mask[pixel].x;
 	const half edge_id = mask[edge].x;
@@ -41,7 +41,7 @@ float4 main(float4 pos : SV_Position) : SV_Target
 		const half id = iiii[i];
 		if (id != current_id && id == edge_id) // only allow blending into different region, and only if it's the same as edge id
 		{
-			const float3 p0 = reconstruct_position(uv, dddd[i], camera.inverse_view_projection);
+			const float3 p0 = reconstruct_position(uv, dddd[i], camera);
 			const half diff = length(p0 - P);
 			dweight += saturate(1 - diff / distance_falloff); // distance-based weighting
 			other_color += half3(rrrr[i], gggg[i], bbbb[i]);
