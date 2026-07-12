@@ -11,7 +11,6 @@
 #include "wiUnorderedMap.h"
 #include "wiLua.h"
 
-#include "Utility/mikktspace.h"
 #include "Utility/meshoptimizer/meshoptimizer.h"
 
 #if __has_include("OpenImageDenoise/oidn.hpp")
@@ -527,66 +526,6 @@ namespace wi::scene
 		return wi::renderer::CombineStencilrefs(engineStencilRef, userStencilRef);
 	}
 
-	struct MikkTSpaceUserdata
-	{
-		MeshComponent* mesh = nullptr;
-		const uint32_t* indicesLOD0 = nullptr;
-		int faceCountLOD0 = 0;
-	};
-	int get_num_faces(const SMikkTSpaceContext* context)
-	{
-		const MikkTSpaceUserdata* userdata = static_cast<const MikkTSpaceUserdata*>(context->m_pUserData);
-		return userdata->faceCountLOD0;
-	}
-	int get_num_vertices_of_face(const SMikkTSpaceContext* context, const int iFace)
-	{
-		return 3;
-	}
-	int get_vertex_index(const SMikkTSpaceContext* context, int iFace, int iVert)
-	{
-		const MikkTSpaceUserdata* userdata = static_cast<const MikkTSpaceUserdata*>(context->m_pUserData);
-		int face_size = get_num_vertices_of_face(context, iFace);
-		int indices_index = iFace * face_size + iVert;
-		int index = int(userdata->indicesLOD0[indices_index]);
-		return index;
-	}
-	void get_position(const SMikkTSpaceContext* context, float* outpos, const int iFace, const int iVert)
-	{
-		const MikkTSpaceUserdata* userdata = static_cast<const MikkTSpaceUserdata*>(context->m_pUserData);
-		int index = get_vertex_index(context, iFace, iVert);
-		const XMFLOAT3& vert = userdata->mesh->vertex_positions[index];
-		outpos[0] = vert.x;
-		outpos[1] = vert.y;
-		outpos[2] = vert.z;
-	}
-	void get_normal(const SMikkTSpaceContext* context, float* outnormal, const int iFace, const int iVert)
-	{
-		const MikkTSpaceUserdata* userdata = static_cast<const MikkTSpaceUserdata*>(context->m_pUserData);
-		int index = get_vertex_index(context, iFace, iVert);
-		const XMFLOAT3& vert = userdata->mesh->vertex_normals[index];
-		outnormal[0] = vert.x;
-		outnormal[1] = vert.y;
-		outnormal[2] = vert.z;
-	}
-	void get_tex_coords(const SMikkTSpaceContext* context, float* outuv, const int iFace, const int iVert)
-	{
-		const MikkTSpaceUserdata* userdata = static_cast<const MikkTSpaceUserdata*>(context->m_pUserData);
-		int index = get_vertex_index(context, iFace, iVert);
-		const XMFLOAT2& vert = userdata->mesh->vertex_uvset_0[index];
-		outuv[0] = vert.x;
-		outuv[1] = vert.y;
-	}
-	void set_tspace_basic(const SMikkTSpaceContext* context, const float* tangentu, const float fSign, const int iFace, const int iVert)
-	{
-		const MikkTSpaceUserdata* userdata = static_cast<const MikkTSpaceUserdata*>(context->m_pUserData);
-		auto index = get_vertex_index(context, iFace, iVert);
-		XMFLOAT4& vert = userdata->mesh->vertex_tangents[index];
-		vert.x = tangentu[0];
-		vert.y = tangentu[1];
-		vert.z = tangentu[2];
-		vert.w = fSign;
-	}
-
 	void MeshComponent::DeleteRenderData()
 	{
 		generalBufferOffsetAllocation = {};
@@ -623,12 +562,6 @@ namespace wi::scene
 		if (vertex_tangents.empty() && !vertex_uvset_0.empty() && !vertex_normals.empty())
 		{
 			// Generate tangents if not found:
-			vertex_tangents.resize(vertex_positions.size());
-
-#if 1
-			// MikkTSpace tangent generation:
-			MikkTSpaceUserdata userdata;
-			userdata.mesh = this;
 			uint32_t indexOffsetLOD0 = ~0u;
 			uint32_t indexCountLOD0 = 0;
 			uint32_t first_subset = 0;
@@ -640,96 +573,14 @@ namespace wi::scene
 				indexOffsetLOD0 = std::min(indexOffsetLOD0, subset.indexOffset);
 				indexCountLOD0 = std::max(indexCountLOD0, subset.indexCount);
 			}
-			userdata.indicesLOD0 = indices.data() + indexOffsetLOD0;
-			userdata.faceCountLOD0 = int(indexCountLOD0) / 3;
-
-			SMikkTSpaceInterface iface = {};
-			iface.m_getNumFaces = get_num_faces;
-			iface.m_getNumVerticesOfFace = get_num_vertices_of_face;
-			iface.m_getNormal = get_normal;
-			iface.m_getPosition = get_position;
-			iface.m_getTexCoord = get_tex_coords;
-			iface.m_setTSpaceBasic = set_tspace_basic;
-			SMikkTSpaceContext context = {};
-			context.m_pInterface = &iface;
-			context.m_pUserData = &userdata;
-			tbool mikktspace_result = genTangSpaceDefault(&context);
-			assert(mikktspace_result == 1);
-
-#else
-			// Old tangent generation logic:
-			uint32_t first_subset = 0;
-			uint32_t last_subset = 0;
-			GetLODSubsetRange(0, first_subset, last_subset);
-			for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
+			const uint32_t* indicesLOD0 = indices.data() + indexOffsetLOD0;
+			wi::vector<XMFLOAT4> index_tangents(indexCountLOD0);
+			meshopt_generateTangents((float*)index_tangents.data(), indicesLOD0, indexCountLOD0, (float*)vertex_positions.data(), vertex_positions.size(), sizeof(XMFLOAT3), (float*)vertex_normals.data(), sizeof(XMFLOAT3), (float*)vertex_uvset_0.data(), sizeof(XMFLOAT2));
+			vertex_tangents.resize(vertex_positions.size());
+			for (size_t i = 0; i < indexCountLOD0; ++i)
 			{
-				const MeshComponent::MeshSubset& subset = subsets[subsetIndex];
-				for (size_t i = 0; i < subset.indexCount; i += 3)
-				{
-					const uint32_t i0 = indices[subset.indexOffset + i + 0];
-					const uint32_t i1 = indices[subset.indexOffset + i + 1];
-					const uint32_t i2 = indices[subset.indexOffset + i + 2];
-
-					const XMFLOAT3 v0 = vertex_positions[i0];
-					const XMFLOAT3 v1 = vertex_positions[i1];
-					const XMFLOAT3 v2 = vertex_positions[i2];
-
-					const XMFLOAT2 u0 = vertex_uvset_0[i0];
-					const XMFLOAT2 u1 = vertex_uvset_0[i1];
-					const XMFLOAT2 u2 = vertex_uvset_0[i2];
-
-					const XMFLOAT3 n0 = vertex_normals[i0];
-					const XMFLOAT3 n1 = vertex_normals[i1];
-					const XMFLOAT3 n2 = vertex_normals[i2];
-
-					const XMVECTOR nor0 = XMLoadFloat3(&n0);
-					const XMVECTOR nor1 = XMLoadFloat3(&n1);
-					const XMVECTOR nor2 = XMLoadFloat3(&n2);
-
-					const XMVECTOR facenormal = XMVector3Normalize(nor0 + nor1 + nor2);
-
-					const float x1 = v1.x - v0.x;
-					const float x2 = v2.x - v0.x;
-					const float y1 = v1.y - v0.y;
-					const float y2 = v2.y - v0.y;
-					const float z1 = v1.z - v0.z;
-					const float z2 = v2.z - v0.z;
-
-					const float s1 = u1.x - u0.x;
-					const float s2 = u2.x - u0.x;
-					const float t1 = u1.y - u0.y;
-					const float t2 = u2.y - u0.y;
-
-					const float r = 1.0f / (s1 * t2 - s2 * t1);
-					const XMVECTOR sdir = XMVectorSet((t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r,
-						(t2 * z1 - t1 * z2) * r, 0);
-					const XMVECTOR tdir = XMVectorSet((s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r,
-						(s1 * z2 - s2 * z1) * r, 0);
-
-					XMVECTOR tangent;
-					tangent = XMVector3Normalize(sdir - facenormal * XMVector3Dot(facenormal, sdir));
-					float sign = XMVectorGetX(XMVector3Dot(XMVector3Cross(tangent, facenormal), tdir)) < 0.0f ? -1.0f : 1.0f;
-
-					XMFLOAT3 t;
-					XMStoreFloat3(&t, tangent);
-
-					vertex_tangents[i0].x += t.x;
-					vertex_tangents[i0].y += t.y;
-					vertex_tangents[i0].z += t.z;
-					vertex_tangents[i0].w = sign;
-
-					vertex_tangents[i1].x += t.x;
-					vertex_tangents[i1].y += t.y;
-					vertex_tangents[i1].z += t.z;
-					vertex_tangents[i1].w = sign;
-
-					vertex_tangents[i2].x += t.x;
-					vertex_tangents[i2].y += t.y;
-					vertex_tangents[i2].z += t.z;
-					vertex_tangents[i2].w = sign;
-				}
+				vertex_tangents[indices[i]] = index_tangents[i];
 			}
-#endif
 		}
 
 		// SV_PrimitiveID avoiding workaround: provoking vertex can refer to triangel index

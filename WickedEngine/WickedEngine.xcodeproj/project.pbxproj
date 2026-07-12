@@ -8,6 +8,14 @@
 
 /* Begin PBXBuildFile section */
 		1E19DEF32F557EFB009F2E30 /* wiGaussianSplatModel.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E19DEF22F557EFB009F2E30 /* wiGaussianSplatModel.cpp */; };
+		1E413A8A2FF57A8A0031EAD9 /* meshletcodec.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E413A862FF57A8A0031EAD9 /* meshletcodec.cpp */; };
+		1E413A8B2FF57A8A0031EAD9 /* meshletutils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E413A872FF57A8A0031EAD9 /* meshletutils.cpp */; };
+		1E413A8C2FF57A8A0031EAD9 /* tangentspace.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E413A892FF57A8A0031EAD9 /* tangentspace.cpp */; };
+		1E413A8D2FF57A8A0031EAD9 /* opacitymap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E413A882FF57A8A0031EAD9 /* opacitymap.cpp */; };
+		1E413A8E2FF57A8A0031EAD9 /* meshletcodec.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E413A862FF57A8A0031EAD9 /* meshletcodec.cpp */; };
+		1E413A8F2FF57A8A0031EAD9 /* meshletutils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E413A872FF57A8A0031EAD9 /* meshletutils.cpp */; };
+		1E413A902FF57A8A0031EAD9 /* tangentspace.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E413A892FF57A8A0031EAD9 /* tangentspace.cpp */; };
+		1E413A912FF57A8A0031EAD9 /* opacitymap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E413A882FF57A8A0031EAD9 /* opacitymap.cpp */; };
 		1E50AD9D2FCEFF2E000EE545 /* wiPhysics_Jolt.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA80702EE236A900210D41 /* wiPhysics_Jolt.cpp */; };
 		1E50AD9E2FCEFF2E000EE545 /* wiArchive.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7A552EE1DF2100210D41 /* wiArchive.cpp */; };
 		1E50AD9F2FCEFF2E000EE545 /* wiNetwork_Linux.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7AA82EE1DFE300210D41 /* wiNetwork_Linux.cpp */; };
@@ -149,7 +157,6 @@
 		1E50AE272FCEFF2E000EE545 /* zstd.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7FF62EE1F57900210D41 /* zstd.c */; };
 		1E50AE282FCEFF2E000EE545 /* ldblib.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F382EE1F57900210D41 /* ldblib.c */; };
 		1E50AE292FCEFF2E000EE545 /* lutf8lib.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F662EE1F57900210D41 /* lutf8lib.c */; };
-		1E50AE2A2FCEFF2E000EE545 /* mikktspace.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA80052EE1F57900210D41 /* mikktspace.c */; };
 		1E50AE2B2FCEFF2E000EE545 /* clusterizer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7FC32EE1F57900210D41 /* clusterizer.cpp */; };
 		1E50AE2C2FCEFF2E000EE545 /* lmem.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F4A2EE1F57900210D41 /* lmem.c */; };
 		1E50AE2D2FCEFF2E000EE545 /* ltablib.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F5C2EE1F57900210D41 /* ltablib.c */; };
@@ -519,7 +526,6 @@
 		1EDA803F2EE1F57900210D41 /* zstd.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7FF62EE1F57900210D41 /* zstd.c */; };
 		1EDA80402EE1F57900210D41 /* ldblib.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F382EE1F57900210D41 /* ldblib.c */; };
 		1EDA80412EE1F57900210D41 /* lutf8lib.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F662EE1F57900210D41 /* lutf8lib.c */; };
-		1EDA80422EE1F57900210D41 /* mikktspace.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA80052EE1F57900210D41 /* mikktspace.c */; };
 		1EDA80442EE1F57900210D41 /* clusterizer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7FC32EE1F57900210D41 /* clusterizer.cpp */; };
 		1EDA80452EE1F57900210D41 /* lmem.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F4A2EE1F57900210D41 /* lmem.c */; };
 		1EDA80462EE1F57900210D41 /* ltablib.c in Sources */ = {isa = PBXBuildFile; fileRef = 1EDA7F5C2EE1F57900210D41 /* ltablib.c */; };
@@ -585,6 +591,10 @@
 /* Begin PBXFileReference section */
 		1E19DEF12F557EFB009F2E30 /* wiGaussianSplatModel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = wiGaussianSplatModel.h; sourceTree = "<group>"; };
 		1E19DEF22F557EFB009F2E30 /* wiGaussianSplatModel.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = wiGaussianSplatModel.cpp; sourceTree = "<group>"; };
+		1E413A862FF57A8A0031EAD9 /* meshletcodec.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = meshletcodec.cpp; sourceTree = "<group>"; };
+		1E413A872FF57A8A0031EAD9 /* meshletutils.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = meshletutils.cpp; sourceTree = "<group>"; };
+		1E413A882FF57A8A0031EAD9 /* opacitymap.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = opacitymap.cpp; sourceTree = "<group>"; };
+		1E413A892FF57A8A0031EAD9 /* tangentspace.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = tangentspace.cpp; sourceTree = "<group>"; };
 		1E50AEB32FCEFF2E000EE545 /* libWickedEngine_iOS.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libWickedEngine_iOS.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E640FE12F0AEC0B003D9FC7 /* libmetalirconverter.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libmetalirconverter.dylib; sourceTree = "<group>"; };
 		1E7929892EFE75BA00B9E35C /* wiAppleHelper.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = wiAppleHelper.mm; sourceTree = "<group>"; };
@@ -1713,8 +1723,6 @@
 		1EDA80012EE1F57900210D41 /* liberation_sans.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = liberation_sans.h; sourceTree = "<group>"; };
 		1EDA80022EE1F57900210D41 /* lodepng.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = lodepng.h; sourceTree = "<group>"; };
 		1EDA80032EE1F57900210D41 /* lodepng.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = lodepng.cpp; sourceTree = "<group>"; };
-		1EDA80042EE1F57900210D41 /* mikktspace.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mikktspace.h; sourceTree = "<group>"; };
-		1EDA80052EE1F57900210D41 /* mikktspace.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = mikktspace.c; sourceTree = "<group>"; };
 		1EDA80062EE1F57900210D41 /* minimp4.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = minimp4.h; sourceTree = "<group>"; };
 		1EDA80072EE1F57900210D41 /* NeonIntrinsicsAppleShim.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NeonIntrinsicsAppleShim.h; sourceTree = "<group>"; };
 		1EDA80082EE1F57900210D41 /* offsetAllocator.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = offsetAllocator.hpp; sourceTree = "<group>"; };
@@ -3277,6 +3285,10 @@
 		1EDA7FD32EE1F57900210D41 /* meshoptimizer */ = {
 			isa = PBXGroup;
 			children = (
+				1E413A862FF57A8A0031EAD9 /* meshletcodec.cpp */,
+				1E413A872FF57A8A0031EAD9 /* meshletutils.cpp */,
+				1E413A882FF57A8A0031EAD9 /* opacitymap.cpp */,
+				1E413A892FF57A8A0031EAD9 /* tangentspace.cpp */,
 				1EDA7FC22EE1F57900210D41 /* allocator.cpp */,
 				1EDA7FC32EE1F57900210D41 /* clusterizer.cpp */,
 				1EDA7FC42EE1F57900210D41 /* indexanalyzer.cpp */,
@@ -3322,8 +3334,6 @@
 				1EDA80012EE1F57900210D41 /* liberation_sans.h */,
 				1EDA80022EE1F57900210D41 /* lodepng.h */,
 				1EDA80032EE1F57900210D41 /* lodepng.cpp */,
-				1EDA80042EE1F57900210D41 /* mikktspace.h */,
-				1EDA80052EE1F57900210D41 /* mikktspace.c */,
 				1EDA80062EE1F57900210D41 /* minimp4.h */,
 				1EDA80072EE1F57900210D41 /* NeonIntrinsicsAppleShim.h */,
 				1EDA80082EE1F57900210D41 /* offsetAllocator.hpp */,
@@ -3761,6 +3771,10 @@
 				1E50AE1E2FCEFF2E000EE545 /* lobject.c in Sources */,
 				1E50AE1F2FCEFF2E000EE545 /* spatialorder.cpp in Sources */,
 				1E50AE202FCEFF2E000EE545 /* ldebug.c in Sources */,
+				1E413A8A2FF57A8A0031EAD9 /* meshletcodec.cpp in Sources */,
+				1E413A8B2FF57A8A0031EAD9 /* meshletutils.cpp in Sources */,
+				1E413A8C2FF57A8A0031EAD9 /* tangentspace.cpp in Sources */,
+				1E413A8D2FF57A8A0031EAD9 /* opacitymap.cpp in Sources */,
 				1E50AE212FCEFF2E000EE545 /* lauxlib.c in Sources */,
 				1E50AE222FCEFF2E000EE545 /* indexgenerator.cpp in Sources */,
 				1E50AE232FCEFF2E000EE545 /* samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp.cpp in Sources */,
@@ -3770,7 +3784,6 @@
 				1E50AE272FCEFF2E000EE545 /* zstd.c in Sources */,
 				1E50AE282FCEFF2E000EE545 /* ldblib.c in Sources */,
 				1E50AE292FCEFF2E000EE545 /* lutf8lib.c in Sources */,
-				1E50AE2A2FCEFF2E000EE545 /* mikktspace.c in Sources */,
 				1E50AE2B2FCEFF2E000EE545 /* clusterizer.cpp in Sources */,
 				1E50AE2C2FCEFF2E000EE545 /* lmem.c in Sources */,
 				1E50AE2D2FCEFF2E000EE545 /* ltablib.c in Sources */,
@@ -4037,6 +4050,10 @@
 				1EDA80342EE1F57900210D41 /* lobject.c in Sources */,
 				1EDA80352EE1F57900210D41 /* spatialorder.cpp in Sources */,
 				1EDA80362EE1F57900210D41 /* ldebug.c in Sources */,
+				1E413A8E2FF57A8A0031EAD9 /* meshletcodec.cpp in Sources */,
+				1E413A8F2FF57A8A0031EAD9 /* meshletutils.cpp in Sources */,
+				1E413A902FF57A8A0031EAD9 /* tangentspace.cpp in Sources */,
+				1E413A912FF57A8A0031EAD9 /* opacitymap.cpp in Sources */,
 				1EDA80372EE1F57900210D41 /* lauxlib.c in Sources */,
 				1EDA80382EE1F57900210D41 /* indexgenerator.cpp in Sources */,
 				1EDA803A2EE1F57900210D41 /* samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp.cpp in Sources */,
@@ -4046,7 +4063,6 @@
 				1EDA803F2EE1F57900210D41 /* zstd.c in Sources */,
 				1EDA80402EE1F57900210D41 /* ldblib.c in Sources */,
 				1EDA80412EE1F57900210D41 /* lutf8lib.c in Sources */,
-				1EDA80422EE1F57900210D41 /* mikktspace.c in Sources */,
 				1EDA80442EE1F57900210D41 /* clusterizer.cpp in Sources */,
 				1EDA80452EE1F57900210D41 /* lmem.c in Sources */,
 				1EDA80462EE1F57900210D41 /* ltablib.c in Sources */,
@@ -4392,6 +4408,7 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				OTHER_CPLUSPLUSFLAGS = "$(OTHER_CFLAGS)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -4418,6 +4435,7 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				OTHER_CPLUSPLUSFLAGS = "$(OTHER_CFLAGS)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;

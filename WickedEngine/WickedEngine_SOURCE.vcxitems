@@ -607,6 +607,9 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\indexanalyzer.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\indexcodec.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\indexgenerator.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\meshletcodec.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\meshletutils.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\opacitymap.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\overdrawoptimizer.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\partition.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\quantization.cpp" />
@@ -614,6 +617,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\simplifier.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\spatialorder.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\stripifier.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\tangentspace.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\vcacheoptimizer.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\vertexcodec.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\vertexfilter.cpp" />
