@@ -254,7 +254,7 @@ jobs:
     - name: Clean Xcode cache
       run: |
         rm -rf ~/Library/Developer/Xcode/DerivedData/*
-        xcode-select --reset
+        sudo xcode-select --reset
 
     - name: Compile Offlineshadercompiler
       run: |
@@ -299,7 +299,7 @@ jobs:
     - name: Clean Xcode cache
       run: |
         rm -rf ~/Library/Developer/Xcode/DerivedData/*
-        xcode-select --reset
+        sudo xcode-select --reset
 
     - name: Compile Offlineshadercompiler
       run: |
