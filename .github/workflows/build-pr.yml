@@ -251,6 +251,11 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Clean Xcode cache
+      run: |
+        rm -rf ~/Library/Developer/Xcode/DerivedData/*
+        xcode-select --reset
+
     - name: Compile Offlineshadercompiler
       run: |
         xcodebuild clean build -project WickedEngine/offlineshadercompiler.xcodeproj -scheme offlineshadercompiler -configuration Release -jobs 1
@@ -290,6 +295,11 @@ jobs:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v4
+
+    - name: Clean Xcode cache
+      run: |
+        rm -rf ~/Library/Developer/Xcode/DerivedData/*
+        xcode-select --reset
 
     - name: Compile Offlineshadercompiler
       run: |
