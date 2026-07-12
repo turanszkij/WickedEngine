@@ -562,11 +562,25 @@ namespace wi::scene
 		if (vertex_tangents.empty() && !vertex_uvset_0.empty() && !vertex_normals.empty())
 		{
 			// Generate tangents if not found:
-			wi::vector<XMFLOAT4> index_tangents(indices.size());
-			meshopt_generateTangents((float*)index_tangents.data(), indices.data(), indices.size(), (float*)vertex_positions.data(), vertex_positions.size(), sizeof(XMFLOAT3), (float*)vertex_normals.data(), sizeof(XMFLOAT3), (float*)vertex_uvset_0.data(), sizeof(XMFLOAT2), meshopt_TangentCompatible);
+			uint32_t indexOffsetLOD0 = ~0u;
+			uint32_t indexCountLOD0 = 0;
+			uint32_t first_subset = 0;
+			uint32_t last_subset = 0;
+			GetLODSubsetRange(0, first_subset, last_subset);
+			for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
+			{
+				const MeshComponent::MeshSubset& subset = subsets[subsetIndex];
+				indexOffsetLOD0 = std::min(indexOffsetLOD0, subset.indexOffset);
+				indexCountLOD0 = std::max(indexCountLOD0, subset.indexCount);
+			}
+			const uint32_t* indicesLOD0 = indices.data() + indexOffsetLOD0;
+			wi::vector<XMFLOAT4> index_tangents(indexCountLOD0);
+			meshopt_generateTangents((float*)index_tangents.data(), indicesLOD0, indexCountLOD0, (float*)vertex_positions.data(), vertex_positions.size(), sizeof(XMFLOAT3), (float*)vertex_normals.data(), sizeof(XMFLOAT3), (float*)vertex_uvset_0.data(), sizeof(XMFLOAT2));
 			vertex_tangents.resize(vertex_positions.size());
-			for (size_t i = 0; i < indices.size(); ++i)
+			for (size_t i = 0; i < indexCountLOD0; ++i)
+			{
 				vertex_tangents[indices[i]] = index_tangents[i];
+			}
 		}
 
 		// SV_PrimitiveID avoiding workaround: provoking vertex can refer to triangel index
