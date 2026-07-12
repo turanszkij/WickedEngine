@@ -1492,9 +1492,18 @@ inline float3 reconstruct_position(in float2 uv, in float z, in float4x4 inverse
 	float4 position_v = mul(inverse_view_projection, position_s);
 	return position_v.xyz / position_v.w;
 }
+// Reconstructs world-space position from depth buffer, optimized without matrix math, instead lerping within frustum volume
+//	uv		: screen space coordinate in [0, 1] range
+//	z		: depth value at current pixel
+//	camera	: camera struct containing frustum corners in world space
+inline float3 reconstruct_position(in float2 uv, in float z, in ShaderCamera camera)
+{
+	return camera.screen_to_world(uv, z, compute_lineardepth(z));
+}
 inline float3 reconstruct_position(in float2 uv, in float z)
 {
-	return reconstruct_position(uv, z, GetCamera().inverse_view_projection);
+	//return reconstruct_position(uv, z, GetCamera().inverse_view_projection);
+	return reconstruct_position(uv, z, GetCamera());
 }
 
 inline float find_max_depth(in float2 uv, in int radius, in float lod)

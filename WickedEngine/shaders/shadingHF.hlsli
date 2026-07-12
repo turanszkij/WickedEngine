@@ -122,7 +122,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	}
 
 	[branch]
-	if (!surface.IsGIApplied() && GetFrame().options & OPTION_BIT_SURFELGI_ENABLED && camera.texture_surfelgi_index >= 0 && surfel_cellvalid(surfel_cell(surface.P)))
+	if (!surface.IsGIApplied() && GetFrame().options & OPTION_BIT_SURFELGI_ENABLED && camera.texture_surfelgi_index >= 0 && surfel_cellvalid(surfel_cell(surface.P, 0)))
 	{
 		lighting.indirect.diffuse = bindless_textures_half4[descriptor_index(camera.texture_surfelgi_index)][surface.pixel].rgb;
 		surface.SetGIApplied(true);
@@ -351,8 +351,8 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 				float3 center = lerp(A, B, 0.5);
 				half range = distance(center, A) + radius + CAPSULE_SHADOW_AFFECTION_RANGE;
 				half range2 = range * range;
-				occ = 1 - saturate((1 - occ) * saturate(attenuation_pointlight(distance_squared(surface.P, center), range, range2)));
-				ref = 1 - saturate((1 - ref) * saturate(attenuation_pointlight(distance_squared(closest_point_on_line(surface.P, surface.P + surface.R, center), center), range, range2)));
+				occ = 1 - saturate((1 - occ) * saturate(attenuation_pointlight(distance_squared(surface.P, center), range, entity.GetRange2Rcp())));
+				ref = 1 - saturate((1 - ref) * saturate(attenuation_pointlight(distance_squared(closest_point_on_line(surface.P, surface.P + surface.R, center), center), range, entity.GetRange2Rcp())));
 			
 				capsuleshadow *= occ;
 				capsulereflection *= ref;

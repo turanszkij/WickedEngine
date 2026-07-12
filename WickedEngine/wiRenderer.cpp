@@ -967,6 +967,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_PAINTDECAL], "paintdecalPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_WAVE_EFFECT], "waveeffectPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_POSTPROCESS_MESH_BLEND], "mesh_blendPS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_VOID], "voidPS.cso"); });
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_VOXELIZER], "objectGS_voxelizer.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_VOXEL], "voxelGS.cso"); });
@@ -1120,6 +1121,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SURFEL_GRIDOFFSETS], "surfel_gridoffsetsCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SURFEL_BINNING], "surfel_binningCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SURFEL_INTEGRATE], "surfel_integrateCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SURFEL_DENOISE], "surfel_denoiseCS.cso"); });
 	if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 	{
 		wi::jobsystem::Execute(raytracing_ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SURFEL_RAYTRACE], "surfel_raytraceCS_rtapi.cso", ShaderModel::SM_6_5); });
@@ -1946,7 +1948,7 @@ void LoadShaders()
 									if (mesh_shader && realPS == SHADERTYPE_COUNT)
 									{
 										// Apple Metal workaround: mesh shader must have pixel shader
-										realPS = PSTYPE_VERTEXCOLOR;
+										realPS = PSTYPE_VOID;
 									}
 #endif // __APPLE__
 									desc.ps = realPS < SHADERTYPE_COUNT ? &shaders[realPS] : nullptr;
@@ -4690,7 +4692,7 @@ void UpdatePerFrameData(
 			}
 
 			const LightComponent& light = vis.scene->lights[lightIndex];
-			if (light.GetType() != LightComponent::SPOT || light.IsInactive())
+			if (light.GetType() != LightComponent::SPOT || light.IsInactive() || light.GetRange() < FLT_EPSILON)
 				continue;
 
 			ShaderEntity shaderentity = {};
@@ -4709,7 +4711,7 @@ void UpdatePerFrameData(
 			shaderentity.SetRadius(light.radius);
 			shaderentity.SetLength(light.length);
 			shaderentity.SetDirection(light.direction);
-			shaderentity.SetColor(float4(light.color.x * light.intensity, light.color.y * light.intensity, light.color.z * light.intensity, 1));
+			shaderentity.SetColor(float4(light.color.x * light.intensity, light.color.y * light.intensity, light.color.z * light.intensity, 1.0f / sqr(light.GetRange())));
 
 			const bool shadowmap = IsShadowsEnabled() && light.IsCastingShadow() && !light.IsStatic();
 			const wi::rectpacker::Rect& shadow_rect = vis.visibleLightShadowRects[lightIndex];
@@ -4789,7 +4791,7 @@ void UpdatePerFrameData(
 			}
 
 			const LightComponent& light = vis.scene->lights[lightIndex];
-			if (light.GetType() != LightComponent::POINT || light.IsInactive())
+			if (light.GetType() != LightComponent::POINT || light.IsInactive() || light.GetRange() < FLT_EPSILON)
 				continue;
 
 			ShaderEntity shaderentity = {};
@@ -4808,7 +4810,7 @@ void UpdatePerFrameData(
 			shaderentity.SetRadius(light.radius);
 			shaderentity.SetLength(light.length);
 			shaderentity.SetDirection(light.direction);
-			shaderentity.SetColor(float4(light.color.x * light.intensity, light.color.y * light.intensity, light.color.z * light.intensity, 1));
+			shaderentity.SetColor(float4(light.color.x * light.intensity, light.color.y * light.intensity, light.color.z * light.intensity, 1.0f / sqr(light.GetRange())));
 
 			const bool shadowmap = IsShadowsEnabled() && light.IsCastingShadow() && !light.IsStatic();
 			const wi::rectpacker::Rect& shadow_rect = vis.visibleLightShadowRects[lightIndex];
@@ -4874,7 +4876,7 @@ void UpdatePerFrameData(
 			}
 
 			const LightComponent& light = vis.scene->lights[lightIndex];
-			if (light.GetType() != LightComponent::RECTANGLE || light.IsInactive())
+			if (light.GetType() != LightComponent::RECTANGLE || light.IsInactive() || light.GetRange() < FLT_EPSILON)
 				continue;
 
 			ShaderEntity shaderentity = {};
@@ -4893,7 +4895,7 @@ void UpdatePerFrameData(
 			shaderentity.SetLength(light.length);
 			shaderentity.SetHeight(light.height);
 			shaderentity.SetQuaternion(light.rotation);
-			shaderentity.SetColor(float4(light.color.x * light.intensity, light.color.y * light.intensity, light.color.z * light.intensity, 1));
+			shaderentity.SetColor(float4(light.color.x * light.intensity, light.color.y * light.intensity, light.color.z * light.intensity, 1.0f / sqr(light.GetRange())));
 
 			const bool shadowmap = IsShadowsEnabled() && light.IsCastingShadow() && !light.IsStatic();
 			const wi::rectpacker::Rect& shadow_rect = vis.visibleLightShadowRects[lightIndex];
@@ -4992,6 +4994,9 @@ void UpdatePerFrameData(
 					Sphere sphere = collider.capsule.getSphere();
 					cullsphere.center = sphere.center;
 					cullsphere.radius = sphere.radius * CAPSULE_SHADOW_BOLDEN + CAPSULE_SHADOW_AFFECTION_RANGE;
+
+					const float atten_range = std::max(0.001f, collider.capsule.getLength() * 0.5f + cullsphere.radius);
+					shaderentity.SetColor(XMFLOAT4(0, 0, 0, 1.0f / sqr(atten_range))); // for GetRange2Rcp() attenuation
 				}
 				break;
 			case ColliderComponent::Shape::Plane:
@@ -5054,6 +5059,7 @@ void UpdatePerFrameData(
 			shaderentity.SetRange(std::max(0.001f, force.GetRange()));
 			// The default planar force field is facing upwards, and thus the pull direction is downwards:
 			shaderentity.SetDirection(force.direction);
+			shaderentity.SetColor(XMFLOAT4(0, 0, 0, 1.0f / sqr(force.GetRange())));
 
 			ShaderSphere cullsphere = {};
 
@@ -12124,12 +12130,22 @@ void CreateSurfelGIResources(SurfelGIResources& res, XMUINT2 resolution)
 	desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 	desc.width = resolution.x / 2;
 	desc.height = resolution.y / 2;
-	device->CreateTexture(&desc, nullptr, &res.result_halfres);
-	device->SetName(&res.result_halfres, "surfelgi.result_halfres");
+	device->CreateTexture(&desc, nullptr, &res.result_halfres[0]);
+	device->SetName(&res.result_halfres[0], "surfelgi.result_halfres[0]");
+	device->CreateTexture(&desc, nullptr, &res.result_halfres[1]);
+	device->SetName(&res.result_halfres[1], "surfelgi.result_halfres[1]");
+	device->CreateTexture(&desc, nullptr, &res.result_halfres_denoise[0]);
+	device->SetName(&res.result_halfres_denoise[0], "surfelgi.result_halfres_denoise[0]");
+	device->CreateTexture(&desc, nullptr, &res.result_halfres_denoise[1]);
+	device->SetName(&res.result_halfres_denoise[1], "surfelgi.result_halfres_denoise[1]");
 	desc.width = resolution.x;
 	desc.height = resolution.y;
 	device->CreateTexture(&desc, nullptr, &res.result);
 	device->SetName(&res.result, "surfelgi.result");
+
+	// Freshly allocated textures are uninitialised; frame 0 clears the temporal
+	// history before it is first read (see SurfelGI_Coverage).
+	res.frame = 0;
 }
 void SurfelGI_Coverage(
 	const SurfelGIResources& res,
@@ -12142,15 +12158,35 @@ void SurfelGI_Coverage(
 	device->EventBegin("SurfelGI - Coverage", cmd);
 	auto prof_range = wi::profiler::BeginRangeGPU("SurfelGI - Coverage", cmd);
 
+	// Ping-pong the half-res GI by frame parity: this frame reads the other
+	// texture as temporal history and writes this one; upsample reads this one.
+	const uint32_t hist_read = (uint32_t)(device->GetFrameCount() & 1);
+	const uint32_t hist_write = 1u - hist_read;
+
+	// On the first frame after (re)creation the ping-pong history texture is
+	// uninitialised. Coverage reads result_halfres[hist_read] as temporal
+	// history, and reproject_history's guard rejects NaN/Inf but NOT finite
+	// garbage - so an uninitialised read shows up as bright coloured blobs that
+	// only fade as the temporal loop washes them out (seen on a viewport
+	// resize, which reallocates these textures). Clear the history side once so
+	// the reprojection starts from black. The write side is cleared every frame
+	// below, so only the read/history texture needs this.
+	if (res.frame == 0)
+	{
+		device->Barrier(GPUBarrier::Image(&res.result_halfres[hist_read], res.result_halfres[hist_read].desc.layout, ResourceState::UNORDERED_ACCESS), cmd);
+		device->ClearUAV(&res.result_halfres[hist_read], 0, cmd);
+		device->Barrier(GPUBarrier::Image(&res.result_halfres[hist_read], ResourceState::UNORDERED_ACCESS, res.result_halfres[hist_read].desc.layout), cmd);
+	}
+
 	{
 		GPUBarrier barriers[] = {
 			GPUBarrier::Buffer(&scene.surfelgi.statsBuffer, ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS),
-			GPUBarrier::Image(&res.result_halfres, res.result_halfres.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.result_halfres[hist_write], res.result_halfres[hist_write].desc.layout, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Image(&res.result, res.result.desc.layout, ResourceState::UNORDERED_ACCESS),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
-	device->ClearUAV(&res.result_halfres, 0, cmd);
+	device->ClearUAV(&res.result_halfres[hist_write], 0, cmd);
 	device->ClearUAV(&res.result, 0, cmd);
 	device->Barrier(cmd);
 
@@ -12168,27 +12204,28 @@ void SurfelGI_Coverage(
 		device->BindResource(&scene.surfelgi.gridBuffer, 1, cmd);
 		device->BindResource(&scene.surfelgi.cellBuffer, 2, cmd);
 		device->BindResource(&scene.surfelgi.momentsTexture, 3, cmd);
+		device->BindResource(&res.result_halfres[hist_read], 4, cmd); // temporal history
 
 		const GPUResource* uavs[] = {
 			&scene.surfelgi.dataBuffer,
 			&scene.surfelgi.deadBuffer,
 			&scene.surfelgi.aliveBuffer[1],
 			&scene.surfelgi.statsBuffer,
-			&res.result_halfres,
+			&res.result_halfres[hist_write],
 			&debugUAV
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		device->Dispatch(
-			(res.result_halfres.desc.width + 15) / 16,
-			(res.result_halfres.desc.height + 15) / 16,
+			(res.result_halfres[hist_write].desc.width + 15) / 16,
+			(res.result_halfres[hist_write].desc.height + 15) / 16,
 			1,
 			cmd
 		);
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&res.result_halfres, ResourceState::UNORDERED_ACCESS, res.result_halfres.desc.layout),
+				GPUBarrier::Image(&res.result_halfres[hist_write], ResourceState::UNORDERED_ACCESS, res.result_halfres[hist_write].desc.layout),
 				GPUBarrier::Image(&res.result, ResourceState::UNORDERED_ACCESS, res.result.desc.layout),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
@@ -12212,14 +12249,77 @@ void SurfelGI_Coverage(
 		device->EventEnd(cmd);
 	}
 
+	// Edge-aware a-trous denoise of the half-res GI (output-side; see
+	// surfel_denoiseCS). Ping-pong through result_halfres_denoise[] seeded from
+	// this frame's coverage output in result_halfres[hist_write]; that texture
+	// is left untouched so it still serves as next frame's UN-denoised temporal
+	// history (the spatial blur must not compound through the temporal loop).
+	// The upsample then consumes the filtered copy in final_gi.
+	const Texture* final_gi = &res.result_halfres[hist_write];
+	if (SURFEL_DENOISE_PASSES > 0)
+	{
+		device->EventBegin("Denoise", cmd);
+		auto prof_denoise = wi::profiler::BeginRangeGPU("SurfelGI - Denoise", cmd);
+		device->BindComputeShader(&shaders[CSTYPE_SURFEL_DENOISE], cmd);
+
+		PostProcess postprocess = {};
+		postprocess.resolution.x = res.result_halfres[hist_write].desc.width;
+		postprocess.resolution.y = res.result_halfres[hist_write].desc.height;
+		postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+		postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+
+		for (uint32_t pass = 0; pass < SURFEL_DENOISE_PASSES; ++pass)
+		{
+			const Texture* src = (pass == 0)
+				? &res.result_halfres[hist_write]
+				: &res.result_halfres_denoise[(pass - 1) & 1];
+			const Texture* dst = &res.result_halfres_denoise[pass & 1];
+
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Image(dst, dst->desc.layout, ResourceState::UNORDERED_ACCESS),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+
+			postprocess.params1.x = (float)pass;
+			postprocess.params1.y = (float)(1u << pass); // a-trous step 1,2,4,...
+			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
+			device->BindResource(src, 0, cmd);
+			device->BindUAV(dst, 0, cmd);
+
+			device->Dispatch(
+				(postprocess.resolution.x + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+				(postprocess.resolution.y + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+				1,
+				cmd
+			);
+
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Image(dst, ResourceState::UNORDERED_ACCESS, dst->desc.layout),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+
+			final_gi = dst;
+		}
+
+		wi::profiler::EndRange(prof_denoise);
+		device->EventEnd(cmd);
+	}
+
 	Postprocess_Upsample_Bilateral(
-		res.result_halfres,
+		*final_gi,
 		depth,
 		res.result,
 		cmd,
 		false,
 		2
 	);
+
+	res.frame++;
 
 	wi::profiler::EndRange(prof_range);
 	device->EventEnd(cmd);
@@ -12254,6 +12354,7 @@ void SurfelGI(
 	// Grid reset:
 	{
 		device->EventBegin("Grid Reset", cmd);
+		auto prof = wi::profiler::ScopedRangeGPU("Surfel - Grid Reset", cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -12271,6 +12372,7 @@ void SurfelGI(
 	// Update:
 	{
 		device->EventBegin("Update", cmd);
+		auto prof = wi::profiler::ScopedRangeGPU("Surfel - Update", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_SURFEL_UPDATE], cmd);
 
 		device->BindResource(&scene.surfelgi.aliveBuffer[0], 1, cmd);
@@ -12283,6 +12385,10 @@ void SurfelGI(
 			&scene.surfelgi.statsBuffer,
 			&scene.surfelgi.rayBuffer,
 			&scene.surfelgi.dataBuffer,
+#ifdef SURFEL_RAY_SORTING
+			&scene.surfelgi.raySortKeyBuffer,     // u7
+			&scene.surfelgi.raySortPayloadBuffer, // u8
+#endif // SURFEL_RAY_SORTING
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
@@ -12302,6 +12408,7 @@ void SurfelGI(
 	// Grid offsets:
 	{
 		device->EventBegin("Grid Offsets", cmd);
+		auto prof = wi::profiler::ScopedRangeGPU("Surfel - Grid Offsets", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_SURFEL_GRIDOFFSETS], cmd);
 
 		const GPUResource* uavs[] = {
@@ -12319,7 +12426,7 @@ void SurfelGI(
 		}
 
 		device->Dispatch(
-			(SURFEL_TABLE_SIZE + 63) / 64,
+			(SURFEL_TOTAL_TABLE_SIZE + 63) / 64,
 			1,
 			1,
 			cmd
@@ -12338,6 +12445,7 @@ void SurfelGI(
 	// Binning:
 	{
 		device->EventBegin("Binning", cmd);
+		auto prof = wi::profiler::ScopedRangeGPU("Surfel - Binning", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_SURFEL_BINNING], cmd);
 
 		device->BindResource(&scene.surfelgi.surfelBuffer, 0, cmd);
@@ -12363,9 +12471,54 @@ void SurfelGI(
 		device->EventEnd(cmd);
 	}
 
+#ifdef SURFEL_RAY_SORTING
+	// Ray sort: radix-sort the ray payload by each ray's origin-surfel Morton key
+	// (written in Update), so the raytrace below traces spatially-nearby rays
+	// together for BVH coherence. Sorts raySortCount rays (<= budget).
+	{
+		device->EventBegin("Ray sort", cmd);
+		auto prof = wi::profiler::ScopedRangeGPU("Surfel - Ray sort", cmd);
+
+		// Make Update's key/payload writes visible (they stay UNORDERED_ACCESS),
+		// and move the stats buffer to SHADER_RESOURCE, the state gpusortlib reads
+		// its counter in (the surfel passes otherwise keep it in the _COMPUTE
+		// variant).
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(&scene.surfelgi.raySortKeyBuffer),
+				GPUBarrier::Memory(&scene.surfelgi.raySortPayloadBuffer),
+				GPUBarrier::Buffer(&scene.surfelgi.statsBuffer, ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::SHADER_RESOURCE),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		wi::gpusortlib::Sort(
+			SURFEL_RAY_BUDGET,
+			scene.surfelgi.raySortKeyBuffer,
+			scene.surfelgi.statsBuffer, // counter (SHADER_RESOURCE) - raySortCount
+			offsetof(SurfelStats, raySortCount),
+			scene.surfelgi.raySortPayloadBuffer,
+			cmd
+		);
+
+		// Sorted payload -> SRV for the raytrace remap; restore the stats buffer to
+		// the _COMPUTE state the rest of the frame's barriers expect.
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Buffer(&scene.surfelgi.raySortPayloadBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
+				GPUBarrier::Buffer(&scene.surfelgi.statsBuffer, ResourceState::SHADER_RESOURCE, ResourceState::SHADER_RESOURCE_COMPUTE),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->EventEnd(cmd);
+	}
+#endif // SURFEL_RAY_SORTING
+
 	// Raytracing:
 	{
 		device->EventBegin("Raytrace", cmd);
+		auto prof = wi::profiler::ScopedRangeGPU("Surfel - Raytrace", cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_SURFEL_RAYTRACE], cmd);
 
@@ -12380,6 +12533,9 @@ void SurfelGI(
 		device->BindResource(&scene.surfelgi.cellBuffer, 3, cmd);
 		device->BindResource(&scene.surfelgi.aliveBuffer[0], 4, cmd);
 		device->BindResource(&scene.surfelgi.momentsTexture, 5, cmd);
+#ifdef SURFEL_RAY_SORTING
+		device->BindResource(&scene.surfelgi.raySortPayloadBuffer, 6, cmd); // sorted -> original ray slot
+#endif // SURFEL_RAY_SORTING
 
 		const GPUResource* uavs[] = {
 			&scene.surfelgi.rayBuffer,
@@ -12391,6 +12547,10 @@ void SurfelGI(
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Buffer(&scene.surfelgi.rayBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
+#ifdef SURFEL_RAY_SORTING
+				// Restore the payload to UNORDERED_ACCESS for next frame's Update.
+				GPUBarrier::Buffer(&scene.surfelgi.raySortPayloadBuffer, ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS),
+#endif // SURFEL_RAY_SORTING
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -12401,6 +12561,7 @@ void SurfelGI(
 	// Integrate rays:
 	{
 		device->EventBegin("Integrate", cmd);
+		auto prof = wi::profiler::ScopedRangeGPU("Surfel - Integrate", cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_SURFEL_INTEGRATE], cmd);
 
@@ -19688,8 +19849,7 @@ wi::Resource CreatePaintableTexture(uint32_t width, uint32_t height, uint32_t mi
 	desc.format = Format::R8G8B8A8_UNORM;
 	desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS | BindFlag::RENDER_TARGET;
 	desc.misc_flags = ResourceMiscFlag::TYPED_FORMAT_CASTING;
-	wi::vector<wi::Color> data(desc.width * desc.height);
-	std::fill(data.begin(), data.end(), initialColor);
+	wi::vector<wi::Color> data(desc.width * desc.height, initialColor);
 	SubresourceData initdata[32] = {};
 	for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
 	{

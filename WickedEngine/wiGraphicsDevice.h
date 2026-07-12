@@ -288,8 +288,7 @@ namespace wi::graphics
 		// This can be used to create a texture filled with a single value
 		bool CreateTextureCleared(const TextureDesc* desc, uint8_t value, Texture* texture, const GPUResource* alias = nullptr, uint64_t alias_offset = 0ull) const
 		{
-			wi::vector<uint8_t> texturedata(ComputeTextureMemorySizeInBytes(*desc));
-			std::fill(texturedata.begin(), texturedata.end(), value);
+			wi::vector<uint8_t> texturedata(ComputeTextureMemorySizeInBytes(*desc), value);
 			wi::vector<SubresourceData> initdata;
 			CreateTextureSubresourceDatas(*desc, texturedata.data(), initdata);
 			return CreateTexture(desc, initdata.data(), texture, alias, alias_offset);

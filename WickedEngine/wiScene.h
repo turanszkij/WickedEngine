@@ -195,6 +195,11 @@ namespace wi::scene
 			wi::graphics::GPUBuffer gridBuffer;
 			wi::graphics::GPUBuffer cellBuffer;
 			wi::graphics::GPUBuffer rayBuffer;
+			// Ray-sort (coherence) buffers: Morton key + payload (ray slot),
+			// radix-sorted so the raytrace traces rays from nearby surfels
+			// together.
+			wi::graphics::GPUBuffer raySortKeyBuffer;
+			wi::graphics::GPUBuffer raySortPayloadBuffer;
 			wi::graphics::Texture momentsTexture;
 		} surfelgi;
 

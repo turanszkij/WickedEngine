@@ -204,6 +204,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"surfel_raytraceCS_rtapi", wi::graphics::ShaderStage::CS, wi::graphics::ShaderModel::SM_6_5 },
 	{"surfel_raytraceCS", wi::graphics::ShaderStage::CS },
 	{"surfel_integrateCS", wi::graphics::ShaderStage::CS },
+	{"surfel_denoiseCS", wi::graphics::ShaderStage::CS },
 	{"ddgi_rayallocationCS", wi::graphics::ShaderStage::CS },
 	{"ddgi_indirectprepareCS", wi::graphics::ShaderStage::CS },
 	{"ddgi_raytraceCS", wi::graphics::ShaderStage::CS },
@@ -287,6 +288,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"trailPS", wi::graphics::ShaderStage::PS },
 	{"waveeffectPS", wi::graphics::ShaderStage::PS },
 	{"gaussian_splatPS", wi::graphics::ShaderStage::PS },
+	{"voidPS", wi::graphics::ShaderStage::PS },
 
 
 	{"hairparticleVS", wi::graphics::ShaderStage::VS },

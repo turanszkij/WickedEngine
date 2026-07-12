@@ -549,7 +549,7 @@ namespace wi::scene
 				device->SetName(&surfelgi.indirectBuffer, "surfelgi.indirectBuffer");
 
 				buf.stride = sizeof(SurfelGridCell);
-				buf.size = buf.stride * SURFEL_TABLE_SIZE;
+				buf.size = buf.stride * SURFEL_TOTAL_TABLE_SIZE; // one hash table per cascaded grid level
 				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 				device->CreateBufferZeroed(&buf, &surfelgi.gridBuffer);
 				device->SetName(&surfelgi.gridBuffer, "surfelgi.gridBuffer");
@@ -565,6 +565,19 @@ namespace wi::scene
 				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 				device->CreateBufferZeroed(&buf, &surfelgi.rayBuffer);
 				device->SetName(&surfelgi.rayBuffer, "surfelgi.rayBuffer");
+
+#ifdef SURFEL_RAY_SORTING
+				// Ray-sort key + payload: one uint per ray slot (gpusortlib
+				// sorts uint32 structured buffers). Payload (SHADER_RESOURCE)
+				// is read by the raytrace to remap thread -> original ray slot.
+				buf.stride = sizeof(uint32_t);
+				buf.size = buf.stride * SURFEL_RAY_BUDGET;
+				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
+				device->CreateBufferZeroed(&buf, &surfelgi.raySortKeyBuffer);
+				device->SetName(&surfelgi.raySortKeyBuffer, "surfelgi.raySortKeyBuffer");
+				device->CreateBufferZeroed(&buf, &surfelgi.raySortPayloadBuffer);
+				device->SetName(&surfelgi.raySortPayloadBuffer, "surfelgi.raySortPayloadBuffer");
+#endif // SURFEL_RAY_SORTING
 
 				TextureDesc tex;
 				tex.width = SURFEL_MOMENT_ATLAS_TEXELS;
@@ -8880,12 +8893,45 @@ namespace wi::scene
 
 	uint32_t Scene::ComputeObjectLODForView(const ObjectComponent& object, const AABB& aabb, const MeshComponent& mesh, const XMMATRIX& ViewProjection) const
 	{
-		XMFLOAT4 rect = aabb.ProjectToScreen(ViewProjection);
-		float width = rect.z - rect.x;
-		float height = rect.w - rect.y;
-		float maxdim = std::max(width, height);
-		float lod_max = float(mesh.GetLODCount() - 1);
-		float lod = clamp(std::log2(1.0f / maxdim) + object.lod_bias, 0.0f, lod_max);
+		const float lod_max = float(mesh.GetLODCount() - 1);
+
+		// Estimate the object's projected screen-space size to pick a LOD by
+		// coverage. The perspective divide (x/w) explodes as an AABB corner
+		// approaches the camera plane (w -> 0), and flips sign behind it (w <
+		// 0). The old code (ProjectToScreen) divided unconditionally, so any
+		// object straddling or touching the camera plane -- very common for
+		// large terrain chunks near the camera -- produced a huge bogus extent
+		// and was forced to LOD 0 (max density) regardless of lod_bias, with
+		// the result flipping as the view angle changed.
+		//
+		// Fix: guard w away from zero and clamp each projected corner to a
+		// bounded box around the screen. This keeps the extent (and therefore
+		// the LOD) finite and stable even when the AABB crosses the camera
+		// plane, so lod_bias is honored.
+		const XMVECTOR MUL = XMVectorSet(0.5f, -0.5f, 1, 1);
+		const XMVECTOR ADD = XMVectorSet(0.5f, 0.5f, 0, 0);
+		// One screen of margin each side, so partially off-screen objects still
+		// read as large without the near-plane blowup running away to infinity:
+		const XMVECTOR UV_MIN = XMVectorReplicate(-1.0f);
+		const XMVECTOR UV_MAX = XMVectorReplicate(2.0f);
+		XMVECTOR screen_min = XMVectorReplicate(1000000.0f);
+		XMVECTOR screen_max = XMVectorReplicate(-1000000.0f);
+		for (int i = 0; i < 8; ++i)
+		{
+			XMFLOAT3 c = aabb.corner(i);
+			XMVECTOR C = XMVector3Transform(XMLoadFloat3(&c), ViewProjection);	// world -> clip (keep w)
+			const float w = std::max(XMVectorGetW(C), 1e-4f);					// guard against w -> 0 / behind camera
+			C = XMVectorDivide(C, XMVectorReplicate(w));						// clip -> NDC (perspective divide)
+			C = XMVectorMultiplyAdd(C, MUL, ADD);								// NDC -> uv
+			C = XMVectorClamp(C, UV_MIN, UV_MAX);								// bound the near-plane blowup
+			screen_min = XMVectorMin(screen_min, C);
+			screen_max = XMVectorMax(screen_max, C);
+		}
+
+		const float width = XMVectorGetX(screen_max) - XMVectorGetX(screen_min);
+		const float height = XMVectorGetY(screen_max) - XMVectorGetY(screen_min);
+		const float maxdim = std::max(width, height);
+		const float lod = clamp(std::log2(1.0f / maxdim) + object.lod_bias, 0.0f, lod_max);
 		return uint32_t(lod);
 	}
 

@@ -147,13 +147,13 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 		
 }
 
-inline half attenuation_pointlight(in half dist2, in half range, in half range2)
+inline half attenuation_pointlight(in half dist2, in half range, in half range2_rcp)
 {
 	// GLTF recommendation: https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_lights_punctual#range-property
 	//return saturate(1 - pow(dist / range, 4)) / dist2;
 
 	// Removed pow(x, 4):
-	half dist_per_range = dist2 / range2; // pow2 (note: range cannot be 0, in that case light is not uploaded to GPU, so here will not be zero-division)
+	half dist_per_range = dist2 * range2_rcp; // pow2
 	dist_per_range *= dist_per_range; // pow4
 	return saturate(1 - dist_per_range) / max(0.0001, dist2);
 }
@@ -221,7 +221,7 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 		light_color *= mask.rgb * mask.a;
 	}
 		
-	light_color *= attenuation_pointlight(dist2, range, range2);
+	light_color *= attenuation_pointlight(dist2, range, light.GetRange2Rcp());
 
 	lighting.direct.diffuse = mad(light_color, BRDF_GetDiffuse(surface, surface_to_light), lighting.direct.diffuse);
 
@@ -266,9 +266,9 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 #endif // LIGHTING_SCATTER
 }
 
-inline half attenuation_spotlight(in half dist2, in half range, in half range2, in half spot_factor, in half angle_scale, in half angle_offset)
+inline half attenuation_spotlight(in half dist2, in half range, in half range2_rcp, in half spot_factor, in half angle_scale, in half angle_offset)
 {
-	half attenuation = attenuation_pointlight(dist2, range, range2);
+	half attenuation = attenuation_pointlight(dist2, range, range2_rcp);
 	half angularAttenuation = saturate(mad(spot_factor, angle_scale, angle_offset));
 	angularAttenuation *= angularAttenuation;
 	attenuation *= angularAttenuation;
@@ -339,7 +339,7 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 		light_color *= mask.rgb * mask.a;
 	}
 	
-	light_color *= attenuation_spotlight(dist2, range, range2, spot_factor, light.GetAngleScale(), light.GetAngleOffset());
+	light_color *= attenuation_spotlight(dist2, range, light.GetRange2Rcp(), spot_factor, light.GetAngleScale(), light.GetAngleOffset());
 		
 	lighting.direct.diffuse = mad(light_color, BRDF_GetDiffuse(surface, surface_to_light), lighting.direct.diffuse);
 
@@ -462,7 +462,7 @@ inline void light_rect(in ShaderEntity light, in Surface surface, inout Lighting
 			return; // light color lost after shadow
 	}
 		
-	light_color *= attenuation_pointlight(dist2, range, range2); // dist2 is the closest point on rectangle, so it will not be a falloff from light center, but as if a point light is placed on the closest rectangle point
+	light_color *= attenuation_pointlight(dist2, range, light.GetRange2Rcp()); // dist2 is the closest point on rectangle, so it will not be a falloff from light center, but as if a point light is placed on the closest rectangle point
 	
 	half3 light_color_diffuse = light_color * light_area * PI; // I increase the light color by the surface area, because I want larger lights to illuminate more.
 	

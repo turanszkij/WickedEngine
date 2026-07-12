@@ -19,7 +19,7 @@ struct PSIn
 
 	inline float3 GetViewVector()
 	{
-		return GetCameraIndexed(cameraIndex).screen_to_nearplane(pos) - GetPos3D(); // ortho support, cannot use cameraPos!
+		return GetCameraIndexed(cameraIndex).screen_to_view(pos);
 	}
 };
 
