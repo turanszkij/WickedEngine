@@ -1398,10 +1398,10 @@ namespace wi::terrain
 									// random barycentric coords on the triangle:
 									float f = rng.next_float();
 									float g = rng.next_float();
-									if (f + g > 1)
+									if (f + g > 1.0f)
 									{
-										f = 1 - f;
-										g = 1 - g;
+										f = 1.0f - f;
+										g = 1.0f - g;
 									}
 									const XMFLOAT3 vertex_pos = XMFLOAT3(
 										pos0.x + f * (pos1.x - pos0.x) + g * (pos2.x - pos0.x),
@@ -1418,7 +1418,7 @@ namespace wi::terrain
 
 									const float noise = (perlin_noise.compute((vertex_pos.x + chunk_data.position.x) * prop.noise_frequency, vertex_pos.y * prop.noise_frequency, (vertex_pos.z + chunk_data.position.z) * prop.noise_frequency) * 0.5f + 0.5f);
 									const float chance = (((float*)&region)[clamp(prop.region, 0, 3)]) * noise * (1 - saturate(spline_factor));
-									if (chance > prop.threshold)
+									//if (chance > prop.threshold)
 									{
 										wi::Archive archive = wi::Archive(prop.data.data(), prop.data.size());
 										EntitySerializer seri;
