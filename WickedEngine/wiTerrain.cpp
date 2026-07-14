@@ -1219,7 +1219,7 @@ namespace wi::terrain
 
 						const float grass_noise_frequency = 0.1f;
 						const float grass_noise = perlin_noise.compute(vertex_pos.x * grass_noise_frequency, vertex_pos.y * grass_noise_frequency, vertex_pos.z * grass_noise_frequency) * 0.5f + 0.5f;
-						const float region_grass = std::pow(materialBlendWeights.x * (1 - materialBlendWeights.w), 8.0f) * grass_noise * (1 - saturate(spline_factor));
+						const float region_grass = (materialBlendWeights.x * (1 - materialBlendWeights.w)) * grass_noise * (1 - saturate(spline_factor));
 						if (region_grass > 0.1f)
 						{
 							grass_valid_vertex_count.fetch_add(1);
