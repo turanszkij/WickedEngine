@@ -78,7 +78,7 @@ namespace wi::random
 			//} value = {};
 			//value.u = 0x3f800000u | (uint32_t(next_uint()) >> 9);
 			//return value.f - 1.0f;
-			return float(next_uint() & 0xFFFFFF) / 16777216.0f; // /2^24
+			return float(next_uint() & 0xFFFF) / 65535.0f;
 		}
 		// gives a float in range [min, max]
 		constexpr float next_float(float min, float max)
