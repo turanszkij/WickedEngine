@@ -1366,7 +1366,9 @@ namespace wi::terrain
 								);
 								for (int i = 0; i < gen_count; ++i)
 								{
-									const uint32_t tri = rng.next_uint(0, chunk_indices().lods[0].indexCount / 3); // random triangle on the chunk mesh
+									//const uint32_t tri = rng.next_uint(0, chunk_indices().lods[0].indexCount / 3); // random triangle on the chunk mesh
+									const uint64_t tri_hash = chunk.compute_hash() ^ (uint64_t(i) * 0x9E3779B97F4A7C15ULL) ^ (uint64_t(prop.region) << 32);
+									const uint32_t tri = (uint32_t)(tri_hash % (chunk_indices().lods[0].indexCount / 3));
 									const uint32_t ind0 = chunk_indices().indices[tri * 3 + 0];
 									const uint32_t ind1 = chunk_indices().indices[tri * 3 + 1];
 									const uint32_t ind2 = chunk_indices().indices[tri * 3 + 2];
