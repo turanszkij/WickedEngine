@@ -37,9 +37,10 @@ namespace wi::random
 		// gives an uint32 in range [min, max]
 		constexpr uint32_t next_uint(uint32_t min, uint32_t max)
 		{
-			if (min == max)
-				return min;
-			return min + (uint32_t(next_uint()) % (std::min(uint32_t(0xffffffffu) - uint32_t(1), std::max(uint32_t(1), max - min)) + uint32_t(1)));
+			if (min == max) return min;
+			uint32_t range = max - min;
+			if (range == 0) return min;
+			return min + (uint32_t(next_uint()) % range);   // simpler, avoids min/max issues
 		}
 
 		// gives an int64 in range [-INT64_MAX, INT64_MAX]
