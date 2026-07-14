@@ -32,14 +32,14 @@ namespace wi::random
 		{
 			if (min == max)
 				return min;
-			return min + (next_uint() % (std::min(std::numeric_limits<uint64_t>::max() - uint64_t(1), std::max(uint64_t(1), max - min)) + uint64_t(1)));
+			return min + (next_uint() % (std::min(0xffffffffffffffffui64 - uint64_t(1), std::max(uint64_t(1), max - min)) + uint64_t(1)));
 		}
 		// gives an uint32 in range [min, max]
 		constexpr uint32_t next_uint(uint32_t min, uint32_t max)
 		{
 			if (min == max)
 				return min;
-			return min + (uint32_t(next_uint()) % (std::min(std::numeric_limits<uint32_t>::max() - uint32_t(1), std::max(uint32_t(1), max - min)) + uint32_t(1)));
+			return min + (uint32_t(next_uint()) % (std::min(0xffffffffui32 - uint32_t(1), std::max(uint32_t(1), max - min)) + uint32_t(1)));
 		}
 
 		// gives an int64 in range [-INT64_MAX, INT64_MAX]
@@ -58,14 +58,14 @@ namespace wi::random
 		{
 			if (min == max)
 				return min;
-			return min + int64_t(next_uint() % (std::min(std::numeric_limits<int64_t>::max() - int64_t(1), std::max(int64_t(1), max - min)) + int64_t(1))); // we roll next_uint here to avoid negative value messing with range mapping
+			return min + int64_t(next_uint() % (std::min(9223372036854775807i64 - int64_t(1), std::max(int64_t(1), max - min)) + int64_t(1))); // we roll next_uint here to avoid negative value messing with range mapping
 		}
 		// gives an int32 in range [min, max]
 		constexpr int32_t next_int(int32_t min, int32_t max)
 		{
 			if (min == max)
 				return min;
-			return min + int32_t(next_uint() % (std::min(std::numeric_limits<int32_t>::max() - int32_t(1), std::max(int32_t(1), max - min)) + int32_t(1))); // we roll next_uint here to avoid negative value messing with range mapping
+			return min + int32_t(next_uint() % (std::min(2147483647i32 - int32_t(1), std::max(int32_t(1), max - min)) + int32_t(1))); // we roll next_uint here to avoid negative value messing with range mapping
 		}
 
 		// gives a float in range [0, 1]
