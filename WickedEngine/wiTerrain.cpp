@@ -1435,6 +1435,12 @@ namespace wi::terrain
 									const float chance = (((float*)&region)[clamp(prop.region, 0, 3)]) * noise * (1 - saturate(spline_factor));
 									//if (chance > prop.threshold)
 									{
+										if (chunk.x == 1 && chunk.z == 1) {  // focus on center chunk
+											char buf[512];
+											snprintf(buf, sizeof(buf), "Platform debug | tri=%u f=%.10f g=%.10f pos=(%.6f,%.6f,%.6f) chance=%.10f\n",
+												tri, f, g, vertex_pos.x, vertex_pos.y, vertex_pos.z, chance);
+											wi::backlog::post(buf);
+										}
 										wi::Archive archive = wi::Archive(prop.data.data(), prop.data.size());
 										EntitySerializer seri;
 										Entity entity = generator->scene.Entity_Serialize(
