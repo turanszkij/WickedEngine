@@ -1415,22 +1415,13 @@ namespace wi::terrain
 										pos0.y * h + pos1.y * f + pos2.y * g,
 										pos0.z * h + pos1.z * f + pos2.z * g
 									);
-
-									// Same for region
 									const XMFLOAT4 region = XMFLOAT4(
-										region0.x * one_minus_f_minus_g + region1.x * fx + region2.x * gx,
-										region0.y * one_minus_f_minus_g + region1.y * fx + region2.y * gx,
-										region0.z * one_minus_f_minus_g + region1.z * fx + region2.z * gx,
-										region0.w * one_minus_f_minus_g + region1.w * fx + region2.w * gx
+										region0.x * h + region1.x * f + region2.x * g,
+										region0.y * h + region1.y * f + region2.y * g,
+										region0.z * h + region1.z * f + region2.z * g,
+										region0.w * h + region1.w * f + region2.w * g
 									);
-
-									float spline_factor = 0.0f;
-									if (!chunk_data.spline_blendmap_layers.empty())
-									{
-										spline_factor = spline_factor0 * one_minus_f_minus_g +
-											spline_factor1 * fx +
-											spline_factor2 * gx;
-									}
+									const float spline_factor = spline_factor0 * h + spline_factor1 * f + spline_factor2 * g;
 
 									const float noise = (perlin_noise.compute((vertex_pos.x + chunk_data.position.x) * prop.noise_frequency, vertex_pos.y * prop.noise_frequency, (vertex_pos.z + chunk_data.position.z) * prop.noise_frequency) * 0.5f + 0.5f);
 									const float chance = (((float*)&region)[clamp(prop.region, 0, 3)]) * noise * (1 - saturate(spline_factor));
