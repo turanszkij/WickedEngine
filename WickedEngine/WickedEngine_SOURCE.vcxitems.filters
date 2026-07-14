@@ -1407,6 +1407,99 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGaussianSplatModel.h">
       <Filter>ENGINE\Graphics</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Compute\ComputeBuffer.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Compute\ComputeQueue.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Compute\ComputeShader.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Compute\ComputeSystem.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Hair\Hair.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Hair\HairSettings.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Hair\HairShaders.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Physics\Hair\RegisterHair.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Compute\CPU\ComputeBufferCPU.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Compute\CPU\ComputeQueueCPU.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Compute\CPU\ComputeShaderCPU.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Compute\CPU\ComputeSystemCPU.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Compute\CPU\HLSLToCPP.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Compute\CPU\ShaderWrapper.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Compute\CPU\WrapShaderBegin.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Compute\CPU\WrapShaderBindings.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Compute\CPU\WrapShaderEnd.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Compute\DX12\ComputeBufferDX12.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Compute\DX12\ComputeQueueDX12.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Compute\DX12\ComputeShaderDX12.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Compute\DX12\ComputeSystemDX12.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Compute\DX12\ComputeSystemDX12Impl.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Compute\DX12\IncludeDX12.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Compute\VK\BufferVK.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Compute\VK\ComputeBufferVK.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Compute\VK\ComputeQueueVK.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Compute\VK\ComputeShaderVK.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Compute\VK\ComputeSystemVK.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Compute\VK\ComputeSystemVKImpl.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Compute\VK\ComputeSystemVKWithAllocator.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Compute\VK\IncludeVK.h">
+      <Filter>JOLT</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -2224,6 +2317,66 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\tangentspace.cpp">
       <Filter>UTILITY\meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Compute\ComputeSystem.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Hair\Hair.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Hair\HairSettings.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Hair\HairShaders.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Physics\Hair\RegisterHair.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Compute\CPU\ComputeBufferCPU.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Compute\CPU\ComputeQueueCPU.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Compute\CPU\ComputeSystemCPU.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Compute\DX12\ComputeBufferDX12.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Compute\DX12\ComputeQueueDX12.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Compute\DX12\ComputeSystemDX12.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Compute\DX12\ComputeSystemDX12Impl.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Compute\VK\ComputeBufferVK.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Compute\VK\ComputeQueueVK.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Compute\VK\ComputeShaderVK.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Compute\VK\ComputeSystemVK.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Compute\VK\ComputeSystemVKImpl.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Compute\VK\ComputeSystemVKWithAllocator.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Shaders\HairWrapper.cpp">
+      <Filter>JOLT</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Jolt\Shaders\TestComputeWrapper.cpp">
+      <Filter>JOLT</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
