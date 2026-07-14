@@ -1403,18 +1403,33 @@ namespace wi::terrain
 										f = 1.0f - f;
 										g = 1.0f - g;
 									}
+
+									// Force exact same FP path
+									const float fx = f;
+									const float gx = g;
+									const float one_minus_f_minus_g = 1.0f - fx - gx; // explicit for compiler
+
 									const XMFLOAT3 vertex_pos = XMFLOAT3(
-										pos0.x + f * (pos1.x - pos0.x) + g * (pos2.x - pos0.x),
-										pos0.y + f * (pos1.y - pos0.y) + g * (pos2.y - pos0.y),
-										pos0.z + f * (pos1.z - pos0.z) + g * (pos2.z - pos0.z)
+										pos0.x * one_minus_f_minus_g + pos1.x * fx + pos2.x * gx,  // changed order
+										pos0.y * one_minus_f_minus_g + pos1.y * fx + pos2.y * gx,
+										pos0.z * one_minus_f_minus_g + pos1.z * fx + pos2.z * gx
 									);
+
+									// Same for region
 									const XMFLOAT4 region = XMFLOAT4(
-										region0.x + f * (region1.x - region0.x) + g * (region2.x - region0.x),
-										region0.y + f * (region1.y - region0.y) + g * (region2.y - region0.y),
-										region0.z + f * (region1.z - region0.z) + g * (region2.z - region0.z),
-										region0.w + f * (region1.w - region0.w) + g * (region2.w - region0.w)
+										region0.x * one_minus_f_minus_g + region1.x * fx + region2.x * gx,
+										region0.y * one_minus_f_minus_g + region1.y * fx + region2.y * gx,
+										region0.z * one_minus_f_minus_g + region1.z * fx + region2.z * gx,
+										region0.w * one_minus_f_minus_g + region1.w * fx + region2.w * gx
 									);
-									const float spline_factor = spline_factor0 + f * (spline_factor1 - spline_factor0) + g * (spline_factor2 - spline_factor0);
+
+									float spline_factor = 0.0f;
+									if (!chunk_data.spline_blendmap_layers.empty())
+									{
+										spline_factor = spline_factor0 * one_minus_f_minus_g +
+											spline_factor1 * fx +
+											spline_factor2 * gx;
+									}
 
 									const float noise = (perlin_noise.compute((vertex_pos.x + chunk_data.position.x) * prop.noise_frequency, vertex_pos.y * prop.noise_frequency, (vertex_pos.z + chunk_data.position.z) * prop.noise_frequency) * 0.5f + 0.5f);
 									const float chance = (((float*)&region)[clamp(prop.region, 0, 3)]) * noise * (1 - saturate(spline_factor));
