@@ -1369,6 +1369,9 @@ namespace wi::terrain
 									//const uint32_t tri = rng.next_uint(0, chunk_indices().lods[0].indexCount / 3); // random triangle on the chunk mesh
 									const uint64_t tri_hash = chunk.compute_hash() ^ (uint64_t(i) * 0x9E3779B97F4A7C15ULL) ^ (uint64_t(prop.region) << 32);
 									const uint32_t tri = (uint32_t)(tri_hash % (chunk_indices().lods[0].indexCount / 3));
+									if (chunk.x == 1 && chunk.z == 1) {  // focus on center chunk
+										wilog("DEBUG: chunk_hash = %llu, tri_hash = %llu, tri = %u", chunk.compute_hash(), tri_hash, tri);
+									}
 									const uint32_t ind0 = chunk_indices().indices[tri * 3 + 0];
 									const uint32_t ind1 = chunk_indices().indices[tri * 3 + 1];
 									const uint32_t ind2 = chunk_indices().indices[tri * 3 + 2];
@@ -1429,12 +1432,6 @@ namespace wi::terrain
 									const float chance = (((float*)&region)[clamp(prop.region, 0, 3)]) * noise * (1 - saturate(spline_factor));
 									//if (chance > prop.threshold)
 									{
-										if (chunk.x == 1 && chunk.z == 1) {  // focus on center chunk
-											char buf[512];
-											snprintf(buf, sizeof(buf), "Platform debug | tri=%u f=%.10f g=%.10f pos=(%.6f,%.6f,%.6f) chance=%.10f\n",
-												tri, f, g, vertex_pos.x, vertex_pos.y, vertex_pos.z, chance);
-											wi::backlog::post(buf);
-										}
 										wi::Archive archive = wi::Archive(prop.data.data(), prop.data.size());
 										EntitySerializer seri;
 										Entity entity = generator->scene.Entity_Serialize(
