@@ -26,10 +26,6 @@ namespace wi::noise
 		{
 			return t * t * t * (t * (t * 6 - 15) + 10);
 		}
-		constexpr float lerp(float a, float b, float t) const
-		{
-			return (a + (b - a) * t);
-		}
 		constexpr float grad(uint8_t hash, float x, float y, float z) const
 		{
 			const uint8_t h = hash & 15;
