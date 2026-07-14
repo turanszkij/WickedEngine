@@ -1408,11 +1408,12 @@ namespace wi::terrain
 									const float fx = f;
 									const float gx = g;
 									const float one_minus_f_minus_g = 1.0f - fx - gx; // explicit for compiler
+									float h = 1.0f - f - g;  // explicit third barycentric weight
 
 									const XMFLOAT3 vertex_pos = XMFLOAT3(
-										pos0.x * one_minus_f_minus_g + pos1.x * fx + pos2.x * gx,  // changed order
-										pos0.y * one_minus_f_minus_g + pos1.y * fx + pos2.y * gx,
-										pos0.z * one_minus_f_minus_g + pos1.z * fx + pos2.z * gx
+										pos0.x * h + pos1.x * f + pos2.x * g,
+										pos0.y * h + pos1.y * f + pos2.y * g,
+										pos0.z * h + pos1.z * f + pos2.z * g
 									);
 
 									// Same for region
