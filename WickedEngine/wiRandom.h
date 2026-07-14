@@ -71,13 +71,15 @@ namespace wi::random
 		// gives a float in range [0, 1]
 		constexpr float next_float()
 		{
-			union
-			{
-				uint32_t u;
-				float f;
-			} value = {};
-			value.u = 0x3f800000u | (uint32_t(next_uint()) >> 9);
-			return value.f - 1.0f;
+			//union
+			//{
+			//	uint32_t u;
+			//	float f;
+			//} value = {};
+			//value.u = 0x3f800000u | (uint32_t(next_uint()) >> 9);
+			//return value.f - 1.0f;
+			uint32_t r = uint32_t(next_uint()) >> 8;  // 24 bits of randomness
+			return float(r) * (1.0f / 16777216.0f);   // 1/2^24
 		}
 		// gives a float in range [min, max]
 		constexpr float next_float(float min, float max)
