@@ -1354,12 +1354,12 @@ namespace wi::terrain
 							generator->scene.Component_Attach(chunk_data.props_entity, chunk_data.entity, true);
 							chunk_data.prop_density_current = prop_density;
 
-							wi::random::RNG rng(chunk.compute_hash());
-
 							for (const auto& prop : props)
 							{
 								if (prop.data.empty())
 									continue;
+								
+								wi::random::RNG rng(chunk.compute_hash());
 								const int gen_count = rng.next_int(
 									int(std::floor(float(prop.min_count_per_chunk) * chunk_data.prop_density_current)),
 									int(std::ceil(float(prop.max_count_per_chunk) * chunk_data.prop_density_current))
@@ -1440,8 +1440,8 @@ namespace wi::terrain
 											transform = &generator->scene.transforms.Create(entity);
 										}
 										transform->translation_local = vertex_pos;
-										transform->translation_local.y += wi::math::Lerp(prop.min_y_offset, prop.max_y_offset, rng.next_float());
-										const float scaling = wi::math::Lerp(prop.min_size, prop.max_size, rng.next_float());
+										transform->translation_local.y += lerp(prop.min_y_offset, prop.max_y_offset, rng.next_float());
+										const float scaling = lerp(prop.min_size, prop.max_size, rng.next_float());
 										transform->Scale(XMFLOAT3(scaling, scaling, scaling));
 										transform->RotateRollPitchYaw(XMFLOAT3(0, XM_2PI * rng.next_float(), 0));
 										transform->SetDirty();
