@@ -3,8 +3,8 @@
 
 #include <string>
 #include <vector>
-#include <unordered_map>
 #include <mutex>
+#include <map>
 
 namespace wi::config
 {
@@ -46,13 +46,13 @@ namespace wi::config
 		void Set(const char* name, const std::vector<int>& values);
 		void Set(const char* name, const std::vector<float>& values);
 
-		std::unordered_map<std::string, std::string>::iterator begin() { return values.begin(); }
-		std::unordered_map<std::string, std::string>::const_iterator begin() const { return values.begin(); }
-		std::unordered_map<std::string, std::string>::iterator end() { return values.end(); }
-		std::unordered_map<std::string, std::string>::const_iterator end() const { return values.end(); }
+		std::map<std::string, std::string>::iterator begin() { return values.begin(); }
+		std::map<std::string, std::string>::const_iterator begin() const { return values.begin(); }
+		std::map<std::string, std::string>::iterator end() { return values.end(); }
+		std::map<std::string, std::string>::const_iterator end() const { return values.end(); }
 
 	protected:
-		std::unordered_map<std::string, std::string> values;
+		std::map<std::string, std::string> values;
 	};
 
 	struct File final : public Section
@@ -67,14 +67,14 @@ namespace wi::config
 		// Get access to a named section. If it doesn't exist, then it will be created
 		Section& GetSection(const char* name);
 
-		std::unordered_map<std::string, Section>::iterator begin() { return sections.begin(); }
-		std::unordered_map<std::string, Section>::const_iterator begin() const { return sections.begin(); }
-		std::unordered_map<std::string, Section>::iterator end() { return sections.end(); }
-		std::unordered_map<std::string, Section>::const_iterator end() const { return sections.end(); }
+		std::map<std::string, Section>::iterator begin() { return sections.begin(); }
+		std::map<std::string, Section>::const_iterator begin() const { return sections.begin(); }
+		std::map<std::string, Section>::iterator end() { return sections.end(); }
+		std::map<std::string, Section>::const_iterator end() const { return sections.end(); }
 
 	private:
 		std::string filename;
-		std::unordered_map<std::string, Section> sections;
+		std::map<std::string, Section> sections;
 		struct Line
 		{
 			std::string section_label;

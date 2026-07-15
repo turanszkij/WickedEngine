@@ -1,7 +1,7 @@
 #include "wiConfig.h"
 #include "wiHelper.h"
 
-#include <unordered_set>
+#include <set>
 #include <mutex>
 
 namespace wi::config
@@ -397,7 +397,7 @@ namespace wi::config
 	}
 	void File::Commit()
 	{
-		std::unordered_map<Section*, std::unordered_set<std::string>> committed_values;
+		std::map<Section*, std::set<std::string>> committed_values;
 		Section* section = this;
 		std::string text;
 		for (auto& line : opened_order)
