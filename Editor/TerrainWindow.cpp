@@ -1622,10 +1622,11 @@ void TerrainWindow::SetupAssets()
 	config.Open(std::string(asset_path + "props.ini").c_str());
 	std::unordered_map<std::string, Scene> prop_scenes;
 
-	for (const auto& it : config)
+	auto sorted_sections = config.GetSortedSections(); // note: prop order must be exactly the same across platforms!
+	for (const auto& it : sorted_sections)
 	{
 		const std::string& section_name = it.first;
-		const wi::config::Section& section = it.second;
+		const wi::config::Section& section = *it.second;
 		Entity entity = INVALID_ENTITY;
 		Scene* scene = &editor->GetCurrentScene();
 
