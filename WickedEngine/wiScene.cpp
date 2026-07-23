@@ -72,7 +72,66 @@ namespace wi::scene
 
 		StartBuildTopDownHierarchy();
 
-		instanceArraySize = objects.GetCount() + hairs.GetCount() + emitters.GetCount();
+		// Reconcile the stable per-object instance slots before the (later)
+		// parallel object update job reads ObjectComponent::gpuInstanceIndex to
+		// place instance data. Single-threaded so the free-list is not raced.
+		{
+			const size_t objectCount = objects.GetCount();
+
+			// Mark which existing slots are still validly owned this frame.
+			instanceSlotClaimed.assign(objectInstanceCapacity, false);
+			for (size_t i = 0; i < objectCount; ++i)
+			{
+				const uint32_t slot = objects[i].gpuInstanceIndex;
+				if (slot < objectInstanceCapacity &&
+					instanceSlotOwners[slot] == objects.GetEntity(i))
+				{
+					instanceSlotClaimed[slot] = true;
+				}
+			}
+
+			// Return slots whose owner was removed / relocated to the pool.
+			for (uint32_t slot = 0; slot < objectInstanceCapacity; ++slot)
+			{
+				if (instanceSlotOwners[slot] != INVALID_ENTITY &&
+					!instanceSlotClaimed[slot])
+				{
+					instanceSlotOwners[slot] = INVALID_ENTITY;
+					freeInstanceSlots.push_back(slot);
+				}
+			}
+
+			// Assign every object still lacking a valid slot a recycled or new
+			// one. Capacity only grows, so surviving objects keep their slot.
+			for (size_t i = 0; i < objectCount; ++i)
+			{
+				ObjectComponent& object = objects[i];
+				const Entity entity = objects.GetEntity(i);
+				const uint32_t slot = object.gpuInstanceIndex;
+				if (slot < objectInstanceCapacity &&
+					instanceSlotOwners[slot] == entity)
+				{
+					continue; // already holds a valid slot
+				}
+				uint32_t newSlot;
+				if (!freeInstanceSlots.empty())
+				{
+					newSlot = freeInstanceSlots.back();
+					freeInstanceSlots.pop_back();
+				}
+				else
+				{
+					newSlot = objectInstanceCapacity++;
+					instanceSlotOwners.push_back(INVALID_ENTITY);
+				}
+				object.gpuInstanceIndex = newSlot;
+				instanceSlotOwners[newSlot] = entity;
+			}
+		}
+
+		// Objects occupy the stable slot range [0, objectInstanceCapacity);
+		// hairs, emitters, impostor and rain instances append after it.
+		instanceArraySize = objectInstanceCapacity + hairs.GetCount() + emitters.GetCount();
 		if (impostors.GetCount() > 0)
 		{
 			impostorInstanceOffset = uint32_t(instanceArraySize);
@@ -4664,7 +4723,12 @@ namespace wi::scene
 				inst.SetUserStencilRef(object.userStencilRef);
 				inst.rimHighlight = wi::math::pack_half4(XMFLOAT4(object.rimHighlightColor.x * object.rimHighlightColor.w, object.rimHighlightColor.y * object.rimHighlightColor.w, object.rimHighlightColor.z * object.rimHighlightColor.w, object.rimHighlightFalloff));
 
-				std::memcpy(instanceArrayMapped + args.jobIndex, &inst, sizeof(inst)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
+				// Write to the object's stable GPU instance slot (not the
+				// ComponentManager index), so cached instance indices survive
+				// unrelated object add/remove churn.
+				const uint32_t instanceSlot = object.gpuInstanceIndex;
+
+				std::memcpy(instanceArrayMapped + instanceSlot, &inst, sizeof(inst)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
 
 				if (TLAS_instancesMapped != nullptr)
 				{
@@ -4677,7 +4741,7 @@ namespace wi::scene
 							instance.transform[i][j] = worldMatrix.m[j][i];
 						}
 					}
-					instance.instance_id = args.jobIndex;
+					instance.instance_id = instanceSlot;
 					instance.instance_mask = layerMask == 0 ? 0 : 0xFF;
 					if (!object.IsRenderable() || !mesh.IsRenderable())
 					{
@@ -4711,7 +4775,7 @@ namespace wi::scene
 						instance.flags |= RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE;
 					}
 
-					void* dest = (void*)((size_t)TLAS_instancesMapped + (size_t)args.jobIndex * device->GetTopLevelAccelerationStructureInstanceSize());
+					void* dest = (void*)((size_t)TLAS_instancesMapped + (size_t)instanceSlot * device->GetTopLevelAccelerationStructureInstanceSize());
 					device->WriteTopLevelAccelerationStructureInstance(&instance, dest);
 				}
 
@@ -5142,7 +5206,7 @@ namespace wi::scene
 			}
 			inst.transformPrev = inst.transform;
 
-			const size_t instanceIndex = objects.GetCount() + args.jobIndex;
+			const size_t instanceIndex = objectInstanceCapacity + args.jobIndex;
 			std::memcpy(instanceArrayMapped + instanceIndex, &inst, sizeof(inst));
 
 			if (TLAS_instancesMapped != nullptr)
@@ -5246,7 +5310,7 @@ namespace wi::scene
 			inst.baseGeometryOffset = inst.geometryOffset;
 			inst.baseGeometryCount = inst.geometryCount;
 
-			const size_t instanceIndex = objects.GetCount() + hairs.GetCount() + args.jobIndex;
+			const size_t instanceIndex = objectInstanceCapacity + hairs.GetCount() + args.jobIndex;
 			std::memcpy(instanceArrayMapped + instanceIndex, &inst, sizeof(inst));
 
 			if (TLAS_instancesMapped != nullptr)

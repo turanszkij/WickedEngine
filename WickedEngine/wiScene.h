@@ -126,6 +126,21 @@ namespace wi::scene
 		size_t instanceArraySize = 0;
 		wi::graphics::GPUBuffer instanceBuffer;
 
+		// Stable per-object GPU instance slot allocator. Objects occupy the
+		// instance array range [0, objectInstanceCapacity); each object keeps
+		// its slot (ObjectComponent::gpuInstanceIndex) for its whole lifetime
+		// so GPU caches that store an instance index (e.g. surfel GI) are not
+		// invalidated when unrelated objects are added/removed (the objects
+		// ComponentManager relocates entries on removal via swap-with-last).
+		// instanceSlotOwners[slot] holds the owning entity (INVALID_ENTITY when
+		// free); freeInstanceSlots is the recycled-slot stack. Capacity only
+		// grows (never compacted), keeping slots maximally stable. Hairs,
+		// emitters, impostor and rain instances append after this range.
+		wi::vector<wi::ecs::Entity> instanceSlotOwners;
+		wi::vector<uint32_t> freeInstanceSlots;
+		uint32_t objectInstanceCapacity = 0;
+		wi::vector<bool> instanceSlotClaimed; // per-frame reconciliation scratch
+
 		// Geometries for bindless visiblity indexing:
 		//	contains in order:
 		//		1) meshes * mesh.subsetCount
