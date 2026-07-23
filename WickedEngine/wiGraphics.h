@@ -2013,6 +2013,15 @@ namespace wi::graphics
 	//	plane can be specified optionally, the value ~0u means all planes
 	constexpr size_t ComputeTextureMemorySizeInBytes(const TextureDesc& desc, uint32_t plane = ~0u)
 	{
+		// An uninitialized / not-yet-created texture (e.g. a component whose
+		// GPU resource has not been built yet) has an UNKNOWN format and no
+		// memory footprint. Return early so we don't hit GetFormatStride's
+		// unhandled- format assert on a legitimately empty descriptor.
+		if (desc.format == Format::UNKNOWN)
+		{
+			return 0;
+		}
+
 		size_t size = 0;
 		const uint32_t bytes_per_block = GetFormatStride(desc.format, plane);
 		const uint32_t pixels_per_block = GetFormatBlockSize(desc.format);
