@@ -1152,8 +1152,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 				wi::vector<uint8_t> data;
 				int width = int(aabb.getHalfWidth().x * 2 + 1);
 				int height = int(aabb.getHalfWidth().z * 2 + 1);
-				data.resize(width * height * sizeof(uint16_t));
-				std::fill(data.begin(), data.end(), 0u);
+				data.resize(width * height * sizeof(uint16_t), 0);
 				uint16_t* dest = (uint16_t*)data.data();
 
 				for (auto& chunk : terrain->chunks)
@@ -1227,8 +1226,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 				wi::vector<uint8_t> data;
 				int width = int(aabb.getHalfWidth().x * 2 + 1);
 				int height = int(aabb.getHalfWidth().z * 2 + 1);
-				data.resize(width * height * sizeof(wi::Color));
-				std::fill(data.begin(), data.end(), 0u);
+				data.resize(width * height * sizeof(wi::Color), 0);
 				wi::Color* dest = (wi::Color*)data.data();
 
 				for (auto& chunk : terrain->chunks)
@@ -1624,10 +1622,11 @@ void TerrainWindow::SetupAssets()
 	config.Open(std::string(asset_path + "props.ini").c_str());
 	std::unordered_map<std::string, Scene> prop_scenes;
 
-	for (const auto& it : config)
+	auto sorted_sections = config.GetSortedSections(); // note: prop order must be exactly the same across platforms!
+	for (const auto& it : sorted_sections)
 	{
 		const std::string& section_name = it.first;
-		const wi::config::Section& section = it.second;
+		const wi::config::Section& section = *it.second;
 		Entity entity = INVALID_ENTITY;
 		Scene* scene = &editor->GetCurrentScene();
 

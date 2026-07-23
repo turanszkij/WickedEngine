@@ -203,13 +203,8 @@ namespace wi
 		// buoyancy readback, while halving the texture's bandwidth and memory.
 		tex_desc.format = Format::R16G16B16A16_FLOAT;
 		tex_desc.mip_levels = 1;
-		wi::vector<XMHALF4> displacementdata(tex_desc.width * tex_desc.height); // zero init the heightmap to be valid before first simulation
-		std::fill(displacementdata.begin(), displacementdata.end(), XMHALF4(0.0f, 0.0f, 0.0f, 0.0f));
-		SubresourceData initdata;
-		initdata.data_ptr = displacementdata.data();
-		initdata.row_pitch = tex_desc.width * sizeof(XMHALF4);
 		tex_desc.layout = ResourceState::COPY_SRC | ResourceState::SHADER_RESOURCE_COMPUTE;
-		device->CreateTexture(&tex_desc, &initdata, &displacementMap);
+		device->CreateTextureZeroed(&tex_desc, &displacementMap); // zero init the heightmap to be valid before first simulation
 		device->SetName(&displacementMap, "displacementMap");
 
 		for (uint32_t i = 0; i < arraysize(displacementMap_readback); ++i)

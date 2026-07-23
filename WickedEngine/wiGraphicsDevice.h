@@ -279,6 +279,14 @@ namespace wi::graphics
 			return CreateBuffer2(desc, [&](void* dest) { std::memset(dest, value, desc->size); }, buffer, alias, alias_offset);
 		}
 
+		// This can be used to create a buffer filled with a single value, the data initialization will be done on the CPU (and additional GPU copy for non-UMA)
+		//	This version can clear with larger than byte types but you must ensure that buffer size is multiple of the clear value size
+		template <typename T>
+		bool CreateBufferClearedWithType(const GPUBufferDesc* desc, T value, GPUBuffer* buffer, const GPUResource* alias = nullptr, uint64_t alias_offset = 0ull) const
+		{
+			return CreateBuffer2(desc, [&](void* dest) { std::fill((T*)dest, (T*)dest + (desc->size / sizeof(T)), value); }, buffer, alias, alias_offset);
+		}
+
 		// This can be used to create a buffer filled with zeroes, the data initialization will be done on the CPU (and additional GPU copy for non-UMA)
 		bool CreateBufferZeroed(const GPUBufferDesc* desc, GPUBuffer* buffer, const GPUResource* alias = nullptr, uint64_t alias_offset = 0ull) const
 		{
@@ -288,8 +296,7 @@ namespace wi::graphics
 		// This can be used to create a texture filled with a single value
 		bool CreateTextureCleared(const TextureDesc* desc, uint8_t value, Texture* texture, const GPUResource* alias = nullptr, uint64_t alias_offset = 0ull) const
 		{
-			wi::vector<uint8_t> texturedata(ComputeTextureMemorySizeInBytes(*desc));
-			std::fill(texturedata.begin(), texturedata.end(), value);
+			wi::vector<uint8_t> texturedata(ComputeTextureMemorySizeInBytes(*desc), value);
 			wi::vector<SubresourceData> initdata;
 			CreateTextureSubresourceDatas(*desc, texturedata.data(), initdata);
 			return CreateTexture(desc, initdata.data(), texture, alias, alias_offset);

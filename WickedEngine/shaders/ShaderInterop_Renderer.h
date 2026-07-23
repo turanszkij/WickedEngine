@@ -1266,7 +1266,7 @@ struct alignas(16) FrameCB
 	int			texture_skyluminancelut_index;
 	int			texture_cameravolumelut_index;
 	int			texture_wind_index;
-	int			texture_wind_prev_index;
+	int			padding0;
 
 	float4		rain_blocker_mad;
 	float4x4	rain_blocker_matrix;

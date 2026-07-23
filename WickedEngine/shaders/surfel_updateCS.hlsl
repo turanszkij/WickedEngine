@@ -1,3 +1,4 @@
+#define DISABLE_HALF_PRECISION // compiler issue
 #define TEXTURE_SLOT_NONUNIFORM
 #include "globals.hlsli"
 #include "ShaderInterop_SurfelGI.h"

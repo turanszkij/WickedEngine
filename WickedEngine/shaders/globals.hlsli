@@ -765,7 +765,6 @@ struct PrimitiveID
 #define texture_skyluminancelut bindless_textures_half4[descriptor_index(GetFrame().texture_skyluminancelut_index)]
 #define texture_cameravolumelut bindless_textures3D_half4[descriptor_index(GetFrame().texture_cameravolumelut_index)]
 #define texture_wind bindless_textures3D[descriptor_index(GetFrame().texture_wind_index)]
-#define texture_wind_prev bindless_textures3D[descriptor_index(GetFrame().texture_wind_prev_index)]
 #define scene_acceleration_structure bindless_accelerationstructures[descriptor_index(GetScene().TLAS)]
 
 #define texture_depth bindless_textures_float[descriptor_index(GetCamera().texture_depth_index)]
@@ -2244,7 +2243,7 @@ float3 sample_wind_prev(float3 position, float weight)
 	[branch]
 	if (weight > 0)
 	{
-		return texture_wind_prev.SampleLevel(sampler_linear_mirror, position, 0).r * GetWeather().wind.direction * weight;
+		return texture_wind.SampleLevel(sampler_linear_mirror, position, 0).g * GetWeather().wind.direction * weight;
 	}
 	else
 	{

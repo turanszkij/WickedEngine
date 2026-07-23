@@ -1,7 +1,7 @@
 #include "wiConfig.h"
 #include "wiHelper.h"
+#include "wiUnorderedSet.h"
 
-#include <unordered_set>
 #include <mutex>
 
 namespace wi::config
@@ -105,9 +105,9 @@ namespace wi::config
 		return it->second;
 	}
 
-	std::vector<std::string> Section::GetTextArray(const char* name) const
+	wi::vector<std::string> Section::GetTextArray(const char* name) const
 	{
-		std::vector<std::string> result;
+		wi::vector<std::string> result;
 		const auto it = values.find(name);
 		if (it == values.end())
 		{
@@ -143,10 +143,10 @@ namespace wi::config
 			result.push_back("");
 		return result;
 	}
-	std::vector<int> Section::GetIntArray(const char* name) const
+	wi::vector<int> Section::GetIntArray(const char* name) const
 	{
-		std::vector<int> result;
-		std::vector<std::string> strings = GetTextArray(name);
+		wi::vector<int> result;
+		wi::vector<std::string> strings = GetTextArray(name);
 		result.reserve(strings.size());
 		for (const auto& s : strings)
 		{
@@ -157,10 +157,10 @@ namespace wi::config
 		}
 		return result;
 	}
-	std::vector<float> Section::GetFloatArray(const char* name) const
+	wi::vector<float> Section::GetFloatArray(const char* name) const
 	{
-		std::vector<float> result;
-		std::vector<std::string> strings = GetTextArray(name);
+		wi::vector<float> result;
+		wi::vector<std::string> strings = GetTextArray(name);
 		result.reserve(strings.size());
 		for (const auto& s : strings)
 		{
@@ -211,7 +211,7 @@ namespace wi::config
 	{
 		values[name] = value;
 	}
-	void Section::Set(const char* name, const std::vector<std::string>& arr)
+	void Section::Set(const char* name, const wi::vector<std::string>& arr)
 	{
 		std::string result;
 		for (size_t i = 0; i < arr.size(); ++i)
@@ -222,7 +222,7 @@ namespace wi::config
 		}
 		values[name] = result;
 	}
-	void Section::Set(const char* name, const std::vector<int>& arr)
+	void Section::Set(const char* name, const wi::vector<int>& arr)
 	{
 		std::string result;
 		for (size_t i = 0; i < arr.size(); ++i)
@@ -233,7 +233,7 @@ namespace wi::config
 		}
 		values[name] = result;
 	}
-	void Section::Set(const char* name, const std::vector<float>& arr)
+	void Section::Set(const char* name, const wi::vector<float>& arr)
 	{
 		std::string result;
 		for (size_t i = 0; i < arr.size(); ++i)
@@ -397,7 +397,7 @@ namespace wi::config
 	}
 	void File::Commit()
 	{
-		std::unordered_map<Section*, std::unordered_set<std::string>> committed_values;
+		wi::unordered_map<Section*, wi::unordered_set<std::string>> committed_values;
 		Section* section = this;
 		std::string text;
 		for (auto& line : opened_order)
@@ -517,5 +517,16 @@ namespace wi::config
 	bool File::HasSection(const char* name) const
 	{
 		return sections.find(name) != sections.end();
+	}
+
+	wi::vector<std::pair<std::string, const Section*>> File::GetSortedSections() const
+	{
+		wi::vector<std::pair<std::string, const Section*>> ret;
+		for (auto& it : sections)
+		{
+			ret.push_back(std::make_pair(it.first, &it.second));
+		}
+		std::sort(ret.begin(), ret.end(), [](const std::pair<std::string, const Section*>& a, const std::pair<std::string, const Section*>& b) {return a.first < b.first; });
+		return ret;
 	}
 }
