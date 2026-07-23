@@ -1,7 +1,6 @@
 #include "globals.hlsli"
 
-RWTexture3D<float> output : register(u0);
-RWTexture3D<float> output_prev : register(u1);
+RWTexture3D<float2> output : register(u0);
 
 float compute_wind(float3 position, float time)
 {
@@ -26,7 +25,5 @@ float compute_wind(float3 position, float time)
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	float3 position = (float3)DTid;
-
-	output[DTid] = compute_wind(position, GetTime());
-	output_prev[DTid] = compute_wind(position, GetTimePrev());
+	output[DTid] = float2(compute_wind(position, GetTime()), compute_wind(position, GetTimePrev()));
 }

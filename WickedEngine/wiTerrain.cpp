@@ -254,7 +254,7 @@ namespace wi::terrain
 			td.usage = Usage::DEFAULT;
 			td.layout = ResourceState::UNORDERED_ACCESS;
 			td.mip_levels = lod_count;
-			wi::vector<uint32_t> default_data(td.width * td.height);
+			wi::vector<uint32_t> default_data(td.width * td.height, 0xff);
 			wi::vector<SubresourceData> initdata(lod_count);
 			for (uint32_t lod = 0; lod < lod_count; ++lod)
 			{
@@ -276,7 +276,6 @@ namespace wi::terrain
 			td.usage = Usage::DEFAULT;
 			td.layout = ResourceState::UNORDERED_ACCESS;
 			td.mip_levels = 1;
-			std::fill(default_data.begin(), default_data.end(), 0xFF);
 			success = device->CreateTexture(&td, initdata.data(), &feedbackMap);
 			assert(success);
 			device->SetName(&feedbackMap, "VirtualTexture::feedbackMap");
@@ -287,9 +286,7 @@ namespace wi::terrain
 				bd.usage = Usage::DEFAULT;
 				bd.bind_flags = BindFlag::UNORDERED_ACCESS;
 				bd.size = sizeof(uint32_t) * tile_count;
-				wi::vector<uint32_t> data(tile_count);
-				std::fill(data.begin(), data.end(), 0xFF);
-				success = device->CreateBuffer(&bd, data.data(), &requestBuffer);
+				success = device->CreateBufferClearedWithType(&bd, 0x000000FFu, &requestBuffer);
 				assert(success);
 				device->SetName(&requestBuffer, "VirtualTexture::requestBuffer");
 			}
@@ -1358,11 +1355,8 @@ namespace wi::terrain
 							chunk_data.prop_density_current = prop_density;
 
 							wi::random::RNG rng(chunk.compute_hash());
-
 							for (const auto& prop : props)
 							{
-								if (prop.data.empty())
-									continue;
 								const int gen_count = rng.next_int(
 									int(std::floor(float(prop.min_count_per_chunk) * chunk_data.prop_density_current)),
 									int(std::ceil(float(prop.max_count_per_chunk) * chunk_data.prop_density_current))
@@ -1419,10 +1413,16 @@ namespace wi::terrain
 									);
 									const float spline_factor = spline_factor0 + f * (spline_factor1 - spline_factor0) + g * (spline_factor2 - spline_factor0);
 
+									// These are always computed, not inside chance branch:
+									const float f0 = rng.next_float();
+									const float f1 = rng.next_float();
+									const float f2 = rng.next_float();
+
 									const float noise = std::pow(perlin_noise.compute((vertex_pos.x + chunk_data.position.x) * prop.noise_frequency, vertex_pos.y * prop.noise_frequency, (vertex_pos.z + chunk_data.position.z) * prop.noise_frequency) * 0.5f + 0.5f, prop.noise_power);
 									const float chance = std::pow(((float*)&region)[clamp(prop.region, 0, 3)], prop.region_power) * noise * (1 - saturate(spline_factor));
-									if (chance > prop.threshold)
+									if (chance > prop.threshold && !prop.data.empty())
 									{
+										// No RNG must happen here, the random generation must be always consistent!
 										wi::Archive archive = wi::Archive(prop.data.data(), prop.data.size());
 										EntitySerializer seri;
 										Entity entity = generator->scene.Entity_Serialize(
@@ -1443,10 +1443,10 @@ namespace wi::terrain
 											transform = &generator->scene.transforms.Create(entity);
 										}
 										transform->translation_local = vertex_pos;
-										transform->translation_local.y += wi::math::Lerp(prop.min_y_offset, prop.max_y_offset, rng.next_float());
-										const float scaling = wi::math::Lerp(prop.min_size, prop.max_size, rng.next_float());
+										transform->translation_local.y += lerp(prop.min_y_offset, prop.max_y_offset, f0);
+										const float scaling = lerp(prop.min_size, prop.max_size, f1);
 										transform->Scale(XMFLOAT3(scaling, scaling, scaling));
-										transform->RotateRollPitchYaw(XMFLOAT3(0, XM_2PI * rng.next_float(), 0));
+										transform->RotateRollPitchYaw(XMFLOAT3(0, XM_2PI * f2, 0));
 										transform->SetDirty();
 										transform->UpdateTransform();
 										generator->scene.Component_Attach(entity, chunk_data.props_entity, true);

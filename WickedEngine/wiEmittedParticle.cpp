@@ -171,11 +171,7 @@ namespace wi
 			bd.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 			bd.stride = sizeof(uint32_t);
 			bd.size = bd.stride * MAX_PARTICLES;
-			auto init_distances = [&](void* dest) {
-				float* distances = (float*)dest;
-				std::fill(distances, distances + MAX_PARTICLES, 0.0f);
-			};
-			device->CreateBuffer2(&bd, init_distances, &distanceBuffer);
+			device->CreateBufferZeroed(&bd, &distanceBuffer);
 			device->SetName(&distanceBuffer, "EmittedParticleSystem::distanceBuffer");
 		}
 

@@ -26,10 +26,6 @@ namespace wi::noise
 		{
 			return t * t * t * (t * (t * 6 - 15) + 10);
 		}
-		constexpr float lerp(float a, float b, float t) const
-		{
-			return (a + (b - a) * t);
-		}
 		constexpr float grad(uint8_t hash, float x, float y, float z) const
 		{
 			const uint8_t h = hash & 15;
@@ -157,7 +153,7 @@ namespace wi::noise
 			constexpr float ReciprocalTwoPi = 0.159154943f;
 			constexpr float TwoPi = 6.283185307f;
 			float vResult = angle * ReciprocalTwoPi;
-			vResult = std::nearbyint(vResult);
+			vResult = std::round(vResult);
 			return fnmadd_compat(vResult, TwoPi, angle);
 		}
 		inline float compute_sin(float x) noexcept
@@ -223,8 +219,8 @@ namespace wi::noise
 					XMFLOAT2 g = XMFLOAT2(float(i), float(j));
 					XMFLOAT2 o = hash(XMFLOAT2(n.x + g.x, n.y + g.y));
 					XMFLOAT2 r;
-					r.x = g.x - f.x + (0.5f + 0.5f * std::sin(seed * o.x));
-					r.y = g.y - f.y + (0.5f + 0.5f * std::sin(seed * o.y));
+					r.x = g.x - f.x + (0.5f + 0.5f * compute_sin(seed * o.x));
+					r.y = g.y - f.y + (0.5f + 0.5f * compute_sin(seed * o.y));
 					float d = dot(r, r);
 					if (d < m.x)
 					{

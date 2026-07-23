@@ -2234,15 +2234,13 @@ void LoadBuffers()
 	{
 		TextureDesc desc;
 		desc.type = TextureDesc::Type::TEXTURE_3D;
-		desc.format = Format::R16_FLOAT;
+		desc.format = Format::R16G16_FLOAT;
 		desc.width = 32;
 		desc.height = 32;
 		desc.depth = 32;
 		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_3D_WIND]);
 		device->SetName(&textures[TEXTYPE_3D_WIND], "textures[TEXTYPE_3D_WIND]");
-		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_3D_WIND_PREV]);
-		device->SetName(&textures[TEXTYPE_3D_WIND_PREV], "textures[TEXTYPE_3D_WIND_PREV]");
 	}
 }
 void SetUpStates()
@@ -4335,7 +4333,6 @@ void UpdatePerFrameData(
 	frameCB.texture_skyluminancelut_index = device->GetDescriptorIndex(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], SubresourceType::SRV);
 	frameCB.texture_cameravolumelut_index = device->GetDescriptorIndex(&textures[TEXTYPE_3D_SKYATMOSPHERE_CAMERAVOLUMELUT], SubresourceType::SRV);
 	frameCB.texture_wind_index = device->GetDescriptorIndex(&textures[TEXTYPE_3D_WIND], SubresourceType::SRV);
-	frameCB.texture_wind_prev_index = device->GetDescriptorIndex(&textures[TEXTYPE_3D_WIND_PREV], SubresourceType::SRV);
 
 	// See if indirect debug buffer needs to be resized:
 	if (indirectDebugStatsReadback_available[device->GetBufferIndex()] && indirectDebugStatsReadback[device->GetBufferIndex()].mapped_data != nullptr)
@@ -5091,12 +5088,10 @@ void UpdateRenderData(
 	auto prof_updatebuffer_gpu = wi::profiler::BeginRangeGPU("Update Buffers (GPU)", cmd);
 
 	PushBarrier(GPUBarrier::Image(&textures[TEXTYPE_3D_WIND], textures[TEXTYPE_3D_WIND].desc.layout, ResourceState::UNORDERED_ACCESS));
-	PushBarrier(GPUBarrier::Image(&textures[TEXTYPE_3D_WIND_PREV], textures[TEXTYPE_3D_WIND_PREV].desc.layout, ResourceState::UNORDERED_ACCESS));
 	PushBarrier(GPUBarrier::Buffer(&buffers[BUFFERTYPE_INDIRECT_DEBUG_0], ResourceState::VERTEX_BUFFER | ResourceState::INDIRECT_ARGUMENT, ResourceState::COPY_SRC));
 	FlushBarriers(cmd);
 
 	device->ClearUAV(&textures[TEXTYPE_3D_WIND], 0, cmd);
-	device->ClearUAV(&textures[TEXTYPE_3D_WIND_PREV], 0, cmd);
 	PushBarrier(GPUBarrier::Memory());
 
 	device->CopyBuffer(&indirectDebugStatsReadback[device->GetBufferIndex()], 0, &buffers[BUFFERTYPE_INDIRECT_DEBUG_0], 0, sizeof(IndirectDrawArgsInstanced), cmd);
@@ -5215,12 +5210,10 @@ void UpdateRenderData(
 		{
 			device->BindComputeShader(&shaders[CSTYPE_WIND], cmd);
 			device->BindUAV(&textures[TEXTYPE_3D_WIND], 0, cmd);
-			device->BindUAV(&textures[TEXTYPE_3D_WIND_PREV], 1, cmd);
 			const TextureDesc& desc = textures[TEXTYPE_3D_WIND].GetDesc();
 			device->Dispatch(desc.width / 8, desc.height / 8, desc.depth / 8, cmd);
 		}
 		PushBarrier(GPUBarrier::Image(&textures[TEXTYPE_3D_WIND], ResourceState::UNORDERED_ACCESS, textures[TEXTYPE_3D_WIND].desc.layout));
-		PushBarrier(GPUBarrier::Image(&textures[TEXTYPE_3D_WIND_PREV], ResourceState::UNORDERED_ACCESS, textures[TEXTYPE_3D_WIND_PREV].desc.layout));
 		device->EventEnd(cmd);
 		wi::profiler::EndRange(range);
 	}
@@ -19849,8 +19842,7 @@ wi::Resource CreatePaintableTexture(uint32_t width, uint32_t height, uint32_t mi
 	desc.format = Format::R8G8B8A8_UNORM;
 	desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS | BindFlag::RENDER_TARGET;
 	desc.misc_flags = ResourceMiscFlag::TYPED_FORMAT_CASTING;
-	wi::vector<wi::Color> data(desc.width * desc.height);
-	std::fill(data.begin(), data.end(), initialColor);
+	wi::vector<wi::Color> data(desc.width * desc.height, initialColor);
 	SubresourceData initdata[32] = {};
 	for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
 	{

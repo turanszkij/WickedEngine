@@ -1,3 +1,4 @@
+#define DISABLE_HALF_PRECISION // compiler issue
 #include "globals.hlsli"
 #include "raytracingHF.hlsli"
 #include "lightingHF.hlsli"

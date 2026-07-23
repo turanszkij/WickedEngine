@@ -1,3 +1,4 @@
+#define DISABLE_HALF_PRECISION // compiler issue
 #include "globals.hlsli"
 #include "ShaderInterop_DDGI.h"
 #include "bc6h.hlsli"

@@ -8,7 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		1E640FB52F0AE03E003D9FC7 /* offlineshadercompiler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E640FB42F0AE03E003D9FC7 /* offlineshadercompiler.cpp */; };
-		1E640FC92F0AE1C3003D9FC7 /* libWickedEngine.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E640FC22F0AE07B003D9FC7 /* libWickedEngine.a */; };
+		1E640FC92F0AE1C3003D9FC7 /* libWickedEngine_MacOS.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E640FC22F0AE07B003D9FC7 /* libWickedEngine_MacOS.a */; };
 		1E640FD02F0AE275003D9FC7 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E640FCF2F0AE275003D9FC7 /* Metal.framework */; };
 		1E640FD42F0AE282003D9FC7 /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E640FD32F0AE282003D9FC7 /* AppKit.framework */; };
 		1EBD1C0D2F2525BD00C29B34 /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1EBD1C0B2F2525BD00C29B34 /* GameController.framework */; };
@@ -53,7 +53,7 @@
 				1E640FD02F0AE275003D9FC7 /* Metal.framework in Frameworks */,
 				1E640FD42F0AE282003D9FC7 /* AppKit.framework in Frameworks */,
 				1EBD1C0D2F2525BD00C29B34 /* GameController.framework in Frameworks */,
-				1E640FC92F0AE1C3003D9FC7 /* libWickedEngine.a in Frameworks */,
+				1E640FC92F0AE1C3003D9FC7 /* libWickedEngine_MacOS.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -91,7 +91,7 @@
 		1E640FBE2F0AE07B003D9FC7 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				1E640FC22F0AE07B003D9FC7 /* libWickedEngine.a */,
+				1E640FC22F0AE07B003D9FC7 /* libWickedEngine_MacOS.a */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -158,10 +158,10 @@
 /* End PBXProject section */
 
 /* Begin PBXReferenceProxy section */
-		1E640FC22F0AE07B003D9FC7 /* libWickedEngine.a */ = {
+		1E640FC22F0AE07B003D9FC7 /* libWickedEngine_MacOS.a */ = {
 			isa = PBXReferenceProxy;
 			fileType = archive.ar;
-			path = libWickedEngine.a;
+			path = libWickedEngine_MacOS.a;
 			remoteRef = 1E640FC12F0AE07B003D9FC7 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
@@ -300,7 +300,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				GCC_ENABLE_CPP_EXCEPTIONS = NO;
 				GCC_ENABLE_CPP_RTTI = NO;
-				MACOSX_DEPLOYMENT_TARGET = 15.6;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -311,7 +311,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				GCC_ENABLE_CPP_EXCEPTIONS = NO;
 				GCC_ENABLE_CPP_RTTI = NO;
-				MACOSX_DEPLOYMENT_TARGET = 15.6;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
