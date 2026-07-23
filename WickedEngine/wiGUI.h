@@ -438,6 +438,10 @@ namespace wi::gui
 		float overscroll = 0;
 		bool vertical = true;
 		float safe_area = 0;
+		// Sticky required-state and the margin that keeps it sticky. See
+		// SetHysteresis and Update for why this exists.
+		bool scrollbar_required = false;
+		float scrollbar_hysteresis = 0;
 		XMFLOAT2 grab_pos = {};
 		float grab_delta = 0;
 
@@ -462,10 +466,17 @@ namespace wi::gui
 		//	1: full extra offset
 		void SetOverScroll(float amount) { overscroll = amount; }
 		// Check whether the scrollbar is required (when the items don't fit and scrolling could be used)
-		bool IsScrollbarRequired() const { return scrollbar_granularity < 1; }
+		bool IsScrollbarRequired() const { return scrollbar_required; }
 		// Check whether the scrollbar is at the beginning
 		bool IsScrolledToBegin() const { return scrollbar_delta <= 0; }
 		void SetSafeArea(float value) { safe_area = value; }
+		// Hysteresis margin (in list-length units) applied to the
+		// required-state: once shown, the scrollbar stays shown until the
+		// content fits with this much extra room. Set it to the width the
+		// scrollbar reserves so a width-derived content height (aspect-scaled
+		// previews) can't oscillate the scrollbar on/off every frame. 0
+		// disables hysteresis.
+		void SetHysteresis(float value) { scrollbar_hysteresis = value; }
 
 		enum SCROLLBAR_STATE
 		{

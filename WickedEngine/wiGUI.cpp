@@ -1189,6 +1189,20 @@ namespace wi::gui
 		}
 		scrollbar_length = std::max(0.0f, scrollbar_length);
 
+		// Decide whether the scrollbar is required, with hysteresis. Reserving
+		// the scrollbar's width shrinks the content area, and width-derived
+		// content (aspect-scaled previews) then gets shorter, which can make it
+		// fit and hide the scrollbar, which widens the content again - a
+		// per-frame on/off flicker. Once shown, keep it shown until the content
+		// fits by a margin (scrollbar_hysteresis), which breaks that loop. With
+		// hysteresis 0 this reduces to the old "content taller than the visible
+		// area" test.
+		const float content_over_area = list_length - safe_area;
+		const float required_threshold = scrollbar_required
+			? (scrollbar_size - scrollbar_hysteresis)
+			: scrollbar_size;
+		scrollbar_required = content_over_area > required_threshold;
+
 		if (IsEnabled() && dt > 0)
 		{
 			if (state == FOCUS)
@@ -4674,6 +4688,10 @@ namespace wi::gui
 			scrollbar_horizontal.SetPos(XMFLOAT2(translation.x + control_size, translation.y + scale.y - control_size));
 			scrollbar_horizontal.AttachTo(this);
 			scrollbar_horizontal.SetSafeArea(control_size * 2);
+			// Keep the scrollbar reserved until content fits by its own
+			// reserved width, so aspect-scaled content can't flicker it on/off
+			// each frame.
+			scrollbar_horizontal.SetHysteresis(control_size);
 		}
 		if (scrollbar_vertical.parent != nullptr)
 		{
@@ -4681,6 +4699,10 @@ namespace wi::gui
 			scrollbar_vertical.SetSize(XMFLOAT2(control_size, GetWidgetAreaSize().y - control_size));
 			scrollbar_vertical.SetPos(XMFLOAT2(translation.x + scale.x - control_size, translation.y + control_size));
 			scrollbar_vertical.AttachTo(this);
+			// See the horizontal scrollbar above: hysteresis prevents an on/off
+			// oscillation when reserving the scrollbar width shortens
+			// width-derived content (e.g. add_fullwidth_aspect previews).
+			scrollbar_vertical.SetHysteresis(control_size);
 		}
 
 		if (onResize)
