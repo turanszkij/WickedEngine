@@ -1881,4 +1881,26 @@ struct alignas(16) DDGIProbe
 	uint2 offset;
 };
 
+// This per-surfel surfel structure will be accessed rapidly on GI lookup, so
+// keep it as small as possible But also ensure that it is 16-byte aligned for
+// structured buffer access performance
+struct alignas(16) Surfel
+{
+	SH::L1_RGB::Packed radiance;
+	uint2 normal;
+	float3 position;
+	uint radius_packed; // 16-bit half: per-surfel world radius (distance scaled)
+
+#ifndef __cplusplus
+	inline float GetRadius() { return f16tof32(radius_packed); }
+	inline void SetRadius(float value) { radius_packed = f32tof16(value); }
+#endif // __cplusplus
+};
+
+struct SurfelGridCell
+{
+	uint count;
+	uint offset;
+};
+
 #endif // WI_SHADERINTEROP_RENDERER_H

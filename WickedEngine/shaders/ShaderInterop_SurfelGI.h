@@ -99,20 +99,6 @@ static_assert(SURFEL_RECYCLE_RECENCY_MAX < 256, "Must be < 256 because it is pac
 static_assert(SURFEL_RAY_BOOST_MAX < 256, "Must be < 256 because it is packed at 8 bits!");
 #endif // __cplusplus
 
-// This per-surfel surfel structure will be accessed rapidly on GI lookup, so keep it as small as possible
-//	But also ensure that it is 16-byte aligned for structured buffer access performance
-struct alignas(16) Surfel
-{
-	SH::L1_RGB::Packed radiance;
-	uint2 normal;
-	float3 position;
-	uint radius_packed; // 16-bit half: per-surfel world radius (distance scaled)
-
-#ifndef __cplusplus
-	inline float GetRadius() { return f16tof32(radius_packed); }
-	inline void SetRadius(float value) { radius_packed = f32tof16(value); }
-#endif // __cplusplus
-};
 // This per-surfel structure will store all additional persistent data per surfel that isn't needed at GI lookup
 struct SurfelData
 {
@@ -202,11 +188,6 @@ struct SurfelRayDataPacked
 	}
 #endif // __cplusplus
 };
-struct SurfelGridCell
-{
-	uint count;
-	uint offset;
-};
 struct PushConstantsSurfelRaytrace
 {
 	uint instanceInclusionMask;
@@ -229,25 +210,6 @@ struct SurfelDebugPushConstants
 };
 
 #ifndef __cplusplus
-
-// Bindless views of the world-space surfel cache, so shaders outside the surfel
-// passes (which bind it explicitly at t0..t2) can gather it - used by
-// SampleSurfelGI below for the TRANSPARENT forward path. Declared here rather
-// than in globals.hlsli because they reference the Surfel / SurfelGridCell
-// structs (defined above); the surfel cell index list reuses the existing
-// bindless_structured_uint. The three backend forms mirror globals.hlsli's
-// bindless_structured_* declarations; the register-space form adds spaces
-// 211/212, which the default root signature declares.
-#if defined(__PSSL__) || (defined(__hlsl_dx_compiler) && !defined(__spirv__) && __SHADER_TARGET_MAJOR >= 6 && __SHADER_TARGET_MINOR >= 6)
-static const BindlessResource<StructuredBuffer<Surfel> > bindless_structured_surfel;
-static const BindlessResource<StructuredBuffer<SurfelGridCell> > bindless_structured_surfelgridcell;
-#elif defined(__spirv__)
-[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<Surfel> bindless_structured_surfel[];
-[[vk::binding(0, DESCRIPTOR_SET_BINDLESS_STORAGE_BUFFER)]] StructuredBuffer<SurfelGridCell> bindless_structured_surfelgridcell[];
-#else
-StructuredBuffer<Surfel> bindless_structured_surfel[] : register(space211);
-StructuredBuffer<SurfelGridCell> bindless_structured_surfelgridcell[] : register(space212);
-#endif
 
 // World-space cell size (and surfel radius) of cascaded grid level L. Level 0
 // is the finest (SURFEL_MIN_RADIUS); each coarser level doubles. A surfel is
