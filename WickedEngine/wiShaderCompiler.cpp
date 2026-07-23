@@ -199,6 +199,8 @@ namespace wi::shadercompiler
 			args.push_back(L"-D"); args.push_back(L"DESCRIPTOR_SET_BINDLESS_STORAGE_TEXEL_BUFFER=" + std::to_wstring((int)wi::graphics::GraphicsDevice_Vulkan::DESCRIPTOR_SET_BINDLESS_STORAGE_TEXEL_BUFFER));
 			args.push_back(L"-D"); args.push_back(L"DESCRIPTOR_SET_BINDLESS_ACCELERATION_STRUCTURE=" + std::to_wstring((int)wi::graphics::GraphicsDevice_Vulkan::DESCRIPTOR_SET_BINDLESS_ACCELERATION_STRUCTURE));
 
+			args.push_back(L"-Vd"); // compiler issue
+
 			break;
 		case ShaderFormat::METAL:
 			args.push_back(L"-D"); args.push_back(L"__metal__");
