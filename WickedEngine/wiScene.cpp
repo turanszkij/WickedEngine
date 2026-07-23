@@ -129,6 +129,90 @@ namespace wi::scene
 			}
 		}
 
+		// Lazy incremental compaction of the instance slot range. Capacity only
+		// grows during normal operation, so a scene that sheds most of a large
+		// object peak (e.g. streaming a big region out) would otherwise keep
+		// paying to zero + build the wasted trailing slots every frame. Reclaim
+		// them by relocating objects out of the highest occupied slots into the
+		// lowest free holes, then trimming the now-free tail off the capacity.
+		//
+		// A relocation changes an object's stable slot, which re-invalidates
+		// its GPU caches (surfels) - the very churn stable slots exist to avoid
+		// - so this is deliberately conservative: it only runs once the waste
+		// is large (both a ratio and an absolute floor), and moves at most a
+		// small capped number of objects per frame so the churn stays tiny and
+		// spread out.
+		{
+			const uint32_t liveCount = (uint32_t)objects.GetCount();
+			constexpr uint32_t MIN_COMPACT_SLACK = 1024; // skip small waste
+			constexpr uint32_t MAX_RELOCATIONS_PER_FRAME = 128; // bound churn
+
+			if (liveCount == 0)
+			{
+				// Nothing alive: drop straight to an empty range.
+				objectInstanceCapacity = 0;
+				instanceSlotOwners.clear();
+				freeInstanceSlots.clear();
+			}
+			else if (objectInstanceCapacity > liveCount * 2 &&
+				objectInstanceCapacity - liveCount >= MIN_COMPACT_SLACK)
+			{
+				// Two pointers: low walks up to free holes, high walks down to
+				// occupied slots. Move the topmost objects into the lowest
+				// holes until they meet (fully compacted) or the per-frame cap
+				// is hit.
+				uint32_t low = 0;
+				uint32_t high = objectInstanceCapacity;
+				uint32_t relocated = 0;
+				while (relocated < MAX_RELOCATIONS_PER_FRAME)
+				{
+					while (low < objectInstanceCapacity &&
+						instanceSlotOwners[low] != INVALID_ENTITY)
+					{
+						++low;
+					}
+					do
+					{
+						--high;
+					} while (high > low &&
+						instanceSlotOwners[high] == INVALID_ENTITY);
+					if (low >= high)
+					{
+						break; // all holes are above the occupied slots
+					}
+
+					const Entity entity = instanceSlotOwners[high];
+					ObjectComponent* object = objects.GetComponent(entity);
+					assert(object != nullptr && "compaction slot owner must be live");
+					object->gpuInstanceIndex = low;
+					instanceSlotOwners[low] = entity;
+					instanceSlotOwners[high] = INVALID_ENTITY;
+					++relocated;
+					++low;
+				}
+
+				// Trim the free tail, then rebuild the free list for the holes
+				// that remain below the new (possibly still partial) capacity.
+				uint32_t newCapacity = objectInstanceCapacity;
+				while (newCapacity > 0 &&
+					instanceSlotOwners[newCapacity - 1] == INVALID_ENTITY)
+				{
+					--newCapacity;
+				}
+				objectInstanceCapacity = newCapacity;
+				instanceSlotOwners.resize(newCapacity);
+
+				freeInstanceSlots.clear();
+				for (uint32_t slot = 0; slot < newCapacity; ++slot)
+				{
+					if (instanceSlotOwners[slot] == INVALID_ENTITY)
+					{
+						freeInstanceSlots.push_back(slot);
+					}
+				}
+			}
+		}
+
 		// Objects occupy the stable slot range [0, objectInstanceCapacity);
 		// hairs, emitters, impostor and rain instances append after it.
 		instanceArraySize = objectInstanceCapacity + hairs.GetCount() + emitters.GetCount();
