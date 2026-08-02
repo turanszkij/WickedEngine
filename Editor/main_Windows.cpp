@@ -181,6 +181,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		fullscreen = editor.config.GetBool("fullscreen");
 		borderless = editor.config.GetBool("borderless");
 		editor.allow_hdr = editor.config.GetBool("allow_hdr");
+		if (editor.config.GetBool("window_maximized"))
+		{
+			nCmdShow = SW_MAXIMIZE;
+		}
 
 		wilog("config.ini loaded in %.2f milliseconds\n", (float)timer.elapsed_milliseconds());
 	}
@@ -236,6 +240,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	ShowWindow(hWnd, nCmdShow);
 	UpdateWindow(hWnd);
 	DragAcceptFiles(hWnd, TRUE);
+	SetForegroundWindow(hWnd);
 
 	editor.SetWindow(hWnd);
 

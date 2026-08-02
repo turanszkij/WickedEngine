@@ -31,40 +31,40 @@ public:
 
 int sdl_loop()
 {
-    while (editor.KeepRunning())
-    {
-        editor.Run();
-        SDL_Event event;
-        while(SDL_PollEvent(&event)){
-            bool textinput_action_delete = false;
-            wi::input::sdlinput::ProcessEvent(event);
-            switch(event.type){
-                case SDL_QUIT:
-                    editor.Exit();
-                    break;
-                case SDL_WINDOWEVENT:
-                    switch (event.window.event) {
-                        case SDL_WINDOWEVENT_RESIZED:
-                            // Tells the engine to reload window configuration (size and dpi)
-                            editor.SetWindow(editor.window);
-                            editor.SaveWindowSize();
-                            break;
-                        case SDL_WINDOWEVENT_FOCUS_LOST:
-                            editor.is_window_active = false;
-                            break;
-                        case SDL_WINDOWEVENT_FOCUS_GAINED:
-                            editor.is_window_active = true;
+	while (editor.KeepRunning())
+	{
+		editor.Run();
+		SDL_Event event;
+		while(SDL_PollEvent(&event)){
+			bool textinput_action_delete = false;
+			wi::input::sdlinput::ProcessEvent(event);
+			switch(event.type){
+				case SDL_QUIT:
+					editor.Exit();
+					break;
+				case SDL_WINDOWEVENT:
+					switch (event.window.event) {
+						case SDL_WINDOWEVENT_RESIZED:
+							// Tells the engine to reload window configuration (size and dpi)
+							editor.SetWindow(editor.window);
+							editor.SaveWindowSize();
+							break;
+						case SDL_WINDOWEVENT_FOCUS_LOST:
+							editor.is_window_active = false;
+							break;
+						case SDL_WINDOWEVENT_FOCUS_GAINED:
+							editor.is_window_active = true;
 							editor.HotReload();
-                            break;
-                        default:
-                            break;
-                    }
-                case SDL_KEYDOWN:
-                    if(event.key.keysym.scancode == SDL_SCANCODE_BACKSPACE
-                       || event.key.keysym.scancode == SDL_SCANCODE_KP_BACKSPACE) {
-                        wi::gui::TextInputField::DeleteFromInput();
-                        textinput_action_delete = true;
-                    } else if(wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RCONTROL)) {
+							break;
+						default:
+							break;
+					}
+				case SDL_KEYDOWN:
+					if(event.key.keysym.scancode == SDL_SCANCODE_BACKSPACE
+					   || event.key.keysym.scancode == SDL_SCANCODE_KP_BACKSPACE) {
+						wi::gui::TextInputField::DeleteFromInput();
+						textinput_action_delete = true;
+					} else if(wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RCONTROL)) {
 						// HACK: AddInput will check if Ctrl is pressed and
 						// handle Ctrl-C/Ctrl-V/Ctrl-X for us, but
 						// wi::input::Down will only be accurate after
@@ -74,50 +74,50 @@ int sdl_loop()
 						wi::input::Update(editor.window, editor.canvas);
 						wi::gui::TextInputField::AddInput('?'); // AddInput actually ignores the argument when Ctrl is pressed
 					}
-                    break;
-                case SDL_TEXTINPUT:
-                    if(!textinput_action_delete){
-                        if(event.text.text[0] >= 21){
-                            wi::gui::TextInputField::AddInput(event.text.text[0]);
-                        }
-                    }
-                    break;
-                case SDL_DROPFILE:
-				    editor.renderComponent.Open(event.drop.file);
-                    editor.is_window_active = true;
-                    break;
-                default:
-                    break;
-            }
-        }
-    }
+					break;
+				case SDL_TEXTINPUT:
+					if(!textinput_action_delete){
+						if(event.text.text[0] >= 21){
+							wi::gui::TextInputField::AddInput(event.text.text[0]);
+						}
+					}
+					break;
+				case SDL_DROPFILE:
+					editor.renderComponent.Open(event.drop.file);
+					editor.is_window_active = true;
+					break;
+				default:
+					break;
+			}
+		}
+	}
 
-    return 0;
+	return 0;
 }
 
 void set_window_icon(SDL_Window *window) {
-    // these masks are needed to tell SDL_CreateRGBSurface(From)
-    // to assume the data it gets is byte-wise RGB(A) data
-    Uint32 rmask, gmask, bmask, amask;
+	// these masks are needed to tell SDL_CreateRGBSurface(From)
+	// to assume the data it gets is byte-wise RGB(A) data
+	Uint32 rmask, gmask, bmask, amask;
 #if SDL_BYTEORDER == SDL_BIG_ENDIAN
-    int shift = (embedded_image.bytes_per_pixel == 3) ? 8 : 0;
-    rmask = 0xff000000 >> shift;
-    gmask = 0x00ff0000 >> shift;
-    bmask = 0x0000ff00 >> shift;
-    amask = 0x000000ff >> shift;
+	int shift = (embedded_image.bytes_per_pixel == 3) ? 8 : 0;
+	rmask = 0xff000000 >> shift;
+	gmask = 0x00ff0000 >> shift;
+	bmask = 0x0000ff00 >> shift;
+	amask = 0x000000ff >> shift;
 #else // little endian, like x86
-    rmask = 0x000000ff;
-    gmask = 0x0000ff00;
-    bmask = 0x00ff0000;
-    amask = (embedded_image.bytes_per_pixel == 3) ? 0 : 0xff000000;
+	rmask = 0x000000ff;
+	gmask = 0x0000ff00;
+	bmask = 0x00ff0000;
+	amask = (embedded_image.bytes_per_pixel == 3) ? 0 : 0xff000000;
 #endif
-    SDL_Surface* icon = SDL_CreateRGBSurfaceFrom((void*)embedded_image.pixel_data, embedded_image.width,
+	SDL_Surface* icon = SDL_CreateRGBSurfaceFrom((void*)embedded_image.pixel_data, embedded_image.width,
 		embedded_image.height, embedded_image.bytes_per_pixel*8, embedded_image.bytes_per_pixel* embedded_image.width,
-        rmask, gmask, bmask, amask);
+		rmask, gmask, bmask, amask);
 
-    SDL_SetWindowIcon(window, icon);
+	SDL_SetWindowIcon(window, icon);
 
-    SDL_FreeSurface(icon);
+	SDL_FreeSurface(icon);
 }
 
 #ifdef __linux__
@@ -222,14 +222,15 @@ int main(int argc, char *argv[])
 
 	wi::arguments::Parse(argc, argv);
 
-    sdl2::sdlsystem_ptr_t system = sdl2::make_sdlsystem(SDL_INIT_EVERYTHING | SDL_INIT_EVENTS);
-    if (*system) {
+	sdl2::sdlsystem_ptr_t system = sdl2::make_sdlsystem(SDL_INIT_EVERYTHING | SDL_INIT_EVENTS);
+	if (*system) {
 		wilog_error("Error creating SDL2 system");
-    }
+	}
 
 	int width = 1920;
 	int height = 1080;
 	bool fullscreen = false;
+	bool window_maximized = false;
 
 	wi::Timer timer;
 	if (editor.config.Open("config.ini"))
@@ -241,6 +242,7 @@ int main(int argc, char *argv[])
 		}
 		fullscreen = editor.config.GetBool("fullscreen");
 		editor.allow_hdr = editor.config.GetBool("allow_hdr");
+		window_maximized = editor.config.GetBool("window_maximized");
 
 		wilog("config.ini loaded in %.2f milliseconds\n", (float)timer.elapsed_milliseconds());
 	}
@@ -248,16 +250,16 @@ int main(int argc, char *argv[])
 	width = std::max(100, width);
 	height = std::max(100, height);
 
-    sdl2::window_ptr_t window = sdl2::make_window(
+	sdl2::window_ptr_t window = sdl2::make_window(
 			wi::helper::StringRemoveTrailingWhitespaces(exe_customization.name_padded).c_str(),
-            SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-            width, height,
-            SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
-    if (!window) {
+			SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+			width, height,
+			SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+	if (!window) {
 		wilog_error("Error creating window");
-    }
+	}
 
-    set_window_icon(window.get());
+	set_window_icon(window.get());
 
 	if (fullscreen)
 	{
@@ -266,11 +268,16 @@ int main(int argc, char *argv[])
 		SDL_SetWindowFullscreen(window.get(), SDL_WINDOW_FULLSCREEN_DESKTOP);
 	}
 
-    editor.SetWindow(window.get());
+	if (window_maximized)
+	{
+		SDL_MaximizeWindow(window.get());
+	}
 
-    int ret = sdl_loop();
+	editor.SetWindow(window.get());
+
+	int ret = sdl_loop();
 
 	wi::jobsystem::ShutDown();
 
-    return ret;
+	return ret;
 }

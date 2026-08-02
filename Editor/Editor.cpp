@@ -390,20 +390,32 @@ void Editor::SaveWindowSize()
 #ifdef _WIN32
 		WINDOWPLACEMENT placement = {};
 		placement.length = sizeof(WINDOWPLACEMENT);
-		if (GetWindowPlacement(window, &placement) && placement.showCmd != SW_SHOWMAXIMIZED)
+		if (GetWindowPlacement(window, &placement))
 		{
-			RECT rect;
-			GetWindowRect(window, &rect);
-			int width = rect.right - rect.left;
-			int height = rect.bottom - rect.top;
-			if (width > 0 && height > 0)
+			if (placement.showCmd == SW_SHOWMAXIMIZED)
 			{
-				config.Set("width", width);
-				config.Set("height", height);
+				config.Set("window_maximized", true);
+			}
+			else
+			{
+				RECT rect;
+				GetWindowRect(window, &rect);
+				int width = rect.right - rect.left;
+				int height = rect.bottom - rect.top;
+				if (width > 0 && height > 0)
+				{
+					config.Set("width", width);
+					config.Set("height", height);
+				}
+				config.Set("window_maximized", false);
 			}
 		}
 #elif defined(SDL2)
-		if (!(SDL_GetWindowFlags(window) & SDL_WINDOW_MAXIMIZED))
+		if (SDL_GetWindowFlags(window) & SDL_WINDOW_MAXIMIZED)
+		{
+			config.Set("window_maximized", true);
+		}
+		else
 		{
 			int width = 0;
 			int height = 0;
@@ -413,6 +425,7 @@ void Editor::SaveWindowSize()
 				config.Set("width", width);
 				config.Set("height", height);
 			}
+			config.Set("window_maximized", false);
 		}
 #elif defined(__APPLE__)
 		XMUINT2 size = wi::apple::GetWindowSizeNoScaling(window);
