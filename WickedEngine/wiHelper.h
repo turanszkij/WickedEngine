@@ -245,4 +245,7 @@ namespace wi::helper
 
 	// Copies text to clipboard
 	void SetClipboardText(const std::wstring& wstr);
+
+	// Copies texture to clipboard
+	void SetClipboardImage(const wi::graphics::Texture& texture);
 };

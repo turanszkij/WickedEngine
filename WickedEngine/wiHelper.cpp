@@ -221,6 +221,8 @@ namespace wi::helper
 		bool result = saveTextureToFile(texture, filename);
 		assert(result);
 
+		SetClipboardImage(texture);
+
 		if (result)
 		{
 			return filename;
@@ -2318,6 +2320,65 @@ namespace wi::helper
 		std::string str;
 		StringConvert(wstr, str);
 		wi::apple::SetClipboardText(str.c_str());
+#endif // PLATFORM_WINDOWS_DESKTOP
+	}
+
+	void SetClipboardImage(const wi::graphics::Texture& texture)
+	{
+#ifdef PLATFORM_WINDOWS_DESKTOP
+		wi::vector<uint8_t> rgba;
+		if (!saveTextureToMemoryFile(texture, "RAW", rgba)) // "RAW" file format saves it to uncompressed RGBA bytes
+			return;
+
+		const size_t row_stride = wi::graphics::ComputeTextureMipRowPitch(texture.desc, 0);
+		const size_t image_size = row_stride * texture.desc.height;
+		const size_t total_size = sizeof(BITMAPINFOHEADER) + image_size;
+		HGLOBAL hClipboardData = GlobalAlloc(GMEM_MOVEABLE, total_size);
+		if (!hClipboardData)
+			return;
+
+		void* pData = GlobalLock(hClipboardData);
+		if (pData == nullptr)
+			return;
+
+		// Write standard DIB header chunk
+		BITMAPINFOHEADER* pHeader = (BITMAPINFOHEADER*)pData;
+		pHeader->biSize = sizeof(BITMAPINFOHEADER);
+		pHeader->biWidth = texture.desc.width;
+		pHeader->biHeight = texture.desc.height;
+		pHeader->biPlanes = 1;
+		pHeader->biBitCount = 32;
+		pHeader->biCompression = BI_RGB;
+		pHeader->biSizeImage = (DWORD)image_size;
+
+		// Clipboard DIB stores pixels bottom-to-top, flip vertical rows directly into memory block
+		unsigned char* pDestPixels = (unsigned char*)pData + sizeof(BITMAPINFOHEADER);
+		for (uint32_t y = 0; y < texture.desc.height; ++y)
+		{
+			unsigned char* src_row = rgba.data() + ((texture.desc.height - 1 - y) * row_stride);
+			unsigned char* dst_row = pDestPixels + (y * row_stride);
+
+			// Reorder raw storage layer RGBA -> Clipboard BGRA channel alignment configurations
+			for (uint32_t x = 0; x < texture.desc.width; ++x)
+			{
+				dst_row[x * 4 + 0] = src_row[x * 4 + 2]; // B
+				dst_row[x * 4 + 1] = src_row[x * 4 + 1]; // G
+				dst_row[x * 4 + 2] = src_row[x * 4 + 0]; // R
+				dst_row[x * 4 + 3] = src_row[x * 4 + 3]; // A
+			}
+		}
+		GlobalUnlock(hClipboardData);
+
+		if (OpenClipboard(NULL))
+		{
+			EmptyClipboard();
+			SetClipboardData(CF_DIB, hClipboardData);
+			CloseClipboard();
+		}
+		else
+		{
+			GlobalFree(hClipboardData);
+		}
 #endif // PLATFORM_WINDOWS_DESKTOP
 	}
 }
