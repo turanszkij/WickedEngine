@@ -2826,9 +2826,14 @@ namespace wi::scene
 
 	void Scene::DDGI::Serialize(wi::Archive& archive)
 	{
-		using namespace wi::graphics;
-		GraphicsDevice* device = GetDevice();
-
+		// The probe buffer and depth atlas were historically serialized as raw
+		// GPU dumps, but the runtime always rebuilds them zero-initialized when
+		// a serialized scene is loaded: the transient ray_buffer is never
+		// serialized, so Scene::Update recreates every DDGI GPU resource and
+		// resets frame_index (see wiScene.cpp). The blobs were therefore always
+		// discarded on load while still bloating the scene file - so they are
+		// now consumed for stream compatibility on read and written empty on
+		// save.
 		if (archive.IsReadMode())
 		{
 			archive >> frame_index;
@@ -2836,59 +2841,20 @@ namespace wi::scene
 
 			if (archive.GetVersion() >= 87)
 			{
-				archive >> grid_min;
-				archive >> grid_max;
+				archive >> cascades[0].grid_min;
+				archive >> cascades[0].grid_max;
 				archive >> smooth_backface;
 			}
 
 			wi::vector<uint8_t> data;
-
-			// color texture:
-			archive >> data;
-			if (!data.empty() && archive.GetVersion() >= 93)
-			{
-				const uint32_t probe_count = grid_dimensions.x * grid_dimensions.y * grid_dimensions.z;
-
-				GPUBufferDesc buf;
-				buf.stride = sizeof(DDGIProbe);
-				buf.size = buf.stride * probe_count;
-				buf.bind_flags = BindFlag::SHADER_RESOURCE;
-				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
-				buf.format = Format::UNKNOWN;
-				device->CreateBuffer(&buf, data.data(), &probe_buffer);
-				device->SetName(&probe_buffer, "ddgi.probe_buffer[serialized]");
-			}
-
-			// depth texture:
-			archive >> data;
-			if(!data.empty())
-			{
-				TextureDesc desc;
-				desc.width = DDGI_DEPTH_TEXELS * grid_dimensions.x * grid_dimensions.y;
-				desc.height = DDGI_DEPTH_TEXELS * grid_dimensions.z;
-				desc.format = Format::R16G16_FLOAT;
-				desc.bind_flags = BindFlag::SHADER_RESOURCE;
-
-				SubresourceData initdata;
-				initdata.data_ptr = data.data();
-				initdata.row_pitch = desc.width * GetFormatStride(desc.format);
-
-				device->CreateTexture(&desc, &initdata, &depth_texture);
-				device->SetName(&depth_texture, "ddgi.depth_texture[serialized]");
-			}
-
+			archive >> data; // probe buffer blob (color texture in older files)
+			archive >> data; // depth atlas blob
 			if (archive.GetVersion() < 93)
 			{
-				// offset texture:
-				archive >> data;
-
-				if (!data.empty())
-				{
-					wi::backlog::post("Found older DDGI data in the scene which is now incompatible. Please recompute the DDGI if you need it.", wi::backlog::LogLevel::Warning);
-					depth_texture = {};
-					probe_buffer = {};
-				}
+				archive >> data; // legacy offset texture blob
 			}
+			// All discarded: Scene::Update rebuilds probe_buffer and
+			// depth_texture zero-initialized on the first frame after load.
 		}
 		else
 		{
@@ -2897,27 +2863,16 @@ namespace wi::scene
 
 			if (archive.GetVersion() >= 87)
 			{
-				archive << grid_min;
-				archive << grid_max;
+				archive << cascades[0].grid_min;
+				archive << cascades[0].grid_max;
 				archive << smooth_backface;
 			}
 
-			wi::vector<uint8_t> data;
-
-			// Save probe buffer:
-			if (probe_buffer.IsValid())
-			{
-				wi::helper::saveBufferToMemory(probe_buffer, data);
-			}
-			archive << data;
-
-			data.clear();
-			if (depth_texture.IsValid())
-			{
-				bool success = wi::helper::saveTextureToMemory(depth_texture, data);
-				assert(success);
-			}
-			archive << data;
+			// Empty blobs: no point dumping buffers that are always rebuilt at
+			// load time (see the read path).
+			const wi::vector<uint8_t> data;
+			archive << data; // probe buffer blob
+			archive << data; // depth atlas blob
 		}
 	}
 

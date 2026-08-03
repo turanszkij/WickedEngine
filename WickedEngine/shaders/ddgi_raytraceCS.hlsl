@@ -2,7 +2,7 @@
 #include "globals.hlsli"
 #include "raytracingHF.hlsli"
 #include "lightingHF.hlsli"
-#include "ShaderInterop_DDGI.h"
+#include "ddgiHF.hlsli"
 
 // This shader runs one probe per thread group and each thread will trace rays and write the trace result to a ray data buffer
 //	ray data buffer will be later integrated by ddgi_updateCS shader which updates the DDGI irradiance and depth textures
@@ -40,8 +40,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	const uint probeIndex = rayAlloc & 0xFFFFF;
 	const uint rayIndex = rayAlloc >> 20u;
 	const uint rayCount = raycountBuffer[probeIndex] * DDGI_RAY_BUCKET_COUNT;
-	const uint3 probeCoord = ddgi_probe_coord(probeIndex);
-	const float3 probePos = ddgi_probe_position(probeCoord);
+	if (rayCount == 0)
+		return; // stale/cleared allocation record (nothing was allocated for this probe this frame)
+	uint cascade;
+	uint3 probeCoord;
+	ddgi_decode_probe(probeIndex, cascade, probeCoord);
+	const float3 probePos = ddgi_probe_position(cascade, probeCoord);
 
 	RNG rng;
 	rng.init(DTid.xx, GetFrame().frame_count);
@@ -273,9 +277,17 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 			DDGIRayData rayData;
 			rayData.direction = ray.Direction;
-			rayData.depth = -1;
+			// Miss (sky): store a far, positive depth. The sign of depth
+			// encodes front (+) vs back (-) face hits for the update pass, so a
+			// miss must be positive and is treated as "no near occluder" for
+			// visibility.
+			rayData.depth = (half)ddgi_max_distance(cascade);
 			rayData.radiance = radiance;
-			rayBuffer[probeIndex * DDGI_MAX_RAYCOUNT + rayIndex].store(rayData);
+			// DTid.x is this ray's slot in the compacted ray buffer: the
+			// allocation pass wrote this thread's record at (probe base +
+			// rayIndex), so record index == ray slot. The update pass reads a
+			// probe's rays at rayBaseBuffer[probeIndex] + i.
+			rayBuffer[DTid.x].store(rayData);
 		}
 		else
 		{
@@ -506,9 +518,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 			DDGIRayData rayData;
 			rayData.direction = ray.Direction;
-			rayData.depth = hit_depth;
+			// Encode a backface hit as a negative depth so the update pass can
+			// detect probes that are stuck inside geometry (a ray only hits a
+			// backface when the probe is behind that surface). Magnitude stays
+			// the hit distance.
+			rayData.depth = surface.IsBackface() ? -(half)hit_depth : (half)hit_depth;
 			rayData.radiance = radiance;
-			rayBuffer[probeIndex * DDGI_MAX_RAYCOUNT + rayIndex].store(rayData);
+			// Compacted slot; see the miss-path store above.
+			rayBuffer[DTid.x].store(rayData);
 		}
 
 	}

@@ -602,15 +602,31 @@ namespace wi::scene
 			{
 				ddgi.frame_index = 0;
 			}
+			// Derive every cascade from the cascade 0 user configuration. Safe
+			// to call each frame: it only recomputes static per-cascade
+			// parameters (dimensions, coverage, buffer offsets) and preserves
+			// scroll state.
+			ddgi.Compute_Cascade_Parameters();
+
 			if (!ddgi.ray_buffer.IsValid()) // Check the ray_buffer here because that is invalid with serialized DDGI data, and we can detect if dynamic resources need recreation when serialized is loaded
 			{
 				ddgi.frame_index = 0;
 
-				const uint32_t probe_count = ddgi.grid_dimensions.x * ddgi.grid_dimensions.y * ddgi.grid_dimensions.z;
+				const uint32_t probe_count = ddgi.Get_Total_Probe_Count();
+
+				// The ray and ray-allocation buffers are transient (rays are
+				// traced and integrated within one frame), so they are sized
+				// for the probes refreshed per frame (cascade 0 + one
+				// round-robin coarse cascade), NOT for every probe of every
+				// cascade. The ray allocation shader compacts rays contiguously
+				// and clamps to this capacity; each probe finds its rays via
+				// raybase_buffer. This keeps ray memory independent of
+				// CASCADE_COUNT.
+				const uint32_t ray_capacity = ddgi.Get_Ray_Buffer_Capacity();
 
 				GPUBufferDesc buf;
 				buf.stride = sizeof(DDGIRayDataPacked);
-				buf.size = buf.stride * probe_count * DDGI_MAX_RAYCOUNT;
+				buf.size = buf.stride * ray_capacity;
 				buf.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
 				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 				device->CreateBufferZeroed(&buf, &ddgi.ray_buffer);
@@ -629,8 +645,17 @@ namespace wi::scene
 				device->CreateBufferZeroed(&buf, &ddgi.raycount_buffer);
 				device->SetName(&ddgi.raycount_buffer, "ddgi.raycount_buffer");
 
+				// Per-probe base offset of its rays within the compacted
+				// ray_buffer, written by the ray allocation pass each frame.
 				buf.stride = sizeof(uint32_t);
-				buf.size = buf.stride * (probe_count * DDGI_MAX_RAYCOUNT + 4); // +4: counter/indirect dispatch args
+				buf.size = buf.stride * probe_count;
+				buf.misc_flags = ResourceMiscFlag::NONE;
+				buf.format = Format::R32_UINT;
+				device->CreateBufferZeroed(&buf, &ddgi.raybase_buffer);
+				device->SetName(&ddgi.raybase_buffer, "ddgi.raybase_buffer");
+
+				buf.stride = sizeof(uint32_t);
+				buf.size = buf.stride * (ray_capacity + 4); // +4: counter/indirect dispatch args
 				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED | ResourceMiscFlag::INDIRECT_ARGS;
 				buf.format = Format::UNKNOWN;
 				device->CreateBufferZeroed(&buf, &ddgi.rayallocation_buffer);
@@ -643,9 +668,13 @@ namespace wi::scene
 				device->CreateBufferZeroed(&buf, &ddgi.probe_buffer);
 				device->SetName(&ddgi.probe_buffer, "ddgi.probe_buffer");
 
+				// Shared depth atlas: each cascade's tiles occupy a distinct
+				// region, stacked vertically (all cascades share
+				// grid_dimensions, so every region is the same size).
+				const XMUINT3 cdims = ddgi.cascades[0].grid_dimensions;
 				TextureDesc tex;
-				tex.width = DDGI_DEPTH_TEXELS * ddgi.grid_dimensions.x * ddgi.grid_dimensions.y;
-				tex.height = DDGI_DEPTH_TEXELS * ddgi.grid_dimensions.z;
+				tex.width = DDGI_DEPTH_TEXELS * cdims.x * cdims.y;
+				tex.height = DDGI_DEPTH_TEXELS * cdims.z * DDGI::CASCADE_COUNT;
 				tex.format = Format::R16G16_FLOAT;
 				tex.misc_flags = {};
 				tex.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
@@ -657,22 +686,134 @@ namespace wi::scene
 				device->CreateTexture(&tex, &initdata, &ddgi.depth_texture);
 				device->SetName(&ddgi.depth_texture, "ddgi.depth_texture");
 			}
-			float3 grid_min = bounds.getMin();
-			grid_min.x -= 1;
-			grid_min.y -= 1;
-			grid_min.z -= 1;
-			float3 grid_max = bounds.getMax();
-			grid_max.x += 1;
-			grid_max.y += 1;
-			grid_max.z += 1;
-			float bounds_blend = 0.01f;
-			const float area = AABB(ddgi.grid_min, ddgi.grid_max).getArea();
-			if (ddgi.frame_index == 0 || area < 0.001f)
+			// Camera-centered grid with toroidal scrolling.
+			//
+			// The probe grid follows the main camera (scene.camera, the same
+			// eye used for LOD and VXGI) rather than growing to fit the whole
+			// scene. This keeps a fixed, user-controlled probe density around
+			// the viewer regardless of map size. When the camera crosses a cell
+			// boundary the grid snaps by whole cells and the probe buffers are
+			// addressed toroidally (via ddgi.scroll_offset), so only the newly
+			// entered slab of probes is reset while the rest keep their
+			// history.
+			//
+			// Multi-camera note: DDGI serves one grid, centered on scene.camera
+			// (set from the primary RenderPath3D). Secondary cameras (e.g.
+			// render-to-texture) sample whatever probes are near them; the grid
+			// does not split between views. Because scene.camera is set once
+			// per Scene::Update, the grid does not thrash.
+			const XMFLOAT3 camera_eye = camera.Eye;
+
+			// Snap each cascade independently. A cascade's cell size comes from
+			// its own coverage (grid_half_extents, doubled per cascade) and the
+			// shared grid dimensions. Y is asymmetric: less coverage below the
+			// camera than above, since probes buried under terrain are wasted.
+			for (uint32_t c = 0; c < DDGI::CASCADE_COUNT; ++c)
 			{
-				bounds_blend = 1;
+				auto& cascade = ddgi.cascades[c];
+
+				// Staggered update schedule. Cascade 0 (the fine near-camera
+				// grid the viewer sees most) refreshes every frame; the coarser
+				// cascades round-robin one per frame, so the per-frame
+				// trace/update cost stays ~constant (cascade 0 + one coarse)
+				// regardless of how many cascades exist - this is what makes 6
+				// cascades affordable. An inactive cascade is frozen: its grid
+				// does not scroll and its probes are neither traced nor
+				// integrated, so they simply hold their last result.
+				//
+				// At most TWO cascades refresh per frame - even on frame 0 - so
+				// the transient ray buffers can be sized for two cascades (see
+				// Get_Ray_Buffer_Capacity). A never-yet-refreshed probe is
+				// recognized on the GPU by its missing INITIALIZED flag and
+				// takes the full "fresh" path (max ray budget, no temporal
+				// blend) the first time its cascade activates, so each coarse
+				// cascade converges in one round-robin cycle after
+				// (re)creation. On frame 0 the grid of every cascade is still
+				// snapped (below) so cascade bounds are valid for sampling from
+				// the start.
+				const bool refresh =
+					(c == 0) ||
+					(DDGI::CASCADE_COUNT > 1 &&
+						c == 1u + (ddgi.frame_index % (DDGI::CASCADE_COUNT - 1)));
+				cascade.active = refresh;
+
+				if (!refresh)
+				{
+					cascade.scroll_delta = int3(0, 0, 0);
+					cascade.reset = false;
+					// On frame 0 fall through to snap this cascade's grid
+					// anyway (no GPU work happens for it; probes stay
+					// uninitialized).
+					if (ddgi.frame_index != 0)
+						continue;
+				}
+
+				const XMUINT3 dims = cascade.grid_dimensions;
+				const float cell_size_x = dims.x > 1 ? (cascade.grid_half_extents.x * 2.0f) / (dims.x - 1) : 1.0f;
+				const float cell_size_y = dims.y > 1 ? (cascade.grid_half_extents.y + cascade.grid_half_extents_down) / (dims.y - 1) : 1.0f;
+				const float cell_size_z = dims.z > 1 ? (cascade.grid_half_extents.z * 2.0f) / (dims.z - 1) : 1.0f;
+
+				// Desired grid min, snapped to the cell lattice so scrolls are
+				// whole cells.
+				XMFLOAT3 desired_grid_min;
+				desired_grid_min.x = std::floor((camera_eye.x - cascade.grid_half_extents.x) / cell_size_x) * cell_size_x;
+				desired_grid_min.y = std::floor((camera_eye.y - cascade.grid_half_extents_down) / cell_size_y) * cell_size_y;
+				desired_grid_min.z = std::floor((camera_eye.z - cascade.grid_half_extents.z) / cell_size_z) * cell_size_z;
+
+				const XMFLOAT3 desired_grid_max = XMFLOAT3(
+					desired_grid_min.x + cell_size_x * (dims.x - 1),
+					desired_grid_min.y + cell_size_y * (dims.y - 1),
+					desired_grid_min.z + cell_size_z * (dims.z - 1)
+				);
+
+				cascade.reset = false;
+				cascade.scroll_delta = int3(0, 0, 0);
+				if (ddgi.frame_index != 0)
+				{
+					// Whole-cell scroll delta since last frame.
+					cascade.scroll_delta.x = (int)std::lround((desired_grid_min.x - cascade.grid_min.x) / cell_size_x);
+					cascade.scroll_delta.y = (int)std::lround((desired_grid_min.y - cascade.grid_min.y) / cell_size_y);
+					cascade.scroll_delta.z = (int)std::lround((desired_grid_min.z - cascade.grid_min.z) / cell_size_z);
+				}
+
+				// A jump of a whole grid or more (teleport, big extent change)
+				// can't be handled as an incremental scroll - the scroll shader
+				// assumes |delta| < dimensions. Because frame_index is shared
+				// across cascades, a mid-run teleport of one cascade can't
+				// reset via frame 0 without wiping the other's history; instead
+				// flag this cascade to reset all its probes (the scroll shader
+				// marks them FRESH).
+				const bool teleport =
+					std::abs(cascade.scroll_delta.x) >= (int)dims.x ||
+					std::abs(cascade.scroll_delta.y) >= (int)dims.y ||
+					std::abs(cascade.scroll_delta.z) >= (int)dims.z;
+
+				if (ddgi.frame_index == 0)
+				{
+					// Frame 0: every probe resets via the shaders'
+					// frameIndex==0 path; just snap.
+					cascade.scroll_offset = int3(0, 0, 0);
+					cascade.scroll_delta = int3(0, 0, 0);
+					cascade.grid_min = desired_grid_min;
+					cascade.grid_max = desired_grid_max;
+				}
+				else if (teleport)
+				{
+					cascade.reset = true; // scroll shader resets every probe in this cascade
+					cascade.scroll_offset = int3(0, 0, 0);
+					cascade.scroll_delta = int3(0, 0, 0);
+					cascade.grid_min = desired_grid_min;
+					cascade.grid_max = desired_grid_max;
+				}
+				else if (cascade.scroll_delta.x != 0 || cascade.scroll_delta.y != 0 || cascade.scroll_delta.z != 0)
+				{
+					cascade.scroll_offset.x += cascade.scroll_delta.x;
+					cascade.scroll_offset.y += cascade.scroll_delta.y;
+					cascade.scroll_offset.z += cascade.scroll_delta.z;
+					cascade.grid_min = desired_grid_min;
+					cascade.grid_max = desired_grid_max;
+				}
 			}
-			ddgi.grid_min = wi::math::Lerp(ddgi.grid_min, grid_min, bounds_blend);
-			ddgi.grid_max = wi::math::Lerp(ddgi.grid_max, grid_max, bounds_blend);
 		}
 		else if (ddgi.ray_buffer.IsValid()) // if ray_buffer is valid, it means DDGI was not from serialization, so it will be deleted when DDGI is disabled
 		{
@@ -975,27 +1116,64 @@ namespace wi::scene
 		shaderscene.weather.rain_splash_scale = weather.rain_splash_scale;
 		shaderscene.weather.rain_color = weather.rain_color;
 
-		shaderscene.ddgi.grid_dimensions = ddgi.grid_dimensions;
-		shaderscene.ddgi.probe_count = ddgi.grid_dimensions.x * ddgi.grid_dimensions.y * ddgi.grid_dimensions.z;
 		shaderscene.ddgi.probe_buffer = device->GetDescriptorIndex(&ddgi.probe_buffer, SubresourceType::SRV);
+		shaderscene.ddgi.depth_texture = device->GetDescriptorIndex(&ddgi.depth_texture, SubresourceType::SRV);
+		shaderscene.ddgi.smooth_backface = ddgi.smooth_backface;
+		shaderscene.ddgi.total_probe_count = ddgi.Get_Total_Probe_Count();
+		shaderscene.ddgi.cascade_count = DDGI::CASCADE_COUNT;
+		shaderscene.ddgi.ray_buffer_capacity = ddgi.Get_Ray_Buffer_Capacity();
 		shaderscene.ddgi.depth_texture_resolution = uint2(ddgi.depth_texture.desc.width, ddgi.depth_texture.desc.height);
 		shaderscene.ddgi.depth_texture_resolution_rcp = float2(1.0f / shaderscene.ddgi.depth_texture_resolution.x, 1.0f / shaderscene.ddgi.depth_texture_resolution.y);
-		shaderscene.ddgi.depth_texture = device->GetDescriptorIndex(&ddgi.depth_texture, SubresourceType::SRV);
-		shaderscene.ddgi.grid_min = ddgi.grid_min;
-		shaderscene.ddgi.grid_extents.x = abs(ddgi.grid_max.x - ddgi.grid_min.x);
-		shaderscene.ddgi.grid_extents.y = abs(ddgi.grid_max.y - ddgi.grid_min.y);
-		shaderscene.ddgi.grid_extents.z = abs(ddgi.grid_max.z - ddgi.grid_min.z);
-		shaderscene.ddgi.grid_extents_rcp.x = 1.0f / shaderscene.ddgi.grid_extents.x;
-		shaderscene.ddgi.grid_extents_rcp.y = 1.0f / shaderscene.ddgi.grid_extents.y;
-		shaderscene.ddgi.grid_extents_rcp.z = 1.0f / shaderscene.ddgi.grid_extents.z;
-		shaderscene.ddgi.smooth_backface = ddgi.smooth_backface;
-		shaderscene.ddgi.cell_size.x = shaderscene.ddgi.grid_extents.x / (ddgi.grid_dimensions.x - 1);
-		shaderscene.ddgi.cell_size.y = shaderscene.ddgi.grid_extents.y / (ddgi.grid_dimensions.y - 1);
-		shaderscene.ddgi.cell_size.z = shaderscene.ddgi.grid_extents.z / (ddgi.grid_dimensions.z - 1);
-		shaderscene.ddgi.cell_size_rcp.x = 1.0f / shaderscene.ddgi.cell_size.x;
-		shaderscene.ddgi.cell_size_rcp.y = 1.0f / shaderscene.ddgi.cell_size.y;
-		shaderscene.ddgi.cell_size_rcp.z = 1.0f / shaderscene.ddgi.cell_size.z;
-		shaderscene.ddgi.max_distance = std::max(shaderscene.ddgi.cell_size.x, std::max(shaderscene.ddgi.cell_size.y, shaderscene.ddgi.cell_size.z)) * 1.5f;
+
+		// Per-cascade parameters. Each cascade's depth-atlas region is stacked
+		// vertically; since all cascades share grid_dimensions, every region
+		// has the same height (DDGI_DEPTH_TEXELS * grid_dimensions.z).
+		for (uint32_t c = 0; c < DDGI::CASCADE_COUNT; ++c)
+		{
+			const Scene::DDGI::Cascade& cascade = ddgi.cascades[c];
+			auto& dst = shaderscene.ddgi.cascades[c];
+
+			dst.grid_dimensions = cascade.grid_dimensions;
+			dst.probe_count = cascade.probe_count;
+			dst.probe_offset = cascade.probe_offset;
+			dst.reset = cascade.reset ? 1 : 0;
+
+			dst.grid_min = cascade.grid_min;
+			dst.grid_extents.x = std::abs(cascade.grid_max.x - cascade.grid_min.x);
+			dst.grid_extents.y = std::abs(cascade.grid_max.y - cascade.grid_min.y);
+			dst.grid_extents.z = std::abs(cascade.grid_max.z - cascade.grid_min.z);
+			dst.grid_extents_rcp.x = 1.0f / dst.grid_extents.x;
+			dst.grid_extents_rcp.y = 1.0f / dst.grid_extents.y;
+			dst.grid_extents_rcp.z = 1.0f / dst.grid_extents.z;
+
+			dst.cell_size.x = dst.grid_extents.x / (cascade.grid_dimensions.x - 1);
+			dst.cell_size.y = dst.grid_extents.y / (cascade.grid_dimensions.y - 1);
+			dst.cell_size.z = dst.grid_extents.z / (cascade.grid_dimensions.z - 1);
+			dst.cell_size_rcp.x = 1.0f / dst.cell_size.x;
+			dst.cell_size_rcp.y = 1.0f / dst.cell_size.y;
+			dst.cell_size_rcp.z = 1.0f / dst.cell_size.z;
+			dst.max_distance = std::max(dst.cell_size.x, std::max(dst.cell_size.y, dst.cell_size.z)) * 1.5f;
+
+			// Blend-rate compensation: this cascade refreshes once every
+			// `update_period` frames (cascade 0 every frame; the coarser
+			// cascades round-robin, so once every CASCADE_COUNT-1 frames).
+			// Scaling the temporal blend by the period keeps its wall-clock
+			// convergence in step with cascade 0. Must match the schedule in
+			// the grid-snapping loop above.
+			const uint32_t update_period =
+				(c == 0 || DDGI::CASCADE_COUNT <= 1) ? 1u : (DDGI::CASCADE_COUNT - 1);
+			dst.blend_scale = float(update_period);
+
+			dst.scroll_offset = int3(cascade.scroll_offset.x, cascade.scroll_offset.y, cascade.scroll_offset.z);
+			dst.scroll_delta = int3(cascade.scroll_delta.x, cascade.scroll_delta.y, cascade.scroll_delta.z);
+			dst.active = cascade.active ? 1 : 0;
+			dst.depth_atlas_offset = uint2(0, DDGI_DEPTH_TEXELS * cascade.grid_dimensions.z * c);
+
+			// Clear this frame's scroll delta / reset now that they are
+			// uploaded.
+			ddgi.cascades[c].scroll_delta = int3(0, 0, 0);
+			ddgi.cascades[c].reset = false;
+		}
 
 		// Expose the surfel GI cache to shaders that gather it outside the
 		// surfel passes (the forward transparent/water path via
@@ -9819,5 +9997,55 @@ namespace wi::scene
 				}
 			}
 		}
+	}
+
+	void Scene::DDGI::Compute_Cascade_Parameters()
+	{
+		// Cascade c uses the same probe grid dimensions as cascade 0, but
+		// doubles its cell spacing and world coverage (grid_half_extents) with
+		// each level, so cascade 0 is the fine near-camera grid and higher
+		// cascades reach progressively farther at lower density. Only the
+		// derived static parameters are (re)computed here; per-cascade scroll
+		// state (grid_min, scroll_offset, ...) is owned by the grid-snapping
+		// code and left intact, so this is safe to call every frame.
+		const uint32_t probe_count = grid_dimensions.x * grid_dimensions.y * grid_dimensions.z;
+		uint32_t probe_offset = 0;
+		for (uint32_t c = 0; c < CASCADE_COUNT; ++c)
+		{
+			const float spacing = float(1u << c); // 1, 2, 4, ...
+			cascades[c].grid_dimensions = grid_dimensions;
+			cascades[c].grid_half_extents = float3(
+				grid_half_extents.x * spacing,
+				grid_half_extents.y * spacing,
+				grid_half_extents.z * spacing);
+			cascades[c].grid_half_extents_down = grid_half_extents_down * spacing;
+			cascades[c].probe_offset = probe_offset;
+			cascades[c].probe_count = probe_count;
+			probe_offset += probe_count;
+		}
+	}
+
+	uint32_t Scene::DDGI::Get_Total_Probe_Count() const
+	{
+		uint32_t total = 0;
+		for (uint32_t c = 0; c < CASCADE_COUNT; ++c)
+			total += cascades[c].probe_count;
+		return total;
+	}
+
+	uint32_t Scene::DDGI::Get_Ray_Buffer_Capacity() const
+	{
+		// At most two cascades refresh in one frame (cascade 0 + one
+		// round-robin coarse cascade). Each cascade's per-probe budget is
+		// capped by ddgi_cascade_ray_budget (cascade 0 full, coarser cascades
+		// progressively fewer), so in the worst frame both demand their cap for
+		// every probe. The cap decreases with cascade index, so the heaviest
+		// pairing is cascade 0 plus cascade 1; size the buffer for exactly
+		// that. All cascades share the same probe count. Requires
+		// Compute_Cascade_Parameters() to have run.
+		uint32_t per_probe = ddgi_cascade_ray_budget(0);
+		if (CASCADE_COUNT > 1)
+			per_probe += ddgi_cascade_ray_budget(1);
+		return cascades[0].probe_count * per_probe;
 	}
 }

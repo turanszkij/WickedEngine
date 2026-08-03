@@ -5,6 +5,7 @@
 #include "ShaderInterop_VXGI.h"
 #include "ShaderInterop_Terrain.h"
 #include "ShaderInterop_VoxelGrid.h"
+#include "ShaderInterop_DDGI.h"
 
 struct alignas(16) ShaderScene
 {
@@ -34,30 +35,7 @@ struct alignas(16) ShaderScene
 
 	ShaderWeather weather;
 
-	struct alignas(16) DDGI
-	{
-		uint3 grid_dimensions;
-		uint probe_count;
-
-		uint2 depth_texture_resolution;
-		float2 depth_texture_resolution_rcp;
-
-		float3 grid_min;
-		int probe_buffer;
-
-		float3 grid_extents;
-		int depth_texture;
-
-		float3 cell_size;
-		float max_distance;
-
-		float3 grid_extents_rcp;
-		float padding;
-
-		float3 cell_size_rcp;
-		float smooth_backface;
-	};
-	DDGI ddgi;
+	ShaderDDGI ddgi;
 
 	// World-space handles to the surfel GI cache, so shaders OUTSIDE the surfel
 	// passes (which bind the cache explicitly) can gather it too - specifically
@@ -1875,10 +1853,52 @@ namespace SH
 }
 #endif // __cplusplus
 
+// DDGIProbe.flags bits:
+static const uint DDGIPROBE_FLAG_VALID = 1 << 0; // probe is not buried in solid geometry
+static const uint DDGIPROBE_FLAG_FRESH = 1 << 1; // probe was just (re)placed by a grid scroll; reset it this frame like frame 0
+// Set once the probe has been through a full update (depth pass). A cleared bit
+// means the probe has never been refreshed - flags == 0 is the buffer's zeroed
+// creation/reset state - so it must take the "fresh" path (max ray budget, no
+// temporal blend) on its first update. This is what lets coarse cascades skip
+// frame 0 (the transient ray buffers only fit two cascades per frame) and still
+// converge cleanly the first time the staggered schedule activates them.
+static const uint DDGIPROBE_FLAG_INITIALIZED = 1 << 2;
+// Set for one frame when a probe transitions from invalid (buried) to valid -
+// i.e. relocation just ejected it out of solid geometry into open space. It has
+// no useful colour history (a probe that spawned inside an object was never
+// lit), so on its next update it takes the full ray budget and the fresh
+// colour-reset path to converge cleanly from its new position in one step,
+// instead of trickling up from black. Unlike FRESH this does NOT reset the
+// probe offset, which would undo the ejection and send it straight back inside.
+static const uint DDGIPROBE_FLAG_COLOR_RESET = 1 << 3;
+// Set when every traced ray reached open space (no geometry within max_distance
+// in any direction) - the probe sees only sky. Such a probe has no surface
+// within range, so it is never in a shaded point's interpolation cage and
+// lighting it precisely does not matter; and per-frame sky/sun sampling noise
+// would otherwise inflate its variance-driven ray budget (like a buried probe's
+// noisy backfaces). The ray allocation pass caps its budget to a small fixed
+// count.
+static const uint DDGIPROBE_FLAG_OPEN = 1 << 4;
+// One-frame marker: set on the frame a probe transitions from invalid (buried)
+// to valid, i.e. relocation just ejected it out of a moving solid. Read by that
+// probe's neighbours in the next update so the still-valid probes just outside
+// the solid's newly-covered faces also take the fast colour-reset path - they
+// light those faces and would otherwise lag through the noise-damped estimator,
+// leaving the freshly-covered surface lit by stale (pre-occlusion, bright)
+// values for many frames. Because only a MOVING solid produces ejections, this
+// never fires for static geometry, so static objects do not shimmer.
+static const uint DDGIPROBE_FLAG_EJECTED = 1 << 5;
+
 struct alignas(16) DDGIProbe
 {
 	SH::L1_RGB::Packed radiance;
 	uint2 offset;
+	uint flags;
+	// Temporally smoothed "buried in solid" confidence in [0,1]. The per-frame
+	// enclosure test is noisy (a probe near the boundary only traces ~32 rays,
+	// re-randomized each frame), so the raw decision blinks. This is an EMA of
+	// that decision; the VALID flag is derived from it, which keeps it stable.
+	float enclosure_confidence;
 };
 
 // This per-surfel surfel structure will be accessed rapidly on GI lookup, so

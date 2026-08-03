@@ -206,17 +206,61 @@ namespace wi::scene
 		// DDGI resources:
 		struct DDGI
 		{
+			// Number of probe-grid cascades. Must match DDGI_CASCADE_COUNT in
+			// ShaderInterop_DDGI.h.
+			static constexpr uint32_t CASCADE_COUNT = 6;
+
 			uint frame_index = 0;
-			uint3 grid_dimensions = uint3(32, 8, 32); // The scene extents will be subdivided into a grid of this resolution, each grid cell will have one probe
-			float3 grid_min = float3(-1, -1, -1);
-			float3 grid_max = float3(1, 1, 1);
+
+			// User-facing configuration describes cascade 0 (the fine inner
+			// grid); coarser cascades are derived from it in
+			// Compute_Cascade_Parameters().
+			uint3 grid_dimensions = uint3(32, 8, 32); // Probes per axis for cascade 0
+			float3 grid_half_extents = float3(64, 16, 64); // Cascade 0 world-space coverage radius (X, Y, Z)
+			float grid_half_extents_down = 8.0F; // Cascade 0 downward Y coverage (less than up to avoid terrain waste)
 			float smooth_backface = 0.01f; // smoothness of backface test
+
+			// Per-cascade runtime state. Cascade 0 is the finest; each
+			// successive cascade doubles the cell spacing and coverage. Probes
+			// for all cascades are concatenated in the shared buffers by
+			// probe_offset.
+			struct Cascade
+			{
+				uint3 grid_dimensions = uint3(0, 0, 0);
+				float3 grid_min = float3(-1, -1, -1);
+				float3 grid_max = float3(1, 1, 1);
+				float3 grid_half_extents = float3(1, 1, 1);
+				float grid_half_extents_down = 1.0F;
+				int3 scroll_offset = int3(0, 0, 0); // Cumulative grid scroll in cell steps
+				int3 scroll_delta = int3(0, 0, 0);   // This frame's scroll delta
+				bool reset = false;                  // Force full reset of this cascade this frame
+				bool active = true;                  // Refreshed (snapped/traced/updated) this frame
+				uint probe_offset = 0;               // Start index in the shared buffers
+				uint probe_count = 0;                // Probes in this cascade
+			};
+			Cascade cascades[CASCADE_COUNT];
+
 			wi::graphics::GPUBuffer ray_buffer;
 			wi::graphics::GPUBuffer variance_buffer;
 			wi::graphics::GPUBuffer raycount_buffer;
 			wi::graphics::GPUBuffer rayallocation_buffer;
+			wi::graphics::GPUBuffer raybase_buffer; // Per-probe base offset of its rays in the compacted ray_buffer
 			wi::graphics::GPUBuffer probe_buffer;
 			wi::graphics::Texture depth_texture;
+
+			// Capacity of the transient ray buffers in rays: probes refreshed
+			// per frame (cascade 0 + one coarse) x DDGI_MAX_RAYCOUNT,
+			// independent of CASCADE_COUNT. Must match what the buffers were
+			// created with.
+			[[nodiscard]] uint32_t Get_Ray_Buffer_Capacity() const;
+
+			// Derives every cascade from the cascade 0 user configuration
+			// (grid_dimensions / grid_half_extents), preserving per-cascade
+			// scroll state. Cell spacing and coverage double with each cascade.
+			void Compute_Cascade_Parameters();
+
+			// Total probes across all cascades (sizes the shared buffers).
+			[[nodiscard]] uint32_t Get_Total_Probe_Count() const;
 
 			void Serialize(wi::Archive& archive);
 		} ddgi;

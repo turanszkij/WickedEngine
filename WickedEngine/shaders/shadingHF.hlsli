@@ -5,7 +5,7 @@
 #include "lightingHF.hlsli"
 #include "brdf.hlsli"
 #include "ShaderInterop_SurfelGI.h"
-#include "ShaderInterop_DDGI.h"
+#include "ddgiHF.hlsli"
 #include "capsuleShadowHF.hlsli"
 
 inline void LightMapping(in int lightmap, in float2 ATLAS, inout Lighting lighting, inout Surface surface)
