@@ -3431,7 +3431,9 @@ void RenderMeshes(
 				continue;
 
 			ShaderMeshInstancePointer poi;
-			poi.Create(instanceIndex, camera_index, dither);
+			// Hand the GPU the object's stable instance slot, not the
+			// ComponentManager index used for the CPU-side lookups above.
+			poi.Create(instance.gpuInstanceIndex, camera_index, dither);
 
 			// Write into actual GPU-buffer:
 			std::memcpy((ShaderMeshInstancePointer*)instances.data + instanceCount, &poi, sizeof(poi)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
@@ -5329,7 +5331,7 @@ void UpdateRenderData(
 					const MaterialComponent& material = vis.scene->materials[materialIndex];
 					auto& hair_update = hair_updates.emplace_back();
 					hair_update.hair = &hair;
-					hair_update.instanceIndex = (uint32_t)vis.scene->objects.GetCount() + hairIndex;
+					hair_update.instanceIndex = vis.scene->objectInstanceCapacity + hairIndex;
 					hair_update.mesh = mesh;
 					hair_update.material = &material;
 				}
@@ -5365,10 +5367,13 @@ void UpdateRenderData(
 		device->BindUAV(&vis.scene->impostorBuffer, 3, cmd, vis.scene->impostor_data.subresource_uav);
 		device->BindUAV(&vis.scene->impostorBuffer, 4, cmd, vis.scene->impostor_indirect.subresource_uav);
 
-		uint object_count = (uint)vis.scene->objects.GetCount();
-		device->PushConstants(&object_count, sizeof(object_count), cmd);
+		// Iterate the full stable instance-slot range (objects live at sparse
+		// slots with gaps), not the dense object count. Gap slots are skipped
+		// in the shader by their invalid (geometryCount == 0) instance data.
+		uint slot_count = vis.scene->objectInstanceCapacity;
+		device->PushConstants(&slot_count, sizeof(slot_count), cmd);
 
-		device->Dispatch((object_count + 63u) / 64u, 1, 1, cmd);
+		device->Dispatch((slot_count + 63u) / 64u, 1, 1, cmd);
 
 		PushBarrier(GPUBarrier::Buffer(&vis.scene->impostorBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE | ResourceState::INDIRECT_ARGUMENT));
 		FlushBarriers(cmd);
@@ -5602,7 +5607,7 @@ void UpdateRenderDataAsync(
 			Entity entity = vis.scene->emitters.GetEntity(emitterIndex);
 			const TransformComponent& transform = *vis.scene->transforms.GetComponent(entity);
 			const MeshComponent* mesh = vis.scene->meshes.GetComponent(emitter.meshID);
-			const uint32_t instanceIndex = uint32_t(vis.scene->objects.GetCount() + vis.scene->hairs.GetCount()) + emitterIndex;
+			const uint32_t instanceIndex = vis.scene->objectInstanceCapacity + uint32_t(vis.scene->hairs.GetCount()) + emitterIndex;
 
 			emitter.UpdateGPU(instanceIndex, mesh, cmd);
 		}
@@ -8807,7 +8812,7 @@ void DrawDebugWorld(
 
 			GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(ShaderMeshInstancePointer), cmd);
 			ShaderMeshInstancePointer poi;
-			poi.Create((uint)scene.objects.GetIndex(x.objectEntity));
+			poi.Create(object.gpuInstanceIndex); // stable GPU instance slot
 			std::memcpy(mem.data, &poi, sizeof(poi));
 
 			device->BindIndexBuffer(&mesh.generalBuffer, mesh.GetIndexFormat(), mesh.ib.offset, cmd);
@@ -10011,7 +10016,7 @@ void PaintDecals(const Scene& scene, CommandList cmd)
 		PaintDecalCB cb = {};
 		XMStoreFloat4x4(&cb.g_xPaintDecalMatrix, XMMatrixInverse(nullptr, XMLoadFloat4x4(&paint.decalMatrix)));
 		cb.g_xPaintDecalTexture = device->GetDescriptorIndex(&paint.in_texture, SubresourceType::SRV);
-		cb.g_xPaintDecalInstanceID = (uint)scene.objects.GetIndex(paint.objectEntity);
+		cb.g_xPaintDecalInstanceID = object.gpuInstanceIndex; // stable GPU instance slot
 		cb.g_xPaintDecalSlopeBlendPower = paint.slopeBlendPower;
 
 		device->BindPipelineState(&PSO_paintdecal, cmd);
@@ -11284,7 +11289,7 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 			push.vb_pos_wind = mesh.vb_pos_wind.descriptor_srv;
 			push.vb_nor = mesh.vb_nor.descriptor_srv;
 			push.vb_atl = mesh.vb_atl.descriptor_srv;
-			push.instanceIndex = objectIndex;
+			push.instanceIndex = object.gpuInstanceIndex; // stable GPU instance slot
 			device->PushConstants(&push, sizeof(push), cmd);
 
 			RaytracingCB cb = {};
@@ -11410,7 +11415,7 @@ void RefreshWetmaps(const Visibility& vis, CommandList cmd)
 		if (push.wetmap < 0)
 			continue;
 
-		push.instanceID = objectIndex;
+		push.instanceID = object.gpuInstanceIndex; // stable GPU instance slot
 		device->PushConstants(&push, sizeof(push), cmd);
 
 		device->Dispatch((vertexCount + 63u) / 64u, 1, 1, cmd);
@@ -11430,7 +11435,7 @@ void RefreshWetmaps(const Visibility& vis, CommandList cmd)
 		if (push.wetmap < 0)
 			continue;
 
-		push.instanceID = uint32_t(vis.scene->objects.GetCount() + hairIndex);
+		push.instanceID = vis.scene->objectInstanceCapacity + hairIndex;
 		device->PushConstants(&push, sizeof(push), cmd);
 
 		device->Dispatch((vertexCount + 63u) / 64u, 1, 1, cmd);

@@ -72,7 +72,150 @@ namespace wi::scene
 
 		StartBuildTopDownHierarchy();
 
-		instanceArraySize = objects.GetCount() + hairs.GetCount() + emitters.GetCount();
+		// Reconcile the stable per-object instance slots before the (later)
+		// parallel object update job reads ObjectComponent::gpuInstanceIndex to
+		// place instance data. Single-threaded so the free-list is not raced.
+		{
+			const size_t objectCount = objects.GetCount();
+
+			// Mark which existing slots are still validly owned this frame.
+			instanceSlotClaimed.assign(objectInstanceCapacity, false);
+			for (size_t i = 0; i < objectCount; ++i)
+			{
+				const uint32_t slot = objects[i].gpuInstanceIndex;
+				if (slot < objectInstanceCapacity &&
+					instanceSlotOwners[slot] == objects.GetEntity(i))
+				{
+					instanceSlotClaimed[slot] = true;
+				}
+			}
+
+			// Return slots whose owner was removed / relocated to the pool.
+			for (uint32_t slot = 0; slot < objectInstanceCapacity; ++slot)
+			{
+				if (instanceSlotOwners[slot] != INVALID_ENTITY &&
+					!instanceSlotClaimed[slot])
+				{
+					instanceSlotOwners[slot] = INVALID_ENTITY;
+					freeInstanceSlots.push_back(slot);
+				}
+			}
+
+			// Assign every object still lacking a valid slot a recycled or new
+			// one. Capacity only grows, so surviving objects keep their slot.
+			for (size_t i = 0; i < objectCount; ++i)
+			{
+				ObjectComponent& object = objects[i];
+				const Entity entity = objects.GetEntity(i);
+				const uint32_t slot = object.gpuInstanceIndex;
+				if (slot < objectInstanceCapacity &&
+					instanceSlotOwners[slot] == entity)
+				{
+					continue; // already holds a valid slot
+				}
+				uint32_t newSlot;
+				if (!freeInstanceSlots.empty())
+				{
+					newSlot = freeInstanceSlots.back();
+					freeInstanceSlots.pop_back();
+				}
+				else
+				{
+					newSlot = objectInstanceCapacity++;
+					instanceSlotOwners.push_back(INVALID_ENTITY);
+				}
+				object.gpuInstanceIndex = newSlot;
+				instanceSlotOwners[newSlot] = entity;
+			}
+		}
+
+		// Lazy incremental compaction of the instance slot range. Capacity only
+		// grows during normal operation, so a scene that sheds most of a large
+		// object peak (e.g. streaming a big region out) would otherwise keep
+		// paying to zero + build the wasted trailing slots every frame. Reclaim
+		// them by relocating objects out of the highest occupied slots into the
+		// lowest free holes, then trimming the now-free tail off the capacity.
+		//
+		// A relocation changes an object's stable slot, which re-invalidates
+		// its GPU caches (surfels) - the very churn stable slots exist to avoid
+		// - so this is deliberately conservative: it only runs once the waste
+		// is large (both a ratio and an absolute floor), and moves at most a
+		// small capped number of objects per frame so the churn stays tiny and
+		// spread out.
+		{
+			const uint32_t liveCount = (uint32_t)objects.GetCount();
+			constexpr uint32_t MIN_COMPACT_SLACK = 1024; // skip small waste
+			constexpr uint32_t MAX_RELOCATIONS_PER_FRAME = 128; // bound churn
+
+			if (liveCount == 0)
+			{
+				// Nothing alive: drop straight to an empty range.
+				objectInstanceCapacity = 0;
+				instanceSlotOwners.clear();
+				freeInstanceSlots.clear();
+			}
+			else if (objectInstanceCapacity > liveCount * 2 &&
+				objectInstanceCapacity - liveCount >= MIN_COMPACT_SLACK)
+			{
+				// Two pointers: low walks up to free holes, high walks down to
+				// occupied slots. Move the topmost objects into the lowest
+				// holes until they meet (fully compacted) or the per-frame cap
+				// is hit.
+				uint32_t low = 0;
+				uint32_t high = objectInstanceCapacity;
+				uint32_t relocated = 0;
+				while (relocated < MAX_RELOCATIONS_PER_FRAME)
+				{
+					while (low < objectInstanceCapacity &&
+						instanceSlotOwners[low] != INVALID_ENTITY)
+					{
+						++low;
+					}
+					do
+					{
+						--high;
+					} while (high > low &&
+						instanceSlotOwners[high] == INVALID_ENTITY);
+					if (low >= high)
+					{
+						break; // all holes are above the occupied slots
+					}
+
+					const Entity entity = instanceSlotOwners[high];
+					ObjectComponent* object = objects.GetComponent(entity);
+					assert(object != nullptr && "compaction slot owner must be live");
+					object->gpuInstanceIndex = low;
+					instanceSlotOwners[low] = entity;
+					instanceSlotOwners[high] = INVALID_ENTITY;
+					++relocated;
+					++low;
+				}
+
+				// Trim the free tail, then rebuild the free list for the holes
+				// that remain below the new (possibly still partial) capacity.
+				uint32_t newCapacity = objectInstanceCapacity;
+				while (newCapacity > 0 &&
+					instanceSlotOwners[newCapacity - 1] == INVALID_ENTITY)
+				{
+					--newCapacity;
+				}
+				objectInstanceCapacity = newCapacity;
+				instanceSlotOwners.resize(newCapacity);
+
+				freeInstanceSlots.clear();
+				for (uint32_t slot = 0; slot < newCapacity; ++slot)
+				{
+					if (instanceSlotOwners[slot] == INVALID_ENTITY)
+					{
+						freeInstanceSlots.push_back(slot);
+					}
+				}
+			}
+		}
+
+		// Objects occupy the stable slot range [0, objectInstanceCapacity);
+		// hairs, emitters, impostor and rain instances append after it.
+		instanceArraySize = objectInstanceCapacity + hairs.GetCount() + emitters.GetCount();
 		if (impostors.GetCount() > 0)
 		{
 			impostorInstanceOffset = uint32_t(instanceArraySize);
@@ -4681,7 +4824,12 @@ namespace wi::scene
 				inst.SetUserStencilRef(object.userStencilRef);
 				inst.rimHighlight = wi::math::pack_half4(XMFLOAT4(object.rimHighlightColor.x * object.rimHighlightColor.w, object.rimHighlightColor.y * object.rimHighlightColor.w, object.rimHighlightColor.z * object.rimHighlightColor.w, object.rimHighlightFalloff));
 
-				std::memcpy(instanceArrayMapped + args.jobIndex, &inst, sizeof(inst)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
+				// Write to the object's stable GPU instance slot (not the
+				// ComponentManager index), so cached instance indices survive
+				// unrelated object add/remove churn.
+				const uint32_t instanceSlot = object.gpuInstanceIndex;
+
+				std::memcpy(instanceArrayMapped + instanceSlot, &inst, sizeof(inst)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
 
 				if (TLAS_instancesMapped != nullptr)
 				{
@@ -4694,7 +4842,7 @@ namespace wi::scene
 							instance.transform[i][j] = worldMatrix.m[j][i];
 						}
 					}
-					instance.instance_id = args.jobIndex;
+					instance.instance_id = instanceSlot;
 					instance.instance_mask = layerMask == 0 ? 0 : 0xFF;
 					if (!object.IsRenderable() || !mesh.IsRenderable())
 					{
@@ -4728,7 +4876,7 @@ namespace wi::scene
 						instance.flags |= RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE;
 					}
 
-					void* dest = (void*)((size_t)TLAS_instancesMapped + (size_t)args.jobIndex * device->GetTopLevelAccelerationStructureInstanceSize());
+					void* dest = (void*)((size_t)TLAS_instancesMapped + (size_t)instanceSlot * device->GetTopLevelAccelerationStructureInstanceSize());
 					device->WriteTopLevelAccelerationStructureInstance(&instance, dest);
 				}
 
@@ -5159,7 +5307,7 @@ namespace wi::scene
 			}
 			inst.transformPrev = inst.transform;
 
-			const size_t instanceIndex = objects.GetCount() + args.jobIndex;
+			const size_t instanceIndex = objectInstanceCapacity + args.jobIndex;
 			std::memcpy(instanceArrayMapped + instanceIndex, &inst, sizeof(inst));
 
 			if (TLAS_instancesMapped != nullptr)
@@ -5263,7 +5411,7 @@ namespace wi::scene
 			inst.baseGeometryOffset = inst.geometryOffset;
 			inst.baseGeometryCount = inst.geometryCount;
 
-			const size_t instanceIndex = objects.GetCount() + hairs.GetCount() + args.jobIndex;
+			const size_t instanceIndex = objectInstanceCapacity + hairs.GetCount() + args.jobIndex;
 			std::memcpy(instanceArrayMapped + instanceIndex, &inst, sizeof(inst));
 
 			if (TLAS_instancesMapped != nullptr)

@@ -29,6 +29,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	if (DTid.x >= push.count)
 		return;
 
+	// The thread index is a stable instance slot, which spans the whole [0,
+	// objectInstanceCapacity) range and can contain gaps (slots whose object
+	// was removed). A gap is initialized invalid (geometryCount == 0); skip it
+	// so it is not mistaken for a real impostor object (load_geometry below
+	// would otherwise read geometry 0's slice offset for it).
 	const uint instanceIndex = DTid.x;
 	ShaderMeshInstance instance = load_instance(instanceIndex);
 	ShaderGeometry geometry = load_geometry(instance.geometryOffset);
@@ -41,7 +46,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	sphere.center = instance.center;
 	sphere.radius = instance.radius;
 
-	const bool visible = geometry.impostorSliceOffset >= 0 && !distance_culled && GetCamera().frustum.intersects(sphere);
+	const bool valid = instance.geometryCount > 0;
+	const bool visible = valid && geometry.impostorSliceOffset >= 0 && !distance_culled && GetCamera().frustum.intersects(sphere);
 
 	// Optimization: reduce to 1 atomic operation per wave
 	const uint waveAppendCount = WaveActiveCountBits(visible);
