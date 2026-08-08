@@ -13,6 +13,14 @@
 #include <mutex>
 #include <unordered_map>
 
+#ifdef _WIN32
+#include <wrl/client.h>
+#include <wincodec.h>
+#pragma comment(lib, "windowscodecs.lib")
+#include <shlwapi.h>
+#pragma comment(lib, "Shlwapi.lib")
+#endif // _WIN32
+
 using namespace wi::graphics;
 
 //#define RESOURCE_LOGGING
@@ -245,6 +253,8 @@ namespace wi
 			{"DDS", DataType::IMAGE},
 			{"TGA", DataType::IMAGE},
 			{"HDR", DataType::IMAGE},
+			{"HEIC", DataType::IMAGE},
+			{"HEIF", DataType::IMAGE},
 			{"WAV", DataType::SOUND},
 			{"OGG", DataType::SOUND},
 			{"LUA", DataType::SCRIPT},
@@ -674,6 +684,70 @@ namespace wi
 
 						stbi_image_free(data);
 					}
+				}
+				else if (!ext.compare("HEIC") || !ext.compare("HEIF"))
+				{
+#ifdef _WIN32
+					Microsoft::WRL::ComPtr<IWICImagingFactory> factory;
+					success = SUCCEEDED(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&factory)));
+					assert(success);
+					Microsoft::WRL::ComPtr<IStream> stream;
+					stream.Attach(SHCreateMemStream(filedata, static_cast<UINT>(filesize)));
+					assert(stream);
+					Microsoft::WRL::ComPtr<IWICBitmapDecoder> decoder;
+					success = SUCCEEDED(factory->CreateDecoderFromStream(stream.Get(), nullptr, WICDecodeMetadataCacheOnDemand, &decoder));
+					assert(success);
+					Microsoft::WRL::ComPtr<IWICBitmapFrameDecode> frame;
+					success = SUCCEEDED(decoder->GetFrame(0, &frame));
+					assert(success);
+					Microsoft::WRL::ComPtr<IWICFormatConverter> converter;
+					success = SUCCEEDED(factory->CreateFormatConverter(&converter));
+					assert(success);
+					success = SUCCEEDED(converter->Initialize(frame.Get(), GUID_WICPixelFormat32bppRGBA, WICBitmapDitherTypeNone, nullptr, 0.0, WICBitmapPaletteTypeCustom));
+					assert(success);
+					UINT width = 0, height = 0;
+					success = SUCCEEDED(converter->GetSize(&width, &height)) && width != 0 && height != 0;
+					assert(success);
+					const size_t stride = static_cast<size_t>(width) * 4;
+					const size_t buffer_size = stride * height;
+					unsigned char* rgba = static_cast<unsigned char*>(malloc(buffer_size));
+					if (SUCCEEDED(converter->CopyPixels(nullptr, static_cast<UINT>(stride), static_cast<UINT>(buffer_size), rgba)))
+					{
+						flags &= ~Flags::STREAMING; // disable streaming
+						TextureDesc desc;
+						desc.format = Format::R8G8B8A8_UNORM;
+						desc.width = width;
+						desc.height = height;
+						desc.mip_levels = GetMipCount(desc.width, desc.height);
+						desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+						desc.misc_flags = ResourceMiscFlag::TYPED_FORMAT_CASTING;
+						uint32_t mipwidth = width;
+						SubresourceData init_data[16];
+						for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
+						{
+							init_data[mip].data_ptr = rgba; // attention! we don't fill the mips here correctly, just always point to the mip0 data by default. Mip levels will be created using compute shader when needed!
+							init_data[mip].row_pitch = uint32_t(mipwidth * GetFormatStride(desc.format));
+							mipwidth = std::max(1u, mipwidth / 2);
+						}
+						success = device->CreateTexture(&desc, init_data, &resource->texture);
+						assert(success);
+						device->SetName(&resource->texture, name.c_str());
+						device->CreateMipgenSubresources(resource->texture);
+						Format srgb_format = GetFormatSRGB(desc.format);
+						if (srgb_format != Format::UNKNOWN && srgb_format != desc.format)
+						{
+							resource->srgb_subresource = device->CreateSubresource(
+								&resource->texture,
+								SubresourceType::SRV,
+								0, -1,
+								0, -1,
+								&srgb_format
+							);
+						}
+						wi::renderer::AddDeferredMIPGen(resource->texture, true);
+					}
+					free(rgba);
+#endif // _WIN32
 				}
 				else
 				{
