@@ -5741,7 +5741,14 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 
 				if (hair.meshID != INVALID_ENTITY && hair.BLAS.IsValid())
 				{
-					device->BuildRaytracingAccelerationStructure(&hair.BLAS, cmd, nullptr);
+					// Full rebuild when the structure is new/dirty or the
+					// camera has moved far enough to warrant refreshing BVH
+					// quality; otherwise refit in place (much cheaper) to track
+					// per-frame strand animation.
+					const bool rebuild = hair.must_rebuild_blas || motion_rebuild;
+					device->BuildRaytracingAccelerationStructure(
+						&hair.BLAS, cmd, rebuild ? nullptr : &hair.BLAS
+					);
 					hair.must_rebuild_blas = false;
 				}
 			}

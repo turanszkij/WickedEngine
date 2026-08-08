@@ -99,7 +99,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	float3 diff = GetCamera().position - base;
 	const float distsq = dot(diff, diff);
 	const bool distance_culled = distsq > sqr(xHairViewDistance);
-	
+
 	// Frustum culling the whole strand at once:
 	//	intentionally overestimated, to not disappear as soon in different views (shadow map, etc)
 	ShaderSphere sphere;
@@ -155,8 +155,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		bend = GetCamera().up * (1 - saturate(dot(target, GetCamera().up))) * 0.8;
 	}
 
+	// Compute the actual billboard normal direction (matching geometry
+	// orientation)
+	half3 billboard_normal = normalize(target + bend);
+
 	// Bottom vertices:
-	half3x3 TBN = half3x3(tangent, normalize(target + bend), binormal);
+	half3x3 TBN = half3x3(tangent, billboard_normal, binormal);
 	if (distance_culled)
 	{
 		// Strand is beyond the view distance, so it is never rendered: no
@@ -235,7 +239,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 				}
 
 				vertexBuffer_POS[v0] = float4(position, 0);
-				vertexBuffer_NOR[v0] = half4(target, 0);
+				vertexBuffer_NOR[v0] = half4(billboard_normal, 0);
 				vertexBuffer_UVS[v0] = uv.xyxy; // a second uv set could be used here
 				if (xHairFlags & HAIR_FLAG_RAYTRACED)
 				{
@@ -496,7 +500,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 					}
 
 					vertexBuffer_POS[v0] = float4(position, 0);
-					vertexBuffer_NOR[v0] = half4(normal, 0);
+					// Store the bent normal (matching the billboard's actual
+					// orientation, TBN above), not the raw strand direction.
+					// Otherwise a wind/gravity-bent card is shaded as if it
+					// still pointed along the strand, which reads as a dark,
+					// pulsating patch when viewed from above (normal facing
+					// away from both the view and the light). Kept consistent
+					// with the root vertices, which also store the bent normal.
+					vertexBuffer_NOR[v0] = half4(normal_bend, 0);
 					vertexBuffer_UVS[v0] = uv.xyxy; // a second uv set could be used here
 					if (xHairFlags & HAIR_FLAG_RAYTRACED)
 					{
