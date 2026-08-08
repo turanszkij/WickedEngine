@@ -6871,6 +6871,8 @@ Luna<WeatherComponent_BindLua>::FunctionType WeatherComponent_BindLua::methods[]
 Luna<WeatherComponent_BindLua>::PropertyType WeatherComponent_BindLua::properties[] = {
 	lunaproperty(WeatherComponent_BindLua, sunColor),
 	lunaproperty(WeatherComponent_BindLua, sunDirection),
+	lunaproperty(WeatherComponent_BindLua, moonColor),
+	lunaproperty(WeatherComponent_BindLua, moonDirection),
 	lunaproperty(WeatherComponent_BindLua, skyExposure),
 	lunaproperty(WeatherComponent_BindLua, horizon),
 	lunaproperty(WeatherComponent_BindLua, zenith),
@@ -6892,6 +6894,9 @@ Luna<WeatherComponent_BindLua>::PropertyType WeatherComponent_BindLua::propertie
 	lunaproperty(WeatherComponent_BindLua, windWaveSize),
 	lunaproperty(WeatherComponent_BindLua, windSpeed),
 	lunaproperty(WeatherComponent_BindLua, stars),
+	lunaproperty(WeatherComponent_BindLua, moonSize),
+	lunaproperty(WeatherComponent_BindLua, sunSize),
+	lunaproperty(WeatherComponent_BindLua, moonLightIntensity),
 	lunaproperty(WeatherComponent_BindLua, rainAmount),
 	lunaproperty(WeatherComponent_BindLua, rainLength),
 	lunaproperty(WeatherComponent_BindLua, rainSpeed),

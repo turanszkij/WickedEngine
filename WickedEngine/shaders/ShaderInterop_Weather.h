@@ -1,6 +1,7 @@
 #ifndef WI_SHADERINTEROP_WEATHER_H
 #define WI_SHADERINTEROP_WEATHER_H
 #include "ShaderInterop.h"
+#include "ShaderInterop_Moon.h"
 
 struct alignas(16) AtmosphereParameters
 {
@@ -367,7 +368,10 @@ struct alignas(16) ShaderWeather
 
 	float4 stars_rotation; // quaternion
 
-	float3 padding_stars;
+	ShaderMoon moon;
+
+	float sun_eclipse_strength; // 0-1 multiplier describing moon shadow on sun
+	float sun_size; // Sun angular radius (radians)
 
 	float sky_rotation_sin;
 	float sky_rotation_cos;

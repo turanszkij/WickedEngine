@@ -166,6 +166,210 @@ namespace wi::math
 		}
 	}
 
+	inline float LawOfCosinesAngle(const float a, const float b, const float c)
+	{
+		const float numerator = (a * a) + (b * b) - (c * c);
+		const float denominator = 2.0F * a * b;
+		const float cosine = numerator / denominator;
+
+		return XMScalarACos(Clamp(cosine, -1.0F, 1.0F));
+	}
+
+	XMVECTOR NormalizeDirection(const XMFLOAT3 &direction)
+	{
+		const XMVECTOR inputVector = XMLoadFloat3(&direction);
+		const XMVECTOR lengthSquared = XMVector3LengthSq(inputVector);
+
+		if (XMVectorGetX(lengthSquared) == 0.0F) {
+			return XMVectorZero();
+		}
+
+		return XMVector3Normalize(inputVector);
+	}
+
+	/**
+	 * @brief Computes the overlap area between two angular disks `a` and `b`
+ 	 * with approximately the same radius.
+	 *
+	 * Since the disk radii are assumed to be approximately equal, the overlap
+	 * ratio is symmetric and can be interpreted as either $|a \cap b| / |a|$ or
+	 * $|a \cap b| / |b|$.
+	 *
+	 * This function only requires the **common angular radius** of the disks
+	 * and the **angular distance** between their centers (both in radians). The
+	 * full direction vectors of the disks are **not needed**.
+	 *
+	 * Equation:
+	 * \[
+	 * A_{\text{intersection}}(r, d) =
+	 * 2 r^2 \arccos\Big(\frac{d}{2r}\Big) - \frac{d}{2} \sqrt{4 r^2 - d^2}
+	 * \]
+	 *
+	 * Sources:
+	 * https://mathworld.wolfram.com/Circle-CircleIntersection.html
+	 *
+	 * @param radius - Angular radius of the disks (in radians).
+	 * @param distance - Angular distance between disk centers (in radians).
+	 *
+	 * @return Area of the disks’ overlap.
+	 *
+	 * @internal
+	 */
+	float ComputeSameRadiusDisksOverlapArea(
+		const float radius,
+		const float distance
+	) {
+		const float radius_sq = radius * radius;
+
+		// Fully overlapping (identical centers)
+		if (distance <= 0.0F)
+		{
+			return XM_PI * radius_sq;
+		}
+
+		const float distanceRatio =
+			Clamp(distance / (2.0F * radius), -1.0F, 1.0F);
+
+		const float intersectionAngle = XMScalarACos(distanceRatio);
+
+		const float sqrtTerm = std::sqrt(
+			std::max(0.0F, (4.0F * radius_sq) - (distance * distance))
+		);
+
+		return (2.0F * radius_sq * intersectionAngle)
+			 - (0.5F * distance  * sqrtTerm         );
+	}
+
+	/**
+	 * @brief Computes the overlap area of disk `b` on disk `a` when the disks
+ 	 * have different angular radii (in radians).
+	 *
+	 * The computation is based on the **circle–circle intersection formula**:
+	 * \[
+	 * A_{\text{intersection}} =
+	 * r_a^2 \alpha + r_b^2 \beta - \frac{1}{2} \sqrt{(-d+r_a+r_b)(d+r_a-r_b)(d-r_a+r_b)(d+r_a+r_b)}
+	 * \]
+	 *
+	 * Where:
+	 * - \(r_a, r_b\) are the angular radii of disks `a` and `a`
+	 * - \(d\) is the angular distance between the disk centers
+	 * - \(\alpha = \arccos \frac{d^2 + r_a^2 - r_b^2}{2 d r_a}\)
+	 * - \(\beta = \arccos \frac{d^2 + r_b^2 - r_a^2}{2 d r_b}\)
+	 *
+	 * Reference:
+ 	 * https://mathworld.wolfram.com/Circle-CircleIntersection.html
+	 *
+	 * @param radius_a - Angular radius of disk `a` (in radians).
+	 * @param distance - Angular distance between disk centers (in radians).
+	 * @param radius_b - Angular radius of disk `b` (in radians).
+	 *
+	 * @return  Area of disk `a` that is overlapped by disk `b`.
+	 *
+	 * @internal
+	 */
+	float ComputeDifferentRadiusDisksOverlapArea(
+		const float radius_a,
+		const float distance,
+		const float radius_b
+	) {
+		const float ra_sq = radius_a * radius_a;
+		const float rb_sq = radius_b * radius_b;
+		const float distance_sq = distance * distance;
+
+		const float alpha =
+			LawOfCosinesAngle(distance, radius_a, radius_b);
+		const float beta =
+			LawOfCosinesAngle(distance, radius_b, radius_a);
+
+		return
+			(ra_sq * alpha) +
+			(rb_sq * beta) -
+			(0.5F * std::sqrt(
+				std::max(0.0F,
+					(-distance + radius_a + radius_b)
+					* ( distance + radius_a - radius_b)
+					* ( distance - radius_a + radius_b)
+					* ( distance + radius_a + radius_b))
+			));
+	}
+
+	float ComputeDiskOverlapArea(
+		const XMVECTOR &dir_a,
+		const float radius_a,
+		const XMVECTOR &dir_b,
+		const float radius_b
+	) {
+		// Make sure directions are normalized!
+		assert(IsNormalized(dir_a));
+		assert(IsNormalized(dir_b));
+
+		// Angular separation (radians)
+		const float angularSeparation = XMVectorGetX(
+			XMVector3AngleBetweenNormals(dir_a, dir_b)
+		);
+
+		// No overlap
+		if (angularSeparation >= radius_a + radius_b)
+		{
+			return 0.0F;
+		}
+
+		// Same radius fast path
+		if (FP_Equal(radius_a, radius_b))
+		{
+			return ComputeSameRadiusDisksOverlapArea(
+				radius_a, angularSeparation
+			);
+		}
+
+		return ComputeDifferentRadiusDisksOverlapArea(
+			radius_a, angularSeparation, radius_b
+		);
+	}
+
+	float ComputeDiskOverlapRatio(
+		const XMVECTOR &dir_a,
+		const float radius_a,
+		const XMVECTOR &dir_b,
+		const float radius_b
+	) {
+		// Make sure directions are normalized!
+		assert(IsNormalized(dir_a));
+		assert(IsNormalized(dir_b));
+
+		const float ra_sq = radius_a * radius_a;
+		const float a_area = XM_PI * ra_sq;
+
+		const float intersectionArea = ComputeDiskOverlapArea(
+			dir_a, radius_a, dir_b, radius_b
+		);
+
+		return Clamp(intersectionArea / a_area, 0.0F, 1.0F);
+	}
+
+	float ComputeDiskOverlapRatioEst(
+		const XMVECTOR& dir_a,
+		const float radius,
+		const XMVECTOR& dir_b
+	) {
+		// Make sure directions are normalized!
+		assert(IsNormalized(dir_a));
+		assert(IsNormalized(dir_b));
+
+		// Cosine of angular separation between disk centers
+		const float cosTheta = XMVectorGetX(XMVector3Dot(dir_a, dir_b));
+
+		// Maximum and minimum cosines defining overlap range
+		const float cosMax = XMScalarCosEst(2.0F * radius); // completely separate
+		const float cosMin = 1.0F; // completely overlapping
+
+		// Linear interpolation of overlap fraction
+		const float overlapFactor = (cosTheta - cosMax) / (cosMin - cosMax);
+
+		// Clamp to [0,1]
+		return Clamp(overlapFactor, 0.0F, 1.0F);
+	}
+
 	const XMFLOAT4& GetHaltonSequence(int idx)
 	{
 		static const XMFLOAT4 HALTON[] = {

@@ -2,6 +2,7 @@
 #define WI_SKY_HF
 #include "globals.hlsli"
 #include "skyAtmosphere.hlsli"
+#include "moonHF.hlsli"
 #include "fogHF.hlsli"
 
 // Custom Atmosphere based on: https://www.shadertoy.com/view/Ml2cWG
@@ -142,6 +143,11 @@ float3 GetDynamicSkyColor(in float2 pixel, in float3 V, bool sun_enabled = true,
     {
 		sky = lerp(GetHorizonColor(), GetZenithColor(), saturate(V.y * 0.5f + 0.5f));
     }
+
+	if (!dark_enabled)
+	{
+		sky += GetMoonDiskRadiance(V);
+	}
 
 	sky *= GetWeather().sky_exposure;
 	
