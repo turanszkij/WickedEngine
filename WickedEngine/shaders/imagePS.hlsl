@@ -32,8 +32,6 @@ float4 main(VertextoPixel input) : SV_TARGET
 			color.a *= value;
 		}
 
-		color.rgb *= color.a; // NOTE: premultiplied blending! This is important for blending in HDR linear space
-
 		[branch]
 		if (image.flags & FONT_FLAG_OUTPUT_COLOR_SPACE_LINEAR)
 		{

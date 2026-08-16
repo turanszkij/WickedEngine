@@ -595,7 +595,7 @@ namespace wi::font
 		device->EventBegin("Font", cmd);
 
 		const wi::image::DEPTH_TEST_MODE depth_test_mode = params.isDepthTestEnabled() ? wi::image::DEPTH_TEST_ON : wi::image::DEPTH_TEST_OFF;
-		const PipelineState* pso = wi::image::GetPSO(depth_test_mode, wi::enums::BLENDMODE_PREMULTIPLIED, wi::image::STENCILMODE_DISABLED, wi::image::STENCILREFMODE_ALL);
+		const PipelineState* pso = wi::image::GetPSO(depth_test_mode, wi::enums::BLENDMODE_ALPHA, wi::image::STENCILMODE_DISABLED, wi::image::STENCILREFMODE_ALL);
 		assert(pso != nullptr);
 		assert(pso->IsValid());
 

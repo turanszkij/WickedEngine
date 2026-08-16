@@ -518,7 +518,7 @@ void GeneralWindow::Create(EditorComponent* _editor)
 		XMFLOAT4 theme_color_wave = theme_color_focus;
 		wi::gui::Theme theme;
 		theme.image.background = true;
-		theme.image.blendFlag = wi::enums::BLENDMODE_OPAQUE;
+		theme.image.blendFlag = wi::enums::BLENDMODE_ALPHA;
 		theme.font.color = wi::Color(130, 210, 220, 255);
 		theme.shadow_color = wi::Color(80, 140, 180, 100);
 
