@@ -220,6 +220,7 @@ namespace wi::image
 				// The rounded corner mode will use a triangle fan structure (implemented by triangle strip):
 				image.flags |= IMAGE_FLAG_CORNER_ROUNDING;
 				const int min_segment_count = 2;
+
 				uint32_t perimeter_count = 0;
 				for (int i = 0; i < arraysize(params.corners_rounding); ++i)
 				{
@@ -227,12 +228,18 @@ namespace wi::image
 					perimeter_count += segments;
 				}
 
+				vertex_count = 2 * perimeter_count + 1;
+				GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(float4) * vertex_count, cmd);
+				image.buffer_index = device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV);
+				image.buffer_offset = (uint)mem.offset;
+				float4* strip = (float4*)mem.data;
+
 				float4 center;
 				XMStoreFloat4(&center, XMVector2Transform((V[0] + V[1] + V[2] + V[3]) * 0.25f, M));
 
-				float4* perimeter = (float4*)alloca(sizeof(float4) * perimeter_count);
-				uint32_t pi = 0;
-
+				float4 first_point;
+				uint32_t si = 0;
+				bool first = true;
 				for (int i = 0; i < arraysize(params.corners_rounding); ++i)
 				{
 					Params::Rounding rounding;
@@ -259,24 +266,20 @@ namespace wi::image
 					{
 						float t = float(j) / float(rounding.segments - 1);
 						XMVECTOR bezier = wi::math::GetQuadraticBezierPos(start, B, end, t);
-						XMStoreFloat4(perimeter + pi, XMVector2Transform(bezier, M));
-						++pi;
+						XMVECTOR pos = XMVector2Transform(bezier, M);
+
+						float4 point;
+						XMStoreFloat4(&point, pos);
+						if (first)
+						{
+							first_point = point;
+							first = false;
+						}
+						std::memcpy(&strip[si++], &point, sizeof(float4));
+						std::memcpy(&strip[si++], &center, sizeof(float4));
 					}
 				}
-
-				vertex_count = 2 * perimeter_count + 1;
-				GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(float4) * vertex_count, cmd);
-				image.buffer_index = device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV);
-				image.buffer_offset = (uint)mem.offset;
-				float4* gpu_strip = (float4*)mem.data;
-
-				uint32_t si = 0;
-				for (uint32_t i = 0; i < perimeter_count; ++i)
-				{
-					std::memcpy(&gpu_strip[si++], &perimeter[i], sizeof(float4));
-					std::memcpy(&gpu_strip[si++], &center, sizeof(float4));
-				}
-				std::memcpy(&gpu_strip[si++], &perimeter[0], sizeof(float4));
+				std::memcpy(&strip[si++], &first_point, sizeof(float4));
 			}
 			else
 			{
