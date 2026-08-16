@@ -19,7 +19,25 @@ enum IMAGE_FLAGS
 	IMAGE_FLAG_GRADIENT_LINEAR = 1u << 12u,
 	IMAGE_FLAG_GRADIENT_LINEAR_REFLECTED = 1u << 13u,
 	IMAGE_FLAG_GRADIENT_CIRCULAR = 1u << 14u,
+
+	FONT_FLAG_ISFONT = 1u << 15u,
+	FONT_FLAG_SDF_RENDERING = 1u << 16u,
+	FONT_FLAG_OUTPUT_COLOR_SPACE_HDR10_ST2084 = 1u << 17u,
+	FONT_FLAG_OUTPUT_COLOR_SPACE_LINEAR = 1u << 18u,
 };
+
+struct FontVertex
+{
+	float2 pos;
+	float2 uv;
+};
+namespace SDF
+{
+	static const uint padding = 5;
+	static const uint onedge_value = 127;
+	static const float onedge_value_unorm = float(onedge_value) / 255.0f;
+	static const float pixel_dist_scale = float(onedge_value) / float(padding);
+}
 
 struct alignas(16) ImageConstants
 {
@@ -50,15 +68,22 @@ struct alignas(16) ImageConstants
 	uint highlight_xy; // packed half2
 	uint angular_softness_direction; // packed half2
 
+	uint2 softness_bolden_hdrscaling; // packed half3
 	uint angular_softness_mad; // packed half2
 	uint padding0;
-	uint padding1;
-	uint padding2;
 
 	uint2 gradient_color; // packed half4
 	uint gradient_uv_start; // packed half2
 	uint gradient_uv_end; // packed half2
+
+	float4x4 transform;
+
+	inline bool IsFont() { return flags & FONT_FLAG_ISFONT; }
 };
+#ifdef __cplusplus
+static_assert(sizeof(ImageConstants) <= 256); // fit into one cb alloc dx12
+#endif // __cplusplus
+
 CONSTANTBUFFER(image, ImageConstants, CBSLOT_IMAGE);
 
 #endif // WI_SHADERINTEROP_IMAGE_H

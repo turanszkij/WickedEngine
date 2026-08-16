@@ -164,7 +164,6 @@ namespace wi::initializer
 		wi::jobsystem::Initialize();
 
 		wi::backlog::post("");
-		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::image::Initialize(); systems[INITIALIZED_SYSTEM_IMAGE].store(true); });
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::input::Initialize(); systems[INITIALIZED_SYSTEM_INPUT].store(true); });
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::renderer::Initialize(); systems[INITIALIZED_SYSTEM_RENDERER].store(true); });
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::texturehelper::Initialize(); systems[INITIALIZED_SYSTEM_TEXTUREHELPER].store(true); });
@@ -180,6 +179,7 @@ namespace wi::initializer
 		// Initialize these immediately:
 		wi::lua::Initialize(); systems[INITIALIZED_SYSTEM_LUA].store(true);
 		wi::audio::Initialize(); systems[INITIALIZED_SYSTEM_AUDIO].store(true);
+		wi::image::Initialize(); systems[INITIALIZED_SYSTEM_IMAGE].store(true);
 		wi::font::Initialize(); systems[INITIALIZED_SYSTEM_FONT].store(true);
 
 		std::thread([] {

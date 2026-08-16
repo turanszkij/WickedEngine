@@ -18,19 +18,7 @@ namespace wi::image
 	static Shader pixelShader;
 	static BlendState blendStates[BLENDMODE_COUNT];
 	static RasterizerState rasterizerState;
-	enum DEPTH_TEST_MODE
-	{
-		DEPTH_TEST_OFF,
-		DEPTH_TEST_ON,
-		DEPTH_TEST_MODE_COUNT
-	};
 	static DepthStencilState depthStencilStates[STENCILMODE_COUNT][STENCILREFMODE_COUNT][DEPTH_TEST_MODE_COUNT];
-	enum STRIP_MODE
-	{
-		STRIP_OFF,
-		STRIP_ON,
-		STRIP_MODE_COUNT,
-	};
 	static PipelineState imagePSO[BLENDMODE_COUNT][STENCILMODE_COUNT][STENCILREFMODE_COUNT][DEPTH_TEST_MODE_COUNT][STRIP_MODE_COUNT];
 	static thread_local Texture backgroundTexture;
 	static thread_local wi::Canvas canvas;
@@ -695,6 +683,11 @@ namespace wi::image
 		LoadShaders();
 
 		wilog("wi::image Initialized (%d ms)", (int)std::round(timer.elapsed()));
+	}
+
+	const PipelineState* GetPSO(DEPTH_TEST_MODE depth_test_mode, wi::enums::BLENDMODE blend_mode, STENCILMODE stencil_mode, STENCILREFMODE stencil_ref_mode, STRIP_MODE strip_mode)
+	{
+		return &imagePSO[blend_mode][stencil_mode][stencil_ref_mode][depth_test_mode][strip_mode];
 	}
 
 }

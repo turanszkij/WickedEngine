@@ -2,7 +2,7 @@
 #include "wiRenderer.h"
 #include "wiResourceManager.h"
 #include "wiHelper.h"
-#include "shaders/ShaderInterop_Font.h"
+#include "shaders/ShaderInterop_Image.h"
 #include "wiBacklog.h"
 #include "wiTextureHelper.h"
 #include "wiRectPacker.h"
@@ -14,6 +14,7 @@
 #include "wiUnorderedSet.h"
 #include "wiVector.h"
 #include "wiMath.h"
+#include "wiImage.h"
 
 #include "Utility/liberation_sans.h"
 #include "Utility/stb_truetype.h"
@@ -28,20 +29,6 @@ namespace wi::font
 {
 	namespace font_internal
 	{
-		enum DEPTH_TEST_MODE
-		{
-			DEPTH_TEST_OFF,
-			DEPTH_TEST_ON,
-			DEPTH_TEST_MODE_COUNT
-		};
-		static BlendState blendState;
-		static RasterizerState rasterizerState;
-		static DepthStencilState depthStencilStates[DEPTH_TEST_MODE_COUNT];
-
-		static Shader vertexShader;
-		static Shader pixelShader;
-		static PipelineState PSO[DEPTH_TEST_MODE_COUNT];
-
 		static thread_local wi::Canvas canvas;
 
 		static Texture texture;
@@ -278,23 +265,6 @@ namespace wi::font
 	}
 	using namespace font_internal;
 
-	void LoadShaders()
-	{
-		wi::renderer::LoadShader(ShaderStage::VS, vertexShader, "fontVS.cso");
-		wi::renderer::LoadShader(ShaderStage::PS, pixelShader, "fontPS.cso");
-
-		for (int d = 0; d < DEPTH_TEST_MODE_COUNT; ++d)
-		{
-			PipelineStateDesc desc;
-			desc.vs = &vertexShader;
-			desc.ps = &pixelShader;
-			desc.bs = &blendState;
-			desc.dss = &depthStencilStates[d];
-			desc.rs = &rasterizerState;
-			desc.pt = PrimitiveTopology::TRIANGLESTRIP;
-			wi::graphics::GetDevice()->CreatePipelineState(&desc, &PSO[d]);
-		}
-	}
 	void Initialize()
 	{
 		wi::Timer timer;
@@ -306,43 +276,6 @@ namespace wi::font
 			helper::Decompress(liberation_sans_zstd, sizeof(liberation_sans_zstd), data);
 			AddFontStyle("Liberation Sans", data.data(), data.size(), true);
 		}
-
-		RasterizerState rs;
-		rs.fill_mode = FillMode::SOLID;
-		rs.cull_mode = CullMode::NONE;
-		rs.front_counter_clockwise = true;
-		rs.depth_bias = 0;
-		rs.depth_bias_clamp = 0;
-		rs.slope_scaled_depth_bias = 0;
-		rs.depth_clip_enable = false;
-		rs.multisample_enable = false;
-		rs.antialiased_line_enable = false;
-		rasterizerState = rs;
-
-		BlendState bd;
-		bd.render_target[0].blend_enable = true;
-		bd.render_target[0].src_blend = Blend::ONE; // premultiplied blending
-		bd.render_target[0].dest_blend = Blend::INV_SRC_ALPHA;
-		bd.render_target[0].blend_op = BlendOp::ADD;
-		bd.render_target[0].src_blend_alpha = Blend::ONE;
-		bd.render_target[0].dest_blend_alpha = Blend::INV_SRC_ALPHA;
-		bd.render_target[0].blend_op_alpha = BlendOp::ADD;
-		bd.render_target[0].render_target_write_mask = ColorWrite::ENABLE_ALL;
-		bd.independent_blend_enable = false;
-		blendState = bd;
-
-		DepthStencilState dsd;
-		dsd.depth_enable = false;
-		dsd.stencil_enable = false;
-		depthStencilStates[DEPTH_TEST_OFF] = dsd;
-
-		dsd.depth_enable = true;
-		dsd.depth_write_mask = DepthWriteMask::ZERO;
-		dsd.depth_func = ComparisonFunc::GREATER_EQUAL;
-		depthStencilStates[DEPTH_TEST_ON] = dsd;
-
-		static wi::eventhandler::Handle handle1 = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
-		LoadShaders();
 
 		wilog("wi::font Initialized (%d ms)", (int)std::round(timer.elapsed()));
 	}
@@ -632,11 +565,12 @@ namespace wi::font
 			return status.cursor;
 		CommitText(mem.data);
 
-		FontConstants font = {};
-		font.buffer_index = device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV);
-		font.buffer_offset = (uint)mem.offset;
-		font.texture_index = device->GetDescriptorIndex(&texture, SubresourceType::SRV);
-		if (font.buffer_index < 0 || font.texture_index < 0)
+		ImageConstants image = {};
+		image.flags = FONT_FLAG_ISFONT;
+		image.buffer_index = device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV);
+		image.buffer_offset = (uint)mem.offset;
+		image.texture_base_index = device->GetDescriptorIndex(&texture, SubresourceType::SRV);
+		if (image.buffer_index < 0 || image.texture_base_index < 0)
 			return status.cursor;
 
 		using namespace wi::math;
@@ -644,55 +578,57 @@ namespace wi::font
 		float softness = 0;
 		float bolden = 0;
 		float hdr_scaling = 1;
-		uint32_t flags = 0;
 		if (params.isSDFRenderingEnabled())
 		{
-			flags |= FONT_FLAG_SDF_RENDERING;
+			image.flags |= FONT_FLAG_SDF_RENDERING;
 		}
 		if (params.isHDR10OutputMappingEnabled())
 		{
-			flags |= FONT_FLAG_OUTPUT_COLOR_SPACE_HDR10_ST2084;
+			image.flags |= FONT_FLAG_OUTPUT_COLOR_SPACE_HDR10_ST2084;
 		}
 		if (params.isLinearOutputMappingEnabled())
 		{
-			flags |= FONT_FLAG_OUTPUT_COLOR_SPACE_LINEAR;
+			image.flags |= FONT_FLAG_OUTPUT_COLOR_SPACE_LINEAR;
 			hdr_scaling = params.hdr_scaling;
 		}
 
 		device->EventBegin("Font", cmd);
 
-		device->BindPipelineState(&PSO[params.isDepthTestEnabled()], cmd);
+		const wi::image::DEPTH_TEST_MODE depth_test_mode = params.isDepthTestEnabled() ? wi::image::DEPTH_TEST_ON : wi::image::DEPTH_TEST_OFF;
+		const PipelineState* pso = wi::image::GetPSO(depth_test_mode, wi::enums::BLENDMODE_PREMULTIPLIED, wi::image::STENCILMODE_DISABLED, wi::image::STENCILREFMODE_ALL, wi::image::STRIP_ON);
+		assert(pso != nullptr);
+		assert(pso->IsValid());
+
+		device->BindPipelineState(pso, cmd);
 
 		if (params.shadowColor.getA() > 0)
 		{
 			// font shadow render:
-			XMStoreFloat4x4(&font.transform, XMMatrixTranslation(params.shadow_offset_x, params.shadow_offset_y, 0) * M);
+			XMStoreFloat4x4(&image.transform, XMMatrixTranslation(params.shadow_offset_x, params.shadow_offset_y, 0) * M);
 			color = params.shadowColor;
 			color.x *= params.shadow_intensity;
 			color.y *= params.shadow_intensity;
 			color.z *= params.shadow_intensity;
-			font.color = pack_half4(color);
+			image.packed_color = pack_half4(color);
 			bolden = params.shadow_bolden;
 			softness = params.shadow_softness * 0.5f;
-			font.softness_bolden_hdrscaling = pack_half3(softness, bolden, hdr_scaling);
-			font.softness_bolden_hdrscaling.y |= flags << 16u;
-			device->BindDynamicConstantBuffer(font, CBSLOT_FONT, cmd);
+			image.softness_bolden_hdrscaling = pack_half3(softness, bolden, hdr_scaling);
+			device->BindDynamicConstantBuffer(image, CBSLOT_FONT, cmd);
 
 			device->DrawInstanced(4, status.quadCount, 0, 0, cmd);
 		}
 
 		// font base render:
-		XMStoreFloat4x4(&font.transform, M);
+		XMStoreFloat4x4(&image.transform, M);
 		color = params.color;
 		color.x *= params.intensity;
 		color.y *= params.intensity;
 		color.z *= params.intensity;
-		font.color = pack_half4(color);
+		image.packed_color = pack_half4(color);
 		bolden = params.bolden;
 		softness = params.softness * 0.5f;
-		font.softness_bolden_hdrscaling = pack_half3(softness, bolden, hdr_scaling);
-		font.softness_bolden_hdrscaling.y |= flags << 16u;
-		device->BindDynamicConstantBuffer(font, CBSLOT_FONT, cmd);
+		image.softness_bolden_hdrscaling = pack_half3(softness, bolden, hdr_scaling);
+		device->BindDynamicConstantBuffer(image, CBSLOT_FONT, cmd);
 
 		device->DrawInstanced(4, status.quadCount, 0, 0, cmd);
 
