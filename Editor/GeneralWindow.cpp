@@ -810,26 +810,30 @@ void GeneralWindow::Create(EditorComponent* _editor)
 
 		if (editor->themeEditorWnd.imageResource.IsValid())
 		{
-			// When there is background image, make the entity tools not occlude a big part of it:
+			// When there is background image, make the entity tools not occlude a big part of it, except while it's interacted with:
 			editor->componentsWnd.entityTree.SetShadowRadius(0);
 			editor->componentsWnd.entityTree.sprites[wi::gui::IDLE].params.blendFlag = wi::enums::BLENDMODE_ALPHA;
 			editor->componentsWnd.entityTree.sprites[wi::gui::IDLE].params.disableBackground();
+			editor->componentsWnd.entityTree.sprites[wi::gui::FOCUS].params.blendFlag = wi::enums::BLENDMODE_OPAQUE;
 			editor->componentsWnd.entityTree.sprites[wi::gui::FOCUS].params.disableBackground();
 			editor->componentsWnd.entityTree.scrollbar.SetShadowRadius(0);
 
 			editor->componentsWnd.filterInput.SetShadowRadius(0);
 			editor->componentsWnd.filterInput.sprites[wi::gui::IDLE].params.blendFlag = wi::enums::BLENDMODE_ALPHA;
 			editor->componentsWnd.filterInput.sprites[wi::gui::IDLE].params.disableBackground();
+			editor->componentsWnd.filterInput.sprites[wi::gui::FOCUS].params.blendFlag = wi::enums::BLENDMODE_OPAQUE;
 			editor->componentsWnd.filterInput.sprites[wi::gui::FOCUS].params.disableBackground();
 
 			editor->componentsWnd.filterCombo.SetShadowRadius(0);
 			editor->componentsWnd.filterCombo.sprites[wi::gui::IDLE].params.blendFlag = wi::enums::BLENDMODE_ALPHA;
 			editor->componentsWnd.filterCombo.sprites[wi::gui::IDLE].params.disableBackground();
+			editor->componentsWnd.filterCombo.sprites[wi::gui::FOCUS].params.blendFlag = wi::enums::BLENDMODE_OPAQUE;
 			editor->componentsWnd.filterCombo.sprites[wi::gui::FOCUS].params.disableBackground();
 
 			editor->componentsWnd.filterCaseCheckBox.SetShadowRadius(0);
 			editor->componentsWnd.filterCaseCheckBox.sprites[wi::gui::IDLE].params.blendFlag = wi::enums::BLENDMODE_ALPHA;
 			editor->componentsWnd.filterCaseCheckBox.sprites[wi::gui::IDLE].params.disableBackground();
+			editor->componentsWnd.filterCaseCheckBox.sprites[wi::gui::FOCUS].params.blendFlag = wi::enums::BLENDMODE_OPAQUE;
 			editor->componentsWnd.filterCaseCheckBox.sprites[wi::gui::FOCUS].params.disableBackground();
 		}
 		else
