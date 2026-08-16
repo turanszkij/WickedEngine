@@ -19,7 +19,7 @@ namespace wi::image
 	static BlendState blendStates[BLENDMODE_COUNT];
 	static RasterizerState rasterizerState;
 	static DepthStencilState depthStencilStates[STENCILMODE_COUNT][STENCILREFMODE_COUNT][DEPTH_TEST_MODE_COUNT];
-	static PipelineState imagePSO[BLENDMODE_COUNT][STENCILMODE_COUNT][STENCILREFMODE_COUNT][DEPTH_TEST_MODE_COUNT][STRIP_MODE_COUNT];
+	static PipelineState imagePSO[BLENDMODE_COUNT][STENCILMODE_COUNT][STENCILREFMODE_COUNT][DEPTH_TEST_MODE_COUNT];
 	static thread_local Texture backgroundTexture;
 	static thread_local wi::Canvas canvas;
 
@@ -164,14 +164,14 @@ namespace wi::image
 		image.bordersoften_saturation = wi::math::pack_half2(params.border_soften, params.saturation);
 		image.mask_alpha_range = wi::math::pack_half2(params.mask_alpha_range_start, params.mask_alpha_range_end);
 
-		STRIP_MODE strip_mode = STRIP_ON;
-		uint32_t index_count = 0;
+		uint32_t vertex_count = 0;
 
 		if (params.isFullScreenEnabled())
 		{
 			// full screen triangle, no vertex buffer:
 			image.buffer_index = -1;
 			image.buffer_offset = 0;
+			vertex_count = 3;
 		}
 		else
 		{
@@ -217,65 +217,36 @@ namespace wi::image
 
 			if (params.isCornerRoundingEnabled())
 			{
-				// The rounded corner mode will use a triangle fan structure (implemrnted by indexed triangle list):
-				strip_mode = STRIP_OFF;
+				// The rounded corner mode will use a triangle fan structure (implemented by triangle strip):
 				image.flags |= IMAGE_FLAG_CORNER_ROUNDING;
-				size_t vertex_count = 1; // start with center vertex
 				const int min_segment_count = 2;
+				uint32_t perimeter_count = 0;
 				for (int i = 0; i < arraysize(params.corners_rounding); ++i)
 				{
 					int segments = std::max(min_segment_count, params.corners_rounding[i].segments);
-					vertex_count += segments;
-					index_count += segments * 3;
+					perimeter_count += segments;
 				}
-				index_count += 3; // closing triangle
-				const size_t vb_size = sizeof(float4) * vertex_count;
-				const size_t ib_size = sizeof(uint16_t) * index_count;
-				GraphicsDevice::GPUAllocation mem = device->AllocateGPU(vb_size + ib_size, cmd);
-				image.buffer_index = device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV);
-				image.buffer_offset = (uint)mem.offset;
-				device->BindIndexBuffer(&mem.buffer, IndexBufferFormat::UINT16, mem.offset + vb_size, cmd);
-				float4* vertices = (float4*)mem.data;
-				uint16_t* indices = (uint16_t*)((uint8_t*)mem.data + vb_size);
-				uint32_t vi = 0;
-				uint32_t ii = 0;
-				XMStoreFloat4(vertices + vi, XMVector2Transform((V[0] + V[1] + V[2] + V[3]) * 0.25f, M)); // center vertex
-				vi++;
+
+				float4 center;
+				XMStoreFloat4(&center, XMVector2Transform((V[0] + V[1] + V[2] + V[3]) * 0.25f, M));
+
+				float4* perimeter = (float4*)alloca(sizeof(float4) * perimeter_count);
+				uint32_t pi = 0;
+
 				for (int i = 0; i < arraysize(params.corners_rounding); ++i)
 				{
 					Params::Rounding rounding;
-					XMVECTOR A;
-					XMVECTOR B;
-					XMVECTOR C;
+					XMVECTOR A, B, C;
 					switch (i)
 					{
 					default:
-					case 0:
-						rounding = params.corners_rounding[0];
-						A = V[2];
-						B = V[0];
-						C = V[1];
-						break;
-					case 1:
-						rounding = params.corners_rounding[1];
-						A = V[0];
-						B = V[1];
-						C = V[3];
-						break;
-					case 2:
-						rounding = params.corners_rounding[3];
-						A = V[1];
-						B = V[3];
-						C = V[2];
-						break;
-					case 3:
-						rounding = params.corners_rounding[2];
-						A = V[3];
-						B = V[2];
-						C = V[0];
-						break;
+					case 0: rounding = params.corners_rounding[0]; A = V[2]; B = V[0]; C = V[1]; break;
+					case 1: rounding = params.corners_rounding[1]; A = V[0]; B = V[1]; C = V[3]; break;
+					case 2: rounding = params.corners_rounding[3]; A = V[1]; B = V[3]; C = V[2]; break;
+					case 3: rounding = params.corners_rounding[2]; A = V[3]; B = V[2]; C = V[0]; break;
 					}
 					rounding.segments = std::max(min_segment_count, rounding.segments);
+
 					const XMVECTOR BA = A - B;
 					const XMVECTOR BC = C - B;
 					const XMVECTOR BA_length = XMVector2Length(BA);
@@ -288,22 +259,30 @@ namespace wi::image
 					{
 						float t = float(j) / float(rounding.segments - 1);
 						XMVECTOR bezier = wi::math::GetQuadraticBezierPos(start, B, end, t);
-						XMStoreFloat4(vertices + vi, XMVector2Transform(bezier, M));
-						indices[ii++] = 0;
-						indices[ii++] = vi - 1;
-						indices[ii++] = vi;
-						vi++;
+						XMStoreFloat4(perimeter + pi, XMVector2Transform(bezier, M));
+						++pi;
 					}
 				}
-				// closing the triangle fan:
-				indices[ii++] = 0;
-				indices[ii++] = vi - 1;
-				indices[ii++] = 1;
+
+				vertex_count = 2 * perimeter_count + 1;
+				GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(float4) * vertex_count, cmd);
+				image.buffer_index = device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV);
+				image.buffer_offset = (uint)mem.offset;
+				float4* gpu_strip = (float4*)mem.data;
+
+				uint32_t si = 0;
+				for (uint32_t i = 0; i < perimeter_count; ++i)
+				{
+					std::memcpy(&gpu_strip[si++], &perimeter[i], sizeof(float4));
+					std::memcpy(&gpu_strip[si++], &center, sizeof(float4));
+				}
+				std::memcpy(&gpu_strip[si++], &perimeter[0], sizeof(float4));
 			}
 			else
 			{
 				// Non rounded image will simply use a 4 vertex triangle strip (simple quad)
-				GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(float4) * 4, cmd);
+				vertex_count = 4;
+				GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(float4) * vertex_count, cmd);
 				image.buffer_index = device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV);
 				image.buffer_offset = (uint)mem.offset;
 				std::memcpy(mem.data, corners, sizeof(corners));
@@ -389,27 +368,11 @@ namespace wi::image
 		}
 		device->BindStencilRef(stencilRef, cmd);
 
-		device->BindPipelineState(&imagePSO[params.blendFlag][params.stencilComp][params.stencilRefMode][params.isDepthTestEnabled()][strip_mode], cmd);
+		device->BindPipelineState(&imagePSO[params.blendFlag][params.stencilComp][params.stencilRefMode][params.isDepthTestEnabled()], cmd);
 
 		device->BindDynamicConstantBuffer(image, CBSLOT_IMAGE, cmd);
 
-		if (params.isFullScreenEnabled())
-		{
-			device->Draw(3, 0, cmd); // full screen triangle
-		}
-		else
-		{
-			switch (strip_mode)
-			{
-			case wi::image::STRIP_OFF:
-				device->DrawIndexed(index_count, 0, 0, cmd); // corner rounding with indexed geometry
-				break;
-			case wi::image::STRIP_ON:
-			default:
-				device->Draw(4, 0, cmd); // simple quad
-				break;
-			}
-		}
+		device->Draw(vertex_count, 0, cmd);
 
 		device->EventEnd(cmd);
 	}
@@ -426,6 +389,7 @@ namespace wi::image
 		desc.vs = &vertexShader;
 		desc.ps = &pixelShader;
 		desc.rs = &rasterizerState;
+		desc.pt = PrimitiveTopology::TRIANGLESTRIP;
 
 		for (int j = 0; j < BLENDMODE_COUNT; ++j)
 		{
@@ -437,21 +401,7 @@ namespace wi::image
 					for (int d = 0; d < DEPTH_TEST_MODE_COUNT; ++d)
 					{
 						desc.dss = &depthStencilStates[k][m][d];
-
-						for (int n = 0; n < STRIP_MODE_COUNT; ++n)
-						{
-							switch (n)
-							{
-							default:
-							case STRIP_ON:
-								desc.pt = PrimitiveTopology::TRIANGLESTRIP;
-								break;
-							case STRIP_OFF:
-								desc.pt = PrimitiveTopology::TRIANGLELIST;
-								break;
-							}
-							device->CreatePipelineState(&desc, &imagePSO[j][k][m][d][n]);
-						}
+						device->CreatePipelineState(&desc, &imagePSO[j][k][m][d]);
 					}
 				}
 			}
@@ -685,9 +635,9 @@ namespace wi::image
 		wilog("wi::image Initialized (%d ms)", (int)std::round(timer.elapsed()));
 	}
 
-	const PipelineState* GetPSO(DEPTH_TEST_MODE depth_test_mode, wi::enums::BLENDMODE blend_mode, STENCILMODE stencil_mode, STENCILREFMODE stencil_ref_mode, STRIP_MODE strip_mode)
+	const PipelineState* GetPSO(DEPTH_TEST_MODE depth_test_mode, wi::enums::BLENDMODE blend_mode, STENCILMODE stencil_mode, STENCILREFMODE stencil_ref_mode)
 	{
-		return &imagePSO[blend_mode][stencil_mode][stencil_ref_mode][depth_test_mode][strip_mode];
+		return &imagePSO[blend_mode][stencil_mode][stencil_ref_mode][depth_test_mode];
 	}
 
 }

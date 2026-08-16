@@ -56,7 +56,7 @@ VertextoPixel main(uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID)
 			if (image.flags & IMAGE_FLAG_CORNER_ROUNDING)
 			{
 				// triangle fan, complex shape; center vertex is not edge, rest are edge:
-				Out.edge = vertexID == 0 ? 0 : 1;
+				Out.edge = (vertexID & 1) ? 0 : 1;
 			}
 			else
 			{
