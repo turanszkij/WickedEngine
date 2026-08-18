@@ -221,9 +221,12 @@ namespace wi::input
 		wi::input::ps5::Update();
 #endif // PLATFORM_PS5
 
-#if defined(_WIN32) && !defined(PLATFORM_XBOX)
+#if defined(SDL2)
+		wi::input::sdlinput::GetMouseState(&mouse);
+		wi::input::sdlinput::GetKeyboardState(&keyboard);
+#elif defined(_WIN32) && !defined(PLATFORM_XBOX)
 		wi::input::rawinput::GetMouseState(&mouse); // currently only the relative data can be used from this
-		wi::input::rawinput::GetKeyboardState(&keyboard); 
+		wi::input::rawinput::GetKeyboardState(&keyboard);
 
 		// apparently checking the mouse here instead of Down() avoids missing the button presses (review!)
 		mouse.left_button_press |= KEY_DOWN(VK_LBUTTON);
@@ -249,9 +252,6 @@ namespace wi::input
 		mouse.middle_button_press = false;
 		mouse.delta_position = XMFLOAT2(0, 0);
 		mouse.delta_wheel = 0;
-#elif defined(SDL2)
-		wi::input::sdlinput::GetMouseState(&mouse);
-		wi::input::sdlinput::GetKeyboardState(&keyboard);
 #endif
 		
 		for (auto& x : mouse_move_events)
@@ -583,12 +583,12 @@ namespace wi::input
 			}
 			auto cursorhandle = cursor_table[cursor_next] ? cursor_table[cursor_next] : cursor_table[CURSOR_DEFAULT];
 			
-#ifdef PLATFORM_WINDOWS_DESKTOP
+#ifdef SDL2
+			SDL_SetCursor(cursorhandle);
+#elif defined(PLATFORM_WINDOWS_DESKTOP)
 			::SetCursor(cursorhandle);
 #elif defined(__APPLE__)
 			wi::apple::CursorSet(cursorhandle);
-#elif defined(SDL2)
-			SDL_SetCursor(cursorhandle);
 #endif // SDL2
 
 			cursor_current = cursor_next;
@@ -1102,12 +1102,12 @@ namespace wi::input
 					
 				default: break;
 			}
-#if defined(_WIN32) && !defined(PLATFORM_XBOX)
+#if defined(SDL2)
+			return keyboard.buttons[keycode] == 1;
+#elif defined(_WIN32) && !defined(PLATFORM_XBOX)
 			return KEY_DOWN(keycode) || KEY_TOGGLE(keycode);
 #elif defined(__APPLE__)
 			return IsKeyDown(keycode);
-#elif defined(SDL2)
-			return keyboard.buttons[keycode] == 1;
 #endif
 		}
 
@@ -1181,7 +1181,9 @@ namespace wi::input
 		const uint32_t posX = canvas.LogicalToPhysical(props.x);
 		const uint32_t posY = canvas.LogicalToPhysical(props.y);
 
-#if defined(PLATFORM_WINDOWS_DESKTOP)
+#if defined(SDL2)
+		SDL_WarpMouseInWindow(window, posX, posY);
+#elif defined(PLATFORM_WINDOWS_DESKTOP)
 		HWND hWnd = window;
 		POINT p;
 		p.x = (LONG)(posX);
@@ -1190,13 +1192,13 @@ namespace wi::input
 		SetCursorPos(p.x, p.y);
 #elif defined(__APPLE__)
 		wi::apple::SetMousePositionInWindow(window, XMFLOAT2(float(posX), float(posY)));
-#elif defined(SDL2)
-		SDL_WarpMouseInWindow(window, posX, posY);
 #endif // SDL2
 	}
 	void HidePointer(bool value)
 	{
-#ifdef _WIN32
+#ifdef SDL2
+		SDL_SetRelativeMouseMode(value ? SDL_TRUE : SDL_FALSE);
+#elif defined(_WIN32)
 		if (value)
 		{
 			while (ShowCursor(false) >= 0) {};
@@ -1207,9 +1209,7 @@ namespace wi::input
 		}
 #elif defined(__APPLE__)
 		wi::apple::CursorHide(value);
-#elif defined(SDL2)
-		SDL_SetRelativeMouseMode(value ? SDL_TRUE : SDL_FALSE);
-#endif // _WIN32
+#endif // SDL2
 	}
 
 	BUTTON WhatIsPressed(int playerindex)

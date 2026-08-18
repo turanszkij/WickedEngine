@@ -2043,9 +2043,7 @@ using namespace vulkan_internal;
 
 		instanceExtensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
-		instanceExtensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
-#elif defined(SDL2)
+#if defined(SDL2)
 		if (window != nullptr) {
 			uint32_t extensionCount;
 			SDL_Vulkan_GetInstanceExtensions(window, &extensionCount, nullptr);
@@ -2057,7 +2055,9 @@ using namespace vulkan_internal;
 				instanceExtensions.push_back(x);
 			}
 		}
-#endif // _WIN32
+#elif defined(VK_USE_PLATFORM_WIN32_KHR)
+		instanceExtensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+#endif // SDL2
 
 		if (validationMode != ValidationMode::Disabled)
 		{
@@ -3441,24 +3441,24 @@ using namespace vulkan_internal;
 		// Surface creation:
 		if(internal_state->surface == VK_NULL_HANDLE)
 		{
-#ifdef _WIN32
+#ifdef SDL2
+			if (!SDL_Vulkan_CreateSurface(window, instance, &internal_state->surface))
+			{
+				wilog_messagebox("Error creating a vulkan surface with SDL_Vulkan_CreateSurface!");
+				wi::platform::Exit();
+			}
+#elif defined(_WIN32)
 			VkWin32SurfaceCreateInfoKHR createInfo = {};
 			createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
 			createInfo.hwnd = window;
 			createInfo.hinstance = GetModuleHandle(nullptr);
 
 			vulkan_check(vkCreateWin32SurfaceKHR(instance, &createInfo, nullptr, &internal_state->surface));
-#elif defined(SDL2)
-			if (!SDL_Vulkan_CreateSurface(window, instance, &internal_state->surface))
-			{
-				wilog_messagebox("Error creating a vulkan surface with SDL_Vulkan_CreateSurface!");
-				wi::platform::Exit();
-			}
 #elif defined(__APPLE__)
 			wilog("Vulkan surface on Apple platform is not yet implemented");
 #else
 #error WICKEDENGINE VULKAN DEVICE ERROR: PLATFORM NOT SUPPORTED
-#endif // _WIN32
+#endif // SDL2
 		}
 
 		uint32_t presentFamily = VK_QUEUE_FAMILY_IGNORED;

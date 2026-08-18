@@ -100,7 +100,9 @@ namespace wi::helper
 
 	void messageBox(const std::string& msg, const std::string& caption)
 	{
-#if defined(PLATFORM_WINDOWS_DESKTOP)
+#if defined(SDL2)
+		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, caption.c_str(), msg.c_str(), NULL);
+#elif defined(PLATFORM_WINDOWS_DESKTOP)
 		std::wstring wmsg;
 		std::wstring wcaption;
 		StringConvert(msg, wmsg);
@@ -108,14 +110,39 @@ namespace wi::helper
 		MessageBox(GetActiveWindow(), wmsg.c_str(), wcaption.c_str(), 0);
 #elif defined(__APPLE__)
 		wi::apple::MessageBox(caption.c_str(), msg.c_str());
-#elif defined(SDL2)
-		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, caption.c_str(), msg.c_str(), NULL);
 #endif
 	}
 
 	MessageBoxResult messageBoxCustom(const std::string& msg, const std::string& caption, const std::string& buttons)
 	{
-#if defined(PLATFORM_WINDOWS_DESKTOP)
+#if defined(SDL2)
+		const SDL_MessageBoxButtonData buttons_data[] = {
+			{ SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 0, "Yes" },
+			{ 0, 1, "No" },
+			{ SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 2, "Cancel" },
+		};
+		const SDL_MessageBoxData messageboxdata = {
+			SDL_MESSAGEBOX_INFORMATION,
+			NULL,
+			caption.c_str(),
+			msg.c_str(),
+			SDL_arraysize(buttons_data),
+			buttons_data,
+			NULL
+		};
+		int buttonid;
+		if (SDL_ShowMessageBox(&messageboxdata, &buttonid) < 0)
+		{
+			return MessageBoxResult::Cancel;
+		}
+		switch (buttonid)
+		{
+		case 0: return MessageBoxResult::Yes;
+		case 1: return MessageBoxResult::No;
+		case 2: return MessageBoxResult::Cancel;
+		default: return MessageBoxResult::Cancel;
+		}
+#elif defined(PLATFORM_WINDOWS_DESKTOP)
 		std::wstring wmsg;
 		std::wstring wcaption;
 		StringConvert(msg, wmsg);
@@ -157,36 +184,9 @@ namespace wi::helper
 		default: return MessageBoxResult::Cancel;
 		}
 #elif defined(__APPLE__)
-		
+
 		return (MessageBoxResult)wi::apple::MessageBox(caption.c_str(), msg.c_str(), buttons.c_str());
-		
-#elif defined(SDL2)
-		const SDL_MessageBoxButtonData buttons_data[] = {
-			{ SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 0, "Yes" },
-			{ 0, 1, "No" },
-			{ SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 2, "Cancel" },
-		};
-		const SDL_MessageBoxData messageboxdata = {
-			SDL_MESSAGEBOX_INFORMATION,
-			NULL,
-			caption.c_str(),
-			msg.c_str(),
-			SDL_arraysize(buttons_data),
-			buttons_data,
-			NULL
-		};
-		int buttonid;
-		if (SDL_ShowMessageBox(&messageboxdata, &buttonid) < 0)
-		{
-			return MessageBoxResult::Cancel;
-		}
-		switch (buttonid)
-		{
-		case 0: return MessageBoxResult::Yes;
-		case 1: return MessageBoxResult::No;
-		case 2: return MessageBoxResult::Cancel;
-		default: return MessageBoxResult::Cancel;
-		}
+
 #endif
 
 		return MessageBoxResult::Cancel;
@@ -2266,7 +2266,11 @@ namespace wi::helper
 	{
 		std::wstring wstr;
 
-#ifdef PLATFORM_WINDOWS_DESKTOP
+#ifdef SDL2
+		char* str = SDL_GetClipboardText();
+		StringConvert(str, wstr);
+		SDL_free(str);
+#elif defined(PLATFORM_WINDOWS_DESKTOP)
 		if (!::OpenClipboard(NULL))
 			return wstr;
 		HANDLE wbuf_handle = ::GetClipboardData(CF_UNICODETEXT);
@@ -2281,21 +2285,21 @@ namespace wi::helper
 		}
 		::GlobalUnlock(wbuf_handle);
 		::CloseClipboard();
-#elif defined(SDL2)
-		char* str = SDL_GetClipboardText();
-		StringConvert(str, wstr);
-		SDL_free(str);
 #elif defined(__APPLE__)
 		std::string str = wi::apple::GetClipboardText();
 		StringConvert(str, wstr);
-#endif // PLATFORM_WINDOWS_DESKTOP
+#endif // SDL2
 
 		return wstr;
 	}
 
 	void SetClipboardText(const std::wstring& wstr)
 	{
-#ifdef PLATFORM_WINDOWS_DESKTOP
+#ifdef SDL2
+		std::string str;
+		StringConvert(wstr, str);
+		SDL_SetClipboardText(str.c_str());
+#elif defined(PLATFORM_WINDOWS_DESKTOP)
 		if (!::OpenClipboard(NULL))
 			return;
 		const int wbuf_length = (int)wstr.length() + 1;
@@ -2312,15 +2316,11 @@ namespace wi::helper
 		if (::SetClipboardData(CF_UNICODETEXT, wbuf_handle) == NULL)
 			::GlobalFree(wbuf_handle);
 		::CloseClipboard();
-#elif defined(SDL2)
-		std::string str;
-		StringConvert(wstr, str);
-		SDL_SetClipboardText(str.c_str());
 #elif defined(__APPLE__)
 		std::string str;
 		StringConvert(wstr, str);
 		wi::apple::SetClipboardText(str.c_str());
-#endif // PLATFORM_WINDOWS_DESKTOP
+#endif // SDL2
 	}
 
 	void SetClipboardImage(const wi::graphics::Texture& texture)
