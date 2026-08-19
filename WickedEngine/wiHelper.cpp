@@ -1474,7 +1474,7 @@ namespace wi::helper
 #ifdef PLATFORM_WINDOWS_DESKTOP
 		std::thread([=] {
 
-			wchar_t szFile[4096];
+			wchar_t szFile[4096] = {};
 
 			OPENFILENAME ofn;
 			ZeroMemory(&ofn, sizeof(ofn));
