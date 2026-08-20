@@ -100,7 +100,7 @@ namespace wi::helper
 
 	void messageBox(const std::string& msg, const std::string& caption)
 	{
-#if defined(PLATFORM_WINDOWS_DESKTOP)
+#if defined(PLATFORM_WINDOWS_DESKTOP) && !defined(SDL2)
 		std::wstring wmsg;
 		std::wstring wcaption;
 		StringConvert(msg, wmsg);
@@ -115,7 +115,7 @@ namespace wi::helper
 
 	MessageBoxResult messageBoxCustom(const std::string& msg, const std::string& caption, const std::string& buttons)
 	{
-#if defined(PLATFORM_WINDOWS_DESKTOP)
+#if defined(PLATFORM_WINDOWS_DESKTOP) && !defined(SDL2)
 		std::wstring wmsg;
 		std::wstring wcaption;
 		StringConvert(msg, wmsg);
@@ -2258,7 +2258,7 @@ namespace wi::helper
 	{
 		std::wstring wstr;
 
-#ifdef PLATFORM_WINDOWS_DESKTOP
+#if defined(PLATFORM_WINDOWS_DESKTOP) && !defined(SDL2)
 		if (!::OpenClipboard(NULL))
 			return wstr;
 		HANDLE wbuf_handle = ::GetClipboardData(CF_UNICODETEXT);
@@ -2287,7 +2287,7 @@ namespace wi::helper
 
 	void SetClipboardText(const std::wstring& wstr)
 	{
-#ifdef PLATFORM_WINDOWS_DESKTOP
+#if defined(PLATFORM_WINDOWS_DESKTOP) && !defined(SDL2)
 		if (!::OpenClipboard(NULL))
 			return;
 		const int wbuf_length = (int)wstr.length() + 1;

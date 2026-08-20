@@ -33,6 +33,10 @@ DEFINE_GUID(D3D12_VIDEO_DECODE_PROFILE_HEVC_MAIN, 0x5b11d51b, 0x2f4c, 0x4452, 0x
 #include <algorithm>
 #include <intrin.h> // _BitScanReverse64
 
+#ifdef SDL2
+#include <SDL_syswm.h>
+#endif // SDL2
+
 using namespace Microsoft::WRL;
 
 namespace wi::graphics
@@ -3098,9 +3102,18 @@ std::mutex queue_locker;
 			DXGI_SWAP_CHAIN_FULLSCREEN_DESC fullscreenDesc = {};
 			fullscreenDesc.Windowed = !desc->fullscreen;
 
+#ifdef SDL2
+			SDL_SysWMinfo wmInfo;
+			SDL_VERSION(&wmInfo.version);
+			wilog_assert(SDL_GetWindowWMInfo(window, &wmInfo) == SDL_TRUE, "SDL_GetWindowWMInfo failed!");
+			HWND hwnd = wmInfo.info.win.window;
+#else
+			HWND hwnd = window;
+#endif // SDL2
+
 			hr = dxgiFactory->CreateSwapChainForHwnd(
 				queues[QUEUE_GRAPHICS].queue.Get(),
-				window,
+				hwnd,
 				&swapChainDesc,
 				&fullscreenDesc,
 				nullptr,

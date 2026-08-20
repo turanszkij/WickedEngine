@@ -9,7 +9,7 @@
 
 #include <sstream>
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(SDL2)
 
 #include <wrl/client.h> // ComPtr
 #include <xaudio2.h>

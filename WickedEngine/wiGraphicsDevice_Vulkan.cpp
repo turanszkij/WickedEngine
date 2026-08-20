@@ -2043,7 +2043,7 @@ using namespace vulkan_internal;
 
 		instanceExtensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
+#if defined(VK_USE_PLATFORM_WIN32_KHR) && !defined(SDL2)
 		instanceExtensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #elif defined(SDL2)
 		if (window != nullptr) {
@@ -3441,7 +3441,7 @@ using namespace vulkan_internal;
 		// Surface creation:
 		if(internal_state->surface == VK_NULL_HANDLE)
 		{
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(SDL2)
 			VkWin32SurfaceCreateInfoKHR createInfo = {};
 			createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
 			createInfo.hwnd = window;

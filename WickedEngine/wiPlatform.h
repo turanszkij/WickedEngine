@@ -51,7 +51,7 @@ typedef void* HMODULE;
 
 namespace wi::platform
 {
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(SDL2)
 	using window_type = HWND;
 	using error_type = HRESULT;
 #elif defined(SDL2)
@@ -67,7 +67,7 @@ namespace wi::platform
 
 	inline void Exit()
 	{
-#if defined(_WIN32)
+#if defined(_WIN32) && !defined(SDL2)
 		PostQuitMessage(0);
 #elif defined(SDL2)
 		SDL_Event quit_event;
@@ -91,7 +91,7 @@ namespace wi::platform
 	};
 	inline void GetWindowProperties(window_type window, WindowProperties* dest)
 	{
-#ifdef PLATFORM_WINDOWS_DESKTOP
+#if defined(PLATFORM_WINDOWS_DESKTOP) && !defined(SDL2)
 		dest->dpi = (float)GetDpiForWindow(window);
 #endif // WINDOWS_DESKTOP
 
@@ -99,19 +99,19 @@ namespace wi::platform
 		dest->dpi = 96.f;
 #endif // PLATFORM_XBOX
 
-#if defined(PLATFORM_WINDOWS_DESKTOP) || defined(PLATFORM_XBOX)
+#if (defined(PLATFORM_WINDOWS_DESKTOP) && !defined(SDL2)) || defined(PLATFORM_XBOX)
 		RECT rect;
 		GetClientRect(window, &rect);
 		dest->width = int(rect.right - rect.left);
 		dest->height = int(rect.bottom - rect.top);
 #endif // PLATFORM_WINDOWS_DESKTOP || PLATFORM_XBOX
 
-#ifdef PLATFORM_LINUX
+#ifdef SDL2
 		int window_width, window_height;
 		SDL_GetWindowSize(window, &window_width, &window_height);
 		SDL_Vulkan_GetDrawableSize(window, &dest->width, &dest->height);
 		dest->dpi = ((float)dest->width / (float)window_width) * 96.f;
-#endif // PLATFORM_LINUX
+#endif // SDL2
 		
 #ifdef PLATFORM_APPLE
 		XMUINT2 size = wi::apple::GetWindowSize(window);
@@ -124,7 +124,7 @@ namespace wi::platform
 
 	inline void SetWindowFullScreen(window_type window, bool fullscreen)
 	{
-#if defined(PLATFORM_WINDOWS_DESKTOP)
+#if defined(PLATFORM_WINDOWS_DESKTOP) && !defined(SDL2)
 		// Based on: https://devblogs.microsoft.com/oldnewthing/20100412-00/?p=14353
 		static WINDOWPLACEMENT wp = {};
 		const DWORD dwStyle = GetWindowLong(window, GWL_STYLE);
@@ -156,7 +156,7 @@ namespace wi::platform
 				SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
 		}
 
-#elif defined(PLATFORM_LINUX)
+#elif defined(SDL2)
 		SDL_SetWindowFullscreen(window, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
 #elif defined(__APPLE__)
 		wi::apple::SetWindowFullScreen(window, fullscreen);
@@ -165,9 +165,9 @@ namespace wi::platform
 
 	inline bool IsWindowFullScreen(window_type window)
 	{
-#if defined(PLATFORM_WINDOWS_DESKTOP)
+#if defined(PLATFORM_WINDOWS_DESKTOP) && !defined(SDL2)
 		return (GetWindowLong(window, GWL_STYLE) & WS_OVERLAPPEDWINDOW) == 0;
-#elif defined(PLATFORM_LINUX)
+#elif defined(SDL2)
 		auto flags = SDL_GetWindowFlags(window);
 		if (flags & SDL_WINDOW_FULLSCREEN_DESKTOP)
 			return true;

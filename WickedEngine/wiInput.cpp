@@ -221,7 +221,7 @@ namespace wi::input
 		wi::input::ps5::Update();
 #endif // PLATFORM_PS5
 
-#if defined(_WIN32) && !defined(PLATFORM_XBOX)
+#if defined(_WIN32) && !defined(PLATFORM_XBOX) && !defined(SDL2)
 		wi::input::rawinput::GetMouseState(&mouse); // currently only the relative data can be used from this
 		wi::input::rawinput::GetKeyboardState(&keyboard); 
 
@@ -583,7 +583,7 @@ namespace wi::input
 			}
 			auto cursorhandle = cursor_table[cursor_next] ? cursor_table[cursor_next] : cursor_table[CURSOR_DEFAULT];
 			
-#ifdef PLATFORM_WINDOWS_DESKTOP
+#if defined(PLATFORM_WINDOWS_DESKTOP) && !defined(SDL2)
 			::SetCursor(cursorhandle);
 #elif defined(__APPLE__)
 			wi::apple::CursorSet(cursorhandle);
@@ -1102,7 +1102,7 @@ namespace wi::input
 					
 				default: break;
 			}
-#if defined(_WIN32) && !defined(PLATFORM_XBOX)
+#if defined(_WIN32) && !defined(PLATFORM_XBOX) && !defined(SDL2)
 			return KEY_DOWN(keycode) || KEY_TOGGLE(keycode);
 #elif defined(__APPLE__)
 			return IsKeyDown(keycode);
@@ -1181,7 +1181,7 @@ namespace wi::input
 		const uint32_t posX = canvas.LogicalToPhysical(props.x);
 		const uint32_t posY = canvas.LogicalToPhysical(props.y);
 
-#if defined(PLATFORM_WINDOWS_DESKTOP)
+#if defined(PLATFORM_WINDOWS_DESKTOP) && !defined(SDL2)
 		HWND hWnd = window;
 		POINT p;
 		p.x = (LONG)(posX);
@@ -1196,7 +1196,7 @@ namespace wi::input
 	}
 	void HidePointer(bool value)
 	{
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(SDL2)
 		if (value)
 		{
 			while (ShowCursor(false) >= 0) {};
