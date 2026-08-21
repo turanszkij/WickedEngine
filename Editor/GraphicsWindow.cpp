@@ -625,6 +625,22 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	MSAAComboBox.SetTooltip("Multisampling Anti Aliasing quality. ");
 	AddWidget(&MSAAComboBox);
 
+	oitCheckBox.Create("OIT (experimental): ");
+	oitCheckBox.SetTooltip("Toggle stochastic order independent transparency. Distributes each transparent fragment across a subset of the pixel's MSAA samples instead of blending it into all of them, so intersecting or unsorted transparent surfaces blend more correctly.\nRequires MSAA to be enabled above (2/4/8) to have any effect; the more samples, the more distinguishable transparency layers per pixel.");
+	oitCheckBox.SetPos(XMFLOAT2(x, y += step));
+	oitCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
+	if (editor->main->config.GetSection("graphics").Has("oit"))
+	{
+		wi::renderer::SetOITEnabled(editor->main->config.GetSection("graphics").GetBool("oit"));
+	}
+	oitCheckBox.SetCheck(wi::renderer::GetOITEnabled());
+	oitCheckBox.OnClick([=](wi::gui::EventArgs args) {
+		wi::renderer::SetOITEnabled(args.bValue);
+		editor->main->config.GetSection("graphics").Set("oit", args.bValue);
+		editor->main->config.Commit();
+	});
+	AddWidget(&oitCheckBox);
+
 	temporalAACheckBox.Create("Temporal AA: ");
 	temporalAACheckBox.SetTooltip("Toggle Temporal Anti Aliasing. It is a supersampling techique which is performed across multiple frames.");
 	temporalAACheckBox.SetPos(XMFLOAT2(x, y += step));

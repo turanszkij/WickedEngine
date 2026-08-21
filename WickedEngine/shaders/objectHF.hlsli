@@ -1121,6 +1121,15 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 
 #ifndef DISABLE_ALPHATEST
 	coverage = AlphaToCoverage(color.a, alphatest, dithering, input.pos); // opaque soft alpha test (MSAA, temporal AA support)
+#ifdef TRANSPARENT
+	if ((GetFrame().options & OPTION_BIT_OIT_ENABLED) && GetCamera().sample_count > 1)
+	{
+		// Order independent transparency was resolved above into a per-sample coverage mask,
+		//	so the covered samples must be written fully opaque here, otherwise the regular
+		//	alpha blend state would attenuate them by alpha a second time.
+		color.a = 1;
+	}
+#endif // TRANSPARENT
 #endif // DISABLE_ALPHATEST
 
 #ifdef ENVMAPRENDERING

@@ -588,6 +588,26 @@ inline uint AlphaToCoverage(half alpha, half alphaTest, half dithering, float4 s
 	if (alpha > 0)
 	{
 #ifdef TRANSPARENT
+		if ((GetFrame().options & OPTION_BIT_OIT_ENABLED) && GetCamera().sample_count > 1)
+		{
+			// Stochastic order independent transparency:
+			//	Instead of blending this fragment into every MSAA sample of the pixel (regular
+			//	forward alpha blending below), only distribute it into a subset of the samples,
+			//	sized proportionally to alpha, and rotated by a blue-noise value (animated over
+			//	time, and varying with depth so that overlapping surfaces at the same pixel tend
+			//	to pick different samples). Surfaces that actually overlap in depth then end up
+			//	blended into different samples instead of on top of each other, and the ordinary
+			//	MSAA resolve averages the samples back together - approximating order independent
+			//	blending with up to sample_count distinguishable layers per pixel, while still
+			//	using the regular forward render target and MSAA hardware.
+			const uint sample_count = GetCamera().sample_count;
+			const uint full_mask = (1u << sample_count) - 1u;
+			const uint bits = clamp(uint(alpha * sample_count + 0.5), 1u, sample_count);
+			uint mask = bits >= sample_count ? full_mask : ((1u << bits) - 1u);
+			const uint rot = uint(blue_noise(svposition.xy, svposition.w).y * sample_count) % sample_count;
+			mask = ((mask << rot) | (mask >> ((sample_count - rot) % sample_count))) & full_mask;
+			return mask;
+		}
 		// Transparent render pass:
 		//	still clips alpha = 0 but for any alpha it will use blending and full coverage
 		//	otherwise the alpha would do blending and coverage which doubles the alpha effect in multisampling

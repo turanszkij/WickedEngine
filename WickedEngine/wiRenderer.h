@@ -1249,6 +1249,9 @@ namespace wi::renderer
 	bool GetVXGIEnabled();
 	void SetVXGIReflectionsEnabled(bool enabled);
 	bool GetVXGIReflectionsEnabled();
+	// Experimental order independent transparency (stochastic MSAA-based). Only has an effect when MSAA is also enabled.
+	void SetOITEnabled(bool enabled);
+	bool GetOITEnabled();
 	void SetGameSpeed(float value);
 	float GetGameSpeed();
 	void SetShadowsEnabled(bool value);

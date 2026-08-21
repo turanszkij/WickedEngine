@@ -148,6 +148,7 @@ std::atomic<size_t> SHADER_ERRORS{ 0 };
 std::atomic<size_t> SHADER_MISSING{ 0 };
 bool VXGI_ENABLED = false;
 bool VXGI_REFLECTIONS_ENABLED = true;
+bool OIT_ENABLED = false;
 bool VXGI_DEBUG = false;
 int VXGI_DEBUG_CLIPMAP = 0;
 bool CAPSULE_SHADOW_ENABLED = false;
@@ -4247,6 +4248,10 @@ void UpdatePerFrameData(
 	if (GetVXGIReflectionsEnabled())
 	{
 		frameCB.options |= OPTION_BIT_VXGI_REFLECTIONS_ENABLED;
+	}
+	if (GetOITEnabled())
+	{
+		frameCB.options |= OPTION_BIT_OIT_ENABLED;
 	}
 	if (vis.scene->weather.IsRealisticSky())
 	{
@@ -19640,6 +19645,8 @@ void SetVXGIEnabled(bool enabled)
 bool GetVXGIEnabled() { return VXGI_ENABLED; }
 void SetVXGIReflectionsEnabled(bool enabled) { VXGI_REFLECTIONS_ENABLED = enabled; }
 bool GetVXGIReflectionsEnabled() { return VXGI_REFLECTIONS_ENABLED; }
+void SetOITEnabled(bool enabled) { OIT_ENABLED = enabled; }
+bool GetOITEnabled() { return OIT_ENABLED; }
 void SetGameSpeed(float value) { GameSpeed = std::max(0.0f, value); }
 float GetGameSpeed() { return GameSpeed; }
 void SetShadowsEnabled(bool value)

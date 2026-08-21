@@ -44,6 +44,7 @@ public:
 	wi::gui::ComboBox shadowProps2DComboBox;
 	wi::gui::ComboBox shadowPropsCubeComboBox;
 	wi::gui::ComboBox MSAAComboBox;
+	wi::gui::CheckBox oitCheckBox;
 	wi::gui::CheckBox temporalAACheckBox;
 	wi::gui::CheckBox temporalAADebugCheckBox;
 	wi::gui::ComboBox textureQualityComboBox;
