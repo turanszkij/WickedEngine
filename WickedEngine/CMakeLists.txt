@@ -63,7 +63,7 @@ else ()
     endif()
 
     # minimum sdl version is 2.0.14 for controller LED support
-    if((${SDL_VERSION_MAJOR} GREATER_EQUAL 2) AND (${SDL2_VERSION_MINOR} GREATER_EQUAL 0) AND (${SDL2_VERSION_PATCH} GREATER_EQUAL 14))
+    if((${SDL_VERSION_MAJOR} GREATER_EQUAL 2) AND (${SDL_VERSION_MINOR} GREATER_EQUAL 0) AND (${SDL_VERSION_PATCH} GREATER_EQUAL 14))
         add_compile_definitions(SDL2_FEATURE_CONTROLLER_LED=1)
     endif()
 endif()
