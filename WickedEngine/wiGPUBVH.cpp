@@ -166,7 +166,7 @@ namespace wi
 						const MeshComponent::MeshSubset& subset = mesh.subsets[subsetIndex];
 
 						BVHPushConstants push;
-						push.instanceIndex = (uint)i;
+						push.instanceIndex = object.gpuInstanceIndex; // stable GPU instance slot
 						push.subsetIndex = subsetIndex;
 						push.primitiveCount = subset.indexCount / 3;
 						push.primitiveOffset = primitiveCount;
@@ -192,7 +192,7 @@ namespace wi
 				if (hair.meshID != INVALID_ENTITY)
 				{
 					BVHPushConstants push;
-					push.instanceIndex = (uint)(scene.objects.GetCount() + i);
+					push.instanceIndex = (uint)(scene.objectInstanceCapacity + i);
 					push.subsetIndex = 0;
 					push.primitiveCount = hair.segmentCount * hair.strandCount * 2;
 					push.primitiveOffset = primitiveCount;
@@ -216,7 +216,7 @@ namespace wi
 				if (emitter.GetMaxParticleCount() > 0)
 				{
 					BVHPushConstants push;
-					push.instanceIndex = (uint)(scene.objects.GetCount() + i);
+					push.instanceIndex = (uint)(scene.objectInstanceCapacity + i);
 					push.subsetIndex = 0;
 					push.primitiveCount = emitter.GetMaxParticleCount() * 2;
 					push.primitiveOffset = primitiveCount;

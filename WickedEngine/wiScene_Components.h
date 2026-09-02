@@ -1198,6 +1198,16 @@ namespace wi::scene
 		mutable bool wetmap_cleared = false;
 		bool mesh_blend_required = false;
 
+		// Persistent GPU instance slot for this object, assigned by the Scene's
+		// stable-slot allocator and held for the object's lifetime (unlike the
+		// ComponentManager array index, which the swap-with-last removal
+		// churns). Keeping it stable lets GPU-side caches that store an
+		// instance index - most notably the surfel GI cache, which validates by
+		// entity uid - keep resolving to the same entity across unrelated scene
+		// edits (terrain streaming), instead of being mass-invalidated. ~0u =
+		// not yet assigned.
+		uint32_t gpuInstanceIndex = ~0u;
+
 		// these will only be valid for a single frame:
 		uint32_t mesh_index = ~0u;
 		uint32_t sort_bits = 0;
