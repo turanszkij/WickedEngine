@@ -176,9 +176,9 @@ namespace wi::scene
 			}
 		};
 		mutable wi::vector<OcclusionResult> occlusion_results_objects;
-		wi::graphics::GPUQueryHeap queryHeap;
+		wi::graphics::GPUBuffer occlusionMatrices[wi::graphics::GraphicsDevice::GetBufferCount()];
+		wi::graphics::GPUBuffer queryResultBufferRW;
 		wi::graphics::GPUBuffer queryResultBuffer[arraysize(OcclusionResult::occlusionQueries)];
-		wi::graphics::GPUBuffer queryPredicationBuffer;
 		uint32_t queryheap_idx = 0;
 		mutable std::atomic<uint32_t> queryAllocator{ 0 };
 

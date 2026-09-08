@@ -177,32 +177,40 @@ namespace wi::scene
 		if(wi::renderer::GetOcclusionCullingEnabled() && !wi::renderer::GetFreezeCullingCameraEnabled())
 		{
 			uint32_t minQueryCount = uint32_t(objects.GetCount() + lights.GetCount() + 1); // +1: ocean (don't know for sure if it exists yet before weather update)
-			if (queryHeap.desc.query_count < minQueryCount)
+			if (queryResultBufferRW.desc.size < minQueryCount * sizeof(uint64_t))
 			{
-				GPUQueryHeapDesc desc;
-				desc.type = GpuQueryType::OCCLUSION_BINARY;
-				desc.query_count = minQueryCount * 2; // *2 to grow fast
-				bool success = device->CreateQueryHeap(&desc, &queryHeap);
-				assert(success);
-
+				const uint64_t occlusionCount = minQueryCount * 2; // *2 to grow fast
+				
 				GPUBufferDesc bd;
+				bd.usage = Usage::DEFAULT;
+				bd.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+				bd.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
+				bd.stride = sizeof(uint64_t);
+				bd.size = occlusionCount * bd.stride;
+				bool success = device->CreateBuffer(&bd, nullptr, &queryResultBufferRW);
+				assert(success);
+				device->SetName(&queryResultBufferRW, "Scene::queryResultBufferRW");
+				
 				bd.usage = Usage::READBACK;
-				bd.size = desc.query_count * sizeof(uint64_t);
-
+				bd.bind_flags = BindFlag::NONE;
+				bd.misc_flags = ResourceMiscFlag::NONE;
 				for (int i = 0; i < arraysize(queryResultBuffer); ++i)
 				{
 					success = device->CreateBuffer(&bd, nullptr, &queryResultBuffer[i]);
 					assert(success);
 					device->SetName(&queryResultBuffer[i], "Scene::queryResultBuffer");
 				}
-
-				if (device->CheckCapability(GraphicsDeviceCapability::PREDICATION))
+				
+				bd.usage = Usage::UPLOAD;
+				bd.bind_flags = BindFlag::SHADER_RESOURCE;
+				bd.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
+				bd.stride = sizeof(float4x4);
+				bd.size = occlusionCount * bd.stride;
+				for (int i = 0; i < arraysize(occlusionMatrices); ++i)
 				{
-					bd.usage = Usage::DEFAULT;
-					bd.misc_flags |= ResourceMiscFlag::PREDICATION;
-					success = device->CreateBuffer(&bd, nullptr, &queryPredicationBuffer);
+					success = device->CreateBuffer(&bd, nullptr, &occlusionMatrices[i]);
 					assert(success);
-					device->SetName(&queryPredicationBuffer, "Scene::queryPredicationBuffer");
+					device->SetName(&occlusionMatrices[i], "Scene::occlusionMatrices");
 				}
 			}
 

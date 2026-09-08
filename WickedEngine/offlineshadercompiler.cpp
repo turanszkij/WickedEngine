@@ -288,6 +288,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"waveeffectPS", wi::graphics::ShaderStage::PS },
 	{"gaussian_splatPS", wi::graphics::ShaderStage::PS },
 	{"voidPS", wi::graphics::ShaderStage::PS },
+	{"occludeePS", wi::graphics::ShaderStage::PS },
 
 
 	{"hairparticleVS", wi::graphics::ShaderStage::VS },

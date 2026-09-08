@@ -623,7 +623,7 @@ SHADERTYPE GetPSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, b
 	return realPS;
 }
 
-PipelineState PSO_occlusionquery;
+PipelineState PSO_occlusionculling;
 PipelineState PSO_impostor[RENDERPASS_COUNT];
 PipelineState PSO_impostor_wire;
 PipelineState PSO_captureimpostor;
@@ -964,6 +964,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_WAVE_EFFECT], "waveeffectPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_POSTPROCESS_MESH_BLEND], "mesh_blendPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_VOID], "voidPS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OCCLUDEE], "occludeePS.cso"); });
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_VOXELIZER], "objectGS_voxelizer.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_VOXEL], "voxelGS.cso"); });
@@ -1320,12 +1321,12 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
 		PipelineStateDesc desc;
 		desc.vs = &shaders[VSTYPE_OCCLUDEE];
+		desc.ps = &shaders[PSTYPE_OCCLUDEE];
 		desc.rs = &rasterizers[RSTYPE_OCCLUDEE];
 		desc.bs = &blendStates[BSTYPE_COLORWRITEDISABLE];
 		desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
 		desc.pt = PrimitiveTopology::TRIANGLESTRIP;
-
-		device->CreatePipelineState(&desc, &PSO_occlusionquery);
+		device->CreatePipelineState(&desc, &PSO_occlusionculling);
 		});
 	wi::jobsystem::Dispatch(ctx, RENDERPASS_COUNT, 1, [](wi::jobsystem::JobArgs args) {
 		const bool impostorRequest =
@@ -5793,160 +5794,103 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 
 void OcclusionCulling_Reset(const Visibility& vis, CommandList cmd)
 {
-	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled() || !vis.scene->queryHeap.IsValid())
-	{
+	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled() || !vis.scene->queryResultBufferRW.IsValid())
 		return;
-	}
 	if (vis.visibleObjects.empty() && vis.visibleLights.empty() && !vis.scene->weather.IsOceanEnabled())
-	{
 		return;
-	}
+	const uint32_t queryCount = vis.scene->queryAllocator.load();
+	if (queryCount == 0)
+		return;
 
-	const GPUQueryHeap& queryHeap = vis.scene->queryHeap;
-
-	device->QueryReset(
-		&queryHeap,
-		0,
-		queryHeap.desc.query_count,
-		cmd
-	);
+	device->ClearUAV(&vis.scene->queryResultBufferRW, 0, cmd);
+	device->Barrier(GPUBarrier::Memory(&vis.scene->queryResultBufferRW), cmd);
 }
 void OcclusionCulling_Render(const CameraComponent& camera, const Visibility& vis, CommandList cmd)
 {
-	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled() || !vis.scene->queryHeap.IsValid())
-	{
+	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled() || !vis.scene->queryResultBufferRW.IsValid())
 		return;
-	}
 	if (vis.visibleObjects.empty() && vis.visibleLights.empty() && !vis.scene->weather.IsOceanEnabled())
-	{
 		return;
-	}
+	const uint32_t queryCount = vis.scene->queryAllocator.load();
+	if (queryCount == 0)
+		return;
 
 	auto range = wi::profiler::BeginRangeGPU("Occlusion Culling Render", cmd);
+	device->EventBegin("Occlusion Culling", cmd);
 
-	device->BindPipelineState(&PSO_occlusionquery, cmd);
+	const XMMATRIX VP = camera.GetViewProjection();
 
-	XMMATRIX VP = camera.GetViewProjection();
+	const int query_write = vis.scene->queryheap_idx;
+	
+	float4x4* dest = (float4x4*)vis.scene->occlusionMatrices[device->GetBufferIndex()].mapped_data;
 
-	const GPUQueryHeap& queryHeap = vis.scene->queryHeap;
-	int query_write = vis.scene->queryheap_idx;
-
-	if (!vis.visibleObjects.empty())
+	for (uint32_t instanceIndex : vis.visibleObjects)
 	{
-		device->EventBegin("Occlusion Culling Objects", cmd);
+		const Scene::OcclusionResult& occlusion_result = vis.scene->occlusion_results_objects[instanceIndex];
 
-		for (uint32_t instanceIndex : vis.visibleObjects)
+		const int queryIndex = occlusion_result.occlusionQueries[query_write];
+		if (queryIndex >= 0)
 		{
-			const Scene::OcclusionResult& occlusion_result = vis.scene->occlusion_results_objects[instanceIndex];
+			AABB aabb = vis.scene->aabb_objects[instanceIndex];
+			// extrude the bounding box a bit:
+			aabb._min.x -= 0.001f;
+			aabb._min.y -= 0.001f;
+			aabb._min.z -= 0.001f;
+			aabb._max.x += 0.001f;
+			aabb._max.y += 0.001f;
+			aabb._max.z += 0.001f;
+			const XMMATRIX transform = aabb.getAsBoxMatrix() * VP;
+			XMStoreFloat4x4(dest + queryIndex, transform);
+		}
+	}
 
-			int queryIndex = occlusion_result.occlusionQueries[query_write];
+	for (uint32_t lightIndex : vis.visibleLights)
+	{
+		const LightComponent& light = vis.scene->lights[lightIndex];
+		if (light.occlusionquery >= 0)
+		{
+			const uint32_t queryIndex = (uint32_t)light.occlusionquery;
 			if (queryIndex >= 0)
 			{
-				AABB aabb = vis.scene->aabb_objects[instanceIndex];
-				// extrude the bounding box a bit:
-				aabb._min.x -= 0.001f;
-				aabb._min.y -= 0.001f;
-				aabb._min.z -= 0.001f;
-				aabb._max.x += 0.001f;
-				aabb._max.y += 0.001f;
-				aabb._max.z += 0.001f;
-				const XMMATRIX transform = aabb.getAsBoxMatrix() * VP;
-				device->PushConstants(&transform, sizeof(transform), cmd);
-
-				// render bounding box to later read the occlusion status
-				device->QueryBegin(&queryHeap, queryIndex, cmd);
-				device->Draw(14, 0, cmd);
-				device->QueryEnd(&queryHeap, queryIndex, cmd);
-			}
-		}
-
-		device->EventEnd(cmd);
-	}
-
-	if (!vis.visibleLights.empty())
-	{
-		device->EventBegin("Occlusion Culling Lights", cmd);
-
-		for (uint32_t lightIndex : vis.visibleLights)
-		{
-			const LightComponent& light = vis.scene->lights[lightIndex];
-			if (light.occlusionquery >= 0)
-			{
-				uint32_t queryIndex = (uint32_t)light.occlusionquery;
 				const AABB& aabb = vis.scene->aabb_lights[lightIndex];
 				const XMMATRIX transform = aabb.getAsBoxMatrix() * VP;
-				device->PushConstants(&transform, sizeof(transform), cmd);
-
-				device->QueryBegin(&queryHeap, queryIndex, cmd);
-				device->Draw(14, 0, cmd);
-				device->QueryEnd(&queryHeap, queryIndex, cmd);
+				XMStoreFloat4x4(dest + queryIndex, transform);
 			}
 		}
-
-		device->EventEnd(cmd);
 	}
+	
+	device->BindPipelineState(&PSO_occlusionculling, cmd);
+	device->BindResource(&vis.scene->occlusionMatrices[device->GetBufferIndex()], 0, cmd);
+	device->BindUAV(&vis.scene->queryResultBufferRW, 0, cmd);
+	device->DrawInstanced(14, vis.scene->queryAllocator.load(), 0, 0, cmd);
 
 	if (vis.scene->weather.IsOceanEnabled())
 	{
-		int queryIndex = vis.scene->ocean.occlusionQueries[query_write];
+		const int queryIndex = vis.scene->ocean.occlusionQueries[query_write];
 		if (queryIndex >= 0)
 		{
-			device->EventBegin("Occlusion Culling Ocean", cmd);
-
-			device->QueryBegin(&queryHeap, queryIndex, cmd);
 			vis.scene->ocean.RenderForOcclusionTest(camera, cmd);
-			device->QueryEnd(&queryHeap, queryIndex, cmd);
-
-			device->EventEnd(cmd);
 		}
 	}
-
-	wi::profiler::EndRange(range); // Occlusion Culling Render
+	
+	device->EventEnd(cmd);
+	wi::profiler::EndRange(range);
 }
 void OcclusionCulling_Resolve(const Visibility& vis, CommandList cmd)
 {
-	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled() || !vis.scene->queryHeap.IsValid())
-	{
+	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled() || !vis.scene->queryResultBufferRW.IsValid())
 		return;
-	}
 	if (vis.visibleObjects.empty() && vis.visibleLights.empty() && !vis.scene->weather.IsOceanEnabled())
-	{
 		return;
-	}
+	const uint32_t queryCount = vis.scene->queryAllocator.load();
+	if (queryCount == 0)
+		return;
 
 	int query_write = vis.scene->queryheap_idx;
-	const GPUQueryHeap& queryHeap = vis.scene->queryHeap;
-	uint32_t queryCount = vis.scene->queryAllocator.load();
 
-	// Resolve into readback buffer:
-	device->QueryResolve(
-		&queryHeap,
-		0,
-		queryCount,
-		&vis.scene->queryResultBuffer[query_write],
-		0ull,
-		cmd
-	);
-
-	if (device->CheckCapability(GraphicsDeviceCapability::PREDICATION))
-	{
-		// Resolve into predication buffer:
-		device->QueryResolve(
-			&queryHeap,
-			0,
-			queryCount,
-			&vis.scene->queryPredicationBuffer,
-			0ull,
-			cmd
-		);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Buffer(&vis.scene->queryPredicationBuffer, ResourceState::COPY_DST, ResourceState::PREDICATION),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-	}
+	// finalize and copy to readback:
+	device->Barrier(GPUBarrier::Buffer(&vis.scene->queryResultBufferRW, ResourceState::UNORDERED_ACCESS, ResourceState::COPY_SRC | ResourceState::PREDICATION), cmd);
+	device->CopyBuffer(&vis.scene->queryResultBuffer[query_write], 0, &vis.scene->queryResultBufferRW, 0, queryCount, cmd);
 }
 
 void DrawWaterRipples(const Visibility& vis, CommandList cmd)
@@ -6990,7 +6934,7 @@ void DrawShadowmaps(
 			if (predicationRequest && light.occlusionquery >= 0)
 			{
 				device->PredicationBegin(
-					&vis.scene->queryPredicationBuffer,
+					&vis.scene->queryResultBufferRW,
 					(uint64_t)light.occlusionquery * sizeof(uint64_t),
 					PredicationOp::EQUAL_ZERO,
 					cmd
@@ -7220,7 +7164,7 @@ void DrawShadowmaps(
 			if (predicationRequest && light.occlusionquery >= 0)
 			{
 				device->PredicationBegin(
-					&vis.scene->queryPredicationBuffer,
+					&vis.scene->queryResultBufferRW,
 					(uint64_t)light.occlusionquery * sizeof(uint64_t),
 					PredicationOp::EQUAL_ZERO,
 					cmd
@@ -19622,10 +19566,7 @@ void SetVariableRateShadingClassification(bool enabled) { variableRateShadingCla
 bool GetVariableRateShadingClassification() { return variableRateShadingClassification; }
 void SetVariableRateShadingClassificationDebug(bool enabled) { variableRateShadingClassificationDebug = enabled; }
 bool GetVariableRateShadingClassificationDebug() { return variableRateShadingClassificationDebug; }
-void SetOcclusionCullingEnabled(bool value)
-{
-	occlusionCulling = value;
-}
+void SetOcclusionCullingEnabled(bool value) { occlusionCulling = value; }
 bool GetOcclusionCullingEnabled() { return occlusionCulling; }
 void SetTemporalAAEnabled(bool enabled) { temporalAA = enabled; }
 bool GetTemporalAAEnabled() { return temporalAA; }

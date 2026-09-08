@@ -333,6 +333,7 @@
 		1E640FE12F0AEC0B003D9FC7 /* libmetalirconverter.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libmetalirconverter.dylib; sourceTree = "<group>"; };
 		1E7929892EFE75BA00B9E35C /* wiAppleHelper.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = wiAppleHelper.mm; sourceTree = "<group>"; };
 		1E79298B2EFE76C500B9E35C /* wiAppleHelper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = wiAppleHelper.h; sourceTree = "<group>"; };
+		1EA9AEB3305011DF005F2758 /* occludeePS.hlsl */ = {isa = PBXFileReference; lastKnownFileType = text; path = occludeePS.hlsl; sourceTree = "<group>"; };
 		1EBD1BFF2F2514D700C29B34 /* wiInput_Apple.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = wiInput_Apple.h; sourceTree = "<group>"; };
 		1EBD1C002F2514E700C29B34 /* wiInput_Apple.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = wiInput_Apple.mm; sourceTree = "<group>"; };
 		1EBD1C032F25166100C29B34 /* GameController.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GameController.framework; path = System/Library/Frameworks/GameController.framework; sourceTree = SDKROOT; };
@@ -1674,6 +1675,7 @@
 				1ED5785C2F0115B40032621C /* wetmap_updateCS.hlsl */,
 				1ED5785D2F0115B40032621C /* windCS.hlsl */,
 				1ED5785E2F0115B40032621C /* yuv_to_rgbCS.hlsl */,
+				1EA9AEB3305011DF005F2758 /* occludeePS.hlsl */,
 			);
 			path = shaders;
 			sourceTree = "<group>";

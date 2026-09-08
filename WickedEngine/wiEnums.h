@@ -199,6 +199,7 @@ namespace wi::enums
 		PSTYPE_WAVE_EFFECT,
 		PSTYPE_POSTPROCESS_MESH_BLEND,
 		PSTYPE_VOID,
+		PSTYPE_OCCLUDEE,
 
 
 		// geometry shaders

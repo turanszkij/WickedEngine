@@ -1137,7 +1137,7 @@ namespace wi
 				RenderPassImage rp[] = {
 					RenderPassImage::DepthStencil(&depthBuffer_Main),
 				};
-				device->RenderPassBegin(rp, arraysize(rp), &scene->queryHeap, cmd);
+				device->RenderPassBegin(rp, arraysize(rp), cmd);
 
 				wi::graphics::Rect scissor = GetScissorInternalResolution();
 				device->BindScissorRects(1, &scissor, cmd);
