@@ -132,6 +132,9 @@ target_link_libraries(DmoClientMac PUBLIC
     "-framework AppKit"
     "-framework Carbon"
 )
+if(DMO_WICKED_ENABLE_TEST_ENV)
+    target_compile_definitions(DmoClientMac PRIVATE DMO_WICKED_ENABLE_TEST_ENV=1)
+endif()
 
 target_link_libraries(DmoClientMacGodClientPanelProbe PUBLIC
     WickedEngine
