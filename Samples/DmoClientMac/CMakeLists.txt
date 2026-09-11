@@ -142,6 +142,10 @@ target_link_libraries(DmoClientMacGodClientPanelProbe PUBLIC
 # "WickedEngine.h" resolves to the real engine, not the shim.
 target_include_directories(DmoClientMac PRIVATE
     ${DMO_CLIENT_ROOT}/Source
+    # App-layer GLTF import compiles Editor/ModelImporter_GLTF.cpp and
+    # Source/Client/WickedGltfSceneImporter.cpp (#include "ModelImporter.h").
+    # Windows dmo_client_ui already adds this path; omitting it breaks Mac only.
+    ${DMO_CLIENT_ROOT}/external/WickedEngine/Editor
     # The shared render path still lives in this directory (see the debt note in
     # cmake/DmoClientLayers.cmake). App-layer sources compiled from Source/Client
     # include "DmoClientRenderPath.h", so the dir must be a real -I, not just the
