@@ -195,6 +195,7 @@ if (WICKED_EDITOR)
 endif()
 
 if (WICKED_TESTS)
+	enable_testing()
     add_subdirectory(Samples/Tests)
 endif()
 

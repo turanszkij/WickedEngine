@@ -457,9 +457,9 @@ namespace wi::scene
 	}
 	uint32_t MaterialComponent::GetFilterMask() const
 	{
-		if (IsCustomShader() && customShaderID < (int)wi::renderer::GetCustomShaders().size())
+		wi::renderer::CustomShader customShader;
+		if (IsCustomShader() && wi::renderer::GetCustomShader(customShaderID, customShader))
 		{
-			auto& customShader = wi::renderer::GetCustomShaders()[customShaderID];
 			return customShader.filterMask;
 		}
 		if (shaderType == SHADERTYPE_WATER)

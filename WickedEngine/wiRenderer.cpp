@@ -35,6 +35,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <limits>
 #include <mutex>
 
 using namespace wi::primitive;
@@ -378,13 +379,69 @@ wi::jobsystem::context raytracing_ctx;
 wi::jobsystem::context objectps_ctx;
 
 wi::vector<CustomShader> customShaders;
+wi::unordered_map<int, size_t> customShaderSlots;
+std::mutex customShaderMutex;
+int nextCustomShaderID = 0;
 int RegisterCustomShader(const CustomShader& customShader)
 {
-	static std::mutex locker;
-	std::scoped_lock lck(locker);
-	int result = (int)customShaders.size();
-	customShaders.push_back(customShader);
-	return result;
+	CustomShader registered = customShader;
+	std::scoped_lock lck(customShaderMutex);
+	if (nextCustomShaderID == std::numeric_limits<int>::max())
+		return -1;
+	const int id = nextCustomShaderID++;
+	registered.id = id;
+	const size_t slot = customShaders.size();
+	customShaders.push_back(std::move(registered));
+	customShaderSlots[id] = slot;
+	return id;
+}
+bool UpdateCustomShader(int customShaderID, const CustomShader& customShader)
+{
+	CustomShader replacement = customShader;
+	replacement.id = customShaderID;
+	CustomShader retired;
+	{
+		std::scoped_lock lck(customShaderMutex);
+		const auto it = customShaderSlots.find(customShaderID);
+		if (it == customShaderSlots.end())
+			return false;
+		retired = std::move(customShaders[it->second]);
+		customShaders[it->second] = std::move(replacement);
+	}
+	// Release the old PSO references after publication and outside the registry lock.
+	return true;
+}
+bool UnregisterCustomShader(int customShaderID)
+{
+	CustomShader retired;
+	{
+		std::scoped_lock lck(customShaderMutex);
+		const auto it = customShaderSlots.find(customShaderID);
+		if (it == customShaderSlots.end())
+			return false;
+
+		const size_t slot = it->second;
+		const size_t last = customShaders.size() - 1;
+		retired = std::move(customShaders[slot]);
+		if (slot != last)
+		{
+			customShaders[slot] = std::move(customShaders[last]);
+			customShaderSlots[customShaders[slot].id] = slot;
+		}
+		customShaders.pop_back();
+		customShaderSlots.erase(it);
+	}
+	// Release the removed PSO references outside the registry lock.
+	return true;
+}
+bool GetCustomShader(int customShaderID, CustomShader& result)
+{
+	std::scoped_lock lck(customShaderMutex);
+	const auto it = customShaderSlots.find(customShaderID);
+	if (it == customShaderSlots.end())
+		return false;
+	result = customShaders[it->second];
+	return true;
 }
 const wi::vector<CustomShader>& GetCustomShaders()
 {
@@ -1849,8 +1906,12 @@ void LoadShaders()
 	};
 #endif // RTREFLECTION_WITH_RAYTRACING_PIPELINE
 
-	// Clear custom shaders (Custom shaders coming from user will need to be handled by the user in case of shader reload):
-	customShaders.clear();
+	// Reset the registry before built-in custom shaders are registered during renderer initialization/reload:
+	{
+		std::scoped_lock lck(customShaderMutex);
+		customShaders.clear();
+		customShaderSlots.clear();
+	}
 
 	// Hologram sample shader will be registered as custom shader:
 	//	It's best to register all custom shaders from the same thread, so under here
@@ -3222,6 +3283,7 @@ void RenderMeshes(
 
 			const PipelineState* pso = nullptr;
 			const PipelineState* pso_backside = nullptr; // only when separate backside rendering is required (transparent doublesided)
+			CustomShader customShader;
 			{
 				if (wireframe && renderPass != RENDERPASS_ENVMAPCAPTURE)
 				{
@@ -3251,9 +3313,8 @@ void RenderMeshes(
 						break;
 					}
 				}
-				else if (material.customShaderID >= 0 && material.customShaderID < (int)customShaders.size())
+				else if (material.customShaderID >= 0 && GetCustomShader(material.customShaderID, customShader))
 				{
-					const CustomShader& customShader = customShaders[material.customShaderID];
 					if (filterMask & customShader.filterMask)
 					{
 						pso = &customShader.pso[renderPass];

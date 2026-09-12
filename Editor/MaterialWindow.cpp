@@ -476,7 +476,7 @@ void MaterialWindow::Create(EditorComponent* _editor)
 	shaderTypeComboBox.OnSelect(forEachSelected([this] (auto material, auto args) {
 		if (args.iValue >= MaterialComponent::SHADERTYPE_COUNT)
 		{
-			material->SetCustomShaderID(args.iValue - MaterialComponent::SHADERTYPE_COUNT);
+			material->SetCustomShaderID((int)args.userdata);
 			blendModeComboBox.SetEnabled(false);
 		}
 		else
@@ -1230,13 +1230,18 @@ void MaterialWindow::SetEntity(Entity entity)
 		shaderTypeComboBox.AddItem("Cartoon", MaterialComponent::SHADERTYPE_CARTOON);
 		shaderTypeComboBox.AddItem("Unlit", MaterialComponent::SHADERTYPE_UNLIT);
 		shaderTypeComboBox.AddItem("Interior", MaterialComponent::SHADERTYPE_INTERIORMAPPING);
+		int customShaderSelection = -1;
+		int customShaderItem = MaterialComponent::SHADERTYPE_COUNT;
 		for (auto& x : wi::renderer::GetCustomShaders())
 		{
-			shaderTypeComboBox.AddItem("*" + x.name);
+			shaderTypeComboBox.AddItem("*" + x.name, (uint64_t)x.id);
+			if (x.id == material->GetCustomShaderID())
+				customShaderSelection = customShaderItem;
+			customShaderItem++;
 		}
-		if (material->GetCustomShaderID() >= 0)
+		if (customShaderSelection >= 0)
 		{
-			shaderTypeComboBox.SetSelectedWithoutCallback(MaterialComponent::SHADERTYPE_COUNT + material->GetCustomShaderID());
+			shaderTypeComboBox.SetSelectedWithoutCallback(customShaderSelection);
 		}
 		else
 		{
