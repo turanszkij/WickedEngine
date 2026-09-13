@@ -31,6 +31,28 @@ namespace wi::scene
 {
 	static constexpr uint32_t small_subtask_groupsize = 256u;
 
+	Scene::ProceduralAnimationHookId Scene::AddProceduralAnimationHook(
+		ProceduralAnimationHook hook)
+	{
+		if (!hook)
+			return 0;
+		const ProceduralAnimationHookId id = next_procedural_animation_hook_id++;
+		procedural_animation_hooks.push_back({ id, std::move(hook) });
+		return id;
+	}
+
+	void Scene::RemoveProceduralAnimationHook(const ProceduralAnimationHookId id)
+	{
+		if (id == 0)
+			return;
+		procedural_animation_hooks.erase(
+			std::remove_if(
+				procedural_animation_hooks.begin(),
+				procedural_animation_hooks.end(),
+				[id](const ProceduralAnimationHookEntry& entry) { return entry.id == id; }),
+			procedural_animation_hooks.end());
+	}
+
 	void Scene::Update(float dt)
 	{
 		GraphicsDevice* device = wi::graphics::GetDevice();
@@ -3387,6 +3409,16 @@ namespace wi::scene
 			}
 		});
 		wi::jobsystem::Wait(ctx);
+
+		// Application pose layers run here: authored animation and the ordinary
+		// hierarchy are complete, while built-in IK and armature upload have not
+		// started. A hook that changes local transforms is responsible for
+		// updating the affected subtree before returning.
+		for (const ProceduralAnimationHookEntry& entry : procedural_animation_hooks)
+		{
+			if (entry.callback)
+				entry.callback(*this);
+		}
 
 		if (inverse_kinematics.GetCount() > 0 || humanoids.GetCount() > 0)
 		{

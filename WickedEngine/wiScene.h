@@ -19,11 +19,15 @@
 
 #include <string>
 #include <memory>
+#include <functional>
 
 namespace wi::scene
 {
 	struct Scene
 	{
+		using ProceduralAnimationHook = std::function<void(Scene&)>;
+		using ProceduralAnimationHookId = uint64_t;
+
 		virtual ~Scene() = default;
 
 		wi::ecs::ComponentLibrary componentLibrary;
@@ -334,6 +338,11 @@ namespace wi::scene
 		// Update all components by a given timestep (in seconds):
 		//	This is an expensive function, prefer to call it only once per frame!
 		virtual void Update(float dt);
+		// Registers application-owned pose work that must run after authored
+		// animation/hierarchy evaluation and before built-in IK and skinning.
+		// Hooks must be added and removed from the scene update thread.
+		ProceduralAnimationHookId AddProceduralAnimationHook(ProceduralAnimationHook hook);
+		void RemoveProceduralAnimationHook(ProceduralAnimationHookId id);
 		// Remove everything from the scene that it owns:
 		virtual void Clear();
 		// Merge an other scene into this.
@@ -646,6 +655,14 @@ namespace wi::scene
 		void DeleteDuplicateColliders();
 
 	private:
+		struct ProceduralAnimationHookEntry
+		{
+			ProceduralAnimationHookId id = 0;
+			ProceduralAnimationHook callback;
+		};
+		wi::vector<ProceduralAnimationHookEntry> procedural_animation_hooks;
+		ProceduralAnimationHookId next_procedural_animation_hook_id = 1;
+
 		void UpdateHumanoidFacings();
 
 	};
