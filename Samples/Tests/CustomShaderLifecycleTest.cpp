@@ -28,6 +28,9 @@ int main()
 		return 1;
 
 	CustomShader resolved;
+	if (!Check(!GetCustomShader(-1, resolved), "negative ID resolved") ||
+		!Check(!GetCustomShader(firstID + 1, resolved), "unregistered ID resolved"))
+		return 1;
 	if (!Check(GetCustomShader(firstID, resolved), "registered shader could not be resolved") ||
 		!Check(resolved.id == firstID, "resolved shader ID changed") ||
 		!Check(resolved.name == first.name, "resolved shader payload differs"))
@@ -65,6 +68,13 @@ int main()
 		!Check(GetCustomShader(secondID, resolved), "swap-removal invalidated another shader") ||
 		!Check(retainedCopy.name == replacement.name, "published copy did not survive retirement"))
 		return 1;
+	// Emulate consecutive render-side lookups between lifecycle safe points.
+	for (int draw = 0; draw < 128; ++draw)
+	{
+		if (!Check(GetCustomShader(secondID, resolved), "render-style lookup failed") ||
+			!Check(resolved.id == secondID, "render-style lookup resolved wrong ID"))
+			return 1;
+	}
 
 	int activeID = RegisterCustomShader(first);
 	if (!Check(activeID >= 0 && activeID != firstID && activeID != secondID, "unregistered ID was reused"))

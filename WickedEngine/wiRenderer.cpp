@@ -380,12 +380,18 @@ wi::jobsystem::context objectps_ctx;
 
 wi::vector<CustomShader> customShaders;
 wi::unordered_map<int, size_t> customShaderSlots;
-std::mutex customShaderMutex;
 int nextCustomShaderID = 0;
+// Registry mutations are main-thread safe-point operations. RenderMeshes may
+// retain a pointer into customShaders for the duration of a draw, so no caller
+// may register, update, unregister, or reload shaders while rendering reads it.
+static const CustomShader* FindCustomShader(int customShaderID)
+{
+	const auto it = customShaderSlots.find(customShaderID);
+	return it == customShaderSlots.end() ? nullptr : &customShaders[it->second];
+}
 int RegisterCustomShader(const CustomShader& customShader)
 {
 	CustomShader registered = customShader;
-	std::scoped_lock lck(customShaderMutex);
 	if (nextCustomShaderID == std::numeric_limits<int>::max())
 		return -1;
 	const int id = nextCustomShaderID++;
@@ -399,48 +405,38 @@ bool UpdateCustomShader(int customShaderID, const CustomShader& customShader)
 {
 	CustomShader replacement = customShader;
 	replacement.id = customShaderID;
-	CustomShader retired;
-	{
-		std::scoped_lock lck(customShaderMutex);
-		const auto it = customShaderSlots.find(customShaderID);
-		if (it == customShaderSlots.end())
-			return false;
-		retired = std::move(customShaders[it->second]);
-		customShaders[it->second] = std::move(replacement);
-	}
-	// Release the old PSO references after publication and outside the registry lock.
+	const auto it = customShaderSlots.find(customShaderID);
+	if (it == customShaderSlots.end())
+		return false;
+	CustomShader retired = std::move(customShaders[it->second]);
+	customShaders[it->second] = std::move(replacement);
+	// Wicked's existing PipelineState ownership retires the previous GPU resources.
 	return true;
 }
 bool UnregisterCustomShader(int customShaderID)
 {
-	CustomShader retired;
-	{
-		std::scoped_lock lck(customShaderMutex);
-		const auto it = customShaderSlots.find(customShaderID);
-		if (it == customShaderSlots.end())
-			return false;
+	const auto it = customShaderSlots.find(customShaderID);
+	if (it == customShaderSlots.end())
+		return false;
 
-		const size_t slot = it->second;
-		const size_t last = customShaders.size() - 1;
-		retired = std::move(customShaders[slot]);
-		if (slot != last)
-		{
-			customShaders[slot] = std::move(customShaders[last]);
-			customShaderSlots[customShaders[slot].id] = slot;
-		}
-		customShaders.pop_back();
-		customShaderSlots.erase(it);
+	const size_t slot = it->second;
+	const size_t last = customShaders.size() - 1;
+	CustomShader retired = std::move(customShaders[slot]);
+	if (slot != last)
+	{
+		customShaders[slot] = std::move(customShaders[last]);
+		customShaderSlots[customShaders[slot].id] = slot;
 	}
-	// Release the removed PSO references outside the registry lock.
+	customShaders.pop_back();
+	customShaderSlots.erase(it);
 	return true;
 }
 bool GetCustomShader(int customShaderID, CustomShader& result)
 {
-	std::scoped_lock lck(customShaderMutex);
-	const auto it = customShaderSlots.find(customShaderID);
-	if (it == customShaderSlots.end())
+	const CustomShader* shader = FindCustomShader(customShaderID);
+	if (shader == nullptr)
 		return false;
-	result = customShaders[it->second];
+	result = *shader;
 	return true;
 }
 const wi::vector<CustomShader>& GetCustomShaders()
@@ -1907,11 +1903,8 @@ void LoadShaders()
 #endif // RTREFLECTION_WITH_RAYTRACING_PIPELINE
 
 	// Reset the registry before built-in custom shaders are registered during renderer initialization/reload:
-	{
-		std::scoped_lock lck(customShaderMutex);
-		customShaders.clear();
-		customShaderSlots.clear();
-	}
+	customShaders.clear();
+	customShaderSlots.clear();
 
 	// Hologram sample shader will be registered as custom shader:
 	//	It's best to register all custom shaders from the same thread, so under here
@@ -3283,7 +3276,7 @@ void RenderMeshes(
 
 			const PipelineState* pso = nullptr;
 			const PipelineState* pso_backside = nullptr; // only when separate backside rendering is required (transparent doublesided)
-			CustomShader customShader;
+			const CustomShader* customShader = nullptr;
 			{
 				if (wireframe && renderPass != RENDERPASS_ENVMAPCAPTURE)
 				{
@@ -3313,11 +3306,11 @@ void RenderMeshes(
 						break;
 					}
 				}
-				else if (material.customShaderID >= 0 && GetCustomShader(material.customShaderID, customShader))
+				else if (material.customShaderID >= 0 && (customShader = FindCustomShader(material.customShaderID)) != nullptr)
 				{
-					if (filterMask & customShader.filterMask)
+					if (filterMask & customShader->filterMask)
 					{
-						pso = &customShader.pso[renderPass];
+						pso = &customShader->pso[renderPass];
 					}
 				}
 				else
