@@ -2325,6 +2325,8 @@ namespace wi::scene
 		constexpr void SetCapsuleShadowDisabled(bool value = true) { set_flag(_flags, DISABLE_CAPSULE_SHADOW, value); }
 		constexpr void SetRagdollDisabled(bool value = true) { set_flag(_flags, RAGDOLL_DISABLED, value); }
 		constexpr void SetRagdoll2D(bool value = true) { set_flag(_flags, RAGDOLL_2D, value); }
+		constexpr bool IsRagdollPoseMotorEnabled() const { return ragdoll_pose_motor_enabled; }
+		constexpr void SetRagdollPoseMotorEnabled(bool value = true) { ragdoll_pose_motor_enabled = value; }
 
 		XMFLOAT2 head_rotation_max = XMFLOAT2(XM_PI / 3.0f, XM_PI / 6.0f);
 		XMFLOAT2 eye_rotation_max = XMFLOAT2(XM_PI / 20.0f, XM_PI / 20.0f);
@@ -2349,11 +2351,33 @@ namespace wi::scene
 		float default_facing = 0; // 0 = not yet computed, otherwise Z direction
 		float knee_bending = 0; // 0 = not yet computed, otherwise Z direction
 
+		// Optional active-ragdoll controls. These are presentation/runtime state and
+		// intentionally not serialized. When enabled, the authored hierarchy stays
+		// attached and animations keep evaluating while physics constraints drive
+		// toward the authored pose. A client can then blend the physical pose from
+		// ragdoll_bodyparts per bone instead of accepting the legacy binary takeover.
+		bool ragdoll_pose_motor_enabled = false;
+		float ragdoll_pose_motor_stiffness = 0.0f; // normalized 0..1
+		float ragdoll_pose_motor_damping = 1.0f;
+		float ragdoll_pose_motor_max_torque = 350.0f;
+		std::array<float, size_t(HumanoidBone::Count)> ragdoll_pose_motor_bone_weights = [] {
+			std::array<float, size_t(HumanoidBone::Count)> result = {};
+			result.fill(1.0f);
+			return result;
+		}();
+		std::array<float, size_t(HumanoidBone::Count)> ragdoll_physics_blend_bone_weights = [] {
+			std::array<float, size_t(HumanoidBone::Count)> result = {};
+			result.fill(1.0f);
+			return result;
+		}();
+
 		// Things for ragdoll intersection tests:
 		struct RagdollBodypart
 		{
 			HumanoidBone bone;
 			wi::primitive::Capsule capsule;
+			XMFLOAT3 physical_bone_position = {};
+			XMFLOAT4 physical_bone_rotation = XMFLOAT4(0, 0, 0, 1);
 		};
 		wi::vector<RagdollBodypart> ragdoll_bodyparts;
 		wi::primitive::AABB ragdoll_bounds;

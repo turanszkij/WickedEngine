@@ -1344,6 +1344,7 @@ namespace wi::physics
 			RagdollSettings settings;
 			Ref<JPH::Ragdoll> ragdoll;
 			bool state_active = false;
+			bool hierarchy_detached = false;
 			float scale = 1;
 			Vec3 prev_capsule_position[BODYPART_COUNT] = {};
 			Quat prev_capsule_rotation[BODYPART_COUNT] = {};
@@ -1855,7 +1856,8 @@ namespace wi::physics
 			// Activates ragdoll as dynamic physics object:
 			void Activate(
 				Scene& scene,
-				Entity humanoidEntity
+				Entity humanoidEntity,
+				bool preserveAuthoredHierarchy
 			)
 			{
 				if (state_active)
@@ -1886,14 +1888,21 @@ namespace wi::physics
 						saved_parents[c] = INVALID_ENTITY;
 					}
 
-					// detach bone because it will be simulated in world space:
-					scene.Component_Detach(x.entity);
+					// The legacy passive ragdoll writes physics directly into world-space
+					// bones, so it must detach them. Active ragdoll keeps the hierarchy
+					// intact: animation remains the motor target and the physical pose is
+					// exposed separately for a post-animation per-bone blend.
+					if (!preserveAuthoredHierarchy)
+						scene.Component_Detach(x.entity);
 
 					c++;
 				}
 
-				// Stop all anims that are children of humanoid:
-				for (size_t i = 0; i < scene.animations.GetCount(); ++i)
+				hierarchy_detached = !preserveAuthoredHierarchy;
+
+				// Passive ragdoll is a full takeover. Active ragdoll must keep the
+				// authored clips alive because they are the constraint-motor target.
+				for (size_t i = 0; !preserveAuthoredHierarchy && i < scene.animations.GetCount(); ++i)
 				{
 					Entity entity = scene.animations.GetEntity(i);
 					if (!scene.Entity_IsDescendant(entity, humanoidEntity))
@@ -1921,12 +1930,86 @@ namespace wi::physics
 				{
 					body_interface.SetMotionType(x.bodyID, EMotionType::Kinematic, EActivation::Activate);
 
-					if (saved_parents[c] != INVALID_ENTITY)
+					if (hierarchy_detached && saved_parents[c] != INVALID_ENTITY)
 					{
 						scene.Component_Attach(x.entity, saved_parents[c]);
 					}
 					c++;
 				}
+				hierarchy_detached = false;
+			}
+
+			void DriveToAuthoredPose(Scene& scene, const HumanoidComponent& humanoid)
+			{
+				Mat44 desiredWorld[BODYPART_COUNT] = {};
+				for (int bodypart = 0; bodypart < BODYPART_COUNT; ++bodypart)
+				{
+					const RigidBody& rb = rigidbodies[bodypart];
+					const TransformComponent* transform = scene.transforms.GetComponent(rb.entity);
+					if (transform == nullptr)
+						return;
+					const Vec3 position = cast(transform->GetPosition());
+					const Quat rotation = cast(transform->GetRotation());
+					desiredWorld[bodypart] = Mat44::sTranslation(position) * Mat44::sRotation(rotation);
+					desiredWorld[bodypart] = desiredWorld[bodypart] * rb.restBasisInverse;
+					desiredWorld[bodypart] = desiredWorld[bodypart] * rb.additionalTransform;
+				}
+
+				const float globalStiffness = clamp(humanoid.ragdoll_pose_motor_stiffness, 0.0f, 1.0f);
+				const float damping = max(0.0f, humanoid.ragdoll_pose_motor_damping);
+				const float maximumTorque = max(0.0f, humanoid.ragdoll_pose_motor_max_torque);
+				for (int bodypart = 1; bodypart < BODYPART_COUNT; ++bodypart)
+				{
+					const int constraintIndex = settings.GetConstraintIndexForBodyIndex(bodypart);
+					if (constraintIndex < 0)
+						continue;
+
+					const int parent = skeleton.GetJoint(bodypart).mParentJointIndex;
+					if (parent < 0)
+						continue;
+					const Quat parentRotation = desiredWorld[parent].GetQuaternion().Normalized();
+					const Quat childRotation = desiredWorld[bodypart].GetQuaternion().Normalized();
+					const Quat target = (parentRotation.Conjugated() * childRotation).Normalized();
+
+					const auto humanoidBone = rigidbodies[bodypart].humanoid_bone;
+					const float boneWeight = clamp(
+						humanoid.ragdoll_pose_motor_bone_weights[size_t(humanoidBone)], 0.0f, 1.0f);
+					const float strength = globalStiffness * boneWeight;
+					TwoBodyConstraint* constraint = ragdoll->GetConstraint(constraintIndex);
+					if (constraint->GetSubType() == EConstraintSubType::SwingTwist)
+					{
+						auto* swingTwist = static_cast<SwingTwistConstraint*>(constraint);
+						if (strength <= 0.0001f || maximumTorque <= 0.0f)
+						{
+							swingTwist->SetSwingMotorState(EMotorState::Off);
+							swingTwist->SetTwistMotorState(EMotorState::Off);
+							continue;
+						}
+						const float frequency = 0.5f + strength * 11.5f;
+						swingTwist->GetSwingMotorSettings() = MotorSettings(frequency, damping);
+						swingTwist->GetTwistMotorSettings() = MotorSettings(frequency, damping);
+						swingTwist->GetSwingMotorSettings().SetTorqueLimit(maximumTorque * strength);
+						swingTwist->GetTwistMotorSettings().SetTorqueLimit(maximumTorque * strength);
+						swingTwist->SetSwingMotorState(EMotorState::Position);
+						swingTwist->SetTwistMotorState(EMotorState::Position);
+						swingTwist->SetTargetOrientationBS(target);
+					}
+					else if (constraint->GetSubType() == EConstraintSubType::Hinge)
+					{
+						auto* hinge = static_cast<HingeConstraint*>(constraint);
+						if (strength <= 0.0001f || maximumTorque <= 0.0f)
+						{
+							hinge->SetMotorState(EMotorState::Off);
+							continue;
+						}
+						const float frequency = 0.5f + strength * 11.5f;
+						hinge->GetMotorSettings() = MotorSettings(frequency, damping);
+						hinge->GetMotorSettings().SetTorqueLimit(maximumTorque * strength);
+						hinge->SetMotorState(EMotorState::Position);
+						hinge->SetTargetOrientationBS(target);
+					}
+				}
+				ragdoll->Activate(false);
 			}
 		};
 
@@ -2658,7 +2741,7 @@ namespace wi::physics
 
 			if (humanoid.IsRagdollPhysicsEnabled())
 			{
-				ragdoll.Activate(scene, humanoidEntity);
+				ragdoll.Activate(scene, humanoidEntity, humanoid.IsRagdollPoseMotorEnabled());
 			}
 
 			BodyInterface& body_interface = physics_scene.physics_system.GetBodyInterfaceNoLock();
@@ -2667,6 +2750,9 @@ namespace wi::physics
 			{
 				if (humanoid.IsRagdollPhysicsEnabled())
 				{
+					if (humanoid.IsRagdollPoseMotorEnabled())
+						ragdoll.DriveToAuthoredPose(scene, humanoid);
+
 					// Apply effects on dynamics if needed:
 					static const Ragdoll::BODYPART floating_bodyparts[] = {
 						Ragdoll::BODYPART_PELVIS,
@@ -3092,9 +3178,15 @@ namespace wi::physics
 						rotation = rb.prev_rotation.SLERP(rotation, physics_scene.alpha);
 					}
 
-					transform->translation_local = cast(position);
-					transform->rotation_local = cast(rotation);
-					transform->SetDirty();
+					bp.physical_bone_position = cast(position);
+					bp.physical_bone_rotation = cast(rotation);
+
+					if (!humanoid.IsRagdollPoseMotorEnabled())
+					{
+						transform->translation_local = cast(position);
+						transform->rotation_local = cast(rotation);
+						transform->SetDirty();
+					}
 				}
 
 				bodypart++;
