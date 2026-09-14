@@ -1436,10 +1436,27 @@ namespace wi::renderer
 		std::string name;
 		uint32_t filterMask = wi::enums::FILTER_OPAQUE;
 		wi::graphics::PipelineState pso[wi::enums::RENDERPASS_COUNT] = {};
+		// Assigned by RegisterCustomShader(). The ID remains stable across updates.
+		int id = -1;
 	};
-	// Registers a custom shader that can be set to materials. 
+	// Registers a custom shader that can be set to materials.
 	//	Returns the ID of the custom shader that can be used with MaterialComponent::SetCustomShaderID()
+	//	The supplied shader must be fully created before registration. Returns -1 if an ID can't be allocated.
+	//	Call from the main thread at a safe point when rendering is not reading the registry.
 	int RegisterCustomShader(const CustomShader& customShader);
+	// Replaces a registered custom shader while preserving its ID. The replacement must be fully
+	//	created before this call. Call from the main thread at a safe point when rendering is not
+	//	reading the registry. On failure, the old shader remains active.
+	bool UpdateCustomShader(int customShaderID, const CustomShader& customShader);
+	// Unregisters a custom shader at a main-thread safe point when rendering is not reading the
+	//	registry. Existing materials retaining the ID safely fall back to no custom shader.
+	//	Public IDs are never reused, so a stale material ID can't resolve to a later registration.
+	bool UnregisterCustomShader(int customShaderID);
+	// Copies a registered custom shader into result. Call only when registry mutations cannot
+	//	run concurrently; this lookup is lock-free. The copy retains its PSOs.
+	bool GetCustomShader(int customShaderID, CustomShader& result);
+	// Returns active custom shaders for main-thread enumeration at a safe point.
+	//	Don't retain references across lifecycle calls.
 	const wi::vector<CustomShader>& GetCustomShaders();
 
 	// Thread-local barrier batching helpers:

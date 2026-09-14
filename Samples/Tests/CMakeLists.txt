@@ -41,6 +41,13 @@ endif()
 
 target_precompile_headers(Tests PRIVATE stdafx.h)
 
+add_executable(CustomShaderLifecycleTest
+	CustomShaderLifecycleTest.cpp
+)
+target_link_libraries(CustomShaderLifecycleTest PRIVATE WickedEngine)
+add_test(NAME CustomShaderLifecycleTest COMMAND CustomShaderLifecycleTest)
+set_target_properties(CustomShaderLifecycleTest PROPERTIES FOLDER "Tests")
+
 
 if (MSVC)
 	set_property(TARGET Tests PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")

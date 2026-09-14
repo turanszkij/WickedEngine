@@ -35,6 +35,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <limits>
 #include <mutex>
 
 using namespace wi::primitive;
@@ -378,13 +379,65 @@ wi::jobsystem::context raytracing_ctx;
 wi::jobsystem::context objectps_ctx;
 
 wi::vector<CustomShader> customShaders;
+wi::unordered_map<int, size_t> customShaderSlots;
+int nextCustomShaderID = 0;
+// Registry mutations are main-thread safe-point operations. RenderMeshes may
+// retain a pointer into customShaders for the duration of a draw, so no caller
+// may register, update, unregister, or reload shaders while rendering reads it.
+static const CustomShader* FindCustomShader(int customShaderID)
+{
+	const auto it = customShaderSlots.find(customShaderID);
+	return it == customShaderSlots.end() ? nullptr : &customShaders[it->second];
+}
 int RegisterCustomShader(const CustomShader& customShader)
 {
-	static std::mutex locker;
-	std::scoped_lock lck(locker);
-	int result = (int)customShaders.size();
-	customShaders.push_back(customShader);
-	return result;
+	CustomShader registered = customShader;
+	if (nextCustomShaderID == std::numeric_limits<int>::max())
+		return -1;
+	const int id = nextCustomShaderID++;
+	registered.id = id;
+	const size_t slot = customShaders.size();
+	customShaders.push_back(std::move(registered));
+	customShaderSlots[id] = slot;
+	return id;
+}
+bool UpdateCustomShader(int customShaderID, const CustomShader& customShader)
+{
+	CustomShader replacement = customShader;
+	replacement.id = customShaderID;
+	const auto it = customShaderSlots.find(customShaderID);
+	if (it == customShaderSlots.end())
+		return false;
+	CustomShader retired = std::move(customShaders[it->second]);
+	customShaders[it->second] = std::move(replacement);
+	// Wicked's existing PipelineState ownership retires the previous GPU resources.
+	return true;
+}
+bool UnregisterCustomShader(int customShaderID)
+{
+	const auto it = customShaderSlots.find(customShaderID);
+	if (it == customShaderSlots.end())
+		return false;
+
+	const size_t slot = it->second;
+	const size_t last = customShaders.size() - 1;
+	CustomShader retired = std::move(customShaders[slot]);
+	if (slot != last)
+	{
+		customShaders[slot] = std::move(customShaders[last]);
+		customShaderSlots[customShaders[slot].id] = slot;
+	}
+	customShaders.pop_back();
+	customShaderSlots.erase(it);
+	return true;
+}
+bool GetCustomShader(int customShaderID, CustomShader& result)
+{
+	const CustomShader* shader = FindCustomShader(customShaderID);
+	if (shader == nullptr)
+		return false;
+	result = *shader;
+	return true;
 }
 const wi::vector<CustomShader>& GetCustomShaders()
 {
@@ -1849,8 +1902,9 @@ void LoadShaders()
 	};
 #endif // RTREFLECTION_WITH_RAYTRACING_PIPELINE
 
-	// Clear custom shaders (Custom shaders coming from user will need to be handled by the user in case of shader reload):
+	// Reset the registry before built-in custom shaders are registered during renderer initialization/reload:
 	customShaders.clear();
+	customShaderSlots.clear();
 
 	// Hologram sample shader will be registered as custom shader:
 	//	It's best to register all custom shaders from the same thread, so under here
@@ -3222,6 +3276,7 @@ void RenderMeshes(
 
 			const PipelineState* pso = nullptr;
 			const PipelineState* pso_backside = nullptr; // only when separate backside rendering is required (transparent doublesided)
+			const CustomShader* customShader = nullptr;
 			{
 				if (wireframe && renderPass != RENDERPASS_ENVMAPCAPTURE)
 				{
@@ -3251,12 +3306,11 @@ void RenderMeshes(
 						break;
 					}
 				}
-				else if (material.customShaderID >= 0 && material.customShaderID < (int)customShaders.size())
+				else if (material.customShaderID >= 0 && (customShader = FindCustomShader(material.customShaderID)) != nullptr)
 				{
-					const CustomShader& customShader = customShaders[material.customShaderID];
-					if (filterMask & customShader.filterMask)
+					if (filterMask & customShader->filterMask)
 					{
-						pso = &customShader.pso[renderPass];
+						pso = &customShader->pso[renderPass];
 					}
 				}
 				else

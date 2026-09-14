@@ -4622,7 +4622,9 @@ namespace wi::scene
 						int customshader = material->GetCustomShaderID();
 						if (customshader >= 0)
 						{
-							sort_bits.bits.customshader |= 1 << customshader;
+							// Custom shader IDs are stable opaque handles and can be larger than the
+							// compact sorting hint. Fold them safely into the available bits.
+							sort_bits.bits.customshader |= 1u << (uint32_t(customshader) & 7u);
 						}
 					}
 				}
