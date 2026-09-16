@@ -1489,6 +1489,8 @@ struct alignas(16) ShaderCamera
 		options = 0;
 	}
 
+	inline bool IsOrtho() const { return options & SHADERCAMERA_OPTION_ORTHO; }
+
 #else
 	inline float2 clamp_uv_to_scissor(in float2 uv)
 	{
