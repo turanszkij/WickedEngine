@@ -27,6 +27,7 @@ for i=1,200 do
 	--light_component.SetColor(Vector(math.random(),math.random(),math.random())) -- random color
 	--light_component.SetVolumetricsEnabled(true)
 	light_component.SetCastShadow(true)
+	light_component.SetVisualizerEnabled(true)
 end
 
 runProcess(function()
