@@ -5688,6 +5688,11 @@ handle to retrieve associated components.
     ---@param value boolean
     function LightComponent.SetVolumetricsEnabled(value) end
 
+    --- Enables or disables visualizer.
+    ---
+    ---@param value boolean
+    function LightComponent.SetVisualizerEnabled(value) end
+
     --- Outer cone angle for spotlight in radians.
     ---
     ---@param value number

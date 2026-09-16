@@ -5574,6 +5574,7 @@ Luna<LightComponent_BindLua>::FunctionType LightComponent_BindLua::methods[] = {
 	lunamethod(LightComponent_BindLua, SetColor),
 	lunamethod(LightComponent_BindLua, SetCastShadow),
 	lunamethod(LightComponent_BindLua, SetVolumetricsEnabled),
+	lunamethod(LightComponent_BindLua, SetVisualizerEnabled),
 	lunamethod(LightComponent_BindLua, SetOuterConeAngle),
 	lunamethod(LightComponent_BindLua, SetInnerConeAngle),
 	lunamethod(LightComponent_BindLua, GetType),
@@ -5731,6 +5732,20 @@ int LightComponent_BindLua::SetVolumetricsEnabled(lua_State* L)
 	else
 	{
 		wi::lua::SError(L, "SetVolumetricsEnabled(bool value) not enough arguments!");
+	}
+
+	return 0;
+}
+int LightComponent_BindLua::SetVisualizerEnabled(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->SetVisualizerEnabled(wi::lua::SGetBool(L, 1));
+	}
+	else
+	{
+		wi::lua::SError(L, "SetVisualizerEnabled(bool value) not enough arguments!");
 	}
 
 	return 0;

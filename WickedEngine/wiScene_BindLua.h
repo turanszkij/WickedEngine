@@ -840,6 +840,7 @@ namespace wi::lua::scene
 
 		int SetCastShadow(lua_State* L);
 		int SetVolumetricsEnabled(lua_State* L);
+		int SetVisualizerEnabled(lua_State* L);
 
 		int IsCastShadow(lua_State* L);
 		int IsVolumetricsEnabled(lua_State* L);
