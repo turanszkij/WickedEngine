@@ -6818,6 +6818,8 @@ void DrawShadowmaps(
 		if (view_count == 0)
 			return;
 
+		device->EventBegin("Shadowmap batch", cmd);
+
 		renderQueue.init();
 		renderQueue_transparent.init();
 
@@ -6947,6 +6949,8 @@ void DrawShadowmaps(
 
 		// New view count batch is started after flushing current:
 		view_count = 0;
+
+		device->EventEnd(cmd);
 	};
 
 	const RenderPassImage rp[] = {
