@@ -2,6 +2,7 @@
 #define WI_SKYATMOSPHERE_HF
 #include "globals.hlsli"
 #include "shadowHF.hlsli"
+#include "moonHF.hlsli"
 
 /*
  *
@@ -419,24 +420,98 @@ float3 GetCameraPlanetPos(AtmosphereParameters atmosphere, float3 cameraPosition
 
 half3 GetSunLuminance(float3 worldPosition, float3 worldDirection, float3 sunDirection, half3 sunIlluminance, AtmosphereParameters atmosphere, Texture2D<half4> transmittanceLutTexture)
 {
-	//float sunApexAngleDegree = 0.545; // Angular diameter of sun to earth from sea level, see https://en.wikipedia.org/wiki/Solid_angle
-	float sunApexAngleDegree = 2.4; // Modified sun size
-	float sunHalfApexAngleRadian = 0.5 * sunApexAngleDegree * PI / 180.0;
+	// Sun angular radius (half apex angle) from the weather data, so the drawn
+	// sun disk and the eclipse math share one physically-based size.
+	float sunHalfApexAngleRadian = GetSunSize();
 	float sunCosHalfApexAngle = cos(sunHalfApexAngleRadian);
 
+	float3 sunDirNorm = normalize(sunDirection);
+	float sunEclipseStrength = GetSunEclipseStrength();
 	float3 retval = 0;
 
 	float t = RaySphereIntersectNearest(worldPosition, worldDirection, 0, atmosphere.bottomRadius);
 	if (t < 0) // no intersection
 	{
-		float VdotL = dot(worldDirection, normalize(sunDirection)); // weird... the sun disc shrinks near the horizon if we don't normalize sun direction
+		float VdotL = dot(worldDirection, sunDirNorm); // weird... the sun disc shrinks near the horizon if we don't normalize sun direction
 		if (VdotL > sunCosHalfApexAngle)
 		{
 			// Edge fade
 			const float halfCosHalfApex = sunCosHalfApexAngle + (1.0 - sunCosHalfApexAngle) * 0.25; // Start fading when at 75% distance from light disk center
-			const float weight = 1.0 - saturate((halfCosHalfApex - VdotL) / (halfCosHalfApex - sunCosHalfApexAngle));
+			float weight = 1.0 - saturate((halfCosHalfApex - VdotL) / (halfCosHalfApex - sunCosHalfApexAngle));
 
-			retval = weight * sunIlluminance;
+			if (sunEclipseStrength > 0.0f)
+			{
+				// Opaque moon silhouette: fully occlude the sun wherever the view
+				// ray lies within the moon's angular radius. Independent of the
+				// eclipse area ratio, so the covered region goes fully dark across
+				// the whole moon disk (not just its center).
+				weight *= 1.0f - MoonDiskMask(worldDirection);
+			}
+
+			// Draw the disk from the raw (un-eclipsed) sun color so the visible
+			// crescent keeps full brightness during a partial eclipse; the moon
+			// silhouette already removed the covered part via `weight`. The
+			// eclipse-dimmed `sunIlluminance` still drives the sky scattering and
+			// the corona below.
+			retval = weight * GetSunColorRaw();
+		}
+
+		// Solar corona: at totality the photosphere is fully blocked and the
+		// sun's faint outer atmosphere is revealed as a pearly glow emanating
+		// from the moon's limb. Only appears near totality (full disk overlap) --
+		// a partial or annular eclipse leaves the bright sun visible and washes
+		// it out.
+		if (sunEclipseStrength > 0.9f)
+		{
+			float3 moonDir = GetMoonDirection();
+			float moonLenSq = dot(moonDir, moonDir);
+			if (moonLenSq > 1e-6f)
+			{
+				float3 moonDirNorm = moonDir * rsqrt(moonLenSq);
+				float moonSize = GetMoonSize();					// Moon angular radius (rad)
+				float angToMoon = acos(clamp(dot(worldDirection, moonDirNorm), -1.0, 1.0));
+
+				// Tunable corona shape/appearance (shader-local, like skyHF's
+				// eclipse constants).
+				const float CORONA_EXTENT = 0.8f;					// Reach in solar radii beyond the limb
+				const float CORONA_FALLOFF = 2.0f;					// Radial decay exponent
+				const float CORONA_INTENSITY = 1.0f;				// Brightness vs. sun illuminance
+				const float CORONA_STREAMERS = 0.8f;				// 0 = smooth ring, 1 = strong streamers
+				const float CORONA_ANIM_SPEED = 0.2f;				// Streamer drift / shimmer speed
+				const float3 CORONA_TINT = float3(1.0f, 0.74f, 0.22f);	// Strong gold
+
+				// Azimuthal basis around the moon, used to drive radial streamers.
+				float3 ref = abs(moonDirNorm.y) > 0.95f ? float3(1, 0, 0) : float3(0, 1, 0);
+				float3 tangent = normalize(cross(ref, moonDirNorm));
+				float3 bitangent = cross(moonDirNorm, tangent);
+				float azimuth = atan2(dot(worldDirection, bitangent), dot(worldDirection, tangent));
+
+				// Streamers: noise sampled on a circle (seamless across the
+				// azimuth wrap), animated over time. Two octaves give coarse and
+				// fine spokes; constant along each radial line so they read as
+				// rays. anim drifts the pattern for a living, shimmering corona.
+				float anim = GetTime() * CORONA_ANIM_SPEED;
+				float2 ring = float2(cos(azimuth), sin(azimuth));
+				float a0 = noise_gradient_3D(float3(ring * 4.0f, anim));
+				float a1 = noise_gradient_3D(float3(ring * 11.0f, anim * 1.7f));
+				float streamer = saturate(a0 * 0.6f + a1 * 0.4f);
+
+				// Streamers modulate both brightness and outer reach, so the ring
+				// is irregular rather than a perfect circle.
+				float width = sunHalfApexAngleRadian * CORONA_EXTENT * lerp(0.45f, 1.3f, streamer);
+				// Radial profile: brightest at the limb, decaying outward.
+				float radial = pow(saturate(1.0f - (angToMoon - moonSize) / width), CORONA_FALLOFF);
+				// Keep the corona outside the dark moon disk (preserve silhouette).
+				float soft = max(moonSize * 0.05f, 1e-4f);
+				float outside = smoothstep(moonSize, moonSize + soft, angToMoon);
+				float streaks = lerp(1.0f, 0.3f + 1.4f * streamer, CORONA_STREAMERS);
+				// Only at totality.
+				float totality = smoothstep(0.9f, 1.0f, sunEclipseStrength);
+
+				float corona = radial * outside * streaks * totality;
+				// Write in HDR (tied to sun illuminance) so bloom picks it up.
+				retval += corona * CORONA_INTENSITY * CORONA_TINT * sunIlluminance;
+			}
 		}
 
 		if (GetWeather().stars > 0)
@@ -448,6 +523,14 @@ half3 GetSunLuminance(float3 worldPosition, float3 worldDirection, float3 sunDir
 			float stars_exposure = lerp(0, 512, stars_visibility); // modifies the overall strength of the stars
 			float stars = saturate(pow(noise_gradient_3D(stars_direction * 300), stars_threshold)) * stars_exposure;
 			stars *= lerp(0.4, 1.4, noise_gradient_3D(stars_direction * 256 + GetTime())); // time based flickering
+
+			// Ensure the moon disk always occludes stars (moon silhouette in
+			// front of starfield).
+			if (GetMoonSize() > 0.0)
+			{
+				stars *= 1.0 - MoonDiskMask(worldDirection);
+			}
+
 			retval += stars;
 		}
 

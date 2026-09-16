@@ -1,35 +1,24 @@
 #pragma once
+
 #include "CommonInclude.h"
 
-#include <cmath>
 #include <algorithm>
+#include <cmath>
 #include <limits>
 
 #if !defined(WICKED_CMAKE_BUILD) && !defined(_M_ARM64) && !defined(__arm64__)
-#define _XM_F16C_INTRINSICS_
-#define _XM_FMA3_INTRINSICS_
+	#define _XM_F16C_INTRINSICS_
+	#define _XM_FMA3_INTRINSICS_
 #endif // !defined(WICKED_CMAKE_BUILD) && !defined(_M_ARM64)
 
 #ifdef __APPLE__
-#define __EMULATE_UUID
-#include "Utility/NeonIntrinsicsAppleShim.h"
+	#define __EMULATE_UUID
+	#include "Utility/NeonIntrinsicsAppleShim.h"
 #endif // __APPLE__
 
-#if __has_include(<DirectXMath.h>)
-// In this case, DirectXMath is coming from Windows SDK.
-//	It is better to use this on Windows as some Windows libraries could depend on the same
-//	DirectXMath headers
+#include <DirectXCollision.h>
 #include <DirectXMath.h>
 #include <DirectXPackedVector.h>
-#include <DirectXCollision.h>
-#else
-// In this case, DirectXMath is coming from supplied source code
-//	On platforms that don't have Windows SDK, the source code for DirectXMath is provided
-//	as part of the engine utilities
-#include "Utility/DirectXMath/DirectXMath.h"
-#include "Utility/DirectXMath/DirectXPackedVector.h"
-#include "Utility/DirectXMath/DirectXCollision.h"
-#endif
 
 using namespace DirectX;
 using namespace DirectX::PackedVector;
@@ -432,6 +421,197 @@ namespace wi::math
 	float GetAngleSigned(XMVECTOR A, XMVECTOR B, XMVECTOR axis);
 	void ConstructTriangleEquilateral(float radius, XMFLOAT4& A, XMFLOAT4& B, XMFLOAT4& C);
 	void GetBarycentric(const XMVECTOR& p, const XMVECTOR& a, const XMVECTOR& b, const XMVECTOR& c, float &u, float &v, float &w, bool clamp = false);
+
+
+	/**
+	 * @brief Checks whether a 3D vector is approximately normalized.
+	 *
+	 * A vector is considered normalized if its squared length is within
+	 * `epsilon` of 1.0:
+	 *
+	 * \[
+	 * \left| \|v\|^2 - 1 \right| \le \epsilon
+	 * \]
+	 *
+	 * The comparison is performed using the squared length to avoid an
+	 * unnecessary square root operation.
+	 *
+	 * @param v - Input 3D vector (XMVECTOR).
+	 *
+	 * @param epsilon - Tolerance used to determine whether the vector is
+	 * sufficiently close to unit length.
+	 *
+	 * @return true if the vector is approximately unit length, false otherwise.
+	 *
+	 * @note Intended primarily for debug assertions.
+	 */
+	inline bool IsNormalized(
+		const XMVECTOR& v,
+		const float epsilon = 1e-4f
+	) {
+		const float lengthSq = XMVectorGetX(XMVector3LengthSq(v));
+
+		return std::fabs(lengthSq - 1.0f) <= epsilon;
+	}
+
+	/**
+	 * @brief Compares two floating-point numbers `a` and `b` for approximate
+	 * equality.
+	 *
+	 * The comparison is both absolute and relative, scaled by the largest
+	 * magnitude of the two numbers. This ensures the function works correctly
+	 * for both very small and very large values.
+	 *
+	 * The parameter `eps` controls the tolerance for comparison. A difference
+	 * smaller than `eps` (or scaled by the largest magnitude) is considered
+	 * approximately equal.
+	 *
+	 * @tparam T - Floating-point type (float, double, long double).
+	 * @param a - First number.
+	 * @param b - Second number.
+	 * @param eps - Tolerance. Default is std::numeric_limits<T>::epsilon().
+	 *
+	 * @return true if `a` and `b` are approximately equal, false otherwise.
+	 */
+	template<typename T>
+	constexpr bool FP_Equal(
+		const T a,
+		const T b,
+		const T eps = std::numeric_limits<T>::epsilon()
+	) {
+		static_assert(
+			std::is_floating_point<T>::value,
+			"FP_Equal requires a floating-point type"
+		);
+
+		const T diff = std::abs(a - b);
+		const T maxAbs = std::fmax(std::abs(a), std::abs(b));
+
+		return diff <= std::fmax(eps, eps * maxAbs);
+	}
+
+	/**
+	 * @brief Computes the angle opposite side `c` (in radians) using the law of
+	 * cosines.
+	 *
+	 * Given three side lengths `a`, `b`, `c` of a triangle, returns:
+	 * \[
+     * theta_c = \arccos\!\Bigg(\mathrm{clamp}\Bigg(\frac{a^2 + b^2 - c^2}{2 a b}, -1, 1\Bigg)\Bigg)
+     * \]
+	 *
+	 * The clamp protects against floating-point precision errors.
+	 *
+	 * Source:
+	 * https://en.wikipedia.org/wiki/Law_of_cosines?utm_source=chatgpt.com
+	 *
+	 * @param a - Length of side `a`.
+	 * @param b - Length of side `b`.
+	 * @param c - Length of side `c` (opposite the angle being computed).
+	 *
+	 * @return Angle in radians.
+	 *
+	 * @note `a` and `b` must be non-zero. Inputs are assumed to satisfy the
+	 * triangle inequality.
+	 */
+	inline float LawOfCosinesAngle(const float a, const float b, const float c);
+
+	/**
+	 * @brief Normalizes a 3D direction vector with zero-length protection.
+	 *
+	 * If the vector length is zero, returns the zero vector instead of
+	 * producing undefined results.
+	 *
+	 * @param direction - The input direction vector.
+	 *
+	 * @return A normalized vector or a zero vector if input is zero-length.
+	 */
+	XMVECTOR NormalizeDirection(const XMFLOAT3& direction);
+
+	/**
+	 * @brief Computes the area of angular disk `a` that is overlapped by
+	 * angular disk `b` ($|a \cap b| / |a|$).
+	 *
+	 * Each disk is defined by a normalized center direction vector and an
+	 * angular radius (in radians).
+	 *
+	 * If the disks have approximately equal radii, a simplified and faster
+	 * computation is used.
+	 *
+	 * @param dir_a - Normalized direction vector of disk `a`.
+	 * @param radius_a - Angular radius of disk `a` (in radians).
+	 * @param dir_b - Normalized direction vector of disk `b`.
+	 * @param radius_b - Angular radius of disk `b` (in radians).
+	 *
+	 * @return Area of disk `a` overlapped by disk `b`.
+	 *
+	 * @note Radii are clamped to non-negative values.
+	 */
+	float ComputeDiskOverlapArea(
+		const XMVECTOR& dir_a,
+		const float radius_a,
+		const XMVECTOR& dir_b,
+		const float radius_b
+	);
+
+	/**
+	 * @brief Computes the fraction of angular disk `a` overlapped by angular
+	 * disk `b` ($|a \cap b| / |a|$).
+	 *
+	 * Each disk is defined by a normalized center direction vector and an
+	 * angular radius (in radians).
+	 *
+	 * If the disks have approximately equal radii, a simplified and faster
+	 * computation is used.
+	 *
+	 * @param dir_a - Normalized direction vector of disk `a`.
+	 * @param radius_a - Angular radius of disk `a` (in radians).
+	 * @param dir_b - Normalized direction vector of disk `b`.
+	 * @param radius_b - Angular radius of disk `b` (in radians).
+	 *
+	 * @return A value in the range [0, 1]:
+	 *     - 0.0f if disk `b` does not overlap disk `a`.
+	 *     - 1.0f if disk a is fully covered by disk b.
+	 *     - A value in (0, 1) if disk `b` partially overlaps disk `a`.
+	 *
+	 * @note Radii are clamped to non-negative values.
+	 */
+	float ComputeDiskOverlapRatio(
+		const XMVECTOR& dir_a,
+		const float radius_a,
+		const XMVECTOR& dir_b,
+		const float radius_b
+	);
+
+	/**
+	 * @brief Estimates the fraction of overlap between angular disk `a` and
+ 	 * angular disk `b` of same radius.
+	 *
+	 * This is a fast linear approximation based on the angular separation
+	 * between disk centers. Only valid when both disks have the same radius!
+	 *
+	 * Since the disk radii are assumed to be approximately equal, the overlap
+	 * ratio is symmetric and can be interpreted as either $|a \cap b| / |a|$ or
+	 * $|a \cap b| / |b|$.
+	 *
+	 * Each disk is defined by a normalized center direction vector and a single
+	 * angular radius (in radians).
+	 *
+	 * @param dir_a - Normalized direction vector of disk `a`.
+	 * @param radius - Common angular radius of disks `a` and `b` (in radians).
+	 * @param dir_b - Normalized direction vector of disk `b`.
+	 *
+	 * @return A value in the range [0, 1]:
+	 *     - 0.0f if disks do not overlap.
+	 *     - 1.0f if disks fully overlap.
+	 *     - A value in (0, 1) if disks partially overlap.
+	 *
+	 * @note Radii are clamped to non-negative values.
+	 */
+	float ComputeDiskOverlapRatioEst(
+		const XMVECTOR& dir_a,
+		const float radius,
+		const XMVECTOR& dir_b
+	);
 
 	inline XMFLOAT3 GetPosition(const XMFLOAT4X4& _m)
 	{
