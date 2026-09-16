@@ -9794,8 +9794,8 @@ namespace wi::scene
 		if (!wi::renderer::GetFreezeCullingCameraEnabled())
 		{
 			occlusion.occlusionHistory <<= 1u; // advance history by 1 frame
-			int query_id = occlusion.occlusionQueries[queryheap_idx];
-			if (queryResultBuffer[queryheap_idx].mapped_data != nullptr && query_id >= 0)
+			const int query_id = occlusion.occlusionQueries[queryheap_idx];
+			if (queryResultBuffer[queryheap_idx].mapped_data != nullptr && query_id >= 0 && query_id < (int)queryHeap.desc.query_count)
 			{
 				uint64_t visible = ((uint64_t*)queryResultBuffer[queryheap_idx].mapped_data)[query_id];
 				if (visible)

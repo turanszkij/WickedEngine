@@ -208,10 +208,10 @@ struct alignas(16) RenderBatch
 {
 	uint32_t meshIndex;
 	uint32_t instanceIndex;
-	uint16_t distance;
-	uint16_t camera_mask;
-	uint8_t lod_override; // if overriding the base object LOD is needed, specify less than 0xFF in this
-	uint16_t sort_bits; // an additional bitmask for sorting only, it should be used to reduce pipeline changes
+	uint32_t distance : 16;
+	uint32_t camera_mask : 16;
+	uint32_t lod_override : 8; // if overriding the base object LOD is needed, specify less than 0xFF in this
+	uint32_t sort_bits : 24; // an additional bitmask for sorting only, it should be used to reduce pipeline changes
 
 	inline void Create(uint32_t meshIndex, uint32_t instanceIndex, float distance, uint32_t sort_bits, uint16_t camera_mask = 0xFFFF, uint8_t lod_override = 0xFF)
 	{
@@ -5921,7 +5921,8 @@ void OcclusionCulling_Render(const CameraComponent& camera, const Visibility& vi
 	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled() || !vis.scene->queryHeap.IsValid() || vis.scene->queryAllocator.load() == 0)
 		return;
 
-	auto range = wi::profiler::BeginRangeGPU("Occlusion Culling Render", cmd);
+	ScopedCPUProfiling("Occlusion Culling Render");
+	ScopedGPUProfiling("Occlusion Culling Render", cmd);
 
 	device->BindPipelineState(&PSO_occlusionquery, cmd);
 
@@ -5937,8 +5938,8 @@ void OcclusionCulling_Render(const CameraComponent& camera, const Visibility& vi
 		for (uint32_t objectIndex : vis.visibleObjects)
 		{
 			const ObjectComponent& object = vis.scene->objects[objectIndex];
-			int queryIndex = object.occlusion.occlusionQueries[query_write];
-			if (queryIndex >= 0)
+			const int queryIndex = object.occlusion.occlusionQueries[query_write];
+			if (queryIndex >= 0 && queryIndex < (int)vis.scene->queryHeap.desc.query_count)
 			{
 				AABB aabb = vis.scene->aabb_objects[objectIndex];
 				// extrude the bounding box a bit:
@@ -5964,8 +5965,8 @@ void OcclusionCulling_Render(const CameraComponent& camera, const Visibility& vi
 	auto test_and_draw_occlusion_box = [&](const AABB& aabb, const OcclusionResult& occlusion) {
 		if ((aabb.layerMask & vis.layerMask) && vis.frustum.CheckBoxFast(aabb)) // re-test frustum because this doesn't use visible list (those are already occ culled except objects)
 		{
-			int queryIndex = occlusion.occlusionQueries[query_write];
-			if (queryIndex >= 0)
+			const int queryIndex = occlusion.occlusionQueries[query_write];
+			if (queryIndex >= 0 && queryIndex < (int)vis.scene->queryHeap.desc.query_count)
 			{
 				const XMMATRIX transform = aabb.getAsBoxMatrix() * VP;
 				device->PushConstants(&transform, sizeof(transform), cmd);
@@ -6032,8 +6033,6 @@ void OcclusionCulling_Render(const CameraComponent& camera, const Visibility& vi
 			device->EventEnd(cmd);
 		}
 	}
-
-	wi::profiler::EndRange(range); // Occlusion Culling Render
 }
 void OcclusionCulling_Resolve(const Visibility& vis, CommandList cmd)
 {
