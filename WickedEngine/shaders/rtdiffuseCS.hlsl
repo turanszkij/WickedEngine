@@ -9,7 +9,7 @@
 #include "stochasticSSRHF.hlsli"
 #include "lightingHF.hlsli"
 #include "ShaderInterop_SurfelGI.h"
-#include "ShaderInterop_DDGI.h"
+#include "ddgiHF.hlsli"
 
 PUSHCONSTANT(postprocess, PostProcess);
 

@@ -7,7 +7,7 @@
 #include "raytracingHF.hlsli"
 #include "stochasticSSRHF.hlsli"
 #include "lightingHF.hlsli"
-#include "ShaderInterop_DDGI.h"
+#include "ddgiHF.hlsli"
 
 PUSHCONSTANT(postprocess, PostProcess);
 
