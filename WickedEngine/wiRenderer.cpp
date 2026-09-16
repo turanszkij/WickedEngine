@@ -6809,6 +6809,8 @@ void DrawShadowmaps(
 	SHCAM shcams[max_camera_count];
 	CameraCB cb = camera_cb_null;
 	CameraCB cb_single = camera_cb_null;
+	uint32_t cascade_indices[16] = {};
+	uint32_t cascade_counts[16] = {};
 
 	uint32_t view_count = 0;
 
@@ -6838,7 +6840,9 @@ void DrawShadowmaps(
 					{
 						const ShaderCamera& cbcam = cb.cameras[view];
 						const SHCAM& shcam = shcams[view];
-						if ((!cbcam.IsOrtho() || view < (view_count - object.cascadeMask)) && shcam.frustum.CheckBoxFast(aabb))
+						const uint32_t cascade = cascade_indices[view];
+						const uint32_t cascade_count = cascade_counts[view];
+						if ((!cbcam.IsOrtho() || cascade < (cascade_count - object.cascadeMask)) && shcam.frustum.CheckBoxFast(aabb))
 						{
 							camera_mask |= 1 << view;
 							if (shadow_lod_override)
@@ -7002,6 +7006,8 @@ void DrawShadowmaps(
 				SHCAM& shcam = shcams[output_index];
 				Viewport& vp = viewports[output_index];
 				wi::graphics::Rect& scissor = scissors[output_index];
+				cascade_indices[output_index] = cascade;
+				cascade_counts[output_index] = cascade_count;
 
 				cbcam.position = vis.camera->Eye;
 				cbcam.internal_resolution = uint2(shadow_rect.w, shadow_rect.h);
