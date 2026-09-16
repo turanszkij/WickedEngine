@@ -310,7 +310,7 @@ struct RenderQueue
 	{
 		batches.clear();
 	}
-	inline void add(uint32_t meshIndex, uint32_t instanceIndex, float distance, uint32_t sort_bits, uint16_t camera_mask = 0xFFFF, uint8_t lod_override = 0xFF)
+	inline void add(uint32_t meshIndex, uint32_t instanceIndex, float distance, uint32_t sort_bits, uint16_t camera_mask = 1, uint8_t lod_override = 0xFF)
 	{
 		batches.emplace_back().Create(meshIndex, instanceIndex, distance, sort_bits, camera_mask, lod_override);
 	}
@@ -3474,11 +3474,11 @@ void RenderMeshes(
 			instancedBatch.aabb = AABB::Merge(instancedBatch.aabb, instanceAABB);
 		}
 
-		for (uint32_t camera_index = 0; camera_index < camera_count; ++camera_index)
+		uint32_t camera_bits = batch.camera_mask;
+		while (camera_bits != 0)
 		{
-			const uint16_t camera_mask = 1 << camera_index;
-			if ((batch.camera_mask & camera_mask) == 0)
-				continue;
+			const uint camera_index = firstbitlow(camera_bits);
+			camera_bits ^= 1u << camera_index;
 
 			ShaderMeshInstancePointer poi;
 			poi.Create(instanceIndex, camera_index, dither);
@@ -6785,9 +6785,10 @@ void DrawShadowmaps(
 	if (vis.visibleLights.empty() && vis.scene->weather.rain_amount <= 0)
 		return;
 
+	ScopedCPUProfiling("Shadowmap Rendering");
+	ScopedGPUProfiling("Shadowmap Rendering", cmd);
+
 	device->EventBegin("DrawShadowmaps", cmd);
-	auto range_cpu = wi::profiler::BeginRangeCPU("Shadowmap Rendering");
-	auto range_gpu = wi::profiler::BeginRangeGPU("Shadowmap Rendering", cmd);
 
 	const bool shadow_lod_override = IsShadowLODOverrideEnabled();
 
@@ -6832,7 +6833,7 @@ void DrawShadowmaps(
 					if (distanceSq > sqr(object.draw_distance + object.radius)) // Note: here I use draw_distance instead of fadeDeistance because this doesn't account for impostor switch fade
 						continue;
 
-					// Determine which cascades the object is contained in:
+					// Determine which frustums/cascades the object is contained in:
 					uint16_t camera_mask = 0;
 					uint8_t shadow_lod = 0xFF;
 					for (uint32_t view = 0; view < view_count; ++view)
@@ -7200,8 +7201,6 @@ void DrawShadowmaps(
 
 	device->RenderPassEnd(cmd);
 
-	wi::profiler::EndRange(range_gpu);
-	wi::profiler::EndRange(range_cpu);
 	device->EventEnd(cmd);
 }
 
