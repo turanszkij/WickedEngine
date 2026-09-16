@@ -1144,6 +1144,23 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
+	// Occlusion query state:
+	struct OcclusionResult
+	{
+		int occlusionQueries[wi::graphics::GraphicsDevice::GetBufferCount()];
+		// occlusion result history bitfield (32 bit->32 frame history)
+		uint32_t occlusionHistory = ~0u;
+
+		constexpr bool IsOccluded() const
+		{
+			// Perform a conservative occlusion test:
+			// If it is visible in any frames in the history, it is determined visible in this frame
+			// But if all queries failed in the history, it is occluded.
+			// If it pops up for a frame after occluded, it is visible again for some frames
+			return occlusionHistory == 0;
+		}
+	};
+
 	struct alignas(32) ObjectComponent
 	{
 		enum FLAGS
@@ -1197,6 +1214,8 @@ namespace wi::scene
 		uint16_t lod = 0;
 		mutable bool wetmap_cleared = false;
 		bool mesh_blend_required = false;
+
+		mutable OcclusionResult occlusion;
 
 		// these will only be valid for a single frame:
 		uint32_t mesh_index = ~0u;
@@ -1365,10 +1384,11 @@ namespace wi::scene
 		// Non-serialized attributes:
 		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 direction = XMFLOAT3(0, 1, 0);
-		mutable int occlusionquery = -1;
 		XMFLOAT4 rotation = XMFLOAT4(0, 0, 0, 1);
 		XMFLOAT3 scale = XMFLOAT3(1, 1, 1);
 		int maskTexDescriptor = -1;
+
+		mutable OcclusionResult occlusion;
 
 		wi::vector<wi::Resource> lensFlareRimTextures;
 
@@ -1550,6 +1570,8 @@ namespace wi::scene
 		mutable bool first_render = true; // true until first render completes
 		mutable float realtime_time_accumulator = 0.0f; // tracks time since last render for realtime probes
 
+		mutable OcclusionResult occlusion;
+
 		constexpr void SetDirty(bool value = true) { set_flag(_flags, DIRTY, value); if (value) { DeleteResource(); } }
 		constexpr void SetRealTime(bool value) { set_flag(_flags, REALTIME, value); }
 		constexpr void SetMSAA(bool value) { set_flag(_flags, MSAA, value); SetDirty(); }
@@ -1622,6 +1644,8 @@ namespace wi::scene
 		float range;
 		XMFLOAT4X4 world;
 		XMFLOAT4 texMulAdd;
+
+		mutable OcclusionResult occlusion;
 
 		wi::Resource texture;
 		wi::Resource normal;

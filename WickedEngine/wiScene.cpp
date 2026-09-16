@@ -176,7 +176,7 @@ namespace wi::scene
 		// Occlusion culling read:
 		if(wi::renderer::GetOcclusionCullingEnabled() && !wi::renderer::GetFreezeCullingCameraEnabled())
 		{
-			uint32_t minQueryCount = uint32_t(objects.GetCount() + lights.GetCount() + 1); // +1: ocean (don't know for sure if it exists yet before weather update)
+			uint32_t minQueryCount = uint32_t(objects.GetCount() + lights.GetCount() + decals.GetCount() + probes.GetCount() + 1); // +1: ocean (don't know for sure if it exists yet before weather update)
 			if (queryHeap.desc.query_count < minQueryCount)
 			{
 				GPUQueryHeapDesc desc;
@@ -194,15 +194,6 @@ namespace wi::scene
 					success = device->CreateBuffer(&bd, nullptr, &queryResultBuffer[i]);
 					assert(success);
 					device->SetName(&queryResultBuffer[i], "Scene::queryResultBuffer");
-				}
-
-				if (device->CheckCapability(GraphicsDeviceCapability::PREDICATION))
-				{
-					bd.usage = Usage::DEFAULT;
-					bd.misc_flags |= ResourceMiscFlag::PREDICATION;
-					success = device->CreateBuffer(&bd, nullptr, &queryPredicationBuffer);
-					assert(success);
-					device->SetName(&queryPredicationBuffer, "Scene::queryPredicationBuffer");
 				}
 			}
 
@@ -4444,7 +4435,6 @@ namespace wi::scene
 		aabb_objects.resize(objects.GetCount());
 		matrix_objects.resize(objects.GetCount());
 		matrix_objects_prev.resize(objects.GetCount());
-		occlusion_results_objects.resize(objects.GetCount());
 
 		meshletAllocator.store(0u);
 
@@ -4458,26 +4448,7 @@ namespace wi::scene
 			AABB& aabb = aabb_objects[args.jobIndex];
 			GraphicsDevice* device = wi::graphics::GetDevice();
 
-			// Update occlusion culling status:
-			OcclusionResult& occlusion_result = occlusion_results_objects[args.jobIndex];
-			if (!wi::renderer::GetFreezeCullingCameraEnabled())
-			{
-				occlusion_result.occlusionHistory <<= 1u; // advance history by 1 frame
-				int query_id = occlusion_result.occlusionQueries[queryheap_idx];
-				if (queryResultBuffer[queryheap_idx].mapped_data != nullptr && query_id >= 0)
-				{
-					uint64_t visible = ((uint64_t*)queryResultBuffer[queryheap_idx].mapped_data)[query_id];
-					if (visible)
-					{
-						occlusion_result.occlusionHistory |= 1; // visible
-					}
-				}
-				else
-				{
-					occlusion_result.occlusionHistory |= 1; // visible
-				}
-			}
-			occlusion_result.occlusionQueries[queryheap_idx] = -1; // invalidate query
+			UpdateOcclusionResult(object.occlusion);
 
 			const LayerComponent* layer = layers.GetComponent(entity);
 			uint32_t layerMask;
@@ -4844,6 +4815,9 @@ namespace wi::scene
 			Entity entity = decals.GetEntity(i);
 			if (!transforms.Contains(entity))
 				continue;
+
+			UpdateOcclusionResult(decal.occlusion);
+
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 			decal.world = transform.world;
 
@@ -4899,6 +4873,9 @@ namespace wi::scene
 			Entity entity = probes.GetEntity(probeIndex);
 			if (!transforms.Contains(entity))
 				continue;
+
+			UpdateOcclusionResult(probe.occlusion);
+
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 
 			probe.position = transform.GetPosition();
@@ -4974,7 +4951,7 @@ namespace wi::scene
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 			AABB& aabb = aabb_lights[args.jobIndex];
 
-			light.occlusionquery = -1;
+			UpdateOcclusionResult(light.occlusion);
 
 			const LayerComponent* layer = layers.GetComponent(entity);
 			if (layer == nullptr)
@@ -9811,4 +9788,27 @@ namespace wi::scene
 			}
 		}
 	}
+
+	void Scene::UpdateOcclusionResult(OcclusionResult& occlusion)
+	{
+		if (!wi::renderer::GetFreezeCullingCameraEnabled())
+		{
+			occlusion.occlusionHistory <<= 1u; // advance history by 1 frame
+			int query_id = occlusion.occlusionQueries[queryheap_idx];
+			if (queryResultBuffer[queryheap_idx].mapped_data != nullptr && query_id >= 0)
+			{
+				uint64_t visible = ((uint64_t*)queryResultBuffer[queryheap_idx].mapped_data)[query_id];
+				if (visible)
+				{
+					occlusion.occlusionHistory |= 1; // visible
+				}
+			}
+			else
+			{
+				occlusion.occlusionHistory |= 1; // visible
+			}
+		}
+		occlusion.occlusionQueries[queryheap_idx] = -1; // invalidate query
+	}
+
 }

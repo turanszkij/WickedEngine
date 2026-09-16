@@ -159,26 +159,9 @@ namespace wi::scene
 		wi::graphics::GPUBuffer skinningBuffer;
 		std::atomic<uint32_t> skinningAllocator{ 0 };
 
-		// Occlusion query state:
-		struct OcclusionResult
-		{
-			int occlusionQueries[wi::graphics::GraphicsDevice::GetBufferCount()];
-			// occlusion result history bitfield (32 bit->32 frame history)
-			uint32_t occlusionHistory = ~0u;
-
-			constexpr bool IsOccluded() const
-			{
-				// Perform a conservative occlusion test:
-				// If it is visible in any frames in the history, it is determined visible in this frame
-				// But if all queries failed in the history, it is occluded.
-				// If it pops up for a frame after occluded, it is visible again for some frames
-				return occlusionHistory == 0;
-			}
-		};
-		mutable wi::vector<OcclusionResult> occlusion_results_objects;
 		wi::graphics::GPUQueryHeap queryHeap;
 		wi::graphics::GPUBuffer queryResultBuffer[arraysize(OcclusionResult::occlusionQueries)];
-		wi::graphics::GPUBuffer queryPredicationBuffer;
+		void UpdateOcclusionResult(OcclusionResult& occlusion);
 		uint32_t queryheap_idx = 0;
 		mutable std::atomic<uint32_t> queryAllocator{ 0 };
 

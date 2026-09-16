@@ -777,18 +777,6 @@ namespace wi::terrain
 			chunk_data.visible = camera.frustum.CheckSphere(chunk_data.sphere.center, chunk_data.sphere.radius);
 			const int dist = std::max(std::abs(center_chunk.x - chunk.x), std::abs(center_chunk.z - chunk.z));
 
-			if (wi::renderer::GetOcclusionCullingEnabled())
-			{
-				size_t object_index = scene->objects.GetIndex(chunk_data.entity);
-				if (object_index < scene->occlusion_results_objects.size())
-				{
-					if (scene->occlusion_results_objects[object_index].IsOccluded())
-					{
-						chunk_data.visible = false;
-					}
-				}
-			}
-
 			// pointer refresh:
 			MeshComponent* chunk_mesh = scene->meshes.GetComponent(chunk_data.entity);
 			if (chunk_mesh != nullptr)
@@ -816,6 +804,10 @@ namespace wi::terrain
 			ObjectComponent* chunk_object = scene->objects.GetComponent(chunk_data.entity);
 			if (chunk_object != nullptr)
 			{
+				if (wi::renderer::GetOcclusionCullingEnabled() && chunk_object->occlusion.IsOccluded())
+				{
+					chunk_data.visible = false;
+				}
 				chunk_object->SetWetmapEnabled(scene->IsWetmapProcessingRequired());
 				chunk_object->emissiveColor.w = virtual_texture_any ? 1.0f : 0.0f; // without virtual textures, emissive will be disabled on the object-level (most likely missing content)
 			}
