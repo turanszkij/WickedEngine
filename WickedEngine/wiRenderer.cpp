@@ -6859,7 +6859,7 @@ void DrawShadowmaps(
 					uint8_t shadow_lod = 0xFF;
 					for (uint32_t group = 0; group < light_group_count; ++group) // light group iteration, early reject whole light
 					{
-						const LightGroup light_group = light_groups[group];
+						const LightGroup& light_group = light_groups[group];
 						if (!light_group.boundingsphere.intersects(aabb))
 							continue;
 
