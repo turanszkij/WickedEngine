@@ -7147,7 +7147,7 @@ void DrawShadowmaps(
 				flush_shadows();
 			}
 
-			LightGroup& light_group = light_groups[light_group_count++];
+			LightGroup& light_group = light_groups[light_group_count];
 			light_group = {};
 			light_group.boundingsphere = light.GetSphere();
 
@@ -7156,11 +7156,13 @@ void DrawShadowmaps(
 			SHCAM faces[6];
 			CreateCubemapCameras(light.position, zNearP, zFarP, faces, arraysize(faces));
 
+			bool any_face = false;
 			for (uint32_t face = 0; face < arraysize(faces); ++face)
 			{
 				// Check if cubemap face frustum is visible from main camera, otherwise, it will be skipped:
 				if (!cam_frustum.Intersects(faces[face].boundingfrustum))
 					continue;
+				any_face = true;
 
 				const uint32_t output_index = view_count;
 				light_group.outputs[light_group.output_count++] = output_index;
@@ -7190,6 +7192,11 @@ void DrawShadowmaps(
 					cbcam.frustum.planes[i] = shcam.frustum.planes[i];
 				}
 				view_count++;
+			}
+
+			if (any_face)
+			{
+				light_group_count++;
 			}
 		}
 		break;
