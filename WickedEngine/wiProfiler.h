@@ -3,6 +3,8 @@
 #include "wiCanvas.h"
 #include "wiColor.h"
 
+#include <string>
+
 
 // QoL macros, allows writing just ScopedXxxProfiling without needing to declare a variable manually
 #define ScopedCPUProfiling(name) wi::profiler::ScopedRangeCPU WI_PROFILER_CONCAT(_wi_profiler_cpu_range,__LINE__)(name)
@@ -67,7 +69,10 @@ namespace wi::profiler
 
 	bool IsEnabled();
 
+	// Machine-readable diagnostics used by host applications and test tooling.
+	std::string GetJsonSummary();
+	void DumpToBacklog();
+
 	void SetBackgroundColor(wi::Color color);
 	void SetTextColor(wi::Color color);
 };
-

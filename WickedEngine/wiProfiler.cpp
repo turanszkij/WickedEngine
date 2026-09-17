@@ -19,6 +19,7 @@
 #include <stack>
 #include <mutex>
 #include <atomic>
+#include <iomanip>
 #include <sstream>
 
 using namespace wi::graphics;
@@ -666,6 +667,37 @@ namespace wi::profiler
 	bool IsEnabled()
 	{
 		return ENABLED;
+	}
+
+	std::string GetJsonSummary()
+	{
+		std::lock_guard<std::mutex> guard(lock);
+		std::stringstream result;
+		result << std::setprecision(6)
+			<< "{\"schema\":\"wicked.profiler.summary.v1\",\"enabled\":"
+			<< (ENABLED ? "true" : "false")
+			<< ",\"initialized\":" << (initialized ? "true" : "false")
+			<< ",\"ranges\":[";
+		bool first = true;
+		for (const auto& item : ranges)
+		{
+			const Range& range = item.second;
+			if (range.name.empty())
+				continue;
+			if (!first)
+				result << ',';
+			first = false;
+			result << "{\"name\":" << std::quoted(range.name)
+				<< ",\"kind\":\"" << (range.IsCPURange() ? "cpu" : "gpu")
+				<< "\",\"milliseconds\":" << range.time << '}';
+		}
+		result << "]}";
+		return result.str();
+	}
+
+	void DumpToBacklog()
+	{
+		wi::backlog::post(GetJsonSummary());
 	}
 
 	void SetBackgroundColor(wi::Color color)
