@@ -6827,6 +6827,7 @@ void DrawShadowmaps(
 		Sphere boundingsphere;
 		uint32_t outputs[max_camera_count] = {};
 		uint32_t output_count = 0;
+		bool directional = false;
 	};
 	LightGroup light_groups[max_camera_count];
 
@@ -6860,7 +6861,7 @@ void DrawShadowmaps(
 					for (uint32_t group = 0; group < light_group_count; ++group) // light group iteration, early reject whole light
 					{
 						const LightGroup& light_group = light_groups[group];
-						if (!light_group.boundingsphere.intersects(aabb))
+						if (!light_group.directional && !light_group.boundingsphere.intersects(aabb))
 							continue;
 
 						for (uint32_t out = 0; out < light_group.output_count; ++out) // frustum iteration, precisely determine which frustums contain the object
@@ -7053,7 +7054,7 @@ void DrawShadowmaps(
 
 			LightGroup& light_group = light_groups[light_group_count++];
 			light_group = {};
-			light_group.boundingsphere = light.GetSphere();
+			light_group.directional = true;
 
 			for (uint32_t cascade = 0; cascade < cascade_count; ++cascade)
 			{
