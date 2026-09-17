@@ -6809,10 +6809,20 @@ void DrawShadowmaps(
 	SHCAM shcams[max_camera_count];
 	CameraCB cb = camera_cb_null;
 	CameraCB cb_single = camera_cb_null;
-	uint32_t cascade_indices[16] = {};
-	uint32_t cascade_counts[16] = {};
+	uint32_t cascade_indices[max_camera_count] = {};
+	uint32_t cascade_counts[max_camera_count] = {};
+
+	// This light grouping is done to also quickly check object vs light in shadow batching and reject before object vs frustum checks:
+	struct LightGroup
+	{
+		Sphere boundingsphere;
+		uint32_t outputs[max_camera_count] = {};
+		uint32_t output_count = 0;
+	};
+	LightGroup light_groups[max_camera_count];
 
 	uint32_t view_count = 0;
+	uint32_t light_group_count = 0;
 
 	auto flush_shadows = [&] {
 		if (view_count == 0)
@@ -6838,19 +6848,27 @@ void DrawShadowmaps(
 					// Determine which frustums/cascades the object is contained in:
 					uint16_t camera_mask = 0;
 					uint8_t shadow_lod = 0xFF;
-					for (uint32_t view = 0; view < view_count; ++view)
+					for (uint32_t group = 0; group < light_group_count; ++group)
 					{
-						const ShaderCamera& cbcam = cb.cameras[view];
-						const SHCAM& shcam = shcams[view];
-						const uint32_t cascade = cascade_indices[view];
-						const uint32_t cascade_count = cascade_counts[view];
-						if ((!cbcam.IsOrtho() || cascade < (cascade_count - object.cascadeMask)) && shcam.frustum.CheckBoxFast(aabb))
+						const LightGroup light_group = light_groups[group];
+						if (!light_group.boundingsphere.intersects(aabb))
+							continue;
+
+						for (uint32_t out = 0; out < light_group.output_count; ++out)
 						{
-							camera_mask |= 1 << view;
-							if (shadow_lod_override)
+							const uint32_t view = light_group.outputs[out];
+							const ShaderCamera& cbcam = cb.cameras[view];
+							const SHCAM& shcam = shcams[view];
+							const uint32_t cascade = cascade_indices[view];
+							const uint32_t cascade_count = cascade_counts[view];
+							if ((!cbcam.IsOrtho() || cascade < (cascade_count - object.cascadeMask)) && shcam.frustum.CheckBoxFast(aabb))
 							{
-								const uint8_t candidate_lod = (uint8_t)vis.scene->ComputeObjectLODForView(object, aabb, vis.scene->meshes[object.mesh_index], shcam.view_projection);
-								shadow_lod = std::min(shadow_lod, candidate_lod);
+								camera_mask |= 1 << view;
+								if (shadow_lod_override)
+								{
+									const uint8_t candidate_lod = (uint8_t)vis.scene->ComputeObjectLODForView(object, aabb, vis.scene->meshes[object.mesh_index], shcam.view_projection);
+									shadow_lod = std::min(shadow_lod, candidate_lod);
+								}
 							}
 						}
 					}
@@ -6949,6 +6967,7 @@ void DrawShadowmaps(
 
 		// New view count batch is started after flushing current:
 		view_count = 0;
+		light_group_count = 0;
 
 		device->EventEnd(cmd);
 	};
@@ -7002,9 +7021,14 @@ void DrawShadowmaps(
 
 			CreateDirLightShadowCams(light, *vis.camera, &shcams[view_count], cascade_count, shadow_rect, vis.scene->character_dedicated_shadows.data(), vis.scene->character_dedicated_shadows.size());
 
+			LightGroup& light_group = light_groups[light_group_count++];
+			light_group = {};
+			light_group.boundingsphere = light.GetSphere();
+
 			for (uint32_t cascade = 0; cascade < cascade_count; ++cascade)
 			{
 				const uint32_t output_index = view_count++;
+				light_group.outputs[light_group.output_count++] = output_index;
 				ShaderCamera& cbcam = cb.cameras[output_index];
 				cbcam = camera_cb_null.cameras[0];
 				SHCAM& shcam = shcams[output_index];
@@ -7058,7 +7082,12 @@ void DrawShadowmaps(
 				flush_shadows();
 			}
 
+			LightGroup& light_group = light_groups[light_group_count++];
+			light_group = {};
+			light_group.boundingsphere = light.GetSphere();
+
 			const uint32_t output_index = view_count++;
+			light_group.outputs[light_group.output_count++] = output_index;
 			ShaderCamera& cbcam = cb.cameras[output_index];
 			cbcam = camera_cb_null.cameras[0];
 			SHCAM& shcam = shcams[output_index];
@@ -7095,6 +7124,10 @@ void DrawShadowmaps(
 				flush_shadows();
 			}
 
+			LightGroup& light_group = light_groups[light_group_count++];
+			light_group = {};
+			light_group.boundingsphere = light.GetSphere();
+
 			const float zNearP = 0.1f;
 			const float zFarP = std::max(1.0f, light.GetRange());
 			SHCAM faces[6];
@@ -7107,6 +7140,7 @@ void DrawShadowmaps(
 					continue;
 
 				const uint32_t output_index = view_count;
+				light_group.outputs[light_group.output_count++] = output_index;
 				ShaderCamera& cbcam = cb.cameras[output_index];
 				cbcam = camera_cb_null.cameras[0];
 				SHCAM& shcam = shcams[output_index];
@@ -7125,10 +7159,6 @@ void DrawShadowmaps(
 				XMStoreFloat4x4(&cbcam.view, shcam.view);
 				XMStoreFloat4x4(&cbcam.view_projection, shcam.view_projection);
 				XMStoreFloat4x4(&cbcam.inverse_view_projection, XMMatrixInverse(nullptr, shcam.view_projection));
-				// We no longer have a straight mapping from camera to viewport:
-				//	- there will be always 6 viewports
-				//	- there will be only as many cameras, as many cubemap face frustums are visible from main camera
-				//	- output_index is mapping camera to viewport, used by shader to output to SV_ViewportArrayIndex
 				cbcam.output_index = output_index;
 				cbcam.options = SHADERCAMERA_OPTION_NONE;
 				for (int i = 0; i < arraysize(cbcam.frustum.planes); ++i)

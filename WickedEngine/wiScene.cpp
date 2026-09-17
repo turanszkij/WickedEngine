@@ -4949,19 +4949,8 @@ namespace wi::scene
 			if (!transforms.Contains(entity))
 				return;
 			const TransformComponent& transform = *transforms.GetComponent(entity);
-			AABB& aabb = aabb_lights[args.jobIndex];
 
 			UpdateOcclusionResult(light.occlusion);
-
-			const LayerComponent* layer = layers.GetComponent(entity);
-			if (layer == nullptr)
-			{
-				aabb.layerMask = ~0;
-			}
-			else
-			{
-				aabb.layerMask = layer->GetLayerMask();
-			}
 
 			XMMATRIX W = XMLoadFloat4x4(&transform.world);
 			XMVECTOR S, R, T;
@@ -4977,7 +4966,6 @@ namespace wi::scene
 			default:
 			case LightComponent::DIRECTIONAL:
 				XMStoreFloat3(&light.direction, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), W)));
-				aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX));
 				locker.lock();
 				if (args.jobIndex < weather.most_important_light_index)
 				{
@@ -4993,16 +4981,25 @@ namespace wi::scene
 				break;
 			case LightComponent::SPOT:
 				XMStoreFloat3(&light.direction, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), W)));
-				aabb.createFromHalfWidth(light.position, XMFLOAT3(light.GetRange(), light.GetRange(), light.GetRange()));
 				break;
 			case LightComponent::POINT:
 				XMStoreFloat3(&light.direction, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(1, 0, 0, 0), W)));
-				aabb.createFromHalfWidth(light.position, XMFLOAT3(light.GetRange(), light.GetRange(), light.GetRange()));
 				break;
 			case LightComponent::RECTANGLE:
 				XMStoreFloat3(&light.direction, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, 0, -1, 0), W)));
-				aabb.createFromHalfWidth(light.position, XMFLOAT3(light.GetRange(), light.GetRange(), light.GetRange()));
 				break;
+			}
+
+			AABB& aabb = aabb_lights[args.jobIndex];
+			aabb = light.GetAABB();
+			const LayerComponent* layer = layers.GetComponent(entity);
+			if (layer == nullptr)
+			{
+				aabb.layerMask = ~0;
+			}
+			else
+			{
+				aabb.layerMask = layer->GetLayerMask();
 			}
 
 			light.maskTexDescriptor = -1;

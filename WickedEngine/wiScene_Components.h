@@ -1432,6 +1432,39 @@ namespace wi::scene
 			}
 		}
 
+		wi::primitive::Sphere GetSphere() const
+		{
+			wi::primitive::Sphere ret;
+			switch (type)
+			{
+			case LightType::DIRECTIONAL:
+				ret.center = XMFLOAT3(0, 0, 0);
+				ret.radius = FLT_MAX;
+				break;
+			case LightType::POINT:
+			case LightType::RECTANGLE:
+				ret.center = position;
+				ret.radius = GetRange();
+				break;
+			case LightType::SPOT:
+				// Construct a tight fitting sphere around the spotlight cone:
+				const float outerConeAngleCos = std::cos(outerConeAngle);
+				const float radius = GetRange() * 0.5f / (outerConeAngleCos * outerConeAngleCos);
+				const XMVECTOR P = XMLoadFloat3(&position) - XMVector3Normalize(XMLoadFloat3(&direction)) * radius;
+				XMStoreFloat3(&ret.center, P);
+				ret.radius = radius;
+				break;
+			}
+			return ret;
+		}
+		wi::primitive::AABB GetAABB() const
+		{
+			wi::primitive::Sphere sphere = GetSphere();
+			wi::primitive::AABB ret;
+			ret.createFromHalfWidth(sphere.center, XMFLOAT3(sphere.radius, sphere.radius, sphere.radius));
+			return ret;
+		}
+
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
