@@ -6812,13 +6812,12 @@ void DrawShadowmaps(
 
 	const XMVECTOR EYE = vis.camera->GetEye();
 
+	CameraCB cb = camera_cb_null;
 	constexpr uint32_t max_camera_count = arraysize(CameraCB::cameras);
 	const uint32_t max_viewport_count = std::min(device->GetMaxViewportCount(), max_camera_count);
 	Viewport viewports[max_camera_count];
 	wi::graphics::Rect scissors[max_camera_count];
 	SHCAM shcams[max_camera_count];
-	CameraCB cb = camera_cb_null;
-	CameraCB cb_single = camera_cb_null;
 	uint32_t cascade_indices[max_camera_count] = {};
 	uint32_t cascade_counts[max_camera_count] = {};
 
@@ -6855,16 +6854,16 @@ void DrawShadowmaps(
 					if (distanceSq > sqr(object.draw_distance + object.radius)) // Note: here I use draw_distance instead of fadeDeistance because this doesn't account for impostor switch fade
 						continue;
 
-					// Determine which frustums/cascades the object is contained in:
+					// Determine which lights/frustums/cascades the object is contained in:
 					uint16_t camera_mask = 0;
 					uint8_t shadow_lod = 0xFF;
-					for (uint32_t group = 0; group < light_group_count; ++group)
+					for (uint32_t group = 0; group < light_group_count; ++group) // light group iteration, early reject whole light
 					{
 						const LightGroup light_group = light_groups[group];
 						if (!light_group.boundingsphere.intersects(aabb))
 							continue;
 
-						for (uint32_t out = 0; out < light_group.output_count; ++out)
+						for (uint32_t out = 0; out < light_group.output_count; ++out) // frustum iteration, precisely determine which frustums contain the object
 						{
 							const uint32_t view = light_group.outputs[out];
 							const ShaderCamera& cbcam = cb.cameras[view];
@@ -6917,8 +6916,12 @@ void DrawShadowmaps(
 		{
 			for (uint32_t view = 0; view < view_count; ++view)
 			{
-				cb_single.cameras[0] = cb.cameras[view];
-				device->BindDynamicConstantBuffer(cb_single, CBSLOT_RENDERER_CAMERA, cmd);
+				const uint32_t cascade = cascade_indices[view];
+				const uint32_t cascade_count = cascade_counts[view];
+				if (cascade >= std::min(2u + (uint32_t)vis.scene->character_dedicated_shadows.size(), cascade_count)) // this is not rendered into further cascades
+					continue;
+
+				device->BindDynamicConstantBuffer(cb.cameras[view], CBSLOT_RENDERER_CAMERA, cmd);
 				device->BindViewports(1, &viewports[view], cmd);
 				device->BindScissorRects(1, &scissors[view], cmd);
 
@@ -6941,8 +6944,12 @@ void DrawShadowmaps(
 		{
 			for (uint32_t view = 0; view < view_count; ++view)
 			{
-				cb_single.cameras[0] = cb.cameras[view];
-				device->BindDynamicConstantBuffer(cb_single, CBSLOT_RENDERER_CAMERA, cmd);
+				const uint32_t cascade = cascade_indices[view];
+				const uint32_t cascade_count = cascade_counts[view];
+				if (cascade >= std::min(2u + (uint32_t)vis.scene->character_dedicated_shadows.size(), cascade_count)) // this is not rendered into further cascades
+					continue;
+
+				device->BindDynamicConstantBuffer(cb.cameras[view], CBSLOT_RENDERER_CAMERA, cmd);
 				device->BindViewports(1, &viewports[view], cmd);
 				device->BindScissorRects(1, &scissors[view], cmd);
 
@@ -6963,8 +6970,7 @@ void DrawShadowmaps(
 		{
 			for (uint32_t view = 0; view < view_count; ++view)
 			{
-				cb_single.cameras[0] = cb.cameras[view];
-				device->BindDynamicConstantBuffer(cb_single, CBSLOT_RENDERER_CAMERA, cmd);
+				device->BindDynamicConstantBuffer(cb.cameras[view], CBSLOT_RENDERER_CAMERA, cmd);
 				device->BindViewports(1, &viewports[view], cmd);
 				device->BindScissorRects(1, &scissors[view], cmd);
 
