@@ -8875,6 +8875,8 @@ namespace wi::scene
 
 	uint32_t Scene::ComputeObjectLODForView(const ObjectComponent& object, const AABB& aabb, const MeshComponent& mesh, const XMMATRIX& ViewProjection) const
 	{
+		if (mesh.GetLODCount() < 2)
+			return 0;
 		const float lod_max = float(mesh.GetLODCount() - 1);
 
 		// Estimate the object's projected screen-space size to pick a LOD by

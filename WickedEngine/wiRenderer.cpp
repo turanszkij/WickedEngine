@@ -3173,6 +3173,8 @@ void RenderMeshes(
 
 	const bool shadowRendering = renderPass == RENDERPASS_SHADOW;
 
+	const bool stencil_usage = renderPass == RENDERPASS_MAIN || renderPass == RENDERPASS_PREPASS;
+
 	const bool mesh_shader = IsMeshShaderAllowed() &&
 		(renderPass == RENDERPASS_PREPASS || renderPass == RENDERPASS_PREPASS_DEPTHONLY || renderPass == RENDERPASS_MAIN || renderPass == RENDERPASS_SHADOW || renderPass == RENDERPASS_RAINBLOCKER);
 
@@ -3195,7 +3197,11 @@ void RenderMeshes(
 	} instancedBatch = {};
 
 	uint32_t prev_stencilref = STENCILREF_DEFAULT;
-	device->BindStencilRef(prev_stencilref, cmd);
+
+	if (stencil_usage)
+	{
+		device->BindStencilRef(prev_stencilref, cmd);
+	}
 
 	IndexBufferFormat prev_ibformat = IndexBufferFormat::UINT16;
 	const void* prev_ib_internal = nullptr;
@@ -3342,13 +3348,17 @@ void RenderMeshes(
 				continue; // This can happen if the pipeline compilation was not completed for this draw yet
 
 			const bool meshShaderPSO = pso->desc.ms != nullptr;
-			STENCILREF engineStencilRef = material.engineStencilRef;
-			uint8_t userStencilRef = userStencilRefOverride > 0 ? userStencilRefOverride : material.userStencilRef;
-			uint32_t stencilRef = CombineStencilrefs(engineStencilRef, userStencilRef);
-			if (stencilRef != prev_stencilref)
+
+			if (stencil_usage)
 			{
-				prev_stencilref = stencilRef;
-				device->BindStencilRef(stencilRef, cmd);
+				STENCILREF engineStencilRef = material.engineStencilRef;
+				uint8_t userStencilRef = userStencilRefOverride > 0 ? userStencilRefOverride : material.userStencilRef;
+				uint32_t stencilRef = CombineStencilrefs(engineStencilRef, userStencilRef);
+				if (stencilRef != prev_stencilref)
+				{
+					prev_stencilref = stencilRef;
+					device->BindStencilRef(stencilRef, cmd);
+				}
 			}
 
 			// Note: the mesh.generalBuffer can be either a standalone allocated buffer, or a suballocated one (to reduce index buffer switching)
@@ -3439,7 +3449,7 @@ void RenderMeshes(
 
 		// When we encounter a new mesh inside the global instance array, we begin a new RenderBatch:
 		if (meshIndex != instancedBatch.meshIndex ||
-			userStencilRefOverride != instancedBatch.userStencilRefOverride ||
+			(stencil_usage && userStencilRefOverride != instancedBatch.userStencilRefOverride) ||
 			lod != instancedBatch.lod
 			)
 		{
@@ -7188,17 +7198,9 @@ void DrawShadowmaps(
 			if (aabb.layerMask & vis.layerMask)
 			{
 				const ObjectComponent& object = vis.scene->objects[i];
-				if (object.IsRenderable())
+				if (object.IsRenderable() && shcam.frustum.CheckBoxFast(aabb))
 				{
-					uint8_t camera_mask = 0;
-					if (shcam.frustum.CheckBoxFast(aabb))
-					{
-						camera_mask |= 1 << 0;
-					}
-					if (camera_mask == 0)
-						continue;
-
-					renderQueue.add(object.mesh_index, uint32_t(i), 0, object.sort_bits, camera_mask);
+					renderQueue.add(object.mesh_index, uint32_t(i), 0, object.sort_bits);
 				}
 			}
 		}
@@ -7228,7 +7230,7 @@ void DrawShadowmaps(
 			device->BindScissorRects(1, &scissor, cmd);
 
 			renderQueue.sort_opaque();
-			RenderMeshes(vis, renderQueue, RENDERPASS_RAINBLOCKER, FILTER_OBJECT_ALL, cmd, 0, 1);
+			RenderMeshes(vis, renderQueue, RENDERPASS_RAINBLOCKER, FILTER_OBJECT_ALL, cmd);
 			device->EventEnd(cmd);
 		}
 	}
