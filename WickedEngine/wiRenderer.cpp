@@ -6916,10 +6916,13 @@ void DrawShadowmaps(
 		{
 			for (uint32_t view = 0; view < view_count; ++view)
 			{
-				const uint32_t cascade = cascade_indices[view];
-				const uint32_t cascade_count = cascade_counts[view];
-				if (cascade >= std::min(2u + (uint32_t)vis.scene->character_dedicated_shadows.size(), cascade_count)) // this is not rendered into further cascades
-					continue;
+				if (cb.cameras[view].IsOrtho())
+				{
+					const uint32_t cascade = cascade_indices[view];
+					const uint32_t cascade_count = cascade_counts[view];
+					if (cascade >= std::min(2u + (uint32_t)vis.scene->character_dedicated_shadows.size(), cascade_count)) // this is not rendered into further cascades
+						continue;
+				}
 
 				device->BindDynamicConstantBuffer(cb.cameras[view], CBSLOT_RENDERER_CAMERA, cmd);
 				device->BindViewports(1, &viewports[view], cmd);
@@ -6944,10 +6947,13 @@ void DrawShadowmaps(
 		{
 			for (uint32_t view = 0; view < view_count; ++view)
 			{
-				const uint32_t cascade = cascade_indices[view];
-				const uint32_t cascade_count = cascade_counts[view];
-				if (cascade >= std::min(2u + (uint32_t)vis.scene->character_dedicated_shadows.size(), cascade_count)) // this is not rendered into further cascades
-					continue;
+				if (cb.cameras[view].IsOrtho())
+				{
+					const uint32_t cascade = cascade_indices[view];
+					const uint32_t cascade_count = cascade_counts[view];
+					if (cascade >= std::min(2u + (uint32_t)vis.scene->character_dedicated_shadows.size(), cascade_count)) // this is not rendered into further cascades
+						continue;
+				}
 
 				device->BindDynamicConstantBuffer(cb.cameras[view], CBSLOT_RENDERER_CAMERA, cmd);
 				device->BindViewports(1, &viewports[view], cmd);
@@ -7112,6 +7118,7 @@ void DrawShadowmaps(
 
 			shcam = shcamtest;
 
+			cbcam.position = vis.camera->Eye;
 			cbcam.internal_resolution = uint2(shadow_rect.w, shadow_rect.h);
 			cbcam.internal_resolution_rcp = float2(1.0f / shadow_rect.w, 1.0f / shadow_rect.h);
 			XMStoreFloat4x4(&cbcam.view, shcam.view);
@@ -7170,6 +7177,7 @@ void DrawShadowmaps(
 				scissor.from_viewport(vp);
 
 				shcam = faces[face];
+				cbcam.position = vis.camera->Eye;
 				cbcam.internal_resolution = uint2(shadow_rect.w, shadow_rect.h);
 				cbcam.internal_resolution_rcp = float2(1.0f / shadow_rect.w, 1.0f / shadow_rect.h);
 				XMStoreFloat4x4(&cbcam.view, shcam.view);
