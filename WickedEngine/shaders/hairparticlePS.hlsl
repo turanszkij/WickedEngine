@@ -2,13 +2,19 @@
 #define DISABLE_ENVMAPS
 #define SHADOW_MASK_ENABLED
 #include "globals.hlsli"
-#include "objectHF.hlsli"
+#include "shadingHF.hlsli"
 #include "hairparticleHF.hlsli"
+
+struct HairShadowPush
+{
+	uint camera_index;
+};
+PUSHCONSTANT(push, HairShadowPush);
 
 [earlydepthstencil]
 float4 main(VertexToPixel input) : SV_Target
 {
-	ShaderCamera camera = GetCamera();
+	ShaderCamera camera = GetCameraIndexed(push.camera_index);
 	ShaderMaterial material = HairGetMaterial();
 	ShaderMeshInstance meshinstance = HairGetInstance();
 	
