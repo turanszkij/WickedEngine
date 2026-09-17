@@ -7142,27 +7142,37 @@ void DrawShadowmaps(
 			if (max_shadow_resolution_cube == 0 && light.forced_shadow_resolution < 0)
 				break;
 
-			if (view_count + 6 > max_viewport_count)
-			{
-				flush_shadows();
-			}
-
-			LightGroup& light_group = light_groups[light_group_count];
-			light_group = {};
-			light_group.boundingsphere = light.GetSphere();
-
 			const float zNearP = 0.1f;
 			const float zFarP = std::max(1.0f, light.GetRange());
 			SHCAM faces[6];
 			CreateCubemapCameras(light.position, zNearP, zFarP, faces, arraysize(faces));
 
-			bool any_face = false;
+			uint32_t face_mask = 0;
 			for (uint32_t face = 0; face < arraysize(faces); ++face)
 			{
 				// Check if cubemap face frustum is visible from main camera, otherwise, it will be skipped:
 				if (!cam_frustum.Intersects(faces[face].boundingfrustum))
 					continue;
-				any_face = true;
+				face_mask |= 1u << face;
+			}
+
+			const uint32_t face_count = countbits(face_mask);
+			if (face_count == 0)
+				break;
+
+			if (view_count + face_count > max_viewport_count)
+			{
+				flush_shadows();
+			}
+
+			LightGroup& light_group = light_groups[light_group_count++];
+			light_group = {};
+			light_group.boundingsphere = light.GetSphere();
+
+			while (face_mask != 0) // for each visible face
+			{
+				const uint32_t face = firstbitlow(face_mask);
+				face_mask ^= 1u << face;
 
 				const uint32_t output_index = view_count;
 				light_group.outputs[light_group.output_count++] = output_index;
@@ -7192,11 +7202,6 @@ void DrawShadowmaps(
 					cbcam.frustum.planes[i] = shcam.frustum.planes[i];
 				}
 				view_count++;
-			}
-
-			if (any_face)
-			{
-				light_group_count++;
 			}
 		}
 		break;
