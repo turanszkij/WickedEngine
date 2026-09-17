@@ -12,8 +12,16 @@ static const float3 BILLBOARD[] = {
 StructuredBuffer<Particle> particleBuffer : register(t1);
 StructuredBuffer<uint> aliveList : register(t2);
 
-VertextoPixel main(uint vid : SV_VertexID, uint instanceID : SV_InstanceID)
+struct EmitterShadowPush
 {
+	uint camera_index;
+};
+PUSHCONSTANT(push, EmitterShadowPush);
+
+VertextoPixel main(uint vid : SV_VertexID, uint instanceID : SV_InstanceID, out uint VPIndex : SV_ViewportArrayIndex)
+{
+	VPIndex = push.camera_index;
+	ShaderCamera camera = GetCameraIndexed(push.camera_index);
 	ShaderGeometry geometry = EmitterGetGeometry();
 
 	uint particleIndex = aliveList[instanceID];
@@ -45,11 +53,11 @@ VertextoPixel main(uint vid : SV_VertexID, uint instanceID : SV_InstanceID)
 	quadPos *= particleSize;
 
 	// scale the billboard along view space motion vector:
-	float3 velocity = mul((float3x3)GetCamera().view, particle.velocity);
+	float3 velocity = mul((float3x3)camera.view, particle.velocity);
 	quadPos += dot(quadPos, velocity) * velocity * xParticleMotionBlurAmount;
 
 	// rotate the billboard to face the camera:
-	quadPos = mul(quadPos, (float3x3)GetCamera().view); // reversed mul for inverse camera rotation!
+	quadPos = mul(quadPos, (float3x3)camera.view); // reversed mul for inverse camera rotation!
 
 	float3 position = particle.position + quadPos;
 	//float3 position = bindless_buffers_float4[descriptor_index(geometry.vb_pos_wind)][vertexID].xyz;
@@ -65,8 +73,8 @@ VertextoPixel main(uint vid : SV_VertexID, uint instanceID : SV_InstanceID)
 
 	VertextoPixel Out;
 	Out.pos = float4(position, 1);
-	Out.clip = dot(Out.pos, GetCamera().clip_plane);
-	Out.pos = mul(GetCamera().view_projection, Out.pos);
+	Out.clip = dot(Out.pos, camera.clip_plane);
+	Out.pos = mul(camera.view_projection, Out.pos);
 	Out.tex = uvsets;
 	Out.size = half(particleSize);
 	Out.color = pack_rgba(color);

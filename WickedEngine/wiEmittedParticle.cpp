@@ -900,7 +900,7 @@ namespace wi
 		device->EventEnd(cmd);
 	}
 
-	void EmittedParticleSystem::DrawForShadowmap(const MaterialComponent& material, CommandList cmd) const
+	void EmittedParticleSystem::DrawForShadowmap(const MaterialComponent& material, CommandList cmd, uint16_t camera_mask) const
 	{
 		if (IsInactive())
 			return;
@@ -921,7 +921,14 @@ namespace wi
 		};
 		device->BindResources(res, 0, arraysize(res), cmd);
 
-		device->DrawInstancedIndirect(&indirectBuffers, offsetof(EmitterIndirectArgs, draw_all), cmd);
+		uint32_t camera_bits = camera_mask;
+		while (camera_bits != 0)
+		{
+			const uint camera_index = firstbitlow(camera_bits);
+			camera_bits ^= 1u << camera_index;
+			device->PushConstants(&camera_index, sizeof(camera_index), cmd);
+			device->DrawInstancedIndirect(&indirectBuffers, offsetof(EmitterIndirectArgs, draw_all), cmd);
+		}
 
 		device->EventEnd(cmd);
 	}

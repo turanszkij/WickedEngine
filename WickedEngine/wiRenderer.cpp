@@ -6900,12 +6900,12 @@ void DrawShadowmaps(
 			}
 		}
 
+		device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
+		device->BindViewports(view_count, viewports, cmd);
+		device->BindScissorRects(view_count, scissors, cmd);
+
 		if (!renderQueue.empty() || !renderQueue_transparent.empty())
 		{
-			device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
-			device->BindViewports(view_count, viewports, cmd);
-			device->BindScissorRects(view_count, scissors, cmd);
-
 			renderQueue.sort_opaque();
 			renderQueue_transparent.sort_transparent();
 			RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, FILTER_OPAQUE, cmd, 0, view_count);
@@ -6914,37 +6914,68 @@ void DrawShadowmaps(
 
 		if (!vis.visibleHairs.empty())
 		{
-			for (uint32_t view = 0; view < view_count; ++view)
+			for (uint32_t hairIndex : vis.visibleHairs)
 			{
-				if (cb.cameras[view].IsOrtho())
-				{
-					const uint32_t cascade = cascade_indices[view];
-					const uint32_t cascade_count = cascade_counts[view];
-					if (cascade >= std::min(2u + (uint32_t)vis.scene->character_dedicated_shadows.size(), cascade_count)) // this is not rendered into further cascades
-						continue;
-				}
+				const HairParticleSystem& hair = vis.scene->hairs[hairIndex];
+				Entity entity = vis.scene->hairs.GetEntity(hairIndex);
+				const MaterialComponent* material = vis.scene->materials.GetComponent(entity);
+				if (material == nullptr)
+					continue;
 
-				device->BindDynamicConstantBuffer(cb.cameras[view], CBSLOT_RENDERER_CAMERA, cmd);
-				device->BindViewports(1, &viewports[view], cmd);
-				device->BindScissorRects(1, &scissors[view], cmd);
-
-				for (uint32_t hairIndex : vis.visibleHairs)
+				uint16_t camera_mask = 0;
+				for (uint32_t view = 0; view < view_count; ++view)
 				{
-					const HairParticleSystem& hair = vis.scene->hairs[hairIndex];
+					if (cb.cameras[view].IsOrtho())
+					{
+						const uint32_t cascade = cascade_indices[view];
+						const uint32_t cascade_count = cascade_counts[view];
+						if (cascade >= std::min(2u + (uint32_t)vis.scene->character_dedicated_shadows.size(), cascade_count)) // this is not rendered into further cascades
+							continue;
+					}
 					if (!shcams[view].frustum.CheckBoxFast(hair.aabb))
 						continue;
-					Entity entity = vis.scene->hairs.GetEntity(hairIndex);
-					const MaterialComponent* material = vis.scene->materials.GetComponent(entity);
-					if (material != nullptr)
-					{
-						hair.Draw(*material, RENDERPASS_SHADOW, cmd);
-					}
+					camera_mask |= 1u << view;
 				}
+				if (camera_mask == 0)
+					continue;
+
+				hair.Draw(*material, RENDERPASS_SHADOW, cmd, camera_mask);
 			}
 		}
 
 		if (!vis.visibleEmitters.empty())
 		{
+			for (uint32_t emitterIndex : vis.visibleEmitters)
+			{
+				const EmittedParticleSystem& emitter = vis.scene->emitters[emitterIndex];
+				Entity entity = vis.scene->emitters.GetEntity(emitterIndex);
+				const MaterialComponent* material = vis.scene->materials.GetComponent(entity);
+				if (material == nullptr)
+					continue;
+
+				uint16_t camera_mask = 0;
+				for (uint32_t view = 0; view < view_count; ++view)
+				{
+					if (cb.cameras[view].IsOrtho())
+					{
+						const uint32_t cascade = cascade_indices[view];
+						const uint32_t cascade_count = cascade_counts[view];
+						if (cascade >= std::min(2u + (uint32_t)vis.scene->character_dedicated_shadows.size(), cascade_count)) // this is not rendered into further cascades
+							continue;
+					}
+					// Note: there is no CPU frustum culling for gpu particle system
+					camera_mask |= 1u << view;
+				}
+				if (camera_mask == 0)
+					continue;
+
+				emitter.DrawForShadowmap(*material, cmd, camera_mask);
+			}
+		}
+
+		if (vis.scene->ocean.IsValid())
+		{
+			uint16_t camera_mask = 0;
 			for (uint32_t view = 0; view < view_count; ++view)
 			{
 				if (cb.cameras[view].IsOrtho())
@@ -6954,36 +6985,13 @@ void DrawShadowmaps(
 					if (cascade >= std::min(2u + (uint32_t)vis.scene->character_dedicated_shadows.size(), cascade_count)) // this is not rendered into further cascades
 						continue;
 				}
-
-				device->BindDynamicConstantBuffer(cb.cameras[view], CBSLOT_RENDERER_CAMERA, cmd);
-				device->BindViewports(1, &viewports[view], cmd);
-				device->BindScissorRects(1, &scissors[view], cmd);
-
-				for (uint32_t emitterIndex : vis.visibleEmitters)
-				{
-					const EmittedParticleSystem& emitter = vis.scene->emitters[emitterIndex];
-					Entity entity = vis.scene->emitters.GetEntity(emitterIndex);
-					const MaterialComponent* material = vis.scene->materials.GetComponent(entity);
-					if (material != nullptr)
-					{
-						emitter.DrawForShadowmap(*material, cmd);
-					}
-				}
+				if (!shcams[view].frustum.CheckBoxFast(vis.scene->ocean.GetAABB(cb.cameras[view].position)))
+					continue;
+				camera_mask |= 1u << view;
 			}
-		}
-
-		if (vis.scene->ocean.IsValid())
-		{
-			for (uint32_t view = 0; view < view_count; ++view)
+			if (camera_mask != 0)
 			{
-				device->BindDynamicConstantBuffer(cb.cameras[view], CBSLOT_RENDERER_CAMERA, cmd);
-				device->BindViewports(1, &viewports[view], cmd);
-				device->BindScissorRects(1, &scissors[view], cmd);
-
-				if (shcams[view].frustum.CheckBoxFast(vis.scene->ocean.GetAABB(cb.cameras[view].position)))
-				{
-					vis.scene->ocean.RenderForShadowmap(cmd);
-				}
+				vis.scene->ocean.RenderForShadowmap(cmd, camera_mask);
 			}
 		}
 

@@ -44,7 +44,7 @@ namespace wi
 		void UpdateDisplacementMap(wi::graphics::CommandList cmd) const;
 		void RenderForOcclusionTest(const wi::scene::CameraComponent& camera, wi::graphics::CommandList cmd) const;
 		void RenderForCubemap(wi::graphics::CommandList cmd) const;
-		void RenderForShadowmap(wi::graphics::CommandList cmd) const;
+		void RenderForShadowmap(wi::graphics::CommandList cmd, uint16_t camera_mask = 1) const;
 		void Render(const wi::scene::CameraComponent& camera, wi::graphics::CommandList cmd) const;
 
 		void CopyDisplacementMapReadback(wi::graphics::CommandList cmd) const;

@@ -71,7 +71,8 @@ namespace wi
 		void Draw(
 			const wi::scene::MaterialComponent& material,
 			wi::enums::RENDERPASS renderPass,
-			wi::graphics::CommandList cmd
+			wi::graphics::CommandList cmd,
+			uint16_t camera_mask = 1
 		) const;
 
 		wi::ecs::Entity meshID = wi::ecs::INVALID_ENTITY;

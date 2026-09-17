@@ -496,6 +496,9 @@ namespace wi
 
 		device->BindIndexBuffer(&indexBuffer_occlusionTest, IndexBufferFormat::UINT16, 0, cmd);
 
+		uint32_t camera_index = 0;
+		device->PushConstants(&camera_index, sizeof(camera_index), cmd);
+
 		device->DrawIndexed(index_count, 0, 0, cmd);
 
 		device->EventEnd(cmd);
@@ -554,12 +557,15 @@ namespace wi
 
 		device->BindIndexBuffer(&indexBuffer_cubemap, IndexBufferFormat::UINT16, 0, cmd);
 
+		uint32_t camera_index = 0;
+		device->PushConstants(&camera_index, sizeof(camera_index), cmd);
+
 		device->DrawIndexedInstanced(index_count, 6, 0, 0, 0, cmd); // 6 instance for each cube side
 
 		device->EventEnd(cmd);
 	}
 
-	void Ocean::RenderForShadowmap(CommandList cmd) const
+	void Ocean::RenderForShadowmap(CommandList cmd, uint16_t camera_mask) const
 	{
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
@@ -612,7 +618,14 @@ namespace wi
 
 		device->BindIndexBuffer(&indexBuffer_shadowmap, IndexBufferFormat::UINT16, 0, cmd);
 
-		device->DrawIndexedInstanced(index_count, 1, 0, 0, 0, cmd);
+		uint32_t camera_bits = camera_mask;
+		while (camera_bits != 0)
+		{
+			const uint camera_index = firstbitlow(camera_bits);
+			camera_bits ^= 1u << camera_index;
+			device->PushConstants(&camera_index, sizeof(camera_index), cmd);
+			device->DrawIndexedInstanced(index_count, 1, 0, 0, 0, cmd);
+		}
 
 		device->EventEnd(cmd);
 	}
@@ -678,6 +691,9 @@ namespace wi
 		device->BindResource(&perlinTex, 2, cmd);
 
 		device->BindIndexBuffer(&indexBuffer, IndexBufferFormat::UINT32, 0, cmd);
+
+		uint32_t camera_index = 0;
+		device->PushConstants(&camera_index, sizeof(camera_index), cmd);
 
 		device->DrawIndexed(index_count, 0, 0, cmd);
 
