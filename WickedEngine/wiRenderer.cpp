@@ -208,12 +208,12 @@ struct alignas(16) RenderBatch
 {
 	uint32_t meshIndex;
 	uint32_t instanceIndex;
-	uint16_t distance;
-	uint8_t camera_mask;
-	uint8_t lod_override; // if overriding the base object LOD is needed, specify less than 0xFF in this
-	uint32_t sort_bits; // an additional bitmask for sorting only, it should be used to reduce pipeline changes
+	uint32_t distance : 16;
+	uint32_t camera_mask : 16;
+	uint32_t lod_override : 8; // if overriding the base object LOD is needed, specify less than 0xFF in this
+	uint32_t sort_bits : 24; // an additional bitmask for sorting only, it should be used to reduce pipeline changes
 
-	inline void Create(uint32_t meshIndex, uint32_t instanceIndex, float distance, uint32_t sort_bits, uint8_t camera_mask = 0xFF, uint8_t lod_override = 0xFF)
+	inline void Create(uint32_t meshIndex, uint32_t instanceIndex, float distance, uint32_t sort_bits, uint16_t camera_mask = 0xFFFF, uint8_t lod_override = 0xFF)
 	{
 		this->meshIndex = meshIndex;
 		this->instanceIndex = instanceIndex;
@@ -310,7 +310,7 @@ struct RenderQueue
 	{
 		batches.clear();
 	}
-	inline void add(uint32_t meshIndex, uint32_t instanceIndex, float distance, uint32_t sort_bits, uint8_t camera_mask = 0xFF, uint8_t lod_override = 0xFF)
+	inline void add(uint32_t meshIndex, uint32_t instanceIndex, float distance, uint32_t sort_bits, uint16_t camera_mask = 1, uint8_t lod_override = 0xFF)
 	{
 		batches.emplace_back().Create(meshIndex, instanceIndex, distance, sort_bits, camera_mask, lod_override);
 	}
@@ -3173,6 +3173,8 @@ void RenderMeshes(
 
 	const bool shadowRendering = renderPass == RENDERPASS_SHADOW;
 
+	const bool stencil_usage = renderPass == RENDERPASS_MAIN || renderPass == RENDERPASS_PREPASS;
+
 	const bool mesh_shader = IsMeshShaderAllowed() &&
 		(renderPass == RENDERPASS_PREPASS || renderPass == RENDERPASS_PREPASS_DEPTHONLY || renderPass == RENDERPASS_MAIN || renderPass == RENDERPASS_SHADOW || renderPass == RENDERPASS_RAINBLOCKER);
 
@@ -3195,7 +3197,11 @@ void RenderMeshes(
 	} instancedBatch = {};
 
 	uint32_t prev_stencilref = STENCILREF_DEFAULT;
-	device->BindStencilRef(prev_stencilref, cmd);
+
+	if (stencil_usage)
+	{
+		device->BindStencilRef(prev_stencilref, cmd);
+	}
 
 	IndexBufferFormat prev_ibformat = IndexBufferFormat::UINT16;
 	const void* prev_ib_internal = nullptr;
@@ -3342,13 +3348,17 @@ void RenderMeshes(
 				continue; // This can happen if the pipeline compilation was not completed for this draw yet
 
 			const bool meshShaderPSO = pso->desc.ms != nullptr;
-			STENCILREF engineStencilRef = material.engineStencilRef;
-			uint8_t userStencilRef = userStencilRefOverride > 0 ? userStencilRefOverride : material.userStencilRef;
-			uint32_t stencilRef = CombineStencilrefs(engineStencilRef, userStencilRef);
-			if (stencilRef != prev_stencilref)
+
+			if (stencil_usage)
 			{
-				prev_stencilref = stencilRef;
-				device->BindStencilRef(stencilRef, cmd);
+				STENCILREF engineStencilRef = material.engineStencilRef;
+				uint8_t userStencilRef = userStencilRefOverride > 0 ? userStencilRefOverride : material.userStencilRef;
+				uint32_t stencilRef = CombineStencilrefs(engineStencilRef, userStencilRef);
+				if (stencilRef != prev_stencilref)
+				{
+					prev_stencilref = stencilRef;
+					device->BindStencilRef(stencilRef, cmd);
+				}
 			}
 
 			// Note: the mesh.generalBuffer can be either a standalone allocated buffer, or a suballocated one (to reduce index buffer switching)
@@ -3439,7 +3449,7 @@ void RenderMeshes(
 
 		// When we encounter a new mesh inside the global instance array, we begin a new RenderBatch:
 		if (meshIndex != instancedBatch.meshIndex ||
-			userStencilRefOverride != instancedBatch.userStencilRefOverride ||
+			(stencil_usage && userStencilRefOverride != instancedBatch.userStencilRefOverride) ||
 			lod != instancedBatch.lod
 			)
 		{
@@ -3474,11 +3484,11 @@ void RenderMeshes(
 			instancedBatch.aabb = AABB::Merge(instancedBatch.aabb, instanceAABB);
 		}
 
-		for (uint32_t camera_index = 0; camera_index < camera_count; ++camera_index)
+		uint32_t camera_bits = batch.camera_mask;
+		while (camera_bits != 0)
 		{
-			const uint16_t camera_mask = 1 << camera_index;
-			if ((batch.camera_mask & camera_mask) == 0)
-				continue;
+			const uint camera_index = firstbitlow(camera_bits);
+			camera_bits ^= 1u << camera_index;
 
 			ShaderMeshInstancePointer poi;
 			poi.Create(instanceIndex, camera_index, dither);
@@ -3683,23 +3693,35 @@ void UpdateVisibility(Visibility& vis)
 			if ((aabb.layerMask & vis.layerMask) && vis.frustum.CheckBoxFast(aabb))
 			{
 				const LightComponent& light = vis.scene->lights[args.jobIndex];
+
 				if (!light.IsInactive())
 				{
-					// Local stream compaction:
-					stream_compaction.list[stream_compaction.count++] = args.groupIndex;
-					if (light.IsVolumetricsEnabled())
+					bool occluded = false;
+					if (!light.IsStatic() && light.GetType() != LightComponent::DIRECTIONAL && (vis.flags & Visibility::ALLOW_OCCLUSION_CULLING))
 					{
-						vis.volumetriclight_request.store(true);
+						occluded = light.occlusion.IsOccluded();
+
+						if (light.occlusion.occlusionQueries[vis.scene->queryheap_idx] < 0)
+						{
+							if (aabb.intersects(vis.camera->Eye))
+							{
+								// camera is inside the instance, mark it as visible in this frame:
+								light.occlusion.occlusionHistory |= 1;
+							}
+							else
+							{
+								light.occlusion.occlusionQueries[vis.scene->queryheap_idx] = vis.scene->queryAllocator.fetch_add(1); // allocate new occlusion query from heap
+							}
+						}
 					}
 
-					if (vis.flags & Visibility::ALLOW_OCCLUSION_CULLING)
+					if (!occluded)
 					{
-						if (!light.IsStatic() && light.GetType() != LightComponent::DIRECTIONAL && light.occlusionquery < 0)
+						// Local stream compaction:
+						stream_compaction.list[stream_compaction.count++] = args.groupIndex;
+						if (light.IsVolumetricsEnabled())
 						{
-							if (!aabb.intersects(vis.camera->Eye))
-							{
-								light.occlusionquery = vis.scene->queryAllocator.fetch_add(1); // allocate new occlusion query from heap
-							}
+							vis.volumetriclight_request.store(true);
 						}
 					}
 				}
@@ -3741,11 +3763,10 @@ void UpdateVisibility(Visibility& vis)
 				stream_compaction.list[stream_compaction.count++] = args.groupIndex;
 
 				const ObjectComponent& object = vis.scene->objects[args.jobIndex];
-				Scene::OcclusionResult& occlusion_result = vis.scene->occlusion_results_objects[args.jobIndex];
 				bool occluded = false;
 				if (vis.flags & Visibility::ALLOW_OCCLUSION_CULLING)
 				{
-					occluded = occlusion_result.IsOccluded();
+					occluded = object.occlusion.IsOccluded();
 				}
 
 				if ((vis.flags & Visibility::ALLOW_REQUEST_REFLECTION) && object.IsRequestPlanarReflection() && !occluded)
@@ -3780,16 +3801,16 @@ void UpdateVisibility(Visibility& vis)
 
 				if (vis.flags & Visibility::ALLOW_OCCLUSION_CULLING)
 				{
-					if (object.IsRenderable() && occlusion_result.occlusionQueries[vis.scene->queryheap_idx] < 0)
+					if (object.IsRenderable() && object.occlusion.occlusionQueries[vis.scene->queryheap_idx] < 0)
 					{
 						if (aabb.intersects(vis.camera->Eye))
 						{
 							// camera is inside the instance, mark it as visible in this frame:
-							occlusion_result.occlusionHistory |= 1;
+							object.occlusion.occlusionHistory |= 1;
 						}
 						else
 						{
-							occlusion_result.occlusionQueries[vis.scene->queryheap_idx] = vis.scene->queryAllocator.fetch_add(1); // allocate new occlusion query from heap
+							object.occlusion.occlusionQueries[vis.scene->queryheap_idx] = vis.scene->queryAllocator.fetch_add(1); // allocate new occlusion query from heap
 						}
 					}
 				}
@@ -3819,7 +3840,30 @@ void UpdateVisibility(Visibility& vis)
 
 				if ((aabb.layerMask & vis.layerMask) && vis.frustum.CheckBoxFast(aabb))
 				{
-					vis.visibleDecals.push_back(uint32_t(i));
+					const DecalComponent& decal = vis.scene->decals[i];
+					bool occluded = false;
+					if (vis.flags & Visibility::ALLOW_OCCLUSION_CULLING)
+					{
+						occluded = decal.occlusion.IsOccluded();
+
+						if (decal.occlusion.occlusionQueries[vis.scene->queryheap_idx] < 0)
+						{
+							if (aabb.intersects(vis.camera->Eye))
+							{
+								// camera is inside the instance, mark it as visible in this frame:
+								decal.occlusion.occlusionHistory |= 1;
+							}
+							else
+							{
+								decal.occlusion.occlusionQueries[vis.scene->queryheap_idx] = vis.scene->queryAllocator.fetch_add(1); // allocate new occlusion query from heap
+							}
+						}
+					}
+
+					if (!occluded)
+					{
+						vis.visibleDecals.push_back(uint32_t(i));
+					}
 				}
 			}
 		});
@@ -3835,10 +3879,33 @@ void UpdateVisibility(Visibility& vis)
 
 				if ((aabb.layerMask & vis.layerMask) && vis.frustum.CheckBoxFast(aabb))
 				{
-					vis.visibleEnvProbes.push_back((uint32_t)i);
+					const EnvironmentProbeComponent& probe = vis.scene->probes[i];
+					bool occluded = false;
+					if (vis.flags & Visibility::ALLOW_OCCLUSION_CULLING)
+					{
+						occluded = probe.occlusion.IsOccluded();
+
+						if (probe.occlusion.occlusionQueries[vis.scene->queryheap_idx] < 0)
+						{
+							if (aabb.intersects(vis.camera->Eye))
+							{
+								// camera is inside the instance, mark it as visible in this frame:
+								probe.occlusion.occlusionHistory |= 1;
+							}
+							else
+							{
+								probe.occlusion.occlusionQueries[vis.scene->queryheap_idx] = vis.scene->queryAllocator.fetch_add(1); // allocate new occlusion query from heap
+							}
+						}
+					}
+
+					if (!occluded)
+					{
+						vis.visibleEnvProbes.push_back((uint32_t)i);
+					}
 				}
 			}
-			});
+		});
 	}
 
 	if (vis.flags & Visibility::ALLOW_EMITTERS)
@@ -3854,7 +3921,7 @@ void UpdateVisibility(Visibility& vis)
 				}
 				vis.visibleEmitters.push_back((uint32_t)i);
 			}
-			});
+		});
 	}
 
 	if (vis.flags & Visibility::ALLOW_HAIRS)
@@ -3881,7 +3948,7 @@ void UpdateVisibility(Visibility& vis)
 				}
 				vis.visibleHairs.push_back((uint32_t)i);
 			}
-			});
+		});
 	}
 
 	if (vis.flags & Visibility::ALLOW_COLLIDERS)
@@ -5847,14 +5914,8 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 
 void OcclusionCulling_Reset(const Visibility& vis, CommandList cmd)
 {
-	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled() || !vis.scene->queryHeap.IsValid())
-	{
+	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled() || !vis.scene->queryHeap.IsValid() || vis.scene->queryAllocator.load() == 0)
 		return;
-	}
-	if (vis.visibleObjects.empty() && vis.visibleLights.empty() && !vis.scene->weather.IsOceanEnabled())
-	{
-		return;
-	}
 
 	const GPUQueryHeap& queryHeap = vis.scene->queryHeap;
 
@@ -5867,16 +5928,11 @@ void OcclusionCulling_Reset(const Visibility& vis, CommandList cmd)
 }
 void OcclusionCulling_Render(const CameraComponent& camera, const Visibility& vis, CommandList cmd)
 {
-	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled() || !vis.scene->queryHeap.IsValid())
-	{
+	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled() || !vis.scene->queryHeap.IsValid() || vis.scene->queryAllocator.load() == 0)
 		return;
-	}
-	if (vis.visibleObjects.empty() && vis.visibleLights.empty() && !vis.scene->weather.IsOceanEnabled())
-	{
-		return;
-	}
 
-	auto range = wi::profiler::BeginRangeGPU("Occlusion Culling Render", cmd);
+	ScopedCPUProfiling("Occlusion Culling Render");
+	ScopedGPUProfiling("Occlusion Culling Render", cmd);
 
 	device->BindPipelineState(&PSO_occlusionquery, cmd);
 
@@ -5889,14 +5945,13 @@ void OcclusionCulling_Render(const CameraComponent& camera, const Visibility& vi
 	{
 		device->EventBegin("Occlusion Culling Objects", cmd);
 
-		for (uint32_t instanceIndex : vis.visibleObjects)
+		for (uint32_t objectIndex : vis.visibleObjects)
 		{
-			const Scene::OcclusionResult& occlusion_result = vis.scene->occlusion_results_objects[instanceIndex];
-
-			int queryIndex = occlusion_result.occlusionQueries[query_write];
-			if (queryIndex >= 0)
+			const ObjectComponent& object = vis.scene->objects[objectIndex];
+			const int queryIndex = object.occlusion.occlusionQueries[query_write];
+			if (queryIndex >= 0 && queryIndex < (int)vis.scene->queryHeap.desc.query_count)
 			{
-				AABB aabb = vis.scene->aabb_objects[instanceIndex];
+				AABB aabb = vis.scene->aabb_objects[objectIndex];
 				// extrude the bounding box a bit:
 				aabb._min.x -= 0.001f;
 				aabb._min.y -= 0.001f;
@@ -5917,24 +5972,58 @@ void OcclusionCulling_Render(const CameraComponent& camera, const Visibility& vi
 		device->EventEnd(cmd);
 	}
 
-	if (!vis.visibleLights.empty())
-	{
-		device->EventBegin("Occlusion Culling Lights", cmd);
-
-		for (uint32_t lightIndex : vis.visibleLights)
+	auto test_and_draw_occlusion_box = [&](const AABB& aabb, const OcclusionResult& occlusion) {
+		if ((aabb.layerMask & vis.layerMask) && vis.frustum.CheckBoxFast(aabb)) // re-test frustum because this doesn't use visible list (those are already occ culled except objects)
 		{
-			const LightComponent& light = vis.scene->lights[lightIndex];
-			if (light.occlusionquery >= 0)
+			const int queryIndex = occlusion.occlusionQueries[query_write];
+			if (queryIndex >= 0 && queryIndex < (int)vis.scene->queryHeap.desc.query_count)
 			{
-				uint32_t queryIndex = (uint32_t)light.occlusionquery;
-				const AABB& aabb = vis.scene->aabb_lights[lightIndex];
 				const XMMATRIX transform = aabb.getAsBoxMatrix() * VP;
 				device->PushConstants(&transform, sizeof(transform), cmd);
-
 				device->QueryBegin(&queryHeap, queryIndex, cmd);
 				device->Draw(14, 0, cmd);
 				device->QueryEnd(&queryHeap, queryIndex, cmd);
 			}
+		}
+	};
+
+	if (vis.scene->lights.GetCount() > 0)
+	{
+		device->EventBegin("Occlusion Culling Lights", cmd);
+
+		for (size_t lightIndex = 0; lightIndex  < vis.scene->lights.GetCount(); ++lightIndex)
+		{
+			const AABB& aabb = vis.scene->aabb_lights[lightIndex];
+			const LightComponent& light = vis.scene->lights[lightIndex];
+			test_and_draw_occlusion_box(aabb, light.occlusion);
+		}
+
+		device->EventEnd(cmd);
+	}
+
+	if (vis.scene->decals.GetCount() > 0)
+	{
+		device->EventBegin("Occlusion Culling Decals", cmd);
+
+		for (size_t decalIndex = 0; decalIndex < vis.scene->decals.GetCount(); ++decalIndex)
+		{
+			const AABB& aabb = vis.scene->aabb_decals[decalIndex];
+			const DecalComponent& decal = vis.scene->decals[decalIndex];
+			test_and_draw_occlusion_box(aabb, decal.occlusion);
+		}
+
+		device->EventEnd(cmd);
+	}
+
+	if (vis.scene->probes.GetCount() > 0)
+	{
+		device->EventBegin("Occlusion Culling Probes", cmd);
+
+		for (size_t probeIndex = 0; probeIndex < vis.scene->probes.GetCount(); ++probeIndex)
+		{
+			const AABB& aabb = vis.scene->aabb_probes[probeIndex];
+			const EnvironmentProbeComponent& probe = vis.scene->probes[probeIndex];
+			test_and_draw_occlusion_box(aabb, probe.occlusion);
 		}
 
 		device->EventEnd(cmd);
@@ -5954,19 +6043,11 @@ void OcclusionCulling_Render(const CameraComponent& camera, const Visibility& vi
 			device->EventEnd(cmd);
 		}
 	}
-
-	wi::profiler::EndRange(range); // Occlusion Culling Render
 }
 void OcclusionCulling_Resolve(const Visibility& vis, CommandList cmd)
 {
-	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled() || !vis.scene->queryHeap.IsValid())
-	{
+	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled() || !vis.scene->queryHeap.IsValid() || vis.scene->queryAllocator.load() == 0)
 		return;
-	}
-	if (vis.visibleObjects.empty() && vis.visibleLights.empty() && !vis.scene->weather.IsOceanEnabled())
-	{
-		return;
-	}
 
 	int query_write = vis.scene->queryheap_idx;
 	const GPUQueryHeap& queryHeap = vis.scene->queryHeap;
@@ -5981,26 +6062,6 @@ void OcclusionCulling_Resolve(const Visibility& vis, CommandList cmd)
 		0ull,
 		cmd
 	);
-
-	if (device->CheckCapability(GraphicsDeviceCapability::PREDICATION))
-	{
-		// Resolve into predication buffer:
-		device->QueryResolve(
-			&queryHeap,
-			0,
-			queryCount,
-			&vis.scene->queryPredicationBuffer,
-			0ull,
-			cmd
-		);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Buffer(&vis.scene->queryPredicationBuffer, ResourceState::COPY_DST, ResourceState::PREDICATION),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-	}
 }
 
 void DrawWaterRipples(const Visibility& vis, CommandList cmd)
@@ -6734,13 +6795,10 @@ void DrawShadowmaps(
 	if (vis.visibleLights.empty() && vis.scene->weather.rain_amount <= 0)
 		return;
 
-	device->EventBegin("DrawShadowmaps", cmd);
-	auto range_cpu = wi::profiler::BeginRangeCPU("Shadowmap Rendering");
-	auto range_gpu = wi::profiler::BeginRangeGPU("Shadowmap Rendering", cmd);
+	ScopedCPUProfiling("Shadowmap Rendering");
+	ScopedGPUProfiling("Shadowmap Rendering", cmd);
 
-	const bool predicationRequest =
-		device->CheckCapability(GraphicsDeviceCapability::PREDICATION) &&
-		GetOcclusionCullingEnabled();
+	device->EventBegin("DrawShadowmaps", cmd);
 
 	const bool shadow_lod_override = IsShadowLODOverrideEnabled();
 
@@ -6752,14 +6810,198 @@ void DrawShadowmaps(
 	cam_frustum.Transform(cam_frustum, vis.camera->GetInvView());
 	XMStoreFloat4(&cam_frustum.Orientation, XMQuaternionNormalize(XMLoadFloat4(&cam_frustum.Orientation)));
 
-	CameraCB cb = camera_cb_null;
-
 	const XMVECTOR EYE = vis.camera->GetEye();
 
-	const uint32_t max_viewport_count = std::min(device->GetMaxViewportCount(), 16u);
-	Viewport viewports[16];
-	wi::graphics::Rect scissors[16];
-	SHCAM shcams[16];
+	CameraCB cb = camera_cb_null;
+	constexpr uint32_t max_camera_count = arraysize(CameraCB::cameras);
+	const uint32_t max_viewport_count = std::min(device->GetMaxViewportCount(), max_camera_count);
+	Viewport viewports[max_camera_count];
+	wi::graphics::Rect scissors[max_camera_count];
+	SHCAM shcams[max_camera_count];
+	uint32_t cascade_indices[max_camera_count] = {};
+	uint32_t cascade_counts[max_camera_count] = {};
+
+	// This light grouping is done to also quickly check object vs light in shadow batching and reject before object vs frustum checks:
+	struct LightGroup
+	{
+		Sphere boundingsphere;
+		uint32_t outputs[max_camera_count] = {};
+		uint32_t output_count = 0;
+		bool directional = false;
+	};
+	LightGroup light_groups[max_camera_count];
+
+	uint32_t view_count = 0;
+	uint32_t light_group_count = 0;
+
+	auto flush_shadows = [&] {
+		if (view_count == 0)
+			return;
+
+		device->EventBegin("Shadowmap batch", cmd);
+
+		renderQueue.init();
+		renderQueue_transparent.init();
+
+		for (size_t i = 0; i < vis.scene->aabb_objects.size(); ++i)
+		{
+			const AABB& aabb = vis.scene->aabb_objects[i];
+			if (aabb.layerMask & vis.layerMask)
+			{
+				const ObjectComponent& object = vis.scene->objects[i];
+				if (object.IsRenderable() && object.IsCastingShadow())
+				{
+					const float distanceSq = wi::math::DistanceSquared(EYE, object.center);
+					if (distanceSq > sqr(object.draw_distance + object.radius)) // Note: here I use draw_distance instead of fadeDeistance because this doesn't account for impostor switch fade
+						continue;
+
+					// Determine which lights/frustums/cascades the object is contained in:
+					uint16_t camera_mask = 0;
+					uint8_t shadow_lod = 0xFF;
+					for (uint32_t group = 0; group < light_group_count; ++group) // light group iteration, early reject whole light
+					{
+						const LightGroup& light_group = light_groups[group];
+						if (!light_group.directional && !light_group.boundingsphere.intersects(aabb))
+							continue;
+
+						for (uint32_t out = 0; out < light_group.output_count; ++out) // frustum iteration, precisely determine which frustums contain the object
+						{
+							const uint32_t view = light_group.outputs[out];
+							const ShaderCamera& cbcam = cb.cameras[view];
+							const SHCAM& shcam = shcams[view];
+							const uint32_t cascade = cascade_indices[view];
+							const uint32_t cascade_count = cascade_counts[view];
+							if ((!cbcam.IsOrtho() || cascade < (cascade_count - object.cascadeMask)) && shcam.frustum.CheckBoxFast(aabb))
+							{
+								camera_mask |= 1 << view;
+								if (shadow_lod_override)
+								{
+									const uint8_t candidate_lod = (uint8_t)vis.scene->ComputeObjectLODForView(object, aabb, vis.scene->meshes[object.mesh_index], shcam.view_projection);
+									shadow_lod = std::min(shadow_lod, candidate_lod);
+								}
+							}
+						}
+					}
+					if (camera_mask == 0)
+						continue;
+
+					RenderBatch batch;
+					batch.Create(object.mesh_index, uint32_t(i), 0, object.sort_bits, camera_mask, shadow_lod);
+
+					const uint32_t filterMask = object.GetFilterMask();
+					if (filterMask & FILTER_OPAQUE)
+					{
+						renderQueue.add(batch);
+					}
+					if ((filterMask & FILTER_TRANSPARENT) || (filterMask & FILTER_WATER))
+					{
+						renderQueue_transparent.add(batch);
+					}
+				}
+			}
+		}
+
+		device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
+		device->BindViewports(view_count, viewports, cmd);
+		device->BindScissorRects(view_count, scissors, cmd);
+
+		if (!renderQueue.empty() || !renderQueue_transparent.empty())
+		{
+			renderQueue.sort_opaque();
+			renderQueue_transparent.sort_transparent();
+			RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, FILTER_OPAQUE, cmd, 0, view_count);
+			RenderMeshes(vis, renderQueue_transparent, RENDERPASS_SHADOW, FILTER_TRANSPARENT | FILTER_WATER, cmd, 0, view_count);
+		}
+
+		if (!vis.visibleHairs.empty())
+		{
+			for (uint32_t hairIndex : vis.visibleHairs)
+			{
+				const HairParticleSystem& hair = vis.scene->hairs[hairIndex];
+				Entity entity = vis.scene->hairs.GetEntity(hairIndex);
+				const MaterialComponent* material = vis.scene->materials.GetComponent(entity);
+				if (material == nullptr)
+					continue;
+
+				uint16_t camera_mask = 0;
+				for (uint32_t view = 0; view < view_count; ++view)
+				{
+					if (cb.cameras[view].IsOrtho())
+					{
+						const uint32_t cascade = cascade_indices[view];
+						const uint32_t cascade_count = cascade_counts[view];
+						if (cascade >= std::min(2u + (uint32_t)vis.scene->character_dedicated_shadows.size(), cascade_count)) // this is not rendered into further cascades
+							continue;
+					}
+					if (!shcams[view].frustum.CheckBoxFast(hair.aabb))
+						continue;
+					camera_mask |= 1u << view;
+				}
+				if (camera_mask == 0)
+					continue;
+
+				hair.Draw(*material, RENDERPASS_SHADOW, cmd, camera_mask);
+			}
+		}
+
+		if (!vis.visibleEmitters.empty())
+		{
+			for (uint32_t emitterIndex : vis.visibleEmitters)
+			{
+				const EmittedParticleSystem& emitter = vis.scene->emitters[emitterIndex];
+				Entity entity = vis.scene->emitters.GetEntity(emitterIndex);
+				const MaterialComponent* material = vis.scene->materials.GetComponent(entity);
+				if (material == nullptr)
+					continue;
+
+				uint16_t camera_mask = 0;
+				for (uint32_t view = 0; view < view_count; ++view)
+				{
+					if (cb.cameras[view].IsOrtho())
+					{
+						const uint32_t cascade = cascade_indices[view];
+						const uint32_t cascade_count = cascade_counts[view];
+						if (cascade >= std::min(2u + (uint32_t)vis.scene->character_dedicated_shadows.size(), cascade_count)) // this is not rendered into further cascades
+							continue;
+					}
+					// Note: there is no CPU frustum culling for gpu particle system
+					camera_mask |= 1u << view;
+				}
+				if (camera_mask == 0)
+					continue;
+
+				emitter.DrawForShadowmap(*material, cmd, camera_mask);
+			}
+		}
+
+		if (vis.scene->ocean.IsValid())
+		{
+			uint16_t camera_mask = 0;
+			for (uint32_t view = 0; view < view_count; ++view)
+			{
+				if (cb.cameras[view].IsOrtho())
+				{
+					const uint32_t cascade = cascade_indices[view];
+					const uint32_t cascade_count = cascade_counts[view];
+					if (cascade >= std::min(2u + (uint32_t)vis.scene->character_dedicated_shadows.size(), cascade_count)) // this is not rendered into further cascades
+						continue;
+				}
+				if (!shcams[view].frustum.CheckBoxFast(vis.scene->ocean.GetAABB(cb.cameras[view].position)))
+					continue;
+				camera_mask |= 1u << view;
+			}
+			if (camera_mask != 0)
+			{
+				vis.scene->ocean.RenderForShadowmap(cmd, camera_mask);
+			}
+		}
+
+		// New view count batch is started after flushing current:
+		view_count = 0;
+		light_group_count = 0;
+
+		device->EventEnd(cmd);
+	};
 
 	const RenderPassImage rp[] = {
 		RenderPassImage::DepthStencil(
@@ -6780,6 +7022,7 @@ void DrawShadowmaps(
 	};
 	device->RenderPassBegin(rp, arraysize(rp), cmd);
 
+	// Light shadows will be heavily batched by view instancing into all available viewports:
 	for (uint32_t lightIndex : vis.visibleLights)
 	{
 		const LightComponent& light = vis.scene->lights[lightIndex];
@@ -6790,9 +7033,6 @@ void DrawShadowmaps(
 		if (!shadow)
 			continue;
 		const wi::rectpacker::Rect& shadow_rect = vis.visibleLightShadowRects[lightIndex];
-
-		renderQueue.init();
-		renderQueue_transparent.init();
 
 		switch (light.GetType())
 		{
@@ -6805,193 +7045,55 @@ void DrawShadowmaps(
 			if (cascade_count == 0)
 				break;
 
-			CreateDirLightShadowCams(light, *vis.camera, shcams, cascade_count, shadow_rect, vis.scene->character_dedicated_shadows.data(), vis.scene->character_dedicated_shadows.size());
-
-			for (size_t i = 0; i < vis.scene->aabb_objects.size(); ++i)
+			if (view_count + cascade_count > max_viewport_count)
 			{
-				const AABB& aabb = vis.scene->aabb_objects[i];
-				if (aabb.layerMask & vis.layerMask)
-				{
-					const ObjectComponent& object = vis.scene->objects[i];
-					if (object.IsRenderable() && object.IsCastingShadow())
-					{
-						const float distanceSq = wi::math::DistanceSquared(EYE, object.center);
-						if (distanceSq > sqr(object.draw_distance + object.radius)) // Note: here I use draw_distance instead of fadeDeistance because this doesn't account for impostor switch fade
-							continue;
-
-						// Determine which cascades the object is contained in:
-						uint8_t camera_mask = 0;
-						uint8_t shadow_lod = 0xFF;
-						for (uint32_t cascade = 0; cascade < cascade_count; ++cascade)
-						{
-							if ((cascade < (cascade_count - object.cascadeMask)) && shcams[cascade].frustum.CheckBoxFast(aabb))
-							{
-								camera_mask |= 1 << cascade;
-								if (shadow_lod_override)
-								{
-									const uint8_t candidate_lod = (uint8_t)vis.scene->ComputeObjectLODForView(object, aabb, vis.scene->meshes[object.mesh_index], shcams[cascade].view_projection);
-									shadow_lod = std::min(shadow_lod, candidate_lod);
-								}
-							}
-						}
-						if (camera_mask == 0)
-							continue;
-
-						RenderBatch batch;
-						batch.Create(object.mesh_index, uint32_t(i), 0, object.sort_bits, camera_mask, shadow_lod);
-
-						const uint32_t filterMask = object.GetFilterMask();
-						if (filterMask & FILTER_OPAQUE)
-						{
-							renderQueue.add(batch);
-						}
-						if ((filterMask & FILTER_TRANSPARENT) || (filterMask & FILTER_WATER))
-						{
-							renderQueue_transparent.add(batch);
-						}
-					}
-				}
+				flush_shadows();
 			}
 
-			if (!renderQueue.empty() || !renderQueue_transparent.empty())
-			{
-				for (uint32_t cascade = 0; cascade < cascade_count; ++cascade)
-				{
-					cb.cameras[cascade].internal_resolution = uint2(shadow_rect.w, shadow_rect.h);
-					cb.cameras[cascade].internal_resolution_rcp = float2(1.0f / shadow_rect.w, 1.0f / shadow_rect.h);
-					XMStoreFloat4x4(&cb.cameras[cascade].view, shcams[cascade].view);
-					XMStoreFloat4x4(&cb.cameras[cascade].view_projection, shcams[cascade].view_projection);
-					cb.cameras[cascade].output_index = cascade;
-					for (int i = 0; i < arraysize(cb.cameras[cascade].frustum.planes); ++i)
-					{
-						cb.cameras[cascade].frustum.planes[i] = shcams[cascade].frustum.planes[i];
-					}
-					cb.cameras[cascade].options = SHADERCAMERA_OPTION_ORTHO;
-					cb.cameras[cascade].forward.x = -light.direction.x;
-					cb.cameras[cascade].forward.y = -light.direction.y;
-					cb.cameras[cascade].forward.z = -light.direction.z;
+			CreateDirLightShadowCams(light, *vis.camera, &shcams[view_count], cascade_count, shadow_rect, vis.scene->character_dedicated_shadows.data(), vis.scene->character_dedicated_shadows.size());
 
-					Viewport& vp = viewports[cascade];
-					vp.top_left_x = float(shadow_rect.x + cascade * shadow_rect.w);
-					vp.top_left_y = float(shadow_rect.y);
-					vp.width = float(shadow_rect.w);
-					vp.height = float(shadow_rect.h);
-					scissors[cascade].from_viewport(vp);
+			LightGroup& light_group = light_groups[light_group_count++];
+			light_group = {};
+			light_group.directional = true;
+
+			for (uint32_t cascade = 0; cascade < cascade_count; ++cascade)
+			{
+				const uint32_t output_index = view_count++;
+				light_group.outputs[light_group.output_count++] = output_index;
+				ShaderCamera& cbcam = cb.cameras[output_index];
+				cbcam = camera_cb_null.cameras[0];
+				SHCAM& shcam = shcams[output_index];
+				Viewport& vp = viewports[output_index];
+				wi::graphics::Rect& scissor = scissors[output_index];
+				cascade_indices[output_index] = cascade;
+				cascade_counts[output_index] = cascade_count;
+
+				cbcam.position = vis.camera->Eye;
+				cbcam.internal_resolution = uint2(shadow_rect.w, shadow_rect.h);
+				cbcam.internal_resolution_rcp = float2(1.0f / shadow_rect.w, 1.0f / shadow_rect.h);
+				XMStoreFloat4x4(&cbcam.view, shcam.view);
+				XMStoreFloat4x4(&cbcam.view_projection, shcam.view_projection);
+				XMStoreFloat4x4(&cbcam.inverse_view_projection, XMMatrixInverse(nullptr, shcam.view_projection));
+				cbcam.output_index = output_index;
+				for (int i = 0; i < arraysize(cbcam.frustum.planes); ++i)
+				{
+					cbcam.frustum.planes[i] = shcam.frustum.planes[i];
+				}
+				cbcam.options = SHADERCAMERA_OPTION_ORTHO;
+				cbcam.forward.x = -light.direction.x;
+				cbcam.forward.y = -light.direction.y;
+				cbcam.forward.z = -light.direction.z;
+				if (cascade < vis.scene->character_dedicated_shadows.size())
+				{
+					// Note: this hack is to improve the look of dedicated character shadow cascade which otherwise has too sharp grass shadows and cascade transition becomes too obvious
+					cbcam.options |= SHADERCAMERA_OPTION_DEDICATED_SHADOW_LODBIAS;
 				}
 
-				device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
-				device->BindViewports(cascade_count, viewports, cmd);
-				device->BindScissorRects(cascade_count, scissors, cmd);
-
-				renderQueue.sort_opaque();
-				renderQueue_transparent.sort_transparent();
-				RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, FILTER_OPAQUE, cmd, 0, cascade_count);
-				RenderMeshes(vis, renderQueue_transparent, RENDERPASS_SHADOW, FILTER_TRANSPARENT | FILTER_WATER, cmd, 0, cascade_count);
-			}
-
-			if (!vis.visibleHairs.empty())
-			{
-				cb.cameras[0].position = vis.camera->Eye;
-				for (uint32_t cascade = 0; cascade < std::min(2u + (uint32_t)vis.scene->character_dedicated_shadows.size(), cascade_count); ++cascade)
-				{
-					XMStoreFloat4x4(&cb.cameras[0].view, shcams[cascade].view);
-					XMStoreFloat4x4(&cb.cameras[0].view_projection, shcams[cascade].view_projection);
-					cb.cameras[0].options = SHADERCAMERA_OPTION_ORTHO;
-					if (cascade < vis.scene->character_dedicated_shadows.size())
-					{
-						// Note: this hack is to improve the look of dedicated character shadow cascade which otherwise has too sharp grass shadows and cascade transition becomes too obvious
-						cb.cameras[0].options |= SHADERCAMERA_OPTION_DEDICATED_SHADOW_LODBIAS;
-					}
-					device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
-
-					Viewport vp;
-					vp.top_left_x = float(shadow_rect.x + cascade * shadow_rect.w);
-					vp.top_left_y = float(shadow_rect.y);
-					vp.width = float(shadow_rect.w);
-					vp.height = float(shadow_rect.h);
-					device->BindViewports(1, &vp, cmd);
-
-					wi::graphics::Rect scissor;
-					scissor.from_viewport(vp);
-					device->BindScissorRects(1, &scissor, cmd);
-
-					for (uint32_t hairIndex : vis.visibleHairs)
-					{
-						const HairParticleSystem& hair = vis.scene->hairs[hairIndex];
-						if (!shcams[cascade].frustum.CheckBoxFast(hair.aabb))
-							continue;
-						Entity entity = vis.scene->hairs.GetEntity(hairIndex);
-						const MaterialComponent* material = vis.scene->materials.GetComponent(entity);
-						if (material != nullptr)
-						{
-							hair.Draw(*material, RENDERPASS_SHADOW, cmd);
-						}
-					}
-				}
-			}
-
-			if (!vis.visibleEmitters.empty())
-			{
-				cb.cameras[0].position = vis.camera->Eye;
-				for (uint32_t cascade = 0; cascade < std::min(2u + (uint32_t)vis.scene->character_dedicated_shadows.size(), cascade_count); ++cascade)
-				{
-					XMStoreFloat4x4(&cb.cameras[0].view, shcams[cascade].view);
-					XMStoreFloat4x4(&cb.cameras[0].view_projection, shcams[cascade].view_projection);
-					cb.cameras[0].options = SHADERCAMERA_OPTION_ORTHO;
-					device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
-
-					Viewport vp;
-					vp.top_left_x = float(shadow_rect.x + cascade * shadow_rect.w);
-					vp.top_left_y = float(shadow_rect.y);
-					vp.width = float(shadow_rect.w);
-					vp.height = float(shadow_rect.h);
-					device->BindViewports(1, &vp, cmd);
-
-					wi::graphics::Rect scissor;
-					scissor.from_viewport(vp);
-					device->BindScissorRects(1, &scissor, cmd);
-
-					for (uint32_t emitterIndex : vis.visibleEmitters)
-					{
-						const EmittedParticleSystem& emitter = vis.scene->emitters[emitterIndex];
-						Entity entity = vis.scene->emitters.GetEntity(emitterIndex);
-						const MaterialComponent* material = vis.scene->materials.GetComponent(entity);
-						if (material != nullptr)
-						{
-							emitter.DrawForShadowmap(*material, cmd);
-						}
-					}
-				}
-			}
-
-			if (vis.scene->ocean.IsValid())
-			{
-				cb.cameras[0].position = vis.camera->Eye;
-				for (uint32_t cascade = 0; cascade < std::min(2u + (uint32_t)vis.scene->character_dedicated_shadows.size(), cascade_count); ++cascade)
-				{
-					XMStoreFloat4x4(&cb.cameras[0].view, shcams[cascade].view);
-					XMStoreFloat4x4(&cb.cameras[0].view_projection, shcams[cascade].view_projection);
-					XMStoreFloat4x4(&cb.cameras[0].inverse_view_projection, XMMatrixInverse(nullptr, shcams[cascade].view_projection));
-					cb.cameras[0].options = SHADERCAMERA_OPTION_ORTHO;
-					cb.cameras[0].output_index = 0;
-					device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
-
-					Viewport vp;
-					vp.top_left_x = float(shadow_rect.x + cascade * shadow_rect.w);
-					vp.top_left_y = float(shadow_rect.y);
-					vp.width = float(shadow_rect.w);
-					vp.height = float(shadow_rect.h);
-					device->BindViewports(1, &vp, cmd);
-
-					wi::graphics::Rect scissor;
-					scissor.from_viewport(vp);
-					device->BindScissorRects(1, &scissor, cmd);
-
-					if (shcams[cascade].frustum.CheckBoxFast(vis.scene->ocean.GetAABB(cb.cameras[0].position)))
-					{
-						vis.scene->ocean.RenderForShadowmap(cmd);
-					}
-				}
+				vp.top_left_x = float(shadow_rect.x + cascade * shadow_rect.w);
+				vp.top_left_y = float(shadow_rect.y);
+				vp.width = float(shadow_rect.w);
+				vp.height = float(shadow_rect.h);
+				scissor.from_viewport(vp);
 			}
 		}
 		break;
@@ -7001,181 +7103,47 @@ void DrawShadowmaps(
 			if (max_shadow_resolution_2D == 0 && light.forced_shadow_resolution < 0)
 				break;
 
-			SHCAM shcam;
-			CreateSpotLightShadowCam(light, shcam);
-			if (!cam_frustum.Intersects(shcam.boundingfrustum))
+			SHCAM shcamtest;
+			CreateSpotLightShadowCam(light, shcamtest);
+			if (!cam_frustum.Intersects(shcamtest.boundingfrustum))
 				break;
 
-			for (size_t i = 0; i < vis.scene->aabb_objects.size(); ++i)
+			if (view_count + 1 > max_viewport_count)
 			{
-				const AABB& aabb = vis.scene->aabb_objects[i];
-				if ((aabb.layerMask & vis.layerMask) && shcam.frustum.CheckBoxFast(aabb))
-				{
-					const ObjectComponent& object = vis.scene->objects[i];
-					if (object.IsRenderable() && object.IsCastingShadow())
-					{
-						const float distanceSq = wi::math::DistanceSquared(EYE, object.center);
-						if (distanceSq > sqr(object.draw_distance + object.radius)) // Note: here I use draw_distance instead of fadeDeistance because this doesn't account for impostor switch fade
-							continue;
-
-						uint8_t shadow_lod = 0xFF;
-						if (shadow_lod_override)
-						{
-							const uint8_t candidate_lod = (uint8_t)vis.scene->ComputeObjectLODForView(object, aabb, vis.scene->meshes[object.mesh_index], shcam.view_projection);
-							shadow_lod = std::min(shadow_lod, candidate_lod);
-						}
-
-						RenderBatch batch;
-						batch.Create(object.mesh_index, uint32_t(i), 0, object.sort_bits, 0xFF, shadow_lod);
-
-						const uint32_t filterMask = object.GetFilterMask();
-						if (filterMask & FILTER_OPAQUE)
-						{
-							renderQueue.add(batch);
-						}
-						if ((filterMask & FILTER_TRANSPARENT) || (filterMask & FILTER_WATER))
-						{
-							renderQueue_transparent.add(batch);
-						}
-					}
-				}
+				flush_shadows();
 			}
 
-			if (predicationRequest && light.occlusionquery >= 0)
+			LightGroup& light_group = light_groups[light_group_count++];
+			light_group = {};
+			light_group.boundingsphere = light.GetSphere();
+
+			const uint32_t output_index = view_count++;
+			light_group.outputs[light_group.output_count++] = output_index;
+			ShaderCamera& cbcam = cb.cameras[output_index];
+			cbcam = camera_cb_null.cameras[0];
+			SHCAM& shcam = shcams[output_index];
+			Viewport& vp = viewports[output_index];
+			wi::graphics::Rect& scissor = scissors[output_index];
+
+			shcam = shcamtest;
+
+			cbcam.position = vis.camera->Eye;
+			cbcam.internal_resolution = uint2(shadow_rect.w, shadow_rect.h);
+			cbcam.internal_resolution_rcp = float2(1.0f / shadow_rect.w, 1.0f / shadow_rect.h);
+			XMStoreFloat4x4(&cbcam.view, shcam.view);
+			XMStoreFloat4x4(&cbcam.view_projection, shcam.view_projection);
+			XMStoreFloat4x4(&cbcam.inverse_view_projection, XMMatrixInverse(nullptr, shcam.view_projection));
+			cbcam.output_index = output_index;
+			for (int i = 0; i < arraysize(cbcam.frustum.planes); ++i)
 			{
-				device->PredicationBegin(
-					&vis.scene->queryPredicationBuffer,
-					(uint64_t)light.occlusionquery * sizeof(uint64_t),
-					PredicationOp::EQUAL_ZERO,
-					cmd
-				);
+				cbcam.frustum.planes[i] = shcam.frustum.planes[i];
 			}
 
-			if (!renderQueue.empty() || !renderQueue_transparent.empty())
-			{
-				cb.cameras[0].internal_resolution = uint2(shadow_rect.w, shadow_rect.h);
-				cb.cameras[0].internal_resolution_rcp = float2(1.0f / shadow_rect.w, 1.0f / shadow_rect.h);
-				XMStoreFloat4x4(&cb.cameras[0].view, shcam.view);
-				XMStoreFloat4x4(&cb.cameras[0].view_projection, shcam.view_projection);
-				cb.cameras[0].output_index = 0;
-				for (int i = 0; i < arraysize(cb.cameras[0].frustum.planes); ++i)
-				{
-					cb.cameras[0].frustum.planes[i] = shcam.frustum.planes[i];
-				}
-				device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
-
-				Viewport vp;
-				vp.top_left_x = float(shadow_rect.x);
-				vp.top_left_y = float(shadow_rect.y);
-				vp.width = float(shadow_rect.w);
-				vp.height = float(shadow_rect.h);
-				device->BindViewports(1, &vp, cmd);
-
-				wi::graphics::Rect scissor;
-				scissor.from_viewport(vp);
-				device->BindScissorRects(1, &scissor, cmd);
-
-				renderQueue.sort_opaque();
-				renderQueue_transparent.sort_transparent();
-				RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, FILTER_OPAQUE, cmd);
-				RenderMeshes(vis, renderQueue_transparent, RENDERPASS_SHADOW, FILTER_TRANSPARENT | FILTER_WATER, cmd);
-			}
-
-			if (!vis.visibleHairs.empty())
-			{
-				cb.cameras[0].position = vis.camera->Eye;
-				cb.cameras[0].options = SHADERCAMERA_OPTION_NONE;
-				XMStoreFloat4x4(&cb.cameras[0].view, shcam.view);
-				XMStoreFloat4x4(&cb.cameras[0].view_projection, shcam.view_projection);
-				device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
-
-				Viewport vp;
-				vp.top_left_x = float(shadow_rect.x);
-				vp.top_left_y = float(shadow_rect.y);
-				vp.width = float(shadow_rect.w);
-				vp.height = float(shadow_rect.h);
-				device->BindViewports(1, &vp, cmd);
-
-				wi::graphics::Rect scissor;
-				scissor.from_viewport(vp);
-				device->BindScissorRects(1, &scissor, cmd);
-
-				for (uint32_t hairIndex : vis.visibleHairs)
-				{
-					const HairParticleSystem& hair = vis.scene->hairs[hairIndex];
-					if (!shcam.frustum.CheckBoxFast(hair.aabb))
-						continue;
-					Entity entity = vis.scene->hairs.GetEntity(hairIndex);
-					const MaterialComponent* material = vis.scene->materials.GetComponent(entity);
-					if (material != nullptr)
-					{
-						hair.Draw(*material, RENDERPASS_SHADOW, cmd);
-					}
-				}
-			}
-
-			if (!vis.visibleEmitters.empty())
-			{
-				cb.cameras[0].position = vis.camera->Eye;
-				cb.cameras[0].options = SHADERCAMERA_OPTION_NONE;
-				XMStoreFloat4x4(&cb.cameras[0].view, shcam.view);
-				XMStoreFloat4x4(&cb.cameras[0].view_projection, shcam.view_projection);
-				device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
-
-				Viewport vp;
-				vp.top_left_x = float(shadow_rect.x);
-				vp.top_left_y = float(shadow_rect.y);
-				vp.width = float(shadow_rect.w);
-				vp.height = float(shadow_rect.h);
-				device->BindViewports(1, &vp, cmd);
-
-				wi::graphics::Rect scissor;
-				scissor.from_viewport(vp);
-				device->BindScissorRects(1, &scissor, cmd);
-
-				for (uint32_t emitterIndex : vis.visibleEmitters)
-				{
-					const EmittedParticleSystem& emitter = vis.scene->emitters[emitterIndex];
-					Entity entity = vis.scene->emitters.GetEntity(emitterIndex);
-					const MaterialComponent* material = vis.scene->materials.GetComponent(entity);
-					if (material != nullptr)
-					{
-						emitter.DrawForShadowmap(*material, cmd);
-					}
-				}
-			}
-
-			if (vis.scene->ocean.IsValid())
-			{
-				cb.cameras[0].position = vis.camera->Eye;
-				cb.cameras[0].options = SHADERCAMERA_OPTION_NONE;
-				cb.cameras[0].output_index = 0;
-				XMStoreFloat4x4(&cb.cameras[0].view, shcam.view);
-				XMStoreFloat4x4(&cb.cameras[0].view_projection, shcam.view_projection);
-				XMStoreFloat4x4(&cb.cameras[0].inverse_view_projection, XMMatrixInverse(nullptr, shcam.view_projection));
-				device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
-
-				Viewport vp;
-				vp.top_left_x = float(shadow_rect.x);
-				vp.top_left_y = float(shadow_rect.y);
-				vp.width = float(shadow_rect.w);
-				vp.height = float(shadow_rect.h);
-				device->BindViewports(1, &vp, cmd);
-
-				wi::graphics::Rect scissor;
-				scissor.from_viewport(vp);
-				device->BindScissorRects(1, &scissor, cmd);
-
-				if (shcam.frustum.CheckBoxFast(vis.scene->ocean.GetAABB(cb.cameras[0].position)))
-				{
-					vis.scene->ocean.RenderForShadowmap(cmd);
-				}
-			}
-
-			if (predicationRequest && light.occlusionquery >= 0)
-			{
-				device->PredicationEnd(cmd);
-			}
+			vp.top_left_x = float(shadow_rect.x);
+			vp.top_left_y = float(shadow_rect.y);
+			vp.width = float(shadow_rect.w);
+			vp.height = float(shadow_rect.h);
+			scissor.from_viewport(vp);
 		}
 		break;
 		case LightComponent::POINT:
@@ -7183,204 +7151,74 @@ void DrawShadowmaps(
 			if (max_shadow_resolution_cube == 0 && light.forced_shadow_resolution < 0)
 				break;
 
-			Sphere boundingsphere(light.position, light.GetRange());
-
 			const float zNearP = 0.1f;
 			const float zFarP = std::max(1.0f, light.GetRange());
-			SHCAM cameras[6];
-			CreateCubemapCameras(light.position, zNearP, zFarP, cameras, arraysize(cameras));
-			Viewport vp[arraysize(cameras)];
-			wi::graphics::Rect scissors[arraysize(cameras)];
-			Frustum frusta[arraysize(cameras)];
-			uint32_t camera_count = 0;
+			SHCAM faces[6];
+			CreateCubemapCameras(light.position, zNearP, zFarP, faces, arraysize(faces));
 
-			for (uint32_t shcam = 0; shcam < arraysize(cameras); ++shcam)
+			uint32_t face_mask = 0;
+			for (uint32_t face = 0; face < arraysize(faces); ++face)
 			{
-				// always set up viewport and scissor just to be safe, even if this one is skipped:
-				vp[shcam].top_left_x = float(shadow_rect.x + shcam * shadow_rect.w);
-				vp[shcam].top_left_y = float(shadow_rect.y);
-				vp[shcam].width = float(shadow_rect.w);
-				vp[shcam].height = float(shadow_rect.h);
-				scissors[shcam].from_viewport(vp[shcam]);
-
 				// Check if cubemap face frustum is visible from main camera, otherwise, it will be skipped:
-				if (cam_frustum.Intersects(cameras[shcam].boundingfrustum))
+				if (!cam_frustum.Intersects(faces[face].boundingfrustum))
+					continue;
+				face_mask |= 1u << face;
+			}
+
+			const uint32_t face_count = countbits(face_mask);
+			if (face_count == 0)
+				break;
+
+			if (view_count + face_count > max_viewport_count)
+			{
+				flush_shadows();
+			}
+
+			LightGroup& light_group = light_groups[light_group_count++];
+			light_group = {};
+			light_group.boundingsphere = light.GetSphere();
+
+			while (face_mask != 0) // for each visible face
+			{
+				const uint32_t face = firstbitlow(face_mask);
+				face_mask ^= 1u << face;
+
+				const uint32_t output_index = view_count;
+				light_group.outputs[light_group.output_count++] = output_index;
+				ShaderCamera& cbcam = cb.cameras[output_index];
+				cbcam = camera_cb_null.cameras[0];
+				SHCAM& shcam = shcams[output_index];
+				Viewport& vp = viewports[output_index];
+				wi::graphics::Rect& scissor = scissors[output_index];
+
+				vp.top_left_x = float(shadow_rect.x + face * shadow_rect.w);
+				vp.top_left_y = float(shadow_rect.y);
+				vp.width = float(shadow_rect.w);
+				vp.height = float(shadow_rect.h);
+				scissor.from_viewport(vp);
+
+				shcam = faces[face];
+				cbcam.position = vis.camera->Eye;
+				cbcam.internal_resolution = uint2(shadow_rect.w, shadow_rect.h);
+				cbcam.internal_resolution_rcp = float2(1.0f / shadow_rect.w, 1.0f / shadow_rect.h);
+				XMStoreFloat4x4(&cbcam.view, shcam.view);
+				XMStoreFloat4x4(&cbcam.view_projection, shcam.view_projection);
+				XMStoreFloat4x4(&cbcam.inverse_view_projection, XMMatrixInverse(nullptr, shcam.view_projection));
+				cbcam.output_index = output_index;
+				cbcam.options = SHADERCAMERA_OPTION_NONE;
+				for (int i = 0; i < arraysize(cbcam.frustum.planes); ++i)
 				{
-					cb.cameras[camera_count].internal_resolution = uint2(shadow_rect.w, shadow_rect.h);
-					cb.cameras[camera_count].internal_resolution_rcp = float2(1.0f / shadow_rect.w, 1.0f / shadow_rect.h);
-					XMStoreFloat4x4(&cb.cameras[camera_count].view, cameras[shcam].view);
-					XMStoreFloat4x4(&cb.cameras[camera_count].view_projection, cameras[shcam].view_projection);
-					// We no longer have a straight mapping from camera to viewport:
-					//	- there will be always 6 viewports
-					//	- there will be only as many cameras, as many cubemap face frustums are visible from main camera
-					//	- output_index is mapping camera to viewport, used by shader to output to SV_ViewportArrayIndex
-					cb.cameras[camera_count].output_index = shcam;
-					cb.cameras[camera_count].options = SHADERCAMERA_OPTION_NONE;
-					for (int i = 0; i < arraysize(cb.cameras[camera_count].frustum.planes); ++i)
-					{
-						cb.cameras[camera_count].frustum.planes[i] = cameras[shcam].frustum.planes[i];
-					}
-					frusta[camera_count] = cameras[shcam].frustum;
-					camera_count++;
+					cbcam.frustum.planes[i] = shcam.frustum.planes[i];
 				}
+				view_count++;
 			}
-
-			for (size_t i = 0; i < vis.scene->aabb_objects.size(); ++i)
-			{
-				const AABB& aabb = vis.scene->aabb_objects[i];
-				if ((aabb.layerMask & vis.layerMask) && boundingsphere.intersects(aabb))
-				{
-					const ObjectComponent& object = vis.scene->objects[i];
-					if (object.IsRenderable() && object.IsCastingShadow())
-					{
-						const float distanceSq = wi::math::DistanceSquared(EYE, object.center);
-						if (distanceSq > sqr(object.draw_distance + object.radius)) // Note: here I use draw_distance instead of fadeDeistance because this doesn't account for impostor switch fade
-							continue;
-
-						// Check for each frustum, if object is visible from it:
-						uint8_t camera_mask = 0;
-						uint8_t shadow_lod = 0xFF;
-						for (uint32_t camera_index = 0; camera_index < camera_count; ++camera_index)
-						{
-							if (frusta[camera_index].CheckBoxFast(aabb))
-							{
-								camera_mask |= 1 << camera_index;
-								if (shadow_lod_override)
-								{
-									const uint8_t candidate_lod = (uint8_t)vis.scene->ComputeObjectLODForView(object, aabb, vis.scene->meshes[object.mesh_index], cameras[camera_index].view_projection);
-									shadow_lod = std::min(shadow_lod, candidate_lod);
-								}
-							}
-						}
-						if (camera_mask == 0)
-							continue;
-
-						RenderBatch batch;
-						batch.Create(object.mesh_index, uint32_t(i), 0, object.sort_bits, camera_mask, shadow_lod);
-
-						const uint32_t filterMask = object.GetFilterMask();
-						if (filterMask & FILTER_OPAQUE)
-						{
-							renderQueue.add(batch);
-						}
-						if ((filterMask & FILTER_TRANSPARENT) || (filterMask & FILTER_WATER))
-						{
-							renderQueue_transparent.add(batch);
-						}
-					}
-				}
-			}
-
-			if (predicationRequest && light.occlusionquery >= 0)
-			{
-				device->PredicationBegin(
-					&vis.scene->queryPredicationBuffer,
-					(uint64_t)light.occlusionquery * sizeof(uint64_t),
-					PredicationOp::EQUAL_ZERO,
-					cmd
-				);
-			}
-
-			if (!renderQueue.empty() || renderQueue_transparent.empty())
-			{
-				device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
-				device->BindViewports(arraysize(vp), vp, cmd);
-				device->BindScissorRects(arraysize(scissors), scissors, cmd);
-
-				renderQueue.sort_opaque();
-				renderQueue_transparent.sort_transparent();
-				RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, FILTER_OPAQUE, cmd, 0, camera_count);
-				RenderMeshes(vis, renderQueue_transparent, RENDERPASS_SHADOW, FILTER_TRANSPARENT | FILTER_WATER, cmd, 0, camera_count);
-			}
-
-			if (!vis.visibleHairs.empty())
-			{
-				cb.cameras[0].position = vis.camera->Eye;
-				for (uint32_t cami = 0; cami < camera_count; ++cami)
-				{
-					const uint32_t shcam = cb.cameras[cami].output_index;
-					XMStoreFloat4x4(&cb.cameras[0].view, cameras[shcam].view);
-					XMStoreFloat4x4(&cb.cameras[0].view_projection, cameras[shcam].view_projection);
-					device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
-
-					device->BindViewports(1, &vp[shcam], cmd);
-					device->BindScissorRects(1, &scissors[shcam], cmd);
-
-					for (uint32_t hairIndex : vis.visibleHairs)
-					{
-						const HairParticleSystem& hair = vis.scene->hairs[hairIndex];
-						if (!cameras[shcam].frustum.CheckBoxFast(hair.aabb))
-							continue;
-						Entity entity = vis.scene->hairs.GetEntity(hairIndex);
-						const MaterialComponent* material = vis.scene->materials.GetComponent(entity);
-						if (material != nullptr)
-						{
-							hair.Draw(*material, RENDERPASS_SHADOW, cmd);
-						}
-					}
-				}
-			}
-
-			if (!vis.visibleEmitters.empty())
-			{
-				cb.cameras[0].position = vis.camera->Eye;
-				for (uint32_t cami = 0; cami < camera_count; ++cami)
-				{
-					const uint32_t shcam = cb.cameras[cami].output_index;
-					XMStoreFloat4x4(&cb.cameras[0].view, cameras[shcam].view);
-					XMStoreFloat4x4(&cb.cameras[0].view_projection, cameras[shcam].view_projection);
-					device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
-
-					device->BindViewports(1, &vp[shcam], cmd);
-					device->BindScissorRects(1, &scissors[shcam], cmd);
-
-					for (uint32_t emitterIndex : vis.visibleEmitters)
-					{
-						const EmittedParticleSystem& emitter = vis.scene->emitters[emitterIndex];
-						Entity entity = vis.scene->emitters.GetEntity(emitterIndex);
-						const MaterialComponent* material = vis.scene->materials.GetComponent(entity);
-						if (material != nullptr)
-						{
-							emitter.DrawForShadowmap(*material, cmd);
-						}
-					}
-				}
-			}
-
-			if (vis.scene->ocean.IsValid())
-			{
-				cb.cameras[0].position = vis.camera->Eye;
-				cb.cameras[0].options = SHADERCAMERA_OPTION_NONE;
-				cb.cameras[0].output_index = 0;
-				for (uint32_t cami = 0; cami < camera_count; ++cami)
-				{
-					const uint32_t shcam = cb.cameras[cami].output_index;
-					XMStoreFloat4x4(&cb.cameras[0].view, cameras[shcam].view);
-					XMStoreFloat4x4(&cb.cameras[0].view_projection, cameras[shcam].view_projection);
-					XMStoreFloat4x4(&cb.cameras[0].inverse_view_projection, XMMatrixInverse(nullptr, cameras[shcam].view_projection));
-					device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
-
-					device->BindViewports(1, &vp[shcam], cmd);
-					device->BindScissorRects(1, &scissors[shcam], cmd);
-
-					if (cameras[shcam].frustum.CheckBoxFast(vis.scene->ocean.GetAABB(cb.cameras[0].position)))
-					{
-						vis.scene->ocean.RenderForShadowmap(cmd);
-					}
-				}
-			}
-
-			if (predicationRequest && light.occlusionquery >= 0)
-			{
-				device->PredicationEnd(cmd);
-			}
-
 		}
 		break;
 		default:
 			break;
 		} // terminate switch
 	}
+	flush_shadows(); // Light batching ends here
 
 	// Rain blocker:
 	if (vis.scene->weather.rain_amount > 0)
@@ -7395,17 +7233,9 @@ void DrawShadowmaps(
 			if (aabb.layerMask & vis.layerMask)
 			{
 				const ObjectComponent& object = vis.scene->objects[i];
-				if (object.IsRenderable())
+				if (object.IsRenderable() && shcam.frustum.CheckBoxFast(aabb))
 				{
-					uint8_t camera_mask = 0;
-					if (shcam.frustum.CheckBoxFast(aabb))
-					{
-						camera_mask |= 1 << 0;
-					}
-					if (camera_mask == 0)
-						continue;
-
-					renderQueue.add(object.mesh_index, uint32_t(i), 0, object.sort_bits, camera_mask);
+					renderQueue.add(object.mesh_index, uint32_t(i), 0, object.sort_bits);
 				}
 			}
 		}
@@ -7435,15 +7265,13 @@ void DrawShadowmaps(
 			device->BindScissorRects(1, &scissor, cmd);
 
 			renderQueue.sort_opaque();
-			RenderMeshes(vis, renderQueue, RENDERPASS_RAINBLOCKER, FILTER_OBJECT_ALL, cmd, 0, 1);
+			RenderMeshes(vis, renderQueue, RENDERPASS_RAINBLOCKER, FILTER_OBJECT_ALL, cmd);
 			device->EventEnd(cmd);
 		}
 	}
 
 	device->RenderPassEnd(cmd);
 
-	wi::profiler::EndRange(range_gpu);
-	wi::profiler::EndRange(range_cpu);
 	device->EventEnd(cmd);
 }
 
@@ -7493,10 +7321,9 @@ void DrawScene(
 		renderQueue.init();
 		for (uint32_t instanceIndex : vis.visibleObjects)
 		{
-			if (occlusion && vis.scene->occlusion_results_objects[instanceIndex].IsOccluded())
-				continue;
-
 			const ObjectComponent& object = vis.scene->objects[instanceIndex];
+			if (occlusion && object.occlusion.IsOccluded())
+				continue;
 			if (!object.IsRenderable())
 				continue;
 			if (foreground != object.IsForeground())
@@ -9703,7 +9530,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 					const ObjectComponent& object = vis.scene->objects[i];
 					if (object.IsRenderable() && !object.IsNotVisibleInReflections())
 					{
-						uint8_t camera_mask = 0;
+						uint16_t camera_mask = 0;
 						uint8_t probe_lod = 0xFF;
 						for (uint32_t camera_index = 0; camera_index < arraysize(cameras); ++camera_index)
 						{

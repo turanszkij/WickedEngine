@@ -1,20 +1,26 @@
 #include "globals.hlsli"
-#include "objectHF.hlsli"
 #include "hairparticleHF.hlsli"
 #include "ShaderInterop_HairParticle.h"
+
+struct HairShadowPush
+{
+	uint camera_index;
+};
+PUSHCONSTANT(push, HairShadowPush);
 
 void main(VertexToPixel input)
 {
 	// Distance dithered fade:
 	clip(dither(input.pos.xy) - input.fade);
 	
+	ShaderCamera camera = GetCameraIndexed(push.camera_index);
 	ShaderMaterial material = HairGetMaterial();
 
 	[branch]
 	if (material.textures[BASECOLORMAP].IsValid())
 	{
 		float bias = 0;
-		if (GetCamera().options & SHADERCAMERA_OPTION_DEDICATED_SHADOW_LODBIAS)
+		if (camera.options & SHADERCAMERA_OPTION_DEDICATED_SHADOW_LODBIAS)
 		{
 			// Note: this hack is to improve the look of dedicated character shadow cascade which otherwise has too sharp grass shadows and cascade transition becomes too obvious
 			bias = 3.2;

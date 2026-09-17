@@ -176,7 +176,7 @@ namespace wi::scene
 		// Occlusion culling read:
 		if(wi::renderer::GetOcclusionCullingEnabled() && !wi::renderer::GetFreezeCullingCameraEnabled())
 		{
-			uint32_t minQueryCount = uint32_t(objects.GetCount() + lights.GetCount() + 1); // +1: ocean (don't know for sure if it exists yet before weather update)
+			uint32_t minQueryCount = uint32_t(objects.GetCount() + lights.GetCount() + decals.GetCount() + probes.GetCount() + 1); // +1: ocean (don't know for sure if it exists yet before weather update)
 			if (queryHeap.desc.query_count < minQueryCount)
 			{
 				GPUQueryHeapDesc desc;
@@ -194,15 +194,6 @@ namespace wi::scene
 					success = device->CreateBuffer(&bd, nullptr, &queryResultBuffer[i]);
 					assert(success);
 					device->SetName(&queryResultBuffer[i], "Scene::queryResultBuffer");
-				}
-
-				if (device->CheckCapability(GraphicsDeviceCapability::PREDICATION))
-				{
-					bd.usage = Usage::DEFAULT;
-					bd.misc_flags |= ResourceMiscFlag::PREDICATION;
-					success = device->CreateBuffer(&bd, nullptr, &queryPredicationBuffer);
-					assert(success);
-					device->SetName(&queryPredicationBuffer, "Scene::queryPredicationBuffer");
 				}
 			}
 
@@ -4444,7 +4435,6 @@ namespace wi::scene
 		aabb_objects.resize(objects.GetCount());
 		matrix_objects.resize(objects.GetCount());
 		matrix_objects_prev.resize(objects.GetCount());
-		occlusion_results_objects.resize(objects.GetCount());
 
 		meshletAllocator.store(0u);
 
@@ -4458,26 +4448,7 @@ namespace wi::scene
 			AABB& aabb = aabb_objects[args.jobIndex];
 			GraphicsDevice* device = wi::graphics::GetDevice();
 
-			// Update occlusion culling status:
-			OcclusionResult& occlusion_result = occlusion_results_objects[args.jobIndex];
-			if (!wi::renderer::GetFreezeCullingCameraEnabled())
-			{
-				occlusion_result.occlusionHistory <<= 1u; // advance history by 1 frame
-				int query_id = occlusion_result.occlusionQueries[queryheap_idx];
-				if (queryResultBuffer[queryheap_idx].mapped_data != nullptr && query_id >= 0)
-				{
-					uint64_t visible = ((uint64_t*)queryResultBuffer[queryheap_idx].mapped_data)[query_id];
-					if (visible)
-					{
-						occlusion_result.occlusionHistory |= 1; // visible
-					}
-				}
-				else
-				{
-					occlusion_result.occlusionHistory |= 1; // visible
-				}
-			}
-			occlusion_result.occlusionQueries[queryheap_idx] = -1; // invalidate query
+			UpdateOcclusionResult(object.occlusion);
 
 			const LayerComponent* layer = layers.GetComponent(entity);
 			uint32_t layerMask;
@@ -4844,6 +4815,9 @@ namespace wi::scene
 			Entity entity = decals.GetEntity(i);
 			if (!transforms.Contains(entity))
 				continue;
+
+			UpdateOcclusionResult(decal.occlusion);
+
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 			decal.world = transform.world;
 
@@ -4899,6 +4873,9 @@ namespace wi::scene
 			Entity entity = probes.GetEntity(probeIndex);
 			if (!transforms.Contains(entity))
 				continue;
+
+			UpdateOcclusionResult(probe.occlusion);
+
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 
 			probe.position = transform.GetPosition();
@@ -4972,19 +4949,8 @@ namespace wi::scene
 			if (!transforms.Contains(entity))
 				return;
 			const TransformComponent& transform = *transforms.GetComponent(entity);
-			AABB& aabb = aabb_lights[args.jobIndex];
 
-			light.occlusionquery = -1;
-
-			const LayerComponent* layer = layers.GetComponent(entity);
-			if (layer == nullptr)
-			{
-				aabb.layerMask = ~0;
-			}
-			else
-			{
-				aabb.layerMask = layer->GetLayerMask();
-			}
+			UpdateOcclusionResult(light.occlusion);
 
 			XMMATRIX W = XMLoadFloat4x4(&transform.world);
 			XMVECTOR S, R, T;
@@ -5000,7 +4966,6 @@ namespace wi::scene
 			default:
 			case LightComponent::DIRECTIONAL:
 				XMStoreFloat3(&light.direction, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), W)));
-				aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX));
 				locker.lock();
 				if (args.jobIndex < weather.most_important_light_index)
 				{
@@ -5016,16 +4981,25 @@ namespace wi::scene
 				break;
 			case LightComponent::SPOT:
 				XMStoreFloat3(&light.direction, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), W)));
-				aabb.createFromHalfWidth(light.position, XMFLOAT3(light.GetRange(), light.GetRange(), light.GetRange()));
 				break;
 			case LightComponent::POINT:
 				XMStoreFloat3(&light.direction, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(1, 0, 0, 0), W)));
-				aabb.createFromHalfWidth(light.position, XMFLOAT3(light.GetRange(), light.GetRange(), light.GetRange()));
 				break;
 			case LightComponent::RECTANGLE:
 				XMStoreFloat3(&light.direction, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, 0, -1, 0), W)));
-				aabb.createFromHalfWidth(light.position, XMFLOAT3(light.GetRange(), light.GetRange(), light.GetRange()));
 				break;
+			}
+
+			AABB& aabb = aabb_lights[args.jobIndex];
+			aabb = light.GetAABB();
+			const LayerComponent* layer = layers.GetComponent(entity);
+			if (layer == nullptr)
+			{
+				aabb.layerMask = ~0;
+			}
+			else
+			{
+				aabb.layerMask = layer->GetLayerMask();
 			}
 
 			light.maskTexDescriptor = -1;
@@ -8901,6 +8875,8 @@ namespace wi::scene
 
 	uint32_t Scene::ComputeObjectLODForView(const ObjectComponent& object, const AABB& aabb, const MeshComponent& mesh, const XMMATRIX& ViewProjection) const
 	{
+		if (mesh.GetLODCount() < 2)
+			return 0;
 		const float lod_max = float(mesh.GetLODCount() - 1);
 
 		// Estimate the object's projected screen-space size to pick a LOD by
@@ -9811,4 +9787,27 @@ namespace wi::scene
 			}
 		}
 	}
+
+	void Scene::UpdateOcclusionResult(OcclusionResult& occlusion)
+	{
+		if (!wi::renderer::GetFreezeCullingCameraEnabled())
+		{
+			occlusion.occlusionHistory <<= 1u; // advance history by 1 frame
+			const int query_id = occlusion.occlusionQueries[queryheap_idx];
+			if (queryResultBuffer[queryheap_idx].mapped_data != nullptr && query_id >= 0 && query_id < (int)queryHeap.desc.query_count)
+			{
+				uint64_t visible = ((uint64_t*)queryResultBuffer[queryheap_idx].mapped_data)[query_id];
+				if (visible)
+				{
+					occlusion.occlusionHistory |= 1; // visible
+				}
+			}
+			else
+			{
+				occlusion.occlusionHistory |= 1; // visible
+			}
+		}
+		occlusion.occlusionQueries[queryheap_idx] = -1; // invalidate query
+	}
+
 }

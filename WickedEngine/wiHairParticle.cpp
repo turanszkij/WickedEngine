@@ -580,7 +580,7 @@ namespace wi
 		device->EventEnd(cmd);
 	}
 
-	void HairParticleSystem::Draw(const MaterialComponent& material, wi::enums::RENDERPASS renderPass, CommandList cmd) const
+	void HairParticleSystem::Draw(const MaterialComponent& material, wi::enums::RENDERPASS renderPass, CommandList cmd, uint16_t camera_mask) const
 	{
 		if (strandCount == 0 || !constantBuffer.IsValid())
 		{
@@ -619,12 +619,20 @@ namespace wi
 
 		device->BindIndexBuffer(&generalBuffer, GetIndexBufferFormat(GetVertexCount()), ib_culled.offset, cmd);
 
-		device->DrawIndexedInstancedIndirect(&generalBuffer, indirect_view.offset, cmd);
-
-		if (renderPass == RENDERPASS_MAIN && wi::renderer::GetWireframeMode() == wi::renderer::WIREFRAME_OVERLAY)
+		uint32_t camera_bits = camera_mask;
+		while (camera_bits != 0)
 		{
-			device->BindPipelineState(&PSO_wire, cmd);
+			const uint camera_index = firstbitlow(camera_bits);
+			camera_bits ^= 1u << camera_index;
+			device->PushConstants(&camera_index, sizeof(camera_index), cmd);
+
 			device->DrawIndexedInstancedIndirect(&generalBuffer, indirect_view.offset, cmd);
+
+			if (renderPass == RENDERPASS_MAIN && wi::renderer::GetWireframeMode() == wi::renderer::WIREFRAME_OVERLAY)
+			{
+				device->BindPipelineState(&PSO_wire, cmd);
+				device->DrawIndexedInstancedIndirect(&generalBuffer, indirect_view.offset, cmd);
+			}
 		}
 
 		device->EventEnd(cmd);

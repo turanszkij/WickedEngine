@@ -4,12 +4,20 @@
 Texture2D<float4> texture_displacementmap : register(t0);
 Texture2D<float4> texture_perlin : register(t2);
 
-PSIn main(uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID, out uint RTIndex : SV_RenderTargetArrayIndex)
+struct OceanShadowPush
 {
+	uint camera_index;
+};
+PUSHCONSTANT(push, OceanShadowPush);
+
+PSIn main(uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID, out uint RTIndex : SV_RenderTargetArrayIndex, out uint VPIndex : SV_ViewportArrayIndex)
+{
+	VPIndex = push.camera_index;
+
 	PSIn Out;
 	Out.cameraIndex = instanceID;
 
-	ShaderCamera camera = GetCameraIndexed(Out.cameraIndex);
+	ShaderCamera camera = GetCameraIndexed(Out.cameraIndex + push.camera_index);
 	RTIndex = camera.output_index;
 	
 	float2 dim = xOceanScreenSpaceParams.xy;
