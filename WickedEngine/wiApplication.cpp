@@ -763,7 +763,16 @@ namespace wi
 			wi::renderer::SetShaderPath(wi::renderer::GetShaderPath() + "ps5/");
 			graphicsDevice = std::make_unique<GraphicsDevice_PS5>(validationMode);
 #elif defined(PLATFORM_APPLE)
-			wi::renderer::SetShaderPath(wi::renderer::GetShaderPath() + "metal/");
+			{
+				const std::string& curPath = wi::renderer::GetShaderPath();
+				if (curPath.rfind("metal/") == std::string::npos &&
+				    curPath.rfind("metal\\") == std::string::npos &&
+				    curPath.rfind("DMO-Shaders-Metal/") == std::string::npos &&
+				    curPath.rfind("DMO-Shaders-Metal\\") == std::string::npos)
+				{
+					wi::renderer::SetShaderPath(curPath + "metal/");
+				}
+			}
 			graphicsDevice = std::make_unique<GraphicsDevice_Metal>(validationMode, preference);
 
 #else

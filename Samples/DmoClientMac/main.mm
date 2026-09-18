@@ -880,6 +880,8 @@ static bool RenderItemPreviewToFile(const std::string& modelPath, const std::str
 
 int main(int argc, char* argv[])
 {
+	wi::arguments::Parse(argc, argv);
+
 	// Headless visual capture: no NSApplication / window at all.
 	if (const char* shotPath = std::getenv("DMO_UI_SHOT"))
 	{
@@ -912,10 +914,46 @@ int main(int argc, char* argv[])
 		[window center];
 		[window makeKeyAndOrderFront:nil];
 
-		DmoWindowDelegate* delegate = [[DmoWindowDelegate alloc] init];
-		[window setDelegate:delegate];
+		static DmoWindowDelegate* s_delegate = nil;
+		s_delegate = [[DmoWindowDelegate alloc] init];
+		[window setDelegate:s_delegate];
 
 		[NSApp activateIgnoringOtherApps:YES];
+
+		// Resolve Metal compiled shaders from DMO-Transfers or environment
+		{
+			std::string shaderPath;
+			if (const char* env = std::getenv("DMO_SHADERS_PATH"); env != nullptr && env[0] != '\0')
+			{
+				shaderPath = env;
+			}
+			else
+			{
+				std::vector<std::string> search;
+				if (const char* env = std::getenv("DMO_TRANSFERS"); env != nullptr && env[0] != '\0')
+					search.emplace_back(std::string(env) + "/DMO-Shaders-Metal");
+				if (const char* home = std::getenv("HOME"); home != nullptr && home[0] != '\0')
+					search.emplace_back(std::string(home) + "/Documents/DMO-Transfers/DMO-Shaders-Metal");
+				search.emplace_back("./shaders/metal");
+				search.emplace_back("./Shaders/metal");
+				for (const auto& p : search)
+				{
+					if (std::filesystem::is_directory(p))
+					{
+						shaderPath = p;
+						break;
+					}
+				}
+			}
+			if (!shaderPath.empty())
+			{
+				if (shaderPath.back() != '/')
+					shaderPath.push_back('/');
+				wi::renderer::SetShaderPath(shaderPath);
+				std::fprintf(stdout, "[DmoClient] Metal shaders resolved: %s\n", shaderPath.c_str());
+				std::fflush(stdout);
+			}
+		}
 
 		application.SetWindow((__bridge wi::platform::window_type)window);
 		// The DMO front-door path is loaded + activated in DmoApplication::Initialize
@@ -932,6 +970,8 @@ int main(int argc, char* argv[])
 		application.infoDisplay.resolution = true;
 		application.infoDisplay.logical_size = true;
 
+		std::fprintf(stderr, "[DmoClient] Entering main run loop...\n");
+		std::fflush(stderr);
 		while (running)
 		{
 			@autoreleasepool {
@@ -976,6 +1016,8 @@ int main(int argc, char* argv[])
 			}
 		}
 
+		std::fprintf(stderr, "[DmoClient] Exited main run loop! running=%d\n", running);
+		std::fflush(stderr);
 		// Persist the L2 icon-cache manifest so the next launch resolves icons with zero re-bake.
 		SaveIconSidecar();
 		// The application owns the harness now; ShutdownPrototypeHarness() remains
@@ -989,6 +1031,8 @@ int main(int argc, char* argv[])
 
 @implementation DmoWindowDelegate
 - (void)windowWillClose:(NSNotification*)notification {
+	std::fprintf(stderr, "[DmoClient] windowWillClose notification received!\n");
+	std::fflush(stderr);
 	running = false;
 }
 - (void)windowDidResize:(NSNotification*)notification {

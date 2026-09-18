@@ -1954,9 +1954,8 @@ using namespace metal_internal;
 		if (internal_state->texture.get() != nullptr)
 		{
 			allocationhandler->make_resident(internal_state->texture.get());
+			assert(internal_state->texture->isSparse() == sparse);
 		}
-		
-		assert(internal_state->texture->isSparse() == sparse);
 		
 		if (initial_data != nullptr)
 		{
