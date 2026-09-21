@@ -3,6 +3,10 @@ cmake_minimum_required(VERSION 3.19)
 include(GNUInstallDirs)
 if (PLATFORM MATCHES "SDL2")
 	add_subdirectory(FAudio)
+elseif (PLATFORM MATCHES "SDL3")
+	set(BUILD_SDL3 ON CACHE BOOL "" FORCE)
+	add_subdirectory(FAudio)
+	target_compile_definitions(FAudio PRIVATE FAUDIO_SDL3_PLATFORM)
 endif()
 
 file(GLOB_RECURSE HEADER_FILES CONFIGURE_DEPENDS
