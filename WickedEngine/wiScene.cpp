@@ -5896,8 +5896,9 @@ namespace wi::scene
 
 				// Smooth leaning:
 				const float turn_leaning = clamp(faceangle / XM_PI * horizontal_velocity_length * facing_correctness, -leaning_limit, leaning_limit);
-				character.leaning_next = lerp(character.leaning_next, turn_leaning, dt * 5);
-				character.leaning = lerp(character.leaning, character.leaning_next, dt * 5);
+				const float leaning_t = saturate(dt * 5);
+				character.leaning_next = lerp(character.leaning_next, turn_leaning, leaning_t);
+				character.leaning = lerp(character.leaning, character.leaning_next, leaning_t);
 
 				character.anim_timer = 0; // default 0 but overridden if there is valid anim
 
