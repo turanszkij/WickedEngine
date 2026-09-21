@@ -124,6 +124,23 @@ namespace wi
 			}
 		}
 		{
+			// rtPostprocess is created first, as the real non-aliased allocation -- rtPrimitiveID
+			// and rtSceneCopy_tmp alias onto it instead of the reverse. On some drivers (e.g.
+			// RADV), the real VkMemoryRequirements::size for format_rendertarget_main exceeds that
+			// of format_idbuffer at the same resolution even though both come out to the same
+			// logical byte-size estimate below, so the smaller idbuffer allocation could not
+			// actually fit the larger rendertarget_main images aliasing onto it. Making
+			// rtPostprocess -- the largest of the three in real driver-reported bytes -- own the
+			// allocation instead fixes this at the root.
+			TextureDesc desc;
+			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+			desc.format = wi::renderer::format_rendertarget_main;
+			desc.width = internalResolution.x;
+			desc.height = internalResolution.y;
+			device->CreateTexture(&desc, nullptr, &rtPostprocess);
+			device->SetName(&rtPostprocess, "renderpath3D.rtPostprocess");
+		}
+		{
 			TextureDesc desc;
 			desc.format = wi::renderer::format_idbuffer;
 			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
@@ -136,7 +153,8 @@ namespace wi
 			desc.sample_count = 1;
 			desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 			desc.misc_flags = ResourceMiscFlag::ALIASING_TEXTURE_RT_DS;
-			device->CreateTexture(&desc, nullptr, &rtPrimitiveID);
+			assert(ComputeTextureMemorySizeInBytes(desc) <= ComputeTextureMemorySizeInBytes(rtPostprocess.desc)); // Aliased check
+			device->CreateTexture(&desc, nullptr, &rtPrimitiveID, &rtPostprocess); // Aliased!
 			device->SetName(&rtPrimitiveID, "renderpath3D.rtPrimitiveID");
 
 			if (getMSAASampleCount() > 1)
@@ -184,21 +202,11 @@ namespace wi
 			device->CreateTextureZeroed(&desc, &rtSceneCopy);
 			device->SetName(&rtSceneCopy, "renderpath3D.rtSceneCopy");
 			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS | BindFlag::RENDER_TARGET; // render target for aliasing
-			device->CreateTexture(&desc, nullptr, &rtSceneCopy_tmp, &rtPrimitiveID);
+			device->CreateTexture(&desc, nullptr, &rtSceneCopy_tmp, &rtPostprocess);
 			device->SetName(&rtSceneCopy_tmp, "renderpath3D.rtSceneCopy_tmp");
 
 			device->CreateMipgenSubresources(rtSceneCopy);
 			device->CreateMipgenSubresources(rtSceneCopy_tmp);
-		}
-		{
-			TextureDesc desc;
-			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-			desc.format = wi::renderer::format_rendertarget_main;
-			desc.width = internalResolution.x;
-			desc.height = internalResolution.y;
-			assert(ComputeTextureMemorySizeInBytes(desc) <= ComputeTextureMemorySizeInBytes(rtPrimitiveID.desc)); // Aliased check
-			device->CreateTexture(&desc, nullptr, &rtPostprocess, &rtPrimitiveID); // Aliased!
-			device->SetName(&rtPostprocess, "renderpath3D.rtPostprocess");
 		}
 		{
 			TextureDesc desc;
