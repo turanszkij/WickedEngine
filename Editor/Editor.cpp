@@ -410,7 +410,7 @@ void Editor::SaveWindowSize()
 				config.Set("window_maximized", false);
 			}
 		}
-#elif defined(SDL2)
+#elif defined(SDL2) || defined(SDL3)
 		if (SDL_GetWindowFlags(window) & SDL_WINDOW_MAXIMIZED)
 		{
 			config.Set("window_maximized", true);
