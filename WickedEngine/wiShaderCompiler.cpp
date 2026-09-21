@@ -66,11 +66,19 @@ namespace wi::shadercompiler
 #endif // SHADERCOMPILER_XBOX_INCLUDED
 			const std::string library = "dxcompiler" + modifier + ".dll";
 			HMODULE dxcompiler = wiLoadLibrary(library.c_str());
-#elif defined(PLATFORM_LINUX)
-			const std::string library = "./libdxcompiler" + modifier + ".so";
-			HMODULE dxcompiler = wiLoadLibrary(library.c_str());
-#elif defined(PLATFORM_APPLE)
-			const std::string library = "./libdxcompiler" + modifier + ".dylib";
+#elif defined(PLATFORM_LINUX) || defined(PLATFORM_APPLE)
+			// Resolve relative to the running executable's own directory, matching how the
+			// Windows branch above already resolves dxcompiler.dll through the normal DLL
+			// search order (which includes the launching executable's directory). A bare
+			// "./" is relative to the process's current working directory, not the
+			// executable's location, so launching from any other directory failed to find
+			// the library.
+			const std::string library_dir = wi::helper::GetDirectoryFromPath(wi::helper::GetExecutablePath());
+#if defined(PLATFORM_LINUX)
+			const std::string library = library_dir + "libdxcompiler" + modifier + ".so";
+#else
+			const std::string library = library_dir + "libdxcompiler" + modifier + ".dylib";
+#endif
 			HMODULE dxcompiler = wiLoadLibrary(library.c_str());
 #endif
 			if (dxcompiler != nullptr)
