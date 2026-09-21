@@ -697,7 +697,7 @@ namespace wi::audio
 	}
 }
 
-#elif defined(SDL2)
+#elif defined(SDL2) || defined(SDL3)
 
 //FAudio implemetation
 #include <FAudio.h>
