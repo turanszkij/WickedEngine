@@ -1701,6 +1701,9 @@ std::mutex queue_locker;
 		}
 		else
 		{
+#ifdef PLATFORM_XBOX
+			std::scoped_lock lock(queue_locker); // queue operations are not thread-safe on XBOX
+#endif // PLATFORM_XBOX
 			for (int q = 0; q < QUEUE_COUNT; ++q)
 			{
 				CommandQueue& queue = device->queues[q];
