@@ -1079,6 +1079,7 @@ namespace wi::scene
 			shaderscene.voxelgrid.voxelSize_rcp = voxelgrid.voxelSize_rcp;
 		}
 
+		// Note: with the CopyBufferAsync we also have to double buffer the dedicated GPU memory buffers as the async copy will be kicked with frame overlap
 		StackVector<GPUBufferCopyCommand, 8> async_buffer_uploads;
 		if (instanceArraySize > 0 && instanceBuffer[cpu_gpu_mapped_resource_index].IsValid())
 		{
@@ -1121,7 +1122,7 @@ namespace wi::scene
 		}
 		if (!async_buffer_uploads.empty())
 		{
-			device->CopyBufferAsync(async_buffer_uploads.data(), async_buffer_uploads.size());
+			device->CopyBufferAsync(async_buffer_uploads.data(), async_buffer_uploads.size(), "Scene async buffer updates");
 		}
 	}
 	void Scene::Clear()

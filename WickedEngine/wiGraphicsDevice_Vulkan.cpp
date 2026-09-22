@@ -7127,9 +7127,20 @@ using namespace vulkan_internal;
 		}
 	}
 
-	void GraphicsDevice_Vulkan::CopyBufferAsync(GPUBufferCopyCommand* commands, uint32_t command_count) const
+	void GraphicsDevice_Vulkan::CopyBufferAsync(GPUBufferCopyCommand* commands, uint32_t command_count, const char* name) const
 	{
 		CopyAllocator::CopyCMD cmd = copyAllocator.allocate(0);
+
+		if (name != nullptr && debugUtils)
+		{
+			VkDebugUtilsLabelEXT label = { VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
+			label.pLabelName = name;
+			label.color[0] = 0.0f;
+			label.color[1] = 0.0f;
+			label.color[2] = 0.0f;
+			label.color[3] = 1.0f;
+			vkCmdBeginDebugUtilsLabelEXT(cmd.transferCommandBuffer, &label);
+		}
 
 		for (uint32_t i = 0; i < command_count; ++i)
 		{
@@ -7147,6 +7158,11 @@ using namespace vulkan_internal;
 				1,
 				&copyRegion
 			);
+		}
+
+		if (name != nullptr && debugUtils)
+		{
+			vkCmdEndDebugUtilsLabelEXT(cmd.transferCommandBuffer);
 		}
 
 		copyAllocator.submit(cmd, false);

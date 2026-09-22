@@ -192,7 +192,7 @@ namespace wi::graphics
 		virtual void SparseUpdate(QUEUE_TYPE queue, const SparseUpdateCommand* commands, uint32_t command_count) {};
 
 		// Copies buffer data submitted immediately to GPU COPY QUEUE
-		virtual void CopyBufferAsync(GPUBufferCopyCommand* commands, uint32_t command_count) const {}
+		virtual void CopyBufferAsync(GPUBufferCopyCommand* commands, uint32_t command_count, const char* name = nullptr) const {}
 
 		// Returns an identifier string for the graphics device subclass
 		virtual const char* GetTag() const { return ""; }

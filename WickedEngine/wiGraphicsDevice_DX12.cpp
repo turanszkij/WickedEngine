@@ -5979,15 +5979,27 @@ std::mutex queue_locker;
 		}
 	}
 
-	void GraphicsDevice_DX12::CopyBufferAsync(GPUBufferCopyCommand* commands, uint32_t command_count) const
+	void GraphicsDevice_DX12::CopyBufferAsync(GPUBufferCopyCommand* commands, uint32_t command_count, const char* name) const
 	{
 		CopyAllocator::CopyCMD cmd = copyAllocator.allocate(0);
+		if (name != nullptr)
+		{
+			wchar_t text[128];
+			if (wi::helper::StringConvert(name, text, arraysize(text)) > 0)
+			{
+				PIXBeginEvent(cmd.commandList.Get(), 0xFF000000, text);
+			}
+		}
 		for (uint32_t i = 0; i < command_count; ++i)
 		{
 			const GPUBufferCopyCommand& command = commands[i];
 			auto dst_internal = to_internal(command.pDst);
 			auto src_internal = to_internal(command.pSrc);
 			cmd.commandList->CopyBufferRegion(dst_internal->resource.Get(), command.dst_offset, src_internal->resource.Get(), command.src_offset, command.size);
+		}
+		if (name != nullptr)
+		{
+			PIXEndEvent(cmd.commandList.Get());
 		}
 		copyAllocator.submit(cmd, false);
 	}

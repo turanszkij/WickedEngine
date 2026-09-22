@@ -632,7 +632,7 @@ namespace wi::graphics
 
 		void SparseUpdate(QUEUE_TYPE queue, const SparseUpdateCommand* commands, uint32_t command_count) override;
 
-		void CopyBufferAsync(GPUBufferCopyCommand* commands, uint32_t command_count) const override;
+		void CopyBufferAsync(GPUBufferCopyCommand* commands, uint32_t command_count, const char* name = nullptr) const override;
 
 		const char* GetTag() const override { return "[Vulkan]"; }
 
