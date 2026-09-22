@@ -101,6 +101,7 @@ namespace wi::scene
 		wi::jobsystem::context topdown_hierarchy_workload;
 		uint32_t cpu_gpu_mapped_resource_index = 0;
 		mutable uint32_t blas_optimize_offset = 0;
+		wi::jobsystem::context async_upload_ctx;
 
 		// AABB culling streams:
 		wi::vector<wi::primitive::AABB> aabb_objects;
@@ -125,7 +126,7 @@ namespace wi::scene
 		wi::graphics::GPUBuffer instanceUploadBuffer[wi::graphics::GraphicsDevice::GetBufferCount()];
 		ShaderMeshInstance* instanceArrayMapped = nullptr;
 		size_t instanceArraySize = 0;
-		wi::graphics::GPUBuffer instanceBuffer;
+		wi::graphics::GPUBuffer instanceBuffer[wi::graphics::GraphicsDevice::GetBufferCount()];
 
 		// Geometries for bindless visiblity indexing:
 		//	contains in order:
@@ -136,14 +137,14 @@ namespace wi::scene
 		wi::graphics::GPUBuffer geometryUploadBuffer[wi::graphics::GraphicsDevice::GetBufferCount()];
 		ShaderGeometry* geometryArrayMapped = nullptr;
 		size_t geometryArraySize = 0;
-		wi::graphics::GPUBuffer geometryBuffer;
+		wi::graphics::GPUBuffer geometryBuffer[wi::graphics::GraphicsDevice::GetBufferCount()];
 		std::atomic<uint32_t> geometryAllocator{ 0 };
 
 		// Materials for bindless visibility indexing:
 		wi::graphics::GPUBuffer materialUploadBuffer[wi::graphics::GraphicsDevice::GetBufferCount()];
 		ShaderMaterial* materialArrayMapped = nullptr;
 		size_t materialArraySize = 0;
-		wi::graphics::GPUBuffer materialBuffer;
+		wi::graphics::GPUBuffer materialBuffer[wi::graphics::GraphicsDevice::GetBufferCount()];
 		wi::graphics::GPUBuffer textureStreamingFeedbackBuffer;
 		wi::graphics::GPUBuffer textureStreamingFeedbackBuffer_readback[wi::graphics::GraphicsDevice::GetBufferCount()];
 		const uint32_t* textureStreamingFeedbackMapped = nullptr;
@@ -156,7 +157,7 @@ namespace wi::scene
 		wi::graphics::GPUBuffer skinningUploadBuffer[wi::graphics::GraphicsDevice::GetBufferCount()];
 		void* skinningDataMapped = nullptr;
 		size_t skinningDataSize = 0;
-		wi::graphics::GPUBuffer skinningBuffer;
+		wi::graphics::GPUBuffer skinningBuffer[wi::graphics::GraphicsDevice::GetBufferCount()];
 		std::atomic<uint32_t> skinningAllocator{ 0 };
 
 		wi::graphics::GPUQueryHeap queryHeap;
@@ -289,7 +290,8 @@ namespace wi::scene
 		void PutWaterRipple(const XMFLOAT3& pos);
 		void PutWaterRipple(const std::string& image, const XMFLOAT3& pos);
 
-		wi::graphics::GPUBuffer voxelgrid_gpu; // primary CPU voxelgrid uploaded to GPU
+		wi::graphics::GPUBuffer voxelgrid_gpu_upload;
+		wi::graphics::GPUBuffer voxelgrid_gpu[wi::graphics::GraphicsDevice::GetBufferCount()]; // primary CPU voxelgrid uploaded to GPU
 
 		// Animation processing optimizer:
 		struct AnimationQueue

@@ -1656,13 +1656,16 @@ std::mutex queue_locker;
 			dx12_check(device->device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(cmd.fence)));
 			dx12_check(cmd.fence->SetName(L"CopyAllocator::fence"));
 
-			GPUBufferDesc uploaddesc;
-			uploaddesc.size = wi::math::GetNextPowerOfTwo(staging_size);
-			uploaddesc.size = std::max(uploaddesc.size, uint64_t(65536));
-			uploaddesc.usage = Usage::UPLOAD;
-			bool upload_success = device->CreateBuffer(&uploaddesc, nullptr, &cmd.uploadbuffer);
-			assert(upload_success);
-			device->SetName(&cmd.uploadbuffer, "CopyAllocator::uploadBuffer");
+			if (staging_size > 0)
+			{
+				GPUBufferDesc uploaddesc;
+				uploaddesc.size = wi::math::GetNextPowerOfTwo(staging_size);
+				uploaddesc.size = std::max(uploaddesc.size, uint64_t(65536));
+				uploaddesc.usage = Usage::UPLOAD;
+				bool upload_success = device->CreateBuffer(&uploaddesc, nullptr, &cmd.uploadbuffer);
+				assert(upload_success);
+				device->SetName(&cmd.uploadbuffer, "CopyAllocator::uploadBuffer");
+			}
 		}
 
 		// begin command list in valid state:
@@ -5945,6 +5948,15 @@ std::mutex queue_locker;
 				D3D12_TILE_MAPPING_FLAG_NONE
 			);
 		}
+	}
+
+	void GraphicsDevice_DX12::CopyBufferAsync(const GPUBuffer* pDst, uint64_t dst_offset, const GPUBuffer* pSrc, uint64_t src_offset, uint64_t size) const
+	{
+		auto dst_internal = to_internal(pDst);
+		auto src_internal = to_internal(pSrc);
+		CopyAllocator::CopyCMD cmd = copyAllocator.allocate(0);
+		cmd.commandList->CopyBufferRegion(dst_internal->resource.Get(), dst_offset, src_internal->resource.Get(), src_offset, size);
+		copyAllocator.submit(cmd);
 	}
 
 	void GraphicsDevice_DX12::WaitCommandList(CommandList cmd, CommandList wait_for)

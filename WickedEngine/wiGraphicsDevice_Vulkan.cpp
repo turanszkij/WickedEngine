@@ -1542,13 +1542,16 @@ using namespace vulkan_internal;
 			vulkan_check(vkCreateFence(device->device, &fenceInfo, nullptr, &cmd.fence));
 			device->set_fence_name(cmd.fence, "CopyAllocator::fence");
 
-			GPUBufferDesc uploaddesc;
-			uploaddesc.size = wi::math::GetNextPowerOfTwo(staging_size);
-			uploaddesc.size = std::max(uploaddesc.size, uint64_t(65536));
-			uploaddesc.usage = Usage::UPLOAD;
-			bool upload_success = device->CreateBuffer(&uploaddesc, nullptr, &cmd.uploadbuffer);
-			assert(upload_success);
-			device->SetName(&cmd.uploadbuffer, "CopyAllocator::uploadBuffer");
+			if (staging_size > 0)
+			{
+				GPUBufferDesc uploaddesc;
+				uploaddesc.size = wi::math::GetNextPowerOfTwo(staging_size);
+				uploaddesc.size = std::max(uploaddesc.size, uint64_t(65536));
+				uploaddesc.usage = Usage::UPLOAD;
+				bool upload_success = device->CreateBuffer(&uploaddesc, nullptr, &cmd.uploadbuffer);
+				assert(upload_success);
+				device->SetName(&cmd.uploadbuffer, "CopyAllocator::uploadBuffer");
+			}
 		}
 
 		VkCommandBufferBeginInfo beginInfo = {};
@@ -7068,6 +7071,27 @@ using namespace vulkan_internal;
 
 			vulkan_check(vkQueueBindSparse(q->queue, (uint32_t)sparse_infos.size(), sparse_infos.data(), VK_NULL_HANDLE));
 		}
+	}
+
+	void GraphicsDevice_Vulkan::CopyBufferAsync(const GPUBuffer* pDst, uint64_t dst_offset, const GPUBuffer* pSrc, uint64_t src_offset, uint64_t size) const
+	{
+		auto dst_internal = to_internal(pDst);
+		auto src_internal = to_internal(pSrc);
+		CopyAllocator::CopyCMD cmd = copyAllocator.allocate(0);
+
+		VkBufferCopy copyRegion = {};
+		copyRegion.size = size;
+		copyRegion.srcOffset = src_offset;
+		copyRegion.dstOffset = dst_offset;
+		vkCmdCopyBuffer(
+			cmd.transferCommandBuffer,
+			src_internal->resource,
+			dst_internal->resource,
+			1,
+			&copyRegion
+		);
+
+		copyAllocator.submit(cmd);
 	}
 
 	void GraphicsDevice_Vulkan::WaitCommandList(CommandList cmd, CommandList wait_for)
