@@ -1501,6 +1501,19 @@ using namespace vulkan_internal;
 		{
 			vkDestroyCommandPool(device->device, x.transferCommandPool, nullptr);
 			vkDestroyFence(device->device, x.fence, nullptr);
+			for (auto& sema : x.semaphores)
+			{
+				vkDestroySemaphore(device->device, sema, nullptr);
+			}
+		}
+		for (auto& x : async_worklist)
+		{
+			vkDestroyCommandPool(device->device, x.transferCommandPool, nullptr);
+			vkDestroyFence(device->device, x.fence, nullptr);
+			for (auto& sema : x.semaphores)
+			{
+				vkDestroySemaphore(device->device, sema, nullptr);
+			}
 		}
 	}
 	GraphicsDevice_Vulkan::CopyAllocator::CopyCMD GraphicsDevice_Vulkan::CopyAllocator::allocate(uint64_t staging_size)
@@ -6835,7 +6848,7 @@ using namespace vulkan_internal;
 		// Reusing completed async copies:
 		{
 			std::scoped_lock lck(copyAllocator.locker);
-			for (auto& sema : copyAllocator.async_semaphore_recycle[GetBufferIndex()]) // first free this buffer's recycleable sepahores, only after add to it!
+			for (auto& sema : copyAllocator.async_semaphore_recycle[GetBufferIndex()]) // first free this buffer's recycleable semaphores, only after add to it!
 			{
 				free_semaphore(sema);
 			}
