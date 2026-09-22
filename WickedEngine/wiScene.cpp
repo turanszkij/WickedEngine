@@ -67,7 +67,7 @@ namespace wi::scene
 		// voxel grid upload kick off (after script update):
 		wi::jobsystem::context voxel_gpu_ctx;
 		uint64_t voxel_gpu_size = 0;
-		if (voxel_grids.GetCount() > 0)
+		if (voxel_grids.GetCount() > 0 && wi::renderer::GetDDGIEnabled()) // NOTE: right now only DDGI uses the voxel grid so I skip uploading it if not active
 		{
 			VoxelGrid& voxelgrid = voxel_grids[0];
 			voxel_gpu_size = voxelgrid.voxels.size() * sizeof(uint64_t);
