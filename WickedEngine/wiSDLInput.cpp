@@ -475,11 +475,21 @@ namespace wi::input::sdlinput
 
                     // mouse events
                 case SDL_EVENT_MOUSE_MOTION:          // Mouse moved
-                    mouse.position.x = event.motion.x;
-                    mouse.position.y = event.motion.y;
-                    mouse.delta_position.x += event.motion.xrel;
-                    mouse.delta_position.y += event.motion.yrel;
+                {
+                    // SDL3 reports motion coordinates in window (logical) space, not physical
+                    // pixels, but downstream wiInput.cpp::Update() treats sdlinput::GetMouseState()
+                    // as physical and runs it through canvas.PhysicalToLogical() -- so on any
+                    // display where the window's pixel density != 1 (HiDPI/fractional scaling),
+                    // failing to scale up here first causes wiInput to divide twice, offsetting
+                    // the reported cursor position from the real one (visible as click misses).
+                    SDL_Window* motion_window = SDL_GetWindowFromID(event.motion.windowID);
+                    float density = motion_window ? SDL_GetWindowPixelDensity(motion_window) : 1.0f;
+                    mouse.position.x = event.motion.x * density;
+                    mouse.position.y = event.motion.y * density;
+                    mouse.delta_position.x += event.motion.xrel * density;
+                    mouse.delta_position.y += event.motion.yrel * density;
                     break;
+                }
                 case SDL_EVENT_MOUSE_BUTTON_DOWN:      // Mouse button pressed
                     switch(event.button.button){
                         case SDL_BUTTON_LEFT:

@@ -267,5 +267,12 @@ int main(int argc, char *argv[])
 
 	wi::jobsystem::ShutDown();
 
+	// Must run before SDL_Quit() (triggered below by the `system` RAII wrapper going out of
+	// scope): wi::audio's internal state is otherwise only destroyed as a static at process
+	// exit, which runs after SDL_Quit() has already torn down the audio subsystem -- the
+	// FAudio SDL3 platform backend's device teardown then dereferences an already-invalidated
+	// SDL3 audio device handle and crashes.
+	wi::audio::Deinitialize();
+
 	return ret;
 }

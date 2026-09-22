@@ -205,16 +205,17 @@ if (WICKED_TESTS)
     add_subdirectory(Samples/Tests)
 endif()
 
-# Example_ImGui(_Docking) and Template_Linux still target SDL2 directly
-# (find_package(SDL2 REQUIRED) in their own CMakeLists, SDL2-only main files) and haven't
-# been ported to SDL3, unlike Editor. Skip them under WICKED_USE_SDL3 rather than failing
-# the build; porting them is left as follow-up work.
+# Example_ImGui(_Docking) still targets SDL2 directly (find_package(SDL2 REQUIRED) in its
+# own CMakeLists, SDL2-only main file, and the vendored ImGui 1.89.2 predates SDL3's stable
+# release so there is no imgui_impl_sdl3 backend to build against) and hasn't been ported to
+# SDL3, unlike Editor and Tests. Skip it under WICKED_USE_SDL3 rather than failing the build;
+# porting it is left as follow-up work.
 if (WICKED_IMGUI_EXAMPLE AND NOT WICKED_USE_SDL3)
     add_subdirectory(Samples/Example_ImGui)
     add_subdirectory(Samples/Example_ImGui_Docking)
 endif()
 
-if (WICKED_LINUX_TEMPLATE AND NOT WICKED_USE_SDL3)
+if (WICKED_LINUX_TEMPLATE)
     add_subdirectory(Samples/Template_Linux)
 endif()
 
