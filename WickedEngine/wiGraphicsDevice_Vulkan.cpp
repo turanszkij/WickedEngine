@@ -1515,6 +1515,13 @@ using namespace vulkan_internal;
 				vkDestroySemaphore(device->device, sema, nullptr);
 			}
 		}
+		for (auto& x : async_semaphore_recycle)
+		{
+			for (auto& sema : x)
+			{
+				vkDestroySemaphore(device->device, sema, nullptr);
+			}
+		}
 	}
 	GraphicsDevice_Vulkan::CopyAllocator::CopyCMD GraphicsDevice_Vulkan::CopyAllocator::allocate(uint64_t staging_size)
 	{
