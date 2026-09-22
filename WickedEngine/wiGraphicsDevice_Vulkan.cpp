@@ -1627,7 +1627,7 @@ using namespace vulkan_internal;
 
 				cmd.semaphores.push_back(queue.submit_waitSemaphoreInfos.back().semaphore);
 			}
-
+			
 			std::scoped_lock lock(locker);
 			async_worklist.push_back(cmd);
 		}
@@ -6835,11 +6835,16 @@ using namespace vulkan_internal;
 		// Reusing completed async copies:
 		{
 			std::scoped_lock lck(copyAllocator.locker);
+			for (auto& sema : copyAllocator.async_semaphore_recycle[GetBufferIndex()]) // first free this buffer's recycleable sepahores, only after add to it!
+			{
+				free_semaphore(sema);
+			}
+			copyAllocator.async_semaphore_recycle[GetBufferIndex()].clear();
 			while (!copyAllocator.async_worklist.empty() && vkGetFenceStatus(device, copyAllocator.async_worklist.front().fence) == VK_SUCCESS)
 			{
 				for (auto& sema : copyAllocator.async_worklist.front().semaphores)
 				{
-					free_semaphore(sema);
+					copyAllocator.async_semaphore_recycle[GetBufferIndex()].push_back(sema); // delayed recycling with frame buffering
 				}
 				copyAllocator.async_worklist.front().semaphores.clear();
 				copyAllocator.freelist.push_back(std::move(copyAllocator.async_worklist.front()));
