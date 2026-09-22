@@ -101,7 +101,6 @@ namespace wi::scene
 		wi::jobsystem::context topdown_hierarchy_workload;
 		uint32_t cpu_gpu_mapped_resource_index = 0;
 		mutable uint32_t blas_optimize_offset = 0;
-		wi::jobsystem::context async_upload_ctx;
 
 		// AABB culling streams:
 		wi::vector<wi::primitive::AABB> aabb_objects;
@@ -290,7 +289,7 @@ namespace wi::scene
 		void PutWaterRipple(const XMFLOAT3& pos);
 		void PutWaterRipple(const std::string& image, const XMFLOAT3& pos);
 
-		wi::graphics::GPUBuffer voxelgrid_gpu_upload;
+		wi::graphics::GPUBuffer voxelgrid_gpu_upload[wi::graphics::GraphicsDevice::GetBufferCount()];
 		wi::graphics::GPUBuffer voxelgrid_gpu[wi::graphics::GraphicsDevice::GetBufferCount()]; // primary CPU voxelgrid uploaded to GPU
 
 		// Animation processing optimizer:

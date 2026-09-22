@@ -1566,7 +1566,7 @@ using namespace vulkan_internal;
 
 		return cmd;
 	}
-	void GraphicsDevice_Vulkan::CopyAllocator::submit(CopyCMD cmd)
+	void GraphicsDevice_Vulkan::CopyAllocator::submit(CopyCMD cmd, bool wait)
 	{
 		VkSubmitInfo2 submitInfo = {};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
@@ -1574,24 +1574,63 @@ using namespace vulkan_internal;
 		VkCommandBufferSubmitInfo cbSubmitInfo = {};
 		cbSubmitInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
 
+		StackVector<VkSemaphoreSubmitInfo, QUEUE_COUNT> signals;
+
 		{
 			vulkan_check(vkEndCommandBuffer(cmd.transferCommandBuffer));
 			cbSubmitInfo.commandBuffer = cmd.transferCommandBuffer;
 			submitInfo.commandBufferInfoCount = 1;
 			submitInfo.pCommandBufferInfos = &cbSubmitInfo;
 
+			if (!wait)
+			{
+				for (int q = 0; q < QUEUE_COUNT; ++q)
+				{
+					CommandQueue& queue = device->queues[q];
+					if (queue.queue == nullptr)
+						continue;
+
+					auto& signal = signals.emplace_back();
+					signal.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+					signal.semaphore = device->new_semaphore();
+					signal.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+				}
+				submitInfo.pSignalSemaphoreInfos = signals.data();
+				submitInfo.signalSemaphoreInfoCount = signals.size();
+			}
+
 			std::scoped_lock lock(*device->queue_init.locker);
 			vulkan_check(vkQueueSubmit2(device->queue_init.queue, 1, &submitInfo, cmd.fence));
 		}
 
-		while (vulkan_check(vkWaitForFences(device->device, 1, &cmd.fence, VK_TRUE, timeout_value)) == VK_TIMEOUT)
+		if (wait)
 		{
-			wilog_error("[CopyAllocator::submit] vkWaitForFences resulted in VK_TIMEOUT");
-			std::this_thread::yield();
-		}
+			while (vulkan_check(vkWaitForFences(device->device, 1, &cmd.fence, VK_TRUE, timeout_value)) == VK_TIMEOUT)
+			{
+				wilog_error("[CopyAllocator::submit] vkWaitForFences resulted in VK_TIMEOUT");
+				std::this_thread::yield();
+			}
 
-		std::scoped_lock lock(locker);
-		freelist.push_back(cmd);
+			std::scoped_lock lock(locker);
+			freelist.push_back(cmd);
+		}
+		else
+		{
+			for (int q = 0; q < QUEUE_COUNT; ++q)
+			{
+				CommandQueue& queue = device->queues[q];
+				if (queue.queue == nullptr)
+					continue;
+				std::scoped_lock lock(*queue.locker);
+				queue.submit_waitSemaphoreInfos.push_back(signals.back());
+				signals.pop_back();
+
+				cmd.semaphores.push_back(queue.submit_waitSemaphoreInfos.back().semaphore);
+			}
+
+			std::scoped_lock lock(locker);
+			async_worklist.push_back(cmd);
+		}
 	}
 
 	void GraphicsDevice_Vulkan::DescriptorBinder::flush(bool graphics, CommandList cmd)
@@ -6792,6 +6831,21 @@ using namespace vulkan_internal;
 		}
 
 		allocationhandler->Update(FRAMECOUNT, BUFFERCOUNT);
+
+		// Reusing completed async copies:
+		{
+			std::scoped_lock lck(copyAllocator.locker);
+			while (!copyAllocator.async_worklist.empty() && vkGetFenceStatus(device, copyAllocator.async_worklist.front().fence) == VK_SUCCESS)
+			{
+				for (auto& sema : copyAllocator.async_worklist.front().semaphores)
+				{
+					free_semaphore(sema);
+				}
+				copyAllocator.async_worklist.front().semaphores.clear();
+				copyAllocator.freelist.push_back(std::move(copyAllocator.async_worklist.front()));
+				copyAllocator.async_worklist.pop_front();
+			}
+		}
 	}
 
 	void GraphicsDevice_Vulkan::WaitForGPU() const
@@ -7073,25 +7127,29 @@ using namespace vulkan_internal;
 		}
 	}
 
-	void GraphicsDevice_Vulkan::CopyBufferAsync(const GPUBuffer* pDst, uint64_t dst_offset, const GPUBuffer* pSrc, uint64_t src_offset, uint64_t size) const
+	void GraphicsDevice_Vulkan::CopyBufferAsync(GPUBufferCopyCommand* commands, uint32_t command_count) const
 	{
-		auto dst_internal = to_internal(pDst);
-		auto src_internal = to_internal(pSrc);
 		CopyAllocator::CopyCMD cmd = copyAllocator.allocate(0);
 
-		VkBufferCopy copyRegion = {};
-		copyRegion.size = size;
-		copyRegion.srcOffset = src_offset;
-		copyRegion.dstOffset = dst_offset;
-		vkCmdCopyBuffer(
-			cmd.transferCommandBuffer,
-			src_internal->resource,
-			dst_internal->resource,
-			1,
-			&copyRegion
-		);
+		for (uint32_t i = 0; i < command_count; ++i)
+		{
+			const GPUBufferCopyCommand& command = commands[i];
+			auto dst_internal = to_internal(command.pDst);
+			auto src_internal = to_internal(command.pSrc);
+			VkBufferCopy copyRegion = {};
+			copyRegion.size = command.size;
+			copyRegion.srcOffset = command.src_offset;
+			copyRegion.dstOffset = command.dst_offset;
+			vkCmdCopyBuffer(
+				cmd.transferCommandBuffer,
+				src_internal->resource,
+				dst_internal->resource,
+				1,
+				&copyRegion
+			);
+		}
 
-		copyAllocator.submit(cmd);
+		copyAllocator.submit(cmd, false);
 	}
 
 	void GraphicsDevice_Vulkan::WaitCommandList(CommandList cmd, CommandList wait_for)

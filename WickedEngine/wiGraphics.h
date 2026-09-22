@@ -1390,6 +1390,15 @@ namespace wi::graphics
 		const uint32_t* range_tile_counts = nullptr;			// number of tiles to be mapped (num_ranges array size)
 	};
 
+	struct GPUBufferCopyCommand
+	{
+		const GPUBuffer* pDst = nullptr;
+		uint64_t dst_offset = 0;
+		const GPUBuffer* pSrc = nullptr;
+		uint64_t src_offset = 0;
+		uint64_t size = 0;
+	};
+
 
 	constexpr bool IsFormatSRGB(Format format)
 	{

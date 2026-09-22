@@ -1751,8 +1751,6 @@ namespace wi
 
 		wi::jobsystem::Wait(ctx);
 
-		wi::jobsystem::Wait(scene->async_upload_ctx); // wait async uploads somewhere just before GPU submit, end of CPU render commands is fine
-
 		first_frame = false;
 	}
 

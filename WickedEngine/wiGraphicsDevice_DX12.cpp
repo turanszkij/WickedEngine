@@ -1674,7 +1674,7 @@ std::mutex queue_locker;
 
 		return cmd;
 	}
-	void GraphicsDevice_DX12::CopyAllocator::submit(CopyCMD cmd)
+	void GraphicsDevice_DX12::CopyAllocator::submit(CopyCMD cmd, bool wait)
 	{
 		dx12_check(cmd.commandList->Close());
 		ID3D12CommandList* commandlists[] = {
@@ -1692,10 +1692,26 @@ std::mutex queue_locker;
 			dx12_check(queue->Signal(cmd.fence.Get(), cmd.fenceValue));
 		}
 
-		dx12_check(cmd.fence->SetEventOnCompletion(cmd.fenceValue, nullptr));
+		if (wait)
+		{
+			dx12_check(cmd.fence->SetEventOnCompletion(cmd.fenceValue, nullptr));
 
-		std::scoped_lock lock(locker);
-		freelist.push_back(cmd);
+			std::scoped_lock lock(locker);
+			freelist.push_back(cmd);
+		}
+		else
+		{
+			for (int q = 0; q < QUEUE_COUNT; ++q)
+			{
+				CommandQueue& queue = device->queues[q];
+				if (queue.queue == nullptr)
+					continue;
+				queue.queue->Wait(cmd.fence.Get(), cmd.fenceValue);
+			}
+
+			std::scoped_lock lock(locker);
+			async_worklist.push_back(cmd);
+		}
 	}
 
 	void GraphicsDevice_DX12::DescriptorBinder::init(GraphicsDevice_DX12* device)
@@ -5513,6 +5529,16 @@ std::mutex queue_locker;
 		}
 
 		allocationhandler->Update(FRAMECOUNT, BUFFERCOUNT);
+
+		// Reusing completed async copies:
+		{
+			std::scoped_lock lck(copyAllocator.locker);
+			while (!copyAllocator.async_worklist.empty() && copyAllocator.async_worklist.front().fence->GetCompletedValue() >= copyAllocator.async_worklist.front().fenceValue)
+			{
+				copyAllocator.freelist.push_back(std::move(copyAllocator.async_worklist.front()));
+				copyAllocator.async_worklist.pop_front();
+			}
+		}
 	}
 
 	void GraphicsDevice_DX12::OnDeviceRemoved()
@@ -5950,13 +5976,17 @@ std::mutex queue_locker;
 		}
 	}
 
-	void GraphicsDevice_DX12::CopyBufferAsync(const GPUBuffer* pDst, uint64_t dst_offset, const GPUBuffer* pSrc, uint64_t src_offset, uint64_t size) const
+	void GraphicsDevice_DX12::CopyBufferAsync(GPUBufferCopyCommand* commands, uint32_t command_count) const
 	{
-		auto dst_internal = to_internal(pDst);
-		auto src_internal = to_internal(pSrc);
 		CopyAllocator::CopyCMD cmd = copyAllocator.allocate(0);
-		cmd.commandList->CopyBufferRegion(dst_internal->resource.Get(), dst_offset, src_internal->resource.Get(), src_offset, size);
-		copyAllocator.submit(cmd);
+		for (uint32_t i = 0; i < command_count; ++i)
+		{
+			const GPUBufferCopyCommand& command = commands[i];
+			auto dst_internal = to_internal(command.pDst);
+			auto src_internal = to_internal(command.pSrc);
+			cmd.commandList->CopyBufferRegion(dst_internal->resource.Get(), command.dst_offset, src_internal->resource.Get(), command.src_offset, command.size);
+		}
+		copyAllocator.submit(cmd, false);
 	}
 
 	void GraphicsDevice_DX12::WaitCommandList(CommandList cmd, CommandList wait_for)

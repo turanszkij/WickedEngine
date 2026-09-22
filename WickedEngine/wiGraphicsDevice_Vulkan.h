@@ -266,14 +266,16 @@ namespace wi::graphics
 				VkCommandBuffer transferCommandBuffer = VK_NULL_HANDLE;
 				VkFence fence = VK_NULL_HANDLE;
 				GPUBuffer uploadbuffer;
+				wi::vector<VkSemaphore> semaphores;
 				constexpr bool IsValid() const { return transferCommandBuffer != VK_NULL_HANDLE; }
 			};
 			wi::vector<CopyCMD> freelist;
+			std::deque<CopyCMD> async_worklist;
 
 			void init(GraphicsDevice_Vulkan* device);
 			void destroy();
 			CopyCMD allocate(uint64_t staging_size);
-			void submit(CopyCMD cmd);
+			void submit(CopyCMD cmd, bool wait = true);
 		};
 		mutable CopyAllocator copyAllocator;
 
@@ -630,7 +632,7 @@ namespace wi::graphics
 
 		void SparseUpdate(QUEUE_TYPE queue, const SparseUpdateCommand* commands, uint32_t command_count) override;
 
-		void CopyBufferAsync(const GPUBuffer* pDst, uint64_t dst_offset, const GPUBuffer* pSrc, uint64_t src_offset, uint64_t size) const override;
+		void CopyBufferAsync(GPUBufferCopyCommand* commands, uint32_t command_count) const override;
 
 		const char* GetTag() const override { return "[Vulkan]"; }
 
