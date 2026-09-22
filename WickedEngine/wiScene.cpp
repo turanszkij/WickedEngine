@@ -1084,29 +1084,29 @@ namespace wi::scene
 		if (instanceArraySize > 0 && instanceBuffer[cpu_gpu_mapped_resource_index].IsValid())
 		{
 			GPUBufferCopyCommand& command = async_buffer_uploads.emplace_back();
-			command.pDst = &instanceBuffer[cpu_gpu_mapped_resource_index];
-			command.pSrc = &instanceUploadBuffer[cpu_gpu_mapped_resource_index];
+			command.dst = &instanceBuffer[cpu_gpu_mapped_resource_index];
+			command.src = &instanceUploadBuffer[cpu_gpu_mapped_resource_index];
 			command.size = instanceArraySize * sizeof(ShaderMeshInstance);
 		}
 		if (materialArraySize > 0 && materialBuffer[cpu_gpu_mapped_resource_index].IsValid())
 		{
 			GPUBufferCopyCommand& command = async_buffer_uploads.emplace_back();
-			command.pDst = &materialBuffer[cpu_gpu_mapped_resource_index];
-			command.pSrc = &materialUploadBuffer[cpu_gpu_mapped_resource_index];
+			command.dst = &materialBuffer[cpu_gpu_mapped_resource_index];
+			command.src = &materialUploadBuffer[cpu_gpu_mapped_resource_index];
 			command.size = materialArraySize * sizeof(ShaderMaterial);
 		}
 		if (geometryArraySize > 0 && geometryBuffer[cpu_gpu_mapped_resource_index].IsValid())
 		{
 			GPUBufferCopyCommand& command = async_buffer_uploads.emplace_back();
-			command.pDst = &geometryBuffer[cpu_gpu_mapped_resource_index];
-			command.pSrc = &geometryUploadBuffer[cpu_gpu_mapped_resource_index];
+			command.dst = &geometryBuffer[cpu_gpu_mapped_resource_index];
+			command.src = &geometryUploadBuffer[cpu_gpu_mapped_resource_index];
 			command.size = geometryArraySize * sizeof(ShaderGeometry);
 		}
 		if (skinningDataSize > 0 && skinningBuffer[cpu_gpu_mapped_resource_index].IsValid())
 		{
 			GPUBufferCopyCommand& command = async_buffer_uploads.emplace_back();
-			command.pDst = &skinningBuffer[cpu_gpu_mapped_resource_index];
-			command.pSrc = &skinningUploadBuffer[cpu_gpu_mapped_resource_index];
+			command.dst = &skinningBuffer[cpu_gpu_mapped_resource_index];
+			command.src = &skinningUploadBuffer[cpu_gpu_mapped_resource_index];
 			command.size = skinningDataSize;
 		}
 		if (voxel_gpu_size > 0)
@@ -1115,8 +1115,8 @@ namespace wi::scene
 			if (!UMA)
 			{
 				GPUBufferCopyCommand& command = async_buffer_uploads.emplace_back();
-				command.pDst = &voxelgrid_gpu[cpu_gpu_mapped_resource_index];
-				command.pSrc = &voxelgrid_gpu_upload[cpu_gpu_mapped_resource_index];
+				command.dst = &voxelgrid_gpu[cpu_gpu_mapped_resource_index];
+				command.src = &voxelgrid_gpu_upload[cpu_gpu_mapped_resource_index];
 				command.size = voxel_gpu_size;
 			}
 		}

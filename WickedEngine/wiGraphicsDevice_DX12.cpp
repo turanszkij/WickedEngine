@@ -5993,8 +5993,8 @@ std::mutex queue_locker;
 		for (uint32_t i = 0; i < command_count; ++i)
 		{
 			const GPUBufferCopyCommand& command = commands[i];
-			auto dst_internal = to_internal(command.pDst);
-			auto src_internal = to_internal(command.pSrc);
+			auto dst_internal = to_internal(command.dst);
+			auto src_internal = to_internal(command.src);
 			cmd.commandList->CopyBufferRegion(dst_internal->resource.Get(), command.dst_offset, src_internal->resource.Get(), command.src_offset, command.size);
 		}
 		if (name != nullptr)
