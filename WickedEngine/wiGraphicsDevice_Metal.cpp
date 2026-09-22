@@ -3471,6 +3471,40 @@ using namespace metal_internal;
 #endif
 	}
 
+	void GraphicsDevice_Metal::CopyBufferAsync(GPUBufferCopyCommand* commands, uint32_t command_count, const char* name) const
+	{
+		NS::SharedPtr<NS::AutoreleasePool> autorelease_pool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init()); // scoped drain!
+		NS::SharedPtr<MTL4::CommandBuffer> commandbuffer = NS::TransferPtr(device->newCommandBuffer());
+		NS::SharedPtr<MTL4::CommandAllocator> commandallocator = NS::TransferPtr(device->newCommandAllocator());
+		commandbuffer->beginCommandBuffer(commandallocator.get());
+		
+		MTL4::ComputeCommandEncoder* encoder = commandbuffer->computeCommandEncoder();
+		
+		for(uint32_t i = 0;i<command_count;++i)
+		{
+			const GPUBufferCopyCommand& command = commands[i];
+			auto dst_internal = to_internal(command.pDst);
+			auto src_internal = to_internal(command.pSrc);
+			encoder->copyFromBuffer(src_internal->buffer.get(), command.src_offset, dst_internal->buffer.get(), command.dst_offset, command.size);
+		}
+		
+		encoder->endEncoding();
+		commandbuffer->endCommandBuffer();
+		MTL4::CommandBuffer* cmds[] = {commandbuffer.get()};
+		uploadqueue->commit(cmds, arraysize(cmds));
+		NS::SharedPtr<MTL::SharedEvent> event = NS::TransferPtr(device->newSharedEvent());
+		event->setSignaledValue(0);
+		uploadqueue->signalEvent(event.get(), 1);
+		event->waitUntilSignaledValue(1, ~0ull);
+		
+		for (int queue = 0; queue < QUEUE_COUNT; ++queue)
+		{
+			if (queues[queue].queue.get() == nullptr)
+				continue;
+			queues[queue].queue->wait(event.get(), 1);
+		}
+	}
+
 	void GraphicsDevice_Metal::WaitCommandList(CommandList cmd, CommandList wait_for)
 	{
 		CommandList_Metal& commandlist = GetCommandList(cmd);
