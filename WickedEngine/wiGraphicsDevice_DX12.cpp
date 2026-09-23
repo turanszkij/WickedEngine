@@ -3614,16 +3614,9 @@ std::mutex queue_locker;
 		wi::graphics::xbox::ApplyTextureCreationFlags(texture->desc, resourcedesc.Flags, allocationDesc.ExtraHeapFlags);
 #endif // PLATFORM_XBOX
 
-		// An explicit `alias` target must take precedence over the ALIASING_* misc_flags below --
-		// otherwise a texture created with both (e.g. two textures in wiRenderPath3D.cpp that pass
-		// an alias target while also being flagged ALIASING_TEXTURE_RT_DS, as required to be
-		// eligible for aliasing at all) silently gets its own independent heap here instead of
-		// actually aliasing, and the GPUBarrier::Aliasing() issued between them later is rejected
-		// by the D3D12 debug layer (RESOURCE_BARRIER_INVALID_RESOURCE #528), corrupting the command
-		// list and causing its later Close() to fail with E_INVALIDARG.
-		if (alias == nullptr && (has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_BUFFER) ||
+		if (has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_BUFFER) ||
 			has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_NON_RT_DS) ||
-			has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_RT_DS)))
+			has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_TEXTURE_RT_DS))
 		{
 			// Aliasing memory pool must not be a committed resource because that uses implicit heap which returns nullptr,
 			//	thus it cannot be offsetted. This is why we create custom allocation here which will never be committed resource
