@@ -1688,6 +1688,7 @@ using namespace metal_internal;
 			{
 				NS::SharedPtr<NS::AutoreleasePool> autorelease_pool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init());
 				CopyAllocator::CopyCMD cmd = copyAllocator.allocate(desc->size);
+				init_callback(cmd.mapped_data);
 				MTL4::ComputeCommandEncoder* encoder = cmd.commandbuffer->computeCommandEncoder();
 				encoder->copyFromBuffer(cmd.uploadbuffer.get(), 0, internal_state->buffer.get(), 0, desc->size);
 				encoder->endEncoding();
@@ -1951,7 +1952,7 @@ using namespace metal_internal;
 				autorelease_pool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init());
 				cmd = copyAllocator.allocate(internal_state->texture->allocatedSize());
 				encoder = cmd.commandbuffer->computeCommandEncoder();
-				upload_data = (uint8_t*)cmd.uploadbuffer->contents();
+				upload_data = cmd.mapped_data;
 			}
 			
 			const uint32_t data_stride = GetFormatStride(desc->format);
@@ -3330,7 +3331,7 @@ using namespace metal_internal;
 			while (!copyAllocator.async_worklist.empty() && copyAllocator.async_worklist.front().event->signaledValue() >= copyAllocator.async_worklist.front().fenceValue)
 			{
 				copyAllocator.freelist.push_back(std::move(copyAllocator.async_worklist.front()));
-				copyAllocator.async_worklist.pop_back();
+				copyAllocator.async_worklist.pop_front();
 			}
 		}
 	}

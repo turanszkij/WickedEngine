@@ -112,13 +112,15 @@ namespace wi::graphics
 				NS::SharedPtr<MTL4::CommandBuffer> commandbuffer;
 				NS::SharedPtr<MTL4::CommandAllocator> commandallocator;
 				NS::SharedPtr<MTL::Buffer> uploadbuffer;
+				uint64_t size = 0;
+				uint8_t* mapped_data = nullptr;
 				NS::SharedPtr<MTL::SharedEvent> event;
 				uint64_t fenceValue = 0;
 				
 				bool IsValid() const { return commandbuffer.get() != nullptr; }
 			};
 			wi::vector<CopyCMD> freelist;
-			wi::vector<CopyCMD> async_worklist;
+			std::deque<CopyCMD> async_worklist;
 			
 			void init(GraphicsDevice_Metal* dev)
 			{
@@ -132,7 +134,7 @@ namespace wi::graphics
 				// Try to search for a staging buffer that can fit the request:
 				for (size_t i = 0; i < freelist.size(); ++i)
 				{
-					if (freelist[i].uploadbuffer->allocatedSize() >= staging_size)
+					if (freelist[i].size >= staging_size)
 					{
 						cmd = std::move(freelist[i]);
 						std::swap(freelist[i], freelist.back());
@@ -151,11 +153,13 @@ namespace wi::graphics
 					
 					if (staging_size > 0)
 					{
+						cmd.size = staging_size;
 						cmd.uploadbuffer = NS::TransferPtr(device->device->newBuffer(staging_size, MTL::ResourceStorageModeShared | MTL::ResourceOptionCPUCacheModeWriteCombined));
 						device->allocationhandler->destroylocker.lock();
 						device->allocationhandler->residency_set->addAllocation(cmd.uploadbuffer.get());
 						device->allocationhandler->residency_set->commit();
 						device->allocationhandler->destroylocker.unlock();
+						cmd.mapped_data = (uint8_t*)cmd.uploadbuffer->contents();
 					}
 				}
 				
@@ -167,15 +171,18 @@ namespace wi::graphics
 			{
 				cmd.commandbuffer->endCommandBuffer();
 				MTL4::CommandBuffer* cmds[] = {cmd.commandbuffer.get()};
+				
+				cmd.fenceValue++;
+				
 				device->uploadqueue->commit(cmds, arraysize(cmds));
-				device->uploadqueue->signalEvent(cmd.event.get(), ++cmd.fenceValue);
+				device->uploadqueue->signalEvent(cmd.event.get(), cmd.fenceValue);
 				
 				if (wait)
 				{
 					cmd.event->waitUntilSignaledValue(cmd.fenceValue, ~0ull);
 					
 					std::scoped_lock lck(locker);
-					freelist.push_back(cmd);
+					freelist.push_back(std::move(cmd));
 				}
 				else
 				{
@@ -187,7 +194,7 @@ namespace wi::graphics
 					}
 					
 					std::scoped_lock lck(locker);
-					async_worklist.push_back(cmd);
+					async_worklist.push_back(std::move(cmd));
 				}
 			}
 		};
