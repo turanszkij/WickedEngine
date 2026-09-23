@@ -111,6 +111,7 @@ namespace wi::graphics
 			{
 				NS::SharedPtr<MTL4::CommandBuffer> commandbuffer;
 				NS::SharedPtr<MTL4::CommandAllocator> commandallocator;
+				MTL4::ComputeCommandEncoder* encoder = nullptr;
 				NS::SharedPtr<MTL::Buffer> uploadbuffer;
 				uint64_t size = 0;
 				uint8_t* mapped_data = nullptr;
@@ -146,8 +147,8 @@ namespace wi::graphics
 				
 				if (!cmd.IsValid())
 				{
-					cmd.commandbuffer = NS::TransferPtr(device->device->newCommandBuffer());
 					cmd.commandallocator = NS::TransferPtr(device->device->newCommandAllocator());
+					cmd.commandbuffer = NS::TransferPtr(device->device->newCommandBuffer());
 					cmd.event = NS::TransferPtr(device->device->newSharedEvent());
 					cmd.event->setSignaledValue(0);
 					
@@ -165,10 +166,12 @@ namespace wi::graphics
 				
 				cmd.commandallocator->reset();
 				cmd.commandbuffer->beginCommandBuffer(cmd.commandallocator.get());
+				cmd.encoder = cmd.commandbuffer->computeCommandEncoder();
 				return cmd;
 			}
 			void submit(CopyCMD cmd, bool wait = true)
 			{
+				cmd.encoder->endEncoding();
 				cmd.commandbuffer->endCommandBuffer();
 				MTL4::CommandBuffer* cmds[] = {cmd.commandbuffer.get()};
 				

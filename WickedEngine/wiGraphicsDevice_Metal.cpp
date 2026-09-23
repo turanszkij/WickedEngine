@@ -1689,9 +1689,7 @@ using namespace metal_internal;
 				NS::SharedPtr<NS::AutoreleasePool> autorelease_pool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init());
 				CopyAllocator::CopyCMD cmd = copyAllocator.allocate(desc->size);
 				init_callback(cmd.mapped_data);
-				MTL4::ComputeCommandEncoder* encoder = cmd.commandbuffer->computeCommandEncoder();
-				encoder->copyFromBuffer(cmd.uploadbuffer.get(), 0, internal_state->buffer.get(), 0, desc->size);
-				encoder->endEncoding();
+				cmd.encoder->copyFromBuffer(cmd.uploadbuffer.get(), 0, internal_state->buffer.get(), 0, desc->size);
 				copyAllocator.submit(cmd);
 			}
 			else
@@ -1940,7 +1938,6 @@ using namespace metal_internal;
 		{
 			NS::SharedPtr<NS::AutoreleasePool> autorelease_pool; // scoped drain!
 			CopyAllocator::CopyCMD cmd;
-			MTL4::ComputeCommandEncoder* encoder = nullptr;
 			uint8_t* upload_data = nullptr;
 			if (internal_state->buffer.get() != nullptr)
 			{
@@ -1951,7 +1948,6 @@ using namespace metal_internal;
 			{
 				autorelease_pool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init());
 				cmd = copyAllocator.allocate(internal_state->texture->allocatedSize());
-				encoder = cmd.commandbuffer->computeCommandEncoder();
 				upload_data = cmd.mapped_data;
 			}
 			
@@ -1987,7 +1983,7 @@ using namespace metal_internal;
 						size.width = width;
 						size.height = height;
 						size.depth = depth;
-						encoder->copyFromBuffer(cmd.uploadbuffer.get(), src_offset, subresourceData.row_pitch, subresourceData.slice_pitch, size, internal_state->texture.get(), slice, mip, origin);
+						cmd.encoder->copyFromBuffer(cmd.uploadbuffer.get(), src_offset, subresourceData.row_pitch, subresourceData.slice_pitch, size, internal_state->texture.get(), slice, mip, origin);
 						width = std::max(1u, width / 2);
 						height = std::max(1u, height / 2);
 					}
@@ -2004,7 +2000,6 @@ using namespace metal_internal;
 			
 			if (cmd.IsValid())
 			{
-				encoder->endEncoding();
 				copyAllocator.submit(cmd);
 			}
 		}
@@ -3454,17 +3449,15 @@ using namespace metal_internal;
 		NS::SharedPtr<NS::AutoreleasePool> autorelease_pool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init()); // scoped drain!
 		
 		CopyAllocator::CopyCMD cmd = copyAllocator.allocate(0);
-		MTL4::ComputeCommandEncoder* encoder = cmd.commandbuffer->computeCommandEncoder();
 		
 		for (uint32_t i = 0; i < command_count; ++i)
 		{
 			const GPUBufferCopyCommand& command = commands[i];
 			auto dst_internal = to_internal(command.dst);
 			auto src_internal = to_internal(command.src);
-			encoder->copyFromBuffer(src_internal->buffer.get(), command.src_offset, dst_internal->buffer.get(), command.dst_offset, command.size);
+			cmd.encoder->copyFromBuffer(src_internal->buffer.get(), command.src_offset, dst_internal->buffer.get(), command.dst_offset, command.size);
 		}
 		
-		encoder->endEncoding();
 		copyAllocator.submit(cmd, false);
 	}
 
