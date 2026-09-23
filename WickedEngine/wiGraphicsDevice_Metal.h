@@ -60,7 +60,6 @@ namespace wi::graphics
 		
 	private:
 		NS::SharedPtr<MTL::Device> device;
-		NS::SharedPtr<MTL4::CommandQueue> uploadqueue;
 		bool textureUlongAtomics = true;
 		
 		struct Semaphore
@@ -105,6 +104,7 @@ namespace wi::graphics
 		struct CopyAllocator
 		{
 			GraphicsDevice_Metal* device = nullptr;
+			NS::SharedPtr<MTL4::CommandQueue> uploadqueue;
 			std::mutex locker;
 			
 			struct CopyCMD
@@ -126,6 +126,8 @@ namespace wi::graphics
 			void init(GraphicsDevice_Metal* dev)
 			{
 				device = dev;
+				uploadqueue = NS::TransferPtr(device->device->newMTL4CommandQueue());
+				uploadqueue->addResidencySet(device->allocationhandler->residency_set.get());
 			}
 			CopyCMD allocate(uint64_t staging_size)
 			{
@@ -158,7 +160,6 @@ namespace wi::graphics
 						cmd.uploadbuffer = NS::TransferPtr(device->device->newBuffer(staging_size, MTL::ResourceStorageModeShared | MTL::ResourceOptionCPUCacheModeWriteCombined));
 						device->allocationhandler->destroylocker.lock();
 						device->allocationhandler->residency_set->addAllocation(cmd.uploadbuffer.get());
-						device->allocationhandler->residency_set->commit();
 						device->allocationhandler->destroylocker.unlock();
 						cmd.mapped_data = (uint8_t*)cmd.uploadbuffer->contents();
 					}
@@ -167,12 +168,6 @@ namespace wi::graphics
 				cmd.commandallocator->reset();
 				cmd.commandbuffer->beginCommandBuffer(cmd.commandallocator.get());
 				cmd.encoder = cmd.commandbuffer->computeCommandEncoder();
-				if (staging_size > 0)
-				{
-					device->allocationhandler->destroylocker.lock();
-					device->allocationhandler->residency_set->commit();
-					device->allocationhandler->destroylocker.unlock();
-				}
 				return cmd;
 			}
 			void submit(CopyCMD cmd, bool wait = true)
@@ -183,8 +178,12 @@ namespace wi::graphics
 				
 				cmd.fenceValue++;
 				
-				device->uploadqueue->commit(cmds, arraysize(cmds));
-				device->uploadqueue->signalEvent(cmd.event.get(), cmd.fenceValue);
+				device->allocationhandler->destroylocker.lock();
+				device->allocationhandler->residency_set->commit();
+				device->allocationhandler->destroylocker.unlock();
+				
+				uploadqueue->commit(cmds, arraysize(cmds));
+				uploadqueue->signalEvent(cmd.event.get(), cmd.fenceValue);
 				
 				if (wait)
 				{
