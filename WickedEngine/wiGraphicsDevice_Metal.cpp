@@ -1406,7 +1406,6 @@ using namespace metal_internal;
 		
 		TIMESTAMP_FREQUENCY = device->queryTimestampFrequency();
 		
-		uploadqueue = NS::TransferPtr(device->newMTL4CommandQueue());
 		allocationhandler = wi::allocator::make_shared_single<AllocationHandler>();
 		
 		argument_table_desc = NS::TransferPtr(MTL4::ArgumentTableDescriptor::alloc()->init());
@@ -1454,7 +1453,6 @@ using namespace metal_internal;
 			error->release();
 		}
 		assert(allocationhandler->residency_set.get() != nullptr);
-		uploadqueue->addResidencySet(allocationhandler->residency_set.get());
 		allocationhandler->make_resident(descriptor_heap_res.get());
 		allocationhandler->make_resident(descriptor_heap_sam.get());
 		
