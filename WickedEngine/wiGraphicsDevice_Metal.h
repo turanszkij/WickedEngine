@@ -167,6 +167,12 @@ namespace wi::graphics
 				cmd.commandallocator->reset();
 				cmd.commandbuffer->beginCommandBuffer(cmd.commandallocator.get());
 				cmd.encoder = cmd.commandbuffer->computeCommandEncoder();
+				if (staging_size > 0)
+				{
+					device->allocationhandler->destroylocker.lock();
+					device->allocationhandler->residency_set->commit();
+					device->allocationhandler->destroylocker.unlock();
+				}
 				return cmd;
 			}
 			void submit(CopyCMD cmd, bool wait = true)
