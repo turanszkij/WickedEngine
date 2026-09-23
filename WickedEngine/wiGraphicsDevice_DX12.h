@@ -127,7 +127,7 @@ namespace wi::graphics
 
 			void init(GraphicsDevice_DX12* device);
 			CopyCMD allocate(uint64_t staging_size);
-			void submit(CopyCMD cmd, bool wait = true);
+			void submit(CopyCMD cmd, bool wait_cpu = true);
 		};
 		mutable CopyAllocator copyAllocator;
 

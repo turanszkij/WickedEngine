@@ -170,7 +170,7 @@ namespace wi::graphics
 				cmd.encoder = cmd.commandbuffer->computeCommandEncoder();
 				return cmd;
 			}
-			void submit(CopyCMD cmd, bool wait = true)
+			void submit(CopyCMD cmd, bool wait_cpu = true)
 			{
 				cmd.encoder->endEncoding();
 				cmd.commandbuffer->endCommandBuffer();
@@ -185,7 +185,7 @@ namespace wi::graphics
 				uploadqueue->commit(cmds, arraysize(cmds));
 				uploadqueue->signalEvent(cmd.event.get(), cmd.fenceValue);
 				
-				if (wait)
+				if (wait_cpu)
 				{
 					cmd.event->waitUntilSignaledValue(cmd.fenceValue, ~0ull);
 					

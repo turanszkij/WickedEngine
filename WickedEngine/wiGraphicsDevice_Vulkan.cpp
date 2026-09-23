@@ -1586,7 +1586,7 @@ using namespace vulkan_internal;
 
 		return cmd;
 	}
-	void GraphicsDevice_Vulkan::CopyAllocator::submit(CopyCMD cmd, bool wait)
+	void GraphicsDevice_Vulkan::CopyAllocator::submit(CopyCMD cmd, bool wait_cpu)
 	{
 		VkSubmitInfo2 submitInfo = {};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
@@ -1602,7 +1602,7 @@ using namespace vulkan_internal;
 			submitInfo.commandBufferInfoCount = 1;
 			submitInfo.pCommandBufferInfos = &cbSubmitInfo;
 
-			if (!wait)
+			if (!wait_cpu)
 			{
 				for (int q = 0; q < QUEUE_COUNT; ++q)
 				{
@@ -1623,7 +1623,7 @@ using namespace vulkan_internal;
 			vulkan_check(vkQueueSubmit2(device->queue_init.queue, 1, &submitInfo, cmd.fence));
 		}
 
-		if (wait)
+		if (wait_cpu)
 		{
 			while (vulkan_check(vkWaitForFences(device->device, 1, &cmd.fence, VK_TRUE, timeout_value)) == VK_TIMEOUT)
 			{

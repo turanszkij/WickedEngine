@@ -1674,7 +1674,7 @@ std::mutex queue_locker;
 
 		return cmd;
 	}
-	void GraphicsDevice_DX12::CopyAllocator::submit(CopyCMD cmd, bool wait)
+	void GraphicsDevice_DX12::CopyAllocator::submit(CopyCMD cmd, bool wait_cpu)
 	{
 		dx12_check(cmd.commandList->Close());
 		ID3D12CommandList* commandlists[] = {
@@ -1692,7 +1692,7 @@ std::mutex queue_locker;
 			dx12_check(queue->Signal(cmd.fence.Get(), cmd.fenceValue));
 		}
 
-		if (wait)
+		if (wait_cpu)
 		{
 			dx12_check(cmd.fence->SetEventOnCompletion(cmd.fenceValue, nullptr));
 
