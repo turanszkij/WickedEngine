@@ -5805,13 +5805,14 @@ std::mutex queue_locker;
 		{
 			if (queue.queue == nullptr)
 				continue;
-			dx12_check(queue.queue->Signal(fence.Get(), 1));
-			if (fence->GetCompletedValue() < 1)
-			{
-				dx12_check(fence->SetEventOnCompletion(1, nullptr));
-			}
 			fence->Signal(0);
+			dx12_check(queue.queue->Signal(fence.Get(), 1));
+			dx12_check(fence->SetEventOnCompletion(1, nullptr));
 		}
+
+		fence->Signal(0);
+		dx12_check(copyAllocator.queue->Signal(fence.Get(), 1));
+		dx12_check(fence->SetEventOnCompletion(1, nullptr));
 	}
 
 	void GraphicsDevice_DX12::ClearPipelineStateCache()
