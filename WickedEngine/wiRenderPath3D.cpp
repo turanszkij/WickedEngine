@@ -137,6 +137,7 @@ namespace wi
 			desc.format = wi::renderer::format_rendertarget_main;
 			desc.width = internalResolution.x;
 			desc.height = internalResolution.y;
+			desc.misc_flags = ResourceMiscFlag::ALIASING_TEXTURE_RT_DS;
 			device->CreateTexture(&desc, nullptr, &rtPostprocess);
 			device->SetName(&rtPostprocess, "renderpath3D.rtPostprocess");
 		}
@@ -152,7 +153,6 @@ namespace wi
 			desc.height = internalResolution.y;
 			desc.sample_count = 1;
 			desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
-			desc.misc_flags = ResourceMiscFlag::ALIASING_TEXTURE_RT_DS;
 			assert(ComputeTextureMemorySizeInBytes(desc) <= ComputeTextureMemorySizeInBytes(rtPostprocess.desc)); // Aliased check
 			device->CreateTexture(&desc, nullptr, &rtPrimitiveID, &rtPostprocess); // Aliased!
 			device->SetName(&rtPrimitiveID, "renderpath3D.rtPrimitiveID");
