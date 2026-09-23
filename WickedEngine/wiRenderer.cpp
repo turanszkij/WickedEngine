@@ -5218,86 +5218,10 @@ void UpdateRenderData(
 	PushBarrier(GPUBarrier::Buffer(&vis.scene->meshletBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS));
 
 	PushBarrier(GPUBarrier::Buffer(&buffers[BUFFERTYPE_FRAMECB], ResourceState::CONSTANT_BUFFER, ResourceState::COPY_DST));
-	if (vis.scene->instanceBuffer.IsValid())
-	{
-		PushBarrier(GPUBarrier::Buffer(&vis.scene->instanceBuffer, ResourceState::SHADER_RESOURCE, ResourceState::COPY_DST));
-	}
-	if (vis.scene->geometryBuffer.IsValid())
-	{
-		PushBarrier(GPUBarrier::Buffer(&vis.scene->geometryBuffer, ResourceState::SHADER_RESOURCE, ResourceState::COPY_DST));
-	}
-	if (vis.scene->materialBuffer.IsValid())
-	{
-		PushBarrier(GPUBarrier::Buffer(&vis.scene->materialBuffer, ResourceState::SHADER_RESOURCE, ResourceState::COPY_DST));
-	}
-	if (vis.scene->skinningBuffer.IsValid())
-	{
-		PushBarrier(GPUBarrier::Buffer(&vis.scene->skinningBuffer, ResourceState::SHADER_RESOURCE, ResourceState::COPY_DST));
-	}
 	FlushBarriers(cmd);
 
 	device->UpdateBuffer(&buffers[BUFFERTYPE_FRAMECB], &frameCB, cmd);
 	PushBarrier(GPUBarrier::Buffer(&buffers[BUFFERTYPE_FRAMECB], ResourceState::COPY_DST, ResourceState::CONSTANT_BUFFER));
-
-	if (vis.scene->instanceBuffer.IsValid() && vis.scene->instanceArraySize > 0)
-	{
-		device->EventBegin("Upload instances", cmd);
-		device->CopyBuffer(
-			&vis.scene->instanceBuffer,
-			0,
-			&vis.scene->instanceUploadBuffer[vis.scene->cpu_gpu_mapped_resource_index],
-			0,
-			vis.scene->instanceArraySize * sizeof(ShaderMeshInstance),
-			cmd
-		);
-		PushBarrier(GPUBarrier::Buffer(&vis.scene->instanceBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
-		device->EventEnd(cmd);
-	}
-
-	if (vis.scene->geometryBuffer.IsValid() && vis.scene->geometryArraySize > 0)
-	{
-		device->EventBegin("Upload geometries", cmd);
-		device->CopyBuffer(
-			&vis.scene->geometryBuffer,
-			0,
-			&vis.scene->geometryUploadBuffer[vis.scene->cpu_gpu_mapped_resource_index],
-			0,
-			vis.scene->geometryArraySize * sizeof(ShaderGeometry),
-			cmd
-		);
-		PushBarrier(GPUBarrier::Buffer(&vis.scene->geometryBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
-		device->EventEnd(cmd);
-	}
-
-	if (vis.scene->materialBuffer.IsValid() && vis.scene->materialArraySize > 0)
-	{
-		device->EventBegin("Upload materials", cmd);
-		device->CopyBuffer(
-			&vis.scene->materialBuffer,
-			0,
-			&vis.scene->materialUploadBuffer[vis.scene->cpu_gpu_mapped_resource_index],
-			0,
-			vis.scene->materialArraySize * sizeof(ShaderMaterial),
-			cmd
-		);
-		PushBarrier(GPUBarrier::Buffer(&vis.scene->materialBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
-		device->EventEnd(cmd);
-	}
-
-	if (vis.scene->skinningBuffer.IsValid() && vis.scene->skinningDataSize > 0)
-	{
-		device->EventBegin("Upload skinning buffer", cmd);
-		device->CopyBuffer(
-			&vis.scene->skinningBuffer,
-			0,
-			&vis.scene->skinningUploadBuffer[vis.scene->cpu_gpu_mapped_resource_index],
-			0,
-			vis.scene->skinningDataSize,
-			cmd
-		);
-		PushBarrier(GPUBarrier::Buffer(&vis.scene->skinningBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
-		device->EventEnd(cmd);
-	}
 
 	// Indirect debug buffer - clear indirect args:
 	IndirectDrawArgsInstanced debug_indirect = {};
@@ -5340,9 +5264,9 @@ void UpdateRenderData(
 		device->EventBegin("Skinning and Morph", cmd);
 		auto range = wi::profiler::BeginRangeGPU("Skinning and Morph", cmd);
 		int descriptor_skinningbuffer = -1;
-		if (vis.scene->skinningBuffer.IsValid())
+		if (vis.scene->skinningBuffer[vis.scene->cpu_gpu_mapped_resource_index].IsValid())
 		{
-			descriptor_skinningbuffer = device->GetDescriptorIndex(&vis.scene->skinningBuffer, SubresourceType::SRV);
+			descriptor_skinningbuffer = device->GetDescriptorIndex(&vis.scene->skinningBuffer[vis.scene->cpu_gpu_mapped_resource_index], SubresourceType::SRV);
 		}
 		else if (vis.scene->skinningUploadBuffer[vis.scene->cpu_gpu_mapped_resource_index].IsValid())
 		{
@@ -12519,15 +12443,6 @@ void DDGI(
 
 	BindCommonResources(cmd);
 
-	if (scene.voxelgrid_gpu.IsValid() && scene.voxel_grids.GetCount() > 0)
-	{
-		device->EventBegin("Upload voxel grid", cmd);
-		VoxelGrid& voxelgrid = scene.voxel_grids[0];
-		device->UpdateBuffer(&scene.voxelgrid_gpu, voxelgrid.voxels.data(), cmd, voxelgrid.voxels.size() * sizeof(uint64_t));
-		PushBarrier(GPUBarrier::Buffer(&scene.voxelgrid_gpu, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
-		device->EventEnd(cmd);
-	}
-
 	DDGIPushConstants push;
 	uint8_t instanceInclusionMask = 0xFF;
 	push.instanceInclusionMask = instanceInclusionMask;
@@ -12636,8 +12551,6 @@ void DDGI(
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
-
-	FlushBarriers(cmd); // voxelgrid
 
 	// Update:
 	{

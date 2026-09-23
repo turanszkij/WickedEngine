@@ -60,7 +60,6 @@ namespace wi::graphics
 		
 	private:
 		NS::SharedPtr<MTL::Device> device;
-		NS::SharedPtr<MTL4::CommandQueue> uploadqueue;
 		bool textureUlongAtomics = true;
 		
 		struct Semaphore
@@ -101,6 +100,113 @@ namespace wi::graphics
 		NS::SharedPtr<MTL::SharedEvent> frame_fence[BUFFERCOUNT][QUEUE_COUNT];
 		
 		NS::SharedPtr<MTL4::ArgumentTableDescriptor> argument_table_desc;
+		
+		struct CopyAllocator
+		{
+			GraphicsDevice_Metal* device = nullptr;
+			NS::SharedPtr<MTL4::CommandQueue> uploadqueue;
+			std::mutex locker;
+			
+			struct CopyCMD
+			{
+				NS::SharedPtr<MTL4::CommandBuffer> commandbuffer;
+				NS::SharedPtr<MTL4::CommandAllocator> commandallocator;
+				MTL4::ComputeCommandEncoder* encoder = nullptr;
+				NS::SharedPtr<MTL::Buffer> uploadbuffer;
+				uint64_t size = 0;
+				uint8_t* mapped_data = nullptr;
+				NS::SharedPtr<MTL::SharedEvent> event;
+				uint64_t fenceValue = 0;
+				
+				bool IsValid() const { return commandbuffer.get() != nullptr; }
+			};
+			wi::vector<CopyCMD> freelist;
+			std::deque<CopyCMD> async_worklist;
+			
+			void init(GraphicsDevice_Metal* dev)
+			{
+				device = dev;
+				uploadqueue = NS::TransferPtr(device->device->newMTL4CommandQueue());
+				uploadqueue->addResidencySet(device->allocationhandler->residency_set.get());
+			}
+			CopyCMD allocate(uint64_t staging_size)
+			{
+				CopyCMD cmd;
+				
+				locker.lock();
+				// Try to search for a staging buffer that can fit the request:
+				for (size_t i = 0; i < freelist.size(); ++i)
+				{
+					if (freelist[i].size >= staging_size)
+					{
+						cmd = std::move(freelist[i]);
+						std::swap(freelist[i], freelist.back());
+						freelist.pop_back();
+						break;
+					}
+				}
+				locker.unlock();
+				
+				if (!cmd.IsValid())
+				{
+					cmd.commandallocator = NS::TransferPtr(device->device->newCommandAllocator());
+					cmd.commandbuffer = NS::TransferPtr(device->device->newCommandBuffer());
+					cmd.event = NS::TransferPtr(device->device->newSharedEvent());
+					cmd.event->setSignaledValue(0);
+					
+					if (staging_size > 0)
+					{
+						cmd.size = staging_size;
+						cmd.uploadbuffer = NS::TransferPtr(device->device->newBuffer(staging_size, MTL::ResourceStorageModeShared | MTL::ResourceOptionCPUCacheModeWriteCombined));
+						device->allocationhandler->destroylocker.lock();
+						device->allocationhandler->residency_set->addAllocation(cmd.uploadbuffer.get());
+						device->allocationhandler->destroylocker.unlock();
+						cmd.mapped_data = (uint8_t*)cmd.uploadbuffer->contents();
+					}
+				}
+				
+				cmd.commandallocator->reset();
+				cmd.commandbuffer->beginCommandBuffer(cmd.commandallocator.get());
+				cmd.encoder = cmd.commandbuffer->computeCommandEncoder();
+				return cmd;
+			}
+			void submit(CopyCMD cmd, bool wait_cpu = true)
+			{
+				cmd.encoder->endEncoding();
+				cmd.commandbuffer->endCommandBuffer();
+				MTL4::CommandBuffer* cmds[] = {cmd.commandbuffer.get()};
+				
+				cmd.fenceValue++;
+				
+				device->allocationhandler->destroylocker.lock();
+				device->allocationhandler->residency_set->commit();
+				device->allocationhandler->destroylocker.unlock();
+				
+				uploadqueue->commit(cmds, arraysize(cmds));
+				uploadqueue->signalEvent(cmd.event.get(), cmd.fenceValue);
+				
+				if (wait_cpu)
+				{
+					cmd.event->waitUntilSignaledValue(cmd.fenceValue, ~0ull);
+					
+					std::scoped_lock lck(locker);
+					freelist.push_back(std::move(cmd));
+				}
+				else
+				{
+					for (int queue = 0; queue < QUEUE_COUNT; ++queue)
+					{
+						if (device->queues[queue].queue.get() == nullptr)
+							continue;
+						device->queues[queue].queue->wait(cmd.event.get(), cmd.fenceValue);
+					}
+					
+					std::scoped_lock lck(locker);
+					async_worklist.push_back(std::move(cmd));
+				}
+			}
+		};
+		mutable CopyAllocator copyAllocator;
 		
 		wi::vector<Semaphore> semaphore_pool;
 		std::mutex semaphore_pool_locker;
@@ -346,6 +452,8 @@ namespace wi::graphics
 		uint32_t GetMaxViewportCount() const override { return 16; };
 
 		void SparseUpdate(QUEUE_TYPE queue, const SparseUpdateCommand* commands, uint32_t command_count) override;
+		
+		void CopyBufferAsync(const GPUBufferCopyCommand* commands, uint32_t command_count, const char* name = nullptr) const override;
 
 		const char* GetTag() const override { return "[Metal]"; }
 

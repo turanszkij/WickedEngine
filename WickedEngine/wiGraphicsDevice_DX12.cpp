@@ -1656,13 +1656,16 @@ std::mutex queue_locker;
 			dx12_check(device->device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(cmd.fence)));
 			dx12_check(cmd.fence->SetName(L"CopyAllocator::fence"));
 
-			GPUBufferDesc uploaddesc;
-			uploaddesc.size = wi::math::GetNextPowerOfTwo(staging_size);
-			uploaddesc.size = std::max(uploaddesc.size, uint64_t(65536));
-			uploaddesc.usage = Usage::UPLOAD;
-			bool upload_success = device->CreateBuffer(&uploaddesc, nullptr, &cmd.uploadbuffer);
-			assert(upload_success);
-			device->SetName(&cmd.uploadbuffer, "CopyAllocator::uploadBuffer");
+			if (staging_size > 0)
+			{
+				GPUBufferDesc uploaddesc;
+				uploaddesc.size = wi::math::GetNextPowerOfTwo(staging_size);
+				uploaddesc.size = std::max(uploaddesc.size, uint64_t(65536));
+				uploaddesc.usage = Usage::UPLOAD;
+				bool upload_success = device->CreateBuffer(&uploaddesc, nullptr, &cmd.uploadbuffer);
+				assert(upload_success);
+				device->SetName(&cmd.uploadbuffer, "CopyAllocator::uploadBuffer");
+			}
 		}
 
 		// begin command list in valid state:
@@ -1671,7 +1674,7 @@ std::mutex queue_locker;
 
 		return cmd;
 	}
-	void GraphicsDevice_DX12::CopyAllocator::submit(CopyCMD cmd)
+	void GraphicsDevice_DX12::CopyAllocator::submit(CopyCMD cmd, bool wait_cpu)
 	{
 		dx12_check(cmd.commandList->Close());
 		ID3D12CommandList* commandlists[] = {
@@ -1689,10 +1692,29 @@ std::mutex queue_locker;
 			dx12_check(queue->Signal(cmd.fence.Get(), cmd.fenceValue));
 		}
 
-		dx12_check(cmd.fence->SetEventOnCompletion(cmd.fenceValue, nullptr));
+		if (wait_cpu)
+		{
+			dx12_check(cmd.fence->SetEventOnCompletion(cmd.fenceValue, nullptr));
 
-		std::scoped_lock lock(locker);
-		freelist.push_back(cmd);
+			std::scoped_lock lock(locker);
+			freelist.push_back(cmd);
+		}
+		else
+		{
+#ifdef PLATFORM_XBOX
+			std::scoped_lock lock(queue_locker); // queue operations are not thread-safe on XBOX
+#endif // PLATFORM_XBOX
+			for (int q = 0; q < QUEUE_COUNT; ++q)
+			{
+				CommandQueue& queue = device->queues[q];
+				if (queue.queue == nullptr)
+					continue;
+				queue.queue->Wait(cmd.fence.Get(), cmd.fenceValue);
+			}
+
+			std::scoped_lock lock(locker);
+			async_worklist.push_back(cmd);
+		}
 	}
 
 	void GraphicsDevice_DX12::DescriptorBinder::init(GraphicsDevice_DX12* device)
@@ -5510,6 +5532,16 @@ std::mutex queue_locker;
 		}
 
 		allocationhandler->Update(FRAMECOUNT, BUFFERCOUNT);
+
+		// Reusing completed async copies:
+		{
+			std::scoped_lock lck(copyAllocator.locker);
+			while (!copyAllocator.async_worklist.empty() && copyAllocator.async_worklist.front().fence->GetCompletedValue() >= copyAllocator.async_worklist.front().fenceValue)
+			{
+				copyAllocator.freelist.push_back(std::move(copyAllocator.async_worklist.front()));
+				copyAllocator.async_worklist.pop_front();
+			}
+		}
 	}
 
 	void GraphicsDevice_DX12::OnDeviceRemoved()
@@ -5773,13 +5805,14 @@ std::mutex queue_locker;
 		{
 			if (queue.queue == nullptr)
 				continue;
-			dx12_check(queue.queue->Signal(fence.Get(), 1));
-			if (fence->GetCompletedValue() < 1)
-			{
-				dx12_check(fence->SetEventOnCompletion(1, nullptr));
-			}
 			fence->Signal(0);
+			dx12_check(queue.queue->Signal(fence.Get(), 1));
+			dx12_check(fence->SetEventOnCompletion(1, nullptr));
 		}
+
+		fence->Signal(0);
+		dx12_check(copyAllocator.queue->Signal(fence.Get(), 1));
+		dx12_check(fence->SetEventOnCompletion(1, nullptr));
 	}
 
 	void GraphicsDevice_DX12::ClearPipelineStateCache()
@@ -5945,6 +5978,31 @@ std::mutex queue_locker;
 				D3D12_TILE_MAPPING_FLAG_NONE
 			);
 		}
+	}
+
+	void GraphicsDevice_DX12::CopyBufferAsync(const GPUBufferCopyCommand* commands, uint32_t command_count, const char* name) const
+	{
+		CopyAllocator::CopyCMD cmd = copyAllocator.allocate(0);
+		if (name != nullptr)
+		{
+			wchar_t text[128];
+			if (wi::helper::StringConvert(name, text, arraysize(text)) > 0)
+			{
+				PIXBeginEvent(cmd.commandList.Get(), 0xFF000000, text);
+			}
+		}
+		for (uint32_t i = 0; i < command_count; ++i)
+		{
+			const GPUBufferCopyCommand& command = commands[i];
+			auto dst_internal = to_internal(command.dst);
+			auto src_internal = to_internal(command.src);
+			cmd.commandList->CopyBufferRegion(dst_internal->resource.Get(), command.dst_offset, src_internal->resource.Get(), command.src_offset, command.size);
+		}
+		if (name != nullptr)
+		{
+			PIXEndEvent(cmd.commandList.Get());
+		}
+		copyAllocator.submit(cmd, false);
 	}
 
 	void GraphicsDevice_DX12::WaitCommandList(CommandList cmd, CommandList wait_for)
