@@ -1562,6 +1562,8 @@ using namespace metal_internal;
 			}
 		}
 		
+		copyAllocator.init(this);
+		
 		wilog("Created GraphicsDevice_Metal (%d ms)", (int)std::round(timer.elapsed()));
 	}
 	GraphicsDevice_Metal::~GraphicsDevice_Metal()
@@ -1684,29 +1686,12 @@ using namespace metal_internal;
 		{
 			if (buffer->mapped_data == nullptr)
 			{
-				NS::SharedPtr<MTL::Buffer> uploadbuffer = NS::TransferPtr(device->newBuffer(desc->size, MTL::ResourceStorageModeShared | MTL::ResourceOptionCPUCacheModeWriteCombined));
-				init_callback(uploadbuffer->contents());
-				NS::SharedPtr<NS::AutoreleasePool> autorelease_pool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init()); // scoped drain!
-				NS::SharedPtr<MTL4::CommandBuffer> commandbuffer = NS::TransferPtr(device->newCommandBuffer());
-				NS::SharedPtr<MTL4::CommandAllocator> commandallocator = NS::TransferPtr(device->newCommandAllocator());
-				commandbuffer->beginCommandBuffer(commandallocator.get());
-				allocationhandler->destroylocker.lock();
-				allocationhandler->residency_set->addAllocation(uploadbuffer.get());
-				allocationhandler->residency_set->commit();
-				allocationhandler->destroylocker.unlock();
-				MTL4::ComputeCommandEncoder* encoder = commandbuffer->computeCommandEncoder();
-				encoder->copyFromBuffer(uploadbuffer.get(), 0, internal_state->buffer.get(), 0, desc->size);
+				NS::SharedPtr<NS::AutoreleasePool> autorelease_pool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init());
+				CopyAllocator::CopyCMD cmd = copyAllocator.allocate(desc->size);
+				MTL4::ComputeCommandEncoder* encoder = cmd.commandbuffer->computeCommandEncoder();
+				encoder->copyFromBuffer(cmd.uploadbuffer.get(), 0, internal_state->buffer.get(), 0, desc->size);
 				encoder->endEncoding();
-				commandbuffer->endCommandBuffer();
-				MTL4::CommandBuffer* cmds[] = {commandbuffer.get()};
-				uploadqueue->commit(cmds, arraysize(cmds));
-				NS::SharedPtr<MTL::SharedEvent> event = NS::TransferPtr(device->newSharedEvent());
-				event->setSignaledValue(0);
-				uploadqueue->signalEvent(event.get(), 1);
-				event->waitUntilSignaledValue(1, ~0ull);
-				allocationhandler->destroylocker.lock();
-				allocationhandler->residency_set->removeAllocation(uploadbuffer.get());
-				allocationhandler->destroylocker.unlock();
+				copyAllocator.submit(cmd);
 			}
 			else
 			{
@@ -1952,11 +1937,9 @@ using namespace metal_internal;
 		
 		if (initial_data != nullptr)
 		{
-			NS::SharedPtr<MTL4::CommandAllocator> commandallocator;
-			NS::SharedPtr<MTL4::CommandBuffer> commandbuffer;
-			MTL4::ComputeCommandEncoder* encoder = nullptr;
-			NS::SharedPtr<MTL::Buffer> uploadbuffer;
 			NS::SharedPtr<NS::AutoreleasePool> autorelease_pool; // scoped drain!
+			CopyAllocator::CopyCMD cmd;
+			MTL4::ComputeCommandEncoder* encoder = nullptr;
 			uint8_t* upload_data = nullptr;
 			if (internal_state->buffer.get() != nullptr)
 			{
@@ -1966,16 +1949,9 @@ using namespace metal_internal;
 			else if (descriptor->storageMode() == MTL::StorageModePrivate)
 			{
 				autorelease_pool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init());
-				uploadbuffer = NS::TransferPtr(device->newBuffer(internal_state->texture->allocatedSize(), MTL::ResourceStorageModeShared | MTL::ResourceOptionCPUCacheModeWriteCombined));
-				upload_data = (uint8_t*)uploadbuffer->contents();
-				commandallocator = NS::TransferPtr(device->newCommandAllocator());
-				commandbuffer = NS::TransferPtr(device->newCommandBuffer());
-				commandbuffer->beginCommandBuffer(commandallocator.get());
-				allocationhandler->destroylocker.lock();
-				allocationhandler->residency_set->addAllocation(uploadbuffer.get());
-				allocationhandler->residency_set->commit();
-				allocationhandler->destroylocker.unlock();
-				encoder = commandbuffer->computeCommandEncoder();
+				cmd = copyAllocator.allocate(internal_state->texture->allocatedSize());
+				encoder = cmd.commandbuffer->computeCommandEncoder();
+				upload_data = (uint8_t*)cmd.uploadbuffer->contents();
 			}
 			
 			const uint32_t data_stride = GetFormatStride(desc->format);
@@ -2010,7 +1986,7 @@ using namespace metal_internal;
 						size.width = width;
 						size.height = height;
 						size.depth = depth;
-						encoder->copyFromBuffer(uploadbuffer.get(), src_offset, subresourceData.row_pitch, subresourceData.slice_pitch, size, internal_state->texture.get(), slice, mip, origin);
+						encoder->copyFromBuffer(cmd.uploadbuffer.get(), src_offset, subresourceData.row_pitch, subresourceData.slice_pitch, size, internal_state->texture.get(), slice, mip, origin);
 						width = std::max(1u, width / 2);
 						height = std::max(1u, height / 2);
 					}
@@ -2025,19 +2001,10 @@ using namespace metal_internal;
 				}
 			}
 			
-			if (commandbuffer.get() != nullptr)
+			if (cmd.IsValid())
 			{
 				encoder->endEncoding();
-				commandbuffer->endCommandBuffer();
-				MTL4::CommandBuffer* cmds[] = {commandbuffer.get()};
-				uploadqueue->commit(cmds, arraysize(cmds));
-				NS::SharedPtr<MTL::SharedEvent> event = NS::TransferPtr(device->newSharedEvent());
-				event->setSignaledValue(0);
-				uploadqueue->signalEvent(event.get(), 1);
-				event->waitUntilSignaledValue(1, ~0ull);
-				allocationhandler->destroylocker.lock();
-				allocationhandler->residency_set->removeAllocation(uploadbuffer.get());
-				allocationhandler->destroylocker.unlock();
+				copyAllocator.submit(cmd);
 			}
 		}
 		
@@ -3356,6 +3323,16 @@ using namespace metal_internal;
 		}
 		
 		allocationhandler->Update(FRAMECOUNT, BUFFERCOUNT);
+		
+		// Reusing completed async copies:
+		{
+			std::scoped_lock lck(copyAllocator.locker);
+			while (!copyAllocator.async_worklist.empty() && copyAllocator.async_worklist.front().event->signaledValue() >= copyAllocator.async_worklist.front().fenceValue)
+			{
+				copyAllocator.freelist.push_back(std::move(copyAllocator.async_worklist.front()));
+				copyAllocator.async_worklist.pop_back();
+			}
+		}
 	}
 
 	void GraphicsDevice_Metal::WaitForGPU() const
@@ -3474,11 +3451,9 @@ using namespace metal_internal;
 	void GraphicsDevice_Metal::CopyBufferAsync(const GPUBufferCopyCommand* commands, uint32_t command_count, const char* name) const
 	{
 		NS::SharedPtr<NS::AutoreleasePool> autorelease_pool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init()); // scoped drain!
-		NS::SharedPtr<MTL4::CommandBuffer> commandbuffer = NS::TransferPtr(device->newCommandBuffer());
-		NS::SharedPtr<MTL4::CommandAllocator> commandallocator = NS::TransferPtr(device->newCommandAllocator());
-		commandbuffer->beginCommandBuffer(commandallocator.get());
 		
-		MTL4::ComputeCommandEncoder* encoder = commandbuffer->computeCommandEncoder();
+		CopyAllocator::CopyCMD cmd = copyAllocator.allocate(0);
+		MTL4::ComputeCommandEncoder* encoder = cmd.commandbuffer->computeCommandEncoder();
 		
 		for (uint32_t i = 0; i < command_count; ++i)
 		{
@@ -3489,19 +3464,7 @@ using namespace metal_internal;
 		}
 		
 		encoder->endEncoding();
-		commandbuffer->endCommandBuffer();
-		MTL4::CommandBuffer* cmds[] = {commandbuffer.get()};
-		uploadqueue->commit(cmds, arraysize(cmds));
-		NS::SharedPtr<MTL::SharedEvent> event = NS::TransferPtr(device->newSharedEvent());
-		event->setSignaledValue(0);
-		uploadqueue->signalEvent(event.get(), 1);
-		
-		for (int queue = 0; queue < QUEUE_COUNT; ++queue)
-		{
-			if (queues[queue].queue.get() == nullptr)
-				continue;
-			queues[queue].queue->wait(event.get(), 1);
-		}
+		copyAllocator.submit(cmd, false);
 	}
 
 	void GraphicsDevice_Metal::WaitCommandList(CommandList cmd, CommandList wait_for)

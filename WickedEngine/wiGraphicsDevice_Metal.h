@@ -102,6 +102,97 @@ namespace wi::graphics
 		
 		NS::SharedPtr<MTL4::ArgumentTableDescriptor> argument_table_desc;
 		
+		struct CopyAllocator
+		{
+			GraphicsDevice_Metal* device = nullptr;
+			std::mutex locker;
+			
+			struct CopyCMD
+			{
+				NS::SharedPtr<MTL4::CommandBuffer> commandbuffer;
+				NS::SharedPtr<MTL4::CommandAllocator> commandallocator;
+				NS::SharedPtr<MTL::Buffer> uploadbuffer;
+				NS::SharedPtr<MTL::SharedEvent> event;
+				uint64_t fenceValue = 0;
+				
+				bool IsValid() const { return commandbuffer.get() != nullptr; }
+			};
+			wi::vector<CopyCMD> freelist;
+			wi::vector<CopyCMD> async_worklist;
+			
+			void init(GraphicsDevice_Metal* dev)
+			{
+				device = dev;
+			}
+			CopyCMD allocate(uint64_t staging_size)
+			{
+				CopyCMD cmd;
+				
+				locker.lock();
+				// Try to search for a staging buffer that can fit the request:
+				for (size_t i = 0; i < freelist.size(); ++i)
+				{
+					if (freelist[i].uploadbuffer->allocatedSize() >= staging_size)
+					{
+						cmd = std::move(freelist[i]);
+						std::swap(freelist[i], freelist.back());
+						freelist.pop_back();
+						break;
+					}
+				}
+				locker.unlock();
+				
+				if (!cmd.IsValid())
+				{
+					cmd.commandbuffer = NS::TransferPtr(device->device->newCommandBuffer());
+					cmd.commandallocator = NS::TransferPtr(device->device->newCommandAllocator());
+					cmd.event = NS::TransferPtr(device->device->newSharedEvent());
+					cmd.event->setSignaledValue(0);
+					
+					if (staging_size > 0)
+					{
+						cmd.uploadbuffer = NS::TransferPtr(device->device->newBuffer(staging_size, MTL::ResourceStorageModeShared | MTL::ResourceOptionCPUCacheModeWriteCombined));
+						device->allocationhandler->destroylocker.lock();
+						device->allocationhandler->residency_set->addAllocation(cmd.uploadbuffer.get());
+						device->allocationhandler->residency_set->commit();
+						device->allocationhandler->destroylocker.unlock();
+					}
+				}
+				
+				cmd.commandallocator->reset();
+				cmd.commandbuffer->beginCommandBuffer(cmd.commandallocator.get());
+				return cmd;
+			}
+			void submit(CopyCMD cmd, bool wait = true)
+			{
+				cmd.commandbuffer->endCommandBuffer();
+				MTL4::CommandBuffer* cmds[] = {cmd.commandbuffer.get()};
+				device->uploadqueue->commit(cmds, arraysize(cmds));
+				device->uploadqueue->signalEvent(cmd.event.get(), ++cmd.fenceValue);
+				
+				if (wait)
+				{
+					cmd.event->waitUntilSignaledValue(cmd.fenceValue, ~0ull);
+					
+					std::scoped_lock lck(locker);
+					freelist.push_back(cmd);
+				}
+				else
+				{
+					for (int queue = 0; queue < QUEUE_COUNT; ++queue)
+					{
+						if (device->queues[queue].queue.get() == nullptr)
+							continue;
+						device->queues[queue].queue->wait(cmd.event.get(), cmd.fenceValue);
+					}
+					
+					std::scoped_lock lck(locker);
+					async_worklist.push_back(cmd);
+				}
+			}
+		};
+		mutable CopyAllocator copyAllocator;
+		
 		wi::vector<Semaphore> semaphore_pool;
 		std::mutex semaphore_pool_locker;
 		Semaphore new_semaphore()
