@@ -1567,6 +1567,11 @@ using namespace metal_internal;
 	GraphicsDevice_Metal::~GraphicsDevice_Metal()
 	{
 		WaitForGPU();
+		
+		NS::SharedPtr<MTL::SharedEvent> event = NS::TransferPtr(device->newSharedEvent());
+		event->setSignaledValue(0);
+		copyAllocator.uploadqueue->signalEvent(event.get(), 1);
+		event->waitUntilSignaledValue(1, ~0ull);
 	}
 
 	bool GraphicsDevice_Metal::CreateSwapChain(const SwapChainDesc* desc, wi::platform::window_type window, SwapChain* swapchain) const
