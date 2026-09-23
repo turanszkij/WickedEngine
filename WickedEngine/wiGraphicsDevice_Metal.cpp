@@ -3471,7 +3471,7 @@ using namespace metal_internal;
 #endif
 	}
 
-	void GraphicsDevice_Metal::CopyBufferAsync(GPUBufferCopyCommand* commands, uint32_t command_count, const char* name) const
+	void GraphicsDevice_Metal::CopyBufferAsync(const GPUBufferCopyCommand* commands, uint32_t command_count, const char* name) const
 	{
 		NS::SharedPtr<NS::AutoreleasePool> autorelease_pool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init()); // scoped drain!
 		NS::SharedPtr<MTL4::CommandBuffer> commandbuffer = NS::TransferPtr(device->newCommandBuffer());

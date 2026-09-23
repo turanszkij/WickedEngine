@@ -5979,7 +5979,7 @@ std::mutex queue_locker;
 		}
 	}
 
-	void GraphicsDevice_DX12::CopyBufferAsync(GPUBufferCopyCommand* commands, uint32_t command_count, const char* name) const
+	void GraphicsDevice_DX12::CopyBufferAsync(const GPUBufferCopyCommand* commands, uint32_t command_count, const char* name) const
 	{
 		CopyAllocator::CopyCMD cmd = copyAllocator.allocate(0);
 		if (name != nullptr)

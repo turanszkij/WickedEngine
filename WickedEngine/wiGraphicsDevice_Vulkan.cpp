@@ -7152,7 +7152,7 @@ using namespace vulkan_internal;
 		}
 	}
 
-	void GraphicsDevice_Vulkan::CopyBufferAsync(GPUBufferCopyCommand* commands, uint32_t command_count, const char* name) const
+	void GraphicsDevice_Vulkan::CopyBufferAsync(const GPUBufferCopyCommand* commands, uint32_t command_count, const char* name) const
 	{
 		CopyAllocator::CopyCMD cmd = copyAllocator.allocate(0);
 
