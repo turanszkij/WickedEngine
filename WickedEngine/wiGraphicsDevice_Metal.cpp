@@ -3480,7 +3480,7 @@ using namespace metal_internal;
 		
 		MTL4::ComputeCommandEncoder* encoder = commandbuffer->computeCommandEncoder();
 		
-		for(uint32_t i = 0;i<command_count;++i)
+		for (uint32_t i = 0; i < command_count; ++i)
 		{
 			const GPUBufferCopyCommand& command = commands[i];
 			auto dst_internal = to_internal(command.dst);
@@ -3495,7 +3495,6 @@ using namespace metal_internal;
 		NS::SharedPtr<MTL::SharedEvent> event = NS::TransferPtr(device->newSharedEvent());
 		event->setSignaledValue(0);
 		uploadqueue->signalEvent(event.get(), 1);
-		event->waitUntilSignaledValue(1, ~0ull);
 		
 		for (int queue = 0; queue < QUEUE_COUNT; ++queue)
 		{
