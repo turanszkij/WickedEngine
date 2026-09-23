@@ -1392,11 +1392,11 @@ namespace wi::graphics
 
 	struct GPUBufferCopyCommand
 	{
-		const GPUBuffer* dst = nullptr;
-		uint64_t dst_offset = 0;
-		const GPUBuffer* src = nullptr;
-		uint64_t src_offset = 0;
-		uint64_t size = 0;
+		const GPUBuffer* dst = nullptr;		// destination buffer object for copy operation
+		uint64_t dst_offset = 0;			// offset into destination buffer in bytes
+		const GPUBuffer* src = nullptr;		// source buffer object for copy operation
+		uint64_t src_offset = 0;			// offset into source buffer in bytes
+		uint64_t size = 0;					// size of copy operation in bytes
 	};
 
 

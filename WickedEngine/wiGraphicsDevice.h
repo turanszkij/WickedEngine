@@ -191,7 +191,8 @@ namespace wi::graphics
 		// Performs a batched mapping of sparse resource pages to a tile pool
 		virtual void SparseUpdate(QUEUE_TYPE queue, const SparseUpdateCommand* commands, uint32_t command_count) {};
 
-		// Copies buffer data, submitted immediately to a GPU COPY QUEUE independently from the SubmitCommandLists, so this can straddle frame boundaries. All other queues will be synced up after this.
+		// Copies buffer data, submitted immediately to a GPU COPY QUEUE independently from the SubmitCommandLists, so this can straddle frame boundaries. All other queues will be synced to the completion of this.
+		//	Name can be provided for debugging purposes optionally
 		virtual void CopyBufferAsync(const GPUBufferCopyCommand* commands, uint32_t command_count, const char* name = nullptr) const {}
 
 		// Returns an identifier string for the graphics device subclass
