@@ -568,10 +568,10 @@ namespace vulkan_internal
 		mapping.a = _ConvertComponentSwizzle(value.a);
 		return mapping;
 	}
-	constexpr VkImageCreateInfo _ConvertImageDesc(const TextureDesc& desc, const uint32_t* families, uint32_t family_count)
+	constexpr VkImageCreateInfo _ConvertImageDesc(const TextureDesc& desc, const uint32_t* families, uint32_t family_count,
+		VkVideoProfileListInfoKHR& profile_list_info, const VkVideoProfileInfoKHR& profile_h264, const VkVideoProfileInfoKHR& profile_h265)
 	{
 		VkImageCreateInfo imageInfo = {};
-
 		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 		imageInfo.extent.width = desc.width;
 		imageInfo.extent.height = desc.height;
@@ -680,6 +680,19 @@ namespace vulkan_internal
 		default:
 			assert(0);
 			break;
+		}
+
+		if (has_flag(desc.misc_flags, ResourceMiscFlag::VIDEO_COMPATIBILITY_H264))
+		{
+			profile_list_info.pProfiles = &profile_h264;
+			profile_list_info.profileCount = 1;
+			imageInfo.pNext = &profile_list_info;
+		}
+		else if (has_flag(desc.misc_flags, ResourceMiscFlag::VIDEO_COMPATIBILITY_H265))
+		{
+			profile_list_info.pProfiles = &profile_h265;
+			profile_list_info.profileCount = 1;
+			imageInfo.pNext = &profile_list_info;
 		}
 
 		return imageInfo;
@@ -4025,45 +4038,10 @@ using namespace vulkan_internal;
 
 		texture->desc.mip_levels = GetMipCount(texture->desc);
 
-		VkImageCreateInfo imageInfo = _ConvertImageDesc(texture->desc, families.data(), (uint32_t)families.size());
-
 		VkVideoProfileListInfoKHR profile_list_info = {};
 		profile_list_info.sType = VK_STRUCTURE_TYPE_VIDEO_PROFILE_LIST_INFO_KHR;
-		if (has_flag(desc->misc_flags, ResourceMiscFlag::VIDEO_COMPATIBILITY_H264))
-		{
-			profile_list_info.pProfiles = &video_capability_h264.profile;
-			profile_list_info.profileCount = 1;
-			imageInfo.pNext = &profile_list_info;
-		}
-		else if (has_flag(desc->misc_flags, ResourceMiscFlag::VIDEO_COMPATIBILITY_H265))
-		{
-			profile_list_info.pProfiles = &video_capability_h265.profile;
-			profile_list_info.profileCount = 1;
-			imageInfo.pNext = &profile_list_info;
-		}
 
-#if 0
-		// Doesn't seem to be needed right now:
-		if (profile_list_info.profileCount > 0)
-		{
-			VkPhysicalDeviceVideoFormatInfoKHR video_format_info = {};
-			video_format_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VIDEO_FORMAT_INFO_KHR;
-			video_format_info.imageUsage = imageInfo.usage;
-			video_format_info.pNext = &profile_list_info;
-			uint32_t format_property_count = 0;
-			vulkan_check(vkGetPhysicalDeviceVideoFormatPropertiesKHR(physicalDevice, &video_format_info, &format_property_count, nullptr));
-
-			wi::vector<VkVideoFormatPropertiesKHR> video_format_properties(format_property_count);
-			for (auto& x : video_format_properties)
-			{
-				x.sType = VK_STRUCTURE_TYPE_VIDEO_FORMAT_PROPERTIES_KHR;
-			}
-			vulkan_check(vkGetPhysicalDeviceVideoFormatPropertiesKHR(physicalDevice, &video_format_info, &format_property_count, video_format_properties.data()));
-
-			assert(imageInfo.flags == 0 || (!video_format_properties.empty() && video_format_properties[0].imageCreateFlags & imageInfo.flags));
-			assert(!video_format_properties.empty() && video_format_properties[0].imageUsageFlags & imageInfo.usage);
-		}
-#endif
+		VkImageCreateInfo imageInfo = _ConvertImageDesc(texture->desc, families.data(), (uint32_t)families.size(), profile_list_info, video_capability_h264.profile, video_capability_h265.profile);
 
 		VkResult res = VK_SUCCESS;
 
@@ -6547,21 +6525,24 @@ using namespace vulkan_internal;
 
 	SizeAlignment GraphicsDevice_Vulkan::GetDeviceTextureMemoryRequirements(const TextureDesc* desc) const
 	{
-		VkImageCreateInfo imageInfo = _ConvertImageDesc(*desc, families.data(), (uint32_t)families.size());
+		VkVideoProfileListInfoKHR profile_list_info = {};
+		profile_list_info.sType = VK_STRUCTURE_TYPE_VIDEO_PROFILE_LIST_INFO_KHR;
 
-		VkDeviceImageMemoryRequirements query = {};
-		query.sType = VK_STRUCTURE_TYPE_DEVICE_IMAGE_MEMORY_REQUIREMENTS;
-		query.pCreateInfo = &imageInfo;
-		VkMemoryRequirements2 req2 = {};
-		req2.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
-		VkMemoryDedicatedRequirements dedicated = {};
-		dedicated.sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_REQUIREMENTS;
-		req2.pNext = &dedicated;
-		vkGetDeviceImageMemoryRequirements(device, &query, &req2);
+		VkImageCreateInfo imageInfo = _ConvertImageDesc(*desc, families.data(), (uint32_t)families.size(), profile_list_info, video_capability_h264.profile, video_capability_h265.profile);
+
+		VkDeviceImageMemoryRequirements device_image_memory_requirements = {};
+		device_image_memory_requirements.sType = VK_STRUCTURE_TYPE_DEVICE_IMAGE_MEMORY_REQUIREMENTS;
+		device_image_memory_requirements.pCreateInfo = &imageInfo;
+		VkMemoryRequirements2 memory_requirements2 = {};
+		memory_requirements2.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
+		VkMemoryDedicatedRequirements memory_dedicated_requirements = {};
+		memory_dedicated_requirements.sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_REQUIREMENTS;
+		memory_requirements2.pNext = &memory_dedicated_requirements;
+		vkGetDeviceImageMemoryRequirements(device, &device_image_memory_requirements, &memory_requirements2);
 
 		SizeAlignment ret;
-		ret.size = req2.memoryRequirements.size;
-		ret.alignment = req2.memoryRequirements.alignment;
+		ret.size = memory_requirements2.memoryRequirements.size;
+		ret.alignment = memory_requirements2.memoryRequirements.alignment;
 		return ret;
 	}
 
