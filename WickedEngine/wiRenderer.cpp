@@ -11016,7 +11016,6 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 		desc_depth.format = Format::D16_UNORM;
 		desc_depth.bind_flags = BindFlag::DEPTH_STENCIL;
 		desc_depth.layout = ResourceState::DEPTHSTENCIL;
-		desc_depth.misc_flags = ResourceMiscFlag::TRANSIENT_ATTACHMENT;
 		SizeAlignment sizealign_depth = device->GetDeviceTextureMemoryRequirements(&desc_depth);
 
 		GPUBufferDesc bd;
