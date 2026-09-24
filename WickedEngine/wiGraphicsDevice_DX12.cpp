@@ -937,6 +937,10 @@ namespace dx12_internal
 			resourcedesc.Format = _ConvertFormatToTypeless(resourcedesc.Format);
 		}
 
+#ifdef PLATFORM_XBOX
+		wi::graphics::xbox::ApplyTextureCreationFlags(desc, resourcedesc.Flags, D3D12_HEAP_FLAG_NONE);
+#endif // PLATFORM_XBOX
+
 		return resourcedesc;
 	}
 
@@ -3633,10 +3637,6 @@ std::mutex queue_locker;
 			//	It will be used with WriteToSubresource to avoid GPU copy from UPLOAD to DEAFULT
 			allocationDesc.CustomPool = allocationhandler->uma_pool.Get();
 		}
-#endif // PLATFORM_XBOX
-
-#ifdef PLATFORM_XBOX
-		wi::graphics::xbox::ApplyTextureCreationFlags(texture->desc, resourcedesc.Flags, allocationDesc.ExtraHeapFlags);
 #endif // PLATFORM_XBOX
 
 		if (has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_BUFFER) ||

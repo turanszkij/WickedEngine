@@ -128,6 +128,7 @@ namespace wi
 			desc_rtPrimitiveID.width = internalResolution.x;
 			desc_rtPrimitiveID.height = internalResolution.y;
 			desc_rtPrimitiveID.sample_count = 1;
+			desc_rtPrimitiveID.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 			sizealign_rtPrimitiveID = device->GetDeviceTextureMemoryRequirements(&desc_rtPrimitiveID);
 		}
 		TextureDesc desc_rtSceneCopy;
@@ -182,11 +183,11 @@ namespace wi
 			desc.usage = Usage::DEFAULT;
 			desc.misc_flags = ResourceMiscFlag::ALIASING_TEXTURE_RT_DS;
 			desc.alignment = (uint32_t)sizealign_rtPostprocess.alignment;
-			desc.alignment = align(desc.alignment, (uint32_t)sizealign_rtPrimitiveID.alignment);
-			desc.alignment = align(desc.alignment, (uint32_t)sizealign_rtSceneCopy.alignment);
-			desc.alignment = align(desc.alignment, (uint32_t)sizealign_rtParticleDistortion.alignment);
-			desc.alignment = align(desc.alignment, (uint32_t)sizealign_rtWaterRipple.alignment);
-			desc.alignment = align(desc.alignment, (uint32_t)sizealign_rtAO.alignment);
+			desc.alignment = std::max(desc.alignment, (uint32_t)sizealign_rtPrimitiveID.alignment);
+			desc.alignment = std::max(desc.alignment, (uint32_t)sizealign_rtSceneCopy.alignment);
+			desc.alignment = std::max(desc.alignment, (uint32_t)sizealign_rtParticleDistortion.alignment);
+			desc.alignment = std::max(desc.alignment, (uint32_t)sizealign_rtWaterRipple.alignment);
+			desc.alignment = std::max(desc.alignment, (uint32_t)sizealign_rtAO.alignment);
 
 			// placement range 1
 			offset_rtPostprocess = desc.size;

@@ -655,7 +655,7 @@ namespace vulkan_internal
 			imageInfo.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
 		}
 
-		if (family_count > 0)
+		if (family_count > 1)
 		{
 			imageInfo.sharingMode = VK_SHARING_MODE_CONCURRENT;
 			imageInfo.queueFamilyIndexCount = family_count;
