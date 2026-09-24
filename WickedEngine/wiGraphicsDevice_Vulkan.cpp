@@ -4202,23 +4202,6 @@ using namespace vulkan_internal;
 							&internal_state->resource
 						));
 					}
-					if (res != VK_SUCCESS)
-					{
-						// Some drivers report a real VkMemoryRequirements::size for this image that
-						// exceeds the aliased allocation's size even when the logical estimate above
-						// said it would fit -- fall back to a normal, independently-backed allocation
-						// instead of leaving a stale/invalid VkImage handle in internal_state->resource
-						// (which would otherwise be double-freed later by ~Texture_Vulkan()).
-						internal_state->resource = VK_NULL_HANDLE;
-						res = vulkan_check(vmaCreateImage(
-							allocator,
-							&imageInfo,
-							&allocInfo,
-							&internal_state->resource,
-							&internal_state->allocation,
-							nullptr
-						));
-					}
 				}
 
 				if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::SHARED))
