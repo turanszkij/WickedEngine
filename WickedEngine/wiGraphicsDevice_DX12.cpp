@@ -873,7 +873,7 @@ namespace dx12_internal
 		resourcedesc.Format = _ConvertFormat(desc.format);
 		resourcedesc.Width = desc.width;
 		resourcedesc.Height = desc.height;
-		resourcedesc.MipLevels = desc.mip_levels;
+		resourcedesc.MipLevels = GetMipCount(desc);
 		resourcedesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
 		resourcedesc.DepthOrArraySize = (UINT16)desc.array_size;
 		resourcedesc.SampleDesc.Count = desc.sample_count;

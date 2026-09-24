@@ -512,7 +512,7 @@ namespace metal_internal
 		descriptor->setHeight(desc.height);
 		descriptor->setDepth(desc.depth);
 		descriptor->setArrayLength(desc.array_size);
-		descriptor->setMipmapLevelCount(desc.mip_levels);
+		descriptor->setMipmapLevelCount(GetMipCount(desc));
 		descriptor->setPixelFormat(_ConvertPixelFormat(desc.format));
 		
 		uint32_t sample_count = desc.sample_count;

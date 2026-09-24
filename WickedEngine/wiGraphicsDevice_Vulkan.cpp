@@ -568,7 +568,7 @@ namespace vulkan_internal
 		mapping.a = _ConvertComponentSwizzle(value.a);
 		return mapping;
 	}
-	constexpr VkImageCreateInfo _ConvertImageDesc(const TextureDesc& desc, const uint32_t* families, uint32_t family_count,
+	constexpr VkImageCreateInfo _ConvertTextureDesc(const TextureDesc& desc, const uint32_t* families, uint32_t family_count,
 		VkVideoProfileListInfoKHR& profile_list_info, const VkVideoProfileInfoKHR& profile_h264, const VkVideoProfileInfoKHR& profile_h265)
 	{
 		VkImageCreateInfo imageInfo = {};
@@ -578,7 +578,7 @@ namespace vulkan_internal
 		imageInfo.extent.depth = desc.depth;
 		imageInfo.format = _ConvertFormat(desc.format);
 		imageInfo.arrayLayers = desc.array_size;
-		imageInfo.mipLevels = desc.mip_levels;
+		imageInfo.mipLevels = GetMipCount(desc);
 		imageInfo.samples = (VkSampleCountFlagBits)desc.sample_count;
 		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
@@ -4040,7 +4040,7 @@ using namespace vulkan_internal;
 		VkVideoProfileListInfoKHR profile_list_info = {};
 		profile_list_info.sType = VK_STRUCTURE_TYPE_VIDEO_PROFILE_LIST_INFO_KHR;
 
-		VkImageCreateInfo imageInfo = _ConvertImageDesc(texture->desc, families.data(), (uint32_t)families.size(), profile_list_info, video_capability_h264.profile, video_capability_h265.profile);
+		VkImageCreateInfo imageInfo = _ConvertTextureDesc(texture->desc, families.data(), (uint32_t)families.size(), profile_list_info, video_capability_h264.profile, video_capability_h265.profile);
 
 		VkResult res = VK_SUCCESS;
 
@@ -6527,7 +6527,7 @@ using namespace vulkan_internal;
 		VkVideoProfileListInfoKHR profile_list_info = {};
 		profile_list_info.sType = VK_STRUCTURE_TYPE_VIDEO_PROFILE_LIST_INFO_KHR;
 
-		VkImageCreateInfo imageInfo = _ConvertImageDesc(*desc, families.data(), (uint32_t)families.size(), profile_list_info, video_capability_h264.profile, video_capability_h265.profile);
+		VkImageCreateInfo imageInfo = _ConvertTextureDesc(*desc, families.data(), (uint32_t)families.size(), profile_list_info, video_capability_h264.profile, video_capability_h265.profile);
 
 		VkDeviceImageMemoryRequirements device_image_memory_requirements = {};
 		device_image_memory_requirements.sType = VK_STRUCTURE_TYPE_DEVICE_IMAGE_MEMORY_REQUIREMENTS;
