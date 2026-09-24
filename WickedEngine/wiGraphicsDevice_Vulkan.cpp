@@ -568,6 +568,122 @@ namespace vulkan_internal
 		mapping.a = _ConvertComponentSwizzle(value.a);
 		return mapping;
 	}
+	constexpr VkImageCreateInfo _ConvertImageDesc(const TextureDesc& desc, const uint32_t* families, uint32_t family_count)
+	{
+		VkImageCreateInfo imageInfo = {};
+
+		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+		imageInfo.extent.width = desc.width;
+		imageInfo.extent.height = desc.height;
+		imageInfo.extent.depth = desc.depth;
+		imageInfo.format = _ConvertFormat(desc.format);
+		imageInfo.arrayLayers = desc.array_size;
+		imageInfo.mipLevels = desc.mip_levels;
+		imageInfo.samples = (VkSampleCountFlagBits)desc.sample_count;
+		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+		imageInfo.usage = 0;
+		if (has_flag(desc.bind_flags, BindFlag::SHADER_RESOURCE))
+		{
+			imageInfo.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
+		}
+		if (has_flag(desc.bind_flags, BindFlag::UNORDERED_ACCESS))
+		{
+			imageInfo.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+
+			if (IsFormatSRGB(desc.format))
+			{
+				imageInfo.flags |= VK_IMAGE_CREATE_EXTENDED_USAGE_BIT;
+			}
+		}
+		if (has_flag(desc.bind_flags, BindFlag::RENDER_TARGET))
+		{
+			imageInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+		}
+		if (has_flag(desc.bind_flags, BindFlag::DEPTH_STENCIL))
+		{
+			imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+		}
+		if (has_flag(desc.bind_flags, BindFlag::SHADING_RATE))
+		{
+			imageInfo.usage |= VK_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR;
+		}
+		if (has_flag(desc.misc_flags, ResourceMiscFlag::TRANSIENT_ATTACHMENT))
+		{
+			imageInfo.usage |= VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
+		}
+		else
+		{
+			imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+			imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+		}
+
+		if (has_flag(desc.misc_flags, ResourceMiscFlag::SPARSE))
+		{
+			imageInfo.flags |= VK_IMAGE_CREATE_SPARSE_BINDING_BIT;
+			imageInfo.flags |= VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT;
+			imageInfo.flags |= VK_IMAGE_CREATE_SPARSE_ALIASED_BIT;
+		}
+
+		imageInfo.flags = 0;
+		if (has_flag(desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
+		{
+			imageInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+		}
+		if (has_flag(desc.misc_flags, ResourceMiscFlag::TYPED_FORMAT_CASTING) || has_flag(desc.misc_flags, ResourceMiscFlag::TYPELESS_FORMAT_CASTING))
+		{
+			imageInfo.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
+		}
+
+		if (has_flag(desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE))
+		{
+			imageInfo.usage |= VK_IMAGE_USAGE_VIDEO_DECODE_DPB_BIT_KHR;
+			imageInfo.usage |= VK_IMAGE_USAGE_VIDEO_DECODE_SRC_BIT_KHR;
+			imageInfo.usage |= VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR;
+		}
+		if (has_flag(desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_OUTPUT_ONLY))
+		{
+			imageInfo.usage |= VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR;
+		}
+		if (has_flag(desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_DPB_ONLY))
+		{
+			imageInfo.usage = VK_IMAGE_USAGE_VIDEO_DECODE_DPB_BIT_KHR; // Note: this is not a combination of flags, but complete assignment!
+		}
+
+		if (desc.format == Format::NV12 && has_flag(desc.bind_flags, BindFlag::SHADER_RESOURCE))
+		{
+			imageInfo.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
+		}
+
+		if (family_count > 0)
+		{
+			imageInfo.sharingMode = VK_SHARING_MODE_CONCURRENT;
+			imageInfo.queueFamilyIndexCount = family_count;
+			imageInfo.pQueueFamilyIndices = families;
+		}
+		else
+		{
+			imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		}
+
+		switch (desc.type)
+		{
+		case TextureDesc::Type::TEXTURE_1D:
+			imageInfo.imageType = VK_IMAGE_TYPE_1D;
+			break;
+		case TextureDesc::Type::TEXTURE_2D:
+			imageInfo.imageType = VK_IMAGE_TYPE_2D;
+			break;
+		case TextureDesc::Type::TEXTURE_3D:
+			imageInfo.imageType = VK_IMAGE_TYPE_3D;
+			break;
+		default:
+			assert(0);
+			break;
+		}
+
+		return imageInfo;
+	}
 
 
 	bool checkExtensionSupport(const char* checkExtension, const wi::vector<VkExtensionProperties>& available_extensions)
@@ -3909,82 +4025,7 @@ using namespace vulkan_internal;
 
 		texture->desc.mip_levels = GetMipCount(texture->desc);
 
-		VkImageCreateInfo imageInfo = {};
-		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-		imageInfo.extent.width = texture->desc.width;
-		imageInfo.extent.height = texture->desc.height;
-		imageInfo.extent.depth = texture->desc.depth;
-		imageInfo.format = _ConvertFormat(texture->desc.format);
-		imageInfo.arrayLayers = texture->desc.array_size;
-		imageInfo.mipLevels = texture->desc.mip_levels;
-		imageInfo.samples = (VkSampleCountFlagBits)texture->desc.sample_count;
-		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-		imageInfo.usage = 0;
-		if (has_flag(texture->desc.bind_flags, BindFlag::SHADER_RESOURCE))
-		{
-			imageInfo.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
-		}
-		if (has_flag(texture->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
-		{
-			imageInfo.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
-
-			if (IsFormatSRGB(texture->desc.format))
-			{
-				imageInfo.flags |= VK_IMAGE_CREATE_EXTENDED_USAGE_BIT;
-			}
-		}
-		if (has_flag(texture->desc.bind_flags, BindFlag::RENDER_TARGET))
-		{
-			imageInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-		}
-		if (has_flag(texture->desc.bind_flags, BindFlag::DEPTH_STENCIL))
-		{
-			imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-		}
-		if (has_flag(texture->desc.bind_flags, BindFlag::SHADING_RATE))
-		{
-			imageInfo.usage |= VK_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR;
-		}
-		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::TRANSIENT_ATTACHMENT))
-		{
-			imageInfo.usage |= VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
-		}
-		else
-		{
-			imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-			imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-		}
-
-		imageInfo.flags = 0;
-		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
-		{
-			imageInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
-		}
-		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::TYPED_FORMAT_CASTING) || has_flag(texture->desc.misc_flags, ResourceMiscFlag::TYPELESS_FORMAT_CASTING))
-		{
-			imageInfo.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
-		}
-
-		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE))
-		{
-			imageInfo.usage |= VK_IMAGE_USAGE_VIDEO_DECODE_DPB_BIT_KHR;
-			imageInfo.usage |= VK_IMAGE_USAGE_VIDEO_DECODE_SRC_BIT_KHR;
-			imageInfo.usage |= VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR;
-		}
-		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_OUTPUT_ONLY))
-		{
-			imageInfo.usage |= VK_IMAGE_USAGE_VIDEO_DECODE_DST_BIT_KHR;
-		}
-		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_DPB_ONLY))
-		{
-			imageInfo.usage = VK_IMAGE_USAGE_VIDEO_DECODE_DPB_BIT_KHR; // Note: this is not a combination of flags, but complete assignment!
-		}
-
-		if (desc->format == Format::NV12 && has_flag(texture->desc.bind_flags, BindFlag::SHADER_RESOURCE))
-		{
-			imageInfo.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
-		}
+		VkImageCreateInfo imageInfo = _ConvertImageDesc(texture->desc, families.data(), (uint32_t)families.size());
 
 		VkVideoProfileListInfoKHR profile_list_info = {};
 		profile_list_info.sType = VK_STRUCTURE_TYPE_VIDEO_PROFILE_LIST_INFO_KHR;
@@ -4024,42 +4065,12 @@ using namespace vulkan_internal;
 		}
 #endif
 
-		if (families.size() > 1)
-		{
-			imageInfo.sharingMode = VK_SHARING_MODE_CONCURRENT;
-			imageInfo.queueFamilyIndexCount = (uint32_t)families.size();
-			imageInfo.pQueueFamilyIndices = families.data();
-		}
-		else
-		{
-			imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-		}
-
-		switch (texture->desc.type)
-		{
-		case TextureDesc::Type::TEXTURE_1D:
-			imageInfo.imageType = VK_IMAGE_TYPE_1D;
-			break;
-		case TextureDesc::Type::TEXTURE_2D:
-			imageInfo.imageType = VK_IMAGE_TYPE_2D;
-			break;
-		case TextureDesc::Type::TEXTURE_3D:
-			imageInfo.imageType = VK_IMAGE_TYPE_3D;
-			break;
-		default:
-			assert(0);
-			break;
-		}
-
 		VkResult res = VK_SUCCESS;
 
 		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::SPARSE))
 		{
 			assert(CheckCapability(GraphicsDeviceCapability::SPARSE_TEXTURE2D) || imageInfo.imageType != VK_IMAGE_TYPE_2D);
 			assert(CheckCapability(GraphicsDeviceCapability::SPARSE_TEXTURE3D) || imageInfo.imageType != VK_IMAGE_TYPE_3D);
-			imageInfo.flags |= VK_IMAGE_CREATE_SPARSE_BINDING_BIT;
-			imageInfo.flags |= VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT;
-			imageInfo.flags |= VK_IMAGE_CREATE_SPARSE_ALIASED_BIT;
 
 			vulkan_check(vkCreateImage(device, &imageInfo, nullptr, &internal_state->resource));
 
@@ -6532,6 +6543,26 @@ using namespace vulkan_internal;
 			return;
 
 		vulkan_check(vkSetDebugUtilsObjectNameEXT(device, &info));
+	}
+
+	SizeAlignment GraphicsDevice_Vulkan::GetDeviceTextureMemoryRequirements(const TextureDesc* desc) const
+	{
+		VkImageCreateInfo imageInfo = _ConvertImageDesc(*desc, families.data(), (uint32_t)families.size());
+
+		VkDeviceImageMemoryRequirements query = {};
+		query.sType = VK_STRUCTURE_TYPE_DEVICE_IMAGE_MEMORY_REQUIREMENTS;
+		query.pCreateInfo = &imageInfo;
+		VkMemoryRequirements2 req2 = {};
+		req2.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
+		VkMemoryDedicatedRequirements dedicated = {};
+		dedicated.sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_REQUIREMENTS;
+		req2.pNext = &dedicated;
+		vkGetDeviceImageMemoryRequirements(device, &query, &req2);
+
+		SizeAlignment ret;
+		ret.size = req2.memoryRequirements.size;
+		ret.alignment = req2.memoryRequirements.alignment;
+		return ret;
 	}
 
 	CommandList GraphicsDevice_Vulkan::BeginCommandList(QUEUE_TYPE queue)

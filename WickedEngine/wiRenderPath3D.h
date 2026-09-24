@@ -125,7 +125,6 @@ namespace wi
 		wi::graphics::Texture rtFSR[2]; // FSR upscaling result (full resolution LDR)
 		wi::graphics::Texture rtOutlineSource; // linear depth but only the regions which have outline stencil
 		wi::graphics::Texture rtOutlineSource_MSAA; // linear depth but only the regions which have outline stencil
-
 		wi::graphics::Texture rtPostprocess; // ping-pong with main scene RT in post-process chain
 
 		wi::graphics::Texture depthBuffer_Main; // used for depth-testing, can be MSAA
@@ -134,6 +133,8 @@ namespace wi
 		wi::graphics::Texture depthBuffer_Reflection; // used for reflection
 		wi::graphics::Texture depthBuffer_Reflection_render; // used for reflection, can be MSAA
 		wi::graphics::Texture reprojectedDepth; // prev frame depth reprojected into current, and downsampled for meshlet occlusion culling
+
+		wi::graphics::GPUBuffer aliasingAllocation; // aliasing memory allocation for textures
 
 		wi::graphics::Texture debugUAV; // debug UAV can be used by some shaders...
 		wi::renderer::TiledLightResources tiledLightResources;

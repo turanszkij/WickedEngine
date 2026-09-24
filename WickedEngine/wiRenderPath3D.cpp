@@ -81,6 +81,8 @@ namespace wi
 		vxgiResources = {};
 		meshblendResources = {};
 
+		aliasingAllocation = {};
+
 		RenderPath2D::DeleteGPUResources();
 	}
 
@@ -96,6 +98,89 @@ namespace wi
 		camera->height = (float)internalResolution.y;
 
 		// Render targets:
+
+		// Aliasing memory queries:
+		TextureDesc desc_rtPostprocess;
+		SizeAlignment sizealign_rtPostprocess;
+		{
+			desc_rtPostprocess.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+			desc_rtPostprocess.format = wi::renderer::format_rendertarget_main;
+			desc_rtPostprocess.width = internalResolution.x;
+			desc_rtPostprocess.height = internalResolution.y;
+			sizealign_rtPostprocess = device->GetDeviceTextureMemoryRequirements(&desc_rtPostprocess);
+		}
+		TextureDesc desc_rtPrimitiveID;
+		SizeAlignment sizealign_rtPrimitiveID;
+		{
+			desc_rtPrimitiveID.format = wi::renderer::format_idbuffer;
+			desc_rtPrimitiveID.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+			if (getMSAASampleCount() > 1)
+			{
+				desc_rtPrimitiveID.bind_flags |= BindFlag::UNORDERED_ACCESS;
+			}
+			desc_rtPrimitiveID.width = internalResolution.x;
+			desc_rtPrimitiveID.height = internalResolution.y;
+			desc_rtPrimitiveID.sample_count = 1;
+			sizealign_rtPrimitiveID = device->GetDeviceTextureMemoryRequirements(&desc_rtPrimitiveID);
+		}
+		TextureDesc desc_rtSceneCopy;
+		SizeAlignment sizealign_rtSceneCopy;
+		{
+			desc_rtSceneCopy.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS | BindFlag::RENDER_TARGET;
+			desc_rtSceneCopy.format = wi::renderer::format_rendertarget_main;
+			desc_rtSceneCopy.width = internalResolution.x / 4;
+			desc_rtSceneCopy.height = internalResolution.y / 4;
+			desc_rtSceneCopy.mip_levels = std::min(8u, (uint32_t)std::log2(std::max(desc_rtSceneCopy.width, desc_rtSceneCopy.height)));
+			sizealign_rtSceneCopy = device->GetDeviceTextureMemoryRequirements(&desc_rtSceneCopy);
+		}
+
+		// Main allocation for aliasing:
+		{
+			GPUBufferDesc desc;
+			desc.misc_flags = ResourceMiscFlag::ALIASING_TEXTURE_RT_DS;
+			desc.size = std::max(desc.size, sizealign_rtPostprocess.size);
+			desc.size = std::max(desc.size, sizealign_rtPrimitiveID.size);
+			desc.size = std::max(desc.size, sizealign_rtSceneCopy.size);
+			desc.alignment = align(desc.alignment, (uint32_t)sizealign_rtPostprocess.alignment);
+			desc.alignment = align(desc.alignment, (uint32_t)sizealign_rtPrimitiveID.alignment);
+			desc.alignment = align(desc.alignment, (uint32_t)sizealign_rtSceneCopy.alignment);
+			device->CreateBuffer(&desc, nullptr, &aliasingAllocation);
+			device->SetName(&aliasingAllocation, "renderpath3D.aliasingAllocation");
+		}
+
+		// Aliasing placements:
+		{
+			device->CreateTexture(&desc_rtPostprocess, nullptr, &rtPostprocess, &aliasingAllocation); // Aliased!
+			device->SetName(&rtPostprocess, "renderpath3D.rtPostprocess");
+		}
+		{
+			TextureDesc desc = desc_rtPrimitiveID;
+			device->CreateTexture(&desc, nullptr, &rtPrimitiveID, &aliasingAllocation); // Aliased!
+			device->SetName(&rtPrimitiveID, "renderpath3D.rtPrimitiveID");
+
+			if (getMSAASampleCount() > 1)
+			{
+				desc.sample_count = getMSAASampleCount();
+				desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+				desc.misc_flags = ResourceMiscFlag::NONE;
+				device->CreateTexture(&desc, nullptr, &rtPrimitiveID_render);
+				device->SetName(&rtPrimitiveID_render, "renderpath3D.rtPrimitiveID_render");
+			}
+			else
+			{
+				rtPrimitiveID_render = rtPrimitiveID;
+			}
+		}
+		{
+			device->CreateTextureZeroed(&desc_rtSceneCopy, &rtSceneCopy);
+			device->SetName(&rtSceneCopy, "renderpath3D.rtSceneCopy");
+
+			device->CreateTexture(&desc_rtSceneCopy, nullptr, &rtSceneCopy_tmp, &aliasingAllocation); // Aliased!
+			device->SetName(&rtSceneCopy_tmp, "renderpath3D.rtSceneCopy_tmp");
+
+			device->CreateMipgenSubresources(rtSceneCopy);
+			device->CreateMipgenSubresources(rtSceneCopy_tmp);
+		}
 
 		{
 			TextureDesc desc;
@@ -124,53 +209,6 @@ namespace wi
 			}
 		}
 		{
-			// rtPostprocess is created first, as the real non-aliased allocation -- rtPrimitiveID
-			// and rtSceneCopy_tmp alias onto it instead of the reverse. On some drivers (e.g.
-			// RADV), the real VkMemoryRequirements::size for format_rendertarget_main exceeds that
-			// of format_idbuffer at the same resolution even though both come out to the same
-			// logical byte-size estimate below, so the smaller idbuffer allocation could not
-			// actually fit the larger rendertarget_main images aliasing onto it. Making
-			// rtPostprocess -- the largest of the three in real driver-reported bytes -- own the
-			// allocation instead fixes this at the root.
-			TextureDesc desc;
-			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-			desc.format = wi::renderer::format_rendertarget_main;
-			desc.width = internalResolution.x;
-			desc.height = internalResolution.y;
-			desc.misc_flags = ResourceMiscFlag::ALIASING_TEXTURE_RT_DS;
-			device->CreateTexture(&desc, nullptr, &rtPostprocess);
-			device->SetName(&rtPostprocess, "renderpath3D.rtPostprocess");
-		}
-		{
-			TextureDesc desc;
-			desc.format = wi::renderer::format_idbuffer;
-			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
-			if (getMSAASampleCount() > 1)
-			{
-				desc.bind_flags |= BindFlag::UNORDERED_ACCESS;
-			}
-			desc.width = internalResolution.x;
-			desc.height = internalResolution.y;
-			desc.sample_count = 1;
-			desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
-			assert(ComputeTextureMemorySizeInBytes(desc) <= ComputeTextureMemorySizeInBytes(rtPostprocess.desc)); // Aliased check
-			device->CreateTexture(&desc, nullptr, &rtPrimitiveID, &rtPostprocess); // Aliased!
-			device->SetName(&rtPrimitiveID, "renderpath3D.rtPrimitiveID");
-
-			if (getMSAASampleCount() > 1)
-			{
-				desc.sample_count = getMSAASampleCount();
-				desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
-				desc.misc_flags = ResourceMiscFlag::NONE;
-				device->CreateTexture(&desc, nullptr, &rtPrimitiveID_render);
-				device->SetName(&rtPrimitiveID_render, "renderpath3D.rtPrimitiveID_render");
-			}
-			else
-			{
-				rtPrimitiveID_render = rtPrimitiveID;
-			}
-		}
-		{
 			TextureDesc desc;
 			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
 			desc.format = Format::R16G16_FLOAT;
@@ -191,22 +229,6 @@ namespace wi
 			{
 				rtParticleDistortion_render = rtParticleDistortion;
 			}
-		}
-		{
-			TextureDesc desc;
-			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-			desc.format = wi::renderer::format_rendertarget_main;
-			desc.width = internalResolution.x / 4;
-			desc.height = internalResolution.y / 4;
-			desc.mip_levels = std::min(8u, (uint32_t)std::log2(std::max(desc.width, desc.height)));
-			device->CreateTextureZeroed(&desc, &rtSceneCopy);
-			device->SetName(&rtSceneCopy, "renderpath3D.rtSceneCopy");
-			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS | BindFlag::RENDER_TARGET; // render target for aliasing
-			device->CreateTexture(&desc, nullptr, &rtSceneCopy_tmp, &rtPostprocess);
-			device->SetName(&rtSceneCopy_tmp, "renderpath3D.rtSceneCopy_tmp");
-
-			device->CreateMipgenSubresources(rtSceneCopy);
-			device->CreateMipgenSubresources(rtSceneCopy_tmp);
 		}
 		{
 			TextureDesc desc;

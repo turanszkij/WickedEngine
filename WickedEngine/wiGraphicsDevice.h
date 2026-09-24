@@ -177,6 +177,10 @@ namespace wi::graphics
 		// Returns the minimum required alignment for buffer offsets when creating subresources
 		virtual uint32_t GetMinOffsetAlignment(const GPUBufferDesc* desc) const = 0;
 
+		// Returns the real GPU dependent memory allocation size of a texture.
+		//	It includes GPU-specific memory allocations, not only the pixel data size. For pixel data size only, use the ComputeTextureMemorySizeInBytes helper function
+		virtual SizeAlignment GetDeviceTextureMemoryRequirements(const TextureDesc* desc) const { return {}; };
+
 		struct MemoryUsage
 		{
 			uint64_t budget = 0ull;		// total video memory available for use by the current application (in bytes)

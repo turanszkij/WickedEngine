@@ -382,6 +382,8 @@ namespace wi::graphics
 			return alignment;
 		}
 
+		SizeAlignment GetDeviceTextureMemoryRequirements(const TextureDesc* desc) const override;
+
 		MemoryUsage GetMemoryUsage() const override
 		{
 			MemoryUsage retval;

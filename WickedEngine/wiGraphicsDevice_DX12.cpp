@@ -865,6 +865,80 @@ namespace dx12_internal
 	{
 		return D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(_ConvertComponentSwizzle(value.r), _ConvertComponentSwizzle(value.g), _ConvertComponentSwizzle(value.b), _ConvertComponentSwizzle(value.a));
 	}
+	constexpr D3D12_RESOURCE_DESC _ConvertTextureDesc(const TextureDesc& desc, bool casting_fully_typed_formats)
+	{
+		bool require_format_casting = has_flag(desc.misc_flags, ResourceMiscFlag::TYPED_FORMAT_CASTING);
+
+		D3D12_RESOURCE_DESC resourcedesc = {};
+		resourcedesc.Format = _ConvertFormat(desc.format);
+		resourcedesc.Width = desc.width;
+		resourcedesc.Height = desc.height;
+		resourcedesc.MipLevels = desc.mip_levels;
+		resourcedesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+		resourcedesc.DepthOrArraySize = (UINT16)desc.array_size;
+		resourcedesc.SampleDesc.Count = desc.sample_count;
+		resourcedesc.SampleDesc.Quality = 0;
+		resourcedesc.Alignment = 0;
+		resourcedesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+		if (has_flag(desc.bind_flags, BindFlag::DEPTH_STENCIL))
+		{
+			resourcedesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+			if (has_flag(desc.bind_flags, BindFlag::SHADER_RESOURCE))
+			{
+				require_format_casting = true;
+			}
+			else
+			{
+				resourcedesc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
+			}
+		}
+		if (has_flag(desc.bind_flags, BindFlag::RENDER_TARGET))
+		{
+			resourcedesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+		}
+		if (has_flag(desc.bind_flags, BindFlag::UNORDERED_ACCESS))
+		{
+			resourcedesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+		}
+		if (!has_flag(desc.bind_flags, BindFlag::DEPTH_STENCIL) && resourcedesc.SampleDesc.Count <= 1)
+		{
+			// The copy and video queues have much stricter requirements to supported resource states, but they support
+			//	implicit promotion from COMMON state. Because user is not allowed to set resource to COMMON state, we use this flag
+			//	so textures automatically decay to COMMON state at the queue submit when they are left in a read-only state
+			resourcedesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS;
+		}
+
+#ifndef PLATFORM_XBOX
+		if (has_flag(desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_DPB_ONLY))
+		{
+			resourcedesc.Flags = D3D12_RESOURCE_FLAG_VIDEO_DECODE_REFERENCE_ONLY | D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
+		}
+#endif // PLATFORM_XBOX
+
+		switch (desc.type)
+		{
+		case TextureDesc::Type::TEXTURE_1D:
+			resourcedesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE1D;
+			break;
+		case TextureDesc::Type::TEXTURE_2D:
+			resourcedesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+			break;
+		case TextureDesc::Type::TEXTURE_3D:
+			resourcedesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE3D;
+			resourcedesc.DepthOrArraySize = (UINT16)desc.depth;
+			break;
+		default:
+			assert(0);
+			break;
+		}
+
+		if ((!casting_fully_typed_formats && require_format_casting) || has_flag(desc.misc_flags, ResourceMiscFlag::TYPELESS_FORMAT_CASTING))
+		{
+			resourcedesc.Format = _ConvertFormatToTypeless(resourcedesc.Format);
+		}
+
+		return resourcedesc;
+	}
 
 	// Native -> Engine converters
 	constexpr Format _ConvertFormat_Inv(DXGI_FORMAT value)
@@ -3475,8 +3549,6 @@ std::mutex queue_locker;
 		texture->sparse_properties = nullptr;
 		texture->desc = *desc;
 
-		bool require_format_casting = has_flag(desc->misc_flags, ResourceMiscFlag::TYPED_FORMAT_CASTING);
-
 		texture->desc.mip_levels = GetMipCount(texture->desc);
 
 		HRESULT hr = E_FAIL;
@@ -3484,53 +3556,7 @@ std::mutex queue_locker;
 		D3D12MA::ALLOCATION_DESC allocationDesc = {};
 		allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 
-		D3D12_RESOURCE_DESC resourcedesc;
-		resourcedesc.Format = _ConvertFormat(desc->format);
-		resourcedesc.Width = desc->width;
-		resourcedesc.Height = desc->height;
-		resourcedesc.MipLevels = texture->desc.mip_levels;
-		resourcedesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-		resourcedesc.DepthOrArraySize = (UINT16)desc->array_size;
-		resourcedesc.SampleDesc.Count = desc->sample_count;
-		resourcedesc.SampleDesc.Quality = 0;
-		resourcedesc.Alignment = 0;
-		resourcedesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-		if (has_flag(desc->bind_flags, BindFlag::DEPTH_STENCIL))
-		{
-			resourcedesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-			//allocationDesc.Flags |= D3D12MA::ALLOCATION_FLAG_COMMITTED;
-			if (has_flag(desc->bind_flags, BindFlag::SHADER_RESOURCE))
-			{
-				require_format_casting = true;
-			}
-			else
-			{
-				resourcedesc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
-			}
-		}
-		if (has_flag(desc->bind_flags, BindFlag::RENDER_TARGET))
-		{
-			resourcedesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-			//allocationDesc.Flags |= D3D12MA::ALLOCATION_FLAG_COMMITTED;
-		}
-		if (has_flag(desc->bind_flags, BindFlag::UNORDERED_ACCESS))
-		{
-			resourcedesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-		}
-		if (!has_flag(desc->bind_flags, BindFlag::DEPTH_STENCIL) && resourcedesc.SampleDesc.Count <= 1)
-		{
-			// The copy and video queues have much stricter requirements to supported resource states, but they support
-			//	implicit promotion from COMMON state. Because user is not allowed to set resource to COMMON state, we use this flag
-			//	so textures automatically decay to COMMON state at the queue submit when they are left in a read-only state
-			resourcedesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS;
-		}
-
-#ifndef PLATFORM_XBOX
-		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_DPB_ONLY))
-		{
-			resourcedesc.Flags = D3D12_RESOURCE_FLAG_VIDEO_DECODE_REFERENCE_ONLY | D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
-		}
-#endif // PLATFORM_XBOX
+		D3D12_RESOURCE_DESC resourcedesc = _ConvertTextureDesc(texture->desc, casting_fully_typed_formats);
 
 		if (
 			has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE) ||
@@ -3541,23 +3567,6 @@ std::mutex queue_locker;
 			allocationDesc.Flags = D3D12MA::ALLOCATION_FLAG_COMMITTED;
 		}
 
-		switch (texture->desc.type)
-		{
-		case TextureDesc::Type::TEXTURE_1D:
-			resourcedesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE1D;
-			break;
-		case TextureDesc::Type::TEXTURE_2D:
-			resourcedesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-			break;
-		case TextureDesc::Type::TEXTURE_3D:
-			resourcedesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE3D;
-			resourcedesc.DepthOrArraySize = (UINT16)desc->depth;
-			break;
-		default:
-			assert(0);
-			break;
-		}
-
 		D3D12_CLEAR_VALUE optimizedClearValue = {};
 		optimizedClearValue.Color[0] = texture->desc.clear.color[0];
 		optimizedClearValue.Color[1] = texture->desc.clear.color[1];
@@ -3565,14 +3574,8 @@ std::mutex queue_locker;
 		optimizedClearValue.Color[3] = texture->desc.clear.color[3];
 		optimizedClearValue.DepthStencil.Depth = texture->desc.clear.depth_stencil.depth;
 		optimizedClearValue.DepthStencil.Stencil = texture->desc.clear.depth_stencil.stencil;
-		optimizedClearValue.Format = resourcedesc.Format; // Typed
-		bool useClearValue = has_flag(desc->bind_flags, BindFlag::RENDER_TARGET) || has_flag(desc->bind_flags, BindFlag::DEPTH_STENCIL);
-
-		if ((!casting_fully_typed_formats && require_format_casting) || has_flag(texture->desc.misc_flags, ResourceMiscFlag::TYPELESS_FORMAT_CASTING))
-		{
-			// Fallback to TYPELESS, must be AFTER optimizedClearValue.Format was set:
-			resourcedesc.Format = _ConvertFormatToTypeless(resourcedesc.Format);
-		}
+		optimizedClearValue.Format = _ConvertFormat(texture->desc.format); // _ConvertFormat again because _ConvertTextureDesc might change it to _TYPELESS
+		const bool useClearValue = has_flag(desc->bind_flags, BindFlag::RENDER_TARGET) || has_flag(desc->bind_flags, BindFlag::DEPTH_STENCIL);
 
 		D3D12_RESOURCE_STATES resourceState = _ParseResourceState(texture->desc.layout);
 
@@ -5265,6 +5268,16 @@ std::mutex queue_locker;
 				internal_state->resource->SetName(text);
 			}
 		}
+	}
+
+	SizeAlignment GraphicsDevice_DX12::GetDeviceTextureMemoryRequirements(const TextureDesc* desc) const
+	{
+		D3D12_RESOURCE_DESC resourcedesc = _ConvertTextureDesc(*desc, casting_fully_typed_formats);
+		D3D12_RESOURCE_ALLOCATION_INFO allocationInfo = device->GetResourceAllocationInfo(0, 1, &resourcedesc);
+		SizeAlignment ret;
+		ret.size = allocationInfo.SizeInBytes;
+		ret.alignment = allocationInfo.Alignment;
+		return ret;
 	}
 
 	CommandList GraphicsDevice_DX12::BeginCommandList(QUEUE_TYPE queue)
