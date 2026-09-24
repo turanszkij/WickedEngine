@@ -4202,6 +4202,20 @@ using namespace vulkan_internal;
 							&internal_state->resource
 						));
 					}
+					if (res != VK_SUCCESS)
+					{
+						// safety fallback if dedicated memory required
+						internal_state->allocation = VK_NULL_HANDLE;
+						internal_state->resource = VK_NULL_HANDLE;
+						res = vulkan_check(vmaCreateImage(
+							allocator,
+							&imageInfo,
+							&allocInfo,
+							&internal_state->resource,
+							&internal_state->allocation,
+							nullptr
+						));
+					}
 				}
 
 				if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::SHARED))
@@ -6517,9 +6531,6 @@ using namespace vulkan_internal;
 		device_image_memory_requirements.pCreateInfo = &imageInfo;
 		VkMemoryRequirements2 memory_requirements2 = {};
 		memory_requirements2.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
-		VkMemoryDedicatedRequirements memory_dedicated_requirements = {};
-		memory_dedicated_requirements.sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_REQUIREMENTS;
-		memory_requirements2.pNext = &memory_dedicated_requirements;
 		vkGetDeviceImageMemoryRequirements(device, &device_image_memory_requirements, &memory_requirements2);
 
 		SizeAlignment ret;
