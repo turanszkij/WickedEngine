@@ -505,6 +505,130 @@ namespace metal_internal
 		}
 		return MTL::SamplerAddressModeClampToEdge;
 	}
+	inline NS::SharedPtr<MTL::TextureDescriptor> _ConvertTextureDesc(const TextureDesc& desc, MTL::Device* device, bool textureUlongAtomics)
+	{
+		NS::SharedPtr<MTL::TextureDescriptor> descriptor = NS::TransferPtr(MTL::TextureDescriptor::alloc()->init());
+		descriptor->setWidth(desc.width);
+		descriptor->setHeight(desc.height);
+		descriptor->setDepth(desc.depth);
+		descriptor->setArrayLength(desc.array_size);
+		descriptor->setMipmapLevelCount(GetMipCount(desc));
+		descriptor->setPixelFormat(_ConvertPixelFormat(desc.format));
+		
+		uint32_t sample_count = desc.sample_count;
+		while (sample_count > 1 && !device->supportsTextureSampleCount(sample_count))
+		{
+			sample_count /= 2;
+		}
+		descriptor->setSampleCount(sample_count);
+		
+		switch (desc.type)
+		{
+			case TextureDesc::Type::TEXTURE_1D:
+				//descriptor->setTextureType(desc->array_size > 1 ? MTL::TextureType1DArray : MTL::TextureType1D);
+				descriptor->setTextureType(desc.array_size > 1 ? MTL::TextureType2DArray : MTL::TextureType2D); // NOTE: This seems to be broken! Real Texture1D type doesn't work in shaders, but creating Texture2D instead works! Issue FB21629558
+				break;
+			case TextureDesc::Type::TEXTURE_2D:
+				if(desc.sample_count > 1)
+				{
+					descriptor->setTextureType(desc.array_size > 1 ? MTL::TextureType2DMultisampleArray : MTL::TextureType2DMultisample);
+				}
+				else
+				{
+					descriptor->setTextureType(desc.array_size > 1 ? MTL::TextureType2DArray : MTL::TextureType2D);
+				}
+				break;
+			case TextureDesc::Type::TEXTURE_3D:
+				descriptor->setTextureType(MTL::TextureType3D);
+				break;
+			default:
+				break;
+		}
+		if (has_flag(desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
+		{
+			descriptor->setTextureType(desc.array_size > 6 ? MTL::TextureTypeCubeArray : MTL::TextureTypeCube);
+			descriptor->setArrayLength(desc.array_size / 6);
+		}
+		
+		MTL::ResourceOptions resource_options = {};
+		if (has_flag(desc.misc_flags, ResourceMiscFlag::TRANSIENT_ATTACHMENT))
+		{
+			resource_options |= MTL::ResourceStorageModeMemoryless;
+			descriptor->setStorageMode(MTL::StorageModeMemoryless);
+		}
+		if (desc.usage == Usage::DEFAULT && !device->hasUnifiedMemory())
+		{
+			// Discrete GPU path:
+			resource_options |= MTL::ResourceStorageModePrivate;
+			descriptor->setStorageMode(MTL::StorageModePrivate);
+		}
+		else if (
+				 has_flag(desc.misc_flags, ResourceMiscFlag::SPARSE) ||
+				 has_flag(desc.bind_flags, BindFlag::RENDER_TARGET) ||
+				 has_flag(desc.bind_flags, BindFlag::DEPTH_STENCIL) ||
+				 has_flag(desc.bind_flags, BindFlag::UNORDERED_ACCESS)
+				 )
+		{
+			// optimized storage for render efficiency even on UMA GPU:
+			resource_options |= MTL::ResourceStorageModePrivate;
+			descriptor->setStorageMode(MTL::StorageModePrivate);
+		}
+		else if (desc.usage == Usage::UPLOAD)
+		{
+			resource_options |= MTL::ResourceStorageModeShared;
+			resource_options |= MTL::ResourceOptionCPUCacheModeWriteCombined;
+			descriptor->setStorageMode(MTL::StorageModeShared);
+			descriptor->setTextureType(MTL::TextureTypeTextureBuffer);
+		}
+		else if (desc.usage == Usage::READBACK)
+		{
+			resource_options |= MTL::ResourceStorageModeShared;
+			descriptor->setStorageMode(MTL::StorageModeShared);
+			descriptor->setTextureType(MTL::TextureTypeTextureBuffer);
+		}
+		else
+		{
+			// CPU accessible or UMA GPU zero-copy optimized:
+			resource_options |= MTL::ResourceStorageModeShared;
+			descriptor->setStorageMode(MTL::StorageModeShared);
+		}
+		descriptor->setResourceOptions(resource_options);
+		
+		MTL::TextureUsage usage = {};
+		if (has_flag(desc.bind_flags, BindFlag::RENDER_TARGET) || has_flag(desc.bind_flags, BindFlag::DEPTH_STENCIL))
+		{
+			usage |= MTL::TextureUsageRenderTarget;
+		}
+		if (has_flag(desc.bind_flags, BindFlag::UNORDERED_ACCESS))
+		{
+			usage |= MTL::TextureUsageShaderWrite;
+			usage |= MTL::TextureUsageRenderTarget; // support for ClearUAV
+			switch (descriptor->pixelFormat())
+			{
+				case MTL::PixelFormatR32Uint:
+				case MTL::PixelFormatR32Sint:
+					usage |= MTL::TextureUsageShaderAtomic;
+					break;
+				case MTL::PixelFormatRG32Uint:
+					if (textureUlongAtomics) // workaround for: https://github.com/turanszkij/WickedEngine/issues/1597
+					{
+						usage |= MTL::TextureUsageShaderAtomic;
+					}
+					break;
+				default:
+					break;
+			}
+		}
+		if (has_flag(desc.bind_flags, BindFlag::SHADER_RESOURCE))
+		{
+			usage |= MTL::TextureUsageShaderRead;
+		}
+		descriptor->setUsage(usage);
+		
+		descriptor->setAllowGPUOptimizedContents(true);
+		
+		return descriptor;
+	}
 
 	IRDescriptorTableEntry create_entry(MTL::Texture* res, float min_lod_clamp = 0, uint32_t metadata = 0)
 	{
@@ -1730,126 +1854,9 @@ using namespace metal_internal;
 
 		texture->desc.mip_levels = GetMipCount(texture->desc);
 		
-		NS::SharedPtr<MTL::TextureDescriptor> descriptor = NS::TransferPtr(MTL::TextureDescriptor::alloc()->init());
-		descriptor->setWidth(desc->width);
-		descriptor->setHeight(desc->height);
-		descriptor->setDepth(desc->depth);
-		descriptor->setArrayLength(desc->array_size);
-		descriptor->setMipmapLevelCount(texture->desc.mip_levels);
-		descriptor->setPixelFormat(_ConvertPixelFormat(desc->format));
+		NS::SharedPtr<MTL::TextureDescriptor> descriptor = _ConvertTextureDesc(texture->desc, device.get(), textureUlongAtomics);
 		
-		uint32_t sample_count = desc->sample_count;
-		while (sample_count > 1 && !device->supportsTextureSampleCount(sample_count))
-		{
-			sample_count /= 2;
-		}
-		descriptor->setSampleCount(sample_count);
-		texture->desc.sample_count = sample_count;
-		
-		switch (desc->type)
-		{
-			case TextureDesc::Type::TEXTURE_1D:
-				//descriptor->setTextureType(desc->array_size > 1 ? MTL::TextureType1DArray : MTL::TextureType1D);
-				descriptor->setTextureType(desc->array_size > 1 ? MTL::TextureType2DArray : MTL::TextureType2D); // NOTE: This seems to be broken! Real Texture1D type doesn't work in shaders, but creating Texture2D instead works! Issue FB21629558
-				break;
-			case TextureDesc::Type::TEXTURE_2D:
-				if(desc->sample_count > 1)
-				{
-					descriptor->setTextureType(desc->array_size > 1 ? MTL::TextureType2DMultisampleArray : MTL::TextureType2DMultisample);
-				}
-				else
-				{
-					descriptor->setTextureType(desc->array_size > 1 ? MTL::TextureType2DArray : MTL::TextureType2D);
-				}
-				break;
-			case TextureDesc::Type::TEXTURE_3D:
-				descriptor->setTextureType(MTL::TextureType3D);
-				break;
-			default:
-				break;
-		}
-		if (has_flag(desc->misc_flags, ResourceMiscFlag::TEXTURECUBE))
-		{
-			descriptor->setTextureType(desc->array_size > 6 ? MTL::TextureTypeCubeArray : MTL::TextureTypeCube);
-			descriptor->setArrayLength(desc->array_size / 6);
-		}
-		
-		MTL::ResourceOptions resource_options = {};
-		if (has_flag(desc->misc_flags, ResourceMiscFlag::TRANSIENT_ATTACHMENT))
-		{
-			resource_options |= MTL::ResourceStorageModeMemoryless;
-			descriptor->setStorageMode(MTL::StorageModeMemoryless);
-		}
-		if (desc->usage == Usage::DEFAULT && !CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
-		{
-			// Discrete GPU path:
-			resource_options |= MTL::ResourceStorageModePrivate;
-			descriptor->setStorageMode(MTL::StorageModePrivate);
-		}
-		else if (
-				 sparse ||
-				 has_flag(desc->bind_flags, BindFlag::RENDER_TARGET) ||
-				 has_flag(desc->bind_flags, BindFlag::DEPTH_STENCIL) ||
-				 has_flag(desc->bind_flags, BindFlag::UNORDERED_ACCESS)
-				 )
-		{
-			// optimized storage for render efficiency even on UMA GPU:
-			resource_options |= MTL::ResourceStorageModePrivate;
-			descriptor->setStorageMode(MTL::StorageModePrivate);
-		}
-		else if (desc->usage == Usage::UPLOAD)
-		{
-			resource_options |= MTL::ResourceStorageModeShared;
-			resource_options |= MTL::ResourceOptionCPUCacheModeWriteCombined;
-			descriptor->setStorageMode(MTL::StorageModeShared);
-			descriptor->setTextureType(MTL::TextureTypeTextureBuffer);
-		}
-		else if (desc->usage == Usage::READBACK)
-		{
-			resource_options |= MTL::ResourceStorageModeShared;
-			descriptor->setStorageMode(MTL::StorageModeShared);
-			descriptor->setTextureType(MTL::TextureTypeTextureBuffer);
-		}
-		else
-		{
-			// CPU accessible or UMA GPU zero-copy optimized:
-			resource_options |= MTL::ResourceStorageModeShared;
-			descriptor->setStorageMode(MTL::StorageModeShared);
-		}
-		descriptor->setResourceOptions(resource_options);
-		
-		MTL::TextureUsage usage = {};
-		if (has_flag(desc->bind_flags, BindFlag::RENDER_TARGET) || has_flag(desc->bind_flags, BindFlag::DEPTH_STENCIL))
-		{
-			usage |= MTL::TextureUsageRenderTarget;
-		}
-		if (has_flag(desc->bind_flags, BindFlag::UNORDERED_ACCESS))
-		{
-			usage |= MTL::TextureUsageShaderWrite;
-			usage |= MTL::TextureUsageRenderTarget; // support for ClearUAV
-			switch (descriptor->pixelFormat())
-			{
-				case MTL::PixelFormatR32Uint:
-				case MTL::PixelFormatR32Sint:
-					usage |= MTL::TextureUsageShaderAtomic;
-					break;
-				case MTL::PixelFormatRG32Uint:
-					if (textureUlongAtomics) // workaround for: https://github.com/turanszkij/WickedEngine/issues/1597
-					{
-						usage |= MTL::TextureUsageShaderAtomic;
-					}
-					break;
-				default:
-					break;
-			}
-		}
-		if (has_flag(desc->bind_flags, BindFlag::SHADER_RESOURCE))
-		{
-			usage |= MTL::TextureUsageShaderRead;
-		}
-		descriptor->setUsage(usage);
-		
-		descriptor->setAllowGPUOptimizedContents(true);
+		texture->desc.sample_count = (uint32_t)descriptor->sampleCount(); // might be overridden by device descriptor
 		
 		if (sparse)
 		{
@@ -1879,7 +1886,7 @@ using namespace metal_internal;
 			// This is an aliasing storage:
 			MTL::SizeAndAlign sizealign = device->heapTextureSizeAndAlign(descriptor.get());
 			NS::SharedPtr<MTL::HeapDescriptor> heap_desc = NS::TransferPtr(MTL::HeapDescriptor::alloc()->init());
-			heap_desc->setResourceOptions(resource_options);
+			heap_desc->setResourceOptions(descriptor->resourceOptions());
 			heap_desc->setSize(sizealign.size);
 			heap_desc->setType(MTL::HeapTypePlacement);
 			heap_desc->setMaxCompatiblePlacementSparsePageSize(sparse_page_size);
@@ -1908,7 +1915,7 @@ using namespace metal_internal;
 				// Note: we are creating a buffer instead of linear image because linear image cannot have mips
 				//	With a buffer, we can tightly pack mips linearly into a buffer so it won't have that limitation
 				const size_t buffersize = ComputeTextureMemorySizeInBytes(*desc);
-				internal_state->buffer = NS::TransferPtr(device->newBuffer(buffersize, resource_options));
+				internal_state->buffer = NS::TransferPtr(device->newBuffer(buffersize, descriptor->resourceOptions()));
 				allocationhandler->make_resident(internal_state->buffer.get());
 				
 				texture->mapped_data = internal_state->buffer->contents();
@@ -3124,6 +3131,16 @@ using namespace metal_internal;
 		NS::SharedPtr<NS::String> str = NS::TransferPtr(NS::String::alloc()->init(name, NS::UTF8StringEncoding));
 		auto internal_state = to_internal(shader);
 		internal_state->library->setLabel(str.get());
+	}
+
+	SizeAlignment GraphicsDevice_Metal::GetDeviceTextureMemoryRequirements(const TextureDesc* desc) const
+	{
+		NS::SharedPtr<MTL::TextureDescriptor> descriptor = _ConvertTextureDesc(*desc, device.get(), textureUlongAtomics);
+		MTL::SizeAndAlign sizealign = device->heapTextureSizeAndAlign(descriptor.get());
+		SizeAlignment ret;
+		ret.size = sizealign.size;
+		ret.alignment = sizealign.align;
+		return ret;
 	}
 
 	CommandList GraphicsDevice_Metal::BeginCommandList(QUEUE_TYPE queue)

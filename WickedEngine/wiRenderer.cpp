@@ -10998,23 +10998,35 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 		}
 	}
 
+	static GPUBuffer lightmap_aliasingAllocation;
 	static Texture lightmap_color_tmp;
 	static Texture lightmap_depth_tmp;
 	if (lightmap_color_tmp.desc.width < max_width || lightmap_color_tmp.desc.height < max_height)
 	{
-		TextureDesc desc;
-		desc.width = wi::math::GetNextPowerOfTwo(max_width);
-		desc.height = wi::math::GetNextPowerOfTwo(max_height);
-		desc.format = Format::R16G16B16A16_FLOAT;
-		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS | BindFlag::RENDER_TARGET; // Note: RENDER_TARGET is not used, but it's created with support for ResourceMiscFlag::ALIASING_TEXTURE_RT_DS
-		desc.misc_flags = ResourceMiscFlag::ALIASING_TEXTURE_RT_DS;
-		device->CreateTexture(&desc, nullptr, &lightmap_color_tmp);
+		TextureDesc desc_color;
+		desc_color.width = wi::math::GetNextPowerOfTwo(max_width);
+		desc_color.height = wi::math::GetNextPowerOfTwo(max_height);
+		desc_color.format = Format::R16G16B16A16_FLOAT;
+		desc_color.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS | BindFlag::RENDER_TARGET; // Note: RENDER_TARGET is not used, but it's created with support for ResourceMiscFlag::ALIASING_TEXTURE_RT_DS
+		SizeAlignment sizealign_color = device->GetDeviceTextureMemoryRequirements(&desc_color);
 
-		desc.format = Format::D16_UNORM;
-		desc.bind_flags = BindFlag::DEPTH_STENCIL;
-		desc.layout = ResourceState::DEPTHSTENCIL;
-		desc.misc_flags = ResourceMiscFlag::NONE;
-		device->CreateTexture(&desc, nullptr, &lightmap_depth_tmp, &lightmap_color_tmp); // aliased!
+		TextureDesc desc_depth;
+		desc_depth.width = desc_color.width;
+		desc_depth.height = desc_color.height;
+		desc_depth.format = Format::D16_UNORM;
+		desc_depth.bind_flags = BindFlag::DEPTH_STENCIL;
+		desc_depth.layout = ResourceState::DEPTHSTENCIL;
+		SizeAlignment sizealign_depth = device->GetDeviceTextureMemoryRequirements(&desc_depth);
+
+		GPUBufferDesc bd;
+		bd.usage = Usage::DEFAULT;
+		bd.misc_flags = ResourceMiscFlag::ALIASING_TEXTURE_RT_DS;
+		bd.size = std::max(sizealign_color.size, sizealign_depth.size);
+		bd.alignment = (uint32_t)std::max(sizealign_color.alignment, sizealign_depth.alignment);
+		device->CreateBuffer(&bd, nullptr, &lightmap_aliasingAllocation);
+
+		device->CreateTexture(&desc_color, nullptr, &lightmap_color_tmp, &lightmap_aliasingAllocation); // aliased!
+		device->CreateTexture(&desc_depth, nullptr, &lightmap_depth_tmp, &lightmap_aliasingAllocation); // aliased!
 	}
 
 	// Render lightmaps for each object:
@@ -11044,7 +11056,7 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 			{
 				RenderPassImage rp[] = {
 					RenderPassImage::RenderTarget(&object.lightmap_render, RenderPassImage::LoadOp::CLEAR),
-					RenderPassImage::DepthStencil(&lightmap_depth_tmp, RenderPassImage::LoadOp::CLEAR),
+					RenderPassImage::DepthStencil(&lightmap_depth_tmp, RenderPassImage::LoadOp::CLEAR, RenderPassImage::StoreOp::DONTCARE),
 				};
 				device->RenderPassBegin(rp, arraysize(rp), cmd);
 			}
@@ -11052,7 +11064,7 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 			{
 				RenderPassImage rp[] = {
 					RenderPassImage::RenderTarget(&object.lightmap_render, RenderPassImage::LoadOp::LOAD),
-					RenderPassImage::DepthStencil(&lightmap_depth_tmp, RenderPassImage::LoadOp::CLEAR),
+					RenderPassImage::DepthStencil(&lightmap_depth_tmp, RenderPassImage::LoadOp::CLEAR, RenderPassImage::StoreOp::DONTCARE),
 				};
 				device->RenderPassBegin(rp, arraysize(rp), cmd);
 			}
@@ -18562,13 +18574,25 @@ void CreateMeshBlendResources(MeshBlendResources& res, XMUINT2 resolution)
 	device->SetName(&res.mask, "meshblend.mask");
 
 	desc.format = Format::R16G16_UINT;
-	device->CreateTexture(&desc, nullptr, &res.expand[0]);
-	device->SetName(&res.expand[0], "meshblend.expand[0]");
-	device->CreateTexture(&desc, nullptr, &res.expand[1]);
-	device->SetName(&res.expand[1], "meshblend.expand[1]");
+	SizeAlignment sizealign_expand = device->GetDeviceTextureMemoryRequirements(&desc);
+	desc.format = Format::R11G11B10_FLOAT;
+	SizeAlignment sizealign_temp = device->GetDeviceTextureMemoryRequirements(&desc);
+
+	GPUBufferDesc bd;
+	bd.usage = Usage::DEFAULT;
+	bd.misc_flags = ResourceMiscFlag::ALIASING_TEXTURE_NON_RT_DS;
+	bd.size = std::max(sizealign_expand.size, sizealign_temp.size);
+	bd.alignment = (uint32_t)std::max(sizealign_expand.alignment, sizealign_temp.alignment);
+	device->CreateBuffer(&bd, nullptr, &res.aliasingAllocation);
+
+	desc.format = Format::R16G16_UINT;
+	device->CreateTexture(&desc, nullptr, &res.expand[meshblend_final_write], &res.aliasingAllocation); // aliased!
+	device->SetName(&res.expand[meshblend_final_write], "meshblend.expand[meshblend_final_write]");
+	device->CreateTexture(&desc, nullptr, &res.expand[meshblend_final_read]);
+	device->SetName(&res.expand[meshblend_final_read], "meshblend.expand[meshblend_final_read]");
 
 	desc.format = Format::R11G11B10_FLOAT;
-	device->CreateTexture(&desc, nullptr, &res.tmp, &res.expand[meshblend_final_write]); // aliased! Need to take into account the ping-ponging indices!
+	device->CreateTexture(&desc, nullptr, &res.tmp, &res.aliasingAllocation); // aliased!
 	device->SetName(&res.tmp, "meshblend.temp");
 }
 void PostProcess_MeshBlend_EdgeProcess(

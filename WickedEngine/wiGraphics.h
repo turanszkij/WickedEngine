@@ -648,7 +648,7 @@ namespace wi::graphics
 	{
 		uint64_t size = 0;
 		uint32_t stride = 0; // only needed for structured buffer types!
-		uint32_t alignment = 0; // needed for tile pools
+		uint32_t alignment = 0;
 		Usage usage = Usage::DEFAULT;
 		Format format = Format::UNKNOWN; // only needed for typed buffer!
 		BindFlag bind_flags = BindFlag::NONE;
@@ -830,6 +830,12 @@ namespace wi::graphics
 		const void* sps_datas = nullptr;	// array of sequence parameter set structures. The structure type depends on video codec
 		size_t sps_count = 0;				// number of sequence parameter set structures in the sps_datas array
 		uint32_t num_dpb_slots = 0;			// The number of decode picture buffer slots. Usually it is required to be at least number_of_reference_frames + 1
+	};
+
+	struct SizeAlignment
+	{
+		uint64_t size = 0;
+		uint64_t alignment = 0;
 	};
 
 
@@ -2010,8 +2016,9 @@ namespace wi::graphics
 		return num_blocks_x * num_blocks_y * mip_depth * bytes_per_block * desc.sample_count;
 	}
 
-	// Compute the approximate texture memory usage
-	//	Approximate because this doesn't reflect GPU specific texture memory requirements, like alignment and metadata
+	// Compute the texture memory usage of the tightly packed pixel data
+	//	This doesn't reflect GPU specific texture memory requirements, like alignment and metadata.
+	//	For full resource placement allocation size the GraphicsDevice::GetDeviceTextureMemoryRequirements should be used
 	//	plane can be specified optionally, the value ~0u means all planes
 	constexpr size_t ComputeTextureMemorySizeInBytes(const TextureDesc& desc, uint32_t plane = ~0u)
 	{
