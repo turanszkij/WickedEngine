@@ -618,14 +618,6 @@ namespace vulkan_internal
 			imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 		}
 
-		if (has_flag(desc.misc_flags, ResourceMiscFlag::SPARSE))
-		{
-			imageInfo.flags |= VK_IMAGE_CREATE_SPARSE_BINDING_BIT;
-			imageInfo.flags |= VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT;
-			imageInfo.flags |= VK_IMAGE_CREATE_SPARSE_ALIASED_BIT;
-		}
-
-		imageInfo.flags = 0;
 		if (has_flag(desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
 		{
 			imageInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
@@ -633,6 +625,13 @@ namespace vulkan_internal
 		if (has_flag(desc.misc_flags, ResourceMiscFlag::TYPED_FORMAT_CASTING) || has_flag(desc.misc_flags, ResourceMiscFlag::TYPELESS_FORMAT_CASTING))
 		{
 			imageInfo.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
+		}
+
+		if (has_flag(desc.misc_flags, ResourceMiscFlag::SPARSE))
+		{
+			imageInfo.flags |= VK_IMAGE_CREATE_SPARSE_BINDING_BIT;
+			imageInfo.flags |= VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT;
+			imageInfo.flags |= VK_IMAGE_CREATE_SPARSE_ALIASED_BIT;
 		}
 
 		if (has_flag(desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE))

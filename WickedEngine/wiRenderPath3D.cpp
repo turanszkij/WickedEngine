@@ -203,9 +203,7 @@ namespace wi
 			offset_rtParticleDistortion = desc.size;
 			offset_rtWaterRipple = desc.size;
 			offset_rtAO = desc.size;
-			desc.size += std::max(desc.size, sizealign_rtParticleDistortion.size);
-			desc.size = std::max(desc.size, sizealign_rtWaterRipple.size);
-			desc.size = std::max(desc.size, sizealign_rtAO.size);
+			desc.size += std::max({ sizealign_rtParticleDistortion.size, sizealign_rtWaterRipple.size, sizealign_rtAO.size });
 
 			device->CreateBuffer(&desc, nullptr, &aliasingAllocation);
 			device->SetName(&aliasingAllocation, "renderpath3D.aliasingAllocation");
