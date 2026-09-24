@@ -135,6 +135,12 @@ namespace wi
 		wi::graphics::Texture reprojectedDepth; // prev frame depth reprojected into current, and downsampled for meshlet occlusion culling
 
 		wi::graphics::GPUBuffer aliasingAllocation; // aliasing memory allocation for textures
+		uint64_t offset_rtPostprocess = 0;
+		uint64_t offset_rtPrimitiveID = 0;
+		uint64_t offset_rtSceneCopy = 0;
+		uint64_t offset_rtParticleDistortion = 0;
+		uint64_t offset_rtAO = 0;
+		uint64_t offset_rtWaterRipple = 0;
 
 		wi::graphics::Texture debugUAV; // debug UAV can be used by some shaders...
 		wi::renderer::TiledLightResources tiledLightResources;

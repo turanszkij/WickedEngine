@@ -83,6 +83,13 @@ namespace wi
 
 		aliasingAllocation = {};
 
+		offset_rtPostprocess = 0;
+		offset_rtPrimitiveID = 0;
+		offset_rtSceneCopy = 0;
+		offset_rtParticleDistortion = 0;
+		offset_rtWaterRipple = 0;
+		offset_rtAO = 0;
+
 		RenderPath2D::DeleteGPUResources();
 	}
 
@@ -133,29 +140,84 @@ namespace wi
 			desc_rtSceneCopy.mip_levels = std::min(8u, (uint32_t)std::log2(std::max(desc_rtSceneCopy.width, desc_rtSceneCopy.height)));
 			sizealign_rtSceneCopy = device->GetDeviceTextureMemoryRequirements(&desc_rtSceneCopy);
 		}
+		TextureDesc desc_rtParticleDistortion;
+		SizeAlignment sizealign_rtParticleDistortion;
+		{
+			desc_rtParticleDistortion.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+			desc_rtParticleDistortion.format = Format::R16G16_FLOAT;
+			desc_rtParticleDistortion.width = internalResolution.x;
+			desc_rtParticleDistortion.height = internalResolution.y;
+			desc_rtParticleDistortion.sample_count = 1;
+			sizealign_rtParticleDistortion = device->GetDeviceTextureMemoryRequirements(&desc_rtParticleDistortion);
+		}
+		TextureDesc desc_rtWaterRipple;
+		SizeAlignment sizealign_rtWaterRipple;
+		{
+			desc_rtWaterRipple.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+			desc_rtWaterRipple.format = Format::R16G16_FLOAT;
+			desc_rtWaterRipple.width = internalResolution.x / 8;
+			desc_rtWaterRipple.height = internalResolution.y / 8;
+			desc_rtWaterRipple.sample_count = 1;
+			sizealign_rtWaterRipple = device->GetDeviceTextureMemoryRequirements(&desc_rtWaterRipple);
+		}
+		TextureDesc desc_rtAO;
+		SizeAlignment sizealign_rtAO;
+		{
+			desc_rtAO.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS | BindFlag::RENDER_TARGET;
+			desc_rtAO.format = Format::R8_UNORM;
+			desc_rtAO.width = internalResolution.x; // max ao res
+			desc_rtAO.height = internalResolution.y; // max ao res
+			sizealign_rtAO = device->GetDeviceTextureMemoryRequirements(&desc_rtAO);
+		}
 
 		// Main allocation for aliasing:
+		offset_rtPostprocess = 0;
+		offset_rtPrimitiveID = 0;
+		offset_rtSceneCopy = 0;
+		offset_rtParticleDistortion = 0;
+		offset_rtWaterRipple = 0;
+		offset_rtAO = 0;
 		{
 			GPUBufferDesc desc;
+			desc.usage = Usage::DEFAULT;
 			desc.misc_flags = ResourceMiscFlag::ALIASING_TEXTURE_RT_DS;
+			desc.alignment = (uint32_t)sizealign_rtPostprocess.alignment;
+			desc.alignment = align(desc.alignment, (uint32_t)sizealign_rtPrimitiveID.alignment);
+			desc.alignment = align(desc.alignment, (uint32_t)sizealign_rtSceneCopy.alignment);
+			desc.alignment = align(desc.alignment, (uint32_t)sizealign_rtParticleDistortion.alignment);
+			desc.alignment = align(desc.alignment, (uint32_t)sizealign_rtWaterRipple.alignment);
+			desc.alignment = align(desc.alignment, (uint32_t)sizealign_rtAO.alignment);
+
+			// placement range 1
+			offset_rtPostprocess = desc.size;
+			offset_rtPrimitiveID = desc.size;
+			offset_rtSceneCopy = desc.size;
+			desc.size = align(desc.size, (uint64_t)desc.alignment);
 			desc.size = std::max(desc.size, sizealign_rtPostprocess.size);
 			desc.size = std::max(desc.size, sizealign_rtPrimitiveID.size);
 			desc.size = std::max(desc.size, sizealign_rtSceneCopy.size);
-			desc.alignment = align(desc.alignment, (uint32_t)sizealign_rtPostprocess.alignment);
-			desc.alignment = align(desc.alignment, (uint32_t)sizealign_rtPrimitiveID.alignment);
-			desc.alignment = align(desc.alignment, (uint32_t)sizealign_rtSceneCopy.alignment);
+
+			// placement range 2
+			desc.size = align(desc.size, (uint64_t)desc.alignment);
+			offset_rtParticleDistortion = desc.size;
+			offset_rtWaterRipple = desc.size;
+			offset_rtAO = desc.size;
+			desc.size += std::max(desc.size, sizealign_rtParticleDistortion.size);
+			desc.size = std::max(desc.size, sizealign_rtWaterRipple.size);
+			desc.size = std::max(desc.size, sizealign_rtAO.size);
+
 			device->CreateBuffer(&desc, nullptr, &aliasingAllocation);
 			device->SetName(&aliasingAllocation, "renderpath3D.aliasingAllocation");
 		}
 
 		// Aliasing placements:
 		{
-			device->CreateTexture(&desc_rtPostprocess, nullptr, &rtPostprocess, &aliasingAllocation); // Aliased!
+			device->CreateTexture(&desc_rtPostprocess, nullptr, &rtPostprocess, &aliasingAllocation, offset_rtPostprocess); // Aliased!
 			device->SetName(&rtPostprocess, "renderpath3D.rtPostprocess");
 		}
 		{
 			TextureDesc desc = desc_rtPrimitiveID;
-			device->CreateTexture(&desc, nullptr, &rtPrimitiveID, &aliasingAllocation); // Aliased!
+			device->CreateTexture(&desc, nullptr, &rtPrimitiveID, &aliasingAllocation, offset_rtPrimitiveID); // Aliased!
 			device->SetName(&rtPrimitiveID, "renderpath3D.rtPrimitiveID");
 
 			if (getMSAASampleCount() > 1)
@@ -175,13 +237,30 @@ namespace wi
 			device->CreateTextureZeroed(&desc_rtSceneCopy, &rtSceneCopy);
 			device->SetName(&rtSceneCopy, "renderpath3D.rtSceneCopy");
 
-			device->CreateTexture(&desc_rtSceneCopy, nullptr, &rtSceneCopy_tmp, &aliasingAllocation); // Aliased!
+			device->CreateTexture(&desc_rtSceneCopy, nullptr, &rtSceneCopy_tmp, &aliasingAllocation, offset_rtSceneCopy); // Aliased!
 			device->SetName(&rtSceneCopy_tmp, "renderpath3D.rtSceneCopy_tmp");
 
 			device->CreateMipgenSubresources(rtSceneCopy);
 			device->CreateMipgenSubresources(rtSceneCopy_tmp);
 		}
+		{
+			TextureDesc desc = desc_rtParticleDistortion;
+			device->CreateTexture(&desc, nullptr, &rtParticleDistortion, &aliasingAllocation, offset_rtParticleDistortion); // Aliased!
+			device->SetName(&rtParticleDistortion, "renderpath3D.rtParticleDistortion");
+			if (getMSAASampleCount() > 1)
+			{
+				desc.sample_count = getMSAASampleCount();
+				desc.misc_flags = ResourceMiscFlag::NONE;
+				device->CreateTexture(&desc, nullptr, &rtParticleDistortion_render);
+				device->SetName(&rtParticleDistortion_render, "renderpath3D.rtParticleDistortion_render");
+			}
+			else
+			{
+				rtParticleDistortion_render = rtParticleDistortion;
+			}
+		}
 
+		// Regular texture creations:
 		{
 			TextureDesc desc;
 			desc.format = wi::renderer::format_rendertarget_main;
@@ -206,28 +285,6 @@ namespace wi
 			else
 			{
 				rtMain_render = rtMain;
-			}
-		}
-		{
-			TextureDesc desc;
-			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
-			desc.format = Format::R16G16_FLOAT;
-			desc.width = internalResolution.x;
-			desc.height = internalResolution.y;
-			desc.sample_count = 1;
-			desc.misc_flags = ResourceMiscFlag::ALIASING_TEXTURE_RT_DS;
-			device->CreateTexture(&desc, nullptr, &rtParticleDistortion);
-			device->SetName(&rtParticleDistortion, "renderpath3D.rtParticleDistortion");
-			if (getMSAASampleCount() > 1)
-			{
-				desc.sample_count = getMSAASampleCount();
-				desc.misc_flags = ResourceMiscFlag::NONE;
-				device->CreateTexture(&desc, nullptr, &rtParticleDistortion_render);
-				device->SetName(&rtParticleDistortion_render, "renderpath3D.rtParticleDistortion_render");
-			}
-			else
-			{
-				rtParticleDistortion_render = rtParticleDistortion;
 			}
 		}
 		{
@@ -526,8 +583,7 @@ namespace wi
 				desc.format = Format::R16G16_FLOAT;
 				desc.width = internalResolution.x / 8;
 				desc.height = internalResolution.y / 8;
-				assert(ComputeTextureMemorySizeInBytes(desc) <= ComputeTextureMemorySizeInBytes(rtParticleDistortion.desc)); // aliasing check
-				device->CreateTexture(&desc, nullptr, &rtWaterRipple, &rtParticleDistortion); // aliased!
+				device->CreateTexture(&desc, nullptr, &rtWaterRipple, &aliasingAllocation, offset_rtWaterRipple); // aliased!
 				device->SetName(&rtWaterRipple, "renderpath3D.rtWaterRipple");
 			}
 		}
@@ -535,7 +591,6 @@ namespace wi
 		{
 			rtWaterRipple = {};
 		}
-
 		if (wi::renderer::GetSurfelGIEnabled())
 		{
 			if (!surfelGIResources.result.IsValid())
@@ -2857,8 +2912,7 @@ namespace wi
 		}
 
 		GraphicsDevice* device = wi::graphics::GetDevice();
-		assert(ComputeTextureMemorySizeInBytes(desc) <= ComputeTextureMemorySizeInBytes(rtParticleDistortion.desc)); // aliasing check
-		device->CreateTexture(&desc, nullptr, &rtAO, &rtParticleDistortion); // aliasing!
+		device->CreateTexture(&desc, nullptr, &rtAO, &aliasingAllocation, offset_rtAO); // aliasing!
 		device->SetName(&rtAO, "renderpath3D.rtAO");
 	}
 	void RenderPath3D::setSSREnabled(bool value)
