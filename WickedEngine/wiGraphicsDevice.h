@@ -179,7 +179,7 @@ namespace wi::graphics
 
 		// Returns the real GPU dependent memory allocation size of a texture.
 		//	It includes GPU-specific memory allocations, not only the pixel data size. For pixel data size only, use the ComputeTextureMemorySizeInBytes helper function
-		virtual SizeAlignment GetDeviceTextureMemoryRequirements(const TextureDesc* desc) const { return {}; };
+		virtual SizeAlignment GetDeviceTextureMemoryRequirements(const TextureDesc* desc) const = 0;
 
 		struct MemoryUsage
 		{
