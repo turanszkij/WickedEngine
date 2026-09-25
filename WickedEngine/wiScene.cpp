@@ -3118,12 +3118,16 @@ namespace wi::scene
 					{
 						unused_phonemes[next++] = (ExpressionComponent::Preset)phoneme;
 						int mouth = expression_mastering.presets[(int)phoneme];
+						if (mouth < 0 || mouth >= (int)expression_mastering.expressions.size())
+							continue; // preset not bound on this model
 						ExpressionComponent::Expression& expression = expression_mastering.expressions[mouth];
 						expression.weight = wi::math::Lerp(expression.weight, 0, 0.4f); // fade out unused
 						expression.SetDirty();
 					}
 				}
 				int mouth = expression_mastering.presets[(int)expression_mastering.talking_phoneme];
+				if (mouth >= 0 && mouth < (int)expression_mastering.expressions.size()) // preset may not be bound on this model
+				{
 				ExpressionComponent::Expression& expression = expression_mastering.expressions[mouth];
 
 				if (voice_playing)
@@ -3178,6 +3182,7 @@ namespace wi::scene
 				}
 
 				expression.SetDirty();
+				}
 			}
 			else if (expression_mastering._flags & ExpressionComponent::TALKING_ENDED)
 			{
