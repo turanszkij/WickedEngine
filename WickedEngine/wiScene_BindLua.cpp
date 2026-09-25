@@ -6355,7 +6355,7 @@ int SpringComponent_BindLua::SetDamping(lua_State* L)
 	if (argc > 0)
 	{
 		float value = wi::lua::SGetFloat(L, 1);
-		component->stiffnessForce = value;
+		component->dragForce = value;
 	}
 	else
 	{
