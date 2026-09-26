@@ -791,41 +791,41 @@ struct unorm8
 {
 	uint8_t value;
 	unorm8() = default;
-	unorm8(float f) { value = uint8_t(saturate(f) * 255); }
+	constexpr unorm8(float f) : value(uint8_t(saturate(f) * 255)) {}
 
-	operator float() const { return float(value) / 255.0f; }
+	constexpr operator float() const { return float(value) / 255.0f; }
 
-	void operator=(float f) { value = uint8_t(saturate(f) * 255); }
-	void operator+=(float f) { *this = unorm8((*this) + f); }
-	void operator*=(float f) { *this = unorm8((*this) * f); }
-	void operator/=(float f) { *this = unorm8((*this) / f); }
+	constexpr unorm8& operator=(float f) { value = uint8_t(saturate(f) * 255); return *this; }
+	constexpr unorm8& operator+=(float f) { *this = unorm8((*this) + f); return *this; }
+	constexpr unorm8& operator*=(float f) { *this = unorm8((*this) * f); return *this; }
+	constexpr unorm8& operator/=(float f) { *this = unorm8((*this) / f); return *this; }
 };
 struct unorm16
 {
 	uint16_t value;
 	unorm16() = default;
-	unorm16(float f) { value = uint16_t(saturate(f) * 65535); }
+	constexpr unorm16(float f) : value(uint16_t(saturate(f) * 65535)) {}
 
-	operator float() const { return float(value) / 65535.0f; }
+	constexpr operator float() const { return float(value) / 65535.0f; }
 
-	void operator=(float f) { value = uint16_t(saturate(f) * 65535); }
-	void operator+=(float f) { *this = unorm16((*this) + f); }
-	void operator*=(float f) { *this = unorm16((*this) * f); }
-	void operator/=(float f) { *this = unorm16((*this) / f); }
+	constexpr unorm16& operator=(float f) { value = uint16_t(saturate(f) * 65535); return *this; }
+	constexpr unorm16& operator+=(float f) { *this = unorm16((*this) + f); return *this; }
+	constexpr unorm16& operator*=(float f) { *this = unorm16((*this) * f); return *this; }
+	constexpr unorm16& operator/=(float f) { *this = unorm16((*this) / f); return *this; }
 };
 
 struct half
 {
 	uint16_t value;
 	half() = default;
-	half(float f) { value = wi::math::f32tof16(f); }
+	half(float f) : value(wi::math::f32tof16(f)) {}
 
 	operator float() const { return wi::math::f16tof32(value); }
 
-	void operator=(float f) { value = wi::math::f32tof16(f); }
-	void operator+=(float f) { *this = half((*this) + f); }
-	void operator*=(float f) { *this = half((*this) * f); }
-	void operator/=(float f) { *this = half((*this) / f); }
+	half& operator=(float f) { value = wi::math::f32tof16(f); return *this; }
+	half& operator+=(float f) { *this = half((*this) + f); return *this; }
+	half& operator*=(float f) { *this = half((*this) * f); return *this; }
+	half& operator/=(float f) { *this = half((*this) / f); return *this; }
 };
 struct half2
 {
