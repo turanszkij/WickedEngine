@@ -566,7 +566,7 @@ namespace wi::scene
 		{
 			// Generate tangents if not found:
 			uint32_t indexOffsetLOD0 = ~0u;
-			uint32_t indexCountLOD0 = 0;
+			uint32_t indexEndLOD0 = 0;
 			uint32_t first_subset = 0;
 			uint32_t last_subset = 0;
 			GetLODSubsetRange(0, first_subset, last_subset);
@@ -574,15 +574,19 @@ namespace wi::scene
 			{
 				const MeshComponent::MeshSubset& subset = subsets[subsetIndex];
 				indexOffsetLOD0 = std::min(indexOffsetLOD0, subset.indexOffset);
-				indexCountLOD0 = std::max(indexCountLOD0, subset.indexCount);
+				indexEndLOD0 = std::max(indexEndLOD0, subset.indexOffset + subset.indexCount);
 			}
-			const uint32_t* indicesLOD0 = indices.data() + indexOffsetLOD0;
-			wi::vector<XMFLOAT4> index_tangents(indexCountLOD0);
-			meshopt_generateTangents((float*)index_tangents.data(), indicesLOD0, indexCountLOD0, (float*)vertex_positions.data(), vertex_positions.size(), sizeof(XMFLOAT3), (float*)vertex_normals.data(), sizeof(XMFLOAT3), (float*)vertex_uvset_0.data(), sizeof(XMFLOAT2));
-			vertex_tangents.resize(vertex_positions.size());
-			for (size_t i = 0; i < indexCountLOD0; ++i)
+			if (indexOffsetLOD0 < indexEndLOD0)
 			{
-				vertex_tangents[indices[i]] = index_tangents[i];
+				const uint32_t indexCountLOD0 = indexEndLOD0 - indexOffsetLOD0;
+				const uint32_t* indicesLOD0 = indices.data() + indexOffsetLOD0;
+				wi::vector<XMFLOAT4> index_tangents(indexCountLOD0);
+				meshopt_generateTangents((float*)index_tangents.data(), indicesLOD0, indexCountLOD0, (float*)vertex_positions.data(), vertex_positions.size(), sizeof(XMFLOAT3), (float*)vertex_normals.data(), sizeof(XMFLOAT3), (float*)vertex_uvset_0.data(), sizeof(XMFLOAT2));
+				vertex_tangents.resize(vertex_positions.size());
+				for (size_t i = 0; i < indexCountLOD0; ++i)
+				{
+					vertex_tangents[indicesLOD0[i]] = index_tangents[i];
+				}
 			}
 		}
 

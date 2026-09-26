@@ -1402,7 +1402,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 							for (size_t i = 0; i < vertexCount; ++i)
 							{
 								const XMFLOAT3& color = *(XMFLOAT3*)((size_t)data + i * stride);
-								uint32_t rgba = wi::math::CompressColor(color);
+								uint32_t rgba = wi::math::CompressColor(XMFLOAT4(color.x, color.y, color.z, 1.0f)); // glTF: alpha is 1 when not specified
 
 								mesh.vertex_colors[vertexOffset + i] = rgba;
 							}
@@ -1456,7 +1456,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 								const uint16_t& r = *(uint16_t*)((size_t)data + i * stride + 0 * sizeof(uint16_t));
 								const uint16_t& g = *(uint16_t*)((size_t)data + i * stride + 1 * sizeof(uint16_t));
 								const uint16_t& b = *(uint16_t*)((size_t)data + i * stride + 2 * sizeof(uint16_t));
-								uint32_t rgba = wi::math::CompressColor(XMFLOAT3(r / 65535.0f, g / 65535.0f, b / 65535.0f));
+								uint32_t rgba = wi::math::CompressColor(XMFLOAT4(r / 65535.0f, g / 65535.0f, b / 65535.0f, 1.0f)); // glTF: alpha is 1 when not specified
 
 								mesh.vertex_colors[vertexOffset + i] = rgba;
 							}
