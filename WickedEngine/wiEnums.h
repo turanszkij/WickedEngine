@@ -60,7 +60,7 @@ namespace wi::enums
 	// There are two different kinds of stencil refs:
 	//	ENGINE	: managed by the engine systems (STENCILREF enum values between 0-15)
 	//	USER	: managed by the user (raw numbers between 0-15)
-	enum STENCILREF_MASK
+	enum STENCILREF_MASK : uint8_t
 	{
 		STENCILREF_MASK_ENGINE = 0x0F,
 		STENCILREF_MASK_USER = 0xF0,
@@ -69,7 +69,7 @@ namespace wi::enums
 
 	// engine stencil reference values. These can be in range of [0, 15].
 	// Do not alter order or value because it is bound to lua manually!
-	enum STENCILREF
+	enum STENCILREF : uint8_t
 	{
 		STENCILREF_EMPTY = 0,
 		STENCILREF_DEFAULT = 1,

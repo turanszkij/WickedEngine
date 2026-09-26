@@ -31,7 +31,7 @@ namespace wi::gui
 		uint64_t userdata = 0;	// this will provide the userdata value that was set to a widget (or part of a widget)
 	};
 
-	enum WIDGETSTATE
+	enum WIDGETSTATE : uint8_t
 	{
 		IDLE,			// widget is doing nothing
 		FOCUS,			// widget got pointer dragged on or selected
@@ -96,7 +96,7 @@ namespace wi::gui
 		WIDGET_ID_USER,
 	};
 
-	enum class LocalizationEnabled
+	enum class LocalizationEnabled : uint8_t
 	{
 		None = 0,
 		Text = 1 << 0,
@@ -264,31 +264,40 @@ namespace wi::gui
 	class Widget : public wi::scene::TransformComponent
 	{
 		friend class ComboBox;
-	private:
-		int tooltipTimer = 0;
-	protected:
+	public:
 		std::string name;
+		XMFLOAT3 translation = XMFLOAT3(0, 0, 0);
+		WIDGETSTATE state = IDLE;
 		bool enabled = true;
 		bool visible = true;
-		LocalizationEnabled localization_enabled = LocalizationEnabled::All;
-		float shadow = 1; // shadow radius
-		wi::Color shadow_color = wi::Color::Shadow();
 		bool shadow_highlight = false;
-		XMFLOAT3 shadow_highlight_color = XMFLOAT3(1, 1, 1);
-		float shadow_highlight_spread = 1;
-		WIDGETSTATE state = IDLE;
-		float tooltip_shadow = 1; // shadow radius
+		XMFLOAT3 scale = XMFLOAT3(1, 1, 1);
+		bool force_disable = false;
+		bool priority_change = true;
+		LocalizationEnabled localization_enabled = LocalizationEnabled::All;
+		half shadow = 1; // shadow radius
+		int16_t tooltipTimer = 0;
+		wi::Color shadow_color = wi::Color::Shadow();
+		half3 shadow_highlight_color = half3(1, 1, 1);
+		half shadow_highlight_spread = 1;
+		half tooltip_shadow = 1; // shadow radius
+		half angular_highlight_width = 0;
 		wi::Color tooltip_shadow_color = wi::Color::Shadow();
+		half4 angular_highlight_color = half4(1, 1, 1, 1);
+		wi::primitive::Hitbox2D hitBox;
+		float left_text_width = 0;
+		float right_text_width = 0;
+		uint32_t priority = 0;
+		float angular_highlight_timer = 0;
+		wi::graphics::Rect scissorRect;
+		Widget* parent = nullptr;
+		wi::primitive::Hitbox2D active_area; // Pointer hitbox constrain area
+		wi::Sprite sprites[WIDGETSTATE_COUNT];
+		wi::SpriteFont font;
 		mutable wi::Sprite tooltipSprite;
 		mutable wi::SpriteFont tooltipFont;
 		mutable wi::SpriteFont scripttipFont;
-		float angular_highlight_width = 0;
-		float angular_highlight_timer = 0;
-		XMFLOAT4 angular_highlight_color = XMFLOAT4(1, 1, 1, 1);
-		float left_text_width = 0;
-		float right_text_width = 0;
 
-	public:
 		Widget();
 		virtual ~Widget() = default;
 
@@ -339,16 +348,6 @@ namespace wi::gui
 		virtual void SetTheme(const Theme& theme, int id = -1);
 		virtual const char* GetWidgetTypeName() const { return "Widget"; }
 
-		wi::Sprite sprites[WIDGETSTATE_COUNT];
-		wi::SpriteFont font;
-
-		XMFLOAT3 translation = XMFLOAT3(0, 0, 0);
-		XMFLOAT3 scale = XMFLOAT3(1, 1, 1);
-
-		wi::primitive::Hitbox2D hitBox;
-		wi::graphics::Rect scissorRect;
-
-		Widget* parent = nullptr;
 		void AttachTo(Widget* parent);
 		void Detach();
 
@@ -359,12 +358,7 @@ namespace wi::gui
 		wi::primitive::Hitbox2D GetPointerHitbox(bool constrained = true) const;
 		XMFLOAT2 GetPointerHighlightPos(const wi::Canvas& canvas) const;
 
-		wi::primitive::Hitbox2D active_area; // Pointer hitbox constrain area
 		void HitboxConstrain(wi::primitive::Hitbox2D& hb) const;
-
-		bool priority_change = true;
-		uint32_t priority = 0;
-		bool force_disable = false;
 
 		bool IsLocalizationEnabled() const { return localization_enabled != LocalizationEnabled::None; }
 		LocalizationEnabled GetLocalizationEnabled() const { return localization_enabled; }
