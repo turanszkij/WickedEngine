@@ -360,6 +360,9 @@ namespace OffsetAllocator
 #ifdef DEBUG_VERBOSE
 		printf("Getting node %u from freelist[%u]\n", nodeIndex, m_freeOffset + 1);
 #endif
+		// Reset the recycled node: a stale binListPrev, used flag or neighbor link left over from its
+		//	previous use corrupts the bin lists, and allocate() then hands out ranges that are still in use.
+		m_nodes[nodeIndex] = Node();
 		m_nodes[nodeIndex].dataOffset = dataOffset;
 		m_nodes[nodeIndex].dataSize = size;
 		m_nodes[nodeIndex].binListNext = topNodeIndex;
