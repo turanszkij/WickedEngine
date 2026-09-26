@@ -270,6 +270,20 @@ void LoadNode(int nodeIndex, Entity parent, LoaderState& state)
 	state.entityMap[nodeIndex] = entity;
 
 	TransformComponent& transform = *scene.transforms.GetComponent(entity);
+	if (node.mesh >= 0 && node.skin >= 0 &&
+		(!node.scale.empty() || !node.rotation.empty() || !node.translation.empty() || !node.matrix.empty()))
+	{
+		// glTF 2.0 specification, Skins: "Only the joint transforms are applied to
+		// the skinned mesh; the transform of the skinned mesh node MUST be ignored."
+		// Every mesh node of a skin resolves to the same armature entity above, so
+		// applying this node's transform would write it onto the armature shared
+		// by every mesh of that skin.
+		wi::backlog::post("glTF: skinned mesh node '" + node.name + "' has a transform, which is ignored as the glTF specification requires", wi::backlog::LogLevel::Warning);
+		node.scale.clear();
+		node.rotation.clear();
+		node.translation.clear();
+		node.matrix.clear();
+	}
 	if (!node.scale.empty())
 	{
 		// Note: limiting min scale because scale <= 0.0001 will break matrix decompose and mess up the model (float precision issue?)
