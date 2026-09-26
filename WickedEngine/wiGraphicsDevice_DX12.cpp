@@ -865,6 +865,84 @@ namespace dx12_internal
 	{
 		return D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(_ConvertComponentSwizzle(value.r), _ConvertComponentSwizzle(value.g), _ConvertComponentSwizzle(value.b), _ConvertComponentSwizzle(value.a));
 	}
+	constexpr D3D12_RESOURCE_DESC _ConvertTextureDesc(const TextureDesc& desc, bool casting_fully_typed_formats)
+	{
+		bool require_format_casting = has_flag(desc.misc_flags, ResourceMiscFlag::TYPED_FORMAT_CASTING);
+
+		D3D12_RESOURCE_DESC resourcedesc = {};
+		resourcedesc.Format = _ConvertFormat(desc.format);
+		resourcedesc.Width = desc.width;
+		resourcedesc.Height = desc.height;
+		resourcedesc.MipLevels = GetMipCount(desc);
+		resourcedesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+		resourcedesc.DepthOrArraySize = (UINT16)desc.array_size;
+		resourcedesc.SampleDesc.Count = desc.sample_count;
+		resourcedesc.SampleDesc.Quality = 0;
+		resourcedesc.Alignment = 0;
+		resourcedesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+		if (has_flag(desc.bind_flags, BindFlag::DEPTH_STENCIL))
+		{
+			resourcedesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+			if (has_flag(desc.bind_flags, BindFlag::SHADER_RESOURCE))
+			{
+				require_format_casting = true;
+			}
+			else
+			{
+				resourcedesc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
+			}
+		}
+		if (has_flag(desc.bind_flags, BindFlag::RENDER_TARGET))
+		{
+			resourcedesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+		}
+		if (has_flag(desc.bind_flags, BindFlag::UNORDERED_ACCESS))
+		{
+			resourcedesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+		}
+		if (!has_flag(desc.bind_flags, BindFlag::DEPTH_STENCIL) && resourcedesc.SampleDesc.Count <= 1)
+		{
+			// The copy and video queues have much stricter requirements to supported resource states, but they support
+			//	implicit promotion from COMMON state. Because user is not allowed to set resource to COMMON state, we use this flag
+			//	so textures automatically decay to COMMON state at the queue submit when they are left in a read-only state
+			resourcedesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS;
+		}
+
+#ifndef PLATFORM_XBOX
+		if (has_flag(desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_DPB_ONLY))
+		{
+			resourcedesc.Flags = D3D12_RESOURCE_FLAG_VIDEO_DECODE_REFERENCE_ONLY | D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
+		}
+#endif // PLATFORM_XBOX
+
+		switch (desc.type)
+		{
+		case TextureDesc::Type::TEXTURE_1D:
+			resourcedesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE1D;
+			break;
+		case TextureDesc::Type::TEXTURE_2D:
+			resourcedesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+			break;
+		case TextureDesc::Type::TEXTURE_3D:
+			resourcedesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE3D;
+			resourcedesc.DepthOrArraySize = (UINT16)desc.depth;
+			break;
+		default:
+			assert(0);
+			break;
+		}
+
+		if ((!casting_fully_typed_formats && require_format_casting) || has_flag(desc.misc_flags, ResourceMiscFlag::TYPELESS_FORMAT_CASTING))
+		{
+			resourcedesc.Format = _ConvertFormatToTypeless(resourcedesc.Format);
+		}
+
+#ifdef PLATFORM_XBOX
+		wi::graphics::xbox::ApplyTextureCreationFlags(desc, resourcedesc.Flags, D3D12_HEAP_FLAG_NONE);
+#endif // PLATFORM_XBOX
+
+		return resourcedesc;
+	}
 
 	// Native -> Engine converters
 	constexpr Format _ConvertFormat_Inv(DXGI_FORMAT value)
@@ -1656,13 +1734,16 @@ std::mutex queue_locker;
 			dx12_check(device->device->CreateFence(0, D3D12_FENCE_FLAG_NONE, PPV_ARGS(cmd.fence)));
 			dx12_check(cmd.fence->SetName(L"CopyAllocator::fence"));
 
-			GPUBufferDesc uploaddesc;
-			uploaddesc.size = wi::math::GetNextPowerOfTwo(staging_size);
-			uploaddesc.size = std::max(uploaddesc.size, uint64_t(65536));
-			uploaddesc.usage = Usage::UPLOAD;
-			bool upload_success = device->CreateBuffer(&uploaddesc, nullptr, &cmd.uploadbuffer);
-			assert(upload_success);
-			device->SetName(&cmd.uploadbuffer, "CopyAllocator::uploadBuffer");
+			if (staging_size > 0)
+			{
+				GPUBufferDesc uploaddesc;
+				uploaddesc.size = wi::math::GetNextPowerOfTwo(staging_size);
+				uploaddesc.size = std::max(uploaddesc.size, uint64_t(65536));
+				uploaddesc.usage = Usage::UPLOAD;
+				bool upload_success = device->CreateBuffer(&uploaddesc, nullptr, &cmd.uploadbuffer);
+				assert(upload_success);
+				device->SetName(&cmd.uploadbuffer, "CopyAllocator::uploadBuffer");
+			}
 		}
 
 		// begin command list in valid state:
@@ -1671,7 +1752,7 @@ std::mutex queue_locker;
 
 		return cmd;
 	}
-	void GraphicsDevice_DX12::CopyAllocator::submit(CopyCMD cmd)
+	void GraphicsDevice_DX12::CopyAllocator::submit(CopyCMD cmd, bool wait_cpu)
 	{
 		dx12_check(cmd.commandList->Close());
 		ID3D12CommandList* commandlists[] = {
@@ -1689,10 +1770,29 @@ std::mutex queue_locker;
 			dx12_check(queue->Signal(cmd.fence.Get(), cmd.fenceValue));
 		}
 
-		dx12_check(cmd.fence->SetEventOnCompletion(cmd.fenceValue, nullptr));
+		if (wait_cpu)
+		{
+			dx12_check(cmd.fence->SetEventOnCompletion(cmd.fenceValue, nullptr));
 
-		std::scoped_lock lock(locker);
-		freelist.push_back(cmd);
+			std::scoped_lock lock(locker);
+			freelist.push_back(cmd);
+		}
+		else
+		{
+#ifdef PLATFORM_XBOX
+			std::scoped_lock lock(queue_locker); // queue operations are not thread-safe on XBOX
+#endif // PLATFORM_XBOX
+			for (int q = 0; q < QUEUE_COUNT; ++q)
+			{
+				CommandQueue& queue = device->queues[q];
+				if (queue.queue == nullptr)
+					continue;
+				queue.queue->Wait(cmd.fence.Get(), cmd.fenceValue);
+			}
+
+			std::scoped_lock lock(locker);
+			async_worklist.push_back(cmd);
+		}
 	}
 
 	void GraphicsDevice_DX12::DescriptorBinder::init(GraphicsDevice_DX12* device)
@@ -3453,8 +3553,6 @@ std::mutex queue_locker;
 		texture->sparse_properties = nullptr;
 		texture->desc = *desc;
 
-		bool require_format_casting = has_flag(desc->misc_flags, ResourceMiscFlag::TYPED_FORMAT_CASTING);
-
 		texture->desc.mip_levels = GetMipCount(texture->desc);
 
 		HRESULT hr = E_FAIL;
@@ -3462,53 +3560,7 @@ std::mutex queue_locker;
 		D3D12MA::ALLOCATION_DESC allocationDesc = {};
 		allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 
-		D3D12_RESOURCE_DESC resourcedesc;
-		resourcedesc.Format = _ConvertFormat(desc->format);
-		resourcedesc.Width = desc->width;
-		resourcedesc.Height = desc->height;
-		resourcedesc.MipLevels = texture->desc.mip_levels;
-		resourcedesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-		resourcedesc.DepthOrArraySize = (UINT16)desc->array_size;
-		resourcedesc.SampleDesc.Count = desc->sample_count;
-		resourcedesc.SampleDesc.Quality = 0;
-		resourcedesc.Alignment = 0;
-		resourcedesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-		if (has_flag(desc->bind_flags, BindFlag::DEPTH_STENCIL))
-		{
-			resourcedesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-			//allocationDesc.Flags |= D3D12MA::ALLOCATION_FLAG_COMMITTED;
-			if (has_flag(desc->bind_flags, BindFlag::SHADER_RESOURCE))
-			{
-				require_format_casting = true;
-			}
-			else
-			{
-				resourcedesc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
-			}
-		}
-		if (has_flag(desc->bind_flags, BindFlag::RENDER_TARGET))
-		{
-			resourcedesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-			//allocationDesc.Flags |= D3D12MA::ALLOCATION_FLAG_COMMITTED;
-		}
-		if (has_flag(desc->bind_flags, BindFlag::UNORDERED_ACCESS))
-		{
-			resourcedesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-		}
-		if (!has_flag(desc->bind_flags, BindFlag::DEPTH_STENCIL) && resourcedesc.SampleDesc.Count <= 1)
-		{
-			// The copy and video queues have much stricter requirements to supported resource states, but they support
-			//	implicit promotion from COMMON state. Because user is not allowed to set resource to COMMON state, we use this flag
-			//	so textures automatically decay to COMMON state at the queue submit when they are left in a read-only state
-			resourcedesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS;
-		}
-
-#ifndef PLATFORM_XBOX
-		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE_DPB_ONLY))
-		{
-			resourcedesc.Flags = D3D12_RESOURCE_FLAG_VIDEO_DECODE_REFERENCE_ONLY | D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
-		}
-#endif // PLATFORM_XBOX
+		D3D12_RESOURCE_DESC resourcedesc = _ConvertTextureDesc(texture->desc, casting_fully_typed_formats);
 
 		if (
 			has_flag(texture->desc.misc_flags, ResourceMiscFlag::VIDEO_DECODE) ||
@@ -3519,23 +3571,6 @@ std::mutex queue_locker;
 			allocationDesc.Flags = D3D12MA::ALLOCATION_FLAG_COMMITTED;
 		}
 
-		switch (texture->desc.type)
-		{
-		case TextureDesc::Type::TEXTURE_1D:
-			resourcedesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE1D;
-			break;
-		case TextureDesc::Type::TEXTURE_2D:
-			resourcedesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-			break;
-		case TextureDesc::Type::TEXTURE_3D:
-			resourcedesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE3D;
-			resourcedesc.DepthOrArraySize = (UINT16)desc->depth;
-			break;
-		default:
-			assert(0);
-			break;
-		}
-
 		D3D12_CLEAR_VALUE optimizedClearValue = {};
 		optimizedClearValue.Color[0] = texture->desc.clear.color[0];
 		optimizedClearValue.Color[1] = texture->desc.clear.color[1];
@@ -3543,14 +3578,8 @@ std::mutex queue_locker;
 		optimizedClearValue.Color[3] = texture->desc.clear.color[3];
 		optimizedClearValue.DepthStencil.Depth = texture->desc.clear.depth_stencil.depth;
 		optimizedClearValue.DepthStencil.Stencil = texture->desc.clear.depth_stencil.stencil;
-		optimizedClearValue.Format = resourcedesc.Format; // Typed
-		bool useClearValue = has_flag(desc->bind_flags, BindFlag::RENDER_TARGET) || has_flag(desc->bind_flags, BindFlag::DEPTH_STENCIL);
-
-		if ((!casting_fully_typed_formats && require_format_casting) || has_flag(texture->desc.misc_flags, ResourceMiscFlag::TYPELESS_FORMAT_CASTING))
-		{
-			// Fallback to TYPELESS, must be AFTER optimizedClearValue.Format was set:
-			resourcedesc.Format = _ConvertFormatToTypeless(resourcedesc.Format);
-		}
+		optimizedClearValue.Format = _ConvertFormat(texture->desc.format); // _ConvertFormat again because _ConvertTextureDesc might change it to _TYPELESS
+		const bool useClearValue = has_flag(desc->bind_flags, BindFlag::RENDER_TARGET) || has_flag(desc->bind_flags, BindFlag::DEPTH_STENCIL);
 
 		D3D12_RESOURCE_STATES resourceState = _ParseResourceState(texture->desc.layout);
 
@@ -3608,10 +3637,6 @@ std::mutex queue_locker;
 			//	It will be used with WriteToSubresource to avoid GPU copy from UPLOAD to DEAFULT
 			allocationDesc.CustomPool = allocationhandler->uma_pool.Get();
 		}
-#endif // PLATFORM_XBOX
-
-#ifdef PLATFORM_XBOX
-		wi::graphics::xbox::ApplyTextureCreationFlags(texture->desc, resourcedesc.Flags, allocationDesc.ExtraHeapFlags);
 #endif // PLATFORM_XBOX
 
 		if (has_flag(desc->misc_flags, ResourceMiscFlag::ALIASING_BUFFER) ||
@@ -5245,6 +5270,16 @@ std::mutex queue_locker;
 		}
 	}
 
+	SizeAlignment GraphicsDevice_DX12::GetDeviceTextureMemoryRequirements(const TextureDesc* desc) const
+	{
+		D3D12_RESOURCE_DESC resourcedesc = _ConvertTextureDesc(*desc, casting_fully_typed_formats);
+		D3D12_RESOURCE_ALLOCATION_INFO allocationInfo = device->GetResourceAllocationInfo(0, 1, &resourcedesc);
+		SizeAlignment ret;
+		ret.size = allocationInfo.SizeInBytes;
+		ret.alignment = allocationInfo.Alignment;
+		return ret;
+	}
+
 	CommandList GraphicsDevice_DX12::BeginCommandList(QUEUE_TYPE queue)
 	{
 		HRESULT hr;
@@ -5510,6 +5545,16 @@ std::mutex queue_locker;
 		}
 
 		allocationhandler->Update(FRAMECOUNT, BUFFERCOUNT);
+
+		// Reusing completed async copies:
+		{
+			std::scoped_lock lck(copyAllocator.locker);
+			while (!copyAllocator.async_worklist.empty() && copyAllocator.async_worklist.front().fence->GetCompletedValue() >= copyAllocator.async_worklist.front().fenceValue)
+			{
+				copyAllocator.freelist.push_back(std::move(copyAllocator.async_worklist.front()));
+				copyAllocator.async_worklist.pop_front();
+			}
+		}
 	}
 
 	void GraphicsDevice_DX12::OnDeviceRemoved()
@@ -5773,13 +5818,14 @@ std::mutex queue_locker;
 		{
 			if (queue.queue == nullptr)
 				continue;
-			dx12_check(queue.queue->Signal(fence.Get(), 1));
-			if (fence->GetCompletedValue() < 1)
-			{
-				dx12_check(fence->SetEventOnCompletion(1, nullptr));
-			}
 			fence->Signal(0);
+			dx12_check(queue.queue->Signal(fence.Get(), 1));
+			dx12_check(fence->SetEventOnCompletion(1, nullptr));
 		}
+
+		fence->Signal(0);
+		dx12_check(copyAllocator.queue->Signal(fence.Get(), 1));
+		dx12_check(fence->SetEventOnCompletion(1, nullptr));
 	}
 
 	void GraphicsDevice_DX12::ClearPipelineStateCache()
@@ -5945,6 +5991,31 @@ std::mutex queue_locker;
 				D3D12_TILE_MAPPING_FLAG_NONE
 			);
 		}
+	}
+
+	void GraphicsDevice_DX12::CopyBufferAsync(const GPUBufferCopyCommand* commands, uint32_t command_count, const char* name) const
+	{
+		CopyAllocator::CopyCMD cmd = copyAllocator.allocate(0);
+		if (name != nullptr)
+		{
+			wchar_t text[128];
+			if (wi::helper::StringConvert(name, text, arraysize(text)) > 0)
+			{
+				PIXBeginEvent(cmd.commandList.Get(), 0xFF000000, text);
+			}
+		}
+		for (uint32_t i = 0; i < command_count; ++i)
+		{
+			const GPUBufferCopyCommand& command = commands[i];
+			auto dst_internal = to_internal(command.dst);
+			auto src_internal = to_internal(command.src);
+			cmd.commandList->CopyBufferRegion(dst_internal->resource.Get(), command.dst_offset, src_internal->resource.Get(), command.src_offset, command.size);
+		}
+		if (name != nullptr)
+		{
+			PIXEndEvent(cmd.commandList.Get());
+		}
+		copyAllocator.submit(cmd, false);
 	}
 
 	void GraphicsDevice_DX12::WaitCommandList(CommandList cmd, CommandList wait_for)

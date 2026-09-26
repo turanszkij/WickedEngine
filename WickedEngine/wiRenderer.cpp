@@ -5218,86 +5218,10 @@ void UpdateRenderData(
 	PushBarrier(GPUBarrier::Buffer(&vis.scene->meshletBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS));
 
 	PushBarrier(GPUBarrier::Buffer(&buffers[BUFFERTYPE_FRAMECB], ResourceState::CONSTANT_BUFFER, ResourceState::COPY_DST));
-	if (vis.scene->instanceBuffer.IsValid())
-	{
-		PushBarrier(GPUBarrier::Buffer(&vis.scene->instanceBuffer, ResourceState::SHADER_RESOURCE, ResourceState::COPY_DST));
-	}
-	if (vis.scene->geometryBuffer.IsValid())
-	{
-		PushBarrier(GPUBarrier::Buffer(&vis.scene->geometryBuffer, ResourceState::SHADER_RESOURCE, ResourceState::COPY_DST));
-	}
-	if (vis.scene->materialBuffer.IsValid())
-	{
-		PushBarrier(GPUBarrier::Buffer(&vis.scene->materialBuffer, ResourceState::SHADER_RESOURCE, ResourceState::COPY_DST));
-	}
-	if (vis.scene->skinningBuffer.IsValid())
-	{
-		PushBarrier(GPUBarrier::Buffer(&vis.scene->skinningBuffer, ResourceState::SHADER_RESOURCE, ResourceState::COPY_DST));
-	}
 	FlushBarriers(cmd);
 
 	device->UpdateBuffer(&buffers[BUFFERTYPE_FRAMECB], &frameCB, cmd);
 	PushBarrier(GPUBarrier::Buffer(&buffers[BUFFERTYPE_FRAMECB], ResourceState::COPY_DST, ResourceState::CONSTANT_BUFFER));
-
-	if (vis.scene->instanceBuffer.IsValid() && vis.scene->instanceArraySize > 0)
-	{
-		device->EventBegin("Upload instances", cmd);
-		device->CopyBuffer(
-			&vis.scene->instanceBuffer,
-			0,
-			&vis.scene->instanceUploadBuffer[vis.scene->cpu_gpu_mapped_resource_index],
-			0,
-			vis.scene->instanceArraySize * sizeof(ShaderMeshInstance),
-			cmd
-		);
-		PushBarrier(GPUBarrier::Buffer(&vis.scene->instanceBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
-		device->EventEnd(cmd);
-	}
-
-	if (vis.scene->geometryBuffer.IsValid() && vis.scene->geometryArraySize > 0)
-	{
-		device->EventBegin("Upload geometries", cmd);
-		device->CopyBuffer(
-			&vis.scene->geometryBuffer,
-			0,
-			&vis.scene->geometryUploadBuffer[vis.scene->cpu_gpu_mapped_resource_index],
-			0,
-			vis.scene->geometryArraySize * sizeof(ShaderGeometry),
-			cmd
-		);
-		PushBarrier(GPUBarrier::Buffer(&vis.scene->geometryBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
-		device->EventEnd(cmd);
-	}
-
-	if (vis.scene->materialBuffer.IsValid() && vis.scene->materialArraySize > 0)
-	{
-		device->EventBegin("Upload materials", cmd);
-		device->CopyBuffer(
-			&vis.scene->materialBuffer,
-			0,
-			&vis.scene->materialUploadBuffer[vis.scene->cpu_gpu_mapped_resource_index],
-			0,
-			vis.scene->materialArraySize * sizeof(ShaderMaterial),
-			cmd
-		);
-		PushBarrier(GPUBarrier::Buffer(&vis.scene->materialBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
-		device->EventEnd(cmd);
-	}
-
-	if (vis.scene->skinningBuffer.IsValid() && vis.scene->skinningDataSize > 0)
-	{
-		device->EventBegin("Upload skinning buffer", cmd);
-		device->CopyBuffer(
-			&vis.scene->skinningBuffer,
-			0,
-			&vis.scene->skinningUploadBuffer[vis.scene->cpu_gpu_mapped_resource_index],
-			0,
-			vis.scene->skinningDataSize,
-			cmd
-		);
-		PushBarrier(GPUBarrier::Buffer(&vis.scene->skinningBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
-		device->EventEnd(cmd);
-	}
 
 	// Indirect debug buffer - clear indirect args:
 	IndirectDrawArgsInstanced debug_indirect = {};
@@ -5340,9 +5264,9 @@ void UpdateRenderData(
 		device->EventBegin("Skinning and Morph", cmd);
 		auto range = wi::profiler::BeginRangeGPU("Skinning and Morph", cmd);
 		int descriptor_skinningbuffer = -1;
-		if (vis.scene->skinningBuffer.IsValid())
+		if (vis.scene->skinningBuffer[vis.scene->cpu_gpu_mapped_resource_index].IsValid())
 		{
-			descriptor_skinningbuffer = device->GetDescriptorIndex(&vis.scene->skinningBuffer, SubresourceType::SRV);
+			descriptor_skinningbuffer = device->GetDescriptorIndex(&vis.scene->skinningBuffer[vis.scene->cpu_gpu_mapped_resource_index], SubresourceType::SRV);
 		}
 		else if (vis.scene->skinningUploadBuffer[vis.scene->cpu_gpu_mapped_resource_index].IsValid())
 		{
@@ -11074,23 +10998,35 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 		}
 	}
 
+	static GPUBuffer lightmap_aliasingAllocation;
 	static Texture lightmap_color_tmp;
 	static Texture lightmap_depth_tmp;
 	if (lightmap_color_tmp.desc.width < max_width || lightmap_color_tmp.desc.height < max_height)
 	{
-		TextureDesc desc;
-		desc.width = wi::math::GetNextPowerOfTwo(max_width);
-		desc.height = wi::math::GetNextPowerOfTwo(max_height);
-		desc.format = Format::R16G16B16A16_FLOAT;
-		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS | BindFlag::RENDER_TARGET; // Note: RENDER_TARGET is not used, but it's created with support for ResourceMiscFlag::ALIASING_TEXTURE_RT_DS
-		desc.misc_flags = ResourceMiscFlag::ALIASING_TEXTURE_RT_DS;
-		device->CreateTexture(&desc, nullptr, &lightmap_color_tmp);
+		TextureDesc desc_color;
+		desc_color.width = wi::math::GetNextPowerOfTwo(max_width);
+		desc_color.height = wi::math::GetNextPowerOfTwo(max_height);
+		desc_color.format = Format::R16G16B16A16_FLOAT;
+		desc_color.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS | BindFlag::RENDER_TARGET; // Note: RENDER_TARGET is not used, but it's created with support for ResourceMiscFlag::ALIASING_TEXTURE_RT_DS
+		SizeAlignment sizealign_color = device->GetDeviceTextureMemoryRequirements(&desc_color);
 
-		desc.format = Format::D16_UNORM;
-		desc.bind_flags = BindFlag::DEPTH_STENCIL;
-		desc.layout = ResourceState::DEPTHSTENCIL;
-		desc.misc_flags = ResourceMiscFlag::NONE;
-		device->CreateTexture(&desc, nullptr, &lightmap_depth_tmp, &lightmap_color_tmp); // aliased!
+		TextureDesc desc_depth;
+		desc_depth.width = desc_color.width;
+		desc_depth.height = desc_color.height;
+		desc_depth.format = Format::D16_UNORM;
+		desc_depth.bind_flags = BindFlag::DEPTH_STENCIL;
+		desc_depth.layout = ResourceState::DEPTHSTENCIL;
+		SizeAlignment sizealign_depth = device->GetDeviceTextureMemoryRequirements(&desc_depth);
+
+		GPUBufferDesc bd;
+		bd.usage = Usage::DEFAULT;
+		bd.misc_flags = ResourceMiscFlag::ALIASING_TEXTURE_RT_DS;
+		bd.size = std::max(sizealign_color.size, sizealign_depth.size);
+		bd.alignment = (uint32_t)std::max(sizealign_color.alignment, sizealign_depth.alignment);
+		device->CreateBuffer(&bd, nullptr, &lightmap_aliasingAllocation);
+
+		device->CreateTexture(&desc_color, nullptr, &lightmap_color_tmp, &lightmap_aliasingAllocation); // aliased!
+		device->CreateTexture(&desc_depth, nullptr, &lightmap_depth_tmp, &lightmap_aliasingAllocation); // aliased!
 	}
 
 	// Render lightmaps for each object:
@@ -11120,7 +11056,7 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 			{
 				RenderPassImage rp[] = {
 					RenderPassImage::RenderTarget(&object.lightmap_render, RenderPassImage::LoadOp::CLEAR),
-					RenderPassImage::DepthStencil(&lightmap_depth_tmp, RenderPassImage::LoadOp::CLEAR),
+					RenderPassImage::DepthStencil(&lightmap_depth_tmp, RenderPassImage::LoadOp::CLEAR, RenderPassImage::StoreOp::DONTCARE),
 				};
 				device->RenderPassBegin(rp, arraysize(rp), cmd);
 			}
@@ -11128,7 +11064,7 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 			{
 				RenderPassImage rp[] = {
 					RenderPassImage::RenderTarget(&object.lightmap_render, RenderPassImage::LoadOp::LOAD),
-					RenderPassImage::DepthStencil(&lightmap_depth_tmp, RenderPassImage::LoadOp::CLEAR),
+					RenderPassImage::DepthStencil(&lightmap_depth_tmp, RenderPassImage::LoadOp::CLEAR, RenderPassImage::StoreOp::DONTCARE),
 				};
 				device->RenderPassBegin(rp, arraysize(rp), cmd);
 			}
@@ -12519,15 +12455,6 @@ void DDGI(
 
 	BindCommonResources(cmd);
 
-	if (scene.voxelgrid_gpu.IsValid() && scene.voxel_grids.GetCount() > 0)
-	{
-		device->EventBegin("Upload voxel grid", cmd);
-		VoxelGrid& voxelgrid = scene.voxel_grids[0];
-		device->UpdateBuffer(&scene.voxelgrid_gpu, voxelgrid.voxels.data(), cmd, voxelgrid.voxels.size() * sizeof(uint64_t));
-		PushBarrier(GPUBarrier::Buffer(&scene.voxelgrid_gpu, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
-		device->EventEnd(cmd);
-	}
-
 	DDGIPushConstants push;
 	uint8_t instanceInclusionMask = 0xFF;
 	push.instanceInclusionMask = instanceInclusionMask;
@@ -12636,8 +12563,6 @@ void DDGI(
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
-
-	FlushBarriers(cmd); // voxelgrid
 
 	// Update:
 	{
@@ -18649,13 +18574,25 @@ void CreateMeshBlendResources(MeshBlendResources& res, XMUINT2 resolution)
 	device->SetName(&res.mask, "meshblend.mask");
 
 	desc.format = Format::R16G16_UINT;
-	device->CreateTexture(&desc, nullptr, &res.expand[0]);
-	device->SetName(&res.expand[0], "meshblend.expand[0]");
-	device->CreateTexture(&desc, nullptr, &res.expand[1]);
-	device->SetName(&res.expand[1], "meshblend.expand[1]");
+	SizeAlignment sizealign_expand = device->GetDeviceTextureMemoryRequirements(&desc);
+	desc.format = Format::R11G11B10_FLOAT;
+	SizeAlignment sizealign_temp = device->GetDeviceTextureMemoryRequirements(&desc);
+
+	GPUBufferDesc bd;
+	bd.usage = Usage::DEFAULT;
+	bd.misc_flags = ResourceMiscFlag::ALIASING_TEXTURE_NON_RT_DS;
+	bd.size = std::max(sizealign_expand.size, sizealign_temp.size);
+	bd.alignment = (uint32_t)std::max(sizealign_expand.alignment, sizealign_temp.alignment);
+	device->CreateBuffer(&bd, nullptr, &res.aliasingAllocation);
+
+	desc.format = Format::R16G16_UINT;
+	device->CreateTexture(&desc, nullptr, &res.expand[meshblend_final_write], &res.aliasingAllocation); // aliased!
+	device->SetName(&res.expand[meshblend_final_write], "meshblend.expand[meshblend_final_write]");
+	device->CreateTexture(&desc, nullptr, &res.expand[meshblend_final_read]);
+	device->SetName(&res.expand[meshblend_final_read], "meshblend.expand[meshblend_final_read]");
 
 	desc.format = Format::R11G11B10_FLOAT;
-	device->CreateTexture(&desc, nullptr, &res.tmp, &res.expand[meshblend_final_write]); // aliased! Need to take into account the ping-ponging indices!
+	device->CreateTexture(&desc, nullptr, &res.tmp, &res.aliasingAllocation); // aliased!
 	device->SetName(&res.tmp, "meshblend.temp");
 }
 void PostProcess_MeshBlend_EdgeProcess(

@@ -123,10 +123,11 @@ namespace wi::graphics
 				inline bool IsValid() const { return commandList != nullptr; }
 			};
 			wi::vector<CopyCMD> freelist;
+			std::deque<CopyCMD> async_worklist;
 
 			void init(GraphicsDevice_DX12* device);
 			CopyCMD allocate(uint64_t staging_size);
-			void submit(CopyCMD cmd);
+			void submit(CopyCMD cmd, bool wait_cpu = true);
 		};
 		mutable CopyAllocator copyAllocator;
 
@@ -381,6 +382,8 @@ namespace wi::graphics
 			return alignment;
 		}
 
+		SizeAlignment GetDeviceTextureMemoryRequirements(const TextureDesc* desc) const override;
+
 		MemoryUsage GetMemoryUsage() const override
 		{
 			MemoryUsage retval;
@@ -394,6 +397,8 @@ namespace wi::graphics
 		uint32_t GetMaxViewportCount() const override { return D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE; };
 
 		void SparseUpdate(QUEUE_TYPE queue, const SparseUpdateCommand* commands, uint32_t command_count) override;
+
+		void CopyBufferAsync(const GPUBufferCopyCommand* commands, uint32_t command_count, const char* name = nullptr) const override;
 
 		const char* GetTag() const override { return "[DX12]"; }
 

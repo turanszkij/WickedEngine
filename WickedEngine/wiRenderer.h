@@ -1048,6 +1048,7 @@ namespace wi::renderer
 		wi::graphics::Texture mask;
 		wi::graphics::Texture tmp;
 		wi::graphics::Texture expand[2];
+		wi::graphics::GPUBuffer aliasingAllocation;
 
 		bool IsValid() const { return mask.IsValid(); }
 	};

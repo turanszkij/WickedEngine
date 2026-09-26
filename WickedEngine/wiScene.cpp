@@ -34,9 +34,10 @@ namespace wi::scene
 	void Scene::Update(float dt)
 	{
 		GraphicsDevice* device = wi::graphics::GetDevice();
-		cpu_gpu_mapped_resource_index = GetDevice()->GetBufferIndex(); // this is now saved so that the renderer knows the last resource index that the scene was updated with
+		cpu_gpu_mapped_resource_index = device->GetBufferIndex(); // this is now saved so that the renderer knows the last resource index that the scene was updated with
 		this->dt = dt;
 		time += dt;
+		const bool UMA = device->CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA); // Using this to determine whether upload buffers will be bound directly for Unified Memory Architecture GPU or it's better to copy them to DEFAULT
 
 		wi::jobsystem::context ctx;
 
@@ -61,6 +62,43 @@ namespace wi::scene
 				terrain.scene = this;
 				terrain.Generation_Update(camera);
 			}
+		}
+
+		// voxel grid upload kick off (after script update):
+		wi::jobsystem::context voxel_gpu_ctx;
+		uint64_t voxel_gpu_size = 0;
+		if (voxel_grids.GetCount() > 0 && wi::renderer::GetDDGIEnabled()) // NOTE: right now only DDGI uses the voxel grid so I skip uploading it if not active
+		{
+			VoxelGrid& voxelgrid = voxel_grids[0];
+			voxel_gpu_size = voxelgrid.voxels.size() * sizeof(uint64_t);
+			if (!UMA && voxelgrid_gpu[cpu_gpu_mapped_resource_index].desc.size < voxel_gpu_size)
+			{
+				GPUBufferDesc desc;
+				desc.size = voxel_gpu_size;
+				desc.bind_flags = BindFlag::SHADER_RESOURCE;
+				desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+				device->CreateBuffer(&desc, nullptr, &voxelgrid_gpu[cpu_gpu_mapped_resource_index]);
+				device->SetName(&voxelgrid_gpu[cpu_gpu_mapped_resource_index], "voxelgrid_gpu");
+			}
+			if (voxelgrid_gpu_upload[cpu_gpu_mapped_resource_index].desc.size < voxel_gpu_size)
+			{
+				GPUBufferDesc desc;
+				desc.usage = Usage::UPLOAD;
+				desc.size = voxel_gpu_size;
+				if (UMA)
+				{
+					desc.bind_flags = BindFlag::SHADER_RESOURCE;
+					desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+				}
+				device->CreateBuffer(&desc, nullptr, &voxelgrid_gpu_upload[cpu_gpu_mapped_resource_index]);
+				device->SetName(&voxelgrid_gpu_upload[cpu_gpu_mapped_resource_index], "voxelgrid_gpu_upload");
+			}
+			wi::jobsystem::Execute(voxel_gpu_ctx, [this, voxel_gpu_size, device](wi::jobsystem::JobArgs args) {
+				ScopedCPUProfiling("Voxel copy to GPU buffer");
+				const uint64_t* voxel_cpu_src = voxel_grids[0].voxels.data();
+				uint64_t* voxel_gpu_dst = (uint64_t*)voxelgrid_gpu_upload[cpu_gpu_mapped_resource_index].mapped_data;
+				std::memcpy(voxel_gpu_dst, voxel_cpu_src, voxel_gpu_size);
+			});
 		}
 
 		// count colliders in background thread before procedural anim system
@@ -91,11 +129,14 @@ namespace wi::scene
 			desc.size = desc.stride * instanceArraySize * 2; // *2 to grow fast
 			desc.bind_flags = BindFlag::SHADER_RESOURCE;
 			desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
-			if (!device->CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
+			if (!UMA)
 			{
 				// Non-UMA: separate Default usage buffer
-				device->CreateBuffer(&desc, nullptr, &instanceBuffer);
-				device->SetName(&instanceBuffer, "Scene::instanceBuffer");
+				for (int i = 0; i < arraysize(instanceBuffer); ++i)
+				{
+					device->CreateBuffer(&desc, nullptr, &instanceBuffer[i]);
+					device->SetName(&instanceBuffer[i], "Scene::instanceBuffer");
+				}
 
 				// Upload buffer shouldn't be used by shaders with Non-UMA:
 				desc.bind_flags = BindFlag::NONE;
@@ -130,11 +171,14 @@ namespace wi::scene
 			desc.size = desc.stride * materialArraySize * 2; // *2 to grow fast
 			desc.bind_flags = BindFlag::SHADER_RESOURCE;
 			desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
-			if (!device->CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
+			if (!UMA)
 			{
 				// Non-UMA: separate Default usage buffer
-				device->CreateBuffer(&desc, nullptr, &materialBuffer);
-				device->SetName(&materialBuffer, "Scene::materialBuffer");
+				for (int i = 0; i < arraysize(materialBuffer); ++i)
+				{
+					device->CreateBuffer(&desc, nullptr, &materialBuffer[i]);
+					device->SetName(&materialBuffer[i], "Scene::materialBuffer");
+				}
 
 				// Upload buffer shouldn't be used by shaders with Non-UMA:
 				desc.bind_flags = BindFlag::NONE;
@@ -310,11 +354,14 @@ namespace wi::scene
 			desc.size = desc.stride * geometryArraySize * 2; // *2 to grow fast
 			desc.bind_flags = BindFlag::SHADER_RESOURCE;
 			desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
-			if (!device->CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
+			if (!UMA)
 			{
 				// Non-UMA: separate Default usage buffer
-				device->CreateBuffer(&desc, nullptr, &geometryBuffer);
-				device->SetName(&geometryBuffer, "Scene::geometryBuffer");
+				for (int i = 0; i < arraysize(geometryBuffer); ++i)
+				{
+					device->CreateBuffer(&desc, nullptr, &geometryBuffer[i]);
+					device->SetName(&geometryBuffer[i], "Scene::geometryBuffer");
+				}
 
 				// Upload buffer shouldn't be used by shaders with Non-UMA:
 				desc.bind_flags = BindFlag::NONE;
@@ -339,11 +386,14 @@ namespace wi::scene
 			desc.size = skinningDataSize * 2; // *2 to grow fast
 			desc.bind_flags = BindFlag::SHADER_RESOURCE;
 			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-			if (!device->CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
+			if (!UMA)
 			{
 				// Non-UMA: separate Default usage buffer
-				device->CreateBuffer(&desc, nullptr, &skinningBuffer);
-				device->SetName(&skinningBuffer, "Scene::skinningBuffer");
+				for (int i = 0; i < arraysize(skinningBuffer); ++i)
+				{
+					device->CreateBuffer(&desc, nullptr, &skinningBuffer[i]);
+					device->SetName(&skinningBuffer[i], "Scene::skinningBuffer");
+				}
 
 				// Upload buffer shouldn't be used by shaders with Non-UMA:
 				desc.bind_flags = BindFlag::NONE;
@@ -414,7 +464,7 @@ namespace wi::scene
 
 		// Meshlet buffer:
 		uint32_t meshletCount = meshletAllocator.load();
-		if(meshletBuffer.desc.size < meshletCount * sizeof(ShaderMeshlet))
+		if (meshletBuffer.desc.size < meshletCount * sizeof(ShaderMeshlet))
 		{
 			GPUBufferDesc desc;
 			desc.stride = sizeof(ShaderMeshlet);
@@ -875,7 +925,7 @@ namespace wi::scene
 		}
 
 		// Shader scene resources:
-		if (device->CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
+		if (UMA)
 		{
 			shaderscene.instancebuffer = device->GetDescriptorIndex(&instanceUploadBuffer[cpu_gpu_mapped_resource_index], SubresourceType::SRV);
 			shaderscene.geometrybuffer = device->GetDescriptorIndex(&geometryUploadBuffer[cpu_gpu_mapped_resource_index], SubresourceType::SRV);
@@ -883,9 +933,9 @@ namespace wi::scene
 		}
 		else
 		{
-			shaderscene.instancebuffer = device->GetDescriptorIndex(&instanceBuffer, SubresourceType::SRV);
-			shaderscene.geometrybuffer = device->GetDescriptorIndex(&geometryBuffer, SubresourceType::SRV);
-			shaderscene.materialbuffer = device->GetDescriptorIndex(&materialBuffer, SubresourceType::SRV);
+			shaderscene.instancebuffer = device->GetDescriptorIndex(&instanceBuffer[cpu_gpu_mapped_resource_index], SubresourceType::SRV);
+			shaderscene.geometrybuffer = device->GetDescriptorIndex(&geometryBuffer[cpu_gpu_mapped_resource_index], SubresourceType::SRV);
+			shaderscene.materialbuffer = device->GetDescriptorIndex(&materialBuffer[cpu_gpu_mapped_resource_index], SubresourceType::SRV);
 		}
 		shaderscene.instanceCount = (uint)instanceArraySize;
 		shaderscene.geometryCount = (uint)geometryArraySize;
@@ -1013,23 +1063,66 @@ namespace wi::scene
 		if (voxel_grids.GetCount() > 0)
 		{
 			VoxelGrid& voxelgrid = voxel_grids[0];
-			const uint64_t required_size = voxelgrid.voxels.size() * sizeof(uint64_t);
-			if (voxelgrid_gpu.desc.size < required_size)
+			if (UMA)
 			{
-				GPUBufferDesc desc;
-				desc.size = required_size;
-				desc.bind_flags = BindFlag::SHADER_RESOURCE;
-				desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-				device->CreateBuffer(&desc, nullptr, &voxelgrid_gpu);
-				device->SetName(&voxelgrid_gpu, "voxelgrid_gpu");
+				shaderscene.voxelgrid.buffer = device->GetDescriptorIndex(&voxelgrid_gpu_upload[cpu_gpu_mapped_resource_index], SubresourceType::SRV);
 			}
-			shaderscene.voxelgrid.buffer = device->GetDescriptorIndex(&voxelgrid_gpu, SubresourceType::SRV);
+			else
+			{
+				shaderscene.voxelgrid.buffer = device->GetDescriptorIndex(&voxelgrid_gpu[cpu_gpu_mapped_resource_index], SubresourceType::SRV);
+			}
 			shaderscene.voxelgrid.resolution = voxelgrid.resolution;
 			shaderscene.voxelgrid.resolution_div4 = voxelgrid.resolution_div4;
 			shaderscene.voxelgrid.resolution_rcp = voxelgrid.resolution_rcp;
 			shaderscene.voxelgrid.center = voxelgrid.center;
 			shaderscene.voxelgrid.voxelSize = voxelgrid.voxelSize;
 			shaderscene.voxelgrid.voxelSize_rcp = voxelgrid.voxelSize_rcp;
+		}
+
+		// Note: with the CopyBufferAsync we also have to double buffer the dedicated GPU memory buffers as the async copy will be kicked with frame overlap
+		StackVector<GPUBufferCopyCommand, 8> async_buffer_uploads;
+		if (instanceArraySize > 0 && instanceBuffer[cpu_gpu_mapped_resource_index].IsValid())
+		{
+			GPUBufferCopyCommand& command = async_buffer_uploads.emplace_back();
+			command.dst = &instanceBuffer[cpu_gpu_mapped_resource_index];
+			command.src = &instanceUploadBuffer[cpu_gpu_mapped_resource_index];
+			command.size = instanceArraySize * sizeof(ShaderMeshInstance);
+		}
+		if (materialArraySize > 0 && materialBuffer[cpu_gpu_mapped_resource_index].IsValid())
+		{
+			GPUBufferCopyCommand& command = async_buffer_uploads.emplace_back();
+			command.dst = &materialBuffer[cpu_gpu_mapped_resource_index];
+			command.src = &materialUploadBuffer[cpu_gpu_mapped_resource_index];
+			command.size = materialArraySize * sizeof(ShaderMaterial);
+		}
+		if (geometryArraySize > 0 && geometryBuffer[cpu_gpu_mapped_resource_index].IsValid())
+		{
+			GPUBufferCopyCommand& command = async_buffer_uploads.emplace_back();
+			command.dst = &geometryBuffer[cpu_gpu_mapped_resource_index];
+			command.src = &geometryUploadBuffer[cpu_gpu_mapped_resource_index];
+			command.size = geometryArraySize * sizeof(ShaderGeometry);
+		}
+		if (skinningDataSize > 0 && skinningBuffer[cpu_gpu_mapped_resource_index].IsValid())
+		{
+			GPUBufferCopyCommand& command = async_buffer_uploads.emplace_back();
+			command.dst = &skinningBuffer[cpu_gpu_mapped_resource_index];
+			command.src = &skinningUploadBuffer[cpu_gpu_mapped_resource_index];
+			command.size = skinningDataSize;
+		}
+		if (voxel_gpu_size > 0)
+		{
+			wi::jobsystem::Wait(voxel_gpu_ctx);
+			if (!UMA)
+			{
+				GPUBufferCopyCommand& command = async_buffer_uploads.emplace_back();
+				command.dst = &voxelgrid_gpu[cpu_gpu_mapped_resource_index];
+				command.src = &voxelgrid_gpu_upload[cpu_gpu_mapped_resource_index];
+				command.size = voxel_gpu_size;
+			}
+		}
+		if (!async_buffer_uploads.empty())
+		{
+			device->CopyBufferAsync(async_buffer_uploads.data(), async_buffer_uploads.size(), "Scene async buffer updates");
 		}
 	}
 	void Scene::Clear()
@@ -3025,12 +3118,16 @@ namespace wi::scene
 					{
 						unused_phonemes[next++] = (ExpressionComponent::Preset)phoneme;
 						int mouth = expression_mastering.presets[(int)phoneme];
+						if (mouth < 0 || mouth >= (int)expression_mastering.expressions.size())
+							continue; // preset not bound on this model
 						ExpressionComponent::Expression& expression = expression_mastering.expressions[mouth];
 						expression.weight = wi::math::Lerp(expression.weight, 0, 0.4f); // fade out unused
 						expression.SetDirty();
 					}
 				}
 				int mouth = expression_mastering.presets[(int)expression_mastering.talking_phoneme];
+				if (mouth >= 0 && mouth < (int)expression_mastering.expressions.size()) // preset may not be bound on this model
+				{
 				ExpressionComponent::Expression& expression = expression_mastering.expressions[mouth];
 
 				if (voice_playing)
@@ -3085,6 +3182,7 @@ namespace wi::scene
 				}
 
 				expression.SetDirty();
+				}
 			}
 			else if (expression_mastering._flags & ExpressionComponent::TALKING_ENDED)
 			{

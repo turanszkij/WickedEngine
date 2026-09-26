@@ -505,6 +505,130 @@ namespace metal_internal
 		}
 		return MTL::SamplerAddressModeClampToEdge;
 	}
+	inline NS::SharedPtr<MTL::TextureDescriptor> _ConvertTextureDesc(const TextureDesc& desc, MTL::Device* device, bool textureUlongAtomics)
+	{
+		NS::SharedPtr<MTL::TextureDescriptor> descriptor = NS::TransferPtr(MTL::TextureDescriptor::alloc()->init());
+		descriptor->setWidth(desc.width);
+		descriptor->setHeight(desc.height);
+		descriptor->setDepth(desc.depth);
+		descriptor->setArrayLength(desc.array_size);
+		descriptor->setMipmapLevelCount(GetMipCount(desc));
+		descriptor->setPixelFormat(_ConvertPixelFormat(desc.format));
+		
+		uint32_t sample_count = desc.sample_count;
+		while (sample_count > 1 && !device->supportsTextureSampleCount(sample_count))
+		{
+			sample_count /= 2;
+		}
+		descriptor->setSampleCount(sample_count);
+		
+		switch (desc.type)
+		{
+			case TextureDesc::Type::TEXTURE_1D:
+				//descriptor->setTextureType(desc->array_size > 1 ? MTL::TextureType1DArray : MTL::TextureType1D);
+				descriptor->setTextureType(desc.array_size > 1 ? MTL::TextureType2DArray : MTL::TextureType2D); // NOTE: This seems to be broken! Real Texture1D type doesn't work in shaders, but creating Texture2D instead works! Issue FB21629558
+				break;
+			case TextureDesc::Type::TEXTURE_2D:
+				if(desc.sample_count > 1)
+				{
+					descriptor->setTextureType(desc.array_size > 1 ? MTL::TextureType2DMultisampleArray : MTL::TextureType2DMultisample);
+				}
+				else
+				{
+					descriptor->setTextureType(desc.array_size > 1 ? MTL::TextureType2DArray : MTL::TextureType2D);
+				}
+				break;
+			case TextureDesc::Type::TEXTURE_3D:
+				descriptor->setTextureType(MTL::TextureType3D);
+				break;
+			default:
+				break;
+		}
+		if (has_flag(desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
+		{
+			descriptor->setTextureType(desc.array_size > 6 ? MTL::TextureTypeCubeArray : MTL::TextureTypeCube);
+			descriptor->setArrayLength(desc.array_size / 6);
+		}
+		
+		MTL::ResourceOptions resource_options = {};
+		if (has_flag(desc.misc_flags, ResourceMiscFlag::TRANSIENT_ATTACHMENT))
+		{
+			resource_options |= MTL::ResourceStorageModeMemoryless;
+			descriptor->setStorageMode(MTL::StorageModeMemoryless);
+		}
+		if (desc.usage == Usage::DEFAULT && !device->hasUnifiedMemory())
+		{
+			// Discrete GPU path:
+			resource_options |= MTL::ResourceStorageModePrivate;
+			descriptor->setStorageMode(MTL::StorageModePrivate);
+		}
+		else if (
+				 has_flag(desc.misc_flags, ResourceMiscFlag::SPARSE) ||
+				 has_flag(desc.bind_flags, BindFlag::RENDER_TARGET) ||
+				 has_flag(desc.bind_flags, BindFlag::DEPTH_STENCIL) ||
+				 has_flag(desc.bind_flags, BindFlag::UNORDERED_ACCESS)
+				 )
+		{
+			// optimized storage for render efficiency even on UMA GPU:
+			resource_options |= MTL::ResourceStorageModePrivate;
+			descriptor->setStorageMode(MTL::StorageModePrivate);
+		}
+		else if (desc.usage == Usage::UPLOAD)
+		{
+			resource_options |= MTL::ResourceStorageModeShared;
+			resource_options |= MTL::ResourceOptionCPUCacheModeWriteCombined;
+			descriptor->setStorageMode(MTL::StorageModeShared);
+			descriptor->setTextureType(MTL::TextureTypeTextureBuffer);
+		}
+		else if (desc.usage == Usage::READBACK)
+		{
+			resource_options |= MTL::ResourceStorageModeShared;
+			descriptor->setStorageMode(MTL::StorageModeShared);
+			descriptor->setTextureType(MTL::TextureTypeTextureBuffer);
+		}
+		else
+		{
+			// CPU accessible or UMA GPU zero-copy optimized:
+			resource_options |= MTL::ResourceStorageModeShared;
+			descriptor->setStorageMode(MTL::StorageModeShared);
+		}
+		descriptor->setResourceOptions(resource_options);
+		
+		MTL::TextureUsage usage = {};
+		if (has_flag(desc.bind_flags, BindFlag::RENDER_TARGET) || has_flag(desc.bind_flags, BindFlag::DEPTH_STENCIL))
+		{
+			usage |= MTL::TextureUsageRenderTarget;
+		}
+		if (has_flag(desc.bind_flags, BindFlag::UNORDERED_ACCESS))
+		{
+			usage |= MTL::TextureUsageShaderWrite;
+			usage |= MTL::TextureUsageRenderTarget; // support for ClearUAV
+			switch (descriptor->pixelFormat())
+			{
+				case MTL::PixelFormatR32Uint:
+				case MTL::PixelFormatR32Sint:
+					usage |= MTL::TextureUsageShaderAtomic;
+					break;
+				case MTL::PixelFormatRG32Uint:
+					if (textureUlongAtomics) // workaround for: https://github.com/turanszkij/WickedEngine/issues/1597
+					{
+						usage |= MTL::TextureUsageShaderAtomic;
+					}
+					break;
+				default:
+					break;
+			}
+		}
+		if (has_flag(desc.bind_flags, BindFlag::SHADER_RESOURCE))
+		{
+			usage |= MTL::TextureUsageShaderRead;
+		}
+		descriptor->setUsage(usage);
+		
+		descriptor->setAllowGPUOptimizedContents(true);
+		
+		return descriptor;
+	}
 
 	IRDescriptorTableEntry create_entry(MTL::Texture* res, float min_lod_clamp = 0, uint32_t metadata = 0)
 	{
@@ -1406,7 +1530,6 @@ using namespace metal_internal;
 		
 		TIMESTAMP_FREQUENCY = device->queryTimestampFrequency();
 		
-		uploadqueue = NS::TransferPtr(device->newMTL4CommandQueue());
 		allocationhandler = wi::allocator::make_shared_single<AllocationHandler>();
 		
 		argument_table_desc = NS::TransferPtr(MTL4::ArgumentTableDescriptor::alloc()->init());
@@ -1454,7 +1577,6 @@ using namespace metal_internal;
 			error->release();
 		}
 		assert(allocationhandler->residency_set.get() != nullptr);
-		uploadqueue->addResidencySet(allocationhandler->residency_set.get());
 		allocationhandler->make_resident(descriptor_heap_res.get());
 		allocationhandler->make_resident(descriptor_heap_sam.get());
 		
@@ -1561,6 +1683,8 @@ using namespace metal_internal;
 				frame_fence[i][q]->setSignaledValue(0);
 			}
 		}
+		
+		copyAllocator.init(this);
 		
 		wilog("Created GraphicsDevice_Metal (%d ms)", (int)std::round(timer.elapsed()));
 	}
@@ -1684,29 +1808,11 @@ using namespace metal_internal;
 		{
 			if (buffer->mapped_data == nullptr)
 			{
-				NS::SharedPtr<MTL::Buffer> uploadbuffer = NS::TransferPtr(device->newBuffer(desc->size, MTL::ResourceStorageModeShared | MTL::ResourceOptionCPUCacheModeWriteCombined));
-				init_callback(uploadbuffer->contents());
-				NS::SharedPtr<NS::AutoreleasePool> autorelease_pool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init()); // scoped drain!
-				NS::SharedPtr<MTL4::CommandBuffer> commandbuffer = NS::TransferPtr(device->newCommandBuffer());
-				NS::SharedPtr<MTL4::CommandAllocator> commandallocator = NS::TransferPtr(device->newCommandAllocator());
-				commandbuffer->beginCommandBuffer(commandallocator.get());
-				allocationhandler->destroylocker.lock();
-				allocationhandler->residency_set->addAllocation(uploadbuffer.get());
-				allocationhandler->residency_set->commit();
-				allocationhandler->destroylocker.unlock();
-				MTL4::ComputeCommandEncoder* encoder = commandbuffer->computeCommandEncoder();
-				encoder->copyFromBuffer(uploadbuffer.get(), 0, internal_state->buffer.get(), 0, desc->size);
-				encoder->endEncoding();
-				commandbuffer->endCommandBuffer();
-				MTL4::CommandBuffer* cmds[] = {commandbuffer.get()};
-				uploadqueue->commit(cmds, arraysize(cmds));
-				NS::SharedPtr<MTL::SharedEvent> event = NS::TransferPtr(device->newSharedEvent());
-				event->setSignaledValue(0);
-				uploadqueue->signalEvent(event.get(), 1);
-				event->waitUntilSignaledValue(1, ~0ull);
-				allocationhandler->destroylocker.lock();
-				allocationhandler->residency_set->removeAllocation(uploadbuffer.get());
-				allocationhandler->destroylocker.unlock();
+				NS::SharedPtr<NS::AutoreleasePool> autorelease_pool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init());
+				CopyAllocator::CopyCMD cmd = copyAllocator.allocate(desc->size);
+				init_callback(cmd.mapped_data);
+				cmd.encoder->copyFromBuffer(cmd.uploadbuffer.get(), 0, internal_state->buffer.get(), 0, desc->size);
+				copyAllocator.submit(cmd);
 			}
 			else
 			{
@@ -1748,126 +1854,9 @@ using namespace metal_internal;
 
 		texture->desc.mip_levels = GetMipCount(texture->desc);
 		
-		NS::SharedPtr<MTL::TextureDescriptor> descriptor = NS::TransferPtr(MTL::TextureDescriptor::alloc()->init());
-		descriptor->setWidth(desc->width);
-		descriptor->setHeight(desc->height);
-		descriptor->setDepth(desc->depth);
-		descriptor->setArrayLength(desc->array_size);
-		descriptor->setMipmapLevelCount(texture->desc.mip_levels);
-		descriptor->setPixelFormat(_ConvertPixelFormat(desc->format));
+		NS::SharedPtr<MTL::TextureDescriptor> descriptor = _ConvertTextureDesc(texture->desc, device.get(), textureUlongAtomics);
 		
-		uint32_t sample_count = desc->sample_count;
-		while (sample_count > 1 && !device->supportsTextureSampleCount(sample_count))
-		{
-			sample_count /= 2;
-		}
-		descriptor->setSampleCount(sample_count);
-		texture->desc.sample_count = sample_count;
-		
-		switch (desc->type)
-		{
-			case TextureDesc::Type::TEXTURE_1D:
-				//descriptor->setTextureType(desc->array_size > 1 ? MTL::TextureType1DArray : MTL::TextureType1D);
-				descriptor->setTextureType(desc->array_size > 1 ? MTL::TextureType2DArray : MTL::TextureType2D); // NOTE: This seems to be broken! Real Texture1D type doesn't work in shaders, but creating Texture2D instead works! Issue FB21629558
-				break;
-			case TextureDesc::Type::TEXTURE_2D:
-				if(desc->sample_count > 1)
-				{
-					descriptor->setTextureType(desc->array_size > 1 ? MTL::TextureType2DMultisampleArray : MTL::TextureType2DMultisample);
-				}
-				else
-				{
-					descriptor->setTextureType(desc->array_size > 1 ? MTL::TextureType2DArray : MTL::TextureType2D);
-				}
-				break;
-			case TextureDesc::Type::TEXTURE_3D:
-				descriptor->setTextureType(MTL::TextureType3D);
-				break;
-			default:
-				break;
-		}
-		if (has_flag(desc->misc_flags, ResourceMiscFlag::TEXTURECUBE))
-		{
-			descriptor->setTextureType(desc->array_size > 6 ? MTL::TextureTypeCubeArray : MTL::TextureTypeCube);
-			descriptor->setArrayLength(desc->array_size / 6);
-		}
-		
-		MTL::ResourceOptions resource_options = {};
-		if (has_flag(desc->misc_flags, ResourceMiscFlag::TRANSIENT_ATTACHMENT))
-		{
-			resource_options |= MTL::ResourceStorageModeMemoryless;
-			descriptor->setStorageMode(MTL::StorageModeMemoryless);
-		}
-		if (desc->usage == Usage::DEFAULT && !CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
-		{
-			// Discrete GPU path:
-			resource_options |= MTL::ResourceStorageModePrivate;
-			descriptor->setStorageMode(MTL::StorageModePrivate);
-		}
-		else if (
-				 sparse ||
-				 has_flag(desc->bind_flags, BindFlag::RENDER_TARGET) ||
-				 has_flag(desc->bind_flags, BindFlag::DEPTH_STENCIL) ||
-				 has_flag(desc->bind_flags, BindFlag::UNORDERED_ACCESS)
-				 )
-		{
-			// optimized storage for render efficiency even on UMA GPU:
-			resource_options |= MTL::ResourceStorageModePrivate;
-			descriptor->setStorageMode(MTL::StorageModePrivate);
-		}
-		else if (desc->usage == Usage::UPLOAD)
-		{
-			resource_options |= MTL::ResourceStorageModeShared;
-			resource_options |= MTL::ResourceOptionCPUCacheModeWriteCombined;
-			descriptor->setStorageMode(MTL::StorageModeShared);
-			descriptor->setTextureType(MTL::TextureTypeTextureBuffer);
-		}
-		else if (desc->usage == Usage::READBACK)
-		{
-			resource_options |= MTL::ResourceStorageModeShared;
-			descriptor->setStorageMode(MTL::StorageModeShared);
-			descriptor->setTextureType(MTL::TextureTypeTextureBuffer);
-		}
-		else
-		{
-			// CPU accessible or UMA GPU zero-copy optimized:
-			resource_options |= MTL::ResourceStorageModeShared;
-			descriptor->setStorageMode(MTL::StorageModeShared);
-		}
-		descriptor->setResourceOptions(resource_options);
-		
-		MTL::TextureUsage usage = {};
-		if (has_flag(desc->bind_flags, BindFlag::RENDER_TARGET) || has_flag(desc->bind_flags, BindFlag::DEPTH_STENCIL))
-		{
-			usage |= MTL::TextureUsageRenderTarget;
-		}
-		if (has_flag(desc->bind_flags, BindFlag::UNORDERED_ACCESS))
-		{
-			usage |= MTL::TextureUsageShaderWrite;
-			usage |= MTL::TextureUsageRenderTarget; // support for ClearUAV
-			switch (descriptor->pixelFormat())
-			{
-				case MTL::PixelFormatR32Uint:
-				case MTL::PixelFormatR32Sint:
-					usage |= MTL::TextureUsageShaderAtomic;
-					break;
-				case MTL::PixelFormatRG32Uint:
-					if (textureUlongAtomics) // workaround for: https://github.com/turanszkij/WickedEngine/issues/1597
-					{
-						usage |= MTL::TextureUsageShaderAtomic;
-					}
-					break;
-				default:
-					break;
-			}
-		}
-		if (has_flag(desc->bind_flags, BindFlag::SHADER_RESOURCE))
-		{
-			usage |= MTL::TextureUsageShaderRead;
-		}
-		descriptor->setUsage(usage);
-		
-		descriptor->setAllowGPUOptimizedContents(true);
+		texture->desc.sample_count = (uint32_t)descriptor->sampleCount(); // might be overridden by device descriptor
 		
 		if (sparse)
 		{
@@ -1897,7 +1886,7 @@ using namespace metal_internal;
 			// This is an aliasing storage:
 			MTL::SizeAndAlign sizealign = device->heapTextureSizeAndAlign(descriptor.get());
 			NS::SharedPtr<MTL::HeapDescriptor> heap_desc = NS::TransferPtr(MTL::HeapDescriptor::alloc()->init());
-			heap_desc->setResourceOptions(resource_options);
+			heap_desc->setResourceOptions(descriptor->resourceOptions());
 			heap_desc->setSize(sizealign.size);
 			heap_desc->setType(MTL::HeapTypePlacement);
 			heap_desc->setMaxCompatiblePlacementSparsePageSize(sparse_page_size);
@@ -1926,7 +1915,7 @@ using namespace metal_internal;
 				// Note: we are creating a buffer instead of linear image because linear image cannot have mips
 				//	With a buffer, we can tightly pack mips linearly into a buffer so it won't have that limitation
 				const size_t buffersize = ComputeTextureMemorySizeInBytes(*desc);
-				internal_state->buffer = NS::TransferPtr(device->newBuffer(buffersize, resource_options));
+				internal_state->buffer = NS::TransferPtr(device->newBuffer(buffersize, descriptor->resourceOptions()));
 				allocationhandler->make_resident(internal_state->buffer.get());
 				
 				texture->mapped_data = internal_state->buffer->contents();
@@ -1952,11 +1941,8 @@ using namespace metal_internal;
 		
 		if (initial_data != nullptr)
 		{
-			NS::SharedPtr<MTL4::CommandAllocator> commandallocator;
-			NS::SharedPtr<MTL4::CommandBuffer> commandbuffer;
-			MTL4::ComputeCommandEncoder* encoder = nullptr;
-			NS::SharedPtr<MTL::Buffer> uploadbuffer;
 			NS::SharedPtr<NS::AutoreleasePool> autorelease_pool; // scoped drain!
+			CopyAllocator::CopyCMD cmd;
 			uint8_t* upload_data = nullptr;
 			if (internal_state->buffer.get() != nullptr)
 			{
@@ -1966,16 +1952,8 @@ using namespace metal_internal;
 			else if (descriptor->storageMode() == MTL::StorageModePrivate)
 			{
 				autorelease_pool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init());
-				uploadbuffer = NS::TransferPtr(device->newBuffer(internal_state->texture->allocatedSize(), MTL::ResourceStorageModeShared | MTL::ResourceOptionCPUCacheModeWriteCombined));
-				upload_data = (uint8_t*)uploadbuffer->contents();
-				commandallocator = NS::TransferPtr(device->newCommandAllocator());
-				commandbuffer = NS::TransferPtr(device->newCommandBuffer());
-				commandbuffer->beginCommandBuffer(commandallocator.get());
-				allocationhandler->destroylocker.lock();
-				allocationhandler->residency_set->addAllocation(uploadbuffer.get());
-				allocationhandler->residency_set->commit();
-				allocationhandler->destroylocker.unlock();
-				encoder = commandbuffer->computeCommandEncoder();
+				cmd = copyAllocator.allocate(internal_state->texture->allocatedSize());
+				upload_data = cmd.mapped_data;
 			}
 			
 			const uint32_t data_stride = GetFormatStride(desc->format);
@@ -2010,7 +1988,7 @@ using namespace metal_internal;
 						size.width = width;
 						size.height = height;
 						size.depth = depth;
-						encoder->copyFromBuffer(uploadbuffer.get(), src_offset, subresourceData.row_pitch, subresourceData.slice_pitch, size, internal_state->texture.get(), slice, mip, origin);
+						cmd.encoder->copyFromBuffer(cmd.uploadbuffer.get(), src_offset, subresourceData.row_pitch, subresourceData.slice_pitch, size, internal_state->texture.get(), slice, mip, origin);
 						width = std::max(1u, width / 2);
 						height = std::max(1u, height / 2);
 					}
@@ -2025,19 +2003,9 @@ using namespace metal_internal;
 				}
 			}
 			
-			if (commandbuffer.get() != nullptr)
+			if (cmd.IsValid())
 			{
-				encoder->endEncoding();
-				commandbuffer->endCommandBuffer();
-				MTL4::CommandBuffer* cmds[] = {commandbuffer.get()};
-				uploadqueue->commit(cmds, arraysize(cmds));
-				NS::SharedPtr<MTL::SharedEvent> event = NS::TransferPtr(device->newSharedEvent());
-				event->setSignaledValue(0);
-				uploadqueue->signalEvent(event.get(), 1);
-				event->waitUntilSignaledValue(1, ~0ull);
-				allocationhandler->destroylocker.lock();
-				allocationhandler->residency_set->removeAllocation(uploadbuffer.get());
-				allocationhandler->destroylocker.unlock();
+				copyAllocator.submit(cmd);
 			}
 		}
 		
@@ -3165,6 +3133,16 @@ using namespace metal_internal;
 		internal_state->library->setLabel(str.get());
 	}
 
+	SizeAlignment GraphicsDevice_Metal::GetDeviceTextureMemoryRequirements(const TextureDesc* desc) const
+	{
+		NS::SharedPtr<MTL::TextureDescriptor> descriptor = _ConvertTextureDesc(*desc, device.get(), textureUlongAtomics);
+		MTL::SizeAndAlign sizealign = device->heapTextureSizeAndAlign(descriptor.get());
+		SizeAlignment ret;
+		ret.size = sizealign.size;
+		ret.alignment = sizealign.align;
+		return ret;
+	}
+
 	CommandList GraphicsDevice_Metal::BeginCommandList(QUEUE_TYPE queue)
 	{
 		cmd_locker.lock();
@@ -3356,6 +3334,16 @@ using namespace metal_internal;
 		}
 		
 		allocationhandler->Update(FRAMECOUNT, BUFFERCOUNT);
+		
+		// Reusing completed async copies:
+		{
+			std::scoped_lock lck(copyAllocator.locker);
+			while (!copyAllocator.async_worklist.empty() && copyAllocator.async_worklist.front().event->signaledValue() >= copyAllocator.async_worklist.front().fenceValue)
+			{
+				copyAllocator.freelist.push_back(std::move(copyAllocator.async_worklist.front()));
+				copyAllocator.async_worklist.pop_front();
+			}
+		}
 	}
 
 	void GraphicsDevice_Metal::WaitForGPU() const
@@ -3369,6 +3357,10 @@ using namespace metal_internal;
 			queue.queue->signalEvent(event.get(), 1);
 			event->waitUntilSignaledValue(1, ~0ull);
 		}
+
+		event->setSignaledValue(0);
+		copyAllocator.uploadqueue->signalEvent(event.get(), 1);
+		event->waitUntilSignaledValue(1, ~0ull);
 	}
 	void GraphicsDevice_Metal::ClearPipelineStateCache()
 	{
@@ -3469,6 +3461,23 @@ using namespace metal_internal;
 		commandqueue->signalEvent(event.get(), 1);
 		event->waitUntilSignaledValue(1, ~0ull);
 #endif
+	}
+
+	void GraphicsDevice_Metal::CopyBufferAsync(const GPUBufferCopyCommand* commands, uint32_t command_count, const char* name) const
+	{
+		NS::SharedPtr<NS::AutoreleasePool> autorelease_pool = NS::TransferPtr(NS::AutoreleasePool::alloc()->init()); // scoped drain!
+		
+		CopyAllocator::CopyCMD cmd = copyAllocator.allocate(0);
+		
+		for (uint32_t i = 0; i < command_count; ++i)
+		{
+			const GPUBufferCopyCommand& command = commands[i];
+			auto dst_internal = to_internal(command.dst);
+			auto src_internal = to_internal(command.src);
+			cmd.encoder->copyFromBuffer(src_internal->buffer.get(), command.src_offset, dst_internal->buffer.get(), command.dst_offset, command.size);
+		}
+		
+		copyAllocator.submit(cmd, false);
 	}
 
 	void GraphicsDevice_Metal::WaitCommandList(CommandList cmd, CommandList wait_for)
