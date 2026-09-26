@@ -3402,6 +3402,14 @@ void Import_Mixamo_Bone(LoaderState& state, Entity boneEntity, const tinygltf::N
 	{
 		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::Head)] = boneEntity;
 	}
+	else if (!node.name.compare("mixamorig:LeftEye"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftEye)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:RightEye"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightEye)] = boneEntity;
+	}
 	else if (!node.name.compare("mixamorig:LeftShoulder"))
 	{
 		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftShoulder)] = boneEntity;
@@ -3622,6 +3630,16 @@ void Import_Makehuman_Bone(LoaderState& state, Entity boneEntity, const tinygltf
 	else if (!node.name.compare("head"))
 	{
 		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::Head)] = boneEntity;
+	}
+	// Unreal-style skeletons (such as MetaHuman) name their eye joints
+	// FACIAL_L_Eye and FACIAL_R_Eye.
+	else if (!node.name.compare("FACIAL_L_Eye"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftEye)] = boneEntity;
+	}
+	else if (!node.name.compare("FACIAL_R_Eye"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightEye)] = boneEntity;
 	}
 	else if (!node.name.compare("clavicle_l"))
 	{
