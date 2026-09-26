@@ -207,6 +207,11 @@ namespace wi::audio
 		audio_internal = wi::allocator::make_shared_single<AudioInternal>();
 	}
 
+	void Deinitialize()
+	{
+		audio_internal.reset();
+	}
+
 	struct SoundInternal
 	{
 		wi::allocator::shared_ptr<AudioInternal> audio;
@@ -697,7 +702,7 @@ namespace wi::audio
 	}
 }
 
-#elif defined(SDL2)
+#elif defined(SDL2) || defined(SDL3)
 
 //FAudio implemetation
 #include <FAudio.h>
@@ -878,6 +883,11 @@ namespace wi::audio
 	void Initialize()
 	{
 		audio_internal = wi::allocator::make_shared_single<AudioInternal>();
+	}
+
+	void Deinitialize()
+	{
+		audio_internal.reset();
 	}
 
 	struct SoundInternal{
@@ -1372,6 +1382,11 @@ namespace wi::audio
 		wilog("wi::audio Initialized [miniaudio] (%d ms)", (int)std::round(timer.elapsed()));
 	}
 
+	void Deinitialize()
+	{
+		engine.reset();
+	}
+
 	static bool CreateSoundInternal(std::function<ma_result (ma_decoder_config* config, ma_uint64* frameCount, void** pcmFrames)> decoder, Sound* sound)
 	{
 		auto info = wi::allocator::make_shared<WrappedSampleInfo>();
@@ -1586,6 +1601,7 @@ namespace wi::audio
 namespace wi::audio
 {
 	void Initialize() {}
+	void Deinitialize() {}
 
 	bool CreateSound(const std::string& filename, Sound* sound) { return false; }
 	bool CreateSound(const uint8_t* data, size_t size, Sound* sound) { return false; }

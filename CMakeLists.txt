@@ -114,8 +114,14 @@ if (WIN32)
     add_compile_definitions(WIN32=1)
     add_compile_definitions(_HAS_EXCEPTIONS=0)
 elseif (UNIX)
-    set(PLATFORM "SDL2")
-    add_compile_definitions(SDL2=1)
+    option(WICKED_USE_SDL3 "Use SDL3 instead of SDL2 as the UNIX platform layer" OFF)
+    if (WICKED_USE_SDL3)
+        set(PLATFORM "SDL3")
+        add_compile_definitions(SDL3=1)
+    else()
+        set(PLATFORM "SDL2")
+        add_compile_definitions(SDL2=1)
+    endif()
     add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=1)
 endif()
 
@@ -199,7 +205,12 @@ if (WICKED_TESTS)
     add_subdirectory(Samples/Tests)
 endif()
 
-if (WICKED_IMGUI_EXAMPLE)
+# Example_ImGui(_Docking) still targets SDL2 directly (find_package(SDL2 REQUIRED) in its
+# own CMakeLists, SDL2-only main file, and the vendored ImGui 1.89.2 predates SDL3's stable
+# release so there is no imgui_impl_sdl3 backend to build against) and hasn't been ported to
+# SDL3, unlike Editor and Tests. Skip it under WICKED_USE_SDL3 rather than failing the build;
+# porting it is left as follow-up work.
+if (WICKED_IMGUI_EXAMPLE AND NOT WICKED_USE_SDL3)
     add_subdirectory(Samples/Example_ImGui)
     add_subdirectory(Samples/Example_ImGui_Docking)
 endif()
