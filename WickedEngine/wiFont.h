@@ -49,16 +49,17 @@ namespace wi::font
 				float posY; // position in vertical direction (logical canvas units)
 			};
 		};
+		uint16_t _flags = SDF_RENDERING;
 		uint16_t size = WIFONTSIZE_DEFAULT; // line height (logical canvas units)
 		half scaling = 1; // this will apply upscaling to the text while keeping the same resolution (size) of the font
 		half rotation = 0; // rotation around alignment anchor (in radians)
 		half spacingX = 0, spacingY = 0; // minimum spacing between characters (logical canvas units)
-		Alignment h_align = WIFALIGN_LEFT; // horizontal alignment
-		Alignment v_align = WIFALIGN_TOP; // vertical alignment
 		wi::Color color; // base color of the text characters
 		wi::Color shadowColor; // transparent disables, any other color enables shadow under text
-		half h_wrap = -1; // wrap start width (-1 default for no wrap) (logical canvas units)
-		uint16_t style = 0; // 0: use default font style, other values can be taken from the wi::font::AddFontStyle() funtion's return value
+		float h_wrap = -1; // wrap start width (-1 default for no wrap) (logical canvas units)
+		int style = 0; // 0: use default font style, other values can be taken from the wi::font::AddFontStyle() funtion's return value
+		Alignment h_align = WIFALIGN_LEFT; // horizontal alignment
+		Alignment v_align = WIFALIGN_TOP; // vertical alignment
 		half softness = 0; // value in [0,1] range (requires SDF rendering to be enabled)
 		half bolden = 0; // value in [0,1] range (requires SDF rendering to be enabled)
 		half shadow_softness = 0.5f; // value in [0,1] range (requires SDF rendering to be enabled)
@@ -68,7 +69,6 @@ namespace wi::font
 		half hdr_scaling = 1.0f; // a scaling value for use by linear output mapping
 		half intensity = 1.0f; // color multiplier
 		half shadow_intensity = 1.0f; // shadow color multiplier
-		uint16_t _flags = SDF_RENDERING;
 		Cursor cursor; // cursor can be used to continue text drawing by taking the Draw's return value (optional)
 		const XMMATRIX* customProjection = nullptr;
 		const XMMATRIX* customRotation = nullptr;
