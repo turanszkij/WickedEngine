@@ -396,7 +396,7 @@ namespace wi::gui
 			}
 			fx.angular_softness_outer_angle = XM_PI * 0.6f;
 			fx.angular_softness_inner_angle = 0;
-			XMStoreFloat2(&fx.angular_softness_direction, XMVector2Normalize(XMVectorSet(std::sin(angular_highlight_timer), std::cos(angular_highlight_timer), 0, 0)));
+			XMStoreHalf2((XMHALF2*)&fx.angular_softness_direction, XMVector2Normalize(XMVectorSet(std::sin(angular_highlight_timer), std::cos(angular_highlight_timer), 0, 0)));
 			fx.enableAngularSoftnessDoubleSided();
 			fx.border_soften = 0.1f;
 			wi::image::Draw(nullptr, fx, cmd);
@@ -4314,7 +4314,7 @@ namespace wi::gui
 			{
 				fx.angular_softness_outer_angle = XM_PI * 0.03f;
 				fx.angular_softness_inner_angle = XM_PI * wi::math::Lerp(0.0f, 0.025f, std::abs(std::sin(resize_blink_timer * 4)));
-				XMStoreFloat2(&fx.angular_softness_direction, XMVector2Normalize(XMVectorSet(-1, -1, 0, 0)));
+				XMStoreHalf2((XMHALF2*)&fx.angular_softness_direction, XMVector2Normalize(XMVectorSet(-1, -1, 0, 0)));
 				wi::image::Draw(nullptr, fx, cmd);
 				wi::input::SetCursor(wi::input::CURSOR_RESIZE_NWSE);
 			}
@@ -4322,7 +4322,7 @@ namespace wi::gui
 			{
 				fx.angular_softness_outer_angle = XM_PI * 0.03f;
 				fx.angular_softness_inner_angle = XM_PI * wi::math::Lerp(0.0f, 0.025f, std::abs(std::sin(resize_blink_timer * 4)));
-				XMStoreFloat2(&fx.angular_softness_direction, XMVector2Normalize(XMVectorSet(1, -1, 0, 0)));
+				XMStoreHalf2((XMHALF2*)&fx.angular_softness_direction, XMVector2Normalize(XMVectorSet(1, -1, 0, 0)));
 				wi::image::Draw(nullptr, fx, cmd);
 				wi::input::SetCursor(wi::input::CURSOR_RESIZE_NESW);
 			}
@@ -4330,7 +4330,7 @@ namespace wi::gui
 			{
 				fx.angular_softness_outer_angle = XM_PI * 0.03f;
 				fx.angular_softness_inner_angle = XM_PI * wi::math::Lerp(0.0f, 0.025f, std::abs(std::sin(resize_blink_timer * 4)));
-				XMStoreFloat2(&fx.angular_softness_direction, XMVector2Normalize(XMVectorSet(1, 1, 0, 0)));
+				XMStoreHalf2((XMHALF2*)&fx.angular_softness_direction, XMVector2Normalize(XMVectorSet(1, 1, 0, 0)));
 				wi::image::Draw(nullptr, fx, cmd);
 				wi::input::SetCursor(wi::input::CURSOR_RESIZE_NWSE);
 			}
@@ -4338,7 +4338,7 @@ namespace wi::gui
 			{
 				fx.angular_softness_outer_angle = XM_PI * 0.03f;
 				fx.angular_softness_inner_angle = XM_PI * wi::math::Lerp(0.0f, 0.025f, std::abs(std::sin(resize_blink_timer * 4)));
-				XMStoreFloat2(&fx.angular_softness_direction, XMVector2Normalize(XMVectorSet(-1, 1, 0, 0)));
+				XMStoreHalf2((XMHALF2*)&fx.angular_softness_direction, XMVector2Normalize(XMVectorSet(-1, 1, 0, 0)));
 				wi::image::Draw(nullptr, fx, cmd);
 				wi::input::SetCursor(wi::input::CURSOR_RESIZE_NESW);
 			}
@@ -6234,7 +6234,7 @@ namespace wi::gui
 				device->BindPipelineState(&gui_internal().PSO_colored, cmd);
 
 				MiscCB cb;
-				cb.g_xColor = opener_highlight == i ? wi::Color::White().toFloat4() : sprites[FOCUS].params.color;
+				cb.g_xColor = opener_highlight == i ? wi::Color::White().toFloat4() : (XMFLOAT4)sprites[FOCUS].params.color;
 				XMStoreFloat4x4(&cb.g_xTransform, XMMatrixScaling(item_height() * 0.3f, item_height() * 0.3f, 1) *
 					XMMatrixRotationZ(item.open ? XM_PIDIV2 : 0) *
 					XMMatrixTranslation(open_box.pos.x + open_box.siz.x * 0.5f, open_box.pos.y + open_box.siz.y * 0.25f, 0) *

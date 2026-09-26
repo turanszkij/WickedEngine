@@ -167,7 +167,16 @@ namespace wi
 			archive >> textureName;
 			archive >> maskName;
 
-			archive >> params._flags;
+			uint32_t paramflags = 0;
+			uint32_t stencilComp = 0;
+			uint32_t stencilRefMode = 0;
+			uint32_t blendFlag = 0;
+			uint32_t sampleFlag = 0;
+			uint32_t quality = 0;
+
+			archive >> paramflags;
+			params._flags = paramflags;
+
 			archive >> params.pos;
 			archive >> params.siz;
 			archive >> params.scale;
@@ -186,16 +195,32 @@ namespace wi
 			archive >> params.mask_alpha_range_end;
 			archive >> params.border_soften;
 			archive >> params.stencilRef;
-			archive >> *(uint32_t*)&params.stencilComp;
-			archive >> *(uint32_t*)&params.stencilRefMode;
-			archive >> *(uint32_t*)&params.blendFlag;
-			archive >> *(uint32_t*)&params.sampleFlag;
-			archive >> *(uint32_t*)&params.quality;
+
+			archive >> stencilComp;
+			archive >> stencilRefMode;
+			archive >> blendFlag;
+			archive >> sampleFlag;
+			archive >> quality;
+
+			params.stencilComp = (wi::image::STENCILMODE)stencilComp;
+			params.stencilRefMode = (wi::image::STENCILREFMODE)stencilRefMode;
+			params.blendFlag = (wi::enums::BLENDMODE)blendFlag;
+			params.sampleFlag = (wi::image::SAMPLEMODE)sampleFlag;
+			params.quality = (wi::image::QUALITY)quality;
+
 			for (int i = 0; i < arraysize(params.corners); ++i)
 			{
-				archive >> params.corners[i];
-				archive >> params.corners_rounding[i].radius;
-				archive >> params.corners_rounding[i].segments;
+				XMFLOAT2 corners;
+				float radius;
+				uint32_t segments;
+
+				archive >> corners;
+				archive >> radius;
+				archive >> segments;
+
+				params.corners[i] = corners;
+				params.corners_rounding[i].radius = radius;
+				params.corners_rounding[i].segments = segments;
 			}
 
 			archive >> anim.repeatable;
@@ -247,7 +272,7 @@ namespace wi
 			archive << wi::helper::GetPathRelative(dir, textureName);
 			archive << wi::helper::GetPathRelative(dir, maskName);
 
-			archive << params._flags;
+			archive << (uint32_t)params._flags;
 			archive << params.pos;
 			archive << params.siz;
 			archive << params.scale;

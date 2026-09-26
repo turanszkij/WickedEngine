@@ -10,7 +10,7 @@
 namespace wi::font
 {
 	// Do not alter order because it is bound to lua manually
-	enum Alignment
+	enum Alignment : uint8_t
 	{
 		WIFALIGN_LEFT,		// left alignment (horizontal)
 		WIFALIGN_CENTER,	// center alignment (horizontal or vertical)
@@ -29,38 +29,6 @@ namespace wi::font
 
 	struct Params
 	{
-		union
-		{
-			XMFLOAT3 position = {}; // position in logical canvas units
-			struct // back-compat aliasing
-			{
-				float posX; // position in horizontal direction (logical canvas units)
-				float posY; // position in vertical direction (logical canvas units)
-			};
-		};
-		int size = WIFONTSIZE_DEFAULT; // line height (logical canvas units)
-		float scaling = 1; // this will apply upscaling to the text while keeping the same resolution (size) of the font
-		float rotation = 0; // rotation around alignment anchor (in radians)
-		float spacingX = 0, spacingY = 0; // minimum spacing between characters (logical canvas units)
-		Alignment h_align = WIFALIGN_LEFT; // horizontal alignment
-		Alignment v_align = WIFALIGN_TOP; // vertical alignment
-		wi::Color color; // base color of the text characters
-		wi::Color shadowColor; // transparent disables, any other color enables shadow under text
-		float h_wrap = -1; // wrap start width (-1 default for no wrap) (logical canvas units)
-		int style = 0; // 0: use default font style, other values can be taken from the wi::font::AddFontStyle() funtion's return value
-		float softness = 0; // value in [0,1] range (requires SDF rendering to be enabled)
-		float bolden = 0; // value in [0,1] range (requires SDF rendering to be enabled)
-		float shadow_softness = 0.5f; // value in [0,1] range (requires SDF rendering to be enabled)
-		float shadow_bolden = 0.1f; // value in [0,1] range (requires SDF rendering to be enabled)
-		float shadow_offset_x = 0; // offset for shadow under the text in logical canvas coordinates
-		float shadow_offset_y = 0; // offset for shadow under the text in logical canvas coordinates
-		Cursor cursor; // cursor can be used to continue text drawing by taking the Draw's return value (optional)
-		float hdr_scaling = 1.0f; // a scaling value for use by linear output mapping
-		float intensity = 1.0f; // color multiplier
-		float shadow_intensity = 1.0f; // shadow color multiplier
-		const XMMATRIX* customProjection = nullptr;
-		const XMMATRIX* customRotation = nullptr;
-
 		enum FLAGS
 		{
 			EMPTY = 0,
@@ -71,7 +39,39 @@ namespace wi::font
 			FLIP_HORIZONTAL = 1 << 4,
 			FLIP_VERTICAL = 1 << 5,
 		};
-		uint32_t _flags = SDF_RENDERING;
+
+		union
+		{
+			XMFLOAT3 position = {}; // position in logical canvas units
+			struct // back-compat aliasing
+			{
+				float posX; // position in horizontal direction (logical canvas units)
+				float posY; // position in vertical direction (logical canvas units)
+			};
+		};
+		uint16_t _flags = SDF_RENDERING;
+		uint16_t size = WIFONTSIZE_DEFAULT; // line height (logical canvas units)
+		half scaling = 1; // this will apply upscaling to the text while keeping the same resolution (size) of the font
+		half rotation = 0; // rotation around alignment anchor (in radians)
+		half spacingX = 0, spacingY = 0; // minimum spacing between characters (logical canvas units)
+		wi::Color color; // base color of the text characters
+		wi::Color shadowColor; // transparent disables, any other color enables shadow under text
+		float h_wrap = -1; // wrap start width (-1 default for no wrap) (logical canvas units)
+		int style = 0; // 0: use default font style, other values can be taken from the wi::font::AddFontStyle() funtion's return value
+		Alignment h_align = WIFALIGN_LEFT; // horizontal alignment
+		Alignment v_align = WIFALIGN_TOP; // vertical alignment
+		half softness = 0; // value in [0,1] range (requires SDF rendering to be enabled)
+		half bolden = 0; // value in [0,1] range (requires SDF rendering to be enabled)
+		half shadow_softness = 0.5f; // value in [0,1] range (requires SDF rendering to be enabled)
+		half shadow_bolden = 0.1f; // value in [0,1] range (requires SDF rendering to be enabled)
+		half shadow_offset_x = 0; // offset for shadow under the text in logical canvas coordinates
+		half shadow_offset_y = 0; // offset for shadow under the text in logical canvas coordinates
+		half hdr_scaling = 1.0f; // a scaling value for use by linear output mapping
+		half intensity = 1.0f; // color multiplier
+		half shadow_intensity = 1.0f; // shadow color multiplier
+		Cursor cursor; // cursor can be used to continue text drawing by taking the Draw's return value (optional)
+		const XMMATRIX* customProjection = nullptr;
+		const XMMATRIX* customRotation = nullptr;
 
 		constexpr bool isSDFRenderingEnabled() const { return _flags & SDF_RENDERING; }
 		constexpr bool isHDR10OutputMappingEnabled() const { return _flags & OUTPUT_COLOR_SPACE_HDR10_ST2084; }
@@ -85,7 +85,7 @@ namespace wi::font
 		// enable HDR10 output mapping, if this image can be interpreted in linear space and converted to HDR10 display format
 		constexpr void enableHDR10OutputMapping() { _flags |= OUTPUT_COLOR_SPACE_HDR10_ST2084; }
 		// enable linear output mapping, which means removing gamma curve and outputting in linear space (useful for blending in HDR space)
-		constexpr void enableLinearOutputMapping(float scaling = 1.0f) { _flags |= OUTPUT_COLOR_SPACE_LINEAR; hdr_scaling = scaling; }
+		inline void enableLinearOutputMapping(float scaling = 1.0f) { _flags |= OUTPUT_COLOR_SPACE_LINEAR; hdr_scaling = scaling; }
 		constexpr void enableDepthTest() { _flags |= DEPTH_TEST; }
 		constexpr void enableFlipHorizontally() { _flags |= FLIP_HORIZONTAL; }
 		constexpr void enableFlipVertically() { _flags |= FLIP_VERTICAL; }
