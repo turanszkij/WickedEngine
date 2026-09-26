@@ -4,7 +4,7 @@
 namespace wi::enums
 {
 	// Common blendmodes used across multiple systems
-	enum BLENDMODE
+	enum BLENDMODE : uint8_t
 	{
 		BLENDMODE_OPAQUE,
 		BLENDMODE_ALPHA,
@@ -45,7 +45,7 @@ namespace wi::enums
 		RENDERTYPE_ALL = FILTER_ALL
 	};
 
-	enum RENDERPASS
+	enum RENDERPASS : uint8_t
 	{
 		RENDERPASS_MAIN,
 		RENDERPASS_PREPASS,

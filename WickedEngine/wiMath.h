@@ -770,5 +770,86 @@ namespace wi::math
 
 		return true;
 	}
-};
+
+}
+
+namespace wi
+{
+	struct unorm8
+	{
+		uint8_t value;
+		unorm8() = default;
+		unorm8(float f) { value = uint8_t(saturate(f) * 255); }
+
+		operator float() const { return float(value) / 255.0f; }
+
+		void operator=(float f) { value = uint8_t(saturate(f) * 255); }
+		void operator+=(float f) { *this = unorm8((*this) + f); }
+		void operator*=(float f) { *this = unorm8((*this) * f); }
+		void operator/=(float f) { *this = unorm8((*this) / f); }
+	};
+	struct unorm16
+	{
+		uint16_t value;
+		unorm16() = default;
+		unorm16(float f) { value = uint16_t(saturate(f) * 65535); }
+
+		operator float() const { return float(value) / 65535.0f; }
+
+		void operator=(float f) { value = uint16_t(saturate(f) * 65535); }
+		void operator+=(float f) { *this = unorm16((*this) + f); }
+		void operator*=(float f) { *this = unorm16((*this) * f); }
+		void operator/=(float f) { *this = unorm16((*this) / f); }
+	};
+
+	struct half
+	{
+		uint16_t value;
+		half() = default;
+		half(float f) { value = wi::math::f32tof16(f); }
+
+		operator float() const { return wi::math::f16tof32(value); }
+
+		void operator=(float f) { value = wi::math::f32tof16(f); }
+		void operator+=(float f) { *this = half((*this) + f); }
+		void operator*=(float f) { *this = half((*this) * f); }
+		void operator/=(float f) { *this = half((*this) / f); }
+	};
+	struct half2
+	{
+		half x, y;
+		half2() = default;
+		half2(float _x, float _y) : x(_x), y(_y) {};
+		half2(const XMFLOAT2& v) : x(v.x), y(v.y) {};
+
+		void operator=(const XMFLOAT2& v) { x = v.x; y = v.y; }
+
+		operator XMFLOAT2() const { return XMFLOAT2(x, y); }
+		constexpr operator uint32_t() const { return uint32_t(x.value) | (uint32_t(y.value) << 16u); }
+	};
+	struct half3
+	{
+		half x, y, z;
+		half3() = default;
+		half3(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {};
+		half3(const XMFLOAT3& v) : x(v.x), y(v.y), z(v.z) {};
+
+		void operator=(const XMFLOAT3& v) { x = v.x; y = v.y; z = v.z; }
+
+		operator XMFLOAT3() const { return XMFLOAT3(x, y, z); }
+		constexpr operator XMUINT2() const { return XMUINT2(uint32_t(x.value) | (uint32_t(y.value) << 16u), uint32_t(z.value)); }
+	};
+	struct half4
+	{
+		half x, y, z, w;
+		half4() = default;
+		half4(float _x, float _y, float _z, float _w) : x(_x), y(_y), z(_z), w(_w) {};
+		half4(const XMFLOAT4& v) : x(v.x), y(v.y), z(v.z), w(v.w) {};
+
+		void operator=(const XMFLOAT4& v) { x = v.x; y = v.y; z = v.z; w = v.w; }
+
+		operator XMFLOAT4() const { return XMFLOAT4(x, y, z, w); }
+		constexpr operator XMUINT2() const { return XMUINT2(uint32_t(x.value) | (uint32_t(y.value) << 16u), uint32_t(z.value) | (uint32_t(w.value) << 16u)); }
+	};
+}
 

@@ -110,7 +110,7 @@ namespace wi::image
 			// https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_lights_punctual#inner-and-outer-cone-angles
 			const float lightAngleScale = 1.0f / std::max(0.001f, innerConeAngleCos - outerConeAngleCos);
 			const float lightAngleOffset = -outerConeAngleCos * lightAngleScale;
-			image.angular_softness_direction = wi::math::pack_half2(params.angular_softness_direction);
+			image.angular_softness_direction = params.angular_softness_direction;
 			image.angular_softness_mad = wi::math::pack_half2(lightAngleScale, lightAngleOffset);
 		}
 
@@ -219,12 +219,12 @@ namespace wi::image
 			{
 				// The rounded corner mode will use a triangle fan structure (implemented by triangle strip):
 				image.flags |= IMAGE_FLAG_CORNER_ROUNDING;
-				const int min_segment_count = 2;
+				const uint16_t min_segment_count = 2;
 
-				uint32_t perimeter_count = 0;
+				uint16_t perimeter_count = 0;
 				for (int i = 0; i < arraysize(params.corners_rounding); ++i)
 				{
-					int segments = std::max(min_segment_count, params.corners_rounding[i].segments);
+					uint16_t segments = std::max(min_segment_count, params.corners_rounding[i].segments);
 					perimeter_count += segments;
 				}
 
@@ -357,9 +357,9 @@ namespace wi::image
 				image.flags |= IMAGE_FLAG_GRADIENT_CIRCULAR;
 				break;
 			}
-			image.gradient_color = wi::math::pack_half4(params.gradient_color);
-			image.gradient_uv_start = wi::math::pack_half2(params.gradient_uv_start);
-			image.gradient_uv_end = wi::math::pack_half2(params.gradient_uv_end);
+			image.gradient_color = params.gradient_color;
+			image.gradient_uv_start = params.gradient_uv_start;
+			image.gradient_uv_end = params.gradient_uv_end;
 		}
 
 		device->EventBegin("Image", cmd);
