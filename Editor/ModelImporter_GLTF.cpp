@@ -2062,6 +2062,18 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 	Import_Extension_VRM(state);
 	Import_Extension_VRMC(state);
 
+	// Humanoid look-at is enabled by default and aims at the origin until a
+	// target is set. Left on, the scene.Update() below would turn the head (and
+	// eyes) toward the origin, and FlipZAxis() would then decompose that turn
+	// into the bones' local transforms, baking a rotation the file does not
+	// contain. Hold it off across both updates and restore it afterwards.
+	wi::vector<uint8_t> lookat_was_enabled(scene.humanoids.GetCount());
+	for (size_t i = 0; i < scene.humanoids.GetCount(); ++i)
+	{
+		lookat_was_enabled[i] = scene.humanoids[i].IsLookAtEnabled() ? 1 : 0;
+		scene.humanoids[i].SetLookAtEnabled(false);
+	}
+
 	//Correct orientation after importing
 	scene.Update(0);
 	FlipZAxis(state);
@@ -2069,6 +2081,11 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 	// Update the scene, to have up to date values immediately after loading:
 	//	For example, snap to camera functionality relies on this
 	scene.Update(0);
+
+	for (size_t i = 0; i < scene.humanoids.GetCount() && i < lookat_was_enabled.size(); ++i)
+	{
+		scene.humanoids[i].SetLookAtEnabled(lookat_was_enabled[i] != 0);
+	}
 
 	// after scene update, clean up duplicate colliders that could have been loaded by some extension
 	scene.DeleteDuplicateColliders();
