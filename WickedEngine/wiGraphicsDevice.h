@@ -445,6 +445,63 @@ namespace wi::graphics
 			}
 		}
 
+		// Resource aliasing helper utility
+		struct AliasingAllocator
+		{
+			GraphicsDevice* device = nullptr;
+			uint64_t size = 0;
+			uint64_t alignment = 0;
+			bool rt_ds = false;
+
+			// Add a single texture into the heap, return its offset
+			uint64_t Add(const TextureDesc* desc)
+			{
+				rt_ds |= has_flag(desc->bind_flags, BindFlag::RENDER_TARGET) | has_flag(desc->bind_flags, BindFlag::DEPTH_STENCIL);
+				SizeAlignment sizealign = device->GetDeviceTextureMemoryRequirements(desc);
+				alignment = std::max(alignment, sizealign.alignment);
+				size = align(size, alignment);
+				uint64_t offset = size;
+				size += sizealign.size;
+				return offset;
+			}
+
+			// Add multiple single textures into the heap on the current offset, aliasing each others' memory, returns the single offset for all of them
+			uint64_t Add(std::initializer_list<const TextureDesc*> descs)
+			{
+				uint64_t batch_size = 0;
+				for (const TextureDesc* desc : descs)
+				{
+					rt_ds |= has_flag(desc->bind_flags, BindFlag::RENDER_TARGET) | has_flag(desc->bind_flags, BindFlag::DEPTH_STENCIL);
+					SizeAlignment sizealign = device->GetDeviceTextureMemoryRequirements(desc);
+					alignment = std::max(alignment, sizealign.alignment);
+					batch_size = std::max(batch_size, sizealign.size);
+				}
+				size = align(size, alignment);
+				uint64_t offset = size;
+				size += batch_size;
+				return offset;
+			}
+
+			// Return the buffer that can hold all the resources that were allocated up to this point
+			GPUBuffer Commit()
+			{
+				GPUBuffer heap;
+				GPUBufferDesc bd;
+				bd.usage = Usage::DEFAULT;
+				bd.size = size;
+				bd.alignment = (uint32_t)alignment;
+				bd.misc_flags = rt_ds ? ResourceMiscFlag::ALIASING_TEXTURE_RT_DS : ResourceMiscFlag::ALIASING_TEXTURE_NON_RT_DS;
+				device->CreateBuffer(&bd, nullptr, &heap);
+				return heap;
+			}
+		};
+		AliasingAllocator CreateAliasingAllocator()
+		{
+			AliasingAllocator ret;
+			ret.device = this;
+			return ret;
+		}
+
 		WI_DISABLE_DEPRECATED_BEGIN
 		// Deprecated, kept for back-compat:
 		[[deprecated]]
