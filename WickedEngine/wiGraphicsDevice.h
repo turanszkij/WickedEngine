@@ -469,14 +469,16 @@ namespace wi::graphics
 			uint64_t Add(std::initializer_list<const TextureDesc*> descs)
 			{
 				uint64_t batch_size = 0;
+				uint64_t batch_alignment = 0;
 				for (const TextureDesc* desc : descs)
 				{
 					rt_ds |= has_flag(desc->bind_flags, BindFlag::RENDER_TARGET) | has_flag(desc->bind_flags, BindFlag::DEPTH_STENCIL);
 					SizeAlignment sizealign = device->GetDeviceTextureMemoryRequirements(desc);
-					alignment = std::max(alignment, sizealign.alignment);
 					batch_size = std::max(batch_size, sizealign.size);
+					batch_alignment = std::max(batch_alignment, sizealign.alignment);
 				}
-				size = align(size, alignment);
+				size = align(size, batch_alignment);
+				alignment = std::max(alignment, batch_alignment);
 				uint64_t offset = size;
 				size += batch_size;
 				return offset;
