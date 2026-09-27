@@ -465,7 +465,7 @@ namespace wi::graphics
 				return offset;
 			}
 
-			// Add multiple single textures into the heap on the current offset, aliasing each others' memory, returns the single offset for all of them
+			// Add multiple textures into the heap on the same offset, aliasing each others' memory, returns the single offset for all of them
 			uint64_t Add(std::initializer_list<const TextureDesc*> descs)
 			{
 				uint64_t batch_size = 0;
