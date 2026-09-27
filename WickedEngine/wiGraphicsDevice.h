@@ -458,8 +458,8 @@ namespace wi::graphics
 			{
 				rt_ds |= has_flag(desc->bind_flags, BindFlag::RENDER_TARGET) | has_flag(desc->bind_flags, BindFlag::DEPTH_STENCIL);
 				SizeAlignment sizealign = device->GetDeviceTextureMemoryRequirements(desc);
+				size = align(size, sizealign.alignment);
 				alignment = std::max(alignment, sizealign.alignment);
-				size = align(size, alignment);
 				uint64_t offset = size;
 				size += sizealign.size;
 				return offset;
