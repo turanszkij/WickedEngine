@@ -2912,7 +2912,9 @@ using namespace vulkan_internal;
 					queueFamily.queueFamilyProperties.queueFlags & VK_QUEUE_TRANSFER_BIT &&
 					copyFamily != i &&
 					!(queueFamily.queueFamilyProperties.queueFlags & VK_QUEUE_GRAPHICS_BIT) &&
-					!(queueFamily.queueFamilyProperties.queueFlags & VK_QUEUE_COMPUTE_BIT)
+					!(queueFamily.queueFamilyProperties.queueFlags & VK_QUEUE_COMPUTE_BIT) &&
+					// Video/optical flow families can also report TRANSFER (NVIDIA: one queue each), and the video family is also used for QUEUE_VIDEO_DECODE, so the init queue would share that VkQueue
+					!(queueFamily.queueFamilyProperties.queueFlags & (VK_QUEUE_VIDEO_DECODE_BIT_KHR | VK_QUEUE_VIDEO_ENCODE_BIT_KHR | VK_QUEUE_OPTICAL_FLOW_BIT_NV))
 					)
 				{
 					initFamily = i;
