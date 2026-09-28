@@ -979,6 +979,14 @@ void Import_Mixamo_Bone(Scene& scene, Entity rootEntity, Entity boneEntity)
 	{
 		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::Head)] = boneEntity;
 	}
+	else if (!name.compare("mixamorig:LeftEye"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftEye)] = boneEntity;
+	}
+	else if (!name.compare("mixamorig:RightEye"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightEye)] = boneEntity;
+	}
 	else if (!name.compare("mixamorig:LeftShoulder"))
 	{
 		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftShoulder)] = boneEntity;
