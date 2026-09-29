@@ -5299,6 +5299,14 @@ namespace wi::scene
 
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 			emitter.UpdateCPU(transform, dt);
+
+			// Create the BLAS as soon as ray tracing is used, not only when the emitter first becomes active:
+			//	creating it lazily in the frame an emitter starts emitting caused GPU faults in the acceleration structure build
+			if (TLAS_instancesMapped != nullptr && !emitter.BLAS.IsValid())
+			{
+				emitter.CreateRaytracingRenderData();
+			}
+
 			if (emitter.IsInactive()) // check after UpdateCPU
 				return; // can skip writing TLAS instace below
 
@@ -5333,11 +5341,6 @@ namespace wi::scene
 
 			if (TLAS_instancesMapped != nullptr)
 			{
-				if (!emitter.BLAS.IsValid())
-				{
-					emitter.CreateRaytracingRenderData();
-				}
-
 				// TLAS instance data:
 				RaytracingAccelerationStructureDesc::TopLevel::Instance instance;
 				for (int i = 0; i < arraysize(instance.transform); ++i)
