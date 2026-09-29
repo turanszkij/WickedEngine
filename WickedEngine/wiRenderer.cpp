@@ -12225,8 +12225,11 @@ void SurfelGI(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
+		// One thread per grid cell. This pass also resets the cell counts, so every cell must be covered:
+		//	an oversized dispatch (more than 65535 groups) is invalid and leaves cells stale.
+		assert((SURFEL_TOTAL_TABLE_SIZE + SURFEL_GRIDOFFSETS_NUMTHREADS - 1) / SURFEL_GRIDOFFSETS_NUMTHREADS <= 65535u);
 		device->Dispatch(
-			(SURFEL_TOTAL_TABLE_SIZE + 63) / 64,
+			(SURFEL_TOTAL_TABLE_SIZE + SURFEL_GRIDOFFSETS_NUMTHREADS - 1) / SURFEL_GRIDOFFSETS_NUMTHREADS,
 			1,
 			1,
 			cmd
