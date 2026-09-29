@@ -23,6 +23,9 @@
 #ifdef SDL2
 #include <SDL2/SDL_vulkan.h>
 #include "sdl2.h"
+#elif defined(SDL3)
+#include <SDL3/SDL_vulkan.h>
+#include "sdl3.h"
 #endif
 
 #include <string>
@@ -1124,7 +1127,7 @@ namespace vulkan_internal
 				allocationhandler->destroyer_semaphores.push_back(std::make_pair(swapchainReleaseSemaphores[i], framecount));
 			}
 
-#ifdef SDL2
+#if defined(SDL2) || defined(SDL3)
 			// Checks if the SDL VIDEO System was already destroyed.
 			// If so we would delete the swapchain twice, causing a crash on wayland.
 			if (SDL_WasInit(SDL_INIT_VIDEO))
@@ -2247,6 +2250,19 @@ using namespace vulkan_internal;
 				instanceExtensions.push_back(x);
 			}
 		}
+#elif defined(SDL3)
+		{
+			Uint32 extensionCount = 0;
+			char const* const* extensionNames_sdl = SDL_Vulkan_GetInstanceExtensions(&extensionCount);
+			if (extensionNames_sdl != nullptr)
+			{
+				instanceExtensions.reserve(instanceExtensions.size() + extensionCount);
+				for (Uint32 i = 0; i < extensionCount; ++i)
+				{
+					instanceExtensions.push_back(extensionNames_sdl[i]);
+				}
+			}
+		}
 #endif // _WIN32
 
 		if (validationMode != ValidationMode::Disabled)
@@ -2896,7 +2912,9 @@ using namespace vulkan_internal;
 					queueFamily.queueFamilyProperties.queueFlags & VK_QUEUE_TRANSFER_BIT &&
 					copyFamily != i &&
 					!(queueFamily.queueFamilyProperties.queueFlags & VK_QUEUE_GRAPHICS_BIT) &&
-					!(queueFamily.queueFamilyProperties.queueFlags & VK_QUEUE_COMPUTE_BIT)
+					!(queueFamily.queueFamilyProperties.queueFlags & VK_QUEUE_COMPUTE_BIT) &&
+					// Video/optical flow families can also report TRANSFER (NVIDIA: one queue each), and the video family is also used for QUEUE_VIDEO_DECODE, so the init queue would share that VkQueue
+					!(queueFamily.queueFamilyProperties.queueFlags & (VK_QUEUE_VIDEO_DECODE_BIT_KHR | VK_QUEUE_VIDEO_ENCODE_BIT_KHR | VK_QUEUE_OPTICAL_FLOW_BIT_NV))
 					)
 				{
 					initFamily = i;
@@ -3640,6 +3658,12 @@ using namespace vulkan_internal;
 			vulkan_check(vkCreateWin32SurfaceKHR(instance, &createInfo, nullptr, &internal_state->surface));
 #elif defined(SDL2)
 			if (!SDL_Vulkan_CreateSurface(window, instance, &internal_state->surface))
+			{
+				wilog_messagebox("Error creating a vulkan surface with SDL_Vulkan_CreateSurface!");
+				wi::platform::Exit();
+			}
+#elif defined(SDL3)
+			if (!SDL_Vulkan_CreateSurface(window, instance, nullptr, &internal_state->surface))
 			{
 				wilog_messagebox("Error creating a vulkan surface with SDL_Vulkan_CreateSurface!");
 				wi::platform::Exit();

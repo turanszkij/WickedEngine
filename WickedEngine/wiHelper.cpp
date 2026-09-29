@@ -108,7 +108,7 @@ namespace wi::helper
 		MessageBox(GetActiveWindow(), wmsg.c_str(), wcaption.c_str(), 0);
 #elif defined(__APPLE__)
 		wi::apple::MessageBox(caption.c_str(), msg.c_str());
-#elif defined(SDL2)
+#elif defined(SDL2) || defined(SDL3)
 		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, caption.c_str(), msg.c_str(), NULL);
 #endif
 	}
@@ -160,7 +160,7 @@ namespace wi::helper
 		
 		return (MessageBoxResult)wi::apple::MessageBox(caption.c_str(), msg.c_str(), buttons.c_str());
 		
-#elif defined(SDL2)
+#elif defined(SDL2) || defined(SDL3)
 		const SDL_MessageBoxButtonData buttons_data[] = {
 			{ SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 0, "Yes" },
 			{ 0, 1, "No" },
@@ -176,7 +176,11 @@ namespace wi::helper
 			NULL
 		};
 		int buttonid;
+#ifdef SDL2
 		if (SDL_ShowMessageBox(&messageboxdata, &buttonid) < 0)
+#elif defined(SDL3)
+		if (!SDL_ShowMessageBox(&messageboxdata, &buttonid))
+#endif
 		{
 			return MessageBoxResult::Cancel;
 		}
@@ -2273,7 +2277,7 @@ namespace wi::helper
 		}
 		::GlobalUnlock(wbuf_handle);
 		::CloseClipboard();
-#elif defined(SDL2)
+#elif defined(SDL2) || defined(SDL3)
 		char* str = SDL_GetClipboardText();
 		StringConvert(str, wstr);
 		SDL_free(str);
@@ -2304,7 +2308,7 @@ namespace wi::helper
 		if (::SetClipboardData(CF_UNICODETEXT, wbuf_handle) == NULL)
 			::GlobalFree(wbuf_handle);
 		::CloseClipboard();
-#elif defined(SDL2)
+#elif defined(SDL2) || defined(SDL3)
 		std::string str;
 		StringConvert(wstr, str);
 		SDL_SetClipboardText(str.c_str());

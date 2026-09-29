@@ -8,11 +8,20 @@
 
 #ifdef SDL2
 #include <SDL2/SDL.h>
+#elif defined(SDL3)
+#include <SDL3/SDL.h>
 #endif
 
 namespace wi::audio
 {
 	void Initialize();
+
+	// Explicitly tears down the audio device/engine. Call this before shutting down the
+	// window system (e.g. before SDL_Quit() on SDL2/SDL3 platforms): audio_internal is
+	// otherwise only destroyed as a static at process exit, which on SDL3 runs after
+	// SDL_Quit() has already torn down the audio subsystem -- the platform backend's
+	// device teardown then dereferences an already-invalidated SDL3 audio device handle.
+	void Deinitialize();
 
 	// SUBMIX_TYPE specifies the playback channel of sound instances
 	//	Do not change the order as this enum can be serialized!

@@ -5,6 +5,8 @@
 
 #ifdef SDL2
 #include <SDL2/SDL.h>
+#elif defined(SDL3)
+#include <SDL3/SDL.h>
 #endif
 
 namespace wi::input::sdlinput
@@ -32,7 +34,7 @@ namespace wi::input::sdlinput
 	void SetControllerFeedback(const wi::input::ControllerFeedback& data, int index);
 
 	// External events can be used for events that is needed outside the engine library, like main_SDL2.cpp for example
-#ifdef SDL2
+#if defined(SDL2) || defined(SDL3)
 	// Call this within the main.cpp program loop for the engine to be able handle the input
 	void ProcessEvent(const SDL_Event &event);
 #endif

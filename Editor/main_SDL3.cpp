@@ -1,0 +1,278 @@
+#include "stdafx.h"
+#include "Editor.h"
+
+#include "sdl3.h"
+#include <fstream>
+
+#include "icon.h"
+
+#ifdef __linux__
+#  include <execinfo.h>
+#  include <csignal>
+#  include <cstdio>
+#  include <unistd.h>
+#endif
+
+using namespace std;
+
+class EditorWithDevInfo : public Editor
+{
+public:
+	const char* GetAdapterName() const
+	{
+		return graphicsDevice == nullptr ? "(no device)" : graphicsDevice->GetAdapterName().c_str();
+	}
+
+	const char* GetDriverDescription() const
+	{
+		return graphicsDevice == nullptr ? "(no device)" : graphicsDevice->GetDriverDescription().c_str();
+	}
+} editor;
+
+int sdl_loop()
+{
+	while (editor.KeepRunning())
+	{
+		editor.Run();
+		SDL_Event event;
+		while(SDL_PollEvent(&event)){
+			bool textinput_action_delete = false;
+			wi::input::sdlinput::ProcessEvent(event);
+			switch(event.type){
+				case SDL_EVENT_QUIT:
+					editor.Exit();
+					break;
+				case SDL_EVENT_WINDOW_RESIZED:
+					// Tells the engine to reload window configuration (size and dpi)
+					editor.SetWindow(editor.window);
+					editor.SaveWindowSize();
+					break;
+				case SDL_EVENT_WINDOW_FOCUS_LOST:
+					editor.is_window_active = false;
+					break;
+				case SDL_EVENT_WINDOW_FOCUS_GAINED:
+					editor.is_window_active = true;
+					editor.HotReload();
+					break;
+				case SDL_EVENT_KEY_DOWN:
+					if(event.key.scancode == SDL_SCANCODE_BACKSPACE
+					   || event.key.scancode == SDL_SCANCODE_KP_BACKSPACE) {
+						wi::gui::TextInputField::DeleteFromInput();
+						textinput_action_delete = true;
+					} else if(wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) || wi::input::Down(wi::input::KEYBOARD_BUTTON_RCONTROL)) {
+						// HACK: AddInput will check if Ctrl is pressed and
+						// handle Ctrl-C/Ctrl-V/Ctrl-X for us, but
+						// wi::input::Down will only be accurate after
+						// wi::input::Update was run, which will happen next
+						// frame, which is too late for us. So we just call it
+						// now and then call AddInput
+						wi::input::Update(editor.window, editor.canvas);
+						wi::gui::TextInputField::AddInput('?'); // AddInput actually ignores the argument when Ctrl is pressed
+					}
+					break;
+				case SDL_EVENT_TEXT_INPUT:
+					if(!textinput_action_delete){
+						if(event.text.text[0] >= 21){
+							wi::gui::TextInputField::AddInput(event.text.text[0]);
+						}
+					}
+					break;
+				case SDL_EVENT_DROP_FILE:
+					editor.renderComponent.Open(event.drop.data);
+					editor.is_window_active = true;
+					break;
+				default:
+					break;
+			}
+		}
+	}
+
+	return 0;
+}
+
+void set_window_icon(SDL_Window *window) {
+	// these masks are needed to tell SDL_CreateSurfaceFrom to assume the data it gets is
+	// byte-wise RGB(A) data -- expressed as a pixel format instead of bitmasks in SDL3
+	SDL_PixelFormat format;
+#if SDL_BYTEORDER == SDL_BIG_ENDIAN
+	format = (embedded_image.bytes_per_pixel == 3) ? SDL_PIXELFORMAT_RGB24 : SDL_PIXELFORMAT_RGBA8888;
+#else // little endian, like x86
+	format = (embedded_image.bytes_per_pixel == 3) ? SDL_PIXELFORMAT_BGR24 : SDL_PIXELFORMAT_ABGR8888;
+#endif
+	SDL_Surface* icon = SDL_CreateSurfaceFrom(
+		embedded_image.width, embedded_image.height, format,
+		(void*)embedded_image.pixel_data, embedded_image.bytes_per_pixel * embedded_image.width);
+
+	SDL_SetWindowIcon(window, icon);
+
+	SDL_DestroySurface(icon);
+}
+
+#ifdef __linux__
+
+void crash_handler(int sig)
+{
+	static bool already_handled = false;
+
+	void* btbuf[100];
+
+	char outbuf[512];
+
+	if (already_handled) return;
+
+	already_handled = true;
+
+	// we can only use functions that are async-signal-safe, see
+	// https://pubs.opengroup.org/onlinepubs/9699919799/functions/V2_chap02.html#tag_15_04
+
+	// we'll use fork() and let the child process do the heavy lifting of writing stuff.
+	// this is technically not 100% safe, but works well enough in practise.
+
+	pid_t child = fork();
+
+	if (child < 0) {
+		const char* msg = "Sorry, a problem occured and crash_handler couldn't fork() to tell you more\n";
+
+		write(STDERR_FILENO, msg, strlen(msg));
+		_exit(128 + sig);
+	}
+	if (child > 0) {
+		_exit(128 + sig);
+	}
+
+	// not we're in a child process and can use printf etc.
+	size_t size = backtrace(btbuf, 100);
+
+	snprintf(
+		outbuf, sizeof(outbuf),
+		"Signal: %i (%s)\n"
+		"Version: %s\n"
+		"Adapter: %s\n"
+		"Driver: %s\n"
+		"Stacktrace:\n",
+		sig, sigdescr_np(sig),
+		wi::version::GetVersionString(),
+		editor.GetAdapterName(),
+		editor.GetDriverDescription()
+	);
+
+	fprintf(
+		stderr,
+		"\e[31m"  // red
+		"The editor just crashed, sorry about that! If you make a bug report, please include the following information:\n\n%s",
+		outbuf
+	);
+	backtrace_symbols_fd(btbuf, size, STDERR_FILENO);  // backtrace_symbols does a malloc which could crash, backtrace_symbols_fd does not.
+	fprintf(stderr, "\e[m");  // back to normal
+
+	// finally, we also try to write the crash data to a file
+	// this might fail because we're in a weird state right now, but there's no harm done if it doesn't work
+
+	// Use C interface because some stuff in the c++ stdlib could be calling malloc
+
+	const char* filename = "wicked-editor-crash-log.txt";
+
+	FILE* logfile = fopen(filename, "w");
+
+	if (logfile != nullptr)
+	{
+		fputs(outbuf, logfile);
+		fflush(logfile);
+		backtrace_symbols_fd(btbuf, size, fileno(logfile));
+		fputs("\nBacklog:\n", logfile);
+		wi::backlog::_forEachLogEntry_unsafe([&logfile] (auto&& entry) {
+			fputs(entry.text.c_str(), logfile);
+			fflush(logfile);
+		});
+		fclose(logfile);
+		char cwdbuf[200];
+		fprintf(stderr, "\e[1mcrash log written to %s/%s\e[m\n", getcwd(cwdbuf, sizeof(cwdbuf)), filename);
+	}
+	_exit(0);
+}
+
+#endif
+
+int main(int argc, char *argv[])
+{
+
+#ifdef __linux__
+	// dummy backtrace() call to force libgcc to be loaded ahead of time.
+	// Otherwise it might lead to malloc calls in the crash_handler, which we want to avoid
+	void* dummy[1];
+	backtrace(dummy, 1);
+
+	for (int sig : std::array{SIGABRT, SIGBUS, SIGILL, SIGFPE, SIGSEGV})
+	{
+		signal(sig, crash_handler);
+	}
+#endif
+
+	wi::arguments::Parse(argc, argv);
+
+	// SDL3 dropped SDL_INIT_EVERYTHING; list the subsystems the editor actually needs instead.
+	sdl3::sdlsystem_ptr_t system = sdl3::make_sdlsystem(
+		SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS | SDL_INIT_GAMEPAD | SDL_INIT_JOYSTICK | SDL_INIT_HAPTIC);
+	if (*system) {
+		wilog_error("Error creating SDL3 system");
+	}
+
+	int width = 1920;
+	int height = 1080;
+	bool fullscreen = false;
+	bool window_maximized = false;
+
+	wi::Timer timer;
+	if (editor.config.Open("config.ini"))
+	{
+		if (editor.config.Has("width"))
+		{
+			width = editor.config.GetInt("width");
+			height = editor.config.GetInt("height");
+		}
+		fullscreen = editor.config.GetBool("fullscreen");
+		editor.allow_hdr = editor.config.GetBool("allow_hdr");
+		window_maximized = editor.config.GetBool("window_maximized");
+
+		wilog("config.ini loaded in %.2f milliseconds\n", (float)timer.elapsed_milliseconds());
+	}
+
+	width = std::max(100, width);
+	height = std::max(100, height);
+
+	sdl3::window_ptr_t window = sdl3::make_window(
+			wi::helper::StringRemoveTrailingWhitespaces(exe_customization.name_padded).c_str(),
+			SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+			width, height,
+			SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
+	if (!window) {
+		wilog_error("Error creating window");
+	}
+
+	set_window_icon(window.get());
+
+	if (fullscreen)
+	{
+		SDL_SetWindowFullscreen(window.get(), true);
+	}
+
+	if (window_maximized)
+	{
+		SDL_MaximizeWindow(window.get());
+	}
+
+	editor.SetWindow(window.get());
+
+	int ret = sdl_loop();
+
+	wi::jobsystem::ShutDown();
+
+	// Must run before SDL_Quit() (triggered below by the `system` RAII wrapper going out of
+	// scope): wi::audio's internal state is otherwise only destroyed as a static at process
+	// exit, which runs after SDL_Quit() has already torn down the audio subsystem -- the
+	// FAudio SDL3 platform backend's device teardown then dereferences an already-invalidated
+	// SDL3 audio device handle and crashes.
+	wi::audio::Deinitialize();
+
+	return ret;
+}

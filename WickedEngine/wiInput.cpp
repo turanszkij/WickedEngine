@@ -19,6 +19,8 @@
 
 #ifdef SDL2
 #include <SDL2/SDL.h>
+#elif defined(SDL3)
+#include <SDL3/SDL.h>
 #endif // SDL2
 
 #ifdef PLATFORM_PS5
@@ -129,6 +131,20 @@ namespace wi::input
 		SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENWSE),
 		SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND),
 		SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_NO),
+		SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_CROSSHAIR),
+	};
+	static SDL_Cursor* cursor_table[arraysize(cursor_table_original)] = {};
+#elif defined(SDL3)
+	static SDL_Cursor* cursor_table_original[] = {
+		SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_DEFAULT),
+		SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_TEXT),
+		SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_MOVE),
+		SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_NS_RESIZE),
+		SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_EW_RESIZE),
+		SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_NESW_RESIZE),
+		SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_NWSE_RESIZE),
+		SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_POINTER),
+		SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_NOT_ALLOWED),
 		SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_CROSSHAIR),
 	};
 	static SDL_Cursor* cursor_table[arraysize(cursor_table_original)] = {};
@@ -249,7 +265,7 @@ namespace wi::input
 		mouse.middle_button_press = false;
 		mouse.delta_position = XMFLOAT2(0, 0);
 		mouse.delta_wheel = 0;
-#elif defined(SDL2)
+#elif defined(SDL2) || defined(SDL3)
 		wi::input::sdlinput::GetMouseState(&mouse);
 		wi::input::sdlinput::GetKeyboardState(&keyboard);
 #endif
@@ -587,7 +603,7 @@ namespace wi::input
 			::SetCursor(cursorhandle);
 #elif defined(__APPLE__)
 			wi::apple::CursorSet(cursorhandle);
-#elif defined(SDL2)
+#elif defined(SDL2) || defined(SDL3)
 			SDL_SetCursor(cursorhandle);
 #endif // SDL2
 
@@ -1106,7 +1122,7 @@ namespace wi::input
 			return KEY_DOWN(keycode) || KEY_TOGGLE(keycode);
 #elif defined(__APPLE__)
 			return IsKeyDown(keycode);
-#elif defined(SDL2)
+#elif defined(SDL2) || defined(SDL3)
 			return keyboard.buttons[keycode] == 1;
 #endif
 		}
@@ -1192,6 +1208,8 @@ namespace wi::input
 		wi::apple::SetMousePositionInWindow(window, XMFLOAT2(float(posX), float(posY)));
 #elif defined(SDL2)
 		SDL_WarpMouseInWindow(window, posX, posY);
+#elif defined(SDL3)
+		SDL_WarpMouseInWindow(window, (float)posX, (float)posY);
 #endif // SDL2
 	}
 	void HidePointer(bool value)
@@ -1209,6 +1227,8 @@ namespace wi::input
 		wi::apple::CursorHide(value);
 #elif defined(SDL2)
 		SDL_SetRelativeMouseMode(value ? SDL_TRUE : SDL_FALSE);
+#elif defined(SDL3)
+		SDL_SetWindowRelativeMouseMode(window, value);
 #endif // _WIN32
 	}
 
@@ -1309,7 +1329,7 @@ namespace wi::input
 		cursor_table[cursor] = LoadCursorFromFile(wfilename);
 #endif // PLATFORM_WINDOWS_DESKTOP
 		
-#if defined(SDL2) || defined(PLATFORM_MACOS)
+#if defined(SDL2) || defined(SDL3) || defined(PLATFORM_MACOS)
 		// On other platforms, extract the raw color data from win32 .CUR file and create cursor from that:
 		wi::vector<uint8_t> data;
 		if (wi::helper::FileRead(filename, data))
@@ -1350,17 +1370,31 @@ namespace wi::input
 															0xff000000,
 															0x000000ff
 															);
-			
+
 			if (surface != nullptr)
 			{
 				cursor_table[cursor] = SDL_CreateColorCursor(surface, hotspotX, hotspotY);
 				SDL_FreeSurface(surface);
 			}
+#elif defined(SDL3)
+			SDL_Surface* surface = SDL_CreateSurfaceFrom(
+															width,
+															height,
+															SDL_PIXELFORMAT_BGRA8888,
+															colors.data(),
+															4 * width
+															);
+
+			if (surface != nullptr)
+			{
+				cursor_table[cursor] = SDL_CreateColorCursor(surface, hotspotX, hotspotY);
+				SDL_DestroySurface(surface);
+			}
 #elif defined(PLATFORM_MACOS)
 			cursor_table[cursor] = wi::apple::CreateCursorFromARGB8ImageData(colors.data(), width, height, hotspotX, hotspotY);
 #endif // SDL2
 		}
-#endif // defined(SDL2) || defined(PLATFORM_MACOS)
+#endif // defined(SDL2) || defined(SDL3) || defined(PLATFORM_MACOS)
 		
 		// refresh in case we set the current one:
 		cursor_next = cursor_current;

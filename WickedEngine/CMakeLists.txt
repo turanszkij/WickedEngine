@@ -39,32 +39,38 @@ if (WIN32)
         )
     endif()
 else ()
-    find_package(SDL2 REQUIRED)
+    if (PLATFORM STREQUAL "SDL3")
+        find_package(SDL3 REQUIRED CONFIG)
+    else ()
+        find_package(SDL2 REQUIRED)
+
+        if(NOT TARGET SDL2::SDL2)
+            # using old SDL2 cmake, lets create a SDL2 target ourselves
+            find_library(SDL2_LIBRARY_FILE_LOCATION SDL2 REQUIRED)
+
+            add_library(SDL2::SDL2 SHARED IMPORTED)
+            set_target_properties(SDL2::SDL2 PROPERTIES
+                INTERFACE_INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIRS}
+                INTERFACE_LINK_LIBRARIES ${SDL2_LIBRARIES}
+                IMPORTED_LOCATION ${SDL2_LIBRARY_FILE_LOCATION}
+            )
+
+            unset(SDL2_LIBRARY_FILE_LOCATION)
+        endif()
+
+        # minimum sdl version is 2.0.14 for controller LED support
+        if((${SDL_VERSION_MAJOR} GREATER_EQUAL 2) AND (${SDL2_VERSION_MINOR} GREATER_EQUAL 0) AND (${SDL2_VERSION_PATCH} GREATER_EQUAL 14))
+            add_compile_definitions(SDL2_FEATURE_CONTROLLER_LED=1)
+        endif()
+        # SDL3 always supports controller LED (SDL_SetGamepadLED), no version gate needed.
+    endif ()
+
     find_package(OpenImageDenoise "${MIN_OpenImageDenoise_VERSION}" QUIET)
     find_package(Threads REQUIRED)
     if(NOT ${OpenImageDenoise_FOUND})
         message(STATUS "OpenImageDenoise>=${MIN_OpenImageDenoise_VERSION} not found, it will be disabled.")
     else()
         message(STATUS "OpenImageDenoise ${OpenImageDenoise_VERSION} Found.")
-    endif()
-
-    if(NOT TARGET SDL2::SDL2)
-        # using old SDL2 cmake, lets create a SDL2 target ourselves
-        find_library(SDL2_LIBRARY_FILE_LOCATION SDL2 REQUIRED)
-
-        add_library(SDL2::SDL2 SHARED IMPORTED)
-        set_target_properties(SDL2::SDL2 PROPERTIES
-            INTERFACE_INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIRS}
-            INTERFACE_LINK_LIBRARIES ${SDL2_LIBRARIES}
-            IMPORTED_LOCATION ${SDL2_LIBRARY_FILE_LOCATION}
-        )
-
-        unset(SDL2_LIBRARY_FILE_LOCATION)
-    endif()
-
-    # minimum sdl version is 2.0.14 for controller LED support
-    if((${SDL_VERSION_MAJOR} GREATER_EQUAL 2) AND (${SDL2_VERSION_MINOR} GREATER_EQUAL 0) AND (${SDL2_VERSION_PATCH} GREATER_EQUAL 14))
-        add_compile_definitions(SDL2_FEATURE_CONTROLLER_LED=1)
     endif()
 endif()
 
@@ -242,9 +248,15 @@ else ()
     # in same cases. Use `robin_hood::unordered_flat_map` instead
     target_compile_definitions(WickedEngine_common PUBLIC WI_UNORDERED_MAP_TYPE=2)
 
+    if (PLATFORM STREQUAL "SDL3")
+        set(WICKED_SDL_TARGET SDL3::SDL3)
+    else ()
+        set(WICKED_SDL_TARGET SDL2::SDL2)
+    endif ()
+
     target_link_libraries(WickedEngine_common PUBLIC
         Threads::Threads
-        SDL2::SDL2
+        ${WICKED_SDL_TARGET}
         $<$<BOOL:${OpenImageDenoise_FOUND}>:OpenImageDenoise> # links OpenImageDenoise only if it's found
     )
 
@@ -263,6 +275,8 @@ target_link_libraries(WickedEngine_common PUBLIC ${WICKEDENGINE_STATIC_LIBRARIES
 
 if (PLATFORM MATCHES "SDL2")
     target_compile_definitions(WickedEngine_common PUBLIC SDL2=1)
+elseif (PLATFORM MATCHES "SDL3")
+    target_compile_definitions(WickedEngine_common PUBLIC SDL3=1)
 endif()
 
 add_library(dxcompiler SHARED IMPORTED)

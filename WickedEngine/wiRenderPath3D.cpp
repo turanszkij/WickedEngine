@@ -105,19 +105,17 @@ namespace wi
 		camera->height = (float)internalResolution.y;
 
 		// Render targets:
+		GraphicsDevice::AliasingAllocator aliasing_allocator = device->CreateAliasingAllocator();
 
-		// Aliasing memory queries:
+		// Aliased texture descriptions:
 		TextureDesc desc_rtPostprocess;
-		SizeAlignment sizealign_rtPostprocess;
 		{
 			desc_rtPostprocess.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 			desc_rtPostprocess.format = wi::renderer::format_rendertarget_main;
 			desc_rtPostprocess.width = internalResolution.x;
 			desc_rtPostprocess.height = internalResolution.y;
-			sizealign_rtPostprocess = device->GetDeviceTextureMemoryRequirements(&desc_rtPostprocess);
 		}
 		TextureDesc desc_rtPrimitiveID;
-		SizeAlignment sizealign_rtPrimitiveID;
 		{
 			desc_rtPrimitiveID.format = wi::renderer::format_idbuffer;
 			desc_rtPrimitiveID.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
@@ -129,85 +127,44 @@ namespace wi
 			desc_rtPrimitiveID.height = internalResolution.y;
 			desc_rtPrimitiveID.sample_count = 1;
 			desc_rtPrimitiveID.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
-			sizealign_rtPrimitiveID = device->GetDeviceTextureMemoryRequirements(&desc_rtPrimitiveID);
 		}
 		TextureDesc desc_rtSceneCopy;
-		SizeAlignment sizealign_rtSceneCopy;
 		{
 			desc_rtSceneCopy.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS | BindFlag::RENDER_TARGET;
 			desc_rtSceneCopy.format = wi::renderer::format_rendertarget_main;
 			desc_rtSceneCopy.width = internalResolution.x / 4;
 			desc_rtSceneCopy.height = internalResolution.y / 4;
 			desc_rtSceneCopy.mip_levels = std::min(8u, (uint32_t)std::log2(std::max(desc_rtSceneCopy.width, desc_rtSceneCopy.height)));
-			sizealign_rtSceneCopy = device->GetDeviceTextureMemoryRequirements(&desc_rtSceneCopy);
 		}
 		TextureDesc desc_rtParticleDistortion;
-		SizeAlignment sizealign_rtParticleDistortion;
 		{
 			desc_rtParticleDistortion.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
 			desc_rtParticleDistortion.format = Format::R16G16_FLOAT;
 			desc_rtParticleDistortion.width = internalResolution.x;
 			desc_rtParticleDistortion.height = internalResolution.y;
 			desc_rtParticleDistortion.sample_count = 1;
-			sizealign_rtParticleDistortion = device->GetDeviceTextureMemoryRequirements(&desc_rtParticleDistortion);
 		}
 		TextureDesc desc_rtWaterRipple;
-		SizeAlignment sizealign_rtWaterRipple;
 		{
 			desc_rtWaterRipple.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
 			desc_rtWaterRipple.format = Format::R16G16_FLOAT;
 			desc_rtWaterRipple.width = internalResolution.x / 8;
 			desc_rtWaterRipple.height = internalResolution.y / 8;
 			desc_rtWaterRipple.sample_count = 1;
-			sizealign_rtWaterRipple = device->GetDeviceTextureMemoryRequirements(&desc_rtWaterRipple);
 		}
 		TextureDesc desc_rtAO;
-		SizeAlignment sizealign_rtAO;
 		{
 			desc_rtAO.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS | BindFlag::RENDER_TARGET;
 			desc_rtAO.format = Format::R8_UNORM;
 			desc_rtAO.width = internalResolution.x; // max ao res
 			desc_rtAO.height = internalResolution.y; // max ao res
-			sizealign_rtAO = device->GetDeviceTextureMemoryRequirements(&desc_rtAO);
 		}
 
 		// Main allocation for aliasing:
-		offset_rtPostprocess = 0;
-		offset_rtPrimitiveID = 0;
-		offset_rtSceneCopy = 0;
-		offset_rtParticleDistortion = 0;
-		offset_rtWaterRipple = 0;
-		offset_rtAO = 0;
-		{
-			GPUBufferDesc desc;
-			desc.usage = Usage::DEFAULT;
-			desc.misc_flags = ResourceMiscFlag::ALIASING_TEXTURE_RT_DS;
-			desc.alignment = (uint32_t)sizealign_rtPostprocess.alignment;
-			desc.alignment = std::max(desc.alignment, (uint32_t)sizealign_rtPrimitiveID.alignment);
-			desc.alignment = std::max(desc.alignment, (uint32_t)sizealign_rtSceneCopy.alignment);
-			desc.alignment = std::max(desc.alignment, (uint32_t)sizealign_rtParticleDistortion.alignment);
-			desc.alignment = std::max(desc.alignment, (uint32_t)sizealign_rtWaterRipple.alignment);
-			desc.alignment = std::max(desc.alignment, (uint32_t)sizealign_rtAO.alignment);
-
-			// placement range 1
-			offset_rtPostprocess = desc.size;
-			offset_rtPrimitiveID = desc.size;
-			offset_rtSceneCopy = desc.size;
-			desc.size = align(desc.size, (uint64_t)desc.alignment);
-			desc.size = std::max(desc.size, sizealign_rtPostprocess.size);
-			desc.size = std::max(desc.size, sizealign_rtPrimitiveID.size);
-			desc.size = std::max(desc.size, sizealign_rtSceneCopy.size);
-
-			// placement range 2
-			desc.size = align(desc.size, (uint64_t)desc.alignment);
-			offset_rtParticleDistortion = desc.size;
-			offset_rtWaterRipple = desc.size;
-			offset_rtAO = desc.size;
-			desc.size += std::max({ sizealign_rtParticleDistortion.size, sizealign_rtWaterRipple.size, sizealign_rtAO.size });
-
-			device->CreateBuffer(&desc, nullptr, &aliasingAllocation);
-			device->SetName(&aliasingAllocation, "renderpath3D.aliasingAllocation");
-		}
+		offset_rtPostprocess = offset_rtPrimitiveID = offset_rtSceneCopy = aliasing_allocator.Add({ &desc_rtPostprocess, &desc_rtPrimitiveID, &desc_rtSceneCopy });
+		offset_rtParticleDistortion = offset_rtWaterRipple = offset_rtAO = aliasing_allocator.Add({ &desc_rtParticleDistortion, &desc_rtWaterRipple, &desc_rtAO });
+		aliasingAllocation = aliasing_allocator.Commit();
+		device->SetName(&aliasingAllocation, "renderpath3D.aliasingAllocation");
 
 		// Aliasing placements:
 		{
@@ -342,18 +299,8 @@ namespace wi
 			device->CreateTexture(&desc, nullptr, &depthBuffer_Copy1);
 			device->SetName(&depthBuffer_Copy1, "renderpath3D.depthBuffer_Copy1");
 
-			for (uint32_t i = 0; i < depthBuffer_Copy.desc.mip_levels; ++i)
-			{
-				int subresource = 0;
-				subresource = device->CreateSubresource(&depthBuffer_Copy, SubresourceType::SRV, 0, 1, i, 1);
-				assert(subresource == i);
-				subresource = device->CreateSubresource(&depthBuffer_Copy, SubresourceType::UAV, 0, 1, i, 1);
-				assert(subresource == i);
-				subresource = device->CreateSubresource(&depthBuffer_Copy1, SubresourceType::SRV, 0, 1, i, 1);
-				assert(subresource == i);
-				subresource = device->CreateSubresource(&depthBuffer_Copy1, SubresourceType::UAV, 0, 1, i, 1);
-				assert(subresource == i);
-			}
+			device->CreateMipgenSubresources(depthBuffer_Copy);
+			device->CreateMipgenSubresources(depthBuffer_Copy1);
 		}
 
 		// Other resources:
