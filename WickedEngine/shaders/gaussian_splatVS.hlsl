@@ -238,7 +238,7 @@ void main(in uint vertexID : SV_VertexID, in uint instanceID : SV_InstanceID, ou
 	const uint cameraIndex = instanceID % push.camera_count;
 
 	ShaderCamera camera = GetCameraIndexed(cameraIndex);
-	RTIndex = camera.output_index;
+	RTIndex = cameraIndex;
 
 	const uint2 lookup = splatLookupBuffer[splatIndexGlobal];
 	const uint modelIndex = lookup.x;

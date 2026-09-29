@@ -21,10 +21,5 @@ uint main(VertexToPixel input, out uint coverage : SV_Coverage) : SV_Target
 	
 	coverage = AlphaToCoverage(alpha, material.GetAlphaTest(), input.GetDither(), input.pos);
 
-	PrimitiveID prim;
-	prim.init();
-	prim.primitiveIndex = input.primitiveID;
-	prim.instanceIndex = xHairInstanceIndex;
-	prim.subsetIndex = 0;
-	return prim.pack();
+	return input.primitiveID;
 }

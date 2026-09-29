@@ -140,7 +140,12 @@ struct VertexInput
 	uint GetPrimitiveID()
 	{
 		// For prepass the meshopt_generateProvokingIndexBuffer is used to emulate SV_PrimitiveID via provoking vertex
-		return vertexID;
+		PrimitiveID prim;
+		prim.init();
+		prim.primitiveIndex = vertexID - GetMesh().indexOffset / 3;
+		prim.instanceIndex = GetInstancePointer().GetInstanceIndex();
+		prim.subsetIndex = push.geometryIndex - GetInstance().geometryOffset;
+		return prim.pack();
 	}
 #endif // OBJECTSHADER_USE_PROVOKING_INDEX_BUFFER
 
@@ -479,10 +484,10 @@ PixelInput vertex_to_pixel_export(VertexInput input)
 
 #if !defined(OBJECTSHADER_COMPILE_PS)
 #ifdef OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
-	Out.RTIndex = camera.output_index;
+	Out.RTIndex = input.GetInstancePointer().GetCameraIndex();
 #endif // OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
 #ifdef OBJECTSHADER_USE_VIEWPORTARRAYINDEX
-	Out.VPIndex = camera.output_index;
+	Out.VPIndex = input.GetInstancePointer().GetCameraIndex();
 #endif // OBJECTSHADER_USE_VIEWPORTARRAYINDEX
 #endif // !defined(OBJECTSHADER_COMPILE_PS)
 
@@ -1130,12 +1135,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 	// end point:
 #ifdef PREPASS
 #ifndef DEPTHONLY
-	PrimitiveID prim;
-	prim.init();
-	prim.primitiveIndex = input.primitiveID - GetMesh().indexOffset / 3;
-	prim.instanceIndex = input.GetInstanceIndex();
-	prim.subsetIndex = push.geometryIndex - meshinstance.geometryOffset;
-	return prim.pack();
+	return input.primitiveID;
 #endif // DEPTHONLY
 #else
 	return color;
