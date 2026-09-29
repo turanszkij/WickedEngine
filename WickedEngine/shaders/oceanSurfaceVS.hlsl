@@ -13,12 +13,13 @@ PUSHCONSTANT(push, OceanShadowPush);
 PSIn main(uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID, out uint RTIndex : SV_RenderTargetArrayIndex, out uint VPIndex : SV_ViewportArrayIndex)
 {
 	VPIndex = push.camera_index;
+	const uint camera_index = push.camera_index + instanceID;
 
 	PSIn Out;
-	Out.cameraIndex = instanceID;
+	Out.cameraIndex = camera_index;
 
-	ShaderCamera camera = GetCameraIndexed(Out.cameraIndex + push.camera_index);
-	RTIndex = camera.output_index;
+	ShaderCamera camera = GetCameraIndexed(camera_index);
+	RTIndex = camera_index;
 	
 	float2 dim = xOceanScreenSpaceParams.xy;
 	float2 invdim = xOceanScreenSpaceParams.zw;
