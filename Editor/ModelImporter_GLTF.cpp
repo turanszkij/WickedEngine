@@ -270,6 +270,18 @@ void LoadNode(int nodeIndex, Entity parent, LoaderState& state)
 	state.entityMap[nodeIndex] = entity;
 
 	TransformComponent& transform = *scene.transforms.GetComponent(entity);
+	if (node.mesh >= 0 && node.skin >= 0)
+	{
+		// glTF 2.0 specification, Skins: "Only the joint transforms are applied to
+		// the skinned mesh; the transform of the skinned mesh node MUST be ignored."
+		// Every mesh node of a skin resolves to the same armature entity above, so
+		// applying this node's transform would write it onto the armature shared
+		// by every mesh of that skin.
+		node.scale.clear();
+		node.rotation.clear();
+		node.translation.clear();
+		node.matrix.clear();
+	}
 	if (!node.scale.empty())
 	{
 		// Note: limiting min scale because scale <= 0.0001 will break matrix decompose and mess up the model (float precision issue?)
@@ -2048,6 +2060,18 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 	Import_Extension_VRM(state);
 	Import_Extension_VRMC(state);
 
+	// Humanoid look-at is enabled by default and aims at the origin until a
+	// target is set. Left on, the scene.Update() below would turn the head (and
+	// eyes) toward the origin, and FlipZAxis() would then decompose that turn
+	// into the bones' local transforms, baking a rotation the file does not
+	// contain. Hold it off across both updates and restore it afterwards.
+	wi::vector<uint8_t> lookat_was_enabled(scene.humanoids.GetCount());
+	for (size_t i = 0; i < scene.humanoids.GetCount(); ++i)
+	{
+		lookat_was_enabled[i] = scene.humanoids[i].IsLookAtEnabled() ? 1 : 0;
+		scene.humanoids[i].SetLookAtEnabled(false);
+	}
+
 	//Correct orientation after importing
 	scene.Update(0);
 	FlipZAxis(state);
@@ -2055,6 +2079,11 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 	// Update the scene, to have up to date values immediately after loading:
 	//	For example, snap to camera functionality relies on this
 	scene.Update(0);
+
+	for (size_t i = 0; i < scene.humanoids.GetCount() && i < lookat_was_enabled.size(); ++i)
+	{
+		scene.humanoids[i].SetLookAtEnabled(lookat_was_enabled[i] != 0);
+	}
 
 	// after scene update, clean up duplicate colliders that could have been loaded by some extension
 	scene.DeleteDuplicateColliders();
@@ -3371,6 +3400,14 @@ void Import_Mixamo_Bone(LoaderState& state, Entity boneEntity, const tinygltf::N
 	{
 		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::Head)] = boneEntity;
 	}
+	else if (!node.name.compare("mixamorig:LeftEye"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftEye)] = boneEntity;
+	}
+	else if (!node.name.compare("mixamorig:RightEye"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightEye)] = boneEntity;
+	}
 	else if (!node.name.compare("mixamorig:LeftShoulder"))
 	{
 		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftShoulder)] = boneEntity;
@@ -3591,6 +3628,16 @@ void Import_Makehuman_Bone(LoaderState& state, Entity boneEntity, const tinygltf
 	else if (!node.name.compare("head"))
 	{
 		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::Head)] = boneEntity;
+	}
+	// Unreal-style skeletons (such as MetaHuman) name their eye joints
+	// FACIAL_L_Eye and FACIAL_R_Eye.
+	else if (!node.name.compare("FACIAL_L_Eye"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::LeftEye)] = boneEntity;
+	}
+	else if (!node.name.compare("FACIAL_R_Eye"))
+	{
+		get_humanoid().bones[size_t(HumanoidComponent::HumanoidBone::RightEye)] = boneEntity;
 	}
 	else if (!node.name.compare("clavicle_l"))
 	{
