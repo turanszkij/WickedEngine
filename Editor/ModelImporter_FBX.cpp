@@ -627,7 +627,9 @@ void ImportModel_FBX(const std::string& filename, wi::scene::Scene& scene)
 		ArmatureComponent& armatureWithoutMesh = scene.armatures.Create(rootEntity);
 		for (const ufbx_bone* bone : fbxscene->bones)
 		{
-			const ufbx_node* node = fbxscene->nodes[bone->element_id];
+			if (bone->instances.count == 0)
+				continue;
+			const ufbx_node* node = bone->instances[0]; // bone->element_id indexes fbxscene->elements, not fbxscene->nodes
 			Entity boneEntity = node_lookup[node];
 
 			armatureWithoutMesh.boneCollection.push_back(boneEntity);
