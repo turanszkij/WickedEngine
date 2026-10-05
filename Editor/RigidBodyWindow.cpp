@@ -71,7 +71,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 	collisionShapeComboBox.SetTooltip("Set rigid body collision shape.");
 	AddWidget(&collisionShapeComboBox);
 
-	XSlider.Create(0, 10, 1, 100000, "XSlider");
+	XSlider.Create(0.01f, 10, 1, 100000, "XSlider");
 	XSlider.OnSlide(forEachSelectedPhysicsComponent([](auto physicscomponent, auto args) {
 		switch (physicscomponent->shape)
 		{
@@ -93,7 +93,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 	ZSlider.SetLocalizationEnabled(false);
 	AddWidget(&XSlider);
 
-	YSlider.Create(0, 10, 1, 100000, "YSlider");
+	YSlider.Create(0.01f, 10, 1, 100000, "YSlider");
 	YSlider.OnSlide(forEachSelectedPhysicsComponent([](auto physicsComponent, auto args) {
 		switch (physicsComponent->shape)
 		{
@@ -111,7 +111,7 @@ void RigidBodyWindow::Create(EditorComponent* _editor)
 	ZSlider.SetLocalizationEnabled(false);
 	AddWidget(&YSlider);
 
-	ZSlider.Create(0, 10, 1, 100000, "ZSlider");
+	ZSlider.Create(0.01f, 10, 1, 100000, "ZSlider");
 	ZSlider.OnSlide(forEachSelectedPhysicsComponent([](auto physicscomponent, auto args) {
 		switch (physicscomponent->shape)
 		{

@@ -562,6 +562,12 @@ namespace wi::physics
 				}
 			}
 
+			if (physicsobject.shape == nullptr)
+			{
+				wilog_warning("Physics shape creation failed, rigid boody will not be created!");
+				return;
+			}
+
 			// Apply vehicle-specific transformations
 			if (physicscomponent.IsVehicle())
 			{
