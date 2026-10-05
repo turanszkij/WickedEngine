@@ -26,7 +26,7 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
     const float2 uv = (pixel + 0.5f) * postprocess.resolution_rcp;
 
 #ifdef DEPTHOFFIELD_EARLYEXIT
-    prefilter = max(0, input.SampleLevel(sampler_point_clamp, uv, 0).rgb);
+    prefilter = dof_to_working_color(max(0, input.SampleLevel(sampler_point_clamp, uv, 0).rgb));
 
 #else
 
@@ -41,7 +41,7 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 
 	output_presort[pixel] = float3(coc, backgroundFactor, foregroundFactor);
 
-    const float3 center_color = max(0, input.SampleLevel(sampler_point_clamp, uv, 0).rgb);
+    const float3 center_color = dof_to_working_color(max(0, input.SampleLevel(sampler_point_clamp, uv, 0).rgb));
     prefilter = center_color;
 
     [branch]
@@ -53,7 +53,7 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
         {
             const float2 uv2 = uv + ringScale * disc[i].xy;
             const float depth = texture_lineardepth.SampleLevel(sampler_point_clamp, uv2, 1);
-            const float3 color = max(0, input.SampleLevel(sampler_linear_clamp, uv2, 0).rgb);
+            const float3 color = dof_to_working_color(max(0, input.SampleLevel(sampler_linear_clamp, uv2, 0).rgb));
             const float weight = saturate(abs(depth - center_depth) * GetCamera().z_far * 2);
             prefilter += lerp(color, center_color, weight);
         }

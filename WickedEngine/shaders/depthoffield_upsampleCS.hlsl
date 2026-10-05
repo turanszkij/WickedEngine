@@ -19,7 +19,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float mindepth = mindepth_maxcoc.x;
 	const float maxcoc = mindepth_maxcoc.y;
 	float4 fullres = input[DTid.xy];
-	const float3 halfres = texture_postfilter.SampleLevel(sampler_linear_clamp, uv, 0);
+	const float3 halfres = dof_from_working_color(texture_postfilter.SampleLevel(sampler_linear_clamp, uv, 0));
 	const float alpha = texture_alpha.SampleLevel(sampler_linear_clamp, uv, 0);
 
 	const float coc = get_coc(center_depth);

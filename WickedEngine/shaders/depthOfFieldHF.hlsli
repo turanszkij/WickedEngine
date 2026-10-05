@@ -8,6 +8,30 @@ inline float get_coc(in float linear_depth)
     return min(dof_maxcoc, dof_cocscale * GetCamera().aperture_size * pow(abs(1 - GetCamera().focal_length / (linear_depth * GetCamera().z_far)), 2.0f));
 }
 
+// The half resolution passes (prefilter, main, postfilter) work on tonemapped colors, and the
+//	upsample converts back to HDR. Averaged linearly, a very bright surface dominates every sample
+//	disc it touches, so a slightly defocused bright object next to a blurred background turns into a
+//	solid band of its own color out to the nearest sample ring, with a hard edge that jumps as the
+//	rings and tiles shift (same idea as HDR_CORRECTION in temporalaaCS.hlsl).
+#define DOF_HDR_CORRECTION
+
+inline float3 dof_to_working_color(float3 color)
+{
+#ifdef DOF_HDR_CORRECTION
+	return tonemap(color);
+#else
+	return color;
+#endif // DOF_HDR_CORRECTION
+}
+inline float3 dof_from_working_color(float3 color)
+{
+#ifdef DOF_HDR_CORRECTION
+	return inverse_tonemap(min(color, 0.996)); // the texture format can round to 1, which would map to infinity
+#else
+	return color;
+#endif // DOF_HDR_CORRECTION
+}
+
 #define DOF_DEPTH_SCALE_FOREGROUND (GetCamera().z_far * 1.5)
 float2 DepthCmp2(float depth, float closestTileDepth)
 {
