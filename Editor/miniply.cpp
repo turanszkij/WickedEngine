@@ -964,7 +964,6 @@ namespace miniply {
         // If the columns aren't contiguous, we must memcpy each one separately.
         const uint8_t* row = m_elementData.data();
         const uint8_t* end = m_elementData.data() + m_elementData.size();
-        uint8_t* to = reinterpret_cast<uint8_t*>(dest);
         size_t colBytes = kPLYPropertySize[uint32_t(destType)]; // size of an output column in bytes.
         while (row < end) {
           for (uint32_t i = 0; i < numProps; i++) {
@@ -983,7 +982,6 @@ namespace miniply {
       // processed separately.
       const uint8_t* row = m_elementData.data();
       const uint8_t* end = m_elementData.data() + m_elementData.size();
-      uint8_t* to = reinterpret_cast<uint8_t*>(dest);
       size_t colBytes = kPLYPropertySize[uint32_t(destType)]; // size of an output column in bytes.
       while (row < end) {
         for (uint32_t i = 0; i < numProps; i++) {
@@ -1075,7 +1073,6 @@ namespace miniply {
         // If the columns aren't contiguous, we must memcpy each one separately.
         const uint8_t* row = m_elementData.data();
         const uint8_t* end = m_elementData.data() + m_elementData.size();
-        uint8_t* to = reinterpret_cast<uint8_t*>(dest);
         const size_t colBytes = kPLYPropertySize[uint32_t(destType)]; // size of an output column in bytes.
         const size_t colPadding = destStride - minDestStride;
         while (row < end) {
@@ -1096,7 +1093,6 @@ namespace miniply {
       // processed separately.
       const uint8_t* row = m_elementData.data();
       const uint8_t* end = m_elementData.data() + m_elementData.size();
-      uint8_t* to = reinterpret_cast<uint8_t*>(dest);
       size_t colBytes = kPLYPropertySize[uint32_t(destType)]; // size of an output column in bytes.
       size_t colPadding = destStride - minDestStride;
       while (row < end) {
@@ -1652,8 +1648,8 @@ namespace miniply {
         uint8_t* data = m_elementData.data();
         for (uint32_t row = 0; row < elem.count; row++) {
           for (PLYProperty& prop : elem.properties) {
-            size_t numBytes = kPLYPropertySize[uint32_t(prop.type)];
-            switch (numBytes) {
+            size_t propBytes = kPLYPropertySize[uint32_t(prop.type)];
+            switch (propBytes) {
             case 2:
               endian_swap_2(data);
               break;
@@ -1666,7 +1662,7 @@ namespace miniply {
             default:
               break;
             }
-            data += numBytes;
+            data += propBytes;
           }
         }
       }
