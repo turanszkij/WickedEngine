@@ -4005,7 +4005,10 @@ namespace wi::scene
 			ArmatureComponent& armature = armatures[args.jobIndex];
 			Entity entity = armatures.GetEntity(args.jobIndex);
 			if (!transforms.Contains(entity))
+			{
+				armature.skinningRebase = XMFLOAT3(0, 0, 0);
 				return;
+			}
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 
 			// The transform world matrices are in world space, but skinning needs them in armature-local space, 
@@ -4031,6 +4034,8 @@ namespace wi::scene
 			XMFLOAT3 _min = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX);
 			XMFLOAT3 _max = XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
 
+			XMVECTOR REBASE = XMVectorZero();
+
 			uint32_t boneIndex = 0;
 			for (Entity boneEntity : armature.boneCollection)
 			{
@@ -4042,16 +4047,13 @@ namespace wi::scene
 				XMMATRIX W = XMLoadFloat4x4(&bone->world);
 				XMMATRIX M = B * W * R;
 
+				REBASE += wi::math::GetPosition(M);
+
 				XMFLOAT4X4 mat;
 				XMStoreFloat4x4(&mat, M);
 
 				ShaderTransform& shadertransform = armature.boneData[boneIndex];
 				shadertransform.Create(mat);
-				uint8_t* gpu_bone_dst = (uint8_t*)(gpu_dst + boneIndex);
-				if (skinningDataMapped != nullptr && ((size_t)gpu_bone_dst - size_t(skinningDataMapped) + sizeof(ShaderTransform)) <= skinningDataSize)
-				{
-					std::memcpy(gpu_bone_dst, &shadertransform, sizeof(shadertransform));
-				}
 
 				const float bone_radius = 1;
 				XMFLOAT3 bonepos = bone->GetPosition();
@@ -4061,6 +4063,23 @@ namespace wi::scene
 				_max = wi::math::Max(_max, boneAABB._max);
 
 				boneIndex++;
+			}
+			REBASE /= float(std::max(1u, boneIndex));
+
+			// Rebase offset is removed from bones, putting them into local space averaged for all bones
+			XMStoreFloat3(&armature.skinningRebase, REBASE);
+			for (uint32_t i = 0; i < boneIndex; ++i)
+			{
+				ShaderTransform& shadertransform = armature.boneData[i];
+				shadertransform.mat0.w -= armature.skinningRebase.x;
+				shadertransform.mat1.w -= armature.skinningRebase.y;
+				shadertransform.mat2.w -= armature.skinningRebase.z;
+			}
+
+			const size_t cpy_size = armature.boneData.size() * sizeof(ShaderTransform);
+			if (skinningDataMapped != nullptr && cpy_size > 0 && (((size_t)gpu_dst - (size_t)skinningDataMapped + (size_t)cpy_size) <= skinningDataSize))
+			{
+				std::memcpy(gpu_dst, armature.boneData.data(), cpy_size);
 			}
 
 			armature.aabb = AABB(_min, _max);
@@ -4591,12 +4610,18 @@ namespace wi::scene
 				const TransformComponent& transform = *transforms.GetComponent(entity);
 
 				XMMATRIX W = XMLoadFloat4x4(&transform.world);
+				const ArmatureComponent* armature = (mesh.IsSkinned() || mesh.IsDynamic()) ? armatures.GetComponent(mesh.armatureID) : nullptr;
+				SoftBodyPhysicsComponent* softbody = softbodies.GetComponent(object.meshID);
+				// armature rebase is removed from bones to bring them to local, it is applied to object here:
+				if (armature != nullptr && (softbody == nullptr || softbody->physicsobject == nullptr))
+				{
+					W = XMMatrixTranslation(armature->skinningRebase.x, armature->skinningRebase.y, armature->skinningRebase.z) * W;
+				}
 				aabb = mesh.aabb.transform(W);
 
 				if (mesh.IsSkinned() || mesh.IsDynamic())
 				{
 					object.SetDynamic(true);
-					const ArmatureComponent* armature = armatures.GetComponent(mesh.armatureID);
 					if (armature != nullptr)
 					{
 						aabb = AABB::Merge(aabb, armature->aabb);
@@ -4609,7 +4634,6 @@ namespace wi::scene
 					object.fadeDistance = std::min(object.fadeDistance, impostor->swapInDistance);
 				}
 
-				SoftBodyPhysicsComponent* softbody = softbodies.GetComponent(object.meshID);
 				if (softbody != nullptr)
 				{
 					if (wi::physics::IsEnabled())
