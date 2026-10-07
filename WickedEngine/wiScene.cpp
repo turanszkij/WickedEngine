@@ -12,6 +12,7 @@
 #include "wiLua.h"
 #include "wiAllocator.h"
 #include "wiProfiler.h"
+#include <cmath>
 
 #include "shaders/ShaderInterop_SurfelGI.h"
 #include "shaders/ShaderInterop_DDGI.h"
