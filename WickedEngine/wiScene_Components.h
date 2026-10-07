@@ -2357,6 +2357,20 @@ namespace wi::scene
 		// toward the authored pose. A client can then blend the physical pose from
 		// ragdoll_bodyparts per bone instead of accepting the legacy binary takeover.
 		bool ragdoll_pose_motor_enabled = false;
+		// Optional partial dynamics: selected bodies are simulated, all others
+		// remain authored kinematic anchors. Full ragdoll takes precedence. This
+		// never detaches bones, stops clips, or writes into the authored pose.
+		// Runtime-only, deliberately not serialized into asset archives.
+		std::array<bool, size_t(HumanoidBone::Count)> ragdoll_partial_dynamic_bones = {};
+		// Keeps a presentation-only constraint skeleton allocated between partial
+		// poses. Its collision layer excludes gameplay dynamic bodies/characters.
+		bool ragdoll_partial_physics_available = false;
+		bool IsRagdollPartialPhysicsEnabled() const
+		{
+			for (bool dynamic : ragdoll_partial_dynamic_bones)
+				if (dynamic) return true;
+			return false;
+		}
 		float ragdoll_pose_motor_stiffness = 0.0f; // normalized 0..1
 		float ragdoll_pose_motor_damping = 1.0f;
 		float ragdoll_pose_motor_max_torque = 350.0f;

@@ -177,6 +177,7 @@ namespace wi::physics
 			GHOST = 0,
 			NON_MOVING = 1,
 			MOVING = 2,
+			PRESENTATION = 3,
 		};
 
 		/// Class that determines if two object layers can collide
@@ -190,7 +191,9 @@ namespace wi::physics
 				case Layers::GHOST:
 					return false; // collides with nothing
 				case Layers::NON_MOVING:
-					return inObject2 == Layers::MOVING; // Non moving only collides with moving
+					return inObject2 == Layers::MOVING || inObject2 == Layers::PRESENTATION;
+				case Layers::PRESENTATION:
+					return inObject2 == Layers::NON_MOVING || inObject2 == Layers::PRESENTATION;
 				case Layers::MOVING:
 					return inObject2 == Layers::MOVING || inObject2 == Layers::NON_MOVING; // Moving collides with moving and non moving
 				default:
@@ -226,7 +229,7 @@ namespace wi::physics
 
 			virtual BroadPhaseLayer GetBroadPhaseLayer(ObjectLayer inLayer) const override
 			{
-				return inLayer == Layers::MOVING ? BroadPhaseLayers::DYNAMIC : BroadPhaseLayers::STATIC;
+				return inLayer == Layers::MOVING || inLayer == Layers::PRESENTATION ? BroadPhaseLayers::DYNAMIC : BroadPhaseLayers::STATIC;
 			}
 		};
 
@@ -243,6 +246,7 @@ namespace wi::physics
 				case Layers::NON_MOVING:
 					return inLayer2 == BroadPhaseLayers::DYNAMIC;
 				case Layers::MOVING:
+				case Layers::PRESENTATION:
 					return inLayer2 == BroadPhaseLayers::DYNAMIC || inLayer2 == BroadPhaseLayers::STATIC;
 				default:
 					JPH_ASSERT(false);
@@ -1344,6 +1348,8 @@ namespace wi::physics
 			RagdollSettings settings;
 			Ref<JPH::Ragdoll> ragdoll;
 			bool state_active = false;
+			bool partial_active = false;
+			bool presentation_only = false;
 			bool hierarchy_detached = false;
 			float scale = 1;
 			Vec3 prev_capsule_position[BODYPART_COUNT] = {};
@@ -1371,6 +1377,7 @@ namespace wi::physics
 				// Whole ragdoll will take a uniform scaling:
 				const XMMATRIX scaleMatrix = XMMatrixScaling(scale, scale, scale);
 				this->scale = scale;
+				presentation_only = humanoid.ragdoll_partial_physics_available;
 
 				// Calculate the bone lengths and radiuses in armature local space and create rigid bodies for bones:
 				for (int c = 0; c < BODYPART_COUNT; ++c)
@@ -1568,6 +1575,20 @@ namespace wi::physics
 						break;
 					}
 
+					const bool authoredArmShape = presentation_only &&
+						(c == BODYPART_LEFT_UPPER_ARM || c == BODYPART_LEFT_LOWER_ARM ||
+						 c == BODYPART_RIGHT_UPPER_ARM || c == BODYPART_RIGHT_LOWER_ARM);
+					const Vec3 authoredArmDirection = cast(cast(XMVector3Normalize(rootB - rootA)));
+					if (authoredArmShape)
+					{
+						// Partial rigs can have an A-pose bind. The stock full-body
+						// recipe assumes horizontal T-pose arms; use the actual rest
+						// segment for presentation capsule orientation and centre.
+						rtshape_settings.mRotation = Quat::sFromTo(Vec3::sAxisY(), authoredArmDirection);
+						const Vec3 extent = authoredArmDirection * (capsule_height * 0.5f + capsule_radius);
+						physicsobject.capsule = wi::primitive::Capsule(cast(-extent), cast(extent), capsule_radius);
+					}
+
 					shape_result = rtshape_settings.Create();
 					physicsobject.shape = shape_result.Get();
 
@@ -1606,6 +1627,7 @@ namespace wi::physics
 						break;
 					}
 
+					if (authoredArmShape) local_offset = authoredArmDirection * offset;
 					physicsobject.additionalTransform.SetTranslation(local_offset);
 					physicsobject.additionalTransformInverse = physicsobject.additionalTransform.Inversed();
 
@@ -1726,7 +1748,7 @@ namespace wi::physics
 					part.mRotation = Quat::sIdentity();
 					part.mMotionType = EMotionType::Kinematic;
 					part.mMotionQuality = cMotionQuality;
-					part.mObjectLayer = Layers::MOVING;
+					part.mObjectLayer = presentation_only ? Layers::PRESENTATION : Layers::MOVING;
 					part.mOverrideMassProperties = EOverrideMassProperties::CalculateInertia;
 					part.mMassPropertiesOverride.mMass = masses[p];
 					if (humanoid.IsRagdoll2D())
@@ -1763,6 +1785,14 @@ namespace wi::physics
 						constraint->mPoint1 = constraint->mPoint2 = constraint_positions[p];
 						constraint->mHingeAxis1 = constraint->mHingeAxis2 = Vec3::sAxisY();
 						constraint->mNormalAxis1 = constraint->mNormalAxis2 = (constraint_positions[p] - constraint_positions[p - 1]).Normalized();
+						if (presentation_only)
+						{
+							// default_facing=+1 faces -Z in Wicked, not +Z. Positive
+							// hinge angles must flex towards the front, never behind
+							// the torso. Cross the actual A-pose arm axis with front.
+							constraint->mHingeAxis1 = constraint->mHingeAxis2 = constraint->mNormalAxis1.Cross(-Vec3::sAxisZ() * facing).NormalizedOr(-Vec3::sAxisY());
+							constraint->mMaxFrictionTorque = 0.1f;
+						}
 						if (fixpose)
 						{
 							constraint->mLimitsMin = constraint->mLimitsMax = 0;
@@ -1781,6 +1811,11 @@ namespace wi::physics
 						constraint->mPoint1 = constraint->mPoint2 = constraint_positions[p];
 						constraint->mHingeAxis1 = constraint->mHingeAxis2 = -Vec3::sAxisY();
 						constraint->mNormalAxis1 = constraint->mNormalAxis2 = (constraint_positions[p] - constraint_positions[p - 1]).Normalized();
+						if (presentation_only)
+						{
+							constraint->mHingeAxis1 = constraint->mHingeAxis2 = constraint->mNormalAxis1.Cross(-Vec3::sAxisZ() * facing).NormalizedOr(Vec3::sAxisY());
+							constraint->mMaxFrictionTorque = 0.1f;
+						}
 						if (fixpose)
 						{
 							constraint->mLimitsMin = constraint->mLimitsMax = 0;
@@ -1862,6 +1897,8 @@ namespace wi::physics
 			{
 				if (state_active)
 					return;
+				if (partial_active)
+					Deactivate(scene);
 				state_active = true;
 
 				const HumanoidComponent* humanoid = scene.humanoids.GetComponent(humanoidEntity);
@@ -1875,6 +1912,7 @@ namespace wi::physics
 				int c = 0;
 				for (auto& x : rigidbodies)
 				{
+					body_interface.SetObjectLayer(x.bodyID, Layers::MOVING);
 					body_interface.SetMotionType(x.bodyID, EMotionType::Dynamic, EActivation::Activate);
 
 					// Save parenting information to be able to restore it:
@@ -1917,9 +1955,10 @@ namespace wi::physics
 				Scene& scene
 			)
 			{
-				if (!state_active)
+				if (!state_active && !partial_active)
 					return;
 				state_active = false;
+				partial_active = false;
 
 				PhysicsSystem& physics_system = ((PhysicsScene*)physics_scene.get())->physics_system;
 				BodyInterface& body_interface = physics_system.GetBodyInterface(); // locking version because this is called from job system!
@@ -1928,6 +1967,7 @@ namespace wi::physics
 				int c = 0;
 				for (auto& x : rigidbodies)
 				{
+					body_interface.SetObjectLayer(x.bodyID, presentation_only ? Layers::PRESENTATION : Layers::MOVING);
 					body_interface.SetMotionType(x.bodyID, EMotionType::Kinematic, EActivation::Activate);
 
 					if (hierarchy_detached && saved_parents[c] != INVALID_ENTITY)
@@ -1937,6 +1977,49 @@ namespace wi::physics
 					c++;
 				}
 				hierarchy_detached = false;
+			}
+
+			void UpdatePartial(Scene& scene, const HumanoidComponent& humanoid, float dt)
+			{
+				if (state_active)
+					Deactivate(scene);
+				partial_active = true;
+				PhysicsSystem& physics_system = ((PhysicsScene*)physics_scene.get())->physics_system;
+				BodyInterface& bodies = physics_system.GetBodyInterface();
+				// Do not inherit motor targets from a previous full-body takeover.
+				for (int p = 1; p < BODYPART_COUNT; ++p)
+				{
+					const int index = settings.GetConstraintIndexForBodyIndex(p);
+					if (index < 0) continue;
+					TwoBodyConstraint* constraint = ragdoll->GetConstraint(index);
+					if (constraint->GetSubType() == EConstraintSubType::SwingTwist)
+					{
+						auto* joint = static_cast<SwingTwistConstraint*>(constraint);
+						joint->SetSwingMotorState(EMotorState::Off);
+						joint->SetTwistMotorState(EMotorState::Off);
+					}
+					else if (constraint->GetSubType() == EConstraintSubType::Hinge)
+						static_cast<HingeConstraint*>(constraint)->SetMotorState(EMotorState::Off);
+				}
+				for (auto& rb : rigidbodies)
+				{
+					const TransformComponent* transform = scene.transforms.GetComponent(rb.entity);
+					if (transform == nullptr) continue;
+					Mat44 target = Mat44::sRotationTranslation(cast(transform->GetRotation()), cast(transform->GetPosition()));
+					target = target * rb.restBasisInverse * rb.additionalTransform;
+					const bool dynamic = humanoid.ragdoll_partial_dynamic_bones[size_t(rb.humanoid_bone)];
+					const EMotionType type = dynamic ? EMotionType::Dynamic : EMotionType::Kinematic;
+					if (bodies.GetMotionType(rb.bodyID) != type)
+					{
+						bodies.SetMotionType(rb.bodyID, type, EActivation::Activate);
+						bodies.SetPositionAndRotation(rb.bodyID, target.GetTranslation(), target.GetQuaternion().Normalized(), EActivation::Activate);
+						// A kinematic anchor can carry large catch-up velocities. Never
+						// transfer those into a freshly released presentation limb.
+						bodies.SetLinearAndAngularVelocity(rb.bodyID, Vec3::sZero(), Vec3::sZero());
+					}
+					if (dynamic) continue;
+					bodies.MoveKinematic(rb.bodyID, target.GetTranslation(), target.GetQuaternion().Normalized(), dt);
+				}
 			}
 
 			void DriveToAuthoredPose(Scene& scene, const HumanoidComponent& humanoid)
@@ -2833,6 +2916,10 @@ namespace wi::physics
 						}
 					}
 				}
+				else if (humanoid.IsRagdollPartialPhysicsEnabled())
+				{
+					ragdoll.UpdatePartial(scene, humanoid, physics_scene.GetKinematicDT(scene.dt));
+				}
 				else
 				{
 					ragdoll.Deactivate(scene);
@@ -2861,6 +2948,7 @@ namespace wi::physics
 			}
 			else if(!humanoid.IsRagdollPhysicsEnabled())
 			{
+				ragdoll.Deactivate(scene);
 				// Simulation is disabled, update physics state immediately:
 				for (auto& rb : ragdoll.rigidbodies)
 				{
@@ -3165,7 +3253,8 @@ namespace wi::physics
 				scene.locker.unlock();
 #endif
 
-				if (humanoid.IsRagdollPhysicsEnabled())
+				if (humanoid.IsRagdollPhysicsEnabled() ||
+					(IsSimulationEnabled() && humanoid.ragdoll_partial_dynamic_bones[size_t(rb.humanoid_bone)]))
 				{
 					mat = mat * rb.additionalTransformInverse;
 					mat = mat * rb.restBasis;
@@ -3181,7 +3270,7 @@ namespace wi::physics
 					bp.physical_bone_position = cast(position);
 					bp.physical_bone_rotation = cast(rotation);
 
-					if (!humanoid.IsRagdollPoseMotorEnabled())
+					if (humanoid.IsRagdollPhysicsEnabled() && !humanoid.IsRagdollPoseMotorEnabled())
 					{
 						transform->translation_local = cast(position);
 						transform->rotation_local = cast(rotation);
@@ -4070,6 +4159,8 @@ namespace wi::physics
 			const uint64_t userdata = body.GetUserData();
 			if (userdata == 0)
 				return;
+			if (body.GetObjectLayer() == Layers::PRESENTATION)
+				return; // Presentation limbs are not gameplay floor/target query results.
 
 			if (body.IsRigidBody())
 			{

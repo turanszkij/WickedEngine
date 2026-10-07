@@ -53,6 +53,40 @@ namespace wi::scene
 			procedural_animation_hooks.end());
 	}
 
+	Scene::ProceduralAnimationHookId Scene::AddFinalPoseHook(ProceduralAnimationHook hook)
+	{
+		if (!hook) return 0;
+		const auto id = next_procedural_animation_hook_id++;
+		final_pose_hooks.push_back({ id, std::move(hook) });
+		return id;
+	}
+
+	void Scene::RemoveFinalPoseHook(ProceduralAnimationHookId id)
+	{
+		final_pose_hooks.erase(std::remove_if(final_pose_hooks.begin(), final_pose_hooks.end(),
+			[id](const ProceduralAnimationHookEntry& entry) { return entry.id == id; }), final_pose_hooks.end());
+	}
+
+	void Scene::RefreshMorphWeights(Entity meshEntity)
+	{
+		MeshComponent* mesh = meshes.GetComponent(meshEntity);
+		if (mesh == nullptr || skinningDataMapped == nullptr || mesh->morph_targets.empty() ||
+			mesh->morphGPUOffset + mesh->morph_targets.size() * sizeof(MorphTargetGPU) > skinningDataSize)
+			return;
+		MorphTargetGPU* dst = (MorphTargetGPU*)((uint8_t*)skinningDataMapped + mesh->morphGPUOffset);
+		mesh->active_morph_count = 0;
+		for (const auto& morph : mesh->morph_targets)
+		{
+			if (morph.weight == 0 || !std::isfinite(morph.weight)) continue;
+			MorphTargetGPU gpu = {};
+			gpu.offset_pos = uint32_t(morph.offset_pos);
+			gpu.offset_nor = uint32_t(morph.offset_nor);
+			gpu.offset_tan = ~0u;
+			gpu.weight = morph.weight;
+			std::memcpy(dst + mesh->active_morph_count++, &gpu, sizeof(gpu));
+		}
+	}
+
 	void Scene::Update(float dt)
 	{
 		GraphicsDevice* device = wi::graphics::GetDevice();
@@ -407,6 +441,8 @@ namespace wi::scene
 		RunProceduralAnimationUpdateSystem(ctx);
 
 		wi::physics::OverrideWehicleWheelTransforms(*this);
+		for (const auto& entry : final_pose_hooks)
+			if (entry.callback) entry.callback(*this);
 
 		RunArmatureUpdateSystem(ctx);
 

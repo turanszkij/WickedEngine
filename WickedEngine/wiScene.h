@@ -343,6 +343,12 @@ namespace wi::scene
 		// Hooks must be added and removed from the scene update thread.
 		ProceduralAnimationHookId AddProceduralAnimationHook(ProceduralAnimationHook hook);
 		void RemoveProceduralAnimationHook(ProceduralAnimationHookId id);
+		// Presentation morph drivers run after all procedural/built-in IK.
+		// The hook must not change transforms or scene membership.
+		ProceduralAnimationHookId AddFinalPoseHook(ProceduralAnimationHook hook);
+		void RemoveFinalPoseHook(ProceduralAnimationHookId id);
+		// Refresh an already allocated morph upload after a final-pose driver.
+		void RefreshMorphWeights(wi::ecs::Entity meshEntity);
 		// Remove everything from the scene that it owns:
 		virtual void Clear();
 		// Merge an other scene into this.
@@ -661,6 +667,7 @@ namespace wi::scene
 			ProceduralAnimationHook callback;
 		};
 		wi::vector<ProceduralAnimationHookEntry> procedural_animation_hooks;
+		wi::vector<ProceduralAnimationHookEntry> final_pose_hooks;
 		ProceduralAnimationHookId next_procedural_animation_hook_id = 1;
 
 		void UpdateHumanoidFacings();
