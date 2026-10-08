@@ -264,7 +264,6 @@ struct VertexSurface
 		ShaderMeshInstance inst = input.GetInstance();
 		float4 pos_wind = input.GetPositionWind();
 		position = float4(pos_wind.xyz, 1);
-		normal = input.GetNormal();
 		color = half4(material.GetBaseColor() * inst.GetColor());
 
 		[branch]
@@ -291,11 +290,13 @@ struct VertexSurface
 			ao = 1;
 		}
 
-		normal = mul(inst.transformRaw.GetMatrixAdjoint(), normal);
+		float3x3 adjoint = inst.transformRaw.GetMatrixAdjoint();
+		normal = input.GetNormal();
+		normal = mul(adjoint, normal);
 		normal = any(normal) ? normalize(normal) : 0;
 
 		tangent = input.GetTangent();
-		tangent.xyz = mul(inst.transformRaw.GetMatrixAdjoint(), tangent.xyz);
+		tangent.xyz = mul(adjoint, tangent.xyz);
 		tangent.xyz = any(tangent.xyz) ? normalize(tangent.xyz) : 0;
 		
 		uvsets = input.GetUVSets();

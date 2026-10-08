@@ -16,7 +16,12 @@ struct alignas(16) ShaderScene
 	int texturestreamingbuffer;
 	int globalenvmap; // static sky, not guaranteed to be cubemap, mipmaps or format, just whatever is imported
 	int globalprobe; // rendered probe with guaranteed mipmaps, hdr, etc.
+	uint globalprobe_mipcount16f; // force fp16 load
+
 	int impostorInstanceOffset;
+	int padding0;
+	int padding1;
+	int padding2;
 
 	int TLAS;
 	int BVH_counter;
@@ -948,6 +953,10 @@ struct alignas(16) ShaderEntity
 	{
 		return (half)f16tof32(remap >> 16u);
 	}
+	inline half GetCubemapMipcount()
+	{
+		return (half)f16tof32(remap);
+	}
 	inline half4 GetColor()
 	{
 		half4 retVal;
@@ -1055,6 +1064,10 @@ struct alignas(16) ShaderEntity
 	inline void SetCubeRemapFar(float value)
 	{
 		remap |= XMConvertFloatToHalf(value) << 16u;
+	}
+	inline void SetCubemapMipcount(float value)
+	{
+		remap |= XMConvertFloatToHalf(value);
 	}
 	inline void SetIndices(uint matrixIndex, uint textureIndex)
 	{

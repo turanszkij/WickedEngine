@@ -955,14 +955,17 @@ namespace wi::scene
 		if (probes.GetCount() > 0 && probes[0].texture.IsValid())
 		{
 			shaderscene.globalprobe = device->GetDescriptorIndex(&probes[0].texture, SubresourceType::SRV);
+			shaderscene.globalprobe_mipcount16f = wi::math::f32tof16(float(probes[0].texture.desc.mip_levels));
 		}
 		else if (global_dynamic_probe.texture.IsValid())
 		{
 			shaderscene.globalprobe = device->GetDescriptorIndex(&global_dynamic_probe.texture, SubresourceType::SRV);
+			shaderscene.globalprobe_mipcount16f = wi::math::f32tof16(float(global_dynamic_probe.texture.desc.mip_levels));
 		}
 		else
 		{
 			shaderscene.globalprobe = -1;
+			shaderscene.globalprobe_mipcount16f = 0;
 		}
 
 		shaderscene.impostorInstanceOffset = impostorInstanceOffset;

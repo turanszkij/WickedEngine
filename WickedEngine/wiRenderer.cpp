@@ -4681,6 +4681,7 @@ void UpdatePerFrameData(
 			shaderentity.SetType(ENTITY_TYPE_ENVMAP);
 			shaderentity.position = probe.position;
 			shaderentity.SetRange(probe.range);
+			shaderentity.SetCubemapMipcount(float(probe.texture.desc.mip_levels));
 
 			int texture_index = -1;
 			if (probe.texture.IsValid())
