@@ -30,7 +30,7 @@ VertexToPixel main(uint vid : SV_VertexID, out uint VPIndex : SV_ViewportArrayIn
 	prim.primitiveIndex = vid / 3;
 	prim.instanceIndex = xHairInstanceIndex;
 	prim.subsetIndex = 0;
-	Out.primitiveID = prim.pack();
+	Out.primitiveID = prim.pack(inst, geometry);
 
 	Out.fade = saturate(distance(position.xyz, camera.position.xyz) / xHairViewDistance);
 	Out.fade = saturate(Out.fade - 0.8f) * 5.0f; // fade will be on edge and inwards 20%

@@ -693,12 +693,10 @@ struct PrimitiveID
 	}
 
 	// These packing methods require meshlet data, and pack into 32 bits:
-	inline uint pack()
+	inline uint pack(in ShaderMeshInstance inst, in ShaderGeometry geometry) // overload with directly specified structs (sometimes they are loaded directly which is more optimal)
 	{
 		// 25 bit meshletIndex
 		// 7  bit meshletPrimitiveIndex
-		ShaderMeshInstance inst = load_instance(instanceIndex);
-		ShaderGeometry geometry = load_geometry(inst.geometryOffset + subsetIndex);
 		uint meshletIndex = inst.meshletOffset + geometry.meshletOffset + primitiveIndex / MESHLET_TRIANGLE_COUNT;
 		meshletIndex += 1; // indicate that it is valid
 		meshletIndex &= ~0u >> 7u; // mask 25 active bits
@@ -706,6 +704,12 @@ struct PrimitiveID
 		meshletPrimitiveIndex &= 0x7F; // mask 7 active bits
 		meshletPrimitiveIndex <<= 25u;
 		return meshletPrimitiveIndex | meshletIndex;
+	}
+	inline uint pack() // overload with indirectly loaded structs
+	{
+		ShaderMeshInstance inst = load_instance(instanceIndex);
+		ShaderGeometry geometry = load_geometry(inst.geometryOffset + subsetIndex);
+		return pack(inst, geometry);
 	}
 	inline void unpack(uint value)
 	{

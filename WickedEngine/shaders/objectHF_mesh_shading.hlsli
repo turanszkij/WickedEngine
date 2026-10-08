@@ -225,7 +225,7 @@ void main(
 		prim.primitiveIndex = (meshletID - geometry.meshletOffset) * MESHLET_TRIANGLE_COUNT + ti;
 		prim.instanceIndex = poi.GetInstanceIndex();
 		prim.subsetIndex = push.geometryIndex - inst.geometryOffset;
-		primitives[ti].primitiveID = prim.pack();
+		primitives[ti].primitiveID = prim.pack(inst, geometry);
 #endif // defined(OBJECTSHADER_LAYOUT_PREPASS) || defined(OBJECTSHADER_LAYOUT_PREPASS_TEX)
 		
 #ifdef OBJECTSHADER_USE_RENDERTARGETARRAYINDEX

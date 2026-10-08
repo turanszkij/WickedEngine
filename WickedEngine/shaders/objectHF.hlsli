@@ -145,7 +145,7 @@ struct VertexInput
 		prim.primitiveIndex = vertexID - GetMesh().indexOffset / 3;
 		prim.instanceIndex = GetInstancePointer().GetInstanceIndex();
 		prim.subsetIndex = push.geometryIndex - GetInstance().geometryOffset;
-		return prim.pack();
+		return prim.pack(GetInstance(), GetMesh());
 	}
 #endif // OBJECTSHADER_USE_PROVOKING_INDEX_BUFFER
 
