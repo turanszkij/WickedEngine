@@ -85,13 +85,15 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		float2 offset = (hammersley2d_random(i, sampleCount, random) - 0.5) * resolveSpatialSize;
 
 		int2 neighborTracingCoord = tracingCoord + offset;
-		int2 neighborCoord = DTid.xy * rtdiffuse_downscalefactor + offset;
+		int2 neighborCoord = neighborTracingCoord * rtdiffuse_downscalefactor;
 
 		float neighbor_lineardepth = texture_lineardepth[neighborCoord] * farplane;
 		if (neighbor_lineardepth < farplane)
 		{
 			float weight = 1;
-			weight *= 1 - saturate(abs(lineardepth - neighbor_lineardepth));
+			// Relative depth difference (zero weight at 10%), so that a surface seen at a grazing
+			// angle far away is not rejected just because its depth changes by meters per pixel:
+			weight *= 1 - saturate(abs(lineardepth - neighbor_lineardepth) / lineardepth * 10);
 
 			float4 sampleColor = texture_rayIndirectDiffuse[neighborTracingCoord];
 			sampleColor.rgb *= rcp(1 + Luminance(sampleColor.rgb));
@@ -103,8 +105,17 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		}
 	}
 
-	result /= weightSum;
-	result.rgb *= rcp(1 - Luminance(result.rgb));
+	if (weightSum > 0)
+	{
+		result /= weightSum;
+		result.rgb *= rcp(1 - Luminance(result.rgb));
+	}
+	else
+	{
+		// No neighbor passed the depth test: keep this pixel's own ray result instead of 0/0
+		result = texture_rayIndirectDiffuse[tracingCoord];
+		weightSum = 1;
+	}
 
 	// Population variance
 	float resolveVariance = S / weightSum;
