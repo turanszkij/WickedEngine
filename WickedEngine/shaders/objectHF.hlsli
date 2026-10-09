@@ -140,7 +140,12 @@ struct VertexInput
 	uint GetPrimitiveID()
 	{
 		// For prepass the meshopt_generateProvokingIndexBuffer is used to emulate SV_PrimitiveID via provoking vertex
-		return vertexID;
+		PrimitiveID prim;
+		prim.init();
+		prim.primitiveIndex = vertexID - GetMesh().indexOffset / 3;
+		prim.instanceIndex = GetInstancePointer().GetInstanceIndex();
+		prim.subsetIndex = push.geometryIndex - GetInstance().geometryOffset;
+		return prim.pack(GetInstance(), GetMesh());
 	}
 #endif // OBJECTSHADER_USE_PROVOKING_INDEX_BUFFER
 
@@ -259,7 +264,6 @@ struct VertexSurface
 		ShaderMeshInstance inst = input.GetInstance();
 		float4 pos_wind = input.GetPositionWind();
 		position = float4(pos_wind.xyz, 1);
-		normal = input.GetNormal();
 		color = half4(material.GetBaseColor() * inst.GetColor());
 
 		[branch]
@@ -286,11 +290,13 @@ struct VertexSurface
 			ao = 1;
 		}
 
-		normal = mul(inst.transformRaw.GetMatrixAdjoint(), normal);
+		float3x3 adjoint = inst.transformRaw.GetMatrixAdjoint();
+		normal = input.GetNormal();
+		normal = mul(adjoint, normal);
 		normal = any(normal) ? normalize(normal) : 0;
 
 		tangent = input.GetTangent();
-		tangent.xyz = mul(inst.transformRaw.GetMatrixAdjoint(), tangent.xyz);
+		tangent.xyz = mul(adjoint, tangent.xyz);
 		tangent.xyz = any(tangent.xyz) ? normalize(tangent.xyz) : 0;
 		
 		uvsets = input.GetUVSets();
@@ -479,10 +485,10 @@ PixelInput vertex_to_pixel_export(VertexInput input)
 
 #if !defined(OBJECTSHADER_COMPILE_PS)
 #ifdef OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
-	Out.RTIndex = camera.output_index;
+	Out.RTIndex = input.GetInstancePointer().GetCameraIndex();
 #endif // OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
 #ifdef OBJECTSHADER_USE_VIEWPORTARRAYINDEX
-	Out.VPIndex = camera.output_index;
+	Out.VPIndex = input.GetInstancePointer().GetCameraIndex();
 #endif // OBJECTSHADER_USE_VIEWPORTARRAYINDEX
 #endif // !defined(OBJECTSHADER_COMPILE_PS)
 
@@ -1130,12 +1136,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 	// end point:
 #ifdef PREPASS
 #ifndef DEPTHONLY
-	PrimitiveID prim;
-	prim.init();
-	prim.primitiveIndex = input.primitiveID - GetMesh().indexOffset / 3;
-	prim.instanceIndex = input.GetInstanceIndex();
-	prim.subsetIndex = push.geometryIndex - meshinstance.geometryOffset;
-	return prim.pack();
+	return input.primitiveID;
 #endif // DEPTHONLY
 #else
 	return color;

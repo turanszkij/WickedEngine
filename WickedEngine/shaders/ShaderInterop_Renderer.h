@@ -16,7 +16,12 @@ struct alignas(16) ShaderScene
 	int texturestreamingbuffer;
 	int globalenvmap; // static sky, not guaranteed to be cubemap, mipmaps or format, just whatever is imported
 	int globalprobe; // rendered probe with guaranteed mipmaps, hdr, etc.
+	uint globalprobe_mipcount16f; // force fp16 load
+
 	int impostorInstanceOffset;
+	int padding0;
+	int padding1;
+	int padding2;
 
 	int TLAS;
 	int BVH_counter;
@@ -948,6 +953,10 @@ struct alignas(16) ShaderEntity
 	{
 		return (half)f16tof32(remap >> 16u);
 	}
+	inline half GetCubemapMipcount()
+	{
+		return (half)f16tof32(remap);
+	}
 	inline half4 GetColor()
 	{
 		half4 retVal;
@@ -1055,6 +1064,10 @@ struct alignas(16) ShaderEntity
 	inline void SetCubeRemapFar(float value)
 	{
 		remap |= XMConvertFloatToHalf(value) << 16u;
+	}
+	inline void SetCubemapMipcount(float value)
+	{
+		remap |= XMConvertFloatToHalf(value);
 	}
 	inline void SetIndices(uint matrixIndex, uint textureIndex)
 	{
@@ -1325,7 +1338,7 @@ struct alignas(16) ShaderCamera
 	float4x4	view_projection;
 
 	float3		position;
-	uint		output_index; // viewport or rendertarget array index
+	float		padding0;
 
 	float4		clip_plane;
 	float4		reflection_plane; // not clip plane (not reversed when camera is under), but the original plane
@@ -1395,7 +1408,7 @@ struct alignas(16) ShaderCamera
 	int texture_depth_index;
 	int texture_velocity_index;
 	int texture_normal_roughness_index;
-	int padding0;
+	int padding1;
 
 	int texture_reflection_index;
 	int texture_reflection_depth_index;
@@ -1421,7 +1434,6 @@ struct alignas(16) ShaderCamera
 	{
 		view_projection = {};
 		position = {};
-		output_index = 0;
 		clip_plane = {};
 		reflection_plane = float4(0, 1, 0, 0);
 		forward = {};
@@ -1487,6 +1499,9 @@ struct alignas(16) ShaderCamera
 		texture_reprojected_depth_index = -1;
 
 		options = 0;
+
+		padding0 = 0;
+		padding1 = 0;
 	}
 
 	inline bool IsOrtho() const { return options & SHADERCAMERA_OPTION_ORTHO; }

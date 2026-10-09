@@ -27,7 +27,7 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	uint instanceID = Gid.y;
 	uint meshletGroupOffset = geometry.meshletOffset + Gid.x * AS_GROUPSIZE;
 
-	if(WaveIsFirstLane())
+	if (WaveIsFirstLane())
 	{
 		amplification_payload.instanceID = instanceID;
 		amplification_payload.meshletGroupOffset = meshletGroupOffset;
@@ -208,6 +208,7 @@ void main(
 	}
 
 	ShaderMeshInstancePointer poi = bindless_buffers[descriptor_index(push.instances)].Load<ShaderMeshInstancePointer>(push.instance_offset + amplification_payload.instanceID * sizeof(ShaderMeshInstancePointer));
+	ShaderMeshInstance inst = load_instance(poi.GetInstanceIndex());
 	const uint frustum_index = poi.GetCameraIndex();
 	
 	for (uint ti = groupIndex; ti < cluster.triangleCount; ti += MS_GROUPSIZE)
@@ -219,15 +220,20 @@ void main(
 #endif // defined(OBJECTSHADER_USE_INSTANCEINDEX) || defined(OBJECTSHADER_USE_DITHERING) || defined(OBJECTSHADER_USE_CAMERAINDEX)
 		
 #if defined(OBJECTSHADER_LAYOUT_PREPASS) || defined(OBJECTSHADER_LAYOUT_PREPASS_TEX)
-		primitives[ti].primitiveID = (meshletID - geometry.meshletOffset) * MESHLET_TRIANGLE_COUNT + ti + geometry.indexOffset / 3;
+		PrimitiveID prim;
+		prim.init();
+		prim.primitiveIndex = (meshletID - geometry.meshletOffset) * MESHLET_TRIANGLE_COUNT + ti;
+		prim.instanceIndex = poi.GetInstanceIndex();
+		prim.subsetIndex = push.geometryIndex - inst.geometryOffset;
+		primitives[ti].primitiveID = prim.pack(inst, geometry);
 #endif // defined(OBJECTSHADER_LAYOUT_PREPASS) || defined(OBJECTSHADER_LAYOUT_PREPASS_TEX)
 		
 #ifdef OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
-		primitives[ti].RTIndex = GetCameraIndexed(frustum_index).output_index;
+		primitives[ti].RTIndex = frustum_index;
 #endif // OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
 
 #ifdef OBJECTSHADER_USE_VIEWPORTARRAYINDEX
-		primitives[ti].VPIndex = GetCameraIndexed(frustum_index).output_index;
+		primitives[ti].VPIndex = frustum_index;
 #endif // OBJECTSHADER_USE_VIEWPORTARRAYINDEX
 
 	}

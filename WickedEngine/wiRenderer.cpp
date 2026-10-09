@@ -4681,6 +4681,7 @@ void UpdatePerFrameData(
 			shaderentity.SetType(ENTITY_TYPE_ENVMAP);
 			shaderentity.position = probe.position;
 			shaderentity.SetRange(probe.range);
+			shaderentity.SetCubemapMipcount(float(probe.texture.desc.mip_levels));
 
 			int texture_index = -1;
 			if (probe.texture.IsValid())
@@ -6999,7 +7000,6 @@ void DrawShadowmaps(
 				XMStoreFloat4x4(&cbcam.view, shcam.view);
 				XMStoreFloat4x4(&cbcam.view_projection, shcam.view_projection);
 				XMStoreFloat4x4(&cbcam.inverse_view_projection, XMMatrixInverse(nullptr, shcam.view_projection));
-				cbcam.output_index = output_index;
 				for (int i = 0; i < arraysize(cbcam.frustum.planes); ++i)
 				{
 					cbcam.frustum.planes[i] = shcam.frustum.planes[i];
@@ -7058,7 +7058,6 @@ void DrawShadowmaps(
 			XMStoreFloat4x4(&cbcam.view, shcam.view);
 			XMStoreFloat4x4(&cbcam.view_projection, shcam.view_projection);
 			XMStoreFloat4x4(&cbcam.inverse_view_projection, XMMatrixInverse(nullptr, shcam.view_projection));
-			cbcam.output_index = output_index;
 			for (int i = 0; i < arraysize(cbcam.frustum.planes); ++i)
 			{
 				cbcam.frustum.planes[i] = shcam.frustum.planes[i];
@@ -7129,7 +7128,6 @@ void DrawShadowmaps(
 				XMStoreFloat4x4(&cbcam.view, shcam.view);
 				XMStoreFloat4x4(&cbcam.view_projection, shcam.view_projection);
 				XMStoreFloat4x4(&cbcam.inverse_view_projection, XMMatrixInverse(nullptr, shcam.view_projection));
-				cbcam.output_index = output_index;
 				cbcam.options = SHADERCAMERA_OPTION_NONE;
 				for (int i = 0; i < arraysize(cbcam.frustum.planes); ++i)
 				{
@@ -7170,7 +7168,6 @@ void DrawShadowmaps(
 			device->EventBegin("Rain Blocker", cmd);
 			const uint cascade = 0;
 			XMStoreFloat4x4(&cb.cameras[cascade].view_projection, shcam.view_projection);
-			cb.cameras[cascade].output_index = cascade;
 			for (int i = 0; i < arraysize(cb.cameras[cascade].frustum.planes); ++i)
 			{
 				cb.cameras[cascade].frustum.planes[i] = shcam.frustum.planes[i];
@@ -9147,7 +9144,6 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			XMStoreFloat4x4(&shadercam.inverse_projection, XMMatrixInverse(nullptr, cameras[i].projection));
 			XMStoreFloat4x4(&shadercam.inverse_view, XMMatrixInverse(nullptr, cameras[i].view));
 			shadercam.position = probe.position;
-			shadercam.output_index = i;
 			shadercam.z_near = zNearP;
 			shadercam.z_near_rcp = zNearPRcp;
 			shadercam.z_far = zFarP;
@@ -12230,8 +12226,11 @@ void SurfelGI(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
+		// One thread per grid cell. This pass also resets the cell counts, so every cell must be covered:
+		//	an oversized dispatch (more than 65535 groups) is invalid and leaves cells stale.
+		assert((SURFEL_TOTAL_TABLE_SIZE + SURFEL_GRIDOFFSETS_NUMTHREADS - 1) / SURFEL_GRIDOFFSETS_NUMTHREADS <= 65535u);
 		device->Dispatch(
-			(SURFEL_TOTAL_TABLE_SIZE + 63) / 64,
+			(SURFEL_TOTAL_TABLE_SIZE + SURFEL_GRIDOFFSETS_NUMTHREADS - 1) / SURFEL_GRIDOFFSETS_NUMTHREADS,
 			1,
 			1,
 			cmd

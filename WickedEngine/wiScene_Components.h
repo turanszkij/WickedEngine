@@ -1338,6 +1338,9 @@ namespace wi::scene
 		wi::primitive::AABB aabb;
 		wi::vector<ShaderTransform> boneData;
 
+		// ragdoll: bones falling far from armature original position exhibited precision issues after skinning
+		XMFLOAT3 skinningRebase = XMFLOAT3(0, 0, 0);
+
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 

@@ -24,6 +24,13 @@ VSOut main(uint vertexID : SV_VertexID)
 	Out.slice = data.x & 0xFFFFFF;
 	Out.dither = float((data.x >> 24u) & 0xFF) / 255.0;
 	Out.instanceColor = data.y;
-	Out.primitiveID = vertexID / 2u;
+
+	PrimitiveID prim;
+	prim.init();
+	prim.primitiveIndex = vertexID / 2u;
+	prim.instanceIndex = GetScene().impostorInstanceOffset;
+	prim.subsetIndex = 0;
+	Out.primitiveID = prim.pack();
+
 	return Out;
 }

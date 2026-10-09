@@ -547,13 +547,10 @@ inline half3 EnvironmentReflection_Global(in Surface surface)
 	[branch]
 	if (GetScene().globalprobe < 0)
 		return 0;
-	
-	TextureCube<half4> cubemap = bindless_cubemaps_half4[descriptor_index(GetScene().globalprobe)];
-	uint2 dim;
-	uint mipcount;
-	cubemap.GetDimensions(0, dim.x, dim.y, mipcount);
-	half mipcount16f = half(mipcount);
 
+	TextureCube<half4> cubemap = bindless_cubemaps_half4[descriptor_index(GetScene().globalprobe)];
+
+	const half mipcount16f = half(f16tof32(GetScene().globalprobe_mipcount16f));
 	half MIP = surface.roughness * mipcount16f;
 	envColor = cubemap.SampleLevel(sampler_linear_clamp, surface.R, MIP).rgb * surface.F;
 
@@ -591,10 +588,7 @@ inline half4 EnvironmentReflection_Local(in TextureCube<half4> cubemap, in Surfa
 	half Distance = min(FurthestPlane.x, min(FurthestPlane.y, FurthestPlane.z));
 	half3 R_parallaxCorrected = surface.P - probe.position + surface.R * Distance;
 
-	uint2 dim;
-	uint mipcount;
-	cubemap.GetDimensions(0, dim.x, dim.y, mipcount);
-	half mipcount16f = half(mipcount);
+	const half mipcount16f = probe.GetCubemapMipcount();
 
 	// Sample cubemap texture:
 	half MIP = surface.roughness * mipcount16f;

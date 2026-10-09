@@ -17,14 +17,20 @@ VertexToPixel main(uint vid : SV_VertexID, out uint VPIndex : SV_ViewportArrayIn
 	ShaderMeshInstance inst = HairGetInstance();
 	ShaderGeometry geometry = HairGetGeometry();
 
-	VertexToPixel Out;
-	Out.primitiveID = vid / 3;
-
 	uint vertexID = primitiveBuffer[vid];
 	float4 pos_wind = bindless_buffers_float4[descriptor_index(geometry.vb_pos_wind)][vertexID];
 	float3 position = mul(inst.transform.GetMatrix(), float4(pos_wind.xyz, 1)).xyz;
 	float3 normal = normalize(bindless_buffers_float4[descriptor_index(geometry.vb_nor)][vertexID].xyz);
 	float4 uvsets = bindless_buffers_float4[descriptor_index(geometry.vb_uvs)][vertexID];
+
+	VertexToPixel Out;
+
+	PrimitiveID prim;
+	prim.init();
+	prim.primitiveIndex = vid / 3;
+	prim.instanceIndex = xHairInstanceIndex;
+	prim.subsetIndex = 0;
+	Out.primitiveID = prim.pack(inst, geometry);
 
 	Out.fade = saturate(distance(position.xyz, camera.position.xyz) / xHairViewDistance);
 	Out.fade = saturate(Out.fade - 0.8f) * 5.0f; // fade will be on edge and inwards 20%

@@ -7659,8 +7659,8 @@ using namespace vulkan_internal;
 	{
 		assert(pViewports != nullptr);
 		VkViewport vp[16];
-		assert(NumViewports < arraysize(vp));
-		assert(NumViewports < properties2.properties.limits.maxViewports);
+		assert(NumViewports <= arraysize(vp));
+		assert(NumViewports <= properties2.properties.limits.maxViewports);
 		for (uint32_t i = 0; i < NumViewports; ++i)
 		{
 			vp[i].x = pViewports[i].top_left_x;
