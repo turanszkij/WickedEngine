@@ -237,6 +237,26 @@ namespace wi
 			_write(data);
 			return *this;
 		}
+		inline Archive& operator<<(half data)
+		{
+			_write((float)data);
+			return *this;
+		}
+		inline Archive& operator<<(const half2& data)
+		{
+			_write((XMFLOAT2)data);
+			return *this;
+		}
+		inline Archive& operator<<(const half3& data)
+		{
+			_write((XMFLOAT3)data);
+			return *this;
+		}
+		inline Archive& operator<<(const half4& data)
+		{
+			_write((XMFLOAT4)data);
+			return *this;
+		}
 		inline Archive& operator<<(const XMFLOAT3X3& data)
 		{
 			_write(data);
@@ -405,6 +425,34 @@ namespace wi
 		inline Archive& operator>>(XMFLOAT4& data)
 		{
 			_read(data);
+			return *this;
+		}
+		inline Archive& operator>>(half& data)
+		{
+			float tmp;
+			_read(tmp);
+			data = tmp;
+			return *this;
+		}
+		inline Archive& operator>>(half2& data)
+		{
+			XMFLOAT2 tmp;
+			_read(tmp);
+			data = tmp;
+			return *this;
+		}
+		inline Archive& operator>>(half3& data)
+		{
+			XMFLOAT3 tmp;
+			_read(tmp);
+			data = tmp;
+			return *this;
+		}
+		inline Archive& operator>>(half4& data)
+		{
+			XMFLOAT4 tmp;
+			_read(tmp);
+			data = tmp;
 			return *this;
 		}
 		inline Archive& operator>>(XMFLOAT3X3& data)

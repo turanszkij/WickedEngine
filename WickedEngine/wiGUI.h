@@ -293,7 +293,7 @@ namespace wi::gui
 		virtual ~Widget() = default;
 
 		// Delete copy/move to keep internal references stable.
-		Widget(const Widget &) = delete;
+		Widget(const Widget&) = delete;
 
 		const std::string& GetName() const;
 		void SetName(const std::string& value);
@@ -1071,8 +1071,8 @@ namespace wi::gui
 		int drag_target_level = 0;      // item level for BETWEEN drops (0 = root)
 		bool dragging = false;
 		XMFLOAT2 drag_start_pos = {};
-				float drag_indicator_y = 0;    // screen Y for drop indicator line (updated in Update)
-				XMFLOAT2 drag_pointer_pos = {}; // current pointer pos while dragging (for ghost rendering)
+		float drag_indicator_y = 0;    // screen Y for drop indicator line (updated in Update)
+		XMFLOAT2 drag_pointer_pos = {}; // current pointer pos while dragging (for ghost rendering)
 		void ComputeScrollbarLength();
 
 	public:
