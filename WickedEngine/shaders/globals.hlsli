@@ -1015,7 +1015,7 @@ float acosFastPositive(float x)
 }
 
 inline half3 GetSunColor() { return unpack_half3(GetWeather().sun_color); } // sun color with intensity applied
-inline half3 GetSunDirection() { return normalize(unpack_half3(GetWeather().sun_direction)); }
+inline half3 GetSunDirection() { return unpack_half3(GetWeather().sun_direction); }
 inline half3 GetHorizonColor() { return unpack_half3(GetWeather().horizon); }
 inline half3 GetZenithColor() { return unpack_half3(GetWeather().zenith); }
 inline half3 GetAmbientColor() { return unpack_half3(GetWeather().ambient); }
@@ -1023,7 +1023,7 @@ inline uint2 GetInternalResolution() { return GetCamera().internal_resolution; }
 inline float GetDeltaTime() { return GetFrame().delta_time; }
 inline float GetTime() { return GetFrame().time; }
 inline float GetTimePrev() { return GetFrame().time_previous; }
-inline float GetFrameCount() { return GetFrame().frame_count; }
+inline uint GetFrameCount() { return GetFrame().frame_count; }
 inline min16uint2 GetTemporalAASampleRotation() { return uint2(GetFrame().temporalaa_samplerotation & 0xFF, (GetFrame().temporalaa_samplerotation >> 8u) & 0xFF); }
 inline half GetCapsuleShadowFade() { return f16tof32(GetFrame().capsuleshadow_fade_angle); }
 inline half GetCapsuleShadowAngle() { return f16tof32(GetFrame().capsuleshadow_fade_angle >> 16u); }

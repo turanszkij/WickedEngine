@@ -359,15 +359,13 @@ struct alignas(16) ShaderWeather
 	uint2 sun_color; // packed half3
 
 	uint2 ambient; // packed half3
-	uint most_important_light_index;
+	uint padding0;
 	float stars; // number of stars (0: disable stars, >0: increase number of stars)
 
 	uint2 horizon; // packed half3
 	uint2 zenith; // packed half3
 
 	float4 stars_rotation; // quaternion
-
-	float3 padding_stars;
 
 	float sky_rotation_sin;
 	float sky_rotation_cos;

@@ -347,7 +347,11 @@ inline half shadow_2D_volumetricclouds(float3 P)
 // Used with SkyAtmosphere and Volumetric Clouds
 inline bool furthest_cascade_volumetrics(inout ShaderEntity light, inout uint furthestCascade)
 {
-	light = load_entity(lights().first_item() + GetWeather().most_important_light_index);
+	ShaderEntityIterator iterator = directional_lights();
+	if (iterator.empty())
+		return false;
+
+	light = load_entity(iterator.first_item());
 	furthestCascade = light.GetShadowCascadeCount() - 1;
 	
 	if (!light.IsStaticLight() && light.IsCastingShadow() && furthestCascade >= 0)

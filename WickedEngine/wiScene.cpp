@@ -985,7 +985,6 @@ namespace wi::scene
 
 		shaderscene.weather.sun_color = wi::math::pack_half3(weather.sunColor);
 		shaderscene.weather.sun_direction = wi::math::pack_half3(weather.sunDirection);
-		shaderscene.weather.most_important_light_index = weather.most_important_light_index;
 		shaderscene.weather.ambient = wi::math::pack_half3(weather.ambient);
 		shaderscene.weather.sky_rotation_sin = std::sin(weather.sky_rotation);
 		shaderscene.weather.sky_rotation_cos = std::cos(weather.sky_rotation);
@@ -5073,6 +5072,8 @@ namespace wi::scene
 	{
 		aabb_lights.resize(lights.GetCount());
 
+		sun_protection.store(0);
+
 		wi::jobsystem::Dispatch(ctx, (uint32_t)lights.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
 
 			LightComponent& light = lights[args.jobIndex];
@@ -5097,10 +5098,8 @@ namespace wi::scene
 			default:
 			case LightComponent::DIRECTIONAL:
 				XMStoreFloat3(&light.direction, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), W)));
-				locker.lock();
-				if (args.jobIndex < weather.most_important_light_index)
+				if (sun_protection.fetch_add(1) == 0)
 				{
-					weather.most_important_light_index = args.jobIndex;
 					weather.sunColor = light.color;
 					weather.sunColor.x *= light.intensity;
 					weather.sunColor.y *= light.intensity;
@@ -5108,7 +5107,6 @@ namespace wi::scene
 					weather.sunDirection = light.direction;
 					weather.stars_rotation_quaternion = light.rotation;
 				}
-				locker.unlock();
 				break;
 			case LightComponent::SPOT:
 				XMStoreFloat3(&light.direction, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), W)));
@@ -5422,7 +5420,6 @@ namespace wi::scene
 		if (weathers.GetCount() > 0)
 		{
 			weather = weathers[0];
-			weather.most_important_light_index = ~0;
 
 			if (weather.IsOceanEnabled() && !ocean.IsValid())
 			{
