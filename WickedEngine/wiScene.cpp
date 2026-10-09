@@ -5072,7 +5072,15 @@ namespace wi::scene
 	{
 		aabb_lights.resize(lights.GetCount());
 
-		sun_protection.store(0);
+		sun_index = ~0u;
+		for (size_t i = 0; i < lights.GetCount(); ++i)
+		{
+			if (lights[i].GetType() == LightComponent::DIRECTIONAL)
+			{
+				sun_index = (uint32_t)i;
+				break;
+			}
+		}
 
 		wi::jobsystem::Dispatch(ctx, (uint32_t)lights.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
 
@@ -5098,7 +5106,7 @@ namespace wi::scene
 			default:
 			case LightComponent::DIRECTIONAL:
 				XMStoreFloat3(&light.direction, XMVector3Normalize(XMVector3TransformNormal(XMVectorSet(0, 1, 0, 0), W)));
-				if (sun_protection.fetch_add(1) == 0)
+				if (args.jobIndex == sun_index)
 				{
 					weather.sunColor = light.color;
 					weather.sunColor.x *= light.intensity;

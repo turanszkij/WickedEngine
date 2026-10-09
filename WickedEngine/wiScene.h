@@ -101,7 +101,7 @@ namespace wi::scene
 		wi::jobsystem::context topdown_hierarchy_workload;
 		uint32_t cpu_gpu_mapped_resource_index = 0;
 		mutable uint32_t blas_optimize_offset = 0;
-		std::atomic<uint32_t> sun_protection; // only 1 thread writes sun props, no lock
+		uint32_t sun_index = 0;
 
 		// AABB culling streams:
 		wi::vector<wi::primitive::AABB> aabb_objects;
