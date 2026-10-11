@@ -1950,6 +1950,18 @@ namespace wi::physics
 				}
 			}
 
+			void SetBodyDamping(const BodyID& bodyID, float linear, float angular)
+			{
+				auto& system = ((PhysicsScene*)physics_scene.get())->physics_system;
+				BodyLockWrite lock(system.GetBodyLockInterface(), bodyID);
+				if (lock.Succeeded())
+				{
+					auto* motion = lock.GetBody().GetMotionProperties();
+					motion->SetLinearDamping(linear);
+					motion->SetAngularDamping(angular);
+				}
+			}
+
 			// Disables dynamic ragdoll and reattaches loose parts as they were:
 			void Deactivate(
 				Scene& scene
@@ -1969,6 +1981,8 @@ namespace wi::physics
 				{
 					body_interface.SetObjectLayer(x.bodyID, presentation_only ? Layers::PRESENTATION : Layers::MOVING);
 					body_interface.SetMotionType(x.bodyID, EMotionType::Kinematic, EActivation::Activate);
+					// Partial drag must not leak into a later full-body takeover.
+					SetBodyDamping(x.bodyID, settings.mParts[c].mLinearDamping, settings.mParts[c].mAngularDamping);
 
 					if (hierarchy_detached && saved_parents[c] != INVALID_ENTITY)
 					{
@@ -2017,7 +2031,15 @@ namespace wi::physics
 						// transfer those into a freshly released presentation limb.
 						bodies.SetLinearAndAngularVelocity(rb.bodyID, Vec3::sZero(), Vec3::sZero());
 					}
-					if (dynamic) continue;
+					if (dynamic)
+					{
+						const float linear = std::isfinite(humanoid.ragdoll_partial_linear_damping)
+							? clamp(humanoid.ragdoll_partial_linear_damping, 0.0f, 10.0f) : 0.05f;
+						const float angular = std::isfinite(humanoid.ragdoll_partial_angular_damping)
+							? clamp(humanoid.ragdoll_partial_angular_damping, 0.0f, 20.0f) : 0.05f;
+						SetBodyDamping(rb.bodyID, linear, angular);
+						continue;
+					}
 					bodies.MoveKinematic(rb.bodyID, target.GetTranslation(), target.GetQuaternion().Normalized(), dt);
 				}
 			}

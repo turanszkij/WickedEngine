@@ -2365,6 +2365,10 @@ namespace wi::scene
 		// Keeps a presentation-only constraint skeleton allocated between partial
 		// poses. Its collision layer excludes gameplay dynamic bodies/characters.
 		bool ragdoll_partial_physics_available = false;
+		// Runtime-only viscous drag for partial limbs. Full ragdoll retains its
+		// original body settings; clients can tune settling without changing mass.
+		float ragdoll_partial_linear_damping = 0.05f;
+		float ragdoll_partial_angular_damping = 0.05f;
 		bool IsRagdollPartialPhysicsEnabled() const
 		{
 			for (bool dynamic : ragdoll_partial_dynamic_bones)
