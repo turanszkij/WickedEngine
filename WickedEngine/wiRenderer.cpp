@@ -3166,11 +3166,6 @@ void RenderMeshes(
 	const bool wireframe_overlay = flags & DRAWSCENE_WIREFRAME_OVERLAY;
 	const bool wireframe = wireframe_overlay || (IsWireRender() && GetWireframeMode() != WIREFRAME_OVERLAY);
 
-	// Do we need to compute a light mask for this pass on the CPU?
-	const bool forwardLightmaskRequest =
-		renderPass == RENDERPASS_ENVMAPCAPTURE ||
-		renderPass == RENDERPASS_VOXELIZE;
-
 	const bool shadowRendering = renderPass == RENDERPASS_SHADOW;
 
 	const bool stencil_usage = renderPass == RENDERPASS_MAIN || renderPass == RENDERPASS_PREPASS;
@@ -3193,7 +3188,6 @@ void RenderMeshes(
 		uint8_t userStencilRefOverride = 0;
 		bool forceAlphatestForDithering = false;
 		uint8_t lod = 0;
-		AABB aabb;
 	} instancedBatch = {};
 
 	uint32_t prev_stencilref = STENCILREF_DEFAULT;
@@ -3443,7 +3437,6 @@ void RenderMeshes(
 		const uint32_t meshIndex = batch.GetMeshIndex();
 		const uint32_t instanceIndex = batch.GetInstanceIndex();
 		const ObjectComponent& instance = vis.scene->objects[instanceIndex];
-		const AABB& instanceAABB = vis.scene->aabb_objects[instanceIndex];
 		const uint8_t userStencilRefOverride = instance.userStencilRef;
 		const uint8_t lod = batch.lod_override == 0xFF ? (uint8_t)instance.lod : batch.lod_override;
 
@@ -3461,7 +3454,6 @@ void RenderMeshes(
 			instancedBatch.dataOffset = (uint32_t)(instances.offset + instanceCount * sizeof(ShaderMeshInstancePointer));
 			instancedBatch.userStencilRefOverride = userStencilRefOverride;
 			instancedBatch.forceAlphatestForDithering = 0;
-			instancedBatch.aabb = AABB();
 			instancedBatch.lod = lod;
 		}
 
@@ -3477,11 +3469,6 @@ void RenderMeshes(
 		if (instance.alphaRef < 1)
 		{
 			instancedBatch.forceAlphatestForDithering = 1;
-		}
-
-		if (forwardLightmaskRequest)
-		{
-			instancedBatch.aabb = AABB::Merge(instancedBatch.aabb, instanceAABB);
 		}
 
 		uint32_t camera_bits = batch.camera_mask;
