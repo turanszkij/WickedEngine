@@ -42,8 +42,10 @@ namespace wi::initializer
 		static constexpr const char* platform_string = "PS5";
 #elif defined(PLATFORM_XBOX)
 		static constexpr const char* platform_string = "Xbox";
-#elif defined(PLATFORM_APPLE)
+#elif defined(PLATFORM_MACOS)
 		static constexpr const char* platform_string = "MacOS";
+#elif defined(PLATFORM_IOS)
+		static constexpr const char* platform_string = "iOS";
 #endif // PLATFORM
 
 #if defined(_MSC_VER) && defined(__clang__)
