@@ -1250,7 +1250,9 @@ namespace wi::helper
 		if (filepath.is_absolute())
 		{
 			std::filesystem::path rootpath = ToNativeString(rootdir);
-			std::filesystem::path relative = std::filesystem::relative(filepath, rootpath);
+			// Non-throwing: a path on a drive that is not ready (empty card reader) must not throw, the empty result falls back below
+			std::error_code ec;
+			std::filesystem::path relative = std::filesystem::relative(filepath, rootpath, ec);
 			if (!relative.empty())
 			{
 				StringConvert(relative.generic_wstring(), path);
