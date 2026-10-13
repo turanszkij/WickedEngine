@@ -1367,24 +1367,24 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 							const uint8_t& w = *(uint8_t*)((size_t)data + i * stride + 3);
 
 							mesh.vertex_boneweights[vertexOffset + i].x = x / 255.0f;
-							mesh.vertex_boneweights[vertexOffset + i].x = y / 255.0f;
-							mesh.vertex_boneweights[vertexOffset + i].x = z / 255.0f;
-							mesh.vertex_boneweights[vertexOffset + i].x = w / 255.0f;
+							mesh.vertex_boneweights[vertexOffset + i].y = y / 255.0f;
+							mesh.vertex_boneweights[vertexOffset + i].z = z / 255.0f;
+							mesh.vertex_boneweights[vertexOffset + i].w = w / 255.0f;
 						}
 					}
 					else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
 					{
 						for (size_t i = 0; i < vertexCount; ++i)
 						{
-							const uint16_t& x = *(uint8_t*)((size_t)data + i * stride + 0 * sizeof(uint16_t));
-							const uint16_t& y = *(uint8_t*)((size_t)data + i * stride + 1 * sizeof(uint16_t));
-							const uint16_t& z = *(uint8_t*)((size_t)data + i * stride + 2 * sizeof(uint16_t));
-							const uint16_t& w = *(uint8_t*)((size_t)data + i * stride + 3 * sizeof(uint16_t));
+							const uint16_t& x = *(const uint16_t*)((size_t)data + i * stride + 0 * sizeof(uint16_t));
+							const uint16_t& y = *(const uint16_t*)((size_t)data + i * stride + 1 * sizeof(uint16_t));
+							const uint16_t& z = *(const uint16_t*)((size_t)data + i * stride + 2 * sizeof(uint16_t));
+							const uint16_t& w = *(const uint16_t*)((size_t)data + i * stride + 3 * sizeof(uint16_t));
 
 							mesh.vertex_boneweights[vertexOffset + i].x = x / 65535.0f;
-							mesh.vertex_boneweights[vertexOffset + i].x = y / 65535.0f;
-							mesh.vertex_boneweights[vertexOffset + i].x = z / 65535.0f;
-							mesh.vertex_boneweights[vertexOffset + i].x = w / 65535.0f;
+							mesh.vertex_boneweights[vertexOffset + i].y = y / 65535.0f;
+							mesh.vertex_boneweights[vertexOffset + i].z = z / 65535.0f;
+							mesh.vertex_boneweights[vertexOffset + i].w = w / 65535.0f;
 						}
 					}
 				}
