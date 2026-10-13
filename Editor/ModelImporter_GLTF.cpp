@@ -3104,6 +3104,11 @@ void Import_VRMC_Bone(LoaderState& state, Entity boneID, const std::string& bone
 		if (component == nullptr)
 		{
 			component = &state.scene->humanoids.Create(state.rootEntity);
+			// Bone-name inference supplies a rig, not an authored gaze target.
+			// Import's zero-dt scene updates must preserve its bind pose rather
+			// than rotating the head/eyes toward the implicit world origin.
+			// A runtime gaze owner can enable look-at after placement.
+			component->SetLookAtEnabled(false);
 		}
 		return *component;
 	};
@@ -3343,6 +3348,7 @@ void Import_Mixamo_Bone(LoaderState& state, Entity boneEntity, const tinygltf::N
 		if (component == nullptr)
 		{
 			component = &state.scene->humanoids.Create(state.rootEntity);
+			component->SetLookAtEnabled(false); // No gaze target is authored by bone-name inference.
 		}
 		return *component;
 	};
@@ -3564,6 +3570,7 @@ void Import_Makehuman_Bone(LoaderState& state, Entity boneEntity, const tinygltf
 		if (component == nullptr)
 		{
 			component = &state.scene->humanoids.Create(state.rootEntity);
+			component->SetLookAtEnabled(false); // No gaze target is authored by bone-name inference.
 		}
 		return *component;
 	};
