@@ -54,6 +54,20 @@ namespace wi::scene
 			procedural_animation_hooks.end());
 	}
 
+	Scene::ProceduralAnimationHookId Scene::AddSecondaryPoseHook(ProceduralAnimationHook hook)
+	{
+		if (!hook) return 0;
+		const auto id = next_procedural_animation_hook_id++;
+		secondary_pose_hooks.push_back({ id, std::move(hook) });
+		return id;
+	}
+
+	void Scene::RemoveSecondaryPoseHook(ProceduralAnimationHookId id)
+	{
+		secondary_pose_hooks.erase(std::remove_if(secondary_pose_hooks.begin(), secondary_pose_hooks.end(),
+			[id](const ProceduralAnimationHookEntry& entry) { return entry.id == id; }), secondary_pose_hooks.end());
+	}
+
 	Scene::ProceduralAnimationHookId Scene::AddFinalPoseHook(ProceduralAnimationHook hook)
 	{
 		if (!hook) return 0;
@@ -442,6 +456,8 @@ namespace wi::scene
 		RunProceduralAnimationUpdateSystem(ctx);
 
 		wi::physics::OverrideWehicleWheelTransforms(*this);
+		for (const auto& entry : secondary_pose_hooks)
+			if (entry.callback) entry.callback(*this);
 		for (const auto& entry : final_pose_hooks)
 			if (entry.callback) entry.callback(*this);
 

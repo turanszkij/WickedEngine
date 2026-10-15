@@ -343,6 +343,12 @@ namespace wi::scene
 		// Hooks must be added and removed from the scene update thread.
 		ProceduralAnimationHookId AddProceduralAnimationHook(ProceduralAnimationHook hook);
 		void RemoveProceduralAnimationHook(ProceduralAnimationHookId id);
+		// Cosmetic private-rig transforms: after built-in IK/springs and vehicle
+		// overrides, before final morph drivers and armature skin upload. Callers
+		// may only write their exclusively owned transforms and refresh their
+		// subtree. No scene membership or hook-list mutations during callbacks.
+		ProceduralAnimationHookId AddSecondaryPoseHook(ProceduralAnimationHook hook);
+		void RemoveSecondaryPoseHook(ProceduralAnimationHookId id);
 		// Presentation morph drivers run after all procedural/built-in IK.
 		// The hook must not change transforms or scene membership.
 		ProceduralAnimationHookId AddFinalPoseHook(ProceduralAnimationHook hook);
@@ -668,6 +674,7 @@ namespace wi::scene
 		};
 		wi::vector<ProceduralAnimationHookEntry> procedural_animation_hooks;
 		wi::vector<ProceduralAnimationHookEntry> final_pose_hooks;
+		wi::vector<ProceduralAnimationHookEntry> secondary_pose_hooks;
 		ProceduralAnimationHookId next_procedural_animation_hook_id = 1;
 
 		void UpdateHumanoidFacings();
