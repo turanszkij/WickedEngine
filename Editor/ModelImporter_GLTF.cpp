@@ -587,6 +587,22 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		}
 	}
 
+	// Eight influences are supported by the native skinning path. Never silently
+	// discard a third stream or accept an unpaired joint/weight attribute.
+	for (const auto& mesh : state.gltfModel.meshes)
+	{
+		for (const auto& primitive : mesh.primitives)
+		{
+			if (primitive.attributes.count("JOINTS_2") || primitive.attributes.count("WEIGHTS_2") ||
+				primitive.attributes.count("JOINTS_0") != primitive.attributes.count("WEIGHTS_0") ||
+				primitive.attributes.count("JOINTS_1") != primitive.attributes.count("WEIGHTS_1") ||
+				(primitive.attributes.count("JOINTS_1") && !primitive.attributes.count("JOINTS_0")))
+			{
+				wi::backlog::post("glTF skin requires paired joint/weight streams and at most eight influences", wi::backlog::LogLevel::Error);
+				return;
+			}
+		}
+	}
 	state.rootEntity = CreateEntity();
 	scene.transforms.Create(state.rootEntity);
 	scene.names.Create(state.rootEntity) = name;
@@ -1288,9 +1304,10 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 						}
 					}
 				}
-				else if (!attr_name.compare("JOINTS_0"))
+				else if (!attr_name.compare("JOINTS_0") || !attr_name.compare("JOINTS_1"))
 				{
-					mesh.vertex_boneindices.resize(vertexOffset + vertexCount);
+					auto& boneindices = attr_name == "JOINTS_1" ? mesh.vertex_boneindices2 : mesh.vertex_boneindices;
+					boneindices.resize(vertexOffset + vertexCount, XMUINT4(0, 0, 0, 0));
 					if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE)
 					{
 						struct JointTmp
@@ -1302,10 +1319,10 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 						{
 							const JointTmp& joint = *(const JointTmp*)(data + i * stride);
 
-							mesh.vertex_boneindices[vertexOffset + i].x = joint.ind[0];
-							mesh.vertex_boneindices[vertexOffset + i].y = joint.ind[1];
-							mesh.vertex_boneindices[vertexOffset + i].z = joint.ind[2];
-							mesh.vertex_boneindices[vertexOffset + i].w = joint.ind[3];
+							boneindices[vertexOffset + i].x = joint.ind[0];
+							boneindices[vertexOffset + i].y = joint.ind[1];
+							boneindices[vertexOffset + i].z = joint.ind[2];
+							boneindices[vertexOffset + i].w = joint.ind[3];
 						}
 					}
 					else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
@@ -1319,10 +1336,10 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 						{
 							const JointTmp& joint = *(const JointTmp*)(data + i * stride);
 
-							mesh.vertex_boneindices[vertexOffset + i].x = joint.ind[0];
-							mesh.vertex_boneindices[vertexOffset + i].y = joint.ind[1];
-							mesh.vertex_boneindices[vertexOffset + i].z = joint.ind[2];
-							mesh.vertex_boneindices[vertexOffset + i].w = joint.ind[3];
+							boneindices[vertexOffset + i].x = joint.ind[0];
+							boneindices[vertexOffset + i].y = joint.ind[1];
+							boneindices[vertexOffset + i].z = joint.ind[2];
+							boneindices[vertexOffset + i].w = joint.ind[3];
 						}
 					}
 					else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT)
@@ -1336,10 +1353,10 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 						{
 							const JointTmp& joint = *(const JointTmp*)(data + i * stride);
 
-							mesh.vertex_boneindices[vertexOffset + i].x = joint.ind[0];
-							mesh.vertex_boneindices[vertexOffset + i].y = joint.ind[1];
-							mesh.vertex_boneindices[vertexOffset + i].z = joint.ind[2];
-							mesh.vertex_boneindices[vertexOffset + i].w = joint.ind[3];
+							boneindices[vertexOffset + i].x = joint.ind[0];
+							boneindices[vertexOffset + i].y = joint.ind[1];
+							boneindices[vertexOffset + i].z = joint.ind[2];
+							boneindices[vertexOffset + i].w = joint.ind[3];
 						}
 					}
 					else
@@ -1347,14 +1364,15 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 						assert(0);
 					}
 				}
-				else if (!attr_name.compare("WEIGHTS_0"))
+				else if (!attr_name.compare("WEIGHTS_0") || !attr_name.compare("WEIGHTS_1"))
 				{
-					mesh.vertex_boneweights.resize(vertexOffset + vertexCount);
+					auto& boneweights = attr_name == "WEIGHTS_1" ? mesh.vertex_boneweights2 : mesh.vertex_boneweights;
+					boneweights.resize(vertexOffset + vertexCount, XMFLOAT4(0, 0, 0, 0));
 					if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT)
 					{
 						for (size_t i = 0; i < vertexCount; ++i)
 						{
-							mesh.vertex_boneweights[vertexOffset + i] = *(XMFLOAT4*)((size_t)data + i * stride);
+							boneweights[vertexOffset + i] = *(XMFLOAT4*)((size_t)data + i * stride);
 						}
 					}
 					else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE)
@@ -1366,10 +1384,10 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 							const uint8_t& z = *(uint8_t*)((size_t)data + i * stride + 2);
 							const uint8_t& w = *(uint8_t*)((size_t)data + i * stride + 3);
 
-							mesh.vertex_boneweights[vertexOffset + i].x = x / 255.0f;
-							mesh.vertex_boneweights[vertexOffset + i].y = y / 255.0f;
-							mesh.vertex_boneweights[vertexOffset + i].z = z / 255.0f;
-							mesh.vertex_boneweights[vertexOffset + i].w = w / 255.0f;
+							boneweights[vertexOffset + i].x = x / 255.0f;
+							boneweights[vertexOffset + i].y = y / 255.0f;
+							boneweights[vertexOffset + i].z = z / 255.0f;
+							boneweights[vertexOffset + i].w = w / 255.0f;
 						}
 					}
 					else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
@@ -1381,10 +1399,10 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 							const uint16_t& z = *(const uint16_t*)((size_t)data + i * stride + 2 * sizeof(uint16_t));
 							const uint16_t& w = *(const uint16_t*)((size_t)data + i * stride + 3 * sizeof(uint16_t));
 
-							mesh.vertex_boneweights[vertexOffset + i].x = x / 65535.0f;
-							mesh.vertex_boneweights[vertexOffset + i].y = y / 65535.0f;
-							mesh.vertex_boneweights[vertexOffset + i].z = z / 65535.0f;
-							mesh.vertex_boneweights[vertexOffset + i].w = w / 65535.0f;
+							boneweights[vertexOffset + i].x = x / 65535.0f;
+							boneweights[vertexOffset + i].y = y / 65535.0f;
+							boneweights[vertexOffset + i].z = z / 65535.0f;
+							boneweights[vertexOffset + i].w = w / 65535.0f;
 						}
 					}
 				}
@@ -1619,6 +1637,13 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			mesh.ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH_FAST);
 		}
 
+		// glTF primitives may mix four and eight influences. Pad absent second
+		// streams with zero weights so every vertex has the same GPU layout.
+		if (!mesh.vertex_boneindices2.empty() || !mesh.vertex_boneweights2.empty())
+		{
+			mesh.vertex_boneindices2.resize(mesh.vertex_positions.size(), XMUINT4(0, 0, 0, 0));
+			mesh.vertex_boneweights2.resize(mesh.vertex_positions.size(), XMFLOAT4(0, 0, 0, 0));
+		}
 		ImportMetadata(state, meshEntity, x.extras);
 		mesh.CreateRenderData(); // tangents are generated inside if needed, which must be done before FlipZAxis!
 	}
