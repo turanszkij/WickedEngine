@@ -753,7 +753,11 @@ struct PrimitiveID
 		{
 			const uint clusterID = primitiveIndex >> 7u;
 			const uint triangleID = primitiveIndex & 0x7F;
+#ifdef PRIMITIVEID_UNIFORM
+			ShaderCluster cluster = bindless_structured_cluster[descriptor_index(geometry.vb_clu)][clusterID];
+#else
 			ShaderCluster cluster = bindless_structured_cluster[NonUniformResourceIndex(descriptor_index(geometry.vb_clu))][clusterID];
+#endif // PRIMITIVEID_UNIFORM
 			const uint i0 = cluster.vertices[cluster.triangles[triangleID].i0()];
 			const uint i1 = cluster.vertices[cluster.triangles[triangleID].i1()];
 			const uint i2 = cluster.vertices[cluster.triangles[triangleID].i2()];

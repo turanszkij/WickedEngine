@@ -2,13 +2,6 @@
 #define WI_SURFACE_HF
 #include "globals.hlsli"
 
-// MakeUniformResourceIndex can omit the NonUniformResourceIndex call if the primitiveID is guaranteed to be uniform, as an optimization
-#ifdef PRIMITIVEID_UNIFORM
-#define MakeUniformResourceIndex(x) (descriptor_index(x))
-#else
-#define MakeUniformResourceIndex(x) NonUniformResourceIndex(descriptor_index(x))
-#endif // PRIMITIVEID_UNIFORM
-
 // hard coded value for surfaces with simplified lighting:
 //	occlusion = 1
 //	roughness = 1
@@ -738,7 +731,7 @@ struct Surface
 					[branch]
 					if(chunk.heightmap >= 0)
 					{
-						Texture2D terrain_heightmap = bindless_textures[MakeUniformResourceIndex(chunk.heightmap)];
+						Texture2D terrain_heightmap = bindless_textures[NonUniformResourceIndex(chunk.heightmap)];
 						float2 chunk_min = terrain.center_chunk_pos.xz + chunk_coord * terrain.chunk_size;
 						float2 chunk_max = terrain.center_chunk_pos.xz + terrain.chunk_size + chunk_coord * terrain.chunk_size;
 						float2 terrain_uv = saturate(inverse_lerp(chunk_min, chunk_max, P.xz));

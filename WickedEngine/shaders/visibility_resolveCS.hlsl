@@ -1,4 +1,5 @@
 #define PRIMITIVEID_FROM_MESHLET_OPTIMIZED
+#define TEXTURE_SLOT_NONUNIFORM
 #include "globals.hlsli"
 #include "ShaderInterop_Renderer.h"
 #include "surfaceHF.hlsli"
