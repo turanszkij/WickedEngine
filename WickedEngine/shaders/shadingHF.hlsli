@@ -65,8 +65,10 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 			uint bucket_bits = load_entitytile(camera, flatTileIndex + bucket);
 			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
 			
+#ifndef SURFACE_LOAD_QUAD_DERIVATIVES
 			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
 			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
+#endif // SURFACE_LOAD_QUAD_DERIVATIVES
 
 			[loop]
 			while (WaveActiveAnyTrue(bucket_bits != 0 && envmapAccumulation.a < 0.99))
@@ -126,20 +128,11 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	{
 		if (camera.texture_surfelgi_index >= 0 && surfel_cellvalid(surfel_cell(surface.P, 0)))
 		{
-			// Primary camera: the screen-space surfel GI texture was rendered
-			// for this view - the fast path.
 			lighting.indirect.diffuse = bindless_textures_half4[descriptor_index(camera.texture_surfelgi_index)][surface.pixel].rgb;
 			surface.SetGIApplied(true);
 		}
 		else if (camera.texture_surfelgi_index < 0 && GetScene().surfelgi.buffer >= 0)
 		{
-			// Secondary camera (planar reflection / refraction): surfel
-			// coverage only runs for the main view, so no screen-space GI
-			// texture exists here. Gather the world-space surfel cache instead
-			// (like DDGI, which is world-space and applies in every camera) -
-			// otherwise the reflected/refracted opaque scene falls back to flat
-			// ambient and stays lit while the main view is dark, which shows up
-			// as a visible water reflection with no light in the scene.
 			lighting.indirect.diffuse = SampleSurfelGI(surface.P, surface.N);
 			surface.SetGIApplied(true);
 		}
@@ -160,14 +153,6 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 #endif // TRANSPARENT
 
 #ifdef TRANSPARENT
-	// Surfel GI for TRANSPARENT surfaces (water). The screen-space surfel GI
-	// texture above is keyed to opaque pixels, so transparents cannot read it;
-	// instead gather the world-space surfel cache directly at the shading point
-	// (SampleSurfelGI), the same way DDGI samples its probe volume. Runs before
-	// the DDGI block and sets GI-applied, so when both are enabled transparents
-	// use surfel GI (matching opaque), and without it they fall back to the
-	// flat ambient - not surfel GI silently leaving the water lit by ambient
-	// while opaque surfaces are dark.
 	[branch]
 	if (!surface.IsGIApplied() && (GetFrame().options & OPTION_BIT_SURFELGI_ENABLED) && GetScene().surfelgi.buffer >= 0)
 	{
@@ -228,8 +213,10 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 			uint bucket_bits = load_entitytile(camera, flatTileIndex + bucket);
 			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
 			
+#ifndef SURFACE_LOAD_QUAD_DERIVATIVES
 			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
 			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
+#endif // SURFACE_LOAD_QUAD_DERIVATIVES
 
 			[loop]
 			while (bucket_bits != 0)
@@ -270,8 +257,10 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 			uint bucket_bits = load_entitytile(camera, flatTileIndex + bucket);
 			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
 			
+#ifndef SURFACE_LOAD_QUAD_DERIVATIVES
 			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
 			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
+#endif // SURFACE_LOAD_QUAD_DERIVATIVES
 
 			[loop]
 			while (bucket_bits != 0)
@@ -312,8 +301,10 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 			uint bucket_bits = load_entitytile(camera, flatTileIndex + bucket);
 			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
 			
+#ifndef SURFACE_LOAD_QUAD_DERIVATIVES
 			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
 			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
+#endif // SURFACE_LOAD_QUAD_DERIVATIVES
 
 			[loop]
 			while (bucket_bits != 0)
@@ -359,9 +350,11 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 		{
 			uint bucket_bits = load_entitytile(camera, flatTileIndex + bucket);
 			bucket_bits = iterator.mask_entity(bucket, bucket_bits);
-			
+
+#ifndef SURFACE_LOAD_QUAD_DERIVATIVES
 			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
 			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
+#endif // SURFACE_LOAD_QUAD_DERIVATIVES
 
 			[loop]
 			while (bucket_bits != 0)
@@ -437,8 +430,10 @@ inline void TiledDecals(inout Surface surface, inout half4 surfaceMap, SamplerSt
 		uint bucket_bits = load_entitytile(camera, flatTileIndex + bucket);
 		bucket_bits = iterator.mask_entity(bucket, bucket_bits);
 		
+#ifndef SURFACE_LOAD_QUAD_DERIVATIVES
 		// This is the wave scalarizer from Improved Culling - Siggraph 2017 [Drobot]:
 		bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
+#endif // SURFACE_LOAD_QUAD_DERIVATIVES
 
 		[loop]
 		while (WaveActiveAnyTrue(bucket_bits != 0 && decalAccumulation.a < 1 && decalBumpAccumulation.a < 1 && decalSurfaceAccumulationAlpha < 1))

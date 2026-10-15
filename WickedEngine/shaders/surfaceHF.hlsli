@@ -795,9 +795,8 @@ struct Surface
 			{
 				uint bucket_bits = load_entitytile(GetCamera(), flatTileIndex + bucket);
 				bucket_bits = iterator.mask_entity(bucket, bucket_bits);
-				
-				// This is the wave scalarizer from Improved Culling - Siggraph 2017 [Drobot]:
-				bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
+
+				// scalarization not needed, already running at tile dispatch if SURFACE_LOAD_QUAD_DERIVATIVES enabled
 
 				[loop]
 				while (WaveActiveAnyTrue(bucket_bits != 0 && decalAccumulation.a < 1 && decalBumpAccumulation.a < 1 && decalSurfaceAccumulationAlpha < 1))
