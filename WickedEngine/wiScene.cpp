@@ -6534,13 +6534,57 @@ namespace wi::scene
 		wi::jobsystem::Wait(ctx);
 	}
 
+	namespace
+	{
+		struct RaySkinningScratch
+		{
+			wi::vector<XMFLOAT4> positions;
+			wi::vector<uint8_t> valid;
+			const MeshComponent* mesh = nullptr;
+			const wi::vector<ShaderTransform>* bones = nullptr;
+			Scene::RayQueryStats* stats = nullptr;
+			bool enabled = false;
+			void Begin(const MeshComponent& candidate, const wi::vector<ShaderTransform>* pose,
+				Scene::RaySkinningMode mode, Scene::RayQueryStats* counters)
+			{
+				mesh = &candidate; bones = pose; stats = counters;
+				enabled = bones && mode == Scene::RaySkinningMode::QueryVertices &&
+					!mesh->bvh.IsValid() && mesh->vertex_positions.size() <= 1024 * 1024;
+				if (stats) { ++stats->meshCandidates; if (bones) ++stats->deformedMeshes; }
+				if (!enabled) return;
+				// Reserve explicitly so vector growth cannot exceed the vertex cap.
+				positions.reserve(mesh->vertex_positions.size());
+				valid.reserve(mesh->vertex_positions.size());
+				positions.resize(mesh->vertex_positions.size());
+				valid.assign(mesh->vertex_positions.size(), 0);
+				if (stats)
+				{
+					++stats->cachedMeshes;
+					stats->scratchPeakBytes = std::max(stats->scratchPeakBytes,
+						uint64_t(positions.capacity() * sizeof(XMFLOAT4) + valid.capacity()));
+				}
+			}
+			XMVECTOR Load(uint32_t index)
+			{
+				if (!bones) return XMLoadFloat3(&mesh->vertex_positions[index]);
+				if (stats) ++stats->skinRequests;
+				if (enabled && valid[index]) return XMLoadFloat4(&positions[index]);
+				if (stats) ++stats->skinEvaluations;
+				const XMVECTOR position = SkinVertex(*mesh, *bones, index);
+				if (enabled) { XMStoreFloat4(&positions[index], position); valid[index] = 1; }
+				return position;
+			}
+		};
+	}
 	Scene::RayIntersectionResult Scene::Intersects(const Ray& ray, uint32_t filterMask, uint32_t layerMask, uint32_t lod) const
 	{
 		return IntersectsFiltered(ray, {}, filterMask, layerMask, lod);
 	}
-	Scene::RayIntersectionResult Scene::IntersectsFiltered(const Ray& ray, const RayEntityFilter& acceptEntity, uint32_t filterMask, uint32_t layerMask, uint32_t lod) const
+	Scene::RayIntersectionResult Scene::IntersectsFiltered(const Ray& ray, const RayEntityFilter& acceptEntity, uint32_t filterMask, uint32_t layerMask, uint32_t lod, RaySkinningMode skinning, RayQueryStats* stats) const
 	{
 		RayIntersectionResult result;
+		if (stats) *stats = {};
+		RaySkinningScratch skinScratch;
 
 		const XMVECTOR rayOrigin = XMLoadFloat3(&ray.origin);
 		const XMVECTOR rayDirection = XMVector3Normalize(XMLoadFloat3(&ray.direction));
@@ -6624,34 +6668,19 @@ namespace wi::scene
 				const XMVECTOR rayOrigin_local = XMVector3Transform(rayOrigin, objectMat_Inverse);
 				const XMVECTOR rayDirection_local = XMVector3Normalize(XMVector3TransformNormal(rayDirection, objectMat_Inverse));
 				const ArmatureComponent* armature = mesh->IsSkinned() ? armatures.GetComponent(mesh->armatureID) : nullptr;
+				skinScratch.Begin(*mesh, softbody && !softbody->boneData.empty() ? &softbody->boneData :
+					armature && !armature->boneData.empty() ? &armature->boneData : nullptr, skinning, stats);
 
 				auto intersect_triangle = [&](uint32_t subsetIndex, uint32_t indexOffset, uint32_t triangleIndex)
 				{
+					if (stats) ++stats->triangleTests;
 					const uint32_t i0 = mesh->indices[indexOffset + triangleIndex * 3 + 0];
 					const uint32_t i1 = mesh->indices[indexOffset + triangleIndex * 3 + 1];
 					const uint32_t i2 = mesh->indices[indexOffset + triangleIndex * 3 + 2];
 
-					XMVECTOR p0;
-					XMVECTOR p1;
-					XMVECTOR p2;
-					if (softbody != nullptr && !softbody->boneData.empty())
-					{
-						p0 = SkinVertex(*mesh, *softbody, i0);
-						p1 = SkinVertex(*mesh, *softbody, i1);
-						p2 = SkinVertex(*mesh, *softbody, i2);
-					}
-					else if (armature != nullptr && !armature->boneData.empty())
-					{
-						p0 = SkinVertex(*mesh, *armature, i0);
-						p1 = SkinVertex(*mesh, *armature, i1);
-						p2 = SkinVertex(*mesh, *armature, i2);
-					}
-					else
-					{
-						p0 = XMLoadFloat3(&mesh->vertex_positions[i0]);
-						p1 = XMLoadFloat3(&mesh->vertex_positions[i1]);
-						p2 = XMLoadFloat3(&mesh->vertex_positions[i2]);
-					}
+					const XMVECTOR p0 = skinScratch.Load(i0);
+					const XMVECTOR p1 = skinScratch.Load(i1);
+					const XMVECTOR p2 = skinScratch.Load(i2);
 
 					float distance;
 					XMFLOAT2 bary;
@@ -6808,8 +6837,10 @@ namespace wi::scene
 	{
 		IntersectsAllFiltered(results, ray, {}, filterMask, layerMask, lod);
 	}
-	void Scene::IntersectsAllFiltered(wi::vector<RayIntersectionResult>& results, const Ray& ray, const RayEntityFilter& acceptEntity, uint32_t filterMask, uint32_t layerMask, uint32_t lod) const
+	void Scene::IntersectsAllFiltered(wi::vector<RayIntersectionResult>& results, const Ray& ray, const RayEntityFilter& acceptEntity, uint32_t filterMask, uint32_t layerMask, uint32_t lod, RaySkinningMode skinning, RayQueryStats* stats) const
 	{
+		if (stats) *stats = {};
+		RaySkinningScratch skinScratch;
 		const XMVECTOR rayOrigin = XMLoadFloat3(&ray.origin);
 		const XMVECTOR rayDirection = XMVector3Normalize(XMLoadFloat3(&ray.direction));
 
@@ -6892,34 +6923,19 @@ namespace wi::scene
 				const XMVECTOR rayOrigin_local = XMVector3Transform(rayOrigin, objectMat_Inverse);
 				const XMVECTOR rayDirection_local = XMVector3Normalize(XMVector3TransformNormal(rayDirection, objectMat_Inverse));
 				const ArmatureComponent* armature = mesh->IsSkinned() ? armatures.GetComponent(mesh->armatureID) : nullptr;
+				skinScratch.Begin(*mesh, softbody && !softbody->boneData.empty() ? &softbody->boneData :
+					armature && !armature->boneData.empty() ? &armature->boneData : nullptr, skinning, stats);
 
 				auto intersect_triangle = [&](uint32_t subsetIndex, uint32_t indexOffset, uint32_t triangleIndex)
 				{
+					if (stats) ++stats->triangleTests;
 					const uint32_t i0 = mesh->indices[indexOffset + triangleIndex * 3 + 0];
 					const uint32_t i1 = mesh->indices[indexOffset + triangleIndex * 3 + 1];
 					const uint32_t i2 = mesh->indices[indexOffset + triangleIndex * 3 + 2];
 
-					XMVECTOR p0;
-					XMVECTOR p1;
-					XMVECTOR p2;
-					if (softbody != nullptr && !softbody->boneData.empty())
-					{
-						p0 = SkinVertex(*mesh, *softbody, i0);
-						p1 = SkinVertex(*mesh, *softbody, i1);
-						p2 = SkinVertex(*mesh, *softbody, i2);
-					}
-					else if (armature != nullptr && !armature->boneData.empty())
-					{
-						p0 = SkinVertex(*mesh, *armature, i0);
-						p1 = SkinVertex(*mesh, *armature, i1);
-						p2 = SkinVertex(*mesh, *armature, i2);
-					}
-					else
-					{
-						p0 = XMLoadFloat3(&mesh->vertex_positions[i0]);
-						p1 = XMLoadFloat3(&mesh->vertex_positions[i1]);
-						p2 = XMLoadFloat3(&mesh->vertex_positions[i2]);
-					}
+					const XMVECTOR p0 = skinScratch.Load(i0);
+					const XMVECTOR p1 = skinScratch.Load(i1);
+					const XMVECTOR p2 = skinScratch.Load(i2);
 
 					float distance;
 					XMFLOAT2 bary;

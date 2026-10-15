@@ -581,7 +581,17 @@ namespace wi::scene
 		// Read-only candidate filter, evaluated before triangle skinning/intersection.
 		// Callbacks must not mutate the scene. Empty predicate accepts every entity.
 		using RayEntityFilter = std::function<bool(wi::ecs::Entity)>;
-		RayIntersectionResult IntersectsFiltered(const wi::primitive::Ray& ray, const RayEntityFilter& acceptEntity, uint32_t filterMask = wi::enums::FILTER_OPAQUE, uint32_t layerMask = ~0, uint32_t lod = 0) const;
+		enum class RaySkinningMode { TriangleVertices, QueryVertices };
+		struct RayQueryStats
+		{
+			uint64_t meshCandidates = 0, deformedMeshes = 0, cachedMeshes = 0;
+			uint64_t triangleTests = 0, skinRequests = 0, skinEvaluations = 0, scratchPeakBytes = 0;
+		};
+		// QueryVertices reuses skinned positions only within one candidate/query.
+		// No retained Scene state or pose invalidation contract. Scratch is capped
+		// at 1M vertices; existing mesh BVHs and larger meshes use the legacy path.
+		// Optional stats are reset on entry. Scene must remain stable during queries.
+		RayIntersectionResult IntersectsFiltered(const wi::primitive::Ray& ray, const RayEntityFilter& acceptEntity, uint32_t filterMask = wi::enums::FILTER_OPAQUE, uint32_t layerMask = ~0, uint32_t lod = 0, RaySkinningMode skinning = RaySkinningMode::TriangleVertices, RayQueryStats* stats = nullptr) const;
 
 		// Given a ray, finds the first intersection point against all mesh instances or colliders
 		//	returns true immediately if intersection was found, false otherwise
@@ -593,7 +603,7 @@ namespace wi::scene
 
 		// Given a ray, finds all intersections against all mesh instances or collliders
 		void IntersectsAll(wi::vector<RayIntersectionResult>& results, const wi::primitive::Ray& ray, uint32_t filterMask = wi::enums::FILTER_OPAQUE, uint32_t layerMask = ~0, uint32_t lod = 0) const;
-		void IntersectsAllFiltered(wi::vector<RayIntersectionResult>& results, const wi::primitive::Ray& ray, const RayEntityFilter& acceptEntity, uint32_t filterMask = wi::enums::FILTER_OPAQUE, uint32_t layerMask = ~0, uint32_t lod = 0) const;
+		void IntersectsAllFiltered(wi::vector<RayIntersectionResult>& results, const wi::primitive::Ray& ray, const RayEntityFilter& acceptEntity, uint32_t filterMask = wi::enums::FILTER_OPAQUE, uint32_t layerMask = ~0, uint32_t lod = 0, RaySkinningMode skinning = RaySkinningMode::TriangleVertices, RayQueryStats* stats = nullptr) const;
 
 		struct SphereIntersectionResult
 		{
