@@ -578,6 +578,10 @@ namespace wi::scene
 		//	layerMask		:	filter based on layer
 		//	lod				:	specify min level of detail for meshes
 		RayIntersectionResult Intersects(const wi::primitive::Ray& ray, uint32_t filterMask = wi::enums::FILTER_OPAQUE, uint32_t layerMask = ~0, uint32_t lod = 0) const;
+		// Read-only candidate filter, evaluated before triangle skinning/intersection.
+		// Callbacks must not mutate the scene. Empty predicate accepts every entity.
+		using RayEntityFilter = std::function<bool(wi::ecs::Entity)>;
+		RayIntersectionResult IntersectsFiltered(const wi::primitive::Ray& ray, const RayEntityFilter& acceptEntity, uint32_t filterMask = wi::enums::FILTER_OPAQUE, uint32_t layerMask = ~0, uint32_t lod = 0) const;
 
 		// Given a ray, finds the first intersection point against all mesh instances or colliders
 		//	returns true immediately if intersection was found, false otherwise
@@ -589,6 +593,7 @@ namespace wi::scene
 
 		// Given a ray, finds all intersections against all mesh instances or collliders
 		void IntersectsAll(wi::vector<RayIntersectionResult>& results, const wi::primitive::Ray& ray, uint32_t filterMask = wi::enums::FILTER_OPAQUE, uint32_t layerMask = ~0, uint32_t lod = 0) const;
+		void IntersectsAllFiltered(wi::vector<RayIntersectionResult>& results, const wi::primitive::Ray& ray, const RayEntityFilter& acceptEntity, uint32_t filterMask = wi::enums::FILTER_OPAQUE, uint32_t layerMask = ~0, uint32_t lod = 0) const;
 
 		struct SphereIntersectionResult
 		{

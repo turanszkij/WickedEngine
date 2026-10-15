@@ -6536,6 +6536,10 @@ namespace wi::scene
 
 	Scene::RayIntersectionResult Scene::Intersects(const Ray& ray, uint32_t filterMask, uint32_t layerMask, uint32_t lod) const
 	{
+		return IntersectsFiltered(ray, {}, filterMask, layerMask, lod);
+	}
+	Scene::RayIntersectionResult Scene::IntersectsFiltered(const Ray& ray, const RayEntityFilter& acceptEntity, uint32_t filterMask, uint32_t layerMask, uint32_t lod) const
+	{
 		RayIntersectionResult result;
 
 		const XMVECTOR rayOrigin = XMLoadFloat3(&ray.origin);
@@ -6546,6 +6550,7 @@ namespace wi::scene
 			collider_bvh.Intersects(ray, 0, [&](uint32_t collider_index) {
 				if (colliders.GetCount() <= collider_index)
 					return;
+				if (acceptEntity && !acceptEntity(colliders.GetEntity(collider_index))) return;
 				const ColliderComponent& collider = colliders_cpu[collider_index];
 
 				if ((collider.layerMask & layerMask) == 0)
@@ -6600,6 +6605,7 @@ namespace wi::scene
 				if (!ray.intersects(aabb))
 					continue;
 
+				if (acceptEntity && !acceptEntity(objects.GetEntity(objectIndex))) continue;
 				const ObjectComponent& object = objects[objectIndex];
 				if (object.meshID == INVALID_ENTITY)
 					continue;
@@ -6760,6 +6766,7 @@ namespace wi::scene
 			for (size_t i = 0; i < humanoids.GetCount(); ++i)
 			{
 				Entity entity = humanoids.GetEntity(i);
+				if (acceptEntity && !acceptEntity(entity)) continue;
 				const LayerComponent* layer = layers.GetComponent(entity);
 				if (layer != nullptr && (layer->GetLayerMask() & layerMask) == 0)
 					continue;
@@ -6799,6 +6806,10 @@ namespace wi::scene
 	}
 	void Scene::IntersectsAll(wi::vector<RayIntersectionResult>& results, const Ray& ray, uint32_t filterMask, uint32_t layerMask, uint32_t lod) const
 	{
+		IntersectsAllFiltered(results, ray, {}, filterMask, layerMask, lod);
+	}
+	void Scene::IntersectsAllFiltered(wi::vector<RayIntersectionResult>& results, const Ray& ray, const RayEntityFilter& acceptEntity, uint32_t filterMask, uint32_t layerMask, uint32_t lod) const
+	{
 		const XMVECTOR rayOrigin = XMLoadFloat3(&ray.origin);
 		const XMVECTOR rayDirection = XMVector3Normalize(XMLoadFloat3(&ray.direction));
 
@@ -6807,6 +6818,7 @@ namespace wi::scene
 			collider_bvh.Intersects(ray, 0, [&](uint32_t collider_index) {
 				if (colliders.GetCount() <= collider_index)
 					return;
+				if (acceptEntity && !acceptEntity(colliders.GetEntity(collider_index))) return;
 				const ColliderComponent& collider = colliders_cpu[collider_index];
 
 				if ((collider.layerMask & layerMask) == 0)
@@ -6861,6 +6873,7 @@ namespace wi::scene
 				if (!ray.intersects(aabb))
 					continue;
 
+				if (acceptEntity && !acceptEntity(objects.GetEntity(objectIndex))) continue;
 				const ObjectComponent& object = objects[objectIndex];
 				if (object.meshID == INVALID_ENTITY)
 					continue;
@@ -7023,6 +7036,7 @@ namespace wi::scene
 			for (size_t i = 0; i < humanoids.GetCount(); ++i)
 			{
 				Entity entity = humanoids.GetEntity(i);
+				if (acceptEntity && !acceptEntity(entity)) continue;
 				const LayerComponent* layer = layers.GetComponent(entity);
 				if (layer != nullptr && (layer->GetLayerMask() & layerMask) == 0)
 					continue;
