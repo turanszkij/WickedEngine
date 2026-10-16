@@ -6,6 +6,7 @@
 #define ZERO_AREA_CULLING
 #define OCCLUSION_CULLING
 
+// Note: with current 32-bit bitmask visibility solution, exactly 32 threads are required in both stages!
 static const uint AS_GROUPSIZE = 32;
 static const uint MS_GROUPSIZE = 32;
 
@@ -13,7 +14,7 @@ struct AmplificationPayload
 {
 	uint instanceID;
 	uint meshletGroupOffset;
-	min16uint meshlets[AS_GROUPSIZE]; // this could be uint8_t if HLSL supported it because they are relative to meshletGroupOffset, maybe in the future it will be a reality
+	uint meshlets; // 32 meshlets bitmask
 };
 
 #ifdef OBJECTSHADER_COMPILE_AS
@@ -143,13 +144,8 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 		}
 	}
 
-	if (visible)
-	{
-		uint index = WavePrefixCountBits(visible);
-		amplification_payload.meshlets[index] = meshletID - meshletGroupOffset; // relative packed
-	}
-
-	uint visibleCount = WaveActiveCountBits(visible);
+	amplification_payload.meshlets = WaveActiveBallot(visible);
+	const uint visibleCount = WaveActiveCountBits(visible);
 	
 	DispatchMesh(visibleCount, 1, 1, amplification_payload);
 }
@@ -176,6 +172,8 @@ struct PrimitiveAttributes
 #endif // OBJECTSHADER_USE_VIEWPORTARRAYINDEX
 };
 
+groupshared uint shared_groupMeshletIndex;
+
 [outputtopology("triangle")]
 [numthreads(MS_GROUPSIZE, 1, 1)]
 void main(
@@ -190,8 +188,25 @@ void main(
 #endif
 	)
 {
-	uint meshletGroupOffset = amplification_payload.meshletGroupOffset;
-	uint meshletID = meshletGroupOffset + amplification_payload.meshlets[Gid];
+	// Scan for group-relative visible meshlet bit that matches current groupID:
+	uint groupMeshletIndex = 0;
+	if (amplification_payload.meshlets == ~0u)
+	{
+		// Full visibility bitmask: no need to search, every group of mesh shader maps to every thread of amplification shader
+		groupMeshletIndex = Gid;
+	}
+	else
+	{
+		// Sparse visibility bitmask: need to find the SV_GroupID-th visible bit
+		const bool threadValidBit = amplification_payload.meshlets & (1u << groupIndex);
+		const uint prefixActiveBits = WavePrefixCountBits(threadValidBit);
+		if (threadValidBit && prefixActiveBits == Gid)
+			shared_groupMeshletIndex = groupIndex;
+		GroupMemoryBarrierWithGroupSync();
+		groupMeshletIndex = shared_groupMeshletIndex;
+	}
+
+	const uint meshletID = amplification_payload.meshletGroupOffset + groupMeshletIndex;
 	ShaderGeometry geometry = GetMesh();
 	ShaderCluster cluster = bindless_structured_cluster[descriptor_index(geometry.vb_clu)][meshletID];
 	SetMeshOutputCounts(cluster.vertexCount, cluster.triangleCount);
