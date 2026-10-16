@@ -13,7 +13,7 @@ struct AmplificationPayload
 {
 	uint instanceID;
 	uint meshletGroupOffset;
-	min16uint meshlets[AS_GROUPSIZE]; // this could be uint8_t if HLSL supported it because they are relative to meshletGroupOffset, maybe in the future it will be a reality
+	uint meshlets; // 32 meshlets bitmask
 };
 
 #ifdef OBJECTSHADER_COMPILE_AS
@@ -143,13 +143,8 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 		}
 	}
 
-	if (visible)
-	{
-		uint index = WavePrefixCountBits(visible);
-		amplification_payload.meshlets[index] = meshletID - meshletGroupOffset; // relative packed
-	}
-
-	uint visibleCount = WaveActiveCountBits(visible);
+	amplification_payload.meshlets = WaveActiveBallot(visible);
+	const uint visibleCount = WaveActiveCountBits(visible);
 	
 	DispatchMesh(visibleCount, 1, 1, amplification_payload);
 }
@@ -190,8 +185,25 @@ void main(
 #endif
 	)
 {
-	uint meshletGroupOffset = amplification_payload.meshletGroupOffset;
-	uint meshletID = meshletGroupOffset + amplification_payload.meshlets[Gid];
+	// Scan for group-relative visible meshlet bit that matches current groupID:
+	uint groupMeshletIndex = 0;
+	uint groupVisibleMeshletBits = amplification_payload.meshlets;
+	if (groupVisibleMeshletBits == ~0u)
+	{
+		// Full visibility bitmask: no need to search, every group of mesh shader maps to every thread of amplification shader
+		groupMeshletIndex = Gid;
+	}
+	else
+	{
+		// Sparse visibility bitmask: need to iterate over set bits to find which bit position is for this group
+		for (uint i = 0; i <= Gid; ++i)
+		{
+			groupMeshletIndex = firstbitlow(groupVisibleMeshletBits);
+			groupVisibleMeshletBits ^= 1u << groupMeshletIndex;
+		}
+	}
+
+	const uint meshletID = amplification_payload.meshletGroupOffset + groupMeshletIndex;
 	ShaderGeometry geometry = GetMesh();
 	ShaderCluster cluster = bindless_structured_cluster[descriptor_index(geometry.vb_clu)][meshletID];
 	SetMeshOutputCounts(cluster.vertexCount, cluster.triangleCount);
