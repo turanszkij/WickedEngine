@@ -6,6 +6,7 @@
 #define ZERO_AREA_CULLING
 #define OCCLUSION_CULLING
 
+// Note: with current 32-bit bitmask visibility solution, exactly 32 threads are required in both stages!
 static const uint AS_GROUPSIZE = 32;
 static const uint MS_GROUPSIZE = 32;
 
@@ -171,6 +172,8 @@ struct PrimitiveAttributes
 #endif // OBJECTSHADER_USE_VIEWPORTARRAYINDEX
 };
 
+groupshared uint shared_groupMeshletIndex;
+
 [outputtopology("triangle")]
 [numthreads(MS_GROUPSIZE, 1, 1)]
 void main(
@@ -187,20 +190,20 @@ void main(
 {
 	// Scan for group-relative visible meshlet bit that matches current groupID:
 	uint groupMeshletIndex = 0;
-	uint groupVisibleMeshletBits = amplification_payload.meshlets;
-	if (groupVisibleMeshletBits == ~0u)
+	if (amplification_payload.meshlets == ~0u)
 	{
 		// Full visibility bitmask: no need to search, every group of mesh shader maps to every thread of amplification shader
 		groupMeshletIndex = Gid;
 	}
 	else
 	{
-		// Sparse visibility bitmask: need to iterate over set bits to find which bit position is for this group
-		for (uint i = 0; i <= Gid; ++i)
-		{
-			groupMeshletIndex = firstbitlow(groupVisibleMeshletBits);
-			groupVisibleMeshletBits ^= 1u << groupMeshletIndex;
-		}
+		// Sparse visibility bitmask: need to find the SV_GroupID-th visible bit
+		const bool threadValidBit = amplification_payload.meshlets & (1u << groupIndex);
+		const uint prefixActiveBits = WavePrefixCountBits(threadValidBit);
+		if (threadValidBit && prefixActiveBits == Gid)
+			shared_groupMeshletIndex = groupIndex;
+		GroupMemoryBarrierWithGroupSync();
+		groupMeshletIndex = shared_groupMeshletIndex;
 	}
 
 	const uint meshletID = amplification_payload.meshletGroupOffset + groupMeshletIndex;
