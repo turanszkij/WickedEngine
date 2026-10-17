@@ -6540,6 +6540,7 @@ namespace wi::scene
 		{
 			wi::vector<XMFLOAT4> positions;
 			wi::vector<uint8_t> valid;
+			wi::vector<XMFLOAT4X4> poseMatrices;
 			const MeshComponent* mesh = nullptr;
 			const wi::vector<ShaderTransform>* bones = nullptr;
 			Scene::RayQueryStats* stats = nullptr;
@@ -6548,8 +6549,9 @@ namespace wi::scene
 				Scene::RaySkinningMode mode, Scene::RayQueryStats* counters)
 			{
 				mesh = &candidate; bones = pose; stats = counters;
-				enabled = bones && mode == Scene::RaySkinningMode::QueryVertices &&
+				enabled = bones && mode != Scene::RaySkinningMode::TriangleVertices &&
 					!mesh->bvh.IsValid() && mesh->vertex_positions.size() <= 1024 * 1024;
+				poseMatrices.clear();
 				if (stats) { ++stats->meshCandidates; if (bones) ++stats->deformedMeshes; }
 				if (!enabled) return;
 				// Reserve explicitly so vector growth cannot exceed the vertex cap.
@@ -6557,11 +6559,23 @@ namespace wi::scene
 				valid.reserve(mesh->vertex_positions.size());
 				positions.resize(mesh->vertex_positions.size());
 				valid.assign(mesh->vertex_positions.size(), 0);
+				if (mode == Scene::RaySkinningMode::QueryVerticesPreparedBones && bones->size() <= 4096 &&
+					bones->size() <= mesh->vertex_positions.size() * mesh->GetBoneInfluenceDiv4() * 4)
+				{
+					poseMatrices.reserve(bones->size());
+					poseMatrices.resize(bones->size());
+					for (size_t i = 0; i < bones->size(); ++i)
+					{
+						const XMFLOAT4X4 matrix = (*bones)[i].GetMatrix();
+						XMStoreFloat4x4(&poseMatrices[i], XMMatrixTranspose(XMLoadFloat4x4(&matrix)));
+					}
+					if (stats) { ++stats->preparedMeshes; stats->matrixPreparations += bones->size(); }
+				}
 				if (stats)
 				{
 					++stats->cachedMeshes;
 					stats->scratchPeakBytes = std::max(stats->scratchPeakBytes,
-						uint64_t(positions.capacity() * sizeof(XMFLOAT4) + valid.capacity()));
+						uint64_t(positions.capacity() * sizeof(XMFLOAT4) + valid.capacity() + poseMatrices.capacity() * sizeof(XMFLOAT4X4)));
 				}
 			}
 			XMVECTOR Load(uint32_t index)
@@ -6570,7 +6584,29 @@ namespace wi::scene
 				if (stats) ++stats->skinRequests;
 				if (enabled && valid[index]) return XMLoadFloat4(&positions[index]);
 				if (stats) ++stats->skinEvaluations;
-				const XMVECTOR position = SkinVertex(*mesh, *bones, index);
+				XMVECTOR position;
+				if (poseMatrices.empty())
+				{
+					if (stats) stats->matrixPreparations += mesh->GetBoneInfluenceDiv4() * 4;
+					position = SkinVertex(*mesh, *bones, index);
+				}
+				else
+				{
+					// Same order and float4 arithmetic as SkinVertex, including zero
+					// weights and the second influence set. Only matrix preparation
+					// moves out of the indexed-vertex loop; no pose state survives.
+					const XMVECTOR P = XMLoadFloat3(&mesh->vertex_positions[index]);
+					position = XMVectorZero();
+					for (uint32_t influence = 0; influence < mesh->GetBoneInfluenceDiv4(); ++influence)
+					{
+						const XMUINT4& ind = influence == 0 ? mesh->vertex_boneindices[index] : mesh->vertex_boneindices2[index];
+						const XMFLOAT4& wei = influence == 0 ? mesh->vertex_boneweights[index] : mesh->vertex_boneweights2[index];
+						position += XMVector3Transform(P, XMLoadFloat4x4(&poseMatrices[ind.x])) * wei.x;
+						position += XMVector3Transform(P, XMLoadFloat4x4(&poseMatrices[ind.y])) * wei.y;
+						position += XMVector3Transform(P, XMLoadFloat4x4(&poseMatrices[ind.z])) * wei.z;
+						position += XMVector3Transform(P, XMLoadFloat4x4(&poseMatrices[ind.w])) * wei.w;
+					}
+				}
 				if (enabled) { XMStoreFloat4(&positions[index], position); valid[index] = 1; }
 				return position;
 			}

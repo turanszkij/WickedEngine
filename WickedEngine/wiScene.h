@@ -581,15 +581,18 @@ namespace wi::scene
 		// Read-only candidate filter, evaluated before triangle skinning/intersection.
 		// Callbacks must not mutate the scene. Empty predicate accepts every entity.
 		using RayEntityFilter = std::function<bool(wi::ecs::Entity)>;
-		enum class RaySkinningMode { TriangleVertices, QueryVertices };
+		enum class RaySkinningMode { TriangleVertices, QueryVertices, QueryVerticesPreparedBones };
 		struct RayQueryStats
 		{
 			uint64_t meshCandidates = 0, deformedMeshes = 0, cachedMeshes = 0;
 			uint64_t triangleTests = 0, skinRequests = 0, skinEvaluations = 0, scratchPeakBytes = 0;
+			uint64_t matrixPreparations = 0, preparedMeshes = 0;
 		};
 		// QueryVertices reuses skinned positions only within one candidate/query.
 		// No retained Scene state or pose invalidation contract. Scratch is capped
 		// at 1M vertices; existing mesh BVHs and larger meshes use the legacy path.
+		// QueryVerticesPreparedBones additionally prepares at most 4096 bone
+		// matrices (256 KiB) per candidate/query; larger poses use QueryVertices.
 		// Optional stats are reset on entry. Scene must remain stable during queries.
 		RayIntersectionResult IntersectsFiltered(const wi::primitive::Ray& ray, const RayEntityFilter& acceptEntity, uint32_t filterMask = wi::enums::FILTER_OPAQUE, uint32_t layerMask = ~0, uint32_t lod = 0, RaySkinningMode skinning = RaySkinningMode::TriangleVertices, RayQueryStats* stats = nullptr) const;
 
