@@ -8939,7 +8939,7 @@ using namespace vulkan_internal;
 			std_picture_info_h264.idr_pic_id = slice_header->idr_pic_id;
 			std_picture_info_h264.flags.is_intra = op->frame_type == VideoFrameType::Intra ? 1 : 0;
 			std_picture_info_h264.flags.is_reference = op->reference_priority > 0 ? 1 : 0;
-			std_picture_info_h264.flags.IdrPicFlag = (std_picture_info_h264.flags.is_intra && std_picture_info_h264.flags.is_reference) ? 1 : 0;
+			std_picture_info_h264.flags.IdrPicFlag = std_picture_info_h264.flags.is_intra ? 1 : 0;
 			std_picture_info_h264.flags.field_pic_flag = slice_header->field_pic_flag;
 			std_picture_info_h264.flags.bottom_field_flag = slice_header->bottom_field_flag;
 			std_picture_info_h264.flags.complementary_field_pair = 0;

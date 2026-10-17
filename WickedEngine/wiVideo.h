@@ -62,8 +62,13 @@ namespace wi::video
 			int framenum_status[17] = {};
 			wi::graphics::ResourceState resource_states[17] = {};
 			wi::vector<uint8_t> reference_usage;
-			uint8_t next_ref = 0;
-			uint8_t next_slot = 0;
+			struct Picture
+			{
+				bool used = false;
+				int frame_num = 0;
+				int poc = 0;
+			};
+			Picture pictures[17] = {};
 			uint8_t current_slot = 0;
 		} dpb;
 		struct OutputTexture
