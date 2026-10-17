@@ -24,8 +24,6 @@ namespace wi
 		};
 		uint32_t _flags = EMPTY;
 
-		std::string textureName, maskName;
-
 		Sprite(const std::string& newTexture = "", const std::string& newMask = "");
 		virtual ~Sprite() = default;
 
@@ -43,19 +41,14 @@ namespace wi
 		constexpr bool IsCameraFacing() const { return _flags & CAMERA_FACING; }
 		constexpr bool IsCameraScaling() const { return _flags & CAMERA_SCALING; }
 
-		wi::image::Params params;
-		wi::Resource textureResource;
-		wi::Resource maskResource;
-		wi::Resource backgroundResource;
-
 		const wi::graphics::Texture* GetTexture() const;
 
 		struct Anim
 		{
 			struct MovingTexAnim
 			{
-				float speedX = 0; // the speed of texture scrolling animation in horizontal direction
-				float speedY = 0; // the speed of texture scrolling animation in vertical direction
+				half speedX = 0; // the speed of texture scrolling animation in horizontal direction
+				half speedY = 0; // the speed of texture scrolling animation in vertical direction
 			};
 			struct DrawRectAnim
 			{
@@ -74,13 +67,13 @@ namespace wi
 			};
 			struct WobbleAnim
 			{
-				XMFLOAT2 amount = XMFLOAT2(0, 0);	// how much the sprite wobbles in X and Y direction
-				float speed = 1; // how fast the sprite wobbles
+				half2 amount = half2(0, 0);	// how much the sprite wobbles in X and Y direction
+				half speed = 1; // how fast the sprite wobbles
 
-				float corner_angles[4]; // internal use; you don't need to initialize
-				float corner_speeds[4]; // internal use; you don't need to initialize
-				float corner_angles2[4]; // internal use; you don't need to initialize
-				float corner_speeds2[4]; // internal use; you don't need to initialize
+				half corner_angles[4]; // internal use; you don't need to initialize
+				half corner_speeds[4]; // internal use; you don't need to initialize
+				half corner_angles2[4]; // internal use; you don't need to initialize
+				half corner_speeds2[4]; // internal use; you don't need to initialize
 				WobbleAnim()
 				{
 					for (int i = 0; i < 4; ++i)
@@ -102,17 +95,24 @@ namespace wi
 			};
 
 			bool repeatable = false;
-			XMFLOAT3 vel = XMFLOAT3(0, 0, 0);
-			float rot = 0;
-			float scaleX = 0;
-			float scaleY = 0;
-			float opa = 0;
-			float fad = 0;
+			float3 vel = float3(0, 0, 0);
+			half rot = 0;
+			half scaleX = 0;
+			half scaleY = 0;
+			half opa = 0;
+			half fad = 0;
 			MovingTexAnim movingTexAnim;
 			DrawRectAnim drawRectAnim;
 			WobbleAnim wobbleAnim;
 		};
 		Anim anim;
+
+		wi::image::Params params;
+		wi::Resource textureResource;
+		wi::Resource maskResource;
+		wi::Resource backgroundResource;
+
+		std::string textureName, maskName;
 
 		const wi::graphics::Texture* getTexture() const
 		{

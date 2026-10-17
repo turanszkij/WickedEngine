@@ -770,5 +770,97 @@ namespace wi::math
 
 		return true;
 	}
+
+}
+
+// shader compat and packed data types:
+using float3x3 = XMFLOAT3X3;
+using float4x4 = XMFLOAT4X4;
+using float2 = XMFLOAT2;
+using float3 = XMFLOAT3;
+using float4 = XMFLOAT4;
+using uint = uint32_t;
+using uint2 = XMUINT2;
+using uint3 = XMUINT3;
+using uint4 = XMUINT4;
+using int2 = XMINT2;
+using int3 = XMINT3;
+using int4 = XMINT4;
+
+struct unorm8
+{
+	uint8_t value;
+	unorm8() = default;
+	constexpr unorm8(float f) : value(uint8_t(saturate(f) * 255)) {}
+
+	constexpr operator float() const { return float(value) / 255.0f; }
+
+	constexpr unorm8& operator=(float f) { value = uint8_t(saturate(f) * 255); return *this; }
+	constexpr unorm8& operator+=(float f) { *this = unorm8((*this) + f); return *this; }
+	constexpr unorm8& operator*=(float f) { *this = unorm8((*this) * f); return *this; }
+	constexpr unorm8& operator/=(float f) { *this = unorm8((*this) / f); return *this; }
+};
+struct unorm16
+{
+	uint16_t value;
+	unorm16() = default;
+	constexpr unorm16(float f) : value(uint16_t(saturate(f) * 65535)) {}
+
+	constexpr operator float() const { return float(value) / 65535.0f; }
+
+	constexpr unorm16& operator=(float f) { value = uint16_t(saturate(f) * 65535); return *this; }
+	constexpr unorm16& operator+=(float f) { *this = unorm16((*this) + f); return *this; }
+	constexpr unorm16& operator*=(float f) { *this = unorm16((*this) * f); return *this; }
+	constexpr unorm16& operator/=(float f) { *this = unorm16((*this) / f); return *this; }
+};
+
+struct half
+{
+	uint16_t value;
+	half() = default;
+	half(float f) : value(wi::math::f32tof16(f)) {}
+
+	operator float() const { return wi::math::f16tof32(value); }
+
+	half& operator=(float f) { value = wi::math::f32tof16(f); return *this; }
+	half& operator+=(float f) { *this = half((*this) + f); return *this; }
+	half& operator*=(float f) { *this = half((*this) * f); return *this; }
+	half& operator/=(float f) { *this = half((*this) / f); return *this; }
+};
+struct half2
+{
+	half x, y;
+	half2() = default;
+	half2(float _x, float _y) : x(_x), y(_y) {};
+	half2(const float2& v) : x(v.x), y(v.y) {};
+
+	void operator=(const float2& v) { x = v.x; y = v.y; }
+
+	operator float2() const { return float2(x, y); }
+	constexpr operator uint32_t() const { return uint32_t(x.value) | (uint32_t(y.value) << 16u); }
+};
+struct half3
+{
+	half x, y, z;
+	half3() = default;
+	half3(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {};
+	half3(const float3& v) : x(v.x), y(v.y), z(v.z) {};
+
+	void operator=(const float3& v) { x = v.x; y = v.y; z = v.z; }
+
+	operator float3() const { return float3(x, y, z); }
+	constexpr operator uint2() const { return uint2(uint32_t(x.value) | (uint32_t(y.value) << 16u), uint32_t(z.value)); }
+};
+struct half4
+{
+	half x, y, z, w;
+	half4() = default;
+	half4(float _x, float _y, float _z, float _w) : x(_x), y(_y), z(_z), w(_w) {};
+	half4(const float4& v) : x(v.x), y(v.y), z(v.z), w(v.w) {};
+
+	void operator=(const float4& v) { x = v.x; y = v.y; z = v.z; w = v.w; }
+
+	operator float4() const { return float4(x, y, z, w); }
+	constexpr operator uint2() const { return uint2(uint32_t(x.value) | (uint32_t(y.value) << 16u), uint32_t(z.value) | (uint32_t(w.value) << 16u)); }
 };
 
