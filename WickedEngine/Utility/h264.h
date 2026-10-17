@@ -803,12 +803,23 @@ namespace h264 {
 	}
 	constexpr void read_pred_weight_table(SliceHeader* sh, const SPS* sps, const PPS* pps, Bitstream* b)
 	{
+		// 7.3.3.2 uses the effective num_ref_idx_l*_active_minus1. A slice with
+		// num_ref_idx_active_override_flag replaces the PPS default.
+		int l0_active = pps->num_ref_idx_l0_active_minus1;
+		int l1_active = pps->num_ref_idx_l1_active_minus1;
+		if (sh->num_ref_idx_active_override_flag)
+		{
+			l0_active = sh->num_ref_idx_l0_active_minus1;
+			if (is_slice_type(sh->slice_type, SH_SLICE_TYPE_B))
+				l1_active = sh->num_ref_idx_l1_active_minus1;
+		}
+
 		sh->pwt.luma_log2_weight_denom = b->ue();
 		if (sps->chroma_format_idc != 0)
 		{
 			sh->pwt.chroma_log2_weight_denom = b->ue();
 		}
-		for (int i = 0; i <= pps->num_ref_idx_l0_active_minus1; i++)
+		for (int i = 0; i <= l0_active; i++)
 		{
 			sh->pwt.luma_weight_l0_flag[i] = b->u1();
 			if (sh->pwt.luma_weight_l0_flag[i])
@@ -831,7 +842,7 @@ namespace h264 {
 		}
 		if (is_slice_type(sh->slice_type, SH_SLICE_TYPE_B))
 		{
-			for (int i = 0; i <= pps->num_ref_idx_l1_active_minus1; i++)
+			for (int i = 0; i <= l1_active; i++)
 			{
 				sh->pwt.luma_weight_l1_flag[i] = b->u1();
 				if (sh->pwt.luma_weight_l1_flag[i])
