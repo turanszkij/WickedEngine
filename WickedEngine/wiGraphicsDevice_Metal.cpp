@@ -1029,6 +1029,7 @@ namespace metal_internal
 
 		~VideoDecoder_Metal();
 		void destroy_session();
+		bool ensure_format(const uint8_t* data, size_t size);
 		bool create_session();
 		void log_once(const char* message);
 	};
@@ -1085,6 +1086,89 @@ namespace metal_internal
 			CFRelease(decoded);
 			decoded = nullptr;
 		}
+	}
+
+	static bool collect_h264_parameter_sets(const uint8_t* data, size_t size, wi::vector<const uint8_t*>& sets, wi::vector<size_t>& sizes)
+	{
+		sets.clear();
+		sizes.clear();
+		if (data == nullptr || size < 4)
+			return false;
+		bool has_sps = false;
+		bool has_pps = false;
+		size_t i = 0;
+		while (i + 3 <= size)
+		{
+			size_t start_code = 0;
+			if (i + 4 <= size && data[i] == 0 && data[i + 1] == 0 && data[i + 2] == 0 && data[i + 3] == 1)
+				start_code = 4;
+			else if (data[i] == 0 && data[i + 1] == 0 && data[i + 2] == 1)
+				start_code = 3;
+			else
+			{
+				++i;
+				continue;
+			}
+
+			const size_t nal_begin = i + start_code;
+			size_t nal_end = nal_begin;
+			while (nal_end + 3 <= size)
+			{
+				const bool short_code = data[nal_end] == 0 && data[nal_end + 1] == 0 && data[nal_end + 2] == 1;
+				const bool long_code = nal_end + 4 <= size && data[nal_end] == 0 && data[nal_end + 1] == 0 && data[nal_end + 2] == 0 && data[nal_end + 3] == 1;
+				if (short_code || long_code)
+					break;
+				++nal_end;
+			}
+			while (nal_end > nal_begin && data[nal_end - 1] == 0)
+				--nal_end;
+			if (nal_end <= nal_begin)
+				break;
+
+			const uint8_t nal_type = data[nal_begin] & 0x1f;
+			if (nal_type == (uint8_t)h264::NAL_UNIT_TYPE_SPS || nal_type == (uint8_t)h264::NAL_UNIT_TYPE_PPS)
+			{
+				sets.push_back(data + nal_begin);
+				sizes.push_back(nal_end - nal_begin);
+				has_sps = has_sps || nal_type == (uint8_t)h264::NAL_UNIT_TYPE_SPS;
+				has_pps = has_pps || nal_type == (uint8_t)h264::NAL_UNIT_TYPE_PPS;
+			}
+			else if (nal_type >= (uint8_t)h264::NAL_UNIT_TYPE_CODED_SLICE_NON_IDR && nal_type <= (uint8_t)h264::NAL_UNIT_TYPE_CODED_SLICE_IDR)
+			{
+				break;
+			}
+			i = nal_end;
+		}
+		return has_sps && has_pps;
+	}
+
+	bool VideoDecoder_Metal::ensure_format(const uint8_t* data, size_t size)
+	{
+		if (format_desc != nullptr)
+			return true;
+		wi::vector<const uint8_t*> parameter_sets;
+		wi::vector<size_t> parameter_sizes;
+		if (!collect_h264_parameter_sets(data, size, parameter_sets, parameter_sizes))
+		{
+			log_once("Metal H264 decoder did not find SPS and PPS in the bitstream");
+			return false;
+		}
+		CMVideoFormatDescriptionRef created = nullptr;
+		const OSStatus status = CMVideoFormatDescriptionCreateFromH264ParameterSets(
+			kCFAllocatorDefault,
+			parameter_sets.size(),
+			parameter_sets.data(),
+			parameter_sizes.data(),
+			4,
+			&created
+		);
+		if (status != noErr || created == nullptr)
+		{
+			wilog_error("CMVideoFormatDescriptionCreateFromH264ParameterSets failed (%d)", (int)status);
+			return false;
+		}
+		format_desc = created;
+		return true;
 	}
 
 	bool VideoDecoder_Metal::create_session()
@@ -2886,73 +2970,21 @@ using namespace metal_internal;
 			return false;
 		if (desc->format != Format::NV12 || desc->width == 0 || desc->height == 0)
 			return false;
-		if (desc->sps_count == 0 || desc->pps_count == 0 || desc->sps_nal_data == nullptr || desc->pps_nal_data == nullptr || desc->sps_nal_sizes == nullptr || desc->pps_nal_sizes == nullptr)
-		{
-			wilog_error("Metal H264 decoder requires raw SPS and PPS NAL units");
+		if (desc->sps_count == 0 || desc->pps_count == 0 || desc->sps_datas == nullptr)
 			return false;
-		}
-		if (desc->sps_datas != nullptr)
+		const h264::SPS* sps = (const h264::SPS*)desc->sps_datas;
+		if (sps->bit_depth_luma_minus8 != 0 || sps->bit_depth_chroma_minus8 != 0 || sps->chroma_format_idc > 1)
 		{
-			const h264::SPS* sps = (const h264::SPS*)desc->sps_datas;
-			if (sps->bit_depth_luma_minus8 != 0 || sps->bit_depth_chroma_minus8 != 0 || sps->chroma_format_idc > 1)
-			{
-				wilog_error("Metal H264 decoder supports 8-bit 4:2:0 only");
-				return false;
-			}
-		}
-
-		wi::vector<const uint8_t*> parameter_sets;
-		wi::vector<size_t> parameter_sizes;
-		parameter_sets.reserve(desc->sps_count + desc->pps_count);
-		parameter_sizes.reserve(desc->sps_count + desc->pps_count);
-		size_t sps_offset = 0;
-		for (size_t i = 0; i < desc->sps_count; ++i)
-		{
-			const uint32_t nal_size = desc->sps_nal_sizes[i];
-			if (nal_size == 0)
-				return false;
-			parameter_sets.push_back(desc->sps_nal_data + sps_offset);
-			parameter_sizes.push_back(nal_size);
-			sps_offset += nal_size;
-		}
-		size_t pps_offset = 0;
-		for (size_t i = 0; i < desc->pps_count; ++i)
-		{
-			const uint32_t nal_size = desc->pps_nal_sizes[i];
-			if (nal_size == 0)
-				return false;
-			parameter_sets.push_back(desc->pps_nal_data + pps_offset);
-			parameter_sizes.push_back(nal_size);
-			pps_offset += nal_size;
-		}
-
-		CMVideoFormatDescriptionRef format_desc = nullptr;
-		const OSStatus format_status = CMVideoFormatDescriptionCreateFromH264ParameterSets(
-			kCFAllocatorDefault,
-			parameter_sets.size(),
-			parameter_sets.data(),
-			parameter_sizes.data(),
-			4,
-			&format_desc
-		);
-		if (format_status != noErr || format_desc == nullptr)
-		{
-			wilog_error("CMVideoFormatDescriptionCreateFromH264ParameterSets failed (%d)", (int)format_status);
+			wilog_error("Metal H264 decoder supports 8-bit 4:2:0 only");
 			return false;
 		}
 
 		auto internal_state = wi::allocator::make_shared<VideoDecoder_Metal>();
 		internal_state->allocationhandler = allocationhandler;
-		internal_state->format_desc = format_desc;
-		if (!internal_state->create_session())
-		{
-			video_decoder->internal_state = {};
-			return false;
-		}
-
 		video_decoder->internal_state = internal_state;
 		video_decoder->desc = *desc;
 		// VideoToolbox owns reference frames. The engine DPB texture is the shader-readable output surface.
+		// The decompression session is created on the first decode, once the bitstream is readable.
 		video_decoder->support = VideoDecoderSupportFlags::DPB_AND_OUTPUT_COINCIDE;
 		return true;
 	}
@@ -4919,15 +4951,6 @@ using namespace metal_internal;
 		auto decoder = to_internal(video_decoder);
 		if (decoder == nullptr)
 			return;
-		if ((op->flags & VideoDecodeOperation::FLAG_SESSION_RESET) && decoder->frames_decoded > 0)
-		{
-			decoder->destroy_session();
-		}
-		if (decoder->session == nullptr && !decoder->create_session())
-		{
-			decoder->log_once("Metal video decoder session was not created");
-			return;
-		}
 		if (op->stream == nullptr || op->stream->mapped_data == nullptr)
 		{
 			decoder->log_once("Metal video decoder requires a CPU-visible bitstream buffer");
@@ -4936,6 +4959,17 @@ using namespace metal_internal;
 		if (op->stream_offset + op->stream_size > op->stream->mapped_size)
 		{
 			decoder->log_once("Metal video decoder bitstream range is out of bounds");
+			return;
+		}
+		if (!decoder->ensure_format((const uint8_t*)op->stream->mapped_data, op->stream->mapped_size))
+			return;
+		if ((op->flags & VideoDecodeOperation::FLAG_SESSION_RESET) && decoder->frames_decoded > 0)
+		{
+			decoder->destroy_session();
+		}
+		if (decoder->session == nullptr && !decoder->create_session())
+		{
+			decoder->log_once("Metal video decoder session was not created");
 			return;
 		}
 

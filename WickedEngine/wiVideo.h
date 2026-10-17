@@ -26,10 +26,6 @@ namespace wi::video
 		wi::vector<uint8_t> sps_datas;
 		wi::vector<uint8_t> pps_datas;
 		wi::vector<uint8_t> slice_header_datas;
-		wi::vector<uint8_t> sps_nal_datas;		// raw SPS NAL units without start codes, concatenated
-		wi::vector<uint32_t> sps_nal_sizes;
-		wi::vector<uint8_t> pps_nal_datas;		// raw PPS NAL units without start codes, concatenated
-		wi::vector<uint32_t> pps_nal_sizes;
 		uint32_t sps_count = 0;
 		uint32_t pps_count = 0;
 		uint32_t slice_header_count = 0;
@@ -66,8 +62,13 @@ namespace wi::video
 			int framenum_status[17] = {};
 			wi::graphics::ResourceState resource_states[17] = {};
 			wi::vector<uint8_t> reference_usage;
-			uint8_t next_ref = 0;
-			uint8_t next_slot = 0;
+			struct Picture
+			{
+				bool used = false;
+				int frame_num = 0;
+				int poc = 0;
+			};
+			Picture pictures[17] = {};
 			uint8_t current_slot = 0;
 		} dpb;
 		struct OutputTexture

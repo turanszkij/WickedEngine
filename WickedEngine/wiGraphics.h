@@ -829,13 +829,6 @@ namespace wi::graphics
 		size_t pps_count = 0;				// number of picture parameter set structures in the pps_datas array
 		const void* sps_datas = nullptr;	// array of sequence parameter set structures. The structure type depends on video codec
 		size_t sps_count = 0;				// number of sequence parameter set structures in the sps_datas array
-		// Raw parameter set NAL units without start codes, concatenated.
-		// sps_nal_sizes has sps_count entries and pps_nal_sizes has pps_count entries.
-		// Apple VideoToolbox needs these original bytes. DX12 and Vulkan use the parsed structures above.
-		const uint8_t* sps_nal_data = nullptr;
-		const uint32_t* sps_nal_sizes = nullptr;
-		const uint8_t* pps_nal_data = nullptr;
-		const uint32_t* pps_nal_sizes = nullptr;
 		uint32_t num_dpb_slots = 0;			// The number of decode picture buffer slots. Usually it is required to be at least number_of_reference_frames + 1
 	};
 
