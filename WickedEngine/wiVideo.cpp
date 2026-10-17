@@ -13,6 +13,35 @@ using namespace wi::graphics;
 
 namespace wi::video
 {
+	static size_t H264NalPayloadSize(const uint8_t* filedata, size_t filesize, uint64_t nal_offset)
+	{
+		const size_t payload = (size_t)nal_offset + sizeof(h264::nal_start_code);
+		if (payload >= filesize)
+			return 0;
+		const uint8_t* begin = filedata + payload;
+		const uint8_t* end = filedata + filesize;
+		for (const uint8_t* p = begin; p + 3 <= end; ++p)
+		{
+			if (p[0] == 0 && p[1] == 0 && p[2] == 1)
+			{
+				const uint8_t* nal_end = p;
+				// A 4-byte start code is 00 00 00 01. The extra zero is not part of the previous NAL.
+				if (nal_end > begin && nal_end[-1] == 0)
+					--nal_end;
+				return (size_t)(nal_end - begin);
+			}
+		}
+		return (size_t)(end - begin);
+	}
+
+	static void AppendH264ParameterNal(wi::vector<uint8_t>& bytes, wi::vector<uint32_t>& sizes, const uint8_t* nal, size_t nal_size)
+	{
+		if (nal == nullptr || nal_size == 0)
+			return;
+		sizes.push_back((uint32_t)nal_size);
+		bytes.insert(bytes.end(), nal, nal + nal_size);
+	}
+
 	void CalculatePictureOrder(Video* video)
 	{
 		if (video->profile == VideoProfile::H264)
@@ -187,6 +216,8 @@ namespace wi::video
 					// SPS:
 					video->sps_datas.clear();
 					video->sps_count = 0;
+					video->sps_nal_datas.clear();
+					video->sps_nal_sizes.clear();
 					video->num_dpb_slots = 0;
 					{
 						int size = 0;
@@ -225,6 +256,7 @@ namespace wi::video
 							video->sps_datas.resize(video->sps_datas.size() + sizeof(sps));
 							std::memcpy((h264::SPS*)video->sps_datas.data() + video->sps_count, &sps, sizeof(sps));
 							video->sps_count++;
+							AppendH264ParameterNal(video->sps_nal_datas, video->sps_nal_sizes, sps_data, (size_t)size);
 							index++;
 						}
 					}
@@ -232,6 +264,8 @@ namespace wi::video
 					// PPS:
 					video->pps_datas.clear();
 					video->pps_count = 0;
+					video->pps_nal_datas.clear();
+					video->pps_nal_sizes.clear();
 					{
 						int size = 0;
 						int index = 0;
@@ -258,6 +292,7 @@ namespace wi::video
 							video->pps_datas.resize(video->pps_datas.size() + sizeof(pps));
 							std::memcpy((h264::PPS*)video->pps_datas.data() + video->pps_count, &pps, sizeof(pps));
 							video->pps_count++;
+							AppendH264ParameterNal(video->pps_nal_datas, video->pps_nal_sizes, pps_data, (size_t)size);
 							index++;
 						}
 					}
@@ -513,6 +548,8 @@ namespace wi::video
 						video->sps_datas.resize(video->sps_datas.size() + sizeof(h264::SPS));
 						std::memcpy((h264::SPS*)video->sps_datas.data() + video->sps_count, &sps, sizeof(sps));
 						video->sps_count++;
+						const size_t nal_size = H264NalPayloadSize(filedata, filesize, nal_offset);
+						AppendH264ParameterNal(video->sps_nal_datas, video->sps_nal_sizes, filedata + nal_offset + sizeof(h264::nal_start_code), nal_size);
 
 						video->width = ((sps.pic_width_in_mbs_minus1 + 1) * 16) - sps.frame_crop_left_offset * 2 - sps.frame_crop_right_offset * 2;
 						video->height = ((2 - sps.frame_mbs_only_flag) * (sps.pic_height_in_map_units_minus1 + 1) * 16) - (sps.frame_crop_top_offset * 2) - (sps.frame_crop_bottom_offset * 2);
@@ -531,6 +568,8 @@ namespace wi::video
 						video->pps_datas.resize(video->pps_datas.size() + sizeof(h264::PPS));
 						std::memcpy((h264::PPS*)video->pps_datas.data() + video->pps_count, &pps, sizeof(pps));
 						video->pps_count++;
+						const size_t nal_size = H264NalPayloadSize(filedata, filesize, nal_offset);
+						AppendH264ParameterNal(video->pps_nal_datas, video->pps_nal_sizes, filedata + nal_offset + sizeof(h264::nal_start_code), nal_size);
 					}
 				}
 				break;
@@ -619,6 +658,10 @@ namespace wi::video
 		vd.pps_count = instance->video->pps_count;
 		vd.sps_datas = instance->video->sps_datas.data();
 		vd.sps_count = instance->video->sps_count;
+		vd.sps_nal_data = video->sps_nal_datas.data();
+		vd.sps_nal_sizes = video->sps_nal_sizes.data();
+		vd.pps_nal_data = video->pps_nal_datas.data();
+		vd.pps_nal_sizes = video->pps_nal_sizes.data();
 		vd.num_dpb_slots = video->num_dpb_slots;
 		bool success = device->CreateVideoDecoder(&vd, &instance->decoder);
 		assert(success);

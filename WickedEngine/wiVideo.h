@@ -26,6 +26,10 @@ namespace wi::video
 		wi::vector<uint8_t> sps_datas;
 		wi::vector<uint8_t> pps_datas;
 		wi::vector<uint8_t> slice_header_datas;
+		wi::vector<uint8_t> sps_nal_datas;		// raw SPS NAL units without start codes, concatenated
+		wi::vector<uint32_t> sps_nal_sizes;
+		wi::vector<uint8_t> pps_nal_datas;		// raw PPS NAL units without start codes, concatenated
+		wi::vector<uint32_t> pps_nal_sizes;
 		uint32_t sps_count = 0;
 		uint32_t pps_count = 0;
 		uint32_t slice_header_count = 0;
