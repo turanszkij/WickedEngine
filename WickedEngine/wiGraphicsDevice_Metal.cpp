@@ -13,13 +13,6 @@
 #include <CoreMedia/CoreMedia.h>
 #include <CoreVideo/CoreVideo.h>
 
-// A static library does not pass its link flags to the app. These directives
-// make this object file pull the decoder frameworks in at the final link.
-__asm__(".linker_option \"-framework\", \"VideoToolbox\"");
-__asm__(".linker_option \"-framework\", \"CoreMedia\"");
-__asm__(".linker_option \"-framework\", \"CoreVideo\"");
-__asm__(".linker_option \"-framework\", \"CoreFoundation\"");
-
 #include "Utility/h264.h"
 
 namespace wi::graphics

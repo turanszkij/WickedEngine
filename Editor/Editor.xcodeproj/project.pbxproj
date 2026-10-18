@@ -79,6 +79,13 @@
 		1E50B2772FD07B1B000EE545 /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E50B2762FD07B1B000EE545 /* CoreAudio.framework */; };
 		1E50B2792FD07B2B000EE545 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E50B2782FD07B2B000EE545 /* AVFoundation.framework */; };
 		1E50B27B2FD07B3B000EE545 /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E50B27A2FD07B3B000EE545 /* AudioToolbox.framework */; };
+		1E52E339308496910066876A /* VideoToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E52E333308496910066876A /* VideoToolbox.framework */; };
+		1E52E33B308496C90066876A /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E52E33A308496C90066876A /* CoreVideo.framework */; };
+		1E52E33D308496E20066876A /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E52E33C308496E20066876A /* CoreMedia.framework */; };
+		1E52E33E308496F50066876A /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1EFE85133029D972000F65B3 /* CoreFoundation.framework */; };
+		1E52E3403084971A0066876A /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E52E33F3084971A0066876A /* CoreVideo.framework */; };
+		1E52E342308497200066876A /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E52E341308497200066876A /* CoreMedia.framework */; };
+		1E52E3443084972B0066876A /* VideoToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E52E3433084972B0066876A /* VideoToolbox.framework */; };
 		1E640FDB2F0AE648003D9FC7 /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E73E74D2F053DAB0090D1DA /* AppKit.framework */; };
 		1E73E6DA2F0510A90090D1DA /* Translator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6CC2F0510A90090D1DA /* Translator.cpp */; };
 		1E73E6DB2F0510A90090D1DA /* DummyVisualizer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E73E6682F0510A90090D1DA /* DummyVisualizer.cpp */; };
@@ -190,6 +197,12 @@
 		1E50B2762FD07B1B000EE545 /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/System/Library/Frameworks/CoreAudio.framework; sourceTree = DEVELOPER_DIR; };
 		1E50B2782FD07B2B000EE545 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/System/Library/Frameworks/AVFoundation.framework; sourceTree = DEVELOPER_DIR; };
 		1E50B27A2FD07B3B000EE545 /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/System/Library/Frameworks/AudioToolbox.framework; sourceTree = DEVELOPER_DIR; };
+		1E52E333308496910066876A /* VideoToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = VideoToolbox.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/System/Library/Frameworks/VideoToolbox.framework; sourceTree = DEVELOPER_DIR; };
+		1E52E33A308496C90066876A /* CoreVideo.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreVideo.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/System/Library/Frameworks/CoreVideo.framework; sourceTree = DEVELOPER_DIR; };
+		1E52E33C308496E20066876A /* CoreMedia.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/System/Library/Frameworks/CoreMedia.framework; sourceTree = DEVELOPER_DIR; };
+		1E52E33F3084971A0066876A /* CoreVideo.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreVideo.framework; path = System/Library/Frameworks/CoreVideo.framework; sourceTree = SDKROOT; };
+		1E52E341308497200066876A /* CoreMedia.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = System/Library/Frameworks/CoreMedia.framework; sourceTree = SDKROOT; };
+		1E52E3433084972B0066876A /* VideoToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = VideoToolbox.framework; path = System/Library/Frameworks/VideoToolbox.framework; sourceTree = SDKROOT; };
 		1E73E6422F05105A0090D1DA /* Editor */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Editor; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E73E64C2F0510A90090D1DA /* AnimationWindow.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AnimationWindow.h; sourceTree = "<group>"; };
 		1E73E64D2F0510A90090D1DA /* AnimationWindow.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AnimationWindow.cpp; sourceTree = "<group>"; };
@@ -347,10 +360,14 @@
 				1E50B2772FD07B1B000EE545 /* CoreAudio.framework in Frameworks */,
 				1E50B0022FD0453E000EE545 /* QuartzCore.framework in Frameworks */,
 				1E50AFC42FD04448000EE545 /* GameController.framework in Frameworks */,
+				1E52E33B308496C90066876A /* CoreVideo.framework in Frameworks */,
+				1E52E33E308496F50066876A /* CoreFoundation.framework in Frameworks */,
 				1EFE85123029D965000F65B3 /* CoreGraphics.framework in Frameworks */,
+				1E52E33D308496E20066876A /* CoreMedia.framework in Frameworks */,
 				1E50B27B2FD07B3B000EE545 /* AudioToolbox.framework in Frameworks */,
 				1E50AFC52FD0444F000EE545 /* UIKit.framework in Frameworks */,
 				1EFE85163029D97E000F65B3 /* ImageIO.framework in Frameworks */,
+				1E52E339308496910066876A /* VideoToolbox.framework in Frameworks */,
 				1E50AFC72FD04454000EE545 /* Metal.framework in Frameworks */,
 				1E50B2792FD07B2B000EE545 /* AVFoundation.framework in Frameworks */,
 				1E50AFC22FD04441000EE545 /* libWickedEngine_iOS.a in Frameworks */,
@@ -361,10 +378,13 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1E52E342308497200066876A /* CoreMedia.framework in Frameworks */,
+				1E52E3443084972B0066876A /* VideoToolbox.framework in Frameworks */,
 				1EBD1C072F251B7E00C29B34 /* GameController.framework in Frameworks */,
 				1E640FDB2F0AE648003D9FC7 /* AppKit.framework in Frameworks */,
 				1E73E7392F0513710090D1DA /* libWickedEngine_MacOS.a in Frameworks */,
 				1E73E7552F053DBE0090D1DA /* Metal.framework in Frameworks */,
+				1E52E3403084971A0066876A /* CoreVideo.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -553,6 +573,12 @@
 		1E73E7162F0511130090D1DA /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				1E52E3433084972B0066876A /* VideoToolbox.framework */,
+				1E52E341308497200066876A /* CoreMedia.framework */,
+				1E52E33F3084971A0066876A /* CoreVideo.framework */,
+				1E52E33C308496E20066876A /* CoreMedia.framework */,
+				1E52E33A308496C90066876A /* CoreVideo.framework */,
+				1E52E333308496910066876A /* VideoToolbox.framework */,
 				1EFE85153029D97E000F65B3 /* ImageIO.framework */,
 				1EFE85133029D972000F65B3 /* CoreFoundation.framework */,
 				1EFE85113029D965000F65B3 /* CoreGraphics.framework */,
