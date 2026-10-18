@@ -13,8 +13,6 @@
 #include <CoreMedia/CoreMedia.h>
 #include <CoreVideo/CoreVideo.h>
 
-// A static library does not pass its link flags on. These directives make this
-// object file pull the frameworks in when an app links Wicked Engine.
 __asm__(".linker_option \"-framework\", \"Foundation\"");
 __asm__(".linker_option \"-framework\", \"QuartzCore\"");
 __asm__(".linker_option \"-framework\", \"Metal\"");
@@ -1019,77 +1017,8 @@ namespace metal_internal
 			allocationhandler->destroylocker.unlock();
 		}
 	};
-	struct VideoDecoder_Metal
-	{
-		wi::allocator::shared_ptr<GraphicsDevice_Metal::AllocationHandler> allocationhandler;
-		CMVideoFormatDescriptionRef format_desc = nullptr;
-		VTDecompressionSessionRef session = nullptr;
-		CVPixelBufferRef decoded = nullptr;
-		std::mutex locker;
-		OSStatus decode_status = noErr;
-		uint64_t frames_decoded = 0;
-		bool logged_error = false;
 
-		~VideoDecoder_Metal();
-		void destroy_session();
-		bool ensure_format(const uint8_t* data, size_t size);
-		bool create_session();
-		void log_once(const char* message);
-	};
 
-	static void video_output_callback(
-		void* decompressionOutputRefCon,
-		void* sourceFrameRefCon,
-		OSStatus status,
-		VTDecodeInfoFlags infoFlags,
-		CVImageBufferRef imageBuffer,
-		CMTime presentationTimeStamp,
-		CMTime presentationDuration)
-	{
-		(void)sourceFrameRefCon;
-		(void)infoFlags;
-		(void)presentationTimeStamp;
-		(void)presentationDuration;
-		VideoDecoder_Metal* decoder = (VideoDecoder_Metal*)decompressionOutputRefCon;
-		if (decoder == nullptr)
-			return;
-		std::scoped_lock lock(decoder->locker);
-		decoder->decode_status = status;
-		if (decoder->decoded != nullptr)
-		{
-			CFRelease(decoder->decoded);
-			decoder->decoded = nullptr;
-		}
-		if (status == noErr && imageBuffer != nullptr)
-		{
-			decoder->decoded = (CVPixelBufferRef)CFRetain(imageBuffer);
-		}
-	}
-
-	void VideoDecoder_Metal::log_once(const char* message)
-	{
-		if (logged_error)
-			return;
-		logged_error = true;
-		wilog_error("%s", message);
-	}
-
-	void VideoDecoder_Metal::destroy_session()
-	{
-		if (session != nullptr)
-		{
-			VTDecompressionSessionWaitForAsynchronousFrames(session);
-			VTDecompressionSessionInvalidate(session);
-			CFRelease(session);
-			session = nullptr;
-		}
-		std::scoped_lock lock(locker);
-		if (decoded != nullptr)
-		{
-			CFRelease(decoded);
-			decoded = nullptr;
-		}
-	}
 
 	static bool collect_h264_parameter_sets(const uint8_t* data, size_t size, wi::vector<const uint8_t*>& sets, wi::vector<size_t>& sizes)
 	{
@@ -1143,86 +1072,6 @@ namespace metal_internal
 			i = nal_end;
 		}
 		return has_sps && has_pps;
-	}
-
-	bool VideoDecoder_Metal::ensure_format(const uint8_t* data, size_t size)
-	{
-		if (format_desc != nullptr)
-			return true;
-		wi::vector<const uint8_t*> parameter_sets;
-		wi::vector<size_t> parameter_sizes;
-		if (!collect_h264_parameter_sets(data, size, parameter_sets, parameter_sizes))
-		{
-			log_once("Metal H264 decoder did not find SPS and PPS in the bitstream");
-			return false;
-		}
-		CMVideoFormatDescriptionRef created = nullptr;
-		const OSStatus status = CMVideoFormatDescriptionCreateFromH264ParameterSets(
-			kCFAllocatorDefault,
-			parameter_sets.size(),
-			parameter_sets.data(),
-			parameter_sizes.data(),
-			4,
-			&created
-		);
-		if (status != noErr || created == nullptr)
-		{
-			wilog_error("CMVideoFormatDescriptionCreateFromH264ParameterSets failed (%d)", (int)status);
-			return false;
-		}
-		format_desc = created;
-		return true;
-	}
-
-	bool VideoDecoder_Metal::create_session()
-	{
-		destroy_session();
-		if (format_desc == nullptr)
-			return false;
-
-		// Leave width and height unset so VideoToolbox keeps the native coded size.
-		// Forcing the macroblock-padded size makes it scale the picture.
-		int32_t pixel_format = kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange;
-		CFNumberRef pixel_format_num = CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &pixel_format);
-		CFDictionaryRef io_surface = CFDictionaryCreate(kCFAllocatorDefault, nullptr, nullptr, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
-		const void* keys[] = {
-			kCVPixelBufferPixelFormatTypeKey,
-			kCVPixelBufferMetalCompatibilityKey,
-			kCVPixelBufferIOSurfacePropertiesKey,
-		};
-		const void* values[] = {
-			pixel_format_num,
-			kCFBooleanTrue,
-			io_surface,
-		};
-		CFDictionaryRef attrs = CFDictionaryCreate(kCFAllocatorDefault, keys, values, arraysize(keys), &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
-
-		VTDecompressionOutputCallbackRecord callback = {};
-		callback.decompressionOutputCallback = video_output_callback;
-		callback.decompressionOutputRefCon = this;
-		const OSStatus status = VTDecompressionSessionCreate(kCFAllocatorDefault, format_desc, nullptr, attrs, &callback, &session);
-
-		CFRelease(attrs);
-		CFRelease(io_surface);
-		CFRelease(pixel_format_num);
-
-		if (status != noErr || session == nullptr)
-		{
-			wilog_error("VTDecompressionSessionCreate failed (%d)", (int)status);
-			session = nullptr;
-			return false;
-		}
-		return true;
-	}
-
-	VideoDecoder_Metal::~VideoDecoder_Metal()
-	{
-		destroy_session();
-		if (format_desc != nullptr)
-		{
-			CFRelease(format_desc);
-			format_desc = nullptr;
-		}
 	}
 
 	static bool annexb_to_avcc(const uint8_t* data, size_t size, wi::vector<uint8_t>& out)
@@ -1283,6 +1132,141 @@ namespace metal_internal
 			i = nal_end;
 		}
 		return !out.empty();
+	}
+	static void video_output_callback(void* decompressionOutputRefCon, void* sourceFrameRefCon, OSStatus status, VTDecodeInfoFlags infoFlags, CVImageBufferRef imageBuffer, CMTime presentationTimeStamp, CMTime presentationDuration);
+	struct VideoDecoder_Metal
+	{
+		wi::allocator::shared_ptr<GraphicsDevice_Metal::AllocationHandler> allocationhandler;
+		CMVideoFormatDescriptionRef format_desc = nullptr;
+		VTDecompressionSessionRef session = nullptr;
+		CVPixelBufferRef decoded = nullptr;
+		std::mutex locker;
+		OSStatus decode_status = noErr;
+		uint64_t frames_decoded = 0;
+		bool logged_error = false;
+		
+		~VideoDecoder_Metal()
+		{
+			destroy_session();
+			if (format_desc != nullptr)
+			{
+				CFRelease(format_desc);
+				format_desc = nullptr;
+			}
+		}
+		bool ensure_format(const uint8_t* data, size_t size)
+		{
+			if (format_desc != nullptr)
+				return true;
+			wi::vector<const uint8_t*> parameter_sets;
+			wi::vector<size_t> parameter_sizes;
+			if (!collect_h264_parameter_sets(data, size, parameter_sets, parameter_sizes))
+			{
+				log_once("Metal H264 decoder did not find SPS and PPS in the bitstream");
+				return false;
+			}
+			CMVideoFormatDescriptionRef created = nullptr;
+			const OSStatus status = CMVideoFormatDescriptionCreateFromH264ParameterSets(
+				kCFAllocatorDefault,
+				parameter_sets.size(),
+				parameter_sets.data(),
+				parameter_sizes.data(),
+				4,
+				&created
+			);
+			if (status != noErr || created == nullptr)
+			{
+				wilog_error("CMVideoFormatDescriptionCreateFromH264ParameterSets failed (%d)", (int)status);
+				return false;
+			}
+			format_desc = created;
+			return true;
+		}
+		bool create_session()
+		{
+			destroy_session();
+			if (format_desc == nullptr)
+				return false;
+
+			// Leave width and height unset so VideoToolbox keeps the native coded size.
+			// Forcing the macroblock-padded size makes it scale the picture.
+			int32_t pixel_format = kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange;
+			CFNumberRef pixel_format_num = CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &pixel_format);
+			CFDictionaryRef io_surface = CFDictionaryCreate(kCFAllocatorDefault, nullptr, nullptr, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+			const void* keys[] = {
+				kCVPixelBufferPixelFormatTypeKey,
+				kCVPixelBufferMetalCompatibilityKey,
+				kCVPixelBufferIOSurfacePropertiesKey,
+			};
+			const void* values[] = {
+				pixel_format_num,
+				kCFBooleanTrue,
+				io_surface,
+			};
+			CFDictionaryRef attrs = CFDictionaryCreate(kCFAllocatorDefault, keys, values, arraysize(keys), &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+
+			VTDecompressionOutputCallbackRecord callback = {};
+			callback.decompressionOutputCallback = video_output_callback;
+			callback.decompressionOutputRefCon = this;
+			const OSStatus status = VTDecompressionSessionCreate(kCFAllocatorDefault, format_desc, nullptr, attrs, &callback, &session);
+
+			CFRelease(attrs);
+			CFRelease(io_surface);
+			CFRelease(pixel_format_num);
+
+			if (status != noErr || session == nullptr)
+			{
+				wilog_error("VTDecompressionSessionCreate failed (%d)", (int)status);
+				session = nullptr;
+				return false;
+			}
+			return true;
+		}
+		void destroy_session()
+		{
+			if (session != nullptr)
+			{
+				VTDecompressionSessionWaitForAsynchronousFrames(session);
+				VTDecompressionSessionInvalidate(session);
+				CFRelease(session);
+				session = nullptr;
+			}
+			std::scoped_lock lock(locker);
+			if (decoded != nullptr)
+			{
+				CFRelease(decoded);
+				decoded = nullptr;
+			}
+		}
+		void log_once(const char* message)
+		{
+			if (logged_error)
+				return;
+			logged_error = true;
+			wilog_error("%s", message);
+		}
+	};
+
+	static void video_output_callback(void* decompressionOutputRefCon, void* sourceFrameRefCon, OSStatus status, VTDecodeInfoFlags infoFlags, CVImageBufferRef imageBuffer, CMTime presentationTimeStamp, CMTime presentationDuration)
+	{
+		(void)sourceFrameRefCon;
+		(void)infoFlags;
+		(void)presentationTimeStamp;
+		(void)presentationDuration;
+		VideoDecoder_Metal* decoder = (VideoDecoder_Metal*)decompressionOutputRefCon;
+		if (decoder == nullptr)
+			return;
+		std::scoped_lock lock(decoder->locker);
+		decoder->decode_status = status;
+		if (decoder->decoded != nullptr)
+		{
+			CFRelease(decoder->decoded);
+			decoder->decoded = nullptr;
+		}
+		if (status == noErr && imageBuffer != nullptr)
+		{
+			decoder->decoded = (CVPixelBufferRef)CFRetain(imageBuffer);
+		}
 	}
 
 	template<typename T> struct MetalType;
