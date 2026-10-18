@@ -335,7 +335,6 @@
 		1E79298B2EFE76C500B9E35C /* wiAppleHelper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = wiAppleHelper.h; sourceTree = "<group>"; };
 		1EBD1BFF2F2514D700C29B34 /* wiInput_Apple.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = wiInput_Apple.h; sourceTree = "<group>"; };
 		1EBD1C002F2514E700C29B34 /* wiInput_Apple.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = wiInput_Apple.mm; sourceTree = "<group>"; };
-		1EBD1C032F25166100C29B34 /* GameController.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GameController.framework; path = System/Library/Frameworks/GameController.framework; sourceTree = SDKROOT; };
 		1ED576B82F0115B40032621C /* bcn_common_api.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = bcn_common_api.h; sourceTree = "<group>"; };
 		1ED576B92F0115B40032621C /* bcn_common_kernel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = bcn_common_kernel.h; sourceTree = "<group>"; };
 		1ED576BA2F0115B40032621C /* common_def.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = common_def.h; sourceTree = "<group>"; };
@@ -1223,14 +1222,6 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		1EBD1C022F25166100C29B34 /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-				1EBD1C032F25166100C29B34 /* GameController.framework */,
-			);
-			name = Frameworks;
-			sourceTree = "<group>";
-		};
 		1ED576BB2F0115B40032621C /* compressonator */ = {
 			isa = PBXGroup;
 			children = (
@@ -1871,7 +1862,6 @@
 				1EDA7B032EE1DFE300210D41 /* wiVoxelGrid_BindLua.cpp */,
 				1EDA7A552EE1DF2100210D41 /* wiArchive.cpp */,
 				1EDA7BB12EE1E60500210D41 /* libWickedEngine_MacOS.a */,
-				1EBD1C022F25166100C29B34 /* Frameworks */,
 				1E50AEB32FCEFF2E000EE545 /* libWickedEngine_iOS.a */,
 			);
 			sourceTree = "<group>";

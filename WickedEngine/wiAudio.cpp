@@ -1319,6 +1319,13 @@ namespace wi::audio
 
 #include "Utility/miniaudio.h"
 
+// iOS miniaudio calls these directly. macOS loads them with dlopen.
+#if TARGET_OS_IOS
+__asm__(".linker_option \"-framework\", \"AVFoundation\"");
+__asm__(".linker_option \"-framework\", \"AudioToolbox\"");
+__asm__(".linker_option \"-framework\", \"CoreAudio\"");
+#endif // TARGET_OS_IOS
+
 namespace wi::audio
 {
 	struct WrappedEngine : ma_engine

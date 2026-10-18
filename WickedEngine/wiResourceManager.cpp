@@ -25,6 +25,9 @@
 #include <ImageIO/ImageIO.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <CoreGraphics/CoreGraphics.h>
+__asm__(".linker_option \"-framework\", \"ImageIO\"");
+__asm__(".linker_option \"-framework\", \"CoreFoundation\"");
+__asm__(".linker_option \"-framework\", \"CoreGraphics\"");
 #endif // __APPLE__
 
 using namespace wi::graphics;

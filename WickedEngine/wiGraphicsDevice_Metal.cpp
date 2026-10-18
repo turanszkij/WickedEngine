@@ -13,6 +13,16 @@
 #include <CoreMedia/CoreMedia.h>
 #include <CoreVideo/CoreVideo.h>
 
+// A static library does not pass its link flags on. These directives make this
+// object file pull the frameworks in when an app links Wicked Engine.
+__asm__(".linker_option \"-framework\", \"Foundation\"");
+__asm__(".linker_option \"-framework\", \"QuartzCore\"");
+__asm__(".linker_option \"-framework\", \"Metal\"");
+__asm__(".linker_option \"-framework\", \"CoreFoundation\"");
+__asm__(".linker_option \"-framework\", \"CoreVideo\"");
+__asm__(".linker_option \"-framework\", \"CoreMedia\"");
+__asm__(".linker_option \"-framework\", \"VideoToolbox\"");
+
 #include "Utility/h264.h"
 
 namespace wi::graphics

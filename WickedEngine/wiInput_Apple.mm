@@ -1,6 +1,7 @@
 #include "wiInput_Apple.h"
 
 #import <GameController/GameController.h>
+__asm__(".linker_option \"-framework\", \"GameController\"");
 
 #include <mutex>
 

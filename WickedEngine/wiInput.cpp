@@ -31,6 +31,8 @@
 #include "wiInput_Apple.h"
 #include <ApplicationServices/ApplicationServices.h>
 #include <Carbon/Carbon.h>
+__asm__(".linker_option \"-framework\", \"CoreGraphics\"");
+__asm__(".linker_option \"-framework\", \"ApplicationServices\"");
 namespace wi::input::apple
 {
 bool isLeftMouseButtonPressed()
