@@ -7649,14 +7649,15 @@ std::mutex queue_locker;
 			output.ConversionArguments.ReferenceSubresource = D3D12CalcSubresource(0, op->current_dpb, 0, op->DPB->desc.mip_levels, op->DPB->desc.array_size);
 		}
 
-		ID3D12Resource* reference_frames[16] = {};
-		UINT reference_subresources[16] = {};
-		for (size_t i = 0; i < op->DPB->desc.array_size; ++i)
+		ID3D12Resource* reference_frames[17] = {};
+		UINT reference_subresources[17] = {};
+		const UINT reference_count = std::min<UINT>((UINT)op->DPB->desc.array_size, 17u);
+		for (UINT i = 0; i < reference_count; ++i)
 		{
 			reference_frames[i] = dpb_internal->resource.Get();
-			reference_subresources[i] = D3D12CalcSubresource(0, (UINT)i, 0, op->DPB->desc.mip_levels, op->DPB->desc.array_size);
+			reference_subresources[i] = D3D12CalcSubresource(0, i, 0, op->DPB->desc.mip_levels, op->DPB->desc.array_size);
 		}
-		input.ReferenceFrames.NumTexture2Ds = arraysize(reference_frames);
+		input.ReferenceFrames.NumTexture2Ds = reference_count;
 		input.ReferenceFrames.ppTexture2Ds = reference_frames;
 		input.ReferenceFrames.pSubresources = reference_subresources;
 
@@ -7709,7 +7710,7 @@ std::mutex queue_locker;
 				pic_params_h264.FieldOrderCntList[i][1] = 0;
 				pic_params_h264.FrameNumList[i] = 0;
 			}
-			for (size_t i = 0; i < op->dpb_reference_count; ++i)
+			for (size_t i = 0; i < op->dpb_reference_count && i < 16; ++i)
 			{
 				uint32_t ref_slot = op->dpb_reference_slots[i];
 				assert(ref_slot != op->current_dpb);
@@ -7754,8 +7755,16 @@ std::mutex queue_locker;
 			pic_params_h264.StatusReportFeedbackNumber = (UINT)op->decoded_frame_index + 1; // shall not be 0
 			assert(pic_params_h264.StatusReportFeedbackNumber > 0);
 			pic_params_h264.ContinuationFlag = 1;
-			pic_params_h264.num_ref_idx_l0_active_minus1 = pps->num_ref_idx_l0_active_minus1;
-			pic_params_h264.num_ref_idx_l1_active_minus1 = pps->num_ref_idx_l1_active_minus1;
+			int ref_idx_l0 = pps->num_ref_idx_l0_active_minus1;
+			int ref_idx_l1 = pps->num_ref_idx_l1_active_minus1;
+			if (slice_header->num_ref_idx_active_override_flag)
+			{
+				ref_idx_l0 = slice_header->num_ref_idx_l0_active_minus1;
+				if (h264::is_slice_type(slice_header->slice_type, h264::SH_SLICE_TYPE_B))
+					ref_idx_l1 = slice_header->num_ref_idx_l1_active_minus1;
+			}
+			pic_params_h264.num_ref_idx_l0_active_minus1 = ref_idx_l0;
+			pic_params_h264.num_ref_idx_l1_active_minus1 = ref_idx_l1;
 			input.FrameArguments[input.NumFrameArguments].Type = D3D12_VIDEO_DECODE_ARGUMENT_TYPE_PICTURE_PARAMETERS;
 			input.FrameArguments[input.NumFrameArguments].Size = sizeof(pic_params_h264);
 			input.FrameArguments[input.NumFrameArguments].pData = &pic_params_h264;
