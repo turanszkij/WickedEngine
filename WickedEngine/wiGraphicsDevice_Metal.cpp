@@ -1097,9 +1097,6 @@ namespace metal_internal
 		uint64_t frames_decoded = 0;
 		bool logged_error = false;
 
-		// One NV12 upload buffer per in-flight copy. The GPU consumes it later, so a
-		// slot is reused only after BUFFERCOUNT frames. UINT64_MAX means the slot is free.
-		// 32 covers a catch-up burst; the steady-state slots are created with the decoder.
 		struct StagingSlot
 		{
 			NS::SharedPtr<MTL::Buffer> buffer;
@@ -1250,19 +1247,6 @@ namespace metal_internal
 		{
 			decoder->decoded = (CVPixelBufferRef)CFRetain(imageBuffer);
 		}
-	}
-
-	// Upper bound for the NV12 CPU-to-GPU copy. Matches VideoDecode's row layout at the texture size.
-	static uint64_t nv12_staging_bytes(MTL::Device* device, uint32_t luma_width, uint32_t luma_height, uint32_t chroma_width, uint32_t chroma_height)
-	{
-		const uint32_t luma_alignment = device->minimumLinearTextureAlignmentForPixelFormat(MTL::PixelFormatR8Unorm);
-		const uint32_t chroma_alignment = device->minimumLinearTextureAlignmentForPixelFormat(MTL::PixelFormatRG8Unorm);
-		const uint32_t luma_row = (uint32_t)align((uint64_t)std::max(luma_width, 1u), (uint64_t)luma_alignment);
-		const uint32_t chroma_row = (uint32_t)align((uint64_t)std::max(chroma_width * 2u, 1u), (uint64_t)chroma_alignment);
-		uint64_t size = (uint64_t)luma_row * std::max(luma_height, 1u);
-		size = align(size, (uint64_t)chroma_alignment);
-		size += (uint64_t)chroma_row * std::max(chroma_height, 1u);
-		return std::max(size, (uint64_t)16);
 	}
 
 	template<typename T> struct MetalType;
@@ -1767,7 +1751,6 @@ using namespace metal_internal;
 		capabilities |= GraphicsDeviceCapability::STENCIL_RESOLVE_MIN_MAX;
 		capabilities |= GraphicsDeviceCapability::MESH_SHADER;
 		capabilities |= GraphicsDeviceCapability::COPY_BETWEEN_DIFFERENT_IMAGE_ASPECTS_NOT_SUPPORTED;
-		// H264 is decoded with VideoToolbox into NV12. H265 is left disabled, same as the other backends.
 		capabilities |= GraphicsDeviceCapability::VIDEO_DECODE_H264;
 		
 		if (device->hasUnifiedMemory())
@@ -2966,19 +2949,17 @@ using namespace metal_internal;
 		internal_state->allocationhandler = allocationhandler;
 		video_decoder->internal_state = internal_state;
 		video_decoder->desc = *desc;
-		// VideoToolbox owns reference frames. The engine DPB texture is the shader-readable output surface.
-		// The decompression session is created on the first decode, once the bitstream is readable.
 		video_decoder->support = VideoDecoderSupportFlags::DPB_AND_OUTPUT_COINCIDE;
-
-		// One decode per frame stays in flight for BUFFERCOUNT frames, so keep that many
-		// upload buffers ready. A catch-up burst can still allocate up to kMaxStagingSlots.
-		const uint64_t staging_bytes = nv12_staging_bytes(
-			device.get(),
-			desc->width,
-			desc->height,
-			std::max(1u, desc->width / 2),
-			std::max(1u, desc->height / 2)
-		);
+		
+		const uint32_t luma_alignment = (uint32_t)device->minimumLinearTextureAlignmentForPixelFormat(MTL::PixelFormatR8Unorm);
+		const uint32_t chroma_alignment = (uint32_t)device->minimumLinearTextureAlignmentForPixelFormat(MTL::PixelFormatRG8Unorm);
+		const uint32_t luma_row = (uint32_t)align((uint64_t)std::max(desc->width, 1u), (uint64_t)luma_alignment);
+		const uint32_t chroma_row = (uint32_t)align((uint64_t)std::max(desc->width, 1u), (uint64_t)chroma_alignment);
+		uint64_t size = (uint64_t)luma_row * std::max(desc->height, 1u);
+		size = align(size, (uint64_t)chroma_alignment);
+		size += (uint64_t)chroma_row * std::max(desc->height / 2, 1u);
+		const uint64_t staging_bytes = std::max(size, (uint64_t)16);
+		
 		const uint32_t slot_count = std::min(VideoDecoder_Metal::kMaxStagingSlots, BUFFERCOUNT + 1);
 		for (uint32_t i = 0; i < slot_count; ++i)
 		{
@@ -5176,7 +5157,6 @@ using namespace metal_internal;
 				copy_width[i] = 0;
 				continue;
 			}
-			// Keep the GPU copy inside the source row. row_pitch was sized for the larger width.
 			const uint32_t max_pixels = (uint32_t)(src_stride / planes[i].bpp);
 			if (copy_width[i] > max_pixels)
 				copy_width[i] = max_pixels;
@@ -5196,7 +5176,6 @@ using namespace metal_internal;
 			if (copy_width[i] == 0 || copy_height[i] == 0)
 				continue;
 			const MTL::Size size = { copy_width[i], copy_height[i], 1u };
-			// 2D textures require bytesPerImage 0. Array textures need the image stride.
 			const NS::UInteger bytes_per_image = planes[i].texture->textureType() == MTL::TextureType2D ? 0 : (NS::UInteger)row_pitch[i] * copy_height[i];
 			commandlist.compute_encoder->copyFromBuffer(
 				staging.get(),
