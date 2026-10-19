@@ -221,7 +221,8 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 		light_color *= mask.rgb * mask.a;
 	}
 		
-	light_color *= attenuation_pointlight(dist2, range, light.GetRange2Rcp());
+	const half source_radius = light.GetRadius();
+	light_color *= attenuation_pointlight(max(dist2, source_radius * source_radius), range, light.GetRange2Rcp());
 
 	lighting.direct.diffuse = mad(light_color, BRDF_GetDiffuse(surface, surface_to_light), lighting.direct.diffuse);
 

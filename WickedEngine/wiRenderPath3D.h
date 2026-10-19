@@ -189,6 +189,7 @@ namespace wi
 		virtual void RenderVolumetrics(wi::graphics::CommandList cmd) const;
 		virtual void RenderSceneMIPChain(wi::graphics::CommandList cmd) const;
 		virtual void RenderTransparents(wi::graphics::CommandList cmd) const;
+		virtual void RenderCustomTransparents(const wi::scene::CameraComponent& camera, wi::graphics::CommandList cmd) const {}
 		virtual void RenderPostprocessChain(wi::graphics::CommandList cmd) const;
 
 		void DeleteGPUResources() override;

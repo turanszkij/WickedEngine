@@ -24,7 +24,7 @@ namespace wi::scene
 {
 	struct Scene
 	{
-		virtual ~Scene() = default;
+		virtual ~Scene();
 
 		wi::ecs::ComponentLibrary componentLibrary;
 

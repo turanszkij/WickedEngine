@@ -361,10 +361,20 @@ union ObjectRenderingVariant
 	uint32_t value;
 };
 static_assert(sizeof(ObjectRenderingVariant) == sizeof(uint32_t));
-inline PipelineState* GetObjectPSO(ObjectRenderingVariant variant)
+inline wi::unordered_map<uint32_t, PipelineState>& GetObjectPSOTable(ObjectRenderingVariant variant)
 {
 	static wi::unordered_map<uint32_t, PipelineState> PSO_object[RENDERPASS_COUNT][MaterialComponent::SHADERTYPE_COUNT][OBJECT_MESH_SHADER_PSO_COUNT];
-	return &PSO_object[variant.bits.renderpass][variant.bits.shadertype][variant.bits.mesh_shader][variant.value];
+	return PSO_object[variant.bits.renderpass][variant.bits.shadertype][variant.bits.mesh_shader];
+}
+inline PipelineState* GetObjectPSO(ObjectRenderingVariant variant)
+{
+	return &GetObjectPSOTable(variant)[variant.value];
+}
+inline const PipelineState* FindObjectPSO(ObjectRenderingVariant variant)
+{
+	const auto& table = GetObjectPSOTable(variant);
+	const auto it = table.find(variant.value);
+	return it == table.end() ? nullptr : &it->second;
 }
 wi::jobsystem::context mesh_shader_ctx;
 wi::jobsystem::context object_pso_job_ctx;
@@ -3328,12 +3338,12 @@ void RenderMeshes(
 					variant.bits.sample_count = renderpass_info.sample_count;
 					variant.bits.mesh_shader = meshShaderRequested;
 
-					pso = GetObjectPSO(variant);
+					pso = FindObjectPSO(variant);
 
 					if ((filterMask & FILTER_TRANSPARENT) && variant.bits.cullmode == (uint32_t)CullMode::NONE)
 					{
 						variant.bits.cullmode = (uint32_t)CullMode::FRONT;
-						pso_backside = GetObjectPSO(variant);
+						pso_backside = FindObjectPSO(variant);
 					}
 				}
 			}

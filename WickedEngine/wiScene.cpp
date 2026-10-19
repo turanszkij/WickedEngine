@@ -1166,8 +1166,19 @@ namespace wi::scene
 			entry.second.component_manager->Merge(*other.componentLibrary.entries[entry.first].component_manager);
 		}
 	}
+	Scene::~Scene()
+	{
+		if (wi::jobsystem::IsShuttingDown())
+			return;
+		wi::jobsystem::Wait(collider_bvh_workload);
+		wi::jobsystem::Wait(topdown_hierarchy_workload);
+		wi::jobsystem::Wait(animation_dependency_scan_workload);
+		wi::jobsystem::Wait(spring_dependency_scan_workload);
+	}
 	void Scene::Merge(Scene& other)
 	{
+		wi::jobsystem::Wait(collider_bvh_workload);
+		wi::jobsystem::Wait(other.collider_bvh_workload);
 		MergeFastInternal(other);
 
 		bounds = AABB::Merge(bounds, other.bounds);

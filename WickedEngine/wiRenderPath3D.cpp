@@ -1426,6 +1426,7 @@ namespace wi
 
 				wi::renderer::DrawSoftParticles(visibility_reflection, false, cmd);
 				wi::renderer::DrawSpritesAndFonts(*scene, camera_reflection, false, cmd);
+				RenderCustomTransparents(camera_reflection, cmd);
 
 				device->RenderPassEnd(cmd);
 
@@ -2242,6 +2243,7 @@ namespace wi
 		wi::renderer::DrawSoftParticles(visibility_main, false, cmd);
 		wi::renderer::DrawGaussianSplats(*scene, *camera, cmd);
 		wi::renderer::DrawSpritesAndFonts(*scene, *camera, false, cmd);
+		RenderCustomTransparents(*camera, cmd);
 
 		if (getVolumeLightsEnabled() && visibility_main.IsRequestedVolumetricLights())
 		{

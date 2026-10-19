@@ -1058,6 +1058,7 @@ namespace wi
 				resource = wi::allocator::make_shared<ResourceInternal>();
 				resources[name] = resource;
 				resource->filename = name;
+				resource->timestamp = timestamp;
 
 				// Rememeber the streaming file parameters, which is either the resource filename,
 				//	or it can be a specific filename and offset in the case when the file contained multiple resources
