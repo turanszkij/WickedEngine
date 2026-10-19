@@ -455,6 +455,13 @@ namespace wi::video
 					video->slice_header_datas.resize(track.sample_count * sizeof(h264::SliceHeader));
 					video->slice_header_count = track.sample_count;
 					uint32_t track_duration = 0;
+#ifdef __APPLE__
+					if (!parameter_sets.empty())
+					{
+						const uint8_t aud[] = { 0, 0, 0, 1, 0x09, 0xF0 };
+						parameter_sets.insert(parameter_sets.end(), aud, aud + sizeof(aud));
+					}
+#endif // __APPLE__
 					const uint64_t parameter_bytes = align((uint64_t)parameter_sets.size(), alignment);
 					uint64_t aligned_size = parameter_bytes;
 					for (uint32_t i = 0; i < track.sample_count; i++)
@@ -512,7 +519,11 @@ namespace wi::video
 
 							// Accept frame beginning NAL unit:
 							info.reference_priority = nal.idc;
+#ifdef __APPLE__
+							info.size = size;
+#else
 							info.size = sizeof(h264::nal_start_code) + size - 4;
+#endif // __APPLE__
 							break;
 						}
 
@@ -609,8 +620,12 @@ namespace wi::video
 									continue;
 								}
 
+#ifdef __APPLE__
+								std::memcpy(dst_buffer, src_buffer, size);
+#else
 								std::memcpy(dst_buffer, h264::nal_start_code, sizeof(h264::nal_start_code));
 								std::memcpy(dst_buffer + sizeof(h264::nal_start_code), src_buffer + 4, size - 4);
+#endif // __APPLE__
 								break;
 							}
 						}
@@ -745,6 +760,45 @@ namespace wi::video
 			}
 		}
 
+#ifdef __APPLE__
+		struct AppleSlice
+		{
+			const uint8_t* nal = nullptr;
+			size_t nal_size = 0;
+		};
+		wi::vector<AppleSlice> apple_slices(video->frame_infos.size());
+		for (size_t i = 0; i < video->frame_infos.size(); ++i)
+		{
+			const uint8_t* data = filedata + video->frame_infos[i].offset;
+			size_t size = (size_t)video->frame_infos[i].size;
+			size_t start = 0;
+			if (size >= 4 && data[0] == 0 && data[1] == 0 && data[2] == 0 && data[3] == 1)
+				start = 4;
+			else if (size >= 3 && data[0] == 0 && data[1] == 0 && data[2] == 1)
+				start = 3;
+			else
+			{
+				video->frame_infos[i].size = 0;
+				continue;
+			}
+			while (size > start && data[size - 1] == 0)
+				--size;
+			if (size <= start)
+			{
+				video->frame_infos[i].size = 0;
+				continue;
+			}
+			apple_slices[i].nal = data + start;
+			apple_slices[i].nal_size = size - start;
+			video->frame_infos[i].size = 4 + apple_slices[i].nal_size;
+		}
+		if (!parameter_sets.empty())
+		{
+			const uint8_t aud[] = { 0, 0, 0, 1, 0x09, 0xF0 };
+			parameter_sets.insert(parameter_sets.end(), aud, aud + sizeof(aud));
+		}
+#endif // __APPLE__
+
 		// Calculate the total aligned size of the bitstream buffer that will contain the slice datas:
 		const uint64_t alignment = device->GetVideoDecodeBitstreamAlignment();
 		const uint64_t parameter_bytes = align((uint64_t)parameter_sets.size(), alignment);
@@ -768,9 +822,25 @@ namespace wi::video
 				std::memset(dest, 0, (size_t)parameter_bytes);
 				std::memcpy(dest, parameter_sets.data(), parameter_sets.size());
 			}
+#ifdef __APPLE__
+			AppleSlice* slice = apple_slices.data();
+#endif // __APPLE__
 			for (Video::FrameInfo& frame_info : video->frame_infos)
 			{
+#ifdef __APPLE__
+				if (slice->nal != nullptr)
+				{
+					uint8_t* dst = (uint8_t*)dest + aligned_offset;
+					dst[0] = (uint8_t)(slice->nal_size >> 24);
+					dst[1] = (uint8_t)(slice->nal_size >> 16);
+					dst[2] = (uint8_t)(slice->nal_size >> 8);
+					dst[3] = (uint8_t)slice->nal_size;
+					std::memcpy(dst + 4, slice->nal, slice->nal_size);
+				}
+				++slice;
+#else
 				std::memcpy((uint8_t*)dest + aligned_offset, filedata + frame_info.offset, frame_info.size);
+#endif // __APPLE__
 				frame_info.offset = aligned_offset;
 				aligned_offset += align(frame_info.size, alignment);
 			}

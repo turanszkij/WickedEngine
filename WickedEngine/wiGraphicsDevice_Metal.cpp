@@ -1020,11 +1020,10 @@ namespace metal_internal
 
 
 
-	static bool collect_h264_parameter_sets(const uint8_t* data, size_t size, wi::vector<const uint8_t*>& sets, wi::vector<size_t>& sizes)
+	static bool collect_h264_parameter_sets(const uint8_t* data, size_t size, const uint8_t** sets, size_t* sizes, size_t& count, size_t max_sets)
 	{
-		sets.clear();
-		sizes.clear();
-		if (data == nullptr || size < 4)
+		count = 0;
+		if (data == nullptr || size < 4 || sets == nullptr || sizes == nullptr || max_sets == 0)
 			return false;
 		bool has_sps = false;
 		bool has_pps = false;
@@ -1038,57 +1037,8 @@ namespace metal_internal
 				start_code = 3;
 			else
 			{
-				++i;
-				continue;
-			}
-
-			const size_t nal_begin = i + start_code;
-			size_t nal_end = nal_begin;
-			while (nal_end + 3 <= size)
-			{
-				const bool short_code = data[nal_end] == 0 && data[nal_end + 1] == 0 && data[nal_end + 2] == 1;
-				const bool long_code = nal_end + 4 <= size && data[nal_end] == 0 && data[nal_end + 1] == 0 && data[nal_end + 2] == 0 && data[nal_end + 3] == 1;
-				if (short_code || long_code)
+				if (has_sps && has_pps)
 					break;
-				++nal_end;
-			}
-			while (nal_end > nal_begin && data[nal_end - 1] == 0)
-				--nal_end;
-			if (nal_end <= nal_begin)
-				break;
-
-			const uint8_t nal_type = data[nal_begin] & 0x1f;
-			if (nal_type == (uint8_t)h264::NAL_UNIT_TYPE_SPS || nal_type == (uint8_t)h264::NAL_UNIT_TYPE_PPS)
-			{
-				sets.push_back(data + nal_begin);
-				sizes.push_back(nal_end - nal_begin);
-				has_sps = has_sps || nal_type == (uint8_t)h264::NAL_UNIT_TYPE_SPS;
-				has_pps = has_pps || nal_type == (uint8_t)h264::NAL_UNIT_TYPE_PPS;
-			}
-			else if (nal_type >= (uint8_t)h264::NAL_UNIT_TYPE_CODED_SLICE_NON_IDR && nal_type <= (uint8_t)h264::NAL_UNIT_TYPE_CODED_SLICE_IDR)
-			{
-				break;
-			}
-			i = nal_end;
-		}
-		return has_sps && has_pps;
-	}
-
-	static bool annexb_to_avcc(const uint8_t* data, size_t size, wi::vector<uint8_t>& out)
-	{
-		out.clear();
-		if (data == nullptr || size < 4)
-			return false;
-		size_t i = 0;
-		while (i + 3 <= size)
-		{
-			size_t start_code = 0;
-			if (i + 4 <= size && data[i] == 0 && data[i + 1] == 0 && data[i + 2] == 0 && data[i + 3] == 1)
-				start_code = 4;
-			else if (data[i] == 0 && data[i + 1] == 0 && data[i + 2] == 1)
-				start_code = 3;
-			else
-			{
 				++i;
 				continue;
 			}
@@ -1108,31 +1058,32 @@ namespace metal_internal
 				++nal_end;
 			}
 			if (!found_next)
-				nal_end = size;
-			// Byte-stream framing can leave trailing_zero_8bits, or the next
-			// start code's zero_byte, after the NAL. A conforming NAL unit does
-			// not end in 0x00 (rbsp_trailing_bits has a stop bit). AVCC length
-			// covers only the NAL unit.
+				break;
 			while (nal_end > nal_begin && data[nal_end - 1] == 0)
 				--nal_end;
-			if (nal_end > nal_begin)
-			{
-				const uint32_t nal_size = (uint32_t)(nal_end - nal_begin);
-				const uint8_t length_prefix[4] = {
-					(uint8_t)(nal_size >> 24),
-					(uint8_t)(nal_size >> 16),
-					(uint8_t)(nal_size >> 8),
-					(uint8_t)nal_size,
-				};
-				out.insert(out.end(), length_prefix, length_prefix + 4);
-				out.insert(out.end(), data + nal_begin, data + nal_end);
-			}
-			if (nal_end == i)
+			if (nal_end <= nal_begin)
 				break;
+
+			const uint8_t nal_type = data[nal_begin] & 0x1f;
+			if (nal_type == (uint8_t)h264::NAL_UNIT_TYPE_SPS || nal_type == (uint8_t)h264::NAL_UNIT_TYPE_PPS)
+			{
+				if (count >= max_sets)
+					return false;
+				sets[count] = data + nal_begin;
+				sizes[count] = nal_end - nal_begin;
+				count++;
+				has_sps = has_sps || nal_type == (uint8_t)h264::NAL_UNIT_TYPE_SPS;
+				has_pps = has_pps || nal_type == (uint8_t)h264::NAL_UNIT_TYPE_PPS;
+			}
+			else if (nal_type >= (uint8_t)h264::NAL_UNIT_TYPE_CODED_SLICE_NON_IDR && nal_type <= (uint8_t)h264::NAL_UNIT_TYPE_CODED_SLICE_IDR)
+			{
+				break;
+			}
 			i = nal_end;
 		}
-		return !out.empty();
+		return has_sps && has_pps;
 	}
+
 	static void video_output_callback(void* decompressionOutputRefCon, void* sourceFrameRefCon, OSStatus status, VTDecodeInfoFlags infoFlags, CVImageBufferRef imageBuffer, CMTime presentationTimeStamp, CMTime presentationDuration);
 	struct VideoDecoder_Metal
 	{
@@ -1140,10 +1091,24 @@ namespace metal_internal
 		CMVideoFormatDescriptionRef format_desc = nullptr;
 		VTDecompressionSessionRef session = nullptr;
 		CVPixelBufferRef decoded = nullptr;
+		CFDictionaryRef output_attrs = nullptr;
 		std::mutex locker;
 		OSStatus decode_status = noErr;
 		uint64_t frames_decoded = 0;
 		bool logged_error = false;
+
+		// One NV12 upload buffer per in-flight copy. The GPU consumes it later, so a
+		// slot is reused only after BUFFERCOUNT frames. UINT64_MAX means the slot is free.
+		// 32 covers a catch-up burst; the steady-state slots are created with the decoder.
+		struct StagingSlot
+		{
+			NS::SharedPtr<MTL::Buffer> buffer;
+			uint64_t capacity = 0;
+			uint64_t frame = UINT64_MAX;
+		};
+		static constexpr uint32_t kMaxStagingSlots = 32;
+		StagingSlot staging[kMaxStagingSlots] = {};
+		uint32_t staging_count = 0;
 		
 		~VideoDecoder_Metal()
 		{
@@ -1153,14 +1118,30 @@ namespace metal_internal
 				CFRelease(format_desc);
 				format_desc = nullptr;
 			}
+			if (output_attrs != nullptr)
+			{
+				CFRelease(output_attrs);
+				output_attrs = nullptr;
+			}
+			if (allocationhandler != nullptr)
+			{
+				std::scoped_lock lock(allocationhandler->destroylocker);
+				for (uint32_t i = 0; i < staging_count; ++i)
+				{
+					if (staging[i].buffer.get() != nullptr)
+						allocationhandler->destroyer_resources.push_back(std::make_pair(staging[i].buffer, allocationhandler->framecount));
+				}
+			}
+			staging_count = 0;
 		}
 		bool ensure_format(const uint8_t* data, size_t size)
 		{
 			if (format_desc != nullptr)
 				return true;
-			wi::vector<const uint8_t*> parameter_sets;
-			wi::vector<size_t> parameter_sizes;
-			if (!collect_h264_parameter_sets(data, size, parameter_sets, parameter_sizes))
+			const uint8_t* parameter_sets[8] = {};
+			size_t parameter_sizes[8] = {};
+			size_t parameter_count = 0;
+			if (!collect_h264_parameter_sets(data, size, parameter_sets, parameter_sizes, parameter_count, arraysize(parameter_sets)))
 			{
 				log_once("Metal H264 decoder did not find SPS and PPS in the bitstream");
 				return false;
@@ -1168,9 +1149,9 @@ namespace metal_internal
 			CMVideoFormatDescriptionRef created = nullptr;
 			const OSStatus status = CMVideoFormatDescriptionCreateFromH264ParameterSets(
 				kCFAllocatorDefault,
-				parameter_sets.size(),
-				parameter_sets.data(),
-				parameter_sizes.data(),
+				parameter_count,
+				parameter_sets,
+				parameter_sizes,
 				4,
 				&created
 			);
@@ -1182,12 +1163,10 @@ namespace metal_internal
 			format_desc = created;
 			return true;
 		}
-		bool create_session()
+		bool ensure_output_attrs()
 		{
-			destroy_session();
-			if (format_desc == nullptr)
-				return false;
-
+			if (output_attrs != nullptr)
+				return true;
 			// Leave width and height unset so VideoToolbox keeps the native coded size.
 			// Forcing the macroblock-padded size makes it scale the picture.
 			int32_t pixel_format = kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange;
@@ -1203,17 +1182,21 @@ namespace metal_internal
 				kCFBooleanTrue,
 				io_surface,
 			};
-			CFDictionaryRef attrs = CFDictionaryCreate(kCFAllocatorDefault, keys, values, arraysize(keys), &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+			output_attrs = CFDictionaryCreate(kCFAllocatorDefault, keys, values, arraysize(keys), &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+			CFRelease(io_surface);
+			CFRelease(pixel_format_num);
+			return output_attrs != nullptr;
+		}
+		bool create_session()
+		{
+			destroy_session();
+			if (format_desc == nullptr || !ensure_output_attrs())
+				return false;
 
 			VTDecompressionOutputCallbackRecord callback = {};
 			callback.decompressionOutputCallback = video_output_callback;
 			callback.decompressionOutputRefCon = this;
-			const OSStatus status = VTDecompressionSessionCreate(kCFAllocatorDefault, format_desc, nullptr, attrs, &callback, &session);
-
-			CFRelease(attrs);
-			CFRelease(io_surface);
-			CFRelease(pixel_format_num);
-
+			const OSStatus status = VTDecompressionSessionCreate(kCFAllocatorDefault, format_desc, nullptr, output_attrs, &callback, &session);
 			if (status != noErr || session == nullptr)
 			{
 				wilog_error("VTDecompressionSessionCreate failed (%d)", (int)status);
@@ -1267,6 +1250,19 @@ namespace metal_internal
 		{
 			decoder->decoded = (CVPixelBufferRef)CFRetain(imageBuffer);
 		}
+	}
+
+	// Upper bound for the NV12 CPU-to-GPU copy. Matches VideoDecode's row layout at the texture size.
+	static uint64_t nv12_staging_bytes(MTL::Device* device, uint32_t luma_width, uint32_t luma_height, uint32_t chroma_width, uint32_t chroma_height)
+	{
+		const uint32_t luma_alignment = device->minimumLinearTextureAlignmentForPixelFormat(MTL::PixelFormatR8Unorm);
+		const uint32_t chroma_alignment = device->minimumLinearTextureAlignmentForPixelFormat(MTL::PixelFormatRG8Unorm);
+		const uint32_t luma_row = (uint32_t)align((uint64_t)std::max(luma_width, 1u), (uint64_t)luma_alignment);
+		const uint32_t chroma_row = (uint32_t)align((uint64_t)std::max(chroma_width * 2u, 1u), (uint64_t)chroma_alignment);
+		uint64_t size = (uint64_t)luma_row * std::max(luma_height, 1u);
+		size = align(size, (uint64_t)chroma_alignment);
+		size += (uint64_t)chroma_row * std::max(chroma_height, 1u);
+		return std::max(size, (uint64_t)16);
 	}
 
 	template<typename T> struct MetalType;
@@ -2973,6 +2969,28 @@ using namespace metal_internal;
 		// VideoToolbox owns reference frames. The engine DPB texture is the shader-readable output surface.
 		// The decompression session is created on the first decode, once the bitstream is readable.
 		video_decoder->support = VideoDecoderSupportFlags::DPB_AND_OUTPUT_COINCIDE;
+
+		// One decode per frame stays in flight for BUFFERCOUNT frames, so keep that many
+		// upload buffers ready. A catch-up burst can still allocate up to kMaxStagingSlots.
+		const uint64_t staging_bytes = nv12_staging_bytes(
+			device.get(),
+			desc->width,
+			desc->height,
+			std::max(1u, desc->width / 2),
+			std::max(1u, desc->height / 2)
+		);
+		const uint32_t slot_count = std::min(VideoDecoder_Metal::kMaxStagingSlots, BUFFERCOUNT + 1);
+		for (uint32_t i = 0; i < slot_count; ++i)
+		{
+			NS::SharedPtr<MTL::Buffer> created = NS::TransferPtr(device->newBuffer(staging_bytes, MTL::ResourceStorageModeShared | MTL::ResourceOptionCPUCacheModeWriteCombined));
+			if (created.get() == nullptr)
+				break;
+			allocationhandler->make_resident(created.get());
+			VideoDecoder_Metal::StagingSlot& slot = internal_state->staging[internal_state->staging_count++];
+			slot.buffer = created;
+			slot.capacity = created->length();
+			slot.frame = UINT64_MAX;
+		}
 		return true;
 	}
 
@@ -4979,23 +4997,21 @@ using namespace metal_internal;
 			return;
 		}
 
-		wi::vector<uint8_t> avcc;
-		const uint8_t* bitstream = (const uint8_t*)op->stream->mapped_data + op->stream_offset;
-		if (!annexb_to_avcc(bitstream, (size_t)op->stream_size, avcc))
+		if (op->stream_size < 4)
 		{
-			decoder->log_once("Metal video decoder failed to parse Annex-B bitstream");
+			decoder->log_once("Metal video decoder bitstream frame is empty");
 			return;
 		}
-
+		
 		CMBlockBufferRef block = nullptr;
 		OSStatus status = CMBlockBufferCreateWithMemoryBlock(
 			kCFAllocatorDefault,
-			avcc.data(),
-			avcc.size(),
+			op->stream->mapped_data,
+			op->stream->mapped_size,
 			kCFAllocatorNull,
 			nullptr,
-			0,
-			avcc.size(),
+			(size_t)op->stream_offset,
+			(size_t)op->stream_size,
 			0,
 			&block
 		);
@@ -5004,7 +5020,7 @@ using namespace metal_internal;
 			decoder->log_once("CMBlockBufferCreateWithMemoryBlock failed");
 			return;
 		}
-		const size_t sample_size = avcc.size();
+		const size_t sample_size = (size_t)op->stream_size;
 		CMSampleBufferRef sample = nullptr;
 		status = CMSampleBufferCreateReady(
 			kCFAllocatorDefault,
@@ -5108,13 +5124,46 @@ using namespace metal_internal;
 			staging_size = plane_offset[i] + (uint64_t)row_pitch[i] * std::max(copy_height[i], 1u);
 		}
 
-		NS::SharedPtr<MTL::Buffer> staging = NS::TransferPtr(device->newBuffer(std::max(staging_size, (uint64_t)16), MTL::ResourceStorageModeShared | MTL::ResourceOptionCPUCacheModeWriteCombined));
+		uint64_t frame_index = 0;
+		{
+			std::scoped_lock lock(allocationhandler->destroylocker);
+			frame_index = allocationhandler->framecount;
+		}
+		NS::SharedPtr<MTL::Buffer> staging;
+		bool retire_staging = false;
+		for (uint32_t i = 0; i < decoder->staging_count; ++i)
+		{
+			VideoDecoder_Metal::StagingSlot& slot = decoder->staging[i];
+			if (slot.capacity >= staging_size && (slot.frame == UINT64_MAX || slot.frame + BUFFERCOUNT < frame_index))
+			{
+				slot.frame = frame_index;
+				staging = slot.buffer;
+				break;
+			}
+		}
 		if (staging.get() == nullptr)
 		{
-			CVPixelBufferUnlockBaseAddress(frame, kCVPixelBufferLock_ReadOnly);
-			CFRelease(frame);
-			decoder->log_once("Metal video decoder staging buffer allocation failed");
-			return;
+			NS::SharedPtr<MTL::Buffer> created = NS::TransferPtr(device->newBuffer(std::max(staging_size, (uint64_t)16), MTL::ResourceStorageModeShared | MTL::ResourceOptionCPUCacheModeWriteCombined));
+			if (created.get() == nullptr)
+			{
+				CVPixelBufferUnlockBaseAddress(frame, kCVPixelBufferLock_ReadOnly);
+				CFRelease(frame);
+				decoder->log_once("Metal video decoder staging buffer allocation failed");
+				return;
+			}
+			allocationhandler->make_resident(created.get());
+			if (decoder->staging_count < VideoDecoder_Metal::kMaxStagingSlots)
+			{
+				VideoDecoder_Metal::StagingSlot& slot = decoder->staging[decoder->staging_count++];
+				slot.buffer = created;
+				slot.capacity = created->length();
+				slot.frame = frame_index;
+			}
+			else
+			{
+				retire_staging = true;
+			}
+			staging = created;
 		}
 		uint8_t* staging_data = (uint8_t*)staging->contents();
 		for (uint32_t i = 0; i < 2; ++i)
@@ -5140,7 +5189,6 @@ using namespace metal_internal;
 		CVPixelBufferUnlockBaseAddress(frame, kCVPixelBufferLock_ReadOnly);
 		CFRelease(frame);
 
-		allocationhandler->make_resident(staging.get());
 		precopy(cmd);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
 		for (uint32_t i = 0; i < 2; ++i)
@@ -5163,9 +5211,11 @@ using namespace metal_internal;
 			);
 		}
 
-		allocationhandler->destroylocker.lock();
-		allocationhandler->destroyer_resources.push_back(std::make_pair(staging, allocationhandler->framecount));
-		allocationhandler->destroylocker.unlock();
+		if (retire_staging)
+		{
+			std::scoped_lock lock(allocationhandler->destroylocker);
+			allocationhandler->destroyer_resources.push_back(std::make_pair(staging, allocationhandler->framecount));
+		}
 		decoder->frames_decoded++;
 	}
 
