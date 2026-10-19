@@ -6195,10 +6195,7 @@ std::mutex queue_locker;
 						D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS& params = commandlist.resolve_subresources[rt_resolve_count].emplace_back();
 						params.SrcSubresource = D3D12CalcSubresource(resolve_src_info.firstMip + mip, resolve_src_info.firstSlice + slice, 0, resolve_src_info.total_mipCount, resolve_src_info.total_sliceCount);
 						params.DstSubresource = D3D12CalcSubresource(descriptor.firstMip + mip, descriptor.firstSlice + slice, 0, desc.mip_levels, desc.array_size);
-						params.SrcRect.left = 0;
-						params.SrcRect.top = 0;
-						params.SrcRect.right = (LONG)desc.width;
-						params.SrcRect.bottom = (LONG)desc.height;
+						params.SrcRect = {};
 					}
 				}
 				RTV.EndingAccess.Resolve.pSubresourceParameters = commandlist.resolve_subresources[rt_resolve_count].data();
@@ -6267,10 +6264,7 @@ std::mutex queue_locker;
 						D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS& params = commandlist.resolve_subresources_dsv.emplace_back();
 						params.SrcSubresource = D3D12CalcSubresource(DS_resolve_src_info.firstMip + mip, DS_resolve_src_info.firstSlice + slice, 0, DS_resolve_src_info.total_mipCount, DS_resolve_src_info.total_sliceCount);
 						params.DstSubresource = D3D12CalcSubresource(descriptor.firstMip + mip, descriptor.firstSlice + slice, 0, desc.mip_levels, desc.array_size);
-						params.SrcRect.left = 0;
-						params.SrcRect.top = 0;
-						params.SrcRect.right = (LONG)desc.width;
-						params.SrcRect.bottom = (LONG)desc.height;
+						params.SrcRect = {};
 					}
 				}
 				DSV.DepthEndingAccess.Resolve.pSubresourceParameters = commandlist.resolve_subresources_dsv.data();
