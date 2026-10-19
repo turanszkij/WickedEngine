@@ -9,6 +9,7 @@
 //		- Sequence Parameter Set (SPS)
 //		- Picture Parameter Set (PPS)
 //		- Slices (SliceHeader)
+//	- write SPS and PPS structures back into NAL bytes
 //
 // What this library doesn't do:
 //	- read from MP4 file
@@ -46,6 +47,10 @@
 //	}
 //
 // 4) repeat until you have extracted all that you require or the data ends
+//
+// 5) Write an SPS or PPS structure back into NAL bytes (header + RBSP, no start code):
+//	unsigned char nal[1024];
+//	int nal_bytes = write_sps(&sps, nal, 1024);
 //
 // 
 //	MIT License (see the end of this file)
@@ -1045,6 +1050,359 @@ namespace h264 {
 			const int v = intlog2(pps->pic_size_in_map_units_minus1 + pps->slice_group_change_rate_minus1 + 1);
 			sh->slice_group_change_cycle = b->u(v);
 		}
+	}
+
+	struct BitWriter
+	{
+		unsigned char storage[1024];
+		int nbytes;
+		unsigned char cur;
+		int bits_left;
+		bool overflow;
+
+		constexpr void reset()
+		{
+			nbytes = 0;
+			cur = 0;
+			bits_left = 8;
+			overflow = false;
+		}
+		constexpr void bit(unsigned value)
+		{
+			if (overflow)
+				return;
+			if (bits_left == 8 && nbytes >= (int)sizeof(storage))
+			{
+				overflow = true;
+				return;
+			}
+			--bits_left;
+			cur |= (unsigned char)((value & 1u) << bits_left);
+			if (bits_left == 0)
+			{
+				storage[nbytes++] = cur;
+				cur = 0;
+				bits_left = 8;
+			}
+		}
+		constexpr void u(int n, unsigned value)
+		{
+			for (int i = n - 1; i >= 0; --i)
+				bit((value >> i) & 1u);
+		}
+		constexpr void ue(unsigned value)
+		{
+			unsigned code = value + 1u;
+			int zeros = 0;
+			unsigned rest = code;
+			while (rest > 1u)
+			{
+				rest >>= 1;
+				++zeros;
+			}
+			for (int i = 0; i < zeros; ++i)
+				bit(0);
+			u(zeros + 1, code);
+		}
+		constexpr void se(int value)
+		{
+			unsigned code = value <= 0 ? (unsigned)(-value) << 1 : ((unsigned)value << 1) - 1u;
+			ue(code);
+		}
+		constexpr void trailing()
+		{
+			bit(1);
+			while (bits_left != 8)
+				bit(0);
+		}
+		constexpr void scaling_list(const int* list, int count, int use_default)
+		{
+			if (use_default)
+			{
+				se(-8);
+				return;
+			}
+			int last = 8;
+			for (int j = 0; j < count; ++j)
+			{
+				int next = list[j];
+				int delta = next - last;
+				delta %= 256;
+				if (delta < 0)
+					delta += 256;
+				if (delta > 127)
+					delta -= 256;
+				se(delta);
+				last = next;
+			}
+		}
+		constexpr void hrd(const SPS* sps)
+		{
+			int count = sps->hrd.cpb_cnt_minus1;
+			if (count < 0)
+				count = 0;
+			if (count > MAX_CPB_CNT_MINUS1)
+				count = MAX_CPB_CNT_MINUS1;
+			ue((unsigned)count);
+			u(4, (unsigned)sps->hrd.bit_rate_scale);
+			u(4, (unsigned)sps->hrd.cpb_size_scale);
+			for (int i = 0; i <= count; ++i)
+			{
+				ue((unsigned)sps->hrd.bit_rate_value_minus1[i]);
+				ue((unsigned)sps->hrd.cpb_size_value_minus1[i]);
+				u(1, (unsigned)sps->hrd.cbr_flag[i]);
+			}
+			u(5, (unsigned)sps->hrd.initial_cpb_removal_delay_length_minus1);
+			u(5, (unsigned)sps->hrd.cpb_removal_delay_length_minus1);
+			u(5, (unsigned)sps->hrd.dpb_output_delay_length_minus1);
+			u(5, (unsigned)sps->hrd.time_offset_length);
+		}
+		constexpr void vui(const SPS* sps)
+		{
+			u(1, (unsigned)sps->vui.aspect_ratio_info_present_flag);
+			if (sps->vui.aspect_ratio_info_present_flag)
+			{
+				u(8, (unsigned)sps->vui.aspect_ratio_idc);
+				if (sps->vui.aspect_ratio_idc == 255)
+				{
+					u(16, (unsigned)sps->vui.sar_width);
+					u(16, (unsigned)sps->vui.sar_height);
+				}
+			}
+			u(1, (unsigned)sps->vui.overscan_info_present_flag);
+			if (sps->vui.overscan_info_present_flag)
+				u(1, (unsigned)sps->vui.overscan_appropriate_flag);
+			u(1, (unsigned)sps->vui.video_signal_type_present_flag);
+			if (sps->vui.video_signal_type_present_flag)
+			{
+				u(3, (unsigned)sps->vui.video_format);
+				u(1, (unsigned)sps->vui.video_full_range_flag);
+				u(1, (unsigned)sps->vui.colour_description_present_flag);
+				if (sps->vui.colour_description_present_flag)
+				{
+					u(8, (unsigned)sps->vui.colour_primaries);
+					u(8, (unsigned)sps->vui.transfer_characteristics);
+					u(8, (unsigned)sps->vui.matrix_coefficients);
+				}
+			}
+			u(1, (unsigned)sps->vui.chroma_loc_info_present_flag);
+			if (sps->vui.chroma_loc_info_present_flag)
+			{
+				ue((unsigned)sps->vui.chroma_sample_loc_type_top_field);
+				ue((unsigned)sps->vui.chroma_sample_loc_type_bottom_field);
+			}
+			u(1, (unsigned)sps->vui.timing_info_present_flag);
+			if (sps->vui.timing_info_present_flag)
+			{
+				u(32, (unsigned)sps->vui.num_units_in_tick);
+				u(32, (unsigned)sps->vui.time_scale);
+				u(1, (unsigned)sps->vui.fixed_frame_rate_flag);
+			}
+			u(1, (unsigned)sps->vui.nal_hrd_parameters_present_flag);
+			if (sps->vui.nal_hrd_parameters_present_flag)
+				hrd(sps);
+			u(1, (unsigned)sps->vui.vcl_hrd_parameters_present_flag);
+			if (sps->vui.vcl_hrd_parameters_present_flag)
+				hrd(sps);
+			if (sps->vui.nal_hrd_parameters_present_flag || sps->vui.vcl_hrd_parameters_present_flag)
+				u(1, (unsigned)sps->vui.low_delay_hrd_flag);
+			u(1, (unsigned)sps->vui.pic_struct_present_flag);
+			u(1, (unsigned)sps->vui.bitstream_restriction_flag);
+			if (sps->vui.bitstream_restriction_flag)
+			{
+				u(1, (unsigned)sps->vui.motion_vectors_over_pic_boundaries_flag);
+				ue((unsigned)sps->vui.max_bytes_per_pic_denom);
+				ue((unsigned)sps->vui.max_bits_per_mb_denom);
+				ue((unsigned)sps->vui.log2_max_mv_length_horizontal);
+				ue((unsigned)sps->vui.log2_max_mv_length_vertical);
+				ue((unsigned)sps->vui.num_reorder_frames);
+				ue((unsigned)sps->vui.max_dec_frame_buffering);
+			}
+		}
+		constexpr int emit(unsigned char header, unsigned char* dst, int dst_size)
+		{
+			trailing();
+			if (overflow || dst_size <= 0)
+				return 0;
+			int written = 0;
+			if (written >= dst_size)
+				return 0;
+			dst[written++] = header;
+			int zeros = 0;
+			for (int i = 0; i < nbytes; ++i)
+			{
+				const unsigned char value = storage[i];
+				if (zeros == 2 && value <= 3)
+				{
+					if (written >= dst_size)
+						return 0;
+					dst[written++] = 3;
+					zeros = 0;
+				}
+				if (written >= dst_size)
+					return 0;
+				dst[written++] = value;
+				zeros = value == 0 ? zeros + 1 : 0;
+			}
+			return written;
+		}
+	};
+
+	constexpr int write_sps(const SPS* sps, unsigned char* dst, int dst_size)
+	{
+		BitWriter writer = {};
+		writer.reset();
+		writer.u(8, (unsigned)sps->profile_idc);
+		writer.u(1, (unsigned)sps->constraint_set0_flag);
+		writer.u(1, (unsigned)sps->constraint_set1_flag);
+		writer.u(1, (unsigned)sps->constraint_set2_flag);
+		writer.u(1, (unsigned)sps->constraint_set3_flag);
+		writer.u(1, (unsigned)sps->constraint_set4_flag);
+		writer.u(1, (unsigned)sps->constraint_set5_flag);
+		writer.u(2, 0);
+		writer.u(8, (unsigned)sps->level_idc);
+		writer.ue((unsigned)sps->seq_parameter_set_id);
+		const int profile = sps->profile_idc;
+		if (profile == 100 || profile == 110 || profile == 122 || profile == 144)
+		{
+			writer.ue((unsigned)sps->chroma_format_idc);
+			if (sps->chroma_format_idc == 3)
+				writer.u(1, (unsigned)sps->separate_colour_plane_flag);
+			writer.ue((unsigned)sps->bit_depth_luma_minus8);
+			writer.ue((unsigned)sps->bit_depth_chroma_minus8);
+			writer.u(1, (unsigned)sps->qpprime_y_zero_transform_bypass_flag);
+			writer.u(1, (unsigned)sps->seq_scaling_matrix_present_flag);
+			if (sps->seq_scaling_matrix_present_flag)
+			{
+				for (int i = 0; i < 8; ++i)
+				{
+					writer.u(1, (unsigned)sps->seq_scaling_list_present_flag[i]);
+					if (sps->seq_scaling_list_present_flag[i])
+					{
+						if (i < 6)
+							writer.scaling_list(sps->ScalingList4x4[i], 16, sps->UseDefaultScalingMatrix4x4Flag[i]);
+						else
+							writer.scaling_list(sps->ScalingList8x8[i - 6], 64, sps->UseDefaultScalingMatrix8x8Flag[i - 6]);
+					}
+				}
+			}
+		}
+		writer.ue((unsigned)sps->log2_max_frame_num_minus4);
+		writer.ue((unsigned)sps->pic_order_cnt_type);
+		if (sps->pic_order_cnt_type == 0)
+			writer.ue((unsigned)sps->log2_max_pic_order_cnt_lsb_minus4);
+		else if (sps->pic_order_cnt_type == 1)
+		{
+			writer.u(1, (unsigned)sps->delta_pic_order_always_zero_flag);
+			writer.se(sps->offset_for_non_ref_pic);
+			writer.se(sps->offset_for_top_to_bottom_field);
+			int cycle = sps->num_ref_frames_in_pic_order_cnt_cycle;
+			if (cycle < 0)
+				cycle = 0;
+			if (cycle > MAX_NUM_REF_FRAMES_IN_PIC_ORDER_CNT_CYCLE)
+				cycle = MAX_NUM_REF_FRAMES_IN_PIC_ORDER_CNT_CYCLE;
+			writer.ue((unsigned)cycle);
+			for (int i = 0; i < cycle; ++i)
+				writer.se(sps->offset_for_ref_frame[i]);
+		}
+		writer.ue((unsigned)sps->num_ref_frames);
+		writer.u(1, (unsigned)sps->gaps_in_frame_num_value_allowed_flag);
+		writer.ue((unsigned)sps->pic_width_in_mbs_minus1);
+		writer.ue((unsigned)sps->pic_height_in_map_units_minus1);
+		writer.u(1, (unsigned)sps->frame_mbs_only_flag);
+		if (!sps->frame_mbs_only_flag)
+			writer.u(1, (unsigned)sps->mb_adaptive_frame_field_flag);
+		writer.u(1, (unsigned)sps->direct_8x8_inference_flag);
+		writer.u(1, (unsigned)sps->frame_cropping_flag);
+		if (sps->frame_cropping_flag)
+		{
+			writer.ue((unsigned)sps->frame_crop_left_offset);
+			writer.ue((unsigned)sps->frame_crop_right_offset);
+			writer.ue((unsigned)sps->frame_crop_top_offset);
+			writer.ue((unsigned)sps->frame_crop_bottom_offset);
+		}
+		writer.u(1, (unsigned)sps->vui_parameters_present_flag);
+		if (sps->vui_parameters_present_flag)
+			writer.vui(sps);
+		const unsigned char header = (unsigned char)((NAL_REF_IDC_PRIORITY_HIGHEST << 5) | NAL_UNIT_TYPE_SPS);
+		return writer.emit(header, dst, dst_size);
+	}
+
+	constexpr int write_pps(const PPS* pps, unsigned char* dst, int dst_size)
+	{
+		BitWriter writer = {};
+		writer.reset();
+		writer.ue((unsigned)pps->pic_parameter_set_id);
+		writer.ue((unsigned)pps->seq_parameter_set_id);
+		writer.u(1, (unsigned)pps->entropy_coding_mode_flag);
+		writer.u(1, (unsigned)pps->pic_order_present_flag);
+		writer.ue((unsigned)pps->num_slice_groups_minus1);
+		if (pps->num_slice_groups_minus1 > 0)
+		{
+			writer.ue((unsigned)pps->slice_group_map_type);
+			if (pps->slice_group_map_type == 0)
+			{
+				for (int i = 0; i <= pps->num_slice_groups_minus1 && i <= MAX_NUM_SLICE_GROUPS_MINUS1; ++i)
+					writer.ue((unsigned)pps->run_length_minus1[i]);
+			}
+			else if (pps->slice_group_map_type == 2)
+			{
+				for (int i = 0; i < pps->num_slice_groups_minus1 && i <= MAX_NUM_SLICE_GROUPS_MINUS1; ++i)
+				{
+					writer.ue((unsigned)pps->top_left[i]);
+					writer.ue((unsigned)pps->bottom_right[i]);
+				}
+			}
+			else if (pps->slice_group_map_type == 3 || pps->slice_group_map_type == 4 || pps->slice_group_map_type == 5)
+			{
+				writer.u(1, (unsigned)pps->slice_group_change_direction_flag);
+				writer.ue((unsigned)pps->slice_group_change_rate_minus1);
+			}
+			else if (pps->slice_group_map_type == 6)
+			{
+				writer.ue((unsigned)pps->pic_size_in_map_units_minus1);
+				const int bits = intlog2(pps->num_slice_groups_minus1 + 1);
+				int count = pps->pic_size_in_map_units_minus1;
+				if (count > MAX_SLICE_GROUP_IDS - 1)
+					count = MAX_SLICE_GROUP_IDS - 1;
+				for (int i = 0; i <= count; ++i)
+					writer.u(bits, (unsigned)pps->slice_group_id[i]);
+			}
+		}
+		writer.ue((unsigned)pps->num_ref_idx_l0_active_minus1);
+		writer.ue((unsigned)pps->num_ref_idx_l1_active_minus1);
+		writer.u(1, (unsigned)pps->weighted_pred_flag);
+		writer.u(2, (unsigned)pps->weighted_bipred_idc);
+		writer.se(pps->pic_init_qp_minus26);
+		writer.se(pps->pic_init_qs_minus26);
+		writer.se(pps->chroma_qp_index_offset);
+		writer.u(1, (unsigned)pps->deblocking_filter_control_present_flag);
+		writer.u(1, (unsigned)pps->constrained_intra_pred_flag);
+		writer.u(1, (unsigned)pps->redundant_pic_cnt_present_flag);
+		const bool more = pps->transform_8x8_mode_flag || pps->pic_scaling_matrix_present_flag || pps->second_chroma_qp_index_offset != pps->chroma_qp_index_offset;
+		if (more)
+		{
+			writer.u(1, (unsigned)pps->transform_8x8_mode_flag);
+			writer.u(1, (unsigned)pps->pic_scaling_matrix_present_flag);
+			if (pps->pic_scaling_matrix_present_flag)
+			{
+				const int count = 6 + 2 * pps->transform_8x8_mode_flag;
+				for (int i = 0; i < count; ++i)
+				{
+					writer.u(1, (unsigned)pps->pic_scaling_list_present_flag[i]);
+					if (pps->pic_scaling_list_present_flag[i])
+					{
+						if (i < 6)
+							writer.scaling_list(pps->ScalingList4x4[i], 16, pps->UseDefaultScalingMatrix4x4Flag[i]);
+						else
+							writer.scaling_list(pps->ScalingList8x8[i - 6], 64, pps->UseDefaultScalingMatrix8x8Flag[i - 6]);
+					}
+				}
+			}
+			writer.se(pps->second_chroma_qp_index_offset);
+		}
+		const unsigned char header = (unsigned char)((NAL_REF_IDC_PRIORITY_HIGHEST << 5) | NAL_UNIT_TYPE_PPS);
+		return writer.emit(header, dst, dst_size);
 	}
 
 }

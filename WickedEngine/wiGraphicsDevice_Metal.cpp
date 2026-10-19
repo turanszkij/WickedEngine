@@ -9,6 +9,19 @@
 #include "wiBacklog.h"
 
 #include <Metal/MTL4AccelerationStructure.hpp>
+#include <VideoToolbox/VideoToolbox.h>
+#include <CoreMedia/CoreMedia.h>
+#include <CoreVideo/CoreVideo.h>
+
+__asm__(".linker_option \"-framework\", \"Foundation\"");
+__asm__(".linker_option \"-framework\", \"QuartzCore\"");
+__asm__(".linker_option \"-framework\", \"Metal\"");
+__asm__(".linker_option \"-framework\", \"CoreFoundation\"");
+__asm__(".linker_option \"-framework\", \"CoreVideo\"");
+__asm__(".linker_option \"-framework\", \"CoreMedia\"");
+__asm__(".linker_option \"-framework\", \"VideoToolbox\"");
+
+#include "Utility/h264.h"
 
 namespace wi::graphics
 {
@@ -771,6 +784,7 @@ namespace metal_internal
 	{
 		wi::allocator::shared_ptr<GraphicsDevice_Metal::AllocationHandler> allocationhandler;
 		NS::SharedPtr<MTL::Texture> texture;
+		NS::SharedPtr<MTL::Texture> texture_chroma; // NV12 chrominance plane (RG8), half resolution
 		
 		// Things for readback and upload texture types, linear tiling, using buffer:
 		NS::SharedPtr<MTL::Buffer> buffer;
@@ -859,6 +873,8 @@ namespace metal_internal
 			uint64_t framecount = allocationhandler->framecount;
 			if (texture.get() != nullptr)
 				allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(texture), framecount));
+			if (texture_chroma.get() != nullptr)
+				allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(texture_chroma), framecount));
 			if (buffer.get() != nullptr)
 				allocationhandler->destroyer_resources.push_back(std::make_pair(std::move(buffer), framecount));
 			destroy_subresources();
@@ -1001,19 +1017,132 @@ namespace metal_internal
 			allocationhandler->destroylocker.unlock();
 		}
 	};
+
+	static void video_output_callback(void* decompressionOutputRefCon, void* sourceFrameRefCon, OSStatus status, VTDecodeInfoFlags infoFlags, CVImageBufferRef imageBuffer, CMTime presentationTimeStamp, CMTime presentationDuration);
+	using CVMetalTextureCacheRef = struct __CVMetalTextureCache*;
+	using CVMetalTextureRef = CVImageBufferRef;
+	extern "C" CVReturn CVMetalTextureCacheCreate(CFAllocatorRef allocator, CFDictionaryRef cacheAttributes, void* metalDevice, CFDictionaryRef textureAttributes, CVMetalTextureCacheRef* cacheOut);
+	extern "C" CVReturn CVMetalTextureCacheCreateTextureFromImage(CFAllocatorRef allocator, CVMetalTextureCacheRef textureCache, CVImageBufferRef sourceImage, CFDictionaryRef textureAttributes, NS::UInteger pixelFormat, size_t width, size_t height, size_t planeIndex, CVMetalTextureRef* textureOut);
+	extern "C" void CVMetalTextureCacheFlush(CVMetalTextureCacheRef textureCache, uint64_t options);
+	extern "C" void* CVMetalTextureGetTexture(CVMetalTextureRef image);
+
 	struct VideoDecoder_Metal
 	{
 		wi::allocator::shared_ptr<GraphicsDevice_Metal::AllocationHandler> allocationhandler;
+		CMVideoFormatDescriptionRef format_desc = nullptr;
+		VTDecompressionSessionRef session = nullptr;
+		CVPixelBufferRef decoded = nullptr;
+		CFDictionaryRef output_attrs = nullptr;
+		CVMetalTextureCacheRef texture_cache = nullptr;
+		std::mutex locker;
+		OSStatus decode_status = noErr;
+		uint64_t frames_decoded = 0;
+		bool logged_error = false;
+		wi::vector<uint8_t> sample_bytes;
 
+		struct PendingCopy
+		{
+			CVPixelBufferRef image = nullptr;
+			CVMetalTextureRef planes[2] = {};
+			MTL::Texture* textures[2] = {};
+			uint64_t frame = 0;
+		};
+		wi::vector<PendingCopy> pending_copies;
+
+		void release_pending(uint64_t framecount, bool all)
+		{
+			const uint32_t buffercount = GraphicsDevice::GetBufferCount();
+			const uint32_t count = (uint32_t)pending_copies.size();
+			uint32_t keep = 0;
+			bool released = false;
+			for (uint32_t i = 0; i < count; ++i)
+			{
+				PendingCopy entry = pending_copies[i];
+				if (!all && entry.frame + buffercount >= framecount)
+				{
+					pending_copies[keep++] = entry;
+					continue;
+				}
+				released = true;
+				if (allocationhandler != nullptr)
+				{
+					std::scoped_lock lock(allocationhandler->destroylocker);
+					allocationhandler->remove_resident(entry.textures[0]);
+					allocationhandler->remove_resident(entry.textures[1]);
+				}
+				if (entry.planes[0] != nullptr)
+					CFRelease(entry.planes[0]);
+				if (entry.planes[1] != nullptr)
+					CFRelease(entry.planes[1]);
+				if (entry.image != nullptr)
+					CFRelease(entry.image);
+			}
+			pending_copies.resize(keep);
+			if (released && texture_cache != nullptr)
+				CVMetalTextureCacheFlush(texture_cache, 0);
+		}
+		
 		~VideoDecoder_Metal()
 		{
-			if (allocationhandler == nullptr)
-				return;
-			allocationhandler->destroylocker.lock();
-			uint64_t framecount = allocationhandler->framecount;
-			allocationhandler->destroylocker.unlock();
+			if (session != nullptr)
+				VTDecompressionSessionWaitForAsynchronousFrames(session);
+			release_pending(0, true);
+			destroy_session();
+			if (format_desc != nullptr)
+			{
+				CFRelease(format_desc);
+				format_desc = nullptr;
+			}
+			if (output_attrs != nullptr)
+			{
+				CFRelease(output_attrs);
+				output_attrs = nullptr;
+			}
+			if (texture_cache != nullptr)
+			{
+				CFRelease((CFTypeRef)texture_cache);
+				texture_cache = nullptr;
+			}
+		}
+		void destroy_session()
+		{
+			if (session != nullptr)
+			{
+				VTDecompressionSessionWaitForAsynchronousFrames(session);
+				VTDecompressionSessionInvalidate(session);
+				CFRelease(session);
+				session = nullptr;
+			}
+			std::scoped_lock lock(locker);
+			if (decoded != nullptr)
+			{
+				CFRelease(decoded);
+				decoded = nullptr;
+			}
 		}
 	};
+
+	static void video_output_callback(void* decompressionOutputRefCon, void* sourceFrameRefCon, OSStatus status, VTDecodeInfoFlags infoFlags, CVImageBufferRef imageBuffer, CMTime presentationTimeStamp, CMTime presentationDuration)
+	{
+		(void)sourceFrameRefCon;
+		(void)infoFlags;
+		(void)presentationTimeStamp;
+		(void)presentationDuration;
+		VideoDecoder_Metal* decoder = (VideoDecoder_Metal*)decompressionOutputRefCon;
+		if (decoder == nullptr)
+			return;
+		std::scoped_lock lock(decoder->locker);
+		decoder->decode_status = status;
+		if (decoder->decoded != nullptr)
+		{
+			CFRelease(decoder->decoded);
+			decoder->decoded = nullptr;
+		}
+		if (status == noErr && imageBuffer != nullptr)
+		{
+			decoder->decoded = (CVPixelBufferRef)CFRetain(imageBuffer);
+		}
+	}
 
 	template<typename T> struct MetalType;
 	template<> struct MetalType<GPUBuffer> { using type = Buffer_Metal; };
@@ -1517,6 +1646,7 @@ using namespace metal_internal;
 		capabilities |= GraphicsDeviceCapability::STENCIL_RESOLVE_MIN_MAX;
 		capabilities |= GraphicsDeviceCapability::MESH_SHADER;
 		capabilities |= GraphicsDeviceCapability::COPY_BETWEEN_DIFFERENT_IMAGE_ASPECTS_NOT_SUPPORTED;
+		capabilities |= GraphicsDeviceCapability::VIDEO_DECODE_H264;
 		
 		if (device->hasUnifiedMemory())
 		{
@@ -1672,6 +1802,8 @@ using namespace metal_internal;
 		queues[QUEUE_COMPUTE].queue->addResidencySet(allocationhandler->residency_set.get());
 		queues[QUEUE_COPY].queue = NS::TransferPtr(device->newMTL4CommandQueue());
 		queues[QUEUE_COPY].queue->addResidencySet(allocationhandler->residency_set.get());
+		queues[QUEUE_VIDEO_DECODE].queue = NS::TransferPtr(device->newMTL4CommandQueue());
+		queues[QUEUE_VIDEO_DECODE].queue->addResidencySet(allocationhandler->residency_set.get());
 		
 		for (uint32_t q = 0; q < QUEUE_COUNT; ++q)
 		{
@@ -1734,7 +1866,12 @@ using namespace metal_internal;
 		MTL::ResourceOptions resource_options = {};
 		if (desc->usage == Usage::DEFAULT)
 		{
-			if (aliasing_storage)
+			if (has_flag(desc->misc_flags, ResourceMiscFlag::VIDEO_DECODE))
+			{
+				// VideoToolbox reads the compressed bitstream on the CPU.
+				resource_options |= MTL::ResourceStorageModeShared;
+			}
+			else if (aliasing_storage)
 			{
 				// potentially used for sparse or other private requirement resource
 				resource_options |= MTL::ResourceStorageModePrivate;
@@ -1855,6 +1992,12 @@ using namespace metal_internal;
 		texture->desc.mip_levels = GetMipCount(texture->desc);
 		
 		NS::SharedPtr<MTL::TextureDescriptor> descriptor = _ConvertTextureDesc(texture->desc, device.get(), textureUlongAtomics);
+		const bool nv12 = texture->desc.format == Format::NV12;
+		if (nv12)
+		{
+			// Metal has no multi-planar NV12 format. Luma is R8 and chroma is a paired RG8 texture.
+			descriptor->setPixelFormat(MTL::PixelFormatR8Unorm);
+		}
 		
 		texture->desc.sample_count = (uint32_t)descriptor->sampleCount(); // might be overridden by device descriptor
 		
@@ -1935,6 +2078,25 @@ using namespace metal_internal;
 		if (internal_state->texture.get() != nullptr)
 		{
 			allocationhandler->make_resident(internal_state->texture.get());
+		}
+		if (nv12 && internal_state->texture.get() != nullptr)
+		{
+			NS::SharedPtr<MTL::TextureDescriptor> chroma_desc = NS::TransferPtr(MTL::TextureDescriptor::alloc()->init());
+			chroma_desc->setTextureType(descriptor->textureType());
+			chroma_desc->setWidth(std::max(1u, texture->desc.width / 2));
+			chroma_desc->setHeight(std::max(1u, texture->desc.height / 2));
+			chroma_desc->setDepth(1);
+			chroma_desc->setArrayLength(descriptor->arrayLength());
+			chroma_desc->setMipmapLevelCount(1);
+			chroma_desc->setPixelFormat(MTL::PixelFormatRG8Unorm);
+			chroma_desc->setSampleCount(1);
+			chroma_desc->setResourceOptions(descriptor->resourceOptions());
+			chroma_desc->setStorageMode(descriptor->storageMode());
+			chroma_desc->setUsage(descriptor->usage() | MTL::TextureUsageShaderRead);
+			internal_state->texture_chroma = NS::TransferPtr(device->newTexture(chroma_desc.get()));
+			allocationhandler->make_resident(internal_state->texture_chroma.get());
+			if (internal_state->texture_chroma.get() == nullptr)
+				return false;
 		}
 		
 		assert(internal_state->texture->isSparse() == sparse);
@@ -2663,8 +2825,108 @@ using namespace metal_internal;
 	}
 	bool GraphicsDevice_Metal::CreateVideoDecoder(const VideoDesc* desc, VideoDecoder* video_decoder) const
 	{
-		// TODO
-		return false;
+		if (desc == nullptr || video_decoder == nullptr)
+			return false;
+		if (desc->profile != VideoProfile::H264 || !CheckCapability(GraphicsDeviceCapability::VIDEO_DECODE_H264))
+			return false;
+		if (desc->format != Format::NV12 || desc->width == 0 || desc->height == 0)
+			return false;
+		if (desc->sps_count == 0 || desc->pps_count == 0 || desc->sps_datas == nullptr || desc->pps_datas == nullptr)
+			return false;
+		const h264::SPS* sps_array = (const h264::SPS*)desc->sps_datas;
+		const h264::PPS* pps_array = (const h264::PPS*)desc->pps_datas;
+		if (sps_array->bit_depth_luma_minus8 != 0 || sps_array->bit_depth_chroma_minus8 != 0 || sps_array->chroma_format_idc > 1)
+		{
+			wilog_error("Metal H264 decoder supports 8-bit 4:2:0 only");
+			return false;
+		}
+
+		constexpr size_t kMaxParameterSets = 32;
+		if (desc->sps_count + desc->pps_count > kMaxParameterSets)
+			return false;
+
+		unsigned char parameter_bytes[4096];
+		int parameter_used = 0;
+		size_t parameter_offsets[kMaxParameterSets];
+		size_t parameter_sizes[kMaxParameterSets];
+		size_t parameter_count = 0;
+		for (size_t i = 0; i < desc->sps_count; ++i)
+		{
+			const int written = h264::write_sps(&sps_array[i], parameter_bytes + parameter_used, (int)sizeof(parameter_bytes) - parameter_used);
+			if (written <= 0)
+			{
+				wilog_error("Metal H264 decoder could not write SPS");
+				return false;
+			}
+			parameter_offsets[parameter_count] = (size_t)parameter_used;
+			parameter_sizes[parameter_count] = (size_t)written;
+			parameter_used += written;
+			++parameter_count;
+		}
+		for (size_t i = 0; i < desc->pps_count; ++i)
+		{
+			const int written = h264::write_pps(&pps_array[i], parameter_bytes + parameter_used, (int)sizeof(parameter_bytes) - parameter_used);
+			if (written <= 0)
+			{
+				wilog_error("Metal H264 decoder could not write PPS");
+				return false;
+			}
+			parameter_offsets[parameter_count] = (size_t)parameter_used;
+			parameter_sizes[parameter_count] = (size_t)written;
+			parameter_used += written;
+			++parameter_count;
+		}
+		const uint8_t* parameter_sets[kMaxParameterSets];
+		for (size_t i = 0; i < parameter_count; ++i)
+			parameter_sets[i] = parameter_bytes + parameter_offsets[i];
+		CMVideoFormatDescriptionRef format_desc = nullptr;
+		const OSStatus format_status = CMVideoFormatDescriptionCreateFromH264ParameterSets(
+			kCFAllocatorDefault,
+			parameter_count,
+			parameter_sets,
+			parameter_sizes,
+			4,
+			&format_desc
+		);
+		if (format_status != noErr || format_desc == nullptr)
+		{
+			if (format_desc != nullptr)
+				CFRelease(format_desc);
+			wilog_error("CMVideoFormatDescriptionCreateFromH264ParameterSets failed (%d)", (int)format_status);
+			return false;
+		}
+
+		// Age 0 disables eviction. Retained CVMetalTextures keep each surface alive until the GPU copy retires.
+		CVMetalTextureCacheRef texture_cache = nullptr;
+		double texture_age = 0;
+		CFNumberRef age_num = CFNumberCreate(kCFAllocatorDefault, kCFNumberDoubleType, &texture_age);
+		const void* cache_keys[] = { kCVMetalTextureCacheMaximumTextureAgeKey };
+		const void* cache_values[] = { age_num };
+		CFDictionaryRef cache_attrs = age_num != nullptr ? CFDictionaryCreate(kCFAllocatorDefault, cache_keys, cache_values, 1, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks) : nullptr;
+		const CVReturn cache_status = CVMetalTextureCacheCreate(kCFAllocatorDefault, cache_attrs, device.get(), nullptr, &texture_cache);
+		if (cache_attrs != nullptr)
+			CFRelease(cache_attrs);
+		if (age_num != nullptr)
+			CFRelease(age_num);
+		if (cache_status != kCVReturnSuccess || texture_cache == nullptr)
+		{
+			if (texture_cache != nullptr)
+				CFRelease((CFTypeRef)texture_cache);
+			CFRelease(format_desc);
+			wilog_error("CVMetalTextureCacheCreate failed (%d)", (int)cache_status);
+			return false;
+		}
+
+		auto internal_state = wi::allocator::make_shared<VideoDecoder_Metal>();
+		internal_state->allocationhandler = allocationhandler;
+		internal_state->format_desc = format_desc;
+		internal_state->texture_cache = texture_cache;
+		internal_state->sample_bytes.reserve((size_t)desc->width * (size_t)desc->height);
+		internal_state->pending_copies.reserve(GraphicsDevice::GetBufferCount() + 1);
+		video_decoder->internal_state = internal_state;
+		video_decoder->desc = *desc;
+		video_decoder->support = VideoDecoderSupportFlags::DPB_AND_OUTPUT_COINCIDE;
+		return true;
 	}
 
 	int GraphicsDevice_Metal::CreateSubresource(Texture* texture, SubresourceType type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount, const Format* format_change, const ImageAspect* aspect, const Swizzle* swizzle, float min_lod_clamp) const
@@ -2676,14 +2938,31 @@ using namespace metal_internal;
 		{
 			format = *format_change;
 		}
+
+		MTL::Texture* src_texture = internal_state->texture.get();
+		if (texture->GetDesc().format == Format::NV12)
+		{
+			const bool chroma = (aspect != nullptr && *aspect == ImageAspect::CHROMINANCE) || format == Format::R8G8_UNORM;
+			if (chroma)
+			{
+				src_texture = internal_state->texture_chroma.get();
+				if (format == Format::NV12)
+					format = Format::R8G8_UNORM;
+			}
+			else if (format == Format::NV12)
+			{
+				format = Format::R8_UNORM;
+			}
+		}
 		
 		const MTL::PixelFormat pixelformat = _ConvertPixelFormat(format);
 		assert(pixelformat != MTL::PixelFormatInvalid);
+		assert(src_texture != nullptr);
 		
 		sliceCount = std::min(sliceCount, texture->desc.array_size - firstSlice);
 		mipCount = std::min(mipCount, texture->desc.mip_levels - firstMip);
 		
-		MTL::TextureType texture_type = internal_state->texture->textureType();
+		MTL::TextureType texture_type = src_texture->textureType();
 		if (type != SubresourceType::SRV &&
 			(texture_type == MTL::TextureTypeCube || texture_type == MTL::TextureTypeCubeArray)
 			)
@@ -2725,10 +3004,10 @@ using namespace metal_internal;
 						auto& subresource = internal_state->srv;
 						subresource.index = allocationhandler->allocate_resource_index();
 #ifdef USE_TEXTURE_VIEW_POOL
-						MTL::ResourceID resourceID = texture_view_pool->setTextureView(internal_state->texture.get(), view_desc.get(), subresource.index);
+						MTL::ResourceID resourceID = texture_view_pool->setTextureView(src_texture, view_desc.get(), subresource.index);
 						subresource.entry = create_entry(resourceID, min_lod_clamp);
 #else
-						subresource.view = NS::TransferPtr(internal_state->texture->newTextureView(view_desc.get()));
+						subresource.view = NS::TransferPtr(src_texture->newTextureView(view_desc.get()));
 						subresource.entry = create_entry(subresource.view.get());
 #endif // USE_TEXTURE_VIEW_POOL
 						std::memcpy(descriptor_heap_res_data + subresource.index, &subresource.entry, sizeof(subresource.entry));
@@ -2743,10 +3022,10 @@ using namespace metal_internal;
 						auto& subresource = internal_state->subresources_srv.emplace_back();
 						subresource.index = allocationhandler->allocate_resource_index();
 #ifdef USE_TEXTURE_VIEW_POOL
-						MTL::ResourceID resourceID = texture_view_pool->setTextureView(internal_state->texture.get(), view_desc.get(), subresource.index);
+						MTL::ResourceID resourceID = texture_view_pool->setTextureView(src_texture, view_desc.get(), subresource.index);
 						subresource.entry = create_entry(resourceID, min_lod_clamp);
 #else
-						subresource.view = NS::TransferPtr(internal_state->texture->newTextureView(view_desc.get()));
+						subresource.view = NS::TransferPtr(src_texture->newTextureView(view_desc.get()));
 						subresource.entry = create_entry(subresource.view.get());
 #endif // USE_TEXTURE_VIEW_POOL
 						std::memcpy(descriptor_heap_res_data + subresource.index, &subresource.entry, sizeof(subresource.entry));
@@ -2766,10 +3045,10 @@ using namespace metal_internal;
 						auto& subresource = internal_state->uav;
 						subresource.index = allocationhandler->allocate_resource_index();
 #ifdef USE_TEXTURE_VIEW_POOL
-						MTL::ResourceID resourceID = texture_view_pool->setTextureView(internal_state->texture.get(), view_desc.get(), subresource.index);
+						MTL::ResourceID resourceID = texture_view_pool->setTextureView(src_texture, view_desc.get(), subresource.index);
 						subresource.entry = create_entry(resourceID, min_lod_clamp);
 #else
-						subresource.view = NS::TransferPtr(internal_state->texture->newTextureView(view_desc.get()));
+						subresource.view = NS::TransferPtr(src_texture->newTextureView(view_desc.get()));
 						subresource.entry = create_entry(subresource.view.get());
 #endif // USE_TEXTURE_VIEW_POOL
 						std::memcpy(descriptor_heap_res_data + subresource.index, &subresource.entry, sizeof(subresource.entry));
@@ -2784,10 +3063,10 @@ using namespace metal_internal;
 						auto& subresource = internal_state->subresources_uav.emplace_back();
 						subresource.index = allocationhandler->allocate_resource_index();
 #ifdef USE_TEXTURE_VIEW_POOL
-						MTL::ResourceID resourceID = texture_view_pool->setTextureView(internal_state->texture.get(), view_desc.get(), subresource.index);
+						MTL::ResourceID resourceID = texture_view_pool->setTextureView(src_texture, view_desc.get(), subresource.index);
 						subresource.entry = create_entry(resourceID, min_lod_clamp);
 #else
-						subresource.view = NS::TransferPtr(internal_state->texture->newTextureView(view_desc.get()));
+						subresource.view = NS::TransferPtr(src_texture->newTextureView(view_desc.get()));
 						subresource.entry = create_entry(subresource.view.get());
 #endif // USE_TEXTURE_VIEW_POOL
 						std::memcpy(descriptor_heap_res_data + subresource.index, &subresource.entry, sizeof(subresource.entry));
@@ -3112,6 +3391,8 @@ using namespace metal_internal;
 		{
 			auto internal_state = to_internal<Texture>(pResource);
 			internal_state->texture->setLabel(str.get());
+			if (internal_state->texture_chroma.get() != nullptr)
+				internal_state->texture_chroma->setLabel(str.get());
 		}
 		else if (pResource->IsBuffer())
 		{
@@ -4276,6 +4557,10 @@ using namespace metal_internal;
 			{
 				// Normal texture->texture copy
 				commandlist.compute_encoder->copyFromTexture(src_internal->texture.get(), dst_internal->texture.get());
+				if (src_internal->texture_chroma.get() != nullptr && dst_internal->texture_chroma.get() != nullptr)
+				{
+					commandlist.compute_encoder->copyFromTexture(src_internal->texture_chroma.get(), dst_internal->texture_chroma.get());
+				}
 			}
 			else if(src_internal->texture.get() != nullptr && dst_internal->buffer.get() != nullptr)
 			{
@@ -4601,6 +4886,297 @@ using namespace metal_internal;
 	}
 	void GraphicsDevice_Metal::VideoDecode(const VideoDecoder* video_decoder, const VideoDecodeOperation* op, CommandList cmd)
 	{
+		if (video_decoder == nullptr || op == nullptr || !video_decoder->IsValid())
+			return;
+		auto decoder = to_internal(video_decoder);
+		if (decoder == nullptr)
+			return;
+		if (op->stream == nullptr || op->stream->mapped_data == nullptr)
+		{
+			wilog_error("Metal video decoder requires a CPU-visible bitstream buffer");
+			return;
+		}
+		if (op->stream_offset + op->stream_size > op->stream->mapped_size)
+		{
+			wilog_error("Metal video decoder bitstream range is out of bounds");
+			return;
+		}
+		if (decoder->format_desc == nullptr)
+		{
+			wilog_error("Metal video decoder is missing SPS and PPS");
+			return;
+		}
+		if ((op->flags & VideoDecodeOperation::FLAG_SESSION_RESET) && decoder->frames_decoded > 0)
+		{
+			decoder->destroy_session();
+		}
+		if (decoder->session == nullptr)
+		{
+			if (decoder->output_attrs == nullptr)
+			{
+				int32_t pixel_format = kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange;
+				CFNumberRef pixel_format_num = CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &pixel_format);
+				CFDictionaryRef io_surface = CFDictionaryCreate(kCFAllocatorDefault, nullptr, nullptr, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+				const void* keys[] = {
+					kCVPixelBufferPixelFormatTypeKey,
+					kCVPixelBufferMetalCompatibilityKey,
+					kCVPixelBufferIOSurfacePropertiesKey,
+				};
+				const void* values[] = {
+					pixel_format_num,
+					kCFBooleanTrue,
+					io_surface,
+				};
+				decoder->output_attrs = CFDictionaryCreate(kCFAllocatorDefault, keys, values, arraysize(keys), &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+				CFRelease(io_surface);
+				CFRelease(pixel_format_num);
+			}
+			if (decoder->output_attrs == nullptr)
+			{
+				wilog_error("Metal video decoder session was not created");
+				return;
+			}
+			decoder->destroy_session();
+			VTDecompressionOutputCallbackRecord callback = {};
+			callback.decompressionOutputCallback = video_output_callback;
+			callback.decompressionOutputRefCon = decoder;
+			const OSStatus session_status = VTDecompressionSessionCreate(kCFAllocatorDefault, decoder->format_desc, nullptr, decoder->output_attrs, &callback, &decoder->session);
+			if (session_status != noErr || decoder->session == nullptr)
+			{
+				wilog_error("VTDecompressionSessionCreate failed (%d)", (int)session_status);
+				decoder->session = nullptr;
+				wilog_error("Metal video decoder session was not created");
+				return;
+			}
+		}
+
+		const Texture* target = op->output != nullptr ? op->output : op->DPB;
+		if (target == nullptr || target->desc.format != Format::NV12)
+		{
+			wilog_error("Metal video decoder output must be an NV12 texture");
+			return;
+		}
+		auto target_internal = to_internal(target);
+		if (target_internal->texture.get() == nullptr || target_internal->texture_chroma.get() == nullptr)
+		{
+			wilog_error("Metal video decoder NV12 planes are missing");
+			return;
+		}
+		const uint32_t slice = op->output != nullptr ? 0u : op->current_dpb;
+		if (slice >= target->desc.array_size)
+		{
+			wilog_error("Metal video decoder DPB slot is out of range");
+			return;
+		}
+
+		if (op->stream_size < 4)
+		{
+			wilog_error("Metal video decoder bitstream frame is empty");
+			return;
+		}
+		const uint8_t* src = (const uint8_t*)op->stream->mapped_data + op->stream_offset;
+		const size_t src_size = (size_t)op->stream_size;
+		size_t start = 0;
+		if (src_size >= 4 && src[0] == 0 && src[1] == 0 && src[2] == 0 && src[3] == 1)
+			start = 4;
+		else if (src_size >= 3 && src[0] == 0 && src[1] == 0 && src[2] == 1)
+			start = 3;
+		else
+		{
+			wilog_error("Metal video decoder bitstream frame is not Annex-B");
+			return;
+		}
+		const size_t nal_size = src_size - start;
+		if (nal_size == 0 || nal_size > 0xffffffffu)
+		{
+			wilog_error("Metal video decoder bitstream frame is empty");
+			return;
+		}
+		// The shared bitstream is Annex-B. VideoToolbox samples are 4-byte length prefixed.
+		const size_t sample_size = nal_size + 4;
+		if (decoder->sample_bytes.size() < sample_size)
+			decoder->sample_bytes.resize(sample_size);
+		uint8_t* dst = decoder->sample_bytes.data();
+		dst[0] = (uint8_t)(nal_size >> 24);
+		dst[1] = (uint8_t)(nal_size >> 16);
+		dst[2] = (uint8_t)(nal_size >> 8);
+		dst[3] = (uint8_t)nal_size;
+		std::memcpy(dst + 4, src + start, nal_size);
+
+		CMBlockBufferRef block = nullptr;
+		OSStatus status = CMBlockBufferCreateWithMemoryBlock(
+			kCFAllocatorDefault,
+			dst,
+			decoder->sample_bytes.size(),
+			kCFAllocatorNull,
+			nullptr,
+			0,
+			sample_size,
+			0,
+			&block
+		);
+		if (status != noErr || block == nullptr)
+		{
+			wilog_error("CMBlockBufferCreateWithMemoryBlock failed");
+			return;
+		}
+		CMSampleBufferRef sample = nullptr;
+		status = CMSampleBufferCreateReady(
+			kCFAllocatorDefault,
+			block,
+			decoder->format_desc,
+			1,
+			0,
+			nullptr,
+			1,
+			&sample_size,
+			&sample
+		);
+		if (status != noErr || sample == nullptr)
+		{
+			CFRelease(block);
+			wilog_error("CMSampleBufferCreateReady failed");
+			return;
+		}
+
+		{
+			std::scoped_lock lock(decoder->locker);
+			decoder->decode_status = noErr;
+			if (decoder->decoded != nullptr)
+			{
+				CFRelease(decoder->decoded);
+				decoder->decoded = nullptr;
+			}
+		}
+		VTDecodeInfoFlags info_flags = 0;
+		status = VTDecompressionSessionDecodeFrame(decoder->session, sample, 0, nullptr, &info_flags);
+		if (status == noErr)
+		{
+			status = VTDecompressionSessionWaitForAsynchronousFrames(decoder->session);
+		}
+		CFRelease(sample);
+		CFRelease(block);
+		if (status != noErr)
+		{
+			wilog_error("VTDecompressionSessionDecodeFrame failed");
+			return;
+		}
+
+		CVPixelBufferRef frame = nullptr;
+		OSStatus decode_status = noErr;
+		{
+			std::scoped_lock lock(decoder->locker);
+			frame = decoder->decoded;
+			decoder->decoded = nullptr;
+			decode_status = decoder->decode_status;
+		}
+		if (frame == nullptr || decode_status != noErr)
+		{
+			if (frame != nullptr)
+				CFRelease(frame);
+			wilog_error("Metal video decoder produced no output frame");
+			return;
+		}
+		if (!CVPixelBufferIsPlanar(frame) || CVPixelBufferGetPlaneCount(frame) < 2)
+		{
+			CFRelease(frame);
+			wilog_error("Metal video decoder output is not bi-planar NV12");
+			return;
+		}
+		if (decoder->texture_cache == nullptr)
+		{
+			CFRelease(frame);
+			wilog_error("Metal video decoder texture cache is missing");
+			return;
+		}
+
+		CVMetalTextureRef cv_planes[2] = {};
+		MTL::Texture* src_planes[2] = {};
+		MTL::Texture* dst_planes[2] = {
+			target_internal->texture.get(),
+			target_internal->texture_chroma.get(),
+		};
+		const MTL::PixelFormat plane_formats[2] = {
+			MTL::PixelFormatR8Unorm,
+			MTL::PixelFormatRG8Unorm,
+		};
+		NS::UInteger copy_width[2] = {};
+		NS::UInteger copy_height[2] = {};
+		bool planes_ok = true;
+		for (uint32_t i = 0; i < 2; ++i)
+		{
+			const size_t plane_width = CVPixelBufferGetWidthOfPlane(frame, i);
+			const size_t plane_height = CVPixelBufferGetHeightOfPlane(frame, i);
+			if (plane_width == 0 || plane_height == 0)
+			{
+				planes_ok = false;
+				break;
+			}
+			const CVReturn cv_status = CVMetalTextureCacheCreateTextureFromImage(
+				kCFAllocatorDefault,
+				decoder->texture_cache,
+				frame,
+				nullptr,
+				(NS::UInteger)plane_formats[i],
+				plane_width,
+				plane_height,
+				i,
+				&cv_planes[i]
+			);
+			src_planes[i] = cv_planes[i] != nullptr ? (MTL::Texture*)CVMetalTextureGetTexture(cv_planes[i]) : nullptr;
+			if (cv_status != kCVReturnSuccess || src_planes[i] == nullptr)
+			{
+				planes_ok = false;
+				break;
+			}
+			copy_width[i] = std::min(dst_planes[i]->width(), (NS::UInteger)plane_width);
+			copy_height[i] = std::min(dst_planes[i]->height(), (NS::UInteger)plane_height);
+		}
+		if (!planes_ok)
+		{
+			for (uint32_t i = 0; i < 2; ++i)
+			{
+				if (cv_planes[i] != nullptr)
+					CFRelease(cv_planes[i]);
+			}
+			CFRelease(frame);
+			wilog_error("CVMetalTextureCacheCreateTextureFromImage failed");
+			return;
+		}
+
+		for (uint32_t i = 0; i < 2; ++i)
+			allocationhandler->make_resident(src_planes[i]);
+
+		const uint64_t frame_index = GetFrameCount();
+		decoder->release_pending(frame_index, false);
+		VideoDecoder_Metal::PendingCopy pending = {};
+		pending.image = frame;
+		pending.planes[0] = cv_planes[0];
+		pending.planes[1] = cv_planes[1];
+		pending.textures[0] = src_planes[0];
+		pending.textures[1] = src_planes[1];
+		pending.frame = frame_index;
+		decoder->pending_copies.push_back(pending);
+
+		precopy(cmd);
+		CommandList_Metal& commandlist = GetCommandList(cmd);
+		for (uint32_t i = 0; i < 2; ++i)
+		{
+			if (copy_width[i] == 0 || copy_height[i] == 0)
+				continue;
+			commandlist.compute_encoder->copyFromTexture(
+				src_planes[i],
+				0,
+				0,
+				{ 0, 0, 0 },
+				{ copy_width[i], copy_height[i], 1u },
+				dst_planes[i],
+				slice,
+				0,
+				{ 0, 0, 0 }
+			);
+		}
+		decoder->frames_decoded++;
 	}
 
 	void GraphicsDevice_Metal::EventBegin(const char* name, CommandList cmd)

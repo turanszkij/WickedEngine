@@ -9,9 +9,6 @@
 /* Begin PBXBuildFile section */
 		1E640FB52F0AE03E003D9FC7 /* offlineshadercompiler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E640FB42F0AE03E003D9FC7 /* offlineshadercompiler.cpp */; };
 		1E640FC92F0AE1C3003D9FC7 /* libWickedEngine_MacOS.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E640FC22F0AE07B003D9FC7 /* libWickedEngine_MacOS.a */; };
-		1E640FD02F0AE275003D9FC7 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E640FCF2F0AE275003D9FC7 /* Metal.framework */; };
-		1E640FD42F0AE282003D9FC7 /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E640FD32F0AE282003D9FC7 /* AppKit.framework */; };
-		1EBD1C0D2F2525BD00C29B34 /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1EBD1C0B2F2525BD00C29B34 /* GameController.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -40,9 +37,6 @@
 		1E640FAA2F0ADD19003D9FC7 /* offlineshadercompiler */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = offlineshadercompiler; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E640FB42F0AE03E003D9FC7 /* offlineshadercompiler.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = offlineshadercompiler.cpp; sourceTree = "<group>"; };
 		1E640FBD2F0AE07B003D9FC7 /* WickedEngine.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = WickedEngine.xcodeproj; sourceTree = "<group>"; };
-		1E640FCF2F0AE275003D9FC7 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
-		1E640FD32F0AE282003D9FC7 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
-		1EBD1C0B2F2525BD00C29B34 /* GameController.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GameController.framework; path = System/Library/Frameworks/GameController.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -50,9 +44,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1E640FD02F0AE275003D9FC7 /* Metal.framework in Frameworks */,
-				1E640FD42F0AE282003D9FC7 /* AppKit.framework in Frameworks */,
-				1EBD1C0D2F2525BD00C29B34 /* GameController.framework in Frameworks */,
 				1E640FC92F0AE1C3003D9FC7 /* libWickedEngine_MacOS.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -80,9 +71,6 @@
 		1E640FBC2F0AE07B003D9FC7 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				1EBD1C0B2F2525BD00C29B34 /* GameController.framework */,
-				1E640FD32F0AE282003D9FC7 /* AppKit.framework */,
-				1E640FCF2F0AE275003D9FC7 /* Metal.framework */,
 				1E640FBD2F0AE07B003D9FC7 /* WickedEngine.xcodeproj */,
 			);
 			name = Frameworks;

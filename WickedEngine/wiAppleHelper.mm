@@ -3,6 +3,7 @@
 #include "wiInput.h"
 
 #import <Foundation/Foundation.h>
+__asm__(".linker_option \"-framework\", \"Foundation\"");
 
 namespace wi::apple
 {
@@ -32,6 +33,8 @@ std::string GetApplicationSupportPath()
 }
 
 #ifdef PLATFORM_MACOS
+__asm__(".linker_option \"-framework\", \"AppKit\"");
+__asm__(".linker_option \"-framework\", \"CoreGraphics\"");
 #include <AppKit/AppKit.h>
 #include <CoreGraphics/CoreGraphics.h>
 
@@ -407,6 +410,7 @@ void GetSafeArea(void* _window, float& left, float& right, float& top, float& bo
 
 #elif defined(PLATFORM_IOS)
 
+__asm__(".linker_option \"-framework\", \"UIKit\"");
 #include <UIKit/UIKit.h>
 #include <QuartzCore/QuartzCore.h>
 
