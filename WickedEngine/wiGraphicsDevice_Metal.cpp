@@ -1018,72 +1018,6 @@ namespace metal_internal
 		}
 	};
 
-
-
-	static bool collect_h264_parameter_sets(const uint8_t* data, size_t size, const uint8_t** sets, size_t* sizes, size_t& count, size_t max_sets)
-	{
-		count = 0;
-		if (data == nullptr || size < 4 || sets == nullptr || sizes == nullptr || max_sets == 0)
-			return false;
-		bool has_sps = false;
-		bool has_pps = false;
-		size_t i = 0;
-		while (i + 3 <= size)
-		{
-			size_t start_code = 0;
-			if (i + 4 <= size && data[i] == 0 && data[i + 1] == 0 && data[i + 2] == 0 && data[i + 3] == 1)
-				start_code = 4;
-			else if (data[i] == 0 && data[i + 1] == 0 && data[i + 2] == 1)
-				start_code = 3;
-			else
-			{
-				if (has_sps && has_pps)
-					break;
-				++i;
-				continue;
-			}
-
-			const size_t nal_begin = i + start_code;
-			size_t nal_end = nal_begin;
-			bool found_next = false;
-			while (nal_end + 3 <= size)
-			{
-				const bool short_code = data[nal_end] == 0 && data[nal_end + 1] == 0 && data[nal_end + 2] == 1;
-				const bool long_code = nal_end + 4 <= size && data[nal_end] == 0 && data[nal_end + 1] == 0 && data[nal_end + 2] == 0 && data[nal_end + 3] == 1;
-				if (short_code || long_code)
-				{
-					found_next = true;
-					break;
-				}
-				++nal_end;
-			}
-			if (!found_next)
-				break;
-			while (nal_end > nal_begin && data[nal_end - 1] == 0)
-				--nal_end;
-			if (nal_end <= nal_begin)
-				break;
-
-			const uint8_t nal_type = data[nal_begin] & 0x1f;
-			if (nal_type == (uint8_t)h264::NAL_UNIT_TYPE_SPS || nal_type == (uint8_t)h264::NAL_UNIT_TYPE_PPS)
-			{
-				if (count >= max_sets)
-					return false;
-				sets[count] = data + nal_begin;
-				sizes[count] = nal_end - nal_begin;
-				count++;
-				has_sps = has_sps || nal_type == (uint8_t)h264::NAL_UNIT_TYPE_SPS;
-				has_pps = has_pps || nal_type == (uint8_t)h264::NAL_UNIT_TYPE_PPS;
-			}
-			else if (nal_type >= (uint8_t)h264::NAL_UNIT_TYPE_CODED_SLICE_NON_IDR && nal_type <= (uint8_t)h264::NAL_UNIT_TYPE_CODED_SLICE_IDR)
-			{
-				break;
-			}
-			i = nal_end;
-		}
-		return has_sps && has_pps;
-	}
-
 	static void video_output_callback(void* decompressionOutputRefCon, void* sourceFrameRefCon, OSStatus status, VTDecodeInfoFlags infoFlags, CVImageBufferRef imageBuffer, CMTime presentationTimeStamp, CMTime presentationDuration);
 	struct VideoDecoder_Metal
 	{
@@ -1106,6 +1040,7 @@ namespace metal_internal
 		static constexpr uint32_t kMaxStagingSlots = 32;
 		StagingSlot staging[kMaxStagingSlots] = {};
 		uint32_t staging_count = 0;
+		wi::vector<uint8_t> sample_bytes;
 		
 		~VideoDecoder_Metal()
 		{
@@ -1130,77 +1065,6 @@ namespace metal_internal
 				}
 			}
 			staging_count = 0;
-		}
-		bool ensure_format(const uint8_t* data, size_t size)
-		{
-			if (format_desc != nullptr)
-				return true;
-			const uint8_t* parameter_sets[8] = {};
-			size_t parameter_sizes[8] = {};
-			size_t parameter_count = 0;
-			if (!collect_h264_parameter_sets(data, size, parameter_sets, parameter_sizes, parameter_count, arraysize(parameter_sets)))
-			{
-				log_once("Metal H264 decoder did not find SPS and PPS in the bitstream");
-				return false;
-			}
-			CMVideoFormatDescriptionRef created = nullptr;
-			const OSStatus status = CMVideoFormatDescriptionCreateFromH264ParameterSets(
-				kCFAllocatorDefault,
-				parameter_count,
-				parameter_sets,
-				parameter_sizes,
-				4,
-				&created
-			);
-			if (status != noErr || created == nullptr)
-			{
-				wilog_error("CMVideoFormatDescriptionCreateFromH264ParameterSets failed (%d)", (int)status);
-				return false;
-			}
-			format_desc = created;
-			return true;
-		}
-		bool ensure_output_attrs()
-		{
-			if (output_attrs != nullptr)
-				return true;
-			// Leave width and height unset so VideoToolbox keeps the native coded size.
-			// Forcing the macroblock-padded size makes it scale the picture.
-			int32_t pixel_format = kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange;
-			CFNumberRef pixel_format_num = CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &pixel_format);
-			CFDictionaryRef io_surface = CFDictionaryCreate(kCFAllocatorDefault, nullptr, nullptr, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
-			const void* keys[] = {
-				kCVPixelBufferPixelFormatTypeKey,
-				kCVPixelBufferMetalCompatibilityKey,
-				kCVPixelBufferIOSurfacePropertiesKey,
-			};
-			const void* values[] = {
-				pixel_format_num,
-				kCFBooleanTrue,
-				io_surface,
-			};
-			output_attrs = CFDictionaryCreate(kCFAllocatorDefault, keys, values, arraysize(keys), &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
-			CFRelease(io_surface);
-			CFRelease(pixel_format_num);
-			return output_attrs != nullptr;
-		}
-		bool create_session()
-		{
-			destroy_session();
-			if (format_desc == nullptr || !ensure_output_attrs())
-				return false;
-
-			VTDecompressionOutputCallbackRecord callback = {};
-			callback.decompressionOutputCallback = video_output_callback;
-			callback.decompressionOutputRefCon = this;
-			const OSStatus status = VTDecompressionSessionCreate(kCFAllocatorDefault, format_desc, nullptr, output_attrs, &callback, &session);
-			if (status != noErr || session == nullptr)
-			{
-				wilog_error("VTDecompressionSessionCreate failed (%d)", (int)status);
-				session = nullptr;
-				return false;
-			}
-			return true;
 		}
 		void destroy_session()
 		{
@@ -2936,17 +2800,413 @@ using namespace metal_internal;
 			return false;
 		if (desc->format != Format::NV12 || desc->width == 0 || desc->height == 0)
 			return false;
-		if (desc->sps_count == 0 || desc->pps_count == 0 || desc->sps_datas == nullptr)
+		if (desc->sps_count == 0 || desc->pps_count == 0 || desc->sps_datas == nullptr || desc->pps_datas == nullptr)
 			return false;
-		const h264::SPS* sps = (const h264::SPS*)desc->sps_datas;
-		if (sps->bit_depth_luma_minus8 != 0 || sps->bit_depth_chroma_minus8 != 0 || sps->chroma_format_idc > 1)
+		const h264::SPS* sps_array = (const h264::SPS*)desc->sps_datas;
+		const h264::PPS* pps_array = (const h264::PPS*)desc->pps_datas;
+		if (sps_array->bit_depth_luma_minus8 != 0 || sps_array->bit_depth_chroma_minus8 != 0 || sps_array->chroma_format_idc > 1)
 		{
 			wilog_error("Metal H264 decoder supports 8-bit 4:2:0 only");
 			return false;
 		}
 
+		constexpr size_t kMaxParameterSets = 32;
+		if (desc->sps_count + desc->pps_count > kMaxParameterSets)
+			return false;
+		
+		struct H264ParameterWriter
+		{
+			uint8_t storage[4096] = {};
+			size_t nbytes = 0;
+			uint8_t cur = 0;
+			int bits_left = 8;
+			bool overflow = false;
+			
+			void reset()
+			{
+				nbytes = 0;
+				cur = 0;
+				bits_left = 8;
+				overflow = false;
+			}
+			void bit(unsigned value)
+			{
+				if (overflow)
+					return;
+				if (bits_left == 8 && nbytes >= sizeof(storage))
+				{
+					overflow = true;
+					return;
+				}
+				--bits_left;
+				cur |= (uint8_t)((value & 1u) << bits_left);
+				if (bits_left == 0)
+				{
+					storage[nbytes++] = cur;
+					cur = 0;
+					bits_left = 8;
+				}
+			}
+			void u(int n, unsigned value)
+			{
+				for (int i = n - 1; i >= 0; --i)
+					bit((value >> i) & 1u);
+			}
+			void ue(unsigned value)
+			{
+				unsigned code = value + 1u;
+				int zeros = 0;
+				unsigned rest = code;
+				while (rest > 1u)
+				{
+					rest >>= 1;
+					++zeros;
+				}
+				for (int i = 0; i < zeros; ++i)
+					bit(0);
+				u(zeros + 1, code);
+			}
+			void se(int value)
+			{
+				unsigned code = value <= 0 ? (unsigned)(-value) << 1 : ((unsigned)value << 1) - 1u;
+				ue(code);
+			}
+			void trailing()
+			{
+				bit(1);
+				while (bits_left != 8)
+					bit(0);
+			}
+			void scaling_list(const int* list, int count, int use_default)
+			{
+				if (use_default)
+				{
+					se(-8);
+					return;
+				}
+				int last = 8;
+				for (int j = 0; j < count; ++j)
+				{
+					int next = list[j];
+					int delta = next - last;
+					delta %= 256;
+					if (delta < 0)
+						delta += 256;
+					if (delta > 127)
+						delta -= 256;
+					se(delta);
+					last = next;
+				}
+			}
+			void hrd(const h264::SPS& sps)
+			{
+				int count = sps.hrd.cpb_cnt_minus1;
+				if (count < 0)
+					count = 0;
+				if (count > h264::MAX_CPB_CNT_MINUS1)
+					count = h264::MAX_CPB_CNT_MINUS1;
+				ue((unsigned)count);
+				u(4, (unsigned)sps.hrd.bit_rate_scale);
+				u(4, (unsigned)sps.hrd.cpb_size_scale);
+				for (int i = 0; i <= count; ++i)
+				{
+					ue((unsigned)sps.hrd.bit_rate_value_minus1[i]);
+					ue((unsigned)sps.hrd.cpb_size_value_minus1[i]);
+					u(1, (unsigned)sps.hrd.cbr_flag[i]);
+				}
+				u(5, (unsigned)sps.hrd.initial_cpb_removal_delay_length_minus1);
+				u(5, (unsigned)sps.hrd.cpb_removal_delay_length_minus1);
+				u(5, (unsigned)sps.hrd.dpb_output_delay_length_minus1);
+				u(5, (unsigned)sps.hrd.time_offset_length);
+			}
+			void vui(const h264::SPS& sps)
+			{
+				const auto& v = sps.vui;
+				u(1, (unsigned)v.aspect_ratio_info_present_flag);
+				if (v.aspect_ratio_info_present_flag)
+				{
+					u(8, (unsigned)v.aspect_ratio_idc);
+					if (v.aspect_ratio_idc == 255)
+					{
+						u(16, (unsigned)v.sar_width);
+						u(16, (unsigned)v.sar_height);
+					}
+				}
+				u(1, (unsigned)v.overscan_info_present_flag);
+				if (v.overscan_info_present_flag)
+					u(1, (unsigned)v.overscan_appropriate_flag);
+				u(1, (unsigned)v.video_signal_type_present_flag);
+				if (v.video_signal_type_present_flag)
+				{
+					u(3, (unsigned)v.video_format);
+					u(1, (unsigned)v.video_full_range_flag);
+					u(1, (unsigned)v.colour_description_present_flag);
+					if (v.colour_description_present_flag)
+					{
+						u(8, (unsigned)v.colour_primaries);
+						u(8, (unsigned)v.transfer_characteristics);
+						u(8, (unsigned)v.matrix_coefficients);
+					}
+				}
+				u(1, (unsigned)v.chroma_loc_info_present_flag);
+				if (v.chroma_loc_info_present_flag)
+				{
+					ue((unsigned)v.chroma_sample_loc_type_top_field);
+					ue((unsigned)v.chroma_sample_loc_type_bottom_field);
+				}
+				u(1, (unsigned)v.timing_info_present_flag);
+				if (v.timing_info_present_flag)
+				{
+					u(32, (unsigned)v.num_units_in_tick);
+					u(32, (unsigned)v.time_scale);
+					u(1, (unsigned)v.fixed_frame_rate_flag);
+				}
+				u(1, (unsigned)v.nal_hrd_parameters_present_flag);
+				if (v.nal_hrd_parameters_present_flag)
+					hrd(sps);
+				u(1, (unsigned)v.vcl_hrd_parameters_present_flag);
+				if (v.vcl_hrd_parameters_present_flag)
+					hrd(sps);
+				if (v.nal_hrd_parameters_present_flag || v.vcl_hrd_parameters_present_flag)
+					u(1, (unsigned)v.low_delay_hrd_flag);
+				u(1, (unsigned)v.pic_struct_present_flag);
+				u(1, (unsigned)v.bitstream_restriction_flag);
+				if (v.bitstream_restriction_flag)
+				{
+					u(1, (unsigned)v.motion_vectors_over_pic_boundaries_flag);
+					ue((unsigned)v.max_bytes_per_pic_denom);
+					ue((unsigned)v.max_bits_per_mb_denom);
+					ue((unsigned)v.log2_max_mv_length_horizontal);
+					ue((unsigned)v.log2_max_mv_length_vertical);
+					ue((unsigned)v.num_reorder_frames);
+					ue((unsigned)v.max_dec_frame_buffering);
+				}
+			}
+			bool finish(uint8_t header, wi::vector<uint8_t>& out)
+			{
+				trailing();
+				if (overflow)
+					return false;
+				out.push_back(header);
+				int zeros = 0;
+				for (size_t i = 0; i < nbytes; ++i)
+				{
+					const uint8_t value = storage[i];
+					if (zeros == 2 && value <= 3)
+					{
+						out.push_back(3);
+						zeros = 0;
+					}
+					out.push_back(value);
+					zeros = value == 0 ? zeros + 1 : 0;
+				}
+				return true;
+			}
+			bool write_sps(const h264::SPS& sps, wi::vector<uint8_t>& out)
+			{
+				reset();
+				u(8, (unsigned)sps.profile_idc);
+				u(1, (unsigned)sps.constraint_set0_flag);
+				u(1, (unsigned)sps.constraint_set1_flag);
+				u(1, (unsigned)sps.constraint_set2_flag);
+				u(1, (unsigned)sps.constraint_set3_flag);
+				u(1, (unsigned)sps.constraint_set4_flag);
+				u(1, (unsigned)sps.constraint_set5_flag);
+				u(2, 0);
+				u(8, (unsigned)sps.level_idc);
+				ue((unsigned)sps.seq_parameter_set_id);
+				const int profile = sps.profile_idc;
+				if (profile == 100 || profile == 110 || profile == 122 || profile == 144)
+				{
+					ue((unsigned)sps.chroma_format_idc);
+					if (sps.chroma_format_idc == 3)
+						u(1, (unsigned)sps.separate_colour_plane_flag);
+					ue((unsigned)sps.bit_depth_luma_minus8);
+					ue((unsigned)sps.bit_depth_chroma_minus8);
+					u(1, (unsigned)sps.qpprime_y_zero_transform_bypass_flag);
+					u(1, (unsigned)sps.seq_scaling_matrix_present_flag);
+					if (sps.seq_scaling_matrix_present_flag)
+					{
+						for (int i = 0; i < 8; ++i)
+						{
+							u(1, (unsigned)sps.seq_scaling_list_present_flag[i]);
+							if (sps.seq_scaling_list_present_flag[i])
+							{
+								if (i < 6)
+									scaling_list(sps.ScalingList4x4[i], 16, sps.UseDefaultScalingMatrix4x4Flag[i]);
+								else
+									scaling_list(sps.ScalingList8x8[i - 6], 64, sps.UseDefaultScalingMatrix8x8Flag[i - 6]);
+							}
+						}
+					}
+				}
+				ue((unsigned)sps.log2_max_frame_num_minus4);
+				ue((unsigned)sps.pic_order_cnt_type);
+				if (sps.pic_order_cnt_type == 0)
+					ue((unsigned)sps.log2_max_pic_order_cnt_lsb_minus4);
+				else if (sps.pic_order_cnt_type == 1)
+				{
+					u(1, (unsigned)sps.delta_pic_order_always_zero_flag);
+					se(sps.offset_for_non_ref_pic);
+					se(sps.offset_for_top_to_bottom_field);
+					int cycle = sps.num_ref_frames_in_pic_order_cnt_cycle;
+					if (cycle < 0)
+						cycle = 0;
+					if (cycle > h264::MAX_NUM_REF_FRAMES_IN_PIC_ORDER_CNT_CYCLE)
+						cycle = h264::MAX_NUM_REF_FRAMES_IN_PIC_ORDER_CNT_CYCLE;
+					ue((unsigned)cycle);
+					for (int i = 0; i < cycle; ++i)
+						se(sps.offset_for_ref_frame[i]);
+				}
+				ue((unsigned)sps.num_ref_frames);
+				u(1, (unsigned)sps.gaps_in_frame_num_value_allowed_flag);
+				ue((unsigned)sps.pic_width_in_mbs_minus1);
+				ue((unsigned)sps.pic_height_in_map_units_minus1);
+				u(1, (unsigned)sps.frame_mbs_only_flag);
+				if (!sps.frame_mbs_only_flag)
+					u(1, (unsigned)sps.mb_adaptive_frame_field_flag);
+				u(1, (unsigned)sps.direct_8x8_inference_flag);
+				u(1, (unsigned)sps.frame_cropping_flag);
+				if (sps.frame_cropping_flag)
+				{
+					ue((unsigned)sps.frame_crop_left_offset);
+					ue((unsigned)sps.frame_crop_right_offset);
+					ue((unsigned)sps.frame_crop_top_offset);
+					ue((unsigned)sps.frame_crop_bottom_offset);
+				}
+				u(1, (unsigned)sps.vui_parameters_present_flag);
+				if (sps.vui_parameters_present_flag)
+					vui(sps);
+				return finish(0x67, out);
+			}
+			bool write_pps(const h264::PPS& pps, wi::vector<uint8_t>& out)
+			{
+				reset();
+				ue((unsigned)pps.pic_parameter_set_id);
+				ue((unsigned)pps.seq_parameter_set_id);
+				u(1, (unsigned)pps.entropy_coding_mode_flag);
+				u(1, (unsigned)pps.pic_order_present_flag);
+				ue((unsigned)pps.num_slice_groups_minus1);
+				if (pps.num_slice_groups_minus1 > 0)
+				{
+					ue((unsigned)pps.slice_group_map_type);
+					if (pps.slice_group_map_type == 0)
+					{
+						for (int i = 0; i <= pps.num_slice_groups_minus1 && i <= h264::MAX_NUM_SLICE_GROUPS_MINUS1; ++i)
+							ue((unsigned)pps.run_length_minus1[i]);
+					}
+					else if (pps.slice_group_map_type == 2)
+					{
+						for (int i = 0; i < pps.num_slice_groups_minus1 && i <= h264::MAX_NUM_SLICE_GROUPS_MINUS1; ++i)
+						{
+							ue((unsigned)pps.top_left[i]);
+							ue((unsigned)pps.bottom_right[i]);
+						}
+					}
+					else if (pps.slice_group_map_type == 3 || pps.slice_group_map_type == 4 || pps.slice_group_map_type == 5)
+					{
+						u(1, (unsigned)pps.slice_group_change_direction_flag);
+						ue((unsigned)pps.slice_group_change_rate_minus1);
+					}
+					else if (pps.slice_group_map_type == 6)
+					{
+						ue((unsigned)pps.pic_size_in_map_units_minus1);
+						const int bits = h264::intlog2(pps.num_slice_groups_minus1 + 1);
+						int count = pps.pic_size_in_map_units_minus1;
+						if (count > h264::MAX_SLICE_GROUP_IDS - 1)
+							count = h264::MAX_SLICE_GROUP_IDS - 1;
+						for (int i = 0; i <= count; ++i)
+							u(bits, (unsigned)pps.slice_group_id[i]);
+					}
+				}
+				ue((unsigned)pps.num_ref_idx_l0_active_minus1);
+				ue((unsigned)pps.num_ref_idx_l1_active_minus1);
+				u(1, (unsigned)pps.weighted_pred_flag);
+				u(2, (unsigned)pps.weighted_bipred_idc);
+				se(pps.pic_init_qp_minus26);
+				se(pps.pic_init_qs_minus26);
+				se(pps.chroma_qp_index_offset);
+				u(1, (unsigned)pps.deblocking_filter_control_present_flag);
+				u(1, (unsigned)pps.constrained_intra_pred_flag);
+				u(1, (unsigned)pps.redundant_pic_cnt_present_flag);
+				const bool more = pps.transform_8x8_mode_flag || pps.pic_scaling_matrix_present_flag || pps.second_chroma_qp_index_offset != pps.chroma_qp_index_offset;
+				if (more)
+				{
+					u(1, (unsigned)pps.transform_8x8_mode_flag);
+					u(1, (unsigned)pps.pic_scaling_matrix_present_flag);
+					if (pps.pic_scaling_matrix_present_flag)
+					{
+						const int count = 6 + 2 * pps.transform_8x8_mode_flag;
+						for (int i = 0; i < count; ++i)
+						{
+							u(1, (unsigned)pps.pic_scaling_list_present_flag[i]);
+							if (pps.pic_scaling_list_present_flag[i])
+							{
+								if (i < 6)
+									scaling_list(pps.ScalingList4x4[i], 16, pps.UseDefaultScalingMatrix4x4Flag[i]);
+								else
+									scaling_list(pps.ScalingList8x8[i - 6], 64, pps.UseDefaultScalingMatrix8x8Flag[i - 6]);
+							}
+						}
+					}
+					se(pps.second_chroma_qp_index_offset);
+				}
+				return finish(0x68, out);
+			}
+		};
+		H264ParameterWriter parameter_writer;
+		wi::vector<uint8_t> parameter_bytes;
+		size_t parameter_offsets[kMaxParameterSets];
+		size_t parameter_sizes[kMaxParameterSets];
+		size_t parameter_count = 0;
+		for (size_t i = 0; i < desc->sps_count; ++i)
+		{
+			const size_t begin = parameter_bytes.size();
+			if (!parameter_writer.write_sps(sps_array[i], parameter_bytes))
+			{
+				wilog_error("Metal H264 decoder could not write SPS");
+				return false;
+			}
+			parameter_offsets[parameter_count] = begin;
+			parameter_sizes[parameter_count] = parameter_bytes.size() - begin;
+			++parameter_count;
+		}
+		for (size_t i = 0; i < desc->pps_count; ++i)
+		{
+			const size_t begin = parameter_bytes.size();
+			if (!parameter_writer.write_pps(pps_array[i], parameter_bytes))
+			{
+				wilog_error("Metal H264 decoder could not write PPS");
+				return false;
+			}
+			parameter_offsets[parameter_count] = begin;
+			parameter_sizes[parameter_count] = parameter_bytes.size() - begin;
+			++parameter_count;
+		}
+		const uint8_t* parameter_sets[kMaxParameterSets];
+		for (size_t i = 0; i < parameter_count; ++i)
+			parameter_sets[i] = parameter_bytes.data() + parameter_offsets[i];
+		CMVideoFormatDescriptionRef format_desc = nullptr;
+		const OSStatus format_status = CMVideoFormatDescriptionCreateFromH264ParameterSets(
+			kCFAllocatorDefault,
+			parameter_count,
+			parameter_sets,
+			parameter_sizes,
+			4,
+			&format_desc
+		);
+		if (format_status != noErr || format_desc == nullptr)
+		{
+			if (format_desc != nullptr)
+				CFRelease(format_desc);
+			wilog_error("CMVideoFormatDescriptionCreateFromH264ParameterSets failed (%d)", (int)format_status);
+			return false;
+		}
+
 		auto internal_state = wi::allocator::make_shared<VideoDecoder_Metal>();
 		internal_state->allocationhandler = allocationhandler;
+		internal_state->format_desc = format_desc;
+		internal_state->sample_bytes.reserve((size_t)desc->width * (size_t)desc->height);
 		video_decoder->internal_state = internal_state;
 		video_decoder->desc = *desc;
 		video_decoder->support = VideoDecoderSupportFlags::DPB_AND_OUTPUT_COINCIDE;
@@ -4947,16 +5207,55 @@ using namespace metal_internal;
 			decoder->log_once("Metal video decoder bitstream range is out of bounds");
 			return;
 		}
-		if (!decoder->ensure_format((const uint8_t*)op->stream->mapped_data, op->stream->mapped_size))
+		if (decoder->format_desc == nullptr)
+		{
+			decoder->log_once("Metal video decoder is missing SPS and PPS");
 			return;
+		}
 		if ((op->flags & VideoDecodeOperation::FLAG_SESSION_RESET) && decoder->frames_decoded > 0)
 		{
 			decoder->destroy_session();
 		}
-		if (decoder->session == nullptr && !decoder->create_session())
+		if (decoder->session == nullptr)
 		{
-			decoder->log_once("Metal video decoder session was not created");
-			return;
+			if (decoder->output_attrs == nullptr)
+			{
+				// Leave width and height unset so VideoToolbox keeps the native coded size.
+				// Forcing the macroblock-padded size makes it scale the picture.
+				int32_t pixel_format = kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange;
+				CFNumberRef pixel_format_num = CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &pixel_format);
+				CFDictionaryRef io_surface = CFDictionaryCreate(kCFAllocatorDefault, nullptr, nullptr, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+				const void* keys[] = {
+					kCVPixelBufferPixelFormatTypeKey,
+					kCVPixelBufferMetalCompatibilityKey,
+					kCVPixelBufferIOSurfacePropertiesKey,
+				};
+				const void* values[] = {
+					pixel_format_num,
+					kCFBooleanTrue,
+					io_surface,
+				};
+				decoder->output_attrs = CFDictionaryCreate(kCFAllocatorDefault, keys, values, arraysize(keys), &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+				CFRelease(io_surface);
+				CFRelease(pixel_format_num);
+			}
+			if (decoder->output_attrs == nullptr)
+			{
+				decoder->log_once("Metal video decoder session was not created");
+				return;
+			}
+			decoder->destroy_session();
+			VTDecompressionOutputCallbackRecord callback = {};
+			callback.decompressionOutputCallback = video_output_callback;
+			callback.decompressionOutputRefCon = decoder;
+			const OSStatus session_status = VTDecompressionSessionCreate(kCFAllocatorDefault, decoder->format_desc, nullptr, decoder->output_attrs, &callback, &decoder->session);
+			if (session_status != noErr || decoder->session == nullptr)
+			{
+				wilog_error("VTDecompressionSessionCreate failed (%d)", (int)session_status);
+				decoder->session = nullptr;
+				decoder->log_once("Metal video decoder session was not created");
+				return;
+			}
 		}
 
 		const Texture* target = op->output != nullptr ? op->output : op->DPB;
@@ -4983,16 +5282,44 @@ using namespace metal_internal;
 			decoder->log_once("Metal video decoder bitstream frame is empty");
 			return;
 		}
-		
+		const uint8_t* src = (const uint8_t*)op->stream->mapped_data + op->stream_offset;
+		const size_t src_size = (size_t)op->stream_size;
+		size_t start = 0;
+		if (src_size >= 4 && src[0] == 0 && src[1] == 0 && src[2] == 0 && src[3] == 1)
+			start = 4;
+		else if (src_size >= 3 && src[0] == 0 && src[1] == 0 && src[2] == 1)
+			start = 3;
+		else
+		{
+			decoder->log_once("Metal video decoder bitstream frame is not Annex-B");
+			return;
+		}
+		const size_t nal_size = src_size - start;
+		if (nal_size == 0 || nal_size > 0xffffffffu)
+		{
+			decoder->log_once("Metal video decoder bitstream frame is empty");
+			return;
+		}
+		// The shared bitstream is Annex-B. VideoToolbox samples are 4-byte length prefixed.
+		const size_t sample_size = nal_size + 4;
+		if (decoder->sample_bytes.size() < sample_size)
+			decoder->sample_bytes.resize(sample_size);
+		uint8_t* dst = decoder->sample_bytes.data();
+		dst[0] = (uint8_t)(nal_size >> 24);
+		dst[1] = (uint8_t)(nal_size >> 16);
+		dst[2] = (uint8_t)(nal_size >> 8);
+		dst[3] = (uint8_t)nal_size;
+		std::memcpy(dst + 4, src + start, nal_size);
+
 		CMBlockBufferRef block = nullptr;
 		OSStatus status = CMBlockBufferCreateWithMemoryBlock(
 			kCFAllocatorDefault,
-			op->stream->mapped_data,
-			op->stream->mapped_size,
+			dst,
+			decoder->sample_bytes.size(),
 			kCFAllocatorNull,
 			nullptr,
-			(size_t)op->stream_offset,
-			(size_t)op->stream_size,
+			0,
+			sample_size,
 			0,
 			&block
 		);
@@ -5001,7 +5328,6 @@ using namespace metal_internal;
 			decoder->log_once("CMBlockBufferCreateWithMemoryBlock failed");
 			return;
 		}
-		const size_t sample_size = (size_t)op->stream_size;
 		CMSampleBufferRef sample = nullptr;
 		status = CMSampleBufferCreateReady(
 			kCFAllocatorDefault,
