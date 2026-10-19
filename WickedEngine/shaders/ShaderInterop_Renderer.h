@@ -722,7 +722,7 @@ struct alignas(32) ShaderMeshInstance
 	ShaderTransform transformPrev; // Note: this could contain quantization remapping from UNORM -> FLOAT depending on vertex position format
 	ShaderTransform transformRaw; // Note: this is the world matrix without any quantization remapping
 
-	float4 padding;
+	float4 padding; // xyz: local camera-obstruction focus, w: aperture radius
 
 	inline void init()
 	{
@@ -767,6 +767,15 @@ struct alignas(32) ShaderMeshInstance
 	{
 		return flags >> 24u;
 	}
+	// Low eight flag bits are reserved for non-serialized camera fade strength.
+	// Reuses reserved padding; ShaderMeshInstance stays 256 bytes.
+	inline void SetCameraObstruction(float4 focusRadius, float amount)
+	{
+		padding = focusRadius;
+		amount = amount < 0 ? 0 : (amount > 1 ? 1 : amount);
+		flags = (flags & ~255u) | uint(amount * 255.0f + 0.5f);
+	}
+	inline float GetCameraObstructionAmount() { return float(flags & 255u) / 255.0f; }
 
 #ifndef __cplusplus
 	inline half4 GetColor() { return unpack_half4(color); }
@@ -1304,6 +1313,7 @@ enum SHADERCAMERA_OPTIONS
 	SHADERCAMERA_OPTION_USE_SHADOW_MASK = 1 << 0,
 	SHADERCAMERA_OPTION_ORTHO = 1 << 1,
 	SHADERCAMERA_OPTION_DEDICATED_SHADOW_LODBIAS = 1 << 2,
+	SHADERCAMERA_OPTION_OBJECT_CAMERA_FADE = 1 << 3,
 };
 
 struct alignas(16) ShaderCamera

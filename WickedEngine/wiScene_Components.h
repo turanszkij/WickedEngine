@@ -1182,6 +1182,10 @@ namespace wi::scene
 
 		// Non-serialized attributes:
 		uint32_t filterMaskDynamic = 0;
+		// Local camera presentation, non-serialized. xyz: world focus, w: aperture
+		// radius. Amount never changes authored color/material or physics state.
+		XMFLOAT4 cameraObstruction = XMFLOAT4(0, 0, 0, 0);
+		float cameraObstructionAmount = 0;
 
 		wi::graphics::Texture lightmap_render;
 		wi::graphics::Texture lightmap;
@@ -1471,6 +1475,7 @@ namespace wi::scene
 		int texture_vxgi_specular_index = -1;
 		int texture_reprojected_depth_index = -1;
 		uint shadercamera_options = SHADERCAMERA_OPTION_NONE;
+		bool cameraObstructionFadeEnabled = false; // local main-view opt-in, not serialized
 
 		struct RenderToTexture
 		{

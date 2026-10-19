@@ -3416,7 +3416,7 @@ void RenderMeshes(
 		{
 			instancedBatch.forceAlphatestForDithering = 1;
 		}
-		if (instance.alphaRef < 1)
+		if (instance.alphaRef < 1 || ((flags & DRAWSCENE_MAINCAMERA) && instance.cameraObstructionAmount > 0))
 		{
 			instancedBatch.forceAlphatestForDithering = 1;
 		}

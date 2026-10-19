@@ -46,6 +46,7 @@
 #include "ShaderInterop_SurfelGI.h"
 #include "ShaderInterop_DDGI.h"
 #include "shadingHF.hlsli"
+#include "cameraObstructionHF.hlsli"
 
 // DEFINITIONS
 //////////////////
@@ -1120,6 +1121,20 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 #endif // ENVMAPRENDERING
 
 #ifndef DISABLE_ALPHATEST
+#if defined(PREPASS) && !defined(DEPTHONLY)
+	// Main-view prepass only: depth/visibility agree; shadow, reflection and GI
+	// geometry remain intact. No global instance-alpha change or early-Z discard.
+	[branch]
+	if ((camera.options & SHADERCAMERA_OPTION_OBJECT_CAMERA_FADE) && meshinstance.GetCameraObstructionAmount() > 0)
+	{
+		float3 face = cross(ddx(surface.P), ddy(surface.P));
+		float faceLength2 = dot(face, face);
+		float facing = faceLength2 > 1e-12 ? abs(dot(face, surface.V)) * rsqrt(faceLength2) : 1;
+		float localDither = CameraObstructionDither(surface.P, camera.position, meshinstance.padding,
+			meshinstance.GetCameraObstructionAmount(), facing);
+		dithering = 1 - (1 - dithering) * (1 - localDither);
+	}
+#endif
 	coverage = AlphaToCoverage(color.a, alphatest, dithering, input.pos); // opaque soft alpha test (MSAA, temporal AA support)
 #endif // DISABLE_ALPHATEST
 
