@@ -1019,6 +1019,13 @@ namespace metal_internal
 	};
 
 	static void video_output_callback(void* decompressionOutputRefCon, void* sourceFrameRefCon, OSStatus status, VTDecodeInfoFlags infoFlags, CVImageBufferRef imageBuffer, CMTime presentationTimeStamp, CMTime presentationDuration);
+	using CVMetalTextureCacheRef = struct __CVMetalTextureCache*;
+	using CVMetalTextureRef = CVImageBufferRef;
+	extern "C" CVReturn CVMetalTextureCacheCreate(CFAllocatorRef allocator, CFDictionaryRef cacheAttributes, void* metalDevice, CFDictionaryRef textureAttributes, CVMetalTextureCacheRef* cacheOut);
+	extern "C" CVReturn CVMetalTextureCacheCreateTextureFromImage(CFAllocatorRef allocator, CVMetalTextureCacheRef textureCache, CVImageBufferRef sourceImage, CFDictionaryRef textureAttributes, NS::UInteger pixelFormat, size_t width, size_t height, size_t planeIndex, CVMetalTextureRef* textureOut);
+	extern "C" void CVMetalTextureCacheFlush(CVMetalTextureCacheRef textureCache, uint64_t options);
+	extern "C" void* CVMetalTextureGetTexture(CVMetalTextureRef image);
+
 	struct VideoDecoder_Metal
 	{
 		wi::allocator::shared_ptr<GraphicsDevice_Metal::AllocationHandler> allocationhandler;
@@ -1026,24 +1033,60 @@ namespace metal_internal
 		VTDecompressionSessionRef session = nullptr;
 		CVPixelBufferRef decoded = nullptr;
 		CFDictionaryRef output_attrs = nullptr;
+		CVMetalTextureCacheRef texture_cache = nullptr;
 		std::mutex locker;
 		OSStatus decode_status = noErr;
 		uint64_t frames_decoded = 0;
 		bool logged_error = false;
-
-		struct StagingSlot
-		{
-			NS::SharedPtr<MTL::Buffer> buffer;
-			uint64_t capacity = 0;
-			uint64_t frame = UINT64_MAX;
-		};
-		static constexpr uint32_t kMaxStagingSlots = 32;
-		StagingSlot staging[kMaxStagingSlots] = {};
-		uint32_t staging_count = 0;
 		wi::vector<uint8_t> sample_bytes;
+
+		struct PendingCopy
+		{
+			CVPixelBufferRef image = nullptr;
+			CVMetalTextureRef planes[2] = {};
+			MTL::Texture* textures[2] = {};
+			uint64_t frame = 0;
+		};
+		wi::vector<PendingCopy> pending_copies;
+
+		void release_pending(uint64_t framecount, bool all)
+		{
+			const uint32_t buffercount = GraphicsDevice::GetBufferCount();
+			const uint32_t count = (uint32_t)pending_copies.size();
+			uint32_t keep = 0;
+			bool released = false;
+			for (uint32_t i = 0; i < count; ++i)
+			{
+				PendingCopy entry = pending_copies[i];
+				if (!all && entry.frame + buffercount >= framecount)
+				{
+					pending_copies[keep++] = entry;
+					continue;
+				}
+				released = true;
+				if (allocationhandler != nullptr)
+				{
+					std::scoped_lock lock(allocationhandler->destroylocker);
+					allocationhandler->remove_resident(entry.textures[0]);
+					allocationhandler->remove_resident(entry.textures[1]);
+				}
+				if (entry.planes[0] != nullptr)
+					CFRelease(entry.planes[0]);
+				if (entry.planes[1] != nullptr)
+					CFRelease(entry.planes[1]);
+				if (entry.image != nullptr)
+					CFRelease(entry.image);
+			}
+			pending_copies.resize(keep);
+			if (released && texture_cache != nullptr)
+				CVMetalTextureCacheFlush(texture_cache, 0);
+		}
 		
 		~VideoDecoder_Metal()
 		{
+			if (session != nullptr)
+				VTDecompressionSessionWaitForAsynchronousFrames(session);
+			release_pending(0, true);
 			destroy_session();
 			if (format_desc != nullptr)
 			{
@@ -1055,16 +1098,11 @@ namespace metal_internal
 				CFRelease(output_attrs);
 				output_attrs = nullptr;
 			}
-			if (allocationhandler != nullptr)
+			if (texture_cache != nullptr)
 			{
-				std::scoped_lock lock(allocationhandler->destroylocker);
-				for (uint32_t i = 0; i < staging_count; ++i)
-				{
-					if (staging[i].buffer.get() != nullptr)
-						allocationhandler->destroyer_resources.push_back(std::make_pair(staging[i].buffer, allocationhandler->framecount));
-				}
+				CFRelease((CFTypeRef)texture_cache);
+				texture_cache = nullptr;
 			}
-			staging_count = 0;
 		}
 		void destroy_session()
 		{
@@ -1081,13 +1119,6 @@ namespace metal_internal
 				CFRelease(decoded);
 				decoded = nullptr;
 			}
-		}
-		void log_once(const char* message)
-		{
-			if (logged_error)
-				return;
-			logged_error = true;
-			wilog_error("%s", message);
 		}
 	};
 
@@ -3203,35 +3234,36 @@ using namespace metal_internal;
 			return false;
 		}
 
+		// Age 0 disables eviction. Retained CVMetalTextures keep each surface alive until the GPU copy retires.
+		CVMetalTextureCacheRef texture_cache = nullptr;
+		double texture_age = 0;
+		CFNumberRef age_num = CFNumberCreate(kCFAllocatorDefault, kCFNumberDoubleType, &texture_age);
+		const void* cache_keys[] = { kCVMetalTextureCacheMaximumTextureAgeKey };
+		const void* cache_values[] = { age_num };
+		CFDictionaryRef cache_attrs = age_num != nullptr ? CFDictionaryCreate(kCFAllocatorDefault, cache_keys, cache_values, 1, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks) : nullptr;
+		const CVReturn cache_status = CVMetalTextureCacheCreate(kCFAllocatorDefault, cache_attrs, device.get(), nullptr, &texture_cache);
+		if (cache_attrs != nullptr)
+			CFRelease(cache_attrs);
+		if (age_num != nullptr)
+			CFRelease(age_num);
+		if (cache_status != kCVReturnSuccess || texture_cache == nullptr)
+		{
+			if (texture_cache != nullptr)
+				CFRelease((CFTypeRef)texture_cache);
+			CFRelease(format_desc);
+			wilog_error("CVMetalTextureCacheCreate failed (%d)", (int)cache_status);
+			return false;
+		}
+
 		auto internal_state = wi::allocator::make_shared<VideoDecoder_Metal>();
 		internal_state->allocationhandler = allocationhandler;
 		internal_state->format_desc = format_desc;
+		internal_state->texture_cache = texture_cache;
 		internal_state->sample_bytes.reserve((size_t)desc->width * (size_t)desc->height);
+		internal_state->pending_copies.reserve(GraphicsDevice::GetBufferCount() + 1);
 		video_decoder->internal_state = internal_state;
 		video_decoder->desc = *desc;
 		video_decoder->support = VideoDecoderSupportFlags::DPB_AND_OUTPUT_COINCIDE;
-		
-		const uint32_t luma_alignment = (uint32_t)device->minimumLinearTextureAlignmentForPixelFormat(MTL::PixelFormatR8Unorm);
-		const uint32_t chroma_alignment = (uint32_t)device->minimumLinearTextureAlignmentForPixelFormat(MTL::PixelFormatRG8Unorm);
-		const uint32_t luma_row = (uint32_t)align((uint64_t)std::max(desc->width, 1u), (uint64_t)luma_alignment);
-		const uint32_t chroma_row = (uint32_t)align((uint64_t)std::max(desc->width, 1u), (uint64_t)chroma_alignment);
-		uint64_t size = (uint64_t)luma_row * std::max(desc->height, 1u);
-		size = align(size, (uint64_t)chroma_alignment);
-		size += (uint64_t)chroma_row * std::max(desc->height / 2, 1u);
-		const uint64_t staging_bytes = std::max(size, (uint64_t)16);
-		
-		const uint32_t slot_count = std::min(VideoDecoder_Metal::kMaxStagingSlots, BUFFERCOUNT + 1);
-		for (uint32_t i = 0; i < slot_count; ++i)
-		{
-			NS::SharedPtr<MTL::Buffer> created = NS::TransferPtr(device->newBuffer(staging_bytes, MTL::ResourceStorageModeShared | MTL::ResourceOptionCPUCacheModeWriteCombined));
-			if (created.get() == nullptr)
-				break;
-			allocationhandler->make_resident(created.get());
-			VideoDecoder_Metal::StagingSlot& slot = internal_state->staging[internal_state->staging_count++];
-			slot.buffer = created;
-			slot.capacity = created->length();
-			slot.frame = UINT64_MAX;
-		}
 		return true;
 	}
 
@@ -5199,17 +5231,17 @@ using namespace metal_internal;
 			return;
 		if (op->stream == nullptr || op->stream->mapped_data == nullptr)
 		{
-			decoder->log_once("Metal video decoder requires a CPU-visible bitstream buffer");
+			wilog_error("Metal video decoder requires a CPU-visible bitstream buffer");
 			return;
 		}
 		if (op->stream_offset + op->stream_size > op->stream->mapped_size)
 		{
-			decoder->log_once("Metal video decoder bitstream range is out of bounds");
+			wilog_error("Metal video decoder bitstream range is out of bounds");
 			return;
 		}
 		if (decoder->format_desc == nullptr)
 		{
-			decoder->log_once("Metal video decoder is missing SPS and PPS");
+			wilog_error("Metal video decoder is missing SPS and PPS");
 			return;
 		}
 		if ((op->flags & VideoDecodeOperation::FLAG_SESSION_RESET) && decoder->frames_decoded > 0)
@@ -5220,8 +5252,6 @@ using namespace metal_internal;
 		{
 			if (decoder->output_attrs == nullptr)
 			{
-				// Leave width and height unset so VideoToolbox keeps the native coded size.
-				// Forcing the macroblock-padded size makes it scale the picture.
 				int32_t pixel_format = kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange;
 				CFNumberRef pixel_format_num = CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &pixel_format);
 				CFDictionaryRef io_surface = CFDictionaryCreate(kCFAllocatorDefault, nullptr, nullptr, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
@@ -5241,7 +5271,7 @@ using namespace metal_internal;
 			}
 			if (decoder->output_attrs == nullptr)
 			{
-				decoder->log_once("Metal video decoder session was not created");
+				wilog_error("Metal video decoder session was not created");
 				return;
 			}
 			decoder->destroy_session();
@@ -5253,7 +5283,7 @@ using namespace metal_internal;
 			{
 				wilog_error("VTDecompressionSessionCreate failed (%d)", (int)session_status);
 				decoder->session = nullptr;
-				decoder->log_once("Metal video decoder session was not created");
+				wilog_error("Metal video decoder session was not created");
 				return;
 			}
 		}
@@ -5261,25 +5291,25 @@ using namespace metal_internal;
 		const Texture* target = op->output != nullptr ? op->output : op->DPB;
 		if (target == nullptr || target->desc.format != Format::NV12)
 		{
-			decoder->log_once("Metal video decoder output must be an NV12 texture");
+			wilog_error("Metal video decoder output must be an NV12 texture");
 			return;
 		}
 		auto target_internal = to_internal(target);
 		if (target_internal->texture.get() == nullptr || target_internal->texture_chroma.get() == nullptr)
 		{
-			decoder->log_once("Metal video decoder NV12 planes are missing");
+			wilog_error("Metal video decoder NV12 planes are missing");
 			return;
 		}
 		const uint32_t slice = op->output != nullptr ? 0u : op->current_dpb;
 		if (slice >= target->desc.array_size)
 		{
-			decoder->log_once("Metal video decoder DPB slot is out of range");
+			wilog_error("Metal video decoder DPB slot is out of range");
 			return;
 		}
 
 		if (op->stream_size < 4)
 		{
-			decoder->log_once("Metal video decoder bitstream frame is empty");
+			wilog_error("Metal video decoder bitstream frame is empty");
 			return;
 		}
 		const uint8_t* src = (const uint8_t*)op->stream->mapped_data + op->stream_offset;
@@ -5291,13 +5321,13 @@ using namespace metal_internal;
 			start = 3;
 		else
 		{
-			decoder->log_once("Metal video decoder bitstream frame is not Annex-B");
+			wilog_error("Metal video decoder bitstream frame is not Annex-B");
 			return;
 		}
 		const size_t nal_size = src_size - start;
 		if (nal_size == 0 || nal_size > 0xffffffffu)
 		{
-			decoder->log_once("Metal video decoder bitstream frame is empty");
+			wilog_error("Metal video decoder bitstream frame is empty");
 			return;
 		}
 		// The shared bitstream is Annex-B. VideoToolbox samples are 4-byte length prefixed.
@@ -5325,7 +5355,7 @@ using namespace metal_internal;
 		);
 		if (status != noErr || block == nullptr)
 		{
-			decoder->log_once("CMBlockBufferCreateWithMemoryBlock failed");
+			wilog_error("CMBlockBufferCreateWithMemoryBlock failed");
 			return;
 		}
 		CMSampleBufferRef sample = nullptr;
@@ -5343,7 +5373,7 @@ using namespace metal_internal;
 		if (status != noErr || sample == nullptr)
 		{
 			CFRelease(block);
-			decoder->log_once("CMSampleBufferCreateReady failed");
+			wilog_error("CMSampleBufferCreateReady failed");
 			return;
 		}
 
@@ -5366,7 +5396,7 @@ using namespace metal_internal;
 		CFRelease(block);
 		if (status != noErr)
 		{
-			decoder->log_once("VTDecompressionSessionDecodeFrame failed");
+			wilog_error("VTDecompressionSessionDecodeFrame failed");
 			return;
 		}
 
@@ -5382,118 +5412,89 @@ using namespace metal_internal;
 		{
 			if (frame != nullptr)
 				CFRelease(frame);
-			decoder->log_once("Metal video decoder produced no output frame");
+			wilog_error("Metal video decoder produced no output frame");
 			return;
 		}
 		if (!CVPixelBufferIsPlanar(frame) || CVPixelBufferGetPlaneCount(frame) < 2)
 		{
 			CFRelease(frame);
-			decoder->log_once("Metal video decoder output is not bi-planar NV12");
+			wilog_error("Metal video decoder output is not bi-planar NV12");
 			return;
 		}
-		if (CVPixelBufferLockBaseAddress(frame, kCVPixelBufferLock_ReadOnly) != kCVReturnSuccess)
+		if (decoder->texture_cache == nullptr)
 		{
 			CFRelease(frame);
-			decoder->log_once("CVPixelBufferLockBaseAddress failed");
+			wilog_error("Metal video decoder texture cache is missing");
 			return;
 		}
 
-		struct PlaneCopy
-		{
-			MTL::Texture* texture = nullptr;
-			MTL::PixelFormat format = MTL::PixelFormatInvalid;
-			uint32_t bpp = 1;
-			size_t plane = 0;
+		CVMetalTextureRef cv_planes[2] = {};
+		MTL::Texture* src_planes[2] = {};
+		MTL::Texture* dst_planes[2] = {
+			target_internal->texture.get(),
+			target_internal->texture_chroma.get(),
 		};
-		const PlaneCopy planes[2] = {
-			{ target_internal->texture.get(), MTL::PixelFormatR8Unorm, 1u, 0u },
-			{ target_internal->texture_chroma.get(), MTL::PixelFormatRG8Unorm, 2u, 1u },
+		const MTL::PixelFormat plane_formats[2] = {
+			MTL::PixelFormatR8Unorm,
+			MTL::PixelFormatRG8Unorm,
 		};
-
-		uint64_t staging_size = 0;
-		uint32_t row_pitch[2] = {};
-		uint32_t copy_width[2] = {};
-		uint32_t copy_height[2] = {};
-		uint64_t plane_offset[2] = {};
+		NS::UInteger copy_width[2] = {};
+		NS::UInteger copy_height[2] = {};
+		bool planes_ok = true;
 		for (uint32_t i = 0; i < 2; ++i)
 		{
-			const PlaneCopy& plane = planes[i];
-			uint32_t alignment = (uint32_t)device->minimumLinearTextureAlignmentForPixelFormat(plane.format);
-			if (alignment == 0)
-				alignment = 16u;
-			const uint32_t src_width = (uint32_t)CVPixelBufferGetWidthOfPlane(frame, plane.plane);
-			const uint32_t src_height = (uint32_t)CVPixelBufferGetHeightOfPlane(frame, plane.plane);
-			copy_width[i] = std::min((uint32_t)plane.texture->width(), src_width);
-			copy_height[i] = std::min((uint32_t)plane.texture->height(), src_height);
-			const uint32_t tight_row = copy_width[i] * plane.bpp;
-			row_pitch[i] = (uint32_t)align((uint64_t)std::max(tight_row, 1u), (uint64_t)alignment);
-			plane_offset[i] = align(staging_size, (uint64_t)alignment);
-			staging_size = plane_offset[i] + (uint64_t)row_pitch[i] * std::max(copy_height[i], 1u);
-		}
-
-		uint64_t frame_index = 0;
-		{
-			std::scoped_lock lock(allocationhandler->destroylocker);
-			frame_index = allocationhandler->framecount;
-		}
-		NS::SharedPtr<MTL::Buffer> staging;
-		bool retire_staging = false;
-		for (uint32_t i = 0; i < decoder->staging_count; ++i)
-		{
-			VideoDecoder_Metal::StagingSlot& slot = decoder->staging[i];
-			if (slot.capacity >= staging_size && (slot.frame == UINT64_MAX || slot.frame + BUFFERCOUNT < frame_index))
+			const size_t plane_width = CVPixelBufferGetWidthOfPlane(frame, i);
+			const size_t plane_height = CVPixelBufferGetHeightOfPlane(frame, i);
+			if (plane_width == 0 || plane_height == 0)
 			{
-				slot.frame = frame_index;
-				staging = slot.buffer;
+				planes_ok = false;
 				break;
 			}
+			const CVReturn cv_status = CVMetalTextureCacheCreateTextureFromImage(
+				kCFAllocatorDefault,
+				decoder->texture_cache,
+				frame,
+				nullptr,
+				(NS::UInteger)plane_formats[i],
+				plane_width,
+				plane_height,
+				i,
+				&cv_planes[i]
+			);
+			src_planes[i] = cv_planes[i] != nullptr ? (MTL::Texture*)CVMetalTextureGetTexture(cv_planes[i]) : nullptr;
+			if (cv_status != kCVReturnSuccess || src_planes[i] == nullptr)
+			{
+				planes_ok = false;
+				break;
+			}
+			copy_width[i] = std::min(dst_planes[i]->width(), (NS::UInteger)plane_width);
+			copy_height[i] = std::min(dst_planes[i]->height(), (NS::UInteger)plane_height);
 		}
-		if (staging.get() == nullptr)
+		if (!planes_ok)
 		{
-			NS::SharedPtr<MTL::Buffer> created = NS::TransferPtr(device->newBuffer(std::max(staging_size, (uint64_t)16), MTL::ResourceStorageModeShared | MTL::ResourceOptionCPUCacheModeWriteCombined));
-			if (created.get() == nullptr)
+			for (uint32_t i = 0; i < 2; ++i)
 			{
-				CVPixelBufferUnlockBaseAddress(frame, kCVPixelBufferLock_ReadOnly);
-				CFRelease(frame);
-				decoder->log_once("Metal video decoder staging buffer allocation failed");
-				return;
+				if (cv_planes[i] != nullptr)
+					CFRelease(cv_planes[i]);
 			}
-			allocationhandler->make_resident(created.get());
-			if (decoder->staging_count < VideoDecoder_Metal::kMaxStagingSlots)
-			{
-				VideoDecoder_Metal::StagingSlot& slot = decoder->staging[decoder->staging_count++];
-				slot.buffer = created;
-				slot.capacity = created->length();
-				slot.frame = frame_index;
-			}
-			else
-			{
-				retire_staging = true;
-			}
-			staging = created;
+			CFRelease(frame);
+			wilog_error("CVMetalTextureCacheCreateTextureFromImage failed");
+			return;
 		}
-		uint8_t* staging_data = (uint8_t*)staging->contents();
+
 		for (uint32_t i = 0; i < 2; ++i)
-		{
-			const uint8_t* src = (const uint8_t*)CVPixelBufferGetBaseAddressOfPlane(frame, planes[i].plane);
-			const size_t src_stride = CVPixelBufferGetBytesPerRowOfPlane(frame, planes[i].plane);
-			uint8_t* dst = staging_data + plane_offset[i];
-			if (src == nullptr || src_stride < planes[i].bpp || copy_height[i] == 0)
-			{
-				copy_width[i] = 0;
-				continue;
-			}
-			const uint32_t max_pixels = (uint32_t)(src_stride / planes[i].bpp);
-			if (copy_width[i] > max_pixels)
-				copy_width[i] = max_pixels;
-			const uint32_t copy_bytes = copy_width[i] * planes[i].bpp;
-			for (uint32_t row = 0; row < copy_height[i]; ++row)
-			{
-				std::memcpy(dst + (uint64_t)row * row_pitch[i], src + row * src_stride, copy_bytes);
-			}
-		}
-		CVPixelBufferUnlockBaseAddress(frame, kCVPixelBufferLock_ReadOnly);
-		CFRelease(frame);
+			allocationhandler->make_resident(src_planes[i]);
+
+		const uint64_t frame_index = GetFrameCount();
+		decoder->release_pending(frame_index, false);
+		VideoDecoder_Metal::PendingCopy pending = {};
+		pending.image = frame;
+		pending.planes[0] = cv_planes[0];
+		pending.planes[1] = cv_planes[1];
+		pending.textures[0] = src_planes[0];
+		pending.textures[1] = src_planes[1];
+		pending.frame = frame_index;
+		decoder->pending_copies.push_back(pending);
 
 		precopy(cmd);
 		CommandList_Metal& commandlist = GetCommandList(cmd);
@@ -5501,25 +5502,17 @@ using namespace metal_internal;
 		{
 			if (copy_width[i] == 0 || copy_height[i] == 0)
 				continue;
-			const MTL::Size size = { copy_width[i], copy_height[i], 1u };
-			const NS::UInteger bytes_per_image = planes[i].texture->textureType() == MTL::TextureType2D ? 0 : (NS::UInteger)row_pitch[i] * copy_height[i];
-			commandlist.compute_encoder->copyFromBuffer(
-				staging.get(),
-				plane_offset[i],
-				row_pitch[i],
-				bytes_per_image,
-				size,
-				planes[i].texture,
+			commandlist.compute_encoder->copyFromTexture(
+				src_planes[i],
+				0,
+				0,
+				{ 0, 0, 0 },
+				{ copy_width[i], copy_height[i], 1u },
+				dst_planes[i],
 				slice,
 				0,
 				{ 0, 0, 0 }
 			);
-		}
-
-		if (retire_staging)
-		{
-			std::scoped_lock lock(allocationhandler->destroylocker);
-			allocationhandler->destroyer_resources.push_back(std::make_pair(staging, allocationhandler->framecount));
 		}
 		decoder->frames_decoded++;
 	}
