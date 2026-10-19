@@ -2844,379 +2844,41 @@ using namespace metal_internal;
 		constexpr size_t kMaxParameterSets = 32;
 		if (desc->sps_count + desc->pps_count > kMaxParameterSets)
 			return false;
-		
-		struct H264ParameterWriter
-		{
-			uint8_t storage[4096] = {};
-			size_t nbytes = 0;
-			uint8_t cur = 0;
-			int bits_left = 8;
-			bool overflow = false;
-			
-			void reset()
-			{
-				nbytes = 0;
-				cur = 0;
-				bits_left = 8;
-				overflow = false;
-			}
-			void bit(unsigned value)
-			{
-				if (overflow)
-					return;
-				if (bits_left == 8 && nbytes >= sizeof(storage))
-				{
-					overflow = true;
-					return;
-				}
-				--bits_left;
-				cur |= (uint8_t)((value & 1u) << bits_left);
-				if (bits_left == 0)
-				{
-					storage[nbytes++] = cur;
-					cur = 0;
-					bits_left = 8;
-				}
-			}
-			void u(int n, unsigned value)
-			{
-				for (int i = n - 1; i >= 0; --i)
-					bit((value >> i) & 1u);
-			}
-			void ue(unsigned value)
-			{
-				unsigned code = value + 1u;
-				int zeros = 0;
-				unsigned rest = code;
-				while (rest > 1u)
-				{
-					rest >>= 1;
-					++zeros;
-				}
-				for (int i = 0; i < zeros; ++i)
-					bit(0);
-				u(zeros + 1, code);
-			}
-			void se(int value)
-			{
-				unsigned code = value <= 0 ? (unsigned)(-value) << 1 : ((unsigned)value << 1) - 1u;
-				ue(code);
-			}
-			void trailing()
-			{
-				bit(1);
-				while (bits_left != 8)
-					bit(0);
-			}
-			void scaling_list(const int* list, int count, int use_default)
-			{
-				if (use_default)
-				{
-					se(-8);
-					return;
-				}
-				int last = 8;
-				for (int j = 0; j < count; ++j)
-				{
-					int next = list[j];
-					int delta = next - last;
-					delta %= 256;
-					if (delta < 0)
-						delta += 256;
-					if (delta > 127)
-						delta -= 256;
-					se(delta);
-					last = next;
-				}
-			}
-			void hrd(const h264::SPS& sps)
-			{
-				int count = sps.hrd.cpb_cnt_minus1;
-				if (count < 0)
-					count = 0;
-				if (count > h264::MAX_CPB_CNT_MINUS1)
-					count = h264::MAX_CPB_CNT_MINUS1;
-				ue((unsigned)count);
-				u(4, (unsigned)sps.hrd.bit_rate_scale);
-				u(4, (unsigned)sps.hrd.cpb_size_scale);
-				for (int i = 0; i <= count; ++i)
-				{
-					ue((unsigned)sps.hrd.bit_rate_value_minus1[i]);
-					ue((unsigned)sps.hrd.cpb_size_value_minus1[i]);
-					u(1, (unsigned)sps.hrd.cbr_flag[i]);
-				}
-				u(5, (unsigned)sps.hrd.initial_cpb_removal_delay_length_minus1);
-				u(5, (unsigned)sps.hrd.cpb_removal_delay_length_minus1);
-				u(5, (unsigned)sps.hrd.dpb_output_delay_length_minus1);
-				u(5, (unsigned)sps.hrd.time_offset_length);
-			}
-			void vui(const h264::SPS& sps)
-			{
-				const auto& v = sps.vui;
-				u(1, (unsigned)v.aspect_ratio_info_present_flag);
-				if (v.aspect_ratio_info_present_flag)
-				{
-					u(8, (unsigned)v.aspect_ratio_idc);
-					if (v.aspect_ratio_idc == 255)
-					{
-						u(16, (unsigned)v.sar_width);
-						u(16, (unsigned)v.sar_height);
-					}
-				}
-				u(1, (unsigned)v.overscan_info_present_flag);
-				if (v.overscan_info_present_flag)
-					u(1, (unsigned)v.overscan_appropriate_flag);
-				u(1, (unsigned)v.video_signal_type_present_flag);
-				if (v.video_signal_type_present_flag)
-				{
-					u(3, (unsigned)v.video_format);
-					u(1, (unsigned)v.video_full_range_flag);
-					u(1, (unsigned)v.colour_description_present_flag);
-					if (v.colour_description_present_flag)
-					{
-						u(8, (unsigned)v.colour_primaries);
-						u(8, (unsigned)v.transfer_characteristics);
-						u(8, (unsigned)v.matrix_coefficients);
-					}
-				}
-				u(1, (unsigned)v.chroma_loc_info_present_flag);
-				if (v.chroma_loc_info_present_flag)
-				{
-					ue((unsigned)v.chroma_sample_loc_type_top_field);
-					ue((unsigned)v.chroma_sample_loc_type_bottom_field);
-				}
-				u(1, (unsigned)v.timing_info_present_flag);
-				if (v.timing_info_present_flag)
-				{
-					u(32, (unsigned)v.num_units_in_tick);
-					u(32, (unsigned)v.time_scale);
-					u(1, (unsigned)v.fixed_frame_rate_flag);
-				}
-				u(1, (unsigned)v.nal_hrd_parameters_present_flag);
-				if (v.nal_hrd_parameters_present_flag)
-					hrd(sps);
-				u(1, (unsigned)v.vcl_hrd_parameters_present_flag);
-				if (v.vcl_hrd_parameters_present_flag)
-					hrd(sps);
-				if (v.nal_hrd_parameters_present_flag || v.vcl_hrd_parameters_present_flag)
-					u(1, (unsigned)v.low_delay_hrd_flag);
-				u(1, (unsigned)v.pic_struct_present_flag);
-				u(1, (unsigned)v.bitstream_restriction_flag);
-				if (v.bitstream_restriction_flag)
-				{
-					u(1, (unsigned)v.motion_vectors_over_pic_boundaries_flag);
-					ue((unsigned)v.max_bytes_per_pic_denom);
-					ue((unsigned)v.max_bits_per_mb_denom);
-					ue((unsigned)v.log2_max_mv_length_horizontal);
-					ue((unsigned)v.log2_max_mv_length_vertical);
-					ue((unsigned)v.num_reorder_frames);
-					ue((unsigned)v.max_dec_frame_buffering);
-				}
-			}
-			bool finish(uint8_t header, wi::vector<uint8_t>& out)
-			{
-				trailing();
-				if (overflow)
-					return false;
-				out.push_back(header);
-				int zeros = 0;
-				for (size_t i = 0; i < nbytes; ++i)
-				{
-					const uint8_t value = storage[i];
-					if (zeros == 2 && value <= 3)
-					{
-						out.push_back(3);
-						zeros = 0;
-					}
-					out.push_back(value);
-					zeros = value == 0 ? zeros + 1 : 0;
-				}
-				return true;
-			}
-			bool write_sps(const h264::SPS& sps, wi::vector<uint8_t>& out)
-			{
-				reset();
-				u(8, (unsigned)sps.profile_idc);
-				u(1, (unsigned)sps.constraint_set0_flag);
-				u(1, (unsigned)sps.constraint_set1_flag);
-				u(1, (unsigned)sps.constraint_set2_flag);
-				u(1, (unsigned)sps.constraint_set3_flag);
-				u(1, (unsigned)sps.constraint_set4_flag);
-				u(1, (unsigned)sps.constraint_set5_flag);
-				u(2, 0);
-				u(8, (unsigned)sps.level_idc);
-				ue((unsigned)sps.seq_parameter_set_id);
-				const int profile = sps.profile_idc;
-				if (profile == 100 || profile == 110 || profile == 122 || profile == 144)
-				{
-					ue((unsigned)sps.chroma_format_idc);
-					if (sps.chroma_format_idc == 3)
-						u(1, (unsigned)sps.separate_colour_plane_flag);
-					ue((unsigned)sps.bit_depth_luma_minus8);
-					ue((unsigned)sps.bit_depth_chroma_minus8);
-					u(1, (unsigned)sps.qpprime_y_zero_transform_bypass_flag);
-					u(1, (unsigned)sps.seq_scaling_matrix_present_flag);
-					if (sps.seq_scaling_matrix_present_flag)
-					{
-						for (int i = 0; i < 8; ++i)
-						{
-							u(1, (unsigned)sps.seq_scaling_list_present_flag[i]);
-							if (sps.seq_scaling_list_present_flag[i])
-							{
-								if (i < 6)
-									scaling_list(sps.ScalingList4x4[i], 16, sps.UseDefaultScalingMatrix4x4Flag[i]);
-								else
-									scaling_list(sps.ScalingList8x8[i - 6], 64, sps.UseDefaultScalingMatrix8x8Flag[i - 6]);
-							}
-						}
-					}
-				}
-				ue((unsigned)sps.log2_max_frame_num_minus4);
-				ue((unsigned)sps.pic_order_cnt_type);
-				if (sps.pic_order_cnt_type == 0)
-					ue((unsigned)sps.log2_max_pic_order_cnt_lsb_minus4);
-				else if (sps.pic_order_cnt_type == 1)
-				{
-					u(1, (unsigned)sps.delta_pic_order_always_zero_flag);
-					se(sps.offset_for_non_ref_pic);
-					se(sps.offset_for_top_to_bottom_field);
-					int cycle = sps.num_ref_frames_in_pic_order_cnt_cycle;
-					if (cycle < 0)
-						cycle = 0;
-					if (cycle > h264::MAX_NUM_REF_FRAMES_IN_PIC_ORDER_CNT_CYCLE)
-						cycle = h264::MAX_NUM_REF_FRAMES_IN_PIC_ORDER_CNT_CYCLE;
-					ue((unsigned)cycle);
-					for (int i = 0; i < cycle; ++i)
-						se(sps.offset_for_ref_frame[i]);
-				}
-				ue((unsigned)sps.num_ref_frames);
-				u(1, (unsigned)sps.gaps_in_frame_num_value_allowed_flag);
-				ue((unsigned)sps.pic_width_in_mbs_minus1);
-				ue((unsigned)sps.pic_height_in_map_units_minus1);
-				u(1, (unsigned)sps.frame_mbs_only_flag);
-				if (!sps.frame_mbs_only_flag)
-					u(1, (unsigned)sps.mb_adaptive_frame_field_flag);
-				u(1, (unsigned)sps.direct_8x8_inference_flag);
-				u(1, (unsigned)sps.frame_cropping_flag);
-				if (sps.frame_cropping_flag)
-				{
-					ue((unsigned)sps.frame_crop_left_offset);
-					ue((unsigned)sps.frame_crop_right_offset);
-					ue((unsigned)sps.frame_crop_top_offset);
-					ue((unsigned)sps.frame_crop_bottom_offset);
-				}
-				u(1, (unsigned)sps.vui_parameters_present_flag);
-				if (sps.vui_parameters_present_flag)
-					vui(sps);
-				return finish(0x67, out);
-			}
-			bool write_pps(const h264::PPS& pps, wi::vector<uint8_t>& out)
-			{
-				reset();
-				ue((unsigned)pps.pic_parameter_set_id);
-				ue((unsigned)pps.seq_parameter_set_id);
-				u(1, (unsigned)pps.entropy_coding_mode_flag);
-				u(1, (unsigned)pps.pic_order_present_flag);
-				ue((unsigned)pps.num_slice_groups_minus1);
-				if (pps.num_slice_groups_minus1 > 0)
-				{
-					ue((unsigned)pps.slice_group_map_type);
-					if (pps.slice_group_map_type == 0)
-					{
-						for (int i = 0; i <= pps.num_slice_groups_minus1 && i <= h264::MAX_NUM_SLICE_GROUPS_MINUS1; ++i)
-							ue((unsigned)pps.run_length_minus1[i]);
-					}
-					else if (pps.slice_group_map_type == 2)
-					{
-						for (int i = 0; i < pps.num_slice_groups_minus1 && i <= h264::MAX_NUM_SLICE_GROUPS_MINUS1; ++i)
-						{
-							ue((unsigned)pps.top_left[i]);
-							ue((unsigned)pps.bottom_right[i]);
-						}
-					}
-					else if (pps.slice_group_map_type == 3 || pps.slice_group_map_type == 4 || pps.slice_group_map_type == 5)
-					{
-						u(1, (unsigned)pps.slice_group_change_direction_flag);
-						ue((unsigned)pps.slice_group_change_rate_minus1);
-					}
-					else if (pps.slice_group_map_type == 6)
-					{
-						ue((unsigned)pps.pic_size_in_map_units_minus1);
-						const int bits = h264::intlog2(pps.num_slice_groups_minus1 + 1);
-						int count = pps.pic_size_in_map_units_minus1;
-						if (count > h264::MAX_SLICE_GROUP_IDS - 1)
-							count = h264::MAX_SLICE_GROUP_IDS - 1;
-						for (int i = 0; i <= count; ++i)
-							u(bits, (unsigned)pps.slice_group_id[i]);
-					}
-				}
-				ue((unsigned)pps.num_ref_idx_l0_active_minus1);
-				ue((unsigned)pps.num_ref_idx_l1_active_minus1);
-				u(1, (unsigned)pps.weighted_pred_flag);
-				u(2, (unsigned)pps.weighted_bipred_idc);
-				se(pps.pic_init_qp_minus26);
-				se(pps.pic_init_qs_minus26);
-				se(pps.chroma_qp_index_offset);
-				u(1, (unsigned)pps.deblocking_filter_control_present_flag);
-				u(1, (unsigned)pps.constrained_intra_pred_flag);
-				u(1, (unsigned)pps.redundant_pic_cnt_present_flag);
-				const bool more = pps.transform_8x8_mode_flag || pps.pic_scaling_matrix_present_flag || pps.second_chroma_qp_index_offset != pps.chroma_qp_index_offset;
-				if (more)
-				{
-					u(1, (unsigned)pps.transform_8x8_mode_flag);
-					u(1, (unsigned)pps.pic_scaling_matrix_present_flag);
-					if (pps.pic_scaling_matrix_present_flag)
-					{
-						const int count = 6 + 2 * pps.transform_8x8_mode_flag;
-						for (int i = 0; i < count; ++i)
-						{
-							u(1, (unsigned)pps.pic_scaling_list_present_flag[i]);
-							if (pps.pic_scaling_list_present_flag[i])
-							{
-								if (i < 6)
-									scaling_list(pps.ScalingList4x4[i], 16, pps.UseDefaultScalingMatrix4x4Flag[i]);
-								else
-									scaling_list(pps.ScalingList8x8[i - 6], 64, pps.UseDefaultScalingMatrix8x8Flag[i - 6]);
-							}
-						}
-					}
-					se(pps.second_chroma_qp_index_offset);
-				}
-				return finish(0x68, out);
-			}
-		};
-		H264ParameterWriter parameter_writer;
-		wi::vector<uint8_t> parameter_bytes;
+
+		unsigned char parameter_bytes[4096];
+		int parameter_used = 0;
 		size_t parameter_offsets[kMaxParameterSets];
 		size_t parameter_sizes[kMaxParameterSets];
 		size_t parameter_count = 0;
 		for (size_t i = 0; i < desc->sps_count; ++i)
 		{
-			const size_t begin = parameter_bytes.size();
-			if (!parameter_writer.write_sps(sps_array[i], parameter_bytes))
+			const int written = h264::write_sps(&sps_array[i], parameter_bytes + parameter_used, (int)sizeof(parameter_bytes) - parameter_used);
+			if (written <= 0)
 			{
 				wilog_error("Metal H264 decoder could not write SPS");
 				return false;
 			}
-			parameter_offsets[parameter_count] = begin;
-			parameter_sizes[parameter_count] = parameter_bytes.size() - begin;
+			parameter_offsets[parameter_count] = (size_t)parameter_used;
+			parameter_sizes[parameter_count] = (size_t)written;
+			parameter_used += written;
 			++parameter_count;
 		}
 		for (size_t i = 0; i < desc->pps_count; ++i)
 		{
-			const size_t begin = parameter_bytes.size();
-			if (!parameter_writer.write_pps(pps_array[i], parameter_bytes))
+			const int written = h264::write_pps(&pps_array[i], parameter_bytes + parameter_used, (int)sizeof(parameter_bytes) - parameter_used);
+			if (written <= 0)
 			{
 				wilog_error("Metal H264 decoder could not write PPS");
 				return false;
 			}
-			parameter_offsets[parameter_count] = begin;
-			parameter_sizes[parameter_count] = parameter_bytes.size() - begin;
+			parameter_offsets[parameter_count] = (size_t)parameter_used;
+			parameter_sizes[parameter_count] = (size_t)written;
+			parameter_used += written;
 			++parameter_count;
 		}
 		const uint8_t* parameter_sets[kMaxParameterSets];
 		for (size_t i = 0; i < parameter_count; ++i)
-			parameter_sets[i] = parameter_bytes.data() + parameter_offsets[i];
+			parameter_sets[i] = parameter_bytes + parameter_offsets[i];
 		CMVideoFormatDescriptionRef format_desc = nullptr;
 		const OSStatus format_status = CMVideoFormatDescriptionCreateFromH264ParameterSets(
 			kCFAllocatorDefault,
