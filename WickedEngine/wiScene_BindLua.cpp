@@ -7316,6 +7316,8 @@ Luna<VideoComponent_BindLua>::FunctionType VideoComponent_BindLua::methods[] = {
 	lunamethod(VideoComponent_BindLua, Play),
 	lunamethod(VideoComponent_BindLua, Stop),
 	lunamethod(VideoComponent_BindLua, SetLooped),
+	lunamethod(VideoComponent_BindLua, SetVolume),
+	lunamethod(VideoComponent_BindLua, GetVolume),
 	lunamethod(VideoComponent_BindLua, GetLength),
 	lunamethod(VideoComponent_BindLua, GetCurrentTimer),
 	lunamethod(VideoComponent_BindLua, Seek),
@@ -7363,6 +7365,16 @@ int VideoComponent_BindLua::SetLooped(lua_State* L)
 	component->SetLooped(value);
 
 	return 0;
+}
+int VideoComponent_BindLua::SetVolume(lua_State* L)
+{
+	component->volume = wi::lua::SGetFloat(L, 1);
+	return 0;
+}
+int VideoComponent_BindLua::GetVolume(lua_State* L)
+{
+	wi::lua::SSetFloat(L, component->volume);
+	return 1;
 }
 int VideoComponent_BindLua::GetLength(lua_State* L)
 {

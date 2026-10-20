@@ -58,6 +58,9 @@ namespace wi::lua
 		int GetCurrentTimer(lua_State* L);
 		int IsEnded(lua_State* L);
 
+		int SetVolume(lua_State* L);
+		int GetVolume(lua_State* L);
+
 		static void Bind();
 	};
 

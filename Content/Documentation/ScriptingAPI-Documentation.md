@@ -2647,6 +2647,12 @@ once at different locations.
     ---
     ---@return boolean
     function VideoInstance.IsEnded() end
+	
+    ---@return float
+    function VideoInstance.GetVolume() end
+	
+    ---@param volume float
+    function VideoInstance.SetVolume(volume) end
 ```
 
 ### Math Types
@@ -6706,6 +6712,14 @@ Describes a video object
     ---
     ---@return string
     function VideoComponent.GetFilename() end
+
+    --- Returns the video volume.
+    ---
+    ---@return float
+    function VideoComponent.GetVolume() end
+	
+    ---@param volume float
+    function VideoComponent.SetVolume(volume) end
 ```
 
 #### ColliderComponent
