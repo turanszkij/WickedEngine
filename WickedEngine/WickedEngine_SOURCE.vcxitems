@@ -341,6 +341,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\TriangleSplitter\TriangleSplitterMean.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)LUA\ljumptab.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)LUA\lopnames.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\aac.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\dds.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\dxva.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\h264.h" />
