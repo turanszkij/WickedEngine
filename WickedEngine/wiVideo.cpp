@@ -596,7 +596,7 @@ namespace wi::video
 						track.object_type_indication == MP4_OBJECT_TYPE_AUDIO_ISO_IEC_13818_7_MAIN_PROFILE ||
 						track.object_type_indication == MP4_OBJECT_TYPE_AUDIO_ISO_IEC_13818_7_LC_PROFILE ||
 						track.object_type_indication == MP4_OBJECT_TYPE_AUDIO_ISO_IEC_13818_7_SSR_PROFILE;
-					if (!aac || track.dsi == nullptr || track.dsi_bytes < 2 || track.sample_count == 0)
+					if (!aac || track.dsi == nullptr || track.dsi_bytes < aac::MIN_AUDIO_SPECIFIC_CONFIG_BYTES || track.sample_count == 0)
 					{
 						wilog_warning("Video: audio format not supported!\nsupported formats = ISO_IEC_14496_3, ISO_IEC_13818_7_MAIN_PROFILE, ISO_IEC_13818_7_LC_PROFILE, IEC_13818_7_SSR_PROFILE\ncurrent value = %d", (int)track.object_type_indication);
 						continue;
@@ -608,12 +608,12 @@ namespace wi::video
 					uint32_t channels = 0;
 					if (!aac::read_audio_object_type(track.dsi, track.dsi_bytes, bit, audio_object_type) ||
 						!aac::read_sample_rate_index(track.dsi, track.dsi_bytes, bit, sample_rate_index) ||
-						!aac::read_bits(track.dsi, track.dsi_bytes, bit, 4, channels))
+						!aac::read_bits(track.dsi, track.dsi_bytes, bit, aac::CHANNEL_CONFIGURATION_BITS, channels))
 					{
 						wilog_warning("Video: audio parameter error!");
 						continue;
 					}
-					if (audio_object_type == 5 || audio_object_type == 29)
+					if (audio_object_type == aac::AUDIO_OBJECT_TYPE_SBR || audio_object_type == aac::AUDIO_OBJECT_TYPE_PS)
 					{
 						uint32_t extension_rate_index = 0;
 						uint32_t core_object_type = 0;
@@ -626,12 +626,12 @@ namespace wi::video
 						audio_object_type = core_object_type;
 						(void)extension_rate_index;
 					}
-					if (audio_object_type == 0 || audio_object_type > 4)
-						audio_object_type = 2;
-					if (channels == 0)
+					if (audio_object_type == aac::AUDIO_OBJECT_TYPE_NULL || audio_object_type > aac::MAX_ADTS_AUDIO_OBJECT_TYPE)
+						audio_object_type = aac::AUDIO_OBJECT_TYPE_AAC_LC;
+					if (channels == aac::CHANNEL_CONFIGURATION_AOT_SPECIFIC)
 						channels = track.SampleDescription.audio.channelcount;
-					if (channels == 0 || channels > 7)
-						channels = 2;
+					if (channels == aac::CHANNEL_CONFIGURATION_AOT_SPECIFIC || channels > aac::MAX_ADTS_CHANNEL_CONFIGURATION)
+						channels = aac::CHANNEL_CONFIGURATION_STEREO;
 
 					// AAC is raw AAC compressed audio frame
 					//	It will be converted to ADTS which is AAC frames + ADTS headers separating frames, that can be fed into platform's audio API later
@@ -643,7 +643,7 @@ namespace wi::video
 						unsigned timestamp = 0;
 						unsigned duration = 0;
 						const MP4D_file_offset_t offset = MP4D_frame_offset(&mp4, ntrack, sample, &frame_bytes, &timestamp, &duration);
-						if (frame_bytes < 1 || frame_bytes + sizeof(aac::Header) > 0x1FFF)
+						if (frame_bytes < 1 || frame_bytes + sizeof(aac::Header) > aac::MAX_ADTS_FRAME_LENGTH)
 							continue;
 						if ((uint64_t)offset + frame_bytes > filesize)
 							continue;
