@@ -5702,6 +5702,7 @@ namespace wi::scene
 					instance3D.emitterRadius = 0;
 					wi::audio::Update3D(&video.videoinstance.audio, instance3D);
 				}
+				wi::audio::SetVolume(video.volume, &video.videoinstance.audio);
 			}
 		}
 	}

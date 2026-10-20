@@ -22,6 +22,7 @@ public:
 	wi::gui::Label filenameLabel;
 	wi::gui::Button playpauseButton;
 	wi::gui::Button stopButton;
+	wi::gui::Slider volumeSlider;
 	wi::gui::CheckBox loopedCheckbox;
 	VideoPreview preview;
 	wi::gui::Slider timerSlider;
