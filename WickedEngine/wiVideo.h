@@ -1,5 +1,6 @@
 #pragma once
 #include "CommonInclude.h"
+#include "wiAudio.h"
 #include "wiGraphicsDevice.h"
 #include "wiVector.h"
 #include "wiUnorderedSet.h"
@@ -46,6 +47,7 @@ namespace wi::video
 		};
 		wi::vector<FrameInfo> frame_infos;
 		uint32_t num_dpb_slots = 0;
+		wi::audio::Sound audio;
 		inline bool IsValid() const { return data_stream.IsValid(); }
 	};
 
@@ -89,6 +91,10 @@ namespace wi::video
 		int target_display_order = 0; // the current display order that should be visible
 		int current_decode_frame = 0; // the latest decoded frame index
 		float current_time = 0; // tracking the absolute time of the playback in seconds
+		wi::audio::SoundInstance audio;
+		float audio_time_origin = 0;
+		float audio_sync_time = 0;
+		bool audio_unavailable = false;
 		enum class Flags
 		{
 			Empty = 0,

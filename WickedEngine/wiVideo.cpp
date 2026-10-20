@@ -3,6 +3,8 @@
 #include "wiRenderer.h"
 #include "wiBacklog.h"
 
+#include <cmath>
+
 #include "Utility/minimp4.h"
 #include "Utility/h264.h"
 
@@ -246,6 +248,74 @@ namespace wi::video
 		}
 		return false;
 	}
+
+	static bool ReadBits(const uint8_t* data, uint32_t size, uint32_t& bit, uint32_t count, uint32_t& value)
+	{
+		value = 0;
+		for (uint32_t i = 0; i < count; ++i)
+		{
+			if ((bit >> 3) >= size)
+				return false;
+			value = (value << 1) | ((data[bit >> 3] >> (7 - (bit & 7))) & 1);
+			++bit;
+		}
+		return true;
+	}
+	static bool ReadAudioObjectType(const uint8_t* data, uint32_t size, uint32_t& bit, uint32_t& audio_object_type)
+	{
+		if (!ReadBits(data, size, bit, 5, audio_object_type))
+			return false;
+		if (audio_object_type == 31)
+		{
+			uint32_t extension = 0;
+			if (!ReadBits(data, size, bit, 6, extension))
+				return false;
+			audio_object_type = 32 + extension;
+		}
+		return true;
+	}
+	static uint32_t NearestAACSampleRateIndex(uint32_t sample_rate)
+	{
+		static const uint32_t rates[] = { 96000,88200,64000,48000,44100,32000,24000,22050,16000,12000,11025,8000,7350 };
+		uint32_t best = 4;
+		uint32_t best_diff = 0xFFFFFFFFu;
+		for (uint32_t i = 0; i < 13; ++i)
+		{
+			const uint32_t diff = sample_rate > rates[i] ? sample_rate - rates[i] : rates[i] - sample_rate;
+			if (diff < best_diff)
+			{
+				best_diff = diff;
+				best = i;
+			}
+		}
+		return best;
+	}
+	static bool ReadSampleRateIndex(const uint8_t* data, uint32_t size, uint32_t& bit, uint32_t& index)
+	{
+		if (!ReadBits(data, size, bit, 4, index))
+			return false;
+		if (index == 0x0F)
+		{
+			uint32_t rate = 0;
+			if (!ReadBits(data, size, bit, 24, rate))
+				return false;
+			index = NearestAACSampleRateIndex(rate);
+		}
+		return index < 13;
+	}
+	static void WriteADTSHeader(uint8_t* header, uint32_t audio_object_type, uint32_t sample_rate_index, uint32_t channels, uint32_t aac_bytes)
+	{
+		const uint32_t profile = audio_object_type > 0 ? (audio_object_type - 1) & 3 : 1;
+		const uint32_t length = aac_bytes + 7;
+		header[0] = 0xFF;
+		header[1] = 0xF1;
+		header[2] = (uint8_t)((profile << 6) | ((sample_rate_index & 0x0F) << 2) | ((channels >> 2) & 0x01));
+		header[3] = (uint8_t)(((channels & 0x03) << 6) | ((length >> 11) & 0x03));
+		header[4] = (uint8_t)((length >> 3) & 0xFF);
+		header[5] = (uint8_t)(((length & 0x07) << 5) | 0x1F);
+		header[6] = 0xFC;
+	}
+
 	bool CreateVideoMP4(const uint8_t* filedata, size_t filesize, Video* video)
 	{
 		*video = {};
@@ -301,6 +371,7 @@ namespace wi::video
 				video->genre = (char*)mp4.tag.genre;
 			}
 
+			bool audio_attempted = false;
 			for (uint32_t ntrack = 0; ntrack < mp4.track_count; ntrack++)
 			{
 				const MP4D_track_t& track = mp4.track[ntrack];
@@ -583,8 +654,74 @@ namespace wi::video
 				}
 				else if (track.handler_type == MP4D_HANDLER_TYPE_SOUN)
 				{
-					wi::backlog::post("Audio from video file is not implemented yet!");
+					if (video->audio.IsValid())
+						continue;
+					audio_attempted = true;
+					
+					const MP4D_track_t& track = mp4.track[ntrack];
+					const bool aac =
+						track.object_type_indication == MP4_OBJECT_TYPE_AUDIO_ISO_IEC_14496_3 ||
+						track.object_type_indication == MP4_OBJECT_TYPE_AUDIO_ISO_IEC_13818_7_MAIN_PROFILE ||
+						track.object_type_indication == MP4_OBJECT_TYPE_AUDIO_ISO_IEC_13818_7_LC_PROFILE ||
+						track.object_type_indication == MP4_OBJECT_TYPE_AUDIO_ISO_IEC_13818_7_SSR_PROFILE;
+					if (!aac || track.dsi == nullptr || track.dsi_bytes < 2 || track.sample_count == 0)
+						break;
+
+					uint32_t bit = 0;
+					uint32_t audio_object_type = 0;
+					uint32_t sample_rate_index = 0;
+					uint32_t channels = 0;
+					if (!ReadAudioObjectType(track.dsi, track.dsi_bytes, bit, audio_object_type) ||
+						!ReadSampleRateIndex(track.dsi, track.dsi_bytes, bit, sample_rate_index) ||
+						!ReadBits(track.dsi, track.dsi_bytes, bit, 4, channels))
+					{
+						break;
+					}
+					if (audio_object_type == 5 || audio_object_type == 29)
+					{
+						uint32_t extension_rate_index = 0;
+						uint32_t core_object_type = 0;
+						if (!ReadSampleRateIndex(track.dsi, track.dsi_bytes, bit, extension_rate_index) ||
+							!ReadAudioObjectType(track.dsi, track.dsi_bytes, bit, core_object_type))
+						{
+							break;
+						}
+						audio_object_type = core_object_type;
+						(void)extension_rate_index;
+					}
+					if (audio_object_type == 0 || audio_object_type > 4)
+						audio_object_type = 2;
+					if (channels == 0)
+						channels = track.SampleDescription.audio.channelcount;
+					if (channels == 0 || channels > 7)
+						channels = 2;
+
+					wi::vector<uint8_t> adts;
+					adts.reserve(size_t(track.sample_count) * 256);
+					for (unsigned sample = 0; sample < track.sample_count; ++sample)
+					{
+						unsigned frame_bytes = 0;
+						unsigned timestamp = 0;
+						unsigned duration = 0;
+						const MP4D_file_offset_t offset = MP4D_frame_offset(&mp4, ntrack, sample, &frame_bytes, &timestamp, &duration);
+						if (frame_bytes < 1 || frame_bytes + 7 > 0x1FFF)
+							continue;
+						if ((uint64_t)offset + frame_bytes > filesize)
+							continue;
+						uint8_t header[7];
+						WriteADTSHeader(header, audio_object_type, sample_rate_index, channels, frame_bytes);
+						adts.insert(adts.end(), header, header + 7);
+						const uint8_t* src = filedata + offset;
+						adts.insert(adts.end(), src, src + frame_bytes);
+					}
+					if (adts.empty())
+						break;
+					wi::audio::CreateSound(adts.data(), adts.size(), &video->audio);
 				}
+			}
+			if (audio_attempted && !video->audio.IsValid())
+			{
+				wilog_warning("Video sound creation was not successful");
 			}
 		}
 		else
@@ -734,6 +871,10 @@ namespace wi::video
 	bool CreateVideoInstance(const Video* video, VideoInstance* instance)
 	{
 		instance->video = video;
+		instance->audio = {};
+		instance->audio_time_origin = 0;
+		instance->audio_sync_time = 0;
+		instance->audio_unavailable = false;
 		instance->current_decode_frame = 0;
 		instance->flags &= ~VideoInstance::Flags::InitialFirstFrameDecoded;
 		instance->output_textures_free.clear();
@@ -813,7 +954,74 @@ namespace wi::video
 			}
 		}
 
+		if (video->audio.IsValid())
+		{
+			instance->audio.SetLooped(false);
+			if (!wi::audio::CreateSoundInstance(&video->audio, &instance->audio))
+				instance->audio_unavailable = true;
+		}
+
 		return success;
+	}
+
+	static float VideoAudioTime(const VideoInstance* instance)
+	{
+		if (instance->video == nullptr || !instance->video->audio.IsValid() || !instance->audio.IsValid())
+			return 0;
+		const wi::audio::SampleInfo info = wi::audio::GetSampleInfo(&instance->video->audio);
+		if (info.sample_rate <= 0)
+			return 0;
+		const float played = (float)wi::audio::GetTotalSamplesPlayed(&instance->audio) / (float)info.sample_rate;
+		return instance->audio_time_origin + played;
+	}
+	static void SyncVideoAudio(VideoInstance* instance, bool force)
+	{
+		if (instance == nullptr || instance->video == nullptr || !instance->video->audio.IsValid() || instance->audio_unavailable)
+			return;
+		const bool playing = has_flag(instance->flags, VideoInstance::Flags::Playing);
+		const float video_time = instance->current_time > 0.f ? instance->current_time : 0.f;
+		if (!has_flag(instance->flags, VideoInstance::Flags::Looped) && video_time > instance->video->duration_seconds)
+		{
+			if (instance->audio.IsValid())
+				wi::audio::Pause(&instance->audio);
+			return;
+		}
+		if (!instance->audio.IsValid())
+			force = true;
+		if (!force)
+		{
+			const float audio_time = VideoAudioTime(instance);
+			const bool jumped = video_time + 0.05f < instance->audio_sync_time;
+			const bool drifted = std::abs(audio_time - video_time) > 0.2f && (video_time - instance->audio_sync_time) > 0.5f;
+			force = jumped || drifted;
+		}
+		if (force)
+		{
+			instance->audio = {};
+			instance->audio.begin = video_time;
+			instance->audio.SetLooped(false);
+			if (!wi::audio::CreateSoundInstance(&instance->video->audio, &instance->audio))
+			{
+				instance->audio_unavailable = true;
+				return;
+			}
+			instance->audio_time_origin = video_time;
+			instance->audio_sync_time = video_time;
+			if (playing)
+			{
+				wi::audio::Play(&instance->audio);
+			}
+			else
+			{
+				wi::audio::Pause(&instance->audio);
+			}
+			instance->audio.begin = 0;
+			return;
+		}
+		if (playing)
+			wi::audio::Play(&instance->audio);
+		else
+			wi::audio::Pause(&instance->audio);
 	}
 
 	void UpdateDisplayOrderOutput(VideoInstance* instance)
@@ -861,10 +1069,12 @@ namespace wi::video
 		if (instance == nullptr || instance->video == nullptr)
 			return;
 
+		bool restart_audio = false;
 		if (has_flag(instance->flags, VideoInstance::Flags::Looped) && instance->current_time > instance->video->duration_seconds)
 		{
 			instance->current_time = 0;
 			instance->current_decode_frame = 0;
+			restart_audio = true;
 		}
 
 		// Search for the exact frame that we should currently be displaying:
@@ -880,6 +1090,7 @@ namespace wi::video
 		}
 
 		UpdateDisplayOrderOutput(instance);
+		SyncVideoAudio(instance, restart_audio);
 
 		// Important that this is at the end of func:
 		if (has_flag(instance->flags, VideoInstance::Flags::Playing))
@@ -1186,6 +1397,7 @@ namespace wi::video
 			instance->output_textures_free.clear();
 			instance->output_textures_used.clear();
 			instance->output_textures_resolve_request.clear();
+			SyncVideoAudio(instance, true);
 		}
 	}
 }

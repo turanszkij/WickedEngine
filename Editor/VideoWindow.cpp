@@ -197,7 +197,7 @@ void VideoWindow::SetEntity(Entity entity)
 			{
 				str += "Format: Unsupported\n";
 			}
-			str += "Audio track: not implemented\n";
+			str += videofile.audio.IsValid() ? "Audio track: available\n" : "Audio track: not available\n";
 			str += "Size: " + wi::helper::GetMemorySizeText(video->videoResource.GetVideo().data_stream.GetDesc().size) + "\n\n";
 
 			str += "Tip: if you have a material on this entity, the material basecolor and emissive textures will be replaced by video. If it has light, then the video will be used as light multiplier. This way you can set video textures into the 3D scene.\n\n";
