@@ -6,25 +6,12 @@
 
 #define STB_VORBIS_HEADER_ONLY
 #include "Utility/stb_vorbis.c"
+#include "Utility/aac.h"
 
 #include <sstream>
 #include <cstring>
 
 #include "wiPlatform.h"
-
-static bool IsADTS(const uint8_t* data, size_t size)
-{
-	if (data == nullptr || size < 7)
-		return false;
-	if (data[0] != 0xFF || (data[1] & 0xF6) != 0xF0)
-		return false;
-	const uint32_t frame_length = ((data[3] & 0x03) << 11) | (data[4] << 3) | ((data[5] & 0xE0) >> 5);
-	if (frame_length < 7 || frame_length > size)
-		return false;
-	if (frame_length == size)
-		return true;
-	return data[frame_length] == 0xFF && (data[frame_length + 1] & 0xF6) == 0xF0;
-}
 
 #ifdef _WIN32
 
@@ -34,7 +21,7 @@ static bool IsADTS(const uint8_t* data, size_t size)
 #include <x3daudio.h>
 #pragma comment(lib,"xaudio2.lib")
 
-#if defined(PLATFORM_WINDOWS_DESKTOP)
+// for AAC audio decoding:
 #include <mfapi.h>
 #include <mfidl.h>
 #include <mferror.h>
@@ -42,7 +29,6 @@ static bool IsADTS(const uint8_t* data, size_t size)
 #pragma comment(lib, "mfplat.lib")
 #pragma comment(lib, "mfuuid.lib")
 #pragma comment(lib, "wmcodecdspuuid.lib")
-#endif // PLATFORM_WINDOWS_DESKTOP
 
 //Little-Endian things:
 #define fourccRIFF 'FFIR'
@@ -364,7 +350,6 @@ namespace wi::audio
 
 	}
 
-#if defined(PLATFORM_WINDOWS_DESKTOP)
 	static bool DecodeADTS(const uint8_t* data, size_t size, SoundInternal* soundinternal)
 	{
 		HRESULT co = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
@@ -608,7 +593,6 @@ namespace wi::audio
 		soundinternal->audioData = std::move(pcm);
 		return true;
 	}
-#endif // PLATFORM_WINDOWS_DESKTOP
 
 	bool CreateSound(const std::string& filename, Sound* sound)
 	{
@@ -664,7 +648,7 @@ namespace wi::audio
 			soundinternal->audioData.resize(dwChunkSize);
 			memcpy(soundinternal->audioData.data(), data + dwChunkPosition, dwChunkSize);
 		}
-		else if (IsADTS(data, size))
+		else if (aac::is_adts(data, size))
 		{
 			if (!DecodeADTS(data, size, soundinternal.get()))
 			{
@@ -1304,9 +1288,10 @@ namespace wi::audio
 			soundinternal->audioData.resize(dwChunkSize);
 			memcpy(soundinternal->audioData.data(), data + dwChunkPosition, dwChunkSize);
 		}
-		else if (IsADTS(data, size))
+		else if (aac::is_adts(data, size))
 		{
 			sound->internal_state = {};
+			// TODO: Linux AAC/ADTS audio decoding
 			return false;
 		}
 		else
@@ -1818,7 +1803,7 @@ namespace wi::audio
 
 	bool CreateSound(const uint8_t* data, size_t size, Sound* sound)
 	{
-		if (IsADTS(data, size))
+		if (aac::is_adts(data, size))
 		{
 			if (engine == nullptr)
 				return false;

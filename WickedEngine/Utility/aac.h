@@ -108,6 +108,20 @@ namespace aac
 		h.values[6] = 0xFC;
 		*(Header*)dst = h;
 	}
+
+	constexpr bool is_adts(const unsigned char* data, unsigned long long size)
+	{
+		if (data == nullptr || size < 7)
+			return false;
+		if (data[0] != 0xFF || (data[1] & 0xF6) != 0xF0)
+			return false;
+		const unsigned frame_length = ((data[3] & 0x03) << 11) | (data[4] << 3) | ((data[5] & 0xE0) >> 5);
+		if (frame_length < 7 || frame_length > size)
+			return false;
+		if (frame_length == size)
+			return true;
+		return data[frame_length] == 0xFF && (data[frame_length + 1] & 0xF6) == 0xF0;
+	}
 }
 
 #endif // AAC_H
