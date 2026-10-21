@@ -370,10 +370,10 @@ namespace wi::audio
 			mf_started = true;
 		}
 
-		const uint32_t sfi = (data[2] >> 2) & 0x0F;
-		uint32_t channels = ((data[2] & 0x01) << 2) | ((data[3] >> 6) & 0x03);
-		static const uint32_t rates[] = { 96000,88200,64000,48000,44100,32000,24000,22050,16000,12000,11025,8000,7350,0,0,0 };
-		const uint32_t sample_rate = sfi < 16 ? rates[sfi] : 0;
+		const aac::ADTSHeader* header = (const aac::ADTSHeader*)data;
+		uint32_t channels = header->get_channel_count();
+		const uint32_t sfi = header->get_sample_rate_index();
+		const uint32_t sample_rate = header->get_sample_rate();
 		if (sample_rate == 0)
 			return false;
 		if (channels == 0)

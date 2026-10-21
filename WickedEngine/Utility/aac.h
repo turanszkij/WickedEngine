@@ -61,14 +61,14 @@ namespace aac
 		}
 		return true;
 	}
+	constexpr unsigned sample_rates[] = { 96000,88200,64000,48000,44100,32000,24000,22050,16000,12000,11025,8000,7350,0,0,0 };
 	constexpr unsigned nearest_aac_sample_rate_inndex(unsigned sample_rate)
 	{
-		constexpr unsigned rates[] = { 96000,88200,64000,48000,44100,32000,24000,22050,16000,12000,11025,8000,7350 };
 		unsigned best = SAMPLING_FREQUENCY_INDEX_44100;
 		unsigned best_diff = 0xFFFFFFFFu;
 		for (unsigned i = 0; i < SAMPLING_FREQUENCY_INDEX_COUNT; ++i)
 		{
-			const unsigned diff = sample_rate > rates[i] ? sample_rate - rates[i] : rates[i] - sample_rate;
+			const unsigned diff = sample_rate > sample_rates[i] ? sample_rate - sample_rates[i] : sample_rates[i] - sample_rate;
 			if (diff < best_diff)
 			{
 				best_diff = diff;
@@ -125,6 +125,20 @@ namespace aac
 	struct ADTSHeader
 	{
 		unsigned char values[ADTS_HEADER_BYTES] = {};
+
+		constexpr unsigned get_channel_count() const
+		{
+			return ((values[2] & 0x01) << 2) | ((values[3] >> 6) & 0x03);
+		}
+		constexpr unsigned get_sample_rate_index() const
+		{
+			return (values[2] >> 2) & 0x0F;
+		}
+		constexpr unsigned get_sample_rate() const
+		{
+			const unsigned sfi = get_sample_rate_index();
+			return sfi < 16 ? sample_rates[sfi] : 0;
+		}
 	};
 	constexpr void write_adts_header(void* dst, unsigned audio_object_type, unsigned sample_rate_index, unsigned channels, unsigned aac_bytes)
 	{
