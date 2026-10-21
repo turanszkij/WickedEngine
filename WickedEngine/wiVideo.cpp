@@ -3,8 +3,11 @@
 #include "wiRenderer.h"
 #include "wiBacklog.h"
 
+#include <cmath>
+
 #include "Utility/minimp4.h"
 #include "Utility/h264.h"
+#include "Utility/aac.h"
 
 //#define DEBUG_DUMP_H264
 static const int dump_frame_count = 100;
@@ -246,6 +249,7 @@ namespace wi::video
 		}
 		return false;
 	}
+
 	bool CreateVideoMP4(const uint8_t* filedata, size_t filesize, Video* video)
 	{
 		*video = {};
@@ -583,7 +587,61 @@ namespace wi::video
 				}
 				else if (track.handler_type == MP4D_HANDLER_TYPE_SOUN)
 				{
-					wi::backlog::post("Audio from video file is not implemented yet!");
+					if (video->audio.IsValid())
+						continue;
+					
+					const MP4D_track_t& track = mp4.track[ntrack];
+					const bool aac =
+						track.object_type_indication == MP4_OBJECT_TYPE_AUDIO_ISO_IEC_14496_3 ||
+						track.object_type_indication == MP4_OBJECT_TYPE_AUDIO_ISO_IEC_13818_7_MAIN_PROFILE ||
+						track.object_type_indication == MP4_OBJECT_TYPE_AUDIO_ISO_IEC_13818_7_LC_PROFILE ||
+						track.object_type_indication == MP4_OBJECT_TYPE_AUDIO_ISO_IEC_13818_7_SSR_PROFILE;
+					if (!aac || track.dsi == nullptr || track.dsi_bytes < aac::MIN_AUDIO_SPECIFIC_CONFIG_BYTES || track.sample_count == 0)
+					{
+						wilog_warning("Video: audio format not supported!\nsupported formats = ISO_IEC_14496_3, ISO_IEC_13818_7_MAIN_PROFILE, ISO_IEC_13818_7_LC_PROFILE, IEC_13818_7_SSR_PROFILE\ncurrent value = %d", (int)track.object_type_indication);
+						continue;
+					}
+
+					uint32_t audio_object_type = 0;
+					uint32_t sample_rate_index = 0;
+					uint32_t channels = 0;
+					if (!aac::parse(track.dsi, track.dsi_bytes, audio_object_type, sample_rate_index, channels))
+					{
+						wilog_warning("Video: audio parameter error!");
+						continue;
+					}
+					if (channels == aac::CHANNEL_CONFIGURATION_AOT_SPECIFIC)
+						channels = track.SampleDescription.audio.channelcount;
+
+					// AAC is raw AAC compressed audio frame
+					//	It will be converted to ADTS which is AAC frames + ADTS headers separating frames, that can be fed into platform's audio API later
+					wi::vector<uint8_t> adts;
+					adts.reserve(size_t(track.sample_count) * 256);
+					for (unsigned sample = 0; sample < track.sample_count; ++sample)
+					{
+						unsigned frame_bytes = 0;
+						unsigned timestamp = 0;
+						unsigned duration = 0;
+						const MP4D_file_offset_t offset = MP4D_frame_offset(&mp4, ntrack, sample, &frame_bytes, &timestamp, &duration);
+						if (frame_bytes < 1 || frame_bytes + sizeof(aac::ADTSHeader) > aac::MAX_ADTS_FRAME_LENGTH)
+							continue;
+						if ((uint64_t)offset + frame_bytes > filesize)
+							continue;
+						aac::ADTSHeader header;
+						aac::write_adts_header(&header, audio_object_type, sample_rate_index, channels, frame_bytes);
+						adts.insert(adts.end(), header.values, header.values + arraysize(header.values));
+						const uint8_t* src = filedata + offset;
+						adts.insert(adts.end(), src, src + frame_bytes);
+					}
+					if (adts.empty())
+					{
+						wilog_warning("Video: audio AAC -> ADTS conversion error!");
+						continue;
+					}
+					if (!wi::audio::CreateSound(adts.data(), adts.size(), &video->audio))
+					{
+						wilog_warning("Video: audio creation error!");
+					}
 				}
 			}
 		}
@@ -734,6 +792,10 @@ namespace wi::video
 	bool CreateVideoInstance(const Video* video, VideoInstance* instance)
 	{
 		instance->video = video;
+		instance->audio = {};
+		instance->audio_time_origin = 0;
+		instance->audio_sync_time = 0;
+		instance->audio_unavailable = false;
 		instance->current_decode_frame = 0;
 		instance->flags &= ~VideoInstance::Flags::InitialFirstFrameDecoded;
 		instance->output_textures_free.clear();
@@ -813,7 +875,74 @@ namespace wi::video
 			}
 		}
 
+		if (video->audio.IsValid())
+		{
+			instance->audio.SetLooped(false);
+			if (!wi::audio::CreateSoundInstance(&video->audio, &instance->audio))
+				instance->audio_unavailable = true;
+		}
+
 		return success;
+	}
+
+	static float VideoAudioTime(const VideoInstance* instance)
+	{
+		if (instance->video == nullptr || !instance->video->audio.IsValid() || !instance->audio.IsValid())
+			return 0;
+		const wi::audio::SampleInfo info = wi::audio::GetSampleInfo(&instance->video->audio);
+		if (info.sample_rate <= 0)
+			return 0;
+		const float played = (float)wi::audio::GetTotalSamplesPlayed(&instance->audio) / (float)info.sample_rate;
+		return instance->audio_time_origin + played;
+	}
+	static void SyncVideoAudio(VideoInstance* instance, bool force)
+	{
+		if (instance == nullptr || instance->video == nullptr || !instance->video->audio.IsValid() || instance->audio_unavailable)
+			return;
+		const bool playing = has_flag(instance->flags, VideoInstance::Flags::Playing);
+		const float video_time = instance->current_time > 0.f ? instance->current_time : 0.f;
+		if (!has_flag(instance->flags, VideoInstance::Flags::Looped) && video_time > instance->video->duration_seconds)
+		{
+			if (instance->audio.IsValid())
+				wi::audio::Pause(&instance->audio);
+			return;
+		}
+		if (!instance->audio.IsValid())
+			force = true;
+		if (!force)
+		{
+			const float audio_time = VideoAudioTime(instance);
+			const bool jumped = video_time + 0.05f < instance->audio_sync_time;
+			const bool drifted = std::abs(audio_time - video_time) > 0.2f && (video_time - instance->audio_sync_time) > 0.5f;
+			force = jumped || drifted;
+		}
+		if (force)
+		{
+			instance->audio = {};
+			instance->audio.begin = video_time;
+			instance->audio.SetLooped(false);
+			if (!wi::audio::CreateSoundInstance(&instance->video->audio, &instance->audio))
+			{
+				instance->audio_unavailable = true;
+				return;
+			}
+			instance->audio_time_origin = video_time;
+			instance->audio_sync_time = video_time;
+			if (playing)
+			{
+				wi::audio::Play(&instance->audio);
+			}
+			else
+			{
+				wi::audio::Pause(&instance->audio);
+			}
+			instance->audio.begin = 0;
+			return;
+		}
+		if (playing)
+			wi::audio::Play(&instance->audio);
+		else
+			wi::audio::Pause(&instance->audio);
 	}
 
 	void UpdateDisplayOrderOutput(VideoInstance* instance)
@@ -861,10 +990,12 @@ namespace wi::video
 		if (instance == nullptr || instance->video == nullptr)
 			return;
 
+		bool restart_audio = false;
 		if (has_flag(instance->flags, VideoInstance::Flags::Looped) && instance->current_time > instance->video->duration_seconds)
 		{
 			instance->current_time = 0;
 			instance->current_decode_frame = 0;
+			restart_audio = true;
 		}
 
 		// Search for the exact frame that we should currently be displaying:
@@ -880,6 +1011,7 @@ namespace wi::video
 		}
 
 		UpdateDisplayOrderOutput(instance);
+		SyncVideoAudio(instance, restart_audio);
 
 		// Important that this is at the end of func:
 		if (has_flag(instance->flags, VideoInstance::Flags::Playing))
@@ -1186,6 +1318,7 @@ namespace wi::video
 			instance->output_textures_free.clear();
 			instance->output_textures_used.clear();
 			instance->output_textures_resolve_request.clear();
+			SyncVideoAudio(instance, true);
 		}
 	}
 }

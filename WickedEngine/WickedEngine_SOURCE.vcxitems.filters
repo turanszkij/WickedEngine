@@ -1500,6 +1500,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Jolt\Compute\VK\IncludeVK.h">
       <Filter>JOLT</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\aac.h">
+      <Filter>UTILITY</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">

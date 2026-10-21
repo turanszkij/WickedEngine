@@ -6,8 +6,12 @@
 
 #define STB_VORBIS_HEADER_ONLY
 #include "Utility/stb_vorbis.c"
+#include "Utility/aac.h"
 
 #include <sstream>
+#include <cstring>
+
+#include "wiPlatform.h"
 
 #ifdef _WIN32
 
@@ -16,6 +20,15 @@
 #include <xaudio2fx.h>
 #include <x3daudio.h>
 #pragma comment(lib,"xaudio2.lib")
+
+// for AAC audio decoding:
+#include <mfapi.h>
+#include <mfidl.h>
+#include <mferror.h>
+#include <wmcodecdsp.h>
+#pragma comment(lib, "mfplat.lib")
+#pragma comment(lib, "mfuuid.lib")
+#pragma comment(lib, "wmcodecdspuuid.lib")
 
 //Little-Endian things:
 #define fourccRIFF 'FFIR'
@@ -337,6 +350,250 @@ namespace wi::audio
 
 	}
 
+	static bool DecodeADTS(const uint8_t* data, size_t size, SoundInternal* soundinternal)
+	{
+		HRESULT co = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+		const bool uninit_com = SUCCEEDED(co);
+		if (FAILED(co) && co != RPC_E_CHANGED_MODE)
+			return false;
+		struct ComScope
+		{
+			bool uninit;
+			~ComScope() { if (uninit) CoUninitialize(); }
+		} com_scope{ uninit_com };
+
+		static bool mf_started = false;
+		if (!mf_started)
+		{
+			if (FAILED(MFStartup(MF_VERSION, 0)))
+				return false;
+			mf_started = true;
+		}
+
+		const aac::ADTSHeader* header = (const aac::ADTSHeader*)data;
+		uint32_t channels = header->get_channel_count();
+		const uint32_t sfi = header->get_sample_rate_index();
+		const uint32_t sample_rate = header->get_sample_rate();
+		if (sample_rate == 0)
+			return false;
+		if (channels == 0)
+			channels = 2;
+
+		Microsoft::WRL::ComPtr<IMFTransform> decoder;
+		HRESULT hr = CoCreateInstance(CLSID_CMSAACDecMFT, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&decoder));
+		if (FAILED(hr) || decoder == nullptr)
+			return false;
+
+		auto configure_input = [&](bool with_user_data) -> HRESULT
+		{
+			Microsoft::WRL::ComPtr<IMFMediaType> input;
+			HRESULT result = MFCreateMediaType(&input);
+			if (FAILED(result))
+				return result;
+			input->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Audio);
+			input->SetGUID(MF_MT_SUBTYPE, MFAudioFormat_AAC);
+			input->SetUINT32(MF_MT_AUDIO_SAMPLES_PER_SECOND, sample_rate);
+			input->SetUINT32(MF_MT_AUDIO_NUM_CHANNELS, channels);
+			input->SetUINT32(MF_MT_AAC_PAYLOAD_TYPE, 1);
+			if (with_user_data)
+			{
+				uint8_t blob[14] = {};
+				const uint16_t payload_type = 1;
+				std::memcpy(blob, &payload_type, sizeof(payload_type));
+				blob[2] = 0xFE;
+				const uint32_t aot = ((data[2] >> 6) & 0x03) + 1;
+				blob[12] = (uint8_t)((aot << 3) | (sfi >> 1));
+				blob[13] = (uint8_t)(((sfi & 1) << 7) | ((channels & 0x0F) << 3));
+				input->SetBlob(MF_MT_USER_DATA, blob, sizeof(blob));
+			}
+			return decoder->SetInputType(0, input.Get(), 0);
+		};
+		hr = configure_input(true);
+		if (FAILED(hr))
+			hr = configure_input(false);
+		if (FAILED(hr))
+			return false;
+
+		Microsoft::WRL::ComPtr<IMFMediaType> output_type;
+		bool output_is_float = false;
+		auto select_output = [&]() -> bool
+		{
+			output_type.Reset();
+			output_is_float = false;
+			Microsoft::WRL::ComPtr<IMFMediaType> fallback;
+			for (DWORD i = 0;; ++i)
+			{
+				Microsoft::WRL::ComPtr<IMFMediaType> type;
+				if (FAILED(decoder->GetOutputAvailableType(0, i, &type)))
+					break;
+				GUID subtype = {};
+				type->GetGUID(MF_MT_SUBTYPE, &subtype);
+				UINT32 bits = 0;
+				type->GetUINT32(MF_MT_AUDIO_BITS_PER_SAMPLE, &bits);
+				if (fallback == nullptr)
+					fallback = type;
+				if (subtype == MFAudioFormat_PCM && bits == 16)
+				{
+					output_type = type;
+					output_is_float = false;
+					break;
+				}
+				if (subtype == MFAudioFormat_Float)
+				{
+					output_type = type;
+					output_is_float = true;
+				}
+			}
+			if (output_type == nullptr)
+				output_type = fallback;
+			if (output_type == nullptr)
+				return false;
+			return SUCCEEDED(decoder->SetOutputType(0, output_type.Get(), 0));
+		};
+		if (!select_output())
+			return false;
+
+		decoder->ProcessMessage(MFT_MESSAGE_NOTIFY_BEGIN_STREAMING, 0);
+		decoder->ProcessMessage(MFT_MESSAGE_NOTIFY_START_OF_STREAM, 0);
+
+		wi::vector<uint8_t> pcm;
+		auto append_sample = [&](IMFSample* sample)
+		{
+			if (sample == nullptr)
+				return;
+			Microsoft::WRL::ComPtr<IMFMediaBuffer> buffer;
+			if (FAILED(sample->ConvertToContiguousBuffer(&buffer)) || buffer == nullptr)
+				return;
+			BYTE* bytes = nullptr;
+			DWORD length = 0;
+			if (FAILED(buffer->Lock(&bytes, nullptr, &length)) || bytes == nullptr || length == 0)
+			{
+				if (bytes != nullptr)
+					buffer->Unlock();
+				return;
+			}
+			if (output_is_float)
+			{
+				const float* src = (const float*)bytes;
+				const DWORD count = length / sizeof(float);
+				const size_t offset = pcm.size();
+				pcm.resize(offset + count * sizeof(int16_t));
+				int16_t* dst = (int16_t*)(pcm.data() + offset);
+				for (DWORD i = 0; i < count; ++i)
+				{
+					float sample_value = src[i];
+					if (sample_value < -1.f) sample_value = -1.f;
+					if (sample_value > 1.f) sample_value = 1.f;
+					dst[i] = (int16_t)(sample_value * 32767.f);
+				}
+			}
+			else
+			{
+				pcm.insert(pcm.end(), bytes, bytes + length);
+			}
+			buffer->Unlock();
+		};
+		auto pull = [&]() -> HRESULT
+		{
+			for (;;)
+			{
+				MFT_OUTPUT_STREAM_INFO stream_info = {};
+				decoder->GetOutputStreamInfo(0, &stream_info);
+				Microsoft::WRL::ComPtr<IMFSample> provided;
+				MFT_OUTPUT_DATA_BUFFER output = {};
+				if ((stream_info.dwFlags & MFT_OUTPUT_STREAM_PROVIDES_SAMPLES) == 0)
+				{
+					const DWORD buffer_size = stream_info.cbSize != 0 ? stream_info.cbSize : 65536;
+					Microsoft::WRL::ComPtr<IMFMediaBuffer> buffer;
+					if (FAILED(MFCreateSample(&provided)) || FAILED(MFCreateMemoryBuffer(buffer_size, &buffer)))
+						return E_OUTOFMEMORY;
+					provided->AddBuffer(buffer.Get());
+					output.pSample = provided.Get();
+				}
+				DWORD status = 0;
+				HRESULT result = decoder->ProcessOutput(0, 1, &output, &status);
+				if (output.pEvents != nullptr)
+				{
+					output.pEvents->Release();
+					output.pEvents = nullptr;
+				}
+				if (result == MF_E_TRANSFORM_NEED_MORE_INPUT)
+					return result;
+				if (result == MF_E_TRANSFORM_STREAM_CHANGE)
+				{
+					if (!select_output())
+						return E_FAIL;
+					continue;
+				}
+				if (FAILED(result))
+				{
+					if (output.pSample != nullptr && output.pSample != provided.Get())
+						output.pSample->Release();
+					return result;
+				}
+				IMFSample* produced = output.pSample != nullptr ? output.pSample : provided.Get();
+				append_sample(produced);
+				if (output.pSample != nullptr && output.pSample != provided.Get())
+					output.pSample->Release();
+			}
+		};
+		auto feed = [&](const uint8_t* frame, uint32_t frame_size) -> bool
+		{
+			Microsoft::WRL::ComPtr<IMFSample> sample;
+			Microsoft::WRL::ComPtr<IMFMediaBuffer> buffer;
+			if (FAILED(MFCreateSample(&sample)) || FAILED(MFCreateMemoryBuffer(frame_size, &buffer)))
+				return false;
+			BYTE* dest = nullptr;
+			if (FAILED(buffer->Lock(&dest, nullptr, nullptr)) || dest == nullptr)
+				return false;
+			std::memcpy(dest, frame, frame_size);
+			buffer->Unlock();
+			buffer->SetCurrentLength(frame_size);
+			sample->AddBuffer(buffer.Get());
+			HRESULT result = decoder->ProcessInput(0, sample.Get(), 0);
+			if (result == MF_E_NOTACCEPTING)
+			{
+				pull();
+				result = decoder->ProcessInput(0, sample.Get(), 0);
+			}
+			if (FAILED(result))
+				return false;
+			return pull() == MF_E_TRANSFORM_NEED_MORE_INPUT;
+		};
+
+		size_t offset = 0;
+		while (offset + 7 <= size)
+		{
+			const uint32_t frame_length = ((data[offset + 3] & 0x03) << 11) | (data[offset + 4] << 3) | ((data[offset + 5] & 0xE0) >> 5);
+			if (frame_length < 7 || offset + frame_length > size)
+				break;
+			if (!feed(data + offset, frame_length))
+				return false;
+			offset += frame_length;
+		}
+		decoder->ProcessMessage(MFT_MESSAGE_NOTIFY_END_OF_STREAM, 0);
+		decoder->ProcessMessage(MFT_MESSAGE_COMMAND_DRAIN, 0);
+		if (pull() != MF_E_TRANSFORM_NEED_MORE_INPUT || pcm.empty())
+			return false;
+
+		UINT32 out_rate = sample_rate;
+		UINT32 out_channels = channels;
+		output_type->GetUINT32(MF_MT_AUDIO_SAMPLES_PER_SECOND, &out_rate);
+		output_type->GetUINT32(MF_MT_AUDIO_NUM_CHANNELS, &out_channels);
+		if (out_rate == 0 || out_channels == 0)
+			return false;
+
+		soundinternal->wfx = {};
+		soundinternal->wfx.wFormatTag = WAVE_FORMAT_PCM;
+		soundinternal->wfx.nChannels = (WORD)out_channels;
+		soundinternal->wfx.nSamplesPerSec = out_rate;
+		soundinternal->wfx.wBitsPerSample = sizeof(int16_t) * 8;
+		soundinternal->wfx.nBlockAlign = (WORD)(out_channels * sizeof(int16_t));
+		soundinternal->wfx.nAvgBytesPerSec = soundinternal->wfx.nSamplesPerSec * soundinternal->wfx.nBlockAlign;
+		soundinternal->audioData = std::move(pcm);
+		return true;
+	}
+
 	bool CreateSound(const std::string& filename, Sound* sound)
 	{
 		wi::vector<uint8_t> filedata;
@@ -390,6 +647,14 @@ namespace wi::audio
 
 			soundinternal->audioData.resize(dwChunkSize);
 			memcpy(soundinternal->audioData.data(), data + dwChunkPosition, dwChunkSize);
+		}
+		else if (aac::is_adts(data, size))
+		{
+			if (!DecodeADTS(data, size, soundinternal.get()))
+			{
+				sound->internal_state = {};
+				return false;
+			}
 		}
 		else
 		{
@@ -1023,6 +1288,12 @@ namespace wi::audio
 			soundinternal->audioData.resize(dwChunkSize);
 			memcpy(soundinternal->audioData.data(), data + dwChunkPosition, dwChunkSize);
 		}
+		else if (aac::is_adts(data, size))
+		{
+			sound->internal_state = {};
+			// TODO: Linux AAC/ADTS audio decoding
+			return false;
+		}
 		else
 		{
 			// Ogg decoder:
@@ -1325,6 +1596,12 @@ __asm__(".linker_option \"-framework\", \"AVFoundation\"");
 __asm__(".linker_option \"-framework\", \"AudioToolbox\"");
 __asm__(".linker_option \"-framework\", \"CoreAudio\"");
 #endif // TARGET_OS_IOS
+#if TARGET_OS_OSX
+__asm__(".linker_option \"-framework\", \"AudioToolbox\"");
+#endif // TARGET_OS_OSX
+
+#include <AudioToolbox/AudioFile.h>
+#include <AudioToolbox/ExtendedAudioFile.h>
 
 namespace wi::audio
 {
@@ -1352,11 +1629,11 @@ namespace wi::audio
 		// Just for testing
 		WrappedSound(WrappedSound& other) = delete;
 
-		ma_result Create(ma_engine* engine, const ma_audio_buffer_config& config)
+		ma_result Create(ma_engine* engine, const ma_audio_buffer_config& config, ma_uint32 flags)
 		{
 			buffer = new ma_audio_buffer();
 			ma_audio_buffer_init(&config, buffer);
-			ma_result res = ma_sound_init_from_data_source(engine, buffer, 0, nullptr, this);
+			ma_result res = ma_sound_init_from_data_source(engine, buffer, flags, nullptr, this);
 			return res;
 		}
 
@@ -1424,8 +1701,118 @@ namespace wi::audio
 		);
 	}
 
+	struct ADTSMemory
+	{
+		const uint8_t* data;
+		size_t size;
+	};
+	static OSStatus ADTSRead(void* user, SInt64 position, UInt32 request, void* buffer, UInt32* actual)
+	{
+		ADTSMemory* memory = (ADTSMemory*)user;
+		if (position < 0 || (size_t)position >= memory->size)
+		{
+			*actual = 0;
+			return kAudioFileEndOfFileError;
+		}
+		const size_t available = memory->size - (size_t)position;
+		const UInt32 count = request < available ? request : (UInt32)available;
+		std::memcpy(buffer, memory->data + position, count);
+		*actual = count;
+		return noErr;
+	}
+	static SInt64 ADTSGetSize(void* user)
+	{
+		return (SInt64)((ADTSMemory*)user)->size;
+	}
+	static bool DecodeADTS(const uint8_t* data, size_t size, WrappedSampleInfo* info)
+	{
+		ADTSMemory memory = { data, size };
+		AudioFileID audio_file = nullptr;
+		OSStatus status = AudioFileOpenWithCallbacks(&memory, ADTSRead, nullptr, ADTSGetSize, nullptr, kAudioFileAAC_ADTSType, &audio_file);
+		if (status != noErr || audio_file == nullptr)
+			return false;
+		ExtAudioFileRef ext_file = nullptr;
+		status = ExtAudioFileWrapAudioFileID(audio_file, false, &ext_file);
+		if (status != noErr || ext_file == nullptr)
+		{
+			AudioFileClose(audio_file);
+			return false;
+		}
+		struct Closer
+		{
+			AudioFileID file;
+			ExtAudioFileRef ext;
+			~Closer()
+			{
+				if (ext != nullptr)
+					ExtAudioFileDispose(ext);
+				if (file != nullptr)
+					AudioFileClose(file);
+			}
+		} closer = { audio_file, ext_file };
+
+		AudioStreamBasicDescription file_format = {};
+		UInt32 property_size = sizeof(file_format);
+		status = ExtAudioFileGetProperty(ext_file, kExtAudioFileProperty_FileDataFormat, &property_size, &file_format);
+		if (status != noErr || file_format.mChannelsPerFrame == 0 || file_format.mSampleRate == 0.0)
+			return false;
+
+		AudioStreamBasicDescription client = {};
+		client.mSampleRate = file_format.mSampleRate;
+		client.mFormatID = kAudioFormatLinearPCM;
+		client.mFormatFlags = kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked;
+		client.mBitsPerChannel = 16;
+		client.mChannelsPerFrame = file_format.mChannelsPerFrame;
+		client.mFramesPerPacket = 1;
+		client.mBytesPerFrame = client.mChannelsPerFrame * sizeof(int16_t);
+		client.mBytesPerPacket = client.mBytesPerFrame;
+		status = ExtAudioFileSetProperty(ext_file, kExtAudioFileProperty_ClientDataFormat, sizeof(client), &client);
+		if (status != noErr)
+			return false;
+
+		const uint32_t channels = client.mChannelsPerFrame;
+		wi::vector<int16_t> chunk(size_t(4096) * channels);
+		wi::vector<int16_t> pcm;
+		for (;;)
+		{
+			AudioBufferList buffers = {};
+			buffers.mNumberBuffers = 1;
+			buffers.mBuffers[0].mNumberChannels = channels;
+			buffers.mBuffers[0].mDataByteSize = (UInt32)(chunk.size() * sizeof(int16_t));
+			buffers.mBuffers[0].mData = chunk.data();
+			UInt32 frames = 4096;
+			status = ExtAudioFileRead(ext_file, &frames, &buffers);
+			if (frames > 0)
+				pcm.insert(pcm.end(), chunk.data(), chunk.data() + size_t(frames) * channels);
+			if (status != noErr || frames == 0)
+				break;
+		}
+		if (pcm.empty())
+			return false;
+
+		short* samples = (short*)ma_malloc(pcm.size() * sizeof(short), nullptr);
+		if (samples == nullptr)
+			return false;
+		std::memcpy(samples, pcm.data(), pcm.size() * sizeof(short));
+		info->samples = samples;
+		info->channel_count = channels;
+		info->sample_rate = (int)client.mSampleRate;
+		info->sample_count = pcm.size();
+		return true;
+	}
+
 	bool CreateSound(const uint8_t* data, size_t size, Sound* sound)
 	{
+		if (aac::is_adts(data, size))
+		{
+			if (engine == nullptr)
+				return false;
+			auto info = wi::allocator::make_shared<WrappedSampleInfo>();
+			if (!DecodeADTS(data, size, info.get()))
+				return false;
+			sound->internal_state = info;
+			return true;
+		}
 		return CreateSoundInternal(
 			[data, size](auto config, auto frameCount, auto frames) {
 				return ma_decode_memory(data, size, config, frameCount, frames);
@@ -1445,7 +1832,7 @@ namespace wi::audio
 		config.sampleRate = info->sample_rate;
 		config.sizeInFrames = info->sample_count / info->channel_count;
 		config.pData = info->samples;
-		ma_result res = wrapped_sound->Create(engine.get(), config);
+		ma_result res = wrapped_sound->Create(engine.get(), config, 0);
 		if (res == MA_SUCCESS)
 		{
 			instance->internal_state = wrapped_sound;
@@ -1543,6 +1930,7 @@ namespace wi::audio
 
 	void Update3D(SoundInstance* instance, const SoundInstance3D& instance3D)
 	{
+		ma_sound_set_spatialization_enabled(get_ma_sound(instance), MA_TRUE);
 		ma_sound_set_position(
 			get_ma_sound(instance),
 			instance3D.emitterPos.x,

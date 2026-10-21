@@ -1820,6 +1820,7 @@ namespace wi::lua::scene
 		int Play(lua_State* L);
 		int Stop(lua_State* L);
 		int SetLooped(lua_State* L);
+		int SetVolume(lua_State* L);
 		int GetLength(lua_State* L);
 		int GetCurrentTimer(lua_State* L);
 		int Seek(lua_State* L);
@@ -1827,6 +1828,7 @@ namespace wi::lua::scene
 		int SetVideoInstance(lua_State* L);
 		int GetVideo(lua_State* L);
 		int GetVideoInstance(lua_State* L);
+		int GetVolume(lua_State* L);
 	};
 
 	class ColliderComponent_BindLua

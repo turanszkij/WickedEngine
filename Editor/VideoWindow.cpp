@@ -107,6 +107,18 @@ void VideoWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&stopButton);
 
+	volumeSlider.Create(0, 1, 1, 1000, "Volume: ");
+	volumeSlider.SetTooltip("Set volume level for the selected sound instance.");
+	volumeSlider.OnSlide([this](wi::gui::EventArgs args) {
+		VideoComponent* video = editor->GetCurrentScene().videos.GetComponent(entity);
+		if (video != nullptr)
+		{
+			video->volume = args.fValue;
+		}
+	});
+	AddWidget(&volumeSlider);
+	volumeSlider.SetEnabled(false);
+
 	loopedCheckbox.Create("Looped: ");
 	loopedCheckbox.SetTooltip("Enable looping for the selected video instance.");
 	loopedCheckbox.SetCheckText(ICON_LOOP);
@@ -116,7 +128,7 @@ void VideoWindow::Create(EditorComponent* _editor)
 		{
 			video->SetLooped(args.bValue);
 		}
-		});
+	});
 	AddWidget(&loopedCheckbox);
 
 	timerSlider.Create(0, 1, 0, 1000, "Timer: ");
@@ -154,6 +166,8 @@ void VideoWindow::SetEntity(Entity entity)
 		filenameLabel.SetText(wi::helper::GetFileNameFromPath(video->filename));
 		playpauseButton.SetEnabled(true);
 		stopButton.SetEnabled(true);
+		volumeSlider.SetEnabled(true);
+		volumeSlider.SetValue(video->volume);
 		loopedCheckbox.SetEnabled(true);
 		loopedCheckbox.SetCheck(video->IsLooped());
 		if (video->IsPlaying())
@@ -197,7 +211,7 @@ void VideoWindow::SetEntity(Entity entity)
 			{
 				str += "Format: Unsupported\n";
 			}
-			str += "Audio track: not implemented\n";
+			str += videofile.audio.IsValid() ? "Audio track: available\n" : "Audio track: not available\n";
 			str += "Size: " + wi::helper::GetMemorySizeText(video->videoResource.GetVideo().data_stream.GetDesc().size) + "\n\n";
 
 			str += "Tip: if you have a material on this entity, the material basecolor and emissive textures will be replaced by video. If it has light, then the video will be used as light multiplier. This way you can set video textures into the 3D scene.\n\n";
@@ -230,6 +244,7 @@ void VideoWindow::SetEntity(Entity entity)
 		filenameLabel.SetText("");
 		playpauseButton.SetEnabled(false);
 		stopButton.SetEnabled(false);
+		volumeSlider.SetEnabled(false);
 		loopedCheckbox.SetEnabled(false);
 		infoLabel.SetText("");
 	}
@@ -258,7 +273,8 @@ void VideoWindow::ResizeLayout()
 	stopButton.SetPos(XMFLOAT2(playpauseButton.GetPos().x + playpauseButton.GetSize().x + 2, playpauseButton.GetPos().y));
 	stopButton.SetSize(XMFLOAT2(layout.width - stopButton.GetPos().x - layout.padding, playpauseButton.GetSize().y));
 
-	layout.add(timerSlider);
+	layout.add_fullwidth(timerSlider);
+	layout.add_fullwidth(volumeSlider);
 
 	layout.jump();
 

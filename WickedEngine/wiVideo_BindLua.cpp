@@ -55,6 +55,8 @@ namespace wi::lua
 		lunamethod(VideoInstance_BindLua, Seek),
 		lunamethod(VideoInstance_BindLua, GetCurrentTimer),
 		lunamethod(VideoInstance_BindLua, IsEnded),
+		lunamethod(VideoInstance_BindLua, SetVolume),
+		lunamethod(VideoInstance_BindLua, GetVolume),
 		{ NULL, NULL }
 	};
 	Luna<VideoInstance_BindLua>::PropertyType VideoInstance_BindLua::properties[] = {
@@ -155,6 +157,25 @@ namespace wi::lua
 			return 1;
 		}
 		wi::lua::SSetBool(L, videoinstance.current_time >= videoinstance.video->duration_seconds);
+		return 1;
+	}
+
+	int VideoInstance_BindLua::SetVolume(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			wi::audio::SetVolume(wi::lua::SGetFloat(L, 1), &videoinstance.audio);
+		}
+		else
+		{
+			wi::lua::SError(L, "SetVolume(float volume) not enough arguments!");
+		}
+		return 0;
+	}
+	int VideoInstance_BindLua::GetVolume(lua_State* L)
+	{
+		wi::lua::SSetFloat(L, wi::audio::GetVolume(&videoinstance.audio));
 		return 1;
 	}
 

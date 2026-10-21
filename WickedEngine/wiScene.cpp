@@ -5644,6 +5644,11 @@ namespace wi::scene
 	}
 	void Scene::RunVideoUpdateSystem(wi::jobsystem::context& ctx)
 	{
+		wi::audio::SoundInstance3D instance3D;
+		instance3D.listenerPos = camera.Eye;
+		instance3D.listenerUp = camera.Up;
+		instance3D.listenerFront = camera.At;
+
 		for (size_t i = 0; i < videos.GetCount(); ++i)
 		{
 			VideoComponent& video = videos[i];
@@ -5684,6 +5689,21 @@ namespace wi::scene
 			video.videoinstance.flags |= wi::video::VideoInstance::Flags::Mipmapped;
 
 			wi::video::UpdateVideo(&video.videoinstance, dt);
+
+			if (video.videoinstance.audio.IsValid())
+			{
+				const Entity entity = videos.GetEntity(i);
+				const TransformComponent* transform = transforms.GetComponent(entity);
+				if (transform != nullptr)
+				{
+					instance3D.emitterPos = transform->GetPosition();
+					instance3D.emitterFront = transform->GetForward();
+					instance3D.emitterUp = transform->GetUp();
+					instance3D.emitterRadius = 0;
+					wi::audio::Update3D(&video.videoinstance.audio, instance3D);
+				}
+				wi::audio::SetVolume(video.volume, &video.videoinstance.audio);
+			}
 		}
 	}
 	void Scene::RunScriptUpdateSystem(wi::jobsystem::context& ctx)

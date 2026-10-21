@@ -2003,6 +2003,7 @@ namespace wi::scene
 		wi::Resource videoResource;
 		wi::video::VideoInstance videoinstance;
 		float currentTimer = 0; // The current playback timer is reflected in this
+		float volume = 1;
 
 		constexpr bool IsPlaying() const { return _flags & PLAYING; }
 		constexpr bool IsLooped() const { return _flags & LOOPED; }

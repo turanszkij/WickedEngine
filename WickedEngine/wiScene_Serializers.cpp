@@ -2187,6 +2187,11 @@ namespace wi::scene
 				archive >> currentTimer;
 			}
 
+			if (seri.GetVersion() >= 2)
+			{
+				archive >> volume;
+			}
+
 			wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
 				if (!filename.empty())
 				{
@@ -2208,6 +2213,11 @@ namespace wi::scene
 			if (seri.GetVersion() >= 1)
 			{
 				archive << currentTimer;
+			}
+
+			if (seri.GetVersion() >= 2)
+			{
+				archive << volume;
 			}
 
 		}
