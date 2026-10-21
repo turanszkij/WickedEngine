@@ -90,13 +90,45 @@ namespace aac
 		}
 		return index < SAMPLING_FREQUENCY_INDEX_COUNT;
 	}
-	struct Header
+
+	constexpr bool parse(const unsigned char* data, unsigned size, unsigned& audio_object_type, unsigned& sample_rate_index, unsigned& channels)
+	{
+		audio_object_type = 0;
+		sample_rate_index = 0;
+		channels = 0;
+
+		unsigned bit = 0;
+		if (!aac::read_audio_object_type(data, size, bit, audio_object_type) ||
+			!aac::read_sample_rate_index(data, size, bit, sample_rate_index) ||
+			!aac::read_bits(data, size, bit, aac::CHANNEL_CONFIGURATION_BITS, channels))
+		{
+			return false;
+		}
+		if (audio_object_type == aac::AUDIO_OBJECT_TYPE_SBR || audio_object_type == aac::AUDIO_OBJECT_TYPE_PS)
+		{
+			uint32_t extension_rate_index = 0;
+			uint32_t core_object_type = 0;
+			if (!aac::read_sample_rate_index(data, size, bit, extension_rate_index) ||
+				!aac::read_audio_object_type(data, size, bit, core_object_type))
+			{
+				return false;
+			}
+			audio_object_type = core_object_type;
+		}
+		if (audio_object_type == aac::AUDIO_OBJECT_TYPE_NULL || audio_object_type > aac::MAX_ADTS_AUDIO_OBJECT_TYPE)
+			audio_object_type = aac::AUDIO_OBJECT_TYPE_AAC_LC;
+		if (channels == aac::CHANNEL_CONFIGURATION_AOT_SPECIFIC || channels > aac::MAX_ADTS_CHANNEL_CONFIGURATION)
+			channels = aac::CHANNEL_CONFIGURATION_STEREO;
+		return true;
+	}
+
+	struct ADTSHeader
 	{
 		unsigned char values[ADTS_HEADER_BYTES] = {};
 	};
 	constexpr void write_adts_header(void* dst, unsigned audio_object_type, unsigned sample_rate_index, unsigned channels, unsigned aac_bytes)
 	{
-		Header h;
+		ADTSHeader h;
 		const unsigned profile = audio_object_type > AUDIO_OBJECT_TYPE_NULL ? (audio_object_type - 1) & 3 : 1;
 		const unsigned length = aac_bytes + ADTS_HEADER_BYTES;
 		h.values[0] = 0xFF;
@@ -106,7 +138,7 @@ namespace aac
 		h.values[4] = (unsigned char)((length >> 3) & 0xFF);
 		h.values[5] = (unsigned char)(((length & 0x07) << 5) | 0x1F);
 		h.values[6] = 0xFC;
-		*(Header*)dst = h;
+		*(ADTSHeader*)dst = h;
 	}
 
 	constexpr bool is_adts(const unsigned char* data, unsigned long long size)

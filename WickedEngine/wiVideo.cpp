@@ -602,36 +602,16 @@ namespace wi::video
 						continue;
 					}
 
-					uint32_t bit = 0;
 					uint32_t audio_object_type = 0;
 					uint32_t sample_rate_index = 0;
 					uint32_t channels = 0;
-					if (!aac::read_audio_object_type(track.dsi, track.dsi_bytes, bit, audio_object_type) ||
-						!aac::read_sample_rate_index(track.dsi, track.dsi_bytes, bit, sample_rate_index) ||
-						!aac::read_bits(track.dsi, track.dsi_bytes, bit, aac::CHANNEL_CONFIGURATION_BITS, channels))
+					if (!aac::parse(track.dsi, track.dsi_bytes, audio_object_type, sample_rate_index, channels))
 					{
 						wilog_warning("Video: audio parameter error!");
 						continue;
 					}
-					if (audio_object_type == aac::AUDIO_OBJECT_TYPE_SBR || audio_object_type == aac::AUDIO_OBJECT_TYPE_PS)
-					{
-						uint32_t extension_rate_index = 0;
-						uint32_t core_object_type = 0;
-						if (!aac::read_sample_rate_index(track.dsi, track.dsi_bytes, bit, extension_rate_index) ||
-							!aac::read_audio_object_type(track.dsi, track.dsi_bytes, bit, core_object_type))
-						{
-							wilog_warning("Video: audio parameter error!");
-							continue;
-						}
-						audio_object_type = core_object_type;
-						(void)extension_rate_index;
-					}
-					if (audio_object_type == aac::AUDIO_OBJECT_TYPE_NULL || audio_object_type > aac::MAX_ADTS_AUDIO_OBJECT_TYPE)
-						audio_object_type = aac::AUDIO_OBJECT_TYPE_AAC_LC;
 					if (channels == aac::CHANNEL_CONFIGURATION_AOT_SPECIFIC)
 						channels = track.SampleDescription.audio.channelcount;
-					if (channels == aac::CHANNEL_CONFIGURATION_AOT_SPECIFIC || channels > aac::MAX_ADTS_CHANNEL_CONFIGURATION)
-						channels = aac::CHANNEL_CONFIGURATION_STEREO;
 
 					// AAC is raw AAC compressed audio frame
 					//	It will be converted to ADTS which is AAC frames + ADTS headers separating frames, that can be fed into platform's audio API later
@@ -643,11 +623,11 @@ namespace wi::video
 						unsigned timestamp = 0;
 						unsigned duration = 0;
 						const MP4D_file_offset_t offset = MP4D_frame_offset(&mp4, ntrack, sample, &frame_bytes, &timestamp, &duration);
-						if (frame_bytes < 1 || frame_bytes + sizeof(aac::Header) > aac::MAX_ADTS_FRAME_LENGTH)
+						if (frame_bytes < 1 || frame_bytes + sizeof(aac::ADTSHeader) > aac::MAX_ADTS_FRAME_LENGTH)
 							continue;
 						if ((uint64_t)offset + frame_bytes > filesize)
 							continue;
-						aac::Header header;
+						aac::ADTSHeader header;
 						aac::write_adts_header(&header, audio_object_type, sample_rate_index, channels, frame_bytes);
 						adts.insert(adts.end(), header.values, header.values + arraysize(header.values));
 						const uint8_t* src = filedata + offset;
@@ -658,7 +638,10 @@ namespace wi::video
 						wilog_warning("Video: audio AAC -> ADTS conversion error!");
 						continue;
 					}
-					wi::audio::CreateSound(adts.data(), adts.size(), &video->audio);
+					if (!wi::audio::CreateSound(adts.data(), adts.size(), &video->audio))
+					{
+						wilog_warning("Video: audio creation error!");
+					}
 				}
 			}
 		}
