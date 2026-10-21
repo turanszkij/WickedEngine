@@ -101,12 +101,12 @@ namespace wi::lua
 	}
 	int ImageParams_BindLua::GetPivot(lua_State* L)
 	{
-		Luna<Vector_BindLua>::push(L, XMLoadFloat2(&params.pivot));
+		Luna<Vector_BindLua>::push(L, params.pivot);
 		return 1;
 	}
 	int ImageParams_BindLua::GetColor(lua_State* L)
 	{
-		Luna<Vector_BindLua>::push(L, XMLoadFloat4(&params.color));
+		Luna<Vector_BindLua>::push(L, params.color);
 		return 1;
 	}
 	int ImageParams_BindLua::GetOpacity(lua_State* L)
@@ -227,7 +227,7 @@ namespace wi::lua
 			Vector_BindLua* vector = Luna<Vector_BindLua>::lightcheck(L, 1);
 			if (vector != nullptr)
 			{
-				XMStoreFloat2(&params.pivot, XMLoadFloat4(&vector->data));
+				params.pivot = vector->GetFloat2();
 			}
 		}
 		else
@@ -244,7 +244,7 @@ namespace wi::lua
 			Vector_BindLua* param = Luna<Vector_BindLua>::lightcheck(L, 1);
 			if (param != nullptr)
 			{
-				XMStoreFloat4(&params.color, XMLoadFloat4(&param->data));
+				params.color = param->GetFloat4();
 			}
 		}
 		else

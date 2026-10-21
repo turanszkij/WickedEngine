@@ -5,11 +5,12 @@
 #include "wiColor.h"
 #include "wiCanvas.h"
 #include "wiPrimitive.h"
+#include "wiMath.h"
 
 namespace wi::image
 {
 	// Do not alter order or value because it is bound to lua manually!
-	enum STENCILMODE
+	enum STENCILMODE : uint8_t
 	{
 		STENCILMODE_DISABLED,
 		STENCILMODE_EQUAL,
@@ -21,28 +22,28 @@ namespace wi::image
 		STENCILMODE_ALWAYS,
 		STENCILMODE_COUNT
 	};
-	enum STENCILREFMODE
+	enum STENCILREFMODE : uint8_t
 	{
 		STENCILREFMODE_ENGINE,
 		STENCILREFMODE_USER,
 		STENCILREFMODE_ALL,
 		STENCILREFMODE_COUNT
 	};
-	enum SAMPLEMODE
+	enum SAMPLEMODE : uint8_t
 	{
 		SAMPLEMODE_CLAMP,
 		SAMPLEMODE_WRAP,
 		SAMPLEMODE_MIRROR,
 		SAMPLEMODE_COUNT
 	};
-	enum QUALITY
+	enum QUALITY : uint8_t
 	{
 		QUALITY_NEAREST,
 		QUALITY_LINEAR,
 		QUALITY_ANISOTROPIC,
 		QUALITY_COUNT
 	};
-	enum DEPTH_TEST_MODE
+	enum DEPTH_TEST_MODE : uint8_t
 	{
 		DEPTH_TEST_OFF,
 		DEPTH_TEST_ON,
@@ -69,61 +70,38 @@ namespace wi::image
 			DISTORTION_MASK = 1 << 12,
 			HIGHLIGHT = 1 << 13,
 		};
-		uint32_t _flags = EMPTY;
 
 		XMFLOAT3 pos = XMFLOAT3(0, 0, 0);
+		uint32_t _flags = EMPTY;
 		XMFLOAT2 siz = XMFLOAT2(1, 1);
-		XMFLOAT2 scale = XMFLOAT2(1, 1);
-		XMFLOAT4 color = XMFLOAT4(1, 1, 1, 1);
 		XMFLOAT4 drawRect = XMFLOAT4(0, 0, 0, 0);
 		XMFLOAT4 drawRect2 = XMFLOAT4(0, 0, 0, 0);
 		XMFLOAT2 texOffset = XMFLOAT2(0, 0);
 		XMFLOAT2 texOffset2 = XMFLOAT2(0, 0);
 		XMFLOAT4 texMulAdd = XMFLOAT4(1, 1, 0, 0);
 		XMFLOAT4 texMulAdd2 = XMFLOAT4(1, 1, 0, 0);
-		XMFLOAT2 pivot = XMFLOAT2(0, 0); // (0,0) : upperleft, (0.5,0.5) : center, (1,1) : bottomright
-		float rotation = 0;
-		float fade = 0;
-		float opacity = 1;
-		float intensity = 1;
-		float hdr_scaling = 1.0f; // a scaling value for use by linear output mapping
-		float mask_alpha_range_start = 0; // constrain mask alpha to not go below this level
-		float mask_alpha_range_end = 1; // constrain mask alpha to not go above this level
-		XMFLOAT2 angular_softness_direction = XMFLOAT2(0, 1);
-		float angular_softness_inner_angle = 0;
-		float angular_softness_outer_angle = 0;
-		float saturation = 1;
+		half4 color = half4(1, 1, 1, 1);
+		half2 pivot = half2(0, 0); // (0,0) : upperleft, (0.5,0.5) : center, (1,1) : bottomright
+		half rotation = 0;
+		half fade = 0;
+		half opacity = 1;
+		half intensity = 1;
+		half hdr_scaling = 1.0f; // a scaling value for use by linear output mapping
+		half mask_alpha_range_start = 0; // constrain mask alpha to not go below this level
+		half mask_alpha_range_end = 1; // constrain mask alpha to not go above this level
+		half angular_softness_inner_angle = 0;
+		half angular_softness_outer_angle = 0;
+		half saturation = 1;
+		half2 angular_softness_direction = half2(0, 1);
 
-		enum class Gradient
-		{
-			None,
-			Linear,
-			LinearReflected,
-			Circular,
-		} gradient = Gradient::None;
-		XMFLOAT2 gradient_uv_start = XMFLOAT2(0, 0);
-		XMFLOAT2 gradient_uv_end = XMFLOAT2(1, 0);
-		XMFLOAT4 gradient_color = XMFLOAT4(1, 1, 1, 1);
+		half2 gradient_uv_start = half2(0, 0);
+		half2 gradient_uv_end = half2(1, 0);
+		half2 highlight_pos = half2(0, 0); // screen-uv space highlight position (if HIGHLIGHT is enabled)
+		half4 gradient_color = half4(1, 1, 1, 1);
 
-		// you can deform the image by its corners (0: top left, 1: top right, 2: bottom left, 3: bottom right)
-		XMFLOAT2 corners[4] = {
-			XMFLOAT2(0, 0), XMFLOAT2(1, 0),
-			XMFLOAT2(0, 1), XMFLOAT2(1, 1)
-		};
-		const XMMATRIX* customRotation = nullptr;
-		const XMMATRIX* customProjection = nullptr;
-
-		struct Rounding
-		{
-			float radius = 0; // the radius of corner (in logical pixel units)
-			int segments = 18; // how many segments to add to smoothing curve
-		} corners_rounding[4]; // specify rounding corners (0: top left, 1: top right, 2: bottom left, 3: bottom right)
-
-		float border_soften = 0; // how much alpha softening to apply to image border in range [0, 1] (0: disable)
-
-		XMFLOAT3 highlight_color = XMFLOAT3(1, 1, 1);
-		float highlight_spread = 1;
-		XMFLOAT2 highlight_pos = XMFLOAT2(0, 0); // screen-uv space highlight position (if HIGHLIGHT is enabled)
+		half3 highlight_color = half3(1, 1, 1);
+		half border_soften = 0; // how much alpha softening to apply to image border in range [0, 1] (0: disable)
+		unorm8 highlight_spread = 1;
 
 		uint8_t stencilRef = 0;
 		STENCILMODE stencilComp = STENCILMODE_DISABLED;
@@ -132,11 +110,35 @@ namespace wi::image
 		SAMPLEMODE sampleFlag = SAMPLEMODE_MIRROR;
 		QUALITY quality = QUALITY_LINEAR;
 
+		enum class Gradient : uint8_t
+		{
+			None,
+			Linear,
+			LinearReflected,
+			Circular,
+		} gradient = Gradient::None;
+
+		// you can deform the image by its corners (0: top left, 1: top right, 2: bottom left, 3: bottom right)
+		XMFLOAT2 corners[4] = {
+			XMFLOAT2(0, 0), XMFLOAT2(1, 0),
+			XMFLOAT2(0, 1), XMFLOAT2(1, 1)
+		};
+
+		struct Rounding
+		{
+			half radius = 0; // the radius of corner (in logical pixel units)
+			uint16_t segments = 18; // how many segments to add to smoothing curve
+		} corners_rounding[4]; // specify rounding corners (0: top left, 1: top right, 2: bottom left, 3: bottom right)
+
 		const wi::graphics::Texture* maskMap = nullptr;
 		const wi::graphics::Texture* backgroundMap = nullptr;
 		int image_subresource = -1;
 		int mask_subresource = -1;
 		int background_subresource = -1;
+		half2 scale = half2(1, 1);
+
+		const XMMATRIX* customRotation = nullptr;
+		const XMMATRIX* customProjection = nullptr;
 
 		// Set a mask map that will be used to multiply the base image
 		constexpr void setMaskMap(const wi::graphics::Texture* tex) { maskMap = tex; }
@@ -176,7 +178,7 @@ namespace wi::image
 		// enable HDR10 output mapping, if this image can be interpreted in linear space and converted to HDR10 display format
 		constexpr void enableHDR10OutputMapping() { _flags |= OUTPUT_COLOR_SPACE_HDR10_ST2084; }
 		// enable linear output mapping, which means removing gamma curve and outputting in linear space (useful for blending in HDR space)
-		constexpr void enableLinearOutputMapping(float scaling = 1.0f) { _flags |= OUTPUT_COLOR_SPACE_LINEAR; hdr_scaling = scaling; }
+		inline void enableLinearOutputMapping(float scaling = 1.0f) { _flags |= OUTPUT_COLOR_SPACE_LINEAR; hdr_scaling = scaling; }
 		constexpr void enableCornerRounding() { _flags |= CORNER_ROUNDING; }
 		constexpr void enableDepthTest() { _flags |= DEPTH_TEST; }
 		constexpr void enableAngularSoftnessDoubleSided() { _flags |= ANGULAR_DOUBLESIDED; }
@@ -245,7 +247,6 @@ namespace wi::image
 			color(color)
 		{}
 	};
-
 
 	// Set canvas to handle DPI-aware image rendering (applied to all image rendering commands on the current thread)
 	void SetCanvas(const wi::Canvas& current_canvas);
