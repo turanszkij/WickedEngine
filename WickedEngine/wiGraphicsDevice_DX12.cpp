@@ -1606,6 +1606,7 @@ namespace dx12_internal
 		wi::allocator::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
 		ComPtr<ID3D12VideoDecoderHeap> decoder_heap;
 		ComPtr<ID3D12VideoDecoder> decoder;
+		wi::vector<DXVA_Slice_H264_Short> slice_infos;
 
 		~VideoDecoder_DX12()
 		{
@@ -7651,7 +7652,7 @@ std::mutex queue_locker;
 
 		ID3D12Resource* reference_frames[17] = {};
 		UINT reference_subresources[17] = {};
-		const UINT reference_count = std::min<UINT>((UINT)op->DPB->desc.array_size, 17u);
+		const UINT reference_count = std::min((UINT)op->DPB->desc.array_size, 17u);
 		for (UINT i = 0; i < reference_count; ++i)
 		{
 			reference_frames[i] = dpb_internal->resource.Get();
@@ -7674,7 +7675,6 @@ std::mutex queue_locker;
 
 			DXVA_PicParams_H264 pic_params_h264 = {};
 			DXVA_Qmatrix_H264 qmatrix_h264 = {};
-			DXVA_Slice_H264_Short sliceinfo_h264 = {};
 
 			// DirectX Video Acceleration for H.264/MPEG-4 AVC Decoding, Microsoft, Updated 2010, Page 21
 			//	https://www.microsoft.com/en-us/download/details.aspx?id=11323
@@ -7771,58 +7771,36 @@ std::mutex queue_locker;
 			input.NumFrameArguments++;
 
 			// DirectX Video Acceleration for H.264/MPEG-4 AVC Decoding, Microsoft, Updated 2010, Page 29
-			//	Also: https://gitlab.freedesktop.org/mesa/mesa/-/blob/main/src/gallium/drivers/d3d12/d3d12_video_dec_h264.cpp#L548
-			if (sps->seq_scaling_matrix_present_flag)
-			{
-				static constexpr int vl_zscan_normal_16[] =
-				{
-					/* Zig-Zag scan pattern */
-					0, 1, 4, 8, 5, 2, 3, 6,
-					9, 12, 13, 10, 7, 11, 14, 15
-				};
-				static constexpr int vl_zscan_normal[] =
-				{
-					/* Zig-Zag scan pattern */
-					 0, 1, 8,16, 9, 2, 3,10,
-					17,24,32,25,18,11, 4, 5,
-					12,19,26,33,40,48,41,34,
-					27,20,13, 6, 7,14,21,28,
-					35,42,49,56,57,50,43,36,
-					29,22,15,23,30,37,44,51,
-					58,59,52,45,38,31,39,46,
-					53,60,61,54,47,55,62,63
-				};
-				for (int i = 0; i < 6; ++i)
-				{
-					for (int j = 0; j < 16; ++j)
-					{
-						qmatrix_h264.bScalingLists4x4[i][j] = pps->ScalingList4x4[i][vl_zscan_normal_16[j]];
-					}
-				}
-				for (int i = 0; i < 64; ++i)
-				{
-					qmatrix_h264.bScalingLists8x8[0][i] = pps->ScalingList8x8[0][vl_zscan_normal[i]];
-					qmatrix_h264.bScalingLists8x8[1][i] = pps->ScalingList8x8[1][vl_zscan_normal[i]];
-				}
-			}
-			else
-			{
-				// I don't know why it needs to be filled with 16, but otherwise it gets corrupted output
-				//	Source: https://github.com/mofo7777/H264Dxva2Decoder
-				std::memset(&qmatrix_h264, 16, sizeof(DXVA_Qmatrix_H264));
-			}
+			h264::resolve_scaling_lists(sps, pps, qmatrix_h264.bScalingLists4x4, qmatrix_h264.bScalingLists8x8);
 			input.FrameArguments[input.NumFrameArguments].Type = D3D12_VIDEO_DECODE_ARGUMENT_TYPE_INVERSE_QUANTIZATION_MATRIX;
 			input.FrameArguments[input.NumFrameArguments].Size = sizeof(qmatrix_h264);
 			input.FrameArguments[input.NumFrameArguments].pData = &qmatrix_h264;
 			input.NumFrameArguments++;
 
 			// DirectX Video Acceleration for H.264/MPEG-4 AVC Decoding, Microsoft, Updated 2010, Page 31
-			sliceinfo_h264.BSNALunitDataLocation = 0;
-			sliceinfo_h264.SliceBytesInBuffer = (UINT)op->stream_size;
-			sliceinfo_h264.wBadSliceChopping = 0; // whole slice is in the buffer
+			// One short slice entry per NAL. A picture is often more than one slice.
+			uint32_t fallback_offset = 0;
+			uint32_t slice_count = op->slice_count;
+			const uint32_t* slice_offsets = op->slice_offsets;
+			if (slice_count == 0 || slice_offsets == nullptr)
+			{
+				slice_count = 1;
+				slice_offsets = &fallback_offset;
+			}
+			wi::vector<DXVA_Slice_H264_Short>& sliceinfos = decoder_internal->slice_infos;
+			sliceinfos.resize(slice_count);
+			for (uint32_t slice_index = 0; slice_index < slice_count; ++slice_index)
+			{
+				const uint32_t offset = slice_offsets[slice_index];
+				const uint32_t next = (slice_index + 1 < slice_count) ? slice_offsets[slice_index + 1] : (uint32_t)op->stream_size;
+				DXVA_Slice_H264_Short& sliceinfo = sliceinfos[slice_index];
+				sliceinfo.BSNALunitDataLocation = offset;
+				sliceinfo.SliceBytesInBuffer = next > offset ? next - offset : 0;
+				sliceinfo.wBadSliceChopping = 0; // whole slice is in the buffer
+			}
 			input.FrameArguments[input.NumFrameArguments].Type = D3D12_VIDEO_DECODE_ARGUMENT_TYPE_SLICE_CONTROL;
-			input.FrameArguments[input.NumFrameArguments].Size = sizeof(sliceinfo_h264);
-			input.FrameArguments[input.NumFrameArguments].pData = &sliceinfo_h264;
+			input.FrameArguments[input.NumFrameArguments].Size = (UINT)(sizeof(DXVA_Slice_H264_Short) * sliceinfos.size());
+			input.FrameArguments[input.NumFrameArguments].pData = sliceinfos.data();
 			input.NumFrameArguments++;
 
 			CommandList_DX12& commandlist = GetCommandList(cmd);

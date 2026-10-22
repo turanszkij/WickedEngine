@@ -106,8 +106,8 @@ namespace aac
 		}
 		if (audio_object_type == aac::AUDIO_OBJECT_TYPE_SBR || audio_object_type == aac::AUDIO_OBJECT_TYPE_PS)
 		{
-			uint32_t extension_rate_index = 0;
-			uint32_t core_object_type = 0;
+			unsigned extension_rate_index = 0;
+			unsigned core_object_type = 0;
 			if (!aac::read_sample_rate_index(data, size, bit, extension_rate_index) ||
 				!aac::read_audio_object_type(data, size, bit, core_object_type))
 			{

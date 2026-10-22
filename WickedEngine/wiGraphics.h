@@ -939,6 +939,8 @@ namespace wi::graphics
 		const GPUBuffer* stream = nullptr;
 		uint64_t stream_offset = 0; // must be aligned with GraphicsDevice::GetVideoDecodeBitstreamAlignment()
 		uint64_t stream_size = 0;
+		uint32_t slice_count = 0; // slices in this picture. 0 is treated as one slice at offset 0
+		const uint32_t* slice_offsets = nullptr; // byte offsets from stream_offset, one per slice. The first is 0
 		VideoFrameType frame_type = VideoFrameType::Intra;
 		uint32_t reference_priority = 0; // nal_ref_idc from nal unit header
 		int decoded_frame_index = 0; // frame index in order of decoding
