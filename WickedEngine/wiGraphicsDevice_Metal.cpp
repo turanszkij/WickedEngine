@@ -4976,32 +4976,43 @@ using namespace metal_internal;
 		}
 		const uint8_t* src = (const uint8_t*)op->stream->mapped_data + op->stream_offset;
 		const size_t src_size = (size_t)op->stream_size;
-		size_t start = 0;
-		if (src_size >= 4 && src[0] == 0 && src[1] == 0 && src[2] == 0 && src[3] == 1)
-			start = 4;
-		else if (src_size >= 3 && src[0] == 0 && src[1] == 0 && src[2] == 1)
-			start = 3;
-		else
+		uint32_t fallback_offset = 0;
+		uint32_t slice_count = op->slice_count;
+		const uint32_t* slice_offsets = op->slice_offsets;
+		if (slice_count == 0 || slice_offsets == nullptr)
 		{
-			wilog_error("Metal video decoder bitstream frame is not Annex-B");
-			return;
+			slice_count = 1;
+			slice_offsets = &fallback_offset;
 		}
-		const size_t nal_size = src_size - start;
-		if (nal_size == 0 || nal_size > 0xffffffffu)
+		// Each slice offset is a 3-byte Annex-B start code. VideoToolbox wants a 4-byte length and the NAL payload.
+		constexpr size_t start_code_size = sizeof(h264::nal_start_code);
+		decoder->sample_bytes.clear();
+		for (uint32_t slice_index = 0; slice_index < slice_count; ++slice_index)
+		{
+			const uint32_t offset = slice_offsets[slice_index];
+			const uint32_t next = (slice_index + 1 < slice_count) ? slice_offsets[slice_index + 1] : (uint32_t)src_size;
+			if (next < offset + start_code_size || next > src_size)
+			{
+				wilog_error("Metal video decoder slice range is out of bounds");
+				return;
+			}
+			const size_t nal_size = (size_t)(next - offset) - start_code_size;
+			const size_t at = decoder->sample_bytes.size();
+			decoder->sample_bytes.resize(at + 4 + nal_size);
+			uint8_t* dst_nal = decoder->sample_bytes.data() + at;
+			dst_nal[0] = (uint8_t)(nal_size >> 24);
+			dst_nal[1] = (uint8_t)(nal_size >> 16);
+			dst_nal[2] = (uint8_t)(nal_size >> 8);
+			dst_nal[3] = (uint8_t)nal_size;
+			std::memcpy(dst_nal + 4, src + offset + start_code_size, nal_size);
+		}
+		const size_t sample_size = decoder->sample_bytes.size();
+		if (sample_size < 5)
 		{
 			wilog_error("Metal video decoder bitstream frame is empty");
 			return;
 		}
-		// The shared bitstream is Annex-B. VideoToolbox samples are 4-byte length prefixed.
-		const size_t sample_size = nal_size + 4;
-		if (decoder->sample_bytes.size() < sample_size)
-			decoder->sample_bytes.resize(sample_size);
 		uint8_t* dst = decoder->sample_bytes.data();
-		dst[0] = (uint8_t)(nal_size >> 24);
-		dst[1] = (uint8_t)(nal_size >> 16);
-		dst[2] = (uint8_t)(nal_size >> 8);
-		dst[3] = (uint8_t)nal_size;
-		std::memcpy(dst + 4, src + start, nal_size);
 
 		CMBlockBufferRef block = nullptr;
 		OSStatus status = CMBlockBufferCreateWithMemoryBlock(

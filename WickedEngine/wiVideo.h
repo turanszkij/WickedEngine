@@ -44,8 +44,11 @@ namespace wi::video
 			int poc = 0;
 			int gop = 0;
 			int display_order = 0;
+			uint32_t slice_count = 0;
+			uint32_t slice_offset_index = 0; // index into Video::slice_offsets
 		};
 		wi::vector<FrameInfo> frame_infos;
+		wi::vector<uint32_t> slice_offsets; // per-slice byte offset from the start of that picture's bitstream
 		uint32_t num_dpb_slots = 0;
 		wi::audio::Sound audio;
 		inline bool IsValid() const { return data_stream.IsValid(); }

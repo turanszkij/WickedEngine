@@ -21,6 +21,13 @@ namespace wi::video
 		return frame_num > curr ? frame_num - max_frame_num : frame_num;
 	}
 
+	static void AppendSliceHeader(Video* video, const h264::SliceHeader& slice_header)
+	{
+		video->slice_header_datas.resize(video->slice_header_datas.size() + sizeof(h264::SliceHeader));
+		std::memcpy((h264::SliceHeader*)video->slice_header_datas.data() + video->slice_header_count, &slice_header, sizeof(slice_header));
+		video->slice_header_count++;
+	}
+
 	static int CountUsed(const VideoInstance::DPB& dpb, uint32_t slot_count)
 	{
 		int count = 0;
@@ -166,6 +173,9 @@ namespace wi::video
 			const h264::SPS* sps_array = (const h264::SPS*)video->sps_datas.data();
 			int prev_poc_msb = 0;
 			int prev_poc_lsb = 0;
+			int prev_frame_num = 0;
+			int prev_frame_num_offset = 0;
+			bool has_prev_frame_num = false;
 			int gop = -1;
 			for (size_t i = 0; i < video->frame_infos.size(); ++i)
 			{
@@ -174,7 +184,7 @@ namespace wi::video
 				const h264::SPS& sps = sps_array[pps.seq_parameter_set_id];
 				const bool idr = video->frame_infos[i].type == VideoFrameType::Intra;
 				const bool is_ref = video->frame_infos[i].reference_priority != 0;
-				const int max_poc_lsb = 1 << (sps.log2_max_pic_order_cnt_lsb_minus4 + 4);
+				const int max_frame_num = 1 << (sps.log2_max_frame_num_minus4 + 4);
 
 				// A pic_order_cnt_lsb of 0 is not a new GOP. IDR is.
 				// The previous picture order moves only on reference pictures.
@@ -182,9 +192,40 @@ namespace wi::video
 				{
 					prev_poc_msb = 0;
 					prev_poc_lsb = 0;
+					prev_frame_num = 0;
+					prev_frame_num_offset = 0;
+					has_prev_frame_num = false;
 					gop++;
 				}
 
+				// H.264 8.2.1.3: pic_order_cnt_type 2 has no pic_order_cnt_lsb. POC comes from frame_num.
+				if (sps.pic_order_cnt_type == 2)
+				{
+					int frame_num_offset = 0;
+					if (!idr && has_prev_frame_num && prev_frame_num > slice_header.frame_num)
+						frame_num_offset = prev_frame_num_offset + max_frame_num;
+					else if (!idr)
+						frame_num_offset = prev_frame_num_offset;
+
+					int poc = 0;
+					if (!idr)
+					{
+						poc = 2 * (frame_num_offset + slice_header.frame_num);
+						if (!is_ref)
+							poc -= 1;
+					}
+					video->frame_infos[i].poc = poc;
+					video->frame_infos[i].gop = gop;
+					if (is_ref)
+					{
+						prev_frame_num = slice_header.frame_num;
+						prev_frame_num_offset = frame_num_offset;
+						has_prev_frame_num = true;
+					}
+					continue;
+				}
+
+				const int max_poc_lsb = 1 << (sps.log2_max_pic_order_cnt_lsb_minus4 + 4);
 				int poc_msb = 0;
 				const int poc_lsb = slice_header.pic_order_cnt_lsb;
 				if (poc_lsb < prev_poc_lsb && (prev_poc_lsb - poc_lsb) >= max_poc_lsb / 2)
@@ -419,8 +460,15 @@ namespace wi::video
 					const uint64_t alignment = device->GetVideoDecodeBitstreamAlignment();
 
 					video->frame_infos.reserve(track.sample_count);
-					video->slice_header_datas.resize(track.sample_count * sizeof(h264::SliceHeader));
-					video->slice_header_count = track.sample_count;
+					video->slice_header_datas.reserve(track.sample_count * sizeof(h264::SliceHeader));
+					video->slice_offsets.reserve(track.sample_count);
+					struct SlicePiece
+					{
+						const uint8_t* payload = nullptr;
+						uint32_t size = 0;
+					};
+					wi::vector<SlicePiece> slice_pieces;
+					slice_pieces.reserve(track.sample_count);
 					uint32_t track_duration = 0;
 					uint64_t aligned_size = 0;
 					for (uint32_t i = 0; i < track.sample_count; i++)
@@ -429,61 +477,79 @@ namespace wi::video
 						MP4D_file_offset_t ofs = MP4D_frame_offset(&mp4, ntrack, i, &frame_bytes, &timestamp, &duration);
 						track_duration += duration;
 
-						Video::FrameInfo& info = video->frame_infos.emplace_back();
-						info.offset = aligned_size;
-
 						const uint8_t* src_buffer = input_buf + ofs;
+						int frame_index = -1;
+						uint32_t cursor = 0;
 						while (frame_bytes > 0)
 						{
-							uint32_t size = ((uint32_t)src_buffer[0] << 24) | ((uint32_t)src_buffer[1] << 16) | ((uint32_t)src_buffer[2] << 8) | src_buffer[3];
-							size += 4;
-							assert(frame_bytes >= size);
+							if (frame_bytes < 4)
+								break;
+							uint32_t payload_size = ((uint32_t)src_buffer[0] << 24) | ((uint32_t)src_buffer[1] << 16) | ((uint32_t)src_buffer[2] << 8) | src_buffer[3];
+							if (payload_size > frame_bytes - 4)
+								break;
+							const uint32_t sample_bytes = payload_size + 4;
+
+							h264::Bitstream bs = {};
+							bs.init(&src_buffer[4], payload_size);
+							h264::NALHeader nal = {};
+							if (!h264::read_nal_header(&nal, &bs))
+							{
+								frame_bytes -= sample_bytes;
+								src_buffer += sample_bytes;
+								continue;
+							}
+
+							const bool idr = nal.type == h264::NAL_UNIT_TYPE_CODED_SLICE_IDR;
+							const bool non_idr = nal.type == h264::NAL_UNIT_TYPE_CODED_SLICE_NON_IDR;
+							if (!idr && !non_idr)
+							{
+								frame_bytes -= sample_bytes;
+								src_buffer += sample_bytes;
+								continue;
+							}
+
+							// One MP4 sample is one access unit. Every slice NAL has to reach the
+							// decoder; the first slice is often only the top macroblock rows.
+							if (frame_index < 0)
+							{
+								frame_index = (int)video->frame_infos.size();
+								Video::FrameInfo& info = video->frame_infos.emplace_back();
+								info.offset = aligned_size;
+								info.duration_seconds = float(double(duration) * timescale_rcp);
+								info.type = idr ? VideoFrameType::Intra : VideoFrameType::Predictive;
+								info.reference_priority = nal.idc;
+								info.slice_offset_index = (uint32_t)video->slice_offsets.size();
+								h264::SliceHeader slice_header = {};
+								h264::read_slice_header(&slice_header, &nal, (const h264::PPS*)video->pps_datas.data(), (const h264::SPS*)video->sps_datas.data(), &bs);
+								AppendSliceHeader(video, slice_header);
+							}
 
 #ifdef DEBUG_DUMP_H264
 							if (dump_frame_counter < dump_frame_count)
 							{
-								size_t additional_dump_size = sizeof(h264::nal_start_code) + size - 4;
+								size_t additional_dump_size = sizeof(h264::nal_start_code) + payload_size;
 								dump.resize(dump.size() + additional_dump_size);
 								std::memcpy(dump.data() + dump_offset, h264::nal_start_code, sizeof(h264::nal_start_code));
-								std::memcpy(dump.data() + dump_offset + sizeof(h264::nal_start_code), src_buffer + 4, size - 4);
+								std::memcpy(dump.data() + dump_offset + sizeof(h264::nal_start_code), src_buffer + 4, payload_size);
 								dump_offset += additional_dump_size;
 								dump_frame_counter++;
 							}
 #endif // DEBUG_DUMP_H264
 
-							h264::Bitstream bs = {};
-							bs.init(&src_buffer[4], size - 4);
-							h264::NALHeader nal = {};
-							h264::read_nal_header(&nal, &bs);
+							video->slice_offsets.push_back(cursor);
+							video->frame_infos[frame_index].slice_count++;
+							slice_pieces.push_back({ src_buffer + 4, payload_size });
+							cursor += (uint32_t)sizeof(h264::nal_start_code) + payload_size;
 
-							if (nal.type == h264::NAL_UNIT_TYPE_CODED_SLICE_IDR)
-							{
-								info.type = VideoFrameType::Intra;
-							}
-							else if (nal.type == h264::NAL_UNIT_TYPE_CODED_SLICE_NON_IDR)
-							{
-								info.type = VideoFrameType::Predictive;
-							}
-							else
-							{
-								// Continue search for frame beginning NAL unit:
-								frame_bytes -= size;
-								src_buffer += size;
-								continue;
-							}
-
-							h264::SliceHeader* slice_header = (h264::SliceHeader*)video->slice_header_datas.data() + i;
-							*slice_header = {};
-							h264::read_slice_header(slice_header, &nal, (const h264::PPS*)video->pps_datas.data(), (const h264::SPS*)video->sps_datas.data(), &bs);
-
-							// Accept frame beginning NAL unit:
-							info.reference_priority = nal.idc;
-							info.size = sizeof(h264::nal_start_code) + size - 4;
-							break;
+							frame_bytes -= sample_bytes;
+							src_buffer += sample_bytes;
 						}
 
-						aligned_size += align(info.size, alignment);
-						info.duration_seconds = float(double(duration) * timescale_rcp);
+						if (frame_index >= 0)
+						{
+							video->frame_infos[frame_index].size = cursor;
+							aligned_size += align((uint64_t)cursor, alignment);
+						}
 					}
 
 #ifdef DEBUG_DUMP_H264
@@ -537,53 +603,44 @@ namespace wi::video
 					}
 #endif // DEBUG_DUMP_H264
 
-					CalculatePictureOrder(video);
+					if (!video->frame_infos.empty())
+					{
+						CalculatePictureOrder(video);
 
-					video->average_frames_per_second = float(double(track.timescale) / double(track_duration) * track.sample_count);
-					video->duration_seconds = float(double(track_duration) * timescale_rcp);
+						video->average_frames_per_second = float(double(track.timescale) / double(track_duration) * video->frame_infos.size());
+						video->duration_seconds = float(double(track_duration) * timescale_rcp);
 
-					auto copy_video_track = [&](void* dest) {
-						for (uint32_t i = 0; i < track.sample_count; i++)
-						{
-							unsigned frame_bytes, timestamp, duration;
-							MP4D_file_offset_t ofs = MP4D_frame_offset(&mp4, ntrack, i, &frame_bytes, &timestamp, &duration);
-							uint8_t* dst_buffer = (uint8_t*)dest + video->frame_infos[i].offset;
-							const uint8_t* src_buffer = input_buf + ofs;
-							while (frame_bytes > 0)
+						auto copy_video_track = [&](void* dest) {
+							uint32_t piece_index = 0;
+							for (const Video::FrameInfo& frame_info : video->frame_infos)
 							{
-								uint32_t size = ((uint32_t)src_buffer[0] << 24) | ((uint32_t)src_buffer[1] << 16) | ((uint32_t)src_buffer[2] << 8) | src_buffer[3];
-								size += 4;
-								assert(frame_bytes >= size);
-
-								h264::Bitstream bs = {};
-								bs.init(&src_buffer[4], sizeof(uint8_t));
-								h264::NALHeader nal = {};
-								h264::read_nal_header(&nal, &bs);
-
-								if (
-									nal.type != h264::NAL_UNIT_TYPE_CODED_SLICE_IDR &&
-									nal.type != h264::NAL_UNIT_TYPE_CODED_SLICE_NON_IDR
-									)
+								uint8_t* dst_buffer = (uint8_t*)dest + frame_info.offset;
+								const uint64_t slot = align(frame_info.size, alignment);
+								std::memset(dst_buffer, 0, slot);
+								uint32_t written = 0;
+								for (uint32_t slice = 0; slice < frame_info.slice_count; ++slice)
 								{
-									frame_bytes -= size;
-									src_buffer += size;
-									continue;
+									const SlicePiece& piece = slice_pieces[piece_index++];
+									std::memcpy(dst_buffer + written, h264::nal_start_code, sizeof(h264::nal_start_code));
+									written += (uint32_t)sizeof(h264::nal_start_code);
+									std::memcpy(dst_buffer + written, piece.payload, piece.size);
+									written += piece.size;
 								}
-
-								std::memcpy(dst_buffer, h264::nal_start_code, sizeof(h264::nal_start_code));
-								std::memcpy(dst_buffer + sizeof(h264::nal_start_code), src_buffer + 4, size - 4);
-								break;
 							}
-						}
-					};
+						};
 
-					GPUBufferDesc bd;
-					bd.size = aligned_size;
-					bd.usage = Usage::DEFAULT;
-					bd.misc_flags = ResourceMiscFlag::VIDEO_DECODE | ResourceMiscFlag::VIDEO_COMPATIBILITY_H264;
-					success = device->CreateBuffer2(&bd, copy_video_track, &video->data_stream);
-					assert(success);
-					device->SetName(&video->data_stream, "wi::Video::data_stream");
+						GPUBufferDesc bd;
+						bd.size = aligned_size;
+						bd.usage = Usage::DEFAULT;
+						bd.misc_flags = ResourceMiscFlag::VIDEO_DECODE | ResourceMiscFlag::VIDEO_COMPATIBILITY_H264;
+						success = device->CreateBuffer2(&bd, copy_video_track, &video->data_stream);
+						assert(success);
+						device->SetName(&video->data_stream, "wi::Video::data_stream");
+					}
+					else
+					{
+						wilog_warning("MP4 video track does not contain any decodable frames");
+					}
 				}
 				else if (track.handler_type == MP4D_HANDLER_TYPE_SOUN)
 				{
@@ -661,48 +718,45 @@ namespace wi::video
 
 		h264::Bitstream bs;
 		bs.init(filedata, filesize);
+		int open_frame = -1;
 		while (h264::find_next_nal(&bs))
 		{
 			const uint64_t nal_offset = bs.byte_offset() - sizeof(h264::nal_start_code);
-			if (!video->frame_infos.empty())
-			{
-				// patch size of previous frame:
-				Video::FrameInfo& frame_info = video->frame_infos.back();
-				if (frame_info.size == 0)
-				{
-					frame_info.size = nal_offset - frame_info.offset;
-				}
-			}
 
 			h264::NALHeader nal = {};
 			if (h264::read_nal_header(&nal, &bs))
 			{
+				const bool is_slice = nal.type == h264::NAL_UNIT_TYPE_CODED_SLICE_IDR || nal.type == h264::NAL_UNIT_TYPE_CODED_SLICE_NON_IDR;
+				h264::SliceHeader slice_header = {};
+				if (is_slice)
+					h264::read_slice_header(&slice_header, &nal, (const h264::PPS*)video->pps_datas.data(), (const h264::SPS*)video->sps_datas.data(), &bs);
+
+				const bool continuation = is_slice && open_frame >= 0 && video->frame_infos[open_frame].size == 0 && slice_header.first_mb_in_slice != 0;
+				if (open_frame >= 0 && video->frame_infos[open_frame].size == 0 && !continuation)
+					video->frame_infos[open_frame].size = nal_offset - video->frame_infos[open_frame].offset;
+
+				if (continuation)
+				{
+					Video::FrameInfo& frame_info = video->frame_infos[open_frame];
+					video->slice_offsets.push_back((uint32_t)(nal_offset - frame_info.offset));
+					frame_info.slice_count++;
+					continue;
+				}
+
 				switch (nal.type)
 				{
 				case h264::NAL_UNIT_TYPE_CODED_SLICE_NON_IDR:
-				{
-					Video::FrameInfo& frame_info = video->frame_infos.emplace_back();
-					frame_info.offset = nal_offset;
-					frame_info.type = wi::graphics::VideoFrameType::Predictive;
-					frame_info.reference_priority = nal.idc;
-					h264::SliceHeader slice_header = {};
-					h264::read_slice_header(&slice_header, &nal, (const h264::PPS*)video->pps_datas.data(), (const h264::SPS*)video->sps_datas.data(), &bs);
-					video->slice_header_datas.resize(video->slice_header_datas.size() + sizeof(h264::SliceHeader));
-					std::memcpy((h264::SliceHeader*)video->slice_header_datas.data() + video->slice_header_count, &slice_header, sizeof(slice_header));
-					video->slice_header_count++;
-				}
-				break;
 				case h264::NAL_UNIT_TYPE_CODED_SLICE_IDR:
 				{
+					open_frame = (int)video->frame_infos.size();
 					Video::FrameInfo& frame_info = video->frame_infos.emplace_back();
 					frame_info.offset = nal_offset;
-					frame_info.type = wi::graphics::VideoFrameType::Intra;
+					frame_info.type = nal.type == h264::NAL_UNIT_TYPE_CODED_SLICE_IDR ? wi::graphics::VideoFrameType::Intra : wi::graphics::VideoFrameType::Predictive;
 					frame_info.reference_priority = nal.idc;
-					h264::SliceHeader slice_header = {};
-					h264::read_slice_header(&slice_header, &nal, (const h264::PPS*)video->pps_datas.data(), (const h264::SPS*)video->sps_datas.data(), &bs);
-					video->slice_header_datas.resize(video->slice_header_datas.size() + sizeof(h264::SliceHeader));
-					std::memcpy((h264::SliceHeader*)video->slice_header_datas.data() + video->slice_header_count, &slice_header, sizeof(slice_header));
-					video->slice_header_count++;
+					frame_info.slice_offset_index = (uint32_t)video->slice_offsets.size();
+					frame_info.slice_count = 1;
+					video->slice_offsets.push_back(0);
+					AppendSliceHeader(video, slice_header);
 				}
 				break;
 				case h264::NAL_UNIT_TYPE_SPS:
@@ -745,15 +799,8 @@ namespace wi::video
 			}
 		}
 
-		if (!video->frame_infos.empty())
-		{
-			// patch size of last frame:
-			Video::FrameInfo& frame_info = video->frame_infos.back();
-			if (frame_info.size == 0)
-			{
-				frame_info.size = bs.byte_offset() - frame_info.offset;
-			}
-		}
+		if (open_frame >= 0 && video->frame_infos[open_frame].size == 0)
+			video->frame_infos[open_frame].size = filesize - video->frame_infos[open_frame].offset;
 
 		// Calculate the total aligned size of the bitstream buffer that will contain the slice datas:
 		const uint64_t alignment = device->GetVideoDecodeBitstreamAlignment();
@@ -774,9 +821,12 @@ namespace wi::video
 		auto copy_video_track = [&](void* dest) {
 			for (Video::FrameInfo& frame_info : video->frame_infos)
 			{
-				std::memcpy((uint8_t*)dest + aligned_offset, filedata + frame_info.offset, frame_info.size);
+				uint8_t* dst = (uint8_t*)dest + aligned_offset;
+				const uint64_t slot = align(frame_info.size, alignment);
+				std::memset(dst, 0, slot);
+				std::memcpy(dst, filedata + frame_info.offset, (size_t)frame_info.size);
 				frame_info.offset = aligned_offset;
-				aligned_offset += align(frame_info.size, alignment);
+				aligned_offset += slot;
 			}
 		};
 
@@ -1172,6 +1222,8 @@ namespace wi::video
 			decode_operation.stream = &video->data_stream;
 			decode_operation.stream_offset = frame_info.offset;
 			decode_operation.stream_size = frame_info.size;
+			decode_operation.slice_count = frame_info.slice_count;
+			decode_operation.slice_offsets = video->slice_offsets.data() + frame_info.slice_offset_index;
 			decode_operation.poc[0] = frame_info.poc;
 			decode_operation.poc[1] = frame_info.poc;
 			decode_operation.frame_type = frame_info.type;

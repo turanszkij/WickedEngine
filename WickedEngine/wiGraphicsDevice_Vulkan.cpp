@@ -9030,14 +9030,21 @@ using namespace vulkan_internal;
 			decode_info.pReferenceSlots = decode_info.referenceSlotCount == 0 ? nullptr : reference_slots;
 			decode_info.pSetupReferenceSlot = &reference_slot_infos[op->current_dpb];
 
-			uint32_t slice_offset = 0;
+			uint32_t fallback_offset = 0;
+			uint32_t slice_count = op->slice_count;
+			const uint32_t* slice_offsets = op->slice_offsets;
+			if (slice_count == 0 || slice_offsets == nullptr)
+			{
+				slice_count = 1;
+				slice_offsets = &fallback_offset;
+			}
 
 			// https://vulkan.lunarg.com/doc/view/1.3.239.0/windows/1.3-extensions/vkspec.html#_h_264_decoding_parameters
 			VkVideoDecodeH264PictureInfoKHR picture_info_h264 = {};
 			picture_info_h264.sType = VK_STRUCTURE_TYPE_VIDEO_DECODE_H264_PICTURE_INFO_KHR;
 			picture_info_h264.pStdPictureInfo = &std_picture_info_h264;
-			picture_info_h264.sliceCount = 1;
-			picture_info_h264.pSliceOffsets = &slice_offset;
+			picture_info_h264.sliceCount = slice_count;
+			picture_info_h264.pSliceOffsets = slice_offsets;
 			decode_info.pNext = &picture_info_h264;
 
 			vkCmdDecodeVideoKHR(commandlist.GetCommandBuffer(), &decode_info);
