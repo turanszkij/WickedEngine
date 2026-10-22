@@ -7771,46 +7771,7 @@ std::mutex queue_locker;
 			input.NumFrameArguments++;
 
 			// DirectX Video Acceleration for H.264/MPEG-4 AVC Decoding, Microsoft, Updated 2010, Page 29
-			//	Also: https://gitlab.freedesktop.org/mesa/mesa/-/blob/main/src/gallium/drivers/d3d12/d3d12_video_dec_h264.cpp#L548
-			if (sps->seq_scaling_matrix_present_flag)
-			{
-				static constexpr int vl_zscan_normal_16[] =
-				{
-					/* Zig-Zag scan pattern */
-					0, 1, 4, 8, 5, 2, 3, 6,
-					9, 12, 13, 10, 7, 11, 14, 15
-				};
-				static constexpr int vl_zscan_normal[] =
-				{
-					/* Zig-Zag scan pattern */
-					 0, 1, 8,16, 9, 2, 3,10,
-					17,24,32,25,18,11, 4, 5,
-					12,19,26,33,40,48,41,34,
-					27,20,13, 6, 7,14,21,28,
-					35,42,49,56,57,50,43,36,
-					29,22,15,23,30,37,44,51,
-					58,59,52,45,38,31,39,46,
-					53,60,61,54,47,55,62,63
-				};
-				for (int i = 0; i < 6; ++i)
-				{
-					for (int j = 0; j < 16; ++j)
-					{
-						qmatrix_h264.bScalingLists4x4[i][j] = pps->ScalingList4x4[i][vl_zscan_normal_16[j]];
-					}
-				}
-				for (int i = 0; i < 64; ++i)
-				{
-					qmatrix_h264.bScalingLists8x8[0][i] = pps->ScalingList8x8[0][vl_zscan_normal[i]];
-					qmatrix_h264.bScalingLists8x8[1][i] = pps->ScalingList8x8[1][vl_zscan_normal[i]];
-				}
-			}
-			else
-			{
-				// I don't know why it needs to be filled with 16, but otherwise it gets corrupted output
-				//	Source: https://github.com/mofo7777/H264Dxva2Decoder
-				std::memset(&qmatrix_h264, 16, sizeof(DXVA_Qmatrix_H264));
-			}
+			h264::resolve_scaling_lists(sps, pps, qmatrix_h264.bScalingLists4x4, qmatrix_h264.bScalingLists8x8);
 			input.FrameArguments[input.NumFrameArguments].Type = D3D12_VIDEO_DECODE_ARGUMENT_TYPE_INVERSE_QUANTIZATION_MATRIX;
 			input.FrameArguments[input.NumFrameArguments].Size = sizeof(qmatrix_h264);
 			input.FrameArguments[input.NumFrameArguments].pData = &qmatrix_h264;

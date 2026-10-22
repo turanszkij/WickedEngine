@@ -5642,6 +5642,19 @@ using namespace vulkan_internal;
 
 		if (video_decoder->desc.profile == VideoProfile::H264)
 		{
+			auto fill_vk_scaling = [](StdVideoH264ScalingLists& dst, const unsigned char lists4[6][16], const unsigned char lists8[2][64])
+			{
+				dst = {};
+				dst.scaling_list_present_mask = 0xFF;
+				dst.use_default_scaling_matrix_mask = 0;
+				for (int j = 0; j < 6; ++j)
+					for (int k = 0; k < 16; ++k)
+						dst.ScalingList4x4[j][k] = lists4[j][k];
+				for (int j = 0; j < 2; ++j)
+					for (int k = 0; k < 64; ++k)
+						dst.ScalingList8x8[j][k] = lists8[j][k];
+			};
+
 			wi::vector<StdVideoH264PictureParameterSet> pps_array_h264(desc->pps_count);
 			wi::vector<StdVideoH264ScalingLists> scalinglist_array_h264(desc->pps_count);
 			for (uint32_t i = 0; i < desc->pps_count; ++i)
@@ -5669,33 +5682,29 @@ using namespace vulkan_internal;
 				vk_pps.chroma_qp_index_offset = pps->chroma_qp_index_offset;
 				vk_pps.second_chroma_qp_index_offset = pps->second_chroma_qp_index_offset;
 
-				vk_pps.pScalingLists = &vk_scalinglist;
-				for (int j = 0; j < arraysize(pps->pic_scaling_list_present_flag); ++j)
+				vk_pps.pScalingLists = nullptr;
+				if (pps->pic_scaling_matrix_present_flag)
 				{
-					vk_scalinglist.scaling_list_present_mask |= pps->pic_scaling_list_present_flag[j] << j;
-				}
-				for (int j = 0; j < arraysize(pps->UseDefaultScalingMatrix4x4Flag); ++j)
-				{
-					vk_scalinglist.use_default_scaling_matrix_mask |= pps->UseDefaultScalingMatrix4x4Flag[j] << j;
-				}
-				for (int j = 0; j < arraysize(pps->ScalingList4x4); ++j)
-				{
-					for (int k = 0; k < arraysize(pps->ScalingList4x4[j]); ++k)
+					const h264::SPS* list_sps = nullptr;
+					for (uint32_t s = 0; s < desc->sps_count; ++s)
 					{
-						vk_scalinglist.ScalingList4x4[j][k] = (uint8_t)pps->ScalingList4x4[j][k];
+						const h264::SPS* candidate = (const h264::SPS*)desc->sps_datas + s;
+						if (candidate->seq_parameter_set_id == pps->seq_parameter_set_id)
+						{
+							list_sps = candidate;
+							break;
+						}
 					}
-				}
-				for (int j = 0; j < arraysize(pps->ScalingList8x8); ++j)
-				{
-					for (int k = 0; k < arraysize(pps->ScalingList8x8[j]); ++k)
-					{
-						vk_scalinglist.ScalingList8x8[j][k] = (uint8_t)pps->ScalingList8x8[j][k];
-					}
+					vk_scalinglist.scaling_list_present_mask = 0xFF;
+					vk_scalinglist.use_default_scaling_matrix_mask = 0;
+					h264::resolve_scaling_lists(list_sps, pps, vk_scalinglist.ScalingList4x4, vk_scalinglist.ScalingList8x8);
+					vk_pps.pScalingLists = &vk_scalinglist;
 				}
 			}
 
 			uint32_t num_reference_frames = 0;
 			wi::vector<StdVideoH264SequenceParameterSet> sps_array_h264(desc->sps_count);
+			wi::vector<StdVideoH264ScalingLists> sps_scaling_h264(desc->sps_count);
 			wi::vector<StdVideoH264SequenceParameterSetVui> vui_array_h264(desc->sps_count);
 			wi::vector<StdVideoH264HrdParameters> hrd_array_h264(desc->sps_count);
 			for (uint32_t i = 0; i < desc->sps_count; ++i)
@@ -5719,6 +5728,14 @@ using namespace vulkan_internal;
 				vk_sps.flags.frame_cropping_flag = sps->frame_cropping_flag;
 				vk_sps.flags.seq_scaling_matrix_present_flag = sps->seq_scaling_matrix_present_flag;
 				vk_sps.flags.vui_parameters_present_flag = sps->vui_parameters_present_flag;
+				if (sps->seq_scaling_matrix_present_flag)
+				{
+					StdVideoH264ScalingLists& vk_scalinglist = sps_scaling_h264[i];
+					vk_scalinglist.scaling_list_present_mask = 0xFF;
+					vk_scalinglist.use_default_scaling_matrix_mask = 0;
+					h264::resolve_scaling_lists(sps, nullptr, vk_scalinglist.ScalingList4x4, vk_scalinglist.ScalingList8x8);
+					vk_sps.pScalingLists = &sps_scaling_h264[i];
+				}
 
 				if (vk_sps.flags.vui_parameters_present_flag)
 				{

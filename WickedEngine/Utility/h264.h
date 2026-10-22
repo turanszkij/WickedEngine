@@ -1405,6 +1405,151 @@ namespace h264 {
 		return writer.emit(header, dst, dst_size);
 	}
 
+	constexpr void copy_scaling_bytes(unsigned char* dst, const unsigned char* src, int count)
+	{
+		for (int i = 0; i < count; ++i)
+			dst[i] = src[i];
+	}
+	constexpr void copy_scaling_ints(unsigned char* dst, const int* src, int count)
+	{
+		for (int i = 0; i < count; ++i)
+			dst[i] = (unsigned char)src[i];
+	}
+	constexpr void fill_flat_scaling(unsigned char out4x4[6][16], unsigned char out8x8[2][64])
+	{
+		for (int i = 0; i < 6; ++i)
+			for (int j = 0; j < 16; ++j)
+				out4x4[i][j] = 16;
+		for (int i = 0; i < 2; ++i)
+			for (int j = 0; j < 64; ++j)
+				out8x8[i][j] = 16;
+	}
+	// Table 7-2. Index 0 and 3 take the intra and inter seeds. The other 4x4 lists copy the previous list.
+	constexpr void fallback_scaling_4x4(int i, const unsigned char* intra, const unsigned char* inter, unsigned char out4x4[6][16])
+	{
+		if (i == 0)
+			copy_scaling_bytes(out4x4[0], intra, 16);
+		else if (i == 3)
+			copy_scaling_bytes(out4x4[3], inter, 16);
+		else
+			copy_scaling_bytes(out4x4[i], out4x4[i - 1], 16);
+	}
+
+	// Resolved inverse-quant matrices in bitstream zig-zag order.
+	// Pass pps as null to resolve the SPS only. Both flags clear yields flat 16.
+	// A set matrix flag with an absent list uses Table 7-2, not flat 16 and not zeros.
+	constexpr void resolve_scaling_lists(const SPS* sps, const PPS* pps, unsigned char out4x4[6][16], unsigned char out8x8[2][64])
+	{
+		constexpr unsigned char kDefault4x4Intra[16] = {
+			6, 13, 13, 20, 20, 20, 28, 28, 28, 28, 32, 32, 32, 37, 37, 42
+		};
+		constexpr unsigned char kDefault4x4Inter[16] = {
+			10, 14, 14, 20, 20, 20, 24, 24, 24, 24, 27, 27, 27, 30, 30, 34
+		};
+		constexpr unsigned char kDefault8x8Intra[64] = {
+			6, 10, 10, 13, 11, 13, 16, 16, 16, 16, 18, 18, 18, 18, 18, 23,
+			23, 23, 23, 23, 23, 25, 25, 25, 25, 25, 25, 25, 27, 27, 27, 27,
+			27, 27, 27, 27, 29, 29, 29, 29, 29, 29, 29, 31, 31, 31, 31, 31,
+			31, 33, 33, 33, 33, 33, 36, 36, 36, 36, 38, 38, 38, 40, 40, 42
+		};
+		constexpr unsigned char kDefault8x8Inter[64] = {
+			9, 13, 13, 15, 13, 15, 17, 17, 17, 17, 19, 19, 19, 19, 19, 21,
+			21, 21, 21, 21, 21, 22, 22, 22, 22, 22, 22, 22, 24, 24, 24, 24,
+			24, 24, 24, 24, 25, 25, 25, 25, 25, 25, 25, 27, 27, 27, 27, 27,
+			27, 28, 28, 28, 28, 28, 30, 30, 30, 30, 32, 32, 32, 33, 33, 35
+		};
+
+		const bool sps_matrix = sps != nullptr && sps->seq_scaling_matrix_present_flag != 0;
+		if (!sps_matrix)
+		{
+			fill_flat_scaling(out4x4, out8x8);
+		}
+		else
+		{
+			for (int i = 0; i < 6; ++i)
+			{
+				if (sps->seq_scaling_list_present_flag[i])
+				{
+					if (sps->UseDefaultScalingMatrix4x4Flag[i])
+						copy_scaling_bytes(out4x4[i], i < 3 ? kDefault4x4Intra : kDefault4x4Inter, 16);
+					else
+						copy_scaling_ints(out4x4[i], sps->ScalingList4x4[i], 16);
+				}
+				else
+				{
+					fallback_scaling_4x4(i, kDefault4x4Intra, kDefault4x4Inter, out4x4);
+				}
+			}
+			for (int i = 0; i < 2; ++i)
+			{
+				if (sps->seq_scaling_list_present_flag[6 + i])
+				{
+					if (sps->UseDefaultScalingMatrix8x8Flag[i])
+						copy_scaling_bytes(out8x8[i], (i & 1) == 0 ? kDefault8x8Intra : kDefault8x8Inter, 64);
+					else
+						copy_scaling_ints(out8x8[i], sps->ScalingList8x8[i], 64);
+				}
+				else
+				{
+					copy_scaling_bytes(out8x8[i], (i & 1) == 0 ? kDefault8x8Intra : kDefault8x8Inter, 64);
+				}
+			}
+		}
+
+		if (pps == nullptr || pps->pic_scaling_matrix_present_flag == 0)
+			return;
+
+		// Rule B seeds are the resolved SPS lists. Rule A (no SPS matrix) uses the JVT defaults.
+		unsigned char sps4_intra[16] = {};
+		unsigned char sps4_inter[16] = {};
+		unsigned char sps8_intra[64] = {};
+		unsigned char sps8_inter[64] = {};
+		const unsigned char* intra4 = kDefault4x4Intra;
+		const unsigned char* inter4 = kDefault4x4Inter;
+		const unsigned char* intra8 = kDefault8x8Intra;
+		const unsigned char* inter8 = kDefault8x8Inter;
+		if (sps_matrix)
+		{
+			copy_scaling_bytes(sps4_intra, out4x4[0], 16);
+			copy_scaling_bytes(sps4_inter, out4x4[3], 16);
+			copy_scaling_bytes(sps8_intra, out8x8[0], 64);
+			copy_scaling_bytes(sps8_inter, out8x8[1], 64);
+			intra4 = sps4_intra;
+			inter4 = sps4_inter;
+			intra8 = sps8_intra;
+			inter8 = sps8_inter;
+		}
+
+		for (int i = 0; i < 6; ++i)
+		{
+			if (pps->pic_scaling_list_present_flag[i])
+			{
+				if (pps->UseDefaultScalingMatrix4x4Flag[i])
+					copy_scaling_bytes(out4x4[i], i < 3 ? kDefault4x4Intra : kDefault4x4Inter, 16);
+				else
+					copy_scaling_ints(out4x4[i], pps->ScalingList4x4[i], 16);
+			}
+			else
+			{
+				fallback_scaling_4x4(i, intra4, inter4, out4x4);
+			}
+		}
+		for (int i = 0; i < 2; ++i)
+		{
+			if (pps->pic_scaling_list_present_flag[6 + i])
+			{
+				if (pps->UseDefaultScalingMatrix8x8Flag[i])
+					copy_scaling_bytes(out8x8[i], (i & 1) == 0 ? kDefault8x8Intra : kDefault8x8Inter, 64);
+				else
+					copy_scaling_ints(out8x8[i], pps->ScalingList8x8[i], 64);
+			}
+			else
+			{
+				copy_scaling_bytes(out8x8[i], (i & 1) == 0 ? intra8 : inter8, 64);
+			}
+		}
+	}
+
 }
 
 #endif // H264_H
