@@ -86,6 +86,10 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
 	Lighting lighting;
 	lighting.create(0, 0, surface.gi, 0);
+	
+#ifdef PLANARREFLECTION
+	lighting.indirect.specular += PlanarReflection(surface, surface.bumpColor.rg) * surface.F;
+#endif // PLANARREFLECTION
 
 	TiledLighting(surface, lighting, entity_flat_tile_index, camera);
 
