@@ -2337,9 +2337,9 @@ void SetUpStates()
 	rs.fill_mode = FillMode::WIREFRAME;
 	rs.cull_mode = CullMode::BACK;
 	rs.front_counter_clockwise = true;
-	rs.depth_bias = 0;
-	rs.depth_bias_clamp = 0;
-	rs.slope_scaled_depth_bias = 0;
+	rs.depth_bias = 1000;
+	rs.depth_bias_clamp = 0.001f;
+	rs.slope_scaled_depth_bias = 1;
 	rs.depth_clip_enable = true;
 	rs.multisample_enable = false;
 	rs.antialiased_line_enable = false;
@@ -2347,6 +2347,12 @@ void SetUpStates()
 	rasterizers[RSTYPE_WIRE] = rs;
 	rs.antialiased_line_enable = true;
 	rasterizers[RSTYPE_WIRE_SMOOTH] = rs;
+
+	rs = rasterizers[RSTYPE_WIRE];
+	rs.cull_mode = CullMode::NONE;
+	rasterizers[RSTYPE_WIRE_DOUBLESIDED] = rs;
+	rs.antialiased_line_enable = true;
+	rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH] = rs;
 
 	rs.fill_mode = FillMode::SOLID;
 	rs.cull_mode = CullMode::NONE;
@@ -2359,20 +2365,6 @@ void SetUpStates()
 	rs.antialiased_line_enable = false;
 	rs.conservative_rasterization_enable = false;
 	rasterizers[RSTYPE_DOUBLESIDED] = rs;
-
-	rs.fill_mode = FillMode::WIREFRAME;
-	rs.cull_mode = CullMode::NONE;
-	rs.front_counter_clockwise = true;
-	rs.depth_bias = 0;
-	rs.depth_bias_clamp = 0;
-	rs.slope_scaled_depth_bias = 0;
-	rs.depth_clip_enable = true;
-	rs.multisample_enable = false;
-	rs.antialiased_line_enable = false;
-	rs.conservative_rasterization_enable = false;
-	rasterizers[RSTYPE_WIRE_DOUBLESIDED] = rs;
-	rs.antialiased_line_enable = true;
-	rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH] = rs;
 
 	rs.fill_mode = FillMode::SOLID;
 	rs.cull_mode = CullMode::FRONT;
