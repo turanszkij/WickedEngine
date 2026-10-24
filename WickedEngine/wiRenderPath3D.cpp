@@ -1026,20 +1026,10 @@ namespace wi
 		//	must finish before "main scene opaque color pass")
 		cmd = device->BeginCommandList(QUEUE_COMPUTE);
 		device->WaitCommandList(cmd, cmd_maincamera_prepass);
-		if (video_cmd.IsValid())
-		{
-			device->WaitCommandList(cmd, video_cmd);
-		}
 		CommandList cmd_maincamera_compute_effects = cmd;
 		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
 
 			GraphicsDevice* device = wi::graphics::GetDevice();
-
-			for (size_t i = 0; i < scene->videos.GetCount(); ++i)
-			{
-				wi::scene::VideoComponent& video = scene->videos[i];
-				wi::video::ResolveVideoToRGB(&video.videoinstance, cmd);
-			}
 
 			wi::renderer::BindCameraCB(
 				*camera,
@@ -1765,8 +1755,18 @@ namespace wi
 
 		CommandList cmd_postprocess = device->BeginCommandList();
 		cmd = cmd_postprocess;
+		if (video_cmd.IsValid())
+		{
+			device->WaitCommandList(cmd, video_cmd);
+		}
 		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
 			RenderPostprocessChain(cmd);
+
+			for (size_t i = 0; i < scene->videos.GetCount(); ++i)
+			{
+				wi::scene::VideoComponent& video = scene->videos[i];
+				wi::video::ResolveVideoToRGB(&video.videoinstance, cmd);
+			}
 
 			GraphicsDevice* device = wi::graphics::GetDevice();
 			device->Barrier(GPUBarrier::Image(&debugUAV, ResourceState::UNORDERED_ACCESS, debugUAV.desc.layout), cmd);
