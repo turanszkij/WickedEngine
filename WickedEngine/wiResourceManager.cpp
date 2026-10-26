@@ -42,6 +42,8 @@ using namespace wi::graphics;
 
 namespace wi
 {
+	static std::mutex locker;
+
 	struct StreamingTexture
 	{
 		struct StreamingSubresourceData
@@ -81,6 +83,7 @@ namespace wi
 		size_t container_filesize = ~0ull;
 		size_t container_fileoffset = 0;
 		uint64_t timestamp = 0;
+		bool loading = false;
 
 		// Streaming parameters:
 		StreamingTexture streaming_texture;
@@ -217,6 +220,7 @@ namespace wi
 			internal_state = wi::allocator::make_shared<ResourceInternal>();
 		}
 		ResourceInternal* resourceinternal = (ResourceInternal*)internal_state.get();
+		std::scoped_lock lck(locker);
 		resourceinternal->timestamp = 0;
 	}
 
@@ -232,7 +236,6 @@ namespace wi
 
 	namespace resourcemanager
 	{
-		static std::mutex locker;
 		static wi::unordered_map<std::string, wi::allocator::weak_ptr<ResourceInternal>> resources;
 		static Mode mode = Mode::NO_EMBEDDING;
 
@@ -1043,11 +1046,10 @@ namespace wi
 		)
 		{
 			locker.lock();
-			wi::allocator::weak_ptr<ResourceInternal>& weak_resource = resources[name];
-			wi::allocator::shared_ptr<ResourceInternal> resource = weak_resource.lock();
+			wi::allocator::shared_ptr<ResourceInternal> resource = resources[name].lock();
 
 			uint64_t timestamp = 0;
-			if(!container_filename.empty())
+			if (!container_filename.empty())
 			{
 				timestamp = wi::helper::FileTimestamp(container_filename);
 			}
@@ -1056,9 +1058,23 @@ namespace wi
 				timestamp = wi::helper::FileTimestamp(name);
 			}
 
+			if (resource != nullptr && resource->loading)
+			{
+				// Another thread is already creating it, work in progress resource is returned
+				Resource retVal;
+				retVal.internal_state = resource;
+				locker.unlock();
+				return retVal;
+			}
+
+			wi::allocator::shared_ptr<ResourceInternal> previous;
+			bool replaced = false;
+
 			if (resource == nullptr || resource->timestamp < timestamp)
 			{
+				previous = resource;
 				resource = wi::allocator::make_shared<ResourceInternal>();
+				resource->loading = true;
 				resources[name] = resource;
 				resource->filename = name;
 
@@ -1082,64 +1098,94 @@ namespace wi
 					resource->filedata.resize(filesize);
 					std::memcpy(resource->filedata.data(), filedata, filesize);
 				}
+				replaced = true;
+			}
+			else if (!has_flag(flags, Flags::IMPORT_DELAY) && has_flag(resource->flags, Flags::IMPORT_DELAY))
+			{
+				// If this is not an IMPORT_DELAY load, but this resource load was incomplete, using IMPORT_DELAY,
+				//	then continue loading it as normal from existing file data and remove IMPORT_DELAY flag from it
+				resource->loading = true;
+				resource->flags &= ~Flags::IMPORT_DELAY;
 			}
 			else
 			{
-				if (!has_flag(flags, Flags::IMPORT_DELAY) && has_flag(resource->flags, Flags::IMPORT_DELAY))
-				{
-					// If this is not an IMPORT_DELAY load, but this resource load was incomplete, using IMPORT_DELAY,
-					//	then continue loading it as normal from existing file data and remove IMPORT_DELAY flag from it
-					resource->flags &= ~Flags::IMPORT_DELAY;
-				}
-				else
-				{
-					resource_log("\tResource reused: %s", name.c_str());
-					Resource retVal;
-					retVal.internal_state = resource;
-					locker.unlock();
-					return retVal;
-				}
+				resource_log("\tResource reused: %s", name.c_str());
+				Resource retVal;
+				retVal.internal_state = resource;
+				locker.unlock();
+				return retVal;
 			}
 			locker.unlock();
 
+			bool fileread_ok = true;
 			if (filedata == nullptr || filesize == 0)
 			{
 				if (resource->filedata.empty())
 				{
 					if (!wi::helper::FileRead(resource->container_filename, resource->filedata, resource->container_filesize, resource->container_fileoffset))
 					{
-						resource.reset();
-						return Resource();
+						fileread_ok = false;
 					}
 				}
-				filedata = resource->filedata.data();
-				filesize = resource->filedata.size();
+				if (fileread_ok)
+				{
+					filedata = resource->filedata.data();
+					filesize = resource->filedata.size();
+				}
 			}
-
-			flags |= resource->flags;
 
 			bool success = false;
+			if (fileread_ok)
+			{
+				flags |= resource->flags;
 
-			if (has_flag(flags, Flags::IMPORT_DELAY))
-			{
-				success = true;
-			}
-			else
-			{
-				resource_log("\tResource loading: %s", name.c_str());
-				success = LoadResourceDirectly(name, flags, filedata, filesize, resource.get());
+				if (has_flag(flags, Flags::IMPORT_DELAY))
+				{
+					success = true;
+				}
+				else
+				{
+					resource_log("\tResource loading: %s", name.c_str());
+					success = LoadResourceDirectly(name, flags, filedata, filesize, resource.get());
+				}
 			}
 
 			if (success)
 			{
+				locker.lock();
 				resource->flags = flags;
 				resource->timestamp = timestamp;
+				resource->loading = false;
+				locker.unlock();
 
 				Resource retVal;
 				retVal.internal_state = resource;
 				return retVal;
 			}
 
+			locker.lock();
+			if (replaced)
+			{
+				auto it = resources.find(name);
+				if (it != resources.end())
+				{
+					auto current = it->second.lock();
+					if (current.get() == resource.get())
+					{
+						if (previous.IsValid())
+							it->second = previous;
+						else
+							resources.erase(name);
+					}
+				}
+			}
+			else
+			{
+				// Continuation failed after IMPORT_DELAY was cleared. Put it back so a later Load retries.
+				resource->flags |= Flags::IMPORT_DELAY;
+			}
+			resource->loading = false;
+			locker.unlock();
 			return Resource();
 		}
 
@@ -1209,7 +1255,7 @@ namespace wi
 			{
 				wi::allocator::weak_ptr<ResourceInternal>& weak_resource = x.second;
 				wi::allocator::shared_ptr<ResourceInternal> resource = weak_resource.lock();
-				if (resource != nullptr && resource->texture.IsValid() && has_flag(resource->flags, Flags::STREAMING) && resource->streaming_texture.mip_count > 1)
+				if (resource != nullptr && !resource->loading && resource->texture.IsValid() && has_flag(resource->flags, Flags::STREAMING) && resource->streaming_texture.mip_count > 1)
 				{
 					const TextureDesc& desc = resource->texture.desc;
 					const float mip_offset = float(resource->streaming_texture.mip_count - desc.mip_levels);
@@ -1261,31 +1307,23 @@ namespace wi
 
 			streaming_texture_jobs.clear();
 
-			static wi::vector<const std::string*> removals; // string ptr to avoid string copies, or string constructions from char*
-
 			// Gather the streaming jobs, unload lost resources:
-			for (auto& x : resources)
+			for (auto it = resources.begin(); it != resources.end(); )
 			{
-				if (x.second.expired())
+				if (it->second.expired())
 				{
-					removals.push_back(&x.first);
+					resource_log("\tResource lost: %s", it->first.c_str());
+					it = resources.erase(it);
 					continue;
 				}
 
-				wi::allocator::weak_ptr<ResourceInternal>& weak_resource = x.second;
-				wi::allocator::shared_ptr<ResourceInternal> resource = weak_resource.lock();
-				if (resource != nullptr && resource->texture.IsValid() && resource->streaming_texture.mip_count > 1)
+				wi::allocator::shared_ptr<ResourceInternal> resource = it->second.lock();
+				if (resource != nullptr && !resource->loading && resource->texture.IsValid() && resource->streaming_texture.mip_count > 1)
 				{
 					streaming_texture_jobs.push_back(resource);
 				}
+				++it;
 			}
-
-			for (auto& x : removals)
-			{
-				resource_log("\tResource lost: %s", x->c_str());
-				resources.erase(*x);
-			}
-			removals.clear();
 			locker.unlock();
 
 			if (streaming_texture_jobs.empty())
@@ -1426,39 +1464,81 @@ namespace wi
 
 		void ReloadOutdatedResources()
 		{
-			std::scoped_lock lck(locker);
-
-			for (auto& x : resources)
+			struct Item
 			{
-				auto resourceinternal = x.second.lock();
-				if (resourceinternal == nullptr)
-					continue;
+				wi::allocator::shared_ptr<ResourceInternal> resource;
+				uint64_t timestamp = 0;
+			};
+			wi::vector<Item> items;
+			bool wait_streaming = false;
 
-				uint64_t timestamp = wi::helper::FileTimestamp(resourceinternal->filename);
-				if (resourceinternal->timestamp < timestamp)
+			{
+				std::scoped_lock lck(locker);
+				for (auto& x : resources)
 				{
-					wi::vector<uint8_t> filedata;
-					if (wi::helper::FileRead(resourceinternal->filename, filedata))
+					auto resourceinternal = x.second.lock();
+					if (resourceinternal == nullptr || resourceinternal->loading)
+						continue;
+
+					uint64_t timestamp = wi::helper::FileTimestamp(resourceinternal->filename);
+					if (resourceinternal->timestamp < timestamp)
 					{
+						resourceinternal->loading = true;
 						if (resourceinternal->streaming_texture.mip_count > 1)
-							wi::jobsystem::Wait(streaming_ctx); // reloading a resource that is potentially streaming needs to wait for current streaming job to end
-						if (LoadResourceDirectly(resourceinternal->filename, resourceinternal->flags, filedata.data(), filedata.size(), resourceinternal.get()))
+							wait_streaming = true;
+						items.push_back({ resourceinternal, timestamp });
+					}
+				}
+			}
+
+			if (wait_streaming)
+				wi::jobsystem::Wait(streaming_ctx);
+
+			for (auto& item : items)
+			{
+				auto& resourceinternal = item.resource;
+				wi::vector<uint8_t> filedata;
+				bool success = false;
+				if (wi::helper::FileRead(resourceinternal->filename, filedata))
+				{
+					if (resourceinternal->streaming_texture.mip_count > 1)
+					{
+						std::scoped_lock lck(streaming_replacement_mutex);
+						for (size_t i = 0; i < streaming_texture_replacements.size();)
 						{
-							resourceinternal->timestamp = timestamp;
+							if (streaming_texture_replacements[i].resource.get() == resourceinternal.get())
+								streaming_texture_replacements.erase(streaming_texture_replacements.begin() + i);
+							else
+								++i;
+						}
+					}
+					if (LoadResourceDirectly(resourceinternal->filename, resourceinternal->flags, filedata.data(), filedata.size(), resourceinternal.get()))
+					{
+						{
+							std::scoped_lock lck(locker);
+							resourceinternal->timestamp = item.timestamp;
 							resourceinternal->container_filename = resourceinternal->filename;
 							resourceinternal->container_fileoffset = 0;
 							resourceinternal->container_filesize = ~0ull;
-							wi::backlog::post("[resourcemanager] reload success: " + resourceinternal->filename);
+							resourceinternal->loading = false;
 						}
-						else
-						{
-							wi::backlog::post("[resourcemanager] reload failure - LoadResourceDirectly returned false: " + resourceinternal->filename, wi::backlog::LogLevel::Error);
-						}
+						wi::backlog::post("[resourcemanager] reload success: " + resourceinternal->filename);
+						success = true;
 					}
 					else
 					{
-						wi::backlog::post("[resourcemanager] reload failure - file data could not be read: " + resourceinternal->filename, wi::backlog::LogLevel::Error);
+						wi::backlog::post("[resourcemanager] reload failure - LoadResourceDirectly returned false: " + resourceinternal->filename, wi::backlog::LogLevel::Error);
 					}
+				}
+				else
+				{
+					wi::backlog::post("[resourcemanager] reload failure - file data could not be read: " + resourceinternal->filename, wi::backlog::LogLevel::Error);
+				}
+
+				if (!success)
+				{
+					std::scoped_lock lck(locker);
+					resourceinternal->loading = false;
 				}
 			}
 		}
