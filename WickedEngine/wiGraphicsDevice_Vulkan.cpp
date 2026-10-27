@@ -657,7 +657,7 @@ namespace vulkan_internal
 			imageInfo.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
 		}
 
-		if (family_count > 1)
+		if (family_count > 1 && !has_flag(desc.bind_flags, BindFlag::DEPTH_STENCIL))
 		{
 			imageInfo.sharingMode = VK_SHARING_MODE_CONCURRENT;
 			imageInfo.queueFamilyIndexCount = family_count;
@@ -5054,7 +5054,7 @@ using namespace vulkan_internal;
 
 		// Rasterizer:
 		rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-		rasterizer.depthClampEnable = VK_TRUE;
+		rasterizer.depthClampEnable = rs_desc.depth_clip_enable ? VK_FALSE : VK_TRUE;
 		rasterizer.rasterizerDiscardEnable = VK_FALSE;
 		rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 		rasterizer.lineWidth = 1.0f;
@@ -7483,11 +7483,11 @@ using namespace vulkan_internal;
 				depth_attachment.imageView = descriptor.image_view;
 				if (image.layout == ResourceState::DEPTHSTENCIL_READONLY)
 				{
-					depth_attachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL;
+					depth_attachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 				}
 				else
 				{
-					depth_attachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+					depth_attachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 				}
 				depth_attachment.loadOp = loadOp;
 				depth_attachment.storeOp = storeOp;
@@ -7495,18 +7495,7 @@ using namespace vulkan_internal;
 				depth = true;
 				if (IsFormatStencilSupport(desc.format))
 				{
-					stencil_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-					stencil_attachment.imageView = subresource < 0 ? internal_state->dsv.image_view : internal_state->subresources_dsv[subresource].image_view;
-					if (image.layout == ResourceState::DEPTHSTENCIL_READONLY)
-					{
-						stencil_attachment.imageLayout = VK_IMAGE_LAYOUT_STENCIL_READ_ONLY_OPTIMAL;
-					}
-					else
-					{
-						stencil_attachment.imageLayout = VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL;
-					}
-					stencil_attachment.loadOp = loadOp;
-					stencil_attachment.storeOp = storeOp;
+					stencil_attachment = depth_attachment;
 					stencil_attachment.clearValue.depthStencil.stencil = desc.clear.depth_stencil.stencil;
 					stencil = true;
 				}
@@ -7518,8 +7507,8 @@ using namespace vulkan_internal;
 				descriptor = subresource < 0 ? internal_state->dsv : internal_state->subresources_dsv[subresource];
 				depth_attachment.resolveImageView = descriptor.image_view;
 				stencil_attachment.resolveImageView = descriptor.image_view;
-				depth_attachment.resolveImageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
-				stencil_attachment.resolveImageLayout = VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL;
+				depth_attachment.resolveImageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+				stencil_attachment.resolveImageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 				switch (image.depth_resolve_mode)
 				{
 				default:

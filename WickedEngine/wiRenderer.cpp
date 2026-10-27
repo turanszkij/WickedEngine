@@ -3149,21 +3149,14 @@ void RenderMeshes(
 
 	RenderPassInfo renderpass_info = device->GetRenderPassInfo(cmd);
 
-	const bool tessellation =
-		(flags & DRAWSCENE_TESSELLATION) &&
-		GetTessellationEnabled() &&
-		device->CheckCapability(GraphicsDeviceCapability::TESSELLATION)
-		;
+	const bool tessellation = (flags & DRAWSCENE_TESSELLATION) && GetTessellationEnabled() && device->CheckCapability(GraphicsDeviceCapability::TESSELLATION);
 	const bool skip_planareflection_objects = flags & DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS;
 	const bool wireframe_overlay = flags & DRAWSCENE_WIREFRAME_OVERLAY;
 	const bool wireframe = wireframe_overlay || (IsWireRender() && GetWireframeMode() != WIREFRAME_OVERLAY);
-
 	const bool shadowRendering = renderPass == RENDERPASS_SHADOW;
-
-	const bool stencil_usage = renderPass == RENDERPASS_MAIN || renderPass == RENDERPASS_PREPASS;
-
-	const bool mesh_shader = IsMeshShaderAllowed() &&
-		(renderPass == RENDERPASS_PREPASS || renderPass == RENDERPASS_PREPASS_DEPTHONLY || renderPass == RENDERPASS_MAIN || renderPass == RENDERPASS_SHADOW || renderPass == RENDERPASS_RAINBLOCKER);
+	const bool stencil_usage = renderPass == RENDERPASS_PREPASS || (renderPass == RENDERPASS_MAIN && (flags & DRAWSCENE_TRANSPARENT));
+	const bool mesh_shader = IsMeshShaderAllowed() && (renderPass == RENDERPASS_PREPASS || renderPass == RENDERPASS_PREPASS_DEPTHONLY || renderPass == RENDERPASS_MAIN || renderPass == RENDERPASS_SHADOW || renderPass == RENDERPASS_RAINBLOCKER);
+	const bool shading_rate_usage = renderPass == RENDERPASS_MAIN || renderPass == RENDERPASS_ENVMAPCAPTURE;
 
 	// Pre-allocate space for all the instances in GPU-buffer:
 	const size_t alloc_size = renderQueue.size() * camera_count * sizeof(ShaderMeshInstancePointer);
@@ -3266,6 +3259,8 @@ void RenderMeshes(
 				continue;
 			}
 
+			const bool alphatestRequested = material.IsAlphaTestEnabled() || forceAlphaTestForDithering;
+
 			const PipelineState* pso = nullptr;
 			const PipelineState* pso_backside = nullptr; // only when separate backside rendering is required (transparent doublesided)
 			const CustomShader* customShader = nullptr;
@@ -3316,7 +3311,7 @@ void RenderMeshes(
 					variant.bits.blendmode = material.GetBlendMode();
 					variant.bits.cullmode = (mesh.IsDoubleSided() || material.IsDoubleSided() || (shadowRendering && mesh.IsDoubleSidedShadow())) ? (uint32_t)CullMode::NONE : (uint32_t)CullMode::BACK;
 					variant.bits.tessellation = tessellatorRequested;
-					variant.bits.alphatest = material.IsAlphaTestEnabled() || forceAlphaTestForDithering;
+					variant.bits.alphatest = alphatestRequested;
 					variant.bits.sample_count = renderpass_info.sample_count;
 					variant.bits.mesh_shader = meshShaderRequested;
 
@@ -3359,13 +3354,21 @@ void RenderMeshes(
 				device->BindIndexBuffer(ib, ibformat, 0, cmd);
 			}
 
-			if (
-				renderPass != RENDERPASS_PREPASS &&
-				renderPass != RENDERPASS_PREPASS_DEPTHONLY &&
-				renderPass != RENDERPASS_VOXELIZE
-				)
+			if (renderPass == RENDERPASS_PREPASS)
 			{
-				// depth only alpha test will be full res
+				if (alphatestRequested)
+				{
+					// Prepass with alpha test must use full shading rate for high res cutout
+					device->BindShadingRate(ShadingRate::RATE_1X1, cmd);
+				}
+				else
+				{
+					// Prepass without alpha test is just primID exporting, lowest shading rate is safe to use
+					device->BindShadingRate(ShadingRate::RATE_4X4, cmd);
+				}
+			}
+			else if (shading_rate_usage)
+			{
 				device->BindShadingRate(material.shadingRate, cmd);
 			}
 
@@ -3482,6 +3485,8 @@ void RenderMeshes(
 	}
 
 	batch_flush();
+
+	device->BindShadingRate(ShadingRate::RATE_1X1, cmd);
 
 	device->EventEnd(cmd);
 }
