@@ -213,9 +213,9 @@ namespace wi::jobsystem
 			if (IsShuttingDown())
 				return;
 			alive.store(false); // indicate that new jobs cannot be started from this point
-			bool wake_loop = true;
+			std::atomic_bool wake_loop{ true };
 			std::thread waker([&] {
-				while (wake_loop)
+				while (wake_loop.load())
 				{
 					for (auto& x : resources)
 					{
@@ -230,7 +230,7 @@ namespace wi::jobsystem
 					thread.join();
 				}
 			}
-			wake_loop = false;
+			wake_loop.store(false);
 			waker.join();
 			for (auto& x : resources)
 			{
