@@ -12,6 +12,10 @@ static const half3 HAIRPATCH[] = {
 	half3(1, 1, 0),
 };
 
+// The strands are simulated with a fixed time step, independent of the frame rate:
+static const float HAIR_SIMULATION_FREQUENCY = 60;
+static const float HAIR_SIMULATION_MAX_STEPS = 4;
+
 Buffer<uint> meshIndexBuffer : register(t0);
 Buffer<float4> meshVertexBuffer_POS : register(t1);
 Buffer<half4> meshVertexBuffer_NOR : register(t2);
@@ -251,162 +255,182 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		}
 	}
 	
-	const half dt = clamp(GetFrame().delta_time, 0, 1.0 / 30.0); // clamp delta time to avoid simulation blowing up
+	// Fixed time step: a frame takes as many steps as the scene time crossed step boundaries since the
+	//	previous frame (none while the scene time stands still, one per frame at 60 FPS), and the strands
+	//	are drawn interpolated between the last two steps.
+	const float step_time = GetFrame().time * HAIR_SIMULATION_FREQUENCY;
+	const float step_time_prev = GetFrame().time_previous * HAIR_SIMULATION_FREQUENCY;
+	const uint step_count = distance_culled ? 0 : (uint)clamp(floor(step_time) - floor(step_time_prev), 0, HAIR_SIMULATION_MAX_STEPS);
+	const half step_alpha = (half)frac(step_time);
+	const half dt = 1.0 / HAIR_SIMULATION_FREQUENCY;
 
 	const half gravityPower = xHairGravityPower;
 	const half stiffnessForce = xHairStiffness;
 	const half dragForce = xHairDrag;
 	const half3 boneAxis = target;
 	const half boneLength = len;
-	
-	for (uint segmentID = 0; segmentID < xHairSegmentCount; ++segmentID)
+	const float3 root = base;
+
+	// Rest pose at regeneration. Strands beyond the view distance are held at rest pose so the wind
+	//	sample, integration and collider loop below are skipped. The rest pose
+	//	is still stored, so the tails stay valid and the strand resumes
+	//	without a pop when it re-enters the view distance (it is fully
+	//	dither-faded out before reaching the cull distance, so the transition
+	//	between simulated and rest pose is never visible).
+	if (regenerate_frame || distance_culled)
 	{
-		// Identifies the hair strand segment particle:
-		const uint particleID = DTid.x * xHairSegmentCount + segmentID;
-
-		// Resolve this segment's tail. Visible strands run the full dynamics;
-		// strands beyond the view distance are held at rest pose so the wind
-		// sample, integration and collider loop below are skipped. The rest pose
-		// is still stored, so the tails stay valid and the strand resumes
-		// without a pop when it re-enters the view distance (it is fully
-		// dither-faded out before reaching the cull distance, so the transition
-		// between simulated and rest pose is never visible).
-		float3 tail_current;
-		float3 tail_next;
-		half3 to_tail;
-		if (distance_culled)
+		float3 tail = root;
+		for (uint segmentID = 0; segmentID < xHairSegmentCount; ++segmentID)
 		{
-			tail_current = base + boneAxis * boneLength;
-			tail_next = tail_current;
-			to_tail = boneAxis;
+			const uint particleID = DTid.x * xHairSegmentCount + segmentID;
+			tail += boneAxis * boneLength;
+			simulationBuffer[particleID].prevTail = tail;
+			simulationBuffer[particleID].currentTail = tail;
 		}
-		else
-		{
-			if (regenerate_frame)
-			{
-				float3 tail = base + boneAxis * boneLength;
-				simulationBuffer[particleID].prevTail = tail;
-				simulationBuffer[particleID].currentTail = tail;
-			}
+	}
 
-			tail_current = simulationBuffer[particleID].currentTail;
+	for (uint stepID = 0; stepID < step_count; ++stepID)
+	{
+		// The wind at this step's time, between the frame's previous and current wind:
+		const float step_end_time = (floor(step_time_prev) + stepID + 1) / HAIR_SIMULATION_FREQUENCY;
+		const half wind_lerp = (half)saturate((step_end_time - GetFrame().time_previous) / max(GetFrame().time - GetFrame().time_previous, 1e-6));
+		base = root;
+		for (uint segmentID = 0; segmentID < xHairSegmentCount; ++segmentID)
+		{
+			// Identifies the hair strand segment particle:
+			const uint particleID = DTid.x * xHairSegmentCount + segmentID;
+
+			float3 tail_current = simulationBuffer[particleID].currentTail;
 			float3 tail_prev = simulationBuffer[particleID].prevTail;
 			half3 inertia = (tail_current - tail_prev) * (1 - dragForce);
 			half3 stiffness = boneAxis * stiffnessForce;
 			half3 external = gravityPower * float3(0, -1, 0);
-			half3 wind = sample_wind(tail_current, ((float)segmentID + 1) / (float)xHairSegmentCount);
+			const float wind_weight = ((float)segmentID + 1) / (float)xHairSegmentCount;
+			half3 wind = lerp(sample_wind_prev(tail_current, wind_weight), sample_wind(tail_current, wind_weight), wind_lerp);
 			external += wind;
 
-			tail_next = tail_current + inertia + dt * (stiffness + external);
-			to_tail = normalize(tail_next - base);
+			float3 tail_next = tail_current + inertia + dt * (stiffness + external);
+			half3 to_tail = normalize(tail_next - base);
 			tail_next = base + to_tail * boneLength;
-		}
 
-		//draw_sphere(tail_next, len);
+			//draw_sphere(tail_next, len);
 
-		// Apply every force and collider:
-		for (uint i = forces().first_item(); !distance_culled && (i < forces().end_item()); ++i)
-		{
-			ShaderEntity entity = load_entity(i);
-
-			[branch]
-			if (entity.layerMask & xHairLayerMask)
+			// Apply every force and collider:
+			for (uint i = forces().first_item(); i < forces().end_item(); ++i)
 			{
-				const float range = entity.GetRange();
-				const uint type = entity.GetType();
+				ShaderEntity entity = load_entity(i);
 
-				if (type == ENTITY_TYPE_COLLIDER_CAPSULE)
+				[branch]
+				if (entity.layerMask & xHairLayerMask)
 				{
-					float3 A = entity.position;
-					float3 B = entity.GetColliderTip();
-					half3 N = normalize(A - B);
-					A -= N * range;
-					B += N * range;
-					//if (DTid.x == 0)
-					//{
-					//	draw_sphere(A, range);
-					//	draw_sphere(B, range);
-					//}
-					float3 C = closest_point_on_segment(A, B, tail_next);
-					float3 dir = C - tail_next;
-					float dist = length(dir);
-					dir /= dist;
-					dist = dist - range - segment_radius;
-					if (dist < 0)
+					const float range = entity.GetRange();
+					const uint type = entity.GetType();
+
+					if (type == ENTITY_TYPE_COLLIDER_CAPSULE)
 					{
-						tail_next += dir * dist;
-						to_tail = normalize(tail_next - base);
-						tail_next = base + to_tail * boneLength;
+						float3 A = entity.position;
+						float3 B = entity.GetColliderTip();
+						half3 N = normalize(A - B);
+						A -= N * range;
+						B += N * range;
+						//if (DTid.x == 0)
+						//{
+						//	draw_sphere(A, range);
+						//	draw_sphere(B, range);
+						//}
+						float3 C = closest_point_on_segment(A, B, tail_next);
+						float3 dir = C - tail_next;
+						float dist = length(dir);
+						dir /= dist;
+						dist = dist - range - segment_radius;
+						if (dist < 0)
+						{
+							tail_next += dir * dist;
+							to_tail = normalize(tail_next - base);
+							tail_next = base + to_tail * boneLength;
+						}
 					}
-				}
-				else
-				{
-					float3 closest_point = closest_point_on_segment(base, tail_next, entity.position);
-					float3 dir = entity.position - closest_point;
-					float dist = length(dir);
-					dir /= dist;
-
-					switch (type)
+					else
 					{
-						case ENTITY_TYPE_FORCEFIELD_POINT:
-							tail_next += dt * dir * entity.GetGravity() * (1 - saturate(dist / range));
-							to_tail = normalize(tail_next - base);
-							tail_next = base + to_tail * boneLength;
-							break;
-						case ENTITY_TYPE_FORCEFIELD_PLANE:
-							tail_next += dt * entity.GetDirection() * entity.GetGravity() * (1 - saturate(dist / range));
-							to_tail = normalize(tail_next - base);
-							tail_next = base + to_tail * boneLength;
-							break;
-						case ENTITY_TYPE_COLLIDER_SPHERE:
-							dist = dist - range - segment_radius;
-							if (dist < 0)
-							{
-								tail_next += dir * dist;
+						float3 closest_point = closest_point_on_segment(base, tail_next, entity.position);
+						float3 dir = entity.position - closest_point;
+						float dist = length(dir);
+						dir /= dist;
+
+						switch (type)
+						{
+							case ENTITY_TYPE_FORCEFIELD_POINT:
+								tail_next += dt * dir * entity.GetGravity() * (1 - saturate(dist / range));
 								to_tail = normalize(tail_next - base);
 								tail_next = base + to_tail * boneLength;
-							}
-							break;
-						case ENTITY_TYPE_COLLIDER_PLANE:
-							dir = normalize(entity.GetDirection());
-							dist = plane_point_distance(entity.position, dir, closest_point);
-							if (dist < 0)
-							{
-								dir *= -1;
-								dist = abs(dist);
-							}
-							dist = dist - segment_radius;
-							if (dist < 0)
-							{
-								float4x4 planeProjection = load_entitymatrix(entity.GetMatrixIndex());
-								const float3 clipSpacePos = mul(planeProjection, float4(closest_point, 1)).xyz;
-								const float3 uvw = clipspace_to_uvw(clipSpacePos.xyz);
-								[branch]
-								if (is_saturated(uvw))
+								break;
+							case ENTITY_TYPE_FORCEFIELD_PLANE:
+								tail_next += dt * entity.GetDirection() * entity.GetGravity() * (1 - saturate(dist / range));
+								to_tail = normalize(tail_next - base);
+								tail_next = base + to_tail * boneLength;
+								break;
+							case ENTITY_TYPE_COLLIDER_SPHERE:
+								dist = dist - range - segment_radius;
+								if (dist < 0)
 								{
-									tail_next -= dir * dist;
+									tail_next += dir * dist;
 									to_tail = normalize(tail_next - base);
 									tail_next = base + to_tail * boneLength;
 								}
-							}
-							break;
-						default:
-							break;
+								break;
+							case ENTITY_TYPE_COLLIDER_PLANE:
+								dir = normalize(entity.GetDirection());
+								dist = plane_point_distance(entity.position, dir, closest_point);
+								if (dist < 0)
+								{
+									dir *= -1;
+									dist = abs(dist);
+								}
+								dist = dist - segment_radius;
+								if (dist < 0)
+								{
+									float4x4 planeProjection = load_entitymatrix(entity.GetMatrixIndex());
+									const float3 clipSpacePos = mul(planeProjection, float4(closest_point, 1)).xyz;
+									const float3 uvw = clipspace_to_uvw(clipSpacePos.xyz);
+									[branch]
+									if (is_saturated(uvw))
+									{
+										tail_next -= dir * dist;
+										to_tail = normalize(tail_next - base);
+										tail_next = base + to_tail * boneLength;
+									}
+								}
+								break;
+							default:
+								break;
+						}
 					}
 				}
 			}
-		}
 
-		// Don't allow tail to go below the axis plane:
-		float below_plane = plane_point_distance(base, boneAxis, tail_next);
-		if (below_plane < 0)
-		{
-			tail_next -= boneAxis * below_plane;
-		}
+			// Don't allow tail to go below the axis plane:
+			float below_plane = plane_point_distance(base, boneAxis, tail_next);
+			if (below_plane < 0)
+			{
+				tail_next -= boneAxis * below_plane;
+			}
 
-		// Store simulation:
-		simulationBuffer[particleID].prevTail = tail_current;
-		simulationBuffer[particleID].currentTail = tail_next;
+			// Store simulation:
+			simulationBuffer[particleID].prevTail = tail_current;
+			simulationBuffer[particleID].currentTail = tail_next;
+
+			// Offset next segment root to current tip:
+			base = tail_next;
+		}
+	}
+
+	// Drawing, interpolated between the last two steps:
+	base = root;
+	for (uint segmentID = 0; segmentID < xHairSegmentCount; ++segmentID)
+	{
+		const uint particleID = DTid.x * xHairSegmentCount + segmentID;
+		const float3 tail_next = lerp(simulationBuffer[particleID].prevTail, simulationBuffer[particleID].currentTail, step_alpha);
+		const half3 to_tail = normalize(tail_next - base);
 
 		//draw_point(tail_next, 0.1, float4(0,1,0,1));
 		//draw_line(base, tail_next, float4(1,0,0,1));
