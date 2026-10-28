@@ -3156,7 +3156,7 @@ void RenderMeshes(
 	const bool shadowRendering = renderPass == RENDERPASS_SHADOW;
 	const bool stencil_usage = renderPass == RENDERPASS_PREPASS || (renderPass == RENDERPASS_MAIN && (flags & DRAWSCENE_TRANSPARENT));
 	const bool mesh_shader = IsMeshShaderAllowed() && (renderPass == RENDERPASS_PREPASS || renderPass == RENDERPASS_PREPASS_DEPTHONLY || renderPass == RENDERPASS_MAIN || renderPass == RENDERPASS_SHADOW || renderPass == RENDERPASS_RAINBLOCKER);
-	const bool shading_rate_usage = renderPass == RENDERPASS_MAIN || renderPass == RENDERPASS_ENVMAPCAPTURE;
+	const bool shading_rate_usage = (renderPass == RENDERPASS_MAIN || renderPass == RENDERPASS_ENVMAPCAPTURE) && device->CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING);
 
 	// Pre-allocate space for all the instances in GPU-buffer:
 	const size_t alloc_size = renderQueue.size() * camera_count * sizeof(ShaderMeshInstancePointer);
@@ -3354,20 +3354,7 @@ void RenderMeshes(
 				device->BindIndexBuffer(ib, ibformat, 0, cmd);
 			}
 
-			if (renderPass == RENDERPASS_PREPASS)
-			{
-				if (alphatestRequested)
-				{
-					// Prepass with alpha test must use full shading rate for high res cutout
-					device->BindShadingRate(ShadingRate::RATE_1X1, cmd);
-				}
-				else
-				{
-					// Prepass without alpha test is just primID exporting, lowest shading rate is safe to use
-					device->BindShadingRate(ShadingRate::RATE_4X4, cmd);
-				}
-			}
-			else if (shading_rate_usage)
+			if (shading_rate_usage)
 			{
 				device->BindShadingRate(material.shadingRate, cmd);
 			}
@@ -3486,7 +3473,10 @@ void RenderMeshes(
 
 	batch_flush();
 
-	device->BindShadingRate(ShadingRate::RATE_1X1, cmd);
+	if (shading_rate_usage)
+	{
+		device->BindShadingRate(ShadingRate::RATE_1X1, cmd);
+	}
 
 	device->EventEnd(cmd);
 }
