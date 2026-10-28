@@ -142,8 +142,7 @@ struct StackVector
 };
 
 // CPU intrinsics:
-#if defined(_WIN32)
-// Windows, Xbox:
+#if defined(_MSC_VER)
 #include <intrin.h>
 #if defined(_M_ARM64)
 #include <arm64intr.h>
@@ -263,7 +262,6 @@ inline unsigned long firstbitlow(unsigned long long value)
 	return 0;
 }
 #else
-// Linux, PlayStation:
 inline long AtomicAnd(volatile long* ptr, long mask)
 {
 	return __atomic_fetch_and(ptr, mask, __ATOMIC_SEQ_CST);
@@ -296,6 +294,7 @@ inline long long AtomicAdd(volatile long long* ptr, long long val)
 {
 	return __atomic_fetch_add(ptr, val, __ATOMIC_SEQ_CST);
 }
+#if defined(__clang__) || (defined(__GNUC__) && __GNUC__ >= 17) // AtomicMin and AtomicMax are different for Clang and GCC
 inline long AtomicMin(volatile long* ptr, long val)
 {
 	return __atomic_fetch_min(ptr, val, __ATOMIC_SEQ_CST);
@@ -312,6 +311,48 @@ inline long long AtomicMax(volatile long long* ptr, long long val)
 {
 	return __atomic_fetch_max(ptr, val, __ATOMIC_SEQ_CST);
 }
+#else
+inline long AtomicMin(volatile long* ptr, long val)
+{
+	long old = __atomic_load_n(ptr, __ATOMIC_RELAXED);
+	long newval;
+	do {
+		newval = old < val ? old : val;
+	} while (!__atomic_compare_exchange_n(ptr, &old, newval, false,
+		__ATOMIC_SEQ_CST, __ATOMIC_RELAXED));
+	return old;
+}
+inline long long AtomicMin(volatile long long* ptr, long long val)
+{
+	long long old = __atomic_load_n(ptr, __ATOMIC_RELAXED);
+	long long newval;
+	do {
+		newval = old < val ? old : val;
+	} while (!__atomic_compare_exchange_n(ptr, &old, newval, false,
+		__ATOMIC_SEQ_CST, __ATOMIC_RELAXED));
+	return old;
+}
+inline long AtomicMax(volatile long* ptr, long val)
+{
+	long old = __atomic_load_n(ptr, __ATOMIC_RELAXED);
+	long newval;
+	do {
+		newval = old > val ? old : val;
+	} while (!__atomic_compare_exchange_n(ptr, &old, newval, false,
+		__ATOMIC_SEQ_CST, __ATOMIC_RELAXED));
+	return old;
+}
+inline long long AtomicMax(volatile long long* ptr, long long val)
+{
+	long long old = __atomic_load_n(ptr, __ATOMIC_RELAXED);
+	long long newval;
+	do {
+		newval = old > val ? old : val;
+	} while (!__atomic_compare_exchange_n(ptr, &old, newval, false,
+		__ATOMIC_SEQ_CST, __ATOMIC_RELAXED));
+	return old;
+}
+#endif
 inline unsigned int countbits(unsigned int value)
 {
 	return __builtin_popcount(value);
