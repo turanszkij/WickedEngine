@@ -161,9 +161,8 @@ namespace wi::renderer
 		std::atomic<uint32_t> object_counter;
 		std::atomic<uint32_t> light_counter;
 
-		wi::SpinLock locker;
 		bool planar_reflection_visible = false;
-		float closestRefPlane = std::numeric_limits<float>::max();
+		int64_t closest_ref = INT64_MAX;
 		XMFLOAT4 reflectionPlane = XMFLOAT4(0, 1, 0, 0);
 		std::atomic_bool volumetriclight_request{ false };
 		std::atomic_bool transparents_visible{ false };
@@ -182,7 +181,7 @@ namespace wi::renderer
 			object_counter.store(0);
 			light_counter.store(0);
 
-			closestRefPlane = std::numeric_limits<float>::max();
+			closest_ref = INT64_MAX;
 			planar_reflection_visible = false;
 			volumetriclight_request.store(false);
 			transparents_visible.store(false);

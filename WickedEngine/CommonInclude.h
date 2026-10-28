@@ -180,6 +180,22 @@ inline long long AtomicAdd(volatile long long* ptr, long long val)
 {
 	return _InterlockedExchangeAdd64(ptr, val);
 }
+inline long AtomicMin(volatile long* ptr, long val)
+{
+	return _InterlockedMin(ptr, val);
+}
+inline long long AtomicMin(volatile long long* ptr, long long val)
+{
+	return _InterlockedMin64(ptr, val);
+}
+inline long AtomicMax(volatile long* ptr, long val)
+{
+	return _InterlockedMax(ptr, val);
+}
+inline long long AtomicMax(volatile long long* ptr, long long val)
+{
+	return _InterlockedMax64(ptr, val);
+}
 inline unsigned int countbits(unsigned int value)
 {
 	return __popcnt(value);
@@ -279,6 +295,22 @@ inline long AtomicAdd(volatile long* ptr, long val)
 inline long long AtomicAdd(volatile long long* ptr, long long val)
 {
 	return __atomic_fetch_add(ptr, val, __ATOMIC_SEQ_CST);
+}
+inline long AtomicMin(volatile long* ptr, long val)
+{
+	return __atomic_fetch_min(ptr, val, __ATOMIC_SEQ_CST);
+}
+inline long long AtomicMin(volatile long long* ptr, long long val)
+{
+	return __atomic_fetch_min(ptr, val, __ATOMIC_SEQ_CST);
+}
+inline long AtomicMax(volatile long* ptr, long val)
+{
+	return __atomic_fetch_max(ptr, val, __ATOMIC_SEQ_CST);
+}
+inline long long AtomicMax(volatile long long* ptr, long long val)
+{
+	return __atomic_fetch_max(ptr, val, __ATOMIC_SEQ_CST);
 }
 inline unsigned int countbits(unsigned int value)
 {

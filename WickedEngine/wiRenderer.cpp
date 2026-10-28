@@ -3746,21 +3746,9 @@ void UpdateVisibility(Visibility& vis)
 				if ((vis.flags & Visibility::ALLOW_REQUEST_REFLECTION) && object.IsRequestPlanarReflection() && !occluded)
 				{
 					// Planar reflection priority request:
-					float dist = wi::math::DistanceEstimated(vis.camera->Eye, object.center);
-					vis.locker.lock();
-					if (dist < vis.closestRefPlane)
-					{
-						vis.closestRefPlane = dist;
-						XMVECTOR P = XMLoadFloat3(&object.center);
-						XMVECTOR N = XMVectorSet(0, 1, 0, 0);
-						N = XMVector3TransformNormal(N, XMLoadFloat4x4(&vis.scene->matrix_objects[args.jobIndex]));
-						N = XMVector3Normalize(N);
-						XMVECTOR _refPlane = XMPlaneFromPointNormal(P, N);
-						XMStoreFloat4(&vis.reflectionPlane, _refPlane);
-
-						vis.planar_reflection_visible = true;
-					}
-					vis.locker.unlock();
+					const uint32_t dist16 = wi::math::f32tof16(wi::math::DistanceEstimated(vis.camera->Eye, object.center));
+					const int64_t packed_ref = int64_t(args.jobIndex) | (int64_t(dist16) << int64_t(32));
+					AtomicMin((volatile int64_t*)&vis.closest_ref, packed_ref);
 				}
 
 				if (object.GetFilterMask() & FILTER_TRANSPARENT)
@@ -3985,6 +3973,19 @@ void UpdateVisibility(Visibility& vis)
 	// finalize stream compaction:
 	vis.visibleObjects.resize((size_t)vis.object_counter.load());
 	vis.visibleLights.resize((size_t)vis.light_counter.load());
+
+	if ((vis.flags & Visibility::ALLOW_REQUEST_REFLECTION) && vis.closest_ref != INT64_MAX)
+	{
+		const uint32_t objectIndex = uint32_t(vis.closest_ref & int64_t(0xFFFFFFFF));
+		const ObjectComponent& object = vis.scene->objects[objectIndex];
+		XMVECTOR P = XMLoadFloat3(&object.center);
+		XMVECTOR N = XMVectorSet(0, 1, 0, 0);
+		N = XMVector3TransformNormal(N, XMLoadFloat4x4(&vis.scene->matrix_objects[objectIndex]));
+		N = XMVector3Normalize(N);
+		XMVECTOR _refPlane = XMPlaneFromPointNormal(P, N);
+		XMStoreFloat4(&vis.reflectionPlane, _refPlane);
+		vis.planar_reflection_visible = true;
+	}
 
 	if (vis.scene->weather.IsOceanEnabled())
 	{
