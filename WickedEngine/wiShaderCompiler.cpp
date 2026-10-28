@@ -212,6 +212,7 @@ namespace wi::shadercompiler
 			break;
 		case ShaderFormat::METAL:
 			args.push_back(L"-D"); args.push_back(L"__metal__");
+			args.push_back(L"-enable-16bit-types");
 			break;
 		default:
 			assert(0);
