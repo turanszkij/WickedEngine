@@ -142,7 +142,7 @@ struct StackVector
 };
 
 // CPU intrinsics:
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) && !defined(__clang__)
 #include <intrin.h>
 #if defined(_M_ARM64)
 #include <arm64intr.h>
