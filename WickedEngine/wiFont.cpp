@@ -513,8 +513,14 @@ namespace wi::font
 			offset.y -= status.cursor.size.y * vertical_flip;
 
 		XMMATRIX M = XMMatrixTranslation(offset.x, offset.y, offset.z);
-		M = M * XMMatrixScaling(params.scaling, params.scaling, params.scaling);
-		M = M * XMMatrixRotationZ(params.rotation);
+		if (params.scaling != 1.0f)
+		{
+			M = M * XMMatrixScaling(params.scaling, params.scaling, params.scaling);
+		}
+		if (params.rotation != 0.0f)
+		{
+			M = M * XMMatrixRotationZ(params.rotation);
+		}
 
 		if (params.customRotation != nullptr)
 		{
@@ -526,7 +532,8 @@ namespace wi::font
 		XMMATRIX Projection;
 		if (params.customProjection != nullptr)
 		{
-			M = XMMatrixScaling(1, -1, 1) * M; // reason: screen projection is Y down (like UV-space) and that is the common case for image rendering. But custom projections will use the "world space"
+			static const XMMATRIX S = XMMatrixScaling(1, -1, 1);
+			M = S * M; // reason: screen projection is Y down (like UV-space) and that is the common case for image rendering. But custom projections will use the "world space"
 			Projection = (*params.customProjection);
 		}
 		else
