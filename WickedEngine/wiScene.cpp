@@ -6234,9 +6234,14 @@ namespace wi::scene
 			SplineComponent& spline = splines[args.jobIndex];
 			Entity entity = splines.GetEntity(args.jobIndex);
 
-			bool dirty = spline.prev_mesh_generation_subdivision != spline.mesh_generation_subdivision;
+			const bool meshgen = spline.mesh_generation_subdivision > 0;
+			bool dirty = false;
+			if (meshgen)
+			{
+				dirty |= spline.prev_mesh_generation_subdivision != spline.mesh_generation_subdivision;
 			dirty |= spline.prev_mesh_generation_vertical_subdivision != spline.mesh_generation_vertical_subdivision;
-			dirty |= spline.prev_mesh_generation_nodes != (int)spline.spline_node_entities.size();
+			}
+			dirty |= spline.prev_nodes != (int)spline.spline_node_entities.size();
 			dirty |= spline.prev_looped != spline.IsLooped();
 			dirty |= spline.prev_filled != spline.IsFilled();
 			dirty |= spline.prev_width != spline.width;
@@ -6251,6 +6256,7 @@ namespace wi::scene
 			dirty_terrain |= spline.prev_width != spline.width;
 			dirty_terrain |= spline.prev_rotation != spline.rotation;
 
+			spline.prev_nodes = (int)spline.spline_node_entities.size();
 			spline.prev_width = spline.width;
 			spline.prev_rotation = spline.rotation;
 			spline.prev_fill_normals_mode = spline.fill_normals_mode;
@@ -6293,7 +6299,7 @@ namespace wi::scene
 			// Mesh generation:
 			if (dirty && spline.spline_node_transforms.size() > 1)
 			{
-				if (spline.mesh_generation_subdivision > 0)
+				if (meshgen)
 				{
 					MeshComponent* mesh = meshes.GetComponent(entity);
 					if (mesh != nullptr)
@@ -6301,7 +6307,6 @@ namespace wi::scene
 						spline.PrecomputeSplineNodeDistances(); // local space
 						spline.prev_mesh_generation_subdivision = spline.mesh_generation_subdivision;
 						spline.prev_mesh_generation_vertical_subdivision = spline.mesh_generation_vertical_subdivision;
-						spline.prev_mesh_generation_nodes = (int)spline.spline_node_entities.size();
 
 						const size_t segmentCount = (spline.spline_node_transforms.size() - 1) * (size_t)spline.mesh_generation_subdivision;
 						const int verticalSegments = std::max(0, spline.mesh_generation_vertical_subdivision + 3);
@@ -6595,11 +6600,10 @@ namespace wi::scene
 				}
 			}
 
-			spline.PrecomputeSplineNodeDistances(); // world space
-
 			// Compute AABB:
 			if (dirty || (spline.dirty_terrain && spline.terrain_modifier_amount > 0))
 			{
+				spline.PrecomputeSplineNodeDistances(); // world space
 				spline.PrecomputeSplineBounds(4);
 			}
 
