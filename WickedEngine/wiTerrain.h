@@ -474,32 +474,49 @@ namespace wi::terrain
 	};
 	struct HeightmapModifier : public Modifier
 	{
-		float amount = 0.1f; // multiplier for height values
+		float amount = 1.0f; // multiplier for height values
 
 		wi::vector<uint8_t> data;
 		int width = 0;
 		int height = 0;
 
-		HeightmapModifier() { type = Type::Heightmap; SetScale(1.0f); }
+		HeightmapModifier() { type = Type::Heightmap; SetScale(1.0f); weight = 1.0f; }
 		void Apply(const XMFLOAT2& world_pos, float& height) override
 		{
 			XMFLOAT2 p = world_pos;
 			p.x *= frequency;
 			p.y *= frequency;
-			XMFLOAT2 pixel = XMFLOAT2(p.x + this->width * 0.5f, p.y + this->height * 0.5f);
-			if (pixel.x >= 0 && pixel.x < this->width && pixel.y >= 0 && pixel.y < this->height)
+			const XMFLOAT2 pixel = XMFLOAT2(p.x + this->width * 0.5f, float(this->height - 1) - (p.y + this->height * 0.5f));
+			if (pixel.x >= 0 && pixel.x < this->width - 1 && pixel.y >= 0 && pixel.y < this->height - 1)
 			{
-				const int idx = int(pixel.x) + int(pixel.y) * this->width;
-				float value = 0;
-				if (data.size() == this->width * this->height * sizeof(uint8_t))
+				const XMFLOAT2 pixel_frac = XMFLOAT2(frac(pixel.x), frac(pixel.y));
+				const XMUINT2 pixel_tl = XMUINT2((uint32_t)std::floor(pixel.x), (uint32_t)std::floor(pixel.y));
+				const XMUINT2 pixel_tr = XMUINT2((uint32_t)std::ceil(pixel.x), (uint32_t)std::floor(pixel.y));
+				const XMUINT2 pixel_bl = XMUINT2((uint32_t)std::floor(pixel.x), (uint32_t)std::ceil(pixel.y));
+				const XMUINT2 pixel_br = XMUINT2((uint32_t)std::ceil(pixel.x), (uint32_t)std::ceil(pixel.y));
+				const bool is_8bit = data.size() == this->width * this->height * sizeof(uint8_t);
+				XMFLOAT4 gather;
+				if (is_8bit)
 				{
-					value = ((float)data[idx] / 255.0f);
+					const float remap = 1.0f / 255.0f;
+					const uint8_t* src = data.data();
+					const float tl = (float)src[pixel_tl.x + pixel_tl.y * this->width] * remap;
+					const float tr = (float)src[pixel_tr.x + pixel_tr.y * this->width] * remap;
+					const float bl = (float)src[pixel_bl.x + pixel_bl.y * this->width] * remap;
+					const float br = (float)src[pixel_br.x + pixel_br.y * this->width] * remap;
+					gather = XMFLOAT4(bl, br, tr, tl);
 				}
-				else if (data.size() == this->width * this->height * sizeof(uint16_t))
+				else
 				{
-					value = ((float)((uint16_t*)data.data())[idx] / 65535.0f);
+					const float remap = 1.0f / 65535.0f;
+					const uint16_t* src = (const uint16_t*)data.data();
+					const float tl = (float)src[pixel_tl.x + pixel_tl.y * this->width] * remap;
+					const float tr = (float)src[pixel_tr.x + pixel_tr.y * this->width] * remap;
+					const float bl = (float)src[pixel_bl.x + pixel_bl.y * this->width] * remap;
+					const float br = (float)src[pixel_br.x + pixel_br.y * this->width] * remap;
+					gather = XMFLOAT4(bl, br, tr, tl);
 				}
-				Blend(height, value * amount);
+				Blend(height, bilinear(gather, pixel_frac) * amount);
 			}
 		}
 	};
