@@ -95,10 +95,11 @@ float4 main(PSIn input) : SV_TARGET
 	float depth = input.pos.z;
 	surface.albedo = color.rgb;
 	surface.f0 = 0.02;
-	surface.roughness = 0.1;
 	surface.P = input.GetPos3D();
 	surface.N = normalize(float3(gradient.x, xOceanTexelLength * 2, gradient.y));
 	surface.V = V;
+	surface.roughness = 0.02;
+	surface.roughness = lerp(0.18, surface.roughness, saturate(dot(surface.N, surface.V)));
 	surface.sss = 1;
 	surface.sss_inv = 1.0f / ((1 + surface.sss) * (1 + surface.sss));
 	surface.extinction = xOceanExtinctionColor.rgb;
@@ -158,7 +159,6 @@ float4 main(PSIn input) : SV_TARGET
 		float refraction_depth = find_max_depth(refraction_uv, 2, 2);
 		float3 refraction_position = reconstruct_position(refraction_uv, refraction_depth);
 		water_depth = -dot(float4(refraction_position, 1), water_plane);
-		water_depth += texture_ocean_displacementmap.SampleLevel(sampler_linear_wrap, refraction_position.xz * xOceanPatchSizeRecip, 0).z; // texture contains xzy!
 		if (camera_below_water && V.y < 0)
 			water_depth = -water_depth;
 		if (water_depth <= 0)
@@ -176,7 +176,6 @@ float4 main(PSIn input) : SV_TARGET
 		refraction_depth = texture_depth.SampleLevel(sampler_point_clamp, refraction_uv, 0);
 		refraction_position = reconstruct_position(refraction_uv, refraction_depth);
 		water_depth = max(water_depth, -dot(float4(refraction_position, 1), water_plane));
-		water_depth += texture_ocean_displacementmap.SampleLevel(sampler_linear_wrap, refraction_position.xz * xOceanPatchSizeRecip, 0).z; // texture contains xzy!
 		if (camera_below_water && V.y < 0)
 			water_depth = -water_depth;
 		// Water fog computation:
@@ -197,10 +196,6 @@ float4 main(PSIn input) : SV_TARGET
 		float foam_wave = pow(saturate(gradient.a * (1 - gradient_fade)), 4) * saturate(exp(-water_depth * 0.1));
 		float foam_combined = saturate(foam_shore + foam_wave);
 		float foam = smoothstep(0.5, 0.6, saturate(foam_combined + 0.1));
-		// The procedural noise below is multiplied by foam_combined, so it only
-		// contributes where there is actually foam (shorelines and wave crests).
-		// Skip the 6 noise evaluations for the open-water majority where
-		// foam_combined is ~0; the branch is spatially coherent so warps converge.
 		[branch]
 		if (foam_combined > 0.002)
 		{
