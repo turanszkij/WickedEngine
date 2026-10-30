@@ -1,4 +1,5 @@
 #define SURFACE_LOAD_ENABLE_WIND
+#define TEXTURE_SLOT_NONUNIFORM
 #include "globals.hlsli"
 #include "ShaderInterop_Renderer.h"
 #include "surfaceHF.hlsli"
