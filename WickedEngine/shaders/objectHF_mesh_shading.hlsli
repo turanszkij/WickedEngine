@@ -20,6 +20,40 @@ struct AmplificationPayload
 #ifdef OBJECTSHADER_COMPILE_AS
 groupshared AmplificationPayload amplification_payload;
 
+// Cluster LOD selection with screen space error. The allowed error per view distance and the minimum distance are the same for the whole instance,
+//	so every cluster that shares the same group bounds makes the same decision, which keeps the selected cut of the cluster DAG crack-free
+struct ClusterLODSelector
+{
+	float4x4 transform;
+	float3 camera_position;
+	float size;
+	float threshold; // allowed mesh space error per view distance (or absolute error for ortho)
+	float min_distance; // closest possible distance of any cluster of the instance
+	bool ortho;
+
+	void init(in ShaderCamera camera, in ShaderMeshInstance inst, in ShaderGeometry geometry)
+	{
+		transform = inst.transformRaw.GetMatrix();
+		camera_position = camera.position;
+		size = inst.GetSize();
+		ortho = camera.IsOrtho();
+		const float pixels_per_error = camera.projection[1][1] * 0.5 * camera.internal_resolution.y; // at unit distance
+		// Skinned and soft body geometry deforms away from the simplified bind pose, so it always uses the full detail clusters:
+		threshold = geometry.vb_pre < 0 && pixels_per_error > 0 ? GetFrame().cluster_lod_threshold / pixels_per_error : 0;
+		min_distance = ortho ? 1 : max(0, distance(camera.position, inst.center) - inst.radius);
+	}
+	bool coarse_enough(in ShaderSphere sphere, float error)
+	{
+		float dist = 1;
+		if (!ortho)
+		{
+			const float3 center = mul(transform, float4(sphere.center, 1)).xyz;
+			dist = max(min_distance, distance(camera_position, center) - sphere.radius * size);
+		}
+		return error * size <= threshold * dist;
+	}
+};
+
 [numthreads(AS_GROUPSIZE, 1, 1)]
 void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
@@ -41,10 +75,32 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
 	bool visible = meshletID < geometry.meshletOffset + geometry.meshletCount;
 	
+	ShaderCamera camera = GetCameraIndexed(poi.GetCameraIndex());
+
+	// Cluster LOD selection:
+	[branch]
+	if (geometry.vb_lod >= 0)
+	{
+		ClusterLODSelector selector;
+		selector.init(camera, inst, geometry);
+		ByteAddressBuffer lod_buffer = bindless_buffers[descriptor_index(geometry.vb_lod)];
+
+		// Clusters of a subset are sorted by decreasing simplified error, so if the first cluster of this group is coarse enough even at the closest possible distance, all of them are:
+		const float max_simplified_error = lod_buffer.Load<ShaderClusterLOD>(meshletGroupOffset * sizeof(ShaderClusterLOD)).simplified_error;
+		if (max_simplified_error * selector.size <= selector.threshold * selector.min_distance)
+		{
+			visible = false;
+		}
+		else if (visible)
+		{
+			ShaderClusterLOD lod = lod_buffer.Load<ShaderClusterLOD>(meshletID * sizeof(ShaderClusterLOD));
+			visible = !selector.coarse_enough(lod.simplified, lod.simplified_error) && selector.coarse_enough(lod.refined, lod.refined_error);
+		}
+	}
+
 	// Meshlet culling:
 	if (visible)
 	{
-		ShaderCamera camera = GetCameraIndexed(poi.GetCameraIndex());
 		ShaderClusterBounds bounds = bindless_structured_cluster_bounds[descriptor_index(geometry.vb_bou)][meshletID];
 		if (geometry.vb_pre >= 0)
 		{

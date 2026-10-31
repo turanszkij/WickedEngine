@@ -4178,6 +4178,7 @@ namespace wi::scene
 				{
 					geometry.vb_clu = mesh.vb_clu.descriptor_srv;
 					geometry.vb_bou = mesh.vb_bou.descriptor_srv;
+					geometry.vb_lod = mesh.vb_lod.descriptor_srv;
 				}
 				geometry.aabb_min = mesh.aabb._min;
 				geometry.aabb_max = mesh.aabb._max;

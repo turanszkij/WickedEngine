@@ -163,6 +163,22 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 	AddWidget(&meshletOcclusionCullingCheckBox);
 	meshletOcclusionCullingCheckBox.SetEnabled(wi::graphics::GetDevice()->CheckCapability(wi::graphics::GraphicsDeviceCapability::MESH_SHADER));
 
+	clusterLODSlider.Create(0, 8, 1, 32, "Cluster LOD error: ");
+	clusterLODSlider.SetTooltip("Allowed screen space error in pixels for meshes that use cluster LOD (Mesh window).\nHigher values select simplified clusters closer to the camera. 0 = always full detail.\nRequires mesh shaders.");
+	clusterLODSlider.SetSize(XMFLOAT2(wid, itemheight));
+	clusterLODSlider.SetPos(XMFLOAT2(x, y += step));
+	if (editor->main->config.GetSection("graphics").Has("cluster_lod_error"))
+	{
+		wi::renderer::SetClusterLODErrorThreshold(editor->main->config.GetSection("graphics").GetFloat("cluster_lod_error"));
+	}
+	clusterLODSlider.OnSlide([=](wi::gui::EventArgs args) {
+		wi::renderer::SetClusterLODErrorThreshold(args.fValue);
+		editor->main->config.GetSection("graphics").Set("cluster_lod_error", args.fValue);
+		editor->main->config.Commit();
+	});
+	AddWidget(&clusterLODSlider);
+	clusterLODSlider.SetEnabled(wi::graphics::GetDevice()->CheckCapability(wi::graphics::GraphicsDeviceCapability::MESH_SHADER));
+
 	shadowLODCheckBox.Create("Shadow LOD override: ");
 	shadowLODCheckBox.SetTooltip("Enable custom LOD selection for shadow maps.\nThis can cause LOD mismatch between objects in the camera and shadows, but can be a performance benefit.");
 	shadowLODCheckBox.SetPos(XMFLOAT2(x, y += step));
@@ -1772,6 +1788,7 @@ void GraphicsWindow::UpdateData()
 	visibilityComputeShadingCheckBox.SetCheck(editor->renderPath->getVisibilityComputeShadingEnabled());
 	meshShaderCheckBox.SetCheck(wi::renderer::IsMeshShaderAllowed());
 	meshletOcclusionCullingCheckBox.SetCheck(wi::renderer::IsMeshletOcclusionCullingEnabled());
+	clusterLODSlider.SetValue(wi::renderer::GetClusterLODErrorThreshold());
 	shadowLODCheckBox.SetCheck(wi::renderer::IsShadowLODOverrideEnabled());
 	resolutionScaleSlider.SetValue(editor->resolutionScale);
 	streamingSlider.SetValue(wi::resourcemanager::GetStreamingMemoryThreshold());
@@ -1922,6 +1939,7 @@ void GraphicsWindow::ResizeLayout()
 		visibilityComputeShadingCheckBox.SetVisible(false);
 		meshShaderCheckBox.SetVisible(false);
 		meshletOcclusionCullingCheckBox.SetVisible(false);
+		clusterLODSlider.SetVisible(false);
 		shadowLODCheckBox.SetVisible(false);
 		tessellationCheckBox.SetVisible(false);
 		meshblendCheckBox.SetVisible(false);
@@ -1945,6 +1963,7 @@ void GraphicsWindow::ResizeLayout()
 		visibilityComputeShadingCheckBox.SetVisible(true);
 		meshShaderCheckBox.SetVisible(true);
 		meshletOcclusionCullingCheckBox.SetVisible(true);
+		clusterLODSlider.SetVisible(true);
 		shadowLODCheckBox.SetVisible(true);
 		tessellationCheckBox.SetVisible(true);
 		meshblendCheckBox.SetVisible(true);
@@ -1963,6 +1982,7 @@ void GraphicsWindow::ResizeLayout()
 		layout.add_right(visibilityComputeShadingCheckBox);
 		layout.add_right(meshShaderCheckBox);
 		layout.add_right(meshletOcclusionCullingCheckBox);
+		layout.add(clusterLODSlider);
 		layout.add_right(shadowLODCheckBox);
 		layout.add_right(tessellationCheckBox);
 		layout.add_right(meshblendCheckBox);

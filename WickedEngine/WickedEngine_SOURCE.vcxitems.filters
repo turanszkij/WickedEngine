@@ -504,6 +504,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\WinAdapter.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\clusterlod.h">
+      <Filter>UTILITY\meshoptimizer</Filter>
+    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\meshoptimizer\meshoptimizer.h">
       <Filter>UTILITY\meshoptimizer</Filter>
     </ClInclude>

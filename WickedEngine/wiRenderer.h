@@ -1287,6 +1287,9 @@ namespace wi::renderer
 	bool IsMeshShaderAllowed();
 	void SetMeshletOcclusionCullingEnabled(bool value);
 	bool IsMeshletOcclusionCullingEnabled();
+	// Allowed screen space error in pixels when selecting simplified clusters of meshes with cluster LOD (MeshComponent::SetClusterLODEnabled()). 0 = always full detail
+	void SetClusterLODErrorThreshold(float pixels);
+	float GetClusterLODErrorThreshold();
 	void Workaround( const int bug, wi::graphics::CommandList cmd);
 	void SetCapsuleShadowEnabled(bool value);
 	bool IsCapsuleShadowEnabled();
