@@ -5180,6 +5180,22 @@ void UpdateRenderData(
 	auto prof_updatebuffer_cpu = wi::profiler::BeginRangeCPU("Update Buffers (CPU)");
 	auto prof_updatebuffer_gpu = wi::profiler::BeginRangeGPU("Update Buffers (GPU)", cmd);
 
+	static GPUBuffer counterBuffer;
+	if (!counterBuffer.IsValid())
+	{
+		GPUBufferDesc desc;
+		desc.size = sizeof(uint32_t);
+		desc.stride = sizeof(uint32_t);
+		desc.bind_flags = BindFlag::UNORDERED_ACCESS;
+		desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
+		device->CreateBuffer(&desc, nullptr, &counterBuffer);
+	}
+	device->ClearUAV(&counterBuffer, 0, cmd);
+	PushBarrier(GPUBarrier::Memory(&counterBuffer));
+
+	const GPUBuffer* instanceBuffer = vis.scene->instanceBuffer[vis.scene->cpu_gpu_mapped_resource_index].IsValid() ? &vis.scene->instanceBuffer[vis.scene->cpu_gpu_mapped_resource_index] : &vis.scene->instanceUploadBuffer[vis.scene->cpu_gpu_mapped_resource_index];
+	PushBarrier(GPUBarrier::Buffer(instanceBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS));
+
 	PushBarrier(GPUBarrier::Image(&textures[TEXTYPE_3D_WIND], textures[TEXTYPE_3D_WIND].desc.layout, ResourceState::UNORDERED_ACCESS));
 	PushBarrier(GPUBarrier::Buffer(&buffers[BUFFERTYPE_INDIRECT_DEBUG_0], ResourceState::VERTEX_BUFFER | ResourceState::INDIRECT_ARGUMENT, ResourceState::COPY_SRC));
 	FlushBarriers(cmd);
@@ -5409,17 +5425,30 @@ void UpdateRenderData(
 		device->BindComputeShader(&shaders[CSTYPE_MESHLET_PREPARE], cmd);
 
 		const GPUResource* uavs[] = {
+			instanceBuffer,
 			&vis.scene->meshletBuffer,
+			&counterBuffer
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-		device->Dispatch((uint32_t)vis.scene->instanceArraySize, 1, 1, cmd);
+		uint32_t instanceCountRemaining = (uint32_t)vis.scene->instanceArraySize;
+		uint32_t startInstance = 0;
+		while (instanceCountRemaining > 0)
+		{
+			const uint32_t instanceCountProcessed = std::min(instanceCountRemaining, uint32_t(65535));
+			device->PushConstants(&startInstance, sizeof(startInstance), cmd);
+			device->Dispatch(instanceCountProcessed, 1, 1, cmd);
+			startInstance += instanceCountProcessed;
+			instanceCountRemaining -= instanceCountProcessed;
+		}
 
 		PushBarrier(GPUBarrier::Buffer(&vis.scene->meshletBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
 
 		wi::profiler::EndRange(range);
 		device->EventEnd(cmd);
 	}
+
+	PushBarrier(GPUBarrier::Buffer(instanceBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
 
 	FlushBarriers(cmd);
 
@@ -11829,8 +11858,8 @@ void Visibility_Shade(
 	device->EventBegin("Visibility_Shade", cmd);
 	auto range = wi::profiler::BeginRangeGPU("Visibility_Shade", cmd);
 
-	PushBarrier(GPUBarrier::Image(&output, ResourceState::UNDEFINED, ResourceState::UNORDERED_ACCESS));
-	FlushBarriers(cmd);
+	device->Barrier(GPUBarrier::Image(&output, ResourceState::UNDEFINED, ResourceState::RENDERTARGET), cmd); // dx12: discard here must be in render target
+	device->Barrier(GPUBarrier::Image(&output, ResourceState::RENDERTARGET, ResourceState::UNORDERED_ACCESS), cmd);
 
 	BindCommonResources(cmd);
 
