@@ -2,11 +2,11 @@
 
 static const uint THREADCOUNT = 64;
 
-struct PushContantsMeshletPrepare
+struct PushConstantsMeshletPrepare
 {
 	uint startInstance;
 };
-PUSHCONSTANT(push, PushContantsMeshletPrepare);
+PUSHCONSTANT(push, PushConstantsMeshletPrepare);
 
 RWStructuredBuffer<ShaderMeshInstance> output_instances : register(u0);
 RWStructuredBuffer<ShaderMeshlet> output_meshlets : register(u1);
