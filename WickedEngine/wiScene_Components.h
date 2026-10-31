@@ -667,6 +667,7 @@ namespace wi::scene
 			DOUBLE_SIDED_SHADOW = 1 << 7,
 			BVH_ENABLED = 1 << 8,
 			QUANTIZED_POSITIONS_DISABLED = 1 << 9,
+			CLUSTER_LOD = 1 << 10,
 		};
 		// *uint32_t _flags is moved down for better struct padding...
 
@@ -756,6 +757,7 @@ namespace wi::scene
 		BufferView vb_mor;
 		BufferView vb_clu;
 		BufferView vb_bou;
+		BufferView vb_lod;
 		BufferView so_pos;
 		BufferView so_nor;
 		BufferView so_tan;
@@ -805,12 +807,18 @@ namespace wi::scene
 		//	This should be enabled for connecting meshes like terrain chunks if their AABB is not consistent with each other
 		constexpr void SetQuantizedPositionsDisabled(bool value) { set_flag(_flags, QUANTIZED_POSITIONS_DISABLED, value); }
 
+		// Enable continuous level of detail with a hierarchy of simplified clusters (requires mesh shaders, not used for skinned and morphed meshes)
+		//	The cluster detail is selected per frame based on screen space error, see wi::renderer::SetClusterLODErrorThreshold()
+		//	This increases cluster memory and CreateRenderData() time. CreateRenderData() must be called after changing this.
+		constexpr void SetClusterLODEnabled(bool value) { set_flag(_flags, CLUSTER_LOD, value); }
+
 		constexpr bool IsRenderable() const { return _flags & RENDERABLE; }
 		constexpr bool IsDoubleSided() const { return _flags & DOUBLE_SIDED; }
 		constexpr bool IsDoubleSidedShadow() const { return _flags & DOUBLE_SIDED_SHADOW; }
 		constexpr bool IsDynamic() const { return _flags & DYNAMIC; }
 		constexpr bool IsBVHEnabled() const { return _flags & BVH_ENABLED; }
 		constexpr bool IsQuantizedPositionsDisabled() const { return _flags & QUANTIZED_POSITIONS_DISABLED; }
+		constexpr bool IsClusterLODEnabled() const { return _flags & CLUSTER_LOD; }
 
 		constexpr float GetTessellationFactor() const { return tessellationFactor; }
 		constexpr bool IsSkinned() const { return armatureID != wi::ecs::INVALID_ENTITY; }

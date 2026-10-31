@@ -196,6 +196,18 @@ void MeshWindow::Create(EditorComponent* _editor)
 	}));
 	AddWidget(&quantizeCheckBox);
 
+	clusterLODCheckBox.Create("Cluster LOD: ");
+	clusterLODCheckBox.SetTooltip("Generate a hierarchy of simplified clusters for continuous level of detail.\nThe detail is selected per cluster from the screen space error (Graphics window: Cluster LOD error).\nRequires mesh shaders. Not used for skinned and morphed meshes. Increases memory usage and loading time.");
+	clusterLODCheckBox.OnClick(forEachSelected([] (auto mesh, auto args) {
+		mesh->SetClusterLODEnabled(args.bValue);
+		mesh->CreateRenderData();
+		if (!mesh->BLASes.empty())
+		{
+			mesh->CreateRaytracingRenderData();
+		}
+	}));
+	AddWidget(&clusterLODCheckBox);
+
 	impostorCreateButton.Create("Create Impostor");
 	impostorCreateButton.SetTooltip("Create an impostor image of the mesh. The mesh will be replaced by this image when far away, to render faster.");
 	impostorCreateButton.OnClick([this](wi::gui::EventArgs args) {
@@ -1126,6 +1138,7 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 		doubleSidedShadowCheckBox.SetCheck(mesh->IsDoubleSidedShadow());
 		bvhCheckBox.SetCheck(mesh->bvh.IsValid());
 		quantizeCheckBox.SetCheck(mesh->IsQuantizedPositionsDisabled());
+		clusterLODCheckBox.SetCheck(mesh->IsClusterLODEnabled());
 
 		const ImpostorComponent* impostor = scene.impostors.GetComponent(entity);
 		if (impostor != nullptr)
@@ -1195,6 +1208,7 @@ void MeshWindow::ResizeLayout()
 	layout.add_right(doubleSidedShadowCheckBox);
 	layout.add_right(bvhCheckBox);
 	layout.add_right(quantizeCheckBox);
+	layout.add_right(clusterLODCheckBox);
 	layout.add_fullwidth(impostorCreateButton);
 	layout.add(impostorDistanceSlider);
 	layout.add(tessellationFactorSlider);

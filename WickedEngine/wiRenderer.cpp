@@ -145,6 +145,7 @@ float DDGI_BLEND_SPEED = 0.1f;
 float GI_BOOST = 1.0f;
 bool MESH_SHADER_ALLOWED = false;
 bool MESHLET_OCCLUSION_CULLING = false;
+float CLUSTER_LOD_ERROR_THRESHOLD = 1.0f;
 std::atomic<size_t> SHADER_ERRORS{ 0 };
 std::atomic<size_t> SHADER_MISSING{ 0 };
 bool VXGI_ENABLED = false;
@@ -4425,6 +4426,7 @@ void UpdatePerFrameData(
 	frameCB.texture_skyluminancelut_index = device->GetDescriptorIndex(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], SubresourceType::SRV);
 	frameCB.texture_cameravolumelut_index = device->GetDescriptorIndex(&textures[TEXTYPE_3D_SKYATMOSPHERE_CAMERAVOLUMELUT], SubresourceType::SRV);
 	frameCB.texture_wind_index = device->GetDescriptorIndex(&textures[TEXTYPE_3D_WIND], SubresourceType::SRV);
+	frameCB.cluster_lod_threshold = CLUSTER_LOD_ERROR_THRESHOLD;
 
 	// See if indirect debug buffer needs to be resized:
 	if (indirectDebugStatsReadback_available[device->GetBufferIndex()] && indirectDebugStatsReadback[device->GetBufferIndex()].mapped_data != nullptr)
@@ -19610,6 +19612,14 @@ void SetMeshletOcclusionCullingEnabled(bool value)
 bool IsMeshletOcclusionCullingEnabled()
 {
 	return MESHLET_OCCLUSION_CULLING;
+}
+void SetClusterLODErrorThreshold(float pixels)
+{
+	CLUSTER_LOD_ERROR_THRESHOLD = std::max(0.0f, pixels);
+}
+float GetClusterLODErrorThreshold()
+{
+	return CLUSTER_LOD_ERROR_THRESHOLD;
 }
 void SetCapsuleShadowEnabled(bool value)
 {

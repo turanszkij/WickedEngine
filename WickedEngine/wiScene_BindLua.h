@@ -626,6 +626,8 @@ namespace wi::lua::scene
 		int SetMeshSubsetMaterialID(lua_State* L);
 		int GetMeshSubsetMaterialID(lua_State* L);
 		int CreateSubset(lua_State* L);
+		int SetClusterLODEnabled(lua_State* L);
+		int IsClusterLODEnabled(lua_State* L);
 	};
 
 	class EmitterComponent_BindLua
