@@ -356,6 +356,25 @@ namespace wi
 		aabb = AABB(_min, _max);
 		aabb = aabb.transform(world);
 
+		struct HairBackgroundGeneration
+		{
+			HairParticleSystem hair;
+			wi::jobsystem::context ctx;
+		};
+		if (background_generation.IsValid())
+		{
+			HairBackgroundGeneration* gen = (HairBackgroundGeneration*)background_generation.get();
+			if (wi::jobsystem::IsBusy(gen->ctx))
+			{
+				return;
+			}
+			else
+			{
+				*this = std::move(gen->hair);
+				background_generation = {};
+			}
+		}
+
 		if ((_flags & REBUILD_BUFFERS) || indices.empty())
 		{
 			CreateFromMesh(mesh);
@@ -371,7 +390,19 @@ namespace wi
 			(gfx_indexcount > 0 && prim_view.size != gfx_indexcount * GetFormatStride(GetIndexBufferFormatRaw(GetVertexCount())))
 			)
 		{
+#if 0
+			// immediate regen
 			CreateRenderData();
+#else
+			// background regen
+			auto gen = wi::allocator::make_shared<HairBackgroundGeneration>();
+			gen->hair = *this;
+			gen->ctx.priority = wi::jobsystem::Priority::Low;
+			background_generation = gen;
+			wi::jobsystem::Execute(gen->ctx, [gen](wi::jobsystem::JobArgs args) {
+				gen->hair.CreateRenderData();
+			});
+#endif
 		}
 
 		std::swap(vb_pos[0], vb_pos[1]);

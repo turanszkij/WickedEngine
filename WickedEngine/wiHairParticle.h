@@ -121,6 +121,8 @@ namespace wi
 		// redundant per-frame uploads while the contents are unchanged.
 		mutable HairParticleCB constantBufferData = {};
 
+		wi::allocator::shared_ptr<void> background_generation;
+
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 
 		static void Initialize();
