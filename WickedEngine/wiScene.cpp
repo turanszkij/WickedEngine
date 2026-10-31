@@ -127,7 +127,7 @@ namespace wi::scene
 			desc.stride = sizeof(ShaderMeshInstance);
 			desc.alignment = alignof(ShaderMeshInstance);
 			desc.size = desc.stride * instanceArraySize * 2; // *2 to grow fast
-			desc.bind_flags = BindFlag::SHADER_RESOURCE;
+			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 			desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 			if (!UMA)
 			{
@@ -468,7 +468,11 @@ namespace wi::scene
 		{
 			GPUBufferDesc desc;
 			desc.stride = sizeof(ShaderMeshlet);
-			desc.size = desc.stride * meshletCount * 2; // *2 to grow fast
+			desc.size = desc.stride * meshletCount;
+			if (desc.size <= 1024 * 1024 * 64)
+			{
+				desc.size *= 2; // *2 to grow fast
+			}
 			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 			desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 			bool success = device->CreateBuffer(&desc, nullptr, &meshletBuffer);
@@ -4552,6 +4556,9 @@ namespace wi::scene
 			inst.baseGeometryOffset = inst.geometryOffset;
 			inst.baseGeometryCount = inst.geometryCount;
 			inst.meshletOffset = meshletAllocator.fetch_add(geometry.meshletCount, std::memory_order_relaxed); // global meshlet offset
+			inst.meshletCount = geometry.meshletCount;
+			inst.center = float3(0, 0, 0);
+			inst.radius = FLT_MAX;
 			std::memcpy(instanceArrayMapped + impostorInstanceOffset, &inst, sizeof(inst));
 		}
 	}
@@ -4772,6 +4779,7 @@ namespace wi::scene
 				inst.geometryOffset = inst.baseGeometryOffset + first_subset;
 				inst.geometryCount = last_subset - first_subset;
 				inst.meshletOffset = meshletAllocator.fetch_add(mesh.meshletCount, std::memory_order_relaxed);
+				inst.meshletCount = mesh.meshletCount;
 				inst.fadeDistance = object.fadeDistance;
 				inst.center = object.center;
 				inst.radius = object.radius;
@@ -5254,6 +5262,7 @@ namespace wi::scene
 			inst.baseGeometryOffset = inst.geometryOffset;
 			inst.baseGeometryCount = inst.geometryCount;
 			inst.meshletOffset = meshletOffset;
+			inst.meshletCount = meshletCount;
 			inst.vb_wetmap = hair.wetmap.descriptor_srv;
 
 			XMFLOAT4X4 remapMatrix = wi::math::IDENTITY_MATRIX;

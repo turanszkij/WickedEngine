@@ -741,7 +741,8 @@ struct alignas(32) ShaderMeshInstance
 	ShaderTransform transformPrev; // Note: this could contain quantization remapping from UNORM -> FLOAT depending on vertex position format
 	ShaderTransform transformRaw; // Note: this is the world matrix without any quantization remapping
 
-	float4 padding;
+	float3 padding;
+	uint meshletCount;
 
 	inline void init()
 	{
@@ -769,7 +770,8 @@ struct alignas(32) ShaderMeshInstance
 		transform.init();
 		transformPrev.init();
 		transformRaw.init();
-		padding = float4(0, 0, 0, 0);
+		padding = float3(0, 0, 0);
+		meshletCount = 0;
 	}
 	static ShaderMeshInstance get_null()
 	{
@@ -785,6 +787,14 @@ struct alignas(32) ShaderMeshInstance
 	inline uint GetUserStencilRef()
 	{
 		return flags >> 24u;
+	}
+
+	ShaderSphere GetSphere()
+	{
+		ShaderSphere sphere;
+		sphere.center = center;
+		sphere.radius = radius;
+		return sphere;
 	}
 
 #ifndef __cplusplus

@@ -3364,6 +3364,13 @@ std::mutex queue_locker;
 		{
 			allocationDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
 			resourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
+
+			if (CheckCapability(GraphicsDeviceCapability::CACHE_COHERENT_UMA))
+			{
+				// Allow GPU write on UMA upload buffer
+				allocationDesc.CustomPool = allocationhandler->uma_pool.Get();
+				resourceState = D3D12_RESOURCE_STATE_COMMON;
+			}
 		}
 
 #ifdef PLATFORM_XBOX

@@ -2,13 +2,33 @@
 
 static const uint THREADCOUNT = 64;
 
-RWStructuredBuffer<ShaderMeshlet> output_meshlets : register(u0);
+struct PushConstantsMeshletPrepare
+{
+	uint startInstance;
+};
+PUSHCONSTANT(push, PushConstantsMeshletPrepare);
+
+RWStructuredBuffer<ShaderMeshInstance> output_instances : register(u0);
+RWStructuredBuffer<ShaderMeshlet> output_meshlets : register(u1);
+RWStructuredBuffer<uint> counterBuffer : register(u2);
+
+groupshared uint globalMeshletOffset;
 
 [numthreads(1, THREADCOUNT, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
-	uint instanceIndex = Gid.x;
-	ShaderMeshInstance inst = load_instance(instanceIndex);
+	const uint instanceIndex = push.startInstance + Gid.x;
+	ShaderMeshInstance inst = output_instances[instanceIndex];
+	if (!GetCamera().frustum.intersects(inst.GetSphere()))
+		return;
+
+	if (groupIndex == 0)
+	{
+		InterlockedAdd(counterBuffer[0], inst.meshletCount, globalMeshletOffset);
+		output_instances[instanceIndex].meshletOffset = globalMeshletOffset;
+	}
+	GroupMemoryBarrierWithGroupSync();
+	
 	ShaderGeometry mesh = load_geometry(inst.baseGeometryOffset);
 
 	for (uint i = 0; i < inst.baseGeometryCount; ++i)
@@ -33,7 +53,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 				meshlet.primitiveOffset = (geometry.meshletOffset + j - mesh.meshletOffset) << 7u;
 			}
 
-			uint meshletIndex = inst.meshletOffset + geometry.meshletOffset + j;
+			uint meshletIndex = globalMeshletOffset + geometry.meshletOffset + j;
 			output_meshlets[meshletIndex] = meshlet;
 		}
 	}
