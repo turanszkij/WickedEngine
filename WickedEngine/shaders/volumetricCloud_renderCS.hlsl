@@ -801,20 +801,15 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	const float2 uv = (halfResCoord + 0.5) * postprocess.params0.zw;
 	const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 1).r;
-	
-	float2 screenPosition = uv_to_clipspace(uv);
-	
-	float4 unprojected = mul(GetCamera().inverse_view_projection, float4(screenPosition, 0, 1));
-	unprojected.xyz /= unprojected.w;
 
-	float3 depthWorldPosition = reconstruct_position(uv, depth);
+	float3 P = reconstruct_position(uv, depth);
 
 	float3 rayOrigin = GetCamera().position;
-	float3 rayDirection = normalize(unprojected.xyz - rayOrigin);
+	float3 rayDirection = normalize(P - rayOrigin);
 	
 	float4 cloudColor = 0;
 	float2 cloudDepth = 0;
-	RenderClouds(DTid, uv, depth, depthWorldPosition, rayOrigin, rayDirection, cloudColor, cloudDepth);
+	RenderClouds(DTid, uv, depth, P, rayOrigin, rayDirection, cloudColor, cloudDepth);
 	
 	texture_render[DTid.xy] = cloudColor;
 	texture_cloudDepth[DTid.xy] = cloudDepth;
