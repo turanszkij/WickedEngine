@@ -375,6 +375,7 @@ namespace wi::terrain
 	private:
 		wi::vector<wi::scene::MaterialComponent> materials; // temp storage allocation
 		float chunk_scale_rcp = 1.0f / chunk_scale;
+		float cam_height = 0;
 	};
 
 	struct Modifier
