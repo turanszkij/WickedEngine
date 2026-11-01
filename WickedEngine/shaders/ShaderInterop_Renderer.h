@@ -742,7 +742,7 @@ struct alignas(32) ShaderMeshInstance
 	ShaderTransform transformRaw; // Note: this is the world matrix without any quantization remapping
 
 	float3 padding;
-	uint meshletCount;
+	uint meshletCount;	// for whole instance including all subsets and LODs
 
 	inline void init()
 	{

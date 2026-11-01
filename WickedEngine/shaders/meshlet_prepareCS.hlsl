@@ -19,7 +19,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 {
 	const uint instanceIndex = push.startInstance + Gid.x;
 	ShaderMeshInstance inst = output_instances[instanceIndex];
-	if (!GetCamera().frustum.intersects(inst.GetSphere()))
+	const float dist2 = distance_squared(GetCamera().position, inst.center);
+	const bool distance_culled = dist2 > sqr(inst.fadeDistance + inst.radius);
+	if (distance_culled || !GetCamera().frustum.intersects(inst.GetSphere()))
 		return;
 
 	if (groupIndex == 0)

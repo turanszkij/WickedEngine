@@ -463,7 +463,7 @@ namespace wi::scene
 		}
 
 		// Meshlet buffer:
-		uint32_t meshletCount = meshletAllocator.load();
+		const uint32_t meshletCount = meshletAllocator.load();
 		if (meshletBuffer.desc.size < meshletCount * sizeof(ShaderMeshlet))
 		{
 			GPUBufferDesc desc;
@@ -4550,15 +4550,18 @@ namespace wi::scene
 			geometry.materialIndex = impostorMaterialOffset;
 			std::memcpy(geometryArrayMapped + impostorGeometryOffset, &geometry, sizeof(geometry));
 
+			meshletAllocator.fetch_add(geometry.meshletCount, std::memory_order_relaxed);
+
 			ShaderMeshInstance inst = shader_mesh_instance_null;
 			inst.geometryOffset = impostorGeometryOffset;
 			inst.geometryCount = 1;
 			inst.baseGeometryOffset = inst.geometryOffset;
 			inst.baseGeometryCount = inst.geometryCount;
-			inst.meshletOffset = meshletAllocator.fetch_add(geometry.meshletCount, std::memory_order_relaxed); // global meshlet offset
+			inst.meshletOffset = ~0u; // shader atomic
 			inst.meshletCount = geometry.meshletCount;
 			inst.center = float3(0, 0, 0);
 			inst.radius = FLT_MAX;
+			inst.fadeDistance = FLT_MAX;
 			std::memcpy(instanceArrayMapped + impostorInstanceOffset, &inst, sizeof(inst));
 		}
 	}
@@ -4766,6 +4769,8 @@ namespace wi::scene
 				XMMatrixDecompose(&S, &R, &T, W);
 				float size = std::max(XMVectorGetX(S), std::max(XMVectorGetY(S), XMVectorGetZ(S)));
 
+				meshletAllocator.fetch_add(mesh.meshletCount, std::memory_order_relaxed);
+
 				if (object.lightmap.IsValid())
 				{
 					inst.lightmap = device->GetDescriptorIndex(&object.lightmap, SubresourceType::SRV);
@@ -4778,7 +4783,7 @@ namespace wi::scene
 				inst.baseGeometryCount = (uint)mesh.subsets.size();
 				inst.geometryOffset = inst.baseGeometryOffset + first_subset;
 				inst.geometryCount = last_subset - first_subset;
-				inst.meshletOffset = meshletAllocator.fetch_add(mesh.meshletCount, std::memory_order_relaxed);
+				inst.meshletOffset = ~0u; // shader atomic
 				inst.meshletCount = mesh.meshletCount;
 				inst.fadeDistance = object.fadeDistance;
 				inst.center = object.center;
@@ -5230,7 +5235,7 @@ namespace wi::scene
 			uint32_t indexCount = hair.GetIndexCount();
 			uint32_t triangleCount = indexCount / 3u;
 			uint32_t meshletCount = triangle_count_to_meshlet_count(triangleCount);
-			uint32_t meshletOffset = meshletAllocator.fetch_add(meshletCount, std::memory_order_relaxed);
+			meshletAllocator.fetch_add(meshletCount, std::memory_order_relaxed);
 
 			ShaderGeometry geometry = shader_geometry_null;
 			geometry.indexOffset = 0;
@@ -5261,8 +5266,9 @@ namespace wi::scene
 			inst.geometryCount = 1;
 			inst.baseGeometryOffset = inst.geometryOffset;
 			inst.baseGeometryCount = inst.geometryCount;
-			inst.meshletOffset = meshletOffset;
+			inst.meshletOffset = ~0u; // shader atomic
 			inst.meshletCount = meshletCount;
+			inst.fadeDistance = FLT_MAX;
 			inst.vb_wetmap = hair.wetmap.descriptor_srv;
 
 			XMFLOAT4X4 remapMatrix = wi::math::IDENTITY_MATRIX;
