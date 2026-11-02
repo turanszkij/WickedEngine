@@ -594,6 +594,8 @@ namespace wi::ecs
 			}
 			inline size_t get(Entity entity) const
 			{
+				if (blocks_l2.empty())
+					return INVALID_INDEX;
 				const uint64_t block_index_l2 = entity >> 12ull; // entity / (64 * 64)
 				if (blocks_l2.size() > block_index_l2)
 				{
@@ -660,6 +662,8 @@ namespace wi::ecs
 			}
 			inline size_t get(Entity entity) const
 			{
+				if (table.empty())
+					return INVALID_INDEX;
 				const uint64_t block_index = entity >> 6ull; // entity / 64
 				const auto it = table.find(block_index);
 				if (it == table.end())

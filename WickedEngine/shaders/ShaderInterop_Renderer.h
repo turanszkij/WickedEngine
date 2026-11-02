@@ -11,17 +11,12 @@ struct alignas(16) ShaderScene
 	int instancebuffer;
 	int geometrybuffer;
 	int materialbuffer;
-	int meshletbuffer;
+	int impostorInstanceOffset;
 
 	int texturestreamingbuffer;
 	int globalenvmap; // static sky, not guaranteed to be cubemap, mipmaps or format, just whatever is imported
 	int globalprobe; // rendered probe with guaranteed mipmaps, hdr, etc.
 	uint globalprobe_mipcount16f; // force fp16 load
-
-	int impostorInstanceOffset;
-	int padding0;
-	int padding1;
-	int padding2;
 
 	int TLAS;
 	int BVH_counter;
@@ -1303,7 +1298,7 @@ struct alignas(16) FrameCB
 	int			texture_skyluminancelut_index;
 	int			texture_cameravolumelut_index;
 	int			texture_wind_index;
-	int			padding0;
+	int			meshletbuffer;
 
 	float4		rain_blocker_mad;
 	float4x4	rain_blocker_matrix;

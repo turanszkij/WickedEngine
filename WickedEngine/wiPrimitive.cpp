@@ -53,14 +53,14 @@ namespace wi::primitive
 	XMFLOAT3 AABB::getHalfWidth() const
 	{
 		XMFLOAT3 center = getCenter();
-		return XMFLOAT3(abs(_max.x - center.x), abs(_max.y - center.y), abs(_max.z - center.z));
+		return XMFLOAT3(std::abs(_max.x - center.x), std::abs(_max.y - center.y), std::abs(_max.z - center.z));
 	}
 	XMFLOAT3 AABB::getExtents() const
 	{
 		XMFLOAT3 center = getCenter();
-		return XMFLOAT3(abs(_max.x - _min.x), abs(_max.y - _min.y), abs(_max.z - _min.z));
+		return XMFLOAT3(std::abs(_max.x - _min.x), std::abs(_max.y - _min.y), std::abs(_max.z - _min.z));
 	}
-	XMMATRIX AABB::AABB::getAsBoxMatrix() const
+	XMMATRIX AABB::getAsBoxMatrix() const
 	{
 		XMFLOAT3 ext = getHalfWidth();
 		XMMATRIX sca = XMMatrixScaling(ext.x, ext.y, ext.z);
@@ -69,7 +69,7 @@ namespace wi::primitive
 
 		return sca * tra;
 	}
-	XMMATRIX AABB::AABB::getUnormRemapMatrix() const
+	XMMATRIX AABB::getUnormRemapMatrix() const
 	{
 		return
 			XMMatrixScaling(_max.x - _min.x, _max.y - _min.y, _max.z - _min.z) *

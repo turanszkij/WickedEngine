@@ -724,6 +724,7 @@ namespace wi::scene
 		wi::vector<MorphTarget> morph_targets;
 
 		// Non-serialized attributes:
+		float impostorFadeDistance = FLT_MAX;
 		wi::primitive::AABB aabb;
 		wi::graphics::GPUBuffer generalBuffer; // index buffer + all static vertex buffers
 		wi::graphics::GPUBuffer streamoutBuffer; // all dynamic vertex buffers
@@ -1220,6 +1221,7 @@ namespace wi::scene
 		// these will only be valid for a single frame:
 		uint32_t mesh_index = ~0u;
 		uint32_t sort_bits = 0;
+		uint32_t meshletCount = 0;
 
 		constexpr void SetRenderable(bool value) { set_flag(_flags, RENDERABLE, value); }
 		constexpr void SetCastShadow(bool value) { set_flag(_flags, CAST_SHADOW, value); }

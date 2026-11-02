@@ -587,7 +587,7 @@ StructuredBuffer<SurfelGridCell> bindless_structured_surfelgridcell[] : register
 #define GetCameraIndexed(camera_index) (g_xCamera.cameras[camera_index])
 #define load_instance(instanceIndex) (bindless_structured_meshinstance[descriptor_index(GetScene().instancebuffer)][instanceIndex])
 #define load_geometry(geometryIndex) (bindless_structured_geometry[descriptor_index(GetScene().geometrybuffer)][geometryIndex])
-#define load_meshlet(meshletIndex) (bindless_structured_meshlet[descriptor_index(GetScene().meshletbuffer)][meshletIndex])
+#define load_meshlet(meshletIndex) (bindless_structured_meshlet[descriptor_index(GetFrame().meshletbuffer)][meshletIndex])
 #define load_material(materialIndex) (bindless_structured_material[descriptor_index(GetScene().materialbuffer)][materialIndex])
 #define load_entity(entityIndex) (GetFrame().entityArray[entityIndex])
 #define load_entitymatrix(matrixIndex) (GetFrame().matrixArray[matrixIndex])
