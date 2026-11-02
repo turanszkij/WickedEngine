@@ -1138,6 +1138,8 @@ namespace wi::scene
 
 		collider_count_cpu = 0;
 		collider_count_gpu = 0;
+		collider_bvh = {};
+		collider_bvh_next = {};
 
 		topdown_hierarchy.clear();
 		gaussian_scene.Clear();
