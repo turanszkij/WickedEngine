@@ -149,10 +149,6 @@ namespace wi::scene
 		wi::graphics::GPUBuffer textureStreamingFeedbackBuffer_readback[wi::graphics::GraphicsDevice::GetBufferCount()];
 		const uint32_t* textureStreamingFeedbackMapped = nullptr;
 
-		// Meshlets:
-		wi::graphics::GPUBuffer meshletBuffer;
-		std::atomic<uint32_t> meshletAllocator{ 0 };
-
 		// Skinning GPU data containining all bones, all morph descriptions:
 		wi::graphics::GPUBuffer skinningUploadBuffer[wi::graphics::GraphicsDevice::GetBufferCount()];
 		void* skinningDataMapped = nullptr;
@@ -256,6 +252,7 @@ namespace wi::scene
 		uint32_t impostorInstanceOffset = ~0u;
 		uint32_t impostorGeometryOffset = ~0u;
 		uint32_t impostorMaterialOffset = ~0u;
+		uint32_t impostorMeshletCount = 0;
 
 		wi::EmittedParticleSystem rainEmitter;
 		MaterialComponent rainMaterial;

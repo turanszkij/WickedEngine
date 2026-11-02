@@ -3636,6 +3636,8 @@ void UpdateVisibility(Visibility& vis)
 	// Initialize visible indices:
 	vis.Clear();
 
+	vis.meshlet_counter.fetch_add(vis.scene->impostorMeshletCount);
+
 	if (!GetFreezeCullingCameraEnabled())
 	{
 		vis.frustum = vis.camera->frustum;
@@ -3737,6 +3739,7 @@ void UpdateVisibility(Visibility& vis)
 				stream_compaction.list[stream_compaction.count++] = args.groupIndex;
 
 				const ObjectComponent& object = vis.scene->objects[args.jobIndex];
+				vis.meshlet_counter.fetch_add(object.meshletCount);
 				bool occluded = false;
 				if (vis.flags & Visibility::ALLOW_OCCLUSION_CULLING)
 				{
@@ -3909,6 +3912,7 @@ void UpdateVisibility(Visibility& vis)
 					continue;
 				}
 				vis.visibleHairs.push_back((uint32_t)i);
+				vis.meshlet_counter.fetch_add(hair.meshletCount);
 			}
 		});
 	}
@@ -4425,6 +4429,21 @@ void UpdatePerFrameData(
 	frameCB.texture_skyluminancelut_index = device->GetDescriptorIndex(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], SubresourceType::SRV);
 	frameCB.texture_cameravolumelut_index = device->GetDescriptorIndex(&textures[TEXTYPE_3D_SKYATMOSPHERE_CAMERAVOLUMELUT], SubresourceType::SRV);
 	frameCB.texture_wind_index = device->GetDescriptorIndex(&textures[TEXTYPE_3D_WIND], SubresourceType::SRV);
+
+	const uint32_t meshletCount = vis.meshlet_counter.load();
+	if (buffers[BUFFERTYPE_MESHLET].desc.size < meshletCount * sizeof(ShaderMeshlet))
+	{
+		GPUBufferDesc desc;
+		desc.stride = sizeof(ShaderMeshlet);
+		desc.size = desc.stride * meshletCount * 2; // *2 to grow fast
+		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+		desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
+		bool success = device->CreateBuffer(&desc, nullptr, &buffers[BUFFERTYPE_MESHLET]);
+		assert(success);
+		device->SetName(&buffers[BUFFERTYPE_MESHLET], "meshletBuffer");
+		wilog("meshlet buffer resized: %s", wi::helper::GetMemorySizeText(desc.size).c_str());
+	}
+	frameCB.meshletbuffer = device->GetDescriptorIndex(&buffers[BUFFERTYPE_MESHLET], SubresourceType::SRV);
 
 	// See if indirect debug buffer needs to be resized:
 	if (indirectDebugStatsReadback_available[device->GetBufferIndex()] && indirectDebugStatsReadback[device->GetBufferIndex()].mapped_data != nullptr)
@@ -5207,7 +5226,10 @@ void UpdateRenderData(
 	indirectDebugStatsReadback_available[device->GetBufferIndex()] = true;
 	PushBarrier(GPUBarrier::Buffer(&buffers[BUFFERTYPE_INDIRECT_DEBUG_0], ResourceState::COPY_SRC, ResourceState::COPY_DST));
 
-	PushBarrier(GPUBarrier::Buffer(&vis.scene->meshletBuffer, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS));
+	if (vis.scene->instanceArraySize > 0 && buffers[BUFFERTYPE_MESHLET].IsValid())
+	{
+		PushBarrier(GPUBarrier::Buffer(&buffers[BUFFERTYPE_MESHLET], ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS));
+	}
 
 	PushBarrier(GPUBarrier::Buffer(&buffers[BUFFERTYPE_FRAMECB], ResourceState::CONSTANT_BUFFER, ResourceState::COPY_DST));
 	FlushBarriers(cmd);
@@ -5418,7 +5440,7 @@ void UpdateRenderData(
 	}
 
 	// Meshlets:
-	if(vis.scene->instanceArraySize > 0 && vis.scene->meshletBuffer.IsValid())
+	if(vis.scene->instanceArraySize > 0 && buffers[BUFFERTYPE_MESHLET].IsValid())
 	{
 		device->EventBegin("Meshlet prepare", cmd);
 		auto range = wi::profiler::BeginRangeGPU("Meshlet prepare", cmd);
@@ -5426,7 +5448,7 @@ void UpdateRenderData(
 
 		const GPUResource* uavs[] = {
 			instanceBuffer,
-			&vis.scene->meshletBuffer,
+			&buffers[BUFFERTYPE_MESHLET],
 			&counterBuffer
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
@@ -5442,7 +5464,7 @@ void UpdateRenderData(
 			instanceCountRemaining -= instanceCountProcessed;
 		}
 
-		PushBarrier(GPUBarrier::Buffer(&vis.scene->meshletBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
+		PushBarrier(GPUBarrier::Buffer(&buffers[BUFFERTYPE_MESHLET], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
 
 		wi::profiler::EndRange(range);
 		device->EventEnd(cmd);
