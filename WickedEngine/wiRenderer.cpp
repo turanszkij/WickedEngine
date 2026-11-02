@@ -4435,11 +4435,7 @@ void UpdatePerFrameData(
 	{
 		GPUBufferDesc desc;
 		desc.stride = sizeof(ShaderMeshlet);
-		desc.size = desc.stride * meshletCount;
-		if (desc.size <= 1024 * 1024 * 64)
-		{
-			desc.size *= 2; // *2 to grow fast
-		}
+		desc.size = desc.stride * meshletCount * 2; // *2 to grow fast
 		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 		desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 		bool success = device->CreateBuffer(&desc, nullptr, &buffers[BUFFERTYPE_MESHLET]);
