@@ -4740,16 +4740,20 @@ namespace wi::scene
 				if (IsFormatUnorm(mesh.position_format) && !mesh.so_pos.IsValid())
 				{
 					// The UNORM correction is only done for the GPU data!
-					XMMATRIX R = mesh.aabb.getUnormRemapMatrix();
-					XMStoreFloat4x4(&worldMatrix, R * W);
-					XMStoreFloat4x4(&worldMatrixPrev, R * XMLoadFloat4x4(&worldMatrixPrev));
+					XMMATRIX Wdraw = W;
+					XMMATRIX Wprev = XMLoadFloat4x4(&worldMatrixPrev);
+					mesh.aabb.unormRemap(Wdraw);
+					mesh.aabb.unormRemap(Wprev);
+					XMStoreFloat4x4(&worldMatrix, Wdraw);
+					XMStoreFloat4x4(&worldMatrixPrev, Wprev);
 				}
 				inst.transform.Create(worldMatrix);
 				inst.transformPrev.Create(worldMatrixPrev);
 
-				XMVECTOR S, R, T;
-				XMMatrixDecompose(&S, &R, &T, W);
-				float size = std::max(XMVectorGetX(S), std::max(XMVectorGetY(S), XMVectorGetZ(S)));
+				const float axis_x = XMVectorGetX(XMVector3LengthSq(W.r[0]));
+				const float axis_y = XMVectorGetX(XMVector3LengthSq(W.r[1]));
+				const float axis_z = XMVectorGetX(XMVector3LengthSq(W.r[2]));
+				const float size = std::sqrt(std::max(axis_x, std::max(axis_y, axis_z)));
 
 				if (object.lightmap.IsValid())
 				{

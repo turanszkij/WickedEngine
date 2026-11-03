@@ -10,6 +10,20 @@ namespace wi::primitive
 	}
 	AABB AABB::transform(const XMMATRIX& mat) const
 	{
+#if 1
+		const XMVECTOR MIN = XMLoadFloat3(&_min);
+		const XMVECTOR MAX = XMLoadFloat3(&_max);
+		const XMVECTOR C = XMVectorScale(XMVectorAdd(MIN, MAX), 0.5f);
+		const XMVECTOR E = XMVectorAbs(XMVectorScale(XMVectorSubtract(MAX, MIN), 0.5f));
+		const XMVECTOR T = XMVector3Transform(C, mat);
+		XMVECTOR H = XMVectorMultiply(XMVectorAbs(mat.r[0]), XMVectorSplatX(E));
+		H = XMVectorMultiplyAdd(XMVectorAbs(mat.r[1]), XMVectorSplatY(E), H);
+		H = XMVectorMultiplyAdd(XMVectorAbs(mat.r[2]), XMVectorSplatZ(E), H);
+		XMFLOAT3 min, max;
+		XMStoreFloat3(&min, XMVectorSubtract(T, H));
+		XMStoreFloat3(&max, XMVectorAdd(T, H));
+		return AABB(min, max);
+#else
 		const XMVECTOR vcorners[8] = {
 			XMVector3Transform(XMLoadFloat3(&_min), mat),
 			XMVector3Transform(XMVectorSet(_min.x, _max.y, _min.z, 1), mat),
@@ -41,6 +55,7 @@ namespace wi::primitive
 		XMStoreFloat3(&min, vmin);
 		XMStoreFloat3(&max, vmax);
 		return AABB(min, max);
+#endif
 	}
 	AABB AABB::transform(const XMFLOAT4X4& mat) const
 	{
@@ -75,6 +90,18 @@ namespace wi::primitive
 			XMMatrixScaling(_max.x - _min.x, _max.y - _min.y, _max.z - _min.z) *
 			XMMatrixTranslation(_min.x, _min.y, _min.z)
 			;
+	}
+	void AABB::unormRemap(XMMATRIX& mat) const
+	{
+		const XMVECTOR r0 = mat.r[0];
+		const XMVECTOR r1 = mat.r[1];
+		const XMVECTOR r2 = mat.r[2];
+		mat.r[3] = XMVectorMultiplyAdd(r0, XMVectorReplicate(_min.x), mat.r[3]);
+		mat.r[3] = XMVectorMultiplyAdd(r1, XMVectorReplicate(_min.y), mat.r[3]);
+		mat.r[3] = XMVectorMultiplyAdd(r2, XMVectorReplicate(_min.z), mat.r[3]);
+		mat.r[0] = XMVectorScale(r0, _max.x - _min.x);
+		mat.r[1] = XMVectorScale(r1, _max.y - _min.y);
+		mat.r[2] = XMVectorScale(r2, _max.z - _min.z);
 	}
 	float AABB::getArea() const
 	{

@@ -41,6 +41,7 @@ namespace wi::primitive
 		XMFLOAT3 getExtents() const;
 		XMMATRIX getAsBoxMatrix() const;
 		XMMATRIX getUnormRemapMatrix() const;
+		void unormRemap(XMMATRIX& mat) const;
 		float getArea() const;
 		float getRadius() const;
 		INTERSECTION_TYPE intersects2D(const AABB& b) const;

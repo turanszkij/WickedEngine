@@ -769,7 +769,7 @@ namespace wi::terrain
 		}
 
 		// Ensure that enough grass chunks are generated so that grass view distance will not cause popping:
-		grass_chunk_dist = int(grass_properties.viewDistance / chunk_width + 0.5f);
+		grass_chunk_dist = std::max(1, int(grass_properties.viewDistance / (float(chunk_width) * chunk_scale) + 0.5f));
 
 		for (auto it = chunks.begin(); it != chunks.end();)
 		{

@@ -166,6 +166,14 @@ void AABBfromMinMax(inout AABB aabb, float3 _min, float3 _max)
 template<typename T>
 void AABBtransform(inout AABB aabb, T mat)
 {
+#if 1
+	float3 center = mul(mat, float4(aabb.c, 1)).xyz;
+	float3 axis0 = abs(float3(mat[0].x, mat[1].x, mat[2].x));
+	float3 axis1 = abs(float3(mat[0].y, mat[1].y, mat[2].y));
+	float3 axis2 = abs(float3(mat[0].z, mat[1].z, mat[2].z));
+	aabb.c = center;
+	aabb.e = axis0 * aabb.e.x + axis1 * aabb.e.y + axis2 * aabb.e.z;
+#else
 	float3 _min = aabb.getMin();
 	float3 _max = aabb.getMax();
 	float3 corners[8];
@@ -189,6 +197,7 @@ void AABBtransform(inout AABB aabb, T mat)
 	}
 
 	AABBfromMinMax(aabb, _min, _max);
+#endif
 }
 
 [numthreads(TILED_CULLING_THREADSIZE, TILED_CULLING_THREADSIZE, 1)]
