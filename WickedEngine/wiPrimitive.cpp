@@ -10,6 +10,20 @@ namespace wi::primitive
 	}
 	AABB AABB::transform(const XMMATRIX& mat) const
 	{
+#if 1
+		const XMVECTOR MIN = XMLoadFloat3(&_min);
+		const XMVECTOR MAX = XMLoadFloat3(&_max);
+		const XMVECTOR C = XMVectorScale(XMVectorAdd(MIN, MAX), 0.5f);
+		const XMVECTOR E = XMVectorAbs(XMVectorScale(XMVectorSubtract(MAX, MIN), 0.5f));
+		const XMVECTOR T = XMVector3Transform(C, mat);
+		XMVECTOR H = XMVectorMultiply(XMVectorAbs(mat.r[0]), XMVectorSplatX(E));
+		H = XMVectorMultiplyAdd(XMVectorAbs(mat.r[1]), XMVectorSplatY(E), H);
+		H = XMVectorMultiplyAdd(XMVectorAbs(mat.r[2]), XMVectorSplatZ(E), H);
+		XMFLOAT3 min, max;
+		XMStoreFloat3(&min, XMVectorSubtract(T, H));
+		XMStoreFloat3(&max, XMVectorAdd(T, H));
+		return AABB(min, max);
+#else
 		const XMVECTOR vcorners[8] = {
 			XMVector3Transform(XMLoadFloat3(&_min), mat),
 			XMVector3Transform(XMVectorSet(_min.x, _max.y, _min.z, 1), mat),
@@ -41,6 +55,7 @@ namespace wi::primitive
 		XMStoreFloat3(&min, vmin);
 		XMStoreFloat3(&max, vmax);
 		return AABB(min, max);
+#endif
 	}
 	AABB AABB::transform(const XMFLOAT4X4& mat) const
 	{
@@ -53,14 +68,14 @@ namespace wi::primitive
 	XMFLOAT3 AABB::getHalfWidth() const
 	{
 		XMFLOAT3 center = getCenter();
-		return XMFLOAT3(abs(_max.x - center.x), abs(_max.y - center.y), abs(_max.z - center.z));
+		return XMFLOAT3(std::abs(_max.x - center.x), std::abs(_max.y - center.y), std::abs(_max.z - center.z));
 	}
 	XMFLOAT3 AABB::getExtents() const
 	{
 		XMFLOAT3 center = getCenter();
-		return XMFLOAT3(abs(_max.x - _min.x), abs(_max.y - _min.y), abs(_max.z - _min.z));
+		return XMFLOAT3(std::abs(_max.x - _min.x), std::abs(_max.y - _min.y), std::abs(_max.z - _min.z));
 	}
-	XMMATRIX AABB::AABB::getAsBoxMatrix() const
+	XMMATRIX AABB::getAsBoxMatrix() const
 	{
 		XMFLOAT3 ext = getHalfWidth();
 		XMMATRIX sca = XMMatrixScaling(ext.x, ext.y, ext.z);
@@ -69,12 +84,24 @@ namespace wi::primitive
 
 		return sca * tra;
 	}
-	XMMATRIX AABB::AABB::getUnormRemapMatrix() const
+	XMMATRIX AABB::getUnormRemapMatrix() const
 	{
 		return
 			XMMatrixScaling(_max.x - _min.x, _max.y - _min.y, _max.z - _min.z) *
 			XMMatrixTranslation(_min.x, _min.y, _min.z)
 			;
+	}
+	void AABB::unormRemap(XMMATRIX& mat) const
+	{
+		const XMVECTOR r0 = mat.r[0];
+		const XMVECTOR r1 = mat.r[1];
+		const XMVECTOR r2 = mat.r[2];
+		mat.r[3] = XMVectorMultiplyAdd(r0, XMVectorReplicate(_min.x), mat.r[3]);
+		mat.r[3] = XMVectorMultiplyAdd(r1, XMVectorReplicate(_min.y), mat.r[3]);
+		mat.r[3] = XMVectorMultiplyAdd(r2, XMVectorReplicate(_min.z), mat.r[3]);
+		mat.r[0] = XMVectorScale(r0, _max.x - _min.x);
+		mat.r[1] = XMVectorScale(r1, _max.y - _min.y);
+		mat.r[2] = XMVectorScale(r2, _max.z - _min.z);
 	}
 	float AABB::getArea() const
 	{

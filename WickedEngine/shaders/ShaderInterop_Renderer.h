@@ -11,17 +11,12 @@ struct alignas(16) ShaderScene
 	int instancebuffer;
 	int geometrybuffer;
 	int materialbuffer;
-	int meshletbuffer;
+	int impostorInstanceOffset;
 
 	int texturestreamingbuffer;
 	int globalenvmap; // static sky, not guaranteed to be cubemap, mipmaps or format, just whatever is imported
 	int globalprobe; // rendered probe with guaranteed mipmaps, hdr, etc.
 	uint globalprobe_mipcount16f; // force fp16 load
-
-	int impostorInstanceOffset;
-	int padding0;
-	int padding1;
-	int padding2;
 
 	int TLAS;
 	int BVH_counter;
@@ -757,7 +752,7 @@ struct alignas(32) ShaderMeshInstance
 	ShaderTransform transformRaw; // Note: this is the world matrix without any quantization remapping
 
 	float3 padding;
-	uint meshletCount;
+	uint meshletCount;	// for whole instance including all subsets and LODs
 
 	inline void init()
 	{
@@ -1318,7 +1313,12 @@ struct alignas(16) FrameCB
 	int			texture_skyluminancelut_index;
 	int			texture_cameravolumelut_index;
 	int			texture_wind_index;
+	int			meshletbuffer;
+
 	float		cluster_lod_threshold; // pixels of allowed screen space error for cluster LOD selection
+	float		padding_clusterlod0;
+	float		padding_clusterlod1;
+	float		padding_clusterlod2;
 
 	float4		rain_blocker_mad;
 	float4x4	rain_blocker_matrix;

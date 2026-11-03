@@ -1,6 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiPrimitive.h"
+#include "wiFunction.h"
 
 namespace wi
 {
@@ -82,7 +83,7 @@ namespace wi
 		void Intersects(
 			const T& primitive,
 			uint32_t nodeIndex,
-			const std::function<void(uint32_t index)>& callback
+			const wi::function<void(uint32_t index), 64>& callback
 		) const
 		{
 			if (node_count == 0)
@@ -108,7 +109,7 @@ namespace wi
 		template <typename T>
 		bool IntersectsFirst(
 			const T& primitive,
-			const std::function<bool(uint32_t index)>& callback
+			const wi::function<bool(uint32_t index), 64>& callback
 		) const
 		{
 			if (node_count == 0)

@@ -2273,8 +2273,16 @@ inline bool BoundingOrientedBox::Intersects( const BoundingOrientedBox& box ) co
     assert( DirectX::Internal::XMQuaternionIsUnit( A_quat ) );
     assert( DirectX::Internal::XMQuaternionIsUnit( B_quat ) );
 
+#if defined(__APPLE__) && defined(__clang__) && __clang_major__ >= 21 && defined(__aarch64__) // xcode crash fix
+    XMMATRIX R = [=]() __attribute__((noinline))
+    {
+        XMVECTOR Q = XMQuaternionMultiply( A_quat, XMQuaternionConjugate( B_quat ) );
+        return XMMatrixRotationQuaternion( Q );
+    }();
+#else
     XMVECTOR Q = XMQuaternionMultiply( A_quat, XMQuaternionConjugate( B_quat ) );
     XMMATRIX R = XMMatrixRotationQuaternion( Q );
+#endif
 
     // Compute the translation of B relative to A.
     XMVECTOR A_cent = XMLoadFloat3( &Center );

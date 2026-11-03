@@ -160,6 +160,7 @@ namespace wi::renderer
 
 		std::atomic<uint32_t> object_counter;
 		std::atomic<uint32_t> light_counter;
+		std::atomic<uint32_t> meshlet_counter;
 
 		bool planar_reflection_visible = false;
 		int64_t closest_ref = INT64_MAX;
@@ -180,6 +181,7 @@ namespace wi::renderer
 
 			object_counter.store(0);
 			light_counter.store(0);
+			meshlet_counter.store(0);
 
 			closest_ref = INT64_MAX;
 			planar_reflection_visible = false;

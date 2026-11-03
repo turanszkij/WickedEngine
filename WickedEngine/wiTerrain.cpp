@@ -709,6 +709,7 @@ namespace wi::terrain
 		scene->MergeFastInternal(generator->scene);
 
 		chunk_scale_rcp = 1.0f / chunk_scale;
+		cam_height = camera.Eye.y;
 
 		if (IsCenterToCamEnabled())
 		{
@@ -768,7 +769,7 @@ namespace wi::terrain
 		}
 
 		// Ensure that enough grass chunks are generated so that grass view distance will not cause popping:
-		grass_chunk_dist = int(grass_properties.viewDistance / chunk_width + 0.5f);
+		grass_chunk_dist = std::max(1, int(grass_properties.viewDistance / (float(chunk_width) * chunk_scale) + 0.5f));
 
 		for (auto it = chunks.begin(); it != chunks.end();)
 		{
@@ -1309,7 +1310,7 @@ namespace wi::terrain
 					if (it != chunks.end() && it->second.entity != INVALID_ENTITY)
 					{
 						ChunkData& chunk_data = it->second;
-						if ((chunk_data.grass_entity == INVALID_ENTITY || chunk_data.invalidated) && chunk_data.grass.meshID != INVALID_ENTITY)
+						if ((chunk_data.grass_entity == INVALID_ENTITY || chunk_data.invalidated) && chunk_data.grass.meshID != INVALID_ENTITY && (cam_height - grass_properties.viewDistance < chunk_data.sphere.center.y + chunk_data.sphere.radius))
 						{
 							// add patch for this chunk
 							if (chunk_data.grass_entity == INVALID_ENTITY)

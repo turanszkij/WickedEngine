@@ -120,6 +120,9 @@ namespace wi
 		// Cached constant buffer last uploaded to the GPU, used to skip
 		// redundant per-frame uploads while the contents are unchanged.
 		mutable HairParticleCB constantBufferData = {};
+		uint32_t meshletCount = 0;
+
+		wi::allocator::shared_ptr<void> background_generation;
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 
