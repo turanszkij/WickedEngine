@@ -79,7 +79,7 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
 	// Cluster LOD selection:
 	[branch]
-	if (geometry.vb_lod >= 0)
+	if (visible && geometry.vb_lod >= 0)
 	{
 		ClusterLODSelector selector;
 		selector.init(camera, inst, geometry);
@@ -91,7 +91,7 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 		{
 			visible = false;
 		}
-		else if (visible)
+		else
 		{
 			ShaderClusterLOD lod = lod_buffer.Load<ShaderClusterLOD>(meshletID * sizeof(ShaderClusterLOD));
 			visible = !selector.coarse_enough(lod.simplified, lod.simplified_error) && selector.coarse_enough(lod.refined, lod.refined_error);
