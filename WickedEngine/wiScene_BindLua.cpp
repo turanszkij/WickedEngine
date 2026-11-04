@@ -5140,6 +5140,8 @@ Luna<MeshComponent_BindLua>::FunctionType MeshComponent_BindLua::methods[] = {
 	lunamethod(MeshComponent_BindLua, SetMeshSubsetMaterialID),
 	lunamethod(MeshComponent_BindLua, GetMeshSubsetMaterialID),
 	lunamethod(MeshComponent_BindLua, CreateSubset),
+	lunamethod(MeshComponent_BindLua, SetClusterLODEnabled),
+	lunamethod(MeshComponent_BindLua, IsClusterLODEnabled),
 	{ NULL, NULL }
 };
 Luna<MeshComponent_BindLua>::PropertyType MeshComponent_BindLua::properties[] = {
@@ -5184,6 +5186,34 @@ int MeshComponent_BindLua::GetMeshSubsetMaterialID(lua_State* L)
 int MeshComponent_BindLua::CreateSubset(lua_State* L)
 {
 	wi::lua::SSetInt(L, (int)component->CreateSubset());
+	return 1;
+}
+int MeshComponent_BindLua::SetClusterLODEnabled(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc < 1)
+	{
+		wi::lua::SError(L, "SetClusterLODEnabled(bool value) not enough arguments!");
+		return 0;
+	}
+	const bool value = wi::lua::SGetBool(L, 1);
+	if (value != component->IsClusterLODEnabled())
+	{
+		component->SetClusterLODEnabled(value);
+		if (component->generalBuffer.IsValid())
+		{
+			component->CreateRenderData();
+			if (!component->BLASes.empty())
+			{
+				component->CreateRaytracingRenderData();
+			}
+		}
+	}
+	return 0;
+}
+int MeshComponent_BindLua::IsClusterLODEnabled(lua_State* L)
+{
+	wi::lua::SSetBool(L, component->IsClusterLODEnabled());
 	return 1;
 }
 

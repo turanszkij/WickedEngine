@@ -12,6 +12,8 @@
 #include "wiLua.h"
 
 #include "Utility/meshoptimizer/meshoptimizer.h"
+#define CLUSTERLOD_IMPLEMENTATION
+#include "Utility/meshoptimizer/clusterlod.h"
 
 #if __has_include("OpenImageDenoise/oidn.hpp")
 #include "OpenImageDenoise/oidn.hpp"
@@ -545,6 +547,9 @@ namespace wi::scene
 		vb_atl = {};
 		vb_col = {};
 		vb_bon = {};
+		vb_clu = {};
+		vb_bou = {};
+		vb_lod = {};
 		so_pos = {};
 		so_nor = {};
 		so_tan = {};
@@ -747,6 +752,7 @@ namespace wi::scene
 
 		wi::vector<ShaderCluster> clusters;
 		wi::vector<ShaderClusterBounds> cluster_bounds;
+		wi::vector<ShaderClusterLOD> cluster_lods;
 		cluster_ranges.clear();
 
 		if (wi::renderer::IsMeshShaderAllowed())
@@ -755,12 +761,103 @@ namespace wi::scene
 			const size_t max_triangles = MESHLET_TRIANGLE_COUNT;
 			const float cone_weight = 0.5f;
 
+			auto create_cluster = [&](const unsigned int* meshlet_vertices, const unsigned char* meshlet_triangles, size_t vertex_count, size_t triangle_count) {
+				meshopt_Bounds bounds = meshopt_computeMeshletBounds(
+					meshlet_vertices,
+					meshlet_triangles,
+					triangle_count,
+					&vertex_positions[0].x,
+					vertex_positions.size(),
+					sizeof(XMFLOAT3)
+				);
+
+				ShaderClusterBounds& clusterbound = cluster_bounds.emplace_back();
+				clusterbound.sphere.center.x = bounds.center[0];
+				clusterbound.sphere.center.y = bounds.center[1];
+				clusterbound.sphere.center.z = bounds.center[2];
+				clusterbound.sphere.radius = bounds.radius;
+				clusterbound.cone_axis.x = -bounds.cone_axis[0];
+				clusterbound.cone_axis.y = -bounds.cone_axis[1];
+				clusterbound.cone_axis.z = -bounds.cone_axis[2];
+				clusterbound.cone_cutoff = bounds.cone_cutoff;
+
+				ShaderCluster& cluster = clusters.emplace_back();
+				cluster.vertexCount = (uint)vertex_count;
+				cluster.triangleCount = (uint)triangle_count;
+				for (size_t tri = 0; tri < triangle_count; ++tri)
+				{
+					cluster.triangles[tri].init(
+						meshlet_triangles[tri * 3 + 0],
+						meshlet_triangles[tri * 3 + 1],
+						meshlet_triangles[tri * 3 + 2]
+					);
+				}
+				for (size_t vert = 0; vert < vertex_count; ++vert)
+				{
+					cluster.vertices[vert] = meshlet_vertices[vert];
+				}
+			};
+
+			// Cluster LOD is not used for deforming geometry, because the simplification is computed on the bind pose:
+			const bool cluster_lod = IsClusterLODEnabled() && !IsSkinned() && morph_targets.empty();
+
+			// Attributes for attribute-aware simplification: normals are weighted, UVs are only protected from collapsing across seams
+			static constexpr size_t clod_attribute_stride = 5;
+			static constexpr float clod_attribute_weights[] = { 0.5f, 0.5f, 0.5f };
+			wi::vector<float> clod_attributes;
+			wi::vector<unsigned char> clod_vertex_lock;
+			wi::vector<unsigned int> clod_position_remap;
+			if (cluster_lod)
+			{
+				clod_attributes.resize(vertex_positions.size() * clod_attribute_stride);
+				for (size_t i = 0; i < vertex_positions.size(); ++i)
+				{
+					float* attributes = &clod_attributes[i * clod_attribute_stride];
+					if (i < vertex_normals.size())
+					{
+						attributes[0] = vertex_normals[i].x;
+						attributes[1] = vertex_normals[i].y;
+						attributes[2] = vertex_normals[i].z;
+					}
+					if (i < vertex_uvset_0.size())
+					{
+						attributes[3] = vertex_uvset_0[i].x;
+						attributes[4] = vertex_uvset_0[i].y;
+					}
+				}
+				clod_vertex_lock.resize(vertex_positions.size());
+				clod_position_remap.resize(vertex_positions.size());
+				meshopt_generatePositionRemap(clod_position_remap.data(), &vertex_positions[0].x, vertex_positions.size(), sizeof(XMFLOAT3));
+			}
+
 			const uint32_t lod_count = GetLODCount();
 			for (uint32_t lod = 0; lod < lod_count; ++lod)
 			{
 				uint32_t first_subset = 0;
 				uint32_t last_subset = 0;
 				GetLODSubsetRange(lod, first_subset, last_subset);
+
+				if (cluster_lod)
+				{
+					// Each subset has its own cluster hierarchy, so vertices that are shared between subsets of this LOD are locked to avoid cracks between them:
+					static constexpr uint32_t unused = ~0u;
+					static constexpr uint32_t shared = ~0u - 1;
+					wi::vector<uint32_t> owner(vertex_positions.size(), unused);
+					for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
+					{
+						const MeshSubset& subset = subsets[subsetIndex];
+						for (uint32_t i = 0; i < subset.indexCount; ++i)
+						{
+							uint32_t& o = owner[clod_position_remap[indices[subset.indexOffset + i]]];
+							o = (o == unused || o == subsetIndex) ? subsetIndex : shared;
+						}
+					}
+					for (size_t i = 0; i < vertex_positions.size(); ++i)
+					{
+						clod_vertex_lock[i] = owner[clod_position_remap[i]] == shared ? meshopt_SimplifyVertex_Lock : 0;
+					}
+				}
+
 				for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
 				{
 					const MeshSubset& subset = subsets[subsetIndex];
@@ -768,6 +865,87 @@ namespace wi::scene
 
 					if (subset.indexCount == 0)
 						continue;
+
+					if (cluster_lod)
+					{
+						meshlet_range.clusterOffset = (uint32_t)clusters.size();
+
+						clodConfig config = clodDefaultConfig(max_triangles);
+						config.max_vertices = max_vertices;
+
+						clodMesh clod_mesh = {};
+						clod_mesh.indices = &indices[subset.indexOffset];
+						clod_mesh.index_count = subset.indexCount;
+						clod_mesh.vertex_count = vertex_positions.size();
+						clod_mesh.vertex_positions = &vertex_positions[0].x;
+						clod_mesh.vertex_positions_stride = sizeof(XMFLOAT3);
+						clod_mesh.vertex_attributes = clod_attributes.data();
+						clod_mesh.vertex_attributes_stride = clod_attribute_stride * sizeof(float);
+						clod_mesh.vertex_lock = clod_vertex_lock.data();
+						clod_mesh.attribute_weights = clod_attribute_weights;
+						clod_mesh.attribute_count = arraysize(clod_attribute_weights);
+						clod_mesh.attribute_protect_mask = (1u << 3u) | (1u << 4u); // UV
+
+						wi::vector<clodBounds> groups;
+						wi::vector<ShaderClusterLOD> subset_lods;
+						clodBuild(config, clod_mesh, [&](clodGroup group, const clodCluster* group_clusters, size_t group_cluster_count) {
+							for (size_t i = 0; i < group_cluster_count; ++i)
+							{
+								const clodCluster& src = group_clusters[i];
+								unsigned int meshlet_vertices[MESHLET_VERTEX_COUNT];
+								unsigned char meshlet_triangles[MESHLET_TRIANGLE_COUNT * 3];
+								const size_t vertex_count = clodLocalIndices(meshlet_vertices, meshlet_triangles, src.indices, src.index_count);
+								create_cluster(meshlet_vertices, meshlet_triangles, vertex_count, src.index_count / 3);
+
+								ShaderClusterLOD& dst = subset_lods.emplace_back();
+								dst.simplified.center = XMFLOAT3(group.simplified.center);
+								dst.simplified.radius = group.simplified.radius;
+								dst.simplified_error = group.simplified.error;
+								if (src.refined < 0)
+								{
+									// original geometry is always detailed enough:
+									dst.refined = dst.simplified;
+									dst.refined_error = 0;
+								}
+								else
+								{
+									const clodBounds& refined = groups[src.refined];
+									dst.refined.center = XMFLOAT3(refined.center);
+									dst.refined.radius = refined.radius;
+									dst.refined_error = refined.error;
+								}
+								// the selection is only crack-free if the error is monotonic along the DAG:
+								assert(dst.refined_error <= dst.simplified_error);
+							}
+							groups.push_back(group.simplified);
+							return int(groups.size() - 1);
+						});
+
+						// Sort clusters of the subset by decreasing simplified error, this lets the amplification shader skip whole groups of clusters that are too detailed:
+						const size_t count = subset_lods.size();
+						wi::vector<uint32_t> order(count);
+						for (uint32_t i = 0; i < (uint32_t)count; ++i)
+						{
+							order[i] = i;
+						}
+						std::stable_sort(order.begin(), order.end(), [&](uint32_t a, uint32_t b) {
+							return subset_lods[a].simplified_error > subset_lods[b].simplified_error;
+						});
+						wi::vector<ShaderCluster> sorted_clusters(count);
+						wi::vector<ShaderClusterBounds> sorted_bounds(count);
+						cluster_lods.resize(meshlet_range.clusterOffset + count);
+						for (size_t i = 0; i < count; ++i)
+						{
+							sorted_clusters[i] = clusters[meshlet_range.clusterOffset + order[i]];
+							sorted_bounds[i] = cluster_bounds[meshlet_range.clusterOffset + order[i]];
+							cluster_lods[meshlet_range.clusterOffset + i] = subset_lods[order[i]];
+						}
+						std::copy(sorted_clusters.begin(), sorted_clusters.end(), clusters.begin() + meshlet_range.clusterOffset);
+						std::copy(sorted_bounds.begin(), sorted_bounds.end(), cluster_bounds.begin() + meshlet_range.clusterOffset);
+
+						meshlet_range.clusterCount = (uint32_t)count;
+						continue;
+					}
 
 					size_t max_meshlets = meshopt_buildMeshletsBound(subset.indexCount, max_vertices, max_triangles);
 					std::vector<meshopt_Meshlet> meshopt_meshlets(max_meshlets);
@@ -809,41 +987,7 @@ namespace wi::scene
 							meshlet.triangle_count,
 							meshlet.vertex_count
 						);
-
-						meshopt_Bounds bounds = meshopt_computeMeshletBounds(
-							&meshlet_vertices[meshlet.vertex_offset],
-							&meshlet_triangles[meshlet.triangle_offset],
-							meshlet.triangle_count,
-							&vertex_positions[0].x,
-							vertex_positions.size(),
-							sizeof(XMFLOAT3)
-						);
-
-						ShaderClusterBounds& clusterbound = cluster_bounds.emplace_back();
-						clusterbound.sphere.center.x = bounds.center[0];
-						clusterbound.sphere.center.y = bounds.center[1];
-						clusterbound.sphere.center.z = bounds.center[2];
-						clusterbound.sphere.radius = bounds.radius;
-						clusterbound.cone_axis.x = -bounds.cone_axis[0];
-						clusterbound.cone_axis.y = -bounds.cone_axis[1];
-						clusterbound.cone_axis.z = -bounds.cone_axis[2];
-						clusterbound.cone_cutoff = bounds.cone_cutoff;
-
-						ShaderCluster& cluster = clusters.emplace_back();
-						cluster.vertexCount = meshlet.vertex_count;
-						cluster.triangleCount = meshlet.triangle_count;
-						for (size_t tri = 0; tri < meshlet.triangle_count; ++tri)
-						{
-							cluster.triangles[tri].init(
-								meshlet_triangles[meshlet.triangle_offset + tri * 3 + 0],
-								meshlet_triangles[meshlet.triangle_offset + tri * 3 + 1],
-								meshlet_triangles[meshlet.triangle_offset + tri * 3 + 2]
-							);
-						}
-						for (size_t vert = 0; vert < meshlet.vertex_count; ++vert)
-						{
-							cluster.vertices[vert] = meshlet_vertices[meshlet.vertex_offset + vert];
-						}
+						create_cluster(&meshlet_vertices[meshlet.vertex_offset], &meshlet_triangles[meshlet.triangle_offset], meshlet.vertex_count, meshlet.triangle_count);
 					}
 				}
 			}
@@ -853,6 +997,8 @@ namespace wi::scene
 
 			bd.size = align(bd.size, uint64_t(sizeof(ShaderClusterBounds)));
 			bd.size = align(uint64_t(bd.size + cluster_bounds.size() * sizeof(ShaderClusterBounds)), alignment);
+
+			bd.size = align(uint64_t(bd.size + cluster_lods.size() * sizeof(ShaderClusterLOD)), alignment);
 		}
 
 		auto init_callback = [&](void* dest) {
@@ -1212,6 +1358,13 @@ namespace wi::scene
 				std::memcpy(buffer_data + buffer_offset, cluster_bounds.data(), vb_bou.size);
 				buffer_offset += align(vb_bou.size, alignment);
 			}
+			if (!cluster_lods.empty())
+			{
+				vb_lod.offset = buffer_offset;
+				vb_lod.size = cluster_lods.size() * sizeof(ShaderClusterLOD);
+				std::memcpy(buffer_data + buffer_offset, cluster_lods.data(), vb_lod.size);
+				buffer_offset += align(vb_lod.size, alignment);
+			}
 		};
 
 		// The suballocation strategy is used to have all mesh buffers reside in a global buffer
@@ -1294,6 +1447,11 @@ namespace wi::scene
 			static constexpr uint32_t cluster_stride = sizeof(ShaderClusterBounds);
 			vb_bou.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_bou.offset, vb_bou.size, nullptr, &cluster_stride);
 			vb_bou.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_bou.subresource_srv);
+		}
+		if (vb_lod.IsValid())
+		{
+			vb_lod.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_lod.offset, vb_lod.size);
+			vb_lod.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_lod.subresource_srv);
 		}
 
 		if (!vertex_boneindices.empty() || !morph_targets.empty())

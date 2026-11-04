@@ -677,6 +677,16 @@ functions below are in the global scope (there is no `Renderer` object).
     ---@param value boolean
     function SetMeshletOcclusionCullingEnabled(value) end
 
+    --- Sets the allowed screen space error in pixels for selecting simplified clusters of meshes that use cluster LOD. 0 = always full detail. Default: 1
+    ---
+    ---@param pixels number
+    function SetClusterLODErrorThreshold(pixels) end
+
+    --- Returns the allowed screen space error in pixels for cluster LOD selection.
+    ---
+    ---@return number
+    function GetClusterLODErrorThreshold() end
+
     --- Allows or disallows the use of mesh shaders (if supported).
     ---
     ---@param enabled boolean
@@ -5447,6 +5457,16 @@ handle to retrieve associated components.
     ---
     ---@return integer
     function MeshComponent.CreateSubset() end
+
+    --- Enables continuous level of detail with a hierarchy of simplified clusters (requires mesh shaders, not used for skinned and morphed meshes). The GPU data is rebuilt if it already exists.
+    ---
+    ---@param value boolean
+    function MeshComponent.SetClusterLODEnabled(value) end
+
+    --- Returns whether cluster LOD is enabled.
+    ---
+    ---@return boolean
+    function MeshComponent.IsClusterLODEnabled() end
 ```
 
 #### EmitterComponent
