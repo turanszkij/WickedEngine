@@ -179,6 +179,7 @@ inline long long AtomicAdd(volatile long long* ptr, long long val)
 {
 	return _InterlockedExchangeAdd64(ptr, val);
 }
+#if _MSC_VER >= 1950 // _InterlockedMin/Max intrinsics were added in VS 2026
 inline long AtomicMin(volatile long* ptr, long val)
 {
 	return _InterlockedMin(ptr, val);
@@ -195,6 +196,40 @@ inline long long AtomicMax(volatile long long* ptr, long long val)
 {
 	return _InterlockedMax64(ptr, val);
 }
+#else
+inline long AtomicMin(volatile long* ptr, long val)
+{
+	long old = *ptr;
+	long prev;
+	while (val < old && (prev = _InterlockedCompareExchange(ptr, val, old)) != old)
+		old = prev;
+	return old;
+}
+inline long long AtomicMin(volatile long long* ptr, long long val)
+{
+	long long old = *ptr;
+	long long prev;
+	while (val < old && (prev = _InterlockedCompareExchange64(ptr, val, old)) != old)
+		old = prev;
+	return old;
+}
+inline long AtomicMax(volatile long* ptr, long val)
+{
+	long old = *ptr;
+	long prev;
+	while (val > old && (prev = _InterlockedCompareExchange(ptr, val, old)) != old)
+		old = prev;
+	return old;
+}
+inline long long AtomicMax(volatile long long* ptr, long long val)
+{
+	long long old = *ptr;
+	long long prev;
+	while (val > old && (prev = _InterlockedCompareExchange64(ptr, val, old)) != old)
+		old = prev;
+	return old;
+}
+#endif
 inline unsigned int countbits(unsigned int value)
 {
 	return __popcnt(value);
