@@ -1160,8 +1160,8 @@ namespace wi::terrain
 						const float height = heights_padded[coord.x + coord.y * chunk_width_padded];
 						const XMVECTOR corners[3] = {
 							XMVectorSet(chunk_data.position.x + x, height, chunk_data.position.z + z, 0),
-							XMVectorSet(chunk_data.position.x + x + 1, heights_padded[coord.x + 1 + coord.y * chunk_width_padded], chunk_data.position.z + z, 0),
-							XMVectorSet(chunk_data.position.x + x, heights_padded[coord.x + (coord.y + 1) * chunk_width_padded], chunk_data.position.z + z + 1, 0),
+							XMVectorSet(chunk_data.position.x + x + chunk_scale, heights_padded[coord.x + 1 + coord.y * chunk_width_padded], chunk_data.position.z + z, 0),
+							XMVectorSet(chunk_data.position.x + x, heights_padded[coord.x + (coord.y + 1) * chunk_width_padded], chunk_data.position.z + z + chunk_scale, 0),
 						};
 						const XMVECTOR T = XMVectorSubtract(corners[1], corners[2]);
 						const XMVECTOR B = XMVectorSubtract(corners[0], corners[1]);
