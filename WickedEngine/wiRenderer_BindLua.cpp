@@ -295,6 +295,24 @@ namespace wi::lua::renderer
 		}
 		return 0;
 	}
+	int SetClusterLODErrorThreshold(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			wi::renderer::SetClusterLODErrorThreshold(wi::lua::SGetFloat(L, 1));
+		}
+		else
+		{
+			wi::lua::SError(L, "SetClusterLODErrorThreshold(float pixels) not enough arguments!");
+		}
+		return 0;
+	}
+	int GetClusterLODErrorThreshold(lua_State* L)
+	{
+		wi::lua::SSetFloat(L, wi::renderer::GetClusterLODErrorThreshold());
+		return 1;
+	}
 	int SetCapsuleShadowEnabled(lua_State* L)
 	{
 		int argc = wi::lua::SGetArgCount(L);
@@ -1071,6 +1089,8 @@ namespace wi::lua::renderer
 			wi::lua::RegisterFunc("SetRaytracedShadowsEnabled", SetRaytracedShadowsEnabled);
 			wi::lua::RegisterFunc("SetMeshShaderAllowed", SetMeshShaderAllowed);
 			wi::lua::RegisterFunc("SetMeshletOcclusionCullingEnabled", SetMeshletOcclusionCullingEnabled);
+			wi::lua::RegisterFunc("SetClusterLODErrorThreshold", SetClusterLODErrorThreshold);
+			wi::lua::RegisterFunc("GetClusterLODErrorThreshold", GetClusterLODErrorThreshold);
 			wi::lua::RegisterFunc("SetCapsuleShadowEnabled", SetCapsuleShadowEnabled);
 			wi::lua::RegisterFunc("SetCapsuleShadowFade", SetCapsuleShadowFade);
 			wi::lua::RegisterFunc("SetCapsuleShadowAngle", SetCapsuleShadowAngle);

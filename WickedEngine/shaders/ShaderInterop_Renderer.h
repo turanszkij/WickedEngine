@@ -563,7 +563,7 @@ struct alignas(32) ShaderGeometry
 	int vb_bou;
 
 	int ib_reorder;
-	int padding0;
+	int vb_lod; // optional cluster LOD hierarchy, ShaderClusterLOD per cluster (raw buffer)
 	int padding1;
 	int padding2;
 
@@ -580,6 +580,7 @@ struct alignas(32) ShaderGeometry
 		vb_pre = -1;
 		vb_clu = -1;
 		vb_bou = -1;
+		vb_lod = -1;
 		materialIndex = 0;
 		meshletOffset = 0;
 		meshletCount = 0;
@@ -596,7 +597,6 @@ struct alignas(32) ShaderGeometry
 		indexOffset = 0;
 		indexCount = 0;
 
-		padding0 = 0;
 		padding1 = 0;
 		padding2 = 0;
 	}
@@ -666,6 +666,21 @@ struct alignas(16) ShaderClusterBounds
 
 	float3 cone_axis;
 	float cone_cutoff;
+};
+
+// Cluster LOD hierarchy (DAG) node data, one per cluster. Bounds are in mesh space, errors are absolute in mesh space.
+//	A cluster is selected when its simplified version is too coarse, but its refined source is not:
+//		!ClusterLODCoarseEnough(simplified, simplified_error) && ClusterLODCoarseEnough(refined, refined_error)
+//	simplified: bounds and error of the coarser replacement of this cluster's group (simplified_error is FLT_MAX if the group can't be simplified further)
+//	refined: bounds and error of the finer group that this cluster was simplified from (refined_error is 0 for original geometry)
+struct alignas(16) ShaderClusterLOD
+{
+	ShaderSphere simplified;
+	ShaderSphere refined;
+	float simplified_error;
+	float refined_error;
+	uint padding0;
+	uint padding1;
 };
 
 struct alignas(16) ShaderTransform
@@ -1299,6 +1314,11 @@ struct alignas(16) FrameCB
 	int			texture_cameravolumelut_index;
 	int			texture_wind_index;
 	int			meshletbuffer;
+
+	float		cluster_lod_threshold; // pixels of allowed screen space error for cluster LOD selection
+	float		padding_clusterlod0;
+	float		padding_clusterlod1;
+	float		padding_clusterlod2;
 
 	float4		rain_blocker_mad;
 	float4x4	rain_blocker_matrix;
