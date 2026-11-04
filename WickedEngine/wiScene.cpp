@@ -1352,7 +1352,7 @@ namespace wi::scene
 			}
 			for (auto& child : entities_to_remove)
 			{
-				Entity_Remove(child);
+				Entity_Remove(child, recursive, keep_sorted);
 			}
 		}
 
@@ -1366,12 +1366,8 @@ namespace wi::scene
 			{
 				entry.second.component_manager->Remove(entity);
 			}
-
-			if (topdown_hierarchy.count(entity))
-			{
-				topdown_hierarchy.erase(entity);
-			}
 		}
+		topdown_hierarchy.erase(entity);
 	}
 	Entity Scene::Entity_FindByName(const std::string& name, Entity ancestor)
 	{
