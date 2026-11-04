@@ -226,6 +226,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"depth_reprojectCS", wi::graphics::ShaderStage::CS },
 	{"depth_pyramidCS", wi::graphics::ShaderStage::CS },
 	{"lightmap_expandCS", wi::graphics::ShaderStage::CS },
+	{"meshlet_debugCS", wi::graphics::ShaderStage::CS },
 	{"gaussian_splatCS", wi::graphics::ShaderStage::CS },
 	{"gaussian_splat_indirectCS", wi::graphics::ShaderStage::CS },
 

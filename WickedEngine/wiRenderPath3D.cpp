@@ -1019,6 +1019,11 @@ namespace wi
 
 			device->RenderPassEnd(cmd);
 
+			if (wi::renderer::GetDebugMeshlets())
+			{
+				wi::renderer::RenderDebugMeshlets(rtPrimitiveID, debugUAV, cmd);
+			}
+
 		});
 
 		// Main camera compute effects:
@@ -1800,7 +1805,8 @@ namespace wi
 		if (
 			wi::renderer::GetDebugLightCulling() ||
 			wi::renderer::GetVariableRateShadingClassificationDebug() ||
-			wi::renderer::GetSurfelGIDebugEnabled()
+			wi::renderer::GetSurfelGIDebugEnabled() ||
+			wi::renderer::GetDebugMeshlets()
 			)
 		{
 			fx.enableFullScreen();

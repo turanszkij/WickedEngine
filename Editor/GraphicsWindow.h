@@ -21,6 +21,7 @@ public:
 	wi::gui::CheckBox meshletOcclusionCullingCheckBox;
 	wi::gui::Slider clusterLODSlider;
 	wi::gui::CheckBox shadowLODCheckBox;
+	wi::gui::CheckBox meshletDebugCheckBox;
 	wi::gui::Slider resolutionScaleSlider;
 	wi::gui::Slider streamingSlider;
 	wi::gui::Slider GIBoostSlider;

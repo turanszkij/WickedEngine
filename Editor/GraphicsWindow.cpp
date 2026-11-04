@@ -194,6 +194,15 @@ void GraphicsWindow::Create(EditorComponent* _editor)
 		});
 	AddWidget(&shadowLODCheckBox);
 
+	meshletDebugCheckBox.Create("Meshlet DEBUG: ");
+	meshletDebugCheckBox.SetTooltip("Debug meshlets with colors.");
+	meshletDebugCheckBox.SetPos(XMFLOAT2(x, y += step));
+	meshletDebugCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
+	meshletDebugCheckBox.OnClick([=](wi::gui::EventArgs args) {
+		wi::renderer::SetDebugMeshlets(args.bValue);
+	});
+	AddWidget(&meshletDebugCheckBox);
+
 	GIBoostSlider.Create(1, 10, 1.0f, 1000.0f, "GI Boost: ");
 	GIBoostSlider.SetTooltip("Adjust the strength of GI.\nNote that values other than 1.0 will cause mismatch with path tracing reference!");
 	GIBoostSlider.SetSize(XMFLOAT2(wid, itemheight));
@@ -1790,6 +1799,7 @@ void GraphicsWindow::UpdateData()
 	meshletOcclusionCullingCheckBox.SetCheck(wi::renderer::IsMeshletOcclusionCullingEnabled());
 	clusterLODSlider.SetValue(wi::renderer::GetClusterLODErrorThreshold());
 	shadowLODCheckBox.SetCheck(wi::renderer::IsShadowLODOverrideEnabled());
+	meshletDebugCheckBox.SetCheck(wi::renderer::GetDebugMeshlets());
 	resolutionScaleSlider.SetValue(editor->resolutionScale);
 	streamingSlider.SetValue(wi::resourcemanager::GetStreamingMemoryThreshold());
 	MSAAComboBox.SetSelectedByUserdataWithoutCallback(editor->renderPath->getMSAASampleCount());
@@ -1941,6 +1951,7 @@ void GraphicsWindow::ResizeLayout()
 		meshletOcclusionCullingCheckBox.SetVisible(false);
 		clusterLODSlider.SetVisible(false);
 		shadowLODCheckBox.SetVisible(false);
+		meshletDebugCheckBox.SetVisible(false);
 		tessellationCheckBox.SetVisible(false);
 		meshblendCheckBox.SetVisible(false);
 		reflectionsCheckBox.SetVisible(false);
@@ -1965,6 +1976,7 @@ void GraphicsWindow::ResizeLayout()
 		meshletOcclusionCullingCheckBox.SetVisible(true);
 		clusterLODSlider.SetVisible(true);
 		shadowLODCheckBox.SetVisible(true);
+		meshletDebugCheckBox.SetVisible(true);
 		tessellationCheckBox.SetVisible(true);
 		meshblendCheckBox.SetVisible(true);
 		reflectionsCheckBox.SetVisible(true);
@@ -1980,7 +1992,7 @@ void GraphicsWindow::ResizeLayout()
 		layout.add_right(advancedLightCullingCheckBox, debugLightCullingCheckBox);
 		layout.add_right(occlusionCullingCheckBox);
 		layout.add_right(visibilityComputeShadingCheckBox);
-		layout.add_right(meshShaderCheckBox);
+		layout.add_right(meshletDebugCheckBox, meshShaderCheckBox);
 		layout.add_right(meshletOcclusionCullingCheckBox);
 		layout.add(clusterLODSlider);
 		layout.add_right(shadowLODCheckBox);

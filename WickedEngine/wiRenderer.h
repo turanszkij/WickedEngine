@@ -1083,6 +1083,12 @@ namespace wi::renderer
 		wi::graphics::CommandList cmd
 	);
 
+	void RenderDebugMeshlets(
+		const wi::graphics::Texture& input_primitiveID,
+		const wi::graphics::Texture& output,
+		wi::graphics::CommandList cmd
+	);
+
 	// This performs copies from separate depth and stencil shader resource textures
 	//	into hardware depthStencil buffer that supports depth/stencil testing
 	//	This is only supported by QUEUE_GRAPHICS!
@@ -1301,6 +1307,8 @@ namespace wi::renderer
 	float GetCapsuleShadowFade();
 	void SetShadowLODOverrideEnabled(bool value); // Allow shadowmap rendering to request custom LOD for objects (can result in shadow mismatch, but increased GPU performance)
 	bool IsShadowLODOverrideEnabled();
+	void SetDebugMeshlets(bool enabled);
+	bool GetDebugMeshlets();
 
 	// Switch all debug rendering on/off globally
 	void SetDebugDrawEnabled(bool value);

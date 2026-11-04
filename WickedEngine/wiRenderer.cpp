@@ -157,6 +157,7 @@ float CAPSULE_SHADOW_ANGLE = XM_PIDIV4;
 float CAPSULE_SHADOW_FADE = 0.2f;
 bool SHADOW_LOD_OVERRIDE = true;
 bool DEBUG_DRAW_ENABLED = true;
+bool DEBUG_MESHLETS = false;
 
 Texture shadowMapAtlas;
 Texture shadowMapAtlas_Transparent;
@@ -1227,6 +1228,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_DEPTH_REPROJECT], "depth_reprojectCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_DEPTH_PYRAMID], "depth_pyramidCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_LIGHTMAP_EXPAND], "lightmap_expandCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_MESHLET_DEBUG], "meshlet_debugCS.cso"); });
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::HS, shaders[HSTYPE_OBJECT], "objectHS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::HS, shaders[HSTYPE_OBJECT_PREPASS], "objectHS_prepass.cso"); });
@@ -18850,6 +18852,38 @@ void YUV_to_RGB(
 	device->EventEnd(cmd);
 }
 
+
+void RenderDebugMeshlets(
+	const wi::graphics::Texture& input_primitiveID,
+	const wi::graphics::Texture& output,
+	wi::graphics::CommandList cmd
+)
+{
+	device->EventBegin("Debug meshlets", cmd);
+
+	device->BindComputeShader(&shaders[CSTYPE_MESHLET_DEBUG], cmd);
+
+	const TextureDesc& output_desc = output.GetDesc();
+
+	device->BindResource(&input_primitiveID, 0, cmd);
+
+	const GPUResource* uavs[] = {
+		&output,
+	};
+	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+
+	device->ClearUAV(&output, 0, cmd);
+	device->Barrier(cmd);
+	device->Dispatch(
+		(output_desc.width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		(output_desc.height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		1,
+		cmd
+	);
+
+	device->EventEnd(cmd);
+}
+
 void CopyDepthStencil(
 	const Texture* input_depth,
 	const Texture* input_stencil,
@@ -19674,6 +19708,14 @@ void SetShadowLODOverrideEnabled(bool value)
 bool IsShadowLODOverrideEnabled()
 {
 	return SHADOW_LOD_OVERRIDE;
+}
+void SetDebugMeshlets(bool enabled)
+{
+	DEBUG_MESHLETS = enabled;
+}
+bool GetDebugMeshlets()
+{
+	return DEBUG_MESHLETS;
 }
 
 void SetDebugDrawEnabled(bool value)
