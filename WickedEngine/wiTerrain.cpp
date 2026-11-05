@@ -1010,10 +1010,12 @@ namespace wi::terrain
 					else
 					{
 						// replacement will be made instead of simple merge, entity ID can be reused:
-						generator->scene.names.Create(chunk_data.entity) = std::move(chunk_name);
-						generator->scene.layers.Create(chunk_data.entity);
-						generator->scene.transforms.Create(chunk_data.entity);
-						generator->scene.objects.Create(chunk_data.entity);
+						if (!generator->scene.names.Contains(chunk_data.entity)) generator->scene.names.Create(chunk_data.entity) = std::move(chunk_name);
+						if (!generator->scene.layers.Contains(chunk_data.entity)) generator->scene.layers.Create(chunk_data.entity);
+						if (!generator->scene.transforms.Contains(chunk_data.entity)) generator->scene.transforms.Create(chunk_data.entity);
+						if (!generator->scene.objects.Contains(chunk_data.entity)) generator->scene.objects.Create(chunk_data.entity);
+						generator->scene.materials.Remove(chunk_data.entity);
+						generator->scene.meshes.Remove(chunk_data.entity);
 						generator->removable_chunks.push_back(chunk);
 					}
 					ObjectComponent& object = *generator->scene.objects.GetComponent(chunk_data.entity);
@@ -1239,12 +1241,6 @@ namespace wi::terrain
 						mesh.SetBVHEnabled(true);
 					});
 
-					// If there were any vertices in this chunk that could be
-					// valid for grass, store the grass particle system: Run on
-					// the job pool concurrently with mesh.CreateRenderData()
-					// above: it only reads the finished mesh and writes
-					// chunk_data.grass, so it doesn't conflict with the other
-					// tail tasks.
 					if (grass_valid_vertex_count.load() > 0)
 					{
 						wi::jobsystem::Execute(
@@ -1260,15 +1256,6 @@ namespace wi::terrain
 
 					if (IsPhysicsEnabled())
 					{
-						// Precompute the physics shape on the job pool, because
-						// computing shape for triangle mesh would be slow on
-						// main thread: Note that this is
-						// mesh.precomputed_rigidbody_physics_shape and not a
-						// component in scene.rigidbodies, so this only
-						// contains the shape, not the simulated rigid bodies.
-						// It only reads the mesh and writes its own shape, so
-						// it runs concurrently with the render data and grass
-						// tasks.
 						wi::jobsystem::Execute(
 							ctx,
 							[&](wi::jobsystem::JobArgs args)
@@ -1282,14 +1269,10 @@ namespace wi::terrain
 						});
 					}
 
-					// Create the textures for virtual texture update (runs on
-					// this worker, concurrently with the jobs above):
 					chunk_data.heightmap = {};
 					chunk_data.blendmap  = {};
 					CreateChunkRegionTexture(chunk_data);
 
-					// Wait until the async render data / grass / physics tasks
-					// finish.
 					wi::jobsystem::Wait(ctx);
 				}
 			};
@@ -1347,103 +1330,173 @@ namespace wi::terrain
 							generator->scene.Component_Attach(chunk_data.props_entity, chunk_data.entity, true);
 							chunk_data.prop_density_current = prop_density;
 
-							wi::random::RNG rng(chunk.compute_hash());
-							for (const auto& prop : props)
+							const float chunk_min_x = chunk_data.position.x - chunk_half_width * chunk_scale;
+							const float chunk_min_z = chunk_data.position.z - chunk_half_width * chunk_scale;
+							const float chunk_max_x = chunk_data.position.x + chunk_half_width * chunk_scale;
+							const float chunk_max_z = chunk_data.position.z + chunk_half_width * chunk_scale;
+							const float chunk_side_scale1 = float(chunk_width - 1);
+
+							auto mix_hash = [](uint64_t x) -> uint64_t
 							{
-								const int gen_count = rng.next_int(
-									int(std::floor(float(prop.min_count_per_chunk) * chunk_data.prop_density_current)),
-									int(std::ceil(float(prop.max_count_per_chunk) * chunk_data.prop_density_current))
+								x += 0x9E3779B97F4A7C15ull;
+								x = (x ^ (x >> 30)) * 0xBF58476D1CE4E5B9ull;
+								x = (x ^ (x >> 27)) * 0x94D049BB133111EBull;
+								return x ^ (x >> 31);
+							};
+							auto hash_u01 = [](uint64_t h) -> float
+							{
+								return float(h >> 40) * (1.0f / 16777216.0f);
+							};
+							auto region_at = [&](uint32_t index) -> XMFLOAT4
+							{
+								return wi::Color(
+									chunk_data.blendmap_layers[0].pixels[index],
+									chunk_data.blendmap_layers[1].pixels[index],
+									chunk_data.blendmap_layers[2].pixels[index],
+									chunk_data.blendmap_layers[3].pixels[index]
 								);
-								for (int i = 0; i < gen_count; ++i)
+							};
+							auto spline_at = [&](uint32_t index) -> float
+							{
+								if (chunk_data.spline_blendmap_layers.empty())
 								{
-									const uint32_t tri = rng.next_uint(0, chunk_indices().lods[0].indexCount / 3); // random triangle on the chunk mesh
-									const uint32_t ind0 = chunk_indices().indices[tri * 3 + 0];
-									const uint32_t ind1 = chunk_indices().indices[tri * 3 + 1];
-									const uint32_t ind2 = chunk_indices().indices[tri * 3 + 2];
-									const XMFLOAT3& pos0 = chunk_data.mesh_vertex_positions[ind0];
-									const XMFLOAT3& pos1 = chunk_data.mesh_vertex_positions[ind1];
-									const XMFLOAT3& pos2 = chunk_data.mesh_vertex_positions[ind2];
-									XMFLOAT4 region0 = wi::Color(chunk_data.blendmap_layers[0].pixels[ind0], chunk_data.blendmap_layers[1].pixels[ind0], chunk_data.blendmap_layers[2].pixels[ind0], chunk_data.blendmap_layers[3].pixels[ind0]);
-									XMFLOAT4 region1 = wi::Color(chunk_data.blendmap_layers[0].pixels[ind1], chunk_data.blendmap_layers[1].pixels[ind1], chunk_data.blendmap_layers[2].pixels[ind1], chunk_data.blendmap_layers[3].pixels[ind1]);
-									XMFLOAT4 region2 = wi::Color(chunk_data.blendmap_layers[0].pixels[ind2], chunk_data.blendmap_layers[1].pixels[ind2], chunk_data.blendmap_layers[2].pixels[ind2], chunk_data.blendmap_layers[3].pixels[ind2]);
-									weight_norm(region0);
-									weight_norm(region1);
-									weight_norm(region2);
-									float spline_factor0 = 0;
-									float spline_factor1 = 0;
-									float spline_factor2 = 0;
-									if (!chunk_data.spline_blendmap_layers.empty())
+									return 0.0f;
+								}
+								float factor = 0.0f;
+								for (auto& layer : chunk_data.spline_blendmap_layers)
+								{
+									factor += float(layer.pixels[index]) / 255.0f;
+								}
+								return factor / float(chunk_data.spline_blendmap_layers.size());
+							};
+
+							for (size_t prop_index = 0; prop_index < props.size(); ++prop_index)
+							{
+								const Prop& prop = props[prop_index];
+								if (prop.data.empty())
+								{
+									continue;
+								}
+
+								const float count_min = std::floor(float(prop.min_count_per_chunk) * chunk_data.prop_density_current);
+								const float count_max = std::ceil(float(prop.max_count_per_chunk) * chunk_data.prop_density_current);
+								const float mean_count = 0.5f * (count_min + count_max);
+								if (!(mean_count > 0.0f))
+								{
+									continue;
+								}
+
+								const float cell = chunk_side_scale1 / std::sqrt(mean_count);
+								const float cell_rcp = 1.0f / cell;
+								const int cx0 = (int)std::floor(chunk_min_x * cell_rcp);
+								const int cz0 = (int)std::floor(chunk_min_z * cell_rcp);
+								const int cx1 = (int)std::ceil(chunk_max_x * cell_rcp) - 1;
+								const int cz1 = (int)std::ceil(chunk_max_z * cell_rcp) - 1;
+
+								for (int cz = cz0; cz <= cz1; ++cz)
+								{
+									for (int cx = cx0; cx <= cx1; ++cx)
 									{
-										for (auto& y : chunk_data.spline_blendmap_layers)
+										uint64_t h = mix_hash(uint64_t(uint32_t(cx)) | (uint64_t(uint32_t(cz)) << 32));
+										h = mix_hash(h ^ (uint64_t(prop_index + 1) * 0xD1B54A32D192ED03ull));
+										const float ju = hash_u01(h);
+										h = mix_hash(h);
+										const float jv = hash_u01(h);
+										h = mix_hash(h);
+										const float f0 = hash_u01(h);
+										h = mix_hash(h);
+										const float f1 = hash_u01(h);
+										h = mix_hash(h);
+										const float f2 = hash_u01(h);
+
+										const float world_x = (float(cx) + ju) * cell;
+										const float world_z = (float(cz) + jv) * cell;
+										const float vx = (world_x - chunk_data.position.x) * chunk_scale_rcp + chunk_half_width;
+										const float vz = (world_z - chunk_data.position.z) * chunk_scale_rcp + chunk_half_width;
+										// the far edge belongs to the next chunk.
+										if (vx < 0.0f || vz < 0.0f || vx >= float(chunk_width - 1) || vz >= float(chunk_width - 1))
+											continue;
+
+										const int ix = std::min(int(std::floor(vx)), chunk_width - 2);
+										const int iz = std::min(int(std::floor(vz)), chunk_width - 2);
+										const float tx = vx - float(ix);
+										const float tz = vz - float(iz);
+
+										const uint32_t i00 = uint32_t(ix + iz * chunk_width);
+										const uint32_t i10 = i00 + 1;
+										const uint32_t i01 = i00 + uint32_t(chunk_width);
+										const uint32_t i11 = i01 + 1;
+
+										uint32_t i0 = i00;
+										uint32_t i1 = i10;
+										uint32_t i2 = i01;
+										float w0 = 1.0f - tx - tz;
+										float w1 = tx;
+										float w2 = tz;
+										if (tx + tz > 1.0f)
 										{
-											spline_factor0 += float(y.pixels[ind0]) / 255.0f;
-											spline_factor1 += float(y.pixels[ind1]) / 255.0f;
-											spline_factor2 += float(y.pixels[ind2]) / 255.0f;
+											i0 = i10;
+											i1 = i01;
+											i2 = i11;
+											w0 = 1.0f - tz;
+											w1 = 1.0f - tx;
+											w2 = tx + tz - 1.0f;
 										}
-										const float rcp = 1.0f / float(chunk_data.spline_blendmap_layers.size());
-										spline_factor0 *= rcp;
-										spline_factor1 *= rcp;
-										spline_factor2 *= rcp;
-									}
-									// random barycentric coords on the triangle:
-									float f = rng.next_float();
-									float g = rng.next_float();
-									if (f + g > 1)
-									{
-										f = 1 - f;
-										g = 1 - g;
-									}
-									const XMFLOAT3 vertex_pos = XMFLOAT3(
-										pos0.x + f * (pos1.x - pos0.x) + g * (pos2.x - pos0.x),
-										pos0.y + f * (pos1.y - pos0.y) + g * (pos2.y - pos0.y),
-										pos0.z + f * (pos1.z - pos0.z) + g * (pos2.z - pos0.z)
-									);
-									const XMFLOAT4 region = XMFLOAT4(
-										region0.x + f * (region1.x - region0.x) + g * (region2.x - region0.x),
-										region0.y + f * (region1.y - region0.y) + g * (region2.y - region0.y),
-										region0.z + f * (region1.z - region0.z) + g * (region2.z - region0.z),
-										region0.w + f * (region1.w - region0.w) + g * (region2.w - region0.w)
-									);
-									const float spline_factor = spline_factor0 + f * (spline_factor1 - spline_factor0) + g * (spline_factor2 - spline_factor0);
 
-									// These are always computed, not inside chance branch:
-									const float f0 = rng.next_float();
-									const float f1 = rng.next_float();
-									const float f2 = rng.next_float();
-
-									const float noise = std::pow(perlin_noise.compute((vertex_pos.x + chunk_data.position.x) * prop.noise_frequency, vertex_pos.y * prop.noise_frequency, (vertex_pos.z + chunk_data.position.z) * prop.noise_frequency) * 0.5f + 0.5f, prop.noise_power);
-									const float chance = std::pow(((float*)&region)[clamp(prop.region, 0, 3)], prop.region_power) * noise * (1 - saturate(spline_factor));
-									if (chance > prop.threshold && !prop.data.empty())
-									{
-										// No RNG must happen here, the random generation must be always consistent!
-										wi::Archive archive = wi::Archive(prop.data.data(), prop.data.size());
-										EntitySerializer seri;
-										Entity entity = generator->scene.Entity_Serialize(
-											archive,
-											seri,
-											INVALID_ENTITY,
-											wi::scene::Scene::EntitySerializeFlags::RECURSIVE |
-											wi::scene::Scene::EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES
+										const XMFLOAT3& p0 = chunk_data.mesh_vertex_positions[i0];
+										const XMFLOAT3& p1 = chunk_data.mesh_vertex_positions[i1];
+										const XMFLOAT3& p2 = chunk_data.mesh_vertex_positions[i2];
+										const XMFLOAT3 vertex_pos = XMFLOAT3(
+											p0.x * w0 + p1.x * w1 + p2.x * w2,
+											p0.y * w0 + p1.y * w1 + p2.y * w2,
+											p0.z * w0 + p1.z * w1 + p2.z * w2
 										);
-										NameComponent* name = generator->scene.names.GetComponent(entity);
-										if (name != nullptr)
+
+										const XMFLOAT4 r0 = region_at(i0);
+										const XMFLOAT4 r1 = region_at(i1);
+										const XMFLOAT4 r2 = region_at(i2);
+										XMFLOAT4 region = XMFLOAT4(
+											r0.x * w0 + r1.x * w1 + r2.x * w2,
+											r0.y * w0 + r1.y * w1 + r2.y * w2,
+											r0.z * w0 + r1.z * w1 + r2.z * w2,
+											r0.w * w0 + r1.w * w1 + r2.w * w2
+										);
+										weight_norm(region);
+										const float spline_factor = spline_at(i0) * w0 + spline_at(i1) * w1 + spline_at(i2) * w2;
+
+										const float noise = std::pow(saturate(perlin_noise.compute(world_x * prop.noise_frequency, vertex_pos.y * prop.noise_frequency, world_z * prop.noise_frequency) * 0.5f + 0.5f), prop.noise_power);
+										const float chance = std::pow(((float*)&region)[clamp(prop.region, 0, 3)], prop.region_power) * noise * (1 - saturate(spline_factor));
+										if (chance > prop.threshold)
 										{
-											name->name += std::to_string(i);
+											wi::Archive archive = wi::Archive(prop.data.data(), prop.data.size());
+											EntitySerializer seri;
+											Entity entity = generator->scene.Entity_Serialize(
+												archive,
+												seri,
+												INVALID_ENTITY,
+												wi::scene::Scene::EntitySerializeFlags::RECURSIVE |
+												wi::scene::Scene::EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES
+											);
+											NameComponent* name = generator->scene.names.GetComponent(entity);
+											if (name != nullptr)
+											{
+												name->name += std::to_string(cx) + "_" + std::to_string(cz);
+											}
+											TransformComponent* transform = generator->scene.transforms.GetComponent(entity);
+											if (transform == nullptr)
+											{
+												transform = &generator->scene.transforms.Create(entity);
+											}
+											transform->translation_local = vertex_pos;
+											transform->translation_local.y += lerp(prop.min_y_offset, prop.max_y_offset, f0);
+											const float scaling = lerp(prop.min_size, prop.max_size, f1);
+											transform->Scale(XMFLOAT3(scaling, scaling, scaling));
+											transform->RotateRollPitchYaw(XMFLOAT3(0, XM_2PI * f2, 0));
+											transform->SetDirty();
+											transform->UpdateTransform();
+											generator->scene.Component_Attach(entity, chunk_data.props_entity, true);
+											generated_something = true;
 										}
-										TransformComponent* transform = generator->scene.transforms.GetComponent(entity);
-										if (transform == nullptr)
-										{
-											transform = &generator->scene.transforms.Create(entity);
-										}
-										transform->translation_local = vertex_pos;
-										transform->translation_local.y += lerp(prop.min_y_offset, prop.max_y_offset, f0);
-										const float scaling = lerp(prop.min_size, prop.max_size, f1);
-										transform->Scale(XMFLOAT3(scaling, scaling, scaling));
-										transform->RotateRollPitchYaw(XMFLOAT3(0, XM_2PI * f2, 0));
-										transform->SetDirty();
-										transform->UpdateTransform();
-										generator->scene.Component_Attach(entity, chunk_data.props_entity, true);
-										generated_something = true;
 									}
 								}
 							}
