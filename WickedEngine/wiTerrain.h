@@ -219,7 +219,7 @@ namespace wi::terrain
 	{
 		wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
 		wi::ecs::Entity grass_entity = wi::ecs::INVALID_ENTITY;
-		wi::ecs::Entity props_entity = wi::ecs::INVALID_ENTITY;
+		wi::ecs::Entity props_entity = wi::ecs::INVALID_ENTITY; // legacy prop root parented to this chunk; dropped on the next update
 		float prop_density_current = 1;
 		float grass_density_current = 1;
 		const XMFLOAT3* mesh_vertex_positions = nullptr;
@@ -288,7 +288,14 @@ namespace wi::terrain
 		wi::HairParticleSystem grass_properties;
 		wi::scene::MaterialComponent grass_material;
 		wi::unordered_map<Chunk, ChunkData> chunks;
+		struct PropChunkData
+		{
+			wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
+			float prop_density_current = 1;
+		};
+		wi::unordered_map<Chunk, PropChunkData> prop_chunks;
 		Chunk center_chunk;
+		Chunk prop_center_chunk;
 		wi::noise::Perlin perlin_noise;
 		wi::vector<Prop> props;
 		int grass_chunk_dist = 1;
@@ -376,6 +383,9 @@ namespace wi::terrain
 		wi::vector<wi::scene::MaterialComponent> materials; // temp storage allocation
 		float chunk_scale_rcp = 1.0f / chunk_scale;
 		float cam_height = 0;
+
+		bool RemovePropChunksOverlapping(const Chunk& terrain_chunk);
+		bool PlacePropChunk(const Chunk& prop_chunk);
 	};
 
 	struct Modifier
