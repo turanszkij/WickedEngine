@@ -1593,6 +1593,13 @@ namespace wi::terrain
 					|| it->second.entity == INVALID_ENTITY
 					|| it->second.invalidated
 				) {
+					for (const Chunk& queued : generator->build_batch)
+					{
+						if (queued == chunk)
+						{
+							return true;
+						}
+					}
 					generator->build_batch.push_back(chunk);
 
 					if (generator->build_batch.size() >= batch_capacity)
@@ -1630,7 +1637,7 @@ namespace wi::terrain
 					auto it = chunks.find(chunk);
 					if (it != chunks.end() && it->second.invalidated) // Check here too in this special case, because multiple of the same entries can easily exist on the queue. Already refreshes chunks will not be refreshed again
 					{
-						if (!request_chunk(chunk.x, chunk.z))
+						if (!request_chunk(chunk.x - center_chunk.x, chunk.z - center_chunk.z))
 						{
 							return;
 						}
