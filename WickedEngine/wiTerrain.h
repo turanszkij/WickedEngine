@@ -219,7 +219,7 @@ namespace wi::terrain
 	{
 		wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
 		wi::ecs::Entity grass_entity = wi::ecs::INVALID_ENTITY;
-		wi::ecs::Entity props_entity = wi::ecs::INVALID_ENTITY;
+		wi::ecs::Entity props_entity_old = wi::ecs::INVALID_ENTITY; // prop entity for earlier terrain version
 		float prop_density_current = 1;
 		float grass_density_current = 1;
 		const XMFLOAT3* mesh_vertex_positions = nullptr;
@@ -248,13 +248,12 @@ namespace wi::terrain
 	{
 		wi::vector<uint8_t> data; // serialized component data storage
 		wi::ecs::Entity source_entity = wi::ecs::INVALID_ENTITY; // the original entity that this prop was serialized from
-		int min_count_per_chunk = 0; // a chunk will try to generate min this many props of this type
-		int max_count_per_chunk = 10; // a chunk will try to generate max this many props of this type
+		float density = 10; // target count on one unscaled chunk
+		float clumping = 0; // clumping of distribution
+		float clump_spacing = 64; // spacing of clumps
+		uint32_t seed = 0; // placement distribuiton seed
 		int region = 0; // region selection in range [0,3] (0: base/grass, 1: slopes, 2: low altitude (bottom level-0), 3: high altitude (0-top level))
 		float region_power = 1; // region weight affection power factor
-		float noise_frequency = 1; // perlin noise's frequency for placement factor
-		float noise_power = 1; // perlin noise's power
-		float threshold = 0.5f; // the chance of placement (higher is less chance)
 		float min_size = 1; // scaling randomization range min
 		float max_size = 1; // scaling randomization range max
 		float min_y_offset = 0; // min randomized offset on Y axis
@@ -288,7 +287,14 @@ namespace wi::terrain
 		wi::HairParticleSystem grass_properties;
 		wi::scene::MaterialComponent grass_material;
 		wi::unordered_map<Chunk, ChunkData> chunks;
+		struct PropChunkData
+		{
+			wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
+			float prop_density_current = 1;
+		};
+		wi::unordered_map<Chunk, PropChunkData> prop_chunks;
 		Chunk center_chunk;
+		Chunk prop_center_chunk;
 		wi::noise::Perlin perlin_noise;
 		wi::vector<Prop> props;
 		int grass_chunk_dist = 1;
@@ -376,6 +382,9 @@ namespace wi::terrain
 		wi::vector<wi::scene::MaterialComponent> materials; // temp storage allocation
 		float chunk_scale_rcp = 1.0f / chunk_scale;
 		float cam_height = 0;
+
+		bool RemovePropChunksOverlapping(const Chunk& terrain_chunk);
+		bool PlacePropChunk(const Chunk& prop_chunk);
 	};
 
 	struct Modifier

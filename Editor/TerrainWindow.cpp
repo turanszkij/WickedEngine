@@ -258,8 +258,8 @@ void HeightmapModifierWindow::From(wi::terrain::HeightmapModifier* ptr)
 	amountSlider.SetValue(ptr->amount);
 }
 
-PropWindow::PropWindow(wi::terrain::Terrain* terrain, wi::terrain::Prop* prop, wi::scene::Scene* scene)
-	:prop(prop)
+PropWindow::PropWindow(wi::terrain::Terrain* terrain, wi::terrain::Prop* prop_ptr, wi::scene::Scene* scene)
+	:prop(prop_ptr)
 	,scene(scene)
 {
 	if (terrain == nullptr)
@@ -337,27 +337,45 @@ PropWindow::PropWindow(wi::terrain::Terrain* terrain, wi::terrain::Prop* prop, w
 		generation_callback();
 	});
 
-	minCountPerChunkInput.Create("");
-	minCountPerChunkInput.SetDescription("Min count per chunk: ");
-	minCountPerChunkInput.SetSize(elementSize);
-	minCountPerChunkInput.SetValue(prop->min_count_per_chunk);
-	minCountPerChunkInput.SetTooltip("A chunk will try to generate min this many props of this type");
-	minCountPerChunkInput.OnInputAccepted([=](wi::gui::EventArgs args) {
-		prop->min_count_per_chunk = std::min(prop->max_count_per_chunk, args.iValue);
+	densitySlider.Create(0.0f, 64.0f, 10.0f, 1000, "Density: ");
+	densitySlider.SetSize(elementSize);
+	densitySlider.SetValue(prop->density);
+	densitySlider.SetTooltip("How many props to place on each unscaled chunk");
+	densitySlider.OnSlide([=](wi::gui::EventArgs args) {
+		prop->density = std::max(0.0f, args.fValue);
 		generation_callback();
 	});
-	AddWidget(&minCountPerChunkInput);
+	AddWidget(&densitySlider);
 
-	maxCountPerChunkInput.Create("");
-	maxCountPerChunkInput.SetDescription("Max count per chunk: ");
-	maxCountPerChunkInput.SetSize(elementSize);
-	maxCountPerChunkInput.SetValue(prop->max_count_per_chunk);
-	maxCountPerChunkInput.SetTooltip("A chunk will try to generate max this many props of this type");
-	maxCountPerChunkInput.OnInputAccepted([=](wi::gui::EventArgs args) {
-		prop->max_count_per_chunk = std::max(prop->min_count_per_chunk, args.iValue);
+	clumpingSlider.Create(0.0f, 1.0f, 0.0f, 1000, "Clumping: ");
+	clumpingSlider.SetSize(elementSize);
+	clumpingSlider.SetValue(prop->clumping);
+	clumpingSlider.SetTooltip("Clumping of prop distribution");
+	clumpingSlider.OnSlide([=](wi::gui::EventArgs args) {
+		prop->clumping = saturate(args.fValue);
 		generation_callback();
 	});
-	AddWidget(&maxCountPerChunkInput);
+	AddWidget(&clumpingSlider);
+
+	spacingSlider.Create(8.0f, 256.0f, 64.0f, 248.0f, "Clump spacing: ");
+	spacingSlider.SetSize(elementSize);
+	spacingSlider.SetValue(prop->clump_spacing);
+	spacingSlider.SetTooltip("Spacing of clumpiness");
+	spacingSlider.OnSlide([=](wi::gui::EventArgs args) {
+		prop->clump_spacing = std::max(1.0f, args.fValue);
+		generation_callback();
+	});
+	AddWidget(&spacingSlider);
+
+	seedSlider.Create(0, 99999, 0, 99999, "Seed: ");
+	seedSlider.SetSize(elementSize);
+	seedSlider.SetValue((float)prop->seed);
+	seedSlider.SetTooltip("Distribution seed");
+	seedSlider.OnSlide([=](wi::gui::EventArgs args) {
+		prop->seed = (uint32_t)std::max(0.0f, args.fValue);
+		generation_callback();
+	});
+	AddWidget(&seedSlider);
 
 	regionCombo.Create("Region: ");
 	regionCombo.SetTooltip("Select a terrain region");
@@ -373,45 +391,15 @@ PropWindow::PropWindow(wi::terrain::Terrain* terrain, wi::terrain::Prop* prop, w
 	});
 	AddWidget(&regionCombo);
 
-	regionPowerSlider.Create(0.0f, 1.0f, 1.0f, 1000, "Region power: ");
+	regionPowerSlider.Create(0.0f, 8.0f, 1.0f, 1000, "Region power: ");
 	regionPowerSlider.SetSize(elementSize);
 	regionPowerSlider.SetValue(prop->region_power);
-	regionPowerSlider.SetTooltip("Region weight affection power factor");
+	regionPowerSlider.SetTooltip("0 = full region occupancy, higher: where region is blended out, the prop density will be reduced.");
 	regionPowerSlider.OnSlide([=](wi::gui::EventArgs args) {
 		prop->region_power = args.fValue;
 		generation_callback();
 		});
 	AddWidget(&regionPowerSlider);
-
-	noiseFrequencySlider.Create(0.0f, 1.0f, 1.0f, 1000, "Noise frequency: ");
-	noiseFrequencySlider.SetSize(elementSize);
-	noiseFrequencySlider.SetValue(prop->noise_frequency);
-	noiseFrequencySlider.SetTooltip("Perlin noise's frequency for placement factor");
-	noiseFrequencySlider.OnSlide([=](wi::gui::EventArgs args) {
-		prop->noise_frequency = args.fValue;
-		generation_callback();
-		});
-	AddWidget(&noiseFrequencySlider);
-
-	noisePowerSlider.Create(0.0f, 1.0f, 1.0f, 1000, "Noise pwer: ");
-	noisePowerSlider.SetSize(elementSize);
-	noisePowerSlider.SetValue(prop->noise_power);
-	noisePowerSlider.SetTooltip("Perlin noise's power");
-	noisePowerSlider.OnSlide([=](wi::gui::EventArgs args) {
-		prop->noise_power = args.fValue;
-		generation_callback();
-		});
-	AddWidget(&noisePowerSlider);
-
-	thresholdSlider.Create(0.0f, 1.0f, 0.5f, 1000, "Threshold: ");
-	thresholdSlider.SetSize(elementSize);
-	thresholdSlider.SetValue(prop->threshold);
-	thresholdSlider.SetTooltip("The chance of placement (higher is less chance)");
-	thresholdSlider.OnSlide([=](wi::gui::EventArgs args) {
-		prop->threshold = args.fValue;
-		generation_callback();
-	});
-	AddWidget(&thresholdSlider);
 
 	minSizeSlider.Create(0.0f, 10.0f, 1.0f, 1000, "Min size: ");
 	minSizeSlider.SetSize(elementSize);
@@ -466,13 +454,12 @@ void PropWindow::ResizeLayout()
 	layout.margin_left = 150;
 
 	layout.add(meshCombo);
-	layout.add(minCountPerChunkInput);
-	layout.add(maxCountPerChunkInput);
+	layout.add(densitySlider);
+	layout.add(clumpingSlider);
+	layout.add(spacingSlider);
+	layout.add(seedSlider);
 	layout.add(regionCombo);
 	layout.add(regionPowerSlider);
-	layout.add(noiseFrequencySlider);
-	layout.add(noisePowerSlider);
-	layout.add(thresholdSlider);
 	layout.add(minSizeSlider);
 	layout.add(maxSizeSlider);
 	layout.add(minYOffsetInput);
@@ -1654,13 +1641,27 @@ void TerrainWindow::SetupAssets()
 
 		wi::terrain::Prop& prop = terrain_preset.props.emplace_back();
 
-		if (section.Has("min_count_per_chunk"))
+		if (section.Has("density"))
 		{
-			prop.min_count_per_chunk = section.GetInt("min_count_per_chunk");
+			prop.density = section.GetFloat("density");
 		}
-		if (section.Has("max_count_per_chunk"))
+		else if (section.Has("min_count_per_chunk") || section.Has("max_count_per_chunk"))
 		{
-			prop.max_count_per_chunk = section.GetInt("max_count_per_chunk");
+			const int min_count = section.Has("min_count_per_chunk") ? section.GetInt("min_count_per_chunk") : 0;
+			const int max_count = section.Has("max_count_per_chunk") ? section.GetInt("max_count_per_chunk") : 10;
+			prop.density = 0.5f * float(min_count + max_count);
+		}
+		if (section.Has("clumping"))
+		{
+			prop.clumping = section.GetFloat("clumping");
+		}
+		if (section.Has("clump_spacing"))
+		{
+			prop.clump_spacing = std::max(1.0f, section.GetFloat("clump_spacing"));
+		}
+		if (section.Has("seed"))
+		{
+			prop.seed = (uint32_t)std::max(0, section.GetInt("seed"));
 		}
 		if (section.Has("region"))
 		{
@@ -1669,18 +1670,6 @@ void TerrainWindow::SetupAssets()
 		if (section.Has("region_power"))
 		{
 			prop.region_power = section.GetFloat("region_power");
-		}
-		if (section.Has("noise_frequency"))
-		{
-			prop.noise_frequency = section.GetFloat("noise_frequency");
-		}
-		if (section.Has("noise_power"))
-		{
-			prop.noise_power = section.GetFloat("noise_power");
-		}
-		if (section.Has("threshold"))
-		{
-			prop.threshold = section.GetFloat("threshold");
 		}
 		if (section.Has("min_size"))
 		{
