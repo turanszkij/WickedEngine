@@ -652,7 +652,7 @@ namespace wi::terrain
 			}
 		}
 
-		// Prop footprint is the chunk_scale = 1 cell: 66m, half-open on the far edges.
+		// Prop gen is fixed at chunk_scale=1
 		const float prop_pos_x = float(prop_chunk.x * (chunk_width - 1));
 		const float prop_pos_z = float(prop_chunk.z * (chunk_width - 1));
 		const float prop_min_x = prop_pos_x - chunk_half_width;
