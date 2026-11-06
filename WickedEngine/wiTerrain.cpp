@@ -1126,7 +1126,7 @@ namespace wi::terrain
 			{
 				ChunkData& chunk_data = it->second;
 				scene->Entity_Remove(chunk_data.entity);
-				chunk_data.props_entity = INVALID_ENTITY;
+				chunk_data.props_entity_old = INVALID_ENTITY;
 				props_regenerated |= RemovePropChunksOverlapping(chunk);
 				if (chunk_data.vt != nullptr)
 				{
@@ -1249,10 +1249,10 @@ namespace wi::terrain
 			}
 
 			// old prop remove:
-			if (chunk_data.props_entity != INVALID_ENTITY)
+			if (chunk_data.props_entity_old != INVALID_ENTITY)
 			{
-				scene->Entity_Remove(chunk_data.props_entity);
-				chunk_data.props_entity = INVALID_ENTITY;
+				scene->Entity_Remove(chunk_data.props_entity_old);
+				chunk_data.props_entity_old = INVALID_ENTITY;
 				props_regenerated = true;
 			}
 
@@ -3057,7 +3057,7 @@ namespace wi::terrain
 				ChunkData& chunk_data = chunks[chunk];
 				SerializeEntity(archive, chunk_data.entity, seri);
 				SerializeEntity(archive, chunk_data.grass_entity, seri);
-				SerializeEntity(archive, chunk_data.props_entity, seri);
+				SerializeEntity(archive, chunk_data.props_entity_old, seri);
 				archive >> chunk_data.prop_density_current;
 
 				seri.version = grass_version;
@@ -3211,7 +3211,7 @@ namespace wi::terrain
 				ChunkData& chunk_data = it.second;
 				SerializeEntity(archive, chunk_data.entity, seri);
 				SerializeEntity(archive, chunk_data.grass_entity, seri);
-				SerializeEntity(archive, chunk_data.props_entity, seri);
+				SerializeEntity(archive, chunk_data.props_entity_old, seri);
 				archive << chunk_data.prop_density_current;
 
 				seri.version = grass_version;

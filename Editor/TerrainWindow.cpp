@@ -394,7 +394,7 @@ PropWindow::PropWindow(wi::terrain::Terrain* terrain, wi::terrain::Prop* prop_pt
 	regionPowerSlider.Create(0.0f, 8.0f, 1.0f, 1000, "Region power: ");
 	regionPowerSlider.SetSize(elementSize);
 	regionPowerSlider.SetValue(prop->region_power);
-	regionPowerSlider.SetTooltip("Raises the region weight to this power. Higher keeps props out of other regions.\nA full slope or altitude band is weight 0.5, so 2 and above leaves those to their own region.");
+	regionPowerSlider.SetTooltip("0 = full region occupancy, higher: where region is blended out, the prop density will be reduced.");
 	regionPowerSlider.OnSlide([=](wi::gui::EventArgs args) {
 		prop->region_power = args.fValue;
 		generation_callback();
@@ -742,7 +742,7 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	AddWidget(&physicsGenerationSlider);
 
 	propDensitySlider.Create(0, 10, 1, 1000, "Prop Density: ");
-	propDensitySlider.SetTooltip("Placement density");
+	propDensitySlider.SetTooltip("Modifies overall prop density.");
 	propDensitySlider.SetSize(XMFLOAT2(wid, hei));
 	propDensitySlider.SetPos(XMFLOAT2(x, y += step));
 	propDensitySlider.OnSlide([this](wi::gui::EventArgs args) {

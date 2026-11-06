@@ -219,7 +219,7 @@ namespace wi::terrain
 	{
 		wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
 		wi::ecs::Entity grass_entity = wi::ecs::INVALID_ENTITY;
-		wi::ecs::Entity props_entity = wi::ecs::INVALID_ENTITY; // legacy prop root parented to this chunk; dropped on the next update
+		wi::ecs::Entity props_entity_old = wi::ecs::INVALID_ENTITY; // prop entity for earlier terrain version
 		float prop_density_current = 1;
 		float grass_density_current = 1;
 		const XMFLOAT3* mesh_vertex_positions = nullptr;
