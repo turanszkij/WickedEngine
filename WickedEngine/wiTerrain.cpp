@@ -967,7 +967,7 @@ namespace wi::terrain
 						const float spline_factor = spline_at(*cached, i0) * w0 + spline_at(*cached, i1) * w1 + spline_at(*cached, i2) * w2;
 
 						const float region_weight = ((float*)&region)[clamp(prop.region, 0, 3)];
-						const float chance = std::pow(region_weight, prop.region_power) * (1.0f - saturate(spline_factor));
+						const float chance = (prop.region_power > 0 ? std::pow(region_weight, prop.region_power) : 1.0f) * (1.0f - saturate(spline_factor));
 						if (chance >= 0.5f)
 						{
 							wi::Archive archive = wi::Archive(prop.data.data(), prop.data.size());
@@ -3026,8 +3026,9 @@ namespace wi::terrain
 					archive >> noise_frequency;
 					archive >> noise_power;
 					archive >> threshold;
-					prop.density = 0.5f * float(min_count + max_count);
+					prop.density = float(min_count + max_count) * 0.5f;
 					prop.seed = 0;
+					prop.region_power *= 2;
 
 					const float freq = noise_frequency > 1.0e-6f ? noise_frequency : 1.0e-6f;
 					const float wavelength = 1.0f / freq;
