@@ -50,13 +50,12 @@ struct HeightmapModifierWindow : public ModifierWindow
 struct PropWindow : public wi::gui::Window
 {
 	wi::gui::ComboBox meshCombo;
-	wi::gui::TextInputField minCountPerChunkInput;
-	wi::gui::TextInputField maxCountPerChunkInput;
+	wi::gui::Slider densitySlider;
+	wi::gui::Slider clumpingSlider;
+	wi::gui::Slider spacingSlider;
+	wi::gui::Slider seedSlider;
 	wi::gui::ComboBox regionCombo;
 	wi::gui::Slider regionPowerSlider;
-	wi::gui::Slider noiseFrequencySlider;
-	wi::gui::Slider noisePowerSlider;
-	wi::gui::Slider thresholdSlider;
 	wi::gui::Slider minSizeSlider;
 	wi::gui::Slider maxSizeSlider;
 	wi::gui::TextInputField minYOffsetInput;

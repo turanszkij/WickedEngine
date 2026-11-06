@@ -224,12 +224,12 @@ namespace wi::terrain
 		weights.w *= norm;
 	};
 
-	static int world_to_chunk_index(float world_pos, float scale, float scale_rcp)
+	inline int world_to_chunk_index(float world_pos, float scale, float scale_rcp)
 	{
 		return (int)std::floor((world_pos + chunk_half_width * scale) * chunk_width_rcp * scale_rcp);
 	}
 
-	static void overlapped_chunk_range(float min_world, float max_world, float scale, float scale_rcp, int& index_min, int& index_max)
+	inline void overlapped_chunk_range(float min_world, float max_world, float scale, float scale_rcp, int& index_min, int& index_max)
 	{
 		index_min = world_to_chunk_index(min_world, scale, scale_rcp);
 		const int end_index = world_to_chunk_index(max_world, scale, scale_rcp);
@@ -714,7 +714,6 @@ namespace wi::terrain
 		generator->scene.names.Create(prop_data.entity) = "props";
 		generator->scene.Component_Attach(prop_data.entity, chunkGroupEntity);
 
-		const float chunk_side_scale1 = float(chunk_width - 1);
 		auto mix_hash = [](uint64_t x) -> uint64_t
 		{
 			x += 0x9E3779B97F4A7C15ull;
@@ -762,148 +761,251 @@ namespace wi::terrain
 				continue;
 			}
 
-			const float count_min = std::floor(float(prop.min_count_per_chunk) * prop_data.prop_density_current);
-			const float count_max = std::ceil(float(prop.max_count_per_chunk) * prop_data.prop_density_current);
-			const float mean_count = 0.5f * (count_min + count_max);
+			const float mean_count = prop.density * prop_data.prop_density_current;
 			if (!(mean_count > 0.0f))
 			{
 				continue;
 			}
 
-			const float cell = chunk_side_scale1 / std::sqrt(mean_count);
-			const float cell_rcp = 1.0f / cell;
-			const int cx0 = (int)std::floor(prop_min_x * cell_rcp);
-			const int cz0 = (int)std::floor(prop_min_z * cell_rcp);
-			const int cx1 = (int)std::ceil(prop_max_x * cell_rcp) - 1;
-			const int cz1 = (int)std::ceil(prop_max_z * cell_rcp) - 1;
+			constexpr float chunk_side = float(chunk_width - 1);
+			constexpr float cell = chunk_side / 8.0f;
+			constexpr float cell_rcp = 1.0f / cell;
+			const float clump = saturate(prop.clumping);
+			const float spacing = std::max(prop.clump_spacing, 1.0f);
+			const float spacing_rcp = 1.0f / spacing;
+			const float radius_frac = lerp(1.0f, 0.28f, clump);
+			const float keep = mean_count * (1.0f / 64.0f);
+			int slot_count = 1;
+			if (keep > 1.0f)
+			{
+				slot_count = (int)std::ceil(std::min(keep, 16.0f));
+			}
+			const int cx0 = (int)std::floor(prop_min_x * cell_rcp) - 1;
+			const int cz0 = (int)std::floor(prop_min_z * cell_rcp) - 1;
+			const int cx1 = (int)std::ceil(prop_max_x * cell_rcp);
+			const int cz1 = (int)std::ceil(prop_max_z * cell_rcp);
 
 			for (int cz = cz0; cz <= cz1; ++cz)
 			{
 				for (int cx = cx0; cx <= cx1; ++cx)
 				{
-					uint64_t h = mix_hash(uint64_t(uint32_t(cx)) | (uint64_t(uint32_t(cz)) << 32));
-					h = mix_hash(h ^ (uint64_t(prop_index + 1) * 0xD1B54A32D192ED03ull));
-					const float ju = hash_u01(h);
-					h = mix_hash(h);
-					const float jv = hash_u01(h);
-					h = mix_hash(h);
-					const float f0 = hash_u01(h);
-					h = mix_hash(h);
-					const float f1 = hash_u01(h);
-					h = mix_hash(h);
-					const float f2 = hash_u01(h);
-
-					const float world_x = (float(cx) + ju) * cell;
-					const float world_z = (float(cz) + jv) * cell;
-					if (world_x < prop_min_x || world_z < prop_min_z || world_x >= prop_max_x || world_z >= prop_max_z)
+					for (int slot = 0; slot < slot_count; ++slot)
 					{
-						continue;
-					}
-
-					Chunk terrain_chunk;
-					terrain_chunk.x = world_to_chunk_index(world_x, chunk_scale, chunk_scale_rcp);
-					terrain_chunk.z = world_to_chunk_index(world_z, chunk_scale, chunk_scale_rcp);
-					if (!cache_valid || !(cached_chunk == terrain_chunk))
-					{
-						auto it = chunks.find(terrain_chunk);
-						cache_valid = it != chunks.end();
-						cached_chunk = terrain_chunk;
-						cached = cache_valid ? &it->second : nullptr;
-					}
-					if (!cache_valid || cached->mesh_vertex_positions == nullptr)
-					{
-						continue;
-					}
-
-					const float vx = (world_x - cached->position.x) * chunk_scale_rcp + chunk_half_width;
-					const float vz = (world_z - cached->position.z) * chunk_scale_rcp + chunk_half_width;
-					if (vx < 0.0f || vz < 0.0f || vx >= float(chunk_width - 1) || vz >= float(chunk_width - 1))
-					{
-						continue;
-					}
-
-					const int ix = std::min(int(std::floor(vx)), chunk_width - 2);
-					const int iz = std::min(int(std::floor(vz)), chunk_width - 2);
-					const float tx = vx - float(ix);
-					const float tz = vz - float(iz);
-
-					const uint32_t i00 = uint32_t(ix + iz * chunk_width);
-					const uint32_t i10 = i00 + 1;
-					const uint32_t i01 = i00 + uint32_t(chunk_width);
-					const uint32_t i11 = i01 + 1;
-
-					uint32_t i0 = i00;
-					uint32_t i1 = i10;
-					uint32_t i2 = i01;
-					float w0 = 1.0f - tx - tz;
-					float w1 = tx;
-					float w2 = tz;
-					if (tx + tz > 1.0f)
-					{
-						i0 = i10;
-						i1 = i01;
-						i2 = i11;
-						w0 = 1.0f - tz;
-						w1 = 1.0f - tx;
-						w2 = tx + tz - 1.0f;
-					}
-
-					const XMFLOAT3& p0 = cached->mesh_vertex_positions[i0];
-					const XMFLOAT3& p1 = cached->mesh_vertex_positions[i1];
-					const XMFLOAT3& p2 = cached->mesh_vertex_positions[i2];
-					const XMFLOAT3 vertex_pos = XMFLOAT3(
-						p0.x * w0 + p1.x * w1 + p2.x * w2,
-						p0.y * w0 + p1.y * w1 + p2.y * w2,
-						p0.z * w0 + p1.z * w1 + p2.z * w2
-					);
-
-					const XMFLOAT4 r0 = region_at(*cached, i0);
-					const XMFLOAT4 r1 = region_at(*cached, i1);
-					const XMFLOAT4 r2 = region_at(*cached, i2);
-					XMFLOAT4 region = XMFLOAT4(
-						r0.x * w0 + r1.x * w1 + r2.x * w2,
-						r0.y * w0 + r1.y * w1 + r2.y * w2,
-						r0.z * w0 + r1.z * w1 + r2.z * w2,
-						r0.w * w0 + r1.w * w1 + r2.w * w2
-					);
-					weight_norm(region);
-					const float spline_factor = spline_at(*cached, i0) * w0 + spline_at(*cached, i1) * w1 + spline_at(*cached, i2) * w2;
-
-					const float noise = std::pow(saturate(perlin_noise.compute(world_x * prop.noise_frequency, vertex_pos.y * prop.noise_frequency, world_z * prop.noise_frequency) * 0.5f + 0.5f), prop.noise_power);
-					const float chance = std::pow(((float*)&region)[clamp(prop.region, 0, 3)], prop.region_power) * noise * (1 - saturate(spline_factor));
-					if (chance > prop.threshold)
-					{
-						wi::Archive archive = wi::Archive(prop.data.data(), prop.data.size());
-						EntitySerializer seri;
-						Entity entity = generator->scene.Entity_Serialize(
-							archive,
-							seri,
-							INVALID_ENTITY,
-							wi::scene::Scene::EntitySerializeFlags::RECURSIVE |
-							wi::scene::Scene::EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES
-						);
-						NameComponent* name = generator->scene.names.GetComponent(entity);
-						if (name != nullptr)
+						uint64_t h = mix_hash(uint64_t(uint32_t(cx)) | (uint64_t(uint32_t(cz)) << 32));
+						h = mix_hash(h ^ (uint64_t(prop.seed) * 0x9E3779B97F4A7C15ull + 1ull));
+						h = mix_hash(h ^ (uint64_t(uint32_t(slot)) * 0x9E3779B97F4A7C15ull + 1ull));
+						const float keep_roll = hash_u01(h);
+						if (!(keep_roll < saturate(keep - float(slot))))
 						{
-							name->name += std::to_string(cx) + "_" + std::to_string(cz);
+							continue;
 						}
-						TransformComponent* transform = generator->scene.transforms.GetComponent(entity);
-						if (transform == nullptr)
+						h = mix_hash(h);
+						const float ju = hash_u01(h);
+						h = mix_hash(h);
+						const float jv = hash_u01(h);
+						h = mix_hash(h);
+						const float f0 = hash_u01(h);
+						h = mix_hash(h);
+						const float f1 = hash_u01(h);
+						h = mix_hash(h);
+						const float f2 = hash_u01(h);
+
+						const float world_x = (float(cx) + ju) * cell;
+						const float world_z = (float(cz) + jv) * cell;
+						if (world_x < prop_min_x || world_z < prop_min_z || world_x >= prop_max_x || world_z >= prop_max_z)
 						{
-							transform = &generator->scene.transforms.Create(entity);
+							continue;
 						}
-						transform->translation_local = XMFLOAT3(
-							cached->position.x + vertex_pos.x - prop_pos_x,
-							vertex_pos.y,
-							cached->position.z + vertex_pos.z - prop_pos_z
+						if (clump > 0.0f)
+						{
+							h = mix_hash(h);
+							const float edge = hash_u01(h);
+							float best_t = 2.0f;
+							const int grove_x = (int)std::floor(world_x * spacing_rcp);
+							const int grove_z = (int)std::floor(world_z * spacing_rcp);
+							int ring = (int)std::ceil(1.35f * radius_frac);
+							if (ring < 1)
+							{
+								ring = 1;
+							}
+							for (int oz = -ring; oz <= ring && best_t > 0.65f; ++oz)
+							{
+								for (int ox = -ring; ox <= ring; ++ox)
+								{
+									const int gx = grove_x + ox;
+									const int gz = grove_z + oz;
+									uint64_t gh = mix_hash(uint64_t(uint32_t(gx)) | (uint64_t(uint32_t(gz)) << 32));
+									gh = mix_hash(gh ^ (uint64_t(prop.seed) * 0x9E3779B97F4A7C15ull + 1ull));
+									gh = mix_hash(gh ^ 0xD1B54A32D192ED03ull);
+									if (hash_u01(gh) < 0.34f)
+									{
+										continue;
+									}
+									gh = mix_hash(gh);
+									const float cu = hash_u01(gh);
+									gh = mix_hash(gh);
+									const float cv = hash_u01(gh);
+									gh = mix_hash(gh);
+									const float size_u = hash_u01(gh);
+									gh = mix_hash(gh);
+									const float ax = hash_u01(gh) * 2.0f - 1.0f;
+									gh = mix_hash(gh);
+									const float az = hash_u01(gh) * 2.0f - 1.0f;
+									gh = mix_hash(gh);
+									const float stretch = lerp(0.55f, 1.0f, hash_u01(gh));
+									const float axis_len2 = ax * ax + az * az;
+									float dir_x = 1.0f;
+									float dir_z = 0.0f;
+									if (axis_len2 > 1.0e-4f)
+									{
+										const float inv = 1.0f / std::sqrt(axis_len2);
+										dir_x = ax * inv;
+										dir_z = az * inv;
+									}
+									const float px = world_x - (float(gx) + cu) * spacing;
+									const float pz = world_z - (float(gz) + cv) * spacing;
+									const float lx = px * dir_x + pz * dir_z;
+									const float lz = px * -dir_z + pz * dir_x;
+									const float dist = std::sqrt(lx * lx + (lz / stretch) * (lz / stretch));
+									const float t = dist / (spacing * radius_frac * lerp(0.62f, 1.0f, size_u));
+									if (t < best_t)
+									{
+										best_t = t;
+									}
+									if (best_t <= 0.65f)
+									{
+										break;
+									}
+								}
+							}
+							float admit = 0.0f;
+							if (best_t <= 0.65f)
+							{
+								admit = 1.0f;
+							}
+							else if (best_t < 1.0f)
+							{
+								admit = lerp(1.0f, 0.35f, (best_t - 0.65f) * (1.0f / 0.35f));
+							}
+							else if (best_t < 1.35f)
+							{
+								admit = lerp(0.35f, 0.0f, (best_t - 1.0f) * (1.0f / 0.35f)) * (1.0f - clump);
+							}
+							if (!(edge < admit))
+							{
+								continue;
+							}
+						}
+
+						Chunk terrain_chunk;
+						terrain_chunk.x = world_to_chunk_index(world_x, chunk_scale, chunk_scale_rcp);
+						terrain_chunk.z = world_to_chunk_index(world_z, chunk_scale, chunk_scale_rcp);
+						if (!cache_valid || !(cached_chunk == terrain_chunk))
+						{
+							auto it = chunks.find(terrain_chunk);
+							cache_valid = it != chunks.end();
+							cached_chunk = terrain_chunk;
+							cached = cache_valid ? &it->second : nullptr;
+						}
+						if (!cache_valid || cached->mesh_vertex_positions == nullptr)
+						{
+							continue;
+						}
+
+						const float vx = (world_x - cached->position.x) * chunk_scale_rcp + chunk_half_width;
+						const float vz = (world_z - cached->position.z) * chunk_scale_rcp + chunk_half_width;
+						if (vx < 0.0f || vz < 0.0f || vx >= float(chunk_width - 1) || vz >= float(chunk_width - 1))
+						{
+							continue;
+						}
+
+						const int ix = std::min(int(std::floor(vx)), chunk_width - 2);
+						const int iz = std::min(int(std::floor(vz)), chunk_width - 2);
+						const float tx = vx - float(ix);
+						const float tz = vz - float(iz);
+
+						const uint32_t i00 = uint32_t(ix + iz * chunk_width);
+						const uint32_t i10 = i00 + 1;
+						const uint32_t i01 = i00 + uint32_t(chunk_width);
+						const uint32_t i11 = i01 + 1;
+
+						uint32_t i0 = i00;
+						uint32_t i1 = i10;
+						uint32_t i2 = i01;
+						float w0 = 1.0f - tx - tz;
+						float w1 = tx;
+						float w2 = tz;
+						if (tx + tz > 1.0f)
+						{
+							i0 = i10;
+							i1 = i01;
+							i2 = i11;
+							w0 = 1.0f - tz;
+							w1 = 1.0f - tx;
+							w2 = tx + tz - 1.0f;
+						}
+
+						const XMFLOAT3& p0 = cached->mesh_vertex_positions[i0];
+						const XMFLOAT3& p1 = cached->mesh_vertex_positions[i1];
+						const XMFLOAT3& p2 = cached->mesh_vertex_positions[i2];
+						const XMFLOAT3 vertex_pos = XMFLOAT3(
+							p0.x * w0 + p1.x * w1 + p2.x * w2,
+							p0.y * w0 + p1.y * w1 + p2.y * w2,
+							p0.z * w0 + p1.z * w1 + p2.z * w2
 						);
-						transform->translation_local.y += lerp(prop.min_y_offset, prop.max_y_offset, f0);
-						const float scaling = lerp(prop.min_size, prop.max_size, f1);
-						transform->Scale(XMFLOAT3(scaling, scaling, scaling));
-						transform->RotateRollPitchYaw(XMFLOAT3(0, XM_2PI * f2, 0));
-						transform->SetDirty();
-						transform->UpdateTransform();
-						generator->scene.Component_Attach(entity, prop_data.entity, true);
+
+						const XMFLOAT4 r0 = region_at(*cached, i0);
+						const XMFLOAT4 r1 = region_at(*cached, i1);
+						const XMFLOAT4 r2 = region_at(*cached, i2);
+						XMFLOAT4 region = XMFLOAT4(
+							r0.x * w0 + r1.x * w1 + r2.x * w2,
+							r0.y * w0 + r1.y * w1 + r2.y * w2,
+							r0.z * w0 + r1.z * w1 + r2.z * w2,
+							r0.w * w0 + r1.w * w1 + r2.w * w2
+						);
+						weight_norm(region);
+						const float spline_factor = spline_at(*cached, i0) * w0 + spline_at(*cached, i1) * w1 + spline_at(*cached, i2) * w2;
+
+						const float region_weight = ((float*)&region)[clamp(prop.region, 0, 3)];
+						const float chance = std::pow(region_weight, prop.region_power) * (1.0f - saturate(spline_factor));
+						if (chance >= 0.5f)
+						{
+							wi::Archive archive = wi::Archive(prop.data.data(), prop.data.size());
+							EntitySerializer seri;
+							Entity entity = generator->scene.Entity_Serialize(
+								archive,
+								seri,
+								INVALID_ENTITY,
+								wi::scene::Scene::EntitySerializeFlags::RECURSIVE |
+								wi::scene::Scene::EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES
+							);
+							NameComponent* name = generator->scene.names.GetComponent(entity);
+							if (name != nullptr)
+							{
+								name->name += std::to_string(cx) + "_" + std::to_string(cz);
+								if (slot > 0)
+								{
+									name->name += "_" + std::to_string(slot);
+								}
+							}
+							TransformComponent* transform = generator->scene.transforms.GetComponent(entity);
+							if (transform == nullptr)
+							{
+								transform = &generator->scene.transforms.Create(entity);
+							}
+							transform->translation_local = XMFLOAT3(
+								cached->position.x + vertex_pos.x - prop_pos_x,
+								vertex_pos.y,
+								cached->position.z + vertex_pos.z - prop_pos_z
+							);
+							transform->translation_local.y += lerp(prop.min_y_offset, prop.max_y_offset, f0);
+							const float scaling = lerp(prop.min_size, prop.max_size, f1);
+							transform->Scale(XMFLOAT3(scaling, scaling, scaling));
+							transform->RotateRollPitchYaw(XMFLOAT3(0, XM_2PI * f2, 0));
+							transform->SetDirty();
+							transform->UpdateTransform();
+							generator->scene.Component_Attach(entity, prop_data.entity, true);
+						}
 					}
 				}
 			}
@@ -2901,13 +3003,40 @@ namespace wi::terrain
 					);
 					archive.WriteData(prop.data);
 				}
-				archive >> prop.min_count_per_chunk;
-				archive >> prop.max_count_per_chunk;
-				archive >> prop.region;
-				archive >> prop.region_power;
-				archive >> prop.noise_frequency;
-				archive >> prop.noise_power;
-				archive >> prop.threshold;
+				if (terrain_version >= 7)
+				{
+					archive >> prop.density;
+					archive >> prop.clumping;
+					archive >> prop.clump_spacing;
+					archive >> prop.seed;
+					archive >> prop.region;
+					archive >> prop.region_power;
+				}
+				else
+				{
+					int min_count = 0;
+					int max_count = 10;
+					float noise_frequency = 1;
+					float noise_power = 1;
+					float threshold = 0.5f;
+					archive >> min_count;
+					archive >> max_count;
+					archive >> prop.region;
+					archive >> prop.region_power;
+					archive >> noise_frequency;
+					archive >> noise_power;
+					archive >> threshold;
+					prop.density = 0.5f * float(min_count + max_count);
+					prop.seed = 0;
+
+					const float freq = noise_frequency > 1.0e-6f ? noise_frequency : 1.0e-6f;
+					const float wavelength = 1.0f / freq;
+					const float scale = saturate((wavelength - 8.0f) / 192.0f);
+					const float peakiness = saturate((noise_power - 1.0f) / 3.0f);
+					const float pickiness = saturate(threshold);
+					prop.clumping = saturate(scale * 0.5f + peakiness * 0.35f + pickiness * 0.15f);
+					prop.clump_spacing = 64;
+				}
 				archive >> prop.min_size;
 				archive >> prop.max_size;
 				archive >> prop.min_y_offset;
@@ -3060,13 +3189,12 @@ namespace wi::terrain
 			{
 				Prop& prop = props[i];
 				archive << prop.data;
-				archive << prop.min_count_per_chunk;
-				archive << prop.max_count_per_chunk;
+				archive << prop.density;
+				archive << prop.clumping;
+				archive << prop.clump_spacing;
+				archive << prop.seed;
 				archive << prop.region;
 				archive << prop.region_power;
-				archive << prop.noise_frequency;
-				archive << prop.noise_power;
-				archive << prop.threshold;
 				archive << prop.min_size;
 				archive << prop.max_size;
 				archive << prop.min_y_offset;
