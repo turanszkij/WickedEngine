@@ -9702,7 +9702,7 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 		// impostor camera will fit around mesh bounding sphere:
 		const Sphere boundingsphere = mesh.GetBoundingSphere();
 
-		device->BindIndexBuffer(&mesh.generalBuffer, mesh.GetIndexFormat(), mesh.ib.offset, cmd);
+		device->BindIndexBuffer(&mesh.generalBuffer, mesh.GetProvokingIndexFormat(), mesh.ib_provoke.offset, cmd);
 
 		for (size_t i = 0; i < impostorCaptureAngles; ++i)
 		{
