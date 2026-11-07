@@ -826,7 +826,8 @@ namespace wi
 
 		prerender_happened = true;
 
-		ocean_behind_clouds = camera->Eye.y > scene->ocean.GetAABB(camera->Eye)._max.y;
+		ocean_visible = scene->weather.IsOceanEnabled() && scene->ocean.IsValid() && (!scene->ocean.IsOccluded() || !wi::renderer::GetOcclusionCullingEnabled());
+		ocean_behind_clouds = ocean_visible && scene->weather.IsVolumetricClouds() && camera->Eye.y > scene->weather.volumetricCloudParameters.cloudStartHeight;
 
 		RenderPath2D::PreRender();
 	}
@@ -1254,7 +1255,7 @@ namespace wi
 		}
 
 		CommandList cmd_ocean;
-		if (scene->weather.IsOceanEnabled() && scene->ocean.IsValid())
+		if (ocean_visible)
 		{
 			// Ocean simulation can be updated async to opaque passes:
 			cmd_ocean = device->BeginCommandList(QUEUE_COMPUTE);
@@ -2174,7 +2175,7 @@ namespace wi
 		}
 
 		// Draw only the ocean first, fog and lightshafts will be blended on top:
-		if (scene->weather.IsOceanEnabled() && scene->ocean.IsValid() && (!scene->ocean.IsOccluded() || !wi::renderer::GetOcclusionCullingEnabled()))
+		if (ocean_visible)
 		{
 			device->EventBegin("Copy scene tex only mip0 for ocean", cmd);
 			wi::renderer::Postprocess_Downsample4x(rtMain, rtSceneCopy, cmd);
