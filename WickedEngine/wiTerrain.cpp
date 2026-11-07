@@ -1475,6 +1475,7 @@ namespace wi::terrain
 						generator->scene.materials.Remove(chunk_data.entity);
 						generator->scene.meshes.Remove(chunk_data.entity);
 						generator->removable_chunks.push_back(chunk);
+						chunk_data.grass_entity = INVALID_ENTITY;
 					}
 					ObjectComponent& object = *generator->scene.objects.GetComponent(chunk_data.entity);
 					object.lod_bias = lod_bias;
@@ -1710,6 +1711,10 @@ namespace wi::terrain
 							chunk_data.grass.strandCount = uint32_t(grass_valid_vertex_count.load() * 3 * chunk_scale * chunk_scale); // chunk_scale * chunk_scale : grass density increases with squared amount with chunk scale (x*z)
 							chunk_data.grass.CreateFromMesh(mesh);
 						});
+					}
+					else
+					{
+						chunk_data.grass.meshID = INVALID_ENTITY;
 					}
 
 					if (IsPhysicsEnabled())
