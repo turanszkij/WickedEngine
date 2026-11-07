@@ -826,6 +826,8 @@ namespace wi
 
 		prerender_happened = true;
 
+		ocean_behind_clouds = camera->Eye.y > scene->ocean.GetAABB(camera->Eye)._max.y;
+
 		RenderPath2D::PreRender();
 	}
 
@@ -1698,8 +1700,8 @@ namespace wi
 					device->EventEnd(cmd);
 				}
 
-				// Blend the volumetric clouds on top:
-				if (scene->weather.IsVolumetricClouds())
+				// Blend the volumetric clouds on top of opaque scene if they will be refracted by ocean:
+				if (scene->weather.IsVolumetricClouds() && !ocean_behind_clouds)
 				{
 					wi::renderer::Postprocess_VolumetricClouds_Upsample(volumetriccloudResources, cmd);
 				}
@@ -2186,6 +2188,12 @@ namespace wi
 				cmd,
 				wi::renderer::DRAWSCENE_OCEAN
 			);
+
+			// Blend the volumetric clouds on top of ocean if they will NOT be refracted by ocean:
+			if (scene->weather.IsVolumetricClouds() && ocean_behind_clouds)
+			{
+				wi::renderer::Postprocess_VolumetricClouds_Upsample(volumetriccloudResources, cmd);
+			}
 
 			device->RenderPassEnd(cmd);
 		}

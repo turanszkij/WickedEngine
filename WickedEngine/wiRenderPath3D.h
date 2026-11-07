@@ -94,6 +94,7 @@ namespace wi
 
 		mutable bool first_frame = true;
 		mutable bool prerender_happened = false;
+		bool ocean_behind_clouds = false;
 
 		void RenderCameraComponents(wi::jobsystem::context& ctx) const;
 
