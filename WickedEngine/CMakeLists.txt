@@ -289,8 +289,8 @@ add_executable(offlineshadercompiler
 
 # Copy the shader library next to the executable
 add_custom_command(
-    TARGET WickedEngine_ext_shaders POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${WICKED_ROOT_DIR}/WickedEngine/${LIBDXCOMPILER} ${CMAKE_CURRENT_BINARY_DIR}
+    TARGET offlineshadercompiler POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${WICKED_ROOT_DIR}/WickedEngine/${LIBDXCOMPILER} $<TARGET_FILE_DIR:offlineshadercompiler>
     COMMAND ${CMAKE_COMMAND} -E ${COPY_OR_SYMLINK_DIR_CMD} ${WICKED_ROOT_DIR}/WickedEngine/shaders ${CMAKE_CURRENT_BINARY_DIR}/shaders
 )
 

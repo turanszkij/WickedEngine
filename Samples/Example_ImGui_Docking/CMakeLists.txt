@@ -99,5 +99,5 @@ set_property(TARGET Example_ImGui_Docking PROPERTY UNITY_BUILD NO)
 add_dependencies(Example_ImGui_Docking Content)
 add_custom_command(
 	TARGET Example_ImGui_Docking POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${WICKED_ROOT_DIR}/WickedEngine/${LIB_DXCOMPILER} ${CMAKE_CURRENT_BINARY_DIR}
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${WICKED_ROOT_DIR}/WickedEngine/${LIB_DXCOMPILER} $<TARGET_FILE_DIR:Example_ImGui_Docking>
 )
