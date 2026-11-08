@@ -220,8 +220,7 @@ float4 main(PSIn input) : SV_TARGET
 	ApplyLighting(surface, lighting, color);
 	
 	// Blend out at distance:
-	float far_fade = saturate(1 - saturate(dist / camera.z_far - 0.8) * 5.0); // fade will be on edge and inwards 20%
-	color.a = far_fade;
+	color.a = smoothstep(0.0, 0.1, saturate(1 - saturate(dist * camera.z_far_rcp)));
 
 	ApplyAerialPerspective(ScreenCoord, surface.P, color);
 	
