@@ -1806,8 +1806,7 @@ namespace wi::terrain
 			// Set up and build every chunk queued in the batch, then clear it.
 			// Returns false if the per-frame time budget was exceeded (the
 			// caller should stop).
-			auto flush_build_batch = [&]() -> bool
-			{
+			auto flush_build_batch = [&]() -> bool {
 				if (generator->build_batch.empty())
 				{
 					return true;
@@ -1848,13 +1847,7 @@ namespace wi::terrain
 				return true;
 			};
 
-			// Visit one chunk position. If it still needs (re)generation, add
-			// it to the build batch (flushed, and then placed, when the batch
-			// is full). Otherwise it is already built, so place its
-			// grass now. Returns false if the per-frame time budget was
-			// exceeded (the caller should stop).
-			auto request_chunk = [&](int offset_x, int offset_z) -> bool
-			{
+			auto request_chunk = [&](int offset_x, int offset_z) -> bool {
 				Chunk chunk = center_chunk;
 				chunk.x += offset_x;
 				chunk.z += offset_z;
@@ -1892,16 +1885,29 @@ namespace wi::terrain
 
 				return true;
 			};
+			auto request_props = [&](int offset_x, int offset_z) -> bool {
+				Chunk prop_chunk = prop_center_chunk;
+				prop_chunk.x += offset_x;
+				prop_chunk.z += offset_z;
+				if (PlacePropChunk(prop_chunk))
+				{
+					generated_something = true;
+					if (timer.elapsed_milliseconds() > generation_time_budget_milliseconds)
+					{
+						generator->cancelled.store(true);
+						return false;
+					}
+				}
+				return !generator->cancelled.load();
+			};
 
-			// outward spiiral generation logic
-			auto request_chunk_spiral = [&](int radius)
-			{
+			auto request_chunk_spiral = [&](int start, int radius) {
+				if (generator->cancelled.load())
+					return;
 				if (!request_chunk(0, 0))
-				{
 					return;
-				}
 
-				for (int growth = 0; growth < radius; ++growth)
+				for (int growth = start; growth < radius; ++growth)
 				{
 					const int side = 2 * (growth + 1);
 					int x = -growth - 1;
@@ -1912,7 +1918,6 @@ namespace wi::terrain
 						{
 							return;
 						}
-
 						x++;
 					}
 					for (int i = 0; i < side; ++i)
@@ -1921,7 +1926,6 @@ namespace wi::terrain
 						{
 							return;
 						}
-
 						z++;
 					}
 					for (int i = 0; i < side; ++i)
@@ -1930,7 +1934,6 @@ namespace wi::terrain
 						{
 							return;
 						}
-
 						x--;
 					}
 					for (int i = 0; i < side; ++i)
@@ -1939,70 +1942,28 @@ namespace wi::terrain
 						{
 							return;
 						}
-
 						z--;
 					}
 				}
+				flush_build_batch();
 			};
 
-			auto request_all_chunks = [&]()
-			{
-				// priority invalidation queue:
-				//	This doesn't necessarily finish every frame, that's why it's a queue, next frame will pick up earlier requests before newer ones
-				while (!generator->priority_invalidation.empty())
-				{
-					Chunk chunk = generator->priority_invalidation.front();
-					generator->priority_invalidation.pop_front();
-					auto it = chunks.find(chunk);
-					if (it != chunks.end() && it->second.invalidated) // Check here too in this special case, because multiple of the same entries can easily exist on the queue. Already refreshes chunks will not be refreshed again
-					{
-						if (!request_chunk(chunk.x - center_chunk.x, chunk.z - center_chunk.z))
-						{
-							return;
-						}
-					}
-				}
-
-				request_chunk_spiral(generation);
-			};
-
-			auto request_all_prop_chunks = [&]()
-			{
+			auto request_prop_spiral = [&](int start, int radius) {
+				if (generator->cancelled.load())
+					return;
 				if (!(prop_density > 0.0f) || props.empty())
-				{
 					return;
-				}
-
-				auto visit = [&](int offset_x, int offset_z) -> bool
-				{
-					Chunk prop_chunk = prop_center_chunk;
-					prop_chunk.x += offset_x;
-					prop_chunk.z += offset_z;
-					if (PlacePropChunk(prop_chunk))
-					{
-						generated_something = true;
-						if (timer.elapsed_milliseconds() > generation_time_budget_milliseconds)
-						{
-							generator->cancelled.store(true);
-							return false;
-						}
-					}
-					return !generator->cancelled.load();
-				};
-
-				if (!visit(0, 0))
-				{
+				if (!request_props(0, 0))
 					return;
-				}
 
-				for (int growth = 0; growth < prop_generation; ++growth)
+				for (int growth = start; growth < radius; ++growth)
 				{
 					const int side = 2 * (growth + 1);
 					int x = -growth - 1;
 					int z = -growth - 1;
 					for (int i = 0; i < side; ++i)
 					{
-						if (!visit(x, z))
+						if (!request_props(x, z))
 						{
 							return;
 						}
@@ -2010,7 +1971,7 @@ namespace wi::terrain
 					}
 					for (int i = 0; i < side; ++i)
 					{
-						if (!visit(x, z))
+						if (!request_props(x, z))
 						{
 							return;
 						}
@@ -2018,7 +1979,7 @@ namespace wi::terrain
 					}
 					for (int i = 0; i < side; ++i)
 					{
-						if (!visit(x, z))
+						if (!request_props(x, z))
 						{
 							return;
 						}
@@ -2026,7 +1987,7 @@ namespace wi::terrain
 					}
 					for (int i = 0; i < side; ++i)
 					{
-						if (!visit(x, z))
+						if (!request_props(x, z))
 						{
 							return;
 						}
@@ -2035,39 +1996,40 @@ namespace wi::terrain
 				}
 			};
 
-			const int grass_radius = std::min(generation, grass_chunk_dist);
-			request_chunk_spiral(grass_radius); // grass regen priority
-
-			if (!generator->build_batch.empty())
+			// priority invalidation queue:
+			//	This doesn't necessarily finish every frame, that's why it's a queue, next frame will pick up earlier requests before newer ones
+			while (!generator->priority_invalidation.empty())
 			{
-				flush_build_batch();
+				Chunk chunk = generator->priority_invalidation.front();
+				generator->priority_invalidation.pop_front();
+				auto it = chunks.find(chunk);
+				if (it != chunks.end() && it->second.invalidated) // Check here too in this special case, because multiple of the same entries can easily exist on the queue. Already refreshes chunks will not be refreshed again
+				{
+					if (!request_chunk(chunk.x - center_chunk.x, chunk.z - center_chunk.z))
+					{
+						return;
+					}
+				}
 			}
 
-			if (!generator->cancelled.load())
+			const int gen_loop = std::max(generation, prop_generation);
+			for (int i = 0; i < gen_loop; ++i)
 			{
-				request_all_prop_chunks();
+				if (generator->cancelled.load())
+					return;
+
+				if (i < generation)
+				{
+					request_chunk_spiral(i, i + 1);
+				}
+
+				if (i < prop_generation)
+				{
+					request_prop_spiral(i, i + 1);
+				}
 			}
 
-			if (!generator->cancelled.load())
-			{
-				request_all_chunks();
-			}
-
-			// Build (and place) any chunks left in a partial batch, unless we
-			//  already stopped for the time budget — those are picked up on a
-			//  later frame:
-			if (!generator->cancelled.load())
-			{
-				flush_build_batch();
-			}
-
-			// Pick up prop chunks whose terrain was built earlier in this job.
-			if (!generator->cancelled.load())
-			{
-				request_all_prop_chunks();
-			}
-
-			});
+		});
 
 	}
 
