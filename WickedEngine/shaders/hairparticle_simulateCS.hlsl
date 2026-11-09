@@ -23,7 +23,7 @@ Buffer<half> meshVertexBuffer_length : register(t3);
 
 RWStructuredBuffer<PatchSimulationData> simulationBuffer : register(u0);
 RWBuffer<float4> vertexBuffer_POS : register(u1);
-RWBuffer<float4> vertexBuffer_UVS : register(u2);
+RWBuffer<float2> vertexBuffer_UVS : register(u2);
 RWBuffer<uint> culledIndexBuffer : register(u3);
 RWStructuredBuffer<IndirectDrawArgsIndexedInstanced> indirectBuffer : register(u4);
 RWBuffer<float4> vertexBuffer_POS_RT : register(u5);
@@ -244,7 +244,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 				vertexBuffer_POS[v0] = float4(position, 0);
 				vertexBuffer_NOR[v0] = half4(billboard_normal, 0);
-				vertexBuffer_UVS[v0] = uv.xyxy; // a second uv set could be used here
+				vertexBuffer_UVS[v0] = uv;
 				if (xHairFlags & HAIR_FLAG_RAYTRACED)
 				{
 					vertexBuffer_POS_RT[v0] = float4(position, 0);
@@ -525,7 +525,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 					// away from both the view and the light). Kept consistent
 					// with the root vertices, which also store the bent normal.
 					vertexBuffer_NOR[v0] = half4(normal_bend, 0);
-					vertexBuffer_UVS[v0] = uv.xyxy; // a second uv set could be used here
+					vertexBuffer_UVS[v0] = uv;
 					if (xHairFlags & HAIR_FLAG_RAYTRACED)
 					{
 						vertexBuffer_POS_RT[v0] = float4(position, 0);

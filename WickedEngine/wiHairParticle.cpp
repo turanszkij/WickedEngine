@@ -148,7 +148,7 @@ namespace wi
 			vb_pos[0].size = position_stride * gfx_vertexcount;
 			vb_pos[1].size = position_stride * gfx_vertexcount;
 			vb_nor.size = sizeof(MeshComponent::Vertex_NOR) * gfx_vertexcount;
-			vb_uvs.size = sizeof(MeshComponent::Vertex_UVS) * gfx_vertexcount;
+			vb_uvs.size = sizeof(MeshComponent::Vertex_TEX) * gfx_vertexcount;
 			wetmap.size = sizeof(uint16_t) * gfx_vertexcount;
 			ib_culled.size = ib_stride * gfx_indexcount;
 			prim_view.size = ib_stride * gfx_indexcount;
@@ -219,8 +219,8 @@ namespace wi
 
 			buffer_offset = align(buffer_offset, alignment);
 			vb_uvs.offset = buffer_offset;
-			vb_uvs.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_uvs.offset, vb_uvs.size, &MeshComponent::Vertex_UVS::FORMAT);
-			vb_uvs.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_uvs.offset, vb_uvs.size, &MeshComponent::Vertex_UVS::FORMAT);
+			vb_uvs.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_uvs.offset, vb_uvs.size, &MeshComponent::Vertex_TEX::FORMAT);
+			vb_uvs.subresource_uav = device->CreateSubresource(&generalBuffer, SubresourceType::UAV, vb_uvs.offset, vb_uvs.size, &MeshComponent::Vertex_TEX::FORMAT);
 			vb_uvs.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_uvs.subresource_srv);
 			vb_uvs.descriptor_uav = device->GetDescriptorIndex(&generalBuffer, SubresourceType::UAV, vb_uvs.subresource_uav);
 			buffer_offset += vb_uvs.size;
