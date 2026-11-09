@@ -55,7 +55,6 @@ namespace wi::graphics
 				uint32_t vertex_output_size_in_bytes;
 				bool needs_draw_params;
 			};
-			uint32_t max_input_primitives_per_mesh_threadgroup; // geometry
 		};
 		
 	private:
@@ -276,7 +275,7 @@ namespace wi::graphics
 			bool dirty_drawargs = false;
 			MTL::Size numthreads_as = {};
 			MTL::Size numthreads_ms = {};
-			IRGeometryEmulationPipelineDescriptor gs_desc = {};
+			
 			wi::vector<std::pair<NS::SharedPtr<MTL::Texture>, uint32_t>> texture_clears;
 			
 			struct TextureClearBatchItem

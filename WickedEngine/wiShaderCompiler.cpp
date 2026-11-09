@@ -632,7 +632,6 @@ namespace wi::shadercompiler
 					LINK_IR(IRCompilerDestroy)
 					LINK_IR(IRRootSignatureCreateFromDescriptor)
 					LINK_IR(IRCompilerSetGlobalRootSignature)
-					LINK_IR(IRCompilerEnableGeometryAndTessellationEmulation)
 					//LINK_IR(IRRootSignatureDestroy)
 					
 					static IRDescriptorRange1 binding_resources[] =
@@ -796,13 +795,6 @@ namespace wi::shadercompiler
 							assert(success);
 							reflection_append.needs_draw_params = vs_info.info_1_0.needs_draw_params ? 1 : 0;
 							reflection_append.vertex_output_size_in_bytes = vs_info.info_1_0.vertex_output_size_in_bytes;
-						}
-						if (input.stage == ShaderStage::GS)
-						{
-							IRVersionedGSInfo gs_info = {};
-							success = IRShaderReflectionCopyGeometryInfo(reflection, IRReflectionVersion_1_0, &gs_info);
-							assert(success);
-							reflection_append.max_input_primitives_per_mesh_threadgroup = gs_info.info_1_0.max_input_primitives_per_mesh_threadgroup;
 						}
 						if (input.stage == ShaderStage::CS)
 						{
