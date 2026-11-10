@@ -220,7 +220,7 @@ namespace wi::scene
 		// Occlusion culling read:
 		if(wi::renderer::GetOcclusionCullingEnabled() && !wi::renderer::GetFreezeCullingCameraEnabled())
 		{
-			uint32_t minQueryCount = uint32_t(objects.GetCount() + lights.GetCount() + decals.GetCount() + probes.GetCount() + 1); // +1: ocean (don't know for sure if it exists yet before weather update)
+			uint32_t minQueryCount = uint32_t(objects.GetCount() + lights.GetCount() + decals.GetCount() + probes.GetCount()  + hairs.GetCount() + 1); // +1: ocean (don't know for sure if it exists yet before weather update)
 			if (queryHeap.desc.query_count < minQueryCount)
 			{
 				GPUQueryHeapDesc desc;
@@ -5188,6 +5188,8 @@ namespace wi::scene
 			Entity entity = hairs.GetEntity(args.jobIndex);
 			if (!transforms.Contains(entity))
 				return;
+
+			UpdateOcclusionResult(hair.occlusion);
 
 			if (hair.IsDirty())
 			{

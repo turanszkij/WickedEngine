@@ -168,6 +168,7 @@ namespace wi::renderer
 		std::atomic_bool volumetriclight_request{ false };
 		std::atomic_bool transparents_visible{ false };
 		std::atomic_bool mesh_blend_visible{ false };
+		std::atomic_bool foreground_object_visible{ false };
 
 		void Clear()
 		{
@@ -188,6 +189,7 @@ namespace wi::renderer
 			volumetriclight_request.store(false);
 			transparents_visible.store(false);
 			mesh_blend_visible.store(false);
+			foreground_object_visible.store(false);
 		}
 
 		bool IsRequestedPlanarReflections() const
@@ -205,6 +207,10 @@ namespace wi::renderer
 		bool IsMeshBlendVisible() const
 		{
 			return mesh_blend_visible.load();
+		}
+		bool IsForegroundObjectVisible() const
+		{
+			return foreground_object_visible.load();
 		}
 	};
 
@@ -268,15 +274,14 @@ namespace wi::renderer
 	{
 		DRAWSCENE_OPAQUE = 1 << 0, // include opaque objects
 		DRAWSCENE_TRANSPARENT = 1 << 1, // include transparent objects
-		DRAWSCENE_OCCLUSIONCULLING = 1 << 2, // enable skipping objects based on occlusion culling results
-		DRAWSCENE_TESSELLATION = 1 << 3, // enable tessellation
-		DRAWSCENE_HAIRPARTICLE = 1 << 4, // include hair particles
-		DRAWSCENE_IMPOSTOR = 1 << 5, // include impostors
-		DRAWSCENE_OCEAN = 1 << 6, // include ocean
-		DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS = 1 << 7, // don't draw subsets which have planar reflection material
-		DRAWSCENE_FOREGROUND_ONLY = 1 << 8, // only include objects that are tagged as foreground
-		DRAWSCENE_MAINCAMERA = 1 << 9, // If this is active, then ObjectComponent with SetNotVisibleInMainCamera(true) won't be drawn
-		DRAWSCENE_WIREFRAME_OVERLAY = 1 << 10, // draw wireframe overlay
+		DRAWSCENE_TESSELLATION = 1 << 2, // enable tessellation
+		DRAWSCENE_HAIRPARTICLE = 1 << 3, // include hair particles
+		DRAWSCENE_IMPOSTOR = 1 << 4, // include impostors
+		DRAWSCENE_OCEAN = 1 << 5, // include ocean
+		DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS = 1 << 6, // don't draw subsets which have planar reflection material
+		DRAWSCENE_FOREGROUND_ONLY = 1 << 7, // only include objects that are tagged as foreground
+		DRAWSCENE_MAINCAMERA = 1 << 8, // If this is active, then ObjectComponent with SetNotVisibleInMainCamera(true) won't be drawn
+		DRAWSCENE_WIREFRAME_OVERLAY = 1 << 9, // draw wireframe overlay
 	};
 
 	// Draw the world from a camera. You must call BindCameraCB() at least once in this command list prior to this

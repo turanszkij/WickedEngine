@@ -121,6 +121,7 @@ namespace wi
 		// redundant per-frame uploads while the contents are unchanged.
 		mutable HairParticleCB constantBufferData = {};
 		uint32_t meshletCount = 0;
+		mutable wi::scene::OcclusionResult occlusion;
 
 		wi::allocator::shared_ptr<void> background_generation;
 
