@@ -1459,13 +1459,16 @@ namespace wi::scene
 				ret.center = position;
 				ret.radius = GetRange();
 				break;
-			case LightType::SPOT:
+			case LightType::SPOT: {
 				// Construct a tight fitting sphere around the spotlight cone:
 				const float outerConeAngleCos = std::cos(outerConeAngle);
 				const float radius = GetRange() * 0.5f / (outerConeAngleCos * outerConeAngleCos);
 				const XMVECTOR P = XMLoadFloat3(&position) - XMVector3Normalize(XMLoadFloat3(&direction)) * radius;
 				XMStoreFloat3(&ret.center, P);
 				ret.radius = radius;
+				break;
+			}
+			default:
 				break;
 			}
 			return ret;

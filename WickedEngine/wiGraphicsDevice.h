@@ -456,7 +456,7 @@ namespace wi::graphics
 			// Add a single texture into the heap, return its offset
 			uint64_t Add(const TextureDesc* desc)
 			{
-				rt_ds |= has_flag(desc->bind_flags, BindFlag::RENDER_TARGET) | has_flag(desc->bind_flags, BindFlag::DEPTH_STENCIL);
+				rt_ds |= has_flag(desc->bind_flags, BindFlag::RENDER_TARGET) || has_flag(desc->bind_flags, BindFlag::DEPTH_STENCIL);
 				SizeAlignment sizealign = device->GetDeviceTextureMemoryRequirements(desc);
 				size = align(size, sizealign.alignment);
 				alignment = std::max(alignment, sizealign.alignment);
@@ -472,7 +472,7 @@ namespace wi::graphics
 				uint64_t batch_alignment = 0;
 				for (const TextureDesc* desc : descs)
 				{
-					rt_ds |= has_flag(desc->bind_flags, BindFlag::RENDER_TARGET) | has_flag(desc->bind_flags, BindFlag::DEPTH_STENCIL);
+					rt_ds |= has_flag(desc->bind_flags, BindFlag::RENDER_TARGET) || has_flag(desc->bind_flags, BindFlag::DEPTH_STENCIL);
 					SizeAlignment sizealign = device->GetDeviceTextureMemoryRequirements(desc);
 					batch_size = std::max(batch_size, sizealign.size);
 					batch_alignment = std::max(batch_alignment, sizealign.alignment);
