@@ -9586,6 +9586,10 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 					{
 						push.filterRayCount = 8192;
 					}
+					if (probe.filter_samplecount > 0)
+					{
+						push.filterRayCount = probe.filter_samplecount;
+					}
 				}
 				else
 				{

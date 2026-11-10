@@ -86,6 +86,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 	TextureCube input = bindless_cubemaps[descriptor_index(push.texture_input)];
 	RWTexture2DArray<float4> output = bindless_rwtextures2DArray[descriptor_index(push.texture_output)];
 
+	uint2 dim;
+	input.GetDimensions(dim.x, dim.y); // input to computeLod needs to be resolution of top mip, not the current filter resolution
+
 	float2 uv = (DTid.xy + 0.5f) * push.filterResolution_rcp.xy;
 	uint face = DTid.z / THREAD_OFFLOAD;
 	float3 N = normalize(uv_to_cubemap(uv, face));
@@ -105,8 +108,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 		float NoL = saturate(dot(N, L));
 		if (NoL > 0)
 		{
-			uint2 dim;
-			input.GetDimensions(dim.x, dim.y); // input to computeLod needs to be resolution of top mip, not the current filter resolution
 			float lod = computeLod(pdf, dim.x, push.filterRayCount);
 			col += input.SampleLevel(sampler_linear_clamp, L, lod) * NoL;
 		}
@@ -115,7 +116,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 	shared_colors[GTid.x][GTid.y][threadstart] = pack_half4(saturateMediump(col));
 	GroupMemoryBarrierWithGroupSync();
 
-	if(threadstart == 0)
+	if (threadstart == 0)
 	{
 		float4 accum = 0;
 		for (uint j = 0; j < THREAD_OFFLOAD;++j)

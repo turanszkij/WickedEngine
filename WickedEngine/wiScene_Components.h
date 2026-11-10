@@ -1604,6 +1604,7 @@ namespace wi::scene
 		float realtime_update_interval = 0.0f; // how often to render when realtime (in seconds, 0 = every frame)
 		std::string textureName; // if texture is coming from an asset
 		float view_distance = -1; // -1: use main camera's view distance, > 0: custom view distance
+		uint32_t filter_samplecount = 0; // filter sample count. 0 = use default
 
 		// Non-serialized attributes:
 		wi::graphics::Texture texture;
@@ -1622,12 +1623,14 @@ namespace wi::scene
 		constexpr void SetRealTime(bool value) { set_flag(_flags, REALTIME, value); }
 		constexpr void SetMSAA(bool value) { set_flag(_flags, MSAA, value); SetDirty(); }
 		constexpr void SetUpdateInterval(float value) { realtime_update_interval = std::max(0.0f, value); }
+		constexpr void SetFilterSampleCount(uint32_t value) { if (filter_samplecount != value) SetDirty(); filter_samplecount = value; }
 
 		constexpr bool IsDirty() const { return _flags & DIRTY; }
 		constexpr bool IsRealTime() const { return _flags & REALTIME; }
 		constexpr bool IsMSAA() const { return _flags & MSAA; }
 		constexpr uint32_t GetSampleCount() const { return IsMSAA() ? envmapMSAASampleCount : 1; }
 		bool ShouldRenderThisFrame() const { return !IsRealTime() || first_render || (realtime_update_interval <= 0.0f) || (realtime_time_accumulator >= realtime_update_interval); }
+		constexpr uint32_t GetFilterSampleCount() const { return filter_samplecount; }
 
 		size_t GetMemorySizeInBytes() const;
 		constexpr float GetRealtimeUpdateInterval() const { return realtime_update_interval; }

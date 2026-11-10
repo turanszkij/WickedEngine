@@ -1407,6 +1407,10 @@ namespace wi::scene
 			{
 				archive >> view_distance;
 			}
+			if (seri.GetVersion() >= 4)
+			{
+				archive >> filter_samplecount;
+			}
 		}
 		else
 		{
@@ -1426,6 +1430,10 @@ namespace wi::scene
 			if (seri.GetVersion() >= 3)
 			{
 				archive << view_distance;
+			}
+			if (seri.GetVersion() >= 4)
+			{
+				archive << filter_samplecount;
 			}
 		}
 	}

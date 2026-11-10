@@ -83,6 +83,14 @@ void EnvProbeWindow::Create(EditorComponent* _editor)
 	}));
 	AddWidget(&viewdistanceSlider);
 
+	filterSlider.Create(0, 8192, 0, 8192, "Filter sample count: ");
+	filterSlider.SetTooltip("Set filtering sample count. 0 = use default; higher values correspond to higher quality ad slower rendering");
+	filterSlider.SetEnabled(false);
+	filterSlider.OnSlide(forEachSelected([] (auto probe, auto args) {
+		probe->SetFilterSampleCount((uint32_t)args.iValue);
+	}));
+	AddWidget(&filterSlider);
+
 	refreshButton.Create("Refresh");
 	refreshButton.SetTooltip("Re-renders the selected probe.");
 	refreshButton.SetEnabled(false);
@@ -206,6 +214,7 @@ void EnvProbeWindow::SetEntity(Entity entity)
 		msaaCheckBox.SetEnabled(false);
 		realtimeFrameIntervalSlider.SetEnabled(false);
 		viewdistanceSlider.SetEnabled(false);
+		filterSlider.SetEnabled(false);
 		refreshButton.SetEnabled(false);
 		preview.SetImage({});
 	}
@@ -222,6 +231,8 @@ void EnvProbeWindow::SetEntity(Entity entity)
 		realtimeFrameIntervalSlider.SetEnabled(true);
 		viewdistanceSlider.SetValue(probe->view_distance);
 		viewdistanceSlider.SetEnabled(true);
+		filterSlider.SetValue((int)probe->filter_samplecount);
+		filterSlider.SetEnabled(true);
 		refreshButton.SetEnabled(true);
 		resolutionCombo.SetSelectedByUserdata(probe->resolution);
 
@@ -271,6 +282,7 @@ void EnvProbeWindow::ResizeLayout()
 	layout.add_right(msaaCheckBox, realTimeCheckBox);
 	layout.add_fullwidth(realtimeFrameIntervalSlider);
 	layout.add_fullwidth(viewdistanceSlider);
+	layout.add_fullwidth(filterSlider);
 
 	layout.add_fullwidth_aspect(preview);
 	preview.SetColor(wi::Color::White());
