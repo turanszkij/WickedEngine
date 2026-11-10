@@ -934,7 +934,6 @@ namespace wi
 			wi::renderer::DRAWSCENE_IMPOSTOR |
 			wi::renderer::DRAWSCENE_HAIRPARTICLE |
 			wi::renderer::DRAWSCENE_TESSELLATION |
-			wi::renderer::DRAWSCENE_OCCLUSIONCULLING |
 			wi::renderer::DRAWSCENE_MAINCAMERA
 			;
 
@@ -993,18 +992,21 @@ namespace wi
 			vp.width = (float)depthBuffer_Main.GetDesc().width;
 			vp.height = (float)depthBuffer_Main.GetDesc().height;
 
-			// Foreground:
-			vp.min_depth = 1 - foreground_depth_range;
-			vp.max_depth = 1;
-			device->BindViewports(1, &vp, cmd);
-			wi::renderer::DrawScene(
-				visibility_main,
-				RENDERPASS_PREPASS,
-				cmd,
-				wi::renderer::DRAWSCENE_OPAQUE |
-				wi::renderer::DRAWSCENE_FOREGROUND_ONLY |
-				wi::renderer::DRAWSCENE_MAINCAMERA
-			);
+			if (visibility_main.IsForegroundObjectVisible())
+			{
+				// Foreground:
+				vp.min_depth = 1 - foreground_depth_range;
+				vp.max_depth = 1;
+				device->BindViewports(1, &vp, cmd);
+				wi::renderer::DrawScene(
+					visibility_main,
+					RENDERPASS_PREPASS,
+					cmd,
+					wi::renderer::DRAWSCENE_OPAQUE |
+					wi::renderer::DRAWSCENE_FOREGROUND_ONLY |
+					wi::renderer::DRAWSCENE_MAINCAMERA
+				);
+			}
 
 			// Regular:
 			vp.min_depth = 0;
@@ -1563,18 +1565,21 @@ namespace wi
 			{
 				auto range = wi::profiler::BeginRangeGPU("Opaque Scene", cmd);
 
-				// Foreground:
-				vp.min_depth = 1 - foreground_depth_range;
-				vp.max_depth = 1;
-				device->BindViewports(1, &vp, cmd);
-				wi::renderer::DrawScene(
-					visibility_main,
-					RENDERPASS_MAIN,
-					cmd,
-					wi::renderer::DRAWSCENE_OPAQUE |
-					wi::renderer::DRAWSCENE_FOREGROUND_ONLY |
-					wi::renderer::DRAWSCENE_MAINCAMERA
-				);
+				if (visibility_main.IsForegroundObjectVisible())
+				{
+					// Foreground:
+					vp.min_depth = 1 - foreground_depth_range;
+					vp.max_depth = 1;
+					device->BindViewports(1, &vp, cmd);
+					wi::renderer::DrawScene(
+						visibility_main,
+						RENDERPASS_MAIN,
+						cmd,
+						wi::renderer::DRAWSCENE_OPAQUE |
+						wi::renderer::DRAWSCENE_FOREGROUND_ONLY |
+						wi::renderer::DRAWSCENE_MAINCAMERA
+					);
+				}
 
 				// Regular:
 				vp.min_depth = 0;
@@ -2222,22 +2227,24 @@ namespace wi
 				cmd,
 				wi::renderer::DRAWSCENE_TRANSPARENT |
 				wi::renderer::DRAWSCENE_TESSELLATION |
-				wi::renderer::DRAWSCENE_OCCLUSIONCULLING |
 				wi::renderer::DRAWSCENE_MAINCAMERA
 			);
 
-			// Foreground:
-			vp.min_depth = 1 - foreground_depth_range;
-			vp.max_depth = 1;
-			device->BindViewports(1, &vp, cmd);
-			wi::renderer::DrawScene(
-				visibility_main,
-				RENDERPASS_MAIN,
-				cmd,
-				wi::renderer::DRAWSCENE_TRANSPARENT |
-				wi::renderer::DRAWSCENE_FOREGROUND_ONLY |
-				wi::renderer::DRAWSCENE_MAINCAMERA
-			);
+			if (visibility_main.IsForegroundObjectVisible())
+			{
+				// Foreground:
+				vp.min_depth = 1 - foreground_depth_range;
+				vp.max_depth = 1;
+				device->BindViewports(1, &vp, cmd);
+				wi::renderer::DrawScene(
+					visibility_main,
+					RENDERPASS_MAIN,
+					cmd,
+					wi::renderer::DRAWSCENE_TRANSPARENT |
+					wi::renderer::DRAWSCENE_FOREGROUND_ONLY |
+					wi::renderer::DRAWSCENE_MAINCAMERA
+				);
+			}
 
 			// Reset normal viewport:
 			vp.min_depth = 0;

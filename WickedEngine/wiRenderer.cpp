@@ -3738,37 +3738,12 @@ void UpdateVisibility(Visibility& vis)
 
 			if ((aabb.layerMask & vis.layerMask) && vis.frustum.CheckBoxFast(aabb))
 			{
-				// Local stream compaction:
-				stream_compaction.list[stream_compaction.count++] = args.groupIndex;
-
 				const ObjectComponent& object = vis.scene->objects[args.jobIndex];
-				vis.meshlet_counter.fetch_add(object.meshletCount);
 				bool occluded = false;
 				if (vis.flags & Visibility::ALLOW_OCCLUSION_CULLING)
 				{
 					occluded = object.occlusion.IsOccluded();
-				}
 
-				if ((vis.flags & Visibility::ALLOW_REQUEST_REFLECTION) && object.IsRequestPlanarReflection() && !occluded)
-				{
-					// Planar reflection priority request:
-					const uint32_t dist16 = wi::math::f32tof16(wi::math::DistanceEstimated(vis.camera->Eye, object.center));
-					const int64_t packed_ref = int64_t(args.jobIndex) | (int64_t(dist16) << int64_t(32));
-					AtomicMin((volatile int64_t*)&vis.closest_ref, packed_ref);
-				}
-
-				if (object.GetFilterMask() & FILTER_TRANSPARENT)
-				{
-					vis.transparents_visible.store(true);
-				}
-
-				if (object.mesh_blend_required)
-				{
-					vis.mesh_blend_visible.store(true);
-				}
-
-				if (vis.flags & Visibility::ALLOW_OCCLUSION_CULLING)
-				{
 					if (object.IsRenderable() && object.occlusion.occlusionQueries[vis.scene->queryheap_idx] < 0)
 					{
 						if (aabb.intersects(vis.camera->Eye))
@@ -3780,6 +3755,37 @@ void UpdateVisibility(Visibility& vis)
 						{
 							object.occlusion.occlusionQueries[vis.scene->queryheap_idx] = vis.scene->queryAllocator.fetch_add(1); // allocate new occlusion query from heap
 						}
+					}
+				}
+
+				if (!occluded)
+				{
+					// Local stream compaction:
+					stream_compaction.list[stream_compaction.count++] = args.groupIndex;
+
+					vis.meshlet_counter.fetch_add(object.meshletCount);
+
+					if ((vis.flags & Visibility::ALLOW_REQUEST_REFLECTION) && object.IsRequestPlanarReflection())
+					{
+						// Planar reflection priority request:
+						const uint32_t dist16 = wi::math::f32tof16(wi::math::DistanceEstimated(vis.camera->Eye, object.center));
+						const int64_t packed_ref = int64_t(args.jobIndex) | (int64_t(dist16) << int64_t(32));
+						AtomicMin((volatile int64_t*)&vis.closest_ref, packed_ref);
+					}
+
+					if (object.GetFilterMask() & FILTER_TRANSPARENT)
+					{
+						vis.transparents_visible.store(true);
+					}
+
+					if (object.mesh_blend_required)
+					{
+						vis.mesh_blend_visible.store(true);
+					}
+
+					if (object.IsForeground())
+					{
+						vis.foreground_object_visible.store(true);
 					}
 				}
 			}
@@ -3914,8 +3920,31 @@ void UpdateVisibility(Visibility& vis)
 				{
 					continue;
 				}
-				vis.visibleHairs.push_back((uint32_t)i);
-				vis.meshlet_counter.fetch_add(hair.meshletCount);
+
+				bool occluded = false;
+				if (vis.flags & Visibility::ALLOW_OCCLUSION_CULLING)
+				{
+					occluded = hair.occlusion.IsOccluded();
+
+					if (hair.occlusion.occlusionQueries[vis.scene->queryheap_idx] < 0)
+					{
+						if (hair.aabb.intersects(vis.camera->Eye))
+						{
+							// camera is inside the instance, mark it as visible in this frame:
+							hair.occlusion.occlusionHistory |= 1;
+						}
+						else
+						{
+							hair.occlusion.occlusionQueries[vis.scene->queryheap_idx] = vis.scene->queryAllocator.fetch_add(1); // allocate new occlusion query from heap
+						}
+					}
+				}
+
+				if (!occluded)
+				{
+					vis.visibleHairs.push_back((uint32_t)i);
+					vis.meshlet_counter.fetch_add(hair.meshletCount);
+				}
 			}
 		});
 	}
@@ -5897,39 +5926,31 @@ void OcclusionCulling_Render(const CameraComponent& camera, const Visibility& vi
 	const GPUQueryHeap& queryHeap = vis.scene->queryHeap;
 	int query_write = vis.scene->queryheap_idx;
 
-	if (!vis.visibleObjects.empty())
-	{
-		device->EventBegin("Occlusion Culling Objects", cmd);
-
-		for (uint32_t objectIndex : vis.visibleObjects)
+	auto test_and_draw_occlusion_box_extended = [&](const AABB& aabb, const OcclusionResult& occlusion) {
+		if ((aabb.layerMask & vis.layerMask) && vis.frustum.CheckBoxFast(aabb))
 		{
-			const ObjectComponent& object = vis.scene->objects[objectIndex];
-			const int queryIndex = object.occlusion.occlusionQueries[query_write];
+			const int queryIndex = occlusion.occlusionQueries[query_write];
 			if (queryIndex >= 0 && queryIndex < (int)vis.scene->queryHeap.desc.query_count)
 			{
-				AABB aabb = vis.scene->aabb_objects[objectIndex];
+				AABB aabb_ext = aabb;
 				// extrude the bounding box a bit:
-				aabb._min.x -= 0.001f;
-				aabb._min.y -= 0.001f;
-				aabb._min.z -= 0.001f;
-				aabb._max.x += 0.001f;
-				aabb._max.y += 0.001f;
-				aabb._max.z += 0.001f;
-				const XMMATRIX transform = aabb.getAsBoxMatrix() * VP;
-				device->PushConstants(&transform, sizeof(transform), cmd);
+				aabb_ext._min.x -= 0.001f;
+				aabb_ext._min.y -= 0.001f;
+				aabb_ext._min.z -= 0.001f;
+				aabb_ext._max.x += 0.001f;
+				aabb_ext._max.y += 0.001f;
+				aabb_ext._max.z += 0.001f;
 
-				// render bounding box to later read the occlusion status
+				const XMMATRIX transform = aabb_ext.getAsBoxMatrix() * VP;
+				device->PushConstants(&transform, sizeof(transform), cmd);
 				device->QueryBegin(&queryHeap, queryIndex, cmd);
 				device->Draw(14, 0, cmd);
 				device->QueryEnd(&queryHeap, queryIndex, cmd);
 			}
 		}
-
-		device->EventEnd(cmd);
-	}
-
+	};
 	auto test_and_draw_occlusion_box = [&](const AABB& aabb, const OcclusionResult& occlusion) {
-		if ((aabb.layerMask & vis.layerMask) && vis.frustum.CheckBoxFast(aabb)) // re-test frustum because this doesn't use visible list (those are already occ culled except objects)
+		if ((aabb.layerMask & vis.layerMask) && vis.frustum.CheckBoxFast(aabb))
 		{
 			const int queryIndex = occlusion.occlusionQueries[query_write];
 			if (queryIndex >= 0 && queryIndex < (int)vis.scene->queryHeap.desc.query_count)
@@ -5943,14 +5964,28 @@ void OcclusionCulling_Render(const CameraComponent& camera, const Visibility& vi
 		}
 	};
 
+	if (!vis.visibleObjects.empty())
+	{
+		device->EventBegin("Occlusion Culling Objects", cmd);
+
+		for (size_t i = 0; i < vis.scene->objects.GetCount(); ++i)
+		{
+			const AABB& aabb = vis.scene->aabb_objects[i];
+			const ObjectComponent& object = vis.scene->objects[i];
+			test_and_draw_occlusion_box_extended(aabb, object.occlusion);
+		}
+
+		device->EventEnd(cmd);
+	}
+
 	if (vis.scene->lights.GetCount() > 0)
 	{
 		device->EventBegin("Occlusion Culling Lights", cmd);
 
-		for (size_t lightIndex = 0; lightIndex  < vis.scene->lights.GetCount(); ++lightIndex)
+		for (size_t i = 0; i  < vis.scene->lights.GetCount(); ++i)
 		{
-			const AABB& aabb = vis.scene->aabb_lights[lightIndex];
-			const LightComponent& light = vis.scene->lights[lightIndex];
+			const AABB& aabb = vis.scene->aabb_lights[i];
+			const LightComponent& light = vis.scene->lights[i];
 			test_and_draw_occlusion_box(aabb, light.occlusion);
 		}
 
@@ -5961,10 +5996,10 @@ void OcclusionCulling_Render(const CameraComponent& camera, const Visibility& vi
 	{
 		device->EventBegin("Occlusion Culling Decals", cmd);
 
-		for (size_t decalIndex = 0; decalIndex < vis.scene->decals.GetCount(); ++decalIndex)
+		for (size_t i = 0; i < vis.scene->decals.GetCount(); ++i)
 		{
-			const AABB& aabb = vis.scene->aabb_decals[decalIndex];
-			const DecalComponent& decal = vis.scene->decals[decalIndex];
+			const AABB& aabb = vis.scene->aabb_decals[i];
+			const DecalComponent& decal = vis.scene->decals[i];
 			test_and_draw_occlusion_box(aabb, decal.occlusion);
 		}
 
@@ -5975,11 +6010,24 @@ void OcclusionCulling_Render(const CameraComponent& camera, const Visibility& vi
 	{
 		device->EventBegin("Occlusion Culling Probes", cmd);
 
-		for (size_t probeIndex = 0; probeIndex < vis.scene->probes.GetCount(); ++probeIndex)
+		for (size_t i = 0; i < vis.scene->probes.GetCount(); ++i)
 		{
-			const AABB& aabb = vis.scene->aabb_probes[probeIndex];
-			const EnvironmentProbeComponent& probe = vis.scene->probes[probeIndex];
+			const AABB& aabb = vis.scene->aabb_probes[i];
+			const EnvironmentProbeComponent& probe = vis.scene->probes[i];
 			test_and_draw_occlusion_box(aabb, probe.occlusion);
+		}
+
+		device->EventEnd(cmd);
+	}
+
+	if (vis.scene->hairs.GetCount() > 0)
+	{
+		device->EventBegin("Occlusion Culling Hairs", cmd);
+
+		for (size_t i = 0; i < vis.scene->hairs.GetCount(); ++i)
+		{
+			const HairParticleSystem& hair = vis.scene->hairs[i];
+			test_and_draw_occlusion_box(hair.aabb, hair.occlusion);
 		}
 
 		device->EventEnd(cmd);
@@ -7238,7 +7286,6 @@ void DrawScene(
 	const bool transparent = flags & DRAWSCENE_TRANSPARENT;
 	const bool hairparticle = flags & DRAWSCENE_HAIRPARTICLE;
 	const bool impostor = flags & DRAWSCENE_IMPOSTOR;
-	const bool occlusion = (flags & DRAWSCENE_OCCLUSIONCULLING) && (vis.flags & Visibility::ALLOW_OCCLUSION_CULLING) && GetOcclusionCullingEnabled();
 	const bool ocean = flags & DRAWSCENE_OCEAN;
 	const bool skip_planar_reflection_objects = flags & DRAWSCENE_SKIP_PLANAR_REFLECTION_OBJECTS;
 	const bool foreground = flags & DRAWSCENE_FOREGROUND_ONLY;
@@ -7251,7 +7298,7 @@ void DrawScene(
 
 	if (ocean && !skip_planar_reflection_objects && vis.scene->weather.IsOceanEnabled() && vis.scene->ocean.IsValid())
 	{
-		if (!occlusion || !vis.scene->ocean.IsOccluded())
+		if (GetOcclusionCullingEnabled() && !vis.scene->ocean.IsOccluded())
 		{
 			vis.scene->ocean.Render(*vis.camera, cmd);
 		}
@@ -7274,8 +7321,6 @@ void DrawScene(
 		for (uint32_t instanceIndex : vis.visibleObjects)
 		{
 			const ObjectComponent& object = vis.scene->objects[instanceIndex];
-			if (occlusion && object.occlusion.IsOccluded())
-				continue;
 			if (!object.IsRenderable())
 				continue;
 			if (foreground != object.IsForeground())
