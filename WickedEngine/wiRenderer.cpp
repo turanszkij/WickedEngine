@@ -5964,7 +5964,7 @@ void OcclusionCulling_Render(const CameraComponent& camera, const Visibility& vi
 		}
 	};
 
-	if (!vis.visibleObjects.empty())
+	if (vis.scene->objects.GetCount() > 0)
 	{
 		device->EventBegin("Occlusion Culling Objects", cmd);
 
@@ -7298,7 +7298,7 @@ void DrawScene(
 
 	if (ocean && !skip_planar_reflection_objects && vis.scene->weather.IsOceanEnabled() && vis.scene->ocean.IsValid())
 	{
-		if (GetOcclusionCullingEnabled() && !vis.scene->ocean.IsOccluded())
+		if (!GetOcclusionCullingEnabled() || !vis.scene->ocean.IsOccluded())
 		{
 			vis.scene->ocean.Render(*vis.camera, cmd);
 		}
