@@ -1802,7 +1802,38 @@ using namespace metal_internal;
 		}
 		
 		copyAllocator.init(this);
-		
+
+		// Descriptor safety feature:
+		//	We init null descriptors for bindless index = 0 for access safety
+		//	Because shader compiler sometimes incorrectly loads descriptor outside of safety branch
+		//	Note: these are never freed, this is intentional
+		//	Metal has no null descriptors, so index 0 refers to a texture and a sampler that live as long as the device
+		{
+			int index = allocationhandler->free_bindless_res.back();
+			allocationhandler->free_bindless_res.pop_back();
+			wilog_assert(index == 0, "Descriptor safety feature error: descriptor index must be 0!");
+			TextureDesc desc;
+			desc.width = 1;
+			desc.height = 1;
+			desc.format = Format::R8G8B8A8_UNORM;
+			desc.bind_flags = BindFlag::SHADER_RESOURCE;
+			const uint32_t zero = 0;
+			SubresourceData data;
+			data.data_ptr = &zero;
+			data.row_pitch = sizeof(zero);
+			CreateTexture(&desc, &data, &nullTexture);
+			SetName(&nullTexture, "nullTexture");
+			descriptor_heap_res_data[index] = to_internal(&nullTexture)->srv.entry;
+		}
+		{
+			int index = allocationhandler->free_bindless_sam.back();
+			allocationhandler->free_bindless_sam.pop_back();
+			wilog_assert(index == 0, "Descriptor safety feature error: descriptor index must be 0!");
+			SamplerDesc desc;
+			CreateSampler(&desc, &nullSampler);
+			descriptor_heap_sam_data[index] = to_internal(&nullSampler)->entry;
+		}
+
 		wilog("Created GraphicsDevice_Metal (%d ms)", (int)std::round(timer.elapsed()));
 	}
 	GraphicsDevice_Metal::~GraphicsDevice_Metal()

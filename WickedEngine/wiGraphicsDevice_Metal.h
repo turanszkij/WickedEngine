@@ -366,6 +366,8 @@ namespace wi::graphics
 		NS::SharedPtr<MTL::Buffer> descriptor_heap_sam;
 		IRDescriptorTableEntry* descriptor_heap_res_data = nullptr;
 		IRDescriptorTableEntry* descriptor_heap_sam_data = nullptr;
+		Texture nullTexture; // descriptor safety feature: bindless resource index 0 (see the constructor)
+		Sampler nullSampler; // descriptor safety feature: bindless sampler index 0 (see the constructor)
 		
 #ifdef USE_TEXTURE_VIEW_POOL
 		NS::SharedPtr<MTL::TextureViewPool> texture_view_pool;
