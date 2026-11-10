@@ -4629,7 +4629,7 @@ using namespace metal_internal;
 					commandlist.compute_encoder->endEncoding();
 					commandlist.compute_encoder.reset();
 				}
-				commandlist.commandbuffer->resolveCounterHeap(internal_state->counter_heap.get(), {index, count}, {dst_internal->gpu_address, count * sizeof(uint64_t)}, nullptr, nullptr);
+				commandlist.commandbuffer->resolveCounterHeap(internal_state->counter_heap.get(), {index, count}, {dst_internal->gpu_address + dest_offset, count * sizeof(uint64_t)}, nullptr, nullptr);
 				break;
 			default:
 				break;
