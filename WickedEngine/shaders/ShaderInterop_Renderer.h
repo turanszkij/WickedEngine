@@ -353,7 +353,7 @@ struct alignas(16) ShaderTextureSlot
 			float2 virtual_image_dim = virtual_tile_count * SVT_TILE_SIZE;
 			float virtual_lod = get_lod(virtual_image_dim, ddx_coarse(uv), ddy_coarse(uv), GetAnisotropy()) + SVT_MIP_BIAS;
 			virtual_lod += bias;
-			return SampleVirtual(tex, sam, uv, residency_map, virtual_tile_count, virtual_image_dim, virtual_lod + bias);
+			return SampleVirtual(tex, sam, uv, residency_map, virtual_tile_count, virtual_image_dim, virtual_lod);
 		}
 #endif // DISABLE_SVT
 
