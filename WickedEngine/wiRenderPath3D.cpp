@@ -398,16 +398,19 @@ namespace wi
 			camera_reflection = *camera;
 			camera_reflection.jitter = XMFLOAT2(0, 0);
 			camera_reflection.Reflect(visibility_main.reflectionPlane);
-			visibility_reflection.layerMask = getLayerMask();
-			visibility_reflection.scene = scene;
-			visibility_reflection.camera = &camera_reflection;
-			visibility_reflection.flags =
-				wi::renderer::Visibility::ALLOW_OBJECTS |
-				wi::renderer::Visibility::ALLOW_EMITTERS |
-				wi::renderer::Visibility::ALLOW_HAIRS |
-				wi::renderer::Visibility::ALLOW_LIGHTS
-				;
-			wi::renderer::UpdateVisibility(visibility_reflection);
+			if (getReflectionsEnabled())
+			{
+				visibility_reflection.layerMask = getLayerMask();
+				visibility_reflection.scene = scene;
+				visibility_reflection.camera = &camera_reflection;
+				visibility_reflection.flags =
+					wi::renderer::Visibility::ALLOW_OBJECTS |
+					wi::renderer::Visibility::ALLOW_EMITTERS |
+					wi::renderer::Visibility::ALLOW_HAIRS |
+					wi::renderer::Visibility::ALLOW_LIGHTS
+					;
+				wi::renderer::UpdateVisibility(visibility_reflection);
+			}
 		}
 
 		XMUINT2 internalResolution = GetInternalResolution();

@@ -1061,12 +1061,16 @@ namespace wi::scene
 	}
 	void Scene::MergeFastInternal(Scene& other)
 	{
+		wi::jobsystem::context ctx;
 		for (auto& entry : componentLibrary.entries)
 		{
 			if (other.componentLibrary.entries.count(entry.first) == 0)
 				continue;
-			entry.second.component_manager->Merge(*other.componentLibrary.entries[entry.first].component_manager);
+			wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
+				entry.second.component_manager->Merge(*other.componentLibrary.entries[entry.first].component_manager);
+			});
 		}
+		wi::jobsystem::Wait(ctx);
 	}
 	void Scene::Merge(Scene& other)
 	{
@@ -1987,6 +1991,23 @@ namespace wi::scene
 			}
 		}
 	}
+
+	union SortBits
+	{
+		struct
+		{
+			uint32_t shadertype : 6; // max 64 shader types
+			uint32_t blendmode : 3; // max 8 blendmodes
+			uint32_t doublesided : 1;	// bool
+			uint32_t tessellation : 1;	// bool
+			uint32_t alphatest : 1;		// bool
+			uint32_t customshader : 8;
+			uint32_t sort_priority : 4;
+			uint32_t unused : 8;
+		} bits;
+		uint32_t value = 0;
+	};
+	static_assert(sizeof(SortBits) == sizeof(uint32_t));
 
 	void Scene::RunAnimationUpdateSystem(wi::jobsystem::context& ctx)
 	{
@@ -4017,6 +4038,51 @@ namespace wi::scene
 
 			mesh.impostorFadeDistance = FLT_MAX;
 
+			mesh.planar_refleection_request = false;
+			mesh.mesh_blend_request = false;
+
+			SortBits sort_bits;
+			sort_bits.bits.tessellation = mesh.GetTessellationFactor() > 0;
+			sort_bits.bits.doublesided = mesh.IsDoubleSided();
+
+			uint32_t first_subset = 0;
+			uint32_t last_subset = 0;
+			mesh.GetLODSubsetRange(0, first_subset, last_subset);
+			for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
+			{
+				const MeshComponent::MeshSubset& subset = mesh.subsets[subsetIndex];
+				const MaterialComponent* material = materials.GetComponent(subset.materialID);
+
+				if (material != nullptr)
+				{
+					mesh.filterMaskDynamic |= material->GetFilterMask();
+
+					if (material->HasPlanarReflection())
+					{
+						mesh.planar_refleection_request = true;
+					}
+
+					if (material->GetMeshBlend() > 0)
+					{
+						mesh.mesh_blend_request = true;
+					}
+
+					sort_bits.bits.shadertype |= 1 << material->shaderType;
+					sort_bits.bits.blendmode |= 1 << material->GetBlendMode();
+					sort_bits.bits.doublesided |= material->IsDoubleSided();
+					sort_bits.bits.alphatest |= material->IsAlphaTestEnabled();
+
+					int customshader = material->GetCustomShaderID();
+					if (customshader >= 0)
+					{
+						// Custom shader IDs are stable opaque handles and can be larger than the
+						// compact sorting hint. Fold them safely into the available bits.
+						sort_bits.bits.customshader |= 1u << (uint32_t(customshader) & 7u);
+					}
+				}
+			}
+			mesh.sort_bits = sort_bits.value;
+
 			mesh.active_morph_count = 0;
 			if (skinningDataMapped != nullptr && !mesh.morph_targets.empty())
 			{
@@ -4660,72 +4726,20 @@ namespace wi::scene
 					object.lod = ComputeObjectLODForView(object, aabb, mesh, camera.GetViewProjection());
 				}
 
-				union SortBits
-				{
-					struct
-					{
-						uint32_t shadertype : 6; // max 64 shader types
-						uint32_t blendmode : 3; // max 8 blendmodes
-						uint32_t doublesided : 1;	// bool
-						uint32_t tessellation : 1;	// bool
-						uint32_t alphatest : 1;		// bool
-						uint32_t customshader : 8;
-						uint32_t sort_priority : 4;
-						uint32_t unused : 8;
-					} bits;
-					uint32_t value;
-				} sort_bits;
-				static_assert(sizeof(SortBits) == sizeof(uint32_t));
-
-				sort_bits.bits.tessellation = mesh.GetTessellationFactor() > 0;
-				sort_bits.bits.doublesided = mesh.IsDoubleSided();
+				SortBits sort_bits;
+				sort_bits.value = mesh.sort_bits;
 				sort_bits.bits.sort_priority = object.sort_priority;
+				object.sort_bits = sort_bits.value;
+
+				object.filterMaskDynamic = mesh.filterMaskDynamic;
+				object.SetRequestPlanarReflection(mesh.planar_refleection_request);
+				object.mesh_blend_required = mesh.mesh_blend_request;
+
+				object.meshletCount = mesh.meshletCount;
 
 				uint32_t first_subset = 0;
 				uint32_t last_subset = 0;
 				mesh.GetLODSubsetRange(object.lod, first_subset, last_subset);
-				for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
-				{
-					const MeshComponent::MeshSubset& subset = mesh.subsets[subsetIndex];
-					const MaterialComponent* material = materials.GetComponent(subset.materialID);
-
-					if (material != nullptr)
-					{
-						object.filterMaskDynamic |= material->GetFilterMask();
-
-						if (material->HasPlanarReflection())
-						{
-							object.SetRequestPlanarReflection(true);
-						}
-
-						if (material->GetMeshBlend() > 0)
-						{
-							object.mesh_blend_required = true;
-						}
-
-						sort_bits.bits.shadertype |= 1 << material->shaderType;
-						sort_bits.bits.blendmode |= 1 << material->GetBlendMode();
-						sort_bits.bits.doublesided |= material->IsDoubleSided();
-						sort_bits.bits.alphatest |= material->IsAlphaTestEnabled();
-
-						int customshader = material->GetCustomShaderID();
-						if (customshader >= 0)
-						{
-							// Custom shader IDs are stable opaque handles and can be larger than the
-							// compact sorting hint. Fold them safely into the available bits.
-							sort_bits.bits.customshader |= 1u << (uint32_t(customshader) & 7u);
-						}
-					}
-				}
-
-				object.sort_bits = sort_bits.value;
-
-				object.meshletCount = mesh.meshletCount;
-
-				//// Correction matrix for mesh normals with non-uniform object scaling:
-				//XMMATRIX worldMatrixInverseTranspose = XMMatrixTranspose(XMMatrixInverse(nullptr, W));
-				//XMFLOAT4X4 transformNormal;
-				//XMStoreFloat4x4(&transformNormal, worldMatrixInverseTranspose);
 
 				// Create GPU instance data:
 				ShaderMeshInstance inst = shader_mesh_instance_null;

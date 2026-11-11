@@ -1130,6 +1130,10 @@ namespace wi::scene
 			static constexpr wi::graphics::Format FORMAT = wi::graphics::Format::R8G8B8A8_SNORM;
 		};
 
+		uint32_t sort_bits = 0;
+		uint32_t filterMaskDynamic = 0;
+		bool planar_refleection_request = false;
+		bool mesh_blend_request = false;
 	};
 
 	struct alignas(16) ImpostorComponent

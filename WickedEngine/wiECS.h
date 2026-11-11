@@ -172,8 +172,10 @@ namespace wi::ecs
 		// Perform deep copy of all the contents of "other" into this
 		inline void Copy(const ComponentManager<Component>& other)
 		{
-			components.reserve(GetCount() + other.GetCount());
-			entities.reserve(GetCount() + other.GetCount());
+			if (other.GetCount() == 0)
+				return;
+			Reserve(GetCount() + other.GetCount());
+
 			for (size_t i = 0; i < other.GetCount(); ++i)
 			{
 				Entity entity = other.entities[i];
@@ -189,8 +191,9 @@ namespace wi::ecs
 		//	The other component manager is not retained after this operation!
 		inline void Merge(ComponentManager<Component>& other)
 		{
-			components.reserve(GetCount() + other.GetCount());
-			entities.reserve(GetCount() + other.GetCount());
+			if (other.GetCount() == 0)
+				return;
+			Reserve(GetCount() + other.GetCount());
 
 			for (size_t i = 0; i < other.GetCount(); ++i)
 			{
