@@ -398,7 +398,6 @@ int main(int argc, char* argv[])
 
 	*out << "[Wicked Engine Offline Shader Compiler]\n";
 	*out << "Available command arguments:\n";
-	*out << "\thlsl5 : \t\tCompile shaders to hlsl5 (dx11) format (using d3dcompiler)\n";
 	*out << "\thlsl6 : \t\tCompile shaders to hlsl6 (dx12) format (using dxcompiler)\n";
 	*out << "\tspirv : \t\tCompile shaders to spirv (vulkan) format (using dxcompiler)\n";
 	*out << "\tmetal : \t\tCompile shaders to Apple Metal format (using dxcompiler and metal shader converter)\n";
@@ -418,11 +417,6 @@ int main(int argc, char* argv[])
 	*out << "\tsm6.6 : \t\tIncrease all compilations to shader model 6.6\n";
 	*out << "Command arguments used: ";
 
-	if (wi::arguments::HasArgument("hlsl5"))
-	{
-		targets.push_back({ ShaderFormat::HLSL5, "shaders/hlsl5/" });
-		*out << "hlsl5 ";
-	}
 	if (wi::arguments::HasArgument("hlsl6"))
 	{
 		targets.push_back({ ShaderFormat::HLSL6, "shaders/hlsl6/" });
@@ -524,7 +518,6 @@ int main(int argc, char* argv[])
 #ifdef __APPLE__
 			{ ShaderFormat::METAL, "shaders/metal/" },
 #else
-			//{ ShaderFormat::HLSL5, "shaders/hlsl5/" },
 			{ ShaderFormat::HLSL6, "shaders/hlsl6/" },
 			{ ShaderFormat::SPIRV, "shaders/spirv/" },
 #endif // __APPLE__
@@ -634,19 +627,6 @@ int main(int argc, char* argv[])
 
 		for (auto& shader : shaders)
 		{
-			if (target.format == ShaderFormat::HLSL5)
-			{
-				if (
-					shader.stage == ShaderStage::MS ||
-					shader.stage == ShaderStage::AS ||
-					shader.stage == ShaderStage::LIB
-					)
-				{
-					// shader stage not applicable to HLSL5
-					continue;
-				}
-			}
-
 			for (auto& permutation : shader.permutations)
 			{
 				wi::jobsystem::Execute(ctx, [&target, &permutation, &shader, &out, SHADERPATH, compile_flags, minshadermodel_override](wi::jobsystem::JobArgs args) {
@@ -700,11 +680,6 @@ int main(int argc, char* argv[])
 					input.minshadermodel = std::max(shader.minshadermodel, minshadermodel_override);
 					input.defines = permutation.defines;
 
-					if (input.minshadermodel > ShaderModel::SM_5_0 && target.format == ShaderFormat::HLSL5)
-					{
-						// if shader format cannot support shader model, then we cancel the task without returning error
-						return;
-					}
 					if (target.format == ShaderFormat::PS5 && (input.minshadermodel >= ShaderModel::SM_6_5 || input.stage == ShaderStage::MS || input.stage == ShaderStage::AS))
 					{
 						// TODO PS5 raytracing, mesh shader

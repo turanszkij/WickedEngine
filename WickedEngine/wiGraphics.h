@@ -57,7 +57,6 @@ namespace wi::graphics
 	enum class ShaderFormat : uint8_t
 	{
 		NONE,		// Not used
-		HLSL5,		// DXBC
 		HLSL6,		// DXIL
 		SPIRV,		// SPIR-V
 		HLSL6_XS,	// XBOX Series Native

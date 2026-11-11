@@ -11,16 +11,6 @@
 #define wiRayQuery RayQuery<0>
 #endif // __XBOX_SCARLETT
 
-#ifdef HLSL5
-struct RayDesc
-{
-	float3 Origin;
-	float TMin;
-	float3 Direction;
-	float TMax;
-};
-#endif // HLSL5
-
 // Creates camera ray from clip space using the inverse projection matrix:
 inline RayDesc CreateCameraRay(float2 clipspace)
 {

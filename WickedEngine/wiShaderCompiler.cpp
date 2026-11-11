@@ -10,7 +10,6 @@
 #ifdef PLATFORM_WINDOWS_DESKTOP
 #define SHADERCOMPILER_ENABLED
 #define SHADERCOMPILER_ENABLED_DXCOMPILER
-#define SHADERCOMPILER_ENABLED_D3DCOMPILER
 #include <wrl/client.h>
 using namespace Microsoft::WRL;
 #endif // _WIN32
@@ -27,10 +26,6 @@ using namespace Microsoft::WRL;
 #include "Utility/dxc/dxcapi.h"
 #include "wiGraphicsDevice_Vulkan.h"
 #endif // SHADERCOMPILER_ENABLED_DXCOMPILER
-
-#ifdef SHADERCOMPILER_ENABLED_D3DCOMPILER
-#include <d3dcompiler.h>
-#endif // SHADERCOMPILER_ENABLED_D3DCOMPILER
 
 #if __has_include("wiShaderCompiler_XBOX.h")
 #include "wiShaderCompiler_XBOX.h"
@@ -858,166 +853,6 @@ namespace wi::shadercompiler
 	}
 #endif // SHADERCOMPILER_ENABLED_DXCOMPILER
 
-#ifdef SHADERCOMPILER_ENABLED_D3DCOMPILER
-	struct InternalState_D3DCompiler
-	{
-		using PFN_D3DCOMPILE = decltype(&D3DCompile);
-		PFN_D3DCOMPILE D3DCompile = nullptr;
-
-		InternalState_D3DCompiler()
-		{
-			if (D3DCompile != nullptr)
-			{
-				return; // already initialized
-			}
-
-			HMODULE d3dcompiler = wiLoadLibrary("d3dcompiler_47.dll");
-			if (d3dcompiler != nullptr)
-			{
-				D3DCompile = (PFN_D3DCOMPILE)wiGetProcAddress(d3dcompiler, "D3DCompile");
-				if (D3DCompile != nullptr)
-				{
-					wi::backlog::post("wi::shadercompiler: loaded d3dcompiler_47.dll");
-				}
-			}
-		}
-	};
-	inline InternalState_D3DCompiler& d3d_compiler()
-	{
-		static InternalState_D3DCompiler internal_state;
-		return internal_state;
-	}
-
-	void Compile_D3DCompiler(const CompilerInput& input, CompilerOutput& output)
-	{
-		if (d3d_compiler().D3DCompile == nullptr)
-		{
-			return;
-		}
-
-		if (input.minshadermodel > ShaderModel::SM_5_0)
-		{
-			output.error_message = "SHADERFORMAT_HLSL5 cannot support specified minshadermodel!";
-			return;
-		}
-
-		wi::vector<uint8_t> shadersourcedata;
-		if (!wi::helper::FileRead(input.shadersourcefilename, shadersourcedata))
-		{
-			return;
-		}
-
-		D3D_SHADER_MACRO defines[] = {
-			{"HLSL5", "1"},
-			{"DISABLE_WAVE_INTRINSICS", "1"},
-			{NULL, NULL},
-		};
-
-		const char* target = nullptr;
-		switch (input.stage)
-		{
-		default:
-		case ShaderStage::MS:
-		case ShaderStage::AS:
-		case ShaderStage::LIB:
-			// not applicable
-			return;
-		case ShaderStage::VS:
-			target = "vs_5_0";
-			break;
-		case ShaderStage::HS:
-			target = "hs_5_0";
-			break;
-		case ShaderStage::DS:
-			target = "ds_5_0";
-			break;
-		case ShaderStage::GS:
-			target = "gs_5_0";
-			break;
-		case ShaderStage::PS:
-			target = "ps_5_0";
-			break;
-		case ShaderStage::CS:
-			target = "cs_5_0";
-			break;
-		}
-
-		struct IncludeHandler final : public ID3DInclude
-		{
-			const CompilerInput* input = nullptr;
-			CompilerOutput* output = nullptr;
-			wi::vector<wi::vector<uint8_t>> filedatas;
-
-			HRESULT Open(D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID* ppData, UINT* pBytes) override
-			{
-				for (auto& x : input->include_directories)
-				{
-					std::string filename = x + pFileName;
-					if (!wi::helper::FileExists(filename))
-						continue;
-					wi::vector<uint8_t>& filedata = filedatas.emplace_back();
-					if (wi::helper::FileRead(filename, filedata))
-					{
-						output->dependencies.push_back(filename);
-						*ppData = filedata.data();
-						*pBytes = (UINT)filedata.size();
-						return S_OK;
-					}
-				}
-				return E_FAIL;
-			}
-
-			HRESULT Close(LPCVOID pData) override
-			{
-				return S_OK;
-			}
-		} includehandler;
-		includehandler.input = &input;
-		includehandler.output = &output;
-
-		// https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/d3dcompile-constants
-		UINT Flags1 = 0;
-		if (has_flag(input.flags, Flags::DISABLE_OPTIMIZATION))
-		{
-			Flags1 |= D3DCOMPILE_SKIP_OPTIMIZATION;
-		}
-
-
-		ComPtr<ID3DBlob> code;
-		ComPtr<ID3DBlob> errors;
-		HRESULT hr = d3d_compiler().D3DCompile(
-			shadersourcedata.data(),
-			shadersourcedata.size(),
-			input.shadersourcefilename.c_str(),
-			defines,
-			&includehandler, //D3D_COMPILE_STANDARD_FILE_INCLUDE,
-			input.entrypoint.c_str(),
-			target,
-			Flags1,
-			0,
-			&code,
-			&errors
-		);
-
-		if (errors)
-		{
-			output.error_message = (const char*)errors->GetBufferPointer();
-		}
-
-		if (SUCCEEDED(hr))
-		{
-			output.dependencies.push_back(input.shadersourcefilename);
-			output.shaderdata = (const uint8_t*)code->GetBufferPointer();
-			output.shadersize = code->GetBufferSize();
-
-			// keep the blob alive == keep shader pointer valid!
-			auto internal_state = wi::allocator::make_shared<ComPtr<ID3D10Blob>>();
-			*internal_state = code;
-			output.internal_state = internal_state;
-		}
-	}
-#endif // SHADERCOMPILER_ENABLED_D3DCOMPILER
-
 	void Compile(const CompilerInput& input, CompilerOutput& output)
 	{
 		output = CompilerOutput();
@@ -1036,12 +871,6 @@ namespace wi::shadercompiler
 			Compile_DXCompiler(input, output);
 			break;
 #endif // SHADERCOMPILER_ENABLED_DXCOMPILER
-
-#ifdef SHADERCOMPILER_ENABLED_D3DCOMPILER
-		case ShaderFormat::HLSL5:
-			Compile_D3DCompiler(input, output);
-			break;
-#endif // SHADERCOMPILER_ENABLED_D3DCOMPILER
 
 #ifdef SHADERCOMPILER_PS5_INCLUDED
 		case ShaderFormat::PS5:
