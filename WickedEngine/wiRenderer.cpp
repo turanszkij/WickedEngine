@@ -363,10 +363,22 @@ union ObjectRenderingVariant
 	uint32_t value;
 };
 static_assert(sizeof(ObjectRenderingVariant) == sizeof(uint32_t));
-inline PipelineState* GetObjectPSO(ObjectRenderingVariant variant)
+inline wi::unordered_map<uint32_t, PipelineState>& GetObjectPSOMap(ObjectRenderingVariant variant)
 {
 	static wi::unordered_map<uint32_t, PipelineState> PSO_object[RENDERPASS_COUNT][MaterialComponent::SHADERTYPE_COUNT][OBJECT_MESH_SHADER_PSO_COUNT];
-	return &PSO_object[variant.bits.renderpass][variant.bits.shadertype][variant.bits.mesh_shader][variant.value];
+	return PSO_object[variant.bits.renderpass][variant.bits.shadertype][variant.bits.mesh_shader];
+}
+// Lookup only, returns nullptr if not compiled yet: render threads call this in parallel, so it must never insert
+inline const PipelineState* GetObjectPSO(ObjectRenderingVariant variant)
+{
+	const auto& map = GetObjectPSOMap(variant);
+	const auto it = map.find(variant.value);
+	return it == map.end() ? nullptr : &it->second;
+}
+// Main thread only, while nothing is rendering (EVENT_THREAD_SAFE_POINT)
+inline void SetObjectPSO(ObjectRenderingVariant variant, const PipelineState& pso)
+{
+	GetObjectPSOMap(variant)[variant.value] = pso;
 }
 wi::jobsystem::context mesh_shader_ctx;
 wi::jobsystem::context object_pso_job_ctx;
@@ -2158,7 +2170,7 @@ void LoadShaders()
 											PipelineState pso;
 											device->CreatePipelineState(&desc, &pso, &renderpass_info);
 											wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-												*GetObjectPSO(variant) = pso;
+												SetObjectPSO(variant, pso);
 												});
 										}
 									}
@@ -2183,7 +2195,7 @@ void LoadShaders()
 											PipelineState pso;
 											device->CreatePipelineState(&desc, &pso, &renderpass_info);
 											wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-												*GetObjectPSO(variant) = pso;
+												SetObjectPSO(variant, pso);
 												});
 										}
 									}
@@ -2198,7 +2210,7 @@ void LoadShaders()
 										PipelineState pso;
 										device->CreatePipelineState(&desc, &pso, &renderpass_info);
 										wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-											*GetObjectPSO(variant) = pso;
+											SetObjectPSO(variant, pso);
 											});
 									}
 									break;
@@ -2212,7 +2224,7 @@ void LoadShaders()
 										PipelineState pso;
 										device->CreatePipelineState(&desc, &pso, &renderpass_info);
 										wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-											*GetObjectPSO(variant) = pso;
+											SetObjectPSO(variant, pso);
 											});
 									}
 									break;
@@ -2221,7 +2233,7 @@ void LoadShaders()
 										PipelineState pso;
 										device->CreatePipelineState(&desc, &pso);
 										wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-											*GetObjectPSO(variant) = pso;
+											SetObjectPSO(variant, pso);
 											});
 										break;
 									}
@@ -3124,6 +3136,8 @@ void Workaround(const int bug , CommandList cmd)
 		variant.bits.blendmode = BLENDMODE_OPAQUE;
 		variant.bits.sample_count = 1;
 		const PipelineState* pso = GetObjectPSO(variant);
+		if (pso == nullptr)
+			return;
 
 		device->EventBegin("Workaround 1", cmd);
 		device->RenderPassBegin(nullptr, 0, cmd);
