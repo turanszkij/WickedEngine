@@ -1,10 +1,5 @@
 #ifndef WI_LIGHTING_HF
 #define WI_LIGHTING_HF
-
-#ifdef CARTOON
-#define DISABLE_SOFT_SHADOWMAP // must be defined before shadowHF.hlsli is included
-#endif // CARTOON
-
 #include "globals.hlsli"
 #include "shadowHF.hlsli"
 #include "brdf.hlsli"
