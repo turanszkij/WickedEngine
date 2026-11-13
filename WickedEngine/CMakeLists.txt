@@ -87,7 +87,7 @@ endif()
 set_target_properties(Jolt PROPERTIES
     POSITION_INDEPENDENT_CODE ${WICKED_PIC}
 )
-add_compile_definitions(Jolt JPH_DEBUG_RENDERER)
+target_compile_definitions(Jolt PUBLIC JPH_DEBUG_RENDERER)
 
 file(GLOB HEADER_FILES CONFIGURE_DEPENDS *.h)
 file(GLOB SOURCE_FILES CONFIGURE_DEPENDS *.cpp)
