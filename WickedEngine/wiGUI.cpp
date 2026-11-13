@@ -7,7 +7,6 @@
 #include "wiEventHandler.h"
 #include "wiFont.h"
 #include "wiImage.h"
-#include "wiTextureHelper.h"
 #include "wiBacklog.h"
 #include "wiHelper.h"
 

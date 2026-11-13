@@ -50,12 +50,15 @@ inline sdlsystem_ptr_t make_sdlsystem(Uint32 flags)
 // Create a window (that contains both a SDL_Window and the destructor for SDL_Windows).
 // SDL3's SDL_CreateWindow() dropped the x/y position parameters SDL2 had -- positioning is
 // now a separate call, so this makes it afterward to keep the same call signature as sdl2.h.
+// Also call SDL_StartTextInput since we listen for SDL_TEXTINPUT. This wasn't necessary in SDL2,
+// but is needed in SDL3, otherwise the events will not be delivered.
 inline window_ptr_t make_window(const char* title, int x, int y, int w, int h, Uint64 flags)
 {
     window_ptr_t window(SDL_CreateWindow(title, w, h, flags), SDL_DestroyWindow);
     if (window)
     {
         SDL_SetWindowPosition(window.get(), x, y);
+        SDL_StartTextInput(window.get());
     }
     return window;
 }
