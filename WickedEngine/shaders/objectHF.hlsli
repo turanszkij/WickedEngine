@@ -856,12 +856,12 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 	[branch]
 	if (material.textures[SHEENCOLORMAP].IsValid())
 	{
-		surface.sheen.color = material.textures[SHEENCOLORMAP].Sample(sampler_objectshader, uvsets).rgb;
+		surface.sheen.color *= material.textures[SHEENCOLORMAP].Sample(sampler_objectshader, uvsets).rgb;
 	}
 	[branch]
 	if (material.textures[SHEENROUGHNESSMAP].IsValid())
 	{
-		surface.sheen.roughness = material.textures[SHEENROUGHNESSMAP].Sample(sampler_objectshader, uvsets).a;
+		surface.sheen.roughness *= material.textures[SHEENROUGHNESSMAP].Sample(sampler_objectshader, uvsets).a;
 	}
 #endif // OBJECTSHADER_USE_UVSETS
 #endif // SHEEN
@@ -876,12 +876,12 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace APPEND_COVER
 	[branch]
 	if (material.textures[CLEARCOATMAP].IsValid())
 	{
-		surface.clearcoat.factor = material.textures[CLEARCOATMAP].Sample(sampler_objectshader, uvsets).r;
+		surface.clearcoat.factor *= material.textures[CLEARCOATMAP].Sample(sampler_objectshader, uvsets).r;
 	}
 	[branch]
 	if (material.textures[CLEARCOATROUGHNESSMAP].IsValid())
 	{
-		surface.clearcoat.roughness = material.textures[CLEARCOATROUGHNESSMAP].Sample(sampler_objectshader, uvsets).g;
+		surface.clearcoat.roughness *= material.textures[CLEARCOATROUGHNESSMAP].Sample(sampler_objectshader, uvsets).g;
 	}
 #ifdef OBJECTSHADER_USE_TANGENT
 	[branch]
