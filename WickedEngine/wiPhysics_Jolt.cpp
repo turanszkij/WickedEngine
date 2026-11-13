@@ -1939,9 +1939,20 @@ namespace wi::physics
 	}
 	using namespace jolt;
 
+	static void JoltTrace(const char* fmt, ...) {
+		char buf[1024];
+		va_list args;
+		va_start(args, fmt);
+		vsnprintf(buf, sizeof(buf), fmt, args);
+		va_end(args);
+		wilog_warning("[Jolt] %s", buf);
+	}
+
 	void Initialize()
 	{
 		wi::Timer timer;
+
+		JPH::Trace = JoltTrace;
 
 		RegisterDefaultAllocator();
 
