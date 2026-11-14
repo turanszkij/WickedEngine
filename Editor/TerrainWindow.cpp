@@ -765,10 +765,13 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	grassLengthSlider.SetPos(XMFLOAT2(x, y += step));
 	grassLengthSlider.OnSlide([this](wi::gui::EventArgs args) {
 		terrain->grass_properties.length = args.fValue;
-		wi::HairParticleSystem* hair = terrain->scene->hairs.GetComponent(terrain->grassEntity);
-		if (hair != nullptr)
+		for (int region = 0; region < wi::terrain::MATERIAL_COUNT; ++region)
 		{
-			hair->length = args.fValue;
+			wi::HairParticleSystem* hair = terrain->scene->hairs.GetComponent(terrain->grassEntities[region]);
+			if (hair != nullptr)
+			{
+				hair->length = args.fValue;
+			}
 		}
 		});
 	AddWidget(&grassLengthSlider);
@@ -779,10 +782,13 @@ void TerrainWindow::Create(EditorComponent* _editor)
 	grassDistanceSlider.SetPos(XMFLOAT2(x, y += step));
 	grassDistanceSlider.OnSlide([this](wi::gui::EventArgs args) {
 		terrain->grass_properties.viewDistance = args.fValue;
-		wi::HairParticleSystem* hair = terrain->scene->hairs.GetComponent(terrain->grassEntity);
-		if (hair != nullptr)
+		for (int region = 0; region < wi::terrain::MATERIAL_COUNT; ++region)
 		{
-			hair->viewDistance = args.fValue;
+			wi::HairParticleSystem* hair = terrain->scene->hairs.GetComponent(terrain->grassEntities[region]);
+			if (hair != nullptr)
+			{
+				hair->viewDistance = args.fValue;
+			}
 		}
 		});
 	AddWidget(&grassDistanceSlider);
@@ -1092,27 +1098,44 @@ void TerrainWindow::Create(EditorComponent* _editor)
 		AddWidget(&materialCombos[i]);
 	}
 
-	materialCombo_GrassParticle.Create("Grass material: ");
-	materialCombo_GrassParticle.SetTooltip("Select material entity");
-	materialCombo_GrassParticle.SetSize(XMFLOAT2(wid, hei));
-	materialCombo_GrassParticle.SetPos(XMFLOAT2(x, y += step));
-	materialCombo_GrassParticle.OnSelect([this](wi::gui::EventArgs args) {
-		const Scene& scene = editor->GetCurrentScene();
-		wi::ecs::Entity entity = static_cast<wi::ecs::Entity>(args.userdata);
-		if (entity != INVALID_ENTITY && scene.materials.Contains(entity))
-		{
-			if (terrain->grassEntity != entity)
+	const char* grass_labels[wi::terrain::MATERIAL_COUNT] = {
+		"Base grass: ",
+		"Slope grass: ",
+		"Low altitude grass: ",
+		"High altitude grass: ",
+	};
+	for (size_t i = 0; i < arraysize(grassCombos); ++i)
+	{
+		grassCombos[i].Create(grass_labels[i]);
+		grassCombos[i].SetTooltip("Grass entity for this region.");
+		grassCombos[i].SetSize(XMFLOAT2(wid, hei));
+		grassCombos[i].SetPos(XMFLOAT2(x, y += step));
+		grassCombos[i].OnSelect([this, i](wi::gui::EventArgs args) {
+			const Scene& scene = editor->GetCurrentScene();
+			wi::ecs::Entity entity = static_cast<wi::ecs::Entity>(args.userdata);
+			wi::ecs::Entity& slot = terrain->grassEntities[i];
+			if (entity != INVALID_ENTITY && scene.hairs.Contains(entity))
 			{
-				terrain->grassEntity = entity;
-				terrain->Generation_Restart();
+				const bool changed = slot != entity;
+				slot = entity;
+				// Non-base regions rebuild even when the same entity is chosen again, so a
+				// shared grass entity rebakes that region's mask.
+				if (changed || i != wi::terrain::MATERIAL_BASE)
+				{
+					terrain->Generation_Restart();
+				}
 			}
-		}
-		else
-		{
-			terrain->grassEntity = INVALID_ENTITY;
-		}
-	});
-	AddWidget(&materialCombo_GrassParticle);
+			else
+			{
+				slot = INVALID_ENTITY;
+				if (i != wi::terrain::MATERIAL_BASE)
+				{
+					terrain->Generation_Restart();
+				}
+			}
+		});
+		AddWidget(&grassCombos[i]);
+	}
 
 	propsWindow.reset(new PropsWindow(editor));
 	AddWidget(propsWindow.get());
@@ -1355,6 +1378,10 @@ void TerrainWindow::RefreshMaterialComboBoxes()
 	auto fillMaterialCombo = [&](wi::gui::ComboBox& comboBox, Entity selected) {
 		comboBox.ClearItems();
 		comboBox.AddItem("NO MATERIAL", INVALID_ENTITY);
+		if (selected == INVALID_ENTITY)
+		{
+			comboBox.SetSelectedWithoutCallback(0);
+		}
 		for (size_t i = 0; i < scene.materials.GetCount(); ++i)
 		{
 			if (scene.materials[i].IsInternal())
@@ -1384,7 +1411,65 @@ void TerrainWindow::RefreshMaterialComboBoxes()
 	{
 		fillMaterialCombo(materialCombos[i], terrain->materialEntities[i]);
 	}
-	fillMaterialCombo(materialCombo_GrassParticle, terrain->grassEntity);
+
+	wi::vector<Entity> chunk_entities;
+	for (size_t terrain_index = 0; terrain_index < scene.terrains.GetCount(); ++terrain_index)
+	{
+		for (const auto& it : scene.terrains[terrain_index].chunks)
+		{
+			if (it.second.entity != INVALID_ENTITY)
+			{
+				chunk_entities.push_back(it.second.entity);
+			}
+		}
+	}
+	auto fillGrassCombo = [&](wi::gui::ComboBox& comboBox, Entity selected) {
+		comboBox.ClearItems();
+		comboBox.AddItem("NONE", INVALID_ENTITY);
+		if (selected == INVALID_ENTITY)
+		{
+			comboBox.SetSelectedWithoutCallback(0);
+		}
+		int item = 1;
+		for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
+		{
+			const Entity entity = scene.hairs.GetEntity(i);
+			const HierarchyComponent* hierarchy = scene.hierarchy.GetComponent(entity);
+			bool spawned_patch = false;
+			if (hierarchy != nullptr)
+			{
+				for (Entity chunk_entity : chunk_entities)
+				{
+					if (hierarchy->parentID == chunk_entity)
+					{
+						spawned_patch = true;
+						break;
+					}
+				}
+			}
+			if (spawned_patch)
+			{
+				continue;
+			}
+			if (scene.names.Contains(entity))
+			{
+				comboBox.AddItem(scene.names.GetComponent(entity)->name, entity);
+			}
+			else
+			{
+				comboBox.AddItem(std::to_string(entity), entity);
+			}
+			if (selected == entity)
+			{
+				comboBox.SetSelectedWithoutCallback(item);
+			}
+			++item;
+		}
+	};
+	for (size_t i = 0; i < arraysize(grassCombos); ++i)
+	{
+		fillGrassCombo(grassCombos[i], terrain->grassEntities[i]);
+	}
 }
 void TerrainWindow::AddModifier(ModifierWindow* modifier_window)
 {
@@ -1716,19 +1801,19 @@ void TerrainWindow::SetupAssets()
 		LoadModel(grassScene, grassWiscenePath);
 		if (grassScene.hairs.GetCount() > 0)
 		{
-			terrain_preset.grassEntity = grassScene.hairs.GetEntity(0);
+			terrain_preset.grassEntities[wi::terrain::MATERIAL_BASE] = grassScene.hairs.GetEntity(0);
 			currentScene.Merge(grassScene);
 		}
 	}
 	else
 	{
 		// Old method: from grass.ini, doesn't support some spritesheet features...
-		terrain_preset.grassEntity = CreateEntity();
-		currentScene.Component_Attach(terrain_preset.grassEntity, entity);
-		currentScene.materials.Create(terrain_preset.grassEntity);
-		currentScene.hairs.Create(terrain_preset.grassEntity) = terrain_preset.grass_properties;
-		MaterialComponent* material_Grass = currentScene.materials.GetComponent(terrain_preset.grassEntity);
-		wi::HairParticleSystem* grass = currentScene.hairs.GetComponent(terrain_preset.grassEntity);
+		terrain_preset.grassEntities[wi::terrain::MATERIAL_BASE] = CreateEntity();
+		currentScene.Component_Attach(terrain_preset.grassEntities[wi::terrain::MATERIAL_BASE], entity);
+		currentScene.materials.Create(terrain_preset.grassEntities[wi::terrain::MATERIAL_BASE]);
+		currentScene.hairs.Create(terrain_preset.grassEntities[wi::terrain::MATERIAL_BASE]) = terrain_preset.grass_properties;
+		MaterialComponent* material_Grass = currentScene.materials.GetComponent(terrain_preset.grassEntities[wi::terrain::MATERIAL_BASE]);
+		wi::HairParticleSystem* grass = currentScene.hairs.GetComponent(terrain_preset.grassEntities[wi::terrain::MATERIAL_BASE]);
 		wi::config::File grass_config;
 		grass_config.Open(std::string(asset_path + "grass.ini").c_str());
 		if (grass_config.Has("texture"))
@@ -1837,7 +1922,10 @@ void TerrainWindow::ResizeLayout()
 	{
 		layout.add(materialCombos[i]);
 	}
-	layout.add(materialCombo_GrassParticle);
+	for (size_t i = 0; i < arraysize(grassCombos); ++i)
+	{
+		layout.add(grassCombos[i]);
+	}
 	layout.add(saveHeightmapButton);
 	layout.add(saveRegionButton);
 	layout.add(addModifierCombo);

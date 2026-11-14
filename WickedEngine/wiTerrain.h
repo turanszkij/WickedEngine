@@ -230,10 +230,11 @@ namespace wi::terrain
 			uint32_t z0 = 0;
 			uint32_t x1 = 0;
 			uint32_t z1 = 0;
+			uint32_t region = MATERIAL_BASE;
 		};
 		wi::vector<GrassPatch> grass_patches;
 		const XMFLOAT3* mesh_vertex_positions = nullptr;
-		wi::HairParticleSystem grass;
+		wi::vector<float> grass_region_lengths[MATERIAL_COUNT];
 		wi::vector<BlendmapLayer> blendmap_layers;
 		wi::vector<BlendmapLayer> spline_blendmap_layers;
 		wi::graphics::Texture blendmap;
@@ -292,10 +293,12 @@ namespace wi::terrain
 		wi::scene::Scene* scene = nullptr;
 		wi::vector<wi::ecs::Entity> materialEntities;
 		wi::vector<wi::ecs::Entity> splineMaterialEntities;
-		wi::ecs::Entity grassEntity = wi::ecs::INVALID_ENTITY;
+		wi::ecs::Entity grassEntities[MATERIAL_COUNT] = {}; // grass per region index; base is [MATERIAL_BASE]
 		wi::scene::WeatherComponent weather;
-		wi::HairParticleSystem grass_properties;
+		wi::HairParticleSystem grass_properties; // base grass, edited by the length and distance sliders
 		wi::scene::MaterialComponent grass_material;
+		wi::HairParticleSystem grass_region_properties[MATERIAL_COUNT];
+		wi::scene::MaterialComponent grass_region_materials[MATERIAL_COUNT];
 		wi::unordered_map<Chunk, ChunkData> chunks;
 		struct PropChunkData
 		{
