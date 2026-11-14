@@ -59,9 +59,9 @@ else ()
         endif()
 
         # minimum sdl version is 2.0.14 for controller LED support
-        if((${SDL2_VERSION_MAJOR} GREATER_EQUAL 2) AND (${SDL2_VERSION_MINOR} GREATER_EQUAL 0) AND (${SDL2_VERSION_PATCH} GREATER_EQUAL 14))
-            add_compile_definitions(SDL2_FEATURE_CONTROLLER_LED=1)
-        endif()
+		if("${SDL2_VERSION_MAJOR}.${SDL2_VERSION_MINOR}.${SDL2_VERSION_PATCH}" VERSION_GREATER_EQUAL "2.0.14")
+		    add_compile_definitions(SDL2_FEATURE_CONTROLLER_LED=1)
+		endif()
         # SDL3 always supports controller LED (SDL_SetGamepadLED), no version gate needed.
     endif ()
 
