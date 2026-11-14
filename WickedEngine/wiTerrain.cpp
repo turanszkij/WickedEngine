@@ -242,6 +242,183 @@ namespace wi::terrain
 		}
 	}
 
+	inline int grass_cells_per_axis(float scale)
+	{
+		const int quads = chunk_width - 1;
+		int cells = (int)std::round(scale);
+		if (cells < 1)
+		{
+			cells = 1;
+		}
+		if (cells > quads)
+		{
+			cells = quads;
+		}
+		return cells;
+	}
+
+	constexpr void grass_cell_quads(int cell, int cells, int& q0, int& q1)
+	{
+		const int quads = chunk_width - 1;
+		q0 = (cell * quads) / cells;
+		q1 = ((cell + 1) * quads) / cells;
+	}
+
+	constexpr bool grass_rect_in_range(float min_x, float max_x, float min_z, float max_z, float eye_x, float eye_z, float view)
+	{
+		float dx = 0.0f;
+		if (eye_x < min_x)
+		{
+			dx = min_x - eye_x;
+		}
+		else if (eye_x > max_x)
+		{
+			dx = eye_x - max_x;
+		}
+		float dz = 0.0f;
+		if (eye_z < min_z)
+		{
+			dz = min_z - eye_z;
+		}
+		else if (eye_z > max_z)
+		{
+			dz = eye_z - max_z;
+		}
+		return dx * dx + dz * dz <= view * view;
+	}
+
+	constexpr float grass_spawn_distance(float view_distance, float length)
+	{
+		if (view_distance < 0.0f)
+			view_distance = 0.0f;
+		if (length < 0.0f)
+			length = 0.0f;
+		return view_distance * 1.2f + length; // 1.2: +20% dither fade
+	}
+
+	constexpr uint32_t grass_strand_count(uint32_t vertices, float scale, float density)
+	{
+		return uint32_t(float(vertices) * 3.0f * scale * scale * density);
+	}
+
+	inline uint32_t grass_patch_strand_count(const Terrain& terrain, uint32_t region, uint32_t owned, float scale)
+	{
+		uint32_t base = 0;
+		if (region < MATERIAL_COUNT)
+			base = terrain.grass_region_properties[region].strandCount;
+		if (base == 0)
+			base = grass_strand_count(owned, scale, 1.0f);
+		return uint32_t(float(base) * terrain.grass_density);
+	}
+
+	inline bool grass_mask_used(const wi::vector<float>& lengths)
+	{
+		for (float value : lengths)
+		{
+			if (value > 0.0f)
+				return true;
+		}
+		return false;
+	}
+
+	constexpr float grass_band_weight(float weight, float edge)
+	{
+		if (edge <= 0.0f)
+			return saturate(weight);
+		const float peak = smoothstep(0.0f, edge, 1.0f);
+		return peak > 0.0f ? saturate(weight / peak) : 0.0f;
+	}
+
+	inline void sync_grass(Terrain& terrain)
+	{
+		Scene* scene = terrain.scene;
+		if (scene == nullptr)
+			return;
+		for (int region = 0; region < MATERIAL_COUNT; ++region)
+		{
+			const Entity entity = terrain.grassEntities[region];
+			if (region == MATERIAL_BASE)
+			{
+				if (entity != INVALID_ENTITY && scene->hairs.Contains(entity))
+				{
+					terrain.grass_properties = *scene->hairs.GetComponent(entity);
+					terrain.grass_properties.SetDirty(false);
+				}
+				if (entity != INVALID_ENTITY && scene->materials.Contains(entity))
+				{
+					terrain.grass_material = *scene->materials.GetComponent(entity);
+					terrain.grass_material.SetDirty(false);
+				}
+				terrain.grass_region_properties[region] = terrain.grass_properties;
+				terrain.grass_region_materials[region] = terrain.grass_material;
+				continue;
+			}
+			if (entity == INVALID_ENTITY)
+				continue;
+			if (scene->hairs.Contains(entity))
+			{
+				terrain.grass_region_properties[region] = *scene->hairs.GetComponent(entity);
+				terrain.grass_region_properties[region].SetDirty(false);
+			}
+			if (scene->materials.Contains(entity))
+			{
+				terrain.grass_region_materials[region] = *scene->materials.GetComponent(entity);
+				terrain.grass_region_materials[region].SetDirty(false);
+			}
+		}
+	}
+
+	inline uint32_t count_grass_vertices(const wi::vector<float>& lengths, int x0, int z0, int x1, int z1)
+	{
+		if (lengths.size() != vertexCount || x1 <= x0 || z1 <= z0)
+			return 0;
+		const int vx1 = x1 + (x1 == (chunk_width - 1) ? 1 : 0);
+		const int vz1 = z1 + (z1 == (chunk_width - 1) ? 1 : 0);
+		uint32_t count = 0;
+		for (int z = z0; z < vz1; ++z)
+		{
+			const float* row = lengths.data() + z * chunk_width;
+			for (int x = x0; x < vx1; ++x)
+			{
+				if (row[x] > 0.0f)
+				{
+					++count;
+				}
+			}
+		}
+		return count;
+	}
+
+	inline void build_grass_index_range(wi::HairParticleSystem& grass, uint32_t x0, uint32_t z0, uint32_t x1, uint32_t z1)
+	{
+		grass.indices.clear();
+		if (grass.vertex_lengths.size() != vertexCount || x1 <= x0 || z1 <= z0)
+			return;
+		const ChunkIndices& table = chunk_indices();
+		const uint32_t lod_offset = table.lods[0].indexOffset;
+		const int quads = chunk_width - 1;
+		grass.indices.reserve((size_t)(x1 - x0) * (size_t)(z1 - z0) * 6);
+		for (uint32_t x = x0; x < x1; ++x)
+		{
+			for (uint32_t z = z0; z < z1; ++z)
+			{
+				const uint32_t base = lod_offset + (x * uint32_t(quads) + z) * 6;
+				for (uint32_t t = 0; t < 2; ++t)
+				{
+					const uint32_t i0 = table.indices[base + t * 3 + 0];
+					const uint32_t i1 = table.indices[base + t * 3 + 1];
+					const uint32_t i2 = table.indices[base + t * 3 + 2];
+					if (grass.vertex_lengths[i0] > 0.0f || grass.vertex_lengths[i1] > 0.0f || grass.vertex_lengths[i2] > 0.0f)
+					{
+						grass.indices.push_back(i0);
+						grass.indices.push_back(i1);
+						grass.indices.push_back(i2);
+					}
+				}
+			}
+		}
+	}
+
 
 	void VirtualTextureAtlas::Residency::init(uint32_t resolution)
 	{
@@ -483,16 +660,7 @@ namespace wi::terrain
 		}
 
 		// save grass parameters:
-		if (scene->hairs.Contains(grassEntity))
-		{
-			grass_properties = *scene->hairs.GetComponent(grassEntity);
-			grass_properties.SetDirty(false);
-		}
-		if (scene->materials.Contains(grassEntity))
-		{
-			grass_material = *scene->materials.GetComponent(grassEntity);
-			grass_material.SetDirty(false);
-		}
+		sync_grass(*this);
 
 		for (auto it = chunks.begin(); it != chunks.end(); it++)
 		{
@@ -571,24 +739,41 @@ namespace wi::terrain
 
 		// Restore grass parameters:
 		if (IsGrassEnabled()) {
-			if (grassEntity == INVALID_ENTITY)
+			Entity& base_grass = grassEntities[MATERIAL_BASE];
+			if (base_grass == INVALID_ENTITY)
 			{
-				grassEntity = CreateEntity();
+				base_grass = CreateEntity();
 			}
-			if (!scene->hairs.Contains(grassEntity))
+			if (!scene->hairs.Contains(base_grass))
 			{
-				scene->hairs.Create(grassEntity);
+				scene->hairs.Create(base_grass);
 			}
-			if (!scene->materials.Contains(grassEntity))
+			if (!scene->materials.Contains(base_grass))
 			{
-				scene->materials.Create(grassEntity);
+				scene->materials.Create(base_grass);
 			}
-			if (!scene->names.Contains(grassEntity))
+			if (!scene->names.Contains(base_grass))
 			{
-				scene->names.Create(grassEntity) = "grass";
+				scene->names.Create(base_grass) = "grass";
 			}
-			*scene->hairs.GetComponent(grassEntity) = grass_properties;
-			*scene->materials.GetComponent(grassEntity) = grass_material;
+			*scene->hairs.GetComponent(base_grass) = grass_properties;
+			*scene->materials.GetComponent(base_grass) = grass_material;
+
+			for (int region = MATERIAL_SLOPE; region < MATERIAL_COUNT; ++region)
+			{
+				const Entity entity = grassEntities[region];
+				if (entity == INVALID_ENTITY)
+					continue;
+				if (!scene->hairs.Contains(entity))
+				{
+					scene->hairs.Create(entity) = grass_properties;
+				}
+				if (!scene->materials.Contains(entity))
+				{
+					scene->materials.Create(entity);
+				}
+			}
+			sync_grass(*this);
 		}
 
 		if (chunkGroupEntity == INVALID_ENTITY)
@@ -1142,6 +1327,8 @@ namespace wi::terrain
 
 		chunk_scale_rcp = 1.0f / chunk_scale;
 		cam_height = camera.Eye.y;
+		cam_x = camera.Eye.x;
+		cam_z = camera.Eye.z;
 
 		if (IsCenterToCamEnabled())
 		{
@@ -1187,24 +1374,24 @@ namespace wi::terrain
 				if (virtual_texture_any)
 					break;
 			}
-
-			if (grassEntity != INVALID_ENTITY)
-			{
-				MaterialComponent* material_grassparticle_in_scene = scene->materials.GetComponent(grassEntity);
-				if (material_grassparticle_in_scene != nullptr)
-				{
-					grass_material = *material_grassparticle_in_scene;
-				}
-				HairParticleSystem* hair = scene->hairs.GetComponent(grassEntity);
-				if (hair != nullptr)
-				{
-					grass_properties = *hair;
-				}
-			}
 		}
 
-		// Ensure that enough grass chunks are generated so that grass view distance will not cause popping:
-		grass_chunk_dist = std::max(1, int(grass_properties.viewDistance / (float(chunk_width) * chunk_scale) + 0.5f));
+		sync_grass(*this);
+
+		const float chunk_span = float(chunk_width - 1) * chunk_scale;
+		float grass_length = grass_properties.length;
+		for (int region = 0; region < MATERIAL_COUNT; ++region)
+		{
+			if (region != MATERIAL_BASE && grassEntities[region] == INVALID_ENTITY)
+				continue;
+			grass_length = std::max(grass_length, grass_region_properties[region].length);
+		}
+		const float grass_spawn = grass_spawn_distance(grass_properties.viewDistance, grass_length);
+		grass_chunk_dist = 1;
+		if (chunk_span > 0.0f)
+		{
+			grass_chunk_dist = std::max(1, (int)std::ceil(grass_spawn / chunk_span));
+		}
 
 		for (auto it = chunks.begin(); it != chunks.end();)
 		{
@@ -1256,6 +1443,13 @@ namespace wi::terrain
 				props_regenerated = true;
 			}
 
+			// remove old grass if exists:
+			if (chunk_data.grass_entity != INVALID_ENTITY)
+			{
+				scene->Entity_Remove(chunk_data.grass_entity);
+				chunk_data.grass_entity = INVALID_ENTITY;
+			}
+
 			// chunk removal:
 			if (IsRemovalEnabled())
 			{
@@ -1272,41 +1466,127 @@ namespace wi::terrain
 				}
 				else
 				{
-					// Grass patch removal:
-					if (chunk_data.grass_entity != INVALID_ENTITY && (dist > grass_chunk_dist || !IsGrassEnabled()))
+					const int cells = grass_cells_per_axis(chunk_scale);
+					const float origin_x = chunk_data.position.x - chunk_half_width * chunk_scale;
+					const float origin_z = chunk_data.position.z - chunk_half_width * chunk_scale;
+					for (size_t patch_index = 0; patch_index < chunk_data.grass_patches.size();)
 					{
-						scene->Entity_Remove(chunk_data.grass_entity);
-						chunk_data.grass_entity = INVALID_ENTITY; // grass can be generated here by generation thread...
+						ChunkData::GrassPatch& patch = chunk_data.grass_patches[patch_index];
+						const uint32_t region = patch.region < MATERIAL_COUNT ? patch.region : MATERIAL_BASE;
+						const bool region_active = region == MATERIAL_BASE || grassEntities[region] != INVALID_ENTITY;
+						const float view = grass_spawn_distance(grass_properties.viewDistance, grass_region_properties[region].length);
+						bool layout = false;
+						for (int cz = 0; cz < cells && !layout; ++cz)
+						{
+							int qz0 = 0;
+							int qz1 = 0;
+							grass_cell_quads(cz, cells, qz0, qz1);
+							if ((uint32_t)qz0 != patch.z0 || (uint32_t)qz1 != patch.z1)
+							{
+								continue;
+							}
+							for (int cx = 0; cx < cells; ++cx)
+							{
+								int qx0 = 0;
+								int qx1 = 0;
+								grass_cell_quads(cx, cells, qx0, qx1);
+								if ((uint32_t)qx0 == patch.x0 && (uint32_t)qx1 == patch.x1)
+								{
+									layout = true;
+									break;
+								}
+							}
+						}
+						const float min_x = origin_x + float(patch.x0) * chunk_scale;
+						const float max_x = origin_x + float(patch.x1) * chunk_scale;
+						const float min_z = origin_z + float(patch.z0) * chunk_scale;
+						const float max_z = origin_z + float(patch.z1) * chunk_scale;
+						const bool keep = IsGrassEnabled() && region_active && dist <= grass_chunk_dist && layout && grass_rect_in_range(min_x, max_x, min_z, max_z, cam_x, cam_z, view);
+						if (!keep)
+						{
+							if (patch.entity != INVALID_ENTITY)
+							{
+								scene->Entity_Remove(patch.entity);
+							}
+							patch = chunk_data.grass_patches.back(); // swap with back
+							chunk_data.grass_patches.pop_back();
+							continue;
+						}
+						++patch_index;
 					}
 				}
 			}
 
 			// Grass property update:
-			if (chunk_data.visible && chunk_data.grass_entity != INVALID_ENTITY)
+			if (chunk_data.visible && IsGrassEnabled())
 			{
-				wi::HairParticleSystem* grass = scene->hairs.GetComponent(chunk_data.grass_entity);
-				if (grass != nullptr)
+				chunk_data.grass_density_current = grass_density;
+				for (size_t patch_index = 0; patch_index < chunk_data.grass_patches.size();)
 				{
-					chunk_data.grass_density_current = grass_density;
-					grass->strandCount = uint32_t(chunk_data.grass.strandCount * chunk_data.grass_density_current);
-					grass->length = grass_properties.length;
-					grass->randomness = grass_properties.randomness;
-					grass->randomSeed = grass_properties.randomSeed;
-					grass->stiffness = grass_properties.stiffness;
+					ChunkData::GrassPatch& patch = chunk_data.grass_patches[patch_index];
+					wi::HairParticleSystem* grass = scene->hairs.GetComponent(patch.entity);
+					if (grass == nullptr)
+					{
+						++patch_index;
+						continue;
+					}
+					const uint32_t region = patch.region < MATERIAL_COUNT ? patch.region : MATERIAL_BASE;
+					const wi::HairParticleSystem& props = grassEntities[region] != INVALID_ENTITY ? grass_region_properties[region] : grass_properties;
+					const uint32_t span_x = patch.x1 > patch.x0 ? patch.x1 - patch.x0 : 0;
+					const uint32_t span_z = patch.z1 > patch.z0 ? patch.z1 - patch.z0 : 0;
+					const uint32_t index_limit = span_x * span_z * 6u;
+					bool refresh = (grass->_flags & wi::HairParticleSystem::REBUILD_BUFFERS) != 0 || grass->indices.empty() || grass->indices.size() > index_limit;
+					if (chunk_data.grass_region_lengths[region].size() == vertexCount && grass->vertex_lengths != chunk_data.grass_region_lengths[region])
+					{
+						grass->vertex_lengths = chunk_data.grass_region_lengths[region];
+						refresh = true;
+					}
+					if (refresh)
+					{
+						build_grass_index_range(*grass, patch.x0, patch.z0, patch.x1, patch.z1);
+						if (grass->indices.empty())
+						{
+							scene->Entity_Remove(patch.entity);
+							patch = chunk_data.grass_patches.back();
+							chunk_data.grass_patches.pop_back();
+							continue;
+						}
+					}
+					const wi::vector<float>* lengths = &grass->vertex_lengths;
+					if (lengths->size() != vertexCount)
+					{
+						lengths = &chunk_data.grass_region_lengths[region];
+					}
+					const uint32_t owned = count_grass_vertices(*lengths, (int)patch.x0, (int)patch.z0, (int)patch.x1, (int)patch.z1);
+					patch.base_strand_count = grass_strand_count(owned, chunk_scale, 1.0f);
+					const uint32_t strand_count = grass_patch_strand_count(*this, region, owned, chunk_scale);
+					if (grass->strandCount != strand_count)
+					{
+						grass->strandCount = strand_count;
+					}
+					grass->length = props.length;
+					grass->randomness = props.randomness;
+					grass->randomSeed = props.randomSeed;
+					grass->stiffness = props.stiffness;
+					grass->width = props.width;
+					grass->uniformity = props.uniformity;
+					grass->atlas_rects = props.atlas_rects;
+					grass->segmentCount = props.segmentCount;
+					grass->billboardCount = props.billboardCount;
+					grass->drag = props.drag;
+					grass->gravityPower = props.gravityPower;
 					grass->viewDistance = grass_properties.viewDistance;
-					grass->width = grass_properties.width;
-					grass->uniformity = grass_properties.uniformity;
-					grass->atlas_rects = grass_properties.atlas_rects;
-					grass->segmentCount = grass_properties.segmentCount;
-					grass->billboardCount = grass_properties.billboardCount;
-					grass->drag = grass_properties.drag;
-					grass->gravityPower = grass_properties.gravityPower;
-				}
 
-				MaterialComponent* chunkGrassMaterial = scene->materials.GetComponent(chunk_data.grass_entity);
-				if (chunkGrassMaterial != nullptr)
-				{
-					*chunkGrassMaterial = grass_material;
+					MaterialComponent* chunkGrassMaterial = scene->materials.GetComponent(patch.entity);
+					if (chunkGrassMaterial != nullptr)
+					{
+						*chunkGrassMaterial = grassEntities[region] != INVALID_ENTITY ? grass_region_materials[region] : grass_material;
+					}
+					if (refresh)
+					{
+						grass->CreateRenderData();
+					}
+					++patch_index;
 				}
 			}
 
@@ -1476,6 +1756,7 @@ namespace wi::terrain
 						generator->scene.meshes.Remove(chunk_data.entity);
 						generator->removable_chunks.push_back(chunk);
 						chunk_data.grass_entity = INVALID_ENTITY;
+						chunk_data.grass_patches.clear();
 					}
 					ObjectComponent& object = *generator->scene.objects.GetComponent(chunk_data.entity);
 					object.lod_bias = lod_bias;
@@ -1552,10 +1833,6 @@ namespace wi::terrain
 					TransformComponent& transform = *generator->scene.transforms.GetComponent(chunk_data.entity);
 					MeshComponent& mesh = *generator->scene.meshes.GetComponent(chunk_data.entity);
 
-					wi::HairParticleSystem grass = grass_properties;
-					grass.vertex_lengths.resize(vertexCount);
-					std::atomic<uint32_t> grass_valid_vertex_count{ 0 };
-
 					// Shadow casting will only be enabled for sloped terrain chunks:
 					std::atomic_bool slope_cast_shadow;
 					slope_cast_shadow.store(false);
@@ -1612,6 +1889,18 @@ namespace wi::terrain
 						heights_padded[coord.x + coord.y * chunk_width_padded] = height;
 					});
 					wi::jobsystem::Wait(ctx);
+
+					// Each assigned grass entity gets a length mask from that region index only.
+					bool region_grass_enabled[MATERIAL_COUNT] = {};
+					wi::vector<float> region_lengths[MATERIAL_COUNT];
+					for (int region = 0; region < MATERIAL_COUNT; ++region)
+					{
+						region_grass_enabled[region] = grassEntities[region] != INVALID_ENTITY;
+						if (region_grass_enabled[region])
+						{
+							region_lengths[region].resize(vertexCount);
+						}
+					}
 
 					wi::jobsystem::Dispatch(ctx, vertexCount, chunk_width * 4, [&](wi::jobsystem::JobArgs args) {
 						const uint32_t index = args.jobIndex;
@@ -1673,15 +1962,34 @@ namespace wi::terrain
 
 						const float grass_noise_frequency = 0.1f;
 						const float grass_noise = perlin_noise.compute(vertex_pos.x * grass_noise_frequency, vertex_pos.y * grass_noise_frequency, vertex_pos.z * grass_noise_frequency) * 0.5f + 0.5f;
-						const float region_grass = std::pow(materialBlendWeights.x * (1 - materialBlendWeights.w), 8.0f) * grass_noise * (1 - saturate(spline_factor));
-						if (region_grass > 0.1f)
+						const float spline_suppress = 1.0f - saturate(spline_factor);
+						const float slope_g = grass_band_weight(region_slope, region1);
+						const float low_g = grass_band_weight(region_low_altitude, region2);
+						const float high_g = grass_band_weight(region_high_altitude, region3);
+						const float region_weights[MATERIAL_COUNT] = { saturate(1.0f - slope_g - low_g - high_g), slope_g, low_g, high_g, };
+						// Pow8 where this grass meets a region that has none. Linear where it meets other grass, so a shared boundary does not open a gap.
+						float grassy_weight = 0.0f;
+						float total_weight = 0.0f;
+						float weights[MATERIAL_COUNT];
+						for (int region = 0; region < MATERIAL_COUNT; ++region)
 						{
-							grass_valid_vertex_count.fetch_add(1);
-							grass.vertex_lengths[index] = region_grass;
+							weights[region] = saturate(region_weights[region]);
+							total_weight += weights[region];
+							if (region_grass_enabled[region])
+							{
+								grassy_weight += weights[region];
+							}
 						}
-						else
+						for (int region = 0; region < MATERIAL_COUNT; ++region)
 						{
-							grass.vertex_lengths[index] = 0;
+							if (!region_grass_enabled[region])
+								continue;
+							const float other = total_weight - weights[region];
+							const float grassy_other = grassy_weight - weights[region];
+							const float grassy_frac = other > 0.0001f ? saturate(grassy_other / other) : 0.0f;
+							const float shaped = lerp(pow8(weights[region]), weights[region], grassy_frac);
+							const float region_grass = shaped * grass_noise * spline_suppress;
+							region_lengths[region][index] = region_grass > 0.1f ? region_grass : 0.0f;
 						}
 						chunk_data.heightmap_data[index] = uint16_t(inverse_lerp(bottomLevel, topLevel, height) * 65535);
 					});
@@ -1700,21 +2008,16 @@ namespace wi::terrain
 						mesh.SetBVHEnabled(true);
 					});
 
-					if (grass_valid_vertex_count.load() > 0)
+					for (int region = 0; region < MATERIAL_COUNT; ++region)
 					{
-						wi::jobsystem::Execute(
-							ctx,
-							[&](wi::jobsystem::JobArgs args)
+						if (region_grass_enabled[region] && grass_mask_used(region_lengths[region]))
 						{
-							chunk_data.grass = std::move(grass); // the grass will be added to the scene later, only when the chunk is close to the camera (center chunk's neighbors)
-							chunk_data.grass.meshID = chunk_data.entity;
-							chunk_data.grass.strandCount = uint32_t(grass_valid_vertex_count.load() * 3 * chunk_scale * chunk_scale); // chunk_scale * chunk_scale : grass density increases with squared amount with chunk scale (x*z)
-							chunk_data.grass.CreateFromMesh(mesh);
-						});
-					}
-					else
-					{
-						chunk_data.grass.meshID = INVALID_ENTITY;
+							chunk_data.grass_region_lengths[region] = std::move(region_lengths[region]);
+						}
+						else
+						{
+							chunk_data.grass_region_lengths[region].clear();
+						}
 					}
 
 					if (IsPhysicsEnabled())
@@ -1756,23 +2059,92 @@ namespace wi::terrain
 					if (it != chunks.end() && it->second.entity != INVALID_ENTITY)
 					{
 						ChunkData& chunk_data = it->second;
-						if ((chunk_data.grass_entity == INVALID_ENTITY || chunk_data.invalidated) && chunk_data.grass.meshID != INVALID_ENTITY && (cam_height - grass_properties.viewDistance < chunk_data.sphere.center.y + chunk_data.sphere.radius))
+						// Multiple grass chunks can be placed onto 1 terrain chunk, important for large terrain chunks to not blow up VRAM usage with large grass particle system:
+						const int cells = grass_cells_per_axis(chunk_scale);
+						const float origin_x = chunk_data.position.x - chunk_half_width * chunk_scale;
+						const float origin_z = chunk_data.position.z - chunk_half_width * chunk_scale;
+						bool budget_hit = false;
+						for (int region = 0; region < MATERIAL_COUNT && !budget_hit; ++region)
 						{
-							// add patch for this chunk
-							if (chunk_data.grass_entity == INVALID_ENTITY)
+							if (grassEntities[region] == INVALID_ENTITY)
+								continue;
+							const wi::vector<float>& lengths = chunk_data.grass_region_lengths[region];
+							if (lengths.size() != vertexCount)
+								continue;
+							const float view = grass_spawn_distance(grass_properties.viewDistance, grass_region_properties[region].length);
+							const bool height_ok = cam_height - view < chunk_data.sphere.center.y + chunk_data.sphere.radius;
+							if (!height_ok)
+								continue;
+							for (int cz = 0; cz < cells && !budget_hit; ++cz)
 							{
-								chunk_data.grass_entity = CreateEntity();
+								int z0 = 0;
+								int z1 = 0;
+								grass_cell_quads(cz, cells, z0, z1);
+								const float min_z = origin_z + float(z0) * chunk_scale;
+								const float max_z = origin_z + float(z1) * chunk_scale;
+								for (int cx = 0; cx < cells; ++cx)
+								{
+									int x0 = 0;
+									int x1 = 0;
+									grass_cell_quads(cx, cells, x0, x1);
+									const float min_x = origin_x + float(x0) * chunk_scale;
+									const float max_x = origin_x + float(x1) * chunk_scale;
+									if (!grass_rect_in_range(min_x, max_x, min_z, max_z, cam_x, cam_z, view))
+										continue;
+									bool exists = false;
+									for (const ChunkData::GrassPatch& patch : chunk_data.grass_patches)
+									{
+										if (patch.region == (uint32_t)region && patch.x0 == (uint32_t)x0 && patch.z0 == (uint32_t)z0)
+										{
+											exists = true;
+											break;
+										}
+									}
+									if (exists)
+										continue;
+									const uint32_t base = count_grass_vertices(lengths, x0, z0, x1, z1);
+									if (base == 0)
+										continue;
+
+									ChunkData::GrassPatch& patch = chunk_data.grass_patches.emplace_back();
+									patch.region = (uint32_t)region;
+									patch.x0 = (uint32_t)x0;
+									patch.z0 = (uint32_t)z0;
+									patch.x1 = (uint32_t)x1;
+									patch.z1 = (uint32_t)z1;
+									patch.base_strand_count = grass_strand_count(base, chunk_scale, 1.0f);
+									patch.entity = CreateEntity();
+
+									wi::HairParticleSystem& grass = generator->scene.hairs.Create(patch.entity);
+									grass = grass_region_properties[region];
+									grass.viewDistance = grass_properties.viewDistance;
+									grass.meshID = chunk_data.entity;
+									grass.vertex_lengths = lengths;
+									grass.indices.clear();
+									grass.strandCount = 0;
+									chunk_data.grass_density_current = grass_density;
+									build_grass_index_range(grass, patch.x0, patch.z0, patch.x1, patch.z1);
+									if (grass.indices.empty())
+									{
+										generator->scene.Entity_Remove(patch.entity);
+										patch.entity = INVALID_ENTITY;
+										patch.base_strand_count = 0;
+										continue;
+									}
+									grass.strandCount = grass_patch_strand_count(*this, (uint32_t)region, base, chunk_scale);
+									grass.CreateRenderData();
+									generator->scene.materials.Create(patch.entity) = grass_region_materials[region];
+									generator->scene.transforms.Create(patch.entity);
+									generator->scene.names.Create(patch.entity) = "grass_" + std::to_string(region) + "_" + std::to_string(x0) + "_" + std::to_string(z0);
+									generator->scene.Component_Attach(patch.entity, chunk_data.entity, true);
+									generated_something = true;
+									if (timer.elapsed_milliseconds() > generation_time_budget_milliseconds)
+									{
+										budget_hit = true;
+										break;
+									}
+								}
 							}
-							wi::HairParticleSystem& grass = generator->scene.hairs.Create(chunk_data.grass_entity);
-							grass = chunk_data.grass;
-							chunk_data.grass_density_current = grass_density;
-							grass.strandCount = uint32_t(grass.strandCount * chunk_data.grass_density_current);
-							grass.CreateRenderData();
-							generator->scene.materials.Create(chunk_data.grass_entity) = grass_material;
-							generator->scene.transforms.Create(chunk_data.grass_entity);
-							generator->scene.names.Create(chunk_data.grass_entity) = "grass";
-							generator->scene.Component_Attach(chunk_data.grass_entity, chunk_data.entity, true);
-							generated_something = true;
 						}
 					}
 				}
@@ -3029,6 +3401,7 @@ namespace wi::terrain
 
 			archive >> count;
 			chunks.reserve(count);
+			ComponentManager<wi::HairParticleSystem>* scene_hairs = library.Get<wi::HairParticleSystem>("wi::scene::Scene::hairs");
 			for (size_t i = 0; i < count; ++i)
 			{
 				Chunk chunk;
@@ -3040,9 +3413,21 @@ namespace wi::terrain
 				SerializeEntity(archive, chunk_data.props_entity_old, seri);
 				archive >> chunk_data.prop_density_current;
 
-				seri.version = grass_version;
-				chunk_data.grass.Serialize(archive, seri);
-				seri.version = terrain_version;
+				if (terrain_version < 8)
+				{
+					wi::HairParticleSystem grass;
+					seri.version = grass_version;
+					grass.Serialize(archive, seri);
+					seri.version = terrain_version;
+					chunk_data.grass_region_lengths[MATERIAL_BASE] = std::move(grass.vertex_lengths);
+				}
+				else
+				{
+					for (int region = 0; region < MATERIAL_COUNT; ++region)
+					{
+						archive >> chunk_data.grass_region_lengths[region];
+					}
+				}
 
 				archive >> chunk_data.grass_density_current;
 				if (terrain_version >= 5)
@@ -3076,6 +3461,45 @@ namespace wi::terrain
 				archive >> chunk_data.sphere.center;
 				archive >> chunk_data.sphere.radius;
 				archive >> chunk_data.position;
+				if (terrain_version >= 8)
+				{
+					size_t patch_count = 0;
+					archive >> patch_count;
+					chunk_data.grass_patches.resize(patch_count);
+					for (size_t patch_index = 0; patch_index < patch_count; ++patch_index)
+					{
+						ChunkData::GrassPatch& patch = chunk_data.grass_patches[patch_index];
+						SerializeEntity(archive, patch.entity, seri);
+						archive >> patch.base_strand_count;
+						archive >> patch.x0;
+						archive >> patch.z0;
+						archive >> patch.x1;
+						archive >> patch.z1;
+						archive >> patch.region;
+					}
+					if (scene_hairs != nullptr)
+					{
+						for (ChunkData::GrassPatch& patch : chunk_data.grass_patches)
+						{
+							wi::HairParticleSystem* grass = scene_hairs->GetComponent(patch.entity);
+							if (grass == nullptr)
+							{
+								continue;
+							}
+							build_grass_index_range(*grass, patch.x0, patch.z0, patch.x1, patch.z1);
+							if (grass->indices.empty())
+							{
+								scene_hairs->Remove(patch.entity);
+								patch.entity = INVALID_ENTITY;
+								patch.base_strand_count = 0;
+							}
+							else
+							{
+								grass->_flags &= ~wi::HairParticleSystem::REBUILD_BUFFERS;
+							}
+						}
+					}
+				}
 			}
 
 			archive >> count;
@@ -3194,9 +3618,22 @@ namespace wi::terrain
 				SerializeEntity(archive, chunk_data.props_entity_old, seri);
 				archive << chunk_data.prop_density_current;
 
-				seri.version = grass_version;
-				chunk_data.grass.Serialize(archive, seri);
-				seri.version = terrain_version;
+				if (terrain_version < 8)
+				{
+					wi::HairParticleSystem grass;
+					grass.vertex_lengths = chunk_data.grass_region_lengths[MATERIAL_BASE];
+					grass.meshID = chunk_data.entity;
+					seri.version = grass_version;
+					grass.Serialize(archive, seri);
+					seri.version = terrain_version;
+				}
+				else
+				{
+					for (int region = 0; region < MATERIAL_COUNT; ++region)
+					{
+						archive << chunk_data.grass_region_lengths[region];
+					}
+				}
 
 				archive << chunk_data.grass_density_current;
 				archive << chunk_data.blendmap_layers.size();
@@ -3208,6 +3645,20 @@ namespace wi::terrain
 				archive << chunk_data.sphere.center;
 				archive << chunk_data.sphere.radius;
 				archive << chunk_data.position;
+				if (terrain_version >= 8)
+				{
+					archive << chunk_data.grass_patches.size();
+					for (ChunkData::GrassPatch& patch : chunk_data.grass_patches)
+					{
+						SerializeEntity(archive, patch.entity, seri);
+						archive << patch.base_strand_count;
+						archive << patch.x0;
+						archive << patch.z0;
+						archive << patch.x1;
+						archive << patch.z1;
+						archive << patch.region;
+					}
+				}
 			}
 
 			archive << modifiers.size();
@@ -3258,7 +3709,14 @@ namespace wi::terrain
 				{
 					SerializeEntity(archive, materialEntities[i], seri);
 				}
-				SerializeEntity(archive, grassEntity, seri);
+				SerializeEntity(archive, grassEntities[MATERIAL_BASE], seri);
+				if (terrain_version >= 8)
+				{
+					for (int region = MATERIAL_SLOPE; region < MATERIAL_COUNT; ++region)
+					{
+						SerializeEntity(archive, grassEntities[region], seri);
+					}
+				}
 			}
 			else
 			{
@@ -3268,7 +3726,14 @@ namespace wi::terrain
 				{
 					SerializeEntity(archive, materialEntities[i], seri);
 				}
-				SerializeEntity(archive, grassEntity, seri);
+				SerializeEntity(archive, grassEntities[MATERIAL_BASE], seri);
+				if (terrain_version >= 8)
+				{
+					for (int region = MATERIAL_SLOPE; region < MATERIAL_COUNT; ++region)
+					{
+						SerializeEntity(archive, grassEntities[region], seri);
+					}
+				}
 			}
 		}
 		else if (terrain_version >= 4)
@@ -3278,7 +3743,7 @@ namespace wi::terrain
 			{
 				SerializeEntity(archive, materialEntities[i], seri);
 			}
-			SerializeEntity(archive, grassEntity, seri);
+			SerializeEntity(archive, grassEntities[MATERIAL_BASE], seri);
 		}
 		else
 		{
@@ -3296,21 +3761,21 @@ namespace wi::terrain
 			materialEntities[MATERIAL_SLOPE] = CreateEntity();
 			materialEntities[MATERIAL_LOW_ALTITUDE] = CreateEntity();
 			materialEntities[MATERIAL_HIGH_ALTITUDE] = CreateEntity();
-			grassEntity = CreateEntity();
+			grassEntities[MATERIAL_BASE] = CreateEntity();
 
 			ComponentManager<MaterialComponent>* scene_materials = library.Get<MaterialComponent>("wi::scene::Scene::materials");
 			scene_materials->Create(materialEntities[MATERIAL_BASE]) = materials[MATERIAL_BASE];
 			scene_materials->Create(materialEntities[MATERIAL_SLOPE]) = materials[MATERIAL_SLOPE];
 			scene_materials->Create(materialEntities[MATERIAL_LOW_ALTITUDE]) = materials[MATERIAL_LOW_ALTITUDE];
 			scene_materials->Create(materialEntities[MATERIAL_HIGH_ALTITUDE]) = materials[MATERIAL_HIGH_ALTITUDE];
-			scene_materials->Create(grassEntity) = grass_material;
+			scene_materials->Create(grassEntities[MATERIAL_BASE]) = grass_material;
 
 			ComponentManager<NameComponent>* scene_names = library.Get<NameComponent>("wi::scene::Scene::names");
 			scene_names->Create(materialEntities[MATERIAL_BASE]).name = "material_base";
 			scene_names->Create(materialEntities[MATERIAL_SLOPE]).name = "material_slope";
 			scene_names->Create(materialEntities[MATERIAL_LOW_ALTITUDE]).name = "material_low_altitude";
 			scene_names->Create(materialEntities[MATERIAL_HIGH_ALTITUDE]).name = "material_high_altitude";
-			scene_names->Create(grassEntity).name = "grass";
+			scene_names->Create(grassEntities[MATERIAL_BASE]).name = "grass";
 		}
 
 		seri.version = weather_version;
@@ -3323,7 +3788,7 @@ namespace wi::terrain
 			seri.version = terrain_version;
 
 			ComponentManager<wi::HairParticleSystem>* scene_hairs = library.Get<wi::HairParticleSystem>("wi::scene::Scene::hairs");
-			scene_hairs->Create(grassEntity) = grass_properties;
+			scene_hairs->Create(grassEntities[MATERIAL_BASE]) = grass_properties;
 		}
 
 		perlin_noise.Serialize(archive);

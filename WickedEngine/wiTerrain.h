@@ -218,12 +218,23 @@ namespace wi::terrain
 	struct ChunkData
 	{
 		wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
-		wi::ecs::Entity grass_entity = wi::ecs::INVALID_ENTITY;
+		wi::ecs::Entity grass_entity = wi::ecs::INVALID_ENTITY; // single grass patch for earlier terrain version
 		wi::ecs::Entity props_entity_old = wi::ecs::INVALID_ENTITY; // prop entity for earlier terrain version
 		float prop_density_current = 1;
 		float grass_density_current = 1;
+		struct GrassPatch
+		{
+			wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
+			uint32_t base_strand_count = 0;
+			uint32_t x0 = 0;
+			uint32_t z0 = 0;
+			uint32_t x1 = 0;
+			uint32_t z1 = 0;
+			uint32_t region = MATERIAL_BASE;
+		};
+		wi::vector<GrassPatch> grass_patches;
 		const XMFLOAT3* mesh_vertex_positions = nullptr;
-		wi::HairParticleSystem grass;
+		wi::vector<float> grass_region_lengths[MATERIAL_COUNT];
 		wi::vector<BlendmapLayer> blendmap_layers;
 		wi::vector<BlendmapLayer> spline_blendmap_layers;
 		wi::graphics::Texture blendmap;
@@ -282,10 +293,12 @@ namespace wi::terrain
 		wi::scene::Scene* scene = nullptr;
 		wi::vector<wi::ecs::Entity> materialEntities;
 		wi::vector<wi::ecs::Entity> splineMaterialEntities;
-		wi::ecs::Entity grassEntity = wi::ecs::INVALID_ENTITY;
+		wi::ecs::Entity grassEntities[MATERIAL_COUNT] = {}; // grass per region index; base is [MATERIAL_BASE]
 		wi::scene::WeatherComponent weather;
-		wi::HairParticleSystem grass_properties;
+		wi::HairParticleSystem grass_properties; // base grass, edited by the length and distance sliders
 		wi::scene::MaterialComponent grass_material;
+		wi::HairParticleSystem grass_region_properties[MATERIAL_COUNT];
+		wi::scene::MaterialComponent grass_region_materials[MATERIAL_COUNT];
 		wi::unordered_map<Chunk, ChunkData> chunks;
 		struct PropChunkData
 		{
@@ -382,6 +395,8 @@ namespace wi::terrain
 		wi::vector<wi::scene::MaterialComponent> materials; // temp storage allocation
 		float chunk_scale_rcp = 1.0f / chunk_scale;
 		float cam_height = 0;
+		float cam_x = 0;
+		float cam_z = 0;
 
 		bool RemovePropChunksOverlapping(const Chunk& terrain_chunk);
 		bool PlacePropChunk(const Chunk& prop_chunk);

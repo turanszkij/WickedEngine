@@ -1279,8 +1279,20 @@ void PaintToolWindow::UpdateData(float dt)
 						{
 							if (scene.Entity_IsDescendant(hairEntity, it.second.entity))
 							{
-								// Save modified grass lengths for chunk:
-								it.second.grass.vertex_lengths = hair.vertex_lengths;
+								// Save modified grass lengths onto the painted patch's region mask:
+								uint32_t region = wi::terrain::MATERIAL_BASE;
+								for (const wi::terrain::ChunkData::GrassPatch& patch : it.second.grass_patches)
+								{
+									if (patch.entity == hairEntity)
+									{
+										region = patch.region;
+										break;
+									}
+								}
+								if (region < wi::terrain::MATERIAL_COUNT)
+								{
+									it.second.grass_region_lengths[region] = hair.vertex_lengths;
+								}
 								break;
 							}
 						}
