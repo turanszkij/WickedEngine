@@ -287,6 +287,14 @@ add_executable(offlineshadercompiler
     offlineshadercompiler.cpp
 )
 
+# Ninja workaround: toggling WICKED_EMBED_SHADERS moves the libWickedEngine.a filename to the
+# other variant, but ninja's deps log still holds the old linker depfile entry, creating a
+# dependency cycle via wiShaderDump.h. LINK_DEPENDS_NO_SHARED also disables the linker depfile
+# (see CMAKE_LINK_DEPENDS_USE_LINKER docs).
+if(CMAKE_GENERATOR MATCHES "Ninja")
+    set_target_properties(offlineshadercompiler PROPERTIES LINK_DEPENDS_NO_SHARED ON)
+endif()
+
 # Copy the shader library next to the executable
 add_custom_command(
     TARGET offlineshadercompiler POST_BUILD
