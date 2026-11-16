@@ -1778,7 +1778,7 @@ using namespace vulkan_internal;
 
 				cmd.semaphores.push_back(queue.submit_waitSemaphoreInfos.back().semaphore);
 			}
-			
+
 			std::scoped_lock lock(locker);
 			async_worklist.push_back(cmd);
 		}
@@ -2251,7 +2251,7 @@ using namespace vulkan_internal;
 			}
 		}
 #elif defined(SDL3)
-		{
+		if (window != nullptr) {
 			Uint32 extensionCount = 0;
 			char const* const* extensionNames_sdl = SDL_Vulkan_GetInstanceExtensions(&extensionCount);
 			if (extensionNames_sdl != nullptr)
