@@ -113,6 +113,8 @@ namespace wi
 
 		// Set a Texture as the thumbnail. This resets the archive, so you should usually do this before writing data:
 		void SetThumbnailAndResetPos(const wi::graphics::Texture& texture);
+		// Same, with already encoded (JPEG) thumbnail data:
+		void SetThumbnailAndResetPos(const uint8_t* data, size_t size);
 
 		// Open just the tumbnail data from an archive, and return it as a Texture:
 		//	header: optional, can return header info if not null
