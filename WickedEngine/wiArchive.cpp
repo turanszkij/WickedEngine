@@ -214,8 +214,13 @@ namespace wi
 	{
 		wi::vector<uint8_t> thumbnail_data;
 		wi::helper::saveTextureToMemoryFile(texture, "JPG", thumbnail_data);
-		header.properties.bits.thumbnail_data_size = thumbnail_data.size();
-		thumbnail_data_ptr_write = thumbnail_data.data();
+		SetThumbnailAndResetPos(thumbnail_data.data(), thumbnail_data.size());
+	}
+
+	void Archive::SetThumbnailAndResetPos(const uint8_t* data, size_t size)
+	{
+		header.properties.bits.thumbnail_data_size = size;
+		thumbnail_data_ptr_write = data;
 		SetReadModeAndResetPos(false); // start over in write mode with thumbnail image data
 		thumbnail_data_ptr_write = nullptr;
 	}
